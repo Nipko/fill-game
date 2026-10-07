@@ -128,7 +128,8 @@ namespace AF.UI
             IProgressStore progress = LaunchOptions.ProgressStoreOverride ?? new PlayerPrefsProgressStore();
             try
             {
-                _flow = new LevelFlow(pack, progress, _screen);
+                // rules_pour_mode (D-001): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
+                _flow = new LevelFlow(pack, progress, _screen, GameConfig.TapSwitchSelection, LaunchOptions.ResolvePourMode());
             }
             catch (NotSupportedException e)
             {

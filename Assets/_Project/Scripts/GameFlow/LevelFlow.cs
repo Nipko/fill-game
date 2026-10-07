@@ -15,6 +15,8 @@ namespace AF.GameFlow
     /// <list type="bullet">
     /// <item><description>Las reglas viven en el núcleo: cada toque pasa por <see cref="TapController"/> y
     /// <see cref="LevelSession"/>; victoria y bloqueo son los de <see cref="LevelSession.Status"/> (R10, R12, R13).</description></item>
+    /// <item><description>Cada nivel se juega con el modo de vertido de <see cref="PourMode"/> (D-001: por defecto una dosis
+    /// por vertido), fijado al cargarlo.</description></item>
     /// <item><description>Tras la victoria o el bloqueo lógico el input queda bloqueado al instante (R15) y el flujo espera a que
     /// la cola visual se vacíe (02 §3.2) antes de celebrar o de abrir el modal; el modal se abre
     /// <c>stuck_modal_delay_ms</c> después (R15).</description></item>
@@ -36,6 +38,7 @@ namespace AF.GameFlow
 
         private LevelSession? _session;
         private LevelDefinition? _level;
+        private PourMode _pourMode;
         private Outcome _pending;
         private bool _drained;
         private int _pendingWaitMs;
@@ -44,7 +47,14 @@ namespace AF.GameFlow
         private int _introMs;
 
         /// <summary>Crea el flujo. No carga ningún nivel hasta <see cref="Load"/> o <see cref="LoadSaved"/>.</summary>
-        public LevelFlow(LevelPack pack, IProgressStore progress, ILevelFlowListener listener, bool tapSwitchSelection = GameConfig.TapSwitchSelection)
+        /// <param name="pack">Paquete de niveles.</param>
+        /// <param name="progress">Progreso guardado.</param>
+        /// <param name="listener">Vista (y sonda de desarrollo).</param>
+        /// <param name="tapSwitchSelection">Valor de <c>tap_switch_selection</c> (08 §9; C5).</param>
+        /// <param name="pourMode">Modo de vertido de los niveles que se carguen (<c>rules_pour_mode</c>, D-001; por defecto
+        /// <see cref="PourModes.Default"/>, una dosis por vertido). Ver <see cref="PourMode"/>.</param>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="pourMode"/> no es un valor definido.</exception>
+        public LevelFlow(LevelPack pack, IProgressStore progress, ILevelFlowListener listener, bool tapSwitchSelection = GameConfig.TapSwitchSelection, PourMode pourMode = PourModes.Default)
         {
             _pack = pack ?? throw new ArgumentNullException(nameof(pack));
             _progress = progress ?? throw new ArgumentNullException(nameof(progress));
@@ -63,6 +73,7 @@ namespace AF.GameFlow
 
             _listener = listener ?? throw new ArgumentNullException(nameof(listener));
             _taps = new TapController(tapSwitchSelection);
+            PourMode = pourMode;
             Phase = FlowPhase.Loading;
         }
 
@@ -75,6 +86,27 @@ namespace AF.GameFlow
 
         /// <summary>Estado de la pantalla (02 §2).</summary>
         public FlowPhase Phase { get; private set; }
+
+        /// <summary>
+        /// Modo de vertido (<c>rules_pour_mode</c>, D-001) con el que se crea la sesión en cada <see cref="Load"/>. Un
+        /// cambio se aplica desde la siguiente carga de nivel, nunca a mitad: el nivel en curso conserva el de su sesión
+        /// (<see cref="LevelSession.PourMode"/>), porque el historial de Marea y el par dependen de él. Volver a la orilla
+        /// tampoco lo cambia. La cantidad de cada vertido la decide el núcleo con este modo (<c>PourRules.Amount</c>).
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">El valor no es un <see cref="AF.Core.Rules.PourMode"/> definido.</exception>
+        public PourMode PourMode
+        {
+            get => _pourMode;
+            set
+            {
+                if (!PourModes.IsDefined(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "Modo de vertido desconocido: Single o Run.");
+                }
+
+                _pourMode = value;
+            }
+        }
 
         /// <summary>Paquete de niveles.</summary>
         public LevelPack Pack => _pack;
@@ -124,13 +156,16 @@ namespace AF.GameFlow
             Load(ResolveLevel(_progress.LoadNextLevel()));
         }
 
-        /// <summary>LOADING del nivel <paramref name="level"/> (o del primero si no existe) y arranque de la intro.</summary>
+        /// <summary>
+        /// LOADING del nivel <paramref name="level"/> (o del primero si no existe) y arranque de la intro. La sesión se crea
+        /// con el <see cref="PourMode"/> vigente, que queda fijo hasta la siguiente carga.
+        /// </summary>
         public void Load(int level)
         {
             LevelDefinition def = _pack.Find(level) ?? _pack.First;
             Phase = FlowPhase.Loading;
             _level = def;
-            _session = new LevelSession(def.CreateBoard(), GameConfig.FutileRuleEnabled);
+            _session = new LevelSession(def.CreateBoard(), GameConfig.FutileRuleEnabled, _pourMode);
             _taps.Clear();
             ResetPending();
             _listener.OnLevelLoaded(def.Level);

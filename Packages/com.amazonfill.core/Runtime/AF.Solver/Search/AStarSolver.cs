@@ -7,8 +7,9 @@ using AF.Solver.Collections;
 namespace AF.Solver.Search
 {
     /// <summary>
-    /// Solver A* (ponderado con <c>w</c> entero) sobre estados canónicos (GDD 03 §3 y §5): heurística
-    /// <see cref="SolverHeuristic"/>, movimientos = <c>movimientos_utiles</c> de 02 §1.4 evaluados con
+    /// Solver A* (ponderado con <c>w</c> entero) sobre estados canónicos (GDD 03 §3 y §5) en los dos modos de vertido
+    /// (D-001): heurística <see cref="SolverHeuristic"/> del modo (<c>H</c> en <see cref="PourMode.Run"/>,
+    /// <c>H_single</c> en <see cref="PourMode.Single"/>), movimientos = <c>movimientos_utiles</c> de 02 §1.4 evaluados con
     /// <see cref="CuiaRules"/> (la misma implementación que el cliente), presupuesto de estados expandidos y
     /// prueba de irresolubilidad por agotamiento. Admite tableros de hasta 16 cuias (14 generadas, R1).
     /// </summary>
@@ -17,7 +18,10 @@ namespace AF.Solver.Search
     /// <item><description><b>Estado canónico:</b> cada nodo guarda sus cuias ordenadas con <see cref="BoardCanon.Sort"/> y
     /// su hash FNV-1a de 64 bits (<see cref="BoardCanon.Hash"/>); los visitados son una tabla hash abierta propia sobre
     /// arrays (sin <c>Dictionary</c>).</description></item>
-    /// <item><description><b>Movimientos:</b> los de 03 §5 <c>MOVIMIENTOS</c>, siempre la racha completa que cabe.
+    /// <item><description><b>Movimientos:</b> los de 03 §5 <c>MOVIMIENTOS</c>, con la cantidad de
+    /// <see cref="CuiaRules.Amount(Cuia, Cuia, PourMode)"/>: la racha completa que cabe en <see cref="PourMode.Run"/> y una
+    /// dosis en <see cref="PourMode.Single"/>. Los pares (A, B) que se expanden son los mismos en los dos modos (el factor de
+    /// ramificación por nodo no cambia); en <c>Single</c> crece el conjunto de estados alcanzables (decisiones.md §2.1.3).
     /// Las cuias idénticas (mismo <see cref="Cuia.Packed"/>, que incluye la capacidad) se expanden una sola vez como
     /// origen y como destino: generalizan "un solo vacío por (capacidad, attr)" de 03 §5 y producen exactamente los
     /// mismos hijos canónicos.</description></item>
@@ -50,6 +54,7 @@ namespace AF.Solver.Search
         private readonly int[] _perm = new int[BoardState.MaxCuias];
 
         private int _width;
+        private PourMode _pourMode;
         private int _nodeCount;
         private int _nodeCapacity;
         private Cuia[] _nodeCuias;
@@ -104,10 +109,10 @@ namespace AF.Solver.Search
 
             if (!options.IsValid)
             {
-                throw new ArgumentException("Opciones no válidas: crea SolverOptions con su constructor o usa SolverOptions.Pipeline.", nameof(options));
+                throw new ArgumentException("Opciones no válidas: crea SolverOptions con su constructor o usa SolverOptions.ForPipeline.", nameof(options));
             }
 
-            Reset(start);
+            Reset(start, options.PourMode);
             int width = _width;
             for (int i = 0; i < width; i++)
             {
@@ -146,9 +151,10 @@ namespace AF.Solver.Search
             return new SolveResult(SolveStatus.Unsolvable, null, expanded, _nodeCount);
         }
 
-        private void Reset(BoardState start)
+        private void Reset(BoardState start, PourMode pourMode)
         {
             _width = start.Count;
+            _pourMode = pourMode;
             _nodeCount = 0;
             int needed = _nodeCapacity * _width;
             if (_nodeCuias.Length < needed)
@@ -171,6 +177,7 @@ namespace AF.Solver.Search
             Array.Copy(_nodeCuias, node * width, _parentBuf, 0, width);
             int childG = _nodeG[node] + 1;
             int[] units = _units;
+            PourMode pourMode = _pourMode;
             for (int i = 0; i < width; i++)
             {
                 Cuia from = _parentBuf[i];
@@ -213,7 +220,7 @@ namespace AF.Solver.Search
                         continue;
                     }
 
-                    int amount = CuiaRules.Amount(from, to);
+                    int amount = CuiaRules.Amount(from, to, pourMode);
                     Array.Copy(_parentBuf, _childBuf, width);
                     _childBuf[i] = from.RemoveTop(amount);
                     _childBuf[j] = to.AddOnTop(from.TopColor, amount);
@@ -316,7 +323,7 @@ namespace AF.Solver.Search
             int node = _nodeCount++;
             Array.Copy(_childBuf, 0, _nodeCuias, node * width, width);
             _nodeG[node] = g;
-            _nodeH[node] = SolverHeuristic.Estimate(_childBuf, 0, width);
+            _nodeH[node] = SolverHeuristic.Estimate(_childBuf, 0, width, _pourMode);
             _nodeParent[node] = parent;
             _nodeMove[node] = move;
             _nodeHash[node] = hash;
@@ -407,7 +414,7 @@ namespace AF.Solver.Search
                     throw new InvalidOperationException("AF.Solver: la solución canónica no se puede rehacer sobre el tablero real.");
                 }
 
-                int amount = CuiaRules.Amount(from, to);
+                int amount = CuiaRules.Amount(from, to, _pourMode);
                 moves[s] = new Pour(source, target, amount);
                 _realBuf[source] = from.RemoveTop(amount);
                 _realBuf[target] = to.AddOnTop(from.TopColor, amount);

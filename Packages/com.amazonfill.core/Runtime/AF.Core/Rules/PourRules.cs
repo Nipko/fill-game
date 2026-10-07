@@ -6,13 +6,19 @@ using AF.Core.Board;
 namespace AF.Core.Rules
 {
     /// <summary>
-    /// Vertido legal, cantidad y vertido parcial (GDD 02 §1.2, R9-R11), vertidos fútiles y bloqueo
+    /// Vertido legal, cantidad según el modo de vertido (GDD 02 §1.2, R9-R11; D-001), vertidos fútiles y bloqueo
     /// (02 §1.4, R13-R16; 04 §5.1) del núcleo canónico, sobre un <see cref="BoardState"/>.
     /// </summary>
     /// <remarks>
-    /// Delega en <see cref="CuiaRules"/>, la única implementación de las reglas, que también usan el solver y el
+    /// <para>Delega en <see cref="CuiaRules"/>, la única implementación de las reglas, que también usan el solver y el
     /// bot. Sin las ramas de mecánicas (<c>bloqueada_origen</c>, <c>bloqueada_destino</c>, Remolino, Barro, Hoja,
-    /// Lluvia; GDD 02 §9), que se añadirán cuando se porten.
+    /// Lluvia; GDD 02 §9), que se añadirán cuando se porten.</para>
+    /// <para>Modo de vertido (<see cref="PourMode"/>, D-001): solo lo reciben
+    /// <see cref="Amount(BoardState, int, int, PourMode)"/>, <see cref="Apply(BoardState, int, int, PourMode)"/> y
+    /// <see cref="CollectUsefulMoves(BoardState, bool, PourMode, Pour[])"/>. <see cref="IsLegal"/>,
+    /// <see cref="IsFutile"/>, <see cref="HasUsefulMove"/> e <see cref="IsStuck"/> no dependen de la cantidad, así que
+    /// valen igual en los dos modos (decisiones.md §2.1.2). Las sobrecargas sin modo son heredadas: equivalen a
+    /// <see cref="PourMode.Run"/>, conservan el comportamiento anterior y las retira T6.</para>
     /// </remarks>
     public static class PourRules
     {
@@ -22,7 +28,7 @@ namespace AF.Core.Rules
         /// <summary>
         /// La cuia <paramref name="index"/> puede ser origen de un vertido: no está vacía ni sellada (02 §1.2; C1-C2
         /// de 02 §3.1). Delega en <see cref="CuiaRules.CanBeSource"/>, la misma condición que usan
-        /// <see cref="IsLegal"/>, <see cref="CollectUsefulMoves"/> y el solver.
+        /// <see cref="IsLegal"/>, <see cref="CollectUsefulMoves(BoardState, bool, PourMode, Pour[])"/> y el solver.
         /// </summary>
         public static bool CanBeSource(BoardState state, int index)
         {
@@ -55,27 +61,44 @@ namespace AF.Core.Rules
         }
 
         /// <summary>
-        /// <c>cantidad(A, B) = min(racha visible de A, espacio de B)</c> (R6, R9); 0 si el vertido no es legal.
+        /// <c>cantidad(A, B)</c> en el modo <paramref name="mode"/>: 1 con <see cref="PourMode.Single"/> y
+        /// <c>min(racha visible de A, espacio de B)</c> con <see cref="PourMode.Run"/> (R6, R9; D-001); 0 si el
+        /// vertido no es legal (en los dos modos).
         /// </summary>
-        public static int Amount(BoardState state, int source, int target)
+        /// <exception cref="ArgumentOutOfRangeException">Índice fuera del tablero o <paramref name="mode"/> no definido.</exception>
+        public static int Amount(BoardState state, int source, int target, PourMode mode)
         {
+            PourModes.Check(mode, nameof(mode));
             if (!IsLegal(state, source, target))
             {
                 return 0;
             }
 
-            return CuiaRules.Amount(state.CuiaAt(source), state.CuiaAt(target));
+            return CuiaRules.Amount(state.CuiaAt(source), state.CuiaAt(target), mode);
         }
 
         /// <summary>
-        /// Ejecuta un vertido legal (R9): mueve <see cref="Amount"/> dosis de la racha visible de A a la
-        /// cima de B; si no cabe entera, el resto queda en A (vertido parcial). Aplica R10 (a): la nueva
-        /// cima de A queda visible (R7). El sellado y la victoria se derivan del estado nuevo.
+        /// Heredada (equivale a <see cref="PourMode.Run"/>): <c>cantidad(A, B) = min(racha visible de A, espacio de B)</c>
+        /// (R6, R9); 0 si el vertido no es legal. Ver <see cref="Amount(BoardState, int, int, PourMode)"/>.
+        /// </summary>
+        public static int Amount(BoardState state, int source, int target)
+        {
+            return Amount(state, source, target, PourMode.Run);
+        }
+
+        /// <summary>
+        /// Ejecuta un vertido legal (R9) en el modo <paramref name="mode"/>: mueve
+        /// <see cref="Amount(BoardState, int, int, PourMode)"/> dosis de la cima de A a la cima de B. Con
+        /// <see cref="PourMode.Single"/> mueve una sola dosis aunque debajo haya más del mismo color (no existe el
+        /// vertido parcial); con <see cref="PourMode.Run"/> mueve la racha visible que cabe y el resto queda en A
+        /// (vertido parcial). Aplica R10 (a): la nueva cima de A queda visible (R7). El sellado y la victoria se derivan
+        /// del estado nuevo. Un vertido cuenta como 1 movimiento en los dos modos.
         /// </summary>
         /// <exception cref="InvalidOperationException">El vertido no es legal (R11: el llamante debe comprobarlo antes).</exception>
-        public static BoardState Apply(BoardState state, int source, int target)
+        /// <exception cref="ArgumentOutOfRangeException">Índice fuera del tablero o <paramref name="mode"/> no definido.</exception>
+        public static BoardState Apply(BoardState state, int source, int target, PourMode mode)
         {
-            int amount = Amount(state, source, target);
+            int amount = Amount(state, source, target, mode);
             if (amount == 0)
             {
                 throw new InvalidOperationException(
@@ -87,9 +110,21 @@ namespace AF.Core.Rules
         }
 
         /// <summary>
+        /// Heredada (equivale a <see cref="PourMode.Run"/>): mueve la racha visible que cabe; si no cabe entera, el
+        /// resto queda en A (vertido parcial). Ver <see cref="Apply(BoardState, int, int, PourMode)"/>.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">El vertido no es legal (R11: el llamante debe comprobarlo antes).</exception>
+        public static BoardState Apply(BoardState state, int source, int target)
+        {
+            return Apply(state, source, target, PourMode.Run);
+        }
+
+        /// <summary>
         /// <c>futil(A, B)</c> (02 §1.4 y 04 §5.1): A monocolor, no sellada y sin dosis ocultas hacia una B vacía,
         /// salvo la rama "casa correcta" (<c>cap_A ≠ U_c</c> y <c>cap_B = U_c</c>). Un vertido fútil sigue siendo
-        /// legal (R13): solo no cuenta para evitar el bloqueo. Falso si A = B o A está vacía.
+        /// legal (R13): solo no cuenta para evitar el bloqueo. Falso si A = B o A está vacía. No depende del modo de
+        /// vertido; en <see cref="PourMode.Single"/> un fútil puede partir una cuia monocolor en dos (decisiones.md
+        /// §2.1.2, E2), lo que con capacidades iguales solo aumenta la dispersión.
         /// </summary>
         public static bool IsFutile(BoardState state, int source, int target)
         {
@@ -104,14 +139,17 @@ namespace AF.Core.Rules
 
         /// <summary>
         /// <c>movimientos_utiles(S)</c> (02 §1.4; <c>legalNonFutileMoves</c> de 04 §5.1): escribe en
-        /// <paramref name="buffer"/> los vertidos legales y no fútiles, en orden (A, B) ascendente, y devuelve
-        /// cuántos hay. Con <paramref name="futileRuleEnabled"/> = false (kill-switch <c>futile_rule_enabled</c>,
-        /// R16) devuelve todos los vertidos legales. No asigna memoria.
+        /// <paramref name="buffer"/> los vertidos legales y no fútiles, en orden (A, B) ascendente, con la cantidad del
+        /// modo <paramref name="mode"/>, y devuelve cuántos hay. Los pares (A, B) son los mismos en los dos modos; solo
+        /// cambia <see cref="Pour.Amount"/> (siempre 1 en <see cref="PourMode.Single"/>). Con
+        /// <paramref name="futileRuleEnabled"/> = false (kill-switch <c>futile_rule_enabled</c>, R16) devuelve todos los
+        /// vertidos legales. No asigna memoria.
         /// </summary>
         /// <param name="state">Tablero.</param>
         /// <param name="futileRuleEnabled">Valor de <c>futile_rule_enabled</c> (08 §9).</param>
+        /// <param name="mode">Modo de vertido (D-001; <c>rules_pour_mode</c>).</param>
         /// <param name="buffer">Destino; al menos <c>T·(T−1)</c> posiciones (basta con <see cref="MaxPours"/>).</param>
-        public static int CollectUsefulMoves(BoardState state, bool futileRuleEnabled, Pour[] buffer)
+        public static int CollectUsefulMoves(BoardState state, bool futileRuleEnabled, PourMode mode, Pour[] buffer)
         {
             if (state == null)
             {
@@ -123,6 +161,7 @@ namespace AF.Core.Rules
                 throw new ArgumentNullException(nameof(buffer));
             }
 
+            PourModes.Check(mode, nameof(mode));
             int count = state.Count;
             if (buffer.Length < count * (count - 1))
             {
@@ -157,7 +196,7 @@ namespace AF.Core.Rules
                         continue;
                     }
 
-                    buffer[written++] = new Pour(a, b, CuiaRules.Amount(from, to));
+                    buffer[written++] = new Pour(a, b, CuiaRules.Amount(from, to, mode));
                 }
             }
 
@@ -165,8 +204,18 @@ namespace AF.Core.Rules
         }
 
         /// <summary>
+        /// Heredada (equivale a <see cref="PourMode.Run"/>): <c>movimientos_utiles(S)</c> con la cantidad de la racha que
+        /// cabe. Ver <see cref="CollectUsefulMoves(BoardState, bool, PourMode, Pour[])"/>. No asigna memoria.
+        /// </summary>
+        public static int CollectUsefulMoves(BoardState state, bool futileRuleEnabled, Pour[] buffer)
+        {
+            return CollectUsefulMoves(state, futileRuleEnabled, PourMode.Run, buffer);
+        }
+
+        /// <summary>
         /// <c>movimientos_utiles(S) ≠ ∅</c>: existe un vertido legal y no fútil (o solo legal, con el kill-switch
-        /// apagado). No asigna memoria.
+        /// apagado). No depende del modo de vertido (D-001: ni <c>legal</c> ni <c>futil</c> dependen de la cantidad).
+        /// No asigna memoria.
         /// </summary>
         public static bool HasUsefulMove(BoardState state, bool futileRuleEnabled)
         {
@@ -207,6 +256,7 @@ namespace AF.Core.Rules
         /// <summary>
         /// Aguas estancadas (R13): no es victoria y no queda ningún vertido útil. Se evalúa después de la
         /// victoria, como fija el orden de R10 (e, f); por R14 nunca es verdadero mientras exista un vertido útil.
+        /// Para un mismo estado vale igual en los dos modos de vertido (D-001); lo que cambia es qué estados se alcanzan.
         /// </summary>
         public static bool IsStuck(BoardState state, bool futileRuleEnabled)
         {

@@ -40,6 +40,18 @@ namespace AF.Presentation
     /// cuia acumula más de <c>queue_max_lag_pours</c> animaciones pendientes, las anteriores saltan a su fotograma final.
     /// Sin asignaciones por fotograma (08 §5.4).
     /// </summary>
+    /// <remarks>
+    /// <para><b>Tiempo de un vertido</b> (07 §5.2 y 02 §4.1, sin cambios por D-001): el origen vuelve a su ranura en
+    /// <c>max(anim_travel_ms, 0,7 · anim_travel_ms + n · anim_pour_dose_ms + anim_pour_tail_ms) + anim_return_ms</c>, es
+    /// decir, <b>480 ms para 1 dosis</b> con los defaults de 08 §9 (la elevación de 120 ms ocurre antes, en el toque del
+    /// origen). El retorno arranca cuando termina el chorro, cola incluida ("fin de caudal" y "+0,16 Retorno" del
+    /// storyboard de 07 §5.2). Ver <see cref="PourDurationMs"/>.</para>
+    /// <para><b>Encadenado</b> (propuesta [P] de 02 §3.2 y <c>docs/dev/decisiones.md</c> §2.1.6): un vertido con el mismo
+    /// origen, destino y tinte que el último trabajo de esas cuias no se encola aparte si ese trabajo aún no ha empezado
+    /// (se suma a él) o si su chorro sigue saliendo (el caudal se alarga <c>anim_pour_dose_ms</c> por dosis). Así tres
+    /// vertidos A→B seguidos no superan nunca <c>queue_max_lag_pours</c> y no hay saltos (<see cref="LagSnapCount"/>). Las
+    /// dosis siguen cayendo de una en una; solo se ahorran el retorno, la elevación y el traslado intermedios.</para>
+    /// </remarks>
     public sealed class BoardAnimator
     {
         /// <summary>Inclinación del origen hacia el destino: 38° (02 §4.1).</summary>
@@ -88,6 +100,27 @@ namespace AF.Presentation
         /// <summary>Trabajos en cola o en curso.</summary>
         public int PendingCount => _count;
 
+        /// <summary>
+        /// Trabajos que la cola llevó a su fotograma final por superar <c>queue_max_lag_pours</c> o su capacidad: saltos
+        /// visibles (diagnóstico y tests; criterio A9 de <c>docs/dev/decisiones.md</c>). <see cref="SnapAll"/> no cuenta.
+        /// </summary>
+        public int LagSnapCount { get; private set; }
+
+        /// <summary>Vertidos que se sumaron a un trabajo igual en lugar de encolarse aparte (encadenado; diagnóstico y tests).</summary>
+        public int ChainedCount { get; private set; }
+
+        /// <summary>
+        /// Tiempo (ms) desde que empieza la animación de un vertido de <paramref name="amount"/> dosis hasta que el origen
+        /// vuelve a su ranura, con las duraciones <paramref name="timings"/>: 480 ms para 1 dosis con los defaults de 08 §9
+        /// (07 §5.2: el retorno empieza tras la cola del chorro). Si el destino se sella, su animación (450 ms, 07 §5.3)
+        /// sigue tras el fin de caudal.
+        /// </summary>
+        public static float PourDurationMs(PourTimings timings, int amount)
+        {
+            float streamEnd = (timings.TravelMs * StreamStartFraction) + (Mathf.Max(1, amount) * timings.DoseMs) + timings.TailMs;
+            return Mathf.Max(timings.TravelMs, streamEnd) + timings.ReturnMs;
+        }
+
         /// <summary>Asocia las vistas del nivel cargado y las duraciones.</summary>
         public void Bind(CuiaView[] views, PourTimings timings, int queueMaxLagPours)
         {
@@ -97,9 +130,18 @@ namespace AF.Presentation
             _maxLag = Mathf.Max(1, queueMaxLagPours);
         }
 
-        /// <summary>Encola la animación de un vertido ya aplicado en el modelo.</summary>
+        /// <summary>
+        /// Encola la animación de un vertido ya aplicado en el modelo, o la encadena a un trabajo igual (mismo origen,
+        /// destino y tinte) que aún no ha empezado o cuyo chorro sigue saliendo (ver la clase).
+        /// </summary>
         public void EnqueuePour(int source, int target, int amount, int tint, Cuia sourceBefore, Cuia sourceAfter, bool sourceSealedAfter, Cuia targetBefore, Cuia targetAfter, bool targetSealedAfter)
         {
+            if (TryChain(source, target, amount, tint, sourceBefore, sourceAfter, sourceSealedAfter, targetBefore, targetAfter, targetSealedAfter))
+            {
+                ChainedCount++;
+                return;
+            }
+
             Enqueue(new Job
             {
                 Source = source,
@@ -173,10 +215,70 @@ namespace AF.Presentation
             Compact();
         }
 
+        // Encadenado: el último trabajo que toca el origen o el destino es un vertido igual (no Marea) que aún no ha
+        // empezado o cuyo chorro sigue saliendo; las dosis nuevas se suman a él y su caudal se alarga. Sin asignaciones.
+        private bool TryChain(int source, int target, int amount, int tint, Cuia sourceBefore, Cuia sourceAfter, bool sourceSealedAfter, Cuia targetBefore, Cuia targetAfter, bool targetSealedAfter)
+        {
+            if (amount <= 0)
+            {
+                return false;
+            }
+
+            int last = -1;
+            for (int i = _count - 1; i >= 0; i--)
+            {
+                if (_jobs[i].Source == source || _jobs[i].Target == source || _jobs[i].Source == target || _jobs[i].Target == target)
+                {
+                    last = i;
+                    break;
+                }
+            }
+
+            if (last < 0)
+            {
+                return false;
+            }
+
+            ref Job job = ref _jobs[last];
+            if (job.IsUndo || job.Source != source || job.Target != target || job.Tint != tint || job.SrcDone || job.TgtDone)
+            {
+                return false;
+            }
+
+            // El trabajo debe terminar justo donde empieza este vertido; si no, la vista se desincronizaría del modelo.
+            if (!job.SrcAfter.Equals(sourceBefore) || !job.TgtAfter.Equals(targetBefore))
+            {
+                return false;
+            }
+
+            if (job.Started)
+            {
+                if (job.T >= job.FlowEnd)
+                {
+                    return false; // el caudal ya se cortó (cae la cola o el origen vuelve): el vertido se encola aparte
+                }
+
+                job.FlowEnd += amount * job.DoseMs;
+            }
+
+            job.Amount += amount;
+            job.SrcAfter = sourceAfter;
+            job.SrcSealedAfter = sourceSealedAfter;
+            job.TgtAfter = targetAfter;
+            job.TgtSealedAfter = targetSealedAfter;
+            if (job.Started)
+            {
+                SetEnds(ref job);
+            }
+
+            return true;
+        }
+
         private void Enqueue(Job job)
         {
             if (_count == MaxJobs)
             {
+                LagSnapCount++;
                 SnapThrough(0);
             }
 
@@ -208,6 +310,7 @@ namespace AF.Presentation
                     return;
                 }
 
+                LagSnapCount++;
                 SnapThrough(oldest);
             }
         }
@@ -326,14 +429,21 @@ namespace AF.Presentation
             job.DoseMs = _timings.DoseMs;
             job.StreamStart = _timings.TravelMs * StreamStartFraction;
             job.FlowEnd = job.StreamStart + (job.Amount * _timings.DoseMs);
-            job.StreamEnd = job.FlowEnd + _timings.TailMs;
-            job.ReturnStart = Mathf.Max(_timings.TravelMs, job.StreamEnd);
-            job.SrcEnd = job.ReturnStart + _timings.ReturnMs;
-            job.TgtEnd = job.FlowEnd + (job.TgtSealedAfter ? CuiaView.SealMs : 0f);
+            SetEnds(ref job);
             job.Stream = AcquireStream();
 
             s.Root.SetAsLastSibling();
             _streamLayer.SetAsLastSibling();
+        }
+
+        // Fin de caudal: cola del chorro, retorno del origen (07 §5.2: arranca cuando termina el chorro, cola incluida) y
+        // fin del destino (con el sellado de 07 §5.3 si lo hay).
+        private void SetEnds(ref Job job)
+        {
+            job.StreamEnd = job.FlowEnd + _timings.TailMs;
+            job.ReturnStart = Mathf.Max(_timings.TravelMs, job.StreamEnd);
+            job.SrcEnd = job.ReturnStart + _timings.ReturnMs;
+            job.TgtEnd = job.FlowEnd + (job.TgtSealedAfter ? CuiaView.SealMs : 0f);
         }
 
         private void Advance(ref Job job, float dtMs)

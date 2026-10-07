@@ -1,6 +1,6 @@
 # Capítulo 3 · Generación de niveles, solver y curva de dificultad
 
-Fecha: 2026-10-06 (revisión cruzada; primera versión 2026-10-05) · Proyecto Amazon Fill (nombre comercial Tintalú) · Convención de evidencia: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas, **[NV]** no verificado, **[P]** propuesta de este capítulo a calibrar en soft launch, **[V-proto]** medido ejecutando `tools/levelgen_proto.py` en el equipo del dueño (Windows 11, Python 3.14.3, un solo hilo); se reproduce con el comando indicado en la sección 18. Los nombres siguen el glosario (`docs/gdd/00-glosario.md`).
+Fecha: 2026-10-06 (revisión cruzada; primera versión 2026-10-05; actualizado el 2026-10-06 con la decisión del dueño D-001, una dosis por vertido: el solver, el par y el generador dependen de `rules_pour_mode`, secciones 4.1, 4.4, 5, 6, 7, 11, 17 y 18; registro en `docs/dev/decisiones.md`) · Proyecto Amazon Fill (nombre comercial Tintalú) · Convención de evidencia: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas, **[NV]** no verificado, **[P]** propuesta de este capítulo a calibrar en soft launch, **[V-proto]** medido ejecutando `tools/levelgen_proto.py` en el equipo del dueño (Windows 11, Python 3.14.3, un solo hilo); se reproduce con el comando indicado en la sección 18. Los nombres siguen el glosario (`docs/gdd/00-glosario.md`).
 
 ## Resumen
 
@@ -109,6 +109,8 @@ complejidad(S) = 2·transiciones + 2·cuias_mezcladas + cuias_parciales      # l
 
 Medido [V-proto]: 1-3 ms por intento; profundidad alcanzada mediana 12-20, máx. 26; con 200 intentos los dos lotes de 20 niveles nunca fallaron (1-21 intentos por nivel); fallo de bot 0,00-0,47 con 2 vacíos y 0,03-0,97 con 1 vacío; par ≈ 2K-2,4K. Es la fuente de comodidad y recuperación (con rechazo por ventana de bot, sección 4.4), de Río sin fin y de Pororoca (garantía por construcción, sin solver).
 
+`MOVIMIENTOS_INVERSOS` es el inverso de un vertido del modo `run`. En el modo `single` (por defecto; D-001, decisión del dueño del 2026-10-06; 02 §1.2) el vertido directo mueve siempre una dosis, así que m = 1 y sobra la condición "b no vacía y top(b) == c: continuar"; a cambio, el origen del vertido directo debe quedar con c arriba o vacío (r ≥ 2 o len(a) = 1) y b no puede quedar sellada. Se fija al portar el pipeline de 1.0 a C#, que todavía no existe (`docs/dev/decisiones.md` §2.1.3; pregunta P6). Las mediciones [V-proto] de esta sección se tomaron en `run`.
+
 ### 4.2 Barajado inverso en profundidad (`deep`)
 
 Misma regla de movimiento inverso, pero el paseo se explora como DFS con retroceso hasta `max_nodes` estados y se devuelve el estado válido más profundo. Medido [V-proto] con 20.000 nodos: 0,4-0,6 s por nivel; profundidad 18-27; fallo de bot 0,68-0,97 para K = 8-11 con 1 vacío; par 17-25 (≈ 2K+1..3). Es la fuente de reto e hito con 1 vacío para K ≥ 9, donde el relleno aleatorio no produce tableros resolubles, y conserva la prueba de resolubilidad por construcción.
@@ -151,7 +153,7 @@ Medido [V-proto]: con 2 vacíos todo candidato fue resoluble (K = 8: 30/30, K = 
 | Reto (sin etiqueta, 21-40) | 2 | K del rango | `fill` E=2 | 50-70 % | Densidad alta sin estrechez |
 | Reto Difícil (41+) | 1 | K del rango | `deep` (K ≥ 9) · `fill` E=1 (K ≤ 8) | ≥ 75 % | Estrechez + garantía |
 | Hito Muy difícil (60+) | 1 | K máx. del rango (13 desde 561, en 14 cuias; 14 solo en el evento Encuentro de las Aguas) | `deep`; alternativa `fill` E=2 con K+1 (nunca por encima de 14 cuias) | ≥ 90 % | Pico del tramo |
-| Tutorial 1-10 | 2 (excepciones de 02 §13: niveles 1 y 6 con 1 vacío) | 2-5 | A mano en el editor + verificación; la tabla de 02 §13 (cuias = colores + vacíos) se copia sin alterar | 0-10 % | Enseña Marea (3; ilimitada hasta el 10, `undo_unlimited_until_level`), Volver a la orilla (6 si hay Aguas estancadas; 8 primer reinicio probable), Cuia extra gratis (8); resto de hitos en 02 §13 (research/05 §Primera sesión) |
+| Tutorial 1-10 | 2 (excepciones de 02 §13: niveles 1 y 6 con 1 vacío) | 2-5 | A mano en el editor + verificación; la tabla de 02 §13 (cuias = colores + vacíos) se copia sin alterar; el par se calcula con `rules_pour_mode` (`single` por defecto, D-001) y los pares del tutorial se recalculan en ese modo (02 §13; pregunta P2 de `docs/dev/decisiones.md`) | 0-10 % | Enseña Marea (3; ilimitada hasta el 10, `undo_unlimited_until_level`), Volver a la orilla (6 si hay Aguas estancadas; 8 primer reinicio probable), Cuia extra gratis (8); resto de hitos en 02 §13 (research/05 §Primera sesión) |
 
 Rechazo por ventana: la fuente genera candidatos hasta que `bot_fail` cae en la ventana del slot (máximo 30 candidatos; coste 20-60 ms de bot por candidato). Si ningún candidato entra, la comodidad relaja en este orden: añadir una Cuia chica de 2 unidades como "medio vacío", luego pasar a 2 vacíos; el reto y el hito relajan hacia `fill` con 2 vacíos y K+1. La necesidad quedó medida: los ocho tableros de 1 vacío del lote híbrido dieron fallo de bot 0,88-1,00 sin importar la fuente, así que un slot de comodidad con 1 vacío sin rechazo saldría etiquetado Difícil (sección 18.1).
 
@@ -173,7 +175,7 @@ MOVIMIENTOS(S):                                       # legales y no fútiles = 
         si futil(i, j) o vacío_usado[(caps[j], attr[j])]: saltar   # `futil` única de AF.Core (02 §1.4): mono→vacío solo recoloca, salvo "casa correcta" (caps[j] == units[c] ≠ caps[i]) o destino Lluvia/Remolino; los vacíos equivalentes se expanden una sola vez
         vacío_usado[(caps[j], attr[j])] = verdadero
       sino si top(j) ≠ c: saltar
-      emitir (i → j, min(r, espacio))                                            # siempre la racha completa que cabe
+      emitir (i → j, cantidad(i, j))                                             # single (por defecto, D-001): 1; run: min(r, espacio), la racha completa que cabe
 # `legal`, `cantidad`, `espacio_efectivo` y `futil` son las de 02 §1.2 y §1.4 (misma implementación en AF.Core para solver, bot, Aguas estancadas y Morpho); el solver no mantiene una poda propia. Con mecánicas (sección 9) se usan las versiones extendidas de 02.
 
 ASTAR(S0, presupuesto, w):
@@ -195,6 +197,13 @@ ASTAR(S0, presupuesto, w):
 | Pororoca (verificación del par tras barajar) | Cliente | 40.000 | 2 | par' ≤ par + 2 | <50 ms [E] |
 | Río sin fin (par y anti-trivialidad) | Cliente | 40.000 → reintento 400.000 (research/02 C4.3 [V]) | 2 → 4 | Par aproximado | <300 ms peor caso en gama media [E] |
 | Aguas turbias (seguridad por realidad) | Pipeline | 20.000 por realidad | 1 | Resoluble sí/no | 0,7-8,5 s por nivel con 12 realidades (Python) [V-proto] |
+
+**Modo de vertido (D-001, decisión del dueño del 2026-10-06).** El solver, el par y todo lo que se mide con ellos (bot, `par` − 2K, trampas, alivio, Morpho, Pororoca) dependen de `rules_pour_mode` (08 §9; `PourMode` en `AF.Core` y `SolverOptions` en `AF.Solver`), que vale `single` por defecto. Un par solo vale para el modo con el que se calculó: el pipeline lo calcula con el modo vigente, el informe del generador lo declara y el juego no cambia de modo a mitad de nivel (02 §1.2). En v0 el pack no declara el modo; que lo declare en 1.0 es un cambio de contrato (`pack_schema` 2, pregunta P7 de `docs/dev/decisiones.md`). Qué cambia en `single` (análisis completo en `docs/dev/decisiones.md` §2.1.3):
+- Igual que en `run`: la representación y la clave canónica (sección 3), los pares (i, j) legales de cada estado y, por tanto, el factor de ramificación por nodo; también `movimientos_utiles` y `atascado` (02 R16).
+- Cambia la transición: `cantidad` = 1. Todo vertido `run` de k dosis equivale a k vertidos `single` legales seguidos, así que alcanzables(`run`) ⊆ alcanzables(`single`) y todo nivel resoluble en `run` lo es en `single`; la inversa no está garantizada.
+- `H` sigue siendo admisible y consistente (un vertido de una dosis elimina como mucho un corte y saca un color de como mucho una cuia), así que A* con w = 1 sigue dando el par exacto, pero informa menos. Heurística propuesta para `single` [P]: `H_single = max(Σ_i (n_i − fondo_i), h2)`, con `fondo_i` la longitud de la racha del fondo de la cuia i; es admisible y consistente y se comprobó (`H_single` ≤ distancia) en todos los estados alcanzables del tutorial.
+- Coste: en el tutorial el par sube ×1,0-×1,7 y los estados expandidos ×1-×34 (máximo 2.488 frente a 300.000 del pipeline y 40.000 de `hint_budget_nodes`). En campaña (K de 8 a 14) hay que medir el impacto en Morpho (<50 ms), Pororoca y el pipeline antes de 1.0 (riesgo R-1 de `docs/dev/decisiones.md`).
+- Los pares del tutorial se recalculan en `single` (tabla de 02 §13 y su nota). Las cifras [V-proto] de este capítulo se midieron en `run` (sección 18).
 
 IDA* se reserva como variante del cliente si la memoria del `visited` fuese un problema en gama baja (14 cuias × (3 + 16) bits ≈ 34 bytes por clave con la codificación de la sección 3; 40.000 claves ≈ 1,4 MB más overhead; no se espera necesitarlo) [E]. El cliente ejecuta el solver en un hilo (Unity `Task`/Job) y cancela por tiempo (`hint_timeout_ms`); si se agota, Morpho responde con "No encuentro un camino desde aquí" y ofrece Marea o Volver a la orilla (research/01 Especificación 14).
 
@@ -220,6 +229,8 @@ BOT(S, rng, tope=400, p_greedy=0,85):
 fallo_bot = fallos en 40 partidas con semilla derivada del nivel / 40
 ```
 
+La puntuación está escrita para el modo `run`. En `single` (D-001) `n` vale siempre 1, así que `puntos = n` deja de distinguir vertidos y la penalización "vertido parcial" pierde sentido (con n = 1, `n < racha(i)` castigaría cada vertido de una racha de 2 o más, aunque en `single` el parcial no exista): antes de calificar con el bot en `single` hay que redefinir la puntuación y recalibrar los umbrales de etiqueta (Difícil ≥ 75 %, Muy difícil ≥ 90 %) (pregunta P6 de `docs/dev/decisiones.md`; fuera del tutorial, que no usa el bot).
+
 Parámetros de requiemformemories (40 partidas, 85/15, tope 400) (research/02 §4 [V]). La función de puntuación es la del prototipo [P]: debe congelarse en C# antes de calificar el primer pack y recalibrarse una sola vez contra los intentos medios reales tras 2 semanas de soft launch (regresión de intentos medianos sobre fallo_bot, par−2K, ramificación, trampas y [E==1]); cualquier cambio posterior exige recalcular etiquetas de todo el pool, nunca de un pack aislado. Coste medido: 20-63 ms por nivel (más en tableros largos) [V-proto].
 
 ## 7. Métricas e índice D
@@ -238,6 +249,7 @@ D(nivel) = 0,35·z(bot_fail) + 0,25·z(par − 2K) + 0,20·z(branching) + 0,10·
 z(x) = (x − μ_rango) / σ_rango          # estadísticos del POOL del rango (≥ 3× los slots), no del pack
 banda(nivel) = cuantil de D dentro del pool del rango: recuperación ≤ 0,10 · comodidad ≤ 0,70 · reto ≤ 0,95 · hito > 0,95
 etiqueta(nivel) = Muy difícil si bot_fail ≥ 0,90 · Difícil si ≥ 0,75 · Normal en otro caso   # solo el bot decide la etiqueta
+# par, par − 2K, branching y traps se calculan con el modo de vertido vigente (sección 5); los rangos observados [V-proto] de la tabla son de `run`
 ```
 
 Pesos de research/02 §7.1 [E]. La banda coloca; la etiqueta se muestra y paga (20 / 60 / 80 semillas, dirección 12). Un nivel en slot de reto cuyo bot_fail quede por debajo de 0,75 se publica sin etiqueta (es honesto) y la curación decide si se sustituye por otro del pool.
@@ -303,7 +315,7 @@ Tamaño [V-proto]: 567-715 B por nivel minificado (mediana 642 B con métricas c
 
 | Rango | Mundos | Colores K | Cuias totales | Vacíos | Capacidades | Mecánicas activas (debut) | % Difícil / % Muy difícil | Par objetivo | `max_pares_riesgo` |
 |---|---|---|---|---|---|---|---|---|---|
-| 1-10 | 1 Estuario | 2→5 | 3-7 | 2 (1 en los niveles 1 y 6; tabla de 02 §13) | 4 | Tutorial (02 §13): Marea (3; ilimitada hasta el 10), Volver a la orilla (6 si hay Aguas estancadas; 8 primer reinicio probable), Cuia extra gratis (8) | 0 / 0 | 3-18 (02 §13) | 0 |
+| 1-10 | 1 Estuario | 2→5 | 3-7 | 2 (1 en los niveles 1 y 6; tabla de 02 §13) | 4 | Tutorial (02 §13): Marea (3; ilimitada hasta el 10), Volver a la orilla (6 si hay Aguas estancadas; 8 primer reinicio probable), Cuia extra gratis (8) | 0 / 0 | 3-18 (02 §13; rangos de `run`: en `single` se recalculan, pregunta P2) | 0 |
 | 11-30 | 2 Tapajós | 6-7 | 8-10 | 2 (3 en respiros) | 4; Cuia chica 2 u. (14), 1 u. (18), 3 u. (22); Cuia alta 5 u. + fruta abundante (27) | Cuia chica (14), Cuia alta (27); Marea 3/nivel desde el 11, Morpho con 3 unidades regaladas (12), Pororoca (30); retos suaves sin etiqueta (bot 50-70 %) en 26 y 30 | 0 / 0 | 10-18 | 0 |
 | 31-60 | 2 Tapajós · 3 Manaos (41) | 7 → 7-8 | 9-11 | 1 (2 en respiros y recuperación) | 4 + chica + alta (5 u.) | Hoja (43); Canoas y Cuia de rescate desde 31 | 10-13 / 3 (primer Difícil 40, primer Muy difícil 60) | 14-22 | 0 (31-40) · 1 (41-60) |
 | 61-100 | 3 Manaos · 4 Trapecio (81) | 7-8 → 8-9 | 10-12 | 1 (2 en 30 % de comodidad) | 4 + chica + alta (5 u.) | Brote (63), Liana (83); Aguas turbias en Difícil/Muy difícil desde el hito 100 | 15 / 5 | 16-26 | 1 (61-80) · 2 (81-100) |
@@ -313,7 +325,7 @@ Tamaño [V-proto]: 567-715 B por nivel minificado (mediana 642 B con métricas c
 | 701-1000 | 10 Alto Negro · 11 Escudo de Guayana (821) · 12 Invitados del Orinoco (921) · 13 El origen (961) | 10-12 | 12-14 (hitos de 14 cuias, K = 13 + 1 vacío) | 1 | 4-6 | Rotación completa; Encuentro de las Aguas en Alto Negro (dos aguas): K = 14 solo en ese evento, con Cuia extra y Cuia de rescate deshabilitadas (`rescue_max_per_level` = 0 en ese modo) | 25 / 5 | 28-48 | libre |
 | 1000+ | Vuelta 2 en adelante (variantes lluvia/noche/alba) | 10-12 | 12-14 | 1 | 4-6 | Rotación; amplitud constante, sin crecimiento monótono | 25 / 5 | 30-50 | libre |
 
-Fuentes: colores y mundos de research/02 C3.3 (canon por dirección 16); vacíos de la dirección 4; mecánicas, capacidades y niveles de debut de 02 §8 y §9.1 (`mech_debut_level`, dirección 8), copiados en la sección 9; par de research/02 §7.2 ajustado a los pares medidos (`walk` ≈ 2,2K, `fill` ≈ 3K) [V-proto]; porcentajes derivados del ciclo de la sección 12 [P]. Reglas: nunca dos Difícil consecutivos; el hito siempre va precedido de un reto; tras cada hito, dos niveles con fallo de bot < 30 %; los respiros "puros" (2 vacíos, sin mecánicas) ocupan las posiciones de recuperación (patrón Magic Sort 24/200/280/420, research/09 §Tipos de nivel [V]). **Ningún nivel generado supera las 14 cuias** (02 R1): los hitos de 13 colores llevan 13 cuias llenas + 1 vacío, y con Cuia extra y Cuia de rescate el máximo en pantalla es 16 (02 §5 y §14). K = 14 queda para el evento Encuentro de las Aguas (14 colores + 1 vacío = 15 cuias en tres filas), donde Cuia extra y Cuia de rescate se deshabilitan (`rescue_max_per_level` = 0 en ese modo) para no superar las 16 ranuras.
+Fuentes: colores y mundos de research/02 C3.3 (canon por dirección 16); vacíos de la dirección 4; mecánicas, capacidades y niveles de debut de 02 §8 y §9.1 (`mech_debut_level`, dirección 8), copiados en la sección 9; par de research/02 §7.2 ajustado a los pares medidos (`walk` ≈ 2,2K, `fill` ≈ 3K) [V-proto]; porcentajes derivados del ciclo de la sección 12 [P]. Los pares objetivo de la tabla se midieron en el modo `run`; con `single` (por defecto, D-001) suben y se recalibran antes de la Fase 1 (pregunta P6 de `docs/dev/decisiones.md`). Reglas: nunca dos Difícil consecutivos; el hito siempre va precedido de un reto; tras cada hito, dos niveles con fallo de bot < 30 %; los respiros "puros" (2 vacíos, sin mecánicas) ocupan las posiciones de recuperación (patrón Magic Sort 24/200/280/420, research/09 §Tipos de nivel [V]). **Ningún nivel generado supera las 14 cuias** (02 R1): los hitos de 13 colores llevan 13 cuias llenas + 1 vacío, y con Cuia extra y Cuia de rescate el máximo en pantalla es 16 (02 §5 y §14). K = 14 queda para el evento Encuentro de las Aguas (14 colores + 1 vacío = 15 cuias en tres filas), donde Cuia extra y Cuia de rescate se deshabilitan (`rescue_max_per_level` = 0 en ese modo) para no superar las 16 ranuras.
 
 ## 12. Ciclo de 20 niveles
 
@@ -404,7 +416,7 @@ Fondos de 1.0: los mundos 1-4 van pintados en la instalación (dirección 16) y 
 | # | Comprobación | Criterio |
 |---|---|---|
 | 1 | Resolubilidad | Solución de A* guardada y re-ejecutada desde el JSON publicado (sin campos de pipeline) |
-| 2 | Par | `par ≥ 2K`; par dentro de la ventana del rango ±30 % |
+| 2 | Par | `par ≥ 2K`; par dentro de la ventana del rango ±30 %; el par se calcula con el modo de vertido vigente (sección 5) y el umbral `par ≥ 2K` se fijó en `run`: se recalibra en `single` (pregunta P6 de `docs/dev/decisiones.md`) |
 | 3 | Dificultad | `bot_fail` en la ventana del slot (< 0,20 en debuts, sección 12); etiqueta coherente con el umbral |
 | 4 | Paleta | Todos los tintes con `nivel_debut ≤ nivel`; K ≤ `k_max` del mundo; `risk_pairs ≤ max_pares_riesgo`; `risk_adjacent` revisado (humana) |
 | 5 | Estructura | Vacíos según rango; **≤ 14 cuias siempre** (02 R1); ninguna cuia sellada inicial; `units` coherente con `caps`: para cada color existe una cuia con `caps[i] == units[c]` y toda Cuia alta aloja una fruta abundante con `units[c] == caps[i]` (02 §8); una Cuia alta de 6 solo sella con una fruta de `U_c = 6`; una fruta de 4 unidades dentro de una Cuia alta debe salir a una cuia de capacidad 4; una Cuia chica (1-3) debe terminar vacía; sellada = llena ∧ monocolor ∧ visible (sección 3); `atascado(S0)` = false con la `futil` única de AF.Core (02 §1.4 y §9.2 regla 1) |
@@ -427,6 +439,8 @@ python tools/levelgen_proto.py --levels 20 --bot-runs 40 --size-run 100 --murky 
 ```
 
 Salidas: `tools/out/levels_proto.json`, `tools/out/example_7_cuias.json`, `tools/out/report.md`, `tools/out_inverse/levels_size_100.json`, `tools/out_inverse/murky_demo.json`.
+
+El prototipo vierte rachas: todas las cifras [V-proto] de esta sección (par, estados, tiempos, fallo del bot, trampas) corresponden al modo `run`. Con el modo por defecto `single` (D-001, decisión del dueño del 2026-10-06) hay que volver a medirlas con el pipeline en C# antes de la Fase 1 (pregunta P6 de `docs/dev/decisiones.md`). `tools/levelgen_proto.py` se conserva sin cambios como referencia de paridad en `run`.
 
 ### 18.1 Lote híbrido de 20 niveles (7-12 cuias)
 
@@ -516,7 +530,7 @@ Resumen [V-proto]: A* óptimo mediana 18 ms, media 182 ms, máx. 1.513 ms (18.29
 | Solver en cliente | `hint_budget_nodes`, `hint_weight`, `hint_timeout_ms`; `shuffle_budget_nodes`, `shuffle_par_slack`, `shuffle_reveals_murky`; `lvl_endless_gen_budget_ms`, `lvl_endless_fallback_pool` | 5, 8, 16 |
 | Paneles | `lvl_kpi_alarm_attempts` (no cambia el juego) | 15 |
 
-Claves de otros capítulos que este usa con su nombre canónico: `mech_debut_level.*`, `mech_enabled.*` y `lluvia_k_pours` / `pirana_k_pours` (02; rigen si `attrs[i].k` falta, sección 10); `restart_confirm_min_pours`, `skip_min_fails`, `skip_min_gap_levels`, `skip_seed_price`, `rescue_min_level`, `rescue_max_per_level`, `undo_unlimited_until_level`, `extra_cuia_unlock_level`, `hint_unlock_level` (04); `streak_*` (05); `live_daily_offset` (06; sección 16); `ui_murky_bonus_enabled` (00; false en 1.0, true en 1.1; secciones 8 y 16); `anim_river_lowered_banner_ms` (04). Alias retirados que este capítulo ya no nombra (sustituidos por la clave `lvl_*` o la indicada): `murky_from_level`, `murky_max_cuias`, `murky_max_hidden_units`, `labels_from_level`, `very_hard_from_level`, `label_thresholds`, `dda_*`, `daily_bracket_levels`, `kpi_alarm_attempts`, `endless_*`, `shuffle_max_par_delta` → `shuffle_par_slack`, `skip_after_fails` → `skip_min_fails`.
+Claves de otros capítulos que este usa con su nombre canónico: `rules_pour_mode` (02; D-001: modo de vertido con el que se calculan el par, el solver y las métricas, sección 5); `mech_debut_level.*`, `mech_enabled.*` y `lluvia_k_pours` / `pirana_k_pours` (02; rigen si `attrs[i].k` falta, sección 10); `restart_confirm_min_pours`, `skip_min_fails`, `skip_min_gap_levels`, `skip_seed_price`, `rescue_min_level`, `rescue_max_per_level`, `undo_unlimited_until_level`, `extra_cuia_unlock_level`, `hint_unlock_level` (04); `streak_*` (05); `live_daily_offset` (06; sección 16); `ui_murky_bonus_enabled` (00; false en 1.0, true en 1.1; secciones 8 y 16); `anim_river_lowered_banner_ms` (04). Alias retirados que este capítulo ya no nombra (sustituidos por la clave `lvl_*` o la indicada): `murky_from_level`, `murky_max_cuias`, `murky_max_hidden_units`, `labels_from_level`, `very_hard_from_level`, `label_thresholds`, `dda_*`, `daily_bracket_levels`, `kpi_alarm_attempts`, `endless_*`, `shuffle_max_par_delta` → `shuffle_par_slack`, `skip_after_fails` → `skip_min_fails`.
 
 ## Desviaciones de la dirección
 
@@ -531,6 +545,7 @@ Ninguna respecto a las 22 decisiones de dirección. Dos desviaciones respecto al
 5. **Cerrada**: la sección 9 copia literalmente la columna "Regla exacta" de 02 §9.1 y los debuts de `mech_debut_level` (43 · 63 · 83 · 103 · 123 · 143 · 183; Cuia chica 14, Cuia alta 27 y de 6 en hitos desde el 141); cualquier cambio futuro se hace primero en 02 y se propaga aquí. Con esos valores todos los bloqueadores caen en la posición 3 del ciclo, así que el ajuste de plantilla que se pedía para 34 y 106 ya no existe.
 6. ¿Se publica el histograma de intentos de la comunidad junto a la etiqueta (research/09 §Mejorar) desde 1.0 o se espera a tener 2 semanas de datos?
 7. **Cerrada** (08 §2.4): pipeline en C# (consolas .NET 10 `tools/level-generator` + `tools/level-qa`, que comparten con Unity `AF.Core` y `AF.Solver` del paquete `Packages/com.amazonfill.core`, sin `UnityEngine`) para que pista, Pororoca, Río sin fin y pipeline usen el mismo código; `tools/levelgen_proto.py` queda como prototipo de referencia (paridad de hash y par en el test de portado).
+8. **Modo de vertido (D-001, decidido por el dueño el 2026-10-06)**: siguen abiertas sus consecuencias para este capítulo, redactadas como preguntas cerradas en `docs/dev/decisiones.md` §5: P2, par del tutorial en `single` (adoptar los pares medidos o rediseñar los niveles 2-10 para una rampa monótona); P6, si `single` es también la regla de 1.0 y, si lo es, la recalibración en `single` de las cifras [V-proto], `par ≥ 2K`, el índice D, el bot y sus etiquetas; P7, si el pack declara en 1.0 el modo con el que se calculó el par (`pack_schema` 2).
 
 ## Dependencias con otros capítulos
 

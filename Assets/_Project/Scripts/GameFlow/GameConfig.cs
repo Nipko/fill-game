@@ -12,6 +12,15 @@ namespace AF.GameFlow
         /// <summary><c>futile_rule_enabled</c> (02 §1.4, R16).</summary>
         public const bool FutileRuleEnabled = true;
 
+        /// <summary>
+        /// <c>rules_pour_mode</c> (08 §9; 02 §1.2, R9; decisión del dueño D-001 del 2026-10-06): <c>"single"</c>, una dosis
+        /// por vertido, o <c>"run"</c>, la racha visible que cabe. Se convierte con
+        /// <see cref="AF.Core.Rules.PourModes.TryParse"/>, la única conversión (un valor desconocido se trata como
+        /// <see cref="AF.Core.Rules.PourModes.Default"/> y lo avisa quien lo lee), y se aplica al cargar cada nivel, nunca a
+        /// mitad (<see cref="LevelFlow.PourMode"/>).
+        /// </summary>
+        public const string RulesPourMode = "single";
+
         /// <summary><c>tap_switch_selection</c> (02 §3.1, C5).</summary>
         public const bool TapSwitchSelection = true;
 

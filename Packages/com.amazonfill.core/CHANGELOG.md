@@ -6,6 +6,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- Modo de vertido (decisión del dueño D-001, `docs/dev/decisiones.md`): `AF.Core.Rules.PourMode { Single = 0, Run = 1 }` y
+  `PourModes` (`Default = Single`, `TryParse`/`ToKey` con los valores `"single"`/`"run"` de la clave de Remote Config
+  `rules_pour_mode`, `IsDefined`). En `Single` cada vertido mueve exactamente una dosis aunque haya racha (no existe el
+  vertido parcial); `Run` es la regla anterior (02 R6, R9). El modo solo cambia `cantidad(A, B)` y se aplica en un único
+  sitio, `CuiaRules.Amount(from, to, mode)`; `legal`, `futil`, `movimientos_utiles` (salvo `Amount`), sellado, victoria y
+  bloqueo no dependen de él.
+- Sobrecargas con modo: `PourRules.Amount/Apply(state, a, b, mode)`, `PourRules.CollectUsefulMoves(state, futile, mode,
+  buffer)`, `LevelSession(initial, futile, pourMode)` y su propiedad `PourMode` (Marea deshace una dosis por uso en
+  `Single`), `SolverOptions(budget, weight, futile, pourMode)`, `SolverOptions.PourMode` y `SolverOptions.ForPipeline(mode)`.
+- `AStarSolver` resuelve en los dos modos; en `Single` usa `H_single = max(Σ (dosis − racha del fondo), h2)` [P]
+  (decisiones.md §2.1.3), admisible y consistente: `SolverHeuristic.Estimate(..., mode)` y `DosesAboveBottomRun`.
+- Tests compartidos `PourModeTests` (cantidad, legalidad, fútiles y bloqueo con los ejemplos E1-E6, partida y Marea, en
+  los dos modos) y `AStarSolverPourModeTests` (par de A* = búsqueda exhaustiva con y sin poda; heurísticas admisibles y
+  consistentes en todos los estados alcanzables). Solo-dotnet: `PourModePropertyTests` (criterios A1-A4 sobre 400 + 240
+  tableros aleatorios con semilla fija, el pack del tutorial y las cifras de decisiones.md §2.1.3-§2.1.4) y
+  `HotLoopAllocationTests` en `Single`.
+
 - `AF.Core.Rules.CuiaRules`: sellado, `legal`, `cantidad` y `futil` (02 §1.4 con la excepción de Aguas turbias de 04 §5.1)
   sobre cuias sueltas; única implementación para tablero, solver y bot.
 - `AF.Core.Rules.Pour` y, en `PourRules`, `MaxPours`, `IsFutile`, `CollectUsefulMoves`, `HasUsefulMove` e `IsStuck`
@@ -27,6 +44,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Cambiado
 
+- Las firmas sin modo (`CuiaRules.Amount(from, to)`, `PourRules.Amount/Apply/CollectUsefulMoves` sin modo,
+  `LevelSession(initial, futile)`, `SolverOptions(budget, weight, futile)` y `SolverOptions.Pipeline`) quedan como
+  **heredadas**: equivalen a `Run` y conservan el comportamiento anterior para que Unity y `tools/` compilen y den lo mismo
+  hasta que T3 pase el modo; las retira T6. `SolverHeuristic.Estimate` sin modo sigue siendo `H` (03 §5).
+- `LevelSession.TryPour` aplica la cantidad ya calculada (una sola comprobación de legalidad por vertido).
 - `PourRules.IsLegal`, `Amount` y `BoardState.IsSealed` delegan en `CuiaRules` (mismo comportamiento).
 - `AStarSolver`: a igual `f` expande primero el de **menor** `g`, como la tupla `(f, g, S)` de 03 §5 y
   `(f, g, contador, clave)` de `levelgen_proto.py` (antes, mayor `g`). Con `w = 1` el par no cambia (las pruebas de paridad

@@ -1,5 +1,7 @@
 // Comprobaciones de un nivel del tutorial hecho a mano (docs/dev/prototipo-v0.md b; 02 §13; glosario §9; 03 §4.4-§5).
-// Las reglas se evalúan con AF.Core (PourRules, BoardState) y el par se contrasta con AF.Solver (A*, 03 §5).
+// Las reglas se evalúan con AF.Core (PourRules, BoardState) y el par se contrasta con AF.Solver (A*, 03 §5), en el modo
+// de vertido del pack (D-001: por defecto PourModes.Default = Single; docs/dev/decisiones.md §2.1). El par del otro
+// modo se calcula como referencia: los rangos [P] de 02 §13 se fijaron en Run y siguen así hasta la pregunta P2.
 using System.Globalization;
 using AF.Core.Board;
 using AF.Core.Rules;
@@ -16,9 +18,15 @@ internal sealed class HandmadeLevel
 {
     private readonly List<Check> _checks = new();
 
-    public HandmadeLevel(LevelSpec spec)
+    public HandmadeLevel(LevelSpec spec, PourMode mode)
     {
+        if (!PourModes.IsDefined(mode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(mode), mode, "Modo de vertido desconocido.");
+        }
+
         Spec = spec;
+        Mode = mode;
         Row = HandmadeCanon.Row(spec.Level) ?? throw new SpecException($"nivel {spec.Level}: no está en la tabla de 02 §13 (niveles 1-10)");
         Doses = new int[spec.Cuias.Length][];
         for (int i = 0; i < spec.Cuias.Length; i++)
@@ -43,6 +51,12 @@ internal sealed class HandmadeLevel
 
     public LevelSpec Spec { get; }
 
+    /// <summary>Modo de vertido con el que se calcula el par del pack (D-001).</summary>
+    public PourMode Mode { get; }
+
+    /// <summary>El otro modo, solo como referencia en el informe y para los rangos de 02 §13 (fijados en Run).</summary>
+    public PourMode ReferenceMode => Mode == PourMode.Single ? PourMode.Run : PourMode.Single;
+
     public TutorialRow Row { get; }
 
     public int Number => Spec.Level;
@@ -60,9 +74,20 @@ internal sealed class HandmadeLevel
 
     public bool Ok => _checks.All(c => c.Ok);
 
+    /// <summary>Espacio de estados en <see cref="Mode"/>.</summary>
     public StateGraph? Graph { get; private set; }
 
+    /// <summary>Espacio de estados en <see cref="ReferenceMode"/>.</summary>
+    public StateGraph? ReferenceGraph { get; private set; }
+
+    /// <summary>Par en <see cref="Mode"/>: el que lleva el pack.</summary>
     public int? Par { get; private set; }
+
+    /// <summary>Par en <see cref="ReferenceMode"/> (no entra en el pack).</summary>
+    public int? ReferencePar { get; private set; }
+
+    /// <summary>Par en el modo <paramref name="mode"/>.</summary>
+    public int? ParIn(PourMode mode) => mode == Mode ? Par : ReferencePar;
 
     public List<Pour>? Solution { get; private set; }
 
@@ -122,7 +147,7 @@ internal sealed class HandmadeLevel
     {
         int sealedCount = Enumerable.Range(0, Board.Count).Count(i => Board.IsSealed(i));
         Add("no está resuelto al empezar (02 R12)", !Board.IsWon(), $"{sealedCount} cuias selladas");
-        int useful = PourRules.CollectUsefulMoves(Board, true, new Pour[PourRules.MaxPours]);
+        int useful = PourRules.CollectUsefulMoves(Board, true, Mode, new Pour[PourRules.MaxPours]);
         Add("no está en Aguas estancadas al empezar (02 R13; 02 §9.2 regla 1)", !PourRules.IsStuck(Board, true),
             $"{useful} vertidos útiles");
     }
@@ -134,15 +159,27 @@ internal sealed class HandmadeLevel
             return;
         }
 
-        var g = new StateGraph(Board);
+        string mode = PourModes.ToKey(Mode);
+        var g = new StateGraph(Board, Mode);
         Graph = g;
         Par = g.Distance(Board);
-        Add("resoluble (BFS exhaustivo con AF.Core.PourRules)", Par is not null, $"{g.StateCount} estados alcanzables");
-        Add("par dentro del rango [P] de 02 §13", Par is not null && Par >= Row.ParMin && Par <= Row.ParMax,
-            $"par {Fmt(Par)}; rango {Row.ParMin}-{Row.ParMax}");
+        ReferenceGraph = new StateGraph(Board, ReferenceMode);
+        ReferencePar = ReferenceGraph.Distance(Board);
+        Add($"resoluble en `{mode}` (BFS exhaustivo con AF.Core.PourRules)", Par is not null, $"{g.StateCount} estados alcanzables");
 
-        SolveResult astar = new AStarSolver().Solve(Board, SolverOptions.Pipeline);
-        Add("par = A* de AF.Solver (03 §5, w = 1)", astar.IsSolved && astar.MoveCount == Par,
+        // 02 §13: la columna "Par [P]" se fijó con la racha (modo run) y la tabla conserva esos rangos hasta que el dueño
+        // responda P2 (adoptar los pares medidos en single o rediseñar 2-10; docs/dev/decisiones.md §2.1.4 y §5).
+        // Por eso el rango se comprueba siempre con el par en run, y el par single queda como dato informativo.
+        int? runPar = ParIn(PourMode.Run);
+        string other = Mode == PourMode.Single
+            ? $"; par `single` {Fmt(Par)}, {(Par >= Row.ParMin && Par <= Row.ParMax ? "dentro" : "fuera")} del rango (informativo hasta P2)"
+            : "";
+        Add("par en `run` dentro del rango [P] de 02 §13 (rangos fijados en `run`; P2)",
+            runPar is not null && runPar >= Row.ParMin && runPar <= Row.ParMax,
+            $"par `run` {Fmt(runPar)}; rango {Row.ParMin}-{Row.ParMax}{other}");
+
+        SolveResult astar = new AStarSolver().Solve(Board, SolverOptions.ForPipeline(Mode));
+        Add($"par = A* de AF.Solver en `{mode}` (03 §5, w = 1)", astar.IsSolved && astar.MoveCount == Par,
             $"A* {astar.Status}, par {(astar.IsSolved ? astar.MoveCount.ToString(CultureInfo.InvariantCulture) : "-")}, {astar.Expanded} expandidos");
 
         if (Par is not null)
@@ -150,19 +187,24 @@ internal sealed class HandmadeLevel
             Solution = g.OptimalSolution();
             BoardState s = Board;
             bool legal = true;
+            int maxAmount = 0;
             foreach (Pour m in Solution!)
             {
-                legal &= PourRules.Amount(s, m.Source, m.Target) == m.Amount;
+                legal &= PourRules.Amount(s, m.Source, m.Target, Mode) == m.Amount;
                 if (!legal)
                 {
                     break;
                 }
 
-                s = PourRules.Apply(s, m.Source, m.Target);
+                maxAmount = Math.Max(maxAmount, m.Amount);
+                s = g.Apply(s, m);
             }
 
-            Add("la solución del informe gana con par vertidos legales", legal && s.IsWon() && Solution.Count == Par,
-                $"{Solution.Count} vertidos");
+            bool oneDose = Mode != PourMode.Single || maxAmount == 1;
+            Add($"la solución del informe gana con par vertidos legales en `{mode}`", legal && oneDose && s.IsWon() && Solution.Count == Par,
+                Mode == PourMode.Single
+                    ? $"{Solution.Count} vertidos, todos de 1 dosis (D-001)"
+                    : $"{Solution.Count} vertidos");
         }
 
         StuckPath = g.ShortestStuckPath();
@@ -183,7 +225,15 @@ internal sealed class HandmadeLevel
                 Teaching = "estado literal de 02 §13";
                 break;
             case 2:
-                PartialThreeOnTwo();
+                if (Mode == PourMode.Single)
+                {
+                    OneDosePerPour();
+                }
+                else
+                {
+                    PartialThreeOnTwo();
+                }
+
                 break;
             case 3:
                 DetoursAtStart();
@@ -224,12 +274,13 @@ internal sealed class HandmadeLevel
     }
 
     /// <summary>
-    /// 02 §13, nivel 2: vertido parcial de una racha de 3 sobre un hueco de 2 (R9: el resto queda en A), disponible
-    /// en S0, S1 o S2 de la solución del informe y sin perder la resolubilidad.
+    /// 02 §13, nivel 2, solo en el modo run (en single no existe el parcial, D-001): vertido parcial de una racha de 3
+    /// sobre un hueco de 2 (R9: el resto queda en A), disponible en S0, S1 o S2 de la solución del informe y sin perder
+    /// la resolubilidad.
     /// </summary>
     private void PartialThreeOnTwo()
     {
-        const string name = "nivel 2: vertido parcial de una racha de 3 sobre un hueco de 2 (02 §13)";
+        const string name = "nivel 2: vertido parcial de una racha de 3 sobre un hueco de 2 (02 §13, modo `run`)";
         if (Graph is null || Solution is null)
         {
             Add(name, false, "sin solución");
@@ -244,7 +295,7 @@ internal sealed class HandmadeLevel
             {
                 if (s[m.Source].TopRunLength == 3 && s[m.Target].Space == 2 && m.Amount == 2)
                 {
-                    int? after = Graph.Distance(PourRules.Apply(s, m.Source, m.Target));
+                    int? after = Graph.Distance(Graph.Apply(s, m));
                     if (after is not null)
                     {
                         found = (k, m, after.Value - Graph.Distance(s)!.Value + 1);
@@ -255,7 +306,7 @@ internal sealed class HandmadeLevel
 
             if (k < Solution.Count)
             {
-                s = PourRules.Apply(s, Solution[k].Source, Solution[k].Target);
+                s = Graph.Apply(s, Solution[k]);
             }
         }
 
@@ -265,6 +316,45 @@ internal sealed class HandmadeLevel
         if (found is not null)
         {
             Teaching = $"parcial 3 sobre 2 tras {found.Value.Step} vertido (+{found.Value.Extra})";
+        }
+    }
+
+    /// <summary>
+    /// 02 §13, nivel 2, en el modo single (D-001; sustituye al vertido parcial, decisiones.md §2.1.5 y P3): una dosis por
+    /// vertido. Una racha de 3 solo pasa de una cuia a otra con 3 vertidos A→B. Se exige que <b>toda</b> solución óptima
+    /// repita 3 veces un mismo vertido (la lección no depende del camino que elijan el jugador o el solver) y que la
+    /// solución del informe, la que sirve de guion del tutorial, los haga seguidos.
+    /// </summary>
+    private void OneDosePerPour()
+    {
+        const string name = "nivel 2: una dosis por vertido: toda solución óptima repite 3 veces un mismo vertido A→B y la del informe los hace seguidos (02 §13 [P]; D-001)";
+        if (Graph is null || Solution is null)
+        {
+            Add(name, false, "sin solución");
+            return;
+        }
+
+        bool forced = Graph.EveryOptimalSolutionRepeatsAPour(3);
+        long total = Graph.CountOptimalSolutions();
+        int at = -1;
+        for (int k = 0; k + 2 < Solution.Count && at < 0; k++)
+        {
+            if (Solution[k].Equals(Solution[k + 1]) && Solution[k].Equals(Solution[k + 2]))
+            {
+                at = k;
+            }
+        }
+
+        string where = at < 0
+            ? "la del informe no tiene 3 vertidos iguales seguidos"
+            : string.Create(CultureInfo.InvariantCulture,
+                $"la del informe, en los vertidos {at + 1}-{at + 3}: 3 × {Fmt(Solution[at])} (racha de {Board[Solution[at].Source].TopRunLength} en la cuia {Solution[at].Source} al empezar)");
+        Add(name, forced && at >= 0, string.Create(CultureInfo.InvariantCulture,
+            $"{(forced ? "las" : "no todas las")} {total} soluciones óptimas repiten 3 veces un vertido; {where}"));
+        if (at >= 0)
+        {
+            Teaching = string.Create(CultureInfo.InvariantCulture,
+                $"una dosis por vertido: 3 × {Solution[at].Source}→{Solution[at].Target} (vertidos {at + 1}-{at + 3})");
         }
     }
 
@@ -281,7 +371,7 @@ internal sealed class HandmadeLevel
         Pour[] useful = Graph.UsefulPours(Board);
         int worse = useful.Count(m =>
         {
-            int? d = Graph.Distance(PourRules.Apply(Board, m.Source, m.Target));
+            int? d = Graph.Distance(Graph.Apply(Board, m));
             return d is null || d >= Par;
         });
         Add(name, worse > 0, $"{worse} de {useful.Length} vertidos útiles iniciales no acercan (Δ ≥ 0)");

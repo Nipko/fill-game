@@ -1,6 +1,6 @@
 # Prototipo jugable v0 (teléfono del dueño)
 
-Fecha: 2026-10-06 · Autor: tech-lead · Parte de `main` en `9b54134` (árbol limpio). Objetivo: GDD.md §9 punto 13. Los niveles 1-10 de 02 §13 deben poder jugarse en el SM-S938B y un agente debe poder verificarlos con `adb`.
+Fecha: 2026-10-06 (actualizado el 2026-10-07 con las decisiones del dueño D-001, una dosis por vertido, y D-002, sin resaltado de destinos; registro en `docs/dev/decisiones.md`) · Autor: tech-lead · Parte de `main` en `9b54134` (árbol limpio). Objetivo: GDD.md §9 punto 13. Los niveles 1-10 de 02 §13 deben poder jugarse en el SM-S938B y un agente debe poder verificarlos con `adb`.
 
 **Dentro:**
 - reglas R1-R16 sin mecánicas ni ocultas (02 §1);
@@ -34,6 +34,8 @@ sealed class LevelSession {
   bool TryPour(int a, int b, out PourResult r); bool Undo() /* Marea */; void Restart() /* Volver a la orilla */ }
 ```
 
+Con D-001 se añaden las sobrecargas con `PourMode` (`LevelSession(initial, futileRuleEnabled, pourMode)`, `PourRules.Amount`, `Apply` y `CollectUsefulMoves` con modo, `SolverOptions.ForPipeline(mode)`; API de T1 en `docs/dev/decisiones.md` §3). Las firmas sin modo equivalen a `run` hasta que T6 las retire.
+
 `BoardState` pasa a implementar `IEquatable<BoardState>` (compara `Packed` en orden). Las ramas de Lluvia y Remolino esperan a 02 §9.
 
 **Invariantes:**
@@ -59,15 +61,15 @@ sealed class LevelSession {
   "difficulty": { "par": 3 }, "relief": [] } ] }
 ```
 
-El nivel 1 copia literalmente 02 §13. Los niveles 2-10 se diseñan a mano (03 §4.4) en `tools/level-generator/specs/tutorial_v0.json`. `level-generator --handmade` emite el pack y `tools/out/tutorial_v0_report.md`, y falla si algún nivel incumple alguna de estas condiciones:
+El nivel 1 copia literalmente 02 §13. Los niveles 2-10 se diseñan a mano (03 §4.4) en `tools/level-generator/specs/tutorial_v0.json`. `level-generator --handmade` emite el pack y `tools/out/tutorial_v0_report.md` en el modo de vertido de `--pour-mode single|run` (por defecto `single`, D-001: el par, la solución y el camino a Aguas estancadas son de ese modo, y el informe lo declara), y falla si algún nivel incumple alguna de estas condiciones:
 - la tabla de 02 §13: cuias = colores + vacíos y sus tintes, cap 4, `U_c` = 4, debuts y 0 pares de riesgo;
-- es resoluble y su par entra en el rango (BFS sobre `PourRules`, ≤ 8 cuias);
+- es resoluble (BFS sobre `PourRules`, ≤ 8 cuias) y su par `run` entra en el rango [P] de 02 §13, que se fijó con la racha; el par `single` se informa como dato hasta que el dueño responda la pregunta P2 de `docs/dev/decisiones.md`;
 - no está bloqueado al empezar;
-- nivel 2: hay un vertido parcial de una racha de 3 sobre un hueco de 2;
+- nivel 2: en `single`, la solución óptima contiene ≥ 3 vertidos seguidos con el mismo origen y destino (una dosis por vertido); en `run`, hay un vertido parcial de una racha de 3 sobre un hueco de 2;
 - nivel 5: un color está repartido en 3 cuias;
 - nivel 6: tiene un solo vacío.
 
-El informe trae, por nivel, la solución óptima y el camino más corto a Aguas estancadas. Las soluciones nunca entran en el pack (08 §4.1).
+El informe trae, por nivel, la solución óptima y el camino más corto a Aguas estancadas. Las soluciones nunca entran en el pack (08 §4.1). El pack no declara su modo (pregunta P7): uno generado en `run` y jugado en `single`, o al revés, da pares falsos.
 
 ## c) Capa Unity (unity-gameplay-dev)
 
@@ -89,15 +91,18 @@ Se usan los módulos de 08 §2.2 y no un `AF.Game`, porque `Scripts/Game` queda 
 - Los textos usan `UI.Text` con la fuente `LegacyRuntime.ttf`, sin importar TMP.
 - Tests: `Tests/EditMode` (lector, `TapController`, `LevelFlow`) y `Tests/PlayMode` (gana el nivel 1).
 - Progreso: se guarda en `af_v0_level` y, tras ganar el nivel 10, se vuelve al 1.
+- Modo de vertido (D-001): `GameConfig.RulesPourMode` (`rules_pour_mode`, 08 §9, default `"single"`) se convierte con `PourModes.TryParse` al cargar cada nivel; un valor desconocido se trata como `single` con un aviso en el log.
+- Selección (D-002): solo se eleva el origen; ninguna otra cuia cambia y no se resalta ningún destino.
 
 **DevProbe** (solo si `Debug.isDebugBuild`; JSON en una línea, InvariantCulture; píxeles con el origen arriba a la izquierda; se toca en el centro):
 ```
 AF_LAYOUT {"screen":"level","level":3,"sw":1080,"sh":2340,"cuias":[{"i":0,"x":12,"y":600,"w":144,"h":528}],"buttons":[{"id":"undo",...}]}
-AF_STATE {"event":"pour","t":5321,"level":3,"phase":"PLAYING","status":"playing","pours":4,"selected":-1,"move":[0,2,1],"cuias":[[8,8,8],[4,4,4,4],[4]]}
+AF_STATE {"event":"pour","t":5321,"level":3,"pour_mode":"single","phase":"PLAYING","status":"playing","pours":4,"selected":-1,"tap":2,"move":[0,2,1],"amount":1,"cuias":[[8,8,8],[4,4,4,4],[4]]}
 ```
 - `AF_LAYOUT` se escribe al dibujar cada nivel y al abrir `stuck` (`undo_modal`, `restart_modal`) y `victory` (`next`).
-- `AF_STATE` se escribe en los eventos `load`, `ready`, `pour`, `reject`, `undo`, `restart`, `win` y `stuck`.
+- `AF_STATE` se escribe en los eventos `load`, `ready`, `pour`, `reject`, `undo`, `restart`, `win` y `stuck` (más `select` y `deselect`, de ayuda). Cada línea lleva `pour_mode` (`single` o `run`, el modo de la sesión del nivel); los eventos con vertido (`pour`, `undo`) llevan `move` = [origen, destino, cantidad] y la cantidad suelta en `amount` (en `single`, siempre 1); `pours` cuenta vertidos aplicados.
 - El extra de intent `af_level` elige el nivel de arranque.
+- El extra de intent `af_rules_pour_mode` (string, `single` | `run`; solo builds de desarrollo en Android; propuesta [P] de `docs/dev/decisiones.md` §2.1.7, pendiente del visto bueno del dueño) sustituye a `rules_pour_mode` hasta que exista `AF.RemoteConfig`: `adb shell am start ... --es af_rules_pour_mode run`. Un valor desconocido se trata como `single` con aviso.
 
 ## d) Build de desarrollo (build-release)
 
@@ -111,10 +116,12 @@ AF_STATE {"event":"pour","t":5321,"level":3,"phase":"PLAYING","status":"playing"
 2. Generar el pack dos veces da el mismo SHA-256; el informe tiene los 10 niveles en verde y al menos un camino de bloqueo.
 3. `unity-compile` devuelve 0; EditMode y PlayMode en verde; `BuildDev` devuelve 0; `check-16kb.sh` OK.
 4. En el teléfono la etiqueta es "Tintalú (dev)" y `sw < sh`.
-5. Jugando con `input tap` según el informe, los niveles 1-10 terminan en `win` con `pours` igual al par, y "Siguiente" abre el nivel siguiente.
+5. Jugando con `input tap` según el informe, los niveles 1-10 terminan en `win` con `pours` igual al par del pack (en `single`: 3, 9, 10, 12, 16, 17, 15, 17, 16, 19), cada `pour` con `amount` 1 y `load` con `"pour_mode":"single"`, y "Siguiente" abre el nivel siguiente (D-001, criterio A7 de `docs/dev/decisiones.md`).
 6. Un toque ilegal da `reject` sin cambiar `pours`. Un toque en la intro da `ready` en menos de 50 ms sin seleccionar. Sin tocar, de `load` a `ready` pasan ≤ 1,5 s.
 7. Siguiendo el camino de bloqueo llega `stuck`, y `AF_LAYOUT stuck` aparece ≥ 400 ms después (R15). `undo_modal` vuelve a `playing` y `restart` deja las cuias como al inicio.
 8. Si se gana el 3 y se hace `force-stop`, al relanzar se abre el nivel 4.
+9. Con `--es af_rules_pour_mode run`, `load` trae `"pour_mode":"run"` y en el nivel 2 el vertido 0→3 mueve 2 dosis (`move[2] == 2`; criterio A8).
+10. Al seleccionar un origen ninguna otra cuia cambia: sin aros ni resaltados en los destinos (D-002, criterios B1-B3).
 
 Además de los comandos de verificación de CLAUDE.md:
 ```

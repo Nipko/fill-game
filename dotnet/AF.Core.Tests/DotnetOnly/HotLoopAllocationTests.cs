@@ -60,6 +60,51 @@ namespace AF.Core.Tests.DotnetOnly
         }
 
         [Test]
+        public void UsefulMovesInSingle_DoNotAllocate()
+        {
+            // D-001: la cantidad del modo se calcula en CuiaRules.Amount(from, to, mode), sin asignaciones.
+            BoardState state = Board();
+            var buffer = new Pour[PourRules.MaxPours];
+            int warm = PourRules.CollectUsefulMoves(state, true, PourMode.Single, buffer);
+            PourRules.Amount(state, 0, 12, PourMode.Single);
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            int total = 0;
+            for (int repeat = 0; repeat < 1000; repeat++)
+            {
+                total += PourRules.CollectUsefulMoves(state, true, PourMode.Single, buffer);
+                total += PourRules.CollectUsefulMoves(state, false, PourMode.Run, buffer);
+                total += PourRules.Amount(state, 0, 12, PourMode.Single);
+                total += CuiaRules.Amount(state[0], state[12], PourMode.Run);
+            }
+
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(warm, Is.GreaterThan(0));
+            Assert.That(total, Is.GreaterThan(1000 * warm));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void WarmSolverInSingle_OnlyAllocatesTheSolution()
+        {
+            // decisiones.md A4: 0 bytes en el bucle caliente también en Single (unos 17.000 estados expandidos, par 48).
+            BoardState state = Board();
+            var solver = new AStarSolver();
+            SolverOptions options = SolverOptions.ForPipeline(PourMode.Single);
+            SolveResult warm = solver.Solve(state, options);
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            SolveResult result = solver.Solve(state, options);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(warm.MoveCount, Is.EqualTo(48));
+            Assert.That(result.MoveCount, Is.EqualTo(48));
+            Assert.That(result.Expanded, Is.GreaterThan(5000));
+            Assert.That(allocated, Is.LessThan(1024));
+        }
+
+        [Test]
         public void WarmSolver_OnlyAllocatesTheSolution()
         {
             // Unos 12.000 estados expandidos: si cada nodo asignara, serían cientos de KB.

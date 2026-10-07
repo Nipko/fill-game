@@ -16,8 +16,12 @@ namespace AF.UI
     /// agente pueda jugar y verificar el prototipo con <c>adb logcat -s Unity</c> y <c>adb shell input tap</c>.
     /// </summary>
     /// <remarks>
-    /// Eventos de <c>AF_STATE</c>: <c>load</c>, <c>ready</c>, <c>pour</c>, <c>reject</c>, <c>undo</c>, <c>restart</c>,
-    /// <c>win</c> y <c>stuck</c> (contrato) más <c>select</c> y <c>deselect</c> (ayuda para seguir los toques).
+    /// <para>Eventos de <c>AF_STATE</c>: <c>load</c>, <c>ready</c>, <c>pour</c>, <c>reject</c>, <c>undo</c>, <c>restart</c>,
+    /// <c>win</c> y <c>stuck</c> (contrato) más <c>select</c> y <c>deselect</c> (ayuda para seguir los toques).</para>
+    /// <para>Con D-001 (una dosis por vertido) cada línea lleva <c>"pour_mode"</c> (<c>"single"</c> o <c>"run"</c>, el modo
+    /// de la sesión del nivel) y los eventos con vertido (<c>pour</c>, <c>undo</c>) llevan, además de
+    /// <c>"move":[origen,destino,cantidad]</c>, la cantidad suelta en <c>"amount"</c> (en <c>single</c>, siempre 1).
+    /// <c>pours</c> cuenta vertidos aplicados (en <c>single</c>, dosis movidas).</para>
     /// </remarks>
     public sealed class DevProbe
     {
@@ -37,14 +41,24 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Línea <c>AF_STATE</c>: <c>t</c> en ms desde el arranque, nivel, estado de 02 §2, estado del modelo, vertidos,
-        /// selección, toque o vertido del evento y cuias de abajo arriba.
+        /// Línea <c>AF_STATE</c>: <c>t</c> en ms desde el arranque, nivel, modo de vertido, estado de 02 §2, estado del
+        /// modelo, vertidos, selección, toque o vertido del evento (con su cantidad) y cuias de abajo arriba.
         /// </summary>
         public void State(string evt, LevelFlow flow, int tap, Pour? move)
         {
+            string? line = FormatState(evt, flow, tap, move);
+            if (line != null)
+            {
+                Debug.Log(line);
+            }
+        }
+
+        /// <summary>Texto de la línea <c>AF_STATE</c> de <see cref="State"/>; null si la sonda no escribe o no hay nivel.</summary>
+        public string? FormatState(string evt, LevelFlow flow, int tap, Pour? move)
+        {
             if (!Enabled || !flow.HasLevel)
             {
-                return;
+                return null;
             }
 
             BoardState board = flow.Session.Current;
@@ -53,6 +67,7 @@ namespace AF.UI
             sb.Append("AF_STATE {\"event\":\"").Append(evt).Append('"');
             sb.Append(",\"t\":").Append(((long)(Time.realtimeSinceStartupAsDouble * 1000.0)).ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"pour_mode\":\"").Append(PourModes.ToKey(flow.Session.PourMode)).Append('"');
             sb.Append(",\"phase\":\"").Append(FlowPhaseNames.Of(flow.Phase)).Append('"');
             sb.Append(",\"status\":\"").Append(StatusName(flow)).Append('"');
             sb.Append(",\"pours\":").Append(flow.Session.AppliedPours.ToString(CultureInfo.InvariantCulture));
@@ -68,6 +83,7 @@ namespace AF.UI
                 sb.Append(",\"move\":[").Append(p.Source.ToString(CultureInfo.InvariantCulture))
                     .Append(',').Append(p.Target.ToString(CultureInfo.InvariantCulture))
                     .Append(',').Append(p.Amount.ToString(CultureInfo.InvariantCulture)).Append(']');
+                sb.Append(",\"amount\":").Append(p.Amount.ToString(CultureInfo.InvariantCulture));
             }
 
             sb.Append(",\"cuias\":[");
@@ -94,7 +110,7 @@ namespace AF.UI
             }
 
             sb.Append("]}");
-            Debug.Log(sb.ToString());
+            return sb.ToString();
         }
 
         /// <summary>

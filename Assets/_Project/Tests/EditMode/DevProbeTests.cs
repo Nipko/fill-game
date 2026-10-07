@@ -1,0 +1,49 @@
+#nullable enable
+using AF.Core.Rules;
+using AF.GameFlow;
+using AF.UI;
+using NUnit.Framework;
+
+namespace AF.Tests.EditMode
+{
+    /// <summary>
+    /// Línea <c>AF_STATE</c> de la sonda de desarrollo (docs/dev/prototipo-v0.md c) con D-001: cada línea declara el modo
+    /// de vertido de la sesión y cada vertido lleva su cantidad (<c>"amount"</c> y el tercer valor de <c>"move"</c>).
+    /// </summary>
+    public sealed class DevProbeTests
+    {
+        [Test]
+        public void PourLine_CarriesThePourMode_AndTheAmountOfThePour()
+        {
+            Assert.That(DevProbe.Enabled, Is.True, "la sonda escribe en el Editor y en builds de desarrollo");
+            var flow = new LevelFlow(TestPacks.Tutorial, new MemoryProgressStore(), new RecordingListener());
+            flow.Load(2);
+            flow.TapAnywhere();
+            flow.TapCuia(2);
+            TapResult r = flow.TapCuia(3);
+            Assert.That(r.Kind, Is.EqualTo(TapKind.Poured));
+
+            string? line = new DevProbe().FormatState("pour", flow, 3, r.Pour.Pour);
+            Assert.That(line, Is.Not.Null);
+            Assert.That(line, Does.StartWith("AF_STATE {\"event\":\"pour\""));
+            Assert.That(line, Does.Contain("\"pour_mode\":\"single\""));
+            Assert.That(line, Does.Contain("\"move\":[2,3,1]"));
+            Assert.That(line, Does.Contain("\"amount\":1"));
+            Assert.That(line, Does.Contain("\"pours\":1"));
+            Assert.That(line, Does.EndWith("]}"));
+        }
+
+        [Test]
+        public void LoadLine_InRunMode_SaysRun_AndHasNoAmount()
+        {
+            Assert.That(DevProbe.Enabled, Is.True, "la sonda escribe en el Editor y en builds de desarrollo");
+            var flow = new LevelFlow(TestPacks.Tutorial, new MemoryProgressStore(), new RecordingListener(), true, PourMode.Run);
+            flow.Load(2);
+
+            string? line = new DevProbe().FormatState("load", flow, int.MinValue, null);
+            Assert.That(line, Does.Contain("\"pour_mode\":\"run\""));
+            Assert.That(line, Does.Not.Contain("\"amount\""));
+            Assert.That(line, Does.Not.Contain("\"move\""));
+        }
+    }
+}

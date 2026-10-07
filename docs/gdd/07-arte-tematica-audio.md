@@ -157,9 +157,8 @@ Tamaños en pantalla (canon de layout: GDD 02 §5, margen lateral total de 24 dp
 | Estado | Nombre (glosario) | Cambio visual | Duración |
 |---|---|---|---|
 | Reposo | — | Como 4.2 | — |
-| Seleccionada (origen) | — | La cuia sube 16 dp (02 §4.1; ≈0,94 u con 7 por fila), sombra bajo el pie se separa, iconos de fruta visibles en cada dosis | 0,12 s subida (`anim_lift_ms`, 02 §4.1 / 08 §9) |
+| Seleccionada (origen) | — | La cuia sube 16 dp (02 §4.1; ≈0,94 u con 7 por fila), sombra bajo el pie se separa, iconos de fruta visibles en cada dosis; ninguna otra cuia cambia: no se resalta ni se sugiere ningún destino (D-002, decisión del dueño del 2026-10-06; 02 §3.1) | 0,12 s subida (`anim_lift_ms`, 02 §4.1 / 08 §9) |
 | Vertiendo | — | Inclinación 38° hacia el destino; el líquido no rota con el vaso (shader, research/01 §3 [V]); chorro Bézier desde el labio | Ver 5.2 |
-| Destino válido (resaltado) | — | Aro del borde a marfil 40 % mientras hay origen seleccionado y el vertido es legal | Mientras dure la selección |
 | Vertido ilegal | — | La cuia tocada hace una sacudida horizontal ±6 dp, 2 ciclos, 120 ms (02 §4.1) y el origen, si lo hay, baja a su sitio (02 §3.1, C2 y C5-C6); sonido neutro; sin texto (research/01 Especificación 9 [V]) | 0,12 s |
 | Completa | **Cuia sellada** | Tapa de calabaza, aro de luz, no seleccionable; vidrio y líquido quedan igual (no se desatura) | Ver 5.3 |
 | Capas ocultas | **Aguas turbias** | Dosis oculta = agua parda opaca #8A7B6A con trama diagonal al 25 % y "?" marfil de 0,5 u (glosario §6.2). En el shader `Liquid` (08 §5.1-5.2) las dosis ocultas se marcan con la máscara de bits `_HiddenMask` (hasta 6 capas, una por dosis; los ocultos pueden ser no contiguos) y se pintan con `_MurkyColor` = #8A7B6A; este capítulo es la fuente de ambos valores. Al revelarse por la regla del nivel la trama se disuelve y la dosis se aclara hasta su tinte en 300 ms (Revelado, 02 §4.1); con Luciérnaga rige la secuencia de 04 §2.5 | — |
@@ -255,7 +254,7 @@ Tiempos: canon 02 §4.1 (horquillas de research/01 §3 [E]; ninguna fuente publi
 
 | t (s) | Fotograma | Detalle |
 |---|---|---|
-| 0,00 | Toque en origen | La cuia sube 16 dp (02 §4.1; ≈0,94 u con 7 por fila) en 0,12 s (`anim_lift_ms`, ease-out); iconos de fruta visibles; destinos legales con aro marfil |
+| 0,00 | Toque en origen | La cuia sube 16 dp (02 §4.1; ≈0,94 u con 7 por fila) en 0,12 s (`anim_lift_ms`, ease-out); iconos de fruta visibles |
 | 0,12 | Toque en destino | La cuia viaja hasta 0,6 u por encima del borde del destino e inclina 38° en 0,20 s (`anim_travel_ms`; arco, no línea recta); la onda del origen se agita |
 | 0,26 | Chorro | Arranca al 70 % del traslado (02 §4.1). Bézier cuadrática desde el labio (y = 5,75 u) hasta la superficie del destino con LineRenderer, grosor 0,16 → 0,10 u, UV desplazándose (research/06 §2.6 [E]); color del tinte; la dosis de destino crece mientras la de origen decrece, **0,10 s por dosis + 0,08 s de cola** (`anim_pour_dose_ms` / `anim_pour_tail_ms`: 1 dosis 0,18 s, 4 dosis 0,48 s); burbujas en el destino |
 | 0,26 + caudal | Fin de caudal | Si el destino se completa → 5.3; onda de superficie en destino, amplitud 0,08 u decayendo 0,6 s |

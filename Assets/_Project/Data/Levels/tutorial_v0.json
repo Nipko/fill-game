@@ -39,7 +39,7 @@
       "murky": false,
       "hidden": [],
       "difficulty": {
-        "par": 6
+        "par": 9
       },
       "relief": []
     },
@@ -57,7 +57,7 @@
       "murky": false,
       "hidden": [],
       "difficulty": {
-        "par": 7
+        "par": 10
       },
       "relief": []
     },
@@ -75,7 +75,7 @@
       "murky": false,
       "hidden": [],
       "difficulty": {
-        "par": 8
+        "par": 12
       },
       "relief": []
     },
@@ -93,7 +93,7 @@
       "murky": false,
       "hidden": [],
       "difficulty": {
-        "par": 10
+        "par": 16
       },
       "relief": []
     },
@@ -111,7 +111,7 @@
       "murky": false,
       "hidden": [],
       "difficulty": {
-        "par": 10
+        "par": 17
       },
       "relief": []
     },
@@ -129,7 +129,7 @@
       "murky": false,
       "hidden": [],
       "difficulty": {
-        "par": 11
+        "par": 15
       },
       "relief": []
     },
@@ -147,7 +147,7 @@
       "murky": false,
       "hidden": [],
       "difficulty": {
-        "par": 13
+        "par": 17
       },
       "relief": []
     },
@@ -165,7 +165,7 @@
       "murky": false,
       "hidden": [],
       "difficulty": {
-        "par": 14
+        "par": 16
       },
       "relief": []
     },
@@ -183,7 +183,7 @@
       "murky": false,
       "hidden": [],
       "difficulty": {
-        "par": 16
+        "par": 19
       },
       "relief": []
     }

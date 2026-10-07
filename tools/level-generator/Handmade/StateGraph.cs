@@ -1,7 +1,8 @@
-// Espacio de estados alcanzable de un tablero pequeño (docs/dev/prototipo-v0.md b: BFS sobre PourRules, ≤ 8 cuias).
+// Espacio de estados alcanzable de un tablero pequeño (docs/dev/prototipo-v0.md b: BFS sobre PourRules, ≤ 8 cuias)
+// en un modo de vertido (D-001: Single mueve una dosis; Run, la racha que cabe; docs/dev/decisiones.md §2.1).
 // Todas las reglas salen de AF.Core: vertidos legales (PourRules.CollectUsefulMoves con el kill-switch apagado da
-// todos los legales en orden (A, B) ascendente), vertidos útiles y fútiles, aplicación (PourRules.Apply), victoria y
-// Aguas estancadas. Los estados se identifican por su forma canónica (03 §3: cuias ordenadas por Cuia.Packed con
+// todos los legales en orden (A, B) ascendente), vertidos útiles y fútiles, aplicación (PourRules.Apply con el modo),
+// victoria y Aguas estancadas (estas dos y legal/fútil no dependen del modo; lo que cambia es qué estados se alcanzan). Los estados se identifican por su forma canónica (03 §3: cuias ordenadas por Cuia.Packed con
 // BoardCanon.Sort), con una clave exacta (no un hash) para que no haya colisiones.
 // Determinismo: los diccionarios solo se consultan; todo lo que decide recorre listas en orden de descubrimiento.
 using System.Globalization;
@@ -23,9 +24,15 @@ internal sealed class StateGraph
     private readonly List<int[]> _succ = new();
     private int[] _distToWin = [];
 
-    public StateGraph(BoardState start)
+    public StateGraph(BoardState start, PourMode mode)
     {
+        if (!PourModes.IsDefined(mode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(mode), mode, "Modo de vertido desconocido.");
+        }
+
         Start = start;
+        Mode = mode;
         Add(start, -1, default, 0);
         for (int node = 0; node < _rep.Count; node++)
         {
@@ -34,7 +41,7 @@ internal sealed class StateGraph
             var outs = new int[legal.Length];
             for (int k = 0; k < legal.Length; k++)
             {
-                BoardState t = PourRules.Apply(s, legal[k].Source, legal[k].Target);
+                BoardState t = Apply(s, legal[k]);
                 string key = Key(t);
                 if (!_index.TryGetValue(key, out int child))
                 {
@@ -53,16 +60,25 @@ internal sealed class StateGraph
     /// <summary>Tablero de partida (orden real de las cuias).</summary>
     public BoardState Start { get; }
 
+    /// <summary>Modo de vertido de todas las transiciones (D-001).</summary>
+    public PourMode Mode { get; }
+
     /// <summary>Estados canónicos alcanzables desde el inicio.</summary>
     public int StateCount => _rep.Count;
 
     /// <summary>Estados alcanzables desde los que ya no se puede ganar.</summary>
     public int DeadStateCount => _distToWin.Count(d => d < 0);
 
-    /// <summary>Vertidos legales de <paramref name="state"/> en orden (A, B) ascendente (todos, fútiles incluidos).</summary>
+    /// <summary>
+    /// Vertidos legales de <paramref name="state"/> en orden (A, B) ascendente (todos, fútiles incluidos), con la
+    /// cantidad de <see cref="Mode"/>.
+    /// </summary>
     public Pour[] LegalPours(BoardState state) => Collect(state, futileRuleEnabled: false);
 
-    /// <summary><c>movimientos_utiles(S)</c> de 02 §1.4 (legales y no fútiles), en orden (A, B) ascendente.</summary>
+    /// <summary>
+    /// <c>movimientos_utiles(S)</c> de 02 §1.4 (legales y no fútiles), en orden (A, B) ascendente, con la cantidad de
+    /// <see cref="Mode"/>.
+    /// </summary>
     public Pour[] UsefulPours(BoardState state) => Collect(state, futileRuleEnabled: true);
 
     /// <summary>Distancia mínima a la victoria (par desde ese estado); null si ya no se puede ganar.</summary>
@@ -96,7 +112,7 @@ internal sealed class StateGraph
             bool advanced = false;
             foreach (Pour m in LegalPours(s))
             {
-                BoardState t = PourRules.Apply(s, m.Source, m.Target);
+                BoardState t = Apply(s, m);
                 if (Distance(t) == d - 1)
                 {
                     path.Add(m);
@@ -152,7 +168,7 @@ internal sealed class StateGraph
             BoardState s = _rep[node];
             foreach (Pour m in UsefulPours(s))
             {
-                int? dt = Distance(PourRules.Apply(s, m.Source, m.Target));
+                int? dt = Distance(Apply(s, m));
                 if (dt is null)
                 {
                     toDead++;
@@ -167,9 +183,136 @@ internal sealed class StateGraph
         return (worst, toDead);
     }
 
+    /// <summary>
+    /// Número de soluciones óptimas distintas: secuencias de vertidos reales (pares de índices; el tablero no se canoniza)
+    /// que bajan la distancia a la victoria en 1 en cada paso. 0 si el tablero no tiene solución.
+    /// </summary>
+    public long CountOptimalSolutions()
+    {
+        return Distance(Start) is null ? 0 : CountFrom(Start, new Dictionary<string, long>(StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// Toda solución óptima repite al menos <paramref name="times"/> veces un mismo vertido A→B (no necesariamente
+    /// seguidos). En <see cref="PourMode.Single"/> una racha de n dosis solo pasa de A a B con n vertidos A→B (D-001;
+    /// docs/dev/decisiones.md §2.1.5): si se cumple, quien juega con el par no puede evitar repetir el vertido.
+    /// False si el tablero no tiene solución.
+    /// </summary>
+    public bool EveryOptimalSolutionRepeatsAPour(int times)
+    {
+        if (times < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(times), times, "Al menos 1 vertido.");
+        }
+
+        if (Distance(Start) is null)
+        {
+            return false;
+        }
+
+        var counts = new int[Start.Count * Start.Count];
+        return !CanAvoid(Start, counts, times, new Dictionary<string, bool>(StringComparer.Ordinal));
+    }
+
+    /// <summary>Vertidos de <paramref name="s"/> que bajan la distancia a la victoria en 1, con su estado siguiente.</summary>
+    private List<(Pour Move, BoardState Next)> OptimalSteps(BoardState s)
+    {
+        int d = Distance(s)!.Value;
+        var steps = new List<(Pour, BoardState)>();
+        foreach (Pour m in LegalPours(s))
+        {
+            BoardState t = Apply(s, m);
+            if (Distance(t) == d - 1)
+            {
+                steps.Add((m, t));
+            }
+        }
+
+        return steps;
+    }
+
+    private long CountFrom(BoardState s, Dictionary<string, long> memo)
+    {
+        if (Distance(s) == 0)
+        {
+            return 1;
+        }
+
+        string key = ExactKey(s);
+        if (memo.TryGetValue(key, out long cached))
+        {
+            return cached;
+        }
+
+        long total = 0;
+        foreach ((Pour _, BoardState next) in OptimalSteps(s))
+        {
+            total += CountFrom(next, memo);
+        }
+
+        memo[key] = total;
+        return total;
+    }
+
+    // ¿Hay una continuación óptima desde s en la que ningún vertido A→B llegue a `times` usos? counts[A·T + B] = usos.
+    private bool CanAvoid(BoardState s, int[] counts, int times, Dictionary<string, bool> memo)
+    {
+        if (Distance(s) == 0)
+        {
+            return true;
+        }
+
+        string key = ExactKey(s) + "|" + string.Join(",", counts);
+        if (memo.TryGetValue(key, out bool cached))
+        {
+            return cached;
+        }
+
+        bool found = false;
+        foreach ((Pour m, BoardState next) in OptimalSteps(s))
+        {
+            int k = m.Source * s.Count + m.Target;
+            if (counts[k] + 1 >= times)
+            {
+                continue;
+            }
+
+            counts[k]++;
+            found = CanAvoid(next, counts, times, memo);
+            counts[k]--;
+            if (found)
+            {
+                break;
+            }
+        }
+
+        memo[key] = found;
+        return found;
+    }
+
+    /// <summary>Clave exacta del tablero real (sin ordenar las cuias).</summary>
+    private static string ExactKey(BoardState state)
+    {
+        var sb = new StringBuilder(state.Count * 17);
+        for (int i = 0; i < state.Count; i++)
+        {
+            if (i > 0)
+            {
+                sb.Append('.');
+            }
+
+            sb.Append(state[i].Packed.ToString("x", CultureInfo.InvariantCulture));
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>Aplica <paramref name="move"/> en <see cref="Mode"/> (PourRules.Apply; el vertido debe ser legal).</summary>
+    public BoardState Apply(BoardState state, Pour move) => PourRules.Apply(state, move.Source, move.Target, Mode);
+
     private Pour[] Collect(BoardState state, bool futileRuleEnabled)
     {
-        int count = PourRules.CollectUsefulMoves(state, futileRuleEnabled, _buffer);
+        int count = PourRules.CollectUsefulMoves(state, futileRuleEnabled, Mode, _buffer);
         var result = new Pour[count];
         Array.Copy(_buffer, result, count);
         return result;

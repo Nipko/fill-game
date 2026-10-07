@@ -106,6 +106,7 @@ namespace AF.UI
         private float _confettiDelay = -1f;
         private bool _restartProbePending;
         private bool _undoEnabledShown = true;
+        private PourTimings _timings;
 
         /// <summary>
         /// Construye la pantalla bajo <paramref name="host"/>. Las acciones son los puntos de entrada del input
@@ -241,6 +242,12 @@ namespace AF.UI
         /// <summary>La cola visual está vacía (02 §3.2).</summary>
         public bool IsViewIdle => _animator.IsIdle;
 
+        /// <summary>Cola visual de vertidos (diagnóstico y tests: saltos y encadenados).</summary>
+        public BoardAnimator Animator => _animator;
+
+        /// <summary>Duraciones del vertido del nivel cargado (claves <c>anim_*</c> de 08 §9 por el factor de velocidad).</summary>
+        public PourTimings Timings => _timings;
+
         /// <summary>Lienzo de la pantalla (capturas de prueba).</summary>
         public Canvas Canvas => _canvas;
 
@@ -346,14 +353,12 @@ namespace AF.UI
             {
                 case TapKind.Selected:
                     SetLift(result.PreviousSelection, false);
-                    SetLift(result.Selection, true);
-                    HighlightTargets(flow, result.Selection);
+                    SetLift(result.Selection, true); // solo el origen sube: ningún destino se resalta (D-002; 02 §3.1 C1)
                     _probe.State("select", flow, result.Tapped, null);
                     break;
 
                 case TapKind.Deselected:
                     SetLift(result.PreviousSelection, false);
-                    HighlightTargets(flow, -1);
                     _probe.State("deselect", flow, result.Tapped, null);
                     break;
 
@@ -364,12 +369,10 @@ namespace AF.UI
                         _views[result.Tapped].Shake();
                     }
 
-                    HighlightTargets(flow, -1);
                     _probe.State("reject", flow, result.Tapped, null);
                     break;
 
                 case TapKind.Poured:
-                    HighlightTargets(flow, -1);
                     SetLift(result.PreviousSelection, false);
                     EnqueuePour(flow, result.Pour.Pour);
                     _probe.State("pour", flow, result.Tapped, result.Pour.Pour);
@@ -416,7 +419,6 @@ namespace AF.UI
         {
             LevelFlow flow = RequireFlow();
             ClearLifts();
-            HighlightTargets(flow, -1);
             _probe.State("win", flow, int.MinValue, null);
         }
 
@@ -425,7 +427,6 @@ namespace AF.UI
         {
             LevelFlow flow = RequireFlow();
             ClearLifts();
-            HighlightTargets(flow, -1);
             _probe.State("stuck", flow, int.MinValue, null);
         }
 
@@ -526,13 +527,13 @@ namespace AF.UI
             _views = views;
             _streamLayer.SetAsLastSibling();
             float f = GameConfig.SpeedFactor(flow.LevelNumber);
-            var timings = new PourTimings(
+            _timings = new PourTimings(
                 GameConfig.AnimLiftMs * f,
                 GameConfig.AnimTravelMs * f,
                 GameConfig.AnimPourDoseMs * f,
                 GameConfig.AnimPourTailMs * f,
                 GameConfig.AnimReturnMs * f);
-            _animator.Bind(_views, timings, GameConfig.QueueMaxLagPours);
+            _animator.Bind(_views, _timings, GameConfig.QueueMaxLagPours);
             LayoutBoard();
         }
 
@@ -568,18 +569,6 @@ namespace AF.UI
             for (int i = 0; i < _views.Length; i++)
             {
                 _views[i].SetLifted(false);
-                _views[i].SetTargetHighlight(false);
-            }
-        }
-
-        // Destinos legales del origen seleccionado (07 §4.3); la legalidad la decide el núcleo.
-        private void HighlightTargets(LevelFlow flow, int source)
-        {
-            BoardState state = flow.Session.Current;
-            for (int i = 0; i < _views.Length; i++)
-            {
-                bool on = source >= 0 && i != source && PourRules.IsLegal(state, source, i);
-                _views[i].SetTargetHighlight(on);
             }
         }
 

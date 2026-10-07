@@ -37,7 +37,11 @@ namespace AF.Solver.Search
         /// </summary>
         public int MoveCount => _moves == null ? 0 : _moves.Length;
 
-        /// <summary>Vertido <paramref name="index"/> de la solución, aplicable con <see cref="PourRules.Apply"/> en orden.</summary>
+        /// <summary>
+        /// Vertido <paramref name="index"/> de la solución, aplicable en orden con
+        /// <see cref="PourRules.Apply(AF.Core.Board.BoardState, int, int, PourMode)"/> en el modo de vertido de la búsqueda
+        /// (<see cref="SolverOptions.PourMode"/>); en <see cref="PourMode.Single"/> su <see cref="Pour.Amount"/> es siempre 1.
+        /// </summary>
         public Pour GetMove(int index)
         {
             if (_moves == null || (uint)index >= (uint)_moves.Length)

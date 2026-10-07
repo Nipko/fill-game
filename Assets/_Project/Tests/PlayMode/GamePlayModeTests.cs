@@ -48,15 +48,21 @@ namespace AF.Tests.PlayMode
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
             Assert.That(flow.Selected, Is.EqualTo(TapController.NoSelection));
 
-            // Solución del solucionador del núcleo, tocada sin esperar a las animaciones (cola de 02 §3.2).
-            SolveResult solution = new AStarSolver().Solve(flow.Session.Current, SolverOptions.Pipeline);
+            // El juego arranca en el modo de vertido por defecto: una dosis por vertido (rules_pour_mode = "single", D-001).
+            Assert.That(flow.Session.PourMode, Is.EqualTo(PourMode.Single));
+
+            // Solución del solucionador del núcleo en el modo de la sesión, tocada sin esperar a las animaciones (cola de
+            // 02 §3.2). El par del paquete es el de single.
+            SolveResult solution = new AStarSolver().Solve(flow.Session.Current, SolverOptions.ForPipeline(flow.Session.PourMode));
             Assert.That(solution.IsSolved, Is.True);
             Assert.That(solution.MoveCount, Is.EqualTo(flow.Level.Par));
             for (int i = 0; i < solution.MoveCount; i++)
             {
                 Pour move = solution.GetMove(i);
                 Assert.That(boot.TapCuia(move.Source).Kind, Is.EqualTo(TapKind.Selected), "origen " + i);
-                Assert.That(boot.TapCuia(move.Target).Kind, Is.EqualTo(TapKind.Poured), "destino " + i);
+                TapResult poured = boot.TapCuia(move.Target);
+                Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured), "destino " + i);
+                Assert.That(poured.Pour.Pour.Amount, Is.EqualTo(1), "una dosis por vertido " + i);
             }
 
             Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Won));
@@ -65,6 +71,7 @@ namespace AF.Tests.PlayMode
             yield return PlayModeHelpers.WaitFor(() => flow.Phase == FlowPhase.VictoryScreen, "pantalla de victoria");
             Assert.That(flow.Session.AppliedPours, Is.EqualTo(flow.Level.Par));
             Assert.That(boot.View!.IsViewIdle, Is.True);
+            Assert.That(boot.View.Animator.LagSnapCount, Is.EqualTo(0), "sin saltos de la cola visual");
             CuiaView[] views = boot.View.Views;
             for (int i = 0; i < views.Length; i++)
             {

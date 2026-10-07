@@ -47,7 +47,6 @@ namespace AF.Presentation
         private RectTransform _root = null!;
         private RectTransform _body = null!;
         private RectTransform _liquid = null!;
-        private Image _targetRing = null!;
         private Image _back = null!;
         private Image _front = null!;
         private Image _cap = null!;
@@ -155,8 +154,6 @@ namespace AF.Presentation
             _meniscus.rectTransform.sizeDelta = new Vector2(0f, Mathf.Max(1.5f, 0.08f * _u));
 
             _cap.rectTransform.sizeDelta = new Vector2(1.10f * _u, 0.35f * _u);
-            _targetRing.rectTransform.anchoredPosition = new Vector2(0f, (HeightU - 0.12f) * _u);
-            _targetRing.rectTransform.sizeDelta = new Vector2(1.9f * _u, 0.9f * _u);
             _glow.rectTransform.anchoredPosition = new Vector2(0f, (HeightU - 0.3f) * _u);
             _glow.rectTransform.sizeDelta = new Vector2(2.2f * _u, 2.2f * _u);
             PlaceCapAtRest();
@@ -252,15 +249,6 @@ namespace AF.Presentation
             if (ms >= SealMs)
             {
                 SetSealed(true);
-            }
-        }
-
-        /// <summary>Aro de los destinos legales mientras hay origen seleccionado (07 §4.3).</summary>
-        public void SetTargetHighlight(bool on)
-        {
-            if (_targetRing.gameObject.activeSelf != on)
-            {
-                _targetRing.gameObject.SetActive(on);
             }
         }
 
@@ -508,10 +496,6 @@ namespace AF.Presentation
             GetComponent<HitArea>().raycastTarget = true;
 
             _body = NewRect("Body", _root, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
-
-            _targetRing = NewImage("TargetRing", _body, art.Ring, RingColor);
-            SetAnchors(_targetRing.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0.5f));
-            _targetRing.gameObject.SetActive(false);
 
             _back = NewImage("GlassBack", _body, art.CuiaBack(capacity), Color.white);
             Stretch(_back.rectTransform);

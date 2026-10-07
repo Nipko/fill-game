@@ -58,7 +58,7 @@ namespace AF.Presentation
         /// <summary>Tapa de calabaza (07 §4.4): 1,10 u × 0,35 u.</summary>
         public Sprite SealCap { get; }
 
-        /// <summary>Aro de luz blanco (sellado, destino válido, celebración).</summary>
+        /// <summary>Aro de luz blanco (sellado y celebración, 07 §5.3-§5.4; sin resaltado de destinos, D-002).</summary>
         public Sprite Ring { get; }
 
         /// <summary>Disco blanco suave.</summary>

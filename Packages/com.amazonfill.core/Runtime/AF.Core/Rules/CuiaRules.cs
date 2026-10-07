@@ -6,7 +6,8 @@ namespace AF.Core.Rules
 {
     /// <summary>
     /// Reglas de GDD 02 §1 evaluadas sobre cuias sueltas y la tabla <c>U_c</c>: sellado (R5), <c>legal</c> y
-    /// <c>cantidad</c> (R9) y <c>futil</c> (02 §1.4 con la excepción de Aguas turbias de 04 §5.1).
+    /// <c>cantidad</c> (R9, con el modo de vertido de D-001) y <c>futil</c> (02 §1.4 con la excepción de Aguas turbias
+    /// de 04 §5.1). Solo <c>cantidad</c> depende de <see cref="PourMode"/>.
     /// </summary>
     /// <remarks>
     /// <para>Es la <b>única</b> implementación de estas reglas: <see cref="PourRules"/> (tablero del cliente) y
@@ -66,12 +67,26 @@ namespace AF.Core.Rules
         }
 
         /// <summary>
-        /// <c>cantidad(A, B) = min(racha visible de A, espacio de B)</c> (R6, R9).
-        /// Precondición: <see cref="IsLegal"/> es verdadero; si no, el valor no tiene sentido.
+        /// <c>cantidad(A, B)</c> según el modo de vertido (D-001): 1 con <see cref="PourMode.Single"/>;
+        /// <c>min(racha visible de A, espacio de B)</c> con <see cref="PourMode.Run"/> (R6, R9). Es el <b>único</b> sitio
+        /// donde se aplica el modo: tablero, partida, solver y bot llaman aquí.
+        /// Precondición: <see cref="IsLegal"/> es verdadero (A no vacía y B con hueco, así que 1 siempre cabe); si no, el
+        /// valor no tiene sentido. Bucle caliente: no valida <paramref name="mode"/> (cualquier valor distinto de
+        /// <see cref="PourMode.Run"/> se trata como <see cref="PourMode.Single"/>).
+        /// </summary>
+        public static int Amount(Cuia from, Cuia to, PourMode mode)
+        {
+            return mode == PourMode.Run ? Math.Min(from.TopRunLength, to.Space) : 1;
+        }
+
+        /// <summary>
+        /// Heredada: <c>cantidad(A, B) = min(racha visible de A, espacio de B)</c> (R6, R9), igual que
+        /// <see cref="Amount(Cuia, Cuia, PourMode)"/> con <see cref="PourMode.Run"/>. Se conserva sin cambio de
+        /// comportamiento para que <c>tools/</c> y Unity sigan compilando hasta que la retire T6 (decisiones.md §3).
         /// </summary>
         public static int Amount(Cuia from, Cuia to)
         {
-            return Math.Min(from.TopRunLength, to.Space);
+            return Amount(from, to, PourMode.Run);
         }
 
         /// <summary>

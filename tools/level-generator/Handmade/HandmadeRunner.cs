@@ -1,5 +1,6 @@
 // Modo --handmade: comprueba el tutorial hecho a mano y emite el pack v0 y su informe (docs/dev/prototipo-v0.md b).
-//   entrada:  spec.json (tools/level-generator/specs/tutorial_v0.json; tintes por ID del glosario §9)
+//   entrada:  spec.json (tools/level-generator/specs/tutorial_v0.json; tintes por ID del glosario §9) y el modo de
+//             vertido (--pour-mode; por defecto PourModes.Default = single, D-001)
 //   salida:   <out>/<pack_id>.json   (subconjunto documentado de af-level/1; solo si todas las comprobaciones pasan)
 //             <report>               (informe Markdown; se escribe siempre)
 // Mismo JSON byte a byte en cada ejecución (UTF-8 sin BOM, LF, 2 espacios, orden de claves fijo; .claude/rules/data-json.md).
@@ -8,6 +9,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using AF.Core.Rules;
 
 namespace AmazonFill.Tools.LevelGenerator.Handmade;
 
@@ -15,8 +17,13 @@ internal static class HandmadeRunner
 {
     private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
 
-    /// <summary>0 = todo PASS; 1 = alguna comprobación falla (o --check y el pack difiere); 2 = especificación ilegible.</summary>
-    public static int Run(string specPath, string outDir, string reportPath, bool checkOnly)
+    /// <summary>
+    /// 0 = todo PASS; 1 = alguna comprobación falla (o --check y el pack difiere); 2 = especificación ilegible.
+    /// El par del pack se calcula en <paramref name="mode"/>; el pack no declara el modo (el subconjunto v0 de
+    /// af-level/1 no tiene ese campo y añadirlo es cambio de contrato, pregunta P7 de docs/dev/decisiones.md): asume el
+    /// modo por defecto del cliente. El informe declara el modo y el par del otro modo como referencia.
+    /// </summary>
+    public static int Run(string specPath, string outDir, string reportPath, bool checkOnly, PourMode mode)
     {
         List<LevelSpec> specs;
         try
@@ -29,13 +36,16 @@ internal static class HandmadeRunner
             return 2;
         }
 
+        string modeKey = PourModes.ToKey(mode);
+        string referenceKey = PourModes.ToKey(mode == PourMode.Single ? PourMode.Run : PourMode.Single);
+        Console.WriteLine($"modo de vertido: {modeKey}{(mode == PourModes.Default ? " (por defecto)" : " (NO es el modo por defecto del cliente)")}");
         var levels = new List<HandmadeLevel>();
         foreach (LevelSpec spec in specs)
         {
             HandmadeLevel level;
             try
             {
-                level = new HandmadeLevel(spec);
+                level = new HandmadeLevel(spec, mode);
             }
             catch (SpecException e)
             {
@@ -46,7 +56,7 @@ internal static class HandmadeRunner
             level.Run();
             levels.Add(level);
             Console.WriteLine(Ascii(string.Create(CultureInfo.InvariantCulture,
-                $"[{(level.Ok ? "PASS" : "FAIL")}] nivel {level.Number,2}: {level.Board.Count} cuias = {level.Colors.Length} colores + {level.Empties} vacios, par {HandmadeLevel.Fmt(level.Par)}, {level.Graph?.StateCount ?? 0} estados, estancadas en {(level.StuckPath is null ? "-" : level.StuckPath.Count.ToString(CultureInfo.InvariantCulture))}")));
+                $"[{(level.Ok ? "PASS" : "FAIL")}] nivel {level.Number,2}: {level.Board.Count} cuias = {level.Colors.Length} colores + {level.Empties} vacios, par {HandmadeLevel.Fmt(level.Par)} ({referenceKey}: {HandmadeLevel.Fmt(level.ReferencePar)}), {level.Graph?.StateCount ?? 0} estados, estancadas en {(level.StuckPath is null ? "-" : level.StuckPath.Count.ToString(CultureInfo.InvariantCulture))}")));
             foreach (Check c in level.Checks.Where(c => !c.Ok))
             {
                 Console.WriteLine(Ascii($"         FAIL {c.Name}: {c.Detail}"));
@@ -87,7 +97,7 @@ internal static class HandmadeRunner
             Directory.CreateDirectory(reportDir);
         }
 
-        File.WriteAllBytes(reportPath, Utf8NoBom.GetBytes(HandmadeReport.Build(levels, packChecks, sha, note, allOk)));
+        File.WriteAllBytes(reportPath, Utf8NoBom.GetBytes(HandmadeReport.Build(levels, packChecks, sha, note, allOk, mode)));
 
         int total = levels.Sum(l => l.Checks.Count) + packChecks.Count;
         int pass = levels.Sum(l => l.Checks.Count(c => c.Ok)) + packChecks.Count(c => c.Ok);

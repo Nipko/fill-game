@@ -60,7 +60,7 @@ namespace AF.Tests.PlayMode
             string dir = Path.Combine(Application.dataPath, "../Logs/snapshots");
             Directory.CreateDirectory(dir);
 
-            // Nivel 7: intro, tablero, selección y vertido.
+            // Nivel 7: intro, tablero, selección (solo el origen sube, sin aros en los destinos: D-002) y vertido.
             yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
             GameBootstrap boot = GameBootstrap.Current!;
             Attach(boot);
@@ -71,7 +71,7 @@ namespace AF.Tests.PlayMode
             yield return PlayModeHelpers.WaitFor(() => boot.Flow!.Phase == FlowPhase.Playing, "fin de la intro");
             yield return Wait(0.3f);
             Save(dir, "02_board_l7");
-            SolveResult solution = new AStarSolver().Solve(boot.Flow!.Session.Current, SolverOptions.Pipeline);
+            SolveResult solution = new AStarSolver().Solve(boot.Flow!.Session.Current, SolverOptions.ForPipeline(boot.Flow.Session.PourMode));
             Pour first = solution.GetMove(0);
             boot.TapCuia(first.Source);
             yield return Wait(0.25f);
@@ -89,7 +89,7 @@ namespace AF.Tests.PlayMode
             boot = GameBootstrap.Current!;
             Attach(boot);
             boot.TapAnywhere();
-            SolveResult s1 = new AStarSolver().Solve(boot.Flow!.Session.Current, SolverOptions.Pipeline);
+            SolveResult s1 = new AStarSolver().Solve(boot.Flow!.Session.Current, SolverOptions.ForPipeline(boot.Flow.Session.PourMode));
             for (int i = 0; i < s1.MoveCount; i++)
             {
                 boot.TapCuia(s1.GetMove(i).Source);

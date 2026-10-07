@@ -6,8 +6,8 @@ using AF.Core.Board;
 namespace AF.Core.Rules
 {
     /// <summary>
-    /// Un vertido A→B y las dosis que mueve (R9): <c>cantidad(A, B)</c> en el estado en que se hizo.
-    /// Un vertido, parcial o completo, cuenta como 1 movimiento.
+    /// Un vertido A→B y las dosis que mueve (R9): <c>cantidad(A, B)</c> en el estado y el modo de vertido en que se
+    /// hizo (siempre 1 en <see cref="PourMode.Single"/>, D-001). Un vertido cuenta como 1 movimiento en los dos modos.
     /// </summary>
     public readonly struct Pour : IEquatable<Pour>
     {
@@ -43,7 +43,7 @@ namespace AF.Core.Rules
         /// <summary>Índice de la cuia destino B.</summary>
         public int Target { get; }
 
-        /// <summary>Dosis movidas: <c>cantidad(A, B)</c>.</summary>
+        /// <summary>Dosis movidas: <c>cantidad(A, B)</c> (1 en <see cref="PourMode.Single"/>).</summary>
         public int Amount { get; }
 
         /// <inheritdoc />
