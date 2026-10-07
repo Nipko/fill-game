@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ci/check-16kb.sh - Compuerta de paginas de 16 KB para Aquazonia (GDD 08 sec. 12.1 y 13.1;
+# ci/check-16kb.sh - Compuerta de paginas de 16 KB para Amazon Fill (GDD 08 sec. 12.1 y 13.1;
 # docs/setup/research/b-android-play-2026.md sec. 3).
 #
 # Uso:

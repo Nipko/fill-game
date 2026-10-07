@@ -1,4 +1,4 @@
-// level-qa: control de calidad de paquetes de niveles de Aquazonia (GDD 08 §2.4).
+// level-qa: control de calidad de paquetes de niveles de Amazon Fill (GDD 08 §2.4).
 // Andamiaje: por ahora valida los argumentos y sale con 1 (fallar cerrado). Re-resolverá cada nivel
 // con AF.Solver y fallará el CI si algo no cumple.
 // Todo lo que se imprime es ASCII (.claude/rules/ci.md): la consola de Windows y Git Bash corrompen
@@ -7,7 +7,7 @@ using AF.Core.Board;
 using AF.Solver.Collections;
 
 const string Usage = """
-    level-qa: control de calidad de paquetes de niveles de Aquazonia (GDD 08 sec. 2.4)
+    level-qa: control de calidad de paquetes de niveles de Amazon Fill (GDD 08 sec. 2.4)
 
     Uso:
       dotnet run --project tools/level-qa -- <paquete.json> [<paquete.json> ...] [--report <informe.md>]

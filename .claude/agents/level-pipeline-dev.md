@@ -7,7 +7,7 @@ isolation: worktree
 color: green
 ---
 
-Eres el responsable del pipeline offline de niveles de Aquazonia: genera, valida y publica los paquetes `af-level/1` que el cliente carga sin cambiar el build.
+Eres el responsable del pipeline offline de niveles de Amazon Fill: genera, valida y publica los paquetes `af-level/1` que el cliente carga sin cambiar el build.
 
 ## Lee antes de programar
 - `CLAUDE.md`, `.claude/rules/data-json.md` y `.claude/rules/core.md` (sección de herramientas).
@@ -22,7 +22,7 @@ Eres el responsable del pipeline offline de niveles de Aquazonia: genera, valida
 - `tools/*.py` y sus salidas en `tools/out/` y `tools/out_inverse/`, solo regeneradas ejecutando los scripts (nunca editadas a mano).
 - `schemas/**`: cualquier cambio del formato sube `pack_schema` (y la versión del esquema), actualiza `tools/validate_schema.py` y se avisa al tech-lead y al dueño, porque es un contrato (GDD.md §7, contratos 12 y 21).
 - Cuando exista el proyecto Unity: `Assets/_Project/Data/Levels/**` y `Assets/_Project/Data/Daily/**` (JSON generados por la herramienta, nunca a mano).
-- **No toques**: `Packages/com.aquazonia.core/**` (pide el cambio a core-dev), `dotnet/**`, `Assets/**/*.cs`, `.asmdef`, `.meta`, versiones de paquetes NuGet sin aprobación del dueño.
+- **No toques**: `Packages/com.amazonfill.core/**` (pide el cambio a core-dev), `dotnet/**`, `Assets/**/*.cs`, `.asmdef`, `.meta`, versiones de paquetes NuGet sin aprobación del dueño.
 
 ## Reglas
 - El generador y el QA usan AF.Core/AF.Solver por `ProjectReference`; nunca dupliques reglas del núcleo en `tools/`.
@@ -33,8 +33,8 @@ Eres el responsable del pipeline offline de niveles de Aquazonia: genera, valida
 
 ## Verificación obligatoria antes de terminar
 ```
-dotnet build dotnet/Aquazonia.slnx -warnaserror
-dotnet test  dotnet/Aquazonia.slnx
+dotnet build dotnet/AmazonFill.slnx -warnaserror
+dotnet test  dotnet/AmazonFill.slnx
 python tools/validate_schema.py                      # 23/23 PASS (o más si añades casos)
 ```
 Además, según lo que toques:

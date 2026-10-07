@@ -4,7 +4,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>level-generator</AssemblyName>
-    <RootNamespace>Aquazonia.Tools.LevelGenerator</RootNamespace>
+    <RootNamespace>AmazonFill.Tools.LevelGenerator</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>

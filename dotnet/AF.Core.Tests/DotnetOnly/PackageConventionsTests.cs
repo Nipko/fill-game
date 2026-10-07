@@ -7,7 +7,7 @@ using NUnit.Framework;
 namespace AF.Core.Tests.DotnetOnly
 {
     /// <summary>
-    /// Guardarraíles del paquete Packages/com.aquazonia.core que solo se pueden comprobar desde dotnet,
+    /// Guardarraíles del paquete Packages/com.amazonfill.core que solo se pueden comprobar desde dotnet,
     /// porque leen el disco (informe D §4.2 y §6.4). No se comparten con Unity.
     /// </summary>
     [TestFixture]
@@ -74,7 +74,7 @@ namespace AF.Core.Tests.DotnetOnly
             DirectoryInfo? dir = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
             while (dir != null)
             {
-                string candidate = Path.Combine(dir.FullName, "Packages", "com.aquazonia.core");
+                string candidate = Path.Combine(dir.FullName, "Packages", "com.amazonfill.core");
                 if (File.Exists(Path.Combine(candidate, "package.json")))
                 {
                     return candidate;
@@ -84,7 +84,7 @@ namespace AF.Core.Tests.DotnetOnly
             }
 
             throw new DirectoryNotFoundException(
-                "No se encontró Packages/com.aquazonia.core subiendo desde " + TestContext.CurrentContext.TestDirectory);
+                "No se encontró Packages/com.amazonfill.core subiendo desde " + TestContext.CurrentContext.TestDirectory);
         }
     }
 }

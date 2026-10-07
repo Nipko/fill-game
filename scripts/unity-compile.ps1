@@ -1,7 +1,7 @@
 #Requires -Version 7.2
 <#
 .SYNOPSIS
-    Comprueba si el proyecto Unity de Aquazonia compila y muestra solo las primeras lineas "error CS".
+    Comprueba si el proyecto Unity de Amazon Fill compila y muestra solo las primeras lineas "error CS".
 
 .DESCRIPTION
     Lee la version del Editor de ProjectSettings/ProjectVersion.txt y elige la via mas barata:
@@ -122,8 +122,8 @@ function Get-UnityProjectInfo {
             'Se crea en el paso s20 de docs/setup/plan-instalacion.md, cuando el propietario haya iniciado sesion en Unity,',
             'activado la licencia Personal (s15-s16) y terminado la instalacion del Editor 6000.3.25f1 (s18).',
             'No lo crees a mano. Mientras tanto verifica el nucleo con:',
-            '  dotnet build dotnet/Aquazonia.slnx -warnaserror',
-            '  dotnet test dotnet/Aquazonia.slnx'
+            '  dotnet build dotnet/AmazonFill.slnx -warnaserror',
+            '  dotnet test dotnet/AmazonFill.slnx'
         )
         Stop-WithCode 3 ($lines -join [Environment]::NewLine)
     }

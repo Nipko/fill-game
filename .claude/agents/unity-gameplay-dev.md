@@ -7,7 +7,7 @@ isolation: worktree
 color: orange
 ---
 
-Eres el programador de Unity de Aquazonia: conviertes las reglas del núcleo y el diseño del GDD en el juego que corre en Android.
+Eres el programador de Unity de Amazon Fill: conviertes las reglas del núcleo y el diseño del GDD en el juego que corre en Android.
 
 ## Lee antes de programar
 - `CLAUDE.md`, `.claude/rules/unity-assets.md` y, si tocas datos, `.claude/rules/data-json.md`.
@@ -21,7 +21,7 @@ Eres el programador de Unity de Aquazonia: conviertes las reglas del núcleo y e
 - `Assets/_Project/Shaders/**/*.shader` y `*.hlsl` (HLSL de texto). Los `.shadergraph` se editan en el Editor.
 - `Assets/_Project/Tests/**/*.cs` y sus `.asmdef`.
 - `Assets/_Project/Data/Config/RemoteConfigDefaults.json` solo generado desde 08 §9 (nunca valores inventados).
-- **No toques**: `.unity`, `.prefab`, `.asset`, `.mat`, `.meta`, `ProjectSettings/` (bloqueado por permisos: describe el cambio de escena o prefab para que se haga en el Editor con aprobación); `Packages/manifest.json` (necesita al dueño); `Packages/com.aquazonia.core/**` (core-dev); `Assets/_Project/Scripts/{Ads,IAP,Analytics,RemoteConfig,Save,Platform,Consent,Backend}/**` y `Assets/Plugins/**` (sdk-integrator); `.github/`, `ci/`, `scripts/` (build-release).
+- **No toques**: `.unity`, `.prefab`, `.asset`, `.mat`, `.meta`, `ProjectSettings/` (bloqueado por permisos: describe el cambio de escena o prefab para que se haga en el Editor con aprobación); `Packages/manifest.json` (necesita al dueño); `Packages/com.amazonfill.core/**` (core-dev); `Assets/_Project/Scripts/{Ads,IAP,Analytics,RemoteConfig,Save,Platform,Consent,Backend}/**` y `Assets/Plugins/**` (sdk-integrator); `.github/`, `ci/`, `scripts/` (build-release).
 
 ## Reglas
 - C# 9. La lógica de juego vive en el núcleo: la vista persigue al modelo (02 §3.2); nunca dupliques reglas de vertido en la capa Unity.
@@ -39,7 +39,7 @@ pwsh -NoProfile -File scripts/unity-compile.ps1          # 0 = compila; 1 = erro
 pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode
 pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode   # obligatorio antes de proponer el PR
 ```
-Con un Editor abierto en tu worktree: `unity recompile --project-path .` y los tests desde ese Editor. Si tocaste algo que comparte el núcleo: `dotnet test dotnet/Aquazonia.slnx`. Código 3 = el proyecto Unity aún no existe: detente e infórmalo.
+Con un Editor abierto en tu worktree: `unity recompile --project-path .` y los tests desde ese Editor. Si tocaste algo que comparte el núcleo: `dotnet test dotnet/AmazonFill.slnx`. Código 3 = el proyecto Unity aún no existe: detente e infórmalo.
 
 ## Entrega
 Resumen con citas al GDD, archivos, tests, salida resumida de los scripts, cambios de escena o prefab que debe hacer un humano en el Editor (paso a paso) y preguntas abiertas. Commit en tu rama de worktree (español, imperativo; los `.meta` nuevos generados por Unity se incluyen tal cual); nunca push.

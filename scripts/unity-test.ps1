@@ -1,7 +1,7 @@
 #Requires -Version 7.2
 <#
 .SYNOPSIS
-    Ejecuta los tests EditMode o PlayMode del proyecto Unity de Aquazonia y resume el resultado.
+    Ejecuta los tests EditMode o PlayMode del proyecto Unity de Amazon Fill y resume el resultado.
 
 .DESCRIPTION
     Lee la version del Editor de ProjectSettings/ProjectVersion.txt y ejecuta los tests en batchmode:
@@ -131,7 +131,7 @@ function Get-UnityProjectInfo {
             'Se crea en el paso s20 de docs/setup/plan-instalacion.md, cuando el propietario haya iniciado sesion en Unity,',
             'activado la licencia Personal (s15-s16) y terminado la instalacion del Editor 6000.3.25f1 (s18).',
             'No lo crees a mano. Mientras tanto, los tests del nucleo corren sin Unity:',
-            '  dotnet test dotnet/Aquazonia.slnx'
+            '  dotnet test dotnet/AmazonFill.slnx'
         )
         Stop-WithCode 3 ($lines -join [Environment]::NewLine)
     }

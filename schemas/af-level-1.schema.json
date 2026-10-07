@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:aquazonia:schemas:af-level-1",
-  "title": "Aquazonia (Amazon Fill) · paquete de niveles af-level/1",
+  "$id": "urn:amazonfill:schemas:af-level-1",
+  "title": "Amazon Fill · paquete de niveles af-level/1",
   "description": "JSON Schema canónico del formato de nivel definido en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.1 (pack_schema 1; única copia del esquema). Lo emite tools/level-generator y lo validan tools/level-qa y AF.Levels (comprobación: python tools/validate_schema.py). El esquema exige: patrones de id y seed de campaña (m{mm}_v{v}_n{nnnn} / amazonfill:v1:m{mm}:v{v}:n{nnnn}) y del Reto del río (kind daily: d{b}_n{nnnn} / amazonfill:v1:daily:b{b}:d{ddd}, 03 §16); relief con al menos una variante desde el nivel 31; par de relief nulo solo en plus_empty (03 §13). Lo que el esquema no puede expresar lo comprueba tools/level-qa: igualdad de longitud de caps, cuias y attrs; cada tinte con exactamente units_per_color unidades; tinte con level_debut posterior al nivel; risk_pairs <= max_risk_pairs; K (longitud de palette) <= k_max; par >= 2*K; label coherente con bot_fail (>=0,75 hard, >=0,90 very_hard); Aguas turbias con >=1 vertido seguro en todas las realidades y ocultos en <= 3 cuias; variantes de relief resolubles con bot_fail que baja >=0,20 (si el base tiene bot_fail <0,20, como los debuts de 02 §9.2, basta par menor en minus_color o el vacío extra de plus_empty); bot_fail en la ventana del slot (<0,20 en debuts); semilla que reproduce el tablero base; en daily, banda y día de slot coherentes con id y seed; <=14 cuias generadas (02 R1). Cualquier cambio de este archivo que altere la validación sube pack_schema; los cambios editoriales de description no.",
   "type": "object",
   "additionalProperties": false,

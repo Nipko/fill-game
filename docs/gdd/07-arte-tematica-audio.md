@@ -1,12 +1,12 @@
 # Dirección de arte, temática y audio
 
-**Proyecto:** Amazon Fill (nombre interno) · **Nombre comercial:** Aquazonia · **Capítulo:** 07 del GDD · **Fecha:** 2026-10-06 (revisión cruzada) · **Estado:** borrador para aprobación del dueño del producto.
+**Proyecto:** Amazon Fill (nombre interno) · **Nombre comercial:** Tintalú (decisión del dueño del 2026-10-06; sustituye a Aquazonia, descartado por la solicitud idéntica INPI 938306200 en Brasil) · **Capítulo:** 07 del GDD · **Fecha:** 2026-10-06 (revisión cruzada) · **Estado:** borrador para aprobación del dueño del producto.
 
 Convención de evidencia: **[V]** verificado en el informe citado · **[E]** estimación del informe · **[R]** reseñas de usuarios · **[NV]** no verificado · **[P]** propuesta de este capítulo a calibrar en soft launch. "(dirección N)" remite al punto N de las decisiones de dirección vinculantes. Nombres de juego, moneda, vidas, comodines, eventos, mundos y mascotas según `docs/gdd/00-glosario.md`. Unidad de medida de la cuia: **u** = altura de una dosis de líquido (sección 4). Unidad de UI: **dp** sobre una pantalla de referencia de 360 × 780 dp (19,5:9).
 
 ## Resumen
 
-Aquazonia se ve como una lámina de expedición botánica pintada en acuarela y vista a través de vidrio: fondos desaturados y oscuros de la cuenca real (13 mundos, 3 aguas base), cuias de vidrio con cavidad recta y los 14 tintes de fruta como lo más saturado de la pantalla (research/07 §8). El capítulo fija la tabla de mundos ampliada (paisaje, hora, agua, frutas, skin, fauna, instrumento), la paleta con L* y pares de riesgo, la cuia en unidades para que un artista la dibuje y un programador la enmascare, los storyboards de Sumergir y teñir (1,4 s / 0,8 s, saltable), vertido, sellado, victoria y Aguas estancadas, las hojas de Capi y Rosa, el UI kit con contrastes medidos, las pautas culturales operativas, el plan de audio por mundo, los assets de tienda y UA y el conteo de arte de la 1.0. Todo lo que no es trade dress propio de Royal Match / Magic Sort (gatos, caldero, oro biselado, calavera, misma silueta de frasco) queda prohibido por lista.
+Tintalú se ve como una lámina de expedición botánica pintada en acuarela y vista a través de vidrio: fondos desaturados y oscuros de la cuenca real (13 mundos, 3 aguas base), cuias de vidrio con cavidad recta y los 14 tintes de fruta como lo más saturado de la pantalla (research/07 §8). El capítulo fija la tabla de mundos ampliada (paisaje, hora, agua, frutas, skin, fauna, instrumento), la paleta con L* y pares de riesgo, la cuia en unidades para que un artista la dibuje y un programador la enmascare, los storyboards de Sumergir y teñir (1,4 s / 0,8 s, saltable), vertido, sellado, victoria y Aguas estancadas, las hojas de Capi y Rosa, el UI kit con contrastes medidos, las pautas culturales operativas, el plan de audio por mundo, los assets de tienda y UA y el conteo de arte de la 1.0. Todo lo que no es trade dress propio de Royal Match / Magic Sort (gatos, caldero, oro biselado, calavera, misma silueta de frasco) queda prohibido por lista.
 
 ## 1. Concepto visual
 
@@ -34,9 +34,9 @@ Aquazonia se ve como una lámina de expedición botánica pintada en acuarela y 
 
 ### 1.3 Premium sin copiar el trade dress de Royal Match / Magic Sort
 
-Las reglas de un juego no son protegibles, su presentación sí (*Tetris v. Xio*, *Spry Fox v. LOLApps*, research/08 §4.1 [V]); Apple 4.1 "Copycats" y la política de PI de Play retiran por queja del titular (research/08 §4.1 [V]). Lista cerrada de lo que **no** aparece en Aquazonia y qué hacemos en su lugar:
+Las reglas de un juego no son protegibles, su presentación sí (*Tetris v. Xio*, *Spry Fox v. LOLApps*, research/08 §4.1 [V]); Apple 4.1 "Copycats" y la política de PI de Play retiran por queja del titular (research/08 §4.1 [V]). Lista cerrada de lo que **no** aparece en Tintalú y qué hacemos en su lugar:
 
-| Elemento ajeno | Fuente que lo identifica | Qué hacemos en Aquazonia |
+| Elemento ajeno | Fuente que lo identifica | Qué hacemos en Tintalú |
 |---|---|---|
 | Gatos magos, tres gatos guía de capítulo, gato con caldero al pie de la pantalla | research/09 §Qué NO copiar [V]; research/magic-sort/c §4 [V] | Capi (capibara) y Rosa (boto); Capi nunca fijo en el centro inferior con un objeto (glosario §3.1) |
 | Caldero, ingredientes místicos, escobas, varitas, portales morados, slime | research/09 §Qué NO copiar [V] | Fenómenos naturales y fauna como comodines (Marea, Pororoca, Morpho, Luciérnaga) |
@@ -545,6 +545,8 @@ Música integrada a −20 LUFS, lecho ambiental a −26 LUFS, SFX con picos ≤ 
 
 Reglas de ficha: título ≤ 30 caracteres, prohibidos "Best", "#1", "Free", MAYÚSCULAS, emojis e insignias en el icono; ≥ 4 capturas verticales de 1080 px+ para recomendación; experimentos de ficha por idioma (research/08 §3.2 [V]). Icono 512 px, gráfico de funciones 1024 × 500, 8 capturas por idioma (research/06 §10 checklist [V]). Los iconos dominantes del género son 2-3 tubos saturados sobre fondo liso, sin texto (research/08 §3.1 [E]); el nuestro debe leerse igual de rápido y distinguirse por el objeto.
 
+**Título y logotipo (decisión del dueño del 2026-10-06).** Títulos de ficha: EN "Tintalú: Water Sort Puzzle" (26 caracteres), ES "Tintalú: Ordenar Agua" (21) y PT-BR "Tintalú: Classificar Água" (25), con la tilde en todo lo visible, porque sin ella se lee "tinTAlu"; la forma ASCII "Tintalu" queda para dominios, usuarios de redes, IDs y búsquedas (`docs/legal/nombres-candidatos.md` §4.1). El nombre evoca el teñido del agua con frutas (Sumergir y teñir); el agua y la selva los ponen el subtítulo, el arte y los mundos. **Logotipo:** "Tintalú" con la tilde visible y una gota o pincelada de tinte, sin parecido con la marca "Tinta" de la App Store ("Tinta: Color Logic Puzzle" y "Tinta: Coloring Book & Paint"); la búsqueda figurativa del logotipo la hace el abogado de marcas cuando esté diseñado (`docs/legal/nombres-candidatos.md` §5.1). El icono y las capturas no llevan el nombre (10.1-10.2); la marca aparece en el título y en el logotipo del vídeo (10.3).
+
 ### 10.1 Icono: tres conceptos (A/B por experimento de ficha)
 
 | Concepto | Descripción | Pros | Riesgos |
@@ -579,7 +581,7 @@ Research/08 §Implicaciones 3 recomienda 15-20 s; se produce a 30 s con los prim
 | 0-3 | Gameplay cerrado | Una cuia vierte Açaí; sellado con maracá; sin logo todavía |
 | 3-8 | Gameplay | Tres vertidos seguidos encadenados; 2 cuias se sellan; contador de semillas |
 | 8-12 | Sumergir y teñir | Carga del nivel 42 en Manaos, versión 1,4 s a cámara lenta ×2 |
-| 12-15 | Logo | "Aquazonia" sobre el Encuentro de las Aguas; descriptor "Ordenar agua" |
+| 12-15 | Logo | Logotipo "Tintalú" (tilde visible, gota o pincelada de tinte; sección 10) sobre el Encuentro de las Aguas; descriptor "Ordenar agua" |
 | 15-19 | Tensión | Nivel Difícil: dos cuias quedan y el agua se aquieta; aparece Marea y deshace |
 | 19-23 | Mascotas | Capi llega con una cuia (rescate); Rosa salta al siguiente nivel |
 | 23-27 | Mundos | Barrido rápido de 4 fondos (Estuario, Tapajós, Manaos, Trapecio) con el Mapa del río |

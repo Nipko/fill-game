@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
     AF.Solver compilado por dotnet. Enlaza los .cs del paquete Unity
-    (Packages/com.aquazonia.core/Runtime/AF.Solver), única copia del código.
+    (Packages/com.amazonfill.core/Runtime/AF.Solver), única copia del código.
     No añadir aquí ImplicitUsings ni Nullable: pisarían dotnet/Directory.Build.props.
   -->
   <PropertyGroup>

@@ -1,6 +1,6 @@
 ---
 paths:
-  - "Packages/com.aquazonia.core/**"
+  - "Packages/com.amazonfill.core/**"
   - "dotnet/**"
   - "tools/level-generator/**"
   - "tools/level-qa/**"
@@ -11,7 +11,7 @@ paths:
 
 Fuentes: GDD 08 §2.1-§2.2, 02 §1, 03 §3-§6; `docs/setup/research/d-dotnet-nucleo-compartido.md` §3-§6.
 
-## En `Packages/com.aquazonia.core/**` (lo compila Unity y también `dotnet`)
+## En `Packages/com.amazonfill.core/**` (lo compila Unity y también `dotnet`)
 - **C# 9 y netstandard2.1.** Prohibido lo que C# 9 rechaza aunque el IDE lo sugiera: `namespace X;`, `global using`, `record struct`, `required`, `"""`, list patterns, `[1, 2]`, constructores primarios en clases, `field`. `init`/`record` solo en DTOs con el polyfill `IsExternalInit` del propio ensamblado, nunca en `BoardState` ni en tipos serializados por Unity.
 - **Sin motor:** nada de `UnityEngine`, `UnityEditor` ni `#if UNITY_*`; los asmdef de `Runtime/` tienen `noEngineReferences: true` (los de `Tests/Editor/` no: usan el Test Runner de Unity y no se tocan).
 - `#nullable enable` en la primera línea de cada archivo nuevo.
@@ -38,4 +38,4 @@ Fuentes: GDD 08 §2.1-§2.2, 02 §1, 03 §3-§6; `docs/setup/research/d-dotnet-n
 - Mismo determinismo que el núcleo: misma semilla, mismo JSON byte a byte, en Windows ARM64 y en Linux x64.
 
 ## Verificación
-`dotnet build dotnet/Aquazonia.slnx -warnaserror` y `dotnet test dotnet/Aquazonia.slnx` en verde antes de terminar.
+`dotnet build dotnet/AmazonFill.slnx -warnaserror` y `dotnet test dotnet/AmazonFill.slnx` en verde antes de terminar.

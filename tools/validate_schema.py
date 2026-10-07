@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-validate_schema.py - Aquazonia (Amazon Fill): comprueba schemas/af-level-1.schema.json (formato af-level/1, 08 §4.1).
+validate_schema.py - Amazon Fill (Tintalú): comprueba schemas/af-level-1.schema.json (formato af-level/1, 08 §4.1).
 
 Uso (desde la raiz del repositorio):
     python tools/validate_schema.py

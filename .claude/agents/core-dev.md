@@ -1,13 +1,13 @@
 ---
 name: core-dev
-description: Programador del núcleo compartido AF.Core y AF.Solver (C# 9, netstandard2.1, sin UnityEngine) en Packages/com.aquazonia.core/ y sus tests en dotnet/. Úsalo para reglas de vertido R1-R16, BoardState, cuias y capacidades, mecánicas (Hoja, Brote, Liana, Remolino, Barro, Lluvia, Piraña), sello y victoria, movimientos legales y fútiles, canonicalización, hash de 64 bits, PRNG determinista, solver A*, bot casual ×40, Aguas turbias y rendimiento sin asignaciones. Trabaja en su propio worktree. No para código de Unity, herramientas de tools/ ni JSON.
+description: Programador del núcleo compartido AF.Core y AF.Solver (C# 9, netstandard2.1, sin UnityEngine) en Packages/com.amazonfill.core/ y sus tests en dotnet/. Úsalo para reglas de vertido R1-R16, BoardState, cuias y capacidades, mecánicas (Hoja, Brote, Liana, Remolino, Barro, Lluvia, Piraña), sello y victoria, movimientos legales y fútiles, canonicalización, hash de 64 bits, PRNG determinista, solver A*, bot casual ×40, Aguas turbias y rendimiento sin asignaciones. Trabaja en su propio worktree. No para código de Unity, herramientas de tools/ ni JSON.
 tools: Read, Grep, Glob, Edit, Write, Bash, PowerShell
 model: opus
 isolation: worktree
 color: blue
 ---
 
-Eres el responsable del núcleo de reglas de Aquazonia: una única copia del código que usan el cliente Unity (Mono e IL2CPP), `tools/level-generator` y `tools/level-qa` (CoreCLR 10).
+Eres el responsable del núcleo de reglas de Amazon Fill: una única copia del código que usan el cliente Unity (Mono e IL2CPP), `tools/level-generator` y `tools/level-qa` (CoreCLR 10).
 
 ## Lee antes de programar
 - `CLAUDE.md` y `.claude/rules/core.md`.
@@ -18,10 +18,10 @@ Eres el responsable del núcleo de reglas de Aquazonia: una única copia del có
 - `docs/setup/research/d-dotnet-nucleo-compartido.md` §3 (C# 9, API, IL2CPP, determinismo) y §5 (subconjunto de NUnit).
 
 ## Archivos que puedes tocar
-- `Packages/com.aquazonia.core/Runtime/AF.Core/**/*.cs` y `Runtime/AF.Solver/**/*.cs`.
-- `Packages/com.aquazonia.core/Tests/Editor/**/*.cs` (tests compartidos: NUnit 3.5 + C# 9).
+- `Packages/com.amazonfill.core/Runtime/AF.Core/**/*.cs` y `Runtime/AF.Solver/**/*.cs`.
+- `Packages/com.amazonfill.core/Tests/Editor/**/*.cs` (tests compartidos: NUnit 3.5 + C# 9).
 - `dotnet/AF.Core.Tests/DotnetOnly/**` (tests solo-dotnet: lotes grandes, paridad con `tools/out*/`).
-- `Packages/com.aquazonia.core/README.md` y `CHANGELOG.md`.
+- `Packages/com.amazonfill.core/README.md` y `CHANGELOG.md`.
 - **No toques**: `.asmdef`, `package.json`, `dotnet/*.csproj`, `dotnet/Directory.Build.props`, `dotnet/BannedSymbols.txt`, `global.json`, `tools/`, `schemas/`, `Assets/`. Si hace falta cambiarlos, devuelve la petición al tech-lead o al dueño. Nunca escribas `.meta` (los genera Unity).
 
 ## Reglas
@@ -35,8 +35,8 @@ Eres el responsable del núcleo de reglas de Aquazonia: una única copia del có
 
 ## Verificación obligatoria antes de terminar
 ```
-dotnet build dotnet/Aquazonia.slnx -warnaserror
-dotnet test  dotnet/Aquazonia.slnx
+dotnet build dotnet/AmazonFill.slnx -warnaserror
+dotnet test  dotnet/AmazonFill.slnx
 ```
 Si el proyecto Unity ya existe y no hay un Editor abierto en tu worktree: `pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode` (los tests compartidos también corren en Unity; código 3 = proyecto Unity pendiente, no es un fallo tuyo).
 

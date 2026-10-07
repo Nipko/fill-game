@@ -1,6 +1,6 @@
 # Capítulo 3 · Generación de niveles, solver y curva de dificultad
 
-Fecha: 2026-10-06 (revisión cruzada; primera versión 2026-10-05) · Proyecto Amazon Fill (nombre comercial Aquazonia) · Convención de evidencia: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas, **[NV]** no verificado, **[P]** propuesta de este capítulo a calibrar en soft launch, **[V-proto]** medido ejecutando `tools/levelgen_proto.py` en el equipo del dueño (Windows 11, Python 3.14.3, un solo hilo); se reproduce con el comando indicado en la sección 18. Los nombres siguen el glosario (`docs/gdd/00-glosario.md`).
+Fecha: 2026-10-06 (revisión cruzada; primera versión 2026-10-05) · Proyecto Amazon Fill (nombre comercial Tintalú) · Convención de evidencia: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas, **[NV]** no verificado, **[P]** propuesta de este capítulo a calibrar en soft launch, **[V-proto]** medido ejecutando `tools/levelgen_proto.py` en el equipo del dueño (Windows 11, Python 3.14.3, un solo hilo); se reproduce con el comando indicado en la sección 18. Los nombres siguen el glosario (`docs/gdd/00-glosario.md`).
 
 ## Resumen
 
@@ -390,7 +390,7 @@ Eventos de analítica (Firebase): los de la taxonomía única de 08 §8.2, con s
 
 | Hito | Contenido | Trabajo | Equipo de 1 programador + 1 artista | Equipo de 2 programadores + 1 artista |
 |---|---|---|---|---|
-| Pipeline v1 | Solver C# compartido (`AF.Core` + `AF.Solver` en `Packages/com.aquazonia.core`, C# 9 y netstandard2.1, sin `UnityEngine`, compilados también por `dotnet/` con .NET 10; 08 §2.4), generadores `walk`/`deep`/`fill`, bot, métricas, D, colocación, JSON, validador, CLI .NET en `tools/level-generator` (+ `tools/level-qa`) | 2-3 días solver con tests + 1-2 días generador + 1 día métricas y empaquetado (research/02 C4 [E]) + 2 días mecánicas y turbias [E] | 7-9 días | 5-6 días (solver y generador en paralelo) |
+| Pipeline v1 | Solver C# compartido (`AF.Core` + `AF.Solver` en `Packages/com.amazonfill.core`, C# 9 y netstandard2.1, sin `UnityEngine`, compilados también por `dotnet/` con .NET 10; 08 §2.4), generadores `walk`/`deep`/`fill`, bot, métricas, D, colocación, JSON, validador, CLI .NET en `tools/level-generator` (+ `tools/level-qa`) | 2-3 días solver con tests + 1-2 días generador + 1 día métricas y empaquetado (research/02 C4 [E]) + 2 días mecánicas y turbias [E] | 7-9 días | 5-6 días (solver y generador en paralelo) |
 | Generación 1.0 | 1.040 niveles (vuelta 1) + 20 % reserva + variantes de alivio | Python: 1,3-3,6 s/nivel mediana → 25-60 min para 1.040 más colas de minutos en hitos de 2 vacíos [V-proto]; C#: minutos | 0,5 día | 0,5 día |
 | Curación | Niveles 1-200 a mano (tutorial 1-20 desde cero; 21-200 ajuste de retos, hitos, debuts) | 20-25 niveles/día [E] | 8-10 días (diseñador = programador 1) | 8-10 días (en paralelo) |
 | QA de nivel | 700 niveles instalados: 2 pasadas en retos/hitos (210), 1 en el resto (490) | ~3 min/nivel → ~46 h [E] | 6 días (tester externo) | 6 días |
@@ -530,7 +530,7 @@ Ninguna respecto a las 22 decisiones de dirección. Dos desviaciones respecto al
 4. Alivio por defecto "+1 vacío" (misma imagen del tablero) frente a "−1 color" (tablero más corto): confirmar la preferencia o pedir A/B solo sobre el tipo de alivio (no sobre su existencia).
 5. **Cerrada**: la sección 9 copia literalmente la columna "Regla exacta" de 02 §9.1 y los debuts de `mech_debut_level` (43 · 63 · 83 · 103 · 123 · 143 · 183; Cuia chica 14, Cuia alta 27 y de 6 en hitos desde el 141); cualquier cambio futuro se hace primero en 02 y se propaga aquí. Con esos valores todos los bloqueadores caen en la posición 3 del ciclo, así que el ajuste de plantilla que se pedía para 34 y 106 ya no existe.
 6. ¿Se publica el histograma de intentos de la comunidad junto a la etiqueta (research/09 §Mejorar) desde 1.0 o se espera a tener 2 semanas de datos?
-7. **Cerrada** (08 §2.4): pipeline en C# (consolas .NET 10 `tools/level-generator` + `tools/level-qa`, que comparten con Unity `AF.Core` y `AF.Solver` del paquete `Packages/com.aquazonia.core`, sin `UnityEngine`) para que pista, Pororoca, Río sin fin y pipeline usen el mismo código; `tools/levelgen_proto.py` queda como prototipo de referencia (paridad de hash y par en el test de portado).
+7. **Cerrada** (08 §2.4): pipeline en C# (consolas .NET 10 `tools/level-generator` + `tools/level-qa`, que comparten con Unity `AF.Core` y `AF.Solver` del paquete `Packages/com.amazonfill.core`, sin `UnityEngine`) para que pista, Pororoca, Río sin fin y pipeline usen el mismo código; `tools/levelgen_proto.py` queda como prototipo de referencia (paridad de hash y par en el test de portado).
 
 ## Dependencias con otros capítulos
 

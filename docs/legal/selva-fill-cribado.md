@@ -265,3 +265,5 @@ Fuentes:
 
 **Documentos internos**
 - `docs/setup/research/f-marca-aquazonia.md` (método, costes, regla de no subir un AAB) · `docs/legal/marca.md` · `docs/gdd/00-glosario.md` §1 (títulos de tienda)
+
+**Decisión posterior (2026-10-06):** el dueño eligió **Tintalú** como nombre comercial; Selvagua queda como tercer plan B, tras Cuiazú y Botonda, si el dictamen sobre Tintalú falla. Ver `docs/legal/nombres-candidatos.md`, sección "Decisión del dueño (2026-10-06)", y `docs/legal/marca.md`.

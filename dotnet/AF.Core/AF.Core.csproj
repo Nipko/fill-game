@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!--
     AF.Core compilado por dotnet. No tiene fuentes propios: enlaza los .cs del paquete Unity
-    (Packages/com.aquazonia.core/Runtime/AF.Core), que es la única copia del código.
+    (Packages/com.amazonfill.core/Runtime/AF.Core), que es la única copia del código.
     No añadir aquí ImplicitUsings ni Nullable: pisarían dotnet/Directory.Build.props.
   -->
   <PropertyGroup>

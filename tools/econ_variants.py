@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-econ_variants.py — Sensibilidad de la economía de semillas de Aquazonia (Amazon Fill).
+econ_variants.py — Sensibilidad de la economía de semillas de Amazon Fill (nombre comercial: Tintalú).
 
 Corre tools/econ_sim.py (escenario B canónico) con 8 variantes de precio del rescate y de fuentes gratuitas
 y resume, por variante: ratio de presión de referencia (media de 3 no pagadores) en 31-100 y 101-500,

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-levelgen_proto.py - Amazon Fill (Aquazonia): prototipo del pipeline offline de niveles.
+levelgen_proto.py - Amazon Fill (Tintalu): prototipo del pipeline offline de niveles.
 
 Implementa, en un solo archivo y sin dependencias externas:
   1. Representacion del estado (tuplas) + canonicalizacion (cuias ordenadas por (capacidad, contenido)).

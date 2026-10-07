@@ -1,7 +1,7 @@
 <Project>
   <!--
     Propiedades de todos los proyectos de dotnet/ (AF.Core, AF.Solver y AF.Core.Tests).
-    Compilan los fuentes del paquete Unity Packages/com.aquazonia.core con las mismas restricciones que
+    Compilan los fuentes del paquete Unity Packages/com.amazonfill.core con las mismas restricciones que
     Unity 6.x: C# 9, sin global using ni contexto nullable global. Así el SDK rechaza aquí lo que
     Unity rechazaría (informe docs/setup/research/d-dotnet-nucleo-compartido.md §3 y §6.2).
     Este archivo va en dotnet/ y nunca en la raíz del repositorio: allí afectaría a los .csproj de Unity.
@@ -18,7 +18,7 @@
     <!-- Todo bin/ y obj/ sale a dotnet/artifacts/ (ignorada en git; Unity no la ve) -->
     <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
     <!-- Ruta del paquete embebido, con barra final: única copia de los fuentes del núcleo -->
-    <AfPackageDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', 'Packages', 'com.aquazonia.core'))</AfPackageDir>
+    <AfPackageDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', 'Packages', 'com.amazonfill.core'))</AfPackageDir>
   </PropertyGroup>
 
   <ItemGroup>

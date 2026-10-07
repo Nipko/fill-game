@@ -1,6 +1,6 @@
 # Capítulo 06 · Meta, retención y live-ops
 
-Fecha: 2026-10-06 (revisión de incidencias de GDD.md §7) · Proyecto: Amazon Fill (nombre comercial **Aquazonia**) · Nombres según `docs/gdd/00-glosario.md`. Convención de evidencia: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas de jugadores, **[NV]** no verificado, **[P]** propuesta de este capítulo a calibrar en soft launch. "(dirección N)" remite a las decisiones de dirección vinculantes.
+Fecha: 2026-10-06 (revisión de incidencias de GDD.md §7) · Proyecto: Amazon Fill (nombre comercial **Tintalú**) · Nombres según `docs/gdd/00-glosario.md`. Convención de evidencia: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas de jugadores, **[NV]** no verificado, **[P]** propuesta de este capítulo a calibrar en soft launch. "(dirección N)" remite a las decisiones de dirección vinculantes.
 
 ## Resumen
 
@@ -71,7 +71,7 @@ Por nivel: abandono (jugadores que inician y no terminan ni vuelven en 24 h), re
 
 ## 3. Calendario de desbloqueos por nivel (comparado con Magic Sort)
 
-| Nivel | Qué se desbloquea en Aquazonia | Versión | Magic Sort (referencia) | Estado de la referencia |
+| Nivel | Qué se desbloquea en Tintalú | Versión | Magic Sort (referencia) | Estado de la referencia |
 |---|---|---|---|---|
 | 1 | Volver a la orilla (visible en el HUD, gratis, determinista) | 1.0 | Reiniciar existe; rechazar el continue = −1 vida y reinicio con tablero distinto | research/09 §Núcleo [V] |
 | 3 | Marea (ilimitada en 1-10, `undo_unlimited_until_level` = 10; desde el 11, 3 gratis por nivel, `undo_free_per_level`; recarga por anuncio o 30 semillas; 04 §2.1) | 1.0 | Undo desde el inicio ("Wizard's Gear"), de pago, inutilizable en el bloqueo | research/09 §Comodines [V]/[NV] |

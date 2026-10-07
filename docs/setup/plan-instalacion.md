@@ -1,4 +1,4 @@
-# Plan de instalación y arranque técnico de Aquazonia
+# Plan de instalación y arranque técnico de Tintalú
 
 Fecha: 2026-10-06 · Autor: dirección técnica (agente) · Estado: listo para ejecutar. Los pasos marcados como "dueño" esperan tu acción o tu confirmación en el chat.
 
@@ -30,7 +30,7 @@ Fecha: 2026-10-06 · Autor: dirección técnica (agente) · Estado: listo para e
 - **Cambios en el GDD** (piden tu aprobación; un agente los aplicará en un PR de documentación):
   1. En 08 §1.2 y §15, la versión pasa a 6000.3.25f1 ARM64, instalada con winget y la Unity CLI.
   2. .NET 8 pasa a .NET 10 LTS (08 §2.4, §12.1, §15; 03 §17; GDD §9 #3). .NET 8 deja de tener soporte el 10-11-2026.
-  3. AF.Core y AF.Solver se mueven al paquete embebido `Packages/com.aquazonia.core/` y se añade `dotnet/`.
+  3. AF.Core y AF.Solver se mueven al paquete embebido `Packages/com.amazonfill.core/` y se añade `dotnet/`.
   4. CI:
      - Licencia: `UNITY_LICENSE` (.ulf) desaparece y se usan `UNITY_EMAIL` + `UNITY_PASSWORD` de una cuenta dedicada sin 2FA.
      - Acciones: `unity-test-runner@v4.4.0` y `unity-builder@v6.0.0`, con `cliVersion: v0.1.72`.
@@ -60,7 +60,7 @@ Todo se ejecuta en PowerShell 7 desde `C:\Users\Nipko-lab\Desktop\projects\amazo
 | s07 | Repositorio git | `git init -b main; git config core.longpaths true` | agente | — | 1 min | `git rev-parse` |
 | s08 | Archivos raíz | `.gitignore`, `.gitattributes`, `.editorconfig`; `dotnet new globaljson --sdk-version 10.0.401 --roll-forward latestFeature` | agente | — | 5 min | `Test-Path` |
 | s09 | Proyectos .NET | `dotnet new buildprops/classlib/nunit/console/sln` + NUnit 3.14.0 | agente | 0,3 GB | 5 min | `dotnet sln … list` |
-| s10 | Ajustar y probar el núcleo | Ediciones de §Andamiaje; `dotnet build dotnet/Aquazonia.slnx -warnaserror; dotnet test dotnet/Aquazonia.slnx` | agente | — | 15 min | Código de salida 0 |
+| s10 | Ajustar y probar el núcleo | Ediciones de §Andamiaje; `dotnet build dotnet/AmazonFill.slnx -warnaserror; dotnet test dotnet/AmazonFill.slnx` | agente | — | 15 min | Código de salida 0 |
 | s11 | Configuración de agentes | `CLAUDE.md`, `.claude/agents|rules`, `scripts/*.ps1` | agente | — | 30 min | `CLAUDE.md` < 200 líneas |
 | s12 | Permisos de agentes | Revisar `.claude/settings.proposed.json` y renombrarlo a `.claude/settings.json` al aprobarlo | dueño | — | 10 min | "aprobado" en el chat |
 | s13 | Primer commit local | `git add -A; git commit` | agente | — | 2 min | Ningún secreto en `git ls-files` |
@@ -93,8 +93,8 @@ Todo se ejecuta en PowerShell 7 desde `C:\Users\Nipko-lab\Desktop\projects\amazo
 
 **Reglas de uso:**
 - Cierra Android Studio mientras Unity compila.
-- El `applicationId` provisional es `com.estudio.aquazonia`. Una compuerta del CI impide que llegue a una build de release.
-- No se sube ningún AAB a Play hasta tener el dictamen de marca.
+- El `applicationId` provisional es el neutral `com.amazonfill.dev` (antes `com.estudio.aquazonia`, descartado con la marca Aquazonia). Una compuerta del CI impide que llegue a una build de release. El definitivo, `com.<estudio>.tintalu`, espera al dictamen de marca.
+- Ningún AAB a Play con el `applicationId` definitivo (`com.<estudio>.tintalu`) hasta tener el dictamen de marca.
 
 ## Andamiaje del repositorio
 
@@ -107,13 +107,13 @@ amazon-fill/
   .github/workflows/{ci.yml, unity.yml}
   Assets/_Project/{Art,Audio,Shaders,Prefabs,Scenes,Scripts,Data,Editor/CI,Tests}
   Packages/manifest.json
-  Packages/com.aquazonia.core/            # ÚNICA copia del núcleo
+  Packages/com.amazonfill.core/           # ÚNICA copia del núcleo
     package.json
     Runtime/AF.Core/   AF.Core.asmdef (noEngineReferences: true), Polyfills/IsExternalInit.cs
     Runtime/AF.Solver/ AF.Solver.asmdef
     Tests/Editor/AF.Core.Tests/ AF.Solver.Tests/   # tests compartidos: NUnit 3.5 + C# 9
   ProjectSettings/                        # 6000.3.25f1 (e1dba0a9aba4)
-  dotnet/  Directory.Build.props  BannedSymbols.txt  Aquazonia.slnx
+  dotnet/  Directory.Build.props  BannedSymbols.txt  AmazonFill.slnx
            AF.Core/ AF.Solver/ (netstandard2.1, enlazan los .cs del paquete)
            AF.Core.Tests/ (net10.0, NUnit 3.14.0)  artifacts/ (ignorada)
   tools/   Directory.Build.props  level-generator/  level-qa/  *.py
@@ -185,7 +185,7 @@ Decisión del dueño (2026-10-06): todos los subagentes usan Opus; volver a Sonn
 **Verificación que ejecutan los agentes:**
 
 ```powershell
-dotnet build dotnet/Aquazonia.slnx -warnaserror; dotnet test dotnet/Aquazonia.slnx
+dotnet build dotnet/AmazonFill.slnx -warnaserror; dotnet test dotnet/AmazonFill.slnx
 python tools/validate_schema.py
 unity recompile --project-path .            # con Editor abierto; 7 = Safe Mode
 unity test . --mode EditMode --output Logs/editmode.xml --timeout 900
@@ -208,6 +208,14 @@ En el CI, `dotnet test` corre en cada PR. Los tests compartidos se repiten en Ed
 - El plugin oficial `unity setup claude` (ámbito de usuario) es decisión tuya. Si lo instalas, quita la skill local de s24 para no cargar dos copias.
 
 ## Marca
+
+**Nombre vigente: Tintalú** (forma ASCII `Tintalu`; decisión del dueño del 2026-10-06). Aquazonia se descartó por la solicitud idéntica INPI 938306200 en Brasil (clase 41); lo que sigue bajo "Historia" es el cribado original de Aquazonia y se conserva como registro.
+- **Riesgo de Tintalú: medio** (búsqueda preliminar, no asesoría legal): EL TINTAL en el IMPI de México (reg. 2586508, clase 41); los puzles "Tinta" de la App Store; el elemento TINTA, casi descriptivo y saturado en las clases 9 y 41. Faltan el INPI, INDECOPI y la SIC por consultar directamente.
+- **Pasos para ti:** registrar hoy `tintalu.com`, `tintalu.app`, `tintalu.co` y `tintalu.com.br` y reservar los usuarios en redes; encargar al abogado de marcas la búsqueda en el INPI (clases 9, 28 y 41), el dictamen en México frente a EL TINTAL y la estrategia frente a TINTA en EE. UU.
+- **Publicación:** ningún AAB a Play con el `applicationId` definitivo (`com.<estudio>.tintalu`) hasta tener el dictamen; los builds de prueba usan `com.amazonfill.dev`. Con tilde en todo lo visible, también en PT-BR.
+- **Planes B, en orden:** Cuiazú, Botonda y Selvagua. Detalle en `docs/legal/nombres-candidatos.md`.
+
+### Historia: cribado de Aquazonia (descartado el 2026-10-06)
 
 **Riesgo global: medio.** Esto es una búsqueda preliminar, no asesoría legal.
 

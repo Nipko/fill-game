@@ -1,6 +1,6 @@
-# .gitignore de Aquazonia (Amazon Fill)
+# .gitignore de Amazon Fill
 # La raíz del repositorio ES el proyecto Unity (GDD 08 §3; plan de instalación, "Andamiaje").
-# Nunca se ignoran: docs/, schemas/, tools/out/, tools/out_inverse/ ni Packages/com.aquazonia.core/.
+# Nunca se ignoran: docs/, schemas/, tools/out/, tools/out_inverse/ ni Packages/com.amazonfill.core/.
 
 # ---------------------------------------------------------------------------
 # Unity: carpetas generadas (solo en la raíz)
@@ -19,6 +19,11 @@
 
 # Los .meta se versionan siempre (Visible Meta Files)
 !/[Aa]ssets/**/*.meta
+
+# Escena mínima que AF.EditorTools.BuildSmoke genera y borra en cada build de humo
+# (por si un build se interrumpe a medias). Va después de la regla de los .meta para que gane.
+/[Aa]ssets/_SmokeTemp/
+/[Aa]ssets/_SmokeTemp.meta
 
 # Proyectos y soluciones que Unity genera para el IDE: SOLO en la raíz,
 # para que los de dotnet/ y tools/ sigan versionados.
@@ -116,3 +121,20 @@ CLAUDE.local.md
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# BEGIN unity vcs doctor
+# Unity ignore rules kept current by `unity vcs doctor --fix`. Managed block: edits here are overwritten. To opt out of a rule, negate it below this block (for example `!*.log`).
+*.blend1
+*.blend1.meta
+*.log
+/ServerData
+/[Aa]ssets/AddressableAssetsData/link.xml*
+/[Aa]ssets/Addressables_Temp*
+/[Aa]ssets/StreamingAssets/aa*
+/[Aa]ssets/Unity.VisualScripting.Generated/VisualScripting.Core/Property Providers
+/[Aa]ssets/Unity.VisualScripting.Generated/VisualScripting.Flow/UnitOptions.db
+/[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+/[Aa]ssets/[Ss]ceneDependencyCache*
+InitTestScene*.unity*
+mono_crash.*
+# END unity vcs doctor

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-econ_sim.py — Simulador de la economía de semillas de Amazon Fill (nombre comercial: Aquazonia).
+econ_sim.py — Simulador de la economía de semillas de Amazon Fill (nombre comercial: Tintalú).
 
 Simula 500 niveles de campaña para tres perfiles de jugador (casual sin racha, hábil con racha,
 pagador ligero) más un perfil de referencia "medio no pagador", con la curva canónica del ciclo de 20
@@ -884,7 +884,7 @@ def main():
             rng = random.Random(args.seed * 1000 + i)
             results.append(Sim(prof, econ, rng).run())
         aggs[name] = aggregate(results, econ)
-    print(f"# econ_sim — Amazon Fill / Aquazonia — {LEVELS} niveles, {args.runs} corridas por perfil, semilla {args.seed}")
+    print(f"# econ_sim — Amazon Fill / Tintalú — {LEVELS} niveles, {args.runs} corridas por perfil, semilla {args.seed}")
     print_tables(aggs, econ)
     if not args.no_revenue:
         print_revenue()

@@ -1,4 +1,4 @@
-// level-generator: generador offline de niveles de Aquazonia (GDD 08 §2.4; GDD 03).
+// level-generator: generador offline de niveles de Amazon Fill (GDD 08 §2.4; GDD 03).
 // Andamiaje: por ahora valida los argumentos y sale con 1 (fallar cerrado). La generación se portará
 // desde tools/levelgen_proto.py sobre AF.Core y AF.Solver, las mismas reglas que ejecuta el cliente.
 // Todo lo que se imprime es ASCII (.claude/rules/ci.md): la consola de Windows y Git Bash corrompen
@@ -7,7 +7,7 @@ using AF.Core.Board;
 using AF.Solver.Collections;
 
 const string Usage = """
-    level-generator: generador offline de niveles de Aquazonia (GDD 08 sec. 2.4; GDD 03)
+    level-generator: generador offline de niveles de Amazon Fill (GDD 08 sec. 2.4; GDD 03)
 
     Uso:
       dotnet run --project tools/level-generator -- --spec <spec.json> --out <carpeta>

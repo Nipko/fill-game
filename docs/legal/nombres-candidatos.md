@@ -7,7 +7,7 @@
 | Mercados e idiomas | Colombia, Perú, México y Brasil; después EE. UU. y el resto · ES, PT-BR, EN |
 | Por qué se cambia | "Amazon Fill" choca con Amazon.com. "Aquazonia" tiene una solicitud idéntica en el INPI de Brasil (938306200, clase 41, proyecto periodístico "Aquazônia" sobre las aguas amazónicas); ver `marca.md`. "Selva Fill" y variantes ya se cribaron en `selva-fill-cribado.md` |
 | Autor | Agentes de investigación (Claude Code), para el dueño del producto |
-| Estado | Borrador para decisión del dueño |
+| Estado | Borrador para decisión del dueño. **Decidido el 2026-10-06: Tintalú** (ver la sección final, "Decisión del dueño") |
 | Leyenda | **[V]** verificado con consulta reproducible · **[E]** estimación o criterio del agente · **[NV]** no verificable en esta sesión |
 
 > **Aviso importante: esto no es asesoría legal.** Es un cribado preliminar hecho por agentes de IA en bases públicas. No incluye examen de fondo, búsqueda figurativa (logotipos), los algoritmos fonéticos de cada oficina (salvo el del IMPI) ni solicitudes aún no publicadas. Las bases de Brasil (INPI) y Perú (INDECOPI) **no se pudieron consultar para ningún candidato**. Sirve para descartar nombres y preparar la conversación con un abogado de marcas; no garantiza que un nombre sea registrable ni que su uso no infrinja derechos de terceros.
@@ -180,10 +180,52 @@ Un dominio no da derechos de marca. Siguiendo la regla de `marca.md` §7, convie
 1. **Dueño:** elegir entre Cuiazú y Tintalú (o esperar a los finalistas 6.º a 10.º) y registrar hoy los tres dominios principales del elegido (unos 40-80 USD/año [E]).
 2. **Agentes:** completar la tabla con los finalistas 6.º a 10.º cuando llegue su resultado. Comprobar los usuarios en redes sociales del nombre elegido. Repetir las consultas que fallaron (INPI, INDECOPI, WIPO, TMview) desde otra conexión o en el navegador.
 3. **Abogado:** encargar la búsqueda formal y el dictamen de registrabilidad del nombre elegido (sección 5) antes de presentar en las clases 9 y 41.
-4. **Documentación:** cuando el dueño decida, actualizar `marca.md`, que todavía describe la decisión sobre Aquazonia, con el nuevo nombre, sus dominios y el `applicationId`.
+4. **Documentación:** cuando el dueño decida, actualizar `marca.md`, que todavía describe la decisión sobre Aquazonia, con el nuevo nombre, sus dominios y el `applicationId` (hecho el 2026-10-06; ver Decisión del dueño).
 
 ---
 
 ## 7. Aviso final
 
 **Este documento no es asesoría legal ni una opinión de registrabilidad.** Es un cribado preliminar hecho por agentes de IA el 06-10-2026 con bases públicas, varias de las cuales no estaban disponibles (INPI, INDECOPI, WIPO Global Brand Database y TMview). Un nombre "sin conflictos encontrados" no es un nombre libre de conflictos. Antes de invertir en logotipo, fichas de tienda o marketing, y antes de subir cualquier build con el `applicationId` definitivo, la decisión debe confirmarla un abogado de marcas con búsquedas formales en cada país donde se vaya a vender el juego.
+
+---
+
+## Decisión del dueño (2026-10-06)
+
+**Elección: Tintalú.** El dueño del producto elige **Tintalú** como nombre comercial del juego. La forma ASCII **"Tintalu"** se usa para dominios, usuarios de redes, IDs y búsquedas. Sustituye a "Aquazonia", descartado por la solicitud idéntica INPI 938306200 en Brasil (clase 41). El nombre interno del proyecto sigue siendo Amazon Fill (prefijo `AF.`, carpeta `amazon-fill`).
+
+**Por qué.** Tintalú = *tinta* + *lú*: evoca el teñido en vivo del agua con frutas, la mecánica estrella. El agua y la selva los aportan el subtítulo, el arte y los mundos. Fue la puntuación más alta del jurado (83/100) entre los 48 candidatos generados, y tiene libres según RDAP tintalu.com, .app, .co, .com.br, .games y .net [V].
+
+**Títulos de tienda, con tilde en todo lo visible.** Sin tilde se lee "tinTAlu", así que la decisión sustituye a la grafía "Tintalu" de las secciones 2 y 4.1 (la longitud no cambia, porque la "ú" cuenta como un carácter):
+
+| EN | ES | PT-BR |
+|---|---|---|
+| `Tintalú: Water Sort Puzzle` (26) | `Tintalú: Ordenar Agua` (21) | `Tintalú: Classificar Água` (25) |
+
+**Riesgo aceptado: medio** [E]. El dueño acepta, a sabiendas, los riesgos de la sección 3.2 y de la verificación adversaria:
+
+1. **México:** EL TINTAL (IMPI reg. 2586508, clase 41, entretenimiento), contenida entera en el nombre. Posible cita de oficio, rebatible.
+2. **App Store:** "Tinta: Color Logic Puzzle" (Nicolas Zanette, 2026, puzle de colores) y "Tinta: Coloring Book & Paint". Riesgo de confusión y de uso previo en EE. UU.
+3. **Elemento TINTA:** casi descriptivo y saturado en las clases 9 y 41 (TINTA CLUB DEL LIBRO, tinta.org, TINTA de Tinta Group, TINTAZUL…). La marca protegería el conjunto, no "Tinta-".
+4. **Connotaciones:** en Colombia, "El Tintal" es una zona conocida de Bogotá; en Brasil, suena a "Tintas Lu" (tiendas de pintura).
+5. **Redes:** YouTube @Tintalu ya está reservado (canal vacío creado el 07-04-2026); TikTok, probablemente libre; Instagram y X, sin verificar.
+6. **Bases pendientes:** faltan el INPI (Brasil), INDECOPI (Perú) y la SIC (Colombia) por consultar directamente.
+
+**Acciones.**
+
+- **Dueño, hoy:** registrar tintalu.com, tintalu.app, tintalu.co y tintalu.com.br (este, a través del abogado brasileño, porque Registro.br exige CPF o CNPJ) y reservar los usuarios en redes.
+- **Abogado de marcas:** búsqueda en el INPI (clases 9, 41 y 28), dictamen en México frente a EL TINTAL y estrategia en EE. UU. frente a TINTA (sección 5.2).
+- **`applicationId`:** ningún AAB a Google Play con el ID definitivo (`com.<estudio>.tintalu`) hasta tener el dictamen; los builds de prueba usan `com.amazonfill.dev`.
+- **Documentación:** `marca.md` queda reescrito para Tintalú (paso 4 de la sección 6), con la historia de Aquazonia.
+
+**Planes B, por orden, si el dictamen falla.**
+
+| Orden | Nombre | Riesgo | Notas |
+|---|---|---|---|
+| 1 | **Cuiazú** | Bajo | *Cuia* + Iguazú; dominios libres (sección 3.1) |
+| 2 | **Botonda** | Bajo | *Boto* + *onda*; no figura en las tablas de este documento (ver la nota siguiente) |
+| 3 | **Selvagua** | Bajo fuera de Brasil, medio en Brasil por SELVA | Cribado en `selva-fill-cribado.md` |
+
+**Nota sobre el ranking.** La recomendación automática de la sección 4, que ponía a Cuiazú primero, se generó con solo **5 de los 10 finalistas**, porque la salida del flujo se cortó (sección 2). **Botonda**, que no figura entre los cinco finalistas recibidos, obtuvo **riesgo bajo en las dos revisiones** (cribado y verificación adversaria). Por eso entra como segundo plan B, aunque no tenga ficha aquí. El dueño eligió Tintalú por encima de Cuiazú sabiendo que su riesgo es mayor.
+
+Seguimiento vivo: `marca.md`. Esta decisión tampoco es asesoría legal: la confirma o la descarta el dictamen del abogado.

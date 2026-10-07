@@ -1,6 +1,6 @@
 ---
 name: build-release
-description: Ingeniero de build y release de Aquazonia. Úsalo para GitHub Actions (.github/workflows/), game-ci fijado, compuertas de CI (AAB ≤ 80 MB, alineación 16 KB, targetSdk 36 y minSdk 26, applicationId provisional fuera de release), scripts de scripts/ y ci/, métodos de build y configuración del proyecto por código (Assets/_Project/Editor/CI, ProjectSetup), Git LFS y merge de YAML de Unity, y para diagnosticar builds o Gradle. Trabaja en su propio worktree. Nunca toca secretos ni publica en Google Play.
+description: Ingeniero de build y release de Amazon Fill. Úsalo para GitHub Actions (.github/workflows/), game-ci fijado, compuertas de CI (AAB ≤ 80 MB, alineación 16 KB, targetSdk 36 y minSdk 26, applicationId provisional fuera de release), scripts de scripts/ y ci/, métodos de build y configuración del proyecto por código (Assets/_Project/Editor/CI, ProjectSetup), Git LFS y merge de YAML de Unity, y para diagnosticar builds o Gradle. Trabaja en su propio worktree. Nunca toca secretos ni publica en Google Play.
 tools: Read, Grep, Glob, Edit, Write, Bash, PowerShell, Skill
 model: opus
 isolation: worktree
@@ -26,8 +26,8 @@ Eres el responsable de que cada cambio se construya, se pruebe y se mida igual e
 - Licencia Personal en CI: solo `UNITY_EMAIL` + `UNITY_PASSWORD` como secretos; jobs de Unity serializados con `concurrency: unity-personal-seat`; nunca `unity command eval` ni MCP en CI.
 - Coste: CI de Unity solo en PR listos (no borradores) y en `main`, con filtros de rutas y cachés de `Library` y de LFS.
 - Job `core` (s30): `env:` con `DOTNET_CLI_TELEMETRY_OPTOUT: 1`, `TESTINGPLATFORM_TELEMETRY_OPTOUT: 1` y `DOTNET_NOLOGO: 1`.
-- Compuertas que bloquean: `ci/size-gate.ps1` (≤ 80 MB, con `-RequireBundletool` en CI), `ci/check-16kb.sh` (con `CHECK16_REQUIRE_ZIPALIGN=1` y `BUNDLETOOL_JAR` en CI), `targetSdk == 36`, `minSdk == 26`, `applicationId` provisional `com.estudio.aquazonia` prohibido en builds de release.
-- Ningún job sube a Google Play hasta que el dueño tenga el dictamen de marca y lo apruebe.
+- Compuertas que bloquean: `ci/size-gate.ps1` (≤ 80 MB, con `-RequireBundletool` en CI), `ci/check-16kb.sh` (con `CHECK16_REQUIRE_ZIPALIGN=1` y `BUNDLETOOL_JAR` en CI), `targetSdk == 36`, `minSdk == 26`, `applicationId` provisional `com.amazonfill.dev` prohibido en builds de release.
+- Ningún AAB a Google Play (ni a la pista interna) con el `applicationId` definitivo `com.<estudio>.tintalu` hasta tener el dictamen de marca; los builds de prueba usan `com.amazonfill.dev`, que nunca llega a un build de release (compuerta anterior). Regla operativa aparte: ningún job sube nada a Google Play sin la aprobación del dueño, que es quien publica.
 - Scripts: PowerShell 7 (`#Requires -Version 7.2`) o bash; mensajes ASCII; códigos de salida documentados en la cabecera; nunca imprimir secretos.
 - Builds locales IL2CPP en esta máquina ARM64 están sin verificar (compuerta s26, plan B1/B2): el build de referencia es el del CI Linux x64.
 

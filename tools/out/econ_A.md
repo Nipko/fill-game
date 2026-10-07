@@ -1,4 +1,4 @@
-# econ_sim — Amazon Fill / Aquazonia — 500 niveles, 300 corridas por perfil, semilla 2026
+# econ_sim — Amazon Fill / Tintalú — 500 niveles, 300 corridas por perfil, semilla 2026
 
 ## Escenario A — Cuia de rescate 600/600/600 semillas (31-100 / 101-200 / 201+), primer rescate del día −50 %; Crecida repetible hasta el tope diario, hito 6 = Canasta (50 + comodín), hito 10 = 300; Canasta 50 + comodín; Reto del río 60; Cosecha doble tope 5/día
 

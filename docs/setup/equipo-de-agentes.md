@@ -1,4 +1,4 @@
-# Equipo de agentes programadores de Aquazonia
+# Equipo de agentes programadores de Tintalú
 
 Fecha: 2026-10-06 · Paso s11 de `docs/setup/plan-instalacion.md` · Formato verificado contra la documentación oficial de Claude Code (code.claude.com/docs: memory, sub-agents, permissions, settings, worktrees, costs, errors, interactive-mode).
 
@@ -20,7 +20,7 @@ Todos usan `model: opus`. Los que tienen worktree trabajan en una copia aislada 
 | Agente | Cuándo usarlo | Puede tocar | Herramientas | Aislamiento | Verifica con |
 |---|---|---|---|---|---|
 | `tech-lead` | Al empezar una funcionalidad, una fase o un cambio entre módulos; dudas de arquitectura | Nada (solo lectura) | Read, Grep, Glob, Bash (lectura) | Checkout principal | Cada tarea cita el GDD; `git status` |
-| `core-dev` | Reglas R1-R16, BoardState, mecánicas, hash, PRNG, solver, bot, Aguas turbias | `Packages/com.aquazonia.core/**/*.cs`, `dotnet/AF.Core.Tests/DotnetOnly/` | + Edit, Write, PowerShell | Worktree | `dotnet build -warnaserror`, `dotnet test` (+ EditMode si existe Unity) |
+| `core-dev` | Reglas R1-R16, BoardState, mecánicas, hash, PRNG, solver, bot, Aguas turbias | `Packages/com.amazonfill.core/**/*.cs`, `dotnet/AF.Core.Tests/DotnetOnly/` | + Edit, Write, PowerShell | Worktree | `dotnet build -warnaserror`, `dotnet test` (+ EditMode si existe Unity) |
 | `level-pipeline-dev` | `tools/level-generator`, `tools/level-qa`, `schemas/`, paquetes de niveles, scripts Python | `tools/**`, `schemas/**`, `Assets/_Project/Data/Levels/` y `Daily/` | + Edit, Write, PowerShell | Worktree | `dotnet test`, `validate_schema.py`, `level-qa` |
 | `unity-gameplay-dev` | Shader del líquido, UI/HUD, GameFlow, Levels, Boosters, Economy, LiveOps | `Assets/_Project/Scripts/{Presentation,UI,GameFlow,...}`, `Shaders/`, `Tests/` | + Edit, Write, PowerShell, Skill | Worktree con un solo Editor | `unity-compile.ps1`, `unity-test.ps1` EditMode y PlayMode |
 | `sdk-integrator` | MAX/UMP, IAP, Firebase, Play Games, PAD, notificaciones, consentimiento, **solo con tu aprobación previa** | `Scripts/{Ads,IAP,Analytics,RemoteConfig,Save,Platform,Consent,Backend}`, `Plugins/Android`, `manifest.json` (pide permiso) | + Edit, Write, PowerShell, Skill | Worktree; `permissionMode: default` (pregunta todo) | Scripts de Unity, lista de privacidad, build en CI |
@@ -37,13 +37,13 @@ Todos usan `model: opus`. Los que tienen worktree trabajan en una copia aislada 
 ## 2. Antes de usar el equipo (una sola vez)
 
 1. **s12, tú:** revisa `.claude/settings.proposed.json` (resumen en la sección 7). Si estás de acuerdo, renómbralo a `.claude/settings.json` (o di "aprobado" en el chat para que lo haga un agente). Hasta entonces los permisos no están activos, aunque `CLAUDE.md` y las reglas obligan igual.
-2. **s13:** primer commit local. Los agentes con `isolation: worktree` lo necesitan: sin un commit no hay rama de la que partir.
+2. **s13:** primer commit local (hecho: `88d3331`, ya en el remoto `origin`). Los agentes con `isolation: worktree` lo necesitan: sin un commit no hay rama de la que partir.
 3. **Reinicia Claude Code** en la raíz del repositorio. Así carga `.claude/agents/`, que se creó durante esta sesión, y el nuevo PATH con `dotnet`. La primera vez acepta el diálogo de confianza de la carpeta: los permisos `allow` del proyecto solo se aplican cuando la carpeta es de confianza.
 4. **Comprueba:**
    - `/agents` muestra los siete;
    - `/context` muestra `CLAUDE.md`;
    - `/permissions` muestra las reglas.
-5. **Para trabajar con Unity:** espera a s15-s20. Tú inicias sesión en Unity y activas la licencia Personal; después un agente crea el proyecto. Hasta entonces `scripts/unity-*.ps1` salen con el código 3 ("el proyecto Unity todavía no existe") y solo trabajan `core-dev`, `level-pipeline-dev` y `build-release`.
+5. **Para trabajar con Unity:** la licencia Personal está activa y el proyecto Unity existe en el checkout principal desde el 2026-10-06 (s15-s25), donde `scripts/unity-*.ps1` ya compilan y pasan los tests. Los worktrees de los agentes parten de un commit, así que solo tienen `Assets/` y `ProjectSettings/` cuando el proyecto está commiteado (s29); sin eso, los scripts salen con el código 3 ("no encuentra el proyecto Unity") y `unity-gameplay-dev` no puede trabajar en su worktree. Recuerda: un Editor por carpeta y como máximo 2 abiertos.
 
 ---
 
@@ -220,7 +220,7 @@ El JSON se validó con `python -m json.tool` y contra el esquema oficial `https:
 
 - **Cambios en agentes, reglas o `CLAUDE.md`:** se hacen por PR, porque los agentes los leen como instrucciones. Editar `CLAUDE.md` pide permiso, y `.claude/` es una ruta protegida de Claude Code.
 - **Herramientas en beta:** una vez por semana, revisa las notas de versión de la Unity CLI (`unity changelog`) y de game-ci. Fija la versión nueva solo en un PR de `build-release` con el CI en verde.
-- **Cuando exista el proyecto Unity:**
+- **Al crear el proyecto Unity (hecho el 2026-10-06):**
   - s21: `unity pipeline install`;
   - s23: `unity vcs merge-setup` y `unity vcs hooks install`;
   - s24: `unity skill install claude-code --local`. Si instalas el plugin oficial `unity setup claude` (decisión tuya), quita la skill local para no cargar dos copias.

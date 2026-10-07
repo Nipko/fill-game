@@ -1,7 +1,7 @@
 #Requires -Version 7.2
 <#
 .SYNOPSIS
-    Compuerta de tamano: falla si un AAB de Aquazonia supera el presupuesto (80 MB, GDD 08 sec. 6.1).
+    Compuerta de tamano: falla si un AAB de Amazon Fill supera el presupuesto (80 MB, GDD 08 sec. 6.1).
 
 .DESCRIPTION
     Comprueba cada .aab indicado (archivo, carpeta o comodin) en dos niveles:
@@ -35,7 +35,7 @@
     Falla con 3 si no se puede medir con bundletool (uso en CI).
 
 .EXAMPLE
-    pwsh -NoProfile -File ci/size-gate.ps1 Builds/Android/aquazonia.aab
+    pwsh -NoProfile -File ci/size-gate.ps1 Builds/Android/smoke.aab
 .EXAMPLE
     pwsh -NoProfile -File ci/size-gate.ps1 build/Android -MaxMB 80 -RequireBundletool
 #>

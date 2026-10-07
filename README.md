@@ -1,12 +1,12 @@
-# Amazon Fill (nombre comercial: Aquazonia)
+# Amazon Fill (nombre comercial: Tintalú)
 
-**Amazon Fill** es el nombre interno (carpeta, repositorio, código, prefijo de eventos `af_`) de **Aquazonia**, un juego móvil de ordenar agua (*water-sort*) con temática de la cuenca amazónica real: 14 tintes que son frutas y aguas con nombre, cuias de vidrio como recipientes, 13 mundos por país y río, y dos mascotas, Capi (capibara) y Rosa (boto). Copia el núcleo y la economía probados del género, corrige las quejas estructurales del líder (rescate caro sin ruta gratuita, tablero que cambia al reintentar, colores ocultos como azar, anuncios tras cada nivel) y nace Android-first para América Latina con precios por país.
+**Amazon Fill** es el nombre interno (carpeta, repositorio, código, prefijo de eventos `af_`) de **Tintalú** (forma ASCII `Tintalu`), un juego móvil de ordenar agua (*water-sort*) con temática de la cuenca amazónica real: 14 tintes que son frutas y aguas con nombre, cuias de vidrio como recipientes, 13 mundos por país y río, y dos mascotas, Capi (capibara) y Rosa (boto). Copia el núcleo y la economía probados del género, corrige las quejas estructurales del líder (rescate caro sin ruta gratuita, tablero que cambia al reintentar, colores ocultos como azar, anuncios tras cada nivel) y nace Android-first para América Latina con precios por país.
 
 **Quién lo hace:** todo el código lo escriben agentes de IA (Claude Code con subagentes, modelo Opus; ver `CLAUDE.md` y `.claude/agents/`). Las personas son el dueño del producto (producto, cuentas, licencias, firmas y pagos), un artista 2D freelance, un asesor cultural y un abogado de marcas (`docs/gdd/09-roadmap-equipo-kpis-riesgos.md` §0).
 
 ## Estructura de carpetas
 
-La raíz del repositorio es también la raíz del proyecto Unity. Unity solo importa `Assets/` y `Packages/`; el resto de carpetas no le afecta. Las marcadas con *(tras la licencia)* aparecen cuando el dueño active la licencia Personal de Unity y los agentes creen el proyecto.
+La raíz del repositorio es también la raíz del proyecto Unity (6000.3.25f1, URP 2D, creado el 2026-10-06). Unity solo importa `Assets/` y `Packages/`; el resto de carpetas no le afecta.
 
 ```
 amazon-fill/
@@ -15,15 +15,16 @@ amazon-fill/
   global.json               fija el .NET SDK 10.0.401
   .gitignore  .gitattributes  .editorconfig     # Git LFS para binarios; nunca para código, YAML, .meta ni JSON
   .claude/                  settings.proposed.json (permisos propuestos; pasa a settings.json al aprobarse en s12),
-                            agents/ (7 subagentes), rules/ (reglas por ruta)
+                            agents/ (7 subagentes), rules/ (reglas por ruta), skills/ (unity-cli, unity-pipeline)
   .github/workflows/        (más adelante, s30-s32) ci.yml (job core: dotnet test + esquema) y unity.yml (tests de Unity y AAB)
-  Assets/                   (tras la licencia) _Project/{Art,Audio,Shaders,Prefabs,Scenes,Scripts,Data,Editor/CI,Tests}
-  ProjectSettings/          (tras la licencia) ProjectVersion.txt = Unity 6000.3.25f1 (e1dba0a9aba4)
+  Assets/                   _Project/Editor/CI (AF.EditorTools: ProjectSetup y BuildSmoke); más adelante
+                            _Project/{Art,Audio,Shaders,Prefabs,Scenes,Scripts,Data,Tests}
+  ProjectSettings/          ProjectVersion.txt = Unity 6000.3.25f1 (e1dba0a9aba4); nunca se edita a mano
   Packages/
-    manifest.json           (tras la licencia) paquetes de Unity con versión fijada
-    com.aquazonia.core/     ÚNICA copia del núcleo: Runtime/AF.Core (sin UnityEngine), Runtime/AF.Solver,
+    manifest.json           paquetes de Unity con versión fijada (incluye com.unity.pipeline 0.8.0-exp.1)
+    com.amazonfill.core/    ÚNICA copia del núcleo: Runtime/AF.Core (sin UnityEngine), Runtime/AF.Solver,
                             Tests/Editor (tests compartidos con dotnet, subconjunto NUnit 3.5, C# 9)
-  dotnet/                   Aquazonia.slnx; AF.Core y AF.Solver (netstandard2.1, enlazan los .cs del paquete),
+  dotnet/                   AmazonFill.slnx; AF.Core y AF.Solver (netstandard2.1, enlazan los .cs del paquete),
                             AF.Core.Tests (net10.0, NUnit 3.14.0); Directory.Build.props, BannedSymbols.txt;
                             artifacts/ (bin/obj, ignorada)
   tools/
@@ -56,18 +57,19 @@ Requisitos ya instalados en la máquina de desarrollo (Windows 11 ARM64): .NET S
 **Núcleo en C# (no necesita Unity).** Desde la raíz del repositorio:
 
 ```
-dotnet build dotnet/Aquazonia.slnx -warnaserror
-dotnet test dotnet/Aquazonia.slnx
+dotnet build dotnet/AmazonFill.slnx -warnaserror
+dotnet test dotnet/AmazonFill.slnx
 python tools/validate_schema.py                     # 23/23 PASS; código 1 si falla
 ```
 
-Si `dotnet` no está en el PATH de una terminal nueva, en PowerShell: `& "C:\Program Files\dotnet\dotnet.exe" test dotnet/Aquazonia.slnx` (o antepón `C:\Program Files\dotnet` al PATH).
+Si `dotnet` no está en el PATH de una terminal nueva, en PowerShell: `& "C:\Program Files\dotnet\dotnet.exe" test dotnet/AmazonFill.slnx` (o antepón `C:\Program Files\dotnet` al PATH).
 
-**Proyecto Unity.** Todavía no existe. Se crea con Unity 6000.3.25f1 (editor ARM64) **después de que el dueño inicie sesión y active la licencia Personal** (`unity auth login`, `unity license activate --personal --accept-eula`; pasos s15-s16 del plan). Después los agentes crean el proyecto URP 2D, pasan la compuerta del día 1 (tres builds Android IL2CPP en verde y prueba en el teléfono; `docs/gdd/08-arquitectura-tecnica-publicacion.md` §16) y verifican con:
+**Proyecto Unity** (6000.3.25f1, editor ARM64 nativo; nunca más de un Editor abierto sobre la misma carpeta). La compuerta del día 1 está superada: tres builds AAB + APK IL2CPP ARM64 en verde (`docs/setup/compuerta-dia-1.md`). Se verifica con:
 
 ```
-unity test . --mode EditMode --output Logs/editmode.xml
-unity test . --mode PlayMode --output Logs/playmode.xml     # antes de cada PR
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode     # 35/35; PlayMode antes de cada PR
+pwsh -NoProfile -File scripts/unity-compile.ps1                 # solo compilación (primeras líneas "error CS")
+unity run <repo> --architecture arm64 --log-file Logs/smoke-android-N.log --no-tail --timeout 5400 --non-interactive -- -nographics -buildTarget Android -executeMethod AF.EditorTools.BuildSmoke.BuildAndroid
 ```
 
 **Herramientas de diseño en Python** (Python 3.14; solo `validate_schema.py` necesita `pip install "jsonschema>=4.18"`; las salidas `econ_*.md` se reproducen byte a byte con la semilla 2026):
@@ -81,7 +83,7 @@ python tools/econ_sim.py --runs 300 --rescue 600,750,900 --no-revenue > tools/ou
 python tools/econ_variants.py > tools/out/econ_variants.md                                      # 8 variantes (05 §3.6)
 ```
 
-Reglas que conviene conocer antes de tocar nada: no se editan a mano `.unity`, `.prefab`, `.meta` ni `ProjectSettings/`; no se añaden SDK ni permisos sin el dueño; ningún secreto entra en el repositorio; y **ningún AAB se sube a Google Play hasta tener el dictamen de marca** (`docs/legal/marca.md`).
+Reglas que conviene conocer antes de tocar nada: no se editan a mano `.unity`, `.prefab`, `.meta` ni `ProjectSettings/`; no se añaden SDK ni permisos sin el dueño; ningún secreto entra en el repositorio; y **ningún AAB se sube a Google Play con el `applicationId` definitivo (`com.<estudio>.tintalu`) hasta tener el dictamen de marca**; los builds de prueba usan `com.amazonfill.dev` (`docs/legal/marca.md`).
 
 ## Cómo leer la documentación en 15 minutos
 
@@ -94,9 +96,9 @@ La investigación (`docs/research/` y `docs/setup/research/`) es material de apo
 
 ## Estado
 
-GDD 1.3 — 2026-10-06: **aprobado por el dueño para producción** (recomendaciones aceptadas el 2026-10-06; coherencia verificada: 28/28 contratos). Versiones anteriores: 1.2, 1.1 (2026-10-06) y 1.0 (2026-10-05).
+GDD 1.4 — 2026-10-06 (nombre comercial Tintalú en lugar de Aquazonia): **aprobado por el dueño para producción** (recomendaciones aceptadas el 2026-10-06; coherencia verificada: 28/28 contratos). Versiones anteriores: 1.3, 1.2, 1.1 (2026-10-06) y 1.0 (2026-10-05).
 
-- Puesta en marcha en curso: .NET 10, Unity Hub, Unity CLI, Git LFS y `adb` instalados y verificados; el Editor 6000.3.25f1 ARM64 con Android Build Support se está instalando. Pendiente del dueño: iniciar sesión en Unity y activar la licencia Personal; después se crea el proyecto Unity.
-- El andamiaje del núcleo en .NET (`Packages/com.aquazonia.core`, `dotnet/`, `tools/level-generator`, `tools/level-qa`) y la configuración de los agentes están escritos: `dotnet build -warnaserror` sin avisos y 39/39 tests en verde; todavía no hay commits ni repositorio remoto.
-- Marca: Aquazonia condicionada al dictamen de un abogado de marcas en Brasil (solicitud INPI 938306200); dominios `aquazonia.app` y `aquazonia.co`.
+- Puesta en marcha: .NET 10, Unity Hub, Unity CLI, Git LFS, `adb` y el Editor 6000.3.25f1 ARM64 con Android Build Support instalados; proyecto Unity URP 2D creado. **Compuerta del día 1 superada** (`docs/setup/compuerta-dia-1.md`): 3/3 builds AAB + APK IL2CPP ARM64 con el editor ARM64 nativo; limpio 26,5 min, incrementales unos 7 min; AAB de 35 MB; targetSdk 36; 16 KB correcto. Los builds de release y de referencia serán los del CI Linux. Pendiente del dueño: instalar el APK en el teléfono (s27) y la prueba visual (s28).
+- Núcleo en .NET (`Packages/com.amazonfill.core`, `dotnet/`, `tools/level-generator`, `tools/level-qa`): `dotnet build -warnaserror` sin avisos, 39/39 tests .NET y 35/35 EditMode en verde. Repositorio privado en GitHub con el commit inicial.
+- Marca: **Tintalú** (forma ASCII `Tintalu`), elegida el 2026-10-06 en sustitución de Aquazonia, descartada por la solicitud idéntica INPI 938306200 en Brasil (clase 41). Riesgo medio, condicionada al dictamen de un abogado de marcas (INPI, EL TINTAL en México y TINTA en EE. UU.); dominios por registrar: `tintalu.com`, `tintalu.app`, `tintalu.co` y `tintalu.com.br` (`docs/legal/nombres-candidatos.md`). Los identificadores internos (paquete `com.amazonfill.core`, `dotnet/AmazonFill.slnx`, `AF.*`, eventos `af_`, `com.amazonfill.dev`) no llevan la marca.
 - Siguientes pasos: `docs/GDD.md` §9.
