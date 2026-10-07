@@ -1,39 +1,41 @@
 #nullable enable
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace AF.Presentation
 {
     /// <summary>
-    /// Chorro del vertido (02 §4.1; 07 §5.2): Bézier cuadrática del labio a la superficie del destino, dibujada con
-    /// segmentos de uGUI reutilizados (sin asignaciones por fotograma), grosor de 0,16 u a 0,10 u y el color del tinte.
+    /// Chorro del vertido (02 §4.1; 07 §5.2; guía visual v2, 6.5): Bézier cuadrática del labio a la superficie del destino,
+    /// dibujada como una cinta de <see cref="StreamGraphic"/> reutilizada (sin asignaciones por fotograma), grosor de 0,16 u
+    /// a 0,10 u con remates redondos (revisión visual del 2026-10-07), núcleo del tinte con +10 % de L y línea especular
+    /// central de 1 dp. Una dosis por vertido (D-001).
     /// </summary>
     public sealed class PourStream
     {
-        private const int Segments = 14;
+        private readonly StreamGraphic _graphic;
+        private Color _lastTint = new Color(-1f, -1f, -1f, -1f);
+        private Color _core;
 
-        private readonly Image[] _segments = new Image[Segments];
-
-        /// <summary>Crea los segmentos dentro de <paramref name="layer"/> (contenedor del tablero, origen arriba a la izquierda).</summary>
+        /// <summary>Crea la cinta dentro de <paramref name="layer"/> (contenedor del tablero, origen arriba a la izquierda).</summary>
         public PourStream(RectTransform layer, int id)
         {
-            for (int i = 0; i < Segments; i++)
-            {
-                var go = new GameObject("Stream" + id + "_" + i, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-                go.transform.SetParent(layer, false);
-                Image img = go.GetComponent<Image>();
-                img.raycastTarget = false;
-                RectTransform rt = img.rectTransform;
-                rt.anchorMin = new Vector2(0f, 1f);
-                rt.anchorMax = new Vector2(0f, 1f);
-                rt.pivot = new Vector2(0.5f, 0.5f);
-                img.enabled = false;
-                _segments[i] = img;
-            }
+            var go = new GameObject("Stream" + id, typeof(RectTransform), typeof(CanvasRenderer), typeof(StreamGraphic));
+            go.transform.SetParent(layer, false);
+            _graphic = go.GetComponent<StreamGraphic>();
+            _graphic.Setup();
+            RectTransform rt = _graphic.rectTransform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = Vector2.zero;
+            _graphic.enabled = false;
         }
 
         /// <summary>Lo usa un vertido en curso.</summary>
         public bool InUse { get; set; }
+
+        /// <summary>Gráfico de la cinta (diagnóstico y capturas).</summary>
+        public StreamGraphic Graphic => _graphic;
 
         /// <summary>
         /// Dibuja el tramo [<paramref name="from"/>, <paramref name="to"/>] (parámetros 0..1) de la curva
@@ -49,46 +51,34 @@ namespace AF.Presentation
                 return;
             }
 
-            for (int i = 0; i < Segments; i++)
+            if (color != _lastTint)
             {
-                float a = Mathf.Lerp(from, to, i / (float)Segments);
-                float b = Mathf.Lerp(from, to, (i + 1) / (float)Segments);
-                Vector2 pa = Bezier(start, control, end, a);
-                Vector2 pb = Bezier(start, control, end, b);
-                Vector2 d = pb - pa;
-                float len = d.magnitude;
-                Image img = _segments[i];
-                if (len < 0.01f)
-                {
-                    img.enabled = false;
-                    continue;
-                }
-
-                img.enabled = true;
-                img.color = color;
-                RectTransform rt = img.rectTransform;
-                rt.anchoredPosition = (pa + pb) * 0.5f;
-                rt.sizeDelta = new Vector2(Mathf.Lerp(widthStart, widthEnd, (a + b) * 0.5f), len + 0.6f);
-                rt.localRotation = Quaternion.Euler(0f, 0f, (Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg) - 90f);
+                _lastTint = color;
+                _core = ColorMath.ScaleOkLightness(color, 1.10f); // núcleo del tinte con +10 % de L (guía 6.5)
+                _core.a = color.a;
             }
+
+            if (!_graphic.enabled)
+            {
+                _graphic.enabled = true;
+            }
+
+            if (_graphic.color != _core)
+            {
+                _graphic.color = _core;
+            }
+
+            float unit = Mathf.Max(widthStart, widthEnd) / BoardAnimator.StreamWidthStartU; // grosor del chorro en el labio, en u
+            _graphic.SetCurve(start, control, end, from, to, widthStart, widthEnd, unit);
         }
 
         /// <summary>Oculta el chorro.</summary>
         public void Hide()
         {
-            for (int i = 0; i < Segments; i++)
+            if (_graphic.enabled)
             {
-                if (_segments[i].enabled)
-                {
-                    _segments[i].enabled = false;
-                }
+                _graphic.enabled = false;
             }
-        }
-
-        private static Vector2 Bezier(Vector2 p0, Vector2 p1, Vector2 p2, float t)
-        {
-            float u = 1f - t;
-            return (u * u * p0) + (2f * u * t * p1) + (t * t * p2);
         }
     }
 }

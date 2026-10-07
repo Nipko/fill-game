@@ -8,7 +8,8 @@
     "AF.GameFlow",
     "AF.UI",
     "UnityEngine.TestRunner",
-    "UnityEditor.TestRunner"
+    "UnityEditor.TestRunner",
+    "AF.Presentation"
   ],
   "includePlatforms": [
     "Editor"

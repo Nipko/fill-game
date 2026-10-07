@@ -23,6 +23,9 @@ namespace AF.UI
         [SerializeField]
         private TextAsset? levelPack;
 
+        private static ProceduralArt? s_art;
+        private static string? s_artKey;
+
         private ProceduralArt? _art;
         private GameScreen? _screen;
         private LevelFlow? _flow;
@@ -113,7 +116,7 @@ namespace AF.UI
                 return;
             }
 
-            _art = new ProceduralArt(pack.WaterBase);
+            _art = SharedArt(pack.WaterBase);
             var probe = new DevProbe();
             _screen = new GameScreen(
                 transform,
@@ -189,9 +192,23 @@ namespace AF.UI
             }
         }
 
+        // El arte procedural se genera una vez por sesión y por agua base y variante de panel (guía visual v2, 8: la
+        // generación al arrancar cuesta CPU): recargar la escena o pasar de nivel no lo repite. Vive mientras dure la app.
+        private static ProceduralArt SharedArt(string waterBase)
+        {
+            string key = waterBase + (Palette.PanelVariantB ? "|b" : "|a");
+            if (s_art == null || s_artKey != key)
+            {
+                s_art?.Dispose();
+                s_art = new ProceduralArt(waterBase);
+                s_artKey = key;
+            }
+
+            return s_art;
+        }
+
         private void OnDestroy()
         {
-            _art?.Dispose();
             if (Current == this)
             {
                 Current = null;

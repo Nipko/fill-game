@@ -69,8 +69,43 @@ namespace AF.Presentation
         /// <summary>Altura del arco del traslado ("arco, no línea recta", 07 §5.2), en u.</summary>
         public const float TravelArcU = 0.4f;
 
-        /// <summary>Aparición del chorro desde el labio (ms).</summary>
+        /// <summary>
+        /// Aparición del chorro desde el labio (ms). El destino empieza a llenarse cuando la cabeza llega a su superficie,
+        /// es decir, <see cref="StreamGrowMs"/> después del arranque del chorro (revisión visual del 2026-10-07).
+        /// </summary>
         public const float StreamGrowMs = 60f;
+
+        /// <summary>Grosor del chorro en el labio: 0,16 u (guía 6.5; revisión visual del 2026-10-07).</summary>
+        public const float StreamWidthStartU = 0.16f;
+
+        /// <summary>Grosor del chorro al llegar a la superficie del destino: 0,10 u (guía 6.5).</summary>
+        public const float StreamWidthEndU = 0.10f;
+
+        /// <summary>
+        /// Punto de control de la Bézier del chorro: 0,35 u hacia fuera del labio por el lado bajo (revisión visual del
+        /// 2026-10-07). El chorro sale del labio en esa dirección y se curva hacia la superficie del destino.
+        /// </summary>
+        public const float StreamControlU = 0.35f;
+
+        /// <summary>Holgura del origen inclinado sobre el borde de las cuias vecinas (u; revisión visual del 2026-10-07).</summary>
+        public const float NeighbourClearanceU = 0.3f;
+
+        /// <summary>
+        /// Elevación máxima del origen sobre la pose de 07 §5.2 (u): 1,0, así el labio queda entre 0,6 y 1,6 u sobre el borde
+        /// del destino (revisión visual del 2026-10-07: con 5 u de margen la búsqueda lo subía 2,1 u para tapar menos y el
+        /// chorro caía desde muy alto). A 38° el origen puede tapar algo de una vecina durante el vertido (≤ 400 ms).
+        /// </summary>
+        public const float MaxRaiseU = 1f;
+
+        private const float RaiseStepU = 0.25f;
+        private const float RaisePenalty = 0.4f;   // u² de tapado que compensa subir 1 u
+        private const float LipShiftPenalty = 0.5f; // u² por u de desplazamiento del labio más allá de 0,25 u
+
+        // Distancias (u) del centro del labio al eje del destino, hacia el origen (0,25 u es la pose de partida).
+        private static readonly float[] LipShiftsU = { 0.25f, 0.45f, 0.65f };
+        private const float FarSidePenalty = 0.5f; // u²: verter desde el otro lado del destino
+        private const int SilhouetteRows = 24;
+        private const int SilhouetteCols = 6;
 
         private const int MaxJobs = 64;
 
@@ -94,6 +129,12 @@ namespace AF.Presentation
             }
         }
 
+        /// <summary>
+        /// Efectos de la caída de cada dosis (salpicadura y onda, guía visual v2 6.6); null = sin efectos. No cambian
+        /// tiempos ni el modelo.
+        /// </summary>
+        public IBoardFx? Fx { get; set; }
+
         /// <summary>La cola está vacía (la vista ya muestra el modelo).</summary>
         public bool IsIdle => _count == 0;
 
@@ -108,6 +149,12 @@ namespace AF.Presentation
 
         /// <summary>Vertidos que se sumaron a un trabajo igual en lugar de encolarse aparte (encadenado; diagnóstico y tests).</summary>
         public int ChainedCount { get; private set; }
+
+        /// <summary>
+        /// Techo para el labio del origen, en coordenadas del contenedor (y hacia arriba): el borde inferior del HUD. El
+        /// origen nunca sube por encima al apartarse de las vecinas.
+        /// </summary>
+        public float TopLimitY { get; set; } = float.MaxValue;
 
         /// <summary>
         /// Tiempo (ms) desde que empieza la animación de un vertido de <paramref name="amount"/> dosis hasta que el origen
@@ -406,25 +453,7 @@ namespace AF.Presentation
 
             s.Lock();
             job.StartOffset = s.BodyOffset;
-            float dx = t.FootPosition.x - s.FootPosition.x;
-            float dir;
-            if (Mathf.Abs(dx) > 1f)
-            {
-                dir = dx > 0f ? 1f : -1f;
-            }
-            else
-            {
-                dir = t.FootPosition.x > _streamLayer.rect.width * 0.5f ? -1f : 1f;
-            }
-
-            float angle = -dir * TiltDeg;
-            float rad = angle * Mathf.Deg2Rad;
-            float length = s.HeightU * s.Unit;
-            var lipVector = new Vector2(-length * Mathf.Sin(rad), length * Mathf.Cos(rad));
-            Vector2 rim = t.FootPosition + new Vector2(0f, t.HeightU * t.Unit);
-            Vector2 lipTarget = rim + new Vector2(-dir * 0.25f * t.Unit, LipClearanceU * t.Unit);
-            job.PourOffset = lipTarget - lipVector - s.FootPosition;
-            job.PourAngle = angle;
+            ChoosePourPose(ref job);
 
             job.DoseMs = _timings.DoseMs;
             job.StreamStart = _timings.TravelMs * StreamStartFraction;
@@ -443,7 +472,7 @@ namespace AF.Presentation
             job.StreamEnd = job.FlowEnd + _timings.TailMs;
             job.ReturnStart = Mathf.Max(_timings.TravelMs, job.StreamEnd);
             job.SrcEnd = job.ReturnStart + _timings.ReturnMs;
-            job.TgtEnd = job.FlowEnd + (job.TgtSealedAfter ? CuiaView.SealMs : 0f);
+            job.TgtEnd = job.FlowEnd + StreamGrowMs + (job.TgtSealedAfter ? CuiaView.SealMs : 0f);
         }
 
         private void Advance(ref Job job, float dtMs)
@@ -455,22 +484,52 @@ namespace AF.Presentation
             Color color = Palette.Tint(job.Tint);
             float p = Mathf.Clamp((time - job.StreamStart) / Mathf.Max(1f, job.DoseMs), 0f, job.Amount);
 
+            // El destino se llena cuando la cabeza del chorro llega a su superficie (Marea no tiene chorro).
+            float fillDelay = job.IsUndo ? 0f : StreamGrowMs;
+            float pt = Mathf.Clamp((time - job.StreamStart - fillDelay) / Mathf.Max(1f, job.DoseMs), 0f, job.Amount);
+
+            // La pose del origen se fija antes de dibujar el chorro: así el chorro sale del labio de este fotograma y no
+            // del anterior (con fotogramas largos el retraso se veía como un chorro que nacía por encima del labio).
+            if (!job.IsUndo && !job.SrcDone && time < job.SrcEnd)
+            {
+                s.SetPose(PoseOffset(ref job, time, s.Unit), PoseAngle(ref job, time));
+            }
+
             if (!job.IsUndo && job.Stream >= 0)
             {
                 PourStream stream = _streams[job.Stream];
                 if (time >= job.StreamStart && time < job.StreamEnd)
                 {
                     float u = t.Unit;
-                    Vector2 lip = s.LipInContainer();
-                    Vector2 surface = t.SurfaceInContainer();
-                    var control = new Vector2(surface.x, lip.y);
+                    StreamCurve(s, t, out Vector2 lip, out Vector2 control, out Vector2 surface);
                     float head = Mathf.Clamp01((time - job.StreamStart) / StreamGrowMs);
                     float tail = time > job.FlowEnd ? Mathf.Clamp01((time - job.FlowEnd) / Mathf.Max(1f, _timings.TailMs)) : 0f;
-                    stream.Draw(lip, control, surface, tail, head, color, 0.16f * u, 0.10f * u);
+                    stream.Draw(lip, control, surface, tail, head, color, StreamWidthStartU * s.Unit, StreamWidthEndU * u);
+                    if (!job.SrcDone)
+                    {
+                        s.SetTongue(head * (1f - tail), color, job.Tint); // lengua por la pared inferior hasta el labio
+                    }
+
+                    // Cada dosis que empieza a caer salpica y agita la superficie del destino (una dosis por vertido,
+                    // D-001; con el encadenado, una por dosis).
+                    if (time >= job.StreamStart + StreamGrowMs)
+                    {
+                        int due = Mathf.Min(job.Amount, 1 + Mathf.FloorToInt(Mathf.Max(0f, p)));
+                        while (job.Splashes < due)
+                        {
+                            job.Splashes++;
+                            t.Ripple();
+                            Fx?.Splash(surface, color, u);
+                        }
+                    }
                 }
                 else if (time >= job.StreamEnd)
                 {
                     ReleaseStream(ref job);
+                    if (!job.SrcDone)
+                    {
+                        s.SetTongue(0f, color, job.Tint);
+                    }
                 }
             }
 
@@ -482,11 +541,6 @@ namespace AF.Presentation
                 }
                 else
                 {
-                    if (!job.IsUndo)
-                    {
-                        s.SetPose(PoseOffset(ref job, time, s.Unit), PoseAngle(ref job, time));
-                    }
-
                     int top = job.SrcBefore.Count - 1;
                     for (int i = 0; i < job.Amount; i++)
                     {
@@ -506,15 +560,36 @@ namespace AF.Presentation
                     int bottom = job.TgtBefore.Count;
                     for (int i = 0; i < job.Amount; i++)
                     {
-                        t.SetDose(bottom + i, color, Mathf.Clamp01(p - i), job.Tint);
+                        t.SetDose(bottom + i, color, Mathf.Clamp01(pt - i), job.Tint);
                     }
 
-                    if (job.TgtSealedAfter && time >= job.FlowEnd)
+                    float flowArrived = job.FlowEnd + fillDelay;
+                    if (job.TgtSealedAfter && time >= flowArrived)
                     {
-                        t.SealAnimationAt(time - job.FlowEnd);
+                        t.SealAnimationAt(time - flowArrived);
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Curva del chorro de <paramref name="s"/> a <paramref name="t"/> con la pose actual (revisión visual del
+        /// 2026-10-07; guía 6.5): nace en el labio, en el canto interior del lado bajo, con el remate redondo tangente a él (el
+        /// centro del remate queda medio grosor hacia fuera y medio grosor hacia dentro del labio, sin cuña que asome); el
+        /// control está <see cref="StreamControlU"/> hacia fuera del labio y el final, en la superficie del líquido del
+        /// destino (el fondo de la cavidad si está vacío), dentro de su boca.
+        /// </summary>
+        public static void StreamCurve(CuiaView s, CuiaView t, out Vector2 start, out Vector2 control, out Vector2 end)
+        {
+            float su = s.Unit;
+            float half = 0.5f * StreamWidthStartU * su;
+            Vector2 outward = s.PourOutward();
+            Vector2 up = s.AxisUp();
+            start = s.PourPointInContainer() + (outward * half) - (up * half);
+            control = start + (outward * (StreamControlU * su));
+            Vector2 surface = t.SurfaceInContainer();
+            float mouth = (CuiaGeometry.InnerHalfWidth(CuiaGeometry.LipU(t.Capacity), t.Capacity) - 0.15f) * t.Unit;
+            end = new Vector2(Mathf.Clamp(control.x, surface.x - mouth, surface.x + mouth), surface.y);
         }
 
         private Vector2 PoseOffset(ref Job job, float time, float unit)
@@ -558,6 +633,7 @@ namespace AF.Presentation
             CuiaView s = _views[job.Source];
             if (job.Started && !job.IsUndo)
             {
+                s.SetTongue(0f, Color.clear, 0);
                 s.Unlock();
             }
 
@@ -609,6 +685,171 @@ namespace AF.Presentation
             }
 
             _count = w;
+        }
+
+        // Pose de vertido (07 §5.2: labio 0,6 u sobre el borde del destino; 38° de 02 §4.1) elegida para tapar lo menos
+        // posible (revisiones visuales del 2026-10-07): se prueban los dos lados del destino, el centro del labio a 0,25,
+        // 0,45 o 0,65 u del eje del destino hacia el origen (el canto por el que sale el chorro sigue sobre su boca) y
+        // elevaciones de 0 a 1 u (el labio nunca pasa de 1,6 u sobre el borde del destino). Gana la de menor coste = área
+        // tapada, ponderada (silueta del origen sobre el cuerpo de las demás, × 3, y sobre su hombro, cuello y la holgura
+        // de 0,3 u por encima de su borde, × 2; dentro de la silueta del destino por debajo de su borde, × 3) + 0,4 u² por
+        // u de elevación + 0,5 u² por u de desplazamiento del labio más allá de 0,25 u + 0,5 u² si vierte desde el lado
+        // lejano. Sin asignaciones.
+        private void ChoosePourPose(ref Job job)
+        {
+            CuiaView s = _views[job.Source];
+            CuiaView t = _views[job.Target];
+            float dx = t.FootPosition.x - s.FootPosition.x;
+            float preferred;
+            if (Mathf.Abs(dx) > 1f)
+            {
+                preferred = dx > 0f ? 1f : -1f;
+            }
+            else
+            {
+                preferred = t.FootPosition.x > _streamLayer.rect.width * 0.5f ? -1f : 1f;
+            }
+
+            float bestCost = float.MaxValue;
+            float length = s.HeightU * s.Unit;
+            Vector2 rim = t.FootPosition + new Vector2(0f, t.HeightU * t.Unit);
+            int steps = Mathf.RoundToInt(MaxRaiseU / RaiseStepU);
+            for (int side = 0; side < 2; side++)
+            {
+                float dir = side == 0 ? preferred : -preferred;
+                float angle = -dir * TiltDeg;
+                float rad = angle * Mathf.Deg2Rad;
+                var lipVector = new Vector2(-length * Mathf.Sin(rad), length * Mathf.Cos(rad));
+                for (int shift = 0; shift < LipShiftsU.Length; shift++)
+                {
+                    float lipShift = LipShiftsU[shift];
+                    Vector2 lipTarget = rim + new Vector2(-dir * lipShift * t.Unit, LipClearanceU * t.Unit);
+                    Vector2 baseOffset = lipTarget - lipVector - s.FootPosition;
+                    float fixedCost = (LipShiftPenalty * (lipShift - LipShiftsU[0])) + (side == 1 ? FarSidePenalty : 0f);
+                    for (int step = 0; step <= steps; step++)
+                    {
+                        float raise = step * RaiseStepU * s.Unit;
+                        if (step > 0 && lipTarget.y + raise > TopLimitY)
+                        {
+                            break;
+                        }
+
+                        Vector2 offset = baseOffset + new Vector2(0f, raise);
+                        float cost = PoseCost(job.Source, job.Target, offset, rad) + (RaisePenalty * step * RaiseStepU) + fixedCost;
+                        if (cost < bestCost - 1e-4f)
+                        {
+                            bestCost = cost;
+                            job.PourOffset = offset;
+                            job.PourAngle = angle;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Área ponderada (u²) de la silueta del origen <paramref name="source"/>, desplazada <paramref name="offset"/> y
+        /// girada <paramref name="radians"/>, que tapa a las demás cuias, sale del tablero por los lados o sube sobre el HUD.
+        /// </summary>
+        public float PoseCost(int source, int target, Vector2 offset, float radians)
+        {
+            CuiaView s = _views[source];
+            float u = s.Unit;
+            float h = s.HeightU;
+            int cap = s.Capacity;
+            Vector2 foot = s.FootPosition + offset;
+            float width = _streamLayer.rect.width;
+            float cost = 0f;
+
+            // Muestreo con los bordes incluidos (regla del trapecio): el contorno es lo que toca a las vecinas.
+            for (int r = 0; r <= SilhouetteRows; r++)
+            {
+                float y = (float)r / SilhouetteRows * h;
+                float hw = CuiaGeometry.OuterHalfWidth(Mathf.Min(y, h - 0.001f), cap);
+                if (hw <= 0f)
+                {
+                    continue;
+                }
+
+                float area = (2f * hw / SilhouetteCols) * (h / SilhouetteRows) * (r == 0 || r == SilhouetteRows ? 0.5f : 1f);
+                for (int c = 0; c <= SilhouetteCols; c++)
+                {
+                    float x = -hw + ((float)c * 2f * hw / SilhouetteCols);
+                    Vector2 p = foot + CuiaView.Rotate(new Vector2(x * u, y * u), radians);
+                    cost += area * (c == 0 || c == SilhouetteCols ? 0.5f : 1f) * Occlusion(p, source, target, width);
+                }
+            }
+
+            return cost;
+        }
+
+        /// <summary>Pose de vertido del trabajo en curso que mueve <paramref name="source"/> (diagnóstico y tests).</summary>
+        public bool TryGetPourPose(int source, out Vector2 offset, out float angleDeg)
+        {
+            for (int i = 0; i < _count; i++)
+            {
+                if (_jobs[i].Started && !_jobs[i].IsUndo && _jobs[i].Source == source)
+                {
+                    offset = _jobs[i].PourOffset;
+                    angleDeg = _jobs[i].PourAngle;
+                    return true;
+                }
+            }
+
+            offset = Vector2.zero;
+            angleDeg = 0f;
+            return false;
+        }
+
+        // Peso del tapado en el punto p: 3 sobre el cuerpo (cavidad) de otra cuia, 2 sobre su hombro, cuello y la holgura
+        // de 0,3 u sobre su borde; en el destino, 3 dentro de su silueta por debajo de su borde (el origen no se mete en su
+        // boca ni lo tapa; fuera de la silueta, junto al cuello, no tapa nada) y nada por encima del borde; 3 fuera del
+        // tablero o sobre el HUD. Con 0,4 por u de elevación, subir compensa en cuanto evita tapar algo.
+        private float Occlusion(Vector2 p, int source, int target, float width)
+        {
+            if (p.x < 0f || p.x > width || p.y > TopLimitY)
+            {
+                return 3f;
+            }
+
+            float w = 0f;
+            for (int j = 0; j < _views.Length; j++)
+            {
+                if (j == source)
+                {
+                    continue;
+                }
+
+                CuiaView v = _views[j];
+                float vu = v.Unit;
+                Vector2 f = v.FootPosition;
+                if (p.x < f.x - vu || p.x > f.x + vu || p.y < f.y)
+                {
+                    continue;
+                }
+
+                if (j == target)
+                {
+                    // Destino: el origen no entra en su silueta (el chorro sí); por encima del borde, libre.
+                    if (p.y <= f.y + (v.HeightU * vu) && Mathf.Abs(p.x - f.x) < CuiaGeometry.OuterHalfWidth((p.y - f.y) / vu, v.Capacity) * vu)
+                    {
+                        w = Mathf.Max(w, 3f);
+                    }
+
+                    continue;
+                }
+
+                float body = f.y + (CuiaGeometry.CavityTopU(v.Capacity) * vu);
+                float top = f.y + ((v.HeightU + NeighbourClearanceU) * vu);
+                if (p.y > top)
+                {
+                    continue;
+                }
+
+                w = Mathf.Max(w, p.y <= body ? 3f : 2f);
+            }
+
+            return w;
         }
 
         private int AcquireStream()
@@ -665,6 +906,7 @@ namespace AF.Presentation
             public Vector2 PourOffset;
             public float PourAngle;
             public int Stream;
+            public int Splashes;
         }
     }
 }

@@ -83,6 +83,216 @@ namespace AF.Presentation
         /// <summary>Pluma azul de guacamayo (provisional).</summary>
         public static readonly Color FeatherBlue = Hex(0x2F6FD6);
 
+        // ------------------------------------------------------------------------------------------------------------
+        // Dirección visual v2 «Selva brillante premium» (D-003; docs/art/direccion-visual-v2.md 2.2-2.3). Tokens de
+        // entorno y de UI; los HEX de los tintes no cambian (2.1) y siguen prohibidos en la UI (07 §3, regla 6).
+        // ------------------------------------------------------------------------------------------------------------
+
+        /// <summary>
+        /// <c>cielo_alto</c>: #5BC0EB (revisión visual del 2026-10-07: el #7CCBE8 de la guía 2.2 dejaba la escena casi
+        /// monocroma). Es también el relleno de cielo sobre el panorama cuando el horizonte baja (GameScreen).
+        /// </summary>
+        public static readonly Color SkyTop = Hex(0x5BC0EB);
+
+        /// <summary><c>cielo_medio</c> #FFC994.</summary>
+        public static readonly Color SkyMid = Hex(0xFFC994);
+
+        /// <summary><c>cielo_horizonte</c> #FFE4A8: horizonte y halo del sol.</summary>
+        public static readonly Color SkyHorizon = Hex(0xFFE4A8);
+
+        /// <summary><c>sol</c> #FFF6D6.</summary>
+        public static readonly Color Sun = Hex(0xFFF6D6);
+
+        /// <summary><c>nube_luz</c>: #FFF6EA (revisión visual del 2026-10-07; la guía 2.2 decía #FFF0DC).</summary>
+        public static readonly Color CloudLight = Hex(0xFFF6EA);
+
+        /// <summary><c>nube_sombra</c> #F3AE8A.</summary>
+        public static readonly Color CloudShadow = Hex(0xF3AE8A);
+
+        /// <summary><c>orilla_lejana</c> #7FB0A2.</summary>
+        public static readonly Color FarShore = Hex(0x7FB0A2);
+
+        /// <summary><c>palmera_lejana</c> #4E8C78: siluetas de palmeras de açaí.</summary>
+        public static readonly Color FarPalm = Hex(0x4E8C78);
+
+        /// <summary><c>selva_media</c> #2C7A4B.</summary>
+        public static readonly Color JungleMid = Hex(0x2C7A4B);
+
+        /// <summary><c>selva_luz</c> #63B548.</summary>
+        public static readonly Color JungleLight = Hex(0x63B548);
+
+        /// <summary><c>selva_sombra</c> #1C5236.</summary>
+        public static readonly Color JungleShadow = Hex(0x1C5236);
+
+        /// <summary><c>rio_reflejo</c> #F6CF92.</summary>
+        public static readonly Color RiverReflect = Hex(0xF6CF92);
+
+        /// <summary><c>rio_medio</c> #CDA06A.</summary>
+        public static readonly Color RiverMid = Hex(0xCDA06A);
+
+        /// <summary><c>rio_base</c> #B08A5A (= agua base blanca del Estuario, 07 §2.1).</summary>
+        public static readonly Color RiverBase = Hex(0xB08A5A);
+
+        /// <summary><c>rio_profundo</c> #80603E.</summary>
+        public static readonly Color RiverDeep = Hex(0x80603E);
+
+        /// <summary>Río a +60 dp bajo el horizonte, #8A6C48 (revisión visual del 2026-10-07: el río no debe leerse como arena).</summary>
+        public static readonly Color RiverLow = Hex(0x8A6C48);
+
+        /// <summary>Río a +140 dp bajo el horizonte, #6B5640 (revisión visual del 2026-10-07).</summary>
+        public static readonly Color RiverFar = Hex(0x6B5640);
+
+        /// <summary>Línea de agua al pie de las orillas, #F7E6C4.</summary>
+        public static readonly Color WaterLine = Hex(0xF7E6C4);
+
+        /// <summary><c>destello</c> #FFF4D2: brillos aditivos del agua, polen.</summary>
+        public static readonly Color Glint = Hex(0xFFF4D2);
+
+        /// <summary><c>hoja_oscura</c> #145A35.</summary>
+        public static readonly Color LeafDark = Hex(0x145A35);
+
+        /// <summary><c>hoja_media</c> #23824A.</summary>
+        public static readonly Color LeafMid = Hex(0x23824A);
+
+        /// <summary><c>hoja_clara</c> #5DBB3F.</summary>
+        public static readonly Color LeafLight = Hex(0x5DBB3F);
+
+        /// <summary><c>hoja_brillo</c> #C6EF6B.</summary>
+        public static readonly Color LeafShine = Hex(0xC6EF6B);
+
+        /// <summary><c>nervadura</c> #0E3F25.</summary>
+        public static readonly Color Vein = Hex(0x0E3F25);
+
+        /// <summary><c>heliconia</c> #E2483A: un único acento floral por racimo (escena, no UI).</summary>
+        public static readonly Color Heliconia = Hex(0xE2483A);
+
+        /// <summary><c>muelle_luz</c>: #C08A58 (revisión visual del 2026-10-07; la guía 2.2 decía #A87A50).</summary>
+        public static readonly Color DockLight = Hex(0xC08A58);
+
+        /// <summary><c>muelle_base</c>: #A8774C, L* 54 (revisión visual del 2026-10-07: con #80583A, L* 41, la escena era marrón sobre marrón).</summary>
+        public static readonly Color DockBase = Hex(0xA8774C);
+
+        /// <summary>
+        /// Cara soleada de las tablas en el tercio superior del muelle, #C99A6A, L* 67 (revisión visual del 2026-10-07: cara
+        /// de L* 64-68 arriba para que el muelle no sea una masa parda de valor medio).
+        /// </summary>
+        public static readonly Color DockSunlit = Hex(0xC99A6A);
+
+        /// <summary><c>muelle_sombra</c> #5A3D28.</summary>
+        public static readonly Color DockShadow = Hex(0x5A3D28);
+
+        /// <summary><c>ranura</c> #2A1A10: juntas y ranuras talladas.</summary>
+        public static readonly Color Groove = Hex(0x2A1A10);
+
+        /// <summary><c>fibra_luz</c> #EED29A.</summary>
+        public static readonly Color FiberLight = Hex(0xEED29A);
+
+        /// <summary><c>fibra_base</c> #C49A5C.</summary>
+        public static readonly Color FiberBase = Hex(0xC49A5C);
+
+        /// <summary><c>fibra_sombra</c> #8A6436.</summary>
+        public static readonly Color FiberShadow = Hex(0x8A6436);
+
+        /// <summary><c>marco</c> #7C4E3A: marco del panel, madera media rojiza.</summary>
+        public static readonly Color Frame = Hex(0x7C4E3A);
+
+        /// <summary><c>marco_bisel</c> #D29B6E.</summary>
+        public static readonly Color FrameBevel = Hex(0xD29B6E);
+
+        /// <summary><c>madera_oscura</c> #36261C: bandeja, placa del nivel y marco de los modales.</summary>
+        public static readonly Color WoodDark = Hex(0x36261C);
+
+        /// <summary><c>repisa_sup</c> #C4935E: cara superior de la repisa (L* ≤ 65, VA-04b).</summary>
+        public static readonly Color ShelfTop = Hex(0xC4935E);
+
+        /// <summary><c>repisa_frente</c> #866650.</summary>
+        public static readonly Color ShelfFront = Hex(0x866650);
+
+        /// <summary><c>repisa_frente_inf</c> #6E523E.</summary>
+        public static readonly Color ShelfFrontLow = Hex(0x6E523E);
+
+        /// <summary><c>repisa_canto</c> #F2C38A: bisel iluminado.</summary>
+        public static readonly Color ShelfEdge = Hex(0xF2C38A);
+
+        /// <summary><c>vidrio_borde</c> #EAF7F3: contorno y fresnel del vidrio.</summary>
+        public static readonly Color GlassRim = Hex(0xEAF7F3);
+
+        /// <summary>Tinte del cuerpo del vidrio #CFEFE6 (guía 4.1; <c>glass_tint</c> de 07 §4.6).</summary>
+        public static readonly Color GlassTint = Hex(0xCFEFE6);
+
+        /// <summary><c>scrim</c> #0B2A33: velo bajo la barra de estado.</summary>
+        public static readonly Color Scrim = Hex(0x0B2A33);
+
+        /// <summary><c>crema</c> #FFF8E6: texto y glifos sobre botones, placas y madera.</summary>
+        public static readonly Color Cream = Hex(0xFFF8E6);
+
+        /// <summary><c>tinta</c> #2B2118 (= <c>ui_tinta</c>).</summary>
+        public static readonly Color Ink = Hex(0x2B2118);
+
+        /// <summary><c>panel_claro</c> #FBF0D9: superficie de modales (madera clara pulida, nunca papel).</summary>
+        public static readonly Color PanelLight = Hex(0xFBF0D9);
+
+        /// <summary><c>panel_claro_fondo</c> #F2E4C6.</summary>
+        public static readonly Color PanelLightLow = Hex(0xF2E4C6);
+
+        /// <summary><c>deshabilitado</c> #A9A39A.</summary>
+        public static readonly Color Disabled = Hex(0xA9A39A);
+
+        /// <summary><c>deshabilitado_texto</c> #3A3530 (4,85:1).</summary>
+        public static readonly Color DisabledText = Hex(0x3A3530);
+
+        /// <summary><c>deshabilitado_glifo</c> #4A4540 (3,79:1).</summary>
+        public static readonly Color DisabledGlyph = Hex(0x4A4540);
+
+        /// <summary><c>deshabilitado_contorno</c> #7C766D.</summary>
+        public static readonly Color DisabledOutline = Hex(0x7C766D);
+
+        /// <summary>Familia <b>Hoja</b> (primario: Siguiente).</summary>
+        public static readonly ButtonFamily FamilyLeaf = new ButtonFamily(Hex(0x86D25A), Hex(0x2F7D32), Hex(0x236A29), Hex(0x17501E), Hex(0x0F3A15));
+
+        /// <summary>Familia <b>Agua</b> (Marea: Deshacer en la bandeja y en el modal).</summary>
+        public static readonly ButtonFamily FamilyWater = new ButtonFamily(Hex(0x8ADBE6), Hex(0x13788F), Hex(0x0F6275), Hex(0x0A4A59), Hex(0x073640));
+
+        /// <summary>Familia <b>Madera</b> (secundario: Reiniciar, placa del nivel).</summary>
+        public static readonly ButtonFamily FamilyWood = new ButtonFamily(Hex(0xBF8F62), Hex(0x7E5638), Hex(0x46302A), Hex(0x2E2018), Hex(0x1E140E));
+
+        /// <summary>
+        /// Panel del tablero, variante A «azul petróleo de río» (recomendada, guía 4.6), con el degradado de agua profunda
+        /// de la revisión visual del 2026-10-07: #234452 (L* 27) → #142C36 (L* 17). C* ≤ 14, ΔE00 ≥ 14 frente a Huito.
+        /// </summary>
+        public static readonly PanelColors PanelA = new PanelColors(Hex(0x234452), Hex(0x142C36), Hex(0x102228));
+
+        /// <summary>Panel del tablero, variante B «caoba lacada» (solo para la comparación de F1, guía 4.6).</summary>
+        public static readonly PanelColors PanelB = new PanelColors(Hex(0x44302C), Hex(0x372521), Hex(0x251A17));
+
+        /// <summary>Usa la variante B del panel (capturas de comparación de F1; guía 4.6). Por defecto, A.</summary>
+        public static bool PanelVariantB { get; set; }
+
+        /// <summary>Variante de panel activa (A salvo que la elija el dueño o una captura de comparación).</summary>
+        public static PanelColors Panel => PanelVariantB ? PanelB : PanelA;
+
+        /// <summary>
+        /// Color opaco precalculado de la franja especular principal sobre el líquido de un tinte (guía 4.2): el tinte con
+        /// +12 L* (CIELAB) si su L* &lt; 40 y +10 en el resto; Guanábana, sin franja. Opaco, como <see cref="PatternMark"/>:
+        /// así el resultado no depende del espacio de mezcla (2.5).
+        /// </summary>
+        public static Color LiquidHighlight(int tint, Color dose)
+        {
+            float dl = HighlightDeltaL(tint, dose);
+            return dl <= 0f ? dose : ColorMath.AddLabLightness(dose, dl);
+        }
+
+        /// <summary>ΔL* de la franja principal para el tinte <paramref name="tint"/> (0 = sin franja; guía 4.2).</summary>
+        public static float HighlightDeltaL(int tint, Color dose)
+        {
+            if (tint == 1)
+            {
+                return 0f; // Guanábana: sin franja
+            }
+
+            return ColorMath.LabLightness(dose) < 40f ? 12f : 10f;
+        }
+
         /// <summary>
         /// Opacidad del patrón por tinte que se dibuja "siempre" (02 §12; 07 §3, regla 1: 15 % hasta el nivel 40, sin
         /// Patrones de fruta; el 20 % de <c>ui_pattern_opacity</c> y el icono llegan con ese ajuste, fuera de v0).
@@ -171,5 +381,61 @@ namespace AF.Presentation
         {
             return new Color32((byte)((rgb >> 16) & 0xFF), (byte)((rgb >> 8) & 0xFF), (byte)(rgb & 0xFF), 0xFF);
         }
+    }
+
+    /// <summary>Familia de botón (guía 2.3): cara con degradado <c>_luz</c> → <c>_base</c> (25 %) → <c>_fondo</c>, canto y contorno.</summary>
+    public readonly struct ButtonFamily
+    {
+        /// <summary>Crea la familia.</summary>
+        public ButtonFamily(Color light, Color baseColor, Color deep, Color edge, Color outline)
+        {
+            Light = light;
+            Base = baseColor;
+            Deep = deep;
+            Edge = edge;
+            Outline = outline;
+        }
+
+        /// <summary><c>_luz</c> (0 % de la cara).</summary>
+        public Color Light { get; }
+
+        /// <summary><c>_base</c> (25 %).</summary>
+        public Color Base { get; }
+
+        /// <summary><c>_fondo</c> (100 %).</summary>
+        public Color Deep { get; }
+
+        /// <summary><c>_canto</c>.</summary>
+        public Color Edge { get; }
+
+        /// <summary><c>_contorno</c>.</summary>
+        public Color Outline { get; }
+
+        /// <summary>Color de la cara a la altura <paramref name="t"/> (0 arriba, 1 abajo).</summary>
+        public Color FaceAt(float t)
+        {
+            return t < 0.25f ? Color.Lerp(Light, Base, t / 0.25f) : Color.Lerp(Base, Deep, (t - 0.25f) / 0.75f);
+        }
+    }
+
+    /// <summary>Colores del panel del tablero (guía 4.6): relleno alto y bajo y cavidad vacía de la cuia.</summary>
+    public readonly struct PanelColors
+    {
+        /// <summary>Crea los colores.</summary>
+        public PanelColors(Color top, Color bottom, Color cavity)
+        {
+            Top = top;
+            Bottom = bottom;
+            Cavity = cavity;
+        }
+
+        /// <summary><c>panel_alto</c>.</summary>
+        public Color Top { get; }
+
+        /// <summary><c>panel_bajo</c>.</summary>
+        public Color Bottom { get; }
+
+        /// <summary><c>cavidad</c>: el tono medio del panel × 0,6, opaca (D-003).</summary>
+        public Color Cavity { get; }
     }
 }

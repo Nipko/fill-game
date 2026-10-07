@@ -3,12 +3,12 @@ using System.Collections;
 using System.IO;
 using AF.Core.Rules;
 using AF.GameFlow;
+using AF.Presentation;
 using AF.Solver.Search;
 using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
-using UnityEngine.UI;
 
 namespace AF.Tests.PlayMode
 {
@@ -16,7 +16,8 @@ namespace AF.Tests.PlayMode
     /// Capturas visuales de revisión (no forman parte de la suite: <c>[Explicit]</c>). Simulan una pantalla de
     /// 1080 × 2340 px (20:9 aprox., 360 × 780 dp) con zona segura y escriben PNG en <c>Logs/snapshots/</c> (ignorada por
     /// git). Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter VisualSnapshotTests</c> sin
-    /// <c>-nographics</c>.
+    /// <c>-nographics</c>. El ambiente se congela con semilla y tiempo fijos (guía visual v2, 9) y se usa siempre el arte
+    /// procedural; <c>02c_board_l7_panelB</c> es la variante B del panel para la comparación de F1 (guía 4.6).
     /// </summary>
     [Explicit("Capturas visuales manuales; necesitan dispositivo gráfico.")]
     public sealed class VisualSnapshotTests
@@ -31,6 +32,8 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             GameScreen.SimulatedScreen = null;
+            AmbientLayer.Frozen = false;
+            Palette.PanelVariantB = false;
             LaunchOptions.Reset();
             if (_camera != null)
             {
@@ -48,6 +51,8 @@ namespace AF.Tests.PlayMode
         public IEnumerator CaptureKeyScreens()
         {
             GameScreen.SimulatedScreen = new Vector4(Width, Height, 96f, 48f); // 32 dp de cutout arriba, 16 dp de gestos abajo
+            AmbientLayer.Frozen = true;
+            Palette.PanelVariantB = false;
             _target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
             var camGo = new GameObject("SnapshotCamera");
             Object.DontDestroyOnLoad(camGo);
@@ -77,18 +82,21 @@ namespace AF.Tests.PlayMode
             yield return Wait(0.25f);
             Save(dir, "03_selected_l7");
             boot.TapCuia(first.Target);
-            yield return PlayModeHelpers.WaitFor(StreamVisible, "chorro visible");
-            yield return null;
+            // Con la cabeza del chorro ya en la superficie del destino (revisión visual del 2026-10-07: la captura salía con
+            // el chorro a medio crecer y parecía terminar en el borde).
+            yield return PlayModeHelpers.WaitFor(StreamReachedSurface, "chorro hasta la superficie");
             Save(dir, "04_pouring_l7");
             yield return PlayModeHelpers.WaitFor(() => boot.View!.IsViewIdle, "fin del vertido");
             yield return Wait(0.2f);
             Save(dir, "05_after_pour_l7");
 
-            // Nivel 1: sellado, celebración y victoria.
+            // Nivel 1: tablero de una fila (02b), sellado, celebración y victoria.
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
             Attach(boot);
             boot.TapAnywhere();
+            yield return Wait(0.3f);
+            Save(dir, "02b_board_l1");
             SolveResult s1 = new AStarSolver().Solve(boot.Flow!.Session.Current, SolverOptions.ForPipeline(boot.Flow.Session.PourMode));
             for (int i = 0; i < s1.MoveCount; i++)
             {
@@ -98,10 +106,10 @@ namespace AF.Tests.PlayMode
 
             LevelFlow f1 = boot.Flow;
             yield return PlayModeHelpers.WaitFor(() => f1.Phase == FlowPhase.Celebration, "celebración");
-            yield return Wait(0.6f);
+            yield return Wait(0.9f); // estallido a mitad de vuelo (arranca a 0,5 s; guía 6.9)
             Save(dir, "06_celebration_l1");
             yield return PlayModeHelpers.WaitFor(() => f1.Phase == FlowPhase.VictoryScreen, "victoria");
-            yield return Wait(0.4f);
+            yield return Wait(0.9f); // guía 6.9 y VA-13: Siguiente aparece a 1,4 s del inicio de la celebración
             Save(dir, "07_victory_l1");
 
             // Nivel 6: Aguas estancadas.
@@ -116,6 +124,16 @@ namespace AF.Tests.PlayMode
             yield return Wait(0.4f);
             Save(dir, "08_stuck_l6");
             Assert.That(File.Exists(Path.Combine(dir, "08_stuck_l6.png")), Is.True);
+
+            // Variante B del panel (caoba lacada) para la comparación lado a lado con 02_board_l7 (guía 4.6, F1).
+            Palette.PanelVariantB = true;
+            yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
+            boot = GameBootstrap.Current!;
+            Attach(boot);
+            boot.TapAnywhere();
+            yield return Wait(0.3f);
+            Save(dir, "02c_board_l7_panelB");
+            Palette.PanelVariantB = false;
         }
 
         private void Attach(GameBootstrap boot)
@@ -140,12 +158,12 @@ namespace AF.Tests.PlayMode
             Object.Destroy(tex);
         }
 
-        private static bool StreamVisible()
+        private static bool StreamReachedSurface()
         {
-            Image[] images = Object.FindObjectsByType<Image>(FindObjectsSortMode.None);
-            for (int i = 0; i < images.Length; i++)
+            StreamGraphic[] streams = Object.FindObjectsByType<StreamGraphic>(FindObjectsSortMode.None);
+            for (int i = 0; i < streams.Length; i++)
             {
-                if (images[i].enabled && images[i].name.StartsWith("Stream", System.StringComparison.Ordinal))
+                if (streams[i].enabled && streams[i].Range.y >= 0.999f)
                 {
                     return true;
                 }

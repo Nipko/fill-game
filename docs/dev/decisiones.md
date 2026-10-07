@@ -8,6 +8,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 |---|---|---|---|
 | D-001 | 2026-10-06 | Una dosis por vertido | Decidida por el dueño; implementada en el árbol de trabajo, sin commitear (T1-T3 y T5) y verificada en el SM-S938B el 2026-10-07 (T7: A7 y A8). Pendientes: commit y PR, T6 y las preguntas P2-P7 |
 | D-002 | 2026-10-06 | Sin resaltado de destinos al seleccionar | Decidida por el dueño; implementada en el árbol de trabajo, sin commitear (T4 y T5) y verificada en el SM-S938B el 2026-10-07 (T7: B1-B2 y captura de B3). Pendientes: commit y PR y la revisión visual del dueño (B3) |
+| D-003 | 2026-10-07 | Dirección visual «Selva brillante premium» | Decidida por el dueño; sin implementar. Pendientes: P8-P10, la fase visual (V1-V8 de `docs/reviews/2026-10-07/evaluacion-claude.md`) y la edición del GDD |
 
 ---
 
@@ -396,3 +397,105 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 | R-4 | Saltos visibles en la cola con toques rápidos (3 o más vertidos iguales) | Encadenado (A9) |
 | R-5 | Más rechazos y frustración sin resaltado, sobre todo con 6-7 cuias | Marea ilimitada hasta el 10; vigilar la tasa de `reject` por nivel en `AF_STATE` durante la prueba del dueño |
 | R-6 | Desviación del canon del género (research/01 §2): las cifras de investigación y de prototipo se midieron con rachas | P6; registrar la desviación en 02 y GDD.md |
+
+---
+
+## D-003 · Dirección visual «Selva brillante premium»
+
+- **Fecha:** 2026-10-07.
+- **Estado:** decidida por el dueño tras ver el prototipo v0.1 (`ef676a4`) y el concepto «Orillas vivas» de la revisión del 2026-10-07. Sin implementar. Hay dos puntos pendientes de respuesta: la frontera exacta con el trade dress de los líderes (P8) y los umbrales de contraste (P9).
+
+**Contexto.**
+- **El canon vigente:**
+  - 07 (Resumen y §1.1) fija el estilo «acuarela botánica sobre vidrio»: fondos desaturados y oscuros (S ≤ 35 %, V ≤ 55 %, 07 §1.2), paneles de papel marfil con grano y botones planos, sin bisel ni degradado (07 §7.2-7.3).
+  - 07 §1.3 sustituye la «saturación alta y luz cálida “de cuento”» por esos fondos desaturados.
+  - El dueño lo confirmó el 2026-10-06 (GDD.md §2, decisión 23, y §6.1, pregunta 12).
+- **El prototipo v0.1** lo aproxima con arte procedural provisional (`ProceduralArt.cs`) y la fuente `LegacyRuntime.ttf`.
+- **La revisión del 2026-10-07** (`docs/reviews/2026-10-07/`, hecha por otra IA a petición del dueño) propuso «Orillas vivas»: gouache, papel crema y cuaderno botánico, con el tablero sobre un muelle.
+- **Al dueño no le gustan ni el aspecto actual ni ese concepto:** «no parece un juego sino algo como libro». Pide un enfoque «más de juego, con texturas», al nivel de los juegos más populares del género.
+- Evaluación de la revisión: `docs/reviews/2026-10-07/evaluacion-claude.md`.
+
+**Decisión.**
+1. **La dirección visual es «Selva brillante premium».**
+   - El nivel de acabado de los líderes del género: vidrio con brillos y reflejos, colores saturados, botones con volumen, luz cálida, texturas y partículas.
+   - Con identidad amazónica propia: madera tallada, hojas, agua de río, frutas del Estuario y la fauna de 07 §2.2.
+2. **Sustituye a «acuarela botánica sobre vidrio»** (07, Resumen y §1.1; GDD.md §2, decisión 23, y §6.1, pregunta 12).
+3. **Se descarta la estética de papel, gouache y cuaderno de «Orillas vivas»**, incluida su variante B. Se conserva su composición útil:
+   - una ventana al río en la franja superior;
+   - una repisa o muelle de madera por fila, con sombra de contacto;
+   - el bloque de cuias centrado en el área del tablero, no anclado abajo;
+   - la bandeja de comodines abajo.
+4. **Tipografía:** Baloo 2 (ExtraBold y Bold) para títulos y Nunito (ExtraBold, Bold y Regular) para el texto. Las dos tienen licencia SIL OFL, el dueño las aprobó y ya están copiadas en `Assets/_Project/Art/Fonts/`. Nunito SemiBold (07 §7.1) se sustituye por Bold.
+5. **No cambian:**
+   - D-001 y D-002: ningún brillo, partícula ni animación varía con la selección ni con la legalidad de un destino.
+   - La cuia-garrafa, su cavidad recta, las alturas iguales por dosis, las marcas y el menisco (07 §4).
+   - La lista cerrada de trade dress prohibido de 07 §1.3: gatos, caldero, oro biselado, gemas, cintas rojas, calavera y silueta de frasco con labio.
+   - Sin personas ni aldeas identificables (07 §8.1).
+   - El Estuario como primer mundo con sus cinco tintes, y la paleta, los HEX y los patrones de 07 §3.
+   - Las posiciones del HUD de 07 §7.4.
+   - Como mucho 60 partículas en gama baja, texto con contraste ≥ 4,5:1 y controles ≥ 48 dp (07 §1.2 y §7.8).
+   - Sin Bloom del 2D Renderer (UUM-150232): los brillos se hacen con sprites aditivos o shaders de UI.
+
+**Consecuencias.**
+- **Hay que reescribir 07 §1-§7:**
+  - el Resumen;
+  - §1.1: sale el papel; entran el vidrio brillante, la madera tallada, la hoja y la piedra;
+  - §1.2: se retiran el límite de saturación del fondo, el grano de papel y la regla de L*;
+  - §1.3: las filas de botones y de «saturación alta y luz cálida», con la frontera que fije P8;
+  - §2: pinturas base y variantes;
+  - §4.2: brillo y cavidad aislada;
+  - §5: partículas y brillos de los storyboards;
+  - §6: estilo de Capi y Rosa;
+  - §7.1-7.3: contorno de texto, tokens sin papel marfil y botones con volumen.
+
+  Fuera de 07 §1-§7 también cambian:
+  - en 07: §10.2 (capturas «en papel marfil»), §11, las «Preguntas abiertas» 1 y 7 y las «Desviaciones de la dirección»;
+  - en GDD.md: §2 (decisión 23), §6.1 (pregunta 12) y §9 (paso 11, el brief al artista «acuarela»);
+  - 02 §12: «fondos desaturados y oscuros por diseño».
+
+  La revisión listaba solo 07 §§1, 2, 4, 7, 9 y 11, y se quedaba corta. Lo edita la sesión principal en un lote de documentación aprobado por el dueño, después de que este acepte las capturas de la fase visual (P10).
+- **La regla de contraste de L* se sustituye.**
+  - Comprobado el 2026-10-07 con los L* de 07 §3: ningún fondo uniforme cumple «cada tinte ≥ 25 puntos de L* respecto al fondo». El barrido de 0 a 100 en pasos de 0,1 no da ningún candidato.
+  - Con los cinco tintes del Estuario solo valdría L* ≤ 7, un fondo casi negro, lo contrario de esta dirección.
+  - En su lugar se mide el resultado compuesto, en espacio lineal y sobre el fondo real que hay detrás del tablero. Umbrales [P], pendientes de P9:
+    1. cada tinte del mundo frente a la cavidad vacía: ΔL* ≥ 15;
+    2. el contorno de la cuia frente al fondo local: contraste ≥ 3:1 (WCAG 2.1, criterio 1.4.11, componentes no textuales);
+    3. la cavidad vacía frente a la Guanábana: ΔL* ≥ 50;
+    4. las dosis vecinas de un par de riesgo se siguen distinguiendo por patrón e icono (07 §3), no por L*.
+  - Para cumplir 1 y 3 sobre un fondo claro, la cavidad pasa a ser oscura y casi opaca, independiente del fondo:
+    - hoy es translúcida, con alfa 0,62 (`ProceduralArt.cs:322`);
+    - opaca, su color actual da L* ≈ 12, es decir, ΔL* 20 con el Açaí (32) y 86 con la Guanábana (98).
+  - Lo comprueba un test EditMode con los cinco tintes del Estuario.
+- **El fondo deja de estar limitado a S ≤ 35 % y V ≤ 55 %.** Fuera de las cuias, el cielo, los bordes y la vegetación pueden ser saturados y luminosos. Detrás de las cuias, el valor lo controlan la repisa o un panel.
+- **Código afectado en la fase visual** (unity-gameplay-dev):
+  - `BoardLayout.cs` y `BoardLayoutTests.cs`;
+  - `GameScreen.cs`: río, repisas y `ShiftToClear`;
+  - `ProceduralArt.cs`: fondo, río, vidrio, botones y cavidad;
+  - `UiBuilder.cs`: fuentes y estado deshabilitado;
+  - `CuiaView.cs`: brillos;
+  - `VisualSnapshotTests.cs`.
+
+  Sin paquetes nuevos: las fuentes se cargan como `Font` o con TextMeshPro, que viene con uGUI en Unity 6, importando sus recursos esenciales por script. Ningún `.unity`, `.prefab`, `.mat` ni `.asset` se edita a mano.
+- **El arte final sigue siendo del artista** (CLAUDE.md, «Humanos»). El procedural de los agentes es provisional y servirá de referencia para el brief nuevo.
+- **Riesgo:** el brillo y la saturación pueden competir con los tintes. Se mitiga con las comprobaciones compuestas y con capturas antes y después de los niveles 1 y 7 en el mismo estado (`VisualSnapshotTests`), además de capturas de estrés de layout con 14 cuias.
+- **Después de lo visual** (registrado, sin implementar): la fase de jugabilidad, recursos y detalle de cada elemento, con el backlog priorizado de la §3 de `docs/reviews/2026-10-07/evaluacion-claude.md`.
+
+**Alternativas descartadas.**
+- **Mantener la acuarela del GDD:** es lo que el dueño ve como «un libro».
+- **«Orillas vivas» completa** (gouache, papel, cuaderno): el dueño la rechazó.
+- **Vector plano** (la otra opción de la pregunta 12): no da la sensación de juego que se pide.
+- **Copiar el acabado de Royal Match o Magic Sort** (UI dorada biselada, frascos con labio): riesgo de trade dress (07 §1.3; research/08 §4.1).
+
+**Cómo revertir.**
+- Revertir los commits de la fase visual: `ProceduralArt.cs`, `GameScreen.cs`, `BoardLayout.cs`, `UiBuilder.cs`, `CuiaView.cs` y sus tests vuelven al estado de `ef676a4`. Si ya se reescribió 07, restaurar su texto anterior.
+- Las fuentes pueden quedarse: Baloo 2 y Nunito ya están en 07 §7.1.
+- La regla de L* no vuelve en ningún caso, porque es imposible con cualquier dirección: hará falta otra sustitución.
+- En todos los casos, añadir a este registro una decisión nueva que sustituya a D-003.
+
+**Preguntas para el dueño (cerradas).**
+
+| # | Pregunta | Recomendación | Bloquea |
+|---|---|---|---|
+| P8 | ¿Se permiten degradados, relieve, sombras suaves y contorno de texto no dorado en botones de madera, piedra y hoja, manteniendo prohibidos el oro, las gemas, las cintas rojas, los gatos, el caldero, la calavera y la silueta de frasco con labio? | Sí | Botones de la fase visual (V5) y 07 §1.3 |
+| P9 | ¿Se sustituye la regla de L* de 07 §1.2 por las cuatro comprobaciones compuestas de arriba, con esos umbrales [P]? | Sí | Test de contraste (V4) y 07 §1.2 |
+| P10 | ¿Se reescriben 07 y GDD.md y se encarga el brief nuevo al artista después de aceptar las capturas antes y después de la fase visual? | Sí | Lote de documentación y encargo al artista |

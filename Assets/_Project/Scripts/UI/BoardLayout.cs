@@ -10,6 +10,7 @@ namespace AF.UI
         {
             Rows = rows;
             PerRow = new int[rows];
+            RowFootY = new float[rows];
             CenterX = new float[count];
             FootY = new float[count];
             RowOf = new int[count];
@@ -20,6 +21,9 @@ namespace AF.UI
 
         /// <summary>Cuias por fila, de arriba abajo.</summary>
         public int[] PerRow { get; }
+
+        /// <summary>Línea de pie de cada fila (la cara superior de su repisa está en pie − 3, guía visual v2, 4.5).</summary>
+        public float[] RowFootY { get; }
 
         /// <summary>Ancho de la ranura (área táctil, 02 §3.3).</summary>
         public float SlotWidth { get; internal set; }
@@ -33,20 +37,42 @@ namespace AF.UI
         /// <summary>Centro horizontal de cada cuia.</summary>
         public float[] CenterX { get; }
 
-        /// <summary>Pie de cada cuia, medido desde arriba del lienzo (filas alineadas por el pie, 07 §4.5; la última fila en la línea de pie).</summary>
+        /// <summary>Pie de cada cuia, medido desde arriba del lienzo (filas alineadas por el pie, 07 §4.5).</summary>
         public float[] FootY { get; }
 
         /// <summary>Fila de cada cuia.</summary>
         public int[] RowOf { get; }
+
+        /// <summary>Borde superior del bloque: la cuia de la fila 1, elevada (guía 3.2, <c>blockTop</c>).</summary>
+        public float BlockTop { get; internal set; }
+
+        /// <summary>Borde inferior del bloque: el final de la repisa de la última fila (pie + 15).</summary>
+        public float BlockBottom { get; internal set; }
+
+        /// <summary>Panel del tablero con su marco (guía 3.2): x, y desde arriba, ancho y alto.</summary>
+        public float PanelX { get; internal set; }
+
+        /// <summary>Borde superior del panel.</summary>
+        public float PanelY { get; internal set; }
+
+        /// <summary>Ancho del panel.</summary>
+        public float PanelWidth { get; internal set; }
+
+        /// <summary>Alto del panel.</summary>
+        public float PanelHeight { get; internal set; }
+
+        /// <summary>Borde inferior del panel.</summary>
+        public float PanelBottom => PanelY + PanelHeight;
     }
 
     /// <summary>
-    /// Layout del tablero (GDD 02 §5; 07 §4.1 y §7.4): 1 fila con T ≤ 5, 2 filas con 6-14 (⌈T/2⌉ arriba), 3 con 15-16;
-    /// ranura = (ancho − 24) / cuias_por_fila; cuia_w = clamp(0,70 × ranura, 28, 48); alto = 6 u (u = cuia_w / 2);
-    /// paso de fila = alto + 16 (elevación) + 24 (hueco). El tablero se centra en horizontal a 480 dp como máximo
-    /// (tabletas) y en vertical se ancla abajo: la última fila apoya el pie en la línea de pie (centro de la banda de río
-    /// del fondo del tablero, 07 §7.4) y las demás se apilan encima. Si las filas no caben (16:9), las cuias se reducen
-    /// hasta el mínimo de 28 dp.
+    /// Layout del tablero (GDD 02 §5; 07 §4.1 y §7.4; guía visual v2, 3.2): 1 fila con T ≤ 5, 2 filas con 6-14 (⌈T/2⌉
+    /// arriba), 3 con 15-16; ranura = (ancho − 24) / cuias_por_fila; cuia_w = clamp(0,70 × ranura, 28, 48); alto = 6 u
+    /// (u = cuia_w / 2); paso de fila = alto + 16 (elevación) + 24 (hueco). El tablero se centra en horizontal a 480 dp
+    /// como máximo (tabletas) y, desde D-003, también en vertical: el bloque (elevación de la fila 1, filas, huecos y la
+    /// repisa de 15 dp bajo la última fila) queda centrado entre <c>boardTop</c> y <c>boardBottom</c>, sin espacio muerto
+    /// abajo. Si las filas no caben (16:9), las cuias se reducen hasta el mínimo de 28 dp. Alrededor del bloque va el
+    /// panel del tablero, <see cref="PanelMargin"/> (22 dp) por arriba y por abajo y 8 dp desde los bordes del ancho útil.
     /// </summary>
     public static class BoardLayout
     {
@@ -68,6 +94,19 @@ namespace AF.UI
         /// <summary>Hueco entre filas (02 §5).</summary>
         public const float RowGap = 24f;
 
+        /// <summary>La repisa termina 15 dp bajo la línea de pie (guía 3.2 y 4.5).</summary>
+        public const float ShelfDrop = 15f;
+
+        /// <summary>
+        /// Margen del panel sobre y bajo el bloque: 22 dp (revisión visual del 2026-10-07; la guía 3.2 decía 14). Con el
+        /// marco tallado de 13,5 dp (1,5 de contorno + 12 de madera), la cuia elevada de la fila 1 queda ≥ 8 dp por debajo
+        /// del canto interior del marco en lugar de tocarlo.
+        /// </summary>
+        public const float PanelMargin = 22f;
+
+        /// <summary>Margen del panel desde el borde del ancho útil (guía 3.2).</summary>
+        public const float PanelSide = 8f;
+
         /// <summary>Filas para <paramref name="count"/> cuias.</summary>
         public static int RowsFor(int count)
         {
@@ -81,10 +120,11 @@ namespace AF.UI
 
         /// <summary>
         /// Calcula el layout de <paramref name="count"/> cuias de <paramref name="heightU"/> u de alto en un lienzo de
-        /// <paramref name="canvasWidth"/> dp: la última fila apoya el pie en <paramref name="footLine"/> y la primera, elevada,
-        /// no sube de <paramref name="boardTop"/> (medidas desde arriba).
+        /// <paramref name="canvasWidth"/> dp, con el bloque centrado entre <paramref name="boardTop"/> y
+        /// <paramref name="boardBottom"/> (medidas desde arriba). La línea de pie máxima es
+        /// <c>boardBottom − 15</c> (<see cref="ShelfDrop"/>) y la fila 1, elevada, no sube de <paramref name="boardTop"/>.
         /// </summary>
-        public static BoardLayoutResult Compute(int count, float heightU, float canvasWidth, float boardTop, float footLine)
+        public static BoardLayoutResult Compute(int count, float heightU, float canvasWidth, float boardTop, float boardBottom)
         {
             if (count < 1 || count > 16)
             {
@@ -106,7 +146,8 @@ namespace AF.UI
             float width = Math.Min(canvasWidth, MaxBoardWidth);
             float slot = (width - SideMargins) / maxPerRow;
             float cuiaW = Clamp(0.70f * slot, MinCuiaWidth, MaxCuiaWidth);
-            float available = footLine - boardTop - Lift;
+            float footMax = boardBottom - ShelfDrop;
+            float available = footMax - boardTop - Lift;
             float blockH = BlockHeight(rows, cuiaW, heightU);
             if (blockH > available && available > 0f)
             {
@@ -117,17 +158,22 @@ namespace AF.UI
             }
 
             float cuiaH = heightU * (cuiaW / 2f);
-            float top = footLine - blockH; // anclado abajo: el hueco sobrante queda arriba
+            float block = Lift + blockH + ShelfDrop; // B de la guía 3.2
+            float slack = (boardBottom - boardTop) - block;
+            float blockTop = boardTop + (slack / 2f); // centrado (D-003): fin del anclaje inferior
             result.SlotWidth = slot;
             result.CuiaWidth = cuiaW;
             result.CuiaHeight = cuiaH;
+            result.BlockTop = blockTop;
+            result.BlockBottom = blockTop + block;
 
             int index = 0;
             for (int r = 0; r < rows; r++)
             {
                 int n = result.PerRow[r];
                 float x0 = (canvasWidth - (n * slot)) / 2f;
-                float foot = top + (r * (cuiaH + Lift + RowGap)) + cuiaH;
+                float foot = blockTop + Lift + (r * (cuiaH + Lift + RowGap)) + cuiaH;
+                result.RowFootY[r] = foot;
                 for (int j = 0; j < n; j++)
                 {
                     result.CenterX[index] = x0 + ((j + 0.5f) * slot);
@@ -137,6 +183,15 @@ namespace AF.UI
                 }
             }
 
+            // Panel (guía 3.2): 8 dp desde el ancho útil (≤ 480) y 22 dp sobre y bajo el bloque; si sube por encima de
+            // boardTop − 8 se recorta (el marco pasa bajo el HUD). Nunca se encoge una cuia por el marco.
+            float panelX = ((canvasWidth - width) / 2f) + PanelSide;
+            float panelTop = Math.Max(blockTop - PanelMargin, boardTop - 8f);
+            float panelBottom = result.BlockBottom + PanelMargin;
+            result.PanelX = panelX;
+            result.PanelY = panelTop;
+            result.PanelWidth = canvasWidth - (2f * panelX);
+            result.PanelHeight = panelBottom - panelTop;
             return result;
         }
 

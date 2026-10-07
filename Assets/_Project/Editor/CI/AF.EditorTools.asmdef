@@ -1,7 +1,10 @@
 {
   "name": "AF.EditorTools",
   "rootNamespace": "AF.EditorTools",
-  "references": [],
+  "references": [
+    "Unity.TextMeshPro",
+    "AF.Presentation"
+  ],
   "includePlatforms": [
     "Editor"
   ],

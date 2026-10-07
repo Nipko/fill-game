@@ -6,12 +6,13 @@ using UnityEngine;
 namespace AF.Presentation
 {
     /// <summary>
-    /// Sumergir y teñir simplificada (GDD 02 §4.2; 07 §5.1; 08 §5.3): (a) las cuias vacías caen 2 u hasta su ranura,
-    /// (b) la banda de río sube 1,5 u y el agua base llena las cavidades al 70 %, (c) la banda baja, (d) cada dosis se
-    /// tiñe en 0,10 s de arriba abajo con interpolación OKLab y las posiciones sin dosis se vacían. Fases de 1,4 s:
-    /// 300 + 400 + 250 + ≤ 450 ms; de 0,8 s: 150 + 250 + 150 + 250 ms. Saltable con <see cref="Complete"/>.
+    /// Sumergir y teñir simplificada (GDD 02 §4.2; 07 §5.1; 08 §5.3; guía visual v2, 6.11): (a) las cuias vacías caen
+    /// 2 u hasta su repisa, (b) el agua de inmersión de cada fila (dentro del panel, desde la cara de la repisa) sube
+    /// 1,5 u y el agua base llena las cavidades al 70 %, (c) el agua baja, (d) cada dosis se tiñe en 0,10 s de arriba
+    /// abajo con interpolación OKLab y las posiciones sin dosis se vacían. Fases de 1,4 s: 300 + 400 + 250 + ≤ 450 ms;
+    /// de 0,8 s: 150 + 250 + 150 + 250 ms. Saltable con <see cref="Complete"/>.
     /// </summary>
-    /// <remarks>Sin iconos de fruta ni partículas (arte final fuera del prototipo v0).</remarks>
+    /// <remarks>Sin iconos de fruta (fase de jugabilidad). Una salpicadura por fila al sumergirse (≤ 20 partículas).</remarks>
     public sealed class IntroAnimation
     {
         /// <summary>Una franja se tiñe en 100 ms (02 §4.2).</summary>
@@ -20,7 +21,7 @@ namespace AF.Presentation
         /// <summary>Altura desde la que caen las cuias (07 §5.1): 2,0 u.</summary>
         public const float DropU = 2.0f;
 
-        /// <summary>Subida de la banda de río (07 §5.1): 1,5 u.</summary>
+        /// <summary>Subida del agua de inmersión (07 §5.1): 1,5 u.</summary>
         public const float RiverRiseU = 1.5f;
 
         /// <summary>Opacidad del agua base dentro de la cavidad (07 §5.1): 70 %.</summary>
@@ -29,8 +30,10 @@ namespace AF.Presentation
         private CuiaView[] _views = Array.Empty<CuiaView>();
         private Cuia[] _final = Array.Empty<Cuia>();
         private bool[] _sealed = Array.Empty<bool>();
-        private RectTransform? _river;
-        private Vector2 _riverRest;
+        private RectTransform[] _rows = Array.Empty<RectTransform>();
+        private ImmersionWater?[] _rowWater = Array.Empty<ImmersionWater?>();
+        private IBoardFx? _fx;
+        private bool _splashed;
         private Color _water;
         private float _t;
         private float _a;
@@ -47,9 +50,10 @@ namespace AF.Presentation
 
         /// <summary>
         /// Arranca la intro de <paramref name="totalMs"/> para <paramref name="board"/>; las vistas quedan bloqueadas
-        /// hasta el final.
+        /// hasta el final. <paramref name="rowWater"/>: agua de inmersión de cada fila, con el pivote abajo en la cara de la
+        /// repisa (la intro solo anima su alto); <paramref name="fx"/>: salpicaduras (opcional).
         /// </summary>
-        public void Start(CuiaView[] views, BoardState board, Color water, RectTransform? river, int totalMs)
+        public void Start(CuiaView[] views, BoardState board, Color water, RectTransform[] rowWater, int totalMs, IBoardFx? fx = null)
         {
             Complete();
             _views = views;
@@ -69,8 +73,27 @@ namespace AF.Presentation
             }
 
             _water = new Color(water.r, water.g, water.b, WaterAlpha);
-            _river = river;
-            _riverRest = river != null ? river.anchoredPosition : Vector2.zero;
+            _rows = rowWater;
+            if (_rowWater.Length != rowWater.Length)
+            {
+                _rowWater = new ImmersionWater?[rowWater.Length];
+            }
+
+            float unit0 = n > 0 ? views[0].Unit : 24f;
+            for (int r = 0; r < rowWater.Length; r++)
+            {
+                ImmersionWater? w = rowWater[r] != null ? rowWater[r].GetComponent<ImmersionWater>() : null;
+                _rowWater[r] = w;
+                if (w != null)
+                {
+                    w.SetWater(water);
+                    w.SetUnit(unit0);
+                    w.SetTime(0f);
+                }
+            }
+
+            _fx = fx;
+            _splashed = false;
 
             bool longVersion = totalMs >= 1000;
             float scale = totalMs / (longVersion ? 1400f : 800f);
@@ -115,15 +138,6 @@ namespace AF.Presentation
             Apply();
         }
 
-        /// <summary>Relee la posición de reposo de la banda de río tras un cambio de layout durante la intro.</summary>
-        public void RefreshRiverRest()
-        {
-            if (_river != null)
-            {
-                _riverRest = _river.anchoredPosition;
-            }
-        }
-
         /// <summary>Salta al estado final en el mismo fotograma (02 §4.2).</summary>
         public void Complete()
         {
@@ -139,9 +153,30 @@ namespace AF.Presentation
                 _views[i].ShowContent(_final[i], _sealed[i]);
             }
 
-            if (_river != null)
+            SetRowWater(0f, 24f);
+        }
+
+        private void SetRowWater(float rise, float unit)
+        {
+            float height = rise * RiverRiseU * unit;
+            for (int r = 0; r < _rows.Length; r++)
             {
-                _river.anchoredPosition = _riverRest;
+                RectTransform rt = _rows[r];
+                bool on = height > 0.5f;
+                if (rt.gameObject.activeSelf != on)
+                {
+                    rt.gameObject.SetActive(on);
+                }
+
+                if (on)
+                {
+                    rt.sizeDelta = new Vector2(rt.sizeDelta.x, height);
+                    ImmersionWater? w = r < _rowWater.Length ? _rowWater[r] : null;
+                    if (w != null)
+                    {
+                        w.SetTime(_t); // onda y destellos del agua (guía 6.11)
+                    }
+                }
             }
         }
 
@@ -151,7 +186,6 @@ namespace AF.Presentation
             int n = _views.Length;
             float unit = n > 0 ? _views[0].Unit : 24f;
 
-            if (_river != null)
             {
                 float rise;
                 if (t < _a)
@@ -171,7 +205,15 @@ namespace AF.Presentation
                     rise = 0f;
                 }
 
-                _river.anchoredPosition = _riverRest + new Vector2(0f, rise * RiverRiseU * unit);
+                SetRowWater(rise, unit);
+                if (!_splashed && t >= _a && _fx != null)
+                {
+                    _splashed = true;
+                    for (int r = 0; r < _rows.Length; r++)
+                    {
+                        _fx.Splash(_rows[r].anchoredPosition + new Vector2(0f, 0.3f * unit), _water, unit * 1.6f);
+                    }
+                }
             }
 
             float fillLevel = Mathf.Clamp01((t - _a) / (_b * 0.7f));

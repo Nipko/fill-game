@@ -201,6 +201,167 @@ namespace AF.Presentation
             }
         }
 
+        /// <summary>Rellena todo el lienzo con <paramref name="c"/>.</summary>
+        public void Fill(Color c)
+        {
+            for (int i = 0; i < _px.Length; i++)
+            {
+                _px[i] = c;
+            }
+        }
+
+        /// <summary>
+        /// Como <see cref="Blend"/>, pero mezcla en espacio lineal (guía visual v2, 2.5: "BlendLinear"): para lo horneado
+        /// que deba igualar a lo que compone la GPU con el proyecto en Linear (sombras de contacto, charcos de luz).
+        /// </summary>
+        public void BlendLinear(int x, int y, Color c, float coverage)
+        {
+            if (x < 0 || y < 0 || x >= Width || y >= Height)
+            {
+                return;
+            }
+
+            float a = c.a * Mathf.Clamp01(coverage);
+            if (a <= 0f)
+            {
+                return;
+            }
+
+            int i = (y * Width) + x;
+            Color d = _px[i];
+            float outA = a + (d.a * (1f - a));
+            if (outA <= 0f)
+            {
+                return;
+            }
+
+            float k = d.a * (1f - a);
+            _px[i] = new Color(
+                ColorMath.ToSrgb(((ColorMath.ToLinear(c.r) * a) + (ColorMath.ToLinear(d.r) * k)) / outA),
+                ColorMath.ToSrgb(((ColorMath.ToLinear(c.g) * a) + (ColorMath.ToLinear(d.g) * k)) / outA),
+                ColorMath.ToSrgb(((ColorMath.ToLinear(c.b) * a) + (ColorMath.ToLinear(d.b) * k)) / outA),
+                outA);
+        }
+
+        /// <summary>
+        /// Suma luz al píxel como una capa aditiva de la GPU (en lineal, guía 2.5): <paramref name="c"/> por
+        /// <paramref name="amount"/> (destellos del río, haces de sol). El alfa del píxel no cambia.
+        /// </summary>
+        public void AddLight(int x, int y, Color c, float amount)
+        {
+            if (x < 0 || y < 0 || x >= Width || y >= Height || amount <= 0f)
+            {
+                return;
+            }
+
+            int i = (y * Width) + x;
+            Color d = _px[i];
+            _px[i] = new Color(
+                ColorMath.ToSrgb(Mathf.Min(1f, ColorMath.ToLinear(d.r) + (ColorMath.ToLinear(c.r) * amount))),
+                ColorMath.ToSrgb(Mathf.Min(1f, ColorMath.ToLinear(d.g) + (ColorMath.ToLinear(c.g) * amount))),
+                ColorMath.ToSrgb(Mathf.Min(1f, ColorMath.ToLinear(d.b) + (ColorMath.ToLinear(c.b) * amount))),
+                d.a);
+        }
+
+        /// <summary>Multiplica el RGB del píxel por <paramref name="factor"/> con cobertura <paramref name="coverage"/>.</summary>
+        public void Multiply(int x, int y, float factor, float coverage)
+        {
+            if (x < 0 || y < 0 || x >= Width || y >= Height)
+            {
+                return;
+            }
+
+            float k = Mathf.Lerp(1f, factor, Mathf.Clamp01(coverage));
+            int i = (y * Width) + x;
+            Color d = _px[i];
+            _px[i] = new Color(d.r * k, d.g * k, d.b * k, d.a);
+        }
+
+        /// <summary>Recorta el alfa del píxel por <paramref name="coverage"/> (máscaras).</summary>
+        public void MaskAlpha(int x, int y, float coverage)
+        {
+            if (x < 0 || y < 0 || x >= Width || y >= Height)
+            {
+                return;
+            }
+
+            int i = (y * Width) + x;
+            Color d = _px[i];
+            d.a *= Mathf.Clamp01(coverage);
+            _px[i] = d;
+        }
+
+        /// <summary>Elipse con borde suave de <paramref name="soft"/> px (sombras y halos sin desenfoque por píxel).</summary>
+        public void FillEllipseSoft(float cx, float cy, float rx, float ry, float soft, Color c)
+        {
+            int x0 = Mathf.FloorToInt(cx - rx - soft - 1f);
+            int x1 = Mathf.CeilToInt(cx + rx + soft + 1f);
+            int y0 = Mathf.FloorToInt(cy - ry - soft - 1f);
+            int y1 = Mathf.CeilToInt(cy + ry + soft + 1f);
+            float r = Mathf.Min(rx, ry);
+            for (int y = y0; y <= y1; y++)
+            {
+                for (int x = x0; x <= x1; x++)
+                {
+                    float px = ((x + 0.5f) - cx) / rx;
+                    float py = ((y + 0.5f) - cy) / ry;
+                    float d = (Mathf.Sqrt((px * px) + (py * py)) - 1f) * r;
+                    Blend(x, y, c, SoftCoverage(d, soft));
+                }
+            }
+        }
+
+        /// <summary>Rectángulo redondeado con borde suave de <paramref name="soft"/> px.</summary>
+        public void FillRoundedRectSoft(float x0, float y0, float x1, float y1, float r, float soft, Color c)
+        {
+            for (int y = Mathf.FloorToInt(y0 - soft) - 1; y <= Mathf.CeilToInt(y1 + soft); y++)
+            {
+                for (int x = Mathf.FloorToInt(x0 - soft) - 1; x <= Mathf.CeilToInt(x1 + soft); x++)
+                {
+                    float d = RoundedRectDistance(x + 0.5f, y + 0.5f, x0, y0, x1, y1, r);
+                    Blend(x, y, c, SoftCoverage(d, soft));
+                }
+            }
+        }
+
+        /// <summary>Distancia con signo (px, negativa dentro) al rectángulo redondeado [x0, x1] × [y0, y1] de radio r.</summary>
+        public static float RoundedRectDistance(float px, float py, float x0, float y0, float x1, float y1, float r)
+        {
+            float cx = (x0 + x1) * 0.5f;
+            float cy = (y0 + y1) * 0.5f;
+            float hx = ((x1 - x0) * 0.5f) - r;
+            float hy = ((y1 - y0) * 0.5f) - r;
+            float qx = Mathf.Abs(px - cx) - hx;
+            float qy = Mathf.Abs(py - cy) - hy;
+            float ox = Mathf.Max(qx, 0f);
+            float oy = Mathf.Max(qy, 0f);
+            return Mathf.Sqrt((ox * ox) + (oy * oy)) + Mathf.Min(Mathf.Max(qx, qy), 0f) - r;
+        }
+
+        /// <summary>Cobertura con borde suave: 1 dentro, 0 a <paramref name="soft"/> px fuera (smoothstep).</summary>
+        public static float SoftCoverage(float signedDistance, float soft)
+        {
+            if (soft <= 0.5f)
+            {
+                return Coverage(signedDistance);
+            }
+
+            float t = Mathf.Clamp01((signedDistance + (soft * 0.5f)) / soft);
+            return 1f - (t * t * (3f - (2f * t)));
+        }
+
+        /// <summary>Píxeles como <see cref="Color32"/> (caché en disco de las texturas generadas).</summary>
+        public Color32[] ToColor32()
+        {
+            var result = new Color32[_px.Length];
+            for (int i = 0; i < _px.Length; i++)
+            {
+                result[i] = _px[i];
+            }
+
+            return result;
+        }
+
         public Texture2D ToTexture(string name, bool repeatX = false, bool repeatY = false)
         {
             var tex = new Texture2D(Width, Height, TextureFormat.RGBA32, false)
@@ -227,6 +388,56 @@ namespace AF.Presentation
             Vector2 e = b - a;
             float len = Mathf.Max(1e-6f, e.magnitude);
             return -(((e.x * (p.y - a.y)) - (e.y * (p.x - a.x))) / len);
+        }
+    }
+
+    /// <summary>
+    /// Ruido determinista para las texturas procedurales (veta de madera, nubes, follaje): hash entero y ruido de valor
+    /// suavizado. Solo presentación: no interviene en reglas ni en el núcleo.
+    /// </summary>
+    internal static class ArtNoise
+    {
+        /// <summary>Valor pseudoaleatorio en [0, 1) para (x, y, semilla).</summary>
+        public static float Hash(int x, int y, int seed)
+        {
+            unchecked
+            {
+                uint h = (uint)((x * 374761393) + (y * 668265263) + (seed * 1442695041));
+                h = (h ^ (h >> 13)) * 1274126177u;
+                h ^= h >> 16;
+                return (h & 0x00FFFFFF) / 16777216f;
+            }
+        }
+
+        /// <summary>Ruido de valor 1D suavizado en [0, 1).</summary>
+        public static float Value1(float x, int seed)
+        {
+            int i = Mathf.FloorToInt(x);
+            float f = x - i;
+            float u = f * f * (3f - (2f * f));
+            return Mathf.Lerp(Hash(i, 0, seed), Hash(i + 1, 0, seed), u);
+        }
+
+        /// <summary>Ruido de valor 2D suavizado en [0, 1).</summary>
+        public static float Value2(float x, float y, int seed)
+        {
+            int ix = Mathf.FloorToInt(x);
+            int iy = Mathf.FloorToInt(y);
+            float fx = x - ix;
+            float fy = y - iy;
+            float ux = fx * fx * (3f - (2f * fx));
+            float uy = fy * fy * (3f - (2f * fy));
+            float a = Hash(ix, iy, seed);
+            float b = Hash(ix + 1, iy, seed);
+            float c = Hash(ix, iy + 1, seed);
+            float d = Hash(ix + 1, iy + 1, seed);
+            return Mathf.Lerp(Mathf.Lerp(a, b, ux), Mathf.Lerp(c, d, ux), uy);
+        }
+
+        /// <summary>Suma de 3 octavas de <see cref="Value2"/> en [0, 1).</summary>
+        public static float Fbm2(float x, float y, int seed)
+        {
+            return (0.57f * Value2(x, y, seed)) + (0.29f * Value2(x * 2.03f, y * 2.03f, seed + 17)) + (0.14f * Value2(x * 4.11f, y * 4.11f, seed + 31));
         }
     }
 }
