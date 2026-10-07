@@ -17,7 +17,7 @@ Puzzle móvil de ordenar agua (*water-sort*) con temática amazónica, **Android
 - **C# 9 (`LangVersion 9.0`) y netstandard2.1** en todo lo que compila Unity. Nada de C# 10+: `namespace X;`, `global using`, `record struct`, `required`, `[1, 2]`, constructores primarios.
 - **.NET SDK 10.0.401** (`global.json`, `rollForward: latestFeature`) para `dotnet/` y `tools/`. Tests NUnit 3.14.0; los compartidos con Unity usan el subconjunto de NUnit 3.5 (solo `Assert.That`).
 - Python 3.14 con `jsonschema` (`tools/*.py`); Node 24 (más adelante, `functions/`).
-- Unity CLI 1.0.0-beta.12 (`unity`) con `com.unity.pipeline` 0.8.0-exp.1 y las skills `.claude/skills/unity-cli` y `unity-pipeline`. **Sin MCP.** La CLI funciona para `run`, `test` y `recompile`; sus instaladores no (Hub MSIX): no instales nada con ella.
+- Unity CLI en beta que se actualiza sola (`unity`; 1.0.0-beta.13 desde el 2026-10-07; los hooks de git la llaman por el alias estable `%LOCALAPPDATA%\Microsoft\WindowsApps\unity.exe`, no por la ruta versionada de WindowsApps) con `com.unity.pipeline` 0.8.0-exp.1 y las skills `.claude/skills/unity-cli` y `unity-pipeline`. **Sin MCP.** La CLI funciona para `run`, `test` y `recompile`; sus instaladores no (Hub MSIX): no instales nada con ella.
 - Editor: `C:\Program Files\Unity\Hub\Editor\6000.3.25f1\Editor\Unity.exe` (ARM64). .NET: `C:\Program Files\dotnet`.
 
 ## Mapa del repositorio
