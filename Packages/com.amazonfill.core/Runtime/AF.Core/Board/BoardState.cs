@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Text;
+using AF.Core.Rules;
 
 namespace AF.Core.Board
 {
@@ -13,9 +14,11 @@ namespace AF.Core.Board
     /// los colores 15 (Barro) y 16 (reservado) hasta que exista su mecánica. <c>U_c</c> se cuenta a
     /// partir del contenido inicial; cuando se porte Lluvia habrá que sumar las dosis que aún no han caído.
     /// Esta clase asigna memoria en cada vertido: sirve para reglas, cliente y tests, no para el bucle
-    /// caliente del solver, que usará su propia representación empaquetada.
+    /// caliente del solver, que usa su propia representación empaquetada (AF.Solver).
+    /// La igualdad compara <see cref="Cuia.Packed"/> cuia a cuia y en orden (no es la igualdad canónica:
+    /// para esa, <see cref="CanonicalHash"/> y <see cref="BoardCanon"/>).
     /// </remarks>
-    public sealed class BoardState
+    public sealed class BoardState : IEquatable<BoardState>
     {
         /// <summary>Máximo de cuias en pantalla, contando Cuia extra y Cuia de rescate (R1).</summary>
         public const int MaxCuias = 16;
@@ -122,6 +125,71 @@ namespace AF.Core.Board
             return true;
         }
 
+        /// <summary>Alguna cuia tiene dosis ocultas (Aguas turbias, 02 §11).</summary>
+        public bool HasHidden
+        {
+            get
+            {
+                for (int i = 0; i < _cuias.Length; i++)
+                {
+                    if (_cuias[i].HasHidden)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Hash de 64 bits del estado canónico (03 §3): igual para todas las permutaciones de las mismas cuias.
+        /// Asigna un array temporal: no es para el bucle caliente (allí, <see cref="BoardCanon"/> sobre un búfer propio).
+        /// </summary>
+        public ulong CanonicalHash()
+        {
+            var sorted = (Cuia[])_cuias.Clone();
+            BoardCanon.Sort(sorted, 0, sorted.Length);
+            return BoardCanon.Hash(sorted, 0, sorted.Length);
+        }
+
+        /// <summary>Igualdad por valor: mismas cuias (<see cref="Cuia.Packed"/>) en el mismo orden.</summary>
+        public bool Equals(BoardState? other)
+        {
+            if (ReferenceEquals(this, other))
+            {
+                return true;
+            }
+
+            if (other is null || other._cuias.Length != _cuias.Length)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < _cuias.Length; i++)
+            {
+                if (_cuias[i].Packed != other._cuias[i].Packed)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <inheritdoc />
+        public override bool Equals(object? obj)
+        {
+            return Equals(obj as BoardState);
+        }
+
+        /// <summary>Hash determinista del estado en orden (FNV-1a de <see cref="BoardCanon"/>, plegado a 32 bits).</summary>
+        public override int GetHashCode()
+        {
+            ulong hash = BoardCanon.Hash(_cuias, 0, _cuias.Length);
+            return unchecked((int)hash ^ (int)(hash >> 32));
+        }
+
         /// <summary>Forma legible para tests y registros.</summary>
         public override string ToString()
         {
@@ -151,13 +219,18 @@ namespace AF.Core.Board
             return new BoardState(next, _units);
         }
 
+        /// <summary>Tabla <c>U_c</c> indexada por color (0..16) para <see cref="CuiaRules"/>. No se modifica.</summary>
+        internal int[] UnitsTable => _units;
+
+        /// <summary>Cuia <paramref name="index"/> sin comprobar el índice (el llamante ya lo hizo).</summary>
+        internal Cuia CuiaAt(int index)
+        {
+            return _cuias[index];
+        }
+
         private bool IsSealedCuia(Cuia cuia)
         {
-            return !cuia.IsEmpty
-                && cuia.IsFull
-                && !cuia.HasHidden
-                && cuia.IsMonocolor
-                && cuia.Capacity == _units[cuia.TopColor];
+            return CuiaRules.IsSealed(cuia, _units);
         }
 
         private void CheckIndex(int index, string paramName)

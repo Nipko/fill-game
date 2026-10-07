@@ -1,0 +1,141 @@
+{
+  "spec": "tutorial_v0",
+  "subset_of": "af-level/1",
+  "description": "Niveles 1-10 del tutorial (02 §13), diseñados a mano (03 §4.4; docs/dev/prototipo-v0.md b). Cuias de abajo arriba con los IDs de tinte del glosario §9; [] = cuia vacía. Todas las cuias son estándar (cap 4) y cada tinte tiene 4 dosis (02 R1, R3). Lo verifica (con AF.Core y AF.Solver) y lo empaqueta dotnet run --project tools/level-generator -- --handmade tools/level-generator/specs/tutorial_v0.json --out Assets/_Project/Data/Levels --report tools/out/tutorial_v0_report.md; el pack sale en Assets/_Project/Data/Levels/tutorial_v0.json y el informe en tools/out/tutorial_v0_report.md. Las notas son para diseño y no pasan al pack.",
+  "pack_id": "tutorial_v0",
+  "kind": "campaign",
+  "world": 1,
+  "world_id": "w01_estuario",
+  "lap": 1,
+  "water_base": "white",
+  "levels": [
+    {
+      "level": 1,
+      "palette": ["acai", "aguaje"],
+      "cuias": [
+        ["acai", "acai", "acai", "aguaje"],
+        ["aguaje", "aguaje", "aguaje", "acai"],
+        []
+      ],
+      "note": "Estado inicial literal de 02 §13: la cuia casi llena se termina antes de apartar."
+    },
+    {
+      "level": 2,
+      "palette": ["acai", "aguaje", "tapereba"],
+      "cuias": [
+        ["aguaje", "acai", "aguaje", "aguaje"],
+        ["tapereba", "tapereba", "tapereba", "aguaje"],
+        ["tapereba", "acai", "acai", "acai"],
+        [],
+        []
+      ],
+      "note": "Tras el primer vertido óptimo (las dos aguajes a un vacío) la cuia 0 queda en [aguaje, açaí] con un hueco de 2 y la cuia 2 muestra una racha de 3 açaí: el vertido parcial deja 2 y se queda 1 (cuesta 1 vertido más que el par). El otro vacío queda en reserva."
+    },
+    {
+      "level": 3,
+      "palette": ["acai", "aguaje", "tapereba"],
+      "cuias": [
+        ["tapereba", "tapereba", "aguaje", "aguaje"],
+        ["acai", "tapereba", "acai", "tapereba"],
+        ["acai", "aguaje", "aguaje", "acai"],
+        [],
+        []
+      ],
+      "note": "Cuatro de los seis vertidos iniciales no acercan a la solución: da ocasión al tutorial de Marea."
+    },
+    {
+      "level": 4,
+      "palette": ["acai", "aguaje", "tapereba", "guanabana"],
+      "cuias": [
+        ["acai", "guanabana", "acai", "guanabana"],
+        ["aguaje", "acai", "acai", "aguaje"],
+        ["tapereba", "tapereba", "aguaje", "aguaje"],
+        ["guanabana", "guanabana", "tapereba", "tapereba"],
+        [],
+        []
+      ],
+      "note": "Debut de Guanábana, en la cima de la cuia 0. Cada tinte ocupa dos cuias, en cadena (açaí-guanábana, aguaje-açaí, taperebá-aguaje, guanábana-taperebá)."
+    },
+    {
+      "level": 5,
+      "palette": ["acai", "aguaje", "tapereba", "guanabana"],
+      "cuias": [
+        ["acai", "aguaje", "acai", "acai"],
+        ["guanabana", "aguaje", "guanabana", "guanabana"],
+        ["aguaje", "tapereba", "tapereba", "aguaje"],
+        ["tapereba", "guanabana", "tapereba", "acai"],
+        [],
+        []
+      ],
+      "note": "Color problema: Aguaje repartido en 3 cuias (enterrada en la 0 y la 1, arriba y abajo en la 2); los demás tintes, en dos."
+    },
+    {
+      "level": 6,
+      "palette": ["acai", "aguaje", "tapereba", "guanabana"],
+      "cuias": [
+        ["acai", "guanabana", "aguaje", "aguaje"],
+        ["tapereba", "acai", "acai", "guanabana"],
+        ["aguaje", "tapereba", "tapereba", "guanabana"],
+        ["guanabana", "aguaje", "acai", "tapereba"],
+        []
+      ],
+      "note": "Un solo vacío. Plan de 3 pasos: aguajes al vacío y las dos guanábanas sobre la de la cuia 0. Llevar el taperebá suelto de la cuia 3 al vacío lleva en un vertido a Aguas estancadas."
+    },
+    {
+      "level": 7,
+      "palette": ["acai", "aguaje", "tapereba", "guanabana", "bacaba"],
+      "cuias": [
+        ["acai", "acai", "bacaba", "bacaba"],
+        ["tapereba", "aguaje", "aguaje", "bacaba"],
+        ["guanabana", "guanabana", "acai", "tapereba"],
+        ["tapereba", "bacaba", "acai", "aguaje"],
+        ["aguaje", "guanabana", "guanabana", "tapereba"],
+        [],
+        []
+      ],
+      "note": "Debut de Bacaba, en la cima de las cuias 0 y 1. Tablero de comodidad tras el vacío único del 6: sin estados sin salida."
+    },
+    {
+      "level": 8,
+      "palette": ["acai", "aguaje", "tapereba", "guanabana", "bacaba"],
+      "cuias": [
+        ["aguaje", "aguaje", "bacaba", "bacaba"],
+        ["tapereba", "guanabana", "acai", "bacaba"],
+        ["aguaje", "aguaje", "tapereba", "guanabana"],
+        ["guanabana", "acai", "tapereba", "bacaba"],
+        ["guanabana", "tapereba", "acai", "acai"],
+        [],
+        []
+      ],
+      "note": "Reinicio probable con 2 vacíos: desenterrar las aguajes de la cuia 2 echando la guanábana y el taperebá sueltos a los dos vacíos lleva en dos vertidos a Aguas estancadas. La línea buena junta antes las bacabas."
+    },
+    {
+      "level": 9,
+      "palette": ["acai", "aguaje", "tapereba", "guanabana", "bacaba"],
+      "cuias": [
+        ["guanabana", "bacaba", "bacaba", "acai"],
+        ["aguaje", "aguaje", "acai", "guanabana"],
+        ["tapereba", "aguaje", "guanabana", "bacaba"],
+        ["bacaba", "acai", "aguaje", "tapereba"],
+        ["tapereba", "guanabana", "tapereba", "acai"],
+        [],
+        []
+      ],
+      "note": "Sin enseñanza de tablero (la fila cambia la luz del fondo): par intermedio y sin Aguas estancadas alcanzables."
+    },
+    {
+      "level": 10,
+      "palette": ["acai", "aguaje", "tapereba", "guanabana", "bacaba"],
+      "cuias": [
+        ["acai", "aguaje", "tapereba", "guanabana"],
+        ["bacaba", "acai", "aguaje", "tapereba"],
+        ["guanabana", "bacaba", "acai", "aguaje"],
+        ["tapereba", "guanabana", "bacaba", "acai"],
+        ["aguaje", "tapereba", "guanabana", "bacaba"],
+        [],
+        []
+      ],
+      "note": "Cierre del Estuario: cuadrado latino de los cinco tintes (cada fruta baja en diagonal), sin pares repetidos ni estados sin salida."
+    }
+  ]
+}

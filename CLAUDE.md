@@ -26,12 +26,11 @@ La raíz **es** el proyecto Unity; Unity solo importa `Assets/` y `Packages/`.
 - `schemas/af-level-1.schema.json`: esquema de niveles.
 - `Packages/com.amazonfill.core/`: **única copia** de AF.Core y AF.Solver (`Runtime/`; tests compartidos en `Tests/Editor/`); los asmdef de `Runtime/` con `noEngineReferences: true` y `autoReferenced: false` (los scripts de `Assets/` los referencian desde su propio asmdef).
 - `dotnet/`: `AmazonFill.slnx`, `Directory.Build.props`, `BannedSymbols.txt`, `AF.Core`/`AF.Solver` (.csproj que enlazan los `.cs` del paquete), `AF.Core.Tests` (net10.0, con `DotnetOnly/`); salida en `dotnet/artifacts/` (ignorada).
-- `tools/`: `level-generator/` y `level-qa/` (.NET 10), `levelgen_proto.py`, `econ_sim.py`, `econ_variants.py`, `validate_schema.py`; salidas en `tools/out/` y `tools/out_inverse/`.
-- Proyecto Unity (URP 2D, creado el 2026-10-06): `Assets/` (plantilla URP 2D y `_Project/Editor/CI/`, asmdef `AF.EditorTools` con `ProjectSetup` y `BuildSmoke`), `ProjectSettings/`, `Packages/manifest.json` y `packages-lock.json` (este lo regenera Unity: no lo edites a mano).
+- `tools/`: `level-generator/` (.NET 10; `--handmade` genera el pack del tutorial desde `level-generator/specs/tutorial_v0.json` con AF.Core/AF.Solver) y `level-qa/`, `levelgen_proto.py`, `econ_sim.py`, `econ_variants.py`, `validate_schema.py`; salidas en `tools/out/` y `tools/out_inverse/`.
+- Proyecto Unity (URP 2D, creado el 2026-10-06): `Assets/_Project/` con `Scripts/` (asmdef AF.Levels y AF.GameFlow sin motor; AF.Presentation y AF.UI; gráficos provisionales por código), `Data/Levels/tutorial_v0.json` (niveles 1-10, generado: no lo edites a mano), `Scenes/Game.unity` (la crea `GameSceneBuilder.CreateGameScene`), `Tests/` (EditMode y PlayMode) y `Editor/CI/` (AF.EditorTools: `ProjectSetup`, `BuildSmoke`, `BuildDev`); `ProjectSettings/`, `Packages/manifest.json` y `packages-lock.json` (este lo regenera Unity: no lo edites a mano). Prototipo v0: `docs/dev/prototipo-v0.md`.
 - `scripts/`: `unity-compile.ps1`, `unity-test.ps1`. `ci/`: `size-gate.ps1`, `check-16kb.sh`.
-- `.claude/`: `agents/` (7 subagentes), `rules/` (reglas por ruta), `skills/` (`unity-cli`, `unity-pipeline`), `settings.proposed.json`.
+- `.claude/`: `agents/` (7 subagentes), `rules/` (reglas por ruta), `skills/` (`unity-cli`, `unity-pipeline`), `settings.json` (permisos aprobados por el dueño el 2026-10-06).
 - **Pendiente (no crear a mano):**
-  - `.claude/settings.json`: s12, cuando el dueño apruebe `settings.proposed.json`;
   - `.github/workflows/`: s30 y s32;
   - `functions/`: Cloud Functions, más adelante.
 - Estructura de `Assets/_Project/`: GDD 08 §3, con `Scripts/Core` y `Scripts/Solver` sustituidos por el paquete.
@@ -46,8 +45,8 @@ python tools/validate_schema.py                       # 23/23 PASS; código 1 si
 python tools/econ_sim.py --runs 300 | diff --strip-trailing-cr -q - tools/out/econ_B.md
                                                       # (Git Bash) solo si tocas economía; sin salida = idéntico
 pwsh -NoProfile -File scripts/unity-compile.ps1       # ¿compila Unity? errores: solo las 30 primeras líneas "error CS"
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 35/35 hoy (tests compartidos del núcleo)
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # antes de cada PR que toque Unity
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 216 hoy (núcleo compartido + juego); dotnet test: 143
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 3 (+1 explícito de capturas); antes de cada PR que toque Unity
 ```
 - Los scripts de Unity lanzan `unity test <proyecto> --mode <Mode> --architecture arm64 ...` (respaldo: `Unity.exe -batchmode -runTests`). Códigos: 0 verde · 1 errores de compilación · 2 argumentos · 3 no encuentra el proyecto Unity (¿carpeta equivocada?) · 4 falta CLI o Editor · 5 proyecto abierto en un Editor · 6 sin veredicto (lee el log; no reintentes a ciegas) · 8 tests fallidos.
 - Con un Editor abierto en esa carpeta: `unity status`; `unity recompile --project-path .` (0 compila · 6 errores · 7 Editor inalcanzable o en Safe Mode).
@@ -63,6 +62,7 @@ pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # antes de cada P
 ## Estado y pendientes del dueño
 - Repositorio privado `github.com/Nipko/fill-game` (remoto `origin`, rama `main`), con el proyecto Unity commiteado (s29 hecho).
 - s27 hecho: APK de humo probado en un Samsung SM-S938B (Android 16) por depuración inalámbrica (`adb devices` lo descubre por mDNS). Pendiente del dueño: s28 (prueba visual de 30 min en Play Mode) y decidir si los 15 min orientativos del build limpio son vinculantes.
+- **Prototipo v0 jugable (2026-10-06):** niveles 1-10 del tutorial. Build de desarrollo con `unity run <repo> --architecture arm64 --timeout 5400 -- -nographics -buildTarget Android -executeMethod AF.EditorTools.BuildDev.BuildAndroidDev` → `Builds/Android/dev.apk`. En builds de desarrollo el juego escribe `AF_LAYOUT {json}` y `AF_STATE {json}` en logcat: úsalos para jugar con `adb shell input tap x y` y verificar; capturas en `Logs/device/` (ignorado). La depuración inalámbrica del teléfono de pruebas se desconecta a menudo: si `adb devices` sale vacío, pide al dueño que la reactive; no insistas.
 - **Permiso `INTERNET`:** lo añade Unity porque `ForceInternetPermission` está en Auto; hará falta para anuncios, IAP y Firebase. Está **pendiente del visto bueno del dueño**: no lo fuerces ni lo quites sin él.
 - `com.unity.pipeline` avisa en cada build "No RuntimePipelineConfig asset found": no afecta al build de humo.
 

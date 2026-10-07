@@ -1,0 +1,28 @@
+{
+  "name": "AF.Tests.EditMode",
+  "rootNamespace": "AF.Tests.EditMode",
+  "references": [
+    "AF.Core",
+    "AF.Solver",
+    "AF.Levels",
+    "AF.GameFlow",
+    "AF.UI",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

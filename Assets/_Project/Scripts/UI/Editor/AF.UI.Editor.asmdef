@@ -1,0 +1,20 @@
+{
+  "name": "AF.UI.Editor",
+  "rootNamespace": "AF.UI.Editor",
+  "references": [
+    "AF.UI",
+    "UnityEngine.UI",
+    "Unity.InputSystem"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

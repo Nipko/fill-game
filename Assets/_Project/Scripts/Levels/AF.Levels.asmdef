@@ -1,0 +1,16 @@
+{
+  "name": "AF.Levels",
+  "rootNamespace": "AF.Levels",
+  "references": [
+    "AF.Core"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}

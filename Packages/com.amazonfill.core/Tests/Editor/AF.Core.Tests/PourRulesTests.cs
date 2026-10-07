@@ -83,6 +83,46 @@ namespace AF.Core.Tests
         }
 
         [Test]
+        public void CanBeSource_EmptyOrSealed_IsFalse()
+        {
+            // 02 §1.2 (primera condición de legal) y 02 §3.1 C1-C2: origen = no vacía y no sellada. La Cuia chica llena
+            // y monocolor no sella (R5), así que sigue pudiendo ser origen.
+            BoardState state = Board(C(4, 1, 1, 1, 1), Cuia.Empty(4), C(4, 2, 3), C(2, 2, 2), C(4, 3, 3, 3, 2));
+
+            Assert.That(PourRules.CanBeSource(state, 0), Is.False);
+            Assert.That(PourRules.CanBeSource(state, 1), Is.False);
+            Assert.That(PourRules.CanBeSource(state, 2), Is.True);
+            Assert.That(PourRules.CanBeSource(state, 3), Is.True);
+            Assert.That(PourRules.CanBeSource(state, 4), Is.True);
+            Assert.That(() => { PourRules.CanBeSource(state, 5); }, Throws.TypeOf<ArgumentOutOfRangeException>());
+        }
+
+        [Test]
+        public void IsLegal_ImpliesCanBeSource_OnEveryPair()
+        {
+            // Una sola condición de origen para legal(A, B) y para la selección del cliente (04 §5.1: sin reglas duplicadas).
+            BoardState state = Board(C(4, 1, 1, 1, 1), Cuia.Empty(4), C(4, 2, 3), C(2, 2, 2), C(4, 3, 3, 3, 2), C(4, 3));
+            for (int a = 0; a < state.Count; a++)
+            {
+                bool anyLegal = false;
+                for (int b = 0; b < state.Count; b++)
+                {
+                    anyLegal |= PourRules.IsLegal(state, a, b);
+                }
+
+                if (anyLegal)
+                {
+                    Assert.That(PourRules.CanBeSource(state, a), Is.True, "cuia " + a);
+                }
+
+                if (!PourRules.CanBeSource(state, a))
+                {
+                    Assert.That(anyLegal, Is.False, "cuia " + a);
+                }
+            }
+        }
+
+        [Test]
         public void IsLegal_IndexOutOfBoard_Throws()
         {
             BoardState state = Board(C(4, 1), Cuia.Empty(4));

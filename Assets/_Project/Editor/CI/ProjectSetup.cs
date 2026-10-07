@@ -30,8 +30,15 @@ namespace AF.EditorTools
         /// </summary>
         public const string ApplicationId = "com.amazonfill.dev";
 
-        /// <summary>Nombre visible PROVISIONAL de los builds de desarrollo.</summary>
-        public const string ProductName = "Amazon Fill (dev)";
+        /// <summary>
+        /// Nombre visible de los builds de desarrollo: "Tintalú (dev)" (docs/dev/prototipo-v0.md d; glosario §11: el nombre
+        /// visible lleva la marca, los identificadores internos no). Si la "ú" diera problemas en rutas de Gradle o Burst,
+        /// el plan prevé "Tintalu (dev)".
+        /// </summary>
+        public const string ProductName = "Tintalú (dev)";
+
+        /// <summary>Orientación vertical bloqueada, sin autorrotación (GDD 02 §5: "Orientación: vertical bloqueada").</summary>
+        public const UIOrientation Orientation = UIOrientation.Portrait;
 
         /// <summary>minSdk 26 (CLAUDE.md, stack fijado).</summary>
         public const AndroidSdkVersions MinSdk = AndroidSdkVersions.AndroidApiLevel26;
@@ -70,6 +77,12 @@ namespace AF.EditorTools
 
             NamedBuildTarget android = NamedBuildTarget.Android;
             PlayerSettings.productName = ProductName;
+            PlayerSettings.defaultInterfaceOrientation = Orientation;
+            PlayerSettings.allowedAutorotateToPortrait = true;
+            PlayerSettings.allowedAutorotateToPortraitUpsideDown = false;
+            PlayerSettings.allowedAutorotateToLandscapeLeft = false;
+            PlayerSettings.allowedAutorotateToLandscapeRight = false;
+            PlayerSettings.useAnimatedAutorotation = false;
             PlayerSettings.SetApplicationIdentifier(android, ApplicationId);
             PlayerSettings.SetScriptingBackend(android, ScriptingImplementation.IL2CPP);
             PlayerSettings.Android.minSdkVersion = MinSdk;
@@ -106,6 +119,7 @@ namespace AF.EditorTools
             NamedBuildTarget android = NamedBuildTarget.Android;
             var problems = new List<string>();
             Check(problems, "productName", PlayerSettings.productName, ProductName);
+            Check(problems, "defaultInterfaceOrientation", PlayerSettings.defaultInterfaceOrientation, Orientation);
             Check(problems, "applicationId", PlayerSettings.GetApplicationIdentifier(android), ApplicationId);
             Check(problems, "scriptingBackend", PlayerSettings.GetScriptingBackend(android), ScriptingImplementation.IL2CPP);
             Check(problems, "minSdk", PlayerSettings.Android.minSdkVersion, MinSdk);
@@ -127,6 +141,7 @@ namespace AF.EditorTools
             return "plataforma=" + EditorUserBuildSettings.activeBuildTarget
                 + ", applicationId=" + PlayerSettings.GetApplicationIdentifier(android)
                 + ", productName=\"" + PlayerSettings.productName + "\""
+                + ", orientacion=" + PlayerSettings.defaultInterfaceOrientation
                 + ", backend=" + PlayerSettings.GetScriptingBackend(android)
                 + ", minSdk=" + (int)PlayerSettings.Android.minSdkVersion
                 + ", targetSdk=" + (int)PlayerSettings.Android.targetSdkVersion

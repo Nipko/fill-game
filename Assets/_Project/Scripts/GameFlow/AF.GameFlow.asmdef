@@ -1,0 +1,17 @@
+{
+  "name": "AF.GameFlow",
+  "rootNamespace": "AF.GameFlow",
+  "references": [
+    "AF.Core",
+    "AF.Levels"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}
