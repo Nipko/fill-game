@@ -1,0 +1,32 @@
+<Project>
+  <!--
+    Propiedades de todos los proyectos de dotnet/ (AF.Core, AF.Solver y AF.Core.Tests).
+    Compilan los fuentes del paquete Unity Packages/com.aquazonia.core con las mismas restricciones que
+    Unity 6.x: C# 9, sin global using ni contexto nullable global. Así el SDK rechaza aquí lo que
+    Unity rechazaría (informe docs/setup/research/d-dotnet-nucleo-compartido.md §3 y §6.2).
+    Este archivo va en dotnet/ y nunca en la raíz del repositorio: allí afectaría a los .csproj de Unity.
+    Cambiar LangVersion, TargetFramework o la versión de NUnit requiere decisión del dueño.
+  -->
+  <PropertyGroup>
+    <LangVersion>9.0</LangVersion>
+    <!-- El contexto nullable se abre en cada archivo con #nullable enable, igual que en Unity -->
+    <Nullable>disable</Nullable>
+    <!-- global using es C# 10 -->
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Deterministic>true</Deterministic>
+    <!-- Todo bin/ y obj/ sale a dotnet/artifacts/ (ignorada en git; Unity no la ve) -->
+    <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+    <!-- Ruta del paquete embebido, con barra final: única copia de los fuentes del núcleo -->
+    <AfPackageDir>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', 'Packages', 'com.aquazonia.core'))</AfPackageDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Bloquea APIs no deterministas o caras bajo IL2CPP (regla RS0030, error por TreatWarningsAsErrors) -->
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" Link="BannedSymbols.txt" />
+  </ItemGroup>
+</Project>

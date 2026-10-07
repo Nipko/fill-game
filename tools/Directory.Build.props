@@ -1,0 +1,14 @@
+<Project>
+  <!--
+    Propiedades de las herramientas .NET de tools/ (level-generator, level-qa...).
+    No se comparten con Unity: usan net10.0 y el C# por defecto (14). Referencian AF.Core y AF.Solver
+    a través de dotnet/, así que el núcleo sigue compilándose con C# 9 y netstandard2.1.
+    Los binarios salen al mismo dotnet/artifacts/ (ignorada en git).
+    Este archivo no afecta a tools/*.py ni a tools/out/.
+  -->
+  <PropertyGroup>
+    <ArtifactsPath>$(MSBuildThisFileDirectory)../dotnet/artifacts</ArtifactsPath>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+</Project>

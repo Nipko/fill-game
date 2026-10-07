@@ -1,0 +1,74 @@
+# .editorconfig de Aquazonia (Amazon Fill)
+# Estilo común para agentes, IDE (Cursor, Rider, Visual Studio) y Unity.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.md]
+# Dos espacios al final de línea son un salto en Markdown
+trim_trailing_whitespace = false
+
+[*.{json,asmdef,asmref,yml,yaml}]
+indent_size = 2
+
+[*.{csproj,props,targets,slnx,sln,xml}]
+indent_size = 2
+
+[*.py]
+indent_size = 4
+
+[*.{ts,js,mjs}]
+indent_size = 2
+
+# YAML de Unity y .meta: los escribe Unity; no se reformatean a mano
+[*.{meta,unity,prefab,asset,mat,anim,controller,overrideController,physicMaterial,physicsMaterial2D,playable,mask,spriteatlas,spriteatlasv2,mixer,preset,lighting}]
+indent_size = 2
+trim_trailing_whitespace = false
+insert_final_newline = unset
+
+# ---------------------------------------------------------------------------
+# C#: el núcleo compartido es C# 9 (Unity 6.x); las herramientas pueden usar C# 14
+# ---------------------------------------------------------------------------
+[*.cs]
+indent_size = 4
+
+# Namespaces con llaves: `namespace X;` es C# 10 y Unity no lo compila
+csharp_style_namespace_declarations = block_scoped:warning
+
+# using fuera del namespace, System primero
+csharp_using_directive_placement = outside_namespace:suggestion
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+
+# Llaves en línea nueva (Allman), como el resto del ecosistema .NET/Unity
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_prefer_braces = true:suggestion
+
+# Expresiones de colección y constructores primarios son C# 12: no sugerirlos
+dotnet_style_prefer_collection_expression = never
+csharp_style_prefer_primary_constructors = false
+
+# Nombres: campos privados con _camelCase; constantes en PascalCase
+dotnet_naming_rule.private_fields_underscore.severity = suggestion
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_camel
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_style.underscore_camel.required_prefix = _
+dotnet_naming_style.underscore_camel.capitalization = camel_case
+
+dotnet_naming_rule.constants_pascal.severity = suggestion
+dotnet_naming_rule.constants_pascal.symbols = constants
+dotnet_naming_rule.constants_pascal.style = pascal
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.required_modifiers = const
+dotnet_naming_style.pascal.capitalization = pascal_case

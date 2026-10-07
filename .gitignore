@@ -1,0 +1,118 @@
+# .gitignore de Aquazonia (Amazon Fill)
+# La raíz del repositorio ES el proyecto Unity (GDD 08 §3; plan de instalación, "Andamiaje").
+# Nunca se ignoran: docs/, schemas/, tools/out/, tools/out_inverse/ ni Packages/com.aquazonia.core/.
+
+# ---------------------------------------------------------------------------
+# Unity: carpetas generadas (solo en la raíz)
+# ---------------------------------------------------------------------------
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild*/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+# Carpeta temporal que crea Unity 6 en la raíz del proyecto
+/.utmp/
+
+# Los .meta se versionan siempre (Visible Meta Files)
+!/[Aa]ssets/**/*.meta
+
+# Proyectos y soluciones que Unity genera para el IDE: SOLO en la raíz,
+# para que los de dotnet/ y tools/ sigan versionados.
+/*.csproj
+/*.sln
+/*.slnx
+/*.unityproj
+ExportedObj/
+.consulo/
+
+# Plugin de Rider autogenerado
+/[Aa]ssets/Plugins/Editor/JetBrains*
+
+# Addressables y Play Asset Delivery: datos empaquetados y temporales
+/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Ficheros de depuración y caché de Unity / IDE
+*.pidb
+*.pidb.meta
+*.pdb
+*.pdb.meta
+*.mdb
+*.mdb.meta
+*.booproj
+*.svd
+*.opendb
+*.VC.db
+*.suo
+*.user
+*.userprefs
+*.tmp
+sysinfo.txt
+crashlytics-build.properties
+.vs/
+.idea/
+.vscode/
+.gradle/
+
+# ---------------------------------------------------------------------------
+# Builds y paquetes de distribución (cualquier carpeta)
+# ---------------------------------------------------------------------------
+*.apk
+*.aab
+*.apks
+*.symbols.zip
+*.unitypackage
+*.unitypackage.meta
+*.app
+
+# ---------------------------------------------------------------------------
+# .NET (núcleo compartido y herramientas)
+# ---------------------------------------------------------------------------
+# Todo bin/obj sale a dotnet/artifacts (ArtifactsPath en dotnet/ y tools/Directory.Build.props)
+/dotnet/artifacts/
+# Red de seguridad por si algo compila sin los Directory.Build.props
+/dotnet/**/[Bb]in/
+/dotnet/**/[Oo]bj/
+/tools/**/[Bb]in/
+/tools/**/[Oo]bj/
+[Tt]est[Rr]esults/
+
+# Python (tools/*.py) y Node (functions/, tools/loc-sync)
+__pycache__/
+*.py[cod]
+.venv/
+node_modules/
+
+# ---------------------------------------------------------------------------
+# Secretos: nunca en git (firmas, licencias, configuraciones de Firebase, entorno)
+# ---------------------------------------------------------------------------
+*.jks
+*.keystore
+keystore.properties
+*.p12
+*.pfx
+*.pepk
+*.ulf
+*.alf
+google-services.json
+GoogleService-Info.plist
+.env*
+
+# ---------------------------------------------------------------------------
+# Claude Code: estado local de cada agente o persona
+# ---------------------------------------------------------------------------
+.claude/worktrees/
+.claude/settings.local.json
+CLAUDE.local.md
+
+# ---------------------------------------------------------------------------
+# Sistema operativo
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini

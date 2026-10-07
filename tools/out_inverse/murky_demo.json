@@ -1,0 +1,62 @@
+[
+ {
+  "seed": "amazonfill:v1:murky:n0001",
+  "murky": [
+   2,
+   4
+  ],
+  "ok": true,
+  "safe_path_len": 12,
+  "par": 12,
+  "realities_max": 12,
+  "seconds": 1.19
+ },
+ {
+  "seed": "amazonfill:v1:murky:n0002",
+  "murky": [
+   5,
+   1
+  ],
+  "ok": true,
+  "safe_path_len": 16,
+  "par": 16,
+  "realities_max": 12,
+  "seconds": 8.54
+ },
+ {
+  "seed": "amazonfill:v1:murky:n0003",
+  "murky": [
+   0,
+   3
+  ],
+  "ok": true,
+  "safe_path_len": 14,
+  "par": 14,
+  "realities_max": 12,
+  "seconds": 5.78
+ },
+ {
+  "seed": "amazonfill:v1:murky:n0004",
+  "murky": [
+   6,
+   1
+  ],
+  "ok": true,
+  "safe_path_len": 9,
+  "par": 9,
+  "realities_max": 12,
+  "seconds": 0.68
+ },
+ {
+  "seed": "amazonfill:v1:murky:n0005",
+  "murky": [
+   2,
+   3
+  ],
+  "ok": true,
+  "safe_path_len": 15,
+  "par": 15,
+  "realities_max": 12,
+  "seconds": 5.58
+ }
+]

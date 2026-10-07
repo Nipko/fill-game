@@ -1,0 +1,14 @@
+// APIs prohibidas en dotnet/ (AF.Core, AF.Solver y sus tests): regla RS0030 de Microsoft.CodeAnalysis.BannedApiAnalyzers,
+// error por TreatWarningsAsErrors. Formato: <ID de documentación>;<mensaje>. Motivo: determinismo entre CoreCLR (tools),
+// Mono (Editor) e IL2CPP (móvil) y rendimiento bajo IL2CPP (docs/setup/research/d-dotnet-nucleo-compartido.md §3.4-3.5).
+T:System.Random;Usa el PRNG determinista de AF.Core: las secuencias de System.Random cambian entre versiones de .NET
+M:System.String.GetHashCode;No es estable entre runtimes ni entre procesos: usa el hash de 64 bits de AF.Core
+M:System.String.GetHashCode(System.StringComparison);No es estable entre runtimes ni entre procesos: usa el hash de 64 bits de AF.Core
+T:System.HashCode;Usa una semilla aleatoria por proceso: usa el hash de 64 bits de AF.Core
+T:System.Linq.Enumerable;Sin LINQ en el núcleo: asigna memoria bajo IL2CPP; usa bucles for sobre arrays
+P:System.DateTime.Now;No determinista: inyecta IClock (AF.Clock)
+P:System.DateTime.UtcNow;No determinista: inyecta IClock (AF.Clock)
+P:System.DateTime.Today;No determinista: inyecta IClock (AF.Clock)
+P:System.DateTimeOffset.Now;No determinista: inyecta IClock (AF.Clock)
+P:System.DateTimeOffset.UtcNow;No determinista: inyecta IClock (AF.Clock)
+M:System.Guid.NewGuid;No determinista: deriva los identificadores de la semilla del nivel

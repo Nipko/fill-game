@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Tests del núcleo sobre CoreCLR (.NET 10). Compila en un solo ensamblado:
+    - los tests COMPARTIDOS del paquete (Tests/Editor/AF.Core.Tests y AF.Solver.Tests), que Unity
+      ejecuta también en EditMode con su NUnit 3.5: solo C# 9 y el subconjunto de NUnit 3.5;
+    - los tests SOLO-DOTNET de DotnetOnly/ (lotes grandes, APIs de .NET 10).
+    NUnit se queda en 3.14.0: NUnit 4 y 5 no compilan el mismo código de test que el NUnit de Unity.
+    No añadir aquí ImplicitUsings, Nullable ni <Using>: pisarían dotnet/Directory.Build.props.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>AF.Core.Tests</AssemblyName>
+    <RootNamespace>AF.Core.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(AfPackageDir)Tests/Editor/**/*.cs" Link="Shared/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="DotnetOnly/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="6.3.0" />
+    <PackageReference Include="NUnit.Analyzers" Version="3.9.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../AF.Core/AF.Core.csproj" />
+    <ProjectReference Include="../AF.Solver/AF.Solver.csproj" />
+  </ItemGroup>
+</Project>

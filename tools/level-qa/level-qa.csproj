@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Control de calidad de paquetes de niveles (GDD 08 §2.4). Falla el CI si algo no cumple. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>level-qa</AssemblyName>
+    <RootNamespace>Aquazonia.Tools.LevelQa</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../dotnet/AF.Core/AF.Core.csproj" />
+    <ProjectReference Include="../../dotnet/AF.Solver/AF.Solver.csproj" />
+  </ItemGroup>
+</Project>

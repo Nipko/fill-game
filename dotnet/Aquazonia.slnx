@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/tools/">
+    <Project Path="../tools/level-generator/level-generator.csproj" />
+    <Project Path="../tools/level-qa/level-qa.csproj" />
+  </Folder>
+  <Project Path="AF.Core.Tests/AF.Core.Tests.csproj" />
+  <Project Path="AF.Core/AF.Core.csproj" />
+  <Project Path="AF.Solver/AF.Solver.csproj" />
+</Solution>

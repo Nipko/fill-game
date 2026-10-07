@@ -1,0 +1,16 @@
+{
+  "name": "com.aquazonia.core",
+  "version": "0.1.0",
+  "displayName": "Aquazonia Core (AF.Core + AF.Solver)",
+  "description": "Reglas, solver y utilidades deterministas en C# puro (C# 9, .NET Standard 2.1, sin UnityEngine). Única copia del núcleo: dotnet/ compila estos mismos fuentes para tools/ y dotnet test.",
+  "unity": "6000.3",
+  "author": {
+    "name": "Aquazonia"
+  },
+  "keywords": [
+    "aquazonia",
+    "water-sort",
+    "core",
+    "solver"
+  ]
+}

@@ -1,0 +1,152 @@
+[
+ {
+  "file": "docs/gdd/06-meta-retencion-liveops.md (§2.3, §3, §8.1, tabla RC, Desv. 1, Dependencias fila 08)",
+  "problem": "Usa push_preprompt_level = 10 «de 08 §9» y declara retirados push_preprompt_session y push_preprompt_min_level, que son justo las claves que define 08 §9 (y 08 retira push_preprompt_level). También afirma que «08 §9 no tiene clave para la sesión». En Dependencias pide a 08 victory_autonext_s y eco_calendar_double_ad_enabled, que ya están, y una clave push_preprompt_session «si se quiere configurable», que ya existe.",
+  "fix": "Sustituir push_preprompt_level = 10 por push_preprompt_session = 2 y push_preprompt_min_level = 10 (08 §9) en §2.3, §3 (fila «2.ª sesión»), §8.1, tabla RC y Desv. 1. En la lista de alias retirados, quitar push_preprompt_session y push_preprompt_min_level y añadir push_preprompt_level. Borrar «el número de sesión, 2, es fijo en este capítulo porque 08 §9 no tiene clave para él». En Dependencias (fila 08) dejar solo «pendiente: ui_murky_bonus_enabled = false en 1.0»."
+ },
+ {
+  "file": "schemas/af-level-1.schema.json ($defs.attr, $defs.mechanic_type) + docs/gdd/08 §4.1 (fila attrs) + docs/gdd/03 §3/§10",
+  "problem": "attr solo admite {type, key, partner, n} con additionalProperties false y define n como ritmo. 02 §9.1 usa n = gotas (Lluvia), n = sellos (Liana) y k = ritmo (Lluvia, Piraña), y 03 §10 habla de drops/k: validados con jsonschema, los ejemplos de Lluvia y Piraña de 02 fallan. Además, mechanic_type admite «barro», aunque 02/03 dicen que el Barro no lleva attrs.",
+  "fix": "En el esquema, añadir a attr «\"k\": {\"type\":\"integer\",\"minimum\":1,\"description\":\"Ritmo en vertidos de Lluvia o Piraña; si falta rige lluvia_k_pours / pirana_k_pours\"}», redefinir n como «Liana: sellos necesarios; Lluvia: gotas programadas» y quitar «barro» de mechanic_type. En 08 §4.1, fila attrs: «{type ∈ hoja/brote/liana/remolino/lluvia/pirana, key, partner, n, k}». En 03 §10, cambiar «(drops/k de Lluvia, k de Piraña)» por «(n = gotas y k = ritmo de Lluvia; k de Piraña)». En 03 §3: «attr[i] = {tipo, key, partner, n, k}»."
+ },
+ {
+  "file": "schemas/af-level-1.schema.json ($defs.difficulty.D)",
+  "problem": "D está limitado a minimum 0 y maximum 1, pero 03 §7 define D = 0,35·z(bot_fail) + … (suma de z-scores), y 03 §18 da valores de −0,83 a +0,77: tools/level-qa rechazaría los packs reales.",
+  "fix": "Sustituir por «\"D\": {\"type\":\"number\",\"description\":\"Índice de 03 §7: suma ponderada de z-scores del pool del rango; puede ser negativo\"}». Si se quiere mantener [0,1], redefinir D en 03 §7 como el cuantil dentro del pool."
+ },
+ {
+  "file": "schemas/af-level-1.schema.json ($defs.relief_board, $defs.level)",
+  "problem": "relief_board.par es entero ≥1 obligatorio, pero 03 §13 publica la variante +1 vacío «con par nulo». Además, «relief obligatoria desde el nivel 31» (08 §4.1, 03 §17 #8) no la exige ni el esquema ni la lista de checks de level-qa; la copia antigua sí lo hacía.",
+  "fix": "«\"par\": {\"type\": [\"integer\",\"null\"], \"minimum\": 1, \"description\":\"null solo en plus_empty (03 §13)\"}» y añadir en level.allOf «{\"if\":{\"properties\":{\"level\":{\"minimum\":31}},\"required\":[\"level\"]},\"then\":{\"properties\":{\"relief\":{\"minItems\":1}}}}». La alternativa es que 03 §13 calcule el par con A* ponderado para toda variante publicada."
+ },
+ {
+  "file": "schemas/af-level-1.schema.json ($defs.level: id, seed, required) vs docs/gdd/03 §16",
+  "problem": "En packs kind daily, id y seed solo aceptan el patrón de campaña (m{mm}_v{v}_n{nnnn} / amazonfill:v1:m{mm}:…) y difficulty, world y lap son obligatorios. 03 §16 publica los 2.190 tableros del Reto con slot en lugar de level y «sin métricas»: ningún tablero diario puede validar.",
+  "fix": "Dentro del if kind = daily, aceptar id «^d[1-3]_n[0-9]{4}$» y seed «^amazonfill:v1:daily:b[1-3]:d[0-9]{3}$» (y fijar ese formato en 08 §4.1) y hacer difficulty opcional. Si no, cambiar 03 §16 a «con difficulty y sin relief»."
+ },
+ {
+  "file": "docs/gdd/03-niveles-generacion-dificultad.md (§10, §17 QA #11), docs/GDD.md (§9 paso 5), docs/gdd/schemas/af-level-1.schema.json",
+  "problem": "Remiten a docs/gdd/schemas/af-level-1.schema.json, una copia obsoleta que sigue en el repositorio, difiere del canon (k/drops, D sin límites) y rechaza el ejemplo de 08 §4.1 porque su schema_file tiene la constante «af-level-1.schema.json».",
+  "fix": "Sustituir la ruta por «schemas/af-level-1.schema.json» en 03 §10, 03 §17 #11 y GDD.md §9 paso 5 («validar contra schemas/af-level-1.schema.json, generado por 08 §4.1») y borrar la carpeta docs/gdd/schemas/."
+ },
+ {
+  "file": "docs/gdd/08-arquitectura-tecnica-publicacion.md §4.1 (ejemplo JSON)",
+  "problem": "El ejemplo canónico es el nivel 41 con attrs[3] = {type: hoja, key: 5}, intro_mechanic null y skippable true: una Hoja antes de su debut en el 43, sin marcarse como debut. Además, el 41 es p1 (recuperación) y el ejemplo declara band «comfort».",
+  "fix": "Cambiar a «\"id\": \"m03_v1_n0043\", \"level\": 43, \"seed\": \"amazonfill:v1:m03:v1:n0043\", \"intro_mechanic\": \"hoja\", \"skippable\": false» (p3 = comodidad, band «comfort»), o mantener el 41 con todas las attrs a null (base y relief) y «\"band\": \"recovery\"»."
+ },
+ {
+  "file": "docs/gdd/05-economia-monetizacion.md §2.4 + tools/econ_sim.py (línea 566) + docs/gdd/06-meta-retencion-liveops.md §4.3",
+  "problem": "El pseudocódigo de 05 y la simulación reinician la racha a 0 al pagar el hito 10. El texto de 05 §2.4 y 06 §4.3 (regla y pseudocódigo) dicen que el contador sigue sin nuevos hitos. Esto cambia cuántos hitos 3 se cobran y, con ello, todas las cifras [sim] de la Crecida.",
+  "fix": "Alinear con lo simulado. En 05 §2.4 (texto) y en 06 §4.3, regla «Hitos», escribir: «al pagar el hito 10 la barra vuelve a 0; el río crecido sigue activo hasta el siguiente fallo duro no escudado». En el pseudocódigo de 06 §4.3, añadir «crecida.racha = 0» tras pagar el hito 10. Si se prefiere que el contador siga, quitar «streak = 0» de 05 §2.4 y de econ_sim.py y regenerar tools/out/econ_*.md."
+ },
+ {
+  "file": "docs/gdd/06-meta-retencion-liveops.md §4.3 (fila Tope diario)",
+  "problem": "Suma «el bonus del río crecido» al tope de 600. 05 §2.4, 08 §9 (streak_daily_cap) y econ_sim.py solo cuentan el hito 3 y las 50 de la Canasta.",
+  "fix": "«600 semillas (streak_daily_cap) sumando el hito 3 (300) y las 50 de la Canasta del hito 6; el bonus del río crecido (Cosecha doble sin anuncio) y los comodines de los hitos 6 y 10 no cuentan contra el tope (05 §2.4, 08 §9)»."
+ },
+ {
+  "file": "docs/gdd/02-nucleo-reglas-ux.md §13 (fila 10 y párrafo inicial)",
+  "problem": "La fila 10 sitúa el «pre-prompt de push (cap. 06)» en la victoria del 10, contra 06 §2.3/§8.1 y 01 §3.4. El párrafo dice que «el cap. 06 §2.2 la referencia sin copiarla», pero 06 la copia.",
+  "fix": "Fila 10: «Canasta (contenido visible), Dato del río y Bitácora del río (cap. 06); sin pre-prompt de push: pasa a la primera victoria de la 2.ª sesión (cap. 06 §8.1); el Mercado se abre…». Párrafo: «el cap. 06 §2.2 copia sin alterar sus columnas de cuias, colores, vacíos, par y tiempo»."
+ },
+ {
+  "file": "docs/gdd/08-arquitectura-tecnica-publicacion.md §9 (fila ui_show_difficulty_subtitles / ui_river_fact_every_n_levels / ui_murky_bonus_enabled / ui_mascot_rescue_anim)",
+  "problem": "Pone ui_murky_bonus_enabled = true por defecto, cuando 00, 02 T7/RC y 06 §4.1/RC lo apagan en 1.0 porque el Bonus es de 1.1.",
+  "fix": "Defaults «true / 10 / false (1.1: true) / true» y en Uso: «tarjeta Aguas turbias · Bonus, contenido de 1.1 (02 T7, 06 §4.1)»."
+ },
+ {
+  "file": "docs/gdd/02-nucleo-reglas-ux.md §2 (fila INTRO)",
+  "problem": "El banner «El río bajó» dura 1,2 s, frente a anim_river_lowered_banner_ms = 2000 (08 §9) y los 2,0 s de 03 §13, 04 §2.7/§6.6 y 07 §5.5.",
+  "fix": "«en variante aliviada muestra el banner \"El río bajó\" durante anim_river_lowered_banner_ms (2,0 s, 08 §9) antes del teñido»."
+ },
+ {
+  "file": "docs/gdd/08-arquitectura-tecnica-publicacion.md §9 (eco_model_version; claves consent_)",
+  "problem": "El default es eco_model_version = «B-2026-10-05b», pero 05 (cabecera y tabla RC) declara el modelo «B-2026-10-06d». Además, consent_under13_policy y consent_age_signal_source, que 05 §7 pide, siguen sin alta y por tanto sin default.",
+  "fix": "Default «B-2026-10-06d» y añadir filas «consent_under13_policy | string | \"block\" | block · parental_consent | 05» y «consent_age_signal_source | string | \"self_declared\" | self_declared · self_declared+play_age_signals | 05». La alternativa es que 05 §RC deje de pedirlas."
+ },
+ {
+  "file": "docs/gdd/05-economia-monetizacion.md §10 (Guardarraíles)",
+  "problem": "Usa alias retirados en contexto activo: «solo rescue_order_t1/t3 depende de geo_tier» y «exige cambio de reward_* en el mismo rollout»; el propio §RC de 05 los lista como retirados.",
+  "fix": "«solo stuck_order_t1 / stuck_order_t3 depende de geo_tier» y «exige cambio de eco_reward_normal / eco_reward_hard / eco_reward_very_hard en el mismo rollout»."
+ },
+ {
+  "file": "docs/gdd/08-arquitectura-tecnica-publicacion.md §2.2 (fila AF.LiveOps)",
+  "problem": "Usa el alias retirado daily_offset.",
+  "fix": "«Reto del río (pool por fecha + daily_overrides y live_daily_offset)»."
+ },
+ {
+  "file": "docs/gdd/05-economia-monetizacion.md (§3.1, §3.2, §3.3, §3.4, Desv. 1) + docs/GDD.md §2 #16",
+  "problem": "El contrato 18 exige que 05 ya no mencione envoltorios ni tablas de fallo sustituidas, pero 05 sigue citando la tabla provisional de research/04 C1 §5 (§3.1), «la corrida del 05-10» (§3.3) y cifras «0,5 bloqueos del casual, 15 % de corridas» (§3.2, Desv. 1) que no están en las salidas y que Desv. 1 atribuye a 3.2. Además, §3.4 valida simplificaciones con «copias modificadas del script fuera del repositorio». GDD.md #16 dice «sin bloqueos», pero la simulación da el 1 % de corridas con bloqueo.",
+  "fix": "Borrar en §3.1 «Sustituye desde el 2026-10-06 a la tabla provisional … a 750/900.»; en §3.2, «Con la tabla provisional del 05-10 … 15 % de corridas)»; en §3.3, «y en la corrida del 05-10 apenas movían el ratio de referencia» y «(conflicto con 04 y efecto marginal en el ratio en la corrida del 05-10)» → «(conflicto con 04)». En §3.4, sustituir «(las Canastas y el tope por nivel, comprobados con copias modificadas del script fuera del repositorio; la Balsa, por su peso ínfimo)» por «(sin cuantificar en el repositorio)», o añadir esas variantes a econ_variants.py. Desv. 1: «El escalado 600/750/900 bloquea sin recursos al casual en el 100 % de las corridas (21,3 bloqueos, muro hacia el 198) y al medio en el 40 % con neto −8/día (3.2)». GDD.md #16: «(casi) sin bloqueos sin recursos del no pagador medio (0,0 por corrida; 1 % de corridas) [sim]»."
+ },
+ {
+  "file": "docs/GDD.md (§5 Fase 3, §6 #12, §9 paso 8)",
+  "problem": "Mantiene «600 niveles» en la Fase 3, «201-600» y «cumplir 600 niveles», y «600 con QA (Fase 3)», frente a los 700 instalados (08 §6.2, 03 §17, 09).",
+  "fix": "Fase 3: «700 niveles instalados (≥600 jugables)». §6 #12: «fondo \"río genérico\" para los niveles sin arte de 1.0 (03 §17; 09 decisión 22): única forma de cumplir ≥600 jugables con 700 instalados y 4 mundos pintados». §9 paso 8: «700 instalados con QA (Fase 3)»."
+ },
+ {
+  "file": "docs/gdd/07-arte-tematica-audio.md (§2.1, §11, Desv. (1), pregunta 2) vs docs/gdd/03 §17, docs/gdd/09 (#26, §3.1 P1, decisión 22, Desv. (1)), docs/GDD.md §2 #20",
+  "problem": "07 y GDD.md pintan Loreto en 1.0 (PAD) y dejan el «río genérico» para 201-600; 03 y 09 ponen el genérico en 141-700 hasta que lleguen los packs 5-9.",
+  "fix": "Unificar en: «1.0: fondos 1-4 install-time + Loreto (141-200) por PAD; \"río genérico\" para 201-700 (mundos 6-9)». Aplicarlo en 07 §11, Desv. (1) y P2; 03 §17 («201-700»); 09 #26, decisión 22, Desv. (1) y §3.1 P1 («elimina el fondo genérico en 201-560»); y GDD.md #20. La alternativa es quitar Loreto de 07 §2.1/§11 y de GDD.md #20."
+ },
+ {
+  "file": "docs/gdd/02 §5/§6, docs/gdd/06 §4.3 (HUD), docs/gdd/07 §7.4",
+  "problem": "La barra de la Crecida aparece en tres sitios distintos: 02 la pone horizontal en la «barra de evento» bajo la cabecera (y 88-120); 06, como medidor vertical en el borde izquierdo; 07, vertical en el borde derecho (x = 348-356, y = 120-560).",
+  "fix": "Adoptar 07 §7.4 (dueño del HUD). En 02 §5, sacar la Crecida de la barra de evento (que queda para los eventos de 1.2) y en §6 escribir «la barra del borde derecho (07 §7.4) se replica grande». En 06 §4.3, cambiar «borde izquierdo» por «borde derecho (07 §7.4)»."
+ },
+ {
+  "file": "docs/gdd/02-nucleo-reglas-ux.md §9 (párrafo de cadencia)",
+  "problem": "Describe el ciclo de 20 con «reto (posiciones 13-17), recuperación (18-19)», lo que contradice 03 §12 (retos en p6, p10, p14, p17 y p19; recuperación en p1-p2) y GDD.md #7.",
+  "fix": "«…nunca en reto (p6, p10, p14, p17, p19), recuperación (p1-p2) ni hito (p20), según el ciclo de 03 §12»."
+ },
+ {
+  "file": "docs/GDD.md (§6 #3-#8 y #14, §7) + docs/gdd/02 Dependencias (fila 00) + docs/gdd/08 Dependencias (filas 06 y 09)",
+  "problem": "Presentan como abiertas incidencias ya propagadas: «debuts 34…204», «6 / 720», «08 conserva tramos», «08 fija lvl_dda_enabled en true», «auto-avance 2,5-3 s», y §7 dice «Siguen abiertas las siguientes». 02 «corrige glosario §8, mundo 8» y 08 pide a 06 y 09 correcciones que ya aplicaron.",
+  "fix": "GDD.md §7: titular «Incidencias cerradas en la propagación del 06-10» y añadir la columna «Estado: cerrada». En §6, reescribir #3-#8 y #14 como decisiones cerradas (p. ej. #5: «Cerrada: tabla de 02 §9.1 (43…183)»). En 02 Dependencias, borrar «(corrige glosario §8, mundo 8 \"Cuia alta de 5 en hitos\")». En 08 Dependencias, borrar «(06 §8.2 y §11 deben reflejarlo)» y «correcciones que 09 debe recoger: …»."
+ },
+ {
+  "file": "docs/gdd/05-economia-monetizacion.md (Conflictos detectados, Dependencias, §6.3, pregunta 1)",
+  "problem": "Mantiene como pendientes tareas ya hechas: que 08 retire [101,750],[201,900]; borrar rescue_base_price; que 09 decisión 15 quite la cohorte 450; eliminar la rama A'; el disparador de la Balsa y la frase del glosario; copiar la Crecida en 00/01/04/06/09; que 06 §12 retire el 0,03; recalcular «victorias para pagarlo» en 04 §9 (ya usa 61/99).",
+  "fix": "Marcar esas filas de Conflictos como «Resuelto (06-10)» sin tareas pendientes y quitarlas también de las filas 00, 01, 04, 06, 08 y 09 de Dependencias. En §6.3, «que 09 §8 decisión 15 debe retirar» → «(09 §8 decisión 15)». En P1, quitar «y la columna \"victorias para pagarlo\" de 04 §9». Dejar como pendientes solo la banda del ratio en 01 y las claves consent_ en 08 §9."
+ },
+ {
+  "file": "docs/GDD.md §2 #17",
+  "problem": "Dice «6 ubicaciones rewarded», cuando 05 §6.2 deja 5 en 1.0 porque rv_daily_chest es de 1.1 (eco_calendar_double_ad_enabled = false).",
+  "fix": "«5 ubicaciones rewarded en 1.0 (Cosecha doble, Marea, Morpho, Luciérnaga, Canoa extra; rv_daily_chest en 1.1)»."
+ },
+ {
+  "file": "docs/gdd/07-arte-tematica-audio.md §2.2 (filas 9 y 13)",
+  "problem": "Habla de «hitos con 13-14 colores» y «hitos 13-14», frente a 00 §8 y 03 §1/§11: 13 colores en hitos y 14 solo en el evento Encuentro de las Aguas (02 R1: ≤14 cuias generadas).",
+  "fix": "En ambas filas: «— (hitos con 13 colores; 14 solo en el evento Encuentro de las Aguas)»."
+ },
+ {
+  "file": "docs/gdd/01-vision-posicionamiento.md (Dependencias, fila 05)",
+  "problem": "Da como «ratio objetivo ≈8-12 : 1 sobre ingreso efectivo», frente a la banda 10-15:1 de 05 §1.1 (la referencia [sim] es 7,1-7,7:1).",
+  "fix": "«banda objetivo del ratio de presión 10-15:1 (05 §1.1); referencia actual 7,1-7,7:1 [sim, 05 §3.2]»."
+ },
+ {
+  "file": "docs/gdd/06 §12, docs/gdd/09 (§1.1 #30, §6.2, R13), docs/gdd/03 §15, docs/gdd/05 Dependencias (fila 09)",
+  "problem": "Los nombres de eventos no coinciden con la taxonomía de 08 §8.2. Estos capítulos usan rescue_shown/choice/outcome y rescue_outcome, af_daily_start/complete, af_logbook_claim, af_chest_open, af_river_fact_view, af_push_preprompt/af_push_permission, af_shield_used y un level_end con otros parámetros. Además, dda_applied y label_shown no existen en 08.",
+  "fix": "Adoptar los nombres de 08 §8.2: af_stuck_shown/choice/outcome, af_daily_challenge, af_calendar_claim, af_basket_open, af_river_fact_shown, af_push_prompt, af_streak_shield_used y level_end {success, level_name}. Dar de alta en 08 §8.2 af_dda_applied, af_label_shown, af_fruit_discovered, af_skin_unlock, af_comeback_gift, af_event_join/milestone/claim, af_league_rank y af_push_sent/af_push_open."
+ },
+ {
+  "file": "docs/gdd/04-comodines-vidas-rescate.md §2.4 y §2.5",
+  "problem": "Pororoca «4,8 del casual» y Luciérnaga «1,9 del casual» no cuadran con 300/61,4 = 4,9 y 120/61,4 = 2,0, ni con la tabla de §3 ni con §9 del propio capítulo.",
+  "fix": "§2.4: «(4,9 del casual / 3,0 del medio sobre el ingreso efectivo, §9)». §2.5: «(2,0 del casual / 1,2 del medio sobre el ingreso efectivo, §9)»."
+ },
+ {
+  "file": "docs/gdd/08-arquitectura-tecnica-publicacion.md §5.1-§5.2 (shader Liquid)",
+  "problem": "_HiddenFrom supone que lo oculto es un bloque contiguo desde el fondo, pero 08 §4.1 y el esquema admiten ocultos no contiguos ([cuia, capa]) y 03 §8 oculta capas «bajo la superior». Además, _MurkyColor (#6B5438) no coincide con el agua parda de 07 §4.3 (#8A7B6A).",
+  "fix": "Sustituir _HiddenFrom por una máscara de 6 bits _HiddenMask («col = bit(_HiddenMask, i) ? _MurkyColor : _Col[i]»), o restringir hidden en 02 T3 y 08 §4.1 a un bloque contiguo desde el fondo. Unificar _MurkyColor = #8A7B6A (07 §4.3)."
+ },
+ {
+  "file": "docs/gdd/06-meta-retencion-liveops.md §3 (fila 31) vs docs/gdd/05 §5",
+  "problem": "06 desbloquea el Pase Expedición 6,99 en el nivel 31; 05 §5 lo ofrece en el «inicio de temporada; nivel ≥60».",
+  "fix": "En 06 §3, mover «Pase Expedición 6,99 (14 días) · 1.2» a una fila «60» con «(nivel ≥60, 05 §5)», o cambiar 05 §5 a «nivel ≥31»."
+ },
+ {
+  "file": "docs/gdd/07 §4.3/§5.2 y docs/gdd/09 §1.1 #2 vs docs/gdd/02 §3.2/§4.1 (canon de control y juice)",
+  "problem": "07 eleva la cuia seleccionada 0,5 u (8,5 dp con 7 por fila) y hace el rechazo de 0,2 s con oscilación de 0,05 u, mientras 02 §4.1 fija 16 dp y una sacudida de ±6 dp en 120 ms. 09 #2 habla de «cola de un movimiento» frente a queue_max_lag_pours = 2 (02 §3.2).",
+  "fix": "07 §4.3/§5.2: «sube 16 dp (02 §4.1; ≈0,94 u con 7 por fila)» y «vertido ilegal: sacudida horizontal ±6 dp, 2 ciclos, 120 ms (02 §4.1)». 09 #2: «Animaciones interrumpibles; cola visual de hasta 2 vertidos por cuia (queue_max_lag_pours, 02 §3.2)»."
+ }
+]

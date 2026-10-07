@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    AF.Solver compilado por dotnet. Enlaza los .cs del paquete Unity
+    (Packages/com.aquazonia.core/Runtime/AF.Solver), única copia del código.
+    No añadir aquí ImplicitUsings ni Nullable: pisarían dotnet/Directory.Build.props.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>AF.Solver</AssemblyName>
+    <RootNamespace>AF.Solver</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="$(AfPackageDir)Runtime/AF.Solver/**/*.cs" Link="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../AF.Core/AF.Core.csproj" />
+  </ItemGroup>
+</Project>
