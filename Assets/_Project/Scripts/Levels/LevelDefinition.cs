@@ -12,6 +12,15 @@ namespace AF.Levels
     /// </summary>
     public sealed class LevelDefinition
     {
+        /// <summary>Etiqueta <c>normal</c> de <c>difficulty.label</c> (08 §4.1; glosario §11): también la de un nivel sin etiqueta.</summary>
+        public const string LabelNormal = "normal";
+
+        /// <summary>Etiqueta <c>hard</c> (Difícil, glosario §6.1).</summary>
+        public const string LabelHard = "hard";
+
+        /// <summary>Etiqueta <c>very_hard</c> (Muy difícil, glosario §6.1).</summary>
+        public const string LabelVeryHard = "very_hard";
+
         private readonly int[] _caps;
         private readonly int[][] _cuias;
         private readonly string[] _palette;
@@ -25,7 +34,8 @@ namespace AF.Levels
             int unitsPerColor,
             int[] caps,
             int[][] cuias,
-            int par)
+            int par,
+            string difficultyLabel = LabelNormal)
         {
             Id = id;
             Level = level;
@@ -36,7 +46,14 @@ namespace AF.Levels
             _caps = caps;
             _cuias = cuias;
             Par = par;
+            DifficultyLabel = difficultyLabel;
         }
+
+        /// <summary>
+        /// <c>difficulty.label</c> (08 §4.1): <see cref="LabelNormal"/>, <see cref="LabelHard"/> o <see cref="LabelVeryHard"/>.
+        /// Un nivel sin etiqueta (el subconjunto v0 del tutorial) es <see cref="LabelNormal"/>.
+        /// </summary>
+        public string DifficultyLabel { get; }
 
         /// <summary>Identificador <c>m{mm}_v{v}_n{nnnn}</c> (glosario §11).</summary>
         public string Id { get; }

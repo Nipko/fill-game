@@ -12,7 +12,8 @@ namespace AF.UI.Editor
     /// <summary>
     /// Genera la escena <c>Assets/_Project/Scenes/Game.unity</c> del prototipo v0 (docs/dev/prototipo-v0.md c) y la
     /// deja como la única de Build Settings. La escena es casi vacía (.claude/rules/unity-assets.md): cámara, EventSystem
-    /// con <see cref="InputSystemUIInputModule"/> y <see cref="GameBootstrap"/> enlazado al paquete de niveles; la UI se
+    /// con <see cref="InputSystemUIInputModule"/> y <see cref="GameBootstrap"/> enlazado a los paquetes de niveles
+    /// (<see cref="LevelPackPaths"/>); la UI se
     /// construye por código en tiempo de ejecución. Es la forma versionada de crear la escena (CLAUDE.md, regla dura 3).
     ///
     /// Uso en batchmode (sin ningún Editor abierto en la carpeta):
@@ -27,6 +28,12 @@ namespace AF.UI.Editor
 
         /// <summary>Paquete de niveles del prototipo v0.</summary>
         public const string LevelPackPath = "Assets/_Project/Data/Levels/tutorial_v0.json";
+
+        /// <summary>
+        /// Paquetes de la escena, en orden (08 §2.2: índice nivel → paquete; tarea B1-5). En la integración se añaden aquí
+        /// <c>mundo_02</c> … <c>mundo_05</c> y se regenera la escena.
+        /// </summary>
+        public static readonly string[] LevelPackPaths = { LevelPackPath };
 
         private const string LogPrefix = "[AF.GameSceneBuilder] ";
 
@@ -63,11 +70,15 @@ namespace AF.UI.Editor
         private static int Run()
         {
             AssetDatabase.Refresh();
-            var pack = AssetDatabase.LoadAssetAtPath<TextAsset>(LevelPackPath);
-            if (pack == null)
+            var packs = new TextAsset[LevelPackPaths.Length];
+            for (int i = 0; i < LevelPackPaths.Length; i++)
             {
-                Debug.LogError(LogPrefix + "no existe el paquete de niveles " + LevelPackPath + ".");
-                return 2;
+                packs[i] = AssetDatabase.LoadAssetAtPath<TextAsset>(LevelPackPaths[i]);
+                if (packs[i] == null)
+                {
+                    Debug.LogError(LogPrefix + "no existe el paquete de niveles " + LevelPackPaths[i] + ".");
+                    return 2;
+                }
             }
 
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -97,7 +108,7 @@ namespace AF.UI.Editor
 
             var bootstrapGo = new GameObject("GameBootstrap");
             GameBootstrap bootstrap = bootstrapGo.AddComponent<GameBootstrap>();
-            bootstrap.Configure(pack);
+            bootstrap.Configure(packs);
             EditorUtility.SetDirty(bootstrap);
 
             if (!EditorSceneManager.SaveScene(scene, ScenePath))

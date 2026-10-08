@@ -5,25 +5,32 @@ using UnityEngine;
 namespace AF.UI
 {
     /// <summary>
-    /// Progreso provisional del prototipo v0 en PlayerPrefs, clave <c>af_v0_level</c> (docs/dev/prototipo-v0.md c;
-    /// pregunta 4 al dueño). Se persiste en el acto (<see cref="PlayerPrefs.Save"/>) para sobrevivir a un
-    /// <c>force-stop</c>. El guardado real es <c>AF.Save</c> (GDD 08 §4.3, §11).
+    /// Progreso del prototipo v0 en PlayerPrefs, clave <c>af_v0_level</c> (docs/dev/prototipo-v0.md c). Desde la tarea B1-5
+    /// el progreso vive en el perfil (<see cref="ProfileProgressStore"/>, 08 §4.3): esta clase solo lee el valor antiguo
+    /// para migrarlo una vez (<see cref="ProgressMigration.MigrateV0"/>) y lo borra después.
     /// </summary>
-    public sealed class PlayerPrefsProgressStore : IProgressStore
+    public sealed class PlayerPrefsProgressStore : ILegacyProgressSource
     {
         /// <summary>Clave de PlayerPrefs.</summary>
         public const string Key = "af_v0_level";
 
         /// <inheritdoc />
-        public int LoadNextLevel()
+        public bool TryRead(out int nextLevel)
         {
-            return PlayerPrefs.GetInt(Key, 0);
+            if (!PlayerPrefs.HasKey(Key))
+            {
+                nextLevel = 0;
+                return false;
+            }
+
+            nextLevel = PlayerPrefs.GetInt(Key, 0);
+            return true;
         }
 
         /// <inheritdoc />
-        public void SaveNextLevel(int level)
+        public void Delete()
         {
-            PlayerPrefs.SetInt(Key, level);
+            PlayerPrefs.DeleteKey(Key);
             PlayerPrefs.Save();
         }
     }

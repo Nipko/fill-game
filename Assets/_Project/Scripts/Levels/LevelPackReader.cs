@@ -209,7 +209,29 @@ namespace AF.Levels
                 throw new LevelFormatException(where + ": 'difficulty.par' debe ser ≥ 1.");
             }
 
-            return new LevelDefinition(id, level, world, waterBase, palette, unitsPerColor, caps, cuias, par);
+            string label = ReadDifficultyLabel(difficulty, where);
+            return new LevelDefinition(id, level, world, waterBase, palette, unitsPerColor, caps, cuias, par, label);
+        }
+
+        // difficulty.label (08 §4.1): normal, hard o very_hard; sin etiqueta (subconjunto v0) es normal.
+        private static string ReadDifficultyLabel(JsonValue difficulty, string where)
+        {
+            JsonValue? value = difficulty.Get("label");
+            if (value == null || value.IsNull)
+            {
+                return LevelDefinition.LabelNormal;
+            }
+
+            if (value.Kind == JsonKind.String)
+            {
+                string label = value.AsString();
+                if (label == LevelDefinition.LabelNormal || label == LevelDefinition.LabelHard || label == LevelDefinition.LabelVeryHard)
+                {
+                    return label;
+                }
+            }
+
+            throw new LevelFormatException(where + ": 'difficulty.label' debe ser normal, hard o very_hard (08 §4.1).");
         }
 
         private static void CheckNoMechanics(JsonValue node, int cuiaCount, string where)

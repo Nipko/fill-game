@@ -15,7 +15,9 @@ namespace AF.UI
     /// la dirección visual v2 «Selva brillante premium» (D-003; docs/art/direccion-visual-v2.md): panorama del Estuario,
     /// muelle y follaje; panel azul petróleo con marco tallado y una repisa por fila; HUD con insignia y Reiniciar en las
     /// posiciones de 07 §7.4; bandeja con Deshacer · Marea; modal Aguas estancadas (02 §7; 07 §7.5) y victoria con
-    /// cinta-hoja y estallido (02 §6). Escucha a <see cref="LevelFlow"/> y hace que la vista persiga al modelo (02 §3.2).
+    /// cinta-hoja y estallido (02 §6), con Siguiente y el secundario «Inicio» [P] (06 §4.7; D-008 punto 3). Escucha a
+    /// <see cref="LevelFlow"/> y hace que la vista persiga al modelo (02 §3.2). Se oculta mientras se ve la pantalla de
+    /// inicio (<see cref="SetVisible"/>).
     /// </summary>
     /// <remarks>
     /// Capas de atrás adelante (guía 3.4): panorama, ambiente lejano, muelle, follaje, velo de escena; captura de fondo;
@@ -49,10 +51,17 @@ namespace AF.UI
 
         /// <summary>
         /// Panel de victoria (guía 5.3, ajustado al contenido en la revisión visual del 2026-10-07): 30 dp de cinta dentro +
-        /// 12 + 56 (CTA y canto) + 12 + 8 de marco = 118 dp en lugar de 148, con el CTA centrado. La fila de 44 dp de
-        /// «Semillas +N» llega con la fase de jugabilidad (guía 12).
+        /// 12 + 56 (CTA y canto) + 12 (eran 118 dp hasta el marco) y, desde la tarea B1-6, el secundario «Inicio» [P] (07 §7.3:
+        /// 40 dp de cara, área táctil de 48) en <see cref="VictoryHomeTopDp"/>, más 12 + 8 de marco: 176 dp. La fila de 44 dp
+        /// de «Semillas +N» llega con la victoria de B2-4 (guía 12).
         /// </summary>
-        private const float VictoryPanelDp = 118f;
+        private const float VictoryPanelDp = 176f;
+
+        /// <summary>Borde superior del secundario «Inicio» dentro del panel de victoria (bajo el CTA y su sombra).</summary>
+        private const float VictoryHomeTopDp = 110f;
+
+        /// <summary>Ancho del secundario «Inicio» (dp).</summary>
+        private const float VictoryHomeWidthDp = 168f;
 
         /// <summary>Borde superior del CTA dentro del panel de victoria (centrado entre la cinta y el marco inferior).</summary>
         private const float VictoryCtaTopDp = 42f;
@@ -100,6 +109,7 @@ namespace AF.UI
         private readonly Action _onUndo;
         private readonly Action _onRestart;
         private readonly Action _onNext;
+        private readonly Action _onHome;
 
         private readonly Canvas _canvas;
         private readonly CanvasScaler _scaler;
@@ -161,6 +171,8 @@ namespace AF.UI
         private readonly Image _ribbon;
         private readonly ReliefParts _next;
         private readonly CanvasGroup _nextGroup;
+        private readonly ReliefParts _home;
+        private readonly CanvasGroup _homeGroup;
 
         private readonly BoardAnimator _animator;
         private readonly IntroAnimation _intro = new IntroAnimation();
@@ -211,7 +223,8 @@ namespace AF.UI
             Action onAnywhere,
             Action onUndo,
             Action onRestart,
-            Action onNext)
+            Action onNext,
+            Action onHome)
         {
             _art = art;
             _probe = probe;
@@ -221,6 +234,7 @@ namespace AF.UI
             _onUndo = onUndo;
             _onRestart = onRestart;
             _onNext = onNext;
+            _onHome = onHome;
             _cuiaDown = OnCuiaDown;
             _cuiaUp = OnCuiaUp;
 
@@ -372,7 +386,7 @@ namespace AF.UI
             _stuckDim = UiBuilder.Image("Dim", _stuckOverlay, null, new Color(0f, 0f, 0f, 0f), true);
             UiBuilder.Stretch(_stuckDim.rectTransform);
             _stuckPanel = UiBuilder.Rect("Panel", _stuckOverlay);
-            _stuckSurface = BuildModalBody(_stuckPanel, art);
+            _stuckSurface = UiBuilder.ModalBody(_stuckPanel, art);
             Image header = UiBuilder.Image("HeaderPlate", _stuckPanel, art.HeaderPlate, Color.white);
             UiBuilder.Place(header.rectTransform, 16f, 16f, 296f, 40f);
             TextMeshProUGUI stuckTitle = UiBuilder.Label("Title", header.transform, TextStyle.ModalTitle, UiText.StuckTitle, 22f, Palette.Cream, TextAlignmentOptions.Center);
@@ -385,7 +399,7 @@ namespace AF.UI
             UiBuilder.Place(still.rectTransform, 16f, 86f, 296f, 20f);
             _stuckUndo = UiBuilder.Relief("UndoModalButton", _stuckPanel, art.CtaWater, () => _onUndo());
             TextMeshProUGUI stuckUndoLabel = UiBuilder.Label("Label", _stuckUndo.Face, TextStyle.CtaWater, UiText.StuckUndo, 22f, Palette.Cream, TextAlignmentOptions.Center);
-            PlaceCtaLabel(stuckUndoLabel.rectTransform, art.CtaWater);
+            UiBuilder.PlaceCtaLabel(stuckUndoLabel.rectTransform, art.CtaWater);
             UiBuilder.AutoSize(stuckUndoLabel, 18f, 22f);
             _stuckUndo.Relief.Bind(_stuckUndo.Face, _stuckUndo.Base, _stuckUndo.FaceImage, art.CtaWater, null, null, stuckUndoLabel);
             _stuckRestart = UiBuilder.BareButton("RestartModalButton", _stuckPanel, () => _onRestart());
@@ -400,13 +414,22 @@ namespace AF.UI
             UiBuilder.Stretch(_victoryDim.rectTransform);
 
             _victoryPanel = UiBuilder.Rect("Panel", _victoryOverlay);
-            _victorySurface = BuildModalBody(_victoryPanel, art);
+            _victorySurface = UiBuilder.ModalBody(_victoryPanel, art);
             _next = UiBuilder.Relief("NextButton", _victoryPanel, art.CtaLeaf, () => _onNext());
             _nextGroup = _next.Face.parent.gameObject.AddComponent<CanvasGroup>();
             _nextGroup.blocksRaycasts = false;
             TextMeshProUGUI nextLabel = UiBuilder.Label("Label", _next.Face, TextStyle.CtaLeaf, UiText.Next, 22f, Palette.Cream, TextAlignmentOptions.Center);
-            PlaceCtaLabel(nextLabel.rectTransform, art.CtaLeaf);
+            UiBuilder.PlaceCtaLabel(nextLabel.rectTransform, art.CtaLeaf);
             _next.Relief.Bind(_next.Face, _next.Base, _next.FaceImage, art.CtaLeaf, null, null, nextLabel);
+
+            // «Inicio» [P] (06 §4.7; D-008 punto 3): secundario de madera (07 §7.3) bajo Siguiente; vuelve a la pantalla de inicio.
+            _home = UiBuilder.Relief("HomeButton", _victoryPanel, art.CtaWood, () => _onHome());
+            _homeGroup = _home.Face.parent.gameObject.AddComponent<CanvasGroup>();
+            _homeGroup.blocksRaycasts = false;
+            TextMeshProUGUI homeLabel = UiBuilder.Label("Label", _home.Face, TextStyle.PillWood, UiText.Home, 18f, Palette.Cream, TextAlignmentOptions.Center);
+            UiBuilder.PlaceCtaLabel(homeLabel.rectTransform, art.CtaWood);
+            UiBuilder.AutoSize(homeLabel, 14f, 18f);
+            _home.Relief.Bind(_home.Face, _home.Base, _home.FaceImage, art.CtaWood, null, null, homeLabel);
             _ribbon = UiBuilder.Image("Ribbon", _victoryPanel, art.Ribbon, Color.white);
             // Baloo 2 de 30 dp, mínimo 22 (revisión visual del 2026-10-07; guía 5.5), en la franja de texto de la cinta de
             // 344 × 72 (≈ 262 × 45 dp de hoja_base → hoja_fondo).
@@ -489,6 +512,27 @@ namespace AF.UI
 
         /// <summary>Botón de Reiniciar del HUD.</summary>
         public Button RestartButton => _restart.Button;
+
+        /// <summary>Botón Siguiente de la victoria.</summary>
+        public Button NextButton => _next.Button;
+
+        /// <summary>Botón «Inicio» de la victoria [P].</summary>
+        public Button HomeButton => _home.Button;
+
+        /// <summary>La pantalla de nivel está visible (oculta mientras se ve la de inicio).</summary>
+        public bool Visible => _canvas.gameObject.activeSelf;
+
+        /// <summary>
+        /// Muestra u oculta la pantalla de nivel (tarea B1-6: la pantalla de inicio la sustituye). Oculta no recibe toques ni
+        /// se dibuja; el estado del nivel se conserva hasta la siguiente carga.
+        /// </summary>
+        public void SetVisible(bool visible)
+        {
+            if (_canvas.gameObject.activeSelf != visible)
+            {
+                _canvas.gameObject.SetActive(visible);
+            }
+        }
 
         /// <summary>
         /// Horizonte del panorama (dp desde arriba) para un panel que empieza en <paramref name="panelTop"/> en un lienzo de
@@ -890,7 +934,7 @@ namespace AF.UI
                 ApplyVictoryAnim(_victoryAnim);
                 if (before < PanelSlideMs && _victoryAnim >= PanelSlideMs)
                 {
-                    _probe.Layout("victory", RequireFlow().LevelNumber, null, new[] { "next" }, new[] { (RectTransform)_next.Button.transform });
+                    _probe.Layout("victory", RequireFlow().LevelNumber, null, new[] { "next", "home" }, new[] { (RectTransform)_next.Button.transform, (RectTransform)_home.Button.transform });
                 }
             }
         }
@@ -937,6 +981,7 @@ namespace AF.UI
             }
             float nt = Mathf.Clamp01((ms - 600f) / 150f);
             _nextGroup.alpha = nt;
+            _homeGroup.alpha = nt;
             float breathe = ms > 750f ? 1f + (0.015f * (1f - Mathf.Cos(((ms - 750f) / 1400f) * Mathf.PI * 2f))) : 1f;
             ((RectTransform)_next.Face.parent).localScale = Vector3.one * Mathf.Lerp(0.9f, 1f, Ease.Out(nt)) * breathe;
         }
@@ -1043,6 +1088,8 @@ namespace AF.UI
             PlaceAt(_ribbon.rectTransform, panelW / 2f, -RibbonRiseDp + (RibbonHeightDp * 0.5f), RibbonWidthDp, RibbonHeightDp, new Vector2(0.5f, 0.5f));
             float nextW = Mathf.Min(w - 48f, Mathf.Min(312f, panelW - 16f));
             UiBuilder.Place((RectTransform)_next.Button.transform, (panelW - nextW) / 2f, VictoryCtaTopDp, nextW, 64f);
+            float homeW = Mathf.Min(VictoryHomeWidthDp, nextW);
+            UiBuilder.Place((RectTransform)_home.Button.transform, (panelW - homeW) / 2f, VictoryHomeTopDp, homeW, 48f);
             float ribbonY = _victoryPanelY - RibbonRiseDp + (RibbonHeightDp * 0.5f);
             PlaceAt(_victoryRays.rectTransform, w * 0.5f, ribbonY, 2f * VictoryRaysRadiusDp, 2f * VictoryRaysRadiusDp, new Vector2(0.5f, 0.5f));
             PlaceAt(_victoryGlow.rectTransform, w * 0.5f, ribbonY, 2f * VictoryGlowRadiusDp, 2f * VictoryGlowRadiusDp, new Vector2(0.5f, 0.5f));
@@ -1292,33 +1339,6 @@ namespace AF.UI
             _capi.rectTransform.localScale = new Vector3(1f, breathe, 1f);
         }
 
-        // Sombra, superficie de madera clara pulida (por código, al tamaño del panel: LayoutHud) y marco 9-slice.
-        private static Image BuildModalBody(RectTransform panel, ProceduralArt art)
-        {
-            Image shadow = UiBuilder.Sliced("Shadow", panel, art.SoftShadow, new Color(1f, 1f, 1f, 0.35f));
-            UiBuilder.Stretch(shadow.rectTransform);
-            shadow.rectTransform.offsetMin = new Vector2(-14f, -20f);
-            shadow.rectTransform.offsetMax = new Vector2(14f, 8f);
-            Image surface = UiBuilder.Image("Surface", panel, art.ModalSurfaceFor(312f, 100f), Color.white);
-            UiBuilder.Stretch(surface.rectTransform);
-            surface.rectTransform.offsetMin = new Vector2(8f, 8f);
-            surface.rectTransform.offsetMax = new Vector2(-8f, -8f);
-            Image frame = UiBuilder.Sliced("Frame", panel, art.ModalPanel, Color.white);
-            UiBuilder.Stretch(frame.rectTransform);
-            return surface;
-        }
-
-        // Etiqueta de CTA: centrada al 58 % de la cara y dentro de la franja del 25-85 % (guía 5.1 y 2.4).
-        private static void PlaceCtaLabel(RectTransform label, ReliefSprites sprites)
-        {
-            float face = sprites.FaceHeightDp;
-            label.anchorMin = new Vector2(0f, 1f);
-            label.anchorMax = new Vector2(1f, 1f);
-            label.pivot = new Vector2(0.5f, 0.5f);
-            label.sizeDelta = new Vector2(-24f, face * 0.60f);
-            label.anchoredPosition = new Vector2(0f, -(face * 0.56f));
-        }
-
         // Coloca rt con su pivote en (x, y desde arriba) del padre, con tamaño w × h.
         private static void PlaceAt(RectTransform rt, float x, float yTop, float w, float h, Vector2 pivot)
         {
@@ -1329,7 +1349,7 @@ namespace AF.UI
             rt.sizeDelta = new Vector2(w, h);
         }
 
-        private static void ReadScreen(out int width, out int height, out Rect safeArea)
+        internal static void ReadScreen(out int width, out int height, out Rect safeArea)
         {
             if (SimulatedScreen.HasValue)
             {

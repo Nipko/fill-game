@@ -17,7 +17,9 @@ namespace AF.UI
     /// </summary>
     /// <remarks>
     /// <para>Eventos de <c>AF_STATE</c>: <c>load</c>, <c>ready</c>, <c>pour</c>, <c>reject</c>, <c>undo</c>, <c>restart</c>,
-    /// <c>win</c> y <c>stuck</c> (contrato) más <c>select</c> y <c>deselect</c> (ayuda para seguir los toques).</para>
+    /// <c>win</c> y <c>stuck</c> (contrato) más <c>select</c> y <c>deselect</c> (ayuda para seguir los toques). Fuera del
+    /// nivel (tarea B1-6, <see cref="App"/>): <c>lobby</c>, <c>content_end</c> y <c>no_canoes</c>, con semillas y canoas; y
+    /// <c>AF_LAYOUT</c> de esas pantallas con los botones <c>play</c>, <c>canoes</c>, <c>settings</c> y <c>back</c>.</para>
     /// <para>Cada línea lleva <c>"pour_mode"</c> (run por defecto, D-005; single en pruebas), el modo de la sesión del
     /// nivel, y los eventos con vertido (<c>pour</c>, <c>undo</c>) llevan, además de
     /// <c>"move":[origen,destino,cantidad]</c>, la cantidad suelta en <c>"amount"</c> (en <c>run</c>, la racha que cabe;
@@ -114,8 +116,55 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Línea <c>AF_LAYOUT</c> de la pantalla <paramref name="screen"/> (<c>level</c>, <c>stuck</c>, <c>victory</c>):
-        /// tamaño de pantalla, áreas táctiles de las cuias y botones con su id.
+        /// Línea <c>AF_STATE</c> de las pantallas fuera del nivel (tarea B1-6): <c>lobby</c>, <c>content_end</c> y
+        /// <c>no_canoes</c>, con el nivel del botón Jugar, si está publicado, su etiqueta, las semillas y las canoas
+        /// (<c>canoes</c>, <c>canoes_max</c>, si se ven desde el 31, Canoas infinitas y segundos hasta la próxima).
+        /// </summary>
+        public void App(string evt, AppFlow app)
+        {
+            string? line = FormatApp(evt, app);
+            if (line != null)
+            {
+                Debug.Log(line);
+            }
+        }
+
+        /// <summary>Texto de la línea de <see cref="App"/>; null si la sonda no escribe.</summary>
+        public string? FormatApp(string evt, AppFlow app)
+        {
+            if (!Enabled)
+            {
+                return null;
+            }
+
+            AF.Economy.CanoesStatus canoes = app.Wallet.Canoes;
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"").Append(evt).Append('"');
+            sb.Append(",\"t\":").Append(((long)(Time.realtimeSinceStartupAsDouble * 1000.0)).ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"screen\":\"").Append(AppScreenNames.Of(app.Screen)).Append('"');
+            sb.Append(",\"level\":").Append(app.PlayLevel.ToString(CultureInfo.InvariantCulture));
+            if (app.OverlayLevel > 0)
+            {
+                sb.Append(",\"overlay_level\":").Append(app.OverlayLevel.ToString(CultureInfo.InvariantCulture));
+            }
+
+            sb.Append(",\"available\":").Append(app.PlayLevelAvailable ? "true" : "false");
+            sb.Append(",\"label\":\"").Append(app.PlayLevelLabel).Append('"');
+            sb.Append(",\"seeds\":").Append(app.Wallet.Seeds.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"canoes\":").Append(canoes.Count.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"canoes_max\":").Append(canoes.Max.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"canoes_visible\":").Append(app.CanoesVisible ? "true" : "false");
+            sb.Append(",\"infinite\":").Append(canoes.IsInfinite ? "true" : "false");
+            sb.Append(",\"next_canoe_s\":").Append(((long)canoes.TimeToNext.TotalSeconds).ToString(CultureInfo.InvariantCulture));
+            sb.Append('}');
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Línea <c>AF_LAYOUT</c> de la pantalla <paramref name="screen"/> (<c>level</c>, <c>stuck</c>, <c>victory</c>,
+        /// <c>lobby</c>, <c>content_end</c>, <c>no_canoes</c>): tamaño de pantalla, áreas táctiles de las cuias y botones con
+        /// su id.
         /// </summary>
         public void Layout(string screen, int level, CuiaView[]? cuias, string[] buttonIds, RectTransform[] buttons)
         {

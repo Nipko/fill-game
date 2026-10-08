@@ -2,8 +2,11 @@
 using System.Collections;
 using System.IO;
 using AF.Core.Rules;
+using AF.Economy;
 using AF.GameFlow;
+using AF.Platform;
 using AF.Presentation;
+using AF.Save;
 using AF.Solver.Search;
 using AF.UI;
 using NUnit.Framework;
@@ -57,19 +60,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator CaptureKeyScreens()
         {
-            GameScreen.SimulatedScreen = new Vector4(Width, Height, 96f, 48f); // 32 dp de cutout arriba, 16 dp de gestos abajo
-            AmbientLayer.Frozen = true;
-            _target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
-            var camGo = new GameObject("SnapshotCamera");
-            Object.DontDestroyOnLoad(camGo);
-            _camera = camGo.AddComponent<Camera>();
-            _camera.targetTexture = _target;
-            _camera.clearFlags = CameraClearFlags.SolidColor;
-            _camera.backgroundColor = Color.black;
-            _camera.orthographic = true;
-            _camera.enabled = false;
-            string dir = Path.Combine(Application.dataPath, "../Logs/snapshots");
-            Directory.CreateDirectory(dir);
+            string dir = Prepare();
 
             // Nivel 7: intro, tablero, selección (solo el origen sube, sin aros en los destinos: D-002) y vertido.
             yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
@@ -260,6 +251,111 @@ namespace AF.Tests.PlayMode
 
             PlayModeHelpers.StepUntilIdle(boot, 3000);
             Assert.That(File.Exists(Path.Combine(dir, "10_sheet_l1_1000.png")), Is.True);
+        }
+
+        /// <summary>
+        /// Pantalla de inicio y sus superposiciones (tarea B1-6; 06 §4.7; D-008 punto 6), para compararlas con el Home de Magic
+        /// Sort (ficha §7.1; <c>Logs/device/magicsort/analisis/det_ms/d_000070.jpg</c> y <c>d_011780.jpg</c>):
+        /// <c>10_lobby</c> (nivel 4 guardado, 1.240 semillas, sin canoas antes del 31), <c>10b_lobby_l31</c> (con
+        /// <c>af_level_offset</c> = 30: canoas 3/5 con cronómetro), <c>10c_content_end</c> («El río sigue creciendo» tras el 10),
+        /// <c>10d_no_canoes</c> (Sin canoas en el 31, con el cronómetro) y <c>10e_victory_home</c> (victoria con «Inicio»).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CaptureLobby()
+        {
+            string dir = Prepare();
+            var t0 = new System.DateTime(2026, 10, 8, 15, 0, 0, System.DateTimeKind.Utc);
+            var clock = new ManualClock(t0, System.TimeSpan.FromHours(-5));
+            LaunchOptions.ClockOverride = clock;
+
+            Profile p4 = Wallet.NewProfile(clock);
+            p4.Progress.NextLevel = 4;
+            p4.Progress.MaxLevel = 3;
+            p4.Wallet.Seeds = 1240;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p4));
+            GameBootstrap boot = GameBootstrap.Current!;
+            AttachLobby(boot);
+            yield return Wait(0.3f);
+            Save(dir, "10_lobby");
+
+            LaunchOptions.LevelOffsetOverride = 30;
+            Profile p31 = Wallet.NewProfile(clock);
+            p31.Progress.NextLevel = 31;
+            p31.Progress.MaxLevel = 30;
+            p31.Wallet.Seeds = 2380;
+            p31.Wallet.Canoes.Count = 3;
+            p31.Wallet.Canoes.NextRegenAt = t0 + System.TimeSpan.FromMinutes(18) + System.TimeSpan.FromSeconds(42);
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p31));
+            boot = GameBootstrap.Current!;
+            AttachLobby(boot);
+            yield return Wait(0.3f);
+            Save(dir, "10b_lobby_l31");
+
+            p31.Wallet.Canoes.Count = 0;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p31));
+            boot = GameBootstrap.Current!;
+            AttachLobby(boot);
+            Assert.That(boot.PressPlay(), Is.True);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.NoCanoes));
+            yield return Wait(0.3f);
+            Save(dir, "10d_no_canoes");
+
+            LaunchOptions.LevelOffsetOverride = null;
+            Profile p11 = Wallet.NewProfile(clock);
+            p11.Progress.NextLevel = 11;
+            p11.Progress.MaxLevel = 10;
+            p11.Wallet.Seeds = 300;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p11));
+            boot = GameBootstrap.Current!;
+            AttachLobby(boot);
+            Assert.That(boot.PressPlay(), Is.True);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.ContentEnd));
+            yield return Wait(0.3f);
+            Save(dir, "10c_content_end");
+
+            yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
+            boot = GameBootstrap.Current!;
+            Attach(boot);
+            SolveResult s1 = new AStarSolver().Solve(boot.Flow!.Session.Current, SolverOptions.ForPipeline(boot.Flow.Session.PourMode));
+            boot.TapAnywhere();
+            for (int i = 0; i < s1.MoveCount; i++)
+            {
+                boot.TapCuia(s1.GetMove(i).Source);
+                boot.TapCuia(s1.GetMove(i).Target);
+            }
+
+            LevelFlow f1 = boot.Flow;
+            yield return PlayModeHelpers.WaitFor(() => f1.Phase == FlowPhase.VictoryScreen, "victoria");
+            yield return Wait(0.9f);
+            Save(dir, "10e_victory_home");
+            Assert.That(File.Exists(Path.Combine(dir, "10e_victory_home.png")), Is.True);
+        }
+
+        // Cámara y textura de las capturas (1080 × 2340 px, 20:9 aprox., 360 × 780 dp) con zona segura; devuelve la carpeta.
+        private string Prepare()
+        {
+            GameScreen.SimulatedScreen = new Vector4(Width, Height, 96f, 48f); // 32 dp de cutout arriba, 16 dp de gestos abajo
+            AmbientLayer.Frozen = true;
+            _target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+            var camGo = new GameObject("SnapshotCamera");
+            Object.DontDestroyOnLoad(camGo);
+            _camera = camGo.AddComponent<Camera>();
+            _camera.targetTexture = _target;
+            _camera.clearFlags = CameraClearFlags.SolidColor;
+            _camera.backgroundColor = Color.black;
+            _camera.orthographic = true;
+            _camera.enabled = false;
+            string dir = Path.Combine(Application.dataPath, "../Logs/snapshots");
+            Directory.CreateDirectory(dir);
+            return dir;
+        }
+
+        private void AttachLobby(GameBootstrap boot)
+        {
+            Canvas canvas = boot.Lobby!.Canvas;
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = _camera;
+            canvas.planeDistance = 10f;
         }
 
         // Medidas del tablero para la comparación con Magic Sort (ficha §2.1 y §2.2): cuias, filas, ancho y alto de la cuia y

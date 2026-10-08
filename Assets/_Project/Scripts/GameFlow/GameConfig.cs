@@ -85,6 +85,12 @@ namespace AF.GameFlow
         public const int UndoUnlimitedUntilLevel = 10;
 
         /// <summary>
+        /// <c>live_content_end_message</c> = <c>{"next_batch_eta_days":14}</c> (08 §9): días estimados hasta los próximos 100
+        /// niveles, que muestra la pantalla «El río sigue creciendo» (06 §9; 08 §6.2).
+        /// </summary>
+        public const int LiveContentEndNextBatchEtaDays = 14;
+
+        /// <summary>
         /// Tope de seguridad [P del tech-lead] de la espera a que la cola visual se vacíe antes de la celebración o del
         /// modal: 3000 ms. No es un parámetro de diseño: 02 §3.2 dice que la espera no tiene un máximo de diseño y depende de
         /// lo que quede en la cola (duraciones de 02 §4.1). Medido en el nivel 2 del tutorial, tocando cada 1,0 s la

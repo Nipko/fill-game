@@ -53,6 +53,31 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void LobbyLine_CarriesLevelSeedsAndCanoes()
+        {
+            // B1-6: AF_STATE del inicio con el nivel del botón Jugar, las semillas y las canoas (desde el 31, con cronómetro).
+            Assert.That(DevProbe.Enabled, Is.True, "la sonda escribe en el Editor y en builds de desarrollo");
+            var economy = new EconomyFixture(seeds: 1240);
+            var progress = new MemoryProgressStore(31);
+            var flow = new LevelFlow(AF.Levels.LevelCatalog.Create(new[] { TestPacks.Tutorial }, 30), progress, new RecordingListener());
+            var app = new AppFlow(flow, progress, economy.Wallet, new NullAppListener());
+            Assert.That(economy.Wallet.Apply(AF.Economy.Transaction.HardFail(31)).IsApplied, Is.True);
+            app.Start(false);
+
+            string? line = new DevProbe().FormatApp("lobby", app);
+            Assert.That(line, Does.StartWith("AF_STATE {\"event\":\"lobby\""));
+            Assert.That(line, Does.Contain("\"screen\":\"lobby\""));
+            Assert.That(line, Does.Contain("\"level\":31"));
+            Assert.That(line, Does.Contain("\"available\":true"));
+            Assert.That(line, Does.Contain("\"seeds\":1240"));
+            Assert.That(line, Does.Contain("\"canoes\":4"));
+            Assert.That(line, Does.Contain("\"canoes_max\":5"));
+            Assert.That(line, Does.Contain("\"canoes_visible\":true"));
+            Assert.That(line, Does.Contain("\"next_canoe_s\":1500"), "25 min (canoes_regen_min)");
+            Assert.That(line, Does.EndWith("}"));
+        }
+
+        [Test]
         public void LoadLine_InTheDefaultMode_SaysRun_AndHasNoAmount()
         {
             Assert.That(DevProbe.Enabled, Is.True, "la sonda escribe en el Editor y en builds de desarrollo");
@@ -63,6 +88,13 @@ namespace AF.Tests.EditMode
             Assert.That(line, Does.Contain("\"pour_mode\":\"run\""));
             Assert.That(line, Does.Not.Contain("\"amount\""));
             Assert.That(line, Does.Not.Contain("\"move\""));
+        }
+
+        private sealed class NullAppListener : IAppFlowListener
+        {
+            public void OnAppScreenChanged(AppScreen screen)
+            {
+            }
         }
     }
 }

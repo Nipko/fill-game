@@ -3,7 +3,10 @@
   "rootNamespace": "AF.GameFlow",
   "references": [
     "AF.Core",
-    "AF.Levels"
+    "AF.Levels",
+    "AF.Platform",
+    "AF.Save",
+    "AF.Economy"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

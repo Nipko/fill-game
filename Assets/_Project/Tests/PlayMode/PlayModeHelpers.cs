@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using AF.Core.Board;
 using AF.Core.Rules;
 using AF.GameFlow;
+using AF.Save;
 using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
@@ -20,18 +21,48 @@ namespace AF.Tests.PlayMode
         public const string ScenePath = "Assets/_Project/Scenes/Game.unity";
         public const float TimeoutSeconds = 20f;
 
+        /// <summary>
+        /// Carga la escena Game directamente en el nivel <paramref name="level"/> (gancho <see cref="LaunchOptions.StartLevelOverride"/>)
+        /// con el progreso <paramref name="progress"/>. Si el test no puso un perfil (<see cref="LaunchOptions.ProfileStoreOverride"/>),
+        /// usa uno en memoria: los tests nunca tocan el <c>profile.json</c> del Editor.
+        /// </summary>
         public static IEnumerator LoadGame(int level, IProgressStore progress)
         {
             LaunchOptions.StartLevelOverride = level;
             LaunchOptions.ProgressStoreOverride = progress;
+            if (LaunchOptions.ProfileStoreOverride == null)
+            {
+                LaunchOptions.ProfileStoreOverride = new MemoryProfileStore();
+            }
+
+            yield return LoadScene();
+            yield return WaitFor(
+                () => GameBootstrap.Current != null && GameBootstrap.Current.Flow != null && GameBootstrap.Current.Flow.LevelNumber == level,
+                "arranque de la escena Game con el nivel " + level);
+        }
+
+        /// <summary>
+        /// Carga la escena Game sin nivel forzado (como el juego: la primera vez el nivel 1, si no la pantalla de inicio) con
+        /// el perfil <paramref name="store"/> y espera a que <see cref="GameBootstrap.App"/> haya decidido la primera pantalla.
+        /// </summary>
+        public static IEnumerator LoadApp(IProfileStore store)
+        {
+            LaunchOptions.StartLevelOverride = 0;
+            LaunchOptions.ProgressStoreOverride = null;
+            LaunchOptions.ProfileStoreOverride = store;
+            yield return LoadScene();
+            yield return WaitFor(
+                () => GameBootstrap.Current != null && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AppScreen.Boot,
+                "arranque de la escena Game");
+        }
+
+        private static IEnumerator LoadScene()
+        {
 #if UNITY_EDITOR
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
 #else
             yield return SceneManager.LoadSceneAsync("Game", LoadSceneMode.Single);
 #endif
-            yield return WaitFor(
-                () => GameBootstrap.Current != null && GameBootstrap.Current.Flow != null && GameBootstrap.Current.Flow.LevelNumber == level,
-                "arranque de la escena Game con el nivel " + level);
         }
 
         /// <summary>

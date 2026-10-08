@@ -158,6 +158,7 @@ namespace AF.Presentation
             IconUndo = BuildIconUndo(Palette.Cream, Palette.FamilyWater.Edge, "icon_undo");
             IconUndoDisabled = BuildIconUndo(Palette.DisabledGlyph, Color.clear, "icon_undo_disabled");
             IconRestart = BuildIconRestart(Palette.Cream, Palette.FamilyWood.Edge);
+            BuildLobbyUi();
         }
 
         private ReliefSprites Relief(string slot, string name, float wDp, float faceHDp, float radiusDp, bool circle, ButtonFamily family, bool sliced, float paintedWidthDp)
@@ -271,8 +272,8 @@ namespace AF.Presentation
         }
 
         // Placa de madera oscura con veta, bisel superior de 2 dp, ranura tallada a 4 dp del borde y sombra; con hojas de
-        // 8 dp que asoman por los extremos si leaves (insignia de nivel, guía 3.5).
-        private Sprite BuildPlate(string name, float wDp, float hDp, float radiusDp, bool leaves, float marginDp)
+        // 8 dp que asoman por los extremos si leaves (insignia de nivel, guía 3.5). sliceDp > 0: 9-slice con ese borde.
+        private Sprite BuildPlate(string name, float wDp, float hDp, float radiusDp, bool leaves, float marginDp, float sliceDp = 0f)
         {
             const float k = UiPxPerDp;
             int w = Mathf.RoundToInt(wDp * k);
@@ -341,7 +342,8 @@ namespace AF.Presentation
                 }
             }
 
-            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, k);
+            Vector4 border = sliceDp > 0f ? new Vector4(sliceDp * k, sliceDp * k, sliceDp * k, sliceDp * k) : Vector4.zero;
+            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), border, k);
         }
 
         private Sprite BuildTray(int widthDp)

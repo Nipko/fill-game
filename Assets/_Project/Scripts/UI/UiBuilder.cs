@@ -172,6 +172,36 @@ namespace AF.UI
         }
 
         /// <summary>
+        /// Cuerpo de un modal (guía 5.3): sombra, superficie de madera clara pulida (por código, al tamaño del panel con
+        /// <see cref="ProceduralArt.ModalSurfaceFor"/>) y marco 9-slice. Devuelve la superficie para ajustarla al tamaño.
+        /// </summary>
+        public static Image ModalBody(RectTransform panel, ProceduralArt art)
+        {
+            Image shadow = Sliced("Shadow", panel, art.SoftShadow, new Color(1f, 1f, 1f, 0.35f));
+            Stretch(shadow.rectTransform);
+            shadow.rectTransform.offsetMin = new Vector2(-14f, -20f);
+            shadow.rectTransform.offsetMax = new Vector2(14f, 8f);
+            Image surface = Image("Surface", panel, art.ModalSurfaceFor(312f, 100f), Color.white);
+            Stretch(surface.rectTransform);
+            surface.rectTransform.offsetMin = new Vector2(8f, 8f);
+            surface.rectTransform.offsetMax = new Vector2(-8f, -8f);
+            Image frame = Sliced("Frame", panel, art.ModalPanel, Color.white);
+            Stretch(frame.rectTransform);
+            return surface;
+        }
+
+        /// <summary>Etiqueta de CTA: centrada al 56 % de la cara y dentro de la franja del 25-85 % (guía 5.1 y 2.4).</summary>
+        public static void PlaceCtaLabel(RectTransform label, ReliefSprites sprites)
+        {
+            float face = sprites.FaceHeightDp;
+            label.anchorMin = new Vector2(0f, 1f);
+            label.anchorMax = new Vector2(1f, 1f);
+            label.pivot = new Vector2(0.5f, 0.5f);
+            label.sizeDelta = new Vector2(-24f, face * 0.60f);
+            label.anchoredPosition = new Vector2(0f, -(face * 0.56f));
+        }
+
+        /// <summary>
         /// Activa o desactiva un botón. Con relieve: plano y desaturado, con silueta y etiqueta legibles (guía 5.1); sin
         /// relieve (enlace): el texto pasa a <c>deshabilitado_texto</c>. Nunca con alfa en el texto (07 §7.8).
         /// </summary>

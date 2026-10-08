@@ -21,24 +21,29 @@ namespace AF.GameFlow
     /// <item><description>Tras la victoria o el bloqueo lógico el input queda bloqueado al instante (R15) y el flujo espera a que
     /// la cola visual se vacíe (02 §3.2) antes de celebrar o de abrir el modal; el modal se abre
     /// <c>stuck_modal_delay_ms</c> después (R15).</description></item>
-    /// <item><description>El progreso se guarda en el instante lógico de la victoria: siguiente nivel, y tras el último del
-    /// paquete, el primero (docs/dev/prototipo-v0.md c).</description></item>
+    /// <item><description>Los niveles salen de un <see cref="LevelCatalog"/> (uno o varios paquetes, 08 §2.2) con números de
+    /// campaña. El progreso se guarda en el instante lógico de la victoria: <c>max_level</c> = N y <c>next_level</c> = N + 1
+    /// (08 §4.3; tarea B1-5), aunque N + 1 aún no esté publicado: entonces <see cref="Next"/> devuelve false y
+    /// <see cref="AppFlow"/> muestra «El río sigue creciendo» (08 §6.2).</description></item>
     /// <item><description>VICTORY_SCREEN sin auto-avance: <c>victory_autonext_s</c> = 0 (02 §6; 07 §5.4); solo Siguiente
     /// avanza.</description></item>
     /// <item><description>Marea solo existe en su forma ilimitada de los niveles 1-<c>undo_unlimited_until_level</c> (04 §2.1):
-    /// el contador "3/3" desde el 11 no está en v0, así que el flujo rechaza paquetes con niveles mayores.</description></item>
+    /// el contador "3/3" desde el 11 no está en v0, así que el flujo rechaza paquetes con niveles mayores. Se mira el número
+    /// del paquete: con el desplazamiento de desarrollo <c>af_level_offset</c> [P] (<see cref="LevelCatalog.LevelOffset"/>)
+    /// el tablero del nivel 1 se juega como el 31 con Marea ilimitada hasta que llegue el contador (B2-1).</description></item>
     /// </list>
     /// No es seguro entre hilos.
     /// </remarks>
     public sealed class LevelFlow
     {
-        private readonly LevelPack _pack;
+        private readonly LevelCatalog _catalog;
         private readonly IProgressStore _progress;
         private readonly ILevelFlowListener _listener;
         private readonly TapController _taps;
 
         private LevelSession? _session;
         private LevelDefinition? _level;
+        private int _levelNumber;
         private PourMode _pourMode;
         private Outcome _pending;
         private bool _drained;
@@ -47,8 +52,15 @@ namespace AF.GameFlow
         private int _phaseMs;
         private int _introMs;
 
+        /// <summary>Crea el flujo sobre un solo paquete (catálogo sin desplazamiento; tests y prototipo v0).</summary>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="pourMode"/> no es un valor definido.</exception>
+        public LevelFlow(LevelPack pack, IProgressStore progress, ILevelFlowListener listener, bool tapSwitchSelection = GameConfig.TapSwitchSelection, PourMode pourMode = PourModes.Default)
+            : this(LevelCatalog.FromPack(pack ?? throw new ArgumentNullException(nameof(pack))), progress, listener, tapSwitchSelection, pourMode)
+        {
+        }
+
         /// <summary>Crea el flujo. No carga ningún nivel hasta <see cref="Load"/> o <see cref="LoadSaved"/>.</summary>
-        /// <param name="pack">Paquete de niveles.</param>
+        /// <param name="catalog">Catálogo de niveles (índice nivel → paquete, 08 §2.2).</param>
         /// <param name="progress">Progreso guardado.</param>
         /// <param name="listener">Vista (y sonda de desarrollo).</param>
         /// <param name="tapSwitchSelection">Valor de <c>tap_switch_selection</c> (08 §9; C5).</param>
@@ -56,20 +68,24 @@ namespace AF.GameFlow
         /// <see cref="PourModes.Default"/>, la racha que cabe; <see cref="AF.Core.Rules.PourMode.Single"/> solo en pruebas).
         /// Ver <see cref="PourMode"/>.</param>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="pourMode"/> no es un valor definido.</exception>
-        public LevelFlow(LevelPack pack, IProgressStore progress, ILevelFlowListener listener, bool tapSwitchSelection = GameConfig.TapSwitchSelection, PourMode pourMode = PourModes.Default)
+        public LevelFlow(LevelCatalog catalog, IProgressStore progress, ILevelFlowListener listener, bool tapSwitchSelection = GameConfig.TapSwitchSelection, PourMode pourMode = PourModes.Default)
         {
-            _pack = pack ?? throw new ArgumentNullException(nameof(pack));
+            _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             _progress = progress ?? throw new ArgumentNullException(nameof(progress));
-            for (int i = 0; i < pack.Count; i++)
+            for (int p = 0; p < catalog.Packs.Count; p++)
             {
-                int level = pack.Levels[i].Level;
-                if (!GameConfig.UndoUnlimited(level))
+                LevelPack pack = catalog.Packs[p];
+                for (int i = 0; i < pack.Count; i++)
                 {
-                    throw new NotSupportedException(
-                        "El nivel " + level.ToString(System.Globalization.CultureInfo.InvariantCulture) + " necesita Marea con contador "
-                        + "(3 por nivel desde el " + (GameConfig.UndoUnlimitedUntilLevel + 1).ToString(System.Globalization.CultureInfo.InvariantCulture)
-                        + ", 04 §2.1), que el prototipo v0 no tiene: solo admite niveles 1-"
-                        + GameConfig.UndoUnlimitedUntilLevel.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".");
+                    int level = pack.Levels[i].Level;
+                    if (!GameConfig.UndoUnlimited(level))
+                    {
+                        throw new NotSupportedException(
+                            "El nivel " + level.ToString(System.Globalization.CultureInfo.InvariantCulture) + " necesita Marea con contador "
+                            + "(3 por nivel desde el " + (GameConfig.UndoUnlimitedUntilLevel + 1).ToString(System.Globalization.CultureInfo.InvariantCulture)
+                            + ", 04 §2.1), que el prototipo v0 no tiene: solo admite niveles 1-"
+                            + GameConfig.UndoUnlimitedUntilLevel.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".");
+                    }
                 }
             }
 
@@ -111,15 +127,15 @@ namespace AF.GameFlow
             }
         }
 
-        /// <summary>Paquete de niveles.</summary>
-        public LevelPack Pack => _pack;
+        /// <summary>Catálogo de niveles.</summary>
+        public LevelCatalog Catalog => _catalog;
 
         /// <summary>Nivel cargado.</summary>
         /// <exception cref="InvalidOperationException">Aún no hay nivel.</exception>
         public LevelDefinition Level => _level ?? throw new InvalidOperationException("No hay ningún nivel cargado.");
 
-        /// <summary>Número del nivel cargado (0 si no hay).</summary>
-        public int LevelNumber => _level == null ? 0 : _level.Level;
+        /// <summary>Número de campaña del nivel cargado (0 si no hay); con <c>af_level_offset</c>, el desplazado.</summary>
+        public int LevelNumber => _level == null ? 0 : _levelNumber;
 
         /// <summary>Partida del núcleo del nivel cargado.</summary>
         /// <exception cref="InvalidOperationException">Aún no hay nivel.</exception>
@@ -146,11 +162,10 @@ namespace AF.GameFlow
         /// <summary>Volver a la orilla está disponible (PLAYING sin pendientes o STUCK_MODAL).</summary>
         public bool CanRestart => _session != null && (AcceptsBoardInput || Phase == FlowPhase.StuckModal);
 
-        /// <summary>Nivel de arranque: <paramref name="requested"/> si el paquete lo tiene; si no, el primero.</summary>
+        /// <summary>Nivel de arranque: <paramref name="requested"/> si el catálogo lo tiene; si no, el primero.</summary>
         public int ResolveLevel(int requested)
         {
-            LevelDefinition? def = _pack.Find(requested);
-            return def == null ? _pack.First.Level : def.Level;
+            return _catalog.Contains(requested) ? requested : _catalog.FirstLevel;
         }
 
         /// <summary>Carga el nivel guardado en el progreso (o el primero).</summary>
@@ -166,14 +181,16 @@ namespace AF.GameFlow
         /// </summary>
         public void Load(int level)
         {
-            LevelDefinition def = _pack.Find(level) ?? _pack.First;
+            int number = ResolveLevel(level);
+            LevelDefinition def = _catalog.Find(number)!;
             Phase = FlowPhase.Loading;
             _level = def;
+            _levelNumber = number;
             _session = new LevelSession(def.CreateBoard(), GameConfig.FutileRuleEnabled, _pourMode);
             _taps.Clear();
             ResetPending();
-            _listener.OnLevelLoaded(def.Level);
-            StartIntro(GameConfig.TintDurationMs(def.Level), false);
+            _listener.OnLevelLoaded(number);
+            StartIntro(GameConfig.TintDurationMs(number), false);
         }
 
         /// <summary>
@@ -348,15 +365,19 @@ namespace AF.GameFlow
             return true;
         }
 
-        /// <summary>Siguiente (VICTORY_SCREEN → LOADING(N+1)); tras el último nivel del paquete, el primero.</summary>
+        /// <summary>
+        /// Siguiente (VICTORY_SCREEN → LOADING(N+1)) si el catálogo tiene N + 1; si no (fin del contenido), devuelve false y no
+        /// cambia nada. En el juego la navegación (con «El río sigue creciendo» y Sin canoas) la lleva
+        /// <see cref="AppFlow.PressNext"/>.
+        /// </summary>
         public bool Next()
         {
-            if (Phase != FlowPhase.VictoryScreen)
+            if (Phase != FlowPhase.VictoryScreen || !_catalog.Contains(LevelNumber + 1))
             {
                 return false;
             }
 
-            Load(_pack.NextLevelAfter(LevelNumber));
+            Load(LevelNumber + 1);
             return true;
         }
 
@@ -387,7 +408,7 @@ namespace AF.GameFlow
             {
                 case LevelStatus.Won:
                     BeginPending(Outcome.Win);
-                    _progress.SaveNextLevel(_pack.NextLevelAfter(LevelNumber));
+                    _progress.SaveWin(LevelNumber, LevelNumber + 1);
                     _listener.OnWin();
                     break;
 

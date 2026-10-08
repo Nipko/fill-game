@@ -195,15 +195,55 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void LastLevel_SavesTheFirstAsNext_AndNextWraps()
+        public void Win_SavesMaxLevelAndNextLevel_InOneSave()
         {
+            // 08 §4.3 (B1-5): progress.max_level = N y progress.next_level = N + 1 en el instante lógico de la victoria.
+            StartPlaying(3);
+            PlaySolution();
+            Assert.That(_progress.MaxLevel, Is.EqualTo(3));
+            Assert.That(_progress.NextLevel, Is.EqualTo(4));
+            Assert.That(_progress.SaveCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void LastLevel_SavesTheNextNumber_AndNextReportsTheEndOfTheContent()
+        {
+            // Ya no se vuelve al nivel 1 (prototipo v0): tras el último publicado, next_level = 11 y Siguiente no carga nada;
+            // AppFlow muestra «El río sigue creciendo» (08 §6.2; 06 §9).
             StartPlaying(10);
             PlaySolution();
-            Assert.That(_progress.NextLevel, Is.EqualTo(1));
+            Assert.That(_progress.NextLevel, Is.EqualTo(11));
+            Assert.That(_progress.MaxLevel, Is.EqualTo(10));
             _flow.Tick(16, true);
             _flow.TapAnywhere();
-            Assert.That(_flow.Next(), Is.True);
-            Assert.That(_flow.LevelNumber, Is.EqualTo(1));
+            Assert.That(_flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen));
+            Assert.That(_flow.Next(), Is.False);
+            Assert.That(_flow.LevelNumber, Is.EqualTo(10));
+            Assert.That(_flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen));
+        }
+
+        [Test]
+        public void WithALevelOffset_TheCampaignNumberIsShifted_AndTheBoardIsTheContentOne()
+        {
+            // af_level_offset [P] (B1-5): con 30, el nivel 31 se juega con el tablero del nivel 1 del tutorial.
+            var progress = new MemoryProgressStore();
+            var flow = new LevelFlow(LevelCatalog.Create(new[] { TestPacks.Tutorial }, 30), progress, new RecordingListener());
+            Assert.That(flow.ResolveLevel(1), Is.EqualTo(31), "el 1 no existe: el primero es el 31");
+            flow.Load(31);
+            Assert.That(flow.LevelNumber, Is.EqualTo(31));
+            Assert.That(flow.Level.Level, Is.EqualTo(1));
+            Assert.That(flow.IntroDurationMs, Is.EqualTo(GameConfig.AnimTintDurationMsLate), "desde el 21, la intro corta (02 §4.2)");
+            flow.TapAnywhere();
+            SolveResult result = new AStarSolver().Solve(flow.Session.Current, SolverOptions.ForPipeline(flow.Session.PourMode));
+            for (int i = 0; i < result.MoveCount; i++)
+            {
+                flow.TapCuia(result.GetMove(i).Source);
+                flow.TapCuia(result.GetMove(i).Target);
+            }
+
+            Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Won));
+            Assert.That(progress.NextLevel, Is.EqualTo(32));
+            Assert.That(progress.MaxLevel, Is.EqualTo(31));
         }
 
         [Test]

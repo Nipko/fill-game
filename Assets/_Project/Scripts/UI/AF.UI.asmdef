@@ -6,6 +6,9 @@
     "AF.Levels",
     "AF.GameFlow",
     "AF.Presentation",
+    "AF.Platform",
+    "AF.Save",
+    "AF.Economy",
     "UnityEngine.UI",
     "Unity.InputSystem",
     "Unity.TextMeshPro"

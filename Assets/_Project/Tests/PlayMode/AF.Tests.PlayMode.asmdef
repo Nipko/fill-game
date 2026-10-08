@@ -8,6 +8,9 @@
     "AF.GameFlow",
     "AF.Presentation",
     "AF.UI",
+    "AF.Platform",
+    "AF.Save",
+    "AF.Economy",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner",
     "Unity.TextMeshPro"

@@ -126,6 +126,33 @@ namespace AF.Tests.EditMode
             }
         }
 
+        [TestCase(null, LevelDefinition.LabelNormal)]
+        [TestCase("\"normal\"", LevelDefinition.LabelNormal)]
+        [TestCase("\"hard\"", LevelDefinition.LabelHard)]
+        [TestCase("\"very_hard\"", LevelDefinition.LabelVeryHard)]
+        [TestCase("null", LevelDefinition.LabelNormal)]
+        public void Reader_ReadsTheDifficultyLabel(string? label, string expected)
+        {
+            // 08 §4.1: difficulty.label ∈ normal / hard / very_hard; sin etiqueta (subconjunto v0), normal. El chip Difícil o
+            // Muy difícil del botón Jugar (06 §4.7 [P]) sale de aquí.
+            string level = TestPacks.MinimalLevel();
+            if (label != null)
+            {
+                level = level.Replace("\"difficulty\": { \"par\": 3 }", "\"difficulty\": { \"label\": " + label + ", \"par\": 3 }");
+            }
+
+            Assert.That(LevelPackReader.Read(TestPacks.MinimalPack(level)).First.DifficultyLabel, Is.EqualTo(expected));
+        }
+
+        [TestCase("\"Hard\"")]
+        [TestCase("\"super_hard\"")]
+        [TestCase("2")]
+        public void Reader_RejectsAnUnknownDifficultyLabel(string label)
+        {
+            string level = TestPacks.MinimalLevel().Replace("\"difficulty\": { \"par\": 3 }", "\"difficulty\": { \"label\": " + label + ", \"par\": 3 }");
+            Assert.That(() => LevelPackReader.Read(TestPacks.MinimalPack(level)), Throws.TypeOf<LevelFormatException>());
+        }
+
         [Test]
         public void Reader_IsCultureInvariant()
         {

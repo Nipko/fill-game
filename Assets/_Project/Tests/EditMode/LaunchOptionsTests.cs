@@ -98,7 +98,33 @@ namespace AF.Tests.EditMode
         {
             Assert.That(LaunchOptions.ReadIntentLevel(), Is.EqualTo(0));
             Assert.That(LaunchOptions.ReadIntentPourMode(), Is.Null);
+            Assert.That(LaunchOptions.ReadIntentInt(LaunchOptions.IntentExtraLevelOffset), Is.EqualTo(0));
             Assert.That(LaunchOptions.IntentExtraPourMode, Is.EqualTo("af_rules_pour_mode"));
+            Assert.That(LaunchOptions.IntentExtraLevelOffset, Is.EqualTo("af_level_offset"));
+        }
+
+        [Test]
+        public void LevelOffset_IsZeroByDefault_TakesTheOverride_AndRejectsOutOfRange()
+        {
+            // af_level_offset [P] (B1-5): solo builds de desarrollo; fuera de Android y sin gancho, 0.
+            Assert.That(LaunchOptions.ResolveLevelOffset(), Is.EqualTo(0));
+            LaunchOptions.LevelOffsetOverride = 30;
+            Assert.That(LaunchOptions.ResolveLevelOffset(), Is.EqualTo(30));
+            LaunchOptions.LevelOffsetOverride = -1;
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[AF\.LaunchOptions\] af_level_offset fuera de"));
+            Assert.That(LaunchOptions.ResolveLevelOffset(), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Reset_ClearsTheProfileClockAndOffsetHooks()
+        {
+            LaunchOptions.ProfileStoreOverride = new AF.Save.MemoryProfileStore();
+            LaunchOptions.ClockOverride = new AF.Platform.ManualClock(new System.DateTime(2026, 10, 8, 15, 0, 0, System.DateTimeKind.Utc));
+            LaunchOptions.LevelOffsetOverride = 30;
+            LaunchOptions.Reset();
+            Assert.That(LaunchOptions.ProfileStoreOverride, Is.Null);
+            Assert.That(LaunchOptions.ClockOverride, Is.Null);
+            Assert.That(LaunchOptions.LevelOffsetOverride, Is.Null);
         }
     }
 }
