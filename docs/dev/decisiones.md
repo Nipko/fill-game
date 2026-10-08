@@ -8,7 +8,8 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 |---|---|---|---|
 | D-001 | 2026-10-06 | Una dosis por vertido | Decidida por el dueño; implementada en el árbol de trabajo, sin commitear (T1-T3 y T5) y verificada en el SM-S938B el 2026-10-07 (T7: A7 y A8). Pendientes: commit y PR, T6 y las preguntas P2-P7 |
 | D-002 | 2026-10-06 | Sin resaltado de destinos al seleccionar | Decidida por el dueño; implementada en el árbol de trabajo, sin commitear (T4 y T5) y verificada en el SM-S938B el 2026-10-07 (T7: B1-B2 y captura de B3). Pendientes: commit y PR y la revisión visual del dueño (B3) |
-| D-003 | 2026-10-07 | Dirección visual «Selva brillante premium» | Decidida por el dueño; sin implementar. Pendientes: P8-P10, la fase visual (V1-V8 de `docs/reviews/2026-10-07/evaluacion-claude.md`) y la edición del GDD |
+| D-003 | 2026-10-07 | Dirección visual «Selva brillante premium» | Decidida por el dueño; fase visual implementada con arte procedural provisional en `19177bd` y vista por el dueño en el SM-S938B el 2026-10-07 (de ahí D-004). Pendientes: P8-P10, los PNG de F0 y su integración (F6 de `docs/art/direccion-visual-v2.md`) y la edición del GDD |
+| D-004 | 2026-10-07 | Panel azul petróleo, vertido a 38° y cuias más anchas con pocas cuias | Decidida por el dueño (respuestas a C16-C18 de `docs/art/direccion-visual-v2.md`); implementada en el árbol de trabajo, sin commitear (código, tests y documentación de «Archivos afectados»; EditMode y PlayMode en verde el 2026-10-07). Pendientes: commit y PR, revisión en el teléfono (`dev.apk`) y nueva medida de C19 |
 
 ---
 
@@ -403,7 +404,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 ## D-003 · Dirección visual «Selva brillante premium»
 
 - **Fecha:** 2026-10-07.
-- **Estado:** decidida por el dueño tras ver el prototipo v0.1 (`ef676a4`) y el concepto «Orillas vivas» de la revisión del 2026-10-07. Sin implementar. Hay dos puntos pendientes de respuesta: la frontera exacta con el trade dress de los líderes (P8) y los umbrales de contraste (P9).
+- **Estado:** decidida por el dueño tras ver el prototipo v0.1 (`ef676a4`) y el concepto «Orillas vivas» de la revisión del 2026-10-07. Fase visual implementada con arte procedural provisional en `19177bd` (ver la tabla de arriba). Hay dos puntos pendientes de respuesta: la frontera exacta con el trade dress de los líderes (P8) y los umbrales de contraste (P9).
 
 **Contexto.**
 - **El canon vigente:**
@@ -499,3 +500,72 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 | P8 | ¿Se permiten degradados, relieve, sombras suaves y contorno de texto no dorado en botones de madera, piedra y hoja, manteniendo prohibidos el oro, las gemas, las cintas rojas, los gatos, el caldero, la calavera y la silueta de frasco con labio? | Sí | Botones de la fase visual (V5) y 07 §1.3 |
 | P9 | ¿Se sustituye la regla de L* de 07 §1.2 por las cuatro comprobaciones compuestas de arriba, con esos umbrales [P]? | Sí | Test de contraste (V4) y 07 §1.2 |
 | P10 | ¿Se reescriben 07 y GDD.md y se encarga el brief nuevo al artista después de aceptar las capturas antes y después de la fase visual? | Sí | Lote de documentación y encargo al artista |
+
+---
+
+## D-004 · Panel azul petróleo, vertido a 38° y cuias más anchas con pocas cuias
+
+- **Fecha:** 2026-10-07.
+- **Estado:** decidida por el dueño tras ver en su teléfono (SM-S938B) el build de la fase visual de D-003 (`19177bd`). Respondió a las preguntas C16-C18 de `docs/art/direccion-visual-v2.md` (sección 11) con «azul petróleo, botellas más anchas y 38° está bien». Implementada en el árbol de trabajo, sin commitear (ver la tabla de arriba).
+
+**Contexto.**
+- La guía visual v2 dejó abiertas tres preguntas tras la revisión del 2026-10-07:
+  - C16, tono del panel del tablero: la variante A «azul petróleo de río» o la B «caoba lacada», para elegir con dos capturas lado a lado (guía 4.6, paso F1).
+  - C17, inclinación del vertido: con 38° (02 §4.1, 07 §5.2) y dos filas, el origen tapa la parte alta de la cuia vecina mientras vierte (≤ 400 ms). Los críticos proponían 75° fijos o una inclinación dinámica.
+  - C18, ancho máximo de la cuia: 02 §5 y 07 §4.1 lo fijaban en 48 dp en todos los tableros. En el nivel 1 (3 cuias), eso dejaba cuias de 48 dp en ranuras de 112 dp y 196,5 dp de muelle vacío bajo el panel (360 × 780 dp).
+- Los líderes del género agrandan los frascos en los primeros niveles (guía, C18).
+
+**Decisión.**
+1. **Panel (C16): variante A, «azul petróleo de río»**, tal como la vio el dueño en el build: degradado `panel_alto` #234452 → `panel_bajo` #142C36 (L* 27 → 17) y `cavidad` #102228 (`Palette.PanelA` en `19177bd`). La tabla de la guía en `19177bd` (secciones 2 y 4.6) daba todavía #1E3A44 → #173540, anterior a la ronda 2 de la revisión visual; el build ya usaba los valores de arriba, que son los que vio el dueño. Se descarta la variante B «caoba lacada» (#44302C → #372521, cavidad #251A17), que solo existía para la comparación de F1: sale del código, de las capturas y de los prompts.
+2. **Vertido (C17): se mantienen los 38°** de 02 §4.1 y 07 §5.2, con una elevación de 0 a 1 u, de modo que el labio queda entre 0,6 y 1,6 u por encima del borde del destino (`BoardAnimator.MaxRaiseU`, revisión visual del 2026-10-07). Se acepta que, en tableros de dos filas, el origen tape la parte alta de la cuia vecina mientras vierte (≤ 400 ms). Se descartan los 75° fijos y la inclinación dinámica. Esta respuesta no cambia el código.
+3. **Cuias más anchas (C18):** el tope del ancho de la cuia depende del número de cuias T del tablero (las que hay en pantalla, incluidas Cuia extra y Cuia de rescate; 02 R1):
+   - tope(T) = 64 dp con T ≤ 3, 56 dp con T = 4-5 y 48 dp con T ≥ 6 (como hasta ahora);
+   - ancho = clamp(0,70 × ranura, 28, tope(T)); alto según la proporción 1:3 (6 u); u = ancho / 2;
+   - a 360 dp, con ranura = (360 − 24) / cuias_por_fila: T = 3 → 64 × 192 dp, u = 32; T = 4 → 56 × 168 dp, u = 28; T = 5 → ranura de 67,2 dp y 0,70 × 67,2 ≈ 47 dp (el tope no actúa); T ≥ 6, sin cambios;
+   - el encaje vertical sigue mandando: si el bloque de filas no cabe, `BoardLayout.Compute` reduce el ancho (mínimo 28 dp);
+   - tabletas: el tablero se centra con 480 dp de ancho como máximo y la cuia no supera tope(T);
+   - si T cambia a mitad de nivel (Cuia extra, Cuia de rescate), el layout se recalcula con el T nuevo (re-layout animado de 300 ms, 02 §4.1).
+
+   Cambian 02 §5 y 07 §4.1 a la vez, como exige 07 §4.1.
+
+**Consecuencias.**
+- Tutorial v0 (los datos de `tutorial_v0.json` no cambian):
+  - el nivel 1 (T = 3) pasa a cuias de 64 × 192 dp (u = 32);
+  - los niveles 2, 3 y 6 (T = 5) siguen en ≈ 47 dp;
+  - los niveles 4 y 5 (T = 6, dos filas de 3) y del 7 al 10 (T = 7, filas de 4 y 3) siguen en 48 dp;
+  - ningún nivel del tutorial tiene T = 4.
+- Nivel 1 a 360 × 780 dp: el panel pasa de 219 a 281 dp de alto (y = 206,5-487,5) y la banda libre del muelle, de 196,5 a 172,5 dp. No baja a ≈ 140 dp como estimaba C18: el bloque está centrado y crece hacia los dos lados. El panel incluye los 36 dp de margen superior de los tableros de una fila [P] (ver el techo del vertido, más abajo).
+  - A 360 × 800: panel en 216,5-497,5 y banda de 182,5 dp.
+  - A 360 × 640: panel en 136,5-417,5 y banda de 102,5 dp. El poste del muelle sigue visible (banda ≥ 64 dp).
+  - El horizonte del panorama sube de 180,5 a 142,5 dp (`GameScreen.HorizonFor`).
+- La u máxima pasa de 24 a 32 dp. Lo que se mide en u escala solo (vidrio, líquido, chorro, salpicaduras, pose del vertido). La selección sigue elevando la cuia 16 dp (02 §4.1), que son 0,5 u con la cuia de 64 dp.
+- Texturas:
+  - en el SM-S938B, el vidrio se hornea a 96 px/u con T ≤ 3 (antes, 72);
+  - `ProceduralArt.MaxCuiaPixelsPerU` sube de 96 a 128 para las pantallas de 4 px/dp [P];
+  - el aro y la tapa del sellado se generan para u = 32;
+  - la fuente del artista a 4× del tamaño máximo pasa de 192 × 576 a 256 × 768 px por cuia de 4 (07 §4.1).
+- **Techo del vertido y margen superior en una fila [P].** Son dos propuestas derivadas de C18, no respuestas del dueño.
+  - Con u = 32, el canto alto del origen inclinado sube 0,94 u (30 dp) sobre el borde del destino sin elevación: el labio a 0,6 u más 0,34 u del borde de fibra (`CuiaGeometry.RimHalfWidthU` = 0,55 u, inclinado 38°). Con 1 u de elevación sube 1,94 u (62 dp). Con el margen de 22 dp, una elevación de más de 0,25 u lo sacaba del panel por arriba.
+  - **Margen superior:** en los tableros de una fila, el panel deja 36 dp sobre el bloque (`BoardLayout.PanelMarginTopOneRow`, ≈ 22 + 13,5 del marco). Sobre las cuias en reposo quedan 52 dp hasta el borde exterior del panel y 38,5 hasta el canto interior del marco. En dos y tres filas se mantienen 22 dp (`BoardLayout.PanelMargin`): con 36, el río del nivel 7 bajaría de 34,5 a 20,5 dp.
+  - **Techo** (`GameScreen.PourCeilingFor`): el origen inclinado se queda 4 dp por debajo del canto interior del marco (`GameScreen.PourCeilingAirDp`: con menos de 1 dp la cuerda del labio rozaba el bisel y la cuia parecía apoyarse en el marco) si entre ese canto y la fila 1 elevada quedan ≥ 22 dp de cavidad (`GameScreen.PourCavityDp`; tableros de una fila, con 22,5 dp). Si no, el techo es el borde exterior del panel (dos y tres filas, 38 dp sobre las cuias en reposo). Nunca sube más de 4 dp dentro de la fila del HUD.
+  - En el nivel 1, el techo deja ≈ 4,5 dp (≈ 0,14 u) de elevación y el labio sigue ≥ 0,6 u sobre el borde del destino; la elevación que lo pasaría se recorta. Sin elevación siempre cabe.
+- **Tapado en tableros de una fila: aceptado.** En una fila, el vertido entre cuias no vecinas tapa la parte alta de la cuia del medio mientras vierte (captura `04b_pouring_l1`, nivel 1, cuia 0 → 2). Entra en la decisión 2: el dueño respondió «38° está bien» después de ver la captura del teléfono `v2-tel-rafaga-1` (nivel 1, vertido 0 → 2 con la cuia del medio tapada). Si al verlo con las cuias anchas prefiere otra cosa, se abre una decisión nueva.
+- C19 (familia parda ≤ 40 % [P]) se vuelve a medir con las cuias de D-004 (`02b_board_l1`, `02d_board_l2`) y con el muelle pintado (F6).
+- No cambian: las reglas, el solver, los pares, el formato de nivel, Remote Config (no hay clave nueva), D-001, D-002, D-003, las áreas táctiles (02 §3.3), el paso de fila ni el número de filas (02 §5).
+
+**Alternativas descartadas.**
+- Panel «caoba lacada» (B): cálido, pero el tablero queda más «mueble» que «agua» (guía 4.6).
+- Inclinación de 75° fija, o dinámica: 38° + 12° × (4 − dosis que quedan), con tope de 80° (C17).
+- Mantener el tope de 48 dp en todos los tableros (C18).
+- Una clave de Remote Config para el tope: nadie la ha pedido y 08 §9 no la tiene.
+
+**Cómo revertir.**
+- Revertir los commits de la implementación (`BoardLayout.cs`, `ProceduralArt.cs`, `BoardAnimator.cs`, `CuiaGeometry.cs`, `GameScreen.cs` y sus tests) y restaurar el texto de 02 §5 y 07 §4.1, los dos a la vez.
+- La variante B se recupera de `19177bd` (`Palette.PanelB`).
+- En cualquier caso, añadir una decisión nueva que sustituya a D-004.
+
+**Archivos afectados.**
+- Documentación: `docs/gdd/02-nucleo-reglas-ux.md` (cabecera, §4.1 y §5), `docs/gdd/07-arte-tematica-audio.md` (cabecera, §4.1, §4.3 y §5.2), `docs/art/direccion-visual-v2.md`, `docs/art/prompts-chatgpt.md`, este registro y `CLAUDE.md`. `docs/GDD.md` no cambia: ninguna fila de §2 cita el tope de 48 dp, y la decisión 23 da 34 × 102 dp con 7 por fila, que sigue igual.
+- Código: `Assets/_Project/Scripts/UI/{BoardLayout.cs, GameScreen.cs, GameBootstrap.cs}` y `Assets/_Project/Scripts/Presentation/{Palette.cs, ProceduralArt.cs, ProceduralArt.Scene.cs, BoardAnimator.cs, CuiaGeometry.cs}`. Las propuestas [P] están en `BoardLayout.PanelMarginTopOneRow` (margen superior de 36 dp en una fila), `GameScreen.PourCeilingFor` y `GameScreen.PourCavityDp` (techo del vertido), y `CuiaGeometry.RimHalfWidthU` (canto alto del borde de fibra, que usa el techo en `BoardAnimator`).
+- Tests: `Assets/_Project/Tests/EditMode/{BoardLayoutTests.cs, VisualContrastTests.cs, LiquidVolumeTests.cs}` y `Assets/_Project/Tests/PlayMode/{PourPoseTests.cs, VisualGuardTests.cs, VisualSnapshotTests.cs}`.
+- Sin cambios: `Assets/_Project/Data/Levels/tutorial_v0.json`, `Packages/com.amazonfill.core/`, `tools/`, `schemas/` y 08 §9.

@@ -65,7 +65,7 @@ namespace AF.Tests.EditMode
         }
 
         [TestCase(160f, 118f)] // nivel 7 a 360 × 780 (guía 3.3): sin cambios
-        [TestCase(252f, 188f)] // nivel 1: el horizonte baja y la franja de río mide 64 dp
+        [TestCase(206.5f, 142.5f)] // nivel 1 con D-004 (cuias de 64 dp; panel en 206,5 a 360 × 780)
         [TestCase(330f, 200f)] // tope inferior
         [TestCase(108f, 118f)] // tres filas: el horizonte no sube de 118
         public void Horizon_SitsAbovePanelBetween118And200(float panelTop, float horizon)

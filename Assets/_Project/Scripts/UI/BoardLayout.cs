@@ -67,12 +67,14 @@ namespace AF.UI
 
     /// <summary>
     /// Layout del tablero (GDD 02 §5; 07 §4.1 y §7.4; guía visual v2, 3.2): 1 fila con T ≤ 5, 2 filas con 6-14 (⌈T/2⌉
-    /// arriba), 3 con 15-16; ranura = (ancho − 24) / cuias_por_fila; cuia_w = clamp(0,70 × ranura, 28, 48); alto = 6 u
-    /// (u = cuia_w / 2); paso de fila = alto + 16 (elevación) + 24 (hueco). El tablero se centra en horizontal a 480 dp
-    /// como máximo (tabletas) y, desde D-003, también en vertical: el bloque (elevación de la fila 1, filas, huecos y la
+    /// arriba), 3 con 15-16; ranura = (ancho − 24) / cuias_por_fila; cuia_w = clamp(0,70 × ranura, 28, tope(T)), con
+    /// tope(T) = 64 / 56 / 48 dp para T ≤ 3 / 4-5 / ≥ 6 (D-004); alto = 6 u (u = cuia_w / 2); paso de fila = alto + 16
+    /// (elevación) + 24 (hueco). El tablero se centra en horizontal a 480 dp como máximo (tabletas; la cuia tampoco supera
+    /// tope(T)) y, desde D-003, también en vertical: el bloque (elevación de la fila 1, filas, huecos y la
     /// repisa de 15 dp bajo la última fila) queda centrado entre <c>boardTop</c> y <c>boardBottom</c>, sin espacio muerto
     /// abajo. Si las filas no caben (16:9), las cuias se reducen hasta el mínimo de 28 dp. Alrededor del bloque va el
-    /// panel del tablero, <see cref="PanelMargin"/> (22 dp) por arriba y por abajo y 8 dp desde los bordes del ancho útil.
+    /// panel del tablero, <see cref="PanelMargin"/> (22 dp) por abajo y por arriba (<see cref="PanelMarginTopOneRow"/>,
+    /// 36 dp, por arriba en los tableros de una fila) y 8 dp desde los bordes del ancho útil.
     /// </summary>
     public static class BoardLayout
     {
@@ -85,8 +87,14 @@ namespace AF.UI
         /// <summary>Ancho mínimo de la cuia (02 §5).</summary>
         public const float MinCuiaWidth = 28f;
 
-        /// <summary>Ancho máximo de la cuia (02 §5).</summary>
-        public const float MaxCuiaWidth = 48f;
+        /// <summary>Tope del ancho con T ≤ 3 cuias en pantalla (D-004; 02 §5).</summary>
+        public const float MaxCuiaWidthUpTo3 = 64f;
+
+        /// <summary>Tope del ancho con T = 4-5 cuias en pantalla (D-004; 02 §5).</summary>
+        public const float MaxCuiaWidthUpTo5 = 56f;
+
+        /// <summary>Tope del ancho con T ≥ 6 cuias en pantalla (02 §5, sin cambios con D-004).</summary>
+        public const float MaxCuiaWidthFrom6 = 48f;
 
         /// <summary>Elevación de la selección (02 §4.1).</summary>
         public const float Lift = 16f;
@@ -104,8 +112,27 @@ namespace AF.UI
         /// </summary>
         public const float PanelMargin = 22f;
 
+        /// <summary>
+        /// Margen del panel sobre el bloque en los tableros de una fila: 36 dp ≈ 22 + 13,5 del marco [P] (revisión de D-004).
+        /// Con u = 32 el origen inclinado del vertido sube ≈ 34,5 dp sobre el borde de las cuias en reposo (elevación de
+        /// ≈ 0,14 u, recortada por el techo del vertido, 4 dp bajo el canto interior del marco: GameScreen.PourCeilingAirDp);
+        /// con este margen queda bajo ese canto en lugar de montarse sobre él o rozarlo. En dos y tres filas se mantienen
+        /// 22 dp: 36 estrecharía el río del nivel 7 de 34,5 a 20,5 dp.
+        /// </summary>
+        public const float PanelMarginTopOneRow = 36f;
+
         /// <summary>Margen del panel desde el borde del ancho útil (guía 3.2).</summary>
         public const float PanelSide = 8f;
+
+        /// <summary>
+        /// Tope del ancho de la cuia para T = <paramref name="count"/> cuias del tablero en pantalla, incluidas Cuia extra y
+        /// Cuia de rescate (02 R1): 64 dp con T ≤ 3, 56 con T = 4-5 y 48 con T ≥ 6 (D-004; 02 §5). Si T cambia a mitad de
+        /// nivel, el layout se recalcula con el T nuevo (02 §4.1, re-layout de 300 ms).
+        /// </summary>
+        public static float MaxCuiaWidthFor(int count)
+        {
+            return count <= 3 ? MaxCuiaWidthUpTo3 : (count <= 5 ? MaxCuiaWidthUpTo5 : MaxCuiaWidthFrom6);
+        }
 
         /// <summary>Filas para <paramref name="count"/> cuias.</summary>
         public static int RowsFor(int count)
@@ -145,7 +172,7 @@ namespace AF.UI
             int maxPerRow = result.PerRow[0];
             float width = Math.Min(canvasWidth, MaxBoardWidth);
             float slot = (width - SideMargins) / maxPerRow;
-            float cuiaW = Clamp(0.70f * slot, MinCuiaWidth, MaxCuiaWidth);
+            float cuiaW = Clamp(0.70f * slot, MinCuiaWidth, MaxCuiaWidthFor(count));
             float footMax = boardBottom - ShelfDrop;
             float available = footMax - boardTop - Lift;
             float blockH = BlockHeight(rows, cuiaW, heightU);
@@ -183,10 +210,11 @@ namespace AF.UI
                 }
             }
 
-            // Panel (guía 3.2): 8 dp desde el ancho útil (≤ 480) y 22 dp sobre y bajo el bloque; si sube por encima de
-            // boardTop − 8 se recorta (el marco pasa bajo el HUD). Nunca se encoge una cuia por el marco.
+            // Panel (guía 3.2): 8 dp desde el ancho útil (≤ 480), 22 dp bajo el bloque y 22 sobre él (36 en una fila); si
+            // sube por encima de boardTop − 8 se recorta (el marco pasa bajo el HUD). Nunca se encoge una cuia por el marco.
             float panelX = ((canvasWidth - width) / 2f) + PanelSide;
-            float panelTop = Math.Max(blockTop - PanelMargin, boardTop - 8f);
+            float topMargin = rows == 1 ? PanelMarginTopOneRow : PanelMargin;
+            float panelTop = Math.Max(blockTop - topMargin, boardTop - 8f);
             float panelBottom = result.BlockBottom + PanelMargin;
             result.PanelX = panelX;
             result.PanelY = panelTop;

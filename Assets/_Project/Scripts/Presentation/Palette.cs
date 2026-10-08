@@ -257,19 +257,10 @@ namespace AF.Presentation
         public static readonly ButtonFamily FamilyWood = new ButtonFamily(Hex(0xBF8F62), Hex(0x7E5638), Hex(0x46302A), Hex(0x2E2018), Hex(0x1E140E));
 
         /// <summary>
-        /// Panel del tablero, variante A «azul petróleo de río» (recomendada, guía 4.6), con el degradado de agua profunda
-        /// de la revisión visual del 2026-10-07: #234452 (L* 27) → #142C36 (L* 17). C* ≤ 14, ΔE00 ≥ 14 frente a Huito.
+        /// Panel del tablero «azul petróleo de río», elegido por el dueño el 2026-10-07 (D-004; guía 4.6): #234452 (L* 27)
+        /// → #142C36 (L* 17), cavidad #102228. C* 14,2 / 11,0 (≤ 16, VA-04), ΔE00 ≥ 14 frente a Huito.
         /// </summary>
-        public static readonly PanelColors PanelA = new PanelColors(Hex(0x234452), Hex(0x142C36), Hex(0x102228));
-
-        /// <summary>Panel del tablero, variante B «caoba lacada» (solo para la comparación de F1, guía 4.6).</summary>
-        public static readonly PanelColors PanelB = new PanelColors(Hex(0x44302C), Hex(0x372521), Hex(0x251A17));
-
-        /// <summary>Usa la variante B del panel (capturas de comparación de F1; guía 4.6). Por defecto, A.</summary>
-        public static bool PanelVariantB { get; set; }
-
-        /// <summary>Variante de panel activa (A salvo que la elija el dueño o una captura de comparación).</summary>
-        public static PanelColors Panel => PanelVariantB ? PanelB : PanelA;
+        public static readonly PanelColors Panel = new PanelColors(Hex(0x234452), Hex(0x142C36), Hex(0x102228));
 
         /// <summary>
         /// Color opaco precalculado de la franja especular principal sobre el líquido de un tinte (guía 4.2): el tinte con

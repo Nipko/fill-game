@@ -31,6 +31,12 @@ namespace AF.Presentation
         /// <summary>Alto del borde de fibra (u).</summary>
         public const float RimU = 0.25f;
 
+        /// <summary>
+        /// Medio ancho exterior del borde de fibra (u): anillo de 1,10 u. Es el canto más alto del origen inclinado (techo
+        /// del vertido en <see cref="BoardAnimator"/>).
+        /// </summary>
+        public const float RimHalfWidthU = 0.55f;
+
         /// <summary>Alto total (u): 6 para la estándar de 4 (tabla de 07 §4.5).</summary>
         public static float HeightU(int capacity)
         {
@@ -91,7 +97,7 @@ namespace AF.Presentation
 
             if (y <= HeightU(capacity))
             {
-                return 0.55f; // borde: anillo de 1,10
+                return RimHalfWidthU; // borde: anillo de 1,10
             }
 
             return 0f;

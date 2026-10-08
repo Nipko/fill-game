@@ -17,7 +17,9 @@ namespace AF.Tests.PlayMode
     /// 1080 × 2340 px (20:9 aprox., 360 × 780 dp) con zona segura y escriben PNG en <c>Logs/snapshots/</c> (ignorada por
     /// git). Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter VisualSnapshotTests</c> sin
     /// <c>-nographics</c>. El ambiente se congela con semilla y tiempo fijos (guía visual v2, 9) y se usa siempre el arte
-    /// procedural; <c>02c_board_l7_panelB</c> es la variante B del panel para la comparación de F1 (guía 4.6).
+    /// procedural. Con D-004 (cuias más anchas): <c>02b_board_l1</c> (3 cuias de 64 dp), <c>04b_pouring_l1</c> (primer
+    /// vertido del nivel 1: el origen inclinado queda bajo el canto interior del marco y el chorro entra en la boca del
+    /// destino), <c>02d_board_l2</c> (5 cuias de ≈ 47 dp) y <c>02e_board_l4</c> (6 cuias en dos filas de 3, 48 dp).
     /// </summary>
     [Explicit("Capturas visuales manuales; necesitan dispositivo gráfico.")]
     public sealed class VisualSnapshotTests
@@ -33,7 +35,6 @@ namespace AF.Tests.PlayMode
         {
             GameScreen.SimulatedScreen = null;
             AmbientLayer.Frozen = false;
-            Palette.PanelVariantB = false;
             LaunchOptions.Reset();
             if (_camera != null)
             {
@@ -52,7 +53,6 @@ namespace AF.Tests.PlayMode
         {
             GameScreen.SimulatedScreen = new Vector4(Width, Height, 96f, 48f); // 32 dp de cutout arriba, 16 dp de gestos abajo
             AmbientLayer.Frozen = true;
-            Palette.PanelVariantB = false;
             _target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
             var camGo = new GameObject("SnapshotCamera");
             Object.DontDestroyOnLoad(camGo);
@@ -90,7 +90,7 @@ namespace AF.Tests.PlayMode
             yield return Wait(0.2f);
             Save(dir, "05_after_pour_l7");
 
-            // Nivel 1: tablero de una fila (02b), sellado, celebración y victoria.
+            // Nivel 1: tablero de una fila (02b), primer vertido (04b), sellado, celebración y victoria.
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
             Attach(boot);
@@ -98,7 +98,13 @@ namespace AF.Tests.PlayMode
             yield return Wait(0.3f);
             Save(dir, "02b_board_l1");
             SolveResult s1 = new AStarSolver().Solve(boot.Flow!.Session.Current, SolverOptions.ForPipeline(boot.Flow.Session.PourMode));
-            for (int i = 0; i < s1.MoveCount; i++)
+            boot.TapCuia(s1.GetMove(0).Source);
+            boot.TapCuia(s1.GetMove(0).Target);
+            yield return PlayModeHelpers.WaitFor(StreamReachedSurface, "chorro hasta la superficie (nivel 1)");
+            Save(dir, "04b_pouring_l1");
+            GameBootstrap boot1 = boot;
+            yield return PlayModeHelpers.WaitFor(() => boot1.View!.IsViewIdle, "fin del vertido (nivel 1)");
+            for (int i = 1; i < s1.MoveCount; i++)
             {
                 boot.TapCuia(s1.GetMove(i).Source);
                 boot.TapCuia(s1.GetMove(i).Target);
@@ -125,15 +131,21 @@ namespace AF.Tests.PlayMode
             Save(dir, "08_stuck_l6");
             Assert.That(File.Exists(Path.Combine(dir, "08_stuck_l6.png")), Is.True);
 
-            // Variante B del panel (caoba lacada) para la comparación lado a lado con 02_board_l7 (guía 4.6, F1).
-            Palette.PanelVariantB = true;
-            yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
+            // D-004: nivel 2 (5 cuias de ≈ 47 dp en una fila) y nivel 4 (6 cuias en dos filas de 3, 48 dp).
+            yield return PlayModeHelpers.LoadGame(2, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
             Attach(boot);
             boot.TapAnywhere();
             yield return Wait(0.3f);
-            Save(dir, "02c_board_l7_panelB");
-            Palette.PanelVariantB = false;
+            Save(dir, "02d_board_l2");
+
+            yield return PlayModeHelpers.LoadGame(4, new MemoryProgressStore());
+            boot = GameBootstrap.Current!;
+            Attach(boot);
+            boot.TapAnywhere();
+            yield return Wait(0.3f);
+            Save(dir, "02e_board_l4");
+            Assert.That(File.Exists(Path.Combine(dir, "02e_board_l4.png")), Is.True);
         }
 
         private void Attach(GameBootstrap boot)

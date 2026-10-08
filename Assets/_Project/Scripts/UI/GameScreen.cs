@@ -69,6 +69,22 @@ namespace AF.UI
         public const float RiverPropsMinBandDp = 56f;
 
         /// <summary>
+        /// Cavidad mínima (dp) entre el canto interior del marco y la fila 1 elevada para que el techo del vertido pase a
+        /// ese canto, menos el aire (<see cref="PourCeilingFor"/>): 36 − 13,5 = 22,5 en una fila;
+        /// 22 − 13,5 = 8,5 en dos filas.
+        /// </summary>
+        public const float PourCavityDp = 22f;
+
+        /// <summary>
+        /// Aire (dp) entre el canto interior del marco y el punto más alto del origen inclinado cuando el techo del vertido
+        /// es ese canto (<see cref="PourCeilingFor"/>; revisión de D-004 sobre <c>04b_pouring_l1</c>): con menos de 1 dp
+        /// la banda de cuerda del labio tocaba la línea del bisel interior y la cuia parecía apoyarse en el marco. En el
+        /// nivel 1 (u = 32) la elevación baja de 0,25 a ≈ 0,14 u y el labio sigue ≥ 0,6 u sobre el borde del destino. Es
+        /// el máximo sin mover el panel: con 5,5 dp (0,09 u) el origen entra en el hombro del destino.
+        /// </summary>
+        public const float PourCeilingAirDp = 4f;
+
+        /// <summary>
         /// La cinta-hoja asoma 38 dp sobre el panel de victoria (guía 5.3 decía 34 con la cinta de 64 dp; revisión visual del
         /// 2026-10-07: cinta de 344 × 72 dp centrada 2 dp por encima del borde del panel).
         /// </summary>
@@ -440,6 +456,12 @@ namespace AF.UI
         /// <summary>Layout del tablero del nivel actual (null antes del primer nivel).</summary>
         public BoardLayoutResult? Layout => _layout;
 
+        /// <summary>
+        /// Grosor del marco del panel tal como se dibuja (dp), tras adelgazarlo con el 9-slice si las cuias quedarían a
+        /// menos de 8 dp de él (guía 3.2). El canto interior del marco está en <c>Layout.PanelY + PanelFrameDp</c>.
+        /// </summary>
+        public float PanelFrameDp { get; private set; }
+
         /// <summary>Capa de efectos del tablero (presupuesto de partículas).</summary>
         public FxLayer Fx => _fx;
 
@@ -464,7 +486,7 @@ namespace AF.UI
         /// <summary>
         /// Horizonte del panorama (dp desde arriba) para un panel que empieza en <paramref name="panelTop"/> en un lienzo de
         /// <paramref name="canvasWidth"/> dp: clamp(panel.top − 64, 118, 200), a escala del ancho (revisión visual del
-        /// 2026-10-07). A 360 × 780 dp: nivel 7 (panel en 152,5) → 118; nivel 1 (panel en 244,5) → 180,5.
+        /// 2026-10-07). A 360 × 780 dp: nivel 7 (panel en 152,5) → 118; nivel 1 (panel en 206,5) → 142,5.
         /// </summary>
         public static float HorizonFor(float panelTop, float canvasWidth)
         {
@@ -1046,6 +1068,8 @@ namespace AF.UI
                 heightU = Mathf.Max(heightU, _views[i].HeightU);
             }
 
+            // T = _views.Length: cuando Cuia extra o Cuia de rescate añadan una vista (fuera de v0), LayoutBoard se vuelve a
+            // llamar y el tope se recalcula (D-004).
             _layout = BoardLayout.Compute(_views.Length, heightU, w, BoardTop, BoardBottom);
             BoardLayoutResult l = _layout;
             for (int i = 0; i < _views.Length; i++)
@@ -1069,6 +1093,7 @@ namespace AF.UI
             float frameScale = Mathf.Clamp((leftEdge - px - 8f) / _art.PanelFrameDp, 0.45f, 1f);
             _panelFrame.pixelsPerUnitMultiplier = 1f / frameScale;
             float frame = _art.PanelFrameDp * frameScale;
+            PanelFrameDp = frame;
             _panelShadow.enabled = true;
             _panelFill.enabled = true;
             _panelInner.enabled = true;
@@ -1109,13 +1134,30 @@ namespace AF.UI
             }
 
             LayoutBackdrop(py, l.PanelBottom, true);
-            _animator.TopLimitY = -(BoardTop - 4f); // el origen inclinado no sube sobre el HUD
+            _animator.TopLimitY = -PourCeilingFor(l, frame, BoardTop);
             _ambient.SetLayout(new Vector2(w, _canvasH), PanelRect(), new Rect(0f, _horizonY + 4f, w, Mathf.Max(0f, py - _horizonY - 8f)));
+        }
+
+        /// <summary>
+        /// Techo del origen inclinado durante el vertido (dp desde arriba) para el layout <paramref name="l"/> con un marco
+        /// de <paramref name="frame"/> dp [P] (D-004 y su revisión): nunca sale del panel por arriba ni sube más de 4 dp
+        /// dentro de la fila del HUD, que acaba en <paramref name="boardTop"/> (el panel puede empezar 8 dp dentro de ella si
+        /// se recorta). Si entre el canto interior del marco y la fila 1 elevada quedan ≥ <see cref="PourCavityDp"/>
+        /// (tableros de una fila, con 36 dp de margen), el techo queda <see cref="PourCeilingAirDp"/> (4 dp) bajo ese canto:
+        /// el origen no se monta sobre el marco ni lo roza. Si no (dos y tres filas, con 22 dp), es el borde exterior del
+        /// panel: el vertido hacia la fila 1 necesita ≈ 0,3 u de elevación para no entrar en el hombro del destino y el
+        /// origen puede cubrir parte del marco durante el vertido (≤ 400 ms).
+        /// </summary>
+        public static float PourCeilingFor(BoardLayoutResult l, float frame, float boardTop)
+        {
+            float inner = l.PanelY + frame;
+            float ceiling = l.BlockTop - inner >= PourCavityDp ? inner + PourCeilingAirDp : l.PanelY;
+            return Mathf.Max(ceiling, boardTop - 4f);
         }
 
         // Panorama, cielo, muelle y escena del río según el panel (revisión visual del 2026-10-07):
         //  - el horizonte queda en clamp(panel.top − 64, 118, 200) dp (a 360 de ancho) y el hueco de arriba se rellena con
-        //    cielo_alto: nivel 7 (panel en 160) en 118, sin cambios; nivel 1 (panel en 252) en 188;
+        //    cielo_alto: nivel 7 (panel en 152,5) en 118, sin cambios; nivel 1 (panel en 206,5) en 142,5;
         //  - la viga del muelle va bajo el panel (panel.bottom − 4): el tablero se apoya en el muelle, sin postes;
         //  - con ≥ 56 dp de río visible, una garza en la orilla izquierda y 3 vitórias-régias junto a las orillas.
         private void LayoutBackdrop(float panelTop, float panelBottom, bool hasBoard)

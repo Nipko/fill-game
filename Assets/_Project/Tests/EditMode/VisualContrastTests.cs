@@ -30,14 +30,11 @@ namespace AF.Tests.EditMode
         public void EstuaryTints_StandOutFromTheEmptyCavity_ByAtLeast15LStar()
         {
             // VA-06 (D-003, umbral 1): cada tinte del Estuario frente a la cavidad vacía, ΔL* ≥ 15.
-            foreach (PanelColors panel in new[] { Palette.PanelA, Palette.PanelB })
+            float cavity = ColorMath.LabLightness(Palette.Panel.Cavity);
+            for (int i = 0; i < EstuaryTints.Length; i++)
             {
-                float cavity = ColorMath.LabLightness(panel.Cavity);
-                for (int i = 0; i < EstuaryTints.Length; i++)
-                {
-                    float tint = ColorMath.LabLightness(Palette.Tint(EstuaryTints[i]));
-                    Assert.That(Mathf.Abs(tint - cavity), Is.GreaterThanOrEqualTo(15f), "tinte " + EstuaryTints[i]);
-                }
+                float tint = ColorMath.LabLightness(Palette.Tint(EstuaryTints[i]));
+                Assert.That(Mathf.Abs(tint - cavity), Is.GreaterThanOrEqualTo(15f), "tinte " + EstuaryTints[i]);
             }
         }
 
@@ -45,7 +42,7 @@ namespace AF.Tests.EditMode
         public void Guanabana_IsAtLeast50LStarAboveTheEmptyCavity()
         {
             // VA-06 (D-003, umbral 3).
-            float cavity = ColorMath.LabLightness(Palette.PanelA.Cavity);
+            float cavity = ColorMath.LabLightness(Palette.Panel.Cavity);
             Assert.That(ColorMath.LabLightness(Palette.Tint(1)) - cavity, Is.GreaterThanOrEqualTo(50f));
         }
 
@@ -53,31 +50,27 @@ namespace AF.Tests.EditMode
         public void GlassRim_OverThePanel_HasAtLeast3To1()
         {
             // VA-06 (D-003, umbral 2; WCAG 1.4.11): contorno vidrio_borde al 90 % compuesto en lineal frente al panel.
-            foreach (PanelColors panel in new[] { Palette.PanelA, Palette.PanelB })
+            PanelColors panel = Palette.Panel;
+            foreach (Color fill in new[] { panel.Top, panel.Bottom })
             {
-                foreach (Color fill in new[] { panel.Top, panel.Bottom })
-                {
-                    Color rim = ColorMath.CompositeLinear(Palette.GlassRim, 0.90f, fill);
-                    Assert.That(ColorMath.ContrastRatio(rim, fill), Is.GreaterThanOrEqualTo(3f));
-                }
+                Color rim = ColorMath.CompositeLinear(Palette.GlassRim, 0.90f, fill);
+                Assert.That(ColorMath.ContrastRatio(rim, fill), Is.GreaterThanOrEqualTo(3f));
             }
         }
 
         [Test]
         public void PanelFill_IsDarkQuietAndFarFromTheV01Olive()
         {
-            // VA-04: L* entre 15 y 30 y C* ≤ 16. VA-04c: ΔE00 ≥ 12 frente a las muestras del fondo de v0.1.
-            foreach (PanelColors panel in new[] { Palette.PanelA, Palette.PanelB })
+            // Panel «azul petróleo de río» (D-004). VA-04: L* entre 15 y 30 y C* ≤ 16. VA-04c: ΔE00 ≥ 12 frente a las muestras del fondo de v0.1.
+            PanelColors panel = Palette.Panel;
+            foreach (Color fill in new[] { panel.Top, panel.Bottom })
             {
-                foreach (Color fill in new[] { panel.Top, panel.Bottom })
+                Vector3 lab = ColorMath.ToLab(fill);
+                Assert.That(lab.x, Is.InRange(15f, 30f));
+                Assert.That(Mathf.Sqrt((lab.y * lab.y) + (lab.z * lab.z)), Is.LessThanOrEqualTo(16f));
+                for (int i = 0; i < OliveSamples.Length; i++)
                 {
-                    Vector3 lab = ColorMath.ToLab(fill);
-                    Assert.That(lab.x, Is.InRange(15f, 30f));
-                    Assert.That(Mathf.Sqrt((lab.y * lab.y) + (lab.z * lab.z)), Is.LessThanOrEqualTo(16f));
-                    for (int i = 0; i < OliveSamples.Length; i++)
-                    {
-                        Assert.That(ColorMath.DeltaE00(fill, Palette.Hex(OliveSamples[i])), Is.GreaterThanOrEqualTo(12f), "muestra " + i);
-                    }
+                    Assert.That(ColorMath.DeltaE00(fill, Palette.Hex(OliveSamples[i])), Is.GreaterThanOrEqualTo(12f), "muestra " + i);
                 }
             }
         }
@@ -97,7 +90,7 @@ namespace AF.Tests.EditMode
             // Guía 2.4, regla 1: panel, cavidad, marco y repisas a ΔE00 ≥ 10 de los 14 tintes (el marco es el mínimo, 10,2).
             Color[] surfaces =
             {
-                Palette.PanelA.Top, Palette.PanelA.Bottom, Palette.PanelA.Cavity, Palette.Frame, Palette.ShelfTop,
+                Palette.Panel.Top, Palette.Panel.Bottom, Palette.Panel.Cavity, Palette.Frame, Palette.ShelfTop,
                 Palette.ShelfFront, Palette.ShelfFrontLow,
             };
             for (int s = 0; s < surfaces.Length; s++)
@@ -156,8 +149,8 @@ namespace AF.Tests.EditMode
         public void PanelLightPool_AddsThreeToFourLStar()
         {
             // Guía 4.6: charco de luz de +3 a +4 L* en su centro (alfa lineal ≈ 0,016 de cielo_horizonte).
-            Color pooled = ColorMath.CompositeLinear(Palette.SkyHorizon, 0.016f, Palette.PanelA.Top);
-            float dl = ColorMath.LabLightness(pooled) - ColorMath.LabLightness(Palette.PanelA.Top);
+            Color pooled = ColorMath.CompositeLinear(Palette.SkyHorizon, 0.016f, Palette.Panel.Top);
+            float dl = ColorMath.LabLightness(pooled) - ColorMath.LabLightness(Palette.Panel.Top);
             Assert.That(dl, Is.InRange(2.5f, 4.5f));
         }
     }

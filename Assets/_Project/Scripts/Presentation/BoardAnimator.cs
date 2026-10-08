@@ -93,7 +93,8 @@ namespace AF.Presentation
         /// <summary>
         /// Elevación máxima del origen sobre la pose de 07 §5.2 (u): 1,0, así el labio queda entre 0,6 y 1,6 u sobre el borde
         /// del destino (revisión visual del 2026-10-07: con 5 u de margen la búsqueda lo subía 2,1 u para tapar menos y el
-        /// chorro caía desde muy alto). A 38° el origen puede tapar algo de una vecina durante el vertido (≤ 400 ms).
+        /// chorro caía desde muy alto). A 38° el origen puede tapar algo de una vecina durante el vertido (≤ 400 ms):
+        /// aceptado por el dueño en D-004 (C17).
         /// </summary>
         public const float MaxRaiseU = 1f;
 
@@ -151,8 +152,10 @@ namespace AF.Presentation
         public int ChainedCount { get; private set; }
 
         /// <summary>
-        /// Techo para el labio del origen, en coordenadas del contenedor (y hacia arriba): el borde inferior del HUD. El
-        /// origen nunca sube por encima al apartarse de las vecinas.
+        /// Techo de la silueta del origen inclinado, en coordenadas del contenedor (y hacia arriba): 4 dp bajo el canto
+        /// interior del marco del panel en los tableros de una fila (<c>GameScreen.PourCeilingAirDp</c>) y su borde
+        /// exterior en los de dos y tres filas, nunca más de 4 dp dentro de la fila del HUD (<c>GameScreen.PourCeilingFor</c>;
+        /// D-004). El origen nunca sube por encima al apartarse de las vecinas.
         /// </summary>
         public float TopLimitY { get; set; } = float.MaxValue;
 
@@ -453,7 +456,7 @@ namespace AF.Presentation
 
             s.Lock();
             job.StartOffset = s.BodyOffset;
-            ChoosePourPose(ref job);
+            ChoosePourPose(job.Source, job.Target, out job.PourOffset, out job.PourAngle);
 
             job.DoseMs = _timings.DoseMs;
             job.StreamStart = _timings.TravelMs * StreamStartFraction;
@@ -694,11 +697,20 @@ namespace AF.Presentation
         // tapada, ponderada (silueta del origen sobre el cuerpo de las demás, × 3, y sobre su hombro, cuello y la holgura
         // de 0,3 u por encima de su borde, × 2; dentro de la silueta del destino por debajo de su borde, × 3) + 0,4 u² por
         // u de elevación + 0,5 u² por u de desplazamiento del labio más allá de 0,25 u + 0,5 u² si vierte desde el lado
-        // lejano. Sin asignaciones.
-        private void ChoosePourPose(ref Job job)
+        // lejano. El origen no pasa del techo TopLimitY [P] (4 dp bajo el canto interior del marco en una fila, borde del
+        // panel en dos y tres; nunca sobre el HUD): una elevación solo se prueba si el canto alto del borde inclinado queda
+        // bajo el techo, y la primera que lo pasaría se recorta para dejar ese canto justo en él (sin elevar siempre se
+        // permite: en una fila cabe mientras u ≤ 36 dp, y D-004 limita u a 32). Con el techo la elevación ya no basta
+        // para apartarse de todo, así que una pose cuya silueta entra en el cuerpo o el hombro del destino solo gana si
+        // ninguna lo evita [P] (D-004).
+        // Solo depende de la geometría de las cuias, de TopLimitY y del ancho del tablero, no de su contenido. Sin
+        // asignaciones.
+        private void ChoosePourPose(int source, int target, out Vector2 bestOffset, out float bestAngle)
         {
-            CuiaView s = _views[job.Source];
-            CuiaView t = _views[job.Target];
+            CuiaView s = _views[source];
+            CuiaView t = _views[target];
+            bestOffset = Vector2.zero;
+            bestAngle = 0f;
             float dx = t.FootPosition.x - s.FootPosition.x;
             float preferred;
             if (Mathf.Abs(dx) > 1f)
@@ -711,9 +723,14 @@ namespace AF.Presentation
             }
 
             float bestCost = float.MaxValue;
+            bool bestEnters = true;
             float length = s.HeightU * s.Unit;
             Vector2 rim = t.FootPosition + new Vector2(0f, t.HeightU * t.Unit);
             int steps = Mathf.RoundToInt(MaxRaiseU / RaiseStepU);
+
+            // El punto más alto del origen inclinado es el canto lejano de su borde de fibra (CuiaGeometry.RimHalfWidthU de
+            // semiancho): sube 0,55 · sin 38° ≈ 0,34 u sobre el centro del labio.
+            float rimRise = CuiaGeometry.RimHalfWidthU * Mathf.Sin(TiltDeg * Mathf.Deg2Rad) * s.Unit;
             for (int side = 0; side < 2; side++)
             {
                 float dir = side == 0 ? preferred : -preferred;
@@ -726,25 +743,57 @@ namespace AF.Presentation
                     Vector2 lipTarget = rim + new Vector2(-dir * lipShift * t.Unit, LipClearanceU * t.Unit);
                     Vector2 baseOffset = lipTarget - lipVector - s.FootPosition;
                     float fixedCost = (LipShiftPenalty * (lipShift - LipShiftsU[0])) + (side == 1 ? FarSidePenalty : 0f);
+                    float previousRaise = 0f;
                     for (int step = 0; step <= steps; step++)
                     {
                         float raise = step * RaiseStepU * s.Unit;
-                        if (step > 0 && lipTarget.y + raise > TopLimitY)
+                        bool clipped = false;
+                        if (step > 0 && lipTarget.y + raise + rimRise > TopLimitY)
                         {
-                            break;
+                            // Elevación recortada al techo: el canto alto del borde queda justo en TopLimitY.
+                            raise = TopLimitY - lipTarget.y - rimRise;
+                            if (raise <= previousRaise + 0.01f)
+                            {
+                                break;
+                            }
+
+                            clipped = true;
                         }
 
+                        previousRaise = raise;
                         Vector2 offset = baseOffset + new Vector2(0f, raise);
-                        float cost = PoseCost(job.Source, job.Target, offset, rad) + (RaisePenalty * step * RaiseStepU) + fixedCost;
-                        if (cost < bestCost - 1e-4f)
+                        float cost = PoseCost(source, target, offset, rad, out bool enters) + (RaisePenalty * raise / s.Unit) + fixedCost;
+                        if ((bestEnters && !enters) || (enters == bestEnters && cost < bestCost - 1e-4f))
                         {
                             bestCost = cost;
-                            job.PourOffset = offset;
-                            job.PourAngle = angle;
+                            bestEnters = enters;
+                            bestOffset = offset;
+                            bestAngle = angle;
+                        }
+
+                        if (clipped)
+                        {
+                            break;
                         }
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Pose de vertido (desplazamiento del cuerpo y ángulo en grados) que tomaría el origen <paramref name="source"/> al
+        /// verter en <paramref name="target"/> con el layout actual: la misma búsqueda que hace la cola al empezar un
+        /// vertido. Solo depende de la geometría y de <see cref="TopLimitY"/>, no del contenido, así que vale para cualquier
+        /// pareja de cuias, legal o no en el estado actual (diagnóstico y tests). Sin asignaciones.
+        /// </summary>
+        public void ComputePourPose(int source, int target, out Vector2 offset, out float angleDeg)
+        {
+            if ((uint)source >= (uint)_views.Length || (uint)target >= (uint)_views.Length || source == target)
+            {
+                throw new ArgumentOutOfRangeException(nameof(target), target, "Origen y destino: dos cuias distintas del tablero.");
+            }
+
+            ChoosePourPose(source, target, out offset, out angleDeg);
         }
 
         /// <summary>
@@ -753,13 +802,25 @@ namespace AF.Presentation
         /// </summary>
         public float PoseCost(int source, int target, Vector2 offset, float radians)
         {
+            return PoseCost(source, target, offset, radians, out _);
+        }
+
+        // Como PoseCost; además, entersTarget indica si algún punto de la silueta cae dentro del cuerpo o el hombro del
+        // destino (por debajo de CavityTopU + ShoulderU): el criterio de "el origen no entra en el destino".
+        private float PoseCost(int source, int target, Vector2 offset, float radians, out bool entersTarget)
+        {
             CuiaView s = _views[source];
+            CuiaView t = _views[target];
             float u = s.Unit;
             float h = s.HeightU;
             int cap = s.Capacity;
             Vector2 foot = s.FootPosition + offset;
             float width = _streamLayer.rect.width;
             float cost = 0f;
+            float tu = t.Unit;
+            Vector2 tFoot = t.FootPosition;
+            float tShoulderTop = tFoot.y + ((CuiaGeometry.CavityTopU(t.Capacity) + CuiaGeometry.ShoulderU) * tu);
+            entersTarget = false;
 
             // Muestreo con los bordes incluidos (regla del trapecio): el contorno es lo que toca a las vecinas.
             for (int r = 0; r <= SilhouetteRows; r++)
@@ -777,6 +838,11 @@ namespace AF.Presentation
                     float x = -hw + ((float)c * 2f * hw / SilhouetteCols);
                     Vector2 p = foot + CuiaView.Rotate(new Vector2(x * u, y * u), radians);
                     cost += area * (c == 0 || c == SilhouetteCols ? 0.5f : 1f) * Occlusion(p, source, target, width);
+                    if (!entersTarget && p.y > tFoot.y && p.y < tShoulderTop
+                        && Mathf.Abs(p.x - tFoot.x) < CuiaGeometry.OuterHalfWidth((p.y - tFoot.y) / tu, t.Capacity) * tu)
+                    {
+                        entersTarget = true;
+                    }
                 }
             }
 

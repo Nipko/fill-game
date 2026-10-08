@@ -26,11 +26,14 @@ namespace AF.Presentation
         /// <summary>Píxeles por u por defecto de las texturas de la cuia (u = ancho de la cuia / 2, 07 §4.1).</summary>
         public const int CuiaPixelsPerU = 64;
 
-        /// <summary>Densidad mínima y máxima del vidrio horneado (guía 4.1: 72 px/u en el SM-S938B, hasta 96).</summary>
+        /// <summary>Densidad mínima del vidrio horneado (guía 4.1: <c>ceil(u_dp × escala)</c> px/u, entre este mínimo y el máximo).</summary>
         public const int MinCuiaPixelsPerU = 48;
 
-        /// <summary>Densidad máxima del vidrio horneado (guía 4.1).</summary>
-        public const int MaxCuiaPixelsPerU = 96;
+        /// <summary>
+        /// Densidad máxima del vidrio horneado (guía 4.1): 96 px/u con u = 32 dp en el SM-S938B y 128 en pantallas de
+        /// 4 px/dp (D-004) [P].
+        /// </summary>
+        public const int MaxCuiaPixelsPerU = 128;
 
         /// <summary>Radio en píxeles del sprite 9-slice <see cref="RoundedRect"/>.</summary>
         public const float RoundedRectRadiusPx = 20f;
@@ -132,7 +135,7 @@ namespace AF.Presentation
         /// <summary>Agua base del mundo (07 §2.1).</summary>
         public Color Water => _water;
 
-        /// <summary>Colores del panel con los que se horneó el arte (variante A o B, guía 4.6).</summary>
+        /// <summary>Colores del panel con los que se horneó el arte (guía 4.6; D-004).</summary>
         public PanelColors PanelColors => _panel;
 
         /// <summary>
@@ -677,17 +680,20 @@ namespace AF.Presentation
 
         private Sprite BuildSealCap()
         {
-            // Tapa de calabaza (07 §4.4): #C9A36B con veta y brillo, luz desde arriba a la izquierda.
-            const int w = 108;
-            const int h = 36;
+            // Tapa de calabaza (07 §4.4): #C9A36B con veta y brillo, luz desde arriba a la izquierda. Mide 1,10 × 0,35 u:
+            // 144 × 48 px (≈ 131 px/u ≥ MaxCuiaPixelsPerU) para que no se amplíe con u = 32 dp a 4 px/dp (D-004). Las cotas
+            // son las del dibujo original de 108 × 36 px escaladas por k.
+            const float k = 4f / 3f;
+            const int w = 144;
+            const int h = 48;
             var pc = new PixelCanvas(w, h);
             Color wood = Palette.CapWood;
             Color dark = ColorMath.Darken(wood, 0.30f);
             Color light = ColorMath.Lighten(wood, 0.45f);
-            const float cx = 54f;
-            const float cy = 4.5f;
-            const float rx = 51f;
-            const float ry = 28f;
+            const float cx = 54f * k;
+            const float cy = 4.5f * k;
+            const float rx = 51f * k;
+            const float ry = 28f * k;
             for (int y = 0; y < h; y++)
             {
                 for (int x = 0; x < w; x++)
@@ -696,9 +702,9 @@ namespace AF.Presentation
                     float py = (y + 0.5f - cy) / ry;
                     float e = Mathf.Sqrt((px * px) + (py * py));
                     float d = (e - 1f) * ry;
-                    if (y + 0.5f < cy - 1.5f)
+                    if (y + 0.5f < cy - (1.5f * k))
                     {
-                        d = Mathf.Max(d, (cy - 1.5f) - (y + 0.5f));
+                        d = Mathf.Max(d, (cy - (1.5f * k)) - (y + 0.5f));
                     }
 
                     float cov = PixelCanvas.Coverage(d);
@@ -707,18 +713,18 @@ namespace AF.Presentation
                         continue;
                     }
 
-                    Color c = Color.Lerp(ColorMath.Darken(wood, 0.18f), ColorMath.Lighten(wood, 0.10f), Mathf.Clamp01((y - 4f) / 26f));
+                    Color c = Color.Lerp(ColorMath.Darken(wood, 0.18f), ColorMath.Lighten(wood, 0.10f), Mathf.Clamp01((y - (4f * k)) / (26f * k)));
                     c = Color.Lerp(c, ColorMath.Darken(c, 0.15f), Mathf.Clamp01(px * 0.8f)); // sombra a la derecha
                     pc.Blend(x, y, c, cov);
-                    if (y < 7)
+                    if (y < 7f * k)
                     {
                         pc.Blend(x, y, dark, cov * 0.75f); // asiento sobre el borde
                     }
 
                     float veta = Mathf.Abs(e - 0.62f) * ry;
-                    if (veta < 1.4f && y > 7)
+                    if (veta < 1.4f * k && y > 7f * k)
                     {
-                        pc.Blend(x, y, dark, cov * (1f - (veta / 1.4f)) * 0.45f);
+                        pc.Blend(x, y, dark, cov * (1f - (veta / (1.4f * k))) * 0.45f);
                     }
 
                     if (e > 0.9f && py > 0.2f && px < 0.2f)
@@ -728,22 +734,31 @@ namespace AF.Presentation
                 }
             }
 
-            pc.FillEllipseSoft(36f, 22f, 9f, 4.5f, 3f, ColorMath.WithAlpha(light, 0.75f)); // brillo
-            pc.FillCircle(54f, 31f, 2.4f, ColorMath.WithAlpha(dark, 0.9f)); // pedúnculo
+            pc.FillEllipseSoft(36f * k, 22f * k, 9f * k, 4.5f * k, 3f * k, ColorMath.WithAlpha(light, 0.75f)); // brillo
+            pc.FillCircle(54f * k, 31f * k, 2.4f * k, ColorMath.WithAlpha(dark, 0.9f)); // pedúnculo
             return MakeSprite(pc, "seal_cap", new Vector2(0.5f, 0f), Vector4.zero);
         }
 
         private Sprite BuildRing()
         {
-            const int s = 96;
+            // Aro del sellado (2,4 u) y de las salpicaduras: 2,4 × MaxCuiaPixelsPerU px de lado (308) para que no se amplíe
+            // con u = 32 dp (D-004). Las cotas son las del dibujo original de 96 px escaladas por s / 96.
+            int s = Mathf.CeilToInt(2.4f * MaxCuiaPixelsPerU);
+            float k = s / 96f;
+            float center = s / 2f;
+            float radius = 39f * k;
+            float coreHalf = 3f * k;
+            float halo = 9f * k;
             var pc = new PixelCanvas(s, s);
             for (int y = 0; y < s; y++)
             {
+                float dy = (y + 0.5f) - center;
                 for (int x = 0; x < s; x++)
                 {
-                    float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(48f, 48f));
-                    float core = PixelCanvas.Coverage(Mathf.Abs(d - 39f) - 3f);
-                    float glow = Mathf.Clamp01(1f - (Mathf.Abs(d - 39f) / 9f));
+                    float dx = (x + 0.5f) - center;
+                    float d = Mathf.Sqrt((dx * dx) + (dy * dy));
+                    float core = PixelCanvas.Coverage(Mathf.Abs(d - radius) - coreHalf);
+                    float glow = Mathf.Clamp01(1f - (Mathf.Abs(d - radius) / halo));
                     pc.Blend(x, y, Color.white, Mathf.Max(core, glow * glow * 0.55f));
                 }
             }

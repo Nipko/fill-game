@@ -1,6 +1,6 @@
 # Dirección de arte, temática y audio
 
-**Proyecto:** Amazon Fill (nombre interno) · **Nombre comercial:** Tintalú (decisión del dueño del 2026-10-06; sustituye a Aquazonia, descartado por la solicitud idéntica INPI 938306200 en Brasil) · **Capítulo:** 07 del GDD · **Fecha:** 2026-10-06 (revisión cruzada) · **Estado:** borrador para aprobación del dueño del producto.
+**Proyecto:** Amazon Fill (nombre interno) · **Nombre comercial:** Tintalú (decisión del dueño del 2026-10-06; sustituye a Aquazonia, descartado por la solicitud idéntica INPI 938306200 en Brasil) · **Capítulo:** 07 del GDD · **Fecha:** 2026-10-06 (revisión cruzada; actualizado el 2026-10-07 con la decisión del dueño **D-004**: tope del ancho de la cuia según el número de cuias, §4.1, y vertido a 38° con el labio a 0,6-1,6 u del borde del destino, §5.2; registro en `docs/dev/decisiones.md`) · **Estado:** borrador para aprobación del dueño del producto.
 
 Convención de evidencia: **[V]** verificado en el informe citado · **[E]** estimación del informe · **[R]** reseñas de usuarios · **[NV]** no verificado · **[P]** propuesta de este capítulo a calibrar en soft launch. "(dirección N)" remite al punto N de las decisiones de dirección vinculantes. Nombres de juego, moneda, vidas, comodines, eventos, mundos y mascotas según `docs/gdd/00-glosario.md`. Unidad de medida de la cuia: **u** = altura de una dosis de líquido (sección 4). Unidad de UI: **dp** sobre una pantalla de referencia de 360 × 780 dp (19,5:9).
 
@@ -140,7 +140,7 @@ Cuia-garrafa: silueta de cabaça alargada, hombro suave, cuello corto, base redo
 | Borde de fibra / madera | 0,25 | 5,75-6,00 | 1,10 (anillo) | 0,80 | Aro; cambia por skin |
 | **Total** | **6,00** | | **2,00** | | Ratio 1:3 |
 
-Tamaños en pantalla (canon de layout: GDD 02 §5, margen lateral total de 24 dp): ranura = (360 − 24) / cuias_por_fila; ancho de cuia = clamp(0,70 × ranura, 28, 48) dp; alto = 3 × ancho; **u = ancho / 2**. Con 7 por fila: ranura 48 dp, cuia **34 × 102 dp, u = 17 dp**. Con 6 por fila: ranura 56 dp, cuia 39 × 117 dp, u ≈ 19,5 dp. Con ≤ 5 por fila: cuia 48 × 144 dp (tope de 48 dp de ancho), **u = 24 dp**. Todas las medidas en u de este capítulo se convierten con la u de la fila en la que se dibuja la cuia. La fuente se dibuja en vector o a 4× del tamaño máximo (192 × 576 px por cuia de 4) y se exportan atlas a 1×, 2× y 3×. Estos valores se confirman en la prueba de legibilidad 2 × 7 de la fase 0 (roadmap); si cambian, se actualizan aquí y en 02 §5 a la vez, nunca en un solo capítulo.
+Tamaños en pantalla (canon de layout: GDD 02 §5, margen lateral total de 24 dp): ranura = (360 − 24) / cuias_por_fila; ancho de cuia = clamp(0,70 × ranura, 28, tope(T)) dp, donde tope(T) = 64 dp si el tablero tiene T ≤ 3 cuias, 56 dp si T = 4-5 y 48 dp si T ≥ 6 (T cuenta todas las cuias en pantalla, incluidas Cuia extra y Cuia de rescate; D-004, decisión del dueño del 2026-10-07); alto = 3 × ancho; **u = ancho / 2**. Con 7 por fila: ranura 48 dp, cuia **34 × 102 dp, u = 17 dp**. Con 6 por fila: ranura 56 dp, cuia 39 × 117 dp, u ≈ 19,5 dp. Con 5 por fila: ranura 67,2 dp, cuia ≈ 47 × 141 dp, u ≈ 23,5 dp (el tope no actúa). Con 3 o 4 por fila y T ≥ 6: cuia 48 × 144 dp, u = 24 dp. Con T = 4 (una fila de 4): cuia 56 × 168 dp, u = 28 dp. Con T ≤ 3: cuia 64 × 192 dp, **u = 32 dp** (la máxima). Todas las medidas en u de este capítulo se convierten con la u de la fila en la que se dibuja la cuia. La fuente se dibuja en vector o a 4× del tamaño máximo (256 × 768 px por cuia de 4) y se exportan atlas a 1×, 2× y 3×. Estos valores se confirman en la prueba de legibilidad 2 × 7 de la fase 0 (roadmap); si cambian, se actualizan aquí y en 02 §5 a la vez, nunca en un solo capítulo.
 
 ### 4.2 Zona de capas, menisco, brillo y sombra
 
@@ -157,7 +157,7 @@ Tamaños en pantalla (canon de layout: GDD 02 §5, margen lateral total de 24 dp
 | Estado | Nombre (glosario) | Cambio visual | Duración |
 |---|---|---|---|
 | Reposo | — | Como 4.2 | — |
-| Seleccionada (origen) | — | La cuia sube 16 dp (02 §4.1; ≈0,94 u con 7 por fila), sombra bajo el pie se separa, iconos de fruta visibles en cada dosis; ninguna otra cuia cambia: no se resalta ni se sugiere ningún destino (D-002, decisión del dueño del 2026-10-06; 02 §3.1) | 0,12 s subida (`anim_lift_ms`, 02 §4.1 / 08 §9) |
+| Seleccionada (origen) | — | La cuia sube 16 dp (02 §4.1; ≈0,94 u con 7 por fila y 0,5 u con la cuia de 64 dp), sombra bajo el pie se separa, iconos de fruta visibles en cada dosis; ninguna otra cuia cambia: no se resalta ni se sugiere ningún destino (D-002, decisión del dueño del 2026-10-06; 02 §3.1) | 0,12 s subida (`anim_lift_ms`, 02 §4.1 / 08 §9) |
 | Vertiendo | — | Inclinación 38° hacia el destino; el líquido no rota con el vaso (shader, research/01 §3 [V]); chorro Bézier desde el labio | Ver 5.2 |
 | Vertido ilegal | — | La cuia tocada hace una sacudida horizontal ±6 dp, 2 ciclos, 120 ms (02 §4.1) y el origen, si lo hay, baja a su sitio (02 §3.1, C2 y C5-C6); sonido neutro; sin texto (research/01 Especificación 9 [V]) | 0,12 s |
 | Completa | **Cuia sellada** | Tapa de calabaza, aro de luz, no seleccionable; vidrio y líquido quedan igual (no se desatura) | Ver 5.3 |
@@ -254,8 +254,8 @@ Tiempos: canon 02 §4.1 (horquillas de research/01 §3 [E]; ninguna fuente publi
 
 | t (s) | Fotograma | Detalle |
 |---|---|---|
-| 0,00 | Toque en origen | La cuia sube 16 dp (02 §4.1; ≈0,94 u con 7 por fila) en 0,12 s (`anim_lift_ms`, ease-out); iconos de fruta visibles |
-| 0,12 | Toque en destino | La cuia viaja hasta 0,6 u por encima del borde del destino e inclina 38° en 0,20 s (`anim_travel_ms`; arco, no línea recta); la onda del origen se agita |
+| 0,00 | Toque en origen | La cuia sube 16 dp (02 §4.1; ≈0,94 u con 7 por fila y 0,5 u con la cuia de 64 dp) en 0,12 s (`anim_lift_ms`, ease-out); iconos de fruta visibles |
+| 0,12 | Toque en destino | La cuia viaja hasta dejar el labio entre 0,6 y 1,6 u por encima del borde del destino (0,6 u más una elevación de 0 a 1 u, la que menos tapa a las otras cuias; D-004) e inclina 38° en 0,20 s (`anim_travel_ms`; arco, no línea recta); con 38° y dos filas el origen puede tapar la parte alta de una cuia vecina mientras vierte (≤ 400 ms), lo que el dueño aceptó (D-004); la onda del origen se agita |
 | 0,26 | Chorro | Arranca al 70 % del traslado (02 §4.1). Bézier cuadrática desde el labio (y = 5,75 u) hasta la superficie del destino con LineRenderer, grosor 0,16 → 0,10 u, UV desplazándose (research/06 §2.6 [E]); color del tinte; la dosis de destino crece mientras la de origen decrece, **0,10 s por dosis + 0,08 s de cola** (`anim_pour_dose_ms` / `anim_pour_tail_ms`: 1 dosis 0,18 s, 4 dosis 0,48 s); burbujas en el destino |
 | 0,26 + caudal | Fin de caudal | Si el destino se completa → 5.3; onda de superficie en destino, amplitud 0,08 u decayendo 0,6 s |
 | +0,16 | Retorno | El origen vuelve a su sitio en 0,16 s (`anim_return_ms`) con un rebote de 0,03 u; iconos se ocultan |

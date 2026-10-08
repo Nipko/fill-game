@@ -245,7 +245,7 @@ Do not include: text, letters, numbers, icons or arrows; gold or metal rim; gems
 
 ### 3.8 `ui_panel_tablero.png`: marco del panel del tablero (opcional)
 
-Familia S4, con el modal, la bandeja y la placa. Generar a 1024 × 1024 y llevar a **512 × 512**. Es **solo el marco**: el interior y el exterior quedan transparentes y **sin sombra**. El relleno azul petróleo (o caoba, según elija el dueño en F1) y la sombra proyectada los dibuja el código (guía 4.6). 9-slice de 96 px por lado con PPU 400 (24 dp): cubre el radio exterior de 20 dp (80 px) y el margen.
+Familia S4, con el modal, la bandeja y la placa. Generar a 1024 × 1024 y llevar a **512 × 512**. Es **solo el marco**: el interior y el exterior quedan transparentes y **sin sombra**. El relleno azul petróleo (elegido por el dueño, D-004) y la sombra proyectada los dibuja el código (guía 4.6). 9-slice de 96 px por lado con PPU 400 (24 dp): cubre el radio exterior de 20 dp (80 px) y el margen.
 
 ```text
 A single rectangular carved wooden frame for a game board, perfectly front-facing orthographic view, centered on a fully transparent background, 1024x1024 pixels, the frame filling the whole image with only a 2% empty margin on each side.

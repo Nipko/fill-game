@@ -45,8 +45,8 @@ python tools/validate_schema.py                       # 23/23 PASS; código 1 si
 python tools/econ_sim.py --runs 300 | diff --strip-trailing-cr -q - tools/out/econ_B.md
                                                       # (Git Bash) solo si tocas economía; sin salida = idéntico
 pwsh -NoProfile -File scripts/unity-compile.ps1       # ¿compila Unity? errores: solo las 30 primeras líneas "error CS"
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 307 hoy (núcleo compartido + juego); dotnet test: 235
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 11 (+1 explícito de capturas); antes de cada PR que toque Unity
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 376 hoy (375 + 1 explícito; núcleo compartido + juego); dotnet test: 235
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 29 (28 + 1 explícito de capturas); antes de cada PR que toque Unity
 ```
 - Los scripts de Unity lanzan `unity test <proyecto> --mode <Mode> --architecture arm64 ...` (respaldo: `Unity.exe -batchmode -runTests`). Códigos: 0 verde · 1 errores de compilación · 2 argumentos · 3 no encuentra el proyecto Unity (¿carpeta equivocada?) · 4 falta CLI o Editor · 5 proyecto abierto en un Editor · 6 sin veredicto (lee el log; no reintentes a ciegas) · 8 tests fallidos.
 - Con un Editor abierto en esa carpeta: `unity status`; `unity recompile --project-path .` (0 compila · 6 errores · 7 Editor inalcanzable o en Safe Mode).
@@ -62,7 +62,7 @@ pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 11 (+1 explíci
 ## Estado y pendientes del dueño
 - Repositorio privado `github.com/Nipko/fill-game` (remoto `origin`, rama `main`), con el proyecto Unity commiteado (s29 hecho).
 - s27 hecho: APK de humo probado en un Samsung SM-S938B (Android 16) por depuración inalámbrica (`adb devices` lo descubre por mDNS). Pendiente del dueño: s28 (prueba visual de 30 min en Play Mode) y decidir si los 15 min orientativos del build limpio son vinculantes.
-- **Decisiones del dueño (docs/dev/decisiones.md):** D-001 una dosis por vertido (`PourMode.Single`, clave `rules_pour_mode`, default `single`; `run` solo para pruebas); D-002 al seleccionar no se resalta ningún destino. No reintroduzcas ayudas implícitas: las ayudas son explícitas (comodines).
+- **Decisiones del dueño (docs/dev/decisiones.md):** D-001 una dosis por vertido (`PourMode.Single`, clave `rules_pour_mode`, default `single`; `run` solo para pruebas); D-002 al seleccionar no se resalta ningún destino; D-003 dirección visual «Selva brillante premium» (vidrio, madera y luz de juego, sin papel ni acuarela; guía `docs/art/direccion-visual-v2.md`); D-004 panel azul petróleo, vertido a 38° (elevación ≤ 1 u) y tope del ancho de la cuia según el número de cuias T (64 dp con T ≤ 3, 56 con T = 4-5 y 48 con T ≥ 6; 02 §5). No reintroduzcas ayudas implícitas: las ayudas son explícitas (comodines).
 - **Prototipo v0 jugable (2026-10-06):** niveles 1-10 del tutorial. Build de desarrollo con `unity run <repo> --architecture arm64 --timeout 5400 -- -nographics -buildTarget Android -executeMethod AF.EditorTools.BuildDev.BuildAndroidDev` → `Builds/Android/dev.apk`. En builds de desarrollo el juego escribe `AF_LAYOUT {json}` y `AF_STATE {json}` en logcat: úsalos para jugar con `adb shell input tap x y` y verificar; capturas en `Logs/device/` (ignorado). La depuración inalámbrica del teléfono de pruebas se desconecta a menudo: si `adb devices` sale vacío, pide al dueño que la reactive; no insistas.
 - **Permiso `INTERNET`:** lo añade Unity porque `ForceInternetPermission` está en Auto; hará falta para anuncios, IAP y Firebase. Está **pendiente del visto bueno del dueño**: no lo fuerces ni lo quites sin él.
 - `com.unity.pipeline` avisa en cada build "No RuntimePipelineConfig asset found": no afecta al build de humo.

@@ -21,7 +21,7 @@ namespace AF.Presentation
     public sealed partial class ProceduralArt
     {
         /// <summary>Versión del arte procedural: forma parte de la clave de la caché en disco (guía 4.9).</summary>
-        public const string ArtVersion = "v2.2.0";
+        public const string ArtVersion = "v2.2.1";
 
         // Respaldo de escena a 2,25 px/dp (el panorama, 810 × 1215 px) y follaje a 3 px/dp (revisión visual del 2026-10-07:
         // a 1,5 y 2 px/dp las orillas y las frondas salían en escalera al ampliarse en el teléfono, a 3 px/dp).
@@ -169,7 +169,7 @@ namespace AF.Presentation
                 try
                 {
                     string dir = Path.Combine(Application.persistentDataPath, "afart");
-                    path = Path.Combine(dir, name + "_" + w + "x" + h + "_" + ArtVersion + "_" + Application.version + "_" + (Palette.PanelVariantB ? "b" : "a") + ".raw");
+                    path = Path.Combine(dir, name + "_" + w + "x" + h + "_" + ArtVersion + "_" + Application.version + ".raw");
                     if (File.Exists(path))
                     {
                         byte[] raw = File.ReadAllBytes(path);
@@ -260,6 +260,9 @@ namespace AF.Presentation
         private const float SunXDp = 202f;
         private const float SunYDp = 104f;
         private const float SunRadiusDp = 24f;
+
+        // Rampa con la que los rayos del sol se apagan bajo el borde superior del panorama (revisión de D-004).
+        private const float RayFadeTopDp = 48f;
 
         // Ondas en perspectiva (revisión del 2026-10-07): la fila i está en horizonte + RippleRowK · i^RippleRowExp dp.
         private const float RippleRowK = 1.2f;
@@ -421,7 +424,9 @@ namespace AF.Presentation
         {
             // Brillo aditivo del sol (#FFF6D6, radio 120 dp, 0,5 en el centro) y 3 rayos de luz suaves (alfa 0,12) que
             // suben desde el disco hacia el cielo. Solo por encima del horizonte: nunca tocan el panel (revisión visual del
-            // 2026-10-07: «no hay luz cálida que brille»).
+            // 2026-10-07: «no hay luz cálida que brille»). Los rayos se apagan en los 48 dp de arriba del panorama: con el
+            // horizonte bajo, su borde superior queda a la vista y por encima solo hay cielo_alto liso (revisión de D-004:
+            // sin la rampa se veía una costura horizontal en el cielo del nivel 1).
             int h = pc.Height;
             float[] rayDeg = { 58f, 97f, 138f }; // 0° = derecha, 90° = arriba
             for (int py = 0; py < h; py++)
@@ -451,7 +456,7 @@ namespace AF.Presentation
                             rays = Mathf.Max(rays, 1f - Smooth(1.5f, 5f, off));
                         }
 
-                        amount += 0.12f * rays * Mathf.Clamp01(1f - (d / 320f)) * Smooth(SunRadiusDp, SunRadiusDp + 24f, d);
+                        amount += 0.12f * rays * Mathf.Clamp01(1f - (d / 320f)) * Smooth(SunRadiusDp, SunRadiusDp + 24f, d) * Smooth(0f, RayFadeTopDp, yd);
                     }
 
                     if (amount > 0.002f)
