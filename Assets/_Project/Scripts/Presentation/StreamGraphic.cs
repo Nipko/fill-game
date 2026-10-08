@@ -7,7 +7,9 @@ namespace AF.Presentation
     /// <summary>
     /// Cinta del chorro del vertido en uGUI con el shader <c>AF/UI/Stream</c> (guía visual v2, 6.5): tira de triángulos
     /// sobre una Bézier cuadrática, con el grosor de 0,16 u a 0,10 u y remates redondos en los dos extremos (revisión
-    /// visual del 2026-10-07: sin la cuña que asomaba sobre el labio). Solo se reconstruye mientras el chorro cambia.
+    /// visual del 2026-10-07: sin la cuña que asomaba sobre el labio). Nace en el canto interior bajo de la boca del origen
+    /// (D-006) y termina en la superficie del destino. Solo se reconstruye mientras el chorro cambia; sin asignaciones por
+    /// fotograma.
     /// </summary>
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class StreamGraphic : MaskableGraphic

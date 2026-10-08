@@ -10,7 +10,7 @@ namespace AF.Tests.EditMode
 {
     /// <summary>
     /// Máquina de estados del nivel (GDD 02 §2) con Marea (04 §2.1), Volver a la orilla (04 §2.7) y el modo de vertido
-    /// <c>rules_pour_mode</c> (D-001; 08 §9).
+    /// <c>rules_pour_mode</c> (D-005, que sustituye a D-001: por defecto <c>run</c>; 08 §9).
     /// </summary>
     public sealed class LevelFlowTests
     {
@@ -43,70 +43,97 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void RulesPourModeDefault_IsSingle_AndEveryLevelLoadsInIt()
+        public void RulesPourModeDefault_IsRun_AndEveryLevelLoadsInIt()
         {
-            // 08 §9: rules_pour_mode = "single" (D-001), convertido con la única conversión del núcleo.
+            // 08 §9: rules_pour_mode = "run" (D-005, que sustituye a D-001), convertido con la única conversión del núcleo.
             Assert.That(PourModes.TryParse(GameConfig.RulesPourMode, out PourMode configured), Is.True);
-            Assert.That(configured, Is.EqualTo(PourMode.Single));
+            Assert.That(configured, Is.EqualTo(PourMode.Run));
             Assert.That(configured, Is.EqualTo(PourModes.Default));
-            Assert.That(_flow.PourMode, Is.EqualTo(PourMode.Single));
+            Assert.That(_flow.PourMode, Is.EqualTo(PourMode.Run));
             for (int level = 1; level <= 10; level++)
             {
                 _flow.Load(level);
-                Assert.That(_flow.Session.PourMode, Is.EqualTo(PourMode.Single), "nivel " + level);
+                Assert.That(_flow.Session.PourMode, Is.EqualTo(PourMode.Run), "nivel " + level);
             }
+        }
+
+        [Test]
+        public void InRun_ARunOfThreeOntoAnEmptyCuia_MovesThreeDosesInOnePour()
+        {
+            // D-005 (02 R9): la racha de 3 açaí del nivel 2 (cuia 2) pasa entera a la cuia vacía 3 en un solo vertido, y
+            // Marea devuelve las 3 dosis con un solo uso (04 §2.1).
+            StartPlaying(2);
+            Assert.That(_flow.TapCuia(2).Kind, Is.EqualTo(TapKind.Selected));
+            TapResult r = _flow.TapCuia(3);
+            Assert.That(r.Kind, Is.EqualTo(TapKind.Poured));
+            Assert.That(r.Pour.Pour.Amount, Is.EqualTo(3));
+            Assert.That(_flow.Session.AppliedPours, Is.EqualTo(1));
+            Assert.That(_flow.Session.Current[3].Count, Is.EqualTo(3));
+            Assert.That(_flow.Session.Current[2].Count, Is.EqualTo(1));
+
+            Assert.That(_flow.Undo(), Is.True);
+            Assert.That(_flow.Session.Current[3].Count, Is.EqualTo(0));
+            Assert.That(_flow.Session.Current[2].Count, Is.EqualTo(4));
+            Assert.That(_flow.Session.AppliedPours, Is.EqualTo(0));
+            Assert.That(_listener.Saw("undo:2->3"), Is.True);
         }
 
         [Test]
         public void InSingle_ARunOfThree_TakesThreePours_AndMareaReturnsOneDosePerUse()
         {
-            // D-001: la racha de 3 açaí del nivel 2 (cuia 2) pasa a la cuia vacía 3 con tres vertidos de una dosis; Marea
-            // deshace una dosis por uso (04 §2.1).
-            StartPlaying(2);
+            // Modo de pruebas (single; D-005): la racha de 3 açaí del nivel 2 (cuia 2) pasa a la cuia vacía 3 con tres
+            // vertidos de una dosis; Marea deshace una dosis por uso (04 §2.1).
+            var listener = new RecordingListener();
+            var flow = new LevelFlow(TestPacks.Tutorial, new MemoryProgressStore(), listener, true, PourMode.Single);
+            flow.Load(2);
+            flow.TapAnywhere();
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(flow.Session.PourMode, Is.EqualTo(PourMode.Single));
             for (int i = 0; i < 3; i++)
             {
-                Assert.That(_flow.TapCuia(2).Kind, Is.EqualTo(TapKind.Selected), "origen " + i);
-                TapResult r = _flow.TapCuia(3);
+                Assert.That(flow.TapCuia(2).Kind, Is.EqualTo(TapKind.Selected), "origen " + i);
+                TapResult r = flow.TapCuia(3);
                 Assert.That(r.Kind, Is.EqualTo(TapKind.Poured), "destino " + i);
                 Assert.That(r.Pour.Pour.Amount, Is.EqualTo(1));
             }
 
-            Assert.That(_flow.Session.AppliedPours, Is.EqualTo(3));
-            Assert.That(_flow.Session.Current[3].Count, Is.EqualTo(3));
-            Assert.That(_flow.Undo(), Is.True);
-            Assert.That(_flow.Session.Current[3].Count, Is.EqualTo(2));
-            Assert.That(_flow.Session.Current[2].Count, Is.EqualTo(2));
-            Assert.That(_listener.Saw("undo:2->3"), Is.True);
+            Assert.That(flow.Session.AppliedPours, Is.EqualTo(3));
+            Assert.That(flow.Session.Current[3].Count, Is.EqualTo(3));
+            Assert.That(flow.Undo(), Is.True);
+            Assert.That(flow.Session.Current[3].Count, Is.EqualTo(2));
+            Assert.That(flow.Session.Current[2].Count, Is.EqualTo(2));
+            Assert.That(listener.Saw("undo:2->3"), Is.True);
         }
 
         [Test]
         public void PourModeChange_AppliesFromTheNextLoad_NeverMidLevel()
         {
-            // D-001 punto 3: el modo se fija al cargar el nivel (el historial de Marea y el par dependen de él).
+            // D-005 punto 3 (el de D-001, que conserva): el modo se fija al cargar el nivel (el historial de Marea y el par
+            // dependen de él).
             StartPlaying(2);
-            _flow.PourMode = PourMode.Run;
-            Assert.That(_flow.Session.PourMode, Is.EqualTo(PourMode.Single), "el nivel en curso conserva su modo");
+            _flow.PourMode = PourMode.Single;
+            Assert.That(_flow.Session.PourMode, Is.EqualTo(PourMode.Run), "el nivel en curso conserva su modo");
             _flow.TapCuia(2);
-            Assert.That(_flow.TapCuia(3).Pour.Pour.Amount, Is.EqualTo(1));
+            Assert.That(_flow.TapCuia(3).Pour.Pour.Amount, Is.EqualTo(3), "run: la racha visible que cabe (02 R9)");
 
             Assert.That(_flow.PressRestart(), Is.True);
-            Assert.That(_flow.Session.PourMode, Is.EqualTo(PourMode.Single), "Volver a la orilla tampoco lo cambia");
+            Assert.That(_flow.Session.PourMode, Is.EqualTo(PourMode.Run), "Volver a la orilla tampoco lo cambia");
 
             _flow.Load(2);
             _flow.TapAnywhere();
-            Assert.That(_flow.Session.PourMode, Is.EqualTo(PourMode.Run));
+            Assert.That(_flow.Session.PourMode, Is.EqualTo(PourMode.Single));
             _flow.TapCuia(2);
-            Assert.That(_flow.TapCuia(3).Pour.Pour.Amount, Is.EqualTo(3), "run: la racha visible que cabe (02 R9)");
+            Assert.That(_flow.TapCuia(3).Pour.Pour.Amount, Is.EqualTo(1), "single: una dosis por vertido (pruebas)");
         }
 
         [Test]
         public void PourMode_IsTakenFromTheConstructor_AndRejectsUndefinedValues()
         {
-            var run = new LevelFlow(TestPacks.Tutorial, new MemoryProgressStore(), new RecordingListener(), true, PourMode.Run);
-            run.Load(1);
-            Assert.That(run.Session.PourMode, Is.EqualTo(PourMode.Run));
+            var single = new LevelFlow(TestPacks.Tutorial, new MemoryProgressStore(), new RecordingListener(), true, PourMode.Single);
+            single.Load(1);
+            Assert.That(single.Session.PourMode, Is.EqualTo(PourMode.Single));
             Assert.That(() => { _flow.PourMode = (PourMode)7; }, Throws.TypeOf<System.ArgumentOutOfRangeException>());
-            Assert.That(_flow.PourMode, Is.EqualTo(PourMode.Single));
+            Assert.That(_flow.PourMode, Is.EqualTo(PourMode.Run));
         }
 
         [Test]
@@ -325,7 +352,7 @@ namespace AF.Tests.EditMode
         }
 
         // Juega la solución del solver, en el modo de vertido de la sesión, con toques origen → destino, sin esperar a la
-        // vista (encolado, 02 §3.2). El par del paquete es el del modo por defecto (D-001).
+        // vista (encolado, 02 §3.2). El par del paquete es el del modo por defecto (run, D-005).
         private void PlaySolution()
         {
             LevelDefinition level = _flow.Level;

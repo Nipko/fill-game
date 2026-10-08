@@ -1,6 +1,6 @@
 // Informe del modo --handmade (docs/dev/prototipo-v0.md b: por nivel, la solución óptima y el camino más corto a
-// Aguas estancadas; las soluciones nunca entran en el pack, 08 §4.1), en el modo de vertido del pack (D-001), con el par
-// del otro modo como referencia. Sin fechas: dos ejecuciones dan los mismos bytes.
+// Aguas estancadas; las soluciones nunca entran en el pack, 08 §4.1), en el modo de vertido del pack (D-005: run por
+// defecto; single, solo pruebas), con el par del otro modo como referencia. Sin fechas: dos ejecuciones dan los mismos bytes.
 using System.Globalization;
 using System.Text;
 using AF.Core.Board;
@@ -29,36 +29,34 @@ internal static class HandmadeReport
         W();
         W("- Diseño a mano: `tools/level-generator/specs/tutorial_v0.json`.");
         W(mode == PourModes.Default
-            ? $"- **Modo de vertido: `{key}`** (el modo por defecto, `PourModes.Default`; decisión del dueño D-001 del 2026-10-06, "
-              + "`docs/dev/decisiones.md`): cada vertido mueve una sola dosis y no existe el vertido parcial. El par del pack, la "
-              + "solución óptima y el camino a Aguas estancadas son de este modo; el par en `run` (la racha que cabe, 02 R9) sale solo "
-              + "como referencia. El pack **no declara el modo**: el subconjunto v0 de `af-level/1` no tiene ese campo y añadirlo es "
-              + "un cambio de contrato (`pack_schema` 2, pregunta P7), así que asume el modo por defecto del cliente "
-              + "(`rules_pour_mode` = `\"single\"`). Jugado en `run` (`--pour-mode run` o `rules_pour_mode` = `\"run\"`), su par no vale "
-              + "(riesgo R-2): hay que regenerarlo con `--pour-mode run`."
-            : $"- **Modo de vertido: `{key}`**, que **no** es el modo por defecto del cliente (`single`, D-001): este pack solo vale para "
-              + "jugar con `rules_pour_mode` = `\"run\"`, porque no declara el modo (pregunta P7) y su par es el de `run` (riesgo R-2). "
-              + "El par en `single` sale solo como referencia.");
+            ? $"- **Modo de vertido: `{key}`** (el modo por defecto, `PourModes.Default`; decisión del dueño D-005 del 2026-10-08, "
+              + "que sustituye a D-001; `docs/dev/decisiones.md`): cada vertido mueve la racha visible que cabe, con vertido parcial "
+              + "(02 R9). El par del pack, la solución óptima y el camino a Aguas estancadas son de este modo; el par en `single` "
+              + "(una dosis por vertido, solo pruebas) sale como referencia. El pack **no declara el modo** (pregunta P7, reescrita en "
+              + "`docs/dev/decisiones.md`; el subconjunto v0 de `af-level/1` no tiene ese campo) y asume `rules_pour_mode` = `\"run\"`."
+            : $"- **Modo de vertido: `{key}`**, solo pruebas (el modo por defecto del cliente es `run`, D-005): este pack solo vale con "
+              + $"`rules_pour_mode` = `\"{key}\"`, porque no declara el modo (pregunta P7) y su par es el de `{key}` (riesgo R-2). "
+              + "El par en `run` sale como referencia y es el que se compara con los rangos [P] de 02 §13.");
         W($"- Pack v0: `Assets/_Project/Data/Levels/tutorial_v0.json` (subconjunto de `af-level/1` sin `pack_schema`), SHA-256 `{sha}`{note}.");
         W(string.Create(CultureInfo.InvariantCulture, $"- Resultado: **{pass}/{total} comprobaciones PASS**{(allOk ? "" : " — HAY FALLOS")}."));
         W("- Notación: cuias con índices 0-based en orden visual; dosis de abajo arriba con el índice de motor del glosario §9 "
           + "(8 Açaí, 4 Aguaje, 3 Taperebá, 1 Guanábana, 7 Bacaba); un vertido es `origen→destino ×dosis`"
-          + (mode == PourMode.Single ? " (siempre ×1 en `single`)." : "."));
+          + (mode == PourMode.Single ? " (siempre ×1 en `single`)." : " (en `run`, ×dosis es la parte de la racha visible que cabe, 02 R9)."));
         W("- Bot casual ×40 (03 §6): no se calcula. El bot aún no existe en `AF.Solver` (su PRNG espera la decisión del dueño "
           + "sobre la paridad con MT19937, riesgo R11 del plan) y el contrato b no lo exige para el tutorial.");
         W();
         W("## Resumen");
         W();
-        W($"| Nivel | id | Cuias = colores + vacíos | Colores | Par `single` | Par `run` | Rango [P] de 02 §13 (`run`) | Estados `{key}` | Sin salida | Aguas estancadas | Enseñanza comprobada |");
+        W($"| Nivel | id | Cuias = colores + vacíos | Colores | Par `run` | Rango [P] de 02 §13 (`run`) | Par `single` (pruebas) | Estados `{key}` | Sin salida | Aguas estancadas | Enseñanza comprobada |");
         W("|---|---|---|---|---|---|---|---|---|---|---|");
         foreach (HandmadeLevel l in levels)
         {
             string colors = string.Join(", ", l.Spec.Palette.Select(id => HandmadeCanon.FindTint(id)!.NameEs));
             string stuck = l.StuckPath is null ? "—" : $"{l.StuckPath.Count} vertido(s)";
-            string single = ParCell(l, PourMode.Single, mode);
             string run = ParCell(l, PourMode.Run, mode);
+            string single = ParCell(l, PourMode.Single, mode);
             W(string.Create(CultureInfo.InvariantCulture,
-                $"| {l.Number} | `{HandmadeCanon.LevelId(l.Number)}` | {l.Board.Count} = {l.Colors.Length} + {l.Empties} | {colors} | {single} | {run} | {l.Row.ParMin}-{l.Row.ParMax} | {l.Graph?.StateCount ?? 0} | {l.Graph?.DeadStateCount ?? 0} | {stuck} | {l.Teaching} |"));
+                $"| {l.Number} | `{HandmadeCanon.LevelId(l.Number)}` | {l.Board.Count} = {l.Colors.Length} + {l.Empties} | {colors} | {run} | {l.Row.ParMin}-{l.Row.ParMax} | {single} | {l.Graph?.StateCount ?? 0} | {l.Graph?.DeadStateCount ?? 0} | {stuck} | {l.Teaching} |"));
         }
 
         W();
@@ -66,19 +64,19 @@ internal static class HandmadeReport
           + "sin salida = de ellos, los que ya no pueden ganar; Aguas estancadas = vertidos del camino más corto a un estado sin "
           + $"vertidos útiles (02 R13), en `{key}`.");
         W();
-        string[] outOfRange = levels.Where(l => l.ParIn(PourMode.Single) is not int p || p < l.Row.ParMin || p > l.Row.ParMax)
-            .Select(l => string.Create(CultureInfo.InvariantCulture, $"{l.Number} ({HandmadeLevel.Fmt(l.ParIn(PourMode.Single))} frente a {l.Row.ParMin}-{l.Row.ParMax})"))
+        string[] outOfRange = levels.Where(l => l.ParIn(PourMode.Run) is not int p || p < l.Row.ParMin || p > l.Row.ParMax)
+            .Select(l => string.Create(CultureInfo.InvariantCulture, $"{l.Number} ({HandmadeLevel.Fmt(l.ParIn(PourMode.Run))} frente a {l.Row.ParMin}-{l.Row.ParMax})"))
             .ToArray();
         string[] drops = levels.Zip(levels.Skip(1))
-            .Where(p => p.First.ParIn(PourMode.Single) > p.Second.ParIn(PourMode.Single))
+            .Where(p => p.First.ParIn(PourMode.Run) > p.Second.ParIn(PourMode.Run))
             .Select(p => string.Create(CultureInfo.InvariantCulture,
-                $"{p.First.Number} ({HandmadeLevel.Fmt(p.First.ParIn(PourMode.Single))}) > {p.Second.Number} ({HandmadeLevel.Fmt(p.Second.ParIn(PourMode.Single))})"))
+                $"{p.First.Number} ({HandmadeLevel.Fmt(p.First.ParIn(PourMode.Run))}) > {p.Second.Number} ({HandmadeLevel.Fmt(p.Second.ParIn(PourMode.Run))})"))
             .ToArray();
-        W("Informativo, no falla: los rangos [P] de la columna \"Par\" de 02 §13 se fijaron con la racha (`run`) y la tabla los "
-          + "conserva hasta que el dueño responda la pregunta P2 de `docs/dev/decisiones.md` (adoptar como rangos los pares medidos "
-          + "en `single` o rediseñar los niveles 2-10 para una rampa monótona). Por eso la comprobación de rango usa el par en `run`. "
-          + $"Par en `single` fuera de su rango: {(outOfRange.Length == 0 ? "ninguno" : string.Join(", ", outOfRange))}. "
-          + $"Rampa del par en `single`: {(drops.Length == 0 ? "monótona" : "no monótona, " + string.Join(" y ", drops))}.");
+        W("Rangos y rampa: los rangos [P] de la columna \"Par\" de 02 §13 se fijaron con la racha (`run`), "
+          + (mode == PourMode.Run ? "que es el modo del pack (D-005)" : "y no con el modo de este pack (`single`, solo pruebas)")
+          + "; cada nivel comprueba su par en `run` contra su rango (ver Comprobaciones). "
+          + $"Par en `run` fuera de su rango: {(outOfRange.Length == 0 ? "ninguno" : string.Join(", ", outOfRange))}. "
+          + $"Rampa del par en `run` (informativa, no falla): {(drops.Length == 0 ? "no decreciente" : "decrece en " + string.Join(" y ", drops))}.");
         W();
         W("## Comprobaciones");
         W();

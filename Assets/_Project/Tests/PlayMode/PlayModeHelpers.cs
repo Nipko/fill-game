@@ -1,5 +1,8 @@
 #nullable enable
 using System.Collections;
+using System.Collections.Generic;
+using AF.Core.Board;
+using AF.Core.Rules;
 using AF.GameFlow;
 using AF.UI;
 using NUnit.Framework;
@@ -31,6 +34,52 @@ namespace AF.Tests.PlayMode
                 "arranque de la escena Game con el nivel " + level);
         }
 
+        /// <summary>
+        /// Carga la escena Game con el paquete <paramref name="json"/> (gancho <see cref="LaunchOptions.LevelPackJsonOverride"/>)
+        /// en el nivel <paramref name="level"/>. Quien llama limpia los ganchos con <see cref="LaunchOptions.Reset"/>.
+        /// </summary>
+        public static IEnumerator LoadGameWithPack(string json, int level, IProgressStore store)
+        {
+            LaunchOptions.LevelPackJsonOverride = json;
+            yield return LoadGame(level, store);
+        }
+
+        /// <summary>
+        /// Paquete de prueba con un tablero de 13 cuias (D-006; tablero de Magic Sort con 13 botellas, ficha §2.1): subconjunto
+        /// de <c>af-level/1</c>, nivel 1, 11 tintes del glosario §9 con su ID y su índice de motor (1-11), 4 dosis cada uno
+        /// repartidas en escalera (la cuia i lleva los tintes i … i + 3), 2 cuias vacías y capacidad 4. No empieza resuelto
+        /// ni en Aguas estancadas (hay vacías) y su par es ≥ 1.
+        /// </summary>
+        public static string ThirteenCuiaPack()
+        {
+            string[] ids = { "guanabana", "cupuacu", "tapereba", "aguaje", "urucum", "camu_camu", "bacaba", "acai", "jenipapo", "agua_tapajos", "lulo" };
+            var cuias = new System.Text.StringBuilder();
+            var caps = new System.Text.StringBuilder();
+            var attrs = new System.Text.StringBuilder();
+            for (int i = 0; i < 13; i++)
+            {
+                string sep = i == 0 ? string.Empty : ", ";
+                caps.Append(sep).Append('4');
+                attrs.Append(sep).Append("null");
+                cuias.Append(sep).Append('[');
+                if (i < ids.Length)
+                {
+                    for (int k = 0; k < 4; k++)
+                    {
+                        cuias.Append(k == 0 ? string.Empty : ", ").Append(((i + k) % ids.Length) + 1);
+                    }
+                }
+
+                cuias.Append(']');
+            }
+
+            return "{ \"subset_of\": \"af-level/1\", \"pack_id\": \"test_13\", \"kind\": \"campaign\", \"world\": 1, "
+                + "\"world_id\": \"w01_estuario\", \"lap\": 1, \"water_base\": \"white\", \"levels\": [ { \"id\": \"m01_v1_n0001\", "
+                + "\"level\": 1, \"world\": 1, \"lap\": 1, \"water_base\": \"white\", \"palette\": [\"" + string.Join("\", \"", ids)
+                + "\"], \"units_per_color\": 4, \"caps\": [" + caps + "], \"cuias\": [" + cuias + "], \"attrs\": [" + attrs
+                + "], \"murky\": false, \"hidden\": [], \"difficulty\": { \"par\": 1 }, \"relief\": [] } ] }";
+        }
+
         /// <summary>Paso fijo del reloj manual (≈60 fps, 08 §5.4).</summary>
         public const int FrameMs = 16;
 
@@ -53,6 +102,22 @@ namespace AF.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// Avanza la vista y el flujo exactamente <paramref name="ms"/> milisegundos, en pasos de como mucho
+        /// <see cref="FrameMs"/> (el último, el resto), para llegar a un instante concreto de la animación.
+        /// </summary>
+        public static void TickExact(GameBootstrap boot, int ms)
+        {
+            int left = ms;
+            while (left > 0)
+            {
+                int dt = left < FrameMs ? left : FrameMs;
+                boot.View!.Tick(dt);
+                boot.Flow!.Tick(dt, boot.View.IsViewIdle);
+                left -= dt;
+            }
+        }
+
         /// <summary>Avanza hasta que la cola visual se vacía y devuelve los milisegundos que tardó; falla pasado <paramref name="maxMs"/>.</summary>
         public static int StepUntilIdle(GameBootstrap boot, int maxMs)
         {
@@ -69,6 +134,59 @@ namespace AF.Tests.PlayMode
             }
 
             return elapsed;
+        }
+
+        /// <summary>
+        /// Vertidos más cortos desde <paramref name="state"/> tras los que <paramref name="source"/> → <paramref name="target"/>
+        /// es legal (BFS sobre el modelo con las reglas del núcleo y el modo de vertido de la partida); vacío si ya lo es y
+        /// null si no aparece en los primeros estados. Los estados ganados o bloqueados no sirven de paso intermedio: en
+        /// ellos el flujo no acepta toques.
+        /// </summary>
+        public static Pour[]? FindSetup(BoardState state, int source, int target, PourMode mode, bool futileRule)
+        {
+            const int maxStates = 20000;
+            var parents = new Dictionary<BoardState, (BoardState? Parent, Pour Move)>();
+            var queue = new Queue<BoardState>();
+            parents.Add(state, (null, default));
+            queue.Enqueue(state);
+            int n = state.Count;
+            while (queue.Count > 0 && parents.Count < maxStates)
+            {
+                BoardState current = queue.Dequeue();
+                if (PourRules.IsLegal(current, source, target))
+                {
+                    var path = new List<Pour>();
+                    for (BoardState? at = current; at != null && parents[at].Parent != null; at = parents[at].Parent)
+                    {
+                        path.Add(parents[at].Move);
+                    }
+
+                    path.Reverse();
+                    return path.ToArray();
+                }
+
+                for (int a = 0; a < n; a++)
+                {
+                    for (int b = 0; b < n; b++)
+                    {
+                        if (a == b || !PourRules.IsLegal(current, a, b))
+                        {
+                            continue;
+                        }
+
+                        BoardState next = PourRules.Apply(current, a, b, mode);
+                        if (parents.ContainsKey(next) || next.IsWon() || PourRules.IsStuck(next, futileRule))
+                        {
+                            continue;
+                        }
+
+                        parents.Add(next, (current, new Pour(a, b, PourRules.Amount(current, a, b, mode))));
+                        queue.Enqueue(next);
+                    }
+                }
+            }
+
+            return null;
         }
 
         public static IEnumerator WaitFor(System.Func<bool> condition, string what)

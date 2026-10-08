@@ -6,7 +6,8 @@ namespace AF.Core.Rules
 {
     /// <summary>
     /// Reglas de GDD 02 §1 evaluadas sobre cuias sueltas y la tabla <c>U_c</c>: sellado (R5), <c>legal</c> y
-    /// <c>cantidad</c> (R9, con el modo de vertido de D-001) y <c>futil</c> (02 §1.4 con la excepción de Aguas turbias
+    /// <c>cantidad</c> (R9, con el modo de vertido; D-005: <see cref="PourMode.Run"/> por defecto, la racha que cabe;
+    /// <see cref="PourMode.Single"/>, una dosis, solo pruebas) y <c>futil</c> (02 §1.4 con la excepción de Aguas turbias
     /// de 04 §5.1). Solo <c>cantidad</c> depende de <see cref="PourMode"/>.
     /// </summary>
     /// <remarks>
@@ -67,8 +68,9 @@ namespace AF.Core.Rules
         }
 
         /// <summary>
-        /// <c>cantidad(A, B)</c> según el modo de vertido (D-001): 1 con <see cref="PourMode.Single"/>;
-        /// <c>min(racha visible de A, espacio de B)</c> con <see cref="PourMode.Run"/> (R6, R9). Es el <b>único</b> sitio
+        /// <c>cantidad(A, B)</c> según el modo de vertido (D-005: <see cref="PourMode.Run"/> por defecto, la racha que
+        /// cabe; <see cref="PourMode.Single"/>, una dosis, solo pruebas): <c>min(racha visible de A, espacio de B)</c> con
+        /// <see cref="PourMode.Run"/> (R6, R9; 02 §1.2) y 1 con <see cref="PourMode.Single"/>. Es el <b>único</b> sitio
         /// donde se aplica el modo: tablero, partida, solver y bot llaman aquí.
         /// Precondición: <see cref="IsLegal"/> es verdadero (A no vacía y B con hueco, así que 1 siempre cabe); si no, el
         /// valor no tiene sentido. Bucle caliente: no valida <paramref name="mode"/> (cualquier valor distinto de

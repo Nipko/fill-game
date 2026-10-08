@@ -2,6 +2,8 @@
 
 **Proyecto:** Amazon Fill (Tintalú) · **Fecha:** 2026-10-07 (revisada el 2026-10-08) · **Tipo:** propuesta, **no canon** (CLAUDE.md, fuente 4). No edita el GDD ni las decisiones D-001 a D-004. Los cambios al GDD van como lista en la sección 10, para que el dueño los apruebe.
 
+> **Respuestas del dueño (2026-10-08).** 10.2 #1 → B, `run` (D-005); #3 → A, pero sin reservar el hueco del vertido (D-006, punto 4); #4 → A, opción (a) de §3.4 (D-006, punto 3); #5 → B, pose medida y sin techo (D-006, punto 1); #6 → A, boca a 0,2-0,6 u; #7 → A, ≈ 0,9 s (D-006, punto 2); 4.3.5 → se mantienen 16 dp. Siguen abiertas #2 y #8-#25. Registro en `docs/dev/decisiones.md`. El resto del documento no se reescribe: es histórico.
+
 **Base.**
 - Observación: `docs/research/magic-sort/ficha-magic-sort.md` (en adelante, «la ficha»), con la grabación de 20 min del dueño (niveles 387-389), la hoja de vertido por adb y el vídeo de Love Water.
 - Canon: `docs/GDD.md` (§2, §4, §6, §7), capítulos 00, 02, 03, 04, 05, 06, 07 y 08 §9, y `docs/dev/decisiones.md` (D-001 a D-004 y sus preguntas P1-P10). Composición actual del tablero: `docs/art/direccion-visual-v2.md` §3.2, `BoardLayout.Compute` y `GameScreen.PourCeilingFor`.

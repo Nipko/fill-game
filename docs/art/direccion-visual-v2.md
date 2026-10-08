@@ -6,11 +6,13 @@ Revisión 2 (2026-10-07): aplica las observaciones del crítico de arte, verific
 
 Revisión 3 (2026-10-07, D-004): el dueño eligió el panel azul petróleo (C16), confirmó los 38° del vertido (C17) y adoptó el tope del ancho de la cuia según el número de cuias (C18). Se retira la variante B y se recalculan 3.3, 4.1 y la sección 11. En la implementación se añadieron dos propuestas [P]: 36 dp de margen superior en los tableros de una fila (3.2) y el techo del vertido (6.4).
 
-Fuentes: `docs/dev/decisiones.md` (D-001, D-002 y D-003), GDD 07 (§3 paleta, §4 cuia, §5 storyboards, §6 mascotas, §7 UI kit, §8 pautas culturales), GDD 02 (§3.3, §4, §5, §12), GDD 08 §5 (shader y rendimiento), glosario §0, §3, §9 y §10, `docs/research/09-referencia-magic-sort.md` y `docs/research/magic-sort/c-meta-liveops-ux.md` §4, la revisión del 2026-10-07 (material de entrada, verificado contra el código) y las capturas `Logs/device/v01-fix-*.png` y `docs/reviews/2026-10-07/visual/*.png`.
+Revisión 4 (2026-10-08, D-005 y D-006): el dueño adoptó el vertido por tramo (D-005) y el tablero, la cuia y el vertido de Magic Sort (D-006). La cuia pasa a ≈ 1:2,8 (5,6 u) con la cavidad a 0,80 del ancho y la cara superior en elipse; el vertido deja la boca sobre el eje del destino a 0,2-0,6 u, se inclina hasta 92° − 9° × dosis que quedan y se dibuja delante de todo, sin techo; desde 11 cuias, 2 o 3 filas según la que dé la cuia más ancha. Se retiran el margen de 36 dp y el techo, y se recalculan 3.2, 3.3, 4.1, 4.2, 6 y la sección 11.
+
+Fuentes: `docs/dev/decisiones.md` (D-001 a D-006), GDD 07 (§3 paleta, §4 cuia, §5 storyboards, §6 mascotas, §7 UI kit, §8 pautas culturales), GDD 02 (§3.3, §4, §5, §12), GDD 08 §5 (shader y rendimiento), glosario §0, §3, §9 y §10, `docs/research/09-referencia-magic-sort.md` y `docs/research/magic-sort/c-meta-liveops-ux.md` §4, la revisión del 2026-10-07 (material de entrada, verificado contra el código) y las capturas `Logs/device/v01-fix-*.png` y `docs/reviews/2026-10-07/visual/*.png`.
 
 Convenciones:
 - **dp**: unidad del lienzo de UI (en el SM-S938B, 1 dp = 3 px).
-- **u**: altura de una dosis, igual a la mitad del ancho de la cuia (07 §4.1). Las coordenadas de la cuia van en u, con x de 0 (izquierda) a 2 y y de 0 (pie) a 6 en la estándar.
+- **u**: altura de una dosis, igual a la mitad del ancho de la cuia (07 §4.1). Las coordenadas de la cuia van en u, con x de 0 (izquierda) a 2 y y de 0 (pie) a 5,6 en la estándar (D-006).
 - HEX en sRGB. El contraste es el de WCAG 2.1. L* y ΔE00 se calculan en CIELAB D65.
 - **[P]**: propuesta de esta guía, pendiente de calibrar con capturas.
 - Lo que la guía no menciona sigue como está en el GDD.
@@ -18,7 +20,7 @@ Convenciones:
 ## 0. Resumen
 
 1. **Qué cambia.** Se pasa de «lámina pintada sobre papel» a una escena de juego con volumen, brillo y respuesta. La pantalla tiene un panorama luminoso del Estuario arriba, un muelle de madera abajo y follaje en las esquinas. En el centro hay un **panel azul petróleo de río, oscuro y quieto**, enmarcado en madera media rojiza: dentro, cada fila de cuias apoya en una repisa de madera tallada con sombra de contacto. El verde oliva de v0.1 desaparece (ΔE00 ≥ 12, VA-04c).
-2. **Qué no cambia.** Los 14 tintes y sus HEX, la cuia-garrafa con cavidad recta y 4 dosis iguales, los patrones (15 %, 20 % y 35 %), D-001 (una dosis por vertido), D-002 (sin resaltar destinos), las posiciones del HUD de 07 §7.4 (ahora sí respetadas: la insignia de nivel va en el centro-izquierda, 3.5), las pautas culturales de 07 §8 y el límite de 60 partículas.
+2. **Qué no cambia.** Los 14 tintes y sus HEX, la cuia-garrafa con cavidad recta y 4 dosis iguales, los patrones (15 %, 20 % y 35 %), D-005 (vertido por tramo, como Magic Sort; sustituye a D-001), D-002 (sin resaltar destinos), las posiciones del HUD de 07 §7.4 (ahora sí respetadas: la insignia de nivel va en el centro-izquierda, 3.5), las pautas culturales de 07 §8 y el límite de 60 partículas.
 3. **Dónde vive la legibilidad.** Se garantiza con contraste **local**: cavidad opaca oscura, panel oscuro de croma bajo detrás de las cuias y vidrio con contorno claro. Los brillos sobre el líquido se fijan por su **resultado** (ΔL*), no por su alfa, porque el proyecto mezcla en espacio lineal (2.5). Fuera del panel, la escena puede ser saturada y luminosa.
 4. **Cómo se implementa.** Se reparte por naturaleza (10.2 y 10.3):
    - **Por código**, las piezas geométricas o de material, donde el código alcanza la calidad de los líderes: vidrio, líquido, panel, repisas, botones, bandeja, placa y partículas. Texturas procedurales con `PixelCanvas`, shaders de UI opcionales en `.shader` de texto y fuentes TTF ya aprobadas.
@@ -46,7 +48,7 @@ Convenciones:
 Los 14 tintes de glosario §9 y 07 §3 conservan su HEX, patrón, icono y regla de uso. En el render solo se permite:
 
 - **Luminosidad por dosis:** degradado vertical de ±4 % de L (OKLab) dentro de cada dosis, con el centro exacto (4.2).
-- **Brillos superpuestos:** franja especular, brillo vertical del líquido y menisco (07 §3, regla 4), siempre fuera del centro de la dosis. Dentro de la cavidad se pintan como color opaco precalculado, no como blanco con alfa (2.5 y 4.2).
+- **Brillos superpuestos:** franja especular, brillo vertical del líquido y cara superior en elipse (el antiguo menisco; 07 §3, regla 4; D-006), siempre fuera del centro de la dosis. Dentro de la cavidad se pintan como color opaco precalculado, no como blanco con alfa (2.5 y 4.2).
 - **Croma:** no se toca. El píxel central de cada dosis (mediana de un parche de 4 × 4 dp, x = 1,0 u) debe quedar a ΔE00 ≤ 3 del HEX canónico (VA-05).
 - Los HEX de los tintes siguen prohibidos en la UI (07 §3, regla 6).
 
@@ -180,18 +182,18 @@ Reglas:
 - **Tabletas:** la escena cubre todo el lienzo, el panel se limita a 480 dp de ancho y la cuia no supera tope(T) (02 §5; D-004).
 
 ```
- y (dp)   360 × 800, nivel 7 (filas de 4 y 3; cuias de 48 × 144 dp)
+ y (dp)   360 × 800, nivel 7 (filas de 4 y 3; cuias de 48 × 134,4 dp; D-006)
    0 ┌────────────────────────────────────────┐  cielo del panorama; velo scrim 0-72
   32 │ barra de estado                        │
   40 │(pausa)╭ Nivel 7 ╮ [semillas]    (⟲)  │  fila del HUD, 48 dp: insignia x 56-192 · Semillas x 196-288 (futuras) · Reiniciar x 292-352
-  88 │ follaje · sol · palmeras · orilla · río │  panorama visible: 88-170 (con 780 dp de alto, 88-160)
- 170 │╔══════════════════════════════════════╗│  panel azul petróleo, marco de 6 dp en `marco`, x 8-352
-     │║    ▯      ▯      ▯      ▯            ║│  fila 1, pie en y ≈ 345
+  88 │ follaje · sol · palmeras · orilla · río │  panorama visible: 88-172 (con 780 dp de alto, 88-162)
+ 172 │╔══════════════════════════════════════╗│  panel azul petróleo, marco de 6 dp en `marco`, x 8-352
+     │║    ▯      ▯      ▯      ▯            ║│  fila 1, pie en y ≈ 344,5
      │║▀▀▀▀▀▀▀▀▀▀▀▀▀▀ repisa ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀║│
-     │║       ▯      ▯      ▯                ║│  fila 2, pie en y ≈ 529
+     │║       ▯      ▯      ▯                ║│  fila 2, pie en y ≈ 519
      │║▀▀▀▀▀▀▀▀▀▀▀▀▀▀ repisa ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀║│
- 558 │╚══════════════════════════════════════╝│
-     │ Capi     tablas del muelle     cuerda  │  558-680: muelle; Capi 64×56
+ 556 │╚══════════════════════════════════════╝│
+     │ Capi     tablas del muelle     cuerda  │  556-680: muelle; Capi 64×56
  680 │            ╭[≈ Deshacer]╮              │  bandeja ajustada al contenido (v0: 96 × 80)
  760 │ follaje          orilla        follaje │
  800 └────────────────────────────────────────┘
@@ -208,14 +210,18 @@ boardTop    = hudBottom                   // = BoardTop de GameScreen
 boardBottom = trayTop − 40                // margen de 40 dp (02 §5)
 shelfDrop   = 15                          // la repisa termina 15 dp bajo la línea de pie
 footMax     = boardBottom − shelfDrop     // sustituye a FootLine = BoardBottom − 30 de la banda de río
-cuiaW, filas, ranuras  = BoardLayout.Compute(n, alto_u, W, boardTop, footMax)   // reglas de 02 §5, con el tope del ancho según el número de cuias (D-004)
+cuiaW, filas, ranuras  = BoardLayout.Compute(n, alto_u, W, boardTop, footMax)   // filas de 02 §5 (D-006: 2 o 3 desde 11 cuias, fijas en el nivel), con el tope del ancho según el número de cuias (D-004)
+cuiaH       = 2,8 · cuiaW                 // 5,6 u (D-006)
 B           = filas·cuiaH + (filas − 1)·40 + 16 + 15        // bloque: elevación de la fila 1 + filas + huecos + repisa
+              B ≤ (boardBottom − boardTop) − 27             // la fila 1 elevada queda ≥ 8 dp bajo el canto interior del marco [P]; si no, cuiaW baja
 libre       = (boardBottom − boardTop) − B
 blockTop    = boardTop + libre / 2        // centrado (D-003): fin del anclaje inferior
 panel       = x: (W − min(W, 480))/2 + 8 … simétrico; y: blockTop − m … blockTop + B + 22   // antes 14 (sección 14)
-              m = 36 en una fila (PanelMarginTopOneRow [P], revisión de D-004); 22 en dos y tres filas (PanelMargin)
-              si panel.top < hudBottom − 8: se recorta a hudBottom − 8 (el marco pasa bajo el HUD); nunca se encoge una cuia por el marco
+              m = 22 en todas las filas (PanelMargin); sale PanelMarginTopOneRow, que existía solo por el techo del vertido (D-006)
+              si panel.top < hudBottom − 8: se recorta a hudBottom − 8 (el marco pasa bajo el HUD); la cuia solo se encoge por el límite de B
 ```
+
+De dónde salen los 27 dp (cálculo): con el panel recortado a `hudBottom − 8`, su canto interior queda en `boardTop + 5,5` (marco de 13,5 dp). Para dejar 8 dp hasta la fila 1 elevada (`blockTop = boardTop + libre / 2`), hace falta libre / 2 ≥ 13,5, es decir, libre ≥ 27. Sin recorte, los 22 dp de margen ya dejan 8,5 dp.
 
 `BoardLayout` sigue calculando ranuras, anchos y el paso de fila (`cuiaH + 16 + 24`) de 02 §5. Solo cambia el ancla vertical, que pasa a ser `blockTop`, y la línea de pie máxima. Hay que actualizar `BoardLayoutTests`, que hoy fija `FootY` = 590 (V1). `ShiftToClear` sigue funcionando sobre el mismo `_layout`.
 
@@ -223,29 +229,29 @@ panel       = x: (W − min(W, 480))/2 + 8 … simétrico; y: blockTop − m …
 
 Banda libre = `trayTop − panel.bottom`, el espacio del muelle entre el panel y la bandeja.
 
-Recalculada en la ronda 2 de la revisión visual (sección 14) con el margen del panel de **22 dp** (`BoardLayout.PanelMargin`; antes 14): el marco tallado mide 13,5 dp y la cuia elevada tocaba su canto interior. Ahora queda a 8,5 dp. Recalculada otra vez con D-004 (2026-10-07) para los tableros de T ≤ 5, con **36 dp** de margen superior en los tableros de una fila (`BoardLayout.PanelMarginTopOneRow` [P], revisión de D-004): el panel sube 14 dp, la cuia elevada queda a 22,5 dp del canto interior y el origen inclinado del vertido cabe bajo ese canto (6.4). Las bandas libres no cambian. La comprueban `BoardLayoutTests.Panel_MatchesTheMeasuredCasesOfTheGuide_At360x780` y `ShortScreens_KeepThreeCuiasAt64dp` (360 × 640).
+Recalculada en la ronda 2 de la revisión visual (sección 14) con el margen del panel de **22 dp** (`BoardLayout.PanelMargin`; antes 14): el marco tallado mide 13,5 dp y la cuia elevada tocaba su canto interior. Ahora queda a 8,5 dp. Recalculada otra vez con D-006 (2026-10-08): cuia de 5,6 u (alto = 2,8 × ancho), **22 dp** de margen superior en todos los tableros (sale `PanelMarginTopOneRow`, que solo existía por el techo del vertido) y filas de 02 §5. Con 3 filas y 11-15 cuias a 780 dp, el ancho lo fija el límite de B (3.2): 46,9 dp, con el panel recortado bajo el HUD (y = 80) y la fila 1 elevada a 8 dp del canto interior. La comprueban los casos de `BoardLayoutTests` que actualiza U2.
 
 | Caso | Cuias (ancho × alto dp) | Lienzo | Panel (y) | Alto del panel | Banda libre | Capi visible |
 |---|---|---|---|---|---|---|
-| Nivel 1 (T = 3, una fila; D-004) | 64 × 192 | 360 × 780 | 206,5-487,5 | 281 | 172,5 | Sí |
-| | | 360 × 800 | 216,5-497,5 | 281 | 182,5 | Sí |
-| | | 360 × 640 | 136,5-417,5 | 281 | 102,5 | Sí |
-| T = 4 (una fila; ningún nivel del tutorial) | 56 × 168 | 360 × 780 | 218,5-475,5 | 257 | 184,5 | Sí |
-| Niveles 2, 3 y 6 (T = 5) | ≈ 47 × 141 | 360 × 780 | 231,9-462,1 | 230,1 | 197,9 | Sí |
-| Niveles 4 y 5 (T = 6, filas de 3 y 3) | 48 × 144 | 360 × 780 | 152,5-555,5 | 403 | 104,5 | Sí |
-| Nivel 7 (filas de 4 y 3) | 48 × 144 | 360 × 780 | 152,5-555,5 | 403 | 104,5 | Sí |
-| | | 360 × 800 | 162,5-565,5 | 403 | 114,5 | Sí |
-| | | 360 × 640 | 82,5-485,5 | 403 | 34,5 | No |
-| Estrés 2 × 7 (14) | 33,6 × 100,8 | 360 × 780 | 195,7-512,3 | 316,6 | 147,7 | Sí |
-| | | 360 × 800 | 205,7-522,3 | 316,6 | 157,7 | Sí |
-| Estrés 3 filas (16: 6/5/5) | 39,2 × 117,6 | 360 × 780 | 100,1-607,9 | 507,8 | 52,1 | No |
-| | | 360 × 800 | 110,1-617,9 | 507,8 | 62,1 | No |
-| | 31,2 × 93,7 | 360 × 640 | 80 (recortado)-502 | 422 | 18 | No |
-| Estrés Cuia alta 2 × 7 (7 u) | 33,6 × 117,6 | 360 × 780 | 178,9-529,1 | 350,2 | 130,9 | Sí |
-| | | 360 × 800 | 188,9-539,1 | 350,2 | 140,9 | Sí |
+| Nivel 1 (T = 3, una fila) | 64 × 179,2 | 360 × 780 | 226,9-481,1 | 254,2 | 178,9 | Sí |
+| | | 360 × 800 | 236,9-491,1 | 254,2 | 188,9 | Sí |
+| | | 360 × 640 | 156,9-411,1 | 254,2 | 108,9 | Sí |
+| T = 4 (una fila; ningún nivel del tutorial) | 56 × 156,8 | 360 × 780 | 238,1-469,9 | 231,8 | 190,1 | Sí |
+| Niveles 2, 3 y 6 (T = 5) | 47,04 × 131,7 | 360 × 780 | 250,6-457,4 | 206,7 | 202,6 | Sí |
+| Niveles 4-10 (T = 6-7, dos filas) | 48 × 134,4 | 360 × 780 | 162,1-545,9 | 383,8 | 114,1 | Sí |
+| | | 360 × 800 | 172,1-555,9 | 383,8 | 124,1 | Sí |
+| | | 360 × 640 | 92,1-475,9 | 383,8 | 44,1 | No |
+| T = 11-15 (3 filas) | 46,9 × 131,3 | 360 × 780 | 80 (recortado)-628,5 | 548,5 | 31,5 | No |
+| T = 11-12 (3 filas) | 48 × 134,4 | 360 × 800 | 84,9-643,1 | 558,2 | 36,9 | No |
+| T = 13-15 (3 filas) | 47,04 × 131,7 | 360 × 800 | 88,9-639,1 | 550,2 | 40,9 | No |
+| T = 16 (3 filas: 6/5/5) | 39,2 × 109,8 | 360 × 780 | 111,9-596,1 | 484,3 | 63,9 | No |
+| | | 360 × 800 | 121,9-606,1 | 484,3 | 73,9 | Sí |
+
+- A 360 × 800 los casos no listados suben 10 dp (el ancho no cambia).
+- A 360 × 640 ganan las 2 filas con 11-14 cuias (39,2 dp con 6 por fila; 33,6 × 94,1 con 7) y con 15-16 las 3 filas bajan a 30,2 dp (02 §5). Sus paneles, y el estrés con Cuia alta (la regla de filas mide con su alto [P], 02 §5), se miden con los tests de U2.
 
 Lectura:
-- El borde superior del panel va de 100 a 255 dp según el nivel. Lo que se ve del panorama **entre el HUD y el panel** puede ser solo una franja de 64 dp: en el nivel 7 con 780 dp de alto, de y 88 a 152,5 (30 dp de cielo y 34 de río). Por eso el horizonte, las palmeras de açaí y el río pardo tienen que caer dentro de esa franja (3.9).
+- El borde superior del panel va de 80 a 250,6 dp según el nivel. Lo que se ve del panorama **entre el HUD y el panel** puede ser solo una franja de 74 dp: en el nivel 7 con 780 dp de alto, de y 88 a 162,1. Por eso el horizonte, las palmeras de açaí y el río pardo tienen que caer dentro de esa franja (3.9). Con 11-15 cuias en 3 filas no queda franja: el panel empieza bajo el HUD.
 - Bajo el panel, el muelle llena la banda libre. No queda ninguna franja vacía: cielo, río, muelle, follaje y Capi la ocupan (VA-02).
 
 ### 3.4 Capas, de atrás adelante
@@ -258,12 +264,13 @@ Lectura:
 | 3 | Follaje de esquina: arriba, detrás del HUD; abajo, detrás de la bandeja | 3.8 | No |
 | 4 | Sombra proyectada del panel, relleno (por código) y marco (procedural o PNG solo de marco) | 3.2 y 4.6 | No |
 | 5 | Repisas y sombras de contacto | Una por fila (4.5) | No |
-| 6 | Cuias (vidrio trasero, líquido, vidrio delantero, marcas), chorros, agua de inmersión de la intro | `CuiaView`, `PourStream`, `IntroAnimation` | Sí, ranuras |
+| 6 | Cuias (vidrio trasero, líquido, vidrio delantero, marcas), chorros, agua de inmersión de la intro. Mientras vierte, el cuerpo del origen y su chorro pasan a la capa 11 (D-006) | `CuiaView`, `PourStream`, `IntroAnimation` | Sí, ranuras |
 | 7 | FX: salpicaduras, burbujas, destellos de sellado | Canvas anidado propio (8) | No |
 | 8 | Capi y accesorios del muelle | 3.7 | No |
 | 9 | Velo de la barra de estado, HUD y bandeja | 3.5 y 3.6 | Sí |
 | 10 | Polen, en un Canvas anidado propio | Fuera del rectángulo del panel | No |
-| 11 | Superposiciones: atenuado, modal Aguas estancadas, victoria (panel, cinta, botón) y estallido | 5.3, 5.5 y 6 | Sí, botones |
+| 11 | Capa de vertido (`PourFront`): mientras vierte, el cuerpo del origen y su chorro se dibujan aquí, delante de las vecinas, del marco del panel, del HUD y del polen (D-006; 6.4). En reposo está vacía | Alineada con el tablero (sigue a `ShiftToClear`) | No |
+| 12 | Superposiciones: atenuado, modal Aguas estancadas, victoria (panel, cinta, botón) y estallido | 5.3, 5.5 y 6 | Sí, botones |
 
 Todas las capas no interactivas llevan `raycastTarget = false` (V7). La única captura de toques de fondo sigue siendo `BackgroundCatcher` (C7).
 
@@ -336,7 +343,7 @@ Se mide en dp sobre el panorama mostrado a 360 dp de ancho (540 dp de alto).
 | Franja (dp) | Contenido | Por qué |
 |---|---|---|
 | 0-88 | Cielo tranquilo (degradado `cielo_alto` → `cielo_medio`) y nubes suaves | Detrás del HUD: poco detalle |
-| 70-118 | Coronas de palmeras de açaí en **dos grupos centrales**, en x 125-185 y x 220-280, fuera de la parte densa del follaje de las esquinas (3.8). Sol en x ≈ 108 e y ≈ 103 (radio de unos 28 dp), medio velado por la bruma (luz desde arriba a la izquierda, 07 §1.2) | Asoma en la franja de 72 dp del nivel 7 (y 88-160) |
+| 70-118 | Coronas de palmeras de açaí en **dos grupos centrales**, en x 125-185 y x 220-280, fuera de la parte densa del follaje de las esquinas (3.8). Sol en x ≈ 108 e y ≈ 103 (radio de unos 28 dp), medio velado por la bruma (luz desde arriba a la izquierda, 07 §1.2) | Asoma en la franja de 74 dp del nivel 7 (y 88-162; D-006) |
 | ≈ 118 | Horizonte: orilla lejana (`orilla_lejana`, `palmera_lejana`) con bruma baja (07 §2.1: «alba dorada, bruma baja») | Gesto geográfico único |
 | 118-160 | Río pardo ancho y calmo (`rio_reflejo` → `rio_medio`), con el reflejo del sol y de las palmeras | Es lo que se ve en el peor caso de dos filas: tiene que leerse como un río amazónico, no como agua azul |
 | 160-260 | Más río, con franjas de sol bajo el disco | Visible en los niveles de una fila |
@@ -346,7 +353,9 @@ Comprobación: en las capturas `02_board_l7` (780 dp) y `02b_board_l1`, la franj
 
 ## 4. Materiales
 
-### 4.1 Vidrio de la cuia (geometría de `CuiaGeometry`, sin cambios)
+### 4.1 Vidrio de la cuia (geometría de `CuiaGeometry` tras D-006)
+
+Geometría de 07 §4.1 (D-006): cuia de 2,00 × 5,60 u (≈ 1:2,8); cavidad recta de 1,60 × 4,00 u (0,80 del ancho) en y = 0,60-4,60; pie 0,30, base 0,30, hombro 0,40 (4,60-5,00), cuello 0,35 (5,00-5,35) y borde de fibra 0,25 u (5,35-5,60); labio en y = 5,35 u.
 
 Las capas se hornean en `CuiaBack` y `CuiaFront`, y la GPU compone `CuiaFront` sobre el líquido en **lineal** (2.5). Por eso `CuiaFront` no lleva brillos blancos con alfa sobre la cavidad ni sobre el líquido: en lineal, un blanco al 0,07 ya sube Açaí 12 puntos de L*, y al 0,05 sube Huito casi 15. Dentro de la cavidad, los brillos los pinta la capa del líquido (4.2) o la de la cavidad (4.3) como color opaco precalculado, con la misma geometría, de modo que la franja se lee continua.
 
@@ -355,7 +364,7 @@ Las capas se hornean en `CuiaBack` y `CuiaFront`, y la GPU compone `CuiaFront` s
 | Contorno exterior | Ancho 0,07 u (mínimo 1,2 dp), `vidrio_borde` alfa 0,90 (8,6-12,0:1 frente al panel) |
 | Fresnel interior | Banda de 0,14 u hacia dentro desde el contorno, alfa 0,45 → 0 (smoothstep). Solo sobre la pared de vidrio, no sobre la cavidad |
 | Tinte del cuerpo | #CFEFE6 alfa 0,10 en paredes, hombro y cuello (equivale a `glass_tint` de 07 §4.6) |
-| Franja especular principal | Geometría fija de 07 §4.2: de (0,25 u; 5,00 u) a (0,55 u; 1,00 u), ancho 0,18 u (como mucho x 0,16-0,64 u). Perfil gaussiano (σ = 0,045 u). Pico de alfa 0,55 sobre el vidrio fuera de la cavidad (cuello y hombro). Dentro de la cavidad: 4.2 y 4.3. Nunca cruza x = 1,0 u, el centro de las dosis |
+| Franja especular principal | Geometría fija de 07 §4.2: de (0,25 u; 4,60 u) a (0,55 u; 1,00 u), ancho 0,18 u (como mucho x 0,16-0,64 u). Perfil gaussiano (σ = 0,045 u). Pico de alfa 0,55 sobre el vidrio fuera de la cavidad (cuello y hombro). Dentro de la cavidad: 4.2 y 4.3. Nunca cruza x = 1,0 u, el centro de las dosis |
 | Franja secundaria | Paralela, desplazada +0,16 u en x, ancho 0,05 u (como mucho x 0,39-0,74 u), alfa 0,30 sobre el vidrio. En cada punto no coincide con la principal (quedan 0,045 u entre ellas) |
 | Punto especular del hombro | Centro en (1,55 u; techo de la cavidad + 0,22 u), radio 0,16 u, alfa 0,70 → 0 |
 | Cáustica de la base | Media luna en y 0,34-0,52 u, x 0,45-1,55 u, blanco alfa 0,30 |
@@ -365,19 +374,19 @@ Las capas se hornean en `CuiaBack` y `CuiaFront`, y la GPU compone `CuiaFront` s
 | Selección | Brillo del vidrio +10 % (02 §4.1) con un segundo sprite, `GlassSelect`, que repite franjas y punto a 0,10 veces el alfa de `CuiaFront`, o con un material. `Image.color` no sirve: sus canales llegan como máximo a 1. Solo en el origen (D-002) |
 | Sombra de contacto | Elipse de 1,90 × 0,28 u centrada en el pie (y = −0,02 u), negro → 0. Se fija por su **resultado: ΔL* ≥ 15 en el centro** frente a `repisa_sup` sin sombra. Alfa de partida 0,55, que da ΔL* 18,8 en lineal (el 0,45 anterior daba unos 16 y la cuia apenas «apoyaba»). Con la cuia elevada, la sombra se queda en la repisa: 1,50 × 0,22 u y ΔL* de 6 a 8 (alfa de partida 0,25: ΔL* 7,4) |
 
-**Resolución.** Se hornea a `ceil(u_dp × scaleFactor)` px/u para cada tamaño de cuia en pantalla. En el SM-S938B (3 px/dp) son 72 px/u con u = 24 dp y 96 px/u con u = 32 dp (cuias de 64 dp, T ≤ 3, D-004); en pantallas de 4 px/dp, hasta 128 px/u (`ProceduralArt.MaxCuiaPixelsPerU`). El aro y la tapa del sellado se generan para u = 32 a 128 px/u. Coste: unos 0,8 MB por textura de la cuia de 4 a 128 px/u (256 × 768 px, RGBA32; 1 MB la Cuia alta de 6), con tres texturas por tamaño (vidrio trasero, delantero y marcas) y 2 o 3 tamaños por nivel [P]. Sin fresnel por píxel en tiempo real (08 §5.4).
+**Resolución.** Se hornea a `ceil(u_dp × scaleFactor)` px/u para cada tamaño de cuia en pantalla. En el SM-S938B (3 px/dp) son 72 px/u con u = 24 dp y 96 px/u con u = 32 dp (cuias de 64 dp, T ≤ 3, D-004); en pantallas de 4 px/dp, hasta 128 px/u (`ProceduralArt.MaxCuiaPixelsPerU`). El aro y la tapa del sellado se generan para u = 32 a 128 px/u. Coste: unos 0,7 MB por textura de la cuia de 4 a 128 px/u (256 × 717 px con D-006, RGBA32; 1 MB la Cuia alta de 6), con tres texturas por tamaño (vidrio trasero, delantero y marcas) y 2 o 3 tamaños por nivel [P]. Sin fresnel por píxel en tiempo real (08 §5.4).
 
 ### 4.2 Líquido
 
 | Parámetro | Valor |
 |---|---|
 | Color | HEX canónico en el centro de cada dosis (2.1) |
-| Degradado por dosis | +4 % de L (OKLab) arriba y −4 % abajo, con el centro exacto. Refuerza la unidad «una dosis» (D-001) |
+| Degradado por dosis | +4 % de L (OKLab) arriba y −4 % abajo, con el centro exacto. Refuerza la unidad «una dosis» (1 dosis = 1 u) |
 | **Franjas sobre el líquido** | Continuación de las franjas de 4.1, pintada por la capa del líquido como **color opaco precalculado por tinte** (el tinte con +ΔL* en CIELAB, igual que `Palette.PatternMark`); el alfa solo da forma al borde gaussiano. Principal: ΔL* +12 en los tintes de L* < 40 (Açaí #6A2C91 → #8A4AB1, ΔE00 10,2; Camu camu #9E1B22 → #C3403C, ΔE00 10,6) y +10 en el resto; Guanábana, sin franja. Secundaria: la mitad de ΔL* |
 | Brillo vertical | Franja en x 0,76-0,88 u en toda la altura del líquido, ΔL* +6 [P], también como color precalculado. Se mueve desde x 0,50-0,72 u para no coincidir con ninguna franja: la secundaria llega a 0,74 u y el parche de VA-05 empieza en 0,92 u |
 | **Un brillo por punto** | En cada punto del líquido hay como mucho un brillo: principal, secundaria o vertical. Nunca se apilan (apilados en lineal, Açaí llegaba a L* 71) |
 | Oscurecido lateral | 0,20 u en cada pared, negro 20 % (07 §4.2) |
-| Menisco | 0,08 u (≥ 2 dp) en la dosis superior, con el aclarado de 07 §3 (regla 4: +20 %; +25-30 % en tintes de L* < 35). Línea de 1 dp blanca alfa 0,45 en el borde (línea de ≤ 2 dp) y curvatura cóncava de 0,04 u junto a las paredes |
+| Cara superior (antes «menisco») | Elipse de 0,40 u de alto (≈ 0,4 de dosis, como Magic Sort; D-006) en la dosis superior, con el aclarado de 07 §3 (regla 4: +20 %; +25-30 % en tintes de L* < 35). Sustituye a la franja de 0,08 u con línea clara de 1 dp y curvatura cóncava de 0,04 u. Aplicada en U3: en `AF_UI_Liquid.shader` es la global `_AFTopFaceU` = 0,40 u (`CuiaGeometry.TopFaceU`; equivale al `_MeniscusH` = 0,10 del quad de 4 u del Shader Graph de 1.0, 08 §5.2). La elipse se centra en la superficie, con el ancho de la cavidad; su mitad trasera sube sobre la superficie. Toda la elipse lleva el color aclarado, con una línea clara de 1 dp (blanco al 35 %) en su borde trasero |
 | Onda tras verter | A₀ = 0,03 u, decae con exp(−t / 0,25 s) (08 §5.2); longitud de onda 1,30 u y fase 2,5 u/s. En reposo la superficie está quieta |
 | Burbujas | 5-10 de 0,06-0,10 u, blanco alfa 0,40 con borde de 1 px. Suben a 1,5 ± 0,5 u/s, solo durante el vertido y 1 s después (07 §4.2) |
 | Patrón | 15 % siempre en v0; 20 % con Patrones de fruta; 35 % en Alto contraste (07 §3). Las marcas se dibujan **encima** de las franjas y siguen visibles en ellas (VA-05b) |
@@ -574,13 +583,13 @@ Base: 02 §4.1, 07 §5 y `GameConfig`. Todas las duraciones se multiplican por `
 
 | # | Evento | Qué se ve | Duración | Curva |
 |---|---|---|---|---|
-| 6.1 | **Selección** | El origen sube **16 dp con rebote**: pico de unos 17,6 dp (+10 %) hacia t ≈ 0,58 y asiento en 16. El vidrio sube +10 % de brillo con el sprite `GlassSelect` y la sombra de contacto se encoge (4.1). Solo cambia el origen (D-002) | 120 ms (`anim_lift_ms`) | easeOutBack (c = 1,70158) |
+| 6.1 | **Selección** | El origen sube **16 dp con rebote**: pico de unos 17,6 dp (+10 %) hacia t ≈ 0,58 y asiento en 16. El vidrio sube +10 % de brillo con el sprite `GlassSelect` y la sombra de contacto se encoge (4.1). Solo cambia el origen (D-002) | 100 ms (`anim_lift_ms`; D-006) | easeOutBack (c = 1,70158) |
 | 6.2 | Deselección | Baja a su sitio | 100 ms | easeInQuad |
 | 6.3 | Rechazo | Sacudida de ±6 dp, 2 ciclos. Sin rojo, sin texto y sin cambiar de color | 120 ms | Seno |
-| 6.4 | Traslado e inclinación | Arco de 0,4 u e inclinación de 38° (confirmada en D-004), con el labio a 0,6-1,6 u sobre el borde del destino. [P] El origen inclinado no sube por encima del techo de `GameScreen.PourCeilingFor`: en los tableros de una fila, 4 dp bajo el canto interior del marco (`PourCeilingAirDp`; con 36 dp de margen superior quedan 22,5 dp de cavidad, ≥ 22 de `PourCavityDp`; 38,5 dp sobre las cuias en reposo); en dos y tres filas, el borde exterior del panel (38 dp). Nunca sube más de 4 dp dentro de la fila del HUD. Sin elevación siempre cabe: el canto alto del borde sube 0,94 u (30 dp con u = 32); la elevación que pasaría del techo se recorta (en el nivel 1 quedan ≈ 4,5 dp, ≈ 0,14 u). El líquido no rota | 200 ms | easeInOutCubic |
-| 6.5 | **Chorro** | Bézier del labio a la superficie, de 0,16 a 0,10 u de grosor. Núcleo del tinte con +10 % de L y una línea especular central de 1 dp (blanco 0,40) con UV a 3 u/s. Arranca al 70 % del traslado. **Una dosis** (D-001): termina al transferirla | 180 ms (100 + 80) | Lineal |
+| 6.4 | Traslado e inclinación | Pose de D-006 (medida en Magic Sort): arco de 0,4 u hasta dejar el centro de la boca sobre el eje del destino (±0,1 u), a 0,85 u del borde [P], con el punto más bajo de la boca a 0,30-0,51 u (0,2-0,6 u); llega a 38° y gira alrededor de la boca hasta 92° − 9° × dosis que quedan al terminar cada dosis (65° con 3, frente a los ≈ 66° que midió Magic Sort; ≈ 92° con 0). El cuerpo queda del lado del que viene (en la misma columna, hacia el centro del tablero); si ese lado saliera del lienzo entre 38° y el ángulo final, al otro lado [P]. Escala 1,00. Mientras vierte se dibuja **delante de todo** (vecinas, marco del panel y HUD), sin techo: se retiran `GameScreen.PourCeilingFor`, `PourCavityDp` y `PourCeilingAirDp`. El líquido no rota | 300 ms | easeInOutCubic |
+| 6.5 | **Chorro** | Bézier desde el canto interior del lado bajo de la boca (0,34 u del eje, `CuiaView.PourEdgeU`) hasta la superficie, de 0,16 a 0,10 u de grosor. Núcleo del tinte con +10 % de L y una línea especular central de 1 dp (blanco 0,40) con UV a 3 u/s. Arranca al 70 % del traslado. Vierte la racha que cabe (`run`, D-005): 280 ms por dosis + 80 ms de cola | 360 ms con 1 dosis (280 + 80); 920 ms con 3 | Lineal |
 | 6.6 | **Salpicadura** [P] | Al tocar la superficie: 4-6 gotas de 0,06-0,10 u del tinte con borde claro, lanzadas a 1,5-2,5 u/s hacia arriba (±35°) con gravedad de 18 u/s². Un anillo elíptico crece de 0,4 a 1,3 u con alfa 0,40 → 0, y empieza la onda de 4.2 | 250 ms las gotas y 300 ms el anillo | Balística / easeOutCubic |
-| 6.7 | Retorno | Vuelta a la ranura con un rebote de 0,03 u | 160 ms | easeOutQuad |
+| 6.7 | Retorno | Vuelta directa a la ranura con un rebote de 0,03 u (el de Magic Sort no se copia: no está confirmado; D-006). De la salida al reposo, 870 ms con 1 dosis | 300 ms | easeOutQuad |
 | 6.8 | **Sellado** (07 §5.3) | t = 0: líquido +15 % durante 100 ms. t = 0,10 s: la tapa de calabaza (#C9A36B con veta y brillo) cae desde 0,6 u en 150 ms (easeOutQuad), con un mini-rebote de 0,03 u en 100 ms. t = 0,25 s: aro de luz aditivo (escala 0,8 → 1,25, alfa 0,8 → 0 en 200 ms), destello en estrella de 40 × 40 dp (0 → 1,2 → 0 en 250 ms) y 6-8 gotas | 450 ms | Indicadas |
 | 6.9 | **Victoria** (07 §5.4) | t = 0,30 s: ola de saltos de 0,15 u (escalón de 40 ms; cada salto 240 ms). t = 0,50 s: **estallido** de ≤ 60 partículas (24 plumas roja y azul de guacamayo, 24 hojas `hoja_media`/`hoja_clara` y 12 pétalos de heliconia) durante 1,2 s, desde los dos lados del panel en un cono de ±25°, con gravedad, giro de 180-540 °/s y aleteo de ±15°. t = 0,80 s: el panel sube en 250 ms (easeOutCubic). t = 0,90 s: la **cinta-hoja** pasa de escala 0,6 a 1,08 y a 1,0 en 300 ms (easeOutBack). t = 1,40 s: **Siguiente** aparece (0,9 → 1,0, 150 ms) y respira (1,00 ↔ 1,03, periodo 1,4 s). Sin auto-avance (`victory_autonext_s` = 0) | 1,4 s hasta el CTA | Indicadas |
 | 6.10 | **Bloqueo** (07 §5.5) | t = 0,20 s: superficies quietas; escena −20 % de saturación, ya sea con `_Saturation` en el material de escena o con un velo gris #6B6B6B al 20 %; niebla del 12 % sobre el panel. t = 0,45 s: el modal temático (5.3) sube en 250 ms; cuias al 70 % | 400 ms antes del modal (R15) | easeOutCubic |
@@ -657,12 +666,12 @@ Las máscaras de panel, HUD y bandeja salen de `AF_LAYOUT` o del layout del test
 | VA-07 | Todo texto ≥ 4,5:1 frente al relleno de la franja del 25-85 % y frente a la franja de texto de la cinta-hoja (o 3:1 en el texto grande si se aprueba C14); glifos ≥ 3:1. El contorno y la sombra del texto se ven en la captura de `dev.apk` en el teléfono, no solo en el Editor | Test EditMode sobre los pares de tokens de 2.4 y captura del teléfono |
 | VA-08 | Decoraciones: `raycastTarget = false`; ningún rectángulo decorativo cruza una ranura × (alto + 32 dp), un botón ni el rectángulo del chorro; controles ≥ 48 dp | Test PlayMode nuevo [P] y `AF_LAYOUT` |
 | VA-09 | D-002: entre `02_board_l7` y `03_selected_l7`, ningún píxel cambia fuera de la columna de la ranura seleccionada (tolerancia ΔRGB ≤ 2) | Diferencia de capturas; `SelectionShowsNoTargetsTests` en verde |
-| VA-10 | D-001: en `04_pouring_l7` el chorro lleva una dosis; `PourChainTests` en verde | PlayMode |
+| VA-10 | D-005: en `04_pouring_l7` el chorro lleva la racha que mueve el vertido (`run`); `PourChainTests` (encadenado de `single`) en verde | PlayMode |
 | VA-11 | Siluetas: Reiniciar es un disco y Deshacer un cuadrado redondeado, y en la captura en gris se distinguen sin leer la etiqueta | Revisión de la captura |
 | VA-12 | Estados: Deshacer deshabilitado es plano (desviación típica de L* de la cara ≤ 1, sin canto ni sombra) y conserva la etiqueta legible. Al pulsar, la cara baja 4 dp | Captura del nivel 1 recién cargado y test de UI |
 | VA-13 | Victoria a t = 1,40 s: cinta completa y sin texto recortado, también con la escala de texto al 130 % (5.5); Siguiente entero por encima de `safeBottom + 8`; ≤ 60 partículas | `07_victory_l1` y contador |
 | VA-14 | Bloqueo: cuias visibles al 70 %; la saturación media de la escena baja un 15-25 % respecto al reposo | `08_stuck_l6` frente a `02_board_l7` |
-| VA-15 | Estrés: con 14 cuias de 34 dp, 16 cuias en 3 filas y 2 filas de Cuia alta, ni el panel, ni el HUD, ni la bandeja ni las cuias se solapan, y Capi se oculta si la banda es < 64 dp | `09`-`11` y test de layout |
+| VA-15 | Estrés: con 14 cuias (3 filas de 46,9 dp a 780 dp; 2 filas de 33,6 dp a 640 dp; D-006), 16 cuias en 3 filas y Cuia alta, ni el panel, ni el HUD, ni la bandeja ni las cuias se solapan, y Capi se oculta si la banda es < 64 dp | `09`-`11` y test de layout |
 | VA-16 | Lista de comprobación del dueño: nada de la sección 7 visible, ninguna canoa junto al HUD, ningún papel o cuaderno; capturas antes y después de los niveles 1 y 7 en el mismo estado (V8). Prueba de 5 s: «¿juego o libro?». Se hace **solo con los PNG orgánicos integrados** (panorama, muelle y follaje), nunca con el respaldo procedural. Entre el HUD y el panel se ven palmeras de açaí y río pardo (3.9) | Revisión del dueño |
 | VA-17 | Rendimiento en clase A: p5 de fps ≥ 55 durante 60 s con 16 cuias, vertido y ambiente; presupuestos de 8 | Dispositivo de clase A (pendiente) |
 | VA-18 | Regresión: los comandos de verificación de CLAUDE.md en verde (dotnet, EditMode y PlayMode) | Scripts de `scripts/` |
@@ -735,8 +744,8 @@ Los ajustes de importación (Sprite, bordes 9-slice, ASTC y mipmaps) los aplica 
 | C14 | Contraste del texto grande | D-003 mantiene «texto con contraste ≥ 4,5:1» y 07 §7.8 lo mide sin contar el contorno. Así los CTA de Hoja salen oscuros (5.1). WCAG 2.1 (1.4.3) pide solo 3:1 al texto grande: ≥ 18 pt, o ≥ 14 pt en negrita (≈ 18,7 px CSS, ≈ 19 dp) | Pregunta nueva para el registro de decisiones, junto a P8 y P9 (P11): ¿se aplica 3:1 al texto en negrita de ≥ 19 dp con contorno oscuro de ≥ 2 dp, manteniendo 4,5:1 para el de ≤ 16 dp? Si sí, familia Hoja viva (5.1). Hasta entonces, 4,5:1 |
 | C15 | Fila superior llena desde el 31 | 07 §7.4 pone en 344 dp útiles Pausa, «Nivel {n}», Semillas, Canoas y Reiniciar. Con la insignia de 136 dp y la reserva de Semillas de 92 dp (3.5), la píldora de Canoas no cabe | Decidir en P10 o en la fase de detalle: Canoas solo con icono y cifra bajo Reiniciar, Semillas solo en el mapa, o una insignia más estrecha a partir del 31. No afecta a v0 |
 | C16 | Tono del panel | El panel de la primera versión de esta guía repetía el oliva de v0.1 (ΔE00 3,9-5,4) | **Resuelta (D-004, 2026-10-07):** variante A, azul petróleo de río. La B se retira del código (`Palette.PanelB`, `PanelVariantB`), de las capturas (`02c_board_l7_panelB`) y de los prompts. |
-| C17 | Inclinación del vertido | 02 §4.1 y 07 §5.2 fijaban 38° y el labio a 0,6 u sobre el borde del destino (con D-004, a 0,6-1,6 u). Con 38° el eje del origen cruza la ranura vecina (paso de 3,5 u) a 3,5 / tan 38° ≈ 4,5 u bajo el labio: con dos filas no existe ninguna pose que deje libre a la vecina (en `04_pouring_l7` el origen tapa las 2,5 dosis de arriba de la cuia 6 durante ≤ 400 ms), y el líquido sale de una boca seca 1,25 u por encima de la superficie del origen | **Resuelta (D-004):** se mantienen los 38° con una elevación ≤ 1 u (labio a 0,6-1,6 u del borde del destino) y se acepta que, en dos filas, el origen tape la parte alta de la vecina durante ≤ 400 ms. Se descartan los 75° fijos y la inclinación dinámica. También se acepta el tapado de la cuia del medio en los vertidos cruzados de una fila (captura `04b_pouring_l1`): el dueño respondió «38° está bien» después de ver la captura del teléfono `v2-tel-rafaga-1` (nivel 1, vertido 0 → 2 con la cuia del medio tapada) (D-004, Consecuencias). |
-| C18 | Ancho máximo de la cuia | 02 §5 fijaba `MaxCuiaWidth` = 48 dp. En el nivel 1 a 780 dp quedaban 196,5 dp de muelle vacío entre el panel y la bandeja (el 25 % de la pantalla) y 3 cuias de 48 dp en ranuras de 112 dp | **Resuelta (D-004):** tope(T) = 64 dp con T ≤ 3, 56 con T = 4-5 y 48 con T ≥ 6 (`BoardLayout.MaxCuiaWidthFor`). En el nivel 1 a 780 dp, el panel pasa a 281 dp de alto (206,5-487,5), con 36 dp de margen superior en una fila [P] (3.2), y la banda libre a 172,5 dp (la estimación anterior de ≈ 140 dp era errónea). En una fila, el techo del vertido es el canto interior del marco [P] (6.4). Cambian 02 §5 y 07 §4.1. |
+| C17 | Inclinación del vertido | 02 §4.1 y 07 §5.2 fijaban 38° y el labio a 0,6 u sobre el borde del destino (con D-004, a 0,6-1,6 u). Con 38° el eje del origen cruza la ranura vecina (paso de 3,5 u) a 3,5 / tan 38° ≈ 4,5 u bajo el labio: con dos filas no existe ninguna pose que deje libre a la vecina (en `04_pouring_l7` el origen tapa las 2,5 dosis de arriba de la cuia 6 durante ≤ 400 ms), y el líquido sale de una boca seca 1,25 u por encima de la superficie del origen | **Resuelta (D-004):** se mantienen los 38° con una elevación ≤ 1 u (labio a 0,6-1,6 u del borde del destino) y se acepta que, en dos filas, el origen tape la parte alta de la vecina durante ≤ 400 ms. Se descartan los 75° fijos y la inclinación dinámica. También se acepta el tapado de la cuia del medio en los vertidos cruzados de una fila (captura `04b_pouring_l1`): el dueño respondió «38° está bien» después de ver la captura del teléfono `v2-tel-rafaga-1` (nivel 1, vertido 0 → 2 con la cuia del medio tapada) (D-004, Consecuencias). **Resuelta por D-006 (2026-10-08): pose medida en Magic Sort** (boca sobre el eje del destino a 0,2-0,6 u, 38° al llegar y hasta 92° − 9° × dosis que quedan, delante de todo y sin techo; 6.4). |
+| C18 | Ancho máximo de la cuia | 02 §5 fijaba `MaxCuiaWidth` = 48 dp. En el nivel 1 a 780 dp quedaban 196,5 dp de muelle vacío entre el panel y la bandeja (el 25 % de la pantalla) y 3 cuias de 48 dp en ranuras de 112 dp | **Resuelta (D-004):** tope(T) = 64 dp con T ≤ 3, 56 con T = 4-5 y 48 con T ≥ 6 (`BoardLayout.MaxCuiaWidthFor`). En el nivel 1 a 780 dp, el panel pasa a 281 dp de alto (206,5-487,5), con 36 dp de margen superior en una fila [P] (3.2), y la banda libre a 172,5 dp (la estimación anterior de ≈ 140 dp era errónea). En una fila, el techo del vertido es el canto interior del marco [P] (6.4). Cambian 02 §5 y 07 §4.1. Las filas de 11-16 cuias las fija D-006 (2026-10-08): 3 filas de ≤ 5 desde 11 cuias si dan la cuia más ancha, fijas en el nivel; el techo y el margen de 36 dp se retiran (3.2 y 3.3). |
 | C19 | Criterio [P] de la familia parda | La ronda 2 propone «como mucho el 40 % de la pantalla en el tono 15-50° con S > 0,2». Medido tras la ronda 2: 45 % en `02_board_l7` y 57 % en `02b_board_l1`. Lo que falta es casi todo muelle (madera y luz cálida, que el dueño eligió) y depende de C18 y de los PNG de F0 | Sigue abierta: mantenerlo como objetivo [P] y medirlo de nuevo con las cuias de D-004 (`02b_board_l1`, `02d_board_l2`) y con el muelle pintado (F6). |
 
 Afirmaciones de la revisión del 2026-10-07 verificadas para esta guía:
@@ -789,10 +798,10 @@ Los críticos visuales revisaron las capturas del teléfono de la versión con l
 | El río se lee como arena (L* 57 y C* 27, igual que el muelle) | Alta | `ProceduralArt.Scene.cs` | Reflejo de Fresnel del cielo; reflejos verticales de las palmeras (1,5 dp, alfa 0,40, 0,7 × el alto) con la corona; ondas en perspectiva (filas en horizonte + 1,2·i^1,7, de 8 a 40 dp y de 0,75 a 2 dp, línea clara `cielo_horizonte` al 55 % y oscura `rio_profundo` al 30 % 1 dp más abajo); columna de destellos aditivos de 24-32 dp; reflejos de las orillas con corte suave; panorama a 2,25 px/dp | Fresnel 0,85·exp(−t/22) + 0,10 en lugar de 0,70: con 0,70 el agua junto al horizonte medía L* 75-78. Se añaden franjas de viento y racimos en las ondas (repartidas por igual, se leían como marcas de playa), y el reflejo de la orilla lejana baja del 45 al 32 %. Medido en `02_board_l7`: río L* 66 (σ 11,8), L* 80 de 3 a 9 dp bajo el horizonte |
 | Agua de inmersión opaca | Alta | `ImmersionWater` | Alfa 0,55 (abajo 0,62), banda superior de 0,35 u a +12 L* y 3 líneas de brillo | El relleno de las cavidades al 70 % es de 07 §5.1 y no cambia |
 | Nivel 1: muelle vacío | Alta | — | Ya estaban el follaje inferior de 170 dp, el poste en W − 56 y Capi solo con su PNG | C18, resuelta con D-004: cuias de 64 dp y banda libre de 172,5 dp a 780 dp. La luz moteada del muelle evita bloques planos (VA-02: 0 bloques) |
-| Vertido: labio alto, boca seca, tapado de la vecina, chorro en cuña | Alta | `BoardAnimator`, `PourStream`, `StreamGraphic`, `CuiaView` | Elevación ≤ 1 u (labio a 0,6-1,6 u); el centro del labio puede alejarse 0,25, 0,45 o 0,65 u del eje del destino; el origen no entra en la silueta del destino; muestreo de la silueta con los bordes; chorro de 0,16 a 0,10 u (07 §5.2) con remates redondos, control a 0,35 u hacia fuera del labio y final en la superficie (o el fondo) dentro de la boca | 38° se mantienen (C17, confirmado por el dueño en D-004). Sin vecinas en juego, el labio queda a 0,85 u y fuera de la boca del destino; en `04_pouring_l7` (3 → 5) el origen sigue tapando la parte alta de la cuia 6 |
+| Vertido: labio alto, boca seca, tapado de la vecina, chorro en cuña | Alta | `BoardAnimator`, `PourStream`, `StreamGraphic`, `CuiaView` | Elevación ≤ 1 u (labio a 0,6-1,6 u); el centro del labio puede alejarse 0,25, 0,45 o 0,65 u del eje del destino; el origen no entra en la silueta del destino; muestreo de la silueta con los bordes; chorro de 0,16 a 0,10 u (07 §5.2) con remates redondos, control a 0,35 u hacia fuera del labio y final en la superficie (o el fondo) dentro de la boca | 38° se mantienen (C17, confirmado por el dueño en D-004). Sin vecinas en juego, el labio queda a 0,85 u y fuera de la boca del destino; en `04_pouring_l7` (3 → 5) el origen sigue tapando la parte alta de la cuia 6. *Sustituido por D-006 (2026-10-08): pose medida en Magic Sort, sin techo ni margen de 36 dp.* |
 | Familia parda del 48-59 % y sin luz que brille | Alta | Panorama, muelle, marco | Brillo aditivo del sol (#FFF6D6, 120 dp, 0,5) y 3 rayos al 0,12 en el cielo; muelle con la cara a L* 67 en el tercio superior (`DockSunlit` #C99A6A), juntas en `ranura` al 95 %, 7 racimos de motas de luz aditivas (#FFE4A8 al 18-25 %, 46-90 dp) y degradado cálido desde arriba a la izquierda en lugar de las bandas diagonales; bisel del marco de 2 dp al 90 % | Medido: L* > 85 fuera del panel, 5,0 % (L7) y 9,8 % (L1); familia parda, 45 % y 57 % (pregunta C19) |
 | La victoria no celebra | Media | `GameScreen` | Velo de 0,30 con un hueco bajo los rayos, brillo radial #FFE4A8 (0,5 → 0, 180 dp) y 12 rayos aditivos `destello` al 35 % (260 dp, 8°/s), detrás del tablero; ≤ 12 hojas y pétalos caen hasta el CTA tras el estallido; cinta de 344 × 72 dp con Baloo 2 de 30 (mínimo 22); brillo de 0,25 detrás de cada cuia sellada solo en la victoria | Medido en `07_victory_l1`: la banda del muelle sube 6,1 L* (antes bajaba 17,6) y la pantalla baja 2 L* (antes 24). La cinta asoma 38 dp (5.3 decía 34) |
 | Confeti en racimos sobre las cuias; aro gris | Media | `ConfettiLayer`, `CuiaView` | Nacimiento en x = −8 y W + 8, y = panel.top + 40; 600-850 dp/s, 60-75° ± 8°, gravedad 1100 dp/s², arrastre 1,5/s; aro #FFE4A8 con 1 − t² y destello en estrella también en la celebración | Plumas roja y azul en los dos lados (antes cada lado tenía un color). La captura `06_celebration_l1` pasa de 0,6 a 0,9 s para enseñar el estallido en vuelo |
-| La cuia elevada toca el marco | Media | `BoardLayout` | `PanelMargin` de 14 a 22 dp; tabla 3.3 recalculada | Queda a 8,5 dp del canto interior (22,5 en una fila desde la revisión de D-004, con 36 dp de margen superior; 3.2) |
+| La cuia elevada toca el marco | Media | `BoardLayout` | `PanelMargin` de 14 a 22 dp; tabla 3.3 recalculada | Queda a 8,5 dp del canto interior (22,5 en una fila desde la revisión de D-004, con 36 dp de margen superior; 3.2). *Sustituido por D-006 (2026-10-08): pose medida en Magic Sort, sin techo ni margen de 36 dp.* |
 | Vidrio sin brillo de caramelo | Media | `ProceduralArt.CuiaFront` | Franja blanca de 0,08 u al 85 % en la pared izquierda (arco al 80 % en el hombro), luz de borde de 0,05 u al 50 % en la derecha, cáustica al 45 % | `CuiaPixelsPerUFor` ya horneaba a ceil(u × escala) = 72 px/u en el SM-S938B: esa parte de la observación era de una versión anterior |
 | Se ve el respaldo procedural | Media | Follaje | Follaje a 3 px/dp con borde suavizado | La escena sigue siendo el respaldo: no se enseña al dueño como propuesta hasta integrar los PNG de F0 (4.9, VA-16) |

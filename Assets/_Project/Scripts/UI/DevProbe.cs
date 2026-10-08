@@ -18,10 +18,10 @@ namespace AF.UI
     /// <remarks>
     /// <para>Eventos de <c>AF_STATE</c>: <c>load</c>, <c>ready</c>, <c>pour</c>, <c>reject</c>, <c>undo</c>, <c>restart</c>,
     /// <c>win</c> y <c>stuck</c> (contrato) más <c>select</c> y <c>deselect</c> (ayuda para seguir los toques).</para>
-    /// <para>Con D-001 (una dosis por vertido) cada línea lleva <c>"pour_mode"</c> (<c>"single"</c> o <c>"run"</c>, el modo
-    /// de la sesión del nivel) y los eventos con vertido (<c>pour</c>, <c>undo</c>) llevan, además de
-    /// <c>"move":[origen,destino,cantidad]</c>, la cantidad suelta en <c>"amount"</c> (en <c>single</c>, siempre 1).
-    /// <c>pours</c> cuenta vertidos aplicados (en <c>single</c>, dosis movidas).</para>
+    /// <para>Cada línea lleva <c>"pour_mode"</c> (run por defecto, D-005; single en pruebas), el modo de la sesión del
+    /// nivel, y los eventos con vertido (<c>pour</c>, <c>undo</c>) llevan, además de
+    /// <c>"move":[origen,destino,cantidad]</c>, la cantidad suelta en <c>"amount"</c> (en <c>run</c>, la racha que cabe;
+    /// en <c>single</c>, siempre 1). <c>pours</c> cuenta vertidos aplicados (en <c>single</c>, dosis movidas).</para>
     /// </remarks>
     public sealed class DevProbe
     {

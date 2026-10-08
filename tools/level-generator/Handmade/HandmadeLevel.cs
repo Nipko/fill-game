@@ -1,7 +1,8 @@
 // Comprobaciones de un nivel del tutorial hecho a mano (docs/dev/prototipo-v0.md b; 02 §13; glosario §9; 03 §4.4-§5).
 // Las reglas se evalúan con AF.Core (PourRules, BoardState) y el par se contrasta con AF.Solver (A*, 03 §5), en el modo
-// de vertido del pack (D-001: por defecto PourModes.Default = Single; docs/dev/decisiones.md §2.1). El par del otro
-// modo se calcula como referencia: los rangos [P] de 02 §13 se fijaron en Run y siguen así hasta la pregunta P2.
+// de vertido del pack (D-005, que sustituye a D-001: por defecto PourModes.Default = Run, la racha visible que cabe, con
+// vertido parcial; Single, solo pruebas; docs/dev/decisiones.md). El par del otro modo se calcula como referencia. Los
+// rangos [P] de 02 §13 se fijaron con la racha (Run), el modo del pack, y se comprueban siempre con el par en Run.
 using System.Globalization;
 using AF.Core.Board;
 using AF.Core.Rules;
@@ -51,7 +52,7 @@ internal sealed class HandmadeLevel
 
     public LevelSpec Spec { get; }
 
-    /// <summary>Modo de vertido con el que se calcula el par del pack (D-001).</summary>
+    /// <summary>Modo de vertido con el que se calcula el par del pack (D-005: Run por defecto; Single, solo pruebas).</summary>
     public PourMode Mode { get; }
 
     /// <summary>El otro modo, solo como referencia en el informe y para los rangos de 02 §13 (fijados en Run).</summary>
@@ -167,16 +168,16 @@ internal sealed class HandmadeLevel
         ReferencePar = ReferenceGraph.Distance(Board);
         Add($"resoluble en `{mode}` (BFS exhaustivo con AF.Core.PourRules)", Par is not null, $"{g.StateCount} estados alcanzables");
 
-        // 02 §13: la columna "Par [P]" se fijó con la racha (modo run) y la tabla conserva esos rangos hasta que el dueño
-        // responda P2 (adoptar los pares medidos en single o rediseñar 2-10; docs/dev/decisiones.md §2.1.4 y §5).
-        // Por eso el rango se comprueba siempre con el par en run, y el par single queda como dato informativo.
+        // 02 §13: la columna "Par [P]" se fijó con la racha (modo run), que es el modo del pack desde D-005. El rango se
+        // comprueba siempre con el par en run; el par single (solo pruebas) sale como dato. Si el pack se genera en single
+        // (--pour-mode single), la comprobación sigue usando el par run y lo dice en su nombre.
         int? runPar = ParIn(PourMode.Run);
-        string other = Mode == PourMode.Single
-            ? $"; par `single` {Fmt(Par)}, {(Par >= Row.ParMin && Par <= Row.ParMax ? "dentro" : "fuera")} del rango (informativo hasta P2)"
-            : "";
-        Add("par en `run` dentro del rango [P] de 02 §13 (rangos fijados en `run`; P2)",
+        string rangeName = Mode == PourMode.Run
+            ? "par del pack (`run`) dentro del rango [P] de 02 §13"
+            : "par en `run` dentro del rango [P] de 02 §13 (el pack va en `single`, solo pruebas: el rango se comprueba con el par `run`)";
+        Add(rangeName,
             runPar is not null && runPar >= Row.ParMin && runPar <= Row.ParMax,
-            $"par `run` {Fmt(runPar)}; rango {Row.ParMin}-{Row.ParMax}{other}");
+            $"par `run` {Fmt(runPar)}; rango {Row.ParMin}-{Row.ParMax}; par `single` {Fmt(ParIn(PourMode.Single))} (dato{(Mode == PourMode.Single ? "; es el del pack" : "")})");
 
         SolveResult astar = new AStarSolver().Solve(Board, SolverOptions.ForPipeline(Mode));
         Add($"par = A* de AF.Solver en `{mode}` (03 §5, w = 1)", astar.IsSolved && astar.MoveCount == Par,
@@ -200,11 +201,12 @@ internal sealed class HandmadeLevel
                 s = g.Apply(s, m);
             }
 
+            // En single (solo pruebas) cada vertido mueve 1 dosis; en run (D-005), la racha visible que cabe.
             bool oneDose = Mode != PourMode.Single || maxAmount == 1;
             Add($"la solución del informe gana con par vertidos legales en `{mode}`", legal && oneDose && s.IsWon() && Solution.Count == Par,
                 Mode == PourMode.Single
-                    ? $"{Solution.Count} vertidos, todos de 1 dosis (D-001)"
-                    : $"{Solution.Count} vertidos");
+                    ? $"{Solution.Count} vertidos, todos de 1 dosis (modo `single`, solo pruebas)"
+                    : string.Create(CultureInfo.InvariantCulture, $"{Solution.Count} vertidos, el mayor de ×{maxAmount} (la racha que cabe, D-005)"));
         }
 
         StuckPath = g.ShortestStuckPath();
@@ -225,13 +227,15 @@ internal sealed class HandmadeLevel
                 Teaching = "estado literal de 02 §13";
                 break;
             case 2:
-                if (Mode == PourMode.Single)
+                // D-005: en run (el modo del pack por defecto) se comprueba la lección canónica del nivel 2, el vertido
+                // parcial de 02 §13; en single (solo pruebas), la de una dosis por vertido que tenía D-001.
+                if (Mode == PourMode.Run)
                 {
-                    OneDosePerPour();
+                    PartialThreeOnTwo();
                 }
                 else
                 {
-                    PartialThreeOnTwo();
+                    OneDosePerPour();
                 }
 
                 break;
@@ -274,13 +278,13 @@ internal sealed class HandmadeLevel
     }
 
     /// <summary>
-    /// 02 §13, nivel 2, solo en el modo run (en single no existe el parcial, D-001): vertido parcial de una racha de 3
-    /// sobre un hueco de 2 (R9: el resto queda en A), disponible en S0, S1 o S2 de la solución del informe y sin perder
-    /// la resolubilidad.
+    /// 02 §13, nivel 2, en el modo run, el del pack por defecto (D-005, que recupera esta lección canónica; en single no
+    /// existe el parcial): vertido parcial de una racha de 3 sobre un hueco de 2 (R9: el resto queda en A), disponible en
+    /// S0, S1 o S2 de la solución del informe y sin perder la resolubilidad.
     /// </summary>
     private void PartialThreeOnTwo()
     {
-        const string name = "nivel 2: vertido parcial de una racha de 3 sobre un hueco de 2 (02 §13, modo `run`)";
+        const string name = "nivel 2: vertido parcial de una racha de 3 sobre un hueco de 2 (02 §13; modo `run`, D-005)";
         if (Graph is null || Solution is null)
         {
             Add(name, false, "sin solución");
@@ -320,14 +324,15 @@ internal sealed class HandmadeLevel
     }
 
     /// <summary>
-    /// 02 §13, nivel 2, en el modo single (D-001; sustituye al vertido parcial, decisiones.md §2.1.5 y P3): una dosis por
-    /// vertido. Una racha de 3 solo pasa de una cuia a otra con 3 vertidos A→B. Se exige que <b>toda</b> solución óptima
+    /// 02 §13, nivel 2, solo en el modo single (pruebas desde D-005; era la lección de D-001, que D-005 sustituye por el
+    /// vertido parcial de <see cref="PartialThreeOnTwo"/>): una dosis por vertido. Una racha de 3 solo pasa de una cuia a
+    /// otra con 3 vertidos A→B. Se exige que <b>toda</b> solución óptima
     /// repita 3 veces un mismo vertido (la lección no depende del camino que elijan el jugador o el solver) y que la
     /// solución del informe, la que sirve de guion del tutorial, los haga seguidos.
     /// </summary>
     private void OneDosePerPour()
     {
-        const string name = "nivel 2: una dosis por vertido: toda solución óptima repite 3 veces un mismo vertido A→B y la del informe los hace seguidos (02 §13 [P]; D-001)";
+        const string name = "nivel 2: una dosis por vertido: toda solución óptima repite 3 veces un mismo vertido A→B y la del informe los hace seguidos (modo `single`, solo pruebas; lección de D-001)";
         if (Graph is null || Solution is null)
         {
             Add(name, false, "sin solución");

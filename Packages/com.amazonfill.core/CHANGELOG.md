@@ -6,11 +6,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
-- Modo de vertido (decisión del dueño D-001, `docs/dev/decisiones.md`): `AF.Core.Rules.PourMode { Single = 0, Run = 1 }` y
-  `PourModes` (`Default = Single`, `TryParse`/`ToKey` con los valores `"single"`/`"run"` de la clave de Remote Config
-  `rules_pour_mode`, `IsDefined`). En `Single` cada vertido mueve exactamente una dosis aunque haya racha (no existe el
-  vertido parcial); `Run` es la regla anterior (02 R6, R9). El modo solo cambia `cantidad(A, B)` y se aplica en un único
-  sitio, `CuiaRules.Amount(from, to, mode)`; `legal`, `futil`, `movimientos_utiles` (salvo `Amount`), sellado, victoria y
+- Modo de vertido (decisión del dueño D-005 del 2026-10-08, que sustituye a D-001; `docs/dev/decisiones.md`):
+  `AF.Core.Rules.PourMode { Run = 0, Single = 1 }` y `PourModes` (`Default = Run`, de modo que `default(PourMode)` es el
+  modo por defecto; `TryParse`/`ToKey` con los valores `"run"`/`"single"` de la clave de Remote Config `rules_pour_mode`,
+  y un valor desconocido da `PourModes.Default`; `IsDefined`). `Run` es la regla de 0.1.0 (02 R6, R9): mueve la racha
+  visible que cabe, con vertido parcial, como Magic Sort. `Single`, solo para pruebas, mueve exactamente una dosis aunque
+  haya racha (no existe el vertido parcial). El modo solo cambia `cantidad(A, B)` y se aplica en un único sitio,
+  `CuiaRules.Amount(from, to, mode)`; `legal`, `futil`, `movimientos_utiles` (salvo `Amount`), sellado, victoria y
   bloqueo no dependen de él.
 - Sobrecargas con modo: `PourRules.Amount/Apply(state, a, b, mode)`, `PourRules.CollectUsefulMoves(state, futile, mode,
   buffer)`, `LevelSession(initial, futile, pourMode)` y su propiedad `PourMode` (Marea deshace una dosis por uso en
@@ -21,7 +23,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   los dos modos) y `AStarSolverPourModeTests` (par de A* = búsqueda exhaustiva con y sin poda; heurísticas admisibles y
   consistentes en todos los estados alcanzables). Solo-dotnet: `PourModePropertyTests` (criterios A1-A4 sobre 400 + 240
   tableros aleatorios con semilla fija, el pack del tutorial y las cifras de decisiones.md §2.1.3-§2.1.4) y
-  `HotLoopAllocationTests` en `Single`.
+  `HotLoopAllocationTests` en `Single` y en `Run` con el modo explícito (`UsefulMovesInRun_DoNotAllocate`,
+  `WarmSolverInRun_OnlyAllocatesTheSolution`).
 
 - `AF.Core.Rules.CuiaRules`: sellado, `legal`, `cantidad` y `futil` (02 §1.4 con la excepción de Aguas turbias de 04 §5.1)
   sobre cuias sueltas; única implementación para tablero, solver y bot.
@@ -44,6 +47,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Cambiado
 
+- Nota: antes de publicarse, D-001 tuvo `PourMode { Single = 0, Run = 1 }` con `Default = Single`; ninguna versión
+  publicada lo llevó. El estado de esta versión es el de «Añadido» (D-005).
 - Las firmas sin modo (`CuiaRules.Amount(from, to)`, `PourRules.Amount/Apply/CollectUsefulMoves` sin modo,
   `LevelSession(initial, futile)`, `SolverOptions(budget, weight, futile)` y `SolverOptions.Pipeline`) quedan como
   **heredadas**: equivalen a `Run` y conservan el comportamiento anterior para que Unity y `tools/` compilen y den lo mismo

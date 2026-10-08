@@ -15,8 +15,9 @@ namespace AF.GameFlow
     /// <list type="bullet">
     /// <item><description>Las reglas viven en el núcleo: cada toque pasa por <see cref="TapController"/> y
     /// <see cref="LevelSession"/>; victoria y bloqueo son los de <see cref="LevelSession.Status"/> (R10, R12, R13).</description></item>
-    /// <item><description>Cada nivel se juega con el modo de vertido de <see cref="PourMode"/> (D-001: por defecto una dosis
-    /// por vertido), fijado al cargarlo.</description></item>
+    /// <item><description>Cada nivel se juega con el modo de vertido de <see cref="PourMode"/> (D-005: por defecto
+    /// <see cref="AF.Core.Rules.PourMode.Run"/>, la racha que cabe), fijado al cargarlo y que nunca cambia a mitad del
+    /// nivel.</description></item>
     /// <item><description>Tras la victoria o el bloqueo lógico el input queda bloqueado al instante (R15) y el flujo espera a que
     /// la cola visual se vacíe (02 §3.2) antes de celebrar o de abrir el modal; el modal se abre
     /// <c>stuck_modal_delay_ms</c> después (R15).</description></item>
@@ -51,8 +52,9 @@ namespace AF.GameFlow
         /// <param name="progress">Progreso guardado.</param>
         /// <param name="listener">Vista (y sonda de desarrollo).</param>
         /// <param name="tapSwitchSelection">Valor de <c>tap_switch_selection</c> (08 §9; C5).</param>
-        /// <param name="pourMode">Modo de vertido de los niveles que se carguen (<c>rules_pour_mode</c>, D-001; por defecto
-        /// <see cref="PourModes.Default"/>, una dosis por vertido). Ver <see cref="PourMode"/>.</param>
+        /// <param name="pourMode">Modo de vertido de los niveles que se carguen (<c>rules_pour_mode</c>, D-005; por defecto
+        /// <see cref="PourModes.Default"/>, la racha que cabe; <see cref="AF.Core.Rules.PourMode.Single"/> solo en pruebas).
+        /// Ver <see cref="PourMode"/>.</param>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="pourMode"/> no es un valor definido.</exception>
         public LevelFlow(LevelPack pack, IProgressStore progress, ILevelFlowListener listener, bool tapSwitchSelection = GameConfig.TapSwitchSelection, PourMode pourMode = PourModes.Default)
         {
@@ -88,7 +90,8 @@ namespace AF.GameFlow
         public FlowPhase Phase { get; private set; }
 
         /// <summary>
-        /// Modo de vertido (<c>rules_pour_mode</c>, D-001) con el que se crea la sesión en cada <see cref="Load"/>. Un
+        /// Modo de vertido (<c>rules_pour_mode</c>, D-005: por defecto run) con el que se crea la sesión en cada
+        /// <see cref="Load"/>. Se fija al cargar el nivel y nunca cambia a mitad. Un
         /// cambio se aplica desde la siguiente carga de nivel, nunca a mitad: el nivel en curso conserva el de su sesión
         /// (<see cref="LevelSession.PourMode"/>), porque el historial de Marea y el par dependen de él. Volver a la orilla
         /// tampoco lo cambia. La cantidad de cada vertido la decide el núcleo con este modo (<c>PourRules.Amount</c>).
@@ -158,7 +161,8 @@ namespace AF.GameFlow
 
         /// <summary>
         /// LOADING del nivel <paramref name="level"/> (o del primero si no existe) y arranque de la intro. La sesión se crea
-        /// con el <see cref="PourMode"/> vigente, que queda fijo hasta la siguiente carga.
+        /// con el <see cref="PourMode"/> vigente (por defecto run, D-005), que queda fijo hasta la siguiente carga: nunca
+        /// cambia a mitad del nivel.
         /// </summary>
         public void Load(int level)
         {

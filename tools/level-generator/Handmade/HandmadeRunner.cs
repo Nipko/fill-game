@@ -1,6 +1,7 @@
 // Modo --handmade: comprueba el tutorial hecho a mano y emite el pack v0 y su informe (docs/dev/prototipo-v0.md b).
 //   entrada:  spec.json (tools/level-generator/specs/tutorial_v0.json; tintes por ID del glosario §9) y el modo de
-//             vertido (--pour-mode; por defecto PourModes.Default = single, D-001)
+//             vertido (--pour-mode; por defecto PourModes.Default = run, la racha visible que cabe, decisión del dueño
+//             D-005 que sustituye a D-001; single, una dosis por vertido, solo pruebas)
 //   salida:   <out>/<pack_id>.json   (subconjunto documentado de af-level/1; solo si todas las comprobaciones pasan)
 //             <report>               (informe Markdown; se escribe siempre)
 // Mismo JSON byte a byte en cada ejecución (UTF-8 sin BOM, LF, 2 espacios, orden de claves fijo; .claude/rules/data-json.md).
@@ -21,7 +22,7 @@ internal static class HandmadeRunner
     /// 0 = todo PASS; 1 = alguna comprobación falla (o --check y el pack difiere); 2 = especificación ilegible.
     /// El par del pack se calcula en <paramref name="mode"/>; el pack no declara el modo (el subconjunto v0 de
     /// af-level/1 no tiene ese campo y añadirlo es cambio de contrato, pregunta P7 de docs/dev/decisiones.md): asume el
-    /// modo por defecto del cliente. El informe declara el modo y el par del otro modo como referencia.
+    /// modo por defecto del cliente, run (D-005). El informe declara el modo y el par del otro modo como referencia.
     /// </summary>
     public static int Run(string specPath, string outDir, string reportPath, bool checkOnly, PourMode mode)
     {
@@ -38,7 +39,7 @@ internal static class HandmadeRunner
 
         string modeKey = PourModes.ToKey(mode);
         string referenceKey = PourModes.ToKey(mode == PourMode.Single ? PourMode.Run : PourMode.Single);
-        Console.WriteLine($"modo de vertido: {modeKey}{(mode == PourModes.Default ? " (por defecto)" : " (NO es el modo por defecto del cliente)")}");
+        Console.WriteLine($"modo de vertido: {modeKey}{(mode == PourModes.Default ? " (por defecto)" : " (NO es el modo por defecto del cliente; solo pruebas)")}");
         var levels = new List<HandmadeLevel>();
         foreach (LevelSpec spec in specs)
         {

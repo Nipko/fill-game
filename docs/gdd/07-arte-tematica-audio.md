@@ -1,6 +1,6 @@
 # Dirección de arte, temática y audio
 
-**Proyecto:** Amazon Fill (nombre interno) · **Nombre comercial:** Tintalú (decisión del dueño del 2026-10-06; sustituye a Aquazonia, descartado por la solicitud idéntica INPI 938306200 en Brasil) · **Capítulo:** 07 del GDD · **Fecha:** 2026-10-06 (revisión cruzada; actualizado el 2026-10-07 con la decisión del dueño **D-004**: tope del ancho de la cuia según el número de cuias, §4.1, y vertido a 38° con el labio a 0,6-1,6 u del borde del destino, §5.2; registro en `docs/dev/decisiones.md`) · **Estado:** borrador para aprobación del dueño del producto.
+**Proyecto:** Amazon Fill (nombre interno) · **Nombre comercial:** Tintalú (decisión del dueño del 2026-10-06; sustituye a Aquazonia, descartado por la solicitud idéntica INPI 938306200 en Brasil) · **Capítulo:** 07 del GDD · **Fecha:** 2026-10-06 (revisión cruzada; actualizado el 2026-10-07 con la decisión del dueño **D-004**: tope del ancho de la cuia según el número de cuias, §4.1, y vertido a 38° con el labio a 0,6-1,6 u del borde del destino, §5.2; actualizado el 2026-10-08 con **D-006**: cuia, vertido y tablero como Magic Sort, §3 (regla 4), §4.1-§4.5, §5.2 y §7.4; registro en `docs/dev/decisiones.md`) · **Estado:** borrador para aprobación del dueño del producto.
 
 Convención de evidencia: **[V]** verificado en el informe citado · **[E]** estimación del informe · **[R]** reseñas de usuarios · **[NV]** no verificado · **[P]** propuesta de este capítulo a calibrar en soft launch. "(dirección N)" remite al punto N de las decisiones de dirección vinculantes. Nombres de juego, moneda, vidas, comodines, eventos, mundos y mascotas según `docs/gdd/00-glosario.md`. Unidad de medida de la cuia: **u** = altura de una dosis de líquido (sección 4). Unidad de UI: **dp** sobre una pantalla de referencia de 360 × 780 dp (19,5:9).
 
@@ -120,7 +120,7 @@ Reglas de aplicación (dirección 3; research/07 §3.2 [E]; research/02 C3.2 [E]
 1. **Patrón**: textura del tinte dentro de la dosis a 15-20 % de opacidad (research/07 §8). Hasta el nivel 40 se dibuja sutil (15 %); desde el 41 el toggle Patrones de fruta arranca activado y la opacidad sube a 20 % con el icono de fruta centrado en cada dosis a 0,45 u de alto; el toggle existe siempre en Ajustes. Valores canónicos para todo el GDD: **20 %** con Patrones de fruta activo (`ui_pattern_opacity`, clave de 08 §9) y **35 %** solo en Alto contraste (regla 5); cualquier capítulo que cite otra cifra remite a esta.
 2. **Icono al tocar**: al seleccionar una cuia, cada dosis muestra su icono de fruta durante la elevación aunque el toggle esté apagado (coste cero, ayuda a los pares 4-5 y 8-9).
 3. **Pares de riesgo**: `max_pares_riesgo` 0 (1-40), 1 (41-80), 2 (81-200), libre desde 201; el validador del generador lo aplica (research/02 C3.5 [E]). El arte no decide esto, pero el QA de arte simula protanopía, deuteranopía y tritanopía sobre el shader real antes de aprobar cada tinte (research/07 Preguntas abiertas).
-4. **Menisco**: línea de 2-3 px con el color del tinte a +20 % de luminosidad (research/06 §2.4 [E]); +25-30 % en los tintes de L* < 35 (6, 8, 9, 13) para que el borde superior se vea.
+4. **Menisco (cara superior del líquido)**: desde D-006 (2026-10-08), elipse de ≈ 0,4 de dosis (0,40 u) de alto, como en Magic Sort, en lugar de la línea de 2-3 px; color del tinte a +20 % de luminosidad (research/06 §2.4 [E]); +25-30 % en los tintes de L* < 35 (6, 8, 9, 13) para que el borde superior se vea. La columna «Regla de uso en arte» de la tabla llama «menisco» a esta cara.
 5. **Modo alto contraste** (Ajustes): sube la opacidad del patrón a 35 % y el contorno de dosis a 1,5 px; no cambia los HEX.
 6. **Prohibido** usar los HEX de los tintes en UI, botones o texto; la UI vive en los tokens de la sección 7.2.
 
@@ -128,26 +128,28 @@ Reglas de aplicación (dirección 3; research/07 §3.2 [E]; research/02 C3.2 [E]
 
 ### 4.1 Silueta y proporciones
 
-Cuia-garrafa: silueta de cabaça alargada, hombro suave, cuello corto, base redondeada, vidrio transparente con borde y pie de fibra trenzada o madera (research/07 §4 [V]; glosario §4). El truco de producción es que la **cavidad interior es un cilindro recto** y solo la pared exterior es curva: las 4 dosis miden exactamente lo mismo (research/07 §4 [E]). Proporción exterior 1:3 (ancho:alto) para dos filas de hasta 7 cuias a 360 × 780 dp (research/07 §4 [E]).
+Cuia-garrafa: silueta de cabaça alargada, hombro suave, cuello corto, base redondeada, vidrio transparente con borde y pie de fibra trenzada o madera (research/07 §4 [V]; glosario §4). El truco de producción es que la **cavidad interior es un cilindro recto** y solo la pared exterior es curva: las 4 dosis miden exactamente lo mismo (research/07 §4 [E]). Proporción exterior ≈ 1:2,8 (D-006, decisión del dueño del 2026-10-08) para las 2 o 3 filas de 02 §5.
 
 | Zona (de abajo arriba) | Altura (u) | Rango y (u) | Ancho exterior (u) | Ancho interior (u) | Notas para el artista |
 |---|---|---|---|---|---|
 | Pie de fibra | 0,30 | 0,00-0,30 | 1,60 (anillo) | — | Aro trenzado; cambia por skin |
-| Base de vidrio | 0,30 | 0,30-0,60 | 1,60 → 1,90 | 1,30 (fondo plano de la cavidad en y = 0,60) | Vidrio más grueso: aquí vive el gradiente oscuro de "fondo de botella" |
-| **Cavidad (4 dosis)** | **4,00** | **0,60-4,60** | 1,90 → 2,00 (máx. en y ≈ 4,2) | **1,30 constante** | 4 marcas de dosis grabadas en y = 1,60 / 2,60 / 3,60 / 4,60, 1 px, marfil al 25 % |
-| Hombro | 0,60 | 4,60-5,20 | 2,00 → 1,00 | 1,30 → 0,80 | Curva suave; zona de la banda decorativa de cada skin |
-| Cuello | 0,55 | 5,20-5,75 | 1,00 | 0,80 | Vidrio; el labio de vertido está en y = 5,75 |
-| Borde de fibra / madera | 0,25 | 5,75-6,00 | 1,10 (anillo) | 0,80 | Aro; cambia por skin |
-| **Total** | **6,00** | | **2,00** | | Ratio 1:3 |
+| Base de vidrio | 0,30 | 0,30-0,60 | 1,60 → 1,90 | 1,60 (fondo plano de la cavidad en y = 0,60) | Vidrio más grueso: aquí vive el gradiente oscuro de "fondo de botella" |
+| **Cavidad (4 dosis)** | **4,00** | **0,60-4,60** | 1,90 → 2,00 | **1,60 constante** (0,80 del ancho) | 4 marcas de dosis grabadas en y = 1,60 / 2,60 / 3,60 / 4,60, 1 px, marfil al 25 % |
+| Hombro | 0,40 | 4,60-5,00 | 2,00 → 1,00 | 1,60 → 0,80 | Curva suave; zona de la banda decorativa de cada skin |
+| Cuello | 0,35 | 5,00-5,35 | 1,00 | 0,80 | Vidrio; el labio de vertido está en y = 5,35 |
+| Borde de fibra / madera | 0,25 | 5,35-5,60 | 1,10 (anillo) | 0,80 | Aro; cambia por skin |
+| **Total** | **5,60** | | **2,00** | | Ratio ≈ 1:2,8; las 4 dosis ocupan 0,714 del alto (Magic Sort: 0,74, con el líquido al 0,89 del ancho; ficha §2.2) |
 
-Tamaños en pantalla (canon de layout: GDD 02 §5, margen lateral total de 24 dp): ranura = (360 − 24) / cuias_por_fila; ancho de cuia = clamp(0,70 × ranura, 28, tope(T)) dp, donde tope(T) = 64 dp si el tablero tiene T ≤ 3 cuias, 56 dp si T = 4-5 y 48 dp si T ≥ 6 (T cuenta todas las cuias en pantalla, incluidas Cuia extra y Cuia de rescate; D-004, decisión del dueño del 2026-10-07); alto = 3 × ancho; **u = ancho / 2**. Con 7 por fila: ranura 48 dp, cuia **34 × 102 dp, u = 17 dp**. Con 6 por fila: ranura 56 dp, cuia 39 × 117 dp, u ≈ 19,5 dp. Con 5 por fila: ranura 67,2 dp, cuia ≈ 47 × 141 dp, u ≈ 23,5 dp (el tope no actúa). Con 3 o 4 por fila y T ≥ 6: cuia 48 × 144 dp, u = 24 dp. Con T = 4 (una fila de 4): cuia 56 × 168 dp, u = 28 dp. Con T ≤ 3: cuia 64 × 192 dp, **u = 32 dp** (la máxima). Todas las medidas en u de este capítulo se convierten con la u de la fila en la que se dibuja la cuia. La fuente se dibuja en vector o a 4× del tamaño máximo (256 × 768 px por cuia de 4) y se exportan atlas a 1×, 2× y 3×. Estos valores se confirman en la prueba de legibilidad 2 × 7 de la fase 0 (roadmap); si cambian, se actualizan aquí y en 02 §5 a la vez, nunca en un solo capítulo.
+El reparto de alturas de hombro, cuello y borde es [P] (D-006). Se mantienen el hombro, el cuello corto, el pie y el borde de fibra, y la lista de trade dress de §1.3: nada de labio de botella.
+
+Tamaños en pantalla (canon de layout: GDD 02 §5, margen lateral total de 24 dp): ranura = (360 − 24) / cuias de la fila más larga; ancho de cuia = clamp(0,70 × ranura, 28, tope(T)) dp, donde tope(T) = 64 dp si el tablero tiene T ≤ 3 cuias, 56 dp si T = 4-5 y 48 dp si T ≥ 6 (T cuenta todas las cuias en pantalla, incluidas Cuia extra y Cuia de rescate; D-004, decisión del dueño del 2026-10-07); **alto = 2,8 × ancho**; **u = ancho / 2**. A 360 × 780 dp: con 5 por fila, cuia 47,04 × 131,7 dp, u ≈ 23,5 dp; con 3 o 4 por fila y T ≥ 6, cuia 48 × 134,4 dp, u = 24 dp; con T = 4 (una fila de 4), cuia 56 × 156,8 dp, u = 28 dp; con T ≤ 3, cuia 64 × 179,2 dp, **u = 32 dp** (la máxima); con 3 filas y 11-15 cuias, 46,9 × 131,3 dp; con 16 cuias (6/5/5), 39,2 × 109,8 dp. Con 7 por fila (solo en 16:9): 33,6 × 94,1 dp. Todas las medidas en u de este capítulo se convierten con la u de la fila en la que se dibuja la cuia. La fuente se dibuja en vector o a 4× del tamaño máximo (256 × 717 px por cuia de 4) y se exportan atlas a 1×, 2× y 3×. Estos valores se confirman en la prueba de legibilidad con 14 cuias de la fase 0 (roadmap); si cambian, se actualizan aquí y en 02 §5 a la vez, nunca en un solo capítulo.
 
 ### 4.2 Zona de capas, menisco, brillo y sombra
 
-- **Líquido**: un quad por cuia que cubre exactamente la cavidad (1,30 × 4,00 u), recortado por SpriteMask con la silueta interior (research/06 §2.1-2.2 [V/E]). El shader recibe hasta 6 colores y alturas acumuladas; cambiar dosis = cambiar uniformes.
+- **Líquido**: un quad por cuia que cubre exactamente la cavidad (1,60 × 4,00 u; D-006), recortado por SpriteMask con la silueta interior (research/06 §2.1-2.2 [V/E]). El shader recibe hasta 6 colores y alturas acumuladas; cambiar dosis = cambiar uniformes.
 - **Fondo de cavidad vacía**: la cavidad sin líquido se pinta con el fondo del mundo multiplicado por 0,82 y una viñeta lateral de 0,15 u al 30 % de negro, para que Guanábana (#FAFAF7) y Copoazú lean sobre cualquier fondo (sección 3, regla 1).
-- **Superficie**: onda senoidal con amplitud `A(t)` que decae en 0,5-0,8 s tras cada vertido (research/06 §2.3 [E]); menisco de 2-3 px (regla 4 de la sección 3).
-- **Brillo del vidrio**: franja diagonal fija de 0,18 u de ancho desde (0,25 u, 5,0 u) hasta (0,55 u, 1,0 u), marfil al 18 %; segundo brillo puntual en el hombro derecho al 10 %. Idéntico en todas las skins.
+- **Superficie**: onda senoidal con amplitud `A(t)` que decae en 0,5-0,8 s tras cada vertido (research/06 §2.3 [E]); cara superior en elipse de ≈ 0,4 de dosis (0,40 u) de alto, más clara que el tinte (el aclarado por tinte del antiguo menisco, regla 4 de la sección 3; D-006).
+- **Brillo del vidrio**: franja diagonal fija de 0,18 u de ancho desde (0,25 u; alto − 1,0 u = 4,60 u) hasta (0,55 u; 1,0 u), marfil al 18 %; segundo brillo puntual en el hombro derecho al 10 %. Idéntico en todas las skins.
 - **Gradiente lateral**: 0,20 u en cada borde de la cavidad, negro al 20 %, para dar curvatura (research/06 §2.4 [E]).
 - **Burbujas**: 5-10 partículas de 0,06-0,10 u dentro de la máscara, solo durante el vertido y 1 s después (research/06 §2.5 [E]).
 - **Patrón e icono**: textura del tinte y, con el toggle, icono de 0,45 u centrado en cada dosis (sección 3).
@@ -157,8 +159,8 @@ Tamaños en pantalla (canon de layout: GDD 02 §5, margen lateral total de 24 dp
 | Estado | Nombre (glosario) | Cambio visual | Duración |
 |---|---|---|---|
 | Reposo | — | Como 4.2 | — |
-| Seleccionada (origen) | — | La cuia sube 16 dp (02 §4.1; ≈0,94 u con 7 por fila y 0,5 u con la cuia de 64 dp), sombra bajo el pie se separa, iconos de fruta visibles en cada dosis; ninguna otra cuia cambia: no se resalta ni se sugiere ningún destino (D-002, decisión del dueño del 2026-10-06; 02 §3.1) | 0,12 s subida (`anim_lift_ms`, 02 §4.1 / 08 §9) |
-| Vertiendo | — | Inclinación 38° hacia el destino; el líquido no rota con el vaso (shader, research/01 §3 [V]); chorro Bézier desde el labio | Ver 5.2 |
+| Seleccionada (origen) | — | La cuia sube 16 dp (02 §4.1; 0,67 u con la cuia de 48 dp y 0,5 u con la de 64 dp), sombra bajo el pie se separa, iconos de fruta visibles en cada dosis; ninguna otra cuia cambia: no se resalta ni se sugiere ningún destino (D-002, decisión del dueño del 2026-10-06; 02 §3.1) | 0,10 s de subida (`anim_lift_ms`, 02 §4.1 / 08 §9) |
+| Vertiendo | — | La boca sobre el eje del destino, con su punto más bajo a 0,2-0,6 u del borde; 38° al llegar y hasta 92° − 9° × dosis que quedan; sin cambiar de escala; delante de todo (D-006); el líquido no rota con el vaso (shader, research/01 §3 [V]); chorro Bézier desde el canto interior del lado bajo de la boca (0,34 u del eje, `CuiaView.PourEdgeU`) | Ver 5.2 |
 | Vertido ilegal | — | La cuia tocada hace una sacudida horizontal ±6 dp, 2 ciclos, 120 ms (02 §4.1) y el origen, si lo hay, baja a su sitio (02 §3.1, C2 y C5-C6); sonido neutro; sin texto (research/01 Especificación 9 [V]) | 0,12 s |
 | Completa | **Cuia sellada** | Tapa de calabaza, aro de luz, no seleccionable; vidrio y líquido quedan igual (no se desatura) | Ver 5.3 |
 | Capas ocultas | **Aguas turbias** | Dosis oculta = agua parda opaca #8A7B6A con trama diagonal al 25 % y "?" marfil de 0,5 u (glosario §6.2). En el shader `Liquid` (08 §5.1-5.2) las dosis ocultas se marcan con la máscara de bits `_HiddenMask` (hasta 6 capas, una por dosis; los ocultos pueden ser no contiguos) y se pintan con `_MurkyColor` = #8A7B6A; este capítulo es la fuente de ambos valores. Al revelarse por la regla del nivel la trama se disuelve y la dosis se aclara hasta su tinte en 300 ms (Revelado, 02 §4.1); con Luciérnaga rige la secuencia de 04 §2.5 | — |
@@ -173,14 +175,14 @@ Tapa de calabaza: casquete de madera clara (#C9A36B [P]) de 1,10 u de diámetro 
 
 | Variante (glosario) | Capacidad | Altura total (u) | Cavidad (u) | Cómo se reconoce | Uso |
 |---|---|---|---|---|---|
-| Cuia chica | 1 | 3,00 | 1,00 | Misma base, hombro, cuello y borde; una sola marca; el hombro empieza en y = 1,60 | Buffer de una dosis; debut de la capacidad 1 en el nivel 18 (02 §8; dirección 4) |
-| Cuia chica | 2 | 4,00 | 2,00 | Dos marcas | Debut de la Cuia chica: nivel 14 (02 §8) |
-| Cuia chica | 3 | 5,00 | 3,00 | Tres marcas | Desde el nivel 22 (02 §8) |
-| Cuia (estándar) | 4 | 6,00 | 4,00 | Cuatro marcas | Base |
-| Cuia alta | 5 | 7,00 | 5,00 | Cinco marcas; cuello idéntico, cuerpo más largo | Desde el nivel 27 (canon 02 §8) |
-| Cuia alta | 6 | 8,00 | 6,00 | Seis marcas | Solo niveles hito desde el 141 (primero: 160; canon 02 §8) |
+| Cuia chica | 1 | 2,60 | 1,00 | Misma base, hombro, cuello y borde; una sola marca; el hombro empieza en y = 1,60 | Buffer de una dosis; debut de la capacidad 1 en el nivel 18 (02 §8; dirección 4) |
+| Cuia chica | 2 | 3,60 | 2,00 | Dos marcas | Debut de la Cuia chica: nivel 14 (02 §8) |
+| Cuia chica | 3 | 4,60 | 3,00 | Tres marcas | Desde el nivel 22 (02 §8) |
+| Cuia (estándar) | 4 | 5,60 | 4,00 | Cuatro marcas | Base |
+| Cuia alta | 5 | 6,60 | 5,00 | Cinco marcas; cuello idéntico, cuerpo más largo | Desde el nivel 27 (canon 02 §8) |
+| Cuia alta | 6 | 7,60 | 6,00 | Seis marcas | Solo niveles hito desde el 141 (primero: 160; canon 02 §8) |
 
-La fila que contiene una Cuia alta alinea todas las cuias por el **pie**, no por el centro, para que el ojo compare alturas de líquido. Las Cuias chicas se alinean también por el pie. Los niveles con Cuia alta se limitan a 2 filas (GDD 02 §5); si aun así la fila (8,0 u de alto más 1,0 u de elevación) no cabe en el paso de fila, u baja por debajo del valor de 4.1 hasta un mínimo de 14 dp (cuia de 28 dp de ancho, el mínimo de 02 §5).
+Las alturas se derivan de 1 dosis = 1 u: 1,60 u fijas (pie, base, hombro, cuello y borde) más la capacidad (D-006); la cavidad es igual en todas. La fila que contiene una Cuia alta alinea todas las cuias por el **pie**, no por el centro, para que el ojo compare alturas de líquido. Las Cuias chicas se alinean también por el pie. En los niveles con Cuia alta, la regla de filas de 02 §5 mide con su alto [P]; si aun así la fila (7,6 u de alto más la elevación) no cabe en el paso de fila, u baja por debajo del valor de 4.1 hasta un mínimo de 14 dp (cuia de 28 dp de ancho, el mínimo de 02 §5).
 
 ### 4.6 Skins: qué cambia y qué no
 
@@ -191,7 +193,7 @@ Las skins se ganan por hitos y se venden en packs de 1,99 USD (dirección 14). P
 | `glass_body_{cap}` | Capacidad (6 sprites) | Vidrio, brillo, gradiente lateral, marcas de dosis |
 | `liquid_quad` | Nada | Shader con máscara interior |
 | `rim_{skin}` y `foot_{skin}` | Skin (2 sprites por skin) | Borde y pie: fibra, madera, cumatê, cuero |
-| `band_{skin}` | Skin (1 sprite por skin, zona del hombro 4,60-5,20 u) | Decoración propia; nunca cubre la cavidad |
+| `band_{skin}` | Skin (1 sprite por skin, zona del hombro 4,60-5,00 u; D-006) | Decoración propia; nunca cubre la cavidad |
 | `glass_tint_{skin}` | Skin (color) | Tinte del vidrio ≤ 8 % de opacidad (p. ej., ámbar en Cuia de Santarém) |
 | `cap_{skin}` | Skin (1 sprite) | Tapa de sellado |
 
@@ -250,15 +252,15 @@ Reglas: si `af_anim_skipped` supera `anim_tint_skip_alarm_pct` (40 %) en los niv
 
 ### 5.2 Vertido
 
-Tiempos: canon 02 §4.1 (horquillas de research/01 §3 [E]; ninguna fuente publica los de los líderes) con las claves `anim_lift_ms` 120 / `anim_travel_ms` 200 / `anim_pour_dose_ms` 100 / `anim_pour_tail_ms` 80 / `anim_return_ms` 160, defaults en 08 §9; todas se multiplican por `anim_speed_factor_early/late` y por `anim_reduce_motion_factor` (02 §4). El estado lógico se actualiza al instante y el siguiente toque se encola (research/01 Especificación 24 [V]).
+Tiempos: canon 02 §4.1, medidos en Magic Sort (ficha §2.4 y §2.6; D-006), con las claves `anim_lift_ms` 100 / `anim_travel_ms` 300 / `anim_pour_dose_ms` 280 / `anim_pour_tail_ms` 80 / `anim_return_ms` 300, defaults en 08 §9; todas se multiplican por `anim_speed_factor_early/late` y por `anim_reduce_motion_factor` (02 §4). El estado lógico se actualiza al instante y el siguiente toque se encola (research/01 Especificación 24 [V]).
 
 | t (s) | Fotograma | Detalle |
 |---|---|---|
-| 0,00 | Toque en origen | La cuia sube 16 dp (02 §4.1; ≈0,94 u con 7 por fila y 0,5 u con la cuia de 64 dp) en 0,12 s (`anim_lift_ms`, ease-out); iconos de fruta visibles |
-| 0,12 | Toque en destino | La cuia viaja hasta dejar el labio entre 0,6 y 1,6 u por encima del borde del destino (0,6 u más una elevación de 0 a 1 u, la que menos tapa a las otras cuias; D-004) e inclina 38° en 0,20 s (`anim_travel_ms`; arco, no línea recta); con 38° y dos filas el origen puede tapar la parte alta de una cuia vecina mientras vierte (≤ 400 ms), lo que el dueño aceptó (D-004); la onda del origen se agita |
-| 0,26 | Chorro | Arranca al 70 % del traslado (02 §4.1). Bézier cuadrática desde el labio (y = 5,75 u) hasta la superficie del destino con LineRenderer, grosor 0,16 → 0,10 u, UV desplazándose (research/06 §2.6 [E]); color del tinte; la dosis de destino crece mientras la de origen decrece, **0,10 s por dosis + 0,08 s de cola** (`anim_pour_dose_ms` / `anim_pour_tail_ms`: 1 dosis 0,18 s, 4 dosis 0,48 s); burbujas en el destino |
-| 0,26 + caudal | Fin de caudal | Si el destino se completa → 5.3; onda de superficie en destino, amplitud 0,08 u decayendo 0,6 s |
-| +0,16 | Retorno | El origen vuelve a su sitio en 0,16 s (`anim_return_ms`) con un rebote de 0,03 u; iconos se ocultan |
+| 0,00 | Toque en origen | La cuia sube 16 dp (02 §4.1; 0,67 u con la cuia de 48 dp y 0,5 u con la de 64 dp) en 0,10 s (`anim_lift_ms`, ease-out); iconos de fruta visibles |
+| 0,10 | Toque en destino | La cuia viaja 0,30 s en arco (`anim_travel_ms`) hasta dejar el centro de la boca sobre el eje del destino, a 0,85 u del borde (punto más bajo de la boca a 0,30-0,51 u), y llega a 38°; el cuerpo queda del lado del que viene (en la misma columna, hacia el centro del tablero); si ese lado saliera del lienzo entre 38° y el ángulo final, al otro lado [P]; se dibuja delante de todo, sin techo (D-006); la onda del origen se agita |
+| 0,31 | Chorro | Arranca al 70 % del viaje (02 §4.1). Bézier cuadrática desde el canto interior del lado bajo de la boca (0,34 u del eje, `CuiaView.PourEdgeU`) hasta la superficie del destino con LineRenderer, grosor 0,16 → 0,10 u, UV desplazándose (research/06 §2.6 [E]); color del tinte; la dosis de destino crece mientras la de origen decrece, **0,28 s por dosis + 0,08 s de cola** (`anim_pour_dose_ms` / `anim_pour_tail_ms`: 1 dosis 0,36 s; 3 dosis 0,92 s); con cada dosis la inclinación crece hasta 92° − 9° × dosis que quedan en el origen; burbujas en el destino |
+| 0,31 + caudal | Fin de caudal | Si el destino se completa → 5.3; onda de superficie en destino, amplitud 0,08 u decayendo 0,6 s |
+| +0,30 | Retorno | El origen vuelve directo a su ranura en 0,30 s (`anim_return_ms`) con un rebote de 0,03 u (el de Magic Sort no se copia: no está confirmado); iconos se ocultan. De la salida al reposo: 0,87 s con 1 dosis |
 | — | Interrupción y cola | Si llega otro toque durante el vertido, el modelo ya está actualizado y la vista lo persigue con una cola visual de hasta 2 vertidos por cuia (`queue_max_lag_pours` = 2, 02 §3.2): dos vertidos con cuias disjuntas se animan en paralelo, uno que toca una cuia ocupada espera a que esa cuia termine y, si una cuia acumula más de 2 animaciones pendientes, las anteriores saltan a su fotograma final; nunca se bloquea el input |
 
 ### 5.3 Sellado
@@ -385,9 +387,9 @@ Ninguno coincide con un tinte de la sección 3 (el ámbar de UI difiere de Agua 
 | Fila superior | y = safe + 8, alto 48 | Izquierda: Pausa (40 dp). Centro-izquierda: "Nivel {n}" (Display 28) con etiqueta de dificultad debajo (7.7). Centro-derecha: pill Semillas (icono 20 + cifra). Derecha: pill Canoas (visible desde el 31; antes, oculto) y Reiniciar / Volver a la orilla (icono 40 dp) |
 | Barra de evento | Bajo la fila superior, alto 32 dp (02 §5) | Reservada a los eventos de 1.2 (06 §5): colapsada mientras no haya evento activo, es decir, siempre en la 1.0. Ni la Crecida ni la Hoja escudo van aquí |
 | Borde derecho | x = 348-356, y = 120-560 | **Barra vertical de la Crecida** (nivel de agua que sube de abajo arriba, 8 dp de ancho), visible desde el nivel 25 (`streak_unlock_level`): sube un escalón por victoria, con muescas en los hitos 3 · 6 · 10 (05 §2.4); al pagar el hito 10 vuelve a 0 y el río crecido sigue activo hasta el siguiente fallo duro no escudado, que también la vacía (04 §5.2); Hoja escudo, cuando está disponible, como hoja gigante al pie de la barra. Es la única posición de la Crecida en el HUD (02 §5 y 06 §4.3 la copian); la pantalla de victoria la replica en grande (5.4) |
-| Tablero | y = 120-620 | Banda de río al fondo (alto 60 dp en reposo); 2 filas de cuias centradas (3 filas solo si > 14 cuias); alineación por el pie |
+| Tablero | y = 120-620 | Banda de río al fondo (alto 60 dp en reposo); 1, 2 o 3 filas centradas según 02 §5 (3 de ≤ 5 desde 11 cuias si dan la cuia más ancha; 6/5/5 con 16); el número de filas no cambia a mitad de nivel (D-006); alineación por el pie |
 | Bandeja cumbuca | y = 660-740, alto 80, ancho 328, centrada | **Orden canónico** de izquierda a derecha (este capítulo es la fuente; 02 §5 y 04 §2 lo copian tal cual, sin posiciones propias): [Deshacer · **Marea**; sin contador en los niveles 1-10 (ilimitada, `undo_unlimited_until_level` = 10) y contador "3/3" desde el 11] [+1 cuia · **Cuia extra**] [Pista · **Morpho**] [Barajar · **Pororoca**] (+ [Revelar · **Luciérnaga**] solo en niveles Aguas turbias). Todos los comodines viven en esta bandeja, en una sola fila: ninguno flota fuera de ella. Con 4 slots cada uno mide 64 dp; con los 5 (Aguas turbias) pasan a 56 dp. Antes del desbloqueo de un comodín (02 §5 y §13: Marea visible desde el 1 y enseñada en el 3; Cuia extra 8 con 1 unidad regalada; Morpho 12 con 3 unidades regaladas; Pororoca 30; Luciérnaga ≥ 100) su ranura no existe y la bandeja se centra conservando el orden relativo. Etiqueta funcional de 12 dp bajo el icono; nombre temático en el tooltip de primer uso (glosario §0.2) |
-| Área táctil | — | Todo control ≥ 48 dp; la zona táctil de la cuia es el ancho completo de su ranura (48 dp con 7 por fila) × el alto de la cuia + 32 dp por encima para alcanzarla elevada (102 + 32 = 134 dp con 7 por fila), según 02 §3.3 |
+| Área táctil | — | Todo control ≥ 48 dp; la zona táctil de la cuia es el ancho completo de su ranura (67,2 dp con 5 por fila; 48 dp con 7 en 16:9) × el alto de la cuia + 32 dp por encima para alcanzarla elevada (131,3 + 32 ≈ 163 dp con 3 filas), según 02 §3.3 |
 
 El orden y la iconografía difieren de IEC/Guru (deshacer / pista / +tubo) por diseño (research/08 §4.1 [E]).
 

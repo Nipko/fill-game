@@ -1,7 +1,10 @@
 // Líquido de la cuia para uGUI (GDD 08 §5.2; docs/art/direccion-visual-v2.md 4.2): degradado por dosis (±4 % de L),
 // oscurecido lateral, franja especular, franja secundaria y brillo vertical como color opaco precalculado (un brillo por
-// punto, 2.5), patrón de accesibilidad por tinte (07 §3), menisco con línea clara y curvatura cóncava, onda tras verter
-// (A0 = 0,03 u, exp(-t / 0,25 s), lambda 1,30 u, fase 2,5 u/s) y destello del sellado (+15 %).
+// punto, 2.5), patrón de accesibilidad por tinte (07 §3), cara superior en elipse (D-006, como Magic Sort: alto
+// _AFTopFaceU, ancho de la cavidad, color aclarado del menisco y una línea clara al fondo), fronteras entre dosis y fondo
+// del líquido en arco con la flecha del borde delantero de esa elipse (Magic Sort, d_002340: en el eje todas las dosis
+// miden 1 u, también la de arriba), onda tras verter (A0 = 0,03 u, exp(-t / 0,25 s), lambda 1,30 u, fase 2,5 u/s) y
+// destello del sellado (+15 %).
 //
 // uGUI no admite MaterialPropertyBlock en un CanvasRenderer: los datos por cuia y por dosis llegan por vértice
 // (LiquidGraphic.cs) y todas las cuias comparten un material, así que van en un solo lote. Solo canales UV: el Canvas
@@ -18,9 +21,18 @@
 //              sin patrón, 0 marcas en tinta, 1 marcas en marfil)
 //   TEXCOORD3  rgb: color del menisco (espacio del shader); a: fila del patrón en el atlas
 //   _DpU       1 dp en u (todas las cuias de un nivel miden lo mismo); _PatternRows: filas del atlas
+//   _AF*U      geometría de la cuia (globales que fija LiquidGraphic.ApplyShaderGeometry desde CuiaGeometry, la única
+//              fuente): fondo y medio ancho de la cavidad, medio ancho del cuello, hombro, alto sobre la cavidad, borde y
+//              alto de la cara superior
 //
 // Con la cuia inclinada (al verter) las capas siguen horizontales y llenan la cavidad girada desde su punto más bajo
-// (LiquidGraphic.cs); aquí se recortan a la silueta interior (cavidad recta, hombro y cuello) con antialias.
+// (LiquidGraphic.cs); aquí se recortan a la silueta interior (cavidad recta con el fondo en arco, hombro y cuello) con
+// antialias.
+//
+// Arcos (CuiaGeometry.FaceSagU): flecha = 0,5 · _AFTopFaceU · sqrt(1 − (X / medio ancho)²), 0,20 u en el eje. La malla de
+// cada dosis baja esa flecha bajo su frontera (LiquidGraphic) y aquí se ve solo sobre su arco (y de capa + flecha ≥ fondo
+// de la dosis); como cada dosis se dibuja después de la de debajo, la tapa entre la recta y el arco. La de abajo del todo
+// se recorta al fondo de la cavidad en arco (y local).
 Shader "AF/UI/Liquid"
 {
     Properties
@@ -105,6 +117,15 @@ Shader "AF/UI/Liquid"
             half4 _PaperLin;
             int _UIVertexColorAlwaysGammaSpace;
 
+            // Geometría de la cuia (globales, CuiaGeometry vía LiquidGraphic.ApplyShaderGeometry; D-006).
+            float _AFCavityBottomU;
+            float _AFCavityHalfU;
+            float _AFNeckHalfU;
+            float _AFShoulderU;
+            float _AFAboveCavityU;
+            float _AFRimU;
+            float _AFTopFaceU;
+
             v2f vert(appdata_t v)
             {
                 v2f o;
@@ -142,28 +163,44 @@ Shader "AF/UI/Liquid"
                 float dpU = _DpU;
                 float k = floor((i.surf.w + 1.5) / 4.0);
                 float patternMode = i.surf.w - (4.0 * k);
-                float doseBottom = 0.6 + k;
+                float doseBottom = _AFCavityBottomU + k;
 
-                // Recorte a la silueta interior: cavidad de 1,30 u, hombro de 0,60 u hasta 0,80 u y cuello; entre el fondo
-                // (0,60 u) y el labio (alto - 0,25 u). En reposo la malla ya está dentro y el recorte no cambia nada.
-                float cavityTop = heightU - 1.40;
-                float sh = saturate((yl - cavityTop) / 0.60);
-                float innerHw = lerp(0.65, 0.40, sh * sh * (3.0 - (2.0 * sh)));
+                // Flecha de los arcos (CuiaGeometry.FaceSagU): medio alto de la cara superior en el eje, 0 en las paredes.
+                float ex = saturate(abs(x - 1.0) / _AFCavityHalfU);
+                float faceHalf = 0.5 * _AFTopFaceU * sqrt(saturate(1.0 - (ex * ex)));
+
+                // Recorte a la silueta interior: cavidad recta, hombro hasta el cuello y cuello; entre el fondo en arco y
+                // el labio (alto - borde). En reposo la malla ya está dentro y el recorte solo hace el arco del fondo.
+                float cavityTop = heightU - _AFAboveCavityU;
+                float sh = saturate((yl - cavityTop) / _AFShoulderU);
+                float innerHw = lerp(_AFCavityHalfU, _AFNeckHalfU, sh * sh * (3.0 - (2.0 * sh)));
                 float pixX = max(fwidth(x), 1e-4);
                 float pixY = max(fwidth(yl), 1e-4);
                 float clip = saturate(((innerHw - abs(x - 1.0)) / pixX) + 1.0)
-                    * saturate(((yl - 0.6) / pixY) + 1.0)
-                    * saturate((((heightU - 0.25) - yl) / pixY) + 1.0);
+                    * saturate(((yl - (_AFCavityBottomU - faceHalf)) / pixY) + 0.5)
+                    * saturate((((heightU - _AFRimU) - yl) / pixY) + 1.0);
 
-                // Superficie: onda tras verter y curvatura cóncava junto a las paredes (guía 4.2).
-                float wall = 0.65 - abs(x - 1.0);
+                // Superficie con la onda tras verter y cara superior en elipse (D-006): centrada en la superficie, del ancho
+                // de la cavidad y _AFTopFaceU de alto; su mitad trasera sube sobre la superficie y la delantera es la cara.
+                float wall = _AFCavityHalfU - abs(x - 1.0);
                 float wave = i.surf.y * sin(((x - 1.0) * 4.8332) - (_Time.y * 12.083) + i.surf.z);
-                float top = i.surf.x + wave + (0.04 * saturate(1.0 - (wall / 0.12)));
+                float top = i.surf.x + wave;
+                float topEdge = top + faceHalf;
                 float pix = max(fwidth(y), 1e-4);
-                float alpha = saturate(((top - y) / pix) + 0.5);
+                float alpha = saturate(((topEdge - y) / pix) + 0.5);
 
-                // Degradado vertical por dosis: ±4 % de L (OKLab) es ±12 % en lineal; el centro de la dosis, exacto.
-                float t = saturate(y - doseBottom);
+                // Frontera inferior en arco (como Magic Sort): la dosis k > 0 se ve desde el borde delantero de una elipse
+                // igual a la de la cara superior, faceHalf bajo su nivel en el eje; tapa la de debajo entre la recta y el
+                // arco. La dosis 0 la recorta el fondo en arco (clip). ya = y de capa medida desde el arco.
+                float ya = y + faceHalf;
+                if (k > 0.5)
+                {
+                    alpha *= saturate(((ya - doseBottom) / pix) + 0.5);
+                }
+
+                // Degradado vertical por dosis: ±4 % de L (OKLab) es ±12 % en lineal; el centro de la dosis, exacto (en el
+                // arco, como la banda).
+                float t = saturate(ya - doseBottom);
                 half3 col = i.color.rgb * (1.0 + (0.24 * (t - 0.5)));
 
                 // Oscurecido lateral: 0,20 u por pared, negro al 20 % (07 §4.2).
@@ -187,19 +224,20 @@ Shader "AF/UI/Liquid"
                 if (patternMode > -0.5)
                 {
                     float rowH = 1.0 / _PatternRows;
-                    float2 puv = float2((x - 0.35) * 2.0, (i.men.a * rowH) + (clamp(y - doseBottom, 0.004, 0.996) * rowH));
+                    // Dos teselas por u (ProceduralArt.PatternTileU = 0,5 u) desde la pared izquierda de la cavidad.
+                    float2 puv = float2((x - (1.0 - _AFCavityHalfU)) * 2.0, (i.men.a * rowH) + (clamp(ya - doseBottom, 0.004, 0.996) * rowH));
                     half m = tex2D(_MainTex, puv).a;
                     half3 baseCol = lerp(_InkLin.rgb, _PaperLin.rgb, (half)patternMode);
                     half3 g = lerp(sqrt(col), sqrt(baseCol), 0.15 * m);
                     col = g * g;
                 }
 
-                // Menisco: 0,08 u (mínimo 2 dp) aclarado y una línea clara de 1 dp en el borde.
-                float menH = max(0.08, 2.0 * dpU);
-                float inMen = saturate(((y - (top - menH)) / pix) + 0.5);
-                col = lerp(col, i.men.rgb, inMen);
-                float rim = saturate(1.0 - ((top - y) / dpU));
-                col = lerp(col, half3(1.0, 1.0, 1.0), 0.45 * rim * inMen);
+                // Cara superior (D-006): la elipse entera con el color aclarado del menisco, más clara que el tinte, y una
+                // línea clara de 1 dp en su borde trasero.
+                float inFace = saturate(((y - (top - faceHalf)) / pix) + 0.5);
+                col = lerp(col, i.men.rgb, inFace);
+                float rim = saturate(1.0 - ((topEdge - y) / dpU));
+                col = lerp(col, half3(1.0, 1.0, 1.0), 0.35 * rim * inFace);
 
                 // Destello del sellado: +15 % de luminosidad durante 100 ms (07 §5.3).
                 col += (1.0 - col) * i.lit.a;

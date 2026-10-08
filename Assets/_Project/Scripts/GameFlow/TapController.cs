@@ -70,7 +70,7 @@ namespace AF.GameFlow
 
             if (session.TryPour(previous, index, out PourResult pour))
             {
-                Selected = NoSelection; // C4: el origen no sigue seleccionado aunque le queden dosis del mismo color (en single, D-001, es lo habitual; en run, tras un parcial)
+                Selected = NoSelection; // C4: el origen no sigue seleccionado aunque le queden dosis del mismo color (en run, tras un vertido parcial; en single, de pruebas, lo habitual; P4 cerrada por D-005)
                 return new TapResult(TapKind.Poured, index, previous, NoSelection, pour);
             }
 

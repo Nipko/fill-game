@@ -96,7 +96,10 @@ namespace AF.UI
 
         private void Start()
         {
-            if (levelPack == null)
+            // Gancho de los tests (LaunchOptions.LevelPackJsonOverride, null en producción): un paquete propio en lugar del
+            // TextAsset de la escena.
+            string? packJson = LaunchOptions.LevelPackJsonOverride;
+            if (packJson == null && levelPack == null)
             {
                 Debug.LogError("[AF.GameBootstrap] falta el paquete de niveles (TextAsset). Regenera la escena con AF.UI.Editor.GameSceneBuilder.CreateGameScene.");
                 enabled = false;
@@ -106,7 +109,7 @@ namespace AF.UI
             LevelPack pack;
             try
             {
-                pack = LevelPackReader.Read(levelPack.text);
+                pack = LevelPackReader.Read(packJson ?? levelPack!.text);
             }
             catch (LevelFormatException e)
             {
@@ -131,7 +134,7 @@ namespace AF.UI
             IProgressStore progress = LaunchOptions.ProgressStoreOverride ?? new PlayerPrefsProgressStore();
             try
             {
-                // rules_pour_mode (D-001): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
+                // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
                 _flow = new LevelFlow(pack, progress, _screen, GameConfig.TapSwitchSelection, LaunchOptions.ResolvePourMode());
             }
             catch (NotSupportedException e)

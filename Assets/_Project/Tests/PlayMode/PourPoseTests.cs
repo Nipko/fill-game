@@ -1,9 +1,7 @@
 #nullable enable
 using System.Collections;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
-using AF.Core.Board;
 using AF.Core.Rules;
 using AF.Core.Session;
 using AF.GameFlow;
@@ -17,43 +15,25 @@ using UnityEngine.TestTools;
 namespace AF.Tests.PlayMode
 {
     /// <summary>
-    /// Pose y lectura del vertido (revisiones visuales del 2026-10-07 sobre <c>04_pouring_l7</c>): inclinación de 38°
-    /// (02 §4.1); el labio queda entre 0,6 y 1,6 u sobre el borde del destino (07 §5.2 más la elevación máxima de 1 u), con el
-    /// canto por el que sale el chorro sobre su boca; la silueta del origen no entra en el cuerpo ni en el hombro del
-    /// destino; el chorro nace en el labio y termina en la superficie del destino (o en el fondo de su cavidad), dentro de
-    /// su boca; las marcas de dosis del origen se apagan mientras está inclinado y el destino no empieza a llenarse hasta
-    /// que la cabeza del chorro llega a su superficie. El origen inclinado no sube por encima del techo del vertido
-    /// (<see cref="GameScreen.PourCeilingFor"/>): 4 dp de aire bajo el canto interior del marco en los tableros de una
-    /// fila (<see cref="GameScreen.PourCeilingAirDp"/>) y el borde exterior del panel en los de dos filas, siempre bajo el
-    /// HUD. Es un techo [P] derivado de D-004 (C18: con u = 32 la
-    /// pose elevada salía del panel), no una respuesta del dueño. Una dosis por vertido (D-001). El reloj lo lleva el
-    /// test, en el lienzo del teléfono (1080 × 2340 px, 360 × 780 dp): en batchmode la pantalla puede salir más ancha de
-    /// 360 dp y el tope de tableta cambiaría u.
+    /// Pose y tiempos del vertido como Magic Sort (D-006, puntos 1 y 2; ficha §2.6; propuesta §3.2 y §3.5):
+    /// (a) del fin del viaje al inicio del retorno, el centro de la boca del origen está sobre el eje del destino (±0,10 u)
+    /// y el punto más bajo de la boca, a 0,20-0,60 u de su borde; (b) la inclinación sigue <see cref="BoardAnimator.TiltAt"/>
+    /// en cada fotograma, sin bajar ni pararse en 38° (≈ 40° al terminar el viaje), y vale 92° − 9° × dosis que quedan (±1°)
+    /// al terminar cada dosis y, la última, al cortarse el chorro; (c) el cuerpo queda del lado del que
+    /// viene el origen (en la misma columna, hacia el centro del tablero), salvo que a su ángulo final saliera del lienzo,
+    /// y ninguna silueta sale del lienzo para ninguna pareja de los niveles 1, 2, 4 y 7 con 0-3 dosis restantes; (d) escala
+    /// 1,00; (f) el chorro sale junto al punto más bajo de la boca y acaba en la superficie del destino, dentro de su boca;
+    /// (g) el nivel 2 jugado en run con la solución del informe llega a la celebración sin que salte el drenaje y sin saltos
+    /// de la cola. El reloj lo lleva el test, en el lienzo del teléfono (1080 × 2340 px, 360 × 780 dp).
     /// </summary>
     /// <remarks>
-    /// <para>Cobertura (revisión de D-004): el ajuste del techo cambia la pose con T = 3, 5, 6 y 7, así que para los
-    /// niveles 1, 2, 4 y 7 se comprueban (a) las poses de todas las parejas (origen, destino), 6 + 20 + 30 + 42 = 98, con
-    /// la misma búsqueda que usa la cola (<see cref="BoardAnimator.ComputePourPose"/>: depende solo de la geometría, no del
-    /// contenido); (b) todos los vertidos legales del estado inicial, jugados con toques, con su chorro, y que su pose sea
-    /// la de (a); y (c) vertidos concretos en los que el techo recorta la elevación (hacia la fila 1 en dos filas y el
-    /// vertido cruzado del nivel 1 en los dos sentidos), con los vertidos previos que los hacen legales.</para>
-    /// <para>Con 38° y dos filas no existe ninguna pose que deje libres a las vecinas (el eje cruza la ranura vecina a
-    /// 3,5 / tan 38° ≈ 4,5 u bajo el labio). El dueño aceptó en D-004 (C17) que, en tableros de dos filas, el origen
-    /// tape la parte alta de la vecina durante el vertido (≤ 400 ms). En una fila, el vertido entre cuias no vecinas
-    /// tapa la parte alta de la del medio con cualquier elevación (captura <c>04b_pouring_l1</c>): el dueño también lo
-    /// aceptó (D-004, Consecuencias). Estos tests no comprueban el tapado en ningún caso.</para>
+    /// Sin techo (D-006): el origen puede pasar sobre el marco del panel y el HUD, porque se dibuja delante de todo (lo
+    /// prueba <see cref="PourLayerTests"/>). A 38° el origen tapa parte de la cuia vecina y del propio destino, como Magic
+    /// Sort en 3.100 ms: estos tests no comprueban el tapado.
     /// </remarks>
     public sealed class PourPoseTests
     {
-        // Tolerancia de las comprobaciones de posición (dp).
-        private const float ToleranceDp = 0.5f;
-
-        // Paso de elevación de la búsqueda de pose (u): si el techo queda a menos de un paso sobre la silueta, es el techo
-        // el que limita la elevación (el paso siguiente lo pasaría y se recortaría).
-        private const float RaiseStepU = 0.25f;
-
-        // Fin de la fila del HUD en el lienzo de prueba (32 dp de zona segura + 56 de HUD, guía 3.2).
-        private const float HudBottomDp = 88f;
+        private const float AngleToleranceDeg = 1f;
 
         [TearDown]
         public void TearDown()
@@ -63,85 +43,110 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Level1_TheLipStaysOverTheTargetMouth_AndTheStreamReachesItsSurface()
+        public IEnumerator Level1_FirstPour_FollowsTheMagicSortPose()
         {
-            // Primer vertido de la solución: 0 → 2, cruzado de izquierda a derecha sobre la del medio.
-            yield return PourIsReadable(1, -1, -1, false);
+            // 0 → 2: el origen (4 dosis) suelta 1 y le quedan 3: ≈ 40° al llegar (sin pararse) y 65° al cortarse el chorro.
+            yield return LoadLevel(1);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.View!.Views[0].Unit, Is.EqualTo(32f).Within(0.01f), "u del nivel 1 (D-004)");
+            PlayedPourFollowsThePose(boot, 0, 2, new[] { 65f }, "nivel 1, 0 → 2");
         }
 
         [UnityTest]
-        public IEnumerator Level1_CrossPourRightToLeft_StaysUnderTheFrame_AndTheCeilingLimitsTheRaise()
+        public IEnumerator Level1_CrossPourRightToLeft_FollowsTheMagicSortPose()
         {
-            // 2 → 0, el sentido contrario del primer vertido de la solución: legal tras 1 → 2 y 0 → 1. Con u = 32 el techo,
-            // 4 dp bajo el canto interior del marco, deja 4,5 dp (0,14 u) de elevación: la búsqueda la recorta a ≈ 0,14 u
-            // (con 5,5 dp de aire, 0,09 u, el origen entraría en el hombro del destino).
-            yield return PourIsReadable(1, 2, 0, true);
+            // 2 → 0, el sentido contrario: legal tras 1 → 2 y 0 → 1.
+            yield return PourWithSetup(1, 2, 0);
         }
 
         [UnityTest]
-        public IEnumerator Level2_CrossPour_StaysUnderTheFrame()
+        public IEnumerator Level2_RunOfThreeOntoAnEmptyCuia_TiltsTo65_74And83()
         {
-            // T = 5 (u ≈ 23,5 dp), 0 → 3 sobre dos cuias: la búsqueda querría subir el máximo, 1 u. Con el margen de 36 dp
-            // de una fila el canto interior del marco deja ≈ 1,01 u de elevación y el techo, 4 dp más abajo, la recorta a
-            // ≈ 0,84 u (con el borde exterior y 22 dp de margen la bajaba a 0,5 u).
-            yield return PourIsReadable(2, 0, 3, true);
+            // D-005 y D-006: la racha de 3 açaí de la cuia 2 (4 dosis) pasa a la 3 vacía en un vertido: 65°, 74° y 83°.
+            yield return LoadLevel(2);
+            PlayedPourFollowsThePose(GameBootstrap.Current!, 2, 3, new[] { 65f, 74f, 83f }, "nivel 2, 2 → 3");
         }
 
         [UnityTest]
-        public IEnumerator Level4_PourIntoRow1_StaysUnderTheCeiling_AndTheCeilingClipsTheRaise()
+        public IEnumerator Level4_PoursIntoRow1_FollowTheMagicSortPose()
         {
-            // T = 6 (dos filas de 3, u = 24): de la fila 2 a la fila 1, en diagonal; legal tras 0 → 4 y 0 → 5. El techo (borde
-            // exterior del panel) recorta la elevación a ≈ 0,64 u.
-            yield return PourIsReadable(4, 4, 0, true);
+            // T = 6 (dos filas de 3): de la fila 2 a la fila 1, en la misma columna (el cuerpo va hacia el centro del
+            // tablero) y en diagonal.
+            yield return PourWithSetup(4, 3, 0);
+            yield return PourWithSetup(4, 4, 0);
         }
 
         [UnityTest]
-        public IEnumerator Level7_TwoRows_TheLipStaysOverTheTargetMouth_AndTheStreamReachesItsSurface()
+        public IEnumerator Level7_FirstPourAndAPourIntoRow1_FollowTheMagicSortPose()
         {
-            yield return PourIsReadable(7, -1, -1, false);
+            yield return PourWithSetup(7, -1, -1);
+            yield return PourWithSetup(7, 5, 1);
         }
 
         [UnityTest]
-        public IEnumerator Level7_PourIntoRow1_StaysUnderTheCeiling_AndTheCeilingClipsTheRaise()
+        public IEnumerator Level1_EveryPair_StaysOnTheCanvas_OnTheSourceSide()
         {
-            // T = 7 (filas de 4 y 3, u = 24): de la fila 2 a la fila 1. El techo (borde exterior del panel) recorta la
-            // elevación a ≈ 0,64 u.
-            yield return PourIsReadable(7, 5, 1, true);
+            yield return EveryPairStaysOnTheCanvas(1);
         }
 
         [UnityTest]
-        public IEnumerator Level1_EveryPairAndEveryInitialPour_HaveAReadablePose()
+        public IEnumerator Level2_EveryPair_StaysOnTheCanvas_OnTheSourceSide()
         {
-            yield return EveryPoseIsReadable(1);
+            yield return EveryPairStaysOnTheCanvas(2);
         }
 
         [UnityTest]
-        public IEnumerator Level2_EveryPairAndEveryInitialPour_HaveAReadablePose()
+        public IEnumerator Level4_EveryPair_StaysOnTheCanvas_OnTheSourceSide()
         {
-            yield return EveryPoseIsReadable(2);
+            yield return EveryPairStaysOnTheCanvas(4);
         }
 
         [UnityTest]
-        public IEnumerator Level4_EveryPairAndEveryInitialPour_HaveAReadablePose()
+        public IEnumerator Level7_EveryPair_StaysOnTheCanvas_OnTheSourceSide()
         {
-            yield return EveryPoseIsReadable(4);
+            yield return EveryPairStaysOnTheCanvas(7);
         }
 
         [UnityTest]
-        public IEnumerator Level7_EveryPairAndEveryInitialPour_HaveAReadablePose()
+        public IEnumerator Level2_TheReportSolutionInRun_ReachesTheCelebration_WithoutADrainSnap()
         {
-            yield return EveryPoseIsReadable(7);
+            // (g) Solución óptima en run de tools/out/tutorial_v0_report.md (nivel 2, 6 vertidos):
+            // 0→3 ×2 · 0→4 ×1 · 0→3 ×1 · 1→3 ×1 · 2→4 ×3 · 1→2 ×3, tocada cada 1.000 ms (Magic Sort: 0,99 s entre vertidos como
+            // mínimo y 3,1 s de mediana; ficha §2.6).
+            int[,] moves = { { 0, 3, 2 }, { 0, 4, 1 }, { 0, 3, 1 }, { 1, 3, 1 }, { 2, 4, 3 }, { 1, 2, 3 } };
+            yield return LoadLevel(2);
+            GameBootstrap boot = GameBootstrap.Current!;
+            LevelFlow flow = boot.Flow!;
+            Assert.That(flow.Session.PourMode, Is.EqualTo(PourMode.Run));
+            for (int i = 0; i < moves.GetLength(0); i++)
+            {
+                if (i > 0)
+                {
+                    PlayModeHelpers.TickExact(boot, 1000);
+                }
+
+                Assert.That(boot.TapCuia(moves[i, 0]).Kind, Is.EqualTo(TapKind.Selected), "origen " + i);
+                TapResult r = boot.TapCuia(moves[i, 1]);
+                Assert.That(r.Kind, Is.EqualTo(TapKind.Poured), "destino " + i);
+                Assert.That(r.Pour.Pour.Amount, Is.EqualTo(moves[i, 2]), "cantidad " + i);
+            }
+
+            Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Won));
+            Assert.That(flow.Session.AppliedPours, Is.EqualTo(flow.Level.Par));
+            int drain = PlayModeHelpers.StepUntilIdle(boot, GameConfig.MaxViewDrainWaitMs);
+            Assert.That(drain, Is.LessThan(GameConfig.MaxViewDrainWaitMs - PlayModeHelpers.FrameMs), "la cola se vacía antes del tope de drenaje");
+            PlayModeHelpers.TickExact(boot, PlayModeHelpers.FrameMs);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Celebration), "celebración al vaciarse la cola");
+            Assert.That(boot.View!.Animator.LagSnapCount, Is.EqualTo(0), "sin saltos de la cola visual");
+            Debug.Log("AF_DRAIN nivel 2: la cola se vació " + drain + " ms después del último toque");
         }
 
         [UnityTest]
         public IEnumerator TiltedSource_HidesItsDoseMarks_AndTheTargetWaitsForTheStreamHead()
         {
             // Nivel 2 (02 §13): la cuia 2 tiene una racha de 3 açaí y la 3 está vacía.
-            yield return PlayModeHelpers.LoadGame(2, new MemoryProgressStore());
+            yield return LoadLevel(2);
             GameBootstrap boot = GameBootstrap.Current!;
-            PlayModeHelpers.TakeClock(boot);
-            boot.TapAnywhere();
-            PlayModeHelpers.StepUntilIdle(boot, 2000);
             GameScreen view = boot.View!;
             CuiaView source = view.Views[2];
             CuiaView target = view.Views[3];
@@ -149,11 +154,13 @@ namespace AF.Tests.PlayMode
             float before = target.LiquidLevel;
 
             Assert.That(boot.TapCuia(2).Kind, Is.EqualTo(TapKind.Selected));
-            Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Poured));
+            TapResult poured = boot.TapCuia(3);
+            Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured));
+            int amount = poured.Pour.Pour.Amount;
 
             // Chorro recién salido (< StreamGrowMs): la cabeza aún no ha llegado y el destino no ha subido.
             int streamStart = (int)(view.Timings.TravelMs * BoardAnimator.StreamStartFraction);
-            PlayModeHelpers.Step(boot, streamStart + 24);
+            PlayModeHelpers.TickExact(boot, streamStart + 24);
             Assert.That(source.MarksVisible, Is.False, "marcas del origen apagadas con la cuia inclinada");
             Assert.That(target.LiquidLevel, Is.EqualTo(before).Within(0.001f), "el destino espera a la cabeza del chorro");
             Assert.That(source.Liquid.Tongue, Is.GreaterThan(0f), "lengua por la pared inferior hasta el labio");
@@ -161,13 +168,81 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.StepUntilIdle(boot, 3000);
             Assert.That(source.MarksVisible, Is.True, "marcas de vuelta en la ranura");
             Assert.That(source.Liquid.Tongue, Is.EqualTo(0f));
-            Assert.That(target.LiquidLevel, Is.EqualTo(before + 1f).Within(0.001f), "una dosis por vertido (D-001)");
+            Assert.That(target.LiquidLevel, Is.EqualTo(before + amount).Within(0.001f), "el destino recibe la cantidad del vertido");
+        }
+
+        [Test]
+        public void TiltCurve_OfOneDoseFromAFullCuia_FollowsMagicSort_Every100ms()
+        {
+            // D-006 y ficha §2.6: Magic Sort gira 12°, 24°, 38°, 52°, 62° cada 100 ms desde la salida y llega a 66° con el
+            // final del chorro; sin parada en 38°. Con los defaults de 08 §9: chorro a los 210 ms, dosis de 280 y cola de 80.
+            float[] magicSort = { 0f, 12f, 24f, 38f, 52f, 62f };
+            float previous = -1f;
+            for (int i = 0; i < magicSort.Length; i++)
+            {
+                float tilt = BoardAnimator.TiltAt(i * 100f, 210f, 280f, 80f, 4, 1);
+                Assert.That(tilt, Is.EqualTo(magicSort[i]).Within(3f), "a los " + (i * 100) + " ms");
+                Assert.That(tilt, Is.GreaterThan(previous), "sube sin pararse");
+                previous = tilt;
+            }
+
+            float before38 = BoardAnimator.TiltAt(290f, 210f, 280f, 80f, 4, 1);
+            float after38 = BoardAnimator.TiltAt(310f, 210f, 280f, 80f, 4, 1);
+            Assert.That((after38 - before38) * 5f, Is.GreaterThan(10f), "≈ 13° cada 100 ms al pasar por 38° (sin velocidad 0)");
+            Assert.That(BoardAnimator.TiltAt(570f, 210f, 280f, 80f, 4, 1), Is.EqualTo(65f).Within(1e-3f), "65° al cortarse el chorro");
+            Assert.That(BoardAnimator.TiltAt(900f, 210f, 280f, 80f, 4, 1), Is.EqualTo(65f).Within(1e-3f));
+
+            // Racha de 3 de una cuia llena: 65° y 74° al terminar las dosis 1 y 2 y 83° al cortarse el chorro.
+            Assert.That(BoardAnimator.TiltAt(490f, 210f, 280f, 80f, 4, 3), Is.EqualTo(65f).Within(1e-3f));
+            Assert.That(BoardAnimator.TiltAt(770f, 210f, 280f, 80f, 4, 3), Is.EqualTo(74f).Within(1e-3f));
+            Assert.That(BoardAnimator.TiltAt(1130f, 210f, 280f, 80f, 4, 3), Is.EqualTo(83f).Within(1e-3f));
+            previous = -1f;
+            for (int ms = 0; ms <= 1200; ms += 5)
+            {
+                float tilt = BoardAnimator.TiltAt(ms, 210f, 280f, 80f, 4, 3);
+                Assert.That(tilt, Is.GreaterThanOrEqualTo(previous - 1e-4f), "no decreciente a los " + ms + " ms");
+                previous = tilt;
+            }
+        }
+
+        [Test]
+        public void TiltAfterDose_Is92Minus9PerRemainingDose()
+        {
+            Assert.That(BoardAnimator.TiltAfterDose(3), Is.EqualTo(65f).Within(1e-4f));
+            Assert.That(BoardAnimator.TiltAfterDose(2), Is.EqualTo(74f).Within(1e-4f));
+            Assert.That(BoardAnimator.TiltAfterDose(1), Is.EqualTo(83f).Within(1e-4f));
+            Assert.That(BoardAnimator.TiltAfterDose(0), Is.EqualTo(92f).Within(1e-4f));
+            Assert.That(BoardAnimator.TiltAfterDose(9), Is.EqualTo(BoardAnimator.ArrivalTiltDeg).Within(1e-4f), "nunca menos que la llegada");
+        }
+
+        [Test]
+        public void PourDuration_Is870_1150And1430ms_WithTheTimingsOfD006()
+        {
+            // (e) PourTimings(anim_lift_ms, anim_travel_ms, anim_pour_dose_ms, anim_pour_tail_ms, anim_return_ms).
+            var timings = new PourTimings(100f, 300f, 280f, 80f, 300f);
+            Assert.That(BoardAnimator.PourDurationMs(timings, 1), Is.EqualTo(870f).Within(0.01f));
+            Assert.That(BoardAnimator.PourDurationMs(timings, 2), Is.EqualTo(1150f).Within(0.01f));
+            Assert.That(BoardAnimator.PourDurationMs(timings, 3), Is.EqualTo(1430f).Within(0.01f));
+            Assert.That(GameConfig.AnimLiftMs, Is.EqualTo(100));
+            Assert.That(GameConfig.AnimTravelMs, Is.EqualTo(300));
+            Assert.That(GameConfig.AnimPourDoseMs, Is.EqualTo(280));
+            Assert.That(GameConfig.AnimPourTailMs, Is.EqualTo(80));
+            Assert.That(GameConfig.AnimReturnMs, Is.EqualTo(300));
+        }
+
+        private static IEnumerator LoadLevel(int level)
+        {
+            GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f); // 360 × 780 dp, como VisualSnapshotTests
+            yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.StepUntilIdle(boot, 2000);
         }
 
         // Vertido de source a target (el primero de la solución si source < 0), precedido de los vertidos más cortos que
-        // lo hacen legal; comprueba la pose y el chorro con el origen ya inclinado y, si ceilingLimits, que es el techo el
-        // que limita la elevación (queda a menos de un paso de elevación sobre la silueta).
-        private static IEnumerator PourIsReadable(int level, int source, int target, bool ceilingLimits)
+        // lo hacen legal; comprueba la pose en cada fotograma.
+        private static IEnumerator PourWithSetup(int level, int source, int target)
         {
             yield return LoadLevel(level);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -181,7 +256,7 @@ namespace AF.Tests.PlayMode
             }
 
             string label = "nivel " + level + ", " + source + " → " + target;
-            Pour[]? setup = FindSetup(session.Current, source, target, session.PourMode, session.FutileRuleEnabled);
+            Pour[]? setup = PlayModeHelpers.FindSetup(session.Current, source, target, session.PourMode, session.FutileRuleEnabled);
             Assert.That(setup, Is.Not.Null, label + ": ningún estado cercano hace legal el vertido");
             for (int i = 0; i < setup!.Length; i++)
             {
@@ -189,155 +264,228 @@ namespace AF.Tests.PlayMode
                 PlayModeHelpers.StepUntilIdle(boot, 3000);
             }
 
-            if (level == 1)
+            PlayedPourFollowsThePose(boot, source, target, null, label);
+        }
+
+        // Juega source → target con el reloj exacto y comprueba (a), (b), (d) y (f) en cada fotograma del viaje al retorno,
+        // y (b) en los instantes clave: fin del viaje (la inclinación de TiltAt, ≥ 38°) y fin de cada dosis (92° − 9° ×
+        // dosis que quedan; la última, al cortarse el chorro). Si expectedTilts no es null, también los ángulos esperados
+        // por dosis.
+        private static void PlayedPourFollowsThePose(GameBootstrap boot, int source, int target, float[]? expectedTilts, string label)
+        {
+            GameScreen view = boot.View!;
+            CuiaView s = view.Views[source];
+            CuiaView t = view.Views[target];
+            int before = boot.Flow!.Session.Current[source].Count;
+            TapResult r = TapPour(boot, source, target, label);
+            int amount = r.Pour.Pour.Amount;
+            int remainingAfter = before - amount;
+            if (expectedTilts != null)
             {
-                // D-004 (C18): tres cuias de 64 dp a 360 dp de ancho, u = 32.
-                Assert.That(boot.View!.Views[source].Unit, Is.EqualTo(32f).Within(0.01f), "u del origen en el nivel 1");
-                Assert.That(boot.View.Views[target].Unit, Is.EqualTo(32f).Within(0.01f), "u del destino en el nivel 1");
+                Assert.That(amount, Is.EqualTo(expectedTilts.Length), label + ": dosis del vertido");
             }
 
-            float headroom = PlayedPourIsReadable(boot, source, target, label);
-            if (ceilingLimits)
+            PourTimings timings = view.Timings;
+            int travel = Mathf.RoundToInt(timings.TravelMs);
+            int streamStart = Mathf.RoundToInt(timings.TravelMs * BoardAnimator.StreamStartFraction);
+            int dose = Mathf.RoundToInt(timings.DoseMs);
+            int flowEnd = streamStart + (amount * dose);
+            int returnStart = Mathf.Max(travel, flowEnd + Mathf.RoundToInt(timings.TailMs));
+            float arrivalTilt = BoardAnimator.TiltAt(travel, streamStart, dose, timings.TailMs, before, amount);
+            Assert.That(arrivalTilt, Is.GreaterThanOrEqualTo(BoardAnimator.ArrivalTiltDeg), label + ": al terminar el viaje ya pasó de 38° (b)");
+            view.Animator.ComputePourPose(source, target, remainingAfter, arrivalTilt, out Vector2 arrivalOffset, out float arrivalAngle);
+            float side = Mathf.Sign(arrivalAngle);
+
+            int elapsed = 0;
+            float previousTilt = 0f;
+            int nextDose = 1;
+            bool sawStream = false;
+            while (elapsed < returnStart)
             {
-                float step = RaiseStepU * boot.View!.Views[source].Unit;
-                Assert.That(headroom, Is.LessThan(step), label + ": el techo limita la elevación (holgura en dp, menos de un paso)");
+                // Puntos clave: fin del viaje, fin de cada dosis y, la última, fin del chorro (cola incluida).
+                int doseKey = nextDose < amount ? streamStart + (nextDose * dose) : returnStart;
+                int key = elapsed < travel ? travel : (nextDose <= amount ? doseKey : returnStart);
+                int next = Mathf.Min(elapsed + PlayModeHelpers.FrameMs, Mathf.Max(key, elapsed + 1));
+                PlayModeHelpers.TickExact(boot, next - elapsed);
+                elapsed = next;
+                string at = label + " a los " + elapsed + " ms";
+                Assert.That(s.Body.localScale, Is.EqualTo(Vector3.one), at + ": escala 1,00 (d)");
+                float tilt = Mathf.Abs(s.BodyAngle);
+                Assert.That(tilt, Is.GreaterThanOrEqualTo(previousTilt - 0.01f), at + ": la inclinación no baja hasta la vuelta (b)");
+                Assert.That(tilt, Is.EqualTo(BoardAnimator.TiltAt(elapsed, streamStart, dose, timings.TailMs, before, amount)).Within(0.05f), at + ": sigue la curva de TiltAt (b)");
+                previousTilt = tilt;
+                if (elapsed < travel)
+                {
+                    continue;
+                }
+
+                Assert.That(Mathf.Sign(s.BodyAngle), Is.EqualTo(side), at + ": el lado no cambia");
+                if (elapsed == travel)
+                {
+                    Assert.That(tilt, Is.EqualTo(arrivalTilt).Within(0.05f), at + ": inclinación al terminar el viaje (b)");
+                    Assert.That(Vector2.Distance(s.BodyOffset, arrivalOffset), Is.LessThan(0.01f), at + ": la pose de llegada es la de ComputePourPose");
+                }
+
+                if (nextDose <= amount && elapsed == doseKey)
+                {
+                    float expected = BoardAnimator.TiltAfterDose(before - nextDose);
+                    Assert.That(tilt, Is.EqualTo(expected).Within(AngleToleranceDeg), at + ": 92° − 9° × dosis que quedan al terminar la dosis " + nextDose + " (b)");
+                    if (expectedTilts != null)
+                    {
+                        Assert.That(tilt, Is.EqualTo(expectedTilts[nextDose - 1]).Within(AngleToleranceDeg), at + ": ángulo esperado de la dosis " + nextDose);
+                    }
+
+                    nextDose++;
+                }
+
+                if (elapsed < returnStart)
+                {
+                    MouthIsOverTheTarget(s, t, at);
+                    sawStream |= StreamLeavesTheMouthAndReachesTheSurface(s, t, at);
+                }
+            }
+
+            Assert.That(nextDose, Is.EqualTo(amount + 1), label + ": se comprobaron todas las dosis");
+            Assert.That(sawStream, Is.True, label + ": chorro con la cabeza en la superficie (f)");
+
+            // (c) El cuerpo (su pie), del lado del que viene el origen, salvo la excepción del lienzo.
+            if (Mathf.Abs(t.FootPosition.x - s.FootPosition.x) > 1f)
+            {
+                bool sourceSide = Mathf.Sign(s.FootPosition.x - t.FootPosition.x) == Mathf.Sign(s.FootPosition.x + s.BodyOffset.x - t.FootPosition.x);
+                if (!sourceSide)
+                {
+                    Assert.That(NaturalSideLeavesTheCanvas(view, source, target, remainingAfter), Is.True, label + ": cambia de lado solo si el suyo sale del lienzo (c)");
+                }
             }
 
             PlayModeHelpers.StepUntilIdle(boot, 3000);
+            Assert.That(s.BodyAngle, Is.EqualTo(0f).Within(0.01f), label + ": vuelve recta a su ranura");
+            Assert.That(s.BodyOffset.magnitude, Is.LessThan(0.01f), label + ": vuelve a su ranura");
         }
 
-        // (a) Todas las parejas con ComputePourPose y (b) todos los vertidos legales del estado inicial con toques, cada
-        // uno deshecho después con Marea (ilimitada hasta el nivel 10, 04 §2.1).
-        private static IEnumerator EveryPoseIsReadable(int level)
+        // (a) Centro de la boca sobre el eje del destino (±0,10 u) y su punto más bajo a 0,20-0,60 u del borde del destino.
+        private static void MouthIsOverTheTarget(CuiaView s, CuiaView t, string label)
+        {
+            float tu = t.Unit;
+            float rim = t.FootPosition.y + (t.HeightU * tu);
+            Vector2 mouth = s.MouthCenterInContainer();
+            Assert.That(Mathf.Abs(mouth.x - t.FootPosition.x) / tu, Is.LessThanOrEqualTo(0.10f), label + ": centro de la boca sobre el eje del destino (u) (a)");
+            Assert.That((s.MouthLowestInContainer().y - rim) / tu, Is.InRange(0.20f, 0.60f), label + ": punto más bajo de la boca sobre el borde del destino (u) (a)");
+        }
+
+        // (f) Con la cabeza del chorro en la superficie: nace en el canto interior bajo de la boca, a ≤ 0,25 u de su punto más
+        // bajo, y acaba en la superficie del destino, dentro de su boca. Devuelve si había chorro que comprobar.
+        private static bool StreamLeavesTheMouthAndReachesTheSurface(CuiaView s, CuiaView t, string label)
+        {
+            StreamGraphic? stream = EnabledStream();
+            if (stream == null || stream.Range.y < 0.999f || stream.Range.x > 0.001f)
+            {
+                return false;
+            }
+
+            float u = s.Unit;
+            float tu = t.Unit;
+            float mouth = CuiaGeometry.InnerHalfWidth(CuiaGeometry.LipU(t.Capacity), t.Capacity) * tu;
+            Assert.That(Vector2.Distance(s.PourPointInContainer(), s.MouthLowestInContainer()), Is.LessThanOrEqualTo(0.25f * u), label + ": el canto de vertido está junto al punto más bajo de la boca (f)");
+            Assert.That(Vector2.Distance(stream.CurveStart, s.PourPointInContainer()), Is.LessThan(0.25f * u), label + ": el chorro nace en la boca (f)");
+            // La curva se calcula antes de que el destino suba en ese fotograma: un fotograma de llenado es < 0,1 u.
+            Assert.That(stream.CurveEnd.y, Is.EqualTo(t.SurfaceInContainer().y).Within(0.25f * tu), label + ": termina en la superficie del destino (f)");
+            Assert.That(Mathf.Abs(stream.CurveEnd.x - t.FootPosition.x), Is.LessThan(mouth), label + ": dentro de la boca del destino (f)");
+            return true;
+        }
+
+        // (c) Para todas las parejas (origen, destino) y 0-3 dosis restantes: la silueta del origen no sale del lienzo en la
+        // pose de llegada (38°) ni en la de cada dosis hasta la final; y el cuerpo queda del lado del origen (en la misma
+        // columna, hacia el centro), salvo que ese lado saliera del lienzo a su ángulo final.
+        private static IEnumerator EveryPairStaysOnTheCanvas(int level)
         {
             yield return LoadLevel(level);
-            GameBootstrap boot = GameBootstrap.Current!;
-            GameScreen view = boot.View!;
-            LevelSession session = boot.Flow!.Session;
-            BoardState initial = session.Current;
-            int n = initial.Count;
-            var report = new StringBuilder("AF_POSES nivel " + level + " (s→t: elevación u / holgura del techo dp):");
+            GameScreen view = GameBootstrap.Current!.View!;
+            int n = view.Views.Length;
+            float width = view.CanvasWidth;
+            var report = new StringBuilder("AF_POSES nivel " + level + " (cambios de lado por el lienzo, s→t/dosis):");
             int pairs = 0;
-            int limited = 0;
-            for (int s = 0; s < n; s++)
+            int flips = 0;
+            for (int src = 0; src < n; src++)
             {
-                for (int t = 0; t < n; t++)
+                for (int dst = 0; dst < n; dst++)
                 {
-                    if (s == t)
+                    if (src == dst)
                     {
                         continue;
                     }
 
-                    string label = "nivel " + level + ", pareja " + s + " → " + t;
-                    view.Animator.ComputePourPose(s, t, out Vector2 offset, out float angle);
-                    CuiaView sv = view.Views[s];
-                    sv.Lock();
-                    sv.SetPose(offset, angle);
-                    float raise = LipAboveRimU(sv, view.Views[t]) - BoardAnimator.LipClearanceU;
-                    float headroom = PoseIsReadable(view, s, t, label);
-                    sv.Unlock();
                     pairs++;
-                    limited += headroom < RaiseStepU * sv.Unit ? 1 : 0;
-                    report.Append(' ').Append(s).Append('→').Append(t).Append(':')
-                        .Append(raise.ToString("0.00", CultureInfo.InvariantCulture)).Append('/')
-                        .Append(headroom.ToString("0.0", CultureInfo.InvariantCulture));
+                    CuiaView s = view.Views[src];
+                    for (int remaining = 0; remaining <= 3; remaining++)
+                    {
+                        string label = "nivel " + level + ", " + src + " → " + dst + " con " + remaining + " dosis";
+                        float side = PoseStaysOnTheCanvas(view, s, src, dst, remaining, BoardAnimator.ArrivalTiltDeg, width, label);
+                        for (int m = 3; m >= remaining; m--)
+                        {
+                            Assert.That(PoseStaysOnTheCanvas(view, s, src, dst, remaining, BoardAnimator.TiltAfterDose(m), width, label), Is.EqualTo(side), label + ": un solo lado");
+                        }
+
+                        CuiaView t = view.Views[dst];
+                        float dx = t.FootPosition.x - s.FootPosition.x;
+                        float natural = Mathf.Abs(dx) > 1f ? (dx > 0f ? -1f : 1f) : (t.FootPosition.x > width * 0.5f ? -1f : 1f);
+                        if (side != natural)
+                        {
+                            flips++;
+                            Assert.That(NaturalSideLeavesTheCanvas(view, src, dst, remaining), Is.True, label + ": cambia de lado solo si el suyo sale del lienzo (c)");
+                            report.Append(' ').Append(src).Append('→').Append(dst).Append('/').Append(remaining);
+                        }
+                    }
                 }
             }
 
             Assert.That(pairs, Is.EqualTo(n * (n - 1)));
-            int played = 0;
-            for (int s = 0; s < n; s++)
-            {
-                for (int t = 0; t < n; t++)
-                {
-                    if (s == t || !PourRules.IsLegal(initial, s, t))
-                    {
-                        continue;
-                    }
-
-                    string label = "nivel " + level + ", vertido inicial " + s + " → " + t;
-                    PlayedPourIsReadable(boot, s, t, label);
-                    PlayModeHelpers.StepUntilIdle(boot, 3000);
-                    PlayModeHelpers.Step(boot, 2 * PlayModeHelpers.FrameMs);
-                    Assert.That(boot.PressUndo(), Is.True, label + ": Marea");
-                    PlayModeHelpers.StepUntilIdle(boot, 3000);
-                    Assert.That(session.Current, Is.EqualTo(initial), label + ": Marea vuelve al estado inicial");
-                    played++;
-                }
-            }
-
-            Assert.That(played, Is.GreaterThan(0), "el estado inicial tiene vertidos legales");
-            report.Append(" | parejas ").Append(pairs).Append(", techo a menos de un paso de elevación ").Append(limited)
-                .Append(", vertidos iniciales jugados ").Append(played);
+            report.Append(" | parejas ").Append(pairs).Append(", cambios de lado ").Append(flips);
             Debug.Log(report.ToString());
         }
 
-        private static IEnumerator LoadLevel(int level)
+        // Pose de ComputePourPose con la inclinación tilt: la silueta queda dentro del lienzo. Devuelve el signo del ángulo.
+        private static float PoseStaysOnTheCanvas(GameScreen view, CuiaView s, int src, int dst, int remaining, float tilt, float width, string label)
         {
-            GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f); // 360 × 780 dp, como VisualSnapshotTests
-            yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore());
-            GameBootstrap boot = GameBootstrap.Current!;
-            PlayModeHelpers.TakeClock(boot);
-            boot.TapAnywhere();
-            PlayModeHelpers.StepUntilIdle(boot, 2000);
+            view.Animator.ComputePourPose(src, dst, remaining, tilt, out Vector2 offset, out float angle);
+            Assert.That(Mathf.Abs(angle), Is.EqualTo(tilt).Within(1e-3f), label);
+            Assert.That(SilhouetteInside(s, offset, angle, width), Is.True, label + ", " + tilt.ToString("0", CultureInfo.InvariantCulture) + "°: la silueta no sale del lienzo (c)");
+            Assert.That(view.Animator.SilhouetteInsideBoard(src, offset, angle), Is.True, label + ": la comprobación del animador coincide");
+            return Mathf.Sign(angle);
         }
 
-        private static void TapPour(GameBootstrap boot, int source, int target, string label)
-        {
-            Assert.That(boot.TapCuia(source).Kind, Is.EqualTo(TapKind.Selected), label + ": selección");
-            Assert.That(boot.TapCuia(target).Kind, Is.EqualTo(TapKind.Poured), label + ": vertido");
-        }
-
-        // Juega el vertido con toques y, con el origen ya inclinado, comprueba la pose (la misma que ComputePourPose) y el
-        // chorro. Devuelve la holgura (dp) entre el punto más alto de la silueta y el techo del vertido.
-        private static float PlayedPourIsReadable(GameBootstrap boot, int source, int target, string label)
-        {
-            TapPour(boot, source, target, label);
-            GameScreen view = boot.View!;
-            PlayModeHelpers.Step(boot, (int)view.Timings.TravelMs + PlayModeHelpers.FrameMs); // ya en la pose de vertido
-            CuiaView s = view.Views[source];
-            CuiaView t = view.Views[target];
-            view.Animator.ComputePourPose(source, target, out Vector2 offset, out float angle);
-            Assert.That(Vector2.Distance(s.BodyOffset, offset), Is.LessThan(0.01f), label + ": la pose jugada es la de ComputePourPose");
-            Assert.That(s.BodyAngle, Is.EqualTo(angle).Within(0.01f), label + ": ángulo de ComputePourPose");
-            float headroom = PoseIsReadable(view, source, target, label);
-
-            // El chorro nace junto al labio y termina en la superficie del destino, dentro de su boca.
-            float u = s.Unit;
-            float tu = t.Unit;
-            float mouth = CuiaGeometry.InnerHalfWidth(CuiaGeometry.LipU(t.Capacity), t.Capacity) * tu;
-            StreamGraphic? stream = EnabledStream();
-            Assert.That(stream, Is.Not.Null, label + ": chorro visible");
-            Assert.That(stream!.Range.y, Is.EqualTo(1f).Within(0.001f), label + ": la cabeza del chorro ya llegó");
-            Assert.That(Vector2.Distance(stream.CurveStart, s.PourPointInContainer()), Is.LessThan(0.25f * u), label + ": nace en el labio");
-            // La curva se calcula antes de que el destino suba en ese fotograma: un fotograma de llenado es 0,16 u.
-            Assert.That(stream.CurveEnd.y, Is.EqualTo(t.SurfaceInContainer().y).Within(0.25f * tu), label + ": termina en la superficie del destino");
-            Assert.That(Mathf.Abs(stream.CurveEnd.x - t.FootPosition.x), Is.LessThan(mouth), label + ": dentro de la boca del destino");
-            return headroom;
-        }
-
-        // Comprueba la pose aplicada al cuerpo del origen: 38°, labio a 0,6-1,6 u sobre el borde del destino, canto de
-        // vertido sobre su boca, la silueta no entra en el cuerpo ni en el hombro del destino y no pasa del techo del
-        // vertido. Devuelve la holgura (dp) entre el punto más alto de la silueta y el techo.
-        private static float PoseIsReadable(GameScreen view, int source, int target, string label)
+        // El lado natural del cuerpo (el del origen; en la misma columna, hacia el centro) sale del lienzo en alguna
+        // inclinación del vertido, de 38° a su ángulo final (cada 3°, la regla [P] de D-006 que aplica la cola).
+        private static bool NaturalSideLeavesTheCanvas(GameScreen view, int source, int target, int remaining)
         {
             CuiaView s = view.Views[source];
             CuiaView t = view.Views[target];
-            Assert.That(Mathf.Abs(s.BodyAngle), Is.EqualTo(BoardAnimator.TiltDeg).Within(0.5f), label + ": inclinación de 02 §4.1");
+            float width = view.CanvasWidth;
+            float dx = t.FootPosition.x - s.FootPosition.x;
+            float natural = Mathf.Abs(dx) > 1f ? (dx > 0f ? -1f : 1f) : (t.FootPosition.x > width * 0.5f ? -1f : 1f);
+            float final = BoardAnimator.TiltAfterDose(remaining);
+            Vector2 mouth = t.FootPosition + new Vector2(0f, (t.HeightU + BoardAnimator.MouthCenterAboveRimU) * t.Unit);
+            for (float tilt = BoardAnimator.ArrivalTiltDeg; ; tilt += 3f)
+            {
+                float angle = natural * Mathf.Min(tilt, final);
+                Vector2 offset = mouth - s.FootPosition - CuiaView.Rotate(new Vector2(0f, s.HeightU * s.Unit), angle * Mathf.Deg2Rad);
+                if (!SilhouetteInside(s, offset, angle, width))
+                {
+                    return true;
+                }
 
-            // Labio entre 0,6 y 1,6 u sobre el borde del destino (antes la búsqueda lo subía hasta 2,1 u o más).
-            Assert.That(LipAboveRimU(s, t), Is.InRange(BoardAnimator.LipClearanceU - 0.05f, BoardAnimator.LipClearanceU + BoardAnimator.MaxRaiseU + 0.05f), label + ": altura del labio sobre el borde del destino (u)");
+                if (tilt >= final)
+                {
+                    return false;
+                }
+            }
+        }
 
-            // El canto por el que sale el chorro queda sobre la boca del destino.
-            float tu = t.Unit;
-            float mouth = CuiaGeometry.InnerHalfWidth(CuiaGeometry.LipU(t.Capacity), t.Capacity) * tu;
-            Assert.That(Mathf.Abs(s.PourPointInContainer().x - t.FootPosition.x), Is.LessThan(mouth), label + ": canto de vertido sobre la boca");
-
-            // La silueta del origen no entra en el cuerpo ni en el hombro del destino.
+        // Muestreo propio de la silueta exterior (25 × 7 puntos con los bordes): dentro del lienzo con 0,5 dp de tolerancia.
+        private static bool SilhouetteInside(CuiaView s, Vector2 offset, float angleDeg, float width)
+        {
             float u = s.Unit;
-            float angle = s.BodyAngle * Mathf.Deg2Rad;
-            float shoulderTop = t.FootPosition.y + ((CuiaGeometry.CavityTopU(t.Capacity) + CuiaGeometry.ShoulderU) * tu);
-            float maxY = float.MinValue;
+            float rad = angleDeg * Mathf.Deg2Rad;
             for (int r = 0; r <= 24; r++)
             {
                 float y = r / 24f * s.HeightU;
@@ -345,93 +493,23 @@ namespace AF.Tests.PlayMode
                 for (int c = 0; c <= 6; c++)
                 {
                     float x = -hw + (c / 6f * 2f * hw);
-                    Vector2 p = s.FootPosition + s.BodyOffset + CuiaView.Rotate(new Vector2(x * u, y * u), angle);
-                    maxY = Mathf.Max(maxY, p.y);
-                    if (p.y <= t.FootPosition.y || p.y >= shoulderTop)
+                    Vector2 p = s.FootPosition + offset + CuiaView.Rotate(new Vector2(x * u, y * u), rad);
+                    if (p.x < -0.5f || p.x > width + 0.5f || p.y > 0.5f)
                     {
-                        continue;
+                        return false;
                     }
-
-                    float local = (p.y - t.FootPosition.y) / tu;
-                    bool inside = Mathf.Abs(p.x - t.FootPosition.x) < CuiaGeometry.OuterHalfWidth(local, t.Capacity) * tu;
-                    Assert.That(inside, Is.False, label + ": el origen entra en el destino en (" + p.x + ", " + p.y + ")");
                 }
             }
 
-            // Techo del vertido [P] (y hacia arriba en el contenedor; el panel empieza en −PanelY): nunca sobre el borde
-            // exterior del panel; en una fila, 4 dp de aire bajo el canto interior del marco (revisión de D-004 sobre
-            // 04b_pouring_l1: con < 1 dp la cuia parecía apoyarse en el marco) y sin tolerancia; y el panel empieza bajo el
-            // HUD.
-            BoardLayoutResult layout = view.Layout!;
-            float ceiling = view.Animator.TopLimitY;
-            Assert.That(layout.PanelY, Is.GreaterThanOrEqualTo(HudBottomDp - 0.01f), label + ": el panel empieza bajo el HUD");
-            Assert.That(ceiling, Is.LessThanOrEqualTo(-layout.PanelY + 0.01f), label + ": techo dentro del panel");
-            float headroom = ceiling - maxY;
-            if (layout.Rows == 1)
-            {
-                Assert.That(ceiling, Is.EqualTo(-(layout.PanelY + view.PanelFrameDp + GameScreen.PourCeilingAirDp)).Within(0.01f), label + ": en una fila, el techo queda 4 dp bajo el canto interior del marco");
-                // ≥ 0 salvo el redondeo de float (la elevación recortada deja el canto alto del borde justo en el techo).
-                Assert.That(headroom, Is.GreaterThanOrEqualTo(-0.01f), label + ": en una fila, holgura bajo el techo (dp)");
-            }
-
-            Assert.That(maxY, Is.LessThanOrEqualTo(ceiling + ToleranceDp), label + ": el origen inclinado pasa del techo del vertido (dp)");
-            return headroom;
+            return true;
         }
 
-        private static float LipAboveRimU(CuiaView s, CuiaView t)
+        private static TapResult TapPour(GameBootstrap boot, int source, int target, string label)
         {
-            float rim = t.FootPosition.y + (t.HeightU * t.Unit);
-            return (s.LipInContainer().y - rim) / t.Unit;
-        }
-
-        // Vertidos más cortos desde state tras los que source → target es legal (BFS sobre el modelo con las reglas del
-        // núcleo y el modo de vertido de la partida, D-001); vacío si ya lo es y null si no aparece en los primeros
-        // estados. Los estados ganados o bloqueados no sirven de paso intermedio: en ellos el flujo no acepta toques.
-        private static Pour[]? FindSetup(BoardState state, int source, int target, PourMode mode, bool futileRule)
-        {
-            const int maxStates = 20000;
-            var parents = new Dictionary<BoardState, (BoardState? Parent, Pour Move)>();
-            var queue = new Queue<BoardState>();
-            parents.Add(state, (null, default));
-            queue.Enqueue(state);
-            int n = state.Count;
-            while (queue.Count > 0 && parents.Count < maxStates)
-            {
-                BoardState current = queue.Dequeue();
-                if (PourRules.IsLegal(current, source, target))
-                {
-                    var path = new List<Pour>();
-                    for (BoardState? at = current; at != null && parents[at].Parent != null; at = parents[at].Parent)
-                    {
-                        path.Add(parents[at].Move);
-                    }
-
-                    path.Reverse();
-                    return path.ToArray();
-                }
-
-                for (int a = 0; a < n; a++)
-                {
-                    for (int b = 0; b < n; b++)
-                    {
-                        if (a == b || !PourRules.IsLegal(current, a, b))
-                        {
-                            continue;
-                        }
-
-                        BoardState next = PourRules.Apply(current, a, b, mode);
-                        if (parents.ContainsKey(next) || next.IsWon() || PourRules.IsStuck(next, futileRule))
-                        {
-                            continue;
-                        }
-
-                        parents.Add(next, (current, new Pour(a, b, PourRules.Amount(current, a, b, mode))));
-                        queue.Enqueue(next);
-                    }
-                }
-            }
-
-            return null;
+            Assert.That(boot.TapCuia(source).Kind, Is.EqualTo(TapKind.Selected), label + ": selección");
+            TapResult r = boot.TapCuia(target);
+            Assert.That(r.Kind, Is.EqualTo(TapKind.Poured), label + ": vertido");
+            return r;
         }
 
         private static StreamGraphic? EnabledStream()

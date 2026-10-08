@@ -4,8 +4,9 @@ using System;
 namespace AF.Core.Rules
 {
     /// <summary>
-    /// Cantidad que mueve un vertido legal A→B (decisión del dueño D-001, 2026-10-06; <c>docs/dev/decisiones.md</c>).
-    /// <c>default(PourMode)</c> es <see cref="Single"/>, el valor por defecto del dueño (<see cref="PourModes.Default"/>).
+    /// Cantidad que mueve un vertido legal A→B (decisión del dueño D-005, 2026-10-08, que sustituye a D-001;
+    /// <c>docs/dev/decisiones.md</c>). <c>default(PourMode)</c> es <see cref="Run"/>, el valor por defecto del dueño
+    /// (<see cref="PourModes.Default"/>).
     /// </summary>
     /// <remarks>
     /// <para>El modo solo cambia <c>cantidad(A, B)</c> (02 §1.2, R9). <c>legal(A, B)</c>, <c>futil(A, B)</c>,
@@ -14,33 +15,37 @@ namespace AF.Core.Rules
     /// <see cref="PourRules.IsFutile"/>, <see cref="PourRules.HasUsefulMove"/> y <see cref="PourRules.IsStuck"/> no lo
     /// reciben. La única implementación de la cantidad es <see cref="CuiaRules.Amount(AF.Core.Board.Cuia, AF.Core.Board.Cuia, PourMode)"/>.</para>
     /// <para>El modo se fija al cargar cada nivel y no cambia a mitad de nivel: el historial de Marea y el par dependen
-    /// de él (D-001, punto 3).</para>
+    /// de él (punto 3 de D-001, sustituida por D-005, que lo conserva).</para>
+    /// <para>Nadie persiste el valor numérico: Remote Config, los extras de lanzamiento y los registros usan las claves
+    /// <see cref="PourModes.RunKey"/> y <see cref="PourModes.SingleKey"/> (<see cref="PourModes.ToKey"/>).</para>
     /// </remarks>
     public enum PourMode
     {
         /// <summary>
-        /// Una sola dosis por vertido, la de la cima de A, aunque debajo haya más del mismo color (mecánica tipo
-        /// <i>ball sort</i>). No existe el vertido parcial. Por defecto (D-001).
+        /// La racha visible que cabe: <c>cantidad = min(racha visible de A, espacio de B)</c>, con vertido parcial (02 R6,
+        /// R9). Es la regla canónica del género, la de Magic Sort, que vierte el tramo entero
+        /// (<c>docs/research/magic-sort/ficha-magic-sort.md</c> §2.5), y la del prototipo <c>tools/levelgen_proto.py</c>.
+        /// Modo por defecto desde D-005.
         /// </summary>
-        Single = 0,
+        Run = 0,
 
         /// <summary>
-        /// La racha visible que cabe: <c>cantidad = min(racha visible de A, espacio de B)</c>, con vertido parcial (02 R6,
-        /// R9). Es la regla canónica del género y la del prototipo <c>tools/levelgen_proto.py</c>; queda como opción de
-        /// prueba por Remote Config.
+        /// Una sola dosis por vertido, la de la cima de A, aunque debajo haya más del mismo color (mecánica tipo
+        /// <i>ball sort</i>). No existe el vertido parcial. Solo para pruebas (<c>rules_pour_mode</c> = <c>"single"</c>):
+        /// era el modo por defecto de D-001, sustituida por D-005.
         /// </summary>
-        Run = 1,
+        Single = 1,
     }
 
     /// <summary>
     /// Valor por defecto de <see cref="PourMode"/> y su conversión con el valor de la clave de Remote Config
-    /// <c>rules_pour_mode</c> (<c>"single"</c> | <c>"run"</c>, default <c>"single"</c>; la fila vive en la tabla única de
-    /// 08 §9, no aquí).
+    /// <c>rules_pour_mode</c> (<c>"run"</c> | <c>"single"</c>, default <c>"run"</c> desde D-005; la fila vive en la tabla
+    /// única de 08 §9, no aquí).
     /// </summary>
     public static class PourModes
     {
-        /// <summary>Modo por defecto: una dosis por vertido (D-001).</summary>
-        public const PourMode Default = PourMode.Single;
+        /// <summary>Modo por defecto: la racha visible que cabe, con vertido parcial (D-005, como Magic Sort).</summary>
+        public const PourMode Default = PourMode.Run;
 
         /// <summary>Valor de <c>rules_pour_mode</c> para <see cref="PourMode.Single"/>.</summary>
         public const string SingleKey = "single";
@@ -48,7 +53,7 @@ namespace AF.Core.Rules
         /// <summary>Valor de <c>rules_pour_mode</c> para <see cref="PourMode.Run"/>.</summary>
         public const string RunKey = "run";
 
-        /// <summary><paramref name="mode"/> es <see cref="PourMode.Single"/> o <see cref="PourMode.Run"/>.</summary>
+        /// <summary><paramref name="mode"/> es <see cref="PourMode.Run"/> o <see cref="PourMode.Single"/>.</summary>
         public static bool IsDefined(PourMode mode)
         {
             return mode == PourMode.Single || mode == PourMode.Run;

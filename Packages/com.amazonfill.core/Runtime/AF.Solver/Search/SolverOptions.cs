@@ -7,7 +7,8 @@ namespace AF.Solver.Search
     /// <summary>
     /// Parámetros de una búsqueda (GDD 03 §5): presupuesto de estados expandidos, peso <c>w</c> de la heurística
     /// (<c>f = g + w·H</c>, solo enteros), el kill-switch <c>futile_rule_enabled</c> (02 R16, 04 §5.1) y el modo de
-    /// vertido (D-001; <c>rules_pour_mode</c>).
+    /// vertido (<c>rules_pour_mode</c>; D-005: <see cref="AF.Core.Rules.PourMode.Run"/> por defecto,
+    /// <see cref="AF.Core.Rules.PourMode.Single"/> para pruebas).
     /// </summary>
     /// <remarks>
     /// <c>default(SolverOptions)</c> no es válido: usa el constructor o <see cref="ForPipeline"/>. Los valores del
@@ -27,7 +28,8 @@ namespace AF.Solver.Search
         /// <param name="nodeBudget">Máximo de estados expandidos (≥ 1).</param>
         /// <param name="weight">Peso de la heurística (1 = óptimo; 2 = pista en cliente, 03 §5), de 1 a <see cref="MaxWeight"/>.</param>
         /// <param name="futileRuleEnabled">Excluir los vertidos fútiles (02 §1.4); false = solo vertidos legales.</param>
-        /// <param name="pourMode">Modo de vertido de la partida que se resuelve (D-001).</param>
+        /// <param name="pourMode">Modo de vertido de la partida que se resuelve (por defecto
+        /// <see cref="AF.Core.Rules.PourMode.Run"/>, D-005; <see cref="AF.Core.Rules.PourMode.Single"/> para pruebas).</param>
         public SolverOptions(int nodeBudget, int weight, bool futileRuleEnabled, PourMode pourMode)
         {
             if (nodeBudget < 1)
@@ -52,8 +54,9 @@ namespace AF.Solver.Search
         }
 
         /// <summary>
-        /// Heredado (equivale a <see cref="AF.Core.Rules.PourMode.Run"/>): conserva el comportamiento anterior hasta que
-        /// T6 lo retire. Usa <see cref="SolverOptions(int, int, bool, AF.Core.Rules.PourMode)"/>.
+        /// Heredado sin modo: equivale a <see cref="AF.Core.Rules.PourMode.Run"/>, que desde D-005 es también
+        /// <see cref="PourModes.Default"/>. Conserva el comportamiento anterior; T6 de decisiones.md (retirarlo) sigue
+        /// pendiente. Usa <see cref="SolverOptions(int, int, bool, AF.Core.Rules.PourMode)"/>.
         /// </summary>
         public SolverOptions(int nodeBudget, int weight, bool futileRuleEnabled)
             : this(nodeBudget, weight, futileRuleEnabled, PourMode.Run)
@@ -61,9 +64,9 @@ namespace AF.Solver.Search
         }
 
         /// <summary>
-        /// Heredado (equivale a <c>ForPipeline(PourMode.Run)</c>): par y solución óptimos del pipeline con la racha que
-        /// cabe. Lo usan hoy <c>tools/level-generator</c>, la paridad con <c>levelgen_proto.py</c> y los tests de Unity;
-        /// lo retira T6.
+        /// Heredado sin modo: <c>Pipeline</c> = <c>ForPipeline(PourMode.Run)</c> = <c>ForPipeline(PourModes.Default)</c>
+        /// desde D-005: par y solución óptimos del pipeline con la racha que cabe. Lo usan hoy <c>tools/level-generator</c>,
+        /// la paridad con <c>levelgen_proto.py</c> y los tests de Unity; T6 de decisiones.md (retirarlo) sigue pendiente.
         /// </summary>
         public static SolverOptions Pipeline => ForPipeline(PourMode.Run);
 

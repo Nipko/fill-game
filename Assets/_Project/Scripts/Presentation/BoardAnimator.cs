@@ -41,11 +41,22 @@ namespace AF.Presentation
     /// Sin asignaciones por fotograma (08 §5.4).
     /// </summary>
     /// <remarks>
-    /// <para><b>Tiempo de un vertido</b> (07 §5.2 y 02 §4.1, sin cambios por D-001): el origen vuelve a su ranura en
-    /// <c>max(anim_travel_ms, 0,7 · anim_travel_ms + n · anim_pour_dose_ms + anim_pour_tail_ms) + anim_return_ms</c>, es
-    /// decir, <b>480 ms para 1 dosis</b> con los defaults de 08 §9 (la elevación de 120 ms ocurre antes, en el toque del
-    /// origen). El retorno arranca cuando termina el chorro, cola incluida ("fin de caudal" y "+0,16 Retorno" del
-    /// storyboard de 07 §5.2). Ver <see cref="PourDurationMs"/>.</para>
+    /// <para><b>Tiempo de un vertido</b> (07 §5.2 y 02 §4.1, con los tiempos de Magic Sort de D-006): el origen vuelve a su
+    /// ranura en <c>max(anim_travel_ms, 0,7 · anim_travel_ms + n · anim_pour_dose_ms + anim_pour_tail_ms) +
+    /// anim_return_ms</c>, es decir, <b>870 ms para 1 dosis</b>, 1.150 con 2 y 1.430 con 3 con los defaults de 08 §9 (la
+    /// elevación de 100 ms ocurre antes, en el toque del origen; Magic Sort: 0,9-1,0 s de la salida al reposo, ficha
+    /// §2.6). El retorno arranca cuando termina el chorro, cola incluida, y va directo a la ranura con el rebote de 0,03 u
+    /// de 07 §5.2. Ver <see cref="PourDurationMs"/>.</para>
+    /// <para><b>Pose</b> (D-006, punto 1, como Magic Sort): el origen viaja en arco (ease-in-out) hasta dejar el centro de su
+    /// boca sobre el eje del destino, <see cref="MouthCenterAboveRimU"/> sobre su borde, y desde ahí la boca no se mueve;
+    /// al salir gira por el medio del cuerpo y al llegar, alrededor de la boca (el pivote sube por el eje durante el
+    /// viaje). La inclinación sube sin pararse desde la salida (<see cref="TiltAt"/>:
+    /// ≈ 13° cada 100 ms con 1 dosis de una cuia llena, como Magic Sort; pasa por ≈ 40° al terminar el viaje y solo frena
+    /// al final) hasta <c>92° − 9° × dosis que quedan en el origen</c> (<see cref="TiltAfterDose"/>) al terminar cada
+    /// dosis, y la última, al cortarse el chorro (cola incluida: el máximo de Magic Sort llega con el final del chorro). La
+    /// vuelta es sinusoidal de entrada y salida (Magic Sort: −14°, −21°, −20° y −11° cada 100 ms). El cuerpo queda del
+    /// lado del que viene; escala 1,00; el origen y su chorro se dibujan delante de todo (capa de vertido, sin
+    /// techo).</para>
     /// <para><b>Encadenado</b> (propuesta [P] de 02 §3.2 y <c>docs/dev/decisiones.md</c> §2.1.6): un vertido con el mismo
     /// origen, destino y tinte que el último trabajo de esas cuias no se encola aparte si ese trabajo aún no ha empezado
     /// (se suma a él) o si su chorro sigue saliendo (el caudal se alarga <c>anim_pour_dose_ms</c> por dosis). Así tres
@@ -54,11 +65,38 @@ namespace AF.Presentation
     /// </remarks>
     public sealed class BoardAnimator
     {
-        /// <summary>Inclinación del origen hacia el destino: 38° (02 §4.1).</summary>
-        public const float TiltDeg = 38f;
+        /// <summary>
+        /// Inclinación de Magic Sort al llegar a la boca del destino, 300 ms después de salir: 38° (ficha §2.6, 3.100 ms;
+        /// D-006). El origen no se para ahí (<see cref="TiltAt"/>): es el comienzo del tramo de inclinaciones en que se
+        /// comprueba que la silueta cabe en el lienzo y el mínimo de <see cref="TiltAfterDose"/>.
+        /// </summary>
+        public const float ArrivalTiltDeg = 38f;
 
-        /// <summary>El labio del origen queda 0,6 u por encima del borde del destino (07 §5.2).</summary>
-        public const float LipClearanceU = 0.6f;
+        /// <summary>
+        /// Fracción final de cada tramo de inclinación en que el giro frena hasta la velocidad del tramo siguiente (0 en el
+        /// último): 0,3 [P]. Magic Sort gira +12°, +12°, +14°, +14°, +10° y +4° cada 100 ms: casi constante y solo frena al
+        /// final (ficha §2.6).
+        /// </summary>
+        public const float TiltBrakeFraction = 0.3f;
+
+        /// <summary>
+        /// Encadenado (solo en <c>single</c>): el salto de inclinación que deja la curva nueva al sumar dosis a un trabajo en
+        /// marcha se reparte en 100 ms, sin que el origen dé un tirón.
+        /// </summary>
+        public const float ChainTiltBlendMs = 100f;
+
+        /// <summary>Inclinación al terminar la última dosis con el origen vacío: 92° (D-006; Magic Sort, t = 250).</summary>
+        public const float EmptyTiltDeg = 92f;
+
+        /// <summary>Grados que resta cada dosis que queda en el origen: 9° (D-006: 66° con 3, ≈ 92° con 0).</summary>
+        public const float TiltPerRemainingDoseDeg = 9f;
+
+        /// <summary>
+        /// Altura del centro de la boca del origen sobre el borde superior del destino (u) [P] (D-006): con el borde de fibra
+        /// de <see cref="CuiaGeometry.RimHalfWidthU"/>, el punto más bajo de la boca queda a 0,30-0,51 u entre 38° y 92°
+        /// (Magic Sort: 0,1-0,55 u).
+        /// </summary>
+        public const float MouthCenterAboveRimU = 0.85f;
 
         /// <summary>El chorro arranca al 70 % del traslado (02 §4.1).</summary>
         public const float StreamStartFraction = 0.7f;
@@ -66,7 +104,7 @@ namespace AF.Presentation
         /// <summary>Marea: el agua vuelve a su cuia en 250 ms (04 §2.1, VFX).</summary>
         public const float UndoTransferMs = 250f;
 
-        /// <summary>Altura del arco del traslado ("arco, no línea recta", 07 §5.2), en u.</summary>
+        /// <summary>Altura del arco que traza el centro de la boca en el traslado ("arco, no línea recta", 07 §5.2), en u.</summary>
         public const float TravelArcU = 0.4f;
 
         /// <summary>
@@ -87,24 +125,16 @@ namespace AF.Presentation
         /// </summary>
         public const float StreamControlU = 0.35f;
 
-        /// <summary>Holgura del origen inclinado sobre el borde de las cuias vecinas (u; revisión visual del 2026-10-07).</summary>
-        public const float NeighbourClearanceU = 0.3f;
-
         /// <summary>
-        /// Elevación máxima del origen sobre la pose de 07 §5.2 (u): 1,0, así el labio queda entre 0,6 y 1,6 u sobre el borde
-        /// del destino (revisión visual del 2026-10-07: con 5 u de margen la búsqueda lo subía 2,1 u para tapar menos y el
-        /// chorro caía desde muy alto). A 38° el origen puede tapar algo de una vecina durante el vertido (≤ 400 ms):
-        /// aceptado por el dueño en D-004 (C17).
+        /// Desplazamiento horizontal máximo del centro de la boca respecto al eje del destino (u) [P] para que la silueta del
+        /// origen no salga del lienzo cuando no cabe por ningún lado (nivel 1, cuia del medio, con u = 32): dentro de la
+        /// tolerancia de ±0,10 u de D-006.
         /// </summary>
-        public const float MaxRaiseU = 1f;
+        public const float MaxMouthNudgeU = 0.09f;
 
-        private const float RaiseStepU = 0.25f;
-        private const float RaisePenalty = 0.4f;   // u² de tapado que compensa subir 1 u
-        private const float LipShiftPenalty = 0.5f; // u² por u de desplazamiento del labio más allá de 0,25 u
+        /// <summary>Rebote del retorno a la ranura (u; 07 §5.2). El de Magic Sort (≈ 50 px) no está confirmado: no se copia.</summary>
+        public const float ReturnBounceU = 0.03f;
 
-        // Distancias (u) del centro del labio al eje del destino, hacia el origen (0,25 u es la pose de partida).
-        private static readonly float[] LipShiftsU = { 0.25f, 0.45f, 0.65f };
-        private const float FarSidePenalty = 0.5f; // u²: verter desde el otro lado del destino
         private const int SilhouetteRows = 24;
         private const int SilhouetteCols = 6;
 
@@ -113,16 +143,23 @@ namespace AF.Presentation
         private readonly Job[] _jobs = new Job[MaxJobs];
         private readonly bool[] _mark = new bool[MaxJobs];
         private readonly RectTransform _streamLayer;
+        private readonly RectTransform _frontLayer;
         private readonly PourStream[] _streams;
         private CuiaView[] _views = Array.Empty<CuiaView>();
-        private PourTimings _timings = new PourTimings(120f, 200f, 100f, 80f, 160f);
+        private PourTimings _timings = new PourTimings(100f, 300f, 280f, 80f, 300f);
         private int _maxLag = 2;
         private int _count;
 
-        /// <summary>Crea la cola con un grupo de chorros reutilizables dentro de <paramref name="streamLayer"/>.</summary>
-        public BoardAnimator(RectTransform streamLayer, int streamPool = 6)
+        /// <summary>
+        /// Crea la cola con un grupo de chorros reutilizables dentro de <paramref name="streamLayer"/>. Mientras vierte, el
+        /// cuerpo del origen y su chorro pasan a <paramref name="frontLayer"/>, la capa de vertido alineada con el contenedor
+        /// del tablero y dibujada delante de las vecinas, del marco del panel y del HUD (D-006: sin techo, como Magic Sort en
+        /// t = 250); al terminar vuelven a su sitio. Marea no la usa.
+        /// </summary>
+        public BoardAnimator(RectTransform streamLayer, RectTransform frontLayer, int streamPool = 6)
         {
             _streamLayer = streamLayer;
+            _frontLayer = frontLayer;
             _streams = new PourStream[streamPool];
             for (int i = 0; i < streamPool; i++)
             {
@@ -152,23 +189,102 @@ namespace AF.Presentation
         public int ChainedCount { get; private set; }
 
         /// <summary>
-        /// Techo de la silueta del origen inclinado, en coordenadas del contenedor (y hacia arriba): 4 dp bajo el canto
-        /// interior del marco del panel en los tableros de una fila (<c>GameScreen.PourCeilingAirDp</c>) y su borde
-        /// exterior en los de dos y tres filas, nunca más de 4 dp dentro de la fila del HUD (<c>GameScreen.PourCeilingFor</c>;
-        /// D-004). El origen nunca sube por encima al apartarse de las vecinas.
+        /// Ancho del lienzo en dp (el del layout, <c>GameScreen</c>), para elegir el lado del cuerpo; si es 0, el de la capa
+        /// de chorros. No depende del tamaño real de la ventana (en batchmode puede no coincidir con la pantalla simulada).
         /// </summary>
-        public float TopLimitY { get; set; } = float.MaxValue;
+        public float BoardWidth { get; set; }
+
+        private float Width => BoardWidth > 0f ? BoardWidth : _streamLayer.rect.width;
 
         /// <summary>
         /// Tiempo (ms) desde que empieza la animación de un vertido de <paramref name="amount"/> dosis hasta que el origen
-        /// vuelve a su ranura, con las duraciones <paramref name="timings"/>: 480 ms para 1 dosis con los defaults de 08 §9
-        /// (07 §5.2: el retorno empieza tras la cola del chorro). Si el destino se sella, su animación (450 ms, 07 §5.3)
-        /// sigue tras el fin de caudal.
+        /// vuelve a su ranura, con las duraciones <paramref name="timings"/>: 870, 1.150 y 1.430 ms para 1, 2 y 3 dosis con
+        /// los defaults de 08 §9 tras D-006 (07 §5.2: el retorno empieza tras la cola del chorro). Si el destino se sella, su
+        /// animación (450 ms, 07 §5.3) sigue tras el fin de caudal.
         /// </summary>
         public static float PourDurationMs(PourTimings timings, int amount)
         {
             float streamEnd = (timings.TravelMs * StreamStartFraction) + (Mathf.Max(1, amount) * timings.DoseMs) + timings.TailMs;
             return Mathf.Max(timings.TravelMs, streamEnd) + timings.ReturnMs;
+        }
+
+        /// <summary>
+        /// Inclinación del origen (grados, sin signo) al terminar una dosis si le quedan <paramref name="remaining"/>:
+        /// <c>92° − 9° × dosis que quedan</c> (D-006; 65° con 3, 74° con 2, 83° con 1 y 92° con 0), nunca menos de
+        /// <see cref="ArrivalTiltDeg"/>.
+        /// </summary>
+        public static float TiltAfterDose(int remaining)
+        {
+            return Mathf.Max(ArrivalTiltDeg, EmptyTiltDeg - (TiltPerRemainingDoseDeg * Mathf.Max(0, remaining)));
+        }
+
+        /// <summary>
+        /// Inclinación del origen (grados, sin signo) a los <paramref name="timeMs"/> ms de la salida, hasta que empieza la
+        /// vuelta, en un vertido de <paramref name="amount"/> dosis de una cuia con <paramref name="before"/> (D-006, como
+        /// Magic Sort; ficha §2.6). Pasa por 0° en la salida, por <c>TiltAfterDose(before − k)</c> al terminar cada dosis k
+        /// (<paramref name="streamStartMs"/> + k · <paramref name="doseMs"/>) y, la última, al cortarse el chorro (cola
+        /// <paramref name="tailMs"/> incluida), y se queda ahí. Cada tramo gira a velocidad constante y en su último
+        /// <see cref="TiltBrakeFraction"/> frena hasta la velocidad media del tramo siguiente (hasta 0 el último): sin
+        /// paradas a mitad. Con los defaults de 08 §9, 1 dosis de una cuia llena: 0°, 13,4°, 26,8°, 40,2°, 53,7°, 63,1° cada
+        /// 100 ms y 65° a los 570 ms (Magic Sort: 0°, 12°, 24°, 38°, 52°, 62° y 66°). No decreciente y sin asignaciones.
+        /// </summary>
+        public static float TiltAt(float timeMs, float streamStartMs, float doseMs, float tailMs, int before, int amount)
+        {
+            int n = Mathf.Max(1, amount);
+            float t0 = 0f;
+            float a0 = 0f;
+            for (int k = 1; k <= n; k++)
+            {
+                float t1 = TiltKeyTime(k, n, streamStartMs, doseMs, tailMs);
+                float a1 = Mathf.Max(a0, TiltAfterDose(before - k));
+                if (timeMs < t1)
+                {
+                    float span = Mathf.Max(1f, t1 - t0);
+                    float rise = a1 - a0;
+                    if (rise < 1e-4f)
+                    {
+                        return a0;
+                    }
+
+                    // Velocidad final: la media del tramo siguiente (0 en el último), normalizada a este tramo.
+                    float rEnd = 0f;
+                    if (k < n)
+                    {
+                        float t2 = TiltKeyTime(k + 1, n, streamStartMs, doseMs, tailMs);
+                        float a2 = Mathf.Max(a1, TiltAfterDose(before - k - 1));
+                        rEnd = Mathf.Clamp((a2 - a1) / Mathf.Max(1f, t2 - t1) * span / rise, 0f, 2f);
+                    }
+
+                    return a0 + (rise * BrakeProfile(Mathf.Clamp01((timeMs - t0) / span), rEnd));
+                }
+
+                t0 = t1;
+                a0 = a1;
+            }
+
+            return a0;
+        }
+
+        // Instante del punto k de la curva de inclinación: fin de la dosis k; el último, fin del chorro (con la cola).
+        private static float TiltKeyTime(int k, int n, float streamStartMs, float doseMs, float tailMs)
+        {
+            return streamStartMs + (k * doseMs) + (k == n ? tailMs : 0f);
+        }
+
+        // Tramo normalizado (0 → 1 en x de 0 a 1): velocidad constante c hasta 1 − b y frenado lineal hasta rEnd en x = 1,
+        // con c tal que llega a 1 (c · (1 − b/2) + rEnd · b/2 = 1). Continua en posición y velocidad.
+        private static float BrakeProfile(float x, float rEnd)
+        {
+            const float b = TiltBrakeFraction;
+            float c = (1f - (b * rEnd * 0.5f)) / (1f - (b * 0.5f));
+            float x0 = 1f - b;
+            if (x <= x0)
+            {
+                return c * x;
+            }
+
+            float d = x - x0;
+            return (c * x) + ((rEnd - c) * d * d / (2f * b));
         }
 
         /// <summary>Asocia las vistas del nivel cargado y las duraciones.</summary>
@@ -301,6 +417,7 @@ namespace AF.Presentation
                 return false;
             }
 
+            float oldTilt = 0f;
             if (job.Started)
             {
                 if (job.T >= job.FlowEnd)
@@ -308,6 +425,7 @@ namespace AF.Presentation
                     return false; // el caudal ya se cortó (cae la cola o el origen vuelve): el vertido se encola aparte
                 }
 
+                oldTilt = JobTilt(ref job, job.T);
                 job.FlowEnd += amount * job.DoseMs;
             }
 
@@ -319,6 +437,11 @@ namespace AF.Presentation
             if (job.Started)
             {
                 SetEnds(ref job);
+
+                // La curva de inclinación cambia con las dosis nuevas: la diferencia se reparte en ChainTiltBlendMs.
+                job.TiltBias = 0f;
+                job.TiltBias = oldTilt - JobTilt(ref job, job.T);
+                job.BiasStart = job.T;
             }
 
             return true;
@@ -456,16 +579,29 @@ namespace AF.Presentation
 
             s.Lock();
             job.StartOffset = s.BodyOffset;
-            ChoosePourPose(job.Source, job.Target, out job.PourOffset, out job.PourAngle);
-
+            job.Before = job.SrcBefore.Count;
             job.DoseMs = _timings.DoseMs;
             job.StreamStart = _timings.TravelMs * StreamStartFraction;
             job.FlowEnd = job.StreamStart + (job.Amount * _timings.DoseMs);
+            job.TiltBias = 0f;
             SetEnds(ref job);
+
+            // Pose al terminar el viaje: la inclinación de la curva en ese instante (≈ 40° con 1 dosis de una cuia llena),
+            // con la boca ya sobre el destino. El lado y el ajuste de la boca se comprueban desde 38° (o desde la de
+            // llegada, si fuera menor) hasta la final.
+            float arrival = JobTilt(ref job, _timings.TravelMs);
+            job.MouthTarget = PourMouth(job.Source, job.Target, job.SrcAfter.Count, Mathf.Min(ArrivalTiltDeg, arrival), out job.Dir);
+            job.PivotStart = s.FootPosition + job.StartOffset + new Vector2(0f, 0.5f * s.HeightU * s.Unit);
+            job.PourAngle = -job.Dir * arrival;
+            job.PourOffset = PoseOffsetAt(ref job, arrival);
             job.Stream = AcquireStream();
 
-            s.Root.SetAsLastSibling();
-            _streamLayer.SetAsLastSibling();
+            // D-006: el origen y su chorro se dibujan delante de todo mientras vierte (sin techo).
+            s.MoveBodyTo(_frontLayer);
+            if (job.Stream >= 0)
+            {
+                _streams[job.Stream].MoveTo(_frontLayer);
+            }
         }
 
         // Fin de caudal: cola del chorro, retorno del origen (07 §5.2: arranca cuando termina el chorro, cola incluida) y
@@ -513,8 +649,8 @@ namespace AF.Presentation
                         s.SetTongue(head * (1f - tail), color, job.Tint); // lengua por la pared inferior hasta el labio
                     }
 
-                    // Cada dosis que empieza a caer salpica y agita la superficie del destino (una dosis por vertido,
-                    // D-001; con el encadenado, una por dosis).
+                    // Cada dosis que empieza a caer salpica y agita la superficie del destino: una por dosis (D-005: un
+                    // vertido mueve la racha que cabe; con el encadenado de single, también una por dosis).
                     if (time >= job.StreamStart + StreamGrowMs)
                     {
                         int due = Mathf.Min(job.Amount, 1 + Mathf.FloorToInt(Mathf.Max(0f, p)));
@@ -595,40 +731,76 @@ namespace AF.Presentation
             end = new Vector2(Mathf.Clamp(control.x, surface.x - mouth, surface.x + mouth), surface.y);
         }
 
+        // Viaje: el cuerpo gira con la inclinación de TiltAt alrededor de un pivote que va en arco (ease-in-out) de su
+        // centro, en la ranura, al punto sobre el destino, y que a la vez sube por el eje del centro a la boca: al salir gira
+        // por el medio (como Magic Sort, ficha §2.6: 2.900-3.100 ms) y al llegar ya gira alrededor de la boca, que llega
+        // parada y sigue quieta durante el caudal, sin tirones. Vuelta directa a la ranura, sinusoidal de entrada y salida,
+        // con el rebote de 0,03 u (07 §5.2).
         private Vector2 PoseOffset(ref Job job, float time, float unit)
         {
-            if (time < _timings.TravelMs)
-            {
-                float s = Ease.InOut(time / Mathf.Max(1f, _timings.TravelMs));
-                Vector2 o = Vector2.Lerp(job.StartOffset, job.PourOffset, s);
-                o.y += Mathf.Sin(Mathf.PI * s) * TravelArcU * unit;
-                return o;
-            }
-
+            CuiaView s = _views[job.Source];
             if (time < job.ReturnStart)
             {
-                return job.PourOffset;
+                float angle = -job.Dir * JobTilt(ref job, time);
+                if (time < _timings.TravelMs)
+                {
+                    float e = Ease.InOut(time / Mathf.Max(1f, _timings.TravelMs));
+                    Vector2 pivot = Vector2.Lerp(job.PivotStart, job.MouthTarget, e);
+                    pivot.y += Mathf.Sin(Mathf.PI * e) * TravelArcU * unit;
+                    float along = Mathf.Lerp(0.5f, 1f, e) * s.HeightU * unit;
+                    return pivot - s.FootPosition - CuiaView.Rotate(new Vector2(0f, along), angle * Mathf.Deg2Rad);
+                }
+
+                return PoseOffsetFor(s, job.MouthTarget, angle);
             }
 
-            float r = Ease.Out((time - job.ReturnStart) / Mathf.Max(1f, _timings.ReturnMs));
-            Vector2 back = Vector2.Lerp(job.PourOffset, Vector2.zero, r);
-            back.y += Mathf.Sin(Mathf.PI * r) * 0.03f * unit; // rebote de 0,03 u (07 §5.2)
+            float r = Ease.InOutSine((time - job.ReturnStart) / Mathf.Max(1f, _timings.ReturnMs));
+            Vector2 back = Vector2.Lerp(PoseOffsetAt(ref job, JobTilt(ref job, job.ReturnStart)), Vector2.zero, r);
+            back.y += Mathf.Sin(Mathf.PI * r) * ReturnBounceU * unit;
             return back;
         }
 
         private float PoseAngle(ref Job job, float time)
         {
-            if (time < _timings.TravelMs)
-            {
-                return Mathf.Lerp(0f, job.PourAngle, Ease.InOut(time / Mathf.Max(1f, _timings.TravelMs)));
-            }
-
             if (time < job.ReturnStart)
             {
-                return job.PourAngle;
+                return -job.Dir * JobTilt(ref job, time);
             }
 
-            return Mathf.Lerp(job.PourAngle, 0f, Ease.Out((time - job.ReturnStart) / Mathf.Max(1f, _timings.ReturnMs)));
+            float last = -job.Dir * JobTilt(ref job, job.ReturnStart);
+            return Mathf.Lerp(last, 0f, Ease.InOutSine((time - job.ReturnStart) / Mathf.Max(1f, _timings.ReturnMs)));
+        }
+
+        // Inclinación (sin signo) del trabajo: TiltAt con sus dosis (con el encadenado de single, cada dosis añadida suma su
+        // punto) más el resto del salto del encadenado, que se reparte en ChainTiltBlendMs.
+        private float JobTilt(ref Job job, float time)
+        {
+            float tilt = TiltAt(time, job.StreamStart, job.DoseMs, _timings.TailMs, job.Before, job.Amount);
+            if (job.TiltBias != 0f)
+            {
+                tilt += job.TiltBias * (1f - Mathf.Clamp01((time - job.BiasStart) / ChainTiltBlendMs));
+            }
+
+            return tilt;
+        }
+
+        // Desplazamiento del cuerpo del origen que deja el centro de su boca en job.MouthTarget con la inclinación tilt
+        // (sin signo; el signo lo da el lado, job.Dir).
+        private Vector2 PoseOffsetAt(ref Job job, float tilt)
+        {
+            CuiaView s = _views[job.Source];
+            return PoseOffsetFor(s, job.MouthTarget, -job.Dir * tilt);
+        }
+
+        private static Vector2 PoseOffsetFor(CuiaView s, Vector2 mouth, float angleDeg)
+        {
+            return mouth - s.FootPosition - CuiaView.Rotate(new Vector2(0f, s.HeightU * s.Unit), angleDeg * Mathf.Deg2Rad);
+        }
+
+        // Centro de la boca del origen durante el vertido: sobre el eje del destino, MouthCenterAboveRimU sobre su borde.
+        private static Vector2 MouthTargetFor(CuiaView t)
+        {
+            return t.FootPosition + new Vector2(0f, (t.HeightU + MouthCenterAboveRimU) * t.Unit);
         }
 
         private void FinishSource(ref Job job)
@@ -637,6 +809,7 @@ namespace AF.Presentation
             if (job.Started && !job.IsUndo)
             {
                 s.SetTongue(0f, Color.clear, 0);
+                s.ReturnBody();
                 s.Unlock();
             }
 
@@ -690,166 +863,147 @@ namespace AF.Presentation
             _count = w;
         }
 
-        // Pose de vertido (07 §5.2: labio 0,6 u sobre el borde del destino; 38° de 02 §4.1) elegida para tapar lo menos
-        // posible (revisiones visuales del 2026-10-07): se prueban los dos lados del destino, el centro del labio a 0,25,
-        // 0,45 o 0,65 u del eje del destino hacia el origen (el canto por el que sale el chorro sigue sobre su boca) y
-        // elevaciones de 0 a 1 u (el labio nunca pasa de 1,6 u sobre el borde del destino). Gana la de menor coste = área
-        // tapada, ponderada (silueta del origen sobre el cuerpo de las demás, × 3, y sobre su hombro, cuello y la holgura
-        // de 0,3 u por encima de su borde, × 2; dentro de la silueta del destino por debajo de su borde, × 3) + 0,4 u² por
-        // u de elevación + 0,5 u² por u de desplazamiento del labio más allá de 0,25 u + 0,5 u² si vierte desde el lado
-        // lejano. El origen no pasa del techo TopLimitY [P] (4 dp bajo el canto interior del marco en una fila, borde del
-        // panel en dos y tres; nunca sobre el HUD): una elevación solo se prueba si el canto alto del borde inclinado queda
-        // bajo el techo, y la primera que lo pasaría se recorta para dejar ese canto justo en él (sin elevar siempre se
-        // permite: en una fila cabe mientras u ≤ 36 dp, y D-004 limita u a 32). Con el techo la elevación ya no basta
-        // para apartarse de todo, así que una pose cuya silueta entra en el cuerpo o el hombro del destino solo gana si
-        // ninguna lo evita [P] (D-004).
-        // Solo depende de la geometría de las cuias, de TopLimitY y del ancho del tablero, no de su contenido. Sin
-        // asignaciones.
-        private void ChoosePourPose(int source, int target, out Vector2 bestOffset, out float bestAngle)
+        // Lado del cuerpo (D-006): dir = +1 deja el cuerpo a la izquierda del destino (gira en sentido horario y la boca
+        // apunta a la derecha), −1 a la derecha. El del que viene el origen; en la misma columna (|Δx| ≤ 1 dp), hacia el
+        // centro del tablero; si de fromTilt (38°) a su ángulo final (con remainingAfter dosis en el origen) la silueta
+        // saldría del lienzo y por el otro lado no, el otro [P]. Sin asignaciones.
+        private float ChooseSide(int source, int target, int remainingAfter, float fromTilt)
         {
             CuiaView s = _views[source];
             CuiaView t = _views[target];
-            bestOffset = Vector2.zero;
-            bestAngle = 0f;
             float dx = t.FootPosition.x - s.FootPosition.x;
-            float preferred;
+            float dir;
             if (Mathf.Abs(dx) > 1f)
             {
-                preferred = dx > 0f ? 1f : -1f;
+                dir = dx > 0f ? 1f : -1f;
             }
             else
             {
-                preferred = t.FootPosition.x > _streamLayer.rect.width * 0.5f ? -1f : 1f;
+                dir = t.FootPosition.x > Width * 0.5f ? 1f : -1f;
             }
 
-            float bestCost = float.MaxValue;
-            bool bestEnters = true;
-            float length = s.HeightU * s.Unit;
-            Vector2 rim = t.FootPosition + new Vector2(0f, t.HeightU * t.Unit);
-            int steps = Mathf.RoundToInt(MaxRaiseU / RaiseStepU);
-
-            // El punto más alto del origen inclinado es el canto lejano de su borde de fibra (CuiaGeometry.RimHalfWidthU de
-            // semiancho): sube 0,55 · sin 38° ≈ 0,34 u sobre el centro del labio.
-            float rimRise = CuiaGeometry.RimHalfWidthU * Mathf.Sin(TiltDeg * Mathf.Deg2Rad) * s.Unit;
-            for (int side = 0; side < 2; side++)
+            Vector2 mouth = MouthTargetFor(t);
+            float final = TiltAfterDose(remainingAfter);
+            if (!InsideAlongThePour(s, source, mouth, dir, fromTilt, final) && InsideAlongThePour(s, source, mouth, -dir, fromTilt, final))
             {
-                float dir = side == 0 ? preferred : -preferred;
-                float angle = -dir * TiltDeg;
-                float rad = angle * Mathf.Deg2Rad;
-                var lipVector = new Vector2(-length * Mathf.Sin(rad), length * Mathf.Cos(rad));
-                for (int shift = 0; shift < LipShiftsU.Length; shift++)
+                dir = -dir;
+            }
+
+            return dir;
+        }
+
+        // La silueta queda dentro del lienzo en todas las inclinaciones del vertido sobre el destino, de fromTilt a final
+        // (cada 3° y la final).
+        private bool InsideAlongThePour(CuiaView s, int source, Vector2 mouth, float dir, float fromTilt, float final)
+        {
+            for (float tilt = fromTilt; ; tilt += 3f)
+            {
+                float a = -dir * Mathf.Min(tilt, final);
+                if (!SilhouetteInsideBoard(source, PoseOffsetFor(s, mouth, a), a))
                 {
-                    float lipShift = LipShiftsU[shift];
-                    Vector2 lipTarget = rim + new Vector2(-dir * lipShift * t.Unit, LipClearanceU * t.Unit);
-                    Vector2 baseOffset = lipTarget - lipVector - s.FootPosition;
-                    float fixedCost = (LipShiftPenalty * (lipShift - LipShiftsU[0])) + (side == 1 ? FarSidePenalty : 0f);
-                    float previousRaise = 0f;
-                    for (int step = 0; step <= steps; step++)
-                    {
-                        float raise = step * RaiseStepU * s.Unit;
-                        bool clipped = false;
-                        if (step > 0 && lipTarget.y + raise + rimRise > TopLimitY)
-                        {
-                            // Elevación recortada al techo: el canto alto del borde queda justo en TopLimitY.
-                            raise = TopLimitY - lipTarget.y - rimRise;
-                            if (raise <= previousRaise + 0.01f)
-                            {
-                                break;
-                            }
+                    return false;
+                }
 
-                            clipped = true;
-                        }
-
-                        previousRaise = raise;
-                        Vector2 offset = baseOffset + new Vector2(0f, raise);
-                        float cost = PoseCost(source, target, offset, rad, out bool enters) + (RaisePenalty * raise / s.Unit) + fixedCost;
-                        if ((bestEnters && !enters) || (enters == bestEnters && cost < bestCost - 1e-4f))
-                        {
-                            bestCost = cost;
-                            bestEnters = enters;
-                            bestOffset = offset;
-                            bestAngle = angle;
-                        }
-
-                        if (clipped)
-                        {
-                            break;
-                        }
-                    }
+                if (tilt >= final)
+                {
+                    return true;
                 }
             }
         }
 
         /// <summary>
-        /// Pose de vertido (desplazamiento del cuerpo y ángulo en grados) que tomaría el origen <paramref name="source"/> al
-        /// verter en <paramref name="target"/> con el layout actual: la misma búsqueda que hace la cola al empezar un
-        /// vertido. Solo depende de la geometría y de <see cref="TopLimitY"/>, no del contenido, así que vale para cualquier
-        /// pareja de cuias, legal o no en el estado actual (diagnóstico y tests). Sin asignaciones.
+        /// Pose de vertido (desplazamiento del cuerpo y ángulo en grados, negativo = sentido horario) que toma el origen
+        /// <paramref name="source"/> al verter en <paramref name="target"/> con el layout actual, con la inclinación
+        /// <paramref name="tiltDeg"/> (sin signo; la de <see cref="TiltAt"/> al terminar el viaje, <see cref="TiltAfterDose"/>
+        /// al terminar cada dosis) y el lado que elige la cola cuando al origen le quedan <paramref name="remainingAfter"/>
+        /// dosis al terminar (D-006): el centro de la boca sobre el eje del destino, <see cref="MouthCenterAboveRimU"/> sobre
+        /// su borde. Solo depende de la geometría, no del contenido, así que vale para cualquier pareja de cuias (diagnóstico
+        /// y tests). Sin asignaciones.
         /// </summary>
-        public void ComputePourPose(int source, int target, out Vector2 offset, out float angleDeg)
+        public void ComputePourPose(int source, int target, int remainingAfter, float tiltDeg, out Vector2 offset, out float angleDeg)
         {
             if ((uint)source >= (uint)_views.Length || (uint)target >= (uint)_views.Length || source == target)
             {
                 throw new ArgumentOutOfRangeException(nameof(target), target, "Origen y destino: dos cuias distintas del tablero.");
             }
 
-            ChoosePourPose(source, target, out offset, out angleDeg);
+            Vector2 mouth = PourMouth(source, target, remainingAfter, ArrivalTiltDeg, out float dir);
+            angleDeg = -dir * tiltDeg;
+            offset = PoseOffsetFor(_views[source], mouth, angleDeg);
         }
 
-        /// <summary>
-        /// Área ponderada (u²) de la silueta del origen <paramref name="source"/>, desplazada <paramref name="offset"/> y
-        /// girada <paramref name="radians"/>, que tapa a las demás cuias, sale del tablero por los lados o sube sobre el HUD.
-        /// </summary>
-        public float PoseCost(int source, int target, Vector2 offset, float radians)
-        {
-            return PoseCost(source, target, offset, radians, out _);
-        }
-
-        // Como PoseCost; además, entersTarget indica si algún punto de la silueta cae dentro del cuerpo o el hombro del
-        // destino (por debajo de CavityTopU + ShoulderU): el criterio de "el origen no entra en el destino".
-        private float PoseCost(int source, int target, Vector2 offset, float radians, out bool entersTarget)
+        // Centro de la boca del vertido y lado del cuerpo: sobre el eje del destino, MouthCenterAboveRimU sobre su borde; si
+        // en alguna inclinación de fromTilt (38°) a la final la silueta saldría del lienzo por los dos lados, se desplaza en
+        // horizontal lo justo, como mucho MaxMouthNudgeU [P]. Sin asignaciones.
+        private Vector2 PourMouth(int source, int target, int remainingAfter, float fromTilt, out float dir)
         {
             CuiaView s = _views[source];
             CuiaView t = _views[target];
+            dir = ChooseSide(source, target, remainingAfter, fromTilt);
+            Vector2 mouth = MouthTargetFor(t);
+            float final = TiltAfterDose(remainingAfter);
+            float width = Width;
+            float left = 0f;
+            float right = 0f;
+            for (float tilt = fromTilt; ; tilt += 3f)
+            {
+                float a = -dir * Mathf.Min(tilt, final);
+                SilhouetteExtent(source, PoseOffsetFor(s, mouth, a), a, out float minX, out float maxX, out _);
+                left = Mathf.Max(left, -minX);
+                right = Mathf.Max(right, maxX - width);
+                if (tilt >= final)
+                {
+                    break;
+                }
+            }
+
+            float limit = MaxMouthNudgeU * t.Unit;
+            mouth.x += Mathf.Clamp(left - right, -limit, limit);
+            return mouth;
+        }
+
+        /// <summary>
+        /// La silueta exterior del origen <paramref name="source"/>, desplazada <paramref name="offset"/> y girada
+        /// <paramref name="angleDeg"/> grados, queda dentro del lienzo (contenedor del tablero: 0 ≤ x ≤ ancho, y ≤ 0, con
+        /// 0,5 dp de tolerancia). Muestreo de 25 × 7 puntos con los bordes incluidos. Sin asignaciones.
+        /// </summary>
+        public bool SilhouetteInsideBoard(int source, Vector2 offset, float angleDeg)
+        {
+            SilhouetteExtent(source, offset, angleDeg, out float minX, out float maxX, out float maxY);
+            return minX >= -0.5f && maxX <= Width + 0.5f && maxY <= 0.5f;
+        }
+
+        // Extremos de la silueta exterior muestreada (25 × 7 puntos con los bordes), en coordenadas del contenedor.
+        private void SilhouetteExtent(int source, Vector2 offset, float angleDeg, out float minX, out float maxX, out float maxY)
+        {
+            CuiaView s = _views[source];
             float u = s.Unit;
             float h = s.HeightU;
             int cap = s.Capacity;
+            float rad = angleDeg * Mathf.Deg2Rad;
             Vector2 foot = s.FootPosition + offset;
-            float width = _streamLayer.rect.width;
-            float cost = 0f;
-            float tu = t.Unit;
-            Vector2 tFoot = t.FootPosition;
-            float tShoulderTop = tFoot.y + ((CuiaGeometry.CavityTopU(t.Capacity) + CuiaGeometry.ShoulderU) * tu);
-            entersTarget = false;
-
-            // Muestreo con los bordes incluidos (regla del trapecio): el contorno es lo que toca a las vecinas.
+            minX = float.MaxValue;
+            maxX = float.MinValue;
+            maxY = float.MinValue;
             for (int r = 0; r <= SilhouetteRows; r++)
             {
                 float y = (float)r / SilhouetteRows * h;
                 float hw = CuiaGeometry.OuterHalfWidth(Mathf.Min(y, h - 0.001f), cap);
-                if (hw <= 0f)
-                {
-                    continue;
-                }
-
-                float area = (2f * hw / SilhouetteCols) * (h / SilhouetteRows) * (r == 0 || r == SilhouetteRows ? 0.5f : 1f);
                 for (int c = 0; c <= SilhouetteCols; c++)
                 {
                     float x = -hw + ((float)c * 2f * hw / SilhouetteCols);
-                    Vector2 p = foot + CuiaView.Rotate(new Vector2(x * u, y * u), radians);
-                    cost += area * (c == 0 || c == SilhouetteCols ? 0.5f : 1f) * Occlusion(p, source, target, width);
-                    if (!entersTarget && p.y > tFoot.y && p.y < tShoulderTop
-                        && Mathf.Abs(p.x - tFoot.x) < CuiaGeometry.OuterHalfWidth((p.y - tFoot.y) / tu, t.Capacity) * tu)
-                    {
-                        entersTarget = true;
-                    }
+                    Vector2 p = foot + CuiaView.Rotate(new Vector2(x * u, y * u), rad);
+                    minX = Mathf.Min(minX, p.x);
+                    maxX = Mathf.Max(maxX, p.x);
+                    maxY = Mathf.Max(maxY, p.y);
                 }
             }
-
-            return cost;
         }
 
-        /// <summary>Pose de vertido del trabajo en curso que mueve <paramref name="source"/> (diagnóstico y tests).</summary>
+        /// <summary>
+        /// Pose al terminar el viaje (boca sobre el destino) del trabajo en curso que mueve <paramref name="source"/>
+        /// (diagnóstico y tests).
+        /// </summary>
         public bool TryGetPourPose(int source, out Vector2 offset, out float angleDeg)
         {
             for (int i = 0; i < _count; i++)
@@ -865,57 +1019,6 @@ namespace AF.Presentation
             offset = Vector2.zero;
             angleDeg = 0f;
             return false;
-        }
-
-        // Peso del tapado en el punto p: 3 sobre el cuerpo (cavidad) de otra cuia, 2 sobre su hombro, cuello y la holgura
-        // de 0,3 u sobre su borde; en el destino, 3 dentro de su silueta por debajo de su borde (el origen no se mete en su
-        // boca ni lo tapa; fuera de la silueta, junto al cuello, no tapa nada) y nada por encima del borde; 3 fuera del
-        // tablero o sobre el HUD. Con 0,4 por u de elevación, subir compensa en cuanto evita tapar algo.
-        private float Occlusion(Vector2 p, int source, int target, float width)
-        {
-            if (p.x < 0f || p.x > width || p.y > TopLimitY)
-            {
-                return 3f;
-            }
-
-            float w = 0f;
-            for (int j = 0; j < _views.Length; j++)
-            {
-                if (j == source)
-                {
-                    continue;
-                }
-
-                CuiaView v = _views[j];
-                float vu = v.Unit;
-                Vector2 f = v.FootPosition;
-                if (p.x < f.x - vu || p.x > f.x + vu || p.y < f.y)
-                {
-                    continue;
-                }
-
-                if (j == target)
-                {
-                    // Destino: el origen no entra en su silueta (el chorro sí); por encima del borde, libre.
-                    if (p.y <= f.y + (v.HeightU * vu) && Mathf.Abs(p.x - f.x) < CuiaGeometry.OuterHalfWidth((p.y - f.y) / vu, v.Capacity) * vu)
-                    {
-                        w = Mathf.Max(w, 3f);
-                    }
-
-                    continue;
-                }
-
-                float body = f.y + (CuiaGeometry.CavityTopU(v.Capacity) * vu);
-                float top = f.y + ((v.HeightU + NeighbourClearanceU) * vu);
-                if (p.y > top)
-                {
-                    continue;
-                }
-
-                w = Mathf.Max(w, p.y <= body ? 3f : 2f);
-            }
-
-            return w;
         }
 
         private int AcquireStream()
@@ -940,6 +1043,7 @@ namespace AF.Presentation
             }
 
             _streams[job.Stream].Hide();
+            _streams[job.Stream].MoveTo(_streamLayer);
             _streams[job.Stream].InUse = false;
             job.Stream = -1;
         }
@@ -971,6 +1075,12 @@ namespace AF.Presentation
             public Vector2 StartOffset;
             public Vector2 PourOffset;
             public float PourAngle;
+            public Vector2 MouthTarget;
+            public Vector2 PivotStart;
+            public float TiltBias;
+            public float BiasStart;
+            public float Dir;
+            public int Before;
             public int Stream;
             public int Splashes;
         }

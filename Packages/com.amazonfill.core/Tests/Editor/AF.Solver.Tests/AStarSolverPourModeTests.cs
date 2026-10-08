@@ -180,7 +180,8 @@ namespace AF.Solver.Tests
     }
 
     /// <summary>
-    /// Solver A* en los dos modos de vertido (D-001; docs/dev/decisiones.md §2.1.3 y criterio A4): el par de A*
+    /// Solver A* en los dos modos de vertido (Run por defecto y Single, modo de pruebas, D-005; docs/dev/decisiones.md
+    /// §2.1.3 y criterio A4): el par de A*
     /// (w = 1) coincide con el de la búsqueda exhaustiva, con y sin la poda de fútiles; <c>H</c> y <c>H_single</c> son
     /// admisibles y consistentes en todos los estados alcanzables; <see cref="PourMode.Run"/> conserva el comportamiento
     /// anterior. Test compartido (NUnit 3.5, C# 9).
@@ -235,7 +236,7 @@ namespace AF.Solver.Tests
                 Assert.That(PourRules.Amount(state, pour.Source, pour.Target, mode), Is.EqualTo(pour.Amount), "vertido " + i);
                 if (mode == PourMode.Single)
                 {
-                    Assert.That(pour.Amount, Is.EqualTo(1), "D-001: vertido " + i);
+                    Assert.That(pour.Amount, Is.EqualTo(1), "Single, modo de pruebas (D-005): vertido " + i);
                 }
 
                 state = PourRules.Apply(state, pour.Source, pour.Target, mode);
@@ -337,7 +338,8 @@ namespace AF.Solver.Tests
         [Test]
         public void Single_TutorialLevel1_ParThree_EveryPourMovesOneDose()
         {
-            // 02 §13 nivel 1 y D-001: el par es 3 también en Single (1→2, 0→1, 2→0), cada vertido de una dosis.
+            // 02 §13 nivel 1: el par es 3 también en Single, el modo de pruebas desde D-005 (1→2, 0→1, 2→0), cada vertido
+            // de una dosis.
             BoardState start = new BoardState(new[] { C(4, 8, 8, 8, 4), C(4, 4, 4, 4, 8), Cuia.Empty(4) });
 
             SolveResult result = new AStarSolver().Solve(start, SolverOptions.ForPipeline(PourMode.Single));
@@ -349,8 +351,8 @@ namespace AF.Solver.Tests
         [Test]
         public void Single_RunOfThree_IsMovedDoseByDose()
         {
-            // D-001: con una racha de 3 sobre una vacía, la solución Single contiene 3 vertidos iguales seguidos donde Run
-            // usa uno de 3 dosis.
+            // Single, modo de pruebas (D-005): con una racha de 3 sobre una vacía, la solución Single contiene 3 vertidos
+            // iguales seguidos donde Run usa uno de 3 dosis.
             BoardState start = new BoardState(new[] { C(4, 1, 2, 2, 2), C(4, 2, 1, 1, 1), Cuia.Empty(4) });
 
             SolveResult run = new AStarSolver().Solve(start, SolverOptions.ForPipeline(PourMode.Run));
@@ -462,7 +464,7 @@ namespace AF.Solver.Tests
             Assert.That(single.NodeBudget, Is.EqualTo(SolverOptions.PipelineNodeBudget));
             Assert.That(single.Weight, Is.EqualTo(1));
             Assert.That(single.FutileRuleEnabled, Is.True);
-            Assert.That(SolverOptions.ForPipeline(PourModes.Default).PourMode, Is.EqualTo(PourMode.Single));
+            Assert.That(SolverOptions.ForPipeline(PourModes.Default).PourMode, Is.EqualTo(PourMode.Run));
             Assert.That(() => { new SolverOptions(10, 1, true, (PourMode)7); }, Throws.TypeOf<ArgumentOutOfRangeException>());
             Assert.That(() => { SolverOptions.ForPipeline((PourMode)(-1)); }, Throws.TypeOf<ArgumentOutOfRangeException>());
         }

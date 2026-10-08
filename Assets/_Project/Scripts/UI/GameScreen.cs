@@ -20,8 +20,9 @@ namespace AF.UI
     /// <remarks>
     /// Capas de atrás adelante (guía 3.4): panorama, ambiente lejano, muelle, follaje, velo de escena; captura de fondo;
     /// tablero (sombra, relleno, sombra interior y marco del panel, repisas, cuias, agua de inmersión, chorros y efectos);
-    /// Capi y el poste; velo de estado, HUD y bandeja; polen; estallido; modales; captura de saltos. Las capas que no
-    /// son botones ni áreas de cuia no reciben toques (V7).
+    /// Capi y el poste; velo de estado, HUD y bandeja; polen; capa de vertido (el origen y su chorro mientras vierte, delante
+    /// de todo, D-006); estallido; modales; captura de saltos. Las capas que no son botones ni áreas de cuia no reciben
+    /// toques (V7).
     /// </remarks>
     public sealed class GameScreen : ILevelFlowListener
     {
@@ -67,22 +68,6 @@ namespace AF.UI
 
         /// <summary>Franja mínima de río visible para enseñar la garza y las vitórias-régias (dp).</summary>
         public const float RiverPropsMinBandDp = 56f;
-
-        /// <summary>
-        /// Cavidad mínima (dp) entre el canto interior del marco y la fila 1 elevada para que el techo del vertido pase a
-        /// ese canto, menos el aire (<see cref="PourCeilingFor"/>): 36 − 13,5 = 22,5 en una fila;
-        /// 22 − 13,5 = 8,5 en dos filas.
-        /// </summary>
-        public const float PourCavityDp = 22f;
-
-        /// <summary>
-        /// Aire (dp) entre el canto interior del marco y el punto más alto del origen inclinado cuando el techo del vertido
-        /// es ese canto (<see cref="PourCeilingFor"/>; revisión de D-004 sobre <c>04b_pouring_l1</c>): con menos de 1 dp
-        /// la banda de cuerda del labio tocaba la línea del bisel interior y la cuia parecía apoyarse en el marco. En el
-        /// nivel 1 (u = 32) la elevación baja de 0,25 a ≈ 0,14 u y el labio sigue ≥ 0,6 u sobre el borde del destino. Es
-        /// el máximo sin mover el panel: con 5,5 dp (0,09 u) el origen entra en el hombro del destino.
-        /// </summary>
-        public const float PourCeilingAirDp = 4f;
 
         /// <summary>
         /// La cinta-hoja asoma 38 dp sobre el panel de victoria (guía 5.3 decía 34 con la cinta de 64 dp; revisión visual del
@@ -155,6 +140,7 @@ namespace AF.UI
         private readonly ReliefParts _undo;
         private readonly RectTransform _ambientNearParent;
         private readonly AmbientLayer _ambient;
+        private readonly RectTransform _pourFront;
 
         private readonly RectTransform _confettiLayer;
         private readonly RectTransform _skipCatcher;
@@ -185,6 +171,7 @@ namespace AF.UI
         private LevelFlow? _flow;
         private int _pressPreview = -1;
         private CuiaView[] _views = Array.Empty<CuiaView>();
+        private int _generatedCount;
         private RectTransform[] _rowWaterActive = Array.Empty<RectTransform>();
         private BoardState? _shownBoard;
         private BoardLayoutResult? _layout;
@@ -372,6 +359,11 @@ namespace AF.UI
             _ambient = new AmbientLayer(_ambientFarParent, _ambientNearParent, art);
             _ambient.SetFoliage(_foliage[0].rectTransform, _foliage[1].rectTransform, _foliage[2].rectTransform, _foliage[3].rectTransform);
 
+            // ---- Capa de vertido (D-006): mientras vierte, el cuerpo del origen y su chorro se dibujan aquí, delante de las
+            // vecinas, del marco del panel, del HUD y del polen, como Magic Sort (t = 250: el origen tapa el rótulo del
+            // nivel). Sin Graphic ni raycast; alineada con el tablero (sigue a ShiftToClear) y vacía en reposo. ----
+            _pourFront = UiBuilder.Rect("PourFront", _root);
+
             _confettiLayer = UiBuilder.Rect("Burst", _root);
             _confetti = new ConfettiLayer(_confettiLayer, art, GameConfig.AnimConfettiMaxParticles);
 
@@ -428,7 +420,7 @@ namespace AF.UI
             _skipCatcher.gameObject.AddComponent<PointerDownRelay>().Bind(() => _onAnywhere());
             _skipCatcher.gameObject.SetActive(false);
 
-            _animator = new BoardAnimator(_streamLayer) { Fx = _fx };
+            _animator = new BoardAnimator(_streamLayer, _pourFront) { Fx = _fx };
             ApplyScreenMetrics(true);
         }
 
@@ -449,6 +441,21 @@ namespace AF.UI
 
         /// <summary>Lienzo de la pantalla (capturas de prueba).</summary>
         public Canvas Canvas => _canvas;
+
+        /// <summary>Ancho del lienzo en dp (360 en el teléfono; el de la pantalla simulada en los tests).</summary>
+        public float CanvasWidth => _canvasW;
+
+        /// <summary>Capa de vertido (D-006): el origen y su chorro mientras vierte, delante del HUD (tests).</summary>
+        public RectTransform PourFront => _pourFront;
+
+        /// <summary>Contenedor del tablero, en cuyas coordenadas viven las ranuras y la cola de animación (tests).</summary>
+        public RectTransform BoardContainer => _board;
+
+        /// <summary>Capa del HUD (tests de orden de capas).</summary>
+        public RectTransform Hud => _hud;
+
+        /// <summary>Capa del ambiente cercano (polen), delante del HUD (tests de orden de capas).</summary>
+        public RectTransform AmbientNear => _ambientNearParent;
 
         /// <summary>Vistas de las cuias del nivel actual.</summary>
         public CuiaView[] Views => _views;
@@ -486,7 +493,8 @@ namespace AF.UI
         /// <summary>
         /// Horizonte del panorama (dp desde arriba) para un panel que empieza en <paramref name="panelTop"/> en un lienzo de
         /// <paramref name="canvasWidth"/> dp: clamp(panel.top − 64, 118, 200), a escala del ancho (revisión visual del
-        /// 2026-10-07). A 360 × 780 dp: nivel 7 (panel en 152,5) → 118; nivel 1 (panel en 206,5) → 142,5.
+        /// 2026-10-07). A 360 × 780 dp, con las cuias de 5,60 u (D-006): nivel 7 (panel en 162,1) → 118; nivel 1 (panel en
+        /// 226,9) → 162,9.
         /// </summary>
         public static float HorizonFor(float panelTop, float canvasWidth)
         {
@@ -778,6 +786,7 @@ namespace AF.UI
             }
 
             _views = views;
+            _generatedCount = views.Length; // cuias generadas al cargar el nivel: fijan las filas (D-006); en v0, todas
             for (int i = 0; i < _rowWater.Length; i++)
             {
                 _rowWater[i].rectTransform.SetAsLastSibling();
@@ -1068,9 +1077,11 @@ namespace AF.UI
                 heightU = Mathf.Max(heightU, _views[i].HeightU);
             }
 
-            // T = _views.Length: cuando Cuia extra o Cuia de rescate añadan una vista (fuera de v0), LayoutBoard se vuelve a
-            // llamar y el tope se recalcula (D-004).
-            _layout = BoardLayout.Compute(_views.Length, heightU, w, BoardTop, BoardBottom);
+            // D-006: el número de filas lo fijan las cuias generadas al cargar el nivel y no cambia a mitad de nivel; cuando
+            // Cuia extra o Cuia de rescate añadan una vista (fuera de v0), va a la fila más corta y solo se recalcula el ancho
+            // con el T en pantalla (re-layout de 300 ms, 02 §4.1; tope de D-004).
+            int generated = _generatedCount > 0 ? Mathf.Min(_generatedCount, _views.Length) : _views.Length;
+            _layout = BoardLayout.Compute(_views.Length, generated, heightU, w, BoardTop, BoardBottom);
             BoardLayoutResult l = _layout;
             for (int i = 0; i < _views.Length; i++)
             {
@@ -1134,30 +1145,13 @@ namespace AF.UI
             }
 
             LayoutBackdrop(py, l.PanelBottom, true);
-            _animator.TopLimitY = -PourCeilingFor(l, frame, BoardTop);
+            _animator.BoardWidth = w; // lado del cuerpo al verter (D-006): el lienzo del layout
             _ambient.SetLayout(new Vector2(w, _canvasH), PanelRect(), new Rect(0f, _horizonY + 4f, w, Mathf.Max(0f, py - _horizonY - 8f)));
-        }
-
-        /// <summary>
-        /// Techo del origen inclinado durante el vertido (dp desde arriba) para el layout <paramref name="l"/> con un marco
-        /// de <paramref name="frame"/> dp [P] (D-004 y su revisión): nunca sale del panel por arriba ni sube más de 4 dp
-        /// dentro de la fila del HUD, que acaba en <paramref name="boardTop"/> (el panel puede empezar 8 dp dentro de ella si
-        /// se recorta). Si entre el canto interior del marco y la fila 1 elevada quedan ≥ <see cref="PourCavityDp"/>
-        /// (tableros de una fila, con 36 dp de margen), el techo queda <see cref="PourCeilingAirDp"/> (4 dp) bajo ese canto:
-        /// el origen no se monta sobre el marco ni lo roza. Si no (dos y tres filas, con 22 dp), es el borde exterior del
-        /// panel: el vertido hacia la fila 1 necesita ≈ 0,3 u de elevación para no entrar en el hombro del destino y el
-        /// origen puede cubrir parte del marco durante el vertido (≤ 400 ms).
-        /// </summary>
-        public static float PourCeilingFor(BoardLayoutResult l, float frame, float boardTop)
-        {
-            float inner = l.PanelY + frame;
-            float ceiling = l.BlockTop - inner >= PourCavityDp ? inner + PourCeilingAirDp : l.PanelY;
-            return Mathf.Max(ceiling, boardTop - 4f);
         }
 
         // Panorama, cielo, muelle y escena del río según el panel (revisión visual del 2026-10-07):
         //  - el horizonte queda en clamp(panel.top − 64, 118, 200) dp (a 360 de ancho) y el hueco de arriba se rellena con
-        //    cielo_alto: nivel 7 (panel en 152,5) en 118, sin cambios; nivel 1 (panel en 206,5) en 142,5;
+        //    cielo_alto: nivel 7 (panel en 162,1) en 118; nivel 1 (panel en 226,9) en 162,9 (D-006);
         //  - la viga del muelle va bajo el panel (panel.bottom − 4): el tablero se apoya en el muelle, sin postes;
         //  - con ≥ 56 dp de río visible, una garza en la orilla izquierda y 3 vitórias-régias junto a las orillas.
         private void LayoutBackdrop(float panelTop, float panelBottom, bool hasBoard)
@@ -1281,6 +1275,7 @@ namespace AF.UI
         {
             _boardShift = shift;
             _board.anchoredPosition = new Vector2(0f, shift);
+            _pourFront.anchoredPosition = new Vector2(0f, shift); // la capa de vertido sigue al tablero
         }
 
         // Capi (guía 3.7; solo con capi_idle.png): respiración (escala Y 1,00 ↔ 1,02, periodo 3 s). El parpadeo llega con su

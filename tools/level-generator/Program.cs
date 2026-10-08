@@ -1,8 +1,10 @@
 // level-generator: generador offline de niveles de Amazon Fill (GDD 08 §2.4; GDD 03).
-// --handmade: comprueba el tutorial hecho a mano (02 §13; 03 §4.4) con AF.Core y AF.Solver y emite el pack v0 y su
-// informe (docs/dev/prototipo-v0.md b), con el par en el modo de vertido --pour-mode (D-001; por defecto
-// PourModes.Default = single; docs/dev/decisiones.md §2.1.7). --spec/--out (generación procedural): andamiaje que valida
-// los argumentos y sale con 1 (fallar cerrado); se portará desde tools/levelgen_proto.py sobre AF.Core y AF.Solver.
+// --handmade: comprueba el tutorial hecho a mano (02 §13; 03 §4.4-§5) con AF.Core y AF.Solver y emite el pack v0 y su
+// informe (docs/dev/prototipo-v0.md b), con el par en el modo de vertido --pour-mode, por defecto PourModes.Default = run
+// (decisión del dueño D-005 del 2026-10-08, que sustituye a D-001; docs/dev/decisiones.md): run = la racha visible que
+// cabe, con vertido parcial (02 §1.2, R9); single = una dosis por vertido, solo pruebas. El pack no declara el modo
+// (08 §4.1) y asume run. --spec/--out (generación procedural): andamiaje que valida los argumentos y sale con 1 (fallar
+// cerrado); se portará desde tools/levelgen_proto.py sobre AF.Core y AF.Solver.
 // Todo lo que se imprime es ASCII (.claude/rules/ci.md): la consola de Windows y Git Bash corrompen
 // '§' y los acentos al capturar la salida. Los comentarios sí pueden llevar acentos.
 using AF.Core.Board;
@@ -14,7 +16,7 @@ const string Usage = """
     level-generator: generador offline de niveles de Amazon Fill (GDD 08 sec. 2.4; GDD 03)
 
     Uso:
-      dotnet run --project tools/level-generator -- --handmade <spec.json> --out <carpeta> --report <informe.md> [--pour-mode single|run] [--check]
+      dotnet run --project tools/level-generator -- --handmade <spec.json> --out <carpeta> --report <informe.md> [--pour-mode run|single] [--check]
       dotnet run --project tools/level-generator -- --spec <spec.json> --out <carpeta>
       dotnet run --project tools/level-generator -- --help
 
@@ -22,9 +24,10 @@ const string Usage = """
       AF.Core (BFS sobre PourRules) y AF.Solver, escribe <carpeta>/<pack_id>.json (subconjunto de af-level/1)
       solo si todo pasa, y siempre el informe. Con --check no escribe el pack: falla si el de disco difiere.
       Codigos: 0 = todo PASS; 1 = alguna comprobacion falla (o --check y el pack difiere); 2 = uso o spec ilegible.
-    --pour-mode: modo de vertido con el que se calcula el par (decision D-001; clave rules_pour_mode): single = una
-      dosis por vertido (por defecto) o run = la racha que cabe. El pack no declara el modo: asume el del cliente por
-      defecto (single), asi que un pack generado con run solo vale para jugar en run. El informe lo declara.
+    --pour-mode: modo de vertido con el que se calcula el par (decision D-005, que sustituye a D-001; clave
+      rules_pour_mode): run = la racha visible que cabe, con vertido parcial (por defecto; GDD 02 sec. 1.2 y R9) o
+      single = una dosis por vertido (solo pruebas). El pack no declara el modo y asume run, el del cliente por
+      defecto, asi que un pack generado con single solo vale para jugar en single. El informe lo declara.
     --spec: generacion procedural (GDD 03). Salida prevista: mundo_{nn}_v{vuelta}.json en formato af-level/1
       (schemas/af-level-1.schema.json) y report.csv. Estado: andamiaje, aun no portada desde
       tools/levelgen_proto.py (sale con 1).
@@ -101,7 +104,7 @@ if (handmade is not null)
     PourMode pourMode = PourModes.Default;
     if (pourModeKey is not null && !PourModes.TryParse(pourModeKey, out pourMode))
     {
-        return UsageError($"--pour-mode debe ser {PourModes.SingleKey} o {PourModes.RunKey}: {pourModeKey}");
+        return UsageError($"--pour-mode debe ser {PourModes.RunKey} o {PourModes.SingleKey}: {pourModeKey}");
     }
 
     return HandmadeRunner.Run(handmade, outDir, report, check, pourMode);

@@ -8,8 +8,8 @@ namespace AF.Solver.Search
 {
     /// <summary>
     /// Solver A* (ponderado con <c>w</c> entero) sobre estados canónicos (GDD 03 §3 y §5) en los dos modos de vertido
-    /// (D-001): heurística <see cref="SolverHeuristic"/> del modo (<c>H</c> en <see cref="PourMode.Run"/>,
-    /// <c>H_single</c> en <see cref="PourMode.Single"/>), movimientos = <c>movimientos_utiles</c> de 02 §1.4 evaluados con
+    /// (D-005): heurística <see cref="SolverHeuristic"/> del modo (<c>H</c> en <see cref="PourMode.Run"/>, el modo de
+    /// juego por defecto; <c>H_single</c> [P] solo en <see cref="PourMode.Single"/>, el de pruebas), movimientos = <c>movimientos_utiles</c> de 02 §1.4 evaluados con
     /// <see cref="CuiaRules"/> (la misma implementación que el cliente), presupuesto de estados expandidos y
     /// prueba de irresolubilidad por agotamiento. Admite tableros de hasta 16 cuias (14 generadas, R1).
     /// </summary>

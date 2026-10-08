@@ -48,11 +48,11 @@ namespace AF.Tests.PlayMode
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
             Assert.That(flow.Selected, Is.EqualTo(TapController.NoSelection));
 
-            // El juego arranca en el modo de vertido por defecto: una dosis por vertido (rules_pour_mode = "single", D-001).
-            Assert.That(flow.Session.PourMode, Is.EqualTo(PourMode.Single));
+            // El juego arranca en el modo por defecto: la racha que cabe (rules_pour_mode = run, D-005).
+            Assert.That(flow.Session.PourMode, Is.EqualTo(PourMode.Run));
 
             // Solución del solucionador del núcleo en el modo de la sesión, tocada sin esperar a las animaciones (cola de
-            // 02 §3.2). El par del paquete es el de single.
+            // 02 §3.2). El par del paquete es el de run.
             SolveResult solution = new AStarSolver().Solve(flow.Session.Current, SolverOptions.ForPipeline(flow.Session.PourMode));
             Assert.That(solution.IsSolved, Is.True);
             Assert.That(solution.MoveCount, Is.EqualTo(flow.Level.Par));
@@ -62,7 +62,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(boot.TapCuia(move.Source).Kind, Is.EqualTo(TapKind.Selected), "origen " + i);
                 TapResult poured = boot.TapCuia(move.Target);
                 Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured), "destino " + i);
-                Assert.That(poured.Pour.Pour.Amount, Is.EqualTo(1), "una dosis por vertido " + i);
+                Assert.That(poured.Pour.Pour.Amount, Is.EqualTo(move.Amount), "la racha que cabe en el vertido " + i);
             }
 
             Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Won));

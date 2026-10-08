@@ -18,6 +18,9 @@ namespace AF.Presentation
     /// decisión se toma en el touch-up: soltar dentro del área táctil es un toque; soltar fuera lo cancela.</para>
     /// <para>La pose del cuerpo y la sombra solo se escriben cuando cambian, para no ensuciar el lienzo cada fotograma con
     /// la pantalla quieta (08 §5.4). Nada cambia en una cuia por la selección de otra (D-002).</para>
+    /// <para>Mientras vierte, el cuerpo visual (no la ranura con su área táctil) pasa a la capa de vertido, delante de las
+    /// vecinas, del marco del panel y del HUD (D-006, como Magic Sort; <see cref="MoveBodyTo"/>), y vuelve a su ranura al
+    /// terminar (<see cref="ReturnBody"/>), en la misma posición de pantalla.</para>
     /// </remarks>
     public sealed class CuiaView : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
     {
@@ -74,6 +77,8 @@ namespace AF.Presentation
         private float _shownAura = -1f;
         private int _glassPpu;
         private bool _glassBoost;
+        private bool _bodyInFront;
+        private int _bodySibling;
 
         private float _u = 24f;
         private float _liftMs = 120f;
@@ -111,8 +116,11 @@ namespace AF.Presentation
         /// <summary>Pie de la cuia en reposo, en coordenadas del contenedor del tablero.</summary>
         public Vector2 FootPosition => _root.anchoredPosition;
 
-        /// <summary>Desplazamiento actual del cuerpo respecto a su ranura.</summary>
-        public Vector2 BodyOffset => _body.anchoredPosition;
+        /// <summary>Desplazamiento actual del cuerpo respecto a su ranura (esté en la ranura o en la capa de vertido).</summary>
+        public Vector2 BodyOffset => float.IsNaN(_shownOffset.x) ? _body.anchoredPosition : _shownOffset;
+
+        /// <summary>El cuerpo está en la capa de vertido (<see cref="MoveBodyTo"/>), delante del resto de la pantalla.</summary>
+        public bool BodyInFront => _bodyInFront;
 
         /// <summary>Ángulo actual del cuerpo (grados; negativo = inclinada a la derecha).</summary>
         public float BodyAngle => _body.localEulerAngles.z > 180f ? _body.localEulerAngles.z - 360f : _body.localEulerAngles.z;
@@ -352,6 +360,42 @@ namespace AF.Presentation
             WritePose(offset, angleDeg);
         }
 
+        /// <summary>
+        /// Lleva el cuerpo visual a <paramref name="layer"/> (la capa de vertido, alineada con el contenedor del tablero y
+        /// delante de todo, D-006) conservando su posición en pantalla. La ranura, con su área táctil y su sombra, no se
+        /// mueve. Idempotente; sin asignaciones.
+        /// </summary>
+        public void MoveBodyTo(RectTransform layer)
+        {
+            if (_bodyInFront)
+            {
+                return;
+            }
+
+            _bodyInFront = true;
+            _body.SetParent(layer, false);
+            _body.anchorMin = new Vector2(0f, 1f);
+            _body.anchorMax = new Vector2(0f, 1f);
+            _body.SetAsLastSibling();
+            _body.anchoredPosition = _root.anchoredPosition + BodyOffsetOrZero();
+        }
+
+        /// <summary>Devuelve el cuerpo visual a su ranura (mismo índice de hermano), en la misma posición de pantalla.</summary>
+        public void ReturnBody()
+        {
+            if (!_bodyInFront)
+            {
+                return;
+            }
+
+            _bodyInFront = false;
+            _body.SetParent(_root, false);
+            _body.SetSiblingIndex(_bodySibling);
+            _body.anchorMin = new Vector2(0.5f, 0f);
+            _body.anchorMax = new Vector2(0.5f, 0f);
+            _body.anchoredPosition = BodyOffsetOrZero();
+        }
+
         /// <summary>Devuelve el cuerpo a su ranura y libera el control (la elevación arranca desde 0).</summary>
         public void Unlock()
         {
@@ -361,29 +405,54 @@ namespace AF.Presentation
             SetGlassBoost(_liftTarget);
         }
 
-        /// <summary>Punto del labio (centro del borde superior) en coordenadas del contenedor, con la pose actual.</summary>
-        public Vector2 LipInContainer()
+        /// <summary>
+        /// Canto interior de la boca por el que sale el chorro, medido desde el eje (u): 0,34 u, dentro del cuello interior
+        /// de <see cref="CuiaGeometry.NeckInnerHalfWidthU"/> (0,40 u).
+        /// </summary>
+        public const float PourEdgeU = 0.34f;
+
+        /// <summary>
+        /// Centro de la boca (centro de lo alto del borde de fibra, en el eje a <see cref="HeightU"/>) en coordenadas del
+        /// contenedor, con la pose actual. Durante el caudal queda sobre el eje del destino (D-006).
+        /// </summary>
+        public Vector2 MouthCenterInContainer()
         {
-            float angle = BodyAngle * Mathf.Deg2Rad;
-            float l = HeightU * _u;
-            return FootPosition + BodyOffset + new Vector2(-l * Mathf.Sin(angle), l * Mathf.Cos(angle));
+            return FootPosition + BodyOffset + Rotate(new Vector2(0f, HeightU * _u), BodyAngle * Mathf.Deg2Rad);
         }
 
         /// <summary>
-        /// Punto del labio por el que sale el chorro: el canto interior del lado bajo (donde acaba la lengua de líquido),
-        /// en coordenadas del contenedor, con la pose actual. Sin inclinación, el centro del labio.
+        /// Punto más bajo de la boca con la pose actual: el canto de lo alto del borde de fibra
+        /// (<see cref="CuiaGeometry.RimHalfWidthU"/>) del lado bajo, en coordenadas del contenedor. Sin inclinación, el
+        /// centro de la boca. D-006: queda a 0,20-0,60 u sobre el borde del destino mientras vierte.
+        /// </summary>
+        public Vector2 MouthLowestInContainer()
+        {
+            float deg = BodyAngle;
+            if (Mathf.Abs(deg) < 0.5f)
+            {
+                return MouthCenterInContainer();
+            }
+
+            float side = deg > 0f ? -1f : 1f; // el lado bajo: a la izquierda si la cuia gira en sentido antihorario
+            return FootPosition + BodyOffset + Rotate(new Vector2(side * CuiaGeometry.RimHalfWidthU * _u, HeightU * _u), deg * Mathf.Deg2Rad);
+        }
+
+        /// <summary>
+        /// Punto de la boca por el que sale el chorro: el canto interior del lado bajo (<see cref="PourEdgeU"/>, donde acaba
+        /// la lengua de líquido), a 0,21 u del punto más bajo de la boca (<see cref="MouthLowestInContainer"/>), en
+        /// coordenadas del contenedor, con la pose actual. Sin inclinación, el centro de la boca.
         /// </summary>
         public Vector2 PourPointInContainer()
         {
             float deg = BodyAngle;
             if (Mathf.Abs(deg) < 0.5f)
             {
-                return LipInContainer();
+                return MouthCenterInContainer();
             }
 
             float angle = deg * Mathf.Deg2Rad;
-            float side = deg > 0f ? -1f : 1f; // el lado bajo: a la izquierda si la cuia gira en sentido antihorario
-            return FootPosition + BodyOffset + Rotate(new Vector2(side * 0.34f * _u, HeightU * _u), angle);
+            float side = deg > 0f ? -1f : 1f;
+            return FootPosition + BodyOffset + Rotate(new Vector2(side * PourEdgeU * _u, HeightU * _u), angle);
         }
 
         /// <summary>
@@ -511,7 +580,7 @@ namespace AF.Presentation
 
             _shownOffset = offset;
             _shownAngle = angleDeg;
-            _body.anchoredPosition = offset;
+            _body.anchoredPosition = _bodyInFront ? _root.anchoredPosition + offset : offset;
             _body.localRotation = angleDeg == 0f ? Quaternion.identity : Quaternion.Euler(0f, 0f, angleDeg);
             _liquid.SetTilt(angleDeg); // el líquido no rota (guía 6.4)
             UpdateMarks(angleDeg);
@@ -616,6 +685,21 @@ namespace AF.Presentation
             return _fxElapsed < hopMs ? 0.15f * _u * Mathf.Sin(Mathf.PI * (_fxElapsed / hopMs)) : 0f;
         }
 
+        private Vector2 BodyOffsetOrZero()
+        {
+            return float.IsNaN(_shownOffset.x) ? Vector2.zero : _shownOffset;
+        }
+
+        // Si la vista se destruye con el cuerpo en la capa de vertido (no debería: la cola lo devuelve antes), el cuerpo
+        // no queda huérfano en esa capa.
+        private void OnDestroy()
+        {
+            if (_bodyInFront && _body != null)
+            {
+                Destroy(_body.gameObject);
+            }
+        }
+
         private void PlaceCapAtRest()
         {
             _cap.rectTransform.anchoredPosition = new Vector2(0f, (HeightU - 0.04f) * _u);
@@ -646,6 +730,7 @@ namespace AF.Presentation
             _aura.gameObject.SetActive(false);
 
             _body = NewRect("Body", _root, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            _bodySibling = _body.GetSiblingIndex();
 
             _glassPpu = ProceduralArt.CuiaPixelsPerU;
             _back = NewImage("GlassBack", _body, art.CuiaBack(capacity, _glassPpu), Color.white);

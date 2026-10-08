@@ -1,57 +1,82 @@
 #nullable enable
+using AF.Presentation;
 using AF.UI;
 using NUnit.Framework;
 
 namespace AF.Tests.EditMode
 {
-    /// <summary>Layout del tablero (GDD 02 §5; 07 §4.1; guía visual v2, 3.2-3.3, VA-01 y VA-15).</summary>
+    /// <summary>
+    /// Layout del tablero (GDD 02 §5; 07 §4.1; guía visual v2, 3.2-3.3, VA-01 y VA-15; D-004; D-006, punto 4, como Magic
+    /// Sort): filas de 1, 2 o 3 según T, las 3 filas de ≤ 5 cuias desde 11 cuias cuando dan la cuia más ancha, filas fijas
+    /// al cargar el nivel y cuias de 5,60 u de alto (<see cref="CuiaGeometry.HeightU"/> con 4 dosis).
+    /// </summary>
     public sealed class BoardLayoutTests
     {
         // 360 × 780 con la zona segura de las capturas (32 dp arriba, 24 abajo): HUD hasta 88; bandeja en 660-740;
-        // boardBottom = trayTop − 40 = 620 (guía 3.2).
+        // boardBottom = trayTop − 40 = 620 (guía 3.2). 360 × 800: 640. 360 × 640 (16:9): 480.
         private const float Top = 88f;
         private const float Bottom = 620f;
+        private const float Bottom800 = 640f;
+        private const float Bottom640 = 480f;
 
-        [TestCase(3, 1, 3)]
-        [TestCase(5, 1, 5)]
-        [TestCase(6, 2, 3)]
-        [TestCase(7, 2, 4)]
-        [TestCase(14, 2, 7)]
-        [TestCase(16, 3, 6)]
-        public void Rows_FollowTheSplitOf02_5(int count, int rows, int firstRow)
+        // Marco tallado del panel: 1,5 de contorno + 12 de madera (guía 3.2).
+        private const float FrameDp = 13.5f;
+
+        private static readonly float H4 = CuiaGeometry.HeightU(4); // 5,60 u (D-006)
+        private static readonly float H5 = CuiaGeometry.HeightU(5); // 6,60 u: Cuia alta de 5 dosis
+
+        [TestCase(3, "3")]
+        [TestCase(5, "5")]
+        [TestCase(6, "3/3")]
+        [TestCase(7, "4/3")]
+        [TestCase(10, "5/5")]
+        [TestCase(11, "4/4/3")]
+        [TestCase(12, "4/4/4")]
+        [TestCase(13, "5/4/4")]
+        [TestCase(14, "5/5/4")]
+        [TestCase(15, "5/5/5")]
+        [TestCase(16, "6/5/5")]
+        public void Rows_FollowTheSplitOf02_5_And_D006_At360x780(int count, string split)
         {
-            BoardLayoutResult r = BoardLayout.Compute(count, 6f, 360f, Top, Bottom);
-            Assert.That(r.Rows, Is.EqualTo(rows));
-            Assert.That(r.PerRow[0], Is.EqualTo(firstRow));
-            int sum = 0;
-            for (int i = 0; i < r.Rows; i++)
-            {
-                sum += r.PerRow[i];
-            }
+            BoardLayoutResult r = BoardLayout.Compute(count, H4, 360f, Top, Bottom);
+            Assert.That(Split(r), Is.EqualTo(split));
+        }
 
-            Assert.That(sum, Is.EqualTo(count));
+        [TestCase(11, "6/5")]
+        [TestCase(12, "6/6")]
+        [TestCase(13, "7/6")]
+        [TestCase(14, "7/7")]
+        [TestCase(15, "5/5/5")]
+        [TestCase(16, "6/5/5")]
+        public void Rows_In16x9_TwoRowsWinFrom11To14(int count, string split)
+        {
+            // D-006: en 16:9 (360 × 640 dp) las 2 filas dan la cuia más ancha con T = 11-14.
+            BoardLayoutResult r = BoardLayout.Compute(count, H4, 360f, Top, Bottom640);
+            Assert.That(Split(r), Is.EqualTo(split));
         }
 
         [Test]
-        public void SevenPerRow_GivesSlot48AndCuia34By102()
+        public void SevenPerRow_In16x9_GivesSlot48AndCuia33_6By94_08()
         {
-            // 02 §5: con 7 por fila, ranura 48, cuia 34 × 102 (0,70 × 48 = 33,6).
-            BoardLayoutResult r = BoardLayout.Compute(14, 6f, 360f, Top, Bottom);
+            // 02 §5: con 7 por fila, ranura 48 y cuia de 0,70 × 48 = 33,6 dp; alto 5,60 u = 94,08 dp (D-006).
+            BoardLayoutResult r = BoardLayout.Compute(14, H4, 360f, Top, Bottom640);
+            Assert.That(r.Rows, Is.EqualTo(2));
             Assert.That(r.SlotWidth, Is.EqualTo(48f).Within(0.01f));
             Assert.That(r.CuiaWidth, Is.EqualTo(33.6f).Within(0.01f));
-            Assert.That(r.CuiaHeight, Is.EqualTo(100.8f).Within(0.01f));
+            Assert.That(r.CuiaHeight, Is.EqualTo(94.08f).Within(0.01f));
         }
 
-        // D-004 (C18): tope(T) = 64 / 56 / 48 dp para T ≤ 3 / 4-5 / ≥ 6; alto 1:3; u = ancho / 2. Margen de 12 dp por lado.
-        [TestCase(1, 64f, 192f, 336f)] // una cuia: centrada en 180
-        [TestCase(3, 64f, 192f, 112f)] // nivel 1: centros 68 / 180 / 292
-        [TestCase(4, 56f, 168f, 84f)] // centros 54 / 138 / 222 / 306
-        [TestCase(5, 47.04f, 141.12f, 67.2f)] // niveles 2, 3 y 6: 0,70 × 67,2; el tope de 56 no actúa
-        [TestCase(6, 48f, 144f, 112f)] // niveles 4 y 5: dos filas de 3
-        [TestCase(7, 48f, 144f, 84f)] // niveles 7-10: filas de 4 y 3
+        // D-004 (C18): tope(T) = 64 / 56 / 48 dp para T ≤ 3 / 4-5 / ≥ 6; alto 5,60 u (D-006); u = ancho / 2. Margen de 12 dp.
+        [TestCase(1, 64f, 179.2f, 336f)] // una cuia: centrada en 180
+        [TestCase(3, 64f, 179.2f, 112f)] // nivel 1: centros 68 / 180 / 292
+        [TestCase(4, 56f, 156.8f, 84f)] // centros 54 / 138 / 222 / 306
+        [TestCase(5, 47.04f, 131.712f, 67.2f)] // niveles 2, 3 y 6: 0,70 × 67,2; el tope de 56 no actúa
+        [TestCase(6, 48f, 134.4f, 112f)] // niveles 4 y 5: dos filas de 3
+        [TestCase(7, 48f, 134.4f, 84f)] // niveles 7-10: filas de 4 y 3
+        [TestCase(10, 47.04f, 131.712f, 67.2f)] // dos filas de 5
         public void CuiaWidth_FollowsTheCapOfD004_At360x780(int count, float width, float height, float slot)
         {
-            BoardLayoutResult r = BoardLayout.Compute(count, 6f, 360f, Top, Bottom);
+            BoardLayoutResult r = BoardLayout.Compute(count, H4, 360f, Top, Bottom);
             Assert.That(r.CuiaWidth, Is.EqualTo(width).Within(0.01f));
             Assert.That(r.CuiaHeight, Is.EqualTo(height).Within(0.01f));
             Assert.That(r.SlotWidth, Is.EqualTo(slot).Within(0.01f));
@@ -82,6 +107,70 @@ namespace AF.Tests.EditMode
             }
         }
 
+        [TestCase(11, 46.905f, 131.333f)]
+        [TestCase(12, 46.905f, 131.333f)]
+        [TestCase(13, 46.905f, 131.333f)] // Magic Sort con 13-14 botellas: 45 × 138 dp en nuestra escala
+        [TestCase(14, 46.905f, 131.333f)]
+        [TestCase(15, 46.905f, 131.333f)]
+        [TestCase(16, 39.2f, 109.76f)] // 6/5/5: ranura de 56
+        public void ThreeRows_From11Cuias_At360x780(int count, float width, float height)
+        {
+            // D-006: 3 filas desde 11 cuias; el bloque no supera boardBottom − boardTop − 27 = 505 dp.
+            BoardLayoutResult r = BoardLayout.Compute(count, H4, 360f, Top, Bottom);
+            Assert.That(r.Rows, Is.EqualTo(3));
+            Assert.That(r.CuiaWidth, Is.EqualTo(width).Within(0.01f));
+            Assert.That(r.CuiaHeight, Is.EqualTo(height).Within(0.01f));
+            Assert.That(r.BlockBottom - r.BlockTop, Is.LessThanOrEqualTo(Bottom - Top - BoardLayout.MinBlockSlack + 0.01f));
+        }
+
+        [TestCase(11, 48f)]
+        [TestCase(12, 48f)]
+        [TestCase(13, 47.04f)]
+        [TestCase(14, 47.04f)]
+        [TestCase(15, 47.04f)]
+        public void ThreeRows_At360x800(int count, float width)
+        {
+            BoardLayoutResult r = BoardLayout.Compute(count, H4, 360f, Top, Bottom800);
+            Assert.That(r.Rows, Is.EqualTo(3));
+            Assert.That(r.CuiaWidth, Is.EqualTo(width).Within(0.01f));
+        }
+
+        [TestCase(11, 2, 39.2f)]
+        [TestCase(12, 2, 39.2f)]
+        [TestCase(13, 2, 33.6f)]
+        [TestCase(14, 2, 33.6f)]
+        [TestCase(15, 3, 30.24f)]
+        [TestCase(16, 3, 30.24f)]
+        public void ShortScreens_360x640(int count, int rows, float width)
+        {
+            BoardLayoutResult r = BoardLayout.Compute(count, H4, 360f, Top, Bottom640);
+            Assert.That(r.Rows, Is.EqualTo(rows));
+            Assert.That(r.CuiaWidth, Is.EqualTo(width).Within(0.01f));
+            Assert.That(r.FootY[count - 1], Is.LessThanOrEqualTo(Bottom640 - BoardLayout.ShelfDrop + 0.01f));
+        }
+
+        [Test]
+        public void FixedRows_ExtraCuiasGoToTheShortestRow_TheLowestOnATie()
+        {
+            // D-006: las filas se fijan con las cuias generadas; Cuia extra o de rescate van a la fila más corta (a igualdad,
+            // la de más abajo [P]) y solo se recalcula el ancho.
+            BoardLayoutResult ten = BoardLayout.Compute(11, 10, H4, 360f, Top, Bottom);
+            Assert.That(Split(ten), Is.EqualTo("5/6"), "10 generadas (5/5) + 1: dos filas, la extra abajo");
+            Assert.That(ten.CuiaWidth, Is.EqualTo(39.2f).Within(0.01f));
+
+            BoardLayoutResult thirteen = BoardLayout.Compute(14, 13, H4, 360f, Top, Bottom);
+            Assert.That(Split(thirteen), Is.EqualTo("5/4/5"));
+            Assert.That(thirteen.CuiaWidth, Is.EqualTo(46.905f).Within(0.01f));
+
+            BoardLayoutResult fourteen = BoardLayout.Compute(16, 14, H4, 360f, Top, Bottom);
+            Assert.That(Split(fourteen), Is.EqualTo("5/5/6"));
+            Assert.That(fourteen.CuiaWidth, Is.EqualTo(39.2f).Within(0.01f));
+
+            // Sin cuias de más, el layout de siempre.
+            Assert.That(Split(BoardLayout.Compute(10, 10, H4, 360f, Top, Bottom)), Is.EqualTo("5/5"));
+            Assert.That(() => BoardLayout.Compute(10, 11, H4, 360f, Top, Bottom), Throws.TypeOf<System.ArgumentOutOfRangeException>());
+        }
+
         [Test]
         public void MaxCuiaWidthFor_FollowsT()
         {
@@ -101,33 +190,42 @@ namespace AF.Tests.EditMode
                 Assert.That(BoardLayout.MaxCuiaWidthFor(t), Is.EqualTo(48f), "T = " + t);
             }
 
-            // Una Cuia extra que lleva el tablero de 3 a 4 cuias baja el tope de 64 a 56 (re-layout de 300 ms, 02 §4.1).
-            Assert.That(BoardLayout.Compute(3, 6f, 360f, Top, Bottom).CuiaWidth, Is.EqualTo(64f).Within(0.01f));
-            Assert.That(BoardLayout.Compute(3 + 1, 6f, 360f, Top, Bottom).CuiaWidth, Is.EqualTo(56f).Within(0.01f));
+            // Una Cuia extra que lleva el tablero de 3 a 4 cuias baja el tope de 64 a 56 (re-layout de 300 ms, 02 §4.1) y
+            // sigue en una fila (D-006).
+            Assert.That(BoardLayout.Compute(3, H4, 360f, Top, Bottom).CuiaWidth, Is.EqualTo(64f).Within(0.01f));
+            BoardLayoutResult extra = BoardLayout.Compute(3 + 1, 3, H4, 360f, Top, Bottom);
+            Assert.That(extra.CuiaWidth, Is.EqualTo(56f).Within(0.01f));
+            Assert.That(extra.Rows, Is.EqualTo(1));
         }
 
         [Test]
         public void RowPitch_IsHeightPlusLiftPlusGap()
         {
-            BoardLayoutResult r = BoardLayout.Compute(7, 6f, 360f, Top, Bottom);
+            BoardLayoutResult r = BoardLayout.Compute(7, H4, 360f, Top, Bottom);
             Assert.That(r.FootY[4] - r.FootY[0], Is.EqualTo(r.CuiaHeight + 16f + 24f).Within(0.01f));
             Assert.That(r.FootY[0] - r.CuiaHeight, Is.GreaterThanOrEqualTo(Top + 16f)); // cabe elevada
             Assert.That(r.FootY[6], Is.LessThanOrEqualTo(Bottom - BoardLayout.ShelfDrop)); // la repisa cabe
             Assert.That(r.RowFootY[0], Is.EqualTo(r.FootY[0]).Within(0.01f));
             Assert.That(r.RowFootY[1], Is.EqualTo(r.FootY[6]).Within(0.01f));
+
+            // Tres filas (D-006): el hueco entre filas sigue en 40 dp (16 de elevación + 24), por la repisa de D-003.
+            BoardLayoutResult three = BoardLayout.Compute(13, H4, 360f, Top, Bottom);
+            Assert.That(three.RowFootY[1] - three.RowFootY[0] - three.CuiaHeight, Is.EqualTo(40f).Within(0.01f));
+            Assert.That(three.RowFootY[2] - three.RowFootY[1] - three.CuiaHeight, Is.EqualTo(40f).Within(0.01f));
         }
 
-        [TestCase(3, 6f)]
-        [TestCase(4, 6f)]
-        [TestCase(5, 6f)]
-        [TestCase(7, 6f)]
-        [TestCase(14, 6f)]
-        [TestCase(16, 6f)]
-        [TestCase(14, 7f)]
-        public void Block_IsCentredInTheBoardArea(int count, float heightU)
+        [TestCase(3, false)]
+        [TestCase(4, false)]
+        [TestCase(5, false)]
+        [TestCase(7, false)]
+        [TestCase(13, false)]
+        [TestCase(14, false)]
+        [TestCase(16, false)]
+        [TestCase(14, true)]
+        public void Block_IsCentredInTheBoardArea(int count, bool tall)
         {
             // VA-01 (D-003; guía 3.2): el hueco de arriba y el de abajo difieren ≤ 2 dp. Fin del anclaje inferior.
-            BoardLayoutResult r = BoardLayout.Compute(count, heightU, 360f, Top, Bottom);
+            BoardLayoutResult r = BoardLayout.Compute(count, tall ? H5 : H4, 360f, Top, Bottom);
             float above = r.BlockTop - Top;
             float below = Bottom - r.BlockBottom;
             Assert.That(above, Is.GreaterThanOrEqualTo(0f));
@@ -139,97 +237,91 @@ namespace AF.Tests.EditMode
             Assert.That(r.RowFootY[0] - r.CuiaHeight - BoardLayout.Lift, Is.EqualTo(r.BlockTop).Within(0.01f));
         }
 
-        // Tabla 3.3 de la guía recalculada con el margen del panel de 22 dp (revisión visual del 2026-10-07) y 36 dp por
-        // arriba en los tableros de una fila (revisión de D-004).
-        [TestCase(7, 6f, 152.5f, 555.5f)] // nivel 7 (4 y 3): banda libre de 104 dp hasta la bandeja (660)
-        [TestCase(3, 6f, 206.5f, 487.5f)] // nivel 1 (D-004: cuias de 64 dp; banda libre de 172,5 dp)
-        [TestCase(4, 6f, 218.5f, 475.5f)] // 4 cuias de 56 dp (D-004)
-        [TestCase(5, 6f, 231.9f, 462.1f)] // niveles 2, 3 y 6 (5 cuias de 47 dp)
-        [TestCase(6, 6f, 152.5f, 555.5f)] // niveles 4 y 5 (dos filas de 3, 48 dp)
-        [TestCase(14, 6f, 195.7f, 512.3f)] // estrés 2 × 7
-        [TestCase(16, 6f, 100.1f, 607.9f)] // estrés 3 filas (6/5/5)
-        [TestCase(14, 7f, 178.9f, 529.1f)] // estrés Cuia alta 2 × 7
-        public void Panel_MatchesTheMeasuredCasesOfTheGuide_At360x780(int count, float heightU, float top, float bottom)
+        // Tabla 3.3 de la guía recalculada con el margen del panel de 22 dp en todos los tableros (D-006 retira los 36 dp de
+        // una fila) y las cuias de 5,60 u (D-006).
+        [TestCase(7, 162.1f, 545.9f)] // nivel 7 (4 y 3)
+        [TestCase(3, 226.9f, 481.1f)] // nivel 1 (D-004: cuias de 64 dp)
+        [TestCase(4, 238.1f, 469.9f)] // 4 cuias de 56 dp (D-004)
+        [TestCase(5, 250.64f, 457.36f)] // niveles 2, 3 y 6 (5 cuias de 47 dp)
+        [TestCase(6, 162.1f, 545.9f)] // niveles 4 y 5 (dos filas de 3, 48 dp)
+        [TestCase(11, 80f, 628.5f)] // 3 filas: el panel se recorta 8 dp bajo el HUD
+        [TestCase(14, 80f, 628.5f)]
+        [TestCase(16, 111.86f, 596.14f)] // 3 filas (6/5/5)
+        public void Panel_MatchesTheMeasuredCasesOfTheGuide_At360x780(int count, float top, float bottom)
         {
-            BoardLayoutResult r = BoardLayout.Compute(count, heightU, 360f, Top, Bottom);
+            BoardLayoutResult r = BoardLayout.Compute(count, H4, 360f, Top, Bottom);
             Assert.That(r.PanelX, Is.EqualTo(8f).Within(0.01f));
             Assert.That(r.PanelWidth, Is.EqualTo(344f).Within(0.01f));
-            Assert.That(r.PanelY, Is.EqualTo(top).Within(1f));
-            Assert.That(r.PanelBottom, Is.EqualTo(bottom).Within(1f));
+            Assert.That(r.PanelY, Is.EqualTo(top).Within(0.05f));
+            Assert.That(r.PanelBottom, Is.EqualTo(bottom).Within(0.05f));
 
             // VA-15: ni el HUD ni la bandeja se solapan con el panel; el marco puede pasar 8 dp bajo el HUD.
             Assert.That(r.PanelY, Is.GreaterThanOrEqualTo(Top - 8f));
             Assert.That(r.PanelBottom, Is.LessThanOrEqualTo(Bottom + 40f));
         }
 
-        [TestCase(3, 6f)]
-        [TestCase(4, 6f)]
-        [TestCase(5, 6f)]
-        [TestCase(7, 6f)]
-        [TestCase(14, 6f)]
-        [TestCase(16, 6f)]
-        [TestCase(14, 7f)]
-        public void LiftedCuia_StaysAtLeast8dpBelowTheInnerEdgeOfTheFrame(int count, float heightU)
+        [TestCase(3, 620f, false)]
+        [TestCase(4, 620f, false)]
+        [TestCase(5, 620f, false)]
+        [TestCase(7, 620f, false)]
+        [TestCase(11, 620f, false)]
+        [TestCase(13, 620f, false)]
+        [TestCase(14, 620f, false)]
+        [TestCase(15, 620f, false)]
+        [TestCase(16, 620f, false)]
+        [TestCase(14, 620f, true)]
+        [TestCase(13, 640f, false)]
+        [TestCase(3, 480f, false)]
+        [TestCase(7, 480f, false)]
+        [TestCase(11, 480f, false)]
+        [TestCase(13, 480f, false)]
+        [TestCase(14, 480f, false)]
+        [TestCase(15, 480f, false)]
+        [TestCase(16, 480f, false)]
+        public void LiftedCuia_StaysAtLeast8dpBelowTheInnerEdgeOfTheFrame(int count, float bottom, bool tall)
         {
-            // Revisión visual del 2026-10-07 (03_selected_l7): con el marco tallado de 13,5 dp (1,5 + 12), la cuia elevada
-            // de la fila 1 (BlockTop) queda ≥ 8 dp por debajo del canto interior del marco; con 14 dp de margen lo tocaba.
-            const float frameDp = 13.5f;
-            BoardLayoutResult r = BoardLayout.Compute(count, heightU, 360f, Top, Bottom);
-            Assert.That(r.BlockTop - (r.PanelY + frameDp), Is.GreaterThanOrEqualTo(8f));
-            Assert.That((r.PanelBottom - frameDp) - r.BlockBottom, Is.GreaterThanOrEqualTo(8f));
+            // Revisión visual del 2026-10-07 (03_selected_l7) y D-006 [P]: con el marco tallado de 13,5 dp (1,5 + 12), la cuia
+            // elevada de la fila 1 (BlockTop) queda ≥ 8 dp por debajo del canto interior del marco, también cuando el panel
+            // se recorta bajo el HUD (3 filas), y la última repisa, ≥ 8 dp por encima del de abajo.
+            BoardLayoutResult r = BoardLayout.Compute(count, tall ? H5 : H4, 360f, Top, bottom);
+            Assert.That(r.BlockTop - (r.PanelY + FrameDp), Is.GreaterThanOrEqualTo(8f - 0.01f));
+            Assert.That((r.PanelBottom - FrameDp) - r.BlockBottom, Is.GreaterThanOrEqualTo(8f - 0.01f));
         }
 
-        [TestCase(3, 6f, 36f)]
-        [TestCase(5, 6f, 36f)]
-        [TestCase(7, 6f, 22f)]
-        [TestCase(14, 6f, 22f)]
-        public void PanelTopMargin_Is36InOneRowBoards_And22Otherwise(int count, float heightU, float margin)
+        [TestCase(3)]
+        [TestCase(5)]
+        [TestCase(7)]
+        [TestCase(14)]
+        public void PanelTopMargin_Is22InEveryBoard(int count)
         {
-            // Revisión de D-004: en una fila el panel sube 14 dp más para que el origen inclinado quepa bajo el canto
-            // interior del marco; en dos filas, 36 estrecharía el río del nivel 7 de 34,5 a 20,5 dp.
-            BoardLayoutResult r = BoardLayout.Compute(count, heightU, 360f, Top, Bottom);
-            Assert.That(r.BlockTop - r.PanelY, Is.EqualTo(margin).Within(0.01f));
+            // D-006: sin techo del vertido, el panel deja 22 dp (PanelMargin) sobre y bajo el bloque en todas las filas; por
+            // arriba, salvo que se recorte en boardTop − 8 (3 filas a 360 × 780: 21,5 dp).
+            BoardLayoutResult r = BoardLayout.Compute(count, H4, 360f, Top, Bottom);
+            Assert.That(r.PanelY, Is.EqualTo(System.Math.Max(r.BlockTop - BoardLayout.PanelMargin, Top - 8f)).Within(0.01f));
+            Assert.That(r.BlockTop - r.PanelY, Is.LessThanOrEqualTo(BoardLayout.PanelMargin + 0.01f));
             Assert.That(r.PanelBottom - r.BlockBottom, Is.EqualTo(BoardLayout.PanelMargin).Within(0.01f));
+            if (count <= 7)
+            {
+                Assert.That(r.BlockTop - r.PanelY, Is.EqualTo(BoardLayout.PanelMargin).Within(0.01f));
+            }
         }
 
-        // Techo del vertido (GameScreen.PourCeilingFor): 4 dp de aire bajo el canto interior del marco en una fila
-        // (revisión de D-004: con < 1 dp la cuia parecía apoyarse en el marco), borde exterior del panel en dos filas
-        // (allí la fila 1 queda a 8,5 dp del canto interior). Marco de 13,5 dp; en el nivel 2 el 9-slice lo adelgaza a
-        // 0,45 × 13,5.
-        [TestCase(3, 13.5f, true)] // nivel 1: cavidad de 22,5 dp
-        [TestCase(5, 6.075f, true)] // nivel 2
-        [TestCase(6, 13.5f, false)] // nivel 4
-        [TestCase(7, 13.5f, false)] // nivel 7
-        public void PourCeiling_Leaves4dpOfAirUnderTheFrame_InOneRowBoards(int count, float frame, bool inner)
+        [TestCase(3, 1, 64f)]
+        [TestCase(4, 1, 56f)]
+        [TestCase(5, 1, 56f)] // 0,70 × 91,2 = 63,84, recortado a 56
+        [TestCase(6, 2, 48f)]
+        [TestCase(7, 2, 48f)]
+        [TestCase(11, 2, 48f)] // 6/5: 0,70 × 76 = 53,2 → 48; en 3 filas el alto la bajaría a 46,9
+        [TestCase(12, 2, 48f)]
+        [TestCase(13, 3, 46.905f)] // 2 filas de 7: 45,6; 3 filas: 48 → 46,9 por el alto
+        [TestCase(14, 3, 46.905f)]
+        [TestCase(15, 3, 46.905f)]
+        [TestCase(16, 3, 46.905f)]
+        public void Tablets_CapTheCuiaByT(int count, int rows, float width)
         {
-            BoardLayoutResult r = BoardLayout.Compute(count, 6f, 360f, Top, Bottom);
-            float ceiling = GameScreen.PourCeilingFor(r, frame, Top);
-            Assert.That(GameScreen.PourCeilingAirDp, Is.GreaterThanOrEqualTo(4f));
-            Assert.That(ceiling, Is.EqualTo(inner ? r.PanelY + frame + GameScreen.PourCeilingAirDp : r.PanelY).Within(0.01f));
-            Assert.That(ceiling, Is.GreaterThanOrEqualTo(Top - 4f)); // nunca más de 4 dp dentro de la fila del HUD
-        }
-
-        [Test]
-        public void PourCeiling_NeverRisesMoreThan4dpIntoTheHudRow()
-        {
-            // 16 cuias en 3 filas a 360 × 780: el panel se recorta 8 dp dentro de la fila del HUD y el techo se queda a 4.
-            BoardLayoutResult r = BoardLayout.Compute(16, 6f, 360f, Top, Bottom);
-            Assert.That(GameScreen.PourCeilingFor(r, 6f, Top), Is.GreaterThanOrEqualTo(Top - 4f));
-            BoardLayoutResult clipped = BoardLayout.Compute(16, 6f, 360f, 88f, 480f);
-            Assert.That(clipped.PanelY, Is.EqualTo(80f).Within(0.01f));
-            Assert.That(GameScreen.PourCeilingFor(clipped, 6f, 88f), Is.EqualTo(84f).Within(0.01f));
-        }
-
-        [TestCase(3, 64f)]
-        [TestCase(4, 56f)]
-        [TestCase(5, 56f)] // 0,70 × 91,2 = 63,84, recortado a 56
-        [TestCase(6, 48f)]
-        [TestCase(7, 48f)]
-        [TestCase(14, 45.6f)] // 0,70 × 65,14: el tope no actúa
-        public void Tablets_CapTheCuiaByT(int count, float width)
-        {
-            // 600 dp de ancho: tablero de 480 dp centrado y la cuia no supera tope(T) (02 §5; D-004).
-            BoardLayoutResult r = BoardLayout.Compute(count, 6f, 600f, Top, Bottom);
+            // 600 dp de ancho: tablero de 480 dp centrado y la cuia no supera tope(T) (02 §5; D-004; D-006).
+            BoardLayoutResult r = BoardLayout.Compute(count, H4, 600f, Top, Bottom);
+            Assert.That(r.Rows, Is.EqualTo(rows));
             Assert.That(r.CuiaWidth, Is.EqualTo(width).Within(0.01f));
             Assert.That(r.CuiaWidth, Is.LessThanOrEqualTo(BoardLayout.MaxCuiaWidthFor(count)));
             Assert.That(r.PanelX, Is.EqualTo(68f).Within(0.01f)); // (600 − 480) / 2 + 8
@@ -239,45 +331,61 @@ namespace AF.Tests.EditMode
         [Test]
         public void ShortScreens_ShrinkTheCuias()
         {
-            // 16:9 (360 × 640): las tres filas tienen que caber con su repisa.
-            BoardLayoutResult r = BoardLayout.Compute(16, 6f, 360f, 88f, 480f);
-            Assert.That(r.FootY[15], Is.LessThanOrEqualTo(480f - BoardLayout.ShelfDrop + 0.01f));
+            // 16:9 (360 × 640): las tres filas tienen que caber con su repisa y la holgura del marco.
+            BoardLayoutResult r = BoardLayout.Compute(16, H4, 360f, Top, Bottom640);
+            Assert.That(r.FootY[15], Is.LessThanOrEqualTo(Bottom640 - BoardLayout.ShelfDrop + 0.01f));
             Assert.That(r.CuiaWidth, Is.GreaterThanOrEqualTo(BoardLayout.MinCuiaWidth));
-            Assert.That(r.CuiaWidth, Is.EqualTo(31.2f).Within(0.05f));
-            Assert.That(r.BlockTop, Is.GreaterThanOrEqualTo(88f - 0.01f));
+            Assert.That(r.CuiaWidth, Is.EqualTo(30.24f).Within(0.01f));
+            Assert.That(r.BlockTop, Is.GreaterThanOrEqualTo(Top + (BoardLayout.MinBlockSlack / 2f) - 0.01f));
         }
 
         [Test]
         public void ShortScreens_KeepThreeCuiasAt64dp()
         {
-            // 360 × 640 con el nivel 1 (D-004): 64 × 192 cabe sin encoger; panel en 136,5-417,5.
-            BoardLayoutResult r = BoardLayout.Compute(3, 6f, 360f, 88f, 480f);
+            // 360 × 640 con el nivel 1 (D-004): 64 × 179,2 cabe sin encoger; panel en 156,9-411,1 (22 dp por arriba, D-006).
+            BoardLayoutResult r = BoardLayout.Compute(3, H4, 360f, Top, Bottom640);
             Assert.That(r.CuiaWidth, Is.EqualTo(64f).Within(0.01f));
-            Assert.That(r.CuiaHeight, Is.EqualTo(192f).Within(0.01f));
-            Assert.That(r.PanelY, Is.EqualTo(136.5f).Within(0.01f));
-            Assert.That(r.PanelBottom, Is.EqualTo(417.5f).Within(0.01f));
+            Assert.That(r.CuiaHeight, Is.EqualTo(179.2f).Within(0.01f));
+            Assert.That(r.PanelY, Is.EqualTo(156.9f).Within(0.01f));
+            Assert.That(r.PanelBottom, Is.EqualTo(411.1f).Within(0.01f));
         }
 
         [Test]
         public void ShortScreens_TallCuiasInTwoRows_FitBelowTheCap()
         {
-            // 360 × 640, Cuia alta (7 u) en dos filas: el encaje vertical manda sobre el tope de 48 (D-004).
-            BoardLayoutResult r = BoardLayout.Compute(7, 7f, 360f, 88f, 480f);
-            Assert.That(r.CuiaWidth, Is.EqualTo(45.86f).Within(0.01f));
+            // 360 × 640, Cuia alta (5 dosis, 6,60 u) en dos filas: el encaje vertical manda sobre el tope de 48 (D-004):
+            // 2 × (392 − 27 − 31 − 40) / (2 × 6,6) = 44,55 dp.
+            BoardLayoutResult r = BoardLayout.Compute(7, H5, 360f, Top, Bottom640);
+            Assert.That(r.CuiaWidth, Is.EqualTo(44.545f).Within(0.01f));
             Assert.That(r.CuiaWidth, Is.LessThan(48f));
-            Assert.That(r.FootY[6], Is.LessThanOrEqualTo(480f - BoardLayout.ShelfDrop + 0.01f));
-            Assert.That(r.BlockTop, Is.GreaterThanOrEqualTo(88f - 0.01f));
+            Assert.That(r.FootY[6], Is.LessThanOrEqualTo(Bottom640 - BoardLayout.ShelfDrop + 0.01f));
+            Assert.That(r.BlockTop, Is.GreaterThanOrEqualTo(Top - 0.01f));
         }
 
         [Test]
         public void ShortBoard_OneRow_FitsBelowTheCapOf64()
         {
-            // Caso sintético de una fila (8 u entre 88 y 330): el encaje vertical se aplica después del tope (D-004).
-            BoardLayoutResult r = BoardLayout.Compute(3, 8f, 360f, 88f, 330f);
-            Assert.That(r.CuiaWidth, Is.EqualTo(52.75f).Within(0.01f));
+            // Caso sintético de una fila (8 u entre 88 y 330): el encaje vertical se aplica después del tope (D-004):
+            // 2 × (242 − 27 − 31) / 8 = 46 dp.
+            BoardLayoutResult r = BoardLayout.Compute(3, 8f, 360f, Top, 330f);
+            Assert.That(r.CuiaWidth, Is.EqualTo(46f).Within(0.01f));
             Assert.That(r.CuiaWidth, Is.LessThan(64f));
             Assert.That(r.FootY[0], Is.LessThanOrEqualTo(315f + 0.01f));
-            Assert.That(r.BlockTop, Is.GreaterThanOrEqualTo(88f - 0.01f));
+            Assert.That(r.BlockTop, Is.GreaterThanOrEqualTo(Top - 0.01f));
+        }
+
+        private static string Split(BoardLayoutResult r)
+        {
+            var parts = new string[r.Rows];
+            int sum = 0;
+            for (int i = 0; i < r.Rows; i++)
+            {
+                parts[i] = r.PerRow[i].ToString(System.Globalization.CultureInfo.InvariantCulture);
+                sum += r.PerRow[i];
+            }
+
+            Assert.That(sum, Is.EqualTo(r.CenterX.Length), "todas las cuias tienen fila");
+            return string.Join("/", parts);
         }
     }
 }

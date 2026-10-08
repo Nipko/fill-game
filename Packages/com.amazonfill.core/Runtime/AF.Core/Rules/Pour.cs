@@ -7,7 +7,8 @@ namespace AF.Core.Rules
 {
     /// <summary>
     /// Un vertido A→B y las dosis que mueve (R9): <c>cantidad(A, B)</c> en el estado y el modo de vertido en que se
-    /// hizo (siempre 1 en <see cref="PourMode.Single"/>, D-001). Un vertido cuenta como 1 movimiento en los dos modos.
+    /// hizo: la racha que cabe en <see cref="PourMode.Run"/> (por defecto, D-005); siempre 1 en
+    /// <see cref="PourMode.Single"/> (pruebas). Un vertido cuenta como 1 movimiento en los dos modos.
     /// </summary>
     public readonly struct Pour : IEquatable<Pour>
     {

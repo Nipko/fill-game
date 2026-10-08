@@ -9,8 +9,8 @@ namespace AF.UI
     /// <summary>
     /// Opciones de arranque: los extras de intent de los builds de desarrollo (<c>af_level</c>, nivel de arranque,
     /// <c>adb shell am start ... --ei af_level N</c>, docs/dev/prototipo-v0.md c; y <c>af_rules_pour_mode</c>, modo de
-    /// vertido, <c>--es af_rules_pour_mode run</c>) y los ganchos de los tests PlayMode (nivel de arranque, modo de vertido
-    /// y progreso en memoria). <see cref="GameBootstrap"/> los lee al arrancar; los tests los quitan con
+    /// vertido, <c>--es af_rules_pour_mode single</c> para probar el modo de pruebas, D-005) y los ganchos de los tests
+    /// PlayMode (nivel de arranque, modo de vertido, progreso en memoria y paquete de niveles). <see cref="GameBootstrap"/> los lee al arrancar; los tests los quitan con
     /// <see cref="Reset"/>.
     /// </summary>
     public static class LaunchOptions
@@ -20,8 +20,9 @@ namespace AF.UI
 
         /// <summary>
         /// Extra de intent (string) que sustituye a <c>rules_pour_mode</c> en builds de desarrollo hasta que exista
-        /// <c>AF.RemoteConfig</c> (propuesta [P] de <c>docs/dev/decisiones.md</c> §2.1.7): permite probar <c>"run"</c> sin
-        /// tocar código. Nunca se lee en un build de release.
+        /// <c>AF.RemoteConfig</c> (propuesta [P] de <c>docs/dev/decisiones.md</c> §2.1.7): con D-005 el modo por defecto es
+        /// <c>"run"</c> y el extra sirve ahora para probar <c>"single"</c> sin tocar código. Nunca se lee en un build de
+        /// release.
         /// </summary>
         public const string IntentExtraPourMode = "af_rules_pour_mode";
 
@@ -34,20 +35,28 @@ namespace AF.UI
         /// <summary>Progreso que sustituye a PlayerPrefs (tests).</summary>
         public static IProgressStore? ProgressStoreOverride { get; set; }
 
+        /// <summary>
+        /// Paquete de niveles (JSON <c>af-level/1</c> o su subconjunto v0) que sustituye al <c>TextAsset</c> de la escena:
+        /// solo tests (p. ej. un tablero de 13 cuias para las filas de D-006). Null en producción: ningún extra de intent lo
+        /// rellena y <see cref="Reset"/> lo limpia.
+        /// </summary>
+        public static string? LevelPackJsonOverride { get; set; }
+
         /// <summary>Quita los ganchos de test.</summary>
         public static void Reset()
         {
             StartLevelOverride = 0;
             PourModeOverride = null;
             ProgressStoreOverride = null;
+            LevelPackJsonOverride = null;
         }
 
         /// <summary>
-        /// Modo de vertido de la partida (D-001): el del test (<see cref="PourModeOverride"/>), si no el del extra
+        /// Modo de vertido de la partida (D-005): el del test (<see cref="PourModeOverride"/>), si no el del extra
         /// <c>af_rules_pour_mode</c> (solo builds de desarrollo en Android) y, si no, el default compilado de
-        /// <c>rules_pour_mode</c> (<see cref="GameConfig.RulesPourMode"/>, 08 §9). La conversión es la del núcleo
-        /// (<see cref="PourModes.TryParse"/>): un valor desconocido se trata como <see cref="PourModes.Default"/> y se avisa
-        /// en el log.
+        /// <c>rules_pour_mode</c> (<see cref="GameConfig.RulesPourMode"/>, <c>"run"</c>, 08 §9). La conversión es la del
+        /// núcleo (<see cref="PourModes.TryParse"/>): un valor desconocido se trata como <see cref="PourModes.Default"/>
+        /// (<see cref="PourMode.Run"/>) y se avisa en el log.
         /// </summary>
         public static PourMode ResolvePourMode()
         {
@@ -68,7 +77,7 @@ namespace AF.UI
             if (!PourModes.TryParse(value, out PourMode mode))
             {
                 Debug.LogWarning("[AF.LaunchOptions] valor de modo de vertido desconocido (\"" + value + "\", " + origin
-                    + "): se usa \"" + PourModes.ToKey(mode) + "\" (rules_pour_mode, D-001).");
+                    + "): se usa \"" + PourModes.ToKey(mode) + "\" (rules_pour_mode, D-005).");
             }
 
             return mode;

@@ -435,9 +435,13 @@ namespace AF.Presentation
                         pc.Blend(x, y, tint, PixelCanvas.Coverage((dx - outer) * ppu));
                     }
 
-                    if (inner > 0f && yu < lip)
+                    // Bajo el fondo junto a las paredes, la cavidad sigue con su ancho hasta el fondo en arco (D-006, como el
+                    // fondo redondeado de Magic Sort; CuiaGeometry.FaceSagU).
+                    float cavityW = yu < CuiaGeometry.CavityBottomU ? CuiaGeometry.CavityHalfWidthU : inner;
+                    if (cavityW > 0f && yu < lip && yu > CuiaGeometry.CavityFloorU(0f) - (1f / ppu))
                     {
-                        float cov = PixelCanvas.Coverage((dx - inner) * ppu) * Mathf.Clamp01(((yu - CuiaGeometry.CavityBottomU) * ppu) + 0.5f);
+                        float floorY = CuiaGeometry.CavityFloorU(xu - 1f);
+                        float cov = PixelCanvas.Coverage((dx - cavityW) * ppu) * Mathf.Clamp01(((yu - floorY) * ppu) + 0.5f);
                         if (cov <= 0f)
                         {
                             continue;
@@ -445,7 +449,7 @@ namespace AF.Presentation
 
                         // Cavidad opaca (D-003) con la viñeta lateral (07 §4.2) y las franjas como color opaco.
                         Color c = cavity;
-                        float edge = inner - dx;
+                        float edge = cavityW - dx;
                         if (edge < 0.15f)
                         {
                             c = ColorMath.Darken(c, 0.30f * (1f - Mathf.Clamp01(edge / 0.15f)));
@@ -493,7 +497,10 @@ namespace AF.Presentation
             var hlB = new Vector2(0.55f, 1.0f);
             var hlA2 = hlA + new Vector2(0.16f, 0f);
             var hlB2 = hlB + new Vector2(0.16f, 0f);
-            var spot = new Vector2(1.55f, cavityTop + 0.22f);
+            // Punto especular del hombro (D-006): a 0,22 u sobre el techo de la cavidad, dentro del hombro de 0,40 u, en el
+            // centro de la pared de vidrio a esa altura (lado derecho).
+            float spotY = cavityTop + 0.22f;
+            var spot = new Vector2(1f + (0.5f * (CuiaGeometry.OuterHalfWidth(spotY, capacity) + CuiaGeometry.InnerHalfWidth(spotY, capacity))), spotY);
 
             for (int y = 0; y < h; y++)
             {
@@ -537,29 +544,36 @@ namespace AF.Presentation
                         continue;
                     }
 
-                    bool inCavity = inner > 0f && dx < inner && yu >= CuiaGeometry.CavityBottomU;
+                    // Fondo de la cavidad en arco (D-006; CuiaGeometry.FaceSagU): bajo el fondo junto a las paredes, lo que
+                    // queda sobre el arco también es cavidad (y líquido).
+                    float floorY = dx < CuiaGeometry.CavityHalfWidthU ? CuiaGeometry.CavityFloorU(xu - 1f) : CuiaGeometry.CavityBottomU;
+                    bool inDip = yu < CuiaGeometry.CavityBottomU && yu >= floorY && dx < CuiaGeometry.CavityHalfWidthU;
+                    bool inCavity = (inner > 0f && dx < inner && yu >= CuiaGeometry.CavityBottomU) || inDip;
                     bool overLiquid = inCavity && yu < cavityTop; // ahí solo se permiten líneas de ≤ 2 dp
 
-                    // Base gruesa (0,30-0,60 u): #0E1A16 al 40 % y una línea de luz de 1 dp en y = 0,32 u.
-                    if (yu < CuiaGeometry.CavityBottomU)
+                    // Base gruesa (del pie al fondo de la cavidad, en arco): #0E1A16 al 40 % y una línea de luz de 1 dp 0,02 u
+                    // sobre el pie; con antialias en el arco.
+                    float baseCov = Mathf.Clamp01(((floorY - yu) * ppu) + 0.5f);
+                    if (yu < CuiaGeometry.CavityBottomU && baseCov > 0f)
                     {
-                        pc.Blend(x, y, new Color(0x0E / 255f, 0x1A / 255f, 0x16 / 255f, 0.40f), covOuter);
-                        float l = Mathf.Abs(yu - 0.32f);
+                        pc.Blend(x, y, new Color(0x0E / 255f, 0x1A / 255f, 0x16 / 255f, 0.40f), covOuter * baseCov);
+                        float l = Mathf.Abs(yu - (CuiaGeometry.FootTopU + 0.02f));
                         if (l < lineU)
                         {
-                            pc.Blend(x, y, ColorMath.WithAlpha(white, 0.35f), covOuter * (1f - (l / lineU)));
+                            pc.Blend(x, y, ColorMath.WithAlpha(white, 0.35f), covOuter * baseCov * (1f - (l / lineU)));
                         }
 
-                        // Cáustica de la base: media luna en y 0,34-0,52, x 0,45-1,55, blanco al 45 % (revisión visual del
-                        // 2026-10-07; la guía 4.1 decía 0,30).
+                        // Cáustica de la base: media luna de pie + 0,04 a pie + 0,22 u, x 0,45-1,55, blanco al 45 % (revisión
+                        // visual del 2026-10-07; la guía 4.1 decía 0,30).
                         float cx = (xu - 1f) / 0.55f;
-                        float cy = (yu - 0.43f) / 0.09f;
+                        float cy = (yu - (CuiaGeometry.FootTopU + 0.13f)) / 0.09f;
                         float crescent = 1f - Mathf.Clamp01((cx * cx) + (cy * cy));
-                        float cut = 1f - Mathf.Clamp01((cx * cx) + (((yu - 0.47f) / 0.07f) * ((yu - 0.47f) / 0.07f)));
+                        float cyCut = (yu - (CuiaGeometry.FootTopU + 0.17f)) / 0.07f;
+                        float cut = 1f - Mathf.Clamp01((cx * cx) + (cyCut * cyCut));
                         float caustic = Mathf.Clamp01(crescent - (cut * 0.85f));
                         if (caustic > 0f)
                         {
-                            pc.Blend(x, y, ColorMath.WithAlpha(white, 0.45f), covOuter * Mathf.SmoothStep(0f, 1f, caustic * 2f));
+                            pc.Blend(x, y, ColorMath.WithAlpha(white, 0.45f), covOuter * baseCov * Mathf.SmoothStep(0f, 1f, caustic * 2f));
                         }
                     }
 
@@ -585,7 +599,7 @@ namespace AF.Presentation
                             pc.Blend(x, y, ColorMath.WithAlpha(white, s), covOuter);
                         }
 
-                        // Punto especular del hombro: (1,55 u; techo + 0,22 u), radio 0,16 u, 0,70 → 0.
+                        // Punto especular del hombro: (centro de la pared; techo + 0,22 u), radio 0,16 u, 0,70 → 0.
                         float sd = Vector2.Distance(p, spot) / 0.16f;
                         if (sd < 1f)
                         {
@@ -640,7 +654,8 @@ namespace AF.Presentation
 
         private Sprite BuildCuiaMarks(int capacity, int ppu)
         {
-            // Marcas de dosis (07 §4.1), encima de todos los brillos (V4): 1 dp, marfil al 25 %, solo dentro de la cavidad.
+            // Marcas de dosis (07 §4.1), encima de todos los brillos (V4): 1 dp, marfil al 25 %, solo dentro de la cavidad;
+            // en arco, como las fronteras del líquido y el fondo (D-006; CuiaGeometry.FaceSagU).
             int w = Mathf.RoundToInt(CuiaGeometry.WidthU * ppu);
             int h = Mathf.RoundToInt(CuiaGeometry.HeightU(capacity) * ppu);
             var pc = new PixelCanvas(w, h);
@@ -649,22 +664,22 @@ namespace AF.Presentation
             for (int k = 0; k <= capacity; k++)
             {
                 float my = CuiaGeometry.CavityBottomU + k;
-                int y0 = Mathf.Max(0, Mathf.FloorToInt((my - lineU) * ppu));
+                int y0 = Mathf.Max(0, Mathf.FloorToInt((my - CuiaGeometry.FaceSagU(0f) - lineU) * ppu));
                 int y1 = Mathf.Min(h - 1, Mathf.CeilToInt((my + lineU) * ppu));
                 for (int y = y0; y <= y1; y++)
                 {
                     float yu = (y + 0.5f) / ppu;
-                    float d = Mathf.Abs(yu - my);
-                    if (d >= lineU * 0.6f)
-                    {
-                        continue;
-                    }
-
                     float inner = CuiaGeometry.InnerHalfWidth(Mathf.Max(yu, CuiaGeometry.CavityBottomU), capacity);
                     for (int x = 0; x < w; x++)
                     {
                         float xu = (x + 0.5f) / ppu;
                         if (Mathf.Abs(xu - 1f) >= inner)
+                        {
+                            continue;
+                        }
+
+                        float d = Mathf.Abs(yu - (my - CuiaGeometry.FaceSagU(xu - 1f)));
+                        if (d >= lineU * 0.6f)
                         {
                             continue;
                         }

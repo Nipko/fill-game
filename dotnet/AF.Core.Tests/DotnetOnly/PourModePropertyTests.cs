@@ -13,8 +13,9 @@ using NUnit.Framework;
 namespace AF.Core.Tests.DotnetOnly
 {
     /// <summary>
-    /// Propiedades del modo de vertido (D-001; docs/dev/decisiones.md §4, criterios A1-A4) sobre lotes de tableros
-    /// aleatorios con semilla fija y sobre el pack del tutorial v0. Solo dotnet: lotes grandes y lectura de disco.
+    /// Propiedades del modo de vertido (D-005: <see cref="PourMode.Run"/> por defecto y <see cref="PourMode.Single"/>, el
+    /// modo de pruebas; docs/dev/decisiones.md §4, criterios A1-A4) sobre lotes de tableros aleatorios con semilla fija y
+    /// sobre el pack del tutorial v0. Solo dotnet: lotes grandes y lectura de disco.
     /// El oráculo es <see cref="ExhaustiveSearch"/> (BFS sin heurística, en Tests/Editor/AF.Solver.Tests).
     /// </summary>
     [TestFixture]
@@ -441,7 +442,8 @@ namespace AF.Core.Tests.DotnetOnly
         public void A4_TutorialPack_AStarParEqualsExhaustiveSearch_InBothModes()
         {
             // Los 10 tableros del pack del tutorial (Assets/_Project/Data/Levels/tutorial_v0.json), sin fijar el par que trae
-            // el pack (T2 lo regenera en Single): A* (w = 1) = BFS exhaustivo en cada modo, y H_single admisible.
+            // el pack (el generador lo calcula en el modo por defecto, Run desde D-005): A* (w = 1) = BFS exhaustivo en cada
+            // modo, y H_single admisible.
             string path = Path.Combine(RepoRoot(), "Assets", "_Project", "Data", "Levels", "tutorial_v0.json");
             var solver = new AStarSolver();
             int levels = 0;

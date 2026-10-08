@@ -7,7 +7,9 @@ namespace AF.Presentation
     /// Chorro del vertido (02 §4.1; 07 §5.2; guía visual v2, 6.5): Bézier cuadrática del labio a la superficie del destino,
     /// dibujada como una cinta de <see cref="StreamGraphic"/> reutilizada (sin asignaciones por fotograma), grosor de 0,16 u
     /// a 0,10 u con remates redondos (revisión visual del 2026-10-07), núcleo del tinte con +10 % de L y línea especular
-    /// central de 1 dp. Una dosis por vertido (D-001).
+    /// central de 1 dp. Un vertido mueve la racha que cabe (D-005): el chorro dura n × anim_pour_dose_ms + cola y salpica
+    /// una vez por dosis. Sale del canto interior bajo de la boca (<see cref="CuiaView.PourPointInContainer"/>, junto a su
+    /// punto más bajo, D-006) y se dibuja en la capa de vertido, delante de todo, mientras vierte.
     /// </summary>
     public sealed class PourStream
     {
@@ -33,6 +35,21 @@ namespace AF.Presentation
 
         /// <summary>Lo usa un vertido en curso.</summary>
         public bool InUse { get; set; }
+
+        /// <summary>
+        /// Pasa la cinta a <paramref name="layer"/> (capa de vertido o capa de chorros del tablero, las dos alineadas con el
+        /// contenedor del tablero), al final de sus hermanas. Sin asignaciones.
+        /// </summary>
+        public void MoveTo(RectTransform layer)
+        {
+            Transform t = _graphic.rectTransform;
+            if (t.parent != layer)
+            {
+                t.SetParent(layer, false);
+            }
+
+            t.SetAsLastSibling();
+        }
 
         /// <summary>Gráfico de la cinta (diagnóstico y capturas).</summary>
         public StreamGraphic Graphic => _graphic;

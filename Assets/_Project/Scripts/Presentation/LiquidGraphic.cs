@@ -6,21 +6,31 @@ using UnityEngine.UI;
 namespace AF.Presentation
 {
     /// <summary>
-    /// Líquido de una cuia en uGUI con el shader <c>AF/UI/Liquid</c> (GDD 08 §5.2; guía visual v2, 4.2): un quad por dosis
-    /// visible, con los datos por dosis en los canales de vértice (uGUI no admite <c>MaterialPropertyBlock</c>; así todas
-    /// las cuias comparten material y lote). El rectángulo del gráfico es el del cuerpo de la cuia con el pivote en el pie:
-    /// las coordenadas locales son <c>(x − 1) · u</c> e <c>y · u</c> en dp. La vista lo rellena con
+    /// Líquido de una cuia en uGUI con el shader <c>AF/UI/Liquid</c> (GDD 08 §5.2; guía visual v2, 4.2): un polígono por
+    /// dosis visible, con los datos por dosis en los canales de vértice (uGUI no admite <c>MaterialPropertyBlock</c>; así
+    /// todas las cuias comparten material y lote). El rectángulo del gráfico es el del cuerpo de la cuia con el pivote en el
+    /// pie: las coordenadas locales son <c>(x − 1) · u</c> e <c>y · u</c> en dp. La vista lo rellena con
     /// <see cref="SetDose"/>; solo se reconstruye cuando algo cambia (08 §5.4).
     /// </summary>
     /// <remarks>
-    /// <para><b>Inclinada</b> (al verter; guía 6.4: "el líquido no rota"): cada frontera entre dosis es una línea horizontal
-    /// en pantalla cuya altura sale del volumen (<see cref="LevelForVolume"/>): el líquido llena la cavidad girada desde su
-    /// punto más bajo, sin la cuña vacía junto al pie (revisión visual del 2026-10-07). El shader recorta a la silueta
-    /// interior (cavidad, hombro y cuello). Mientras sale el chorro, una «lengua» de 0,12 u del tinte corre por la pared
-    /// inferior del cuello desde la superficie hasta el labio (<see cref="SetTongue"/>).</para>
+    /// <para><b>Cavidad</b> (D-006, punto 3, como Magic Sort): 1,60 u de ancho (0,80 del exterior) y 1 u por dosis; la cara
+    /// superior del líquido es una elipse de <see cref="CuiaGeometry.TopFaceU"/> (0,40 u) de alto y el ancho de la cavidad,
+    /// con el color aclarado del menisco (<see cref="Palette.MeniscusLighten"/>), más clara que el tinte. Las fronteras entre
+    /// dosis y el fondo son arcos con la flecha de su borde delantero (<see cref="CuiaGeometry.FaceSagU"/>, 0,20 u en el
+    /// eje): en el eje todas las dosis miden 1 u, también la de arriba, como en Magic Sort. Por eso la malla de cada dosis
+    /// baja <see cref="BottomExtraU"/> de capa bajo su frontera y el shader la muestra solo sobre su arco. La geometría
+    /// llega al shader como globales que fija <see cref="Setup"/> desde <see cref="CuiaGeometry"/>: una sola fuente.</para>
+    /// <para><b>Inclinada</b> (al verter; guía 6.4: "el líquido no rota"), de −92° a 92° (D-006: 92° − 9° × dosis que
+    /// quedan): cada frontera entre dosis es una línea horizontal en pantalla, escrita en forma normal en las coordenadas de
+    /// la cuia, <c>X · sen θ + y · cos θ = d</c> (X = x − 1; vale también cerca de 90°, donde la pendiente no existe), y su
+    /// <c>d</c> sale del volumen (<see cref="LevelForVolume"/>): el líquido llena la silueta interior girada desde su punto
+    /// más bajo. Si el volumen no cabe bajo el labio con ese ángulo, la superficie se recorta en el labio (lo que no cabe ya
+    /// está cayendo por el chorro). El shader recorta a la silueta interior (cavidad, hombro y cuello). Mientras sale el
+    /// chorro, una «lengua» de 0,12 u del tinte corre por la pared inferior desde la superficie hasta el labio
+    /// (<see cref="SetTongue"/>).</para>
     /// <para>Canales: <c>TEXCOORD0</c> = (x, y local, y de capa, alto de la cuia); <c>TEXCOORD2.w</c> = patrón + 4 · dosis.
-    /// La y de capa es la de la dosis sin inclinar (degradado, patrón, menisco y superficie); la y local, la del vidrio
-    /// (brillos y recorte).</para>
+    /// La y de capa es la de la dosis sin inclinar (degradado, patrón, cara superior y superficie); la y local, la del
+    /// vidrio (brillos y recorte).</para>
     /// </remarks>
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class LiquidGraphic : MaskableGraphic
@@ -34,16 +44,40 @@ namespace AF.Presentation
         /// <summary>Grosor de la lengua de líquido por la pared inferior del cuello mientras sale el chorro (u).</summary>
         public const float TongueU = 0.12f;
 
-        private const float TopExtraU = 0.10f;
-        private const int AreaSlices = 32;
-        private const int BisectSteps = 22;
+        /// <summary>Inclinación máxima que se dibuja (grados): 92° con el origen vacío (D-006) y algo de margen.</summary>
+        public const float MaxTiltDeg = 95f;
+
+        /// <summary>
+        /// Lo que baja la malla de cada dosis bajo su frontera (u de capa): la flecha de los arcos en el eje, la mitad de la
+        /// cara superior (<see cref="CuiaGeometry.FaceSagU"/>).
+        /// </summary>
+        public const float BottomExtraU = 0.5f * CuiaGeometry.TopFaceU;
+
+        // La dosis superior sube la mitad de la cara superior más la onda y un margen, para que quepa la elipse.
+        private const float TopExtraU = (0.5f * CuiaGeometry.TopFaceU) + RippleAmplitudeU + 0.05f;
+        private const int ShoulderSamples = 16;
+        private const int BisectSteps = 24;
+        private const int TongueSamples = 48;
+        private const int MaxCapacity = 8;
 
         private static readonly int DpUId = Shader.PropertyToID("_DpU");
         private static readonly int PatternRowsId = Shader.PropertyToID("_PatternRows");
         private static readonly int InkId = Shader.PropertyToID("_InkLin");
         private static readonly int PaperId = Shader.PropertyToID("_PaperLin");
+        private static readonly int CavityBottomId = Shader.PropertyToID("_AFCavityBottomU");
+        private static readonly int CavityHalfId = Shader.PropertyToID("_AFCavityHalfU");
+        private static readonly int NeckHalfId = Shader.PropertyToID("_AFNeckHalfU");
+        private static readonly int ShoulderId = Shader.PropertyToID("_AFShoulderU");
+        private static readonly int AboveCavityId = Shader.PropertyToID("_AFAboveCavityU");
+        private static readonly int RimId = Shader.PropertyToID("_AFRimU");
+        private static readonly int TopFaceId = Shader.PropertyToID("_AFTopFaceU");
 
-        private readonly float[] _xs = new float[8];
+        // Silueta interior (cavidad, hombro y cuello hasta el labio) por capacidad, en X = x − 1 e y (u): se crea una vez.
+        private static readonly Vector2[]?[] s_silhouettes = new Vector2[MaxCapacity + 1][];
+
+        // Polígono de una banda: el rectángulo de la cavidad recortado por dos semiplanos (≤ 6 vértices) y un búfer.
+        private readonly Vector2[] _band = new Vector2[8];
+        private readonly Vector2[] _bandTmp = new Vector2[8];
         private Color[] _color = Array.Empty<Color>();
         private float[] _fill = Array.Empty<float>();
         private int[] _tint = Array.Empty<int>();
@@ -54,7 +88,7 @@ namespace AF.Presentation
         private float _rippleMs = -1f;
         private float _ripplePhase;
         private float _flash;
-        private float _slope;
+        private float _angle;
         private float _tongue;
         private Color _tongueColor;
         private int _tongueTint;
@@ -65,11 +99,26 @@ namespace AF.Presentation
         /// <summary>Onda en curso.</summary>
         public bool Rippling => _rippleMs >= 0f;
 
-        /// <summary>Pendiente de las capas en la cuia (−tan del ángulo del cuerpo): 0 en reposo.</summary>
-        public float Slope => _slope;
+        /// <summary>Inclinación del cuerpo con la que se dibujan las capas (grados; 0 en reposo).</summary>
+        public float TiltDeg => _angle;
 
         /// <summary>Lengua de líquido visible (0..1).</summary>
         public float Tongue => _tongue;
+
+        /// <summary>
+        /// Fija en el shader <c>AF/UI/Liquid</c> la geometría de la cuia como globales, desde <see cref="CuiaGeometry"/>:
+        /// fondo y medio ancho de la cavidad, medio ancho del cuello, hombro, alto sobre la cavidad, borde y cara superior.
+        /// </summary>
+        public static void ApplyShaderGeometry()
+        {
+            Shader.SetGlobalFloat(CavityBottomId, CuiaGeometry.CavityBottomU);
+            Shader.SetGlobalFloat(CavityHalfId, CuiaGeometry.CavityHalfWidthU);
+            Shader.SetGlobalFloat(NeckHalfId, CuiaGeometry.NeckInnerHalfWidthU);
+            Shader.SetGlobalFloat(ShoulderId, CuiaGeometry.ShoulderU);
+            Shader.SetGlobalFloat(AboveCavityId, CuiaGeometry.AboveCavityU);
+            Shader.SetGlobalFloat(RimId, CuiaGeometry.RimU);
+            Shader.SetGlobalFloat(TopFaceId, CuiaGeometry.TopFaceU);
+        }
 
         /// <summary>Prepara el gráfico para <paramref name="capacity"/> dosis con el atlas de patrones.</summary>
         public void Setup(int capacity, Texture atlas)
@@ -81,6 +130,7 @@ namespace AF.Presentation
             _levels = new float[capacity + 1];
             _atlas = atlas;
             raycastTarget = false;
+            ApplyShaderGeometry();
             Material? mat = UiMaterials.Liquid;
             if (mat != null)
             {
@@ -136,15 +186,16 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// Inclinación del cuerpo (grados; guía 6.4: "el líquido no rota"): las fronteras entre dosis siguen horizontales en
-        /// pantalla y su altura sale del volumen de cada dosis dentro de la cavidad girada. Solo cambia al verter.
+        /// Inclinación del cuerpo (grados, de −92° a 92° y algo más; guía 6.4: "el líquido no rota"): las fronteras entre
+        /// dosis siguen horizontales en pantalla y su posición sale del volumen de cada dosis dentro de la silueta girada.
+        /// Solo cambia al verter.
         /// </summary>
         public void SetTilt(float angleDeg)
         {
-            float slope = -Mathf.Tan(Mathf.Clamp(angleDeg, -80f, 80f) * Mathf.Deg2Rad);
-            if (Mathf.Abs(slope - _slope) > 0.0005f || (slope == 0f && _slope != 0f))
+            float angle = Mathf.Clamp(angleDeg, -MaxTiltDeg, MaxTiltDeg);
+            if (Mathf.Abs(angle - _angle) > 0.02f || (angle == 0f && _angle != 0f))
             {
-                _slope = slope;
+                _angle = angle;
                 SetVerticesDirty();
             }
         }
@@ -213,103 +264,106 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// Área (u²) de la silueta interior de una cuia de <paramref name="capacity"/> dosis (cavidad, hombro y cuello hasta
-        /// el labio) que queda por debajo de la línea <c>y = c + slope · (x − 1)</c> en coordenadas de la cuia. Exacta en la
-        /// cavidad recta; por franjas de 0,036 u en el hombro y el cuello.
+        /// Posición <c>d</c> de una línea horizontal en pantalla dentro de la cuia girada <paramref name="angleDeg"/> grados
+        /// (sentido antihorario): <c>d = X · sen θ + y · cos θ</c> en las coordenadas de la cuia (X = x − 1, en u). Crece
+        /// hacia arriba de la pantalla; sin inclinar, <c>d = y</c>.
         /// </summary>
-        public static float AreaBelow(float c, float slope, int capacity)
+        public static float LineOffset(float xRel, float y, float angleDeg)
         {
-            // Cavidad recta: integral exacta (la longitud bajo la línea es lineal a trozos). Hombro y cuello: por franjas.
-            float bottom = CuiaGeometry.CavityBottomU;
-            float top = CuiaGeometry.CavityTopU(capacity);
-            float lip = CuiaGeometry.LipU(capacity);
-            float w = CuiaGeometry.CavityHalfWidthU;
-            float area = RectAreaBelow(c, slope, w, bottom, top);
-            float dy = (lip - top) / AreaSlices;
-            for (int i = 0; i < AreaSlices; i++)
-            {
-                float y = top + ((i + 0.5f) * dy);
-                float hw = CuiaGeometry.InnerHalfWidth(y, capacity);
-                float len;
-                if (slope > 1e-5f)
-                {
-                    len = hw - Mathf.Max(-hw, (y - c) / slope);
-                }
-                else if (slope < -1e-5f)
-                {
-                    len = Mathf.Min(hw, (y - c) / slope) + hw;
-                }
-                else
-                {
-                    len = y <= c ? 2f * hw : 0f;
-                }
-
-                area += Mathf.Clamp(len, 0f, 2f * hw) * dy;
-            }
-
-            return area;
+            float rad = angleDeg * Mathf.Deg2Rad;
+            return (xRel * Mathf.Sin(rad)) + (y * Mathf.Cos(rad));
         }
 
-        // ∫ de −w a w de clamp(c + s·X − b, 0, t − b) dX: exacta, partiendo en los puntos donde la línea corta b y t.
-        private static float RectAreaBelow(float c, float s, float w, float b, float t)
+        /// <summary>
+        /// Área (u²) de la silueta interior de una cuia de <paramref name="capacity"/> dosis (cavidad, hombro y cuello hasta
+        /// el labio) que queda por debajo, en pantalla, de la línea horizontal <c>d</c> con la cuia girada
+        /// <paramref name="angleDeg"/> grados (ver <see cref="LineOffset"/>). Exacta sobre el polígono de la silueta (el
+        /// hombro, con 16 tramos). Sin asignaciones tras la primera llamada por capacidad.
+        /// </summary>
+        public static float AreaBelow(float d, float angleDeg, int capacity)
         {
-            float h = t - b;
-            if (Mathf.Abs(s) < 1e-6f)
+            Vector2[] poly = Silhouette(capacity);
+            float rad = angleDeg * Mathf.Deg2Rad;
+            float sn = Mathf.Sin(rad);
+            float cs = Mathf.Cos(rad);
+            int n = poly.Length;
+            bool has = false;
+            Vector2 first = default;
+            Vector2 prev = default;
+            float sum = 0f;
+            for (int i = 0; i < n; i++)
             {
-                return 2f * w * Mathf.Clamp(c - b, 0f, h);
+                Vector2 p = poly[i];
+                Vector2 q = poly[(i + 1) % n];
+                float fp = (p.x * sn) + (p.y * cs) - d;
+                float fq = (q.x * sn) + (q.y * cs) - d;
+                if (fp <= 0f)
+                {
+                    Accumulate(p, ref has, ref first, ref prev, ref sum);
+                }
+
+                if ((fp < 0f && fq > 0f) || (fp > 0f && fq < 0f))
+                {
+                    float t = fp / (fp - fq);
+                    Accumulate(p + ((q - p) * t), ref has, ref first, ref prev, ref sum);
+                }
             }
 
-            float x0 = (b - c) / s;
-            float x1 = (t - c) / s;
-            float lo = Mathf.Min(x0, x1);
-            float hi = Mathf.Max(x0, x1);
-            float a = -w;
-            float area = 0f;
-            float p1 = Mathf.Clamp(lo, -w, w);
-            float p2 = Mathf.Clamp(hi, -w, w);
-            area += Trapezoid(a, p1, c, s, b, h);
-            area += Trapezoid(p1, p2, c, s, b, h);
-            area += Trapezoid(p2, w, c, s, b, h);
-            return area;
-        }
-
-        private static float Trapezoid(float xa, float xb, float c, float s, float b, float h)
-        {
-            if (xb <= xa)
+            if (!has)
             {
                 return 0f;
             }
 
-            float fa = Mathf.Clamp(c + (s * xa) - b, 0f, h);
-            float fb = Mathf.Clamp(c + (s * xb) - b, 0f, h);
-            return (xb - xa) * 0.5f * (fa + fb);
+            sum += (prev.x * first.y) - (first.x * prev.y);
+            return 0.5f * Mathf.Abs(sum);
         }
 
         /// <summary>
-        /// Altura <c>c</c> (en x = 1) de la superficie horizontal que deja <paramref name="volume"/> u² de líquido por debajo,
-        /// llenando desde el punto más bajo de la cavidad girada (bisección sobre <see cref="AreaBelow"/>).
+        /// Posición <c>d</c> del labio en pantalla con la cuia girada <paramref name="angleDeg"/> grados: la del canto más
+        /// bajo de la boca interior (<see cref="CuiaGeometry.NeckInnerHalfWidthU"/> en <see cref="CuiaGeometry.LipU"/>). El
+        /// líquido no sube de ahí: lo que no cabe ya está cayendo.
         /// </summary>
-        public static float LevelForVolume(float volume, float slope, int capacity)
+        public static float LipLevel(float angleDeg, int capacity)
+        {
+            float lip = CuiaGeometry.LipU(capacity);
+            float w = CuiaGeometry.NeckInnerHalfWidthU;
+            return Mathf.Min(LineOffset(-w, lip, angleDeg), LineOffset(w, lip, angleDeg));
+        }
+
+        /// <summary>
+        /// Posición <c>d</c> (ver <see cref="LineOffset"/>) de la superficie horizontal que deja <paramref name="volume"/> u²
+        /// de líquido por debajo, llenando desde el punto más bajo de la silueta girada (bisección sobre
+        /// <see cref="AreaBelow"/>), recortada en el labio (<see cref="LipLevel"/>) si no cabe. Sin inclinar es la altura de
+        /// la superficie. Monótona en el volumen; sin NaN de −92° a 92°.
+        /// </summary>
+        public static float LevelForVolume(float volume, float angleDeg, int capacity)
         {
             float bottom = CuiaGeometry.CavityBottomU;
-            float lip = CuiaGeometry.LipU(capacity);
-            float w = CuiaGeometry.CavityHalfWidthU;
-            if (Mathf.Abs(slope) < 1e-5f)
+            float lipLevel = LipLevel(angleDeg, capacity);
+            if (Mathf.Abs(angleDeg) < 1e-3f)
             {
-                return bottom + (volume / (2f * w));
+                return Mathf.Min(bottom + (Mathf.Max(0f, volume) / (2f * CuiaGeometry.CavityHalfWidthU)), lipLevel);
             }
 
-            float lo = bottom - (Mathf.Abs(slope) * w);
-            float hi = lip + (Mathf.Abs(slope) * w);
+            Vector2[] poly = Silhouette(capacity);
+            float lo = float.MaxValue;
+            float hi = float.MinValue;
+            for (int i = 0; i < poly.Length; i++)
+            {
+                float d = LineOffset(poly[i].x, poly[i].y, angleDeg);
+                lo = Mathf.Min(lo, d);
+                hi = Mathf.Max(hi, d);
+            }
+
             if (volume <= 0f)
             {
-                return lo;
+                return Mathf.Min(lo, lipLevel);
             }
 
             for (int i = 0; i < BisectSteps; i++)
             {
                 float mid = 0.5f * (lo + hi);
-                if (AreaBelow(mid, slope, capacity) < volume)
+                if (AreaBelow(mid, angleDeg, capacity) < volume)
                 {
                     lo = mid;
                 }
@@ -319,7 +373,7 @@ namespace AF.Presentation
                 }
             }
 
-            return 0.5f * (lo + hi);
+            return Mathf.Min(0.5f * (lo + hi), lipLevel);
         }
 
         /// <inheritdoc />
@@ -335,7 +389,7 @@ namespace AF.Presentation
                 }
             }
 
-            if (_unit <= 0f || _capacity <= 0)
+            if (_unit <= 0f || _capacity <= 0 || top < 0)
             {
                 return;
             }
@@ -344,158 +398,163 @@ namespace AF.Presentation
             float bottomU = CuiaGeometry.CavityBottomU;
             float amp = RippleAmplitude();
             float width = 2f * CuiaGeometry.CavityHalfWidthU;
-            bool tilted = Mathf.Abs(_slope) > 1e-4f;
-            if (top >= 0)
+            bool tilted = Mathf.Abs(_angle) > 0.01f;
+            float surface = bottomU + top + _fill[top];
+            int topTint = _tint[top];
+            Color men = ColorMath.Lighten(_color[top], topTint > 0 ? Palette.MeniscusLighten(topTint) : 0.20f);
+            Vector3 menS = ColorMath.ToShaderSpace(men);
+
+            // Fronteras por volumen (forma normal, ver LineOffset): _levels[k] es la línea bajo la dosis k (k = 0, el fondo)
+            // y _levels[k + 1] la de encima. Sin inclinar son alturas: bottom + suma de rellenos.
+            float volume = 0f;
+            _levels[0] = tilted ? LevelForVolume(0f, _angle, _capacity) : bottomU;
+            for (int k = 0; k <= top; k++)
             {
-                float surface = bottomU + top + _fill[top];
-                int topTint = _tint[top];
-                Color men = ColorMath.Lighten(_color[top], topTint > 0 ? Palette.MeniscusLighten(topTint) : 0.20f);
-                Vector3 menS = ColorMath.ToShaderSpace(men);
-
-                // Fronteras por volumen: _levels[k] es la línea bajo la dosis k (k = 0, el fondo) y _levels[k + 1] la de
-                // encima. Sin inclinar coinciden con bottom + k + relleno.
-                float volume = 0f;
-                _levels[0] = tilted ? LevelForVolume(0f, _slope, _capacity) : bottomU;
-                for (int k = 0; k <= top; k++)
-                {
-                    volume += _fill[k] * width;
-                    _levels[k + 1] = tilted ? LevelForVolume(volume, _slope, _capacity) : bottomU + k + _fill[k];
-                }
-
-                for (int k = 0; k <= top; k++)
-                {
-                    float fill = _fill[k];
-                    Color c = _color[k];
-                    if (fill <= 0.001f || c.a <= 0.001f)
-                    {
-                        continue;
-                    }
-
-                    int tint = _tint[k];
-                    Color lit = tint > 0 ? Palette.LiquidHighlight(tint, c) : ColorMath.AddLabLightness(c, 10f);
-                    Vector3 litS = ColorMath.ToShaderSpace(lit);
-                    float pattern = -1f; // sin patrón (Guanábana, agua base)
-                    if (ProceduralArt.HasPattern(tint))
-                    {
-                        pattern = Palette.PatternBase(tint) == Palette.UiPaper ? 1f : 0f;
-                    }
-
-                    var uv1 = new Vector4(litS.x, litS.y, litS.z, _flash);
-                    var uv2 = new Vector4(surface, amp, _ripplePhase, pattern + (4f * k));
-                    var uv3 = new Vector4(menS.x, menS.y, menS.z, tint);
-                    float lo = tilted ? _levels[k] : bottomU + k;
-                    float hi = tilted ? _levels[k + 1] : bottomU + k + fill;
-                    float hiMesh = k == top ? hi + TopExtraU : hi; // la dosis superior sube 0,1 u para la onda y el menisco
-                    if (!tilted)
-                    {
-                        AddQuad(vh, -CuiaGeometry.CavityHalfWidthU, CuiaGeometry.CavityHalfWidthU, lo, hiMesh, 0f, lo, hi, bottomU + k, fill, heightU, c, uv1, uv2, uv3);
-                    }
-                    else
-                    {
-                        AddBand(vh, lo, hiMesh, lo, hi, bottomU + k, fill, heightU, c, uv1, uv2, uv3);
-                    }
-                }
+                volume += _fill[k] * width;
+                _levels[k + 1] = tilted ? LevelForVolume(volume, _angle, _capacity) : _levels[k] + _fill[k];
             }
 
-            if (tilted && _tongue > 0.01f && top >= 0)
+            for (int k = 0; k <= top; k++)
             {
-                AddTongue(vh, heightU, top);
-            }
-        }
-
-        // Banda inclinada entre las líneas y = lo + s·X e y = hiMesh + s·X (X = x − 1), recortada a [fondo, labio]: se
-        // parte en tiras verticales en los puntos donde las líneas cortan el fondo o el labio, y cada tira es un quad
-        // exacto. El shader recorta luego a la silueta interior.
-        private void AddBand(VertexHelper vh, float lo, float hiMesh, float layerLo, float layerHi, float doseBottom, float fill, float heightU, Color c, Vector4 uv1, Vector4 uv2, Vector4 uv3)
-        {
-            float s = _slope;
-            float w = CuiaGeometry.CavityHalfWidthU;
-            float yMin = CuiaGeometry.CavityBottomU;
-            float yMax = CuiaGeometry.LipU(_capacity);
-            int n = 0;
-            _xs[n++] = -w;
-            _xs[n++] = w;
-            AddBreak(ref n, (yMin - lo) / s, w);
-            AddBreak(ref n, (yMax - lo) / s, w);
-            AddBreak(ref n, (yMin - hiMesh) / s, w);
-            AddBreak(ref n, (yMax - hiMesh) / s, w);
-
-            // Orden por inserción (como mucho 6 valores, sin asignaciones).
-            for (int i = 1; i < n; i++)
-            {
-                float v = _xs[i];
-                int j = i - 1;
-                while (j >= 0 && _xs[j] > v)
-                {
-                    _xs[j + 1] = _xs[j];
-                    j--;
-                }
-
-                _xs[j + 1] = v;
-            }
-
-            for (int i = 0; i + 1 < n; i++)
-            {
-                float xa = _xs[i];
-                float xb = _xs[i + 1];
-                if (xb - xa < 1e-4f)
+                float fill = _fill[k];
+                Color c = _color[k];
+                if (fill <= 0.001f || c.a <= 0.001f)
                 {
                     continue;
                 }
 
-                AddQuad(vh, xa, xb, lo, hiMesh, s, layerLo, layerHi, doseBottom, fill, heightU, c, uv1, uv2, uv3);
-            }
-        }
+                float lo = _levels[k];
+                float hi = _levels[k + 1];
+                if (hi - lo < 1e-5f)
+                {
+                    continue; // dosis que ya no cabe bajo el labio: está cayendo por el chorro
+                }
 
-        private void AddBreak(ref int n, float x, float w)
-        {
-            if (x > -w && x < w)
+                int tint = _tint[k];
+                Color lit = tint > 0 ? Palette.LiquidHighlight(tint, c) : ColorMath.AddLabLightness(c, 10f);
+                Vector3 litS = ColorMath.ToShaderSpace(lit);
+                float pattern = -1f; // sin patrón (Guanábana, agua base)
+                if (ProceduralArt.HasPattern(tint))
+                {
+                    pattern = Palette.PatternBase(tint) == Palette.UiPaper ? 1f : 0f;
+                }
+
+                var uv1 = new Vector4(litS.x, litS.y, litS.z, _flash);
+                var uv2 = new Vector4(surface, amp, _ripplePhase, pattern + (4f * k));
+                var uv3 = new Vector4(menS.x, menS.y, menS.z, tint);
+
+                // La dosis superior sube TopExtraU de capa para la cara superior y la onda, y todas bajan BottomExtraU para
+                // su frontera en arco (en d, con la escala de la banda).
+                float hiMesh = k == top ? hi + (TopExtraU * (hi - lo) / fill) : hi;
+                float loMesh = lo - (BottomExtraU * (hi - lo) / fill);
+                AddBand(vh, lo, hi, loMesh, hiMesh, bottomU + k, fill, heightU, c, uv1, uv2, uv3);
+            }
+
+            if (tilted && _tongue > 0.01f)
             {
-                _xs[n++] = x;
+                AddTongue(vh, heightU, _levels[top + 1]);
             }
         }
 
-        // Quad de la tira [xa, xb] (X relativo al centro) entre las líneas lo + s·X y hi + s·X, recortadas a [fondo, labio].
-        // La y de capa se interpola de forma afín: (fondo de la dosis) + relleno · (y − s·X − layerLo) / (layerHi − layerLo).
-        private void AddQuad(VertexHelper vh, float xa, float xb, float lo, float hi, float s, float layerLo, float layerHi, float doseBottom, float fill, float heightU, Color c, Vector4 uv1, Vector4 uv2, Vector4 uv3)
+        // Banda entre las líneas loMesh y hiMesh (forma normal): el rectángulo de la cavidad [−w, w] × [fondo en el eje,
+        // labio] recortado por los dos semiplanos (≤ 6 vértices, convexo) y dibujado en abanico. El shader recorta luego a
+        // la silueta interior (con el fondo en arco) y a la frontera en arco. La y de capa es afín en d: fondo de la dosis +
+        // relleno · (d − lo) / (hi − lo). Sin asignaciones.
+        private void AddBand(VertexHelper vh, float lo, float hi, float loMesh, float hiMesh, float doseBottom, float fill, float heightU, Color c, Vector4 uv1, Vector4 uv2, Vector4 uv3)
         {
-            float yMin = CuiaGeometry.CavityBottomU;
+            float w = CuiaGeometry.CavityHalfWidthU;
+            float yMin = CuiaGeometry.CavityFloorU(0f);
             float yMax = CuiaGeometry.LipU(_capacity);
-            float loA = Mathf.Clamp(lo + (s * xa), yMin, yMax);
-            float loB = Mathf.Clamp(lo + (s * xb), yMin, yMax);
-            float hiA = Mathf.Clamp(hi + (s * xa), yMin, yMax);
-            float hiB = Mathf.Clamp(hi + (s * xb), yMin, yMax);
-            if (hiA - loA < 1e-4f && hiB - loB < 1e-4f)
+            _band[0] = new Vector2(-w, yMin);
+            _band[1] = new Vector2(w, yMin);
+            _band[2] = new Vector2(w, yMax);
+            _band[3] = new Vector2(-w, yMax);
+            int n = ClipHalfPlane(_band, 4, _bandTmp, loMesh, -1f); // d ≥ loMesh
+            n = ClipHalfPlane(_bandTmp, n, _band, hiMesh, 1f); // d ≤ hiMesh
+            if (n < 3)
             {
                 return;
             }
 
-            float scale = fill / Mathf.Max(1e-4f, layerHi - layerLo);
+            float scale = fill / Mathf.Max(1e-5f, hi - lo);
             Color32 vc = c;
             int i0 = vh.currentVertCount;
-            AddVert(vh, xa, loA, doseBottom + ((loA - (s * xa) - layerLo) * scale), heightU, vc, uv1, uv2, uv3);
-            AddVert(vh, xa, hiA, doseBottom + ((hiA - (s * xa) - layerLo) * scale), heightU, vc, uv1, uv2, uv3);
-            AddVert(vh, xb, hiB, doseBottom + ((hiB - (s * xb) - layerLo) * scale), heightU, vc, uv1, uv2, uv3);
-            AddVert(vh, xb, loB, doseBottom + ((loB - (s * xb) - layerLo) * scale), heightU, vc, uv1, uv2, uv3);
-            vh.AddTriangle(i0, i0 + 1, i0 + 2);
-            vh.AddTriangle(i0 + 2, i0 + 3, i0);
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 p = _band[i];
+                float d = LineOffset(p.x, p.y, _angle);
+                AddVert(vh, p.x, p.y, doseBottom + ((d - lo) * scale), heightU, vc, uv1, uv2, uv3);
+            }
+
+            for (int i = 1; i + 1 < n; i++)
+            {
+                vh.AddTriangle(i0, i0 + i, i0 + i + 1);
+            }
+        }
+
+        // Sutherland-Hodgman con un semiplano: conserva los puntos con sign · (d(p) − limit) ≤ 0. Devuelve los vértices
+        // escritos en dst (≤ n + 1).
+        private int ClipHalfPlane(Vector2[] src, int n, Vector2[] dst, float limit, float sign)
+        {
+            int m = 0;
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 p = src[i];
+                Vector2 q = src[(i + 1) % n];
+                float fp = sign * (LineOffset(p.x, p.y, _angle) - limit);
+                float fq = sign * (LineOffset(q.x, q.y, _angle) - limit);
+                if (fp <= 0f)
+                {
+                    dst[m++] = p;
+                }
+
+                if ((fp < 0f && fq > 0f) || (fp > 0f && fq < 0f))
+                {
+                    dst[m++] = p + ((q - p) * (fp / (fp - fq)));
+                }
+            }
+
+            return m;
         }
 
         // Lengua del chorro: franja de 0,12 u por la pared interior del lado bajo (el que mira al destino), desde donde la
-        // superficie toca esa pared hasta el labio. Color de la dosis que se vacía, sin patrón ni menisco.
-        private void AddTongue(VertexHelper vh, float heightU, int top)
+        // superficie toca esa pared hasta el labio. Color de la dosis que se vacía, sin patrón ni cara superior. El punto
+        // de contacto se busca bajando por la pared desde el labio (vale a cualquier ángulo).
+        private void AddTongue(VertexHelper vh, float heightU, float surfaceD)
         {
-            float side = _slope < 0f ? -1f : 1f; // lado bajo de la cavidad girada (x − 1 negativo si el cuerpo gira a la izquierda)
+            float side = _angle > 0f ? -1f : 1f; // lado bajo: X < 0 si el cuerpo gira en sentido antihorario
             float lip = CuiaGeometry.LipU(_capacity);
-            float surfaceAtWall = Mathf.Clamp(_levels[top + 1] + (_slope * side * CuiaGeometry.CavityHalfWidthU), CuiaGeometry.CavityBottomU, lip);
-            if (lip - surfaceAtWall < 0.05f)
+            float bottom = CuiaGeometry.CavityBottomU;
+            if (LineOffset(side * CuiaGeometry.NeckInnerHalfWidthU, lip, _angle) <= surfaceD)
+            {
+                return; // el líquido ya llega al labio
+            }
+
+            float contact = -1f;
+            float prevY = lip;
+            float prevF = LineOffset(side * CuiaGeometry.InnerHalfWidth(lip, _capacity), lip, _angle) - surfaceD;
+            for (int i = 1; i <= TongueSamples; i++)
+            {
+                float y = Mathf.Lerp(lip, bottom, i / (float)TongueSamples);
+                float f = LineOffset(side * CuiaGeometry.InnerHalfWidth(Mathf.Max(y, bottom), _capacity), y, _angle) - surfaceD;
+                if (f <= 0f)
+                {
+                    contact = prevY + ((y - prevY) * (prevF / Mathf.Max(1e-6f, prevF - f)));
+                    break;
+                }
+
+                prevY = y;
+                prevF = f;
+            }
+
+            if (contact < 0f || lip - contact < 0.05f)
             {
                 return;
             }
 
             Color c = _tongueColor;
             Vector3 litS = ColorMath.ToShaderSpace(c);
-            float layer = CuiaGeometry.CavityBottomU + 0.5f; // dentro de una dosis llena: alfa 1, sin menisco
+            float layer = CuiaGeometry.CavityBottomU + 0.5f; // dentro de una dosis llena: alfa 1, sin cara superior
             var uv1 = new Vector4(litS.x, litS.y, litS.z, 0f);
             var uv2 = new Vector4(CuiaGeometry.CavityBottomU + 2f, 0f, 0f, -1f);
             var uv3 = new Vector4(litS.x, litS.y, litS.z, 0f);
@@ -505,8 +564,8 @@ namespace AF.Presentation
             int first = vh.currentVertCount;
             for (int i = 0; i <= segments; i++)
             {
-                float y = Mathf.Lerp(surfaceAtWall - 0.15f, lip, i / (float)segments);
-                float wall = CuiaGeometry.InnerHalfWidth(Mathf.Max(y, CuiaGeometry.CavityBottomU), _capacity);
+                float y = Mathf.Lerp(Mathf.Max(bottom, contact - 0.15f), lip, i / (float)segments);
+                float wall = CuiaGeometry.InnerHalfWidth(Mathf.Max(y, bottom), _capacity);
                 float outer = side * (wall + 0.04f); // un poco más allá de la pared: la recorta el shader
                 float inner = side * (wall - thick);
                 AddVert(vh, outer, y, layer, heightU, vc, uv1, uv2, uv3);
@@ -530,6 +589,56 @@ namespace AF.Presentation
         private float RippleAmplitude()
         {
             return _rippleMs < 0f ? 0f : RippleAmplitudeU * Mathf.Exp(-_rippleMs / RippleDecayMs);
+        }
+
+        private static void Accumulate(Vector2 v, ref bool has, ref Vector2 first, ref Vector2 prev, ref float sum)
+        {
+            if (has)
+            {
+                sum += (prev.x * v.y) - (v.x * prev.y);
+            }
+            else
+            {
+                first = v;
+                has = true;
+            }
+
+            prev = v;
+        }
+
+        // Polígono de la silueta interior (X = x − 1): pared derecha de la cavidad, hombro en 16 tramos, cuello hasta el
+        // labio y la mitad izquierda en espejo. Se crea una vez por capacidad.
+        private static Vector2[] Silhouette(int capacity)
+        {
+            int cap = Mathf.Clamp(capacity, 1, MaxCapacity);
+            Vector2[]? poly = s_silhouettes[cap];
+            if (poly != null)
+            {
+                return poly;
+            }
+
+            float top = CuiaGeometry.CavityTopU(cap);
+            float lip = CuiaGeometry.LipU(cap);
+            int half = 2 + ShoulderSamples + 1; // fondo, techo de la cavidad, hombro y labio
+            poly = new Vector2[2 * half];
+            int n = 0;
+            poly[n++] = new Vector2(CuiaGeometry.CavityHalfWidthU, CuiaGeometry.CavityBottomU);
+            poly[n++] = new Vector2(CuiaGeometry.CavityHalfWidthU, top);
+            for (int i = 1; i <= ShoulderSamples; i++)
+            {
+                float y = top + (CuiaGeometry.ShoulderU * i / ShoulderSamples);
+                float w = i == ShoulderSamples ? CuiaGeometry.NeckInnerHalfWidthU : CuiaGeometry.InnerHalfWidth(y, cap);
+                poly[n++] = new Vector2(w, y);
+            }
+
+            poly[n++] = new Vector2(CuiaGeometry.NeckInnerHalfWidthU, lip);
+            for (int i = half - 1; i >= 0; i--)
+            {
+                poly[n++] = new Vector2(-poly[i].x, poly[i].y);
+            }
+
+            s_silhouettes[cap] = poly;
+            return poly;
         }
     }
 }

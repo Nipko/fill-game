@@ -6,17 +6,19 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 
 | ID | Fecha | Título | Estado |
 |---|---|---|---|
-| D-001 | 2026-10-06 | Una dosis por vertido | Decidida por el dueño; implementada en el árbol de trabajo, sin commitear (T1-T3 y T5) y verificada en el SM-S938B el 2026-10-07 (T7: A7 y A8). Pendientes: commit y PR, T6 y las preguntas P2-P7 |
+| D-001 | 2026-10-06 | Una dosis por vertido | Sustituida por D-005 (2026-10-08). Antes: decidida por el dueño; implementada en el árbol de trabajo, sin commitear (T1-T3 y T5) y verificada en el SM-S938B el 2026-10-07 (T7: A7 y A8). Pendientes: commit y PR, T6 y las preguntas P2-P7 |
 | D-002 | 2026-10-06 | Sin resaltado de destinos al seleccionar | Decidida por el dueño; implementada en el árbol de trabajo, sin commitear (T4 y T5) y verificada en el SM-S938B el 2026-10-07 (T7: B1-B2 y captura de B3). Pendientes: commit y PR y la revisión visual del dueño (B3) |
-| D-003 | 2026-10-07 | Dirección visual «Selva brillante premium» | Decidida por el dueño; fase visual implementada con arte procedural provisional en `19177bd` y vista por el dueño en el SM-S938B el 2026-10-07 (de ahí D-004). Pendientes: P8-P10, los PNG de F0 y su integración (F6 de `docs/art/direccion-visual-v2.md`) y la edición del GDD |
-| D-004 | 2026-10-07 | Panel azul petróleo, vertido a 38° y cuias más anchas con pocas cuias | Decidida por el dueño (respuestas a C16-C18 de `docs/art/direccion-visual-v2.md`); implementada en el árbol de trabajo, sin commitear (código, tests y documentación de «Archivos afectados»; EditMode y PlayMode en verde el 2026-10-07). Pendientes: commit y PR, revisión en el teléfono (`dev.apk`) y nueva medida de C19 |
+| D-003 | 2026-10-07 | Dirección visual «Selva brillante premium» | Decidida por el dueño; fase visual implementada con arte procedural provisional en `19177bd` y vista por el dueño en el SM-S938B el 2026-10-07 (de ahí D-004). Pendientes: P8-P10, los PNG de F0 y su integración (F6 de `docs/art/direccion-visual-v2.md`) y la edición del GDD. El punto 5, en lo que toca a la cavidad y el menisco, queda sustituido por D-006 (2026-10-08) |
+| D-004 | 2026-10-07 | Panel azul petróleo, vertido a 38° y cuias más anchas con pocas cuias | Decidida por el dueño (respuestas a C16-C18 de `docs/art/direccion-visual-v2.md`); implementada en el árbol de trabajo, sin commitear (código, tests y documentación de «Archivos afectados»; EditMode y PlayMode en verde el 2026-10-07). Pendientes: commit y PR, revisión en el teléfono (`dev.apk`) y nueva medida de C19. Actualización del 2026-10-08: implementada en `b2d34de` (rama `d004-cuias-anchas`); la decisión 2 (38° fijos y labio a 0,6-1,6 u), el techo del vertido [P], la consecuencia «no cambia el número de filas» y el alto de la cuia (1:3, 6 u; pasa a 5,6 u) quedan sustituidos por D-006, que también matiza el recálculo a mitad de nivel: las filas se fijan al cargar y no se recalculan, solo el ancho; el resto sigue (panel azul petróleo y topes 64/56/48 dp) |
+| D-005 | 2026-10-08 | Vertido por tramo, como Magic Sort | Decidida por el dueño; en implementación (C1, L1, U1, D1-D6) |
+| D-006 | 2026-10-08 | Tablero, cuia y vertido como Magic Sort | Decidida por el dueño; en implementación (U2-U6, D1-D6). Pendiente: P12 (ranura de 42 dp en 16:9 con cuias añadidas) |
 
 ---
 
 ## D-001 · Una dosis por vertido
 
 - **Fecha:** 2026-10-06.
-- **Estado:** decidida por el dueño tras jugar el prototipo v0 en su teléfono (Samsung SM-S938B). Implementada y verificada en el teléfono el 2026-10-07, sin commitear (ver la tabla de arriba).
+- **Estado:** decidida por el dueño tras jugar el prototipo v0 en su teléfono (Samsung SM-S938B). Implementada y verificada en el teléfono el 2026-10-07, sin commitear (ver la tabla de arriba). **Sustituida por D-005 el 2026-10-08.**
 
 **Contexto.** El núcleo aplica la regla canónica del género, que es también la del GDD: un vertido A→B mueve `cantidad(A, B) = min(racha visible de A, espacio de B)` (02 §1.2, R9). Si la racha no cabe entera, se vierte lo que cabe y el resto queda en A ("vertido parcial"). En el teléfono, el dueño pidió que al pasar a otro recipiente se mueva una sola dosis cada vez, aunque haya varias seguidas del mismo color (mecánica tipo *ball sort*).
 
@@ -79,6 +81,8 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 ---
 
 ## Impacto técnico
+
+*Nota del 2026-10-08: las secciones 1-6 analizan D-001 y D-002. D-001 quedó sustituida por D-005: lo que aquí se dice de `single` como modo por defecto se conserva como historia y como descripción del modo de pruebas. Los estados de P1-P7 y R-1-R-6 están en las secciones 5 y 6.*
 
 ### 1. Estado de partida
 
@@ -376,28 +380,28 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 - T3 y T4: `scripts/unity-compile.ps1`, `unity-test.ps1 -Mode EditMode` y `-Mode PlayMode`.
 - T7: el build de desarrollo de CLAUDE.md, `adb install -r` y A7, A8 y B3. Si `adb devices` sale vacío, se pide al dueño que reactive la depuración inalámbrica.
 
-## 5. Preguntas para el dueño (cerradas)
+## 5. Preguntas para el dueño
 
-| # | Pregunta | Recomendación | Bloquea |
-|---|---|---|---|
-| P1 | ¿Confirmas la clave `rules_pour_mode` (`"single"` \| `"run"`, default `"single"`) en la tabla única de 08 §9, con la nueva familia de prefijo `rules_`, y que `Run` quede solo como opción de prueba? | Sí | T5 (08 §9) |
-| P2 | Par del tutorial en `Single`: ¿(A) mantener los 10 tableros y fijar como rango [P] su par medido (3, 9, 10, 12, 16, 17, 15, 17, 16, 19), aceptando la rampa no monótona, o (B) rediseñar los niveles 2-10 para una rampa monótona con rangos que propone level-pipeline-dev en el PR? | B | T2 |
-| P3 | Nivel 2: ¿sustituir la lección del vertido parcial por "una dosis por vertido" con el texto [P] "Cada vertido pasa una sola dosis: repite para mover las demás."? | Sí | T2, T5 |
-| P4 | Tras verter, ¿el origen se deselecciona (C4 actual, estilo *ball sort*) o sigue seleccionado si puede volver a verter al mismo destino (selección pegajosa, menos toques)? | Deseleccionar (C4 actual) | T3 (solo si cambia) |
-| P5 | El dedo guía de los niveles 1-2 (02 §13) y Morpho (04 §2.3) muestran un destino: ¿se mantienen como ayudas explícitas compatibles con D-002? | Sí | T5 |
-| P6 | ¿Una dosis por vertido es también la regla de 1.0? Si es así, antes de la Fase 1 hay que recalibrar en `Single`: las cifras [V-proto] de 03 (`par ≥ 2K`, bot ×40 y etiquetas, índice D), Marea "3 por nivel", `restart_confirm_min_pours`, `lluvia_k_pours` y `pirana_k_pours` | Sí, con una tarea de recalibración aparte | Fase 1 (no v0) |
-| P7 | En 1.0, ¿el pack declara el modo con el que se calculó el par (cambio de contrato: `af-level/2`, `pack_schema` 2)? | Sí | `schemas/` (no v0) |
+| # | Pregunta | Recomendación | Bloquea | Estado (2026-10-08) |
+|---|---|---|---|---|
+| P1 | ¿Confirmas la clave `rules_pour_mode` (`"single"` \| `"run"`, default `"single"`) en la tabla única de 08 §9, con la nueva familia de prefijo `rules_`, y que `Run` quede solo como opción de prueba? | Sí | T5 (08 §9) | Respondida. Con D-005 el default de `rules_pour_mode` pasa a `run`; `single` queda como opción de pruebas |
+| P2 | Par del tutorial en `Single`: ¿(A) mantener los 10 tableros y fijar como rango [P] su par medido (3, 9, 10, 12, 16, 17, 15, 17, 16, 19), aceptando la rampa no monótona, o (B) rediseñar los niveles 2-10 para una rampa monótona con rangos que propone level-pipeline-dev en el PR? | B | T2 | Cerrada por D-005: los pares en `run` (3, 6, 7, 8, 10, 10, 11, 13, 14, 16) entran en los rangos de 02 §13; no se rediseñan los niveles 2-10 |
+| P3 | Nivel 2: ¿sustituir la lección del vertido parcial por "una dosis por vertido" con el texto [P] "Cada vertido pasa una sola dosis: repite para mover las demás."? | Sí | T2, T5 | Cerrada: el nivel 2 vuelve a la lección del vertido parcial (02 §13); el texto «Cada vertido pasa una sola dosis…» no se usa |
+| P4 | Tras verter, ¿el origen se deselecciona (C4 actual, estilo *ball sort*) o sigue seleccionado si puede volver a verter al mismo destino (selección pegajosa, menos toques)? | Deseleccionar (C4 actual) | T3 (solo si cambia) | Cerrada: tras verter, el origen se deselecciona (C4 canónico) |
+| P5 | El dedo guía de los niveles 1-2 (02 §13) y Morpho (04 §2.3) muestran un destino: ¿se mantienen como ayudas explícitas compatibles con D-002? | Sí | T5 | Sigue abierta: depende de D-002, no de D-001 (Magic Sort no mostró mano guía en los niveles 387-389, ficha §2.10) |
+| P6 | ¿Una dosis por vertido es también la regla de 1.0? Si es así, antes de la Fase 1 hay que recalibrar en `Single`: las cifras [V-proto] de 03 (`par ≥ 2K`, bot ×40 y etiquetas, índice D), Marea "3 por nivel", `restart_confirm_min_pours`, `lluvia_k_pours` y `pirana_k_pours` | Sí, con una tarea de recalibración aparte | Fase 1 (no v0) | Cerrada: `run` es la regla de 1.0; sin recalibración |
+| P7 | En 1.0, ¿el pack declara el modo con el que se calculó el par (cambio de contrato: `af-level/2`, `pack_schema` 2)? | Sí | `schemas/` (no v0) | Reescrita: «Con `run` por defecto y `single` solo de pruebas, ¿el formato sigue sin declarar el modo (los packs se generan siempre en `run`) y se retira P7?». Recomendación: sí. No bloquea |
 
 ## 6. Riesgos
 
-| # | Riesgo | Mitigación |
-|---|---|---|
-| R-1 | Presupuesto del solver en `Single` con K de 8 a 14: entre ×1 y ×34 de estados expandidos en el tutorial (nivel 7: 19 → 641); Morpho debe quedar < 50 ms con 40.000 nodos | `H_single` (hasta ×2 menos en el tutorial); medir con `tools/solver-bench` (aún no existe; tarea de core-dev o level-pipeline-dev) antes de 1.0 |
-| R-2 | Mezclar modos: un pack con par `Single` jugado en `Run` (o al revés) da pares falsos en QA y en automatización | Modo en el informe y en `AF_STATE load`; el modo solo cambia al cargar un nivel; T6 retira las firmas sin modo |
-| R-3 | `main` en rojo entre T2 y T3 | Fusión en lote y EditMode tras las dos |
-| R-4 | Saltos visibles en la cola con toques rápidos (3 o más vertidos iguales) | Encadenado (A9) |
-| R-5 | Más rechazos y frustración sin resaltado, sobre todo con 6-7 cuias | Marea ilimitada hasta el 10; vigilar la tasa de `reject` por nivel en `AF_STATE` durante la prueba del dueño |
-| R-6 | Desviación del canon del género (research/01 §2): las cifras de investigación y de prototipo se midieron con rachas | P6; registrar la desviación en 02 y GDD.md |
+| # | Riesgo | Mitigación | Estado (2026-10-08) |
+|---|---|---|---|
+| R-1 | Presupuesto del solver en `Single` con K de 8 a 14: entre ×1 y ×34 de estados expandidos en el tutorial (nivel 7: 19 → 641); Morpho debe quedar < 50 ms con 40.000 nodos | `H_single` (hasta ×2 menos en el tutorial); medir con `tools/solver-bench` (aún no existe; tarea de core-dev o level-pipeline-dev) antes de 1.0 | Mitigado por D-005: en producción se juega en `run` |
+| R-2 | Mezclar modos: un pack con par `Single` jugado en `Run` (o al revés) da pares falsos en QA y en automatización | Modo en el informe y en `AF_STATE load`; el modo solo cambia al cargar un nivel; T6 retira las firmas sin modo | Sigue para los packs de pruebas generados en `single` |
+| R-3 | `main` en rojo entre T2 y T3 | Fusión en lote y EditMode tras las dos | — |
+| R-4 | Saltos visibles en la cola con toques rápidos (3 o más vertidos iguales) | Encadenado (A9) | Con D-006 aplica a todo vertido: 870 ms de la salida al reposo con 1 dosis. La cola de 2 vertidos por cuia (02 §3.2) lo cubre; el encadenado solo actúa en `single` |
+| R-5 | Más rechazos y frustración sin resaltado, sobre todo con 6-7 cuias | Marea ilimitada hasta el 10; vigilar la tasa de `reject` por nivel en `AF_STATE` durante la prueba del dueño | — |
+| R-6 | Desviación del canon del género (research/01 §2): las cifras de investigación y de prototipo se midieron con rachas | P6; registrar la desviación en 02 y GDD.md | Desaparece con D-005: `run` vuelve a ser el modo por defecto |
 
 ---
 
@@ -429,7 +433,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 4. **Tipografía:** Baloo 2 (ExtraBold y Bold) para títulos y Nunito (ExtraBold, Bold y Regular) para el texto. Las dos tienen licencia SIL OFL, el dueño las aprobó y ya están copiadas en `Assets/_Project/Art/Fonts/`. Nunito SemiBold (07 §7.1) se sustituye por Bold.
 5. **No cambian:**
    - D-001 y D-002: ningún brillo, partícula ni animación varía con la selección ni con la legalidad de un destino.
-   - La cuia-garrafa, su cavidad recta, las alturas iguales por dosis, las marcas y el menisco (07 §4).
+   - La cuia-garrafa, su cavidad recta, las alturas iguales por dosis, las marcas y el menisco (07 §4). *Las proporciones de la cavidad (0,80 del ancho; 4 de 5,6 u) y el menisco (elipse de 0,40 u): sustituidos por D-006 (2026-10-08); la silueta, la cavidad recta, las alturas iguales y las marcas siguen.*
    - La lista cerrada de trade dress prohibido de 07 §1.3: gatos, caldero, oro biselado, gemas, cintas rojas, calavera y silueta de frasco con labio.
    - Sin personas ni aldeas identificables (07 §8.1).
    - El Estuario como primer mundo con sus cinco tintes, y la paleta, los HEX y los patrones de 07 §3.
@@ -517,14 +521,14 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 
 **Decisión.**
 1. **Panel (C16): variante A, «azul petróleo de río»**, tal como la vio el dueño en el build: degradado `panel_alto` #234452 → `panel_bajo` #142C36 (L* 27 → 17) y `cavidad` #102228 (`Palette.PanelA` en `19177bd`). La tabla de la guía en `19177bd` (secciones 2 y 4.6) daba todavía #1E3A44 → #173540, anterior a la ronda 2 de la revisión visual; el build ya usaba los valores de arriba, que son los que vio el dueño. Se descarta la variante B «caoba lacada» (#44302C → #372521, cavidad #251A17), que solo existía para la comparación de F1: sale del código, de las capturas y de los prompts.
-2. **Vertido (C17): se mantienen los 38°** de 02 §4.1 y 07 §5.2, con una elevación de 0 a 1 u, de modo que el labio queda entre 0,6 y 1,6 u por encima del borde del destino (`BoardAnimator.MaxRaiseU`, revisión visual del 2026-10-07). Se acepta que, en tableros de dos filas, el origen tape la parte alta de la cuia vecina mientras vierte (≤ 400 ms). Se descartan los 75° fijos y la inclinación dinámica. Esta respuesta no cambia el código.
+2. **Vertido (C17): se mantienen los 38°** de 02 §4.1 y 07 §5.2, con una elevación de 0 a 1 u, de modo que el labio queda entre 0,6 y 1,6 u por encima del borde del destino (`BoardAnimator.MaxRaiseU`, revisión visual del 2026-10-07). Se acepta que, en tableros de dos filas, el origen tape la parte alta de la cuia vecina mientras vierte (≤ 400 ms). Se descartan los 75° fijos y la inclinación dinámica. Esta respuesta no cambia el código. *Sustituido por D-006 (2026-10-08): pose medida en Magic Sort y sin techo.*
 3. **Cuias más anchas (C18):** el tope del ancho de la cuia depende del número de cuias T del tablero (las que hay en pantalla, incluidas Cuia extra y Cuia de rescate; 02 R1):
    - tope(T) = 64 dp con T ≤ 3, 56 dp con T = 4-5 y 48 dp con T ≥ 6 (como hasta ahora);
    - ancho = clamp(0,70 × ranura, 28, tope(T)); alto según la proporción 1:3 (6 u); u = ancho / 2;
-   - a 360 dp, con ranura = (360 − 24) / cuias_por_fila: T = 3 → 64 × 192 dp, u = 32; T = 4 → 56 × 168 dp, u = 28; T = 5 → ranura de 67,2 dp y 0,70 × 67,2 ≈ 47 dp (el tope no actúa); T ≥ 6, sin cambios;
+   - a 360 dp, con ranura = (360 − 24) / cuias_por_fila: T = 3 → 64 × 192 dp, u = 32; T = 4 → 56 × 168 dp, u = 28; T = 5 → ranura de 67,2 dp y 0,70 × 67,2 ≈ 47 dp (el tope no actúa); T ≥ 6, sin cambios. *El alto: sustituido por D-006 (2026-10-08), que lo fija en 5,6 u (≈ 1:2,8; con T = 3, 64 × 179,2 dp). Los anchos y los topes siguen.*
    - el encaje vertical sigue mandando: si el bloque de filas no cabe, `BoardLayout.Compute` reduce el ancho (mínimo 28 dp);
    - tabletas: el tablero se centra con 480 dp de ancho como máximo y la cuia no supera tope(T);
-   - si T cambia a mitad de nivel (Cuia extra, Cuia de rescate), el layout se recalcula con el T nuevo (re-layout animado de 300 ms, 02 §4.1).
+   - si T cambia a mitad de nivel (Cuia extra, Cuia de rescate), el layout se recalcula con el T nuevo (re-layout animado de 300 ms, 02 §4.1). *Matizado por D-006 (2026-10-08): el número de filas se fija al cargar el nivel y no cambia; la cuia añadida va a la fila más corta y solo se recalcula el ancho.*
 
    Cambian 02 §5 y 07 §4.1 a la vez, como exige 07 §4.1.
 
@@ -544,14 +548,14 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
   - `ProceduralArt.MaxCuiaPixelsPerU` sube de 96 a 128 para las pantallas de 4 px/dp [P];
   - el aro y la tapa del sellado se generan para u = 32;
   - la fuente del artista a 4× del tamaño máximo pasa de 192 × 576 a 256 × 768 px por cuia de 4 (07 §4.1).
-- **Techo del vertido y margen superior en una fila [P].** Son dos propuestas derivadas de C18, no respuestas del dueño.
+- **Techo del vertido y margen superior en una fila [P].** Son dos propuestas derivadas de C18, no respuestas del dueño. *Sustituido por D-006 (2026-10-08): pose medida en Magic Sort y sin techo.*
   - Con u = 32, el canto alto del origen inclinado sube 0,94 u (30 dp) sobre el borde del destino sin elevación: el labio a 0,6 u más 0,34 u del borde de fibra (`CuiaGeometry.RimHalfWidthU` = 0,55 u, inclinado 38°). Con 1 u de elevación sube 1,94 u (62 dp). Con el margen de 22 dp, una elevación de más de 0,25 u lo sacaba del panel por arriba.
   - **Margen superior:** en los tableros de una fila, el panel deja 36 dp sobre el bloque (`BoardLayout.PanelMarginTopOneRow`, ≈ 22 + 13,5 del marco). Sobre las cuias en reposo quedan 52 dp hasta el borde exterior del panel y 38,5 hasta el canto interior del marco. En dos y tres filas se mantienen 22 dp (`BoardLayout.PanelMargin`): con 36, el río del nivel 7 bajaría de 34,5 a 20,5 dp.
   - **Techo** (`GameScreen.PourCeilingFor`): el origen inclinado se queda 4 dp por debajo del canto interior del marco (`GameScreen.PourCeilingAirDp`: con menos de 1 dp la cuerda del labio rozaba el bisel y la cuia parecía apoyarse en el marco) si entre ese canto y la fila 1 elevada quedan ≥ 22 dp de cavidad (`GameScreen.PourCavityDp`; tableros de una fila, con 22,5 dp). Si no, el techo es el borde exterior del panel (dos y tres filas, 38 dp sobre las cuias en reposo). Nunca sube más de 4 dp dentro de la fila del HUD.
   - En el nivel 1, el techo deja ≈ 4,5 dp (≈ 0,14 u) de elevación y el labio sigue ≥ 0,6 u sobre el borde del destino; la elevación que lo pasaría se recorta. Sin elevación siempre cabe.
 - **Tapado en tableros de una fila: aceptado.** En una fila, el vertido entre cuias no vecinas tapa la parte alta de la cuia del medio mientras vierte (captura `04b_pouring_l1`, nivel 1, cuia 0 → 2). Entra en la decisión 2: el dueño respondió «38° está bien» después de ver la captura del teléfono `v2-tel-rafaga-1` (nivel 1, vertido 0 → 2 con la cuia del medio tapada). Si al verlo con las cuias anchas prefiere otra cosa, se abre una decisión nueva.
 - C19 (familia parda ≤ 40 % [P]) se vuelve a medir con las cuias de D-004 (`02b_board_l1`, `02d_board_l2`) y con el muelle pintado (F6).
-- No cambian: las reglas, el solver, los pares, el formato de nivel, Remote Config (no hay clave nueva), D-001, D-002, D-003, las áreas táctiles (02 §3.3), el paso de fila ni el número de filas (02 §5).
+- No cambian: las reglas, el solver, los pares, el formato de nivel, Remote Config (no hay clave nueva), D-001, D-002, D-003, las áreas táctiles (02 §3.3), el paso de fila ni el número de filas (02 §5). *El número de filas: sustituido por D-006 (2026-10-08), que fija 2 o 3 filas desde 11 cuias.*
 
 **Alternativas descartadas.**
 - Panel «caoba lacada» (B): cálido, pero el tablero queda más «mueble» que «agua» (guía 4.6).
@@ -569,3 +573,125 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 - Código: `Assets/_Project/Scripts/UI/{BoardLayout.cs, GameScreen.cs, GameBootstrap.cs}` y `Assets/_Project/Scripts/Presentation/{Palette.cs, ProceduralArt.cs, ProceduralArt.Scene.cs, BoardAnimator.cs, CuiaGeometry.cs}`. Las propuestas [P] están en `BoardLayout.PanelMarginTopOneRow` (margen superior de 36 dp en una fila), `GameScreen.PourCeilingFor` y `GameScreen.PourCavityDp` (techo del vertido), y `CuiaGeometry.RimHalfWidthU` (canto alto del borde de fibra, que usa el techo en `BoardAnimator`).
 - Tests: `Assets/_Project/Tests/EditMode/{BoardLayoutTests.cs, VisualContrastTests.cs, LiquidVolumeTests.cs}` y `Assets/_Project/Tests/PlayMode/{PourPoseTests.cs, VisualGuardTests.cs, VisualSnapshotTests.cs}`.
 - Sin cambios: `Assets/_Project/Data/Levels/tutorial_v0.json`, `Packages/com.amazonfill.core/`, `tools/`, `schemas/` y 08 §9.
+
+---
+
+## D-005 · Vertido por tramo, como Magic Sort
+
+- **Fecha:** 2026-10-08.
+- **Estado:** decidida por el dueño tras analizar su propia sesión de 20 min de Magic Sort: «sí, hagámoslo» y «hagámoslo como Magic». Su método: «no vamos a inventar la rueda: copiamos lo que funciona y cómo se hace, con nuestra temática». Responde la pregunta 4.1 (10.2 #1) de `docs/research/magic-sort/propuesta-tintalu.md`. **Sustituye a D-001.** En implementación (ver la tabla de arriba).
+
+**Contexto.**
+- Magic Sort y Love Water vierten el tramo entero: 2 dosis en t = 250 y 430, y 3 dosis en t = 598, 600 y 838 (`docs/research/magic-sort/ficha-magic-sort.md` §2.5; Love Water, ficha §10).
+- Es la regla de todos los líderes del género (02, Desviaciones 3; research/01 §2 [V]).
+- El coste de `single` ya estaba medido en este registro: par del tutorial ×1,0-×1,7 (§2.1.4) y solver con ×1-×34 de estados expandidos (§2.1.3).
+
+**Decisión.**
+1. Un vertido mueve la **racha superior visible del mismo color que cabe en el destino**, con vertido parcial (02 §1.2 y R9; modo `run`).
+2. `rules_pour_mode` = `run` por defecto (08 §9) y `PourModes.Default = PourMode.Run` en `AF.Core`. `single` queda solo como opción de pruebas: por Remote Config y con el extra de desarrollo `af_rules_pour_mode`.
+3. El modo sigue fijo al cargar el nivel y no cambia a mitad (D-001, punto 3).
+4. El tutorial v0 se regenera en `run`. Pares: 3, 6, 7, 8, 10, 10, 11, 13, 14 y 16, dentro de los rangos [P] de 02 §13. La lección del nivel 2 vuelve a ser el vertido parcial.
+5. D-002 no cambia: Magic Sort tampoco resalta destinos (ficha §2.10).
+
+**Consecuencias.**
+- Preguntas de §5: P2, P3, P4 y P6 cerradas; P7 reescrita; P5 sigue abierta.
+- Las cifras [V-proto] de 03, medidas en `run`, vuelven a valer.
+- No hay que recalibrar Marea «3 por nivel», `restart_confirm_min_pours`, `lluvia_k_pours` ni `pirana_k_pours`.
+- R-1 (presupuesto del solver en `single`) deja de aplicar en producción.
+- El encadenado de 02 §3.2 solo actúa en `single`. En `run`, con las reglas de v0 (sin mecánicas ni ocultas), dos vertidos A→B seguidos nunca son legales: o el origen cambia de cima o el destino queda lleno.
+- La desviación 10 de GDD.md §8 y la desviación 3 de 02 quedan superadas.
+- T6 pierde urgencia, porque las firmas heredadas sin modo equivalen a `Run`, que ahora es el modo por defecto. Sigue pendiente.
+
+**Alternativas descartadas.**
+- Mantener D-001 (recomendación A de la pregunta 4.1 de la propuesta).
+- `single` por defecto y `run` en 1.0.
+- Verter la racha con un gesto aparte (ya descartado en D-001).
+
+**Cómo revertir.**
+- `PourModes.Default = PourMode.Single` (y el orden del enum), `GameConfig.RulesPourMode = "single"`, regenerar el pack con `--pour-mode single`, los tests de U1 y los textos de D2-D6.
+- Siempre con una decisión nueva que sustituya a D-005.
+
+**Archivos afectados.**
+- Núcleo (C1): `Packages/com.amazonfill.core/Runtime/AF.Core/Rules/{PourMode.cs, CuiaRules.cs, Pour.cs, PourRules.cs}`, `Runtime/AF.Core/Session/LevelSession.cs`, `Runtime/AF.Solver/Search/{AStarSolver.cs, SolverHeuristic.cs, SolverOptions.cs}`, sus tests (`PourModeTests`, `AStarSolverPourModeTests`, `PourModePropertyTests` y `HotLoopAllocationTests`), `README.md` y `CHANGELOG.md`.
+- Generador (L1): `tools/level-generator/{Program.cs, Handmade/HandmadeLevel.cs, Handmade/HandmadeReport.cs, Handmade/HandmadeRunner.cs, Handmade/StateGraph.cs}`, la especificación `tools/level-generator/specs/tutorial_v0.json` y, generados, `Assets/_Project/Data/Levels/tutorial_v0.json` y `tools/out/tutorial_v0_report.md`.
+- Unity (U1): `GameConfig.RulesPourMode`, los textos y comentarios de D-001 en `GameFlow/{LevelFlow.cs, TapController.cs}` y `UI/{LaunchOptions.cs, DevProbe.cs, GameBootstrap.cs}`, y los tests que fijaban `single` como modo por defecto (lista en D-001, «Cómo revertir»). `LaunchOptions.cs` y `GameBootstrap.cs` llevan además el gancho de tests `LaunchOptions.LevelPackJsonOverride`, que usan los tests de filas de D-006.
+- Documentación (D1-D6): este registro, `docs/GDD.md`, `docs/gdd/{00, 01, 02, 03, 04, 06, 07, 08, 09}`, `docs/art/direccion-visual-v2.md`, `docs/dev/prototipo-v0.md`, la nota de respuestas de `docs/research/magic-sort/propuesta-tintalu.md` y `CLAUDE.md`.
+
+---
+
+## D-006 · Tablero, cuia y vertido como Magic Sort
+
+- **Fecha:** 2026-10-08.
+- **Estado:** decidida por el dueño junto con D-005 («sí, hagámoslo» al paquete de tablero y vertido). Responde las preguntas 10.2 #3, #4, #5, #6 y #7 y la 4.3.5 de `docs/research/magic-sort/propuesta-tintalu.md` (secciones 3 y 4). **Sustituye** la decisión 2 y el techo del vertido [P] de D-004, su consecuencia «no cambia el número de filas» y el punto 5 de D-003 en lo que toca a la cavidad y el menisco. En implementación (ver la tabla de arriba).
+
+**Contexto.**
+- Medidas de la ficha de Magic Sort: §2.1 (rejilla y filas), §2.2 (botella), §2.4 (selección) y §2.6 (pose y tiempos del vertido).
+- Su traducción a nuestra escala en la propuesta, §3.1-§3.5.
+- Material: `Logs/device/magicsort/analisis/` (`observar.json`, `ficha_workflow_result.json`, `ms_pour_sheet.png` con el vertido cada 100 ms y los fotogramas de `det_ms/` a 1080 × 2340).
+
+**Decisión.**
+1. **Pose del vertido.**
+   - El centro de la boca del origen queda sobre el eje del destino (±0,1 u) y su punto más bajo, a 0,2-0,6 u del borde superior del destino. Con el centro de la boca a 0,85 u [P], el punto más bajo queda a 0,30-0,51 u entre 38° y 92°.
+   - El origen llega a 38° (ficha §2.6, 3.100 ms) y gira alrededor de la boca: al terminar cada dosis, la inclinación es 92° − 9° × dosis que quedan en el origen (65° con 3, frente a los ≈ 66° que midió Magic Sort; ≈ 92° con 0).
+   - El cuerpo queda del lado del que viene la botella (en la misma columna, hacia el centro del tablero). Si ese lado saliera del lienzo entre 38° y el ángulo final, al otro lado [P]. Vale para cualquier vertido, no solo en la misma columna.
+   - Escala 1,00.
+   - Mientras vierte, el origen se dibuja **delante de todo** (vecinas, marco del panel y HUD), como Magic Sort en t = 250. No hay techo.
+   - Se retiran `GameScreen.PourCeilingFor`, `PourCavityDp`, `PourCeilingAirDp`, `BoardAnimator.TopLimitY`, `MaxRaiseU`, `LipClearanceU` y `BoardLayout.PanelMarginTopOneRow`, que existía solo por el techo.
+2. **Tiempos** (08 §9).
+   - `anim_lift_ms` 100, `anim_travel_ms` 300, `anim_pour_dose_ms` 280 (rango 80-300; Magic Sort, ≈ 285 ms por dosis), `anim_pour_tail_ms` 80 y `anim_return_ms` 300.
+   - El chorro sigue arrancando al 70 % del viaje (02 §4.1). De la salida al reposo: 870 ms con 1 dosis (≈ 0,9 s), 1.150 ms con 2 y 1.430 ms con 3.
+   - La vuelta va directa a la ranura. El rebote de Magic Sort (≈ 50 px bajo el reposo, visto en un solo vertido) no se copia porque no está confirmado. Se mantiene el rebote de 0,03 u de 07 §5.2.
+3. **Cuia por dentro** (opción (a) de la propuesta, §3.4).
+   - 1 dosis = 1 u. Cavidad recta de 1,60 × 4,00 u: 0,80 del ancho exterior de 2,00 u.
+   - Alto exterior: 5,60 u. Las 4 dosis ocupan 0,714 del alto (≈ 1:2,8).
+   - Reparto [P]: pie 0,30, base 0,30, cavidad 4,00, hombro 0,40, cuello 0,35 y borde 0,25 u. El labio queda en 5,35 u.
+   - Cara superior del líquido en elipse de 0,40 u, más clara que el tinte (el mismo aclarado por tinte que el menisco actual).
+   - Se mantienen el hombro, el cuello corto, el pie, el borde de fibra y la lista de trade dress de 07 §1.3 (nada de labio de botella).
+   - Las demás capacidades miden 1,60 + cap u.
+4. **Tablero.**
+   - 1 fila con T ≤ 5 y 2 filas con T = 6-10, sin cambios.
+   - Con T = 11-14: 2 filas (hasta 7 por fila) o 3 filas (≤ 5 por fila; reparto de arriba abajo 4/4/3, 4/4/4, 5/4/4 y 5/5/4), la que dé la cuia más ancha. A igualdad, 2 filas [P].
+   - Con T = 15-16: 3 filas (5/5/5 y 6/5/5).
+   - El número de filas se fija al cargar el nivel con las T cuias generadas y **no cambia a mitad de nivel**. Cuia extra y Cuia de rescate van a la fila más corta (a igualdad, la de más abajo [P]) y solo se recalcula el ancho.
+   - Los topes de D-004 (64/56/48 dp) no cambian. El hueco entre filas sigue en 40 dp (repisa de D-003). No se reserva hueco para el vertido.
+   - Se mantiene ≥ 8 dp entre la fila 1 elevada y el canto interior del marco (guía visual v2, §3.2) [P].
+5. **Elevación al seleccionar:** 16 dp (Magic Sort sube ≈ 17 dp a nuestra escala).
+
+**Consecuencias.**
+- Tamaños de la cuia a 360 × 780 dp:
+
+  | Cuias (T) | Filas | Cuia (dp) |
+  |---|---|---|
+  | 3 | 1 | 64 × 179,2 (u = 32) |
+  | 5 | 1 | 47,04 × 131,7 |
+  | 6-8 | 2 | 48 × 134,4 |
+  | 11-15 | 3 | 46,9 × 131,3 (Magic Sort con 13-14 botellas: 45 × 138) |
+  | 16 | 3 | 39,2 × 109,8 |
+
+  - A 360 × 800 dp, con 3 filas: 48 dp con T = 11-12 y 47,04 dp con T = 13-15.
+  - A 360 × 640 dp (16:9) ganan las 2 filas con T = 11-14 (39,2 y 33,6 dp); con T = 15-16, las 3 filas bajan a 30,2 dp.
+  - Ancho de color con 13 cuias: 37,5 dp (hoy, 22,1).
+  - Fuente del artista a 4×: 256 × 717 px por cuia de 4.
+- Cambian 02 §3.2, §4, §4.1, §5 y §8; 07 §3 (regla 4), §4.1-§4.5, §5.2 y §7.4; 08 §5.2, §9 y §14.1; 00 §4; 01 §3.3; 03 (Dependencias, fila 07); 04 §2.2; 09 (Fase 0 de §2.3 y días 4-5 de §9); GDD.md §2 (decisiones 3 y 23); y la guía visual v2.
+
+**Alternativas descartadas.**
+- 38° fijos (D-004).
+- La inclinación dinámica de C17: 38° + 12° × (4 − dosis), con tope de 80°.
+- Reservar el hueco del vertido (≈ 43,6 dp con 11-15 cuias; propuesta §3.3).
+- La opción (b) de la propuesta §3.4 (redefinir u).
+- El hueco de 22 dp entre filas de Magic Sort.
+- La elevación proporcional de ≈ 17 dp (propuesta 4.3.5).
+
+**Cómo revertir.**
+- Revertir los commits de U2-U5 y los textos de D2-D6, y restaurar el techo de `b2d34de`.
+- Siempre con una decisión nueva que sustituya a D-006.
+
+**Archivos afectados.**
+- Código y tests: los de U2-U6, entre ellos los que retiran `GameScreen.PourCeilingFor`, `PourCavityDp`, `PourCeilingAirDp`, `BoardAnimator.TopLimitY`, `MaxRaiseU`, `LipClearanceU` y `BoardLayout.PanelMarginTopOneRow`.
+- Documentación (D2-D6): `docs/GDD.md`, `docs/gdd/{00, 01, 02, 03, 04, 07, 08, 09}`, `docs/art/direccion-visual-v2.md`, la nota de respuestas de la propuesta y `CLAUDE.md`.
+
+**Pregunta para el dueño (abierta).** Surgió en la revisión del código de D-006. El registro no elige por el dueño (CLAUDE.md, regla 10).
+
+| # | Pregunta | Opciones | Bloquea |
+|---|---|---|---|
+| P12 | En 16:9 (360 × 640 dp) ganan las 2 filas con 11-14 cuias generadas (02 §5). Como las filas no cambian a mitad de nivel (punto 4), con 13-14 cuias generadas la Cuia extra y la Cuia de rescate llevan la fila más corta a 8 cuias (14 + 1, 13 + 2 y 14 + 2): ranura de 42 dp y cuia de 29,4 dp, por debajo del mínimo táctil de 48 dp (02 §3.3; 07 §7.4). Antes de D-006, con 16 cuias se pasaba a 3 filas y la ranura medía 56 dp. ¿Qué se hace? | (a) Aceptar la ranura de 42 dp en ese caso y anotarlo como excepción en 02 §3.3, 02 §5 y 07 §7.4. (b) En 16:9, si la fila más corta ya tiene 7, abrir una 3.ª fila aunque no se fijara al cargar, como excepción al punto 4. (c) Decidir 3 filas al cargar cuando T + 2 pase de 14 | No bloquea v0 (el tutorial tiene T ≤ 7). Hay que responderla antes de los niveles con 13-14 cuias. Después, el caso entra en `BoardLayoutTests` |

@@ -8,9 +8,9 @@ using NUnit.Framework;
 namespace AF.Core.Tests
 {
     /// <summary>
-    /// Modo de vertido (decisión del dueño D-001, docs/dev/decisiones.md): en <see cref="PourMode.Single"/> cada vertido
-    /// mueve exactamente una dosis aunque haya racha; <see cref="PourMode.Run"/> conserva el comportamiento anterior
-    /// (02 R6, R9). Cubre la cantidad, la legalidad (que no cambia), los fútiles y el bloqueo con los ejemplos E1-E6 de
+    /// Modo de vertido (decisión del dueño D-005, docs/dev/decisiones.md, que sustituye a D-001): <see cref="PourMode.Run"/>,
+    /// el modo por defecto, mueve la racha visible que cabe, con vertido parcial (02 R6, R9); en <see cref="PourMode.Single"/>,
+    /// el modo de pruebas, cada vertido mueve exactamente una dosis aunque haya racha. Cubre la cantidad, la legalidad (que no cambia), los fútiles y el bloqueo con los ejemplos E1-E6 de
     /// decisiones.md §2.1.2, la partida y Marea. Los casos que valen en los dos modos están parametrizados: el caso
     /// <c>Run</c> reproduce lo que ya probaban PourRulesTests, FutileRulesTests y LevelSessionTests con las sobrecargas
     /// heredadas. Test compartido (NUnit 3.5, C# 9).
@@ -74,12 +74,13 @@ namespace AF.Core.Tests
         // ---------------------------------------------------------------- PourModes (rules_pour_mode)
 
         [Test]
-        public void D001_DefaultIsSingle_AndIsTheZeroValue()
+        public void D005_DefaultIsRun_AndIsTheZeroValue()
         {
-            Assert.That(PourModes.Default, Is.EqualTo(PourMode.Single));
-            Assert.That(default(PourMode), Is.EqualTo(PourMode.Single));
-            Assert.That((int)PourMode.Single, Is.EqualTo(0));
-            Assert.That((int)PourMode.Run, Is.EqualTo(1));
+            // D-005 (como Magic Sort): por defecto la racha que cabe; default(PourMode) es el modo por defecto.
+            Assert.That(PourModes.Default, Is.EqualTo(PourMode.Run));
+            Assert.That(default(PourMode), Is.EqualTo(PourMode.Run));
+            Assert.That((int)PourMode.Run, Is.EqualTo(0));
+            Assert.That((int)PourMode.Single, Is.EqualTo(1));
         }
 
         [TestCase("single", PourMode.Single)]
@@ -103,11 +104,12 @@ namespace AF.Core.Tests
         [TestCase("1")]
         public void TryParse_UnknownValue_ReturnsFalseAndTheDefault(string? key)
         {
-            // Comparación ordinal y exacta; el llamante (GameConfig) decide el aviso en el log y usa el default.
+            // Comparación ordinal y exacta; el llamante (GameConfig) decide el aviso en el log y usa el default (Run, D-005).
             bool ok = PourModes.TryParse(key, out PourMode mode);
 
             Assert.That(ok, Is.False);
             Assert.That(mode, Is.EqualTo(PourModes.Default));
+            Assert.That(mode, Is.EqualTo(PourMode.Run));
         }
 
         [Test]
@@ -126,13 +128,14 @@ namespace AF.Core.Tests
             Assert.That(() => { new LevelSession(state, true, undefined); }, Throws.TypeOf<ArgumentOutOfRangeException>());
         }
 
-        // ---------------------------------------------------------------- cantidad (R9, D-001)
+        // ---------------------------------------------------------------- cantidad (R9; D-005: Run por defecto, Single de pruebas)
 
         [TestCase(PourMode.Single, 1)]
         [TestCase(PourMode.Run, 3)]
         public void R9_RunOfThreeIntoEmpty(PourMode mode, int expected)
         {
-            // D-001: en Single sale una sola dosis aunque debajo haya dos más del mismo color; en Run, la racha entera.
+            // En Run (por defecto, D-005) sale la racha entera; en Single (pruebas), una sola dosis aunque debajo haya dos
+            // más del mismo color.
             BoardState state = Board(C(4, 2, 1, 1, 1), Cuia.Empty(4));
 
             BoardState next = PourRules.Apply(state, 0, 1, mode);
@@ -470,7 +473,8 @@ namespace AF.Core.Tests
         [Test]
         public void LevelSession_KeepsItsMode_LegacyConstructorIsRun()
         {
-            Assert.That(new LevelSession(TutorialLevel1(), true, PourModes.Default).PourMode, Is.EqualTo(PourMode.Single));
+            Assert.That(new LevelSession(TutorialLevel1(), true, PourModes.Default).PourMode, Is.EqualTo(PourMode.Run));
+            Assert.That(new LevelSession(TutorialLevel1(), true, PourMode.Single).PourMode, Is.EqualTo(PourMode.Single));
             Assert.That(new LevelSession(TutorialLevel1(), true, PourMode.Run).PourMode, Is.EqualTo(PourMode.Run));
             Assert.That(new LevelSession(TutorialLevel1(), true).PourMode, Is.EqualTo(PourMode.Run));
         }
@@ -531,7 +535,8 @@ namespace AF.Core.Tests
         [Test]
         public void I3_Single_UndoReturnsOneDosePerUse()
         {
-            // 04 §2.1 con D-001: tres vertidos iguales de una dosis se deshacen de uno en uno, al estado anterior exacto.
+            // 04 §2.1 en Single (modo de pruebas desde D-005): tres vertidos iguales de una dosis se deshacen de uno en uno,
+            // al estado anterior exacto.
             BoardState start = Board(C(4, 2, 1, 1, 1), Cuia.Empty(4), C(4, 2, 2, 2));
             var session = new LevelSession(start, true, PourMode.Single);
             var states = new BoardState[4];
@@ -585,7 +590,7 @@ namespace AF.Core.Tests
         public void R8_ReplayingTheHistoryWithTheSameMode_RebuildsCurrent(PourMode mode)
         {
             // 02 R8: el historial reconstruye el estado con el mismo modo. Rehacerlo con el otro modo da otro tablero: por
-            // eso el modo se fija al cargar el nivel (D-001, punto 3; riesgo R-2).
+            // eso el modo se fija al cargar el nivel (punto 3 de D-001, sustituida por D-005, que lo conserva; riesgo R-2).
             var session = new LevelSession(TutorialLevel1(), true, mode);
             session.TryPour(0, 2, out _);
             session.TryPour(1, 0, out _);

@@ -1,5 +1,6 @@
 // Espacio de estados alcanzable de un tablero pequeño (docs/dev/prototipo-v0.md b: BFS sobre PourRules, ≤ 8 cuias)
-// en un modo de vertido (D-001: Single mueve una dosis; Run, la racha que cabe; docs/dev/decisiones.md §2.1).
+// en un modo de vertido (D-005: Run, la racha que cabe, por defecto; Single mueve una dosis, solo pruebas;
+// docs/dev/decisiones.md).
 // Todas las reglas salen de AF.Core: vertidos legales (PourRules.CollectUsefulMoves con el kill-switch apagado da
 // todos los legales en orden (A, B) ascendente), vertidos útiles y fútiles, aplicación (PourRules.Apply con el modo),
 // victoria y Aguas estancadas (estas dos y legal/fútil no dependen del modo; lo que cambia es qué estados se alcanzan). Los estados se identifican por su forma canónica (03 §3: cuias ordenadas por Cuia.Packed con
@@ -60,7 +61,7 @@ internal sealed class StateGraph
     /// <summary>Tablero de partida (orden real de las cuias).</summary>
     public BoardState Start { get; }
 
-    /// <summary>Modo de vertido de todas las transiciones (D-001).</summary>
+    /// <summary>Modo de vertido de todas las transiciones (D-005: Run por defecto; Single, pruebas).</summary>
     public PourMode Mode { get; }
 
     /// <summary>Estados canónicos alcanzables desde el inicio.</summary>
@@ -194,8 +195,8 @@ internal sealed class StateGraph
 
     /// <summary>
     /// Toda solución óptima repite al menos <paramref name="times"/> veces un mismo vertido A→B (no necesariamente
-    /// seguidos). En <see cref="PourMode.Single"/> una racha de n dosis solo pasa de A a B con n vertidos A→B (D-001;
-    /// docs/dev/decisiones.md §2.1.5): si se cumple, quien juega con el par no puede evitar repetir el vertido.
+    /// seguidos). En <see cref="PourMode.Single"/> (solo pruebas desde D-005; era el modo de D-001) una racha de n dosis
+    /// solo pasa de A a B con n vertidos A→B: si se cumple, quien juega con el par no puede evitar repetir el vertido.
     /// False si el tablero no tiene solución.
     /// </summary>
     public bool EveryOptimalSolutionRepeatsAPour(int times)

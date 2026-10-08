@@ -331,6 +331,16 @@ namespace AF.Presentation
             return t < 0.5f ? 4f * t * t * t : 1f - (Mathf.Pow((-2f * t) + 2f, 3f) / 2f);
         }
 
+        /// <summary>
+        /// Sinusoidal de entrada y salida: arranque y llegada suaves con el tramo central casi constante (pico de velocidad
+        /// 1,57 veces la media; la cúbica llega a 3). Es la vuelta del vertido de Magic Sort (D-006; ficha §2.6).
+        /// </summary>
+        public static float InOutSine(float t)
+        {
+            t = Mathf.Clamp01(t);
+            return 0.5f * (1f - Mathf.Cos(Mathf.PI * t));
+        }
+
         /// <summary>Cúbica de salida.</summary>
         public static float OutCubic(float t)
         {

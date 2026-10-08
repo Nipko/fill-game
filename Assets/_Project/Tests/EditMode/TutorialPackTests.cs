@@ -11,10 +11,11 @@ namespace AF.Tests.EditMode
     /// <summary>
     /// Los niveles 1-10 del paquete se cargan en una sesión jugable, no empiezan resueltos ni en Aguas estancadas
     /// (02 R12, R13) y el solver del núcleo los resuelve con el par del paquete (03 §5). El paquete no declara el modo de
-    /// vertido: su par es el del modo por defecto, <see cref="PourModes.Default"/> (una dosis por vertido, decisión D-001;
-    /// <c>docs/dev/decisiones.md</c>). Además, lo que enseña cada fila de 02 §13 (y que comprueba
-    /// <c>level-generator --handmade</c> al emitir el paquete): debuts y pares de riesgo del glosario §9, "una dosis por
-    /// vertido" en el nivel 2 (y, en el modo run, su parcial 3 → 2), el color en 3 cuias del 5 y el vacío único del 6.
+    /// vertido: su par es el del modo por defecto, <see cref="PourModes.Default"/> = <see cref="PourMode.Run"/> (la racha
+    /// que cabe, decisión D-005, que sustituye a D-001; <c>docs/dev/decisiones.md</c>). Además, lo que enseña cada fila de
+    /// 02 §13 (y que comprueba <c>level-generator --handmade</c> al emitir el paquete): debuts y pares de riesgo del
+    /// glosario §9, el vertido parcial 3 → 2 del nivel 2 (y, en el modo single de pruebas, "una dosis por vertido"), el
+    /// color en 3 cuias del 5 y el vacío único del 6.
     /// </summary>
     public sealed class TutorialPackTests
     {
@@ -28,7 +29,7 @@ namespace AF.Tests.EditMode
         [Test]
         public void EveryLevel_StartsPlayable_AndSolverMatchesPar([Range(1, 10)] int level)
         {
-            // El par del paquete se calculó en el modo por defecto (D-001); en el otro modo no vale (riesgo R-2).
+            // El par del paquete se calculó en el modo por defecto (run, D-005); en el otro modo no vale (riesgo R-2).
             LevelDefinition def = TestPacks.Tutorial.Find(level)!;
             BoardState board = def.CreateBoard();
             var session = new LevelSession(board, true, PourModes.Default);
@@ -85,11 +86,11 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Level2_TeachesOneDosePerPour_TheOptimalSolutionRepeatsAPourThreeTimes()
+        public void Level2_InSingleMode_TheOptimalSolutionRepeatsAPourThreeTimes()
         {
-            // 02 §13, nivel 2, con una dosis por vertido (D-001; sustituye al vertido parcial, decisiones.md §2.1.5): una
-            // racha de 3 solo pasa de una cuia a otra con 3 vertidos A→B. level-generator comprueba en el grafo completo que
-            // toda solución óptima repite 3 veces un mismo vertido, así que la del solver también, elija el camino que elija.
+            // Modo de pruebas single (una dosis por vertido; D-005 lo deja solo para pruebas): una racha de 3 solo pasa de
+            // una cuia a otra con 3 vertidos A→B, así que la solución óptima del solver repite 3 veces un mismo vertido. El
+            // par del paquete es el de run (D-005): el de single es 9 (dato de tools/out/tutorial_v0_report.md, nivel 2).
             LevelDefinition def = TestPacks.Tutorial.Find(2)!;
             BoardState start = def.CreateBoard();
             int longestRun = 0;
@@ -101,7 +102,8 @@ namespace AF.Tests.EditMode
             Assert.That(longestRun, Is.EqualTo(3), "racha visible de 3 al empezar");
             SolveResult result = new AStarSolver().Solve(start, SolverOptions.ForPipeline(PourMode.Single));
             Assert.That(result.IsSolved, Is.True);
-            Assert.That(result.MoveCount, Is.EqualTo(def.Par));
+            Assert.That(result.MoveCount, Is.EqualTo(9), "par single del informe del generador");
+            Assert.That(result.MoveCount, Is.GreaterThan(def.Par), "single cuesta más vertidos que run");
             var uses = new int[start.Count * start.Count];
             int most = 0;
             for (int i = 0; i < result.MoveCount; i++)
@@ -117,16 +119,17 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Level2_InRunMode_OffersThePartialPourOfThreeOntoTwo()
+        public void Level2_TeachesThePartialPour_ThreeOntoTwo()
         {
-            // 02 §13, nivel 2, en el modo run (rules_pour_mode = "run"): vertido parcial de una racha de 3 sobre un hueco de
-            // 2, disponible al empezar o tras un primer vertido óptimo, sin perder la resolubilidad (R9: el resto queda en el
+            // 02 §13, nivel 2, en el modo por defecto run (D-005): vertido parcial de una racha de 3 sobre un hueco de 2,
+            // disponible al empezar o tras un primer vertido óptimo, sin perder la resolubilidad (R9: el resto queda en el
             // origen). Independiente del camino que elija el solver: se prueba S0 y cada estado que deja un primer vertido
-            // óptimo. El par del paquete es el de single, así que el de run se calcula aquí.
+            // óptimo. El par del paquete es el de run.
             LevelDefinition def = TestPacks.Tutorial.Find(2)!;
             BoardState start = def.CreateBoard();
             SolveResult full = new AStarSolver().Solve(start, SolverOptions.ForPipeline(PourMode.Run));
             Assert.That(full.IsSolved, Is.True);
+            Assert.That(full.MoveCount, Is.EqualTo(def.Par));
             bool found = OffersPartialThreeOntoTwo(start);
             for (int a = 0; a < start.Count && !found; a++)
             {

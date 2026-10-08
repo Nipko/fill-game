@@ -12,7 +12,7 @@ namespace AF.Solver.Search
     /// Ambas son admisibles y consistentes, así que A* con <c>w = 1</c> devuelve el par exacto.
     /// </summary>
     /// <remarks>
-    /// <para>Con <see cref="PourMode.Single"/> (D-001) <c>H</c> sigue siendo admisible y consistente (un vertido de una
+    /// <para>Con <see cref="PourMode.Single"/> (el modo de pruebas desde D-005) <c>H</c> sigue siendo admisible y consistente (un vertido de una
     /// dosis también elimina como mucho un corte y saca un color de como mucho una cuia), pero informa menos: una racha de 3
     /// cuesta 3 vertidos y <c>h1</c> la cuenta como 1. En ese modo se usa
     /// <c>H_single = max(h3, h2)</c> [P] (decisiones.md §2.1.3), con <c>h3 = Σ_cuias (dosis − racha del fondo)</c>:</para>

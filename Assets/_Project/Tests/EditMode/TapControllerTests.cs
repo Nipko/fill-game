@@ -7,7 +7,10 @@ using NUnit.Framework;
 
 namespace AF.Tests.EditMode
 {
-    /// <summary>Control tap-tap (GDD 02 §3.1, C1-C7) sobre el núcleo, en el modo de vertido por defecto (D-001).</summary>
+    /// <summary>
+    /// Control tap-tap (GDD 02 §3.1, C1-C7) sobre el núcleo, en el modo de vertido por defecto (Run, D-005); los tests con
+    /// modo explícito lo dicen en su nombre.
+    /// </summary>
     public sealed class TapControllerTests
     {
         private static LevelSession Level1()
@@ -64,8 +67,9 @@ namespace AF.Tests.EditMode
         [Test]
         public void C4_InSingleMode_ARunOfThree_MovesOneDosePerPour_AndTheOriginIsDeselectedEachTime()
         {
-            // D-001 (02 §1.2, R9 en single; C4): la cuia 2 del nivel 2 muestra una racha de 3 açaí y la 3 está vacía. Cada
-            // vertido 2→3 mueve una sola dosis y deja el origen sin seleccionar aunque le queden dosis del mismo color.
+            // Modo single de pruebas (02 §1.2, R9 en single; C4; D-005 lo deja solo para pruebas): la cuia 2 del nivel 2
+            // muestra una racha de 3 açaí y la 3 está vacía. Cada vertido 2→3 mueve una sola dosis y deja el origen sin
+            // seleccionar aunque le queden dosis del mismo color.
             var taps = new TapController(true);
             var session = new LevelSession(TestPacks.Tutorial.Find(2)!.CreateBoard(), true, PourMode.Single);
             Assert.That(session.Current[2].TopRunLength, Is.EqualTo(3));
@@ -86,7 +90,8 @@ namespace AF.Tests.EditMode
         [Test]
         public void C4_InRunMode_TheSameRunMovesInOnePour()
         {
-            // rules_pour_mode = "run" (08 §9): la racha visible que cabe, en un solo vertido (02 R9).
+            // rules_pour_mode = "run" (08 §9; el modo por defecto desde D-005): la racha visible que cabe, en un solo vertido
+            // (02 R9), y el origen queda sin seleccionar (C4).
             var taps = new TapController(true);
             var session = new LevelSession(TestPacks.Tutorial.Find(2)!.CreateBoard(), true, PourMode.Run);
             taps.OnCuiaTap(session, 2);

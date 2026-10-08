@@ -6,14 +6,16 @@ using AF.Core.Board;
 namespace AF.Core.Rules
 {
     /// <summary>
-    /// Vertido legal, cantidad según el modo de vertido (GDD 02 §1.2, R9-R11; D-001), vertidos fútiles y bloqueo
+    /// Vertido legal, cantidad según el modo de vertido (GDD 02 §1.2, R9-R11; D-005: <see cref="PourMode.Run"/> por
+    /// defecto, <see cref="PourMode.Single"/> para pruebas), vertidos fútiles y bloqueo
     /// (02 §1.4, R13-R16; 04 §5.1) del núcleo canónico, sobre un <see cref="BoardState"/>.
     /// </summary>
     /// <remarks>
     /// <para>Delega en <see cref="CuiaRules"/>, la única implementación de las reglas, que también usan el solver y el
     /// bot. Sin las ramas de mecánicas (<c>bloqueada_origen</c>, <c>bloqueada_destino</c>, Remolino, Barro, Hoja,
     /// Lluvia; GDD 02 §9), que se añadirán cuando se porten.</para>
-    /// <para>Modo de vertido (<see cref="PourMode"/>, D-001): solo lo reciben
+    /// <para>Modo de vertido (<see cref="PourMode"/>; D-005: <see cref="PourMode.Run"/> por defecto,
+    /// <see cref="PourMode.Single"/> solo para pruebas): solo lo reciben
     /// <see cref="Amount(BoardState, int, int, PourMode)"/>, <see cref="Apply(BoardState, int, int, PourMode)"/> y
     /// <see cref="CollectUsefulMoves(BoardState, bool, PourMode, Pour[])"/>. <see cref="IsLegal"/>,
     /// <see cref="IsFutile"/>, <see cref="HasUsefulMove"/> e <see cref="IsStuck"/> no dependen de la cantidad, así que
@@ -61,9 +63,9 @@ namespace AF.Core.Rules
         }
 
         /// <summary>
-        /// <c>cantidad(A, B)</c> en el modo <paramref name="mode"/>: 1 con <see cref="PourMode.Single"/> y
-        /// <c>min(racha visible de A, espacio de B)</c> con <see cref="PourMode.Run"/> (R6, R9; D-001); 0 si el
-        /// vertido no es legal (en los dos modos).
+        /// <c>cantidad(A, B)</c> en el modo <paramref name="mode"/>: <c>min(racha visible de A, espacio de B)</c> con
+        /// <see cref="PourMode.Run"/> (R6, R9; por defecto desde D-005) y 1 con <see cref="PourMode.Single"/> (pruebas); 0
+        /// si el vertido no es legal (en los dos modos).
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">Índice fuera del tablero o <paramref name="mode"/> no definido.</exception>
         public static int Amount(BoardState state, int source, int target, PourMode mode)
@@ -147,7 +149,8 @@ namespace AF.Core.Rules
         /// </summary>
         /// <param name="state">Tablero.</param>
         /// <param name="futileRuleEnabled">Valor de <c>futile_rule_enabled</c> (08 §9).</param>
-        /// <param name="mode">Modo de vertido (D-001; <c>rules_pour_mode</c>).</param>
+        /// <param name="mode">Modo de vertido (<c>rules_pour_mode</c>; D-005: <see cref="PourMode.Run"/> por defecto,
+        /// <see cref="PourMode.Single"/> para pruebas).</param>
         /// <param name="buffer">Destino; al menos <c>T·(T−1)</c> posiciones (basta con <see cref="MaxPours"/>).</param>
         public static int CollectUsefulMoves(BoardState state, bool futileRuleEnabled, PourMode mode, Pour[] buffer)
         {
@@ -214,7 +217,9 @@ namespace AF.Core.Rules
 
         /// <summary>
         /// <c>movimientos_utiles(S) ≠ ∅</c>: existe un vertido legal y no fútil (o solo legal, con el kill-switch
-        /// apagado). No depende del modo de vertido (D-001: ni <c>legal</c> ni <c>futil</c> dependen de la cantidad).
+        /// apagado). No depende del modo de vertido, ni en <see cref="PourMode.Run"/> (por defecto, D-005) ni en
+        /// <see cref="PourMode.Single"/> (pruebas): ni <c>legal</c> ni <c>futil</c> dependen de la cantidad (decisiones.md
+        /// §2.1.2).
         /// No asigna memoria.
         /// </summary>
         public static bool HasUsefulMove(BoardState state, bool futileRuleEnabled)
@@ -256,7 +261,8 @@ namespace AF.Core.Rules
         /// <summary>
         /// Aguas estancadas (R13): no es victoria y no queda ningún vertido útil. Se evalúa después de la
         /// victoria, como fija el orden de R10 (e, f); por R14 nunca es verdadero mientras exista un vertido útil.
-        /// Para un mismo estado vale igual en los dos modos de vertido (D-001); lo que cambia es qué estados se alcanzan.
+        /// Para un mismo estado vale igual en los dos modos de vertido (<see cref="PourMode.Run"/>, por defecto desde D-005,
+        /// y <see cref="PourMode.Single"/>, de pruebas; decisiones.md §2.1.2); lo que cambia es qué estados se alcanzan.
         /// </summary>
         public static bool IsStuck(BoardState state, bool futileRuleEnabled)
         {

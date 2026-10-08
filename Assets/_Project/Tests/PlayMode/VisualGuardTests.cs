@@ -219,7 +219,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Level1_CuiaArt_IsBakedForU32()
         {
-            // D-004 (C18): en el nivel 1, u = 32 dp. A 3 px/dp (SM-S938B, 1080 × 2340 px) el vidrio se hornea a 96 px/u
+            // D-004 (C18): en el nivel 1, u = 32 dp; la cuia mide 2 × 5,60 u (D-006). A 3 px/dp (SM-S938B, 1080 × 2340 px) el vidrio se hornea a 96 px/u
             // (guía 4.1: ceil(u_dp × escala)) y el aro del sellado (2,4 u ≈ 230 px) y la tapa (1,10 u ≈ 106 px) no se
             // amplían; a 4 px/dp el vidrio llega a 128 px/u (MaxCuiaPixelsPerU).
             GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
@@ -237,6 +237,7 @@ namespace AF.Tests.PlayMode
             Image? cap = FindImage(cuia.Root, "SealCap");
             Assert.That(glass != null && ring != null && cap != null, Is.True, "GlassBack, SealRing y SealCap");
             Assert.That(glass!.sprite.texture.width, Is.EqualTo(192), "vidrio a 96 px/u (2 u de ancho)");
+            Assert.That(glass.sprite.texture.height, Is.EqualTo(Mathf.RoundToInt(CuiaGeometry.HeightU(4) * 96f)), "vidrio de 5,60 u de alto (D-006): ≈ 538 px");
             Assert.That(ring!.sprite.texture.width, Is.GreaterThanOrEqualTo(231), "aro del sellado sin ampliar (2,4 u × 96)");
             Assert.That(cap!.sprite.texture.width, Is.GreaterThanOrEqualTo(106), "tapa sin ampliar (1,10 u × 96)");
 

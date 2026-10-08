@@ -1,7 +1,7 @@
 {
   "spec": "tutorial_v0",
   "subset_of": "af-level/1",
-  "description": "Niveles 1-10 del tutorial (02 §13), diseñados a mano (03 §4.4; docs/dev/prototipo-v0.md b). Cuias de abajo arriba con los IDs de tinte del glosario §9; [] = cuia vacía. Todas las cuias son estándar (cap 4) y cada tinte tiene 4 dosis (02 R1, R3). Lo verifica (con AF.Core y AF.Solver) y lo empaqueta dotnet run --project tools/level-generator -- --handmade tools/level-generator/specs/tutorial_v0.json --out Assets/_Project/Data/Levels --report tools/out/tutorial_v0_report.md; el pack sale en Assets/_Project/Data/Levels/tutorial_v0.json y el informe en tools/out/tutorial_v0_report.md. El par se calcula en el modo de vertido por defecto, single (una dosis por vertido; decisión del dueño D-001, docs/dev/decisiones.md), salvo --pour-mode run; el pack no declara el modo y asume el del cliente por defecto (el informe sí lo declara, con el par en run como referencia). Las notas describen el modo single y son para diseño: no pasan al pack.",
+  "description": "Niveles 1-10 del tutorial (02 §13), diseñados a mano (03 §4.4; docs/dev/prototipo-v0.md b). Cuias de abajo arriba con los IDs de tinte del glosario §9; [] = cuia vacía. Todas las cuias son estándar (cap 4) y cada tinte tiene 4 dosis (02 R1, R3). Lo verifica (con AF.Core y AF.Solver) y lo empaqueta dotnet run --project tools/level-generator -- --handmade tools/level-generator/specs/tutorial_v0.json --out Assets/_Project/Data/Levels --report tools/out/tutorial_v0_report.md; el pack sale en Assets/_Project/Data/Levels/tutorial_v0.json y el informe en tools/out/tutorial_v0_report.md. El par se calcula en el modo de vertido por defecto, run (la racha visible que cabe, con vertido parcial; decisión del dueño D-005, que sustituye a D-001, docs/dev/decisiones.md), salvo --pour-mode single (una dosis por vertido, solo pruebas); el pack no declara el modo y asume run, el del cliente por defecto (el informe sí lo declara, con el par en single como referencia). Las notas describen el modo run y son para diseño: no pasan al pack.",
   "pack_id": "tutorial_v0",
   "kind": "campaign",
   "world": 1,
@@ -29,7 +29,7 @@
         [],
         []
       ],
-      "note": "Lección «una dosis por vertido» (D-001; sustituye al vertido parcial, decisiones.md §2.1.5): la cuia 2 muestra una racha de 3 açaí que solo pasa a otra cuia de una en una. Toda solución óptima repite 3 veces un mismo vertido, y la del informe pasa las 3 açaí con 3 vertidos seguidos 2→4 sobre la açaí que la cuia 0 dejó en un vacío. El otro vacío queda en reserva. En el modo run el mismo tablero ofrecía el vertido parcial de una racha de 3 sobre un hueco de 2 (la lección anterior, que el generador sigue comprobando con --pour-mode run)."
+      "note": "Lección «vertido parcial» (02 §13; D-005): la cuia 2 muestra una racha de 3 açaí que no cabe entera en un hueco de 2; se vierte lo que cabe y el resto queda. En cuanto las dos aguajes de la cima de la cuia 0 van a un vacío, la cuia 0 deja un hueco de 2 sobre su açaí: 2→0 pasa 2 açaí y deja 1 en la cuia 2 (sigue resoluble, a 1 vertido del par). Dos vacíos: «reserva uno». En single (pruebas) la misma racha pasa dosis a dosis."
     },
     {
       "level": 3,
@@ -41,7 +41,7 @@
         [],
         []
       ],
-      "note": "Dos de los seis vertidos iniciales no acercan a la solución (cuatro en el modo run): da ocasión al tutorial de Marea."
+      "note": "Cuatro de los seis vertidos iniciales no acercan a la solución (dos en single): da ocasión al tutorial de Marea."
     },
     {
       "level": 4,
@@ -79,7 +79,7 @@
         ["guanabana", "aguaje", "acai", "tapereba"],
         []
       ],
-      "note": "Un solo vacío. Plan de 3 pasos: aguajes al vacío (dos vertidos, una dosis cada uno) y las dos guanábanas sobre la de la cuia 0. Llevar el taperebá suelto de la cuia 3 al vacío lleva en un vertido a Aguas estancadas."
+      "note": "Un solo vacío. Plan de 3 pasos: aguajes al vacío (un vertido de 2 dosis) y las dos guanábanas sobre la de la cuia 0. Llevar el taperebá suelto de la cuia 3 al vacío lleva en un vertido a Aguas estancadas."
     },
     {
       "level": 7,
