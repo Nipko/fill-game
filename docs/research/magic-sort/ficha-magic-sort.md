@@ -677,7 +677,7 @@ Ofrecidas y no cobradas: Magic Streak hitos 1 y 3 (30m), hito 15 (5h) y barra 0/
 - Las ∞ 15m del Daily Bonus se reclamaron con «Tap to Claim», **sin anuncio**: elección de chistera en t = 671,48 (clic), «Congratulations!» en t = 675,34 y nada entre medias (t = 672-676).
 - ∞ 15m también es premio del hito 2 de Broom Streak (t = 670); no se cobró.
 - El dueño lo confirmó el 2026-10-08: las ∞ 15m que vio son las de la chistera del Daily Bonus (minuto 11:10, t = 670-676), gratis.
-- **«No del todo»: las vidas ilimitadas no quitan los anuncios.** Con ∞ activo (∞ 44:55 desde t = 682, ∞ 36:11 en t = 1206) el jugador siguió viendo intersticiales: el de t = 906-936 llegó tras el 5.º bloqueo seguido del 389, con vidas ilimitadas en marcha. Las ∞ quitan el coste en vidas del fallo, no la publicidad.
+- **«No del todo»: las vidas ilimitadas no quitan los anuncios.** Con ∞ activo (∞ 44:55 desde t = 682, ∞ 36:11 en t = 1206) el jugador siguió viendo intersticiales: el de t = 906-936 llegó tras el 5.º bloqueo seguido del 389, con vidas ilimitadas en marcha. Las ∞ quitan el coste en vidas del fallo, no la publicidad. El dueño lo da por bueno (2026-10-08): son dos cosas distintas y en Tintalú se copia igual.
 - En esta grabación no aparece ningún caso de vidas ilimitadas que se paguen con un anuncio recompensado.
 
 ---
