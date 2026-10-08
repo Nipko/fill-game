@@ -7,10 +7,12 @@ namespace AF.Save
 {
     /// <summary>
     /// Perfil del jugador guardado en <c>profile.json</c> (GDD 08 §4.3, que extiende el inventario de 04 §10.1), con
-    /// <c>profile_schema</c> = <see cref="CurrentSchema"/>. Contiene el subconjunto que usa la pista B (D-008; tarea B1-1):
-    /// <c>created_at</c>, <c>economy_ts</c>, <c>wallet</c> (semillas y canoas), <c>stock</c>, <c>daily</c>,
-    /// <c>progress</c>, <c>level_state</c>, <c>entitlements.no_ads</c> y <c>stats</c>, con los nombres exactos del GDD.
-    /// El resto de 08 §4.3 (consentimiento, uid, calendario, álbum…) llega con su sistema.
+    /// <c>profile_schema</c> = <see cref="CurrentSchema"/>. Contiene el subconjunto que usa la pista B (D-008; tareas B1-1,
+    /// B1-3 y B1-4): <c>created_at</c>, <c>economy_ts</c>, <c>wallet</c> (semillas y canoas), <c>stock</c>, <c>daily</c>,
+    /// <c>progress</c>, <c>level_state</c>, <c>entitlements</c> (<c>no_ads</c>, <c>starter_bought</c> y <c>skins</c>),
+    /// <c>ads</c> y <c>stats</c>, con los nombres exactos del GDD. El bloque <c>ads</c> y
+    /// <c>daily.af_rescue_hidden_until</c> no están en 08 §4.3: los nombres salen del pseudocódigo de 05 §6.3 y de la regla
+    /// de 48 h de 05 §4.1 [P]. El resto de 08 §4.3 (consentimiento, uid, calendario, álbum…) llega con su sistema.
     /// <para>
     /// Es un contenedor de datos: las reglas (topes, precios, regeneración de canoas, reinicio diario) viven en
     /// <c>AF.Economy</c>, <c>AF.Ads</c> y <c>AF.Boosters</c>, que lo mutan y lo guardan con <see cref="IProfileStore"/>.
@@ -53,6 +55,9 @@ namespace AF.Save
 
         /// <summary><c>entitlements</c>: derechos comprados.</summary>
         public EntitlementsData Entitlements { get; } = new EntitlementsData();
+
+        /// <summary><c>ads</c>: estado de la cadencia de intersticiales que dura más que una sesión (05 §6.3) [P].</summary>
+        public AdsData Ads { get; } = new AdsData();
 
         /// <summary><c>stats</c>: contadores agregados (nunca por nivel: eso va a analítica, 08 §4.3).</summary>
         public StatsData Stats { get; } = new StatsData();
@@ -169,6 +174,13 @@ namespace AF.Save
         /// <summary><c>af_rescue_declined_days</c>: rechazos de la Balsa de rescate.</summary>
         public int AfRescueDeclinedDays { get; set; }
 
+        /// <summary>
+        /// <c>af_rescue_hidden_until</c> [P]: la Balsa de rescate está oculta hasta esta hora (UTC) tras
+        /// <c>af_rescue_hide_after_declines</c> rechazos (05 §4.1: «tras 2 rechazos → oculta 48 h»), o null. No es un
+        /// contador del día: el cambio de fecha no lo toca.
+        /// </summary>
+        public DateTime? AfRescueHiddenUntil { get; set; }
+
         /// <summary><c>shuffles_today</c>: Pororocas usadas hoy.</summary>
         public int ShufflesToday { get; set; }
 
@@ -235,11 +247,38 @@ namespace AF.Save
         public bool Stuck { get; set; }
     }
 
-    /// <summary><c>entitlements</c> (08 §4.3): por ahora solo Sin anuncios.</summary>
+    /// <summary><c>entitlements</c> (08 §4.3): Sin anuncios, Mochila de inicio y skins compradas.</summary>
     public sealed class EntitlementsData
     {
         /// <summary><c>no_ads</c>: Sin anuncios comprado (<c>af_noads</c>, 05 §4.1).</summary>
         public bool NoAds { get; set; }
+
+        /// <summary><c>starter_bought</c>: Mochila de inicio comprada (<c>af_starter</c>: 1 por cuenta, 05 §4.1).</summary>
+        public bool StarterBought { get; set; }
+
+        /// <summary>
+        /// <c>skins</c>: skins de cuia del jugador. Hoy solo las compradas, con el SKU del pack (<c>af_skin_m02</c> …
+        /// <c>af_skin_m04</c>, 05 §4.1), porque el GDD aún no fija los IDs de skin de los mundos 2-4 (08 §4.3 solo nombra
+        /// la base, <c>cuia_vidrio</c>, que es gratis).
+        /// </summary>
+        public List<string> Skins { get; } = new List<string>();
+    }
+
+    /// <summary>
+    /// <c>ads</c> [P]: lo que la cadencia de intersticiales recuerda entre sesiones (05 §6.3, <c>player.last_iap</c> y
+    /// <c>player.levels_since_interstitial</c>). Los contadores del día van en <c>daily</c> (04 §10.1) y lo propio de la
+    /// sesión, en memoria (<c>AF.Ads.AdSession</c>).
+    /// </summary>
+    public sealed class AdsData
+    {
+        /// <summary>
+        /// <c>last_iap</c>: última compra con dinero (UTC), o null. Corta los intersticiales
+        /// <c>ads_interstitial_suppress_after_iap_h</c> horas (24), también tras <c>af_infinite_canoes_1h</c> (D-008).
+        /// </summary>
+        public DateTime? LastIap { get; set; }
+
+        /// <summary><c>levels_since_interstitial</c>: niveles completados desde el último intersticial.</summary>
+        public int LevelsSinceInterstitial { get; set; }
     }
 
     /// <summary><c>stats</c> (08 §4.3).</summary>

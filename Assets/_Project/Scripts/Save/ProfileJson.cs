@@ -108,6 +108,7 @@ namespace AF.Save
             daily.Set("rescues_today", JsonNode.FromInt(d.RescuesToday));
             daily.Set("af_rescue_shown", JsonNode.FromInt(d.AfRescueShown));
             daily.Set("af_rescue_declined_days", JsonNode.FromInt(d.AfRescueDeclinedDays));
+            daily.Set("af_rescue_hidden_until", Timestamp(d.AfRescueHiddenUntil));
             daily.Set("shuffles_today", JsonNode.FromInt(d.ShufflesToday));
             daily.Set("shield_available", JsonNode.FromBool(d.ShieldAvailable));
             root.Set("daily", daily);
@@ -124,7 +125,14 @@ namespace AF.Save
 
             JsonNode entitlements = JsonNode.NewObject();
             entitlements.Set("no_ads", JsonNode.FromBool(p.Entitlements.NoAds));
+            entitlements.Set("starter_bought", JsonNode.FromBool(p.Entitlements.StarterBought));
+            entitlements.Set("skins", StringList(p.Entitlements.Skins));
             root.Set("entitlements", entitlements);
+
+            JsonNode ads = JsonNode.NewObject();
+            ads.Set("last_iap", Timestamp(p.Ads.LastIap));
+            ads.Set("levels_since_interstitial", JsonNode.FromInt(p.Ads.LevelsSinceInterstitial));
+            root.Set("ads", ads);
 
             JsonNode stats = JsonNode.NewObject();
             stats.Set("levels_won", JsonNode.FromInt(p.Stats.LevelsWon));
@@ -183,6 +191,7 @@ namespace AF.Save
                 d.RescuesToday = ReadInt(daily, "rescues_today", d.RescuesToday);
                 d.AfRescueShown = ReadInt(daily, "af_rescue_shown", d.AfRescueShown);
                 d.AfRescueDeclinedDays = ReadInt(daily, "af_rescue_declined_days", d.AfRescueDeclinedDays);
+                d.AfRescueHiddenUntil = ReadTimestamp(daily, "af_rescue_hidden_until");
                 d.ShufflesToday = ReadInt(daily, "shuffles_today", d.ShufflesToday);
                 d.ShieldAvailable = ReadBool(daily, "shield_available", d.ShieldAvailable);
             }
@@ -205,6 +214,15 @@ namespace AF.Save
             if (entitlements != null)
             {
                 p.Entitlements.NoAds = ReadBool(entitlements, "no_ads", p.Entitlements.NoAds);
+                p.Entitlements.StarterBought = ReadBool(entitlements, "starter_bought", p.Entitlements.StarterBought);
+                ReadStringList(entitlements, "skins", p.Entitlements.Skins);
+            }
+
+            JsonNode? ads = Section(root, "ads");
+            if (ads != null)
+            {
+                p.Ads.LastIap = ReadTimestamp(ads, "last_iap");
+                p.Ads.LevelsSinceInterstitial = ReadInt(ads, "levels_since_interstitial", p.Ads.LevelsSinceInterstitial);
             }
 
             JsonNode? stats = Section(root, "stats");
@@ -419,6 +437,38 @@ namespace AF.Save
             {
                 target.Add(Wrap(key, items[i].AsInt));
             }
+        }
+
+        private static void ReadStringList(JsonNode parent, string key, List<string> target)
+        {
+            target.Clear();
+            JsonNode? node = parent.Get(key);
+            if (node == null || node.IsNull)
+            {
+                return;
+            }
+
+            if (node.Kind != JsonKind.Array)
+            {
+                throw new FormatException("'" + key + "' debe ser una lista JSON.");
+            }
+
+            IReadOnlyList<JsonNode> items = node.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                target.Add(Wrap(key, items[i].AsString));
+            }
+        }
+
+        private static JsonNode StringList(List<string> values)
+        {
+            JsonNode array = JsonNode.NewArray();
+            for (int i = 0; i < values.Count; i++)
+            {
+                array.Add(JsonNode.FromString(values[i] ?? throw new InvalidOperationException("Una lista de textos del perfil no admite null.")));
+            }
+
+            return array;
         }
 
         private static JsonNode IntList(List<int> values)

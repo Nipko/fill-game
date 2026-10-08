@@ -1,0 +1,27 @@
+{
+  "name": "AF.Ads.Tests",
+  "rootNamespace": "AF.Ads.Tests",
+  "references": [
+    "AF.Platform",
+    "AF.Save",
+    "AF.Economy",
+    "AF.Ads",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

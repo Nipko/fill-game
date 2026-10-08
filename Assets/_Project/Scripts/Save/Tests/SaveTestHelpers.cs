@@ -121,6 +121,7 @@ namespace AF.Save.Tests
             p.Daily.RescuesToday = 1;
             p.Daily.AfRescueShown = 1;
             p.Daily.AfRescueDeclinedDays = 2;
+            p.Daily.AfRescueHiddenUntil = new DateTime(2026, 10, 7, 9, 30, 0, DateTimeKind.Utc);
             p.Daily.ShufflesToday = 1;
             p.Daily.ShieldAvailable = true;
             p.Progress.MaxLevel = 87;
@@ -145,6 +146,11 @@ namespace AF.Save.Tests
             p.LevelState.RevealedCuias.Add(5);
             p.LevelState.RevealedCuias.Add(0);
             p.Entitlements.NoAds = true;
+            p.Entitlements.StarterBought = true;
+            p.Entitlements.Skins.Add("af_skin_m02");
+            p.Entitlements.Skins.Add("af_skin_m04");
+            p.Ads.LastIap = new DateTime(2026, 10, 5, 13, 40, 0, DateTimeKind.Utc);
+            p.Ads.LevelsSinceInterstitial = 2;
             p.Stats.LevelsWon = 86;
             p.Stats.FailsHard = 9;
             p.Stats.Rescues = 2;
@@ -163,6 +169,7 @@ namespace AF.Save.Tests
             p.Wallet.Seeds = int.MaxValue;
             p.Stats.LevelsWon = int.MaxValue;
             p.Stats.Sessions = int.MaxValue;
+            p.Entitlements.Skins.Insert(1, "af_skin_m03");
             p.Progress.MaxLevel = 3000;
             p.Progress.SkippedLevels.Clear();
             for (int level = 10; level <= 3000; level += 10)
@@ -199,11 +206,12 @@ namespace AF.Save.Tests
                 "stock=" + p.Stock.Undo + "," + p.Stock.Hint + "," + p.Stock.Reveal + "," + p.Stock.ExtraCuia + "," + p.Stock.Shuffle,
                 "daily=" + p.Daily.DateLocal + "," + p.Daily.RvUndoRefill + "," + p.Daily.RvHint + "," + p.Daily.RvReveal + ","
                     + p.Daily.RvExtraCanoe + "," + p.Daily.RvDoubleHarvest + "," + p.Daily.RvTotal + "," + p.Daily.InterstitialsToday + ","
-                    + p.Daily.RescuesToday + "," + p.Daily.AfRescueShown + "," + p.Daily.AfRescueDeclinedDays + "," + p.Daily.ShufflesToday + ","
-                    + p.Daily.ShieldAvailable,
+                    + p.Daily.RescuesToday + "," + p.Daily.AfRescueShown + "," + p.Daily.AfRescueDeclinedDays + ","
+                    + p.Daily.AfRescueHiddenUntil?.Ticks + "," + p.Daily.ShufflesToday + "," + p.Daily.ShieldAvailable,
                 "progress=" + p.Progress.MaxLevel + "," + p.Progress.NextLevel + "," + p.Progress.SinceLastSkip + ",["
                     + string.Join(",", p.Progress.SkippedLevels) + "]," + p.Progress.ContentVersion,
-                "no_ads=" + p.Entitlements.NoAds,
+                "entitlements=" + p.Entitlements.NoAds + "," + p.Entitlements.StarterBought + ",[" + string.Join(",", p.Entitlements.Skins) + "]",
+                "ads=" + p.Ads.LastIap?.Ticks + "/" + p.Ads.LastIap?.Kind + "," + p.Ads.LevelsSinceInterstitial,
                 "stats=" + p.Stats.LevelsWon + "," + p.Stats.FailsHard + "," + p.Stats.Rescues + "," + p.Stats.RvWatched + "," + p.Stats.Sessions,
             };
 

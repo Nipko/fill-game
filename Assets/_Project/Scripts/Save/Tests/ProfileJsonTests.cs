@@ -45,6 +45,7 @@ namespace AF.Save.Tests
             "    \"rescues_today\": 0,",
             "    \"af_rescue_shown\": 0,",
             "    \"af_rescue_declined_days\": 0,",
+            "    \"af_rescue_hidden_until\": null,",
             "    \"shuffles_today\": 0,",
             "    \"shield_available\": false",
             "  },",
@@ -57,7 +58,13 @@ namespace AF.Save.Tests
             "  },",
             "  \"level_state\": null,",
             "  \"entitlements\": {",
-            "    \"no_ads\": false",
+            "    \"no_ads\": false,",
+            "    \"starter_bought\": false,",
+            "    \"skins\": []",
+            "  },",
+            "  \"ads\": {",
+            "    \"last_iap\": null,",
+            "    \"levels_since_interstitial\": 0",
             "  },",
             "  \"stats\": {",
             "    \"levels_won\": 0,",
@@ -106,6 +113,8 @@ namespace AF.Save.Tests
             StringAssert.Contains("\"economy_ts\": \"2026-10-05T14:03:11.1234567Z\"", json);
             StringAssert.Contains("\"infinite_until\": \"2026-10-05T15:00:00.5Z\"", json);
             StringAssert.Contains("\"skipped_levels\": [63, 71]", json);
+            StringAssert.Contains("\"skins\": [\"af_skin_m02\", \"af_skin_m04\"]", json);
+            StringAssert.Contains("\"last_iap\": \"2026-10-05T13:40:00Z\"", json);
         }
 
         [Test]
@@ -186,6 +195,11 @@ namespace AF.Save.Tests
         [TestCase("{\"profile_schema\": 1, \"progress\": {\"skipped_levels\": [1, \"2\"]}}")]
         [TestCase("{\"profile_schema\": 1, \"level_state\": {\"seed\": null}}")]
         [TestCase("{\"profile_schema\": 1, \"entitlements\": {\"no_ads\": 1}}")]
+        [TestCase("{\"profile_schema\": 1, \"entitlements\": {\"skins\": [\"af_skin_m02\", 3]}}")]
+        [TestCase("{\"profile_schema\": 1, \"entitlements\": {\"skins\": \"af_skin_m02\"}}")]
+        [TestCase("{\"profile_schema\": 1, \"ads\": {\"last_iap\": 5}}")]
+        [TestCase("{\"profile_schema\": 1, \"ads\": []}")]
+        [TestCase("{\"profile_schema\": 1, \"daily\": {\"af_rescue_hidden_until\": \"ayer\"}}")]
         [TestCase("{\"profile_schema\": 1} x")]
         [TestCase("{\"profile_schema\": 1, \"profile_schema\": 1}")]
         [TestCase("{\"profile_schema\": 1, \"wallet\": {\"seeds\": 1}")]

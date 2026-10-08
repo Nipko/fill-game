@@ -32,6 +32,47 @@ namespace AF.Save
         void Delete();
     }
 
+    /// <summary>Operaciones comunes sobre un <see cref="IProfileStore"/>.</summary>
+    public static class ProfileStoreExtensions
+    {
+        /// <summary>
+        /// Guarda <paramref name="profile"/> y devuelve si quedó guardado. Si la escritura falla (<see cref="System.IO.IOException"/>,
+        /// <see cref="UnauthorizedAccessException"/>) o el almacén protege un perfil más nuevo o una migración fallida
+        /// (<see cref="InvalidOperationException"/>), devuelve false y el cambio sigue en memoria para reintentarlo, como hace
+        /// <c>AF.Economy.Wallet</c>.
+        /// </summary>
+        public static bool TrySave(this IProfileStore store, Profile profile)
+        {
+            if (store == null)
+            {
+                throw new ArgumentNullException(nameof(store));
+            }
+
+            if (profile == null)
+            {
+                throw new ArgumentNullException(nameof(profile));
+            }
+
+            try
+            {
+                store.Save(profile);
+                return true;
+            }
+            catch (System.IO.IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+            catch (InvalidOperationException)
+            {
+                return false;
+            }
+        }
+    }
+
     /// <summary>Resultado de <see cref="IProfileStore.Load"/>.</summary>
     public enum ProfileLoadStatus
     {
