@@ -6,7 +6,8 @@
     "AF.Levels",
     "AF.Platform",
     "AF.Save",
-    "AF.Economy"
+    "AF.Economy",
+    "AF.Boosters"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

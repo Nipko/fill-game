@@ -353,14 +353,31 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Packs_WithLevelsAfterUnlimitedMarea_AreRejected()
+        public void From11_MareaHasThreeFreeUsesPerLevel_RestoredOnRestart()
         {
-            // 04 §2.1: Marea ilimitada hasta undo_unlimited_until_level (10); desde el 11, 3 por nivel con contador, que v0
-            // no implementa. El flujo rechaza el paquete en lugar de dar Marea ilimitada en el 11.
-            string level11 = TestPacks.MinimalLevel().Replace("\"id\": \"m01_v1_n0001\", \"level\": 1", "\"id\": \"m01_v1_n0011\", \"level\": 11");
-            LevelPack pack = LevelPackReader.Read(TestPacks.MinimalPack(level11, "\"pack_schema\": 1"));
-            Assert.That(pack.First.Level, Is.EqualTo(11));
-            Assert.That(() => { new LevelFlow(pack, new MemoryProgressStore(), new RecordingListener()); }, Throws.TypeOf<System.NotSupportedException>());
+            // 04 §2.1 y 08 §9: ilimitada hasta undo_unlimited_until_level (10); desde el 11, undo_free_per_level (3) por nivel,
+            // restaurados al reiniciar. Sin cartera no hay stock: con el cupo agotado, Marea no deshace.
+            var flow = new LevelFlow(LevelCatalog.Create(new[] { TestPacks.Tutorial }, 10), new MemoryProgressStore(), new RecordingListener());
+            flow.Load(11);
+            flow.TapAnywhere();
+            Assert.That(flow.UndoStatus.Unlimited, Is.False);
+            Assert.That(flow.UndoStatus.FreeLeft, Is.EqualTo(3));
+            for (int i = 0; i < 4; i++)
+            {
+                flow.TapCuia(0);
+                flow.TapCuia(2);
+                bool undone = flow.Undo();
+                Assert.That(undone, Is.EqualTo(i < 3), "Marea " + (i + 1));
+                if (!undone)
+                {
+                    break;
+                }
+            }
+
+            Assert.That(flow.UndoStatus.FreeLeft, Is.EqualTo(0));
+            Assert.That(flow.UndoStatus.HasQuota, Is.False);
+            Assert.That(flow.Restart(), Is.True);
+            Assert.That(flow.UndoStatus.FreeLeft, Is.EqualTo(3), "04 §2.7: Volver a la orilla restaura los 3 Marea gratis");
         }
 
         [Test]

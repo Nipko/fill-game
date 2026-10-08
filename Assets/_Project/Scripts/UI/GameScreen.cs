@@ -1,7 +1,11 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
+using AF.Ads;
+using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Rules;
+using AF.Economy;
 using AF.GameFlow;
 using AF.Presentation;
 using TMPro;
@@ -13,11 +17,13 @@ namespace AF.UI
     /// <summary>
     /// Pantalla de nivel construida por código sobre un Canvas de 360 dp de ancho de referencia (GDD 02 §5; 07 §7.4) con
     /// la dirección visual v2 «Selva brillante premium» (D-003; docs/art/direccion-visual-v2.md): panorama del Estuario,
-    /// muelle y follaje; panel azul petróleo con marco tallado y una repisa por fila; HUD con insignia y Reiniciar en las
-    /// posiciones de 07 §7.4; bandeja con Deshacer · Marea; modal Aguas estancadas (02 §7; 07 §7.5) y victoria con
-    /// cinta-hoja y estallido (02 §6), con Siguiente y el secundario «Inicio» [P] (06 §4.7; D-008 punto 3). Escucha a
-    /// <see cref="LevelFlow"/> y hace que la vista persiga al modelo (02 §3.2). Se oculta mientras se ve la pantalla de
-    /// inicio (<see cref="SetVisible"/>).
+    /// muelle y follaje; panel azul petróleo con marco tallado y una repisa por fila; HUD con pausa, insignia y Reiniciar en
+    /// las posiciones de 02 §5 y 07 §7.4; bandeja de comodines (<see cref="BoosterTray"/>: Marea y Cuia extra, B2-1); el
+    /// embudo de bloqueo de D-008 (B2-2 y B2-3): Aguas estancadas (<see cref="StuckModal"/>), ¿Seguro?, Nivel fallido y Sin
+    /// canoas, con los saldos arriba; pausa con «Volver a la orilla» y «Salir» y sus confirmaciones; el cartel «El río
+    /// bajó»; y la victoria con cinta-hoja y estallido (02 §6), con Siguiente y el secundario «Inicio» [P] (06 §4.7; D-008
+    /// punto 3). Escucha a <see cref="LevelFlow"/> y hace que la vista persiga al modelo (02 §3.2). Se oculta mientras se
+    /// ve la pantalla de inicio (<see cref="SetVisible"/>).
     /// </summary>
     /// <remarks>
     /// Capas de atrás adelante (guía 3.4): panorama, ambiente lejano, muelle, follaje, velo de escena; captura de fondo;
@@ -46,8 +52,14 @@ namespace AF.UI
         private const float PanelSlideMs = 250f;
         private const float OverlayFadeMs = 200f;
 
-        /// <summary>Panel Aguas estancadas (guía 5.3): 328 × 232 en v0 (07 §7.5 fija 300 contando el rescate, desde el 31).</summary>
-        private const float StuckPanelDp = 232f;
+        /// <summary>Relayout animado al añadir una cuia (02 §4.1: «600 ms + 300 ms re-layout»).</summary>
+        private const float RelayoutMs = 300f;
+
+        /// <summary>Entrada de la cuia que trae Capi (02 §4.1: 600 ms).</summary>
+        private const float AddedCuiaMs = 600f;
+
+        /// <summary>Duración del aviso de Capi y de «¡Una cuia más!» [P].</summary>
+        private const float ToastMs = 2600f;
 
         /// <summary>
         /// Panel de victoria (guía 5.3, ajustado al contenido en la revisión visual del 2026-10-07): 30 dp de cinta dentro +
@@ -103,13 +115,7 @@ namespace AF.UI
 
         private readonly ProceduralArt _art;
         private readonly DevProbe _probe;
-        private readonly Action<int> _onCuia;
-        private readonly Action _onBackground;
-        private readonly Action _onAnywhere;
-        private readonly Action _onUndo;
-        private readonly Action _onRestart;
-        private readonly Action _onNext;
-        private readonly Action _onHome;
+        private readonly IGameActions _actions;
 
         private readonly Canvas _canvas;
         private readonly CanvasScaler _scaler;
@@ -146,8 +152,7 @@ namespace AF.UI
         private readonly TextMeshProUGUI _levelText;
         private readonly ReliefParts _restart;
         private readonly Image _restartPill;
-        private readonly Image _tray;
-        private readonly ReliefParts _undo;
+        private readonly BoosterTray _tray;
         private readonly RectTransform _ambientNearParent;
         private readonly AmbientLayer _ambient;
         private readonly RectTransform _pourFront;
@@ -157,11 +162,19 @@ namespace AF.UI
 
         private readonly RectTransform _stuckOverlay;
         private readonly Image _stuckDim;
-        private readonly RectTransform _stuckPanel;
-        private readonly Image _stuckSurface;
-        private readonly ReliefParts _stuckUndo;
-        private readonly Button _stuckRestart;
-        private readonly TextMeshProUGUI _stuckRestartLabel;
+        private readonly StuckModal _stuck;
+        private readonly GiveUpConfirm _giveUp;
+        private readonly LevelFailedScreen _failed;
+        private readonly NoCanoesPanel _noCanoes;
+        private readonly RectTransform _topLayer;
+        private readonly ReliefParts _pauseButton;
+        private readonly WalletBar _walletBar;
+        private readonly PauseMenu _pause;
+        private readonly QuitConfirm _confirm;
+        private readonly Toast _banner;
+        private readonly Toast _toast;
+        private readonly List<string> _layoutIds = new List<string>(12);
+        private readonly List<RectTransform> _layoutRects = new List<RectTransform>(12);
 
         private readonly RectTransform _victoryOverlay;
         private readonly Image _victoryDim;
@@ -181,6 +194,7 @@ namespace AF.UI
         private readonly Action<int, bool> _cuiaUp;
 
         private LevelFlow? _flow;
+        private GameServices? _services;
         private int _pressPreview = -1;
         private CuiaView[] _views = Array.Empty<CuiaView>();
         private int _generatedCount;
@@ -204,37 +218,30 @@ namespace AF.UI
         private float _boardShiftAnim = -1f;
         private float _confettiDelay = -1f;
         private bool _restartProbePending;
-        private bool _undoEnabledShown = true;
         private float _capiTime;
-        private float _trayWidth = 96f;
         private float _horizonY = 118f;
         private PourTimings _timings;
+        private int _stuckSeedsShown = -1;
+        private int _stuckUndoShown = -1;
+        private bool _stuckBalsaOk;
+        private bool _stuckBalsaRecorded;
+        private FlowPhase _chromePhase = FlowPhase.Loading;
+        private float _introDelayMs = -1f;
+        private int _introPendingMs;
+        private float _relayoutMs = -1f;
+        private Vector2[] _relayoutFrom = Array.Empty<Vector2>();
+        private float[] _relayoutFromWidth = Array.Empty<float>();
+        private int _addedView = -1;
 
         /// <summary>
         /// Construye la pantalla bajo <paramref name="host"/>. Las acciones son los puntos de entrada del input
         /// (los mismos que usan los tests PlayMode).
         /// </summary>
-        public GameScreen(
-            Transform host,
-            ProceduralArt art,
-            DevProbe probe,
-            Action<int> onCuia,
-            Action onBackground,
-            Action onAnywhere,
-            Action onUndo,
-            Action onRestart,
-            Action onNext,
-            Action onHome)
+        public GameScreen(Transform host, ProceduralArt art, DevProbe probe, IGameActions actions)
         {
             _art = art;
             _probe = probe;
-            _onCuia = onCuia;
-            _onBackground = onBackground;
-            _onAnywhere = onAnywhere;
-            _onUndo = onUndo;
-            _onRestart = onRestart;
-            _onNext = onNext;
-            _onHome = onHome;
+            _actions = actions ?? throw new ArgumentNullException(nameof(actions));
             _cuiaDown = OnCuiaDown;
             _cuiaUp = OnCuiaUp;
 
@@ -300,7 +307,7 @@ namespace AF.UI
 
             // C7 (02 §3.1): el toque en el fondo deselecciona al soltar, como el resto de decisiones.
             RectTransform bgCatcher = HitLayer("BackgroundCatcher", _root);
-            bgCatcher.gameObject.AddComponent<PointerTapRelay>().Bind(() => _onBackground());
+            bgCatcher.gameObject.AddComponent<PointerTapRelay>().Bind(() => _actions.TapBackground());
 
             // ---- Tablero (capas 4-7): se desplaza entero con ShiftToClear. ----
             _board = UiBuilder.Rect("Board", _root);
@@ -347,7 +354,7 @@ namespace AF.UI
             UiBuilder.AutoSize(_levelText, 20f, 26f); // guía 3.5: 26 dp, mínimo 20, nunca se recorta
 
             // Volver a la orilla: disco de 40 dp (familia Madera) con píldora «Reiniciar» en un área de 60 × 48 (guía 3.5).
-            _restart = UiBuilder.Relief("RestartButton", _hud, art.DiscWood, () => _onRestart());
+            _restart = UiBuilder.Relief("RestartButton", _hud, art.DiscWood, OnHudRestart);
             RectTransform restartVisual = (RectTransform)_restart.Face.parent;
             restartVisual.anchorMin = new Vector2(0.5f, 1f);
             restartVisual.anchorMax = new Vector2(0.5f, 1f);
@@ -361,13 +368,8 @@ namespace AF.UI
             restartLabel.rectTransform.offsetMin = new Vector2(0f, 1f);
             _restart.Relief.Bind(_restart.Face, _restart.Base, _restart.FaceImage, art.DiscWood, restartIcon, null, null);
 
-            _tray = UiBuilder.Image("Tray", _hud, art.Tray(_trayWidth), Color.white);
-            _undo = UiBuilder.Relief("UndoButton", _hud, art.SlotWater, () => _onUndo());
-            Image undoIcon = UiBuilder.Image("Icon", _undo.Face, art.IconUndo, Color.white);
-            UiBuilder.Place(undoIcon.rectTransform, 16f, 6f, 32f, 32f);
-            TextMeshProUGUI undoLabel = UiBuilder.Label("Label", _undo.Face, TextStyle.SlotWater, UiText.Undo, 12f, Palette.Cream, TextAlignmentOptions.Center);
-            UiBuilder.Place(undoLabel.rectTransform, 0f, 41f, 64f, 16f); // franja del 65-87 % de la cara (guía 3.6)
-            _undo.Relief.Bind(_undo.Face, _undo.Base, _undo.FaceImage, art.SlotWater, undoIcon, art.IconUndoDisabled, undoLabel);
+            // Bandeja de comodines (B2-1; 07 §7.4): Marea y, desde el 8, Cuia extra.
+            _tray = new BoosterTray(_hud, art, OnTrayUndo, () => _actions.PressExtraCuia());
 
             _ambientNearParent = UiBuilder.Rect("AmbientNearHost", _root);
             _ambient = new AmbientLayer(_ambientFarParent, _ambientNearParent, art);
@@ -385,27 +387,7 @@ namespace AF.UI
             _stuckOverlay = UiBuilder.Rect("StuckOverlay", _root);
             _stuckDim = UiBuilder.Image("Dim", _stuckOverlay, null, new Color(0f, 0f, 0f, 0f), true);
             UiBuilder.Stretch(_stuckDim.rectTransform);
-            _stuckPanel = UiBuilder.Rect("Panel", _stuckOverlay);
-            _stuckSurface = UiBuilder.ModalBody(_stuckPanel, art);
-            Image header = UiBuilder.Image("HeaderPlate", _stuckPanel, art.HeaderPlate, Color.white);
-            UiBuilder.Place(header.rectTransform, 16f, 16f, 296f, 40f);
-            TextMeshProUGUI stuckTitle = UiBuilder.Label("Title", header.transform, TextStyle.ModalTitle, UiText.StuckTitle, 22f, Palette.Cream, TextAlignmentOptions.Center);
-            UiBuilder.Stretch(stuckTitle.rectTransform);
-            UiBuilder.AutoSize(stuckTitle, 18f, 22f);
-            // Subtítulo en madera_base sobre panel_claro (5,1:1). Nunca alfa en textos.
-            TextMeshProUGUI stuckSubtitle = UiBuilder.Label("Subtitle", _stuckPanel, TextStyle.PlainBold, UiText.StuckSubtitle, 14f, Palette.FamilyWood.Base, TextAlignmentOptions.Center);
-            UiBuilder.Place(stuckSubtitle.rectTransform, 16f, 60f, 296f, 20f);
-            Image still = UiBuilder.Image("StillWater", _stuckPanel, art.StillWater, Color.white);
-            UiBuilder.Place(still.rectTransform, 16f, 86f, 296f, 20f);
-            _stuckUndo = UiBuilder.Relief("UndoModalButton", _stuckPanel, art.CtaWater, () => _onUndo());
-            TextMeshProUGUI stuckUndoLabel = UiBuilder.Label("Label", _stuckUndo.Face, TextStyle.CtaWater, UiText.StuckUndo, 22f, Palette.Cream, TextAlignmentOptions.Center);
-            UiBuilder.PlaceCtaLabel(stuckUndoLabel.rectTransform, art.CtaWater);
-            UiBuilder.AutoSize(stuckUndoLabel, 18f, 22f);
-            _stuckUndo.Relief.Bind(_stuckUndo.Face, _stuckUndo.Base, _stuckUndo.FaceImage, art.CtaWater, null, null, stuckUndoLabel);
-            _stuckRestart = UiBuilder.BareButton("RestartModalButton", _stuckPanel, () => _onRestart());
-            _stuckRestartLabel = UiBuilder.Label("Label", _stuckRestart.transform, TextStyle.PlainBold, UiText.StuckRestart, 16f, Palette.FamilyWood.Base, TextAlignmentOptions.Center);
-            _stuckRestartLabel.fontStyle = FontStyles.Underline;
-            UiBuilder.Stretch(_stuckRestartLabel.rectTransform);
+            _stuck = new StuckModal(_stuckOverlay, art, actions);
             _stuckOverlay.gameObject.SetActive(false);
 
             // ---- Victoria (02 §6; 07 §5.4; guía 5.3, 5.5 y 6.9): panel abajo, cinta-hoja y Siguiente; sin auto-avance. ----
@@ -415,7 +397,7 @@ namespace AF.UI
 
             _victoryPanel = UiBuilder.Rect("Panel", _victoryOverlay);
             _victorySurface = UiBuilder.ModalBody(_victoryPanel, art);
-            _next = UiBuilder.Relief("NextButton", _victoryPanel, art.CtaLeaf, () => _onNext());
+            _next = UiBuilder.Relief("NextButton", _victoryPanel, art.CtaLeaf, () => _actions.PressNext());
             _nextGroup = _next.Face.parent.gameObject.AddComponent<CanvasGroup>();
             _nextGroup.blocksRaycasts = false;
             TextMeshProUGUI nextLabel = UiBuilder.Label("Label", _next.Face, TextStyle.CtaLeaf, UiText.Next, 22f, Palette.Cream, TextAlignmentOptions.Center);
@@ -423,7 +405,7 @@ namespace AF.UI
             _next.Relief.Bind(_next.Face, _next.Base, _next.FaceImage, art.CtaLeaf, null, null, nextLabel);
 
             // «Inicio» [P] (06 §4.7; D-008 punto 3): secundario de madera (07 §7.3) bajo Siguiente; vuelve a la pantalla de inicio.
-            _home = UiBuilder.Relief("HomeButton", _victoryPanel, art.CtaWood, () => _onHome());
+            _home = UiBuilder.Relief("HomeButton", _victoryPanel, art.CtaWood, () => _actions.PressHome());
             _homeGroup = _home.Face.parent.gameObject.AddComponent<CanvasGroup>();
             _homeGroup.blocksRaycasts = false;
             TextMeshProUGUI homeLabel = UiBuilder.Label("Label", _home.Face, TextStyle.PillWood, UiText.Home, 18f, Palette.Cream, TextAlignmentOptions.Center);
@@ -438,9 +420,32 @@ namespace AF.UI
             UiBuilder.AutoSize(ribbonLabel, 22f, 30f);
             _victoryOverlay.gameObject.SetActive(false);
 
+            // ---- Embudo de D-008 (B2-2 y B2-3): ¿Seguro?, Nivel fallido y Sin canoas, con el tablero atenuado detrás. ----
+            _giveUp = new GiveUpConfirm(_root, art, actions);
+            _failed = new LevelFailedScreen(_root, art, actions);
+            _noCanoes = new NoCanoesPanel(_root, art, () => _actions.PressExtraCanoeVideo(), () => _actions.PressRefillCanoes(),
+                () => _actions.PressInfiniteCanoes(), () => _actions.PressNoCanoesHome(), () => _actions.PressNoCanoesClose());
+
+            // ---- Capa superior: pausa (02 §5: izquierda de la fila superior; disco de 40 dp) y saldos del embudo (D-008). ----
+            _topLayer = UiBuilder.Rect("TopLayer", _root);
+            _pauseButton = UiBuilder.Relief("PauseButton", _topLayer, art.DiscWood, OnPause);
+            RectTransform pauseVisual = (RectTransform)_pauseButton.Face.parent;
+            pauseVisual.anchorMin = new Vector2(0.5f, 1f);
+            pauseVisual.anchorMax = new Vector2(0.5f, 1f);
+            pauseVisual.sizeDelta = new Vector2(art.DiscWood.Painted ? art.DiscWood.HeightDp : 40f, art.DiscWood.HeightDp);
+            pauseVisual.anchoredPosition = new Vector2(0f, -4f);
+            Image pauseIcon = UiBuilder.Image("Icon", _pauseButton.Face, art.IconPause, Color.white);
+            UiBuilder.Place(pauseIcon.rectTransform, 7f, 7f, 26f, 26f);
+            _pauseButton.Relief.Bind(_pauseButton.Face, _pauseButton.Base, _pauseButton.FaceImage, art.DiscWood, pauseIcon, null, null);
+            _walletBar = new WalletBar(_topLayer, art);
+            _pause = new PauseMenu(_root, art, OnResume, OnPauseRestart, OnPauseQuit);
+            _confirm = new QuitConfirm(_root, art, OnConfirm, OnConfirmCancel, OnConfirmUndo);
+            _banner = new Toast("RiverLowered", _root, art, 18f);
+            _toast = new Toast("Toast", _root, art, 15f);
+
             // Captura de toques para saltar Sumergir y teñir o la celebración (02 §4.2, §2): por encima de todo.
             _skipCatcher = HitLayer("SkipCatcher", _root);
-            _skipCatcher.gameObject.AddComponent<PointerDownRelay>().Bind(() => _onAnywhere());
+            _skipCatcher.gameObject.AddComponent<PointerDownRelay>().Bind(() => _actions.TapAnywhere());
             _skipCatcher.gameObject.SetActive(false);
 
             _animator = new BoardAnimator(_streamLayer, _pourFront) { Fx = _fx };
@@ -508,7 +513,49 @@ namespace AF.UI
         public RectTransform[] DecorRects => new[] { _capi.rectTransform, _post.rectTransform };
 
         /// <summary>Botón de Deshacer de la bandeja.</summary>
-        public Button UndoButton => _undo.Button;
+        public Button UndoButton => _tray.UndoButton;
+
+        /// <summary>Botón «+1 cuia» de la bandeja (desde el nivel 8).</summary>
+        public Button ExtraCuiaButton => _tray.ExtraCuiaButton;
+
+        /// <summary>Bandeja de comodines (tests).</summary>
+        internal BoosterTray Tray => _tray;
+
+        /// <summary>Modal Aguas estancadas (tests y capturas).</summary>
+        internal StuckModal Stuck => _stuck;
+
+        /// <summary>¿Seguro? (tests).</summary>
+        internal GiveUpConfirm GiveUp => _giveUp;
+
+        /// <summary>Nivel fallido (tests).</summary>
+        internal LevelFailedScreen Failed => _failed;
+
+        /// <summary>Sin canoas (tests).</summary>
+        internal NoCanoesPanel NoCanoes => _noCanoes;
+
+        /// <summary>Menú de pausa (tests).</summary>
+        internal PauseMenu Pause => _pause;
+
+        /// <summary>Diálogo de confirmación (tests).</summary>
+        internal QuitConfirm Confirm => _confirm;
+
+        /// <summary>Saldos arriba durante el embudo (tests).</summary>
+        internal WalletBar WalletBar => _walletBar;
+
+        /// <summary>Botón de pausa.</summary>
+        public Button PauseButton => _pauseButton.Button;
+
+        /// <summary>El modal Aguas estancadas está abierto.</summary>
+        public bool StuckVisible => _stuckOverlay.gameObject.activeSelf && _stuck.Panel.gameObject.activeSelf;
+
+        /// <summary>Texto del cartel «El río bajó» si se ve (null si no).</summary>
+        public string? BannerText => _banner.Visible ? _banner.Text : null;
+
+        /// <summary>Texto del aviso en pantalla (regalo de Capi, rescate), o null.</summary>
+        public string? ToastText => _toast.Visible ? _toast.Text : null;
+
+        /// <summary>Hay un relayout de cuia añadida en curso.</summary>
+        public bool Relayouting => _relayoutMs >= 0f;
 
         /// <summary>Botón de Reiniciar del HUD.</summary>
         public Button RestartButton => _restart.Button;
@@ -549,10 +596,12 @@ namespace AF.UI
         /// <summary>Horizonte del panorama en el nivel cargado (dp desde arriba).</summary>
         public float HorizonY => _horizonY;
 
-        /// <summary>Asocia el flujo (antes de cargar el primer nivel).</summary>
-        public void Bind(LevelFlow flow)
+        /// <summary>Asocia el flujo y los servicios del embudo (antes de cargar el primer nivel).</summary>
+        public void Bind(LevelFlow flow, GameServices? services = null)
         {
             _flow = flow;
+            _services = services;
+            _tray.Bind(flow, services);
         }
 
         /// <summary>Avanza la vista <paramref name="dtMs"/> milisegundos.</summary>
@@ -592,6 +641,10 @@ namespace AF.UI
             TickCapi(dtMs);
             TickBoardShift(dtMs);
             TickPanels(dtMs);
+            TickIntroDelay(dtMs);
+            TickRelayout(dtMs);
+            _banner.Tick(dtMs);
+            _toast.Tick(dtMs);
             RefreshHud();
         }
 
@@ -612,6 +665,8 @@ namespace AF.UI
             _fx.Clear();
             _confettiDelay = -1f;
             HideOverlays();
+            _banner.Hide();
+            _introDelayMs = -1f;
             BuildBoard(flow);
             _levelText.text = UiText.Level(level);
             _pressPreview = -1;
@@ -628,7 +683,16 @@ namespace AF.UI
             ClearLifts();
             HideOverlays();
             _shownBoard = flow.Session.Current;
-            _intro.Start(_views, flow.Session.Current, _art.Water, _rowWaterActive, durationMs, _fx);
+            if (_introDelayMs > 0f)
+            {
+                // Variante aliviada (04 §2.7): el cartel «El río bajó» va antes del teñido; la intro arranca al terminar.
+                _introPendingMs = Mathf.Max(0, durationMs - (int)_introDelayMs);
+            }
+            else
+            {
+                _intro.Start(_views, flow.Session.Current, _art.Water, _rowWaterActive, durationMs, _fx);
+            }
+
             _skipCatcher.gameObject.SetActive(true);
             if (_restartProbePending)
             {
@@ -640,6 +704,8 @@ namespace AF.UI
         /// <inheritdoc />
         public void OnIntroFinished(bool skipped)
         {
+            _introDelayMs = -1f;
+            _banner.Hide();
             _intro.Complete();
             _skipCatcher.gameObject.SetActive(false);
             _probe.State("ready", RequireFlow(), int.MinValue, null);
@@ -728,6 +794,7 @@ namespace AF.UI
             LevelFlow flow = RequireFlow();
             ClearLifts();
             _probe.State("stuck", flow, int.MinValue, null);
+            _probe.Funnel("rescue_check", flow);
         }
 
         /// <inheritdoc />
@@ -764,9 +831,144 @@ namespace AF.UI
             _animator.SnapAll();
             _ambient.SetSuspended(true);
             _stuckOverlay.gameObject.SetActive(true);
+            _stuck.Panel.gameObject.SetActive(true);
+            // balsa_ok se congela al abrir (04 §6.6: lo mostrado no cambia con el modal abierto); la impresión cuenta para el tope.
+            _stuckBalsaOk = _services != null && _services.StoreLedger.CanOfferBalsa(RequireFlow().LevelNumber);
+            _stuckBalsaRecorded = false;
+            ShowStuckView(true);
             ShiftBoard(ShiftToClear(_stuckPanelY, 12f), true); // 07 §5.5: las cuias siguen visibles sobre el modal
             _stuckAnim = 0f;
             ApplyStuckAnim(0f);
+            SyncChrome();
+            _probe.Funnel("stuck_modal", RequireFlow());
+        }
+
+        /// <inheritdoc />
+        public void OnCuiaAdded(int index, AddedCuiaKind kind)
+        {
+            LevelFlow flow = RequireFlow();
+            if (kind == AddedCuiaKind.Rescue)
+            {
+                HideOverlays(true);
+                ShowToast(UiText.RescueApplied);
+            }
+
+            AddCuiaView(flow, index);
+            SyncChrome();
+            _probe.Funnel(kind == AddedCuiaKind.Rescue ? "rescue" : "extra_cuia", flow);
+        }
+
+        /// <inheritdoc />
+        public void OnExtraCuiaGifted(int units)
+        {
+            ShowToast(UiText.ExtraCuiaGift);
+            _probe.Funnel("extra_cuia_gift", RequireFlow());
+        }
+
+        /// <inheritdoc />
+        public void OnFunnelPhase(FlowPhase phase)
+        {
+            LevelFlow flow = RequireFlow();
+            _pause.Hide();
+            _confirm.Hide();
+            switch (phase)
+            {
+                case FlowPhase.GiveUpConfirm:
+                    _stuck.Panel.gameObject.SetActive(false);
+                    _giveUp.Show(StuckModalModel.BuildGiveUpConfirm(StuckContext(flow)), _canvasW, _canvasH);
+                    _probe.Funnel("giveup_confirm", flow);
+                    break;
+
+                case FlowPhase.LevelFailed:
+                    _animator.SnapAll();
+                    ClearLifts();
+                    _ambient.SetSuspended(true);
+                    _stuckOverlay.gameObject.SetActive(true);
+                    _stuck.Panel.gameObject.SetActive(false);
+                    _stuckDim.color = new Color(0.04f, 0.06f, 0.05f, 0.30f);
+                    _giveUp.Hide();
+                    _noCanoes.Hide();
+                    _failed.Show(flow.LevelNumber, LevelReward(flow), _canvasW, _canvasH);
+                    _probe.Funnel("level_failed", flow);
+                    break;
+
+                case FlowPhase.NoCanoes:
+                    _failed.Hide();
+                    _noCanoes.Show(_services, _canvasW, _canvasH);
+                    _probe.Funnel("no_canoes", flow);
+                    break;
+
+                default:
+                    _noCanoes.Hide();
+                    if (phase == FlowPhase.Playing)
+                    {
+                        HideOverlays(true);
+                    }
+
+                    break;
+            }
+
+            SyncChrome();
+        }
+
+        /// <inheritdoc />
+        public void OnFailResolved(FailOutcome outcome)
+        {
+            _probe.Funnel(outcome.Kind == FailKind.Hard ? (outcome.CanoeLost ? "fail_hard_canoe" : "fail_hard") : "fail_soft", RequireFlow());
+        }
+
+        /// <inheritdoc />
+        public void OnRiverLowered(string reliefType, int bannerMs)
+        {
+            _introDelayMs = bannerMs;
+            _banner.Place(_canvasW, TopRowY + 64f);
+            _banner.Show(reliefType == AF.Levels.ReliefBoard.TypeMinusColor ? UiText.RiverLoweredColor : UiText.RiverLoweredCuia, bannerMs);
+            _probe.Funnel("river_lowered", RequireFlow());
+        }
+
+        /// <summary>
+        /// Rearma el modal Aguas estancadas con el contexto de ahora (tras una compra o una recarga: mismo precio congelado,
+        /// saldo nuevo; 04 §6.2 <c>PUÑADO_199</c>: «re-render modal with new saldo»).
+        /// </summary>
+        internal void ShowStuckView(bool layout)
+        {
+            LevelFlow flow = RequireFlow();
+            StuckModalView view = StuckModalModel.Build(StuckContext(flow), flow.Boosters);
+            _stuck.Show(view, _services, _canvasW);
+            _stuckSeedsShown = _services?.Wallet.Seeds ?? 0;
+            _stuckUndoShown = flow.UndoStatus.Stock + (flow.UndoStatus.FreeLeft * 1000);
+            if (_services != null && _stuckBalsaOk && !_stuckBalsaRecorded)
+            {
+                for (int i = 0; i < view.Offers.Count; i++)
+                {
+                    if (view.Offers[i] == StuckOffer.Balsa)
+                    {
+                        // af_rescue_daily_cap: la impresión cuenta una vez por modal; balsa_ok sigue congelado mientras esté abierto.
+                        _services.StoreLedger.RecordBalsaShown();
+                        _stuckBalsaRecorded = true;
+                    }
+                }
+            }
+
+            UiBuilder.SetEnabled(_stuck.UndoButton, view.Undo != StuckUndoKind.Undo || flow.CanUndo);
+            _stuckPanelY = _canvasH - _safeBottom - 8f - _stuck.Height;
+            if (layout || _stuckAnim < 0f)
+            {
+                _stuck.Place(_canvasW, _stuckPanelY);
+            }
+        }
+
+        private StuckContext StuckContext(LevelFlow flow)
+        {
+            bool undoAd = _services != null && _services.RewardedReady(AdPlacement.UndoRefill);
+            return flow.BuildStuckContext(undoAd, _stuckBalsaOk, _services?.Geo ?? GeoTier.T3);
+        }
+
+        private int LevelReward(LevelFlow flow)
+        {
+            EconomyConfig config = _services?.Wallet.Config ?? EconomyConfig.Defaults;
+            RewardTiers.TryParse(flow.Level.DifficultyLabel, out RewardTier tier);
+            return config.WinReward(tier);
         }
 
         // 02 §3.1: la elevación empieza en el touch-down (0 ms percibidos) si, sin selección, la cuia puede ser origen
@@ -791,7 +993,7 @@ namespace AF.UI
         {
             if (inside)
             {
-                _onCuia(index);
+                _actions.TapCuia(index);
             }
 
             if (_pressPreview == index)
@@ -830,7 +1032,7 @@ namespace AF.UI
             }
 
             _views = views;
-            _generatedCount = views.Length; // cuias generadas al cargar el nivel: fijan las filas (D-006); en v0, todas
+            _generatedCount = Mathf.Max(1, flow.GeneratedCuias); // cuias generadas: fijan las filas (D-006); las añadidas van a la más corta
             for (int i = 0; i < _rowWater.Length; i++)
             {
                 _rowWater[i].rectTransform.SetAsLastSibling();
@@ -891,6 +1093,11 @@ namespace AF.UI
             ShiftBoard(0f, animateBoard);
             _stuckOverlay.gameObject.SetActive(false);
             _victoryOverlay.gameObject.SetActive(false);
+            _giveUp.Hide();
+            _failed.Hide();
+            _noCanoes.Hide();
+            _pause.Hide();
+            _confirm.Hide();
             _sceneVeil.color = new Color(_sceneVeil.color.r, _sceneVeil.color.g, _sceneVeil.color.b, 0f);
             SetVictoryLights(false);
             for (int i = 0; i < _views.Length; i++)
@@ -905,12 +1112,274 @@ namespace AF.UI
 
         private void RefreshHud()
         {
-            bool undo = _flow != null && _flow.CanUndo;
-            if (undo != _undoEnabledShown)
+            LevelFlow? flow = _flow;
+            if (flow == null || !flow.HasLevel)
             {
-                _undoEnabledShown = undo;
-                UiBuilder.SetEnabled(_undo.Button, undo);
-                UiBuilder.SetEnabled(_stuckUndo.Button, undo);
+                return;
+            }
+
+            if (flow.Phase != _chromePhase)
+            {
+                _chromePhase = flow.Phase;
+                SyncChrome();
+            }
+
+            _tray.Refresh();
+            _walletBar.Refresh(_services?.Wallet, flow.CanoesLevel);
+            if (flow.Phase == FlowPhase.StuckModal && _stuck.Panel.gameObject.activeSelf)
+            {
+                // Tras comprar un Puñado o recargar Marea, el modal se rearma con el saldo nuevo y el mismo precio.
+                int seeds = _services?.Wallet.Seeds ?? 0;
+                int undo = flow.UndoStatus.Stock + (flow.UndoStatus.FreeLeft * 1000);
+                if (seeds != _stuckSeedsShown || undo != _stuckUndoShown)
+                {
+                    ShowStuckView(false);
+                }
+            }
+            else if (flow.Phase == FlowPhase.NoCanoes)
+            {
+                _noCanoes.Refresh(_services);
+            }
+        }
+
+        // Qué se ve arriba (D-008 paso 1: «el HUD de partida y la bandeja se ocultan» con el embudo abierto; arriba, semillas y
+        // canoas): en juego, la cabecera y la bandeja; en el embudo, los saldos (y la pausa en Aguas estancadas, que es la
+        // única salida sin elegir, 04 §6.6).
+        private void SyncChrome()
+        {
+            LevelFlow? flow = _flow;
+            FlowPhase phase = flow?.Phase ?? FlowPhase.Loading;
+            bool funnel = phase == FlowPhase.StuckModal || phase == FlowPhase.GiveUpConfirm || phase == FlowPhase.LevelFailed || phase == FlowPhase.NoCanoes;
+            bool victory = phase == FlowPhase.VictoryScreen || phase == FlowPhase.Celebration;
+            _badge.gameObject.SetActive(!funnel);
+            _restart.Button.gameObject.SetActive(!funnel);
+            _tray.SetVisible(!funnel);
+            bool pause = !victory && (phase == FlowPhase.Playing || phase == FlowPhase.Intro || phase == FlowPhase.StuckModal);
+            _pauseButton.Button.gameObject.SetActive(pause);
+            _walletBar.SetVisible(funnel);
+            _walletBar.Layout(phase == FlowPhase.StuckModal ? 64f : 16f, TopRowY);
+            _walletBar.Refresh(_services?.Wallet, flow != null && flow.CanoesLevel);
+        }
+
+        private void ShowToast(string text)
+        {
+            _toast.Show(text, ToastMs);
+            _toast.Place(_canvasW, TrayTop - 64f);
+        }
+
+        // 02 §3.1 C8 y 04 §1.1: Marea con cupo deshace; sin cupo ni stock, el botón recarga (video si hay; si no, semillas).
+        private void OnTrayUndo()
+        {
+            LevelFlow? flow = _flow;
+            if (flow == null)
+            {
+                return;
+            }
+
+            if (flow.UndoStatus.HasQuota)
+            {
+                _actions.PressUndo();
+            }
+            else if (_services != null && _services.RewardedReady(AdPlacement.UndoRefill))
+            {
+                _actions.PressUndoRefillVideo();
+            }
+            else
+            {
+                _actions.PressUndoRefillSeeds();
+            }
+        }
+
+        // 04 §2.7: con ≥ restart_confirm_min_pours vertidos, confirmación de una línea con atajo a Deshacer.
+        private void OnHudRestart()
+        {
+            LevelFlow? flow = _flow;
+            if (flow != null && flow.RestartNeedsConfirm)
+            {
+                _confirm.Show(ConfirmKind.Restart, flow.CanUndo, _canvasW, _canvasH);
+                EmitConfirmLayout();
+                return;
+            }
+
+            _actions.PressRestart();
+        }
+
+        private void OnPause()
+        {
+            LevelFlow? flow = _flow;
+            if (flow == null || !(flow.CanQuit || flow.CanRestart))
+            {
+                return;
+            }
+
+            flow.ClearSelection();
+            _pause.Show(flow.CanRestart, _canvasW, _canvasH);
+            _layoutIds.Clear();
+            _layoutRects.Clear();
+            _pause.VisibleButtons(_layoutIds, _layoutRects);
+            _probe.Layout("pause", flow.LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
+        }
+
+        private void OnResume()
+        {
+            _pause.Hide();
+        }
+
+        private void OnPauseRestart()
+        {
+            _pause.Hide();
+            OnHudRestart();
+        }
+
+        // D-008: desde el 31 «Salir» pregunta «¿Salir del nivel? Perderás 1 canoa» [P]; en 1-30 sale sin coste.
+        private void OnPauseQuit()
+        {
+            _pause.Hide();
+            LevelFlow? flow = _flow;
+            if (flow != null && flow.QuitCostsCanoe)
+            {
+                _confirm.Show(ConfirmKind.Quit, false, _canvasW, _canvasH);
+                EmitConfirmLayout();
+                return;
+            }
+
+            _actions.PressQuit();
+        }
+
+        private void OnConfirm()
+        {
+            ConfirmKind kind = _confirm.Kind;
+            _confirm.Hide();
+            if (kind == ConfirmKind.Quit)
+            {
+                _actions.PressQuit();
+            }
+            else if (kind == ConfirmKind.Restart)
+            {
+                _actions.PressRestart();
+            }
+        }
+
+        private void OnConfirmCancel()
+        {
+            _confirm.Hide();
+        }
+
+        private void OnConfirmUndo()
+        {
+            _confirm.Hide();
+            _actions.PressUndo();
+        }
+
+        private void EmitConfirmLayout()
+        {
+            _layoutIds.Clear();
+            _layoutRects.Clear();
+            _confirm.VisibleButtons(_layoutIds, _layoutRects);
+            _probe.Layout(_confirm.Kind == ConfirmKind.Quit ? "quit_confirm" : "restart_confirm", RequireFlow().LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
+        }
+
+        // Variante aliviada: cuando termina el cartel arranca el teñido corto (02 §2 INTRO; 07 §5.5).
+        private void TickIntroDelay(float dtMs)
+        {
+            if (_introDelayMs < 0f)
+            {
+                return;
+            }
+
+            _introDelayMs -= dtMs;
+            if (_introDelayMs <= 0f)
+            {
+                _introDelayMs = -1f;
+                LevelFlow? flow = _flow;
+                if (flow != null && flow.HasLevel && flow.Phase == FlowPhase.Intro)
+                {
+                    _intro.Start(_views, flow.Session.Current, _art.Water, _rowWaterActive, _introPendingMs, _fx);
+                }
+            }
+        }
+
+        // Cuia extra o Cuia de rescate (02 §4.1; D-006 punto 4): la cuia nueva va a la fila más corta y solo cambia el ancho;
+        // las demás se reacomodan en 300 ms y la nueva entra en 600 ms (Capi la trae cuando exista su arte, 04 §2.2).
+        private void AddCuiaView(LevelFlow flow, int index)
+        {
+            _animator.SnapAll();
+            ClearLifts();
+            int old = _views.Length;
+            var from = new Vector2[old];
+            var fromWidth = new float[old];
+            for (int i = 0; i < old; i++)
+            {
+                from[i] = _views[i].FootPosition;
+                fromWidth[i] = _views[i].Unit * CuiaGeometry.WidthU;
+            }
+
+            BoardState board = flow.Session.Current;
+            var views = new CuiaView[board.Count];
+            for (int i = 0; i < old && i < views.Length; i++)
+            {
+                views[i] = _views[i];
+            }
+
+            float liftMs = GameConfig.AnimLiftMs * GameConfig.SpeedFactor(flow.LevelNumber);
+            for (int i = old; i < views.Length; i++)
+            {
+                views[i] = CuiaView.Create(_board, i, board[i].Capacity, _art, _cuiaDown, _cuiaUp, _fx);
+                views[i].SetLiftDuration(liftMs);
+                views[i].ShowContent(board[i], board.IsSealed(i));
+            }
+
+            _views = views;
+            for (int i = 0; i < _rowWater.Length; i++)
+            {
+                _rowWater[i].rectTransform.SetAsLastSibling();
+            }
+
+            _streamLayer.SetAsLastSibling();
+            _fx.Root.SetAsLastSibling();
+            _animator.Bind(_views, _timings, GameConfig.QueueMaxLagPours);
+            LayoutBoard();
+            _shownBoard = board;
+            _relayoutFrom = from;
+            _relayoutFromWidth = fromWidth;
+            _addedView = index;
+            _relayoutMs = 0f;
+            TickRelayout(0f);
+            EmitLevelLayout();
+        }
+
+        private void TickRelayout(float dtMs)
+        {
+            if (_relayoutMs < 0f || _layout == null)
+            {
+                return;
+            }
+
+            _relayoutMs += dtMs;
+            float t = Ease.OutCubic(Mathf.Clamp01(_relayoutMs / RelayoutMs));
+            BoardLayoutResult l = _layout;
+            for (int i = 0; i < _relayoutFrom.Length && i < _views.Length; i++)
+            {
+                var to = new Vector2(l.CenterX[i], -l.FootY[i]);
+                _views[i].SetGeometry(Vector2.LerpUnclamped(_relayoutFrom[i], to, t), Mathf.LerpUnclamped(_relayoutFromWidth[i], l.CuiaWidth, t), l.SlotWidth);
+            }
+
+            if ((uint)_addedView < (uint)_views.Length)
+            {
+                float a = Ease.OutBack(Mathf.Clamp01(_relayoutMs / AddedCuiaMs), 1.6f);
+                _views[_addedView].Root.localScale = new Vector3(a, a, 1f);
+            }
+
+            if (_relayoutMs >= Mathf.Max(RelayoutMs, AddedCuiaMs))
+            {
+                _relayoutMs = -1f;
+                if ((uint)_addedView < (uint)_views.Length)
+                {
+                    _views[_addedView].Root.localScale = Vector3.one;
+                }
+
+                _addedView = -1;
+                LayoutBoard();
             }
         }
 
@@ -923,7 +1392,10 @@ namespace AF.UI
                 if (_stuckAnim >= PanelSlideMs)
                 {
                     _stuckAnim = -1f;
-                    _probe.Layout("stuck", RequireFlow().LevelNumber, null, new[] { "undo_modal", "restart_modal" }, new[] { (RectTransform)_stuckUndo.Button.transform, (RectTransform)_stuckRestart.transform });
+                    _layoutIds.Clear();
+                    _layoutRects.Clear();
+                    _stuck.VisibleButtons(_layoutIds, _layoutRects);
+                    _probe.Layout("stuck", RequireFlow().LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
                 }
             }
 
@@ -947,7 +1419,7 @@ namespace AF.UI
             _stuckDim.color = new Color(0.04f, 0.06f, 0.05f, 0.30f * fade);
             _sceneVeil.color = new Color(0x6B / 255f, 0x6B / 255f, 0x6B / 255f, 0.20f * fade);
             float slide = 1f - Ease.OutCubic(ms / PanelSlideMs);
-            _stuckPanel.anchoredPosition = new Vector2(_stuckPanel.anchoredPosition.x, -(_stuckPanelY + (slide * (StuckPanelDp + 40f))));
+            _stuck.Panel.anchoredPosition = new Vector2(_stuck.Panel.anchoredPosition.x, -(_stuckPanelY + (slide * (_stuck.Height + 40f))));
         }
 
         private void ApplyVictoryAnim(float ms)
@@ -988,7 +1460,21 @@ namespace AF.UI
 
         private void EmitLevelLayout()
         {
-            _probe.Layout("level", RequireFlow().LevelNumber, _views, new[] { "undo", "restart" }, new[] { (RectTransform)_undo.Button.transform, (RectTransform)_restart.Button.transform });
+            _layoutIds.Clear();
+            _layoutRects.Clear();
+            _layoutIds.Add("undo");
+            _layoutRects.Add((RectTransform)_tray.UndoButton.transform);
+            if (_tray.ExtraCuiaShown)
+            {
+                _layoutIds.Add("extra_cuia");
+                _layoutRects.Add((RectTransform)_tray.ExtraCuiaButton.transform);
+            }
+
+            _layoutIds.Add("restart");
+            _layoutRects.Add((RectTransform)_restart.Button.transform);
+            _layoutIds.Add("pause");
+            _layoutRects.Add((RectTransform)_pauseButton.Button.transform);
+            _probe.Layout("level", RequireFlow().LevelNumber, _views, _layoutIds.ToArray(), _layoutRects.ToArray());
         }
 
         private void ApplyScreenMetrics(bool initial)
@@ -1059,29 +1545,17 @@ namespace AF.UI
             UiBuilder.Place((RectTransform)_restart.Button.transform, w - 8f - 60f, TopRowY, 60f, 48f);
             UiBuilder.Place(_restartPill.rectTransform, 0f, 32f, 60f, 16f);
 
-            // Bandeja ajustada al contenido (guía 3.6): 16 + n·64 + (n − 1)·8 + 16 con n = 1 en v0 → 96 dp.
-            _trayWidth = 96f;
-            _tray.sprite = _art.Tray(_trayWidth);
-            float trayX = (w - _trayWidth) / 2f;
-            if (_art.TrayIsPainted)
-            {
-                _tray.type = Image.Type.Sliced; // PNG de ui_bandeja: 9-slice horizontal a su alto nativo
-                UiBuilder.Place(_tray.rectTransform, trayX, TrayTop, _trayWidth, 80f);
-            }
-            else
-            {
-                UiBuilder.Place(_tray.rectTransform, trayX - 8f, TrayTop - 2f, _trayWidth + 16f, 94f);
-            }
+            // Bandeja ajustada al contenido (guía 3.6): 16 + n·64 + (n − 1)·8 + 16 (1 ranura en 1-7; 2 desde el 8).
+            _tray.Layout(w, TrayTop);
 
-            UiBuilder.Place((RectTransform)_undo.Button.transform, trayX + 16f, TrayTop + 4f, 64f, 72f);
+            // Pausa a la izquierda de la fila superior (02 §5; 07 §7.4: 40 dp en un área de 48).
+            UiBuilder.Place((RectTransform)_pauseButton.Button.transform, 8f, TopRowY, 48f, 48f);
+            _walletBar.Layout(64f, TopRowY);
 
             // Paneles anclados abajo (07 §5.4, §5.5, §7.5), con los CTA en la zona del pulgar (02 §3.3).
             float panelW = Mathf.Min(328f, w - 32f);
-            _stuckPanelY = _canvasH - _safeBottom - 8f - StuckPanelDp;
-            UiBuilder.Place(_stuckPanel, (w - panelW) / 2f, _stuckPanelY, panelW, StuckPanelDp);
-            float ctaW = Mathf.Min(panelW - 32f, 296f);
-            UiBuilder.Place((RectTransform)_stuckUndo.Button.transform, (panelW - ctaW) / 2f, 114f, ctaW, 64f);
-            UiBuilder.Place((RectTransform)_stuckRestart.transform, (panelW - 280f) / 2f, StuckPanelDp - 4f - 48f, 280f, 48f); // enlace al pie (07 §7.5)
+            _stuckPanelY = _canvasH - _safeBottom - 8f - _stuck.Height;
+            _stuck.Place(w, _stuckPanelY);
 
             _victoryPanelY = _canvasH - _safeBottom - 8f - VictoryPanelDp;
             UiBuilder.Place(_victoryPanel, (w - panelW) / 2f, _victoryPanelY, panelW, VictoryPanelDp);
@@ -1094,7 +1568,6 @@ namespace AF.UI
             PlaceAt(_victoryRays.rectTransform, w * 0.5f, ribbonY, 2f * VictoryRaysRadiusDp, 2f * VictoryRaysRadiusDp, new Vector2(0.5f, 0.5f));
             PlaceAt(_victoryGlow.rectTransform, w * 0.5f, ribbonY, 2f * VictoryGlowRadiusDp, 2f * VictoryGlowRadiusDp, new Vector2(0.5f, 0.5f));
             PlaceAt(_victoryVeil.rectTransform, w * 0.5f, ribbonY, 2f * ProceduralArt.VeilHoleHalfDp, 2f * ProceduralArt.VeilHoleHalfDp, new Vector2(0.5f, 0.5f));
-            _stuckSurface.sprite = _art.ModalSurfaceFor(panelW - 16f, StuckPanelDp - 16f);
             _victorySurface.sprite = _art.ModalSurfaceFor(panelW - 16f, VictoryPanelDp - 16f);
         }
 

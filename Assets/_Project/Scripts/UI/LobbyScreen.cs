@@ -24,8 +24,8 @@ namespace AF.UI
     /// <item><description>abajo, la barra de pestañas con «Inicio» [P]: Mercado, Mapa del río, Reto del río y Bitácora quedan
     /// ocultos hasta que existan (D-008).</description></item>
     /// </list>
-    /// Encima, cuando toca, «El río sigue creciendo» (06 §9) o Sin canoas (04 §7.3; de momento solo el cronómetro y Volver: el
-    /// resto llega con B2-3). Lienzo de 360 dp de ancho y al menos 640 de alto. Los contadores se actualizan solo al cambiar
+    /// Encima, cuando toca, «El río sigue creciendo» (06 §9) o Sin canoas (04 §7.3, con sus opciones desde B2-3:
+    /// <see cref="NoCanoesPanel"/>). Lienzo de 360 dp de ancho y al menos 640 de alto. Los contadores se actualizan solo al cambiar
     /// y sin asignar memoria (08 §5.4).
     /// </summary>
     public sealed class LobbyScreen
@@ -98,9 +98,10 @@ namespace AF.UI
         private readonly TextMeshProUGUI _overlayTitle;
         private readonly TextMeshProUGUI _overlayBody;
         private readonly ReliefParts _back;
+        private readonly NoCanoesPanel _noCanoes;
+        private GameServices? _services;
 
         private readonly char[] _buf = new char[24];
-        private readonly char[] _bodyBuf = new char[64];
 
         private AppFlow? _app;
         private AppScreen _shown = AppScreen.Boot;
@@ -121,13 +122,12 @@ namespace AF.UI
         private int _canoesMaxShown = -1;
         private int _canoesModeShown = -1;
         private long _timerShown = long.MinValue;
-        private long _overlayTimerShown = long.MinValue;
 
         /// <summary>
         /// Construye la pantalla bajo <paramref name="host"/>, oculta hasta <see cref="Show"/>. Las acciones son los puntos
         /// de entrada del input (los mismos que usan los tests PlayMode).
         /// </summary>
-        public LobbyScreen(Transform host, ProceduralArt art, DevProbe probe, Action onPlay, Action onCanoes, Action onSettings, Action onBack)
+        public LobbyScreen(Transform host, ProceduralArt art, DevProbe probe, Action onPlay, Action onCanoes, Action onSettings, Action onBack, IGameActions actions)
         {
             _art = art;
             _probe = probe;
@@ -247,6 +247,10 @@ namespace AF.UI
             _back.Relief.Bind(_back.Face, _back.Base, _back.FaceImage, art.CtaLeaf, null, null, backLabel);
             _overlay.gameObject.SetActive(false);
 
+            // Sin canoas con sus opciones (04 §7.3; B2-3): la misma tarjeta que en la pantalla de nivel.
+            _noCanoes = new NoCanoesPanel(_root, art, () => actions.PressExtraCanoeVideo(), () => actions.PressRefillCanoes(),
+                () => actions.PressInfiniteCanoes(), () => actions.PressNoCanoesHome(), () => actions.PressNoCanoesClose());
+
             ApplyScreenMetrics();
             _canvas.gameObject.SetActive(false);
         }
@@ -258,10 +262,13 @@ namespace AF.UI
         public bool Visible => _canvas.gameObject.activeSelf;
 
         /// <summary>Hay una superposición abierta («El río sigue creciendo» o Sin canoas).</summary>
-        public bool OverlayVisible => _overlay.gameObject.activeSelf;
+        public bool OverlayVisible => _overlay.gameObject.activeSelf || _noCanoes.Visible;
 
         /// <summary>Título de la superposición abierta.</summary>
-        public string OverlayTitle => _overlayTitle.text;
+        public string OverlayTitle => _noCanoes.Visible ? UiText.NoCanoesTitle : _overlayTitle.text;
+
+        /// <summary>Sin canoas con sus opciones (tests).</summary>
+        internal NoCanoesPanel NoCanoes => _noCanoes;
 
         /// <summary>Ancho del lienzo en dp.</summary>
         public float CanvasWidth => _canvasW;
@@ -290,8 +297,8 @@ namespace AF.UI
         /// <summary>Botón de Ajustes (deshabilitado hasta que exista su pantalla).</summary>
         public Button SettingsButton => _settings.Button;
 
-        /// <summary>Botón Volver de la superposición.</summary>
-        public Button BackButton => _back.Button;
+        /// <summary>Botón Volver de la superposición («Volver al inicio» en Sin canoas).</summary>
+        public Button BackButton => _noCanoes.Visible ? _noCanoes.HomeButton : _back.Button;
 
         /// <summary>Contador de semillas.</summary>
         public RectTransform SeedsRect => _seeds;
@@ -340,10 +347,11 @@ namespace AF.UI
             };
         }
 
-        /// <summary>Asocia la navegación (antes de la primera pantalla).</summary>
-        public void Bind(AppFlow app)
+        /// <summary>Asocia la navegación y los servicios de Sin canoas (antes de la primera pantalla).</summary>
+        public void Bind(AppFlow app, GameServices? services = null)
         {
             _app = app;
+            _services = services;
         }
 
         /// <summary>
@@ -364,20 +372,22 @@ namespace AF.UI
                 return;
             }
 
-            bool overlay = screen != AppScreen.Lobby;
-            _overlay.gameObject.SetActive(overlay);
+            _overlay.gameObject.SetActive(screen == AppScreen.ContentEnd);
             if (screen == AppScreen.ContentEnd)
             {
                 _overlayTitle.text = UiText.ContentEndTitle;
                 _overlayBody.text = UiText.ContentEnd(_app != null ? _app.ContentEndEtaDays : GameConfig.LiveContentEndNextBatchEtaDays);
             }
-            else if (screen == AppScreen.NoCanoes)
-            {
-                _overlayTitle.text = UiText.NoCanoesTitle;
-                _overlayTimerShown = long.MinValue;
-            }
 
             ApplyScreenMetrics();
+            if (screen == AppScreen.NoCanoes)
+            {
+                _noCanoes.Show(_services, _canvasW, _canvasH);
+            }
+            else
+            {
+                _noCanoes.Hide();
+            }
             ForceRefresh();
             if (_app != null)
             {
@@ -451,7 +461,7 @@ namespace AF.UI
             RefreshCanoes(app);
             if (_shown == AppScreen.NoCanoes)
             {
-                RefreshNoCanoes(app);
+                _noCanoes.Refresh(_services);
             }
         }
 
@@ -508,27 +518,6 @@ namespace AF.UI
             {
                 LayoutCanoesContent();
             }
-        }
-
-        private void RefreshNoCanoes(AppFlow app)
-        {
-            long seconds = CeilSeconds(app.Wallet.Canoes.TimeToNext);
-            if (seconds == _overlayTimerShown)
-            {
-                return;
-            }
-
-            _overlayTimerShown = seconds;
-            string prefix = UiText.NoCanoesNext;
-            int n = 0;
-            for (int i = 0; i < prefix.Length && n < _bodyBuf.Length - 12; i++)
-            {
-                _bodyBuf[n++] = prefix[i];
-            }
-
-            _bodyBuf[n++] = ' ';
-            n = UiText.WriteClock(_bodyBuf, n, seconds);
-            _overlayBody.SetCharArray(_bodyBuf, 0, n);
         }
 
         private void ApplyChip(string label)
@@ -683,6 +672,13 @@ namespace AF.UI
                 {
                     _probe.Layout("lobby", level, null, new[] { "play", "settings" }, new[] { (RectTransform)_play.Button.transform, (RectTransform)_settings.Button.transform });
                 }
+            }
+            else if (_shown == AppScreen.NoCanoes)
+            {
+                var ids = new System.Collections.Generic.List<string>(6);
+                var rects = new System.Collections.Generic.List<RectTransform>(6);
+                _noCanoes.VisibleButtons(ids, rects);
+                _probe.Layout(AppScreenNames.Of(_shown), level, null, ids.ToArray(), rects.ToArray());
             }
             else
             {

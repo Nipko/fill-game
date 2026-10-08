@@ -159,6 +159,7 @@ namespace AF.Presentation
             IconUndoDisabled = BuildIconUndo(Palette.DisabledGlyph, Color.clear, "icon_undo_disabled");
             IconRestart = BuildIconRestart(Palette.Cream, Palette.FamilyWood.Edge);
             BuildLobbyUi();
+            BuildBoosterUi();
         }
 
         private ReliefSprites Relief(string slot, string name, float wDp, float faceHDp, float radiusDp, bool circle, ButtonFamily family, bool sliced, float paintedWidthDp)

@@ -12,7 +12,10 @@
     "AF.Presentation",
     "AF.Platform",
     "AF.Save",
-    "AF.Economy"
+    "AF.Economy",
+    "AF.Boosters",
+    "AF.Ads",
+    "AF.IAP"
   ],
   "includePlatforms": [
     "Editor"

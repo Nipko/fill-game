@@ -17,7 +17,8 @@ namespace AF.UI
     /// </summary>
     /// <remarks>
     /// <para>Eventos de <c>AF_STATE</c>: <c>load</c>, <c>ready</c>, <c>pour</c>, <c>reject</c>, <c>undo</c>, <c>restart</c>,
-    /// <c>win</c> y <c>stuck</c> (contrato) más <c>select</c> y <c>deselect</c> (ayuda para seguir los toques). Fuera del
+    /// <c>win</c> y <c>stuck</c> (contrato) más <c>select</c> y <c>deselect</c> (ayuda para seguir los toques). Del embudo de
+    /// D-008 y los comodines, los de <see cref="Funnel"/>. Fuera del
     /// nivel (tarea B1-6, <see cref="App"/>): <c>lobby</c>, <c>content_end</c> y <c>no_canoes</c>, con semillas y canoas; y
     /// <c>AF_LAYOUT</c> de esas pantallas con los botones <c>play</c>, <c>canoes</c>, <c>settings</c> y <c>back</c>.</para>
     /// <para>Cada línea lleva <c>"pour_mode"</c> (run por defecto, D-005; single en pruebas), el modo de la sesión del
@@ -113,6 +114,86 @@ namespace AF.UI
 
             sb.Append("]}");
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Línea <c>AF_STATE</c> del embudo de bloqueo y de los comodines (D-008; tareas B2-1 a B2-3): <c>stuck_modal</c>,
+        /// <c>giveup_confirm</c>, <c>level_failed</c>, <c>no_canoes</c>, <c>rescue</c>, <c>rescue_check</c>, <c>extra_cuia</c>,
+        /// <c>extra_cuia_gift</c>, <c>fail_hard</c>, <c>fail_hard_canoe</c>, <c>fail_soft</c> y <c>river_lowered</c>, siempre con
+        /// semillas y canoas, <c>fails_level</c>, cuias añadidas, el resultado de «la compra cumple», el precio congelado y el
+        /// cupo y el stock de Marea.
+        /// </summary>
+        public void Funnel(string evt, LevelFlow flow)
+        {
+            string? line = FormatFunnel(evt, flow);
+            if (line != null)
+            {
+                Debug.Log(line);
+            }
+        }
+
+        /// <summary>Texto de la línea de <see cref="Funnel"/>; null si la sonda no escribe o no hay nivel.</summary>
+        public string? FormatFunnel(string evt, LevelFlow flow)
+        {
+            if (!Enabled || !flow.HasLevel)
+            {
+                return null;
+            }
+
+            AF.Economy.Wallet? wallet = flow.Wallet;
+            AF.Economy.CanoesStatus canoes = wallet?.Canoes ?? default;
+            AF.Boosters.UndoStatus undo = flow.UndoStatus;
+            AF.Economy.RescueQuote? quote = flow.FrozenRescueQuote;
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"").Append(evt).Append('"');
+            sb.Append(",\"t\":").Append(((long)(Time.realtimeSinceStartupAsDouble * 1000.0)).ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"phase\":\"").Append(FlowPhaseNames.Of(flow.Phase)).Append('"');
+            sb.Append(",\"seeds\":").Append((wallet?.Seeds ?? 0).ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"canoes\":").Append(canoes.Count.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"infinite\":").Append(canoes.IsInfinite ? "true" : "false");
+            sb.Append(",\"fails_level\":").Append(flow.Attempt.FailsLevel.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"relief\":").Append(flow.Attempt.ReliefIndex.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"extra_cuias\":").Append(flow.Attempt.ExtraCuias.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"rescues_level\":").Append(flow.Attempt.Rescues.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"cuias_count\":").Append(flow.Session.Current.Count.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"rescue_check\":\"").Append(flow.RescueCheck.ToString()).Append('"');
+            sb.Append(",\"rescue_price\":").Append((quote.HasValue ? quote.Value.Price : 0).ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"undo_unlimited\":").Append(undo.Unlimited ? "true" : "false");
+            sb.Append(",\"undo_free\":").Append(undo.FreeLeft.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"undo_stock\":").Append(undo.Stock.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"extra_cuia_stock\":").Append((wallet?.Stock.Get(AF.Economy.BoosterKind.ExtraCuia) ?? 0).ToString(CultureInfo.InvariantCulture));
+            sb.Append('}');
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Línea <c>AF_STATE</c> <c>purchase_sim</c> de una compra simulada (D-008 punto 5): SKU, contexto, resultado y el saldo
+        /// después.
+        /// </summary>
+        public void Purchase(AF.IAP.PurchaseResult result)
+        {
+            if (!Enabled || result == null)
+            {
+                return;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"purchase_sim\"");
+            sb.Append(",\"t\":").Append(((long)(Time.realtimeSinceStartupAsDouble * 1000.0)).ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"sku\":\"").Append(result.Request.Sku).Append('"');
+            sb.Append(",\"context\":\"").Append(result.Request.Context.ToString()).Append('"');
+            sb.Append(",\"status\":\"").Append(result.Status.ToString()).Append('"');
+            sb.Append(",\"level\":").Append(result.Request.Level.ToString(CultureInfo.InvariantCulture));
+            if (result.Transaction != null)
+            {
+                sb.Append(",\"seeds\":").Append(result.Transaction.SeedsBalance.ToString(CultureInfo.InvariantCulture));
+            }
+
+            sb.Append('}');
+            Debug.Log(sb.ToString());
         }
 
         /// <summary>

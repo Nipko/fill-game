@@ -9,6 +9,9 @@
     "AF.Platform",
     "AF.Save",
     "AF.Economy",
+    "AF.Boosters",
+    "AF.Ads",
+    "AF.IAP",
     "UnityEngine.UI",
     "Unity.InputSystem",
     "Unity.TextMeshPro"

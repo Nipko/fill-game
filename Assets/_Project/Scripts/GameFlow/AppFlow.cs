@@ -56,8 +56,10 @@ namespace AF.GameFlow
     /// <item><description>Si el nivel pedido no está en el catálogo (después del último publicado o en un hueco), se abre
     /// «El río sigue creciendo» (08 §6.2; 06 §9).</description></item>
     /// <item><description>Desde el 31 (<c>rescue_min_level</c>), Jugar o Siguiente sin canoas ni Canoas infinitas abre Sin canoas
-    /// (04 §7.1 «Qué bloquea» y §7.3; 06 §4.7), y también tocar el contador de canoas en 0/5. Sin canoas aún solo tiene el
-    /// cronómetro y Volver: sus opciones llegan con B2-3.</description></item>
+    /// (04 §7.1 «Qué bloquea» y §7.3; 06 §4.7), y también tocar el contador de canoas en 0/5. Con una canoa, vuelve al inicio
+    /// (<see cref="RefreshNoCanoes"/>).</description></item>
+    /// <item><description>Desde el nivel se sale al inicio con <see cref="ExitToLobby"/> (Nivel fallido, Sin canoas o la pausa
+    /// en 1-30).</description></item>
     /// <item><description>El intersticial tras Siguiente (AD_GATE, 05 §6.3) llega con B2-4: irá entre <see cref="PressNext"/>
     /// y la carga del nivel siguiente.</description></item>
     /// </list>
@@ -204,6 +206,37 @@ namespace AF.GameFlow
 
             OverlayLevel = PlayLevel;
             Go(AppScreen.NoCanoes);
+            return true;
+        }
+
+        /// <summary>
+        /// Salir del nivel al inicio (06 §4.7): X de Nivel fallido, «Volver al inicio» de Sin canoas o pausa › «Salir» en 1-30
+        /// (sin coste; D-008). Desde el 31, «Salir» pasa antes por el fallo duro y Nivel fallido (<see cref="LevelFlow.ConfirmQuit"/>).
+        /// </summary>
+        public bool ExitToLobby()
+        {
+            if (Screen != AppScreen.Level)
+            {
+                return false;
+            }
+
+            Go(AppScreen.Lobby);
+            return true;
+        }
+
+        /// <summary>
+        /// Sin canoas abierta desde el inicio (Jugar o el contador): en cuanto hay una canoa (espera, video, semillas o compra)
+        /// se vuelve al inicio, donde Jugar ya funciona [P] (04 §7.3 solo fija la vuelta a Nivel fallido). Devuelve si cambió.
+        /// </summary>
+        public bool RefreshNoCanoes()
+        {
+            if (Screen != AppScreen.NoCanoes || !_wallet.CanStartLevel(OverlayLevel > 0 ? OverlayLevel : PlayLevel))
+            {
+                return false;
+            }
+
+            OverlayLevel = 0;
+            Go(AppScreen.Lobby);
             return true;
         }
 

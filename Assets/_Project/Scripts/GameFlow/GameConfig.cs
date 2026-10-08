@@ -3,7 +3,8 @@
 namespace AF.GameFlow
 {
     /// <summary>
-    /// Defaults compilados de Remote Config que usa el prototipo v0, con el nombre exacto de la clave en la tabla
+    /// Defaults compilados de Remote Config del flujo de nivel (los de comodines y rescate están en
+    /// <c>AF.Boosters.BoosterConfig</c>; los de la economía, en <c>AF.Economy.EconomyConfig</c>), con el nombre exacto de la clave en la tabla
     /// única de GDD 08 §9 (ningún valor se inventa aquí). Cuando exista <c>AF.RemoteConfig</c>, estos valores pasan a
     /// leerse con <c>RC.Get&lt;T&gt;(key)</c> y esta clase solo queda como respaldo.
     /// </summary>
@@ -81,9 +82,6 @@ namespace AF.GameFlow
         /// <summary><c>anim_confetti_max_particles</c> (07 §5.4).</summary>
         public const int AnimConfettiMaxParticles = 60;
 
-        /// <summary><c>undo_unlimited_until_level</c>: Marea ilimitada y sin contador hasta este nivel (04 §2.1).</summary>
-        public const int UndoUnlimitedUntilLevel = 10;
-
         /// <summary>
         /// <c>live_content_end_message</c> = <c>{"next_batch_eta_days":14}</c> (08 §9): días estimados hasta los próximos 100
         /// niveles, que muestra la pantalla «El río sigue creciendo» (06 §9; 08 §6.2).
@@ -111,12 +109,6 @@ namespace AF.GameFlow
         public static float SpeedFactor(int level)
         {
             return level < AnimFastFromLevel ? AnimSpeedFactorEarly : AnimSpeedFactorLate;
-        }
-
-        /// <summary>Marea es ilimitada en este nivel (04 §2.1; 02 §13).</summary>
-        public static bool UndoUnlimited(int level)
-        {
-            return level <= UndoUnlimitedUntilLevel;
         }
     }
 }

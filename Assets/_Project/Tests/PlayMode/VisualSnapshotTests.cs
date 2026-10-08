@@ -331,6 +331,107 @@ namespace AF.Tests.PlayMode
             Assert.That(File.Exists(Path.Combine(dir, "10e_victory_home.png")), Is.True);
         }
 
+        /// <summary>
+        /// Bandeja y embudo de bloqueo de D-008 (tareas B2-1 a B2-3), para compararlos con Magic Sort (ficha §4.4-§4.8;
+        /// <c>Logs/device/magicsort/analisis/det_ms/d_004040.jpg</c> «No Available Moves», <c>d_008030.jpg</c> «Continue?»,
+        /// <c>d_000065.jpg</c> «Level Failed!» y <c>d_002890.jpg</c> «More Lives»): <c>11_tray_l8</c> (Marea y Cuia extra con
+        /// el regalo de Capi), <c>11b_tray_l8_added</c> (la cuia añadida en la fila más corta), <c>12_stuck_l31</c> (rama A,
+        /// 300 con el 600 tachado), <c>12b_stuck_l6</c> (rama C), <c>12c_stuck_l31_noseeds</c> (rama B con Puñado y Balsa),
+        /// <c>13_giveup_confirm</c>, <c>14_level_failed</c>, <c>15_no_canoes</c>, <c>16_quit_confirm</c> y <c>16b_pause</c>.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CaptureFunnel()
+        {
+            string dir = Prepare();
+            FunnelSetup.Hooks();
+
+            // 11: nivel 8 con la Cuia extra regalada y el aviso de Capi; 11b, tras usarla.
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
+            yield return PlayModeHelpers.LoadGame(8, new MemoryProgressStore(8, 7));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Attach(boot);
+            boot.TapAnywhere();
+            yield return Wait(0.4f);
+            Save(dir, "11_tray_l8");
+            boot.PressExtraCuia();
+            yield return Wait(0.9f);
+            Save(dir, "11b_tray_l8_added");
+            LogBoard("11b_tray_l8_added", boot);
+
+            // 12: nivel 31 (tablero 6 con af_level_offset = 25) con 1.240 semillas: rama A.
+            yield return LoadFunnel(31, 1240, 3);
+            boot = GameBootstrap.Current!;
+            Attach(boot);
+            yield return StuckRealTime(boot);
+            Save(dir, "12_stuck_l31");
+
+            // 13: ¿Seguro? (paso 2).
+            boot.PressGiveUp();
+            yield return Wait(0.3f);
+            Save(dir, "13_giveup_confirm");
+
+            // 14: Nivel fallido (paso 3) y 15: Sin canoas (paso 4, tras gastar las canoas que quedan).
+            boot.ConfirmGiveUp();
+            yield return Wait(0.3f);
+            Save(dir, "14_level_failed");
+            while (boot.Wallet!.Canoes.Count > 0)
+            {
+                boot.Wallet.Apply(AF.Economy.Transaction.HardFail(31));
+            }
+
+            boot.PressRetry();
+            yield return Wait(0.3f);
+            Save(dir, "15_no_canoes");
+
+            // 12b: nivel 6, rama C.
+            LaunchOptions.LevelOffsetOverride = null;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(310));
+            yield return PlayModeHelpers.LoadGame(6, new MemoryProgressStore(6, 5));
+            boot = GameBootstrap.Current!;
+            Attach(boot);
+            yield return StuckRealTime(boot);
+            Save(dir, "12b_stuck_l6");
+
+            // 12c: nivel 31 sin saldo: rama B (Puñado y Balsa en el orden T3).
+            yield return LoadFunnel(31, 140, 3);
+            boot = GameBootstrap.Current!;
+            Attach(boot);
+            yield return StuckRealTime(boot);
+            Save(dir, "12c_stuck_l31_noseeds");
+
+            // 16b: pausa, y 16: «¿Salir del nivel? Perderás 1 canoa».
+            yield return LoadFunnel(31, 1240, 4);
+            boot = GameBootstrap.Current!;
+            Attach(boot);
+            boot.TapAnywhere();
+            yield return Wait(0.3f);
+            boot.View!.PauseButton.onClick.Invoke();
+            yield return Wait(0.2f);
+            Save(dir, "16b_pause");
+            boot.View.Pause.QuitButton.onClick.Invoke();
+            yield return Wait(0.2f);
+            Save(dir, "16_quit_confirm");
+            Assert.That(File.Exists(Path.Combine(dir, "16_quit_confirm.png")), Is.True);
+        }
+
+        private static IEnumerator LoadFunnel(int level, int seeds, int canoes)
+        {
+            LaunchOptions.LevelOffsetOverride = 25;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(seeds, canoes));
+            yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore(level, level - 1));
+        }
+
+        // Tablero 6: 3 → 4 deja Aguas estancadas; espera al modal y a que el panel termine de subir.
+        private static IEnumerator StuckRealTime(GameBootstrap boot)
+        {
+            boot.TapAnywhere();
+            boot.TapCuia(3);
+            boot.TapCuia(4);
+            LevelFlow flow = boot.Flow!;
+            yield return PlayModeHelpers.WaitFor(() => flow.Phase == FlowPhase.StuckModal, "modal");
+            yield return Wait(0.45f);
+        }
+
         // Cámara y textura de las capturas (1080 × 2340 px, 20:9 aprox., 360 × 780 dp) con zona segura; devuelve la carpeta.
         private string Prepare()
         {

@@ -64,7 +64,9 @@ namespace AF.UI
             {
                 _labelMaterial = label.fontSharedMaterial;
                 _labelColor = label.color;
-                _labelDisabledMaterial = UiFonts.Material(TextStyle.Disabled);
+                // El material deshabilitado es de Nunito: con otra fuente (Baloo 2 en los CTA) su atlas no casa y el texto sale
+                // roto; entonces se conserva el material propio y solo cambia el color.
+                _labelDisabledMaterial = UiFonts.Font(TextStyle.Disabled) == label.font ? UiFonts.Material(TextStyle.Disabled) : null;
             }
         }
 
@@ -100,7 +102,7 @@ namespace AF.UI
             if (_label != null)
             {
                 _label.color = interactable ? _labelColor : Palette.DisabledText;
-                Material? m = interactable ? _labelMaterial : _labelDisabledMaterial;
+                Material? m = interactable ? _labelMaterial : (_labelDisabledMaterial ?? _labelMaterial);
                 if (m != null && _label.fontSharedMaterial != m)
                 {
                     _label.fontSharedMaterial = m;

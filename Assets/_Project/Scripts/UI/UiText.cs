@@ -79,6 +79,132 @@ namespace AF.UI
         /// <summary>Cronómetro de Sin canoas (04 §7.3; D-008 paso 4).</summary>
         public const string NoCanoesNext = "Tu próxima canoa vuelve en";
 
+        /// <summary>Etiqueta funcional de Cuia extra en la bandeja (04 §2.2; glosario §0.2).</summary>
+        public const string ExtraCuia = "+1 cuia";
+
+        /// <summary>Texto de Capi al regalar la Cuia extra en el nivel 8 (04 §2.2).</summary>
+        public const string ExtraCuiaGift = "Capi te trae una cuia más para este nivel. La próxima la encuentras en tu Canasta";
+
+        /// <summary><c>stuck_rescue_cta</c>.</summary>
+        public const string StuckRescueCta = "Continuar: +1 cuia";
+
+        /// <summary>
+        /// <c>stuck_rescue_discount</c> («Primer rescate del día: −50 %»). El atlas de las fuentes no tiene el signo menos
+        /// U+2212: se escribe con la raya corta U+2013, que sí tiene (también en las demás cifras negativas).
+        /// </summary>
+        public const string StuckRescueDiscount = "Primer rescate del día: –50 %";
+
+        /// <summary><c>stuck_rescue_missing</c>.</summary>
+        public const string StuckRescueMissing = "Te faltan {0} semillas";
+
+        /// <summary>«Te faltan {n}» del precio en rojo (04 §1.1; bandeja).</summary>
+        public const string Missing = "Te faltan {0}";
+
+        /// <summary><c>stuck_undo_refill_ad</c> (la cifra es <c>undo_refill_amount</c>).</summary>
+        public const string StuckUndoRefillAd = "+{0} Deshacer · Ver video";
+
+        /// <summary><c>stuck_undo_refill_seeds</c> (cifras: <c>undo_refill_amount</c> y <c>undo_refill_seed_price</c>).</summary>
+        public const string StuckUndoRefillSeeds = "+{0} Deshacer · {1} semillas";
+
+        /// <summary>Recarga gratis de +1 Marea de la rama F [P] (04 §6.3; sin clave en 04 §6.5).</summary>
+        public const string StuckUndoGift = "+1 Deshacer · gratis";
+
+        /// <summary><c>stuck_pack_199</c>: «Puñado de semillas · 1.000 · {precio_local}».</summary>
+        public const string StuckPack = "Puñado de semillas · {0} · {1}";
+
+        /// <summary><c>stuck_balsa_499</c>, primera parte: «Balsa de rescate · {precio_local}».</summary>
+        public const string StuckBalsa = "Balsa de rescate · {0}";
+
+        /// <summary><c>stuck_balsa_499</c>, segunda parte.</summary>
+        public const string StuckBalsaContent = "Todo para seguir: semillas, una cuia y canoas infinitas";
+
+        /// <summary><c>stuck_canoe_lost</c> («Travesía perdida: −1 canoa», con U+2013 por el atlas).</summary>
+        public const string StuckCanoeLost = "Travesía perdida: –1 canoa";
+
+        /// <summary><c>stuck_canoe_lost_last</c>.</summary>
+        public const string StuckCanoeLostLast = "Travesía perdida: tu última canoa";
+
+        /// <summary><c>stuck_unsolvable</c> (rama F).</summary>
+        public const string StuckUnsolvable = "Ni una cuia más salva este tramo. Prueba la Marea o vuelve a la orilla.";
+
+        /// <summary><c>stuck_give_up</c> [P] (D-008; P14).</summary>
+        public const string StuckGiveUp = "Rendirse";
+
+        /// <summary><c>rescue_applied</c>.</summary>
+        public const string RescueApplied = "¡Una cuia más! Sigue desde aquí";
+
+        /// <summary><c>giveup_confirm_title</c> [P].</summary>
+        public const string GiveUpConfirmTitle = "¿Seguro?";
+
+        /// <summary><c>giveup_confirm_canoe</c> [P].</summary>
+        public const string GiveUpConfirmCanoe = "Perderás 1 canoa";
+
+        /// <summary>«Perderás tu última canoa» [P] (D-008, paso 2; sin clave propia en 04 §6.5).</summary>
+        public const string GiveUpConfirmLastCanoe = "Perderás tu última canoa";
+
+        /// <summary><c>level_failed</c> [P].</summary>
+        public const string LevelFailed = "Nivel fallido";
+
+        /// <summary><c>level_failed_reward</c> [P].</summary>
+        public const string LevelFailedReward = "Premio: {0} semillas";
+
+        /// <summary><c>retry</c> [P].</summary>
+        public const string Retry = "Reintentar";
+
+        /// <summary><c>quit_confirm</c> [P], primera parte (título del diálogo).</summary>
+        public const string QuitConfirmTitle = "¿Salir del nivel?";
+
+        /// <summary><c>quit_confirm</c> [P], segunda parte.</summary>
+        public const string QuitConfirmCanoe = "Perderás 1 canoa";
+
+        /// <summary>Confirmación de Volver a la orilla con ≥ 8 vertidos (04 §2.7), primera parte.</summary>
+        public const string RestartConfirmTitle = "¿Volver a la orilla?";
+
+        /// <summary>Confirmación de Volver a la orilla con ≥ 8 vertidos (04 §2.7), segunda parte.</summary>
+        public const string RestartConfirmBody = "Perderás los vertidos de este intento";
+
+        /// <summary>Botón «Volver a la orilla» (pausa y confirmación; glosario §5.1).</summary>
+        public const string RestartLong = "Volver a la orilla";
+
+        /// <summary>«Salir» del menú de pausa (D-008).</summary>
+        public const string Quit = "Salir";
+
+        /// <summary>Título del menú de pausa [P].</summary>
+        public const string Pause = "Pausa";
+
+        /// <summary>Volver a la partida desde la pausa o un diálogo [P].</summary>
+        public const string KeepPlaying = "Seguir jugando";
+
+        /// <summary>Sin canoas: «Canoa extra · Ver video» (04 §7.3).</summary>
+        public const string NoCanoesVideo = "Canoa extra · Ver video";
+
+        /// <summary>
+        /// Sin canoas: «Llenar canoas · {n}/{n}» con la etiqueta de precio (<c>canoes_refill_seed_price</c>) al lado (04 §7.3:
+        /// «Llenar canoas · 200 (S) 5/5»).
+        /// </summary>
+        public const string NoCanoesRefill = "Llenar canoas · {0}/{0}";
+
+        /// <summary>Sin canoas: «Canoas infinitas 1 h · {precio}» (04 §7.3; <c>af_infinite_canoes_1h</c>).</summary>
+        public const string NoCanoesInfinite = "Canoas infinitas 1 h · {0}";
+
+        /// <summary>Sin canoas: «Volver al inicio» (tarea B2-3; el wireframe de 04 §7.3 dice Mapa del río, que aún no existe).</summary>
+        public const string BackHome = "Volver al inicio";
+
+        /// <summary><c>river_lowered_color</c>.</summary>
+        public const string RiverLoweredColor = "El río bajó: esta vez hay un color menos";
+
+        /// <summary><c>river_lowered_cuia</c>.</summary>
+        public const string RiverLoweredCuia = "El río bajó: esta vez hay una cuia más";
+
+        /// <summary>Rótulo de la pantalla de anuncio simulado (B1-3; D-008 punto 4).</summary>
+        public const string SimulatedAdClose = "Cerrar";
+
+        /// <summary>Botón de compra de la hoja «Compra simulada» (B1-4).</summary>
+        public const string Buy = "Comprar";
+
+        /// <summary>Cancelar la compra simulada.</summary>
+        public const string Cancel = "Cancelar";
+
         /// <summary>"Nivel {n}".</summary>
         public static string Level(int level)
         {
@@ -89,6 +215,20 @@ namespace AF.UI
         public static string PlayLevel(int level)
         {
             return Play + " · " + Level(level);
+        }
+
+        /// <summary>«Te faltan {n} semillas».</summary>
+        public static string MissingSeeds(int n)
+        {
+            return string.Format(CultureInfo.InvariantCulture, StuckRescueMissing, Grouped(n));
+        }
+
+        /// <summary>Número con separador de miles «.» (glosario §10: «1.000»).</summary>
+        public static string Grouped(int value)
+        {
+            var buffer = new char[16];
+            int n = WriteNumber(buffer, 0, value, true);
+            return new string(buffer, 0, n);
         }
 
         /// <summary>Etiqueta del chip de dificultad para <c>difficulty.label</c>, o null si es <c>normal</c>.</summary>

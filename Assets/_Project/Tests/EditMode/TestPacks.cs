@@ -106,6 +106,31 @@ namespace AF.Tests.EditMode
             Events.Add("modal");
         }
 
+        public void OnCuiaAdded(int index, AddedCuiaKind kind)
+        {
+            Events.Add("cuia:" + index + ":" + kind);
+        }
+
+        public void OnExtraCuiaGifted(int units)
+        {
+            Events.Add("gift:" + units);
+        }
+
+        public void OnFunnelPhase(FlowPhase phase)
+        {
+            Events.Add("phase:" + phase);
+        }
+
+        public void OnFailResolved(FailOutcome outcome)
+        {
+            Events.Add("fail:" + outcome.Kind + ":" + outcome.FailsLevel + (outcome.CanoeLost ? ":canoe" : string.Empty));
+        }
+
+        public void OnRiverLowered(string reliefType, int bannerMs)
+        {
+            Events.Add("river:" + reliefType + ":" + bannerMs);
+        }
+
         public bool Saw(string evt)
         {
             return Events.Contains(evt);

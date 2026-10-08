@@ -133,7 +133,30 @@ namespace AF.Levels
                 throw new LevelFormatException(where + ": 'units_per_color' fuera de 1..6.");
             }
 
-            int[] caps = ReadIntList(RequireArray(node, "caps", where), "caps", where);
+            ReadBoard(node, unitsPerColor, where, out int[] caps, out int[][] cuias);
+            CheckNoMechanics(node, caps.Length, where);
+
+            JsonValue? difficulty = node.Get("difficulty");
+            if (difficulty == null || difficulty.Kind != JsonKind.Object)
+            {
+                throw new LevelFormatException(where + ": falta 'difficulty'.");
+            }
+
+            int par = RequireInt(difficulty, "par", where);
+            if (par < 1)
+            {
+                throw new LevelFormatException(where + ": 'difficulty.par' debe ser ≥ 1.");
+            }
+
+            string label = ReadDifficultyLabel(difficulty, where);
+            ReliefBoard[] relief = ReadRelief(node, unitsPerColor, where);
+            return new LevelDefinition(id, level, world, waterBase, palette, unitsPerColor, caps, cuias, par, label, relief);
+        }
+
+        // caps + cuias de un tablero (nivel o variante de relief[]): longitudes, capacidades 1..6, tintes 1..14 y U_c (02 R3).
+        private static void ReadBoard(JsonValue node, int unitsPerColor, string where, out int[] caps, out int[][] cuias)
+        {
+            caps = ReadIntList(RequireArray(node, "caps", where), "caps", where);
             JsonValue cuiasNode = RequireArray(node, "cuias", where);
             if (caps.Length < 1 || caps.Length > BoardState.MaxCuias)
             {
@@ -146,7 +169,7 @@ namespace AF.Levels
             }
 
             var counts = new int[Cuia.MaxColor + 1];
-            var cuias = new int[caps.Length][];
+            cuias = new int[caps.Length][];
             for (int i = 0; i < caps.Length; i++)
             {
                 if (caps[i] < Cuia.MinCapacity || caps[i] > Cuia.MaxCapacity)
@@ -194,23 +217,57 @@ namespace AF.Levels
                         + unitsPerColor.ToString(CultureInfo.InvariantCulture) + " (02 R3).");
                 }
             }
+        }
 
-            CheckNoMechanics(node, caps.Length, where);
-
-            JsonValue? difficulty = node.Get("difficulty");
-            if (difficulty == null || difficulty.Kind != JsonKind.Object)
+        // relief (08 §4.1; esquema relief_board): lista de 0 a 2 tableros {type, caps, cuias, attrs?, removed?, par, bot_fail},
+        // en orden de prioridad. El cliente solo necesita el tipo y el tablero; sin mecánicas (attrs null o ausente).
+        private static ReliefBoard[] ReadRelief(JsonValue node, int unitsPerColor, string where)
+        {
+            JsonValue? list = node.Get("relief");
+            if (list == null || list.IsNull)
             {
-                throw new LevelFormatException(where + ": falta 'difficulty'.");
+                return new ReliefBoard[0];
             }
 
-            int par = RequireInt(difficulty, "par", where);
-            if (par < 1)
+            if (list.Kind != JsonKind.Array || list.Items.Count > 2)
             {
-                throw new LevelFormatException(where + ": 'difficulty.par' debe ser ≥ 1.");
+                throw new LevelFormatException(where + ": 'relief' debe ser una lista de como mucho 2 tableros.");
             }
 
-            string label = ReadDifficultyLabel(difficulty, where);
-            return new LevelDefinition(id, level, world, waterBase, palette, unitsPerColor, caps, cuias, par, label);
+            var result = new ReliefBoard[list.Items.Count];
+            for (int i = 0; i < result.Length; i++)
+            {
+                JsonValue entry = list.Items[i];
+                string at = where + ".relief[" + i.ToString(CultureInfo.InvariantCulture) + "]";
+                if (entry.Kind != JsonKind.Object)
+                {
+                    throw new LevelFormatException(at + ": cada variante debe ser un objeto.");
+                }
+
+                string type = RequireString(entry, "type", at);
+                if (type != ReliefBoard.TypePlusEmpty && type != ReliefBoard.TypeMinusColor)
+                {
+                    throw new LevelFormatException(at + ": 'type' debe ser plus_empty o minus_color.");
+                }
+
+                ReadBoard(entry, unitsPerColor, at, out int[] caps, out int[][] cuias);
+                JsonValue? attrs = entry.Get("attrs");
+                if (attrs != null && !attrs.IsNull)
+                {
+                    CheckNoMechanics(entry, caps.Length, at);
+                }
+
+                JsonValue? parNode = entry.Get("par");
+                int? par = parNode == null || parNode.IsNull ? (int?)null : AsInt(parNode, "par", at);
+                if (par == null && type == ReliefBoard.TypeMinusColor)
+                {
+                    throw new LevelFormatException(at + ": minus_color lleva siempre par (03 §13).");
+                }
+
+                result[i] = new ReliefBoard(type, caps, cuias, par);
+            }
+
+            return result;
         }
 
         // difficulty.label (08 §4.1): normal, hard o very_hard; sin etiqueta (subconjunto v0) es normal.

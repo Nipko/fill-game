@@ -1,45 +1,51 @@
 #nullable enable
 using System;
+using AF.Boosters;
+using AF.Core.Board;
 using AF.Core.Rules;
 using AF.Core.Session;
+using AF.Economy;
 using AF.Levels;
 
 namespace AF.GameFlow
 {
     /// <summary>
-    /// Máquina de estados de la pantalla de nivel (GDD 02 §2) del prototipo v0: LOADING → INTRO → PLAYING →
-    /// CELEBRATION → VICTORY_SCREEN y PLAYING → STUCK_MODAL, con Marea (04 §2.1) y Volver a la orilla (04 §2.7).
-    /// Sin motor: el tiempo entra por <see cref="Tick"/> y la vista solo informa si su cola de animación está vacía.
+    /// Máquina de estados de la pantalla de nivel (GDD 02 §2): LOADING → INTRO → PLAYING → CELEBRATION → VICTORY_SCREEN y
+    /// PLAYING → STUCK_MODAL, con Marea (04 §2.1), Volver a la orilla (04 §2.7), la bandeja de comodines (B2-1) y el
+    /// embudo de bloqueo de D-008 (B2-2 y B2-3, en <c>LevelFlow.Funnel.cs</c>). Sin motor: el tiempo entra por
+    /// <see cref="Tick"/> y la vista solo informa si su cola de animación está vacía.
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
     /// <item><description>Las reglas viven en el núcleo: cada toque pasa por <see cref="TapController"/> y
     /// <see cref="LevelSession"/>; victoria y bloqueo son los de <see cref="LevelSession.Status"/> (R10, R12, R13).</description></item>
     /// <item><description>Cada nivel se juega con el modo de vertido de <see cref="PourMode"/> (D-005: por defecto
-    /// <see cref="AF.Core.Rules.PourMode.Run"/>, la racha que cabe), fijado al cargarlo y que nunca cambia a mitad del
-    /// nivel.</description></item>
+    /// <see cref="AF.Core.Rules.PourMode.Run"/>), fijado al cargarlo y que nunca cambia a mitad del nivel.</description></item>
     /// <item><description>Tras la victoria o el bloqueo lógico el input queda bloqueado al instante (R15) y el flujo espera a que
     /// la cola visual se vacíe (02 §3.2) antes de celebrar o de abrir el modal; el modal se abre
-    /// <c>stuck_modal_delay_ms</c> después (R15).</description></item>
-    /// <item><description>Los niveles salen de un <see cref="LevelCatalog"/> (uno o varios paquetes, 08 §2.2) con números de
-    /// campaña. El progreso se guarda en el instante lógico de la victoria: <c>max_level</c> = N y <c>next_level</c> = N + 1
-    /// (08 §4.3; tarea B1-5), aunque N + 1 aún no esté publicado: entonces <see cref="Next"/> devuelve false y
-    /// <see cref="AppFlow"/> muestra «El río sigue creciendo» (08 §6.2).</description></item>
-    /// <item><description>VICTORY_SCREEN sin auto-avance: <c>victory_autonext_s</c> = 0 (02 §6; 07 §5.4); solo Siguiente
-    /// avanza.</description></item>
-    /// <item><description>Marea solo existe en su forma ilimitada de los niveles 1-<c>undo_unlimited_until_level</c> (04 §2.1):
-    /// el contador "3/3" desde el 11 no está en v0, así que el flujo rechaza paquetes con niveles mayores. Se mira el número
-    /// del paquete: con el desplazamiento de desarrollo <c>af_level_offset</c> [P] (<see cref="LevelCatalog.LevelOffset"/>)
-    /// el tablero del nivel 1 se juega como el 31 con Marea ilimitada hasta que llegue el contador (B2-1).</description></item>
+    /// <c>stuck_modal_delay_ms</c> después (R15). La verificación «la compra cumple» (04 §6.4) corre en el instante lógico del
+    /// bloqueo, dentro de esa espera.</description></item>
+    /// <item><description>Los niveles salen de un <see cref="LevelCatalog"/> con números de campaña. El progreso se guarda en el
+    /// instante lógico de la victoria: <c>max_level</c> = N y <c>next_level</c> = N + 1 (08 §4.3).</description></item>
+    /// <item><description>VICTORY_SCREEN sin auto-avance: <c>victory_autonext_s</c> = 0 (02 §6); solo Siguiente avanza.</description></item>
+    /// <item><description>Marea con su cupo (<see cref="UndoQuota"/>): ilimitada en 1-10 y 3 por nivel desde el 11, contando el
+    /// número de campaña (con <c>af_level_offset</c> [P], el tablero del nivel 1 se juega como el 31 con 3 Mareas).</description></item>
+    /// <item><description>Sin <see cref="Wallet"/> (tests del núcleo del flujo) no hay stock, compras ni canoas: Marea solo con el
+    /// cupo y nada cuesta canoa.</description></item>
     /// </list>
     /// No es seguro entre hilos.
     /// </remarks>
-    public sealed class LevelFlow
+    public sealed partial class LevelFlow
     {
         private readonly LevelCatalog _catalog;
         private readonly IProgressStore _progress;
         private readonly ILevelFlowListener _listener;
         private readonly TapController _taps;
+        private readonly Wallet? _wallet;
+        private readonly BoosterConfig _boosters;
+        private readonly UndoQuota _undo;
+        private readonly RescueBooster _rescue;
+        private readonly LevelAttempt _attempt = new LevelAttempt();
 
         private LevelSession? _session;
         private LevelDefinition? _level;
@@ -54,8 +60,15 @@ namespace AF.GameFlow
 
         /// <summary>Crea el flujo sobre un solo paquete (catálogo sin desplazamiento; tests y prototipo v0).</summary>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="pourMode"/> no es un valor definido.</exception>
-        public LevelFlow(LevelPack pack, IProgressStore progress, ILevelFlowListener listener, bool tapSwitchSelection = GameConfig.TapSwitchSelection, PourMode pourMode = PourModes.Default)
-            : this(LevelCatalog.FromPack(pack ?? throw new ArgumentNullException(nameof(pack))), progress, listener, tapSwitchSelection, pourMode)
+        public LevelFlow(
+            LevelPack pack,
+            IProgressStore progress,
+            ILevelFlowListener listener,
+            bool tapSwitchSelection = GameConfig.TapSwitchSelection,
+            PourMode pourMode = PourModes.Default,
+            Wallet? wallet = null,
+            BoosterConfig? boosters = null)
+            : this(LevelCatalog.FromPack(pack ?? throw new ArgumentNullException(nameof(pack))), progress, listener, tapSwitchSelection, pourMode, wallet, boosters)
         {
         }
 
@@ -64,32 +77,27 @@ namespace AF.GameFlow
         /// <param name="progress">Progreso guardado.</param>
         /// <param name="listener">Vista (y sonda de desarrollo).</param>
         /// <param name="tapSwitchSelection">Valor de <c>tap_switch_selection</c> (08 §9; C5).</param>
-        /// <param name="pourMode">Modo de vertido de los niveles que se carguen (<c>rules_pour_mode</c>, D-005; por defecto
-        /// <see cref="PourModes.Default"/>, la racha que cabe; <see cref="AF.Core.Rules.PourMode.Single"/> solo en pruebas).
-        /// Ver <see cref="PourMode"/>.</param>
+        /// <param name="pourMode">Modo de vertido de los niveles que se carguen (<c>rules_pour_mode</c>, D-005).</param>
+        /// <param name="wallet">Cartera del jugador (stock, semillas y canoas); null en los tests del flujo sin economía.</param>
+        /// <param name="boosters">Cifras de los comodines (por defecto, las de 08 §9).</param>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="pourMode"/> no es un valor definido.</exception>
-        public LevelFlow(LevelCatalog catalog, IProgressStore progress, ILevelFlowListener listener, bool tapSwitchSelection = GameConfig.TapSwitchSelection, PourMode pourMode = PourModes.Default)
+        public LevelFlow(
+            LevelCatalog catalog,
+            IProgressStore progress,
+            ILevelFlowListener listener,
+            bool tapSwitchSelection = GameConfig.TapSwitchSelection,
+            PourMode pourMode = PourModes.Default,
+            Wallet? wallet = null,
+            BoosterConfig? boosters = null)
         {
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             _progress = progress ?? throw new ArgumentNullException(nameof(progress));
-            for (int p = 0; p < catalog.Packs.Count; p++)
-            {
-                LevelPack pack = catalog.Packs[p];
-                for (int i = 0; i < pack.Count; i++)
-                {
-                    int level = pack.Levels[i].Level;
-                    if (!GameConfig.UndoUnlimited(level))
-                    {
-                        throw new NotSupportedException(
-                            "El nivel " + level.ToString(System.Globalization.CultureInfo.InvariantCulture) + " necesita Marea con contador "
-                            + "(3 por nivel desde el " + (GameConfig.UndoUnlimitedUntilLevel + 1).ToString(System.Globalization.CultureInfo.InvariantCulture)
-                            + ", 04 §2.1), que el prototipo v0 no tiene: solo admite niveles 1-"
-                            + GameConfig.UndoUnlimitedUntilLevel.ToString(System.Globalization.CultureInfo.InvariantCulture) + ".");
-                    }
-                }
-            }
-
             _listener = listener ?? throw new ArgumentNullException(nameof(listener));
+            _wallet = wallet;
+            _boosters = boosters ?? BoosterConfig.Defaults;
+            _boosters.Validate();
+            _undo = new UndoQuota(_boosters);
+            _rescue = new RescueBooster(_boosters);
             _taps = new TapController(tapSwitchSelection);
             PourMode = pourMode;
             Phase = FlowPhase.Loading;
@@ -107,10 +115,7 @@ namespace AF.GameFlow
 
         /// <summary>
         /// Modo de vertido (<c>rules_pour_mode</c>, D-005: por defecto run) con el que se crea la sesión en cada
-        /// <see cref="Load"/>. Se fija al cargar el nivel y nunca cambia a mitad. Un
-        /// cambio se aplica desde la siguiente carga de nivel, nunca a mitad: el nivel en curso conserva el de su sesión
-        /// (<see cref="LevelSession.PourMode"/>), porque el historial de Marea y el par dependen de él. Volver a la orilla
-        /// tampoco lo cambia. La cantidad de cada vertido la decide el núcleo con este modo (<c>PourRules.Amount</c>).
+        /// <see cref="Load"/>. Se fija al cargar el nivel y nunca cambia a mitad; Volver a la orilla tampoco lo cambia.
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException">El valor no es un <see cref="AF.Core.Rules.PourMode"/> definido.</exception>
         public PourMode PourMode
@@ -130,6 +135,15 @@ namespace AF.GameFlow
         /// <summary>Catálogo de niveles.</summary>
         public LevelCatalog Catalog => _catalog;
 
+        /// <summary>Cartera (null en los tests del flujo sin economía).</summary>
+        public Wallet? Wallet => _wallet;
+
+        /// <summary>Cifras de los comodines.</summary>
+        public BoosterConfig Boosters => _boosters;
+
+        /// <summary>Lo que el nivel recuerda entre intentos: <c>fails_level</c>, variante, cuias añadidas.</summary>
+        public LevelAttempt Attempt => _attempt;
+
         /// <summary>Nivel cargado.</summary>
         /// <exception cref="InvalidOperationException">Aún no hay nivel.</exception>
         public LevelDefinition Level => _level ?? throw new InvalidOperationException("No hay ningún nivel cargado.");
@@ -147,8 +161,11 @@ namespace AF.GameFlow
         /// <summary>Cuia seleccionada (−1 = ninguna).</summary>
         public int Selected => _taps.Selected;
 
-        /// <summary>Duración de la intro en curso (ms).</summary>
+        /// <summary>Duración de la intro en curso (ms), con el cartel «El río bajó» si lo hay.</summary>
         public int IntroDurationMs => _introMs;
+
+        /// <summary>Cuias generadas del tablero del intento (sin las añadidas): fijan las filas (D-006).</summary>
+        public int GeneratedCuias => _session == null ? 0 : _session.Current.Count - _attempt.Added.Count;
 
         /// <summary>El tablero acepta toques: PLAYING sin victoria ni bloqueo lógico pendiente (R15).</summary>
         public bool AcceptsBoardInput => Phase == FlowPhase.Playing && _pending == Outcome.None && _session != null;
@@ -156,11 +173,20 @@ namespace AF.GameFlow
         /// <summary>Victoria o bloqueo lógico a la espera de que la vista termine (input bloqueado).</summary>
         public bool IsResolving => Phase == FlowPhase.Playing && _pending != Outcome.None;
 
-        /// <summary>Marea está disponible: hay historial y el estado lo permite (PLAYING sin pendientes o STUCK_MODAL).</summary>
-        public bool CanUndo => _session != null && _session.CanUndo && (AcceptsBoardInput || Phase == FlowPhase.StuckModal);
+        /// <summary>Estado del botón de Marea: ilimitada, cupo gratis y stock (04 §1.1).</summary>
+        public UndoStatus UndoStatus => _undo.Status(_wallet?.Stock.Get(BoosterKind.Undo) ?? 0);
 
-        /// <summary>Volver a la orilla está disponible (PLAYING sin pendientes o STUCK_MODAL).</summary>
-        public bool CanRestart => _session != null && (AcceptsBoardInput || Phase == FlowPhase.StuckModal);
+        /// <summary>
+        /// Marea se puede usar ahora: hay historial, el estado lo permite (PLAYING sin pendientes o STUCK_MODAL) y queda cupo
+        /// o stock (o es ilimitada).
+        /// </summary>
+        public bool CanUndo => _session != null && _session.CanUndo && UndoAllowedHere && UndoStatus.HasQuota;
+
+        /// <summary>
+        /// Volver a la orilla está disponible: PLAYING sin pendientes (cabecera o pausa) o, en 1-30, el pie del modal (rama C).
+        /// Desde el 31 el pie del modal es «Rendirse» (D-008).
+        /// </summary>
+        public bool CanRestart => _session != null && (AcceptsBoardInput || (Phase == FlowPhase.StuckModal && !CanoesLevel));
 
         /// <summary>Nivel de arranque: <paramref name="requested"/> si el catálogo lo tiene; si no, el primero.</summary>
         public int ResolveLevel(int requested)
@@ -175,9 +201,10 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// LOADING del nivel <paramref name="level"/> (o del primero si no existe) y arranque de la intro. La sesión se crea
-        /// con el <see cref="PourMode"/> vigente (por defecto run, D-005), que queda fijo hasta la siguiente carga: nunca
-        /// cambia a mitad del nivel.
+        /// LOADING del nivel <paramref name="level"/> (o del primero si no existe) y arranque de la intro, con el cupo de Marea
+        /// entero. Volver a entrar en el mismo nivel (tras salir al inicio) conserva <c>fails_level</c> y la variante aliviada,
+        /// no las cuias añadidas (04 §2.2: desaparecen al abandonar el nivel). En el nivel 8, la primera vez, Capi regala una
+        /// Cuia extra (04 §2.2).
         /// </summary>
         public void Load(int level)
         {
@@ -186,10 +213,19 @@ namespace AF.GameFlow
             Phase = FlowPhase.Loading;
             _level = def;
             _levelNumber = number;
-            _session = new LevelSession(def.CreateBoard(), GameConfig.FutileRuleEnabled, _pourMode);
+            _attempt.Enter(number);
+            _undo.ResetForLevel(number);
+            ResetStuck();
+            _session = new LevelSession(BoardFor(def, _attempt.ReliefIndex), GameConfig.FutileRuleEnabled, _pourMode);
             _taps.Clear();
             ResetPending();
             _listener.OnLevelLoaded(number);
+            if (ExtraCuiaBooster.ShouldGift(number, _progress.LoadMaxLevel(), _wallet, _boosters)
+                && _wallet!.Apply(Transaction.GrantStock(BoosterKind.ExtraCuia, BoosterConfig.ExtraCuiaTutorialUnits)).IsApplied)
+            {
+                _listener.OnExtraCuiaGifted(BoosterConfig.ExtraCuiaTutorialUnits);
+            }
+
             StartIntro(GameConfig.TintDurationMs(number), false);
         }
 
@@ -224,6 +260,15 @@ namespace AF.GameFlow
                     if (_phaseMs >= GameConfig.AnimCelebrationMs)
                     {
                         ShowVictory();
+                    }
+
+                    break;
+
+                case FlowPhase.NoCanoes:
+                    // 04 §7.3 [P]: en cuanto hay una canoa (espera, video, semillas o compra) se vuelve a donde se abrió.
+                    if (!CanoesBlockStart())
+                    {
+                        ExitNoCanoes();
                     }
 
                     break;
@@ -302,8 +347,8 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// Botón Volver a la orilla de la cabecera o del modal (C8 de 02 §3.1): deselecciona y ejecuta
-        /// <see cref="Restart"/>.
+        /// Botón Volver a la orilla de la cabecera, de la pausa o del pie del modal en 1-30 (C8 de 02 §3.1): deselecciona y
+        /// ejecuta <see cref="Restart"/>.
         /// </summary>
         public bool PressRestart()
         {
@@ -324,12 +369,19 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// Marea (04 §2.1): deshace el último vertido. Desde STUCK_MODAL cierra el modal y vuelve a PLAYING
-        /// (dirección 9, R15). Ilimitada en los niveles 1-10 (<c>undo_unlimited_until_level</c>). C8: quita la selección.
+        /// Marea (04 §2.1): deshace el último vertido y gasta una del cupo o del stock (ilimitada en 1-10). Desde
+        /// STUCK_MODAL cierra el modal y vuelve a PLAYING (dirección 9, R15); no es fallo. C8: quita la selección. Sin cupo ni
+        /// stock devuelve false: la vista ofrece la recarga.
         /// </summary>
         public bool Undo()
         {
             if (!CanUndo || _session == null)
+            {
+                return false;
+            }
+
+            UndoSource source = _undo.Consume(_wallet);
+            if (source == UndoSource.None)
             {
                 return false;
             }
@@ -339,6 +391,7 @@ namespace AF.GameFlow
             _taps.Clear();
             _session.Undo();
             ResetPending();
+            ResetStuck();
             Phase = FlowPhase.Playing;
             _listener.OnUndo(undone, fromModal);
             EvaluateStatus();
@@ -346,8 +399,11 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// Volver a la orilla (04 §2.7): mismo tablero, historial vacío e INTRO corta. Gratis e ilimitado; sin la
-        /// confirmación de ≥ 8 vertidos (fuera del prototipo v0). C8: quita la selección.
+        /// Volver a la orilla (04 §2.7): mismo tablero (misma semilla), historial vacío, cupo de Marea entero e INTRO corta;
+        /// conserva las cuias añadidas. Desde la cabecera es gratis: con ≥ <c>restart_confirm_min_pours</c> vertidos cuenta
+        /// como fallo blando (la vista pide antes la confirmación de una línea: <see cref="RestartNeedsConfirm"/>); desde el 31
+        /// con 0 canoas abre Sin canoas (04 §7.1 «Qué bloquea»). Desde el pie del modal en 1-30 es el fallo duro de la rama C
+        /// (sin canoa). Al tercer fallo se sirve la variante aliviada (<c>relief[0]</c>), si el nivel la tiene.
         /// </summary>
         public bool Restart()
         {
@@ -357,11 +413,25 @@ namespace AF.GameFlow
             }
 
             bool fromModal = Phase == FlowPhase.StuckModal;
+            if (!fromModal && CanoesBlockStart())
+            {
+                _taps.Clear();
+                EnterNoCanoes(FlowPhase.Playing);
+                return true;
+            }
+
             _taps.Clear();
-            _session.Restart();
-            ResetPending();
+            if (fromModal)
+            {
+                Fail(FailKind.Hard);
+            }
+            else if (_session.AppliedPours >= _boosters.RestartConfirmMinPours)
+            {
+                Fail(FailKind.Soft);
+            }
+
             _listener.OnRestart(fromModal);
-            StartIntro(GameConfig.AnimTintDurationMsLate, true);
+            BeginAttempt();
             return true;
         }
 
@@ -379,6 +449,43 @@ namespace AF.GameFlow
 
             Load(LevelNumber + 1);
             return true;
+        }
+
+        // Tablero del intento: el base o la variante relief[index], con las cuias ya añadidas al final (persisten).
+        private BoardState BoardFor(LevelDefinition def, int reliefIndex)
+        {
+            BoardState board = reliefIndex >= 0 && reliefIndex < def.Relief.Count ? def.Relief[reliefIndex].CreateBoard() : def.CreateBoard();
+            for (int i = 0; i < _attempt.Added.Count && board.Count < BoardState.MaxCuias; i++)
+            {
+                board = RescueBooster.WithEmptyCuia(board);
+            }
+
+            return board;
+        }
+
+        // Nuevo intento del mismo nivel (Volver a la orilla, Reintentar, rama C): misma semilla, o la variante aliviada si
+        // toca por primera vez (cartel «El río bajó» antes del teñido), cupo de Marea entero e INTRO corta.
+        private void BeginAttempt()
+        {
+            LevelDefinition def = Level;
+            _undo.Restore();
+            ResetPending();
+            ResetStuck();
+            int relief = FailResolve.ChooseRelief(def, _attempt, _boosters);
+            if (relief >= 0 && relief != _attempt.ReliefIndex)
+            {
+                _attempt.ReliefIndex = relief;
+                _session = new LevelSession(BoardFor(def, relief), GameConfig.FutileRuleEnabled, _session!.PourMode);
+                Phase = FlowPhase.Loading;
+                _listener.OnLevelLoaded(LevelNumber);
+                int banner = Math.Max(0, _boosters.AnimRiverLoweredBannerMs);
+                _listener.OnRiverLowered(def.Relief[relief].Type, banner);
+                StartIntro(banner + GameConfig.AnimTintDurationMsLate, true);
+                return;
+            }
+
+            _session!.Restart();
+            StartIntro(GameConfig.AnimTintDurationMsLate, true);
         }
 
         private void StartIntro(int durationMs, bool isShort)
@@ -408,12 +515,14 @@ namespace AF.GameFlow
             {
                 case LevelStatus.Won:
                     BeginPending(Outcome.Win);
+                    _attempt.Won();
                     _progress.SaveWin(LevelNumber, LevelNumber + 1);
                     _listener.OnWin();
                     break;
 
                 case LevelStatus.Stuck:
                     BeginPending(Outcome.Stuck);
+                    CheckRescue();
                     _listener.OnStuck();
                     break;
             }
@@ -467,9 +576,7 @@ namespace AF.GameFlow
                 if (_sinceDrainedMs >= GameConfig.StuckModalDelayMs)
                 {
                     _pending = Outcome.None;
-                    Phase = FlowPhase.StuckModal;
-                    _phaseMs = 0;
-                    _listener.OnStuckModalOpened();
+                    OpenStuckModal();
                 }
             }
         }

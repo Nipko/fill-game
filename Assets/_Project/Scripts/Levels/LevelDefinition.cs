@@ -21,9 +21,12 @@ namespace AF.Levels
         /// <summary>Etiqueta <c>very_hard</c> (Muy difícil, glosario §6.1).</summary>
         public const string LabelVeryHard = "very_hard";
 
+        private static readonly ReliefBoard[] NoRelief = new ReliefBoard[0];
+
         private readonly int[] _caps;
         private readonly int[][] _cuias;
         private readonly string[] _palette;
+        private readonly ReliefBoard[] _relief;
 
         internal LevelDefinition(
             string id,
@@ -35,7 +38,8 @@ namespace AF.Levels
             int[] caps,
             int[][] cuias,
             int par,
-            string difficultyLabel = LabelNormal)
+            string difficultyLabel = LabelNormal,
+            ReliefBoard[]? relief = null)
         {
             Id = id;
             Level = level;
@@ -47,7 +51,14 @@ namespace AF.Levels
             _cuias = cuias;
             Par = par;
             DifficultyLabel = difficultyLabel;
+            _relief = relief ?? NoRelief;
         }
+
+        /// <summary>
+        /// <c>relief</c> (08 §4.1; 03 §13): tableros de alivio en orden de prioridad (vacía antes del 31 y en el subconjunto v0).
+        /// El cliente sirve <c>relief[0]</c> al llegar a <c>relief_after_fails</c> fallos con el cartel «El río bajó» (04 §2.7).
+        /// </summary>
+        public IReadOnlyList<ReliefBoard> Relief => _relief;
 
         /// <summary>
         /// <c>difficulty.label</c> (08 §4.1): <see cref="LabelNormal"/>, <see cref="LabelHard"/> o <see cref="LabelVeryHard"/>.
@@ -108,6 +119,51 @@ namespace AF.Levels
         {
             return "LevelDefinition(" + Id + ", T=" + _caps.Length.ToString(CultureInfo.InvariantCulture)
                 + ", par=" + Par.ToString(CultureInfo.InvariantCulture) + ")";
+        }
+    }
+
+    /// <summary>
+    /// Una entrada de <c>relief[]</c> (08 §4.1; <c>schemas/af-level-1.schema.json</c> <c>relief_board</c>): tablero completo
+    /// pregenerado con una cuia vacía más (<see cref="TypePlusEmpty"/>) o un color menos (<see cref="TypeMinusColor"/>).
+    /// </summary>
+    public sealed class ReliefBoard
+    {
+        /// <summary><c>plus_empty</c>: +1 cuia vacía («El río bajó: esta vez hay una cuia más»).</summary>
+        public const string TypePlusEmpty = "plus_empty";
+
+        /// <summary><c>minus_color</c>: −1 color («El río bajó: esta vez hay un color menos»).</summary>
+        public const string TypeMinusColor = "minus_color";
+
+        private readonly int[] _caps;
+        private readonly int[][] _cuias;
+
+        internal ReliefBoard(string type, int[] caps, int[][] cuias, int? par)
+        {
+            Type = type;
+            _caps = caps;
+            _cuias = cuias;
+            Par = par;
+        }
+
+        /// <summary><see cref="TypePlusEmpty"/> o <see cref="TypeMinusColor"/>.</summary>
+        public string Type { get; }
+
+        /// <summary>Par de la variante (null solo en <c>plus_empty</c>, 03 §13).</summary>
+        public int? Par { get; }
+
+        /// <summary>Cuias de la variante.</summary>
+        public int CuiaCount => _caps.Length;
+
+        /// <summary>Tablero de la variante (un estado nuevo en cada llamada).</summary>
+        public BoardState CreateBoard()
+        {
+            var cuias = new Cuia[_caps.Length];
+            for (int i = 0; i < _caps.Length; i++)
+            {
+                cuias[i] = _cuias[i].Length == 0 ? Cuia.Empty(_caps[i]) : Cuia.Create(_caps[i], _cuias[i]);
+            }
+
+            return new BoardState(cuias);
         }
     }
 }

@@ -202,7 +202,7 @@ namespace AF.Tests.EditMode
         /// Lee las filas de 08 §9: <c>| `clave` / `clave2` | tipo / tipo2 | default / default2 | rango | dueño | uso |</c>.
         /// Con una sola celda de tipo o de default para varias claves, vale para todas.
         /// </summary>
-        private static Dictionary<string, RcRow> ReadRemoteConfigTable()
+        internal static Dictionary<string, RcRow> ReadRemoteConfigTable()
         {
             string path = Path.Combine(RepoRoot, "docs", "gdd", "08-arquitectura-tecnica-publicacion.md");
             Assert.That(File.Exists(path), Is.True, path);
@@ -245,7 +245,7 @@ namespace AF.Tests.EditMode
             return parts;
         }
 
-        private readonly struct RcRow
+        internal readonly struct RcRow
         {
             public RcRow(string type, string? value)
             {

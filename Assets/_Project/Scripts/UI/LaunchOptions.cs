@@ -1,6 +1,8 @@
 #nullable enable
 using System;
+using AF.Ads;
 using AF.Core.Rules;
+using AF.IAP;
 using AF.GameFlow;
 using AF.Levels;
 using AF.Platform;
@@ -66,9 +68,30 @@ namespace AF.UI
         /// </summary>
         public static string? LevelPackJsonOverride { get; set; }
 
+        /// <summary>
+        /// Pantalla «Anuncio simulado» que sustituye a <see cref="AdOverlay"/> (tests: <see cref="ImmediateAdPresenter"/> cierra
+        /// al instante sin esperar los 3-5 s).
+        /// </summary>
+        public static ISimulatedAdPresenter? AdPresenterOverride { get; set; }
+
+        /// <summary>Hoja «Compra simulada» que sustituye a <see cref="StoreSheet"/> (tests: <see cref="ImmediatePurchasePresenter"/>).</summary>
+        public static ISimulatedPurchasePresenter? PurchasePresenterOverride { get; set; }
+
+        /// <summary>Qué hace el anuncio simulado (tests: <c>no_fill</c>, error); null = hay anuncio.</summary>
+        public static FakeAdFill? AdFillOverride { get; set; }
+
+        /// <summary>
+        /// Moneda de los precios simulados [P]: COP (05 §4.2; los wireframes de 04 §6.6 usan pesos colombianos) mientras no
+        /// haya precios de la tienda real.
+        /// </summary>
+        public const string DefaultStoreCurrency = "COP";
+
         /// <summary>Quita los ganchos de test.</summary>
         public static void Reset()
         {
+            AdPresenterOverride = null;
+            PurchasePresenterOverride = null;
+            AdFillOverride = null;
             StartLevelOverride = 0;
             PourModeOverride = null;
             ProgressStoreOverride = null;

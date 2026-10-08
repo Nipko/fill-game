@@ -11,6 +11,9 @@
     "AF.Platform",
     "AF.Save",
     "AF.Economy",
+    "AF.Boosters",
+    "AF.Ads",
+    "AF.IAP",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner",
     "Unity.TextMeshPro"

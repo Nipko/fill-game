@@ -1,8 +1,11 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using AF.Ads;
+using AF.Boosters;
 using AF.Economy;
 using AF.GameFlow;
+using AF.IAP;
 using AF.Levels;
 using AF.Platform;
 using AF.Presentation;
@@ -16,13 +19,14 @@ namespace AF.UI
     /// <summary>
     /// Arranque de la escena <c>Game</c> (docs/dev/prototipo-v0.md c; 08 §2.3 en lo que ya existe): lee los paquetes de
     /// niveles (TextAsset) y arma el catálogo (tarea B1-5), carga el perfil local (<c>AF.Save</c>, migrando una vez el
-    /// <c>af_v0_level</c> de v0), crea la cartera, genera los gráficos provisionales, construye las pantallas de inicio y de
-    /// nivel, el <see cref="LevelFlow"/> y el <see cref="AppFlow"/> (tarea B1-6) y los hace avanzar cada fotograma. La primera
-    /// vez entra directamente al nivel 1; después, a la pantalla de inicio. Sus métodos públicos de input son los mismos que
-    /// llaman los toques y los tests PlayMode.
+    /// <c>af_v0_level</c> de v0), crea la cartera, los anuncios y la tienda simulados (<c>AF.Ads</c> y <c>AF.IAP</c>, sin SDK:
+    /// D-008), genera los gráficos provisionales, construye las pantallas de inicio y de nivel, el <see cref="LevelFlow"/> y el
+    /// <see cref="AppFlow"/> y los hace avanzar cada fotograma. La primera vez entra directamente al nivel 1; después, a la
+    /// pantalla de inicio. Sus métodos públicos de input (<see cref="IGameActions"/>) son los mismos que llaman los toques y
+    /// los tests PlayMode.
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class GameBootstrap : MonoBehaviour, IAppFlowListener
+    public sealed class GameBootstrap : MonoBehaviour, IAppFlowListener, IGameActions
     {
         /// <summary>Tope del paso de tiempo por fotograma (evita saltos tras un tirón).</summary>
         private const float MaxDeltaMs = 100f;
@@ -44,6 +48,12 @@ namespace AF.UI
         private LevelFlow? _flow;
         private AppFlow? _app;
         private Wallet? _wallet;
+        private AdController? _ads;
+        private IStoreService? _store;
+        private StoreLedger? _storeLedger;
+        private GameServices? _services;
+        private AdOverlay? _adOverlay;
+        private StoreSheet? _storeSheet;
         private Profile? _profile;
         private IProfileStore? _profileStore;
         private DevProbe? _probe;
@@ -67,6 +77,21 @@ namespace AF.UI
 
         /// <summary>Cartera (null hasta <c>Start</c>).</summary>
         public Wallet? Wallet => _wallet;
+
+        /// <summary>Anuncios simulados (null hasta <c>Start</c>).</summary>
+        public AdController? Ads => _ads;
+
+        /// <summary>Tienda simulada (null hasta <c>Start</c>).</summary>
+        public IStoreService? Store => _store;
+
+        /// <summary>Servicios del embudo (null hasta <c>Start</c>).</summary>
+        public GameServices? Services => _services;
+
+        /// <summary>Pantalla «Anuncio simulado» del juego (null con un presentador de test).</summary>
+        internal AdOverlay? AdOverlayView => _adOverlay;
+
+        /// <summary>Hoja «Compra simulada» del juego (null con un presentador de test).</summary>
+        internal StoreSheet? StoreSheetView => _storeSheet;
 
         /// <summary>Perfil cargado (null hasta <c>Start</c>).</summary>
         public Profile? Profile => _profile;
@@ -172,6 +197,172 @@ namespace AF.UI
             return _app != null && _app.PressHome();
         }
 
+        /// <summary>«+1 cuia» de la bandeja (04 §2.2): del stock o por 150 semillas.</summary>
+        public bool PressExtraCuia()
+        {
+            TransactionResult? result = _flow != null && InLevel ? _flow.UseExtraCuia() : null;
+            return result != null && result.IsApplied;
+        }
+
+        /// <summary>«+3 Deshacer · Ver video» (<c>rv_undo_refill</c>): al terminar el anuncio, +3 Mareas al stock.</summary>
+        public bool PressUndoRefillVideo()
+        {
+            LevelFlow? flow = _flow;
+            AdController? ads = _ads;
+            if (flow == null || ads == null || !InLevel || !ads.CheckRewarded(AdPlacement.UndoRefill).IsAllowed)
+            {
+                return false;
+            }
+
+            ads.ShowRewarded(AdPlacement.UndoRefill, r =>
+            {
+                if (r.IsRewarded)
+                {
+                    flow.GrantUndoRefill();
+                }
+            });
+            return true;
+        }
+
+        /// <summary>«+3 Deshacer · 30 semillas».</summary>
+        public bool PressUndoRefillSeeds()
+        {
+            TransactionResult? result = _flow != null && InLevel ? _flow.RefillUndoWithSeeds() : null;
+            return result != null && result.IsApplied;
+        }
+
+        /// <summary>Recarga gratis de +1 Marea de la rama F [P].</summary>
+        public bool PressUndoGift()
+        {
+            return _flow != null && InLevel && _flow.GrantUndoGift();
+        }
+
+        /// <summary>«Continuar: +1 cuia» en Aguas estancadas o en ¿Seguro?</summary>
+        public bool PressRescue()
+        {
+            TransactionResult? result = _flow != null && InLevel ? _flow.BuyRescue() : null;
+            return result != null && result.IsApplied;
+        }
+
+        /// <summary>Puñado de semillas (<c>af_coins_2</c>) desde el modal sin saldo: compra simulada (04 §6.2 <c>PUÑADO_199</c>).</summary>
+        public bool PressHandful()
+        {
+            return Purchase(StoreCatalog.Handful, PurchaseContext.Stuck, null);
+        }
+
+        /// <summary>
+        /// Balsa de rescate (<c>af_rescue</c>): compra simulada; si se compra, la Cuia de rescate se aplica sin semillas (04 §6.2
+        /// <c>BALSA_499</c>); si se cancela, cuenta como rechazo.
+        /// </summary>
+        public bool PressBalsa()
+        {
+            LevelFlow? flow = _flow;
+            return Purchase(StoreCatalog.Rescue, PurchaseContext.Stuck, r =>
+            {
+                if (r.AppliesRescue && flow != null)
+                {
+                    flow.ApplyPaidRescue();
+                }
+            });
+        }
+
+        /// <summary>«Rendirse» [P] (desde el 31).</summary>
+        public bool PressGiveUp()
+        {
+            return _flow != null && InLevel && _flow.PressGiveUp();
+        }
+
+        /// <summary>X o «Rendirse» en ¿Seguro?: fallo duro y Nivel fallido.</summary>
+        public bool ConfirmGiveUp()
+        {
+            return _flow != null && InLevel && _flow.ConfirmGiveUp();
+        }
+
+        /// <summary>«Reintentar» en Nivel fallido (con 0 canoas, Sin canoas).</summary>
+        public bool PressRetry()
+        {
+            return _flow != null && InLevel && _flow.PressRetry();
+        }
+
+        /// <summary>X de Nivel fallido: al inicio (06 §4.7).</summary>
+        public bool PressLevelFailedClose()
+        {
+            return _flow != null && _app != null && _flow.Phase == FlowPhase.LevelFailed && _app.ExitToLobby();
+        }
+
+        /// <summary>«Canoa extra · Ver video» (<c>rv_extra_canoe</c>): +1 canoa al terminar el anuncio.</summary>
+        public bool PressExtraCanoeVideo()
+        {
+            AdController? ads = _ads;
+            Wallet? wallet = _wallet;
+            if (ads == null || wallet == null || !ads.CheckRewarded(AdPlacement.ExtraCanoe).IsAllowed)
+            {
+                return false;
+            }
+
+            ads.ShowRewarded(AdPlacement.ExtraCanoe, r =>
+            {
+                if (r.IsRewarded)
+                {
+                    wallet.Apply(Transaction.AddCanoe());
+                }
+            });
+            return true;
+        }
+
+        /// <summary>«Llenar canoas · 200 semillas» (hasta 5/5).</summary>
+        public bool PressRefillCanoes()
+        {
+            return _wallet != null && _wallet.Apply(Transaction.Buy(SeedSink.CanoesRefill)).IsApplied;
+        }
+
+        /// <summary>«Canoas infinitas 1 h» (<c>af_infinite_canoes_1h</c>): compra simulada.</summary>
+        public bool PressInfiniteCanoes()
+        {
+            return Purchase(StoreCatalog.InfiniteCanoes1h, PurchaseContext.NoCanoes, null);
+        }
+
+        /// <summary>«Volver al inicio» de Sin canoas (desde el nivel o desde el inicio).</summary>
+        public bool PressNoCanoesHome()
+        {
+            if (_app == null)
+            {
+                return false;
+            }
+
+            if (_app.Screen == AppScreen.NoCanoes)
+            {
+                return _app.CloseOverlay();
+            }
+
+            return _flow != null && _flow.Phase == FlowPhase.NoCanoes && _app.ExitToLobby();
+        }
+
+        /// <summary>X de Sin canoas: vuelve a donde se abrió (Nivel fallido o el tablero; desde el inicio, al inicio).</summary>
+        public bool PressNoCanoesClose()
+        {
+            if (_app != null && _app.Screen == AppScreen.NoCanoes)
+            {
+                return _app.CloseOverlay();
+            }
+
+            return _flow != null && InLevel && _flow.CloseNoCanoes();
+        }
+
+        /// <summary>
+        /// Pausa › «Salir» (D-008): desde el 31, ya confirmado, fallo duro y Nivel fallido; en 1-30, al inicio sin coste.
+        /// </summary>
+        public bool PressQuit()
+        {
+            LevelFlow? flow = _flow;
+            if (flow == null || _app == null || !InLevel || !flow.CanQuit)
+            {
+                return false;
+            }
+
+            return flow.QuitCostsCanoe ? flow.ConfirmQuit() : _app.ExitToLobby();
+        }
+
         /// <summary>«Jugar · Nivel {n}» (pantalla de inicio).</summary>
         public bool PressPlay()
         {
@@ -201,6 +392,24 @@ namespace AF.UI
 
         private bool InLevel => _app == null || _app.Screen == AppScreen.Level;
 
+        // Compra simulada de sku (05 §4.1); lo comprado se acredita con Wallet.Apply dentro de la tienda.
+        private bool Purchase(string sku, PurchaseContext context, Action<PurchaseResult>? onDone)
+        {
+            IStoreService? store = _store;
+            if (store == null || store.IsPurchasing)
+            {
+                return false;
+            }
+
+            int level = _flow != null && _flow.HasLevel ? _flow.LevelNumber : (_app?.OverlayLevel ?? 0);
+            store.Purchase(new PurchaseRequest(sku, context, level), r =>
+            {
+                _probe?.Purchase(r);
+                onDone?.Invoke(r);
+            });
+            return true;
+        }
+
         private void Awake()
         {
             Current = this;
@@ -228,34 +437,25 @@ namespace AF.UI
 
             _art = SharedArt(catalog.WaterBase);
             _probe = new DevProbe();
-            _screen = new GameScreen(
-                transform,
-                _art,
-                _probe,
-                i => TapCuia(i),
-                () => TapBackground(),
-                () => TapAnywhere(),
-                () => PressUndo(),
-                () => PressRestart(),
-                () => PressNext(),
-                () => PressHome());
-            _screen.SetVisible(false);
-            _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => { }, () => PressBack());
-            try
-            {
-                // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
-                _flow = new LevelFlow(catalog, progress, _screen, GameConfig.TapSwitchSelection, LaunchOptions.ResolvePourMode());
-            }
-            catch (NotSupportedException e)
-            {
-                Debug.LogError(LogPrefix + e.Message);
-                enabled = false;
-                return;
-            }
 
-            _screen.Bind(_flow);
+            // Anuncios y compras simulados (D-008 puntos 4 y 5; sin SDK, red ni identificadores): sus pantallas van en lienzos
+            // propios por encima de todo; los tests las sustituyen por presentadores inmediatos (LaunchOptions).
+            ISimulatedAdPresenter adPresenter = LaunchOptions.AdPresenterOverride ?? (_adOverlay = new AdOverlay(transform, _art));
+            ISimulatedPurchasePresenter purchasePresenter = LaunchOptions.PurchasePresenterOverride ?? (_storeSheet = new StoreSheet(transform, _art));
+            _ads = AdController.Create(new FakeAdService(adPresenter, LaunchOptions.AdFillOverride ?? FakeAdFill.Fill), profile, store, clock, firstRun);
+            _storeLedger = new StoreLedger(profile, _wallet, store, clock);
+            _store = new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency);
+            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3);
+
+            _screen = new GameScreen(transform, _art, _probe, this);
+            _screen.SetVisible(false);
+            _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => { }, () => PressBack(), this);
+
+            // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
+            _flow = new LevelFlow(catalog, progress, _screen, GameConfig.TapSwitchSelection, LaunchOptions.ResolvePourMode(), _wallet);
+            _screen.Bind(_flow, _services);
             _app = new AppFlow(_flow, progress, _wallet, this);
-            _lobby.Bind(_app);
+            _lobby.Bind(_app, _services);
 
             int requested = LaunchOptions.StartLevelOverride;
             if (requested <= 0)
@@ -289,8 +489,10 @@ namespace AF.UI
                 dt = 0f;
             }
 
+            _adOverlay?.Tick(Time.unscaledDeltaTime * 1000f);
             if (_app.Screen != AppScreen.Level)
             {
+                _app.RefreshNoCanoes();
                 _lobby?.Tick(dt);
                 return;
             }
@@ -306,8 +508,10 @@ namespace AF.UI
         {
             if (paused)
             {
-                // Lo pendiente de la cartera (una escritura fallida) se reintenta al pasar a segundo plano.
+                // Lo pendiente de la cartera, los anuncios y la tienda (una escritura fallida) se reintenta al pasar a segundo plano.
                 _wallet?.Flush();
+                _ads?.Ledger.Flush();
+                _storeLedger?.Flush();
                 return;
             }
 
