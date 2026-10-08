@@ -1,6 +1,6 @@
 # Glosario canónico de Amazon Fill (nombre comercial: Tintalú)
 
-Fecha: 2026-10-05 (revisión cruzada 2026-10-06; nombre comercial Tintalú por decisión del dueño del 2026-10-06, en lugar de Aquazonia) · Fase 0 del GDD · Autoridad: todos los capítulos usan estos nombres tal cual (ES como idioma de diseño; EN y PT-BR como localizaciones de tienda y UI). Convención de evidencia: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas, **[NV]** no verificado, **[P]** propuesta de este glosario a calibrar en soft launch. "(dirección N)" remite al punto N de las decisiones de dirección vinculantes.
+Fecha: 2026-10-05 (revisión cruzada 2026-10-06; nombre comercial Tintalú por decisión del dueño del 2026-10-06, en lugar de Aquazonia; actualizado el 2026-10-08 con la decisión del dueño **D-008**, bucle de partida como Magic Sort: §2.2, §5.1, §6.3, §6.4 y §10) · Fase 0 del GDD · Autoridad: todos los capítulos usan estos nombres tal cual (ES como idioma de diseño; EN y PT-BR como localizaciones de tienda y UI). Convención de evidencia: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas, **[NV]** no verificado, **[P]** propuesta de este glosario a calibrar en soft launch. "(dirección N)" remite al punto N de las decisiones de dirección vinculantes.
 
 ## Resumen
 
@@ -113,7 +113,7 @@ Pendiente [NV]: búsqueda formal de antecedentes de "Tintalú"/"Tintalu" por un 
 |---|---|
 | Nombre | **Canoas** · EN **Canoes** · PT **Canoas** · ID `canoes` |
 | Por qué | El viaje del juego es río arriba; cada intento es una travesía en canoa y fallar es volcarla. Icono horizontal legible en la cabecera y en el modal de bloqueo. Se descartan "gotas" (ver 2.1) y "remos" (icono poco legible a tamaño HUD; metáfora más débil). "Canoa" es palabra idéntica en ES y PT y transparente en EN. |
-| Reglas (dirección 11) | 5 canoas; una vuelve cada 25 min; se introducen en el nivel 31 junto con la Cuia de rescate; antes del 31 fallar solo reinicia gratis. Qué cuenta como fallo (y qué gasta canoa): tabla canónica de 04 §5.2 (solo quedarse sin vertidos y Volver a la orilla desde el modal; el reinicio voluntario nunca gasta canoa ni rompe la Crecida; salir al Mapa no es fallo). |
+| Reglas (dirección 11) | 5 canoas; una vuelve cada 25 min; se introducen en el nivel 31 junto con la Cuia de rescate; antes del 31 fallar solo reinicia gratis. Qué cuenta como fallo (y qué gasta canoa): tabla canónica de 04 §5.2. Desde el 31 gastan canoa rendirse tras quedarse sin vertidos (¿Seguro? → Nivel fallido) y **salir del nivel con el menú, que también cuesta una** (D-008, 2026-10-08). El reinicio voluntario nunca gasta canoa ni rompe la Crecida, y cerrar la app no es fallo. |
 | Términos derivados | **Canoa extra** (vida por anuncio recompensado) · **Canoas infinitas** (vidas infinitas temporizadas, premio o bundle) · **Prestar una canoa** (compartir vidas en Aldeas, v2.0) |
 | Icono | Canoa de madera vista de lado, proa a la derecha, con línea de agua; contador "5/5"; vacía = silueta gris con la línea de agua por encima (volcada). |
 
@@ -186,7 +186,7 @@ Pendiente [NV]: búsqueda formal de antecedentes de "Tintalú"/"Tintalu" por un 
 | Multiplicador post-nivel | **Cosecha doble** | x2 | `rv_double_harvest` | Dos semillas con una cesta | "Duplica tu cosecha de semillas viendo un video." | Anuncio recompensado; desde el nivel 11 |
 | Oferta IAP tras fallar | **Balsa de rescate** | — | `af_rescue` | Balsa de troncos con cuia, semillas y canoa | "Todo para seguir: una cuia ahora, 1.000 semillas, una Cuia extra y canoas infinitas 30 min." | 4,99 USD; desde el nivel 31, solo en Aguas estancadas sin saldo para el rescate; máx. 1/día; contenido determinista y visible (05 §4.1) |
 
-Modal de bloqueo (dirección 10), nombre interno **Aguas estancadas** (`stuck_modal`): titular "No hay más vertidos" (ES) / "No more pours" (EN) / "Sem mais despejos" (PT); opciones en este orden: Marea (si queda cupo), Cuia de rescate, Volver a la orilla como enlace al pie (siempre "gratis"; desde el nivel 31 una línea de estado avisa de la canoa: `stuck_canoe_lost`, sección 10). Sin saldo: Puñado 1,99 o Balsa de rescate. Árbol completo en 04 §6.
+Modal de bloqueo (dirección 10), nombre interno **Aguas estancadas** (`stuck_modal`): titular "No hay más vertidos" (ES) / "No more pours" (EN) / "Sem mais despejos" (PT); opciones en este orden: Marea (si queda cupo), Cuia de rescate y el enlace al pie. En 1-30 el pie es Volver a la orilla ("gratis"). Desde el nivel 31 el pie es **Rendirse** [P], que lleva a **¿Seguro?** [P] y a **Nivel fallido** [P] (D-008, 2026-10-08), y una línea de estado avisa de la canoa (`stuck_canoe_lost`, sección 10). Sin saldo: Puñado 1,99 o Balsa de rescate. Árbol completo en 04 §6.
 
 Orden de la bandeja de comodines en el HUD (canon 07 §7.4, adoptado por 02 §5 y 04 §2): [Deshacer · Marea] [+1 cuia · Cuia extra] [Pista · Morpho] [Barajar · Pororoca] (+ [Revelar · Luciérnaga] cuando está desbloqueada, solo en niveles Aguas turbias).
 
@@ -241,7 +241,7 @@ Umbrales de research/01 §6 [V] y research/02; recompensas de la dirección 12. 
 
 ### 6.3 Crecida (racha de victorias) y Hoja escudo
 
-- **Crecida** · EN **Rising River** · PT **Enchente** · ID `win_streak`: cada victoria consecutiva sube el nivel del agua en una barra vertical en el borde derecho del HUD (07 §7.4, dueño del HUD; la pantalla de victoria la replica en grande); desbloqueo en el nivel 25. Escalera canónica (ver 05 §2.4; clave única `streak_milestones`): **3 → 300 semillas · 6 → Canasta · 10 → 1 Cuia extra + "río crecido"** (Cosecha doble sin anuncio); al pagar el hito 10 la barra vuelve a 0 y el río crecido sigue activo hasta el siguiente fallo duro no escudado, también con la barra a 0 (05 §2.4); cada hito se paga **una vez por día local**; tope diario 600 semillas (`streak_daily_cap`), al que suman solo el hito 3 (300) y las 50 semillas de la Canasta del hito 6: el bonus del río crecido y los comodines de los hitos 6 y 10 no cuentan (research/04 C1 §3 [E]; dirección 12 ajustada, ver GDD §8 Desviaciones 3). Solo un fallo duro (04 §5.2) no cubierto por la Hoja escudo vacía la barra y apaga el río crecido; el fallo blando no la rompe, y salir al Mapa o aceptar una Cuia de rescate no son fallo.
+- **Crecida** · EN **Rising River** · PT **Enchente** · ID `win_streak`: cada victoria consecutiva sube el nivel del agua en una barra vertical en el borde derecho del HUD (07 §7.4, dueño del HUD; la pantalla de victoria la replica en grande); desbloqueo en el nivel 25. Escalera canónica (ver 05 §2.4; clave única `streak_milestones`): **3 → 300 semillas · 6 → Canasta · 10 → 1 Cuia extra + "río crecido"** (Cosecha doble sin anuncio); al pagar el hito 10 la barra vuelve a 0 y el río crecido sigue activo hasta el siguiente fallo duro no escudado, también con la barra a 0 (05 §2.4); cada hito se paga **una vez por día local**; tope diario 600 semillas (`streak_daily_cap`), al que suman solo el hito 3 (300) y las 50 semillas de la Canasta del hito 6: el bonus del río crecido y los comodines de los hitos 6 y 10 no cuentan (research/04 C1 §3 [E]; dirección 12 ajustada, ver GDD §8 Desviaciones 3). Solo un fallo duro (04 §5.2) no cubierto por la Hoja escudo vacía la barra y apaga el río crecido; el fallo blando no la rompe, y cerrar la app o aceptar una Cuia de rescate no son fallo; desde el 31, salir del nivel con el menú sí lo es (D-008).
 - **Hoja escudo** · EN **Leaf Shield** · PT **Folha-escudo** · ID `streak_shield`: una hoja gigante de Victoria amazonica cubre la barra; perdona un fallo duro al día (04 §5.2; dirección 12; research/09 §Mejorar). Frase UI: "Una hoja gigante te cubre: este fallo no rompe tu Crecida."
 - Mensaje de variante aliviada (dirección 7): **"El río bajó"**: "El río bajó: esta vez hay un color menos" / "…una cuia más". Nunca cambiar el tablero sin este aviso.
 
@@ -250,6 +250,9 @@ Umbrales de research/01 §6 [V] y research/02; recompensas de la dirección 12. 
 | Estado | Nombre | Uso |
 |---|---|---|
 | Sin vertidos legales | **Aguas estancadas** | Abre el modal de bloqueo (sección 5.1) |
+| Tras «Rendirse», desde el 31 | **¿Seguro?** [P] | Confirmación de la rendición, con otra oferta de Cuia de rescate (D-008; 04 §6.2) |
+| Rendición confirmada o salida con el menú, desde el 31 | **Nivel fallido** [P] | Fallo duro: premio que no se cobra, «Reintentar» y X (D-008; 04 §6.6) |
+| 0 canoas al reintentar o jugar | **Sin canoas** | Pantalla de 04 §7.3; el dueño la llamó «Más canoas» y el nombre está pendiente (P14 de D-008) |
 | Cuia completa | **Cuia sellada** | Tapa de calabaza, no seleccionable |
 | Carga del nivel | **Sumergir y teñir** | Animación de 1,2-1,5 s (niveles 1-20), 0,8 s después, saltable (dirección 18) |
 | Agua base del mundo | **Agua negra / blanca / clara** | Preset del shader (research/07 §2) |
@@ -356,6 +359,13 @@ Reglas asociadas: K_motor = 16 (índice 15 = Barro, 16 reservado; 02 §9.1 y 08 
 | `stuck_restart` | Volver a la orilla (gratis) | Back to shore (free) | Voltar à margem (grátis) |
 | `stuck_canoe_lost` | Travesía perdida: −1 canoa | Trip lost: −1 canoe | Travessia perdida: −1 canoa |
 | `stuck_canoe_lost_last` | Travesía perdida: tu última canoa | Trip lost: your last canoe | Travessia perdida: sua última canoa |
+| `stuck_give_up` [P] | Rendirse | pendiente (P14) | pendiente (P14) |
+| `giveup_confirm_title` [P] | ¿Seguro? | pendiente (P14) | pendiente (P14) |
+| `giveup_confirm_canoe` [P] | Perderás 1 canoa | pendiente (P14) | pendiente (P14) |
+| `level_failed` [P] | Nivel fallido | pendiente (P14) | pendiente (P14) |
+| `level_failed_reward` [P] | Premio: {n} semillas | pendiente (P14) | pendiente (P14) |
+| `retry` [P] | Reintentar | pendiente (P14) | pendiente (P14) |
+| `quit_confirm` [P] | ¿Salir del nivel? Perderás 1 canoa | pendiente (P14) | pendiente (P14) |
 | `level_complete` | ¡Nivel completado! | Level complete! | Nível concluído! |
 | `river_lowered` | El río bajó | The river dropped | O rio baixou |
 | `lives` | Canoas | Canoes | Canoas |
@@ -378,7 +388,7 @@ Reglas asociadas: K_motor = 16 (índice 15 = Barro, 16 reservado; 02 §9.1 y 08 
 | `back` / `pause` | Volver / Pausa | Back / Pause | Voltar / Pausa |
 | `world_banner` | Mundo {n}: {nombre} · {país} · {río} | World {n}: {name} · {country} · {river} | Mundo {n}: {nome} · {país} · {rio} |
 
-Regla de redacción: tuteo en ES-419 ("tú"), "você" en PT-BR, imperativo en EN; sin signos de exclamación dobles; números con separador de miles local ("1.000" ES/PT, "1,000" EN). Las claves `stuck_*` completas del modal Aguas estancadas están en 04 §6.5; `stuck_canoe_lost` / `stuck_canoe_lost_last` son líneas de estado bajo el titular desde el nivel 31 (ocultas con Canoas infinitas) y sustituyen a las retiradas `stuck_restart_canoe` / `stuck_restart_last_canoe`: el coste es del bloqueo, no del reinicio.
+Regla de redacción: tuteo en ES-419 ("tú"), "você" en PT-BR, imperativo en EN; sin signos de exclamación dobles; números con separador de miles local ("1.000" ES/PT, "1,000" EN). Las claves `stuck_*` completas del modal Aguas estancadas están en 04 §6.5; `stuck_canoe_lost` / `stuck_canoe_lost_last` son líneas de estado bajo el titular desde el nivel 31 (ocultas con Canoas infinitas) y sustituyen a las retiradas `stuck_restart_canoe` / `stuck_restart_last_canoe`: el coste es del bloqueo, no del reinicio. Las siete claves marcadas [P] son del embudo de D-008 (2026-10-08): el texto ES está propuesto y las traducciones EN y PT-BR esperan al visto bueno del dueño (P14 de `docs/dev/decisiones.md`).
 
 ## 11. Identificadores de código
 

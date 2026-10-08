@@ -12,6 +12,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-004 | 2026-10-07 | Panel azul petróleo, vertido a 38° y cuias más anchas con pocas cuias | Decidida por el dueño (respuestas a C16-C18 de `docs/art/direccion-visual-v2.md`); implementada en el árbol de trabajo, sin commitear (código, tests y documentación de «Archivos afectados»; EditMode y PlayMode en verde el 2026-10-07). Pendientes: commit y PR, revisión en el teléfono (`dev.apk`) y nueva medida de C19. Actualización del 2026-10-08: implementada en `b2d34de` (rama `d004-cuias-anchas`); la decisión 2 (38° fijos y labio a 0,6-1,6 u), el techo del vertido [P], la consecuencia «no cambia el número de filas» y el alto de la cuia (1:3, 6 u; pasa a 5,6 u) quedan sustituidos por D-006, que también matiza el recálculo a mitad de nivel: las filas se fijan al cargar y no se recalculan, solo el ancho; el resto sigue (panel azul petróleo y topes 64/56/48 dp) |
 | D-005 | 2026-10-08 | Vertido por tramo, como Magic Sort | Decidida por el dueño; en implementación (C1, L1, U1, D1-D6) |
 | D-006 | 2026-10-08 | Tablero, cuia y vertido como Magic Sort | Decidida por el dueño; en implementación (U2-U6, D1-D6). Pendiente: P12 (ranura de 42 dp en 16:9 con cuias añadidas) |
+| D-008 | 2026-10-08 | Bucle de partida como Magic Sort | Decidida por el dueño. Documentación aplicada el 2026-10-08 (capítulos de «Archivos afectados»). En implementación: pista B (B1-1-B1-6 y B2-1-B2-6). Los textos nuevos y los puntos [P] están pendientes (P14-P16, no bloquean). El número D-007 queda reservado para las mecánicas especiales, en pausa |
 
 ---
 
@@ -695,3 +696,177 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 | # | Pregunta | Opciones | Bloquea |
 |---|---|---|---|
 | P12 | En 16:9 (360 × 640 dp) ganan las 2 filas con 11-14 cuias generadas (02 §5). Como las filas no cambian a mitad de nivel (punto 4), con 13-14 cuias generadas la Cuia extra y la Cuia de rescate llevan la fila más corta a 8 cuias (14 + 1, 13 + 2 y 14 + 2): ranura de 42 dp y cuia de 29,4 dp, por debajo del mínimo táctil de 48 dp (02 §3.3; 07 §7.4). Antes de D-006, con 16 cuias se pasaba a 3 filas y la ranura medía 56 dp. ¿Qué se hace? | (a) Aceptar la ranura de 42 dp en ese caso y anotarlo como excepción en 02 §3.3, 02 §5 y 07 §7.4. (b) En 16:9, si la fila más corta ya tiene 7, abrir una 3.ª fila aunque no se fijara al cargar, como excepción al punto 4. (c) Decidir 3 filas al cargar cuando T + 2 pase de 14 | No bloquea v0 (el tutorial tiene T ≤ 7). Hay que responderla antes de los niveles con 13-14 cuias. Después, el caso entra en `BoardLayoutTests` |
+
+---
+
+## D-008 · Bucle de partida como Magic Sort
+
+- **Fecha:** 2026-10-08.
+- **Estado:** decidida por el dueño el 2026-10-08: «la estructura se copia de Magic Sort; las cifras salen de nuestro GDD». Su postura general: copiar lo que funciona sin suavizarlo, salvo por política de Google Play.
+  - El número D-007 y la pregunta P13 quedan reservados para las mecánicas especiales, **en pausa**: el dueño pidió investigar antes la cultura ribereña y la dificultad escalonada. Nada de esta entrada depende de D-007.
+  - Respuesta del dueño a la pregunta bloqueante 2 del plan de la fase (2026-10-08, transmitida por la sesión principal): AF.Platform, AF.Save, AF.Ads y AF.IAP se crean **solo con interfaces e implementaciones simuladas**. Sin SDK, sin cambios en `Packages/manifest.json` ni `packages-lock.json`, sin permisos de Android, sin claves y sin red. El dueño revisa el resultado al fusionar.
+  - Documentación aplicada el 2026-10-08 en los capítulos de «Archivos afectados».
+- **Sustituye:**
+  - en 04 §6.6, la regla «Máximo un modal por bloqueo; nunca se apila un segundo pop-up»;
+  - en 04 §5.2 (contrato 7), la fila «Salir al Mapa del río … no es fallo», solo cuando se sale con el menú (cerrar la app sigue sin ser fallo);
+  - 04 §7.1, «Qué consume»;
+  - desde el nivel 31, el pie «Volver a la orilla (gratis)» del modal (04 §2.7; glosario §5.1);
+  - los pasos 2 y 3 que la propuesta §6.1-§6.2 marcaba como «no copiamos».
+- **No sustituye:**
+  - precios y cifras (05 §2, 08 §9);
+  - la misma semilla al reintentar (02 §2; GDD.md §2 #11);
+  - Marea como primera opción del modal (02 R15; 04 §6.2, regla 0);
+  - ninguna oferta de pago antes del 31 (05 §10);
+  - intersticiales solo tras victoria (05 §6.1).
+
+**Contexto.**
+- **Magic Sort** (ficha §4.3-§4.7 y §6):
+  - «No Available Moves»: Play On por 900 o Give Up;
+  - «Continue?»: «You will lose 1 life!», con Play On por 900 otra vez;
+  - «Level Failed!»: el premio perdido y Try Again;
+  - con 0 vidas, «More Lives»: Refill por 900 o +1 Life por anuncio, con temporizador;
+  - salir del nivel también cuesta una vida («Are You Sure?»);
+  - tras la victoria, una cadena de pantallas;
+  - las vidas ilimitadas no quitan los intersticiales.
+- **Nuestro canon:** un solo modal con Marea → Cuia de rescate → Volver a la orilla (04 §6), y canoas desde el 31 (04 §7).
+
+**Decisión.**
+1. **Embudo, paso a paso.** Cifras de 08 §9. «≥ 31» = `rescue_min_level`.
+   - **Paso 0 · Detección.**
+     - Cuándo: `atascado(S)`, con los fútiles (R13).
+     - Qué pasa: la entrada se bloquea al instante. El modal se abre `stuck_modal_delay_ms` = 400 ms después de la última animación (R15).
+   - **Paso 1 · Aguas estancadas** («No hay más vertidos»).
+     - El tablero queda atenuado detrás; arriba, semillas y canoas; el HUD de partida y la bandeja se ocultan.
+     - **(a) Marea primero** (04 §6.2, regla 0):
+       - Deshacer, si hay cupo o stock (ilimitada en 1-10; 3 por nivel desde el 11);
+       - si no, la recarga: «+3 Deshacer · Ver video» (`rv_undo_refill`: 4 al día, 60 s) o «+3 · 30 semillas».
+     - **(b) Play On, desde el 31:** «Continuar: +1 cuia» (Cuia de rescate).
+       - 600 semillas, o 300 en el primer rescate del día (`rescue_first_day_mult` 0,5).
+       - Máximo 1 por nivel.
+       - Solo se ofrece si un A* de 40.000 nodos sobre el estado + 1 cuia confirma que la compra cumple (04 §6.4).
+       - Sin saldo, el botón sale en gris con «Te faltan {n} semillas», junto a:
+         - Puñado, 1,99 (COP 3.900, 1.000 semillas);
+         - Balsa de rescate, 4,99 (COP 9.900): 1 al día, oculta 48 h tras 2 rechazos, orden T3.
+     - **(c) Pie:**
+       - en 1-30, «Volver a la orilla (gratis)» reinicia sin coste (rama C de 04 §6.3);
+       - desde el 31, «Rendirse» [P] lleva al paso 2.
+     - Bajo el titular, la línea de canoa (`stuck_canoe_lost` o `stuck_canoe_lost_last`), oculta con Canoas infinitas.
+   - **Paso 2 · ¿Seguro?** [P]. Desde el 31, tras «Rendirse».
+     - Mensaje: «Perderás 1 canoa» («tu última canoa» si solo queda una).
+     - Vuelve a ofrecer «Continuar: +1 cuia», al mismo precio y con las mismas condiciones; si el rescate no está disponible, no aparece.
+     - La X y «Rendirse» confirman la rendición.
+     - Con Canoas infinitas no hay canoa en juego y se pasa directo al paso 3 [P].
+   - **Paso 3 · Nivel fallido** [P]. Tras confirmar la rendición.
+     - Muestra «Nivel {n}» y «Premio: {20 · 60 · 80} semillas», según la etiqueta (`eco_reward_*`); ese premio no se cobra.
+     - Botones: «Reintentar» [P] y X, que vuelve al inicio.
+     - Al entrar se resuelve el fallo duro (04 §5.2 y `failHard` de 04 §6.2):
+       - `fails_level` + 1;
+       - desde el 31, −1 canoa, salvo con Canoas infinitas;
+       - la Crecida, cuando exista, se rompe salvo con Hoja escudo.
+     - «Reintentar» carga el mismo tablero, con la misma semilla.
+     - Al tercer fallo carga `relief[0]` con el cartel «El río bajó», de 2.000 ms (`anim_river_lowered_banner_ms`; 03 §13).
+   - **Paso 4 · Sin canoas** (04 §7.3; «Más canoas» es como lo llamó el dueño, pregunta P14).
+     - Se abre con «Reintentar», «Jugar» o «Siguiente» sin canoas, desde el 31.
+     - Opciones:
+       - cronómetro «Tu próxima canoa vuelve en mm:ss»: 1 canoa cada 25 min, máximo 5;
+       - «Canoa extra · Ver video», +1 (`rv_extra_canoe`: 3 al día, 90 s);
+       - «Llenar canoas · 200 semillas», hasta 5/5;
+       - «Canoas infinitas 1 h» (`af_infinite_canoes_1h`: 1,99, COP 3.900).
+     - En cuanto hay una canoa, vuelve a «Nivel fallido» con «Reintentar», como Magic Sort (t = 338) [P].
+   - **Salir.** Desde la pausa, «Salir».
+     - Desde el 31: «¿Salir del nivel? Perderás 1 canoa» [P] → fallo duro → «Nivel fallido» → inicio. Cuesta la canoa aunque no haya vertidos, como Magic Sort en t = 5 [P] (pregunta P16).
+     - En 1-30 se sale sin coste.
+     - Cerrar la app o un cuelgue no es fallo: el estado se guarda y se reabre tal cual (04 §5.2; 02 §14).
+2. **Reiniciar por voluntad propia** no cambia: Volver a la orilla en el HUD o en la pausa, fuera del bloqueo, sigue siendo gratis.
+   - Con ≥ 8 vertidos es un fallo blando: cuenta para «El río bajó» y para el Salto del Boto, pero no gasta canoa (04 §2.7 y §5.2).
+3. **Victoria con una cadena corta.**
+   - Celebración de 900 ms (`anim_celebration_ms`).
+   - Pantalla de victoria (02 §6):
+     - «¡Nivel completado!»;
+     - Cosecha de +20, +60 o +80 semillas, acreditadas con un contador de 400 ms;
+     - desde el 11, «Cosecha doble: x2 por video» (`rv_double_harvest`: 5 al día, 60 s); sin anuncio disponible, no aparece.
+   - «Siguiente», sin auto-avance (`victory_autonext_s` = 0) → AD_GATE → nivel N+1.
+   - «Inicio» → pantalla de inicio [P].
+   - Como mucho 1 takeover por sesión.
+   - Sin el calificativo «¡Perfecto!»: la pregunta 10.2 #25 sigue abierta.
+4. **Anuncios simulados detrás de AF.Ads**, sin SDK.
+   - **Intersticial**, solo tras tocar «Siguiente» (05 §6.1 y §6.3):
+     - nunca antes del nivel 22 ni en la sesión de instalación;
+     - cada 3 niveles en 22-60 y cada 2 desde el 61;
+     - ≥ 150 s desde el anterior y ≥ 120 s desde el inicio de la sesión;
+     - como mucho 6 por sesión y 12 al día;
+     - nunca en las 24 h siguientes a una compra ni a < 60 s de un recompensado.
+   - **Nunca** al reintentar, al rendirse, en «Nivel fallido» ni en «Sin canoas», aunque Magic Sort lo haga (05 §10).
+   - **Recompensados:** Marea, Canoa extra y Cosecha doble, con sus topes por ubicación y 15 al día en total.
+   - **Las Canoas infinitas no quitan los intersticiales** (postura del dueño, 2026-10-08).
+     - Solo los corta la regla de 24 h tras cualquier compra, que también se aplica a `af_infinite_canoes_1h` (05 §4.1).
+5. **Compras simuladas detrás de AF.IAP**, sin Play Billing.
+   - Los 13 SKU de 05 §4.1, con los precios locales de 05 §4.2.
+   - Lo comprado se acredita con `Wallet.Apply`.
+   - Una compra fallida o cancelada nunca descuenta.
+6. **Pantalla de inicio** (06 §4.7), con la composición de Magic Sort (ficha §7.1: saldos arriba, botón central, pestañas abajo) y sin su trade dress (07 §1.3; D-003).
+   - Botón grande «Jugar · Nivel {n}», con el chip Difícil o Muy difícil cuando toque [P].
+   - Semillas.
+   - Canoas «n/5» con cronómetro, desde el 31.
+   - Ajustes.
+   - Mercado, Mapa del río, Reto del río y Bitácora quedan ocultos hasta que existan.
+7. **Reintentar con otra distribución, como Magic Sort (ficha §2.9): no se adopta.** El GDD no lo permite (02 §2; GDD.md §2 #11; 05 §10, «cambiar el tablero sin avisar»). La pregunta 10.2 #20 sigue abierta.
+
+**Consecuencias.**
+- **Más presión y más ocasiones de compra:** una segunda oferta de rescate y la pérdida a la vista.
+  - El ratio de presión y las cifras [sim] de 05 §3 no modelan la segunda oferta ni el coste de salir (contrato 18).
+  - Se mantienen como referencia y se recalibran con el embudo real del soft launch [P].
+- **Máquina de estados (02 §2):** nuevos estados GIVE_UP_CONFIRM, LEVEL_FAILED y NO_CANOES. FAIL_RESOLVE se dispara al confirmar la rendición.
+- **Analítica (08 §8.2):** `af_stuck_choice` gana los valores `give_up`, `confirm_play_on` y `quit` [P].
+- **Textos nuevos** [P] (pregunta P14):
+
+  | Clave | Texto |
+  |---|---|
+  | `stuck_give_up` | Rendirse |
+  | `giveup_confirm_title` | ¿Seguro? |
+  | `giveup_confirm_canoe` | Perderás 1 canoa |
+  | `level_failed` | Nivel fallido |
+  | `level_failed_reward` | Premio: {n} semillas |
+  | `retry` | Reintentar |
+  | `quit_confirm` | ¿Salir del nivel? Perderás 1 canoa |
+
+- **Persistencia:** el nivel en curso se guarda tras cada vertido (02 R8 y §14), para que cerrar la app no sea una salida gratis.
+- **Remote Config:** sin claves nuevas en 08 §9.
+
+**Alternativas descartadas.**
+- Un solo modal y reinicio en 1 toque (04 §6.6; propuesta §6.1).
+- Otra distribución en cada reintento: el GDD no la permite.
+- Intersticial tras fallar o que corta la celebración (Magic Sort, t = 196 y 629).
+- Que las Canoas infinitas quiten los anuncios.
+- Quitar Marea del modal para igualarlo a Magic Sort (pregunta P15).
+
+**Cómo revertir.**
+- Revertir los commits de B2-2 y B2-3: el modal único de 04 §6.2 vuelve.
+- Una constante de desarrollo, `GameConfig.StuckFunnel` [P], conserva la variante de un solo modal. No es una clave de Remote Config.
+- Siempre con una decisión nueva que sustituya a D-008.
+
+**Archivos afectados.**
+- **Unity:**
+  - `Assets/_Project/Scripts/{Platform,Save,Economy,Ads,IAP,Boosters,GameFlow,Levels,UI,Presentation}`;
+  - `Assets/_Project/Data/Config/{iap_catalog,ad_placements}.json`;
+  - `Assets/_Project/Tests/**`.
+- **Documentación** (aplicada el 2026-10-08; entre paréntesis, lo que se tocó además de la lista original):
+  - 02 §2 y §7 (y §6, §14 y «Preguntas abiertas» 2);
+  - 04 §2.7, §5.2, §6 y §7 (y §3, §4, §10.1, §11 y las secciones finales);
+  - 05 §5 y §6.1 (y §2.4, §3.4, §6.3 y §10);
+  - 06 §4.7 (y §4.3 y «Preguntas abiertas» 1);
+  - 07 §5.5 y §7.5;
+  - 08 §2.2 y §8.2 (y §2.3 y la columna «Uso» de tres filas de §9, sin claves nuevas);
+  - 00 §2.2 y §10 (y §5.1, §6.3 y §6.4);
+  - GDD.md §2 (#11, #14 y #15, y #17), §4 y §6.2 (contrato 7), con una nota en §7.1 y §9;
+  - 09 §2.3 (y §1.1, filas #10, #13, #14 y #22);
+  - la nota de respuestas de `docs/research/magic-sort/propuesta-tintalu.md`.
+  - Pendientes: el resumen de la definición de fallo de 03 §13 y la línea de decisiones de `CLAUDE.md`.
+
+**Preguntas para el dueño** (no bloquean).
+
+| # | Pregunta | Recomendación |
+|---|---|---|
+| P14 | ¿Apruebas los textos nuevos y que la pantalla de 04 §7.3 siga llamándose «Sin canoas» en vez de «Más canoas»? | Sí |
+| P15 | ¿Se mantiene Marea como primera opción del modal (02 R15; 04 §6.2), aunque Magic Sort no la tenga? | Sí |
+| P16 | Desde el 31, ¿salir del nivel cuesta una canoa también con 0 vertidos, como Magic Sort (t = 5)? | Sí |

@@ -1,6 +1,6 @@
 # Capítulo 2 · Núcleo jugable, reglas y UX en nivel
 
-Fecha: 2026-10-06 (actualizado el 2026-10-06 con dos decisiones del dueño tomadas tras jugar el prototipo v0 en su teléfono: **D-001, una dosis por vertido**, y **D-002, sin resaltado de destinos al seleccionar**; actualizado el 2026-10-07 con **D-004, cuias más anchas en los tableros de pocas cuias** (tope del ancho según el número de cuias, sección 5) y vertido a 38° con el labio a 0,6-1,6 u del borde del destino (sección 4.1), decidida tras ver en su teléfono el build «Selva brillante premium»; actualizado el 2026-10-08 con **D-005** (vertido por tramo, como Magic Sort; sustituye a D-001) y **D-006** (tablero, cuia y vertido como Magic Sort: secciones 3.2, 4, 4.1, 5 y 8); registro, impacto y preguntas pendientes en `docs/dev/decisiones.md`) · GDD de Amazon Fill (nombre comercial Tintalú) · Convención: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas, **[NV]** no verificado, **[P]** propuesta de este capítulo a calibrar en soft launch. "(dirección N)" remite a las decisiones de dirección vinculantes; los nombres siguen el glosario (`docs/gdd/00-glosario.md`).
+Fecha: 2026-10-06 (actualizado el 2026-10-06 con dos decisiones del dueño tomadas tras jugar el prototipo v0 en su teléfono: **D-001, una dosis por vertido**, y **D-002, sin resaltado de destinos al seleccionar**; actualizado el 2026-10-07 con **D-004, cuias más anchas en los tableros de pocas cuias** (tope del ancho según el número de cuias, sección 5) y vertido a 38° con el labio a 0,6-1,6 u del borde del destino (sección 4.1), decidida tras ver en su teléfono el build «Selva brillante premium»; actualizado el 2026-10-08 con **D-005** (vertido por tramo, como Magic Sort; sustituye a D-001) y **D-006** (tablero, cuia y vertido como Magic Sort: secciones 3.2, 4, 4.1, 5 y 8), y también con **D-008** (bucle de partida como Magic Sort: secciones 2, 6, 7 y 14); registro, impacto y preguntas pendientes en `docs/dev/decisiones.md`) · GDD de Amazon Fill (nombre comercial Tintalú) · Convención: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas, **[NV]** no verificado, **[P]** propuesta de este capítulo a calibrar en soft launch. "(dirección N)" remite a las decisiones de dirección vinculantes; los nombres siguen el glosario (`docs/gdd/00-glosario.md`).
 
 ## Resumen
 
@@ -92,13 +92,24 @@ PLAYING ──victoria(R12)──▶ CELEBRATION ──0,9 s o toque──▶ VI
 PLAYING ──atascado(R13)──▶ STUCK_MODAL
 STUCK_MODAL ──Marea──▶ PLAYING
 STUCK_MODAL ──Cuia de rescate / Balsa de rescate──▶ PLAYING (+1 cuia)
-STUCK_MODAL ──Volver a la orilla (fallo duro)──▶ FAIL_RESOLVE ──▶ INTRO(corta) ──▶ PLAYING
+STUCK_MODAL ──Volver a la orilla, niveles 1-30 (fallo duro, sin canoa)──▶ FAIL_RESOLVE ──▶ INTRO(corta) ──▶ PLAYING
+STUCK_MODAL ──Rendirse, nivel ≥ 31 (D-008)──▶ GIVE_UP_CONFIRM ──Continuar: +1 cuia──▶ PLAYING (+1 cuia)
+GIVE_UP_CONFIRM ──X o Rendirse (fallo duro)──▶ FAIL_RESOLVE ──▶ LEVEL_FAILED
+STUCK_MODAL ──Rendirse con Canoas infinitas [P]──▶ FAIL_RESOLVE ──▶ LEVEL_FAILED
+LEVEL_FAILED ──Reintentar, con canoa o Canoas infinitas──▶ INTRO(corta, misma semilla) ──▶ PLAYING
+LEVEL_FAILED ──Reintentar con 0 canoas──▶ NO_CANOES ──≥ 1 canoa──▶ LEVEL_FAILED [P]
+LEVEL_FAILED ──X──▶ INICIO (06 §4.7)
+PLAYING o STUCK_MODAL ──pausa › Salir, nivel ≥ 31 («¿Salir del nivel? Perderás 1 canoa» [P])──▶ FAIL_RESOLVE ──▶ LEVEL_FAILED
+PLAYING o STUCK_MODAL ──pausa › Salir, niveles 1-30 (no es fallo)──▶ INICIO
 PLAYING ──Volver a la orilla voluntario, ≥ 8 vertidos (fallo blando)──▶ FAIL_RESOLVE ──▶ INTRO(corta) ──▶ PLAYING
 PLAYING ──Volver a la orilla voluntario, < 8 vertidos (no es fallo)──▶ INTRO(corta) ──▶ PLAYING
 STUCK_MODAL ──Salto del Boto (fails_level ≥ 5)──▶ SKIP_RESOLVE (sin canoa, Crecida intacta, fails_level = 0) ──▶ LOADING(N+1)
 VICTORY_SCREEN ──toque en Siguiente──▶ AD_GATE(nivel ≥ 22, cap. 05 §6) ──▶ LOADING(N+1)
+VICTORY_SCREEN ──toque en Inicio [P] (D-008)──▶ INICIO
 cualquier estado ──app a segundo plano──▶ SUSPENDED (estado ya persistido) ──resume──▶ mismo estado con vista sincronizada
 ```
+
+Embudo de D-008 (decisión del dueño del 2026-10-08; detalle en cap. 04 §6): desde el 31, quedarse sin vertidos lleva a Aguas estancadas, «Rendirse» a ¿Seguro? (GIVE_UP_CONFIRM) y la rendición confirmada a Nivel fallido (LEVEL_FAILED); con 0 canoas, «Reintentar» abre Sin canoas (NO_CANOES). FAIL_RESOLVE se dispara al confirmar la rendición. En 1-30 el modal conserva Volver a la orilla gratis al pie.
 
 | Estado | Entra cuando | Qué hace | Sale a | Timers |
 |---|---|---|---|---|
@@ -107,13 +118,16 @@ cualquier estado ──app a segundo plano──▶ SUSPENDED (estado ya persist
 | PLAYING | Fin de INTRO | Input activo; tras cada vertido ejecuta R10 | CELEBRATION, STUCK_MODAL, pausa | Pista por inactividad `hint_idle_delay_s` (sección 3.4) |
 | CELEBRATION | R12 verdadera | Input bloqueado; sellos brillan en secuencia, confeti de guacamayo, toada corta | VICTORY_SCREEN | 900 ms [P] o toque |
 | VICTORY_SCREEN | Fin de celebración | Cosecha, Crecida, Cosecha doble (≥11), barras de evento, Canasta, Dato del río (cada 10) | AD_GATE / LOADING | Sin auto-avance (`victory_autonext_s` = 0 [P]) |
-| STUCK_MODAL | R13 | Modal Aguas estancadas (sección 7) | PLAYING / FAIL_RESOLVE / SKIP_RESOLVE | Sin cuenta atrás |
-| FAIL_RESOLVE | Fallo duro (Volver a la orilla desde STUCK_MODAL) o fallo blando (Volver a la orilla voluntario con ≥ `restart_confirm_min_pours` vertidos) | `fails_level += 1` en ambos; **solo en fallo duro**: desde el nivel 31 resta 1 canoa (salvo Canoas infinitas) y rompe Crecida salvo Hoja escudo; si `fails_level == relief_after_fails` (3) carga la variante aliviada con el banner "El río bajó"; si no, misma semilla (dirección 7) | INTRO | — |
+| STUCK_MODAL | R13 | Modal Aguas estancadas (sección 7) | PLAYING / FAIL_RESOLVE (1-30) / GIVE_UP_CONFIRM (≥ 31) / SKIP_RESOLVE / INICIO (Salir en 1-30) | Sin cuenta atrás |
+| GIVE_UP_CONFIRM [P] | «Rendirse» en STUCK_MODAL, nivel ≥ 31, con canoa en juego (D-008) | ¿Seguro?: «Perderás 1 canoa» (o «tu última canoa») y otra vez «Continuar: +1 cuia», con el mismo precio y las mismas condiciones; si el rescate no está disponible, no aparece (cap. 04 §6.2) | PLAYING (+1 cuia) / FAIL_RESOLVE (X o «Rendirse») | Sin cuenta atrás |
+| FAIL_RESOLVE | Fallo duro (en 1-30, Volver a la orilla desde STUCK_MODAL; desde el 31, rendición confirmada o «Salir» con el menú; D-008) o fallo blando (Volver a la orilla voluntario con ≥ `restart_confirm_min_pours` vertidos) | `fails_level += 1` en ambos; **solo en fallo duro**: desde el nivel 31 resta 1 canoa (salvo Canoas infinitas) y rompe Crecida salvo Hoja escudo; si `fails_level == relief_after_fails` (3), el siguiente intento carga la variante aliviada con el banner "El río bajó"; si no, misma semilla (dirección 7) | INTRO (1-30 y fallo blando) / LEVEL_FAILED (fallo duro desde el 31) | — |
+| LEVEL_FAILED [P] | Fallo duro desde el 31 (D-008) | Nivel fallido: «Nivel {n}», «Premio: {20 · 60 · 80} semillas» (`eco_reward_*`; no se cobra), «Reintentar» [P] y X | INTRO(corta) / NO_CANOES (0 canoas) / INICIO (X) | Sin cuenta atrás; sin intersticial (cap. 05 §10) |
+| NO_CANOES | «Reintentar», Jugar o Siguiente con 0 canoas, desde el 31 | Sin canoas (cap. 04 §7.3): cronómetro, Canoa extra por video, Llenar canoas, Canoas infinitas 1 h | LEVEL_FAILED en cuanto hay una canoa [P] / INICIO | Sin intersticial (cap. 05 §10) |
 | SKIP_RESOLVE | Salto del Boto aceptado en STUCK_MODAL (`fails_level ≥ skip_min_fails` y ≥ `skip_min_gap_levels` niveles desde el último salto) | Cobra 300 Semillas, marca N como saltado, `fails_level = 0`, `last_skip_level = N`; **no** resta canoa ni toca la Crecida (ni la rompe ni la avanza): no es un fallo (canon cap. 04 §5.2) | LOADING(N+1) | — |
 | AD_GATE | Toque explícito en Siguiente con nivel ≥ 22 y condiciones del cap. 05 §6 | Intersticial solo tras victoria, nunca al inicio ni en reintento (dirección 13); **solo tras toque explícito en Siguiente, nunca por temporizador** (`victory_autonext_s` = 0; cualquier valor > 0 jamás dispara AD_GATE sin toque) | LOADING | — |
 | SUSPENDED | Pérdida de foco | Nada: el estado ya está en disco tras cada vertido | Estado previo | Al volver, la vista salta al modelo (sección 14) |
 
-Definición de **fallo**: **ver cap. 04 §5.2** (tabla canónica única del GDD; este capítulo no la redefine). Resumen idéntico al canon: **fallo duro** = salir de STUCK_MODAL con Volver a la orilla (desde el 31 cuesta 1 canoa salvo Canoas infinitas, rompe la Crecida salvo Hoja escudo, `fails_level` +1); **fallo blando** = Volver a la orilla voluntario con ≥ `restart_confirm_min_pours` (8) vertidos (`fails_level` +1 para el alivio "El río bajó" a los 3 y el Salto del Boto a los 5, pero **nunca** gasta canoa ni rompe la Crecida); reinicio voluntario con < 8 vertidos, Marea desde el modal, Cuia de rescate, salir al Mapa del río o cerrar la app (con o sin modal abierto: el estado se guarda y se reabre tal cual, sección 14) **no** son fallo; Salto del Boto no es fallo y reinicia `fails_level` a 0. El reinicio sigue siendo gratis e ilimitado (dirección 2).
+Definición de **fallo**: **ver cap. 04 §5.2** (tabla canónica única del GDD; este capítulo no la redefine). Resumen idéntico al canon (con D-008, 2026-10-08): **fallo duro** = en 1-30, salir de STUCK_MODAL con Volver a la orilla; desde el 31, confirmar la rendición (GIVE_UP_CONFIRM) o salir del nivel con el menú (desde el 31 cuesta 1 canoa salvo Canoas infinitas, rompe la Crecida salvo Hoja escudo, `fails_level` +1); **fallo blando** = Volver a la orilla voluntario con ≥ `restart_confirm_min_pours` (8) vertidos (`fails_level` +1 para el alivio "El río bajó" a los 3 y el Salto del Boto a los 5, pero **nunca** gasta canoa ni rompe la Crecida); reinicio voluntario con < 8 vertidos, Marea desde el modal, Cuia de rescate, salir con el menú en 1-30 o cerrar la app (con o sin modal abierto: el estado se guarda y se reabre tal cual, sección 14) **no** son fallo; Salto del Boto no es fallo y reinicia `fails_level` a 0. El reinicio sigue siendo gratis e ilimitado (dirección 2).
 
 ## 3. Controles: tap-tap con encolado
 
@@ -265,6 +279,7 @@ Dispositivos: a 320 dp de ancho se admiten 6 cuias por fila (16 cuias = 3 filas 
 |                                          |
 |   [ Cosecha doble: x2 por video ]  (>=11)|
 |   [          Siguiente           ]       |
+|   Inicio [P]                             |
 |                                          |
 |   Dato del rio (cada 10 niveles)         |
 +------------------------------------------+
@@ -278,11 +293,15 @@ Dispositivos: a 320 dp de ancho se admiten 6 cuias por fila (16 cuias = 3 filas 
 | Barras de evento | Reto del río (si el nivel cuenta), Canasta "k/10", en v1.2 Regata/Travesía; máximo 3 barras visibles, el resto en un chevron |
 | Dato del río | Una frase verificada cada 10 niveles (glosario §6.4), bajo el botón, con icono del animal/río; no bloquea Siguiente |
 | Siguiente | CTA primario; sin auto-avance por defecto (`victory_autonext_s` = 0) porque la oferta x2 exige una decisión [P]; research/01 Esp. 12 sugería auto-avance 2-3 s [E], queda como parámetro |
+| Inicio [P] | Botón secundario que vuelve a la pantalla de inicio (06 §4.7) sin pasar por AD_GATE (D-008, 2026-10-08) |
+| Cadena corta (D-008) | Celebración (900 ms) → esta pantalla → Siguiente → AD_GATE → N+1. Como mucho 1 takeover por sesión (05 §5). Sin el calificativo «¡Perfecto!» de Magic Sort: la pregunta 10.2 #25 de la propuesta sigue abierta |
 | Banner de mundo | Si N+1 abre un mundo, tras Siguiente se muestra la tarjeta de país/río/agua base con Rosa guiando (glosario §3.2), 1 toque para continuar |
 
 ## 7. Modal de bloqueo: Aguas estancadas
 
-Dirección 10 y glosario §5.1. Un solo modal, sin cuenta atrás, orden fijo: Marea (si queda cupo o recarga), Cuia de rescate, Volver a la orilla al pie. Antes del nivel 31 el modal solo tiene Marea y Volver a la orilla: sin rescate, sin canoas, sin IAP (dirección 10).
+Dirección 10 y glosario §5.1. Sin cuenta atrás y con orden fijo: Marea (si queda cupo o recarga), Cuia de rescate y el pie. Antes del nivel 31 el modal solo tiene Marea y Volver a la orilla: sin rescate, sin canoas, sin IAP (dirección 10).
+
+**Embudo de D-008 (decisión del dueño del 2026-10-08).** Desde el 31 ya no es un solo modal: el pie es «Rendirse» [P], que lleva a ¿Seguro? [P] (otra vez «Continuar: +1 cuia», con el mismo precio y las mismas condiciones) y, al confirmar, a Nivel fallido [P]; con 0 canoas, «Reintentar» abre Sin canoas. Estados en la sección 2; árbol, textos y wireframes en el cap. 04 §6.2, §6.5 y §6.6.
 
 ```
 +------------------------------------------+
@@ -297,7 +316,7 @@ Dirección 10 y glosario §5.1. Un solo modal, sin cuenta atrás, orden fijo: Ma
 |                                          |
 |  [ Saltar nivel (Salto del Boto)  300 o ]|   solo si fails_level >= 5
 |                                          |
-|           Volver a la orilla             |   enlace; desde el 31 cuesta 1 canoa
+|           Volver a la orilla             |   enlace en 1-30; desde el 31, «Rendirse» [P] (D-008)
 +------------------------------------------+
 ```
 
@@ -308,9 +327,10 @@ Dirección 10 y glosario §5.1. Un solo modal, sin cuenta atrás, orden fijo: Ma
 | Cuia de rescate | Precio **600 Semillas fijas desde el nivel 31** (clave única `rescue_price_bands` = `[[31,600]]`, cap. 05; no existe `rescue_base_price` ni tramos 750/900 ni cohortes por geografía: el ajuste LatAm va en el precio local de los IAP); primer rescate del día 300 (`rescue_first_day_mult` = 0,5, 600 tachado); máximo `rescue_max_per_level` = 1 (decisión cerrada) para que T ≤ 14 + Cuia extra + Cuia de rescate ≤ 16 ranuras. Al aceptar: Capi trae la cuia (600 ms), el modal se cierra, el estado sigue; la cuia **persiste** en reinicios y cierres del mismo nivel (research/03 C2.4 [E]; glosario §5.1) |
 | Sin saldo | El botón muestra el precio en rojo y "Te faltan {n}"; al tocar abre una hoja inferior con Puñado 1,99 (1.000) y, si `rescue_hoy = 0`, Balsa de rescate 4,99; el detalle de la hoja y el árbol de decisión son del cap. 04 §6 y los precios del cap. 05 §4 (research/03 C2.2) |
 | Salto del Boto | Aparece solo con `fails_level ≥ 5` y ≥10 niveles desde el último salto (dirección 9); Rosa salta y lleva al N+1; **no** es fallo: no gasta canoa ni rompe la Crecida (tampoco la avanza) y reinicia `fails_level` (canon cap. 04 §5.2) |
-| Volver a la orilla | Enlace al pie; es el **fallo duro** (sección 2): mismo tablero (misma semilla) salvo que `fails_level` alcance 3 (variante aliviada con "El río bajó", dirección 7); desde el nivel 31 resta 1 canoa y rompe la Crecida salvo Hoja escudo. Qué bloquean 0 canoas (misma frase que el cap. 04 §7.1): con **0 canoas no se puede iniciar ni reiniciar un nivel de campaña**: Jugar (Mapa del río), Siguiente (pantalla de victoria) y Volver a la orilla (cabecera o modal) abren Sin canoas (cap. 04 §7.3: Canoa extra por anuncio, llenar por 200 Semillas o esperar); una partida ya cargada nunca se interrumpe por canoas, y la Cuia de rescate no requiere canoa |
+| Volver a la orilla | Enlace al pie en los niveles 1-30; es el **fallo duro** (sección 2), sin canoa: mismo tablero (misma semilla). Desde el 31 el pie es «Rendirse» (fila siguiente; D-008). Qué bloquean 0 canoas (misma frase que el cap. 04 §7.1): con **0 canoas no se puede iniciar ni reiniciar un nivel de campaña**: Jugar (inicio o Mapa del río), Siguiente (pantalla de victoria), Reintentar (Nivel fallido; D-008) y Volver a la orilla (cabecera) abren Sin canoas (cap. 04 §7.3: Canoa extra por anuncio, llenar por 200 Semillas o esperar); una partida ya cargada nunca se interrumpe por canoas, y la Cuia de rescate no requiere canoa |
+| Rendirse [P] | Desde el 31 (D-008). Abre ¿Seguro? [P]: «Perderás 1 canoa» (o «tu última canoa») y otra vez «Continuar: +1 cuia», al mismo precio y con las mismas condiciones; si el rescate no está disponible, no aparece. La X y «Rendirse» confirman: **fallo duro** (sección 2) y Nivel fallido [P], con «Premio: {20 · 60 · 80} semillas» que no se cobra, «Reintentar» [P] (mismo tablero salvo que `fails_level` alcance 3: variante aliviada con "El río bajó", dirección 7) y X → inicio. Con Canoas infinitas no hay canoa en juego y se pasa directo a Nivel fallido [P] |
 | Cuia extra | **No** aparece aquí: es un comodín planificado "solo mientras quede un vertido legal" (dirección 9). El botón de la barra se desactiva al entrar en Aguas estancadas |
-| Cierre por fuera | No existe: el modal es modal. Volver al Mapa del río desde pausa o cerrar la app **no** es fallo: el estado (incluido el modal abierto) se guarda y se reabre tal cual al volver al nivel, sin cobrar canoa (canon cap. 04 §5.2; sección 14) |
+| Cierre por fuera | No existe: el modal es modal. Cerrar la app **no** es fallo: el estado (incluido el modal, ¿Seguro? o Nivel fallido abiertos) se guarda y se reabre tal cual al volver al nivel, sin cobrar canoa (canon cap. 04 §5.2; sección 14). «Salir» desde la pausa sale sin coste en 1-30; desde el 31 pide «¿Salir del nivel? Perderás 1 canoa» [P] y es fallo duro (D-008) |
 
 ## 8. Capacidades variables
 
@@ -447,7 +467,7 @@ Sesión objetivo 10-14 min [P] para los niveles 1-10 (research/05 proponía 8-10
 | Toque durante Sumergir y teñir | Salta al estado final en 0 ms; el toque **no** se interpreta como selección |
 | Toque durante la celebración | Pasa a la pantalla de victoria; sin pérdida de recompensa |
 | App a segundo plano a medio vertido | El modelo ya estaba actualizado y persistido; al volver, la vista salta al modelo sin animar; la selección se limpia |
-| App cerrada o muerta a medio nivel | Al abrir: LOADING del mismo nivel desde el estado guardado (cuias, movimientos, stock de Marea, cuias añadidas, revelados, contadores); sin intro; si estaba en STUCK_MODAL se reabre el modal (sin cobrar canoa por el cierre) |
+| App cerrada o muerta a medio nivel | Al abrir: LOADING del mismo nivel desde el estado guardado (cuias, movimientos, stock de Marea, cuias añadidas, revelados, contadores); sin intro; si estaba en STUCK_MODAL, GIVE_UP_CONFIRM o LEVEL_FAILED se reabre esa pantalla (sin cobrar canoa por el cierre). Así cerrar la app no es una salida gratis del embudo de D-008 |
 | Interrupción por llamada/anuncio durante una animación | Igual que segundo plano; el anuncio recompensado solo arranca desde modal o pantalla de victoria, nunca en PLAYING |
 | Nivel N+1 no listo al pulsar Siguiente | "Cargando…" con lazo de río hasta 2 s; si falla la carga, reintento y mensaje "Revisa tu conexión" solo si el paquete es remoto; los primeros **700 niveles (mundos 1-9)** van instalados en el AAB (`levels_install`, cap. 08 §6.2) y del 701 en adelante son remotos (`levels_remote`, anunciados por `content_version`) |
 | Rewarded sin inventario (`no_fill`) | El botón de anuncio se oculta; Marea solo por Semillas; Cuia de rescate sin alternativa de anuncio (no la tiene por diseño) |
@@ -490,7 +510,7 @@ Los precios de comodines y rescate los fija el cap. 05 y los muestra este capít
 ## Preguntas abiertas para el dueño del producto
 
 1. **Remolino (M4)**: ¿se acepta la regla "entra por el fondo de la pareja, cualquier color" o se prefiere la versión simple de una sola cuia (lo vertido va al fondo de la misma cuia)? Decidir tras prototipo de legibilidad con 5 jugadores.
-2. **Reinicio voluntario**: Cerrada: canon del cap. 04 §5.2 (fallo blando con ≥ 8 vertidos: cuenta para el alivio y el Salto del Boto, nunca gasta canoa ni rompe la Crecida; salir al Mapa del río no es fallo). El umbral `restart_confirm_min_pours` = 8 (rango 5-12, 08 §9) solo se calibra en soft launch con la distribución real de vertidos antes de reiniciar (GDD §6 #7), sin reabrir la regla.
+2. **Reinicio voluntario**: Cerrada: canon del cap. 04 §5.2 (fallo blando con ≥ 8 vertidos: cuenta para el alivio y el Salto del Boto, nunca gasta canoa ni rompe la Crecida; salir al Mapa del río no es fallo). El umbral `restart_confirm_min_pours` = 8 (rango 5-12, 08 §9) solo se calibra en soft launch con la distribución real de vertidos antes de reiniciar (GDD §6 #7), sin reabrir la regla. *Matizada por D-008 (2026-10-08): desde el 31, salir del nivel con el menú es fallo duro; cerrar la app sigue sin serlo. El reinicio voluntario no cambia.*
 3. **Cuia de rescate**: Cerrada: 1 por nivel (`rescue_max_per_level` = 1, rango 1; revisión del 06-10 y cap. 04 §3/§6.2): T ≤ 14 generadas + Cuia extra + Cuia de rescate ≤ 16 ranuras; el generador no baja a T ≤ 13.
 4. **Doble toque**: ¿mantener sin función o permitir "vertido al único destino legal" como atajo (riesgo de vertidos accidentales)?
 5. **Lluvia y Piraña** (mecánicas con estado temporal): ¿entran en 1.0 (niveles 143 y 183, dentro de los 700 instalados; cap. 08 §6.2) o se posponen a la 1.1 para reducir alcance del solver? Criterio (GDD §6 #6): 1.0 solo si el solver con estado temporal pasa los tests al cierre de la Fase 1; si no, 1.1 **sin mover los debuts** (143 y 183 siguen siendo canon en 9.1 y `mech_debut_level`).
@@ -500,6 +520,7 @@ Los precios de comodines y rescate los fija el cap. 05 y los muestra este capít
 9. **Mochila de inicio**: Cerrada: primera tarjeta en la primera victoria con nivel ≥ 12 dentro de una sesión ≥ 2 (`eco_starter_first_show` = "L12_or_session2"; ventana 10-20 se mantiene; cap. 05 §4.1 y 06).
 10. **Aguas turbias**: Cerrada: máximo 4 dosis ocultas / 24 realidades (`lvl_murky_max_hidden_units` = 4) y sin "Pista parcial" en 02, 03, 04 y 08.
 11. **Una dosis por vertido (D-001) y sin resaltado de destinos (D-002)**: decididas por el dueño el 2026-10-06. D-001 quedó sustituida por D-005 (2026-10-08): P2, P3, P4 y P6 cerradas; P7 reescrita; P5 (dedo guía y Morpho frente a D-002) sigue abierta (`docs/dev/decisiones.md` §5).
+12. **Embudo de D-008** (2026-10-08): textos nuevos (P14), Marea como primera opción del modal (P15) y canoa al salir con 0 vertidos (P16), en `docs/dev/decisiones.md`. No bloquean.
 
 ## Dependencias con otros capítulos
 
@@ -509,7 +530,7 @@ Numeración canónica de capítulos según el glosario (§Dependencias): 00 Glos
 |---|---|---|
 | 00 Glosario | Nombres de mecánicas (Hoja, Brote, Liana, Remolino, Barro, Lluvia, Piraña) confirmados con regla exacta; distinción Hoja (palma) vs Hoja escudo (Victoria amazonica); Cuia alta: debut 27 (cap 5) y cap 6 solo en hitos desde el 141 | — |
 | 03 Niveles, generación y dificultad | Reglas R1-R16 como contrato del solver y del validador; transiciones y semántica de M1-M7 (03 §9 deriva de 9.1, no al revés); tabla de debuts de 9.1 y `mech_debut_level` como única fuente (14·27·43·63·83·103·123·143·183, bloqueadores en la posición 3 del ciclo); `futil` (con la excepción de dosis ocultas); `validar_turbio` con `lvl_murky_max_hidden_units` = 4 y regla T4 garantizada en 03 §8; restricciones de capacidad y de mecánicas por nivel; catálogo de `attrs` de 9.1 (sintaxis del cap. 08 §4.1); `rescue_max_per_level` = 1; rampa 1-12 de la sección 13 (excepciones de 1 vacío en 1 y 6; 03 la copia sin alterarla) | Pipeline, pesos de dificultad, primer Difícil 40 y primer Muy difícil 60 (§11/§12), ciclo de 20 de §12 (retos p6, p10, p14, p17, p19; recuperación p1-p2; hito p20) en el que la sección 9 sitúa los debuts, pools de variantes aliviadas, topes diarios; definición de fallo: ambos remiten al cap. 04 §5.2 |
-| 04 Comodines, vidas y rescate | Desbloqueos escalonados (Marea 1, Cuia extra 8 con 1 unidad, Morpho 12 con 3 unidades, Pororoca 30, Luciérnaga ≥100); Marea ilimitada hasta el 10 y 3 por nivel desde el 11; vertido seguro en turbio (T5) y `hint_timeout_ms` sin "Pista parcial"; estados FAIL_RESOLVE / SKIP_RESOLVE de la sección 2 | Canon de la definición de fallo (§5.2; la sección 2 remite y resume); frase "qué bloquean 0 canoas" (§7.1); topes por nivel/día; reglas detalladas de cada comodín |
+| 04 Comodines, vidas y rescate | Desbloqueos escalonados (Marea 1, Cuia extra 8 con 1 unidad, Morpho 12 con 3 unidades, Pororoca 30, Luciérnaga ≥100); Marea ilimitada hasta el 10 y 3 por nivel desde el 11; vertido seguro en turbio (T5) y `hint_timeout_ms` sin "Pista parcial"; estados FAIL_RESOLVE / SKIP_RESOLVE de la sección 2, y GIVE_UP_CONFIRM / LEVEL_FAILED / NO_CANOES del embudo de D-008 | Canon de la definición de fallo (§5.2; la sección 2 remite y resume); frase "qué bloquean 0 canoas" (§7.1); topes por nivel/día; reglas detalladas de cada comodín |
 | 05 Economía y monetización | Ubicación de Cosecha doble (≥11), AD_GATE tras toque en Siguiente (≥22), hoja "sin saldo" del modal, Balsa de rescate; Mercado desde la victoria del 10 y Mochila de inicio en la primera victoria con nivel ≥ 12 en una sesión ≥ 2 (sección 13) | `rescue_price_bands` = `[[31,600]]` (600 fijo, sin tramos ni cohortes geográficas), escalera de la Crecida (§2.4), cadencia de intersticiales (§6), precios locales y de comodines |
 | 06 Meta, retención y live-ops | Barras de Crecida/Reto del río/Canasta en victoria; distinción fallo duro / blando (canoas, Crecida, Hoja escudo; canon cap. 04 §5.2, referenciado en la sección 2); tarjeta Aguas turbias · Bonus (1.1); banner de mundo; tabla 1-12 de la sección 13 (06 §2.2 copia sin alterar sus columnas de cuias, colores, vacíos, par y tiempo, con el Reto del río tras la victoria del 7 y sin pre-prompt de push en la del 10); barra de la Crecida vertical en el borde derecho (sección 5, posición de 07 §7.4) | Reglas de Canoas, Crecida, Bitácora, Dato del río, pre-prompt de push (2.ª sesión, §8.1) |
 | 07 Arte, temática y audio | Duraciones y curvas de la sección 4; tapa de calabaza; iconografía de M1-M7; Capi en orilla, Rosa en banner; confeti de guacamayo; maracá y toada; requisitos de accesibilidad de la sección 12 (lector de pantalla, fuente 130 %, interruptor de pista); Cuia alta de 6 solo en hitos desde el 141 | Orden canónico de la bandeja de comodines y posición de la barra de la Crecida, vertical en el borde derecho (§7.4, copiados en la sección 5); alturas de las variantes de cuia (§4.5); opacidad del patrón 20 % / 35 % en Alto contraste (§3); hojas de estilo, sprites, bancos de sonido |

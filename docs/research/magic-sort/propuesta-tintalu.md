@@ -4,6 +4,16 @@
 
 > **Respuestas del dueño (2026-10-08).** 10.2 #1 → B, `run` (D-005); #3 → A, pero sin reservar el hueco del vertido (D-006, punto 4); #4 → A, opción (a) de §3.4 (D-006, punto 3); #5 → B, pose medida y sin techo (D-006, punto 1); #6 → A, boca a 0,2-0,6 u; #7 → A, ≈ 0,9 s (D-006, punto 2); 4.3.5 → se mantienen 16 dp. Siguen abiertas #2 y #8-#25. Registro en `docs/dev/decisiones.md`. El resto del documento no se reescribe: es histórico.
 
+> **Respuestas del dueño (2026-10-08, D-008: bucle de partida como Magic Sort).** Se copia la estructura del embudo de §6.1 con nuestras cifras:
+> - Los pasos 2 («Continue?») y 3 («Level Failed!») de §6.1, que esta propuesta no copiaba, ahora se copian: «¿Seguro?» con una segunda oferta de rescate y «Nivel fallido» con el premio que no se cobra.
+> - Por eso dejan de valer las filas de §6.2 sobre la misma oferta dos veces y el premio que no se cobra, y el punto 8 de §1 («un solo modal… reinicio en 1 toque»).
+> - La mejora del paso 6 (cargar el nivel tras la Canoa extra) no se adopta: se vuelve a «Nivel fallido» con «Reintentar» [P], como Magic Sort.
+> - Desde el 31, salir del nivel cuesta una canoa.
+> - #20 → no se adopta otra distribución en cada reintento (D-008, punto 7): el GDD no lo permite. La pregunta sigue abierta.
+> - #25 sigue abierta (sin «¡Perfecto!»).
+> - Postura del dueño, ya anotada en #14: las Canoas infinitas no quitan los intersticiales.
+> - Preguntas nuevas P14-P16 en `docs/dev/decisiones.md`.
+
 **Base.**
 - Observación: `docs/research/magic-sort/ficha-magic-sort.md` (en adelante, «la ficha»), con la grabación de 20 min del dueño (niveles 387-389), la hoja de vertido por adb y el vídeo de Love Water.
 - Canon: `docs/GDD.md` (§2, §4, §6, §7), capítulos 00, 02, 03, 04, 05, 06, 07 y 08 §9, y `docs/dev/decisiones.md` (D-001 a D-004 y sus preguntas P1-P10). Composición actual del tablero: `docs/art/direccion-visual-v2.md` §3.2, `BoardLayout.Compute` y `GameScreen.PourCeilingFor`.
