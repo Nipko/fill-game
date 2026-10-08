@@ -9,7 +9,10 @@
     "AF.UI",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner",
-    "AF.Presentation"
+    "AF.Presentation",
+    "AF.Platform",
+    "AF.Save",
+    "AF.Economy"
   ],
   "includePlatforms": [
     "Editor"

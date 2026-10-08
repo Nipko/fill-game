@@ -1,0 +1,17 @@
+{
+  "name": "AF.Economy",
+  "rootNamespace": "AF.Economy",
+  "references": [
+    "AF.Platform",
+    "AF.Save"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}
