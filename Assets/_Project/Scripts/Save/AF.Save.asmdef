@@ -1,0 +1,16 @@
+{
+  "name": "AF.Save",
+  "rootNamespace": "AF.Save",
+  "references": [
+    "AF.Platform"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}
