@@ -2,7 +2,9 @@
 using System.Globalization;
 using System.Text;
 using AF.Core.Board;
+using AF.Core.Mechanics;
 using AF.Core.Rules;
+using AF.Core.Session;
 using AF.GameFlow;
 using AF.Presentation;
 using UnityEngine;
@@ -29,6 +31,12 @@ namespace AF.UI
     /// nivel, y los eventos con vertido (<c>pour</c>, <c>undo</c>) llevan, además de
     /// <c>"move":[origen,destino,cantidad]</c>, la cantidad suelta en <c>"amount"</c> (en <c>run</c>, la racha que cabe;
     /// en <c>single</c>, siempre 1). <c>pours</c> cuenta vertidos aplicados (en <c>single</c>, dosis movidas).</para>
+    /// <para>Mecánicas de la 1.0 (D-007; arquitectura del paso 1, §9): tras <c>cuias</c>, cada línea de nivel lleva el mundo
+    /// (<c>world</c>), el agua base (<c>water</c>), la etiqueta (<c>label</c>) y los campos del tablero de
+    /// <see cref="AppendBoardFields"/> (<c>murky</c>, <c>mech</c>, <c>hidden</c>, <c>sealed</c> y, con Lluvia o Piraña,
+    /// <c>counter</c>); los vertidos añaden <c>recv</c> y <c>ev</c> (<see cref="AppendPourEvents"/>). Los colores de las dosis
+    /// ocultas salen en <c>cuias</c>: la sonda solo escribe en desarrollo (<see cref="Enabled"/>), donde hacen falta para
+    /// jugar con adb. Los eventos sueltos de la presentación van con <see cref="Event"/>.</para>
     /// </remarks>
     public sealed class DevProbe
     {
@@ -69,7 +77,9 @@ namespace AF.UI
 
         /// <summary>
         /// Línea <c>AF_STATE</c>: <c>t</c> en ms desde el arranque, nivel, modo de vertido, estado de 02 §2, estado del
-        /// modelo, vertidos, selección, toque o vertido del evento (con su cantidad) y cuias de abajo arriba.
+        /// modelo, vertidos, selección, toque o vertido del evento (con su cantidad), cuias de abajo arriba (con los colores de
+        /// las ocultas: la sonda solo escribe en desarrollo) y, después, el mundo, el agua, la etiqueta y los campos del
+        /// tablero de <see cref="AppendBoardFields"/>.
         /// </summary>
         public void State(string evt, LevelFlow flow, int tap, Pour? move)
         {
@@ -80,8 +90,212 @@ namespace AF.UI
             }
         }
 
-        /// <summary>Texto de la línea <c>AF_STATE</c> de <see cref="State"/>; null si la sonda no escribe o no hay nivel.</summary>
+        /// <summary>
+        /// Como <see cref="State(string, LevelFlow, int, Pour?)"/> para un vertido: con <c>move</c> y <c>amount</c> de
+        /// <paramref name="result"/> y, al final, el receptor y las etapas de R10 (<see cref="AppendPourEvents"/>).
+        /// </summary>
+        public void State(string evt, LevelFlow flow, int tap, in PourResult result)
+        {
+            string? line = FormatState(evt, flow, tap, in result);
+            if (line != null)
+            {
+                Debug.Log(line);
+            }
+        }
+
+        /// <summary>Texto de la línea <c>AF_STATE</c> de <see cref="State(string, LevelFlow, int, Pour?)"/>; null si la sonda no escribe o no hay nivel.</summary>
         public string? FormatState(string evt, LevelFlow flow, int tap, Pour? move)
+        {
+            PourEvents none = default;
+            return FormatState(evt, flow, tap, move, false, in none);
+        }
+
+        /// <summary>Texto de la línea <c>AF_STATE</c> de un vertido (la sobrecarga de <c>State</c> con <see cref="PourResult"/>); null si la sonda no escribe o no hay nivel.</summary>
+        public string? FormatState(string evt, LevelFlow flow, int tap, in PourResult result)
+        {
+            PourEvents events = result.Events;
+            return FormatState(evt, flow, tap, result.Pour, true, in events);
+        }
+
+        /// <summary>
+        /// Línea <c>AF_STATE</c> de un evento suelto de la presentación (p. ej. <c>step_budget</c>, el presupuesto de los pasos
+        /// de mecánica): <c>event</c>, <c>t</c> y los campos de <paramref name="fieldsJson"/> (miembros JSON
+        /// <c>"clave":valor</c> separados por comas, con o sin llaves; vacío o null, ninguno). Solo en desarrollo.
+        /// </summary>
+        public void Event(string evt, string fieldsJson)
+        {
+            string? line = FormatEvent(evt, fieldsJson);
+            if (line != null)
+            {
+                Debug.Log(line);
+            }
+        }
+
+        /// <summary>Texto de la línea de <see cref="Event"/>; null si la sonda no escribe.</summary>
+        public string? FormatEvent(string evt, string? fieldsJson)
+        {
+            if (!Enabled)
+            {
+                return null;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"").Append(evt).Append('"');
+            AppendTime(sb);
+            string fields = fieldsJson == null ? string.Empty : fieldsJson.Trim();
+            if (fields.Length >= 2 && fields[0] == '{' && fields[fields.Length - 1] == '}')
+            {
+                fields = fields.Substring(1, fields.Length - 2).Trim();
+            }
+
+            if (fields.Length > 0)
+            {
+                sb.Append(',').Append(fields);
+            }
+
+            sb.Append('}');
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Campos del tablero de la línea <c>AF_STATE</c> (cada uno empieza con coma):
+        /// <list type="bullet">
+        /// <item><description><c>murky</c>: el nivel tiene Aguas turbias (<paramref name="initial"/> con dosis ocultas; 02
+        /// §11);</description></item>
+        /// <item><description><c>mech</c>: una cadena por cuia de <paramref name="current"/>, <c>"-"</c> sin mecánica o su tipo
+        /// (<see cref="MechanicTypes.ToKey"/>) con <c>;key=K</c>, <c>;pair=P</c> (siempre en el Remolino), <c>;n=N</c>,
+        /// <c>;k=K</c> y <c>;c=C</c> (el contador) si valen más de 0 y <c>;closed</c> con la Hoja puesta o el Brote cerrado
+        /// (p. ej. <c>hoja;key=4;closed</c>);</description></item>
+        /// <item><description><c>hidden</c>: la máscara de ocultas de cada cuia (bit k = dosis k desde el fondo);</description></item>
+        /// <item><description><c>sealed</c>: los índices de las cuias selladas;</description></item>
+        /// <item><description><c>counter</c>, solo si hay contador (Lluvia o Piraña; <see cref="LevelCounter"/>):
+        /// <c>type</c>, <c>cuia</c>, <c>remaining</c>, <c>pending</c> y <c>blocked</c>.</description></item>
+        /// </list>
+        /// Puro: no depende de <see cref="LevelFlow"/> ni de <see cref="Enabled"/>.
+        /// </summary>
+        internal static void AppendBoardFields(StringBuilder sb, BoardState initial, BoardState current)
+        {
+            sb.Append(",\"murky\":").Append(initial.HasHidden ? "true" : "false");
+            sb.Append(",\"mech\":[");
+            for (int i = 0; i < current.Count; i++)
+            {
+                if (i > 0)
+                {
+                    sb.Append(',');
+                }
+
+                sb.Append('"');
+                AppendMechanic(sb, current[i]);
+                sb.Append('"');
+            }
+
+            sb.Append("],\"hidden\":[");
+            for (int i = 0; i < current.Count; i++)
+            {
+                if (i > 0)
+                {
+                    sb.Append(',');
+                }
+
+                sb.Append(current[i].HiddenMask.ToString(CultureInfo.InvariantCulture));
+            }
+
+            sb.Append("],\"sealed\":[");
+            bool first = true;
+            for (int i = 0; i < current.Count; i++)
+            {
+                if (!current.IsSealed(i))
+                {
+                    continue;
+                }
+
+                if (!first)
+                {
+                    sb.Append(',');
+                }
+
+                first = false;
+                sb.Append(i.ToString(CultureInfo.InvariantCulture));
+            }
+
+            sb.Append(']');
+            LevelCounter counter = LevelCounter.Of(current);
+            if (counter.IsActive)
+            {
+                sb.Append(",\"counter\":{\"type\":\"").Append(MechanicTypes.ToKey(counter.Type)).Append('"');
+                sb.Append(",\"cuia\":").Append(counter.CuiaIndex.ToString(CultureInfo.InvariantCulture));
+                sb.Append(",\"remaining\":").Append(counter.Remaining.ToString(CultureInfo.InvariantCulture));
+                sb.Append(",\"pending\":").Append(counter.PendingDrops.ToString(CultureInfo.InvariantCulture));
+                sb.Append(",\"blocked\":").Append(counter.Blocked ? "true" : "false").Append('}');
+            }
+        }
+
+        /// <summary>
+        /// Campos de un vertido (cada uno empieza con coma): <c>recv</c>, la cuia que recibió (la pareja en el Remolino), y
+        /// <c>ev</c> con las máscaras de las etapas de R10 (bit i = cuia i): <c>rev</c> (Aguas turbias reveladas), <c>mud</c>
+        /// (Barro lavado), <c>open</c> (Hoja o Brote abiertos), <c>seal</c>, <c>rel</c> (soltadas), <c>drop</c>, <c>wait</c> y
+        /// <c>end</c> (Lluvia), <c>bite</c>, <c>cave</c> y <c>lost</c> (Piraña) y <c>futile</c>. Puro.
+        /// </summary>
+        internal static void AppendPourEvents(StringBuilder sb, in PourEvents ev)
+        {
+            sb.Append(",\"recv\":").Append(ev.Receiver.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"ev\":{");
+            AppendMask(sb, "rev", ev.RevealedMask, true);
+            AppendMask(sb, "mud", ev.BarroWashedMask, false);
+            AppendMask(sb, "open", ev.OpenedMask, false);
+            AppendMask(sb, "seal", ev.SealedMask, false);
+            AppendMask(sb, "rel", ev.ReleasedMask, false);
+            AppendMask(sb, "drop", ev.LluviaDropMask, false);
+            AppendMask(sb, "wait", ev.LluviaWaitingMask, false);
+            AppendMask(sb, "end", ev.LluviaEndedMask, false);
+            AppendMask(sb, "bite", ev.PiranaBittenMask, false);
+            AppendMask(sb, "cave", ev.PiranaCaveMask, false);
+            AppendMask(sb, "lost", ev.PiranaBiteLostMask, false);
+            sb.Append(",\"futile\":").Append(ev.Futile ? "true" : "false").Append('}');
+        }
+
+        private static void AppendMask(StringBuilder sb, string name, int mask, bool first)
+        {
+            if (!first)
+            {
+                sb.Append(',');
+            }
+
+            sb.Append('"').Append(name).Append("\":").Append(mask.ToString(CultureInfo.InvariantCulture));
+        }
+
+        // "-" sin mecánica; si no, el tipo y sus atributos no nulos (pair siempre en el Remolino) y ";closed".
+        private static void AppendMechanic(StringBuilder sb, Cuia cuia)
+        {
+            MechanicType type = cuia.Mechanic;
+            if (type == MechanicType.None || !MechanicTypes.IsDefined(type))
+            {
+                sb.Append('-');
+                return;
+            }
+
+            sb.Append(MechanicTypes.ToKey(type));
+            AppendAttr(sb, "key", cuia.MechanicKey, false);
+            AppendAttr(sb, "pair", cuia.MechanicPairId, type == MechanicType.Remolino);
+            AppendAttr(sb, "n", cuia.MechanicN, false);
+            AppendAttr(sb, "k", cuia.MechanicK, false);
+            AppendAttr(sb, "c", cuia.MechanicCounter, false);
+            if ((cuia.MechanicFlags & Cuia.FlagClosed) != 0)
+            {
+                sb.Append(";closed");
+            }
+        }
+
+        private static void AppendAttr(StringBuilder sb, string name, int value, bool always)
+        {
+            if (always || value > 0)
+            {
+                sb.Append(';').Append(name).Append('=').Append(value.ToString(CultureInfo.InvariantCulture));
+            }
+        }
+
+        private string? FormatState(string evt, LevelFlow flow, int tap, Pour? move, bool hasEvents, in PourEvents events)
         {
             if (!Enabled || !flow.HasLevel)
             {
@@ -136,7 +350,18 @@ namespace AF.UI
                 sb.Append(']');
             }
 
-            sb.Append("]}");
+            sb.Append(']');
+            AF.Levels.LevelDefinition level = flow.Level;
+            sb.Append(",\"world\":").Append(level.World.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"water\":\"").Append(level.WaterBase).Append('"');
+            sb.Append(",\"label\":\"").Append(level.DifficultyLabel).Append('"');
+            AppendBoardFields(sb, flow.Session.Initial, board);
+            if (hasEvents)
+            {
+                AppendPourEvents(sb, in events);
+            }
+
+            sb.Append('}');
             return sb.ToString();
         }
 

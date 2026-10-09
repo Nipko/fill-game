@@ -12,6 +12,9 @@ namespace AF.Presentation
 
         /// <summary>Gotas del sellado alrededor del borde de una cuia (07 §5.3).</summary>
         void SealDrops(Vector2 rim, Color tint, float unitDp);
+
+        /// <summary>Reducir movimiento (02 §4; 07 §7.8): con true no se emiten partículas.</summary>
+        bool ReduceMotion { get; set; }
     }
 
     /// <summary>
@@ -73,8 +76,18 @@ namespace AF.Presentation
         public int ActiveCount => _active;
 
         /// <inheritdoc />
+        /// <remarks>Con true, <see cref="Splash"/> y <see cref="SealDrops"/> no emiten (02 §4: sin partículas); lo que ya
+        /// está en vuelo termina su vida.</remarks>
+        public bool ReduceMotion { get; set; }
+
+        /// <inheritdoc />
         public void Splash(Vector2 surface, Color tint, float unitDp)
         {
+            if (ReduceMotion)
+            {
+                return;
+            }
+
             // 4-6 gotas de 0,06-0,10 u lanzadas a 1,5-2,5 u/s hacia arriba (±35°) con gravedad de 18 u/s², y un anillo
             // elíptico que crece de 0,4 a 1,3 u con alfa 0,40 → 0 (guía 6.6).
             int n = 4 + (int)(Next() * 3f);
@@ -91,6 +104,11 @@ namespace AF.Presentation
         /// <inheritdoc />
         public void SealDrops(Vector2 rim, Color tint, float unitDp)
         {
+            if (ReduceMotion)
+            {
+                return;
+            }
+
             int n = 6 + (int)(Next() * 3f);
             for (int i = 0; i < n; i++)
             {
