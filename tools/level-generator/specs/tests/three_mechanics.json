@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v1.json",
+  "description": "Fixture negativo de --validate-spec: Tres mecánicas en el 152 antes del 300.",
+  "expect_rule": "MAX-2",
+  "calendar": {
+    "152": "Ll+Ho+Ba (D)"
+  }
+}

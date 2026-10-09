@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v1.json",
+  "description": "Fixture negativo de --validate-spec: La Hoja sale 7 veces en su ciclo de debut 41-60 (el 47 pasa a C).",
+  "expect_rule": "TITULAR-8",
+  "calendar": {
+    "47": "C"
+  }
+}

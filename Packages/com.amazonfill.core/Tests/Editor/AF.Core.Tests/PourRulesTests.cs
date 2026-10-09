@@ -216,9 +216,12 @@ namespace AF.Core.Tests
         }
 
         [Test]
-        public void BoardState_RejectsMudUntilItsMechanicExists()
+        public void BoardState_AcceptsMud_AndRejectsTheReservedColor()
         {
-            Assert.That(() => { Board(C(4, Cuia.MudColor), Cuia.Empty(4)); }, Throws.TypeOf<NotSupportedException>());
+            // 02 R2: el 15 es Barro (02 §9.1 M5, portado en C2-3); el 16 sigue reservado.
+            BoardState mud = Board(C(4, 1, Cuia.MudColor), Cuia.Empty(4));
+            Assert.That(mud.UnitsOf(Cuia.MudColor), Is.EqualTo(1));
+            Assert.That(() => { Board(C(4, Cuia.ReservedColor), Cuia.Empty(4)); }, Throws.TypeOf<NotSupportedException>());
         }
 
         [Test]

@@ -9,29 +9,38 @@ namespace AF.Solver.Search
     /// <summary>
     /// Solver A* (ponderado con <c>w</c> entero) sobre estados canónicos (GDD 03 §3 y §5) en los dos modos de vertido
     /// (D-005): heurística <see cref="SolverHeuristic"/> del modo (<c>H</c> en <see cref="PourMode.Run"/>, el modo de
-    /// juego por defecto; <c>H_single</c> [P] solo en <see cref="PourMode.Single"/>, el de pruebas), movimientos = <c>movimientos_utiles</c> de 02 §1.4 evaluados con
-    /// <see cref="CuiaRules"/> (la misma implementación que el cliente), presupuesto de estados expandidos y
-    /// prueba de irresolubilidad por agotamiento. Admite tableros de hasta 16 cuias (14 generadas, R1).
+    /// juego por defecto; <c>H_single</c> [P] solo en <see cref="PourMode.Single"/>, el de pruebas), movimientos =
+    /// <c>movimientos_utiles</c> de 02 §1.4 evaluados y aplicados con <see cref="BoardRules"/> (la misma implementación que
+    /// el cliente, con R10 por etapas y las mecánicas del anexo B de D-007), presupuesto de estados expandidos y prueba de
+    /// irresolubilidad por agotamiento. Admite tableros de hasta 16 cuias (14 generadas, R1).
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
     /// <item><description><b>Estado canónico:</b> cada nodo guarda sus cuias ordenadas con <see cref="BoardCanon.Sort"/> y
     /// su hash FNV-1a de 64 bits (<see cref="BoardCanon.Hash"/>); los visitados son una tabla hash abierta propia sobre
     /// arrays (sin <c>Dictionary</c>).</description></item>
-    /// <item><description><b>Movimientos:</b> los de 03 §5 <c>MOVIMIENTOS</c>, con la cantidad de
-    /// <see cref="CuiaRules.Amount(Cuia, Cuia, PourMode)"/>: la racha completa que cabe en <see cref="PourMode.Run"/> y una
+    /// <item><description><b>Movimientos:</b> los de 03 §5 <c>MOVIMIENTOS</c> que devuelve <see cref="SolverMoves.Collect"/>
+    /// (la misma lista que usan el bot y las métricas), con la cantidad de
+    /// <see cref="BoardRules.Amount"/>: la racha completa que cabe en <see cref="PourMode.Run"/> y una
     /// dosis en <see cref="PourMode.Single"/>. Los pares (A, B) que se expanden son los mismos en los dos modos (el factor de
     /// ramificación por nodo no cambia); en <c>Single</c> crece el conjunto de estados alcanzables (decisiones.md §2.1.3).
     /// Las cuias idénticas (mismo <see cref="Cuia.Packed"/>, que incluye la capacidad) se expanden una sola vez como
     /// origen y como destino: generalizan "un solo vacío por (capacidad, attr)" de 03 §5 y producen exactamente los
-    /// mismos hijos canónicos.</description></item>
+    /// mismos hijos canónicos. El descarte rápido de destinos «llena u otra cima» de <see cref="SolverMoves"/> solo vale
+    /// para cuias normales sin Barro expuesto: un destino Remolino (que puede estar lleno o tener otra cima, porque la racha
+    /// entra por el fondo de su pareja, 03 §9) o con Barro expuesto lo decide <see cref="BoardRules"/>.</description></item>
     /// <item><description><b>Orden:</b> el de <c>ASTAR</c> en 03 §5 y de <c>tools/levelgen_proto.py</c>, que encolan
     /// <c>(f, g, S)</c> y <c>(f, g, contador, clave)</c>: prioridad <c>f = g + w·H</c>; a igual <c>f</c>, primero el de
     /// <b>menor</b> <c>g</c>; a igualdad total, orden de llegada (<see cref="MinHeap"/>). Con <c>w = 1</c> el par no
     /// depende del desempate (H admisible); con <c>w &gt; 1</c> (Morpho, Pororoca, Río sin fin) el desempate decide qué
     /// solución subóptima sale, y así coincide con el prototipo. Determinista en CoreCLR, Mono e IL2CPP.</description></item>
+    /// <item><description><b>Mecánicas con estado</b> (03 §9): Hoja, Brote, Lluvia (gotas pendientes y contador) y Piraña
+    /// (contador) guardan su estado en la propia cuia (<see cref="Cuia.Packed"/>), así que la clave canónica y el hash lo
+    /// incluyen sin código propio; la gota y el mordisco los aplica <see cref="BoardRules"/> en la etapa (e) de R10. El último
+    /// destino de la Piraña es el del propio vertido y no se guarda. La heurística no cambia con ninguna (ver
+    /// <see cref="SolverHeuristic"/>): el par con <c>w = 1</c> sigue siendo exacto.</description></item>
     /// <item><description><b>Solución:</b> se guarda en índices canónicos y se traduce al final a los índices reales del
-    /// tablero de partida, rehaciendo cada vertido con <see cref="CuiaRules"/>.</description></item>
+    /// tablero de partida, rehaciendo cada vertido con <see cref="BoardRules"/>.</description></item>
     /// <item><description><b>Memoria:</b> cada nodo guarda solo las <c>T</c> cuias del tablero (paso <c>T</c>, no las 16 de
     /// <see cref="BoardState.MaxCuias"/>). Los arrays de nodos, la tabla y el montículo se reutilizan entre llamadas y
     /// solo crecen (duplicando, o al empezar una búsqueda con un tablero más ancho) cuando hace falta; el bucle de
@@ -52,6 +61,7 @@ namespace AF.Solver.Search
         private readonly Cuia[] _childBuf = new Cuia[BoardState.MaxCuias];
         private readonly Cuia[] _realBuf = new Cuia[BoardState.MaxCuias];
         private readonly int[] _perm = new int[BoardState.MaxCuias];
+        private readonly SolverMove[] _moves = new SolverMove[SolverMoves.MaxMoves];
 
         private int _width;
         private PourMode _pourMode;
@@ -112,13 +122,46 @@ namespace AF.Solver.Search
                 throw new ArgumentException("Opciones no válidas: crea SolverOptions con su constructor o usa SolverOptions.ForPipeline.", nameof(options));
             }
 
-            Reset(start, options.PourMode);
-            int width = _width;
+            int width = start.Count;
             for (int i = 0; i < width; i++)
             {
                 _childBuf[i] = start[i];
             }
 
+            _units[0] = 0;
+            for (int color = Cuia.MinColor; color <= Cuia.MaxColor; color++)
+            {
+                _units[color] = start.UnitsOf(color);
+            }
+
+            SolveStatus status = Search(width, options, out int goal, out int expanded);
+            return status == SolveStatus.Solved
+                ? BuildSolution(start, goal, expanded)
+                : new SolveResult(status, null, expanded, _nodeCount);
+        }
+
+        /// <summary>
+        /// Como <see cref="Solve"/> sobre <paramref name="width"/> cuias de un array (desde <paramref name="offset"/>) y la
+        /// tabla <c>U_c</c>, sin construir la solución: devuelve el estado y, si está resuelto, la longitud de la solución en
+        /// <paramref name="length"/> (el par con <c>w = 1</c>; −1 si no). No asigna memoria una vez calentado: es la ruta del
+        /// bucle caliente de Aguas turbias (una búsqueda por realidad, 03 §8).
+        /// </summary>
+        internal SolveStatus SolveLength(Cuia[] cuias, int offset, int width, int[] units, SolverOptions options, out int length, out int expanded)
+        {
+            Array.Copy(cuias, offset, _childBuf, 0, width);
+            Array.Copy(units, _units, CuiaRules.UnitsTableLength);
+            SolveStatus status = Search(width, options, out int goal, out expanded);
+            length = status == SolveStatus.Solved ? ChainLength(goal) : -1;
+            return status;
+        }
+
+        /// <summary>
+        /// <c>ASTAR</c> de 03 §5 desde las <paramref name="width"/> cuias de <see cref="_childBuf"/> con la tabla
+        /// <see cref="_units"/> ya cargadas. Devuelve el estado y el nodo meta.
+        /// </summary>
+        private SolveStatus Search(int width, SolverOptions options, out int goal, out int expanded)
+        {
+            Reset(width, options.PourMode);
             BoardCanon.Sort(_childBuf, 0, width);
             int root = AddNode(BoardCanon.Hash(_childBuf, 0, width), 0, NoParent, 0);
             int weight = options.Weight;
@@ -126,7 +169,7 @@ namespace AF.Solver.Search
             int budget = options.NodeBudget;
             _open.Push(root, Priority(root, weight));
 
-            int expanded = 0;
+            expanded = 0;
             while (_open.TryPop(out int node, out int priority))
             {
                 if (priority != Priority(node, weight))
@@ -136,24 +179,27 @@ namespace AF.Solver.Search
 
                 if (IsGoal(node))
                 {
-                    return BuildSolution(start, node, expanded);
+                    goal = node;
+                    return SolveStatus.Solved;
                 }
 
                 expanded++;
                 if (expanded > budget)
                 {
-                    return new SolveResult(SolveStatus.BudgetExceeded, null, expanded, _nodeCount);
+                    goal = NoParent;
+                    return SolveStatus.BudgetExceeded;
                 }
 
                 Expand(node, weight, futileRuleEnabled);
             }
 
-            return new SolveResult(SolveStatus.Unsolvable, null, expanded, _nodeCount);
+            goal = NoParent;
+            return SolveStatus.Unsolvable;
         }
 
-        private void Reset(BoardState start, PourMode pourMode)
+        private void Reset(int width, PourMode pourMode)
         {
-            _width = start.Count;
+            _width = width;
             _pourMode = pourMode;
             _nodeCount = 0;
             int needed = _nodeCapacity * _width;
@@ -164,11 +210,6 @@ namespace AF.Solver.Search
 
             Array.Clear(_table, 0, _table.Length);
             _open.Clear();
-            _units[0] = 0;
-            for (int color = Cuia.MinColor; color <= Cuia.MaxColor; color++)
-            {
-                _units[color] = start.UnitsOf(color);
-            }
         }
 
         private void Expand(int node, int weight, bool futileRuleEnabled)
@@ -178,86 +219,39 @@ namespace AF.Solver.Search
             int childG = _nodeG[node] + 1;
             int[] units = _units;
             PourMode pourMode = _pourMode;
-            for (int i = 0; i < width; i++)
+            SolverMove[] moves = _moves;
+            int count = SolverMoves.Collect(_parentBuf, 0, width, units, pourMode, futileRuleEnabled, moves);
+            for (int m = 0; m < count; m++)
             {
-                Cuia from = _parentBuf[i];
-                if (!CuiaRules.CanBeSource(from, units))
+                SolverMove candidate = moves[m];
+                int i = candidate.Source;
+                int j = candidate.Target;
+                Array.Copy(_parentBuf, _childBuf, width);
+                var events = default(PourEvents);
+                BoardRules.ApplyInPlace(_childBuf, 0, width, units, i, j, pourMode, candidate.IsFutile, ref events);
+                BoardCanon.Sort(_childBuf, 0, width);
+                ulong hash = BoardCanon.Hash(_childBuf, 0, width);
+                int move = (i << 8) | j;
+                int existing = Find(hash);
+                if (existing < 0)
                 {
-                    continue;
+                    int child = AddNode(hash, childG, node, move);
+                    _open.Push(child, Priority(child, weight));
                 }
-
-                if (i > 0 && from.Packed == _parentBuf[i - 1].Packed)
+                else if (childG < _nodeG[existing])
                 {
-                    continue; // origen idéntico al anterior: mismos hijos canónicos
-                }
-
-                int fromTop = from.TopColor;
-                for (int j = 0; j < width; j++)
-                {
-                    if (j == i)
-                    {
-                        continue;
-                    }
-
-                    Cuia to = _parentBuf[j];
-                    if (to.IsFull || (!to.IsEmpty && to.TopColor != fromTop))
-                    {
-                        continue; // descarte rápido de pares que IsLegal rechazaría igual (B llena o con otra cima)
-                    }
-
-                    if (j > 0 && j - 1 != i && to.Packed == _parentBuf[j - 1].Packed)
-                    {
-                        continue; // destino idéntico al anterior (03 §5: vacíos equivalentes una sola vez)
-                    }
-
-                    if (!CuiaRules.IsLegal(from, to, units))
-                    {
-                        continue;
-                    }
-
-                    if (futileRuleEnabled && CuiaRules.IsFutile(from, to, units))
-                    {
-                        continue;
-                    }
-
-                    int amount = CuiaRules.Amount(from, to, pourMode);
-                    Array.Copy(_parentBuf, _childBuf, width);
-                    _childBuf[i] = from.RemoveTop(amount);
-                    _childBuf[j] = to.AddOnTop(from.TopColor, amount);
-                    BoardCanon.Sort(_childBuf, 0, width);
-                    ulong hash = BoardCanon.Hash(_childBuf, 0, width);
-                    int move = (i << 8) | j;
-                    int existing = Find(hash);
-                    if (existing < 0)
-                    {
-                        int child = AddNode(hash, childG, node, move);
-                        _open.Push(child, Priority(child, weight));
-                    }
-                    else if (childG < _nodeG[existing])
-                    {
-                        _nodeG[existing] = childG;
-                        _nodeParent[existing] = node;
-                        _nodeMove[existing] = move;
-                        _open.Push(existing, Priority(existing, weight));
-                    }
+                    _nodeG[existing] = childG;
+                    _nodeParent[existing] = node;
+                    _nodeMove[existing] = move;
+                    _open.Push(existing, Priority(existing, weight));
                 }
             }
         }
 
         private bool IsGoal(int node)
         {
-            int width = _width;
-            int offset = node * width;
-            for (int k = 0; k < width; k++)
-            {
-                Cuia cuia = _nodeCuias[offset + k];
-                if (!cuia.IsEmpty && !CuiaRules.IsSealed(cuia, _units))
-                {
-                    return false;
-                }
-            }
-
-            return true;
+            // R10 (g) / R12 con la misma implementación que el cliente.
+            return BoardRules.IsWon(_nodeCuias, node * _width, _width, _units);
         }
 
         private int Priority(int node, int weight)
@@ -374,14 +368,21 @@ namespace AF.Solver.Search
             }
         }
 
-        private SolveResult BuildSolution(BoardState start, int goal, int expanded)
+        /// <summary>Longitud de la cadena de padres (no se usa g: con w &gt; 1 un padre reabierto puede haber mejorado).</summary>
+        private int ChainLength(int goal)
         {
-            // Longitud de la cadena de padres (no se usa g: con w > 1 un padre reabierto puede haber mejorado).
             int length = 0;
             for (int node = goal; _nodeParent[node] != NoParent; node = _nodeParent[node])
             {
                 length++;
             }
+
+            return length;
+        }
+
+        private SolveResult BuildSolution(BoardState start, int goal, int expanded)
+        {
+            int length = ChainLength(goal);
 
             if (_pathBuf.Length < length)
             {
@@ -407,17 +408,15 @@ namespace AF.Solver.Search
                 CanonicalOrder(width);
                 int source = _perm[_pathBuf[s] >> 8];
                 int target = _perm[_pathBuf[s] & 0xFF];
-                Cuia from = _realBuf[source];
-                Cuia to = _realBuf[target];
-                if (!CuiaRules.IsLegal(from, to, _units))
+                if (!BoardRules.IsLegal(_realBuf, 0, width, _units, source, target))
                 {
                     throw new InvalidOperationException("AF.Solver: la solución canónica no se puede rehacer sobre el tablero real.");
                 }
 
-                int amount = CuiaRules.Amount(from, to, _pourMode);
-                moves[s] = new Pour(source, target, amount);
-                _realBuf[source] = from.RemoveTop(amount);
-                _realBuf[target] = to.AddOnTop(from.TopColor, amount);
+                bool futile = BoardRules.IsFutile(_realBuf, 0, width, _units, source, target);
+                var events = default(PourEvents);
+                BoardRules.ApplyInPlace(_realBuf, 0, width, _units, source, target, _pourMode, futile, ref events);
+                moves[s] = new Pour(source, target, events.Amount);
             }
 
             return new SolveResult(SolveStatus.Solved, moves, expanded, _nodeCount);

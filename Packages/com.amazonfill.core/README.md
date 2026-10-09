@@ -13,7 +13,8 @@ para `dotnet test` y para las herramientas de `tools/` (informe `docs/setup/rese
 - Bucle caliente sin `new` de clases, *closures*, `params` ni `foreach` sobre interfaces.
 - Tests compartidos (`Tests/Editor/**`): solo atributos de NUnit 3.5 y `Assert.That` con restricciones.
   Los tests que necesiten APIs de .NET 10 o lotes grandes van en `dotnet/AF.Core.Tests/DotnetOnly/`.
-- Los `.meta` los genera Unity al abrir el proyecto y se confirman en git junto con su archivo.
+- Los `.meta` los genera Unity al abrir el proyecto y se confirman en git junto con su archivo (regla dura 3: nunca a mano).
+  Una rama escrita sin Editor los deja pendientes y no se fusiona hasta generarlos: ver «Paso obligatorio de integración».
 
 ## Verificación
 
@@ -22,20 +23,70 @@ dotnet build dotnet/AmazonFill.slnx -warnaserror
 dotnet test dotnet/AmazonFill.slnx
 ```
 
+## Paso obligatorio de integración en Unity (rama `fase1-mecanicas-niveles`)
+
+La rama se escribió en un worktree sin Unity (sin `Library/`): añade al paquete 59 archivos `.cs` (32 en `Runtime/` y 27 en
+`Tests/Editor/`) y 5 carpetas sin su `.meta`, y sus 467 tests compartidos solo se han ejecutado en `dotnet` (filtro
+`FullyQualifiedName!~DotnetOnly`). Si se fusiona así, el primer Editor que importe `main` generará GUID sin control. Antes
+del merge, en la integración y **en esta misma rama**:
+
+1. Importar la rama en Unity en un worktree sin ningún Editor abierto en él (regla dura 7):
+   `pwsh -NoProfile -File scripts/unity-compile.ps1`, o abriendo ese worktree en el Editor. Unity genera los **64 `.meta`** que
+   faltan: los de los 59 archivos y los de las carpetas `Runtime/AF.Core/Determinism`, `Runtime/AF.Core/Mechanics`,
+   `Runtime/AF.Solver/Bot`, `Runtime/AF.Solver/Generation` y `Runtime/AF.Solver/Murky`.
+2. Commitear esos `.meta` tal como los genera Unity, en la misma rama y junto a los packs
+   `Assets/_Project/Data/Levels/mundo_02_v1.json` a `mundo_05_v1.json` y sus `.meta`, que quedan pendientes por el mismo motivo
+   (commits `def28bc` y `57b31c6`). Comprobar que no falta ninguno (Git Bash, desde la raíz; sin salida = completo):
+
+   ```bash
+   cd Packages/com.amazonfill.core
+   git ls-files | grep -v '\.meta$' | while read -r f; do git ls-files --error-unmatch "$f.meta" >/dev/null 2>&1 || echo "falta $f.meta"; done
+   find Runtime Tests -mindepth 1 -type d | while read -r d; do git ls-files --error-unmatch "$d.meta" >/dev/null 2>&1 || echo "falta $d.meta"; done
+   ```
+
+3. Pasar, con código 0, `pwsh -NoProfile -File scripts/unity-compile.ps1` y
+   `pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode`. En `dotnet` los tests compartidos forman un solo ensamblado
+   (`dotnet/AF.Core.Tests`); en Unity, dos (`AF.Core.Tests` y `AF.Solver.Tests`, cada uno con su asmdef y el NUnit 3.5 del Test
+   Runner): un test que use un tipo del otro ensamblado o una API de NUnit posterior a la 3.5 compila en `dotnet` y no en
+   Unity. Hasta que este paso se cumpla, la rama no está verificada en Unity.
+
+Este paso va también en la descripción del PR de integración.
+
 ## Contenido actual
 
 | Ensamblado | Tipo | Reglas del GDD |
 |---|---|---|
-| `AF.Core` | `Board.Cuia`: cuia empaquetada en un `ulong` (capacidad, dosis, máscara de ocultos) | 02 §1.1 R1, R2, R4, R6, R7; 08 §2.2 |
+| `AF.Core` | `Board.Cuia`: cuia empaquetada en un `ulong` (capacidad, dosis, máscara de ocultos y atributos de mecánica en los bits 39-60: tipo, `key`, id de pareja, `n`, `k`, contador y banderas; bits libres a 0) | 02 §1.1 R1, R2, R4, R6, R7; 08 §2.2, §4.1; 03 §3 |
+| `AF.Core` | `Mechanics.MechanicType`, `MechanicTypes` (claves `attrs.type`) y `MechanicSpec` (espejo de `attrs[i]`) | 02 §9.1; D-007; 08 §4.1 |
+| `AF.Core` | `Board.BoardBuilder` y `UnitsPerColor`: tablero desde `caps`, `cuias`, `attrs`, `hidden` y `units_per_color` (entero u objeto), con los campos obligatorios por mecánica, el id de pareja del Remolino y el motivo del rechazo; falla cerrado con las mecánicas sin portar | 08 §4.1; 02 §9.1; 03 §3 |
+| `AF.Core` | `Board.LevelValidation`: reglas estructurales del tablero inicial (≤ 16 cuias, `U_c` ∈ {4, 5, 6}, una cuia propia por color y fruta abundante por Cuia alta, sin sellos ni victoria al inicio, reglas de cada mecánica, `atascado(S0)` = false) | 03 §17 #5-#6; 02 §8; 02 §9.2 regla 1 |
 | `AF.Core` | `Board.BoardState`: tablero inmutable, `U_c`, sellado, victoria, igualdad por valor (`IEquatable`) y `CanonicalHash()` | 02 §1.1 R3, R5; §1.3 R12; 03 §3 |
 | `AF.Core` | `Board.BoardCanon`: orden canónico (por `Packed`) y hash FNV-1a de 64 bits, sin asignaciones | 03 §3; 08 §2.2 |
 | `AF.Core` | `Rules.PourMode` y `Rules.PourModes`: modo de vertido `Run` (la racha que cabe, con vertido parcial; por defecto y `default(PourMode)`) o `Single` (una dosis por vertido, solo pruebas), con los valores `"run"`/`"single"` de `rules_pour_mode` | D-005, que sustituye a D-001 (`docs/dev/decisiones.md`); 02 §1.2, R6, R9 |
-| `AF.Core` | `Rules.CuiaRules`: **única** implementación de sellado, origen posible (`CanBeSource`), `legal`, `cantidad` (el único sitio que mira el modo de vertido) y `futil` sobre cuias sueltas; la usan el tablero, el solver, el bot y la selección del cliente | 02 §1.2, §1.4, §3.1; 04 §5.1 |
-| `AF.Core` | `Rules.Pour` y `Rules.PourRules`: vertido según el modo (parcial solo en `Run`), `CanBeSource`, `IsFutile`, `CollectUsefulMoves`, `HasUsefulMove`, `IsStuck` sin mecánicas | 02 §1.2-1.4 R9-R11, R13, R14, R16; §3.1 C1-C2 |
-| `AF.Core` | `Session.LevelSession`, `LevelStatus`, `PourResult`: partida con R10 en un modo de vertido fijo, Marea (deshacer; una dosis por uso en `Single`) y Volver a la orilla (reinicio) | 02 §1.3-1.4, §2; 04 §2.1, §2.7 |
+| `AF.Core` | `Rules.BoardRules`: **única** implementación de las reglas con contexto de tablero y de la aplicación de vertidos: origen, `legal`, `cantidad`, `futil` del anexo B, `ApplyInPlace` con R10 por etapas ((a) revelado, (b) aperturas, (c) sellado, (d) liberaciones, (e) contadores solo en vertidos no fútiles, (f) condiciones, (f′) punto fijo, (g) victoria, (h) bloqueo), sin asignaciones, sobre `(Cuia[], offset, count, U_c)`; `PourRules`, `BoardState`, `LevelSession`, el solver y el bot delegan aquí | 02 §1.2-§1.4; anexo B de la propuesta de D-007 (Q13, Q18 B); 04 §5.1 |
+| `AF.Core` | `Rules.PourEvents`: lo ocurrido en cada etapa de R10 (revelado, aperturas, sellados, liberaciones, contadores, estado), para animar en orden y deshacer en orden inverso | R10 (anexo B) |
+| `AF.Core` | Mecánicas portadas (D-007, núcleo 1): Hoja (M1, debut 43), Matapi (M10, 63), Liana con fruta (M3, 83) y de cuenta (variante, 243) y Brote (M2, 163), como `IMechanic` sin estado; eventos `HojaOpenedMask`, `BroteOpenedMask` y `LianaReleasedMask` en `PourEvents`; cada una con su validación. La Liana con capacidades mixtas está bloqueada en `LevelValidation` hasta decidir la pregunta de 02 R16 (P1 falla) | 02 §9.1; D-007; propuesta de D-007 b.2-b.3 y anexo B |
+| `AF.Core` | Remolino (M4, debut 103; núcleo 2): `RemolinoMechanic`; tocar una cuia del par mete la racha por el fondo de la pareja (cualquier color; la tocada puede estar llena; la pareja con hueco y sin sellar); `min(racha, espacio(pareja))` en `run`; como origen, la regla normal; nunca fútil como destino ni, por Q-B, como origen; Q-A: verter en la propia pareja es ilegal; `PourResult.Receiver` / `ThroughRemolino`; validación: dos cuias por pareja, sin ocultos ni Piraña [P] | 02 §1.2, §9.1 M4; 03 §9; 04 §5.1; Q-A, Q-B |
+| `AF.Core` | Lluvia (M6, debut 143; C3-1): `LluviaMechanic`; cada `k` vertidos útiles (nunca en un fútil, Q18 B) cae una gota del agua `key` encima, sin regla de color, si hay hueco (si no, espera al siguiente vertido útil); con la última se va la nube; solo sella con agua; con gotas pendientes impide la victoria y no es fútil como destino ni, por Q-B, como origen; `U_agua` = dosis + gotas = 4; eventos `LluviaDropMask`, `LluviaWaitingMask`, `LluviaEndedMask`; validación: `key` 10 o 14, `k` 2-5, sin ocultos, un contador por nivel | 02 R3, §9.1 M6, §9.2; 03 §9; anexo B; Q-B, Q14 A, Q18 B |
+| `AF.Core` | Piraña (M7, debut 183; C3-2): `PiranaMechanic` en la cueva; cada `k` vertidos útiles (nunca en un fútil) muerde la dosis superior de la cuia que recibió el vertido y la lleva a la cueva, salvo sellado, Matapi, la propia cueva o cueva llena (Q-C: el mordisco se pierde y el contador sigue); eventos `PiranaBittenMask`, `PiranaCaveMask`, `PiranaBiteLostMask`; validación: `k` 2-5, sin ocultos ni Remolino [P], un contador por nivel | 02 §9.1 M7, §9.2; 03 §9; anexo B; Q-C, Q14 A, Q18 B |
+| `AF.Core` | `Session.LevelCounter`: contador visible del nivel para el HUD (Lluvia o Piraña: `Remaining` vertidos útiles hasta la gota o el mordisco, gotas pendientes, `Blocked`), en `LevelSession.Counter` y `PourResult.Counter`; solo baja con vertidos útiles | 02 R8, §9.1 M6-M7; D-007, Q10, Q18 B |
+| `AF.Core` | Barro (M5, debut 123; núcleo 2): color 15 inerte dentro del contenido, sin despacho de mecánica. Con Barro en la cima (`Cuia.MudExposed`) la cuia no es origen y acepta cualquier color; el primer vertido lo lava y ocupa su lugar (`CuiaRules.EffectiveSpace`: espacio + 1); una cuia con Barro no está sellada ni vacía; evento `BarroWashedMask` / `PourResult.BarroWashed`; validación: capa 2-3 de una cuia de 4, nunca con mecánica ni oculto | 02 R2, §1.2, §9.1 M5; 03 §9; propuesta b.2 M5 |
+| `AF.Core` | Aguas turbias en la partida (núcleo 2): `LevelSession` con máscara de revelado del nivel (`RevealedLayers`), que persiste tras Marea y Volver a la orilla; `Reveal(cuia)` (Luciérnaga) y `RevealAll()` (Pororoca); `PourEvents.RevealedMask`; validación T2-T4 con los límites de 08 §9 como parámetros y las combinaciones de Q14 A | 02 R7, §11 T2-T4, T6; 04 §2.1, §2.4 a, §2.5, §2.7, §5.1; D-007 |
+| `AF.Core` | `Mechanics.IMechanic` (interno): ganchos de mecánica sin estado (origen, destino, espacio, recepción, `cambia_al_recibir`, exención de origen, etapas (b), (d), (e), (f), victoria y validación), despachados por una tabla estática indexada por el tipo de la cuia | 08 §2.2; 02 §9 |
+| `AF.Core` | `Rules.CuiaRules`: envoltorio heredado sobre cuias sueltas sin mecánicas; capa base de `BoardRules` para el sellado (R5) y el núcleo de `futil` | 02 §1.2, §1.4, §3.1; 04 §5.1 |
+| `AF.Core` | `Rules.Pour` y `Rules.PourRules`: validan argumentos y delegan en `BoardRules`: vertido según el modo (parcial solo en `Run`), `Apply` con `PourEvents`, `CanBeSource`, `IsFutile`, `CollectUsefulMoves`, `HasUsefulMove`, `IsStuck` | 02 §1.2-1.4 R9-R11, R13, R14, R16; §3.1 C1-C2 |
+| `AF.Core` | `Session.LevelSession`, `LevelStatus`, `PourResult` (con `Events`): partida con R10 en un modo de vertido fijo, Marea (deshacer; una dosis por uso en `Single`) y Volver a la orilla (reinicio) | 02 §1.3-1.4, §2; 04 §2.1, §2.7 |
+| `AF.Core` | `Determinism.Prng`: xoshiro256** sembrado con SplitMix64 desde la FNV-1a de 64 bits de `amazonfill:v1:m{mm}:v{v}:n{nnnn}` (`LevelSeed`), sub-semillas (`SubSeed`) y `NextInt(bound)` sin sesgo (Lemire); solo enteros, valores dorados en `PrngTests` | 09 R26; 08 §2.1 #5, §4.1 |
 | `AF.Solver` | `Collections.MinHeap`: montículo con desempate FIFO (sustituto de `PriorityQueue`) | 08 §2.2 |
+| `AF.Solver` | `Bot.CasualBot`, `BotOptions`, `BotResult`: bot casual ×40 (85/15, tope 400) sobre `SolverMoves` y `BoardRules`, con `PUNTUACION_CASUAL` ×4 en enteros y ruido entero equivalente, congelada (en el Remolino puntúa la pareja: +16 solo si es monocolor del color vertido y +40 solo si además sella con `cap` = `U_c` [P]); `fallo_bot` reproducible por semilla (`SeedFor`) y sin asignar una vez calentado | 03 §6-§7; 08 §2.2, §14.2 |
+| `AF.Solver` | `Generation.InverseMoves`, `InverseWalk`, `InverseDeep`, `InverseSpec`, `Complexity` y `Collections.StateSet`: barajado inverso (`WALK` con mejor prefijo; `DEEP` en DFS con 20.000 nodos) sobre K, E, capacidades y `U_c`, con el PRNG del núcleo, la puntuación en enteros, la complejidad de laicwben2 y solución por construcción | 03 §4.1-§4.2; 02 §8 |
+| `AF.Solver` | `Search.EarlyTraps`: trampas tempranas (jugadas iniciales que atascan en ≤ 2 vertidos; `CountUnavoidable` en lectura estricta) | Q16 B de D-007 [P] |
+| `AF.Solver` | `Search.SolverMoves` y `SolverMove`: `MOVIMIENTOS` de 03 §5 (útiles, con la cantidad del modo, cuias idénticas una sola vez y fútiles marcados con el kill-switch apagado), sin asignaciones; los usan el solver, el bot y las métricas | 03 §5 |
 | `AF.Solver` | `Search.AStarSolver`, `SolverOptions`, `SolveResult`, `SolveStatus`: A* (w entero) sobre estados canónicos en los dos modos de vertido (`SolverOptions.ForPipeline(mode)`), presupuesto de expandidos y prueba de irresolubilidad; a igual `f`, primero el de menor `g` (tupla `(f, g, S)` de 03 §5 y del prototipo) | 03 §5; D-005 |
-| `AF.Solver` | `Search.SolverHeuristic`: `H = max(cortes, dispersión)`; en `Single`, `H_single = max(dosis sobre la racha del fondo, dispersión)` [P] | 03 §5; decisiones.md §2.1.3 |
+| `AF.Solver` | `Search.SolverHeuristic`: `H = max(cortes, dispersión)`; en `Single`, `H_single = max(dosis sobre la racha del fondo, dispersión)` [P]; con Barro, `h1` resta 1 por barro y `h2` ignora el 15 (03 §9); con Lluvia y Piraña no cambia (una gota no elimina cortes; el mordisco inmediato de Q-C reparte el propio vertido: cada término baja ≤ 1 por paso), así que el par sigue siendo exacto | 03 §5, §9; decisiones.md §2.1.3; Q-C |
+| `AF.Solver` | `Murky.RealityEnumerator`: realidades de Aguas turbias (asignaciones de las posiciones ocultas coherentes con lo visible, `units_per_color` y T4 respecto al tablero inicial; > 24 → `TooMany`, el nivel se rechaza), sin asignaciones | 02 §11 T2, T4; 03 §8; 08 §2.2 |
+| `AF.Solver` | `Murky.SafeMoves`: vertidos útiles seguros en todas las realidades (A* por realidad: 20.000 nodos en el pipeline, `ForPipeline`; el cliente pasa `hint_budget_nodes`), memo exacto por estado canónico y un único `AStarSolver` (`SolveLength`, sin construir la solución); sin seguro, `Count` = 0 (T5: Morpho no cobra) | 02 §11 T5; 03 §8 |
+| `AF.Solver` | `Murky.SafePath`: `RUTA_SEGURA` (hasta 400 pasos; en cada uno, el seguro de menor par en la realidad verdadera), con T4 obligatoria en el tablero inicial (`RejectedT4`) | 03 §8; 02 §11 `validar_turbio` |
 
 Rendimiento medido (2026-10-06, .NET 10 Release, Windows ARM64): los 140 niveles de `tools/out*/levels_*.json` dan el
 mismo par que `levelgen_proto.py`; un tablero de 14 cuias (12 colores, 2 vacíos, par 37) expande 16.114 estados. Con el
@@ -44,12 +95,102 @@ máquina y sesión, unos 100 ms frente a 80 ms; con `w = 2` (Morpho) el cambio e
 largo). Cada nodo guarda solo las `T` cuias del tablero. El bucle caliente no asigna (tests
 `DotnetOnly/HotLoopAllocationTests`).
 
+Reglas con contexto de tablero y mecánicas (C1-1 a C1-7, 2026-10-08, misma máquina y sesión, Release): con el solver
+expandiendo `SolverMoves` y aplicando con `BoardRules`, el tablero de 14 cuias sigue expandiendo 16.114 estados (par 37) en
+`Run` y 16.956 (par 48) en `Single`; el tiempo por búsqueda calentada pasó de 26,7 ms (`main`, e8edd1f) a 30,4 ms en `Run`
+(+13 %) y de 30,0 ms a 33,8 ms en `Single`. Los 140 niveles de paridad dan el mismo par.
+
 Modo de vertido (D-005, 2026-10-08, sustituye a D-001): en `Run` el tutorial v0 da los pares 3, 6, 7, 8, 10, 10, 11, 13,
 14 y 16 (en `Single`, solo de referencia: 3, 9, 10, 12, 16, 17, 15, 17, 16, 19; medidos el 2026-10-06 con los mismos
 tableros). A* con `H_single` expande en `Single` como mucho 1.176 estados (nivel 10), las mismas cifras que decisiones.md
 §2.1.3-§2.1.4. En el tablero de 14 cuias de referencia, `Run` da par 37 con 16.114 expandidos (`Single`: par 48, unos
 17.000). Las firmas sin modo son heredadas (equivalen a `Run`, que desde D-005 es también `PourModes.Default`) hasta T6.
 
-Pendiente de portar: mecánicas (02 §9) y Aguas turbias en la partida (máscara de revelado para Marea, R7), PRNG
-determinista (riesgo R11 del plan de instalación: paridad con MT19937, decisión del dueño), bot casual ×40 (03 §6), cancelación por tiempo del solver para Morpho
-(`hint_timeout_ms`) y enumeración de realidades (03 §8).
+Aguas turbias (C2-2, 2026-10-08, misma máquina, Release): los 5 tableros de `tools/out_inverse/murky_demo.json` (03 §18.3)
+tienen ruta segura con 12 realidades como máximo y 108-630 ms por nivel (prototipo en Python: 0,68-8,54 s; 03 §8 estimaba
+< 1 s en C#), con 134-213 búsquedas A* de 20.000 nodos como máximo y memo por estado canónico. Ese lote es anterior a T3 y
+T4: con T4 obligatoria, n0003 y n0004 se rechazan (esconden una dosis bajo otra de su color) y los otros tres tienen ruta con
+8 realidades como máximo (111-394 ms). `SafeMoves` calentado asigna 0 bytes en una llamada con 12 realidades y 36 búsquedas.
+
+Núcleo 2 (C2-1 a C2-4, 2026-10-08): con Barro y Remolino el tablero de 14 cuias de referencia sigue dando par 37 con 16.114
+expandidos (`Single`: 48 y 16.956) y los 140 niveles de paridad el mismo par; el tiempo por búsqueda calentada queda dentro
+del ruido de la máquina (compartida con un Editor de Unity: de +3 % a +14 % frente a ff9f8da en las mediciones, con
+oscilaciones del mismo orden entre repeticiones). El Remolino multiplica los estados alcanzables: sus tests de solver usan
+tableros de hasta 5.000 estados.
+
+Todas las mecánicas (C3-3, 2026-10-08, .NET 10 Release, Windows ARM64; máquina compartida con un Editor de Unity, así que
+los tiempos oscilan un 10-30 % entre repeticiones). Tableros de referencia de 12-14 cuias para cada mecánica y para cada
+combinación del calendario 1-200 de D-007 (d.4) en `dotnet/AF.Core.Tests/DotnetOnly/ReferenceBoards.cs`: tablero base con
+`InverseWalk` (K = 10, E = 2), superposición de las mecánicas (03 §9) y verificación con `LevelValidation` y A*; de 30 semillas
+por combinación se eligió el del percentil 75 de expandidos. Ho Hoja, Ma Matapi, Li Liana con fruta, Tu Aguas turbias, Re
+Remolino, Ba Barro, Ll Lluvia, Br Brote, Pi Piraña, Ch Cuia chica, Al y Al6 Cuia alta. Comando de la tabla:
+`dotnet test dotnet/AmazonFill.slnx -c Release --filter Category=Performance`.
+
+| Tablero | Cuias | Par | A* w = 1: expandidos (ms) | Morpho w = 2 (ms) | Bot ×40 (ms) | 30 semillas: válidos · resueltos · sin presupuesto · irresolubles | Expandidos: mediana / máx. |
+|---|---|---|---|---|---|---|---|
+| Ch | 13 | 18 | 1.105 (28) | 0,35 | 2,9 | 30 · 30 · 0 · 0 | 298 / 25.715 |
+| Al | 12 | 22 | 7.365 (47) | 0,07 | 1,0 | 30 · 30 · 0 · 0 | 4.952 / 19.282 |
+| Ho | 12 | 23 | 3.694 (6) | 0,12 | 0,3 | 30 · 30 · 0 · 0 | 2.492 / 12.492 |
+| Ma | 12 | 23 | 31.188 (71) | 0,13 | 0,6 | 30 · 30 · 0 · 0 | 16.562 / 102.346 |
+| Li | 12 | 21 | 2.975 (6) | 0,05 | 0,3 | 30 · 30 · 0 · 0 | 1.899 / 7.871 |
+| Tu | 13 | 18 | 5.605 (16; 2 realidades: SafeMoves 328 ms en el pipeline, 2,7 ms con Morpho) | 0,07 | 0,4 | 9 · 9 · 0 · 0 | 243 / 20.651 |
+| Re | 12 | 20 | 67.439 (543) | 0,18 | 1,3 | 30 · 26 · 4 · 0 | 25.988 / 249.805 |
+| Ba | 13 | 19 | 4.910 (21) | 0,14 | 0,8 | 30 · 30 · 0 · 0 | 1.132 / 203.333 |
+| Ll | 12 | 21 | 56.095 (155) | 0,38 | 1,6 | 30 · 30 · 0 · 0 | 32.846 / 216.387 |
+| Br | 13 | 18 | 1.753 (10) | 0,13 | 0,7 | 30 · 30 · 0 · 0 | 641 / 7.403 |
+| Pi | 13 | 22 | 126.829 (627) | 0,28 | 1,8 | 30 · 26 · 4 · 0 | 20.387 / 273.047 |
+| Ho+Ch | 13 | 19 | 1.629 (5) | 0,15 | 0,7 | 30 · 30 · 0 · 0 | 758 / 64.095 |
+| Ma+Ho | 13 | 26 | 90.687 (355) | 0,13 | 4,8 | 30 · 29 · 1 · 0 | 24.226 / 168.988 |
+| Li+Ho | 12 | 21 | 2.861 (6) | 0,09 | 0,3 | 30 · 27 · 0 · 3 | 1.366 / 7.491 |
+| Ho+Tu | 13 | 16 | 1.257 (4; 1 realidad: SafeMoves 47 ms en el pipeline, 0,9 ms con Morpho) | 0,10 | 0,8 | 14 · 14 · 0 · 0 | 528 / 48.887 |
+| Re+Li | 12 | 20 | 61.355 (399) | 0,18 | 1,4 | 30 · 27 · 3 · 0 | 11.458 / 267.050 |
+| Ba+Ma | 13 | 18 | 10.598 (53) | 0,14 | 1,8 | 30 · 30 · 0 · 0 | 3.007 / 35.125 |
+| Ll+Ho | 13 | 19 | 186.346 (929) | 0,29 | 0,9 | 30 · 27 · 3 · 0 | 72.290 / 291.403 |
+| Br+Ba | 13 | 17 | 11.149 (34) | 0,10 | 0,6 | 30 · 30 · 0 · 0 | 1.564 / 72.203 |
+| Pi+Ma | 13 | 18 | 66.472 (355) | 0,21 | 1,2 | 30 · 23 · 7 · 0 | 15.986 / 239.855 |
+| Ma+Tu | 13 | 19 | 8.856 (69; 3 realidades: SafeMoves 2.977 ms en el pipeline, 11,1 ms con Morpho) | 0,19 | 1,1 | 14 · 14 · 0 · 0 | 2.824 / 19.626 |
+| Ba+Tu | 13 | 17 | 4.622 (28; 4 realidades: SafeMoves 2.233 ms en el pipeline, 9,9 ms con Morpho) | 0,12 | 0,9 | 10 · 10 · 0 · 0 | 2.575 / 35.762 |
+| Br+Tu | 13 | 19 | 20.841 (70; 1 realidad: SafeMoves 587 ms en el pipeline, 1,3 ms con Morpho) | 0,15 | 0,8 | 7 · 7 · 0 · 0 | 6.636 / 26.824 |
+| Ll+Re | 12 | 20 | 169.921 (1.325) | 1,00 | 1,2 | 30 · 17 · 13 · 0 | 33.694 / 239.972 |
+| Ll+Ba | 13 | 17 | 23.869 (162) | 0,34 | 0,8 | 30 · 29 · 1 · 0 | 8.541 / 267.015 |
+| Br+Ma | 13 | 14 | 1.976 (12) | 0,16 | 0,6 | 30 · 30 · 0 · 0 | 573 / 32.957 |
+| Pi+Li | 12 | 23 | 35.971 (124) | 0,19 | 1,5 | 30 · 30 · 0 · 0 | 21.335 / 213.932 |
+| Re+Ma | 12 | 22 | 111.046 (666) | 0,24 | 1,5 | 30 · 25 · 5 · 0 | 62.132 / 292.464 |
+| Re+Ho | 12 | 21 | 64.796 (314) | 0,18 | 1,5 | 30 · 28 · 2 · 0 | 20.677 / 156.134 |
+| Ba+Li | 13 | 20 | 3.820 (12) | 0,18 | 1,5 | 30 · 30 · 0 · 0 | 776 / 32.486 |
+| Br+Ho | 13 | 15 | 1.385 (5) | 0,15 | 0,5 | 30 · 30 · 0 · 0 | 170 / 4.591 |
+| Ba+Re | 13 | 17 | 31.897 (433) | 0,30 | 1,8 | 30 · 26 · 4 · 0 | 2.955 / 131.883 |
+| Li+Ma | 12 | 23 | 8.903 (22) | 0,18 | 1,5 | 30 · 30 · 0 · 0 | 5.373 / 17.100 |
+| Ll+Li+Al6 | 12 | 22 | 36.553 (113) | 0,81 | 1,2 | 30 · 30 · 0 · 0 | 14.282 / 58.071 |
+| Pi+Ba | 14 | 18 | 8.678 (81) | 0,35 | 1,3 | 30 · 29 · 1 · 0 | 1.105 / 166.983 |
+| Ma+Li | 12 | 22 | 14.292 (43) | 0,25 | 0,5 | 30 · 30 · 0 · 0 | 7.366 / 29.035 |
+
+Ll+Li+Al6 no pasa hoy `LevelValidation` por el bloqueo provisional de la Liana con capacidades mixtas (C1-9); el solver la
+resuelve igual. Criterios de C3-3:
+
+1. **Asignaciones** (`HotLoopAllocationTests.ReferenceBoard_HotLoop_DoesNotAllocate`, los 36 tableros): 0 bytes en
+   `SolverMoves`, `IsStuck`, `BoardRules.ApplyInPlace` y el bot ×40 calentado; menos de 1 KB por `Solve` calentado y por
+   realidad en `SafeMoves`. Cumplido.
+2. **A\* (w = 1)**: los 36 tableros se resuelven con 186.346 expandidos como máximo (Ll+Ho, 0,93 s); el número de cada uno
+   queda fijado con un 25 % de margen (`MechanicsPerformanceTests`). En el reparto de 30 semillas por combinación, el
+   presupuesto de 300.000 se agota en Ll+Re 13/30, Pi+Ma 7/30, Re+Ma 5/30, Re, Pi y Ba+Re 4/30, Re+Li y Ll+Ho 3/30, Re+Ho
+   2/30 y Ma+Ho, Ll+Ba y Pi+Ba 1/30; en el resto, nunca. El Remolino es lo que más estados añade y la Lluvia y la Piraña los
+   multiplican por 2-3, como estimaba 03 §9. El pipeline tendrá que descartar o regenerar esos tableros (sin par exacto).
+3. **Morpho (w = 2, 40.000)**: determinista (mismo resultado con un solver nuevo y con uno reutilizado) y 1,0 ms como máximo
+   (objetivo < 50 ms). En los tableros turbios, `SafeMoves` con las opciones de Morpho tarda 0,9-11,1 ms (02 T2: < 50 ms);
+   con las del pipeline (w = 1 y 20.000 nodos por realidad), 47-2.977 ms por estado, así que la ruta segura de un nivel de 13
+   cuias puede costar minutos offline (dato para P-11).
+4. **Bot ×40**: 4,8 ms como máximo (objetivo < 200 ms) y reproducible por semilla.
+5. **Heurística con Piraña**: `H`, exacta (ver `SolverHeuristic`). Con `ceil(H/2)`, la cota del plan [P], medida con un parche
+   local que no se publicó, el presupuesto se agota en Pi 29/30, Pi+Ma 30/30, Pi+Li 27/30 y Pi+Ba 30/30 (con `H`: 4, 7, 0 y 1)
+   y Morpho tarda 17-85 ms.
+
+**Evidencia para el GDD §6 #6** (Lluvia y Piraña en la 1.0 si el solver con estado temporal pasa los tests): con capacidades
+uniformes y mixtas, A* coincide con la búsqueda exhaustiva y la heurística es admisible y consistente en todos los estados
+alcanzables (32 tableros por mecánica y 8 por combinación del calendario, en `run` y `single`), P1-P3 se cumplen (R14) y los
+tableros de referencia cumplen los presupuestos de 03 §5 y 08 §14.2. La decisión es del dueño.
+
+Pendiente: cancelación por tiempo del solver para Morpho (`hint_timeout_ms`; el núcleo no lee relojes); el generador `fill` y el
+pipeline (`tools/`). Preguntas abiertas: 02 R16 con capacidades mixtas (C1-8, C1-9: la poda de fútiles puede alargar el par o
+dejar sin camino útil un tablero resoluble, y con una Liana hay estados atascados con solución) y la consecuencia de Q-B en
+P3 (vaivén útil del Remolino que vuelve al mismo estado); ver el CHANGELOG.

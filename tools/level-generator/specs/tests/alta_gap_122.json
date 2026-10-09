@@ -1,0 +1,9 @@
+{
+  "extends": "../campaign_v1.json",
+  "description": "Fixture negativo de --validate-spec: sin Cuia alta en 95 ni en 160, la última sale en el 78 y pasan 122 niveles hasta el 200.",
+  "expect_rule": "GAP-120",
+  "calendar": {
+    "95": "Ma+Ho (D)",
+    "160": "Ll+Ho (MD)"
+  }
+}

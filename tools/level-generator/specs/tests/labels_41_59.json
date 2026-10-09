@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v1.json",
+  "description": "Fixture negativo de --validate-spec: Reto suave p9 (49) marcado como Difícil: en 41-59 solo p6, p12 y p18 llevan etiqueta.",
+  "expect_rule": "LABELS",
+  "calendar": {
+    "49": "Ho (D)"
+  }
+}

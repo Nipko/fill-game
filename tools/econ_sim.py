@@ -5,7 +5,8 @@ econ_sim.py — Simulador de la economía de semillas de Amazon Fill (nombre com
 
 Simula 500 niveles de campaña para tres perfiles de jugador (casual sin racha, hábil con racha,
 pagador ligero) más un perfil de referencia "medio no pagador", con la curva canónica del ciclo de 20
-(03 §12: primer Difícil en el 40, primer Muy difícil en el 60), las tasas de fallo derivadas de los
+(03 §12 con el ciclo escalonado de D-009: retos en p6, p9, p12, p15 y p18, remanso en p19; primer Difícil
+en el 40, primer Muy difícil en el 60), las tasas de fallo derivadas de los
 intentos medios objetivo de 03 §15, los regalos del tutorial (04 §4), la Canasta de ciclo fijo (08 §9)
 y la Cuia de rescate a 600 fija (contrato 4), y produce:
 
@@ -47,14 +48,18 @@ except Exception:
 # ---------------------------------------------------------------------------
 # Etiquetas: normal | recovery (recuperación, mitad de fallo) | challenge (reto sin etiqueta) |
 #            hard (Difícil) | very_hard (Muy difícil)
-# Reglas respetadas: nunca dos Difícil seguidos; el hito va precedido de un reto (03 §12).
+# Reglas respetadas (D-009; propuesta de D-007 c.3, reglas del escalón): nunca dos niveles con etiqueta seguidos;
+# tras cada etiqueta, comodidad; el hito va precedido de un remanso (p19), y este de un reto (p18).
 
-# Ciclo canónico de 20 niveles desde el 21 (03 §12): p = ((n − 1) mod 20) + 1.
-#   p1-p2 = recuperación · p6, p10, p14, p17, p19 = reto · p20 = hito · resto = comodidad (12).
-# Etiquetas (03 §12): 21-39 sin etiquetas (retos suaves = "challenge"); 40 = primer Difícil;
-# 41-59: 3 de los 5 retos etiquetados Difícil (p6, p14, p19) y 2 suaves (p10, p17); 60 = primer Muy difícil;
-# desde el 61: los 5 retos Difícil y el hito Muy difícil.
-CHALLENGE_POSITIONS = {6, 10, 14, 17, 19}
+# Ciclo de 20 niveles desde el 21 con el escalón de D-009 (Q1 A; propuesta c.3 y c.8, que sustituye a 03 §12 mientras
+# el GDD no se edite): p = ((n − 1) mod 20) + 1.
+#   p1-p2 = recuperación · p6, p9, p12, p15, p18 = reto · p19 = remanso (comodidad pura) · p20 = hito ·
+#   resto = comodidad. Las cuentas no cambian: 12 comodidad (con el remanso), 5 reto, 2 recuperación y 1 hito.
+# Etiquetas (03 §12 y propuesta c.3 regla 7): 21-39 sin etiquetas (retos suaves = "challenge"); 40 = primer Difícil;
+# 41-59: 3 de los 5 retos etiquetados Difícil (p6, p12, p18) y 2 suaves (p9, p15); 60 = primer Muy difícil;
+# desde el 61: los 5 retos Difícil y el hito Muy difícil. Premios sin cambios (Q3 A): 20 / 60 / 80 (eco_reward_*).
+CHALLENGE_POSITIONS = {6, 9, 12, 15, 18}
+LABELED_41_59 = {6, 12, 18}        # retos con etiqueta en 41-59 (D-009; propuesta c.3 regla 7)
 RECOVERY_POSITIONS = {1, 2}
 HITO_POSITION = 20
 FIRST_HARD_LEVEL = 40
@@ -79,7 +84,7 @@ def difficulty_tag(level: int) -> str:
         if level < FIRST_HARD_LEVEL:
             return "challenge"
         if level < FIRST_VERY_HARD_LEVEL:
-            return "hard" if pos in (6, 14, 19) else "challenge"
+            return "hard" if pos in LABELED_41_59 else "challenge"
         return "hard"
     return "normal"
 

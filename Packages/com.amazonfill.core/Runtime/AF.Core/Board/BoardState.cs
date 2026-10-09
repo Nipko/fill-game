@@ -10,9 +10,12 @@ namespace AF.Core.Board
     /// Cada vertido produce un estado nuevo (GDD 08 §2.1, principio 5).
     /// </summary>
     /// <remarks>
-    /// Alcance actual: núcleo canónico sin mecánicas (GDD 02 §9 aún sin portar). Por eso se rechazan
-    /// los colores 15 (Barro) y 16 (reservado) hasta que exista su mecánica. <c>U_c</c> se cuenta a
-    /// partir del contenido inicial; cuando se porte Lluvia habrá que sumar las dosis que aún no han caído.
+    /// Las cuias pueden llevar mecánica (<see cref="Cuia.Mechanic"/>; los niveles se construyen con
+    /// <see cref="BoardBuilder"/>, que valida sus atributos). Admite el color 15 (Barro, 02 §9.1 M5: dosis inerte; la tabla
+    /// <c>U_c</c> cuenta en la posición 15 las dosis de Barro, que no son un color de <c>units_per_color</c>) y rechaza el 16
+    /// (reservado, 02 R2). <c>U_c</c> cuenta el contenido inicial más las gotas pendientes de la Lluvia (02 R3, §9.1 M6:
+    /// <c>U_agua</c> = dosis iniciales + gotas pendientes), con el constructor público y con <see cref="BoardBuilder"/>; no
+    /// cambia durante la partida (cada gota que cae pasa de pendiente a dosis).
     /// Esta clase asigna memoria en cada vertido: sirve para reglas, cliente y tests, no para el bucle
     /// caliente del solver, que usa su propia representación empaquetada (AF.Solver).
     /// La igualdad compara <see cref="Cuia.Packed"/> cuia a cuia y en orden (no es la igualdad canónica:
@@ -28,7 +31,10 @@ namespace AF.Core.Board
         // Índice = color (1..16); la posición 0 no se usa.
         private readonly int[] _units;
 
-        /// <summary>Crea un estado a partir de una copia de <paramref name="cuias"/>.</summary>
+        /// <summary>
+        /// Crea un estado a partir de una copia de <paramref name="cuias"/>; <c>U_c</c> cuenta sus dosis y las gotas pendientes
+        /// de la Lluvia (02 R3).
+        /// </summary>
         /// <param name="cuias">Cuias en orden de pantalla; entre 1 y <see cref="MaxCuias"/>.</param>
         public BoardState(Cuia[] cuias)
         {
@@ -55,12 +61,17 @@ namespace AF.Core.Board
                 for (int k = 0; k < cuia.Count; k++)
                 {
                     int color = cuia.ColorAt(k);
-                    if (color > Cuia.MaxTintColor)
+                    if (color == Cuia.ReservedColor)
                     {
-                        throw new NotSupportedException("Los colores 15 (Barro) y 16 (reservado) necesitan las mecánicas de GDD 02 §9, que aún no están portadas.");
+                        throw new NotSupportedException("El color 16 está reservado (02 R2): ninguna regla lo usa.");
                     }
 
                     units[color]++;
+                }
+
+                if (cuia.Mechanic == Mechanics.MechanicType.Lluvia)
+                {
+                    units[cuia.MechanicKey] += cuia.MechanicN; // 02 R3: el agua que aún no ha caído
                 }
 
                 copy[i] = cuia;
@@ -74,6 +85,15 @@ namespace AF.Core.Board
         {
             _cuias = cuias;
             _units = units;
+        }
+
+        /// <summary>
+        /// Tablero ya validado por <see cref="BoardBuilder"/>, con su tabla <c>U_c</c> (que puede incluir dosis que aún no
+        /// están en el tablero, como las gotas pendientes de la Lluvia). Toma posesión de los dos arrays.
+        /// </summary>
+        internal static BoardState FromValidated(Cuia[] cuias, int[] units)
+        {
+            return new BoardState(cuias, units);
         }
 
         /// <summary>Número de cuias (T en R1).</summary>
@@ -110,19 +130,10 @@ namespace AF.Core.Board
             return IsSealedCuia(_cuias[index]);
         }
 
-        /// <summary>Victoria (R12): toda cuia está vacía o sellada.</summary>
+        /// <summary>Victoria (R12): toda cuia está vacía o sellada (<see cref="BoardRules.IsWon"/>).</summary>
         public bool IsWon()
         {
-            for (int i = 0; i < _cuias.Length; i++)
-            {
-                Cuia cuia = _cuias[i];
-                if (!cuia.IsEmpty && !IsSealedCuia(cuia))
-                {
-                    return false;
-                }
-            }
-
-            return true;
+            return BoardRules.IsWon(_cuias, 0, _cuias.Length, _units);
         }
 
         /// <summary>Alguna cuia tiene dosis ocultas (Aguas turbias, 02 §11).</summary>
@@ -139,6 +150,21 @@ namespace AF.Core.Board
                 }
 
                 return false;
+            }
+        }
+
+        /// <summary>Número de dosis ocultas del tablero (Aguas turbias, 02 §11).</summary>
+        public int HiddenCount
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < _cuias.Length; i++)
+                {
+                    count += _cuias[i].HiddenCount;
+                }
+
+                return count;
             }
         }
 
@@ -208,19 +234,46 @@ namespace AF.Core.Board
             return sb.Append(']').ToString();
         }
 
-        /// <summary>Aplica un vertido ya validado por <see cref="Rules.PourRules"/>.</summary>
-        internal BoardState WithPour(int source, int target, int amount)
+        /// <summary>
+        /// Aplica un vertido ya validado (legal) sobre una copia con <see cref="BoardRules"/>, la única implementación que
+        /// aplica vertidos: R10 (a)-(f′) en el orden del anexo B, con lo ocurrido en <paramref name="events"/>.
+        /// </summary>
+        internal BoardState WithPour(int source, int target, PourMode mode, bool isFutile, ref PourEvents events)
         {
             var next = (Cuia[])_cuias.Clone();
-            Cuia from = next[source];
-            int color = from.TopColor;
-            next[source] = from.RemoveTop(amount);
-            next[target] = next[target].AddOnTop(color, amount);
+            BoardRules.ApplyInPlace(next, 0, next.Length, _units, source, target, mode, isFutile, ref events);
             return new BoardState(next, _units);
+        }
+
+        /// <summary>
+        /// El mismo tablero con las capas de <paramref name="revealedByCuia"/>[i] de la cuia i visibles (máscara de revelado
+        /// de la partida, 02 T6). Devuelve este mismo objeto si no cambia nada. Las cuias sin entrada (índice ≥ longitud) no
+        /// cambian.
+        /// </summary>
+        internal BoardState WithRevealed(int[] revealedByCuia)
+        {
+            Cuia[]? next = null;
+            int limit = revealedByCuia.Length < _cuias.Length ? revealedByCuia.Length : _cuias.Length;
+            for (int i = 0; i < limit; i++)
+            {
+                Cuia cuia = _cuias[i];
+                if ((cuia.HiddenMask & revealedByCuia[i]) == 0)
+                {
+                    continue;
+                }
+
+                next ??= (Cuia[])_cuias.Clone();
+                next[i] = cuia.WithRevealed(revealedByCuia[i] & cuia.HiddenMask);
+            }
+
+            return next == null ? this : new BoardState(next, _units);
         }
 
         /// <summary>Tabla <c>U_c</c> indexada por color (0..16) para <see cref="CuiaRules"/>. No se modifica.</summary>
         internal int[] UnitsTable => _units;
+
+        /// <summary>Array interno de cuias, sin copiar, para <see cref="BoardRules"/>. Nadie lo modifica: el estado es inmutable.</summary>
+        internal Cuia[] CuiasArray => _cuias;
 
         /// <summary>Cuia <paramref name="index"/> sin comprobar el índice (el llamante ya lo hizo).</summary>
         internal Cuia CuiaAt(int index)

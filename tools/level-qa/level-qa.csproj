@@ -13,4 +13,21 @@
     <ProjectReference Include="../../dotnet/AF.Core/AF.Core.csproj" />
     <ProjectReference Include="../../dotnet/AF.Solver/AF.Solver.csproj" />
   </ItemGroup>
+
+  <!-- Un solo lector de la especificación de la campaña y unas mismas métricas para el generador y el QA:
+       se enlazan los fuentes de tools/level-generator (no se copian). -->
+  <ItemGroup>
+    <Compile Include="../level-generator/Campaign/CampaignSpec.cs" Link="Shared/CampaignSpec.cs" />
+    <Compile Include="../level-generator/Campaign/SpecValidator.cs" Link="Shared/SpecValidator.cs" />
+    <Compile Include="../level-generator/Campaign/BoardShape.cs" Link="Shared/BoardShape.cs" />
+    <Compile Include="../level-generator/Metrics/Metrics.cs" Link="Shared/Metrics.cs" />
+    <Compile Include="../level-generator/Metrics/ReferencePath.cs" Link="Shared/ReferencePath.cs" />
+    <Compile Include="../level-generator/Metrics/Relief.cs" Link="Shared/Relief.cs" />
+  </ItemGroup>
+
+  <!-- La compuerta regenera la campaña en memoria para comprobar la reproducibilidad (QA-REPRO, 03 §17 #10) y medir la
+       banda de cada nivel en el pool (QA-BAND-Q, 03 §7): el mismo código de generación, enlazado. -->
+  <ItemGroup>
+    <Compile Include="../level-generator/Generation/*.cs" LinkBase="Shared/Generation" />
+  </ItemGroup>
 </Project>

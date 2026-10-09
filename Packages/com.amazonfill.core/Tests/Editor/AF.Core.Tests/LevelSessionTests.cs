@@ -272,12 +272,16 @@ namespace AF.Core.Tests
         }
 
         [Test]
-        public void HiddenDoses_AreRejected()
+        public void HiddenDoses_AreAccepted()
         {
-            // Aguas turbias queda fuera de v0: Marea necesitaría la máscara de revelado (R7, 04 §2.1).
+            // C2-1: Aguas turbias en la partida (02 §11), con la máscara de revelado de Marea y Volver a la orilla (R7,
+            // 04 §2.1, §2.7); el detalle, en LevelSessionMurkyTests.
             var board = new BoardState(new[] { Cuia.Create(4, new[] { 1, 2, 1 }, 0x1), C(4, 2, 2, 1, 1), Cuia.Empty(4) });
 
-            Assert.That(() => { new LevelSession(board, true); }, Throws.TypeOf<NotSupportedException>());
+            var session = new LevelSession(board, true);
+
+            Assert.That(session.HiddenCount, Is.EqualTo(1));
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
         }
 
         [Test]

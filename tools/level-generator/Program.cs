@@ -10,15 +10,27 @@
 using AF.Core.Board;
 using AF.Core.Rules;
 using AF.Solver.Collections;
+using AmazonFill.Tools.LevelGenerator.Campaign;
+using AmazonFill.Tools.LevelGenerator.Generation;
 using AmazonFill.Tools.LevelGenerator.Handmade;
+using AmazonFill.Tools.LevelGenerator.Metrics;
 
 const string Usage = """
     level-generator: generador offline de niveles de Amazon Fill (GDD 08 sec. 2.4; GDD 03)
 
     Uso:
       dotnet run --project tools/level-generator -- --handmade <spec.json> --out <carpeta> --report <informe.md> [--pour-mode run|single] [--check]
-      dotnet run --project tools/level-generator -- --spec <spec.json> --out <carpeta>
+      dotnet run --project tools/level-generator -c Release -- --spec <campaign.json> --levels a-b --out <carpeta> [--report <informe.md>] [--check]
+      dotnet run --project tools/level-generator -- --validate-spec <campaign.json>
+      dotnet run --project tools/level-generator -- --parity [--report tools/out/parity_report.md]
       dotnet run --project tools/level-generator -- --help
+
+    --validate-spec: comprueba la especificacion de la campana (specs/campaign_v1.json) contra la rotacion de la
+      propuesta de D-007 (d.2, d.3 y las comprobaciones de d.4) y el escalon de D-009 (c.3, c.4); imprime un resumen
+      ASCII por ciclo. Codigos: 0 = cumple; 1 = alguna regla falla; 2 = especificacion ilegible.
+    --parity: recalcula con AF.Core/AF.Solver par, complejidad, ramificacion, trampas y la variante -1 color de los 40
+      niveles del prototipo (tools/out/levels_proto.json y tools/out_inverse/levels_proto.json; GDD 03 sec. 17-18, 09 R26)
+      y escribe el informe. Codigos: 0 = umbrales cumplidos; 1 = no; 2 = uso o archivos ausentes.
 
     --handmade: tutorial hecho a mano (GDD 02 sec. 13; docs/dev/prototipo-v0.md b). Comprueba cada nivel con
       AF.Core (BFS sobre PourRules) y AF.Solver, escribe <carpeta>/<pack_id>.json (subconjunto de af-level/1)
@@ -28,13 +40,18 @@ const string Usage = """
       rules_pour_mode): run = la racha visible que cabe, con vertido parcial (por defecto; GDD 02 sec. 1.2 y R9) o
       single = una dosis por vertido (solo pruebas). El pack no declara el modo y asume run, el del cliente por
       defecto, asi que un pack generado con single solo vale para jugar en single. El informe lo declara.
-    --spec: generacion procedural (GDD 03). Salida prevista: mundo_{nn}_v{vuelta}.json en formato af-level/1
-      (schemas/af-level-1.schema.json) y report.csv. Estado: andamiaje, aun no portada desde
-      tools/levelgen_proto.py (sale con 1).
-
+    --spec: generacion procedural de la campana (GDD 03 sec. 2; D-009 y D-007): candidatos por slot (walk, deep o fill),
+      superposicion de mecanicas, tintes, A*, bot x40, trampas tempranas, indice D, colocacion en el ciclo de 20, alivio y
+      un pack por mundo mundo_{mm}_v1.json (af-level/1, pack_schema 2). --levels por defecto 11-200; D depende del pool
+      de cada rango de 03 sec. 11, asi que --check debe usar los mismos --levels. Con --check no escribe nada y compara
+      byte a byte con los packs del disco. Los tiempos salen por consola; el informe no lleva tiempos.
     Codigos de salida: 0 = correcto o ayuda; 1 = la generacion o las comprobaciones fallaron;
     2 = uso incorrecto (sin argumentos, faltan opciones, u opcion desconocida o repetida).
     """;
+
+// Todo el texto con InvariantCulture (.claude/rules/data-json.md): también en los hilos de Parallel.
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
 
 // Sin argumentos es un error, no una petición de ayuda: fallar cerrado (.claude/rules/ci.md).
 if (args.Length == 0)
@@ -43,6 +60,21 @@ if (args.Length == 0)
 }
 
 bool wantsHelp = args.Contains("--help") || args.Contains("-h");
+if (args.Length >= 1 && args[0] == "--validate-spec")
+{
+    return args.Length == 2 ? SpecValidator.Run(args[1]) : UsageError("--validate-spec lleva un solo archivo.");
+}
+
+if (args.Length >= 1 && args[0] == "--parity")
+{
+    if (args.Length == 1)
+    {
+        return Parity.Run("tools/out/parity_report.md");
+    }
+
+    return args.Length == 3 && args[1] == "--report" ? Parity.Run(args[2]) : UsageError("--parity solo admite --report <informe.md>.");
+}
+
 if (wantsHelp)
 {
     Console.WriteLine(Usage);
@@ -55,6 +87,7 @@ string? handmade = null;
 string? outDir = null;
 string? report = null;
 string? pourModeKey = null;
+string? levelsArg = null;
 bool check = false;
 for (int i = 0; i < args.Length; i++)
 {
@@ -78,6 +111,10 @@ for (int i = 0; i < args.Length; i++)
     else if (arg == "--pour-mode" && i + 1 < args.Length && pourModeKey is null)
     {
         pourModeKey = args[++i];
+    }
+    else if (arg == "--levels" && i + 1 < args.Length && levelsArg is null)
+    {
+        levelsArg = args[++i];
     }
     else if (arg == "--check" && !check)
     {
@@ -110,9 +147,14 @@ if (handmade is not null)
     return HandmadeRunner.Run(handmade, outDir, report, check, pourMode);
 }
 
-if (report is not null || check || pourModeKey is not null)
+if (levelsArg is not null && spec is null)
 {
-    return UsageError("--report, --pour-mode y --check solo valen con --handmade.");
+    return UsageError("--levels solo vale con --spec.");
+}
+
+if (pourModeKey is not null)
+{
+    return UsageError("--pour-mode solo vale con --handmade (la campana se genera en run, D-005).");
 }
 
 if (spec is null || outDir is null)
@@ -120,10 +162,7 @@ if (spec is null || outDir is null)
     return UsageError(spec is null ? "falta --spec (o --handmade)." : "falta --out.");
 }
 
-Console.Error.WriteLine(
-    $"level-generator: spec {spec}, salida {outDir}; la generacion todavia no esta implementada.");
-Console.Error.WriteLine($"Nucleo enlazado: {Describe(typeof(BoardState))}, {Describe(typeof(MinHeap))}");
-return 1;
+return CampaignRunner.Run(spec, levelsArg ?? "11-200", outDir, report, check);
 
 static int UsageError(string message)
 {

@@ -8,3 +8,7 @@ using System.Runtime.CompilerServices;
 // No poner aquí AssemblyVersion ni AssemblyTitle: el SDK de .NET los genera y se duplicarían.
 [assembly: InternalsVisibleTo("AF.Core.Tests")]
 [assembly: InternalsVisibleTo("AF.Solver.Tests")]
+
+// AF.Solver (solver, bot y generadores) recorre las reglas de tablero en su bucle caliente con las rutas internas de
+// AF.Core.Rules.BoardRules (origen ya comprobado, sin validar argumentos): son las mismas reglas, no una copia.
+[assembly: InternalsVisibleTo("AF.Solver")]

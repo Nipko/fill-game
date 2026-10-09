@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v1.json",
+  "description": "Fixture negativo de --validate-spec: Cuia alta de 6 en una comodidad (171).",
+  "expect_rule": "CAPACITIES",
+  "calendar": {
+    "171": "Ho+Al6"
+  }
+}

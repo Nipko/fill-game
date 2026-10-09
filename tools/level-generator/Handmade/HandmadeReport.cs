@@ -42,8 +42,9 @@ internal static class HandmadeReport
         W("- Notación: cuias con índices 0-based en orden visual; dosis de abajo arriba con el índice de motor del glosario §9 "
           + "(8 Açaí, 4 Aguaje, 3 Taperebá, 1 Guanábana, 7 Bacaba); un vertido es `origen→destino ×dosis`"
           + (mode == PourMode.Single ? " (siempre ×1 en `single`)." : " (en `run`, ×dosis es la parte de la racha visible que cabe, 02 R9)."));
-        W("- Bot casual ×40 (03 §6): no se calcula. El bot aún no existe en `AF.Solver` (su PRNG espera la decisión del dueño "
-          + "sobre la paridad con MT19937, riesgo R11 del plan) y el contrato b no lo exige para el tutorial.");
+        W("- Bot casual ×40 (03 §6): no se calcula para el tutorial, porque el contrato b no lo exige y el pack v0 no lleva "
+          + "`difficulty.bot_fail`. El bot ya está en `AF.Solver` (`CasualBot`, con el PRNG del núcleo de 09 R26) y lo usan "
+          + "`--spec` y `tools/level-qa`.");
         W();
         W("## Resumen");
         W();

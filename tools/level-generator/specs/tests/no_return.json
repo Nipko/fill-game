@@ -1,0 +1,10 @@
+{
+  "extends": "../campaign_v1.json",
+  "description": "Fixture negativo de --validate-spec: El Matapi (titular de 61-80) no vuelve en ningún reto ni hito de 81-100.",
+  "expect_rule": "RETURN",
+  "calendar": {
+    "86": "Ho (D)",
+    "95": "Ho+Al (D)",
+    "98": "Li+Ho (D)"
+  }
+}

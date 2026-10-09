@@ -24,9 +24,27 @@ namespace AF.Solver.Search
     /// </list>
     /// <para>Mira el color real de cada dosis, también de las ocultas. <c>h2</c> se calcula con máscaras de bits:
     /// <c>Σ popcount(máscara_i) − popcount(⋃ máscara_i)</c>. Sin asignaciones; solo enteros.</para>
+    /// <para><b>Barro</b> (03 §9, M5): <c>h1</c> cuenta el barro como corte y resta 1 por cada barro presente (el lavado
+    /// puede eliminar dos cortes en un vertido: el de debajo del barro, si la fruta coincide, y el de la cima de A); <c>h2</c>
+    /// ignora el color 15. En <see cref="PourMode.Single"/>, <c>h3</c> no cuenta las dosis de Barro [P]: el barro nunca se
+    /// vierte, se lava, y toda dosis de tinte por encima de la racha del fondo sigue teniendo que moverse al menos una vez.
+    /// Las dos variantes siguen siendo admisibles y consistentes (un vertido baja cada término como mucho en 1; lo
+    /// comprueban <c>BarroSolverTests</c> sobre todos los estados alcanzables). Sin Barro dan los mismos valores que antes.</para>
+    /// <para><b>Lluvia y Piraña</b> (03 §9): la heurística no cambia. Una gota de Lluvia cae encima de la cuia de Lluvia y nunca
+    /// elimina cortes ni dispersión (03 §9: «cota válida»). El mordisco de la Piraña se lleva siempre una de las dosis que el
+    /// propio vertido acaba de dejar en la cima de la cuia que recibió (respuesta Q-C del dueño: si no puede morder en ese
+    /// vertido, el mordisco se pierde), así que vertido y mordisco equivalen a repartir el mismo vertido entre esa cuia y la
+    /// cueva: la cuia que recibe queda como si hubiera recibido una dosis menos (con Barro, el lavado sin la dosis), y cada
+    /// término (<c>h1</c>, <c>h2</c>, <c>h3</c>) baja como mucho en 1 por paso. Por tanto <c>H</c> y <c>H_single</c> siguen
+    /// siendo admisibles y consistentes y el par de A* con <c>w = 1</c> es exacto (03 §9 lo daba por aproximado [P] pensando en
+    /// un mordisco diferido sobre un <c>ultimo_destino</c> guardado). Lo comprueban <c>PiranaSolverTests</c> en todos los
+    /// estados alcanzables. <c>ceil(H/2)</c>, la cota del plan de C3-2 [P], también sería válida, pero expande más.</para>
     /// </remarks>
     public static class SolverHeuristic
     {
+        /// <summary>Bit del Barro (color 15) en las máscaras de colores: <c>h2</c> lo ignora (03 §9).</summary>
+        private const int MudBit = 1 << (Cuia.MudColor - 1);
+
         /// <summary>Cortes de color de una cuia: segmentos de color contiguos − 1 (0 si está vacía).</summary>
         public static int ColorBreaks(Cuia cuia)
         {
@@ -158,8 +176,9 @@ namespace AF.Solver.Search
         }
 
         /// <summary>
-        /// Suma los cortes de <paramref name="cuia"/> a <paramref name="breaks"/> y sus dosis por encima de la racha del
-        /// fondo a <paramref name="above"/>, y devuelve su máscara de colores (una pasada).
+        /// Suma los cortes de <paramref name="cuia"/> (menos uno por cada Barro, 03 §9) a <paramref name="breaks"/> y sus
+        /// dosis de tinte por encima de la racha del fondo a <paramref name="above"/>, y devuelve su máscara de colores sin el
+        /// Barro (una pasada).
         /// </summary>
         private static int Accumulate(Cuia cuia, ref int breaks, ref int above)
         {
@@ -189,7 +208,25 @@ namespace AF.Solver.Search
             }
 
             above += count - bottomRun;
-            return mask;
+            if ((mask & MudBit) == 0)
+            {
+                return mask; // sin Barro: la heurística de 03 §5 tal cual
+            }
+
+            // 03 §9: −1 por cada Barro en h1 y h2 sin el 15; en h3 [P] solo cuentan las dosis de tinte sobre la racha del
+            // fondo (las de Barro de la racha del fondo ya no estaban contadas).
+            int muds = 0;
+            for (int k = 0; k < count; k++)
+            {
+                if (cuia.ColorAt(k) == Cuia.MudColor)
+                {
+                    muds++;
+                }
+            }
+
+            breaks -= muds;
+            above -= cuia.ColorAt(0) == Cuia.MudColor ? muds - bottomRun : muds;
+            return mask & ~MudBit;
         }
 
         /// <summary>Bits a 1 de <paramref name="value"/> (SWAR; <c>BitOperations</c> no existe en netstandard2.1).</summary>

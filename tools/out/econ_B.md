@@ -8,76 +8,76 @@ Escenario A = dirección literal (Crecida repetible hasta 600/día con 300 en el
 |---|---|---|---|---|
 | Días de juego hasta el nivel 500 | 74,6 | 40,2 | 30,2 | 36,0 |
 | Corridas que terminan el 500 (%) | 100 | 100 | 100 | 100 |
-| Intentos totales | 593 | 556 | 536 | 533 |
+| Intentos totales | 593 | 556 | 536 | 532 |
 | Victorias por día | 6,7 | 12,4 | 16,6 | 13,9 |
-| Ingreso gratuito total (semillas) | 30.709 | 48.857 | 46.486 | 48.621 |
-| Ingreso efectivo por victoria (todas las fuentes) | 61,4 | 97,7 | 93,0 | 97,2 |
-| Saldo final (semillas) | 1.842 | 15.510 | 26.408 | 8.393 |
+| Ingreso gratuito total (semillas) | 30.735 | 48.816 | 46.431 | 48.631 |
+| Ingreso efectivo por victoria (todas las fuentes) | 61,5 | 97,6 | 92,9 | 97,3 |
+| Saldo final (semillas) | 1.912 | 15.856 | 26.092 | 8.843 |
 | Saldo mínimo (semillas) | 0 | 0 | 0 | 0 |
-| Cuias de rescate pagables con ingreso gratuito (total) | 51,2 | 81,4 | 77,5 | 81,0 |
-| Cuias de rescate pagables por día | 0,69 | 2,03 | 2,57 | 2,25 |
-| Cuias de rescate usadas | 72,5 | 72,1 | 45,0 | 87,5 |
-|   de ellas con −50 % (primera del día) | 48,9 | 33,0 | 23,1 | 31,7 |
-| Bloqueos sin recursos (quiso rescate, sin saldo) | 5,9 | 0,0 | 0,0 | 0,4 |
-| Corridas con ≥1 bloqueo sin recursos (%) | 73 | 2 | 0 | 10 |
-| Nivel del primer bloqueo sin recursos | 249 | 87 | — | 311 |
+| Cuias de rescate pagables con ingreso gratuito (total) | 51,2 | 81,4 | 77,4 | 81,1 |
+| Cuias de rescate pagables por día | 0,69 | 2,03 | 2,56 | 2,25 |
+| Cuias de rescate usadas | 72,3 | 71,3 | 45,4 | 86,7 |
+|   de ellas con −50 % (primera del día) | 48,8 | 32,7 | 23,0 | 31,5 |
+| Bloqueos sin recursos (quiso rescate, sin saldo) | 5,6 | 0,0 | 0,0 | 0,5 |
+| Corridas con ≥1 bloqueo sin recursos (%) | 74 | 1 | 0 | 14 |
+| Nivel del primer bloqueo sin recursos | 260 | 44 | — | 282 |
 | Saltos del Boto | 0,0 | 0,0 | 0,0 | 0,0 |
-| Anuncios recompensados vistos por día | 1,7 | 2,4 | 2,8 | 1,6 |
-| USD gastados (pagador) | 0,00 | 0,00 | 0,00 | 3,54 |
+| Anuncios recompensados vistos por día | 1,7 | 2,4 | 2,8 | 1,5 |
+| USD gastados (pagador) | 0,00 | 0,00 | 0,00 | 3,64 |
 
 ### Ingreso por fuente (semillas, total de la corrida)
 
 | Fuente | Casual sin racha | Medio no pagador (ref.) | Hábil con racha | Pagador ligero |
 |---|---|---|---|---|
-| bitacora | 7.026 | 3.577 | 3.004 | 3.229 |
+| bitacora | 7.024 | 3.577 | 3.006 | 3.228 |
 | canasta | 2.500 | 2.500 | 2.500 | 2.500 |
-| cosecha_doble | 3.938 | 12.129 | 13.504 | 13.670 |
-| crecida | 0 | 13.276 | 10.124 | 12.038 |
-| iap:af_coins_2 | 0 | 0 | 0 | 137 |
+| cosecha_doble | 3.964 | 12.129 | 13.450 | 13.675 |
+| crecida | 0 | 13.271 | 10.126 | 12.030 |
+| iap:af_coins_2 | 0 | 0 | 0 | 147 |
 | iap:af_piggy | 0 | 0 | 0 | 2.050 |
-| iap:af_rescue | 0 | 0 | 0 | 47 |
+| iap:af_rescue | 0 | 0 | 0 | 63 |
 | iap:af_starter | 0 | 0 | 0 | 500 |
-| reto_del_rio | 1.306 | 1.434 | 1.415 | 1.244 |
+| reto_del_rio | 1.307 | 1.398 | 1.410 | 1.258 |
 | victorias | 15.940 | 15.940 | 15.940 | 15.940 |
 
 ### Gasto por sumidero (semillas, total de la corrida)
 
 | Sumidero | Casual sin racha | Medio no pagador (ref.) | Hábil con racha | Pagador ligero |
 |---|---|---|---|---|
-| cuia_de_rescate | 28.809 | 33.345 | 20.062 | 42.958 |
-| cuia_extra | 56 | 0 | 12 | 4 |
-| morpho | 0 | 0 | 4 | 0 |
-| salto_del_boto | 2 | 1 | 0 | 0 |
+| cuia_de_rescate | 28.744 | 32.958 | 20.323 | 42.542 |
+| cuia_extra | 76 | 0 | 15 | 6 |
+| morpho | 0 | 1 | 1 | 0 |
+| salto_del_boto | 3 | 0 | 0 | 0 |
 
 ### Presupuesto por fase (semillas por día)
 
 | Fase | Perfil | Días | Victorias | Ingreso/día | Gasto/día | Neto/día | Rescates | Bloqueos sin recursos | Saldo al cerrar |
 |---|---|---|---|---|---|---|---|---|---|
-| 1-30 | Casual sin racha | 4,2 | 30 | 243 | 0 | 243 | 0,0 | 0,0 | 1.008 |
+| 1-30 | Casual sin racha | 4,2 | 30 | 243 | 0 | 243 | 0,0 | 0,0 | 1.009 |
 | 1-30 | Medio no pagador (ref.) | 3,0 | 30 | 477 | 0 | 477 | 0,0 | 0,0 | 1.432 |
-| 1-30 | Hábil con racha | 2,0 | 30 | 688 | 0 | 688 | 0,0 | 0,0 | 1.376 |
-| 1-30 | Pagador ligero | 2,7 | 30 | 733 | 0 | 733 | 0,0 | 0,0 | 1.902 |
-| 31-100 | Casual sin racha | 10,0 | 70 | 416 | 266 | 149 | 7,1 | 0,3 | 2.488 |
-| 31-100 | Medio no pagador (ref.) | 5,0 | 70 | 1.356 | 579 | 777 | 7,0 | 0,0 | 5.331 |
-| 31-100 | Hábil con racha | 4,0 | 70 | 1.535 | 422 | 1.113 | 4,2 | 0,0 | 5.844 |
-| 31-100 | Pagador ligero | 4,6 | 70 | 1.483 | 828 | 654 | 8,4 | 0,0 | 4.840 |
-| 101-500 | Casual sin racha | 60,4 | 400 | 423 | 434 | -11 | 65,3 | 5,7 | 1.842 |
-| 101-500 | Medio no pagador (ref.) | 32,2 | 400 | 1.263 | 947 | 316 | 65,1 | 0,0 | 15.510 |
-| 101-500 | Hábil con racha | 24,2 | 400 | 1.612 | 761 | 851 | 40,7 | 0,0 | 26.408 |
-| 101-500 | Pagador ligero | 28,7 | 400 | 1.489 | 1.365 | 124 | 79,1 | 0,3 | 8.393 |
+| 1-30 | Hábil con racha | 2,0 | 30 | 687 | 0 | 687 | 0,0 | 0,0 | 1.375 |
+| 1-30 | Pagador ligero | 2,7 | 30 | 734 | 0 | 734 | 0,0 | 0,0 | 1.900 |
+| 31-100 | Casual sin racha | 10,0 | 70 | 415 | 269 | 147 | 7,2 | 0,2 | 2.471 |
+| 31-100 | Medio no pagador (ref.) | 5,0 | 70 | 1.351 | 553 | 798 | 6,7 | 0,0 | 5.431 |
+| 31-100 | Hábil con racha | 4,0 | 70 | 1.530 | 433 | 1.097 | 4,4 | 0,0 | 5.791 |
+| 31-100 | Pagador ligero | 4,6 | 70 | 1.481 | 815 | 666 | 8,3 | 0,1 | 4.901 |
+| 101-500 | Casual sin racha | 60,4 | 400 | 424 | 433 | -9 | 65,1 | 5,4 | 1.912 |
+| 101-500 | Medio no pagador (ref.) | 32,1 | 400 | 1.264 | 939 | 325 | 64,6 | 0,0 | 15.856 |
+| 101-500 | Hábil con racha | 24,2 | 400 | 1.611 | 770 | 841 | 41,0 | 0,0 | 26.092 |
+| 101-500 | Pagador ligero | 28,7 | 400 | 1.491 | 1.353 | 138 | 78,4 | 0,4 | 8.843 |
 
 ### Ratio de presión (precio nominal de la Cuia de rescate / ingreso efectivo por victoria)
 
 | Tramo | Perfil | Precio nominal | Ingreso efectivo/victoria | Ratio | ¿En banda 10-15:1? |
 |---|---|---|---|---|---|
 | 31-100 | Casual sin racha | 600 | 59,1 | 10,1:1 | sí |
-| 31-100 | Medio no pagador (ref.) | 600 | 97,3 | 6,2:1 | bajo |
-| 31-100 | Hábil con racha | 600 | 88,1 | 6,8:1 | bajo |
-| 31-100 | Pagador ligero | 600 | 95,7 | 6,3:1 | bajo |
-| 101-500 | Casual sin racha | 600 | 63,9 | 9,4:1 | bajo |
+| 31-100 | Medio no pagador (ref.) | 600 | 96,8 | 6,2:1 | bajo |
+| 31-100 | Hábil con racha | 600 | 88,0 | 6,8:1 | bajo |
+| 31-100 | Pagador ligero | 600 | 95,8 | 6,3:1 | bajo |
+| 101-500 | Casual sin racha | 600 | 64,0 | 9,4:1 | bajo |
 | 101-500 | Medio no pagador (ref.) | 600 | 101,5 | 5,9:1 | bajo |
-| 101-500 | Hábil con racha | 600 | 97,4 | 6,2:1 | bajo |
-| 101-500 | Pagador ligero | 600 | 106,9 | 5,6:1 | bajo |
+| 101-500 | Hábil con racha | 600 | 97,2 | 6,2:1 | bajo |
+| 101-500 | Pagador ligero | 600 | 107,0 | 5,6:1 | bajo |
 | 31-100 | **Referencia (media de 3 no pagadores)** | 600 | — | **7,7:1** | bajo |
 | 101-500 | **Referencia (media de 3 no pagadores)** | 600 | — | **7,2:1** | bajo |
 

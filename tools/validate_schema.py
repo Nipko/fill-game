@@ -3,7 +3,8 @@
 validate_schema.py - Amazon Fill (Tintalú): comprueba schemas/af-level-1.schema.json (formato af-level/1, 08 §4.1).
 
 Uso (desde la raiz del repositorio):
-    python tools/validate_schema.py
+    python tools/validate_schema.py                       # casos del contrato 21 (N/N PASS)
+    python tools/validate_schema.py --pack <archivo> ...  # valida paquetes arbitrarios contra el esquema
 
 Casos (contrato 21 del GDD; docs/gdd/08-arquitectura-tecnica-publicacion.md §4.1):
     (0) el esquema es un JSON Schema draft 2020-12 valido;
@@ -13,16 +14,25 @@ Casos (contrato 21 del GDD; docs/gdd/08-arquitectura-tecnica-publicacion.md §4.
     (b) attrs de Lluvia {type: lluvia, key: 10, n: 2, k: 3} y de Pirana {type: pirana, k: 4} validan
         (sueltos y dentro de un pack); "barro" no es un tipo de attr;
     (c) un tablero minimo del Reto del rio (kind daily, 03 §16) valida; los formatos cruzados fallan;
-    (d) un nivel >= 31 sin relief falla (y uno < 31 con relief [] pasa); par nulo solo en plus_empty.
+    (d) un nivel >= 31 sin relief falla (y uno < 31 con relief [] pasa); par nulo solo en plus_empty;
+    (e) pack_schema 2 (D-007, contrato 21): tipo matapi, Liana con key o n (uno y solo uno), campos obligatorios por
+        tipo (hoja: key; remolino: partner; lluvia: key y n), intro_mechanic matapi/chica/alta/murky [P] y
+        difficulty.par_approx [P]; con pack_schema 1 nada de eso valida y todo lo demas sigue igual; pack_schema 3 falla.
 
 Imprime PASS/FAIL por caso y termina con codigo 1 si alguno falla. Requiere jsonschema >= 4.18.
+
+Modo --pack (lo usan tools/level-generator, tools/level-qa y el CI): valida cada archivo contra el esquema, imprime
+una linea ASCII por archivo (PASS o FAIL con los primeros errores) y termina con 0 si todos validan, 1 si alguno
+falla y 2 si no se indica ningun archivo. No reescribe tools/out/.
 """
 from __future__ import annotations
 
+import argparse
 import copy
 import json
 import re
 import sys
+import unicodedata
 from collections import Counter
 from pathlib import Path
 
@@ -145,7 +155,8 @@ def main() -> int:
     # (a) Ejemplo canonico de 08 §4.1, copiado a tools/out/
     example = extract_example(DOC_PATH.read_text(encoding="utf-8"))
     EXAMPLE_OUT.parent.mkdir(parents=True, exist_ok=True)
-    EXAMPLE_OUT.write_text(json.dumps(example, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    # newline="\n": LF tambien en Windows (.gitattributes); si no, el archivo regenerado sale como modificado
+    EXAMPLE_OUT.write_text(json.dumps(example, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     example = json.loads(EXAMPLE_OUT.read_text(encoding="utf-8"))
     check(validator, "a1", f"ejemplo de 08 §4.1 copiado a {EXAMPLE_OUT.relative_to(ROOT).as_posix()} (pack completo)",
           example, True)
@@ -255,10 +266,110 @@ def main() -> int:
     d["levels"][0]["difficulty"]["D"] = -0.83
     check(validator, "d5", "difficulty.D negativo (suma de z-scores, 03 §7)", d, True)
 
+    # (e) pack_schema 2 (D-007; contrato 21; 08 §4.1 y §4.4)
+    def pack2_level(world: int, world_id: str, water: str, level: int, mech: dict | None, intro, pack: int = 2) -> dict:
+        """El ejemplo de 08 §4.1 movido al nivel indicado, con mech en attrs[3] (la cuia vacia) del base y del alivio."""
+        p = copy.deepcopy(example)
+        p.update({"pack_schema": pack, "pack_id": f"mundo_{world:02d}_v1", "world": world, "world_id": world_id,
+                  "water_base": water})
+        lv = p["levels"][0]
+        lv.update({"id": f"m{world:02d}_v1_n{level:04d}", "level": level, "world": world,
+                   "seed": f"amazonfill:v1:m{world:02d}:v1:n{level:04d}", "water_base": water, "intro_mechanic": intro})
+        lv["attrs"][3] = copy.deepcopy(mech)
+        for board in lv["relief"]:
+            board["attrs"][3] = copy.deepcopy(mech)
+        return p
+
+    matapi = {"type": "matapi"}
+    check(validator, "e1", "pack 2: debut del Matapi en el 63 (attrs matapi e intro_mechanic matapi)",
+          pack2_level(3, "w03_manaos", "black", 63, matapi, "matapi"), True)
+    check(validator, "e2", "pack 2: Liana con fruta {type: liana, key: 3} (debut en el 83)",
+          pack2_level(4, "w04_trapecio", "white", 83, {"type": "liana", "key": 3}, "liana"), True)
+    d = pack2_level(3, "w03_manaos", "black", 43, {"type": "hoja", "key": 4}, "hoja")
+    d["levels"][0]["difficulty"]["par_approx"] = True
+    check(validator, "e3", "pack 2: difficulty.par_approx = true [P]", d, True)
+    d = pack2_level(4, "w04_trapecio", "white", 100, None, "murky")
+    d["levels"][0].update({"murky": True, "hidden": [[0, 1], [0, 0]]})
+    check(validator, "e4", "pack 2: intro_mechanic = murky en el hito 100 con murky y hidden [P]", d, True)
+    check(validator, "e5", "pack 2: Liana con key y n a la vez",
+          pack2_level(4, "w04_trapecio", "white", 83, {"type": "liana", "key": 3, "n": 1}, "liana"), False)
+    check(validator, "e6", "pack 2: Liana sin key ni n",
+          pack2_level(4, "w04_trapecio", "white", 83, {"type": "liana"}, "liana"), False)
+    check(validator, "e7", "pack 1: attrs con matapi",
+          pack2_level(3, "w03_manaos", "black", 63, matapi, None, pack=1), False)
+    check(validator, "e8", "pack 1: intro_mechanic = matapi",
+          pack2_level(3, "w03_manaos", "black", 43, {"type": "hoja", "key": 4}, "matapi", pack=1), False)
+    d = copy.deepcopy(example)
+    d["pack_schema"] = 3
+    check(validator, "e9", "pack_schema = 3 (el cliente lo rechazaria, 08 §4.4)", d, False)
+    check(validator, "e10", "pack 2: Hoja sin key",
+          pack2_level(3, "w03_manaos", "black", 43, {"type": "hoja"}, "hoja"), False)
+    d = pack2_level(4, "w04_trapecio", "white", 103, {"type": "remolino", "partner": 8}, "remolino")
+    for board in [d["levels"][0]] + d["levels"][0]["relief"]:
+        board["attrs"][8] = {"type": "remolino"}
+    check(validator, "e11", "pack 2: Remolino sin partner", d, False)
+    d = copy.deepcopy(example)
+    d["levels"][0]["difficulty"]["par_approx"] = False
+    check(validator, "e12", "pack 1: difficulty.par_approx (solo pack 2)", d, False)
+    check(validator, "e13", "pack 2: Liana de cuenta {type: liana, n: 1} (variante del 243)",
+          pack2_level(4, "w04_trapecio", "white", 83, {"type": "liana", "n": 1}, None), True)
+    check(validator, "e14", "pack 2: Lluvia sin n",
+          pack2_level(5, "w05_loreto", "white", 143, {"type": "lluvia", "key": 10, "k": 3}, "lluvia"), False)
+    d = copy.deepcopy(example)
+    d["levels"][0]["relief"][1]["attrs"][8] = {"type": "matapi"}
+    check(validator, "e15", "pack 1: matapi solo en attrs de relief[1]", d, False)
+    check(validator, "e16", "pack 1: intro_mechanic = chica",
+          pack2_level(2, "w02_tapajos", "clear", 14, None, "chica", pack=1), False)
+    check(validator, "e17", "pack 1: Hoja sin key (pack 1 no exige campos por tipo: todo igual que hoy)",
+          pack2_level(3, "w03_manaos", "black", 43, {"type": "hoja"}, "hoja", pack=1), True)
+
     failed = RESULTS.count(False)
     print(f"\n{len(RESULTS) - failed}/{len(RESULTS)} casos PASS" + (f"; {failed} FAIL" if failed else ""))
     return 1 if failed else 0
 
 
+def ascii_text(text: str) -> str:
+    """Salida ASCII (.claude/rules/ci.md): la consola de Windows corrompe los acentos al capturar la salida."""
+    text = text.replace("§", "sec. ").replace("→", "->").replace("≤", "<=").replace("≥", ">=")
+    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+
+
+def validate_packs(paths: list[str]) -> int:
+    """Modo --pack: cada archivo contra el esquema. 0 = todos validan; 1 = alguno falla."""
+    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema, format_checker=FormatChecker())
+    failed = 0
+    for raw in paths:
+        path = Path(raw)
+        try:
+            pack = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            print(ascii_text(f"FAIL  {raw}: no se puede leer como JSON ({exc})"))
+            failed += 1
+            continue
+        errors = sorted(validator.iter_errors(pack), key=lambda e: [str(p) for p in e.absolute_path])
+        levels = len(pack.get("levels", [])) if isinstance(pack, dict) else 0
+        version = pack.get("pack_schema") if isinstance(pack, dict) else None
+        if not errors:
+            print(ascii_text(f"PASS  {raw}: pack_schema {version}, {levels} niveles"))
+            continue
+        failed += 1
+        print(ascii_text(f"FAIL  {raw}: {len(errors)} error(es) contra schemas/af-level-1.schema.json"))
+        for e in errors[:10]:
+            where = "/".join(str(p) for p in e.absolute_path) or "(raiz)"
+            print(ascii_text(f"        - {where}: {e.message[:200]}"))
+    print(f"\n{len(paths) - failed}/{len(paths)} paquetes validos")
+    return 1 if failed else 0
+
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Comprueba schemas/af-level-1.schema.json (casos del contrato 21) o valida paquetes con --pack.")
+    parser.add_argument("--pack", nargs="*", metavar="ARCHIVO", help="valida estos paquetes contra el esquema (sin los casos)")
+    args = parser.parse_args()
+    if args.pack is not None:
+        if not args.pack:
+            print("validate_schema.py: --pack necesita al menos un archivo", file=sys.stderr)
+            sys.exit(2)
+        sys.exit(validate_packs(args.pack))
     sys.exit(main())

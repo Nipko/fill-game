@@ -3,7 +3,8 @@
 namespace AF.Core.Session
 {
     /// <summary>
-    /// Estado lógico de la partida tras cada cambio, evaluado en el orden de R10 (e, f): victoria y después bloqueo.
+    /// Estado lógico de la partida tras cada cambio, evaluado en el orden de R10 ((g) y (h) del anexo B de D-007): victoria
+    /// y después bloqueo.
     /// La máquina de estados de pantalla (LOADING, INTRO, CELEBRATION…, GDD 02 §2) vive fuera del núcleo.
     /// </summary>
     public enum LevelStatus

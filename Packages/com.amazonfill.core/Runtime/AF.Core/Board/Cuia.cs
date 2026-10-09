@@ -2,24 +2,38 @@
 using System;
 using System.Globalization;
 using System.Text;
+using AF.Core.Mechanics;
 
 namespace AF.Core.Board
 {
     /// <summary>
     /// Estado de una cuia (GDD 02 §1.1, reglas R1-R7): valor inmutable empaquetado en un
-    /// <see cref="ulong"/>, con longitud y 4 bits por dosis (tinte − 1) más la máscara de
-    /// dosis ocultas (GDD 08 §2.2).
+    /// <see cref="ulong"/>, con longitud y 4 bits por dosis (tinte − 1), la máscara de
+    /// dosis ocultas y los atributos de su mecánica (GDD 08 §2.2, §4.1; 03 §3).
     /// </summary>
     /// <remarks>
     /// Distribución de bits de <see cref="Packed"/>:
     /// <list type="bullet">
     /// <item><description>0-23: dosis, 6 × 4 bits. La dosis k, contada desde el fondo, ocupa los bits 4k..4k+3 y guarda color − 1.</description></item>
     /// <item><description>24-29: máscara de ocultos. El bit 24+k indica que la dosis k está oculta.</description></item>
+    /// <item><description>30-31: libres (0).</description></item>
     /// <item><description>32-34: número de dosis (0..6).</description></item>
+    /// <item><description>35: libre (0).</description></item>
     /// <item><description>36-38: capacidad (1..6).</description></item>
+    /// <item><description>39-42: tipo de mecánica (<see cref="MechanicType"/>; 0 = ninguna).</description></item>
+    /// <item><description>43-46: <c>key</c>, tinte − 1 (Hoja, Liana con fruta, Lluvia).</description></item>
+    /// <item><description>47-49: id de la pareja del Remolino (0..7), asignado por el constructor de tableros.</description></item>
+    /// <item><description>50-52: <c>n</c> (Liana de cuenta: sellos; Lluvia: gotas pendientes).</description></item>
+    /// <item><description>53-55: <c>k</c>, ritmo en vertidos de Lluvia y Piraña (2-5, 08 §9).</description></item>
+    /// <item><description>56-58: contador de vertidos (Lluvia, Piraña).</description></item>
+    /// <item><description>59-60: banderas (bit 59 = cerrada: Hoja puesta, Brote cerrado; bit 60 reservado).</description></item>
+    /// <item><description>61-63: libres (0).</description></item>
     /// </list>
-    /// Los bits de dosis por encima de la cima valen siempre 0, así que dos cuias iguales tienen el mismo
-    /// <see cref="Packed"/>. <c>default(Cuia)</c> no es una cuia válida (capacidad 0).
+    /// Los bits de dosis por encima de la cima y los libres valen siempre 0, así que dos cuias iguales tienen el mismo
+    /// <see cref="Packed"/>, y <see cref="Packed"/> es la clave canónica <c>(cap, attr, contenido)</c> más los contadores de
+    /// 03 §3. Una cuia sin mecánica tiene a 0 los bits 39-63: los tableros sin mecánicas conservan su <see cref="Packed"/> y
+    /// su hash. Cuando una mecánica se abre o se suelta, la cuia pasa a no tener mecánica (todos esos bits a 0; 02 R16 para
+    /// D-007). <c>default(Cuia)</c> no es una cuia válida (capacidad 0).
     /// </remarks>
     public readonly struct Cuia : IEquatable<Cuia>
     {
@@ -58,6 +72,24 @@ namespace AF.Core.Board
         private const int CountShift = 32;
         private const int CapacityShift = 36;
         private const ulong ThreeBitMask = 0x7UL;
+
+        /// <summary>Bandera de <see cref="MechanicFlags"/>: la mecánica está cerrada (Hoja puesta, Brote cerrado; 03 §9).</summary>
+        public const int FlagClosed = 1;
+
+        /// <summary>Máximo del id de pareja de Remolino, de <c>n</c>, de <c>k</c> y del contador (3 bits).</summary>
+        public const int MaxMechanicField = 7;
+
+        // Campo de mecánica (bits 39-63). Con 0 la cuia es normal: los tableros sin mecánicas no cambian su Packed.
+        private const int MechanicShift = 39;
+        private const ulong MechanicFieldMask = 0x1FFFFFFUL << MechanicShift;
+        private const ulong MechanicTypeMask = 0xFUL;
+        private const int KeyShift = 43;
+        private const int PairShift = 47;
+        private const int NShift = 50;
+        private const int KShift = 53;
+        private const int CounterShift = 56;
+        private const int FlagsShift = 59;
+        private const ulong FlagsMask = 0x3UL;
 
         private readonly ulong _bits;
 
@@ -143,11 +175,145 @@ namespace AF.Core.Board
         /// <summary>Tiene al menos una dosis oculta.</summary>
         public bool HasHidden => HiddenMask != 0;
 
+        /// <summary>Número de dosis ocultas (Aguas turbias, 02 §11).</summary>
+        public int HiddenCount
+        {
+            get
+            {
+                int mask = HiddenMask;
+                int count = 0;
+                while (mask != 0)
+                {
+                    mask &= mask - 1;
+                    count++;
+                }
+
+                return count;
+            }
+        }
+
         /// <summary>Representación empaquetada; estable entre CoreCLR, Mono e IL2CPP. Base del hash y de la canonicalización.</summary>
         public ulong Packed => _bits;
 
+        /// <summary>Código del tipo de mecánica (bits 39-42; 0 = cuia normal). Índice de la tabla de despacho de AF.Core.Mechanics.</summary>
+        internal int MechanicCode => (int)((_bits >> MechanicShift) & MechanicTypeMask);
+
+        /// <summary>La cuia lleva una mecánica (02 §9): algún bit del campo de mecánica vale 1.</summary>
+        public bool HasMechanic => (_bits & MechanicFieldMask) != 0;
+
+        /// <summary>Mecánica de la cuia (02 §9.1; <see cref="MechanicType.None"/> si es normal).</summary>
+        public MechanicType Mechanic => (MechanicType)MechanicCode;
+
+        /// <summary>
+        /// Tinte <c>key</c> de la mecánica (1-16): la fruta de la Hoja o de la Liana con fruta, o el tinte agua de la Lluvia.
+        /// <see cref="NoColor"/> si la mecánica no usa <c>key</c> (también la Liana de cuenta, con <c>n</c> &gt; 0).
+        /// </summary>
+        public int MechanicKey
+        {
+            get
+            {
+                MechanicType type = Mechanic;
+                bool usesKey = type == MechanicType.Hoja
+                    || type == MechanicType.Lluvia
+                    || (type == MechanicType.Liana && MechanicN == 0);
+                return usesKey ? (int)((_bits >> KeyShift) & DoseMask) + 1 : NoColor;
+            }
+        }
+
+        /// <summary>Id de la pareja del Remolino (0..7); el constructor de tableros lo deduce de <c>partner</c>.</summary>
+        public int MechanicPairId => (int)((_bits >> PairShift) & ThreeBitMask);
+
+        /// <summary><c>n</c>: sellos de la Liana de cuenta o gotas pendientes de la Lluvia (0..7).</summary>
+        public int MechanicN => (int)((_bits >> NShift) & ThreeBitMask);
+
+        /// <summary><c>k</c>: ritmo en vertidos de Lluvia y Piraña (0..7; 2-5 en campaña, 08 §9).</summary>
+        public int MechanicK => (int)((_bits >> KShift) & ThreeBitMask);
+
+        /// <summary>Contador de vertidos de Lluvia o Piraña (0..7).</summary>
+        public int MechanicCounter => (int)((_bits >> CounterShift) & ThreeBitMask);
+
+        /// <summary>Banderas de la mecánica (2 bits; <see cref="FlagClosed"/>).</summary>
+        public int MechanicFlags => (int)((_bits >> FlagsShift) & FlagsMask);
+
+        /// <summary>
+        /// Devuelve la cuia con la mecánica indicada y sus atributos (03 §3: la clave canónica incluye
+        /// <c>(cap, tipo, key, partner, n, k, flags)</c> y los contadores). Sustituye cualquier mecánica anterior.
+        /// </summary>
+        /// <param name="type">Mecánica; <see cref="MechanicType.None"/> equivale a <see cref="WithoutMechanic"/> (todos los atributos a 0).</param>
+        /// <param name="key">Tinte llave 1-16, o 0 si la mecánica no lo usa (se guarda tinte − 1).</param>
+        /// <param name="pairId">Id de la pareja del Remolino (0..7).</param>
+        /// <param name="n">Sellos de la Liana de cuenta o gotas pendientes de la Lluvia (0..7).</param>
+        /// <param name="k">Ritmo en vertidos (0..7).</param>
+        /// <param name="counter">Contador de vertidos (0..7).</param>
+        /// <param name="flags">Banderas (0..3; <see cref="FlagClosed"/>).</param>
+        /// <exception cref="ArgumentOutOfRangeException">Algún atributo está fuera de su campo.</exception>
+        public Cuia WithMechanic(MechanicType type, int key = 0, int pairId = 0, int n = 0, int k = 0, int counter = 0, int flags = 0)
+        {
+            if (!MechanicTypes.IsDefined(type))
+            {
+                throw new ArgumentOutOfRangeException(nameof(type), type, "Mecánica desconocida.");
+            }
+
+            if (type == MechanicType.None)
+            {
+                if (key != 0 || pairId != 0 || n != 0 || k != 0 || counter != 0 || flags != 0)
+                {
+                    throw new ArgumentException("Una cuia sin mecánica no lleva atributos.", nameof(type));
+                }
+
+                return WithoutMechanic();
+            }
+
+            if (key < 0 || key > MaxColor)
+            {
+                throw new ArgumentOutOfRangeException(nameof(key), key, "La llave es un tinte de 1 a 16, o 0 si no se usa.");
+            }
+
+            CheckField(pairId, nameof(pairId));
+            CheckField(n, nameof(n));
+            CheckField(k, nameof(k));
+            CheckField(counter, nameof(counter));
+            if (flags < 0 || flags > (int)FlagsMask)
+            {
+                throw new ArgumentOutOfRangeException(nameof(flags), flags, "Las banderas ocupan 2 bits.");
+            }
+
+            ulong field = ((ulong)type << MechanicShift)
+                | ((ulong)(key == 0 ? 0 : key - 1) << KeyShift)
+                | ((ulong)pairId << PairShift)
+                | ((ulong)n << NShift)
+                | ((ulong)k << KShift)
+                | ((ulong)counter << CounterShift)
+                | ((ulong)flags << FlagsShift);
+            return new Cuia((_bits & ~MechanicFieldMask) | field);
+        }
+
+        /// <summary>La misma cuia sin mecánica: lo que queda cuando una mecánica se abre o se suelta (02 R16 para D-007).</summary>
+        public Cuia WithoutMechanic()
+        {
+            return new Cuia(_bits & ~MechanicFieldMask);
+        }
+
+        /// <summary>La misma cuia con otro contador de vertidos (Lluvia, Piraña). Bucle caliente: no valida el rango.</summary>
+        internal Cuia WithMechanicCounter(int counter)
+        {
+            return new Cuia((_bits & ~(ThreeBitMask << CounterShift)) | ((ulong)counter << CounterShift));
+        }
+
+        /// <summary>La misma cuia con otro <c>n</c> (gotas pendientes de la Lluvia). Bucle caliente: no valida el rango.</summary>
+        internal Cuia WithMechanicN(int n)
+        {
+            return new Cuia((_bits & ~(ThreeBitMask << NShift)) | ((ulong)n << NShift));
+        }
+
         /// <summary>Color de la cima, o <see cref="NoColor"/> si está vacía. La cima siempre es visible (R7).</summary>
         public int TopColor => IsEmpty ? NoColor : RawColorAt(Count - 1);
+
+        /// <summary>
+        /// <c>barro_expuesto</c> (02 §1.2; §9.1 M5): la cima es Barro (<see cref="MudColor"/>). La cuia no es origen y, como
+        /// destino, acepta cualquier color: el primer vertido lava el barro y ocupa su lugar.
+        /// </summary>
+        public bool MudExposed => TopColor == MudColor;
 
         /// <summary>
         /// Longitud de la racha superior visible (R6): dosis contiguas desde la cima con el mismo color
@@ -222,6 +388,22 @@ namespace AF.Core.Board
         }
 
         /// <summary>
+        /// La misma cuia con las dosis de <paramref name="layerMask"/> (bit k = dosis k desde el fondo) visibles: Luciérnaga,
+        /// Pororoca y la máscara de revelado de la partida (02 T6; 04 §2.5, §2.4 a). Las demás dosis no cambian; los bits que
+        /// no son dosis ocultas se ignoran.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="layerMask"/> no es una máscara de 6 bits.</exception>
+        public Cuia WithRevealed(int layerMask)
+        {
+            if (layerMask < 0 || layerMask > (int)HiddenFieldMask)
+            {
+                throw new ArgumentOutOfRangeException(nameof(layerMask), layerMask, "La máscara de capas ocupa 6 bits.");
+            }
+
+            return new Cuia(_bits & ~((ulong)layerMask << HiddenShift));
+        }
+
+        /// <summary>
         /// Devuelve la cuia sin sus <paramref name="amount"/> dosis superiores. Aplica R7: si la nueva
         /// cima estaba oculta, queda visible.
         /// </summary>
@@ -244,7 +426,8 @@ namespace AF.Core.Board
             return new Cuia(((ulong)Capacity << CapacityShift)
                 | ((ulong)newCount << CountShift)
                 | ((ulong)hidden << HiddenShift)
-                | doses);
+                | doses
+                | (_bits & MechanicFieldMask));
         }
 
         /// <summary>Devuelve la cuia con <paramref name="amount"/> dosis visibles de <paramref name="color"/> sobre la cima.</summary>
@@ -265,6 +448,56 @@ namespace AF.Core.Board
 
             bits |= (ulong)(count + amount) << CountShift;
             return new Cuia(bits);
+        }
+
+        /// <summary>
+        /// Remolino (02 §9.1 M4): devuelve la cuia con <paramref name="amount"/> dosis visibles de <paramref name="color"/>
+        /// insertadas por el <b>fondo</b>; las demás suben (con su visibilidad). Precondición: caben (<see cref="Space"/>).
+        /// Bucle caliente: no valida.
+        /// </summary>
+        internal Cuia InsertAtBottom(int color, int amount)
+        {
+            int count = Count;
+            ulong bottom = 0;
+            for (int i = 0; i < amount; i++)
+            {
+                bottom |= (ulong)(color - 1) << (i * BitsPerDose);
+            }
+
+            ulong doses = (((_bits & DosesFieldMask) << (amount * BitsPerDose)) | bottom) & DosesFieldMask;
+            ulong hidden = ((ulong)HiddenMask << amount) & HiddenFieldMask;
+            ulong bits = (_bits & ~DosesFieldMask & ~(HiddenFieldMask << HiddenShift) & ~(ThreeBitMask << CountShift))
+                | doses
+                | (hidden << HiddenShift)
+                | ((ulong)(count + amount) << CountShift);
+            return new Cuia(bits);
+        }
+
+        /// <summary>
+        /// La misma cuia con la dosis <paramref name="index"/> de color <paramref name="color"/>, sin tocar su visibilidad: es
+        /// como AF.Solver asigna colores a las posiciones ocultas en cada realidad de Aguas turbias (03 §8). Bucle caliente: no
+        /// valida (índice dentro de la cuia, color 1-16).
+        /// </summary>
+        internal Cuia WithColorAt(int index, int color)
+        {
+            int shift = index * BitsPerDose;
+            return new Cuia((_bits & ~(DoseMask << shift)) | ((ulong)(color - 1) << shift));
+        }
+
+        /// <summary>
+        /// Lavado del Barro (02 §9.1 M5): la dosis de Barro de la cima desaparece y <paramref name="amount"/> dosis visibles de
+        /// <paramref name="color"/> ocupan su lugar (<c>espacio_efectivo + 1</c>). La dosis de debajo no queda arriba, así que
+        /// no se revela (R7) aunque esté oculta. Precondición: <see cref="MudExposed"/>; bucle caliente.
+        /// </summary>
+        internal Cuia WashMud(int color, int amount)
+        {
+            int top = Count - 1;
+            ulong bits = _bits
+                & ~(DoseMask << (top * BitsPerDose))
+                & ~(1UL << (HiddenShift + top))
+                & ~(ThreeBitMask << CountShift);
+            bits |= (ulong)top << CountShift;
+            return new Cuia(bits).AddOnTop(color, amount);
         }
 
         /// <inheritdoc />
@@ -297,7 +530,10 @@ namespace AF.Core.Board
             return left._bits != right._bits;
         }
 
-        /// <summary>Forma legible para tests y registros, del fondo a la cima: <c>Cuia(4: 3* 1 1)</c>; <c>*</c> = oculta.</summary>
+        /// <summary>
+        /// Forma legible para tests y registros, del fondo a la cima: <c>Cuia(4: 3* 1 1)</c>; <c>*</c> = oculta. Con
+        /// mecánica añade sus atributos no nulos: <c>Cuia(4: | hoja key=4 flags=1)</c>.
+        /// </summary>
         public override string ToString()
         {
             var sb = new StringBuilder(32);
@@ -312,7 +548,34 @@ namespace AF.Core.Board
                 }
             }
 
+            if (HasMechanic)
+            {
+                sb.Append(" | ").Append(MechanicTypes.ToKey(Mechanic));
+                AppendField(sb, "key", MechanicKey);
+                AppendField(sb, "pair", MechanicPairId);
+                AppendField(sb, "n", MechanicN);
+                AppendField(sb, "k", MechanicK);
+                AppendField(sb, "counter", MechanicCounter);
+                AppendField(sb, "flags", MechanicFlags);
+            }
+
             return sb.Append(')').ToString();
+        }
+
+        private static void AppendField(StringBuilder sb, string name, int value)
+        {
+            if (value != 0)
+            {
+                sb.Append(' ').Append(name).Append('=').Append(value.ToString(CultureInfo.InvariantCulture));
+            }
+        }
+
+        private static void CheckField(int value, string paramName)
+        {
+            if (value < 0 || value > MaxMechanicField)
+            {
+                throw new ArgumentOutOfRangeException(paramName, value, "Los atributos de mecánica ocupan 3 bits (0..7).");
+            }
         }
 
         private int RawColorAt(int index)

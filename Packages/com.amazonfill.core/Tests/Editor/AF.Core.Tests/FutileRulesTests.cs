@@ -238,6 +238,98 @@ namespace AF.Core.Tests
             Assert.That(SortedPacked(after), Is.EqualTo(SortedPacked(state)));
         }
 
+        // Regresiones obligatorias de 04 §5.1 sobre BoardRules, la regla de tablero del anexo B (D-007, Q13). La (4),
+        // "monocolor → vacía bajo Lluvia con gotas pendientes, o conectada a Remolino, no es fútil" (anexo B): la parte del
+        // Remolino está en RemolinoTests (C2-4); la de la Lluvia llega con C3-1.
+
+        [Test]
+        public void BoardRules_Regression1_SmallCuiaToStandardEmpty_IsNotStuck()
+        {
+            // 04 §5.1 (1): Cuia chica de 2 con 2 dosis de c (U_c = 4) → cuia estándar vacía: útil, no hay bloqueo.
+            var cuias = new[] { C(2, 1, 1), C(2, 1, 1), Cuia.Empty(4), C(4, 2, 2, 2, 2) };
+            int[] units = Board(cuias).UnitsTable;
+
+            Assert.That(BoardRules.IsLegal(cuias, 0, cuias.Length, units, 0, 2), Is.True);
+            Assert.That(BoardRules.IsFutile(cuias, 0, cuias.Length, units, 0, 2), Is.False);
+            Assert.That(BoardRules.HasUsefulMove(cuias, 0, cuias.Length, units, true), Is.True);
+            Assert.That(BoardRules.IsStuck(cuias, 0, cuias.Length, units, true), Is.False);
+        }
+
+        [Test]
+        public void BoardRules_Regression2_StandardMonocolorToStandardEmpty_IsFutile()
+        {
+            // 04 §5.1 (2): cuia estándar con 2 dosis de c → otra estándar vacía (cap_A = cap_B = U_c) es fútil.
+            var cuias = new[] { C(4, 1, 1), C(4, 2, 2, 1, 1), Cuia.Empty(4), C(4, 2, 2) };
+            int[] units = Board(cuias).UnitsTable;
+
+            Assert.That(BoardRules.IsLegal(cuias, 0, cuias.Length, units, 0, 2), Is.True);
+            Assert.That(BoardRules.IsFutile(cuias, 0, cuias.Length, units, 0, 2), Is.True);
+        }
+
+        [Test]
+        public void BoardRules_Regression3_HiddenMonocolorToEmpty_IsNotFutile()
+        {
+            // 04 §5.1 (3): una cuia monocolor visible con dosis ocultas → vacía no es fútil (verter revela información).
+            var cuias = new[] { Cuia.Create(4, new[] { 1, 1, 1, 1 }, 0x1), C(4, 2, 2, 2, 2), Cuia.Empty(4) };
+            int[] units = Board(cuias).UnitsTable;
+
+            Assert.That(BoardRules.IsFutile(cuias, 0, cuias.Length, units, 0, 2), Is.False);
+            Assert.That(BoardRules.IsStuck(cuias, 0, cuias.Length, units, true), Is.False);
+        }
+
+        [Test]
+        public void R13_IsCorrectButNotComplete_TwoUsefulPoursCanReturnToTheSameCanonicalState()
+        {
+            // Anexo B, «Pruebas»: el test literal «no existe un ciclo de vertidos útiles que vuelva al mismo estado canónico»
+            // es falso ya en el juego base. A = [1, 2, 2, 2] y B = [3, 3, 2] (cap 4): A→B mueve 1 dosis, B→A mueve 1, los dos
+            // son útiles y el tablero vuelve al inicial. R13 es correcto (no declara bloqueo con progreso posible: P1 de
+            // DotnetOnly/FutilePropertyTests) pero no completo; las propiedades P1-P3 sustituyen a ese test.
+            BoardState start = Board(C(4, 1, 2, 2, 2), C(4, 3, 3, 2));
+
+            Assert.That(PourRules.IsFutile(start, 0, 1), Is.False);
+            BoardState middle = PourRules.Apply(start, 0, 1, PourMode.Run);
+            Assert.That(PourRules.IsFutile(middle, 1, 0), Is.False);
+            BoardState back = PourRules.Apply(middle, 1, 0, PourMode.Run);
+
+            Assert.That(middle.CanonicalHash(), Is.Not.EqualTo(start.CanonicalHash()));
+            Assert.That(back.CanonicalHash(), Is.EqualTo(start.CanonicalHash()));
+            Assert.That(back.Equals(start), Is.True);
+        }
+
+        [Test]
+        public void BoardRules_AgreesWithPourRules_OnEveryPairOfTheseBoards()
+        {
+            // PourRules delega en BoardRules: mismas respuestas de legal, cantidad y futil (y CuiaRules, el envoltorio
+            // heredado, coincide en tableros sin mecánicas).
+            BoardState[] boards =
+            {
+                Board(C(4, 1, 1, 2, 2), C(4, 2, 2), C(4, 1, 1), Cuia.Empty(4)),
+                Board(C(2, 1, 1), C(3, 1), Cuia.Empty(4), C(4, 2, 2, 2, 2), Cuia.Empty(2)),
+                Board(Cuia.Create(4, new[] { 3, 1, 1 }, 0x1), C(5, 1, 1), Cuia.Empty(4), C(4, 3, 3, 3)),
+            };
+            foreach (BoardState state in boards)
+            {
+                for (int a = 0; a < state.Count; a++)
+                {
+                    for (int b = 0; b < state.Count; b++)
+                    {
+                        if (a == b)
+                        {
+                            continue;
+                        }
+
+                        bool legal = CuiaRules.IsLegal(state[a], state[b], state.UnitsTable);
+                        Assert.That(PourRules.IsLegal(state, a, b), Is.EqualTo(legal));
+                        Assert.That(PourRules.IsFutile(state, a, b), Is.EqualTo(CuiaRules.IsFutile(state[a], state[b], state.UnitsTable)));
+                        if (legal)
+                        {
+                            Assert.That(PourRules.Amount(state, a, b, PourMode.Run), Is.EqualTo(CuiaRules.Amount(state[a], state[b], PourMode.Run)));
+                        }
+                    }
+                }
+            }
+        }
+
         private static ulong[] SortedPacked(BoardState state)
         {
             var packed = new ulong[state.Count];

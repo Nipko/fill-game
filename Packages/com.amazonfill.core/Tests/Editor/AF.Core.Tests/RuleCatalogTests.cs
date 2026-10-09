@@ -51,9 +51,9 @@ namespace AF.Core.Tests
         }
 
         [Test]
-        public void R2_DoseColorIsOneToSixteen_MudAndReservedWaitForTheirMechanics()
+        public void R2_DoseColorIsOneToSixteen_ReservedIsRejected()
         {
-            // 02 R2: K_motor = 16; 1-14 tintes, 15 Barro, 16 reservado (Barro llega con 02 §9).
+            // 02 R2: K_motor = 16; 1-14 tintes, 15 Barro (02 §9.1 M5, BarroTests), 16 reservado.
             Assert.That(C(4, 1, 14).ColorAt(1), Is.EqualTo(14));
             Assert.That(() => { C(4, 0); }, Throws.TypeOf<ArgumentOutOfRangeException>());
             Assert.That(() => { C(4, 17); }, Throws.TypeOf<ArgumentOutOfRangeException>());

@@ -7,7 +7,7 @@ Generado por `dotnet run --project tools/level-generator -- --handmade tools/lev
 - Pack v0: `Assets/_Project/Data/Levels/tutorial_v0.json` (subconjunto de `af-level/1` sin `pack_schema`), SHA-256 `438e03dc74009dd33d9134d56eb3b876d9f2a69a62dda7f0261179e2cedfff0a`.
 - Resultado: **141/141 comprobaciones PASS**.
 - Notación: cuias con índices 0-based en orden visual; dosis de abajo arriba con el índice de motor del glosario §9 (8 Açaí, 4 Aguaje, 3 Taperebá, 1 Guanábana, 7 Bacaba); un vertido es `origen→destino ×dosis` (en `run`, ×dosis es la parte de la racha visible que cabe, 02 R9).
-- Bot casual ×40 (03 §6): no se calcula. El bot aún no existe en `AF.Solver` (su PRNG espera la decisión del dueño sobre la paridad con MT19937, riesgo R11 del plan) y el contrato b no lo exige para el tutorial.
+- Bot casual ×40 (03 §6): no se calcula para el tutorial, porque el contrato b no lo exige y el pack v0 no lleva `difficulty.bot_fail`. El bot ya está en `AF.Solver` (`CasualBot`, con el PRNG del núcleo de 09 R26) y lo usan `--spec` y `tools/level-qa`.
 
 ## Resumen
 
