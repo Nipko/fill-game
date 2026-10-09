@@ -2,7 +2,7 @@
 
 Generado por `dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_02_v1.json Assets/_Project/Data/Levels/mundo_03_v1.json Assets/_Project/Data/Levels/mundo_04_v1.json Assets/_Project/Data/Levels/mundo_05_v1.json --report tools/out/level_qa_report.md`: no se edita a mano.
 
-- Niveles: 190; fallos: **0**; avisos: 26.
+- Niveles: 190; fallos: **0**; avisos: 28.
 
 | Comprobación | Regla | Fallos |
 |---|---|---|
@@ -27,12 +27,12 @@ Generado por `dotnet run --project tools/level-qa -c Release -- Assets/_Project/
 | `QA-LABEL-SLOT` | etiquetas solo donde se permiten (41-59: p6, p12, p18; 61+: retos e hito; 40: hito) (D-009) | 0 |
 | `QA-LABEL-ADJ` | nunca dos niveles con etiqueta seguidos (c.3 regla 1) | 0 |
 | `QA-AFTER-LABEL` | tras cada etiqueta, el siguiente con D menor (condicion necesaria de bajar una banda; c.3 regla 2) | 0 |
-| `QA-LADDER` | escalera: 61+ D(p6) <= D(p9) <= D(p12) <= D(p15) <= D(p18) < D(p20); 41-59 D(p6) <= D(p12) <= D(p18) < D(p20), D(p9) < D(p6), D(p15) < D(p12) (c.3 regla 4) | 0 |
+| `QA-LADDER` | escalera: 61+ D(p6) <= D(p9) <= D(p12) <= D(p15) <= D(p18) < D(p20); 41-59 D(p6) <= D(p12) <= D(p18) < D(p20), D(p9) < D(p6), D(p15) < D(p12) (c.3 regla 4); 21-40: los retos suaves por debajo del hito 40 | 0 |
 | `QA-REMANSO` | p19 es un remanso puro y mas facil que la media de comodidad: D(p19) < media de D de las comodidades del ciclo sin estreno (c.4; c.3 regla 5) | 0 |
 | `QA-RAMP` | filas 11-12 de 02 sec. 13: cuias = 6 colores + 2 vacios, par 15-19 y 16-20, bot_fail 0-10 % | 0 |
 | `QA-PURE-30` | al menos un 30 % de niveles puros por ciclo completo (d.2 regla 1) | 0 |
-| `QA-WINDOW` | bot_fail < 0,20 en los tableros de estreno (03 sec. 17 #3); fuera de la ventana en otro slot, aviso (relajacion registrada por el generador) | 0 |
-| `QA-DEBUT` | tableros de estreno con 2 vacios y un solo ejemplar de la mecanica; intro_mechanic y skippable = false solo en el nivel de intro (02 sec. 9.2 regla 2) | 0 |
+| `QA-WINDOW` | bot_fail en la ventana del slot (03 sec. 17 #3; 08 sec. 4.1): falla en recuperacion, comodidad, estreno (< 0,20), remanso y rampa; un reto o un hito fuera de su ventana es aviso (c.2: se publica con la etiqueta que mide) | 0 |
+| `QA-DEBUT` | tableros de estreno con 2 vacios (tambien los de capacidad fuera de la rampa y del hito, 02 sec. 8) y un solo ejemplar de la mecanica; intro_mechanic y skippable = false solo en el nivel de intro (02 sec. 9.2 regla 2) | 0 |
 | `QA-LABEL-ACCURACY` | aviso: acierto de etiqueta por ciclo < 60 % (c.7) | 0 |
 | `QA-RELIEF-MIN` | relief con al menos una variante desde el nivel 31 (03 sec. 13; 08 sec. 4.1) | 0 |
 | `QA-RELIEF-VALID` | cada variante es un tablero valido (BoardBuilder y LevelValidation) | 0 |
@@ -53,9 +53,13 @@ Generado por `dotnet run --project tools/level-qa -c Release -- Assets/_Project/
 | `QA-MURKY-SAFE` | ruta segura en cada estado de la ruta (03 sec. 8; 02 T5) | 0 |
 | `QA-MURKY-COMBO` | sin Lluvia, Pirana, Liana ni Remolino en el nivel (Q14 A; [P] Remolino) | 0 |
 | `QA-MURKY-Q9` | estreno del 100: una cuia, 2 dosis ocultas y ninguna otra mecanica (Q9) | 0 |
+| `QA-SCHEMA` | JSON valido contra schemas/af-level-1.schema.json con python tools/validate_schema.py --pack; sin Python o sin jsonschema, falla (08 sec. 4.1; 03 sec. 17 #11) | 0 |
+| `QA-REPRO` | la especificacion y las semillas reproducen el pack byte a byte: se regenera la campana completa en memoria (03 sec. 17 #10; 08 sec. 2.4 y 4.1) | 0 |
+| `QA-BAND-Q` | banda medida (cuantil de D en el pool del rango) acorde al rol: comodidad, estreno, remanso y rampa <= 0,70; recuperacion <= 0,10 o D bajo la comodidad mas facil del ciclo; hito > 0,95 o par - 2K >= media del pool (03 sec. 7; c.3 reglas 3 y 5) | 0 |
 
 ## Incidencias
 
+- aviso `QA-BAND-Q` nivel 22 (`Assets/_Project/Data/Levels/mundo_02_v1.json`): recuperacion en banda comodidad (q 0.267); cumple el minimo: D -0.34 < comodidad mas facil del ciclo (-0.30)
 - aviso `QA-CUIAS` nivel 31 (`Assets/_Project/Data/Levels/mundo_02_v1.json`): 8 cuias (K = 7); el rango 31-60 pide 9-11 (03 sec. 11)
 - aviso `QA-CUIAS` nivel 36 (`Assets/_Project/Data/Levels/mundo_02_v1.json`): 8 cuias (K = 7); el rango 31-60 pide 9-11 (03 sec. 11)
 - aviso `QA-CUIAS` nivel 37 (`Assets/_Project/Data/Levels/mundo_02_v1.json`): 8 cuias (K = 7); el rango 31-60 pide 9-11 (03 sec. 11)
@@ -80,5 +84,6 @@ Generado por `dotnet run --project tools/level-qa -c Release -- Assets/_Project/
 - aviso `QA-CUIAS` nivel 90 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 9 cuias (K = 8); el rango 61-100 pide 10-12 (03 sec. 11)
 - aviso `QA-CUIAS` nivel 94 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 9 cuias (K = 8); el rango 61-100 pide 10-12 (03 sec. 11)
 - aviso `QA-CUIAS` nivel 96 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): 9 cuias (K = 8); el rango 61-100 pide 10-12 (03 sec. 11)
+- aviso `QA-BAND-Q` nivel 100 (`Assets/_Project/Data/Levels/mundo_04_v1.json`): hito en banda reto (q 0.899); cumple el minimo: par - 2K = 4 >= media del pool (3.0)
 - aviso `QA-WINDOW` nivel 166 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): bot_fail 0.675 fuera de la ventana [0.75, 0.90) (reto)
 - aviso `QA-WINDOW` nivel 189 (`Assets/_Project/Data/Levels/mundo_05_v1.json`): bot_fail 0.725 fuera de la ventana [0.75, 0.90) (reto)

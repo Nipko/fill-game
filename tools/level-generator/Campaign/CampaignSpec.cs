@@ -186,6 +186,14 @@ internal sealed class LevelPlan
     /// del ciclo (p3-p5, p7-p8, p10-p11, p13-p14, p16-p17) que no es tablero de estreno. La usan la colocación y QA-REMANSO.
     /// </summary>
     public bool IsComfortReference => !Ramp && Role == SlotRole.Comfort && !DebutBoard;
+
+    /// <summary>
+    /// Se puede publicar fuera de la ventana del slot: solo los retos y el hito del ciclo (propuesta c.2: un reto que mide por
+    /// debajo de su ventana se publica con la etiqueta que mide, sin chip; el generador lo registra). En recuperación,
+    /// comodidad, estreno, remanso y rampa, un bot_fail fuera de la ventana falla el CI (03 §17 #3; 08 §4.1). La regla la
+    /// aplican la colocación del generador y tools/level-qa (QA-WINDOW).
+    /// </summary>
+    public bool OutOfWindowAllowed => !Ramp && Role is SlotRole.Challenge or SlotRole.Milestone;
 }
 
 internal sealed class CampaignSpec
@@ -395,9 +403,11 @@ internal sealed class CampaignSpec
 
     private Interval WindowFor(int level, int position, SlotRole role, bool debutBoard)
     {
+        // Un tablero de estreno es fácil en cualquier posición que no sea el hito (02 §8: «la mecánica debuta en 2-3 tableros
+        // fáciles»; 03 §12: < 20 % en debuts): también el de la Cuia chica de 3 en el p2 del 22.
         string key = role switch
         {
-            SlotRole.Recovery => "recovery",
+            SlotRole.Recovery => debutBoard ? "debut" : "recovery",
             SlotRole.Comfort => debutBoard ? "debut" : "comfort",
             SlotRole.Remanso => "remanso",
             SlotRole.Challenge => level <= FirstHard ? "challenge_21_40"

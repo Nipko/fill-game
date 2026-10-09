@@ -401,8 +401,10 @@ internal sealed class SlotGenerator(CampaignSpec spec)
 
         // La Cuia chica «cuenta como vacío para la aritmética del nivel, pero de valor reducido» (02 §8): en los niveles con
         // Cuia chica, cada una ocupa uno de los vacíos del rol, dejando al menos un vacío de 4 [P]. La cueva de la Piraña
-        // es una mecánica y no cuenta.
-        int standard = Math.Max(1, empties - chicas.Count);
+        // es una mecánica y no cuenta. Excepción: el estreno de una capacidad fuera de la rampa y del hito (la Cuia chica de 3
+        // en el 22, p2) conserva los 2 vacíos libres de su posición, como los estrenos de 02 §9.2 regla 2.
+        bool capacityDebut = plan.DebutBoard && !plan.Ramp && plan.Mechanics.Count == 0 && plan.Role is SlotRole.Recovery or SlotRole.Comfort;
+        int standard = capacityDebut ? empties : Math.Max(1, empties - chicas.Count);
         // Mecánicas que ocupan un vacío (Hoja, Matapi, Lluvia): en los tableros de estreno la primera ocupa uno de los 2
         // vacíos (ejemplo de 08 §4.1); en comodidad cada una trae su vacío; en retos e hitos ocupan los vacíos del rol
         // (un vacío reservado ya da casi tanto margen como uno libre) salvo al aliviar [P].

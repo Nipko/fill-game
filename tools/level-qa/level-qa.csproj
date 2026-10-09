@@ -24,4 +24,10 @@
     <Compile Include="../level-generator/Metrics/ReferencePath.cs" Link="Shared/ReferencePath.cs" />
     <Compile Include="../level-generator/Metrics/Relief.cs" Link="Shared/Relief.cs" />
   </ItemGroup>
+
+  <!-- La compuerta regenera la campaña en memoria para comprobar la reproducibilidad (QA-REPRO, 03 §17 #10) y medir la
+       banda de cada nivel en el pool (QA-BAND-Q, 03 §7): el mismo código de generación, enlazado. -->
+  <ItemGroup>
+    <Compile Include="../level-generator/Generation/*.cs" LinkBase="Shared/Generation" />
+  </ItemGroup>
 </Project>

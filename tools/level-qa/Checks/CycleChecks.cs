@@ -16,12 +16,12 @@ internal static class CycleChecks
         ("QA-LABEL-SLOT", "etiquetas solo donde se permiten (41-59: p6, p12, p18; 61+: retos e hito; 40: hito) (D-009)"),
         ("QA-LABEL-ADJ", "nunca dos niveles con etiqueta seguidos (c.3 regla 1)"),
         ("QA-AFTER-LABEL", "tras cada etiqueta, el siguiente con D menor (condicion necesaria de bajar una banda; c.3 regla 2)"),
-        ("QA-LADDER", "escalera: 61+ D(p6) <= D(p9) <= D(p12) <= D(p15) <= D(p18) < D(p20); 41-59 D(p6) <= D(p12) <= D(p18) < D(p20), D(p9) < D(p6), D(p15) < D(p12) (c.3 regla 4)"),
+        ("QA-LADDER", "escalera: 61+ D(p6) <= D(p9) <= D(p12) <= D(p15) <= D(p18) < D(p20); 41-59 D(p6) <= D(p12) <= D(p18) < D(p20), D(p9) < D(p6), D(p15) < D(p12) (c.3 regla 4); 21-40: los retos suaves por debajo del hito 40"),
         ("QA-REMANSO", "p19 es un remanso puro y mas facil que la media de comodidad: D(p19) < media de D de las comodidades del ciclo sin estreno (c.4; c.3 regla 5)"),
         ("QA-RAMP", "filas 11-12 de 02 sec. 13: cuias = 6 colores + 2 vacios, par 15-19 y 16-20, bot_fail 0-10 %"),
         ("QA-PURE-30", "al menos un 30 % de niveles puros por ciclo completo (d.2 regla 1)"),
-        ("QA-WINDOW", "bot_fail < 0,20 en los tableros de estreno (03 sec. 17 #3); fuera de la ventana en otro slot, aviso (relajacion registrada por el generador)"),
-        ("QA-DEBUT", "tableros de estreno con 2 vacios y un solo ejemplar de la mecanica; intro_mechanic y skippable = false solo en el nivel de intro (02 sec. 9.2 regla 2)"),
+        ("QA-WINDOW", "bot_fail en la ventana del slot (03 sec. 17 #3; 08 sec. 4.1): falla en recuperacion, comodidad, estreno (< 0,20), remanso y rampa; un reto o un hito fuera de su ventana es aviso (c.2: se publica con la etiqueta que mide)"),
+        ("QA-DEBUT", "tableros de estreno con 2 vacios (tambien los de capacidad fuera de la rampa y del hito, 02 sec. 8) y un solo ejemplar de la mecanica; intro_mechanic y skippable = false solo en el nivel de intro (02 sec. 9.2 regla 2)"),
         ("QA-LABEL-ACCURACY", "aviso: acierto de etiqueta por ciclo < 60 % (c.7)"),
     ];
 
@@ -64,26 +64,33 @@ internal static class CycleChecks
                 yield return Fail("QA-LABEL-SLOT", $"etiqueta {lv.Label} en un slot que admite {plan.AllowedLabel ?? "ninguna"}");
             }
 
-            // Ventana del slot (03 §17 #3): obligatoria en los tableros de estreno (< 0,20, 02 §9.2 regla 2); en el resto es el
-            // objetivo del generador, que registra su relajación (03 §4.4; c.2: un reto que mide menos del 75 % se publica sin
-            // etiqueta), así que aquí es un aviso. Las etiquetas por encima de lo permitido las detiene QA-LABEL-SLOT.
+            // Ventana del slot (03 §17 #3 y 08 §4.1: un bot_fail fuera de la ventana del slot falla el CI; < 0,20 en los estrenos,
+            // 02 §9.2 regla 2). La única excepción es la de c.2 de D-009: un reto o el hito fuera de su ventana se publica con la
+            // etiqueta que mide (sin chip si mide menos del 75 %) y el generador lo registra; ahí queda en aviso
+            // (LevelPlan.OutOfWindowAllowed). Las etiquetas por encima de lo permitido las detienen QA-LABEL-SLOT y QA-LABEL-EARLY.
             if (!plan.Window.Contains(lv.BotFail))
             {
-                bool debut = plan.DebutBoard && plan.Role == SlotRole.Comfort;
                 yield return new QaIssue("QA-WINDOW", lv.Pack, lv.Level,
                     string.Create(CultureInfo.InvariantCulture, $"bot_fail {lv.BotFail:0.000} fuera de la ventana {plan.Window} ({plan.RoleName})"),
-                    Warning: !debut);
+                    Warning: plan.OutOfWindowAllowed);
             }
 
-            // Estreno (02 §9.2 regla 2; 03 §9 consecuencia 3).
-            if (plan.DebutBoard && plan.Mechanics.Count > 0 && plan.Role == SlotRole.Comfort)
+            // Estreno (02 §9.2 regla 2; 03 §9 consecuencia 3): 2 vacíos y un solo ejemplar. El estreno de una capacidad fuera de
+            // la rampa y del hito (la Cuia chica de 3 en el 22, p2) también lleva 2 vacíos libres (02 §8: «la mecánica debuta en
+            // 2-3 tableros fáciles»); su Cuia chica no cuenta como vacío.
+            bool mechanicDebut = plan.DebutBoard && plan.Mechanics.Count > 0 && plan.Role == SlotRole.Comfort;
+            bool capacityDebut = plan.DebutBoard && plan.Mechanics.Count == 0 && !plan.Ramp && plan.Role is SlotRole.Recovery or SlotRole.Comfort;
+            if (mechanicDebut || capacityDebut)
             {
                 int empties = lv.Board.Cuias.Select((c, i) => (c, i)).Count(x => x.c.Length == 0 && lv.Board.Caps[x.i] >= Cuia.DefaultCapacity);
                 if (empties < 2)
                 {
                     yield return Fail("QA-DEBUT", string.Create(CultureInfo.InvariantCulture, $"tablero de estreno con {empties} vacio(s); lleva 2"));
                 }
+            }
 
+            if (mechanicDebut)
+            {
                 int instances = MechanicChecks.Instances(lv.Board);
                 if (instances != 1)
                 {
@@ -190,6 +197,20 @@ internal static class CycleChecks
     {
         if (start + 19 <= spec.FirstHard)
         {
+            // 21-40: retos suaves sin etiqueta y sin escalera, pero todos por debajo del hito 40, el primer Difícil (03 §7: «la
+            // banda coloca»; c.3 regla 5: el pico tras el respiro).
+            if (at.TryGetValue(20, out QaLevel? first))
+            {
+                foreach (int p in new[] { 6, 9, 12, 15, 18 })
+                {
+                    if (at.TryGetValue(p, out QaLevel? soft) && !(soft.D < first.D - 1e-9))
+                    {
+                        yield return new QaIssue("QA-LADDER", soft.Pack, soft.Level, string.Create(CultureInfo.InvariantCulture,
+                            $"reto suave p{p}: D = {soft.D:0.00} no queda por debajo del hito {first.Level} (D = {first.D:0.00})"));
+                    }
+                }
+            }
+
             yield break;
         }
 

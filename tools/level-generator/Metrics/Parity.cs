@@ -41,7 +41,7 @@ internal static class Parity
                 rows.Add(Measure(metrics, source, level));
                 Row r = rows[^1];
                 Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
-                    $"{r.Source,-38} {r.Id}: par {r.ProtoPar}/{r.Par} compl {r.ProtoComplexity}/{r.Complexity} ramif {r.ProtoBranching:0.00}/{r.Branching:0.00} trampas {r.ProtoTraps:0.000}/{r.Traps:0.000} -1 color {Fmt(r.ProtoMinusColor)}({Fmt(r.ProtoMinusPar)})/{Fmt(r.MinusColor)}({Fmt(r.MinusPar)})"));
+                    $"{r.Source,-38} {r.Id}: par {r.ProtoPar}/{r.Par} compl {r.ProtoComplexity}/{r.Complexity} ramif {r.ProtoBranching:0.00}/{Ours(r.Branching, 2)} trampas {r.ProtoTraps:0.000}/{Ours(r.Traps, 3)} -1 color {Fmt(r.ProtoMinusColor)}({Fmt(r.ProtoMinusPar)})/{Fmt(r.MinusColor)}({Fmt(r.MinusPar)})"));
             }
         }
 
@@ -97,6 +97,14 @@ internal static class Parity
         Math.Round(proto, 2, MidpointRounding.ToEven)
         == Math.Round(Math.Round(ours, protoDecimals, MidpointRounding.ToEven), 2, MidpointRounding.ToEven);
 
+    /// <summary>
+    /// La cifra de C# tal como se compara en <see cref="Same2"/>: redondeada al par (<c>ToEven</c>) a los decimales con los
+    /// que publicó el prototipo. El formato <c>0.00</c> redondea alejándose de cero (6,125 → 6,13) y el informe mostraría
+    /// otra cifra que la comparada (6,12).
+    /// </summary>
+    private static string Ours(double ours, int protoDecimals) =>
+        Math.Round(ours, protoDecimals, MidpointRounding.ToEven).ToString(protoDecimals == 2 ? "0.00" : "0.000", CultureInfo.InvariantCulture);
+
     private static string Fmt(int? v) => v?.ToString(CultureInfo.InvariantCulture) ?? "-";
 
     private static string Report(List<Row> rows, int parEq, int complexityEq, int branchingEq, int solverMovesEq, int trapsEq, int minusEq, int minusTotal, bool ok)
@@ -124,8 +132,8 @@ internal static class Parity
         W("|---|---|---|---|---|---|---|---|---|");
         foreach (Row r in rows)
         {
-            string branch = Same2(r.ProtoBranching, r.Branching) ? $"{r.ProtoBranching:0.00} / {r.Branching:0.00}" : $"**{r.ProtoBranching:0.00} / {r.Branching:0.00}**";
-            string traps = Same2(r.ProtoTraps, r.Traps, 3) ? $"{r.ProtoTraps:0.000} / {r.Traps:0.000}" : $"**{r.ProtoTraps:0.000} / {r.Traps:0.000}**";
+            string branch = Same2(r.ProtoBranching, r.Branching) ? $"{r.ProtoBranching:0.00} / {Ours(r.Branching, 2)}" : $"**{r.ProtoBranching:0.00} / {Ours(r.Branching, 2)}**";
+            string traps = Same2(r.ProtoTraps, r.Traps, 3) ? $"{r.ProtoTraps:0.000} / {Ours(r.Traps, 3)}" : $"**{r.ProtoTraps:0.000} / {Ours(r.Traps, 3)}**";
             string minus = $"{Fmt(r.ProtoMinusColor)} ({Fmt(r.ProtoMinusPar)}) / {Fmt(r.MinusColor)} ({Fmt(r.MinusPar)})";
             W(string.Create(CultureInfo.InvariantCulture,
                 $"| `{r.Source}` | {r.Id} | {r.K} | {r.E} | {r.ProtoPar} / {r.Par} | {r.ProtoComplexity} / {r.Complexity} | {branch} | {traps} ({r.TrapPairs}{(r.TrapUnknown > 0 ? $", {r.TrapUnknown} sin decidir" : "")}) | {minus} |"));
@@ -144,7 +152,8 @@ internal static class Parity
         W("3. **Trampas:** los pares son esos `MOVIMIENTOS` en el orden real de cada estado de la ruta; con más de 120 se toma el "
           + "índice entero ⌊k·n/120⌋ [P] en lugar de `int(k·n/120.0)` del prototipo.");
         W("4. **Redondeo:** las cifras del prototipo están redondeadas por Python (al par en el punto medio); la comparación "
-          + "redondea las de C# igual (`MidpointRounding.ToEven`).");
+          + "redondea las de C# igual (`MidpointRounding.ToEven`) y la tabla imprime la cifra de C# ya redondeada así, la misma que "
+          + "se compara.");
         W();
         W("## Diferencias");
         W();
@@ -160,7 +169,7 @@ internal static class Parity
             foreach (Row r in diffs)
             {
                 W(string.Create(CultureInfo.InvariantCulture,
-                    $"| {r.Id} (`{r.Source}`) | {r.ProtoBranching:0.00} / {r.Branching:0.00} | {r.ProtoTraps:0.000} / {r.Traps:0.000} | {r.TrapPairs} |"));
+                    $"| {r.Id} (`{r.Source}`) | {r.ProtoBranching:0.00} / {Ours(r.Branching, 2)} | {r.ProtoTraps:0.000} / {Ours(r.Traps, 3)} | {r.TrapPairs} |"));
             }
 
             W();

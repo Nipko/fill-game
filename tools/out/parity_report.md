@@ -16,7 +16,7 @@ Generado por `dotnet run --project tools/level-generator -- --parity`: no se edi
 | `tools/out/levels_proto.json` | proto_n0002 | 6 | 2 | 15 / 15 | 38 / 38 | 5.20 / 5.20 | 0.000 / 0.000 (78) | 4 (14) / 4 (14) |
 | `tools/out/levels_proto.json` | proto_n0003 | 6 | 1 | 12 / 12 | 34 / 34 | 2.50 / 2.50 | 0.100 / 0.100 (30) | 5 (11) / 5 (11) |
 | `tools/out/levels_proto.json` | proto_n0004 | 7 | 2 | 19 / 19 | 48 / 48 | 3.32 / 3.32 | 0.016 / 0.016 (63, 1 sin decidir) | 6 (17) / 6 (17) |
-| `tools/out/levels_proto.json` | proto_n0005 | 8 | 2 | 16 / 16 | 42 / 42 | 6.12 / 6.13 | 0.000 / 0.000 (98) | 5 (15) / 5 (15) |
+| `tools/out/levels_proto.json` | proto_n0005 | 8 | 2 | 16 / 16 | 42 / 42 | 6.12 / 6.12 | 0.000 / 0.000 (98) | 5 (15) / 5 (15) |
 | `tools/out/levels_proto.json` | proto_n0006 | 9 | 2 | 18 / 18 | 50 / 50 | 7.22 / 7.22 | 0.000 / 0.000 (120) | 6 (17) / 6 (17) |
 | `tools/out/levels_proto.json` | proto_n0007 | 10 | 2 | 21 / 21 | 56 / 56 | 7.43 / 7.43 | 0.000 / 0.000 (120, 11 sin decidir) | 4 (19) / 4 (19) |
 | `tools/out/levels_proto.json` | proto_n0008 | 11 | 1 | 22 / 22 | 58 / 58 | 2.86 / 2.86 | 0.190 / 0.190 (63) | 1 (20) / 1 (20) |
@@ -58,7 +58,7 @@ Generado por `dotnet run --project tools/level-generator -- --parity`: no se edi
 1. **Ruta óptima de referencia.** Con varias soluciones de la misma longitud, la ramificación y las trampas dependen de la ruta medida. `AF.Solver` expande en el orden canónico de las cuias y el prototipo en el orden real del estado guardado. `Metrics/ReferencePath.cs` repite el `ASTAR` de 03 §5 en el orden del prototipo (encola `(f, g, llegada)`) con las reglas y la heurística de `AF.Core`/`AF.Solver`; se usa solo si su ruta tiene la longitud del par de `AF.Solver` [P].
 2. **Ramificación = `|MOVIMIENTOS(S)|` literal de 03 §5** (legales y no fútiles, un vacío por capacidad y mecánica y por origen), que es la definición de 03 §7. `AF.Solver.SolverMoves` funde además orígenes y destinos idénticos y daría otra cifra en los tableros con dos cuias iguales [P].
 3. **Trampas:** los pares son esos `MOVIMIENTOS` en el orden real de cada estado de la ruta; con más de 120 se toma el índice entero ⌊k·n/120⌋ [P] en lugar de `int(k·n/120.0)` del prototipo.
-4. **Redondeo:** las cifras del prototipo están redondeadas por Python (al par en el punto medio); la comparación redondea las de C# igual (`MidpointRounding.ToEven`).
+4. **Redondeo:** las cifras del prototipo están redondeadas por Python (al par en el punto medio); la comparación redondea las de C# igual (`MidpointRounding.ToEven`) y la tabla imprime la cifra de C# ya redondeada así, la misma que se compara.
 
 ## Diferencias
 

@@ -1,12 +1,21 @@
 // Colocación de los candidatos en el ciclo de 20 de D-009 (propuesta c.3, reglas del escalón 1-7; 03 §12) con una
 // programación dinámica por ciclo. Restricciones duras (las comprueba también tools/level-qa):
+//   - ventana del slot: solo un reto o el hito pueden quedar fuera de ella (c.2; LevelPlan.OutOfWindowAllowed); en
+//     recuperación, comodidad, estreno, remanso y rampa, nunca (03 §17 #3; 08 §4.1; QA-WINDOW);
+//   - banda medida por rol (03 §7: «la banda coloca»; cuantil de D en el pool del rango; QA-BAND-Q):
+//       · comodidad, estreno, remanso y rampa: como mucho banda de comodidad (q ≤ 0,70);
+//       · hito (p20, «Pico» de c.3): banda de hito (q > 0,95) o, como mínimo, par − 2K ≥ la media del pool del rango;
+//       · recuperación (p1-p2, c.3 regla 3): banda de recuperación (q ≤ 0,10) o, como mínimo, D por debajo de la comodidad
+//         más fácil del ciclo (PlaceCycle);
 //   - tras cada nivel con etiqueta, el siguiente baja al menos una banda entera de D (y su D es menor);
 //   - escalera desde el 61: D(p6) ≤ D(p9) ≤ D(p12) ≤ D(p15) ≤ D(p18) < D(p20);
 //   - escalera en 41-59: D(p6) ≤ D(p12) ≤ D(p18) < D(p20), con D(p9) < D(p6) y D(p15) < D(p12);
+//   - en 21-40 (retos suaves sin etiqueta): todos los retos por debajo del hito 40, el primer Difícil;
 //   - anti-repetición (03 §17 #9): forma distinta de la de los 200 niveles anteriores y Hamming ≥ 25 % con los 20 anteriores;
 //   - remanso (p19) más fácil que la media de comodidad del ciclo (c.4; c.3 regla 5): D(p19) < media de D de las comodidades
 //     que no son tableros de estreno (PlaceCycle).
-// Blandas (penalizan y se registran): salto entre niveles consecutivos de +2,2 / −3,4 bandas continuas (03 §12).
+// Blandas (penalizan y se registran): salto entre niveles consecutivos de +2,2 / −3,4 bandas continuas (03 §12); una
+// recuperación fuera de su banda o un hito fuera de la suya (cuando cumplen el mínimo de arriba) penalizan fuerte.
 // «Nunca dos etiquetados seguidos», el remanso antes del hito y las dos recuperaciones salen de los roles del calendario.
 // D se compara redondeado a 2 decimales, como se publica.
 using AmazonFill.Tools.LevelGenerator.Campaign;
@@ -34,25 +43,20 @@ internal static class Placement
     /// </summary>
     public static Dictionary<int, Candidate>? PlaceBlock(
         CampaignSpec spec, IReadOnlyList<SlotResult> block, Candidate? previous, IReadOnlyList<Candidate> history,
-        Func<Candidate, bool> excluded, bool strictBand = true)
+        Func<Candidate, bool> excluded, IReadOnlyDictionary<RangeInfo, RangeStats> stats, bool strictBand = true)
     {
         int n = block.Count;
         var options = new List<Candidate>[n];
         for (int i = 0; i < n; i++)
         {
-            // El pool en ventana primero; después los candidatos de relajación medidos (fuera de la ventana), que la
-            // programación dinámica solo usa si hace falta (penalización OutOfWindowPenalty).
-            options[i] = block[i].Candidates.Where(c => c.PoolMember && !excluded(c))
-                .Concat(block[i].Candidates.Where(c => c.Measured && c.Reject is null && !c.InWindow && !excluded(c)))
-                .ToList();
-
+            options[i] = Options(block[i], stats[block[i].Plan.Range], excluded);
             if (options[i].Count == 0)
             {
                 return null;
             }
         }
 
-        // Estado: (candidato elegido en el nivel i, último reto de la escalera o null). Coste: penalización blanda.
+        // Estado: (candidato elegido en el nivel i, reto de referencia de la escalera o null). Coste: penalización blanda.
         var layer = new Dictionary<(int Cand, int Ladder), (double Cost, (int Cand, int Ladder) Prev)>();
         var steps = new List<Dictionary<(int Cand, int Ladder), (double Cost, (int Cand, int Ladder) Prev)>>();
         for (int i = 0; i < n; i++)
@@ -65,7 +69,7 @@ internal static class Placement
             foreach (((int prevCand, int ladder), double cost) in sources)
             {
                 Candidate? prev = i == 0 ? previous : options[i - 1][prevCand];
-                Candidate? ladderCand = LadderCandidate(block, options, ladder);
+                Candidate? ladderCand = LadderCandidate(options, ladder);
                 for (int c = 0; c < options[i].Count; c++)
                 {
                     Candidate cand = options[i][c];
@@ -74,9 +78,10 @@ internal static class Placement
                         continue;
                     }
 
-                    int newLadder = IsLadderSlot(spec, plan) ? Encode(i, c) : ladder;
+                    int newLadder = NextLadder(spec, plan, ladder, ladderCand, cand, Encode(i, c));
                     double newCost = cost + JumpPenalty(prev, cand) + (BandDropMissing(prev, cand) ? BandPenalty : 0)
-                        + (cand.InWindow ? 0 : OutOfWindowPenalty + (10 * plan.Window.Distance(cand.Bot))) + (c * 1e-6);
+                        + (cand.InWindow ? 0 : OutOfWindowPenalty + (10 * plan.Window.Distance(cand.Bot)))
+                        + RoleBandPenalty(plan, cand) + (c * 1e-6);
                     var key = (c, newLadder);
                     if (!next.TryGetValue(key, out var best) || newCost < best.Cost - 1e-12)
                     {
@@ -109,20 +114,102 @@ internal static class Placement
     }
 
     /// <summary>
-    /// <see cref="PlaceBlock"/> con la restricción del remanso (propuesta c.4: p19 «puro, más fácil que la media de comodidad»;
-    /// c.3 regla 5: respiro antes del pico): D(p19) &lt; media de D de las comodidades del ciclo que no son tableros de estreno.
-    /// La media depende de la colocación, así que se coloca, se comprueba y se excluyen del p19 los candidatos con D ≥ media
-    /// hasta que se cumple o el p19 se queda sin opciones (null: el llamante pide más candidatos).
+    /// Candidatos que la colocación puede usar en el slot: el pool en ventana primero; después, solo en un reto o el hito
+    /// (c.2), los candidatos de relajación medidos fuera de la ventana, que la programación dinámica solo usa si hace falta
+    /// (penalización OutOfWindowPenalty). Todos cumplen la banda de su rol (<see cref="BandAdmissible"/>).
+    /// </summary>
+    public static List<Candidate> Options(SlotResult slot, RangeStats stats, Func<Candidate, bool> excluded)
+    {
+        LevelPlan plan = slot.Plan;
+        IEnumerable<Candidate> relaxed = plan.OutOfWindowAllowed
+            ? slot.Candidates.Where(c => c.Measured && c.Reject is null && !c.InWindow)
+            : [];
+        return slot.Candidates.Where(c => c.PoolMember).Concat(relaxed)
+            .Where(c => !excluded(c) && BandAdmissible(plan, c, stats))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Restricción de banda de un candidato que no depende del resto del ciclo (03 §7: «la banda coloca»): comodidad,
+    /// estreno, remanso y rampa como mucho en banda de comodidad; el hito en banda de hito o con par − 2K ≥ la media del pool.
+    /// La de la recuperación depende de las comodidades colocadas: la impone <see cref="PlaceCycle"/>.
+    /// </summary>
+    public static bool BandAdmissible(LevelPlan plan, Candidate c, RangeStats stats) => plan.Role switch
+    {
+        SlotRole.Comfort or SlotRole.Remanso => ComfortBandOk(c.Quantile),
+        SlotRole.Milestone => MilestoneOk(c.Quantile, c.Par, c.K, stats),
+        _ => true,
+    };
+
+    /// <summary>Comodidad, estreno, remanso y rampa: como mucho banda de comodidad (q ≤ 0,70; 03 §7).</summary>
+    public static bool ComfortBandOk(double quantile) => Pool.BandIndex(quantile) <= 1;
+
+    /// <summary>
+    /// Hito (p20, «Pico» de c.3; 03 §7: hito > 0,95): banda de hito o, como mínimo, par − 2K ≥ la media de par − 2K del pool
+    /// del rango (un hito corto que solo castiga la apertura no es el pico del ciclo).
+    /// </summary>
+    public static bool MilestoneOk(double quantile, int par, int k, RangeStats stats) =>
+        Pool.BandIndex(quantile) == 3 || par - (2 * k) >= stats.ParExcess.Mean - 1e-9;
+
+    /// <summary>
+    /// Recuperación (p1-p2; c.3 regla 3: tras el hito, dos niveles de recuperación; 03 §7: recuperación ≤ 0,10): banda de
+    /// recuperación o, como mínimo, D (redondeado) por debajo de la comodidad más fácil del ciclo (sin estrenos). Sin
+    /// comodidades de referencia, solo vale la banda.
+    /// </summary>
+    public static bool RecoveryOk(double quantile, double roundedD, double? comfortMin) =>
+        Pool.BandIndex(quantile) == 0 || (comfortMin is double m && roundedD < m - 1e-9);
+
+    /// <summary>
+    /// <see cref="PlaceBlock"/> con las restricciones que dependen de la colocación de todo el ciclo:
+    ///   - recuperación (c.3 regla 3): <see cref="RecoveryOk"/> con la comodidad más fácil del ciclo. Se resuelve con un
+    ///     umbral T: las recuperaciones fuera de la banda de recuperación tienen D ≤ T y todas las comodidades de referencia
+    ///     D &gt; T. Primero sin ninguna recuperación fuera de su banda (T = −∞) y después con los D de las recuperaciones
+    ///     candidatas en orden creciente: gana el primer T con colocación (la recuperación más fácil posible);
+    ///   - remanso (propuesta c.4: p19 «puro, más fácil que la media de comodidad»; c.3 regla 5: respiro antes del pico):
+    ///     D(p19) &lt; media de D de las comodidades del ciclo que no son tableros de estreno. La media depende de la
+    ///     colocación: se coloca, se comprueba y se excluyen del p19 los candidatos con D ≥ media hasta que se cumple.
+    /// Null si ningún umbral tiene colocación (el llamante pide más candidatos).
     /// </summary>
     public static Dictionary<int, Candidate>? PlaceCycle(
         CampaignSpec spec, IReadOnlyList<SlotResult> block, Candidate? previous, IReadOnlyList<Candidate> history,
-        Func<Candidate, bool> excluded, bool strictBand = true)
+        Func<Candidate, bool> excluded, IReadOnlyDictionary<RangeInfo, RangeStats> stats, bool strictBand = true)
+    {
+        var recoveryLevels = block.Where(s => !s.Plan.Ramp && s.Plan.Role == SlotRole.Recovery).Select(s => s.Plan.Level).ToHashSet();
+        var comfortLevels = block.Where(s => s.Plan.IsComfortReference).Select(s => s.Plan.Level).ToHashSet();
+        var thresholds = new List<double?> { null };
+        if (comfortLevels.Count > 0)
+        {
+            thresholds.AddRange(block.Where(s => recoveryLevels.Contains(s.Plan.Level))
+                .SelectMany(s => Options(s, stats[s.Plan.Range], excluded))
+                .Where(c => Pool.BandIndex(c.Quantile) > 0)
+                .Select(c => Rounded(c.D)).Distinct().Order().Select(d => (double?)d));
+        }
+
+        foreach (double? t in thresholds)
+        {
+            bool OutOfThreshold(Candidate c) =>
+                (recoveryLevels.Contains(c.Level) && Pool.BandIndex(c.Quantile) > 0 && (t is not double r || Rounded(c.D) > r + 1e-9))
+                || (t is double u && comfortLevels.Contains(c.Level) && Rounded(c.D) <= u + 1e-9);
+
+            Dictionary<int, Candidate>? placed = PlaceWithRemanso(spec, block, previous, history, c => excluded(c) || OutOfThreshold(c), stats, strictBand);
+            if (placed is not null)
+            {
+                return placed;
+            }
+        }
+
+        return null;
+    }
+
+    private static Dictionary<int, Candidate>? PlaceWithRemanso(
+        CampaignSpec spec, IReadOnlyList<SlotResult> block, Candidate? previous, IReadOnlyList<Candidate> history,
+        Func<Candidate, bool> excluded, IReadOnlyDictionary<RangeInfo, RangeStats> stats, bool strictBand)
     {
         SlotResult? remanso = block.FirstOrDefault(s => s.Plan.Role == SlotRole.Remanso);
         var tooHard = new HashSet<Candidate>();
         for (int guard = 0; guard < 256; guard++)
         {
-            Dictionary<int, Candidate>? placed = PlaceBlock(spec, block, previous, history, c => excluded(c) || tooHard.Contains(c), strictBand);
+            Dictionary<int, Candidate>? placed = PlaceBlock(spec, block, previous, history, c => excluded(c) || tooHard.Contains(c), stats, strictBand);
             if (placed is null || remanso is null)
             {
                 return placed;
@@ -149,22 +236,52 @@ internal static class Placement
     /// </summary>
     public static double? ComfortMean(IEnumerable<LevelPlan> plans, IReadOnlyDictionary<int, Candidate> placed)
     {
-        List<double> ds = plans.Where(p => p.IsComfortReference && placed.ContainsKey(p.Level)).Select(p => Rounded(placed[p.Level].D)).ToList();
+        List<double> ds = ComfortDs(plans, placed);
         return ds.Count == 0 ? null : ds.Average();
     }
 
+    /// <summary>D (redondeado) de la comodidad más fácil del bloque sin estrenos, o null (recuperación; QA-BAND-Q).</summary>
+    public static double? ComfortMin(IEnumerable<LevelPlan> plans, IReadOnlyDictionary<int, Candidate> placed)
+    {
+        List<double> ds = ComfortDs(plans, placed);
+        return ds.Count == 0 ? null : ds.Min();
+    }
+
+    private static List<double> ComfortDs(IEnumerable<LevelPlan> plans, IReadOnlyDictionary<int, Candidate> placed) =>
+        plans.Where(p => p.IsComfortReference && placed.ContainsKey(p.Level)).Select(p => Rounded(placed[p.Level].D)).ToList();
+
     private static int Encode(int slot, int cand) => (slot * 1024) + cand;
 
-    private static Candidate? LadderCandidate(IReadOnlyList<SlotResult> block, List<Candidate>[] options, int ladder) =>
+    private static Candidate? LadderCandidate(List<Candidate>[] options, int ladder) =>
         ladder < 0 ? null : options[ladder / 1024][ladder % 1024];
 
-    /// <summary>Los slots que entran en la escalera: retos con etiqueta posible (41-59: p6, p12, p18; 61+: los cinco).</summary>
+    /// <summary>Ciclo 21-40: retos suaves sin etiqueta (03 §12; c.3 regla 7: 40 = primer Difícil) y sin escalera.</summary>
+    public static bool SoftCycle(CampaignSpec spec, LevelPlan plan) => !plan.Ramp && plan.Level <= spec.FirstHard;
+
+    /// <summary>
+    /// Los slots que entran en la escalera: retos con etiqueta posible (41-59: p6, p12, p18; 61+: los cinco) y, en 21-40,
+    /// todos los retos (solo para que el hito 40 quede por encima de todos).
+    /// </summary>
     public static bool IsLadderSlot(CampaignSpec spec, LevelPlan plan) =>
-        plan.Level > spec.FirstHard && plan.Role == SlotRole.Challenge && plan.AllowedLabel is not null;
+        plan.Role == SlotRole.Challenge && (SoftCycle(spec, plan) || (plan.Level > spec.FirstHard && plan.AllowedLabel is not null));
+
+    /// <summary>
+    /// Reto de referencia tras colocar <paramref name="cand"/>: desde el 41, el último reto de la escalera (que es el más
+    /// difícil, porque la escalera no baja); en 21-40, el reto de D más alto hasta ahí.
+    /// </summary>
+    private static int NextLadder(CampaignSpec spec, LevelPlan plan, int ladder, Candidate? ladderCand, Candidate cand, int encoded)
+    {
+        if (!IsLadderSlot(spec, plan))
+        {
+            return ladder;
+        }
+
+        return SoftCycle(spec, plan) && ladderCand is not null && Rounded(ladderCand.D) >= Rounded(cand.D) ? ladder : encoded;
+    }
 
     private static bool LadderOk(CampaignSpec spec, LevelPlan plan, Candidate cand, Candidate? last)
     {
-        if (plan.Level <= spec.FirstHard || last is null)
+        if (last is null || plan.Ramp)
         {
             return true;
         }
@@ -173,10 +290,11 @@ internal static class Placement
         double l = Rounded(last.D);
         if (plan.Role == SlotRole.Milestone)
         {
+            // Desde el 41, por encima del último reto de la escalera; en el 40, por encima de todos los retos suaves de 21-39.
             return d > l;
         }
 
-        if (plan.Role != SlotRole.Challenge)
+        if (plan.Role != SlotRole.Challenge || SoftCycle(spec, plan))
         {
             return true;
         }
@@ -190,6 +308,28 @@ internal static class Placement
 
     /// <summary>Penalización de un candidato de relajación fuera de la ventana del slot (se registra en el informe).</summary>
     public const double OutOfWindowPenalty = 20;
+
+    /// <summary>
+    /// Penalización fuerte de una recuperación fuera de la banda de recuperación o de un hito fuera de la banda de hito cuando
+    /// solo cumplen el mínimo de <see cref="RecoveryOk"/> o <see cref="MilestoneOk"/>, más la distancia en bandas continuas.
+    /// </summary>
+    public const double RoleBandMissPenalty = 15;
+
+    private static double RoleBandPenalty(LevelPlan plan, Candidate cand)
+    {
+        if (plan.Ramp)
+        {
+            return 0;
+        }
+
+        double band = Pool.ContinuousBand(cand.Quantile);
+        return plan.Role switch
+        {
+            SlotRole.Recovery when Pool.BandIndex(cand.Quantile) > 0 => RoleBandMissPenalty + (band - 1),
+            SlotRole.Milestone when Pool.BandIndex(cand.Quantile) < 3 => RoleBandMissPenalty + (3 - band),
+            _ => 0,
+        };
+    }
 
     /// <summary>
     /// Tras un nivel con etiqueta, el siguiente tiene D menor (siempre) y baja al menos una banda entera (en modo estricto;

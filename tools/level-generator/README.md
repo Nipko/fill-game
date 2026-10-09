@@ -102,7 +102,8 @@ Todos deben dar `exit=1` y `presente`.
   level-qa (03 §17 #8). Nunca se quita un color que sea llave o contenido de una mecánica [P].
 - `Parity.cs` (`--parity`): sobre los 40 niveles de `tools/out/levels_proto.json` y `tools/out_inverse/levels_proto.json`
   compara par y complejidad (40/40), ramificación y trampas a 2 decimales (≥ 38/40) y color y par de −1 color (donde el
-  prototipo los tiene). `bot_fail` y `D` no se comparan: el PRNG cambia (09 R26).
+  prototipo los tiene). `bot_fail` y `D` no se comparan: el PRNG cambia (09 R26). La cifra de C# se redondea al par
+  (`ToEven`) a los decimales del prototipo, como hace Python, y el informe imprime esa misma cifra, la que se compara.
 
 ```
 dotnet run --project tools/level-generator -c Release -- --parity
@@ -115,14 +116,15 @@ híbrido no tiene −1 color en el prototipo).
 
 ```
 dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v1.json --levels 11-200 --out Assets/_Project/Data/Levels --report tools/out/campaign_v1_report.md
-dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v1.json --levels 11-200 --out Assets/_Project/Data/Levels --check
-python tools/validate_schema.py --pack Assets/_Project/Data/Levels/mundo_02_v1.json Assets/_Project/Data/Levels/mundo_03_v1.json Assets/_Project/Data/Levels/mundo_04_v1.json Assets/_Project/Data/Levels/mundo_05_v1.json
 dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_02_v1.json Assets/_Project/Data/Levels/mundo_03_v1.json Assets/_Project/Data/Levels/mundo_04_v1.json Assets/_Project/Data/Levels/mundo_05_v1.json --report tools/out/level_qa_report.md
 ```
 
-Usa siempre `-c Release` (en Debug tarda varias veces más). `--check` regenera y compara byte a byte con los packs del
-disco sin escribir nada (03 §17 #10). El índice D depende del pool de cada rango de 03 §11, así que un pack solo se
-reproduce con los mismos `--levels` (por defecto 11-200).
+El segundo comando es la compuerta completa (`tools/level-qa/README.md`): comprobaciones por nivel, esquema
+(`validate_schema.py --pack`), reproducibilidad (regenera la campaña en memoria con `CampaignRunner.Generate`, el mismo
+código, y compara byte a byte) y banda medida. Usa siempre `-c Release` (en Debug tarda varias veces más). `--check`
+regenera y compara byte a byte con los packs del disco sin escribir nada (03 §17 #10), sin las demás comprobaciones. El
+índice D depende del pool de cada rango de 03 §11, así que un pack solo se reproduce con los mismos `--levels` (por
+defecto 11-200).
 
 Fases (los tiempos salen por la consola; el informe no lleva tiempos):
 
@@ -140,16 +142,25 @@ Fases (los tiempos salen por la consola; el informe no lleva tiempos):
 2. **Pool e índice D** (`Pool`): z-scores del pool del rango (todos los candidatos en ventana), congelados; banda = cuantil.
 3. **Colocación** (`Placement`, programación dinámica por ciclo): escalera de D-009, bajada de una banda entera de D tras
    cada etiqueta (y D menor), remanso con D por debajo de la media de comodidad del ciclo (c.4; `PlaceCycle`),
-   anti-repetición (forma y Hamming, `Campaign/BoardShape.cs`) y saltos de +2,2 / −3,4 bandas como penalización. Si un ciclo no tiene colocación, se piden más candidatos a sus retos, hito y siguientes (hasta 2
-   rondas); un reto o hito que quede fuera de su ventana se publica con la etiqueta que mide (c.2: sin etiqueta si mide
-   menos del 75 %) y el informe lo registra.
+   anti-repetición (forma y Hamming, `Campaign/BoardShape.cs`) y saltos de +2,2 / −3,4 bandas como penalización. **La banda
+   coloca** (03 §7; cuantil q de D en el pool del rango): comodidad, estreno, remanso y rampa como mucho en banda de
+   comodidad (q ≤ 0,70); recuperación (p1-p2) en banda de recuperación (q ≤ 0,10) o, como mínimo, con D por debajo de la
+   comodidad más fácil del ciclo (`PlaceCycle`); hito (p20) en banda de hito (q > 0,95) o, como mínimo, con par − 2K ≥ la
+   media del pool del rango; en 21-40, todos los retos suaves por debajo del hito 40. Cumplir solo el mínimo penaliza
+   fuerte (la colocación prefiere la banda del rol). Solo un reto o el hito pueden quedar fuera de su ventana (c.2); en
+   recuperación, comodidad, estreno, remanso y rampa no se usa ningún candidato fuera de ella (03 §17 #3). Antes de colocar
+   cada bloque, los slots sin ningún candidato de la banda de su rol piden más candidatos (rondas de banda, hasta 6, con
+   sub-semillas desde el intento 20.000 y los estadísticos del pool ya congelados). Si un ciclo no tiene colocación, se
+   piden más candidatos a sus retos, hito, siguientes y recuperaciones (hasta 2 rondas); un reto o hito que quede fuera de
+   su ventana se publica con la etiqueta que mide (c.2: sin etiqueta si mide menos del 75 %) y el informe lo registra.
 4. **Alivio** (`Metrics/Relief.cs`) desde el nivel 31.
 5. **Packs** (`PackWriter`): `pack_schema` 2, minificado con un nivel por línea, UTF-8 sin BOM y LF, decimales fijos.
 
 El informe (`tools/out/campaign_v1_report.md`) trae, además de los packs, el pool, las etiquetas, los ciclos y la tabla
 por nivel: el debut real y el hueco máximo de cada mecánica y capacidad sobre los tableros publicados, el remanso frente a
-la comodidad de su ciclo, el porcentaje de comodidades y remansos relajados a 2 vacíos o a Cuia chica por rango y las
-cuias por rango frente a 03 §11.
+la comodidad de su ciclo, la banda medida por rol de cada ciclo (recuperaciones, comodidad más fácil, q máximo de la
+comodidad, remanso, retos e hito con su par − 2K frente a la media del pool), el porcentaje de comodidades y remansos
+relajados a 2 vacíos o a Cuia chica por rango y las cuias por rango frente a 03 §11.
 
 Decisiones [P] de la generación (para revisar en la integración):
 
@@ -163,6 +174,11 @@ Decisiones [P] de la generación (para revisar en la integración):
   `deep` corto (2.000 nodos) y `deep`.
 - Contrato 6: ningún candidato que mida ≥ 0,90 antes del 60 ni ≥ 0,75 antes del 40 entra en el pool, tampoco al relajar.
 - Remanso (p19): la colocación exige D(p19) < media de D de las comodidades del ciclo que no son tableros de estreno (c.4).
+- Banda por rol (03 §7): los mínimos de la recuperación (D por debajo de la comodidad más fácil del ciclo) y del hito
+  (par − 2K ≥ la media del pool del rango) son los de la revisión del 2026-10-09; la banda exacta del rol solo penaliza.
+- Estreno de una capacidad fuera de la rampa y del hito (la Cuia chica de 3 en el 22, p2): ventana de estreno (< 0,20) y
+  los 2 vacíos libres de su posición; la Cuia chica de estreno no ocupa uno de ellos (02 §8: «debuta en 2-3 tableros
+  fáciles»). Las de la rampa (14 y 18) no cambian.
 - Aguas turbias: 1-2 cuias y como mucho 3 dosis ocultas (el tope de 02 T2 es 4) para que la ruta segura cueste segundos.
 - Un nivel turbio pide hasta 6 rondas más de candidatos turbios (sub-semillas desde el intento 11.000) antes de publicarse
   sin turbias (respaldo de T1, registrado en el informe y aviso QA-MECH-CELL).

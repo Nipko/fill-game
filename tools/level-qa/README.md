@@ -3,24 +3,38 @@
 Control de calidad de los paquetes de niveles de Amazon Fill (Tintalú): GDD 08 §2.4 y §4.1 («Validación en
 `tools/level-qa`») y 03 §17. Es una consola .NET 10 que recalcula cada nivel con las mismas reglas que el cliente
 (`AF.Core` y `AF.Solver`) y falla el CI si algo no cumple. No usa dependencias NuGet: lee el JSON con `System.Text.Json`.
-Comparte con `tools/level-generator` el lector de la especificación de la campaña, las métricas y la forma de los
-tableros (`Campaign/*.cs` y `Metrics/*.cs`, enlazados en `level-qa.csproj`, no copiados).
+Comparte con `tools/level-generator` el lector de la especificación de la campaña, las métricas, la forma de los
+tableros y la generación (`Campaign/*.cs`, `Metrics/*.cs` y `Generation/*.cs`, enlazados en `level-qa.csproj`, no
+copiados).
 
-El esquema JSON (`schemas/af-level-1.schema.json`) no lo valida `level-qa`: lo hace `python tools/validate_schema.py
---pack` en el mismo paso del CI.
+**Es la compuerta completa en un solo comando** (08 §4.1 «Validación en `tools/level-qa`» y la tabla de 08 §2.4, que le
+asignan el esquema y el determinismo por semilla): además de las comprobaciones por nivel, `level-qa`
+
+- valida cada pack contra `schemas/af-level-1.schema.json` lanzando `python tools/validate_schema.py --pack` (QA-SCHEMA;
+  la única copia del esquema, y .NET no trae un validador de JSON Schema). Sin Python 3 con `jsonschema`, falla;
+- regenera la campaña en memoria con la especificación y comprueba que cada pack sale byte a byte (QA-REPRO, 03 §17 #10).
+  D depende del pool de cada rango de 03 §11, así que siempre se regenera el rango completo de la especificación (11-200),
+  aunque se compruebe un solo pack: tarda lo que el generador (en Release con 8 hilos en la máquina del dueño, entre 6 y
+  13 minutos según la carga);
+- con el pool regenerado, mide la banda de cada nivel (cuantil de D) y la compara con su rol (QA-BAND-Q, 03 §7).
+
+Con `--no-reproduce` salta QA-REPRO y QA-BAND-Q (fixtures negativos, pruebas rápidas) y lo deja como aviso; el CI nunca lo
+usa.
 
 ## Uso
 
 ```
-python tools/validate_schema.py --pack Assets/_Project/Data/Levels/mundo_02_v1.json Assets/_Project/Data/Levels/mundo_03_v1.json Assets/_Project/Data/Levels/mundo_04_v1.json Assets/_Project/Data/Levels/mundo_05_v1.json
 dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_02_v1.json Assets/_Project/Data/Levels/mundo_03_v1.json Assets/_Project/Data/Levels/mundo_04_v1.json Assets/_Project/Data/Levels/mundo_05_v1.json --report tools/out/level_qa_report.md
 ```
 
-Opciones: `--report <informe.md>` (Markdown UTF-8 con cada comprobación y sus fallos) y `--spec <campaign.json>` (por
-defecto `tools/level-generator/specs/campaign_v1.json`; se ejecuta desde la raíz del repositorio).
+Opciones: `--report <informe.md>` (Markdown UTF-8 con cada comprobación y sus fallos), `--spec <campaign.json>` (por
+defecto `tools/level-generator/specs/campaign_v1.json`; se ejecuta desde la raíz del repositorio), `--levels a-b` (rango
+que se regenera; por defecto el de la especificación, el mismo que el `--levels` por defecto del generador) y
+`--no-reproduce`.
 
-Códigos de salida: 0 = todo cumple (los avisos no fallan); 1 = algún nivel no cumple; 2 = uso incorrecto, sin paquetes
-o un archivo ilegible. Sin argumentos sale con 2 (un glob vacío nunca deja pasar la compuerta). La consola es ASCII.
+Códigos de salida: 0 = todo cumple (los avisos no fallan); 1 = algún nivel no cumple, el esquema falla, el pack no se
+reproduce o falta Python; 2 = uso incorrecto, sin paquetes o un archivo ilegible. Sin argumentos sale con 2 (un glob vacío
+nunca deja pasar la compuerta). La consola es ASCII.
 
 ## Comprobaciones
 
@@ -49,12 +63,12 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-LABEL-SLOT | etiquetas solo donde se permiten | D-009; c.3 regla 7 |
 | QA-LABEL-ADJ | nunca dos niveles con etiqueta seguidos | c.3 regla 1 |
 | QA-AFTER-LABEL | tras una etiqueta, el siguiente con D menor (condición necesaria de «bajar una banda») | c.3 regla 2 |
-| QA-LADDER | escalera de D (61+ y 41-59) | c.3 regla 4 |
+| QA-LADDER | escalera de D (61+ y 41-59); en 21-40, los retos suaves por debajo del hito 40 | c.3 regla 4; 03 §7 |
 | QA-REMANSO | p19 puro y más fácil que la media de comodidad: D(p19) < media de D de las comodidades del ciclo que no son estreno | c.4; c.3 regla 5 |
 | QA-RAMP | filas 11 y 12: 8 cuias = 6 colores + 2 vacíos, par 15-19 y 16-20, `bot_fail` 0-10 % | 02 §13 |
 | QA-PURE-30 | ≥ 30 % de niveles puros por ciclo completo | d.2 regla 1 |
-| QA-WINDOW | `bot_fail` en la ventana del slot (< 0,20 en los estrenos) | 03 §17 #3 |
-| QA-DEBUT | estrenos con 2 vacíos y un ejemplar; `intro_mechanic` y `skippable` = false solo en el nivel de intro | 02 §9.2 regla 2 |
+| QA-WINDOW | `bot_fail` en la ventana del slot: falla en recuperación, comodidad, estreno (< 0,20), remanso y rampa; un reto o el hito fuera de su ventana es aviso (se publica con la etiqueta que mide) | 03 §17 #3; 08 §4.1; c.2 |
+| QA-DEBUT | estrenos con 2 vacíos (también el de una capacidad fuera de la rampa y del hito: la Cuia chica de 3 en el 22) y un ejemplar; `intro_mechanic` y `skippable` = false solo en el nivel de intro | 02 §9.2 regla 2; 02 §8 |
 | QA-LABEL-ACCURACY | aviso: acierto de etiqueta por ciclo < 60 % | c.7 |
 | QA-RELIEF-MIN | ≥ 1 variante desde el 31 | 03 §13 |
 | QA-RELIEF-VALID | variantes válidas | 03 §13 |
@@ -75,8 +89,12 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-MURKY-SAFE | ruta segura en cada estado | 03 §8; 02 T5 |
 | QA-MURKY-COMBO | sin Lluvia, Piraña, Liana ni Remolino | Q14 A |
 | QA-MURKY-Q9 | estreno del 100: una cuia, 2 dosis ocultas, sin otra mecánica | Q9 |
+| QA-SCHEMA | JSON válido contra `schemas/af-level-1.schema.json` (`python tools/validate_schema.py --pack`); sin Python o sin `jsonschema`, falla | 08 §4.1; 03 §17 #11 |
+| QA-REPRO | la especificación y las semillas reproducen cada pack byte a byte (campaña regenerada en memoria) | 03 §17 #10; 08 §2.4 y §4.1 |
+| QA-BAND-Q | banda medida (cuantil de D en el pool regenerado) acorde al rol: comodidad, estreno, remanso y rampa ≤ 0,70; recuperación ≤ 0,10 o, como mínimo, D por debajo de la comodidad más fácil del ciclo; hito > 0,95 o, como mínimo, par − 2K ≥ la media del pool del rango. Cumplir solo el mínimo es aviso. Un pack que no se reproduce se mide con su D publicada (aproximado) | 03 §7; c.3 reglas 3 y 5 |
 
-Reproducibilidad (03 §17 #10): la comprueba `dotnet run --project tools/level-generator -c Release -- --spec … --check`.
+Reproducibilidad (03 §17 #10): la comprueba `level-qa` (QA-REPRO). `dotnet run --project tools/level-generator -c Release
+-- --spec … --check` hace la misma comparación contra los packs del disco, sin las demás comprobaciones.
 
 ## Fixtures negativos: `fixtures/*.json`
 
@@ -86,13 +104,20 @@ Cada fixture es un paquete con un defecto. El nombre empieza por el id de la com
 ```
 for f in tools/level-qa/fixtures/QA-*.json; do
   id=$(basename "$f" | sed 's/__.*//')
-  out=$(dotnet run --project tools/level-qa -c Release --no-build -- "$f"); code=$?
+  out=$(dotnet run --project tools/level-qa -c Release --no-build -- "$f" --no-reproduce); code=$?
   echo "$(basename "$f"): exit=$code $(echo "$out" | grep -q "\[$id\]" && echo presente || echo AUSENTE)"
 done
 ```
 
 Todos deben dar `exit=1` y `presente`. Los de QA-RAMP (11), QA-LABEL-EARLY (58), QA-MECH-CELL (160) y QA-REMANSO
 (108, 110 y 119, `remanso_mas_dificil_que_la_comodidad`) son niveles de los packs anteriores a la revisión del
-2026-10-09. QA-GAP-120 no tiene fixture (necesita más de 120 niveles seguidos): se comprueba con esos packs anteriores, en
-los que falla («Cuia alta no vuelve desde el 78»). `fixtures/schema/` son los fixtures de `validate_schema.py --pack`
-(uno válido y uno inválido).
+2026-10-09. QA-WINDOW tiene dos: un estreno con `bot_fail` 0,25 y una comodidad (p8 del 48) con el tablero de recuperación
+del 42 de esos packs, que el bot no falla nunca (`comodidad_bajo_la_ventana`). QA-GAP-120 no tiene fixture (necesita más de
+120 niveles seguidos): se comprueba con esos packs anteriores, en los que falla («Cuia alta no vuelve desde el 78»).
+QA-REPRO y QA-BAND-Q tampoco (necesitan la campaña completa): con los packs anteriores a esta revisión de la colocación
+(2026-10-09) y el generador actual, `level-qa` sale con 1 y 20 fallos: los cuatro packs no se reproducen (QA-REPRO);
+QA-BAND-Q en las recuperaciones 21, 22, 61, 81, 122, 141 y 161, las comodidades 24, 30, 67 y 168 y los hitos 100 y 180
+(q 0,85 con par − 2K = 0); QA-LADDER en el reto suave 26 (D 1,26 por encima del hito 40), y QA-DEBUT y QA-WINDOW en el 22
+(un vacío libre y `bot_fail` 0,275 en el estreno de la Cuia chica de 3). `fixtures/schema/` son los fixtures de
+`validate_schema.py --pack` (uno válido y uno inválido); cualquier fixture con un JSON fuera del esquema daría además
+QA-SCHEMA.

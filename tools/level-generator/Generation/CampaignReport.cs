@@ -102,7 +102,7 @@ internal static class CampaignReport
         W("## Niveles");
         W();
         W("Columnas: p = posición en el ciclo (0 en la rampa); E = vacíos de capacidad ≥ 4 (con la Hoja o el Matapi vacíos), libres = sin mecánica; "
-          + "q = cuantil de D en el pool del rango y su banda; TT = trampas tempranas; alivio = tipos publicados en `relief` en orden (− = minus_color, + = plus_empty).");
+          + "q = cuantil de D en el pool del rango (3 decimales: la banda de hito empieza por encima de 0,95) y su banda; TT = trampas tempranas; alivio = tipos publicados en `relief` en orden (− = minus_color, + = plus_empty).");
         W();
         W("| Nivel | p | Rol | Calendario | K | E (libres) | Cuias | Fuente | Par | Estados A* | bot_fail | Ventana | Etiqueta | Objetivo | D | q (banda) | Ramif. | Trampas | TT | Compl. | Alivio | Notas |");
         W("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
@@ -137,6 +137,11 @@ internal static class CampaignReport
                 notes.Add(F($"{l.Rounds} ronda(s) extra de candidatos"));
             }
 
+            if (l.BandRounds > 0)
+            {
+                notes.Add(F($"{l.BandRounds} ronda(s) de banda"));
+            }
+
             if (c.Murky)
             {
                 notes.Add(F($"turbia: {c.Board.Hidden.Length} dosis ocultas en {c.Board.Hidden.Select(h => h[0]).Distinct().Count()} cuia(s), {c.MaxRealities} realidades"));
@@ -149,7 +154,7 @@ internal static class CampaignReport
 
             string relief = l.Relief.Count == 0 ? "—" : string.Join(" ", l.Relief.Select(r => r.Type == "minus_color" ? F($"−{r.Removed}({r.Par}; {r.BotFail:0.00})") : F($"+({r.BotFail:0.00})")));
             int band = Pool.BandIndex(c.Quantile);
-            W(F($"| {p.Level} | {p.Position} | {p.RoleName} | {p.Cell.Short} | {c.K} | {c.Empties} ({c.FreeEmpties}) | {c.Board.Caps.Length} | {c.Source} | {c.Par} | {c.Expanded} | {c.Bot:0.000} | {p.Window} | {c.MeasuredLabel} | {p.TargetLabel ?? "—"} | {c.D:0.00} | {c.Quantile:0.00} ({Pool.BandName(band)}) | {c.Branching:0.00} | {c.Traps:0.00} | {c.EarlyTraps} | {c.Complexity} | {relief} | {string.Join("; ", notes)} |"));
+            W(F($"| {p.Level} | {p.Position} | {p.RoleName} | {p.Cell.Short} | {c.K} | {c.Empties} ({c.FreeEmpties}) | {c.Board.Caps.Length} | {c.Source} | {c.Par} | {c.Expanded} | {c.Bot:0.000} | {p.Window} | {c.MeasuredLabel} | {p.TargetLabel ?? "—"} | {c.D:0.00} | {c.Quantile:0.000} ({Pool.BandName(band)}) | {c.Branching:0.00} | {c.Traps:0.00} | {c.EarlyTraps} | {c.Complexity} | {relief} | {string.Join("; ", notes)} |"));
         }
 
         W();
@@ -222,6 +227,54 @@ internal static class CampaignReport
             W(F($"| {g.Key} | {rem.Plan.Level} | {dRem:0.00} | {rem.Chosen!.Bot:0.000} | {rem.Chosen!.Par} | {comfort.Count} | {comfort.Average(l => Placement.Rounded(l.Chosen!.D)):0.00} | {comfort.Average(l => l.Chosen!.Bot):0.000} | {rank} de {comfort.Count + 1} (1 = el más difícil) |"));
         }
 
+        W();
+        W("## Banda medida por rol (03 §7: «la banda coloca»)");
+        W();
+        W("La colocación exige, con el cuantil q de D en el pool del rango (recuperación ≤ 0,10, comodidad ≤ 0,70, reto ≤ 0,95, "
+          + "hito > 0,95): comodidad, estreno y remanso como mucho en banda de comodidad; recuperación (p1-p2, c.3 regla 3) en banda de "
+          + "recuperación o, como mínimo, con D por debajo de la comodidad más fácil del ciclo; hito (p20, «Pico» de c.3) en banda de "
+          + "hito o, como mínimo, con par − 2K ≥ la media del pool del rango; y en 21-40 los retos suaves por debajo del hito 40. "
+          + "level-qa lo comprueba regenerando la campaña (QA-BAND-Q y QA-LADDER).");
+        W();
+        W("| Ciclo | Recuperación p1 / p2: q (D) | Comodidad más fácil (D) | q máximo de comodidad y estreno | Remanso: q | Retos: D mín.-máx. | Hito: q (banda) · par − 2K / media del pool |");
+        W("|---|---|---|---|---|---|---|");
+        foreach (IGrouping<string, GeneratedLevel> g in levels.Where(l => !l.Plan.Ramp).GroupBy(l => CycleName(spec, l.Plan)))
+        {
+            List<GeneratedLevel> ls = g.ToList();
+            string Rec(int p) => ls.FirstOrDefault(l => l.Plan.Position == p) is GeneratedLevel r
+                ? F($"{r.Chosen!.Quantile:0.000} ({Placement.Rounded(r.Chosen!.D):0.00})")
+                : "—";
+            List<GeneratedLevel> comfortRefs = ls.Where(l => l.Plan.IsComfortReference).ToList();
+            string min = comfortRefs.Count == 0 ? "—" : F($"{comfortRefs.Min(l => Placement.Rounded(l.Chosen!.D)):0.00}");
+            List<GeneratedLevel> comfort = ls.Where(l => l.Plan.Role == SlotRole.Comfort).ToList();
+            string comfortMax = comfort.Count == 0 ? "—" : F($"{comfort.Max(l => l.Chosen!.Quantile):0.000}");
+            string rem = ls.FirstOrDefault(l => l.Plan.Role == SlotRole.Remanso) is GeneratedLevel rm ? F($"{rm.Chosen!.Quantile:0.000}") : "—";
+            List<GeneratedLevel> ch = ls.Where(l => l.Plan.Role == SlotRole.Challenge).ToList();
+            string challenges = ch.Count == 0 ? "—" : F($"{ch.Min(l => Placement.Rounded(l.Chosen!.D)):0.00} / {ch.Max(l => Placement.Rounded(l.Chosen!.D)):0.00}");
+            string hito = "—";
+            if (ls.FirstOrDefault(l => l.Plan.Role == SlotRole.Milestone) is GeneratedLevel h)
+            {
+                Candidate c = h.Chosen!;
+                hito = F($"{c.Quantile:0.000} ({Pool.BandName(Pool.BandIndex(c.Quantile))}) · {c.Par - (2 * c.K)} / {stats[h.Plan.Range].ParExcess.Mean:0.0}");
+            }
+
+            W(F($"| {g.Key} | {Rec(1)} / {Rec(2)} | {min} | {comfortMax} | {rem} | {challenges} | {hito} |"));
+        }
+
+        var minimumOnly = new List<string>();
+        foreach (GeneratedLevel l in levels.Where(l => !l.Plan.Ramp))
+        {
+            int band = Pool.BandIndex(l.Chosen!.Quantile);
+            if ((l.Plan.Role == SlotRole.Recovery && band > 0) || (l.Plan.Role == SlotRole.Milestone && band < 3))
+            {
+                minimumOnly.Add(F($"{l.Plan.Level} ({l.Plan.RoleName}, q {l.Chosen!.Quantile:0.000})"));
+            }
+        }
+
+        W();
+        W(minimumOnly.Count == 0
+            ? "Todas las recuperaciones en banda de recuperación y todos los hitos en banda de hito."
+            : "Fuera de la banda de su rol, con el mínimo cumplido (aviso QA-BAND-Q): " + string.Join("; ", minimumOnly) + ".");
         W();
         W("## Vacíos de la comodidad y del remanso por rango (03 §4.4 y §11)");
         W();
