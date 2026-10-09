@@ -34,6 +34,11 @@ namespace AF.Solver.Search
     /// <b>menor</b> <c>g</c>; a igualdad total, orden de llegada (<see cref="MinHeap"/>). Con <c>w = 1</c> el par no
     /// depende del desempate (H admisible); con <c>w &gt; 1</c> (Morpho, Pororoca, Río sin fin) el desempate decide qué
     /// solución subóptima sale, y así coincide con el prototipo. Determinista en CoreCLR, Mono e IL2CPP.</description></item>
+    /// <item><description><b>Mecánicas con estado</b> (03 §9): Hoja, Brote, Lluvia (gotas pendientes y contador) y Piraña
+    /// (contador) guardan su estado en la propia cuia (<see cref="Cuia.Packed"/>), así que la clave canónica y el hash lo
+    /// incluyen sin código propio; la gota y el mordisco los aplica <see cref="BoardRules"/> en la etapa (e) de R10. El último
+    /// destino de la Piraña es el del propio vertido y no se guarda. La heurística no cambia con ninguna (ver
+    /// <see cref="SolverHeuristic"/>): el par con <c>w = 1</c> sigue siendo exacto.</description></item>
     /// <item><description><b>Solución:</b> se guarda en índices canónicos y se traduce al final a los índices reales del
     /// tablero de partida, rehaciendo cada vertido con <see cref="BoardRules"/>.</description></item>
     /// <item><description><b>Memoria:</b> cada nodo guarda solo las <c>T</c> cuias del tablero (paso <c>T</c>, no las 16 de

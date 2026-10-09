@@ -128,6 +128,17 @@ namespace AF.Core.Tests.DotnetOnly
             AssertWith(mode, family, new LluviaInjector(), 0xF07E_1431UL);
         }
 
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithPirana(PourMode mode, CapacityFamily family)
+        {
+            // C3-2: 02 R16 antes del debut de la Piraña (183), con Q18 B (los fútiles no avanzan el contador) y la respuesta
+            // Q-C (mordisco perdido si no puede morder). La cueva es una cuia normal para futil.
+            AssertWith(mode, family, new PiranaInjector(), 0xF07E_1831UL);
+        }
+
         [Test]
         public void P3_Remolino_QB_AUsefulRoundTripCanReturnToTheSameCanonicalState()
         {

@@ -30,6 +30,15 @@ namespace AF.Solver.Search
     /// vierte, se lava, y toda dosis de tinte por encima de la racha del fondo sigue teniendo que moverse al menos una vez.
     /// Las dos variantes siguen siendo admisibles y consistentes (un vertido baja cada término como mucho en 1; lo
     /// comprueban <c>BarroSolverTests</c> sobre todos los estados alcanzables). Sin Barro dan los mismos valores que antes.</para>
+    /// <para><b>Lluvia y Piraña</b> (03 §9): la heurística no cambia. Una gota de Lluvia cae encima de la cuia de Lluvia y nunca
+    /// elimina cortes ni dispersión (03 §9: «cota válida»). El mordisco de la Piraña se lleva siempre una de las dosis que el
+    /// propio vertido acaba de dejar en la cima de la cuia que recibió (respuesta Q-C del dueño: si no puede morder en ese
+    /// vertido, el mordisco se pierde), así que vertido y mordisco equivalen a repartir el mismo vertido entre esa cuia y la
+    /// cueva: la cuia que recibe queda como si hubiera recibido una dosis menos (con Barro, el lavado sin la dosis), y cada
+    /// término (<c>h1</c>, <c>h2</c>, <c>h3</c>) baja como mucho en 1 por paso. Por tanto <c>H</c> y <c>H_single</c> siguen
+    /// siendo admisibles y consistentes y el par de A* con <c>w = 1</c> es exacto (03 §9 lo daba por aproximado [P] pensando en
+    /// un mordisco diferido sobre un <c>ultimo_destino</c> guardado). Lo comprueban <c>PiranaSolverTests</c> en todos los
+    /// estados alcanzables. <c>ceil(H/2)</c>, la cota del plan de C3-2 [P], también sería válida, pero expande más.</para>
     /// </remarks>
     public static class SolverHeuristic
     {

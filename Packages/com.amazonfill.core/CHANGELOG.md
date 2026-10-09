@@ -6,6 +6,30 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- Piraña (C3-2; 02 §9.1 M7 y §9.2; 03 §3 y §9; propuesta de D-007 b.2 M7 y b.2 M10 regla 7; anexo B; D-007, Q10, Q14 A y
+  Q18 B; respuesta Q-C del dueño; GDD §6 #6; debut 183). `PiranaMechanic` (interno), registrada en la tabla y aceptada por
+  `BoardBuilder` (con ella están portadas todas las mecánicas definidas). La cueva es la cuia marcada (normalmente una Cuia
+  chica de 2) y guarda `k` y el contador en la clave canónica; el último destino es el del propio vertido, así que no se
+  guarda. Etapa (e) de R10, una vez por vertido y nunca en un fútil (Q18 B): suma 1 y al llegar a `k` el contador vuelve a 0
+  y la piraña muerde la dosis superior de la cuia que recibió el vertido y la lleva a la cima de la cueva, salvo que esa
+  cuia haya quedado sellada (02 §9.1: sellar en el vertido n·k evita el mordisco), sea un Matapi (regla 7) o sea la propia
+  cueva, o que la cueva esté llena (**Q-C**: el mordisco se pierde y el contador sigue). La cueva es una cuia normal como
+  origen y como destino; lo que el mordisco selle o suelte ocurre en el mismo vertido (f′). Eventos en `PourEvents`:
+  `PiranaBittenMask`, `PiranaCaveMask` y `PiranaBiteLostMask`; en `PourResult`, `PiranaBit` y `PiranaBiteLost`;
+  `LevelCounter` cubre la Piraña (`Blocked` = cueva llena). Validación: `k` de 2 a 5 y el contador a 0, sin ocultos (Q14 A),
+  sin Remolino [P] y un contador por nivel (nunca con la Lluvia). **Heurística: `H` no cambia y el par es exacto.** El plan
+  proponía `ceil(H/2)` [P] («un vertido con mordisco baja H como mucho en 2»); con el mordisco inmediato de Q-C la dosis
+  mordida es siempre una de las que el propio vertido acaba de dejar en la cima de la cuia que recibe, así que vertido +
+  mordisco reparte el mismo vertido entre esa cuia y la cueva y cada término (`h1`, `h2`, `h3`) baja como mucho en 1 (también
+  con el lavado del Barro). `H` sigue siendo admisible y consistente (comprobado en todos los estados alcanzables de 32
+  tableros en los dos modos, con más de 50 mordiscos), así que no hace falta `ceil(H/2)` (que expandiría más) ni marcar el
+  par como aproximado (03 §9 lo temía para un mordisco diferido sobre un `ultimo_destino` guardado). Tests compartidos
+  `PiranaTests` (mordisco, sellar en el vertido k, Matapi, los dos casos de Q-C, Q18 B con R16, Marea, el mordisco que sella
+  la cueva y suelta una Liana en el mismo vertido, validación) y `PiranaSolverTests` (A* con y sin poda contra la búsqueda
+  exhaustiva y `H` admisible y consistente en 32 tableros de hasta 5.000 estados, uniformes y mixtos, en `run` y `single`;
+  inyector `PiranaInjector`, cueva = la vacía más chica); P1-P3 con Piraña en `FutilePropertyTests` (20.000-30.000 estados
+  por combinación, sin violaciones) y `HotLoopAllocationTests.PiranaBoard_HotLoop_DoesNotAllocate` (0 bytes en reglas,
+  `BoardRules.ApplyInPlace` y bot; solver calentado < 1 KB).
 - Lluvia (C3-1; 02 R3, §9.1 M6 y §9.2; 03 §3 y §9; 04 §5.1 regresión 4; propuesta de D-007 b.2 M6 y anexo B; D-007, Q10,
   Q14 A y Q18 B; respuesta Q-B del dueño; GDD §6 #6; debut 143). `LluviaMechanic` (interno), registrada en la tabla y
   aceptada por `BoardBuilder`. Estado en la cuia (03 §9, en la clave canónica): `key` = tinte agua, `n` = gotas pendientes,
@@ -270,6 +294,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Cambiado
 
+- C3-2: `BoardBuilderTests.Mechanics_NotYetPorted_AreRejected` pasa a `Mechanics_EveryDefinedTypeIsPorted` (el fallo
+  cerrado sigue en `BoardBuilder` para los tipos que se definan en la 1.1).
 - C3-1: `CuiaRules.IsSealed` no da por sellada una cuia de Lluvia con gotas pendientes (02 §9.1 M6: solo sella con agua);
   sin Lluvia no cambia nada. `BoardState(Cuia[])` cuenta en `U_c` las gotas pendientes de la Lluvia (02 R3), como ya hacía
   `BoardBuilder`: el test de `MurkyTests` que dependía de lo contrario pasa a

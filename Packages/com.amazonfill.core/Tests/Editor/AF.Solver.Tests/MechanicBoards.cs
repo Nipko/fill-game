@@ -607,4 +607,34 @@ namespace AF.Solver.Tests
             return max;
         }
     }
+
+    /// <summary>
+    /// Piraña (02 §9.1 M7; 03 §9: «superposición (cueva = Cuia chica de 2 vacía)»): una cuia vacía y sin mecánica (la Cuia
+    /// chica en los tableros mixtos) pasa a ser la cueva, con <c>k</c> = 2-4.
+    /// </summary>
+    internal sealed class PiranaInjector : IMechanicInjector
+    {
+        public string Name => "pirana";
+
+        public bool Inject(Prng rng, int[] caps, List<int>[] doses, MechanicSpec[] attrs)
+        {
+            List<int> empties = MechanicBoards.PlainEmpties(caps, doses, attrs);
+            if (empties.Count == 0)
+            {
+                return false;
+            }
+
+            int index = empties[0];
+            for (int e = 1; e < empties.Count; e++)
+            {
+                if (caps[empties[e]] < caps[index])
+                {
+                    index = empties[e]; // la más chica, como la cueva de 03 §9
+                }
+            }
+
+            attrs[index] = new MechanicSpec(MechanicType.Pirana, k: 2 + rng.NextInt(3));
+            return true;
+        }
+    }
 }

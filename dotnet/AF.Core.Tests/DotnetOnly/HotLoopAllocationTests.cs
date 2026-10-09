@@ -358,6 +358,20 @@ namespace AF.Core.Tests.DotnetOnly
             AssertRulesBotAndSolverDoNotAllocate(state, 9UL);
         }
 
+        [Test]
+        public void PiranaBoard_HotLoop_DoesNotAllocate()
+        {
+            // C3-2: la Piraña (contador, mordisco en la etapa (e) de R10 y punto fijo (f′)) en movimientos útiles, bloqueo,
+            // vertido aplicado, solver calentado y bot calentado, sin asignaciones; con un Matapi (el mordisco se pierde).
+            Cuia cave = Cuia.Empty(2).WithMechanic(MechanicType.Pirana, k: 3);
+            var state = new BoardState(new[]
+            {
+                cave, Cuia.Create(4, new[] { 1, 2, 3, 4 }), Cuia.Create(4, new[] { 3, 1, 4, 2 }), Cuia.Create(4, new[] { 2, 3, 1, 1 }),
+                Cuia.Create(4, new[] { 3, 2, 4, 4 }), Cuia.Empty(4).WithMechanic(MechanicType.Matapi), Cuia.Empty(4),
+            });
+            AssertRulesBotAndSolverDoNotAllocate(state, 13UL);
+        }
+
         /// <summary>
         /// 0 bytes en movimientos útiles, bloqueo, <c>BoardRules.ApplyInPlace</c> y el bot calentado; menos de 1 KB en el solver
         /// calentado (solo la solución).

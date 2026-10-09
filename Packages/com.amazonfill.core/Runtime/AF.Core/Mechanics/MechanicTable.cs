@@ -46,6 +46,7 @@ namespace AF.Core.Mechanics
             table[(int)MechanicType.Liana] = new LianaMechanic();
             table[(int)MechanicType.Remolino] = new RemolinoMechanic();
             table[(int)MechanicType.Lluvia] = new LluviaMechanic();
+            table[(int)MechanicType.Pirana] = new PiranaMechanic();
             return table;
         }
 
