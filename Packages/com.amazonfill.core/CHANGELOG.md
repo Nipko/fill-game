@@ -19,6 +19,17 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   indexada por el código de mecánica de la cuia (bits 39-42 de `Cuia.Packed`, hoy siempre 0); los ganchos solo se llaman
   para cuias con mecánica. `AF.Core` concede `InternalsVisibleTo("AF.Solver")` para que el solver recorra las mismas
   reglas por sus rutas internas.
+- Atributos por cuia (C1-3; 08 §4.1 `{type, key, partner, n, k}`; 03 §3 y §9): `Cuia` empaqueta en los bits 39-60 de
+  `Packed` el tipo (`AF.Core.Mechanics.MechanicType`: `None`, `Hoja`, `Brote`, `Liana`, `Matapi`, `Remolino`, `Lluvia`,
+  `Pirana`; 4 bits), `key` (tinte − 1), el id de pareja del Remolino, `n`, `k`, el contador y las banderas
+  (`Cuia.FlagClosed`: Hoja puesta, Brote cerrado); los bits libres (30-31, 35 y 61-63) valen 0. Accesores
+  `Mechanic`, `HasMechanic`, `MechanicKey`, `MechanicPairId`, `MechanicN`, `MechanicK`, `MechanicCounter` y
+  `MechanicFlags`; `WithMechanic` y `WithoutMechanic` (una mecánica abierta o suelta deja la cuia normal, con el mismo
+  `Packed`). Una cuia sin mecánica conserva su `Packed`: los tableros sin `attrs` dan el mismo hash que antes.
+- `MechanicTypes` (claves `"hoja"`…`"pirana"`), `MechanicSpec`, `Board.UnitsPerColor` (forma entera y objeto),
+  `Board.BoardBuilder.Build` (con `BoardBuildResult`: tablero o motivo del rechazo) y `Board.LevelValidation.Validate`.
+- Tests compartidos `CuiaAttrTests` y `BoardBuilderTests`, y en `BoardCanonTests` la clave canónica con mecánicas
+  (permutaciones, tipo, `key`, pareja, `n`, `k`, banderas y contador) y los vectores fijos sin `attrs`.
 - Tests compartidos `R10OrderTests` (orden de R10: el revelado entra en el estado que evalúa el sellado; la victoria antes
   que el bloqueo; índices relativos con `offset`; `single`) y regresiones 1-3 de 04 §5.1 sobre `BoardRules` en
   `FutileRulesTests` (la 4 queda para C2-4 y C3-1).

@@ -10,8 +10,13 @@ namespace AF.Core.Board
     /// <remarks>
     /// <list type="bullet">
     /// <item><description>Orden canónico: <see cref="Cuia.Packed"/> ascendente. <c>Packed</c> incluye la capacidad,
-    /// las dosis y la máscara de ocultos, así que dos cuias con el mismo <c>Packed</c> son idénticas y el orden es
-    /// total. Sin mecánicas (02 §9) no hay atributos ni contadores que añadir a la clave.</description></item>
+    /// las dosis, la máscara de ocultos y los atributos de la mecánica (tipo, <c>key</c>, id de pareja, <c>n</c>, <c>k</c>,
+    /// contador y banderas), así que dos cuias con el mismo <c>Packed</c> son idénticas, el orden es total y la clave es la
+    /// <c>(cap, attr, contenido)</c> más los contadores de 03 §3. Una cuia sin mecánica tiene esos bits a 0: los tableros
+    /// sin mecánicas conservan su orden y su hash.</description></item>
+    /// <item><description>Remolino (03 §3: «las dos cuias de un Remolino se canonicalizan como unidad»): el id de pareja va en
+    /// <c>Packed</c>, así que el emparejamiento se conserva; dos tableros que solo difieren en la numeración de las parejas
+    /// dan claves distintas (deduplicación incompleta, nunca incorrecta).</description></item>
     /// <item><description>Hash: FNV-1a de 64 bits sobre los 8 bytes little-endian de <c>Packed</c> de cada cuia, en
     /// orden canónico. Solo aritmética entera: igual en CoreCLR, Mono e IL2CPP.</description></item>
     /// <item><description>Sin asignaciones: sirven en el bucle caliente del solver.</description></item>

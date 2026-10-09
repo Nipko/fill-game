@@ -14,6 +14,7 @@ namespace AF.Core.Mechanics
         /// <summary>Número de códigos representables (4 bits).</summary>
         public const int Size = 16;
 
+        private static readonly IMechanic Normal = new NormalMechanic();
         private static readonly IMechanic[] Table = Build();
 
         /// <summary>Mecánica de <paramref name="cuia"/> (la normal si no lleva ninguna).</summary>
@@ -22,13 +23,21 @@ namespace AF.Core.Mechanics
             return Table[cuia.MechanicCode];
         }
 
+        /// <summary>
+        /// Las reglas de <paramref name="type"/> ya están portadas al núcleo. Un tablero con una mecánica sin portar se
+        /// rechaza al construirlo (fallar cerrado): con la tabla por defecto se jugaría como una cuia normal.
+        /// </summary>
+        public static bool IsPorted(MechanicType type)
+        {
+            return type == MechanicType.None || (MechanicTypes.IsDefined(type) && !ReferenceEquals(Table[(int)type], Normal));
+        }
+
         private static IMechanic[] Build()
         {
             var table = new IMechanic[Size];
-            var normal = new NormalMechanic();
             for (int i = 0; i < table.Length; i++)
             {
-                table[i] = normal;
+                table[i] = Normal;
             }
 
             return table;

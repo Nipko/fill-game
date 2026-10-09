@@ -10,9 +10,10 @@ namespace AF.Core.Board
     /// Cada vertido produce un estado nuevo (GDD 08 §2.1, principio 5).
     /// </summary>
     /// <remarks>
-    /// Alcance actual: núcleo canónico sin mecánicas (GDD 02 §9 aún sin portar). Por eso se rechazan
-    /// los colores 15 (Barro) y 16 (reservado) hasta que exista su mecánica. <c>U_c</c> se cuenta a
-    /// partir del contenido inicial; cuando se porte Lluvia habrá que sumar las dosis que aún no han caído.
+    /// Las cuias pueden llevar mecánica (<see cref="Cuia.Mechanic"/>; los niveles se construyen con
+    /// <see cref="BoardBuilder"/>, que valida sus atributos). Se rechazan los colores 15 (Barro) y 16 (reservado)
+    /// hasta que se porte el Barro. Con el constructor público <c>U_c</c> se cuenta a partir del contenido inicial;
+    /// <see cref="BoardBuilder"/> suma además las gotas pendientes de la Lluvia (02 R3).
     /// Esta clase asigna memoria en cada vertido: sirve para reglas, cliente y tests, no para el bucle
     /// caliente del solver, que usa su propia representación empaquetada (AF.Solver).
     /// La igualdad compara <see cref="Cuia.Packed"/> cuia a cuia y en orden (no es la igualdad canónica:
@@ -74,6 +75,15 @@ namespace AF.Core.Board
         {
             _cuias = cuias;
             _units = units;
+        }
+
+        /// <summary>
+        /// Tablero ya validado por <see cref="BoardBuilder"/>, con su tabla <c>U_c</c> (que puede incluir dosis que aún no
+        /// están en el tablero, como las gotas pendientes de la Lluvia). Toma posesión de los dos arrays.
+        /// </summary>
+        internal static BoardState FromValidated(Cuia[] cuias, int[] units)
+        {
+            return new BoardState(cuias, units);
         }
 
         /// <summary>Número de cuias (T en R1).</summary>
