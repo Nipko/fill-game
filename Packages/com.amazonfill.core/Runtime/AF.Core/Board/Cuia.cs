@@ -175,6 +175,23 @@ namespace AF.Core.Board
         /// <summary>Tiene al menos una dosis oculta.</summary>
         public bool HasHidden => HiddenMask != 0;
 
+        /// <summary>Número de dosis ocultas (Aguas turbias, 02 §11).</summary>
+        public int HiddenCount
+        {
+            get
+            {
+                int mask = HiddenMask;
+                int count = 0;
+                while (mask != 0)
+                {
+                    mask &= mask - 1;
+                    count++;
+                }
+
+                return count;
+            }
+        }
+
         /// <summary>Representación empaquetada; estable entre CoreCLR, Mono e IL2CPP. Base del hash y de la canonicalización.</summary>
         public ulong Packed => _bits;
 
@@ -368,6 +385,22 @@ namespace AF.Core.Board
         {
             CheckDoseIndex(index);
             return ((_bits >> (HiddenShift + index)) & 1UL) != 0;
+        }
+
+        /// <summary>
+        /// La misma cuia con las dosis de <paramref name="layerMask"/> (bit k = dosis k desde el fondo) visibles: Luciérnaga,
+        /// Pororoca y la máscara de revelado de la partida (02 T6; 04 §2.5, §2.4 a). Las demás dosis no cambian; los bits que
+        /// no son dosis ocultas se ignoran.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="layerMask"/> no es una máscara de 6 bits.</exception>
+        public Cuia WithRevealed(int layerMask)
+        {
+            if (layerMask < 0 || layerMask > (int)HiddenFieldMask)
+            {
+                throw new ArgumentOutOfRangeException(nameof(layerMask), layerMask, "La máscara de capas ocupa 6 bits.");
+            }
+
+            return new Cuia(_bits & ~((ulong)layerMask << HiddenShift));
         }
 
         /// <summary>

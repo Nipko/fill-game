@@ -38,6 +38,12 @@ namespace AF.Core.Rules
         public bool SourceRevealed { get; internal set; }
 
         /// <summary>
+        /// Revelado de Aguas turbias en este vertido (02 R7, §11): cuias cuya nueva cima oculta quedó visible (bit i = cuia
+        /// i). Hoy solo puede ser A, en la etapa (a); la presentación anima el «?» que se disuelve en la cima de esas cuias.
+        /// </summary>
+        public int RevealedMask { get; internal set; }
+
+        /// <summary>
         /// Transferencia: cuias cuyo Barro de la cima lavó este vertido (evento BarroWashed; 02 §9.1 M5). Solo puede ser la
         /// que recibió.
         /// </summary>
@@ -97,6 +103,7 @@ namespace AF.Core.Rules
             Color = color;
             Futile = futile;
             SourceRevealed = false;
+            RevealedMask = 0;
             BarroWashedMask = 0;
             OpenedMask = 0;
             HojaOpenedMask = 0;

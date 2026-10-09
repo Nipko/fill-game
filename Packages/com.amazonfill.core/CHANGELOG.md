@@ -6,6 +6,22 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- Aguas turbias en la partida (C2-1; 02 R7, R8 y §11 T2-T4, T6; 04 §2.1, §2.4 a, §2.5, §2.7 y §5.1; D-007, Q14 A).
+  `LevelSession` acepta dosis ocultas y lleva la máscara de revelado del nivel (`RevealedLayers(cuia)`, por posición
+  inicial `[cuia, capa]`: una dosis oculta nunca se mueve), que persiste tras Marea y tras Volver a la orilla (invariante
+  I5: lo revelado no vuelve a ocultarse; `Initial` no cambia). `Reveal(cuia)` (Luciérnaga) y `RevealAll()` (Pororoca)
+  devuelven cuántas dosis revelan, no entran en el historial y recalculan el estado; `HiddenCount`. Rechaza con
+  `NotSupportedException` un tablero con ocultos y Remolino (la inserción por el fondo desplazaría las capas) [P]. La
+  Luciérnaga regalada del nivel 100 la da el cliente (04 §2.5). Eventos de revelado: `PourEvents.RevealedMask` (etapa (a)
+  de R10) y `PourResult.RevealedMask`. `Cuia.WithRevealed(mask)`, `Cuia.HiddenCount` y `BoardState.HiddenCount`.
+  `LevelValidation.Validate(state, futile, murkyMaxCuias, murkyMaxHiddenUnits)` (los límites de 08 §9 como parámetros, por
+  defecto `DefaultMurkyMaxCuias` = 3 y `DefaultMurkyMaxHiddenUnits` = 4): T2; T3 (como mucho 3 dosis, nunca llena, cima
+  visible); T4 (bajo una dosis oculta nunca va el color de la de encima, también si la de encima está oculta); ocultos solo
+  en cuias sin mecánica; con filtros (Hoja, Brote, Matapi, Barro) sí, con Liana, Lluvia y Piraña no (Q14 A), con Remolino
+  no [P: propuesta b.2, «solo junto a filtros»]; el Barro nunca va oculto [P]. T1 y Q9 quedan para el pipeline. Tests
+  compartidos `LevelSessionMurkyTests` (Marea tras revelar en `run` y `single`, reinicio tras revelar, Luciérnaga seguida
+  de Marea, `RevealAll`, regresión 3 de 04 §5.1 en la partida) y `MurkyValidationTests`; solo dotnet
+  `HotLoopAllocationTests.HiddenDoses_StuckDetection_DoesNotAllocate` (0 bytes con ocultos).
 - Barro (C2-3; 02 R2, §1.2 y §9.1 M5; 03 §9; propuesta de D-007 b.2 M5; D-007, Q14 A: es un filtro; debut 123). No es
   una mecánica de cuia sino el color 15 dentro del contenido, así que lo tratan `BoardRules` y `CuiaRules` sin despacho:
   dosis inerte que corta las rachas; con Barro en la cima (`Cuia.MudExposed`, `barro_expuesto`) la cuia no es origen y,
@@ -185,6 +201,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Cambiado
 
+- C2-1: `LevelSession` ya no rechaza los tableros con dosis ocultas (los tests `HiddenDoses_AreRejected*` pasan a
+  `HiddenDoses_AreAccepted*`); I3 e I4 se precisan con la máscara de revelado (I5).
+- C2-3: `BoardState` y `BoardBuilder` aceptan el color 15 (Barro); `CuiaRules.IsSealed` exige un tinte y
+  `CuiaRules.CanBeSource`, `IsLegal` y `Amount` tratan el Barro expuesto (`EffectiveSpace`).
 - C1-1: `PourRules` (legal, cantidad, `Apply`, fútiles, movimientos útiles y bloqueo), `BoardState.IsWon` y su vertido
   interno, `LevelSession.TryPour` (R10 (a)-(f′) con `BoardRules` y después (g)-(h)) y `AStarSolver` (`Expand`, la meta y
   `BuildSolution`) delegan en `BoardRules`. La API pública que usa `Assets/` no cambia; `CuiaRules` queda como envoltorio

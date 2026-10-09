@@ -231,6 +231,39 @@ namespace AF.Core.Tests.DotnetOnly
         }
 
         [Test]
+        public void HiddenDoses_StuckDetection_DoesNotAllocate()
+        {
+            // C2-1: con dosis ocultas (Aguas turbias, 02 §11) la detección de vertidos útiles y del bloqueo (R13; la excepción
+            // de ocultos de 04 §5.1) no asigna memoria.
+            var state = new BoardState(new[]
+            {
+                Cuia.Create(4, new[] { 1, 2, 3 }, 0x3), Cuia.Create(4, new[] { 2, 3, 1 }, 0x1), Cuia.Create(4, new[] { 3, 1, 2 }, 0x2),
+                Cuia.Create(4, new[] { 2, 1, 1, 1 }, 0x1), Cuia.Create(4, new[] { 3, 2, 3 }), Cuia.Empty(4),
+            });
+            var buffer = new Pour[PourRules.MaxPours];
+            int moves = PourRules.CollectUsefulMoves(state, true, PourMode.Run, buffer);
+            bool stuck = PourRules.IsStuck(state, true);
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            int total = 0;
+            for (int repeat = 0; repeat < 1000; repeat++)
+            {
+                total += PourRules.CollectUsefulMoves(state, true, PourMode.Run, buffer);
+                total += PourRules.IsStuck(state, true) ? 1 : 0;
+                total += PourRules.HasUsefulMove(state, true) ? 0 : 1;
+                total += PourRules.IsFutile(state, 3, 5) ? 1 : 0;
+            }
+
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(state.HiddenCount, Is.EqualTo(5));
+            Assert.That(stuck, Is.False);
+            Assert.That(moves, Is.GreaterThan(0));
+            Assert.That(total, Is.EqualTo(1000 * moves));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
         public void BarroBoard_HotLoop_DoesNotAllocate()
         {
             // C2-3: el Barro (color 15) en movimientos útiles, bloqueo, solver calentado y bot calentado, sin asignaciones.

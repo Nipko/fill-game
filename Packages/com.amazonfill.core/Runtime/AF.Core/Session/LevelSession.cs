@@ -19,8 +19,12 @@ namespace AF.Core.Session
     /// <see cref="LevelStatus.Playing"/> devuelve false y no cambia nada (con Aguas estancadas el input está
     /// bloqueado desde el instante lógico del bloqueo, R15).</description></item>
     /// <item><description>I3: <see cref="Undo"/> restaura el estado anterior exacto, reabre los sellos y resta 1 a
-    /// <see cref="AppliedPours"/>.</description></item>
-    /// <item><description>I4: <see cref="Restart"/> deja <c>Current.Equals(Initial)</c> y el historial vacío.</description></item>
+    /// <see cref="AppliedPours"/>; con Aguas turbias, con las dosis ya reveladas visibles (I5).</description></item>
+    /// <item><description>I4: <see cref="Restart"/> deja <c>Current.Equals(Initial)</c> y el historial vacío; con Aguas
+    /// turbias, <see cref="Initial"/> con las dosis ya reveladas visibles (I5).</description></item>
+    /// <item><description>I5 (02 R7, T6; 04 §2.1, §2.5, §2.7): una dosis oculta revelada (al quedar arriba, con
+    /// <see cref="Reveal"/> o con <see cref="RevealAll"/>) no vuelve a ocultarse en todo el nivel, tampoco tras Marea ni tras
+    /// Volver a la orilla: «lo único que no se revierte es el conocimiento».</description></item>
     /// </list>
     /// <para>Modo de vertido (<see cref="AF.Core.Rules.PourMode"/>; por defecto <see cref="AF.Core.Rules.PourMode.Run"/>,
     /// D-005): se fija al crear la partida y no cambia a mitad de nivel, porque el historial de Marea y el par dependen de
@@ -29,8 +33,12 @@ namespace AF.Core.Session
     /// entero (02 §1.2; 04 §2.1). En <see cref="AF.Core.Rules.PourMode.Single"/> (solo pruebas) cada vertido mueve una
     /// dosis, así que <see cref="AppliedPours"/> cuenta dosis movidas y <see cref="Undo"/> deshace una dosis por uso.
     /// Victoria y bloqueo se evalúan igual en los dos modos.</para>
-    /// <para>Rechaza tableros con dosis ocultas: Marea y Volver a la orilla deberían conservar lo revelado (R7,
-    /// 04 §2.1, §2.7) y esa máscara de revelado aún no existe. Las mecánicas (02 §9) las aplica
+    /// <para><b>Aguas turbias</b> (02 §11): la partida lleva una máscara de revelado del nivel (<see cref="RevealedLayers"/>),
+    /// indexada por la posición inicial <c>[cuia, capa]</c> de cada dosis oculta. Es exacta porque una dosis oculta nunca se
+    /// mueve: nunca está en la cima (R7), así que nada la vierte ni se apila directamente sobre ella, y el lavado del Barro
+    /// sustituye el barro sin dejarla arriba. Por eso un tablero con dosis ocultas y Remolino (que inserta por el fondo y
+    /// desplaza las capas) se rechaza: <see cref="LevelValidation"/> ya prohíbe esa combinación [P]. La Luciérnaga regalada
+    /// del nivel 100 la da el cliente (04 §2.5), no el núcleo. Las mecánicas (02 §9) las aplica
     /// <see cref="BoardRules"/> en cada vertido con R10 por etapas (anexo B de D-007); Marea restaura el estado anterior
     /// entero, así que vuelve a cerrar lo que el vertido abrió o soltó.</para>
     /// <para>No es seguro entre hilos.</para>
@@ -40,13 +48,16 @@ namespace AF.Core.Session
         private readonly List<BoardState> _previous = new List<BoardState>();
         private readonly List<Pour> _pours = new List<Pour>();
 
+        // Máscara de revelado del nivel (02 T6): bit k de la entrada i = la dosis oculta inicial [i, k] ya se reveló.
+        private readonly int[] _revealed;
+
         /// <summary>Empieza una partida en <paramref name="initial"/> con el modo de vertido <paramref name="pourMode"/>.</summary>
         /// <param name="initial">Tablero inicial del nivel.</param>
         /// <param name="futileRuleEnabled">Valor de <c>futile_rule_enabled</c> (08 §9; kill-switch de R16).</param>
         /// <param name="pourMode">Modo de vertido del nivel (<c>rules_pour_mode</c>, por defecto
         /// <see cref="PourModes.Default"/> = <see cref="AF.Core.Rules.PourMode.Run"/>, D-005;
         /// <see cref="AF.Core.Rules.PourMode.Single"/> solo para pruebas).</param>
-        /// <exception cref="NotSupportedException">El tablero tiene dosis ocultas (Aguas turbias).</exception>
+        /// <exception cref="NotSupportedException">El tablero tiene dosis ocultas y un Remolino (combinación prohibida [P]).</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="pourMode"/> no es un valor definido.</exception>
         public LevelSession(BoardState initial, bool futileRuleEnabled, PourMode pourMode)
         {
@@ -56,11 +67,12 @@ namespace AF.Core.Session
             }
 
             PourModes.Check(pourMode, nameof(pourMode));
-            if (initial.HasHidden)
+            if (initial.HasHidden && HasRemolino(initial))
             {
-                throw new NotSupportedException("LevelSession aún no admite Aguas turbias: Marea y Volver a la orilla necesitan la máscara de revelado (02 R7, 04 §2.1).");
+                throw new NotSupportedException("Aguas turbias no se combina con el Remolino [P]: su inserción por el fondo desplazaría las dosis ocultas y la máscara de revelado (02 T6).");
             }
 
+            _revealed = new int[initial.Count];
             Initial = initial;
             Current = initial;
             FutileRuleEnabled = futileRuleEnabled;
@@ -73,13 +85,16 @@ namespace AF.Core.Session
         /// <see cref="PourModes.Default"/>. Conserva el comportamiento anterior para que Unity y <c>tools/</c> sigan
         /// compilando; T6 de decisiones.md (retirar esta sobrecarga) sigue pendiente.
         /// </summary>
-        /// <exception cref="NotSupportedException">El tablero tiene dosis ocultas (Aguas turbias).</exception>
+        /// <exception cref="NotSupportedException">El tablero tiene dosis ocultas y un Remolino (combinación prohibida [P]).</exception>
         public LevelSession(BoardState initial, bool futileRuleEnabled)
             : this(initial, futileRuleEnabled, PourMode.Run)
         {
         }
 
-        /// <summary>Tablero inicial del nivel (misma semilla en cada reinicio, 04 §2.7).</summary>
+        /// <summary>
+        /// Tablero inicial del nivel (misma semilla y misma asignación de capas ocultas en cada reinicio, 04 §2.7). No cambia:
+        /// lo revelado está en <see cref="RevealedLayers"/> y se aplica a <see cref="Current"/>.
+        /// </summary>
         public BoardState Initial { get; }
 
         /// <summary>Tablero actual.</summary>
@@ -106,6 +121,19 @@ namespace AF.Core.Session
 
         /// <summary>Hay historial que Marea puede deshacer (04 §2.1).</summary>
         public bool CanUndo => _pours.Count > 0;
+
+        /// <summary>Dosis ocultas que quedan en <see cref="Current"/> (Aguas turbias, 02 §11).</summary>
+        public int HiddenCount => Current.HiddenCount;
+
+        /// <summary>
+        /// Máscara de revelado del nivel (02 R8: parte del estado persistente) para la cuia <paramref name="cuia"/>: bit k =
+        /// la dosis oculta inicial <c>[cuia, k]</c> ya se reveló y no vuelve a ocultarse (02 R7, T6).
+        /// </summary>
+        public int RevealedLayers(int cuia)
+        {
+            CheckIndex(cuia, nameof(cuia));
+            return _revealed[cuia];
+        }
 
         /// <summary>
         /// Vertido <paramref name="index"/> del historial, del primero (0) al último (<c>AppliedPours − 1</c>).
@@ -152,6 +180,7 @@ namespace AF.Core.Session
             bool futile = BoardRules.IsFutile(current.CuiasArray, 0, current.Count, current.UnitsTable, source, target);
             var events = default(PourEvents);
             BoardState next = current.WithPour(source, target, PourMode, futile, ref events);
+            RecordReveals(current, next);
             var pour = new Pour(source, target, events.Amount);
             _previous.Add(current);
             _pours.Add(pour);
@@ -164,7 +193,8 @@ namespace AF.Core.Session
 
         /// <summary>
         /// Marea (04 §2.1): deshace el último vertido y restaura el estado anterior exacto, también desde
-        /// Aguas estancadas o desde la victoria. Devuelve false si el historial está vacío. Los cupos son de la UI.
+        /// Aguas estancadas o desde la victoria, salvo el conocimiento: las dosis ya reveladas siguen visibles (I5). Devuelve
+        /// false si el historial está vacío. Los cupos son de la UI.
         /// En <see cref="AF.Core.Rules.PourMode.Run"/> (por defecto, D-005) cada uso deshace el vertido entero, con todas las
         /// dosis que movió (04 §2.1); en <see cref="AF.Core.Rules.PourMode.Single"/> (pruebas), una sola dosis.
         /// </summary>
@@ -176,20 +206,106 @@ namespace AF.Core.Session
                 return false;
             }
 
-            Current = _previous[last];
+            Current = _previous[last].WithRevealed(_revealed);
             _previous.RemoveAt(last);
             _pours.RemoveAt(last);
             Status = Evaluate(Current);
             return true;
         }
 
-        /// <summary>Volver a la orilla (04 §2.7): vuelve al tablero inicial y vacía el historial (I4).</summary>
+        /// <summary>
+        /// Volver a la orilla (04 §2.7): vuelve al tablero inicial y vacía el historial (I4); conserva las capas reveladas
+        /// (I5).
+        /// </summary>
         public void Restart()
         {
             _previous.Clear();
             _pours.Clear();
-            Current = Initial;
-            Status = Evaluate(Initial);
+            Current = Initial.WithRevealed(_revealed);
+            Status = Evaluate(Current);
+        }
+
+        /// <summary>
+        /// Luciérnaga (04 §2.5; 02 T6): revela todas las dosis ocultas de la cuia <paramref name="cuia"/> y devuelve cuántas
+        /// reveló (0 si no tenía). No entra en el historial (Marea no deshace comodines, 04 §2.1) y lo revelado sigue visible
+        /// tras Marea y tras Volver a la orilla (I5). Revelar no abre una Hoja ni un Brote (04 §2.5 c). Recalcula
+        /// <see cref="Status"/>. Cupos, precio y modo de selección son de la UI.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">El índice está fuera del tablero.</exception>
+        public int Reveal(int cuia)
+        {
+            CheckIndex(cuia, nameof(cuia));
+            int hidden = Current[cuia].HiddenMask;
+            if (hidden == 0)
+            {
+                return 0;
+            }
+
+            _revealed[cuia] |= hidden;
+            Current = Current.WithRevealed(_revealed);
+            Status = Evaluate(Current);
+            return PopCount(hidden);
+        }
+
+        /// <summary>
+        /// Pororoca en un nivel turbio (04 §2.4 a; 02 T6): revela todas las dosis ocultas del nivel antes de barajar y
+        /// devuelve cuántas reveló. Como <see cref="Reveal"/>, no entra en el historial y es permanente (I5). El barajado es
+        /// de otra capa (y vacía el historial de Marea, 02 §14).
+        /// </summary>
+        public int RevealAll()
+        {
+            int total = 0;
+            for (int i = 0; i < _revealed.Length; i++)
+            {
+                int hidden = Current[i].HiddenMask;
+                _revealed[i] |= hidden;
+                total += PopCount(hidden);
+            }
+
+            if (total > 0)
+            {
+                Current = Current.WithRevealed(_revealed);
+                Status = Evaluate(Current);
+            }
+
+            return total;
+        }
+
+        /// <summary>
+        /// Anota en la máscara de revelado lo que el vertido reveló (R7): una dosis oculta solo deja de estarlo al quedar
+        /// arriba, en la misma posición <c>[cuia, capa]</c> (I5).
+        /// </summary>
+        private void RecordReveals(BoardState before, BoardState after)
+        {
+            for (int i = 0; i < _revealed.Length; i++)
+            {
+                _revealed[i] |= before.CuiaAt(i).HiddenMask & ~after.CuiaAt(i).HiddenMask;
+            }
+        }
+
+        private static bool HasRemolino(BoardState state)
+        {
+            for (int i = 0; i < state.Count; i++)
+            {
+                if (state[i].Mechanic == AF.Core.Mechanics.MechanicType.Remolino)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static int PopCount(int mask)
+        {
+            int count = 0;
+            while (mask != 0)
+            {
+                mask &= mask - 1;
+                count++;
+            }
+
+            return count;
         }
 
         private LevelStatus Evaluate(BoardState state)

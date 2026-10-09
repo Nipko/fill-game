@@ -23,6 +23,12 @@ namespace AF.Core.Board
     /// <item><description>Ninguna cuia sellada al inicio (03 §17 #5).</description></item>
     /// <item><description>Barro (02 §9.1 M5): solo en la capa 2 o 3 (índice 1-2) de una cuia de 4; nunca en una cuia con
     /// mecánica (propuesta de D-007 b.2 M5: «nunca dentro de un Matapi»; D-007) ni como dosis oculta [P].</description></item>
+    /// <item><description>Aguas turbias (02 §11; D-007, Q14 A): T2 (como mucho <c>lvl_murky_max_cuias</c> cuias turbias y
+    /// <c>lvl_murky_max_hidden_units</c> dosis ocultas; por defecto 3 y 4, 08 §9); T3 (una cuia turbia tiene como mucho 3
+    /// dosis, nunca está llena y su cima es visible); T4 (bajo una dosis oculta nunca va el color de la dosis de encima);
+    /// ocultos solo en cuias sin mecánica; el nivel puede llevar filtros (Hoja, Brote, Matapi, Barro) pero no Liana, Lluvia
+    /// ni Piraña (Q14 A) ni Remolino [P: propuesta b.2, «solo junto a filtros»]. T1 (etiqueta y nivel ≥ 100) y Q9 son del
+    /// pipeline.</description></item>
     /// <item><description>Las reglas propias de cada mecánica (03 §17 #6).</description></item>
     /// <item><description><c>atascado(S0)</c> = false con la <c>futil</c> única (02 §9.2 regla 1).</description></item>
     /// </list>
@@ -35,6 +41,15 @@ namespace AF.Core.Board
         /// <summary>Máximo de <c>U_c</c> en campaña (02 R3, fruta abundante de una Cuia alta de 6).</summary>
         public const int MaxUnits = 6;
 
+        /// <summary><c>lvl_murky_max_cuias</c> por defecto (02 T2; 08 §9).</summary>
+        public const int DefaultMurkyMaxCuias = 3;
+
+        /// <summary><c>lvl_murky_max_hidden_units</c> por defecto (02 T2; 08 §9): ≤ 24 realidades.</summary>
+        public const int DefaultMurkyMaxHiddenUnits = 4;
+
+        /// <summary>Dosis máximas de una cuia turbia al inicio (02 T3).</summary>
+        public const int MurkyMaxDoses = 3;
+
         /// <summary>
         /// Comprueba las reglas sobre el tablero inicial. Devuelve null si es válido o el motivo del primer rechazo, en el
         /// orden de la lista de la clase.
@@ -42,6 +57,18 @@ namespace AF.Core.Board
         /// <param name="state">Tablero inicial (normalmente de <see cref="BoardBuilder"/>).</param>
         /// <param name="futileRuleEnabled">Valor de <c>futile_rule_enabled</c> con el que se comprueba <c>atascado(S0)</c>.</param>
         public static string? Validate(BoardState state, bool futileRuleEnabled = true)
+        {
+            return Validate(state, futileRuleEnabled, DefaultMurkyMaxCuias, DefaultMurkyMaxHiddenUnits);
+        }
+
+        /// <summary>
+        /// Como <see cref="Validate(BoardState, bool)"/> con los límites de Aguas turbias de Remote Config (02 T2; 08 §9).
+        /// </summary>
+        /// <param name="state">Tablero inicial.</param>
+        /// <param name="futileRuleEnabled">Valor de <c>futile_rule_enabled</c>.</param>
+        /// <param name="murkyMaxCuias"><c>lvl_murky_max_cuias</c> (3 por defecto).</param>
+        /// <param name="murkyMaxHiddenUnits"><c>lvl_murky_max_hidden_units</c> (4 por defecto).</param>
+        public static string? Validate(BoardState state, bool futileRuleEnabled, int murkyMaxCuias, int murkyMaxHiddenUnits)
         {
             if (state == null)
             {
@@ -110,6 +137,12 @@ namespace AF.Core.Board
                 return mud;
             }
 
+            string? murky = MurkyError(state, murkyMaxCuias, murkyMaxHiddenUnits);
+            if (murky != null)
+            {
+                return murky;
+            }
+
             for (int i = 0; i < state.Count; i++)
             {
                 Cuia cuia = state[i];
@@ -165,6 +198,88 @@ namespace AF.Core.Board
                     if (cuia.IsHiddenAt(k))
                     {
                         return where + "el Barro nunca va oculto [P]";
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>Aguas turbias (02 §11 T2-T4; D-007, Q14 A) o null si el tablero no tiene dosis ocultas o son válidas.</summary>
+        private static string? MurkyError(BoardState state, int maxCuias, int maxHiddenUnits)
+        {
+            int murkyCuias = 0;
+            int hiddenUnits = 0;
+            for (int i = 0; i < state.Count; i++)
+            {
+                int hidden = state[i].HiddenCount;
+                if (hidden > 0)
+                {
+                    murkyCuias++;
+                    hiddenUnits += hidden;
+                }
+            }
+
+            if (murkyCuias == 0)
+            {
+                return null;
+            }
+
+            if (murkyCuias > maxCuias)
+            {
+                return "02 T2: " + Num(murkyCuias) + " cuias turbias; como mucho lvl_murky_max_cuias = " + Num(maxCuias);
+            }
+
+            if (hiddenUnits > maxHiddenUnits)
+            {
+                return "02 T2: " + Num(hiddenUnits) + " dosis ocultas; como mucho lvl_murky_max_hidden_units = " + Num(maxHiddenUnits);
+            }
+
+            for (int i = 0; i < state.Count; i++)
+            {
+                Cuia cuia = state[i];
+                MechanicType type = cuia.Mechanic;
+                if (type == MechanicType.Liana || type == MechanicType.Lluvia || type == MechanicType.Pirana)
+                {
+                    return "D-007, Q14 A: Aguas turbias no se combina con " + MechanicTypes.ToKey(type) + " (cuia " + Num(i) + ")";
+                }
+
+                if (type == MechanicType.Remolino)
+                {
+                    return "Aguas turbias no se combina con el Remolino (cuia " + Num(i) + ") [P: propuesta de D-007 b.2, solo junto a filtros]";
+                }
+
+                if (!cuia.HasHidden)
+                {
+                    continue;
+                }
+
+                string where = "cuia turbia " + Num(i) + ": ";
+                if (cuia.HasMechanic)
+                {
+                    return where + "02 §11: una cuia con mecánica lleva sus dosis visibles; las dosis ocultas solo van en cuias sin mecánica (D-007, Q14 A)";
+                }
+
+                if (cuia.Count > MurkyMaxDoses || cuia.IsFull)
+                {
+                    return where + "02 T3: como mucho 3 dosis al inicio y nunca llena";
+                }
+
+                if (cuia.IsHiddenAt(cuia.Count - 1))
+                {
+                    return where + "02 T3: la cima es visible";
+                }
+
+                for (int k = 0; k < cuia.Count - 1; k++)
+                {
+                    if (!cuia.IsHiddenAt(k))
+                    {
+                        continue;
+                    }
+
+                    if (cuia.ColorAt(k) == cuia.ColorAt(k + 1))
+                    {
+                        return where + "02 T4: la dosis oculta " + Num(k) + " repite el color de la de encima";
                     }
                 }
             }

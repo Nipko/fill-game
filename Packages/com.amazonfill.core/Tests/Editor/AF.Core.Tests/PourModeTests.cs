@@ -612,12 +612,13 @@ namespace AF.Core.Tests
         }
 
         [Test]
-        public void HiddenDoses_AreRejectedInBothModes()
+        public void HiddenDoses_AreAcceptedInBothModes()
         {
+            // C2-1: Aguas turbias en la partida (02 §11) en los dos modos de vertido.
             var board = Board(Cuia.Create(4, new[] { 1, 2, 1 }, 0x1), C(4, 2, 2, 1, 1), Cuia.Empty(4));
 
-            Assert.That(() => { new LevelSession(board, true, PourMode.Single); }, Throws.TypeOf<NotSupportedException>());
-            Assert.That(() => { new LevelSession(board, true, PourMode.Run); }, Throws.TypeOf<NotSupportedException>());
+            Assert.That(new LevelSession(board, true, PourMode.Single).HiddenCount, Is.EqualTo(1));
+            Assert.That(new LevelSession(board, true, PourMode.Run).HiddenCount, Is.EqualTo(1));
         }
     }
 }

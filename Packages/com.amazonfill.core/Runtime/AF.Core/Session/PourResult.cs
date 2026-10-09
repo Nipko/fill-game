@@ -39,6 +39,12 @@ namespace AF.Core.Session
         /// </summary>
         public PourEvents Events { get; }
 
+        /// <summary>
+        /// Revelado de Aguas turbias (02 R7, §11): cuias cuya nueva cima oculta quedó visible en este vertido (bit i = cuia
+        /// i; hoy solo A, etapa (a) de R10). Lo revelado ya no vuelve a ocultarse en la partida (<see cref="LevelSession"/>).
+        /// </summary>
+        public int RevealedMask => Events.RevealedMask;
+
         /// <summary>El vertido lavó el Barro de la cima de la cuia que recibió (evento BarroWashed; 02 §9.1 M5).</summary>
         public bool BarroWashed => Events.BarroWashedMask != 0;
     }

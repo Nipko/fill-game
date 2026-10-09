@@ -144,6 +144,21 @@ namespace AF.Core.Board
             }
         }
 
+        /// <summary>Número de dosis ocultas del tablero (Aguas turbias, 02 §11).</summary>
+        public int HiddenCount
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < _cuias.Length; i++)
+                {
+                    count += _cuias[i].HiddenCount;
+                }
+
+                return count;
+            }
+        }
+
         /// <summary>
         /// Hash de 64 bits del estado canónico (03 §3): igual para todas las permutaciones de las mismas cuias.
         /// Asigna un array temporal: no es para el bucle caliente (allí, <see cref="BoardCanon"/> sobre un búfer propio).
@@ -219,6 +234,30 @@ namespace AF.Core.Board
             var next = (Cuia[])_cuias.Clone();
             BoardRules.ApplyInPlace(next, 0, next.Length, _units, source, target, mode, isFutile, ref events);
             return new BoardState(next, _units);
+        }
+
+        /// <summary>
+        /// El mismo tablero con las capas de <paramref name="revealedByCuia"/>[i] de la cuia i visibles (máscara de revelado
+        /// de la partida, 02 T6). Devuelve este mismo objeto si no cambia nada. Las cuias sin entrada (índice ≥ longitud) no
+        /// cambian.
+        /// </summary>
+        internal BoardState WithRevealed(int[] revealedByCuia)
+        {
+            Cuia[]? next = null;
+            int limit = revealedByCuia.Length < _cuias.Length ? revealedByCuia.Length : _cuias.Length;
+            for (int i = 0; i < limit; i++)
+            {
+                Cuia cuia = _cuias[i];
+                if ((cuia.HiddenMask & revealedByCuia[i]) == 0)
+                {
+                    continue;
+                }
+
+                next ??= (Cuia[])_cuias.Clone();
+                next[i] = cuia.WithRevealed(revealedByCuia[i] & cuia.HiddenMask);
+            }
+
+            return next == null ? this : new BoardState(next, _units);
         }
 
         /// <summary>Tabla <c>U_c</c> indexada por color (0..16) para <see cref="CuiaRules"/>. No se modifica.</summary>

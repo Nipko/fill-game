@@ -232,6 +232,7 @@ namespace AF.Core.Rules
             if (!rest.IsEmpty && from.IsHiddenAt(rest.Count - 1))
             {
                 events.SourceRevealed = true;
+                events.RevealedMask |= 1 << source;
             }
 
             Cuia to = board[target];
