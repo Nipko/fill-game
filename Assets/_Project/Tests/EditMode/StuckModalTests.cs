@@ -77,6 +77,21 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void BranchB_WithAReadOnlyProfile_OffersNothingToBuy()
+        {
+            // Revisión de la pista B, punto 5 (08 §4.4): con el perfil en solo lectura (TooNew o MigrationFailed) lo comprado se
+            // perdería al cerrar la app: ni Puñado ni Balsa. El resto del modal no cambia.
+            StuckContext ctx = Ctx(level: 31, seeds: 140, price: 600);
+            ctx.PurchasesBlocked = true;
+            StuckModalView view = StuckModalModel.Build(ctx, Config);
+            Assert.That(view.Rescue, Is.EqualTo(StuckRescueKind.Disabled));
+            Assert.That(view.RescueMissing, Is.EqualTo(460));
+            Assert.That(view.Offers, Is.Empty);
+            Assert.That(view.Undo, Is.EqualTo(StuckUndoKind.Undo));
+            Assert.That(view.Footer, Is.EqualTo(StuckFooter.GiveUp));
+        }
+
+        [Test]
         public void BranchBPrime_T1_BalsaFirst()
         {
             StuckContext ctx = Ctx(level: 31, seeds: 140, price: 600);
@@ -297,9 +312,10 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Flow_AndroidBack_HasNoWayOut_ButTheModalStaysOpenUntilAChoice()
+        public void Flow_BoardTapsAndTime_DoNotCloseTheModal()
         {
-            // 04 §6.6: el modal no se cierra sin elegir; el flujo no tiene un «cerrar» y ni los toques al tablero lo cierran.
+            // 04 §6.6: el modal no se cierra sin elegir; el flujo no tiene un «cerrar», y ni los toques al tablero o al fondo ni
+            // el paso del tiempo lo cierran. El botón Atrás de Android lo prueba BackButtonTests (PlayMode), que lo inyecta.
             var fx = new FunnelFixture(offset: 30, seeds: 1000, maxLevel: 35);
             fx.StartPlaying(36);
             fx.GetStuck();

@@ -2,9 +2,11 @@
 using System.Collections;
 using AF.Boosters;
 using AF.GameFlow;
+using AF.Presentation;
 using AF.Save;
 using AF.UI;
 using NUnit.Framework;
+using UnityEngine;
 using UnityEngine.TestTools;
 
 namespace AF.Tests.PlayMode
@@ -35,8 +37,24 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = null!;
             yield return Load31(1000, b => boot = b);
             GameScreen view = boot.View!;
+
+            // 07 §7.4 (dueño del HUD) y 02 §5: en PLAYING, la cabecera lleva las píldoras de Semillas y, desde el 31, Canoas
+            // «n/5» (el jugador ve su saldo cuando la bandeja le pone precios), entre la insignia y Reiniciar, sin pisarlos.
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(view.WalletBar.Visible, Is.True, "saldo en la cabecera de partida");
+            Assert.That(view.WalletBar.Compact, Is.True, "píldoras de 07 §7.4, no el saldo grande del embudo");
+            Assert.That(view.WalletBar.SeedsShown, Is.EqualTo(1000));
+            Assert.That(view.WalletBar.CanoesShown, Is.EqualTo(5), "Canoas desde el 31");
+            Assert.That(view.WalletBar.TimerShown, Is.False, "02 §5: Canoas «4/5», sin cronómetro en partida");
+            Assert.That(view.WalletBar.Root.parent, Is.SameAs(view.Hud), "en la capa del HUD: el origen que vierte la tapa (D-006)");
+            AssertApart(view.WalletBar.SeedsRect, (RectTransform)view.RestartButton.transform, "Semillas y Reiniciar");
+            AssertApart(view.WalletBar.CanoesRect, (RectTransform)view.RestartButton.transform, "Canoas y Reiniciar");
+            AssertApart(view.WalletBar.SeedsRect, (RectTransform)view.PauseButton.transform, "Semillas y pausa");
+            AssertApart(view.WalletBar.SeedsRect, view.WalletBar.CanoesRect, "Semillas y Canoas");
+
             FunnelSetup.GetStuck(boot);
             Assert.That(view.StuckVisible, Is.True);
+            Assert.That(view.WalletBar.Compact, Is.False, "D-008 paso 1: en el embudo, el saldo grande arriba");
             Assert.That(view.Stuck.View!.Rescue, Is.EqualTo(StuckRescueKind.Available));
             Assert.That(view.Stuck.RescuePriceShown, Is.EqualTo(300), "primer rescate del día (rescue_first_day_mult)");
             Assert.That(view.Stuck.RescueNoteText, Is.EqualTo(UiText.StuckRescueDiscount));
@@ -75,12 +93,21 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Stuck.HandfulButton.gameObject.activeSelf, Is.True);
             Assert.That(view.Stuck.BalsaButton.gameObject.activeSelf, Is.True, "Balsa: 1 al día");
 
+            // 07 §1.2 y §7.8 (contraste ≥ 4,5:1): el CTA deshabilitado lleva el texto deshabilitado_texto (#3A3530, 4,85:1 sobre
+            // el gris) sin el contorno verde del CTA, que rellenaba los huecos de las letras.
+            UnityEngine.Material disabled = view.Stuck.RescueLabel.fontSharedMaterial;
+            Assert.That(disabled.IsKeywordEnabled("OUTLINE_ON"), Is.False, "sin contorno en el estado deshabilitado");
+            Assert.That(disabled.GetFloat("_OutlineWidth"), Is.EqualTo(0f));
+            Assert.That(disabled.IsKeywordEnabled("UNDERLAY_ON"), Is.False, "ni sombra");
+            Assert.That(view.Stuck.RescueLabel.color, Is.EqualTo(Palette.DisabledText));
+
             view.Stuck.HandfulButton.onClick.Invoke();
             Assert.That(FunnelSetup.Purchases.Presented, Is.EqualTo(1));
             Assert.That(boot.Wallet!.Seeds, Is.EqualTo(1000), "Puñado: 1.000 semillas (05 §4.1)");
             PlayModeHelpers.Step(boot, 20);
             Assert.That(view.Stuck.View!.Rescue, Is.EqualTo(StuckRescueKind.Available), "el modal se rearma con el saldo nuevo");
             Assert.That(view.Stuck.RescuePriceShown, Is.EqualTo(300), "mismo precio");
+            Assert.That(view.Stuck.RescueLabel.fontSharedMaterial.IsKeywordEnabled("OUTLINE_ON"), Is.True, "habilitado, vuelve el contorno del CTA");
             Assert.That(view.Stuck.HandfulButton.gameObject.activeSelf, Is.False);
         }
 
@@ -124,8 +151,13 @@ namespace AF.Tests.PlayMode
             yield return PlayModeHelpers.LoadGame(6, new MemoryProgressStore(6, 5));
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
-            boot.TapAnywhere();
             GameScreen view = boot.View!;
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Intro));
+            Assert.That(view.WalletBar.Visible, Is.True, "07 §7.4: la píldora de Semillas también en la intro");
+            Assert.That(view.WalletBar.Compact, Is.True);
+            Assert.That(view.WalletBar.CanoesShown, Is.EqualTo(-1), "07 §7.4: Canoas, visible desde el 31; antes, oculto");
+            boot.TapAnywhere();
             FunnelSetup.GetStuck(boot);
             Assert.That(view.Stuck.RestartButton.gameObject.activeSelf, Is.True, "rama C");
             Assert.That(view.Stuck.GiveUpButton.gameObject.activeSelf, Is.False);
@@ -136,6 +168,19 @@ namespace AF.Tests.PlayMode
             view.Stuck.RestartButton.onClick.Invoke();
             Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Intro));
             Assert.That(boot.Flow.Attempt.FailsLevel, Is.EqualTo(1));
+        }
+
+        // Los dos rectángulos (en el mundo) no se pisan.
+        private static void AssertApart(RectTransform a, RectTransform b, string what)
+        {
+            Assert.That(WorldRect(a).Overlaps(WorldRect(b)), Is.False, what + " se pisan");
+        }
+
+        private static Rect WorldRect(RectTransform rt)
+        {
+            var corners = new Vector3[4];
+            rt.GetWorldCorners(corners);
+            return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
         }
 
         private static IEnumerator Load31(int seeds, System.Action<GameBootstrap> done)

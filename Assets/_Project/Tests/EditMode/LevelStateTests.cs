@@ -70,9 +70,54 @@ namespace AF.Tests.EditMode
         [TestCase("h1|P|||00")]
         [TestCase("h1|P|||0g")]
         [TestCase("h1|P||")]
+        [TestCase("h1|P||b|")]
+        [TestCase("h1|S||bb|")]
         public void History_RejectsBrokenText(string? history)
         {
             Assert.That(LevelStateSnapshot.TryParseHistory(history, out _), Is.False);
+        }
+
+        [Test]
+        public void History_BalsaMark_OnlyWithTheBlockOpen()
+        {
+            // Revisión de la pista B, punto 3: la marca «b» (la Balsa ya se enseñó en este bloqueo) solo va con Aguas estancadas
+            // o ¿Seguro?, para reabrir el modal tal cual (02 §14; D-008).
+            var sb = new StringBuilder();
+            LevelStateSnapshot.WriteHistory(sb, SavedPhase.StuckModal, new AddedCuiaKind[0], false, false, null, balsaShown: true);
+            Assert.That(sb.ToString(), Is.EqualTo("h1|S||b|"));
+            LevelStateSnapshot.WriteHistory(sb, SavedPhase.Playing, new AddedCuiaKind[0], false, false, null, balsaShown: true);
+            Assert.That(sb.ToString(), Is.EqualTo("h1|P|||"), "fuera del bloqueo no se escribe");
+            Assert.That(LevelStateSnapshot.TryParseHistory("h1|G||cb|", out SavedHistory parsed), Is.True);
+            Assert.That(parsed.BalsaShown && parsed.ExtraCuiaGifted, Is.True);
+            Assert.That(LevelStateSnapshot.TryParseHistory("h1|S|||34", out SavedHistory plain), Is.True);
+            Assert.That(plain.BalsaShown, Is.False);
+        }
+
+        [Test]
+        public void TheBalsaShownInTheBlock_IsRestoredWithTheModal_AndForgottenWhenTheBlockEnds()
+        {
+            var rig = new Rig(offset: 25, seeds: 0);
+            rig.Start(31);
+            Assert.That(rig.Flow.MarkBalsaShown(), Is.False, "en juego no hay bloqueo");
+            GetStuck(rig.Flow);
+            Assert.That(rig.Flow.BalsaShownThisBlock, Is.False);
+            Assert.That(rig.Flow.MarkBalsaShown(), Is.True);
+            Assert.That(rig.Flow.MarkBalsaShown(), Is.False, "una vez por bloqueo");
+            StringAssert.StartsWith("h1|S||b|", rig.Store.Load()!.History);
+
+            Rig again = rig.Reopen();
+            Assert.That(again.Flow.Resume(rig.Store.Load()!), Is.True);
+            Assert.That(again.Flow.Phase, Is.EqualTo(FlowPhase.StuckModal));
+            Assert.That(again.Flow.BalsaShownThisBlock, Is.True, "el modal reabierto la sigue ofreciendo sin otra impresión");
+            StringAssert.StartsWith("h1|S||b|", again.Store.Load()!.History, "y la marca sigue guardada");
+
+            Assert.That(again.Flow.PressGiveUp(), Is.True);
+            Assert.That(again.Flow.BalsaShownThisBlock, Is.True, "¿Seguro? es el mismo bloqueo");
+            StringAssert.StartsWith("h1|G||b|", again.Store.Load()!.History);
+            Assert.That(again.Flow.ConfirmGiveUp(), Is.True);
+            StringAssert.StartsWith("h1|F|||", again.Store.Load()!.History, "en Nivel fallido ya no se escribe");
+            Assert.That(again.Flow.PressRetry(), Is.True);
+            Assert.That(again.Flow.BalsaShownThisBlock, Is.False, "el bloqueo terminó");
         }
 
         [Test]

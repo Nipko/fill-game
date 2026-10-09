@@ -47,6 +47,12 @@ namespace AF.GameFlow
         /// <summary>Capi ya regaló la Cuia extra de este nivel (04 §2.2): no se repite al salir y volver a entrar.</summary>
         public bool ExtraCuiaGifted { get; internal set; }
 
+        /// <summary>
+        /// La Balsa de rescate ya se enseñó en este bloqueo (Aguas estancadas o ¿Seguro?): el modal reabierto la vuelve a
+        /// ofrecer tal cual, sin contar otra impresión para <c>af_rescue_daily_cap</c> (02 §14; D-008).
+        /// </summary>
+        public bool BalsaShown { get; internal set; }
+
         /// <summary>Orígenes de los vertidos aplicados, en orden.</summary>
         public List<int> Sources { get; } = new List<int>(64);
 
@@ -67,7 +73,8 @@ namespace AF.GameFlow
     /// <item><description><c>history</c> (su formato lo fija quien reanuda el nivel, 04 §10.1): <c>h1|F|A|M|V</c>, con F la
     /// pantalla (<c>P</c>, <c>S</c>, <c>G</c>, <c>F</c> o <c>X</c>, <see cref="SavedPhase"/>), A las cuias añadidas en orden
     /// (<c>E</c> Cuia extra, <c>R</c> Cuia de rescate), M las marcas (<c>g</c>: recarga gratis de la rama F ya dada;
-    /// <c>c</c>: Capi ya regaló la Cuia extra del nivel, que también se guarda al salir al inicio) y V los vertidos aplicados
+    /// <c>c</c>: Capi ya regaló la Cuia extra del nivel, que también se guarda al salir al inicio; <c>b</c>: la Balsa de
+    /// rescate ya se enseñó en este bloqueo, solo con <c>S</c> o <c>G</c>, para reabrir el modal tal cual) y V los vertidos aplicados
     /// como pares de dígitos hexadecimales origen-destino (16 cuias como mucho). La fase va aquí porque el booleano
     /// <c>stuck</c> no basta (04 §10.1 con D-008) y <c>AF.Save</c> aún no tiene un campo <c>phase</c>; el regalo, porque el
     /// perfil aún no tiene un campo propio para él.</description></item>
@@ -82,6 +89,7 @@ namespace AF.GameFlow
         private const char Separator = '|';
         private const char UndoGiftMark = 'g';
         private const char ExtraCuiaGiftMark = 'c';
+        private const char BalsaShownMark = 'b';
         private const string HexDigits = "0123456789abcdef";
 
         /// <summary>
@@ -127,9 +135,13 @@ namespace AF.GameFlow
             return -2;
         }
 
-        /// <summary>Escribe <c>history</c> en <paramref name="sb"/> (que se vacía antes).</summary>
+        /// <summary>
+        /// Escribe <c>history</c> en <paramref name="sb"/> (que se vacía antes). <paramref name="balsaShown"/> solo se anota con
+        /// Aguas estancadas o ¿Seguro? (es del bloqueo en curso).
+        /// </summary>
         public static void WriteHistory(
-            StringBuilder sb, SavedPhase phase, IReadOnlyList<AddedCuiaKind> added, bool undoGiftUsed, bool extraCuiaGifted, LevelSession? session)
+            StringBuilder sb, SavedPhase phase, IReadOnlyList<AddedCuiaKind> added, bool undoGiftUsed, bool extraCuiaGifted, LevelSession? session,
+            bool balsaShown = false)
         {
             sb.Clear();
             sb.Append(HistoryVersion).Append(Separator).Append(PhaseCode(phase)).Append(Separator);
@@ -147,6 +159,11 @@ namespace AF.GameFlow
             if (extraCuiaGifted)
             {
                 sb.Append(ExtraCuiaGiftMark);
+            }
+
+            if (balsaShown && (phase == SavedPhase.StuckModal || phase == SavedPhase.GiveUpConfirm))
+            {
+                sb.Append(BalsaShownMark);
             }
 
             sb.Append(Separator);
@@ -207,6 +224,10 @@ namespace AF.GameFlow
                 else if (mark == ExtraCuiaGiftMark && !parsed.ExtraCuiaGifted)
                 {
                     parsed.ExtraCuiaGifted = true;
+                }
+                else if (mark == BalsaShownMark && !parsed.BalsaShown && (phase == SavedPhase.StuckModal || phase == SavedPhase.GiveUpConfirm))
+                {
+                    parsed.BalsaShown = true;
                 }
                 else
                 {

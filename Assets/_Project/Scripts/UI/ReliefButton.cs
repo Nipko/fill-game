@@ -64,9 +64,14 @@ namespace AF.UI
             {
                 _labelMaterial = label.fontSharedMaterial;
                 _labelColor = label.color;
-                // El material deshabilitado es de Nunito: con otra fuente (Baloo 2 en los CTA) su atlas no casa y el texto sale
-                // roto; entonces se conserva el material propio y solo cambia el color.
-                _labelDisabledMaterial = UiFonts.Font(TextStyle.Disabled) == label.font ? UiFonts.Material(TextStyle.Disabled) : null;
+                // Deshabilitado sin contorno ni sombra (guía 5.1: «etiqueta legible»; 07 §1.2 y §7.8: contraste ≥ 4,5:1). El
+                // material de TextStyle.Disabled es de Nunito: con otra fuente (Baloo 2 en los CTA) su atlas no casa y el texto
+                // saldría roto, así que se usa el material base del font asset de la etiqueta (la cara sola, sin contorno ni
+                // sombra). Antes se conservaba el material del CTA: el contorno verde grueso rellenaba los huecos de las letras
+                // del texto oscuro sobre el gris (revisión de 12c_stuck_l31_noseeds: «Continuar: +1 cuia» sin saldo).
+                _labelDisabledMaterial = UiFonts.Font(TextStyle.Disabled) == label.font
+                    ? UiFonts.Material(TextStyle.Disabled)
+                    : (label.font != null ? label.font.material : null);
             }
         }
 

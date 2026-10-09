@@ -161,6 +161,8 @@ namespace AF.GameFlow
                 phase = stuck ? SavedPhase.StuckModal : SavedPhase.Playing;
             }
 
+            // La Balsa que ya se enseñó en este bloqueo se vuelve a ofrecer sin contar otra impresión (marca b; D-008).
+            _balsaShown = history.BalsaShown && (phase == SavedPhase.StuckModal || phase == SavedPhase.GiveUpConfirm);
             switch (phase)
             {
                 case SavedPhase.StuckModal:
@@ -242,7 +244,7 @@ namespace AF.GameFlow
             if (inProgress)
             {
                 LevelStateSnapshot.WriteRevealed(session.Initial, session.Current, s.RevealedCuias);
-                LevelStateSnapshot.WriteHistory(_historyBuilder, phase, _attempt.Added, _attempt.UndoGiftUsed, _attempt.ExtraCuiaGifted, session);
+                LevelStateSnapshot.WriteHistory(_historyBuilder, phase, _attempt.Added, _attempt.UndoGiftUsed, _attempt.ExtraCuiaGifted, session, _balsaShown);
             }
             else
             {

@@ -16,13 +16,20 @@ namespace AF.UI
     public sealed class GameServices
     {
         /// <summary>Crea los servicios.</summary>
-        public GameServices(Wallet wallet, AdController ads, IStoreService store, StoreLedger storeLedger, GeoTier geo)
+        /// <param name="wallet">Cartera.</param>
+        /// <param name="ads">Anuncios.</param>
+        /// <param name="store">Tienda simulada.</param>
+        /// <param name="storeLedger">Registro de la tienda en el perfil.</param>
+        /// <param name="geo">Segmento geográfico del modal.</param>
+        /// <param name="purchasesBlocked">No se ofrecen compras (perfil en solo lectura; ver <see cref="PurchasesBlocked"/>).</param>
+        public GameServices(Wallet wallet, AdController ads, IStoreService store, StoreLedger storeLedger, GeoTier geo, bool purchasesBlocked = false)
         {
             Wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
             Ads = ads ?? throw new ArgumentNullException(nameof(ads));
             Store = store ?? throw new ArgumentNullException(nameof(store));
             StoreLedger = storeLedger ?? throw new ArgumentNullException(nameof(storeLedger));
             Geo = geo;
+            PurchasesBlocked = purchasesBlocked;
         }
 
         /// <summary>Cartera.</summary>
@@ -42,6 +49,14 @@ namespace AF.UI
         /// América Latina).
         /// </summary>
         public GeoTier Geo { get; }
+
+        /// <summary>
+        /// No se ofrecen compras: el perfil del dispositivo es de una versión más nueva o su migración falló
+        /// (<c>ProfileLoadStatus.TooNew</c> o <c>MigrationFailed</c>; 08 §4.4) y nada de esta sesión se puede guardar, así que una
+        /// compra se perdería al cerrar la app. Sin Puñado, Balsa ni Canoas infinitas en el embudo. Medida mínima [P]: la
+        /// pantalla de bloqueo «Actualiza Tintalú» (como <c>biz_min_app_version</c> de 08 §9) la decide el dueño.
+        /// </summary>
+        public bool PurchasesBlocked { get; }
 
         /// <summary>El botón de video de <paramref name="placement"/> se enseña (reglas, tope, cooldown y fill; 05 §6.2).</summary>
         public bool RewardedReady(AdPlacement placement)

@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Rules;
 using AF.GameFlow;
@@ -136,6 +137,49 @@ namespace AF.Tests.PlayMode
             fourth.View.Failed.RetryButton.onClick.Invoke();
             Assert.That(fourth.Flow.Phase, Is.EqualTo(FlowPhase.Intro), "Reintentar: el mismo tablero desde el principio");
             Assert.That(fourth.Wallet.Canoes.Count, Is.EqualTo(4));
+        }
+
+        [UnityTest]
+        public IEnumerator WithoutSeeds_TheReopenedModal_KeepsTheBalsa_WithoutCountingItAgain()
+        {
+            // 02 §14 y D-008: el modal se reabre tal cual. Sin saldo (rama B) enseña Puñado y Balsa; la impresión de la Balsa
+            // cuenta para af_rescue_daily_cap (= 1) y queda anotada en level_state (marca b), así que al volver a la app la
+            // Balsa sigue ahí y no cuenta otra impresión. Antes, el modal reabierto la perdía: CanOfferBalsa ya daba false.
+            var store = new MemoryProfileStore(FunnelSetup.Profile(0));
+            LaunchOptions.LevelOffsetOverride = 25;
+            LaunchOptions.ProfileStoreOverride = store;
+            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            FunnelSetup.GetStuck(boot);
+            Assert.That(boot.View!.Stuck.View!.Rescue, Is.EqualTo(StuckRescueKind.Disabled), "saldo insuficiente");
+            Assert.That(boot.View.Stuck.HandfulButton.gameObject.activeSelf, Is.True);
+            Assert.That(boot.View.Stuck.BalsaButton.gameObject.activeSelf, Is.True);
+            Assert.That(boot.Services!.StoreLedger.BalsaShownToday, Is.EqualTo(1), "la impresión cuenta para el tope diario");
+            Assert.That(boot.Services.StoreLedger.CanOfferBalsa(31), Is.False, "af_rescue_daily_cap = 1: ya no se ofrecería en otro bloqueo");
+            StringAssert.StartsWith("h1|S||b|", ProfileJson.Deserialize(store.Json!).LevelState!.History, "la Balsa enseñada queda en level_state");
+
+            yield return PlayModeHelpers.LoadApp(store); // como cerrar y abrir la app
+            GameBootstrap again = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(again);
+            PlayModeHelpers.Step(again, 300);
+            Assert.That(again.Flow!.Phase, Is.EqualTo(FlowPhase.StuckModal));
+            Assert.That(again.View!.StuckVisible, Is.True);
+            Assert.That(again.View.Stuck.View!.Rescue, Is.EqualTo(StuckRescueKind.Disabled));
+            Assert.That(again.View.Stuck.RescueNoteText, Is.EqualTo(UiText.MissingSeeds(300)), "el mismo precio (300, primero del día)");
+            Assert.That(again.View.Stuck.HandfulButton.gameObject.activeSelf, Is.True);
+            Assert.That(again.View.Stuck.BalsaButton.gameObject.activeSelf, Is.True, "el modal reabierto trae la Balsa, tal cual");
+            Assert.That(again.Services!.StoreLedger.BalsaShownToday, Is.EqualTo(1), "sin contar otra impresión");
+            Assert.That(again.Flow.BalsaShownThisBlock, Is.True);
+            Assert.That(again.Wallet!.Canoes.Count, Is.EqualTo(5));
+
+            // Al salir del bloqueo (Marea) la marca se olvida: el tope diario vuelve a mandar en el siguiente bloqueo.
+            Assert.That(again.PressUndo(), Is.True);
+            Assert.That(again.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(again.Flow.BalsaShownThisBlock, Is.False);
+            StringAssert.StartsWith("h1|P|||", ProfileJson.Deserialize(store.Json!).LevelState!.History);
         }
 
         [UnityTest]

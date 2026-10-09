@@ -338,6 +338,9 @@ namespace AF.Tests.PlayMode
         /// el regalo de Capi), <c>11b_tray_l8_added</c> (la cuia añadida en la fila más corta), <c>12_stuck_l31</c> (rama A,
         /// 300 con el 600 tachado), <c>12b_stuck_l6</c> (rama C), <c>12c_stuck_l31_noseeds</c> (rama B con Puñado y Balsa),
         /// <c>13_giveup_confirm</c>, <c>14_level_failed</c>, <c>15_no_canoes</c>, <c>16_quit_confirm</c> y <c>16b_pause</c>.
+        /// Revisión de la pista B: <c>16a_hud_l31</c> (la cabecera de partida con las píldoras de Semillas y Canoas, 07 §7.4),
+        /// <c>14b_retry_l31</c> (la intro corta de «Reintentar» con «Nivel 31 · intento 2», 02 §2; ficha §4.1, t = 340-342) y
+        /// <c>20_profile_locked</c> (el aviso «Actualiza Tintalú» con el perfil en solo lectura, 08 §4.4).
         /// </summary>
         [UnityTest]
         public IEnumerator CaptureFunnel()
@@ -399,19 +402,39 @@ namespace AF.Tests.PlayMode
             yield return StuckRealTime(boot);
             Save(dir, "12c_stuck_l31_noseeds");
 
-            // 16b: pausa, y 16: «¿Salir del nivel? Perderás 1 canoa».
+            // 16a: la cabecera de partida en el 31 (Semillas 1.240 y Canoas 4/5, 07 §7.4); 16b: pausa, y 16: «¿Salir del nivel?
+            // Perderás 1 canoa».
             yield return LoadFunnel(31, 1240, 4);
             boot = GameBootstrap.Current!;
             Attach(boot);
             boot.TapAnywhere();
             yield return Wait(0.3f);
+            Save(dir, "16a_hud_l31");
             boot.View!.PauseButton.onClick.Invoke();
             yield return Wait(0.2f);
             Save(dir, "16b_pause");
             boot.View.Pause.QuitButton.onClick.Invoke();
             yield return Wait(0.2f);
             Save(dir, "16_quit_confirm");
-            Assert.That(File.Exists(Path.Combine(dir, "16_quit_confirm.png")), Is.True);
+
+            // 14b: salir confirmado → Nivel fallido → «Reintentar»: la intro corta con «Nivel 31 · intento 2» (02 §2).
+            boot.View.Confirm.ConfirmButton.onClick.Invoke();
+            yield return Wait(0.2f);
+            boot.PressRetry();
+            yield return Wait(0.3f);
+            Save(dir, "14b_retry_l31");
+
+            // 20: perfil de una versión más nueva: aviso «Actualiza Tintalú» sobre el tablero (08 §4.4).
+            LaunchOptions.LevelOffsetOverride = null;
+            LaunchOptions.ProfileStoreOverride = new ReadOnlyProfileStore(ProfileLoadStatus.TooNew);
+            yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore(7, 6));
+            boot = GameBootstrap.Current!;
+            Attach(boot);
+            AttachOverlay(boot.LockedNotice!.Canvas);
+            boot.TapAnywhere();
+            yield return Wait(0.3f);
+            Save(dir, "20_profile_locked");
+            Assert.That(File.Exists(Path.Combine(dir, "20_profile_locked.png")), Is.True);
         }
 
         /// <summary>

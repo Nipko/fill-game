@@ -129,14 +129,15 @@ namespace AF.UI
             int price = services?.Wallet.Price(SeedSink.CanoesRefill) ?? EconomyConfig.Defaults.CanoesRefillSeedPrice;
             int missing = services?.Wallet.Missing(price) ?? price;
             bool refillOn = services != null && services.Wallet.Config.CanoesRefillSeedsEnabled;
-            int key = ((video ? 1 : 0) * 397) ^ (missing * 7) ^ ((refillOn ? 1 : 0) * 13) ^ canoes.Max;
+            bool infiniteOn = services == null || !services.PurchasesBlocked; // perfil en solo lectura: sin compras (08 §4.4)
+            int key = ((video ? 1 : 0) * 397) ^ (missing * 7) ^ ((refillOn ? 1 : 0) * 13) ^ ((infiniteOn ? 1 : 0) * 8191) ^ canoes.Max;
             if (key == _key)
             {
                 return;
             }
 
             _key = key;
-            Layout(services, video, price, missing, refillOn, canoes.Max);
+            Layout(services, video, price, missing, refillOn, infiniteOn, canoes.Max);
         }
 
         public void VisibleButtons(List<string> ids, List<RectTransform> rects)
@@ -148,7 +149,7 @@ namespace AF.UI
             Add(ids, rects, "home", _home);
         }
 
-        private void Layout(GameServices? services, bool video, int price, int missing, bool refillOn, int max)
+        private void Layout(GameServices? services, bool video, int price, int missing, bool refillOn, bool infiniteOn, int max)
         {
             float width = Mathf.Min(328f, _canvasW - 32f);
             float inner = width - 32f;
@@ -194,9 +195,13 @@ namespace AF.UI
                 y += 8f;
             }
 
-            _infiniteLabel.text = string.Format(CultureInfo.InvariantCulture, UiText.NoCanoesInfinite, services?.PriceText(StoreCatalog.InfiniteCanoes1h) ?? string.Empty);
-            ModalKit.Place(_infinite, 16f, y, inner);
-            y += ModalKit.HeightOf(_infinite) + 6f;
+            _infinite.Button.gameObject.SetActive(infiniteOn);
+            if (infiniteOn)
+            {
+                _infiniteLabel.text = string.Format(CultureInfo.InvariantCulture, UiText.NoCanoesInfinite, services?.PriceText(StoreCatalog.InfiniteCanoes1h) ?? string.Empty);
+                ModalKit.Place(_infinite, 16f, y, inner);
+                y += ModalKit.HeightOf(_infinite) + 6f;
+            }
             UiBuilder.Place((RectTransform)_home.transform, (width - 220f) * 0.5f, y, 220f, 48f);
             y += 48f + 8f;
             ModalKit.Size(_panel, _surface, _art, (_canvasW - width) * 0.5f, Mathf.Max(8f, Mathf.Round((_canvasH - y) * 0.45f)), width, y);

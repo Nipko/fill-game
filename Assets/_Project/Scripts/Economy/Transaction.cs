@@ -507,7 +507,13 @@ namespace AF.Economy
         /// <summary>El perfil cambió (y se marcó <c>economy_ts</c>).</summary>
         public bool Changed { get; }
 
-        /// <summary>El cambio quedó guardado con el <c>IProfileStore</c> (false si no hubo cambio o si falló la escritura).</summary>
+        /// <summary>
+        /// El <c>IProfileStore</c> de la cartera aceptó el guardado sin error (false si no hubo cambio o si falló la escritura).
+        /// Con un almacén que agrupa escrituras (<c>AF.GameFlow.ProfileSaveBatch</c>, como en el juego) y dentro de un lote,
+        /// significa «anotado», no «en disco»: la escritura real ocurre al cerrar el lote más externo y, si falla, solo lo dice
+        /// <c>ProfileSaveBatch.PendingSave</c> (el cambio sigue en memoria y sale con el siguiente guardado o con
+        /// <c>Flush</c>). Quien necesite saber si quedó en disco mira el lote tras cerrarlo.
+        /// </summary>
         public bool Saved { get; }
     }
 }

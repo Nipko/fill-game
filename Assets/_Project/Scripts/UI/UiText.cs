@@ -13,6 +13,27 @@ namespace AF.UI
         /// <summary><c>level_n</c>.</summary>
         public const string LevelN = "Nivel {0}";
 
+        /// <summary>
+        /// «Nivel {n} · intento {k}» [P]: rótulo de la intro corta del reintento (02 §2, INTRO: «En reintento muestra Nivel N ·
+        /// intento k»), con k = <c>fails_level</c> + 1. Sin clave en el glosario §10: pendiente con los textos de P14.
+        /// </summary>
+        public const string LevelAttemptN = "Nivel {0} · intento {1}";
+
+        /// <summary>
+        /// Título del aviso de perfil en solo lectura [P] (08 §4.4; el texto de la pantalla de <c>biz_min_app_version</c> de
+        /// 08 §9). Pendiente de que el dueño decida entre este aviso y una pantalla de bloqueo.
+        /// </summary>
+        public const string ProfileLockedTitle = "Actualiza Tintalú";
+
+        /// <summary>Cuerpo del aviso con un perfil de una versión más nueva (<c>ProfileLoadStatus.TooNew</c>) [P].</summary>
+        public const string ProfileLockedTooNew = "Tu progreso es de una versión más nueva de Tintalú y sigue a salvo. Actualiza la app para jugar con él: lo que juegues ahora no se guardará y no hay compras.";
+
+        /// <summary>Cuerpo del aviso cuando falló la migración del perfil (<c>ProfileLoadStatus.MigrationFailed</c>) [P].</summary>
+        public const string ProfileLockedMigration = "No pudimos abrir tu progreso, pero sigue a salvo. Actualiza la app para recuperarlo: lo que juegues ahora no se guardará y no hay compras.";
+
+        /// <summary>Botón del aviso de perfil en solo lectura [P].</summary>
+        public const string ProfileLockedPlay = "Jugar sin guardar";
+
         /// <summary><c>undo</c>: etiqueta funcional de Marea en la bandeja (glosario §0.2).</summary>
         public const string Undo = "Deshacer";
 
@@ -230,6 +251,12 @@ namespace AF.UI
         public static string Level(int level)
         {
             return string.Format(CultureInfo.InvariantCulture, LevelN, level);
+        }
+
+        /// <summary>«Nivel {n} · intento {k}» (02 §2, INTRO del reintento) [P].</summary>
+        public static string LevelAttempt(int level, int attempt)
+        {
+            return string.Format(CultureInfo.InvariantCulture, LevelAttemptN, level, attempt < 1 ? 1 : attempt);
         }
 
         /// <summary>«Jugar · Nivel {n}» (<c>play</c> + <c>level_n</c>; 06 §4.7; D-008 punto 6).</summary>

@@ -54,6 +54,15 @@ namespace AF.UI
         private const float PanelSlideMs = 250f;
         private const float OverlayFadeMs = 200f;
 
+        /// <summary>Borde derecho de la insignia del nivel (placa de 136 dp en x = 56, con sus hojas; guía 3.5).</summary>
+        private const float HudBadgeRight = 56f + 136f;
+
+        /// <summary>
+        /// El rótulo «Nivel {n} · intento {k}» del reintento (02 §2, INTRO) se ve al menos este tiempo, aunque la intro corta
+        /// dure 800 ms o se salte, como el rótulo «Level N» de Magic Sort al reintentar (ficha §4.1, t = 340-342) [P].
+        /// </summary>
+        private const float AttemptBannerMs = 1400f;
+
         /// <summary>Relayout animado al añadir una cuia (02 §4.1: «600 ms + 300 ms re-layout»).</summary>
         private const float RelayoutMs = 300f;
 
@@ -239,7 +248,7 @@ namespace AF.UI
         private int _stuckSeedsShown = -1;
         private int _stuckUndoShown = -1;
         private bool _stuckBalsaOk;
-        private bool _stuckBalsaRecorded;
+        private bool _attemptBanner;
         private FlowPhase _chromePhase = FlowPhase.Loading;
         private float _introDelayMs = -1f;
         private int _introPendingMs;
@@ -733,6 +742,7 @@ namespace AF.UI
             _confettiDelay = -1f;
             HideOverlays();
             _banner.Hide();
+            _attemptBanner = false;
             _introDelayMs = -1f;
             BuildBoard(flow);
             _levelText.text = UiText.Level(level);
@@ -758,6 +768,15 @@ namespace AF.UI
             else
             {
                 _intro.Start(_views, flow.Session.Current, _art.Water, _rowWaterActive, durationMs, _fx);
+                if (isShort)
+                {
+                    // 02 §2 (INTRO): «En reintento muestra Nivel N · intento k», con k = fails_level + 1, como el rótulo
+                    // «Level N» que baja al reintentar en Magic Sort (ficha §4.1). Reintentar desde Nivel fallido, Volver a la
+                    // orilla (cabecera, pausa o pie del modal en 1-30); la variante aliviada lleva su cartel «El río bajó».
+                    _attemptBanner = true;
+                    _banner.Place(_canvasW, TopRowY + 64f);
+                    _banner.Show(UiText.LevelAttempt(flow.LevelNumber, flow.Attempt.FailsLevel + 1), Mathf.Max(durationMs, AttemptBannerMs));
+                }
             }
 
             _skipCatcher.gameObject.SetActive(true);
@@ -772,7 +791,11 @@ namespace AF.UI
         public void OnIntroFinished(bool skipped)
         {
             _introDelayMs = -1f;
-            _banner.Hide();
+            if (!_attemptBanner)
+            {
+                _banner.Hide(); // el rótulo del intento se apaga solo (AttemptBannerMs)
+            }
+
             _intro.Complete();
             _skipCatcher.gameObject.SetActive(false);
             _probe.State("ready", RequireFlow(), int.MinValue, null);
@@ -972,8 +995,11 @@ namespace AF.UI
             _stuckOverlay.gameObject.SetActive(true);
             _stuck.Panel.gameObject.SetActive(true);
             // balsa_ok se congela al abrir (04 §6.6: lo mostrado no cambia con el modal abierto); la impresión cuenta para el tope.
-            _stuckBalsaOk = _services != null && _services.StoreLedger.CanOfferBalsa(RequireFlow().LevelNumber);
-            _stuckBalsaRecorded = false;
+            // Si la Balsa ya se enseñó en este bloqueo (el modal reabierto al volver a la app: 02 §14 y D-008, «se reabre tal
+            // cual»), se sigue ofreciendo sin contar otra impresión. Con el perfil en solo lectura no se ofrecen compras.
+            LevelFlow flow = RequireFlow();
+            _stuckBalsaOk = flow.BalsaShownThisBlock
+                || (_services != null && !_services.PurchasesBlocked && _services.StoreLedger.CanOfferBalsa(flow.LevelNumber));
             ShowStuckView(true);
             ShiftBoard(ShiftToClear(_stuckPanelY, 12f), true); // 07 §5.5: las cuias siguen visibles sobre el modal
             _stuckAnim = 0f;
@@ -1055,6 +1081,7 @@ namespace AF.UI
         public void OnRiverLowered(string reliefType, int bannerMs)
         {
             _introDelayMs = bannerMs;
+            _attemptBanner = false;
             _banner.Place(_canvasW, TopRowY + 64f);
             _banner.Show(reliefType == AF.Levels.ReliefBoard.TypeMinusColor ? UiText.RiverLoweredColor : UiText.RiverLoweredCuia, bannerMs);
             _probe.Funnel("river_lowered", RequireFlow());
@@ -1071,15 +1098,21 @@ namespace AF.UI
             _stuck.Show(view, _services, _canvasW);
             _stuckSeedsShown = _services?.Wallet.Seeds ?? 0;
             _stuckUndoShown = flow.UndoStatus.Stock + (flow.UndoStatus.FreeLeft * 1000);
-            if (_services != null && _stuckBalsaOk && !_stuckBalsaRecorded)
+            if (_services != null && _stuckBalsaOk && !flow.BalsaShownThisBlock)
             {
                 for (int i = 0; i < view.Offers.Count; i++)
                 {
                     if (view.Offers[i] == StuckOffer.Balsa)
                     {
-                        // af_rescue_daily_cap: la impresión cuenta una vez por modal; balsa_ok sigue congelado mientras esté abierto.
-                        _services.StoreLedger.RecordBalsaShown();
-                        _stuckBalsaRecorded = true;
+                        // af_rescue_daily_cap: la impresión cuenta una vez por bloqueo; balsa_ok sigue congelado mientras esté
+                        // abierto. La impresión y la marca de level_state van en la misma escritura del perfil.
+                        using (flow.SaveBatch == null ? default : flow.SaveBatch.Begin())
+                        {
+                            _services.StoreLedger.RecordBalsaShown();
+                            flow.MarkBalsaShown();
+                        }
+
+                        break;
                     }
                 }
             }
@@ -1107,7 +1140,9 @@ namespace AF.UI
         private StuckContext StuckContext(LevelFlow flow)
         {
             bool undoAd = _services != null && _services.RewardedReady(AdPlacement.UndoRefill);
-            return flow.BuildStuckContext(undoAd, _stuckBalsaOk, _services?.Geo ?? GeoTier.T3);
+            StuckContext ctx = flow.BuildStuckContext(undoAd, _stuckBalsaOk, _services?.Geo ?? GeoTier.T3);
+            ctx.PurchasesBlocked = _services != null && _services.PurchasesBlocked;
+            return ctx;
         }
 
         private int LevelReward(LevelFlow flow)
@@ -1292,9 +1327,10 @@ namespace AF.UI
         }
 
         // Qué se ve arriba (D-008 paso 1: «el HUD de partida y la bandeja se ocultan» con el embudo abierto; arriba, semillas y
-        // canoas): en juego, la cabecera y la bandeja; en el embudo, los saldos (y la pausa en Aguas estancadas, que es la
-        // única salida sin elegir, 04 §6.6). «¿Salir del nivel?» cuenta como embudo: como «Are You Sure?» de Magic Sort (ficha
-        // §4.3, t = 5), saldo arriba y HUD de partida, bandeja y pausa ocultos.
+        // canoas): en juego, la cabecera (con las píldoras de Semillas y, desde el 31, Canoas: 07 §7.4 y 02 §5) y la bandeja;
+        // en el embudo, el saldo grande (y la pausa en Aguas estancadas, que es la única salida sin elegir, 04 §6.6). «¿Salir
+        // del nivel?» cuenta como embudo: como «Are You Sure?» de Magic Sort (ficha §4.3, t = 5), saldo arriba y HUD de
+        // partida, bandeja y pausa ocultos.
         private void SyncChrome()
         {
             LevelFlow? flow = _flow;
@@ -1314,9 +1350,36 @@ namespace AF.UI
             _tray.SetVisible(!funnel && !victoryScreen);
             bool pause = !victory && !quitAsk && (phase == FlowPhase.Playing || phase == FlowPhase.Intro || phase == FlowPhase.StuckModal);
             _pauseButton.Button.gameObject.SetActive(pause);
-            _walletBar.SetVisible(balance);
-            _walletBar.Layout(pause && phase == FlowPhase.StuckModal ? 64f : 16f, TopRowY);
+
+            // 07 §7.4 (dueño del HUD) y 02 §5: en INTRO, PLAYING y la celebración, las píldoras de la cabecera, en la capa del
+            // HUD (el origen que vierte las tapa, como al rótulo del nivel: D-006); en el embudo y la victoria, el saldo grande
+            // en la capa superior. Nada se oculta salvo donde D-008 lo pide (el HUD de partida en el embudo).
+            _walletBar.SetCompact(!balance);
+            Transform layer = balance ? _topLayer : _hud;
+            if (_walletBar.Root.parent != layer)
+            {
+                _walletBar.Root.SetParent(layer, false);
+                _walletBar.Root.SetAsLastSibling();
+            }
+
+            _walletBar.SetVisible(true);
+            LayoutWalletBar(pause && phase == FlowPhase.StuckModal);
             _walletBar.Refresh(_services?.Wallet, flow != null && flow.CanoesLevel, flow == null ? 0 : PendingHarvest(flow));
+        }
+
+        // Saldo grande del embudo a la izquierda (tras la pausa en Aguas estancadas); píldoras de la cabecera de partida entre
+        // la insignia del nivel (x 56-192) y Reiniciar (x W − 68), con 4 dp a cada lado (≈ 92 dp a 360 de ancho).
+        private void LayoutWalletBar(bool afterPause)
+        {
+            if (_walletBar.Compact)
+            {
+                float left = HudBadgeRight + 4f;
+                float right = _canvasW - 8f - 60f - 4f;
+                _walletBar.Layout(left, TopRowY, Mathf.Min(120f, right - left));
+                return;
+            }
+
+            _walletBar.Layout(afterPause ? 64f : 16f, TopRowY);
         }
 
         private void ShowToast(string text)
@@ -1714,7 +1777,8 @@ namespace AF.UI
 
             // Pausa a la izquierda de la fila superior (02 §5; 07 §7.4: 40 dp en un área de 48).
             UiBuilder.Place((RectTransform)_pauseButton.Button.transform, 8f, TopRowY, 48f, 48f);
-            _walletBar.Layout(64f, TopRowY);
+            LevelFlow? flow = _flow;
+            LayoutWalletBar(flow != null && flow.Phase == FlowPhase.StuckModal);
 
             // Paneles anclados abajo (07 §5.4, §5.5, §7.5), con los CTA en la zona del pulgar (02 §3.3).
             float panelW = Mathf.Min(328f, w - 32f);

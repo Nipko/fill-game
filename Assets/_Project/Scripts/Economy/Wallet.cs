@@ -73,7 +73,12 @@ namespace AF.Economy
         /// <summary>Cuias de rescate compradas hoy (día local; 0 si los contadores son de un día anterior).</summary>
         public int RescuesToday => DailyCounters.IsStale(_profile.Daily, _clock.LocalDateKey()) ? 0 : _profile.Daily.RescuesToday;
 
-        /// <summary>Un cambio quedó sin guardar porque falló la escritura; se reintenta en la próxima mutación o con <see cref="Flush"/>.</summary>
+        /// <summary>
+        /// Un cambio quedó sin guardar porque falló la escritura; se reintenta en la próxima mutación o con <see cref="Flush"/>.
+        /// Solo ve los fallos del <c>IProfileStore</c> que recibe: con un almacén que agrupa escrituras
+        /// (<c>AF.GameFlow.ProfileSaveBatch</c>, dentro de un lote) el guardado solo se anota y no falla aquí; si la escritura
+        /// del cierre del lote falla, esto sigue en false y el pendiente lo lleva <c>ProfileSaveBatch.PendingSave</c>.
+        /// </summary>
         public bool PendingSave { get; private set; }
 
         /// <summary>Perfil de primera ejecución con <c>canoes_max</c> canoas (04 §7.1: debut con 5/5) y 0 semillas.</summary>

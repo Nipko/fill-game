@@ -114,6 +114,9 @@ namespace AF.UI
         /// <summary>«Continuar: +1 cuia».</summary>
         public Button RescueButton => _rescue.Button;
 
+        /// <summary>Etiqueta de «Continuar: +1 cuia» (tests de legibilidad del estado deshabilitado).</summary>
+        public TextMeshProUGUI RescueLabel => _rescueLabel;
+
         /// <summary>Puñado de semillas.</summary>
         public Button HandfulButton => _handful.Button;
 

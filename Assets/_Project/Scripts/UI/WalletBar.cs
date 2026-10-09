@@ -9,18 +9,41 @@ using UnityEngine.UI;
 namespace AF.UI
 {
     /// <summary>
-    /// Saldos arriba durante el embudo de bloqueo (D-008 paso 1: «arriba, semillas y canoas»; 04 §6.6: «cabecera: semillas,
+    /// Saldos del jugador en la fila superior, con dos formas:
+    /// <list type="bullet">
+    /// <item><description><b>Embudo y victoria</b> (D-008 paso 1: «arriba, semillas y canoas»; 04 §6.6: «cabecera: semillas,
     /// canoas»), como el saldo de Magic Sort sobre sus pantallas de fallo (ficha §4.4 y §4.8: «el saldo sale siempre arriba a
-    /// la izquierda»): Semillas y, desde el 31, Canoas «n/5» con el cronómetro de la próxima (∞ y el tiempo que queda con
-    /// Canoas infinitas). Mismo material que la pantalla de inicio (placa de madera oscura). Sin asignaciones al refrescar.
+    /// la izquierda»): placas grandes con Semillas y, desde el 31, Canoas «n/5» con el cronómetro de la próxima (∞ y el tiempo
+    /// que queda con Canoas infinitas).</description></item>
+    /// <item><description><b>Cabecera de partida</b> (<see cref="Compact"/>; 07 §7.4, dueño del HUD: «Centro-derecha: pill
+    /// Semillas (icono 20 + cifra). Derecha: pill Canoas (visible desde el 31; antes, oculto)»; 02 §5: «Canoas "4/5" desde el
+    /// nivel 31»): píldoras de 22 dp entre la insignia del nivel y Reiniciar. A 360 dp solo quedan ≈ 92 dp entre las dos, así
+    /// que desde el 31 la de Semillas va encima de la de Canoas (las dos dentro de la fila de 48 dp) y la de Canoas lleva
+    /// «n/5» sin cronómetro (el cronómetro está en el inicio y en Sin canoas). En 1-30, solo Semillas, centrada en la
+    /// fila.</description></item>
+    /// </list>
+    /// Mismo material que la pantalla de inicio (placa de madera oscura). Sin asignaciones al refrescar.
     /// </summary>
     internal sealed class WalletBar
     {
+        /// <summary>Alto de las píldoras de la cabecera de partida (dp).</summary>
+        public const float CompactPillDp = 22f;
+
+        /// <summary>Hueco entre la píldora de Semillas y la de Canoas en la cabecera de partida (dp).</summary>
+        public const float CompactGapDp = 4f;
+
+        // La placa de madera mide 48 × 48 dp con 18 dp de 9-slice: en las píldoras de 22 dp el borde se reduce a 11 dp
+        // (radio de píldora) en los dos ejes, sin esquinas elípticas.
+        private const float CompactSliceMultiplier = 18f / 11f;
+
         private readonly ProceduralArt _art;
         private readonly RectTransform _root;
         private readonly RectTransform _seeds;
+        private readonly Image _seedsPlate;
+        private readonly Image _seedsIcon;
         private readonly TextMeshProUGUI _seedsText;
         private readonly RectTransform _canoes;
+        private readonly Image _canoesPlate;
         private readonly Image _canoesIcon;
         private readonly Image _infinite;
         private readonly TextMeshProUGUI _canoesCount;
@@ -30,41 +53,58 @@ namespace AF.UI
         private int _countShown = -1;
         private int _modeShown = -1;
         private long _timerShown = long.MinValue;
+        private bool _compact;
+        private bool _canoesArranged;
+        private float _left = 64f;
+        private float _top = 40f;
+        private float _width = 92f;
 
         public WalletBar(Transform parent, ProceduralArt art)
         {
             _art = art;
             _root = UiBuilder.Rect("WalletBar", parent);
             _seeds = UiBuilder.Rect("Seeds", _root);
-            Image plate = UiBuilder.Sliced("Plate", _seeds, art.WoodPlate, Color.white);
-            UiBuilder.Stretch(plate.rectTransform);
-            Image seed = UiBuilder.Image("Icon", _seeds, art.IconSeed, Color.white);
-            seed.preserveAspect = true;
-            UiBuilder.Place(seed.rectTransform, -8f, 1f, 38f, 38f);
+            _seedsPlate = UiBuilder.Sliced("Plate", _seeds, art.WoodPlate, Color.white);
+            UiBuilder.Stretch(_seedsPlate.rectTransform);
+            _seedsIcon = UiBuilder.Image("Icon", _seeds, art.IconSeed, Color.white);
+            _seedsIcon.preserveAspect = true;
             _seedsText = UiBuilder.Label("Value", _seeds, TextStyle.PillWood, "0", 20f, Palette.Cream, TextAlignmentOptions.Center);
             UiBuilder.AutoSize(_seedsText, 14f, 20f);
-            UiBuilder.Place(_seedsText.rectTransform, 30f, 0f, 74f, 40f);
 
             _canoes = UiBuilder.Rect("Canoes", _root);
-            Image canoesPlate = UiBuilder.Sliced("Plate", _canoes, art.WoodPlate, Color.white);
-            UiBuilder.Place(canoesPlate.rectTransform, 0f, 0f, 128f, 40f);
+            _canoesPlate = UiBuilder.Sliced("Plate", _canoes, art.WoodPlate, Color.white);
             _canoesIcon = UiBuilder.Image("Icon", _canoes, art.IconCanoe, Color.white);
             _canoesIcon.preserveAspect = true;
-            UiBuilder.Place(_canoesIcon.rectTransform, -8f, 7f, 48f, 28f);
             _infinite = UiBuilder.Image("Infinite", _canoes, art.IconInfinite, Color.white);
             _infinite.preserveAspect = true;
             _canoesCount = UiBuilder.Label("Count", _canoes, TextStyle.PillWood, "5/5", 18f, Palette.Cream, TextAlignmentOptions.Center);
             _timer = UiBuilder.Label("Timer", _canoes, TextStyle.PillWood, string.Empty, 12f, Palette.Cream, TextAlignmentOptions.Center);
+            ArrangeChildren();
             _root.gameObject.SetActive(false);
         }
 
+        /// <summary>Raíz de la barra (la pantalla la pone en la capa del HUD o en la superior según la forma).</summary>
+        public RectTransform Root => _root;
+
         public bool Visible => _root.gameObject.activeSelf;
+
+        /// <summary>Forma de cabecera de partida (píldoras de 07 §7.4) en lugar de las placas del embudo.</summary>
+        public bool Compact => _compact;
 
         /// <summary>Semillas mostradas.</summary>
         public int SeedsShown => _seedsShown;
 
         /// <summary>Canoas mostradas (−1 con Canoas infinitas o sin contador).</summary>
         public int CanoesShown => _canoes.gameObject.activeSelf && _modeShown != 2 ? _countShown : -1;
+
+        /// <summary>Se ve el cronómetro de la próxima canoa (nunca en la cabecera de partida).</summary>
+        public bool TimerShown => _canoes.gameObject.activeSelf && _timer.gameObject.activeSelf;
+
+        /// <summary>Rectángulo de la píldora o placa de Semillas (tests de layout).</summary>
+        public RectTransform SeedsRect => _seeds;
+
+        /// <summary>Rectángulo de la píldora o placa de Canoas (tests de layout).</summary>
+        public RectTransform CanoesRect => _canoes;
 
         public void SetVisible(bool visible)
         {
@@ -77,11 +117,32 @@ namespace AF.UI
             }
         }
 
-        /// <summary>Coloca la barra en la fila superior (<paramref name="top"/>), empezando en <paramref name="left"/>.</summary>
-        public void Layout(float left, float top)
+        /// <summary>Pasa de la forma del embudo a la de la cabecera de partida (o al revés) y recoloca las piezas.</summary>
+        public void SetCompact(bool compact)
         {
-            UiBuilder.Place(_seeds, left, top + 4f, 112f, 40f);
-            UiBuilder.Place(_canoes, left + 124f, top + 4f, 128f, 40f);
+            if (_compact == compact)
+            {
+                return;
+            }
+
+            _compact = compact;
+            _seedsShown = -1;
+            _modeShown = -1;
+            _timerShown = long.MinValue;
+            ArrangeChildren();
+            Arrange();
+        }
+
+        /// <summary>
+        /// Coloca la barra en la fila superior (<paramref name="top"/>), empezando en <paramref name="left"/>. En la cabecera de
+        /// partida, <paramref name="width"/> es el ancho de las píldoras (el hueco entre la insignia y Reiniciar).
+        /// </summary>
+        public void Layout(float left, float top, float width = 92f)
+        {
+            _left = left;
+            _top = top;
+            _width = Mathf.Max(64f, width);
+            Arrange();
         }
 
         /// <summary>
@@ -108,6 +169,10 @@ namespace AF.UI
             {
                 _canoes.gameObject.SetActive(showCanoes);
                 _modeShown = -1;
+                if (_compact)
+                {
+                    Arrange(); // en la cabecera, Semillas se centra en la fila o sube encima de Canoas
+                }
             }
 
             if (!showCanoes)
@@ -135,7 +200,8 @@ namespace AF.UI
                 _timerShown = long.MinValue;
             }
 
-            long seconds = canoes.IsInfinite ? Ceil(canoes.InfiniteRemaining) : (canoes.IsFull ? -1L : Ceil(canoes.TimeToNext));
+            // En la cabecera de partida, «n/5» sin cronómetro (02 §5: Canoas "4/5").
+            long seconds = _compact ? -1L : canoes.IsInfinite ? Ceil(canoes.InfiniteRemaining) : (canoes.IsFull ? -1L : Ceil(canoes.TimeToNext));
             if (seconds != _timerShown)
             {
                 bool layout = (seconds < 0) != (_timerShown < 0) || _timerShown == long.MinValue;
@@ -149,10 +215,7 @@ namespace AF.UI
 
                 if (layout)
                 {
-                    bool timer = seconds >= 0;
-                    UiBuilder.Place(_canoesCount.rectTransform, 40f, timer ? 2f : 0f, 82f, timer ? 21f : 40f);
-                    UiBuilder.Place(_timer.rectTransform, 40f, 22f, 82f, 16f);
-                    UiBuilder.Place(_infinite.rectTransform, 40f + ((82f - 26f) * 0.5f), timer ? 6f : 13f, 26f, 14f);
+                    ArrangeCanoeText(seconds >= 0);
                 }
             }
         }
@@ -160,6 +223,72 @@ namespace AF.UI
         private static long Ceil(TimeSpan span)
         {
             return span <= TimeSpan.Zero ? 0L : (span.Ticks + TimeSpan.TicksPerSecond - 1) / TimeSpan.TicksPerSecond;
+        }
+
+        // Placas en la fila: en el embudo, 112 + 12 + 128 dp en línea; en la cabecera de partida, píldoras de 22 dp en columna
+        // (Semillas encima de Canoas desde el 31) o Semillas sola centrada en la fila de 48 dp.
+        private void Arrange()
+        {
+            if (!_compact)
+            {
+                UiBuilder.Place(_seeds, _left, _top + 4f, 112f, 40f);
+                UiBuilder.Place(_canoes, _left + 124f, _top + 4f, 128f, 40f);
+                return;
+            }
+
+            bool canoes = _canoes.gameObject.activeSelf;
+            float seedsTop = canoes ? _top + 1f : _top + ((48f - CompactPillDp) * 0.5f);
+            UiBuilder.Place(_seeds, _left, seedsTop, _width, CompactPillDp);
+            UiBuilder.Place(_canoes, _left, _top + 1f + CompactPillDp + CompactGapDp, _width, CompactPillDp);
+            UiBuilder.Place(_canoesPlate.rectTransform, 0f, 0f, _width, CompactPillDp);
+            ArrangeCanoeText(false);
+        }
+
+        // Piezas de cada placa según la forma (icono, cifra, contorno de la placa).
+        private void ArrangeChildren()
+        {
+            if (_compact)
+            {
+                _seedsPlate.pixelsPerUnitMultiplier = CompactSliceMultiplier;
+                _canoesPlate.pixelsPerUnitMultiplier = CompactSliceMultiplier;
+                UiBuilder.Place(_seedsIcon.rectTransform, 1f, 1f, 20f, 20f); // 07 §7.4: icono de 20 dp
+                _seedsText.rectTransform.anchorMin = new Vector2(0f, 0f);
+                _seedsText.rectTransform.anchorMax = new Vector2(1f, 1f);
+                _seedsText.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+                _seedsText.rectTransform.offsetMin = new Vector2(22f, 0f);
+                _seedsText.rectTransform.offsetMax = new Vector2(-6f, 0f);
+                UiBuilder.AutoSize(_seedsText, 12f, 15f);
+                UiBuilder.Place(_canoesIcon.rectTransform, 1f, 3f, 28f, 16f);
+                UiBuilder.AutoSize(_canoesCount, 12f, 15f);
+                return;
+            }
+
+            _seedsPlate.pixelsPerUnitMultiplier = 1f;
+            _canoesPlate.pixelsPerUnitMultiplier = 1f;
+            UiBuilder.Place(_seedsIcon.rectTransform, -8f, 1f, 38f, 38f);
+            UiBuilder.Place(_seedsText.rectTransform, 30f, 0f, 74f, 40f);
+            UiBuilder.AutoSize(_seedsText, 14f, 20f);
+            UiBuilder.Place(_canoesPlate.rectTransform, 0f, 0f, 128f, 40f);
+            UiBuilder.Place(_canoesIcon.rectTransform, -8f, 7f, 48f, 28f);
+            UiBuilder.AutoSize(_canoesCount, 14f, 18f);
+        }
+
+        // Cifra, cronómetro e ∞ de la placa de Canoas.
+        private void ArrangeCanoeText(bool timer)
+        {
+            if (_compact)
+            {
+                float textX = 30f;
+                float textW = Mathf.Max(20f, _width - textX - 6f);
+                UiBuilder.Place(_canoesCount.rectTransform, textX, 0f, textW, CompactPillDp);
+                UiBuilder.Place(_infinite.rectTransform, textX + ((textW - 22f) * 0.5f), 5f, 22f, 12f);
+                UiBuilder.Place(_timer.rectTransform, textX, 0f, textW, CompactPillDp);
+                return;
+            }
+
+            UiBuilder.Place(_canoesCount.rectTransform, 40f, timer ? 2f : 0f, 82f, timer ? 21f : 40f);
+            UiBuilder.Place(_timer.rectTransform, 40f, 22f, 82f, 16f);
+            UiBuilder.Place(_infinite.rectTransform, 40f + ((82f - 26f) * 0.5f), timer ? 6f : 13f, 26f, 14f);
         }
     }
 }

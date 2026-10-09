@@ -134,6 +134,12 @@ namespace AF.Boosters
 
         /// <summary>La recarga gratis de la rama F [P] ya se dio en este nivel.</summary>
         public bool UndoGiftUsed;
+
+        /// <summary>
+        /// No se ofrecen compras (ni Puñado ni Balsa): el perfil está en solo lectura porque es de una versión más nueva o su
+        /// migración falló (08 §4.4) y lo comprado se perdería. Medida mínima [P] a la espera de la decisión del dueño.
+        /// </summary>
+        public bool PurchasesBlocked;
     }
 
     /// <summary>El modal Aguas estancadas ya decidido (04 §6.2 <c>buildStuckModal</c>; wireframes A-C de §6.6).</summary>
@@ -289,7 +295,7 @@ namespace AF.Boosters
             }
 
             var offers = new List<StuckOffer>(2);
-            if (rescue == StuckRescueKind.Disabled)
+            if (rescue == StuckRescueKind.Disabled && !ctx.PurchasesBlocked)
             {
                 bool balsaFirst = config.BalsaBeforeHandful(t1);
                 if (balsaFirst && ctx.BalsaOk)

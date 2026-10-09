@@ -19,6 +19,13 @@ namespace AF.GameFlow
     /// Fuera de un lote pasa cada guardado tal cual (y lanza sus excepciones, como espera <c>AF.Economy.Wallet</c>). Si la
     /// escritura del cierre falla, el perfil queda pendiente (<see cref="PendingSave"/>) y sale con el siguiente guardado o con
     /// <see cref="Flush"/>; como todo comparte el mismo perfil, cualquier escritura posterior lo lleva entero. Un solo hilo.
+    /// <para>
+    /// Dentro de un lote, <see cref="Save"/> solo anota y nunca falla: quien guarda a través del lote (la cartera, el
+    /// progreso, <c>level_state</c>, los registros de anuncios y de la tienda) ve un guardado correcto aunque la escritura del
+    /// cierre falle después. Así, <c>TransactionResult.Saved</c> = true y <c>Wallet.PendingSave</c> = false significan
+    /// «anotado en el lote»; el único que sabe si llegó al disco es <see cref="PendingSave"/> tras cerrar el lote. No se
+    /// pierde nada: lo pendiente sale con la siguiente escritura o con <see cref="Flush"/> (<c>OnApplicationPause</c>).
+    /// </para>
     /// </summary>
     public sealed class ProfileSaveBatch : IProfileStore
     {

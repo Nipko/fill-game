@@ -16,7 +16,9 @@
     "AF.IAP",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner",
-    "Unity.TextMeshPro"
+    "Unity.TextMeshPro",
+    "Unity.InputSystem",
+    "Unity.InputSystem.TestFramework"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

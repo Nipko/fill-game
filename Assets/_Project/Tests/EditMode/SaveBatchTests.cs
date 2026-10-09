@@ -84,6 +84,41 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void InsideABatch_TheWalletReportsSaved_ButOnlyTheBatchKnowsTheWriteFailed()
+        {
+            // Revisión de la pista B, punto 4: dentro de un lote, TransactionResult.Saved y Wallet.PendingSave dicen «anotado»,
+            // no «en disco». Si la escritura del cierre falla, el pendiente lo lleva el lote y no se pierde nada.
+            var disk = new RecordingProfileStore();
+            var batch = new ProfileSaveBatch(disk);
+            var clock = new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5));
+            Profile profile = Wallet.NewProfile(clock);
+            var wallet = new Wallet(profile, batch, clock);
+            disk.FailuresLeft = 1;
+            TransactionResult result;
+            using (batch.Begin())
+            {
+                result = wallet.Apply(Transaction.Earn(SeedSource.Basket, 50));
+            }
+
+            Assert.That(result.IsApplied, Is.True);
+            Assert.That(result.Saved, Is.True, "dentro del lote, Saved = anotado");
+            Assert.That(wallet.PendingSave, Is.False, "la cartera no ve el fallo del cierre del lote");
+            Assert.That(disk.Snapshots, Is.Empty, "la escritura del cierre falló");
+            Assert.That(batch.PendingSave, Is.True, "el único que lo sabe es el lote");
+
+            Assert.That(batch.Flush(), Is.True, "OnApplicationPause: se reintenta y no se pierde nada");
+            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(50));
+
+            // Fuera de un lote, el mismo fallo sí llega a la cartera.
+            disk.FailuresLeft = 1;
+            TransactionResult direct = wallet.Apply(Transaction.Earn(SeedSource.Basket, 10));
+            Assert.That(direct.Saved, Is.False);
+            Assert.That(wallet.PendingSave, Is.True);
+            Assert.That(wallet.Flush(), Is.True);
+            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(60));
+        }
+
+        [Test]
         public void EveryPour_IsOneWrite_AndTheVictoryIsOneWriteToo()
         {
             var rig = new BatchRig();

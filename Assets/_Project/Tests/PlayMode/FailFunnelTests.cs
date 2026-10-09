@@ -70,6 +70,15 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
             Assert.That(view.Failed.Visible, Is.False);
             Assert.That(boot.Wallet.Canoes.Count, Is.EqualTo(5), "reintentar no cobra canoa");
+
+            // 02 §2 (INTRO): «En reintento muestra Nivel N · intento k», con k = fails_level + 1 (aquí, tras un fallo duro).
+            Assert.That(view.BannerText, Is.EqualTo(UiText.LevelAttempt(31, 2)));
+            Assert.That(view.BannerText, Is.EqualTo("Nivel 31 · intento 2"));
+            PlayModeHelpers.Step(boot, 1000);
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Playing), "la intro corta (800 ms) terminó");
+            Assert.That(view.BannerText, Is.EqualTo("Nivel 31 · intento 2"), "el rótulo sigue un momento sobre el tablero");
+            PlayModeHelpers.Step(boot, 600);
+            Assert.That(view.BannerText, Is.Null, "y se apaga solo");
         }
 
         [UnityTest]
@@ -115,12 +124,13 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Wallet!.Canoes.Count, Is.EqualTo(5), "preguntar no cuesta");
             AssertQuitComposition(view);
 
-            // La X sigue jugando y devuelve la cabecera de partida.
+            // La X sigue jugando y devuelve la cabecera de partida, con sus píldoras de Semillas y Canoas (07 §7.4).
             view.Confirm.CloseButton.onClick.Invoke();
             Assert.That(view.Confirm.Visible, Is.False);
             Assert.That(view.PauseButton.gameObject.activeInHierarchy, Is.True);
             Assert.That(view.UndoButton.gameObject.activeInHierarchy, Is.True);
-            Assert.That(view.WalletBar.Visible, Is.False);
+            Assert.That(view.WalletBar.Visible, Is.True);
+            Assert.That(view.WalletBar.Compact, Is.True, "las píldoras de la cabecera, no el saldo grande del embudo");
             Assert.That(boot.Wallet.Canoes.Count, Is.EqualTo(5));
 
             view.PauseButton.onClick.Invoke();
@@ -243,6 +253,23 @@ namespace AF.Tests.PlayMode
             view.Confirm.ConfirmButton.onClick.Invoke();
             Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
             Assert.That(boot.Flow.Attempt.FailsLevel, Is.EqualTo(1), "fallo blando");
+            Assert.That(view.BannerText, Is.EqualTo("Nivel 2 · intento 2"), "02 §2: el reintento lleva su rótulo");
+        }
+
+        [UnityTest]
+        public IEnumerator VoluntaryRestart_WithoutAFail_ShowsTheSameAttempt()
+        {
+            // Volver a la orilla con < 8 vertidos no es fallo (04 §2.7): el rótulo dice el mismo intento (fails_level + 1).
+            yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore(7, 6));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            GameScreen view = boot.View!;
+            Assert.That(view.BannerText, Is.Null, "la primera intro no lleva rótulo de intento");
+            view.RestartButton.onClick.Invoke();
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Intro));
+            Assert.That(boot.Flow.Attempt.FailsLevel, Is.EqualTo(0));
+            Assert.That(view.BannerText, Is.EqualTo("Nivel 7 · intento 1"));
         }
     }
 }

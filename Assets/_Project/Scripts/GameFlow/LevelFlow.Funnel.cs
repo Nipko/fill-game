@@ -20,12 +20,20 @@ namespace AF.GameFlow
         private RescueCheck _rescueCheck;
         private RescueQuote? _quote;
         private FlowPhase _noCanoesReturn = FlowPhase.LevelFailed;
+        private bool _balsaShown;
 
         /// <summary>Resultado de «la compra cumple» del bloqueo en curso (04 §6.4).</summary>
         public RescueCheck RescueCheck => _rescueCheck;
 
         /// <summary>Precio del rescate congelado al abrir el modal (04 §6.6), o null antes del 31 o sin cartera.</summary>
         public RescueQuote? FrozenRescueQuote => _quote;
+
+        /// <summary>
+        /// La Balsa de rescate ya se enseñó en este bloqueo (<see cref="MarkBalsaShown"/>): la vista la sigue ofreciendo
+        /// (<c>balsa_ok</c> congelado, 04 §6.6) sin contar otra impresión, también en el modal reabierto al volver a la app
+        /// (02 §14; D-008: «se reabre tal cual»). Se olvida al salir del bloqueo (Marea, rescate, reinicio o nivel nuevo).
+        /// </summary>
+        public bool BalsaShownThisBlock => _balsaShown;
 
         /// <summary>Desde este nivel hay canoas, rescate y el embudo de D-008 (<c>rescue_min_level</c>).</summary>
         public bool CanoesLevel => LevelNumber >= RescueMinLevel;
@@ -112,6 +120,27 @@ namespace AF.GameFlow
                 Geo = geo,
                 UndoGiftUsed = _attempt.UndoGiftUsed,
             };
+        }
+
+        /// <summary>
+        /// La vista enseñó la Balsa de rescate en Aguas estancadas (la impresión ya contó para <c>af_rescue_daily_cap</c>):
+        /// queda anotado en <c>level_state</c> (marca <c>b</c> de <c>history</c>) para reabrir el modal tal cual. False fuera de
+        /// Aguas estancadas o ¿Seguro?, o si ya estaba anotado. La vista lo llama en el mismo lote que la impresión.
+        /// </summary>
+        public bool MarkBalsaShown()
+        {
+            if (_balsaShown || !(Phase == FlowPhase.StuckModal || Phase == FlowPhase.GiveUpConfirm))
+            {
+                return false;
+            }
+
+            using (Saves())
+            {
+                _balsaShown = true;
+                PersistState();
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -379,6 +408,7 @@ namespace AF.GameFlow
         {
             _rescueCheck = RescueCheck.NotChecked;
             _quote = null;
+            _balsaShown = false;
         }
 
         private void Fail(FailKind kind)

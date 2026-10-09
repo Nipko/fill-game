@@ -16,6 +16,9 @@
 /[Rr]ecordings/
 # Carpeta temporal que crea Unity 6 en la raíz del proyecto
 /.utmp/
+# Resultados que escribe `unity test` en la raíz si no se le pasa una ruta (p. ej. las capturas de VisualSnapshotTests);
+# scripts/unity-test.ps1 ya los deja en Logs/.
+/test-results.xml
 
 # Los .meta se versionan siempre (Visible Meta Files)
 !/[Aa]ssets/**/*.meta

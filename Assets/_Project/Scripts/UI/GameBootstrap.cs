@@ -60,6 +60,8 @@ namespace AF.UI
         private IProfileStore? _profileStore;
         private ProfileSaveBatch? _saveBatch;
         private DevProbe? _probe;
+        private ProfileLockedNotice? _lockedNotice;
+        private ProfileLoadStatus _profileStatus = ProfileLoadStatus.NotFound;
         private float _msCarry;
         private bool _skipNextDelta;
 
@@ -107,6 +109,19 @@ namespace AF.UI
         /// jugador lo escribe una sola vez (null hasta <c>Start</c>).
         /// </summary>
         public ProfileSaveBatch? SaveBatch => _saveBatch;
+
+        /// <summary>
+        /// El perfil del dispositivo no se puede usar ni pisar (<see cref="ProfileLoadStatus.TooNew"/> o
+        /// <see cref="ProfileLoadStatus.MigrationFailed"/>; 08 §4.4): se juega con un perfil en blanco que no se guarda, se avisa
+        /// con «Actualiza Tintalú» y no se ofrecen compras (medida mínima [P]; la pantalla de bloqueo la decide el dueño).
+        /// </summary>
+        public bool ProfileLocked => IsLocked(_profileStatus);
+
+        /// <summary>Resultado de la carga del perfil.</summary>
+        public ProfileLoadStatus ProfileStatus => _profileStatus;
+
+        /// <summary>Aviso «Actualiza Tintalú» del perfil en solo lectura (null si el perfil se cargó bien).</summary>
+        internal ProfileLockedNotice? LockedNotice => _lockedNotice;
 
         /// <summary>Primer paquete de niveles asignado.</summary>
         public TextAsset? LevelPackAsset => levelPack;
@@ -441,9 +456,9 @@ namespace AF.UI
         private bool Purchase(string sku, PurchaseContext context, Action<PurchaseResult>? onDone)
         {
             IStoreService? store = _store;
-            if (store == null || store.IsPurchasing)
+            if (store == null || store.IsPurchasing || ProfileLocked)
             {
-                return false;
+                return false; // con el perfil en solo lectura lo comprado se perdería (08 §4.4): no se vende nada
             }
 
             int level = _flow != null && _flow.HasLevel ? _flow.LevelNumber : (_app?.OverlayLevel ?? 0);
@@ -474,7 +489,8 @@ namespace AF.UI
 
             IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
             IProfileStore store = LaunchOptions.ProfileStoreOverride ?? new LocalProfileStore(Application.persistentDataPath);
-            Profile profile = LoadProfile(store, clock, LaunchOptions.ProfileStoreOverride == null, out bool firstRun);
+            Profile profile = LoadProfile(store, clock, LaunchOptions.ProfileStoreOverride == null, out bool firstRun, out _profileStatus);
+            bool locked = IsLocked(_profileStatus);
             if (LaunchOptions.ApplyDevWallet(profile, clock))
             {
                 store.TrySave(profile); // extras af_seeds y af_canoes de los builds de desarrollo [P] (B2-6)
@@ -509,7 +525,7 @@ namespace AF.UI
             _ads = AdController.Create(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()), profile, batch, clock, firstRun);
             _storeLedger = new StoreLedger(profile, _wallet, batch, clock);
             _store = new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency);
-            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3);
+            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: locked);
 
             _screen = new GameScreen(transform, _art, _probe, this);
             _screen.SetVisible(false);
@@ -540,6 +556,13 @@ namespace AF.UI
             {
                 // 02 §14: con un nivel en curso guardado se reabre tal cual (sin intro, con su modal), sin cobrar nada.
                 _app.Start(firstRun, profile.LevelState);
+            }
+
+            if (locked)
+            {
+                // 08 §4.4: el perfil anterior se conserva intacto y esta sesión no se guarda; se avisa y no hay compras.
+                _lockedNotice = new ProfileLockedNotice(transform, _art);
+                _lockedNotice.Show(_profileStatus);
             }
 
             _skipNextDelta = true;
@@ -643,13 +666,21 @@ namespace AF.UI
         }
 
         // 08 §2.3: profile = Save.LoadLocal() ?? Profile.New(). La primera vez (no había perfil ni progreso de v0) se entra
-        // directamente al nivel 1. El af_v0_level de PlayerPrefs se migra una vez (B1-5), solo con el almacén real.
-        private static Profile LoadProfile(IProfileStore store, IClock clock, bool migrateLegacy, out bool firstRun)
+        // directamente al nivel 1. El af_v0_level de PlayerPrefs se migra una vez (B1-5), solo con el almacén real. Con un
+        // perfil más nuevo o una migración fallida (08 §4.4) el almacén no deja guardar: el perfil en blanco de esta sesión no
+        // se guarda nunca (ProfileLocked).
+        private static Profile LoadProfile(IProfileStore store, IClock clock, bool migrateLegacy, out bool firstRun, out ProfileLoadStatus status)
         {
             ProfileLoadResult result = store.Load();
+            status = result.Status;
             if (result.Error != null)
             {
                 Debug.LogWarning(LogPrefix + "perfil (" + result.Status + "): " + result.Error);
+            }
+
+            if (IsLocked(result.Status))
+            {
+                Debug.LogWarning(LogPrefix + "perfil en solo lectura (" + result.Status + "): se juega sin guardar y sin compras hasta actualizar la app (08 §4.4).");
             }
 
             Profile profile = result.Profile ?? Wallet.NewProfile(clock);
@@ -672,6 +703,11 @@ namespace AF.UI
             }
 
             return profile;
+        }
+
+        private static bool IsLocked(ProfileLoadStatus status)
+        {
+            return status == ProfileLoadStatus.TooNew || status == ProfileLoadStatus.MigrationFailed;
         }
 
         // El arte procedural se genera una vez por sesión y por agua base (guía visual v2, 8: la generación al arrancar
