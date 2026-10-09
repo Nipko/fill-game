@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using AF.Core.Board;
+using AF.Core.Mechanics;
 using AF.Presentation.Mechanics;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -14,7 +15,7 @@ namespace AF.Presentation
     /// cavidad opaca, líquido (<see cref="LiquidGraphic"/>, shader <c>AF/UI/Liquid</c>), vidrio frontal, tapa de calabaza,
     /// aro de luz y destello. La vista nunca decide reglas: muestra lo que le dice el modelo o la cola de animación (02 §3.2).
     /// Las dosis ocultas (Aguas turbias) y el Barro los pintan <see cref="MurkyMarks"/> y <see cref="MudMarks"/>, que cuelgan
-    /// del cuerpo encima del líquido.
+    /// del cuerpo encima del líquido; cada mecánica, su <see cref="CuiaOverlay"/> (07 §4.3, «Bloqueada por mecánica»).
     /// </summary>
     /// <remarks>
     /// <para>Input (02 §3.1): el touch-down solo avisa (la elevación empieza ya, 0 ms de latencia percibida) y la
@@ -24,6 +25,11 @@ namespace AF.Presentation
     /// <para>Mientras vierte, el cuerpo visual (no la ranura con su área táctil) pasa a la capa de vertido, delante de las
     /// vecinas, del marco del panel y del HUD (D-006, como Magic Sort; <see cref="MoveBodyTo"/>), y vuelve a su ranura al
     /// terminar (<see cref="ReturnBody"/>), en la misma posición de pantalla.</para>
+    /// <para>Anclas de los overlays (<see cref="CuiaOverlayHost"/>), de atrás adelante: <c>SlotBack</c> en la ranura, antes
+    /// del cuerpo; <c>BodyBack</c> entre el vidrio trasero y el líquido; <c>BodyFront</c> tras las marcas de dosis y antes de
+    /// la tapa; <c>SlotFront</c> en la ranura, tras el cuerpo. El overlay de una mecánica se crea la primera vez que
+    /// <see cref="ShowContent"/> la ve (también a mitad de nivel: Marea devuelve una Hoja) y recibe <c>Show</c>,
+    /// <c>Layout</c>, <c>OnRejected</c>, <c>Tick</c> y <c>SetInFlight</c> de esta vista.</para>
     /// </remarks>
     public sealed class CuiaView : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
     {
@@ -86,6 +92,13 @@ namespace AF.Presentation
         private MudMarks _mud = null!;
         private Cuia _shownCuia;
         private bool _inFlight;
+        private RectTransform _slotBack = null!;
+        private RectTransform _bodyBack = null!;
+        private RectTransform _bodyFront = null!;
+        private RectTransform _slotFront = null!;
+        private CuiaOverlayHost _host = null!;
+        private readonly CuiaOverlay?[] _overlays = new CuiaOverlay?[(int)MechanicTypes.Last + 1];
+        private CuiaOverlay? _overlay;
 
         private float _u = 24f;
         private float _liftMs = 120f;
@@ -131,6 +144,12 @@ namespace AF.Presentation
 
         /// <summary>El cuerpo está en vuelo (en la capa de vertido): las marcas de las bandas se ocultan.</summary>
         public bool InFlight => _inFlight;
+
+        /// <summary>Overlay de la última mecánica mostrada (null si la cuia nunca tuvo mecánica). Se oculta solo al abrirse.</summary>
+        public CuiaOverlay? Overlay => _overlay;
+
+        /// <summary>Lo que esta cuia ofrece a sus overlays: anclas, geometría, arte, efectos y tablero.</summary>
+        public CuiaOverlayHost OverlayHost => _host;
 
         /// <summary>Pie de la cuia en reposo, en coordenadas del contenedor del tablero.</summary>
         public Vector2 FootPosition => _root.anchoredPosition;
@@ -195,6 +214,11 @@ namespace AF.Presentation
             _liquid.SetUnit(_u);
             _murky.Layout(_u);
             _mud.Layout(_u);
+            _host.U = _u;
+            for (int t = 0; t < _overlays.Length; t++)
+            {
+                _overlays[t]?.Layout(_u, HeightU);
+            }
 
             // Vidrio horneado a la densidad real de la pantalla (guía 4.1: ceil(u_dp × escala) px/u).
             int ppu = _art.CuiaPixelsPerUFor(_u);
@@ -267,6 +291,35 @@ namespace AF.Presentation
             {
                 _mud.Show(cuia);
             }
+
+            ShowOverlays(cuia, sealedNow);
+        }
+
+        /// <summary>
+        /// Une <paramref name="overlay"/> a esta cuia en lugar del que crearía la fábrica para su mecánica (pruebas y
+        /// variantes). Después, <see cref="ShowContent"/> lo usa como cualquier otro.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">La cuia ya tiene un overlay de esa mecánica.</exception>
+        public void UseOverlay(CuiaOverlay overlay)
+        {
+            if (overlay == null)
+            {
+                throw new ArgumentNullException(nameof(overlay));
+            }
+
+            int slot = (int)overlay.Type;
+            if (slot <= 0 || slot >= _overlays.Length)
+            {
+                throw new ArgumentException("El overlay no dibuja ninguna mecánica.", nameof(overlay));
+            }
+
+            if (_overlays[slot] != null)
+            {
+                throw new InvalidOperationException("La cuia ya tiene un overlay de esa mecánica.");
+            }
+
+            AttachOverlay(overlay, slot);
+            _overlay = overlay;
         }
 
         /// <summary>Pinta la dosis <paramref name="k"/> como oculta (pardo opaco y «?»; la intro en el primer impacto).</summary>
@@ -435,6 +488,11 @@ namespace AF.Presentation
         public void Shake()
         {
             _shakeElapsed = 0f;
+            int slot = (int)_shownCuia.Mechanic;
+            if (slot > 0 && slot < _overlays.Length)
+            {
+                _overlays[slot]?.OnRejected();
+            }
         }
 
         /// <summary>Celebración (07 §5.4): tras <paramref name="delayMs"/>, aro de luz si está sellada y salto de 0,15 u.</summary>
@@ -502,6 +560,65 @@ namespace AF.Presentation
             _inFlight = inFlight;
             _murky.SetInFlight(inFlight);
             _mud.SetInFlight(inFlight);
+            for (int t = 0; t < _overlays.Length; t++)
+            {
+                _overlays[t]?.SetInFlight(inFlight);
+            }
+        }
+
+        // Overlay de la mecánica, perezoso (se crea la primera vez que aparece; Marea puede devolver una Hoja a mitad de
+        // nivel), y Show en todos los creados: cada uno se oculta si su mecánica ya no está. Ninguno se repinta mientras anima.
+        private void ShowOverlays(Cuia cuia, bool sealedNow)
+        {
+            MechanicType type = cuia.Mechanic;
+            if (type != MechanicType.None)
+            {
+                CuiaOverlay? overlay = EnsureOverlay(type);
+                if (overlay != null)
+                {
+                    _overlay = overlay;
+                }
+            }
+
+            for (int t = 0; t < _overlays.Length; t++)
+            {
+                CuiaOverlay? o = _overlays[t];
+                if (o != null && !o.IsAnimating)
+                {
+                    o.Show(cuia, sealedNow);
+                }
+            }
+        }
+
+        private CuiaOverlay? EnsureOverlay(MechanicType type)
+        {
+            int slot = (int)type;
+            if ((uint)slot >= (uint)_overlays.Length)
+            {
+                return null;
+            }
+
+            CuiaOverlay? overlay = _overlays[slot];
+            if (overlay == null)
+            {
+                overlay = CuiaOverlays.Create(type);
+                if (overlay != null)
+                {
+                    AttachOverlay(overlay, slot);
+                }
+            }
+
+            return overlay;
+        }
+
+        private void AttachOverlay(CuiaOverlay overlay, int slot)
+        {
+            overlay.Attach(_host);
+            _overlays[slot] = overlay;
+            if (_inFlight)
+            {
+                overlay.SetInFlight(true);
+            }
         }
 
         /// <summary>Devuelve el cuerpo a su ranura y libera el control (la elevación arranca desde 0).</summary>
@@ -665,6 +782,10 @@ namespace AF.Presentation
             _liquid.TickRipple(dtMs);
             _murky.Tick(dtMs);
             _mud.Tick(dtMs);
+            for (int t = 0; t < _overlays.Length; t++)
+            {
+                _overlays[t]?.Tick(dtMs);
+            }
         }
 
         /// <inheritdoc />
@@ -839,12 +960,14 @@ namespace AF.Presentation
             SetAnchors(_aura.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0.5f));
             _aura.gameObject.SetActive(false);
 
+            _slotBack = OverlayParts.NewAnchor("SlotBack", _root); // overlays en la ranura, detrás del cuerpo
             _body = NewRect("Body", _root, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
             _bodySibling = _body.GetSiblingIndex();
 
             _glassPpu = ProceduralArt.CuiaPixelsPerU;
             _back = NewImage("GlassBack", _body, art.CuiaBack(capacity, _glassPpu), Color.white);
             Stretch(_back.rectTransform);
+            _bodyBack = OverlayParts.NewAnchor("BodyBack", _body); // entre el vidrio trasero y el líquido
 
             var liquidGo = new GameObject("Liquid", typeof(RectTransform), typeof(CanvasRenderer), typeof(LiquidGraphic));
             liquidGo.transform.SetParent(_body, false);
@@ -874,6 +997,7 @@ namespace AF.Presentation
 
             _marks = NewImage("DoseMarks", _body, art.CuiaMarks(capacity, _glassPpu), Color.white);
             Stretch(_marks.rectTransform);
+            _bodyFront = OverlayParts.NewAnchor("BodyFront", _body); // sobre las marcas de dosis y bajo la tapa
 
             _cap = NewImage("SealCap", _body, art.SealCap, Color.white);
             SetAnchors(_cap.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
@@ -892,6 +1016,9 @@ namespace AF.Presentation
                 _star.material = additive;
                 _aura.material = additive;
             }
+
+            _slotFront = OverlayParts.NewAnchor("SlotFront", _root); // overlays en la ranura, delante del cuerpo
+            _host = new CuiaOverlayHost(index, capacity, _slotBack, _bodyBack, _bodyFront, _slotFront, art, fx);
         }
 
         private static RectTransform NewRect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot)
