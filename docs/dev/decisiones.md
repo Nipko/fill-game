@@ -12,7 +12,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-004 | 2026-10-07 | Panel azul petróleo, vertido a 38° y cuias más anchas con pocas cuias | Decidida por el dueño (respuestas a C16-C18 de `docs/art/direccion-visual-v2.md`); implementada en el árbol de trabajo, sin commitear (código, tests y documentación de «Archivos afectados»; EditMode y PlayMode en verde el 2026-10-07). Pendientes: commit y PR, revisión en el teléfono (`dev.apk`) y nueva medida de C19. Actualización del 2026-10-08: implementada en `b2d34de` (rama `d004-cuias-anchas`); la decisión 2 (38° fijos y labio a 0,6-1,6 u), el techo del vertido [P], la consecuencia «no cambia el número de filas» y el alto de la cuia (1:3, 6 u; pasa a 5,6 u) quedan sustituidos por D-006, que también matiza el recálculo a mitad de nivel: las filas se fijan al cargar y no se recalculan, solo el ancho; el resto sigue (panel azul petróleo y topes 64/56/48 dp) |
 | D-005 | 2026-10-08 | Vertido por tramo, como Magic Sort | Decidida por el dueño; en implementación (C1, L1, U1, D1-D6) |
 | D-006 | 2026-10-08 | Tablero, cuia y vertido como Magic Sort | Decidida por el dueño; en implementación (U2-U6, D1-D6). Pendiente: P12 (ranura de 42 dp en 16:9 con cuias añadidas) |
-| D-008 | 2026-10-08 | Bucle de partida como Magic Sort | Decidida por el dueño. Documentación aplicada el 2026-10-08 (capítulos de «Archivos afectados»). En implementación: pista B (B1-1-B1-6 y B2-1-B2-6). Los textos nuevos y los puntos [P] están pendientes (P14-P16, no bloquean). El número D-007 queda reservado para las mecánicas especiales, en pausa |
+| D-008 | 2026-10-08 | Bucle de partida como Magic Sort | Decidida por el dueño. Documentación aplicada el 2026-10-08 en `117f4be` (capítulos de «Archivos afectados»), dentro de la rama de código: **pendiente de la aprobación explícita del dueño antes de fusionar** o de un PR de documentación aparte (cambia el contrato 7). En implementación: pista B (B1-1-B1-6 y B2-1-B2-6). Los textos nuevos y los puntos [P] están pendientes (P14-P16, no bloquean). Abierta: P17, cuándo sale «Canoas infinitas 1 h» en Sin canoas (04 §7.3 y 05 §4.1 se contradicen). El número D-007 queda reservado para las mecánicas especiales, en pausa |
 
 ---
 
@@ -705,7 +705,14 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 - **Estado:** decidida por el dueño el 2026-10-08: «la estructura se copia de Magic Sort; las cifras salen de nuestro GDD». Su postura general: copiar lo que funciona sin suavizarlo, salvo por política de Google Play.
   - El número D-007 y la pregunta P13 quedan reservados para las mecánicas especiales, **en pausa**: el dueño pidió investigar antes la cultura ribereña y la dificultad escalonada. Nada de esta entrada depende de D-007.
   - Respuesta del dueño a la pregunta bloqueante 2 del plan de la fase (2026-10-08, transmitida por la sesión principal): AF.Platform, AF.Save, AF.Ads y AF.IAP se crean **solo con interfaces e implementaciones simuladas**. Sin SDK, sin cambios en `Packages/manifest.json` ni `packages-lock.json`, sin permisos de Android, sin claves y sin red. El dueño revisa el resultado al fusionar.
-  - Documentación aplicada el 2026-10-08 en los capítulos de «Archivos afectados».
+  - Documentación aplicada el 2026-10-08 en los capítulos de «Archivos afectados», en `117f4be`, dentro de la rama de código `fase2-bucle-partida`.
+    - El plan de la fase dejaba estas ediciones del GDD (Dc2-Dc6) para después de las respuestas a P13-P16, como lote aprobado por el dueño. Por eso quedan **pendientes de su aprobación explícita antes de fusionar**. Si no las aprueba en el PR de la pista B, van en un PR de documentación aparte.
+    - Qué tiene que aprobar:
+      - el contrato 7 (04 §5.2): desde el 31, salir del nivel con el menú es fallo duro; cerrar la app sigue sin serlo;
+      - 04 §6 y §7: el embudo con ¿Seguro? y Nivel fallido, que sustituye «Máximo un modal por bloqueo» (§6.6), y «Qué consume» (§7.1);
+      - 08 §2.2, §2.3 y §8.2, y la columna «Uso» de tres filas de §9 (contrato 13), sin claves ni defaults nuevos;
+      - 00, 02, 05, 06, 07, 09, GDD.md y la nota de respuestas de la propuesta, sin cifras nuevas.
+    - Queda abierta una contradicción del GDD que estas ediciones no resolvieron: cuándo se ofrece «Canoas infinitas 1 h» en Sin canoas (P17).
 - **Sustituye:**
   - en 04 §6.6, la regla «Máximo un modal por bloqueo; nunca se apila un segundo pop-up»;
   - en 04 §5.2 (contrato 7), la fila «Salir al Mapa del río … no es fallo», solo cuando se sale con el menú (cerrar la app sigue sin ser fallo);
@@ -772,6 +779,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
        - «Canoa extra · Ver video», +1 (`rv_extra_canoe`: 3 al día, 90 s);
        - «Llenar canoas · 200 semillas», hasta 5/5;
        - «Canoas infinitas 1 h» (`af_infinite_canoes_1h`: 1,99, COP 3.900).
+         - *Nota del 2026-10-08: cuándo se ofrece está pendiente de P17. 04 §7.3 la pone siempre, y así lo hace `NoCanoesScreen`; 05 §4.1 y §5, solo tras rechazar dos veces la Canoa extra en el día. El código no cambia hasta la respuesta.*
      - En cuanto hay una canoa, vuelve a «Nivel fallido» con «Reintentar», como Magic Sort (t = 338) [P].
    - **Salir.** Desde la pausa, «Salir».
      - Desde el 31: «¿Salir del nivel? Perderás 1 canoa» [P] → fallo duro → «Nivel fallido» → inicio. Cuesta la canoa aunque no haya vertidos, como Magic Sort en t = 5 [P] (pregunta P16).
@@ -850,7 +858,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
   - `Assets/_Project/Scripts/{Platform,Save,Economy,Ads,IAP,Boosters,GameFlow,Levels,UI,Presentation}`;
   - `Assets/_Project/Data/Config/{iap_catalog,ad_placements}.json`;
   - `Assets/_Project/Tests/**`.
-- **Documentación** (aplicada el 2026-10-08; entre paréntesis, lo que se tocó además de la lista original):
+- **Documentación** (aplicada el 2026-10-08 en `117f4be`, pendiente de la aprobación explícita del dueño antes de fusionar, ver «Estado»; entre paréntesis, lo que se tocó además de la lista original):
   - 02 §2 y §7 (y §6, §14 y «Preguntas abiertas» 2);
   - 04 §2.7, §5.2, §6 y §7 (y §3, §4, §10.1, §11 y las secciones finales);
   - 05 §5 y §6.1 (y §2.4, §3.4, §6.3 y §10);
@@ -861,7 +869,8 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
   - GDD.md §2 (#11, #14 y #15, y #17), §4 y §6.2 (contrato 7), con una nota en §7.1 y §9;
   - 09 §2.3 (y §1.1, filas #10, #13, #14 y #22);
   - la nota de respuestas de `docs/research/magic-sort/propuesta-tintalu.md`.
-  - Pendientes: el resumen de la definición de fallo de 03 §13 y la línea de decisiones de `CLAUDE.md`.
+  - Nota de P17 (2026-10-08): 04 §7.3 y «Preguntas abiertas» 9; 05 §4.1, §5, «Conflictos detectados» y «Dependencias» (fila 04); y la fecha de cabecera de los dos. Solo señalan la contradicción; no cambian ninguna regla.
+  - Pendientes: el resumen de la definición de fallo de 03 §13, la línea de decisiones de `CLAUDE.md` y, tras la respuesta a P17, alinear 04 §7.3 o 05 §4.1 y §5 (lote Dc4).
 
 **Preguntas para el dueño** (no bloquean).
 
@@ -870,3 +879,4 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 | P14 | ¿Apruebas los textos nuevos y que la pantalla de 04 §7.3 siga llamándose «Sin canoas» en vez de «Más canoas»? | Sí |
 | P15 | ¿Se mantiene Marea como primera opción del modal (02 R15; 04 §6.2), aunque Magic Sort no la tenga? | Sí |
 | P16 | Desde el 31, ¿salir del nivel cuesta una canoa también con 0 vertidos, como Magic Sort (t = 5)? | Sí |
+| P17 | ¿Cuándo sale «Canoas infinitas 1 h» (`af_infinite_canoes_1h`, 1,99) en Sin canoas? El GDD se contradice. **A:** siempre, detrás de esperar, el video y las semillas, y sin cuenta atrás: así lo dibuja 04 §7.3, la listan sin condición 02 §2, 06 §4.7 y el paso 4 de esta decisión, y así lo hace ya `NoCanoesScreen`. **B:** solo al quedarse sin canoas tras rechazar la Canoa extra dos veces en el día, con 1 impresión contextual al día que caduca a los 10 min: así lo dicen 05 §4.1 y §5; habría que definir qué cuenta como «rechazar» y cambiar el código. En los dos casos sigue en el Mercado | A [P]: es lo que dicen los demás capítulos y lo que hace el código, y la caducidad de 10 min de 05 §5 choca con «Sin cuenta atrás de oferta» de 04 §7.3. En contra: Magic Sort no vende vidas ilimitadas en «More Lives» (ficha §4.5). Con A se corrigen 05 §4.1 y §5; con B, 04 §7.3, 02 §2, 06 §4.7, este paso 4 y el código. Se alinea en el lote Dc4; hasta la respuesta, el código no se toca |
