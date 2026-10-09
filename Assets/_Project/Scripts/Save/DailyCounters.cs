@@ -1,12 +1,13 @@
 #nullable enable
 using System;
-using AF.Save;
 
-namespace AF.Economy
+namespace AF.Save
 {
     /// <summary>
     /// Cambio de día local del bloque <c>daily</c> del perfil (04 §10.1: reinicio a las 00:00 locales). Se reinicia el
-    /// bloque entero de una vez, para que ningún módulo deje la fecha nueva con contadores del día anterior:
+    /// bloque entero de una vez, para que ningún módulo deje la fecha nueva con contadores del día anterior. Vive junto a
+    /// <see cref="DailyData"/> porque lo comparten la cartera (<c>AF.Economy</c>), los anuncios (<c>AF.Ads</c>) y las
+    /// compras (<c>AF.IAP</c>), y <c>AF.Ads</c> no puede depender de <c>AF.Economy</c> (08 §2.2: Economy usa Ads):
     /// <list type="bullet">
     /// <item>recompensados por ubicación y <c>rv_total</c>, <c>interstitials_today</c>, <c>rescues_today</c>,
     /// <c>af_rescue_shown</c> y <c>shuffles_today</c> vuelven a 0;</item>

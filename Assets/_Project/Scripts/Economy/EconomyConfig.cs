@@ -3,27 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using AF.Platform;
 
 namespace AF.Economy
 {
-    /// <summary>
-    /// Marca una propiedad de <see cref="EconomyConfig"/> con su clave exacta en la tabla única de Remote Config
-    /// (GDD 08 §9). <c>EconomyConfigTests</c> lee esa tabla y comprueba la clave, el tipo y el default de cada propiedad
-    /// marcada, como guarda contra cifras inventadas.
-    /// </summary>
-    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
-    public sealed class RemoteConfigKeyAttribute : Attribute
-    {
-        /// <summary>Marca la propiedad con la clave <paramref name="key"/>.</summary>
-        public RemoteConfigKeyAttribute(string key)
-        {
-            Key = key;
-        }
-
-        /// <summary>Clave de 08 §9.</summary>
-        public string Key { get; }
-    }
-
     /// <summary>Un tramo de <c>rescue_price_bands</c>: desde el nivel <see cref="FromLevel"/> cuesta <see cref="Price"/>.</summary>
     public readonly struct PriceBand
     {

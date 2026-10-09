@@ -4,7 +4,6 @@
   "references": [
     "AF.Platform",
     "AF.Save",
-    "AF.Economy",
     "AF.Ads",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"

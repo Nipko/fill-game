@@ -3,8 +3,7 @@
   "rootNamespace": "AF.Ads",
   "references": [
     "AF.Platform",
-    "AF.Save",
-    "AF.Economy"
+    "AF.Save"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

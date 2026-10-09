@@ -5,7 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using AF.Economy;
+using AF.Platform;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -14,7 +14,7 @@ namespace AF.Ads.Tests
     /// <summary>
     /// Guardas de B1-3 contra cifras y nombres inventados: cada default de <see cref="AdsConfig"/> sale de la tabla única
     /// de 08 §9, los IDs de ubicación son los de 08 §2.2, los rangos de 08 §9 se exigen y el ensamblado <c>AF.Ads</c> no
-    /// usa el motor, el reloj del sistema ni la red.
+    /// usa el motor, el reloj del sistema ni la red, ni depende de los módulos que lo usan (08 §2.2).
     /// </summary>
     public sealed class AdsConfigTests
     {
@@ -182,6 +182,39 @@ namespace AF.Ads.Tests
             }
 
             Assert.That(files, Is.GreaterThanOrEqualTo(7));
+        }
+
+        [Test]
+        public void AdsAssembly_DoesNotDependOnItsConsumers_08_2_2()
+        {
+            // 08 §2.2: AF.Ads «entrega a» Boosters, Economy y GameFlow. Si los referenciara, el día que uno de ellos use
+            // AF.Ads (p. ej. Economy cobrando semillas con biz_ads_enabled = false) habría un ciclo de asmdef.
+            string modules = GddTables.Section(GddTables.Chapter("08-arquitectura-tecnica-publicacion.md"), "### 2.2 ", "### 2.3 ");
+            Match row = Regex.Match(modules, "\n\\| `AF\\.Ads` \\|[^\n]*");
+            Assert.That(row.Success, Is.True, "fila de AF.Ads en 08 §2.2");
+            string[] cells = row.Value.Split('|');
+            Assert.That(cells.Length, Is.EqualTo(7), "columnas de 08 §2.2: módulo, responsabilidad, depende de, entrega a, versión");
+
+            var consumers = new List<string>();
+            foreach (string name in cells[4].Split(','))
+            {
+                consumers.Add("AF." + name.Trim());
+            }
+
+            Assert.That(consumers, Does.Contain("AF.Economy"), "columna «Entrega a» de AF.Ads");
+
+            string asmdef = File.ReadAllText(Path.Combine(AdsDir, "AF.Ads.asmdef"));
+            var compiled = new List<string>();
+            foreach (AssemblyName reference in typeof(AdPolicy).Assembly.GetReferencedAssemblies())
+            {
+                compiled.Add(reference.Name);
+            }
+
+            foreach (string consumer in consumers)
+            {
+                Assert.That(asmdef.Contains("\"" + consumer + "\""), Is.False, "AF.Ads.asmdef no debe referenciar " + consumer);
+                Assert.That(compiled, Does.Not.Contain(consumer), "AF.Ads no debe usar " + consumer);
+            }
         }
 
         private static string GddType(Type type)

@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using AF.Economy;
+using AF.Platform;
 
 namespace AF.Boosters
 {

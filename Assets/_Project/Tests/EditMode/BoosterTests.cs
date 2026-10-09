@@ -10,6 +10,7 @@ using AF.Core.Session;
 using AF.Economy;
 using AF.GameFlow;
 using AF.Levels;
+using AF.Platform;
 using NUnit.Framework;
 using UnityEngine;
 

@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using AF.Ads.Tests;
-using AF.Economy;
+using AF.Platform;
 using NUnit.Framework;
 using UnityEngine;
 

@@ -6,6 +6,7 @@ using System.IO;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using AF.Economy;
+using AF.Platform;
 using NUnit.Framework;
 using UnityEngine;
 
