@@ -9,9 +9,10 @@ namespace AF.Solver.Search
     /// <summary>
     /// Solver A* (ponderado con <c>w</c> entero) sobre estados canónicos (GDD 03 §3 y §5) en los dos modos de vertido
     /// (D-005): heurística <see cref="SolverHeuristic"/> del modo (<c>H</c> en <see cref="PourMode.Run"/>, el modo de
-    /// juego por defecto; <c>H_single</c> [P] solo en <see cref="PourMode.Single"/>, el de pruebas), movimientos = <c>movimientos_utiles</c> de 02 §1.4 evaluados con
-    /// <see cref="CuiaRules"/> (la misma implementación que el cliente), presupuesto de estados expandidos y
-    /// prueba de irresolubilidad por agotamiento. Admite tableros de hasta 16 cuias (14 generadas, R1).
+    /// juego por defecto; <c>H_single</c> [P] solo en <see cref="PourMode.Single"/>, el de pruebas), movimientos =
+    /// <c>movimientos_utiles</c> de 02 §1.4 evaluados y aplicados con <see cref="BoardRules"/> (la misma implementación que
+    /// el cliente, con R10 por etapas y las mecánicas del anexo B de D-007), presupuesto de estados expandidos y prueba de
+    /// irresolubilidad por agotamiento. Admite tableros de hasta 16 cuias (14 generadas, R1).
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
@@ -19,7 +20,7 @@ namespace AF.Solver.Search
     /// su hash FNV-1a de 64 bits (<see cref="BoardCanon.Hash"/>); los visitados son una tabla hash abierta propia sobre
     /// arrays (sin <c>Dictionary</c>).</description></item>
     /// <item><description><b>Movimientos:</b> los de 03 §5 <c>MOVIMIENTOS</c>, con la cantidad de
-    /// <see cref="CuiaRules.Amount(Cuia, Cuia, PourMode)"/>: la racha completa que cabe en <see cref="PourMode.Run"/> y una
+    /// <see cref="BoardRules.Amount"/>: la racha completa que cabe en <see cref="PourMode.Run"/> y una
     /// dosis en <see cref="PourMode.Single"/>. Los pares (A, B) que se expanden son los mismos en los dos modos (el factor de
     /// ramificación por nodo no cambia); en <c>Single</c> crece el conjunto de estados alcanzables (decisiones.md §2.1.3).
     /// Las cuias idénticas (mismo <see cref="Cuia.Packed"/>, que incluye la capacidad) se expanden una sola vez como
@@ -31,7 +32,7 @@ namespace AF.Solver.Search
     /// depende del desempate (H admisible); con <c>w &gt; 1</c> (Morpho, Pororoca, Río sin fin) el desempate decide qué
     /// solución subóptima sale, y así coincide con el prototipo. Determinista en CoreCLR, Mono e IL2CPP.</description></item>
     /// <item><description><b>Solución:</b> se guarda en índices canónicos y se traduce al final a los índices reales del
-    /// tablero de partida, rehaciendo cada vertido con <see cref="CuiaRules"/>.</description></item>
+    /// tablero de partida, rehaciendo cada vertido con <see cref="BoardRules"/>.</description></item>
     /// <item><description><b>Memoria:</b> cada nodo guarda solo las <c>T</c> cuias del tablero (paso <c>T</c>, no las 16 de
     /// <see cref="BoardState.MaxCuias"/>). Los arrays de nodos, la tabla y el montículo se reutilizan entre llamadas y
     /// solo crecen (duplicando, o al empezar una búsqueda con un tablero más ancho) cuando hace falta; el bucle de
@@ -178,10 +179,11 @@ namespace AF.Solver.Search
             int childG = _nodeG[node] + 1;
             int[] units = _units;
             PourMode pourMode = _pourMode;
+            var parent = new BoardSlice(_parentBuf, 0, width, units);
             for (int i = 0; i < width; i++)
             {
                 Cuia from = _parentBuf[i];
-                if (!CuiaRules.CanBeSource(from, units))
+                if (!BoardRules.IsSourceCuia(from, units))
                 {
                     continue;
                 }
@@ -200,9 +202,9 @@ namespace AF.Solver.Search
                     }
 
                     Cuia to = _parentBuf[j];
-                    if (to.IsFull || (!to.IsEmpty && to.TopColor != fromTop))
+                    if (!to.HasMechanic && (to.IsFull || (!to.IsEmpty && to.TopColor != fromTop)))
                     {
-                        continue; // descarte rápido de pares que IsLegal rechazaría igual (B llena o con otra cima)
+                        continue; // descarte rápido de destinos normales que la regla normal rechazaría igual
                     }
 
                     if (j > 0 && j - 1 != i && to.Packed == _parentBuf[j - 1].Packed)
@@ -210,20 +212,20 @@ namespace AF.Solver.Search
                         continue; // destino idéntico al anterior (03 §5: vacíos equivalentes una sola vez)
                     }
 
-                    if (!CuiaRules.IsLegal(from, to, units))
+                    if (!BoardRules.Accepts(in parent, i, j))
                     {
                         continue;
                     }
 
-                    if (futileRuleEnabled && CuiaRules.IsFutile(from, to, units))
+                    bool futile = BoardRules.IsFutileCuias(from, to, units);
+                    if (futileRuleEnabled && futile)
                     {
                         continue;
                     }
 
-                    int amount = CuiaRules.Amount(from, to, pourMode);
                     Array.Copy(_parentBuf, _childBuf, width);
-                    _childBuf[i] = from.RemoveTop(amount);
-                    _childBuf[j] = to.AddOnTop(from.TopColor, amount);
+                    var events = default(PourEvents);
+                    BoardRules.ApplyInPlace(_childBuf, 0, width, units, i, j, pourMode, futile, ref events);
                     BoardCanon.Sort(_childBuf, 0, width);
                     ulong hash = BoardCanon.Hash(_childBuf, 0, width);
                     int move = (i << 8) | j;
@@ -246,18 +248,8 @@ namespace AF.Solver.Search
 
         private bool IsGoal(int node)
         {
-            int width = _width;
-            int offset = node * width;
-            for (int k = 0; k < width; k++)
-            {
-                Cuia cuia = _nodeCuias[offset + k];
-                if (!cuia.IsEmpty && !CuiaRules.IsSealed(cuia, _units))
-                {
-                    return false;
-                }
-            }
-
-            return true;
+            // R10 (g) / R12 con la misma implementación que el cliente.
+            return BoardRules.IsWon(_nodeCuias, node * _width, _width, _units);
         }
 
         private int Priority(int node, int weight)
@@ -407,17 +399,15 @@ namespace AF.Solver.Search
                 CanonicalOrder(width);
                 int source = _perm[_pathBuf[s] >> 8];
                 int target = _perm[_pathBuf[s] & 0xFF];
-                Cuia from = _realBuf[source];
-                Cuia to = _realBuf[target];
-                if (!CuiaRules.IsLegal(from, to, _units))
+                if (!BoardRules.IsLegal(_realBuf, 0, width, _units, source, target))
                 {
                     throw new InvalidOperationException("AF.Solver: la solución canónica no se puede rehacer sobre el tablero real.");
                 }
 
-                int amount = CuiaRules.Amount(from, to, _pourMode);
-                moves[s] = new Pour(source, target, amount);
-                _realBuf[source] = from.RemoveTop(amount);
-                _realBuf[target] = to.AddOnTop(from.TopColor, amount);
+                bool futile = BoardRules.IsFutile(_realBuf, 0, width, _units, source, target);
+                var events = default(PourEvents);
+                BoardRules.ApplyInPlace(_realBuf, 0, width, _units, source, target, _pourMode, futile, ref events);
+                moves[s] = new Pour(source, target, events.Amount);
             }
 
             return new SolveResult(SolveStatus.Solved, moves, expanded, _nodeCount);
