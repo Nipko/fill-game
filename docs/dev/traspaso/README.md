@@ -90,6 +90,23 @@ La sesión del portátil usaba la herramienta Workflow con equipos de agentes Op
 
 ### Paso 1 · Integración en Unity (la más urgente: el dueño quiere probar ya)
 
+> **Progreso en el escritorio (x64).** El trabajo va en 5 olas de tareas pequeñas; cada ola se fusiona en esta rama ya revisada y verificada.
+>
+> **Ola 1 integrada el 2026-10-09:**
+> - los niveles 1-200 cargan y se juegan con todas las mecánicas de la 1.0 en las reglas;
+> - cada mecánica tiene un aspecto simple provisional;
+> - las dosis turbias y el Barro se pintan bien;
+> - la vista sigue al modelo en cada vertido;
+> - AF_STATE informa de las mecánicas.
+>
+> **Pendiente:**
+> - ola 2: pasos de desbloqueo en el orden de R10, persistencia de lo revelado, partículas y etiquetas D-009 en el inicio y en los modales;
+> - ola 3: HUD, aspecto y animación de cada mecánica, y lógica de la Luciérnaga;
+> - ola 4: tarjeta previa y tutoriales, y la Luciérnaga en la bandeja;
+> - ola 5: verificación final.
+>
+> Qué probar en el teléfono tras cada push: en el mensaje del commit.
+
 Las tareas detalladas están en `docs/dev/traspaso/planes-integracion.json` (`integration_tasks` e `integration_notes_pista_A`). En resumen:
 
 1. **Lector de `pack_schema` 2.** `LevelPackReader` (en `Assets/_Project/Scripts/Levels/`) solo acepta el 1. Tiene que leer:
