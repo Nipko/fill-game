@@ -87,14 +87,16 @@ namespace AF.Tests.EditMode
             Assert.That(LevelPackReader.Read(TestPacks.MinimalPack(null, "\"pack_schema\": 2")).Count, Is.EqualTo(1));
         }
 
-        [TestCase("\"pack_schema\": 0")]
-        [TestCase("\"pack_schema\": 3")]
-        [TestCase("\"subset_of\": \"af-level/2\"")]
-        [TestCase("\"note\": \"sin esquema\"")]
-        public void Reader_RejectsUnknownSchema(string header)
+        [TestCase("\"pack_schema\": 0", "t: pack_schema 0 no admitido")]
+        [TestCase("\"pack_schema\": 3", "t: pack_schema 3 no admitido")]
+        [TestCase("\"subset_of\": \"af-level/2\"", "t: el paquete no declara pack_schema")]
+        [TestCase("\"note\": \"sin esquema\"", "t: el paquete no declara pack_schema")]
+        public void Reader_RejectsUnknownSchema(string header, string expected)
         {
-            // 08 §4.4: el cliente rechaza un paquete con un pack_schema que no conoce (lee el 1 y el 2, contrato 21).
-            Assert.That(() => LevelPackReader.Read(TestPacks.MinimalPack(null, header)), Throws.TypeOf<LevelFormatException>());
+            // 08 §4.4: el cliente rechaza un paquete con un pack_schema que no conoce (lee el 1 y el 2, contrato 21). El mensaje
+            // empieza por el id del paquete ("t") y dice por qué: la versión que no admite o que no declara ninguna.
+            Assert.That(() => LevelPackReader.Read(TestPacks.MinimalPack(null, header)),
+                Throws.TypeOf<LevelFormatException>().With.Message.Contains("pack_schema").And.Message.Contains(expected));
         }
 
         [Test]
@@ -163,38 +165,46 @@ namespace AF.Tests.EditMode
             Assert.That(plain.HasMud, Is.False);
         }
 
-        // Paquetes pack_schema 2 de un nivel que el lector rechaza (contrato 21; 02 §9.1, §11 y R2-R7): cada caso con su motivo.
-        private static readonly object[] InvalidSchema2Levels =
+        // Paquetes pack_schema 2 de un nivel que el lector rechaza (contrato 21; 02 §9.1, §11 y R2-R7). Cada caso lleva el
+        // fragmento del mensaje que prueba su motivo: cualquier error posterior a leer el id también diría el id, así que el id
+        // solo no basta para saber que el caso falla por lo que dice su nombre. El nombre del test es el motivo, no el JSON.
+        private static readonly TestCaseData[] InvalidSchema2Levels =
         {
-            new object[] { "tipo desconocido", TestPacks.Schema2Pack("[null, null, {\"type\": \"aguape\"}, null]") },
-            new object[] { "barro no es un type", TestPacks.Schema2Pack("[null, null, {\"type\": \"barro\"}, null]") },
-            new object[] { "hoja sin key", TestPacks.Schema2Pack("[null, null, {\"type\": \"hoja\"}, null]") },
-            new object[] { "partner incoherente", TestPacks.Schema2Pack("[null, null, {\"type\": \"remolino\", \"partner\": 3}, null]") },
-            new object[] { "partner negativo", TestPacks.Schema2Pack("[null, null, {\"type\": \"remolino\", \"partner\": -2}, {\"type\": \"remolino\", \"partner\": 2}]") },
-            new object[] { "attrs de otra longitud", TestPacks.Schema2Pack("[null, null, null]") },
-            new object[] { "oculta en la cima (R7)", TestPacks.Schema2Pack(cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", murky: "true", hidden: "[[0, 2]]") },
-            new object[] { "oculta fuera del tablero", TestPacks.Schema2Pack(cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", murky: "true", hidden: "[[4, 0]]") },
-            new object[] { "oculta repetida", TestPacks.Schema2Pack(cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", murky: "true", hidden: "[[0, 0], [0, 0]]") },
-            new object[] { "murky sin ocultas", TestPacks.Schema2Pack(murky: "true") },
-            new object[] { "ocultas sin murky", TestPacks.Schema2Pack(cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", hidden: "[[0, 0]]") },
-            new object[] { "units con clave 17", TestPacks.Schema2Pack(units: "{\"17\": 4}") },
-            new object[] { "units con valor 7", TestPacks.Schema2Pack(units: "{\"8\": 7}") },
-            new object[] { "units objeto vacío", TestPacks.Schema2Pack(units: "{}") },
-            new object[] { "units que no cuadra", TestPacks.Schema2Pack(units: "{\"8\": 5}") },
-            new object[] { "color 16", TestPacks.Schema2Pack(cuias: "[[8, 8, 8, 4], [4, 4, 4, 8], [16], []]") },
-            new object[] { "intro desconocida", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"aguape\"") },
-            new object[] { "banda desconocida", TestPacks.Schema2Pack().Replace("\"difficulty\": { \"par\": 3 }", "\"difficulty\": { \"par\": 3, \"band\": \"easy\" }") },
-            new object[] { "matapi con pack_schema 1", TestPacks.Schema2Pack("[null, null, null, {\"type\": \"matapi\"}]", schema: 1) },
-            new object[] { "intro chica con pack_schema 1", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"chica\"", schema: 1) },
-            new object[] { "par_approx con pack_schema 1", TestPacks.Schema2Pack(schema: 1).Replace("\"difficulty\": { \"par\": 3 }", "\"difficulty\": { \"par\": 3, \"par_approx\": false }") },
-            new object[] { "tablero que no valida", TestPacks.Schema2Pack(cuias: "[[8, 8, 8, 8], [4, 4, 4, 4], [], []]") },
+            Invalid("tipo desconocido", TestPacks.Schema2Pack("[null, null, {\"type\": \"aguape\"}, null]"), "desconocido 'aguape'"),
+            Invalid("barro no es un type", TestPacks.Schema2Pack("[null, null, {\"type\": \"barro\"}, null]"), "desconocido 'barro'"),
+            Invalid("hoja sin key", TestPacks.Schema2Pack("[null, null, {\"type\": \"hoja\"}, null]"), "(hoja): lleva solo key"),
+            Invalid("partner incoherente", TestPacks.Schema2Pack("[null, null, {\"type\": \"remolino\", \"partner\": 3}, null]"), "la pareja tiene que ser un Remolino"),
+            Invalid("partner negativo", TestPacks.Schema2Pack("[null, null, {\"type\": \"remolino\", \"partner\": -2}, {\"type\": \"remolino\", \"partner\": 2}]"), "partner es un índice 0-based"),
+            Invalid("attrs de otra longitud", TestPacks.Schema2Pack("[null, null, null]"), "'attrs' debe tener una entrada por cuia"),
+            Invalid("oculta en la cima (R7)", TestPacks.Schema2Pack(cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", murky: "true", hidden: "[[0, 2]]"), "R7, la cima"),
+            Invalid("oculta fuera del tablero", TestPacks.Schema2Pack(cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", murky: "true", hidden: "[[4, 0]]"), "[4, 0] está fuera del tablero"),
+            Invalid("oculta repetida", TestPacks.Schema2Pack(cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", murky: "true", hidden: "[[0, 0], [0, 0]]"), "repite la dosis [0, 0]"),
+            Invalid("murky sin ocultas", TestPacks.Schema2Pack(murky: "true"), "murky = true necesita al menos una dosis oculta"),
+            Invalid("ocultas sin murky", TestPacks.Schema2Pack(cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", hidden: "[[0, 0]]"), "solo puede tener dosis ocultas con murky = true"),
+            Invalid("units con clave 17", TestPacks.Schema2Pack(units: "{\"17\": 4}"), "'units_per_color' tiene la clave '17'"),
+            Invalid("units con valor 7", TestPacks.Schema2Pack(units: "{\"8\": 7}"), "'units_per_color' del color 8 fuera de 1..6"),
+            Invalid("units objeto vacío", TestPacks.Schema2Pack(units: "{}"), "'units_per_color' debe ser un entero de 1 a 6 o un objeto"),
+            Invalid("units que no cuadra", TestPacks.Schema2Pack(units: "{\"8\": 5}"), "units_per_color: el color 8 tiene 4 dosis y se declararon 5"),
+            Invalid("color 16", TestPacks.Schema2Pack(cuias: "[[8, 8, 8, 4], [4, 4, 4, 8], [16], []]"), "color 16 fuera de 1..15"),
+            Invalid("intro desconocida", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"aguape\""), "'intro_mechanic' debe ser null o"),
+            Invalid("banda desconocida", TestPacks.Schema2Pack().Replace("\"difficulty\": { \"par\": 3 }", "\"difficulty\": { \"par\": 3, \"band\": \"easy\" }"), "'difficulty.band' debe ser"),
+            Invalid("matapi con pack_schema 1", TestPacks.Schema2Pack("[null, null, null, {\"type\": \"matapi\"}]", schema: 1), "el tipo matapi necesita pack_schema 2"),
+            Invalid("intro chica con pack_schema 1", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"chica\"", schema: 1), "'intro_mechanic' chica necesita pack_schema 2"),
+            Invalid("par_approx con pack_schema 1", TestPacks.Schema2Pack(schema: 1).Replace("\"difficulty\": { \"par\": 3 }", "\"difficulty\": { \"par\": 3, \"par_approx\": false }"), "'difficulty.par_approx' necesita pack_schema 2"),
+            Invalid("tablero que no valida", TestPacks.Schema2Pack(cuias: "[[8, 8, 8, 8], [4, 4, 4, 4], [], []]"), "03 §17 #5: la cuia 0 empieza sellada"),
         };
 
-        [TestCaseSource(nameof(InvalidSchema2Levels))]
-        public void Reader_Schema2_RejectsInvalidMechanicsMurkyAndHidden(string why, string json)
+        private static TestCaseData Invalid(string why, string json, string expected)
         {
-            // Falla cerrado (BoardBuilder y LevelValidation, como tools/level-qa) y el mensaje dice el id del nivel.
-            Assert.That(() => LevelPackReader.Read(json), Throws.TypeOf<LevelFormatException>().With.Message.Contains("m01_v1_n0001"), why);
+            return new TestCaseData(json, expected).SetName("Reader_Schema2_RejectsInvalidMechanicsMurkyAndHidden(" + why + ")");
+        }
+
+        [TestCaseSource(nameof(InvalidSchema2Levels))]
+        public void Reader_Schema2_RejectsInvalidMechanicsMurkyAndHidden(string json, string expected)
+        {
+            // Falla cerrado (BoardBuilder y LevelValidation, como tools/level-qa): el mensaje dice el id del nivel y el motivo.
+            Assert.That(() => LevelPackReader.Read(json),
+                Throws.TypeOf<LevelFormatException>().With.Message.Contains("m01_v1_n0001").And.Message.Contains(expected));
         }
 
         [Test]
