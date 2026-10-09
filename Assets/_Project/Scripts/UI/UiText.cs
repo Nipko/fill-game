@@ -14,6 +14,12 @@ namespace AF.UI
         public const string LevelN = "Nivel {0}";
 
         /// <summary>
+        /// <c>fauna_sighted_card</c> [P] (guion de la intro §4.5, Q10 A): «avistamiento», nunca «nuevo» ni «tu mono». Pendiente
+        /// del dueño (Q10) y del asesor cultural (07 §8.2); EN «Monkey spotted!».
+        /// </summary>
+        public const string FaunaSightedCard = "¡Miquito a la vista!";
+
+        /// <summary>
         /// «Nivel {n} · intento {k}» [P]: rótulo de la intro corta del reintento (02 §2, INTRO: «En reintento muestra Nivel N ·
         /// intento k»), con k = <c>fails_level</c> + 1. Sin clave en el glosario §10: pendiente con los textos de P14.
         /// </summary>
@@ -332,6 +338,42 @@ namespace AF.UI
             while (value > 0);
 
             return end;
+        }
+
+        /// <summary>
+        /// Línea de la tarjeta «¡Miquito a la vista!» (≤ 50 caracteres, con un dato verificado; guion de la intro §4.5) para la
+        /// clave <c>dato_tarjeta</c> del catálogo de fauna; cadena vacía si no hay. Todas pendientes del asesor cultural
+        /// (07 §8.2); en las especies amenazadas, una buena noticia de conservación, nunca la etiqueta UICN.
+        /// </summary>
+        public static string FaunaFact(string key)
+        {
+            switch (key)
+            {
+                case "fauna_saimiri_collinsi_dato":
+                    return "Cruza el bosque en fila, por ramas finas";
+                case "fauna_mico_argentatus_dato":
+                    return "Vive en Alter do Chão, junto al Tapajós";
+                case "fauna_saguinus_bicolor_dato":
+                    return "Manaos tiende puentes de cuerda para él";
+                case "fauna_lagothrix_lagothricha_dato":
+                    return "El mono más grande de Amacayacu";
+                case "fauna_cacajao_calvus_ucayalii_dato":
+                    return "Su cara roja es señal de buena salud";
+                case "fauna_plecturocebus_discolor_dato":
+                    return "Las parejas cantan a dúo al amanecer";
+                case "fauna_saguinus_imperator_dato":
+                    return "Su bigote blanco pasa de los hombros";
+                case "fauna_ateles_chamek_dato":
+                    return "Siembra la selva: dispersa muchas semillas";
+                case "fauna_aotus_trivirgatus_dato":
+                    return "El papá carga a la cría";
+                case "fauna_pithecia_pithecia_dato":
+                    return "Casi siempre se mueve a saltos";
+                case "fauna_saimiri_sciureus_albigena_dato":
+                    return "Vecinos del Orinoco";
+                default:
+                    return string.Empty;
+            }
         }
 
         /// <summary>

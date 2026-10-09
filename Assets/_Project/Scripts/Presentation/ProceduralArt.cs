@@ -218,11 +218,19 @@ namespace AF.Presentation
             {
                 if (_owned[i] != null)
                 {
-                    UnityEngine.Object.Destroy(_owned[i]);
+                    if (Application.isPlaying)
+                    {
+                        UnityEngine.Object.Destroy(_owned[i]);
+                    }
+                    else
+                    {
+                        UnityEngine.Object.DestroyImmediate(_owned[i]); // tests EditMode y herramientas del Editor
+                    }
                 }
             }
 
             _owned.Clear();
+            ForgetIntroArt();
             _cuiaBack.Clear();
             _cuiaFront.Clear();
             _cuiaMarks.Clear();

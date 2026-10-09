@@ -73,14 +73,60 @@ namespace AF.Presentation
         /// <summary>Capi en pose neutra (fase de jugabilidad; se usa si existe).</summary>
         public const string Capi = "capi_idle";
 
-        /// <summary>Todas las ranuras conocidas, en el orden de la tabla 2 de los prompts.</summary>
+        /// <summary>Prefijo de las frutas de los 14 tintes (<c>fruta_&lt;id del tinte&gt;</c>, 256 × 256; guion de la intro §12).</summary>
+        public const string FruitPrefix = "fruta_";
+
+        /// <summary>Prefijo de las ranuras de fauna (<c>fauna_&lt;id&gt;_partes</c> y <c>fauna_&lt;id&gt;_retrato</c>).</summary>
+        public const string FaunaPrefix = "fauna_";
+
+        /// <summary>Sufijo de la hoja de piezas de un miquito (1024 × 1024, rejilla de 4 × 4 celdas de 256 px).</summary>
+        public const string FaunaPartsSuffix = "_partes";
+
+        /// <summary>Sufijo del retrato de 3/4 de un miquito (512 × 512; tarjeta y Cuaderno).</summary>
+        public const string FaunaPortraitSuffix = "_retrato";
+
+        /// <summary>Prefijo de la rama de cada mundo (<c>rama_estuario</c>, 1024 × 256).</summary>
+        public const string BranchPrefix = "rama_";
+
+        /// <summary>Liana en tesela para el modelo <c>cuelga</c> (64 × 256).</summary>
+        public const string LianaTile = "liana_tile";
+
+        /// <summary>Todas las ranuras fijas, en el orden de la tabla 2 de los prompts, con las 14 frutas.</summary>
         public static readonly string[] All =
         {
             Panorama, Dock, FoliageTopLeft, FoliageTopRight, FoliageBottomLeft, FoliageBottomRight, Ribbon,
             ButtonLeaf, ButtonWater, ButtonWood, SlotWater, DiscWood, PanelFrame, ModalPanel, Tray, BadgePlate,
             WoodDarkTile, WoodLightTile, Capi,
             "fruta_acai", "fruta_aguaje", "fruta_tapereba", "fruta_guanabana", "fruta_bacaba",
+            "fruta_cupuacu", "fruta_urucum", "fruta_camu_camu", "fruta_jenipapo", "fruta_agua_tapajos", "fruta_lulo",
+            "fruta_araza", "fruta_cacao", "fruta_agua_negro", LianaTile,
         };
+
+        /// <summary>
+        /// La ranura existe: una de <see cref="All"/>, la hoja de piezas o el retrato de una especie del catálogo de fauna
+        /// (<c>fauna_&lt;id&gt;_partes</c>, <c>fauna_&lt;id&gt;_retrato</c>) o la rama de un mundo (<c>rama_&lt;mundo&gt;</c>).
+        /// </summary>
+        public static bool IsKnown(string slot)
+        {
+            if (string.IsNullOrEmpty(slot))
+            {
+                return false;
+            }
+
+            if (Array.IndexOf(All, slot) >= 0)
+            {
+                return true;
+            }
+
+            if (slot.StartsWith(FaunaPrefix, StringComparison.Ordinal))
+            {
+                bool parts = slot.EndsWith(FaunaPartsSuffix, StringComparison.Ordinal) && slot.Length > FaunaPrefix.Length + FaunaPartsSuffix.Length;
+                bool portrait = slot.EndsWith(FaunaPortraitSuffix, StringComparison.Ordinal) && slot.Length > FaunaPrefix.Length + FaunaPortraitSuffix.Length;
+                return parts || portrait;
+            }
+
+            return slot.StartsWith(BranchPrefix, StringComparison.Ordinal) && slot.Length > BranchPrefix.Length;
+        }
 
         private static ArtSlotCatalog? _catalog;
         private static bool _loaded;

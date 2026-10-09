@@ -166,6 +166,12 @@ namespace AF.GameFlow
         /// <summary>Duración de la intro en curso (ms), con el cartel «El río bajó» si lo hay.</summary>
         public int IntroDurationMs => _introMs;
 
+        /// <summary>
+        /// «Reducir movimiento» (07 §7.8): la intro pasa a un fundido de <see cref="GameConfig.ReducedMotionIntroMs"/> ms. El
+        /// ajuste aún no existe en el perfil; por defecto, apagado.
+        /// </summary>
+        public bool ReduceMotion { get; set; }
+
         /// <summary>Cuias generadas del tablero del intento (sin las añadidas): fijan las filas (D-006).</summary>
         public int GeneratedCuias => _session == null ? 0 : _session.Current.Count - _attempt.Added.Count;
 
@@ -233,7 +239,7 @@ namespace AF.GameFlow
                     _listener.OnExtraCuiaGifted(BoosterConfig.ExtraCuiaTutorialUnits);
                 }
 
-                StartIntro(GameConfig.TintDurationMs(number), false);
+                StartIntro(ReduceMotion ? GameConfig.ReducedMotionIntroMs : GameConfig.TintDurationMs(number), false);
                 PersistState(); // con el regalo, en la misma escritura del perfil
             }
         }
@@ -502,13 +508,13 @@ namespace AF.GameFlow
                 _listener.OnLevelLoaded(LevelNumber);
                 int banner = Math.Max(0, _boosters.AnimRiverLoweredBannerMs);
                 _listener.OnRiverLowered(def.Relief[relief].Type, banner);
-                StartIntro(banner + GameConfig.AnimTintDurationMsLate, true);
+                StartIntro(banner + (ReduceMotion ? GameConfig.ReducedMotionIntroMs : GameConfig.AnimTintDurationMsLate), true);
                 PersistState();
                 return;
             }
 
             _session!.Restart();
-            StartIntro(GameConfig.AnimTintDurationMsLate, true);
+            StartIntro(ReduceMotion ? GameConfig.ReducedMotionIntroMs : GameConfig.AnimTintDurationMsLate, true);
             PersistState();
         }
 

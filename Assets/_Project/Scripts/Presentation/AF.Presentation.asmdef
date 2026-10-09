@@ -3,6 +3,7 @@
   "rootNamespace": "AF.Presentation",
   "references": [
     "AF.Core",
+    "AF.Levels",
     "UnityEngine.UI"
   ],
   "includePlatforms": [],

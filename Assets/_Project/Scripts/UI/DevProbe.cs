@@ -48,6 +48,26 @@ namespace AF.UI
         }
 
         /// <summary>
+        /// Línea <c>AF_STATE</c> con el evento de analítica <c>af_anim_skipped</c> (08 §8.2: <c>anim</c>, <c>at_ms</c> y
+        /// <c>duration_cfg_ms</c>): hasta que exista <c>AF.Analytics</c>, la sonda lo deja en el log de los builds de desarrollo.
+        /// </summary>
+        public void AnimSkipped(string anim, LevelFlow flow, int atMs, int durationCfgMs)
+        {
+            if (!Enabled || !flow.HasLevel)
+            {
+                return;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"af_anim_skipped\",\"anim\":\"").Append(anim).Append('"');
+            sb.Append(",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"at_ms\":").Append(atMs.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"duration_cfg_ms\":").Append(durationCfgMs.ToString(CultureInfo.InvariantCulture)).Append('}');
+            Debug.Log(sb.ToString());
+        }
+
+        /// <summary>
         /// Línea <c>AF_STATE</c>: <c>t</c> en ms desde el arranque, nivel, modo de vertido, estado de 02 §2, estado del
         /// modelo, vertidos, selección, toque o vertido del evento (con su cantidad) y cuias de abajo arriba.
         /// </summary>

@@ -35,6 +35,9 @@ namespace AF.UI.Editor
         /// </summary>
         public static readonly string[] LevelPackPaths = { LevelPackPath };
 
+        /// <summary>Catálogo de miquitos de la intro «Llenar y teñir» (<c>af-fauna/0</c>; guion de la intro §4.3).</summary>
+        public const string FaunaCatalogPath = "Assets/_Project/Data/Fauna/miquitos_v0.json";
+
         private const string LogPrefix = "[AF.GameSceneBuilder] ";
 
         /// <summary>Crea (o recrea) la escena y la deja como única escena de Build Settings.</summary>
@@ -109,6 +112,13 @@ namespace AF.UI.Editor
             var bootstrapGo = new GameObject("GameBootstrap");
             GameBootstrap bootstrap = bootstrapGo.AddComponent<GameBootstrap>();
             bootstrap.Configure(packs);
+            TextAsset? fauna = AssetDatabase.LoadAssetAtPath<TextAsset>(FaunaCatalogPath);
+            if (fauna == null)
+            {
+                Debug.LogWarning(LogPrefix + "no existe el catálogo de miquitos " + FaunaCatalogPath + ": la intro irá en modo dosel.");
+            }
+
+            bootstrap.ConfigureFauna(fauna);
             EditorUtility.SetDirty(bootstrap);
 
             if (!EditorSceneManager.SaveScene(scene, ScenePath))

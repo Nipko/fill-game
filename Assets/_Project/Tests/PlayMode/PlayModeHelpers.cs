@@ -111,6 +111,64 @@ namespace AF.Tests.PlayMode
                 + "], \"murky\": false, \"hidden\": [], \"difficulty\": { \"par\": 1 }, \"relief\": [] } ] }";
         }
 
+        /// <summary>
+        /// Paquete de prueba de 16 cuias (6 + 5 + 5, D-006): 14 tintes del glosario §9 con 4 dosis cada uno en escalera (la cuia
+        /// i lleva los tintes i … i + 3: 4 rachas por cuia, 56 en total) y 2 vacías. Con más de 24 rachas, «Llenar y teñir» cae
+        /// en el modo de una fruta por cuia y, con 3 filas, en el modo dosel (guion de la intro §7.4).
+        /// </summary>
+        public static string SixteenCuiaPack()
+        {
+            string[] ids = { "guanabana", "cupuacu", "tapereba", "aguaje", "urucum", "camu_camu", "bacaba", "acai", "jenipapo", "agua_tapajos", "lulo", "araza", "cacao", "agua_negro" };
+            var cuias = new int[16][];
+            for (int i = 0; i < 16; i++)
+            {
+                cuias[i] = i < ids.Length ? new[] { (i % 14) + 1, ((i + 3) % 14) + 1, ((i + 6) % 14) + 1, ((i + 9) % 14) + 1 } : new int[0];
+            }
+
+            return BoardPack(1, "w01_estuario", "white", 1, ids, cuias);
+        }
+
+        /// <summary>
+        /// Paquete de un nivel con el tablero del nivel 7 del tutorial (7 cuias, 4 + 3, 15 rachas) en el mundo
+        /// <paramref name="world"/> y el nivel <paramref name="level"/>: sirve para ver la tropa de otra especie (guion de la
+        /// intro §4.2: sagui plateado en el 11-40 del mundo 2, huapo colorado en el 141-200 del mundo 5…).
+        /// </summary>
+        public static string Level7BoardPack(int world, string worldId, string water, int level)
+        {
+            string[] ids = { "acai", "aguaje", "tapereba", "guanabana", "bacaba" };
+            int[][] cuias = { new[] { 8, 8, 7, 7 }, new[] { 3, 4, 4, 7 }, new[] { 1, 1, 8, 3 }, new[] { 3, 7, 8, 4 }, new[] { 4, 1, 1, 3 }, new int[0], new int[0] };
+            return BoardPack(world, worldId, water, level, ids, cuias);
+        }
+
+        /// <summary>Paquete <c>af-level/1</c> (subconjunto de v0) de un solo nivel con capacidad 4.</summary>
+        public static string BoardPack(int world, string worldId, string water, int level, string[] palette, int[][] board)
+        {
+            var cuias = new System.Text.StringBuilder();
+            var caps = new System.Text.StringBuilder();
+            var attrs = new System.Text.StringBuilder();
+            for (int i = 0; i < board.Length; i++)
+            {
+                string sep = i == 0 ? string.Empty : ", ";
+                caps.Append(sep).Append('4');
+                attrs.Append(sep).Append("null");
+                cuias.Append(sep).Append('[');
+                for (int k = 0; k < board[i].Length; k++)
+                {
+                    cuias.Append(k == 0 ? string.Empty : ", ").Append(board[i][k]);
+                }
+
+                cuias.Append(']');
+            }
+
+            string ww = world.ToString("00", System.Globalization.CultureInfo.InvariantCulture);
+            string id = "m" + ww + "_v1_n" + level.ToString("0000", System.Globalization.CultureInfo.InvariantCulture);
+            return "{ \"subset_of\": \"af-level/1\", \"pack_id\": \"test_" + id + "\", \"kind\": \"campaign\", \"world\": " + world
+                + ", \"world_id\": \"" + worldId + "\", \"lap\": 1, \"water_base\": \"" + water + "\", \"levels\": [ { \"id\": \"" + id + "\", "
+                + "\"level\": " + level + ", \"world\": " + world + ", \"lap\": 1, \"water_base\": \"" + water + "\", \"palette\": [\""
+                + string.Join("\", \"", palette) + "\"], \"units_per_color\": 4, \"caps\": [" + caps + "], \"cuias\": [" + cuias + "], \"attrs\": ["
+                + attrs + "], \"murky\": false, \"hidden\": [], \"difficulty\": { \"par\": 1 }, \"relief\": [] } ] }";
+        }
+
         /// <summary>Paso fijo del reloj manual (≈60 fps, 08 §5.4).</summary>
         public const int FrameMs = 16;
 

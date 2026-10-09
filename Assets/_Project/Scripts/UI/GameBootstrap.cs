@@ -41,6 +41,9 @@ namespace AF.UI
         [SerializeField]
         private TextAsset[] extraLevelPacks = Array.Empty<TextAsset>();
 
+        [SerializeField]
+        private TextAsset? faunaCatalog;
+
         private static ProceduralArt? s_art;
         private static string? s_artKey;
 
@@ -147,6 +150,18 @@ namespace AF.UI
 
                 return list;
             }
+        }
+
+        /// <summary>Catálogo de miquitos asignado (<c>miquitos_v0.json</c>; escena generada por <c>GameSceneBuilder</c>).</summary>
+        public TextAsset? FaunaCatalogAsset => faunaCatalog;
+
+        /// <summary>Catálogo de miquitos leído al arrancar (null = la intro siempre en modo dosel).</summary>
+        public FaunaCatalog? Fauna { get; private set; }
+
+        /// <summary>Asigna el catálogo de miquitos de la intro (escena generada por <c>GameSceneBuilder</c>).</summary>
+        public void ConfigureFauna(TextAsset? catalog)
+        {
+            faunaCatalog = catalog;
         }
 
         /// <summary>Asigna el paquete de niveles (escena generada por <c>GameSceneBuilder</c>).</summary>
@@ -529,6 +544,8 @@ namespace AF.UI
 
             _screen = new GameScreen(transform, _art, _probe, this);
             _screen.SetVisible(false);
+            Fauna = LoadFauna();
+            _screen.Fauna = Fauna; // la especie de miquito de cada intro (guion de la intro §4.3)
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => { }, () => PressBack(), this);
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
@@ -615,6 +632,26 @@ namespace AF.UI
             {
                 _screen.SnapToModel();
                 _flow.ClearSelection();
+            }
+        }
+
+        // Catálogo de miquitos de la escena (af-fauna/0). Si falta o no valida, la intro va siempre en modo dosel (sin tropa).
+        private FaunaCatalog? LoadFauna()
+        {
+            if (faunaCatalog == null)
+            {
+                Debug.LogWarning(LogPrefix + "falta el catálogo de miquitos (TextAsset): la intro irá en modo dosel. Regenera la escena con AF.UI.Editor.GameSceneBuilder.CreateGameScene.");
+                return null;
+            }
+
+            try
+            {
+                return FaunaCatalogReader.Read(faunaCatalog.text);
+            }
+            catch (FaunaFormatException e)
+            {
+                Debug.LogError(LogPrefix + e.Message);
+                return null;
             }
         }
 

@@ -28,7 +28,8 @@ namespace AF.Tests.PlayMode
     /// (13 cuias en 3 filas de 5/4/4) y <c>09b_pouring_row1_13</c> (vertido de la fila 3 a la fila 1 que vacía el origen, sobre el HUD).
     /// Hoja de vertido como la de Magic Sort (ficha §2.6): <c>10_sheet_l1_0000</c> … <c>10_sheet_l1_1000</c>, una captura
     /// cada 100 ms desde la salida de un vertido de 1 dosis de una cuia llena (nivel 1, 0 → 2, ya elevada). Cada tablero y
-    /// cada fotograma de la hoja escriben en el log una línea <c>AF_BOARD</c> o <c>AF_SHEET</c> con sus medidas.
+    /// cada fotograma de la hoja escriben en el log una línea <c>AF_BOARD</c> o <c>AF_SHEET</c> con sus medidas. «Llenar y
+    /// teñir» (guion de la intro, A14) va en <see cref="CaptureIntro"/>, con el instante fijado por el enganche de depuración.
     /// </summary>
     [Explicit("Capturas visuales manuales; necesitan dispositivo gráfico.")]
     public sealed class VisualSnapshotTests
@@ -62,14 +63,11 @@ namespace AF.Tests.PlayMode
         {
             string dir = Prepare();
 
-            // Nivel 7: intro, tablero, selección (solo el origen sube, sin aros en los destinos: D-002) y vertido.
+            // Nivel 7: tablero, selección (solo el origen sube, sin aros en los destinos: D-002) y vertido. La intro, en
+            // CaptureIntro.
             yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
             GameBootstrap boot = GameBootstrap.Current!;
             Attach(boot);
-            yield return Wait(0.55f);
-            Save(dir, "01_intro_l7");
-            yield return Wait(0.6f);
-            Save(dir, "01b_intro_tint_l7");
             yield return PlayModeHelpers.WaitFor(() => boot.Flow!.Phase == FlowPhase.Playing, "fin de la intro");
             yield return Wait(0.3f);
             Save(dir, "02_board_l7");
@@ -251,6 +249,147 @@ namespace AF.Tests.PlayMode
 
             PlayModeHelpers.StepUntilIdle(boot, 3000);
             Assert.That(File.Exists(Path.Combine(dir, "10_sheet_l1_1000.png")), Is.True);
+        }
+
+        /// <summary>
+        /// «Llenar y teñir» (guion de la intro, A14), deterministas con el reloj del test y el enganche de depuración
+        /// (<c>GameScreen.DebugReplayIntro</c> e <see cref="IntroAnimation.Seek"/>): <c>01_intro_l7_*</c> a 300, 700, 1.100 y
+        /// 1.400 ms (larga, rama con el mono ardilla); <c>01c_intro_l1_*</c> a 300, 900 y 1.300; <c>01d_intro_short_l7_*</c> a 200,
+        /// 500 y 700 (corta, tropa posada); <c>01e_intro_16_0500</c> (16 cuias en 3 filas: dosel, una fruta por cuia). Hojas
+        /// cada 100 ms (<c>21_sheet_&lt;tablero&gt;_&lt;versión&gt;_&lt;ms&gt;</c>) de la larga y la corta con 3, 7 y 13 cuias, y del
+        /// reintento (dosel) del nivel 7. Galería de especies (<c>22_species_&lt;id&gt;</c>): el tablero del nivel 7 en un nivel de
+        /// cada tramo del catálogo, corta a 300 ms; y <c>23_sighting_l5</c>, la tarjeta «¡Miquito a la vista!». Cada hoja escribe
+        /// una línea <c>AF_INTRO</c> con el plan.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CaptureIntro()
+        {
+            string dir = Prepare();
+
+            yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            Attach(boot);
+            PlayModeHelpers.TakeClock(boot);
+            Replay(boot, 1400, false, "01_intro_l7");
+            foreach (int ms in new[] { 300, 700, 1100, 1400 })
+            {
+                boot.View!.Intro.Seek(ms);
+                Save(dir, "01_intro_l7_" + Ms(ms));
+            }
+
+            Sheet(boot, dir, "21_sheet_l7_long", 1400, false);
+            Sheet(boot, dir, "21_sheet_l7_short", 800, false);
+            Replay(boot, 800, false, "01d_intro_short_l7");
+            foreach (int ms in new[] { 200, 500, 700 })
+            {
+                boot.View!.Intro.Seek(ms);
+                Save(dir, "01d_intro_short_l7_" + Ms(ms));
+            }
+
+            Sheet(boot, dir, "21_sheet_l7_retry", 800, true);
+
+            yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
+            boot = GameBootstrap.Current!;
+            Attach(boot);
+            PlayModeHelpers.TakeClock(boot);
+            Replay(boot, 1400, false, "01c_intro_l1");
+            foreach (int ms in new[] { 300, 900, 1300 })
+            {
+                boot.View!.Intro.Seek(ms);
+                Save(dir, "01c_intro_l1_" + Ms(ms));
+            }
+
+            Sheet(boot, dir, "21_sheet_l1_long", 1400, false);
+            Sheet(boot, dir, "21_sheet_l1_short", 800, false);
+
+            yield return PlayModeHelpers.LoadGameWithPack(PlayModeHelpers.ThirteenCuiaPack(), 1, new MemoryProgressStore());
+            boot = GameBootstrap.Current!;
+            Attach(boot);
+            PlayModeHelpers.TakeClock(boot);
+            Sheet(boot, dir, "21_sheet_13_long", 1400, false);
+            Sheet(boot, dir, "21_sheet_13_short", 800, false);
+
+            LaunchOptions.Reset();
+            yield return PlayModeHelpers.LoadGameWithPack(PlayModeHelpers.SixteenCuiaPack(), 1, new MemoryProgressStore());
+            boot = GameBootstrap.Current!;
+            Attach(boot);
+            PlayModeHelpers.TakeClock(boot);
+            Replay(boot, 1400, false, "01e_intro_16");
+            boot.View!.Intro.Seek(500);
+            Save(dir, "01e_intro_16_0500");
+            boot.View.Intro.Seek(1250);
+            Save(dir, "01e_intro_16_1250");
+
+            // Galería de especies: el tablero del nivel 7 en un nivel de cada tramo (guion de la intro §4.2), corta a 300 ms.
+            var stretches = new (int World, string WorldId, string Water, int Level)[]
+            {
+                (2, "w02_tapajos", "clear", 13), (3, "w03_manaos", "black", 42), (4, "w04_trapecio", "white", 82),
+                (5, "w05_loreto", "white", 142), (6, "w06_oriente", "white", 202), (7, "w07_madre_de_dios", "white", 302),
+                (8, "w08_madidi", "white", 422), (10, "w10_alto_negro", "black", 702), (11, "w11_escudo_guayana", "white", 822),
+                (12, "w12_orinoco", "clear", 922),
+            };
+            foreach ((int world, string worldId, string water, int level) in stretches)
+            {
+                LaunchOptions.Reset();
+                yield return PlayModeHelpers.LoadGameWithPack(PlayModeHelpers.Level7BoardPack(world, worldId, water, level), level, new MemoryProgressStore());
+                boot = GameBootstrap.Current!;
+                Attach(boot);
+                PlayModeHelpers.TakeClock(boot);
+                Replay(boot, 800, false, "22_species_l" + level);
+                boot.View!.Intro.Seek(300);
+                string id = boot.View.IntroSpecies != null ? boot.View.IntroSpecies.Id : "dosel";
+                Save(dir, "22_species_" + id);
+                if (level == 13 || level == 142 || level == 82)
+                {
+                    Sheet(boot, dir, "21_sheet_l" + level + "_long", 1400, false);
+                }
+            }
+
+            // «¡Miquito a la vista!» (guion §4.5): nivel 5, tras la intro, sobre la franja del panorama.
+            LaunchOptions.Reset();
+            yield return PlayModeHelpers.LoadGame(5, new MemoryProgressStore());
+            boot = GameBootstrap.Current!;
+            Attach(boot);
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.TickExact(boot, 400);
+            Save(dir, "23_sighting_l5");
+
+            Assert.That(File.Exists(Path.Combine(dir, "01e_intro_16_0500.png")), Is.True);
+        }
+
+        // Relanza la intro del nivel cargado desde t = 0 y deja el plan en el log.
+        private static void Replay(GameBootstrap boot, int durationMs, bool retry, string name)
+        {
+            boot.View!.DebugReplayIntro(durationMs, retry);
+            IntroChoreography p = boot.View.Intro.Plan;
+            var line = new System.Text.StringBuilder("AF_INTRO " + name + ": T " + durationMs + " ms");
+            line.Append(", especie ").Append(boot.View.IntroSpecies != null ? boot.View.IntroSpecies.Id : "dosel");
+            line.Append(", posadero ").Append(p.Perch).Append(", modelo ").Append(p.Model).Append(", miquitos ").Append(p.MonkeyCount);
+            line.Append(" de ").Append(p.MonkeyDp.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)).Append(" dp");
+            line.Append(", frutas ").Append(p.FruitCount).Append(p.FruitPerCuia ? " (una por cuia)" : " (una por racha)");
+            line.Append(", fila 1 llena ").Append(p.Row1FullMs.ToString("0", System.Globalization.CultureInfo.InvariantCulture));
+            line.Append(", llenado hasta ").Append(p.LastFillEndMs.ToString("0", System.Globalization.CultureInfo.InvariantCulture));
+            line.Append(", primer impacto ").Append(p.FirstImpactMs.ToString("0", System.Globalization.CultureInfo.InvariantCulture));
+            line.Append(", última floración ").Append(p.LastBloomEndMs.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture));
+            Debug.Log(line.ToString());
+        }
+
+        // Hoja de la intro: una captura cada 100 ms de 0 a T + 300 (la salida de la tropa).
+        private void Sheet(GameBootstrap boot, string dir, string name, int durationMs, bool retry)
+        {
+            Replay(boot, durationMs, retry, name);
+            IntroAnimation intro = boot.View!.Intro;
+            for (int ms = 0; ms <= durationMs + 300; ms += 100)
+            {
+                intro.Seek(ms);
+                Save(dir, name + "_" + Ms(ms));
+            }
+        }
+
+        private static string Ms(int ms)
+        {
+            return ms.ToString("0000", System.Globalization.CultureInfo.InvariantCulture);
         }
 
         /// <summary>

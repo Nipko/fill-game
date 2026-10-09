@@ -7,6 +7,7 @@ using AF.Core.Board;
 using AF.Core.Rules;
 using AF.Economy;
 using AF.GameFlow;
+using AF.Levels;
 using AF.Presentation;
 using TMPro;
 using UnityEngine;
@@ -28,11 +29,11 @@ namespace AF.UI
     /// Se oculta mientras se ve la pantalla de inicio (<see cref="SetVisible"/>).
     /// </summary>
     /// <remarks>
-    /// Capas de atrás adelante (guía 3.4): panorama, ambiente lejano, muelle, follaje, velo de escena; captura de fondo;
-    /// tablero (sombra, relleno, sombra interior y marco del panel, repisas, cuias, agua de inmersión, chorros y efectos);
-    /// Capi y el poste; velo de estado, HUD y bandeja; polen; capa de vertido (el origen y su chorro mientras vierte, delante
-    /// de todo, D-006); estallido; modales; captura de saltos. Las capas que no son botones ni áreas de cuia no reciben
-    /// toques (V7).
+    /// Capas de atrás adelante (guía 3.4): panorama, ambiente lejano (con la capa de crecida del río), muelle, follaje, velo
+    /// de escena; captura de fondo; tablero (sombra, relleno, sombra interior y marco del panel, repisas, cuias, la capa de
+    /// «Llenar y teñir» con su agua, chorritos y frutas, chorros y efectos); la tropa de miquitos y su rama; Capi y el poste;
+    /// velo de estado, HUD y bandeja; polen; capa de vertido (el origen y su chorro mientras vierte, delante de todo, D-006);
+    /// estallido; modales; captura de saltos. Las capas que no son botones ni áreas de cuia no reciben toques (V7).
     /// </remarks>
     public sealed class GameScreen : ILevelFlowListener
     {
@@ -153,7 +154,6 @@ namespace AF.UI
         private readonly Image _panelInner;
         private readonly Image _panelFrame;
         private readonly Image[] _shelves = new Image[3];
-        private readonly ImmersionWater[] _rowWater = new ImmersionWater[3];
         private readonly RectTransform _streamLayer;
         private readonly FxLayer _fx;
 
@@ -187,6 +187,7 @@ namespace AF.UI
         private readonly QuitConfirm _confirm;
         private readonly Toast _banner;
         private readonly Toast _toast;
+        private readonly SightingCard _sighting;
         private readonly List<string> _layoutIds = new List<string>(12);
         private readonly List<RectTransform> _layoutRects = new List<RectTransform>(12);
 
@@ -212,7 +213,8 @@ namespace AF.UI
         private readonly char[] _harvestBuf = new char[16];
 
         private readonly BoardAnimator _animator;
-        private readonly IntroAnimation _intro = new IntroAnimation();
+        private readonly IntroAnimation _intro;
+        private readonly TroopLayer _troop;
         private readonly ConfettiLayer _confetti;
         private readonly Action<int> _cuiaDown;
         private readonly Action<int, bool> _cuiaUp;
@@ -222,7 +224,10 @@ namespace AF.UI
         private int _pressPreview = -1;
         private CuiaView[] _views = Array.Empty<CuiaView>();
         private int _generatedCount;
-        private RectTransform[] _rowWaterActive = Array.Empty<RectTransform>();
+        private FaunaSpecies? _introSpecies;
+        private bool _introRetry;
+        private int _animSkipped;
+        private int _lastSkipAtMs = -1;
         private BoardState? _shownBoard;
         private BoardLayoutResult? _layout;
         private float _canvasW = ReferenceWidth;
@@ -354,21 +359,14 @@ namespace AF.UI
                 _shelves[i].gameObject.SetActive(false);
             }
 
-            for (int i = 0; i < _rowWater.Length; i++)
-            {
-                var waterGo = new GameObject("IntroWater" + i, typeof(RectTransform), typeof(CanvasRenderer), typeof(ImmersionWater));
-                waterGo.transform.SetParent(_board, false);
-                _rowWater[i] = waterGo.GetComponent<ImmersionWater>();
-                _rowWater[i].Setup();
-                RectTransform rt = _rowWater[i].rectTransform;
-                rt.anchorMin = new Vector2(0f, 1f);
-                rt.anchorMax = new Vector2(0f, 1f);
-                rt.pivot = new Vector2(0.5f, 0f);
-                _rowWater[i].gameObject.SetActive(false);
-            }
-
+            // «Llenar y teñir» (guion de la intro): su Canvas anidado va delante de las cuias (BuildBoard lo reordena).
+            _intro = new IntroAnimation(_board, art);
             _streamLayer = UiBuilder.Rect("Streams", _board);
             _fx = new FxLayer(_board, art);
+
+            // ---- Tropa de miquitos (guion de la intro §4.4): Canvas anidado entre el tablero y el muelle. ----
+            _troop = new TroopLayer(_root, art);
+            _intro.Troop = _troop;
 
             // ---- Capi y accesorio del muelle (capa 8): fuera de las zonas táctiles, nunca miran una cuia. Capi solo con
             // capi_idle.png (sin respaldo procedural; revisión visual del 2026-10-07 y guía 10.2 F7). ----
@@ -407,6 +405,7 @@ namespace AF.UI
             _ambientNearParent = UiBuilder.Rect("AmbientNearHost", _root);
             _ambient = new AmbientLayer(_ambientFarParent, _ambientNearParent, art);
             _ambient.SetFoliage(_foliage[0].rectTransform, _foliage[1].rectTransform, _foliage[2].rectTransform, _foliage[3].rectTransform);
+            _intro.Ambient = _ambient;
 
             // ---- Capa de vertido (D-006): mientras vierte, el cuerpo del origen y su chorro se dibujan aquí, delante de las
             // vecinas, del marco del panel, del HUD y del polen, como Magic Sort (t = 250: el origen tapa el rótulo del
@@ -496,6 +495,7 @@ namespace AF.UI
             _confirm = new QuitConfirm(_root, art, OnConfirm, OnConfirmCancel, OnConfirmUndo);
             _banner = new Toast("RiverLowered", _root, art, 18f);
             _toast = new Toast("Toast", _root, art, 15f);
+            _sighting = new SightingCard(_root, art); // «¡Miquito a la vista!» (guion de la intro §4.5)
 
             // Captura de toques para saltar Sumergir y teñir o la celebración (02 §4.2, §2): por encima de todo.
             _skipCatcher = HitLayer("SkipCatcher", _root);
@@ -554,6 +554,27 @@ namespace AF.UI
         /// <summary>Capa de efectos del tablero (presupuesto de partículas).</summary>
         public FxLayer Fx => _fx;
 
+        /// <summary>«Llenar y teñir»: la intro de carga (tests y capturas).</summary>
+        public IntroAnimation Intro => _intro;
+
+        /// <summary>Tropa de miquitos de la intro (tests y capturas).</summary>
+        public TroopLayer Troop => _troop;
+
+        /// <summary>
+        /// Catálogo de miquitos (<c>af-fauna/0</c>; null = siempre dosel). La especie de la intro la resuelve
+        /// <see cref="IntroCast.Resolve"/> con el mundo, el nivel y el intento (guion de la intro §4.3).
+        /// </summary>
+        public FaunaCatalog? Fauna { get; set; }
+
+        /// <summary>Especie de la intro en curso o de la última (null = dosel).</summary>
+        public FaunaSpecies? IntroSpecies => _introSpecies;
+
+        /// <summary>Veces que se saltó la intro desde que existe la pantalla (<c>af_anim_skipped</c> con <c>anim = tint</c>).</summary>
+        public int AnimSkippedCount => _animSkipped;
+
+        /// <summary><c>at_ms</c> del último salto de la intro (−1 si no hubo).</summary>
+        public int LastAnimSkipAtMs => _lastSkipAtMs;
+
         /// <summary>Ambiente de la escena (presupuesto de partículas).</summary>
         public AmbientLayer Ambient => _ambient;
 
@@ -604,6 +625,9 @@ namespace AF.UI
 
         /// <summary>Texto del cartel «El río bajó» si se ve (null si no).</summary>
         public string? BannerText => _banner.Visible ? _banner.Text : null;
+
+        /// <summary>Tarjeta «¡Miquito a la vista!» (tests).</summary>
+        internal SightingCard Sighting => _sighting;
 
         /// <summary>Texto del aviso en pantalla (regalo de Capi, rescate), o null.</summary>
         public string? ToastText => _toast.Visible ? _toast.Text : null;
@@ -688,7 +712,7 @@ namespace AF.UI
                 ApplyScreenMetrics(false);
             }
 
-            if (_intro.Running)
+            if (_intro.Active)
             {
                 _intro.Tick(dtMs);
             }
@@ -720,6 +744,7 @@ namespace AF.UI
             TickRelayout(dtMs);
             _banner.Tick(dtMs);
             _toast.Tick(dtMs);
+            _sighting.Tick(dtMs);
             TickHarvest(dtMs);
             RefreshHud();
         }
@@ -728,7 +753,7 @@ namespace AF.UI
         public void SnapToModel()
         {
             _animator.SnapAll();
-            _intro.Complete();
+            _intro.Clear();
         }
 
         /// <inheritdoc />
@@ -736,12 +761,13 @@ namespace AF.UI
         {
             LevelFlow flow = RequireFlow();
             _animator.SnapAll();
-            _intro.Complete();
+            _intro.Clear();
             _confetti.Stop();
             _fx.Clear();
             _confettiDelay = -1f;
             HideOverlays();
             _banner.Hide();
+            _sighting.Hide();
             _attemptBanner = false;
             _introDelayMs = -1f;
             BuildBoard(flow);
@@ -760,6 +786,7 @@ namespace AF.UI
             ClearLifts();
             HideOverlays();
             _shownBoard = flow.Session.Current;
+            _introRetry = isShort;
             if (_introDelayMs > 0f)
             {
                 // Variante aliviada (04 §2.7): el cartel «El río bajó» va antes del teñido; la intro arranca al terminar.
@@ -767,7 +794,7 @@ namespace AF.UI
             }
             else
             {
-                _intro.Start(_views, flow.Session.Current, _art.Water, _rowWaterActive, durationMs, _fx);
+                StartIntro(flow, durationMs, isShort);
                 if (isShort)
                 {
                     // 02 §2 (INTRO): «En reintento muestra Nivel N · intento k», con k = fails_level + 1, como el rótulo
@@ -796,7 +823,17 @@ namespace AF.UI
                 _banner.Hide(); // el rótulo del intento se apaga solo (AttemptBannerMs)
             }
 
-            _intro.Complete();
+            if (skipped)
+            {
+                // af_anim_skipped (08 §8.2) con anim = tint, at_ms y duration_cfg_ms; lo enviará AF.Analytics cuando exista.
+                _animSkipped++;
+                _lastSkipAtMs = Mathf.RoundToInt(_intro.TimeMs);
+                LevelFlow f = RequireFlow();
+                _probe.AnimSkipped("tint", f, _lastSkipAtMs, f.IntroDurationMs);
+            }
+
+            _intro.Complete(skipped);
+            MaybeShowSighting(RequireFlow());
             _skipCatcher.gameObject.SetActive(false);
             _probe.State("ready", RequireFlow(), int.MinValue, null);
         }
@@ -966,7 +1003,7 @@ namespace AF.UI
             // 02 §14: LOADING del mismo nivel desde el estado guardado, sin intro; el tablero ya se construyó con el contenido
             // de ahora (OnLevelLoaded) y se reabre la pantalla que estaba abierta.
             LevelFlow flow = RequireFlow();
-            _intro.Complete();
+            _intro.Clear();
             _skipCatcher.gameObject.SetActive(false);
             if (phase == FlowPhase.GiveUpConfirm)
             {
@@ -1214,11 +1251,7 @@ namespace AF.UI
 
             _views = views;
             _generatedCount = Mathf.Max(1, flow.GeneratedCuias); // cuias generadas: fijan las filas (D-006); las añadidas van a la más corta
-            for (int i = 0; i < _rowWater.Length; i++)
-            {
-                _rowWater[i].rectTransform.SetAsLastSibling();
-            }
-
+            _intro.Layer.SetAsLastSibling(); // la intro, delante de las cuias
             _streamLayer.SetAsLastSibling();
             _fx.Root.SetAsLastSibling();
             float f = GameConfig.SpeedFactor(flow.LevelNumber);
@@ -1505,6 +1538,105 @@ namespace AF.UI
             _probe.Layout(_confirm.Kind == ConfirmKind.Quit ? "quit_confirm" : "restart_confirm", RequireFlow().LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
         }
 
+        // «Llenar y teñir» (guion de la intro §7): geometría del panel, del marco, de las repisas y del HUD, y la especie del tramo
+        // (o el dosel: reintento, mundo 13, sin arte en release, franja < 44 dp). Reducir movimiento lo decide el flujo.
+        private void StartIntro(LevelFlow flow, int durationMs, bool isShort)
+        {
+            IntroInput input = _intro.Input;
+            input.Clear();
+            BoardLayoutResult? l = _layout;
+            if (l != null)
+            {
+                input.Rows = l.Rows;
+                for (int r = 0; r < l.Rows && r < IntroInput.MaxRows; r++)
+                {
+                    input.RowFootY[r] = l.RowFootY[r];
+                }
+
+                input.PanelX = l.PanelX;
+                input.PanelTop = l.PanelY;
+                input.PanelWidth = l.PanelWidth;
+                input.PanelBottom = l.PanelBottom;
+            }
+
+            input.FrameDp = PanelFrameDp;
+            input.HudBottom = BoardTop;
+            input.CanvasWidth = _canvasW;
+            input.Seed = flow.LevelNumber;
+            FaunaSpecies? species = IntroCast.Resolve(Fauna, flow.Level.World, flow.LevelNumber, isShort ? 2 : 1, true);
+            if (species != null && !Debug.isDebugBuild && ArtSlots.Find(species.PartsSlot) == null)
+            {
+                species = null; // en release, sin su arte final: dosel, nunca la especie de otro mundo (guion §4.3)
+            }
+
+            _introSpecies = species;
+            input.Perch = species != null ? IntroPerch.Branch : IntroPerch.Canopy;
+            if (species != null)
+            {
+                input.Model = species.Model == FaunaModel.Hang ? TroopModel.Hang : (species.Model == FaunaModel.Shake ? TroopModel.Shake : TroopModel.Row);
+                input.Troop = species.Troop;
+                input.MonkeyDp = species.SizeDp;
+            }
+
+            _troop.Prepare(species);
+            _intro.ReduceMotion = flow.ReduceMotion;
+            _intro.Start(_views, flow.Session.Current, _art.Water, durationMs);
+        }
+
+        // «¡Miquito a la vista!» (guion de la intro §4.5 y §14): al habilitarse el input tras la intro, en el primer intento del
+        // primer nivel libre desde el nivel_tarjeta de la especie del tramo (nunca la de otro mundo). Sobre la franja del
+        // panorama si mide ≥ 64 dp; si no, sobre el muelle, bajo la última fila y por encima de la bandeja; si no cabe sin tapar
+        // cuias ni botones, no sale. Sin persistir ni af_fauna_sighted: eso exige migrar el perfil (Q11, PR aparte).
+        private void MaybeShowSighting(LevelFlow flow)
+        {
+            FaunaCatalog? fauna = Fauna;
+            BoardLayoutResult? l = _layout;
+            if (_introRetry || fauna == null || l == null || !flow.HasLevel)
+            {
+                return;
+            }
+
+            int level = flow.LevelNumber;
+            FaunaSpecies? species = fauna.IsNoFauna(level) ? null : fauna.ForLevel(level);
+            if (species == null || !species.LivesIn(flow.Level.World) || !SightingRule.ShowsCard(level, species.CardLevel, true))
+            {
+                return;
+            }
+
+            float band = l.PanelY - BoardTop;
+            float top;
+            if (band >= 64f)
+            {
+                top = BoardTop + ((band - SightingCard.HeightDp) * 0.5f);
+            }
+            else
+            {
+                float lowest = l.PanelBottom;
+                top = lowest + 4f;
+                if (top + SightingCard.HeightDp > TrayTop - 8f)
+                {
+                    return;
+                }
+            }
+
+            _sighting.Place(_canvasW, top);
+            _sighting.Show(_art.MonkeyArtFor(species).Portrait, species.NameIn("es"), UiText.FaunaFact(species.FactKey), SightingRule.CardMs);
+        }
+
+        /// <summary>
+        /// Enganche de depuración (capturas y pruebas, guion de la intro A14): vuelve a lanzar «Llenar y teñir» del nivel
+        /// cargado desde t = 0 con <paramref name="durationMs"/> y como primer intento o como reintento (dosel), sin tocar el
+        /// flujo. Con <see cref="IntroAnimation.Seek"/> fija el instante de cada captura.
+        /// </summary>
+        internal void DebugReplayIntro(int durationMs, bool retry)
+        {
+            LevelFlow flow = RequireFlow();
+            _animator.SnapAll();
+            ClearLifts();
+            HideOverlays();
+            StartIntro(flow, durationMs, retry);
+        }
+
         // Variante aliviada: cuando termina el cartel arranca el teñido corto (02 §2 INTRO; 07 §5.5).
         private void TickIntroDelay(float dtMs)
         {
@@ -1520,7 +1652,7 @@ namespace AF.UI
                 LevelFlow? flow = _flow;
                 if (flow != null && flow.HasLevel && flow.Phase == FlowPhase.Intro)
                 {
-                    _intro.Start(_views, flow.Session.Current, _art.Water, _rowWaterActive, _introPendingMs, _fx);
+                    StartIntro(flow, _introPendingMs, true);
                 }
             }
         }
@@ -1556,11 +1688,7 @@ namespace AF.UI
             }
 
             _views = views;
-            for (int i = 0; i < _rowWater.Length; i++)
-            {
-                _rowWater[i].rectTransform.SetAsLastSibling();
-            }
-
+            _intro.Layer.SetAsLastSibling();
             _streamLayer.SetAsLastSibling();
             _fx.Root.SetAsLastSibling();
             _animator.Bind(_views, _timings, GameConfig.QueueMaxLagPours);
@@ -1739,6 +1867,7 @@ namespace AF.UI
         // termina 16 dp por encima de la zona segura inferior; 40 dp entre tablero y bandeja (guía 3.2).
         private float TopRowY => _safeTop + 8f;
 
+        /// <summary>Borde inferior de la fila del HUD (hudBottom de la intro): safeTop + 56.</summary>
         private float BoardTop => TopRowY + 48f;
 
         private float TrayBottom => _canvasH - _safeBottom - 16f;
@@ -1969,19 +2098,12 @@ namespace AF.UI
             // Una repisa por fila (guía 4.5): de innerLeft + 6 a innerRight − 6, cara superior en pie − 3, 26 dp con sombra.
             float shelfX = px + frame + 6f;
             float shelfW = pw - (2f * frame) - 12f;
-            var active = new RectTransform[l.Rows];
             for (int r = 0; r < l.Rows && r < _shelves.Length; r++)
             {
                 float foot = l.RowFootY[r];
                 _shelves[r].gameObject.SetActive(true);
                 UiBuilder.Place(_shelves[r].rectTransform, shelfX, foot - 3f, shelfW, 26f);
-                RectTransform water = _rowWater[r].rectTransform;
-                water.anchoredPosition = new Vector2(px + (pw * 0.5f), -(foot - 3f));
-                water.sizeDelta = new Vector2(shelfW, 0f);
-                active[r] = water;
             }
-
-            _rowWaterActive = active;
 
             // Capi (solo con su PNG) y el poste en el muelle, si la banda libre bajo el panel es ≥ 64 dp (guía 3.7 y 3.8).
             float band = TrayTop - l.PanelBottom;

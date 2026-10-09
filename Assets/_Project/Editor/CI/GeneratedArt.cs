@@ -15,7 +15,11 @@ namespace AF.EditorTools
     /// importación de los PNG de <c>Assets/_Project/Art/Generated/</c> (Sprite, PPU, bordes 9-slice, sin mipmaps, ASTC en
     /// Android) y mantiene el catálogo <c>Assets/_Project/Resources/AF/ArtSlotCatalog.asset</c> que lee el juego
     /// (<see cref="ArtSlots"/>). Es la forma versionada de hacerlo: nunca se editan a mano los <c>.meta</c> ni el catálogo
-    /// (CLAUDE.md, regla dura 3). Sin PNG no hay catálogo y todo es procedural.
+    /// (CLAUDE.md, regla dura 3). Sin PNG no hay catálogo y todo es procedural. Con «Llenar y teñir» (guion de la intro §12)
+    /// llegan las ranuras de fauna (<c>fauna_&lt;id&gt;_partes</c> y <c>fauna_&lt;id&gt;_retrato</c>), las 14 frutas
+    /// (<c>fruta_&lt;tinte&gt;</c>), la rama de cada mundo (<c>rama_&lt;mundo&gt;</c>) y la liana (<c>liana_tile</c>); con los
+    /// <c>fruta_*.png</c> presentes, el script genera el atlas de vuelo de 64 px
+    /// (<c>Assets/_Project/Resources/AF/fruit_flight_atlas.png</c>, 512 × 128) con el respaldo procedural en las que falten.
     /// </summary>
     public sealed class GeneratedArt : AssetPostprocessor, IPreprocessBuildWithReport
     {
@@ -25,6 +29,9 @@ namespace AF.EditorTools
         /// <summary>Ruta del catálogo.</summary>
         public const string CatalogPath = "Assets/_Project/Resources/AF/ArtSlotCatalog.asset";
 
+        /// <summary>Atlas de frutas en vuelo de 64 px (lo lee <see cref="ProceduralArt.FruitFlight"/>).</summary>
+        public const string FruitAtlasPath = "Assets/_Project/Resources/AF/fruit_flight_atlas.png";
+
         private const string LogPrefix = "[AF.GeneratedArt] ";
 
         /// <inheritdoc />
@@ -33,6 +40,18 @@ namespace AF.EditorTools
         /// <summary>Ajustes de importación por ranura (tabla 2 de los prompts).</summary>
         public static SlotSettings SettingsFor(string slot)
         {
+            if (slot.StartsWith(ArtSlots.FaunaPrefix, StringComparison.Ordinal) || slot.StartsWith(ArtSlots.FruitPrefix, StringComparison.Ordinal)
+                || slot.StartsWith(ArtSlots.BranchPrefix, StringComparison.Ordinal))
+            {
+                // Piezas de miquito (1024 × 1024, rejilla de 4 × 4), retratos (512), frutas (256) y ramas (1024 × 256): UI.
+                return new SlotSettings(100f, Vector4.zero, TextureImporterFormat.ASTC_4x4, false);
+            }
+
+            if (slot == ArtSlots.LianaTile)
+            {
+                return new SlotSettings(100f, Vector4.zero, TextureImporterFormat.ASTC_4x4, true);
+            }
+
             switch (slot)
             {
                 case ArtSlots.Panorama:
@@ -86,7 +105,7 @@ namespace AF.EditorTools
                     }
 
                     string slot = Path.GetFileNameWithoutExtension(path);
-                    if (Array.IndexOf(ArtSlots.All, slot) < 0)
+                    if (!ArtSlots.IsKnown(slot))
                     {
                         Debug.LogWarning(LogPrefix + path + " no es una ranura conocida (docs/art/prompts-chatgpt.md §2): se ignora.");
                         continue;
@@ -103,6 +122,7 @@ namespace AF.EditorTools
                 }
             }
 
+            RebuildFruitAtlas();
             ArtSlotCatalog? catalog = AssetDatabase.LoadAssetAtPath<ArtSlotCatalog>(CatalogPath);
             if (entries.Count == 0)
             {
@@ -134,6 +154,112 @@ namespace AF.EditorTools
             Debug.Log(LogPrefix + entries.Count + " ranuras con PNG en el catálogo.");
         }
 
+        /// <summary>
+        /// Atlas de frutas en vuelo de 512 × 128 (guion de la intro §11): cada fruta con PNG, reducida a 64 px con un filtro de
+        /// caja con alfa premultiplicado; el resto, el respaldo procedural. Sin ningún <c>fruta_*.png</c>, el atlas no existe.
+        /// </summary>
+        public static void RebuildFruitAtlas()
+        {
+            Color32[] pixels = ProceduralArt.FruitFlightPixels();
+            int painted = 0;
+            for (int tint = 1; tint <= 14; tint++)
+            {
+                string path = Folder + "/" + ArtSlots.FruitPrefix + ProceduralArt.TintIds[tint] + ".png";
+                if (!File.Exists(path))
+                {
+                    continue;
+                }
+
+                var source = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                try
+                {
+                    if (!source.LoadImage(File.ReadAllBytes(path)))
+                    {
+                        Debug.LogWarning(LogPrefix + path + " no se pudo leer para el atlas de vuelo.");
+                        continue;
+                    }
+
+                    Downscale(source, pixels, ProceduralArt.FruitCell(tint));
+                    painted++;
+                }
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(source);
+                }
+            }
+
+            if (painted == 0)
+            {
+                if (File.Exists(FruitAtlasPath))
+                {
+                    AssetDatabase.DeleteAsset(FruitAtlasPath);
+                }
+
+                return;
+            }
+
+            var atlas = new Texture2D(ProceduralArt.FruitAtlasWidth, ProceduralArt.FruitAtlasHeight, TextureFormat.RGBA32, false);
+            try
+            {
+                atlas.SetPixels32(pixels);
+                atlas.Apply(false, false);
+                EnsureFolder(Path.GetDirectoryName(FruitAtlasPath)!.Replace('\\', '/'));
+                File.WriteAllBytes(FruitAtlasPath, atlas.EncodeToPNG());
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(atlas);
+            }
+
+            AssetDatabase.ImportAsset(FruitAtlasPath, ImportAssetOptions.ForceUpdate);
+            Debug.Log(LogPrefix + painted + " frutas con PNG en el atlas de vuelo.");
+        }
+
+        // Reduce source a la celda (filtro de caja con alfa premultiplicado: sin halos oscuros en los bordes).
+        private static void Downscale(Texture2D source, Color32[] atlas, RectInt cell)
+        {
+            Color32[] src = source.GetPixels32();
+            int sw = source.width;
+            int sh = source.height;
+            for (int y = 0; y < cell.height; y++)
+            {
+                int y0 = y * sh / cell.height;
+                int y1 = Mathf.Max(y0 + 1, (y + 1) * sh / cell.height);
+                for (int x = 0; x < cell.width; x++)
+                {
+                    int x0 = x * sw / cell.width;
+                    int x1 = Mathf.Max(x0 + 1, (x + 1) * sw / cell.width);
+                    float r = 0f;
+                    float g = 0f;
+                    float b = 0f;
+                    float a = 0f;
+                    int n = 0;
+                    for (int sy = y0; sy < y1; sy++)
+                    {
+                        for (int sx = x0; sx < x1; sx++)
+                        {
+                            Color32 c = src[(sy * sw) + sx];
+                            float ca = c.a / 255f;
+                            r += c.r * ca;
+                            g += c.g * ca;
+                            b += c.b * ca;
+                            a += ca;
+                            n++;
+                        }
+                    }
+
+                    var o = new Color32(0, 0, 0, 0);
+                    if (a > 0f)
+                    {
+                        o = new Color32((byte)Mathf.Clamp(Mathf.RoundToInt(r / a), 0, 255), (byte)Mathf.Clamp(Mathf.RoundToInt(g / a), 0, 255),
+                            (byte)Mathf.Clamp(Mathf.RoundToInt(b / a), 0, 255), (byte)Mathf.Clamp(Mathf.RoundToInt(a / n * 255f), 0, 255));
+                    }
+
+                    atlas[((cell.y + y) * ProceduralArt.FruitAtlasWidth) + cell.x + x] = o;
+                }
+            }
+        }
+
         /// <inheritdoc />
         public void OnPreprocessBuild(BuildReport report)
         {
@@ -142,6 +268,27 @@ namespace AF.EditorTools
 
         private void OnPreprocessTexture()
         {
+            if (string.Equals(assetPath, FruitAtlasPath, StringComparison.Ordinal))
+            {
+                // Atlas de vuelo: textura (no Sprite; los sprites los crea el juego), sin mipmaps, ASTC 4×4 en Android.
+                var atlasImporter = (TextureImporter)assetImporter;
+                atlasImporter.textureType = TextureImporterType.Default;
+                atlasImporter.mipmapEnabled = false;
+                atlasImporter.alphaIsTransparency = true;
+                atlasImporter.sRGBTexture = true;
+                atlasImporter.wrapMode = TextureWrapMode.Clamp;
+                atlasImporter.filterMode = FilterMode.Bilinear;
+                atlasImporter.npotScale = TextureImporterNPOTScale.None;
+                atlasImporter.SetPlatformTextureSettings(new TextureImporterPlatformSettings
+                {
+                    name = "Android",
+                    overridden = true,
+                    format = TextureImporterFormat.ASTC_4x4,
+                    maxTextureSize = 512,
+                });
+                return;
+            }
+
             if (!assetPath.StartsWith(Folder + "/", StringComparison.Ordinal) || !assetPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
             {
                 return;

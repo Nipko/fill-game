@@ -76,6 +76,12 @@ namespace AF.GameFlow
         /// <summary><c>anim_tint_skippable</c>: nunca false en producción (08 §9).</summary>
         public const bool AnimTintSkippable = true;
 
+        /// <summary>
+        /// Con «Reducir movimiento» activo, la intro se reemplaza por un fundido de 0,25 s (07 §5.1 y §7.8; guion de la intro
+        /// §9). No es una clave de 08 §9: el ajuste aún no existe y lo activa quien lo tenga (<see cref="LevelFlow.ReduceMotion"/>).
+        /// </summary>
+        public const int ReducedMotionIntroMs = 250;
+
         /// <summary><c>anim_celebration_ms</c> (02 §2, CELEBRATION).</summary>
         public const int AnimCelebrationMs = 900;
 

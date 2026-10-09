@@ -9,6 +9,10 @@ namespace AF.Presentation
     /// destellos del río (6, titilan) y balanceo del follaje (±1,5°, 4-6 s, desfasado). Siempre fuera del rectángulo del
     /// panel; dos Canvas anidados propios (lejano y cercano) para no reconstruir el lienzo principal. Nada depende de la
     /// selección ni de la legalidad (D-002): solo de la fase (se suspende en la celebración, la victoria y el bloqueo).
+    /// En «Llenar y teñir» (guion de la intro, §6.2 y §11) el río crece: el río está horneado en el panorama, así que no se
+    /// puede subir; una capa de crecida aclara la franja de río visible (+12 L* como máximo) y los destellos duplican su alfa y
+    /// se deslizan 10 dp hacia el panel (<see cref="SetRiverBoost"/>). En el modo dosel el follaje de arriba se sacude ±6°
+    /// (<see cref="SetCanopyShake"/>). Sin ninguna cresta que avance por el río (sería la Pororoca).
     /// </summary>
     public sealed class AmbientLayer
     {
@@ -17,6 +21,12 @@ namespace AF.Presentation
 
         /// <summary>Destellos del río (guía 6.12: 6).</summary>
         public const int GlintCount = 6;
+
+        /// <summary>Opacidad máxima de la capa de crecida (guion §11: alfa 0 → 0,35, ≈ +12 L*).</summary>
+        public const float RiverSwellAlpha = 0.35f;
+
+        /// <summary>Los destellos se deslizan hacia el panel con la crecida (dp).</summary>
+        public const float RiverGlintSlideDp = 10f;
 
         private readonly RectTransform _far;
         private readonly RectTransform _near;
@@ -29,6 +39,8 @@ namespace AF.Presentation
         private readonly Image[] _glints = new Image[GlintCount];
         private readonly float[] _glintAge = new float[GlintCount];
         private readonly float[] _glintLife = new float[GlintCount];
+        private readonly Vector2[] _glintPos = new Vector2[GlintCount];
+        private readonly Image _swell;
         private readonly RectTransform?[] _foliage = new RectTransform?[4];
         private readonly float[] _foliagePhase = { 0f, 1.7f, 3.1f, 4.4f };
         private readonly float[] _foliagePeriod = { 4.6f, 5.4f, 5.0f, 4.2f };
@@ -38,6 +50,8 @@ namespace AF.Presentation
         private uint _rng = 0x2545F491u;
         private float _time;
         private bool _suspended;
+        private float _boost;
+        private float _shake;
 
         /// <summary>Crea las dos capas: <paramref name="farParent"/> (sobre el panorama) y <paramref name="nearParent"/> (sobre el HUD).</summary>
         public AmbientLayer(RectTransform farParent, RectTransform nearParent, ProceduralArt art)
@@ -45,6 +59,10 @@ namespace AF.Presentation
             _far = NewCanvas("AmbientFar", farParent);
             _near = NewCanvas("AmbientNear", nearParent);
             Material? additive = UiMaterials.Additive;
+            _swell = NewImage(_far, "RiverSwell", art.RiverSwell, null);
+            _swell.rectTransform.pivot = new Vector2(0f, 1f);
+            _swell.enabled = false;
+            _swell.gameObject.SetActive(true);
             for (int i = 0; i < GlintCount; i++)
             {
                 _glints[i] = NewImage(_far, "RiverGlint" + i, art.GlintStreak, additive);
@@ -57,6 +75,63 @@ namespace AF.Presentation
                 _pollen[i] = NewImage(_near, "Pollen" + i, art.Glow, additive);
                 _pollenAge[i] = -1f;
             }
+        }
+
+        /// <summary>Crecida del río de la intro (0..1).</summary>
+        public float RiverBoost => _boost;
+
+        /// <summary>Capa de crecida sobre la franja de río (tests).</summary>
+        public Image RiverSwell => _swell;
+
+        /// <summary>
+        /// Crecida del río en «Llenar y teñir» (0..1): la capa sobre la franja de río visible pasa de alfa 0 a 0,35 en los
+        /// colores claros del río y los 6 destellos duplican su alfa y se deslizan 10 dp hacia el panel. Se aplica en el acto,
+        /// también con el ambiente congelado (capturas).
+        /// </summary>
+        public void SetRiverBoost(float boost)
+        {
+            boost = Mathf.Clamp01(boost);
+            if (Mathf.Abs(boost - _boost) < 0.0005f)
+            {
+                return;
+            }
+
+            _boost = boost;
+            bool on = boost > 0.001f && _river.height > 4f;
+            if (_swell.enabled != on)
+            {
+                _swell.enabled = on; // el componente, no el GameObject: sin asignaciones en mitad de la intro
+            }
+
+            if (on)
+            {
+                Color c = Palette.RiverReflect;
+                c.a = RiverSwellAlpha * boost;
+                _swell.color = c;
+            }
+
+            for (int i = 0; i < GlintCount; i++)
+            {
+                if (_glintAge[i] >= 0f)
+                {
+                    ApplyGlint(i);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sacudida del follaje de las dos esquinas de arriba (grados, ±6° en el modo dosel de la intro). Se suma al balanceo y se
+        /// aplica en el acto.
+        /// </summary>
+        public void SetCanopyShake(float degrees)
+        {
+            if (Mathf.Abs(degrees - _shake) < 0.001f)
+            {
+                return;
+            }
+
+            _shake = degrees;
+            ApplyFoliage();
         }
 
         /// <summary>Congela el ambiente con semilla y tiempo fijos (capturas de prueba; guía 6, "Reducir movimiento").</summary>
@@ -106,6 +181,8 @@ namespace AF.Presentation
             _size = canvasSize;
             _panel = panel;
             _river = river;
+            _swell.rectTransform.anchoredPosition = new Vector2(0f, -river.yMin + 4f);
+            _swell.rectTransform.sizeDelta = new Vector2(canvasSize.x, Mathf.Max(0f, river.height + 8f));
             if (Frozen)
             {
                 Seed();
@@ -146,15 +223,7 @@ namespace AF.Presentation
             }
 
             _time += dtMs / 1000f;
-            for (int i = 0; i < 4; i++)
-            {
-                RectTransform? f = _foliage[i];
-                if (f != null)
-                {
-                    float a = 1.5f * Mathf.Sin(((_time / _foliagePeriod[i]) * Mathf.PI * 2f) + _foliagePhase[i]);
-                    f.localRotation = Quaternion.Euler(0f, 0f, a);
-                }
-            }
+            ApplyFoliage();
 
             if (_suspended)
             {
@@ -214,6 +283,29 @@ namespace AF.Presentation
                 }
 
                 ApplyGlint(i);
+            }
+        }
+
+        // Balanceo de ±1,5° (guía 6.12) más la sacudida del dosel en las dos esquinas de arriba (en espejo).
+        private void ApplyFoliage()
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                RectTransform? f = _foliage[i];
+                if (f != null)
+                {
+                    float a = Frozen ? 0f : 1.5f * Mathf.Sin(((_time / _foliagePeriod[i]) * Mathf.PI * 2f) + _foliagePhase[i]);
+                    if (i == 0)
+                    {
+                        a += _shake;
+                    }
+                    else if (i == 1)
+                    {
+                        a -= _shake;
+                    }
+
+                    f.localRotation = Quaternion.Euler(0f, 0f, a);
+                }
             }
         }
 
@@ -280,7 +372,7 @@ namespace AF.Presentation
 
             _glintLife[i] = Mathf.Lerp(0.8f, 1.4f, Next());
             _glintAge[i] = _glintLife[i] * startT;
-            _glints[i].rectTransform.anchoredPosition = new Vector2(p.x, -p.y);
+            _glintPos[i] = p;
             SetActive(_glints[i], true);
             ApplyGlint(i);
         }
@@ -289,8 +381,12 @@ namespace AF.Presentation
         {
             float t = _glintAge[i] / _glintLife[i];
             Color c = Palette.Glint;
-            c.a = 0.7f * Mathf.Sin(Mathf.PI * Mathf.Clamp01(t));
+            c.a = Mathf.Min(1f, 0.7f * Mathf.Sin(Mathf.PI * Mathf.Clamp01(t)) * (1f + _boost));
             _glints[i].color = c;
+            Vector2 p = _glintPos[i];
+            float slide = RiverGlintSlideDp * _boost; // hacia el panel, sin salir de la franja
+            float y = Mathf.Min(p.y + slide, Mathf.Max(p.y, _panel.yMin - 8f));
+            _glints[i].rectTransform.anchoredPosition = new Vector2(p.x, -y);
         }
 
         private bool InsidePanel(Vector2 p, float margin)
