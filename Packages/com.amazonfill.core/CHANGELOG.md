@@ -18,6 +18,21 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- `LevelSession.RestoreRevealed(int cuia, int layers)` (T01, paso 1 del traspaso; 02 R7, R8, §11 T6 y §14; 04 §2.1, §2.2 y
+  §6): restaura capas reveladas de Aguas turbias, también en parte (un vertido puede revelar una de las dos ocultas de una
+  cuia; en el nivel 100 la cuia 0 tiene dos), que `Reveal` y `RevealAll` no expresan. Hace OR de `layers` en la máscara de
+  revelado, la aplica a `Current`, recalcula `Status` como `Reveal` (R10 g-h) y devuelve cuántas capas nuevas reveló; es
+  idempotente (0 y nada cambia si ya lo estaban), no entra en el historial de Marea y es permanente (I5: sigue tras Marea y
+  Volver a la orilla). Lanza `ArgumentOutOfRangeException` con una cuia fuera del tablero y `ArgumentException` con `layers`
+  negativa o con bits que no son dosis ocultas de la cuia en `Initial`. Usos: **reanudar** (02 §14, R8: se rehacen los
+  vertidos guardados y se restaura la máscara guardada) y **rehacer la sesión con la Cuia extra o la Cuia de rescate**
+  (`LevelFlow.Funnel.AddCuia`: la cuia vacía va al final, así que la máscara se copia cuia a cuia). Si una capa se reveló a
+  mitad del historial sin que el historial rehecho la revele (Luciérnaga, Pororoca o un vertido deshecho con Marea), la llamada
+  va en ese punto del rehacer: revelar alarga la racha (R6) y permite sellar (R5), así que restaurarla al final puede cambiar
+  la cantidad de un vertido posterior (con T4 solo pasa tras lavar el Barro con el color de la oculta de debajo). Tests en
+  `LevelSessionMurkyTests`: `RestoreRevealed_PartialLayer_KeepsOtherHidden`, `_SurvivesUndoAndRestart`,
+  `_RejectsLayersNotHidden`, `_RejectsCuiaOutOfRange`, `_IsIdempotentAndOutsideHistory`, `_RecomputesStatusLikeReveal_R10gh`
+  y `_AtTheRevealPoint_ReplaysTheHistoryExactly`; README, «Restaurar las capas reveladas».
 - Solver y bot con todas las mecánicas: rendimiento y asignaciones (C3-3, cierra el núcleo 3; regla dura 2; 03 §5-§6; 08 §14.2;
   02 T2; GDD §6 #6). Solo dotnet: `DotnetOnly/ReferenceBoards` (36 tableros de 12-14 cuias: las 9 mecánicas de 1-200, Cuia
   chica, Cuia alta y las 25 combinaciones del calendario d.4 de D-007, generados con `InverseWalk`, superposición y
