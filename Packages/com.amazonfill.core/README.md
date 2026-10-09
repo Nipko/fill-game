@@ -71,7 +71,7 @@ Este paso va también en la descripción del PR de integración.
 | `AF.Core` | Piraña (M7, debut 183; C3-2): `PiranaMechanic` en la cueva; cada `k` vertidos útiles (nunca en un fútil) muerde la dosis superior de la cuia que recibió el vertido y la lleva a la cueva, salvo sellado, Matapi, la propia cueva o cueva llena (Q-C: el mordisco se pierde y el contador sigue); eventos `PiranaBittenMask`, `PiranaCaveMask`, `PiranaBiteLostMask`; validación: `k` 2-5, sin ocultos ni Remolino [P], un contador por nivel | 02 §9.1 M7, §9.2; 03 §9; anexo B; Q-C, Q14 A, Q18 B |
 | `AF.Core` | `Session.LevelCounter`: contador visible del nivel para el HUD (Lluvia o Piraña: `Remaining` vertidos útiles hasta la gota o el mordisco, gotas pendientes, `Blocked`), en `LevelSession.Counter` y `PourResult.Counter`; solo baja con vertidos útiles | 02 R8, §9.1 M6-M7; D-007, Q10, Q18 B |
 | `AF.Core` | Barro (M5, debut 123; núcleo 2): color 15 inerte dentro del contenido, sin despacho de mecánica. Con Barro en la cima (`Cuia.MudExposed`) la cuia no es origen y acepta cualquier color; el primer vertido lo lava y ocupa su lugar (`CuiaRules.EffectiveSpace`: espacio + 1); una cuia con Barro no está sellada ni vacía; evento `BarroWashedMask` / `PourResult.BarroWashed`; validación: capa 2-3 de una cuia de 4, nunca con mecánica ni oculto | 02 R2, §1.2, §9.1 M5; 03 §9; propuesta b.2 M5 |
-| `AF.Core` | Aguas turbias en la partida (núcleo 2): `LevelSession` con máscara de revelado del nivel (`RevealedLayers`), que persiste tras Marea y Volver a la orilla; `Reveal(cuia)` (Luciérnaga) y `RevealAll()` (Pororoca); `PourEvents.RevealedMask`; validación T2-T4 con los límites de 08 §9 como parámetros y las combinaciones de Q14 A | 02 R7, §11 T2-T4, T6; 04 §2.1, §2.4 a, §2.5, §2.7, §5.1; D-007 |
+| `AF.Core` | Aguas turbias en la partida (núcleo 2): `LevelSession` con máscara de revelado del nivel (`RevealedLayers`), que persiste tras Marea y Volver a la orilla; `Reveal(cuia)` (Luciérnaga), `RevealAll()` (Pororoca) y `RestoreRevealed(cuia, layers)` (restaurar capas reveladas, también en parte, al reanudar y al rehacer la sesión; ver «Restaurar las capas reveladas»); `PourEvents.RevealedMask`; validación T2-T4 con los límites de 08 §9 como parámetros y las combinaciones de Q14 A | 02 R7, R8, §11 T2-T4, T6, §14; 04 §2.1, §2.2, §2.4 a, §2.5, §2.7, §5.1; D-007 |
 | `AF.Core` | `Mechanics.IMechanic` (interno): ganchos de mecánica sin estado (origen, destino, espacio, recepción, `cambia_al_recibir`, exención de origen, etapas (b), (d), (e), (f), victoria y validación), despachados por una tabla estática indexada por el tipo de la cuia | 08 §2.2; 02 §9 |
 | `AF.Core` | `Rules.CuiaRules`: envoltorio heredado sobre cuias sueltas sin mecánicas; capa base de `BoardRules` para el sellado (R5) y el núcleo de `futil` | 02 §1.2, §1.4, §3.1; 04 §5.1 |
 | `AF.Core` | `Rules.Pour` y `Rules.PourRules`: validan argumentos y delegan en `BoardRules`: vertido según el modo (parcial solo en `Run`), `Apply` con `PourEvents`, `CanBeSource`, `IsFutile`, `CollectUsefulMoves`, `HasUsefulMove`, `IsStuck` | 02 §1.2-1.4 R9-R11, R13, R14, R16; §3.1 C1-C2 |
@@ -194,3 +194,37 @@ Pendiente: cancelación por tiempo del solver para Morpho (`hint_timeout_ms`; el
 pipeline (`tools/`). Preguntas abiertas: 02 R16 con capacidades mixtas (C1-8, C1-9: la poda de fútiles puede alargar el par o
 dejar sin camino útil un tablero resoluble, y con una Liana hay estados atascados con solución) y la consecuencia de Q-B en
 P3 (vaivén útil del Remolino que vuelve al mismo estado); ver el CHANGELOG.
+
+## Restaurar las capas reveladas (Aguas turbias)
+
+`LevelSession.RestoreRevealed(int cuia, int layers)` (T01, paso 1 del traspaso) hace OR de `layers` (bit k = la dosis oculta
+inicial `[cuia, k]`) en la máscara de revelado, la aplica a `Current`, recalcula `Status` como `Reveal` (R10 g-h) y devuelve
+cuántas capas nuevas reveló. Es idempotente (0 y nada cambia si ya lo estaban), no entra en el historial de Marea (04 §2.1) y
+es permanente como `Reveal` (I5: sigue tras Marea y Volver a la orilla). Lanza `ArgumentOutOfRangeException` con una cuia
+fuera del tablero y `ArgumentException` con `layers` negativa o con bits que no son dosis ocultas de la cuia en `Initial`.
+
+Cubre lo que `Reveal` y `RevealAll` no expresan: las capas reveladas solo en parte (un vertido puede revelar una de las dos
+ocultas de una cuia, R7; en el nivel 100 la cuia 0 tiene dos). Dos usos, ambos sobre una sesión nueva construida desde el
+tablero inicial con su historial rehecho:
+
+1. **Reanudar** (02 §14, «App cerrada o muerta a medio nivel»; R8: la máscara de revelado es parte del estado persistente):
+   se rehacen los vertidos guardados y se restaura la máscara guardada de cada cuia.
+2. **Rehacer la sesión con la Cuia extra o la Cuia de rescate** (04 §2.2 y §6; `LevelFlow.Funnel.AddCuia`): la cuia vacía va
+   al final, así que los índices de las demás no cambian y `RevealedLayers(i)` de la sesión anterior se copia cuia a cuia.
+
+Las capas que el historial rehecho ya reveló cuentan como reveladas y no suman. En los dos usos la máscara se restaura **al
+final del rehacer**, como hace el cliente desde la integración del paso 1 (`docs/dev/traspaso/README.md` §6): el historial `h2` de `level_state` guarda por cuia
+solo la máscara revelada (la cuia en 1 dígito hex y la máscara en 2), sin el punto del historial en que se reveló cada capa, y
+`LevelSession` tampoco lo expone. Es exacto aunque una capa se revelara a mitad del historial sin que el historial rehecho la
+revele (con la Luciérnaga o con un vertido que Marea deshizo después): ver una oculta solo cambia lo que pasa después si cambia
+la racha (R6) o el sellado (R5), y con T4 (02 §11; `LevelValidation`: bajo una dosis oculta nunca va el color de la de
+encima) eso solo ocurre si un lavado de Barro (02 §9.1 M5) deja encima de la oculta su mismo color. Ningún nivel de 1-200
+lleva Barro en una cuia turbia: de los 7 tableros turbios (100, 106, 115, 135, 155, 175 y 195), el 135 y el 195 lo llevan
+solo en otras cuias, y los tableros de relief no tienen ocultas. Si un pack futuro lo combinara, habría que guardar el punto
+del revelado (y restaurar la capa ahí) o prohibir la combinación en `LevelValidation`.
+`RestoreRevealed_AtTheRevealPoint_ReplaysTheHistoryExactly` documenta ese caso teórico: con la capa restaurada en su punto,
+el vertido siguiente mueve 2 dosis; sin ella, 1.
+
+La Pororoca queda fuera de los dos usos: su revelado va justo antes de un barajado que vacía el historial y cambia el tablero
+(04 §2.1 y §2.4 a; 02 §14), así que tras una Pororoca la sesión ya no se rehace desde `Initial` más los vertidos (fuera del
+paso 1). Tests: `LevelSessionMurkyTests.RestoreRevealed_*`.

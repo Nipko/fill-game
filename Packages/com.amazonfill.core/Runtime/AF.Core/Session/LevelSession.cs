@@ -23,8 +23,9 @@ namespace AF.Core.Session
     /// <item><description>I4: <see cref="Restart"/> deja <c>Current.Equals(Initial)</c> y el historial vacío; con Aguas
     /// turbias, <see cref="Initial"/> con las dosis ya reveladas visibles (I5).</description></item>
     /// <item><description>I5 (02 R7, T6; 04 §2.1, §2.5, §2.7): una dosis oculta revelada (al quedar arriba, con
-    /// <see cref="Reveal"/> o con <see cref="RevealAll"/>) no vuelve a ocultarse en todo el nivel, tampoco tras Marea ni tras
-    /// Volver a la orilla: «lo único que no se revierte es el conocimiento».</description></item>
+    /// <see cref="Reveal"/>, con <see cref="RevealAll"/> o restaurada con <see cref="RestoreRevealed"/>) no vuelve a ocultarse
+    /// en todo el nivel, tampoco tras Marea ni tras Volver a la orilla: «lo único que no se revierte es el
+    /// conocimiento».</description></item>
     /// </list>
     /// <para>Modo de vertido (<see cref="AF.Core.Rules.PourMode"/>; por defecto <see cref="AF.Core.Rules.PourMode.Run"/>,
     /// D-005): se fija al crear la partida y no cambia a mitad de nivel, porque el historial de Marea y el par dependen de
@@ -277,6 +278,64 @@ namespace AF.Core.Session
             }
 
             return total;
+        }
+
+        /// <summary>
+        /// Restaura capas ya reveladas de la cuia <paramref name="cuia"/> (02 R8: la máscara de revelado es parte del estado
+        /// persistente; 02 T6): hace OR de <paramref name="layers"/> (bit k = la dosis oculta inicial <c>[cuia, k]</c>) en
+        /// <see cref="RevealedLayers"/>, aplica la máscara a <see cref="Current"/>, recalcula <see cref="Status"/> como
+        /// <see cref="Reveal"/> (R10 g-h) y devuelve cuántas capas nuevas reveló. Es idempotente: si todas ya lo estaban
+        /// devuelve 0 y no cambia nada. Como <see cref="Reveal"/>, no entra en el historial (04 §2.1) y es permanente (I5):
+        /// sigue visible tras Marea y tras Volver a la orilla.
+        /// </summary>
+        /// <remarks>
+        /// <para>Sirve para recuperar las capas reveladas solo en parte (un vertido puede revelar una de las dos ocultas de una
+        /// cuia, R7), que <see cref="Reveal"/> y <see cref="RevealAll"/> no expresan. Dos usos, ambos sobre una sesión nueva
+        /// construida desde el tablero inicial con su historial rehecho:</para>
+        /// <list type="bullet">
+        /// <item><description>Reanudar (02 §14, «App cerrada o muerta a medio nivel»; R8): el cliente rehace los vertidos
+        /// guardados y restaura la máscara guardada de cada cuia.</description></item>
+        /// <item><description>Rehacer la sesión con la Cuia extra o la Cuia de rescate (04 §2.2 y §6): la cuia vacía se añade
+        /// al final del tablero, así que los índices de las demás no cambian y la máscara de la sesión anterior
+        /// (<see cref="RevealedLayers"/>) se copia cuia a cuia.</description></item>
+        /// </list>
+        /// <para>Las capas que el historial rehecho ya reveló (R7) cuentan como reveladas y no suman. En los dos usos esta
+        /// llamada va al final del rehacer, como hace el cliente desde la integración del paso 1 (docs/dev/traspaso/README.md §6): el historial <c>h2</c> guarda
+        /// por cuia solo la máscara revelada, sin el punto del historial en que se reveló cada capa, y esta clase tampoco lo
+        /// expone. Es exacto aunque una capa se revelara a mitad del historial sin que el historial rehecho la revele (con la
+        /// Luciérnaga o con un vertido que Marea deshizo después): ver una oculta solo cambia lo que pasa después si cambia la
+        /// racha (R6) o el sellado (R5), y con T4 (02 §11; <see cref="LevelValidation"/>: bajo una dosis oculta nunca va el
+        /// color de la de encima) eso solo ocurre si un lavado de Barro (02 §9.1 M5) deja encima de la oculta su mismo color.
+        /// Ningún nivel de 1-200 lleva Barro en una cuia turbia. Si un pack futuro lo combinara, habría que guardar el punto
+        /// del revelado o prohibir la combinación en <see cref="LevelValidation"/>.</para>
+        /// <para>La Pororoca queda fuera de los dos usos: su revelado va justo antes de un barajado que vacía el historial y
+        /// cambia el tablero (04 §2.1 y §2.4 a; 02 §14), así que tras una Pororoca la sesión ya no se rehace desde
+        /// <see cref="Initial"/> más los vertidos.</para>
+        /// </remarks>
+        /// <param name="cuia">Índice de la cuia en el tablero.</param>
+        /// <param name="layers">Máscara de capas (bit k = capa k desde el fondo); solo bits ocultos en <see cref="Initial"/>.</param>
+        /// <returns>Número de capas que no estaban reveladas y ahora sí.</returns>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="cuia"/> está fuera del tablero.</exception>
+        /// <exception cref="ArgumentException"><paramref name="layers"/> es negativa o tiene algún bit que no es una dosis
+        /// oculta de la cuia en <see cref="Initial"/>.</exception>
+        public int RestoreRevealed(int cuia, int layers)
+        {
+            CheckIndex(cuia, nameof(cuia));
+            if (layers < 0 || (layers & ~Initial.CuiaAt(cuia).HiddenMask) != 0)
+            {
+                throw new ArgumentException("Las capas a restaurar tienen que ser dosis ocultas de la cuia en el tablero inicial (02 T6).", nameof(layers));
+            }
+
+            int added = layers & ~_revealed[cuia];
+            if (added == 0)
+            {
+                return 0;
+            }
+
+            _revealed[cuia] |= added;
+            Current = Current.WithRevealed(_revealed);
+            Status = Evaluate(Current);
+            return PopCount(added);
         }
 
         /// <summary>
