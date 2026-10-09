@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using AF.Core.Board;
+using AF.Core.Mechanics;
 using AF.Core.Rules;
 using AF.Solver.Bot;
 using AF.Solver.Search;
@@ -103,6 +104,59 @@ namespace AF.Solver.Tests
             var move = new SolverMove(0, 1, 1, false);
 
             Assert.That(CasualBot.Score(in board, move), Is.EqualTo(4 + 16 - 12));
+        }
+
+        /// <summary>
+        /// Vierte la racha de dos dosis del 1 de <c>C(4, 1, 1)</c> en el Remolino <c>R(4, 3)</c>: entra por el fondo de la
+        /// pareja <paramref name="partnerColors"/> (02 §9.1 M4). <paramref name="extra"/> ajusta <c>U_c</c>.
+        /// </summary>
+        private static int ScoreThroughRemolino(int[] partnerColors, Cuia extra)
+        {
+            var cuias = new[]
+            {
+                C(4, 1, 1),
+                C(4, 3).WithMechanic(MechanicType.Remolino, pairId: 0),
+                Cuia.Create(4, partnerColors).WithMechanic(MechanicType.Remolino, pairId: 0),
+                extra,
+            };
+            int[] units = new BoardState(cuias).UnitsTable;
+            var board = new BoardSlice(cuias, 0, cuias.Length, units);
+            int amount = BoardRules.Amount(cuias, 0, cuias.Length, units, 0, 1, PourMode.Run);
+
+            Assert.That(BoardRules.IsLegal(cuias, 0, cuias.Length, units, 0, 1), Is.True);
+            Assert.That(BoardRules.ReceiverOf(in board, 1), Is.EqualTo(2));
+            Assert.That(amount, Is.EqualTo(2));
+            return CasualBot.Score(in board, new SolverMove(0, 1, amount, false));
+        }
+
+        [Test]
+        public void Score_Remolino_MixingIntoThePartner_DoesNotCountAsJoiningOrSealing()
+        {
+            // 02 §9.1 M4: la racha entra por el fondo y de cualquier color. Con la pareja de otro color no junta (+16) y,
+            // aunque quede llena y con un color debajo, no sella (+40): solo 4·n.
+            Assert.That(ScoreThroughRemolino(new[] { 2 }, Cuia.Empty(4)), Is.EqualTo(4 * 2));
+            Assert.That(ScoreThroughRemolino(new[] { 2, 2 }, Cuia.Empty(4)), Is.EqualTo(4 * 2));
+            Assert.That(ScoreThroughRemolino(new[] { 1, 2 }, Cuia.Empty(4)), Is.EqualTo(4 * 2));
+        }
+
+        [Test]
+        public void Score_Remolino_JoinsOnlyAMonocolorPartnerOfThePouredColor_AndSealsOnlyWithCapEqualToUnits()
+        {
+            // Pareja monocolor del 1: junta (+16). Llena con cap = U_1 = 4: sella (+40, 02 R5).
+            Assert.That(ScoreThroughRemolino(new[] { 1, 1 }, Cuia.Empty(4)), Is.EqualTo((4 * 2) + 16 + 40));
+
+            // Llena y monocolor, pero U_1 = 5 ≠ cap: no sella.
+            Assert.That(ScoreThroughRemolino(new[] { 1, 1 }, C(4, 3, 1)), Is.EqualTo((4 * 2) + 16));
+
+            // Monocolor del 1 sin llenarse: junta sin sellar.
+            Assert.That(ScoreThroughRemolino(new[] { 1 }, Cuia.Empty(4)), Is.EqualTo((4 * 2) + 16));
+        }
+
+        [Test]
+        public void Score_Remolino_EmptyPartner_CostsAnEmpty()
+        {
+            // −5 ×4: la pareja vacía es un vacío gastado, como en una cuia normal.
+            Assert.That(ScoreThroughRemolino(new int[0], Cuia.Empty(4)), Is.EqualTo((4 * 2) - 20));
         }
 
         [Test]

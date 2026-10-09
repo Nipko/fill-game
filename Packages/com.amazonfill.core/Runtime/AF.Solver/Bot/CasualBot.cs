@@ -22,7 +22,10 @@ namespace AF.Solver.Bot
     /// vacía la racha y deja expuesto un color que tiene destino disponible (otra cuia vacía, o con ese color arriba y
     /// hueco; si la dosis expuesta está oculta, el jugador no la ve y no puntúa [P]; el Barro expuesto tampoco puntúa,
     /// porque no es un color, 02 §9.1 M5 [P]). Con mecánicas puntúa la cuia que
-    /// recibe las dosis (la pareja en el Remolino) [P]; las mecánicas no añaden ramas.</para>
+    /// recibe las dosis (la pareja en el Remolino) [P]. En el Remolino la racha entra por el fondo de la pareja y de
+    /// cualquier color (02 §9.1 M4), así que el +16 exige que la pareja sea monocolor del color vertido y el +40, además,
+    /// que quede llena con <c>cap</c> = <c>U_c</c> (sella, 02 R5); si la pareja mezcla colores no suma nada [P]. Las
+    /// demás mecánicas no añaden ramas.</para>
     /// <para><b>Ruido:</b> el «+ rng()·0,5» de 03 §6 pasa a un entero equivalente: la clave es
     /// <c>puntos·65.536 + NextInt(131.072)</c>, un ruido en [0, 2) unidades de la puntuación ×4, es decir [0, 0,5) de la
     /// original. Como las puntuaciones distintas se separan al menos 4 unidades, el ruido solo desempata, como en el
@@ -163,7 +166,11 @@ namespace AF.Solver.Bot
             int receiver = BoardRules.ReceiverOf(in board, move.Target);
             Cuia to = board[receiver];
             int score = 4 * amount;
-            if (!to.IsEmpty)
+            if (to.IsEmpty)
+            {
+                score -= 20; // gastar un vacío parece caro
+            }
+            else if (receiver == move.Target)
             {
                 score += 16; // juntar con el mismo color
                 if (to.IsMonocolor && to.Count + amount == to.Capacity)
@@ -173,7 +180,17 @@ namespace AF.Solver.Bot
             }
             else
             {
-                score -= 20; // gastar un vacío parece caro
+                // Remolino (02 §9.1 M4): la racha entra por el fondo de la pareja y de cualquier color, así que solo junta si
+                // la pareja es monocolor del color vertido y solo sella si además queda llena con cap = U_c (R5) [P].
+                int color = from.TopColor;
+                if (to.IsMonocolor && to.TopColor == color)
+                {
+                    score += 16;
+                    if (to.Count + amount == to.Capacity && to.Capacity == board.Units[color])
+                    {
+                        score += 40;
+                    }
+                }
             }
 
             int run = from.TopRunLength;

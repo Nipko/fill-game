@@ -318,6 +318,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Cambiado
 
+- Revisión de la fase 1 (03 §6-§7; 02 §9.1 M4 y R5): `CasualBot.Score` con Remolino. La racha entra por el fondo de la pareja
+  y de cualquier color, así que el bot daba +16 («juntar con el mismo color») y +40 («sella») a vertidos que mezclaban
+  colores. Ahora, cuando la cuia que recibe es la pareja de un Remolino, +16 solo si es monocolor del color vertido y +40
+  solo si además queda llena con `cap` = `U_c` (sella); si mezcla, no suma nada y la pareja vacía sigue costando −20 [P].
+  Sin Remolino la puntuación no cambia: el tutorial y los niveles 11-100 salen idénticos byte a byte. Tests compartidos
+  `CasualBotTests.Score_Remolino_*`. Cambia el `bot_fail` de los candidatos con Remolino y, con él, las z del pool 101-200
+  y la colocación: `mundo_04_v1` (101-140) y `mundo_05_v1` difieren y la campaña 101-200 y sus informes se regeneran; el
+  reto 166 (Ll+Re) baja a 0,675 y queda sin etiqueta (101-200: 23 Difícil en vez de 24; level-qa, 4 avisos en vez de 3).
 - C3-3 (corrección de C1-9): `LianaMechanic` ya no cuenta el Barro (15) como un color de `U` = 1 al decidir si las capacidades
   son mixtas, así que un nivel con Liana y Barro y capacidades uniformes (Ba+Li, nivel 138 del calendario d.4) deja de
   rechazarse por el bloqueo provisional. Test `LianaTests.M3_Validation_WithBarro_IsNotMixedCapacities_D4_138`.
