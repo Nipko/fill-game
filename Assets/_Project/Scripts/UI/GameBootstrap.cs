@@ -657,8 +657,11 @@ namespace AF.UI
 
         // Paquetes de la escena (o el del test, LaunchOptions.LevelPackJsonOverride) → catálogo con el desplazamiento de
         // desarrollo (af_level_offset). Un paquete roto no deja la pantalla en blanco con una excepción en Start: se registra.
+        // Leer los paquetes construye y valida cada tablero (base y relief): en desarrollo, la línea AF_PERF levels_load dice
+        // cuánto cuesta (T02; si se nota en el teléfono, la validación pasará a ser perezosa).
         private LevelCatalog? LoadCatalog()
         {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
             var packs = new List<LevelPack>();
             try
             {
@@ -683,6 +686,14 @@ namespace AF.UI
                 }
 
                 LevelCatalog catalog = LevelCatalog.Create(packs, LaunchOptions.ResolveLevelOffset());
+                watch.Stop();
+                if (DevProbe.Enabled)
+                {
+                    Debug.Log("AF_PERF {\"event\":\"levels_load\",\"packs\":" + packs.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                        + ",\"levels\":" + catalog.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                        + ",\"ms\":" + watch.ElapsedMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture) + "}");
+                }
+
                 if (!catalog.IsContiguous)
                 {
                     Debug.LogError(LogPrefix + "faltan niveles en el catálogo: " + catalog.DescribeGaps() + ". Al llegar a ellos se verá «El río sigue creciendo».");
