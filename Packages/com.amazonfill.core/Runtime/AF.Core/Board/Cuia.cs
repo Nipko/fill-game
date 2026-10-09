@@ -59,6 +59,11 @@ namespace AF.Core.Board
         private const int CapacityShift = 36;
         private const ulong ThreeBitMask = 0x7UL;
 
+        // Campo de mecánica (bits 39-63). Con 0 la cuia es normal: los tableros sin mecánicas no cambian su Packed.
+        private const int MechanicShift = 39;
+        private const ulong MechanicFieldMask = 0x1FFFFFFUL << MechanicShift;
+        private const ulong MechanicTypeMask = 0xFUL;
+
         private readonly ulong _bits;
 
         private Cuia(ulong bits)
@@ -145,6 +150,18 @@ namespace AF.Core.Board
 
         /// <summary>Representación empaquetada; estable entre CoreCLR, Mono e IL2CPP. Base del hash y de la canonicalización.</summary>
         public ulong Packed => _bits;
+
+        /// <summary>Código del tipo de mecánica (bits 39-42; 0 = cuia normal). Índice de la tabla de despacho de AF.Core.Mechanics.</summary>
+        internal int MechanicCode => (int)((_bits >> MechanicShift) & MechanicTypeMask);
+
+        /// <summary>La cuia lleva una mecánica (02 §9): algún bit del campo de mecánica vale 1.</summary>
+        internal bool HasMechanic => (_bits & MechanicFieldMask) != 0;
+
+        /// <summary>La misma cuia sin mecánica: lo que queda cuando una mecánica se abre o se suelta (02 R16 para D-007).</summary>
+        internal Cuia WithoutMechanic()
+        {
+            return new Cuia(_bits & ~MechanicFieldMask);
+        }
 
         /// <summary>Color de la cima, o <see cref="NoColor"/> si está vacía. La cima siempre es visible (R7).</summary>
         public int TopColor => IsEmpty ? NoColor : RawColorAt(Count - 1);
@@ -244,7 +261,8 @@ namespace AF.Core.Board
             return new Cuia(((ulong)Capacity << CapacityShift)
                 | ((ulong)newCount << CountShift)
                 | ((ulong)hidden << HiddenShift)
-                | doses);
+                | doses
+                | (_bits & MechanicFieldMask));
         }
 
         /// <summary>Devuelve la cuia con <paramref name="amount"/> dosis visibles de <paramref name="color"/> sobre la cima.</summary>

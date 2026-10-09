@@ -6,6 +6,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- Q13 de D-007, parte 1 (C1-1): `AF.Core.Rules.BoardRules`, reglas con contexto de tablero sobre
+  `(Cuia[] cuias, offset, count, int[] U_c)` y sin asignaciones: `CanBeSource`, `IsLegal`, `Amount`, `IsFutile` con la
+  estructura del anexo B (`cambia_al_recibir(B)` y `no_puede_recibir(A)` como ganchos de mecánica, hoy sin efecto),
+  `ApplyInPlace` con R10 por etapas en el orden del anexo B ((a) revelado de A, (b) aperturas por recepción, (c) sellado,
+  (d) liberaciones por sellado, (e) contadores una vez por vertido y solo si no es fútil, Q18 B, (f) condiciones, (f′) punto
+  fijo de (c), (d) y (f); la sobrecarga con `futileRuleEnabled` evalúa además (g) victoria y (h) bloqueo), `EvaluateStatus`,
+  `IsWon`, `HasUsefulMove` e `IsStuck`. Es la única implementación que aplica vertidos.
+- `AF.Core.Rules.PourEvents` (lo ocurrido en cada etapa de R10), `PourRules.Apply(state, a, b, mode, out events)` y
+  `PourResult.Events` (con un constructor nuevo; el anterior se conserva).
+- `AF.Core.Mechanics.IMechanic` (interno): ganchos sin estado de las mecánicas (08 §2.2), despachados por una tabla estática
+  indexada por el código de mecánica de la cuia (bits 39-42 de `Cuia.Packed`, hoy siempre 0); los ganchos solo se llaman
+  para cuias con mecánica. `AF.Core` concede `InternalsVisibleTo("AF.Solver")` para que el solver recorra las mismas
+  reglas por sus rutas internas.
+- Tests compartidos `R10OrderTests` (orden de R10: el revelado entra en el estado que evalúa el sellado; la victoria antes
+  que el bloqueo; índices relativos con `offset`; `single`) y regresiones 1-3 de 04 §5.1 sobre `BoardRules` en
+  `FutileRulesTests` (la 4 queda para C2-4 y C3-1).
+
 - Modo de vertido (decisión del dueño D-005 del 2026-10-08, que sustituye a D-001; `docs/dev/decisiones.md`):
   `AF.Core.Rules.PourMode { Run = 0, Single = 1 }` y `PourModes` (`Default = Run`, de modo que `default(PourMode)` es el
   modo por defecto; `TryParse`/`ToKey` con los valores `"run"`/`"single"` de la clave de Remote Config `rules_pour_mode`,
@@ -47,6 +64,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Cambiado
 
+- C1-1: `PourRules` (legal, cantidad, `Apply`, fútiles, movimientos útiles y bloqueo), `BoardState.IsWon` y su vertido
+  interno, `LevelSession.TryPour` (R10 (a)-(f′) con `BoardRules` y después (g)-(h)) y `AStarSolver` (`Expand`, la meta y
+  `BuildSolution`) delegan en `BoardRules`. La API pública que usa `Assets/` no cambia; `CuiaRules` queda como envoltorio
+  heredado de cuias sin mecánica. Mismo par en los 140 niveles de paridad y mismos expandidos en el tablero de 14 cuias.
 - Nota: antes de publicarse, D-001 tuvo `PourMode { Single = 0, Run = 1 }` con `Default = Single`; ninguna versión
   publicada lo llevó. El estado de esta versión es el de «Añadido» (D-005).
 - Las firmas sin modo (`CuiaRules.Amount(from, to)`, `PourRules.Amount/Apply/CollectUsefulMoves` sin modo,

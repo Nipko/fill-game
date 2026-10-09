@@ -30,7 +30,9 @@ namespace AF.Core.Session
     /// dosis, así que <see cref="AppliedPours"/> cuenta dosis movidas y <see cref="Undo"/> deshace una dosis por uso.
     /// Victoria y bloqueo se evalúan igual en los dos modos.</para>
     /// <para>Rechaza tableros con dosis ocultas: Marea y Volver a la orilla deberían conservar lo revelado (R7,
-    /// 04 §2.1, §2.7) y esa máscara de revelado aún no existe. Tampoco hay mecánicas (02 §9).</para>
+    /// 04 §2.1, §2.7) y esa máscara de revelado aún no existe. Las mecánicas (02 §9) las aplica
+    /// <see cref="BoardRules"/> en cada vertido con R10 por etapas (anexo B de D-007); Marea restaura el estado anterior
+    /// entero, así que vuelve a cerrar lo que el vertido abrió o soltó.</para>
     /// <para>No es seguro entre hilos.</para>
     /// </remarks>
     public sealed class LevelSession
@@ -145,13 +147,18 @@ namespace AF.Core.Session
                 return false;
             }
 
-            BoardState next = Current.WithPour(source, target, amount);
-            var pour = new Pour(source, target, amount);
-            _previous.Add(Current);
+            // R10 en el orden del anexo B: (a)-(f′) los aplica BoardRules sobre la copia y (g)-(h) se evalúan después.
+            BoardState current = Current;
+            bool futile = BoardRules.IsFutile(current.CuiasArray, 0, current.Count, current.UnitsTable, source, target);
+            var events = default(PourEvents);
+            BoardState next = current.WithPour(source, target, PourMode, futile, ref events);
+            var pour = new Pour(source, target, events.Amount);
+            _previous.Add(current);
             _pours.Add(pour);
             Current = next;
             Status = Evaluate(next);
-            result = new PourResult(pour, next.IsSealed(target), Status);
+            events.Finish(Status);
+            result = new PourResult(pour, next.IsSealed(target), Status, events);
             return true;
         }
 
@@ -187,12 +194,8 @@ namespace AF.Core.Session
 
         private LevelStatus Evaluate(BoardState state)
         {
-            if (state.IsWon())
-            {
-                return LevelStatus.Won;
-            }
-
-            return PourRules.HasUsefulMove(state, FutileRuleEnabled) ? LevelStatus.Playing : LevelStatus.Stuck;
+            // R10 (g) victoria y (h) bloqueo, en ese orden.
+            return BoardRules.EvaluateStatus(state.CuiasArray, 0, state.Count, state.UnitsTable, FutileRuleEnabled);
         }
 
         private void CheckIndex(int index, string paramName)

@@ -8,12 +8,11 @@ namespace AF.Core.Rules
     /// <summary>
     /// Vertido legal, cantidad según el modo de vertido (GDD 02 §1.2, R9-R11; D-005: <see cref="PourMode.Run"/> por
     /// defecto, <see cref="PourMode.Single"/> para pruebas), vertidos fútiles y bloqueo
-    /// (02 §1.4, R13-R16; 04 §5.1) del núcleo canónico, sobre un <see cref="BoardState"/>.
+    /// (02 §1.4, R13-R16; 04 §5.1; anexo B de D-007), sobre un <see cref="BoardState"/>.
     /// </summary>
     /// <remarks>
-    /// <para>Delega en <see cref="CuiaRules"/>, la única implementación de las reglas, que también usan el solver y el
-    /// bot. Sin las ramas de mecánicas (<c>bloqueada_origen</c>, <c>bloqueada_destino</c>, Remolino, Barro, Hoja,
-    /// Lluvia; GDD 02 §9), que se añadirán cuando se porten.</para>
+    /// <para>Valida los argumentos y delega en <see cref="BoardRules"/>, la única implementación de las reglas con contexto
+    /// de tablero y mecánicas (D-007, Q13), que también usan el solver, el bot y los generadores.</para>
     /// <para>Modo de vertido (<see cref="PourMode"/>; D-005: <see cref="PourMode.Run"/> por defecto,
     /// <see cref="PourMode.Single"/> solo para pruebas): solo lo reciben
     /// <see cref="Amount(BoardState, int, int, PourMode)"/>, <see cref="Apply(BoardState, int, int, PourMode)"/> y
@@ -28,9 +27,10 @@ namespace AF.Core.Rules
         public const int MaxPours = BoardState.MaxCuias * (BoardState.MaxCuias - 1);
 
         /// <summary>
-        /// La cuia <paramref name="index"/> puede ser origen de un vertido: no está vacía ni sellada (02 §1.2; C1-C2
-        /// de 02 §3.1). Delega en <see cref="CuiaRules.CanBeSource"/>, la misma condición que usan
-        /// <see cref="IsLegal"/>, <see cref="CollectUsefulMoves(BoardState, bool, PourMode, Pour[])"/> y el solver.
+        /// La cuia <paramref name="index"/> puede ser origen de un vertido: no está vacía ni sellada ni tiene
+        /// <c>bloqueada_origen</c> (02 §1.2; C1-C2 de 02 §3.1). Delega en <see cref="BoardRules.CanBeSource"/>, la misma
+        /// condición que usan <see cref="IsLegal"/>, <see cref="CollectUsefulMoves(BoardState, bool, PourMode, Pour[])"/> y
+        /// el solver.
         /// </summary>
         public static bool CanBeSource(BoardState state, int index)
         {
@@ -44,22 +44,18 @@ namespace AF.Core.Rules
                 throw new ArgumentOutOfRangeException(nameof(index), index, "Índice de cuia fuera del tablero.");
             }
 
-            return CuiaRules.CanBeSource(state.CuiaAt(index), state.UnitsTable);
+            return BoardRules.CanBeSource(state.CuiasArray, 0, state.Count, state.UnitsTable, index);
         }
 
         /// <summary>
-        /// <c>legal(A, B)</c>: A distinta de B; A puede ser origen (<see cref="CanBeSource"/>); B no sellada ni llena;
-        /// y B vacía o con la misma cima que A.
+        /// <c>legal(A, B)</c>: A distinta de B; A puede ser origen (<see cref="CanBeSource"/>); B no sellada ni
+        /// <c>bloqueada_destino</c>; los filtros de la mecánica de B (02 §9); y, por defecto, B no llena y vacía o con la
+        /// misma cima que A.
         /// </summary>
         public static bool IsLegal(BoardState state, int source, int target)
         {
             CheckArguments(state, source, target);
-            if (source == target)
-            {
-                return false;
-            }
-
-            return CuiaRules.IsLegal(state.CuiaAt(source), state.CuiaAt(target), state.UnitsTable);
+            return BoardRules.IsLegal(state.CuiasArray, 0, state.Count, state.UnitsTable, source, target);
         }
 
         /// <summary>
@@ -76,7 +72,7 @@ namespace AF.Core.Rules
                 return 0;
             }
 
-            return CuiaRules.Amount(state.CuiaAt(source), state.CuiaAt(target), mode);
+            return BoardRules.Amount(state.CuiasArray, 0, state.Count, state.UnitsTable, source, target, mode);
         }
 
         /// <summary>
@@ -93,12 +89,24 @@ namespace AF.Core.Rules
         /// <see cref="Amount(BoardState, int, int, PourMode)"/> dosis de la cima de A a la cima de B. Con
         /// <see cref="PourMode.Single"/> mueve una sola dosis aunque debajo haya más del mismo color (no existe el
         /// vertido parcial); con <see cref="PourMode.Run"/> mueve la racha visible que cabe y el resto queda en A
-        /// (vertido parcial). Aplica R10 (a): la nueva cima de A queda visible (R7). El sellado y la victoria se derivan
-        /// del estado nuevo. Un vertido cuenta como 1 movimiento en los dos modos.
+        /// (vertido parcial). Aplica R10 (a)-(f′) en el orden del anexo B con <see cref="BoardRules"/>: la nueva cima de A
+        /// queda visible (R7) y las mecánicas se abren, se sueltan o avanzan. El sellado y la victoria se derivan del estado
+        /// nuevo. Un vertido cuenta como 1 movimiento en los dos modos.
         /// </summary>
         /// <exception cref="InvalidOperationException">El vertido no es legal (R11: el llamante debe comprobarlo antes).</exception>
         /// <exception cref="ArgumentOutOfRangeException">Índice fuera del tablero o <paramref name="mode"/> no definido.</exception>
         public static BoardState Apply(BoardState state, int source, int target, PourMode mode)
+        {
+            return Apply(state, source, target, mode, out _);
+        }
+
+        /// <summary>
+        /// Como <see cref="Apply(BoardState, int, int, PourMode)"/> y devuelve en <paramref name="events"/> lo que ocurrió
+        /// en cada etapa de R10 (a)-(f′) (sin evaluar todavía la victoria ni el bloqueo).
+        /// </summary>
+        /// <exception cref="InvalidOperationException">El vertido no es legal (R11).</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Índice fuera del tablero o <paramref name="mode"/> no definido.</exception>
+        public static BoardState Apply(BoardState state, int source, int target, PourMode mode, out PourEvents events)
         {
             int amount = Amount(state, source, target, mode);
             if (amount == 0)
@@ -108,7 +116,9 @@ namespace AF.Core.Rules
                     + " a la cuia " + target.ToString(CultureInfo.InvariantCulture) + ".");
             }
 
-            return state.WithPour(source, target, amount);
+            bool futile = BoardRules.IsFutile(state.CuiasArray, 0, state.Count, state.UnitsTable, source, target);
+            events = default;
+            return state.WithPour(source, target, mode, futile, ref events);
         }
 
         /// <summary>
@@ -122,11 +132,12 @@ namespace AF.Core.Rules
         }
 
         /// <summary>
-        /// <c>futil(A, B)</c> (02 §1.4 y 04 §5.1): A monocolor, no sellada y sin dosis ocultas hacia una B vacía,
-        /// salvo la rama "casa correcta" (<c>cap_A ≠ U_c</c> y <c>cap_B = U_c</c>). Un vertido fútil sigue siendo
-        /// legal (R13): solo no cuenta para evitar el bloqueo. Falso si A = B o A está vacía. No depende del modo de
-        /// vertido; en <see cref="PourMode.Single"/> un fútil puede partir una cuia monocolor en dos (decisiones.md
-        /// §2.1.2, E2), lo que con capacidades iguales solo aumenta la dispersión.
+        /// <c>futil(A, B)</c> (02 §1.4 y 04 §5.1 con el anexo B de D-007): A monocolor, no sellada y sin dosis ocultas hacia
+        /// una B vacía, salvo la rama "casa correcta" (<c>cap_A ≠ U_c</c> y <c>cap_B = U_c</c>), un destino que cambia al
+        /// recibir (Hoja, Matapi…) o un origen exento. Un vertido fútil sigue siendo legal (R13): solo no cuenta para evitar
+        /// el bloqueo. Falso si A = B o A está vacía. No depende del modo de vertido; en <see cref="PourMode.Single"/> un
+        /// fútil puede partir una cuia monocolor en dos (decisiones.md §2.1.2, E2), lo que con capacidades iguales solo
+        /// aumenta la dispersión.
         /// </summary>
         public static bool IsFutile(BoardState state, int source, int target)
         {
@@ -136,7 +147,7 @@ namespace AF.Core.Rules
                 return false;
             }
 
-            return CuiaRules.IsFutile(state.CuiaAt(source), state.CuiaAt(target), state.UnitsTable);
+            return BoardRules.IsFutile(state.CuiasArray, 0, state.Count, state.UnitsTable, source, target);
         }
 
         /// <summary>
@@ -171,35 +182,31 @@ namespace AF.Core.Rules
                 throw new ArgumentException("El búfer necesita al menos T·(T−1) posiciones (PourRules.MaxPours basta).", nameof(buffer));
             }
 
+            var board = new BoardSlice(state.CuiasArray, 0, count, state.UnitsTable);
             int[] units = state.UnitsTable;
             int written = 0;
             for (int a = 0; a < count; a++)
             {
-                Cuia from = state.CuiaAt(a);
-                if (!CuiaRules.CanBeSource(from, units))
+                Cuia from = board[a];
+                if (!BoardRules.IsSourceCuia(from, units))
                 {
                     continue;
                 }
 
                 for (int b = 0; b < count; b++)
                 {
-                    if (b == a)
+                    if (b == a || !BoardRules.Accepts(in board, a, b))
                     {
                         continue;
                     }
 
-                    Cuia to = state.CuiaAt(b);
-                    if (!CuiaRules.IsLegal(from, to, units))
+                    if (futileRuleEnabled && BoardRules.IsFutileCuias(from, board[b], units))
                     {
                         continue;
                     }
 
-                    if (futileRuleEnabled && CuiaRules.IsFutile(from, to, units))
-                    {
-                        continue;
-                    }
-
-                    buffer[written++] = new Pour(a, b, CuiaRules.Amount(from, to, mode));
+                    int amount = mode == PourMode.Run ? BoardRules.RunAmount(in board, a, b) : 1;
+                    buffer[written++] = new Pour(a, b, amount);
                 }
             }
 
@@ -229,38 +236,12 @@ namespace AF.Core.Rules
                 throw new ArgumentNullException(nameof(state));
             }
 
-            int count = state.Count;
-            int[] units = state.UnitsTable;
-            for (int a = 0; a < count; a++)
-            {
-                Cuia from = state.CuiaAt(a);
-                if (!CuiaRules.CanBeSource(from, units))
-                {
-                    continue;
-                }
-
-                for (int b = 0; b < count; b++)
-                {
-                    if (b == a)
-                    {
-                        continue;
-                    }
-
-                    Cuia to = state.CuiaAt(b);
-                    if (CuiaRules.IsLegal(from, to, units)
-                        && !(futileRuleEnabled && CuiaRules.IsFutile(from, to, units)))
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            return false;
+            return BoardRules.HasUsefulMove(state.CuiasArray, 0, state.Count, state.UnitsTable, futileRuleEnabled);
         }
 
         /// <summary>
         /// Aguas estancadas (R13): no es victoria y no queda ningún vertido útil. Se evalúa después de la
-        /// victoria, como fija el orden de R10 (e, f); por R14 nunca es verdadero mientras exista un vertido útil.
+        /// victoria, como fija el orden de R10 (g, h); por R14 nunca es verdadero mientras exista un vertido útil.
         /// Para un mismo estado vale igual en los dos modos de vertido (<see cref="PourMode.Run"/>, por defecto desde D-005,
         /// y <see cref="PourMode.Single"/>, de pruebas; decisiones.md §2.1.2); lo que cambia es qué estados se alcanzan.
         /// </summary>
@@ -271,7 +252,7 @@ namespace AF.Core.Rules
                 throw new ArgumentNullException(nameof(state));
             }
 
-            return !state.IsWon() && !HasUsefulMove(state, futileRuleEnabled);
+            return BoardRules.IsStuck(state.CuiasArray, 0, state.Count, state.UnitsTable, futileRuleEnabled);
         }
 
         private static void CheckArguments(BoardState state, int source, int target)

@@ -110,19 +110,10 @@ namespace AF.Core.Board
             return IsSealedCuia(_cuias[index]);
         }
 
-        /// <summary>Victoria (R12): toda cuia está vacía o sellada.</summary>
+        /// <summary>Victoria (R12): toda cuia está vacía o sellada (<see cref="BoardRules.IsWon"/>).</summary>
         public bool IsWon()
         {
-            for (int i = 0; i < _cuias.Length; i++)
-            {
-                Cuia cuia = _cuias[i];
-                if (!cuia.IsEmpty && !IsSealedCuia(cuia))
-                {
-                    return false;
-                }
-            }
-
-            return true;
+            return BoardRules.IsWon(_cuias, 0, _cuias.Length, _units);
         }
 
         /// <summary>Alguna cuia tiene dosis ocultas (Aguas turbias, 02 §11).</summary>
@@ -208,19 +199,22 @@ namespace AF.Core.Board
             return sb.Append(']').ToString();
         }
 
-        /// <summary>Aplica un vertido ya validado por <see cref="Rules.PourRules"/>.</summary>
-        internal BoardState WithPour(int source, int target, int amount)
+        /// <summary>
+        /// Aplica un vertido ya validado (legal) sobre una copia con <see cref="BoardRules"/>, la única implementación que
+        /// aplica vertidos: R10 (a)-(f′) en el orden del anexo B, con lo ocurrido en <paramref name="events"/>.
+        /// </summary>
+        internal BoardState WithPour(int source, int target, PourMode mode, bool isFutile, ref PourEvents events)
         {
             var next = (Cuia[])_cuias.Clone();
-            Cuia from = next[source];
-            int color = from.TopColor;
-            next[source] = from.RemoveTop(amount);
-            next[target] = next[target].AddOnTop(color, amount);
+            BoardRules.ApplyInPlace(next, 0, next.Length, _units, source, target, mode, isFutile, ref events);
             return new BoardState(next, _units);
         }
 
         /// <summary>Tabla <c>U_c</c> indexada por color (0..16) para <see cref="CuiaRules"/>. No se modifica.</summary>
         internal int[] UnitsTable => _units;
+
+        /// <summary>Array interno de cuias, sin copiar, para <see cref="BoardRules"/>. Nadie lo modifica: el estado es inmutable.</summary>
+        internal Cuia[] CuiasArray => _cuias;
 
         /// <summary>Cuia <paramref name="index"/> sin comprobar el índice (el llamante ya lo hizo).</summary>
         internal Cuia CuiaAt(int index)

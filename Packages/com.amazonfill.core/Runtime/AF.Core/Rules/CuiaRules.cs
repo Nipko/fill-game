@@ -11,14 +11,16 @@ namespace AF.Core.Rules
     /// de 04 §5.1). Solo <c>cantidad</c> depende de <see cref="PourMode"/>.
     /// </summary>
     /// <remarks>
-    /// <para>Es la <b>única</b> implementación de estas reglas: <see cref="PourRules"/> (tablero del cliente) y
-    /// AF.Solver (solver y bot, sobre su estado empaquetado) llaman aquí, así que cliente, solver y bot no pueden
-    /// divergir (04 §5.1; 03 §5: "el solver no mantiene una poda propia").</para>
+    /// <para>Desde D-007 (Q13) las reglas con contexto de tablero y mecánicas viven en <see cref="BoardRules"/>, la única
+    /// implementación que aplica vertidos. Esta clase queda como <b>envoltorio heredado</b> de cuias normales y como capa
+    /// base que <see cref="BoardRules"/> usa para la parte sin mecánicas: <see cref="IsSealed"/> (R5) y el núcleo de
+    /// <c>futil</c> (<see cref="IsFutile"/>), así que cliente, solver y bot no pueden divergir (04 §5.1; 03 §5: "el solver no
+    /// mantiene una poda propia").</para>
     /// <para>Código de bucle caliente: sin asignaciones y sin validar argumentos. <c>unitsByColor</c> es una tabla
     /// indexada por color (0..16, longitud <see cref="UnitsTableLength"/>) con <c>U_c</c>; la posición 0 vale 0.
     /// La condición A ≠ B (índices distintos) la comprueba el llamante.</para>
-    /// <para>Sin las ramas de mecánicas de 02 §9 (<c>bloqueada_origen</c>, <c>bloqueada_destino</c>, Remolino,
-    /// Barro, Hoja, Lluvia): <see cref="BoardState"/> rechaza los tableros que las necesitarían.</para>
+    /// <para>Sin las ramas de mecánicas de 02 §9 (<c>bloqueada_origen</c>, <c>bloqueada_destino</c>, Remolino, Barro, Hoja,
+    /// Lluvia…): para cuias con mecánica usa <see cref="BoardRules"/>.</para>
     /// </remarks>
     public static class CuiaRules
     {
@@ -42,7 +44,8 @@ namespace AF.Core.Rules
         /// sellada) y regla de selección C1/C2 de 02 §3.1. Es la única definición: la usan <see cref="IsLegal"/>,
         /// <c>movimientos_utiles</c>, el solver y el control tap-tap del cliente.
         /// </summary>
-        /// <remarks>Sin mecánicas: <c>bloqueada_origen</c> (Hoja, Brote y Liana cerrados, 02 §9) se añadirá aquí.</remarks>
+        /// <remarks>Heredada, sin mecánicas: <c>bloqueada_origen</c> (Hoja, Brote, Matapi y Liana, 02 §9) la añade
+        /// <see cref="BoardRules.CanBeSource"/>.</remarks>
         public static bool CanBeSource(Cuia from, int[] unitsByColor)
         {
             return !from.IsEmpty && !IsSealed(from, unitsByColor);
@@ -92,9 +95,11 @@ namespace AF.Core.Rules
         }
 
         /// <summary>
-        /// <c>futil(A, B)</c> de 02 §1.4 con la excepción de 04 §5.1: verter una cuia monocolor, no sellada y sin
+        /// Núcleo de <c>futil(A, B)</c> de 02 §1.4 con la excepción de 04 §5.1: verter una cuia monocolor, no sellada y sin
         /// dosis ocultas en una vacía solo recoloca el problema, salvo en la rama "casa correcta"
-        /// (<c>cap_A ≠ U_c</c> y <c>cap_B = U_c</c>). Una A vacía nunca es fútil (no hay vertido).
+        /// (<c>cap_A ≠ U_c</c> y <c>cap_B = U_c</c>). Una A vacía nunca es fútil (no hay vertido). Las exenciones de
+        /// mecánica del anexo B (<c>cambia_al_recibir(B)</c>, <c>no_puede_recibir(A)</c>, Q-B) las añade
+        /// <see cref="BoardRules.IsFutile"/>, que es la regla completa.
         /// </summary>
         public static bool IsFutile(Cuia from, Cuia to, int[] unitsByColor)
         {
@@ -123,7 +128,7 @@ namespace AF.Core.Rules
                 return false;
             }
 
-            // Destino Lluvia o Remolino: nunca fútil (02 §1.4); llega con las mecánicas de 02 §9.
+            // Los destinos que cambian al recibir (Hoja, Matapi, Remolino, Lluvia…) los exime BoardRules (anexo B).
             return true;
         }
     }
