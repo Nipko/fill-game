@@ -1,6 +1,6 @@
 # Glosario canónico de Amazon Fill (nombre comercial: Tintalú)
 
-Fecha: 2026-10-05 (revisión cruzada 2026-10-06; nombre comercial Tintalú por decisión del dueño del 2026-10-06, en lugar de Aquazonia; actualizado el 2026-10-08 con la decisión del dueño **D-008**, bucle de partida como Magic Sort: §2.2, §5.1, §6.3, §6.4 y §10) · Fase 0 del GDD · Autoridad: todos los capítulos usan estos nombres tal cual (ES como idioma de diseño; EN y PT-BR como localizaciones de tienda y UI). Convención de evidencia: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas, **[NV]** no verificado, **[P]** propuesta de este glosario a calibrar en soft launch. "(dirección N)" remite al punto N de las decisiones de dirección vinculantes.
+Fecha: 2026-10-05 (revisión cruzada 2026-10-06; nombre comercial Tintalú por decisión del dueño del 2026-10-06, en lugar de Aquazonia; actualizado el 2026-10-08 con la decisión del dueño **D-008**, bucle de partida como Magic Sort: §2.2, §5.1, §6.3, §6.4 y §10; actualizado el 2026-10-09 con **D-010**, «Llenar y teñir» en lugar de «Sumergir y teñir» y los miquitos de la intro: §1.2, §3.3, §5.3 (alias), §6.4, §10 y §11, con los nombres de fauna pendientes del asesor cultural) · Fase 0 del GDD · Autoridad: todos los capítulos usan estos nombres tal cual (ES como idioma de diseño; EN y PT-BR como localizaciones de tienda y UI). Convención de evidencia: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas, **[NV]** no verificado, **[P]** propuesta de este glosario a calibrar en soft launch. "(dirección N)" remite al punto N de las decisiones de dirección vinculantes.
 
 ## Resumen
 
@@ -28,7 +28,7 @@ El proyecto conserva el nombre interno **Amazon Fill** (carpeta, código, analí
 
 ### 1.2 Nombre vigente: Tintalú (decisión del dueño, 2026-10-06)
 
-**Tintalú** (TINTA + -LÚ): la tinta o el tinte que colorea el agua, con un final corto y alegre. Nombra la mecánica estrella, el teñido en vivo del agua con frutas (Sumergir y teñir, sección 6.4, y los 14 tintes de la sección 9); el agua y la selva los aportan el subtítulo de la ficha (1.3), el arte y los mundos. Palabra aguda, con el acento en la última sílaba [E]: ES "tin-ta-LÚ", PT "tchin-ta-LÚ", EN "tin-tuh-LOO".
+**Tintalú** (TINTA + -LÚ): la tinta o el tinte que colorea el agua, con un final corto y alegre. Nombra la mecánica estrella, el teñido en vivo del agua con frutas (Llenar y teñir, sección 6.4, y los 14 tintes de la sección 9); el agua y la selva los aportan el subtítulo de la ficha (1.3), el arte y los mundos. Palabra aguda, con el acento en la última sílaba [E]: ES "tin-ta-LÚ", PT "tchin-ta-LÚ", EN "tin-tuh-LOO".
 
 Grafía:
 - **"Tintalú", con tilde, en todo lo visible**: logotipo, títulos de tienda, UI, tutorial y materiales de marketing, en ES, PT-BR y EN. Sin tilde se lee "tinTAlu".
@@ -142,6 +142,7 @@ Pendiente [NV]: búsqueda formal de antecedentes de "Tintalú"/"Tintalu" por un 
 | Jaguar | Icono de la etiqueta Muy difícil; solo animal, sin iconografía jaguar-hombre | research/07 §5 |
 | Perezoso | Animación de espera/inactividad (idle) en el Mapa del río | research/07 §5 (no se usa para deshacer: su lentitud connota un deshacer lento) |
 | Pirarucú, hoatzin, tucán | Reservados: pirarucú para Datos del río y una futura mecánica de "respiro"; hoatzin como animación de Volver a la orilla en el mundo 11; tucán en la animación de vertido del tutorial | research/07 §5 |
+| **Miquitos** [P] | Tropa de Llenar y teñir (D-010): dejan caer la fruta de cada racha; una especie por tramo del río (mono ardilla en 1-10, sagui plateado, sauim-de-coleira, churuco, huapo colorado, cotoncillo colorado, pichico emperador, maquisapa, mono nocturno, saquí de cara blanca y mono ardilla de los Llanos; ninguna en El origen), con la tarjeta «¡Miquito a la vista!». Siempre libres y en su árbol; nunca guías, mascotas ni premio. Catálogo y reglas: 07 §6.4. **Nombres comunes y la palabra «miquitos» (y su traducción) pendientes del asesor cultural** | Guion de la intro §4 (`docs/research/intro-rio-miquitos/guion.md`); `docs/research/fauna/propuesta-fauna.md` (apoyo) |
 | **Descartados** | Anaconda (sagrada para varios pueblos, "madre" del kené); jaguar-hombre; Iara, Yacumama, Curupira, Mapinguari y cualquier ser mitológico; pueblos indígenas como personajes, enemigos o skins; Garantido/Caprichoso de Parintins (marcas de asociaciones [E]) | research/07 §5 y §6.1 [V] |
 
 ## 4. El recipiente: la cuia
@@ -220,6 +221,8 @@ Orden de la bandeja de comodines en el HUD (canon 07 §7.4, adoptado por 02 §5 
 | Canasta | 03, 04 | **Canasta** |
 | Reto del río | 05 | **Reto del río** |
 | Río sin fin | 01 | **Río sin fin** |
+| Sumergir y teñir (carga del nivel) | `magic-sort/propuesta-tintalu.md`; versiones del GDD anteriores a D-010 | **Llenar y teñir** (D-010) |
+| «¡Nuevo miquito!» | `docs/research/fauna/propuesta-fauna.md` | **¡Miquito a la vista!** [P] (`fauna_sighted_card`) |
 
 ## 6. Dificultad, aguas turbias, racha y escudo
 
@@ -254,7 +257,7 @@ Umbrales de research/01 §6 [V] y research/02; recompensas de la dirección 12. 
 | Rendición confirmada o salida con el menú, desde el 31 | **Nivel fallido** [P] | Fallo duro: premio que no se cobra, «Reintentar» y X (D-008; 04 §6.6) |
 | 0 canoas al reintentar o jugar | **Sin canoas** | Pantalla de 04 §7.3; el dueño la llamó «Más canoas» y el nombre está pendiente (P14 de D-008) |
 | Cuia completa | **Cuia sellada** | Tapa de calabaza, no seleccionable |
-| Carga del nivel | **Sumergir y teñir** | Animación de 1,2-1,5 s (niveles 1-20), 0,8 s después, saltable (dirección 18) |
+| Carga del nivel | **Llenar y teñir** | Animación de 1,2-1,5 s (niveles 1-20), 0,8 s después, saltable (dirección 18): el río llena las cuias y los miquitos las tiñen con fruta (D-010, que sustituye a «Sumergir y teñir»; 02 §4.2). EN «Fill & Tint» [P]; PT-BR «Encher e tingir» [P], con el asesor |
 | Agua base del mundo | **Agua negra / blanca / clara** | Preset del shader (research/07 §2) |
 | Dato educativo | **Dato del río** | Una frase verificada cada 10 niveles (research/07 §Implicaciones 8) |
 
@@ -368,6 +371,7 @@ Reglas asociadas: K_motor = 16 (índice 15 = Barro, 16 reservado; 02 §9.1 y 08 
 | `quit_confirm` [P] | ¿Salir del nivel? Perderás 1 canoa | pendiente (P14) | pendiente (P14) |
 | `level_complete` | ¡Nivel completado! | Level complete! | Nível concluído! |
 | `river_lowered` | El río bajó | The river dropped | O rio baixou |
+| `fauna_sighted_card` [P] | ¡Miquito a la vista! | Monkey spotted! | pendiente del asesor (evitar «macaco»; opción neutra: «Nova espécie à vista!») |
 | `lives` | Canoas | Canoes | Canoas |
 | `currency` | Semillas | Seeds | Sementes |
 | `shop` | Mercado | Market | Mercado |
@@ -404,6 +408,7 @@ Regla de redacción: tuteo en ES-419 ("tú"), "você" en PT-BR, imperativo en EN
 | Mundos y niveles | `w01_estuario` … `w13_origen`; paquetes `mundo_{nn}_v{v}.json`; id de nivel `m{mm}_v{v}_n{nnnn}` y semilla `amazonfill:v1:m{mm}:v{v}:n{nnnn}` **con ceros a la izquierda** (ej. `amazonfill:v1:m03:v1:n0057`; el test de reproducibilidad por hash exige el padding exacto; research/02 C3.5); esquema de nivel `af-level/1` en 08 §4.1 y `schemas/af-level-1.schema.json` |
 | Tintes | IDs de la sección 9; índice de motor 1-14 en `tints.json`; 15 = Barro; 16 reservado |
 | Agua base | `water_base ∈ {black, white, clear}` |
+| Fauna (miquitos) [P] | Catálogo `Assets/_Project/Data/Fauna/miquitos_v0.json`, formato `af-fauna/0`; id de especie = nombre científico en minúsculas con guiones bajos (`saimiri_collinsi`, `mico_argentatus`, `saguinus_bicolor`, `lagothrix_lagothricha`, `cacajao_calvus_ucayalii`, `plecturocebus_discolor`, `saguinus_imperator`, `ateles_chamek`, `aotus_trivirgatus`, `pithecia_pithecia`, `saimiri_sciureus_albigena`); ranuras de arte `fauna_<id>_partes`, `fauna_<id>_retrato`, `fruta_<id del tinte>` (sección 9), `rama_<mundo>` y `liana_tile`; evento `af_fauna_sighted` reservado, pendiente de aprobación (no está en 08 §8.2) (D-010) |
 
 ## Parámetros configurables (Remote Config)
 
@@ -443,7 +448,7 @@ Numeración canónica de los capítulos del GDD (coincide con los archivos de `d
 | Capítulo | Toma de este glosario | Devuelve al glosario |
 |---|---|---|
 | 01 Visión y posicionamiento | Nombre comercial Tintalú, su historia (Aquazonia, descartado) y alternativas (1.2, 1.2.1, 1.4: planes B Cuiazú, Botonda y Selvagua), variante de ficha "Amazonia Sort", disclaimer "sin relación con Amazon.com, Inc.", nombres de mascotas; §9 reproduce los riesgos de marca | Resultado de la búsqueda de antecedentes de marca (clases 9 y 41) y decisión sobre la variante de ficha; glosario de términos de negocio (01 §11) alineado con la sección 11 |
-| 02 Núcleo, reglas y UX | cuia, Cuia chica/alta, Cuia sellada, Aguas estancadas, Sumergir y teñir, nombres reservados de mecánicas (6.5), tintes e IDs, términos de UI (10) | Catálogo exacto de mecánicas y su nivel de introducción (cerrado: 02 §9.1 y `mech_debut_level`, copiados en 6.5; Cuia chica 14 / Cuia alta 27 y 141 en 02 §8; tutorial 1-12 en 02 §13); puede pedir nombres nuevos |
+| 02 Núcleo, reglas y UX | cuia, Cuia chica/alta, Cuia sellada, Aguas estancadas, Llenar y teñir, nombres reservados de mecánicas (6.5), tintes e IDs, términos de UI (10) | Catálogo exacto de mecánicas y su nivel de introducción (cerrado: 02 §9.1 y `mech_debut_level`, copiados en 6.5; Cuia chica 14 / Cuia alta 27 y 141 en 02 §8; tutorial 1-12 en 02 §13); puede pedir nombres nuevos |
 | 03 Niveles, generación y dificultad | Tabla de mundos (8), paleta e IDs de tinte (9), `max_pares_riesgo`, etiquetas Difícil/Muy difícil, Aguas turbias, semilla de nivel (11) | Validación de rangos de nivel y debuts |
 | 04 Comodines, vidas y rescate | Nombres, IDs, iconos y frases de los 6 comodines + Volver a la orilla + Cuia de rescate (5.1), regla "Cuia extra solo con semillas" (5.1), alias (5.3), Canoas y términos derivados (2.2), modal Aguas estancadas | Topes por nivel/día y reglas detalladas de cada comodín; definición canónica de fallo (04 §5.2); claves de texto del modal (04 §6.5, incluidas `stuck_canoe_lost` / `stuck_canoe_lost_last`, ya en la sección 10) |
 | 05 Economía y monetización | Semillas y nombres de packs (2.1), IDs `af_*`, Mochila de inicio, Balsa de rescate, Sin anuncios, Cántaro, Pase Expedición, Canoas infinitas, Cosecha doble | Precios finales, catálogo de SKUs y contenidos (05 §4.1: Balsa de rescate, `af_infinite_canoes_1h`), Cuia de rescate a 600 fijo, escalera de la Crecida, barra a 0 tras el hito 10 y composición del tope diario (05 §2.4), ventana de la Mochila de inicio, Pase Expedición desde el nivel 60 (05 §5), cadencia de intersticiales |

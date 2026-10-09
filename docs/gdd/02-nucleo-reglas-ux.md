@@ -1,6 +1,6 @@
 # Capítulo 2 · Núcleo jugable, reglas y UX en nivel
 
-Fecha: 2026-10-06 (actualizado el 2026-10-06 con dos decisiones del dueño tomadas tras jugar el prototipo v0 en su teléfono: **D-001, una dosis por vertido**, y **D-002, sin resaltado de destinos al seleccionar**; actualizado el 2026-10-07 con **D-004, cuias más anchas en los tableros de pocas cuias** (tope del ancho según el número de cuias, sección 5) y vertido a 38° con el labio a 0,6-1,6 u del borde del destino (sección 4.1), decidida tras ver en su teléfono el build «Selva brillante premium»; actualizado el 2026-10-08 con **D-005** (vertido por tramo, como Magic Sort; sustituye a D-001) y **D-006** (tablero, cuia y vertido como Magic Sort: secciones 3.2, 4, 4.1, 5 y 8), y también con **D-008** (bucle de partida como Magic Sort: secciones 2, 6, 7 y 14; el mismo día, alineado con lo construido en la pista B: Canoas sin cronómetro en la cabecera, sección 5, y modal sin ilustración ni copia de Capi, sección 7, ambos [P]); registro, impacto y preguntas pendientes en `docs/dev/decisiones.md`) · GDD de Amazon Fill (nombre comercial Tintalú) · Convención: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas, **[NV]** no verificado, **[P]** propuesta de este capítulo a calibrar en soft launch. "(dirección N)" remite a las decisiones de dirección vinculantes; los nombres siguen el glosario (`docs/gdd/00-glosario.md`).
+Fecha: 2026-10-06 (actualizado el 2026-10-06 con dos decisiones del dueño tomadas tras jugar el prototipo v0 en su teléfono: **D-001, una dosis por vertido**, y **D-002, sin resaltado de destinos al seleccionar**; actualizado el 2026-10-07 con **D-004, cuias más anchas en los tableros de pocas cuias** (tope del ancho según el número de cuias, sección 5) y vertido a 38° con el labio a 0,6-1,6 u del borde del destino (sección 4.1), decidida tras ver en su teléfono el build «Selva brillante premium»; actualizado el 2026-10-08 con **D-005** (vertido por tramo, como Magic Sort; sustituye a D-001) y **D-006** (tablero, cuia y vertido como Magic Sort: secciones 3.2, 4, 4.1, 5 y 8), y también con **D-008** (bucle de partida como Magic Sort: secciones 2, 6, 7 y 14; el mismo día, alineado con lo construido en la pista B: Canoas sin cronómetro en la cabecera, sección 5, y modal sin ilustración ni copia de Capi, sección 7, ambos [P]); actualizado el 2026-10-09 con **D-010** («Llenar y teñir»: el río llena las cuias y los miquitos las tiñen con fruta; sustituye a «Sumergir y teñir», mismos tiempos: secciones 2 y 4.2); registro, impacto y preguntas pendientes en `docs/dev/decisiones.md`) · GDD de Amazon Fill (nombre comercial Tintalú) · Convención: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas, **[NV]** no verificado, **[P]** propuesta de este capítulo a calibrar en soft launch. "(dirección N)" remite a las decisiones de dirección vinculantes; los nombres siguen el glosario (`docs/gdd/00-glosario.md`).
 
 ## Resumen
 
@@ -87,7 +87,7 @@ atascado(S) = (movimientos_utiles(S) == ∅)
 ## 2. Máquina de estados del nivel
 
 ```
-LOADING ──nivel en memoria──▶ INTRO(sumergir_y_tenir) ──fin o toque──▶ PLAYING
+LOADING ──nivel en memoria──▶ INTRO(llenar_y_tenir) ──fin o toque──▶ PLAYING
 PLAYING ──victoria(R12)──▶ CELEBRATION ──0,9 s o toque──▶ VICTORY_SCREEN
 PLAYING ──atascado(R13)──▶ STUCK_MODAL
 STUCK_MODAL ──Marea──▶ PLAYING
@@ -114,7 +114,7 @@ Embudo de D-008 (decisión del dueño del 2026-10-08; detalle en cap. 04 §6): d
 | Estado | Entra cuando | Qué hace | Sale a | Timers |
 |---|---|---|---|---|
 | LOADING | Se pide el nivel N | Lee JSON (precargado durante N−1), construye estado, calcula layout, reserva texturas, precarga rewarded si aplica | INTRO | Si >300 ms, muestra "Cargando…" con lazo de río; el intro nunca arranca sin el nivel en memoria (dirección 18) |
-| INTRO | Nivel listo | Sumergir y teñir (sección 4.2). En reintento muestra "Nivel N · intento k"; en variante aliviada muestra el banner "El río bajó" durante `anim_river_lowered_banner_ms` (2,0 s, 08 §9) antes del teñido | PLAYING | 1,2-1,5 s (niveles 1-20), 0,8 s (≥21); saltable desde el primer fotograma |
+| INTRO | Nivel listo | Llenar y teñir (sección 4.2). En reintento muestra "Nivel N · intento k"; en variante aliviada muestra el banner "El río bajó" durante `anim_river_lowered_banner_ms` (2,0 s, 08 §9) antes del teñido | PLAYING | 1,2-1,5 s (niveles 1-20), 0,8 s (≥21); saltable desde el primer fotograma |
 | PLAYING | Fin de INTRO | Input activo; tras cada vertido ejecuta R10 | CELEBRATION, STUCK_MODAL, pausa | Pista por inactividad `hint_idle_delay_s` (sección 3.4) |
 | CELEBRATION | R12 verdadera | Input bloqueado; sellos brillan en secuencia, confeti de guacamayo, toada corta | VICTORY_SCREEN | 900 ms [P] o toque |
 | VICTORY_SCREEN | Fin de celebración | Cosecha, Crecida, Cosecha doble (≥11), barras de evento, Canasta, Dato del río (cada 10) | AD_GATE / LOADING | Sin auto-avance (`victory_autonext_s` = 0 [P]) |
@@ -208,19 +208,32 @@ Ningún líder publica tiempos (research/01 §3 [E]; research/09 §Arte [E]). De
 
 Reglas de audio: nunca el grito de la piha en bucles (>110 dB en la realidad, research/07 §6.3 [V]); piha solo en el banner de mundo. Háptico: `VibrationEffect` predefinidos (tick/click) en Android; desactivable en Ajustes (research/01 §3 [V]: los jugadores exigen que el apagado funcione).
 
-### 4.2 Sumergir y teñir (carga del nivel)
+### 4.2 Llenar y teñir (carga del nivel)
 
-Secuencia (research/06 §2 [E], recortada a la dirección 18):
+**D-010** (idea del dueño del 2026-10-08; sustituye a «Sumergir y teñir»): el río del fondo llena las cuias y se ve cómo; después, una tropa de miquitos de la especie de ese tramo del río deja caer sobre cada racha la fruta de su tinte, y el agua florece en su color. La especie cambia con el progreso (07 §6.4); la duración, no. El detalle fotograma a fotograma, la geometría, el planificador y las pruebas de aceptación están en el guion aprobado (`docs/research/intro-rio-miquitos/guion.md` §6-§8 y §16); manda este capítulo.
 
-| Fase | Niveles 1-20 | Desde 21 | Qué pasa |
+Secuencia (research/06 §2 [E], recortada a la dirección 18). Las fases son **cortes** del canon: los tiempos no cambian con D-010, cambia lo que se ve. Los tramos de agua se solapan; el calendario exacto lo calcula el planificador y se escala por T / 1.400 o T / 800 si Remote Config cambia la duración:
+
+| Fase | Niveles 1-20 | Desde el 21 y en todos los reintentos | Qué pasa |
 |---|---|---|---|
-| a | 0,30 s | 0,15 s | Las cuias vacías bajan desde arriba hasta la banda de río del fondo |
-| b | 0,40 s | 0,25 s | Se sumergen: ondas concéntricas, salpicadura; entran llenas del agua base del mundo (negra #4A2C14 / blanca #B08A5A / clara #2E8B8B, research/07 §2 [E]) |
-| c | 0,25 s | 0,15 s | Emergen a su ranura |
-| d | 0,10 s por franja, solapado (máx. 0,45 s) | 0,25 s total | Un icono de fruta vuela a cada franja y la tiñe de abajo arriba (interpolación OKLab, research/06 §2 [E]) |
-| Total | 1,2-1,5 s | 0,8 s | Un toque en cualquier punto desde el primer fotograma salta al estado final (0 ms); el input de juego se habilita en ese mismo fotograma |
+| a | 0,30 s | 0,15 s | Las cuias están **vacías y secas en su ranura** desde el fotograma 0: no caen. **El río crece**: la franja de río visible se aclara y sus destellos se deslizan hacia el panel; en los primeros 100 ms es lo único que se mueve. Sin cresta ni frente que avance por el río (se leería como la Pororoca, comodín Barajar). El agua **desborda** el canto superior del panel |
+| b | 0,40 s | 0,25 s | El agua corre por la madera del marco y de las repisas y, sobre cada cuia no vacía, cae **un chorrito** desde la madera de encima (el marco para la fila 1; la repisa de arriba para las demás). La cuia se llena desde el fondo **solo hasta sus dosis**, con el agua base del mundo (negra #4A2C14 / blanca #B08A5A / clara #2E8B8B, research/07 §2 [E]), con la gramática del vertido (D-006). El chorrito se abre ≤ 30 ms después de que el agua pase sobre el eje de la cuia y el llenado empieza ≤ 50 ms después del contacto. **Las cuias vacías no reciben agua y quedan secas.** Todo el llenado termina antes de t = 0,70 / 0,40 s |
+| c | 0,25 s | 0,15 s | Los chorritos se cortan y la madera se escurre hacia las esquinas inferiores del panel (nunca una ola que retrocede de lado: es el icono de Marea). En la versión larga, la tropa entra por su rama cuando la fila 1 está llena; en la corta ya está posada desde t = 0 |
+| d | 0,10 s por racha, solapado (máx. 0,45 s) | 0,25 s total | **Una fruta por racha visible** (tramo de dosis visibles del mismo tinte en una cuia; como mucho 24) cae de la mano de un miquito o, en modo dosel, del follaje por detrás del HUD. Con más de 24 rachas, una fruta por cuia no vacía: la de su racha de arriba, y la cuia florece **de abajo arriba** en cascada, 25 ms entre rachas. Al tocar el agua, la racha florece en 0,10 s (interpolación OKLab desde el agua del río, research/06 §2 [E]) con un anillo sobre la superficie. **Orden:** filas de arriba abajo; dentro de la fila, por pasadas; **dentro de la cuia, de abajo arriba**. La última floración termina exactamente en T |
+| Total | 1,2-1,5 s (1,4 s) | 0,8 s | Un toque en cualquier punto desde el primer fotograma salta al estado final (0 ms); el input de juego se habilita en ese mismo fotograma |
 
 Reglas: el nivel está parseado y las texturas residentes antes de la fase a (dirección 18); el nivel N+1 se precarga mientras se juega N; cada salto se registra con `af_anim_skipped` (`anim` = `tint`; taxonomía del cap. 08 §8.2, con `level` entre los parámetros comunes); si la tasa de salto supera el 40 % en un tramo (`anim_tint_skip_alarm_pct`), `anim_tint_duration_ms_early` / `anim_tint_duration_ms_late` se baja por Remote Config (cap. 08 §9) (research/06 §2 [E]: satisfacción del 70 % a ~1,6 s y 50 % a ~2,7 s [V]).
+
+Reglas de D-010:
+- **Qué cae:** siempre la fruta del tinte, con la forma de la familia de su icono de accesibilidad (07 §3 y §5.1), nunca una semilla ámbar ovalada ni un grano de cacao suelto (icono de Semillas, glosario §2.1).
+- **Modo de posadero**, fijado al arrancar, nunca a mitad de la intro:
+  - **rama**: la especie del tramo (07 §6.4) en primer intento, con franja libre entre el HUD y el panel de 44 dp o más y con el arte de la especie;
+  - **dosel**: en los demás casos (3 filas o pantallas de 640 dp sin franja, reintentos, mundo 13 y especie sin arte final en un build de release). Sin tropa: el follaje de las esquinas superiores se sacude y cada fruta cae desde detrás del HUD sobre su columna. **Nunca se usa la especie de otro mundo.**
+- **Aguas turbias:** las dosis ocultas no reciben fruta ni nota; en el fotograma del primer impacto, todas pasan a la vez a pardo opaco con «?» (07 §4.3). El calendario de la intro no depende del color real de ninguna oculta.
+- **Salto:** el modelo y la vista quedan en el estado final en el fotograma del toque; los restos cosméticos (frutas, chorritos, agua de la madera, tropa) se funden en ≤ 100 ms en su sitio, sin moverse y sin capturar toques. El toque que salta no selecciona ninguna cuia.
+- **D-002:** ningún miquito mira, señala ni reacciona a una cuia, a una selección o a un vertido; nada de la intro depende de la legalidad. Tras T, la tropa sale en 0,3 s hacia la esquina más cercana, de espaldas al tablero.
+- **Después de la intro**, como mucho una tarjeta por nivel, con prioridad: dedo guía del tutorial → «Fruta nueva» → «¡Miquito a la vista!» [P] (07 §6.4). Ninguna alarga la carga.
+- **Reducir movimiento:** fundido de 0,25 s, sin río, chorritos ni frutas (07 §5.1).
 
 ## 5. HUD y layout de la pantalla de nivel
 
@@ -464,7 +477,7 @@ Sesión objetivo 10-14 min [P] para los niveles 1-10 (research/05 proponía 8-10
 
 | Caso | Comportamiento |
 |---|---|
-| Toque durante Sumergir y teñir | Salta al estado final en 0 ms; el toque **no** se interpreta como selección |
+| Toque durante Llenar y teñir | Salta al estado final en 0 ms; el toque **no** se interpreta como selección |
 | Toque durante la celebración | Pasa a la pantalla de victoria; sin pérdida de recompensa |
 | App a segundo plano a medio vertido | El modelo ya estaba actualizado y persistido; al volver, la vista salta al modelo sin animar; la selección se limpia |
 | App cerrada o muerta a medio nivel | Al abrir: LOADING del mismo nivel desde el estado guardado (cuias, movimientos, stock de Marea, cuias añadidas, revelados, contadores); sin intro; si estaba en STUCK_MODAL, GIVE_UP_CONFIRM o LEVEL_FAILED se reabre esa pantalla (sin cobrar canoa por el cierre). Así cerrar la app no es una salida gratis del embudo de D-008 |
@@ -534,5 +547,5 @@ Numeración canónica de capítulos según el glosario (§Dependencias): 00 Glos
 | 05 Economía y monetización | Ubicación de Cosecha doble (≥11), AD_GATE tras toque en Siguiente (≥22), hoja "sin saldo" del modal, Balsa de rescate; Mercado desde la victoria del 10 y Mochila de inicio en la primera victoria con nivel ≥ 12 en una sesión ≥ 2 (sección 13) | `rescue_price_bands` = `[[31,600]]` (600 fijo, sin tramos ni cohortes geográficas), escalera de la Crecida (§2.4), cadencia de intersticiales (§6), precios locales y de comodines |
 | 06 Meta, retención y live-ops | Barras de Crecida/Reto del río/Canasta en victoria; distinción fallo duro / blando (canoas, Crecida, Hoja escudo; canon cap. 04 §5.2, referenciado en la sección 2); tarjeta Aguas turbias · Bonus (1.1); banner de mundo; tabla 1-12 de la sección 13 (06 §2.2 copia sin alterar sus columnas de cuias, colores, vacíos, par y tiempo, con el Reto del río tras la victoria del 7 y sin pre-prompt de push en la del 10); barra de la Crecida vertical en el borde derecho (sección 5, posición de 07 §7.4) | Reglas de Canoas, Crecida, Bitácora, Dato del río, pre-prompt de push (2.ª sesión, §8.1) |
 | 07 Arte, temática y audio | Duraciones y curvas de la sección 4; tapa de calabaza; iconografía de M1-M7; Capi en orilla, Rosa en banner; confeti de guacamayo; maracá y toada; requisitos de accesibilidad de la sección 12 (lector de pantalla, fuente 130 %, interruptor de pista); Cuia alta de 6 solo en hitos desde el 141 | Orden canónico de la bandeja de comodines y posición de la barra de la Crecida, vertical en el borde derecho (§7.4, copiados en la sección 5); alturas de las variantes de cuia (§4.5); opacidad del patrón 20 % / 35 % en Alto contraste (§3); hojas de estilo, sprites, bancos de sonido |
-| 08 Arquitectura técnica y publicación | Shader de líquido (arrays de colores/alturas, inclinación, onda), persistencia tras cada vertido, precarga N+1, presupuesto del solver en cliente (≤24 realidades en turbio), comportamiento de las claves de Remote Config que este capítulo usa; §13: sin azar en ninguna mecánica ni modal (Canasta visible, sin ruleta), textos del tutorial sin términos prohibidos; §14.2: suite "Accesibilidad: TalkBack recorre el tablero; fuente 130 % sin desbordes" | Tabla única de Remote Config (§9); esquema de nivel `af-level/1` (§4.1, ejemplo canónico del nivel 43) y `schemas/af-level-1.schema.json`; taxonomía de analítica (§8.2: el salto de Sumergir y teñir es `af_anim_skipped`); 700 niveles instalados (≥600 jugables; §6.2); implementación de Addressables, Play Asset Delivery, Firebase; revisión legal de textos |
+| 08 Arquitectura técnica y publicación | Shader de líquido (arrays de colores/alturas, inclinación, onda), persistencia tras cada vertido, precarga N+1, presupuesto del solver en cliente (≤24 realidades en turbio), comportamiento de las claves de Remote Config que este capítulo usa; §13: sin azar en ninguna mecánica ni modal (Canasta visible, sin ruleta), textos del tutorial sin términos prohibidos; §14.2: suite "Accesibilidad: TalkBack recorre el tablero; fuente 130 % sin desbordes" | Tabla única de Remote Config (§9); esquema de nivel `af-level/1` (§4.1, ejemplo canónico del nivel 43) y `schemas/af-level-1.schema.json`; taxonomía de analítica (§8.2: el salto de Llenar y teñir es `af_anim_skipped`); 700 niveles instalados (≥600 jugables; §6.2); implementación de Addressables, Play Asset Delivery, Firebase; revisión legal de textos |
 | 09 Roadmap, equipo, KPIs y riesgos | Debuts de mecánicas de 9.1 para el plan de contenido (§1.1); niveles 1-12 construidos a mano en la Fase 1 | Fechas de entrega de mecánicas por versión |

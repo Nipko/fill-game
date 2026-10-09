@@ -36,7 +36,7 @@ Lectura que ordena este capítulo: D1 depende del núcleo y de la primera sesió
 
 | Min (acum.) | Nivel | Colores (debut) | Vacíos | Cuias | Par [P] | Fallo bot ×40 [P] | Qué aprende | Qué ve / qué se desbloquea | Semillas acumuladas |
 |---|---|---|---|---|---|---|---|---|---|
-| 0:00-0:25 | — | — | — | — | — | — | — | Splash de 1 pantalla (río + logotipo), pantalla de edad neutral + consentimiento (regla 3), carga del nivel 1 con Sumergir y teñir (1,2-1,5 s, saltable; dirección 18) | 0 |
+| 0:00-0:25 | — | — | — | — | — | — | — | Splash de 1 pantalla (río + logotipo), pantalla de edad neutral + consentimiento (regla 3), carga del nivel 1 con Llenar y teñir (1,2-1,5 s, saltable; dirección 18) | 0 |
 | 0:25-0:55 | 1 | 2 (açaí, aguaje) | 1* | 3 | 3 | 0 % | Tap origen → tap destino; una cuia completa se sella (tapa de calabaza, maracá, háptico); "termina la cuia casi llena antes de apartar" | Dedo guía en los dos primeros toques; HUD solo con "Nivel 1"; Marea ya está en la barra, sin contador; al ganar aparece el contador de semillas con +20 | 20 |
 | 0:55-1:40 | 2 | 3 (+taperebá) | 2 | 5 | 4-6 | 0-5 % | Vertido parcial con dedo guía (una racha de 3 sobre un hueco de 2; D-005); dos vacíos por primera vez: "reserva uno". Lección y par: 02 §13 | Tarjeta "Fruta nueva: Taperebá" (2 s, icono + patrón); confeti de guacamayo | 40 |
 | 1:40-2:40 | 3 | 3 | 2 | 5 | 5-7 | 5-10 % | Deshacer | Tutorial de **Marea** la primera vez que un vertido aleja de la solución (distancia del solver +2) o al inicio del nivel 5 si no ocurrió; tooltip "Marea · Deshacer" y contador oculto "∞" (Marea ilimitada hasta el nivel 10, `undo_unlimited_until_level` = 10, 04 §2.1; desde el 11, 3 gratis por nivel con contador "3/3") | 60 |

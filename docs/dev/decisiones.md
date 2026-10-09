@@ -13,6 +13,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-005 | 2026-10-08 | Vertido por tramo, como Magic Sort | Decidida por el dueño; en implementación (C1, L1, U1, D1-D6) |
 | D-006 | 2026-10-08 | Tablero, cuia y vertido como Magic Sort | Decidida por el dueño; en implementación (U2-U6, D1-D6). Pendiente: P12 (ranura de 42 dp en 16:9 con cuias añadidas) |
 | D-008 | 2026-10-08 | Bucle de partida como Magic Sort | Decidida por el dueño. Documentación aplicada el 2026-10-08 en `117f4be` (capítulos de «Archivos afectados»), dentro de la rama de código: **pendiente de la aprobación explícita del dueño antes de fusionar** o de un PR de documentación aparte (cambia el contrato 7). En implementación: pista B (B1-1-B1-6 y B2-1-B2-6). Los textos nuevos y los puntos [P] están pendientes (P14-P16, no bloquean). Abierta: P17, cuándo sale «Canoas infinitas 1 h» en Sin canoas (04 §7.3 y 05 §4.1 se contradicen). El número D-007 queda reservado para las mecánicas especiales, en pausa |
+| D-010 | 2026-10-08 | «Llenar y teñir»: el río llena las cuias y los miquitos las tiñen con fruta | Decidida por el dueño (idea y ampliación del 2026-10-08); guion `docs/research/intro-rio-miquitos/guion.md` aprobado para implementar. Implementada en la rama `intro-rio-miquitos` (`fbdf11e`, `e479cf0` y `8955ef3`), sin fusionar. Documentación aplicada el 2026-10-09 en la misma rama. Pendientes, sin bloquear: confirmar Q1-Q16 del guion (el código aplica sus recomendaciones salvo Q11 y Q14), Q17, toda la fauna con el asesor cultural, el arte del artista y las preguntas abiertas de la propuesta de fauna (F7, F9-F11 y F13). Los números D-007 y D-009 los usa la pista de mecánicas y niveles (rama `fase1-mecanicas-niveles`), sin entrada aún en este registro |
 
 ---
 
@@ -880,3 +881,204 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 | P15 | ¿Se mantiene Marea como primera opción del modal (02 R15; 04 §6.2), aunque Magic Sort no la tenga? | Sí |
 | P16 | Desde el 31, ¿salir del nivel cuesta una canoa también con 0 vertidos, como Magic Sort (t = 5)? | Sí |
 | P17 | ¿Cuándo sale «Canoas infinitas 1 h» (`af_infinite_canoes_1h`, 1,99) en Sin canoas? El GDD se contradice. **A:** siempre, detrás de esperar, el video y las semillas, y sin cuenta atrás: así lo dibuja 04 §7.3, la listan sin condición 02 §2, 06 §4.7 y el paso 4 de esta decisión, y así lo hace ya `NoCanoesScreen`. **B:** solo al quedarse sin canoas tras rechazar la Canoa extra dos veces en el día, con 1 impresión contextual al día que caduca a los 10 min: así lo dicen 05 §4.1 y §5; habría que definir qué cuenta como «rechazar» y cambiar el código. En los dos casos sigue en el Mercado | A [P]: es lo que dicen los demás capítulos y lo que hace el código, y la caducidad de 10 min de 05 §5 choca con «Sin cuenta atrás de oferta» de 04 §7.3. En contra: Magic Sort no vende vidas ilimitadas en «More Lives» (ficha §4.5). Con A se corrigen 05 §4.1 y §5; con B, 04 §7.3, 02 §2, 06 §4.7, este paso 4 y el código. Se alinea en el lote Dc4; hasta la respuesta, el código no se toca |
+
+---
+
+## D-010 · «Llenar y teñir»: el río llena las cuias y los miquitos las tiñen con fruta
+
+- **Fecha:** 2026-10-08 (idea del dueño y su ampliación, y guion de la intro del mismo día). Registrada el 2026-10-09.
+- **Estado:** decidida por el dueño, con el guion `docs/research/intro-rio-miquitos/guion.md` aprobado para implementar. Implementada en la rama `intro-rio-miquitos` (`fbdf11e`, con las revisiones `e479cf0` y `8955ef3`), **sin fusionar en `main`**.
+  - Las 16 preguntas del guion (§18) no tienen respuesta explícita una a una. La implementación aplica la recomendación de cada una, salvo Q11 y Q14. Aquí quedan como **recomendación aplicada, pendiente de confirmación** (tabla del final): no bloquean y el registro no elige por el dueño (CLAUDE.md, regla 10).
+  - **Toda la fauna, los nombres comunes, los datos de las tarjetas y la palabra «miquitos» (y su traducción) quedan pendientes de revisión del asesor cultural** (07 §8.2).
+  - La propuesta de fauna (`docs/research/fauna/propuesta-fauna.md`) queda como **material de apoyo**, no canon, con sus preguntas abiertas (F1-F14; estado al final). Donde choca con el guion, manda el guion (punto 7).
+  - Numeración: D-007 (mecánicas, debuts) y D-009 (dificultad escalonada) son de la pista de mecánicas y niveles (rama `fase1-mecanicas-niveles`, `tools/level-generator/README.md`), que todavía no ha traído sus entradas a este registro. El código de esta rama cita la intro como «pendiente de D-009» (`IntroAnimation.cs`, `MonkeyRig.cs`, `TroopLayer.cs` y `SightingCard.cs`): debe decir D-010.
+- **Sustituye:**
+  - «Sumergir y teñir» (02 §4.2, 07 §5.1, 08 §5.3 y glosario §6.4): la caída de las cuias (fase a), el agua de inmersión por fila (guía visual v2, 6.11) y «un icono de fruta por dosis desde fuera de pantalla»;
+  - la contradicción del orden del teñido (02 §4.2: «de abajo arriba»; 07 §5.1: «la de arriba primero»; el código teñía de arriba abajo): dentro de la cuia, de abajo arriba;
+  - en Aguas turbias, «la dosis oculta recibe una gota parda y el ?» (07 §5.1);
+  - `sfx_submerge` y `sfx_emerge` (07 §9.2).
+- **No sustituye:**
+  - la dirección 18 y sus claves de 08 §9 (`anim_tint_duration_ms_early` 1.400, `anim_tint_duration_ms_late` 800, `anim_tint_fast_from_level` 21, `anim_tint_skippable`, `anim_tint_skip_alarm_pct` 0,40): **sin claves, defaults ni tiempos nuevos**;
+  - las fases a-d como cortes (300 + 400 + 250 + 450 ms y 150 + 250 + 150 + 250 ms);
+  - el nivel en memoria antes de animar, el salto al primer toque y `af_anim_skipped` con `anim = tint`;
+  - el fundido de 0,25 s con Reducir movimiento y el banner de mundo antes de la intro;
+  - D-002: ningún miquito mira, señala ni reacciona a una cuia.
+
+**Contexto.**
+- **Idea del dueño (2026-10-08), literal:** «Quiero que plasmemos una idea única. El río Amazonas llena los recipientes: debemos hacerlo más visual, que se entienda mejor que eso pasa; y para poder pintar o revelar los colores, que unos miquitos tiren unas semillas de diferentes frutas autóctonas del Amazonas y los pinten de ese color; que sea muy visual y rápido. Investiguemos sobre ello y hagámoslo muy bien logrado.»
+- **Ampliación del mismo día, literal:** «Podemos, a medida que suba de niveles, que diferentes miquitos de especies vayan apareciendo. Podemos explorar fuertemente la fauna del Amazonas para tener algunas cosas visuales bonitas y que hagan algo también.»
+- **Lo que había:** «Sumergir y teñir», implementado en `IntroAnimation.cs` con `ImmersionWater.cs` (capturas `01_intro_l7` y `01b_intro_tint_l7`). El agua de inmersión nacía en la cara de la repisa sin un camino visible desde el río, así que no se entendía que el río llena, y la fruta caía «desde fuera de pantalla».
+- **Método del dueño** (D-005): copiar lo que funciona y darle nuestra temática, aquí con base real, investigada y respetuosa.
+- **Material:**
+  - el guion (síntesis de dos guiones evaluados por jueces, con fuentes [V] y [E] en su §21);
+  - la propuesta de fauna (elenco, 18 animales «que hacen cosas» y página Fauna del Cuaderno de campo);
+  - `docs/research/cultura-ribera/investigacion.md` (pulso de inundación, F6).
+
+**Decisión.**
+1. **Nombre: «Llenar y teñir»** (EN «Fill & Tint» [P]; PT-BR «Encher e tingir» [P], con el asesor).
+   - Sustituye a «Sumergir y teñir» en el glosario §6.4 y en todos los capítulos, y conserva el verbo de la marca (Tintalú, el tinte que colorea el agua).
+   - Código: la clase `IntroAnimation` se mantiene; se añaden el planificador puro `IntroChoreography`, el catálogo `FaunaCatalog` y su resolución `IntroCast`. La analítica no cambia.
+2. **El río llena, y se ve** (guion §6; canon en 02 §4.2 y 07 §5.1).
+   - Las cuias están vacías y secas en su ranura desde el fotograma 0: no caen.
+   - El río del fondo crece: se aclara y sus destellos se deslizan hacia el panel, sin cresta ni frente que avance (eso sería la Pororoca, comodín Barajar).
+   - Desborda el canto superior del panel y corre por la madera del marco y de las repisas.
+   - Un chorrito por cuia no vacía, desde la madera de encima, llena la cuia desde el fondo **solo hasta sus dosis**, con la gramática del vertido (D-006). Las vacías quedan secas.
+   - Causalidad: el chorrito se abre ≤ 30 ms después de que el agua pase sobre el eje de la cuia, y el llenado empieza ≤ 50 ms después del contacto. Todo lleno antes de 700 / 400 ms.
+   - El vaciado es vertical, nunca una ola lateral (icono de Marea).
+3. **La fruta tiñe** (guion §5 y §7).
+   - **Una fruta por racha visible**, como mucho 24. Con más rachas, una por cuia no vacía y la cuia florece de abajo arriba en cascada (25 ms entre rachas).
+   - **Fruta, no semilla:** la semilla ámbar ovalada es el icono de la moneda (glosario §2.1). La forma en vuelo es de la familia del icono de accesibilidad del tinte (07 §3). Casos especiales: el achiote suelta semillitas rojas y angulosas; el Agua del Río Negro es una hoja seca que se hunde; el Agua del Tapajós, 3 gotas de una hoja sacudida. Nunca un grano de cacao suelto. Tabla por tinte en 07 §5.1.
+   - Al tocar el agua, anillo en la superficie y floración OKLab de 100 ms desde el agua del río, igual para todos los tintes.
+   - **Orden:** filas de arriba abajo; dentro de la fila, por pasadas; **dentro de la cuia, de abajo arriba** (Q4). La última floración termina exactamente en T.
+   - **Aguas turbias:** las ocultas no reciben fruta ni nota y su «?» aparece en todas a la vez con el primer impacto. El calendario no depende del color real de una oculta.
+4. **Los miquitos cambian de especie con el progreso** (ampliación del dueño; catálogo en 07 §6.4).
+   - **Las especies son datos:** catálogo `Assets/_Project/Data/Fauna/miquitos_v0.json` (formato `af-fauna/0`) con esqueleto (A-D), modelo de suelta (`fila`, `cuelga` o `sacude`), paleta, tropa, rasgo de reposo, tramo de niveles, nombres, dato de la tarjeta y ranuras de arte. El código no conoce ninguna especie, y cambiar o añadir una no toca código. Sin Remote Config.
+   - **Una especie por mundo, de géneros distintos**, porque los grandes ríos separan especies (Wallace 1852 [V]): mono ardilla (1-10), sagui plateado (11-40), sauim-de-coleira (41-80), churuco (81-140), huapo colorado (141-200), cotoncillo colorado (201-300), pichico emperador (301-420), maquisapa (421-700; recomendación de Q8), mono nocturno (701-820), saquí de cara blanca (821-920), mono ardilla de los Llanos como variante (921-960) y **sin miquitos en El origen** (961-1.000).
+   - **Nunca la especie de otro mundo.** Pasa a **modo dosel** (sin tropa: el follaje se sacude y la fruta cae por detrás del HUD) en estos casos:
+     - reintentos;
+     - mundo 13;
+     - sin franja libre de 44 dp entre el HUD y el panel (3 filas, pantallas de 640 dp);
+     - especie sin arte final en un build de release.
+   - La especie cambia **qué** se ve, nunca **cuánto** dura.
+   - Tres modelos de suelta en lugar de un gesto a medida por especie. La identidad va en la silueta y en el rasgo de reposo.
+5. **Tarjeta «¡Miquito a la vista!»** [P] (Q10).
+   - Pone nombre a la especie **después** de la intro, en el primer nivel libre desde su «tarjeta desde» (07 §6.4), solo en primer intento.
+   - Dura 2,5 s, no bloquea el toque y no tapa cuias ni botones. Una tarjeta por nivel, con prioridad tutorial → Fruta nueva → miquito.
+   - Lenguaje de avistamiento: «a la vista», nunca «nuevo», «tu mono» ni «adoptar». Sin confeti.
+   - Clave `fauna_sighted_card` (glosario §10).
+6. **Representación: reglas duras** (guion §4.6; 07 §6.4).
+   - Siempre libres, en su árbol y sin personas. Sin rasgos humanos ni pintura corporal.
+   - No son guías: no hablan, no presentan el banner y no dan consejos.
+   - No cruzan el río.
+   - Las especies amenazadas hacen el mismo gesto neutro que las demás y nunca son premio.
+   - La máscara del mono ardilla no se lee como calavera. Nombres vetados.
+7. **Fauna fuera de la intro: no se decide aquí.**
+   - La propuesta de fauna queda como material de apoyo con sus preguntas abiertas:
+     - 18 animales «que hacen cosas»: ambiente con microinteracciones, celebraciones y presentación de mecánicas;
+     - la página Fauna del Cuaderno de campo;
+     - el puente en el Mapa del río.
+   - **Donde choca con el guion, manda el guion:**
+     - «¡Miquito a la vista!» en lugar de «¡Nuevo miquito!»;
+     - modo dosel en lugar de la especie del mundo anterior cuando falta el arte;
+     - sin lianas laterales con 3 filas (rompían la distancia de 8 dp a las cuias);
+     - el avistamiento se registraría al mostrar la tarjeta, no al hacer la intro;
+     - tres modelos de suelta en lugar de nueve gestos;
+     - el maquisapa en lugar del fraile en los mundos 8-9 (Q8).
+
+**Consecuencias.**
+- **Tiempos y Remote Config:** sin cambios (contrato 13). Si Remote Config cambia T (1.200-1.500 o 600-1.000 ms), todo el calendario se escala por T / 1.400 o T / 800. La versión larga o corta la decide la clave, no T.
+- **Código** (ya en la rama; lista en «Archivos afectados»):
+  - un planificador puro y determinista calcula el calendario una vez, en arrays preasignados (0 B por fotograma);
+  - todas las capas de la intro van en Canvas anidados propios con `raycastTarget = false`;
+  - se borra `ImmersionWater.cs`;
+  - la escena se regenera con `GameSceneBuilder.CreateGameScene`.
+- **Arte** (guion §12; 07 §6.4):
+  - el artista dibuja las piezas por especie sobre 4 esqueletos (Q16), además de los retratos, 14 frutas, la rama y la liana;
+  - coste: unos 30 días para las especies 1-5 [E], con prioridad para el mono ardilla;
+  - mientras no haya PNG, miquito procedural solo en builds de desarrollo. El vídeo de la tienda y el soft launch no se graban con provisionales.
+  - Las plantillas por esqueleto que deben preparar los agentes en `docs/art/` no existen todavía.
+- **Audio:** `sfx_river_rise`, `sfx_fill` y `sfx_fruit_plip` [P] sustituyen a `sfx_submerge` y `sfx_emerge` (07 §9.2). Hoy no hay audio en el código; lo encarga el dueño (07 §9.5).
+- **Analítica:** sin cambios en 08 §8.2. `af_fauna_sighted` queda reservado y **no se emite** hasta Q11, que exige la aprobación del dueño, una migración del perfil (`ProfileMigrations`) y la entrada en 08 §8.2.
+- **Accesibilidad:** el ajuste Reducir movimiento todavía no existe en el perfil. La ruta ya está en el código: `LevelFlow.ReduceMotion` y `GameConfig.ReducedMotionIntroMs` = 250, que no es una clave de 08 §9.
+- **Riesgos** (guion §15):
+  - densidad de la versión larga (R1);
+  - con 3 filas no se ve el río (R3);
+  - repetición en tramos largos (R5), que mitiga la variación determinista por nivel;
+  - representación (R8);
+  - arte sin encargar (R9);
+  - rendimiento en clase A sin dispositivo para medir (R11).
+  - La prueba de pasillo con cinco personas (A11) sigue pendiente. Si falla con 3 filas, el respaldo es la cortina de agua (guion §6.3).
+
+**Alternativas descartadas** (guion §0.2 y §18).
+- Mantener «Sumergir y teñir»: ya no describe lo que pasa y no se ve que el río llena.
+- «Río y fruta» como nombre: rompe el par de verbos.
+- Inundación por fila desde los lados: no puede llenar una cuia cuya boca queda por encima.
+- La cortina desde arriba como camino principal: queda de respaldo con 3 filas.
+- Un frente que avanza por el río: se lee como la Pororoca.
+- Una fruta por dosis: hasta 64 en 250 ms con 16 cuias.
+- Semillas en lugar de fruta: chocan con el icono de la moneda.
+- Solo monos ardilla con otra paleta: el jugador no nota el cambio.
+- Nueve gestos a medida: no se perciben en 150 ms.
+- La especie del mundo anterior cuando falta el arte: contradice la barrera de los ríos.
+- «¡Nuevo miquito!»: suena a adquisición, y el elenco tiene especies amenazadas (sauim CR; churuco y huapo VU; maquisapa EN).
+- Lianas laterales con 3 filas.
+- Una versión de estreno de 1,8 s en el nivel 1: exigiría una clave nueva (Q12).
+
+**Cómo revertir.**
+- Revertir `fbdf11e`, `e479cf0` y `8955ef3` y el commit de documentación de esta entrada:
+  - `ImmersionWater.cs` y la intro anterior de `IntroAnimation.cs` vuelven de `b137533`;
+  - la escena se regenera con `GameSceneBuilder.CreateGameScene`;
+  - el texto de 02 §4.2, 07 §5.1 y §9.2, 08 §5.3, el glosario y la guía visual vuelve a su versión anterior.
+- Quitar solo la tropa y dejar el río y la fruta (modo dosel siempre; fase 2 del guion, §19) **no tiene interruptor hoy**: exige un cambio de código.
+- Siempre con una decisión nueva que sustituya a D-010.
+
+**Archivos afectados.**
+- **Código, datos y tests** (rama `intro-rio-miquitos`, `fbdf11e`, `e479cf0` y `8955ef3`):
+  - `Assets/_Project/Data/Fauna/miquitos_v0.json`;
+  - `Assets/_Project/Scripts/GameFlow/{GameConfig.cs, LevelFlow.cs, SightingRule.cs}`;
+  - `Assets/_Project/Scripts/Levels/{FaunaCatalog.cs, FaunaCatalogReader.cs, WorldTable.cs}`;
+  - `Assets/_Project/Scripts/Presentation/{IntroAnimation.cs, IntroChoreography.cs, WaterStripGraphic.cs, BezierStripGraphic.cs, TroopLayer.cs, MonkeyRig.cs, ProceduralArt.Fauna.cs, ProceduralArt.Fruit.cs, GraphicPool.cs, ShaderClock.cs, AmbientLayer.cs, ArtSlots.cs, CuiaView.cs, LiquidGraphic.cs, ProceduralArt.cs}` (se borra `ImmersionWater.cs`);
+  - `Assets/_Project/Scripts/UI/{GameScreen.cs, SightingCard.cs, UiText.cs, GameBootstrap.cs, LaunchOptions.cs, DevProbe.cs, Editor/GameSceneBuilder.cs}`;
+  - `Assets/_Project/Shaders/Resources/{AF_UI_Liquid.shader, AF_UI_Stream.shader}`;
+  - `Assets/_Project/Editor/CI/GeneratedArt.cs` y `Assets/_Project/Art/Generated/README.md`;
+  - la escena `Assets/_Project/Scenes/Game.unity`, regenerada;
+  - tests EditMode (`FaunaCatalogTests`, `IntroArtTests`, `IntroChoreographyTests`, `SightingRuleTests`, `ArtExportTests`) y PlayMode (`IntroTests`, `VisualSnapshotTests`, `PlayModeHelpers`).
+- **Documentación** (aplicada el 2026-10-09 en la misma rama):
+  - 02: cabecera, §2 (el estado `INTRO(llenar_y_tenir)`) y §4.2;
+  - 07: cabecera, §2.2 (regla 5), §5.1, §6.3, §6.4 (nueva), §9.2, «Desviaciones» (3) y «Preguntas abiertas» 11;
+  - 00: cabecera, §1.2, §3.3, §5.3 (alias), §6.4, §10 (`fauna_sighted_card`) y §11 (fauna);
+  - 08: cabecera, §5.3 y el nombre en la columna «Uso» de §9, sin claves nuevas;
+  - GDD.md §2 (decisión 22);
+  - la guía visual v2 (revisión 5, tabla de capas, exclusión del panel, 6.11 y C9);
+  - este registro;
+  - solo el nombre en 01, 06, 09 y en el resto de GDD.md, 02, 07 y 08; en 04 §2.7, el nombre y una nota que remite a Q17.
+  - Los históricos y el material de apoyo no se tocan: `docs/research/`, `docs/reviews/` y `docs/dev/prototipo-v0.md`.
+- **Pendientes de documentación** (necesitan una respuesta del dueño o del asesor):
+  - 06 §4.6 y el glosario §3.3: la página Fauna del Cuaderno de campo con los miquitos (F7);
+  - 08 §8.2: `af_fauna_sighted` (Q11);
+  - 07 §11: los días de arte de los miquitos y las frutas;
+  - 07 §2.2: la columna «Fauna de ambiente» con la especie y los animales de ambiente de cada mundo (F9);
+  - 07 §6.2: si Rosa salta o solo asoma (F11);
+  - 04 §2.7 y el glosario §3.3: el hoatzin del mundo 11 (Q17);
+  - la línea de decisiones de `CLAUDE.md`;
+  - los comentarios «pendiente de D-009» del código.
+
+**Preguntas para el dueño.** No bloquean la rama. Q1-Q16 son las del guion (§18), con su numeración; Q17 la añade este registro.
+
+| # | Pregunta | Recomendación | Estado en el código | Bloquea |
+|---|---|---|---|---|
+| Q1 | Nombre de la animación | «Llenar y teñir» | Aplicada (y en el GDD) | — |
+| Q2 | Cómo entra el agua | El río crece, desborda, corre por la madera y cae un chorrito en cada cuia | Aplicada | — |
+| Q3 | ¿Se quita la caída de las cuias? | Sí | Aplicada | — |
+| Q4 | Orden del teñido dentro de la cuia | De abajo arriba, con las filas de arriba abajo | Aplicada (02, 07 y 08 alineados) | — |
+| Q5 | ¿Una fruta por racha o por dosis? | Por racha, como mucho 24; si no, una por cuia con cascada | Aplicada | — |
+| Q6 | ¿Qué sueltan los miquitos? | La fruta del tinte; hoja en el Río Negro; gotas en el Tapajós; semillitas rojas solo en el achiote | Aplicada | — |
+| Q7 | ¿Qué miquitos van apareciendo? | Géneros distintos por mundo (07 §6.4) | Aplicada | Encargo de arte |
+| Q8 | Especie de los mundos 8-9 (421-700) | Maquisapa (*Ateles chamek*, EN), tras confirmar su presencia en el Madidi y su nombre por país. Alternativa: fraile (*Saimiri boliviensis*), del mismo género que el mono del nivel 1 | Aplicada (maquisapa en el catálogo) | No bloquea la 1.0 si Q9 es A |
+| Q9 | ¿Cuántas especies en la 1.0, y qué pasa sin arte? | Las especies 1-5. Un mundo sin arte final va en modo dosel, nunca con la especie de otro | Aplicada la regla del modo dosel; las especies de la 1.0 dependen del encargo | Encargo al artista (unos 30 días [E]) |
+| Q10 | Texto de la tarjeta | «¡Miquito a la vista!» | Aplicada | Texto final con el asesor |
+| Q11 | ¿Cuándo se registra el avistamiento? | `af_fauna_sighted` al mostrar la tarjeta, desde la 1.0 | **No aplicada**: la tarjeta sale, pero no se guarda ni se emite nada. Exige tu aprobación del evento (08 §8.2) y una migración del perfil, en un PR aparte | Cuaderno de campo (1.1) y el puente en el Mapa del río |
+| Q12 | Duración del nivel 1 | 1.400 ms como el resto de 1-20; medir primero. Solo si la prueba de cinco personas lo pide, una versión de estreno de 1.800 ms con una clave nueva | Aplicada (1.400 ms) | — |
+| Q13 | Reducir movimiento con especie | El miquito aparece quieto durante el fundido y 600 ms más | Aplicada en la ruta (el ajuste aún no existe) | — |
+| Q14 | Agua negra (mundos 3 y 10) | Ámbar-té translúcido que mantenga los 29 puntos de L* frente al tinte 14, tras una captura de prueba | **No aplicada**: el preset sigue en #4A2C14 al 70 % | Antes del mundo 3 (nivel 41) |
+| Q15 | Estilizaciones de color y forma (bacaba rosa, guanábana, lulo, icono bol del açaí) | Mantener el canon como estilización, sin Datos del río que la afirmen; en vuelo, ramita de açaí. Revisar los tintes con el asesor para el Cuaderno | Aplicada | — |
+| Q16 | Técnica de animación de los miquitos | Rig recortable en uGUI: piezas sobre una plantilla por esqueleto y animación por código | Aplicada (rig procedural de 8 piezas) | Encargo al artista y plantillas en `docs/art/` |
+| Q17 | En el mundo 11, el hoatzin hace la animación de Volver a la orilla (glosario §3.3; 04 §2.7: «la animación la ejecuta el hoatzin»). ¿Solo vacía las cuias, o también suelta la fruta en la intro corta del reintento? | Solo el vaciado. La intro del reintento va en modo dosel, sin tropa, como en todos los mundos | Sin hoatzin en el código | Mundo 11 (nivel 821) |
+
+**Preguntas de la propuesta de fauna** (material de apoyo; sección f). Siguen abiertas las que el guion no resuelve:
+
+| # | Pregunta | Recomendación de la propuesta | Estado |
+|---|---|---|---|
+| F7 | ¿Se amplían el glosario §3.3 y 06 §4.6 con la página Fauna del Cuaderno de campo («Miquitos» y «Río y selva»)? | Sí, tras el asesor | Abierta (06 §4.6 sigue con 12 animales del elenco) |
+| F9 | ¿Microinteracciones al tocar la fauna del fondo (como mucho 2 animales por mundo, fuera del panel, sin dar nada económico)? | Sí, midiendo que no aumenten los toques erróneos en las cuias | Abierta |
+| F10 | ¿La fauna reacciona al sellar una cuia? | No: solo en la victoria y los hitos (prudencia con D-002) | Abierta |
+| F11 | ¿Quién salta en las celebraciones? | El tucuxi; Rosa asoma y exhala, como el boto real. Cambia 07 §6.2, con el asesor | Abierta |
+| F13 | ¿Algo nuevo a mitad de los mundos largos (6-11)? | Un segundo gesto de la misma especie en la 1.1 y, después, invitados opcionales | Abierta. La variación determinista por nivel ya alterna el lado de entrada, quién lidera y el reposo |
+
+Las demás preguntas de la propuesta quedan cubiertas por el guion:
+- F1 es Q7, y F2 es Q6.
+- F3 y F4: tarjeta tras la intro, en el siguiente nivel libre, de 2,5 s y sin bloquear.
+- F5: las especies amenazadas entran, con sus reglas. Pendiente de confirmación como Q7.
+- F6: sin miquitos en el mundo 13.
+- F8 es Q11, y F12 es Q9.
+- F14: el churuco en el mundo 4.

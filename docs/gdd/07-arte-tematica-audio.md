@@ -1,12 +1,12 @@
 # Dirección de arte, temática y audio
 
-**Proyecto:** Amazon Fill (nombre interno) · **Nombre comercial:** Tintalú (decisión del dueño del 2026-10-06; sustituye a Aquazonia, descartado por la solicitud idéntica INPI 938306200 en Brasil) · **Capítulo:** 07 del GDD · **Fecha:** 2026-10-06 (revisión cruzada; actualizado el 2026-10-07 con la decisión del dueño **D-004**: tope del ancho de la cuia según el número de cuias, §4.1, y vertido a 38° con el labio a 0,6-1,6 u del borde del destino, §5.2; actualizado el 2026-10-08 con **D-006**: cuia, vertido y tablero como Magic Sort, §3 (regla 4), §4.1-§4.5, §5.2 y §7.4, y con **D-008**: bucle de partida como Magic Sort, §5.5 y §7.5; registro en `docs/dev/decisiones.md`) · **Estado:** borrador para aprobación del dueño del producto.
+**Proyecto:** Amazon Fill (nombre interno) · **Nombre comercial:** Tintalú (decisión del dueño del 2026-10-06; sustituye a Aquazonia, descartado por la solicitud idéntica INPI 938306200 en Brasil) · **Capítulo:** 07 del GDD · **Fecha:** 2026-10-06 (revisión cruzada; actualizado el 2026-10-07 con la decisión del dueño **D-004**: tope del ancho de la cuia según el número de cuias, §4.1, y vertido a 38° con el labio a 0,6-1,6 u del borde del destino, §5.2; actualizado el 2026-10-08 con **D-006**: cuia, vertido y tablero como Magic Sort, §3 (regla 4), §4.1-§4.5, §5.2 y §7.4, y con **D-008**: bucle de partida como Magic Sort, §5.5 y §7.5; actualizado el 2026-10-09 con **D-010**: «Llenar y teñir» sustituye a «Sumergir y teñir», mismos tiempos, y los miquitos de la intro cambian de especie con el progreso, §2.2 (regla 5), §5.1, §6.3, §6.4 y §9.2, todo lo de fauna pendiente del asesor; registro en `docs/dev/decisiones.md`) · **Estado:** borrador para aprobación del dueño del producto.
 
 Convención de evidencia: **[V]** verificado en el informe citado · **[E]** estimación del informe · **[R]** reseñas de usuarios · **[NV]** no verificado · **[P]** propuesta de este capítulo a calibrar en soft launch. "(dirección N)" remite al punto N de las decisiones de dirección vinculantes. Nombres de juego, moneda, vidas, comodines, eventos, mundos y mascotas según `docs/gdd/00-glosario.md`. Unidad de medida de la cuia: **u** = altura de una dosis de líquido (sección 4). Unidad de UI: **dp** sobre una pantalla de referencia de 360 × 780 dp (19,5:9).
 
 ## Resumen
 
-Tintalú se ve como una lámina de expedición botánica pintada en acuarela y vista a través de vidrio: fondos desaturados y oscuros de la cuenca real (13 mundos, 3 aguas base), cuias de vidrio con cavidad recta y los 14 tintes de fruta como lo más saturado de la pantalla (research/07 §8). El capítulo fija la tabla de mundos ampliada (paisaje, hora, agua, frutas, skin, fauna, instrumento), la paleta con L* y pares de riesgo, la cuia en unidades para que un artista la dibuje y un programador la enmascare, los storyboards de Sumergir y teñir (1,4 s / 0,8 s, saltable), vertido, sellado, victoria y Aguas estancadas, las hojas de Capi y Rosa, el UI kit con contrastes medidos, las pautas culturales operativas, el plan de audio por mundo, los assets de tienda y UA y el conteo de arte de la 1.0. Todo lo que no es trade dress propio de Royal Match / Magic Sort (gatos, caldero, oro biselado, calavera, misma silueta de frasco) queda prohibido por lista.
+Tintalú se ve como una lámina de expedición botánica pintada en acuarela y vista a través de vidrio: fondos desaturados y oscuros de la cuenca real (13 mundos, 3 aguas base), cuias de vidrio con cavidad recta y los 14 tintes de fruta como lo más saturado de la pantalla (research/07 §8). El capítulo fija la tabla de mundos ampliada (paisaje, hora, agua, frutas, skin, fauna, instrumento), la paleta con L* y pares de riesgo, la cuia en unidades para que un artista la dibuje y un programador la enmascare, los storyboards de Llenar y teñir (1,4 s / 0,8 s, saltable), vertido, sellado, victoria y Aguas estancadas, las hojas de Capi y Rosa, el UI kit con contrastes medidos, las pautas culturales operativas, el plan de audio por mundo, los assets de tienda y UA y el conteo de arte de la 1.0. Todo lo que no es trade dress propio de Royal Match / Magic Sort (gatos, caldero, oro biselado, calavera, misma silueta de frasco) queda prohibido por lista.
 
 ## 1. Concepto visual
 
@@ -16,9 +16,9 @@ Tintalú se ve como una lámina de expedición botánica pintada en acuarela y v
 
 **Materiales**: tres familias y ninguna más. (1) Vidrio: la cuia-garrafa, con refracción insinuada por un brillo diagonal estático y un gradiente lateral oscuro, no por shader de refracción real (research/06 §2.4 [E]). (2) Fibra y madera: borde y pie de las cuias (arumã trenzado, calabaza ennegrecida, madera clara), la bandeja de comodines (cumbuca, research/07 §4 [V]) y los marcos de los modales. (3) Papel: todos los paneles de UI son marfil con grano, como páginas de un cuaderno de campo; el Cuaderno de campo y la Bitácora del río son literalmente ese papel. El metal dorado, las gemas y los biselados quedan excluidos (sección 1.3).
 
-**Saturación por capas**. La pantalla se organiza en tres planos con saturación creciente: fondo (S ≤ 35 %, V ≤ 55 % en HSV), capa media (banda de río, UI de papel y madera, S ≤ 45 %) y primer plano (líquido en las cuias, S 56-98 % según el tinte; sección 3). El agua base de cada mundo (negra #4A2C14, blanca #B08A5A, clara #2E8B8B, research/07 §2 [E]) pertenece a la capa media: es translúcida y solo se ve como banda de río y como relleno inicial durante Sumergir y teñir, nunca compite con un tinte.
+**Saturación por capas**. La pantalla se organiza en tres planos con saturación creciente: fondo (S ≤ 35 %, V ≤ 55 % en HSV), capa media (banda de río, UI de papel y madera, S ≤ 45 %) y primer plano (líquido en las cuias, S 56-98 % según el tinte; sección 3). El agua base de cada mundo (negra #4A2C14, blanca #B08A5A, clara #2E8B8B, research/07 §2 [E]) pertenece a la capa media: es translúcida y solo se ve como banda de río y como relleno inicial durante Llenar y teñir, nunca compite con un tinte.
 
-**Qué significa "premium" aquí**. No oro ni partículas en todas partes, sino cuatro cosas medibles: líquido con menisco, onda amortiguada y burbujas (research/06 §2 [V/E]); animaciones que nunca frenan el toque siguiente (research/01 Especificación 24 [V]); un momento de autor por nivel, Sumergir y teñir (dirección 18); y coherencia de materiales entre juego, tienda y creativos, de forma que el playable se vea idéntico al juego, el factor que separó el CPI de Magic Sort del water-sort genérico (research/09 §Por qué ganó 4 [V]; research/magic-sort/c §4 [E]).
+**Qué significa "premium" aquí**. No oro ni partículas en todas partes, sino cuatro cosas medibles: líquido con menisco, onda amortiguada y burbujas (research/06 §2 [V/E]); animaciones que nunca frenan el toque siguiente (research/01 Especificación 24 [V]); un momento de autor por nivel, Llenar y teñir (dirección 18); y coherencia de materiales entre juego, tienda y creativos, de forma que el playable se vea idéntico al juego, el factor que separó el CPI de Magic Sort del water-sort genérico (research/09 §Por qué ganó 4 [V]; research/magic-sort/c §4 [E]).
 
 ### 1.2 Reglas medibles de la dirección de arte [P]
 
@@ -92,7 +92,7 @@ Canon de orden, país, río y rangos: research/02 C3.3 [E] vía glosario §8 (di
 | 12 | Invitados del Orinoco | — (skin de evento) | Skin de temporada "Río de cinco colores" | Guacamayos sobre tepuyes | Arpa y maracas de los llanos del Orinoco (fuera de la cuenca, coherente con el rótulo) [P] |
 | 13 | El origen | — (hitos con 13 colores; 14 solo en el evento Encuentro de las Aguas) | Cántaro andino (cerámica roja) · 1.1 | Siluetas de aves de altura; sin fauna en primer plano | Quena y zampoña, permitidas solo aquí (research/07 §6.3 [V]) |
 
-Reglas transversales: (1) el banner de entrada a cada mundo muestra "Mundo {n}: {nombre} · {país} · {río}" con Capi presentando (glosario §10); (2) ninguna aldea identificable, ninguna persona, ninguna pictografía (research/07 §1 [V]); (3) el mundo 12 lleva el rótulo "vecinos del Orinoco" en el banner y en el Dato del río; (4) desde la vuelta 2 (nivel 1.001) las variantes de LUT reciclan las 13 pinturas (research/02 C3.4 [E]).
+Reglas transversales: (1) el banner de entrada a cada mundo muestra "Mundo {n}: {nombre} · {país} · {río}" con Capi presentando (glosario §10); (2) ninguna aldea identificable, ninguna persona, ninguna pictografía (research/07 §1 [V]); (3) el mundo 12 lleva el rótulo "vecinos del Orinoco" en el banner y en el Dato del río; (4) desde la vuelta 2 (nivel 1.001) las variantes de LUT reciclan las 13 pinturas (research/02 C3.4 [E]); (5) cada mundo del 1 al 12 tiene su especie de miquito en la intro, y el 13 ninguna (D-010; catálogo en §6.4, pendiente del asesor).
 
 ## 3. Paleta de 14 tintes
 
@@ -208,47 +208,74 @@ Las nueve skins restantes (glosario §4) siguen la misma plantilla en 1.1. Regla
 
 ## 5. Storyboards
 
-### 5.1 Sumergir y teñir (carga de nivel)
+### 5.1 Llenar y teñir (carga de nivel)
 
-Reglas de la dirección 18: 1,2-1,5 s completa en los niveles 1-20 (**1,4 s** = `anim_tint_duration_ms_early` 1.400), **0,8 s** desde el 21 (`anim_tint_duration_ms_late` 800; el cambio lo fija `anim_tint_fast_from_level` = 21), saltable con un toque desde el primer fotograma (`anim_tint_skippable`, nunca false en producción), solo arranca con el nivel ya en memoria; el agua base cambia por mundo. Claves, tipos (int, ms) y defaults: 08 §9. **Fases y totales: canon 02 §4.2** (0,30 + 0,40 + 0,25 + ≤ 0,45 solapado = 1,4 s; versión corta 0,15 + 0,25 + 0,15 + 0,25 = 0,80 s); este capítulo detalla qué se ve y se oye en cada fase. Satisfacción medida del 70 % con esperas de ~1,6 s y 50 % con ~2,7 s; las animaciones con significado semántico reducen la espera percibida (research/06 §2 [V]). El esquema a-b-c-d es el de research/06 §Animación [E]; el teñido por fruta, el de research/07 §8 [E].
+Reglas de la dirección 18: 1,2-1,5 s completa en los niveles 1-20 (**1,4 s** = `anim_tint_duration_ms_early` 1.400), **0,8 s** desde el 21 y en todos los reintentos (`anim_tint_duration_ms_late` 800; el cambio lo fija `anim_tint_fast_from_level` = 21), saltable con un toque desde el primer fotograma (`anim_tint_skippable`, nunca false en producción), solo arranca con el nivel ya en memoria; el agua base cambia por mundo. Claves, tipos (int, ms) y defaults: 08 §9. **Fases y totales: canon 02 §4.2** (0,30 + 0,40 + 0,25 + ≤ 0,45 solapado = 1,4 s; versión corta 0,15 + 0,25 + 0,15 + 0,25 = 0,80 s); este capítulo detalla qué se ve y se oye en cada fase. Satisfacción medida del 70 % con esperas de ~1,6 s y 50 % con ~2,7 s; las animaciones con significado semántico reducen la espera percibida (research/06 §2 [V]). El esquema a-b-c-d es el de research/06 §Animación [E]; el teñido por fruta, el de research/07 §8 [E].
 
-| Fase | Versión 1,4 s | Versión 0,8 s | Qué se ve | Audio |
+**D-010** (idea del dueño del 2026-10-08; sustituye a «Sumergir y teñir»): el río del fondo crece, desborda el canto del panel, corre por la madera y cae en un chorrito sobre cada cuia; después, la tropa de miquitos de la especie del tramo (6.4) deja caer la fruta de cada racha. Las fases se conservan como cortes; los tramos de agua se solapan y todos los tiempos y velocidades se escalan por T / 1.400 o T / 800. Detalle fotograma a fotograma, geometría de referencia (niveles 1 y 7, 16 cuias) y pruebas: guion aprobado `docs/research/intro-rio-miquitos/guion.md` §6-§8, §13 y §16.
+
+| Fase (corte) | Versión 1,4 s | Versión 0,8 s | Qué se ve | Audio |
 |---|---|---|---|---|
-| 0. Estado inicial | t = 0,00 | 0,00 | HUD visible con número de nivel y etiqueta; banda de río en reposo al pie del tablero; cuias vacías 2,0 u por encima de su posición final, alfa 100 %. Toque en cualquier punto = salto | Lecho del mundo ya sonando |
-| a. Caída | 0,00-0,30 | 0,00-0,15 | Las cuias caen con ease-in hasta su posición; escalonado de hasta 0,015 s / 0,008 s de izquierda a derecha, repartido para que la última aterrice al cerrar la fase | Golpes suaves de madera, uno por cuia, −12 dB |
-| b. Inmersión | 0,30-0,70 | 0,15-0,40 | La banda de río sube 1,5 u y cubre hasta el hombro; ondas concéntricas en cada cuia; 6 partículas de salpicadura (≤ 20 en total, 08 §5.3); el agua base del mundo entra en la cavidad y llena las 4 u (o la capacidad) con la onda de superficie activa, color del preset (negra / blanca / clara) al 70 % de opacidad | `sfx_submerge` (chapuzón grave + burbujas) |
-| c. Emersión | 0,70-0,95 | 0,40-0,55 | La banda baja a su altura de reposo; 3-4 gotas caen de cada cuia; el agua base queda quieta | Goteo |
-| d. Teñir | 0,95-1,40 (≤ 0,45 s, solapado) | 0,55-0,80 (0,25 s en total) | Por cuia, un icono de fruta por dosis cae desde fuera de pantalla y se detiene a la altura de su dosis (la de arriba primero); cada franja se tiñe en **0,10 s** (una franja = 0,10 s, 02 §4.2): el tinte florece desde el centro de la dosis hacia los lados con interpolación OKLab para no pasar por grises (research/06 §2.7 [E]) y el icono se funde en el mismo tramo. Escalonado entre dosis de la misma cuia 0,08 s / 0,04 s (menor si la cuia tiene 5-6 dosis) y entre cuias el margen restante, repartido para que la última dosis termine exactamente en t = 1,40 / 0,80. En Aguas turbias, la dosis oculta recibe una gota parda y el "?" | `sfx_tint` por dosis (tono corto, afinado por tinte: 14 notas de una escala pentatónica) |
-| e. Listo | 1,40 | 0,80 | Onda de superficie decae 0,5 s; input habilitado desde el fotograma final de d | — |
+| 0. Estado inicial | t = 0,00 | 0,00 | HUD visible con número de nivel y etiqueta. **Cuias vacías y secas en su ranura** (sin caída). En modo rama, la rama ya está (decoración quieta); en la larga, la tropa espera oculta en el follaje superior (como mucho asoma una punta de cola quieta); en la corta, la tropa ya está posada y en reposo (respira, parpadea, mece la cola), para que su rasgo se vea los 0,8 s. El polen se pausa. Toque en cualquier punto = salto | Lecho del mundo ya sonando |
+| a. El río crece y desborda | 0,00-0,30 (crece 0,00-0,15; desborda 0,12-0,28) | 0,00-0,15 (crece 0,00-0,08; desborda 0,05-0,13) | Una capa sobre la franja de río visible aclara el agua (+12 L* como máximo, ease-out) y los 6 destellos del río duplican su alfa y se deslizan 10 dp hacia el panel: en los primeros 100 ms es lo único que se mueve. **Sin cresta ni frente que avance** (sería la Pororoca). Después, una lámina de agua sube por encima del canto superior del marco y se extiende desde el centro hacia las esquinas (1.300 / 2.600 dp/s), con 2 gotas al llegar a cada esquina. Con 3 filas no queda franja de río: el desborde sale por debajo del HUD | `sfx_river_rise` [P]: oleada grave de 0,4 s a −10 dB |
+| b. Chorritos y llenado | 0,15-0,70 | 0,06-0,40 | **Fila 1:** cuando la lámina pasa sobre el eje de una cuia no vacía, en ≤ 30 ms cae su chorrito recto desde el borde interior del marco (0,16 → 0,10 u; núcleo del agua del río con +10 % de L y la línea especular del chorro, 5.2). La cuia se llena desde el fondo **hasta sus dosis finales** en 0,22 / 0,13 s (ease-out), con el menisco elíptico de 0,40 u, la onda y las marcas de dosis apareciendo al paso; color del preset (negra / blanca / clara). **Filas siguientes:** desde las esquinas, tiras de agua de 5 dp bajan por el borde interior de los costados del marco y corren por la cara de cada repisa desde los extremos hacia el centro; el chorrito cae del borde inferior de la repisa de arriba. **Las cuias vacías no reciben agua y quedan secas.** Todo lleno antes de 0,70 / 0,40 (el planificador sube las velocidades si el tablero lo exige) | `sfx_fill` [P] (chorro y gorgoteo), uno por fila, no por cuia |
+| c. Se calma; llega la tropa | 0,70-0,95 (tropa: ~0,49-0,76) | 0,40-0,55 | Los chorritos se cortan (la cola cae y cada boca de la madera suelta 1 gota) y el agua de la madera baja hacia las esquinas inferiores del panel y se desvanece; nunca una ola que retrocede de lado (icono de Marea). Las superficies se mecen y se calman (onda decreciente de 0,5 s). Larga: la tropa entra por la rama cuando la fila 1 está llena, a ≤ 450 dp/s, en la capa media y menos saturada que los tintes; con tropa de 4 o más, la mitad entra por la otra esquina | Goteo; sin chillidos, para no robar la mirada al agua |
+| d. La fruta tiñe | 0,95-1,40 (sueltas desde ~0,74) | 0,55-0,80 (sueltas desde ~0,30) | Cada miquito frena 60 ms sobre cada columna suya y suelta la fruta **desde la mano** (gesto de ~0,10 s; nunca un lanzamiento por encima del hombro ni hacia el jugador; impulso horizontal ≤ 250 dp/s, solo hacia una columna vecina de su grupo). La fruta gira a 180-360 °/s y cae con g = 12.000 dp/s², de 0,6 a 0,45 u (mínimo 8 dp, siempre menor que la boca); la suelta se calcula hacia atrás desde el impacto. Al tocar la superficie, la fruta se funde en 40 ms, un anillo elíptico se abre (0,4 → 1,3 u, alfa 0,4 → 0, 0,25 s), un penacho del color baja hasta su racha y la racha **florece en 0,10 s** (OKLab desde el agua del río; el patrón aparece con el tinte); 2 gotas solo en el primer impacto de cada fila (≤ 20 partículas en total). Cuántas frutas y en qué orden: 02 §4.2. **Modo dosel:** el follaje de las esquinas superiores se sacude (±6° en 0,15 s) y cada fruta cae desde detrás del HUD sobre su columna. **Aguas turbias:** las ocultas no reciben fruta ni nota; su «?» aparece en todas a la vez con el primer impacto | `sfx_fruit_plip` [P] por fruta y `sfx_tint` por racha (tono corto afinado por tinte: 14 notas de una escala pentatónica); como mucho 6 voces a la vez |
+| e. Listo | 1,40 | 0,80 | Input habilitado en este fotograma; la onda de superficie decae 0,5 s | — |
+| f. Salida | 1,40-1,70 | 0,80-1,10 | La tropa sale en 0,3 s hacia la esquina más cercana, **de espaldas al tablero**, sin capturar toques y sin mirar ninguna cuia; el polen vuelve. Si toca, aparece la tarjeta «¡Miquito a la vista!» (6.4) | — |
+
+**Qué cae por tinte** (D-010; la forma en vuelo es de la familia del icono de accesibilidad de la sección 3, para que la forma explique el color también a quien ve mal los colores). Siempre la fruta del tinte, mordida o partida si hace falta para enseñar la pulpa del color; **nunca una semilla ámbar ovalada ni un grano de cacao suelto** (icono de Semillas, glosario §2.1); sin destellos «mágicos» ni espirales: el tinte se comporta como un jugo, no como una poción (caldero vetado, §1.3). Las estilizaciones de color y forma de la columna derecha no se afirman en ningún Dato del río [P]:
+
+| Tinte | Qué cae | Nota |
+|---|---|---|
+| Guanábana | Gajo de pulpa blanca con 1-2 pepitas negras | El fruto entero mide 10-35 cm |
+| Copoazú | Trozo de pulpa crema con borde de cáscara parda y vellosa (fractura dentada, nunca un óvalo) | — |
+| Taperebá | Ciruela amarilla con rabito y una hoja verde | El rabito y la hoja la separan de la semilla-moneda |
+| Aguaje | Fruto escamoso vinotinto, mordido, con la pulpa naranja a la vista | Tinte del tutorial |
+| Achiote (`urucum`) | Cápsula roja erizada abierta, con 5-8 semillitas rojas y angulosas | Única «semilla que pinta»: roja y angulosa, nunca ámbar. Nada de pintura corporal (§8.1) |
+| Camu camu | 2-3 bayas granate brillantes juntas | — |
+| Bacaba | Racimito rojizo sin pruina | El rosa del tinte es estilización |
+| Açaí | Ramita de 4-6 bolitas violeta-negras con pruina gris | El icono de accesibilidad es un bol: en vuelo, la ramita |
+| Huito | Fruto gris pardo partido, con la pulpa clara | Pintura corporal: solo fruto y agua; ningún texto llama instantánea a su reacción |
+| Agua del Tapajós | Sin fruta: el miquito sacude una hoja y caen 3 gotas turquesa (icono gota) de 0,25 u; en dosel caen del follaje | — |
+| Lulo | Bola naranja peluda, mordida, con la pulpa verde a la vista | Es andino: ningún Dato del río lo sitúa en el Trapecio |
+| Arazá | Fruto aterciopelado verde-amarillo | — |
+| Cacao | Trozo de mazorca amarillo-naranja con pulpa blanca | Nunca un grano suelto |
+| Agua del Río Negro | Hoja seca, estrecha, parda y rizada, de 0,55 u, que entra por la boca y **se hunde** | Nunca verde ni posada sobre la boca (sería la mecánica Hoja) |
 
 ```pseudo
-procedure PlayLoadAnim(level, rc):                   // level ya parseado, texturas residentes
+procedure PlayLoadAnim(level, attempt, rc):           // level ya parseado, texturas residentes
     require level.loaded and textures.resident
-    early = level.index < rc.anim_tint_fast_from_level            // 21 (08 §9)
+    early = level.index < rc.anim_tint_fast_from_level and attempt == 1   // 21 (08 §9); los reintentos usan la corta
     T = early ? rc.anim_tint_duration_ms_early : rc.anim_tint_duration_ms_late   // 1400 / 800 ms
-    [A, B, C, D] = early ? [300, 400, 250, 450] : [150, 250, 150, 250]           // fases a-d (02 §4.2); A+B+C+D = T
-    n = level.cuias.count
-    timeline = new Timeline()
-    for i, cuia in enumerate(level.cuias):
-        timeline.add(min(15, A*0.3/max(1,n-1)) * i, Drop(cuia, 2.0u, A, easeIn))
-    timeline.add(A, RiverRise(1.5u, B)); timeline.add(A, FillBase(all, waterPreset(level.world), B*0.7))
-    timeline.add(A+B, RiverFall(C)); timeline.add(A+B, Drips(all))
-    franja = 100                                                                 // una franja = 100 ms
-    maxCap = max(c.capacity for c in level.cuias)
-    dDose = min(early ? 80 : 40, (D - franja) / max(1, maxCap-1))                // escalonado entre dosis
-    dCuia = (D - franja - dDose*(maxCap-1)) / max(1, n-1)                        // reparte el margen entre cuias
-    for i, cuia in enumerate(level.cuias):
-        for d in reversed(range(cuia.capacity)):                                 // de arriba hacia abajo
-            t = A+B+C + dCuia*i + dDose*(cuia.capacity-1-d)
-            timeline.add(t, FruitDropAndBloom(cuia, d, tint(cuia,d), franja, OKLab))   // la última termina en T
-    timeline.add(T, EnableInput)
-    onAnyTap if rc.anim_tint_skippable: timeline.Complete()                      // salta al estado final en 1 frame
-              crossfade(fruitIcons.alpha -> 0, 100ms); RiverFall(150ms); EnableInput
+    [A, B, C, D] = early ? [300, 400, 250, 450] : [150, 250, 150, 250]           // cortes a-d (02 §4.2), escalados por T
+    species = IntroCast.Resolve(level.world, level.index, attempt, artAvailable)   // catálogo de 6.4; null = dosel
+    mode = (species != null and freeBandDp >= 44) ? Branch : Canopy               // se fija aquí, nunca a mitad
+    plan = IntroChoreography.Plan(geometryDp, visibleRuns(level), hiddenMask(level), mode, species, T)
+                                                                                  // puro y determinista; arrays preasignados
+    timeline.add(0, RiverRise(+12 L*, sparkles -> panel))                          // lo único que se mueve en 0-100 ms
+    timeline.add(plan.overflowStart, OverflowSheet(center -> corners), FrameStrips(sides -> shelves))
+    for cuia in level.cuias where not cuia.empty:                                  // las vacías quedan secas
+        timeline.add(plan.streamOpen[cuia], Stream(cuia))                          // ≤ 30 ms tras el paso del agua por su eje
+        timeline.add(plan.fillStart[cuia], FillTo(cuia, cuia.doses, waterPreset(level.world)))   // ≤ 50 ms tras el contacto
+    timeline.add(plan.drainStart, CutStreams(), DrainWood())                       // todo lleno antes de A+B
+    if mode == Branch: timeline.add(plan.troopIn, Troop(species, plan.troopPaths)) // larga: con la fila 1 llena; corta: posada en 0
+    for f in plan.fruits:                                                          // una por racha visible (≤ 24) o una por cuia
+        timeline.add(f.impact - f.fallMs, FruitFall(f.tint, f.from, f.to, g = 12000)) // suelta = impacto − caída
+        timeline.add(f.impact, Ring(f.cuia), Bloom(f.runs, 100, OKLab))            // la última floración termina en T
+    timeline.add(plan.firstImpact, ShowMurkyMarks(level))                          // «?» de todas las ocultas a la vez
+    timeline.add(T, EnableInput); timeline.add(T, TroopExit(300, backToBoard))
+    onAnyTap if rc.anim_tint_skippable: timeline.Complete()                      // estado final en el mismo fotograma
+              fadeInPlace(introLeftovers, <= 100ms); EnableInput                  // sin impactos tardíos; la tropa no corre
               analytics.log("af_anim_skipped", {anim: "tint", at_ms: t_skip, duration_cfg_ms: T})   // taxonomía de 08 §8.2; level va en los parámetros comunes
     timeline.play()
 ```
 
-Reglas: si `af_anim_skipped` supera `anim_tint_skip_alarm_pct` (40 %) en los niveles 1-20, `anim_tint_duration_ms_early` baja a **1.200 ms** por Remote Config (mínimo de la dirección 18; nunca por debajo; research/06 §Animación [E]); el nivel N+1 se precarga mientras se juega N; con "Reducir movimiento" activo la animación se reemplaza por un fundido de 0,25 s. El banner de mundo (primer nivel de cada mundo) se muestra **antes** de esta animación, no encima.
+Reglas: si `af_anim_skipped` supera `anim_tint_skip_alarm_pct` (40 %) en los niveles 1-20, `anim_tint_duration_ms_early` baja a **1.200 ms** por Remote Config (mínimo de la dirección 18; nunca por debajo; research/06 §Animación [E]); el nivel N+1 se precarga mientras se juega N; con "Reducir movimiento" activo la animación se reemplaza por un fundido de 0,25 s de las cuias vacías al estado final, con patrones y «?», sin río, lámina, chorritos, frutas, anillos ni partículas; en modo rama, el miquito más cercano a la esquina aparece quieto en una pose de reposo durante el fundido y 0,6 s más y se desvanece en 0,15 s, sin traslación [P] (Q13 de D-010). El banner de mundo (primer nivel de cada mundo) se muestra **antes** de esta animación, no encima. Reglas de D-010:
+- **Exclusión:** nada a menos de 8 dp de una cuia salvo el chorrito y la fruta que entran en ella; nada sobre los botones del HUD ni sobre la barra de la Crecida; todas las capas de la intro con `raycastTarget = false`, en Canvas anidados propios.
+- **Rendimiento** [P] (guion §13): ≤ 1 ms de CPU de efectos y tropa por fotograma en clase A, 0 B asignados por fotograma tras el arranque, ≤ 6 draw calls nuevos, ≤ 20 partículas y ≤ 8 brillos aditivos; pools preasignados (24 frutas, 24 anillos, 16 chorritos, ≤ 6 miquitos).
+- **Variación determinista** en los tramos largos con la misma especie: por un hash del número de nivel alternan el lado de entrada, quién lidera y una de tres variantes de reposo. Mismo nivel, mismo resultado.
+- **Lectura** [P]: la prueba de pasillo con cinco personas (guion A11) sigue pendiente. Si con 3 filas no se entiende que el agua sale del río, el respaldo es una «cortina» de agua que baja desde el canto superior del marco (guion §6.3).
 
 ### 5.2 Vertido
 
@@ -343,7 +370,55 @@ Celebración con confeti, sonido y háptico, recompensa y botón "Siguiente". **
 
 ### 6.3 Elenco de fondo
 
-Guacamayos (confeti de victoria), nutria gigante (chillido al subir un hito de Crecida), morpho (Morpho), luciérnaga (Luciérnaga), rana dardo (icono Difícil), jaguar (icono Muy difícil, solo animal), perezoso (idle del Mapa del río), hoatzin (Volver a la orilla en el mundo 11), tucán (vertido del tutorial) (glosario §3.3). Descartados: anaconda como personaje, jaguar-hombre, seres mitológicos, pueblos indígenas como personajes o skins (research/07 §5-6.1 [V]).
+Guacamayos (confeti de victoria), nutria gigante (chillido al subir un hito de Crecida), morpho (Morpho), luciérnaga (Luciérnaga), rana dardo (icono Difícil), jaguar (icono Muy difícil, solo animal), perezoso (idle del Mapa del río), hoatzin (Volver a la orilla en el mundo 11), tucán (vertido del tutorial) y, desde D-010, los **miquitos** de la intro, una especie por tramo del río (6.4) (glosario §3.3). Descartados: anaconda como personaje, jaguar-hombre, seres mitológicos, pueblos indígenas como personajes o skins (research/07 §5-6.1 [V]).
+
+### 6.4 Miquitos: la tropa de Llenar y teñir (D-010)
+
+**Rol.** Una tropa de miquitos pasa por su rama sobre el panel durante Llenar y teñir (5.1) y deja caer la fruta de cada racha. Idea del dueño del 2026-10-08, con su ampliación del mismo día: «a medida que suba de niveles, que diferentes miquitos de especies vayan apareciendo». No son guías de capítulo: no hablan, no presentan el banner ni dan consejos (presenta Capi, §1.3). Solo aparecen en la intro y, después, en la tarjeta de avistamiento. **Todos los nombres comunes, datos y textos de esta sección están pendientes de revisión del asesor cultural (§8.2).**
+
+**Las especies son datos.** El código no conoce ninguna especie: lee el catálogo `Assets/_Project/Data/Fauna/miquitos_v0.json` (formato `af-fauna/0`), con id, nombre científico, nombres por idioma, esqueleto, modelo de suelta, locomoción, tamaño, tropa, rasgos de reposo, paleta de 6 colores, iluminación, mundos, tramo de niveles, nivel de la tarjeta, UICN, dato de la tarjeta, ranuras de arte, estado de la revisión del asesor y lista «evitar». Cambiar o añadir una especie no toca código. No es Remote Config: ajustarlo en remoto exigiría una clave nueva en 08 §9. Los tramos cubren 1-1.000 sin solapes ni huecos; la resolución (`IntroCast`) devuelve la especie del tramo o el modo dosel (02 §4.2), **nunca la especie de otro mundo**: los grandes ríos separan especies de monos (Wallace 1852 [V]), así que cada tramo tiene la suya y cambia la silueta, no solo el color.
+
+**Catálogo** [P] (guion de la intro §4.2; paleta orientativa, la fija el artista, siempre menos saturada que los tintes):
+
+| # | Especie (científico) | Mundo · niveles | Tarjeta desde | Esqueleto · modelo de suelta | Rasgo que se lee en reposo (48 dp) | Tropa | UICN |
+|---|---|---|---|---|---|---|---|
+| 1 | Mono ardilla (*Saimiri collinsi*) | 1 Estuario · 1-10 | 5 | B cébido · `fila` (corre) | Máscara blanca redondeada y cálida (nunca una calavera), cola en arco | 5 | LC |
+| 2 | Sagui plateado (*Mico argentatus*) | 2 Tapajós · 11-40 | 13 | A calitrícido · `cuelga` | Blanco plateado, orejas desnudas color carne, cola oscura | 3 | LC |
+| 3 | Sauim-de-coleira (*Saguinus bicolor*) | 3 Manaos · 41-80 | 42 | A · `cuelga` (cabeza abajo) | Cabeza negra y collar blanco | 3 | CR |
+| 4 | Churuco (*Lagothrix lagothricha*) | 4 Trapecio · 81-140 | 82 | D atélido · `cuelga` (de la cola) | Grande y lanudo, cara negra, cola enrollada en la rama | 2 | VU |
+| 5 | Huapo colorado (*Cacajao calvus ucayalii*) | 5 Loreto · 141-200 | 142 | C pitécido · `sacude` (muerde y derrama) | Cara roja (señal de salud, nunca burla) y cola corta | 4 | VU |
+| 6 | Cotoncillo colorado (*Plecturocebus discolor*) | 6 Oriente · 201-300 | 202 | C · `sacude` (la pareja) | Pareja mullida con las colas entrelazadas | 2 | LC |
+| 7 | Pichico emperador (*Saguinus imperator*) | 7 Madre de Dios · 301-420 | 302 | A · `fila` (salta) | Bigote blanco largo | 3 | LC |
+| 8 | Maquisapa (*Ateles chamek*) (Q8 de D-010, pendiente) | 8 Madidi y 9 Ucayali · 421-700 | 422 | D · `cuelga` (de la cola) | Brazos larguísimos, negro, cara negra | 3 | EN |
+| 9 | Mono nocturno (*Aotus trivirgatus*) | 10 Alto Negro · 701-820 | 702 | C · `fila` (camina), con luz de noche | Ojos enormes con un destello de luna (nunca ojos que brillan); el padre con la cría | 2 y una cría | LC |
+| 10 | Saquí de cara blanca (*Pithecia pithecia*) | 11 Escudo de Guayana · 821-920 | 822 | C · `fila` (salta) | Macho negro con la cara blanca; hembra gris parda | 2 | LC |
+| 1b | Mono ardilla de los Llanos (*Saimiri sciureus albigena*) | 12 Invitados del Orinoco · 921-960 | 922 (variante) | B · `fila` | Paleta del n.º 1 algo más clara; rótulo «vecinos del Orinoco» | 5 | — |
+| — | Sin miquitos | 13 El origen · 961-1.000 | — | Modo dosel | — | — | — |
+
+- **Tres modelos de suelta** (no un gesto a medida por especie): `fila` (entra por la rama baja y suelta al pasar sobre su grupo de columnas), `cuelga` (baja colgado de una liana corta o de la cola desde la rama alta; con franja < 64 dp se sienta en la rama baja y suelta como `fila`) y `sacude` (muerde un fruto o sacude la rama; lo que cae es solo la fruta del tinte). La identidad va en la silueta y en el rasgo de reposo, que se ve los 0,8 s de la versión corta.
+- **Tamaño en pantalla:** `min(tam_dp, franja − 10)`, mínimo 28 dp (si no cabe, modo dosel). **Tropa en pantalla:** `clamp(tropa, 2, columnas con alguna cuia no vacía)`, con un grupo contiguo de columnas por miquito.
+- **Rama:** Bézier de 4-6 dp con corteza y 3-4 hojas que sale del follaje de las esquinas superiores y cruza la franja en primer plano, en la orilla cercana: los miquitos nunca cruzan el río ni aparecen en la orilla de enfrente, y su reflejo no se dibuja en el agua. Árbol de várzea o igapó, nunca sumaúma ni lupuna (sagradas) ni una palmera de açaí trepada con peconha.
+
+**Representación: reglas duras** (guion §4.6; se suman a §8.1):
+1. Siempre libres, en su árbol, sin personas: nada de collar, correa, pañal, ropa, jaula, hombros ni manos humanas. Con humanos en la imagen sube el deseo de tenerlos como mascota [V]; el mono ardilla es el primate más rescatado de casas en Lima [V].
+2. Sin rasgos humanos: ni de pie como personas, ni sonrisas humanas, ni accesorios, ni pintura de achiote o huito en el pelaje o las manos.
+3. D-002: durante el juego ningún miquito mira, señala ni reacciona a una cuia, a una selección o a un vertido; en la intro miran a lo largo de la rama o a la fruta de su mano y salen de espaldas.
+4. La máscara del mono ardilla no se lee como calavera.
+5. Las especies amenazadas (sauim CR; churuco y huapo VU; maquisapa EN) hacen el mismo gesto neutro que las demás: nunca un chiste, un premio ni una recompensa al azar.
+6. Nombres vetados: «Jurupari», nombres en lenguas indígenas sin revisión pagada, «tití o mico de bolsillo», «tití» como genérico, el nombre científico del tití del Madidi. En PT-BR, cuidado con «macaco» (insulto racista [E]): la palabra «miquitos» y su traducción pasan por el asesor.
+
+**Tarjeta «¡Miquito a la vista!»** [P] (Q10 y Q11 de D-010). Familia de «Fruta nueva» (06 §4.5): retrato de 40 dp, «¡Miquito a la vista!» (`fauna_sighted_card`, glosario §10), el nombre local y una línea de ≤ 50 caracteres con un dato verificado (fuente en «Sobre la Amazonía»).
+- Sale al habilitarse el input tras la intro, nunca dentro de la carga; dura 2,5 s y se desvanece; no captura toques (`raycastTarget = false`) ni tapa cuias o botones (sobre la franja del panorama si mide ≥ 64 dp; si no, sobre el muelle, encima de la bandeja).
+- En el primer nivel ≥ «tarjeta desde» que esté libre (sin banner de mundo, Fruta nueva, debut de mecánica o comodín ni tutorial pendiente), en primer intento. Una tarjeta por nivel, con prioridad tutorial → Fruta nueva → miquito. Sin tarjeta en el nivel 1: el primer contacto es el tutorial.
+- Lenguaje de avistamiento: «a la vista», nunca «nuevo», «tu mono», «adoptar» ni «tener». En las especies amenazadas, la línea es una buena noticia de conservación, nunca la etiqueta UICN como trofeo. Sin confeti.
+- Registrar el avistamiento (`af_fauna_sighted`, al mostrar la tarjeta) exige la aprobación del dueño, una migración del perfil y la entrada en 08 §8.2: hoy no se registra.
+- Fuera de los builds de desarrollo, la tarjeta exige el retrato final de la especie.
+
+**Arte** [P] (Q16 de D-010; lista completa en el guion §12):
+- Rig recortable en uGUI: el artista dibuja las piezas de cada especie (`fauna_<id>_partes.png`, 1024 × 1024, rejilla de 4 × 4 celdas de 256 px) sobre una plantilla por esqueleto (A-D) con celdas y pivotes fijos, y el código anima las poses (reposo, viaje, suelta, colgado). Retrato de 3/4 `fauna_<id>_retrato.png` (512 × 512) para la tarjeta y el Cuaderno de campo.
+- Estilo de Capi (6.1): contorno de 2 px de tinta al 80 %, ojos con brillo, postura animal, saturación por debajo de los tintes, luz desde arriba a la izquierda a 35°; legible a 40 dp (churuco y maquisapa, a 64 dp).
+- También: 14 frutas `fruta_<id del tinte>.png` (256 × 256; de ellas sale el atlas de vuelo de 64 px), `rama_<mundo>.png` y `liana_tile.png`. Prioridad: el mono ardilla (niveles 1-10 y vídeo).
+- Mientras no haya PNG, un miquito procedural por esqueleto con los colores del catálogo, **solo en builds de desarrollo**; en un build de release, una especie sin arte final usa el modo dosel. El vídeo de la tienda y el soft launch no se graban con miquitos provisionales.
 
 ## 7. UI kit
 
@@ -434,7 +509,7 @@ Sin calavera en ningún caso (research/09 §Qué NO copiar [V]). Recompensas (20
 
 ### 7.8 Accesibilidad
 
-Canon de accesibilidad: 02 §12; este capítulo aporta la parte visual. Controles ≥ 48 dp; texto ≥ 12 dp con contraste ≥ 4,5:1; Patrones de fruta (toggle, por defecto desde el 41; opacidad 20 %, sección 3); Alto contraste (sección 3, regla 5); Reducir movimiento (sustituye Sumergir y teñir por fundido, quita confeti y rebotes; `ui_reduce_motion_default`, `anim_reduce_motion_factor`); Vibración on/off; QA con simulador de daltonismo en los tres tipos sobre el shader real (research/07 §3.2 y Preguntas abiertas [E]); ninguna información depende solo del color (las etiquetas llevan texto e icono; el bloqueo lleva texto).
+Canon de accesibilidad: 02 §12; este capítulo aporta la parte visual. Controles ≥ 48 dp; texto ≥ 12 dp con contraste ≥ 4,5:1; Patrones de fruta (toggle, por defecto desde el 41; opacidad 20 %, sección 3); Alto contraste (sección 3, regla 5); Reducir movimiento (sustituye Llenar y teñir por fundido, quita confeti y rebotes; `ui_reduce_motion_default`, `anim_reduce_motion_factor`); Vibración on/off; QA con simulador de daltonismo en los tres tipos sobre el shader real (research/07 §3.2 y Preguntas abiertas [E]); ninguna información depende solo del color (las etiquetas llevan texto e icono; el bloqueo lleva texto).
 
 Filas replicadas de 02 §12 (mismo texto que el canon):
 
@@ -508,7 +583,7 @@ Firma sonora del Amazonas: piha gritona (>110 dB, marcador de selva en el cine),
 | `sfx_illegal` | Vertido ilegal | Sonido neutro de madera, sin tono negativo (research/01 Especificación 9 [V]) | 0,15 s |
 | `sfx_seal` | Cuia sellada | Maracá (dos sacudidas) + tapa de madera | 0,45 s |
 | `sfx_haptic_seal` | Cuia sellada | Háptico ligero (research/01 Especificación 10 [V]) | 20 ms |
-| `sfx_submerge` / `sfx_emerge` / `sfx_tint` | Sumergir y teñir | Chapuzón grave + burbujas; goteo; nota por dosis | 0,4 / 0,3 / 0,1 s |
+| `sfx_river_rise` / `sfx_fill` / `sfx_fruit_plip` / `sfx_tint` | Llenar y teñir (5.1; D-010 sustituye a `sfx_submerge` y `sfx_emerge`) | Oleada grave del río que crece, a −10 dB [P]; chorro y gorgoteo, uno por fila [P]; «plic» suave por fruta [P]; nota por racha afinada al tinte (14 notas pentatónicas), como mucho 6 voces a la vez. Sin chillidos de mono durante el llenado; como mucho uno corto de mono ardilla a −18 dB, con licencia (9.5) | 0,4 s / sin fijar / sin fijar / 0,1 s |
 | `sfx_win_toada` | Victoria | Toada corta de percusión y voz sin letra (research/07 §6.3 [E]) | 2-3 s |
 | `sfx_confetti` | Victoria | Aleteo de guacamayos | 1,0 s |
 | `sfx_seeds_tick` | Contador de semillas | Semillas cayendo en cesta, 1 por 10 semillas, máx. 20 ticks | 0,05 s c/u |
@@ -549,7 +624,7 @@ Música integrada a −20 LUFS, lecho ambiental a −26 LUFS, SFX con picos ≤ 
 
 Reglas de ficha: título ≤ 30 caracteres, prohibidos "Best", "#1", "Free", MAYÚSCULAS, emojis e insignias en el icono; ≥ 4 capturas verticales de 1080 px+ para recomendación; experimentos de ficha por idioma (research/08 §3.2 [V]). Icono 512 px, gráfico de funciones 1024 × 500, 8 capturas por idioma (research/06 §10 checklist [V]). Los iconos dominantes del género son 2-3 tubos saturados sobre fondo liso, sin texto (research/08 §3.1 [E]); el nuestro debe leerse igual de rápido y distinguirse por el objeto.
 
-**Título y logotipo (decisión del dueño del 2026-10-06).** Títulos de ficha: EN "Tintalú: Water Sort Puzzle" (26 caracteres), ES "Tintalú: Ordenar Agua" (21) y PT-BR "Tintalú: Classificar Água" (25), con la tilde en todo lo visible, porque sin ella se lee "tinTAlu"; la forma ASCII "Tintalu" queda para dominios, usuarios de redes, IDs y búsquedas (`docs/legal/nombres-candidatos.md` §4.1). El nombre evoca el teñido del agua con frutas (Sumergir y teñir); el agua y la selva los ponen el subtítulo, el arte y los mundos. **Logotipo:** "Tintalú" con la tilde visible y una gota o pincelada de tinte, sin parecido con la marca "Tinta" de la App Store ("Tinta: Color Logic Puzzle" y "Tinta: Coloring Book & Paint"); la búsqueda figurativa del logotipo la hace el abogado de marcas cuando esté diseñado (`docs/legal/nombres-candidatos.md` §5.1). El icono y las capturas no llevan el nombre (10.1-10.2); la marca aparece en el título y en el logotipo del vídeo (10.3).
+**Título y logotipo (decisión del dueño del 2026-10-06).** Títulos de ficha: EN "Tintalú: Water Sort Puzzle" (26 caracteres), ES "Tintalú: Ordenar Agua" (21) y PT-BR "Tintalú: Classificar Água" (25), con la tilde en todo lo visible, porque sin ella se lee "tinTAlu"; la forma ASCII "Tintalu" queda para dominios, usuarios de redes, IDs y búsquedas (`docs/legal/nombres-candidatos.md` §4.1). El nombre evoca el teñido del agua con frutas (Llenar y teñir); el agua y la selva los ponen el subtítulo, el arte y los mundos. **Logotipo:** "Tintalú" con la tilde visible y una gota o pincelada de tinte, sin parecido con la marca "Tinta" de la App Store ("Tinta: Color Logic Puzzle" y "Tinta: Coloring Book & Paint"); la búsqueda figurativa del logotipo la hace el abogado de marcas cuando esté diseñado (`docs/legal/nombres-candidatos.md` §5.1). El icono y las capturas no llevan el nombre (10.1-10.2); la marca aparece en el título y en el logotipo del vídeo (10.3).
 
 ### 10.1 Icono: tres conceptos (A/B por experimento de ficha)
 
@@ -567,7 +642,7 @@ Reglas comunes: sin sonrisa/flecha ni naranja #FF9900 sobre negro (research/08 �
 |---|---|---|
 | 1 | Gameplay real en Manaos: una cuia vertiendo Açaí con el Encuentro de las Aguas detrás (hook de research/07 §Implicaciones 10) | "Ordena el agua del Amazonas" / "Sort the waters of the Amazon" / "Classifique as águas da Amazônia" |
 | 2 | Tablero del Estuario con 5 cuias, iconos de fruta visibles | "14 frutas, 14 colores" / "14 fruits, 14 colors" / "14 frutas, 14 cores" |
-| 3 | Sumergir y teñir a mitad (frutas cayendo) | "Mira cómo se tiñe el río" / "Watch the river take color" / "Veja o rio ganhar cor" |
+| 3 | Llenar y teñir a mitad (frutas cayendo) | "Mira cómo se tiñe el río" / "Watch the river take color" / "Veja o rio ganhar cor" |
 | 4 | Mapa del río con 13 paradas y banderas de país | "13 mundos, 8 países" / "13 worlds, 8 countries" / "13 mundos, 8 países" |
 | 5 | Nivel Difícil con badge rana dardo y una Marea usada en el bloqueo | "Difícil de verdad, justo siempre" / "Honest hard levels" / "Difícil de verdade, sempre justo" |
 | 6 | Patrones de fruta activados, con simulación lado a lado | "Patrones para todos los ojos" / "Patterns for every eye" / "Padrões para todos os olhos" |
@@ -584,7 +659,7 @@ Research/08 §Implicaciones 3 recomienda 15-20 s; se produce a 30 s con los prim
 |---|---|---|
 | 0-3 | Gameplay cerrado | Una cuia vierte Açaí; sellado con maracá; sin logo todavía |
 | 3-8 | Gameplay | Tres vertidos seguidos encadenados; 2 cuias se sellan; contador de semillas |
-| 8-12 | Sumergir y teñir | Carga del nivel 42 en Manaos, versión 1,4 s a cámara lenta ×2 |
+| 8-12 | Llenar y teñir | Carga del nivel 42 en Manaos, versión 1,4 s a cámara lenta ×2 |
 | 12-15 | Logo | Logotipo "Tintalú" (tilde visible, gota o pincelada de tinte; sección 10) sobre el Encuentro de las Aguas; descriptor "Ordenar agua" |
 | 15-19 | Tensión | Nivel Difícil: dos cuias quedan y el agua se aquieta; aparece Marea y deshace |
 | 19-23 | Mascotas | Capi llega con una cuia (rescate); Rosa salta al siguiente nivel |
@@ -639,7 +714,7 @@ Con dos artistas (o artista + animador) baja a ~9-10 semanas de calendario; los 
 
 | Sección | Claves (nombres de 08 §9) |
 |---|---|
-| Sumergir y teñir (5.1) | `anim_tint_duration_ms_early` / `anim_tint_duration_ms_late` (int, ms), `anim_tint_fast_from_level`, `anim_tint_skippable`, `anim_tint_skip_alarm_pct` (dueño 07) |
+| Llenar y teñir (5.1) | `anim_tint_duration_ms_early` / `anim_tint_duration_ms_late` (int, ms), `anim_tint_fast_from_level`, `anim_tint_skippable`, `anim_tint_skip_alarm_pct` (dueño 07) |
 | Vertido y sellado (4.3, 5.2) | `anim_lift_ms`, `anim_travel_ms`, `anim_pour_dose_ms`, `anim_pour_tail_ms`, `anim_return_ms`, `anim_speed_factor_early` / `anim_speed_factor_late`, `queue_max_lag_pours` (= 2, cola visual por cuia; dueño 02) |
 | Victoria (5.4) | `victory_autonext_s` = **0** (int; sin auto-avance, valor común a 02, 06, 07 y 08), `anim_celebration_ms`, `anim_confetti_max_particles` (dueño 07) |
 | Aguas estancadas y El río bajó (5.5) | `ui_mascot_rescue_anim`, `rescue_min_level`, `rescue_price_bands` (= [[31,600]], 600 fijo), `relief_after_fails`, `anim_river_lowered_banner_ms` |
@@ -652,7 +727,7 @@ Alias retirados de versiones anteriores de este capítulo (no existen en `Remote
 
 ## Desviaciones de la dirección
 
-Ninguna. Precisiones que no contradicen la dirección: (1) la 1.0 añade a los fondos 1-4 install-time (dirección 16) el de Loreto (141-200) por Play Asset Delivery y un "río genérico" para los niveles 201-700 (mundos 6-9) hasta que lleguen sus packs, para cubrir los ≥600 niveles jugables de la dirección 17 (700 instalados), como propone research/02 C3.3 [E]; (2) la duración completa de Sumergir y teñir se fija en 1,4 s dentro del rango 1,2-1,5 s de la dirección 18; (3) el teñido florece desde el centro de cada dosis (research/06 y research/07 difieren en la dirección del gradiente; ninguno es dirección vinculante); (4) la pantalla de victoria no auto-avanza (`victory_autonext_s` = 0, int; semántica en 02 §6 y default en 08 §9) aunque research/01 Especificación 12 [E] sugería 2-3 s: con auto-avance, AD_GATE abriría el intersticial sin toque del jugador, contra el espíritu de la dirección 13 (anuncio solo tras completar nivel, nunca vivido como "anuncio tras cada nivel").
+Ninguna. Precisiones que no contradicen la dirección: (1) la 1.0 añade a los fondos 1-4 install-time (dirección 16) el de Loreto (141-200) por Play Asset Delivery y un "río genérico" para los niveles 201-700 (mundos 6-9) hasta que lleguen sus packs, para cubrir los ≥600 niveles jugables de la dirección 17 (700 instalados), como propone research/02 C3.3 [E]; (2) la duración completa de Llenar y teñir se fija en 1,4 s dentro del rango 1,2-1,5 s de la dirección 18; (3) el teñido es una interpolación OKLab uniforme de 0,10 s por racha con un anillo sobre la superficie (D-010); la floración radial desde el centro de la dosis queda para después porque exige tocar el shader del líquido (research/06 y research/07 difieren en la dirección del gradiente; ninguno es dirección vinculante); (4) la pantalla de victoria no auto-avanza (`victory_autonext_s` = 0, int; semántica en 02 §6 y default en 08 §9) aunque research/01 Especificación 12 [E] sugería 2-3 s: con auto-avance, AD_GATE abriría el intersticial sin toque del jugador, contra el espíritu de la dirección 13 (anuncio solo tras completar nivel, nunca vivido como "anuncio tras cada nivel").
 
 ## Preguntas abiertas para el dueño del producto
 
@@ -666,6 +741,7 @@ Ninguna. Precisiones que no contradicen la dirección: (1) la 1.0 añade a los f
 8. Vídeo de ficha de 30 s con corte a 15 s, o solo 15-20 s como sugiere research/08.
 9. Cerrada: `victory_autonext_s` = 0 (int) en 02, 06, 07 y 08 (incidencia 10 de GDD §7): la pantalla de victoria no auto-avanza y el intersticial solo se dispara tras el toque en Siguiente. La prueba de un valor > 0 solo para compradores de Sin anuncios queda, si acaso, como experimento opcional de soft launch, no como pregunta de diseño.
 10. Variante nocturna del fondo en Muy difícil: ¿se activa desde la 1.0 o se mide primero si confunde con el modo noche de la vuelta 3?
+11. Llenar y teñir y los miquitos (D-010): las preguntas Q1-Q17 de la intro (nombre, orden del teñido, especie de los mundos 8-9, especies en la 1.0, texto de la tarjeta, registro del avistamiento, Reducir movimiento, agua negra, estilizaciones de fruta y técnica de animación) y las de la propuesta de fauna (F7, F9-F11 y F13) están en `docs/dev/decisiones.md`, D-010. La implementación aplica la recomendación de cada una hasta la respuesta.
 
 ## Dependencias con otros capítulos
 
@@ -675,7 +751,7 @@ Numeración canónica de capítulos: la del glosario (00 Glosario · 01 Visión 
 |---|---|---|
 | 00 Glosario | Hojas de estilo e iconos finales; HEX de UI | Nombres, IDs, frases de UI; numeración canónica de capítulos |
 | 01 Visión y posicionamiento | Icono, capturas y vídeo (10) como expresión del posicionamiento; lista de trade dress excluido (1.3) | Resultado de la búsqueda de marca y decisión sobre la variante de ficha (01 §9); dispositivos de referencia para el presupuesto de VFX (01 §3.3) |
-| 02 Núcleo, reglas y UX | Estados visuales de la cuia (4.3), storyboards de vertido y sellado (5.2-5.3), variantes de capacidad (4.5), orden canónico de la bandeja y posición de la barra de la Crecida (7.4: vertical en el borde derecho; la barra de evento bajo la cabecera queda para los eventos de 1.2), opacidad canónica del patrón (3) | Catálogo de mecánicas con sus debuts (02 §9.1 y `mech_debut_level`: Hoja 43, Brote 63, Liana 83, Remolino 103, Barro 123, Lluvia 143, Piraña 183) que necesitan overlay y SFX propios; Cuia alta 27 (cap 5) y cap 6 en hitos desde el 141 (02 §8); fases y totales de Sumergir y teñir (02 §4.2); duraciones base del vertido, elevación de 16 dp y sacudida de rechazo ±6 dp / 2 ciclos / 120 ms (02 §4.1) y cola visual de hasta 2 vertidos por cuia (`queue_max_lag_pours` = 2, 02 §3.2); tutorial 1-12 (02 §13); filas de accesibilidad (02 §12) |
+| 02 Núcleo, reglas y UX | Estados visuales de la cuia (4.3), storyboards de vertido y sellado (5.2-5.3), variantes de capacidad (4.5), orden canónico de la bandeja y posición de la barra de la Crecida (7.4: vertical en el borde derecho; la barra de evento bajo la cabecera queda para los eventos de 1.2), opacidad canónica del patrón (3) | Catálogo de mecánicas con sus debuts (02 §9.1 y `mech_debut_level`: Hoja 43, Brote 63, Liana 83, Remolino 103, Barro 123, Lluvia 143, Piraña 183) que necesitan overlay y SFX propios; Cuia alta 27 (cap 5) y cap 6 en hitos desde el 141 (02 §8); fases y totales de Llenar y teñir (02 §4.2); duraciones base del vertido, elevación de 16 dp y sacudida de rechazo ±6 dp / 2 ciclos / 120 ms (02 §4.1) y cola visual de hasta 2 vertidos por cuia (`queue_max_lag_pours` = 2, 02 §3.2); tutorial 1-12 (02 §13); filas de accesibilidad (02 §12) |
 | 03 Niveles, generación y dificultad | Paleta con L* y pares de riesgo (3), variante nocturna de Muy difícil, tabla de mundos (2) | Niveles exactos de debut de cada tinte, `max_pares_riesgo`; primer Difícil 40 y primer Muy difícil 60 (03 §11/§12); bandas del Reto del río (03 §16) |
 | 04 Comodines, vidas y rescate | Iconos y animaciones de los 6 comodines, Volver a la orilla, Cuia de rescate (5.5, 7.6); orden de la bandeja (7.4) | Precios y topes que se muestran en los botones (defaults en 08 §9); Cuia de rescate a 600 fijo desde el 31 (`rescue_price_bands` = [[31,600]], primer rescate del día 300, máximo 1 por nivel); definición canónica de fallo (04 §5.2) para `capi_shrug`, Salto del Boto y El río bajó; Marea ilimitada en 1-10, 1 Cuia extra regalada en el 8, 3 Morphos en el 12 |
 | 05 Economía y monetización | Botones con precio y "Ver video" (7.3), capturas y vídeo (10), Cosecha doble en victoria (5.4) | Catálogo de SKUs (incluido `af_infinite_canoes_1h`) y ubicaciones rewarded; hitos de la Crecida que anima la pantalla de victoria (05 §2.4: 3 → 300 · 6 → Canasta · 10 → 1 Cuia extra + río crecido; cada hito una vez al día local; tope diario 600, que solo suma el hito 3 y las 50 semillas de la Canasta del hito 6; tras el hito 10 la barra vuelve a 0 y el río crecido sigue activo hasta el siguiente fallo duro no escudado; clave `streak_milestones`; debut en el 25, `streak_unlock_level`) |
