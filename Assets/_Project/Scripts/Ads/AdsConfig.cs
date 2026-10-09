@@ -29,6 +29,12 @@ namespace AF.Ads
     /// exactos: <c>AdsConfigTests</c> los contrasta con el GDD. <see cref="Validate"/> exige además los rangos de 08 §9, que
     /// son guardarraíles de 05 §10 (p. ej. ningún intersticial antes del 22). Cuando exista <c>AF.RemoteConfig</c>, sus
     /// valores se copiarán en una instancia; hasta entonces se usa <see cref="Defaults"/>.
+    /// <para>
+    /// Desviación del plan (B1-3): no hay <c>Assets/_Project/Data/Config/ad_placements.json</c>. Las ubicaciones van en
+    /// <see cref="AdPlacement"/> y sus topes y cooldowns aquí, compilados, porque AF.Ads no tiene un lector JSON público al
+    /// alcance (el de AF.Levels queda fuera de sus dependencias de 08 §2.2 y el de AF.Save es interno) y no se añaden
+    /// paquetes.
+    /// </para>
     /// </summary>
     public sealed class AdsConfig
     {

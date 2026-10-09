@@ -26,9 +26,16 @@ namespace AF.IAP
 
     /// <summary>
     /// Cifras de la tienda con los <b>defaults compilados</b> de la tabla única de 08 §9 y sus nombres exactos
-    /// (<c>StoreConfigTests</c> los contrasta con el GDD). Lo que el GDD fija sin clave (contenido de la Mochila, la Balsa,
+    /// (<c>StoreCatalogTests</c> los contrasta con el GDD). Lo que el GDD fija sin clave (contenido de la Mochila, la Balsa,
     /// las Canoas infinitas y las skins; las 48 h de la Balsa) está en <see cref="StoreCatalog"/> y en
     /// <see cref="BalsaHideDuration"/>, citando 05 §4.1.
+    /// <para>
+    /// Desviación del plan (B1-4): no hay <c>Assets/_Project/Data/Config/iap_catalog.json</c>. El catálogo y sus cifras
+    /// van compilados aquí y en <see cref="StoreCatalog"/>, porque AF.IAP no tiene un lector JSON público al alcance (el de
+    /// AF.Levels queda fuera de sus dependencias de 08 §2.2 y el de AF.Save es interno) y no se añaden paquetes. Cuando
+    /// exista <c>AF.RemoteConfig</c>, sus valores se copiarán en una instancia; hasta entonces se usa
+    /// <see cref="Defaults"/>.
+    /// </para>
     /// </summary>
     public sealed class StoreConfig
     {
@@ -42,7 +49,9 @@ namespace AF.IAP
         [RemoteConfigKey("biz_iap_enabled")]
         public bool BizIapEnabled { get; set; } = true;
 
-        /// <summary><c>eco_seed_pack_amounts</c>: semillas de cada pack (espejo de <c>iap_catalog.json</c>).</summary>
+        /// <summary>
+        /// <c>eco_seed_pack_amounts</c>: semillas de cada pack (08 §9; <see cref="StoreCatalog"/> las toma de aquí).
+        /// </summary>
         [RemoteConfigKey("eco_seed_pack_amounts")]
         public IReadOnlyList<SeedPack> EcoSeedPackAmounts { get; set; } = new[]
         {
