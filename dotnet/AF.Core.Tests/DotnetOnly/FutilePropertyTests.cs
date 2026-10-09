@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using AF.Core.Board;
+using AF.Core.Determinism;
 using AF.Core.Rules;
 using AF.Solver.Tests;
 using NUnit.Framework;
@@ -19,7 +20,9 @@ namespace AF.Core.Tests.DotnetOnly
     /// el estado canónico. Con capacidades distintas puede cambiarlo sin crear progreso (ver
     /// <see cref="R16_InRun_AFutilePourBetweenDifferentCapacities_CanChangeTheCanonicalState"/>); la garantía que
     /// importa es P1.</description></item>
-    /// <item><description>P3 (anexo B): ningún par monocolor ↔ vacía es útil en los dos sentidos.</description></item>
+    /// <item><description>P3 (anexo B): ningún par monocolor ↔ vacía es útil en los dos sentidos sin progreso (el vaivén no
+    /// vuelve al mismo estado canónico). Con mecánicas un vaivén útil puede existir si cambia el estado: la Hoja de 1 que
+    /// cae y después deja ir su fruta a la «casa correcta» de 4 (02 §1.4).</description></item>
     /// </list>
     /// Cada mecánica añade su inyector (<see cref="IMechanicInjector"/>) antes de su debut (02 R16). Solo dotnet: lotes
     /// grandes.
@@ -40,6 +43,7 @@ namespace AF.Core.Tests.DotnetOnly
             public int Stuck;
             public int FutilePours;
             public int UsefulMonoToEmpty;
+            public int UsefulRoundTrips;
             public readonly List<string> Violations = new List<string>();
         }
 
@@ -55,6 +59,20 @@ namespace AF.Core.Tests.DotnetOnly
             Assert.That(report.Violations, Is.Empty);
             Assert.That(report.States, Is.GreaterThanOrEqualTo(MinStates));
             Assert.That(report.FutilePours, Is.GreaterThan(0));
+        }
+
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithHoja(PourMode mode, CapacityFamily family)
+        {
+            // C1-7: 02 R16 antes del debut de la Hoja (43).
+            Report report = Run(mode, family, new HojaInjector(), 0xF07E_4301UL);
+
+            TestContext.WriteLine(Describe(report));
+            Assert.That(report.Violations, Is.Empty);
+            Assert.That(report.States, Is.GreaterThanOrEqualTo(MinStates));
         }
 
         [Test]
@@ -78,10 +96,10 @@ namespace AF.Core.Tests.DotnetOnly
         internal static Report Run(PourMode mode, CapacityFamily family, IMechanicInjector? injector, ulong seed)
         {
             var report = new Report();
-            var rng = new PropertyRng(seed);
+            var rng = new Prng(seed);
             for (int attempt = 0; attempt < MaxBoards && report.States < TargetStates; attempt++)
             {
-                BoardState? start = PropertyBoards.Start(ref rng, family, injector);
+                BoardState? start = PropertyBoards.Start(rng, family, injector);
                 if (start == null)
                 {
                     continue;
@@ -111,7 +129,8 @@ namespace AF.Core.Tests.DotnetOnly
                 + report.States.ToString(CultureInfo.InvariantCulture) + " estados, "
                 + report.Stuck.ToString(CultureInfo.InvariantCulture) + " atascados, "
                 + report.FutilePours.ToString(CultureInfo.InvariantCulture) + " fútiles, "
-                + report.UsefulMonoToEmpty.ToString(CultureInfo.InvariantCulture) + " monocolor→vacía útiles";
+                + report.UsefulMonoToEmpty.ToString(CultureInfo.InvariantCulture) + " monocolor→vacía útiles, "
+                + report.UsefulRoundTrips.ToString(CultureInfo.InvariantCulture) + " vaivenes útiles (con progreso)";
         }
 
         private static void Check(ExhaustiveSearch.Graph graph, PourMode mode, Report report)
@@ -154,13 +173,19 @@ namespace AF.Core.Tests.DotnetOnly
                             continue;
                         }
 
-                        // P3: A monocolor → B vacía útil; si el vertido vacía A, volver de B a A no puede ser útil.
+                        // P3: A monocolor → B vacía útil y que vacía A; si volver de B a A también es útil, el vaivén no
+                        // puede devolver el estado canónico de partida (un ir y venir sin progreso que esquivaría el modal).
                         if (state[b].IsEmpty && state[a].IsMonocolor && after[a].IsEmpty)
                         {
                             report.UsefulMonoToEmpty++;
                             if (PourRules.IsLegal(after, b, a) && !PourRules.IsFutile(after, b, a))
                             {
-                                Violation(report, "P3 (anexo B)", mode, state, a + "↔" + b + " es útil en los dos sentidos");
+                                report.UsefulRoundTrips++;
+                                BoardState back = PourRules.Apply(after, b, a, mode);
+                                if (back.CanonicalHash() == state.CanonicalHash())
+                                {
+                                    Violation(report, "P3 (anexo B)", mode, state, a + "↔" + b + " es útil en los dos sentidos y vuelve al mismo estado");
+                                }
                             }
                         }
                     }

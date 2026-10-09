@@ -19,6 +19,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   indexada por el código de mecánica de la cuia (bits 39-42 de `Cuia.Packed`, hoy siempre 0); los ganchos solo se llaman
   para cuias con mecánica. `AF.Core` concede `InternalsVisibleTo("AF.Solver")` para que el solver recorra las mismas
   reglas por sus rutas internas.
+- Hoja (C1-7; 02 §9.1 M1 y §9.2; 03 §9; propuesta de D-007 b.2 M1 y anexo B; debut 43): `HojaMechanic` (interno),
+  registrada en la tabla de mecánicas y aceptada por `BoardBuilder`. Cuia vacía con hoja y llave `key`: solo recibe
+  `key` (en `run`, el tramo que cabe), no es origen mientras tenga la hoja, la hoja cae con el primer vertido en la etapa
+  (b) de R10 y la cuia pasa a `MechanicType.None`; como destino nunca es fútil (`cambia_al_recibir`); Marea y Volver a la
+  orilla la devuelven. `PourEvents.HojaOpenedMask` (evento HojaOpened). Validación: empieza vacía y su llave está en el
+  tablero (03 §17 #6). Tests compartidos `HojaTests` (cada regla con su §, el caso del anexo B «verter el resto de una
+  fruta en su Hoja vacía no es fútil» en un tablero que con la regla anterior se declaraba atascado) y `HojaSolverTests`
+  (par de A* = búsqueda exhaustiva en 32 tableros pequeños, uniformes y mixtos, en `run` y `single`; heurística admisible y
+  consistente en todos los estados alcanzables), con el generador compartido `MechanicBoards` e `IMechanicInjector`
+  (también lo usa `DotnetOnly/PropertyBoards`, ahora con el PRNG del núcleo); P1-P3 con Hoja en `FutilePropertyTests`
+  (P3 precisado: un vaivén monocolor ↔ vacía útil en los dos sentidos no puede volver al mismo estado; con la Hoja de 1 que
+  cae y deja ir su fruta a la casa correcta sí hay vaivenes útiles, con progreso) y el bucle caliente sin asignaciones con
+  Hoja en `HotLoopAllocationTests`.
 - Barajado inverso (C1-6; 03 §4.1-§4.2): `AF.Solver.Generation.InverseMoves` (inverso exacto de un vertido útil:
   el directo `b → a` es legal, mueve exactamente `m` dosis en el modo y no es fútil, evaluado con `BoardRules`; en `run`
   equivale a las condiciones literales de 03 §4.1 y en `single` a su nota), `InverseWalk` (`WALK` con mejor prefijo: los 3

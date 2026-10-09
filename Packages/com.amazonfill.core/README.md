@@ -55,10 +55,10 @@ máquina y sesión, unos 100 ms frente a 80 ms; con `w = 2` (Morpho) el cambio e
 largo). Cada nodo guarda solo las `T` cuias del tablero. El bucle caliente no asigna (tests
 `DotnetOnly/HotLoopAllocationTests`).
 
-Reglas con contexto de tablero (C1-1, 2026-10-08, misma máquina, Release): con el solver delegando en `BoardRules`, el
-tablero de 14 cuias sigue expandiendo 16.114 estados (par 37) en `Run` y 16.956 (par 48) en `Single`; el tiempo por
-búsqueda calentada pasó de 29,1 ms a 20,9 ms en `Run` y de 28,5 ms a 26,8 ms en `Single` (la regla normal del destino ya no
-recalcula el sellado de una cuia que no está llena). Los 140 niveles de paridad dan el mismo par.
+Reglas con contexto de tablero y mecánicas (C1-1 a C1-7, 2026-10-08, misma máquina y sesión, Release): con el solver
+expandiendo `SolverMoves` y aplicando con `BoardRules`, el tablero de 14 cuias sigue expandiendo 16.114 estados (par 37) en
+`Run` y 16.956 (par 48) en `Single`; el tiempo por búsqueda calentada pasó de 26,7 ms (`main`, e8edd1f) a 30,4 ms en `Run`
+(+13 %) y de 30,0 ms a 33,8 ms en `Single`. Los 140 niveles de paridad dan el mismo par.
 
 Modo de vertido (D-005, 2026-10-08, sustituye a D-001): en `Run` el tutorial v0 da los pares 3, 6, 7, 8, 10, 10, 11, 13,
 14 y 16 (en `Single`, solo de referencia: 3, 9, 10, 12, 16, 17, 15, 17, 16, 19; medidos el 2026-10-06 con los mismos

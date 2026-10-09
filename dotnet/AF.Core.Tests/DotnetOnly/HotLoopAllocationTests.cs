@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using AF.Core.Board;
+using AF.Core.Mechanics;
 using AF.Core.Rules;
 using AF.Solver.Bot;
 using AF.Solver.Search;
@@ -22,6 +23,18 @@ namespace AF.Core.Tests.DotnetOnly
             new[] { 8, 2, 1, 3 }, new[] { 2, 3, 11, 5 }, new[] { 9, 11, 4, 4 }, new[] { 11, 8, 9, 12 }, new[] { 2, 3, 10, 7 },
             new[] { 9, 7, 1, 7 }, new[] { 10, 10, 6, 4 }, new int[0], new int[0],
         };
+
+        /// <summary>Tablero de 10 cuias con una Hoja (y las mecánicas que se vayan portando).</summary>
+        private static BoardState MechanicBoard()
+        {
+            var cuias = new Cuia[]
+            {
+                Cuia.Create(4, new[] { 1, 2, 3, 4 }), Cuia.Create(4, new[] { 5, 6, 1, 2 }), Cuia.Create(4, new[] { 3, 4, 5, 6 }),
+                Cuia.Create(4, new[] { 6, 5, 4, 3 }), Cuia.Create(4, new[] { 2, 1, 6, 5 }), Cuia.Create(4, new[] { 4, 3, 2, 1 }),
+                Cuia.Empty(4).WithMechanic(MechanicType.Hoja, key: 1, flags: Cuia.FlagClosed), Cuia.Empty(4),
+            };
+            return new BoardState(cuias);
+        }
 
         private static BoardState Board()
         {
@@ -176,6 +189,43 @@ namespace AF.Core.Tests.DotnetOnly
 
             Assert.That(again, Is.GreaterThanOrEqualTo(warm));
             Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void MechanicBoard_HotLoop_DoesNotAllocate()
+        {
+            // C1-7 a C1-9: las mecánicas se despachan por la tabla estática, sin asignaciones: movimientos útiles, bloqueo,
+            // solver calentado y bot calentado sobre un tablero con Hoja.
+            BoardState state = MechanicBoard();
+            var buffer = new Pour[PourRules.MaxPours];
+            var solver = new AStarSolver();
+            var bot = new CasualBot();
+            SolverOptions options = SolverOptions.ForPipeline(PourMode.Run);
+            SolveResult warm = solver.Solve(state, options);
+            bot.FailRate(state, 3UL, PourMode.Run);
+            int moves = PourRules.CollectUsefulMoves(state, true, PourMode.Run, buffer);
+            PourRules.IsStuck(state, true);
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            int total = 0;
+            for (int repeat = 0; repeat < 200; repeat++)
+            {
+                total += PourRules.CollectUsefulMoves(state, true, PourMode.Run, buffer);
+                total += PourRules.IsStuck(state, true) ? 1 : 0;
+            }
+
+            bot.FailRate(state, 3UL, PourMode.Run);
+            long rulesAndBot = GC.GetAllocatedBytesForCurrentThread() - before;
+            before = GC.GetAllocatedBytesForCurrentThread();
+            SolveResult result = solver.Solve(state, options);
+            long solve = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(moves, Is.GreaterThan(0));
+            Assert.That(total, Is.EqualTo(200 * moves));
+            Assert.That(warm.IsSolved, Is.True);
+            Assert.That(result.MoveCount, Is.EqualTo(warm.MoveCount));
+            Assert.That(rulesAndBot, Is.EqualTo(0));
+            Assert.That(solve, Is.LessThan(1024));
         }
 
         [Test]

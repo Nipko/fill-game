@@ -243,7 +243,7 @@ namespace AF.Core.Rules
                 if (opened.Packed != received.Packed)
                 {
                     board.Set(receiver, opened);
-                    events.OpenedMask |= 1 << receiver;
+                    events.RecordOpened(receiver, received.Mechanic);
                 }
             }
 

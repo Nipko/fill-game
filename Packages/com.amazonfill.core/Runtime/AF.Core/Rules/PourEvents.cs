@@ -40,6 +40,9 @@ namespace AF.Core.Rules
         /// <summary>(b) Cuias cuya mecánica se abrió al recibir (Hoja, Brote): pasan a ser normales.</summary>
         public int OpenedMask { get; internal set; }
 
+        /// <summary>(b) Hojas que cayeron en este vertido (evento HojaOpened; 02 §9.1 M1).</summary>
+        public int HojaOpenedMask { get; internal set; }
+
         /// <summary>(c) Cuias que este vertido dejó selladas (R5).</summary>
         public int SealedMask { get; internal set; }
 
@@ -83,6 +86,7 @@ namespace AF.Core.Rules
             Futile = futile;
             SourceRevealed = false;
             OpenedMask = 0;
+            HojaOpenedMask = 0;
             SealedMask = 0;
             ReleasedMask = 0;
             CountersAdvanced = false;
@@ -90,6 +94,17 @@ namespace AF.Core.Rules
             FixedPointPasses = 0;
             StatusEvaluated = false;
             Status = LevelStatus.Playing;
+        }
+
+        /// <summary>(b) La mecánica <paramref name="type"/> de la cuia <paramref name="index"/> se abrió al recibir.</summary>
+        internal void RecordOpened(int index, Mechanics.MechanicType type)
+        {
+            int bit = 1 << index;
+            OpenedMask |= bit;
+            if (type == Mechanics.MechanicType.Hoja)
+            {
+                HojaOpenedMask |= bit;
+            }
         }
 
         internal void Finish(LevelStatus status)

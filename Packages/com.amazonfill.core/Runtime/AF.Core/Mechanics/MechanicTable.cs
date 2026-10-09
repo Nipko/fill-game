@@ -40,6 +40,7 @@ namespace AF.Core.Mechanics
                 table[i] = Normal;
             }
 
+            table[(int)MechanicType.Hoja] = new HojaMechanic();
             return table;
         }
 
