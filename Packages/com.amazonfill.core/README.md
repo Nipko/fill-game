@@ -213,7 +213,7 @@ tablero inicial con su historial rehecho:
    al final, así que los índices de las demás no cambian y `RevealedLayers(i)` de la sesión anterior se copia cuia a cuia.
 
 Las capas que el historial rehecho ya reveló cuentan como reveladas y no suman. En los dos usos la máscara se restaura **al
-final del rehacer**, como fijan la arquitectura del paso 1 (§11) y T06: el historial `h2` de `level_state` guarda por cuia
+final del rehacer**, como hace el cliente desde la integración del paso 1 (`docs/dev/traspaso/README.md` §6): el historial `h2` de `level_state` guarda por cuia
 solo la máscara revelada (la cuia en 1 dígito hex y la máscara en 2), sin el punto del historial en que se reveló cada capa, y
 `LevelSession` tampoco lo expone. Es exacto aunque una capa se revelara a mitad del historial sin que el historial rehecho la
 revele (con la Luciérnaga o con un vertido que Marea deshizo después): ver una oculta solo cambia lo que pasa después si cambia

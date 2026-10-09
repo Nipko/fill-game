@@ -27,7 +27,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   negativa o con bits que no son dosis ocultas de la cuia en `Initial`. Usos: **reanudar** (02 §14, R8: se rehacen los
   vertidos guardados y se restaura la máscara guardada) y **rehacer la sesión con la Cuia extra o la Cuia de rescate**
   (`LevelFlow.Funnel.AddCuia`: la cuia vacía va al final, así que la máscara se copia cuia a cuia). En los dos usos la
-  máscara se restaura al final del rehacer, como fijan la arquitectura del paso 1 (§11) y T06 (el historial `h2` guarda por
+  máscara se restaura al final del rehacer, como hace el cliente desde la integración del paso 1 (`docs/dev/traspaso/README.md` §6) (el historial `h2` guarda por
   cuia solo la máscara, sin el punto del revelado). Es exacto también con capas reveladas a mitad del historial sin que el
   historial rehecho las revele (Luciérnaga o un vertido deshecho con Marea): con T4, ver una oculta solo cambia la racha (R6)
   o el sellado (R5) si un lavado de Barro deja encima su mismo color, y ningún nivel de 1-200 lleva Barro en una cuia turbia

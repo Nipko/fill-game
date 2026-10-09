@@ -300,7 +300,7 @@ namespace AF.Core.Session
         /// (<see cref="RevealedLayers"/>) se copia cuia a cuia.</description></item>
         /// </list>
         /// <para>Las capas que el historial rehecho ya reveló (R7) cuentan como reveladas y no suman. En los dos usos esta
-        /// llamada va al final del rehacer, como fijan la arquitectura del paso 1 (§11) y T06: el historial <c>h2</c> guarda
+        /// llamada va al final del rehacer, como hace el cliente desde la integración del paso 1 (docs/dev/traspaso/README.md §6): el historial <c>h2</c> guarda
         /// por cuia solo la máscara revelada, sin el punto del historial en que se reveló cada capa, y esta clase tampoco lo
         /// expone. Es exacto aunque una capa se revelara a mitad del historial sin que el historial rehecho la revele (con la
         /// Luciérnaga o con un vertido que Marea deshizo después): ver una oculta solo cambia lo que pasa después si cambia la
