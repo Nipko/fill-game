@@ -4,6 +4,18 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Sin publicar]
 
+### Pendiente de integración (obligatorio antes del merge)
+
+- **`.meta` del paquete y verificación en Unity** (regla dura 3; README, «Paso obligatorio de integración en Unity»). La rama
+  `fase1-mecanicas-niveles` se escribió sin Editor: los 59 archivos `.cs` nuevos del paquete (32 en `Runtime/` y 27 en
+  `Tests/Editor/`) y las 5 carpetas nuevas (`Runtime/AF.Core/Determinism`, `Runtime/AF.Core/Mechanics`, `Runtime/AF.Solver/Bot`,
+  `Runtime/AF.Solver/Generation` y `Runtime/AF.Solver/Murky`) no tienen `.meta`, y los 467 tests compartidos solo se han ejecutado
+  en `dotnet` (un ensamblado; en Unity son dos, `AF.Core.Tests` y `AF.Solver.Tests`). Antes del merge, en esta misma rama:
+  importarla en Unity en un worktree sin Editor abierto (`scripts/unity-compile.ps1` o el Editor), commitear los 64 `.meta`
+  generados (nunca a mano) junto a los packs `mundo_02_v1` a `mundo_05_v1` y sus `.meta` (pendientes por el mismo motivo desde
+  `def28bc` y `57b31c6`), y pasar `scripts/unity-compile.ps1` y `scripts/unity-test.ps1 -Mode EditMode` con código 0. Va
+  también en la descripción del PR.
+
 ### Añadido
 
 - Solver y bot con todas las mecánicas: rendimiento y asignaciones (C3-3, cierra el núcleo 3; regla dura 2; 03 §5-§6; 08 §14.2;

@@ -13,7 +13,8 @@ para `dotnet test` y para las herramientas de `tools/` (informe `docs/setup/rese
 - Bucle caliente sin `new` de clases, *closures*, `params` ni `foreach` sobre interfaces.
 - Tests compartidos (`Tests/Editor/**`): solo atributos de NUnit 3.5 y `Assert.That` con restricciones.
   Los tests que necesiten APIs de .NET 10 o lotes grandes van en `dotnet/AF.Core.Tests/DotnetOnly/`.
-- Los `.meta` los genera Unity al abrir el proyecto y se confirman en git junto con su archivo.
+- Los `.meta` los genera Unity al abrir el proyecto y se confirman en git junto con su archivo (regla dura 3: nunca a mano).
+  Una rama escrita sin Editor los deja pendientes y no se fusiona hasta generarlos: ver «Paso obligatorio de integración».
 
 ## Verificación
 
@@ -21,6 +22,35 @@ para `dotnet test` y para las herramientas de `tools/` (informe `docs/setup/rese
 dotnet build dotnet/AmazonFill.slnx -warnaserror
 dotnet test dotnet/AmazonFill.slnx
 ```
+
+## Paso obligatorio de integración en Unity (rama `fase1-mecanicas-niveles`)
+
+La rama se escribió en un worktree sin Unity (sin `Library/`): añade al paquete 59 archivos `.cs` (32 en `Runtime/` y 27 en
+`Tests/Editor/`) y 5 carpetas sin su `.meta`, y sus 467 tests compartidos solo se han ejecutado en `dotnet` (filtro
+`FullyQualifiedName!~DotnetOnly`). Si se fusiona así, el primer Editor que importe `main` generará GUID sin control. Antes
+del merge, en la integración y **en esta misma rama**:
+
+1. Importar la rama en Unity en un worktree sin ningún Editor abierto en él (regla dura 7):
+   `pwsh -NoProfile -File scripts/unity-compile.ps1`, o abriendo ese worktree en el Editor. Unity genera los **64 `.meta`** que
+   faltan: los de los 59 archivos y los de las carpetas `Runtime/AF.Core/Determinism`, `Runtime/AF.Core/Mechanics`,
+   `Runtime/AF.Solver/Bot`, `Runtime/AF.Solver/Generation` y `Runtime/AF.Solver/Murky`.
+2. Commitear esos `.meta` tal como los genera Unity, en la misma rama y junto a los packs
+   `Assets/_Project/Data/Levels/mundo_02_v1.json` a `mundo_05_v1.json` y sus `.meta`, que quedan pendientes por el mismo motivo
+   (commits `def28bc` y `57b31c6`). Comprobar que no falta ninguno (Git Bash, desde la raíz; sin salida = completo):
+
+   ```bash
+   cd Packages/com.amazonfill.core
+   git ls-files | grep -v '\.meta$' | while read -r f; do git ls-files --error-unmatch "$f.meta" >/dev/null 2>&1 || echo "falta $f.meta"; done
+   find Runtime Tests -mindepth 1 -type d | while read -r d; do git ls-files --error-unmatch "$d.meta" >/dev/null 2>&1 || echo "falta $d.meta"; done
+   ```
+
+3. Pasar, con código 0, `pwsh -NoProfile -File scripts/unity-compile.ps1` y
+   `pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode`. En `dotnet` los tests compartidos forman un solo ensamblado
+   (`dotnet/AF.Core.Tests`); en Unity, dos (`AF.Core.Tests` y `AF.Solver.Tests`, cada uno con su asmdef y el NUnit 3.5 del Test
+   Runner): un test que use un tipo del otro ensamblado o una API de NUnit posterior a la 3.5 compila en `dotnet` y no en
+   Unity. Hasta que este paso se cumpla, la rama no está verificada en Unity.
+
+Este paso va también en la descripción del PR de integración.
 
 ## Contenido actual
 
