@@ -16,6 +16,7 @@ namespace AF.Core.Tests.DotnetOnly
     /// <see cref="GC.GetAllocatedBytesForCurrentThread"/>, que no existe en el perfil de Unity.
     /// </summary>
     [TestFixture]
+    [NonParallelizable] // MechanicsPerformanceTests corre en paralelo: sus recolecciones suman ~8 KB a GetAllocatedBytesForCurrentThread.
     public sealed class HotLoopAllocationTests
     {
         private static readonly int[][] FillBoard =
