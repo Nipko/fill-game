@@ -134,7 +134,7 @@ namespace AF.Presentation
 
         /// <summary>
         /// La pareja se sienta junta (rasgo <c>colas_entrelazadas</c> del catálogo, modelo <c>sacude</c>): centros a 0,9 del
-        /// tamaño, de espaldas, con las colas trenzadas.
+        /// tamaño, lado a lado y mirando al mismo sitio, con las colas colgando bajo la rama, trenzadas.
         /// </summary>
         public bool Pair;
 
@@ -291,6 +291,21 @@ namespace AF.Presentation
         /// <summary>La pareja de <c>colas_entrelazadas</c>, junta: centros a 0,9 S.</summary>
         public const float PairGapS = 0.9f;
 
+        /// <summary>
+        /// Las colas de la pareja cuelgan bajo la rama 0,75 S, trenzadas (revisión del 2026-10-09: «colas colgando bajo la
+        /// rama, trenzadas dos vueltas»).
+        /// </summary>
+        public const float PairTailHangS = 0.75f;
+
+        /// <summary>La punta de la trenza acaba ≥ 6 dp sobre el panel (la lámina del desborde llega a panel.top − 4).</summary>
+        public const float PairTailClearDp = 6f;
+
+        /// <summary>Alto del miquito sentado sobre su apoyo (S): la cabeza, también al mirar al cielo.</summary>
+        public const float SitTopS = 1.05f;
+
+        /// <summary>La rama de la pareja, ya subida, solo sube 2 dp más hacia las esquinas (la baja sube 6).</summary>
+        public const float PairCornerRiseDp = 2f;
+
         /// <summary>Margen del centro de cada miquito con los bordes de la pantalla: [0,5·S + 6, ancho − 0,5·S − 6].</summary>
         public const float EdgeMarginDp = 6f;
 
@@ -300,7 +315,10 @@ namespace AF.Presentation
         /// <summary>En dosel, la fruta cae desde hudBottom − 12, por detrás del HUD.</summary>
         public const float CanopyAboveHudDp = 12f;
 
-        /// <summary>Rama baja en panel.top − 8.</summary>
+        /// <summary>
+        /// Rama baja con su punto más bajo en panel.top − 8 (guion §7.1): con 6 dp de grosor ocupa de panel.top − 11 a
+        /// panel.top − 5, por encima de la lámina del desborde (panel.top − 4), y sube 6 dp hacia el follaje de las esquinas.
+        /// </summary>
         public const float LowBranchAbovePanelDp = 8f;
 
         /// <summary>Rama alta en hudBottom + 6 (modelo <c>cuelga</c>).</summary>
@@ -355,6 +373,7 @@ namespace AF.Presentation
         private readonly int[] _relCount = new int[MaxMonkeys];
         private float _canvasW = 360f;
         private float _corner = 6f;
+        private float _sag;
         private float _hangRelease;
         private bool _crowdedCycles;
 
@@ -627,10 +646,19 @@ namespace AF.Presentation
         /// <summary>Miquitos en pantalla: hasta clamp(tropa, 2, columnas con contenido), con vecinos a ≥ 1,1 S.</summary>
         public int MonkeyCount { get; private set; }
 
-        /// <summary>La pareja de <c>colas_entrelazadas</c> sentada junta (modelo <c>sacude</c>).</summary>
+        /// <summary>
+        /// La pareja de <c>colas_entrelazadas</c> sentada junta, lado a lado y mirando al mismo sitio, con las colas colgando
+        /// bajo la rama, trenzadas (modelo <c>sacude</c>). Sin sitio en la franja para las colas, se sientan como los demás.
+        /// </summary>
         public bool Pair { get; private set; }
 
-        /// <summary>y de la rama de la tropa (dp desde arriba).</summary>
+        /// <summary>Lo que cuelgan bajo la rama las colas trenzadas de la pareja (dp; 0 sin pareja).</summary>
+        public float PairTailHangDp { get; private set; }
+
+        /// <summary>
+        /// y de la rama de la tropa (dp desde arriba): el punto más bajo de la rama baja (en el centro) o la altura de la alta.
+        /// Con la pareja, la rama baja sube lo que cuelgan sus colas.
+        /// </summary>
         public float BranchY { get; private set; }
 
         /// <summary>y de la rama baja (panel.top − 8).</summary>
@@ -736,11 +764,15 @@ namespace AF.Presentation
             return MonkeyX(m, t) + (MonkeyFacing(m, t) * HandOffsetDp);
         }
 
-        /// <summary>y de la rama de la tropa en <paramref name="x"/> (dp desde arriba): sube hacia el follaje de las esquinas.</summary>
+        /// <summary>
+        /// y de la rama de la tropa en <paramref name="x"/> (dp desde arriba): sube hacia el follaje de las esquinas. La baja
+        /// tiene su punto más bajo en el centro, en <see cref="BranchY"/>, y sube 6 dp en los extremos; la alta baja 3 dp en el
+        /// centro y sube 1 dp en los extremos (sin pasar sobre el HUD).
+        /// </summary>
         public float BranchCurveY(float x)
         {
             float u = Math.Min(1f, Math.Max(0f, (x + BranchOverhangDp) / (_canvasW + (2f * BranchOverhangDp))));
-            return BranchY - _corner + (4f * u * (1f - u) * (3f + _corner));
+            return BranchY - _corner + (4f * u * (1f - u) * (_sag + _corner));
         }
 
         /// <summary>La rama sobresale 12 dp por cada lado (sale del follaje de las esquinas).</summary>
@@ -1024,6 +1056,8 @@ namespace AF.Presentation
             LowBranchY = input.PanelTop - LowBranchAbovePanelDp;
             BranchY = model == TroopModel.Hang ? input.HudBottom + HighBranchBelowHudDp : LowBranchY;
             _corner = model == TroopModel.Hang ? 1f : 6f;
+            _sag = model == TroopModel.Hang ? 3f : 0f;
+            PairTailHangDp = 0f;
 
             // Cuelga: el cuerpo colgado acaba ≥ 8 dp por encima del panel (la mano libre, con la fruta, en la suelta).
             float hangRelease = input.PanelTop - LowBranchAbovePanelDp - 2f;
@@ -1037,6 +1071,27 @@ namespace AF.Presentation
             SetBody(body);
             int maxM = perch == IntroPerch.Branch ? Math.Min(Math.Min(Math.Max(input.Troop, 2), ColumnCount), MaxMonkeys) : 0;
             Pair = maxM >= 2 && input.Pair && model == TroopModel.Shake;
+            if (Pair)
+            {
+                // Las colas cuelgan bajo la rama, trenzadas: la rama sube lo que cuelgan (la punta, ≥ 6 dp sobre el panel), sube
+                // solo 2 dp hacia las esquinas, y el tamaño se ajusta para que la pareja, sentada o entrando por la rama desde el
+                // follaje de las esquinas, no pase sobre el HUD. Si no cabe con ≥ 28 dp, sin pareja.
+                float fit = (band - PairTailClearDp - 2f - PairCornerRiseDp) / (SitTopS + PairTailHangS);
+                float pairBody = Math.Min(body, fit);
+                if (pairBody >= MinMonkeyDp)
+                {
+                    body = pairBody;
+                    MonkeyDp = Math.Min(MonkeyDp, pairBody);
+                    SetBody(body);
+                    PairTailHangDp = PairTailHangS * body;
+                    BranchY = Math.Min(LowBranchY, input.PanelTop - PairTailClearDp - PairTailHangDp);
+                    _corner = PairCornerRiseDp;
+                }
+                else
+                {
+                    Pair = false;
+                }
+            }
             for (int j = 0; j < MaxMonkeys; j++)
             {
                 MonkeyKeyCount[j] = 0;
@@ -1057,7 +1112,8 @@ namespace AF.Presentation
             // dos vecinos quedan a ≥ 1,1 S (la frontera, a medio camino entre sus columnas), así que dos miquitos nunca se
             // solapan aunque las columnas estén juntas (filas de 4 y 3 al tresbolillo). Se usan tantos miquitos como quepan
             // (hasta clamp(tropa, 2, columnas)) con todas sus columnas al alcance de la mano. La pareja de colas_entrelazadas
-            // se reparte el tablero por mitades y se sienta junta en el centro del panel.
+            // se reparte el tablero por mitades y se sienta junta en el centro del panel, lado a lado y mirando al mismo sitio
+            // (a lo largo de la rama, nunca a una cuia; el lado alterna con la variación).
             float mid = input.CanvasWidth * 0.5f;
             int m = maxM;
             if (Pair)
@@ -1065,13 +1121,14 @@ namespace AF.Presentation
                 m = 2;
                 AssignGroups(m);
                 float c = input.PanelX + (input.PanelWidth * 0.5f);
+                int look = EntryFromRight ? -1 : 1;
                 for (int g = 0; g < 2; g++)
                 {
                     float seat = ClampEdges(c + ((g == 0 ? -0.5f : 0.5f) * PairGapS * body));
                     _laneLo[g] = seat;
                     _laneHi[g] = seat;
                     _seat[g] = seat;
-                    _seatFacing[g] = g == 0 ? -1 : 1;
+                    _seatFacing[g] = look;
                 }
             }
             else
@@ -1923,7 +1980,7 @@ namespace AF.Presentation
             if (move.Moved)
             {
                 AddKey(m, _mt[m], _mx[m], move.TravelFacing);
-                AddKey(m, move.Arrive, move.Target, move.EndFacing); // al llegar se queda (la pareja, de espaldas)
+                AddKey(m, move.Arrive, move.Target, move.EndFacing); // al llegar se queda (la pareja, mirando al mismo sitio)
                 _mx[m] = move.Target;
                 _arrived[m] = move.Arrive;
             }

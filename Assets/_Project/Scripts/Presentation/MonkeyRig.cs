@@ -62,6 +62,24 @@ namespace AF.Presentation
         /// <summary>Punta de la cola.</summary>
         public Vector2 Tail3;
 
+        /// <summary>
+        /// Trenza (<see cref="BezierStripGraphic.SetWave"/>, en S): separación de la base de la cola al eje de la curva; 0 sin
+        /// trenza.
+        /// </summary>
+        public float TailWaveFromS;
+
+        /// <summary>Trenza: separación de la cola al eje en el tramo trenzado (S).</summary>
+        public float TailWaveS;
+
+        /// <summary>Trenza: fracción de la cola en la que pasa de su base al eje.</summary>
+        public float TailWaveGather;
+
+        /// <summary>Trenza: medias ondas (4 = dos vueltas); 0 sin trenza.</summary>
+        public float TailWaveHalves;
+
+        /// <summary>Trenza: fase (0 o π: las dos colas de la pareja se cruzan).</summary>
+        public float TailWavePhase;
+
         /// <summary>Párpados cerrados (parpadeo de 120 ms).</summary>
         public bool Blink;
     }
@@ -308,6 +326,25 @@ namespace AF.Presentation
 
             float w = _art.TailWidthS * s;
             _tail.SetCurve(pose.Tail0 * s, pose.Tail1 * s, pose.Tail2 * s, pose.Tail3 * s, w, w * 0.65f);
+            _tail.SetWave(pose.TailWaveFromS * s, pose.TailWaveS * s, pose.TailWaveGather, pose.TailWaveHalves, pose.TailWavePhase);
+        }
+
+        /// <summary>Cola del rig (tests de la trenza).</summary>
+        public BezierStripGraphic Tail => _tail;
+
+        /// <summary>Deja registradas en su Canvas las piezas ocultas (párpado, bigote, fruta abrazada): ver <see cref="GraphicPool"/>.</summary>
+        public void EnsureRegistered()
+        {
+            for (int i = 0; i < _graphics.Length; i++)
+            {
+                GraphicPool.EnsureRegistered(_graphics[i]);
+            }
+        }
+
+        /// <summary>Segmentos de la cola: 8 en arco; más para que la trenza de la pareja no se vea poligonal.</summary>
+        public void SetTailSegments(int segments)
+        {
+            _tail.SetSegments(segments);
         }
 
         /// <summary>Añade los gráficos del rig (tests de raycast).</summary>

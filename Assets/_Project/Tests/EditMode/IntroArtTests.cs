@@ -328,6 +328,98 @@ namespace AF.Tests.EditMode
             Assert.That(amber, Is.GreaterThan(150), "mono nocturno: iris ámbar de ojos enormes");
         }
 
+        /// <summary>
+        /// Revisión del 2026-10-09 (22_species_saguinus_imperator y 22_species_cacajao_calvus_ucayalii; guion §4.2 y §4.6.2): el
+        /// bigote del pichico son hebras blancas #F4F1EA sin contorno de tinta (con borde de 1 px #BDB8AE) que bajan del labio
+        /// más allá de los hombros; la cabeza del huapo es un óvalo vertical rojo, sin nariz saliente, con ojos pequeños de color
+        /// ámbar y pelo largo rojizo alrededor de la cabeza y en los hombros. Se mira en el atlas de piezas (y desde abajo).
+        /// </summary>
+        [Test]
+        public void ReviewedTraits_MoustacheWithoutInk_AndBaldRedOvalHeadWithLongHair()
+        {
+            FaunaCatalog catalog = FaunaCatalogReader.Read(File.ReadAllText(Path.Combine(Application.dataPath, "_Project/Data/Fauna/miquitos_v0.json")));
+            int size = ProceduralArt.FaunaPixelsSize;
+
+            // Bigote: celda (80, 0, 176 × 78).
+            Color32[] px = ProceduralArt.FaunaPixels(catalog.Find("saguinus_imperator")!);
+            int white = 0;
+            int ink = 0;
+            int lowest = int.MaxValue;
+            for (int y = 0; y < 78; y++)
+            {
+                for (int x = 80; x < 256; x++)
+                {
+                    Color32 c = px[(y * size) + x];
+                    if (c.a < 128)
+                    {
+                        continue;
+                    }
+
+                    bool isWhite = Distance(c, Palette.Hex(0xF4F1EA)) < 0.04f;
+                    white += isWhite ? 1 : 0;
+                    ink += ((0.299f * c.r) + (0.587f * c.g) + (0.114f * c.b)) / 255f < 0.45f ? 1 : 0;
+                    lowest = isWhite ? Mathf.Min(lowest, y) : lowest;
+                }
+            }
+
+            Assert.That(white, Is.GreaterThan(300), "pichico: hebras blancas #F4F1EA");
+            Assert.That(ink, Is.EqualTo(0), "pichico: el bigote, sin contorno de tinta (se leía como colmillos)");
+            Assert.That(lowest, Is.LessThan(20), "baja del labio (y 63 en la celda) más allá de los hombros (y ≈ 40)");
+
+            // Huapo: cabeza en la celda (0, 128) y torso en la (128, 128).
+            FaunaSpecies uakari = catalog.Find("cacajao_calvus_ucayalii")!;
+            px = ProceduralArt.FaunaPixels(uakari);
+            Color red = Palette.Hex(uakari.Palette.Face);
+            Color hair = Palette.Hex(0xC8743A);
+            int x0 = int.MaxValue;
+            int x1 = int.MinValue;
+            int y0 = int.MaxValue;
+            int y1 = int.MinValue;
+            int nose = 0;
+            int headHair = 0;
+            int amber = 0;
+            for (int y = 128; y < 256; y++)
+            {
+                for (int x = 0; x < 128; x++)
+                {
+                    Color32 c = px[(y * size) + x];
+                    if (c.a < 128)
+                    {
+                        continue;
+                    }
+
+                    if (Distance(c, red) < 0.05f)
+                    {
+                        x0 = Mathf.Min(x0, x);
+                        x1 = Mathf.Max(x1, x);
+                        y0 = Mathf.Min(y0, y);
+                        y1 = Mathf.Max(y1, y);
+                    }
+
+                    nose += Distance(c, Palette.Hex(uakari.Palette.Muzzle)) < 0.06f ? 1 : 0;
+                    headHair += Distance(c, hair) < 0.06f ? 1 : 0;
+                    amber += Distance(c, Palette.Hex(0xC8902A)) < 0.06f ? 1 : 0;
+                }
+            }
+
+            Assert.That(y1 - y0, Is.GreaterThan((x1 - x0) * 1.15f), "huapo: la cara y el cuero cabelludo, un óvalo vertical rojo");
+            Assert.That(x1 - x0, Is.LessThan(60), "no un disco que llena la cabeza");
+            Assert.That(nose, Is.LessThan(30), "sin nariz saliente (solo dos fosas a ras de la cara)");
+            Assert.That(headHair, Is.GreaterThan(250), "pelo largo rojizo alrededor de la cabeza (antes, 0: un disco con flecos del color del cuerpo)");
+            Assert.That(amber, Is.InRange(20, 150), "ojos pequeños de color ámbar");
+
+            int torsoHair = 0;
+            for (int y = 128; y < 256; y++)
+            {
+                for (int x = 128; x < 256; x++)
+                {
+                    torsoHair += Distance(px[(y * size) + x], hair) < 0.06f ? 1 : 0;
+                }
+            }
+
+            Assert.That(torsoHair, Is.GreaterThan(400), "y en los hombros y el lomo");
+        }
+
         [Test]
         public void PairPalette_IsOptional_AndPaintsTheSecondIndividual()
         {

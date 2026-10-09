@@ -9,18 +9,19 @@ namespace AF.Presentation
     /// <summary>
     /// La tropa de «Llenar y teñir» (guion de la intro §4.4, §7.1-§7.3 y §11) en un Canvas anidado propio dentro de la escena,
     /// por detrás del follaje de las esquinas (la rama sale de él y la tropa entra y sale trepando por él) y del tablero: la
-    /// rama en primer plano del río (Bézier de 5 dp con corteza y 4 hojas, sin reflejo: la tropa nunca cruza el río), a
-    /// panel.top − 8 para <c>fila</c> y <c>sacude</c> y a hudBottom + 6 para <c>cuelga</c>, y hasta 6 miquitos con su rig
-    /// recortable (<see cref="MonkeyRig"/>) guiados por las trayectorias del planificador (<see cref="IntroChoreography"/>):
-    /// entran por la rama cuando la fila 1 está llena (larga) o ya están posados (corta), frenan con la mano sobre sus
-    /// columnas, sueltan la fruta y salen en 300 ms trepando hacia el follaje de la esquina más cercana, con alfa 1 hasta los
-    /// últimos 80 ms. Entre la rama y la tropa queda <see cref="WaterSlot"/>, donde la intro dibuja el labio del río que
-    /// desborda (delante de la rama, detrás de los miquitos). Rasgos de reposo por especie: la pareja de
-    /// <c>colas_entrelazadas</c> se sienta junta con las colas trenzadas, el churuco lleva la fruta abrazada al pecho, el
-    /// segundo individuo usa la <c>paleta_pareja</c> si la hay, y con <c>iluminacion = noche</c> un velo nocturno cubre la
-    /// franja mientras no exista la pintura de noche del mundo (07 §2.1). Todo es función del tiempo de la intro, así que una
-    /// captura en t es siempre la misma. Nada depende de la selección, de un vertido ni de la legalidad (D-002); nada recibe
-    /// toques.
+    /// rama en primer plano del río (Bézier de 6 dp con corteza y 4 hojas, sin reflejo: la tropa nunca cruza el río), con su
+    /// punto más bajo en panel.top − 8 para <c>fila</c> y <c>sacude</c> y a hudBottom + 6 para <c>cuelga</c>, y hasta 6
+    /// miquitos con su rig recortable (<see cref="MonkeyRig"/>) guiados por las trayectorias del planificador
+    /// (<see cref="IntroChoreography"/>): entran por la rama cuando la fila 1 está llena (larga) o ya están posados (corta),
+    /// frenan con la mano sobre sus columnas, sueltan la fruta y salen en 300 ms trepando hacia el follaje de la esquina más
+    /// cercana, con alfa 1 hasta los últimos 80 ms. Orden de capas (guion §4.6.5; revisión del 2026-10-09): agua &lt; rama
+    /// &lt; tropa. <see cref="WaterSlot"/>, donde la intro dibuja el labio del río que desborda, va por detrás de la rama: la
+    /// rama queda encima de la crecida y los miquitos, sobre la rama, nunca de pie sobre el río. Rasgos de reposo por especie:
+    /// la pareja de <c>colas_entrelazadas</c> se sienta lado a lado mirando al mismo sitio con las colas colgando bajo la rama,
+    /// trenzadas dos vueltas; el churuco lleva la fruta abrazada al pecho; el segundo individuo usa la <c>paleta_pareja</c>
+    /// si la hay; y con <c>iluminacion = noche</c> un velo nocturno cubre la franja mientras no exista la pintura de noche del
+    /// mundo (07 §2.1). Todo es función del tiempo de la intro, así que una captura en t es siempre la misma. Nada depende de
+    /// la selección, de un vertido ni de la legalidad (D-002); nada recibe toques.
     /// </summary>
     public sealed class TroopLayer
     {
@@ -31,6 +32,12 @@ namespace AF.Presentation
         private const float BraidBlendMs = 120f;
         private const float ClimbTiltDeg = 18f;
         private const int Leaves = 4;
+
+        /// <summary>Medias ondas de la trenza de la pareja: 4 cruces, dos vueltas (revisión del 2026-10-09).</summary>
+        public const float BraidHalfWaves = 4f;
+
+        /// <summary>Separación de cada cola al eje de la trenza (S).</summary>
+        public const float BraidAmplitudeS = 0.07f;
 
         /// <summary>Velo nocturno sobre la franja (especies con <c>iluminacion = noche</c>).</summary>
         public static readonly Color NightVeil = new Color(0x0E / 255f, 0x16 / 255f, 0x36 / 255f, 0.42f);
@@ -82,6 +89,15 @@ namespace AF.Presentation
             nrt.pivot = new Vector2(0f, 1f);
             _night.enabled = false;
 
+            // Agua < rama < tropa: el labio del río que desborda, por detrás de la rama (guion §4.6.5).
+            var waterGo = new GameObject("Water", typeof(RectTransform));
+            waterGo.transform.SetParent(_layer, false);
+            _water = (RectTransform)waterGo.transform;
+            _water.anchorMin = Vector2.zero;
+            _water.anchorMax = Vector2.one;
+            _water.offsetMin = Vector2.zero;
+            _water.offsetMax = Vector2.zero;
+
             for (int m = 0; m < _lianas.Length; m++)
             {
                 _lianas[m] = Strip("Liana" + m, 6);
@@ -106,27 +122,23 @@ namespace AF.Presentation
                 _leaves[i] = img;
             }
 
-            var waterGo = new GameObject("Water", typeof(RectTransform));
-            waterGo.transform.SetParent(_layer, false);
-            _water = (RectTransform)waterGo.transform;
-            _water.anchorMin = Vector2.zero;
-            _water.anchorMax = Vector2.one;
-            _water.offsetMin = Vector2.zero;
-            _water.offsetMax = Vector2.zero;
-
             for (int m = 0; m < _rigs.Length; m++)
             {
                 _rigs[m] = new MonkeyRig(_layer, m);
             }
 
-            go.SetActive(false);
+            // La capa no se desactiva nunca (ni aquí ni en Hide): desactivar un Canvas anidado desregistra sus gráficos ocultos
+            // y volver a mostrarlos en mitad de la intro asignaría memoria (GraphicRegistry, A10). Todo empieza oculto pieza a pieza.
         }
 
         /// <summary>Raíz de la capa (orden de capas y tests).</summary>
         public RectTransform Layer => _layer;
 
-        /// <summary>Hueco entre la rama y la tropa para el labio del río que desborda (lo rellena la intro).</summary>
+        /// <summary>Hueco por detrás de la rama (y de la tropa) para el labio del río que desborda (lo rellena la intro).</summary>
         public RectTransform WaterSlot => _water;
+
+        /// <summary>La rama (orden de capas y tests de visibilidad).</summary>
+        public Graphic Branch => _branch;
 
         /// <summary>La tropa (rama y miquitos) está en pantalla.</summary>
         public bool Active => _active;
@@ -185,6 +197,7 @@ namespace AF.Presentation
 
             _active = true;
             _night.enabled = _species != null && _species.Lighting == FaunaLighting.Night;
+            GraphicPool.EnsureRegistered(_night);
             if (_night.enabled)
             {
                 _night.rectTransform.anchoredPosition = Vector2.zero;
@@ -219,12 +232,15 @@ namespace AF.Presentation
                 bool on = m < plan.MonkeyCount;
                 _rigs[m].SetVisible(on);
                 _lianas[m].enabled = false;
+                GraphicPool.EnsureRegistered(_lianas[m]);
                 if (!on)
                 {
                     continue;
                 }
 
                 _rigs[m].SetArt(LookOf(m), plan.BodyDp);
+                _rigs[m].SetTailSegments(plan.Pair ? BezierStripGraphic.MaxSegments : 8);
+                _rigs[m].EnsureRegistered(); // párpado, fruta abrazada…: mostrarlos en mitad de la intro no asigna (A10)
                 _firstRelease[m] = float.MaxValue;
                 for (int k = 0; k < plan.FruitCount; k++)
                 {
@@ -314,14 +330,10 @@ namespace AF.Presentation
             }
         }
 
-        /// <summary>Oculta la rama, la tropa y el hueco del agua.</summary>
+        /// <summary>Oculta la rama y la tropa (el agua del hueco la oculta la intro), pieza a pieza: la capa sigue activa.</summary>
         public void Hide()
         {
             HideTroop();
-            if (_layer.gameObject.activeSelf)
-            {
-                _layer.gameObject.SetActive(false);
-            }
         }
 
         /// <summary>Añade los gráficos de la capa (tests de raycast).</summary>
@@ -507,19 +519,25 @@ namespace AF.Presentation
             rig.SetAlpha(alpha);
         }
 
-        // La pareja de colas_entrelazadas, quieta en sus asientos de espaldas: las dos colas suben trenzadas por detrás de ellos
-        // (dos Bézier de ≈ 1,3 S que se cruzan 3 veces, una el reflejo de la otra). Cuelgan hacia arriba y no bajo la rama: la
-        // rama está a 8 dp del panel y nada de la tropa entra en él (A7).
+        // La pareja de colas_entrelazadas, quieta en sus asientos, lado a lado y mirando al mismo sitio (revisión del
+        // 2026-10-09): las dos colas bajan de la grupa por delante de la rama, se juntan en un eje común a medio camino entre las
+        // dos grupas y cuelgan bajo la rama trenzadas dos vueltas (4 cruces: la misma curva con fases opuestas). La rama de la
+        // pareja sube lo que cuelgan las colas, que acaban ≥ 6 dp sobre el panel (IntroChoreography.PairTailHangDp): nada de la
+        // tropa entra en el panel (A7).
         private void Braid(IntroChoreography plan, int m, float t, float s, ref MonkeyPose pose)
         {
             int other = m == 0 ? 1 : 0;
-            if (plan.MonkeyCount < 2 || m > 1)
+            if (plan.MonkeyCount < 2 || m > 1 || plan.PairTailHangDp <= 0f)
             {
                 return;
             }
 
+            // Solo sentados juntos en sus asientos (no mientras esperan quietos en el follaje de sus esquinas, en la larga).
+            float x = plan.MonkeyX(m, t);
+            float xo = plan.MonkeyX(other, t);
             float since = Mathf.Max(StillSince(plan, 0, t), StillSince(plan, 1, t));
-            bool still = Mathf.Abs(plan.MonkeyVelocity(0, t)) < 0.0001f && Mathf.Abs(plan.MonkeyVelocity(1, t)) < 0.0001f;
+            bool still = Mathf.Abs(plan.MonkeyVelocity(0, t)) < 0.0001f && Mathf.Abs(plan.MonkeyVelocity(1, t)) < 0.0001f
+                && Mathf.Abs(x - xo) <= (IntroChoreography.PairGapS * s) + 1f;
             float amount = still ? Mathf.Clamp01((t - since) / BraidBlendMs) : 0f;
             if (!plan.IsLong)
             {
@@ -531,23 +549,37 @@ namespace AF.Presentation
                 return;
             }
 
-            float x = plan.MonkeyX(m, t);
-            float xo = plan.MonkeyX(other, t);
-            float mid = (x + xo) * 0.5f;
-            float side = x < xo ? -1f : 1f; // este miquito, a la izquierda (−1) o a la derecha (+1) del centro
+            // Grupas de los dos (la base de la cola sentada, pose.Tail0) en el lienzo (dp, y hacia abajo).
             float f = plan.MonkeyFacing(m, t);
             float y = plan.BranchCurveY(x);
-            float h = 0.93f * s;
+            float fo = plan.MonkeyFacing(other, t);
+            float baseX = x + (f * pose.Tail0.x * s);
+            float baseY = y - (pose.Tail0.y * s);
+            float otherBaseX = xo + (fo * pose.Tail0.x * s);
+            float axisX = (baseX + otherBaseX) * 0.5f;
+            float branchY = plan.BranchCurveY(axisX);
+            float endY = branchY + plan.PairTailHangDp;
 
-            // Puntos de control en el lienzo (dp, y hacia abajo); el de la derecha es el reflejo del de la izquierda.
-            Vector2 w0 = new Vector2(mid + (side * 0.23f * s), y - (0.22f * s));
-            Vector2 w1 = new Vector2(mid - (side * 0.45f * s), y - (0.22f * s) - (h * 0.33f));
-            Vector2 w2 = new Vector2(mid + (side * 0.45f * s), y - (0.22f * s) - (h * 0.66f));
-            Vector2 w3 = new Vector2(mid - (side * 0.06f * s), y - (0.22f * s) - h);
-            pose.Tail0 = Vector2.Lerp(pose.Tail0, Local(w0, x, y, f, s), amount);
-            pose.Tail1 = Vector2.Lerp(pose.Tail1, Local(w1, x, y, f, s), amount);
-            pose.Tail2 = Vector2.Lerp(pose.Tail2, Local(w2, x, y, f, s), amount);
-            pose.Tail3 = Vector2.Lerp(pose.Tail3, Local(w3, x, y, f, s), amount);
+            // Eje recto de la trenza, de la altura de las grupas hasta la punta; cada cola sale de su grupa (separación inicial)
+            // y se junta con la otra al pasar por la rama.
+            var top = new Vector2(axisX, baseY);
+            var end = new Vector2(axisX, endY);
+            Vector2 c0 = Local(top, x, y, f, s);
+            Vector2 c3 = Local(end, x, y, f, s);
+            pose.Tail0 = Vector2.Lerp(pose.Tail0, c0, amount);
+            pose.Tail1 = Vector2.Lerp(pose.Tail1, Vector2.Lerp(c0, c3, 1f / 3f), amount);
+            pose.Tail2 = Vector2.Lerp(pose.Tail2, Vector2.Lerp(c0, c3, 2f / 3f), amount);
+            pose.Tail3 = Vector2.Lerp(pose.Tail3, c3, amount);
+
+            // Hacia abajo la normal local es +x (en el espacio del rig, que ya refleja la orientación): la base de la cola, a
+            // un lado u otro del eje, fija la fase.
+            float fromS = (baseX - axisX) * f / s;
+            float gather = Mathf.Clamp((branchY + 3f - baseY) / Mathf.Max(1f, endY - baseY), 0.1f, 0.5f);
+            pose.TailWaveFromS = amount * Mathf.Abs(fromS);
+            pose.TailWaveS = amount * BraidAmplitudeS;
+            pose.TailWaveGather = gather;
+            pose.TailWaveHalves = BraidHalfWaves;
+            pose.TailWavePhase = fromS >= 0f ? 0f : Mathf.PI;
         }
 
         // Del lienzo (y hacia abajo) al espacio del rig (S, y hacia arriba, mirando a la derecha).

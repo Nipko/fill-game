@@ -250,6 +250,34 @@ namespace AF.Presentation
         }
 
         /// <summary>
+        /// Onda de la superficie en función de un reloj de fuera (la intro, A14): edad en ms (&lt; 0 sin onda) y fase fija; no
+        /// acumula estado y no avanza con <see cref="Tick"/> hasta <see cref="ReleaseRipple"/>.
+        /// </summary>
+        public void SetRippleAt(float ageMs, float phase)
+        {
+            _liquid.SetRippleAt(ageMs, phase);
+        }
+
+        /// <summary>Devuelve la onda al reloj del juego.</summary>
+        public void ReleaseRipple()
+        {
+            _liquid.ReleaseRipple();
+        }
+
+        /// <summary>La onda la lleva un reloj de fuera (la intro).</summary>
+        public bool RippleDriven => _liquid.RippleDriven;
+
+        /// <summary>Onda en curso (tests).</summary>
+        public bool Rippling => _liquid.Rippling;
+
+        /// <summary>Edad (ms; −1 sin onda) y fase (radianes) de la onda (tests de determinismo, A14).</summary>
+        public void RippleState(out float ageMs, out float phase)
+        {
+            ageMs = _liquid.RippleAgeMs;
+            phase = _liquid.RipplePhase;
+        }
+
+        /// <summary>
         /// Lengua de líquido por la pared inferior del cuello mientras sale el chorro (0..1; revisión visual del
         /// 2026-10-07): une la superficie inclinada con el labio del que sale el chorro.
         /// </summary>

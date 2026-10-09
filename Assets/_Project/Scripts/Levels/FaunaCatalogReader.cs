@@ -26,8 +26,9 @@ namespace AF.Levels
     /// Lee y valida el catálogo de miquitos <c>af-fauna/0</c> (guion de la intro §4.3) con el lector JSON del cliente
     /// (<see cref="JsonParser"/>): ids únicos; valores de <c>esqueleto</c>, <c>modelo</c>, <c>locomocion</c> e
     /// <c>iluminacion</c> conocidos; colores <c>#RRGGBB</c>; <c>nivel_tarjeta</c> dentro de su tramo; ranuras de arte
-    /// <c>fauna_&lt;id&gt;_partes</c> y <c>fauna_&lt;id&gt;_retrato</c>; y los tramos de las especies y de <c>sin_fauna</c>
-    /// cubren 1-1.000 sin solapes ni huecos.
+    /// <c>fauna_&lt;id&gt;_partes</c> y <c>fauna_&lt;id&gt;_retrato</c>; los <c>mundos</c> de cada especie y de cada tramo
+    /// <c>sin_fauna</c> son justo los que cruza su tramo según la tabla de mundos (<see cref="WorldTable"/>, glosario §8); y
+    /// los tramos de las especies y de <c>sin_fauna</c> cubren 1-1.000 sin solapes ni huecos.
     /// </summary>
     public static class FaunaCatalogReader
     {
@@ -111,6 +112,7 @@ namespace AF.Levels
 
                     int[] worlds = ReadWorlds(g, where);
                     ReadRange(g, where, out int from, out int to);
+                    CheckWorlds(worlds, from, to, where);
                     gaps.Add(new FaunaGap(worlds, from, to));
                 }
             }
@@ -174,6 +176,7 @@ namespace AF.Levels
             FaunaLighting lighting = ParseLighting(RequireString(node, "iluminacion", where), where);
             int[] worlds = ReadWorlds(node, where);
             ReadRange(node, where, out int from, out int to);
+            CheckWorlds(worlds, from, to, where);
             int card = RequireInt(node, "nivel_tarjeta", where);
             if (card < from || card > to)
             {
@@ -292,6 +295,32 @@ namespace AF.Levels
             if (from < 1 || to > FaunaCatalog.LastLevel || from > to)
             {
                 throw new FaunaFormatException(where + ": el tramo " + Range(from, to) + " no es válido (1..1.000, desde ≤ hasta).");
+            }
+        }
+
+        // Los mundos de una especie (o de un tramo sin fauna) son exactamente los que cruza su tramo de niveles según la tabla
+        // de mundos (glosario §8): un tramo que se sale de sus mundos dejaría esos niveles en dosel sin avisar (LivesIn falla en
+        // IntroCast.Resolve), y un mundo de más la haría «vivir» donde nunca sale.
+        private static void CheckWorlds(int[] worlds, int from, int to, string where)
+        {
+            int first = WorldTable.WorldOf(from);
+            int last = WorldTable.WorldOf(to);
+            for (int w = first; w <= last; w++)
+            {
+                if (Array.IndexOf(worlds, w) < 0)
+                {
+                    throw new FaunaFormatException(where + ": el tramo " + Range(from, to) + " cruza el mundo " + w.ToString(CultureInfo.InvariantCulture)
+                        + " (glosario §8), que no está en 'mundos'.");
+                }
+            }
+
+            for (int i = 0; i < worlds.Length; i++)
+            {
+                if (worlds[i] < first || worlds[i] > last)
+                {
+                    throw new FaunaFormatException(where + ": el mundo " + worlds[i].ToString(CultureInfo.InvariantCulture) + " no tiene niveles en el tramo "
+                        + Range(from, to) + " (glosario §8).");
+                }
             }
         }
 

@@ -18,13 +18,16 @@ namespace AF.Presentation
     /// en la cuia; la última floración termina en T. El calendario lo calcula una vez <see cref="IntroChoreography"/> y todo se
     /// evalúa por tiempo, en un Canvas anidado propio delante de las cuias (<see cref="Layer"/>) con pools preasignados: 7 tiras
     /// de agua, 16 chorritos, 24 frutas (un atlas), 24 penachos, 24 anillos aditivos (<see cref="FxLayer"/> solo tiene 6) y 20
-    /// gotas; y, delante de la rama y detrás de la tropa (<see cref="AttachFront"/>), el labio del río que desborda la orilla
-    /// hasta el canto del panel con 6 puntos de espuma en la cresta. Presupuesto del guion §13, con contador
+    /// gotas; y, en la capa de la tropa, por detrás de la rama (<see cref="AttachFront"/>: labio &lt; rama &lt; tropa, guion
+    /// §4.6.5), el labio del río que desborda la orilla hasta el canto del panel con 6 puntos de espuma en la cresta, al 70 %
+    /// en la franja de la rama para que se lea «rama sobre la crecida» y no una tabla. Presupuesto del guion §13, con contador
     /// (<see cref="CountVisible"/>): ≤ 8 brillos aditivos a la vez (la espuma de los chorritos y los anillos; se queda el más
     /// reciente y la vida del anillo se acorta según el espaciado de los impactos) y ≤ 20 partículas (gotas, penachos y espuma
-    /// del labio). Al ser todo función del tiempo, y el reloj de los shaders del líquido y del chorro el de la intro cuando el
-    /// ambiente está congelado (<see cref="ShaderClock"/>), una captura en t es siempre la misma. Nada recibe toques y no se
-    /// asigna memoria por fotograma tras <see cref="Start"/>.
+    /// del labio). Todo lo que se ve es función del tiempo de la intro: también la onda del menisco, cuya edad es t menos el
+    /// último evento de su cuia (inicio del llenado o impacto de una fruta) con una fase fija por cuia y evento, sin estado
+    /// acumulado en el líquido (A14); y, con el ambiente congelado, el reloj de los shaders del líquido y del chorro es el de la
+    /// intro (<see cref="ShaderClock"/>). Así una captura en t sale igual sin importar las intros que hubo antes. Nada recibe
+    /// toques y no se asigna memoria por fotograma tras <see cref="Start"/>.
     /// </summary>
     /// <remarks>
     /// <para>Sigue las recomendaciones del guion (Q1-Q7 A, Q8 A provisional, Q9 A, Q10 A, Q13 A y Q16 A; Q11 diferida), que
@@ -93,6 +96,15 @@ namespace AF.Presentation
         /// <summary>…y llega 2 dp dentro del canto del panel, donde lo recoge la lámina.</summary>
         public const float LipBelowPanelDp = 2f;
 
+        /// <summary>
+        /// Franja de la rama baja sobre el labio: de panel.top − 11 a panel.top − 5 (la rama de 6 dp con su punto más bajo en
+        /// panel.top − 8). Desde el borde plano del labio hasta su borde de arriba, el labio va al <see cref="LipBranchBandAlpha"/>.
+        /// </summary>
+        public const float LipBranchBandTopDp = 11f;
+
+        /// <summary>Opacidad del labio en la franja de la rama (revisión del 2026-10-09: «rama sobre la crecida»).</summary>
+        public const float LipBranchBandAlpha = 0.7f;
+
         /// <summary>Lado de cada punto de espuma del labio (dp).</summary>
         public const float LipFoamDp = 2f;
 
@@ -129,7 +141,8 @@ namespace AF.Presentation
         private int _dropCount;
         private readonly Cuia[] _final = new Cuia[MaxCuias];
         private readonly bool[] _sealed = new bool[MaxCuias];
-        private readonly bool[] _rippled = new bool[MaxCuias];
+        private readonly float[] _rippleAt = new float[MaxCuias];
+        private readonly int[] _rippleEvent = new int[MaxCuias];
         private readonly Color[] _ringColor = new Color[MaxFruits];
         private readonly Color[] _plumeColor = new Color[MaxFruits];
         private readonly List<Graphic> _graphics = new List<Graphic>(128);
@@ -144,7 +157,6 @@ namespace AF.Presentation
         private Color _waterA;
         private Color _waterCore;
         private float _t;
-        private float _prevT;
         private float _fadeLeft = -1f;
         private float _frozenT;
         private bool _tail;
@@ -210,10 +222,11 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// Crea, en <paramref name="slot"/> (el hueco entre la rama y la tropa de <see cref="TroopLayer"/>), el labio del río
-        /// que desborda: una tira de agua desde el borde inferior del río (panel.top − 14) hasta 2 dp dentro del canto del panel,
-        /// del mismo ancho que la lámina en cada instante, delante de la rama, con 6 puntos de espuma de 2 × 2 dp en la cresta.
-        /// Así se ve que el agua sale del río y pasa por encima de la rama hasta el marco (guion §6.2, tiempo 2).
+        /// Crea, en <paramref name="slot"/> (<see cref="TroopLayer.WaterSlot"/>, por detrás de la rama y de la tropa), el labio
+        /// del río que desborda: una tira de agua desde el borde inferior del río (panel.top − 14) hasta 2 dp dentro del canto
+        /// del panel, del mismo ancho que la lámina en cada instante, con 6 puntos de espuma de 2 × 2 dp en la cresta y al 70 %
+        /// desde el canto hasta la franja de la rama (panel.top − 11). Así se ve que el agua sale del río y corre por debajo de
+        /// la rama hasta el marco (guion §6.2, tiempo 2), con la rama delante, en primer plano, y el río detrás (§4.6.5).
         /// </summary>
         public void AttachFront(RectTransform slot)
         {
@@ -281,6 +294,9 @@ namespace AF.Presentation
         /// <summary>Medio ancho del labio a la vista (dp; 0 sin labio).</summary>
         public float LipHalfWidth => _lip != null && _lip.enabled ? _lip.Length * 0.5f : 0f;
 
+        /// <summary>Tira del labio (tests: su opacidad en la franja de la rama).</summary>
+        public WaterStripGraphic? LipGraphic => _lip;
+
         /// <summary>La intro está en curso (input de juego bloqueado, vistas bloqueadas).</summary>
         public bool Running { get; private set; }
 
@@ -334,7 +350,6 @@ namespace AF.Presentation
                 _sealed[i] = board.IsSealed(i);
                 Vector2 foot = views[i].FootPosition;
                 _input.SetCuia(i, foot.x, -foot.y, RowOf(-foot.y), board[i]);
-                _rippled[i] = false;
             }
 
             _plan.Plan(_input);
@@ -413,13 +428,18 @@ namespace AF.Presentation
             Troop?.Begin(_plan, _input);
             Ambient?.SetPollenPaused(true); // el polen se pausa: en los primeros 100 ms solo se mueve el río (guion §7.2)
             _t = 0f;
-            _prevT = 0f;
             _tail = false;
             _fadeLeft = -1f;
             Running = true;
             if (!_layer.gameObject.activeSelf)
             {
                 _layer.gameObject.SetActive(true);
+            }
+
+            // Los pools, registrados (ocultos) en su Canvas ya: mostrarlos en mitad de la intro no asigna (A10).
+            for (int i = 0; i < _graphics.Count; i++)
+            {
+                GraphicPool.EnsureRegistered(_graphics[i]);
             }
 
             Apply(0f);
@@ -437,7 +457,7 @@ namespace AF.Presentation
                     return;
                 }
 
-                ApplyRemnants(_frozenT, RemnantAlpha, false);
+                ApplyRemnants(_frozenT, RemnantAlpha);
                 return;
             }
 
@@ -446,7 +466,6 @@ namespace AF.Presentation
                 return;
             }
 
-            _prevT = _t;
             _t += dtMs;
             if (Running && _t >= _input.TotalMs)
             {
@@ -461,18 +480,26 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// Enganche de depuración para las capturas: lleva la intro al instante <paramref name="ms"/> (sin las gotas de los
-        /// instantes saltados). Todo lo que se ve es función del tiempo, así que la captura es determinista.
+        /// Enganche de depuración para las capturas: lleva la intro al instante <paramref name="ms"/>. Todo lo que se ve es
+        /// función del tiempo (también la onda del menisco), así que la captura es determinista. Mientras la intro corre se puede
+        /// ir hacia delante o hacia atrás; una vez terminada (T alcanzado: las vistas ya están desbloqueadas y con su contenido
+        /// final), solo hacia la cola (≥ T): volver a un instante anterior exige relanzarla (<c>GameScreen.DebugReplayIntro</c>).
         /// </summary>
+        /// <exception cref="InvalidOperationException">No hay intro, o ya terminó y <paramref name="ms"/> &lt; T.</exception>
         public void Seek(float ms)
         {
             if (!Running && !_tail)
             {
-                return;
+                throw new InvalidOperationException("IntroAnimation.Seek: no hay intro en curso ni restos que buscar.");
+            }
+
+            if (!Running && ms < _input.TotalMs)
+            {
+                throw new InvalidOperationException("IntroAnimation.Seek: la intro ya terminó (T = " + _input.TotalMs + " ms); para ir a "
+                    + ms + " ms hay que relanzarla.");
             }
 
             _t = Mathf.Max(0f, ms);
-            _prevT = _t;
             if (Running && _t >= _input.TotalMs)
             {
                 FinishNatural();
@@ -501,7 +528,8 @@ namespace AF.Presentation
             _frozenT = _t;
             _fadeLeft = SkipFadeMs;
             Ambient?.SetCanopyShake(0f);
-            ApplyRemnants(_frozenT, 1f, false);
+            ReleaseRipples(); // tras el salto la onda sigue con el reloj del juego
+            ApplyRemnants(_frozenT, 1f);
         }
 
         /// <summary>Retira en el acto todos los restos (carga de otro nivel, vuelta de segundo plano).</summary>
@@ -608,7 +636,70 @@ namespace AF.Presentation
                 ApplyCuias(t);
             }
 
-            ApplyRemnants(t, 1f, true);
+            ApplyRipples(t);
+            ApplyRemnants(t, 1f);
+        }
+
+        // Onda del menisco en función de t (A14): su edad es t menos el último evento de la cuia (el inicio del llenado, con
+        // menisco y onda como en el vertido, D-006, o el impacto de una fruta) y su fase es fija por cuia y evento; nada se
+        // acumula en el líquido. En la cola (tras T), una onda nueva del juego (un vertido) manda sobre la de la intro.
+        private void ApplyRipples(float t)
+        {
+            IntroChoreography p = _plan;
+            int n = Mathf.Min(_views.Length, _input.Count);
+            for (int i = 0; i < n; i++)
+            {
+                _rippleAt[i] = -1f;
+                _rippleEvent[i] = 0;
+                if (!ReduceMotion && p.FillStartMs[i] >= 0f && t >= p.FillStartMs[i])
+                {
+                    _rippleAt[i] = p.FillStartMs[i];
+                    _rippleEvent[i] = 1;
+                }
+            }
+
+            if (!ReduceMotion)
+            {
+                for (int k = 0; k < p.FruitCount; k++)
+                {
+                    int c = p.FruitCuia[k];
+                    float at = p.FruitImpactMs[k];
+                    if ((uint)c < (uint)n && t >= at && at >= _rippleAt[c])
+                    {
+                        _rippleAt[c] = at;
+                        _rippleEvent[c] = k + 2;
+                    }
+                }
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                CuiaView v = _views[i];
+                if (v == null || (!Running && !v.RippleDriven))
+                {
+                    continue;
+                }
+
+                v.SetRippleAt(_rippleAt[i] >= 0f ? t - _rippleAt[i] : -1f, RipplePhase(i, _rippleEvent[i]));
+            }
+        }
+
+        // Fase fija de la onda de la cuia i en su evento e (0 sin onda): determinista, distinta entre cuias y eventos.
+        private static float RipplePhase(int cuia, int ev)
+        {
+            return Mathf.Repeat((2.3f * (ev + 1)) + (1.7f * cuia), Mathf.PI * 2f);
+        }
+
+        // Devuelve la onda de cada cuia al reloj del juego (fin de la intro, salto o carga de otro nivel).
+        private void ReleaseRipples()
+        {
+            for (int i = 0; i < _views.Length; i++)
+            {
+                if (_views[i] != null)
+                {
+                    _views[i].ReleaseRipple();
+                }
+            }
         }
 
         // Cuias: llenado por cuia con el calendario, solo hasta sus dosis finales; floración OKLab por racha de abajo arriba.
@@ -649,12 +740,7 @@ namespace AF.Presentation
                 if (p.FillStartMs[i] >= 0f && t >= p.FillStartMs[i])
                 {
                     float span = Mathf.Max(1f, p.FillEndMs[i] - p.FillStartMs[i]);
-                    level = doses * Ease.Out(Mathf.Clamp01((t - p.FillStartMs[i]) / span));
-                    if (!_rippled[i])
-                    {
-                        _rippled[i] = true;
-                        v.Ripple(); // menisco con onda al llenarse (D-006)
-                    }
+                    level = doses * Ease.Out(Mathf.Clamp01((t - p.FillStartMs[i]) / span)); // menisco y onda: ApplyRipples
                 }
 
                 for (int k = 0; k < v.Capacity; k++)
@@ -688,9 +774,9 @@ namespace AF.Presentation
             }
         }
 
-        // Todo lo cosmético, por tiempo: río, madera, chorritos, frutas, penachos, anillos, dosel y tropa. alpha < 1: fundido
-        // del salto (en su sitio). events: gotas y ondas al cruzar sus instantes (no en el fundido ni al buscar un instante).
-        private void ApplyRemnants(float t, float alpha, bool events)
+        // Todo lo cosmético, por tiempo: río, madera, chorritos, frutas, penachos, anillos, gotas, dosel y tropa. alpha < 1:
+        // fundido del salto (en su sitio).
+        private void ApplyRemnants(float t, float alpha)
         {
             IntroChoreography p = _plan;
             float unit = _input.Unit;
@@ -961,15 +1047,6 @@ namespace AF.Presentation
                 {
                     SetEnabled(plume, false);
                 }
-
-                if (events && _prevT < impact && t >= impact)
-                {
-                    int c = p.FruitCuia[k];
-                    if ((uint)c < (uint)_views.Length && Running)
-                    {
-                        _views[c].Ripple();
-                    }
-                }
             }
 
             // Gotas balísticas (esquinas del desborde y primer impacto de cada fila), con gravedad y fundido final.
@@ -1056,6 +1133,7 @@ namespace AF.Presentation
         {
             _tail = false;
             _fadeLeft = -1f;
+            ReleaseRipples();
             Ambient?.SetPollenPaused(false);
             HideWater();
             HideFruits();
@@ -1065,7 +1143,8 @@ namespace AF.Presentation
         }
 
         // Labio del río que desborda: de panel.top − 14 (el borde inferior del río) a panel.top + 2, del ancho de la lámina, con
-        // 6 puntos de espuma en la cresta (nunca sobre el HUD).
+        // 6 puntos de espuma en la cresta (nunca sobre el HUD). Va por detrás de la rama; desde el canto hasta la franja de la
+        // rama (panel.top − 11), al 70 %, para que la rama se lea sobre la crecida y no sobre una tabla.
         private void ShowLip(float half, float taper, float alpha, float unit, float t)
         {
             WaterStripGraphic? lip = _lip;
@@ -1086,6 +1165,7 @@ namespace AF.Presentation
 
             ShowStrip(lip, new Vector2(p.SheetCenterX, -bottom), half, half, thick, false, false, alpha, unit, t * FlowDpPerMs);
             lip.SetTaper(taper, taper);
+            lip.SetFade(Mathf.Min(thick - 1f, LipBelowPanelDp + LipBranchBandTopDp), LipBranchBandAlpha);
             for (int i = 0; i < LipFoamDots; i++)
             {
                 Image dot = _lipFoam[i];

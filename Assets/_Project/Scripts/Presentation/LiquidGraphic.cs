@@ -41,6 +41,9 @@ namespace AF.Presentation
         /// <summary>Constante de caída de la onda (08 §5.2): exp(−t / 0,25 s).</summary>
         public const float RippleDecayMs = 250f;
 
+        /// <summary>Por debajo de esta amplitud (u) la onda ya no se ve y la superficie queda quieta.</summary>
+        public const float RippleSettledU = 0.0008f;
+
         /// <summary>Grosor de la lengua de líquido por la pared inferior del cuello mientras sale el chorro (u).</summary>
         public const float TongueU = 0.12f;
 
@@ -87,6 +90,7 @@ namespace AF.Presentation
         private float _unit = 24f;
         private float _rippleMs = -1f;
         private float _ripplePhase;
+        private bool _rippleDriven;
         private float _flash;
         private float _angle;
         private float _tongue;
@@ -98,6 +102,15 @@ namespace AF.Presentation
 
         /// <summary>Onda en curso.</summary>
         public bool Rippling => _rippleMs >= 0f;
+
+        /// <summary>Edad de la onda en curso (ms; −1 sin onda).</summary>
+        public float RippleAgeMs => _rippleMs;
+
+        /// <summary>Fase de la onda (radianes).</summary>
+        public float RipplePhase => _ripplePhase;
+
+        /// <summary>La onda la lleva un reloj de fuera (<see cref="SetRippleAt"/>: la intro) y no avanza con <see cref="TickRipple"/>.</summary>
+        public bool RippleDriven => _rippleDriven;
 
         /// <summary>Inclinación del cuerpo con la que se dibujan las capas (grados; 0 en reposo).</summary>
         public float TiltDeg => _angle;
@@ -228,9 +241,10 @@ namespace AF.Presentation
             }
         }
 
-        /// <summary>Arranca la onda de la superficie (al caer una dosis).</summary>
+        /// <summary>Arranca la onda de la superficie (al caer una dosis); manda sobre una onda llevada desde fuera.</summary>
         public void StartRipple()
         {
+            _rippleDriven = false;
             _rippleMs = 0f;
             _ripplePhase = Mathf.Repeat(_ripplePhase + 2.3f, Mathf.PI * 2f);
             SetVerticesDirty();
@@ -239,6 +253,7 @@ namespace AF.Presentation
         /// <summary>Quita la onda (reposo: la superficie está quieta).</summary>
         public void StopRipple()
         {
+            _rippleDriven = false;
             if (_rippleMs >= 0f)
             {
                 _rippleMs = -1f;
@@ -246,16 +261,40 @@ namespace AF.Presentation
             }
         }
 
-        /// <summary>Avanza la onda; solo reconstruye la malla mientras dura.</summary>
+        /// <summary>
+        /// Fija la onda desde un reloj de fuera (la intro, A14): edad <paramref name="ageMs"/> (&lt; 0, o ya imperceptible: sin
+        /// onda) y fase <paramref name="phase"/>. No acumula nada: el mismo instante da la misma superficie. Mientras la lleva el
+        /// reloj de fuera, <see cref="TickRipple"/> no la avanza; <see cref="ReleaseRipple"/> o una onda nueva la devuelven.
+        /// </summary>
+        public void SetRippleAt(float ageMs, float phase)
+        {
+            _rippleDriven = true;
+            float ms = ageMs >= 0f && RippleAmplitudeU * Mathf.Exp(-ageMs / RippleDecayMs) >= RippleSettledU ? ageMs : -1f;
+            bool changed = ms != _rippleMs || (ms >= 0f && phase != _ripplePhase);
+            _rippleMs = ms;
+            _ripplePhase = phase;
+            if (changed)
+            {
+                SetVerticesDirty();
+            }
+        }
+
+        /// <summary>Devuelve la onda al reloj del juego: sigue decayendo desde su edad con <see cref="TickRipple"/>.</summary>
+        public void ReleaseRipple()
+        {
+            _rippleDriven = false;
+        }
+
+        /// <summary>Avanza la onda; solo reconstruye la malla mientras dura (no si la lleva un reloj de fuera).</summary>
         public void TickRipple(float dtMs)
         {
-            if (_rippleMs < 0f)
+            if (_rippleMs < 0f || _rippleDriven)
             {
                 return;
             }
 
             _rippleMs += dtMs;
-            if (RippleAmplitude() < 0.0008f)
+            if (RippleAmplitude() < RippleSettledU)
             {
                 _rippleMs = -1f;
             }

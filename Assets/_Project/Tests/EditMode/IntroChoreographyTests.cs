@@ -522,21 +522,61 @@ namespace AF.Tests.EditMode
             }
         }
 
+        /// <summary>
+        /// La pareja de <c>colas_entrelazadas</c> (revisión del 2026-10-09): lado a lado, mirando al mismo sitio, con las colas
+        /// colgando bajo la rama; la rama sube lo que cuelgan, la punta acaba ≥ 6 dp sobre el panel y la pareja sentada no pasa
+        /// sobre el HUD. Sin sitio en la franja, se sientan como los demás.
+        /// </summary>
         [Test]
-        public void Pair_SitsTogether_BackToBack()
+        public void Pair_SitsSideBySide_FacingTheSameWay_WithTheTailsHangingUnderTheBranch([Values(800f, 1400f)] float t, [Values(1, 2)] int seed)
         {
             var plan = new IntroChoreography();
-            IntroInput input = Input(7, 780f, 800f, IntroPerch.Branch);
+            IntroInput input = Input(7, 780f, t, IntroPerch.Branch);
             input.Model = TroopModel.Shake;
             input.Troop = 2;
+            input.MonkeyDp = 40f;
             input.Pair = true;
+            input.Seed = seed;
             plan.Plan(input);
             Assert.That(plan.Pair, Is.True);
             Assert.That(plan.MonkeyCount, Is.EqualTo(2));
-            float gap = plan.MonkeyX(1, 0f) - plan.MonkeyX(0, 0f);
+            float at = plan.IsLong ? plan.ExitStartMs - 1f : 0f;
+            float gap = plan.MonkeyX(1, at) - plan.MonkeyX(0, at);
             Assert.That(gap, Is.EqualTo(IntroChoreography.PairGapS * plan.BodyDp).Within(0.01f), "centros a 0,9 S");
-            Assert.That(plan.MonkeyFacing(0, 0f), Is.EqualTo(-1), "de espaldas");
-            Assert.That(plan.MonkeyFacing(1, 0f), Is.EqualTo(1));
+            Assert.That(plan.MonkeyFacing(0, at), Is.EqualTo(plan.MonkeyFacing(1, at)), "mirando al mismo sitio");
+            Assert.That(plan.PairTailHangDp, Is.EqualTo(IntroChoreography.PairTailHangS * plan.BodyDp).Within(0.01f));
+            Assert.That(plan.BranchY + plan.PairTailHangDp, Is.LessThanOrEqualTo(input.PanelTop - IntroChoreography.PairTailClearDp + 0.01f), "la trenza acaba ≥ 6 dp sobre el panel");
+            Assert.That(plan.BranchY - (IntroChoreography.SitTopS * plan.BodyDp), Is.GreaterThanOrEqualTo(input.HudBottom), "la pareja sentada no pasa sobre el HUD");
+            Assert.That(plan.BodyDp, Is.GreaterThanOrEqualTo(IntroChoreography.MinMonkeyDp));
+
+            // Con una franja de 56 dp no caben las colas colgando con ≥ 28 dp: sin pareja, en la rama baja.
+            input.HudBottom = input.PanelTop - 56f;
+            plan.Plan(input);
+            Assert.That(plan.Pair, Is.False);
+            Assert.That(plan.PairTailHangDp, Is.EqualTo(0f));
+            Assert.That(plan.BranchY, Is.EqualTo(input.PanelTop - IntroChoreography.LowBranchAbovePanelDp).Within(0.001f));
+        }
+
+        /// <summary>
+        /// Revisión del 2026-10-09: la rama baja tiene su punto más bajo en panel.top − 8 (con 6 dp ocupa de panel.top − 11 a
+        /// panel.top − 5, sobre la lámina del desborde, que sube hasta panel.top − 4) y sube hacia el follaje de las esquinas.
+        /// </summary>
+        [Test]
+        public void LowBranch_LowestPointIsPanelTopMinus8_AndRisesToTheCorners([Values(3, 7)] int cuias)
+        {
+            var plan = new IntroChoreography();
+            IntroInput input = Input(cuias, 780f, 1400f, IntroPerch.Branch);
+            plan.Plan(input);
+            Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Branch));
+            float low = float.MinValue;
+            for (float x = -IntroChoreography.BranchOverhangDp; x <= 360f + IntroChoreography.BranchOverhangDp; x += 1f)
+            {
+                low = Mathf.Max(low, plan.BranchCurveY(x));
+            }
+
+            Assert.That(low, Is.EqualTo(input.PanelTop - IntroChoreography.LowBranchAbovePanelDp).Within(0.05f), "punto más bajo");
+            Assert.That(low + 3f, Is.LessThanOrEqualTo(input.PanelTop - IntroChoreography.SheetAbovePanelDp - 1f + 0.05f), "por encima de la lámina");
+            Assert.That(plan.BranchCurveY(-IntroChoreography.BranchOverhangDp), Is.LessThan(low - 5f), "sube hacia las esquinas");
         }
 
         [Test]

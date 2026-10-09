@@ -11,10 +11,12 @@ namespace AF.Presentation
     /// borde, un labio claro opcional en el borde plano (la lámina) y destellos cortos que viajan a lo largo de la tira
     /// (<see cref="SetFlow"/>, 300-400 dp/s). Crece desde un origen hacia uno o los dos sentidos; mientras crece, el frente
     /// puede afinarse en lengua (<see cref="SetTaper"/>: el borde ondulado baja hasta el 15 % en la punta, con perfil
-    /// redondeado), para que se lea como agua que avanza y no como una caja. Coordenadas del contenedor del
+    /// redondeado), para que se lea como agua que avanza y no como una caja. Con <see cref="SetFade"/>, el cuerpo se aclara
+    /// (menos opaco) desde el borde plano hasta una altura dada y recupera la opacidad en la cresta: el labio del río que
+    /// desborda deja ver la orilla por detrás de la rama (revisión del 2026-10-09). Coordenadas del contenedor del
     /// tablero (origen arriba a la izquierda, y hacia arriba, como <see cref="StreamGraphic"/>). Como mucho
-    /// <see cref="MaxQuads"/> cuadriláteros; solo se reconstruye cuando cambian sus parámetros (la opacidad va por
-    /// <c>CanvasRenderer.SetAlpha</c>, sin reconstruir).
+    /// <see cref="MaxQuads"/> cuadriláteros (con la franja aclarada, el cuerpo usa menos columnas de dos pisos); solo se
+    /// reconstruye cuando cambian sus parámetros (la opacidad va por <c>CanvasRenderer.SetAlpha</c>, sin reconstruir).
     /// </summary>
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class WaterStripGraphic : MaskableGraphic
@@ -29,6 +31,9 @@ namespace AF.Presentation
         public const float WaveLengthU = 0.5f;
 
         private const int MaxBodyQuads = 36;
+
+        // Con la franja aclarada cada columna lleva dos pisos: 2 × 20 + líneas (≤ 6) + labio (≤ 5) + destellos (≤ 8) ≤ 64.
+        private const int MaxFadeColumns = 20;
         private const int MaxLineQuads = 12;
         private const int MaxLipQuads = 8;
         private const int MaxGlints = 8;
@@ -50,6 +55,8 @@ namespace AF.Presentation
         private float _flow;
         private float _taperBack;
         private float _taperForward;
+        private float _fadeAcross;
+        private float _fadeAlpha = 1f;
         private Color _base = new Color(0.69f, 0.54f, 0.35f, 0.85f);
         private Color _surface = new Color(0.85f, 0.72f, 0.52f, 0.9f);
         private Color _line = new Color(1f, 0.96f, 0.82f, 0.7f);
@@ -125,6 +132,51 @@ namespace AF.Presentation
             }
         }
 
+        /// <summary>
+        /// Aclara el cuerpo: desde el borde plano hasta <paramref name="acrossDp"/> (dp hacia el borde ondulado) la opacidad se
+        /// multiplica por <paramref name="alpha"/>, y de ahí a la cresta vuelve a 1. <paramref name="acrossDp"/> ≤ 0 lo quita.
+        /// </summary>
+        public void SetFade(float acrossDp, float alpha)
+        {
+            acrossDp = Mathf.Max(0f, acrossDp);
+            alpha = acrossDp > 0f ? Mathf.Clamp01(alpha) : 1f;
+            if (!Mathf.Approximately(acrossDp, _fadeAcross) || !Mathf.Approximately(alpha, _fadeAlpha))
+            {
+                _fadeAcross = acrossDp;
+                _fadeAlpha = alpha;
+                SetVerticesDirty();
+            }
+        }
+
+        /// <summary>Opacidad del cuerpo a <paramref name="acrossDp"/> del borde plano, en la parte recta de la tira (tests).</summary>
+        public float BodyAlphaAt(float acrossDp)
+        {
+            if (_fadeAcross <= 0f || acrossDp <= _fadeAcross)
+            {
+                return _fadeAcross > 0f ? _fadeAlpha : 1f;
+            }
+
+            float crest = Mathf.Max(_fadeAcross + 0.01f, _thickness);
+            return Mathf.Lerp(_fadeAlpha, 1f, Mathf.Clamp01((acrossDp - _fadeAcross) / (crest - _fadeAcross)));
+        }
+
+        /// <summary>
+        /// Caja de la tira en las coordenadas de su RectTransform (las del contenedor: y hacia arriba), con la cresta completa.
+        /// Vacía si no hay largo.
+        /// </summary>
+        public Rect LocalBounds()
+        {
+            float length = _back + _forward;
+            if (length < 0.05f)
+            {
+                return Rect.zero;
+            }
+
+            Vector2 a = Point(-_back, 0f);
+            Vector2 b = Point(_forward, _thickness);
+            return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+        }
+
         /// <summary>Desplazamiento de los destellos a lo largo de la tira (dp): el agua corre.</summary>
         public void SetFlow(float flowDp)
         {
@@ -150,22 +202,33 @@ namespace AF.Presentation
             float tf = TaperForward(length);
             int nb = tb > 0f ? TaperQuads : 0;
             int nf = tf > 0f ? TaperQuads : 0;
-            int mid = Mathf.Clamp(Mathf.CeilToInt((length - tb - tf) / (lambda * 0.25f)), 1, MaxBodyQuads - nb - nf);
+            bool fade = _fadeAcross > 0f;
+            int maxBody = fade ? MaxFadeColumns : MaxBodyQuads;
+            int mid = Mathf.Clamp(Mathf.CeilToInt((length - tb - tf) / (lambda * 0.25f)), 1, maxBody - nb - nf);
             int body = nb + mid + nf;
             float a = color.a;
             Color32 cBase = Alpha(_base, a);
             Color32 cSurface = Alpha(_surface, a);
+            Color32 cBaseFaded = Alpha(_base, a * _fadeAlpha);
             for (int i = 0; i < body; i++)
             {
                 float a0 = Along(i, nb, mid, nf, tb, tf, length);
                 float a1 = Along(i + 1, nb, mid, nf, tb, tf, length);
-                int b = vh.currentVertCount;
-                vh.AddVert(Point(a0, 0f), cBase, Vector4.zero);
-                vh.AddVert(Point(a0, Edge(a0)), cSurface, Vector4.zero);
-                vh.AddVert(Point(a1, Edge(a1)), cSurface, Vector4.zero);
-                vh.AddVert(Point(a1, 0f), cBase, Vector4.zero);
-                vh.AddTriangle(b, b + 1, b + 2);
-                vh.AddTriangle(b + 2, b + 3, b);
+                float e0 = Edge(a0);
+                float e1 = Edge(a1);
+                if (!fade)
+                {
+                    Quad(vh, a0, a1, 0f, e0, 0f, e1, cBase, cSurface, cBase, cSurface);
+                    continue;
+                }
+
+                // Dos pisos: aclarado desde el borde plano hasta la franja y, de ahí a la cresta, de vuelta a la opacidad plena.
+                float f0 = Mathf.Min(_fadeAcross, e0 * 0.98f);
+                float f1 = Mathf.Min(_fadeAcross, e1 * 0.98f);
+                Color32 m0 = Alpha(Color.Lerp(_base, _surface, f0 / e0), a * _fadeAlpha);
+                Color32 m1 = Alpha(Color.Lerp(_base, _surface, f1 / e1), a * _fadeAlpha);
+                Quad(vh, a0, a1, 0f, f0, 0f, f1, cBaseFaded, m0, cBaseFaded, m1);
+                Quad(vh, a0, a1, f0, e0, f1, e1, m0, cSurface, m1, cSurface);
             }
 
             if (_thickness < 3f)
@@ -226,11 +289,17 @@ namespace AF.Presentation
 
         private void Quad(VertexHelper vh, float a0, float a1, float in0, float out0, float in1, float out1, Color32 c0, Color32 c1)
         {
+            Quad(vh, a0, a1, in0, out0, in1, out1, c0, c0, c1, c1);
+        }
+
+        // Cuadrilátero con un color por vértice: dentro y fuera en a0, dentro y fuera en a1.
+        private void Quad(VertexHelper vh, float a0, float a1, float in0, float out0, float in1, float out1, Color32 cIn0, Color32 cOut0, Color32 cIn1, Color32 cOut1)
+        {
             int b = vh.currentVertCount;
-            vh.AddVert(Point(a0, in0), c0, Vector4.zero);
-            vh.AddVert(Point(a0, out0), c0, Vector4.zero);
-            vh.AddVert(Point(a1, out1), c1, Vector4.zero);
-            vh.AddVert(Point(a1, in1), c1, Vector4.zero);
+            vh.AddVert(Point(a0, in0), cIn0, Vector4.zero);
+            vh.AddVert(Point(a0, out0), cOut0, Vector4.zero);
+            vh.AddVert(Point(a1, out1), cOut1, Vector4.zero);
+            vh.AddVert(Point(a1, in1), cIn1, Vector4.zero);
             vh.AddTriangle(b, b + 1, b + 2);
             vh.AddTriangle(b + 2, b + 3, b);
         }

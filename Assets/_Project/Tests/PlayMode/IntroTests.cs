@@ -15,13 +15,15 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 namespace AF.Tests.PlayMode
 {
     /// <summary>
-    /// «Llenar y teñir» en la escena real (guion de la intro §8 y §16: A1, A3, A7, A8, A9): salto en cualquier instante con el
-    /// estado final en ese fotograma y el primer toque de juego en el siguiente, restos fundidos en ≤ 100 ms y un solo
-    /// <c>af_anim_skipped</c> con <c>anim = tint</c>; primero se mueve el río; un chorrito sobre cada cuia no vacía y ninguno
-    /// sobre las vacías; nada de la intro recibe toques; la tropa queda a ≥ 8 dp de las cuias y fuera del HUD y del panel con
-    /// 3, 7 y 16 cuias en 20:9 (360 × 780 dp) y 16:9 (el lienzo nunca baja de 780 dp: 439 × 780), en los tres modelos;
-    /// seleccionar o verter no cambia nada de la tropa; 0 B por fotograma; la ruta de Reducir movimiento; y la tarjeta
-    /// «¡Miquito a la vista!» del nivel 5 (guion §4.5, A15 sin la persistencia).
+    /// «Llenar y teñir» en la escena real (guion de la intro §8 y §16: A1, A3, A7, A8, A9, A10, A14): salto en cualquier
+    /// instante con el estado final en ese fotograma y el primer toque de juego en el siguiente, restos fundidos en ≤ 100 ms y
+    /// un solo <c>af_anim_skipped</c> con <c>anim = tint</c>; primero se mueve el río; un chorrito sobre cada cuia no vacía y
+    /// ninguno sobre las vacías; nada de la intro recibe toques; la tropa queda a ≥ 8 dp de las cuias y fuera del HUD y del
+    /// panel con 3, 7 y 16 cuias en 20:9 (360 × 780 dp) y 16:9 (el lienzo nunca baja de 780 dp: 439 × 780), en los tres
+    /// modelos, y el agua nunca tapa la rama bajo los miquitos (labio &lt; rama &lt; tropa); seleccionar o verter no cambia
+    /// nada de la tropa; 0 B por fotograma en todas las rutas; la onda del menisco, función solo del tiempo; la ruta de
+    /// Reducir movimiento; la compuerta del arte de release; y la tarjeta «¡Miquito a la vista!» del nivel 5 (guion §4.5, A15
+    /// sin la persistencia).
     /// </summary>
     public sealed class IntroTests
     {
@@ -311,31 +313,227 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.View.Intro.Plan.FruitCount, Is.EqualTo(15));
         }
 
-        [UnityTest]
-        public IEnumerator IntroTick_AllocatesNothing_AfterStart()
+        // Rutas de la intro para el presupuesto de 0 B por fotograma (guion §13 y A10): especie y modelo, versión, salto a mitad
+        // y Reducir movimiento.
+        private static readonly string[] AllocationCases =
         {
-            yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
+            "rama_fila_l7_larga", "rama_fila_l7_corta", "dosel_16_larga", "reintento_dosel_l7", "cuelga_lianas_13",
+            "cuelga_abraza_82", "sacude_142", "pareja_202_larga", "pareja_202_corta", "salta_bigote_302", "noche_702",
+            "salto_a_mitad_l7", "reducir_movimiento_l7",
+        };
+
+        /// <summary>
+        /// A10: 0 B asignados por fotograma tras <see cref="IntroAnimation.Start"/> en todas las rutas de la intro (y en el
+        /// salto, también el fotograma del toque), con una pasada completa de calentamiento antes de medir.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator IntroTick_AllocatesNothing_AfterStart([ValueSource(nameof(AllocationCases))] string route)
+        {
+            string pack = string.Empty;
+            int level = 7;
+            int duration = 1400;
+            bool retry = false;
+            bool reduce = false;
+            int skipAt = -1;
+            switch (route)
+            {
+                case "rama_fila_l7_corta":
+                    duration = 800;
+                    break;
+                case "dosel_16_larga":
+                    pack = PlayModeHelpers.SixteenCuiaPack();
+                    level = 1;
+                    break;
+                case "reintento_dosel_l7":
+                    duration = 800;
+                    retry = true;
+                    break;
+                case "cuelga_lianas_13":
+                    pack = PlayModeHelpers.Level7BoardPack(2, "w02_tapajos", "clear", 13);
+                    level = 13;
+                    break;
+                case "cuelga_abraza_82":
+                    pack = PlayModeHelpers.Level7BoardPack(4, "w04_trapecio", "white", 82);
+                    level = 82;
+                    break;
+                case "sacude_142":
+                    pack = PlayModeHelpers.Level7BoardPack(5, "w05_loreto", "white", 142);
+                    level = 142;
+                    break;
+                case "pareja_202_larga":
+                    pack = PlayModeHelpers.Level7BoardPack(6, "w06_oriente", "white", 202);
+                    level = 202;
+                    break;
+                case "pareja_202_corta":
+                    pack = PlayModeHelpers.Level7BoardPack(6, "w06_oriente", "white", 202);
+                    level = 202;
+                    duration = 800;
+                    break;
+                case "salta_bigote_302":
+                    pack = PlayModeHelpers.Level7BoardPack(7, "w07_madre_de_dios", "white", 302);
+                    level = 302;
+                    duration = 800;
+                    break;
+                case "noche_702":
+                    pack = PlayModeHelpers.Level7BoardPack(10, "w10_alto_negro", "black", 702);
+                    level = 702;
+                    duration = 800;
+                    break;
+                case "salto_a_mitad_l7":
+                    skipAt = 700;
+                    break;
+                case "reducir_movimiento_l7":
+                    reduce = true;
+                    duration = GameConfig.ReducedMotionIntroMs;
+                    break;
+            }
+
+            GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f); // 360 × 780 dp: cada ruta, la que dice su nombre
+            if (pack.Length > 0)
+            {
+                yield return PlayModeHelpers.LoadGameWithPack(pack, level, new MemoryProgressStore());
+            }
+            else
+            {
+                yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore());
+            }
+
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
             GameScreen view = boot.View!;
-            view.DebugReplayIntro(1400, false);
+            boot.Flow!.ReduceMotion = reduce;
             IntroAnimation intro = view.Intro;
 
-            // Pasadas completas para calentar (primer uso de cada gráfico), y luego cada fotograma sin asignar.
-            for (int pass = 0; pass < 1; pass++)
+            // Calentamiento: una pasada completa por la misma ruta (primer uso de cada gráfico, de cada pieza y del salto).
+            view.DebugReplayIntro(duration, retry);
+            RunRoute(intro, skipAt, null);
+
+            view.DebugReplayIntro(duration, retry);
+            AssertRouteDescribed(view, route, duration > GameConfig.AnimTintDurationMsLate && !retry);
+            int frames = RunRoute(intro, skipAt, (t, step) => Assert.That(step, Is.Not.AllocatingGCMemory(), route + ", t = " + t));
+            Assert.That(frames, Is.GreaterThan(10), route + ": fotogramas medidos");
+            Assert.That(intro.Active, Is.False, route + ": la intro y sus restos terminan");
+            boot.Flow.ReduceMotion = false;
+        }
+
+        /// <summary>
+        /// A10 también en la primera intro tras montar un tablero (sin pasada de calentamiento): al arrancar, todos los gráficos
+        /// ocultos de la intro y de la tropa quedan registrados en su Canvas, así que mostrarlos en mitad de la intro no hace
+        /// crecer el registro de UGUI (reordenar el tablero o activar la capa los desregistra).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator IntroStart_RegistersEveryHiddenPoolGraphic_InItsCanvas()
+        {
+            GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
+            foreach (string pack in new[] { string.Empty, PlayModeHelpers.Level7BoardPack(4, "w04_trapecio", "white", 82) })
             {
-                view.DebugReplayIntro(1400, false);
-                for (int t = 0; t < 1700; t += 16)
+                LaunchOptions.Reset();
+                int level = pack.Length > 0 ? 82 : 7;
+                if (pack.Length > 0)
                 {
-                    intro.Tick(16f);
+                    yield return PlayModeHelpers.LoadGameWithPack(pack, level, new MemoryProgressStore());
                 }
+                else
+                {
+                    yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore());
+                }
+
+                GameBootstrap boot = GameBootstrap.Current!;
+                PlayModeHelpers.TakeClock(boot);
+                GameScreen view = boot.View!;
+                Assert.That(view.Intro.Running, Is.True, "la intro de la carga, recién arrancada");
+                var graphics = new List<Graphic>();
+                view.Intro.CollectGraphics(graphics);
+                int hidden = 0;
+                foreach (Graphic g in graphics)
+                {
+                    if (!g.enabled && g.gameObject.activeInHierarchy)
+                    {
+                        hidden++;
+                        Assert.That(GraphicPool.IsRegistered(g), Is.True, g.name + " (nivel " + level + "): oculto pero registrado en su Canvas");
+                    }
+                }
+
+                Assert.That(hidden, Is.GreaterThan(80), "los pools de la intro, ocultos al arrancar");
+            }
+        }
+
+        // Avanza la intro a 16 ms por fotograma hasta que no quede nada (con el salto en skipAt, si lo hay) y, con measure,
+        // mide cada fotograma (y el del toque). Devuelve los fotogramas.
+        private static int RunRoute(IntroAnimation intro, int skipAt, System.Action<int, TestDelegate>? measure)
+        {
+            int frames = 0;
+            for (int t = 0; intro.Active && t < 4000; t += 16)
+            {
+                TestDelegate step;
+                if (skipAt >= 0 && t == skipAt - (skipAt % 16))
+                {
+                    step = () =>
+                    {
+                        intro.Complete(true);
+                        intro.Tick(16f);
+                    };
+                }
+                else
+                {
+                    step = () => intro.Tick(16f);
+                }
+
+                if (measure != null)
+                {
+                    measure(t, step);
+                }
+                else
+                {
+                    step();
+                }
+
+                frames++;
             }
 
-            view.DebugReplayIntro(1400, false);
-            for (int t = 0; t < 1700; t += 16)
+            return frames;
+        }
+
+        // Cada ruta es la que dice su nombre (si no, el test no prueba lo que promete).
+        private static void AssertRouteDescribed(GameScreen view, string route, bool expectLong)
+        {
+            IntroChoreography p = view.Intro.Plan;
+            bool canopy = route.StartsWith("dosel", System.StringComparison.Ordinal) || route.StartsWith("reintento", System.StringComparison.Ordinal);
+            Assert.That(p.Perch, Is.EqualTo(canopy ? IntroPerch.Canopy : IntroPerch.Branch), route);
+            Assert.That(view.Intro.ReduceMotion, Is.EqualTo(route.StartsWith("reducir", System.StringComparison.Ordinal)), route);
+            if (route.StartsWith("dosel", System.StringComparison.Ordinal))
             {
-                Assert.That(() => intro.Tick(16f), Is.Not.AllocatingGCMemory(), "t = " + t);
+                Assert.That(p.FruitPerCuia, Is.True, route + ": una fruta por cuia");
             }
+            else if (route.StartsWith("cuelga", System.StringComparison.Ordinal))
+            {
+                Assert.That(p.Model, Is.EqualTo(TroopModel.Hang), route);
+            }
+            else if (route.StartsWith("pareja", System.StringComparison.Ordinal))
+            {
+                Assert.That(p.Pair, Is.True, route);
+            }
+            else if (route.StartsWith("sacude", System.StringComparison.Ordinal))
+            {
+                Assert.That(p.Model, Is.EqualTo(TroopModel.Shake), route);
+            }
+
+            if (route.StartsWith("cuelga_abraza", System.StringComparison.Ordinal))
+            {
+                Assert.That(view.Troop.Look!.HugsFruit, Is.True, route + ": la fruta abrazada");
+            }
+
+            if (route.StartsWith("noche", System.StringComparison.Ordinal))
+            {
+                Assert.That(view.Troop.NightVisible, Is.True, route + ": el velo nocturno");
+            }
+
+            if (route.StartsWith("salta_bigote", System.StringComparison.Ordinal))
+            {
+                Assert.That(view.Troop.Look!.Whiskers, Is.Not.Null, route + ": el bigote");
+            }
+
+            Assert.That(p.IsLong, Is.EqualTo(expectLong), route + ": versión");
         }
 
         [UnityTest]
@@ -440,7 +638,8 @@ namespace AF.Tests.PlayMode
 
         /// <summary>
         /// El labio del río que desborda (revisión: no se veía de dónde salía el agua): aparece con la lámina, del mismo ancho
-        /// en cada instante, entre la rama y la tropa, desde 14 dp sobre el panel; se va con la madera.
+        /// en cada instante, desde 14 dp sobre el panel, y se va con la madera. Orden de capas (guion §4.6.5; revisión del
+        /// 2026-10-09): labio &lt; rama &lt; tropa, con el labio al 70 % en la franja de la rama y pleno en la cresta.
         /// </summary>
         [UnityTest]
         public IEnumerator RiverLip_GrowsWithTheSheet_FromTheBank()
@@ -462,10 +661,271 @@ namespace AF.Tests.PlayMode
                 Assert.That(intro.LipHalfWidth, Is.EqualTo(half).Within(0.5f), "el labio, tan ancho como la lámina a " + dt + " ms");
             }
 
+            // Al 70 % en la franja de la rama (de panel.top − 11 a panel.top − 5: del borde plano, en panel.top + 2, son 7-13
+            // dp) y pleno en la cresta (panel.top − 14).
+            WaterStripGraphic lip = intro.LipGraphic!;
+            float below = IntroAnimation.LipBelowPanelDp;
+            Assert.That(lip.BodyAlphaAt(below + 5f), Is.EqualTo(IntroAnimation.LipBranchBandAlpha).Within(0.001f), "panel.top − 5");
+            Assert.That(lip.BodyAlphaAt(below + 8f), Is.EqualTo(IntroAnimation.LipBranchBandAlpha).Within(0.001f), "panel.top − 8");
+            Assert.That(lip.BodyAlphaAt(below + IntroAnimation.LipBranchBandTopDp), Is.EqualTo(IntroAnimation.LipBranchBandAlpha).Within(0.001f), "panel.top − 11");
+            Assert.That(lip.BodyAlphaAt(below + IntroAnimation.LipAbovePanelDp), Is.EqualTo(1f).Within(0.001f), "cresta, pleno");
+
             intro.Seek(p.DrainEndMs + 1f);
             Assert.That(intro.LipVisible, Is.False, "la madera ya está seca");
             Assert.That(view.Troop.WaterSlot.IsChildOf(view.Troop.Layer), Is.True, "en la capa de la tropa");
-            Assert.That(view.Troop.WaterSlot.GetSiblingIndex(), Is.LessThan(view.Troop.Rig(0).Root.GetSiblingIndex()), "detrás de los miquitos");
+            int water = view.Troop.WaterSlot.GetSiblingIndex();
+            Assert.That(water, Is.LessThan(view.Troop.Branch.transform.GetSiblingIndex()), "labio < rama: la rama sobre la crecida");
+            Assert.That(view.Troop.Branch.transform.GetSiblingIndex(), Is.LessThan(view.Troop.Rig(0).Root.GetSiblingIndex()), "rama < tropa");
+        }
+
+        /// <summary>
+        /// A7 ampliada (revisión del 2026-10-09: «monos de pie sobre el río»): mientras el río desborda (300-850 ms en la
+        /// larga y 0-550 ms en la corta), al menos el 80 % de la rama bajo cada miquito se sigue viendo: ninguna agua de la
+        /// intro dibujada por delante de la rama (el labio, la lámina, las tiras, los chorritos) la tapa. Se muestrea la rama
+        /// de 6 dp cada 1 dp bajo el cuerpo de cada miquito (± 0,4 S) y se contrasta con las cajas de esa agua, en el orden de
+        /// dibujo real (recorrido de la jerarquía del lienzo). Con 3 y 7 cuias y las especies de cada modelo, en 20:9 y 16:9.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Branch_StaysVisibleUnderEachMonkey_WhileTheRiverOverflows([Values(2340, 1920)] int screenHeightPx)
+        {
+            GameScreen.SimulatedScreen = new Vector4(1080f, screenHeightPx, 96f, 48f);
+            var cases = new (string Pack, int Level)[]
+            {
+                (string.Empty, 1), (string.Empty, 7),
+                (PlayModeHelpers.Level7BoardPack(2, "w02_tapajos", "clear", 13), 13),
+                (PlayModeHelpers.Level7BoardPack(5, "w05_loreto", "white", 142), 142),
+                (PlayModeHelpers.Level7BoardPack(6, "w06_oriente", "white", 202), 202),
+                (PlayModeHelpers.Level7BoardPack(7, "w07_madre_de_dios", "white", 302), 302),
+                (PlayModeHelpers.Level7BoardPack(12, "w12_orinoco", "clear", 922), 922),
+            };
+            int measured = 0;
+            int lipFrames = 0;
+            var quads = new List<Vector2[]>();
+            var all = new List<Graphic>();
+            var troop = new List<Graphic>();
+            foreach ((string pack, int level) in cases)
+            {
+                LaunchOptions.Reset();
+                if (pack.Length > 0)
+                {
+                    yield return PlayModeHelpers.LoadGameWithPack(pack, level, new MemoryProgressStore());
+                }
+                else
+                {
+                    yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore());
+                }
+
+                GameBootstrap boot = GameBootstrap.Current!;
+                PlayModeHelpers.TakeClock(boot);
+                GameScreen view = boot.View!;
+                RectTransform canvas = (RectTransform)view.Canvas.transform;
+                foreach (int duration in new[] { 1400, 800 })
+                {
+                    view.DebugReplayIntro(duration, false);
+                    IntroChoreography plan = view.Intro.Plan;
+                    Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Branch), "nivel " + level);
+                    Dictionary<Transform, int> order = RenderOrder(canvas);
+                    int branchOrder = order[view.Troop.Branch.transform];
+                    all.Clear();
+                    troop.Clear();
+                    view.Intro.CollectGraphics(all);
+                    view.Troop.CollectGraphics(troop);
+                    int from = duration == 1400 ? 300 : 0;
+                    int to = duration == 1400 ? 850 : 550;
+                    for (int t = from; t <= to; t += 25)
+                    {
+                        view.Intro.Seek(t);
+                        lipFrames += view.Intro.LipVisible ? 1 : 0;
+                        quads.Clear();
+                        foreach (Graphic g in all)
+                        {
+                            bool water = !troop.Contains(g) && (g is WaterStripGraphic || g is StreamGraphic || g.transform.IsChildOf(view.Troop.WaterSlot));
+                            if (water && Shown(g) && order[g.transform] > branchOrder)
+                            {
+                                quads.Add(CanvasQuad(g, canvas));
+                            }
+                        }
+
+                        for (int m = 0; m < plan.MonkeyCount; m++)
+                        {
+                            MonkeyRig rig = view.Troop.Rig(m);
+                            if (!rig.Visible || rig.Alpha <= 0.01f)
+                            {
+                                continue;
+                            }
+
+                            float x0 = Mathf.Max(0f, rig.Root.anchoredPosition.x - (0.4f * rig.Size));
+                            float x1 = Mathf.Min(view.CanvasWidth, rig.Root.anchoredPosition.x + (0.4f * rig.Size));
+                            int total = 0;
+                            int hidden = 0;
+                            for (float x = x0; x <= x1; x += 1f)
+                            {
+                                float yc = plan.BranchCurveY(x);
+                                for (float dy = -2.5f; dy <= 2.51f; dy += 1f)
+                                {
+                                    var sample = new Vector2(x, yc + dy);
+                                    total++;
+                                    foreach (Vector2[] q in quads)
+                                    {
+                                        if (Inside(q, sample))
+                                        {
+                                            hidden++;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (total == 0)
+                            {
+                                continue; // aún en el follaje, fuera de la pantalla
+                            }
+
+                            measured++;
+                            float visible = (total - hidden) / (float)total;
+                            Assert.That(visible, Is.GreaterThanOrEqualTo(0.8f), "rama bajo el miquito " + m + ": nivel " + level + ", T " + duration + ", t " + t);
+                        }
+                    }
+                }
+            }
+
+            Assert.That(measured, Is.GreaterThan(100), "miquitos medidos sobre la rama");
+            Assert.That(lipFrames, Is.GreaterThan(20), "con el labio del río a la vista");
+        }
+
+        /// <summary>
+        /// A14 sin dispositivo gráfico: la onda del menisco depende solo del tiempo de la intro. Se toma el mismo instante en dos
+        /// pasadas independientes, con otras intros, fotogramas reales y un reintento por medio, en instantes con la onda activa
+        /// (300 ms: llenándose; 1.100 ms: impactos de fruta), y el estado de la onda de cada cuia sale idéntico. Un fotograma
+        /// del juego entre medias no la mueve.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator MeniscusRipple_DependsOnlyOnTheIntroTime()
+        {
+            GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
+            yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere(); // la intro del flujo, terminada: el resto lo lleva el enganche de depuración
+            PlayModeHelpers.StepUntilIdle(boot, 1000);
+            GameScreen view = boot.View!;
+            int[] instants = { 300, 1100 };
+            var first = new float[instants.Length][];
+            for (int pass = 0; pass < 2; pass++)
+            {
+                if (pass == 1)
+                {
+                    // Otra historia: intros de otra duración, un reintento y fotogramas reales por medio.
+                    view.DebugReplayIntro(800, false);
+                    for (int i = 0; i < 30; i++)
+                    {
+                        view.Tick(16f);
+                    }
+
+                    view.DebugReplayIntro(800, true);
+                    view.Intro.Seek(500);
+                    view.DebugReplayIntro(1400, false);
+                    for (int i = 0; i < 70; i++)
+                    {
+                        view.Tick(16f);
+                    }
+                }
+
+                view.DebugReplayIntro(1400, false);
+                for (int s = 0; s < instants.Length; s++)
+                {
+                    view.Intro.Seek(instants[s]);
+                    float[] state = RippleStates(view);
+                    for (int i = 0; i < view.Views.Length; i++)
+                    {
+                        view.Views[i].Tick(16f); // un fotograma de la cuia no avanza la onda que lleva la intro
+                    }
+
+                    Assert.That(RippleStates(view), Is.EqualTo(state), "la cuia no acumula la onda a " + instants[s] + " ms");
+                    int rippling = 0;
+                    for (int i = 0; i < view.Views.Length; i++)
+                    {
+                        rippling += view.Views[i].Rippling ? 1 : 0;
+                    }
+
+                    Assert.That(rippling, Is.GreaterThan(0), "onda activa a " + instants[s] + " ms");
+                    if (pass == 0)
+                    {
+                        first[s] = state;
+                    }
+                    else
+                    {
+                        Assert.That(state, Is.EqualTo(first[s]), "mismo instante, dos pasadas: " + instants[s] + " ms");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// El enganche de depuración no deja un fotograma imposible: tras el fin de la intro (las vistas ya desbloqueadas y con
+        /// su contenido final), buscar un instante anterior a T se rechaza; hacia la cola, sí.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Seek_BeforeTAfterTheIntroEnded_IsRejected()
+        {
+            yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            view.DebugReplayIntro(1400, false);
+            IntroAnimation intro = view.Intro;
+            intro.Seek(1100);
+            intro.Seek(300); // mientras corre, hacia atrás también
+            Assert.That(intro.Running, Is.True);
+            intro.Seek(1400);
+            Assert.That(intro.Running, Is.False, "T: input habilitado");
+            Assert.Throws<System.InvalidOperationException>(() => intro.Seek(300), "antes de T, ya terminada");
+            Assert.That(view.Views[0].Locked, Is.False, "el intento no vuelve a bloquear las vistas");
+            intro.Seek(1500); // la cola, sí
+            Assert.That(intro.Active, Is.True);
+        }
+
+        /// <summary>
+        /// Guion §4.3 y §11: en un build de release sin el arte final de la especie, ni la tropa sale en la intro (dosel) ni la
+        /// tarjeta «¡Miquito a la vista!» con el miquito provisional por código. Con la misma regla (<c>FaunaArtAvailable</c>), en
+        /// desarrollo sí salen las dos.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator WithoutFinalArt_InARelease_NeitherTheTroopNorTheCardAppear()
+        {
+            GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
+            LaunchOptions.DevelopmentBuildOverride = false;
+            yield return PlayModeHelpers.LoadGame(4, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            boot.TapAnywhere();
+            PlayModeHelpers.StepUntilIdle(boot, 1000);
+
+            boot.Flow!.Load(5); // el nivel de la tarjeta del mono ardilla
+            AF.Levels.FaunaSpecies squirrel = view.Fauna!.ForLevel(5)!;
+            Assert.That(GameScreen.FaunaArtAvailable(squirrel, false), Is.False, "release sin fauna_saimiri_collinsi_partes");
+            Assert.That(GameScreen.FaunaArtAvailable(squirrel, true), Is.False);
+            Assert.That(view.IntroSpecies, Is.Null, "sin arte: dosel");
+            Assert.That(view.Intro.Plan.Perch, Is.EqualTo(IntroPerch.Canopy));
+            Assert.That(view.Troop.Active, Is.False, "sin tropa");
+            for (int t = 0; t < 1400; t += 100)
+            {
+                PlayModeHelpers.TickExact(boot, 100);
+                Assert.That(view.Troop.Active, Is.False, "sin tropa a " + t + " ms");
+            }
+
+            PlayModeHelpers.TickExact(boot, 400);
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(view.Sighting.Visible, Is.False, "sin tarjeta con el miquito provisional");
+
+            // La misma regla en desarrollo: la tropa provisional y la tarjeta.
+            LaunchOptions.DevelopmentBuildOverride = true;
+            boot.Flow.Load(5);
+            Assert.That(view.IntroSpecies, Is.Not.Null);
+            Assert.That(view.Troop.Active, Is.True);
+            boot.TapAnywhere();
+            Assert.That(view.Sighting.Visible, Is.True);
         }
 
         /// <summary>
@@ -612,12 +1072,14 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// Rasgos de especie que hacen algo en la intro (revisión, 22_species_*): la pareja del cotoncillo junta y de espaldas
-        /// (colas trenzadas), el velo nocturno del mono nocturno y nada de eso en el mono ardilla.
+        /// Rasgos de especie que hacen algo en la intro (revisión, 22_species_*): la pareja del cotoncillo lado a lado y mirando
+        /// al mismo sitio, con las colas colgando bajo la rama y trenzadas dos vueltas (4 cruces), sin entrar en el panel; el
+        /// velo nocturno del mono nocturno; y nada de eso en el mono ardilla.
         /// </summary>
         [UnityTest]
         public IEnumerator SpeciesTraits_PairAndNight()
         {
+            GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
             yield return PlayModeHelpers.LoadGameWithPack(PlayModeHelpers.Level7BoardPack(6, "w06_oriente", "white", 202), 202, new MemoryProgressStore());
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
@@ -626,6 +1088,32 @@ namespace AF.Tests.PlayMode
             Assert.That(p.Pair, Is.True, "cotoncillo: la pareja");
             Assert.That(p.MonkeyX(1, 0f) - p.MonkeyX(0, 0f), Is.EqualTo(IntroChoreography.PairGapS * p.BodyDp).Within(0.01f));
             Assert.That(boot.View.Troop.NightVisible, Is.False);
+
+            boot.View.Intro.Seek(300);
+            TroopLayer troop = boot.View.Troop;
+            Assert.That(troop.Rig(0).Root.localScale.x, Is.EqualTo(troop.Rig(1).Root.localScale.x), "mirando al mismo sitio");
+            int crossings = 0;
+            float prev = 0f;
+            for (int i = 0; i <= 400; i++)
+            {
+                float t = i / 400f;
+                Assert.That(troop.Rig(0).Tail.Waving && troop.Rig(1).Tail.Waving, Is.True, "las dos colas, trenzadas");
+                float d = troop.Rig(0).Tail.WaveOffset(t) - troop.Rig(1).Tail.WaveOffset(t);
+                crossings += i > 0 && Mathf.Sign(d) != Mathf.Sign(prev) && Mathf.Abs(d) > 1e-4f ? 1 : 0;
+                prev = Mathf.Abs(d) > 1e-4f ? d : prev;
+            }
+
+            Assert.That(crossings, Is.EqualTo(4), "dos vueltas: 4 cruces");
+            RectTransform canvas = (RectTransform)boot.View.Canvas.transform;
+            float panelTop = boot.View.Intro.Input.PanelTop;
+            for (int m = 0; m < 2; m++)
+            {
+                BezierStripGraphic tail = troop.Rig(m).Tail;
+                Vector3 l = canvas.InverseTransformPoint(tail.rectTransform.TransformPoint(tail.PointAt(1f)));
+                Vector2 tip = new Vector2(l.x - canvas.rect.xMin, canvas.rect.yMax - l.y);
+                Assert.That(tip.y, Is.GreaterThan(p.BranchCurveY(tip.x) + (0.5f * p.PairTailHangDp)), "la cola " + m + " cuelga bajo la rama");
+                Assert.That(tip.y, Is.LessThanOrEqualTo(panelTop - IntroChoreography.PairTailClearDp + 1f), "sin entrar en el panel");
+            }
 
             LaunchOptions.Reset();
             yield return PlayModeHelpers.LoadGameWithPack(PlayModeHelpers.Level7BoardPack(10, "w10_alto_negro", "black", 702), 702, new MemoryProgressStore());
@@ -636,6 +1124,117 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.View.Troop.NightVisible, Is.True, "mono nocturno: velo de noche sobre la franja");
             boot.View.Intro.Seek(800 + IntroChoreography.ExitMs + 10);
             Assert.That(boot.View.Troop.NightVisible, Is.False, "el velo se va con la tropa");
+        }
+
+        // Orden de dibujo de cada Transform del lienzo: recorrido en profundidad de la jerarquía (los Canvas anidados sin orden
+        // propio se dibujan en ese orden dentro de su padre).
+        private static Dictionary<Transform, int> RenderOrder(Transform root)
+        {
+            var order = new Dictionary<Transform, int>();
+            var stack = new Stack<Transform>();
+            stack.Push(root);
+            while (stack.Count > 0)
+            {
+                Transform t = stack.Pop();
+                order[t] = order.Count;
+                for (int i = t.childCount - 1; i >= 0; i--)
+                {
+                    stack.Push(t.GetChild(i));
+                }
+            }
+
+            return order;
+        }
+
+        private static bool Shown(Graphic g)
+        {
+            return g.enabled && g.gameObject.activeInHierarchy && g.canvasRenderer.GetAlpha() > 0.01f && g.color.a > 0.01f;
+        }
+
+        // Caja de un gráfico en dp del lienzo (y desde arriba), como cuadrilátero: las tiras de agua por su malla, los chorritos
+        // por su curva (con 2 dp de margen) y las imágenes por su RectTransform (giro incluido).
+        private static Vector2[] CanvasQuad(Graphic g, RectTransform canvas)
+        {
+            var world = new Vector3[4];
+            RectTransform rt = g.rectTransform;
+            if (g is WaterStripGraphic strip)
+            {
+                Rect b = strip.LocalBounds();
+                world[0] = rt.TransformPoint(new Vector3(b.xMin, b.yMin, 0f));
+                world[1] = rt.TransformPoint(new Vector3(b.xMin, b.yMax, 0f));
+                world[2] = rt.TransformPoint(new Vector3(b.xMax, b.yMax, 0f));
+                world[3] = rt.TransformPoint(new Vector3(b.xMax, b.yMin, 0f));
+            }
+            else if (g is StreamGraphic stream)
+            {
+                Vector2 a = stream.CurveStart;
+                Vector2 e = stream.CurveEnd;
+                var b = Rect.MinMaxRect(Mathf.Min(a.x, e.x) - 2f, Mathf.Min(a.y, e.y) - 2f, Mathf.Max(a.x, e.x) + 2f, Mathf.Max(a.y, e.y) + 2f);
+                world[0] = rt.TransformPoint(new Vector3(b.xMin, b.yMin, 0f));
+                world[1] = rt.TransformPoint(new Vector3(b.xMin, b.yMax, 0f));
+                world[2] = rt.TransformPoint(new Vector3(b.xMax, b.yMax, 0f));
+                world[3] = rt.TransformPoint(new Vector3(b.xMax, b.yMin, 0f));
+            }
+            else
+            {
+                rt.GetWorldCorners(world);
+            }
+
+            Rect area = canvas.rect;
+            var quad = new Vector2[4];
+            for (int i = 0; i < 4; i++)
+            {
+                Vector3 l = canvas.InverseTransformPoint(world[i]);
+                quad[i] = new Vector2(l.x - area.xMin, area.yMax - l.y);
+            }
+
+            return quad;
+        }
+
+        // Punto dentro de un cuadrilátero convexo (en cualquier sentido de giro); uno sin área no tapa nada.
+        private static bool Inside(Vector2[] q, Vector2 p)
+        {
+            float area = 0f;
+            for (int i = 0; i < 4; i++)
+            {
+                area += (q[i].x * q[(i + 1) % 4].y) - (q[(i + 1) % 4].x * q[i].y);
+            }
+
+            if (Mathf.Abs(area) < 1e-3f)
+            {
+                return false;
+            }
+
+            bool pos = false;
+            bool neg = false;
+            for (int i = 0; i < 4; i++)
+            {
+                Vector2 a = q[i];
+                Vector2 b = q[(i + 1) % 4];
+                float cross = ((b.x - a.x) * (p.y - a.y)) - ((b.y - a.y) * (p.x - a.x));
+                pos |= cross > 1e-4f;
+                neg |= cross < -1e-4f;
+                if (pos && neg)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // Edad y fase de la onda de cada cuia.
+        private static float[] RippleStates(GameScreen view)
+        {
+            var state = new float[view.Views.Length * 2];
+            for (int i = 0; i < view.Views.Length; i++)
+            {
+                view.Views[i].RippleState(out float age, out float phase);
+                state[2 * i] = age;
+                state[(2 * i) + 1] = phase;
+            }
+
+            return state;
         }
 
         private static void AssertFinalBoard(GameScreen view, BoardState board, string when)

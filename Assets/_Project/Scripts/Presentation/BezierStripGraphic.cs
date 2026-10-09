@@ -7,14 +7,17 @@ namespace AF.Presentation
     /// <summary>
     /// Tira sobre una Bézier cúbica con contorno de tinta (guion de la intro §11): la cola de los miquitos (tira de 8
     /// segmentos), la rama de la tropa (Bézier de 4-6 dp con corteza) y la liana del modelo <c>cuelga</c>. Grosor y color
-    /// interpolados de la base a la punta, con un tramo final de otro color (la punta de la cola). Coordenadas locales de su
-    /// RectTransform; solo se reconstruye cuando cambian sus parámetros (la opacidad va por <c>CanvasRenderer.SetAlpha</c>).
+    /// interpolados de la base a la punta, con un tramo final de otro color (la punta de la cola). Con <see cref="SetWave"/>,
+    /// la tira se aparta de la curva a lo largo de su normal: desde su base va hacia el eje y luego ondula (la trenza de las
+    /// colas de la pareja de <c>colas_entrelazadas</c>: dos tiras con fases opuestas se cruzan en cada media onda).
+    /// Coordenadas locales de su RectTransform; solo se reconstruye cuando cambian sus parámetros (la opacidad va por
+    /// <c>CanvasRenderer.SetAlpha</c>). Sin asignaciones.
     /// </summary>
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class BezierStripGraphic : MaskableGraphic
     {
         /// <summary>Segmentos como mucho.</summary>
-        public const int MaxSegments = 24;
+        public const int MaxSegments = 32;
 
         private Vector2 _p0;
         private Vector2 _p1;
@@ -28,12 +31,86 @@ namespace AF.Presentation
         private Color _outline = new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 0.8f);
         private float _outlineDp = 1f;
         private int _segments = 8;
+        private float _waveFrom;
+        private float _wave;
+        private float _waveGather;
+        private float _waveHalves;
+        private float _wavePhase;
 
         /// <summary>Configura el gráfico (sin raycast).</summary>
         public void Setup(int segments)
         {
             raycastTarget = false;
             _segments = Mathf.Clamp(segments, 1, MaxSegments);
+        }
+
+        /// <summary>Segmentos de la tira (1 a <see cref="MaxSegments"/>).</summary>
+        public int Segments => _segments;
+
+        /// <summary>Cambia los segmentos (la trenza necesita más que una cola en arco).</summary>
+        public void SetSegments(int segments)
+        {
+            segments = Mathf.Clamp(segments, 1, MaxSegments);
+            if (segments != _segments)
+            {
+                _segments = segments;
+                SetVerticesDirty();
+            }
+        }
+
+        /// <summary>
+        /// Ondula la tira a lo largo de su normal (dp): en la base se aparta <paramref name="fromDp"/>, se acerca hasta
+        /// <paramref name="ampDp"/> a lo largo de la fracción <paramref name="gather"/> de la curva y desde ahí oscila con
+        /// <paramref name="halfWaves"/> medias ondas: desplazamiento = amplitud · cos(π · medias ondas · s + fase), con s de 0 a 1
+        /// en el tramo ondulado. Dos tiras sobre la misma curva con fases 0 y π se cruzan en cada media onda (una trenza).
+        /// <paramref name="halfWaves"/> = 0 y amplitudes 0: sin onda.
+        /// </summary>
+        public void SetWave(float fromDp, float ampDp, float gather, float halfWaves, float phase)
+        {
+            gather = Mathf.Clamp(gather, 0f, 0.95f);
+            if (Mathf.Approximately(fromDp, _waveFrom) && Mathf.Approximately(ampDp, _wave) && Mathf.Approximately(gather, _waveGather)
+                && Mathf.Approximately(halfWaves, _waveHalves) && Mathf.Approximately(phase, _wavePhase))
+            {
+                return;
+            }
+
+            _waveFrom = fromDp;
+            _wave = ampDp;
+            _waveGather = gather;
+            _waveHalves = halfWaves;
+            _wavePhase = phase;
+            SetVerticesDirty();
+        }
+
+        /// <summary>La tira ondula (<see cref="SetWave"/>).</summary>
+        public bool Waving => _waveHalves > 0f || _waveFrom != 0f || _wave != 0f;
+
+        /// <summary>Desplazamiento de la onda a lo largo de la normal en <paramref name="t"/> (dp; tests).</summary>
+        public float WaveOffset(float t)
+        {
+            if (!Waving)
+            {
+                return 0f;
+            }
+
+            float g = _waveGather;
+            float k = g > 0f ? Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / g)) : 1f;
+            float amp = Mathf.Lerp(_waveFrom, _wave, k);
+            float s = t <= g ? 0f : (t - g) / Mathf.Max(0.0001f, 1f - g);
+            return amp * Mathf.Cos((Mathf.PI * _waveHalves * s) + _wavePhase);
+        }
+
+        /// <summary>Punto de la tira en <paramref name="t"/> (0..1): la curva más la onda, en coordenadas locales.</summary>
+        public Vector2 PointAt(float t)
+        {
+            Vector2 p = Evaluate(t);
+            if (!Waving)
+            {
+                return p;
+            }
+
+            Vector2 d = Tangent(t);
+            return p + (new Vector2(-d.y, d.x) * WaveOffset(t));
         }
 
         /// <summary>Puntos de control (locales) y grosor en la base y en la punta (dp).</summary>
@@ -79,7 +156,7 @@ namespace AF.Presentation
             float y1 = float.MinValue;
             for (int i = 0; i <= _segments; i++)
             {
-                Vector2 p = Evaluate(i / (float)_segments);
+                Vector2 p = PointAt(i / (float)_segments);
                 x0 = Mathf.Min(x0, p.x);
                 x1 = Mathf.Max(x1, p.x);
                 y0 = Mathf.Min(y0, p.y);
@@ -117,11 +194,12 @@ namespace AF.Presentation
         {
             int n = _segments;
             int start = vh.currentVertCount;
+            bool waving = Waving;
             for (int i = 0; i <= n; i++)
             {
                 float t = i / (float)n;
-                Vector2 p = Evaluate(t);
-                Vector2 d = Tangent(t);
+                Vector2 p = PointAt(t);
+                Vector2 d = waving ? WaveTangent(i, n) : Tangent(t);
                 if (outline && (i == 0 || i == n))
                 {
                     p += d * (i == 0 ? -grow : grow); // el contorno asoma también por los extremos
@@ -153,6 +231,13 @@ namespace AF.Presentation
                     vh.AddTriangle(b + 3, b + 2, b);
                 }
             }
+        }
+
+        // Dirección de la tira ondulada en el vértice i (diferencia entre sus vecinos).
+        private Vector2 WaveTangent(int i, int n)
+        {
+            Vector2 d = PointAt(Mathf.Min(n, i + 1) / (float)n) - PointAt(Mathf.Max(0, i - 1) / (float)n);
+            return d.sqrMagnitude < 1e-8f ? Tangent(i / (float)n) : d.normalized;
         }
 
         private Vector2 Tangent(float t)

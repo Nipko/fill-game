@@ -112,6 +112,19 @@ namespace AF.Presentation
         private const float CollarRyPx = 12f;
         private static readonly Color FaunaInk = new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 0.8f);
 
+        // Bigote blanco (rasgo bigote_blanco; revisión del 2026-10-09): hebras #F4F1EA con un borde de 1 px #BDB8AE, sin
+        // contorno de tinta (con tinta se leía como colmillos de morsa).
+        private static readonly Color WhiskerWhite = new Color(0xF4 / 255f, 0xF1 / 255f, 0xEA / 255f, 1f);
+        private static readonly Color WhiskerEdge = new Color(0xBD / 255f, 0xB8 / 255f, 0xAE / 255f, 1f);
+        private static readonly Color WhiskerStrand = new Color(0xCF / 255f, 0xC9 / 255f, 0xBD / 255f, 1f);
+
+        // Pelo largo rojizo de la cabeza y los hombros con la cara roja (rasgo cara_roja, el huapo colorado; revisión del
+        // 2026-10-09). Orientativo: lo fija el artista.
+        private static readonly Color LongRedHair = new Color(0xC8 / 255f, 0x74 / 255f, 0x3A / 255f, 1f);
+
+        // Iris ámbar (mono nocturno y huapo).
+        private static readonly Color AmberIris = new Color(0xC8 / 255f, 0x90 / 255f, 0x2A / 255f, 1f);
+
         private readonly Dictionary<string, MonkeyArt> _monkeys = new Dictionary<string, MonkeyArt>();
 
         /// <summary>Tiempo de generación de la última especie (≤ 10 ms; 0 si salió de la caché o del PNG).</summary>
@@ -238,7 +251,7 @@ namespace AF.Presentation
 
             if (sp.HasTrait("bigote_blanco"))
             {
-                DrawWhiskers(pc, muzzle);
+                DrawWhiskers(pc);
             }
 
             // Extremidad: cápsula vertical con la mano o el pie más oscuros abajo.
@@ -256,6 +269,12 @@ namespace AF.Presentation
 
         private static void DrawHead(PixelCanvas pc, FaunaSpecies sp, MonkeyArt art, float ox, float oy, Color body, Color face, Color muzzle, Color cap, Color limbs)
         {
+            if (sp.HasTrait("cara_roja"))
+            {
+                DrawBaldRedHead(pc, art, ox, oy, face);
+                return;
+            }
+
             float cx = ox + 60f;
             float cy = oy + 58f;
             float r = 40f;
@@ -318,13 +337,6 @@ namespace AF.Presentation
                 pc.FillEllipseSoft(cx + 33f, cy - 12f, 11f, 8.5f, 1.5f, muzzle);
                 nose = 1f;
             }
-            else if (sp.HasTrait("cara_roja"))
-            {
-                // Cara roja desnuda (señal de salud, nunca burla): cubre la frente y la cara.
-                pc.FillEllipseSoft(cx + 14f, cy + 2f, 30f, 32f, 2f, face);
-                pc.FillEllipseSoft(cx + 30f, cy - 12f, 9f, 7f, 2f, muzzle);
-                pc.FillEllipseSoft(cx + 6f, cy + 22f, 14f, 6f, 6f, ColorMath.WithAlpha(ColorMath.Lighten(face, 0.3f), 0.5f));
-            }
             else if (sp.HasTrait("cara_blanca"))
             {
                 // Saquí macho: disco blanco alrededor de una cara oscura pequeña.
@@ -367,7 +379,7 @@ namespace AF.Presentation
             }
 
             bool bigEyes = sp.HasTrait("ojos_grandes");
-            Color iris = bigEyes ? Hex(0xC8902A) : new Color(0x2A / 255f, 0x1A / 255f, 0x10 / 255f, 1f);
+            Color iris = bigEyes ? AmberIris : new Color(0x2A / 255f, 0x1A / 255f, 0x10 / 255f, 1f);
             pc.FillCircle(nearEye.x, nearEye.y, eyeR, iris);
             pc.FillCircle(farEye.x, farEye.y, eyeR * 0.85f, iris);
             if (bigEyes)
@@ -397,6 +409,8 @@ namespace AF.Presentation
             float cx = ox + 64f;
             float cy = oy + 62f;
             bool woolly = sp.HasTrait("lanudo") || sp.Skeleton == FaunaSkeleton.C;
+            bool longHair = sp.HasTrait("cara_roja");
+            Color fur = longHair ? LongRedHair : body;
             if (woolly)
             {
                 for (int i = 0; i < 14; i++)
@@ -412,12 +426,21 @@ namespace AF.Presentation
                 for (int i = 0; i < 14; i++)
                 {
                     float a = i * (Mathf.PI * 2f / 14f);
-                    pc.FillCircle(cx + (Mathf.Cos(a) * 50f), cy + (Mathf.Sin(a) * 40f), 9f, body);
+                    pc.FillCircle(cx + (Mathf.Cos(a) * 50f), cy + (Mathf.Sin(a) * 40f), 9f, fur);
                 }
             }
 
             pc.FillEllipseSoft(cx, cy, 51.5f, 41.5f, 1f, body);
             pc.FillEllipseSoft(cx - 14f, cy + 18f, 26f, 12f, 10f, ColorMath.WithAlpha(ColorMath.Lighten(body, 0.3f), 0.45f)); // luz
+            if (longHair)
+            {
+                // Huapo: mechones de pelo largo rojizo que cuelgan del lomo y de los hombros (mirando a la derecha: el lomo a la
+                // izquierda, el hombro arriba a la derecha), por encima del cuerpo y dentro de su celda.
+                HairLock(pc, cx - 40f, cy + 22f, cx - 50f, cy + 2f, cx - 52f, cy - 24f, 7f);
+                HairLock(pc, cx - 14f, cy + 38f, cx - 26f, cy + 20f, cx - 30f, cy - 8f, 7f);
+                HairLock(pc, cx + 14f, cy + 40f, cx + 6f, cy + 22f, cx + 4f, cy - 6f, 6.5f);
+                HairLock(pc, cx + 36f, cy + 30f, cx + 44f, cy + 10f, cx + 46f, cy - 16f, 6f);
+            }
 
             if (sp.HasTrait("collar_blanco"))
             {
@@ -448,32 +471,168 @@ namespace AF.Presentation
             }
         }
 
-        // Bigote del pichico emperador (guion §4.2: bigote blanco largo que pasa de los hombros): dos trazos de 3 dp que se
-        // afinan, curvados hacia fuera y hacia abajo desde el hocico hasta 0,6 de la cabeza por cada lado, con contorno de
-        // tinta. Coordenadas de la celda de la cabeza (centro del cráneo en (60, 58), hocico en (90, 48)), llevadas a la celda
-        // del bigote.
-        private static void DrawWhiskers(PixelCanvas pc, Color white)
+        // Huapo colorado (rasgo cara_roja; guion §4.2: «cara roja, señal de salud, nunca burla»; revisión del 2026-10-09): la
+        // cabeza calva es un óvalo vertical, rojo solo en la cara y el cuero cabelludo (el color «cara» del catálogo), sin nariz
+        // saliente (solo dos fosas a ras de la cara) y con ojos pequeños de color ámbar; 7 mechones de pelo largo rojizo le
+        // salen de la nuca y de debajo de la mandíbula y cuelgan hacia los hombros (los del lomo van en el torso). Todo dentro
+        // de la celda de la cabeza (0..128).
+        private static void DrawBaldRedHead(PixelCanvas pc, MonkeyArt art, float ox, float oy, Color face)
         {
-            float reach = 0.6f * 80f; // 0,6 del diámetro del cráneo (80 px) por lado
-            for (int pass = 0; pass < 2; pass++)
+            float cx = ox + 62f;
+            float cy = oy + 66f;
+            const float rx = 25f;
+            const float ry = 33f;
+
+            // Mechones de la nuca a la mandíbula (ángulo en grados desde +x, con y hacia arriba; la cara, a la derecha, y el
+            // cuero cabelludo quedan calvos): salen del borde del óvalo, se abren un poco hacia fuera y cuelgan.
+            for (int i = 0; i < 7; i++)
+            {
+                float deg = 140f + (i * 25f);
+                float a = deg * Mathf.Deg2Rad;
+                var dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                var root = new Vector2(cx + (dir.x * (rx - 4f)), cy + (dir.y * (ry - 4f)));
+                float len = i == 0 || i == 6 ? 20f : 26f;
+                Vector2 mid = root + (dir * (len * 0.45f)) + new Vector2(0f, -len * 0.2f);
+                Vector2 tip = root + (dir * (len * 0.5f)) + new Vector2(dir.x * 4f, -len * 0.85f);
+                tip.x = Mathf.Clamp(tip.x, ox + 8f, ox + 120f);
+                tip.y = Mathf.Max(tip.y, oy + 8f);
+                HairLock(pc, root.x, root.y, mid.x, mid.y, tip.x, tip.y, 6.5f);
+            }
+
+            // Óvalo vertical calvo con su contorno de tinta y una luz suave arriba a la izquierda.
+            pc.FillEllipseSoft(cx, cy, rx + 3.5f, ry + 3.5f, 1f, FaunaInk);
+            pc.FillEllipseSoft(cx, cy, rx, ry, 1f, face);
+            pc.FillEllipseSoft(cx - 7f, cy + 14f, 12f, 10f, 8f, ColorMath.WithAlpha(ColorMath.Lighten(face, 0.28f), 0.45f));
+
+            // Ojos pequeños de color ámbar (3/4 mirando a la derecha) con pupila y brillo, y dos fosas nasales a ras.
+            var nearEye = new Vector2(cx + 13f, cy + 5f);
+            var farEye = new Vector2(cx - 1f, cy + 6f);
+            const float eyeR = 4.6f;
+            var socket = ColorMath.Darken(face, 0.2f);
+            pc.FillCircle(nearEye.x, nearEye.y, eyeR + 1.4f, socket);
+            pc.FillCircle(farEye.x, farEye.y, (eyeR * 0.85f) + 1.3f, socket);
+            pc.FillCircle(nearEye.x, nearEye.y, eyeR, AmberIris);
+            pc.FillCircle(farEye.x, farEye.y, eyeR * 0.85f, AmberIris);
+            var pupil = new Color(0.12f, 0.07f, 0.04f, 1f);
+            pc.FillCircle(nearEye.x + 0.8f, nearEye.y - 0.3f, eyeR * 0.45f, pupil);
+            pc.FillCircle(farEye.x + 0.6f, farEye.y - 0.3f, eyeR * 0.38f, pupil);
+            pc.FillCircle(nearEye.x - 1.4f, nearEye.y + 1.5f, 1.2f, Color.white);
+            pc.FillCircle(farEye.x - 1.2f, farEye.y + 1.3f, 1f, Color.white);
+            Color nostril = ColorMath.WithAlpha(ColorMath.Darken(face, 0.45f), 0.85f);
+            pc.FillEllipseSoft(cx + 17f, cy - 10f, 1.6f, 1.1f, 0.8f, nostril);
+            pc.FillEllipseSoft(cx + 12f, cy - 10.5f, 1.4f, 1f, 0.8f, nostril);
+
+            art.EyelidOffsetS = new Vector2(((nearEye.x + farEye.x) * 0.5f) - (ox + 64f), ((nearEye.y + farEye.y) * 0.5f) - (oy + 64f)) / FaunaPxPerS * (art.HeadS / 0.6f);
+            art.EyelidSizeS = new Vector2((Mathf.Abs(nearEye.x - farEye.x) + (eyeR * 2.6f)) / FaunaPxPerS, eyeR * 2.4f / FaunaPxPerS) * (art.HeadS / 0.6f);
+        }
+
+        // Mechón de pelo largo: cápsulas que se afinan a lo largo de una Bézier cuadrática (raíz, control, punta) de
+        // radio <paramref name="r0"/> a un cuarto de él, con contorno de tinta de 2 px y una hebra clara encima.
+        private static void HairLock(PixelCanvas pc, float x0, float y0, float x1, float y1, float x2, float y2, float r0)
+        {
+            const int steps = 12;
+            Color light = ColorMath.WithAlpha(ColorMath.Lighten(LongRedHair, 0.3f), 0.7f);
+            Color dark = ColorMath.Darken(LongRedHair, 0.22f);
+            for (int pass = 0; pass < 4; pass++)
+            {
+                float px = x0;
+                float py = y0;
+                for (int i = 1; i <= steps; i++)
+                {
+                    float t = i / (float)steps;
+                    float u = 1f - t;
+                    float qx = (u * u * x0) + (2f * u * t * x1) + (t * t * x2);
+                    float qy = (u * u * y0) + (2f * u * t * y1) + (t * t * y2);
+                    float r = Mathf.Lerp(r0, r0 * 0.25f, t);
+                    switch (pass)
+                    {
+                        case 0:
+                            pc.FillCapsule(px, py, qx, qy, r + 2f, FaunaInk);
+                            break;
+                        case 1:
+                            pc.FillCapsule(px, py, qx, qy, r, LongRedHair);
+                            break;
+                        case 2:
+                            pc.FillCapsule(px - (r * 0.35f), py, qx - (r * 0.35f), qy, Mathf.Max(0.5f, r * 0.18f), dark); // hebra
+                            break;
+                        default:
+                            pc.FillCapsule(px + (r * 0.3f), py, qx + (r * 0.3f), qy, Mathf.Max(0.5f, r * 0.2f), light); // luz
+                            break;
+                    }
+
+                    px = qx;
+                    py = qy;
+                }
+            }
+        }
+
+        // Bigote del pichico emperador (guion §4.2: «bigote blanco largo», que pasa de los hombros; revisión del 2026-10-09):
+        // dos mechones simétricos del labio superior hacia abajo y hacia fuera, de 4 hebras cada uno, que se afinan de unos
+        // 2,5 dp a 0,5 dp (≈ 6,5 px por dp en la celda de la cabeza), blancos #F4F1EA con un borde de 1 px #BDB8AE y sin tinta.
+        // Coordenadas de la celda de la cabeza (centro del cráneo en (60, 58), hocico en (90, 48)), llevadas a la del bigote.
+        private static void DrawWhiskers(PixelCanvas pc)
+        {
+            const int steps = 16;
+            const int strands = 4;
+            for (int pass = 0; pass < 3; pass++)
             {
                 for (int side = -1; side <= 1; side += 2)
                 {
-                    var a = new Vector2(90f + (side * 5f), 45f);
-                    var c = new Vector2(90f + (side * reach * 0.95f), 46f);
-                    var b = new Vector2(90f + (side * reach), -14f);
-                    Vector2 prev = a;
-                    for (int i = 1; i <= 16; i++)
+                    // Raíz en el labio, bajo el hocico; baja y se abre, con la punta algo hacia fuera (pasa los hombros: y ≈ 20).
+                    var a = new Vector2(90f + (side * 4f), 43f);
+                    var c1 = new Vector2(90f + (side * 15f), 30f);
+                    var c2 = new Vector2(90f + (side * 24f), 6f);
+                    var b = new Vector2(90f + (side * 33f), -13f);
+                    for (int j = 0; j < strands; j++)
                     {
-                        float t = i / 16f;
-                        float u = 1f - t;
-                        Vector2 q = (u * u * a) + (2f * u * t * c) + (t * t * b);
-                        float r = Mathf.Lerp(8f, 2.4f, t) + (pass == 0 ? 2f : 0f);
-                        pc.FillCapsule(WhiskersCellX + prev.x - WhiskersHeadX0, prev.y - WhiskersHeadY0, WhiskersCellX + q.x - WhiskersHeadX0, q.y - WhiskersHeadY0, r, pass == 0 ? FaunaInk : white);
-                        prev = q;
+                        float lane = j - ((strands - 1) * 0.5f); // −1,5 … 1,5
+                        float end = 1f - (0.08f * Mathf.Abs(lane)) - (side > 0 && j == 0 ? 0.05f : 0f); // puntas escalonadas
+                        Vector2 prev = Vector2.zero;
+                        for (int i = 0; i <= steps; i++)
+                        {
+                            float t = end * i / steps;
+                            Vector2 q = Cubic(a, c1, c2, b, t);
+                            Vector2 d = Cubic(a, c1, c2, b, Mathf.Min(1f, t + 0.02f)) - Cubic(a, c1, c2, b, Mathf.Max(0f, t - 0.02f));
+                            var n = new Vector2(-d.y, d.x).normalized;
+                            // Las hebras se juntan hacia la punta sin cerrarse del todo (se abren un poco: pelo, no un colmillo) y
+                            // ondulan apenas.
+                            float spread = Mathf.Lerp(3.4f, 1.1f, t);
+                            float wave = 0.7f * t * Mathf.Sin((t * 3f * Mathf.PI) + (lane * 1.3f));
+                            q += n * ((lane * spread) + wave);
+                            if (i > 0)
+                            {
+                                float r = Mathf.Lerp(2.5f, 0.6f, t);
+                                float qx = WhiskersCellX + q.x - WhiskersHeadX0;
+                                float qy = q.y - WhiskersHeadY0;
+                                float px = WhiskersCellX + prev.x - WhiskersHeadX0;
+                                float py = prev.y - WhiskersHeadY0;
+                                if (pass == 0)
+                                {
+                                    pc.FillCapsule(px, py, qx, qy, r + 1f, WhiskerEdge);
+                                }
+                                else if (pass == 1)
+                                {
+                                    pc.FillCapsule(px, py, qx, qy, r, WhiskerWhite);
+                                }
+                                else if (j < strands - 1 && t > 0.12f && t < 0.85f)
+                                {
+                                    // Raya entre una hebra y la siguiente: se leen los pelos, no una medialuna maciza.
+                                    Vector2 gap = n * (spread * 0.5f);
+                                    pc.FillCapsule(px + gap.x, py + gap.y, qx + gap.x, qy + gap.y, 0.75f, WhiskerStrand);
+                                }
+                            }
+
+                            prev = q;
+                        }
                     }
                 }
             }
+        }
+
+        private static Vector2 Cubic(Vector2 a, Vector2 b, Vector2 c, Vector2 d, float t)
+        {
+            float u = 1f - t;
+            return (u * u * u * a) + (3f * u * u * t * b) + (3f * u * t * t * c) + (t * t * t * d);
         }
 
         private static void FaunaDisc(PixelCanvas pc, float x, float y, float r, Color c)

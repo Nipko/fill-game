@@ -369,7 +369,7 @@ namespace AF.UI
 
             // ---- Tropa de miquitos (guion de la intro §4.4): Canvas anidado en la escena, justo por detrás del follaje de las
             // esquinas (la rama sale de él; la tropa entra y sale trepando por él) y del tablero; el labio del río que desborda
-            // va entre la rama y la tropa. ----
+            // va por detrás de la rama (agua < rama < tropa, guion §4.6.5). ----
             _troop = new TroopLayer(scene, art);
             _troop.Layer.SetSiblingIndex(_foliage[0].transform.GetSiblingIndex());
             _intro.Troop = _troop;
@@ -1590,12 +1590,10 @@ namespace AF.UI
             input.HudBottom = BoardTop;
             input.CanvasWidth = _canvasW;
             input.Seed = flow.LevelNumber;
-            FaunaSpecies? species = IntroCast.Resolve(Fauna, flow.Level.World, flow.LevelNumber, isShort ? 2 : 1, true);
-            if (species != null && !Debug.isDebugBuild && ArtSlots.Find(species.PartsSlot) == null)
-            {
-                species = null; // en release, sin su arte final: dosel, nunca la especie de otro mundo (guion §4.3)
-            }
-
+            // En release, sin su arte final: dosel, nunca la especie de otro mundo (guion §4.3); la regla, en FaunaArtAvailable.
+            FaunaSpecies? candidate = Fauna?.ForLevel(flow.LevelNumber);
+            bool art = candidate != null && FaunaArtAvailable(candidate, false);
+            FaunaSpecies? species = IntroCast.Resolve(Fauna, flow.Level.World, flow.LevelNumber, isShort ? 2 : 1, art);
             _introSpecies = species;
             input.Perch = species != null ? IntroPerch.Branch : IntroPerch.Canopy;
             if (species != null)
@@ -1611,10 +1609,26 @@ namespace AF.UI
             _intro.Start(_views, flow.Session.Current, _art.Water, durationMs);
         }
 
+        /// <summary>
+        /// Compuerta del arte de una especie (guion de la intro §4.3 y §11), la misma para la intro y para la tarjeta
+        /// (<see cref="FaunaArtRule"/>): en un build de desarrollo vale el miquito provisional por código; fuera de él, la tropa
+        /// exige el PNG <c>fauna_&lt;id&gt;_partes</c> y la tarjeta (<paramref name="forCard"/>), además, <c>fauna_&lt;id&gt;_retrato</c>.
+        /// El build es <c>Debug.isDebugBuild</c> salvo <see cref="LaunchOptions.DevelopmentBuildOverride"/> (tests).
+        /// </summary>
+        internal static bool FaunaArtAvailable(FaunaSpecies species, bool forCard)
+        {
+            bool development = LaunchOptions.DevelopmentBuildOverride ?? Debug.isDebugBuild;
+            bool parts = ArtSlots.Find(species.PartsSlot) != null;
+            return forCard
+                ? FaunaArtRule.CardArt(development, parts, ArtSlots.Find(species.PortraitSlot) != null)
+                : FaunaArtRule.TroopArt(development, parts);
+        }
+
         // «¡Miquito a la vista!» (guion de la intro §4.5 y §14): al habilitarse el input tras la intro, en el primer intento del
-        // primer nivel libre desde el nivel_tarjeta de la especie del tramo (nunca la de otro mundo). Sobre la franja del
-        // panorama si mide ≥ 64 dp; si no, sobre el muelle, bajo la última fila y por encima de la bandeja; si no cabe sin tapar
-        // cuias ni botones, no sale. Sin persistir ni af_fauna_sighted: eso exige migrar el perfil (Q11, PR aparte).
+        // primer nivel libre desde el nivel_tarjeta de la especie del tramo (nunca la de otro mundo) y solo con su arte
+        // (FaunaArtAvailable: fuera de desarrollo, sin el PNG del retrato no sale). Sobre la franja del panorama si mide ≥ 64 dp;
+        // si no, sobre el muelle, bajo la última fila y por encima de la bandeja; si no cabe sin tapar cuias ni botones, no sale.
+        // Sin persistir ni af_fauna_sighted: eso exige migrar el perfil (Q11, PR aparte).
         private void MaybeShowSighting(LevelFlow flow)
         {
             FaunaCatalog? fauna = Fauna;
@@ -1625,8 +1639,10 @@ namespace AF.UI
             }
 
             int level = flow.LevelNumber;
-            FaunaSpecies? species = fauna.IsNoFauna(level) ? null : fauna.ForLevel(level);
-            if (species == null || !species.LivesIn(flow.Level.World) || !SightingRule.ShowsCard(level, species.CardLevel, true))
+            FaunaSpecies? candidate = fauna.ForLevel(level);
+            bool art = candidate != null && FaunaArtAvailable(candidate, true);
+            FaunaSpecies? species = IntroCast.Resolve(fauna, flow.Level.World, level, 1, art);
+            if (species == null || !SightingRule.ShowsCard(level, species.CardLevel, true))
             {
                 return;
             }

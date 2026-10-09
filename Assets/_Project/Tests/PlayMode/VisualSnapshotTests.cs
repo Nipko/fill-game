@@ -253,8 +253,10 @@ namespace AF.Tests.PlayMode
 
         /// <summary>
         /// «Llenar y teñir» (guion de la intro, A14), deterministas con el reloj del test, el enganche de depuración
-        /// (<c>GameScreen.DebugReplayIntro</c> e <see cref="IntroAnimation.Seek"/>) y el reloj de los shaders congelado en el
-        /// tiempo de la intro (<see cref="ShaderClock"/>; se comprueba capturando dos veces el mismo instante):
+        /// (<c>GameScreen.DebugReplayIntro</c> e <see cref="IntroAnimation.Seek"/>), la onda del menisco en función de t y el
+        /// reloj de los shaders congelado en el tiempo de la intro (<see cref="ShaderClock"/>; se comprueba capturando 300,
+        /// 700, 1.100 y 1.400 ms del nivel 7 en dos pasadas independientes, con otras intros y fotogramas reales por medio y
+        /// la onda activa a 300 y 1.100 ms):
         /// <c>01_intro_l7_*</c> a 0, 50, 150, 300, 700, 1.100 y 1.400 ms (larga, rama con el mono ardilla; 0-150: el río crece
         /// antes que nada, A3); <c>01c_intro_l1_*</c> a 0, 50, 150, 300, 900 y 1.300; <c>01d_intro_short_l7_*</c> a 200,
         /// 500 y 700 (corta, tropa posada); <c>01e_intro_16_0500</c> (16 cuias en 3 filas: dosel, una fruta por cuia). Hojas
@@ -273,26 +275,28 @@ namespace AF.Tests.PlayMode
             Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             Replay(boot, 1400, false, "01_intro_l7");
+            int[] checkMs = { 300, 700, 1100, 1400 };
+            var firstPass = new System.Collections.Generic.Dictionary<int, byte[]>();
             foreach (int ms in new[] { 0, 50, 150, 300, 700, 1100, 1400 })
             {
                 boot.View!.Intro.Seek(ms);
-                Save(dir, "01_intro_l7_" + Ms(ms));
+                byte[] png = Capture();
+                File.WriteAllBytes(Path.Combine(dir, "01_intro_l7_" + Ms(ms) + ".png"), png);
+                if (System.Array.IndexOf(checkMs, ms) >= 0)
+                {
+                    firstPass[ms] = png;
+                    if (ms == 300 || ms == 1100)
+                    {
+                        Assert.That(AnyRipple(boot), Is.True, "onda del menisco activa a " + ms + " ms (si no, la comparación no prueba nada)");
+                    }
+                }
             }
 
-            // A14: el mismo instante, capturado dos veces con fotogramas reales por medio, sale idéntico byte a byte (el reloj
-            // de los shaders del líquido y del chorro es el de la intro, no el del motor).
-            foreach (int ms in new[] { 300, 1100 })
+            // Otra historia antes de la segunda pasada: fotogramas reales, las hojas larga, corta y del reintento y la corta
+            // del 01d (más intros, de otras duraciones y en dosel).
+            for (int i = 0; i < 5; i++)
             {
-                boot.View!.Intro.Seek(ms);
-                byte[] first = Capture();
-                for (int i = 0; i < 5; i++)
-                {
-                    yield return null;
-                }
-
-                boot.View.Intro.Seek(ms);
-                byte[] second = Capture();
-                Assert.That(second, Is.EqualTo(first), "captura determinista a " + ms + " ms");
+                yield return null;
             }
 
             Sheet(boot, dir, "21_sheet_l7_long", 1400, false);
@@ -305,6 +309,15 @@ namespace AF.Tests.PlayMode
             }
 
             Sheet(boot, dir, "21_sheet_l7_retry", 800, true);
+
+            // A14: el mismo instante de la misma intro, en una pasada independiente, sale idéntico byte a byte (la onda del
+            // menisco depende solo de t y el reloj de los shaders es el de la intro, no el del motor).
+            Replay(boot, 1400, false, "01_intro_l7_segunda_pasada");
+            foreach (int ms in checkMs)
+            {
+                boot.View!.Intro.Seek(ms);
+                Assert.That(Capture(), Is.EqualTo(firstPass[ms]), "captura determinista a " + ms + " ms en dos pasadas");
+            }
 
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
@@ -361,6 +374,11 @@ namespace AF.Tests.PlayMode
                 {
                     Sheet(boot, dir, "21_sheet_l" + level + "_long", 1400, false);
                 }
+
+                if (level == 142 || level == 202 || level == 302)
+                {
+                    Sheet(boot, dir, "21_sheet_l" + level + "_short", 800, false); // huapo, pareja trenzada y bigote, en movimiento
+                }
             }
 
             // «¡Miquito a la vista!» (guion §4.5): nivel 5, tras la intro, sobre la franja del panorama.
@@ -415,6 +433,21 @@ namespace AF.Tests.PlayMode
         private static string Ms(int ms)
         {
             return ms.ToString("0000", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        // Alguna cuia tiene la onda del menisco en curso.
+        private static bool AnyRipple(GameBootstrap boot)
+        {
+            CuiaView[] views = boot.View!.Views;
+            for (int i = 0; i < views.Length; i++)
+            {
+                if (views[i].Rippling)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

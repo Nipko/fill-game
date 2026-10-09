@@ -100,6 +100,13 @@ namespace AF.UI
         public static FakeAdFill? AdFillOverride { get; set; }
 
         /// <summary>
+        /// Simula un build de release (false) o de desarrollo (true) para la compuerta del arte de fauna
+        /// (<c>GameScreen.FaunaArtAvailable</c>, guion de la intro §4.3 y §11); null = <c>Debug.isDebugBuild</c>. Solo tests:
+        /// nada más lo lee.
+        /// </summary>
+        public static bool? DevelopmentBuildOverride { get; set; }
+
+        /// <summary>
         /// Moneda de los precios simulados [P]: COP (05 §4.2; los wireframes de 04 §6.6 usan pesos colombianos) mientras no
         /// haya precios de la tienda real.
         /// </summary>
@@ -118,6 +125,7 @@ namespace AF.UI
             ClockOverride = null;
             LevelOffsetOverride = null;
             LevelPackJsonOverride = null;
+            DevelopmentBuildOverride = null;
         }
 
         /// <summary>

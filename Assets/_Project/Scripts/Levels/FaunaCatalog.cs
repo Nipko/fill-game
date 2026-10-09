@@ -348,6 +348,27 @@ namespace AF.Levels
         }
     }
 
+    /// <summary>
+    /// Compuerta del arte de una especie (guion de la intro §4.3 y §11): la única regla de «hay arte», pura y comprobable. En un
+    /// build de desarrollo basta el miquito provisional por código; fuera de él, la tropa exige el PNG <c>fauna_&lt;id&gt;_partes</c>
+    /// y la tarjeta «¡Miquito a la vista!» exige además el PNG <c>fauna_&lt;id&gt;_retrato</c> (ni el soft launch ni el vídeo con
+    /// miquitos provisionales, §11). Sin arte: dosel en la intro y sin tarjeta, nunca la especie de otro mundo.
+    /// </summary>
+    public static class FaunaArtRule
+    {
+        /// <summary>La tropa de la especie puede salir en la intro.</summary>
+        public static bool TroopArt(bool developmentBuild, bool partsPng)
+        {
+            return developmentBuild || partsPng;
+        }
+
+        /// <summary>La tarjeta de la especie puede salir: la regla de la tropa y, fuera de desarrollo, también el retrato.</summary>
+        public static bool CardArt(bool developmentBuild, bool partsPng, bool portraitPng)
+        {
+            return TroopArt(developmentBuild, partsPng) && (developmentBuild || portraitPng);
+        }
+    }
+
     /// <summary>Qué tropa hace la intro de un nivel (guion de la intro §4.3).</summary>
     public static class IntroCast
     {
@@ -355,8 +376,8 @@ namespace AF.Levels
         /// Especie de la intro del nivel <paramref name="level"/> del mundo <paramref name="world"/>, o null (modo dosel) si: no
         /// hay catálogo; el nivel está en <c>sin_fauna</c> (mundo 13); es un reintento (<paramref name="attempt"/> &gt; 1); no hay
         /// especie para el tramo; la especie del tramo no vive en ese mundo (nunca la de otro mundo: barrera de los ríos); o
-        /// falta su arte (<paramref name="artAvailable"/> = false: en un build de release sin el PNG final; en desarrollo, el
-        /// miquito provisional por código cuenta como disponible).
+        /// falta su arte (<paramref name="artAvailable"/> = false, con <see cref="FaunaArtRule"/>: en un build de release sin el
+        /// PNG final; en desarrollo, el miquito provisional por código cuenta como disponible).
         /// </summary>
         public static FaunaSpecies? Resolve(FaunaCatalog? catalog, int world, int level, int attempt, bool artAvailable)
         {
