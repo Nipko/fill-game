@@ -1,6 +1,6 @@
 # Capítulo 4 · Comodines, Canoas y Cuia de rescate
 
-Fecha: 2026-10-06 (revisión cruzada; versión anterior 2026-10-05; actualizado el 2026-10-08 con la decisión del dueño **D-008**, bucle de partida como Magic Sort: §2.7, §3, §5.2, §6, §7, §10.1 y §11, y con la nota de la pregunta P17 en §7.3; registro en `docs/dev/decisiones.md`) · Proyecto Amazon Fill (nombre comercial Tintalú) · Convención de evidencia: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas de jugadores, **[NV]** no verificado, **[P]** propuesta de este capítulo a calibrar en soft launch. "(dirección N)" remite a las decisiones de dirección vinculantes. Nombres según `docs/gdd/00-glosario.md`.
+Fecha: 2026-10-06 (revisión cruzada; versión anterior 2026-10-05; actualizado el 2026-10-08 con la decisión del dueño **D-008**, bucle de partida como Magic Sort: §2.7, §3, §5.2, §6, §7, §10.1 y §11, y con la nota de la pregunta P17 en §7.3; alineado el mismo día con lo construido en la pista B y con Magic Sort: panel de Aguas estancadas sin ilustración ni `stuck_rescue_copy` en §6.5-§6.6 y cronómetro de canoas fuera de la cabecera de partida en §7.1, ambos [P]; registro en `docs/dev/decisiones.md`) · Proyecto Amazon Fill (nombre comercial Tintalú) · Convención de evidencia: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas de jugadores, **[NV]** no verificado, **[P]** propuesta de este capítulo a calibrar en soft launch. "(dirección N)" remite a las decisiones de dirección vinculantes. Nombres según `docs/gdd/00-glosario.md`.
 
 ## Resumen
 
@@ -412,22 +412,23 @@ La rama F debe ser excepcional (<0,5 % de bloqueos); si un nivel la dispara más
 | `retry` [P] | Reintentar |
 | `quit_confirm` [P] | ¿Salir del nivel? Perderás 1 canoa |
 
-Las siete claves marcadas [P] llegan con D-008 (2026-10-08) y esperan el visto bueno del dueño (pregunta P14 de `docs/dev/decisiones.md`). En 1-30 el pie del modal usa `stuck_restart` ("Volver a la orilla (gratis)"); desde el 31 usa `stuck_give_up` [P] (D-008). `stuck_canoe_lost` / `stuck_canoe_lost_last` son líneas de estado bajo el titular desde el nivel 31, ocultas con Canoas infinitas; sustituyen a las antiguas `stuck_restart_canoe` / `stuck_restart_last_canoe`, que atribuían al reinicio un coste que es del bloqueo y contradecían el tooltip del primer modal del tutorial (02 §13, nivel 6: "Reiniciar es gratis, siempre, mismo tablero").
+Las siete claves marcadas [P] llegan con D-008 (2026-10-08) y esperan el visto bueno del dueño (pregunta P14 de `docs/dev/decisiones.md`). En 1-30 el pie del modal usa `stuck_restart` ("Volver a la orilla (gratis)"); desde el 31 usa `stuck_give_up` [P] (D-008). `stuck_canoe_lost` / `stuck_canoe_lost_last` son líneas de estado bajo el titular desde el nivel 31, ocultas con Canoas infinitas; sustituyen a las antiguas `stuck_restart_canoe` / `stuck_restart_last_canoe`, que atribuían al reinicio un coste que es del bloqueo y contradecían el tooltip del primer modal del tutorial (02 §13, nivel 6: "Reiniciar es gratis, siempre, mismo tablero"). `stuck_rescue_copy` no se muestra en el panel de Aguas estancadas (§6.6) [P]; queda solo para la llegada de Capi de 07 §5.5 (`ui_mascot_rescue_anim`), pendiente de alinear con este panel en el lote Dc5.
 
-### 6.6 Wireframes (360 × 780, el tablero queda atenuado detrás; sin cuenta atrás)
+### 6.6 Wireframes (360 × 780, el tablero queda a la vista y atenuado; sin cuenta atrás)
+
+**Panel sin ilustración (alineación con D-008, 2026-10-08) [P].** Aguas estancadas sigue la composición de «No Available Moves» de Magic Sort (ficha §4.4, t = 404 y 777): el saldo arriba, el tablero entero a la vista y atenuado al 70 % (07 §5.5; sube lo justo para que el panel no lo tape) y las opciones en el panel de abajo, sin ilustración ni la copia `stuck_rescue_copy`, para que el jugador vea qué deshacer. Sustituye a la ilustración de 96 px de los wireframes A-D («Capi en canoa con una cuia», «Capi en la orilla», y Capi con Rosa en D) y a la copia de Capi del modal de 02 §7. ¿Seguro? y Nivel fallido sí llevan su ilustración (canoa volcada y cesta de semillas vacía), como el corazón roto de «Continue?» y las monedas de «Level Failed!» (ficha §4.4).
 
 **A · Con saldo, primer rescate del día (nivel ≥31)**
 
 ```
 +--------------------------------------------+
 | (S) 1.240                     (C) 4/5      |   cabecera: semillas, canoas
-|  . . . tablero atenuado al 40 % . . .      |
+|  . . tablero a la vista, atenuado . . .    |   al 70 % (07 §5.5); el panel no lo tapa
 |  +--------------------------------------+  |
 |  |          ~ Aguas estancadas ~        |  |   subtítulo pequeño
 |  |        NO HAY MAS VERTIDOS           |  |   titular
 |  |     Travesía perdida: -1 canoa       |  |   línea de estado (≥31; oculta con Canoas infinitas)
-|  |     [ Capi en canoa con una cuia ]   |  |   ilustración 96 px
-|  |                                      |  |
+|  |                                      |  |   sin ilustración (D-008) [P]
 |  |  +--------------------------------+  |  |
 |  |  |  <- Deshacer · Marea      [2]  |  |  |   Regla 0: secundaria (marfil), 48 px
 |  |  +--------------------------------+  |  |
@@ -452,7 +453,6 @@ Las siete claves marcadas [P] llegan con D-008 (2026-10-08) y esperan el visto b
 |  |          ~ Aguas estancadas ~        |  |
 |  |        NO HAY MAS VERTIDOS           |  |
 |  |     Travesía perdida: -1 canoa       |  |
-|  |     [ Capi en canoa con una cuia ]   |  |
 |  |  +--------------------------------+  |  |
 |  |  |  +3 Deshacer · Ver video       |  |  |   Regla 0: ruta gratuita primero
 |  |  +--------------------------------+  |  |
@@ -481,7 +481,6 @@ En geo T1 las dos tarjetas de compra se invierten (Balsa de rescate arriba) y la
 | (S) 310                                    |   sin contador de canoas antes del 31
 |  +--------------------------------------+  |
 |  |        NO HAY MAS VERTIDOS           |  |
-|  |       [ Capi en la orilla ]          |  |
 |  |  +--------------------------------+  |  |
 |  |  |  <- Deshacer · Marea      [1]  |  |  |
 |  |  +--------------------------------+  |  |
@@ -504,7 +503,6 @@ En geo T1 las dos tarjetas de compra se invierten (Balsa de rescate arriba) y la
 |  |          ~ Aguas estancadas ~        |  |
 |  |        NO HAY MAS VERTIDOS           |  |
 |  |     Travesía perdida: -1 canoa       |  |
-|  |     [ Capi ]              [ Rosa ]   |  |   Rosa asoma a la derecha
 |  |  +--------------------------------+  |  |
 |  |  |  <- Deshacer · Marea      [3]  |  |  |   Regla 0: secundaria (marfil), 48 px
 |  |  +--------------------------------+  |  |
@@ -569,7 +567,7 @@ Reglas de interacción: el botón Atrás de Android no cierra el modal ni ¿Segu
 | Regla | Valor | Fuente |
 |---|---|---|
 | Máximo | **5** Canoas | dirección 11; Magic Sort 5 vidas (research/magic-sort/b §2.1 [V]) |
-| Regeneración | **1 cada 25 min** mientras haya menos de 5; cronómetro mm:ss en la cabecera junto al contador | dirección 11; research/magic-sort/b §2.1 [V] |
+| Regeneración | **1 cada 25 min** mientras haya menos de 5; cronómetro mm:ss junto al contador en la pantalla de inicio (06 §4.7), en el saldo grande del embudo (D-008, paso 1) y de la victoria, y en Sin canoas (§7.3). La cabecera de partida lleva «n/5» sin cronómetro [P] (alineación con D-008: Magic Sort no enseña vidas ni temporizador durante la partida, ficha §2.3; la píldora de Canoas es la de 07 §7.4) | dirección 11; research/magic-sort/b §2.1 [V]; D-008 |
 | Debut | **Nivel 31**, con 5/5 y tarjeta: "Canoas: cada vez que el río te deje sin vertidos y vuelvas a la orilla, pierdes una. Vuelven solas cada 25 minutos." Antes del 31 la cabecera no muestra canoas y fallar solo reinicia. *El texto de la tarjeta habla de «volver a la orilla»; con D-008 la canoa se pierde al rendirse o al salir del nivel: texto pendiente de P14* | dirección 10 y 11 |
 | Qué consume | **D-008 (2026-10-08):** solo el fallo duro (§5.2): rendirse tras el bloqueo (¿Seguro? → Nivel fallido) o salir del nivel con el menú, desde el 31. Nunca el reinicio voluntario, un crash ni un cierre de la app (las reseñas de Magic Sort castigan "crashes que cuestan vidas", research/09 §Técnico [R]): el nivel en curso se guarda tras cada vertido (02 R8 y §14), así que cerrar la app no es una salida gratis. *Sustituye a «Solo el fallo duro (§5.2). Nunca el reinicio voluntario, el abandono, un crash ni un cierre de la app»* | dirección 2; D-008 |
 | Qué bloquea | Con **0 canoas no se puede iniciar ni reiniciar un nivel de campaña**: Jugar (inicio o Mapa del río), Siguiente (pantalla de victoria), Reintentar (Nivel fallido; D-008) y Volver a la orilla (cabecera) abren Sin canoas (§7.3). Una partida ya cargada nunca se interrumpe por canoas: el nivel en curso sigue jugable hasta ganar o bloquearse (si una sincronización deja el contador en 0 a mitad de nivel, se termina igual). La **Cuia de rescate no requiere canoa**: con 0 canoas y saldo se compra y se sigue. Reto del río, Mapa del río, Mercado, Bitácora del río, Canasta y Cuaderno de campo siguen disponibles. Misma frase en 02 §7 | dirección 11 (fija cantidad y regeneración, no el efecto; precisión de este capítulo, §Desviaciones 7); research/magic-sort/b §2.1 [V] |
@@ -577,7 +575,7 @@ Reglas de interacción: el botón Atrás de Android no cierra el modal ni ¿Segu
 | Reloj | Basado en hora UTC del dispositivo contrastada con la hora del servidor del último fetch de Remote Config; si la diferencia supera `sec_clock_max_drift_h` (24 h; clave global de 08 §9, que absorbe la antigua `canoes_clock_max_drift_h`) las canoas no regeneran hasta reconectar (research/06 C6.1 [E], misma regla que el Reto del río) | research/06; 08 §9 |
 | Canoa extra | Ubicación `rv_extra_canoe`: **+1 Canoa**, solo en la pantalla Sin canoas; tope **3/día**, cooldown **90 s** [P] | dirección 11 y 13 |
 | Llenar canoas | 5/5 por **200 semillas** [P] desde la pantalla Sin canoas (≈0,40 USD; Royal Match cobra 900 monedas, research/04 C1 [S]); `canoes_refill_seeds_enabled` | precisión, §Desviaciones |
-| Canoas infinitas | Temporizadas: 30 min (Balsa de rescate), 60 min (IAP `af_infinite_canoes_1h`, ID canónico de 05 §4.1 y 00 §11, en Sin canoas y Mercado, bundles del Mercado, premios de Regata y Liga del río 1.2; la casilla 30 de la Bitácora **no** las incluye: 05 §2.3 / 06 §4.2). La Crecida **no** otorga Canoas infinitas: su hito 6 es la Canasta (05 §2.4). Durante el periodo los fallos duros no consumen canoa; el cronómetro sustituye al contador; el tiempo corre en tiempo real aunque la app esté cerrada | dirección 11 y 14; research/magic-sort/b §2.1 [NV 15-30 min] |
+| Canoas infinitas | Temporizadas: 30 min (Balsa de rescate), 60 min (IAP `af_infinite_canoes_1h`, ID canónico de 05 §4.1 y 00 §11, en Sin canoas y Mercado, bundles del Mercado, premios de Regata y Liga del río 1.2; la casilla 30 de la Bitácora **no** las incluye: 05 §2.3 / 06 §4.2). La Crecida **no** otorga Canoas infinitas: su hito 6 es la Canasta (05 §2.4). Durante el periodo los fallos duros no consumen canoa; ∞ y el tiempo que queda sustituyen al contador (en la cabecera de partida, solo ∞ [P]); el tiempo corre en tiempo real aunque la app esté cerrada | dirección 11 y 14; research/magic-sort/b §2.1 [NV 15-30 min] |
 | Prestar una canoa | Aldea, v2.0; el hueco de UI queda reservado pero oculto en 1.0 | dirección 11 |
 
 ### 7.2 Interacción con el bloqueo
