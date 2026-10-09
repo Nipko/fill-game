@@ -1,0 +1,9 @@
+{
+  "extends": "../campaign_v1.json",
+  "description": "Fixture negativo de --validate-spec: Tres niveles con Aguas turbias en el ciclo 121-140 (126, 135 y 138).",
+  "expect_rule": "MURKY-2",
+  "calendar": {
+    "126": "Ho+Tu (D)",
+    "138": "Ba+Tu (D)"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v1.json",
+  "description": "Fixture negativo de --validate-spec: Aguas turbias en una comodidad sin etiqueta (108).",
+  "expect_rule": "MURKY-SLOT",
+  "calendar": {
+    "108": "Tu"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "extends": "../campaign_v1.json",
+  "description": "Fixture negativo de --validate-spec: El Remolino se estrena en el reto 109 (sus tableros 103-105 y 107 pasan a C).",
+  "expect_rule": "DEBUT-SLOT",
+  "calendar": {
+    "103": "C",
+    "104": "C",
+    "105": "C",
+    "107": "C",
+    "109": "★Re (D)"
+  }
+}

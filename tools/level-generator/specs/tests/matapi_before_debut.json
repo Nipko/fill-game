@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v1.json",
+  "description": "Fixture negativo de --validate-spec: Matapi en el 54, antes de su debut en el 63.",
+  "expect_rule": "BEFORE-DEBUT",
+  "calendar": {
+    "54": "Ma"
+  }
+}

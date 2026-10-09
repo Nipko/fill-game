@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v1.json",
+  "description": "Fixture negativo de --validate-spec: Piraña y Lluvia en el mismo nivel (192): dos contadores (d.3).",
+  "expect_rule": "FORBIDDEN",
+  "calendar": {
+    "192": "Pi+Ll (D)"
+  }
+}

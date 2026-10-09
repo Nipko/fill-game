@@ -1,0 +1,10 @@
+{
+  "extends": "../campaign_v1.json",
+  "description": "Fixture negativo de --validate-spec: El ciclo 21-40 se queda con 5 niveles puros (24, 25 y 34 pasan a Ch).",
+  "expect_rule": "PURE-30",
+  "calendar": {
+    "24": "Ch",
+    "25": "Ch",
+    "34": "Ch"
+  }
+}

@@ -10,7 +10,9 @@
 using AF.Core.Board;
 using AF.Core.Rules;
 using AF.Solver.Collections;
+using AmazonFill.Tools.LevelGenerator.Campaign;
 using AmazonFill.Tools.LevelGenerator.Handmade;
+using AmazonFill.Tools.LevelGenerator.Metrics;
 
 const string Usage = """
     level-generator: generador offline de niveles de Amazon Fill (GDD 08 sec. 2.4; GDD 03)
@@ -18,7 +20,16 @@ const string Usage = """
     Uso:
       dotnet run --project tools/level-generator -- --handmade <spec.json> --out <carpeta> --report <informe.md> [--pour-mode run|single] [--check]
       dotnet run --project tools/level-generator -- --spec <spec.json> --out <carpeta>
+      dotnet run --project tools/level-generator -- --validate-spec <campaign.json>
+      dotnet run --project tools/level-generator -- --parity [--report tools/out/parity_report.md]
       dotnet run --project tools/level-generator -- --help
+
+    --validate-spec: comprueba la especificacion de la campana (specs/campaign_v1.json) contra la rotacion de la
+      propuesta de D-007 (d.2, d.3 y las comprobaciones de d.4) y el escalon de D-009 (c.3, c.4); imprime un resumen
+      ASCII por ciclo. Codigos: 0 = cumple; 1 = alguna regla falla; 2 = especificacion ilegible.
+    --parity: recalcula con AF.Core/AF.Solver par, complejidad, ramificacion, trampas y la variante -1 color de los 40
+      niveles del prototipo (tools/out/levels_proto.json y tools/out_inverse/levels_proto.json; GDD 03 sec. 17-18, 09 R26)
+      y escribe el informe. Codigos: 0 = umbrales cumplidos; 1 = no; 2 = uso o archivos ausentes.
 
     --handmade: tutorial hecho a mano (GDD 02 sec. 13; docs/dev/prototipo-v0.md b). Comprueba cada nivel con
       AF.Core (BFS sobre PourRules) y AF.Solver, escribe <carpeta>/<pack_id>.json (subconjunto de af-level/1)
@@ -36,6 +47,10 @@ const string Usage = """
     2 = uso incorrecto (sin argumentos, faltan opciones, u opcion desconocida o repetida).
     """;
 
+// Todo el texto con InvariantCulture (.claude/rules/data-json.md): también en los hilos de Parallel.
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+System.Globalization.CultureInfo.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+
 // Sin argumentos es un error, no una petición de ayuda: fallar cerrado (.claude/rules/ci.md).
 if (args.Length == 0)
 {
@@ -43,6 +58,21 @@ if (args.Length == 0)
 }
 
 bool wantsHelp = args.Contains("--help") || args.Contains("-h");
+if (args.Length >= 1 && args[0] == "--validate-spec")
+{
+    return args.Length == 2 ? SpecValidator.Run(args[1]) : UsageError("--validate-spec lleva un solo archivo.");
+}
+
+if (args.Length >= 1 && args[0] == "--parity")
+{
+    if (args.Length == 1)
+    {
+        return Parity.Run("tools/out/parity_report.md");
+    }
+
+    return args.Length == 3 && args[1] == "--report" ? Parity.Run(args[2]) : UsageError("--parity solo admite --report <informe.md>.");
+}
+
 if (wantsHelp)
 {
     Console.WriteLine(Usage);

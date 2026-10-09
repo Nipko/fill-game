@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v1.json",
+  "description": "Fixture negativo de --validate-spec: Tres ciclos seguidos de temporada A (81, 101 y 121).",
+  "expect_rule": "SEASONS",
+  "seasons": {
+    "101": "A"
+  }
+}
