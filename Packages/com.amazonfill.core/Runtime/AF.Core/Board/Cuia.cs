@@ -451,6 +451,17 @@ namespace AF.Core.Board
         }
 
         /// <summary>
+        /// La misma cuia con la dosis <paramref name="index"/> de color <paramref name="color"/>, sin tocar su visibilidad: es
+        /// como AF.Solver asigna colores a las posiciones ocultas en cada realidad de Aguas turbias (03 §8). Bucle caliente: no
+        /// valida (índice dentro de la cuia, color 1-16).
+        /// </summary>
+        internal Cuia WithColorAt(int index, int color)
+        {
+            int shift = index * BitsPerDose;
+            return new Cuia((_bits & ~(DoseMask << shift)) | ((ulong)(color - 1) << shift));
+        }
+
+        /// <summary>
         /// Lavado del Barro (02 §9.1 M5): la dosis de Barro de la cima desaparece y <paramref name="amount"/> dosis visibles de
         /// <paramref name="color"/> ocupan su lugar (<c>espacio_efectivo + 1</c>). La dosis de debajo no queda arriba, así que
         /// no se revela (R7) aunque esté oculta. Precondición: <see cref="MudExposed"/>; bucle caliente.

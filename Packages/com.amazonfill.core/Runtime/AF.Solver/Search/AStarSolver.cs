@@ -115,13 +115,46 @@ namespace AF.Solver.Search
                 throw new ArgumentException("Opciones no válidas: crea SolverOptions con su constructor o usa SolverOptions.ForPipeline.", nameof(options));
             }
 
-            Reset(start, options.PourMode);
-            int width = _width;
+            int width = start.Count;
             for (int i = 0; i < width; i++)
             {
                 _childBuf[i] = start[i];
             }
 
+            _units[0] = 0;
+            for (int color = Cuia.MinColor; color <= Cuia.MaxColor; color++)
+            {
+                _units[color] = start.UnitsOf(color);
+            }
+
+            SolveStatus status = Search(width, options, out int goal, out int expanded);
+            return status == SolveStatus.Solved
+                ? BuildSolution(start, goal, expanded)
+                : new SolveResult(status, null, expanded, _nodeCount);
+        }
+
+        /// <summary>
+        /// Como <see cref="Solve"/> sobre <paramref name="width"/> cuias de un array (desde <paramref name="offset"/>) y la
+        /// tabla <c>U_c</c>, sin construir la solución: devuelve el estado y, si está resuelto, la longitud de la solución en
+        /// <paramref name="length"/> (el par con <c>w = 1</c>; −1 si no). No asigna memoria una vez calentado: es la ruta del
+        /// bucle caliente de Aguas turbias (una búsqueda por realidad, 03 §8).
+        /// </summary>
+        internal SolveStatus SolveLength(Cuia[] cuias, int offset, int width, int[] units, SolverOptions options, out int length, out int expanded)
+        {
+            Array.Copy(cuias, offset, _childBuf, 0, width);
+            Array.Copy(units, _units, CuiaRules.UnitsTableLength);
+            SolveStatus status = Search(width, options, out int goal, out expanded);
+            length = status == SolveStatus.Solved ? ChainLength(goal) : -1;
+            return status;
+        }
+
+        /// <summary>
+        /// <c>ASTAR</c> de 03 §5 desde las <paramref name="width"/> cuias de <see cref="_childBuf"/> con la tabla
+        /// <see cref="_units"/> ya cargadas. Devuelve el estado y el nodo meta.
+        /// </summary>
+        private SolveStatus Search(int width, SolverOptions options, out int goal, out int expanded)
+        {
+            Reset(width, options.PourMode);
             BoardCanon.Sort(_childBuf, 0, width);
             int root = AddNode(BoardCanon.Hash(_childBuf, 0, width), 0, NoParent, 0);
             int weight = options.Weight;
@@ -129,7 +162,7 @@ namespace AF.Solver.Search
             int budget = options.NodeBudget;
             _open.Push(root, Priority(root, weight));
 
-            int expanded = 0;
+            expanded = 0;
             while (_open.TryPop(out int node, out int priority))
             {
                 if (priority != Priority(node, weight))
@@ -139,24 +172,27 @@ namespace AF.Solver.Search
 
                 if (IsGoal(node))
                 {
-                    return BuildSolution(start, node, expanded);
+                    goal = node;
+                    return SolveStatus.Solved;
                 }
 
                 expanded++;
                 if (expanded > budget)
                 {
-                    return new SolveResult(SolveStatus.BudgetExceeded, null, expanded, _nodeCount);
+                    goal = NoParent;
+                    return SolveStatus.BudgetExceeded;
                 }
 
                 Expand(node, weight, futileRuleEnabled);
             }
 
-            return new SolveResult(SolveStatus.Unsolvable, null, expanded, _nodeCount);
+            goal = NoParent;
+            return SolveStatus.Unsolvable;
         }
 
-        private void Reset(BoardState start, PourMode pourMode)
+        private void Reset(int width, PourMode pourMode)
         {
-            _width = start.Count;
+            _width = width;
             _pourMode = pourMode;
             _nodeCount = 0;
             int needed = _nodeCapacity * _width;
@@ -167,11 +203,6 @@ namespace AF.Solver.Search
 
             Array.Clear(_table, 0, _table.Length);
             _open.Clear();
-            _units[0] = 0;
-            for (int color = Cuia.MinColor; color <= Cuia.MaxColor; color++)
-            {
-                _units[color] = start.UnitsOf(color);
-            }
         }
 
         private void Expand(int node, int weight, bool futileRuleEnabled)
@@ -330,14 +361,21 @@ namespace AF.Solver.Search
             }
         }
 
-        private SolveResult BuildSolution(BoardState start, int goal, int expanded)
+        /// <summary>Longitud de la cadena de padres (no se usa g: con w &gt; 1 un padre reabierto puede haber mejorado).</summary>
+        private int ChainLength(int goal)
         {
-            // Longitud de la cadena de padres (no se usa g: con w > 1 un padre reabierto puede haber mejorado).
             int length = 0;
             for (int node = goal; _nodeParent[node] != NoParent; node = _nodeParent[node])
             {
                 length++;
             }
+
+            return length;
+        }
+
+        private SolveResult BuildSolution(BoardState start, int goal, int expanded)
+        {
+            int length = ChainLength(goal);
 
             if (_pathBuf.Length < length)
             {

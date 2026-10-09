@@ -36,6 +36,8 @@ dotnet test dotnet/AmazonFill.slnx
 | `AF.Core` | `Rules.BoardRules`: **única** implementación de las reglas con contexto de tablero y de la aplicación de vertidos: origen, `legal`, `cantidad`, `futil` del anexo B, `ApplyInPlace` con R10 por etapas ((a) revelado, (b) aperturas, (c) sellado, (d) liberaciones, (e) contadores solo en vertidos no fútiles, (f) condiciones, (f′) punto fijo, (g) victoria, (h) bloqueo), sin asignaciones, sobre `(Cuia[], offset, count, U_c)`; `PourRules`, `BoardState`, `LevelSession`, el solver y el bot delegan aquí | 02 §1.2-§1.4; anexo B de la propuesta de D-007 (Q13, Q18 B); 04 §5.1 |
 | `AF.Core` | `Rules.PourEvents`: lo ocurrido en cada etapa de R10 (revelado, aperturas, sellados, liberaciones, contadores, estado), para animar en orden y deshacer en orden inverso | R10 (anexo B) |
 | `AF.Core` | Mecánicas portadas (D-007, núcleo 1): Hoja (M1, debut 43), Matapi (M10, 63), Liana con fruta (M3, 83) y de cuenta (variante, 243) y Brote (M2, 163), como `IMechanic` sin estado; eventos `HojaOpenedMask`, `BroteOpenedMask` y `LianaReleasedMask` en `PourEvents`; cada una con su validación. La Liana con capacidades mixtas está bloqueada en `LevelValidation` hasta decidir la pregunta de 02 R16 (P1 falla) | 02 §9.1; D-007; propuesta de D-007 b.2-b.3 y anexo B |
+| `AF.Core` | Barro (M5, debut 123; núcleo 2): color 15 inerte dentro del contenido, sin despacho de mecánica. Con Barro en la cima (`Cuia.MudExposed`) la cuia no es origen y acepta cualquier color; el primer vertido lo lava y ocupa su lugar (`CuiaRules.EffectiveSpace`: espacio + 1); una cuia con Barro no está sellada ni vacía; evento `BarroWashedMask` / `PourResult.BarroWashed`; validación: capa 2-3 de una cuia de 4, nunca con mecánica ni oculto | 02 R2, §1.2, §9.1 M5; 03 §9; propuesta b.2 M5 |
+| `AF.Core` | Aguas turbias en la partida (núcleo 2): `LevelSession` con máscara de revelado del nivel (`RevealedLayers`), que persiste tras Marea y Volver a la orilla; `Reveal(cuia)` (Luciérnaga) y `RevealAll()` (Pororoca); `PourEvents.RevealedMask`; validación T2-T4 con los límites de 08 §9 como parámetros y las combinaciones de Q14 A | 02 R7, §11 T2-T4, T6; 04 §2.1, §2.4 a, §2.5, §2.7, §5.1; D-007 |
 | `AF.Core` | `Mechanics.IMechanic` (interno): ganchos de mecánica sin estado (origen, destino, espacio, recepción, `cambia_al_recibir`, exención de origen, etapas (b), (d), (e), (f), victoria y validación), despachados por una tabla estática indexada por el tipo de la cuia | 08 §2.2; 02 §9 |
 | `AF.Core` | `Rules.CuiaRules`: envoltorio heredado sobre cuias sueltas sin mecánicas; capa base de `BoardRules` para el sellado (R5) y el núcleo de `futil` | 02 §1.2, §1.4, §3.1; 04 §5.1 |
 | `AF.Core` | `Rules.Pour` y `Rules.PourRules`: validan argumentos y delegan en `BoardRules`: vertido según el modo (parcial solo en `Run`), `Apply` con `PourEvents`, `CanBeSource`, `IsFutile`, `CollectUsefulMoves`, `HasUsefulMove`, `IsStuck` | 02 §1.2-1.4 R9-R11, R13, R14, R16; §3.1 C1-C2 |
@@ -47,7 +49,10 @@ dotnet test dotnet/AmazonFill.slnx
 | `AF.Solver` | `Search.EarlyTraps`: trampas tempranas (jugadas iniciales que atascan en ≤ 2 vertidos; `CountUnavoidable` en lectura estricta) | Q16 B de D-007 [P] |
 | `AF.Solver` | `Search.SolverMoves` y `SolverMove`: `MOVIMIENTOS` de 03 §5 (útiles, con la cantidad del modo, cuias idénticas una sola vez y fútiles marcados con el kill-switch apagado), sin asignaciones; los usan el solver, el bot y las métricas | 03 §5 |
 | `AF.Solver` | `Search.AStarSolver`, `SolverOptions`, `SolveResult`, `SolveStatus`: A* (w entero) sobre estados canónicos en los dos modos de vertido (`SolverOptions.ForPipeline(mode)`), presupuesto de expandidos y prueba de irresolubilidad; a igual `f`, primero el de menor `g` (tupla `(f, g, S)` de 03 §5 y del prototipo) | 03 §5; D-005 |
-| `AF.Solver` | `Search.SolverHeuristic`: `H = max(cortes, dispersión)`; en `Single`, `H_single = max(dosis sobre la racha del fondo, dispersión)` [P] | 03 §5; decisiones.md §2.1.3 |
+| `AF.Solver` | `Search.SolverHeuristic`: `H = max(cortes, dispersión)`; en `Single`, `H_single = max(dosis sobre la racha del fondo, dispersión)` [P]; con Barro, `h1` resta 1 por barro y `h2` ignora el 15 (03 §9) | 03 §5, §9; decisiones.md §2.1.3 |
+| `AF.Solver` | `Murky.RealityEnumerator`: realidades de Aguas turbias (asignaciones de las posiciones ocultas coherentes con lo visible, `units_per_color` y T4 respecto al tablero inicial; > 24 → `TooMany`, el nivel se rechaza), sin asignaciones | 02 §11 T2, T4; 03 §8; 08 §2.2 |
+| `AF.Solver` | `Murky.SafeMoves`: vertidos útiles seguros en todas las realidades (A* por realidad: 20.000 nodos en el pipeline, `ForPipeline`; el cliente pasa `hint_budget_nodes`), memo exacto por estado canónico y un único `AStarSolver` (`SolveLength`, sin construir la solución); sin seguro, `Count` = 0 (T5: Morpho no cobra) | 02 §11 T5; 03 §8 |
+| `AF.Solver` | `Murky.SafePath`: `RUTA_SEGURA` (hasta 400 pasos; en cada uno, el seguro de menor par en la realidad verdadera), con T4 obligatoria en el tablero inicial (`RejectedT4`) | 03 §8; 02 §11 `validar_turbio` |
 
 Rendimiento medido (2026-10-06, .NET 10 Release, Windows ARM64): los 140 niveles de `tools/out*/levels_*.json` dan el
 mismo par que `levelgen_proto.py`; un tablero de 14 cuias (12 colores, 2 vacíos, par 37) expande 16.114 estados. Con el
@@ -67,8 +72,13 @@ tableros). A* con `H_single` expande en `Single` como mucho 1.176 estados (nivel
 §2.1.3-§2.1.4. En el tablero de 14 cuias de referencia, `Run` da par 37 con 16.114 expandidos (`Single`: par 48, unos
 17.000). Las firmas sin modo son heredadas (equivalen a `Run`, que desde D-005 es también `PourModes.Default`) hasta T6.
 
-Pendiente de portar: Remolino (C2-4), Barro (colores 15 y 16 en `BoardState`), Lluvia (C3-1) y Piraña (C3-2); Aguas
-turbias en la partida (máscara de revelado para Marea, R7) y enumeración de realidades (03 §8); cancelación por tiempo del
-solver para Morpho (`hint_timeout_ms`); el generador `fill` y el pipeline (`tools/`). Pregunta abierta de 02 R16 (C1-8,
+Aguas turbias (C2-2, 2026-10-08, misma máquina, Release): los 5 tableros de `tools/out_inverse/murky_demo.json` (03 §18.3)
+tienen ruta segura con 12 realidades como máximo y 108-630 ms por nivel (prototipo en Python: 0,68-8,54 s; 03 §8 estimaba
+< 1 s en C#), con 134-213 búsquedas A* de 20.000 nodos como máximo y memo por estado canónico. Ese lote es anterior a T3 y
+T4: con T4 obligatoria, n0003 y n0004 se rechazan (esconden una dosis bajo otra de su color) y los otros tres tienen ruta con
+8 realidades como máximo (111-394 ms). `SafeMoves` calentado asigna 0 bytes en una llamada con 12 realidades y 36 búsquedas.
+
+Pendiente de portar: Remolino (C2-4), Lluvia (C3-1) y Piraña (C3-2); cancelación por tiempo del solver para Morpho
+(`hint_timeout_ms`; el núcleo no lee relojes); el generador `fill` y el pipeline (`tools/`). Pregunta abierta de 02 R16 (C1-8,
 C1-9): con capacidades mixtas la poda de fútiles puede alargar el par o dejar sin camino útil un tablero resoluble, y con una
 Liana hay estados atascados con solución (P1 de R14 falla); ver el CHANGELOG.

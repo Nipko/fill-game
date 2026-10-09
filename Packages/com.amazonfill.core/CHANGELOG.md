@@ -6,6 +6,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- Realidades, vertido seguro y ruta segura de Aguas turbias (C2-2; 02 §11 T2, T4, T5 y `validar_turbio`; 03 §8 y §18.3;
+  08 §2.2). `AF.Solver.Murky.RealityEnumerator`: asignaciones de las posiciones ocultas coherentes con lo visible, con
+  `units_per_color` (menos las gotas pendientes de Lluvia) y con T4; T4 se mira contra la dosis de encima del tablero de
+  referencia (el inicial: el lavado del Barro sustituye la dosis de encima sin revelar la oculta); cada realidad conserva
+  la máscara de ocultos, así que el solver juega la partida real; orden determinista y sin duplicados; más de 24 →
+  `TooMany` (el nivel se rechaza); sin ninguna → `Inconsistent`; `SatisfiesT4`. `SafeMoves`: los vertidos de
+  `SolverMoves` que dejan el tablero resoluble en todas las realidades (A* por realidad con el presupuesto de las opciones:
+  `ForPipeline` = 20.000 nodos, w = 1; Morpho pasa `hint_budget_nodes`), memo exacto por estado canónico con el par, un
+  único `AStarSolver`; sin ninguno, `Count` = 0 («ninguno», T5: Morpho no cobra); `TrueParAfter`. `SafePath`:
+  `RUTA_SEGURA` (hasta 400 pasos, el seguro de menor par en la realidad verdadera; T4 obligatoria en S0 → `RejectedT4`;
+  `enforceT4 = false` solo para la paridad con el prototipo). `AStarSolver.SolveLength` (interno): A* sobre un array sin
+  construir la solución, sin asignaciones. `Cuia.WithColorAt` (interno). Tests compartidos `MurkyTests` (2 ocultas → ≤ 2
+  realidades; 4 en 2 cuias → ≤ 24, 12 en el caso de 03 §8 sin T4 y 8 con T4; > 24 rechaza; T4 con Barro lavado; vertidos
+  seguros contra la búsqueda exhaustiva en cada realidad; un tablero sin vertido seguro con solución en la realidad
+  verdadera; memo; ruta segura en `run` y `single`; rechazo por T4) y solo dotnet `MurkyParityTests` (los 5 tableros de
+  `murky_demo.json`, reproducidos con `levelgen_proto.generate_inverse` y sus semillas, tienen ruta segura con 12
+  realidades máx. en 108-630 ms por nivel en Release; con T4, n0003 y n0004 se rechazan; 0 bytes por llamada calentada).
 - Aguas turbias en la partida (C2-1; 02 R7, R8 y §11 T2-T4, T6; 04 §2.1, §2.4 a, §2.5, §2.7 y §5.1; D-007, Q14 A).
   `LevelSession` acepta dosis ocultas y lleva la máscara de revelado del nivel (`RevealedLayers(cuia)`, por posición
   inicial `[cuia, capa]`: una dosis oculta nunca se mueve), que persiste tras Marea y tras Volver a la orilla (invariante
