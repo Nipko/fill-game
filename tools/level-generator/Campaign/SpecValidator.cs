@@ -459,16 +459,16 @@ internal static class SpecValidator
         }
         catch (CampaignSpecException e)
         {
-            Console.Error.WriteLine(Ascii.Of($"level-generator: {e.Message}"));
+            Console.Error.WriteLine(AsciiText.Of($"level-generator: {e.Message}"));
             return 2;
         }
 
         List<SpecIssue> issues = Validate(spec);
-        Console.WriteLine(Ascii.Of($"especificacion {spec.SpecId} ({path.Replace('\\', '/')}): niveles {spec.FirstLevel}-{spec.LastLevel}"));
-        Console.Write(Ascii.Of(Summary(spec)));
+        Console.WriteLine(AsciiText.Of($"especificacion {spec.SpecId} ({path.Replace('\\', '/')}): niveles {spec.FirstLevel}-{spec.LastLevel}"));
+        Console.Write(AsciiText.Of(Summary(spec)));
         foreach (SpecIssue issue in issues.OrderBy(i => i.Warning).ThenBy(i => i.Level).ThenBy(i => i.Rule, StringComparer.Ordinal))
         {
-            Console.WriteLine(Ascii.Of(string.Create(CultureInfo.InvariantCulture,
+            Console.WriteLine(AsciiText.Of(string.Create(CultureInfo.InvariantCulture,
                 $"{(issue.Warning ? "AVISO" : "FAIL ")} [{issue.Rule}] nivel {issue.Level}: {issue.Message}")));
         }
 
@@ -487,7 +487,7 @@ internal static class SpecValidator
 }
 
 /// <summary>Texto ASCII para la consola (.claude/rules/ci.md).</summary>
-internal static class Ascii
+internal static class AsciiText
 {
     public static string Of(string text)
     {
