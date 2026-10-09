@@ -126,6 +126,14 @@ namespace AF.Core.Session
         public int HiddenCount => Current.HiddenCount;
 
         /// <summary>
+        /// Contador visible del nivel para el HUD (02 R8, §9.1 M6-M7): vertidos útiles hasta la próxima gota de Lluvia o el
+        /// próximo mordisco de la Piraña, y las gotas pendientes. Solo baja con vertidos útiles: un vertido fútil no lo avanza
+        /// (D-007, Q18 B). Marea y Volver a la orilla lo restauran con el estado. Sin Lluvia ni Piraña (o cuando la nube ya se
+        /// fue), <see cref="LevelCounter.IsActive"/> es false.
+        /// </summary>
+        public LevelCounter Counter => LevelCounter.Of(Current);
+
+        /// <summary>
         /// Máscara de revelado del nivel (02 R8: parte del estado persistente) para la cuia <paramref name="cuia"/>: bit k =
         /// la dosis oculta inicial <c>[cuia, k]</c> ya se reveló y no vuelve a ocultarse (02 R7, T6).
         /// </summary>
@@ -187,7 +195,7 @@ namespace AF.Core.Session
             Current = next;
             Status = Evaluate(next);
             events.Finish(Status);
-            result = new PourResult(pour, next.IsSealed(events.Receiver), Status, events);
+            result = new PourResult(pour, next.IsSealed(events.Receiver), Status, events, LevelCounter.Of(next));
             return true;
         }
 

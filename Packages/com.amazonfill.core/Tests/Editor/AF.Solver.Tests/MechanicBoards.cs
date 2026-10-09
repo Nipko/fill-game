@@ -532,4 +532,79 @@ namespace AF.Solver.Tests
             return true;
         }
     }
+
+    /// <summary>
+    /// Lluvia (02 §9.1 M6; 03 §9: «las gotas se generan hacia atrás»): un color de 4 dosis pasa a ser el agua; se quitan
+    /// <c>n</c> = 1-2 de sus dosis del tablero (empezando por las de más arriba) y una cuia sin mecánica pasa a ser la Lluvia
+    /// con esas gotas pendientes y <c>k</c> = 2-3, así que <c>U_agua</c> sigue siendo 4 (02 R3).
+    /// </summary>
+    internal sealed class LluviaInjector : IMechanicInjector
+    {
+        public string Name => "lluvia";
+
+        public bool Inject(Prng rng, int[] caps, List<int>[] doses, MechanicSpec[] attrs)
+        {
+            var units = new int[Cuia.MaxColor + 1];
+            for (int i = 0; i < doses.Length; i++)
+            {
+                for (int k = 0; k < doses[i].Count; k++)
+                {
+                    units[doses[i][k]]++;
+                }
+            }
+
+            var waters = new List<int>();
+            List<int> colors = MechanicBoards.Colors(doses);
+            for (int c = 0; c < colors.Count; c++)
+            {
+                if (units[colors[c]] == 4)
+                {
+                    waters.Add(colors[c]);
+                }
+            }
+
+            var candidates = new List<int>();
+            for (int i = 0; i < caps.Length; i++)
+            {
+                if (attrs[i].IsNone)
+                {
+                    candidates.Add(i);
+                }
+            }
+
+            if (waters.Count == 0 || candidates.Count == 0)
+            {
+                return false;
+            }
+
+            int water = waters[rng.NextInt(waters.Count)];
+            int drops = 1 + rng.NextInt(2);
+            for (int removed = 0, layer = MaxLayer(doses); removed < drops && layer >= 0; layer--)
+            {
+                for (int i = 0; i < doses.Length && removed < drops; i++)
+                {
+                    if (layer < doses[i].Count && doses[i][layer] == water)
+                    {
+                        doses[i].RemoveAt(layer);
+                        removed++;
+                    }
+                }
+            }
+
+            int index = candidates[rng.NextInt(candidates.Count)];
+            attrs[index] = new MechanicSpec(MechanicType.Lluvia, key: water, n: drops, k: 2 + rng.NextInt(2));
+            return true;
+        }
+
+        private static int MaxLayer(List<int>[] doses)
+        {
+            int max = 0;
+            for (int i = 0; i < doses.Length; i++)
+            {
+                max = Math.Max(max, doses[i].Count - 1);
+            }
+
+            return max;
+        }
+    }
 }

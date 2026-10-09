@@ -79,6 +79,38 @@ namespace AF.Core.Rules
         /// <summary>Cuias cuyo contenido cambió en el vertido (A, la que recibió y las que tocaron las mecánicas).</summary>
         public int ChangedMask { get; internal set; }
 
+        /// <summary>
+        /// (e) Cuias de Lluvia sobre las que cayó una gota del tinte agua en este vertido (evento RainDrop; 02 §9.1 M6). La gota
+        /// cae encima de lo que haya, sin regla de color.
+        /// </summary>
+        public int LluviaDropMask { get; internal set; }
+
+        /// <summary>
+        /// (e) Cuias de Lluvia cuya gota tocaba en este vertido pero estaban llenas: la gota espera al siguiente vertido útil
+        /// (02 §9.1 M6).
+        /// </summary>
+        public int LluviaWaitingMask { get; internal set; }
+
+        /// <summary>
+        /// (e) Cuias de Lluvia cuya última gota cayó en este vertido: la nube se va y la cuia pasa a ser normal (02 §9.1 M6).
+        /// </summary>
+        public int LluviaEndedMask { get; internal set; }
+
+        /// <summary>
+        /// (e) Cuia que mordió la Piraña en este vertido: perdió su dosis superior (02 §9.1 M7). Es siempre la cuia que recibió
+        /// el vertido (<see cref="Receiver"/>).
+        /// </summary>
+        public int PiranaBittenMask { get; internal set; }
+
+        /// <summary>(e) Cueva de la Piraña que recibió la dosis mordida, encima de lo que haya (02 §9.1 M7).</summary>
+        public int PiranaCaveMask { get; internal set; }
+
+        /// <summary>
+        /// (e) Cueva cuyo mordisco tocaba en este vertido y se perdió: la cuia que recibió quedó sellada, es un Matapi (D-007,
+        /// regla 7) o es la propia cueva, o la cueva estaba llena (respuesta Q-C del dueño). El contador sigue.
+        /// </summary>
+        public int PiranaBiteLostMask { get; internal set; }
+
         /// <summary>(f′) Vueltas extra del punto fijo de (c), (d) y (f) (0 si nada más cambió).</summary>
         public int FixedPointPasses { get; internal set; }
 
@@ -119,6 +151,12 @@ namespace AF.Core.Rules
             LianaReleasedMask = 0;
             CountersAdvanced = false;
             ChangedMask = (1 << source) | (1 << target);
+            LluviaDropMask = 0;
+            LluviaWaitingMask = 0;
+            LluviaEndedMask = 0;
+            PiranaBittenMask = 0;
+            PiranaCaveMask = 0;
+            PiranaBiteLostMask = 0;
             FixedPointPasses = 0;
             StatusEvaluated = false;
             Status = LevelStatus.Playing;
@@ -154,6 +192,41 @@ namespace AF.Core.Rules
             {
                 LianaReleasedMask |= bit;
             }
+        }
+
+        /// <summary>
+        /// (e) Cayó una gota sobre la Lluvia <paramref name="index"/>; con <paramref name="last"/>, era la última y la nube se
+        /// fue (02 §9.1 M6). La cuia cambió de contenido.
+        /// </summary>
+        internal void RecordDrop(int index, bool last)
+        {
+            int bit = 1 << index;
+            LluviaDropMask |= bit;
+            ChangedMask |= bit;
+            if (last)
+            {
+                LluviaEndedMask |= bit;
+            }
+        }
+
+        /// <summary>(e) La gota de la Lluvia <paramref name="index"/> tocaba pero la cuia estaba llena: espera.</summary>
+        internal void RecordDropWaiting(int index)
+        {
+            LluviaWaitingMask |= 1 << index;
+        }
+
+        /// <summary>(e) La Piraña mordió la cuia <paramref name="bitten"/> y llevó la dosis a la cueva <paramref name="cave"/>.</summary>
+        internal void RecordBite(int bitten, int cave)
+        {
+            PiranaBittenMask |= 1 << bitten;
+            PiranaCaveMask |= 1 << cave;
+            ChangedMask |= (1 << bitten) | (1 << cave);
+        }
+
+        /// <summary>(e) El mordisco de la cueva <paramref name="cave"/> se perdió (Q-C, sellado o Matapi).</summary>
+        internal void RecordBiteLost(int cave)
+        {
+            PiranaBiteLostMask |= 1 << cave;
         }
 
         internal void Finish(LevelStatus status)

@@ -13,8 +13,9 @@ namespace AF.Core.Board
     /// Las cuias pueden llevar mecánica (<see cref="Cuia.Mechanic"/>; los niveles se construyen con
     /// <see cref="BoardBuilder"/>, que valida sus atributos). Admite el color 15 (Barro, 02 §9.1 M5: dosis inerte; la tabla
     /// <c>U_c</c> cuenta en la posición 15 las dosis de Barro, que no son un color de <c>units_per_color</c>) y rechaza el 16
-    /// (reservado, 02 R2). Con el constructor público <c>U_c</c> se cuenta a partir del contenido inicial;
-    /// <see cref="BoardBuilder"/> suma además las gotas pendientes de la Lluvia (02 R3).
+    /// (reservado, 02 R2). <c>U_c</c> cuenta el contenido inicial más las gotas pendientes de la Lluvia (02 R3, §9.1 M6:
+    /// <c>U_agua</c> = dosis iniciales + gotas pendientes), con el constructor público y con <see cref="BoardBuilder"/>; no
+    /// cambia durante la partida (cada gota que cae pasa de pendiente a dosis).
     /// Esta clase asigna memoria en cada vertido: sirve para reglas, cliente y tests, no para el bucle
     /// caliente del solver, que usa su propia representación empaquetada (AF.Solver).
     /// La igualdad compara <see cref="Cuia.Packed"/> cuia a cuia y en orden (no es la igualdad canónica:
@@ -30,7 +31,10 @@ namespace AF.Core.Board
         // Índice = color (1..16); la posición 0 no se usa.
         private readonly int[] _units;
 
-        /// <summary>Crea un estado a partir de una copia de <paramref name="cuias"/>.</summary>
+        /// <summary>
+        /// Crea un estado a partir de una copia de <paramref name="cuias"/>; <c>U_c</c> cuenta sus dosis y las gotas pendientes
+        /// de la Lluvia (02 R3).
+        /// </summary>
         /// <param name="cuias">Cuias en orden de pantalla; entre 1 y <see cref="MaxCuias"/>.</param>
         public BoardState(Cuia[] cuias)
         {
@@ -63,6 +67,11 @@ namespace AF.Core.Board
                     }
 
                     units[color]++;
+                }
+
+                if (cuia.Mechanic == Mechanics.MechanicType.Lluvia)
+                {
+                    units[cuia.MechanicKey] += cuia.MechanicN; // 02 R3: el agua que aún no ha caído
                 }
 
                 copy[i] = cuia;

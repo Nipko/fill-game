@@ -59,7 +59,11 @@ namespace AF.Core.Mechanics
         /// <summary>R10 (d): la mecánica se suelta por el sellado de otras cuias (se deduce del estado).</summary>
         bool ReleasedBySeal(in BoardSlice board, int index);
 
-        /// <summary>R10 (e): avanza su contador una vez por vertido útil; devuelve true si cambió alguna cuia.</summary>
+        /// <summary>
+        /// R10 (e): avanza su contador una vez por vertido útil (nunca en un fútil, Q18 B) y pone
+        /// <see cref="PourEvents.CountersAdvanced"/>; devuelve true si cambió el contenido de alguna cuia (una gota de Lluvia,
+        /// un mordisco de Piraña), para que el punto fijo (f′) vuelva a mirar sellados y liberaciones.
+        /// </summary>
         bool AdvanceCounter(in BoardSlice board, int index, ref PourEvents events);
 
         /// <summary>R10 (f): condición del tablero (llave en la cima, atraque…); devuelve true si cambió alguna cuia.</summary>

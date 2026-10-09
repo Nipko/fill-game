@@ -345,6 +345,71 @@ namespace AF.Core.Tests.DotnetOnly
         }
 
         [Test]
+        public void LluviaBoard_HotLoop_DoesNotAllocate()
+        {
+            // C3-1: la Lluvia (contador y gota en la etapa (e) de R10, punto fijo (f′)) en movimientos útiles, bloqueo, vertido
+            // aplicado, solver calentado y bot calentado, sin asignaciones.
+            Cuia rain = Cuia.Empty(4).WithMechanic(MechanicType.Lluvia, key: 10, n: 2, k: 3);
+            var state = new BoardState(new[]
+            {
+                rain, Cuia.Create(4, new[] { 1, 2, 3, 10 }), Cuia.Create(4, new[] { 3, 1, 10, 2 }), Cuia.Create(4, new[] { 2, 3, 1, 1 }),
+                Cuia.Create(4, new[] { 3, 2, 4, 4 }), Cuia.Create(4, new[] { 4, 4 }), Cuia.Empty(4), Cuia.Empty(4),
+            });
+            AssertRulesBotAndSolverDoNotAllocate(state, 9UL);
+        }
+
+        /// <summary>
+        /// 0 bytes en movimientos útiles, bloqueo, <c>BoardRules.ApplyInPlace</c> y el bot calentado; menos de 1 KB en el solver
+        /// calentado (solo la solución).
+        /// </summary>
+        private static void AssertRulesBotAndSolverDoNotAllocate(BoardState state, ulong seed)
+        {
+            var buffer = new Pour[PourRules.MaxPours];
+            var solver = new AStarSolver();
+            var bot = new CasualBot();
+            SolverOptions options = SolverOptions.ForPipeline(PourMode.Run);
+            SolveResult warm = solver.Solve(state, options);
+            bot.FailRate(state, seed, PourMode.Run);
+            int moves = PourRules.CollectUsefulMoves(state, true, PourMode.Run, buffer);
+            var cuias = new Cuia[state.Count];
+            var work = new Cuia[state.Count];
+            for (int i = 0; i < cuias.Length; i++)
+            {
+                cuias[i] = state[i];
+            }
+
+            int[] units = state.UnitsTable;
+            Pour first = buffer[0];
+            bool futile = BoardRules.IsFutile(cuias, 0, cuias.Length, units, first.Source, first.Target);
+            var events = default(PourEvents);
+            Array.Copy(cuias, work, cuias.Length);
+            BoardRules.ApplyInPlace(work, 0, work.Length, units, first.Source, first.Target, PourMode.Run, futile, ref events);
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            int total = 0;
+            for (int repeat = 0; repeat < 200; repeat++)
+            {
+                total += PourRules.CollectUsefulMoves(state, true, PourMode.Run, buffer);
+                total += PourRules.IsStuck(state, true) ? 1 : 0;
+                Array.Copy(cuias, work, cuias.Length);
+                BoardRules.ApplyInPlace(work, 0, work.Length, units, first.Source, first.Target, PourMode.Run, futile, ref events);
+            }
+
+            bot.FailRate(state, seed, PourMode.Run);
+            long rulesAndBot = GC.GetAllocatedBytesForCurrentThread() - before;
+            before = GC.GetAllocatedBytesForCurrentThread();
+            SolveResult result = solver.Solve(state, options);
+            long solve = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(moves, Is.GreaterThan(0));
+            Assert.That(total, Is.EqualTo(200 * moves));
+            Assert.That(warm.IsSolved, Is.True);
+            Assert.That(result.MoveCount, Is.EqualTo(warm.MoveCount));
+            Assert.That(rulesAndBot, Is.EqualTo(0));
+            Assert.That(solve, Is.LessThan(1024));
+        }
+
+        [Test]
         public void WarmSolverInRun_OnlyAllocatesTheSolution()
         {
             // D-005: 0 bytes en el bucle caliente en Run, el modo por defecto, con el modo explícito (16.114 estados

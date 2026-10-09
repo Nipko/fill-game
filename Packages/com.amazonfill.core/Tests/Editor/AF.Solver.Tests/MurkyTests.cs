@@ -156,13 +156,19 @@ namespace AF.Solver.Tests
         }
 
         [Test]
-        public void Realities_WhenTheVisibleDosesExceedTheUnits_AreInconsistent()
+        public void Realities_SubtractThePendingDropsOfTheLluvia_02R3()
         {
-            // 02 R3: U_c cuenta las gotas pendientes de la Lluvia; si lo visible y lo pendiente pasan de U_c, no hay realidad.
+            // 02 R3: U_c cuenta las gotas pendientes de la Lluvia (BoardState las suma desde C3-1), así que el multiconjunto
+            // oculto es U_c menos lo visible y menos lo pendiente: aquí U_1 = 1 oculta + 1 visible + 2 gotas = 4 y la única
+            // realidad pone el 1 bajo el 3. Sin restar las gotas sobrarían dos 1 y no habría ninguna realidad.
             Cuia lluvia = Cuia.Empty(4).WithMechanic(MechanicType.Lluvia, key: 1, n: 2, k: 3);
+            BoardState board = Board(H(4, 0x1, 1, 3), C(4, 1), C(4, 3, 3, 3), lluvia, Cuia.Empty(4));
             var realities = new RealityEnumerator();
 
-            Assert.That(realities.Enumerate(Board(C(4, 1, 1), lluvia)), Is.EqualTo(RealityStatus.Inconsistent));
+            Assert.That(board.UnitsOf(1), Is.EqualTo(4));
+            Assert.That(realities.Enumerate(board), Is.EqualTo(RealityStatus.Ok));
+            Assert.That(realities.Count, Is.EqualTo(1));
+            Assert.That(realities.GetReality(0).Equals(board), Is.True);
         }
 
         [Test]

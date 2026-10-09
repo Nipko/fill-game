@@ -135,7 +135,9 @@ namespace AF.Core.Tests
                 : type == MechanicType.Lluvia ? Cuia.Empty(4).WithMechanic(type, key: 1, n: 1, k: 3)
                 : Cuia.Empty(4).WithMechanic(type, k: 4);
 
-            Assert.That(LevelValidation.Validate(Board(new[] { 0x3, 0, 0, 0 }, fifth: other)), Does.Contain("Q14 A"));
+            // Con la Lluvia, una dosis del agua (1) pasa a ser su gota pendiente: U_1 sigue siendo 4 (02 R3).
+            Cuia? fourth = type == MechanicType.Lluvia ? Cuia.Create(4, new[] { 2, 3 }) : (Cuia?)null;
+            Assert.That(LevelValidation.Validate(Board(new[] { 0x3, 0, 0, 0 }, fourth, other)), Does.Contain("Q14 A"));
         }
 
         [Test]

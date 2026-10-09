@@ -6,6 +6,33 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- Lluvia (C3-1; 02 R3, §9.1 M6 y §9.2; 03 §3 y §9; 04 §5.1 regresión 4; propuesta de D-007 b.2 M6 y anexo B; D-007, Q10,
+  Q14 A y Q18 B; respuesta Q-B del dueño; GDD §6 #6; debut 143). `LluviaMechanic` (interno), registrada en la tabla y
+  aceptada por `BoardBuilder`. Estado en la cuia (03 §9, en la clave canónica): `key` = tinte agua, `n` = gotas pendientes,
+  `k` y el contador de vertidos útiles desde la última gota. Etapa (e) de R10, una vez por vertido y nunca en un fútil (Q18 B):
+  suma 1 y al llegar a `k` cae encima una dosis de `key`, sin regla de color, si hay hueco; si la cuia está llena la gota
+  espera al siguiente vertido útil (el contador queda en `k − 1`, que se comporta igual y no crea un estado más); con la
+  última gota la nube se va y la cuia pasa a `None`. Lo que la gota selle o suelte ocurre en el mismo vertido por el punto
+  fijo (f′) (test obligatorio del anexo B: la gota que sella suelta la Liana con fruta del agua). «La cuia Lluvia solo sella
+  con agua» (02 §9.1 M6): `CuiaRules.IsSealed` no da por sellada una cuia de Lluvia con gotas pendientes (llena de otra fruta
+  sigue siendo origen). Con gotas pendientes impide la victoria (R12) y nunca es fútil como destino (`cambia_al_recibir`) ni,
+  por **Q-B**, como origen; la exención acaba al caer la última gota. `U_agua` = dosis iniciales + gotas pendientes:
+  `BoardState` (constructor público) suma ya las gotas, como `BoardBuilder`. Eventos de la etapa (e) en `PourEvents`:
+  `LluviaDropMask`, `LluviaWaitingMask` y `LluviaEndedMask` (y `CountersAdvanced`); en `PourResult`, `RainDropped`,
+  `RainWaiting` y `RainEnded`. Contador para el HUD: `Session.LevelCounter` (tipo, cuia, `k`, `Elapsed`, `Remaining` =
+  vertidos útiles hasta la gota, `PendingDrops` y `Blocked` = cuia llena), en `LevelSession.Counter` y `PourResult.Counter`;
+  solo baja con vertidos útiles (Q18 B) y Marea lo restaura con el estado. Validación: `key` = 10 o 14
+  (`LevelValidation.TapajosWater`, `RioNegroWater`; 02 §9.1), `n` ≥ 1 y `n` + dosis iniciales = 4
+  (`LluviaWaterUnits`), `k` de 2 a 5 y el contador a 0, sin ocultos (Q14 A); `LevelValidation` exige además **un contador
+  por nivel** (Lluvia o Piraña; propuesta b.2 M6-M7, d.2 regla 6). Heurística sin cambios (03 §9: una gota nunca elimina
+  cortes; comprobado). Tests compartidos `LluviaTests` (cada regla con su §, Q18 B con R16, la gota que espera, el
+  obligatorio del anexo B, regresión 4 de 04 §5.1, el final de nivel del contraejemplo de Q-B: no hay bloqueo y se gana en 4,
+  la victoria bloqueada, Marea y Volver a la orilla, validación) y `LluviaSolverTests` (A* con y sin poda contra la búsqueda
+  exhaustiva y heurística admisible y consistente en 32 tableros de hasta 5.000 estados, uniformes y mixtos, en `run` y
+  `single`; inyector `LluviaInjector`; el solver espera la gota en el contraejemplo de Q-B, par 4); P1-P3 con Lluvia en
+  `FutilePropertyTests` (unos 20.000 estados por combinación, sin violaciones) y
+  `HotLoopAllocationTests.LluviaBoard_HotLoop_DoesNotAllocate` (0 bytes en reglas, `BoardRules.ApplyInPlace` y bot; solver
+  calentado < 1 KB).
 - Remolino (C2-4, cierra el núcleo 2; 02 §1.2 rama del remolino en `legal` y §9.1 M4; 03 §9; 04 §2.1 b y §5.1 regresión 4;
   propuesta de D-007 b.2 M4; respuestas Q-A y Q-B del dueño; debut 103). `RemolinoMechanic` (interno), registrada en la
   tabla y aceptada por `BoardBuilder`: tocar una cuia del par como destino mete la racha por el fondo de la pareja, sea del
@@ -243,6 +270,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Cambiado
 
+- C3-1: `CuiaRules.IsSealed` no da por sellada una cuia de Lluvia con gotas pendientes (02 §9.1 M6: solo sella con agua);
+  sin Lluvia no cambia nada. `BoardState(Cuia[])` cuenta en `U_c` las gotas pendientes de la Lluvia (02 R3), como ya hacía
+  `BoardBuilder`: el test de `MurkyTests` que dependía de lo contrario pasa a
+  `Realities_SubtractThePendingDropsOfTheLluvia_02R3`. `IMechanic.AdvanceCounter` devuelve true solo si cambió el contenido
+  de alguna cuia (gota o mordisco). `PourResult` gana un constructor con el `LevelCounter`; los anteriores se conservan.
 - C2-4: `PourResult.TargetSealed` mira la cuia que recibió las dosis (`Receiver`): en el Remolino, la pareja. Sin Remolino es
   la misma que antes. `MechanicBoards.Generate` admite un tope de estados alcanzables.
 - C2-2: `AStarSolver.Solve` separa la búsqueda (`Search`) de la construcción de la solución; `SolveLength` (interno) la usa

@@ -116,6 +116,18 @@ namespace AF.Core.Tests.DotnetOnly
             AssertWith(mode, family, new RemolinoInjector(), 0xF07E_1031UL);
         }
 
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithLluvia(PourMode mode, CapacityFamily family)
+        {
+            // C3-1: 02 R16 antes del debut de la Lluvia (143), con Q18 B (los fútiles no avanzan el contador) y la exención
+            // de origen de Q-B mientras quedan gotas. Un vaivén útil Lluvia ↔ vacía nunca vuelve al mismo estado: el contador
+            // o las gotas pendientes cambian.
+            AssertWith(mode, family, new LluviaInjector(), 0xF07E_1431UL);
+        }
+
         [Test]
         public void P3_Remolino_QB_AUsefulRoundTripCanReturnToTheSameCanonicalState()
         {

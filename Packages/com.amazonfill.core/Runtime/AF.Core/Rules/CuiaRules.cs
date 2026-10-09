@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using AF.Core.Board;
+using AF.Core.Mechanics;
 
 namespace AF.Core.Rules
 {
@@ -31,7 +32,10 @@ namespace AF.Core.Rules
 
         /// <summary>
         /// Cuia sellada (R5): llena, monocolor de un tinte, sin dosis ocultas y con capacidad igual a <c>U_c</c> de su color.
-        /// Una cuia con Barro nunca está sellada (02 §9.1 M5; 03 §9: hay que lavarlo).
+        /// Una cuia con Barro nunca está sellada (02 §9.1 M5; 03 §9: hay que lavarlo). Una cuia de Lluvia con gotas pendientes
+        /// tampoco (02 §9.1 M6: «la cuia Lluvia solo sella con agua»; mientras le quedan gotas no puede estar llena de agua,
+        /// porque <c>U_agua</c> = dosis iniciales + gotas pendientes = 4, así que llena de otra fruta sigue siendo origen y la
+        /// gota espera). Al caer la última gota la cuia pasa a ser normal y sella con la regla de siempre.
         /// </summary>
         public static bool IsSealed(Cuia cuia, int[] unitsByColor)
         {
@@ -39,6 +43,7 @@ namespace AF.Core.Rules
                 && cuia.IsFull
                 && !cuia.HasHidden
                 && cuia.TopColor <= Cuia.MaxTintColor
+                && cuia.Mechanic != MechanicType.Lluvia
                 && cuia.IsMonocolor
                 && cuia.Capacity == unitsByColor[cuia.TopColor];
         }

@@ -29,6 +29,8 @@ namespace AF.Core.Board
     /// ocultos solo en cuias sin mecánica; el nivel puede llevar filtros (Hoja, Brote, Matapi, Barro) pero no Liana, Lluvia
     /// ni Piraña (Q14 A) ni Remolino [P: propuesta b.2, «solo junto a filtros»]. T1 (etiqueta y nivel ≥ 100) y Q9 son del
     /// pipeline.</description></item>
+    /// <item><description>Como mucho un contador por nivel (Lluvia o Piraña; propuesta de D-007 b.2 M6-M7 y d.2 regla 6): la
+    /// Lluvia y la Piraña nunca van juntas.</description></item>
     /// <item><description>Las reglas propias de cada mecánica (03 §17 #6).</description></item>
     /// <item><description><c>atascado(S0)</c> = false con la <c>futil</c> única (02 §9.2 regla 1).</description></item>
     /// </list>
@@ -49,6 +51,15 @@ namespace AF.Core.Board
 
         /// <summary>Dosis máximas de una cuia turbia al inicio (02 T3).</summary>
         public const int MurkyMaxDoses = 3;
+
+        /// <summary>Tinte agua del mundo en aguas blancas y claras: Agua del Tapajós (02 §9.1 M6; 03 §9).</summary>
+        public const int TapajosWater = 10;
+
+        /// <summary>Tinte agua del mundo en aguas negras: Agua del Río Negro (02 §9.1 M6; 03 §9).</summary>
+        public const int RioNegroWater = 14;
+
+        /// <summary><c>U_agua</c> de un nivel con Lluvia: dosis iniciales + gotas pendientes (02 §9.1 M6, R3).</summary>
+        public const int LluviaWaterUnits = 4;
 
         /// <summary>
         /// Comprueba las reglas sobre el tablero inicial. Devuelve null si es válido o el motivo del primer rechazo, en el
@@ -143,6 +154,12 @@ namespace AF.Core.Board
                 return murky;
             }
 
+            string? counters = CounterError(state);
+            if (counters != null)
+            {
+                return counters;
+            }
+
             for (int i = 0; i < state.Count; i++)
             {
                 Cuia cuia = state[i];
@@ -200,6 +217,34 @@ namespace AF.Core.Board
                         return where + "el Barro nunca va oculto [P]";
                     }
                 }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Como mucho un contador por nivel (propuesta de D-007 b.2 M6 y M7, d.2 regla 6 y d.3: dos contadores en el mismo
+        /// nivel están prohibidos; la Piraña nunca va con la Lluvia) o null.
+        /// </summary>
+        private static string? CounterError(BoardState state)
+        {
+            int first = -1;
+            for (int i = 0; i < state.Count; i++)
+            {
+                MechanicType type = state[i].Mechanic;
+                if (type != MechanicType.Lluvia && type != MechanicType.Pirana)
+                {
+                    continue;
+                }
+
+                if (first >= 0)
+                {
+                    return "D-007 (propuesta b.2 M6-M7, d.2 regla 6): como mucho un contador por nivel; hay "
+                        + MechanicTypes.ToKey(state[first].Mechanic) + " en la cuia " + Num(first) + " y "
+                        + MechanicTypes.ToKey(type) + " en la cuia " + Num(i);
+                }
+
+                first = i;
             }
 
             return null;
