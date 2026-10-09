@@ -31,14 +31,14 @@ namespace AF.Presentation
     /// </summary>
     /// <remarks>
     /// <para>Sigue las recomendaciones del guion (Q1-Q7 A, Q8 A provisional, Q9 A, Q10 A, Q13 A y Q16 A; Q11 diferida), que
-    /// cambian 02 §4.2, 07 §5.1 y 08 §5.3: antes de fusionar en main hace falta la decisión del dueño (D-009) y editar esos
+    /// cambian 02 §4.2, 07 §5.1 y 08 §5.3: antes de fusionar en main hace falta la decisión del dueño (D-010) y editar esos
     /// capítulos (guion §17). Hasta entonces el GDD manda y esto es una propuesta en su rama.</para>
     /// <para><see cref="Complete"/> deja el estado final en el mismo fotograma; si fue un salto, los restos (frutas, anillos,
     /// chorritos, tiras, capa del río y tropa) se funden en ≤ 100 ms en su sitio, sin moverse ni impactos tardíos.</para>
     /// <para>Las dosis ocultas (Aguas turbias, aún sin mecánica en el cliente) se llenan de río como las demás, no reciben fruta
     /// y pasan todas a la vez al pardo opaco #8A7B6A en el fotograma del primer impacto (el «?» queda preparado, 07 §4.3).</para>
     /// <para>Con <see cref="ReduceMotion"/> (07 §7.8, cuando exista el ajuste): fundido de 250 ms al estado final y, en modo
-    /// rama, un miquito quieto que se desvanece 600 ms después (guion §9; recomendación Q13 A, pendiente de D-009).</para>
+    /// rama, un miquito quieto que se desvanece 600 ms después (guion §9; recomendación Q13 A, pendiente de D-010).</para>
     /// </remarks>
     public sealed class IntroAnimation
     {
@@ -57,7 +57,7 @@ namespace AF.Presentation
         /// <summary>Reducir movimiento: fundido de 250 ms (07 §5.1 y §7.8).</summary>
         public const float ReducedMotionMs = 250f;
 
-        /// <summary>Reducir movimiento: el miquito quieto se ve 600 ms más y se desvanece en 150 ms (guion §9; recomendación Q13 A, pendiente de D-009).</summary>
+        /// <summary>Reducir movimiento: el miquito quieto se ve 600 ms más y se desvanece en 150 ms (guion §9; recomendación Q13 A, pendiente de D-010).</summary>
         public const float ReducedTroopHoldMs = 600f;
 
         /// <summary>Fundido del miquito quieto.</summary>

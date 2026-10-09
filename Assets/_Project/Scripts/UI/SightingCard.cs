@@ -8,7 +8,7 @@ using UnityEngine.UI;
 namespace AF.UI
 {
     /// <summary>
-    /// Tarjeta «¡Miquito a la vista!» (guion de la intro §4.5; recomendación Q10 A, pendiente de D-009): de la familia de los avisos del tablero (placa de
+    /// Tarjeta «¡Miquito a la vista!» (guion de la intro §4.5; recomendación Q10 A, pendiente de D-010): de la familia de los avisos del tablero (placa de
     /// madera clara, como «El río bajó»), con el retrato de la especie de 40 dp, el título, el nombre local y una línea de ≤ 50
     /// caracteres con un dato verificado. Sale después de la intro, nunca dentro de la carga; dura 2,5 s con fundido de
     /// entrada y salida; no captura toques (<c>raycastTarget</c> = false y <see cref="CanvasGroup.blocksRaycasts"/> = false) y

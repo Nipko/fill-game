@@ -275,7 +275,7 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// Reducir movimiento (guion §9; recomendación Q13 A, pendiente de D-009): solo el miquito más cercano a una esquina, quieto en una pose de reposo, con
+        /// Reducir movimiento (guion §9; recomendación Q13 A, pendiente de D-010): solo el miquito más cercano a una esquina, quieto en una pose de reposo, con
         /// la opacidad <paramref name="alpha"/>; ninguna pieza cambia de posición.
         /// </summary>
         public void ApplyStill(float alpha)

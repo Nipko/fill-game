@@ -85,7 +85,7 @@ namespace AF.Presentation
     }
 
     /// <summary>
-    /// Rig recortable de un miquito en uGUI (guion de la intro §11; recomendación Q16 A, pendiente de D-009): 8 piezas (cola, pierna y brazo de detrás, torso,
+    /// Rig recortable de un miquito en uGUI (guion de la intro §11; recomendación Q16 A, pendiente de D-010): 8 piezas (cola, pierna y brazo de detrás, torso,
     /// pierna de delante, cabeza con su párpado y brazo de delante) más dos opcionales (el bigote del pichico, hijo de la
     /// cabeza, y la fruta abrazada al pecho del churuco) con las piezas de <see cref="MonkeyArt"/> y poses por código
     /// (<see cref="Sit"/>, <see cref="Walk"/>, <see cref="Hang"/>). Postura animal, sin ropa ni accesorios, y nunca mira una
