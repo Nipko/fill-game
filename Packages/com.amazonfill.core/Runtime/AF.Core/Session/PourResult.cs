@@ -38,5 +38,8 @@ namespace AF.Core.Session
         /// contadores y condiciones, para que la presentación las anime en ese orden.
         /// </summary>
         public PourEvents Events { get; }
+
+        /// <summary>El vertido lavó el Barro de la cima de la cuia que recibió (evento BarroWashed; 02 §9.1 M5).</summary>
+        public bool BarroWashed => Events.BarroWashedMask != 0;
     }
 }

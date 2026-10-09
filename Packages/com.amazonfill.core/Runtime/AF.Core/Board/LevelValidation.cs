@@ -21,6 +21,8 @@ namespace AF.Core.Board
     /// fruta abundante (02 §8; 03 §3): para cada <c>v</c>, hay al menos tantas cuias de capacidad <c>v</c> como colores con
     /// <c>U_c = v</c>, y para <c>v</c> ∈ {5, 6} exactamente tantas.</description></item>
     /// <item><description>Ninguna cuia sellada al inicio (03 §17 #5).</description></item>
+    /// <item><description>Barro (02 §9.1 M5): solo en la capa 2 o 3 (índice 1-2) de una cuia de 4; nunca en una cuia con
+    /// mecánica (propuesta de D-007 b.2 M5: «nunca dentro de un Matapi»; D-007) ni como dosis oculta [P].</description></item>
     /// <item><description>Las reglas propias de cada mecánica (03 §17 #6).</description></item>
     /// <item><description><c>atascado(S0)</c> = false con la <c>futil</c> única (02 §9.2 regla 1).</description></item>
     /// </list>
@@ -53,8 +55,9 @@ namespace AF.Core.Board
 
             int[] units = state.UnitsTable;
             var colorsWithUnits = new int[MaxUnits + 1];
-            for (int c = Cuia.MinColor; c <= Cuia.MaxColor; c++)
+            for (int c = Cuia.MinColor; c <= Cuia.MaxTintColor; c++)
             {
+                // El Barro (15) no es un color (02 §9.1 M5): no tiene U_c ni casa donde sellar.
                 int u = units[c];
                 if (u == 0)
                 {
@@ -101,6 +104,12 @@ namespace AF.Core.Board
                 return "03 §17 #5: el nivel empieza ganado (no hay dosis)";
             }
 
+            string? mud = MudError(state);
+            if (mud != null)
+            {
+                return mud;
+            }
+
             for (int i = 0; i < state.Count; i++)
             {
                 Cuia cuia = state[i];
@@ -119,6 +128,45 @@ namespace AF.Core.Board
             if (BoardRules.IsStuck(state.CuiasArray, 0, state.Count, units, futileRuleEnabled))
             {
                 return "02 §9.2 regla 1: el nivel empieza en Aguas estancadas";
+            }
+
+            return null;
+        }
+
+        /// <summary>Colocación del Barro (02 §9.1 M5; D-007, propuesta b.2 M5) o null si es válida.</summary>
+        private static string? MudError(BoardState state)
+        {
+            for (int i = 0; i < state.Count; i++)
+            {
+                Cuia cuia = state[i];
+                for (int k = 0; k < cuia.Count; k++)
+                {
+                    if (cuia.ColorAt(k) != Cuia.MudColor)
+                    {
+                        continue;
+                    }
+
+                    string where = "cuia " + Num(i) + ", capa " + Num(k) + ": ";
+                    if (cuia.Capacity != Cuia.DefaultCapacity)
+                    {
+                        return where + "02 §9.1 M5: el Barro va en una cuia de 4";
+                    }
+
+                    if (k < 1 || k > 2)
+                    {
+                        return where + "02 §9.1 M5: el Barro va en la capa 2 o 3 (índice 1-2)";
+                    }
+
+                    if (cuia.HasMechanic)
+                    {
+                        return where + "D-007 (propuesta b.2 M5): el Barro nunca va en una cuia con mecánica";
+                    }
+
+                    if (cuia.IsHiddenAt(k))
+                    {
+                        return where + "el Barro nunca va oculto [P]";
+                    }
+                }
             }
 
             return null;

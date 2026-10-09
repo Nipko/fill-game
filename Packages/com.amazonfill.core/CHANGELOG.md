@@ -6,6 +6,26 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- Barro (C2-3; 02 R2, §1.2 y §9.1 M5; 03 §9; propuesta de D-007 b.2 M5; D-007, Q14 A: es un filtro; debut 123). No es
+  una mecánica de cuia sino el color 15 dentro del contenido, así que lo tratan `BoardRules` y `CuiaRules` sin despacho:
+  dosis inerte que corta las rachas; con Barro en la cima (`Cuia.MudExposed`, `barro_expuesto`) la cuia no es origen y,
+  como destino, acepta cualquier color tras los filtros de mecánica (también llena: `barro_expuesto` va antes que
+  `llena(B)` en `legal`); el primer vertido lava el barro y ocupa su lugar con `cantidad = min(racha, espacio + 1)`
+  (`CuiaRules.EffectiveSpace`, `espacio_efectivo`); el lavado no revela la dosis de debajo (R7: nunca queda arriba); una
+  cuia con Barro no está sellada ni vacía (R5, R12: `CuiaRules.IsSealed` exige un tinte). Evento BarroWashed:
+  `PourEvents.BarroWashedMask` y `PourResult.BarroWashed`. Marea restaura el barro (estado anterior).
+  `BoardState` y `BoardBuilder` aceptan el 15 y siguen rechazando el 16 (reservado); `units_per_color` no declara el Barro
+  (no es un color). `LevelValidation`: solo en la capa 2 o 3 (índice 1-2) de una cuia de 4; nunca en una cuia con mecánica
+  ni oculto [P]; las reglas de `U_c` y de casa ignoran el 15. Solver: el descarte rápido de destinos de `SolverMoves` no
+  descarta el barro expuesto; heurística de 03 §9 (`h1` cuenta el barro como corte y resta 1 por barro; `h2` ignora el
+  15; en `single`, `h3` no cuenta el barro [P]); sin Barro da los mismos valores (mismos pares y expandidos). Bot: exponer
+  el Barro no puntúa el +8 de «deja expuesto un color» (no es un color) [P]. Tests compartidos `BarroTests` (cada regla
+  con su §) y `BarroSolverTests` (A* con y sin poda contra la búsqueda exhaustiva y heurística admisible y consistente en
+  32 tableros, uniformes y mixtos, en `run` y `single`; inyector `BarroInjector`: inserta el barro en la capa 2-3 sin
+  quitar fruta); P1-P3 con Barro en `FutilePropertyTests` (unos 20.000 estados por combinación, sin violaciones) y
+  `HotLoopAllocationTests.BarroBoard_HotLoop_DoesNotAllocate` (0 bytes en reglas y bot; solver calentado < 1 KB).
+  Pendiente para el pipeline: 03 §9 dice que la superposición «sustituye la capa 2 o 3 por 15 y retira una unidad de ese
+  color», lo que dejaría `U_c` = 3 en cuias de 4 (sin casa): los tests insertan el barro sin quitar fruta.
 - Q13 de D-007, parte 1 (C1-1): `AF.Core.Rules.BoardRules`, reglas con contexto de tablero sobre
   `(Cuia[] cuias, offset, count, int[] U_c)` y sin asignaciones: `CanBeSource`, `IsLegal`, `Amount`, `IsFutile` con la
   estructura del anexo B (`cambia_al_recibir(B)` y `no_puede_recibir(A)` como ganchos de mecánica, hoy sin efecto),

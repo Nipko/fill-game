@@ -293,6 +293,12 @@ namespace AF.Core.Board
         public int TopColor => IsEmpty ? NoColor : RawColorAt(Count - 1);
 
         /// <summary>
+        /// <c>barro_expuesto</c> (02 §1.2; §9.1 M5): la cima es Barro (<see cref="MudColor"/>). La cuia no es origen y, como
+        /// destino, acepta cualquier color: el primer vertido lava el barro y ocupa su lugar.
+        /// </summary>
+        public bool MudExposed => TopColor == MudColor;
+
+        /// <summary>
         /// Longitud de la racha superior visible (R6): dosis contiguas desde la cima con el mismo color
         /// y visibles. Una dosis oculta corta la racha aunque su color coincida.
         /// </summary>
@@ -409,6 +415,22 @@ namespace AF.Core.Board
 
             bits |= (ulong)(count + amount) << CountShift;
             return new Cuia(bits);
+        }
+
+        /// <summary>
+        /// Lavado del Barro (02 §9.1 M5): la dosis de Barro de la cima desaparece y <paramref name="amount"/> dosis visibles de
+        /// <paramref name="color"/> ocupan su lugar (<c>espacio_efectivo + 1</c>). La dosis de debajo no queda arriba, así que
+        /// no se revela (R7) aunque esté oculta. Precondición: <see cref="MudExposed"/>; bucle caliente.
+        /// </summary>
+        internal Cuia WashMud(int color, int amount)
+        {
+            int top = Count - 1;
+            ulong bits = _bits
+                & ~(DoseMask << (top * BitsPerDose))
+                & ~(1UL << (HiddenShift + top))
+                & ~(ThreeBitMask << CountShift);
+            bits |= (ulong)top << CountShift;
+            return new Cuia(bits).AddOnTop(color, amount);
         }
 
         /// <inheritdoc />

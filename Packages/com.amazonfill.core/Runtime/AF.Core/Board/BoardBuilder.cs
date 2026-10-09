@@ -18,7 +18,9 @@ namespace AF.Core.Board
     /// <item><description><c>k</c> ausente en Lluvia o Piraña toma el valor por defecto que pasa el llamante
     /// (<c>lluvia_k_pours</c> / <c>pirana_k_pours</c> de Remote Config, 08 §9; 3 y 4 por defecto).</description></item>
     /// <item><description>Falla cerrado: rechaza las mecánicas cuyas reglas aún no están portadas al núcleo (se jugarían como
-    /// cuias normales) y los colores 15 (Barro) y 16 (reservado) mientras <see cref="BoardState"/> no los admita.</description></item>
+    /// cuias normales) y el color 16 (reservado, 02 R2). El 15 es Barro (02 §9.1 M5): no es un color de
+    /// <c>units_per_color</c>, así que no se contrasta con él; sus reglas de colocación las comprueba
+    /// <see cref="LevelValidation"/>.</description></item>
     /// </list>
     /// No es código caliente: se llama una vez por nivel.
     /// </remarks>
@@ -131,8 +133,9 @@ namespace AF.Core.Board
 
             if (units != null)
             {
-                for (int c = Cuia.MinColor; c <= Cuia.MaxColor; c++)
+                for (int c = Cuia.MinColor; c <= Cuia.MaxTintColor; c++)
                 {
+                    // El Barro (15) no es un color (02 §9.1 M5): units_per_color no lo declara.
                     if (table[c] != 0 && table[c] != units.Of(c))
                     {
                         return Fail("units_per_color: el color " + Num(c) + " tiene " + Num(table[c]) + " dosis y se declararon " + Num(units.Of(c)) + " (02 R3)");
@@ -207,9 +210,9 @@ namespace AF.Core.Board
                     return "cuia " + Num(index) + ": R2, el color " + Num(color) + " no es un índice de motor (1-16)";
                 }
 
-                if (color > Cuia.MaxTintColor)
+                if (color == Cuia.ReservedColor)
                 {
-                    return "cuia " + Num(index) + ": los colores 15 (Barro) y 16 (reservado) aún no están portados al núcleo";
+                    return "cuia " + Num(index) + ": R2, el color 16 está reservado";
                 }
             }
 

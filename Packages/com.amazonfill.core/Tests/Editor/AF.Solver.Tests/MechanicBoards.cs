@@ -447,4 +447,35 @@ namespace AF.Solver.Tests
             return true;
         }
     }
+
+    /// <summary>
+    /// Barro (02 §9.1 M5; 03 §9: «superposición»): inserta una dosis de Barro (15) en la capa 2 o 3 (índice 1-2) de una cuia
+    /// de 4 sin mecánica y con 1-3 dosis, sin quitar ninguna fruta (así cada color conserva su <c>U_c</c> y su casa).
+    /// </summary>
+    internal sealed class BarroInjector : IMechanicInjector
+    {
+        public string Name => "barro";
+
+        public bool Inject(Prng rng, int[] caps, List<int>[] doses, MechanicSpec[] attrs)
+        {
+            var candidates = new List<int>();
+            for (int i = 0; i < caps.Length; i++)
+            {
+                if (attrs[i].IsNone && caps[i] == Cuia.DefaultCapacity && doses[i].Count >= 1 && doses[i].Count <= 3)
+                {
+                    candidates.Add(i);
+                }
+            }
+
+            if (candidates.Count == 0)
+            {
+                return false;
+            }
+
+            List<int> cuia = doses[candidates[rng.NextInt(candidates.Count)]];
+            int layer = cuia.Count == 1 ? 1 : 1 + rng.NextInt(2);
+            cuia.Insert(layer, Cuia.MudColor);
+            return true;
+        }
+    }
 }

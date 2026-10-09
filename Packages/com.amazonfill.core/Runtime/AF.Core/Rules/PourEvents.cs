@@ -37,6 +37,12 @@ namespace AF.Core.Rules
         /// <summary>(a) La nueva cima de A estaba oculta y quedó visible (R7).</summary>
         public bool SourceRevealed { get; internal set; }
 
+        /// <summary>
+        /// Transferencia: cuias cuyo Barro de la cima lavó este vertido (evento BarroWashed; 02 §9.1 M5). Solo puede ser la
+        /// que recibió.
+        /// </summary>
+        public int BarroWashedMask { get; internal set; }
+
         /// <summary>(b) Cuias cuya mecánica se abrió al recibir (Hoja, Brote): pasan a ser normales.</summary>
         public int OpenedMask { get; internal set; }
 
@@ -91,6 +97,7 @@ namespace AF.Core.Rules
             Color = color;
             Futile = futile;
             SourceRevealed = false;
+            BarroWashedMask = 0;
             OpenedMask = 0;
             HojaOpenedMask = 0;
             BroteOpenedMask = 0;
@@ -102,6 +109,12 @@ namespace AF.Core.Rules
             FixedPointPasses = 0;
             StatusEvaluated = false;
             Status = LevelStatus.Playing;
+        }
+
+        /// <summary>Transferencia: el vertido lavó el Barro de la cima de la cuia <paramref name="index"/> (02 §9.1 M5).</summary>
+        internal void RecordWashed(int index)
+        {
+            BarroWashedMask |= 1 << index;
         }
 
         /// <summary>(b) La mecánica <paramref name="type"/> de la cuia <paramref name="index"/> se abrió al recibir.</summary>

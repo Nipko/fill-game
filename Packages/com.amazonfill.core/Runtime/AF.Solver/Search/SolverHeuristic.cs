@@ -24,6 +24,12 @@ namespace AF.Solver.Search
     /// </list>
     /// <para>Mira el color real de cada dosis, también de las ocultas. <c>h2</c> se calcula con máscaras de bits:
     /// <c>Σ popcount(máscara_i) − popcount(⋃ máscara_i)</c>. Sin asignaciones; solo enteros.</para>
+    /// <para><b>Barro</b> (03 §9, M5): <c>h1</c> cuenta el barro como corte y resta 1 por cada barro presente (el lavado
+    /// puede eliminar dos cortes en un vertido: el de debajo del barro, si la fruta coincide, y el de la cima de A); <c>h2</c>
+    /// ignora el color 15. En <see cref="PourMode.Single"/>, <c>h3</c> no cuenta las dosis de Barro [P]: el barro nunca se
+    /// vierte, se lava, y toda dosis de tinte por encima de la racha del fondo sigue teniendo que moverse al menos una vez.
+    /// Las dos variantes siguen siendo admisibles y consistentes (un vertido baja cada término como mucho en 1; lo
+    /// comprueban <c>BarroSolverTests</c> sobre todos los estados alcanzables). Sin Barro dan los mismos valores que antes.</para>
     /// </remarks>
     public static class SolverHeuristic
     {
@@ -158,8 +164,9 @@ namespace AF.Solver.Search
         }
 
         /// <summary>
-        /// Suma los cortes de <paramref name="cuia"/> a <paramref name="breaks"/> y sus dosis por encima de la racha del
-        /// fondo a <paramref name="above"/>, y devuelve su máscara de colores (una pasada).
+        /// Suma los cortes de <paramref name="cuia"/> (menos uno por cada Barro, 03 §9) a <paramref name="breaks"/> y sus
+        /// dosis de tinte por encima de la racha del fondo a <paramref name="above"/>, y devuelve su máscara de colores sin el
+        /// Barro (una pasada).
         /// </summary>
         private static int Accumulate(Cuia cuia, ref int breaks, ref int above)
         {
@@ -169,12 +176,19 @@ namespace AF.Solver.Search
                 return 0;
             }
 
+            const int mud = Cuia.MudColor;
             int previous = cuia.ColorAt(0);
-            int mask = 1 << (previous - 1);
+            int mask = previous == mud ? 0 : 1 << (previous - 1);
+            int muds = previous == mud ? 1 : 0;
             int bottomRun = count;
             for (int k = 1; k < count; k++)
             {
                 int color = cuia.ColorAt(k);
+                if (color == mud)
+                {
+                    muds++;
+                }
+
                 if (color != previous)
                 {
                     if (bottomRun == count)
@@ -183,12 +197,25 @@ namespace AF.Solver.Search
                     }
 
                     breaks++;
-                    mask |= 1 << (color - 1);
+                    if (color != mud)
+                    {
+                        mask |= 1 << (color - 1);
+                    }
+
                     previous = color;
                 }
             }
 
-            above += count - bottomRun;
+            if (muds == 0)
+            {
+                above += count - bottomRun;
+                return mask;
+            }
+
+            // 03 §9: −1 por cada Barro en h1; en h3 [P] solo cuentan las dosis de tinte sobre la racha del fondo.
+            breaks -= muds;
+            int mudsAbove = cuia.ColorAt(0) == mud ? muds - bottomRun : muds;
+            above += count - bottomRun - mudsAbove;
             return mask;
         }
 

@@ -20,7 +20,8 @@ namespace AF.Solver.Bot
     /// enteros y multiplicada por 4 [P]: <c>4·n</c>; +16 si la cuia que recibe no está vacía y +40 más si queda llena y
     /// monocolor (sella, 02 R5); −20 si está vacía; −12 si el vertido es parcial (<c>n</c> &lt; racha visible de A); +8 si
     /// vacía la racha y deja expuesto un color que tiene destino disponible (otra cuia vacía, o con ese color arriba y
-    /// hueco; si la dosis expuesta está oculta, el jugador no la ve y no puntúa [P]). Con mecánicas puntúa la cuia que
+    /// hueco; si la dosis expuesta está oculta, el jugador no la ve y no puntúa [P]; el Barro expuesto tampoco puntúa,
+    /// porque no es un color, 02 §9.1 M5 [P]). Con mecánicas puntúa la cuia que
     /// recibe las dosis (la pareja en el Remolino) [P]; las mecánicas no añaden ramas.</para>
     /// <para><b>Ruido:</b> el «+ rng()·0,5» de 03 §6 pasa a un entero equivalente: la clave es
     /// <c>puntos·65.536 + NextInt(131.072)</c>, un ruido en [0, 2) unidades de la puntuación ×4, es decir [0, 0,5) de la
@@ -182,9 +183,10 @@ namespace AF.Solver.Bot
             }
 
             int below = from.Count - run - 1;
-            if (amount == run && below >= 0 && !from.IsHiddenAt(below) && HasDestinationFor(in board, source, from.ColorAt(below)))
+            if (amount == run && below >= 0 && !from.IsHiddenAt(below) && from.ColorAt(below) != Cuia.MudColor
+                && HasDestinationFor(in board, source, from.ColorAt(below)))
             {
-                score += 8; // deja expuesto un color con destino disponible
+                score += 8; // deja expuesto un color con destino disponible (el Barro no es un color, 02 §9.1 M5)
             }
 
             return score;

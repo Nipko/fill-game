@@ -19,7 +19,7 @@ namespace AF.Solver.Generation
     /// monocolor entera en una vacía, que sería un directo fútil), con la excepción «casa correcta» de las capacidades mixtas
     /// resuelta por la misma <c>futil</c> que el juego. En <see cref="PourMode.Single"/>, <c>m</c> = 1 y desaparece la
     /// condición de la cima de <c>b</c> (nota de 03 §4.1).</para>
-    /// <para>Solo tableros sin mecánicas ni dosis ocultas: las mecánicas se superponen después sobre el tablero base y se
+    /// <para>Solo tableros sin mecánicas, sin Barro y sin dosis ocultas: las mecánicas se superponen después sobre el tablero base y se
     /// verifican con el solver (03 §9, consecuencia 2). Sin asignaciones; el vertido directo se evalúa sobre el par
     /// <c>(b, a)</c>.</para>
     /// </remarks>

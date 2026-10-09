@@ -231,6 +231,45 @@ namespace AF.Core.Tests.DotnetOnly
         }
 
         [Test]
+        public void BarroBoard_HotLoop_DoesNotAllocate()
+        {
+            // C2-3: el Barro (color 15) en movimientos útiles, bloqueo, solver calentado y bot calentado, sin asignaciones.
+            var state = new BoardState(new[]
+            {
+                Cuia.Create(4, new[] { 1, Cuia.MudColor, 2 }), Cuia.Create(4, new[] { 2, 3, Cuia.MudColor }), Cuia.Create(4, new[] { 3, 1, 4, 4 }),
+                Cuia.Create(4, new[] { 4, 2, 1, 3 }), Cuia.Create(4, new[] { 1, 3, 2, 4 }), Cuia.Empty(4), Cuia.Empty(4),
+            });
+            var buffer = new Pour[PourRules.MaxPours];
+            var solver = new AStarSolver();
+            var bot = new CasualBot();
+            SolverOptions options = SolverOptions.ForPipeline(PourMode.Run);
+            SolveResult warm = solver.Solve(state, options);
+            bot.FailRate(state, 5UL, PourMode.Run);
+            int moves = PourRules.CollectUsefulMoves(state, true, PourMode.Run, buffer);
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            int total = 0;
+            for (int repeat = 0; repeat < 200; repeat++)
+            {
+                total += PourRules.CollectUsefulMoves(state, true, PourMode.Run, buffer);
+                total += PourRules.IsStuck(state, true) ? 1 : 0;
+            }
+
+            bot.FailRate(state, 5UL, PourMode.Run);
+            long rulesAndBot = GC.GetAllocatedBytesForCurrentThread() - before;
+            before = GC.GetAllocatedBytesForCurrentThread();
+            SolveResult result = solver.Solve(state, options);
+            long solve = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(moves, Is.GreaterThan(0));
+            Assert.That(total, Is.EqualTo(200 * moves));
+            Assert.That(warm.IsSolved, Is.True);
+            Assert.That(result.MoveCount, Is.EqualTo(warm.MoveCount));
+            Assert.That(rulesAndBot, Is.EqualTo(0));
+            Assert.That(solve, Is.LessThan(1024));
+        }
+
+        [Test]
         public void WarmSolverInRun_OnlyAllocatesTheSolution()
         {
             // D-005: 0 bytes en el bucle caliente en Run, el modo por defecto, con el modo explícito (16.114 estados

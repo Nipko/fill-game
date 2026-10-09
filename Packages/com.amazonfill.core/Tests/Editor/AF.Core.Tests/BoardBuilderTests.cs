@@ -90,7 +90,7 @@ namespace AF.Core.Tests
             Assert.That(BoardBuilder.Build(new[] { 4, 4 }, Simple()).Error, Does.Contain("longitudes distintas"));
             Assert.That(BoardBuilder.Build(new[] { 4, 4, 7, 4 }, Simple()).Error, Does.Contain("capacidad"));
             Assert.That(BoardBuilder.Build(new[] { 4, 4, 3, 4 }, Simple()).Error, Does.Contain("no caben"));
-            Assert.That(BoardBuilder.Build(Caps4, Doses(new[] { 1, 15 }, new[] { 1 }, new int[0], new int[0])).Error, Does.Contain("15 (Barro)"));
+            Assert.That(BoardBuilder.Build(Caps4, Doses(new[] { 1, 16 }, new[] { 1 }, new int[0], new int[0])).Error, Does.Contain("16 está reservado"));
             Assert.That(BoardBuilder.Build(Caps4, Doses(new[] { 0 }, new int[0], new int[0], new int[0])).Error, Does.Contain("R2"));
             Assert.That(BoardBuilder.Build(Caps4, Simple(), new MechanicSpec[3]).Error, Does.Contain("attrs"));
         }

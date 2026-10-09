@@ -62,9 +62,12 @@ namespace AF.Solver.Search
                     }
 
                     Cuia to = board[j];
-                    if (!to.HasMechanic && (to.IsFull || (!to.IsEmpty && to.TopColor != fromTop)))
+                    if (!to.HasMechanic && !to.MudExposed && (to.IsFull || (!to.IsEmpty && to.TopColor != fromTop)))
                     {
-                        continue; // descarte rápido de destinos normales que la regla normal rechazaría igual
+                        // Descarte rápido de destinos normales que la regla normal rechazaría igual. No vale para las cuias
+                        // con mecánica (Remolino: entra en la pareja, de cualquier color) ni con Barro en la cima
+                        // (barro_expuesto acepta cualquier color, 02 §1.2): esas las decide BoardRules.Accepts.
+                        continue;
                     }
 
                     if (j > 0 && j - 1 != i && to.Packed == board[j - 1].Packed)

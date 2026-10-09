@@ -11,8 +11,9 @@ namespace AF.Core.Board
     /// </summary>
     /// <remarks>
     /// Las cuias pueden llevar mecánica (<see cref="Cuia.Mechanic"/>; los niveles se construyen con
-    /// <see cref="BoardBuilder"/>, que valida sus atributos). Se rechazan los colores 15 (Barro) y 16 (reservado)
-    /// hasta que se porte el Barro. Con el constructor público <c>U_c</c> se cuenta a partir del contenido inicial;
+    /// <see cref="BoardBuilder"/>, que valida sus atributos). Admite el color 15 (Barro, 02 §9.1 M5: dosis inerte; la tabla
+    /// <c>U_c</c> cuenta en la posición 15 las dosis de Barro, que no son un color de <c>units_per_color</c>) y rechaza el 16
+    /// (reservado, 02 R2). Con el constructor público <c>U_c</c> se cuenta a partir del contenido inicial;
     /// <see cref="BoardBuilder"/> suma además las gotas pendientes de la Lluvia (02 R3).
     /// Esta clase asigna memoria en cada vertido: sirve para reglas, cliente y tests, no para el bucle
     /// caliente del solver, que usa su propia representación empaquetada (AF.Solver).
@@ -56,9 +57,9 @@ namespace AF.Core.Board
                 for (int k = 0; k < cuia.Count; k++)
                 {
                     int color = cuia.ColorAt(k);
-                    if (color > Cuia.MaxTintColor)
+                    if (color == Cuia.ReservedColor)
                     {
-                        throw new NotSupportedException("Los colores 15 (Barro) y 16 (reservado) necesitan las mecánicas de GDD 02 §9, que aún no están portadas.");
+                        throw new NotSupportedException("El color 16 está reservado (02 R2): ninguna regla lo usa.");
                     }
 
                     units[color]++;

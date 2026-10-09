@@ -91,6 +91,16 @@ namespace AF.Core.Tests.DotnetOnly
             AssertWith(mode, family, new MatapiInjector(), 0xF07E_0631UL);
         }
 
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithBarro(PourMode mode, CapacityFamily family)
+        {
+            // C2-3: 02 R16 antes del debut del Barro (123).
+            AssertWith(mode, family, new BarroInjector(), 0xF07E_1231UL);
+        }
+
         private const string LianaMixedBlocked =
             "BLOQUEADO (C1-9): con Liana y capacidades mixtas P1 falla; pregunta de 02 R16 al tech-lead "
             + "(ver P1_Liana_MixedCapacities_OpenR16Counterexample).";

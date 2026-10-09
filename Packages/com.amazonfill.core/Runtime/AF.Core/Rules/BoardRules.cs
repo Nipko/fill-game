@@ -18,6 +18,11 @@ namespace AF.Core.Rules
     /// caliente: sin asignaciones y sin validar argumentos (los valida <see cref="PourRules"/>). Las mecánicas
     /// (<see cref="IMechanic"/>) se despachan por la tabla estática de <see cref="MechanicTable"/> solo para cuias que llevan
     /// una: un tablero sin mecánicas sigue la ruta de 02 §1 sin llamadas virtuales.</para>
+    /// <para><b>Barro</b> (02 §9.1 M5): no es una mecánica de cuia sino el color 15 dentro del contenido, así que lo tratan
+    /// estas rutas sin despacho: con Barro en la cima la cuia no es origen; como destino acepta cualquier color
+    /// (<c>barro_expuesto</c>, tras los filtros de mecánica, como en el pseudocódigo de 02 §1.2), con
+    /// <c>espacio_efectivo + 1</c>; el vertido lo lava (<see cref="PourEvents.BarroWashedMask"/>); una cuia con Barro no
+    /// está sellada ni vacía (R5, R12).</para>
     /// <para><b>R10 (anexo B).</b> Tras cada vertido: (a) revelado de la nueva cima de A (R7); (b) aperturas por recepción
     /// en B (Hoja, Brote); (c) sellado (R5); (d) liberaciones por sellado (Liana); (e) contadores (Lluvia, Piraña), una sola
     /// vez por vertido y solo si el vertido no es fútil (respuesta Q18 B); (f) condiciones del tablero; (f′) se repiten
@@ -135,10 +140,10 @@ namespace AF.Core.Rules
         // Rutas internas del bucle caliente (también las usa AF.Solver).
         // ------------------------------------------------------------------------------------------------------------
 
-        /// <summary>Origen posible: no vacía, no sellada (R5) y sin <c>bloqueada_origen</c>.</summary>
+        /// <summary>Origen posible: no vacía, sin Barro en la cima (02 §9.1 M5), no sellada (R5) y sin <c>bloqueada_origen</c>.</summary>
         internal static bool IsSourceCuia(Cuia cuia, int[] units)
         {
-            if (cuia.IsEmpty || CuiaRules.IsSealed(cuia, units))
+            if (cuia.IsEmpty || cuia.MudExposed || CuiaRules.IsSealed(cuia, units))
             {
                 return false;
             }
@@ -164,6 +169,11 @@ namespace AF.Core.Rules
                 }
             }
 
+            if (to.MudExposed)
+            {
+                return true; // barro_expuesto(B): acepta cualquier color (02 §1.2; §9.1 M5); nunca está sellada
+            }
+
             // Regla normal: una cuia sellada está llena, así que "no llena" cubre también "no sellada".
             return !to.IsFull && (to.IsEmpty || to.TopColor == board[source].TopColor);
         }
@@ -175,11 +185,14 @@ namespace AF.Core.Rules
             return to.HasMechanic ? MechanicTable.Of(to).ReceiverOf(in board, target) : target;
         }
 
-        /// <summary><c>cantidad</c> en <see cref="PourMode.Run"/>: <c>min(racha visible de A, espacio_efectivo(B))</c>.</summary>
+        /// <summary>
+        /// <c>cantidad</c> en <see cref="PourMode.Run"/>: <c>min(racha visible de A, espacio_efectivo(B))</c>, con + 1 si
+        /// <c>barro_expuesto(B)</c> (02 §1.2).
+        /// </summary>
         internal static int RunAmount(in BoardSlice board, int source, int target)
         {
             Cuia to = board[target];
-            int space = to.HasMechanic ? MechanicTable.Of(to).ReceiveSpace(in board, target) : to.Space;
+            int space = to.HasMechanic ? MechanicTable.Of(to).ReceiveSpace(in board, target) : CuiaRules.EffectiveSpace(to);
             int run = board[source].TopRunLength;
             return run < space ? run : space;
         }
@@ -226,6 +239,12 @@ namespace AF.Core.Rules
             if (to.HasMechanic)
             {
                 receiver = MechanicTable.Of(to).Receive(in board, target, color, amount);
+            }
+            else if (to.MudExposed)
+            {
+                // 02 §9.1 M5: el primer vertido lava el barro y ocupa su lugar (evento BarroWashed).
+                board.Set(target, to.WashMud(color, amount));
+                events.RecordWashed(target);
             }
             else
             {
