@@ -5,6 +5,7 @@ using AF.Ads;
 using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Rules;
+using AF.Core.Session;
 using AF.Economy;
 using AF.GameFlow;
 using AF.Levels;
@@ -33,9 +34,15 @@ namespace AF.UI
     /// de escena; captura de fondo; tablero (sombra, relleno, sombra interior y marco del panel, repisas, cuias, la capa de
     /// «Llenar y teñir» con su agua, chorritos y frutas, chorros y efectos); la tropa de miquitos y su rama; Capi y el poste;
     /// velo de estado, HUD y bandeja; polen; capa de vertido (el origen y su chorro mientras vierte, delante de todo, D-006);
-    /// estallido; modales; captura de saltos. Las capas que no son botones ni áreas de cuia no reciben toques (V7).
+    /// estallido; modales; captura de saltos. Las capas que no son botones ni áreas de cuia no reciben toques (V7). Dentro
+    /// del tablero, las cuias van entre dos capas de mecánicas (detrás y delante; arquitectura del paso 1, §6), y la
+    /// delantera, detrás de la intro, los chorros y los efectos.
+    /// <para>Clase parcial (arquitectura del paso 1, §7): los métodos parciales <c>Labels*</c>, <c>Cards*</c>,
+    /// <c>Reveal*</c> y <c>FunnelModalShowing</c> son los ganchos que implementan otros archivos (GameScreen.Labels.cs,
+    /// GameScreen.Cards.cs, GameScreen.Reveal.cs y GameScreen.Funnel.cs) sin editar este. Sin implementación no hacen
+    /// nada.</para>
     /// </remarks>
-    public sealed class GameScreen : ILevelFlowListener
+    public sealed partial class GameScreen : ILevelFlowListener
     {
         /// <summary>Ancho de referencia del lienzo (dp).</summary>
         public const float ReferenceWidth = 360f;
@@ -154,6 +161,8 @@ namespace AF.UI
         private readonly Image _panelInner;
         private readonly Image _panelFrame;
         private readonly Image[] _shelves = new Image[3];
+        private readonly RectTransform _mechanicBackLayer;
+        private readonly RectTransform _mechanicFrontLayer;
         private readonly RectTransform _streamLayer;
         private readonly FxLayer _fx;
 
@@ -362,6 +371,11 @@ namespace AF.UI
                 _shelves[i].gameObject.SetActive(false);
             }
 
+            // Capas de mecánicas (arquitectura del paso 1, §6): lo que une cuias o ronda el tablero va detrás o delante de las
+            // cuias, nunca en su cuerpo. Sin Graphic ni raycast; BuildBoard las coloca a los dos lados de las cuias.
+            _mechanicBackLayer = UiBuilder.Rect("MechanicBack", _board);
+            _mechanicFrontLayer = UiBuilder.Rect("MechanicFront", _board);
+
             // «Llenar y teñir» (guion de la intro): su Canvas anidado va delante de las cuias (BuildBoard lo reordena).
             _intro = new IntroAnimation(_board, art);
             _streamLayer = UiBuilder.Rect("Streams", _board);
@@ -510,6 +524,12 @@ namespace AF.UI
             _skipCatcher.gameObject.SetActive(false);
 
             _animator = new BoardAnimator(_streamLayer, _pourFront) { Fx = _fx };
+
+            // Ganchos de construcción de los parciales: al final, con todo creado (también la bandeja) y antes de la primera
+            // maquetación, para que sus Layout* ya encuentren lo que crean.
+            LabelsBuild();
+            CardsBuild();
+            RevealBuild();
             ApplyScreenMetrics(true);
         }
 
@@ -563,6 +583,18 @@ namespace AF.UI
 
         /// <summary>«Llenar y teñir»: la intro de carga (tests y capturas).</summary>
         public IntroAnimation Intro => _intro;
+
+        /// <summary>
+        /// Agua base con la que arrancó la última intro: la del mundo del nivel (<c>water_base</c>; 07 §2.1; glosario §11),
+        /// no la del primer paquete del catálogo (tests).
+        /// </summary>
+        internal Color IntroWaterColor { get; private set; }
+
+        /// <summary>Capa de mecánicas detrás de las cuias (arquitectura del paso 1, §6; tests de orden de capas).</summary>
+        internal RectTransform MechanicBackLayer => _mechanicBackLayer;
+
+        /// <summary>Capa de mecánicas delante de las cuias y detrás de la intro, los chorros y los efectos (tests).</summary>
+        internal RectTransform MechanicFrontLayer => _mechanicFrontLayer;
 
         /// <summary>Tropa de miquitos de la intro (tests y capturas).</summary>
         public TroopLayer Troop => _troop;
@@ -760,6 +792,9 @@ namespace AF.UI
             _sighting.Tick(dtMs);
             TickHarvest(dtMs);
             RefreshHud();
+            LabelsTick(dtMs);
+            CardsTick(dtMs);
+            RevealTick(dtMs);
         }
 
         /// <summary>Vuelta de segundo plano (02 §14): la vista salta al modelo sin animar.</summary>
@@ -789,6 +824,9 @@ namespace AF.UI
             _shownBoard = flow.Session.Current;
             _probe.State("load", flow, int.MinValue, null);
             EmitLevelLayout();
+            LabelsLevelLoaded(flow);
+            CardsLevelLoaded(flow);
+            RevealLevelLoaded(flow);
         }
 
         /// <inheritdoc />
@@ -799,6 +837,7 @@ namespace AF.UI
             ClearLifts();
             HideOverlays();
             _shownBoard = flow.Session.Current;
+            _animator.AdoptBoard(_shownBoard); // la intro pinta el tablero nuevo (también tras Volver a la orilla)
             _introRetry = isShort;
             _introAnimStarted = false;
             if (_introDelayMs > 0f)
@@ -826,6 +865,10 @@ namespace AF.UI
                 _restartProbePending = false;
                 _probe.State("restart", flow, int.MinValue, null);
             }
+
+            // El tablero del intento ya es el de la sesión (OnRestart avisa antes de reiniciarla: ahí aún es el viejo).
+            LabelsBoardChanged(flow);
+            RevealBoardChanged(flow);
         }
 
         /// <inheritdoc />
@@ -884,13 +927,21 @@ namespace AF.UI
 
                 case TapKind.Poured:
                     SetLift(result.PreviousSelection, false);
-                    EnqueuePour(flow, result.Pour.Pour);
-                    _probe.State("pour", flow, result.Tapped, result.Pour.Pour);
+                    EnqueuePour(flow, result.Pour);
+                    _probe.State("pour", flow, result.Tapped, result.Pour);
+                    LabelsBoardChanged(flow);
+                    RevealBoardChanged(flow);
                     break;
             }
         }
 
         /// <inheritdoc />
+        /// <remarks>
+        /// Marea (04 §2.1; 02 §14): la cola salta a su final y las dosis vuelven de la cuia tocada al origen en 250 ms con la
+        /// tapa que salta. Si la cuia tocada no cambió (vertido por un Remolino), no hay traslado: el origen y la pareja saltan
+        /// al estado nuevo [P] (Magic Sort no se observó; paso 2). Después, las demás cuias que difieren del tablero que se
+        /// veía (la gota, el mordisco, la Liana que se vuelve a atar…) saltan a su estado.
+        /// </remarks>
         public void OnUndo(Pour undone, bool fromStuckModal)
         {
             LevelFlow flow = RequireFlow();
@@ -899,19 +950,39 @@ namespace AF.UI
             HideOverlays(true);
             BoardState before = _shownBoard ?? flow.Session.Current;
             BoardState after = flow.Session.Current;
-            _animator.EnqueueUndo(
-                undone.Target,
-                undone.Source,
-                undone.Amount,
-                before[undone.Target].TopColor,
-                before[undone.Target],
-                after[undone.Target],
-                after.IsSealed(undone.Target),
-                before[undone.Source],
-                after[undone.Source],
-                after.IsSealed(undone.Source));
+            int from = undone.Target;
+            int to = undone.Source;
+            int moved = 0;
+            if (before.Count == after.Count && (uint)from < (uint)after.Count && (uint)to < (uint)after.Count
+                && (before[from].Packed != after[from].Packed || before.IsSealed(from) != after.IsSealed(from)))
+            {
+                _animator.EnqueueUndo(
+                    from,
+                    to,
+                    undone.Amount,
+                    before[from].TopColor,
+                    before[from],
+                    after[from],
+                    after.IsSealed(from),
+                    before[to],
+                    after[to],
+                    after.IsSealed(to));
+                moved = (1 << from) | (1 << to);
+            }
+
+            int others = BoardDiff.ChangedOthers(before, after, -1, -1) & ~moved;
+            for (int i = 0; i < _views.Length && i < after.Count; i++)
+            {
+                if (((others >> i) & 1) != 0)
+                {
+                    _animator.ShowContent(i, after[i], after.IsSealed(i));
+                }
+            }
+
             _shownBoard = after;
             _probe.State("undo", flow, int.MinValue, undone);
+            LabelsBoardChanged(flow);
+            RevealBoardChanged(flow);
         }
 
         /// <inheritdoc />
@@ -981,6 +1052,7 @@ namespace AF.UI
             ApplyVictoryAnim(0f);
             SyncChrome();
             _probe.Victory("victory", flow, _doubleShown);
+            LabelsVictoryShown(flow);
         }
 
         /// <inheritdoc />
@@ -1026,6 +1098,7 @@ namespace AF.UI
             {
                 ShowFunnelBackdrop();
                 ShiftBoard(ShiftToClear(_stuckPanelY, 12f), false);
+                FunnelModalShowing(phase, flow);
                 _giveUp.Show(StuckModalModel.BuildGiveUpConfirm(StuckContext(flow)), _canvasW, _canvasH);
             }
             else if (phase == FlowPhase.LevelFailed)
@@ -1039,6 +1112,9 @@ namespace AF.UI
             {
                 _probe.State("ready", flow, int.MinValue, null);
             }
+
+            LabelsBoardChanged(flow);
+            RevealBoardChanged(flow);
         }
 
         /// <inheritdoc />
@@ -1075,6 +1151,8 @@ namespace AF.UI
             AddCuiaView(flow, index);
             SyncChrome();
             _probe.Funnel(kind == AddedCuiaKind.Rescue ? "rescue" : "extra_cuia", flow);
+            LabelsBoardChanged(flow);
+            RevealBoardChanged(flow);
         }
 
         /// <inheritdoc />
@@ -1094,6 +1172,7 @@ namespace AF.UI
             {
                 case FlowPhase.GiveUpConfirm:
                     _stuck.Panel.gameObject.SetActive(false);
+                    FunnelModalShowing(phase, flow);
                     _giveUp.Show(StuckModalModel.BuildGiveUpConfirm(StuckContext(flow)), _canvasW, _canvasH);
                     _probe.Funnel("giveup_confirm", flow);
                     break;
@@ -1102,6 +1181,7 @@ namespace AF.UI
                     ShowFunnelBackdrop();
                     _giveUp.Hide();
                     _noCanoes.Hide();
+                    FunnelModalShowing(phase, flow);
                     _failed.Show(flow.LevelNumber, LevelReward(flow), _canvasW, _canvasH);
                     _probe.Funnel("level_failed", flow);
                     break;
@@ -1263,14 +1343,11 @@ namespace AF.UI
             {
                 views[i] = CuiaView.Create(_board, i, board[i].Capacity, _art, _cuiaDown, _cuiaUp, _fx);
                 views[i].SetLiftDuration(liftMs);
-                views[i].ShowContent(board[i], board.IsSealed(i));
             }
 
             _views = views;
             _generatedCount = Mathf.Max(1, flow.GeneratedCuias); // cuias generadas: fijan las filas (D-006); las añadidas van a la más corta
-            _intro.Layer.SetAsLastSibling(); // la intro, delante de las cuias
-            _streamLayer.SetAsLastSibling();
-            _fx.Root.SetAsLastSibling();
+            OrderBoardLayers();
             float f = GameConfig.SpeedFactor(flow.LevelNumber);
             _timings = new PourTimings(
                 GameConfig.AnimLiftMs * f,
@@ -1278,25 +1355,40 @@ namespace AF.UI
                 GameConfig.AnimPourDoseMs * f,
                 GameConfig.AnimPourTailMs * f,
                 GameConfig.AnimReturnMs * f);
-            _animator.Bind(_views, _timings, GameConfig.QueueMaxLagPours);
+            _animator.Bind(_views, _timings, GameConfig.QueueMaxLagPours, _mechanicBackLayer, _mechanicFrontLayer);
+            _animator.SpeedFactor = f;
+            _animator.ReduceMotion = flow.ReduceMotion;
+            _fx.ReduceMotion = flow.ReduceMotion;
+            for (int i = 0; i < board.Count; i++)
+            {
+                _animator.ShowContent(i, board[i], board.IsSealed(i));
+            }
+
             LayoutBoard();
         }
 
-        private void EnqueuePour(LevelFlow flow, Pour pour)
+        // Orden dentro del tablero (arquitectura del paso 1, §6): panel y repisas; capa de mecánicas trasera; las cuias en
+        // orden; capa de mecánicas delantera; la intro (delante de las cuias); los chorros; los efectos.
+        private void OrderBoardLayers()
+        {
+            _mechanicBackLayer.SetAsLastSibling();
+            for (int i = 0; i < _views.Length; i++)
+            {
+                _views[i].Root.SetAsLastSibling();
+            }
+
+            _mechanicFrontLayer.SetAsLastSibling();
+            _intro.Layer.SetAsLastSibling();
+            _streamLayer.SetAsLastSibling();
+            _fx.Root.SetAsLastSibling();
+        }
+
+        // La vista persigue al modelo (02 §3.2): el vertido con sus etapas de R10 y los tableros que se veía y del modelo.
+        private void EnqueuePour(LevelFlow flow, in PourResult result)
         {
             BoardState after = flow.Session.Current;
             BoardState before = _shownBoard ?? after;
-            _animator.EnqueuePour(
-                pour.Source,
-                pour.Target,
-                pour.Amount,
-                before[pour.Source].TopColor,
-                before[pour.Source],
-                after[pour.Source],
-                after.IsSealed(pour.Source),
-                before[pour.Target],
-                after[pour.Target],
-                after.IsSealed(pour.Target));
+            _animator.EnqueuePour(new PourVisual(result.Pour, result.Events, before, after));
             _shownBoard = after;
         }
 
@@ -1606,7 +1698,11 @@ namespace AF.UI
 
             _troop.Prepare(species);
             _intro.ReduceMotion = flow.ReduceMotion;
-            _intro.Start(_views, flow.Session.Current, _art.Water, durationMs);
+
+            // El agua del mundo del nivel (07 §2.1; mundo 3, agua negra), no la del primer paquete del catálogo.
+            Color water = Palette.WaterBase(flow.Level.WaterBase);
+            IntroWaterColor = water;
+            _intro.Start(_views, flow.Session.Current, water, durationMs);
         }
 
         /// <summary>
@@ -1728,14 +1824,16 @@ namespace AF.UI
             {
                 views[i] = CuiaView.Create(_board, i, board[i].Capacity, _art, _cuiaDown, _cuiaUp, _fx);
                 views[i].SetLiftDuration(liftMs);
-                views[i].ShowContent(board[i], board.IsSealed(i));
             }
 
             _views = views;
-            _intro.Layer.SetAsLastSibling();
-            _streamLayer.SetAsLastSibling();
-            _fx.Root.SetAsLastSibling();
-            _animator.Bind(_views, _timings, GameConfig.QueueMaxLagPours);
+            OrderBoardLayers();
+            _animator.Bind(_views, _timings, GameConfig.QueueMaxLagPours, _mechanicBackLayer, _mechanicFrontLayer);
+            for (int i = old; i < views.Length; i++)
+            {
+                _animator.ShowContent(i, board[i], board.IsSealed(i));
+            }
+
             LayoutBoard();
             _shownBoard = board;
             _relayoutFrom = from;
@@ -1777,8 +1875,14 @@ namespace AF.UI
                 }
 
                 _addedView = -1;
+
+                // LayoutBoard ya avisa de la recolocación (BoardLaidOut y LabelsLayoutBoard): un solo aviso por fotograma.
                 LayoutBoard();
+                return;
             }
+
+            _animator.BoardLaidOut();
+            LabelsLayoutBoard();
         }
 
         private void TickPanels(float dtMs)
@@ -1873,6 +1977,8 @@ namespace AF.UI
             _layoutRects.Add((RectTransform)_restart.Button.transform);
             _layoutIds.Add("pause");
             _layoutRects.Add((RectTransform)_pauseButton.Button.transform);
+            CardsLayoutIds(_layoutIds, _layoutRects);
+            RevealLayoutIds(_layoutIds, _layoutRects);
             _probe.Layout("level", RequireFlow().LevelNumber, _views, _layoutIds.ToArray(), _layoutRects.ToArray());
         }
 
@@ -1959,6 +2065,9 @@ namespace AF.UI
             _stuck.Place(w, _stuckPanelY);
 
             LayoutVictory();
+            LabelsLayoutHud();
+            CardsLayout();
+            RevealLayout();
         }
 
         // Panel de victoria de arriba abajo según lo que ofrece (con o sin Cosecha doble), con la cinta, los rayos y el velo
@@ -2005,6 +2114,7 @@ namespace AF.UI
             PlaceAt(_victoryGlow.rectTransform, w * 0.5f, ribbonY, 2f * VictoryGlowRadiusDp, 2f * VictoryGlowRadiusDp, new Vector2(0.5f, 0.5f));
             PlaceAt(_victoryVeil.rectTransform, w * 0.5f, ribbonY, 2f * ProceduralArt.VeilHoleHalfDp, 2f * ProceduralArt.VeilHoleHalfDp, new Vector2(0.5f, 0.5f));
             _victorySurface.sprite = _art.ModalSurfaceFor(panelW - 16f, _victoryPanelDp - 16f);
+            LabelsLayoutVictory();
         }
 
         private void EmitVictoryLayout()
@@ -2076,7 +2186,16 @@ namespace AF.UI
             return Mathf.Max(0, flow.HarvestSeeds - _harvestShown);
         }
 
+        // Maquetación del tablero y, al final, los avisos de recolocación: la cola (y desde la ola 2, los overlays) y las
+        // etiquetas del tablero.
         private void LayoutBoard()
+        {
+            LayoutBoardPanel();
+            _animator.BoardLaidOut();
+            LabelsLayoutBoard();
+        }
+
+        private void LayoutBoardPanel()
         {
             float w = _canvasW;
             for (int i = 0; i < _shelves.Length; i++)
@@ -2345,5 +2464,73 @@ namespace AF.UI
             go.GetComponent<HitArea>().raycastTarget = true;
             return rt;
         }
+
+        // ---- Ganchos de los parciales (arquitectura del paso 1, §7). Métodos parciales clásicos: void, sin modificador y
+        // opcionales; sin implementación, el compilador quita sus llamadas. Comparten los campos privados, pero cada parcial
+        // crea sus propios Image (no reutiliza _sceneVeil ni _panelFrame). Si hace falta otro gancho, lo añade la sesión
+        // principal entre olas. ----
+
+        // Etiquetas (GameScreen.Labels.cs): al final del constructor, con todo creado y antes de la primera maquetación.
+        partial void LabelsBuild();
+
+        // Etiquetas: al final de LayoutHud.
+        partial void LabelsLayoutHud();
+
+        // Etiquetas: al final de LayoutBoard y de cada fotograma de TickRelayout (cuia añadida); al añadir la cuia avisan los dos
+        // en el mismo fotograma (LayoutBoard y después TickRelayout(0), que devuelve las vistas a la posición de partida).
+        partial void LabelsLayoutBoard();
+
+        // Etiquetas: al final de OnLevelLoaded.
+        partial void LabelsLevelLoaded(LevelFlow flow);
+
+        // Etiquetas: el tablero del modelo cambió; tras un vertido, Marea, OnResumed, OnCuiaAdded y al final de
+        // OnIntroStarted. No en OnRestart: LevelFlow lo avisa antes de reiniciar la sesión y ahí el tablero aún es el viejo.
+        partial void LabelsBoardChanged(LevelFlow flow);
+
+        // Etiquetas: en OnVictoryScreen, con la pantalla de victoria ya colocada.
+        partial void LabelsVictoryShown(LevelFlow flow);
+
+        // Etiquetas: al final de LayoutVictory.
+        partial void LabelsLayoutVictory();
+
+        // Etiquetas: en cada Tick, tras el resto de la vista.
+        partial void LabelsTick(float dtMs);
+
+        // Tarjeta previa y tutoriales (GameScreen.Cards.cs): al final del constructor.
+        partial void CardsBuild();
+
+        // Tarjetas: al final de LayoutHud.
+        partial void CardsLayout();
+
+        // Tarjetas: en cada Tick.
+        partial void CardsTick(float dtMs);
+
+        // Tarjetas: al final de OnLevelLoaded.
+        partial void CardsLevelLoaded(LevelFlow flow);
+
+        // Tarjetas: botones visibles para AF_LAYOUT (EmitLevelLayout, antes de emitir).
+        partial void CardsLayoutIds(List<string> ids, List<RectTransform> rects);
+
+        // Luciérnaga en la bandeja (GameScreen.Reveal.cs): al final del constructor, después de crear _tray.
+        partial void RevealBuild();
+
+        // Luciérnaga: al final de LayoutHud.
+        partial void RevealLayout();
+
+        // Luciérnaga: en cada Tick.
+        partial void RevealTick(float dtMs);
+
+        // Luciérnaga: al final de OnLevelLoaded.
+        partial void RevealLevelLoaded(LevelFlow flow);
+
+        // Luciérnaga: en los mismos puntos que LabelsBoardChanged.
+        partial void RevealBoardChanged(LevelFlow flow);
+
+        // Luciérnaga: botones visibles para AF_LAYOUT (EmitLevelLayout, antes de emitir).
+        partial void RevealLayoutIds(List<string> ids, List<RectTransform> rects);
+
+        // Embudo (GameScreen.Funnel.cs): justo antes de abrir ¿Seguro? (GiveUpConfirm) o Nivel fallido (LevelFailed), para
+        // colorear sus cabeceras.
+        partial void FunnelModalShowing(FlowPhase phase, LevelFlow flow);
     }
 }

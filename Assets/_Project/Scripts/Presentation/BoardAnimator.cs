@@ -61,7 +61,13 @@ namespace AF.Presentation
     /// origen, destino y tinte que el último trabajo de esas cuias no se encola aparte si ese trabajo aún no ha empezado
     /// (se suma a él) o si su chorro sigue saliendo (el caudal se alarga <c>anim_pour_dose_ms</c> por dosis). Así tres
     /// vertidos A→B seguidos no superan nunca <c>queue_max_lag_pours</c> y no hay saltos (<see cref="LagSnapCount"/>). Las
-    /// dosis siguen cayendo de una en una; solo se ahorran el retorno, la elevación y el traslado intermedios.</para>
+    /// dosis siguen cayendo de una en una; solo se ahorran el retorno, la elevación y el traslado intermedios. No se encadena
+    /// un vertido con pasos de mecánica (Remolino, Barro, otras cuias que cambian o Aguas turbias reveladas).</para>
+    /// <para><b>Mecánicas</b> (arquitectura del paso 1, §4, ola 1): cada vertido llega como <see cref="PourVisual"/>, con los
+    /// tableros antes y después y las etapas de R10. Ninguna cuia queda desfasada del modelo: el origen y la cuia tocada
+    /// terminan en su estado final como siempre, y el receptor del Remolino y las demás cuias que cambiaron
+    /// (<see cref="BoardDiff.ChangedOthers"/>) saltan a él al llegar el caudal. Todas cuentan para la espera, el retraso
+    /// máximo y el encadenado de 02 §3.2. <see cref="ShownOf"/> dice lo último que se pintó en cada vista.</para>
     /// </remarks>
     public sealed class BoardAnimator
     {
@@ -140,12 +146,16 @@ namespace AF.Presentation
 
         private const int MaxJobs = 64;
 
+        // Bits de las máscaras de cuias: 16 como máximo (R1).
+        private const int MaskBits = BoardState.MaxCuias;
+
         private readonly Job[] _jobs = new Job[MaxJobs];
         private readonly bool[] _mark = new bool[MaxJobs];
         private readonly RectTransform _streamLayer;
         private readonly RectTransform _frontLayer;
         private readonly PourStream[] _streams;
         private CuiaView[] _views = Array.Empty<CuiaView>();
+        private Cuia[] _shown = Array.Empty<Cuia>();
         private PourTimings _timings = new PourTimings(100f, 300f, 280f, 80f, 300f);
         private int _maxLag = 2;
         private int _count;
@@ -195,6 +205,36 @@ namespace AF.Presentation
         public float BoardWidth { get; set; }
 
         private float Width => BoardWidth > 0f ? BoardWidth : _streamLayer.rect.width;
+
+        /// <summary>
+        /// Capa del tablero detrás de las cuias (arquitectura del paso 1, §6): lo que une cuias o ronda el tablero (el canal
+        /// del Remolino, el cardumen…) y nunca va en el cuerpo de una cuia. Null hasta <see cref="Bind"/>; la usan los
+        /// overlays de mecánica desde la ola 2.
+        /// </summary>
+        public RectTransform? BoardBackLayer { get; private set; }
+
+        /// <summary>
+        /// Capa del tablero delante de las cuias y detrás de la intro, los chorros y los efectos (arquitectura del paso 1, §6):
+        /// el hilo de luz de la Liana, el pulso de la Luciérnaga… Null hasta <see cref="Bind"/>.
+        /// </summary>
+        public RectTransform? BoardFrontLayer { get; private set; }
+
+        /// <summary>
+        /// Factor de velocidad del nivel (<c>GameConfig.SpeedFactor</c>; 02 §4): multiplica las duraciones que la cola no
+        /// recibe ya multiplicadas, las de los pasos de mecánica (desde la ola 2; con <see cref="ReduceMotion"/>, × 0,5). Las
+        /// de <see cref="PourTimings"/> ya lo llevan, y el traslado inverso de Marea (<see cref="UndoTransferMs"/>, 04 §2.1)
+        /// no cambia. 1 por defecto.
+        /// </summary>
+        public float SpeedFactor { get; set; } = 1f;
+
+        /// <summary>Reducir movimiento (02 §4; 07 §7.8): los pasos de mecánica van más cortos y sin partículas (ola 2).</summary>
+        public bool ReduceMotion { get; set; }
+
+        /// <summary>
+        /// Recolocaciones del tablero avisadas con <see cref="BoardLaidOut"/> (carga, cambio de pantalla y cada fotograma del
+        /// relayout de una cuia añadida): los overlays comparan su copia para recolocarse.
+        /// </summary>
+        public int LayoutVersion { get; private set; }
 
         /// <summary>
         /// Tiempo (ms) desde que empieza la animación de un vertido de <paramref name="amount"/> dosis hasta que el origen
@@ -287,22 +327,134 @@ namespace AF.Presentation
             return (c * x) + ((rEnd - c) * d * d / (2f * b));
         }
 
-        /// <summary>Asocia las vistas del nivel cargado y las duraciones.</summary>
-        public void Bind(CuiaView[] views, PourTimings timings, int queueMaxLagPours)
+        /// <summary>
+        /// Asocia las vistas del nivel cargado, las duraciones y las capas de tablero (<see cref="BoardBackLayer"/> y
+        /// <see cref="BoardFrontLayer"/>). Lo pintado en las vistas que siguen siendo las mismas (cuia añadida) se conserva en
+        /// <see cref="ShownOf"/>; el de las vistas nuevas queda sin pintar hasta <see cref="ShowContent"/>.
+        /// </summary>
+        public void Bind(CuiaView[] views, PourTimings timings, int queueMaxLagPours, RectTransform? backLayer = null, RectTransform? frontLayer = null)
         {
             SnapAll();
+            Cuia[] shown = _shown.Length == views.Length ? _shown : new Cuia[views.Length];
+            for (int i = 0; i < views.Length; i++)
+            {
+                bool same = i < _views.Length && i < _shown.Length && ReferenceEquals(views[i], _views[i]);
+                shown[i] = same ? _shown[i] : default;
+            }
+
+            _shown = shown;
             _views = views;
             _timings = timings;
             _maxLag = Mathf.Max(1, queueMaxLagPours);
+            BoardBackLayer = backLayer;
+            BoardFrontLayer = frontLayer;
         }
 
         /// <summary>
-        /// Encola la animación de un vertido ya aplicado en el modelo, o la encadena a un trabajo igual (mismo origen,
-        /// destino y tinte) que aún no ha empezado o cuyo chorro sigue saliendo (ver la clase).
+        /// El tablero se recolocó (al final de cada maquetación y de cada fotograma del relayout, también tras añadir una
+        /// cuia): sube <see cref="LayoutVersion"/>. Desde la ola 2 avisa además a los overlays de mecánica.
         /// </summary>
-        public void EnqueuePour(int source, int target, int amount, int tint, Cuia sourceBefore, Cuia sourceAfter, bool sourceSealedAfter, Cuia targetBefore, Cuia targetAfter, bool targetSealedAfter)
+        public void BoardLaidOut()
         {
-            if (TryChain(source, target, amount, tint, sourceBefore, sourceAfter, sourceSealedAfter, targetBefore, targetAfter, targetSealedAfter))
+            LayoutVersion++;
+        }
+
+        /// <summary>
+        /// Último <see cref="Cuia"/> que la cola pintó (o registró con <see cref="AdoptBoard"/>) en la vista
+        /// <paramref name="index"/>: al quedar quieta, el del modelo. <c>default(Cuia)</c> si aún no se pintó.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">El índice no es una vista asociada.</exception>
+        public Cuia ShownOf(int index)
+        {
+            if ((uint)index >= (uint)_shown.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index), index, "Índice fuera de las vistas asociadas.");
+            }
+
+            return _shown[index];
+        }
+
+        /// <summary>
+        /// Pinta <paramref name="cuia"/> en la vista <paramref name="index"/> sin animar (carga, cuia añadida, las demás cuias
+        /// de Marea) y lo registra en <see cref="ShownOf"/>. Quien llama se asegura de que ningún trabajo de la cola la esté
+        /// animando (<see cref="SnapAll"/> antes).
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">El índice no es una vista asociada.</exception>
+        public void ShowContent(int index, Cuia cuia, bool sealedNow)
+        {
+            if ((uint)index >= (uint)_views.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index), index, "Índice fuera de las vistas asociadas.");
+            }
+
+            ShowContentAt(index, cuia, sealedNow);
+        }
+
+        /// <summary>
+        /// Registra <paramref name="board"/> como lo que muestran las vistas sin pintarlo: «Llenar y teñir» las pinta por su
+        /// cuenta (intro y reinicio, 02 §2 INTRO) y al terminar deja ese tablero.
+        /// </summary>
+        /// <exception cref="ArgumentNullException">Falta el tablero.</exception>
+        public void AdoptBoard(BoardState board)
+        {
+            if (board == null)
+            {
+                throw new ArgumentNullException(nameof(board));
+            }
+
+            int n = Mathf.Min(board.Count, _shown.Length);
+            for (int i = 0; i < n; i++)
+            {
+                _shown[i] = board[i];
+            }
+        }
+
+        /// <summary>
+        /// Encola la animación de un vertido ya aplicado en el modelo (02 §3.2; arquitectura del paso 1, §4), o la encadena a
+        /// un trabajo igual (mismo origen, destino y tinte) que aún no ha empezado o cuyo chorro sigue saliendo (ver la clase):
+        /// <list type="bullet">
+        /// <item><description>el traslado, la inclinación y el chorro van siempre a la cuia tocada (D-006);</description></item>
+        /// <item><description>el relleno va al receptor; con Barro en su cima, empieza en <c>Count − 1</c>, sobre el barro, que
+        /// se ve hasta que llega el chorro (02 §9.1 M5);</description></item>
+        /// <item><description>por un Remolino la cuia tocada no se llena: al terminar el caudal la pareja salta a su estado
+        /// final y, si se sella, con su animación (02 §9.1 M4);</description></item>
+        /// <item><description>las demás cuias que cambiaron (<see cref="BoardDiff.ChangedOthers"/>: la gota de la Lluvia, la
+        /// cueva de la Piraña, la Liana que se soltó, el sellado por el punto fijo) saltan a su estado final al terminar el
+        /// caudal, con la animación de sellado si se sellaron;</description></item>
+        /// <item><description>no se encadena por un Remolino, con Barro en la cima del receptor, si cambian otras cuias o si
+        /// el vertido revela Aguas turbias.</description></item>
+        /// </list>
+        /// Sin asignaciones.
+        /// </summary>
+        public void EnqueuePour(in PourVisual v)
+        {
+            BoardState before = v.Before;
+            BoardState after = v.After;
+            int source = v.Source;
+            int target = v.Target;
+            int receiver = v.Receiver;
+            bool through = receiver != target;
+            int tint = v.Tint;
+            Cuia srcBefore = before[source];
+            Cuia srcAfter = after[source];
+            bool srcSealed = after.IsSealed(source);
+            Cuia tgtBefore = before[target];
+            Cuia tgtAfter = through ? tgtBefore : after[target];
+            bool tgtSealed = through ? before.IsSealed(target) : after.IsSealed(target);
+            bool onMud = !through && tgtBefore.MudExposed;
+            int others = BoardDiff.ChangedOthers(before, after, source, receiver);
+            int extra = others | (through ? 1 << receiver : 0);
+            int extraSeal = 0;
+            for (int i = 0; i < MaskBits && i < after.Count; i++)
+            {
+                if (((extra >> i) & 1) != 0 && after.IsSealed(i) && (i >= before.Count || !before.IsSealed(i)))
+                {
+                    extraSeal |= 1 << i;
+                }
+            }
+
+            bool chainable = !through && !before[receiver].MudExposed && others == 0 && v.RevealedMask == 0;
+            if (chainable && TryChain(source, target, v.Amount, tint, srcBefore, srcAfter, srcSealed, tgtBefore, tgtAfter, tgtSealed, after))
             {
                 ChainedCount++;
                 return;
@@ -312,22 +464,32 @@ namespace AF.Presentation
             {
                 Source = source,
                 Target = target,
-                Amount = amount,
+                Receiver = receiver,
+                Amount = v.Amount,
                 Tint = tint,
                 IsUndo = false,
-                SrcBefore = sourceBefore,
-                SrcAfter = sourceAfter,
-                SrcSealedAfter = sourceSealedAfter,
-                TgtBefore = targetBefore,
-                TgtAfter = targetAfter,
-                TgtSealedAfter = targetSealedAfter,
+                Through = through,
+                OnMud = onMud,
+                Chainable = chainable,
+                FillBase = onMud ? tgtBefore.Count - 1 : tgtBefore.Count,
+                Extra = extra,
+                ExtraSeal = extraSeal,
+                ExtraDone = extra == 0,
+                After = after,
+                SrcBefore = srcBefore,
+                SrcAfter = srcAfter,
+                SrcSealedAfter = srcSealed,
+                TgtBefore = tgtBefore,
+                TgtAfter = tgtAfter,
+                TgtSealedAfter = tgtSealed,
                 Stream = -1,
             });
         }
 
         /// <summary>
         /// Encola Marea (02 §14: la cola ya debe estar resuelta con <see cref="SnapAll"/>): las dosis vuelven de
-        /// <paramref name="from"/> (el destino del vertido deshecho) a <paramref name="to"/> en 250 ms y la tapa salta.
+        /// <paramref name="from"/> (la cuia tocada del vertido deshecho) a <paramref name="to"/> en 250 ms y la tapa salta
+        /// (04 §2.1). Las demás cuias que cambiaron las pinta quien llama con <see cref="ShowContent"/>.
         /// </summary>
         public void EnqueueUndo(int from, int to, int amount, int tint, Cuia fromBefore, Cuia fromAfter, bool fromSealedAfter, Cuia toBefore, Cuia toAfter, bool toSealedAfter)
         {
@@ -335,9 +497,12 @@ namespace AF.Presentation
             {
                 Source = from,
                 Target = to,
+                Receiver = to,
                 Amount = amount,
                 Tint = tint,
                 IsUndo = true,
+                FillBase = toBefore.Count,
+                ExtraDone = true,
                 SrcBefore = fromBefore,
                 SrcAfter = fromAfter,
                 SrcSealedAfter = fromSealedAfter,
@@ -354,6 +519,7 @@ namespace AF.Presentation
             for (int i = 0; i < _count; i++)
             {
                 Complete(ref _jobs[i]);
+                _jobs[i] = default; // sin referencias a tableros viejos
             }
 
             _count = 0;
@@ -381,19 +547,21 @@ namespace AF.Presentation
             Compact();
         }
 
-        // Encadenado: el último trabajo que toca el origen o el destino es un vertido igual (no Marea) que aún no ha
-        // empezado o cuyo chorro sigue saliendo; las dosis nuevas se suman a él y su caudal se alarga. Sin asignaciones.
-        private bool TryChain(int source, int target, int amount, int tint, Cuia sourceBefore, Cuia sourceAfter, bool sourceSealedAfter, Cuia targetBefore, Cuia targetAfter, bool targetSealedAfter)
+        // Encadenado: el último trabajo que toca el origen o el destino (también como receptor u otra cuia que cambió) es un
+        // vertido igual y encadenable (no Marea, sin Remolino, Barro, otras cuias ni revelado) que aún no ha empezado o cuyo
+        // chorro sigue saliendo; las dosis nuevas se suman a él y su caudal se alarga. Sin asignaciones.
+        private bool TryChain(int source, int target, int amount, int tint, Cuia sourceBefore, Cuia sourceAfter, bool sourceSealedAfter, Cuia targetBefore, Cuia targetAfter, bool targetSealedAfter, BoardState after)
         {
             if (amount <= 0)
             {
                 return false;
             }
 
+            int pair = (1 << source) | (1 << target);
             int last = -1;
             for (int i = _count - 1; i >= 0; i--)
             {
-                if (_jobs[i].Source == source || _jobs[i].Target == source || _jobs[i].Source == target || _jobs[i].Target == target)
+                if ((CuiaMask(ref _jobs[i]) & pair) != 0)
                 {
                     last = i;
                     break;
@@ -406,7 +574,7 @@ namespace AF.Presentation
             }
 
             ref Job job = ref _jobs[last];
-            if (job.IsUndo || job.Source != source || job.Target != target || job.Tint != tint || job.SrcDone || job.TgtDone)
+            if (job.IsUndo || !job.Chainable || job.Source != source || job.Target != target || job.Tint != tint || job.SrcDone || job.TgtDone)
             {
                 return false;
             }
@@ -434,6 +602,7 @@ namespace AF.Presentation
             job.SrcSealedAfter = sourceSealedAfter;
             job.TgtAfter = targetAfter;
             job.TgtSealedAfter = targetSealedAfter;
+            job.After = after;
             if (job.Started)
             {
                 SetEnds(ref job);
@@ -456,19 +625,29 @@ namespace AF.Presentation
             }
 
             _jobs[_count++] = job;
-            EnforceLag(job.Source);
-            EnforceLag(job.Target);
+
+            // 02 §3.2: cada cuia del trabajo (origen, tocada, receptor y las demás que cambian) admite como mucho
+            // queue_max_lag_pours animaciones pendientes.
+            int mask = CuiaMask(ref job);
+            for (int c = 0; c < MaskBits; c++)
+            {
+                if (((mask >> c) & 1) != 0)
+                {
+                    EnforceLag(c);
+                }
+            }
         }
 
         private void EnforceLag(int cuia)
         {
+            int bit = 1 << cuia;
             while (true)
             {
                 int involving = 0;
                 int oldest = -1;
                 for (int i = 0; i < _count; i++)
                 {
-                    if (_jobs[i].Source == cuia || _jobs[i].Target == cuia)
+                    if ((CuiaMask(ref _jobs[i]) & bit) != 0)
                     {
                         involving++;
                         if (oldest < 0)
@@ -519,39 +698,54 @@ namespace AF.Presentation
             Compact();
         }
 
+        // Cuias que toca el trabajo: origen, cuia tocada, receptor y las demás que saltan al estado final (Extra).
         private static int CuiaMask(ref Job job)
         {
-            return (1 << job.Source) | (1 << job.Target);
+            return (1 << job.Source) | (1 << job.Target) | (1 << job.Receiver) | job.Extra;
         }
 
+        // Un trabajo empieza cuando ningún trabajo anterior retiene alguna de sus cuias (02 §3.2).
         private bool CanStart(int index)
         {
-            int source = _jobs[index].Source;
-            int target = _jobs[index].Target;
+            int mask = CuiaMask(ref _jobs[index]);
             for (int i = 0; i < index; i++)
             {
-                if (Holds(ref _jobs[i], source) || Holds(ref _jobs[i], target))
+                int shared = CuiaMask(ref _jobs[i]) & mask;
+                if (shared == 0)
                 {
-                    return false;
+                    continue;
+                }
+
+                for (int c = 0; c < MaskBits; c++)
+                {
+                    if (((shared >> c) & 1) != 0 && Holds(ref _jobs[i], c))
+                    {
+                        return false;
+                    }
                 }
             }
 
             return true;
         }
 
+        // El trabajo retiene la cuia hasta que su parte termina: el origen al volver, la tocada al terminar su relleno (o su
+        // sellado) y el receptor del Remolino y las demás cuias al saltar a su estado final.
         private static bool Holds(ref Job job, int cuia)
         {
-            if (job.Source == cuia)
+            int bit = 1 << cuia;
+            if ((CuiaMask(ref job) & bit) == 0)
             {
-                return !job.Started || !job.SrcDone;
+                return false;
             }
 
-            if (job.Target == cuia)
+            if (!job.Started)
             {
-                return !job.Started || !job.TgtDone;
+                return true;
             }
 
-            return false;
+            return (job.Source == cuia && !job.SrcDone)
+                || (job.Target == cuia && !job.TgtDone)
+                || ((job.Extra & bit) != 0 && !job.ExtraDone);
         }
 
         private void Start(ref Job job)
@@ -604,14 +798,17 @@ namespace AF.Presentation
             }
         }
 
-        // Fin de caudal: cola del chorro, retorno del origen (07 §5.2: arranca cuando termina el chorro, cola incluida) y
-        // fin del destino (con el sellado de 07 §5.3 si lo hay).
+        // Fin de caudal: cola del chorro, retorno del origen (07 §5.2: arranca cuando termina el chorro, cola incluida),
+        // fin del destino (con el sellado de 07 §5.3 si lo hay) y salto de la pareja del Remolino y de las demás cuias al
+        // llegar el caudal (con su sellado si lo hay).
         private void SetEnds(ref Job job)
         {
             job.StreamEnd = job.FlowEnd + _timings.TailMs;
             job.ReturnStart = Mathf.Max(_timings.TravelMs, job.StreamEnd);
             job.SrcEnd = job.ReturnStart + _timings.ReturnMs;
             job.TgtEnd = job.FlowEnd + StreamGrowMs + (job.TgtSealedAfter ? CuiaView.SealMs : 0f);
+            job.ExtraStart = job.FlowEnd + StreamGrowMs;
+            job.ExtraEnd = job.ExtraStart + (job.ExtraSeal != 0 ? CuiaView.SealMs : 0f);
         }
 
         private void Advance(ref Job job, float dtMs)
@@ -696,10 +893,21 @@ namespace AF.Presentation
                 }
                 else
                 {
-                    int bottom = job.TgtBefore.Count;
-                    for (int i = 0; i < job.Amount; i++)
+                    // Por un Remolino la cuia tocada no se llena: las dosis entran por el fondo de la pareja (02 §9.1 M4).
+                    if (!job.Through)
                     {
-                        t.SetDose(bottom + i, color, Mathf.Clamp01(pt - i), job.Tint);
+                        // Con Barro en la cima, el relleno empieza en su dosis, que se ve hasta que llega el chorro (M5).
+                        int bottom = job.FillBase;
+                        for (int i = 0; i < job.Amount; i++)
+                        {
+                            float fill = Mathf.Clamp01(pt - i);
+                            if (i == 0 && job.OnMud && fill <= 0f)
+                            {
+                                continue;
+                            }
+
+                            t.SetDose(bottom + i, color, fill, job.Tint);
+                        }
                     }
 
                     float flowArrived = job.FlowEnd + fillDelay;
@@ -707,6 +915,26 @@ namespace AF.Presentation
                     {
                         t.SealAnimationAt(time - flowArrived);
                     }
+                }
+            }
+
+            // Pareja del Remolino y demás cuias que cambiaron: saltan a su estado final al llegar el caudal y, si se sellaron,
+            // la tapa cae con la animación de 07 §5.3 (desde la ola 2, pasos de mecánica en su orden).
+            if (!job.ExtraDone)
+            {
+                if (time >= job.ExtraEnd)
+                {
+                    FinishExtras(ref job);
+                }
+                else if (time >= job.ExtraStart)
+                {
+                    if (!job.ExtraShown)
+                    {
+                        job.ExtraShown = true;
+                        ShowExtras(ref job, false);
+                    }
+
+                    SealExtrasAt(ref job, time - job.ExtraStart);
                 }
             }
         }
@@ -813,15 +1041,79 @@ namespace AF.Presentation
                 s.Unlock();
             }
 
-            s.ShowContent(job.SrcAfter, job.SrcSealedAfter);
+            ShowContentAt(job.Source, job.SrcAfter, job.SrcSealedAfter);
             job.SrcDone = true;
             ReleaseStream(ref job);
         }
 
         private void FinishTarget(ref Job job)
         {
-            _views[job.Target].ShowContent(job.TgtAfter, job.TgtSealedAfter);
+            ShowContentAt(job.Target, job.TgtAfter, job.TgtSealedAfter);
             job.TgtDone = true;
+        }
+
+        // Fin de la pareja del Remolino y de las demás cuias: su estado final, sellado incluido. Va después del destino, así
+        // que la cuia tocada por un Remolino que además cambió termina también en su estado final.
+        private void FinishExtras(ref Job job)
+        {
+            ShowExtras(ref job, true);
+            job.ExtraDone = true;
+        }
+
+        // Pinta el estado final de las cuias de Extra; con final = false, las que se sellan quedan aún sin tapa (la pone
+        // SealExtrasAt).
+        private void ShowExtras(ref Job job, bool final)
+        {
+            BoardState? after = job.After;
+            if (after == null)
+            {
+                return;
+            }
+
+            int n = Mathf.Min(Mathf.Min(_views.Length, after.Count), MaskBits);
+            for (int i = 0; i < n; i++)
+            {
+                int bit = 1 << i;
+                if ((job.Extra & bit) == 0)
+                {
+                    continue;
+                }
+
+                bool sealedNow = after.IsSealed(i) && (final || (job.ExtraSeal & bit) == 0);
+                ShowContentAt(i, after[i], sealedNow);
+            }
+        }
+
+        private void SealExtrasAt(ref Job job, float ms)
+        {
+            if (job.ExtraSeal == 0)
+            {
+                return;
+            }
+
+            int n = Mathf.Min(_views.Length, MaskBits);
+            for (int i = 0; i < n; i++)
+            {
+                if (((job.ExtraSeal >> i) & 1) != 0)
+                {
+                    _views[i].SealAnimationAt(ms);
+                }
+            }
+        }
+
+        // Toda pintura final de la cola pasa por aquí: así ShownOf sabe lo último que se pintó en cada vista.
+        private void ShowContentAt(int index, Cuia cuia, bool sealedNow)
+        {
+            if ((uint)index >= (uint)_views.Length)
+            {
+                return;
+            }
+
+            _views[index].ShowContent(cuia, sealedNow);
+            if ((uint)index < (uint)_shown.Length)
+            {
+                _shown[index] = cuia;
+            }
         }
 
         private void Complete(ref Job job)
@@ -835,6 +1127,11 @@ namespace AF.Presentation
             {
                 FinishTarget(ref job);
             }
+
+            if (!job.ExtraDone)
+            {
+                FinishExtras(ref job);
+            }
         }
 
         private void Compact()
@@ -842,7 +1139,7 @@ namespace AF.Presentation
             int w = 0;
             for (int i = 0; i < _count; i++)
             {
-                if (_jobs[i].SrcDone && _jobs[i].TgtDone)
+                if (_jobs[i].SrcDone && _jobs[i].TgtDone && _jobs[i].ExtraDone)
                 {
                     continue;
                 }
@@ -1052,9 +1349,21 @@ namespace AF.Presentation
         {
             public int Source;
             public int Target;
+            public int Receiver;
             public int Amount;
             public int Tint;
             public bool IsUndo;
+            public bool Through;
+            public bool OnMud;
+            public bool Chainable;
+            public int FillBase;
+            public int Extra;
+            public int ExtraSeal;
+            public bool ExtraDone;
+            public bool ExtraShown;
+            public float ExtraStart;
+            public float ExtraEnd;
+            public BoardState? After;
             public Cuia SrcBefore;
             public Cuia SrcAfter;
             public bool SrcSealedAfter;
