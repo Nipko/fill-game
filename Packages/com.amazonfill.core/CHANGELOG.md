@@ -19,6 +19,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   indexada por el código de mecánica de la cuia (bits 39-42 de `Cuia.Packed`, hoy siempre 0); los ganchos solo se llaman
   para cuias con mecánica. `AF.Core` concede `InternalsVisibleTo("AF.Solver")` para que el solver recorra las mismas
   reglas por sus rutas internas.
+- PRNG determinista (C1-4; 09 R26, decidido el 2026-10-06: PRNG nuevo en C# y paridad sobre los estados exportados):
+  `AF.Core.Determinism.Prng`, xoshiro256** (Blackman y Vigna) sembrado con SplitMix64, escrito desde cero; semilla del
+  nivel = FNV-1a de 64 bits de la cadena UTF-8 `amazonfill:v1:m{mm}:v{v}:n{nnnn}` (`LevelSeedText`, `LevelSeed`,
+  `SeedFrom`), `SubSeed(seed, stream)`, `NextULong`, `NextUInt` y `NextInt(bound)` sin sesgo (Lemire con rechazo), solo
+  enteros y sin asignar tras construirlo (`Reseed`). Valores dorados de las 16 primeras salidas de tres semillas en el test
+  compartido `PrngTests` (calculados con una implementación independiente en Python); χ² con 10.000 muestras en
+  `DotnetOnly/PrngDistributionTests`.
+- `AF.Solver.Search.SolverMoves.Collect` y `SolverMove` (C1-4): `MOVIMIENTOS` de 03 §5 con la cantidad del modo y la
+  deduplicación del solver, públicos y sin asignaciones (test `SolverMoves_DoNotAllocate`); `AStarSolver` expande con ellos.
+  Tests compartidos `SolverMovesTests`. Mismo par en los 140 niveles de paridad y mismos expandidos.
 - Pruebas de propiedad de R13, R14 y R16 (C1-2; Q13 de D-007, parte 2), solo dotnet: `DotnetOnly/PropertyBoards`
   (tableros pequeños con semilla fija, capacidades uniformes o mixtas con Cuia chica 1-3 y Cuia alta 5-6 con su fruta
   abundante, e `IMechanicInjector` para que cada mecánica añada sus casos antes de su debut, 02 R16) y

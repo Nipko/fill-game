@@ -19,7 +19,8 @@ namespace AF.Solver.Search
     /// <item><description><b>Estado canónico:</b> cada nodo guarda sus cuias ordenadas con <see cref="BoardCanon.Sort"/> y
     /// su hash FNV-1a de 64 bits (<see cref="BoardCanon.Hash"/>); los visitados son una tabla hash abierta propia sobre
     /// arrays (sin <c>Dictionary</c>).</description></item>
-    /// <item><description><b>Movimientos:</b> los de 03 §5 <c>MOVIMIENTOS</c>, con la cantidad de
+    /// <item><description><b>Movimientos:</b> los de 03 §5 <c>MOVIMIENTOS</c> que devuelve <see cref="SolverMoves.Collect"/>
+    /// (la misma lista que usan el bot y las métricas), con la cantidad de
     /// <see cref="BoardRules.Amount"/>: la racha completa que cabe en <see cref="PourMode.Run"/> y una
     /// dosis en <see cref="PourMode.Single"/>. Los pares (A, B) que se expanden son los mismos en los dos modos (el factor de
     /// ramificación por nodo no cambia); en <c>Single</c> crece el conjunto de estados alcanzables (decisiones.md §2.1.3).
@@ -53,6 +54,7 @@ namespace AF.Solver.Search
         private readonly Cuia[] _childBuf = new Cuia[BoardState.MaxCuias];
         private readonly Cuia[] _realBuf = new Cuia[BoardState.MaxCuias];
         private readonly int[] _perm = new int[BoardState.MaxCuias];
+        private readonly SolverMove[] _moves = new SolverMove[SolverMoves.MaxMoves];
 
         private int _width;
         private PourMode _pourMode;
@@ -179,69 +181,31 @@ namespace AF.Solver.Search
             int childG = _nodeG[node] + 1;
             int[] units = _units;
             PourMode pourMode = _pourMode;
-            var parent = new BoardSlice(_parentBuf, 0, width, units);
-            for (int i = 0; i < width; i++)
+            SolverMove[] moves = _moves;
+            int count = SolverMoves.Collect(_parentBuf, 0, width, units, pourMode, futileRuleEnabled, moves);
+            for (int m = 0; m < count; m++)
             {
-                Cuia from = _parentBuf[i];
-                if (!BoardRules.IsSourceCuia(from, units))
+                SolverMove candidate = moves[m];
+                int i = candidate.Source;
+                int j = candidate.Target;
+                Array.Copy(_parentBuf, _childBuf, width);
+                var events = default(PourEvents);
+                BoardRules.ApplyInPlace(_childBuf, 0, width, units, i, j, pourMode, candidate.IsFutile, ref events);
+                BoardCanon.Sort(_childBuf, 0, width);
+                ulong hash = BoardCanon.Hash(_childBuf, 0, width);
+                int move = (i << 8) | j;
+                int existing = Find(hash);
+                if (existing < 0)
                 {
-                    continue;
+                    int child = AddNode(hash, childG, node, move);
+                    _open.Push(child, Priority(child, weight));
                 }
-
-                if (i > 0 && from.Packed == _parentBuf[i - 1].Packed)
+                else if (childG < _nodeG[existing])
                 {
-                    continue; // origen idéntico al anterior: mismos hijos canónicos
-                }
-
-                int fromTop = from.TopColor;
-                for (int j = 0; j < width; j++)
-                {
-                    if (j == i)
-                    {
-                        continue;
-                    }
-
-                    Cuia to = _parentBuf[j];
-                    if (!to.HasMechanic && (to.IsFull || (!to.IsEmpty && to.TopColor != fromTop)))
-                    {
-                        continue; // descarte rápido de destinos normales que la regla normal rechazaría igual
-                    }
-
-                    if (j > 0 && j - 1 != i && to.Packed == _parentBuf[j - 1].Packed)
-                    {
-                        continue; // destino idéntico al anterior (03 §5: vacíos equivalentes una sola vez)
-                    }
-
-                    if (!BoardRules.Accepts(in parent, i, j))
-                    {
-                        continue;
-                    }
-
-                    bool futile = BoardRules.IsFutileCuias(from, to, units);
-                    if (futileRuleEnabled && futile)
-                    {
-                        continue;
-                    }
-
-                    Array.Copy(_parentBuf, _childBuf, width);
-                    var events = default(PourEvents);
-                    BoardRules.ApplyInPlace(_childBuf, 0, width, units, i, j, pourMode, futile, ref events);
-                    BoardCanon.Sort(_childBuf, 0, width);
-                    ulong hash = BoardCanon.Hash(_childBuf, 0, width);
-                    int move = (i << 8) | j;
-                    int existing = Find(hash);
-                    if (existing < 0)
-                    {
-                        int child = AddNode(hash, childG, node, move);
-                        _open.Push(child, Priority(child, weight));
-                    }
-                    else if (childG < _nodeG[existing])
-                    {
-                        _nodeG[existing] = childG;
-                        _nodeParent[existing] = node;
-                        _nodeMove[existing] = move;
-                        _open.Push(existing, Priority(existing, weight));
-                    }
+                    _nodeG[existing] = childG;
+                    _nodeParent[existing] = node;
+                    _nodeMove[existing] = move;
+                    _open.Push(existing, Priority(existing, weight));
                 }
             }
         }

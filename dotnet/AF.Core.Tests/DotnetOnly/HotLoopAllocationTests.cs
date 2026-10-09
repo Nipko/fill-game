@@ -114,6 +114,37 @@ namespace AF.Core.Tests.DotnetOnly
         }
 
         [Test]
+        public void SolverMoves_DoNotAllocate()
+        {
+            // C1-4: MOVIMIENTOS de 03 §5 (la lista del solver, el bot y las métricas) sin asignaciones, en los dos modos.
+            BoardState state = Board();
+            var cuias = new Cuia[state.Count];
+            for (int i = 0; i < cuias.Length; i++)
+            {
+                cuias[i] = state[i];
+            }
+
+            BoardCanon.Sort(cuias, 0, cuias.Length);
+            int[] units = state.UnitsTable;
+            var buffer = new SolverMove[SolverMoves.MaxMoves];
+            int warm = SolverMoves.Collect(cuias, 0, cuias.Length, units, PourMode.Run, true, buffer);
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            int total = 0;
+            for (int repeat = 0; repeat < 1000; repeat++)
+            {
+                total += SolverMoves.Collect(cuias, 0, cuias.Length, units, PourMode.Run, true, buffer);
+                total += SolverMoves.Collect(cuias, 0, cuias.Length, units, PourMode.Single, false, buffer);
+            }
+
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(warm, Is.GreaterThan(0));
+            Assert.That(total, Is.GreaterThanOrEqualTo(2000 * warm));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
         public void WarmSolverInRun_OnlyAllocatesTheSolution()
         {
             // D-005: 0 bytes en el bucle caliente en Run, el modo por defecto, con el modo explícito (16.114 estados
