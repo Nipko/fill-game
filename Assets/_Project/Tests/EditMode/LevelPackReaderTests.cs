@@ -192,7 +192,33 @@ namespace AF.Tests.EditMode
             Invalid("intro chica con pack_schema 1", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"chica\"", schema: 1), "'intro_mechanic' chica necesita pack_schema 2"),
             Invalid("par_approx con pack_schema 1", TestPacks.Schema2Pack(schema: 1).Replace("\"difficulty\": { \"par\": 3 }", "\"difficulty\": { \"par\": 3, \"par_approx\": false }"), "'difficulty.par_approx' necesita pack_schema 2"),
             Invalid("tablero que no valida", TestPacks.Schema2Pack(cuias: "[[8, 8, 8, 8], [4, 4, 4, 4], [], []]"), "03 §17 #5: la cuia 0 empieza sellada"),
+            Invalid("5 ocultas (02 T2)", TestPacks.Schema2Pack(cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", murky: "true", hidden: "[[0, 0], [0, 1], [1, 0], [1, 1], [1, 2]]"), "como mucho 4 (02 T2)"),
+            Invalid("relief con hoja sin key", WithRelief("{ \"type\": \"plus_empty\", \"caps\": [4, 4, 4, 4, 4], \"cuias\": [[8, 8, 8, 4], [4, 4, 4, 8], [], [], []], \"attrs\": [null, null, {\"type\": \"hoja\"}, null, null], \"par\": null }"), "relief[0]: attrs[2] (hoja): lleva solo key"),
+            Invalid("relief que no valida", WithRelief("{ \"type\": \"plus_empty\", \"caps\": [4, 4, 4, 4, 4], \"cuias\": [[8, 8, 8, 8], [4, 4, 4, 4], [], [], []], \"attrs\": null, \"par\": null }"), "relief[0]: 03 §17 #5: la cuia 0 empieza sellada"),
         };
+
+        // Nivel pack_schema 2 por defecto (TestPacks.Schema2Pack) con una sola variante de alivio (08 §4.1, relief_board).
+        private static string WithRelief(string reliefBoard)
+        {
+            return TestPacks.Schema2Pack().Replace("\"relief\": []", "\"relief\": [" + reliefBoard + "]");
+        }
+
+        [Test]
+        public void Reader_Schema2_ReliefKeepsItsMechanics()
+        {
+            // El alivio lleva sus attrs (relief_board.attrs) y se construye con BoardBuilder, como el nivel (T02 §1d).
+            LevelDefinition level = LevelPackReader.Read(WithRelief(
+                "{ \"type\": \"plus_empty\", \"caps\": [4, 4, 4, 4, 4], \"cuias\": [[8, 8, 8, 4], [4, 4, 4, 8], [], [], []], "
+                + "\"attrs\": [null, null, {\"type\": \"hoja\", \"key\": 4}, null, null], \"par\": null }")).First;
+            Assert.That(level.Relief.Count, Is.EqualTo(1));
+            ReliefBoard relief = level.Relief[0];
+            Assert.That(relief.Attrs[2], Is.EqualTo(new MechanicSpec(MechanicType.Hoja, key: 4)));
+            Assert.That(relief.Attrs[0].IsNone, Is.True);
+            BoardState board = relief.CreateBoard();
+            Assert.That(board.Count, Is.EqualTo(5));
+            Assert.That(board[2].Mechanic, Is.EqualTo(MechanicType.Hoja));
+            Assert.That(board[2].MechanicKey, Is.EqualTo(4));
+        }
 
         private static TestCaseData Invalid(string why, string json, string expected)
         {
