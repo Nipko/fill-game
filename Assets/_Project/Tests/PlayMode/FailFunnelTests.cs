@@ -111,13 +111,88 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Confirm.Visible, Is.True);
             Assert.That(view.Confirm.Kind, Is.EqualTo(ConfirmKind.Quit));
             Assert.That(view.Confirm.BodyText, Is.EqualTo(UiText.QuitConfirmCanoe));
+            Assert.That(view.Confirm.CanoeShown, Is.True);
             Assert.That(boot.Wallet!.Canoes.Count, Is.EqualTo(5), "preguntar no cuesta");
+            AssertQuitComposition(view);
 
+            // La X sigue jugando y devuelve la cabecera de partida.
+            view.Confirm.CloseButton.onClick.Invoke();
+            Assert.That(view.Confirm.Visible, Is.False);
+            Assert.That(view.PauseButton.gameObject.activeInHierarchy, Is.True);
+            Assert.That(view.UndoButton.gameObject.activeInHierarchy, Is.True);
+            Assert.That(view.WalletBar.Visible, Is.False);
+            Assert.That(boot.Wallet.Canoes.Count, Is.EqualTo(5));
+
+            view.PauseButton.onClick.Invoke();
+            view.Pause.QuitButton.onClick.Invoke();
             view.Confirm.ConfirmButton.onClick.Invoke();
             Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.LevelFailed));
             Assert.That(boot.Wallet.Canoes.Count, Is.EqualTo(4));
             view.Failed.CloseButton.onClick.Invoke();
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby), "X → inicio");
+        }
+
+        [UnityTest]
+        public IEnumerator Level31_WithInfiniteCanoes_QuitAsks_WithoutAnnouncingACanoe()
+        {
+            // Revisión de B2-3: con Canoas infinitas no hay canoa en juego (HardFail no cobra): el aviso no dice «Perderás 1
+            // canoa», pero salir sigue siendo fallo duro y lleva a Nivel fallido (D-008).
+            Profile profile = FunnelSetup.Profile(0);
+            profile.Wallet.Canoes.InfiniteUntil = FunnelSetup.T0 + System.TimeSpan.FromHours(1);
+            LaunchOptions.LevelOffsetOverride = 25;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(profile);
+            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            GameScreen view = boot.View!;
+            Assert.That(boot.Flow!.CanoeAtStake, Is.False);
+            view.PauseButton.onClick.Invoke();
+            view.Pause.QuitButton.onClick.Invoke();
+            Assert.That(view.Confirm.Visible, Is.True, "salir desde el 31 sigue preguntando: es fallo duro");
+            Assert.That(view.Confirm.BodyText, Is.Null, "sin «Perderás 1 canoa»");
+            Assert.That(view.Confirm.CanoeShown, Is.False);
+            AssertQuitComposition(view);
+
+            view.Confirm.ConfirmButton.onClick.Invoke();
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed));
+            Assert.That(boot.Wallet!.Canoes.Count, Is.EqualTo(5), "no cuesta canoa");
+            Assert.That(boot.Flow.Attempt.FailsLevel, Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator Level31_WithInfiniteCanoes_GiveUpSkipsAreYouSure()
+        {
+            Profile profile = FunnelSetup.Profile(0);
+            profile.Wallet.Canoes.InfiniteUntil = FunnelSetup.T0 + System.TimeSpan.FromHours(1);
+            LaunchOptions.LevelOffsetOverride = 25;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(profile);
+            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            GameScreen view = boot.View!;
+            FunnelSetup.GetStuck(boot);
+            Assert.That(view.Stuck.CanoeLineText, Is.Null, "rama H: sin línea de canoa");
+            view.Stuck.GiveUpButton.onClick.Invoke();
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.LevelFailed), "sin ¿Seguro? (D-008, paso 2 [P])");
+            Assert.That(view.GiveUp.Visible, Is.False);
+            Assert.That(view.Failed.Visible, Is.True);
+            Assert.That(boot.Wallet!.Canoes.Count, Is.EqualTo(5));
+        }
+
+        // «¿Salir del nivel?» con la composición de «Are You Sure?» de Magic Sort (ficha §4.3): X y un solo botón «Salir», saldo
+        // arriba y el HUD de partida (insignia, Reiniciar, pausa y bandeja) oculto, como en el embudo.
+        private static void AssertQuitComposition(GameScreen view)
+        {
+            Assert.That(view.Confirm.KeepPlayingButton.gameObject.activeSelf, Is.False, "sin «Seguir jugando»: lo hace la X");
+            Assert.That(view.Confirm.CloseButton.gameObject.activeInHierarchy, Is.True);
+            Assert.That(view.Confirm.ConfirmButton.gameObject.activeInHierarchy, Is.True);
+            Assert.That(view.WalletBar.Visible, Is.True, "saldo arriba");
+            Assert.That(view.PauseButton.gameObject.activeInHierarchy, Is.False);
+            Assert.That(view.RestartButton.gameObject.activeInHierarchy, Is.False);
+            Assert.That(view.UndoButton.gameObject.activeInHierarchy, Is.False, "bandeja oculta");
         }
 
         [UnityTest]

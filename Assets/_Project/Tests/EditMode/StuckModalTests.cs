@@ -144,6 +144,27 @@ namespace AF.Tests.EditMode
             ctx.InfiniteCanoes = true;
             Assert.That(StuckModalModel.Build(ctx, Config).CanoeLine, Is.EqualTo(StuckCanoeLine.None));
             Assert.That(StuckModalModel.GiveUpNeedsConfirm(ctx), Is.False, "D-008: directo a Nivel fallido [P]");
+            GiveUpConfirmView step2 = StuckModalModel.BuildGiveUpConfirm(ctx);
+            Assert.That(step2.ShowsCanoe, Is.False, "si ¿Seguro? se reabre, no anuncia ninguna canoa");
+            Assert.That(step2.CanoeLine, Is.EqualTo(StuckCanoeLine.None));
+        }
+
+        [Test]
+        public void NoCanoeAtStake_WithZeroCanoes_NoCanoeLine_AndGiveUpSkipsStep2()
+        {
+            // Revisión de B2-2: con 0 canoas (p. ej. Canoas infinitas caducadas a mitad de nivel) el fallo duro no cobra nada;
+            // «Perderás tu última canoa» (Canoes <= 1) anunciaba una pérdida que no existe.
+            StuckContext ctx = Ctx(level: 31, seeds: 1240, price: 600);
+            ctx.Canoes = 0;
+            Assert.That(StuckModalModel.Build(ctx, Config).CanoeLine, Is.EqualTo(StuckCanoeLine.None));
+            Assert.That(StuckModalModel.GiveUpNeedsConfirm(ctx), Is.False);
+            GiveUpConfirmView step2 = StuckModalModel.BuildGiveUpConfirm(ctx);
+            Assert.That(step2.ShowsCanoe, Is.False);
+            Assert.That(step2.LastCanoe, Is.False);
+
+            ctx.Canoes = 1;
+            Assert.That(StuckModalModel.GiveUpNeedsConfirm(ctx), Is.True);
+            Assert.That(StuckModalModel.BuildGiveUpConfirm(ctx).CanoeLine, Is.EqualTo(StuckCanoeLine.LostLast));
         }
 
         [Test]

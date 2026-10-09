@@ -72,11 +72,49 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Matrix_QuitFrom31_WithInfiniteCanoes_IsAHardFail_ButAnnouncesAndCostsNoCanoe()
+        {
+            var fx = new FunnelFixture(offset: 30, maxLevel: 35);
+            fx.Wallet.Apply(Transaction.InfiniteCanoesFor(TimeSpan.FromHours(1)));
+            fx.StartPlaying(36);
+            Assert.That(fx.Flow.QuitIsHardFail, Is.True, "salir con el menú sigue siendo fallo duro (D-008)");
+            Assert.That(fx.Flow.CanoeAtStake, Is.False);
+            Assert.That(fx.Flow.QuitCostsCanoe, Is.False, "el aviso no anuncia ninguna canoa");
+            Assert.That(fx.Flow.ConfirmQuit(), Is.True);
+            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed));
+            Assert.That(fx.Wallet.Canoes.Count, Is.EqualTo(5));
+            Assert.That(fx.Flow.Attempt.FailsLevel, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Matrix_WithZeroCanoesMidLevel_QuitAndGiveUpAnnounceNoCanoe_AndSkipAreYouSure()
+        {
+            // Las Canoas infinitas caducaron a mitad de nivel con 0 canoas: el fallo duro no cobra nada (Wallet.HardFail), así
+            // que ni la salida ni «Rendirse» anuncian una pérdida y ¿Seguro? no hace falta (D-008, paso 2 [P]).
+            var fx = new FunnelFixture(offset: 30, maxLevel: 35);
+            fx.StartPlaying(36);
+            fx.SpendCanoesTo(0);
+            Assert.That(fx.Flow.CanoeAtStake, Is.False);
+            Assert.That(fx.Flow.QuitCostsCanoe, Is.False);
+
+            fx.GetStuck();
+            StuckContext ctx = fx.Flow.BuildStuckContext(false, false, GeoTier.T3);
+            Assert.That(StuckModalModel.Build(ctx, fx.Flow.Boosters).CanoeLine, Is.EqualTo(StuckCanoeLine.None));
+            Assert.That(StuckModalModel.GiveUpNeedsConfirm(ctx), Is.False);
+            Assert.That(fx.Flow.PressGiveUp(), Is.True);
+            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed), "sin ¿Seguro?");
+            Assert.That(fx.Listener.Saw("phase:GiveUpConfirm"), Is.False);
+            Assert.That(fx.Wallet.Canoes.Count, Is.EqualTo(0));
+            Assert.That(fx.Flow.Attempt.FailsLevel, Is.EqualTo(1), "la rendición sigue siendo fallo duro");
+        }
+
+        [Test]
         public void Matrix_QuitIn1To30_IsFree_AndNotAFail()
         {
             var fx = new FunnelFixture();
             fx.StartPlaying(6);
             Assert.That(fx.Flow.QuitCostsCanoe, Is.False);
+            Assert.That(fx.Flow.QuitIsHardFail, Is.False);
             Assert.That(fx.Flow.ConfirmQuit(), Is.False, "la salida sin coste la hace AppFlow.ExitToLobby");
             Assert.That(fx.Flow.Attempt.FailsLevel, Is.EqualTo(0));
         }

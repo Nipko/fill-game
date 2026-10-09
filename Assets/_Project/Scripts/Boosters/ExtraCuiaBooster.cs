@@ -112,12 +112,13 @@ namespace AF.Boosters
 
         /// <summary>
         /// Regalo del tutorial (04 §2.2 y §4): al cargar el nivel de desbloqueo por primera vez (aún no superado:
-        /// <paramref name="maxLevel"/> &lt; nivel) y sin Cuia extra en el stock, Capi trae 1. El perfil aún no guarda que el
-        /// regalo se hizo: el stock vacío y el nivel sin superar evitan acumular más de una.
+        /// <paramref name="maxLevel"/> &lt; nivel), si Capi aún no lo regaló en este nivel (<paramref name="alreadyGifted"/>, que
+        /// <c>AF.GameFlow</c> guarda en <c>level_state</c> también al salir al inicio) y sin Cuia extra en el stock, Capi trae 1.
+        /// Así salir gratis en 1-30 y volver a entrar no repite el regalo.
         /// </summary>
-        public static bool ShouldGift(int level, int maxLevel, Wallet? wallet, BoosterConfig config)
+        public static bool ShouldGift(int level, int maxLevel, bool alreadyGifted, Wallet? wallet, BoosterConfig config)
         {
-            return wallet != null && level == config.ExtraCuiaUnlockLevel && maxLevel < level
+            return wallet != null && !alreadyGifted && level == config.ExtraCuiaUnlockLevel && maxLevel < level
                 && !wallet.Stock.Has(BoosterKind.ExtraCuia);
         }
     }

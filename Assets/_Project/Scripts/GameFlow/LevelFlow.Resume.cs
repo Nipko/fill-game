@@ -39,6 +39,13 @@ namespace AF.GameFlow
         public ILevelStateStore? StateStore { get; set; }
 
         /// <summary>
+        /// Lote de guardado del perfil (revisión de B2-5): cada acción del jugador (vertido, victoria, rescate, rendición,
+        /// salida…) escribe el perfil una sola vez, con la cartera, el progreso y <c>level_state</c> juntos. Null = cada
+        /// almacén guarda por su cuenta (tests del flujo sin perfil).
+        /// </summary>
+        public ProfileSaveBatch? SaveBatch { get; set; }
+
+        /// <summary>
         /// ¿Sirve <paramref name="saved"/>? Comprueba el formato de <c>history</c>, que el nivel siga en el catálogo con la misma
         /// semilla y que la variante exista. No cambia nada.
         /// </summary>
@@ -55,13 +62,67 @@ namespace AF.GameFlow
         /// </summary>
         public bool Resume(LevelStateData saved)
         {
+            using (Saves())
+            {
+                return ResumeSaved(saved);
+            }
+        }
+
+        /// <summary>
+        /// <c>level_state</c> de un nivel del que se salió al inicio (<see cref="ResumeCheck.Exited"/>): el nivel recuerda
+        /// <c>fails_level</c>, la variante aliviada y si Capi ya regaló su Cuia extra, para cuando se vuelva a jugar (04 §2.7 y
+        /// §2.2). False si no sirve.
+        /// </summary>
+        public bool RestoreExited(LevelStateData saved)
+        {
+            if (Validate(saved, out SavedHistory history, out _, out int relief) != ResumeCheck.Exited)
+            {
+                return false;
+            }
+
+            _attempt.Restore(saved.Level, saved.FailsLevel, relief, null, false, history.ExtraCuiaGifted);
+            return true;
+        }
+
+        /// <summary>
+        /// Se sale del nivel al inicio sin ganarlo (X de Nivel fallido, «Volver al inicio», «Salir» en 1-30): se guarda que el
+        /// nivel ya no está en curso, con <c>fails_level</c>, la variante y el regalo de Capi (las cuias añadidas desaparecen:
+        /// 04 §2.2).
+        /// </summary>
+        public void LeaveLevel()
+        {
+            if (StateStore == null || _session == null || _level == null || IsWonPhase)
+            {
+                return;
+            }
+
+            using (Saves())
+            {
+                WriteState(SavedPhase.Exited, false);
+            }
+        }
+
+        /// <summary>Descarta el <c>level_state</c> guardado (no sirve).</summary>
+        public void DiscardSaved()
+        {
+            StateStore?.Clear();
+        }
+
+        // Abre un lote de guardado (una escritura del perfil al cerrarlo); sin lote, no hace nada.
+        private ProfileSaveScope Saves()
+        {
+            return SaveBatch == null ? default : SaveBatch.Begin();
+        }
+
+        private bool ResumeSaved(LevelStateData saved)
+        {
             if (Validate(saved, out SavedHistory history, out LevelDefinition? def, out int relief) != ResumeCheck.Resumable || def == null)
             {
                 return false;
             }
 
             int number = saved.Level;
-            _attempt.Restore(number, saved.FailsLevel, relief, history.Added, history.UndoGiftUsed);
+            _attempt.Restore(number, saved.FailsLevel, relief, history.Added, history.UndoGiftUsed, history.ExtraCuiaGifted);
             var session = new LevelSession(BoardFor(def, relief), GameConfig.FutileRuleEnabled, _pourMode);
             for (int i = 0; i < history.Sources.Count; i++)
             {
@@ -130,41 +191,6 @@ namespace AF.GameFlow
             return true;
         }
 
-        /// <summary>
-        /// <c>level_state</c> de un nivel del que se salió al inicio (<see cref="ResumeCheck.Exited"/>): el nivel recuerda
-        /// <c>fails_level</c> y la variante aliviada para cuando se vuelva a jugar (04 §2.7). False si no sirve.
-        /// </summary>
-        public bool RestoreExited(LevelStateData saved)
-        {
-            if (Validate(saved, out _, out _, out int relief) != ResumeCheck.Exited)
-            {
-                return false;
-            }
-
-            _attempt.Restore(saved.Level, saved.FailsLevel, relief, null, false);
-            return true;
-        }
-
-        /// <summary>
-        /// Se sale del nivel al inicio sin ganarlo (X de Nivel fallido, «Volver al inicio», «Salir» en 1-30): se guarda que el
-        /// nivel ya no está en curso, con <c>fails_level</c> y la variante (las cuias añadidas desaparecen: 04 §2.2).
-        /// </summary>
-        public void LeaveLevel()
-        {
-            if (StateStore == null || _session == null || _level == null || IsWonPhase)
-            {
-                return;
-            }
-
-            WriteState(SavedPhase.Exited, false);
-        }
-
-        /// <summary>Descarta el <c>level_state</c> guardado (no sirve).</summary>
-        public void DiscardSaved()
-        {
-            StateStore?.Clear();
-        }
-
         private bool IsWonPhase => Phase == FlowPhase.Celebration || Phase == FlowPhase.VictoryScreen || Phase == FlowPhase.AdGate
             || _pending == Outcome.Win || (_session != null && _session.Status == LevelStatus.Won);
 
@@ -216,12 +242,12 @@ namespace AF.GameFlow
             if (inProgress)
             {
                 LevelStateSnapshot.WriteRevealed(session.Initial, session.Current, s.RevealedCuias);
-                LevelStateSnapshot.WriteHistory(_historyBuilder, phase, _attempt.Added, _attempt.UndoGiftUsed, session);
+                LevelStateSnapshot.WriteHistory(_historyBuilder, phase, _attempt.Added, _attempt.UndoGiftUsed, _attempt.ExtraCuiaGifted, session);
             }
             else
             {
                 s.RevealedCuias.Clear();
-                LevelStateSnapshot.WriteHistory(_historyBuilder, phase, Array.Empty<AddedCuiaKind>(), false, null);
+                LevelStateSnapshot.WriteHistory(_historyBuilder, phase, Array.Empty<AddedCuiaKind>(), false, _attempt.ExtraCuiaGifted, null);
             }
 
             s.History = _historyBuilder.ToString();

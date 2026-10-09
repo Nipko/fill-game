@@ -59,7 +59,8 @@ namespace AF.UI
 
         public Button GiveUpButton => _giveUp;
 
-        public string LineText => _line.text;
+        /// <summary>Línea de canoa visible (texto), o null sin canoa en juego.</summary>
+        public string? LineText => _line.gameObject.activeSelf ? _line.text : null;
 
         public void Hide()
         {
@@ -71,15 +72,27 @@ namespace AF.UI
             _root.gameObject.SetActive(true);
             _width = Mathf.Min(328f, canvasW - 32f);
             float inner = _width - 32f;
-            _line.text = view.LastCanoe ? UiText.GiveUpConfirmLastCanoe : UiText.GiveUpConfirmCanoe;
             float y = 16f;
             UiBuilder.Place(_header.rectTransform, 16f, y, inner - 52f, 40f);
             UiBuilder.Place((RectTransform)_close.Button.transform, _width - 16f - ModalKit.CloseDp, y - 4f, ModalKit.CloseDp, ModalKit.CloseDp);
             y += 52f;
-            UiBuilder.Place(_canoe.rectTransform, (_width - 132f) * 0.5f, y, 132f, 78f);
-            y += 84f;
-            UiBuilder.Place(_line.rectTransform, 16f, y, inner, 24f);
-            y += 34f;
+
+            // Sin canoa en juego (Canoas infinitas o 0 canoas) no se anuncia ninguna pérdida: ni la canoa volcada ni la línea.
+            bool canoe = view.ShowsCanoe;
+            _canoe.gameObject.SetActive(canoe);
+            _line.gameObject.SetActive(canoe);
+            if (canoe)
+            {
+                _line.text = view.LastCanoe ? UiText.GiveUpConfirmLastCanoe : UiText.GiveUpConfirmCanoe;
+                UiBuilder.Place(_canoe.rectTransform, (_width - 132f) * 0.5f, y, 132f, 78f);
+                y += 84f;
+                UiBuilder.Place(_line.rectTransform, 16f, y, inner, 24f);
+                y += 34f;
+            }
+            else
+            {
+                y += 8f;
+            }
 
             bool rescue = view.Rescue != StuckRescueKind.None;
             _rescue.Button.gameObject.SetActive(rescue);

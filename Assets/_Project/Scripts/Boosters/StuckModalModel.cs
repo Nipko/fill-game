@@ -212,17 +212,26 @@ namespace AF.Boosters
     /// <summary>¿Seguro? [P] (paso 2 del embudo de D-008; 04 §6.2 <c>buildGiveUpConfirm</c>).</summary>
     public sealed class GiveUpConfirmView
     {
-        internal GiveUpConfirmView(bool lastCanoe, StuckRescueKind rescue, int price, int basePrice, int missing)
+        internal GiveUpConfirmView(StuckCanoeLine canoeLine, StuckRescueKind rescue, int price, int basePrice, int missing)
         {
-            LastCanoe = lastCanoe;
+            CanoeLine = canoeLine;
             Rescue = rescue;
             RescuePrice = price;
             RescueBasePrice = basePrice;
             RescueMissing = missing;
         }
 
+        /// <summary>
+        /// La canoa que se pierde: «Perderás 1 canoa», «Perderás tu última canoa» o ninguna línea si no hay canoa en juego
+        /// (Canoas infinitas o 0 canoas; el fallo duro no cobra nada).
+        /// </summary>
+        public StuckCanoeLine CanoeLine { get; }
+
         /// <summary>«Perderás tu última canoa» en lugar de «Perderás 1 canoa».</summary>
-        public bool LastCanoe { get; }
+        public bool LastCanoe => CanoeLine == StuckCanoeLine.LostLast;
+
+        /// <summary>Anuncia la pérdida de una canoa (hay canoa en juego).</summary>
+        public bool ShowsCanoe => CanoeLine != StuckCanoeLine.None;
 
         /// <summary>El mismo rescate del paso 1, con el mismo precio y condiciones; none si no está disponible.</summary>
         public StuckRescueKind Rescue { get; }
@@ -300,17 +309,23 @@ namespace AF.Boosters
                 ctx.RescueCheck == RescueCheck.Unsolvable && ctx.RescuesLevel < ctx.RescueMaxPerLevel);
         }
 
-        /// <summary><c>buildGiveUpConfirm(ctx)</c> (paso 2 [P]): el mismo rescate y la canoa que se pierde.</summary>
+        /// <summary>
+        /// <c>buildGiveUpConfirm(ctx)</c> (paso 2 [P]): el mismo rescate y la canoa que se pierde (ninguna línea sin canoa en
+        /// juego, por si ¿Seguro? se reabre tras caducar las Canoas infinitas o con 0 canoas).
+        /// </summary>
         public static GiveUpConfirmView BuildGiveUpConfirm(StuckContext ctx)
         {
             StuckRescueKind rescue = RescueKind(ctx, out int missing);
-            return new GiveUpConfirmView(ctx.Canoes <= 1, rescue, ctx.RescuePrice, ctx.RescueBasePrice, missing);
+            return new GiveUpConfirmView(CanoeLine(ctx), rescue, ctx.RescuePrice, ctx.RescueBasePrice, missing);
         }
 
-        /// <summary>¿Hay ¿Seguro? tras «Rendirse»? Solo con una canoa en juego (no con Canoas infinitas; 04 §6.2).</summary>
+        /// <summary>
+        /// ¿Hay ¿Seguro? tras «Rendirse»? Solo con una canoa en juego: desde el 31, sin Canoas infinitas y con alguna canoa
+        /// (04 §6.2; D-008, paso 2). Si no, «Rendirse» pasa directo a Nivel fallido.
+        /// </summary>
         public static bool GiveUpNeedsConfirm(StuckContext ctx)
         {
-            return ctx.Level >= ctx.RescueMinLevel && !ctx.InfiniteCanoes;
+            return ctx.Level >= ctx.RescueMinLevel && !ctx.InfiniteCanoes && ctx.Canoes > 0;
         }
 
         private static StuckRescueKind RescueKind(StuckContext ctx, out int missing)
@@ -333,9 +348,9 @@ namespace AF.Boosters
 
         private static StuckCanoeLine CanoeLine(StuckContext ctx)
         {
-            if (ctx.InfiniteCanoes || ctx.Canoes <= 0)
+            if (ctx.Level < ctx.RescueMinLevel || ctx.InfiniteCanoes || ctx.Canoes <= 0)
             {
-                return StuckCanoeLine.None;
+                return StuckCanoeLine.None; // sin canoa en juego no se anuncia ninguna pérdida
             }
 
             return ctx.Canoes == 1 ? StuckCanoeLine.LostLast : StuckCanoeLine.Lost;

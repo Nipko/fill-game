@@ -107,26 +107,31 @@ namespace AF.GameFlow
         }
 
         // Instante lógico de la victoria (R12): el nivel en curso deja de estarlo, el progreso avanza, se cobra la Cosecha y
-        // la victoria cuenta para la cadencia de intersticiales. Primero se borra level_state: así un cierre a mitad nunca
-        // reabre el tablero de un nivel ya cobrado.
+        // la victoria cuenta para la cadencia de intersticiales, todo en una sola escritura del perfil (SaveBatch; antes eran
+        // cuatro con su fsync cada una). Sin lote, primero se borra level_state: así un cierre a mitad nunca reabre el tablero
+        // de un nivel ya cobrado.
         private void ResolveWin()
         {
-            StateStore?.Clear();
-            _attempt.Won();
-            _progress.SaveWin(LevelNumber, LevelNumber + 1);
-            ResetHarvest();
-            RewardTiers.TryParse(Level.DifficultyLabel, out _harvestTier);
-            if (_wallet != null)
+            using (Saves())
             {
-                TransactionResult paid = _wallet.Apply(Transaction.Win(LevelNumber, _harvestTier));
-                if (paid.IsApplied)
+                StateStore?.Clear();
+                _attempt.Won();
+                _progress.SaveWin(LevelNumber, LevelNumber + 1);
+                ResetHarvest();
+                RewardTiers.TryParse(Level.DifficultyLabel, out _harvestTier);
+                if (_wallet != null)
                 {
-                    _harvestBase = paid.SeedsDelta;
-                    _harvest = paid.SeedsDelta;
+                    TransactionResult paid = _wallet.Apply(Transaction.Win(LevelNumber, _harvestTier));
+                    if (paid.IsApplied)
+                    {
+                        _harvestBase = paid.SeedsDelta;
+                        _harvest = paid.SeedsDelta;
+                    }
                 }
+
+                AdGate?.RecordWin(LevelNumber);
             }
 
-            AdGate?.RecordWin(LevelNumber);
             _listener.OnWin();
         }
 

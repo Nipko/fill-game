@@ -121,6 +121,27 @@ namespace AF.UI
         }
 
         /// <summary>
+        /// Línea <c>AF_PERF</c> con lo que costó escribir el perfil tras una acción del jugador (revisión de B2-5; umbral [P] de
+        /// 5 ms por vertido pendiente del dueño): <c>event</c> (p. ej. <c>pour</c>), nivel, escrituras de esa acción (1 con el
+        /// lote) y ms de la última. Sirve para medirlo en el teléfono con <c>adb logcat -s Unity</c>.
+        /// </summary>
+        public void SaveCost(string evt, int level, int writes, double ms)
+        {
+            if (!Enabled)
+            {
+                return;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_PERF {\"event\":\"").Append(evt).Append('"');
+            sb.Append(",\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"writes\":").Append(writes.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"save_ms\":").Append(ms.ToString("0.00", CultureInfo.InvariantCulture)).Append('}');
+            Debug.Log(sb.ToString());
+        }
+
+        /// <summary>
         /// Línea <c>AF_STATE</c> del embudo de bloqueo y de los comodines (D-008; tareas B2-1 a B2-3): <c>stuck_modal</c>,
         /// <c>giveup_confirm</c>, <c>level_failed</c>, <c>no_canoes</c>, <c>rescue</c>, <c>rescue_check</c>, <c>extra_cuia</c>,
         /// <c>extra_cuia_gift</c>, <c>fail_hard</c>, <c>fail_hard_canoe</c>, <c>fail_soft</c> y <c>river_lowered</c>, siempre con

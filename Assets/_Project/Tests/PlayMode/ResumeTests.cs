@@ -20,10 +20,14 @@ namespace AF.Tests.PlayMode
     /// Nivel en curso guardado tras cada vertido y reabierto en la escena (tarea B2-5; 02 R8 y §14; 04 §5.2): destruir y
     /// recrear el arranque a mitad de nivel devuelve el mismo tablero y la misma pantalla, sin intro; con Aguas estancadas,
     /// ¿Seguro? o Nivel fallido abiertos, la pantalla reaparece y las canoas no cambian (cerrar la app nunca cobra canoa ni
-    /// es una salida gratis del embudo); y guardar cuesta menos de 5 ms por vertido en el Editor [P].
+    /// es una salida gratis del embudo); y cada vertido y la victoria escriben el perfil una sola vez, con su coste en el log
+    /// (el objetivo [P] de 5 ms por vertido está pendiente del dueño).
     /// </summary>
     public sealed class ResumeTests
     {
+        // Plan B2-5 [P]: «guardar cuesta < 5 ms por vertido en el Editor»; pendiente de que el dueño lo confirme o lo ajuste.
+        private const double PourSaveTargetMs = 5.0;
+
         private string? _dir;
 
         [SetUp]
@@ -135,12 +139,15 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Saving_OnePerPour_ReportsItsCost_AndStaysWithinAFrame()
+        public IEnumerator Saving_IsOneWritePerPour_AndOneForTheVictory_AndReportsItsCost()
         {
-            // Plan B2-5 [P]: «guardar cuesta < 5 ms por vertido en el Editor». Perfil real en disco (LocalProfileStore de
-            // AF.Save: .tmp, Flush(true) y File.Replace con copia) en una carpeta temporal. Se mide aparte lo que pone la pista
-            // B (estado y JSON) y el guardado entero; el objetivo de 5 ms se exige a lo primero y el guardado entero, a un
-            // fotograma de 60 fps (08 §5.4). Las cifras quedan en el log (AF_PERF) para el informe.
+            // Revisión de B2-5: cada acción del jugador escribe el perfil una sola vez (ProfileSaveBatch): un vertido, una
+            // escritura; la victoria (level_state, progreso, Cosecha y cadencia de intersticiales), una, no cuatro. Perfil real en
+            // disco (LocalProfileStore de AF.Save: .tmp, Flush(true) y File.Replace con copia) en una carpeta temporal.
+            // El criterio [P] del plan («< 5 ms por vertido en el Editor») no se cumple con una escritura síncrona con fsync en el
+            // hilo principal: lo que pone la pista B (estado y JSON) es < 1 ms y el resto es el disco (AF.Save). Aquí se exige que
+            // la escritura quepa en un fotograma de 60 fps (08 §5.4) y se informa de la cifra (AF_PERF) para que el dueño confirme
+            // o ajuste el umbral; si pasa de 5 ms queda un aviso en el log, no un fallo.
             _dir = Path.Combine(Application.temporaryCachePath, "af_resume_" + Guid.NewGuid().ToString("N"));
             var store = new LocalProfileStore(_dir);
             store.Save(FunnelSetup.Profile(0));
@@ -149,31 +156,50 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
             boot.TapAnywhere();
-            var states = (ProfileLevelStateStore)boot.Flow!.StateStore!;
-            SolveResult solution = new AStarSolver().Solve(boot.Flow.Session.Current, SolverOptions.ForPipeline(boot.Flow.Session.PourMode));
+            ProfileSaveBatch batch = boot.SaveBatch!;
+            Assert.That(batch.Inner, Is.SameAs(store));
+            SolveResult solution = new AStarSolver().Solve(boot.Flow!.Session.Current, SolverOptions.ForPipeline(boot.Flow.Session.PourMode));
             var saves = new List<double>();
             var json = new List<double>();
-            for (int i = 0; i < solution.MoveCount - 1; i++)
+            int last = solution.MoveCount - 1;
+            for (int i = 0; i <= last; i++)
             {
-                int before = states.SaveCount;
+                int before = batch.WriteCount;
                 boot.TapCuia(solution.GetMove(i).Source);
                 boot.TapCuia(solution.GetMove(i).Target);
-                Assert.That(states.SaveCount, Is.EqualTo(before + 1), "un guardado por vertido");
-                saves.Add(states.LastSaveMs);
+                Assert.That(batch.WriteCount, Is.EqualTo(before + 1), i == last ? "la victoria: una escritura (antes, cuatro)" : "vertido " + (i + 1) + ": una escritura");
+                saves.Add(batch.LastWriteMs);
                 long start = System.Diagnostics.Stopwatch.GetTimestamp();
                 ProfileJson.Serialize(boot.Profile!);
                 json.Add((System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
-                PlayModeHelpers.StepUntilIdle(boot, 4000);
+                if (i < last)
+                {
+                    PlayModeHelpers.StepUntilIdle(boot, 4000);
+                }
             }
+
+            ProfileLoadResult onDisk = new LocalProfileStore(_dir).Load();
+            // (El progreso de este test va en un MemoryProgressStore; en el juego, ProfileProgressStore escribe por el mismo lote.)
+            Assert.That(onDisk.Profile!.LevelState, Is.Null, "la victoria borró level_state…");
+            Assert.That(onDisk.Profile.Wallet.Seeds, Is.EqualTo(boot.Flow.HarvestSeeds), "…cobró la Cosecha…");
+            Assert.That(onDisk.Profile.Ads.LevelsSinceInterstitial, Is.EqualTo(1), "…y contó para los intersticiales, en la misma escritura");
 
             Assert.That(saves.Count, Is.GreaterThanOrEqualTo(3));
             double saveMedian = Median(saves);
+            double saveMax = saves[saves.Count - 1];
             double jsonMedian = Median(json);
-            Debug.Log("AF_PERF level_state: " + saves.Count + " vertidos; guardado entero mediana " + Ms(saveMedian) + " ms, máximo "
-                + Ms(saves[saves.Count - 1]) + " ms; JSON del perfil mediana " + Ms(jsonMedian) + " ms; " + store.LastSavedBytes + " bytes");
-            Assert.That(states.PendingSave, Is.False);
-            Assert.That(jsonMedian, Is.LessThan(5.0), "lo que pone la pista B: < 5 ms por vertido [P]");
-            Assert.That(saveMedian, Is.LessThan(1000.0 / 60.0), "el guardado entero cabe en un fotograma de 60 fps (08 §5.4)");
+            Debug.Log("AF_PERF level_state: " + saves.Count + " acciones (vertidos y victoria), una escritura cada una; escritura mediana "
+                + Ms(saveMedian) + " ms, máximo " + Ms(saveMax) + " ms; JSON del perfil mediana " + Ms(jsonMedian) + " ms; "
+                + store.LastSavedBytes + " bytes");
+            if (saveMedian >= PourSaveTargetMs)
+            {
+                Debug.LogWarning("AF_PERF level_state: la escritura por vertido (" + Ms(saveMedian) + " ms) supera el objetivo [P] de "
+                    + Ms(PourSaveTargetMs) + " ms del plan B2-5; pendiente de que el dueño confirme o ajuste el umbral.");
+            }
+
+            Assert.That(batch.PendingSave, Is.False);
+            Assert.That(jsonMedian, Is.LessThan(PourSaveTargetMs), "lo que pone la pista B por vertido (estado y JSON)");
+            Assert.That(saveMedian, Is.LessThan(1000.0 / 60.0), "la escritura cabe en un fotograma de 60 fps (08 §5.4)");
             Assert.That(store.LastSavedBytes, Is.LessThan(100 * 1024), "perfil < 100 KB (08 §4.3)");
         }
 

@@ -44,6 +44,9 @@ namespace AF.GameFlow
         /// <summary>La recarga gratis de la rama F [P] ya se dio en este nivel.</summary>
         public bool UndoGiftUsed { get; internal set; }
 
+        /// <summary>Capi ya regaló la Cuia extra de este nivel (04 §2.2): no se repite al salir y volver a entrar.</summary>
+        public bool ExtraCuiaGifted { get; internal set; }
+
         /// <summary>Orígenes de los vertidos aplicados, en orden.</summary>
         public List<int> Sources { get; } = new List<int>(64);
 
@@ -63,9 +66,11 @@ namespace AF.GameFlow
     /// ocultas que ya se destaparon; se rehacen solas al repetir los vertidos) y <c>stuck</c> (embudo abierto).</description></item>
     /// <item><description><c>history</c> (su formato lo fija quien reanuda el nivel, 04 §10.1): <c>h1|F|A|M|V</c>, con F la
     /// pantalla (<c>P</c>, <c>S</c>, <c>G</c>, <c>F</c> o <c>X</c>, <see cref="SavedPhase"/>), A las cuias añadidas en orden
-    /// (<c>E</c> Cuia extra, <c>R</c> Cuia de rescate), M las marcas (<c>g</c>: recarga gratis de la rama F ya dada) y V los
-    /// vertidos aplicados como pares de dígitos hexadecimales origen-destino (16 cuias como mucho). La fase va aquí porque
-    /// el booleano <c>stuck</c> no basta (04 §10.1 con D-008) y <c>AF.Save</c> aún no tiene un campo <c>phase</c>.</description></item>
+    /// (<c>E</c> Cuia extra, <c>R</c> Cuia de rescate), M las marcas (<c>g</c>: recarga gratis de la rama F ya dada;
+    /// <c>c</c>: Capi ya regaló la Cuia extra del nivel, que también se guarda al salir al inicio) y V los vertidos aplicados
+    /// como pares de dígitos hexadecimales origen-destino (16 cuias como mucho). La fase va aquí porque el booleano
+    /// <c>stuck</c> no basta (04 §10.1 con D-008) y <c>AF.Save</c> aún no tiene un campo <c>phase</c>; el regalo, porque el
+    /// perfil aún no tiene un campo propio para él.</description></item>
     /// </list>
     /// Sin el tablero: se reconstruye con el nivel, la variante, las cuias añadidas y los vertidos, con las reglas del núcleo.
     /// </summary>
@@ -75,6 +80,8 @@ namespace AF.GameFlow
         public const string HistoryVersion = "h1";
 
         private const char Separator = '|';
+        private const char UndoGiftMark = 'g';
+        private const char ExtraCuiaGiftMark = 'c';
         private const string HexDigits = "0123456789abcdef";
 
         /// <summary>
@@ -121,7 +128,8 @@ namespace AF.GameFlow
         }
 
         /// <summary>Escribe <c>history</c> en <paramref name="sb"/> (que se vacía antes).</summary>
-        public static void WriteHistory(StringBuilder sb, SavedPhase phase, IReadOnlyList<AddedCuiaKind> added, bool undoGiftUsed, LevelSession? session)
+        public static void WriteHistory(
+            StringBuilder sb, SavedPhase phase, IReadOnlyList<AddedCuiaKind> added, bool undoGiftUsed, bool extraCuiaGifted, LevelSession? session)
         {
             sb.Clear();
             sb.Append(HistoryVersion).Append(Separator).Append(PhaseCode(phase)).Append(Separator);
@@ -133,7 +141,12 @@ namespace AF.GameFlow
             sb.Append(Separator);
             if (undoGiftUsed)
             {
-                sb.Append('g');
+                sb.Append(UndoGiftMark);
+            }
+
+            if (extraCuiaGifted)
+            {
+                sb.Append(ExtraCuiaGiftMark);
             }
 
             sb.Append(Separator);
@@ -183,12 +196,24 @@ namespace AF.GameFlow
                 }
             }
 
-            if (parts[3].Length > 1 || (parts[3].Length == 1 && parts[3][0] != 'g'))
+            string marks = parts[3];
+            for (int i = 0; i < marks.Length; i++)
             {
-                return false;
+                char mark = marks[i];
+                if (mark == UndoGiftMark && !parsed.UndoGiftUsed)
+                {
+                    parsed.UndoGiftUsed = true;
+                }
+                else if (mark == ExtraCuiaGiftMark && !parsed.ExtraCuiaGifted)
+                {
+                    parsed.ExtraCuiaGifted = true;
+                }
+                else
+                {
+                    return false; // marca desconocida o repetida
+                }
             }
 
-            parsed.UndoGiftUsed = parts[3].Length == 1;
             string moves = parts[4];
             if (moves.Length % 2 != 0)
             {

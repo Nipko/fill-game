@@ -88,8 +88,15 @@ namespace AF.GameFlow
         public bool UndoGiftUsed { get; internal set; }
 
         /// <summary>
+        /// Capi ya regaló la Cuia extra de este nivel (04 §2.2: una vez). Dura como <c>fails_level</c>: también al salir al
+        /// inicio y volver a entrar, para que salir gratis en 1-30 no repita el regalo.
+        /// </summary>
+        public bool ExtraCuiaGifted { get; internal set; }
+
+        /// <summary>
         /// Entrar en el nivel <paramref name="level"/> (Jugar, Siguiente): si es otro nivel, todo vuelve a cero; si es el mismo
-        /// (se salió al inicio y se vuelve), se conservan <c>fails_level</c> y la variante, pero no las cuias añadidas.
+        /// (se salió al inicio y se vuelve), se conservan <c>fails_level</c>, la variante y el regalo de Capi, pero no las cuias
+        /// añadidas.
         /// </summary>
         public void Enter(int level)
         {
@@ -98,6 +105,7 @@ namespace AF.GameFlow
                 Level = level;
                 FailsLevel = 0;
                 ReliefIndex = -1;
+                ExtraCuiaGifted = false;
             }
 
             _added.Clear();
@@ -117,14 +125,15 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// Lo guardado en <c>level_state</c> (tarea B2-5): el nivel, <c>fails_level</c>, la variante servida y, si el nivel sigue
-        /// en curso, las cuias añadidas y la recarga gratis de la rama F.
+        /// Lo guardado en <c>level_state</c> (tarea B2-5): el nivel, <c>fails_level</c>, la variante servida, el regalo de Capi
+        /// y, si el nivel sigue en curso, las cuias añadidas y la recarga gratis de la rama F.
         /// </summary>
-        internal void Restore(int level, int failsLevel, int reliefIndex, IReadOnlyList<AddedCuiaKind>? added, bool undoGiftUsed)
+        internal void Restore(int level, int failsLevel, int reliefIndex, IReadOnlyList<AddedCuiaKind>? added, bool undoGiftUsed, bool extraCuiaGifted)
         {
             Level = level;
             FailsLevel = Math.Max(0, failsLevel);
             ReliefIndex = reliefIndex < 0 ? -1 : reliefIndex;
+            ExtraCuiaGifted = extraCuiaGifted;
             _added.Clear();
             if (added != null)
             {

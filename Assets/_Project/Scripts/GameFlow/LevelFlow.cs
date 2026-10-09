@@ -206,32 +206,36 @@ namespace AF.GameFlow
         /// LOADING del nivel <paramref name="level"/> (o del primero si no existe) y arranque de la intro, con el cupo de Marea
         /// entero. Volver a entrar en el mismo nivel (tras salir al inicio) conserva <c>fails_level</c> y la variante aliviada,
         /// no las cuias añadidas (04 §2.2: desaparecen al abandonar el nivel). En el nivel 8, la primera vez, Capi regala una
-        /// Cuia extra (04 §2.2).
+        /// Cuia extra (04 §2.2); el regalo queda anotado en <c>level_state</c> y no se repite al salir y volver a entrar.
         /// </summary>
         public void Load(int level)
         {
-            int number = ResolveLevel(level);
-            LevelDefinition def = _catalog.Find(number)!;
-            Phase = FlowPhase.Loading;
-            _level = def;
-            _levelNumber = number;
-            _seed = LevelStateSnapshot.SeedOf(def);
-            ResetHarvest();
-            _attempt.Enter(number);
-            _undo.ResetForLevel(number);
-            ResetStuck();
-            _session = new LevelSession(BoardFor(def, _attempt.ReliefIndex), GameConfig.FutileRuleEnabled, _pourMode);
-            _taps.Clear();
-            ResetPending();
-            _listener.OnLevelLoaded(number);
-            if (ExtraCuiaBooster.ShouldGift(number, _progress.LoadMaxLevel(), _wallet, _boosters)
-                && _wallet!.Apply(Transaction.GrantStock(BoosterKind.ExtraCuia, BoosterConfig.ExtraCuiaTutorialUnits)).IsApplied)
+            using (Saves())
             {
-                _listener.OnExtraCuiaGifted(BoosterConfig.ExtraCuiaTutorialUnits);
-            }
+                int number = ResolveLevel(level);
+                LevelDefinition def = _catalog.Find(number)!;
+                Phase = FlowPhase.Loading;
+                _level = def;
+                _levelNumber = number;
+                _seed = LevelStateSnapshot.SeedOf(def);
+                ResetHarvest();
+                _attempt.Enter(number);
+                _undo.ResetForLevel(number);
+                ResetStuck();
+                _session = new LevelSession(BoardFor(def, _attempt.ReliefIndex), GameConfig.FutileRuleEnabled, _pourMode);
+                _taps.Clear();
+                ResetPending();
+                _listener.OnLevelLoaded(number);
+                if (ExtraCuiaBooster.ShouldGift(number, _progress.LoadMaxLevel(), _attempt.ExtraCuiaGifted, _wallet, _boosters)
+                    && _wallet!.Apply(Transaction.GrantStock(BoosterKind.ExtraCuia, BoosterConfig.ExtraCuiaTutorialUnits)).IsApplied)
+                {
+                    _attempt.ExtraCuiaGifted = true;
+                    _listener.OnExtraCuiaGifted(BoosterConfig.ExtraCuiaTutorialUnits);
+                }
 
-            StartIntro(GameConfig.TintDurationMs(number), false);
-            PersistState();
+                StartIntro(GameConfig.TintDurationMs(number), false);
+                PersistState(); // con el regalo, en la misma escritura del perfil
+            }
         }
 
         /// <summary>
@@ -318,8 +322,13 @@ namespace AF.GameFlow
             _listener.OnTap(result);
             if (result.Kind == TapKind.Poured)
             {
-                EvaluateStatus();
-                PersistState(); // 02 R8: el nivel en curso se guarda tras cada vertido (no tras la victoria, que lo borra)
+                // 02 R8: el nivel en curso se guarda tras cada vertido, en una sola escritura del perfil; la victoria lo borra
+                // y cobra la Cosecha en esa misma escritura.
+                using (Saves())
+                {
+                    EvaluateStatus();
+                    PersistState();
+                }
             }
 
             return result;
@@ -386,23 +395,26 @@ namespace AF.GameFlow
                 return false;
             }
 
-            UndoSource source = _undo.Consume(_wallet);
-            if (source == UndoSource.None)
+            using (Saves())
             {
-                return false;
-            }
+                UndoSource source = _undo.Consume(_wallet);
+                if (source == UndoSource.None)
+                {
+                    return false;
+                }
 
-            bool fromModal = Phase == FlowPhase.StuckModal;
-            Pour undone = _session.GetAppliedPour(_session.AppliedPours - 1);
-            _taps.Clear();
-            _session.Undo();
-            ResetPending();
-            ResetStuck();
-            Phase = FlowPhase.Playing;
-            _listener.OnUndo(undone, fromModal);
-            EvaluateStatus();
-            PersistState();
-            return true;
+                bool fromModal = Phase == FlowPhase.StuckModal;
+                Pour undone = _session.GetAppliedPour(_session.AppliedPours - 1);
+                _taps.Clear();
+                _session.Undo();
+                ResetPending();
+                ResetStuck();
+                Phase = FlowPhase.Playing;
+                _listener.OnUndo(undone, fromModal);
+                EvaluateStatus();
+                PersistState(); // con la Marea del stock, en la misma escritura del perfil
+                return true;
+            }
         }
 
         /// <summary>
@@ -419,27 +431,30 @@ namespace AF.GameFlow
                 return false;
             }
 
-            bool fromModal = Phase == FlowPhase.StuckModal;
-            if (!fromModal && CanoesBlockStart())
+            using (Saves())
             {
+                bool fromModal = Phase == FlowPhase.StuckModal;
+                if (!fromModal && CanoesBlockStart())
+                {
+                    _taps.Clear();
+                    EnterNoCanoes(FlowPhase.Playing);
+                    return true;
+                }
+
                 _taps.Clear();
-                EnterNoCanoes(FlowPhase.Playing);
+                if (fromModal)
+                {
+                    Fail(FailKind.Hard);
+                }
+                else if (_session.AppliedPours >= _boosters.RestartConfirmMinPours)
+                {
+                    Fail(FailKind.Soft);
+                }
+
+                _listener.OnRestart(fromModal);
+                BeginAttempt();
                 return true;
             }
-
-            _taps.Clear();
-            if (fromModal)
-            {
-                Fail(FailKind.Hard);
-            }
-            else if (_session.AppliedPours >= _boosters.RestartConfirmMinPours)
-            {
-                Fail(FailKind.Soft);
-            }
-
-            _listener.OnRestart(fromModal);
-            BeginAttempt();
-            return true;
         }
 
         /// <summary>

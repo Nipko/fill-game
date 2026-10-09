@@ -22,9 +22,16 @@ namespace AF.UI
     }
 
     /// <summary>
-    /// Diálogo de confirmación de una línea (tarea B2-3): la salida con coste desde el 31, como «Are You Sure?» de Magic Sort
-    /// (ficha §4.3: «You will lose 1 life!», «Quit» y X) con el material de D-003, y el reinicio con ≥ 8 vertidos con su
-    /// atajo a Deshacer si queda cupo (04 §2.7). El botón de seguir jugando es el primario; el de confirmar, secundario.
+    /// Diálogo de confirmación de una línea (tarea B2-3):
+    /// <list type="bullet">
+    /// <item><description>la salida desde el 31 con la composición de «Are You Sure?» de Magic Sort (ficha §4.3, t = 5 y
+    /// t = 1174: título con X, lo que se pierde, la frase y un único botón «Quit») con el material de D-003: canoa volcada,
+    /// «Perderás 1 canoa» y un solo botón «Salir»; la X sigue jugando. Sin canoa en juego (Canoas infinitas o 0 canoas) no
+    /// hay canoa ni línea: solo «¿Salir del nivel?», porque salir sigue siendo fallo duro (D-008). Mientras está abierto,
+    /// arriba van los saldos y el HUD de partida se oculta, como en el embudo (<c>GameScreen.SyncChrome</c>);</description></item>
+    /// <item><description>el reinicio con ≥ 8 vertidos (04 §2.7), con «Seguir jugando» como primario, su atajo a Deshacer si
+    /// queda cupo y «Volver a la orilla» como secundario.</description></item>
+    /// </list>
     /// </summary>
     internal sealed class QuitConfirm
     {
@@ -63,13 +70,22 @@ namespace AF.UI
 
         public bool Visible => _root.gameObject.activeSelf;
 
+        /// <summary>La pregunta de salida está abierta (cuenta como embudo para la cabecera).</summary>
+        public bool QuitVisible => Visible && Kind == ConfirmKind.Quit;
+
         public Button ConfirmButton => _confirm.Button;
+
+        public Button CloseButton => _close.Button;
 
         public Button KeepPlayingButton => _keep.Button;
 
         public Button UndoButton => _undo.Button;
 
-        public string BodyText => _body.text;
+        /// <summary>Línea bajo el título (la canoa que se pierde, o el aviso del reinicio), o null si no hay.</summary>
+        public string? BodyText => _body.gameObject.activeSelf ? _body.text : null;
+
+        /// <summary>Se ve la canoa volcada.</summary>
+        public bool CanoeShown => _canoe.gameObject.activeSelf;
 
         public void Hide()
         {
@@ -77,8 +93,11 @@ namespace AF.UI
             _root.gameObject.SetActive(false);
         }
 
-        /// <summary>Muestra la pregunta <paramref name="kind"/>; con <paramref name="undoShortcut"/>, el atajo a Deshacer.</summary>
-        public void Show(ConfirmKind kind, bool undoShortcut, float canvasW, float canvasH)
+        /// <summary>
+        /// Muestra la pregunta <paramref name="kind"/>; con <paramref name="undoShortcut"/>, el atajo a Deshacer (reinicio); con
+        /// <paramref name="canoeAtStake"/>, la canoa volcada y «Perderás 1 canoa» (salida).
+        /// </summary>
+        public void Show(ConfirmKind kind, bool undoShortcut, bool canoeAtStake, float canvasW, float canvasH)
         {
             Kind = kind;
             _root.gameObject.SetActive(true);
@@ -87,23 +106,43 @@ namespace AF.UI
             _body.text = quit ? UiText.QuitConfirmCanoe : UiText.RestartConfirmBody;
             _body.color = quit ? (Color)Palette.UiRedWarning : Palette.FamilyWood.Base;
             _confirmLabel.text = quit ? UiText.Quit : UiText.RestartLong;
+            _confirmLabel.fontSize = quit ? 21f : 18f;
             float width = Mathf.Min(328f, canvasW - 32f);
             float inner = width - 32f;
             float y = 16f;
             UiBuilder.Place(_header.rectTransform, 16f, y, inner - 52f, 40f);
             UiBuilder.Place((RectTransform)_close.Button.transform, width - 16f - ModalKit.CloseDp, y - 4f, ModalKit.CloseDp, ModalKit.CloseDp);
             y += 52f;
-            _canoe.gameObject.SetActive(quit);
-            if (quit)
+
+            // Salida: la canoa y su línea solo con una canoa en juego (sin ella, el fallo duro no cobra nada).
+            bool canoe = quit && canoeAtStake;
+            bool body = !quit || canoeAtStake;
+            _canoe.gameObject.SetActive(canoe);
+            _body.gameObject.SetActive(body);
+            if (canoe)
             {
                 UiBuilder.Place(_canoe.rectTransform, (width - 110f) * 0.5f, y, 110f, 65f);
                 y += 70f;
             }
 
-            UiBuilder.Place(_body.rectTransform, 16f, y, inner, 26f);
-            y += 36f;
-            ModalKit.Place(_keep, 16f, y, inner);
-            y += ModalKit.HeightOf(_keep) + 8f;
+            if (body)
+            {
+                UiBuilder.Place(_body.rectTransform, 16f, y, inner, 26f);
+                y += 36f;
+            }
+            else
+            {
+                y += 8f;
+            }
+
+            // Magic Sort («Are You Sure?») no tiene «seguir jugando»: lo hace la X. El reinicio de 04 §2.7 sí lo lleva.
+            _keep.Button.gameObject.SetActive(!quit);
+            if (!quit)
+            {
+                ModalKit.Place(_keep, 16f, y, inner);
+                y += ModalKit.HeightOf(_keep) + 8f;
+            }
+
             bool undo = !quit && undoShortcut;
             _undo.Button.gameObject.SetActive(undo);
             if (undo)
@@ -119,8 +158,14 @@ namespace AF.UI
 
         public void VisibleButtons(List<string> ids, List<RectTransform> rects)
         {
-            ids.Add("keep_playing");
-            rects.Add((RectTransform)_keep.Button.transform);
+            ids.Add("close");
+            rects.Add((RectTransform)_close.Button.transform);
+            if (_keep.Button.gameObject.activeSelf)
+            {
+                ids.Add("keep_playing");
+                rects.Add((RectTransform)_keep.Button.transform);
+            }
+
             if (_undo.Button.gameObject.activeSelf)
             {
                 ids.Add("undo_shortcut");

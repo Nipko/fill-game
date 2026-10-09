@@ -1293,12 +1293,15 @@ namespace AF.UI
 
         // Qué se ve arriba (D-008 paso 1: «el HUD de partida y la bandeja se ocultan» con el embudo abierto; arriba, semillas y
         // canoas): en juego, la cabecera y la bandeja; en el embudo, los saldos (y la pausa en Aguas estancadas, que es la
-        // única salida sin elegir, 04 §6.6).
+        // única salida sin elegir, 04 §6.6). «¿Salir del nivel?» cuenta como embudo: como «Are You Sure?» de Magic Sort (ficha
+        // §4.3, t = 5), saldo arriba y HUD de partida, bandeja y pausa ocultos.
         private void SyncChrome()
         {
             LevelFlow? flow = _flow;
             FlowPhase phase = flow?.Phase ?? FlowPhase.Loading;
-            bool funnel = phase == FlowPhase.StuckModal || phase == FlowPhase.GiveUpConfirm || phase == FlowPhase.LevelFailed || phase == FlowPhase.NoCanoes;
+            bool quitAsk = _confirm.QuitVisible;
+            bool funnel = quitAsk || phase == FlowPhase.StuckModal || phase == FlowPhase.GiveUpConfirm || phase == FlowPhase.LevelFailed
+                || phase == FlowPhase.NoCanoes;
             bool victoryScreen = phase == FlowPhase.VictoryScreen || phase == FlowPhase.AdGate;
             bool victory = victoryScreen || phase == FlowPhase.Celebration;
 
@@ -1309,10 +1312,10 @@ namespace AF.UI
             _badge.gameObject.SetActive(!balance);
             _restart.Button.gameObject.SetActive(!balance);
             _tray.SetVisible(!funnel && !victoryScreen);
-            bool pause = !victory && (phase == FlowPhase.Playing || phase == FlowPhase.Intro || phase == FlowPhase.StuckModal);
+            bool pause = !victory && !quitAsk && (phase == FlowPhase.Playing || phase == FlowPhase.Intro || phase == FlowPhase.StuckModal);
             _pauseButton.Button.gameObject.SetActive(pause);
             _walletBar.SetVisible(balance);
-            _walletBar.Layout(phase == FlowPhase.StuckModal ? 64f : 16f, TopRowY);
+            _walletBar.Layout(pause && phase == FlowPhase.StuckModal ? 64f : 16f, TopRowY);
             _walletBar.Refresh(_services?.Wallet, flow != null && flow.CanoesLevel, flow == null ? 0 : PendingHarvest(flow));
         }
 
@@ -1351,7 +1354,7 @@ namespace AF.UI
             LevelFlow? flow = _flow;
             if (flow != null && flow.RestartNeedsConfirm)
             {
-                _confirm.Show(ConfirmKind.Restart, flow.CanUndo, _canvasW, _canvasH);
+                _confirm.Show(ConfirmKind.Restart, flow.CanUndo, false, _canvasW, _canvasH);
                 EmitConfirmLayout();
                 return;
             }
@@ -1386,14 +1389,16 @@ namespace AF.UI
             OnHudRestart();
         }
 
-        // D-008: desde el 31 «Salir» pregunta «¿Salir del nivel? Perderás 1 canoa» [P]; en 1-30 sale sin coste.
+        // D-008: desde el 31 «Salir» pregunta «¿Salir del nivel? Perderás 1 canoa» [P] (sin la línea de canoa si no hay canoa
+        // en juego: Canoas infinitas o 0 canoas); en 1-30 sale sin coste.
         private void OnPauseQuit()
         {
             _pause.Hide();
             LevelFlow? flow = _flow;
-            if (flow != null && flow.QuitCostsCanoe)
+            if (flow != null && flow.QuitIsHardFail)
             {
-                _confirm.Show(ConfirmKind.Quit, false, _canvasW, _canvasH);
+                _confirm.Show(ConfirmKind.Quit, false, flow.CanoeAtStake, _canvasW, _canvasH);
+                SyncChrome();
                 EmitConfirmLayout();
                 return;
             }
@@ -1405,6 +1410,7 @@ namespace AF.UI
         {
             ConfirmKind kind = _confirm.Kind;
             _confirm.Hide();
+            SyncChrome();
             if (kind == ConfirmKind.Quit)
             {
                 _actions.PressQuit();
@@ -1418,11 +1424,13 @@ namespace AF.UI
         private void OnConfirmCancel()
         {
             _confirm.Hide();
+            SyncChrome();
         }
 
         private void OnConfirmUndo()
         {
             _confirm.Hide();
+            SyncChrome();
             _actions.PressUndo();
         }
 

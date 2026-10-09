@@ -30,8 +30,30 @@ namespace AF.GameFlow
         /// <summary>Desde este nivel hay canoas, rescate y el embudo de D-008 (<c>rescue_min_level</c>).</summary>
         public bool CanoesLevel => LevelNumber >= RescueMinLevel;
 
-        /// <summary>Salir del nivel con el menú cuesta una canoa y es fallo duro (desde el 31; D-008, P16).</summary>
-        public bool QuitCostsCanoe => CanoesLevel;
+        /// <summary>
+        /// Hay una canoa en juego: desde el 31, con cartera, sin Canoas infinitas y con alguna canoa (0 si, por ejemplo, las
+        /// infinitas caducaron a mitad de nivel). Es lo que cobra el fallo duro (<see cref="Transaction.HardFail"/>); sin canoa
+        /// en juego no se anuncia ninguna pérdida y «Rendirse» pasa directo a Nivel fallido (D-008, paso 2 [P]).
+        /// </summary>
+        public bool CanoeAtStake
+        {
+            get
+            {
+                if (_wallet == null || !CanoesLevel)
+                {
+                    return false;
+                }
+
+                CanoesStatus canoes = _wallet.Canoes;
+                return !canoes.IsInfinite && canoes.Count > 0;
+            }
+        }
+
+        /// <summary>Salir del nivel con el menú es fallo duro y lleva a Nivel fallido (desde el 31; D-008, P16).</summary>
+        public bool QuitIsHardFail => CanoesLevel;
+
+        /// <summary>Salir del nivel con el menú cuesta una canoa: fallo duro con una canoa en juego (<see cref="CanoeAtStake"/>).</summary>
+        public bool QuitCostsCanoe => QuitIsHardFail && CanoeAtStake;
 
         /// <summary>
         /// Se puede salir con el menú de pausa: PLAYING (sin victoria pendiente), INTRO o STUCK_MODAL (02 §2: «PLAYING o
@@ -106,16 +128,19 @@ namespace AF.GameFlow
             }
 
             ClearSelection();
-            TransactionResult paid = ExtraCuiaBooster.Pay(_wallet);
-            if (!paid.IsApplied)
+            using (Saves())
             {
+                TransactionResult paid = ExtraCuiaBooster.Pay(_wallet);
+                if (!paid.IsApplied)
+                {
+                    return paid;
+                }
+
+                int index = AddCuia(AddedCuiaKind.Extra);
+                _listener.OnCuiaAdded(index, AddedCuiaKind.Extra);
+                PersistState(); // el cobro y la cuia añadida, en la misma escritura del perfil
                 return paid;
             }
-
-            int index = AddCuia(AddedCuiaKind.Extra);
-            _listener.OnCuiaAdded(index, AddedCuiaKind.Extra);
-            PersistState();
-            return paid;
         }
 
         /// <summary>«+3 Deshacer · 30 semillas» (04 §2.1): +<c>undo_refill_amount</c> Mareas al stock. Null sin cartera o fuera de juego.</summary>
@@ -146,20 +171,24 @@ namespace AF.GameFlow
                 return false;
             }
 
-            if (!_wallet.Apply(Transaction.GrantStock(BoosterKind.Undo, 1)).IsApplied)
+            using (Saves())
             {
-                return false;
-            }
+                if (!_wallet.Apply(Transaction.GrantStock(BoosterKind.Undo, 1)).IsApplied)
+                {
+                    return false;
+                }
 
-            _attempt.UndoGiftUsed = true;
-            PersistState();
-            return true;
+                _attempt.UndoGiftUsed = true;
+                PersistState();
+                return true;
+            }
         }
 
         /// <summary>
         /// «Continuar: +1 cuia» en Aguas estancadas o en ¿Seguro? (04 §6.2 <c>RESCUE</c>): cobra el precio congelado
         /// (<see cref="Transaction.Rescue"/>), añade la cuia, cierra el embudo y la partida sigue en PLAYING; conserva la
-        /// Crecida y no cuesta canoa. Null si no se ofrece; un resultado rechazado si faltan semillas.
+        /// Crecida y no cuesta canoa. El cobro y el <c>level_state</c> con la cuia van en la misma escritura del perfil: un
+        /// cierre entre los dos no reabre el modal ya cobrado. Null si no se ofrece; un resultado rechazado si faltan semillas.
         /// </summary>
         public TransactionResult? BuyRescue()
         {
@@ -168,13 +197,16 @@ namespace AF.GameFlow
                 return null;
             }
 
-            TransactionResult paid = _wallet.Apply(Transaction.Rescue(LevelNumber, _quote!.Value.Price));
-            if (paid.IsApplied)
+            using (Saves())
             {
-                ApplyRescueCuia();
-            }
+                TransactionResult paid = _wallet.Apply(Transaction.Rescue(LevelNumber, _quote!.Value.Price));
+                if (paid.IsApplied)
+                {
+                    ApplyRescueCuia();
+                }
 
-            return paid;
+                return paid;
+            }
         }
 
         /// <summary>
@@ -194,8 +226,9 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// «Rendirse» [P] desde el 31 (D-008, paso 1 → 2): abre ¿Seguro?; con Canoas infinitas no hay canoa en juego y pasa
-        /// directo al fallo duro y a Nivel fallido.
+        /// «Rendirse» [P] desde el 31 (D-008, paso 1 → 2): abre ¿Seguro?; sin canoa en juego (Canoas infinitas, o 0 canoas si
+        /// las infinitas caducaron a mitad de nivel: <see cref="CanoeAtStake"/>) no hay nada que confirmar y pasa directo al
+        /// fallo duro y a Nivel fallido.
         /// </summary>
         public bool PressGiveUp()
         {
@@ -204,7 +237,7 @@ namespace AF.GameFlow
                 return false;
             }
 
-            if (_wallet != null && _wallet.Canoes.IsInfinite)
+            if (!CanoeAtStake)
             {
                 FailToLevelFailed();
                 return true;
@@ -266,13 +299,13 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// Pausa › «Salir» confirmado desde el 31 («¿Salir del nivel? Perderás 1 canoa» [P]; D-008): fallo duro, también con 0
-        /// vertidos [P] (P16), y Nivel fallido, cuya X lleva al inicio. En 1-30 no es fallo: devuelve false y la salida la
-        /// hace <see cref="AppFlow.ExitToLobby"/> sin coste.
+        /// Pausa › «Salir» confirmado desde el 31 («¿Salir del nivel? Perderás 1 canoa» [P]; D-008; sin la línea de canoa si no
+        /// hay canoa en juego, <see cref="CanoeAtStake"/>): fallo duro, también con 0 vertidos [P] (P16), y Nivel fallido, cuya
+        /// X lleva al inicio. En 1-30 no es fallo: devuelve false y la salida la hace <see cref="AppFlow.ExitToLobby"/> sin coste.
         /// </summary>
         public bool ConfirmQuit()
         {
-            if (!CanQuit || !QuitCostsCanoe)
+            if (!CanQuit || !QuitIsHardFail)
             {
                 return false;
             }
@@ -284,14 +317,17 @@ namespace AF.GameFlow
 
         private void ApplyRescueCuia()
         {
-            int index = AddCuia(AddedCuiaKind.Rescue);
-            _taps.Clear();
-            ResetPending();
-            ResetStuck();
-            Phase = FlowPhase.Playing;
-            _listener.OnCuiaAdded(index, AddedCuiaKind.Rescue);
-            EvaluateStatus();
-            PersistState();
+            using (Saves())
+            {
+                int index = AddCuia(AddedCuiaKind.Rescue);
+                _taps.Clear();
+                ResetPending();
+                ResetStuck();
+                Phase = FlowPhase.Playing;
+                _listener.OnCuiaAdded(index, AddedCuiaKind.Rescue);
+                EvaluateStatus();
+                PersistState();
+            }
         }
 
         // Añade una cuia vacía de capacidad 4 al final del tablero (04 §2.2), que persiste al reiniciar y que Marea no quita
@@ -329,11 +365,14 @@ namespace AF.GameFlow
 
         private void OpenStuckModal()
         {
-            Phase = FlowPhase.StuckModal;
-            _phaseMs = 0;
-            _quote = _wallet?.QuoteRescue(LevelNumber); // el precio se congela al abrir el modal (04 §6.6)
-            _listener.OnStuckModalOpened();
-            PersistState(); // 02 §14: cerrar la app con el modal abierto lo reabre al volver
+            using (Saves()) // la impresión de la Balsa que anota la vista y el level_state, en una escritura
+            {
+                Phase = FlowPhase.StuckModal;
+                _phaseMs = 0;
+                _quote = _wallet?.QuoteRescue(LevelNumber); // el precio se congela al abrir el modal (04 §6.6)
+                _listener.OnStuckModalOpened();
+                PersistState(); // 02 §14: cerrar la app con el modal abierto lo reabre al volver
+            }
         }
 
         private void ResetStuck()
@@ -348,15 +387,20 @@ namespace AF.GameFlow
             _listener.OnFailResolved(outcome);
         }
 
-        // Fallo duro desde el 31 (rendición confirmada o «Salir»): FAIL_RESOLVE y Nivel fallido (D-008, paso 3).
+        // Fallo duro desde el 31 (rendición confirmada o «Salir»): FAIL_RESOLVE y Nivel fallido (D-008, paso 3). La canoa y el
+        // level_state en LEVEL_FAILED van en la misma escritura del perfil: un cierre entre los dos no reabre ¿Seguro? o el
+        // modal con la canoa ya cobrada (y reabrir Nivel fallido nunca lo vuelve a cobrar).
         private void FailToLevelFailed()
         {
-            _taps.Clear();
-            ResetPending();
-            Fail(FailKind.Hard);
-            Phase = FlowPhase.LevelFailed;
-            _listener.OnFunnelPhase(FlowPhase.LevelFailed);
-            PersistState(); // el fallo ya se cobró: reabrir Nivel fallido nunca lo vuelve a cobrar
+            using (Saves())
+            {
+                _taps.Clear();
+                ResetPending();
+                Fail(FailKind.Hard);
+                Phase = FlowPhase.LevelFailed;
+                _listener.OnFunnelPhase(FlowPhase.LevelFailed);
+                PersistState();
+            }
         }
 
         // 04 §7.1 «Qué bloquea»: desde el 31, sin canoas ni Canoas infinitas no se empieza ni se reinicia un nivel.

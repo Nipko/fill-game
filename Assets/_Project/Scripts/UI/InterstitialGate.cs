@@ -3,6 +3,7 @@ using System;
 using AF.Ads;
 using AF.Economy;
 using AF.GameFlow;
+using AF.IAP;
 
 namespace AF.UI
 {
@@ -53,13 +54,19 @@ namespace AF.UI
         private readonly DevProbe _probe;
         private readonly Func<int> _level;
         private readonly Func<Wallet?> _wallet;
+        private readonly ProfileSaveBatch? _saves;
 
-        public ProbedAdPresenter(ISimulatedAdPresenter inner, DevProbe probe, Func<int> level, Func<Wallet?> wallet)
+        /// <param name="saves">
+        /// Lote de guardado: lo que se anota al cerrar el anuncio (registro de <c>AF.Ads</c>, recompensa y, tras AD_GATE, la
+        /// carga del nivel siguiente) va en una sola escritura del perfil. Null = sin lote.
+        /// </param>
+        public ProbedAdPresenter(ISimulatedAdPresenter inner, DevProbe probe, Func<int> level, Func<Wallet?> wallet, ProfileSaveBatch? saves = null)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
             _probe = probe ?? throw new ArgumentNullException(nameof(probe));
             _level = level ?? throw new ArgumentNullException(nameof(level));
             _wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
+            _saves = saves;
         }
 
         /// <summary>La pantalla envuelta.</summary>
@@ -72,7 +79,43 @@ namespace AF.UI
             _inner.Present(ad, close =>
             {
                 _probe.Ad("ad_closed", ad, close == SimulatedAdClose.Completed ? "completed" : "closed_early", _level(), _wallet());
-                onClosed(close);
+                using (_saves == null ? default : _saves.Begin())
+                {
+                    onClosed(close);
+                }
+            });
+        }
+    }
+
+    /// <summary>
+    /// Envuelve la hoja «Compra simulada» (la del juego, <see cref="StoreSheet"/>, o la inmediata de los tests) para que lo que
+    /// pasa al cerrarla (acreditar con <c>StoreLedger.Fulfill</c> y, con la Balsa de rescate, aplicar la Cuia de rescate en
+    /// el nivel; o anotar el rechazo) vaya en una sola escritura del perfil: un cierre entre la compra y <c>level_state</c> no
+    /// deja la Balsa cobrada con el modal abierto. No cambia nada de lo que muestra ni de cuándo se cierra.
+    /// </summary>
+    internal sealed class BatchedPurchasePresenter : ISimulatedPurchasePresenter
+    {
+        private readonly ISimulatedPurchasePresenter _inner;
+        private readonly ProfileSaveBatch _saves;
+
+        public BatchedPurchasePresenter(ISimulatedPurchasePresenter inner, ProfileSaveBatch saves)
+        {
+            _inner = inner ?? throw new ArgumentNullException(nameof(inner));
+            _saves = saves ?? throw new ArgumentNullException(nameof(saves));
+        }
+
+        /// <summary>La hoja envuelta.</summary>
+        public ISimulatedPurchasePresenter Inner => _inner;
+
+        /// <inheritdoc />
+        public void Present(SimulatedPurchase purchase, Action<bool> onClosed)
+        {
+            _inner.Present(purchase, confirmed =>
+            {
+                using (_saves.Begin())
+                {
+                    onClosed(confirmed);
+                }
             });
         }
     }

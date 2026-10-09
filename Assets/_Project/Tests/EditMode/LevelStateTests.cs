@@ -31,14 +31,24 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Flow.UseExtraCuia()!.IsApplied, Is.True);
 
             var sb = new StringBuilder();
-            LevelStateSnapshot.WriteHistory(sb, SavedPhase.GiveUpConfirm, rig.Flow.Attempt.Added, true, rig.Flow.Session);
+            LevelStateSnapshot.WriteHistory(sb, SavedPhase.GiveUpConfirm, rig.Flow.Attempt.Added, true, false, rig.Flow.Session);
             Assert.That(sb.ToString(), Is.EqualTo("h1|G|E|g|02"));
             Assert.That(LevelStateSnapshot.TryParseHistory(sb.ToString(), out SavedHistory parsed), Is.True);
             Assert.That(parsed.Phase, Is.EqualTo(SavedPhase.GiveUpConfirm));
             Assert.That(parsed.Added, Is.EqualTo(new[] { AddedCuiaKind.Extra }));
             Assert.That(parsed.UndoGiftUsed, Is.True);
+            Assert.That(parsed.ExtraCuiaGifted, Is.False);
             Assert.That(parsed.Sources, Is.EqualTo(new[] { 0 }));
             Assert.That(parsed.Targets, Is.EqualTo(new[] { 2 }));
+
+            // Marca «c»: Capi ya regaló la Cuia extra del nivel (04 §2.2), también en un estado de salida al inicio.
+            LevelStateSnapshot.WriteHistory(sb, SavedPhase.Exited, new AddedCuiaKind[0], false, true, null);
+            Assert.That(sb.ToString(), Is.EqualTo("h1|X||c|"));
+            Assert.That(LevelStateSnapshot.TryParseHistory("h1|X||c|", out SavedHistory gifted), Is.True);
+            Assert.That(gifted.ExtraCuiaGifted, Is.True);
+            Assert.That(gifted.UndoGiftUsed, Is.False);
+            Assert.That(LevelStateSnapshot.TryParseHistory("h1|P||cg|", out SavedHistory both), Is.True);
+            Assert.That(both.ExtraCuiaGifted && both.UndoGiftUsed, Is.True, "las marcas en cualquier orden");
 
             Assert.That(LevelStateSnapshot.TryParseHistory("h1|X|||", out SavedHistory exited), Is.True);
             Assert.That(exited.Phase, Is.EqualTo(SavedPhase.Exited));
@@ -54,6 +64,8 @@ namespace AF.Tests.EditMode
         [TestCase("h1|Q|||")]
         [TestCase("h1|P|Z||")]
         [TestCase("h1|P||x|")]
+        [TestCase("h1|P||gg|")]
+        [TestCase("h1|P||cc|")]
         [TestCase("h1|P|||0")]
         [TestCase("h1|P|||00")]
         [TestCase("h1|P|||0g")]
@@ -216,14 +228,45 @@ namespace AF.Tests.EditMode
             again.Flow.Load(6);
             Assert.That(again.Flow.Attempt.FailsLevel, Is.EqualTo(1), "04 §2.7: los fallos cuentan hasta ganar");
 
-            // Nivel 8 con una Cuia extra: al salir, la cuia añadida no se guarda (04 §2.2: desaparece al abandonar el nivel).
+            // Nivel 8 con una Cuia extra: al salir, la cuia añadida no se guarda (04 §2.2: desaparece al abandonar el nivel); el
+            // regalo de Capi sí («c»), para no repetirlo al volver.
             var withCuia = new Rig(seeds: 150);
             withCuia.Start(8);
             Assert.That(withCuia.Flow.UseExtraCuia()!.IsApplied, Is.True);
             Assert.That(withCuia.Store.Load()!.ExtraCuias, Is.EqualTo(1));
             withCuia.Flow.LeaveLevel();
             Assert.That(withCuia.Store.Load()!.ExtraCuias, Is.EqualTo(0));
-            Assert.That(withCuia.Store.Load()!.History, Is.EqualTo("h1|X|||"));
+            Assert.That(withCuia.Store.Load()!.History, Is.EqualTo("h1|X||c|"));
+        }
+
+        [Test]
+        public void CapisGift_IsGivenOnce_EvenLeavingFreeIn1To30_AndReopeningTheApp()
+        {
+            // Revisión de B2-1: salir en 1-30 es gratis y volver a entrar llamaba a Load, que regalaba otra vez la Cuia extra.
+            var rig = new Rig();
+            rig.Start(8);
+            Assert.That(rig.Listener.Saw("gift:1"), Is.True, "04 §2.2: Capi regala 1 en el 8");
+            Assert.That(rig.Flow.UseExtraCuia()!.IsApplied, Is.True, "se gasta la regalada");
+            Assert.That(rig.Economy.Wallet.Stock.Get(BoosterKind.ExtraCuia), Is.EqualTo(0));
+
+            // Misma sesión: salir al inicio y volver a jugar el 8.
+            rig.Flow.LeaveLevel();
+            rig.Listener.Events.Clear();
+            rig.Start(8);
+            Assert.That(rig.Listener.Saw("gift:1"), Is.False, "salir y volver no repite el regalo");
+            Assert.That(rig.Economy.Wallet.Stock.Get(BoosterKind.ExtraCuia), Is.EqualTo(0));
+
+            // Otra sesión: salir, cerrar la app y volver a jugar el 8 desde el inicio.
+            rig.Flow.LeaveLevel();
+            LevelStateData exited = rig.Store.Load()!;
+            Rig again = rig.Reopen();
+            var app = new AppFlow(again.Flow, again.Progress, again.Economy.Wallet, new NullApp());
+            app.Start(false, exited);
+            Assert.That(app.Screen, Is.EqualTo(AppScreen.Lobby));
+            again.Flow.Load(8);
+            Assert.That(again.Listener.Saw("gift:1"), Is.False, "el regalo queda en level_state");
+            Assert.That(again.Economy.Wallet.Stock.Get(BoosterKind.ExtraCuia), Is.EqualTo(0));
+            StringAssert.StartsWith("h1|P||c|", again.Store.Load()!.History);
         }
 
         [Test]

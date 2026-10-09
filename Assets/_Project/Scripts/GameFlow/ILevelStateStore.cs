@@ -23,7 +23,8 @@ namespace AF.GameFlow
 
     /// <summary>
     /// <c>level_state</c> en el perfil (08 §4.3): escribe <see cref="Profile.LevelState"/> y guarda el perfil entero con el
-    /// mismo <see cref="IProfileStore"/> que la cartera y el progreso. Si la escritura falla, el cambio sigue en memoria
+    /// mismo <see cref="IProfileStore"/> que la cartera y el progreso (en el juego, el <see cref="ProfileSaveBatch"/>, que junta
+    /// los guardados de una acción en una escritura). Si la escritura falla, el cambio sigue en memoria
     /// (<see cref="PendingSave"/>) y sale con el siguiente guardado del perfil (02 §14: lo peor es reabrir un vertido antes).
     /// </summary>
     public sealed class ProfileLevelStateStore : ILevelStateStore
@@ -44,7 +45,10 @@ namespace AF.GameFlow
         /// <summary>Guardados hechos (diagnóstico del coste por vertido).</summary>
         public int SaveCount { get; private set; }
 
-        /// <summary>Lo que tardó el último guardado, en ms (plan B2-5: &lt; 5 ms por vertido en el Editor [P]).</summary>
+        /// <summary>
+        /// Lo que tardó el último guardado, en ms. Con el almacén envuelto en un <see cref="ProfileSaveBatch"/> (el juego), dentro
+        /// de un lote solo se anota el cambio y la escritura de verdad la mide <see cref="ProfileSaveBatch.LastWriteMs"/>.
+        /// </summary>
         public double LastSaveMs { get; private set; }
 
         /// <inheritdoc />

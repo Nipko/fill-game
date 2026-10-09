@@ -58,6 +58,7 @@ namespace AF.UI
         private StoreSheet? _storeSheet;
         private Profile? _profile;
         private IProfileStore? _profileStore;
+        private ProfileSaveBatch? _saveBatch;
         private DevProbe? _probe;
         private float _msCarry;
         private bool _skipNextDelta;
@@ -100,6 +101,12 @@ namespace AF.UI
 
         /// <summary>Almacén del perfil (null hasta <c>Start</c>).</summary>
         public IProfileStore? ProfileStore => _profileStore;
+
+        /// <summary>
+        /// Lote de guardado que envuelve <see cref="ProfileStore"/>: todo lo que escribe el perfil pasa por él y cada acción del
+        /// jugador lo escribe una sola vez (null hasta <c>Start</c>).
+        /// </summary>
+        public ProfileSaveBatch? SaveBatch => _saveBatch;
 
         /// <summary>Primer paquete de niveles asignado.</summary>
         public TextAsset? LevelPackAsset => levelPack;
@@ -154,10 +161,22 @@ namespace AF.UI
             extraLevelPacks = extra;
         }
 
-        /// <summary>Toque en una cuia (02 §3.1).</summary>
+        /// <summary>Toque en una cuia (02 §3.1). Tras un vertido, la sonda de desarrollo escribe lo que costó guardar (AF_PERF).</summary>
         public TapResult TapCuia(int index)
         {
-            return _flow == null || !InLevel ? TapResult.Ignored(index, -1) : _flow.TapCuia(index);
+            if (_flow == null || !InLevel)
+            {
+                return TapResult.Ignored(index, -1);
+            }
+
+            int writes = _saveBatch?.WriteCount ?? 0;
+            TapResult result = _flow.TapCuia(index);
+            if (result.Kind == TapKind.Poured && _saveBatch != null && DevProbe.Enabled)
+            {
+                _probe?.SaveCost("pour", _flow.LevelNumber, _saveBatch.WriteCount - writes, _saveBatch.LastWriteMs);
+            }
+
+            return result;
         }
 
         /// <summary>Toque en el fondo (C7).</summary>
@@ -375,7 +394,8 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Pausa › «Salir» (D-008): desde el 31, ya confirmado, fallo duro y Nivel fallido; en 1-30, al inicio sin coste.
+        /// Pausa › «Salir» (D-008): desde el 31, ya confirmado, fallo duro y Nivel fallido (−1 canoa si hay una en juego); en
+        /// 1-30, al inicio sin coste.
         /// </summary>
         public bool PressQuit()
         {
@@ -385,7 +405,7 @@ namespace AF.UI
                 return false;
             }
 
-            return flow.QuitCostsCanoe ? flow.ConfirmQuit() : _app.ExitToLobby();
+            return flow.QuitIsHardFail ? flow.ConfirmQuit() : _app.ExitToLobby();
         }
 
         /// <summary>«Jugar · Nivel {n}» (pantalla de inicio).</summary>
@@ -462,8 +482,13 @@ namespace AF.UI
 
             _profile = profile;
             _profileStore = store;
-            _wallet = new Wallet(profile, store, clock);
-            IProgressStore progress = LaunchOptions.ProgressStoreOverride ?? new ProfileProgressStore(profile, store);
+
+            // Cartera, progreso, nivel en curso, anuncios y tienda guardan el mismo perfil por el lote: dentro de una acción del
+            // jugador (vertido, victoria, rescate, rendición, compra, anuncio) el perfil se escribe una sola vez (revisión B2-5).
+            var batch = new ProfileSaveBatch(store);
+            _saveBatch = batch;
+            _wallet = new Wallet(profile, batch, clock);
+            IProgressStore progress = LaunchOptions.ProgressStoreOverride ?? new ProfileProgressStore(profile, batch);
 
             _art = SharedArt(catalog.WaterBase);
             _probe = new DevProbe();
@@ -471,14 +496,18 @@ namespace AF.UI
             // Anuncios y compras simulados (D-008 puntos 4 y 5; sin SDK, red ni identificadores): sus pantallas van en lienzos
             // propios por encima de todo; los tests las sustituyen por presentadores inmediatos (LaunchOptions).
             // Cada anuncio escribe su tipo y su ubicación en la sonda (AF_STATE ad y ad_closed, B2-4).
+            // Al cerrar un anuncio o una compra, lo que se anota (registro, recompensa, compra y su efecto en el nivel) va en un
+            // lote: una escritura del perfil.
             ISimulatedAdPresenter adPresenter = new ProbedAdPresenter(
                 LaunchOptions.AdPresenterOverride ?? (_adOverlay = new AdOverlay(transform, _art)),
                 _probe,
                 () => _flow != null && _flow.HasLevel && InLevel ? _flow.LevelNumber : (_app?.OverlayLevel ?? 0),
-                () => _wallet);
-            ISimulatedPurchasePresenter purchasePresenter = LaunchOptions.PurchasePresenterOverride ?? (_storeSheet = new StoreSheet(transform, _art));
-            _ads = AdController.Create(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()), profile, store, clock, firstRun);
-            _storeLedger = new StoreLedger(profile, _wallet, store, clock);
+                () => _wallet,
+                batch);
+            ISimulatedPurchasePresenter purchasePresenter = new BatchedPurchasePresenter(
+                LaunchOptions.PurchasePresenterOverride ?? (_storeSheet = new StoreSheet(transform, _art)), batch);
+            _ads = AdController.Create(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()), profile, batch, clock, firstRun);
+            _storeLedger = new StoreLedger(profile, _wallet, batch, clock);
             _store = new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency);
             _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3);
 
@@ -490,7 +519,8 @@ namespace AF.UI
             _flow = new LevelFlow(catalog, progress, _screen, GameConfig.TapSwitchSelection, LaunchOptions.ResolvePourMode(), _wallet)
             {
                 AdGate = new InterstitialGate(_ads, _probe, _wallet), // AD_GATE tras «Siguiente» (B2-4)
-                StateStore = new ProfileLevelStateStore(profile, store), // nivel en curso tras cada vertido (B2-5)
+                StateStore = new ProfileLevelStateStore(profile, batch), // nivel en curso tras cada vertido (B2-5)
+                SaveBatch = batch, // una escritura del perfil por acción del jugador
             };
             _screen.Bind(_flow, _services);
             _app = new AppFlow(_flow, progress, _wallet, this);
@@ -549,6 +579,7 @@ namespace AF.UI
             if (paused)
             {
                 // Lo pendiente de la cartera, los anuncios y la tienda (una escritura fallida) se reintenta al pasar a segundo plano.
+                _saveBatch?.Flush();
                 _wallet?.Flush();
                 _ads?.Ledger.Flush();
                 _storeLedger?.Flush();
@@ -660,6 +691,7 @@ namespace AF.UI
 
         private void OnDestroy()
         {
+            _saveBatch?.Flush();
             _wallet?.Flush();
             (_flow?.StateStore as ProfileLevelStateStore)?.Flush();
             if (Current == this)
