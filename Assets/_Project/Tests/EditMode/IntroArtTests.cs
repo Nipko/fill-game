@@ -57,7 +57,7 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void FruitCells_AreNotEmpty_AndNeverTheAmberSeedOfTheCurrency()
+        public void FruitCells_AreNotEmpty()
         {
             Color32[] px = ProceduralArt.FruitFlightPixels();
             for (int tint = 1; tint <= 14; tint++)
@@ -76,6 +76,136 @@ namespace AF.Tests.EditMode
             }
         }
 
+        /// <summary>
+        /// Ninguna fruta en vuelo tiene la silueta y el color de la semilla-moneda (glosario §2.1; guion §5 y R7): un óvalo
+        /// cerrado (la silueta coincide con su elipse de momentos en ≥ 92 %) y ámbar (la mitad o más de sus píxeles a menos de
+        /// 0,22 del ámbar de la moneda). El detector marca una semilla ámbar sintética; el copoazú, en concreto, es un trozo
+        /// partido y no un óvalo (revisión: a 7 dp parecía un grano).
+        /// </summary>
+        [Test]
+        public void FruitCells_AreNeverTheAmberSeedOfTheCurrency()
+        {
+            const int n = ProceduralArt.FruitFlightPx;
+            var mask = new bool[n * n];
+            var colors = new Color[n * n];
+
+            // Semilla sintética: óvalo ámbar de 20 × 27 px.
+            for (int y = 0; y < n; y++)
+            {
+                for (int x = 0; x < n; x++)
+                {
+                    float dx = (x + 0.5f - 32f) / 10f;
+                    float dy = (y + 0.5f - 32f) / 13.5f;
+                    mask[(y * n) + x] = (dx * dx) + (dy * dy) <= 1f;
+                    colors[(y * n) + x] = ProceduralArt.SeedAmber;
+                }
+            }
+
+            SeedLikeness(mask, colors, out float seedIou, out float seedAmber);
+            Assert.That(seedIou >= 0.92f && seedAmber >= 0.5f, Is.True, "el detector reconoce la semilla-moneda (" + seedIou + ", " + seedAmber + ")");
+
+            Color32[] px = ProceduralArt.FruitFlightPixels();
+            for (int tint = 1; tint <= 14; tint++)
+            {
+                RectInt cell = ProceduralArt.FruitCell(tint);
+                for (int y = 0; y < n; y++)
+                {
+                    for (int x = 0; x < n; x++)
+                    {
+                        Color32 c = px[((cell.y + y) * ProceduralArt.FruitAtlasWidth) + cell.x + x];
+                        mask[(y * n) + x] = c.a > 128;
+                        colors[(y * n) + x] = c;
+                    }
+                }
+
+                SeedLikeness(mask, colors, out float iou, out float amber);
+                string what = ProceduralArt.TintIds[tint] + ": óvalo " + iou.ToString("0.00") + ", ámbar " + amber.ToString("0.00");
+                Assert.That(iou >= 0.92f && amber >= 0.5f, Is.False, "parece la semilla-moneda: " + what);
+                if (tint == 2)
+                {
+                    Assert.That(iou, Is.LessThan(0.88f), "el copoazú es un trozo partido, nunca un óvalo cerrado: " + what);
+                }
+            }
+        }
+
+        // Cuánto se parece una silueta a un óvalo (IoU con la elipse de sus momentos) y qué parte de sus píxeles es ámbar.
+        private static void SeedLikeness(bool[] mask, Color[] colors, out float ellipseIou, out float amberShare)
+        {
+            int n = ProceduralArt.FruitFlightPx;
+            double sx = 0;
+            double sy = 0;
+            int count = 0;
+            int amber = 0;
+            Color seed = ProceduralArt.SeedAmber;
+            for (int i = 0; i < mask.Length; i++)
+            {
+                if (!mask[i])
+                {
+                    continue;
+                }
+
+                sx += i % n;
+                sy += i / n;
+                count++;
+                Color c = colors[i];
+                float d = Mathf.Sqrt(((c.r - seed.r) * (c.r - seed.r)) + ((c.g - seed.g) * (c.g - seed.g)) + ((c.b - seed.b) * (c.b - seed.b)));
+                amber += d < 0.22f ? 1 : 0;
+            }
+
+            if (count == 0)
+            {
+                ellipseIou = 0f;
+                amberShare = 0f;
+                return;
+            }
+
+            double cx = sx / count;
+            double cy = sy / count;
+            double xx = 0;
+            double yy = 0;
+            double xy = 0;
+            for (int i = 0; i < mask.Length; i++)
+            {
+                if (mask[i])
+                {
+                    double dx = (i % n) - cx;
+                    double dy = (i / n) - cy;
+                    xx += dx * dx;
+                    yy += dy * dy;
+                    xy += dx * dy;
+                }
+            }
+
+            xx /= count;
+            yy /= count;
+            xy /= count;
+            double tr = xx + yy;
+            double det = (xx * yy) - (xy * xy);
+            double disc = System.Math.Sqrt(System.Math.Max(0.0, (tr * tr / 4.0) - det));
+            double l1 = (tr / 2.0) + disc;
+            double l2 = System.Math.Max(1e-6, (tr / 2.0) - disc);
+            double angle = 0.5 * System.Math.Atan2(2.0 * xy, xx - yy);
+            double a = 2.0 * System.Math.Sqrt(l1);
+            double b = 2.0 * System.Math.Sqrt(l2);
+            double cos = System.Math.Cos(angle);
+            double sin = System.Math.Sin(angle);
+            int inter = 0;
+            int union = 0;
+            for (int i = 0; i < mask.Length; i++)
+            {
+                double dx = (i % n) - cx;
+                double dy = (i / n) - cy;
+                double u = (dx * cos) + (dy * sin);
+                double v = (-dx * sin) + (dy * cos);
+                bool inEllipse = ((u * u) / (a * a)) + ((v * v) / (b * b)) <= 1.0;
+                inter += inEllipse && mask[i] ? 1 : 0;
+                union += inEllipse || mask[i] ? 1 : 0;
+            }
+
+            ellipseIou = union == 0 ? 0f : inter / (float)union;
+            amberShare = amber / (float)count;
+        }
+
         [Test]
         public void MonkeyArt_ThreeSpecies_AreDistinguishable_AndGeneratedWithin10ms()
         {
@@ -90,13 +220,29 @@ namespace AF.Tests.EditMode
                 MonkeyArt monkey = second.MonkeyArtFor(catalog.Find("saimiri_collinsi")!);
                 MonkeyArt uakari = second.MonkeyArtFor(catalog.Find("cacajao_calvus_ucayalii")!);
                 MonkeyArt woolly = second.MonkeyArtFor(catalog.Find("lagothrix_lagothricha")!);
+                MonkeyArt spider = second.MonkeyArtFor(catalog.Find("ateles_chamek")!);
+                MonkeyArt emperor = second.MonkeyArtFor(catalog.Find("saguinus_imperator")!);
                 Assert.That(second.MonkeyArtFor(catalog.Find("saimiri_collinsi")!), Is.SameAs(monkey), "en caché");
 
                 // Silueta (esqueleto, cabeza, extremidades), colores y cola distintos.
                 Assert.That(uakari.TailLength, Is.LessThan(monkey.TailLength), "el huapo, cola corta");
                 Assert.That(woolly.TailCurls, Is.True, "el churuco, cola prensil enrollada");
-                Assert.That(woolly.LimbScale, Is.GreaterThan(monkey.LimbScale));
                 Assert.That(uakari.TailWidthS, Is.GreaterThan(monkey.TailWidthS), "cola mullida del pitécido");
+
+                // Churuco y maquisapa (mismo esqueleto D) ya no son la misma figura (revisión, 22_species_*).
+                Assert.That(woolly.TorsoWidthScale, Is.GreaterThanOrEqualTo(1.25f), "churuco: torso 1,25 × más ancho");
+                Assert.That(woolly.LimbScale, Is.LessThanOrEqualTo(0.8f), "churuco: extremidades a 0,8");
+                Assert.That(woolly.HugsFruit, Is.True, "churuco: la fruta abrazada al pecho");
+                Assert.That(spider.LimbScale, Is.GreaterThanOrEqualTo(1.4f), "maquisapa: extremidades 1,4 × más largas");
+                Assert.That(spider.HeadS, Is.EqualTo(woolly.HeadS * 0.8f).Within(0.001f), "maquisapa: cabeza a 0,8");
+                Assert.That(spider.ArmUp, Is.True, "maquisapa: un brazo arriba agarrado a la rama");
+                Assert.That(spider.LimbScale / woolly.LimbScale, Is.GreaterThanOrEqualTo(1.7f));
+
+                // Pichico emperador: bigote blanco aparte, que baja más allá de la cabeza (hasta pasar los hombros) y se abre a
+                // los lados 0,6 de la cabeza.
+                Assert.That(emperor.Whiskers, Is.Not.Null, "pichico: bigote");
+                Assert.That(emperor.WhiskersOffsetS.y - (emperor.WhiskersSizeS.y * 0.5f), Is.LessThan(-emperor.HeadS * 0.5f), "baja más allá de la cabeza");
+                Assert.That(monkey.Whiskers, Is.Null);
                 Assert.That(squirrel.HeadS, Is.Not.EqualTo(monkey.HeadS));
                 Assert.That(monkey.Tail, Is.Not.EqualTo(squirrel.Tail));
                 Assert.That(monkey.Head.texture, Is.SameAs(monkey.Torso.texture), "una textura por especie");
@@ -128,6 +274,100 @@ namespace AF.Tests.EditMode
             }
 
             return best;
+        }
+
+        /// <summary>
+        /// Rasgos de reposo que se pintan en las piezas (revisión, 22_species_*): el sauim con el babero blanco bajo la cabeza
+        /// negra y los brazos del color del cuerpo; el mono nocturno con los ojos ámbar enormes. Se mira el color en el atlas.
+        /// </summary>
+        [Test]
+        public void RestTraits_ArePaintedOnTheParts()
+        {
+            FaunaCatalog catalog = FaunaCatalogReader.Read(File.ReadAllText(Path.Combine(Application.dataPath, "_Project/Data/Fauna/miquitos_v0.json")));
+            int size = ProceduralArt.FaunaPixelsSize;
+
+            FaunaSpecies sauim = catalog.Find("saguinus_bicolor")!;
+            Color32[] px = ProceduralArt.FaunaPixels(sauim);
+            Color limb = px[(56 * size) + 16]; // centro de la extremidad (celda 0, 0, 32 × 112)
+            Assert.That(Distance(limb, Palette.Hex(sauim.Palette.Body)), Is.LessThan(0.08f), "sauim: brazos del color del cuerpo, no blancos");
+            int white = 0;
+            for (int y = 128; y < 256; y++)
+            {
+                for (int x = 128; x < 256; x++)
+                {
+                    white += Distance(px[(y * size) + x], Palette.Hex(sauim.Palette.Limbs)) < 0.06f ? 1 : 0;
+                }
+            }
+
+            Assert.That(white, Is.GreaterThan(400), "sauim: babero blanco en el torso");
+
+            // El babero asoma bajo el cráneo en la pieza de la cabeza (por encima del torso: colgado, el brazo de delante tapa
+            // el pecho; revisión de 22_species_saguinus_bicolor).
+            int collar = 0;
+            for (int y = 128; y < 142; y++)
+            {
+                for (int x = 40; x < 110; x++)
+                {
+                    collar += Distance(px[(y * size) + x], Palette.Hex(sauim.Palette.Limbs)) < 0.06f ? 1 : 0;
+                }
+            }
+
+            Assert.That(collar, Is.GreaterThan(150), "sauim: babero blanco bajo la cabeza negra");
+
+            FaunaSpecies night = catalog.Find("aotus_trivirgatus")!;
+            px = ProceduralArt.FaunaPixels(night);
+            int amber = 0;
+            for (int y = 128; y < 256; y++)
+            {
+                for (int x = 0; x < 128; x++)
+                {
+                    amber += Distance(px[(y * size) + x], Palette.Hex(0xC8902A)) < 0.06f ? 1 : 0;
+                }
+            }
+
+            Assert.That(amber, Is.GreaterThan(150), "mono nocturno: iris ámbar de ojos enormes");
+        }
+
+        [Test]
+        public void PairPalette_IsOptional_AndPaintsTheSecondIndividual()
+        {
+            string json = File.ReadAllText(Path.Combine(Application.dataPath, "_Project/Data/Fauna/miquitos_v0.json"));
+            FaunaCatalog catalog = FaunaCatalogReader.Read(json);
+            FaunaSpecies saki = catalog.Find("pithecia_pithecia")!;
+            var art = new ProceduralArt("white");
+            try
+            {
+                MonkeyArt male = art.MonkeyArtFor(saki);
+                Assert.That(art.MonkeyArtFor(saki, true), Is.SameAs(male), "sin paleta_pareja, el segundo individuo es igual");
+            }
+            finally
+            {
+                art.Dispose();
+            }
+
+            // Con paleta_pareja (la hembra gris parda del saquí), el segundo individuo tiene sus propias piezas.
+            string withPair = json.Replace("\"id\": \"pithecia_pithecia\",", "\"id\": \"pithecia_pithecia\", \"paleta_pareja\": { \"cuerpo\": \"#7A6A5A\", \"extremidades\": \"#6E5E50\", \"cara\": \"#C9B9A0\", \"hocico\": \"#6E5A4E\", \"gorra\": \"#7A6A5A\", \"punta_cola\": \"#5E5044\" },");
+            Assert.That(withPair, Is.Not.EqualTo(json));
+            FaunaSpecies pairSaki = FaunaCatalogReader.Read(withPair).Find("pithecia_pithecia")!;
+            Assert.That(pairSaki.PairPalette, Is.Not.Null);
+            Assert.That(pairSaki.PairPalette!.Body, Is.EqualTo(0x7A6A5A));
+            art = new ProceduralArt("white");
+            try
+            {
+                Assert.That(art.MonkeyArtFor(pairSaki, true), Is.Not.SameAs(art.MonkeyArtFor(pairSaki)));
+                Color32[] female = ProceduralArt.FaunaPixels(pairSaki, true);
+                int size = ProceduralArt.FaunaPixelsSize;
+                Assert.That(Distance(female[(190 * size) + 192], Palette.Hex(0x7A6A5A)), Is.LessThan(0.1f), "hembra gris parda");
+            }
+            finally
+            {
+                art.Dispose();
+            }
+        }
+
+        private static float Distance(Color a, Color b)
+        {
+            return Mathf.Sqrt(((a.r - b.r) * (a.r - b.r)) + ((a.g - b.g) * (a.g - b.g)) + ((a.b - b.b) * (a.b - b.b)));
         }
 
         [Test]

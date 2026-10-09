@@ -201,26 +201,28 @@ namespace AF.Levels
 
             string review = RequireString(node, "revision_asesor", where);
             string[] avoid = ReadStrings(node, "evitar", where);
-            return new FaunaSpecies(id, scientific, showScientific, names, skeleton, model, locomotion, size, troop, traits, palette,
+            var species = new FaunaSpecies(id, scientific, showScientific, names, skeleton, model, locomotion, size, troop, traits, palette,
                 lighting, worlds, from, to, card, iucn, threatened, fact, parts, portrait, review, avoid);
+            species.PairPalette = node.Get("paleta_pareja") == null ? null : ReadPalette(node, where, "paleta_pareja");
+            return species;
         }
 
-        private static FaunaPalette ReadPalette(JsonValue node, string where)
+        private static FaunaPalette ReadPalette(JsonValue node, string where, string key = "paleta")
         {
-            JsonValue? p = node.Get("paleta");
+            JsonValue? p = node.Get(key);
             if (p == null || p.Kind != JsonKind.Object)
             {
-                throw new FaunaFormatException(where + ": 'paleta' debe ser un objeto.");
+                throw new FaunaFormatException(where + ": '" + key + "' debe ser un objeto.");
             }
 
             var c = new int[PaletteKeys.Length];
             for (int i = 0; i < PaletteKeys.Length; i++)
             {
-                c[i] = ParseColor(RequireString(p, PaletteKeys[i], where + ".paleta"), where + ".paleta." + PaletteKeys[i]);
+                c[i] = ParseColor(RequireString(p, PaletteKeys[i], where + "." + key), where + "." + key + "." + PaletteKeys[i]);
             }
 
             JsonValue? tailNode = p.Get("cola");
-            int tail = tailNode == null ? c[0] : ParseColor(tailNode.AsString(), where + ".paleta.cola");
+            int tail = tailNode == null ? c[0] : ParseColor(tailNode.AsString(), where + "." + key + ".cola");
             return new FaunaPalette(c[0], c[1], c[2], c[3], c[4], tail, c[5]);
         }
 

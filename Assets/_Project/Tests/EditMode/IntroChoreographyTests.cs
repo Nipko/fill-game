@@ -252,10 +252,10 @@ namespace AF.Tests.EditMode
 
                 float release = plan.FruitReleaseMs[k];
                 float tau = plan.FruitImpactMs[k] - release;
-                Assert.That(plan.MonkeyX(m, release), Is.EqualTo(plan.FruitReleaseX[k]).Within(0.01f), "suelta desde la mano");
+                Assert.That(plan.MonkeyHandX(m, release), Is.EqualTo(plan.FruitReleaseX[k]).Within(0.01f), "suelta desde la mano");
                 Assert.That(Mathf.Abs(plan.FruitImpactX[k] - plan.FruitReleaseX[k]) / tau, Is.LessThanOrEqualTo(IntroChoreography.MaxTossDpPerMs + 0.0001f),
                     "≤ 250 dp/s de velocidad horizontal hasta una columna vecina");
-                Assert.That(plan.MonkeyX(m, release - IntroChoreography.ReleaseAfterArrivalMs), Is.EqualTo(plan.FruitReleaseX[k]).Within(0.01f),
+                Assert.That(plan.MonkeyHandX(m, release - IntroChoreography.ReleaseAfterArrivalMs), Is.EqualTo(plan.FruitReleaseX[k]).Within(0.01f),
                     "la suelta llega ≥ 50 ms después de que el miquito llegue a su columna");
             }
         }
@@ -300,12 +300,259 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void FruitSize_AtLeast8dp([Values(3, 7, 16)] int cuias, [Values(780f, 640f)] float height)
+        public void FruitSize_AtLeast8dpVisible_AndTheSpriteCompensatesTheArtPadding([Values(3, 7, 16)] int cuias, [Values(780f, 640f)] float height)
         {
             var plan = new IntroChoreography();
-            plan.Plan(Input(cuias, height, 1400f, IntroPerch.Canopy));
-            Assert.That(plan.FruitImpactDp, Is.GreaterThanOrEqualTo(8f));
-            Assert.That(plan.FruitFlightDp, Is.GreaterThanOrEqualTo(plan.FruitImpactDp));
+            IntroInput input = Input(cuias, height, 1400f, IntroPerch.Canopy);
+            plan.Plan(input);
+            Assert.That(plan.FruitImpactVisibleDp, Is.GreaterThanOrEqualTo(8f));
+            Assert.That(plan.FruitFlightVisibleDp, Is.GreaterThanOrEqualTo(plan.FruitImpactVisibleDp));
+            Assert.That(plan.FruitFlightVisibleDp, Is.EqualTo(Mathf.Max(8f, 0.6f * input.Unit)).Within(0.001f), "0,6 u en vuelo (guion §5)");
+            Assert.That(plan.FruitImpactVisibleDp, Is.EqualTo(Mathf.Max(8f, 0.45f * input.Unit)).Within(0.001f), "0,45 u al impacto");
+            Assert.That(plan.FruitFlightDp, Is.EqualTo(plan.FruitFlightVisibleDp / IntroChoreography.FruitArtFill).Within(0.001f), "el sprite compensa el relleno de la celda");
+            Assert.That(plan.FruitImpactDp, Is.EqualTo(plan.FruitImpactVisibleDp / IntroChoreography.FruitArtFill).Within(0.001f));
+            if (0.6f * input.Unit > 8f)
+            {
+                Assert.That(plan.FruitFlightVisibleDp, Is.LessThan(0.68f * input.Unit), "menor que la boca (0,68 u)");
+            }
+        }
+
+        /// <summary>
+        /// Tamaño visible del aguaje (tinte del tutorial) medido en su celda del atlas (revisión: 9 dp al impacto en el nivel 1 y
+        /// 8 en vuelo en el nivel 7): en el nivel 7, ≥ 14 dp en vuelo y ≥ 10,5 dp al impacto; con 16 cuias, ≥ 8 dp al impacto.
+        /// </summary>
+        [Test]
+        public void Aguaje_VisibleSize_MeasuredOnTheArt([Values(780f, 640f)] float height)
+        {
+            Color32[] px = ProceduralArt.FruitFlightPixels();
+            RectInt cell = ProceduralArt.FruitCell(4);
+            int x0 = int.MaxValue;
+            int x1 = int.MinValue;
+            int y0 = int.MaxValue;
+            int y1 = int.MinValue;
+            for (int y = cell.y; y < cell.yMax; y++)
+            {
+                for (int x = cell.x; x < cell.xMax; x++)
+                {
+                    if (px[(y * ProceduralArt.FruitAtlasWidth) + x].a > 128)
+                    {
+                        x0 = Mathf.Min(x0, x);
+                        x1 = Mathf.Max(x1, x);
+                        y0 = Mathf.Min(y0, y);
+                        y1 = Mathf.Max(y1, y);
+                    }
+                }
+            }
+
+            float fill = Mathf.Min(x1 - x0 + 1, y1 - y0 + 1) / (float)ProceduralArt.FruitFlightPx; // el lado más corto
+            var plan = new IntroChoreography();
+            if (height > 700f)
+            {
+                plan.Plan(Input(7, height, 1400f, IntroPerch.Branch));
+                Assert.That(plan.FruitFlightDp * fill, Is.GreaterThanOrEqualTo(14f), "nivel 7: aguaje en vuelo");
+                Assert.That(plan.FruitImpactDp * fill, Is.GreaterThanOrEqualTo(10.5f), "nivel 7: aguaje al impacto");
+            }
+
+            plan.Plan(Input(16, height, 1400f, IntroPerch.Canopy));
+            Assert.That(plan.FruitImpactDp * fill, Is.GreaterThanOrEqualTo(8f), "16 cuias: ≥ 8 dp visibles (A5)");
+        }
+
+        [Test]
+        public void Version_IsDecidedByTheKey_NotByT()
+        {
+            var plan = new IntroChoreography();
+            IntroInput input = Input(7, 780f, 1000f, IntroPerch.Canopy);
+            input.Version = IntroVersion.Short; // anim_tint_duration_ms_late = 1.000 (rango 600-1.000 de 08 §9)
+            plan.Plan(input);
+            Assert.That(plan.IsLong, Is.False);
+            Assert.That(plan.Scale, Is.EqualTo(1000f / 800f).Within(0.0001f));
+            Assert.That(Mathf.Abs(plan.LastBloomEndMs - 1000f), Is.LessThanOrEqualTo(Frame));
+            input.Version = IntroVersion.Long;
+            input.TotalMs = 1200f;
+            plan.Plan(input);
+            Assert.That(plan.IsLong, Is.True);
+            Assert.That(plan.Scale, Is.EqualTo(1200f / 1400f).Within(0.0001f));
+        }
+
+        [Test]
+        public void Hang_StaysHanging_WithABandOf64OrMore_AndReleasesAtLeast8dpAboveThePanel([Values(800f, 1400f)] float t)
+        {
+            var plan = new IntroChoreography();
+            IntroInput input = Input(7, 780f, t, IntroPerch.Branch);
+            input.Model = TroopModel.Hang;
+            input.MonkeyDp = 34f;
+            input.Troop = 3;
+            Assert.That(input.PanelTop - input.HudBottom, Is.GreaterThanOrEqualTo(IntroChoreography.HangMinBandDp));
+            plan.Plan(input);
+            Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Branch));
+            Assert.That(plan.Model, Is.EqualTo(TroopModel.Hang));
+            Assert.That(plan.BranchY, Is.EqualTo(input.HudBottom + IntroChoreography.HighBranchBelowHudDp).Within(0.001f), "rama alta en hudBottom + 6");
+            Assert.That(plan.HangGripY, Is.GreaterThan(plan.BranchY), "cuelga por debajo de la rama alta");
+            Assert.That(plan.HangGripY + (IntroChoreography.HangDepthS * plan.BodyDp), Is.LessThanOrEqualTo(input.PanelTop - 8f + 0.01f), "el cuerpo colgado acaba ≥ 8 dp sobre el panel");
+            for (int k = 0; k < plan.FruitCount; k++)
+            {
+                if (plan.FruitMonkey[k] >= 0)
+                {
+                    Assert.That(plan.FruitReleaseY[k], Is.LessThanOrEqualTo(input.PanelTop - 8f + 0.01f), "la suelta de cuelga, ≥ 8 dp sobre el panel");
+                    Assert.That(plan.MonkeyHandX(plan.FruitMonkey[k], plan.FruitReleaseMs[k]), Is.EqualTo(plan.FruitReleaseX[k]).Within(0.01f));
+                }
+            }
+        }
+
+        [Test]
+        public void Hang_SitsOnTheLowBranchAsRow_WithABandUnder64()
+        {
+            var plan = new IntroChoreography();
+            IntroInput input = Input(7, 780f, 1400f, IntroPerch.Branch);
+            input.Model = TroopModel.Hang;
+            input.HudBottom = input.PanelTop - 56f; // franja de 56 dp: ≥ 44 (rama) pero < 64
+            plan.Plan(input);
+            Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Branch));
+            Assert.That(plan.Model, Is.EqualTo(TroopModel.Row), "con menos de 64 dp, cuelga se sienta y suelta como fila (guion §4.4)");
+            Assert.That(plan.BranchY, Is.EqualTo(input.PanelTop - IntroChoreography.LowBranchAbovePanelDp).Within(0.001f), "rama baja");
+        }
+
+        [Test]
+        public void Shake_FruitFallsFromTheBranchOverItsColumn_AndTheMonkeysStayInTheirSeats([Values(800f, 1400f)] float t)
+        {
+            var plan = new IntroChoreography();
+            IntroInput input = Input(7, 780f, t, IntroPerch.Branch);
+            input.Model = TroopModel.Shake;
+            input.Troop = 4;
+            input.MonkeyDp = 42f;
+            plan.Plan(input);
+            Assert.That(plan.Model, Is.EqualTo(TroopModel.Shake));
+            Assert.That(plan.HandOffsetDp, Is.EqualTo(0f));
+            int fromBranch = 0;
+            for (int k = 0; k < plan.FruitCount; k++)
+            {
+                int m = plan.FruitMonkey[k];
+                if (m < 0)
+                {
+                    continue;
+                }
+
+                fromBranch++;
+                Assert.That(plan.FruitReleaseX[k], Is.EqualTo(plan.FruitImpactX[k]).Within(0.001f), "cae de la rama recta sobre su columna");
+                Assert.That(plan.FruitReleaseY[k], Is.EqualTo(plan.BranchCurveY(plan.FruitImpactX[k]) - 2f).Within(0.01f), "desde la rama baja sacudida");
+                Assert.That(plan.FruitV0[k], Is.GreaterThanOrEqualTo(0f));
+                float seat = plan.MonkeyX(m, plan.FruitReleaseMs[k]);
+                Assert.That(plan.MonkeyVelocity(m, plan.FruitReleaseMs[k]), Is.EqualTo(0f), "sacude quieto en su asiento");
+                Assert.That(seat, Is.EqualTo(plan.MonkeyX(m, plan.ExitStartMs)).Within(0.01f), "no se mueve de su asiento hasta salir");
+            }
+
+            Assert.That(fromBranch, Is.GreaterThan(plan.FruitCount / 2), "casi todas desde la rama sacudida");
+        }
+
+        [Test]
+        public void TooSmallMonkey_FallsBackToTheCanopy()
+        {
+            var plan = new IntroChoreography();
+            IntroInput input = Input(7, 780f, 1400f, IntroPerch.Branch);
+            input.MonkeyDp = 24f; // tam_dp < 28: no cabe con su silueta (guion §4.4)
+            plan.Plan(input);
+            Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Canopy));
+            Assert.That(plan.MonkeyCount, Is.EqualTo(0));
+            input.MonkeyDp = 40f;
+            input.HudBottom = input.PanelTop - 37f; // franja de 37 dp: < 44 y tamaño 27
+            plan.Plan(input);
+            Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Canopy));
+        }
+
+        /// <summary>
+        /// Revisión: los miquitos soltaban 30 dp antes de su columna y salían cortados por el borde o solapados. Ahora: la mano
+        /// sobre el eje (o a un lado con ≤ 250 dp/s), el centro en [0,5·S + 6, 360 − 0,5·S − 6] mientras posa y ≥ 1,1 S entre
+        /// los centros de dos vecinos en todo momento.
+        /// </summary>
+        [Test]
+        public void Troop_KeepsItsMargins_AndNeighborsNeverOverlap([Values(3, 7)] int cuias, [Values(800f, 1400f)] float t,
+            [Values(TroopModel.Row, TroopModel.Hang, TroopModel.Shake)] TroopModel model)
+        {
+            var plan = new IntroChoreography();
+            IntroInput input = Input(cuias, 780f, t, IntroPerch.Branch);
+            input.Model = model;
+            input.MonkeyDp = model == TroopModel.Hang ? 34f : 40f;
+            plan.Plan(input);
+            Assert.That(plan.MonkeyCount, Is.GreaterThanOrEqualTo(2));
+            float s = plan.BodyDp;
+            float lo = (0.5f * s) + IntroChoreography.EdgeMarginDp;
+            float hi = 360f - (0.5f * s) - IntroChoreography.EdgeMarginDp;
+            for (float now = 0f; now <= plan.ExitStartMs + IntroChoreography.ExitMs; now += 2f)
+            {
+                for (int m = 0; m < plan.MonkeyCount; m++)
+                {
+                    float x = plan.MonkeyX(m, now);
+                    bool resting = Mathf.Abs(plan.MonkeyVelocity(m, now)) < 0.0001f && now < plan.ExitStartMs && (!plan.IsLong || now > plan.TroopEnterMs);
+                    if (resting)
+                    {
+                        Assert.That(x, Is.InRange(lo - 0.01f, hi + 0.01f), "centro dentro de los márgenes: miquito " + m + " a " + now + " ms");
+                    }
+
+                    if (m + 1 < plan.MonkeyCount)
+                    {
+                        float x2 = plan.MonkeyX(m + 1, now);
+                        bool both = x > -0.5f * s && x < 360f + (0.5f * s) && x2 > -0.5f * s && x2 < 360f + (0.5f * s);
+                        if (both)
+                        {
+                            Assert.That(Mathf.Abs(x2 - x), Is.GreaterThanOrEqualTo((IntroChoreography.NeighborGapS * s) - 0.05f), "vecinos " + m + "-" + (m + 1) + " a " + now + " ms");
+                        }
+                    }
+                }
+            }
+
+            for (int k = 0; k < plan.FruitCount; k++)
+            {
+                if (plan.FruitMonkey[k] >= 0 && model != TroopModel.Shake)
+                {
+                    float tau = plan.FruitImpactMs[k] - plan.FruitReleaseMs[k];
+                    Assert.That(Mathf.Abs(plan.FruitReleaseX[k] - plan.FruitImpactX[k]), Is.LessThanOrEqualTo((IntroChoreography.MaxTossDpPerMs * tau) + 0.01f));
+                }
+            }
+        }
+
+        [Test]
+        public void Level1_HandsOverTheAxis_TheFruitFallsStraight([Values(800f, 1400f)] float t)
+        {
+            var plan = new IntroChoreography();
+            plan.Plan(Input(3, 780f, t, IntroPerch.Branch));
+            for (int k = 0; k < plan.FruitCount; k++)
+            {
+                Assert.That(plan.FruitMonkey[k], Is.GreaterThanOrEqualTo(0));
+                Assert.That(plan.FruitReleaseX[k], Is.EqualTo(plan.FruitImpactX[k]).Within(0.01f), "la mano sobre el eje de la cuia (guion §7.2)");
+            }
+        }
+
+        [Test]
+        public void Pair_SitsTogether_BackToBack()
+        {
+            var plan = new IntroChoreography();
+            IntroInput input = Input(7, 780f, 800f, IntroPerch.Branch);
+            input.Model = TroopModel.Shake;
+            input.Troop = 2;
+            input.Pair = true;
+            plan.Plan(input);
+            Assert.That(plan.Pair, Is.True);
+            Assert.That(plan.MonkeyCount, Is.EqualTo(2));
+            float gap = plan.MonkeyX(1, 0f) - plan.MonkeyX(0, 0f);
+            Assert.That(gap, Is.EqualTo(IntroChoreography.PairGapS * plan.BodyDp).Within(0.01f), "centros a 0,9 S");
+            Assert.That(plan.MonkeyFacing(0, 0f), Is.EqualTo(-1), "de espaldas");
+            Assert.That(plan.MonkeyFacing(1, 0f), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Exit_HeadsToTheNearestCorner_AllAtOnce([Values(800f, 1400f)] float t)
+        {
+            var plan = new IntroChoreography();
+            plan.Plan(Input(7, 780f, t, IntroPerch.Branch));
+            Assert.That(plan.ExitStartMs, Is.EqualTo(t).Within(0.01f), "salen en T");
+            for (int m = 0; m < plan.MonkeyCount; m++)
+            {
+                float x = plan.MonkeyX(m, plan.ExitStartMs);
+                int dir = x < 180f ? -1 : 1;
+                Assert.That(plan.MonkeyExitDir[m], Is.EqualTo(dir));
+                Assert.That(plan.MonkeyFacing(m, plan.ExitStartMs + 1f), Is.EqualTo(dir), "de espaldas al tablero, hacia su esquina");
+                Assert.That((plan.MonkeyX(m, plan.ExitStartMs + IntroChoreography.ExitMs) - x) * dir, Is.GreaterThan(0f));
+            }
         }
 
         [Test]
@@ -349,6 +596,65 @@ namespace AF.Tests.EditMode
             }
         }
 
+        /// <summary>
+        /// Frente en lengua (revisión: la lámina y el labio que crecían se leían como una caja translúcida): con
+        /// <see cref="WaterStripGraphic.SetTaper"/>, la cresta baja hasta el 15 % en cada punta y llega a la altura completa a
+        /// los dp del afinado; sin afinado, la punta tiene la altura completa. Sigue en ≤ 64 cuadriláteros.
+        /// </summary>
+        [Test]
+        public void WaterStrip_TaperedFront_LowersTheCrestAtTheTips()
+        {
+            var go = new GameObject("Strip", typeof(RectTransform), typeof(CanvasRenderer), typeof(WaterStripGraphic));
+            try
+            {
+                WaterStripGraphic strip = go.GetComponent<WaterStripGraphic>();
+                strip.Setup();
+                var origin = new Vector2(180f, -200f);
+                strip.SetStrip(origin, 60f, 60f, 16f, 24f, false, false);
+                Assert.That(TipCrest(strip, origin.y, 120f), Is.GreaterThan(12f), "sin afinado, la punta recta");
+
+                strip.SetTaper(14f, 14f);
+                Assert.That(TipCrest(strip, origin.y, 120f), Is.LessThan(16f * 0.2f), "con afinado, la punta baja al 15 %");
+                Assert.That(CrestAt(strip, origin.y, origin.x - 60f + 14f), Is.GreaterThan(12f), "a 14 dp de la punta, altura completa");
+                Assert.That(Vertices(strip) / 4, Is.LessThanOrEqualTo(WaterStripGraphic.MaxQuads));
+
+                strip.SetStrip(origin, 3f, 3f, 16f, 24f, false, false);
+                Assert.That(Vertices(strip), Is.GreaterThan(0), "una lengua corta sigue dibujándose");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        // Altura de la cresta (dp sobre el origen) en la punta de atrás de una tira horizontal de largo «length».
+        private static float TipCrest(WaterStripGraphic strip, float originY, float length)
+        {
+            return CrestAt(strip, originY, 180f - (length * 0.5f));
+        }
+
+        // Altura máxima de los vértices del cuerpo en x (dp sobre el origen).
+        private static float CrestAt(WaterStripGraphic strip, float originY, float x)
+        {
+            MethodInfo populate = typeof(WaterStripGraphic).GetMethod("OnPopulateMesh", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(VertexHelper) }, null)!;
+            using (var vh = new VertexHelper())
+            {
+                populate.Invoke(strip, new object[] { vh });
+                float best = 0f;
+                var v = new UIVertex();
+                for (int i = 0; i < vh.currentVertCount; i++)
+                {
+                    vh.PopulateUIVertex(ref v, i);
+                    if (Mathf.Abs(v.position.x - x) < 0.01f)
+                    {
+                        best = Mathf.Max(best, v.position.y - originY);
+                    }
+                }
+
+                return best;
+            }
+        }
+
         private static int Vertices(WaterStripGraphic strip)
         {
             MethodInfo populate = typeof(WaterStripGraphic).GetMethod("OnPopulateMesh", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(VertexHelper) }, null)!;
@@ -376,6 +682,52 @@ namespace AF.Tests.EditMode
             Assert.That(b.MonkeyKeyCount, Is.EqualTo(a.MonkeyKeyCount));
             Assert.That(b.MonkeyKeyT, Is.EqualTo(a.MonkeyKeyT));
             Assert.That(b.MonkeyKeyX, Is.EqualTo(a.MonkeyKeyX));
+        }
+
+        /// <summary>
+        /// Tropas pequeñas con muchas columnas (churuco: 2 colgados de 60 dp; mono nocturno: 2 en fila): la fruta que ningún
+        /// miquito alcanza a tiempo cae de la rama de la tropa, recta sobre su columna, y nunca del cielo por detrás del HUD con
+        /// la tropa a la vista (revisión de las hojas 21_sheet_l13 y l82). Con la tropa del mono ardilla, ninguna.
+        /// </summary>
+        [Test]
+        public void Branch_FruitNoMonkeyReaches_FallsFromTheTroopBranch([Values(800f, 1400f)] float t)
+        {
+            var cases = new (TroopModel Model, int Troop, float Size)[]
+            {
+                (TroopModel.Hang, 2, 60f), (TroopModel.Row, 2, 38f), (TroopModel.Hang, 3, 34f), (TroopModel.Row, 5, 40f),
+            };
+            foreach ((TroopModel model, int troop, float size) in cases)
+            {
+                var plan = new IntroChoreography();
+                IntroInput input = Input(7, 780f, t, IntroPerch.Branch);
+                input.Model = model;
+                input.Troop = troop;
+                input.MonkeyDp = size;
+                plan.Plan(input);
+                Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Branch));
+                int fromBranch = 0;
+                for (int k = 0; k < plan.FruitCount; k++)
+                {
+                    if (plan.FruitMonkey[k] >= 0)
+                    {
+                        continue;
+                    }
+
+                    fromBranch++;
+                    string what = model + " × " + troop + ", fruta " + k;
+                    Assert.That(plan.FruitReleaseY[k], Is.EqualTo(plan.BranchDropY(plan.FruitImpactX[k])).Within(0.01f), "de la rama de la tropa: " + what);
+                    Assert.That(plan.FruitReleaseY[k], Is.GreaterThan(input.HudBottom), "nunca por detrás del HUD: " + what);
+                    Assert.That(plan.FruitReleaseX[k], Is.EqualTo(plan.FruitImpactX[k]).Within(0.01f), "recta sobre su columna: " + what);
+                    Assert.That(plan.FruitImpactMs[k] - plan.FruitReleaseMs[k], Is.InRange(IntroChoreography.MinFallMs - 0.01f, IntroChoreography.MaxFallMs + 0.01f));
+                }
+
+                if (troop == 5)
+                {
+                    Assert.That(fromBranch, Is.EqualTo(0), "la tropa del mono ardilla suelta todas las frutas");
+                }
+
+                Assert.That(fromBranch, Is.LessThanOrEqualTo(plan.FruitCount / 2), "la mayoría, de la mano: " + model + " × " + troop);
+            }
         }
 
         // Tablero de 3, 7 o 16 cuias medido con BoardLayout como GameScreen (safeTop 32, safeBottom 24).

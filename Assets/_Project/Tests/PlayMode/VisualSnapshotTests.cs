@@ -252,9 +252,11 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// «Llenar y teñir» (guion de la intro, A14), deterministas con el reloj del test y el enganche de depuración
-        /// (<c>GameScreen.DebugReplayIntro</c> e <see cref="IntroAnimation.Seek"/>): <c>01_intro_l7_*</c> a 300, 700, 1.100 y
-        /// 1.400 ms (larga, rama con el mono ardilla); <c>01c_intro_l1_*</c> a 300, 900 y 1.300; <c>01d_intro_short_l7_*</c> a 200,
+        /// «Llenar y teñir» (guion de la intro, A14), deterministas con el reloj del test, el enganche de depuración
+        /// (<c>GameScreen.DebugReplayIntro</c> e <see cref="IntroAnimation.Seek"/>) y el reloj de los shaders congelado en el
+        /// tiempo de la intro (<see cref="ShaderClock"/>; se comprueba capturando dos veces el mismo instante):
+        /// <c>01_intro_l7_*</c> a 0, 50, 150, 300, 700, 1.100 y 1.400 ms (larga, rama con el mono ardilla; 0-150: el río crece
+        /// antes que nada, A3); <c>01c_intro_l1_*</c> a 0, 50, 150, 300, 900 y 1.300; <c>01d_intro_short_l7_*</c> a 200,
         /// 500 y 700 (corta, tropa posada); <c>01e_intro_16_0500</c> (16 cuias en 3 filas: dosel, una fruta por cuia). Hojas
         /// cada 100 ms (<c>21_sheet_&lt;tablero&gt;_&lt;versión&gt;_&lt;ms&gt;</c>) de la larga y la corta con 3, 7 y 13 cuias, y del
         /// reintento (dosel) del nivel 7. Galería de especies (<c>22_species_&lt;id&gt;</c>): el tablero del nivel 7 en un nivel de
@@ -271,10 +273,26 @@ namespace AF.Tests.PlayMode
             Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             Replay(boot, 1400, false, "01_intro_l7");
-            foreach (int ms in new[] { 300, 700, 1100, 1400 })
+            foreach (int ms in new[] { 0, 50, 150, 300, 700, 1100, 1400 })
             {
                 boot.View!.Intro.Seek(ms);
                 Save(dir, "01_intro_l7_" + Ms(ms));
+            }
+
+            // A14: el mismo instante, capturado dos veces con fotogramas reales por medio, sale idéntico byte a byte (el reloj
+            // de los shaders del líquido y del chorro es el de la intro, no el del motor).
+            foreach (int ms in new[] { 300, 1100 })
+            {
+                boot.View!.Intro.Seek(ms);
+                byte[] first = Capture();
+                for (int i = 0; i < 5; i++)
+                {
+                    yield return null;
+                }
+
+                boot.View.Intro.Seek(ms);
+                byte[] second = Capture();
+                Assert.That(second, Is.EqualTo(first), "captura determinista a " + ms + " ms");
             }
 
             Sheet(boot, dir, "21_sheet_l7_long", 1400, false);
@@ -293,7 +311,7 @@ namespace AF.Tests.PlayMode
             Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             Replay(boot, 1400, false, "01c_intro_l1");
-            foreach (int ms in new[] { 300, 900, 1300 })
+            foreach (int ms in new[] { 0, 50, 150, 300, 900, 1300 })
             {
                 boot.View!.Intro.Seek(ms);
                 Save(dir, "01c_intro_l1_" + Ms(ms));
@@ -367,7 +385,14 @@ namespace AF.Tests.PlayMode
             line.Append(", especie ").Append(boot.View.IntroSpecies != null ? boot.View.IntroSpecies.Id : "dosel");
             line.Append(", posadero ").Append(p.Perch).Append(", modelo ").Append(p.Model).Append(", miquitos ").Append(p.MonkeyCount);
             line.Append(" de ").Append(p.MonkeyDp.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)).Append(" dp");
+            int loose = 0;
+            for (int k = 0; k < p.FruitCount; k++)
+            {
+                loose += p.FruitMonkey[k] < 0 ? 1 : 0;
+            }
+
             line.Append(", frutas ").Append(p.FruitCount).Append(p.FruitPerCuia ? " (una por cuia)" : " (una por racha)");
+            line.Append(", sin miquito ").Append(loose);
             line.Append(", fila 1 llena ").Append(p.Row1FullMs.ToString("0", System.Globalization.CultureInfo.InvariantCulture));
             line.Append(", llenado hasta ").Append(p.LastFillEndMs.ToString("0", System.Globalization.CultureInfo.InvariantCulture));
             line.Append(", primer impacto ").Append(p.FirstImpactMs.ToString("0", System.Globalization.CultureInfo.InvariantCulture));
@@ -759,6 +784,11 @@ namespace AF.Tests.PlayMode
 
         private void Save(string dir, string name)
         {
+            File.WriteAllBytes(Path.Combine(dir, name + ".png"), Capture());
+        }
+
+        private byte[] Capture()
+        {
             Canvas.ForceUpdateCanvases();
             _camera!.Render();
             RenderTexture previous = RenderTexture.active;
@@ -767,8 +797,9 @@ namespace AF.Tests.PlayMode
             tex.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
             tex.Apply();
             RenderTexture.active = previous;
-            File.WriteAllBytes(Path.Combine(dir, name + ".png"), tex.EncodeToPNG());
+            byte[] png = tex.EncodeToPNG();
             Object.Destroy(tex);
+            return png;
         }
 
         private static bool StreamReachedSurface()

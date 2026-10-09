@@ -228,6 +228,9 @@ namespace AF.UI
         private bool _introRetry;
         private int _animSkipped;
         private int _lastSkipAtMs = -1;
+        private int _lastSkipCfgMs = -1;
+        private bool _introAnimStarted;
+        private int _introCfgMs;
         private BoardState? _shownBoard;
         private BoardLayoutResult? _layout;
         private float _canvasW = ReferenceWidth;
@@ -364,9 +367,13 @@ namespace AF.UI
             _streamLayer = UiBuilder.Rect("Streams", _board);
             _fx = new FxLayer(_board, art);
 
-            // ---- Tropa de miquitos (guion de la intro §4.4): Canvas anidado entre el tablero y el muelle. ----
-            _troop = new TroopLayer(_root, art);
+            // ---- Tropa de miquitos (guion de la intro §4.4): Canvas anidado en la escena, justo por detrás del follaje de las
+            // esquinas (la rama sale de él; la tropa entra y sale trepando por él) y del tablero; el labio del río que desborda
+            // va entre la rama y la tropa. ----
+            _troop = new TroopLayer(scene, art);
+            _troop.Layer.SetSiblingIndex(_foliage[0].transform.GetSiblingIndex());
             _intro.Troop = _troop;
+            _intro.AttachFront(_troop.WaterSlot);
 
             // ---- Capi y accesorio del muelle (capa 8): fuera de las zonas táctiles, nunca miran una cuia. Capi solo con
             // capi_idle.png (sin respaldo procedural; revisión visual del 2026-10-07 y guía 10.2 F7). ----
@@ -574,6 +581,12 @@ namespace AF.UI
 
         /// <summary><c>at_ms</c> del último salto de la intro (−1 si no hubo).</summary>
         public int LastAnimSkipAtMs => _lastSkipAtMs;
+
+        /// <summary>
+        /// <c>duration_cfg_ms</c> del último <c>af_anim_skipped</c>: la duración configurada de la animación (1.400, 800 o 250),
+        /// sin el cartel «El río bajó».
+        /// </summary>
+        public int LastAnimSkipCfgMs => _lastSkipCfgMs;
 
         /// <summary>Ambiente de la escena (presupuesto de partículas).</summary>
         public AmbientLayer Ambient => _ambient;
@@ -787,6 +800,7 @@ namespace AF.UI
             HideOverlays();
             _shownBoard = flow.Session.Current;
             _introRetry = isShort;
+            _introAnimStarted = false;
             if (_introDelayMs > 0f)
             {
                 // Variante aliviada (04 §2.7): el cartel «El río bajó» va antes del teñido; la intro arranca al terminar.
@@ -825,11 +839,14 @@ namespace AF.UI
 
             if (skipped)
             {
-                // af_anim_skipped (08 §8.2) con anim = tint, at_ms y duration_cfg_ms; lo enviará AF.Analytics cuando exista.
+                // af_anim_skipped (08 §8.2) con anim = tint, at_ms y duration_cfg_ms; lo enviará AF.Analytics cuando exista. Si el
+                // salto llega durante el cartel «El río bajó», la intro aún no ha empezado: at_ms = 0 (no el tiempo de la intro
+                // anterior); duration_cfg_ms es siempre la duración configurada de la animación, sin el cartel.
                 _animSkipped++;
-                _lastSkipAtMs = Mathf.RoundToInt(_intro.TimeMs);
+                _lastSkipAtMs = _introAnimStarted ? Mathf.RoundToInt(_intro.TimeMs) : 0;
+                _lastSkipCfgMs = _introAnimStarted ? _introCfgMs : _introPendingMs;
                 LevelFlow f = RequireFlow();
-                _probe.AnimSkipped("tint", f, _lastSkipAtMs, f.IntroDurationMs);
+                _probe.AnimSkipped("tint", f, _lastSkipAtMs, _lastSkipCfgMs);
             }
 
             _intro.Complete(skipped);
@@ -1542,8 +1559,18 @@ namespace AF.UI
         // (o el dosel: reintento, mundo 13, sin arte en release, franja < 44 dp). Reducir movimiento lo decide el flujo.
         private void StartIntro(LevelFlow flow, int durationMs, bool isShort)
         {
+            StartIntro(flow, durationMs, isShort, !isShort && !flow.ReduceMotion && flow.LevelNumber < GameConfig.AnimTintFastFromLevel);
+        }
+
+        // longVersion: la versión la decide la clave que dio la duración (anim_tint_duration_ms_early en el primer intento de
+        // 1-20; _late desde el 21 y en los reintentos), nunca T (guion §7.2-§7.3).
+        private void StartIntro(LevelFlow flow, int durationMs, bool isShort, bool longVersion)
+        {
+            _introAnimStarted = true;
+            _introCfgMs = durationMs;
             IntroInput input = _intro.Input;
             input.Clear();
+            input.Version = longVersion ? IntroVersion.Long : IntroVersion.Short;
             BoardLayoutResult? l = _layout;
             if (l != null)
             {
@@ -1576,6 +1603,7 @@ namespace AF.UI
                 input.Model = species.Model == FaunaModel.Hang ? TroopModel.Hang : (species.Model == FaunaModel.Shake ? TroopModel.Shake : TroopModel.Row);
                 input.Troop = species.Troop;
                 input.MonkeyDp = species.SizeDp;
+                input.Pair = species.HasTrait("colas_entrelazadas"); // la pareja se sienta junta con las colas trenzadas
             }
 
             _troop.Prepare(species);
@@ -1634,7 +1662,7 @@ namespace AF.UI
             _animator.SnapAll();
             ClearLifts();
             HideOverlays();
-            StartIntro(flow, durationMs, retry);
+            StartIntro(flow, durationMs, retry, !retry && durationMs > GameConfig.AnimTintDurationMsLate);
         }
 
         // Variante aliviada: cuando termina el cartel arranca el teñido corto (02 §2 INTRO; 07 §5.5).

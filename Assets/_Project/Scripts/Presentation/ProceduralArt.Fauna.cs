@@ -71,6 +71,24 @@ namespace AF.Presentation
         /// <summary>La cola se enrolla (cola prensil de los atélidos).</summary>
         public bool TailCurls { get; internal set; }
 
+        /// <summary>Ancho relativo del torso (1; el churuco lanudo, 1,25: más ancho que el maquisapa).</summary>
+        public float TorsoWidthScale { get; internal set; } = 1f;
+
+        /// <summary>Lleva la fruta abrazada al pecho hasta soltarla (rasgo <c>lanudo</c>: el churuco).</summary>
+        public bool HugsFruit { get; internal set; }
+
+        /// <summary>Colgado, un brazo arriba agarrado a la rama además de la cola (rasgo <c>brazos_largos</c>: braquiación).</summary>
+        public bool ArmUp { get; internal set; }
+
+        /// <summary>Bigote blanco largo (rasgo <c>bigote_blanco</c>: el pichico emperador), pieza aparte de la cabeza; null si no.</summary>
+        public Sprite? Whiskers { get; internal set; }
+
+        /// <summary>Centro del bigote respecto al centro de la cabeza (S; mirando a la derecha).</summary>
+        public Vector2 WhiskersOffsetS { get; internal set; }
+
+        /// <summary>Tamaño de la pieza del bigote (S).</summary>
+        public Vector2 WhiskersSizeS { get; internal set; }
+
         /// <summary>Las piezas salen del PNG del artista.</summary>
         public bool Painted { get; internal set; }
     }
@@ -78,7 +96,20 @@ namespace AF.Presentation
     public sealed partial class ProceduralArt
     {
         private const int FaunaAtlasPx = 256;
+
+        // Celda del bigote (pichico emperador): 176 × 78 px a la derecha de la extremidad y el párpado, en el espacio de la
+        // celda de la cabeza desplazado (−8, −20) px: el bigote baja más allá de la cabeza, hasta pasar los hombros.
+        private const int WhiskersCellX = 80;
+        private const int WhiskersCellW = 176;
+        private const int WhiskersCellH = 78;
+        private const float WhiskersHeadX0 = -8f;
+        private const float WhiskersHeadY0 = -20f;
         private const float FaunaPxPerS = 128f / 0.6f; // la celda de la cabeza (128 px) mide 0,6 S
+
+        // Babero del sauim en la celda de la cabeza (A: 128 px = 0,58 S): 0,45 del ancho del torso colgado (0,34 S) ≈ 34 px de
+        // ancho, y 12 px de alto, de los que asoman unos 14 bajo el cráneo.
+        private const float CollarRxPx = 18f;
+        private const float CollarRyPx = 12f;
         private static readonly Color FaunaInk = new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 0.8f);
 
         private readonly Dictionary<string, MonkeyArt> _monkeys = new Dictionary<string, MonkeyArt>();
@@ -89,11 +120,14 @@ namespace AF.Presentation
         /// <summary>
         /// Piezas de la especie <paramref name="species"/>, generadas de forma perezosa la primera vez (≤ 10 ms) y guardadas en
         /// caché. Si existe <c>fauna_&lt;id&gt;_partes</c> (rejilla de 4 × 4 celdas de 256 px: cabeza, torso, extremidad y
-        /// párpado en la primera fila), se usan sus celdas.
+        /// párpado en la primera fila), se usan sus celdas. Con <paramref name="pair"/> y una <c>paleta_pareja</c> en el
+        /// catálogo, las del segundo individuo (dimorfismo: la hembra del saquí); sin ella, las mismas.
         /// </summary>
-        public MonkeyArt MonkeyArtFor(FaunaSpecies species)
+        public MonkeyArt MonkeyArtFor(FaunaSpecies species, bool pair = false)
         {
-            if (_monkeys.TryGetValue(species.Id, out MonkeyArt? cached))
+            pair = pair && species.PairPalette != null;
+            string key = pair ? species.Id + "#pareja" : species.Id;
+            if (_monkeys.TryGetValue(key, out MonkeyArt? cached))
             {
                 FaunaArtMs = 0;
                 return cached;
@@ -101,7 +135,7 @@ namespace AF.Presentation
 
             Stopwatch watch = Stopwatch.StartNew();
             var art = new MonkeyArt(species.Id, species.Skeleton);
-            FaunaPalette p = species.Palette;
+            FaunaPalette p = pair ? species.PairPalette! : species.Palette;
             art.Tail = Hex(p.Tail);
             art.TailTip = Hex(p.TailTip);
             switch (species.Skeleton)
@@ -118,11 +152,18 @@ namespace AF.Presentation
                     art.LimbWidthS = 0.14f;
                     break;
                 case FaunaSkeleton.D:
-                    art.HeadS = 0.48f;
+                    // Atélidos (guion §4.2): el churuco, grande y lanudo, de torso ancho y extremidades cortas, con la fruta
+                    // abrazada al pecho; el maquisapa, de brazos larguísimos y cabeza pequeña, colgado de la cola y de un brazo.
+                    bool woolly = species.HasTrait("lanudo");
+                    bool longArms = species.HasTrait("brazos_largos");
+                    art.HeadS = longArms ? 0.48f * 0.8f : 0.48f;
                     art.TailWidthS = 0.07f;
                     art.TailCurls = true;
-                    art.LimbScale = 1.35f;
-                    art.LimbWidthS = 0.11f;
+                    art.LimbScale = longArms ? 1.4f : (woolly ? 0.8f : 1.2f);
+                    art.LimbWidthS = longArms ? 0.09f : (woolly ? 0.14f : 0.11f);
+                    art.TorsoWidthScale = woolly ? 1.25f : (longArms ? 0.85f : 1f);
+                    art.HugsFruit = woolly;
+                    art.ArmUp = longArms;
                     break;
                 default:
                     art.HeadS = 0.6f;
@@ -144,18 +185,25 @@ namespace AF.Presentation
             }
             else
             {
-                PixelCanvas pc = BuildFaunaCanvas(species, art);
-                Texture2D tex = pc.ToTexture("fauna_" + species.Id);
+                PixelCanvas pc = BuildFaunaCanvas(species, art, p);
+                Texture2D tex = pc.ToTexture("fauna_" + key);
                 _owned.Add(tex);
                 art.Head = SubSprite(tex, new Rect(0, 128, 128, 128), "head", 0f);
                 art.Torso = SubSprite(tex, new Rect(128, 128, 128, 128), "torso", 0f);
                 art.Limb = SubSprite(tex, new Rect(0, 0, 32, 112), "limb", 24f);
                 art.Eyelid = SubSprite(tex, new Rect(32, 0, 48, 20), "eyelid", 0f);
+                if (species.HasTrait("bigote_blanco"))
+                {
+                    art.Whiskers = SubSprite(tex, new Rect(WhiskersCellX, 0, WhiskersCellW, WhiskersCellH), "whiskers", 0f);
+                    float k = art.HeadS / 128f; // px de la celda de la cabeza → S
+                    art.WhiskersOffsetS = new Vector2((WhiskersHeadX0 + (WhiskersCellW * 0.5f)) - 64f, (WhiskersHeadY0 + (WhiskersCellH * 0.5f)) - 64f) * k;
+                    art.WhiskersSizeS = new Vector2(WhiskersCellW, WhiskersCellH) * k;
+                }
             }
 
             Sprite? portrait = ArtSlots.Find(species.PortraitSlot);
             art.Portrait = portrait != null ? portrait : art.Head;
-            _monkeys[species.Id] = art;
+            _monkeys[key] = art;
             watch.Stop();
             FaunaArtMs = watch.Elapsed.TotalMilliseconds;
             return art;
@@ -173,17 +221,25 @@ namespace AF.Presentation
 
         // Celdas: cabeza (0, 128), torso (128, 128), extremidad (0, 0, 32 × 112) y párpado (32, 0, 48 × 20). Mirando a la derecha,
         // luz desde arriba a la izquierda; contorno de tinta al 80 % (como Capi).
-        private static PixelCanvas BuildFaunaCanvas(FaunaSpecies sp, MonkeyArt art)
+        private static PixelCanvas BuildFaunaCanvas(FaunaSpecies sp, MonkeyArt art, FaunaPalette p)
         {
             var pc = new PixelCanvas(FaunaAtlasPx, FaunaAtlasPx);
-            FaunaPalette p = sp.Palette;
             Color body = Hex(p.Body);
             Color limbs = Hex(p.Limbs);
             Color face = Hex(p.Face);
             Color muzzle = Hex(p.Muzzle);
             Color cap = Hex(p.Cap);
-            DrawHead(pc, sp, art, 0f, 128f, body, face, muzzle, cap);
+            DrawHead(pc, sp, art, 0f, 128f, body, face, muzzle, cap, limbs);
             DrawTorso(pc, sp, 128f, 128f, body, limbs, face);
+            if (sp.HasTrait("collar_blanco"))
+            {
+                limbs = body; // el blanco del sauim es el collar (el babero del torso): los brazos, del color del cuerpo
+            }
+
+            if (sp.HasTrait("bigote_blanco"))
+            {
+                DrawWhiskers(pc, muzzle);
+            }
 
             // Extremidad: cápsula vertical con la mano o el pie más oscuros abajo.
             pc.FillCapsule(16f, 100f, 16f, 12f, 13f, FaunaInk);
@@ -198,7 +254,7 @@ namespace AF.Presentation
             return pc;
         }
 
-        private static void DrawHead(PixelCanvas pc, FaunaSpecies sp, MonkeyArt art, float ox, float oy, Color body, Color face, Color muzzle, Color cap)
+        private static void DrawHead(PixelCanvas pc, FaunaSpecies sp, MonkeyArt art, float ox, float oy, Color body, Color face, Color muzzle, Color cap, Color limbs)
         {
             float cx = ox + 60f;
             float cy = oy + 58f;
@@ -217,6 +273,15 @@ namespace AF.Presentation
             else if (!fluffy)
             {
                 FaunaDisc(pc, cx - 24f, cy + 26f, 8f, face);
+            }
+
+            if (sp.HasTrait("collar_blanco"))
+            {
+                // Sauim: el babero blanco asoma bajo la cabeza negra, por delante (va en la pieza de la cabeza, por encima del
+                // torso: el brazo de delante tapa el pecho del torso cuando cuelga). El blanco del catálogo va en «extremidades».
+                Color white = limbs;
+                pc.FillEllipseSoft(cx + 14f, oy + 14f, CollarRxPx + 2f, CollarRyPx + 2f, 1f, FaunaInk);
+                pc.FillEllipseSoft(cx + 14f, oy + 14f, CollarRxPx, CollarRyPx, 1.5f, white);
             }
 
             // Pelo mullido o lanudo alrededor (pitécidos y churuco).
@@ -268,35 +333,28 @@ namespace AF.Presentation
             }
             else if (sp.HasTrait("ojos_grandes"))
             {
-                // Mono nocturno: cara clara, ojos enormes y tres rayas oscuras en la frente.
-                pc.FillEllipseSoft(cx + 14f, cy + 2f, 27f, 27f, 2f, face);
-                pc.FillCapsule(cx + 14f, cy + 22f, cx + 13f, cy + 38f, 3.2f, cap);
-                pc.FillCapsule(cx + 3f, cy + 18f, cx - 6f, cy + 34f, 2.8f, cap);
-                pc.FillCapsule(cx + 26f, cy + 17f, cx + 33f, cy + 31f, 2.8f, cap);
-                pc.FillEllipseSoft(cx + 30f, cy - 12f, 7f, 5f, 2f, muzzle);
-                eyeR = 10.5f;
-                nearEye = new Vector2(cx + 27f, cy + 4f);
-                farEye = new Vector2(cx + 7f, cy + 7f);
+                // Mono nocturno: ojos enormes (radio × 1,8) con el iris ámbar, manchas blancas sobre los ojos entre tres rayas
+                // oscuras y un anillo pardo alrededor que separa el blanco de la cara clara.
+                eyeR = 7f * 1.8f;
+                nearEye = new Vector2(cx + 30f, cy + 2f);
+                farEye = new Vector2(cx + 4f, cy + 6f);
+                pc.FillEllipseSoft(cx + 16f, cy + 1f, 30f, 29f, 2f, face);
+                Color eyeRing = ColorMath.WithAlpha(muzzle, 0.85f);
+                pc.FillCircle(nearEye.x, nearEye.y, eyeR + 3.2f, eyeRing);
+                pc.FillCircle(farEye.x, farEye.y, (eyeR * 0.85f) + 3f, eyeRing);
+                var white = new Color(0.98f, 0.97f, 0.94f, 1f);
+                pc.FillEllipseSoft(nearEye.x + 1f, nearEye.y + eyeR + 6f, eyeR * 0.85f, 4.6f, 1.5f, white);
+                pc.FillEllipseSoft(farEye.x, farEye.y + (eyeR * 0.85f) + 6f, eyeR * 0.72f, 4.2f, 1.5f, white);
+                pc.FillCapsule(cx + 17f, cy + 22f, cx + 17f, cy + 40f, 3.2f, cap);
+                pc.FillCapsule(cx - 6f, cy + 20f, cx - 12f, cy + 34f, 2.8f, cap);
+                pc.FillCapsule(cx + 42f, cy + 18f, cx + 44f, cy + 30f, 2.8f, cap);
+                pc.FillEllipseSoft(cx + 33f, cy - 15f, 7f, 5f, 2f, muzzle);
             }
             else
             {
                 // Cara desnuda (sagui: color carne; sauim, churuco, maquisapa: negra; pichico: oscura).
                 pc.FillEllipseSoft(cx + 17f, cy + 1f, 22f, 25f, 2f, face);
                 pc.FillEllipseSoft(cx + 30f, cy - 10f, 8f, 6f, 2f, muzzle);
-            }
-
-            if (sp.HasTrait("bigote_blanco"))
-            {
-                // Pichico emperador: bigote blanco largo que pasa de los hombros.
-                Color m = muzzle;
-                pc.FillCapsule(cx + 32f, cy - 12f, cx + 48f, cy - 34f, 5f, FaunaInk);
-                pc.FillCapsule(cx + 48f, cy - 34f, cx + 50f, cy - 52f, 4.5f, FaunaInk);
-                pc.FillCapsule(cx + 24f, cy - 14f, cx + 30f, cy - 40f, 5f, FaunaInk);
-                pc.FillCapsule(cx + 30f, cy - 40f, cx + 26f, cy - 56f, 4.5f, FaunaInk);
-                pc.FillCapsule(cx + 32f, cy - 12f, cx + 48f, cy - 34f, 3.4f, m);
-                pc.FillCapsule(cx + 48f, cy - 34f, cx + 50f, cy - 52f, 3f, m);
-                pc.FillCapsule(cx + 24f, cy - 14f, cx + 30f, cy - 40f, 3.4f, m);
-                pc.FillCapsule(cx + 30f, cy - 40f, cx + 26f, cy - 56f, 3f, m);
             }
 
             // Ojos (3/4 mirando a la derecha) con brillo; en caras oscuras, un anillo claro para que se lean a 40 dp.
@@ -308,9 +366,16 @@ namespace AF.Presentation
                 pc.FillCircle(farEye.x, farEye.y, (eyeR * 0.85f) + 2f, ring);
             }
 
-            Color iris = new Color(0x2A / 255f, 0x1A / 255f, 0x10 / 255f, 1f);
+            bool bigEyes = sp.HasTrait("ojos_grandes");
+            Color iris = bigEyes ? Hex(0xC8902A) : new Color(0x2A / 255f, 0x1A / 255f, 0x10 / 255f, 1f);
             pc.FillCircle(nearEye.x, nearEye.y, eyeR, iris);
             pc.FillCircle(farEye.x, farEye.y, eyeR * 0.85f, iris);
+            if (bigEyes)
+            {
+                var pupil = new Color(0.07f, 0.05f, 0.04f, 1f);
+                pc.FillCircle(nearEye.x + (eyeR * 0.08f), nearEye.y - (eyeR * 0.04f), eyeR * 0.5f, pupil);
+                pc.FillCircle(farEye.x + (eyeR * 0.06f), farEye.y - (eyeR * 0.04f), eyeR * 0.42f, pupil);
+            }
             pc.FillCircle(nearEye.x - (eyeR * 0.35f), nearEye.y + (eyeR * 0.35f), Mathf.Max(1.6f, eyeR * 0.3f), Color.white);
             pc.FillCircle(farEye.x - (eyeR * 0.3f), farEye.y + (eyeR * 0.3f), Mathf.Max(1.4f, eyeR * 0.26f), Color.white);
             if (sp.Lighting == FaunaLighting.Night)
@@ -356,7 +421,12 @@ namespace AF.Presentation
 
             if (sp.HasTrait("collar_blanco"))
             {
-                pc.FillEllipseSoft(cx + 30f, cy + 14f, 22f, 28f, 2f, limbs); // pecho y hombros blancos (sauim)
+                // Sauim: babero blanco elíptico de 0,45 del ancho del torso, en la mitad de arriba del pecho, que sigue al de la
+                // pieza de la cabeza (más arriba, la cabeza lo tapa; el blanco del catálogo va en «extremidades» y los brazos
+                // salen del color del cuerpo).
+                float bibRx = 0.45f * 51.5f;
+                pc.FillEllipseSoft(cx + 12f, cy + 2f, bibRx + 2f, 22f, 1f, FaunaInk);
+                pc.FillEllipseSoft(cx + 12f, cy + 2f, bibRx, 20f, 1.5f, limbs);
             }
             else if (sp.HasTrait("pecho_rojizo"))
             {
@@ -375,6 +445,34 @@ namespace AF.Presentation
                 pc.FillEllipseSoft(cx - 24f, cy + 37f, 8f, 8f, 1f, face);
                 pc.FillCircle(cx - 21f, cy + 39f, 2.6f, new Color(0.16f, 0.1f, 0.06f, 1f));
                 pc.FillCircle(cx - 27f, cy + 40f, 2.2f, new Color(0.16f, 0.1f, 0.06f, 1f));
+            }
+        }
+
+        // Bigote del pichico emperador (guion §4.2: bigote blanco largo que pasa de los hombros): dos trazos de 3 dp que se
+        // afinan, curvados hacia fuera y hacia abajo desde el hocico hasta 0,6 de la cabeza por cada lado, con contorno de
+        // tinta. Coordenadas de la celda de la cabeza (centro del cráneo en (60, 58), hocico en (90, 48)), llevadas a la celda
+        // del bigote.
+        private static void DrawWhiskers(PixelCanvas pc, Color white)
+        {
+            float reach = 0.6f * 80f; // 0,6 del diámetro del cráneo (80 px) por lado
+            for (int pass = 0; pass < 2; pass++)
+            {
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    var a = new Vector2(90f + (side * 5f), 45f);
+                    var c = new Vector2(90f + (side * reach * 0.95f), 46f);
+                    var b = new Vector2(90f + (side * reach), -14f);
+                    Vector2 prev = a;
+                    for (int i = 1; i <= 16; i++)
+                    {
+                        float t = i / 16f;
+                        float u = 1f - t;
+                        Vector2 q = (u * u * a) + (2f * u * t * c) + (t * t * b);
+                        float r = Mathf.Lerp(8f, 2.4f, t) + (pass == 0 ? 2f : 0f);
+                        pc.FillCapsule(WhiskersCellX + prev.x - WhiskersHeadX0, prev.y - WhiskersHeadY0, WhiskersCellX + q.x - WhiskersHeadX0, q.y - WhiskersHeadY0, r, pass == 0 ? FaunaInk : white);
+                        prev = q;
+                    }
+                }
             }
         }
 

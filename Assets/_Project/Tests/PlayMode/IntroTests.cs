@@ -31,6 +31,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             GameScreen.SimulatedScreen = null;
+            AmbientLayer.Frozen = false;
             LaunchOptions.Reset();
         }
 
@@ -63,8 +64,9 @@ namespace AF.Tests.PlayMode
                 Vector2[] before = TroopPositions(view);
                 PlayModeHelpers.TickExact(boot, 50);
                 Assert.That(TroopPositions(view), Is.EqualTo(before), "los restos no se mueven al fundirse");
-                PlayModeHelpers.TickExact(boot, 60);
-                Assert.That(view.Intro.Active, Is.False, "restos con alfa 0 en ≤ 100 ms (t = " + at + ")");
+                Assert.That(view.Intro.RemnantAlpha, Is.EqualTo(0.5f).Within(0.01f), "a medio fundido a los 50 ms");
+                PlayModeHelpers.TickExact(boot, 50);
+                Assert.That(view.Intro.Active, Is.False, "restos con alfa 0 a los 100 ms (t = " + at + ")");
                 AssertNoIntroGraphicVisible(view);
                 Assert.That(view.Ambient.RiverBoost, Is.EqualTo(0f));
 
@@ -101,11 +103,23 @@ namespace AF.Tests.PlayMode
             Assert.That(view.IntroSpecies!.Id, Is.EqualTo("saimiri_collinsi"));
             Assert.That(intro.Plan.Perch, Is.EqualTo(IntroPerch.Branch));
 
-            // A3: en [0, 100] ms solo se mueven el río y sus destellos.
+            // A3: en [0, 100] ms solo se mueven el río y sus destellos (el polen, en pausa).
             Vector2[] troop0 = TroopPositions(view);
+            Assert.That(view.Ambient.PollenPaused, Is.True, "el polen se pausa en t = 0 (guion §7.2)");
+            var pollen0 = new Vector2[AmbientLayer.PollenCount];
+            for (int i = 0; i < pollen0.Length; i++)
+            {
+                pollen0[i] = view.Ambient.PollenPosition(i);
+            }
+
             for (int t = 0; t <= 100; t += 4)
             {
                 PlayModeHelpers.TickExact(boot, t == 0 ? 0 : 4);
+                for (int i = 0; i < pollen0.Length; i++)
+                {
+                    Assert.That(view.Ambient.PollenPosition(i), Is.EqualTo(pollen0[i]), "el polen no se mueve a " + t + " ms");
+                }
+
                 for (int i = 0; i < view.Views.Length; i++)
                 {
                     Assert.That(intro.StreamVisible(i), Is.False, "sin chorritos a " + t + " ms");
@@ -126,6 +140,7 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(view.Ambient.RiverBoost, Is.GreaterThan(0.5f), "el río ha crecido");
+            Assert.That(view.Ambient.RiverSwell.color.a, Is.GreaterThan(0.5f * AmbientLayer.RiverSwellAlpha), "la capa de crecida aclara la franja");
 
             // Chorrito sobre cada cuia no vacía (y ninguno sobre las vacías); todo lleno antes de 700 ms.
             BoardState board = flow.Session.Current;
@@ -154,6 +169,7 @@ namespace AF.Tests.PlayMode
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Intro));
             PlayModeHelpers.TickExact(boot, 1);
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing), "Phase == Playing en T (A1)");
+            Assert.That(view.Ambient.PollenPaused, Is.False, "el polen vuelve con el input");
             AssertFinalBoard(view, board, "fin natural");
             PlayModeHelpers.TickExact(boot, 320);
             Assert.That(view.Intro.Active, Is.False, "a T + 300 ms no queda nada de la intro");
@@ -187,16 +203,20 @@ namespace AF.Tests.PlayMode
         {
             // 20:9 (360 × 780 dp) y 16:9 (el lienzo nunca baja de 780 dp de alto: 439 × 780 dp; 02 §5).
             GameScreen.SimulatedScreen = new Vector4(1080f, screenHeightPx, 96f, 48f);
-            var cases = new (string Pack, int Level)[]
+            var cases = new (string Pack, int Level, IntroPerch Perch, TroopModel Model)[]
             {
-                (string.Empty, 1), (string.Empty, 7), (PlayModeHelpers.SixteenCuiaPack(), 1),
-                (PlayModeHelpers.Level7BoardPack(2, "w02_tapajos", "clear", 13), 13), // cuelga
-                (PlayModeHelpers.Level7BoardPack(5, "w05_loreto", "white", 142), 142), // sacude
-                (PlayModeHelpers.Level7BoardPack(4, "w04_trapecio", "white", 82), 82), // cuelga de la cola
+                (string.Empty, 1, IntroPerch.Branch, TroopModel.Row), (string.Empty, 7, IntroPerch.Branch, TroopModel.Row),
+                (PlayModeHelpers.SixteenCuiaPack(), 1, IntroPerch.Canopy, TroopModel.Row),
+                (PlayModeHelpers.Level7BoardPack(2, "w02_tapajos", "clear", 13), 13, IntroPerch.Branch, TroopModel.Hang), // cuelga
+                (PlayModeHelpers.Level7BoardPack(5, "w05_loreto", "white", 142), 142, IntroPerch.Branch, TroopModel.Shake), // sacude
+                (PlayModeHelpers.Level7BoardPack(4, "w04_trapecio", "white", 82), 82, IntroPerch.Branch, TroopModel.Hang), // cuelga de la cola
+                (PlayModeHelpers.Level7BoardPack(6, "w06_oriente", "white", 202), 202, IntroPerch.Branch, TroopModel.Shake), // la pareja, colas trenzadas
+                (PlayModeHelpers.Level7BoardPack(7, "w07_madre_de_dios", "white", 302), 302, IntroPerch.Branch, TroopModel.Row), // bigote
+                (PlayModeHelpers.Level7BoardPack(8, "w08_madidi", "white", 422), 422, IntroPerch.Branch, TroopModel.Hang), // brazos largos
             };
             var rects = new List<Rect>();
             int branches = 0;
-            foreach ((string pack, int level) in cases)
+            foreach ((string pack, int level, IntroPerch perch, TroopModel model) in cases)
             {
                 LaunchOptions.Reset();
                 if (pack.Length > 0)
@@ -216,6 +236,12 @@ namespace AF.Tests.PlayMode
                     view.DebugReplayIntro(duration, false);
                     IntroChoreography plan = view.Intro.Plan;
                     branches += plan.Perch == IntroPerch.Branch ? 1 : 0;
+                    Assert.That(plan.Perch, Is.EqualTo(perch), "posadero del nivel " + level);
+                    if (perch == IntroPerch.Branch)
+                    {
+                        Assert.That(plan.Model, Is.EqualTo(model), "modelo del nivel " + level);
+                    }
+
                     float hudBottom = view.Intro.Input.HudBottom;
                     float panelTop = view.Intro.Input.PanelTop;
                     for (int t = 0; t <= duration + 300; t += 25)
@@ -242,7 +268,7 @@ namespace AF.Tests.PlayMode
                 }
             }
 
-            Assert.That(branches, Is.GreaterThan(0), "algún caso con tropa");
+            Assert.That(branches, Is.EqualTo(16), "8 tableros con tropa × 2 versiones");
         }
 
         [UnityTest]
@@ -330,7 +356,8 @@ namespace AF.Tests.PlayMode
                 visible += view.Troop.Rig(i).Visible ? 1 : 0;
             }
 
-            Assert.That(visible, Is.LessThanOrEqualTo(1), "un solo miquito, quieto (Q13 A)");
+            Assert.That(view.Intro.Plan.Perch, Is.EqualTo(IntroPerch.Branch), "nivel 7, primer intento: modo rama");
+            Assert.That(visible, Is.EqualTo(1), "un solo miquito, quieto (Q13 A)");
             for (int t = 0; t < 1100; t += 25)
             {
                 for (int i = 0; i < view.Views.Length; i++)
@@ -409,6 +436,206 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.PressRestart(), Is.True);
             boot.TapAnywhere();
             Assert.That(card.Visible, Is.False);
+        }
+
+        /// <summary>
+        /// El labio del río que desborda (revisión: no se veía de dónde salía el agua): aparece con la lámina, del mismo ancho
+        /// en cada instante, entre la rama y la tropa, desde 14 dp sobre el panel; se va con la madera.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator RiverLip_GrowsWithTheSheet_FromTheBank()
+        {
+            yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            view.DebugReplayIntro(1400, false);
+            IntroAnimation intro = view.Intro;
+            IntroChoreography p = intro.Plan;
+            intro.Seek(p.SheetStartMs - 1f);
+            Assert.That(intro.LipVisible, Is.False, "nada antes del desborde");
+            foreach (float dt in new[] { 20f, 60f, 150f })
+            {
+                intro.Seek(p.SheetStartMs + dt);
+                float half = Mathf.Min(p.SheetHalfWidth, dt * p.SheetSpeed);
+                Assert.That(intro.LipVisible, Is.True);
+                Assert.That(intro.LipHalfWidth, Is.EqualTo(half).Within(0.5f), "el labio, tan ancho como la lámina a " + dt + " ms");
+            }
+
+            intro.Seek(p.DrainEndMs + 1f);
+            Assert.That(intro.LipVisible, Is.False, "la madera ya está seca");
+            Assert.That(view.Troop.WaterSlot.IsChildOf(view.Troop.Layer), Is.True, "en la capa de la tropa");
+            Assert.That(view.Troop.WaterSlot.GetSiblingIndex(), Is.LessThan(view.Troop.Rig(0).Root.GetSiblingIndex()), "detrás de los miquitos");
+        }
+
+        /// <summary>
+        /// Presupuesto del guion §13 con contador, fotograma a fotograma: ≤ 8 brillos aditivos de la intro (espuma y anillos) y
+        /// ≤ 20 partículas (gotas, penachos y espuma del labio); con el ambiente, ≤ 60 (07: gama baja). Larga y corta, con 15 y
+        /// 24 rachas.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Intro_StaysWithinTheGlowAndParticleBudget()
+        {
+            string[] ids = { "guanabana", "cupuacu", "tapereba", "aguaje", "urucum", "camu_camu", "bacaba", "acai" };
+            var board = new int[10][];
+            for (int i = 0; i < 10; i++)
+            {
+                board[i] = i < 8 ? new[] { i + 1, i + 1, ((i + 1) % 8) + 1, ((i + 2) % 8) + 1 } : new int[0]; // 8 × 3 rachas = 24
+            }
+
+            var cases = new (string Pack, int Level, int Runs)[]
+            {
+                (string.Empty, 7, 15), (PlayModeHelpers.BoardPack(1, "w01_estuario", "white", 9, ids, board), 9, 24),
+            };
+            foreach ((string pack, int level, int runs) in cases)
+            {
+                LaunchOptions.Reset();
+                if (pack.Length > 0)
+                {
+                    yield return PlayModeHelpers.LoadGameWithPack(pack, level, new MemoryProgressStore());
+                }
+                else
+                {
+                    yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore());
+                }
+
+                GameBootstrap boot = GameBootstrap.Current!;
+                PlayModeHelpers.TakeClock(boot);
+                GameScreen view = boot.View!;
+                foreach (int duration in new[] { 1400, 800 })
+                {
+                    view.DebugReplayIntro(duration, false);
+                    Assert.That(view.Intro.Plan.RunCount, Is.EqualTo(runs));
+                    int maxAdditive = 0;
+                    int maxParticles = 0;
+                    for (int t = 0; t <= duration + 300; t += 4)
+                    {
+                        view.Intro.Seek(t);
+                        view.Intro.CountVisible(out int additive, out int particles);
+                        maxAdditive = Mathf.Max(maxAdditive, additive);
+                        maxParticles = Mathf.Max(maxParticles, particles);
+                        string where = runs + " rachas, T " + duration + ", t " + t;
+                        Assert.That(additive, Is.LessThanOrEqualTo(IntroAnimation.MaxAdditive), "≤ 8 brillos aditivos: " + where);
+                        Assert.That(particles, Is.LessThanOrEqualTo(IntroAnimation.MaxParticles), "≤ 20 partículas: " + where);
+                        Assert.That(particles + view.Ambient.ActiveCount, Is.LessThanOrEqualTo(60), "≤ 60 con el ambiente: " + where);
+                    }
+
+                    Assert.That(maxAdditive, Is.GreaterThan(0), "hay brillos que contar");
+                    Assert.That(maxParticles, Is.GreaterThan(0), "hay partículas que contar");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Capturas deterministas (A14): con el ambiente congelado, el reloj de los shaders del líquido y del chorro es el
+        /// tiempo de la intro (no el del motor) y no avanza entre fotogramas; al descongelar vuelve el del motor.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator FrozenAmbient_PinsTheShaderClockToTheIntroTime()
+        {
+            yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            AmbientLayer.Frozen = true;
+            boot.View!.DebugReplayIntro(1400, false);
+            boot.View.Intro.Seek(300);
+            ShaderClock.ReadGlobals(out float seconds, out float frozen);
+            Assert.That(frozen, Is.EqualTo(1f));
+            Assert.That(seconds, Is.EqualTo(0.3f).Within(0.0001f));
+            for (int i = 0; i < 3; i++)
+            {
+                yield return null;
+            }
+
+            ShaderClock.ReadGlobals(out seconds, out frozen);
+            Assert.That(seconds, Is.EqualTo(0.3f).Within(0.0001f), "no avanza con los fotogramas");
+            boot.View.Intro.Seek(1100);
+            ShaderClock.ReadGlobals(out seconds, out _);
+            Assert.That(seconds, Is.EqualTo(1.1f).Within(0.0001f));
+            AmbientLayer.Frozen = false;
+            ShaderClock.ReadGlobals(out _, out frozen);
+            Assert.That(frozen, Is.EqualTo(0f), "fuera de las capturas, el reloj del motor");
+        }
+
+        /// <summary>
+        /// <c>af_anim_skipped</c> en la variante aliviada: si el salto llega durante el cartel «El río bajó», la intro aún no ha
+        /// empezado: at_ms = 0 (no el tiempo de la intro anterior) y duration_cfg_ms es la duración de la animación (800), sin
+        /// el cartel.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SkipDuringTheRiverLoweredBanner_ReportsAt0_AndTheAnimationDuration()
+        {
+            yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            PlayModeHelpers.TickExact(boot, 500); // una intro anterior a medias: TimeMs = 500
+            Assert.That(view.Intro.TimeMs, Is.GreaterThan(0f));
+            view.OnRiverLowered("plus_empty", 2000);
+            view.OnIntroStarted(2000 + GameConfig.AnimTintDurationMsLate, true);
+            view.OnIntroFinished(true);
+            Assert.That(view.LastAnimSkipAtMs, Is.EqualTo(0), "at_ms = 0: la intro no había empezado");
+            Assert.That(view.LastAnimSkipCfgMs, Is.EqualTo(GameConfig.AnimTintDurationMsLate), "duration_cfg_ms sin el cartel");
+
+            view.OnIntroStarted(GameConfig.AnimTintDurationMsLate, true); // reintento normal: la intro empieza ya
+            view.Intro.Seek(300);
+            view.OnIntroFinished(true);
+            Assert.That(view.LastAnimSkipAtMs, Is.EqualTo(300));
+            Assert.That(view.LastAnimSkipCfgMs, Is.EqualTo(GameConfig.AnimTintDurationMsLate));
+        }
+
+        /// <summary>
+        /// Salida de la tropa (revisión: parecían monos fantasma a media salida): trepan hacia el follaje de la esquina más
+        /// cercana, con alfa 1 hasta los últimos 80 ms, y la capa de la tropa está detrás del follaje de las esquinas.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TroopExit_ClimbsToTheCornerFoliage_OpaqueUntilTheLast80ms()
+        {
+            yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            view.DebugReplayIntro(1400, false);
+            IntroAnimation intro = view.Intro;
+            float exit = intro.Plan.ExitStartMs;
+            intro.Seek(exit);
+            float y0 = view.Troop.Rig(0).Root.anchoredPosition.y;
+            intro.Seek(exit + IntroChoreography.ExitMs - IntroChoreography.ExitFadeMs - 10f);
+            Assert.That(view.Troop.Rig(0).Alpha, Is.EqualTo(1f).Within(0.001f), "opaco hasta los últimos 80 ms");
+            Assert.That(view.Troop.Rig(0).Root.anchoredPosition.y, Is.GreaterThan(y0 + 5f), "trepa hacia el follaje");
+            intro.Seek(exit + IntroChoreography.ExitMs - 40f);
+            Assert.That(view.Troop.Rig(0).Alpha, Is.InRange(0.01f, 0.99f), "se funde en los últimos 80 ms");
+            Transform scene = view.Troop.Layer.parent;
+            Transform foliage = scene.Find("FoliageTL");
+            Assert.That(foliage, Is.Not.Null);
+            Assert.That(view.Troop.Layer.GetSiblingIndex(), Is.LessThan(foliage.GetSiblingIndex()), "la tropa, por detrás del follaje");
+        }
+
+        /// <summary>
+        /// Rasgos de especie que hacen algo en la intro (revisión, 22_species_*): la pareja del cotoncillo junta y de espaldas
+        /// (colas trenzadas), el velo nocturno del mono nocturno y nada de eso en el mono ardilla.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SpeciesTraits_PairAndNight()
+        {
+            yield return PlayModeHelpers.LoadGameWithPack(PlayModeHelpers.Level7BoardPack(6, "w06_oriente", "white", 202), 202, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.View!.DebugReplayIntro(800, false);
+            IntroChoreography p = boot.View.Intro.Plan;
+            Assert.That(p.Pair, Is.True, "cotoncillo: la pareja");
+            Assert.That(p.MonkeyX(1, 0f) - p.MonkeyX(0, 0f), Is.EqualTo(IntroChoreography.PairGapS * p.BodyDp).Within(0.01f));
+            Assert.That(boot.View.Troop.NightVisible, Is.False);
+
+            LaunchOptions.Reset();
+            yield return PlayModeHelpers.LoadGameWithPack(PlayModeHelpers.Level7BoardPack(10, "w10_alto_negro", "black", 702), 702, new MemoryProgressStore());
+            boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.View!.DebugReplayIntro(800, false);
+            Assert.That(boot.View.IntroSpecies!.Id, Is.EqualTo("aotus_trivirgatus"));
+            Assert.That(boot.View.Troop.NightVisible, Is.True, "mono nocturno: velo de noche sobre la franja");
+            boot.View.Intro.Seek(800 + IntroChoreography.ExitMs + 10);
+            Assert.That(boot.View.Troop.NightVisible, Is.False, "el velo se va con la tropa");
         }
 
         private static void AssertFinalBoard(GameScreen view, BoardState board, string when)

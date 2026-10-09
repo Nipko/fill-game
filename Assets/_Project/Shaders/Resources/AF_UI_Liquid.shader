@@ -4,7 +4,8 @@
 // _AFTopFaceU, ancho de la cavidad, color aclarado del menisco y una línea clara al fondo), fronteras entre dosis y fondo
 // del líquido en arco con la flecha del borde delantero de esa elipse (Magic Sort, d_002340: en el eje todas las dosis
 // miden 1 u, también la de arriba), onda tras verter (A0 = 0,03 u, exp(-t / 0,25 s), lambda 1,30 u, fase 2,5 u/s) y
-// destello del sellado (+15 %).
+// destello del sellado (+15 %). El reloj de la onda es _Time.y salvo que ShaderClock lo congele (_AFClockFrozen = 1: capturas
+// deterministas con _AFTime).
 //
 // uGUI no admite MaterialPropertyBlock en un CanvasRenderer: los datos por cuia y por dosis llegan por vértice
 // (LiquidGraphic.cs) y todas las cuias comparten un material, así que van en un solo lote. Solo canales UV: el Canvas
@@ -126,6 +127,10 @@ Shader "AF/UI/Liquid"
             float _AFRimU;
             float _AFTopFaceU;
 
+            // Reloj (ShaderClock): _Time.y en el juego; el tiempo de la intro, congelado, en las capturas deterministas.
+            float _AFTime;
+            float _AFClockFrozen;
+
             v2f vert(appdata_t v)
             {
                 v2f o;
@@ -183,7 +188,8 @@ Shader "AF/UI/Liquid"
                 // Superficie con la onda tras verter y cara superior en elipse (D-006): centrada en la superficie, del ancho
                 // de la cavidad y _AFTopFaceU de alto; su mitad trasera sube sobre la superficie y la delantera es la cara.
                 float wall = _AFCavityHalfU - abs(x - 1.0);
-                float wave = i.surf.y * sin(((x - 1.0) * 4.8332) - (_Time.y * 12.083) + i.surf.z);
+                float clockS = _AFClockFrozen > 0.5 ? _AFTime : _Time.y; // selección exacta: con lerp, _Time.y grande deja un ulp de error
+                float wave = i.surf.y * sin(((x - 1.0) * 4.8332) - (clockS * 12.083) + i.surf.z);
                 float top = i.surf.x + wave;
                 float topEdge = top + faceHalf;
                 float pix = max(fwidth(y), 1e-4);

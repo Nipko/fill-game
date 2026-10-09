@@ -7,23 +7,33 @@ using UnityEngine.UI;
 namespace AF.Presentation
 {
     /// <summary>
-    /// La tropa de «Llenar y teñir» (guion de la intro §4.4, §7.1-§7.3 y §11) en un Canvas anidado propio entre el tablero y
-    /// el muelle: la rama en primer plano (Bézier de 5 dp con corteza y 4 hojas, sin reflejo en el río, que sale del follaje
-    /// de las esquinas de arriba: la tropa nunca cruza el río), a panel.top − 8 para <c>fila</c> y <c>sacude</c> y a
-    /// hudBottom + 6 para <c>cuelga</c>, y hasta 6 miquitos con su rig recortable (<see cref="MonkeyRig"/>) guiados por las
-    /// trayectorias del planificador (<see cref="IntroChoreography"/>): entran por la rama cuando la fila 1 está llena (larga)
-    /// o ya están posados (corta), frenan sobre sus columnas, sueltan la fruta desde la mano y salen de espaldas en 300 ms.
-    /// Todo es función del tiempo de la intro (sin estado por fotograma), así que una captura en t es siempre la misma. Nada
-    /// depende de la selección, de un vertido ni de la legalidad (D-002); nada recibe toques.
+    /// La tropa de «Llenar y teñir» (guion de la intro §4.4, §7.1-§7.3 y §11) en un Canvas anidado propio dentro de la escena,
+    /// por detrás del follaje de las esquinas (la rama sale de él y la tropa entra y sale trepando por él) y del tablero: la
+    /// rama en primer plano del río (Bézier de 5 dp con corteza y 4 hojas, sin reflejo: la tropa nunca cruza el río), a
+    /// panel.top − 8 para <c>fila</c> y <c>sacude</c> y a hudBottom + 6 para <c>cuelga</c>, y hasta 6 miquitos con su rig
+    /// recortable (<see cref="MonkeyRig"/>) guiados por las trayectorias del planificador (<see cref="IntroChoreography"/>):
+    /// entran por la rama cuando la fila 1 está llena (larga) o ya están posados (corta), frenan con la mano sobre sus
+    /// columnas, sueltan la fruta y salen en 300 ms trepando hacia el follaje de la esquina más cercana, con alfa 1 hasta los
+    /// últimos 80 ms. Entre la rama y la tropa queda <see cref="WaterSlot"/>, donde la intro dibuja el labio del río que
+    /// desborda (delante de la rama, detrás de los miquitos). Rasgos de reposo por especie: la pareja de
+    /// <c>colas_entrelazadas</c> se sienta junta con las colas trenzadas, el churuco lleva la fruta abrazada al pecho, el
+    /// segundo individuo usa la <c>paleta_pareja</c> si la hay, y con <c>iluminacion = noche</c> un velo nocturno cubre la
+    /// franja mientras no exista la pintura de noche del mundo (07 §2.1). Todo es función del tiempo de la intro, así que una
+    /// captura en t es siempre la misma. Nada depende de la selección, de un vertido ni de la legalidad (D-002); nada recibe
+    /// toques.
     /// </summary>
     public sealed class TroopLayer
     {
-        private const float BranchOverhangDp = 12f;
         private const float BranchWidthDp = 6f;
         private const float LeafWidthDp = 12f;
         private const float LeafHeightDp = 20f;
         private const float HangDropMs = 120f;
+        private const float BraidBlendMs = 120f;
+        private const float ClimbTiltDeg = 18f;
         private const int Leaves = 4;
+
+        /// <summary>Velo nocturno sobre la franja (especies con <c>iluminacion = noche</c>).</summary>
+        public static readonly Color NightVeil = new Color(0x0E / 255f, 0x16 / 255f, 0x36 / 255f, 0.42f);
 
         private static readonly Color Bark = Palette.Hex(0x7A5232);
         private static readonly Color BarkTip = Palette.Hex(0x8E6440);
@@ -32,25 +42,24 @@ namespace AF.Presentation
 
         private readonly RectTransform _layer;
         private readonly ProceduralArt _art;
+        private readonly Image _night;
         private readonly BezierStripGraphic _branch;
         private readonly Image[] _leaves = new Image[Leaves];
+        private readonly RectTransform _water;
         private readonly BezierStripGraphic[] _lianas = new BezierStripGraphic[IntroChoreography.MaxMonkeys];
         private readonly MonkeyRig[] _rigs = new MonkeyRig[IntroChoreography.MaxMonkeys];
-        private readonly float[] _startFacing = new float[IntroChoreography.MaxMonkeys];
         private readonly float[] _firstRelease = new float[IntroChoreography.MaxMonkeys];
         private readonly Vector3[] _corners = new Vector3[4];
         private MonkeyArt? _look;
+        private MonkeyArt? _lookPair;
         private FaunaSpecies? _species;
         private IntroChoreography? _plan;
         private float _canvasW = 360f;
-        private float _branchY;
-        private float _corner;
-        private float _bodyS = 40f;
-        private float _gripY;
+        private float _hudBottom = 88f;
         private bool _active;
         private float _alpha = -1f;
 
-        /// <summary>Crea la capa (oculta) dentro de <paramref name="parent"/> (la raíz del lienzo, entre el tablero y el muelle).</summary>
+        /// <summary>Crea la capa (oculta) dentro de <paramref name="parent"/> (la escena, justo antes del follaje).</summary>
         public TroopLayer(RectTransform parent, ProceduralArt art)
         {
             _art = art;
@@ -61,6 +70,17 @@ namespace AF.Presentation
             _layer.anchorMax = Vector2.one;
             _layer.offsetMin = Vector2.zero;
             _layer.offsetMax = Vector2.zero;
+
+            var nightGo = new GameObject("NightVeil", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            nightGo.transform.SetParent(_layer, false);
+            _night = nightGo.GetComponent<Image>();
+            _night.raycastTarget = false;
+            _night.color = NightVeil;
+            RectTransform nrt = _night.rectTransform;
+            nrt.anchorMin = new Vector2(0f, 1f);
+            nrt.anchorMax = new Vector2(0f, 1f);
+            nrt.pivot = new Vector2(0f, 1f);
+            _night.enabled = false;
 
             for (int m = 0; m < _lianas.Length; m++)
             {
@@ -82,8 +102,17 @@ namespace AF.Presentation
                 rt.anchorMax = new Vector2(0f, 1f);
                 rt.pivot = new Vector2(0.5f, 0f);
                 rt.sizeDelta = new Vector2(LeafWidthDp, LeafHeightDp);
+                img.enabled = false;
                 _leaves[i] = img;
             }
+
+            var waterGo = new GameObject("Water", typeof(RectTransform));
+            waterGo.transform.SetParent(_layer, false);
+            _water = (RectTransform)waterGo.transform;
+            _water.anchorMin = Vector2.zero;
+            _water.anchorMax = Vector2.one;
+            _water.offsetMin = Vector2.zero;
+            _water.offsetMax = Vector2.zero;
 
             for (int m = 0; m < _rigs.Length; m++)
             {
@@ -96,17 +125,26 @@ namespace AF.Presentation
         /// <summary>Raíz de la capa (orden de capas y tests).</summary>
         public RectTransform Layer => _layer;
 
-        /// <summary>La tropa está en pantalla.</summary>
+        /// <summary>Hueco entre la rama y la tropa para el labio del río que desborda (lo rellena la intro).</summary>
+        public RectTransform WaterSlot => _water;
+
+        /// <summary>La tropa (rama y miquitos) está en pantalla.</summary>
         public bool Active => _active;
 
         /// <summary>Piezas de la especie preparada (null = dosel).</summary>
         public MonkeyArt? Look => _look;
+
+        /// <summary>Piezas del segundo individuo (la <c>paleta_pareja</c>; null si la especie no la tiene).</summary>
+        public MonkeyArt? PairLook => _lookPair;
 
         /// <summary>Especie preparada.</summary>
         public FaunaSpecies? Species => _species;
 
         /// <summary>Miquitos en pantalla.</summary>
         public int MonkeyCount => _active && _plan != null ? _plan.MonkeyCount : 0;
+
+        /// <summary>El velo nocturno está a la vista (tests).</summary>
+        public bool NightVisible => _night.enabled && _layer.gameObject.activeInHierarchy && _night.canvasRenderer.GetAlpha() > 0.001f;
 
         /// <summary>Rig del miquito <paramref name="m"/> (tests).</summary>
         public MonkeyRig Rig(int m)
@@ -121,57 +159,57 @@ namespace AF.Presentation
         {
             _species = species;
             _look = species != null ? _art.MonkeyArtFor(species) : null;
+            _lookPair = species != null && species.PairPalette != null ? _art.MonkeyArtFor(species, true) : null;
         }
 
         /// <summary>
-        /// Coloca la rama y la tropa para el plan <paramref name="plan"/> (solo en modo rama y con una especie preparada).
+        /// Coloca la rama y la tropa para el plan <paramref name="plan"/> (solo en modo rama y con una especie preparada); en el
+        /// modo dosel solo queda activo el hueco del agua.
         /// </summary>
         public void Begin(IntroChoreography plan, IntroInput input)
         {
             _plan = plan;
-            if (plan.Perch != IntroPerch.Branch || plan.MonkeyCount == 0 || _look == null)
-            {
-                Hide();
-                return;
-            }
-
-            _active = true;
-            _alpha = -1f;
             _canvasW = input.CanvasWidth;
-            _bodyS = plan.MonkeyDp;
-            _branchY = plan.BranchY;
-            _corner = plan.Model == TroopModel.Hang ? 1f : 6f;
-            if (plan.Model == TroopModel.Hang)
-            {
-                // El cuerpo colgado acaba ≥ 8 dp por encima del panel (la mano libre, con la fruta, en la suelta del plan).
-                float release = input.PanelTop - IntroChoreography.LowBranchAbovePanelDp - 2f;
-                float room = release - (_branchY + 4f);
-                _bodyS = Mathf.Max(12f, Mathf.Min(_bodyS, room / -MonkeyRig.HangHandS.y));
-                _gripY = release + (MonkeyRig.HangHandS.y * _bodyS);
-            }
-
+            _hudBottom = input.HudBottom;
+            _alpha = -1f;
             if (!_layer.gameObject.activeSelf)
             {
                 _layer.gameObject.SetActive(true);
             }
 
+            if (plan.Perch != IntroPerch.Branch || plan.MonkeyCount == 0 || _look == null)
+            {
+                HideTroop();
+                return;
+            }
+
+            _active = true;
+            _night.enabled = _species != null && _species.Lighting == FaunaLighting.Night;
+            if (_night.enabled)
+            {
+                _night.rectTransform.anchoredPosition = Vector2.zero;
+                _night.rectTransform.sizeDelta = new Vector2(_canvasW, Mathf.Max(0f, input.PanelTop));
+            }
+
             // Rama: parábola de esquina a esquina (sube hacia el follaje de las esquinas), como Bézier cúbica equivalente.
             float w = _canvasW;
-            float yc = _branchY - _corner;
-            float yPeak = yc + (2f * (3f + _corner));
-            var p0 = new Vector2(-BranchOverhangDp, -yc);
-            var p3 = new Vector2(w + BranchOverhangDp, -yc);
+            float over = IntroChoreography.BranchOverhangDp;
+            float yEnd = plan.BranchCurveY(-over);
+            float yMid = plan.BranchCurveY(w * 0.5f);
+            float yPeak = yEnd + (2f * (yMid - yEnd));
+            var p0 = new Vector2(-over, -yEnd);
+            var p3 = new Vector2(w + over, -yEnd);
             var q = new Vector2(w * 0.5f, -yPeak);
             _branch.SetCurve(p0, p0 + ((q - p0) * (2f / 3f)), p3 + ((q - p3) * (2f / 3f)), p3, BranchWidthDp, BranchWidthDp - 1.5f);
             _branch.enabled = true;
+            bool high = plan.Model == TroopModel.Hang;
             for (int i = 0; i < Leaves; i++)
             {
                 float u = i == 0 ? 0.1f : (i == 1 ? 0.33f : (i == 2 ? 0.67f : 0.9f));
-                float x = -BranchOverhangDp + (u * (w + (2f * BranchOverhangDp)));
+                float x = -over + (u * (w + (2f * over)));
                 RectTransform rt = _leaves[i].rectTransform;
                 // En la rama baja, hacia arriba (nunca hacia el panel); en la alta, colgando (nunca sobre el HUD).
-                bool high = plan.Model == TroopModel.Hang;
-                rt.anchoredPosition = new Vector2(x, -(BranchYAt(x) + (high ? 1.5f : -1.5f)));
+                rt.anchoredPosition = new Vector2(x, -(plan.BranchCurveY(x) + (high ? 1.5f : -1.5f)));
                 rt.localRotation = Quaternion.Euler(0f, 0f, (high ? 180f : 0f) + ((i % 2 == 0 ? 1f : -1f) * (30f + (i * 6f))));
                 _leaves[i].enabled = true;
             }
@@ -186,9 +224,7 @@ namespace AF.Presentation
                     continue;
                 }
 
-                _rigs[m].SetArt(_look, _bodyS);
-                float x0 = plan.MonkeyX(m, 0f);
-                _startFacing[m] = plan.IsLong ? (plan.MonkeyFromRight[m] ? -1f : 1f) : (x0 < _canvasW * 0.5f ? 1f : -1f);
+                _rigs[m].SetArt(LookOf(m), plan.BodyDp);
                 _firstRelease[m] = float.MaxValue;
                 for (int k = 0; k < plan.FruitCount; k++)
                 {
@@ -212,7 +248,8 @@ namespace AF.Presentation
                 return;
             }
 
-            float exit = 1f - Mathf.Clamp01((t - plan.TotalMs) / IntroChoreography.ExitMs);
+            float fadeFrom = plan.ExitStartMs + IntroChoreography.ExitMs - IntroChoreography.ExitFadeMs;
+            float exit = 1f - Mathf.Clamp01((t - fadeFrom) / IntroChoreography.ExitFadeMs);
             float a = Mathf.Clamp01(alpha) * exit;
             SetDecorAlpha(a);
             for (int m = 0; m < plan.MonkeyCount; m++)
@@ -222,7 +259,7 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// Reducir movimiento (guion §9, Q13 A): solo el miquito más cercano a una esquina, quieto en una pose de reposo, con
+        /// Reducir movimiento (guion §9; recomendación Q13 A, pendiente de D-009): solo el miquito más cercano a una esquina, quieto en una pose de reposo, con
         /// la opacidad <paramref name="alpha"/>; ninguna pieza cambia de posición.
         /// </summary>
         public void ApplyStill(float alpha)
@@ -257,35 +294,30 @@ namespace AF.Presentation
                 }
 
                 MonkeyRig rig = _rigs[m];
-                float facing = _startFacing[m];
+                MonkeyArt look = LookOf(m);
+                float facing = plan.MonkeyStartFacing[m];
                 float x = plan.MonkeyX(m, 0f);
                 if (plan.Model == TroopModel.Hang)
                 {
-                    float gx = x - (facing * MonkeyRig.HangHandS.x * _bodyS);
-                    rig.Place(gx, _gripY, facing);
-                    rig.Apply(MonkeyRig.Hang(_look, 0f, 0f));
-                    SetLiana(m, gx, _gripY, alpha);
+                    rig.Place(x, plan.HangGripY, facing);
+                    rig.Apply(MonkeyRig.Hang(look, 0f, 0f));
+                    SetLiana(m, x, plan.HangGripY, alpha);
                 }
                 else
                 {
-                    float rx = plan.Model == TroopModel.Shake ? x : x - (facing * MonkeyRig.SitHandS.x * _bodyS);
-                    rig.Place(rx, BranchYAt(rx), facing);
-                    rig.Apply(MonkeyRig.Sit(_look, 1f, 0f, -1, 0f));
+                    rig.Place(x, plan.BranchCurveY(x), facing);
+                    rig.Apply(MonkeyRig.Sit(look, 1f, 0f, -1, 0f));
                 }
 
+                rig.Hold(null, Vector2.zero, 0f);
                 rig.SetAlpha(alpha);
             }
         }
 
-        /// <summary>Oculta la rama y la tropa.</summary>
+        /// <summary>Oculta la rama, la tropa y el hueco del agua.</summary>
         public void Hide()
         {
-            _active = false;
-            for (int m = 0; m < _rigs.Length; m++)
-            {
-                _rigs[m].SetVisible(false);
-            }
-
+            HideTroop();
             if (_layer.gameObject.activeSelf)
             {
                 _layer.gameObject.SetActive(false);
@@ -295,6 +327,7 @@ namespace AF.Presentation
         /// <summary>Añade los gráficos de la capa (tests de raycast).</summary>
         public void CollectGraphics(List<Graphic> graphics)
         {
+            graphics.Add(_night);
             graphics.Add(_branch);
             for (int i = 0; i < Leaves; i++)
             {
@@ -348,21 +381,43 @@ namespace AF.Presentation
         /// <summary>y de la rama (dp desde arriba) en <paramref name="x"/>.</summary>
         public float BranchYAt(float x)
         {
-            float u = Mathf.Clamp01((x + BranchOverhangDp) / (_canvasW + (2f * BranchOverhangDp)));
-            return _branchY - _corner + (4f * u * (1f - u) * (3f + _corner));
+            return _plan != null ? _plan.BranchCurveY(x) : 0f;
+        }
+
+        private MonkeyArt LookOf(int m)
+        {
+            return (m % 2 == 1 && _lookPair != null) ? _lookPair : _look!;
+        }
+
+        private void HideTroop()
+        {
+            _active = false;
+            _night.enabled = false;
+            _branch.enabled = false;
+            for (int i = 0; i < Leaves; i++)
+            {
+                _leaves[i].enabled = false;
+            }
+
+            for (int m = 0; m < _rigs.Length; m++)
+            {
+                _rigs[m].SetVisible(false);
+                _lianas[m].enabled = false;
+            }
         }
 
         private void PoseMonkey(IntroChoreography plan, int m, float t, float alpha)
         {
             MonkeyRig rig = _rigs[m];
-            MonkeyArt look = _look!;
-            float s = _bodyS;
+            MonkeyArt look = LookOf(m);
+            float s = plan.BodyDp;
             float x = plan.MonkeyX(m, t);
             float v = plan.MonkeyVelocity(m, t);
             bool moving = Mathf.Abs(v) > 0.0001f;
-            float facing = Facing(plan, m, t);
+            float facing = plan.MonkeyFacing(m, t);
             float lift = 0f;
             float shake = 0f;
+            int next = -1;
             for (int k = 0; k < plan.FruitCount; k++)
             {
                 if (plan.FruitMonkey[k] != m)
@@ -377,32 +432,49 @@ namespace AF.Presentation
                     lift = Mathf.Max(lift, Mathf.Sin(Mathf.PI * Mathf.Min(1f, g / 1.2f)));
                     shake = Mathf.Max(shake, Mathf.Sin(Mathf.PI * g));
                 }
+
+                if (g < 0f && (next < 0 || plan.FruitReleaseMs[k] < plan.FruitReleaseMs[next]))
+                {
+                    next = k; // la próxima fruta que soltará (la que el churuco lleva abrazada)
+                }
             }
 
+            bool exiting = t >= plan.ExitStartMs;
+            float exitQ = exiting ? Mathf.Clamp01((t - plan.ExitStartMs) / IntroChoreography.ExitMs) : 0f;
             float phase = t * (Mathf.PI * 2f * 8f / 1000f); // 8 Hz
             float breathe = 1f + (0.01f * (1f - Mathf.Cos(t * (Mathf.PI * 2f / 1600f))));
             bool blink = !moving && Mathf.Repeat(t + (m * 731f), 2400f) < 120f;
             bool idle = !moving && lift <= 0f && t < _firstRelease[m] && !plan.IsLong;
             float hop = moving && _species != null && _species.Locomotion == FaunaLocomotion.Jump ? 0.18f * Mathf.Abs(Mathf.Sin(phase * 0.5f)) * s : 0f;
+            bool hanging = plan.Model == TroopModel.Hang;
             MonkeyPose pose;
-            if (plan.Model == TroopModel.Hang)
+            if (hanging)
             {
-                // Avanza mano sobre mano bajo la rama alta y, parado sobre su grupo, baja colgado de una liana corta.
+                // Avanza mano sobre mano bajo la rama alta y, parado sobre su grupo, baja colgado de una liana corta; al salir,
+                // sigue la rama hacia la esquina (sin subir sobre el HUD).
                 float settled = moving ? 0f : Mathf.Clamp01((t - StillSince(plan, m, t)) / HangDropMs);
-                float gripTop = _branchY + 1.5f;
-                float gripY = Mathf.Lerp(gripTop, _gripY, Ease.OutCubic(settled));
+                float gripTop = plan.BranchY + 1.5f;
+                float gripY = Mathf.Lerp(gripTop, plan.HangGripY, Ease.OutCubic(settled));
                 float sway = moving ? 0.06f * Mathf.Sin(phase * 0.5f) : 0.02f * Mathf.Sin(t * 0.004f);
                 pose = MonkeyRig.Hang(look, lift, sway);
                 pose.Blink = blink;
-                float gx = x - (facing * MonkeyRig.HangHandS.x * s);
-                rig.Place(gx, gripY, facing);
-                SetLiana(m, gx, gripY, alpha);
+                rig.Place(x, gripY, facing);
+                SetLiana(m, x, gripY, alpha);
             }
             else
             {
+                float tilt = 0f;
+                float rise = 0f;
                 if (moving)
                 {
                     pose = MonkeyRig.Walk(look, phase, 2f / Mathf.Max(8f, s));
+                    if (exiting)
+                    {
+                        // Trepa hacia el follaje de la esquina: hasta 30 dp hacia arriba, sin pasar sobre el HUD.
+                        float room = plan.BranchCurveY(x) - (1.1f * s) - _hudBottom - 1f;
+                        rise = Mathf.Clamp(room, 0f, IntroChoreography.ExitRiseDp) * Ease.Out(exitQ);
+                        tilt = ClimbTiltDeg * Mathf.Clamp01(exitQ * 4f);
+                    }
                 }
                 else
                 {
@@ -418,37 +490,70 @@ namespace AF.Presentation
                     }
                 }
 
+                if (plan.Pair && !exiting)
+                {
+                    Braid(plan, m, t, s, ref pose);
+                }
+
                 pose.Blink = blink;
-                float rx = plan.Model == TroopModel.Shake ? x : x - (facing * MonkeyRig.SitHandS.x * s);
-                rig.Place(rx, BranchYAt(rx) - hop, facing);
+                rig.Place(x, plan.BranchCurveY(x) - hop - rise, facing, tilt);
                 _lianas[m].enabled = false;
             }
 
+            // El churuco lleva abrazada la próxima fruta hasta el gesto de soltarla (entonces la sigue la de la intro).
+            bool hug = look.HugsFruit && next >= 0 && !moving && !exiting;
+            rig.Hold(hug ? _art.FruitFlight(plan.FruitTint[next]) : null, MonkeyRig.ChestS(look, hanging), plan.FruitFlightDp * 0.8f);
             rig.Apply(pose);
             rig.SetAlpha(alpha);
         }
 
-        // Hacia dónde mira: el sentido de su último desplazamiento (o el de entrada); a lo largo de la rama, nunca a una cuia.
-        private float Facing(IntroChoreography plan, int m, float t)
+        // La pareja de colas_entrelazadas, quieta en sus asientos de espaldas: las dos colas suben trenzadas por detrás de ellos
+        // (dos Bézier de ≈ 1,3 S que se cruzan 3 veces, una el reflejo de la otra). Cuelgan hacia arriba y no bajo la rama: la
+        // rama está a 8 dp del panel y nada de la tropa entra en él (A7).
+        private void Braid(IntroChoreography plan, int m, float t, float s, ref MonkeyPose pose)
         {
-            int count = plan.MonkeyKeyCount[m];
-            int b = m * IntroChoreography.MaxKeys;
-            float facing = _startFacing[m];
-            for (int j = 1; j < count; j++)
+            int other = m == 0 ? 1 : 0;
+            if (plan.MonkeyCount < 2 || m > 1)
             {
-                if (plan.MonkeyKeyT[b + j - 1] > t)
-                {
-                    break;
-                }
-
-                float dx = plan.MonkeyKeyX[b + j] - plan.MonkeyKeyX[b + j - 1];
-                if (Mathf.Abs(dx) > 0.01f)
-                {
-                    facing = dx > 0f ? 1f : -1f;
-                }
+                return;
             }
 
-            return facing;
+            float since = Mathf.Max(StillSince(plan, 0, t), StillSince(plan, 1, t));
+            bool still = Mathf.Abs(plan.MonkeyVelocity(0, t)) < 0.0001f && Mathf.Abs(plan.MonkeyVelocity(1, t)) < 0.0001f;
+            float amount = still ? Mathf.Clamp01((t - since) / BraidBlendMs) : 0f;
+            if (!plan.IsLong)
+            {
+                amount = still ? 1f : 0f;
+            }
+
+            if (amount <= 0f)
+            {
+                return;
+            }
+
+            float x = plan.MonkeyX(m, t);
+            float xo = plan.MonkeyX(other, t);
+            float mid = (x + xo) * 0.5f;
+            float side = x < xo ? -1f : 1f; // este miquito, a la izquierda (−1) o a la derecha (+1) del centro
+            float f = plan.MonkeyFacing(m, t);
+            float y = plan.BranchCurveY(x);
+            float h = 0.93f * s;
+
+            // Puntos de control en el lienzo (dp, y hacia abajo); el de la derecha es el reflejo del de la izquierda.
+            Vector2 w0 = new Vector2(mid + (side * 0.23f * s), y - (0.22f * s));
+            Vector2 w1 = new Vector2(mid - (side * 0.45f * s), y - (0.22f * s) - (h * 0.33f));
+            Vector2 w2 = new Vector2(mid + (side * 0.45f * s), y - (0.22f * s) - (h * 0.66f));
+            Vector2 w3 = new Vector2(mid - (side * 0.06f * s), y - (0.22f * s) - h);
+            pose.Tail0 = Vector2.Lerp(pose.Tail0, Local(w0, x, y, f, s), amount);
+            pose.Tail1 = Vector2.Lerp(pose.Tail1, Local(w1, x, y, f, s), amount);
+            pose.Tail2 = Vector2.Lerp(pose.Tail2, Local(w2, x, y, f, s), amount);
+            pose.Tail3 = Vector2.Lerp(pose.Tail3, Local(w3, x, y, f, s), amount);
+        }
+
+        // Del lienzo (y hacia abajo) al espacio del rig (S, y hacia arriba, mirando a la derecha).
+        private static Vector2 Local(Vector2 world, float rootX, float rootY, float facing, float s)
+        {
+            return new Vector2((world.x - rootX) * facing / s, (rootY - world.y) / s);
         }
 
         // Desde cuándo está quieto en su posición actual.
@@ -477,7 +582,8 @@ namespace AF.Presentation
         private void SetLiana(int m, float x, float gripY, float alpha)
         {
             BezierStripGraphic liana = _lianas[m];
-            bool on = gripY > _branchY + 2f;
+            float branchY = _plan != null ? _plan.BranchY : gripY;
+            bool on = gripY > branchY + 2f;
             if (liana.enabled != on)
             {
                 liana.enabled = on;
@@ -488,7 +594,7 @@ namespace AF.Presentation
                 return;
             }
 
-            var top = new Vector2(x, -_branchY);
+            var top = new Vector2(x, -branchY);
             var bottom = new Vector2(x, -gripY);
             liana.SetCurve(top, Vector2.Lerp(top, bottom, 0.33f) + new Vector2(1.5f, 0f), Vector2.Lerp(top, bottom, 0.66f) + new Vector2(-1f, 0f), bottom, 2f, 1.6f);
             liana.canvasRenderer.SetAlpha(alpha);
@@ -503,6 +609,7 @@ namespace AF.Presentation
 
             _alpha = a;
             _branch.canvasRenderer.SetAlpha(a);
+            _night.canvasRenderer.SetAlpha(a);
             for (int i = 0; i < Leaves; i++)
             {
                 _leaves[i].canvasRenderer.SetAlpha(a);

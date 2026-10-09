@@ -67,21 +67,22 @@ namespace AF.Presentation
     }
 
     /// <summary>
-    /// Rig recortable de un miquito en uGUI (guion de la intro §11, Q16 A): 8 piezas (cola, pierna y brazo de detrás, torso,
-    /// pierna de delante, cabeza con su párpado y brazo de delante) con las piezas de <see cref="MonkeyArt"/> y poses por
-    /// código (<see cref="Sit"/>, <see cref="Walk"/>, <see cref="Hang"/>). Postura animal, sin ropa ni accesorios, y nunca
-    /// mira una cuia: mira a lo largo de la rama o a la fruta de su mano (guion §4.6). Sin raycast.
+    /// Rig recortable de un miquito en uGUI (guion de la intro §11; recomendación Q16 A, pendiente de D-009): 8 piezas (cola, pierna y brazo de detrás, torso,
+    /// pierna de delante, cabeza con su párpado y brazo de delante) más dos opcionales (el bigote del pichico, hijo de la
+    /// cabeza, y la fruta abrazada al pecho del churuco) con las piezas de <see cref="MonkeyArt"/> y poses por código
+    /// (<see cref="Sit"/>, <see cref="Walk"/>, <see cref="Hang"/>). Postura animal, sin ropa ni accesorios, y nunca mira una
+    /// cuia: mira a lo largo de la rama o a la fruta de su mano (guion §4.6). Sin raycast.
     /// </summary>
     public sealed class MonkeyRig
     {
         /// <summary>Piezas del rig.</summary>
         public const int PieceCount = 8;
 
-        /// <summary>Mano del brazo de delante al soltar, sentado (S): la fruta sale de aquí.</summary>
-        public static readonly Vector2 SitHandS = new Vector2(0.30f, 0.36f);
+        /// <summary>Mano del brazo de delante al soltar, sentado (S): la fruta sale de aquí (la misma que planifica la intro).</summary>
+        public static readonly Vector2 SitHandS = new Vector2(IntroChoreography.SitHandOffsetS, IntroChoreography.SitHandHeightS);
 
-        /// <summary>Mano libre colgado (S, bajo el agarre): la fruta sale de aquí.</summary>
-        public static readonly Vector2 HangHandS = new Vector2(0.14f, -0.95f);
+        /// <summary>Mano libre colgado (S, bajo el agarre): la fruta sale de aquí; es lo más bajo del cuerpo colgado.</summary>
+        public static readonly Vector2 HangHandS = new Vector2(IntroChoreography.HangHandOffsetS, -IntroChoreography.HangDepthS);
 
         private readonly RectTransform _root;
         private readonly BezierStripGraphic _tail;
@@ -92,6 +93,8 @@ namespace AF.Presentation
         private readonly Image _head;
         private readonly Image _eyelid;
         private readonly Image _frontArm;
+        private readonly Image _whiskers;
+        private readonly Image _held;
         private readonly Graphic[] _graphics;
         private readonly Vector3[] _corners = new Vector3[4];
         private MonkeyArt? _art;
@@ -125,12 +128,16 @@ namespace AF.Presentation
             _eyelid = Piece("Eyelid", _head.rectTransform, new Vector2(0.5f, 0.5f));
             _eyelid.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
             _eyelid.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            _whiskers = Piece("Whiskers", _head.rectTransform, new Vector2(0.5f, 0.5f));
+            _whiskers.enabled = false;
+            _held = Piece("HeldFruit", _root, new Vector2(0.5f, 0.5f));
+            _held.enabled = false;
             _frontArm = Piece("FrontArm", _root, new Vector2(0.5f, 1f));
             _backLeg.type = Image.Type.Sliced;
             _backArm.type = Image.Type.Sliced;
             _frontLeg.type = Image.Type.Sliced;
             _frontArm.type = Image.Type.Sliced;
-            _graphics = new Graphic[] { _tail, _backLeg, _backArm, _torso, _frontLeg, _head, _eyelid, _frontArm };
+            _graphics = new Graphic[] { _tail, _backLeg, _backArm, _torso, _frontLeg, _head, _eyelid, _whiskers, _held, _frontArm };
             go.SetActive(false);
         }
 
@@ -174,6 +181,17 @@ namespace AF.Presentation
             _head.rectTransform.sizeDelta = new Vector2(art.HeadS * _s, art.HeadS * _s);
             _eyelid.rectTransform.sizeDelta = art.EyelidSizeS * _s;
             _eyelid.rectTransform.anchoredPosition = art.EyelidOffsetS * _s;
+            _whiskers.sprite = art.Whiskers;
+            _whiskers.enabled = art.Whiskers != null;
+            if (art.Whiskers != null)
+            {
+                _whiskers.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
+                _whiskers.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+                _whiskers.rectTransform.sizeDelta = art.WhiskersSizeS * _s;
+                _whiskers.rectTransform.anchoredPosition = art.WhiskersOffsetS * _s;
+            }
+
+            _held.enabled = false;
             _tail.SetColors(art.Tail, art.TailTip, 0.72f, new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 0.8f), Mathf.Max(0.8f, 0.03f * _s));
         }
 
@@ -203,8 +221,11 @@ namespace AF.Presentation
             }
         }
 
-        /// <summary>Coloca el apoyo en (<paramref name="x"/>, <paramref name="yDown"/>) dp del lienzo, mirando a <paramref name="facing"/> (±1).</summary>
-        public void Place(float x, float yDown, float facing)
+        /// <summary>
+        /// Coloca el apoyo en (<paramref name="x"/>, <paramref name="yDown"/>) dp del lienzo, mirando a <paramref name="facing"/>
+        /// (±1) y con la cabeza <paramref name="tiltDeg"/> grados hacia arriba (trepa hacia el follaje al salir).
+        /// </summary>
+        public void Place(float x, float yDown, float facing, float tiltDeg = 0f)
         {
             var pos = new Vector2(x, -yDown);
             if (_root.anchoredPosition != pos)
@@ -217,6 +238,37 @@ namespace AF.Presentation
             {
                 _root.localScale = scale;
             }
+
+            Quaternion r = tiltDeg == 0f ? Quaternion.identity : Quaternion.Euler(0f, 0f, facing < 0f ? -tiltDeg : tiltDeg);
+            if (_root.localRotation != r)
+            {
+                _root.localRotation = r;
+            }
+        }
+
+        /// <summary>
+        /// La fruta abrazada al pecho (<see cref="MonkeyArt.HugsFruit"/>): <paramref name="sprite"/> en <paramref name="chestS"/>
+        /// (S) con lado <paramref name="sizeDp"/>; null la oculta (al soltarla, la sigue la fruta de la intro).
+        /// </summary>
+        public void Hold(Sprite? sprite, Vector2 chestS, float sizeDp)
+        {
+            bool on = sprite != null;
+            if (_held.enabled != on)
+            {
+                _held.enabled = on;
+            }
+
+            if (!on)
+            {
+                return;
+            }
+
+            if (_held.sprite != sprite)
+            {
+                _held.sprite = sprite;
+            }
+
+            Set(_held.rectTransform, chestS * _s, new Vector2(sizeDp, sizeDp), 0f);
         }
 
         /// <summary>Aplica la pose.</summary>
@@ -233,7 +285,9 @@ namespace AF.Presentation
             Limb(_backArm, pose.BackArmFrom * s, pose.BackArmTo * s, limbW);
             Limb(_frontLeg, pose.FrontLegFrom * s, pose.FrontLegTo * s, limbW);
             Limb(_frontArm, pose.FrontArmFrom * s, pose.FrontArmTo * s, limbW);
-            Set(_torso.rectTransform, pose.TorsoCenter * s, pose.TorsoSize * s, pose.TorsoAngle);
+            Vector2 torso = pose.TorsoSize * s;
+            torso.x *= _art.TorsoWidthScale;
+            Set(_torso.rectTransform, pose.TorsoCenter * s, torso, pose.TorsoAngle);
             RectTransform head = _head.rectTransform;
             Vector2 hp = pose.HeadCenter * s;
             if (head.anchoredPosition != hp)
@@ -315,7 +369,7 @@ namespace AF.Presentation
                 BackArmFrom = new Vector2(0.08f, 0.47f),
                 BackArmTo = new Vector2(0.08f + (0.08f * l), 0.47f - (0.41f * l)),
                 FrontArmFrom = new Vector2(0.13f, 0.46f),
-                FrontArmTo = Vector2.Lerp(new Vector2(0.13f + (0.09f * l), 0.46f - (0.38f * l)), SitHandS, Mathf.Clamp01(lift)),
+                FrontArmTo = Vector2.Lerp(art.HugsFruit ? new Vector2(0.18f, 0.32f) : new Vector2(0.13f + (0.09f * l), 0.46f - (0.38f * l)), SitHandS, Mathf.Clamp01(lift)),
             };
 
             if (lift <= 0f)
@@ -366,46 +420,78 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// Colgado bajo el agarre (modelo <c>cuelga</c>): de un brazo (calitrícidos) o de la cola (atélidos), con la mano libre
-        /// abajo y la fruta en ella; <paramref name="lift"/> la adelanta al soltar.
+        /// Colgado bajo el agarre (modelo <c>cuelga</c>): de un brazo (calitrícidos) o de la cola (atélidos; el maquisapa, de la
+        /// cola y de un brazo arriba), con la mano libre abajo y la fruta en ella (el churuco la lleva abrazada al pecho hasta
+        /// soltarla); <paramref name="lift"/> la adelanta al soltar. Lo más bajo del cuerpo nunca pasa de la mano de soltar
+        /// (<see cref="HangHandS"/>): con extremidades largas el cuerpo queda más arriba y pequeño; con cortas, más abajo.
         /// </summary>
         public static MonkeyPose Hang(MonkeyArt art, float lift, float sway)
         {
             bool tailGrip = art.TailCurls;
+            float l = art.LimbScale;
+            float low = HangHandS.y;
+            float torsoH = art.ArmUp ? 0.36f : 0.46f;
+            float legLen = art.ArmUp ? 0.22f : 0.22f * l;
+            float hipY = art.ArmUp ? -0.62f : low + legLen;
+            float torsoY = hipY + (torsoH * 0.35f);
+            float shoulderY = torsoY + (torsoH * 0.33f);
+            Vector2 rest = art.HugsFruit ? new Vector2(0.16f + sway, torsoY + 0.04f) : new Vector2(0.10f + sway, Mathf.Max(low + 0.02f, shoulderY - (0.52f * l)));
+            Vector2 backTo;
+            if (art.ArmUp || !tailGrip)
+            {
+                backTo = new Vector2(-0.01f, -0.01f); // agarrado a la rama
+            }
+            else
+            {
+                backTo = new Vector2(-0.12f + sway, Mathf.Max(low + 0.04f, shoulderY - (0.48f * l)));
+            }
+
             var p = new MonkeyPose
             {
-                TorsoCenter = new Vector2(0.02f + sway, -0.52f),
-                TorsoSize = new Vector2(0.34f, 0.46f),
+                TorsoCenter = new Vector2(0.02f + sway, torsoY),
+                TorsoSize = new Vector2(0.34f, torsoH),
                 TorsoAngle = sway * 40f,
-                HeadCenter = tailGrip ? new Vector2(0.10f + sway, -0.26f) : new Vector2(0.13f + (sway * 0.5f), -0.24f),
-                BackArmFrom = new Vector2(-0.02f + sway, -0.36f),
-                BackArmTo = tailGrip ? new Vector2(-0.12f + sway, -0.86f) : Vector2.zero,
-                FrontArmFrom = new Vector2(0.08f + sway, -0.38f),
-                FrontArmTo = Vector2.Lerp(new Vector2(0.10f + sway, -0.90f), HangHandS, Mathf.Clamp01(lift)),
-                BackLegFrom = new Vector2(-0.06f + sway, -0.70f),
-                BackLegTo = new Vector2(-0.12f + (sway * 1.5f), -0.92f),
-                FrontLegFrom = new Vector2(0.06f + sway, -0.70f),
-                FrontLegTo = new Vector2(0.02f + (sway * 1.5f), -0.92f),
+                HeadCenter = tailGrip ? new Vector2(0.10f + sway, shoulderY + 0.11f) : new Vector2(0.13f + (sway * 0.5f), shoulderY + 0.13f),
+                BackArmFrom = new Vector2(-0.02f + sway, shoulderY),
+                BackArmTo = backTo,
+                FrontArmFrom = new Vector2(0.08f + sway, shoulderY - 0.02f),
+                FrontArmTo = Vector2.Lerp(rest, HangHandS, Mathf.Clamp01(lift)),
+                BackLegFrom = new Vector2(-0.06f + sway, hipY + 0.02f),
+                BackLegTo = new Vector2(-0.12f + (sway * 1.5f), hipY - legLen + 0.03f),
+                FrontLegFrom = new Vector2(0.06f + sway, hipY + 0.02f),
+                FrontLegTo = new Vector2(0.02f + (sway * 1.5f), hipY - legLen + 0.03f),
             };
 
             if (tailGrip)
             {
                 // La cola prensil sube hasta la rama y se enrolla en el agarre.
-                p.Tail0 = new Vector2(-0.06f + sway, -0.62f);
-                p.Tail1 = new Vector2(-0.42f, -0.40f);
+                p.Tail0 = new Vector2(-0.06f + sway, hipY + 0.10f);
+                p.Tail1 = new Vector2(-0.42f, hipY + 0.32f);
                 p.Tail2 = new Vector2(-0.22f, 0.12f);
                 p.Tail3 = new Vector2(0.02f, 0.02f);
             }
             else
             {
                 float k = art.TailLength;
-                p.Tail0 = new Vector2(-0.06f + sway, -0.72f);
+                p.Tail0 = new Vector2(-0.06f + sway, hipY);
                 p.Tail1 = p.Tail0 + (new Vector2(-0.30f, -0.08f) * k);
                 p.Tail2 = p.Tail0 + (new Vector2(-0.46f, 0.20f) * k);
                 p.Tail3 = p.Tail0 + (new Vector2(-0.34f, 0.47f) * k); // hacia arriba: nada cuelga hacia el panel
             }
 
             return p;
+        }
+
+        /// <summary>Pecho del miquito (S): donde el churuco abraza la fruta, sentado o colgado.</summary>
+        public static Vector2 ChestS(MonkeyArt art, bool hanging)
+        {
+            if (!hanging)
+            {
+                return new Vector2(0.14f, 0.34f);
+            }
+
+            MonkeyPose p = Hang(art, 0f, 0f);
+            return new Vector2(0.17f, p.TorsoCenter.y + 0.04f);
         }
 
         // Cola en arco hacia arriba y atrás (balancín), corta (huapo) o enrollada (atélidos); nunca cuelga hacia el panel.

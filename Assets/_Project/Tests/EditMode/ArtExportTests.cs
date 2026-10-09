@@ -22,14 +22,43 @@ namespace AF.Tests.EditMode
             Assert.That(File.Exists(Path.Combine(dir, "foliage_tr.png")), Is.True);
         }
 
-        /// <summary>Atlas de frutas en vuelo y piezas procedurales de cada especie de miquito (guion de la intro §11).</summary>
+        /// <summary>
+        /// Atlas de frutas en vuelo y piezas procedurales de cada especie de miquito (guion de la intro §11), con la de la pareja
+        /// si el catálogo trae <c>paleta_pareja</c>. La escritura a disco vive aquí (ensamblado de Editor), no en el runtime.
+        /// </summary>
         [Test]
         public void ExportIntroArt()
         {
             string dir = Path.Combine(Application.dataPath, "../Logs/art");
+            Directory.CreateDirectory(dir);
             FaunaCatalog catalog = FaunaCatalogReader.Read(File.ReadAllText(Path.Combine(Application.dataPath, "_Project/Data/Fauna/miquitos_v0.json")));
-            ProceduralArt.ExportIntroArt(dir, catalog.Species);
+            Save(dir, "fruit_flight_atlas", ProceduralArt.FruitFlightPixels(), ProceduralArt.FruitAtlasWidth, ProceduralArt.FruitAtlasHeight);
+            int size = ProceduralArt.FaunaPixelsSize;
+            foreach (FaunaSpecies species in catalog.Species)
+            {
+                Save(dir, "fauna_" + species.Id, ProceduralArt.FaunaPixels(species), size, size);
+                if (species.PairPalette != null)
+                {
+                    Save(dir, "fauna_" + species.Id + "_pareja", ProceduralArt.FaunaPixels(species, true), size, size);
+                }
+            }
+
             Assert.That(File.Exists(Path.Combine(dir, "fruit_flight_atlas.png")), Is.True);
+        }
+
+        private static void Save(string dir, string name, Color32[] pixels, int width, int height)
+        {
+            var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            try
+            {
+                tex.SetPixels32(pixels);
+                tex.Apply(false, false);
+                File.WriteAllBytes(Path.Combine(dir, name + ".png"), tex.EncodeToPNG());
+            }
+            finally
+            {
+                Object.DestroyImmediate(tex);
+            }
         }
     }
 }

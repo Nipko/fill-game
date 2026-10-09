@@ -10,9 +10,11 @@ namespace AF.Presentation
     /// panel; dos Canvas anidados propios (lejano y cercano) para no reconstruir el lienzo principal. Nada depende de la
     /// selección ni de la legalidad (D-002): solo de la fase (se suspende en la celebración, la victoria y el bloqueo).
     /// En «Llenar y teñir» (guion de la intro, §6.2 y §11) el río crece: el río está horneado en el panorama, así que no se
-    /// puede subir; una capa de crecida aclara la franja de río visible (+12 L* como máximo) y los destellos duplican su alfa y
-    /// se deslizan 10 dp hacia el panel (<see cref="SetRiverBoost"/>). En el modo dosel el follaje de arriba se sacude ±6°
-    /// (<see cref="SetCanopyShake"/>). Sin ninguna cresta que avance por el río (sería la Pororoca).
+    /// puede subir; una capa de crecida clara (degradado con suelo de 0,35 y alfa máximo de 0,65) aclara la franja de río
+    /// visible unos +12 L* y los destellos duplican su alfa y se deslizan 10 dp hacia el panel (<see cref="SetRiverBoost"/>).
+    /// En el modo dosel el follaje de arriba se sacude ±6° (<see cref="SetCanopyShake"/>). Mientras dura la intro el polen se
+    /// pausa (<see cref="SetPollenPaused"/>: en los primeros 100 ms solo se mueve el río). Sin ninguna cresta que avance por el
+    /// río (sería la Pororoca).
     /// </summary>
     public sealed class AmbientLayer
     {
@@ -22,8 +24,22 @@ namespace AF.Presentation
         /// <summary>Destellos del río (guía 6.12: 6).</summary>
         public const int GlintCount = 6;
 
-        /// <summary>Opacidad máxima de la capa de crecida (guion §11: alfa 0 → 0,35, ≈ +12 L*).</summary>
-        public const float RiverSwellAlpha = 0.35f;
+        /// <summary>
+        /// Opacidad máxima de la capa de crecida: con el suelo del degradado en 0,35 (a = 0,35 + 0,65 · smoothstep) y el color
+        /// claro del destello, la franja de río sube unos +12 L* a los 150 ms (guion §6.2; con 0,35 sobre un degradado de 0 a 1
+        /// en el beige del río solo subía +2 L*).
+        /// </summary>
+        public const float RiverSwellAlpha = 0.65f;
+
+        /// <summary>Suelo del degradado de la capa de crecida (arriba, junto al horizonte).</summary>
+        public const float RiverSwellFloor = 0.35f;
+
+        /// <summary>
+        /// Alto de la capa de crecida (del horizonte al panel, dp) para el que vale <see cref="RiverSwellAlpha"/> (el nivel 7: 44
+        /// dp). En franjas más altas (nivel 1: 64 dp) el alfa baja con √(44 / alto), para que la franja suba de media unos +12 L*
+        /// y no +15 (medido en las capturas 01_intro_l7 y 01c_intro_l1 a 0 y 150 ms).
+        /// </summary>
+        public const float RiverSwellRefDp = 44f;
 
         /// <summary>Los destellos se deslizan hacia el panel con la crecida (dp).</summary>
         public const float RiverGlintSlideDp = 10f;
@@ -50,6 +66,7 @@ namespace AF.Presentation
         private uint _rng = 0x2545F491u;
         private float _time;
         private bool _suspended;
+        private bool _pollenPaused;
         private float _boost;
         private float _shake;
 
@@ -84,9 +101,9 @@ namespace AF.Presentation
         public Image RiverSwell => _swell;
 
         /// <summary>
-        /// Crecida del río en «Llenar y teñir» (0..1): la capa sobre la franja de río visible pasa de alfa 0 a 0,35 en los
-        /// colores claros del río y los 6 destellos duplican su alfa y se deslizan 10 dp hacia el panel. Se aplica en el acto,
-        /// también con el ambiente congelado (capturas).
+        /// Crecida del río en «Llenar y teñir» (0..1): la capa sobre la franja de río visible pasa de alfa 0 a 0,65 (corregido
+        /// por el alto de la franja, <see cref="RiverSwellRefDp"/>) en un color claro y cálido, y los 6 destellos duplican su alfa
+        /// y se deslizan 10 dp hacia el panel. Se aplica en el acto, también con el ambiente congelado (capturas).
         /// </summary>
         public void SetRiverBoost(float boost)
         {
@@ -105,8 +122,8 @@ namespace AF.Presentation
 
             if (on)
             {
-                Color c = Palette.RiverReflect;
-                c.a = RiverSwellAlpha * boost;
+                Color c = Palette.Glint; // claro y cálido: el beige del río apenas lo aclaraba
+                c.a = RiverSwellAlpha * SwellBandScale() * boost;
                 _swell.color = c;
             }
 
@@ -117,6 +134,12 @@ namespace AF.Presentation
                     ApplyGlint(i);
                 }
             }
+        }
+
+        // √(44 / alto de la capa), como mucho 1: las franjas altas no se aclaran más que la del nivel 7.
+        private float SwellBandScale()
+        {
+            return Mathf.Sqrt(Mathf.Min(1f, RiverSwellRefDp / Mathf.Max(1f, _river.height + 8f)));
         }
 
         /// <summary>
@@ -134,8 +157,46 @@ namespace AF.Presentation
             ApplyFoliage();
         }
 
-        /// <summary>Congela el ambiente con semilla y tiempo fijos (capturas de prueba; guía 6, "Reducir movimiento").</summary>
-        public static bool Frozen { get; set; }
+        private static bool s_frozen;
+
+        /// <summary>
+        /// Congela el ambiente con semilla y tiempo fijos (capturas de prueba; guía 6, "Reducir movimiento"), y el reloj de los
+        /// shaders del líquido y del chorro (<see cref="ShaderClock"/>: la intro lo lleva a su propio tiempo).
+        /// </summary>
+        public static bool Frozen
+        {
+            get => s_frozen;
+            set
+            {
+                s_frozen = value;
+                if (value)
+                {
+                    ShaderClock.Freeze(0f);
+                }
+                else
+                {
+                    ShaderClock.Release();
+                }
+            }
+        }
+
+        /// <summary>El polen está en pausa (la intro).</summary>
+        public bool PollenPaused => _pollenPaused;
+
+        /// <summary>Posición de la mota de polen <paramref name="i"/> (dp, y desde arriba; tests).</summary>
+        public Vector2 PollenPosition(int i)
+        {
+            return _pollenPos[i];
+        }
+
+        /// <summary>
+        /// Pausa el polen (las motas se quedan quietas y no nacen nuevas): mientras dura la intro, en los primeros 100 ms solo
+        /// se mueven el río y sus destellos (guion §7.2, A3). Vuelve con el input.
+        /// </summary>
+        public void SetPollenPaused(bool paused)
+        {
+            _pollenPaused = paused;
+        }
 
         /// <summary>Raíz de la capa lejana.</summary>
         public RectTransform Far => _far;
@@ -231,7 +292,7 @@ namespace AF.Presentation
             }
 
             float dt = dtMs / 1000f;
-            for (int i = 0; i < PollenCount; i++)
+            for (int i = 0; i < PollenCount && !_pollenPaused; i++)
             {
                 if (_pollenAge[i] < 0f)
                 {

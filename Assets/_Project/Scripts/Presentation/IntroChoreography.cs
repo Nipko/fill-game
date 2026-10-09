@@ -28,6 +28,23 @@ namespace AF.Presentation
     }
 
     /// <summary>
+    /// Versión de la intro (guion §7.2-§7.3). La decide la clave de Remote Config que dio la duración
+    /// (<c>anim_tint_duration_ms_early</c>: larga; <c>_late</c> y los reintentos: corta), no T: con la clave tardía a 1.000 ms
+    /// (rango 600-1.000 de 08 §9) sigue siendo la corta, escalada por T / 800.
+    /// </summary>
+    public enum IntroVersion
+    {
+        /// <summary>Sin decidir (tests y herramientas): larga con T ≥ 1.000 ms.</summary>
+        Auto = 0,
+
+        /// <summary>Larga (niveles 1-20, primer intento): fases de 1.400 ms escaladas.</summary>
+        Long = 1,
+
+        /// <summary>Corta (desde el 21 y en los reintentos): fases de 800 ms escaladas.</summary>
+        Short = 2,
+    }
+
+    /// <summary>
     /// Entrada del planificador de «Llenar y teñir» (guion §7.4), en dp del lienzo con la y medida desde arriba: geometría
     /// de las cuias, de las filas, de las repisas y del panel, el estado visible (dosis y ocultas), el modo y T. Arrays
     /// preasignados: se rellena sin asignar memoria.
@@ -112,10 +129,21 @@ namespace AF.Presentation
         /// <summary>Semilla de la variación determinista (el número de nivel).</summary>
         public int Seed;
 
+        /// <summary>Versión pedida (la decide la clave de la duración; <see cref="IntroVersion.Auto"/>: por T).</summary>
+        public IntroVersion Version;
+
+        /// <summary>
+        /// La pareja se sienta junta (rasgo <c>colas_entrelazadas</c> del catálogo, modelo <c>sacude</c>): centros a 0,9 del
+        /// tamaño, de espaldas, con las colas trenzadas.
+        /// </summary>
+        public bool Pair;
+
         /// <summary>Vacía la entrada (mismos arrays).</summary>
         public void Clear()
         {
             Count = 0;
+            Version = IntroVersion.Auto;
+            Pair = false;
             Array.Clear(Doses, 0, Doses.Length);
             Array.Clear(Tints, 0, Tints.Length);
             Array.Clear(Hidden, 0, Hidden.Length);
@@ -163,11 +191,23 @@ namespace AF.Presentation
     /// velocidades subidas si hace falta. Fruta: una por racha visible (≤ 24; si hay más, una por cuia con cascada de 25 ms
     /// de abajo arriba), filas de arriba abajo, por pasadas en el sentido de la tropa y de abajo arriba en la cuia; impactos
     /// repartidos entre el inicio de la fase d y T − su floración, de modo que la última floración termina en T; caída con
-    /// g = 12.000 dp/s² y τ entre 80 y 260 ms, programada hacia atrás desde el impacto. Tropa: grupos contiguos de columnas,
-    /// entrada por la rama a ≤ 450 dp/s cuando la fila 1 está llena (larga) o posada desde t = 0 (corta), parada de 60 ms
-    /// sobre cada columna, suelta ≥ 50 ms tras llegar, salida de espaldas en 300 ms. Las dosis ocultas no forman racha ni
-    /// reciben fruta. Sin LINQ, sin <c>UnityEngine.Random</c> y sin asignaciones tras construirlo.
+    /// g = 12.000 dp/s² y τ entre 80 y 260 ms, programada hacia atrás desde el impacto. Tropa: grupos contiguos de columnas
+    /// separados donde cabe la distancia mínima entre vecinos (1,1 del tamaño entre centros, contando la mano), entrada por la
+    /// rama a ≤ 450 dp/s cuando la fila 1 está llena (larga; con tropa de 4 o más, la mitad por cada esquina; si no, por un
+    /// solo lado que alterna con la variación) o posada desde t = 0 (corta), parada de 60 ms sobre cada columna suya con la
+    /// mano sobre el eje (la fruta cae recta), suelta ≥ 50 ms tras llegar, y el impulso lateral de ≤ 250 dp/s solo hacia una
+    /// columna vecina de su grupo; el centro de cada miquito queda en [0,5·S + 6, ancho − 0,5·S − 6]; si no llega a tiempo, se
+    /// aprieta el calendario hacia T (paso 7), nunca se acorta el recorrido. Salida en 300 ms hacia el follaje de la esquina
+    /// más cercana. Las claves de trayectoria son el centro del cuerpo (la raíz del rig) con su orientación, así que un giro no
+    /// desplaza el cuerpo. Las dosis ocultas no forman racha ni reciben fruta. Sin LINQ, sin <c>UnityEngine.Random</c> y sin
+    /// asignaciones tras construirlo.
     /// </summary>
+    /// <remarks>
+    /// Sin tope de 3 ciclos de suelta por miquito (guion §7.3): ese tope suponía un miquito por columna; aquí cada miquito
+    /// atiende un grupo contiguo y el calendario ya separa sus sueltas (llegada + 50 ms, gesto de 40 ms entre ciclos y como
+    /// mucho 2 frutas por ciclo sin moverse), así que cortar en el tercer ciclo solo pasaría frutas al dosel en mitad de la
+    /// tropa.
+    /// </remarks>
     public sealed class IntroChoreography
     {
         /// <summary>Gravedad de la fruta: 12.000 dp/s² (guion §7.4, paso 5), en dp/ms².</summary>
@@ -221,8 +261,41 @@ namespace AF.Presentation
         /// <summary>La tropa sale de espaldas en 300 ms.</summary>
         public const float ExitMs = 300f;
 
-        /// <summary>Con T ≥ 1.000 ms, versión larga (fases de 1.400 escaladas); si no, la corta (fases de 800).</summary>
+        /// <summary>Al salir, sube hacia el follaje de la esquina como mucho 30 dp (sin pasar sobre el HUD).</summary>
+        public const float ExitRiseDp = 30f;
+
+        /// <summary>Al salir, la tropa conserva el alfa 1 salvo en los últimos 80 ms.</summary>
+        public const float ExitFadeMs = 80f;
+
+        /// <summary>Sin versión pedida (<see cref="IntroVersion.Auto"/>): con T ≥ 1.000 ms, la larga; si no, la corta.</summary>
         public const float LongFromMs = 1000f;
+
+        /// <summary>
+        /// Parte visible de la celda de 64 px que ocupa el dibujo de cada fruta (≈ 42 px de 64): el sprite se agranda en esa
+        /// proporción para que el tamaño visible sea el del guion (0,6 u en vuelo y 0,45 u al impacto, mínimo 8 dp).
+        /// </summary>
+        public const float FruitArtFill = 0.65f;
+
+        /// <summary>Mano del brazo que suelta, sentado, delante del centro del cuerpo (S): <c>MonkeyRig.SitHandS.x</c>.</summary>
+        public const float SitHandOffsetS = 0.30f;
+
+        /// <summary>Mano libre, colgado, delante del agarre (S): <c>MonkeyRig.HangHandS.x</c>.</summary>
+        public const float HangHandOffsetS = 0.14f;
+
+        /// <summary>Mano libre, colgado, bajo el agarre (S): lo más bajo del cuerpo colgado.</summary>
+        public const float HangDepthS = 0.95f;
+
+        /// <summary>Distancia mínima entre los centros de dos miquitos vecinos (S).</summary>
+        public const float NeighborGapS = 1.1f;
+
+        /// <summary>La pareja de <c>colas_entrelazadas</c>, junta: centros a 0,9 S.</summary>
+        public const float PairGapS = 0.9f;
+
+        /// <summary>Margen del centro de cada miquito con los bordes de la pantalla: [0,5·S + 6, ancho − 0,5·S − 6].</summary>
+        public const float EdgeMarginDp = 6f;
+
+        /// <summary>Con las columnas juntas, la tropa se encoge hasta el 85 % antes de perder miquitos.</summary>
+        public const float ShrinkToFit = 0.85f;
 
         /// <summary>En dosel, la fruta cae desde hudBottom − 12, por detrás del HUD.</summary>
         public const float CanopyAboveHudDp = 12f;
@@ -257,8 +330,8 @@ namespace AF.Presentation
         /// <summary>Miquitos como mucho en pantalla.</summary>
         public const int MaxMonkeys = 6;
 
-        /// <summary>Claves de trayectoria como mucho por miquito.</summary>
-        public const int MaxKeys = (2 * MaxFruits) + 6;
+        /// <summary>Claves de trayectoria como mucho por miquito (salida, llegada y giro por fruta, más entrada y salida).</summary>
+        public const int MaxKeys = (3 * MaxFruits) + 6;
 
         /// <summary>Rachas como mucho.</summary>
         public const int MaxRuns = IntroInput.MaxCuias * IntroInput.MaxDoses;
@@ -270,10 +343,20 @@ namespace AF.Presentation
         private readonly float[] _ideal = new float[MaxFruits];
         private readonly float[] _mx = new float[MaxMonkeys];
         private readonly float[] _mt = new float[MaxMonkeys];
+        private readonly int[] _facing = new int[MaxMonkeys];
+        private readonly float[] _seat = new float[MaxMonkeys];
+        private readonly int[] _seatFacing = new int[MaxMonkeys];
+        private readonly float[] _laneLo = new float[MaxMonkeys];
+        private readonly float[] _laneHi = new float[MaxMonkeys];
+        private readonly float[] _groupLo = new float[MaxMonkeys];
+        private readonly float[] _groupHi = new float[MaxMonkeys];
         private readonly float[] _arrived = new float[MaxMonkeys];
-        private readonly float[] _lastRelease = new float[MaxMonkeys];
-        private readonly int[] _cycleFruits = new int[MaxMonkeys];
-        private readonly float[] _cycleStart = new float[MaxMonkeys];
+        private readonly float[] _relLog = new float[MaxMonkeys * MaxFruits];
+        private readonly int[] _relCount = new int[MaxMonkeys];
+        private float _canvasW = 360f;
+        private float _corner = 6f;
+        private float _hangRelease;
+        private bool _crowdedCycles;
 
         // ---- Agua por cuia ----
 
@@ -397,14 +480,20 @@ namespace AF.Presentation
         /// <summary>Sentido de la salida (−1 izquierda, +1 derecha).</summary>
         public readonly int[] MonkeyExitDir = new int[MaxMonkeys];
 
+        /// <summary>Orientación de cada miquito en t = 0 (+1 mira a la derecha).</summary>
+        public readonly int[] MonkeyStartFacing = new int[MaxMonkeys];
+
         /// <summary>Claves de trayectoria por miquito.</summary>
         public readonly int[] MonkeyKeyCount = new int[MaxMonkeys];
 
         /// <summary>Tiempo de cada clave: <c>[m · MaxKeys + j]</c>.</summary>
         public readonly float[] MonkeyKeyT = new float[MaxMonkeys * MaxKeys];
 
-        /// <summary>x de la mano en cada clave: <c>[m · MaxKeys + j]</c>.</summary>
+        /// <summary>x del centro del cuerpo (la raíz del rig) en cada clave: <c>[m · MaxKeys + j]</c>.</summary>
         public readonly float[] MonkeyKeyX = new float[MaxMonkeys * MaxKeys];
+
+        /// <summary>Orientación desde cada clave (+1 derecha, −1 izquierda): <c>[m · MaxKeys + j]</c>.</summary>
+        public readonly int[] MonkeyKeyFacing = new int[MaxMonkeys * MaxKeys];
 
         /// <summary>Cuias del plan.</summary>
         public int CuiaCount { get; private set; }
@@ -499,11 +588,17 @@ namespace AF.Presentation
         /// <summary>Fin de la última floración (= T salvo que no haya frutas).</summary>
         public float LastBloomEndMs { get; private set; }
 
-        /// <summary>Fruta en vuelo: 0,6 u, con un mínimo de 8 dp.</summary>
+        /// <summary>Lado del sprite de la fruta en vuelo: el visible (<see cref="FruitFlightVisibleDp"/>) / <see cref="FruitArtFill"/>.</summary>
         public float FruitFlightDp { get; private set; }
 
-        /// <summary>Fruta al impacto: 0,45 u, con un mínimo de 8 dp.</summary>
+        /// <summary>Lado del sprite de la fruta al impacto: el visible (<see cref="FruitImpactVisibleDp"/>) / <see cref="FruitArtFill"/>.</summary>
         public float FruitImpactDp { get; private set; }
+
+        /// <summary>Fruta en vuelo a la vista: 0,6 u, con un mínimo de 8 dp (siempre menor que la boca de 0,68 u).</summary>
+        public float FruitFlightVisibleDp { get; private set; }
+
+        /// <summary>Fruta al impacto a la vista: 0,45 u, con un mínimo de 8 dp.</summary>
+        public float FruitImpactVisibleDp { get; private set; }
 
         /// <summary>u en dp.</summary>
         public float Unit { get; private set; }
@@ -517,8 +612,23 @@ namespace AF.Presentation
         /// <summary>Tamaño del miquito en pantalla: min(tam_dp, franja − 10).</summary>
         public float MonkeyDp { get; private set; }
 
-        /// <summary>Miquitos en pantalla: clamp(tropa, 2, columnas con contenido).</summary>
+        /// <summary>
+        /// Tamaño del rig: el de <see cref="MonkeyDp"/> salvo en <c>cuelga</c>, donde el cuerpo colgado se reduce para acabar
+        /// ≥ 8 dp por encima del panel.
+        /// </summary>
+        public float BodyDp { get; private set; }
+
+        /// <summary>Mano que suelta delante del centro del cuerpo (dp; 0 en <c>sacude</c>: la fruta cae de la rama).</summary>
+        public float HandOffsetDp { get; private set; }
+
+        /// <summary>y del agarre del cuerpo colgado en <c>cuelga</c> (dp desde arriba).</summary>
+        public float HangGripY { get; private set; }
+
+        /// <summary>Miquitos en pantalla: hasta clamp(tropa, 2, columnas con contenido), con vecinos a ≥ 1,1 S.</summary>
         public int MonkeyCount { get; private set; }
+
+        /// <summary>La pareja de <c>colas_entrelazadas</c> sentada junta (modelo <c>sacude</c>).</summary>
+        public bool Pair { get; private set; }
 
         /// <summary>y de la rama de la tropa (dp desde arriba).</summary>
         public float BranchY { get; private set; }
@@ -529,13 +639,19 @@ namespace AF.Presentation
         /// <summary>Entrada de la tropa (versión larga): la fila 1 está llena.</summary>
         public float TroopEnterMs { get; private set; }
 
+        /// <summary>La tropa empieza a salir (T, o más tarde si algún gesto acaba después).</summary>
+        public float ExitStartMs { get; private set; }
+
         /// <summary>Columnas con contenido.</summary>
         public int ColumnCount { get; private set; }
 
         /// <summary>Variación determinista: con una tropa de menos de 4, entra por la derecha.</summary>
         public bool EntryFromRight { get; private set; }
 
-        /// <summary>Variación determinista: el segundo de la fila lidera.</summary>
+        /// <summary>La tropa entra por las dos esquinas (larga): las pasadas van de fuera hacia dentro.</summary>
+        public bool EntryTwoSides { get; private set; }
+
+        /// <summary>Variación determinista: el que lidera la fila va 0,3 S más adelantado.</summary>
         public bool LeaderSwap { get; private set; }
 
         /// <summary>Variación determinista de reposo: 0 rascarse, 1 mirar al cielo, 2 acicalarse.</summary>
@@ -548,13 +664,16 @@ namespace AF.Presentation
             CuiaCount = n;
             float total = Math.Max(1f, input.TotalMs);
             TotalMs = total;
-            IsLong = total >= LongFromMs;
+            IsLong = input.Version == IntroVersion.Auto ? total >= LongFromMs : input.Version == IntroVersion.Long;
             float s = total / (IsLong ? 1400f : 800f);
             Scale = s;
             Rows = Clamp(input.Rows, 1, IntroInput.MaxRows);
             Unit = Math.Max(1f, input.Unit);
-            FruitFlightDp = Math.Max(8f, 0.6f * Unit);
-            FruitImpactDp = Math.Max(8f, 0.45f * Unit);
+            _canvasW = input.CanvasWidth;
+            FruitFlightVisibleDp = Math.Max(8f, 0.6f * Unit);
+            FruitImpactVisibleDp = Math.Max(8f, 0.45f * Unit);
+            FruitFlightDp = FruitFlightVisibleDp / FruitArtFill;
+            FruitImpactDp = FruitImpactVisibleDp / FruitArtFill;
 
             RiseEndMs = (IsLong ? 150f : 80f) * s;
             SheetStartMs = (IsLong ? 120f : 50f) * s;
@@ -592,7 +711,42 @@ namespace AF.Presentation
             Schedule(input);
         }
 
-        /// <summary>x de la mano del miquito <paramref name="m"/> en <paramref name="t"/> (interpolación lineal de sus claves).</summary>
+        /// <summary>Orientación del miquito <paramref name="m"/> en <paramref name="t"/> (+1 mira a la derecha): nunca a una cuia.</summary>
+        public int MonkeyFacing(int m, float t)
+        {
+            int count = MonkeyKeyCount[m];
+            int b = m * MaxKeys;
+            int facing = MonkeyStartFacing[m];
+            for (int j = 0; j < count; j++)
+            {
+                if (MonkeyKeyT[b + j] > t)
+                {
+                    break;
+                }
+
+                facing = MonkeyKeyFacing[b + j];
+            }
+
+            return facing;
+        }
+
+        /// <summary>x de la mano que suelta del miquito <paramref name="m"/> en <paramref name="t"/> (en <c>sacude</c>, el centro).</summary>
+        public float MonkeyHandX(int m, float t)
+        {
+            return MonkeyX(m, t) + (MonkeyFacing(m, t) * HandOffsetDp);
+        }
+
+        /// <summary>y de la rama de la tropa en <paramref name="x"/> (dp desde arriba): sube hacia el follaje de las esquinas.</summary>
+        public float BranchCurveY(float x)
+        {
+            float u = Math.Min(1f, Math.Max(0f, (x + BranchOverhangDp) / (_canvasW + (2f * BranchOverhangDp))));
+            return BranchY - _corner + (4f * u * (1f - u) * (3f + _corner));
+        }
+
+        /// <summary>La rama sobresale 12 dp por cada lado (sale del follaje de las esquinas).</summary>
+        public const float BranchOverhangDp = 12f;
+
+        /// <summary>x del centro del cuerpo del miquito <paramref name="m"/> en <paramref name="t"/> (interpolación lineal de sus claves).</summary>
         public float MonkeyX(int m, float t)
         {
             int count = MonkeyKeyCount[m];
@@ -869,23 +1023,140 @@ namespace AF.Presentation
             MonkeyDp = perch == IntroPerch.Branch ? size : 0f;
             LowBranchY = input.PanelTop - LowBranchAbovePanelDp;
             BranchY = model == TroopModel.Hang ? input.HudBottom + HighBranchBelowHudDp : LowBranchY;
-            int m = perch == IntroPerch.Branch ? Math.Min(Math.Max(input.Troop, 2), ColumnCount) : 0;
-            m = Math.Min(m, MaxMonkeys);
-            MonkeyCount = m;
+            _corner = model == TroopModel.Hang ? 1f : 6f;
+
+            // Cuelga: el cuerpo colgado acaba ≥ 8 dp por encima del panel (la mano libre, con la fruta, en la suelta).
+            float hangRelease = input.PanelTop - LowBranchAbovePanelDp - 2f;
+            float body = MonkeyDp;
+            if (model == TroopModel.Hang && perch == IntroPerch.Branch)
+            {
+                body = Math.Max(12f, Math.Min(MonkeyDp, (hangRelease - (BranchY + 4f)) / HangDepthS));
+            }
+
+            _hangRelease = hangRelease;
+            SetBody(body);
+            int maxM = perch == IntroPerch.Branch ? Math.Min(Math.Min(Math.Max(input.Troop, 2), ColumnCount), MaxMonkeys) : 0;
+            Pair = maxM >= 2 && input.Pair && model == TroopModel.Shake;
             for (int j = 0; j < MaxMonkeys; j++)
             {
                 MonkeyKeyCount[j] = 0;
                 MonkeyFromRight[j] = false;
                 MonkeyExitDir[j] = -1;
+                MonkeyStartFacing[j] = 1;
                 MonkeyGroupX[j] = 0f;
             }
 
-            if (m == 0)
+            EntryTwoSides = false;
+            if (maxM == 0)
             {
+                MonkeyCount = 0;
                 return;
             }
 
-            // Columnas en grupos contiguos, uno por miquito.
+            // Columnas en grupos contiguos, uno por miquito, y un carril propio para el centro de cada uno: los carriles de
+            // dos vecinos quedan a ≥ 1,1 S (la frontera, a medio camino entre sus columnas), así que dos miquitos nunca se
+            // solapan aunque las columnas estén juntas (filas de 4 y 3 al tresbolillo). Se usan tantos miquitos como quepan
+            // (hasta clamp(tropa, 2, columnas)) con todas sus columnas al alcance de la mano. La pareja de colas_entrelazadas
+            // se reparte el tablero por mitades y se sienta junta en el centro del panel.
+            float mid = input.CanvasWidth * 0.5f;
+            int m = maxM;
+            if (Pair)
+            {
+                m = 2;
+                AssignGroups(m);
+                float c = input.PanelX + (input.PanelWidth * 0.5f);
+                for (int g = 0; g < 2; g++)
+                {
+                    float seat = ClampEdges(c + ((g == 0 ? -0.5f : 0.5f) * PairGapS * body));
+                    _laneLo[g] = seat;
+                    _laneHi[g] = seat;
+                    _seat[g] = seat;
+                    _seatFacing[g] = g == 0 ? -1 : 1;
+                }
+            }
+            else
+            {
+                // Con las columnas muy juntas, antes que quitar miquitos se encogen un poco (hasta el 85 %): la tropa del
+                // nivel 7 (columnas a 42 dp) cabe entera a 38 dp, hombro con hombro.
+                float full = body;
+                float chosenBody = full;
+                int chosen = 1;
+                for (int mm = maxM; mm >= 1; mm--)
+                {
+                    bool ok = false;
+                    float floor = Math.Max(12f, ShrinkToFit * full);
+                    for (float s2 = full; s2 >= floor - 0.001f; s2 -= 1f)
+                    {
+                        SetBody(s2);
+                        if (AssignLanes(mm))
+                        {
+                            ok = true;
+                            break;
+                        }
+                    }
+
+                    if (ok)
+                    {
+                        chosen = mm;
+                        chosenBody = BodyDp;
+                        break;
+                    }
+                }
+
+                m = chosen;
+                SetBody(chosenBody);
+                MonkeyDp *= chosenBody / Math.Max(1f, full);
+                AssignLanes(m);
+
+                for (int g = 0; g < m; g++)
+                {
+                    _seat[g] = ClampCenter(g, MonkeyGroupX[g]);
+                    _seatFacing[g] = _seat[g] < mid ? 1 : -1;
+                }
+            }
+
+            MonkeyCount = m;
+
+            // Entrada (larga): con tropa de 4 o más, cada miquito por la esquina más cercana a su grupo (la mitad por cada
+            // lado, guion §7.2); con menos, todos por un solo lado que alterna con la variación (§7.4, paso 8), salvo que el
+            // primero de la fila no llegue a su columna antes de la primera suelta (el lado único se pensó para recorridos
+            // cortos: R2): entonces también por las dos esquinas (la pareja se encuentra en el centro).
+            bool twoSides = m >= 4 && !Pair;
+            if (!twoSides && m >= 2 && IsLong)
+            {
+                float far = EntryFromRight ? input.CanvasWidth - _seat[0] : _seat[m - 1];
+                float window = DStartMs - Row1FullMs - ((ReleaseAfterArrivalMs + 130f) * Scale);
+                twoSides = far / MonkeySpeedDpPerMs > window;
+            }
+
+            EntryTwoSides = twoSides;
+            int lefts = 0;
+            int rights = 0;
+            for (int g = 0; g < m; g++)
+            {
+                lefts += MonkeyGroupX[g] < mid - 0.5f ? 1 : 0;
+                rights += MonkeyGroupX[g] > mid + 0.5f ? 1 : 0;
+            }
+
+            for (int g = 0; g < m; g++)
+            {
+                float x = MonkeyGroupX[g];
+                bool tie = Math.Abs(x - mid) <= 0.5f;
+                MonkeyFromRight[g] = twoSides ? (tie ? (lefts == rights ? EntryFromRight : rights < lefts) : x > mid) : EntryFromRight;
+            }
+        }
+
+        // Tamaño del rig y lo que depende de él (mano y agarre del colgado).
+        private void SetBody(float body)
+        {
+            BodyDp = body;
+            HangGripY = _hangRelease - (HangDepthS * body);
+            HandOffsetDp = Model == TroopModel.Shake ? 0f : (Model == TroopModel.Hang ? HangHandOffsetS : SitHandOffsetS) * body;
+        }
+
+        // Grupos contiguos y equilibrados de columnas para m miquitos, con el centro de cada grupo.
+        private void AssignGroups(int m)
+        {
             for (int j = 0; j < ColumnCount; j++)
             {
                 ColumnGroup[j] = (j * m) / ColumnCount;
@@ -905,21 +1176,75 @@ namespace AF.Presentation
                 }
 
                 MonkeyGroupX[g] = (lo + hi) * 0.5f;
+                _groupLo[g] = lo;
+                _groupHi[g] = hi;
             }
+        }
 
-            // Cada miquito entra por la esquina más cercana a su grupo (con tropa de 4 o más, la mitad por cada lado, guion
-            // §7.2): recorridos cortos. Un grupo en el centro exacto entra por el lado de la variación.
-            float mid = input.CanvasWidth * 0.5f;
+        // Carriles de m miquitos: entre dos grupos vecinos, la frontera a medio camino y 0,55 S de margen a cada lado; los de
+        // los extremos, hasta el borde de la pantalla. Vale si ningún carril queda vacío y, en fila y cuelga, la mano llega a
+        // todas sus columnas con lo que deja el impulso lateral más corto (0,25 dp/ms × 80 ms = 20 dp).
+        private bool AssignLanes(int m)
+        {
+            AssignGroups(m);
+            float half = 0.5f * NeighborGapS * BodyDp;
             for (int g = 0; g < m; g++)
             {
-                float x = MonkeyGroupX[g];
-                MonkeyFromRight[g] = Math.Abs(x - mid) < 0.5f ? EntryFromRight : x > mid;
+                float lo = g == 0 ? EdgeLo() : ((_groupHi[g - 1] + _groupLo[g]) * 0.5f) + half;
+                float hi = g == m - 1 ? EdgeHi() : ((_groupHi[g] + _groupLo[g + 1]) * 0.5f) - half;
+                _laneLo[g] = Math.Max(lo, EdgeLo());
+                _laneHi[g] = Math.Min(hi, EdgeHi());
+                if (_laneLo[g] > _laneHi[g] + 0.001f)
+                {
+                    return false;
+                }
             }
+
+            float reach = MaxTossDpPerMs * MinFallMs;
+            for (int j = 0; j < ColumnCount; j++)
+            {
+                int g = ColumnGroup[j];
+                float col = ColumnX[j];
+                float drift = Math.Max(0f, Math.Max(_laneLo[g] - HandOffsetDp - col, col - (_laneHi[g] + HandOffsetDp)));
+                if (Model != TroopModel.Shake && drift > reach)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private float EdgeLo()
+        {
+            return (0.5f * BodyDp) + EdgeMarginDp;
+        }
+
+        private float EdgeHi()
+        {
+            return _canvasW - (0.5f * BodyDp) - EdgeMarginDp;
+        }
+
+        // Centro del cuerpo dentro de [0,5·S + 6, ancho − 0,5·S − 6].
+        private float ClampEdges(float x)
+        {
+            float lo = EdgeLo();
+            float hi = EdgeHi();
+            return hi < lo ? _canvasW * 0.5f : Math.Min(Math.Max(x, lo), hi);
+        }
+
+        // Centro del cuerpo del miquito m dentro de su carril (y de la pantalla).
+        private float ClampCenter(int m, float x)
+        {
+            return Math.Min(Math.Max(x, _laneLo[m]), _laneHi[m]);
         }
 
         private void BuildFruits(IntroInput input, int n)
         {
-            bool descending = Perch == IntroPerch.Branch && MonkeyCount < 4 && EntryFromRight;
+            // Pasadas en el sentido de la tropa: de la esquina de entrada hacia la otra o, si entra por las dos, de fuera
+            // hacia dentro (primero las columnas a las que llega antes).
+            bool descending = Perch == IntroPerch.Branch && !EntryTwoSides && EntryFromRight;
+            bool outsideIn = Perch == IntroPerch.Branch && EntryTwoSides;
             int count = 0;
             for (int row = 0; row < Rows; row++)
             {
@@ -933,7 +1258,7 @@ namespace AF.Presentation
                     }
 
                     int at = k;
-                    while (at > 0 && Before(input.CenterX[i], input.CenterX[_sorted[at - 1]], descending))
+                    while (at > 0 && Before(input.CenterX[i], input.CenterX[_sorted[at - 1]], descending, outsideIn, input.CanvasWidth))
                     {
                         _sorted[at] = _sorted[at - 1];
                         at--;
@@ -1005,30 +1330,6 @@ namespace AF.Presentation
             FirstImpactMs = -1f;
             LastBloomEndMs = 0f;
             TroopEnterMs = IsLong ? Row1FullMs : 0f;
-            if (count == 0)
-            {
-                InitMonkeys(input);
-                FinishMonkeys(input);
-                return;
-            }
-
-            float releaseY;
-            switch (Perch == IntroPerch.Canopy ? -1 : (int)Model)
-            {
-                case (int)TroopModel.Row:
-                    releaseY = BranchY - (0.35f * MonkeyDp); // la mano del miquito sentado
-                    break;
-                case (int)TroopModel.Hang:
-                    releaseY = input.PanelTop - LowBranchAbovePanelDp - 2f; // la mano del cuerpo colgado, ≥ 8 dp sobre el panel
-                    break;
-                case (int)TroopModel.Shake:
-                    releaseY = LowBranchY - 2f; // cae de la rama sacudida
-                    break;
-                default:
-                    releaseY = input.HudBottom - CanopyAboveHudDp; // por detrás del HUD
-                    break;
-            }
-
             uint spin = Mix(input.Seed ^ 0x51ED27);
             for (int k = 0; k < count; k++)
             {
@@ -1036,10 +1337,17 @@ namespace AF.Presentation
                 FruitImpactX[k] = input.CenterX[c];
                 FruitImpactY[k] = SurfaceY[c];
                 FruitReleaseX[k] = input.CenterX[c];
-                FruitReleaseY[k] = releaseY;
+                FruitReleaseY[k] = ReleaseY(input, input.CenterX[c]);
                 spin = Next(spin);
                 float deg = 180f + (180f * ((spin & 0xFFFF) / 65535f));
                 FruitSpin[k] = ((spin >> 16) & 1u) != 0u ? deg / 1000f : -deg / 1000f;
+            }
+
+            if (count == 0)
+            {
+                InitMonkeys(input);
+                FinishMonkeys(input);
+                return;
             }
 
             // Impactos ideales repartidos de forma uniforme entre el inicio de d y T − la floración de la última.
@@ -1060,23 +1368,34 @@ namespace AF.Presentation
                 float imp = Math.Max(_ideal[k], prev);
                 imp = Math.Max(imp, FillEndMs[c] + 1f); // cada impacto, después del fin del llenado de su cuia
                 int m = -1;
-                float target = 0f;
-                float arrive = 0f;
+                Move move = default;
+                bool stay = false;
+                float stayX = 0f;
                 float minRelease = float.MinValue;
-                if (Perch == IntroPerch.Branch)
+                if (Perch == IntroPerch.Branch && MonkeyCount > 0)
                 {
                     m = ColumnGroup[Math.Max(0, CuiaColumn[c])];
-                    minRelease = Needs(m, FruitImpactX[k], tau, out target, out arrive);
-                    imp = Math.Max(imp, minRelease + tau);
+                    imp = Math.Min(imp, total - dur);
+                    if (TryStay(m, k, tau, imp - tau, out stayX))
+                    {
+                        stay = true; // la suelta cae en un rato en que ya está quieto (las frutas de la fila de abajo caen más)
+                    }
+                    else
+                    {
+                        // Si no llega a tiempo (o su ciclo de suelta está ocupado), se aprieta el calendario hacia T (paso 7).
+                        minRelease = Choose(m, k, tau, imp - tau, out move);
+                        imp = Math.Max(imp, NextFree(m, Math.Max(imp - tau, minRelease)) + tau);
+                    }
                 }
 
                 imp = Math.Min(imp, total - dur); // nunca se pasa de T
                 float release = imp - tau;
-                if (m >= 0)
+                if (m >= 0 && !stay)
                 {
-                    if (release + 0.01f < minRelease)
+                    if (release + 0.01f < minRelease || !CycleFree(m, release))
                     {
-                        // No cabe con su miquito: pasa al vecino que llegue a tiempo, o cae del dosel (por detrás del HUD).
+                        // No cabe con su miquito: pasa al vecino que llegue a tiempo desde su carril o, si nadie llega, cae de
+                        // la rama de la tropa sobre su columna.
                         int chosen = -1;
                         for (int d = -1; d <= 1 && chosen < 0; d += 2)
                         {
@@ -1086,32 +1405,63 @@ namespace AF.Presentation
                                 continue;
                             }
 
-                            float need = Needs(other, FruitImpactX[k], tau, out float t2, out float a2);
-                            if (release + 0.01f >= need)
+                            if (TryStay(other, k, tau, release, out stayX))
                             {
                                 chosen = other;
-                                target = t2;
-                                arrive = a2;
+                                stay = true;
+                                continue;
                             }
+
+                            float need = Choose(other, k, tau, release, out Move alt);
+                            if (release + 0.01f >= need && CycleFree(other, release))
+                            {
+                                chosen = other;
+                                move = alt;
+                            }
+                        }
+
+                        if (chosen < 0)
+                        {
+                            // Último recurso antes de la rama: su propio miquito, aunque junte más de 2 frutas en un ciclo de
+                            // suelta (se ve como una mano que deja caer fruta tras fruta), mejor que una fruta sin miquito.
+                            _crowdedCycles = true;
+                            if (TryStay(m, k, tau, release, out stayX))
+                            {
+                                chosen = m;
+                                stay = true;
+                            }
+                            else if (release + 0.01f >= Choose(m, k, tau, release, out Move own))
+                            {
+                                chosen = m;
+                                move = own;
+                            }
+
+                            _crowdedCycles = false;
                         }
 
                         m = chosen;
                     }
 
-                    if (m >= 0)
+                    if (m >= 0 && !stay)
                     {
-                        Commit(m, target, arrive, release);
-                        if (Model != TroopModel.Shake)
-                        {
-                            FruitReleaseX[k] = target; // desde la mano, con ≤ 250 dp/s hasta su columna
-                        }
+                        Commit(m, move, release);
+                        FruitReleaseX[k] = move.ReleaseX; // desde la mano sobre el eje (o, a una columna vecina, con ≤ 250 dp/s)
                     }
-                    else
+                    else if (m < 0)
                     {
-                        FruitReleaseY[k] = input.HudBottom - CanopyAboveHudDp;
+                        // Ningún miquito llega a tiempo (tropas pequeñas con muchas columnas: churuco, mono nocturno): la
+                        // fruta cuelga de la rama de la tropa sobre su columna y cae de ella, como al sacudirla; nunca del
+                        // cielo, por detrás del HUD, con la tropa a la vista.
+                        FruitReleaseY[k] = BranchDropY(FruitImpactX[k]);
                         tau = FallTime(k);
                         release = imp - tau;
                     }
+                }
+
+                if (m >= 0 && stay)
+                {
+                    LogRelease(m, release);
+                    FruitReleaseX[k] = stayX;
                 }
 
                 FruitMonkey[k] = m;
@@ -1147,6 +1497,38 @@ namespace AF.Presentation
 
             FirstImpactMs = first;
             FinishMonkeys(input);
+        }
+
+        /// <summary>Altura de la mano que suelta, sentado, sobre la rama (S): <c>MonkeyRig.SitHandS.y</c>.</summary>
+        public const float SitHandHeightS = 0.36f;
+
+        // y de la suelta: la mano del miquito sentado, la mano libre del colgado (≥ 8 dp sobre el panel), la rama sacudida o
+        // el dosel por detrás del HUD.
+        private float ReleaseY(IntroInput input, float x)
+        {
+            if (Perch == IntroPerch.Canopy || MonkeyCount == 0)
+            {
+                return input.HudBottom - CanopyAboveHudDp;
+            }
+
+            switch (Model)
+            {
+                case TroopModel.Hang:
+                    return input.PanelTop - LowBranchAbovePanelDp - 2f;
+                case TroopModel.Shake:
+                    return BranchCurveY(x) - 2f;
+                default:
+                    return BranchCurveY(x) - (SitHandHeightS * BodyDp);
+            }
+        }
+
+        /// <summary>
+        /// y desde la que cae una fruta que ningún miquito alcanza en el modo rama (dp desde arriba): cuelga de la rama de la
+        /// tropa en <paramref name="x"/> (bajo la rama alta en <c>cuelga</c>; sobre la baja en <c>fila</c> y <c>sacude</c>).
+        /// </summary>
+        public float BranchDropY(float x)
+        {
+            return Model == TroopModel.Hang ? BranchCurveY(x) + 3f : BranchCurveY(x) - 2f;
         }
 
         private float BloomDuration(int k)
@@ -1185,63 +1567,86 @@ namespace AF.Presentation
         private void InitMonkeys(IntroInput input)
         {
             int m = MonkeyCount;
-            float size = MonkeyDp;
-            float spacing = 0.9f * size;
-            int left = 0;
+            float size = BodyDp;
+            float spacing = NeighborGapS * size;
+            float mid = input.CanvasWidth * 0.5f;
             for (int g = 0; g < m; g++)
             {
-                left += MonkeyFromRight[g] ? 0 : 1;
-            }
-
-            for (int g = 0; g < m; g++)
-            {
-                _lastRelease[g] = float.MinValue;
-                _cycleFruits[g] = 0;
-                _cycleStart[g] = float.MinValue;
+                _relCount[g] = 0;
                 MonkeyKeyCount[g] = 0;
                 float x;
+                int f;
                 if (IsLong)
                 {
-                    // Oculta en el follaje de su esquina; entra cuando la fila 1 está llena, en fila, el que va más lejos
-                    // primero (o el segundo, con la variación).
-                    int order;
-                    if (MonkeyFromRight[g])
+                    // Oculta en el follaje de su esquina; entra cuando la fila 1 está llena, en fila a 1,1 S, el que va más
+                    // lejos primero (con la variación, el primero va 0,3 S más adelantado). Nadie adelanta a nadie.
+                    bool right = MonkeyFromRight[g];
+                    int order = 0;
+                    for (int o = 0; o < m; o++)
                     {
-                        order = g - left;
-                        int count = m - left;
-                        if (LeaderSwap && count >= 2 && order < 2)
+                        if (MonkeyFromRight[o] == right && (right ? o < g : o > g))
                         {
-                            order = 1 - order;
+                            order++;
                         }
-
-                        x = input.CanvasWidth + (0.6f * size) + (order * spacing);
-                    }
-                    else
-                    {
-                        order = left - 1 - g;
-                        if (LeaderSwap && left >= 2 && order < 2)
-                        {
-                            order = 1 - order;
-                        }
-
-                        x = -(0.6f * size) - (order * spacing);
                     }
 
-                    _mx[g] = x;
+                    float back = (0.6f * size) + HandOffsetDp + (order * spacing) + (LeaderSwap && order > 0 ? 0.3f * size : 0f);
+                    x = right ? input.CanvasWidth + back : -back;
+                    f = right ? -1 : 1;
                     _mt[g] = TroopEnterMs;
                     _arrived[g] = float.MinValue;
-                    AddKey(g, 0f, x);
-                    AddKey(g, TroopEnterMs, x);
                 }
                 else
                 {
-                    // Posada desde t = 0 sobre su grupo (sobre la primera columna que atiende; en sacude, el centro).
-                    x = Model == TroopModel.Shake ? MonkeyGroupX[g] : FirstColumnOf(g);
-                    _mx[g] = x;
+                    // Posada desde t = 0: en sacude, en su asiento; si no, con la mano sobre la primera columna que atiende.
+                    if (Model == TroopModel.Shake)
+                    {
+                        x = _seat[g];
+                        f = _seatFacing[g];
+                    }
+                    else
+                    {
+                        float col = FirstColumnOf(g);
+                        f = col < mid ? 1 : -1;
+                        x = ClampCenter(g, col - (f * HandOffsetDp));
+                        float other = ClampCenter(g, col + (f * HandOffsetDp));
+                        if (Math.Abs(other - (f * HandOffsetDp) - col) + 0.01f < Math.Abs(x + (f * HandOffsetDp) - col))
+                        {
+                            f = -f; // de la otra mano llega mejor a la columna desde su carril
+                            x = other;
+                        }
+                    }
+
                     _mt[g] = 0f;
                     _arrived[g] = -1000f;
-                    AddKey(g, 0f, x);
                 }
+
+                _mx[g] = x;
+                _facing[g] = f;
+                MonkeyStartFacing[g] = f;
+                AddKey(g, 0f, x, f);
+            }
+
+            if (!IsLong)
+            {
+                return;
+            }
+
+            // Larga: cuando la fila 1 está llena, todos salen a la vez del follaje hacia su primera columna (o su asiento) a
+            // ≤ 450 dp/s, en fila: nadie adelanta a nadie y cada uno se queda en su carril.
+            for (int g = 0; g < m; g++)
+            {
+                AddKey(g, TroopEnterMs, _mx[g], _facing[g]);
+                Move entry = MoveTo(g, Model == TroopModel.Shake ? _seat[g] : FirstColumnOf(g));
+                if (entry.Moved)
+                {
+                    AddKey(g, entry.Arrive, entry.Target, entry.EndFacing);
+                    _mx[g] = entry.Target;
+                    _arrived[g] = entry.Arrive;
+                    _mt[g] = entry.Arrive;
+                }
+
+                _facing[g] = entry.EndFacing;
             }
         }
 
@@ -1259,68 +1664,303 @@ namespace AF.Presentation
             return MonkeyGroupX[g];
         }
 
-        // Suelta más temprana posible del miquito m para una fruta sobre x que cae en tau (y adónde va y cuándo llega): en
-        // fila y cuelga, el punto más cercano desde el que la fruta llega a su columna con ≤ 250 dp/s; en sacude, el centro de
-        // su grupo (la fruta cae de la rama sobre la columna).
-        private float Needs(int m, float columnX, float tau, out float target, out float arrive)
+        // Un desplazamiento del miquito m para soltar una fruta: adónde va (centro del cuerpo), con qué orientación viaja y
+        // queda, cuándo llega y desde dónde sale la fruta.
+        private struct Move
         {
-            float reach = MaxTossDpPerMs * tau;
-            target = Model == TroopModel.Shake ? MonkeyGroupX[m] : Math.Min(Math.Max(_mx[m], columnX - reach), columnX + reach);
-            float dist = Math.Abs(target - _mx[m]);
-            arrive = dist < 0.5f ? _arrived[m] : _mt[m] + (dist / MonkeySpeedDpPerMs);
+            public float Target;
+            public int TravelFacing;
+            public int EndFacing;
+            public float Arrive;
+            public float ReleaseX;
+            public bool Moved;
+        }
 
-            // Ciclo de suelta (guion §7.3): 1-2 frutas por ciclo (una en cada mano, sin moverse) y el siguiente ciclo, al
-            // acabar el gesto del anterior.
-            bool join = dist < 0.5f && _cycleFruits[m] == 1;
-            float after = join ? _lastRelease[m] : (_cycleStart[m] == float.MinValue ? float.MinValue : _cycleStart[m] + GestureTailMs);
-            float min = Math.Max(arrive + ReleaseAfterArrivalMs, after);
-            if (!IsLong)
+        // Suelta más temprana del miquito m para la fruta k (que cae en tau; su suelta ideal es idealRelease) y el
+        // desplazamiento elegido. En fila y cuelga, la mano queda sobre el eje de la columna (la fruta cae recta); solo si así
+        // no llega a tiempo y la columna es vecina en su grupo, la suelta desde donde está con ≤ 250 dp/s de impulso lateral
+        // (guion §4.4). En sacude, va a su asiento y la fruta cae de la rama sobre la columna.
+        private float Choose(int m, int k, float tau, float idealRelease, out Move move)
+        {
+            float col = FruitImpactX[k];
+            float reach = MaxTossDpPerMs * tau;
+            move = MoveTo(m, col);
+            float min = Model != TroopModel.Shake && Math.Abs(move.ReleaseX - col) > reach + 0.01f ? float.MaxValue : MinRelease(m, move);
+            if (Model != TroopModel.Shake && move.Moved && min > idealRelease + 0.01f)
             {
-                min = Math.Max(min, 100f * Scale); // el primer ciclo de suelta
+                float hand = _mx[m] + (_facing[m] * HandOffsetDp);
+                float drift = Math.Abs(col - hand);
+                if (drift <= reach && InGroup(m, col))
+                {
+                    var stay = new Move
+                    {
+                        Target = _mx[m],
+                        TravelFacing = _facing[m],
+                        EndFacing = _facing[m],
+                        Arrive = _arrived[m],
+                        ReleaseX = hand,
+                        Moved = false,
+                    };
+                    float minStay = MinRelease(m, stay);
+                    if (minStay < min)
+                    {
+                        move = stay;
+                        min = minStay;
+                    }
+                }
             }
 
             return min;
         }
 
-        private void Commit(int m, float target, float arrive, float release)
+        private Move MoveTo(int m, float col)
         {
-            bool moved = Math.Abs(target - _mx[m]) >= 0.5f;
-            if (moved)
+            var move = default(Move);
+            float x = _mx[m];
+            int f = _facing[m];
+            if (Model == TroopModel.Shake)
             {
-                AddKey(m, _mt[m], _mx[m]);
-                AddKey(m, arrive, target);
-                _mx[m] = target;
-                _arrived[m] = arrive;
-            }
-
-            _mt[m] = Math.Max(Math.Max(_mt[m], arrive + MonkeyStopMs), release + GestureTailMs);
-            bool sameCycle = !moved && _cycleFruits[m] == 1 && _cycleStart[m] != float.MinValue && release < _cycleStart[m] + GestureTailMs;
-            if (sameCycle)
-            {
-                _cycleFruits[m] = 2;
+                move.Target = _seat[m];
+                float dx = move.Target - x;
+                move.TravelFacing = Math.Abs(dx) < 0.5f ? f : (dx > 0f ? 1 : -1);
+                move.EndFacing = Pair ? _seatFacing[m] : move.TravelFacing;
+                move.ReleaseX = col;
             }
             else
             {
-                _cycleFruits[m] = 1;
-                _cycleStart[m] = release;
+                float off = HandOffsetDp;
+                if (Math.Abs(col - (x + (f * off))) < 0.5f)
+                {
+                    move.Target = x; // ya tiene la mano sobre el eje
+                    move.TravelFacing = f;
+                    move.EndFacing = f;
+                }
+                else
+                {
+                    // La mano sobre el eje con cada orientación, dentro de su carril; gana la que deja la mano más cerca del
+                    // eje y, a igualdad, la que llega andando hacia delante (sin darse la vuelta al llegar) o la de ahora.
+                    float a = ClampCenter(m, col - off);
+                    float b = ClampCenter(m, col + off);
+                    float da = Math.Abs(a + off - col);
+                    float db = Math.Abs(b - off - col);
+                    bool forwardA = a - x > 0.5f;
+                    bool forwardB = x - b > 0.5f;
+                    bool pickA = da + 0.01f < db || (Math.Abs(da - db) <= 0.01f && (forwardA != forwardB ? forwardA : f > 0));
+                    move.Target = pickA ? a : b;
+                    move.EndFacing = pickA ? 1 : -1;
+                    float dx = move.Target - x;
+                    move.TravelFacing = Math.Abs(dx) < 0.5f ? f : (dx > 0f ? 1 : -1);
+                }
+
+                move.ReleaseX = move.Target + (move.EndFacing * off);
             }
 
-            _lastRelease[m] = release;
+            float dist = Math.Abs(move.Target - x);
+            move.Moved = dist >= 0.5f;
+            move.Arrive = move.Moved ? _mt[m] + (dist / MonkeySpeedDpPerMs) : _arrived[m];
+            return move;
         }
 
+        // Ciclo de suelta (guion §7.3): 1-2 frutas por ciclo (una en cada mano, sin moverse) y el siguiente ciclo, al acabar
+        // el gesto del anterior; nunca antes de 50 ms tras llegar y, en la corta, nunca antes del primer ciclo (100 ms).
+        private float MinRelease(int m, Move move)
+        {
+            float min = move.Arrive + ReleaseAfterArrivalMs + 0.05f;
+            if (!IsLong)
+            {
+                min = Math.Max(min, 100f * Scale);
+            }
+
+            return NextFree(m, min);
+        }
+
+        // Primera suelta ≥ r que deja libre el ciclo de suelta del miquito m.
+        private float NextFree(int m, float r)
+        {
+            int b = m * MaxFruits;
+            for (int guard = 0; guard <= MaxFruits && !CycleFree(m, r); guard++)
+            {
+                float next = r + 1f;
+                for (int i = 0; i < _relCount[m]; i++)
+                {
+                    float x = _relLog[b + i];
+                    if (Math.Abs(x - r) < GestureTailMs)
+                    {
+                        next = Math.Max(next, x + GestureTailMs);
+                    }
+                }
+
+                r = next;
+            }
+
+            return r;
+        }
+
+        // Como mucho 2 frutas por ciclo de suelta (una en cada mano, guion §7.3): a menos de 40 ms (el final del gesto) de una
+        // suelta nueva solo puede haber otra suelta del mismo miquito.
+        private bool CycleFree(int m, float r)
+        {
+            if (Model == TroopModel.Shake || _crowdedCycles)
+            {
+                return true; // una sacudida de la rama suelta varias frutas a la vez
+            }
+
+            int b = m * MaxFruits;
+            int near = 0;
+            for (int i = 0; i < _relCount[m]; i++)
+            {
+                if (Math.Abs(_relLog[b + i] - r) < GestureTailMs)
+                {
+                    near++;
+                }
+            }
+
+            return near <= 1;
+        }
+
+        private void LogRelease(int m, float r)
+        {
+            if (_relCount[m] < MaxFruits)
+            {
+                _relLog[(m * MaxFruits) + _relCount[m]] = r;
+                _relCount[m]++;
+            }
+        }
+
+        // Suelta en r desde donde el miquito m ya está quieto según su trayectoria comprometida (sin moverlo): llegó hace
+        // ≥ 50 ms, no se va antes de acabar el gesto (40 ms), está en su carril, la fruta llega a su columna con ≤ 250 dp/s
+        // y el ciclo de suelta lo permite. Así una fruta de la fila de abajo (cae más, sale antes) se suelta mientras el
+        // miquito atiende la de arriba, a veces con la otra mano en el mismo ciclo.
+        private bool TryStay(int m, int k, float tau, float r, out float releaseX)
+        {
+            releaseX = 0f;
+            int count = MonkeyKeyCount[m];
+            if (count == 0 || r >= _mt[m] - 0.01f || (!IsLong && r < 100f * Scale) || (IsLong && r < TroopEnterMs))
+            {
+                return false;
+            }
+
+            int b = m * MaxKeys;
+            int j = -1;
+            for (int i = 0; i < count; i++)
+            {
+                if (MonkeyKeyT[b + i] <= r)
+                {
+                    j = i;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            if (j < 0)
+            {
+                return false;
+            }
+
+            float x = MonkeyKeyX[b + j];
+            float depart = float.MaxValue;
+            for (int i = j + 1; i < count; i++)
+            {
+                if (Math.Abs(MonkeyKeyX[b + i] - x) > 0.01f)
+                {
+                    depart = MonkeyKeyT[b + i - 1];
+                    break;
+                }
+            }
+
+            if (j + 1 < count && Math.Abs(MonkeyKeyX[b + j + 1] - x) > 0.01f)
+            {
+                return false; // de camino
+            }
+
+            int s = j;
+            while (s > 0 && Math.Abs(MonkeyKeyX[b + s - 1] - x) < 0.01f)
+            {
+                s--;
+            }
+
+            float since = s == 0 ? (IsLong ? float.MaxValue : -1000f) : MonkeyKeyT[b + s];
+            if (r < since + ReleaseAfterArrivalMs || r + GestureTailMs > depart || x < _laneLo[m] - 0.5f || x > _laneHi[m] + 0.5f
+                || !CycleFree(m, r))
+            {
+                return false;
+            }
+
+            float col = FruitImpactX[k];
+            if (Model == TroopModel.Shake)
+            {
+                releaseX = col;
+                return true;
+            }
+
+            float hand = x + (MonkeyFacing(m, r) * HandOffsetDp);
+            if (Math.Abs(col - hand) > (MaxTossDpPerMs * tau) + 0.01f)
+            {
+                return false;
+            }
+
+            releaseX = hand;
+            return true;
+        }
+
+        private bool InGroup(int m, float col)
+        {
+            for (int j = 0; j < ColumnCount; j++)
+            {
+                if (Math.Abs(ColumnX[j] - col) < 1f)
+                {
+                    return ColumnGroup[j] == m;
+                }
+            }
+
+            return false;
+        }
+
+        private void Commit(int m, Move move, float release)
+        {
+            if (move.Moved)
+            {
+                AddKey(m, _mt[m], _mx[m], move.TravelFacing);
+                AddKey(m, move.Arrive, move.Target, move.EndFacing); // al llegar se queda (la pareja, de espaldas)
+                _mx[m] = move.Target;
+                _arrived[m] = move.Arrive;
+            }
+            else if (move.EndFacing != _facing[m])
+            {
+                AddKey(m, _mt[m], _mx[m], move.EndFacing);
+            }
+
+            _facing[m] = move.EndFacing;
+            _mt[m] = Math.Max(Math.Max(_mt[m], move.Arrive + MonkeyStopMs), release + GestureTailMs);
+            LogRelease(m, release);
+        }
+
+        // Salida: todos a la vez, en 300 ms hacia la esquina más cercana (de espaldas al tablero) a ≤ 450 dp/s; TroopLayer la
+        // eleva hacia el follaje de esa esquina.
         private void FinishMonkeys(IntroInput input)
         {
+            float start = TotalMs;
             for (int g = 0; g < MonkeyCount; g++)
             {
-                int dir = _mx[g] < input.CanvasWidth * 0.5f ? -1 : 1; // hacia la esquina más cercana, de espaldas
+                start = Math.Max(start, _mt[g]);
+            }
+
+            ExitStartMs = start;
+            float size = BodyDp;
+            for (int g = 0; g < MonkeyCount; g++)
+            {
+                int dir = _mx[g] < input.CanvasWidth * 0.5f ? -1 : 1;
                 MonkeyExitDir[g] = dir;
-                float start = Math.Max(TotalMs, _mt[g]);
-                AddKey(g, start, _mx[g]);
-                AddKey(g, start + ExitMs, _mx[g] + (dir * MonkeySpeedDpPerMs * ExitMs));
+                float corner = dir < 0 ? -(0.6f * size) - EdgeMarginDp : input.CanvasWidth + (0.6f * size) + EdgeMarginDp;
+                float travel = Math.Min(Math.Abs(corner - _mx[g]), MonkeySpeedDpPerMs * ExitMs);
+                AddKey(g, start, _mx[g], dir);
+                AddKey(g, start + (travel / MonkeySpeedDpPerMs), _mx[g] + (dir * travel), dir);
             }
         }
 
-        private void AddKey(int m, float t, float x)
+        private void AddKey(int m, float t, float x, int facing)
         {
             int count = MonkeyKeyCount[m];
             int b = m * MaxKeys;
@@ -1335,6 +1975,7 @@ namespace AF.Presentation
 
                 if (Math.Abs(t - lastT) < 0.0001f && Math.Abs(x - lastX) < 0.0001f)
                 {
+                    MonkeyKeyFacing[b + count - 1] = facing;
                     return;
                 }
             }
@@ -1346,11 +1987,22 @@ namespace AF.Presentation
 
             MonkeyKeyT[b + count] = t;
             MonkeyKeyX[b + count] = x;
+            MonkeyKeyFacing[b + count] = facing;
             MonkeyKeyCount[m] = count + 1;
         }
 
-        private static bool Before(float a, float b, bool descending)
+        private static bool Before(float a, float b, bool descending, bool outsideIn, float width)
         {
+            if (outsideIn)
+            {
+                float ea = Math.Min(a, width - a);
+                float eb = Math.Min(b, width - b);
+                if (Math.Abs(ea - eb) > 0.5f)
+                {
+                    return ea < eb;
+                }
+            }
+
             return descending ? a > b : a < b;
         }
 

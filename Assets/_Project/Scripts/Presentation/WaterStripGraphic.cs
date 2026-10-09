@@ -9,7 +9,9 @@ namespace AF.Presentation
     /// costados del marco y las de las repisas. Horizontal o vertical, con el borde de fuera ondulado (1 dp de amplitud y
     /// longitud de onda de 0,5 u), degradado del agua del mundo (más clara en la superficie), una línea especular junto a ese
     /// borde, un labio claro opcional en el borde plano (la lámina) y destellos cortos que viajan a lo largo de la tira
-    /// (<see cref="SetFlow"/>, 300-400 dp/s). Crece desde un origen hacia uno o los dos sentidos. Coordenadas del contenedor del
+    /// (<see cref="SetFlow"/>, 300-400 dp/s). Crece desde un origen hacia uno o los dos sentidos; mientras crece, el frente
+    /// puede afinarse en lengua (<see cref="SetTaper"/>: el borde ondulado baja hasta el 15 % en la punta, con perfil
+    /// redondeado), para que se lea como agua que avanza y no como una caja. Coordenadas del contenedor del
     /// tablero (origen arriba a la izquierda, y hacia arriba, como <see cref="StreamGraphic"/>). Como mucho
     /// <see cref="MaxQuads"/> cuadriláteros; solo se reconstruye cuando cambian sus parámetros (la opacidad va por
     /// <c>CanvasRenderer.SetAlpha</c>, sin reconstruir).
@@ -34,6 +36,8 @@ namespace AF.Presentation
         private const float LineDp = 1f;
         private const float GlintSpacingDp = 38f;
         private const float GlintLengthDp = 7f;
+        private const int TaperQuads = 4;
+        private const float TaperTip = 0.15f;
 
         private Vector2 _origin;
         private float _back;
@@ -44,6 +48,8 @@ namespace AF.Presentation
         private bool _flip;
         private bool _lip;
         private float _flow;
+        private float _taperBack;
+        private float _taperForward;
         private Color _base = new Color(0.69f, 0.54f, 0.35f, 0.85f);
         private Color _surface = new Color(0.85f, 0.72f, 0.52f, 0.9f);
         private Color _line = new Color(1f, 0.96f, 0.82f, 0.7f);
@@ -103,6 +109,22 @@ namespace AF.Presentation
             SetVerticesDirty();
         }
 
+        /// <summary>
+        /// Afina los extremos en lengua: <paramref name="backDp"/> y <paramref name="forwardDp"/> son los dp de cada extremo
+        /// en los que el borde ondulado baja del todo hasta el 15 % de su altura en la punta (0: extremo recto).
+        /// </summary>
+        public void SetTaper(float backDp, float forwardDp)
+        {
+            backDp = Mathf.Max(0f, backDp);
+            forwardDp = Mathf.Max(0f, forwardDp);
+            if (!Mathf.Approximately(backDp, _taperBack) || !Mathf.Approximately(forwardDp, _taperForward))
+            {
+                _taperBack = backDp;
+                _taperForward = forwardDp;
+                SetVerticesDirty();
+            }
+        }
+
         /// <summary>Desplazamiento de los destellos a lo largo de la tira (dp): el agua corre.</summary>
         public void SetFlow(float flowDp)
         {
@@ -124,14 +146,19 @@ namespace AF.Presentation
             }
 
             float lambda = WaveLengthU * _unit;
-            int body = Mathf.Clamp(Mathf.CeilToInt(length / (lambda * 0.25f)), 1, MaxBodyQuads);
+            float tb = TaperBack(length);
+            float tf = TaperForward(length);
+            int nb = tb > 0f ? TaperQuads : 0;
+            int nf = tf > 0f ? TaperQuads : 0;
+            int mid = Mathf.Clamp(Mathf.CeilToInt((length - tb - tf) / (lambda * 0.25f)), 1, MaxBodyQuads - nb - nf);
+            int body = nb + mid + nf;
             float a = color.a;
             Color32 cBase = Alpha(_base, a);
             Color32 cSurface = Alpha(_surface, a);
             for (int i = 0; i < body; i++)
             {
-                float a0 = -_back + (length * i / body);
-                float a1 = -_back + (length * (i + 1) / body);
+                float a0 = Along(i, nb, mid, nf, tb, tf, length);
+                float a1 = Along(i + 1, nb, mid, nf, tb, tf, length);
                 int b = vh.currentVertCount;
                 vh.AddVert(Point(a0, 0f), cBase, Vector4.zero);
                 vh.AddVert(Point(a0, Edge(a0)), cSurface, Vector4.zero);
@@ -154,8 +181,8 @@ namespace AF.Presentation
             {
                 float a0 = -_back + (length * i / lines);
                 float a1 = -_back + (length * (i + 1) / lines);
-                float o0 = Edge(a0) - LineInsetDp;
-                float o1 = Edge(a1) - LineInsetDp;
+                float o0 = Mathf.Max(LineDp, Edge(a0) - LineInsetDp);
+                float o1 = Mathf.Max(LineDp, Edge(a1) - LineInsetDp);
                 Quad(vh, a0, a1, o0 - LineDp, o0, o1 - LineDp, o1, i == 0 ? tip : lc, i == lines - 1 ? tip : lc);
             }
 
@@ -184,13 +211,13 @@ namespace AF.Presentation
                     continue;
                 }
 
-                float depth = _thickness * (glints % 2 == 0 ? 0.55f : 0.35f);
-                float mid = along + (GlintLengthDp * 0.5f);
+                float center = along + (GlintLengthDp * 0.5f);
+                float depth = Mathf.Min(_thickness * (glints % 2 == 0 ? 0.55f : 0.35f), Edge(center) * 0.6f); // dentro de la lengua
                 int b = vh.currentVertCount;
                 vh.AddVert(Point(along, depth), clear, Vector4.zero);
-                vh.AddVert(Point(mid, depth + 0.6f), glint, Vector4.zero);
+                vh.AddVert(Point(center, depth + 0.6f), glint, Vector4.zero);
                 vh.AddVert(Point(along + GlintLengthDp, depth), clear, Vector4.zero);
-                vh.AddVert(Point(mid, depth - 0.6f), glint, Vector4.zero);
+                vh.AddVert(Point(center, depth - 0.6f), glint, Vector4.zero);
                 vh.AddTriangle(b, b + 1, b + 2);
                 vh.AddTriangle(b + 2, b + 3, b);
                 glints++;
@@ -208,11 +235,53 @@ namespace AF.Presentation
             vh.AddTriangle(b + 2, b + 3, b);
         }
 
-        // Altura del borde ondulado en la posición a lo largo del eje.
+        // Altura del borde ondulado en la posición a lo largo del eje (más baja hacia las puntas afinadas, con perfil redondeado).
         private float Edge(float along)
         {
             float lambda = Mathf.Max(1f, WaveLengthU * _unit);
-            return Mathf.Max(1f, _thickness - WaveAmplitudeDp + (WaveAmplitudeDp * Mathf.Sin(along * 2f * Mathf.PI / lambda)));
+            float h = Mathf.Max(1f, _thickness - WaveAmplitudeDp + (WaveAmplitudeDp * Mathf.Sin(along * 2f * Mathf.PI / lambda)));
+            float length = _back + _forward;
+            float tb = TaperBack(length);
+            float tf = TaperForward(length);
+            float k = 1f;
+            if (tb > 0f)
+            {
+                k = Mathf.Min(k, Mathf.Lerp(TaperTip, 1f, Mathf.Sqrt(Mathf.Clamp01((along + _back) / tb))));
+            }
+
+            if (tf > 0f)
+            {
+                k = Mathf.Min(k, Mathf.Lerp(TaperTip, 1f, Mathf.Sqrt(Mathf.Clamp01((_forward - along) / tf))));
+            }
+
+            return Mathf.Max(0.5f, h * k);
+        }
+
+        private float TaperBack(float length)
+        {
+            return _taperBack > 0f ? Mathf.Min(_taperBack, length * 0.5f) : 0f;
+        }
+
+        private float TaperForward(float length)
+        {
+            return _taperForward > 0f ? Mathf.Min(_taperForward, length * 0.5f) : 0f;
+        }
+
+        // Posición del borde i de los cuadriláteros del cuerpo: nb en la punta de atrás, mid en medio y nf en la de delante.
+        private float Along(int i, int nb, int mid, int nf, float tb, float tf, float length)
+        {
+            if (i <= nb && nb > 0)
+            {
+                return -_back + (tb * i / nb);
+            }
+
+            int j = i - nb;
+            if (j <= mid)
+            {
+                return -_back + tb + ((length - tb - tf) * j / mid);
+            }
+
+            return _forward - tf + (tf * (j - mid) / Mathf.Max(1, nf));
         }
 
         // Punto a «along» dp a lo largo del eje y «across» dp hacia el borde ondulado.

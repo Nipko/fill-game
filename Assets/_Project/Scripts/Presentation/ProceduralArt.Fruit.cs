@@ -1,5 +1,4 @@
 #nullable enable
-using System.Collections.Generic;
 using System.Diagnostics;
 using AF.Levels;
 using UnityEngine;
@@ -43,8 +42,8 @@ namespace AF.Presentation
         private Sprite? _riverSwell;
 
         /// <summary>
-        /// Degradado vertical blanco de la capa de crecida del río (guion §11): alfa 0 arriba (el horizonte) → 1 abajo (junto
-        /// al panel); el color y el alfa máximo (0,35) los pone <c>Image.color</c>.
+        /// Degradado vertical blanco de la capa de crecida del río (guion §11): alfa 0,35 arriba (el horizonte) → 1 abajo (junto
+        /// al panel), 0,35 + 0,65 · smoothstep; el color y el alfa máximo (0,65) los pone <c>Image.color</c>.
         /// </summary>
         public Sprite RiverSwell
         {
@@ -56,9 +55,10 @@ namespace AF.Presentation
                     for (int y = 0; y < 64; y++)
                     {
                         float a = 1f - ((y + 0.5f) / 64f);
+                        float smooth = a * a * (3f - (2f * a));
                         for (int x = 0; x < 4; x++)
                         {
-                            pc.Set(x, y, new Color(1f, 1f, 1f, a * a * (3f - (2f * a))));
+                            pc.Set(x, y, new Color(1f, 1f, 1f, AmbientLayer.RiverSwellFloor + ((1f - AmbientLayer.RiverSwellFloor) * smooth)));
                         }
                     }
 
@@ -101,19 +101,19 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// Herramienta de revisión: escribe en <paramref name="dir"/> el atlas de frutas en vuelo y las piezas procedurales de
-        /// cada especie de <paramref name="species"/> para mirarlos sin abrir el juego. No se usa en el juego.
+        /// Píxeles de las piezas procedurales de la especie <paramref name="species"/> (256 × 256, de abajo arriba): cabeza,
+        /// torso, extremidad, párpado y, si lo tiene, bigote. Para revisarlas fuera del juego: la escritura a disco va en la
+        /// herramienta de Editor (los tests de exportación), nunca en el ensamblado de runtime.
         /// </summary>
-        public static void ExportIntroArt(string dir, IReadOnlyList<FaunaSpecies> species)
+        public static Color32[] FaunaPixels(FaunaSpecies species, bool pair = false)
         {
-            System.IO.Directory.CreateDirectory(dir);
-            Save(dir, "fruit_flight_atlas", BuildFruitAtlasCanvas());
-            for (int i = 0; i < species.Count; i++)
-            {
-                var art = new MonkeyArt(species[i].Id, species[i].Skeleton);
-                Save(dir, "fauna_" + species[i].Id, BuildFaunaCanvas(species[i], art));
-            }
+            var art = new MonkeyArt(species.Id, species.Skeleton);
+            FaunaPalette palette = pair && species.PairPalette != null ? species.PairPalette : species.Palette;
+            return BuildFaunaCanvas(species, art, palette).ToColor32();
         }
+
+        /// <summary>Lado del atlas de piezas de cada especie (px).</summary>
+        public static int FaunaPixelsSize => FaunaAtlasPx;
 
         // Tras Dispose, las texturas y los sprites ya no existen: se vuelven a generar si hace falta.
         private void ForgetIntroArt()
@@ -184,14 +184,26 @@ namespace AF.Presentation
                     Seed(pc, ox + 40f, oy + 36f, 3.4f, 2.1f, Hex(0x1E1A16));
                     break;
 
-                case 2: // Copoazú: trozo de pulpa crema con el borde de cáscara parda y vellosa.
-                    Outlined(pc, ox + 32f, oy + 30f, 24f, 19f, Hex(0x7A5634));
-                    pc.FillEllipseSoft(ox + 35f, oy + 33f, 19f, 14.5f, 1f, Hex(0xEFE2BE));
-                    pc.FillEllipseSoft(ox + 30f, oy + 38f, 9f, 5f, 4f, new Color(1f, 1f, 1f, 0.5f));
-                    for (int i = 0; i < 9; i++)
+                case 2: // Copoazú: trozo partido de un fruto grande (nunca un óvalo cerrado: sería la semilla-moneda, guion §5 y R7).
                     {
-                        float a = (200f + (i * 16f)) * Mathf.Deg2Rad;
-                        pc.FillCircle(ox + 32f + (Mathf.Cos(a) * 22f), oy + 30f + (Mathf.Sin(a) * 17f), 1.4f, Hex(0xA07A50)); // vello
+                        // Cuña con el borde de fractura dentado, pulpa crema con fibras y una media luna de cáscara parda y vellosa
+                        // de 6 px sobre el 40 % del perímetro (el arco).
+                        var apex = new Vector2(ox + CupuacuApexX, oy + CupuacuApexY);
+                        DrawCupuacuChunk(pc, apex, Hex(0xEFE2BE), Hex(0x7A5634));
+                        for (int i = 0; i < 12; i++)
+                        {
+                            float a = (110f + (i * 8f)) * Mathf.Deg2Rad;
+                            pc.FillCircle(apex.x + (Mathf.Cos(a) * (CupuacuRadius + 0.6f)), apex.y + (Mathf.Sin(a) * (CupuacuRadius + 0.6f)), 1.2f, Hex(0xA07A50)); // vello
+                        }
+
+                        for (int i = 0; i < 4; i++)
+                        {
+                            float a = (122f + (i * 18f)) * Mathf.Deg2Rad;
+                            float r0 = 6f + (i % 2 * 3f);
+                            pc.FillCapsule(apex.x + (Mathf.Cos(a) * r0), apex.y + (Mathf.Sin(a) * r0), apex.x + (Mathf.Cos(a) * 23f), apex.y + (Mathf.Sin(a) * 23f), 0.8f, new Color(0.80f, 0.71f, 0.52f, 0.85f)); // fibras
+                        }
+
+                        pc.FillEllipseSoft(apex.x - 13f, apex.y + 13f, 5f, 3f, 3f, new Color(1f, 1f, 1f, 0.5f)); // pulpa húmeda
                     }
 
                     break;
@@ -315,6 +327,26 @@ namespace AF.Presentation
                         pc.FillCircle(ox + 40f + (Mathf.Cos(a) * 5f), oy + 38f + (Mathf.Sin(a) * 4.5f), 1.1f, Hex(0xF4EFD8));
                     }
 
+                    // Cáliz verde en estrella con su rabito (el lulo lo conserva): la silueta deja de ser una bola cerrada y no se
+                    // confunde con la semilla-moneda.
+                    {
+                        var calyx = new Vector2(ox + 22f, oy + 45f);
+                        var stemDir = new Vector2(-0.5f, 0.866f);
+                        pc.FillCapsule(calyx.x, calyx.y, calyx.x + (stemDir.x * 9f), calyx.y + (stemDir.y * 9f), 2.8f, Ink);
+                        pc.FillCapsule(calyx.x, calyx.y, calyx.x + (stemDir.x * 9f), calyx.y + (stemDir.y * 9f), 1.6f, Hex(0x5A6A2A));
+                        for (int pass = 0; pass < 2; pass++)
+                        {
+                            for (int i = 0; i < 5; i++)
+                            {
+                                float a = (40f + (i * 40f)) * Mathf.Deg2Rad;
+                                var d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                                var side = new Vector2(-d.y, d.x);
+                                float grow = pass == 0 ? 1.6f : 0f;
+                                pc.FillTriangle(calyx + (d * (15f + grow)), calyx + (side * (4f + grow)) - (d * grow), calyx - (side * (4f + grow)) - (d * grow), pass == 0 ? Ink : Hex(0x4E7A32));
+                            }
+                        }
+                    }
+
                     break;
 
                 case 12: // Arazá: fruto aterciopelado verde-amarillo.
@@ -347,6 +379,66 @@ namespace AF.Presentation
                     pc.FillCapsule(ox + 12f, oy + 10f, ox + 9f, oy + 5f, 1.3f, Hex(0x5A3A1A));
                     break;
             }
+        }
+
+        private const float CupuacuApexX = 46f;
+        private const float CupuacuApexY = 20f;
+        private const float CupuacuRadius = 32f;
+
+        // Cuña del copoazú en una sola pasada (distancia con signo analítica, para que el atlas se genere en ≤ 10 ms): arco de
+        // 100° (105° → 205°) de radio 32 px alrededor del vértice, los dos lados de la fractura dentados (dientes de 3 px cada
+        // 8 px), contorno de tinta de 2 px, pulpa y la cáscara parda de 6 px a lo largo del arco salvo junto a la fractura
+        // (≈ 40 % del perímetro).
+        private static void DrawCupuacuChunk(PixelCanvas pc, Vector2 apex, Color pulp, Color rind)
+        {
+            const float r = CupuacuRadius;
+            const float amp = 3f;
+            const float period = 8f;
+            float a0 = 105f * Mathf.Deg2Rad;
+            float a1 = 205f * Mathf.Deg2Rad;
+            var e0 = new Vector2(Mathf.Cos(a0), Mathf.Sin(a0));
+            var e1 = new Vector2(Mathf.Cos(a1), Mathf.Sin(a1));
+            int x0 = Mathf.Max(0, Mathf.FloorToInt(apex.x - r - 6f));
+            int x1 = Mathf.Min(pc.Width - 1, Mathf.CeilToInt(apex.x + 6f));
+            int y0 = Mathf.Max(0, Mathf.FloorToInt(apex.y - 18f));
+            int y1 = Mathf.Min(pc.Height - 1, Mathf.CeilToInt(apex.y + r + 6f));
+            for (int y = y0; y <= y1; y++)
+            {
+                float qy = (y + 0.5f) - apex.y;
+                for (int x = x0; x <= x1; x++)
+                {
+                    float qx = (x + 0.5f) - apex.x;
+                    float dist = Mathf.Sqrt((qx * qx) + (qy * qy));
+                    float s0 = -((e0.x * qy) - (e0.y * qx)); // > 0 fuera del lado de 105°
+                    float s1 = (e1.x * qy) - (e1.y * qx);    // > 0 fuera del lado de 205°
+                    float along0 = (qx * e0.x) + (qy * e0.y);
+                    float along1 = (qx * e1.x) + (qy * e1.y);
+                    float d = Mathf.Max(dist - r, Mathf.Max(s0 - (amp * Tooth(along0 / period)), s1 - (amp * Tooth(along1 / period))));
+                    float inkCov = PixelCanvas.Coverage(d - 2f);
+                    if (inkCov <= 0f)
+                    {
+                        continue;
+                    }
+
+                    pc.Blend(x, y, Ink, inkCov);
+                    float fillCov = PixelCanvas.Coverage(d);
+                    if (fillCov <= 0f)
+                    {
+                        continue;
+                    }
+
+                    // La cáscara: los 6 px de fuera del arco, lejos (≥ 4 px) de los bordes de la fractura.
+                    float rindCov = Mathf.Clamp01(dist - (r - 6f) + 0.5f) * Mathf.Clamp01(-Mathf.Max(s0, s1) - 3.5f);
+                    pc.Blend(x, y, Color.Lerp(pulp, rind, rindCov), fillCov);
+                }
+            }
+        }
+
+        // Onda en diente de sierra simétrica (0 → 1 → 0) de periodo 1.
+        private static float Tooth(float t)
+        {
+            float f = t - Mathf.Floor(t);
+            return 1f - (2f * Mathf.Abs(f - 0.5f));
         }
 
         // Elipse con contorno de tinta de 2 px en una sola pasada: el interior cubierto del todo se escribe sin mezclar.

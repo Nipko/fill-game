@@ -186,6 +186,12 @@ namespace AF.Levels
         /// <summary><c>paleta</c>.</summary>
         public FaunaPalette Palette { get; }
 
+        /// <summary>
+        /// <c>paleta_pareja</c> (opcional): la del segundo individuo de la tropa cuando la especie tiene dimorfismo (por
+        /// ejemplo, la hembra gris parda del saquí junto al macho negro de cara blanca). null: todos con <see cref="Palette"/>.
+        /// </summary>
+        public FaunaPalette? PairPalette { get; internal set; }
+
         /// <summary><c>iluminacion</c>.</summary>
         public FaunaLighting Lighting { get; }
 

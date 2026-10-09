@@ -18,17 +18,24 @@ namespace AF.Presentation
     /// en la cuia; la última floración termina en T. El calendario lo calcula una vez <see cref="IntroChoreography"/> y todo se
     /// evalúa por tiempo, en un Canvas anidado propio delante de las cuias (<see cref="Layer"/>) con pools preasignados: 7 tiras
     /// de agua, 16 chorritos, 24 frutas (un atlas), 24 penachos, 24 anillos aditivos (<see cref="FxLayer"/> solo tiene 6) y 20
-    /// gotas (las de las esquinas del desborde y las del primer impacto de cada fila: ≤ 20 partículas). Al ser todo función del
-    /// tiempo, una captura en t es siempre la misma. Nada recibe toques y no se asigna memoria por fotograma tras
-    /// <see cref="Start"/>.
+    /// gotas; y, delante de la rama y detrás de la tropa (<see cref="AttachFront"/>), el labio del río que desborda la orilla
+    /// hasta el canto del panel con 6 puntos de espuma en la cresta. Presupuesto del guion §13, con contador
+    /// (<see cref="CountVisible"/>): ≤ 8 brillos aditivos a la vez (la espuma de los chorritos y los anillos; se queda el más
+    /// reciente y la vida del anillo se acorta según el espaciado de los impactos) y ≤ 20 partículas (gotas, penachos y espuma
+    /// del labio). Al ser todo función del tiempo, y el reloj de los shaders del líquido y del chorro el de la intro cuando el
+    /// ambiente está congelado (<see cref="ShaderClock"/>), una captura en t es siempre la misma. Nada recibe toques y no se
+    /// asigna memoria por fotograma tras <see cref="Start"/>.
     /// </summary>
     /// <remarks>
+    /// <para>Sigue las recomendaciones del guion (Q1-Q7 A, Q8 A provisional, Q9 A, Q10 A, Q13 A y Q16 A; Q11 diferida), que
+    /// cambian 02 §4.2, 07 §5.1 y 08 §5.3: antes de fusionar en main hace falta la decisión del dueño (D-009) y editar esos
+    /// capítulos (guion §17). Hasta entonces el GDD manda y esto es una propuesta en su rama.</para>
     /// <para><see cref="Complete"/> deja el estado final en el mismo fotograma; si fue un salto, los restos (frutas, anillos,
     /// chorritos, tiras, capa del río y tropa) se funden en ≤ 100 ms en su sitio, sin moverse ni impactos tardíos.</para>
     /// <para>Las dosis ocultas (Aguas turbias, aún sin mecánica en el cliente) se llenan de río como las demás, no reciben fruta
     /// y pasan todas a la vez al pardo opaco #8A7B6A en el fotograma del primer impacto (el «?» queda preparado, 07 §4.3).</para>
     /// <para>Con <see cref="ReduceMotion"/> (07 §7.8, cuando exista el ajuste): fundido de 250 ms al estado final y, en modo
-    /// rama, un miquito quieto que se desvanece 600 ms después (guion §9, Q13 A).</para>
+    /// rama, un miquito quieto que se desvanece 600 ms después (guion §9; recomendación Q13 A, pendiente de D-009).</para>
     /// </remarks>
     public sealed class IntroAnimation
     {
@@ -47,7 +54,7 @@ namespace AF.Presentation
         /// <summary>Reducir movimiento: fundido de 250 ms (07 §5.1 y §7.8).</summary>
         public const float ReducedMotionMs = 250f;
 
-        /// <summary>Reducir movimiento: el miquito quieto se ve 600 ms más y se desvanece en 150 ms (guion §9, Q13 A).</summary>
+        /// <summary>Reducir movimiento: el miquito quieto se ve 600 ms más y se desvanece en 150 ms (guion §9; recomendación Q13 A, pendiente de D-009).</summary>
         public const float ReducedTroopHoldMs = 600f;
 
         /// <summary>Fundido del miquito quieto.</summary>
@@ -70,6 +77,30 @@ namespace AF.Presentation
 
         /// <summary>Pardo opaco de las dosis ocultas (07 §4.3).</summary>
         public static readonly Color MurkyColor = new Color(0x8A / 255f, 0x7B / 255f, 0x6A / 255f, 1f);
+
+        /// <summary>Brillos aditivos a la vez como mucho en la intro (guion §13).</summary>
+        public const int MaxAdditive = 8;
+
+        /// <summary>Partículas a la vez como mucho en la intro (guion §13): gotas, penachos y espuma del labio.</summary>
+        public const int MaxParticles = 20;
+
+        /// <summary>Puntos de espuma en la cresta del labio del desborde (2 × 2 dp).</summary>
+        public const int LipFoamDots = 6;
+
+        /// <summary>El labio del desborde nace en el borde inferior del río, 14 dp sobre el panel…</summary>
+        public const float LipAbovePanelDp = 14f;
+
+        /// <summary>…y llega 2 dp dentro del canto del panel, donde lo recoge la lámina.</summary>
+        public const float LipBelowPanelDp = 2f;
+
+        /// <summary>Lado de cada punto de espuma del labio (dp).</summary>
+        public const float LipFoamDp = 2f;
+
+        /// <summary>
+        /// Mientras la lámina y el labio crecen, sus frentes se afinan en lengua a lo largo de 14 dp (agua que avanza, no una
+        /// caja); al llegar a las esquinas la lengua se endereza.
+        /// </summary>
+        public const float SheetTaperDp = 14f;
 
         private const int MaxCuias = IntroInput.MaxCuias;
         private const int MaxFruits = IntroChoreography.MaxFruits;
@@ -102,6 +133,11 @@ namespace AF.Presentation
         private readonly Color[] _ringColor = new Color[MaxFruits];
         private readonly Color[] _plumeColor = new Color[MaxFruits];
         private readonly List<Graphic> _graphics = new List<Graphic>(128);
+        private readonly bool[] _foamWant = new bool[MaxCuias];
+        private readonly float[] _foamY = new float[MaxCuias];
+        private readonly Image[] _lipFoam = new Image[LipFoamDots];
+        private WaterStripGraphic? _lip;
+        private float _ringLife = IntroChoreography.RingMs;
 
         private CuiaView[] _views = Array.Empty<CuiaView>();
         private Color _water;
@@ -173,6 +209,78 @@ namespace AF.Presentation
             }
         }
 
+        /// <summary>
+        /// Crea, en <paramref name="slot"/> (el hueco entre la rama y la tropa de <see cref="TroopLayer"/>), el labio del río
+        /// que desborda: una tira de agua desde el borde inferior del río (panel.top − 14) hasta 2 dp dentro del canto del panel,
+        /// del mismo ancho que la lámina en cada instante, delante de la rama, con 6 puntos de espuma de 2 × 2 dp en la cresta.
+        /// Así se ve que el agua sale del río y pasa por encima de la rama hasta el marco (guion §6.2, tiempo 2).
+        /// </summary>
+        public void AttachFront(RectTransform slot)
+        {
+            if (_lip != null)
+            {
+                return;
+            }
+
+            var go = new GameObject("RiverLip", typeof(RectTransform), typeof(CanvasRenderer), typeof(WaterStripGraphic));
+            go.transform.SetParent(slot, false);
+            WaterStripGraphic lip = go.GetComponent<WaterStripGraphic>();
+            lip.Setup();
+            TopLeft(lip.rectTransform, new Vector2(0f, 1f));
+            lip.enabled = false;
+            _graphics.Add(lip);
+            _lip = lip;
+            for (int i = 0; i < LipFoamDots; i++)
+            {
+                var dot = new GameObject("LipFoam" + i, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                dot.transform.SetParent(slot, false);
+                Image img = dot.GetComponent<Image>();
+                img.sprite = _art.Drop;
+                img.raycastTarget = false;
+                TopLeft(img.rectTransform, new Vector2(0.5f, 0.5f));
+                img.rectTransform.sizeDelta = new Vector2(LipFoamDp, LipFoamDp);
+                img.enabled = false;
+                _graphics.Add(img);
+                _lipFoam[i] = img;
+            }
+        }
+
+        /// <summary>
+        /// Cuenta lo que se ve de la intro en este fotograma (tests del presupuesto del guion §13): imágenes aditivas a la vista
+        /// (espuma de los chorritos y anillos) y partículas (gotas, penachos y espuma del labio).
+        /// </summary>
+        public void CountVisible(out int additive, out int particles)
+        {
+            additive = 0;
+            particles = 0;
+            for (int i = 0; i < MaxCuias; i++)
+            {
+                additive += Shown(_streamRings[i]) ? 1 : 0;
+            }
+
+            for (int k = 0; k < MaxFruits; k++)
+            {
+                additive += Shown(_rings[k]) ? 1 : 0;
+                particles += Shown(_plumes[k]) ? 1 : 0;
+            }
+
+            for (int j = 0; j < MaxDrops; j++)
+            {
+                particles += Shown(_drops[j]) ? 1 : 0;
+            }
+
+            for (int i = 0; i < LipFoamDots; i++)
+            {
+                particles += _lipFoam[i] != null && Shown(_lipFoam[i]) ? 1 : 0;
+            }
+        }
+
+        /// <summary>Labio del desborde a la vista (tests y capturas).</summary>
+        public bool LipVisible => _lip != null && _lip.enabled;
+
+        /// <summary>Medio ancho del labio a la vista (dp; 0 sin labio).</summary>
+        public float LipHalfWidth => _lip != null && _lip.enabled ? _lip.Length * 0.5f : 0f;
+
         /// <summary>La intro está en curso (input de juego bloqueado, vistas bloqueadas).</summary>
         public bool Running { get; private set; }
 
@@ -232,14 +340,25 @@ namespace AF.Presentation
             _plan.Plan(_input);
             _water = water;
             _waterA = new Color(water.r, water.g, water.b, WaterAlpha);
-            // Núcleo del chorrito: el agua del río con +10 % de L como el del vertido (guía 6.5), un punto más clara para que se
-            // lea como agua al sol sobre el panel oscuro.
-            _waterCore = ColorMath.ScaleOkLightness(new Color(water.r, water.g, water.b, 1f), 1.18f);
+            // Núcleo del chorrito: el agua del río con +10 % de L, como el del vertido (guion §7.2; guía 6.5).
+            _waterCore = ColorMath.ScaleOkLightness(new Color(water.r, water.g, water.b, 1f), 1.10f);
             _waterCore.a = 1f;
+
+            // Anillos: la vida se acorta según el espaciado de los impactos para que no haya más de 8 brillos a la vez.
+            _ringLife = IntroChoreography.RingMs;
+            if (_plan.FruitCount > 1)
+            {
+                float spacing = (_plan.FruitImpactMs[_plan.FruitCount - 1] - _plan.FruitImpactMs[0]) / (_plan.FruitCount - 1);
+                _ringLife = Mathf.Clamp(MaxAdditive * spacing, 100f, IntroChoreography.RingMs);
+            }
             var strip = new Color(water.r, water.g, water.b, SheetAlpha);
             Color surface = ColorMath.WithAlpha(ColorMath.Lighten(new Color(water.r, water.g, water.b, 1f), 0.38f), 0.95f);
             Color line = ColorMath.WithAlpha(Palette.Glint, 0.8f);
             SetStripColor(_sheet, strip, surface, line, true);
+            if (_lip != null)
+            {
+                SetStripColor(_lip, new Color(water.r, water.g, water.b, 0.92f), surface, line, false);
+            }
             SetStripColor(_sideLeft, strip, surface, line, false);
             SetStripColor(_sideRight, strip, surface, line, false);
             for (int r = 0; r < _shelfLeft.Length; r++)
@@ -252,6 +371,14 @@ namespace AF.Presentation
             for (int i = 0; i < MaxCuias; i++)
             {
                 _streamRings[i].color = foam;
+            }
+
+            for (int i = 0; i < LipFoamDots; i++)
+            {
+                if (_lipFoam[i] != null)
+                {
+                    _lipFoam[i].color = ColorMath.Lighten(foam, 0.5f);
+                }
             }
 
             for (int i = 0; i < MaxCuias; i++)
@@ -284,6 +411,7 @@ namespace AF.Presentation
 
             PlanDrops(water);
             Troop?.Begin(_plan, _input);
+            Ambient?.SetPollenPaused(true); // el polen se pausa: en los primeros 100 ms solo se mueve el río (guion §7.2)
             _t = 0f;
             _prevT = 0f;
             _tail = false;
@@ -452,6 +580,7 @@ namespace AF.Presentation
         private void FinishNatural()
         {
             Running = false;
+            Ambient?.SetPollenPaused(false); // el polen vuelve con el input
             int n = Mathf.Min(_views.Length, _input.Count);
             for (int i = 0; i < n; i++)
             {
@@ -469,6 +598,11 @@ namespace AF.Presentation
 
         private void Apply(float t)
         {
+            if (AmbientLayer.Frozen)
+            {
+                ShaderClock.Freeze(t / 1000f); // capturas: la onda del líquido y el flujo del chorro, función del tiempo de la intro
+            }
+
             if (Running)
             {
                 ApplyCuias(t);
@@ -588,11 +722,15 @@ namespace AF.Presentation
                 float half = Mathf.Min(p.SheetHalfWidth, (t - p.SheetStartMs) * p.SheetSpeed);
                 float a = Mathf.Clamp01((t - p.SheetStartMs) / Mathf.Max(1f, p.SheetFadeMs)) * wood;
                 float thick = _input.FrameDp + IntroChoreography.SheetAbovePanelDp;
+                float taper = SheetTaperDp * Mathf.Clamp01((p.SheetHalfWidth - half) / SheetTaperDp);
                 ShowStrip(_sheet, new Vector2(p.SheetCenterX, -p.FrameInnerY), half, half, thick, false, false, a, unit, t * 0.1f);
+                _sheet.SetTaper(taper, taper);
+                ShowLip(half, taper, a, unit, t);
             }
             else
             {
                 HideStrip(_sheet);
+                HideLip();
             }
 
             // 3. Tiras por el borde interior de los costados del marco y por la cara de cada repisa.
@@ -633,7 +771,7 @@ namespace AF.Presentation
             for (int i = 0; i < MaxCuias; i++)
             {
                 StreamGraphic s = _streams[i];
-                Image foamRing = _streamRings[i];
+                _foamWant[i] = false;
                 bool on = i < p.CuiaCount && p.StreamOpenMs[i] >= 0f && t >= p.StreamOpenMs[i] && t < p.FillEndMs[i] + p.StreamTailMs;
                 if (!on)
                 {
@@ -642,7 +780,6 @@ namespace AF.Presentation
                         s.enabled = false;
                     }
 
-                    SetEnabled(foamRing, false);
                     continue;
                 }
 
@@ -673,19 +810,44 @@ namespace AF.Presentation
                 s.canvasRenderer.SetAlpha(alpha);
 
                 // Espuma donde el chorrito toca el agua mientras la cuia se llena (la misma gramática que el vertido).
-                if (t >= p.ContactMs[i] && t < p.FillEndMs[i])
-                {
-                    float pulse = 0.5f + (0.5f * Mathf.Sin(t * 0.045f));
-                    float rw = Mathf.Lerp(0.55f, 0.75f, pulse) * unit;
-                    SetEnabled(foamRing, true);
-                    Place(foamRing.rectTransform, new Vector2(x, -headY), new Vector2(rw * 2f, rw * 0.5f), 0f);
-                    foamRing.canvasRenderer.SetAlpha(alpha * Mathf.Lerp(0.35f, 0.55f, pulse));
-                }
-                else
+                _foamWant[i] = t >= p.ContactMs[i] && t < p.FillEndMs[i];
+                _foamY[i] = headY;
+            }
+
+            // Espuma: como mucho 8 brillos aditivos a la vez (guion §13); se quedan los chorritos abiertos más recientes.
+            int foamShown = 0;
+            for (int i = 0; i < MaxCuias; i++)
+            {
+                Image foamRing = _streamRings[i];
+                bool show = _foamWant[i] && NewerFoam(i) < MaxAdditive;
+                if (!show)
                 {
                     SetEnabled(foamRing, false);
+                    continue;
+                }
+
+                foamShown++;
+                float pulse = 0.5f + (0.5f * Mathf.Sin(t * 0.045f));
+                float rw = Mathf.Lerp(0.55f, 0.75f, pulse) * unit;
+                SetEnabled(foamRing, true);
+                Place(foamRing.rectTransform, new Vector2(_input.CenterX[i], -_foamY[i]), new Vector2(rw * 2f, rw * 0.5f), 0f);
+                foamRing.canvasRenderer.SetAlpha(alpha * Mathf.Lerp(0.35f, 0.55f, pulse));
+            }
+
+            // Anillos y penachos activos (los impactos van en orden): los más recientes, dentro del presupuesto.
+            int ringBudget = MaxAdditive - foamShown;
+            int ringNewest = -1;
+            int plumeNewest = -1;
+            for (int k = 0; k < p.FruitCount; k++)
+            {
+                if (t >= p.FruitImpactMs[k])
+                {
+                    ringNewest = k;
+                    plumeNewest = k;
                 }
             }
+
+            int particleBudget = MaxParticles - ActiveDrops(t) - ActiveLipFoam();
 
             // 5. Frutas: en la mano (rama) o asomando por detrás del HUD (dosel), caída con g, giro y fundido al impacto.
             float shakeAmp = 0f;
@@ -705,11 +867,13 @@ namespace AF.Presentation
                 float release = p.FruitReleaseMs[k];
                 float impact = p.FruitImpactMs[k];
                 float tau = Mathf.Max(1f, impact - release);
-                bool held = p.FruitMonkey[k] >= 0; // en la mano (o en la rama sacudida) 60 ms antes de soltarla
+                // En la mano (o en la rama: sacudida, o la fruta que ningún miquito alcanza) 60 ms antes de soltarla; del dosel,
+                // asoma al soltarla.
+                bool held = p.FruitMonkey[k] >= 0 || p.Perch == IntroPerch.Branch;
                 float showFrom = held ? release - IntroChoreography.HoldMs : release;
-                if (!held)
+                if (p.FruitMonkey[k] < 0)
                 {
-                    // Cae del dosel (modo dosel o una fruta que ningún miquito alcanza): el follaje de las esquinas se sacude.
+                    // Cae del dosel o de la rama sin miquito: el follaje de las esquinas (de donde sale la rama) se sacude.
                     shakeAmp = Mathf.Max(shakeAmp, 1f - Mathf.Clamp01(Mathf.Abs(t - release) / 75f));
                 }
 
@@ -751,10 +915,10 @@ namespace AF.Presentation
                     SetEnabled(fruit, false);
                 }
 
-                // Anillo elíptico sobre la superficie (0,4 → 1,3 u, alfa 0,4 → 0 en 250 ms).
-                if (t >= impact && t < impact + IntroChoreography.RingMs)
+                // Anillo elíptico sobre la superficie (0,4 → 1,3 u, alfa 0,4 → 0 en 250 ms, o menos si los impactos van juntos).
+                if (t >= impact && t < impact + _ringLife && ringNewest - k < ringBudget)
                 {
-                    float q = (t - impact) / IntroChoreography.RingMs;
+                    float q = (t - impact) / _ringLife;
                     float w = Mathf.Lerp(0.4f, 1.3f, Ease.OutCubic(q)) * unit;
                     SetEnabled(ring, true);
                     Place(ring.rectTransform, new Vector2(p.FruitImpactX[k], -p.FruitImpactY[k]), new Vector2(w * 2f, w * 0.55f), 0f);
@@ -773,7 +937,7 @@ namespace AF.Presentation
                 }
 
                 // Penacho del color que baja hasta su racha (≤ 60 ms).
-                if (t >= impact && t < impact + IntroChoreography.PlumeMs)
+                if (t >= impact && t < impact + IntroChoreography.PlumeMs && plumeNewest - k < particleBudget)
                 {
                     float q = (t - impact) / IntroChoreography.PlumeMs;
                     int c = p.FruitCuia[k];
@@ -892,6 +1056,7 @@ namespace AF.Presentation
         {
             _tail = false;
             _fadeLeft = -1f;
+            Ambient?.SetPollenPaused(false);
             HideWater();
             HideFruits();
             Ambient?.SetRiverBoost(0f);
@@ -899,8 +1064,105 @@ namespace AF.Presentation
             Troop?.Hide();
         }
 
+        // Labio del río que desborda: de panel.top − 14 (el borde inferior del río) a panel.top + 2, del ancho de la lámina, con
+        // 6 puntos de espuma en la cresta (nunca sobre el HUD).
+        private void ShowLip(float half, float taper, float alpha, float unit, float t)
+        {
+            WaterStripGraphic? lip = _lip;
+            if (lip == null)
+            {
+                return;
+            }
+
+            IntroChoreography p = _plan;
+            float bottom = _input.PanelTop + LipBelowPanelDp;
+            float crest = Mathf.Max(_input.PanelTop - LipAbovePanelDp, _input.HudBottom + 1f);
+            float thick = bottom - crest;
+            if (thick < 1f)
+            {
+                HideLip();
+                return;
+            }
+
+            ShowStrip(lip, new Vector2(p.SheetCenterX, -bottom), half, half, thick, false, false, alpha, unit, t * FlowDpPerMs);
+            lip.SetTaper(taper, taper);
+            for (int i = 0; i < LipFoamDots; i++)
+            {
+                Image dot = _lipFoam[i];
+                float frac = ((i + 0.5f) / LipFoamDots * 2f) - 1f; // repartidos a lo ancho del panel
+                float x = p.SheetCenterX + (frac * p.SheetHalfWidth * 0.92f);
+                bool on = Mathf.Abs(x - p.SheetCenterX) <= half - Mathf.Max(1f, taper); // en la cresta, no en la lengua
+                SetEnabled(dot, on);
+                if (on)
+                {
+                    float bob = 0.5f * Mathf.Sin((t * 0.012f) + (i * 1.7f));
+                    Place(dot.rectTransform, new Vector2(x, -(crest + 0.8f + bob)), new Vector2(LipFoamDp, LipFoamDp), 0f);
+                    dot.canvasRenderer.SetAlpha(alpha * 0.95f);
+                }
+            }
+        }
+
+        private void HideLip()
+        {
+            if (_lip == null)
+            {
+                return;
+            }
+
+            HideStrip(_lip);
+            for (int i = 0; i < LipFoamDots; i++)
+            {
+                SetEnabled(_lipFoam[i], false);
+            }
+        }
+
+        // Chorritos con espuma abiertos después que el i (empate: el de índice mayor).
+        private int NewerFoam(int i)
+        {
+            int newer = 0;
+            float open = _plan.StreamOpenMs[i];
+            for (int j = 0; j < MaxCuias; j++)
+            {
+                if (j != i && _foamWant[j] && (_plan.StreamOpenMs[j] > open || (_plan.StreamOpenMs[j] == open && j > i)))
+                {
+                    newer++;
+                }
+            }
+
+            return newer;
+        }
+
+        private int ActiveDrops(float t)
+        {
+            int n = 0;
+            for (int j = 0; j < _dropCount; j++)
+            {
+                float dt = t - _dropT0[j];
+                n += dt >= 0f && dt < DropLifeMs ? 1 : 0;
+            }
+
+            return n;
+        }
+
+        private int ActiveLipFoam()
+        {
+            int n = 0;
+            for (int i = 0; i < LipFoamDots; i++)
+            {
+                n += _lipFoam[i] != null && _lipFoam[i].enabled ? 1 : 0;
+            }
+
+            return n;
+        }
+
+        private static bool Shown(Graphic g)
+        {
+            return g.enabled && g.gameObject.activeInHierarchy && g.canvasRenderer.GetAlpha() > 0.001f;
+        }
+
         private void HideWater()
         {
+            HideLip();
             HideStrip(_sheet);
             HideStrip(_sideLeft);
             HideStrip(_sideRight);
