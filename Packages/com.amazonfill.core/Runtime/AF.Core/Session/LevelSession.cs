@@ -301,8 +301,11 @@ namespace AF.Core.Session
         /// </list>
         /// <para>Las capas que el historial rehecho ya reveló (R7) cuentan como reveladas y no suman. Revelar alarga la racha
         /// (R6) y permite sellar (R5): si una capa se reveló a mitad del historial sin que el historial rehecho la revele (con
-        /// un comodín, Luciérnaga o Pororoca, o con un vertido que Marea deshizo después), esta llamada va en ese punto del
-        /// rehacer y no al final, o un vertido posterior podría mover otra cantidad o no sellar.</para>
+        /// la Luciérnaga o con un vertido que Marea deshizo después), esta llamada va en ese punto del rehacer y no al final,
+        /// o un vertido posterior podría mover otra cantidad o no sellar.</para>
+        /// <para>La Pororoca no es uno de esos casos: su revelado va justo antes de un barajado que vacía el historial y cambia
+        /// el tablero (04 §2.1 y §2.4 a; 02 §14), así que tras una Pororoca la sesión ya no se rehace desde
+        /// <see cref="Initial"/> más los vertidos y queda fuera de estos dos usos.</para>
         /// </remarks>
         /// <param name="cuia">Índice de la cuia en el tablero.</param>
         /// <param name="layers">Máscara de capas (bit k = capa k desde el fondo); solo bits ocultos en <see cref="Initial"/>.</param>

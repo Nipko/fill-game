@@ -213,6 +213,8 @@ tablero inicial con su historial rehecho:
    al final, así que los índices de las demás no cambian y `RevealedLayers(i)` de la sesión anterior se copia cuia a cuia.
 
 Las capas que el historial rehecho ya reveló cuentan como reveladas y no suman. Revelar alarga la racha (R6) y permite sellar
-(R5): si una capa se reveló a mitad del historial sin que el historial rehecho la revele (con la Luciérnaga o la Pororoca, o
-con un vertido que Marea deshizo después), la llamada va en ese punto del rehacer y no al final, o un vertido posterior podría
-mover otra cantidad o no sellar. Tests: `LevelSessionMurkyTests.RestoreRevealed_*`.
+(R5): si una capa se reveló a mitad del historial sin que el historial rehecho la revele (con la Luciérnaga o con un vertido
+que Marea deshizo después), la llamada va en ese punto del rehacer y no al final, o un vertido posterior podría mover otra
+cantidad o no sellar. La Pororoca no es uno de esos casos: su revelado va justo antes de un barajado que vacía el historial y
+cambia el tablero (04 §2.1 y §2.4 a; 02 §14), así que tras una Pororoca la sesión ya no se rehace desde `Initial` más los
+vertidos (fuera del paso 1). Tests: `LevelSessionMurkyTests.RestoreRevealed_*`.

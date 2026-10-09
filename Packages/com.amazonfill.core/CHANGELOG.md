@@ -27,9 +27,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   negativa o con bits que no son dosis ocultas de la cuia en `Initial`. Usos: **reanudar** (02 §14, R8: se rehacen los
   vertidos guardados y se restaura la máscara guardada) y **rehacer la sesión con la Cuia extra o la Cuia de rescate**
   (`LevelFlow.Funnel.AddCuia`: la cuia vacía va al final, así que la máscara se copia cuia a cuia). Si una capa se reveló a
-  mitad del historial sin que el historial rehecho la revele (Luciérnaga, Pororoca o un vertido deshecho con Marea), la llamada
-  va en ese punto del rehacer: revelar alarga la racha (R6) y permite sellar (R5), así que restaurarla al final puede cambiar
-  la cantidad de un vertido posterior (con T4 solo pasa tras lavar el Barro con el color de la oculta de debajo). Tests en
+  mitad del historial sin que el historial rehecho la revele (Luciérnaga o un vertido deshecho con Marea), la llamada va en
+  ese punto del rehacer: revelar alarga la racha (R6) y permite sellar (R5), así que restaurarla al final puede cambiar la
+  cantidad de un vertido posterior (con T4 solo pasa tras lavar el Barro con el color de la oculta de debajo). La Pororoca no
+  es uno de esos casos: su revelado va justo antes de un barajado que vacía el historial y cambia el tablero (04 §2.1 y §2.4 a;
+  02 §14), así que tras ella la sesión ya no se rehace desde `Initial` más los vertidos (fuera del paso 1). Tests en
   `LevelSessionMurkyTests`: `RestoreRevealed_PartialLayer_KeepsOtherHidden`, `_SurvivesUndoAndRestart`,
   `_RejectsLayersNotHidden`, `_RejectsCuiaOutOfRange`, `_IsIdempotentAndOutsideHistory`, `_RecomputesStatusLikeReveal_R10gh`
   y `_AtTheRevealPoint_ReplaysTheHistoryExactly`; README, «Restaurar las capas reveladas».
