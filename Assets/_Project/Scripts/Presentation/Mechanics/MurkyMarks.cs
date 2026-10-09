@@ -19,8 +19,8 @@ namespace AF.Presentation.Mechanics
     /// </remarks>
     public sealed class MurkyMarks
     {
-        /// <summary>Alto del «?» (07 §4.3: 0,5 u).</summary>
-        public const float MarkU = 0.5f;
+        /// <summary>Alto del «?» marfil, sin el halo (07 §4.3: 0,5 u).</summary>
+        public const float MarkU = ProceduralArt.QuestionGlyphU;
 
         private readonly RectTransform _root;
         private readonly Image[] _marks;
@@ -92,13 +92,17 @@ namespace AF.Presentation.Mechanics
             SetMask(0);
         }
 
-        /// <summary>Coloca cada «?» en el centro de su banda (u en dp).</summary>
+        /// <summary>
+        /// Coloca cada «?» en el centro de su banda (u en dp). La caja es el sprite entero
+        /// (<see cref="ProceduralArt.QuestionMarkU"/>, con el margen del halo), así que el glifo mide <see cref="MarkU"/>.
+        /// </summary>
         public void Layout(float u)
         {
             _u = u;
+            const float box = ProceduralArt.QuestionMarkU;
             for (int k = 0; k < _marks.Length; k++)
             {
-                OverlayParts.Place(_marks[k], 0f, CuiaGeometry.CavityBottomU + k + 0.5f, MarkU, MarkU, _u);
+                OverlayParts.Place(_marks[k], 0f, CuiaGeometry.CavityBottomU + k + 0.5f, box, box, _u);
             }
         }
 

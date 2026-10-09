@@ -33,6 +33,26 @@ namespace AF.Presentation
         /// <summary>Lado de los iconos de mecánica, del «?» y del Barro (dp; 32 dp como pide la tarjeta y el HUD).</summary>
         public const float MechanicIconDp = 32f;
 
+        /// <summary>Alto del «?» marfil de las turbias, sin el halo (07 §4.3: 0,5 u).</summary>
+        public const float QuestionGlyphU = 0.5f;
+
+        /// <summary>
+        /// Lado del sprite cuadrado <see cref="QuestionMark"/> (u; 0,5625 u): el glifo de <see cref="QuestionGlyphU"/> centrado
+        /// y 3 px de margen por lado para que el halo no se recorte. Quien lo coloque usa este lado, no el del glifo.
+        /// </summary>
+        public const float QuestionMarkU = (float)QuestionMarkPx / MechanicPxPerU;
+
+        // Glifo de DrawQuestionGlyph a escala 1 (px sobre y0): de la base del punto (6,5 − 3,6) a la cima del arco
+        // (31 + 10 + 3).
+        private const float QuestionGlyphBottom = 2.9f;
+        private const float QuestionGlyphHeight = 44f - QuestionGlyphBottom;
+
+        // El glifo de QuestionMark a su densidad (48 px = 0,5 u) y el lado del lienzo con el margen del halo (1,6 · k ≈ 1,9 px
+        // más el antialias).
+        private const float QuestionGlyphPx = QuestionGlyphU * MechanicPxPerU;
+        private const int QuestionHaloMarginPx = 3;
+        private const int QuestionMarkPx = (int)QuestionGlyphPx + (2 * QuestionHaloMarginPx);
+
         /// <summary>Grumos del Barro: pardo oscuro #3F3826 [P].</summary>
         public static readonly Color MudLumpColor = Palette.Hex(0x3F3826);
 
@@ -55,7 +75,8 @@ namespace AF.Presentation
 
         /// <summary>
         /// «?» marfil (<see cref="Palette.UiPaper"/>) con un halo de tinta para leerse sobre el pardo de las turbias (07 §4.3;
-        /// glosario §6.2). Sprite cuadrado de 0,5 u: el glifo ocupa unos 0,45 u de alto.
+        /// glosario §6.2). Sprite cuadrado de <see cref="QuestionMarkU"/>: el glifo, centrado, mide <see cref="QuestionGlyphU"/>
+        /// de alto (12 dp con la cuia de 48 dp) y el halo cabe en el margen.
         /// </summary>
         public Sprite QuestionMark
         {
@@ -63,11 +84,7 @@ namespace AF.Presentation
             {
                 if (_questionMark == null)
                 {
-                    const int s = MechanicPxPerU / 2;
-                    var pc = new PixelCanvas(s, s);
-                    DrawQuestionGlyph(pc, s * 0.5f, 0f, s / 48f, ColorMath.WithAlpha(Palette.Ink, 0.55f), 1.6f);
-                    DrawQuestionGlyph(pc, s * 0.5f, 0f, s / 48f, Palette.UiPaper, 0f);
-                    _questionMark = MakeSprite(pc, "mech_question", new Vector2(0.5f, 0.5f), Vector4.zero);
+                    _questionMark = MakeSprite(DrawQuestionMark(), "mech_question", new Vector2(0.5f, 0.5f), Vector4.zero);
                 }
 
                 return _questionMark;
@@ -108,8 +125,9 @@ namespace AF.Presentation
                     pc.FillCircle(c, c, s * 0.46f, ColorMath.Darken(Palette.Murky, 0.35f));
                     pc.FillCircle(c, c, s * 0.42f, Palette.Murky);
                     float k = s / 64f;
-                    DrawQuestionGlyph(pc, c, (s - (41f * k)) * 0.5f - (2.9f * k), k, ColorMath.WithAlpha(Palette.Ink, 0.5f), 1.2f * k);
-                    DrawQuestionGlyph(pc, c, (s - (41f * k)) * 0.5f - (2.9f * k), k, Palette.UiPaper, 0f);
+                    float y0 = ((s - (QuestionGlyphHeight * k)) * 0.5f) - (QuestionGlyphBottom * k);
+                    DrawQuestionGlyph(pc, c, y0, k, ColorMath.WithAlpha(Palette.Ink, 0.5f), 1.2f * k);
+                    DrawQuestionGlyph(pc, c, y0, k, Palette.UiPaper, 0f);
                     _murkyIcon = MakeSprite(pc, "mech_icon_murky", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
                 }
 
@@ -140,8 +158,21 @@ namespace AF.Presentation
         /// <summary>Lado en píxeles de un icono de <see cref="MechanicIconDp"/> a la densidad de UI.</summary>
         private static int IconPx => Mathf.RoundToInt(MechanicIconDp * UiPxPerDp);
 
-        // «?» en una caja de 48 × 48 px a escala k, con el eje en cx y la caja empezando en y0. grow engorda los trazos (el
-        // halo se dibuja antes, más grueso).
+        // Lienzo de QuestionMark: el glifo escalado a QuestionGlyphPx de alto (k ≈ 1,168) y centrado en los dos ejes, con un
+        // halo proporcional. Aparte del getter para que los tests de EditMode lo midan (la textura no es legible).
+        private static PixelCanvas DrawQuestionMark()
+        {
+            const int s = QuestionMarkPx;
+            const float k = QuestionGlyphPx / QuestionGlyphHeight;
+            var pc = new PixelCanvas(s, s);
+            float y0 = ((s - QuestionGlyphPx) * 0.5f) - (QuestionGlyphBottom * k);
+            DrawQuestionGlyph(pc, s * 0.5f, y0, k, ColorMath.WithAlpha(Palette.Ink, 0.55f), 1.6f * k);
+            DrawQuestionGlyph(pc, s * 0.5f, y0, k, Palette.UiPaper, 0f);
+            return pc;
+        }
+
+        // «?» a escala k con el eje en cx: va de y0 + QuestionGlyphBottom · k (base del punto) a y0 + 44 · k (cima del arco) y
+        // mide 26 · k de ancho. grow engorda los trazos (el halo se dibuja antes, más grueso).
         private static void DrawQuestionGlyph(PixelCanvas pc, float cx, float y0, float k, Color c, float grow)
         {
             float half = (3f * k) + grow;

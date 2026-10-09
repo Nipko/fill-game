@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using AF.Core.Board;
 using AF.Presentation;
+using AF.Presentation.Mechanics;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
@@ -124,6 +125,60 @@ namespace AF.Tests.EditMode
             Assert.That(view.Murky.MarkVisible(0), Is.False, "en vuelo las bandas no giran: el «?» se oculta");
             view.ReturnBody();
             Assert.That(view.Murky.MarkVisible(0), Is.True, "al volver, el «?» reaparece");
+        }
+
+        [Test]
+        public void Hidden_MarkGlyphIsHalfU() // 07 §4.3: «?» marfil de 0,5 u
+        {
+            Assert.That(MurkyMarks.MarkU, Is.EqualTo(0.5f), "07 §4.3");
+
+            // El lienzo del sprite tal como lo dibuja ProceduralArt (la textura no es legible en EditMode). Marfil = alfa ≥ 0,9:
+            // el halo de tinta solo llega a 0,55.
+            object canvas = typeof(ProceduralArt).GetMethod("DrawQuestionMark", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, null)!;
+            System.Type type = canvas.GetType();
+            int w = (int)type.GetProperty("Width")!.GetValue(canvas)!;
+            int h = (int)type.GetProperty("Height")!.GetValue(canvas)!;
+            MethodInfo get = type.GetMethod("Get")!;
+            int bottom = -1;
+            int top = -1;
+            float edgeAlpha = 0f;
+            var args = new object[2];
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    args[0] = x;
+                    args[1] = y;
+                    var c = (Color)get.Invoke(canvas, args)!;
+                    if (c.a >= 0.9f)
+                    {
+                        bottom = bottom < 0 ? y : bottom;
+                        top = y;
+                    }
+
+                    if (x == 0 || y == 0 || x == w - 1 || y == h - 1)
+                    {
+                        edgeAlpha = Mathf.Max(edgeAlpha, c.a);
+                    }
+                }
+            }
+
+            const float px = ProceduralArt.MechanicPxPerU;
+            Assert.That(w, Is.EqualTo(h), "sprite cuadrado");
+            Assert.That(w / px, Is.EqualTo(ProceduralArt.QuestionMarkU).Within(1e-4f), "lado del sprite");
+            Assert.That(_art.QuestionMark.rect.height, Is.EqualTo((float)h), "el sprite es ese lienzo");
+            Assert.That(bottom, Is.GreaterThanOrEqualTo(0), "hay glifo marfil");
+            Assert.That((top - bottom + 1) / px, Is.EqualTo(MurkyMarks.MarkU).Within(1.5f / px), "alto del glifo marfil (u)");
+            Assert.That((bottom + top + 1) * 0.5f, Is.EqualTo(h * 0.5f).Within(1f), "glifo centrado en la caja");
+            Assert.That(edgeAlpha, Is.LessThan(0.02f), "el halo cabe en el margen: nada toca el borde");
+
+            // Colocado en la cuia más estrecha (48 dp de ancho): la caja es el sprite entero, así que el glifo mide 0,5 u.
+            CuiaView view = NewView();
+            view.SetGeometry(Vector2.zero, 48f, 64f);
+            view.ShowContent(Cuia.Create(4, new[] { 8, 4, 4 }, 0b0001), false);
+            var mark = (RectTransform)view.Murky.Root.GetChild(0);
+            Assert.That(mark.sizeDelta.y / view.Unit, Is.EqualTo(ProceduralArt.QuestionMarkU).Within(1e-4f), "caja del «?» (u)");
+            Assert.That(mark.sizeDelta.x, Is.EqualTo(mark.sizeDelta.y), "sin deformar el glifo");
         }
 
         [Test]
