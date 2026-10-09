@@ -2476,7 +2476,8 @@ namespace AF.UI
         // Etiquetas: al final de LayoutHud.
         partial void LabelsLayoutHud();
 
-        // Etiquetas: al final de LayoutBoard y de cada fotograma de TickRelayout (cuia añadida), una sola vez por fotograma.
+        // Etiquetas: al final de LayoutBoard y de cada fotograma de TickRelayout (cuia añadida); al añadir la cuia avisan los dos
+        // en el mismo fotograma (LayoutBoard y después TickRelayout(0), que devuelve las vistas a la posición de partida).
         partial void LabelsLayoutBoard();
 
         // Etiquetas: al final de OnLevelLoaded.
