@@ -212,9 +212,19 @@ tablero inicial con su historial rehecho:
 2. **Rehacer la sesión con la Cuia extra o la Cuia de rescate** (04 §2.2 y §6; `LevelFlow.Funnel.AddCuia`): la cuia vacía va
    al final, así que los índices de las demás no cambian y `RevealedLayers(i)` de la sesión anterior se copia cuia a cuia.
 
-Las capas que el historial rehecho ya reveló cuentan como reveladas y no suman. Revelar alarga la racha (R6) y permite sellar
-(R5): si una capa se reveló a mitad del historial sin que el historial rehecho la revele (con la Luciérnaga o con un vertido
-que Marea deshizo después), la llamada va en ese punto del rehacer y no al final, o un vertido posterior podría mover otra
-cantidad o no sellar. La Pororoca no es uno de esos casos: su revelado va justo antes de un barajado que vacía el historial y
-cambia el tablero (04 §2.1 y §2.4 a; 02 §14), así que tras una Pororoca la sesión ya no se rehace desde `Initial` más los
-vertidos (fuera del paso 1). Tests: `LevelSessionMurkyTests.RestoreRevealed_*`.
+Las capas que el historial rehecho ya reveló cuentan como reveladas y no suman. En los dos usos la máscara se restaura **al
+final del rehacer**, como fijan la arquitectura del paso 1 (§11) y T06: el historial `h2` de `level_state` guarda por cuia
+solo la máscara revelada (la cuia en 1 dígito hex y la máscara en 2), sin el punto del historial en que se reveló cada capa, y
+`LevelSession` tampoco lo expone. Es exacto aunque una capa se revelara a mitad del historial sin que el historial rehecho la
+revele (con la Luciérnaga o con un vertido que Marea deshizo después): ver una oculta solo cambia lo que pasa después si cambia
+la racha (R6) o el sellado (R5), y con T4 (02 §11; `LevelValidation`: bajo una dosis oculta nunca va el color de la de
+encima) eso solo ocurre si un lavado de Barro (02 §9.1 M5) deja encima de la oculta su mismo color. Ningún nivel de 1-200
+lleva Barro en una cuia turbia: de los 7 tableros turbios (100, 106, 115, 135, 155, 175 y 195), el 135 y el 195 lo llevan
+solo en otras cuias, y los tableros de relief no tienen ocultas. Si un pack futuro lo combinara, habría que guardar el punto
+del revelado (y restaurar la capa ahí) o prohibir la combinación en `LevelValidation`.
+`RestoreRevealed_AtTheRevealPoint_ReplaysTheHistoryExactly` documenta ese caso teórico: con la capa restaurada en su punto,
+el vertido siguiente mueve 2 dosis; sin ella, 1.
+
+La Pororoca queda fuera de los dos usos: su revelado va justo antes de un barajado que vacía el historial y cambia el tablero
+(04 §2.1 y §2.4 a; 02 §14), así que tras una Pororoca la sesión ya no se rehace desde `Initial` más los vertidos (fuera del
+paso 1). Tests: `LevelSessionMurkyTests.RestoreRevealed_*`.

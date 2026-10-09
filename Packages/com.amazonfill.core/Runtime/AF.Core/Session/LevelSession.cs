@@ -299,13 +299,18 @@ namespace AF.Core.Session
         /// al final del tablero, así que los índices de las demás no cambian y la máscara de la sesión anterior
         /// (<see cref="RevealedLayers"/>) se copia cuia a cuia.</description></item>
         /// </list>
-        /// <para>Las capas que el historial rehecho ya reveló (R7) cuentan como reveladas y no suman. Revelar alarga la racha
-        /// (R6) y permite sellar (R5): si una capa se reveló a mitad del historial sin que el historial rehecho la revele (con
-        /// la Luciérnaga o con un vertido que Marea deshizo después), esta llamada va en ese punto del rehacer y no al final,
-        /// o un vertido posterior podría mover otra cantidad o no sellar.</para>
-        /// <para>La Pororoca no es uno de esos casos: su revelado va justo antes de un barajado que vacía el historial y cambia
-        /// el tablero (04 §2.1 y §2.4 a; 02 §14), así que tras una Pororoca la sesión ya no se rehace desde
-        /// <see cref="Initial"/> más los vertidos y queda fuera de estos dos usos.</para>
+        /// <para>Las capas que el historial rehecho ya reveló (R7) cuentan como reveladas y no suman. En los dos usos esta
+        /// llamada va al final del rehacer, como fijan la arquitectura del paso 1 (§11) y T06: el historial <c>h2</c> guarda
+        /// por cuia solo la máscara revelada, sin el punto del historial en que se reveló cada capa, y esta clase tampoco lo
+        /// expone. Es exacto aunque una capa se revelara a mitad del historial sin que el historial rehecho la revele (con la
+        /// Luciérnaga o con un vertido que Marea deshizo después): ver una oculta solo cambia lo que pasa después si cambia la
+        /// racha (R6) o el sellado (R5), y con T4 (02 §11; <see cref="LevelValidation"/>: bajo una dosis oculta nunca va el
+        /// color de la de encima) eso solo ocurre si un lavado de Barro (02 §9.1 M5) deja encima de la oculta su mismo color.
+        /// Ningún nivel de 1-200 lleva Barro en una cuia turbia. Si un pack futuro lo combinara, habría que guardar el punto
+        /// del revelado o prohibir la combinación en <see cref="LevelValidation"/>.</para>
+        /// <para>La Pororoca queda fuera de los dos usos: su revelado va justo antes de un barajado que vacía el historial y
+        /// cambia el tablero (04 §2.1 y §2.4 a; 02 §14), así que tras una Pororoca la sesión ya no se rehace desde
+        /// <see cref="Initial"/> más los vertidos.</para>
         /// </remarks>
         /// <param name="cuia">Índice de la cuia en el tablero.</param>
         /// <param name="layers">Máscara de capas (bit k = capa k desde el fondo); solo bits ocultos en <see cref="Initial"/>.</param>

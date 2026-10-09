@@ -375,9 +375,11 @@ namespace AF.Core.Tests
         [Test]
         public void RestoreRevealed_AtTheRevealPoint_ReplaysTheHistoryExactly()
         {
-            // 02 R8 y §14: al rehacer el historial, una capa revelada a mitad de él sin que el historial la revele (aquí, la
-            // Luciérnaga tras lavar el Barro con el color de la oculta, 02 §9.1 M5) se restaura en ese punto: revelar alarga la
-            // racha (R6) y el vertido siguiente mueve 2 dosis y no 1.
+            // 02 R8 y §14, caso teórico: el paso 1 restaura la máscara al final del rehacer (README, «Restaurar las capas
+            // reveladas»), y es exacto porque ningún nivel de 1-200 lleva Barro en una cuia turbia. Con Barro sobre la oculta, una
+            // capa revelada a mitad del historial sin que el historial la revele (aquí, la Luciérnaga tras lavar el Barro con el
+            // color de la oculta, 02 §9.1 M5) solo se reproduce restaurándola en ese punto: revelar alarga la racha (R6) y el
+            // vertido siguiente mueve 2 dosis y no 1.
             var initial = new BoardState(new[]
             {
                 Murky(4, 0x1, 3, Cuia.MudColor, 2), C(4, 2, 2, 2), C(4, 3), C(4, 3, 3), Cuia.Empty(4),

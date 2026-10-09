@@ -26,12 +26,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   Volver a la orilla). Lanza `ArgumentOutOfRangeException` con una cuia fuera del tablero y `ArgumentException` con `layers`
   negativa o con bits que no son dosis ocultas de la cuia en `Initial`. Usos: **reanudar** (02 §14, R8: se rehacen los
   vertidos guardados y se restaura la máscara guardada) y **rehacer la sesión con la Cuia extra o la Cuia de rescate**
-  (`LevelFlow.Funnel.AddCuia`: la cuia vacía va al final, así que la máscara se copia cuia a cuia). Si una capa se reveló a
-  mitad del historial sin que el historial rehecho la revele (Luciérnaga o un vertido deshecho con Marea), la llamada va en
-  ese punto del rehacer: revelar alarga la racha (R6) y permite sellar (R5), así que restaurarla al final puede cambiar la
-  cantidad de un vertido posterior (con T4 solo pasa tras lavar el Barro con el color de la oculta de debajo). La Pororoca no
-  es uno de esos casos: su revelado va justo antes de un barajado que vacía el historial y cambia el tablero (04 §2.1 y §2.4 a;
-  02 §14), así que tras ella la sesión ya no se rehace desde `Initial` más los vertidos (fuera del paso 1). Tests en
+  (`LevelFlow.Funnel.AddCuia`: la cuia vacía va al final, así que la máscara se copia cuia a cuia). En los dos usos la
+  máscara se restaura al final del rehacer, como fijan la arquitectura del paso 1 (§11) y T06 (el historial `h2` guarda por
+  cuia solo la máscara, sin el punto del revelado). Es exacto también con capas reveladas a mitad del historial sin que el
+  historial rehecho las revele (Luciérnaga o un vertido deshecho con Marea): con T4, ver una oculta solo cambia la racha (R6)
+  o el sellado (R5) si un lavado de Barro deja encima su mismo color, y ningún nivel de 1-200 lleva Barro en una cuia turbia
+  (de los 7 tableros turbios, el 135 y el 195 lo llevan solo en otras cuias). Si un pack futuro lo combinara, habría que
+  guardar el punto del revelado o prohibir la combinación en `LevelValidation`; `_AtTheRevealPoint_ReplaysTheHistoryExactly`
+  documenta ese caso teórico. La Pororoca queda fuera: su revelado va justo antes de un barajado que vacía el historial y
+  cambia el tablero (04 §2.1 y §2.4 a; 02 §14), así que tras ella la sesión ya no se rehace desde `Initial` más los vertidos
+  (fuera del paso 1). Tests en
   `LevelSessionMurkyTests`: `RestoreRevealed_PartialLayer_KeepsOtherHidden`, `_SurvivesUndoAndRestart`,
   `_RejectsLayersNotHidden`, `_RejectsCuiaOutOfRange`, `_IsIdempotentAndOutsideHistory`, `_RecomputesStatusLikeReveal_R10gh`
   y `_AtTheRevealPoint_ReplaysTheHistoryExactly`; README, «Restaurar las capas reveladas».
