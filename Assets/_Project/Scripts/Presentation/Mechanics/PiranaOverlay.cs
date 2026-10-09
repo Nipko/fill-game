@@ -85,7 +85,7 @@ namespace AF.Presentation.Mechanics
             into.Add(ProceduralArt.FishSide); // piraña
             into.Add(ProceduralArt.FishBack);
             into.Add(ProceduralArt.FishBelly);
-            into.Add(OverlayParts.Pearl); // puntos del contador
+            into.Add(ProceduralArt.Pearl); // puntos del contador
         }
 
         /// <inheritdoc />
@@ -93,7 +93,7 @@ namespace AF.Presentation.Mechanics
         {
             _stones = OverlayParts.NewImage("PiranaStones", Host.BodyFront, Host.Art.PiranaStones, Color.white);
             _fish = OverlayParts.NewImage("PiranaFish", Host.BodyFront, Host.Art.Piranha, Color.white);
-            _pips = new PipRow("PiranaPip", Host.BodyFront, Host.Art.CounterPip, Host.Art.CounterPipEmpty, OverlayParts.Pearl);
+            _pips = new PipRow("PiranaPip", Host.BodyFront, Host.Art.CounterPip, Host.Art.CounterPipEmpty, ProceduralArt.Pearl);
         }
 
         private void Apply()

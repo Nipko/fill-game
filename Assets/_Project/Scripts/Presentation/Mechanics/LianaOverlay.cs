@@ -90,7 +90,7 @@ namespace AF.Presentation.Mechanics
         {
             into.Add(Palette.LeafMid); // tallo de la liana
             into.Add(Palette.LeafDark); // hojitas y nudo
-            into.Add(OverlayParts.Pearl); // puntos de la Liana de cuenta
+            into.Add(ProceduralArt.Pearl); // puntos de la Liana de cuenta
         }
 
         /// <inheritdoc />
@@ -107,7 +107,7 @@ namespace AF.Presentation.Mechanics
 
             _knot = OverlayParts.NewImage("LianaKnot", Host.BodyFront, Host.Art.LianaKnot, Color.white);
             _fruit = OverlayParts.NewImage("LianaFruit", Host.BodyFront, null, Color.white);
-            _dots = new PipRow("LianaDot", Host.BodyFront, Host.Art.CounterPip, Host.Art.CounterPipEmpty, OverlayParts.Pearl);
+            _dots = new PipRow("LianaDot", Host.BodyFront, Host.Art.CounterPip, Host.Art.CounterPipEmpty, ProceduralArt.Pearl);
         }
     }
 }

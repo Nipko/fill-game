@@ -1,6 +1,5 @@
 #nullable enable
 using AF.Core.Mechanics;
-using AF.Presentation.Mechanics;
 using UnityEngine;
 
 namespace AF.Presentation
@@ -11,9 +10,21 @@ namespace AF.Presentation
     /// iconos de 32 dp que reutilizarán la tarjeta previa y el HUD (<see cref="MechanicIcon"/>, <see cref="MurkyIcon"/>,
     /// <see cref="MudIcon"/>, <see cref="CounterPip"/> y <see cref="DropIcon"/>). Todo se genera de forma perezosa la primera
     /// vez que se pide (como <see cref="RiverSwell"/>), así que un nivel sin mecánicas no crea ninguna textura. Tras
-    /// <see cref="Dispose"/> los sprites destruidos se vuelven a generar (el == de Unity). Reutiliza
-    /// <c>DrawLeafShape</c> y <c>DrawRopeSegment</c> de la escena; pocos sprites por familia, porque cada uno crea una textura.
+    /// <see cref="Dispose"/> los sprites destruidos se vuelven a generar (el == de Unity). Pocos sprites por familia, porque
+    /// cada uno crea una textura.
     /// </summary>
+    /// <remarks>
+    /// <para>Reutiliza de la escena <c>DrawLeafShape</c> (capullo y cáliz del Brote, hojitas de la liana) y
+    /// <c>DrawRopeSegment</c> (aro del embudo del Matapi). <c>DrawFrond</c> no: dibuja una fronda pinnada de açaí, un raquis
+    /// con foliolos sueltos que cuelgan por gravedad y con los verdes de cada esquina del follaje. Deja la boca a la vista
+    /// entre los foliolos y se confunde con el follaje que enmarca la pantalla, mientras que b.2 M1 pide una hoja de palma
+    /// alargada y plegada que tape la boca como una tapa, con silueta distinta de la Hoja escudo. Esa hoja la dibuja
+    /// <see cref="DrawPalmLeaf"/>, la misma en el overlay y en el icono de la Hoja, para que la tarjeta y el HUD enseñen lo
+    /// que se ve en la cuia.</para>
+    /// <para>Los nombres de las piezas internas de los overlays (<see cref="HojaLeaf"/> … <see cref="Piranha"/>) están
+    /// ocupados: el arte nuevo de cada mecánica, en su propio parcial, los reutiliza o usa otros nombres, y las piezas que
+    /// queden sin uso se borran aquí, sin tocar los iconos públicos.</para>
+    /// </remarks>
     public sealed partial class ProceduralArt
     {
         /// <summary>Densidad de los sprites que van dentro de la cuia o sobre ella (px por u): la del vidrio a u = 32 dp en el SM-S938B.</summary>
@@ -161,7 +172,18 @@ namespace AF.Presentation
         // ------------------------------------------------------------------------------------------------------------
         // Overlays de las mecánicas (02 §9.1; propuesta de D-007 b.2) e iconos reutilizables. Colores [P] a ΔE00 ≥ 10 de los
         // 14 tintes (direccion-visual-v2 §2.4, regla 1): verdes de hoja oscuros, grises perla y pizarra, piedra y fibra.
+        // Viven aquí, con los iconos que los usan, y no en el overlay de cada mecánica: el icono es estable aunque el overlay
+        // se reescriba.
         // ------------------------------------------------------------------------------------------------------------
+
+        /// <summary>Gris perla #B8BEC6 [P]: puntos claros y nube de la Lluvia. ΔE00 ≥ 14 frente a los 14 tintes.</summary>
+        public static readonly Color Pearl = Palette.Hex(0xB8BEC6);
+
+        /// <summary>Pizarra #2A3B3E [P]: puntos oscuros sobre fondos claros y contornos de piedras y piraña. ΔE00 ≥ 17 frente a los 14 tintes.</summary>
+        public static readonly Color Slate = Palette.Hex(0x2A3B3E);
+
+        /// <summary>Remanso oscuro del Remolino #1A2E33 [P] (tiñe <see cref="WhirlPool"/>): ΔE00 17,7 del Huito, lejos del turquesa.</summary>
+        public static readonly Color WhirlPoolColor = Palette.Hex(0x1A2E33);
 
         /// <summary>Gris piedra #7F8C8D [P] (Piraña): ΔE00 ≥ 20 frente a los tintes.</summary>
         public static readonly Color StoneLight = Palette.Hex(0x7F8C8D);
@@ -195,6 +217,21 @@ namespace AF.Presentation
         private Sprite? _rainCloud;
         private Sprite? _piranaStones;
         private Sprite? _piranha;
+
+        /// <summary>
+        /// Grosor del aro del punto vacío en fracción del lado del sprite: 10 px de 32, con un hueco del mismo ancho (el aro va
+        /// del radio 5 al 15). Un punto de 3,4 dp (0,14 u en una cuia de 48 dp, la más estrecha, 02 §5) tiene un aro y un hueco
+        /// de ≈ 1 dp cada uno, así que lleno y vacío se distinguen en el teléfono.
+        /// </summary>
+        public const float CounterPipRingFraction = CounterPipRingPx / CounterPipPx;
+
+        /// <summary>Hueco del punto vacío en fracción del lado del sprite (10 px de 32).</summary>
+        public const float CounterPipHoleFraction = 2f * (CounterPipOuterPx - CounterPipRingPx) / CounterPipPx;
+
+        // Puntos de contador: lado del sprite, radio del punto lleno (= canto exterior del aro) y grosor del aro (px).
+        private const int CounterPipPx = 32;
+        private const float CounterPipOuterPx = 15f;
+        private const float CounterPipRingPx = 10f;
 
         /// <summary>Punto lleno de un contador (blanco; lo tiñe <c>Image.color</c>).</summary>
         public Sprite CounterPip => _counterPip != null ? _counterPip : (_counterPip = BuildPip(false));
@@ -269,15 +306,15 @@ namespace AF.Presentation
 
         private Sprite BuildPip(bool empty)
         {
-            const int s = 32;
+            const int s = CounterPipPx;
             var pc = new PixelCanvas(s, s);
             if (empty)
             {
-                pc.StrokeArc(s * 0.5f, s * 0.5f, 12.5f, 5f, 0f, 360f, Color.white);
+                pc.StrokeArc(s * 0.5f, s * 0.5f, CounterPipOuterPx - (0.5f * CounterPipRingPx), CounterPipRingPx, 0f, 360f, Color.white);
             }
             else
             {
-                pc.FillCircle(s * 0.5f, s * 0.5f, 15f, Color.white);
+                pc.FillCircle(s * 0.5f, s * 0.5f, CounterPipOuterPx, Color.white);
             }
 
             return MakeSprite(pc, empty ? "mech_pip_empty" : "mech_pip", new Vector2(0.5f, 0.5f), Vector4.zero);
@@ -461,11 +498,11 @@ namespace AF.Presentation
                     DrawFunnel(pc, 14f * k, 58f * k, 68f * k, 34f * k, 0.7f * k);
                     break;
                 case MechanicType.Remolino:
-                    pc.FillEllipseSoft(48f * k, 48f * k, 44f * k, 30f * k, 2f * k, RemolinoOverlay.PoolColor);
+                    pc.FillEllipseSoft(48f * k, 48f * k, 44f * k, 30f * k, 2f * k, WhirlPoolColor);
                     DrawSpiral(pc, 48f * k, 48f * k, 38f * k, 24f * k, 2.2f, 7f * k, ColorMath.WithAlpha(Palette.UiPaper, 0.6f));
                     break;
                 case MechanicType.Lluvia:
-                    DrawCloud(pc, 4f * k, 40f * k, 88f * k, 50f * k, OverlayParts.Pearl, 0.84f);
+                    DrawCloud(pc, 4f * k, 40f * k, 88f * k, 50f * k, Pearl, 0.84f);
                     for (int i = 0; i < 3; i++)
                     {
                         DrawDrop(pc, (30f + (i * 18f)) * k, 18f * k - ((i % 2) * 6f * k), 6f * k, 13f * k, FishSide);
@@ -678,7 +715,7 @@ namespace AF.Presentation
                 float sy = baseY + (Mathf.Sin(angle) * ry);
                 float size = stone * (0.9f + (0.25f * ArtNoise.Hash(i, 3, 41)));
                 Color c = (i % 2) == 0 ? StoneLight : StoneDark;
-                pc.FillEllipseSoft(sx, sy, size + (1.6f * k), (size * 0.82f) + (1.6f * k), 1f, OverlayParts.Slate);
+                pc.FillEllipseSoft(sx, sy, size + (1.6f * k), (size * 0.82f) + (1.6f * k), 1f, Slate);
                 pc.FillEllipseSoft(sx, sy, size, size * 0.82f, 1f, c);
                 pc.FillEllipseSoft(sx - (size * 0.3f), sy + (size * 0.3f), size * 0.3f, size * 0.22f, 1f, ColorMath.WithAlpha(Palette.Hex(0xA9B1BA), 0.8f));
             }
@@ -691,18 +728,18 @@ namespace AF.Presentation
             float rx = len * 0.34f;
             float ry = len * 0.25f;
             float bodyX = cx - (len * 0.08f);
-            pc.FillTriangle(new Vector2(bodyX + (rx * 0.8f), cy), new Vector2(cx + (len * 0.48f), cy + (ry * 0.85f)), new Vector2(cx + (len * 0.48f), cy - (ry * 0.85f)), OverlayParts.Slate);
+            pc.FillTriangle(new Vector2(bodyX + (rx * 0.8f), cy), new Vector2(cx + (len * 0.48f), cy + (ry * 0.85f)), new Vector2(cx + (len * 0.48f), cy - (ry * 0.85f)), Slate);
             pc.FillTriangle(new Vector2(bodyX + (rx * 0.85f), cy), new Vector2(cx + (len * 0.45f), cy + (ry * 0.68f)), new Vector2(cx + (len * 0.45f), cy - (ry * 0.68f)), FishBack);
             pc.FillTriangle(new Vector2(bodyX - (rx * 0.1f), cy + (ry * 0.8f)), new Vector2(bodyX + (rx * 0.55f), cy + (ry * 0.75f)), new Vector2(bodyX + (rx * 0.35f), cy + (ry * 1.25f)), FishBack);
-            pc.FillEllipseSoft(bodyX, cy, rx + (1.5f * k), ry + (1.5f * k), 1f, OverlayParts.Slate);
+            pc.FillEllipseSoft(bodyX, cy, rx + (1.5f * k), ry + (1.5f * k), 1f, Slate);
             pc.FillEllipseSoft(bodyX, cy, rx, ry, 1f, FishBack);
             pc.FillEllipseSoft(bodyX, cy - (ry * 0.12f), rx * 0.9f, ry * 0.78f, 1f, FishSide);
             pc.FillEllipseSoft(bodyX - (rx * 0.1f), cy - (ry * 0.45f), rx * 0.7f, ry * 0.45f, 1f, FishBelly);
             float eyeX = bodyX - (rx * 0.6f);
             float eyeY = cy + (ry * 0.22f);
-            pc.FillCircle(eyeX, eyeY, 2.6f * k, OverlayParts.Slate);
+            pc.FillCircle(eyeX, eyeY, 2.6f * k, Slate);
             pc.FillCircle(eyeX - (0.7f * k), eyeY + (0.7f * k), 0.9f * k, Palette.Cream);
-            pc.FillCapsule(bodyX - (rx * 0.98f), cy - (ry * 0.18f), bodyX - (rx * 0.7f), cy - (ry * 0.26f), 0.8f * k, OverlayParts.Slate);
+            pc.FillCapsule(bodyX - (rx * 0.98f), cy - (ry * 0.18f), bodyX - (rx * 0.7f), cy - (ry * 0.26f), 0.8f * k, Slate);
         }
     }
 }

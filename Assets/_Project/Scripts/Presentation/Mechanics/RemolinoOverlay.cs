@@ -15,9 +15,6 @@ namespace AF.Presentation.Mechanics
     /// </summary>
     public sealed class RemolinoOverlay : CuiaOverlay
     {
-        /// <summary>Remanso oscuro #1A2E33 [P]: ΔE00 17,7 del Huito, lejos del turquesa.</summary>
-        public static readonly Color PoolColor = Palette.Hex(0x1A2E33);
-
         /// <summary>Opacidad de la espuma marfil (<see cref="Palette.UiPaper"/>) sobre el remanso.</summary>
         public const float FoamAlpha = 0.5f;
 
@@ -32,7 +29,7 @@ namespace AF.Presentation.Mechanics
         public int PairDots => _dots.Visible ? _dots.Count : 0;
 
         /// <summary>Color con el que se ve la espiral: la espuma compuesta en lineal sobre el remanso, como la GPU.</summary>
-        public static Color SpiralSeenColor => ColorMath.CompositeLinear(Palette.UiPaper, FoamAlpha, PoolColor);
+        public static Color SpiralSeenColor => ColorMath.CompositeLinear(Palette.UiPaper, FoamAlpha, ProceduralArt.WhirlPoolColor);
 
         /// <inheritdoc />
         public override void Show(Cuia cuia, bool sealedNow)
@@ -57,17 +54,17 @@ namespace AF.Presentation.Mechanics
         /// <inheritdoc />
         public override void CollectSurfaceColors(List<Color> into)
         {
-            into.Add(PoolColor); // remanso
+            into.Add(ProceduralArt.WhirlPoolColor); // remanso
             into.Add(SpiralSeenColor); // espiral de espuma
-            into.Add(OverlayParts.Pearl); // puntos de la pareja
+            into.Add(ProceduralArt.Pearl); // puntos de la pareja
         }
 
         /// <inheritdoc />
         protected override void OnAttach()
         {
-            _pool = OverlayParts.NewImage("RemolinoPool", Host.SlotBack, Host.Art.WhirlPool, PoolColor);
+            _pool = OverlayParts.NewImage("RemolinoPool", Host.SlotBack, Host.Art.WhirlPool, ProceduralArt.WhirlPoolColor);
             _spiral = OverlayParts.NewImage("RemolinoSpiral", Host.SlotBack, Host.Art.WhirlSpiral, OverlayParts.Fade(Palette.UiPaper, FoamAlpha));
-            _dots = new PipRow("RemolinoPair", Host.SlotFront, Host.Art.CounterPip, Host.Art.CounterPipEmpty, OverlayParts.Pearl);
+            _dots = new PipRow("RemolinoPair", Host.SlotFront, Host.Art.CounterPip, Host.Art.CounterPipEmpty, ProceduralArt.Pearl);
         }
     }
 }

@@ -241,6 +241,38 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void CounterPips_EmptyRingLegibleAt48dp([Values(MechanicType.Lluvia, MechanicType.Pirana)] MechanicType type) // 02 §5: 48 dp con 6 cuias o más
+        {
+            // Lo que distingue un vertido contado de uno pendiente es el aro vacío: su trazo y su hueco, de 1 dp como mínimo
+            // en la cuia más estrecha.
+            CuiaView view = NewView();
+            view.SetGeometry(new Vector2(100f, -300f), 48f, 64f);
+            view.ShowContent(Sample(type), false);
+            int empties = 0;
+            CuiaOverlayHost host = view.OverlayHost;
+            Transform[] anchors = { host.SlotBack, host.BodyBack, host.BodyFront, host.SlotFront };
+            for (int a = 0; a < anchors.Length; a++)
+            {
+                Image[] images = anchors[a].GetComponentsInChildren<Image>(false);
+                for (int i = 0; i < images.Length; i++)
+                {
+                    if (images[i].sprite != _art.CounterPipEmpty)
+                    {
+                        continue;
+                    }
+
+                    Vector2 size = images[i].rectTransform.sizeDelta;
+                    float sideDp = Mathf.Min(size.x, size.y);
+                    Assert.That(sideDp * ProceduralArt.CounterPipRingFraction, Is.GreaterThanOrEqualTo(1f), type + ": trazo del aro (dp) de " + images[i].name);
+                    Assert.That(sideDp * ProceduralArt.CounterPipHoleFraction, Is.GreaterThanOrEqualTo(1f), type + ": hueco del aro (dp) de " + images[i].name);
+                    empties++;
+                }
+            }
+
+            Assert.That(empties, Is.GreaterThan(0), type + ": algún vertido pendiente a la vista");
+        }
+
+        [Test]
         public void SurfaceColors_AtLeast10DeltaE00FromEveryTint() // direccion-visual-v2 §2.4, regla 1; 07 §3, regla 6
         {
             var colors = new List<Color>();

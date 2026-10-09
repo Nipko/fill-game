@@ -16,12 +16,6 @@ namespace AF.Presentation.Mechanics
     /// </remarks>
     public static class OverlayParts
     {
-        /// <summary>Gris perla #B8BEC6 [P]: puntos claros, nube de la Lluvia. ΔE00 ≥ 14 frente a los 14 tintes.</summary>
-        public static readonly Color Pearl = Palette.Hex(0xB8BEC6);
-
-        /// <summary>Pizarra #2A3B3E [P]: puntos oscuros sobre fondos claros. ΔE00 ≥ 17 frente a los 14 tintes.</summary>
-        public static readonly Color Slate = Palette.Hex(0x2A3B3E);
-
         /// <summary>Crea un ancla vacía (sin tamaño) en el pie de <paramref name="parent"/>.</summary>
         public static RectTransform NewAnchor(string name, Transform parent)
         {

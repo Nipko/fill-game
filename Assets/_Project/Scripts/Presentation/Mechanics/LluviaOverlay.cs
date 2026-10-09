@@ -114,15 +114,15 @@ namespace AF.Presentation.Mechanics
         /// <inheritdoc />
         public override void CollectSurfaceColors(List<Color> into)
         {
-            into.Add(OverlayParts.Pearl); // nube
-            into.Add(OverlayParts.Slate); // puntos del contador (las gotitas llevan el agua del mundo a propósito)
+            into.Add(ProceduralArt.Pearl); // nube
+            into.Add(ProceduralArt.Slate); // puntos del contador (las gotitas llevan el agua del mundo a propósito)
         }
 
         /// <inheritdoc />
         protected override void OnAttach()
         {
-            _cloud = OverlayParts.NewImage("LluviaCloud", Host.BodyFront, Host.Art.RainCloud, OverlayParts.Pearl);
-            _pips = new PipRow("LluviaPip", Host.BodyFront, Host.Art.CounterPip, Host.Art.CounterPipEmpty, OverlayParts.Slate);
+            _cloud = OverlayParts.NewImage("LluviaCloud", Host.BodyFront, Host.Art.RainCloud, ProceduralArt.Pearl);
+            _pips = new PipRow("LluviaPip", Host.BodyFront, Host.Art.CounterPip, Host.Art.CounterPipEmpty, ProceduralArt.Slate);
             for (int i = 0; i < _drops.Length; i++)
             {
                 _drops[i] = OverlayParts.NewImage("LluviaDrop" + i, Host.BodyFront, Host.Art.DropIcon, Color.white);
