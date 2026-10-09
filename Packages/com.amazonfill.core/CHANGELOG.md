@@ -19,6 +19,17 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   indexada por el código de mecánica de la cuia (bits 39-42 de `Cuia.Packed`, hoy siempre 0); los ganchos solo se llaman
   para cuias con mecánica. `AF.Core` concede `InternalsVisibleTo("AF.Solver")` para que el solver recorra las mismas
   reglas por sus rutas internas.
+- Barajado inverso (C1-6; 03 §4.1-§4.2): `AF.Solver.Generation.InverseMoves` (inverso exacto de un vertido útil:
+  el directo `b → a` es legal, mueve exactamente `m` dosis en el modo y no es fútil, evaluado con `BoardRules`; en `run`
+  equivale a las condiciones literales de 03 §4.1 y en `single` a su nota), `InverseWalk` (`WALK` con mejor prefijo: los 3
+  mejores candidatos no visitados, puntuación entera `NextInt(2·65.536) − 4·65.536·[vacíos < E]`, hasta 200
+  sub-semillas), `InverseDeep` (`DEEP`: DFS con retroceso, candidatos barajados con Fisher-Yates, 20.000 nodos y 5
+  intentos), `InverseSpec` (K, E, capacidades y `U_c`, con el tablero resuelto del prototipo; Cuia chica y Cuia alta),
+  `InverseResult`, `Complexity` (laicwben2) y `AF.Solver.Collections.StateSet` (visitados con comparación completa). Sin
+  asignaciones por paso. Lote completo (200 semillas × K 5-11 × E 1-2, Release): todos los tableros válidos y resueltos por
+  A*; `walk` con profundidad mediana 10-23 y máxima 15-31 y 0,06-0,46 ms por intento; `deep` con E = 1 y K 8-11, par
+  mediano 19-23 (2K+1..2K+3 = 17-25) y 19-34 ms por nivel. Tests compartidos `InverseGenerationTests`; solo dotnet
+  `InverseGenerationPropertyTests` (lote reducido siempre y lote completo explícito, categoría `Informe`).
 - Bot casual ×40 (C1-5; 03 §6-§7; 08 §2.2 y §14.2): `AF.Solver.Bot.CasualBot.FailRate(state, seed, options)` con
   `BotOptions` (40 partidas, 85/15, tope 400; `ForPipeline(mode)`) y `BotResult` (fallos, partidas y `Rate`). Juega sobre
   `SolverMoves` en orden canónico y aplica con `BoardRules`, así que admite cada mecánica portada sin código propio.
