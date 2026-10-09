@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using AF.Core.Board;
+using AF.Core.Mechanics;
 using AF.Levels;
 using AF.Levels.Json;
 using NUnit.Framework;
@@ -79,51 +80,192 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Reader_AcceptsSubsetOfAndPackSchema1()
+        public void Reader_AcceptsSubsetOfAndPackSchema1And2()
         {
             Assert.That(LevelPackReader.Read(TestPacks.MinimalPack()).Count, Is.EqualTo(1));
             Assert.That(LevelPackReader.Read(TestPacks.MinimalPack(null, "\"pack_schema\": 1")).Count, Is.EqualTo(1));
+            Assert.That(LevelPackReader.Read(TestPacks.MinimalPack(null, "\"pack_schema\": 2")).Count, Is.EqualTo(1));
         }
 
-        [TestCase("\"pack_schema\": 2")]
-        [TestCase("\"subset_of\": \"af-level/2\"")]
-        [TestCase("\"note\": \"sin esquema\"")]
-        public void Reader_RejectsUnknownSchema(string header)
+        [TestCase("\"pack_schema\": 0", "t: pack_schema 0 no admitido")]
+        [TestCase("\"pack_schema\": 3", "t: pack_schema 3 no admitido")]
+        [TestCase("\"subset_of\": \"af-level/2\"", "t: el paquete no declara pack_schema")]
+        [TestCase("\"note\": \"sin esquema\"", "t: el paquete no declara pack_schema")]
+        public void Reader_RejectsUnknownSchema(string header, string expected)
         {
-            Assert.That(() => LevelPackReader.Read(TestPacks.MinimalPack(null, header)), Throws.TypeOf<LevelFormatException>());
-        }
-
-        [Test]
-        public void Reader_RejectsMechanicsMurkyAndHidden()
-        {
-            Assert.That(
-                () => LevelPackReader.Read(TestPacks.MinimalPack(TestPacks.MinimalLevel(attrs: "[{\"type\": \"hoja\"}, null, null]"))),
-                Throws.TypeOf<LevelFormatException>());
-            Assert.That(
-                () => LevelPackReader.Read(TestPacks.MinimalPack(TestPacks.MinimalLevel(murky: "true"))),
-                Throws.TypeOf<LevelFormatException>());
-            Assert.That(
-                () => LevelPackReader.Read(TestPacks.MinimalPack(TestPacks.MinimalLevel(hidden: "[[0, 1]]"))),
-                Throws.TypeOf<LevelFormatException>());
+            // 08 §4.4: el cliente rechaza un paquete con un pack_schema que no conoce (lee el 1 y el 2, contrato 21). El mensaje
+            // empieza por el id del paquete ("t") y dice por qué: la versión que no admite o que no declara ninguna.
+            Assert.That(() => LevelPackReader.Read(TestPacks.MinimalPack(null, header)),
+                Throws.TypeOf<LevelFormatException>().With.Message.Contains("pack_schema").And.Message.Contains(expected));
         }
 
         [Test]
-        public void Reader_RejectsInconsistentBoards()
+        public void Reader_Schema2_AcceptsMechanicsMurkyHiddenAndUnitsObject()
         {
-            // longitudes distintas, más dosis que capacidad, Barro (15), tinte fuera de rango y U_c distinto (02 R3)
-            string[] cuias =
-            {
-                "[[8, 8, 8, 4], [4, 4, 4, 8]]",
-                "[[8, 8, 8, 4, 4], [4, 4, 8], []]",
-                "[[8, 8, 8, 15], [4, 4, 4, 8], []]",
-                "[[8, 8, 8, 0], [4, 4, 4, 8], []]",
-                "[[8, 8, 8, 4], [4, 4, 4, 8], [8]]",
-            };
-            for (int i = 0; i < cuias.Length; i++)
-            {
-                string json = TestPacks.MinimalPack(TestPacks.MinimalLevel(cuias: cuias[i]));
-                Assert.That(() => LevelPackReader.Read(json), Throws.TypeOf<LevelFormatException>(), cuias[i]);
-            }
+            // Hoja (02 §9.1 M1): vacía, con su llave en el tablero; se construye cerrada.
+            LevelDefinition hoja = LevelPackReader.Read(TestPacks.Schema2Pack("[null, null, {\"type\": \"hoja\", \"key\": 4}, null]")).First;
+            Assert.That(hoja.Attrs.Count, Is.EqualTo(4));
+            Assert.That(hoja.Attrs[2], Is.EqualTo(new MechanicSpec(MechanicType.Hoja, key: 4)));
+            Assert.That(hoja.Attrs[0].IsNone, Is.True);
+            Assert.That(hoja.HasMechanic(MechanicType.Hoja), Is.True);
+            Assert.That(hoja.HasMechanic(MechanicType.Liana), Is.False);
+            BoardState hojaBoard = hoja.CreateBoard();
+            Assert.That(hojaBoard[2].Mechanic, Is.EqualTo(MechanicType.Hoja));
+            Assert.That(hojaBoard[2].MechanicKey, Is.EqualTo(4));
+            Assert.That(hojaBoard[2].MechanicFlags & Cuia.FlagClosed, Is.EqualTo(Cuia.FlagClosed));
+            Assert.That(hoja.CreateBoard(), Is.EqualTo(hojaBoard).And.Not.SameAs(hojaBoard), "un estado nuevo en cada llamada");
+
+            // Remolino (M4): un par simétrico con el mismo id de pareja; Matapi (D-007) sin campos.
+            LevelDefinition remolino = LevelPackReader.Read(TestPacks.Schema2Pack("[null, null, {\"type\": \"remolino\", \"partner\": 3}, {\"type\": \"remolino\", \"partner\": 2}]")).First;
+            BoardState pair = remolino.CreateBoard();
+            Assert.That(pair[2].Mechanic, Is.EqualTo(MechanicType.Remolino));
+            Assert.That(pair[3].MechanicPairId, Is.EqualTo(pair[2].MechanicPairId));
+            LevelDefinition matapi = LevelPackReader.Read(TestPacks.Schema2Pack("[null, null, null, {\"type\": \"matapi\"}]")).First;
+            Assert.That(matapi.CreateBoard()[3].Mechanic, Is.EqualTo(MechanicType.Matapi));
+
+            // Aguas turbias (02 §11): murky = true con la dosis [0, 0] oculta (T3: 3 dosis, cima visible; T4: distinta de la de encima).
+            LevelDefinition murky = LevelPackReader.Read(TestPacks.Schema2Pack(
+                cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", murky: "true", hidden: "[[0, 0]]")).First;
+            Assert.That(murky.IsMurky, Is.True);
+            Assert.That(murky.HiddenCount, Is.EqualTo(1));
+            Assert.That(murky.Hidden[0], Is.EqualTo(new[] { 0, 0 }));
+            Assert.That(murky.CreateBoard()[0].IsHiddenAt(0), Is.True);
+            Assert.That(murky.CreateBoard().HiddenCount, Is.EqualTo(1));
+
+            // units_per_color objeto (02 §8): la fruta abundante de la Cuia alta de 5; los demás colores, 4.
+            LevelDefinition tall = LevelPackReader.Read(TestPacks.Schema2Pack(
+                "[null, null, null]", "[[8, 8, 8, 8, 4], [4, 4, 4, 8], []]", "[5, 4, 4]", units: "{\"8\": 5}")).First;
+            Assert.That(tall.Units.Of(8), Is.EqualTo(5));
+            Assert.That(tall.Units.Of(4), Is.EqualTo(4));
+            Assert.That(tall.HasTallCuia, Is.True);
+            Assert.That(tall.HasSmallCuia, Is.False);
+            Assert.That(tall.CreateBoard().UnitsOf(8), Is.EqualTo(5));
+
+            // Campos opcionales: intro_mechanic, skippable, hint_supported, difficulty.band y difficulty.par_approx [P].
+            string optional = TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"chica\", \"skippable\": false, \"hint_supported\": false")
+                .Replace("\"difficulty\": { \"par\": 3 }", "\"difficulty\": { \"label\": \"hard\", \"par\": 3, \"band\": \"milestone\", \"par_approx\": true }");
+            LevelDefinition withOptional = LevelPackReader.Read(optional).First;
+            Assert.That(withOptional.IntroMechanic, Is.EqualTo("chica"));
+            Assert.That(withOptional.Skippable, Is.False);
+            Assert.That(withOptional.HintSupported, Is.False);
+            Assert.That(withOptional.Band, Is.EqualTo(LevelDefinition.BandMilestone));
+            Assert.That(withOptional.ParApprox, Is.True);
+            Assert.That(withOptional.DifficultyLabel, Is.EqualTo(LevelDefinition.LabelHard));
+
+            // Sin ellos: sin mecánicas ni ocultos, units 4, null, true, true, sin banda y par exacto.
+            LevelDefinition plain = LevelPackReader.Read(TestPacks.MinimalPack()).First;
+            Assert.That(plain.IntroMechanic, Is.Null);
+            Assert.That(plain.Skippable, Is.True);
+            Assert.That(plain.HintSupported, Is.True);
+            Assert.That(plain.Band, Is.Null);
+            Assert.That(plain.ParApprox, Is.False);
+            Assert.That(plain.IsMurky, Is.False);
+            Assert.That(plain.HiddenCount, Is.EqualTo(0));
+            Assert.That(plain.Units.Of(8), Is.EqualTo(4));
+            Assert.That(plain.HasMud, Is.False);
+        }
+
+        // Paquetes pack_schema 2 de un nivel que el lector rechaza (contrato 21; 02 §9.1, §11 y R2-R7). Cada caso lleva el
+        // fragmento del mensaje que prueba su motivo: cualquier error posterior a leer el id también diría el id, así que el id
+        // solo no basta para saber que el caso falla por lo que dice su nombre. El nombre del test es el motivo, no el JSON.
+        private static readonly TestCaseData[] InvalidSchema2Levels =
+        {
+            Invalid("tipo desconocido", TestPacks.Schema2Pack("[null, null, {\"type\": \"aguape\"}, null]"), "desconocido 'aguape'"),
+            Invalid("barro no es un type", TestPacks.Schema2Pack("[null, null, {\"type\": \"barro\"}, null]"), "desconocido 'barro'"),
+            Invalid("hoja sin key", TestPacks.Schema2Pack("[null, null, {\"type\": \"hoja\"}, null]"), "(hoja): lleva solo key"),
+            Invalid("partner incoherente", TestPacks.Schema2Pack("[null, null, {\"type\": \"remolino\", \"partner\": 3}, null]"), "la pareja tiene que ser un Remolino"),
+            Invalid("partner negativo", TestPacks.Schema2Pack("[null, null, {\"type\": \"remolino\", \"partner\": -2}, {\"type\": \"remolino\", \"partner\": 2}]"), "partner es un índice 0-based"),
+            Invalid("attrs de otra longitud", TestPacks.Schema2Pack("[null, null, null]"), "'attrs' debe tener una entrada por cuia"),
+            Invalid("oculta en la cima (R7)", TestPacks.Schema2Pack(cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", murky: "true", hidden: "[[0, 2]]"), "R7, la cima"),
+            Invalid("oculta fuera del tablero", TestPacks.Schema2Pack(cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", murky: "true", hidden: "[[4, 0]]"), "[4, 0] está fuera del tablero"),
+            Invalid("oculta repetida", TestPacks.Schema2Pack(cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", murky: "true", hidden: "[[0, 0], [0, 0]]"), "repite la dosis [0, 0]"),
+            Invalid("murky sin ocultas", TestPacks.Schema2Pack(murky: "true"), "murky = true necesita al menos una dosis oculta"),
+            Invalid("ocultas sin murky", TestPacks.Schema2Pack(cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", hidden: "[[0, 0]]"), "solo puede tener dosis ocultas con murky = true"),
+            Invalid("units con clave 17", TestPacks.Schema2Pack(units: "{\"17\": 4}"), "'units_per_color' tiene la clave '17'"),
+            Invalid("units con valor 7", TestPacks.Schema2Pack(units: "{\"8\": 7}"), "'units_per_color' del color 8 fuera de 1..6"),
+            Invalid("units objeto vacío", TestPacks.Schema2Pack(units: "{}"), "'units_per_color' debe ser un entero de 1 a 6 o un objeto"),
+            Invalid("units que no cuadra", TestPacks.Schema2Pack(units: "{\"8\": 5}"), "units_per_color: el color 8 tiene 4 dosis y se declararon 5"),
+            Invalid("color 16", TestPacks.Schema2Pack(cuias: "[[8, 8, 8, 4], [4, 4, 4, 8], [16], []]"), "color 16 fuera de 1..15"),
+            Invalid("intro desconocida", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"aguape\""), "'intro_mechanic' debe ser null o"),
+            Invalid("banda desconocida", TestPacks.Schema2Pack().Replace("\"difficulty\": { \"par\": 3 }", "\"difficulty\": { \"par\": 3, \"band\": \"easy\" }"), "'difficulty.band' debe ser"),
+            Invalid("matapi con pack_schema 1", TestPacks.Schema2Pack("[null, null, null, {\"type\": \"matapi\"}]", schema: 1), "el tipo matapi necesita pack_schema 2"),
+            Invalid("intro chica con pack_schema 1", TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"chica\"", schema: 1), "'intro_mechanic' chica necesita pack_schema 2"),
+            Invalid("par_approx con pack_schema 1", TestPacks.Schema2Pack(schema: 1).Replace("\"difficulty\": { \"par\": 3 }", "\"difficulty\": { \"par\": 3, \"par_approx\": false }"), "'difficulty.par_approx' necesita pack_schema 2"),
+            Invalid("tablero que no valida", TestPacks.Schema2Pack(cuias: "[[8, 8, 8, 8], [4, 4, 4, 4], [], []]"), "03 §17 #5: la cuia 0 empieza sellada"),
+            Invalid("5 ocultas (02 T2)", TestPacks.Schema2Pack(cuias: "[[4, 8, 4], [8, 8, 4, 4], [8], []]", murky: "true", hidden: "[[0, 0], [0, 1], [1, 0], [1, 1], [1, 2]]"), "como mucho 4 (02 T2)"),
+            Invalid("relief con hoja sin key", WithRelief("{ \"type\": \"plus_empty\", \"caps\": [4, 4, 4, 4, 4], \"cuias\": [[8, 8, 8, 4], [4, 4, 4, 8], [], [], []], \"attrs\": [null, null, {\"type\": \"hoja\"}, null, null], \"par\": null }"), "relief[0]: attrs[2] (hoja): lleva solo key"),
+            Invalid("relief que no valida", WithRelief("{ \"type\": \"plus_empty\", \"caps\": [4, 4, 4, 4, 4], \"cuias\": [[8, 8, 8, 8], [4, 4, 4, 4], [], [], []], \"attrs\": null, \"par\": null }"), "relief[0]: 03 §17 #5: la cuia 0 empieza sellada"),
+        };
+
+        // Nivel pack_schema 2 por defecto (TestPacks.Schema2Pack) con una sola variante de alivio (08 §4.1, relief_board).
+        private static string WithRelief(string reliefBoard)
+        {
+            return TestPacks.Schema2Pack().Replace("\"relief\": []", "\"relief\": [" + reliefBoard + "]");
+        }
+
+        [Test]
+        public void Reader_Schema2_ReliefKeepsItsMechanics()
+        {
+            // El alivio lleva sus attrs (relief_board.attrs) y se construye con BoardBuilder, como el nivel (T02 §1d).
+            LevelDefinition level = LevelPackReader.Read(WithRelief(
+                "{ \"type\": \"plus_empty\", \"caps\": [4, 4, 4, 4, 4], \"cuias\": [[8, 8, 8, 4], [4, 4, 4, 8], [], [], []], "
+                + "\"attrs\": [null, null, {\"type\": \"hoja\", \"key\": 4}, null, null], \"par\": null }")).First;
+            Assert.That(level.Relief.Count, Is.EqualTo(1));
+            ReliefBoard relief = level.Relief[0];
+            Assert.That(relief.Attrs[2], Is.EqualTo(new MechanicSpec(MechanicType.Hoja, key: 4)));
+            Assert.That(relief.Attrs[0].IsNone, Is.True);
+            BoardState board = relief.CreateBoard();
+            Assert.That(board.Count, Is.EqualTo(5));
+            Assert.That(board[2].Mechanic, Is.EqualTo(MechanicType.Hoja));
+            Assert.That(board[2].MechanicKey, Is.EqualTo(4));
+        }
+
+        private static TestCaseData Invalid(string why, string json, string expected)
+        {
+            return new TestCaseData(json, expected).SetName("Reader_Schema2_RejectsInvalidMechanicsMurkyAndHidden(" + why + ")");
+        }
+
+        [TestCaseSource(nameof(InvalidSchema2Levels))]
+        public void Reader_Schema2_RejectsInvalidMechanicsMurkyAndHidden(string json, string expected)
+        {
+            // Falla cerrado (BoardBuilder y LevelValidation, como tools/level-qa): el mensaje dice el id del nivel y el motivo.
+            Assert.That(() => LevelPackReader.Read(json),
+                Throws.TypeOf<LevelFormatException>().With.Message.Contains("m01_v1_n0001").And.Message.Contains(expected));
+        }
+
+        [Test]
+        public void Reader_Schema1_AcceptsTheSameMechanicsWithoutMatapi()
+        {
+            // pack_schema 1 lee las mecánicas de siempre; solo el tipo matapi, las intro de D-007 y par_approx son del 2.
+            LevelDefinition hoja = LevelPackReader.Read(TestPacks.Schema2Pack("[null, null, {\"type\": \"hoja\", \"key\": 4}, null]", schema: 1)).First;
+            Assert.That(hoja.HasMechanic(MechanicType.Hoja), Is.True);
+            Assert.That(LevelPackReader.Read(TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"hoja\"", schema: 1)).First.IntroMechanic, Is.EqualTo("hoja"));
+        }
+
+        // Tableros del subconjunto af-level/1 (caps [4, 4, 4]) que el lector rechaza, con el fragmento del mensaje que prueba
+        // su motivo, como InvalidSchema2Levels: el formato lo comprueba ReadBoard, U_c (02 R3) BoardBuilder y la colocación del
+        // Barro (02 §9.1 M5) LevelValidation.
+        private static readonly TestCaseData[] InconsistentBoards =
+        {
+            Inconsistent("longitudes distintas", "[[8, 8, 8, 4], [4, 4, 4, 8]]", "'cuias' y 'caps' deben tener la misma longitud"),
+            Inconsistent("más dosis que capacidad", "[[8, 8, 8, 4, 4], [4, 4, 8], []]", "la cuia 0 tiene más dosis que su capacidad"),
+            Inconsistent("Barro fuera de su sitio", "[[8, 8, 8, 4], [4, 4, 4, 8], [15]]", "cuia 2, capa 0: 02 §9.1 M5: el Barro va en la capa 2 o 3"),
+            Inconsistent("tinte 0", "[[8, 8, 8, 0], [4, 4, 4, 8], []]", "color 0 fuera de 1..15"),
+            Inconsistent("color 16 reservado", "[[8, 8, 8, 4], [4, 4, 4, 8], [16]]", "color 16 fuera de 1..15"),
+            Inconsistent("U_c distinto", "[[8, 8, 8, 4], [4, 4, 4, 8], [8]]", "units_per_color: el color 8 tiene 5 dosis y se declararon 4"),
+        };
+
+        private static TestCaseData Inconsistent(string why, string cuias, string expected)
+        {
+            return new TestCaseData(TestPacks.MinimalPack(TestPacks.MinimalLevel(cuias: cuias)), expected)
+                .SetName("Reader_RejectsInconsistentBoards(" + why + ")");
+        }
+
+        [TestCaseSource(nameof(InconsistentBoards))]
+        public void Reader_RejectsInconsistentBoards(string json, string expected)
+        {
+            Assert.That(() => LevelPackReader.Read(json),
+                Throws.TypeOf<LevelFormatException>().With.Message.Contains("m01_v1_n0001").And.Message.Contains(expected));
         }
 
         [TestCase(null, LevelDefinition.LabelNormal)]

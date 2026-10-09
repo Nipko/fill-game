@@ -34,70 +34,53 @@ namespace AF.Tests.PlayMode
     [Explicit("Capturas visuales manuales; necesitan dispositivo gráfico.")]
     public sealed class VisualSnapshotTests
     {
-        private const int Width = 1080;
-        private const int Height = 2340;
-
-        private Camera? _camera;
-        private RenderTexture? _target;
-
         [TearDown]
         public void TearDown()
         {
-            GameScreen.SimulatedScreen = null;
-            AmbientLayer.Frozen = false;
             LaunchOptions.Reset();
-            if (_camera != null)
-            {
-                Object.Destroy(_camera.gameObject);
-            }
-
-            if (_target != null)
-            {
-                _target.Release();
-                Object.Destroy(_target);
-            }
+            SnapshotKit.Release();
         }
 
         [UnityTest]
         public IEnumerator CaptureKeyScreens()
         {
-            string dir = Prepare();
+            string dir = SnapshotKit.Prepare();
 
             // Nivel 7: tablero, selección (solo el origen sube, sin aros en los destinos: D-002) y vertido. La intro, en
             // CaptureIntro.
             yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
             GameBootstrap boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             yield return PlayModeHelpers.WaitFor(() => boot.Flow!.Phase == FlowPhase.Playing, "fin de la intro");
-            yield return Wait(0.3f);
-            Save(dir, "02_board_l7");
-            LogBoard("02_board_l7", boot);
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "02_board_l7");
+            SnapshotKit.LogBoard("02_board_l7", boot);
             SolveResult solution = new AStarSolver().Solve(boot.Flow!.Session.Current, SolverOptions.ForPipeline(boot.Flow.Session.PourMode));
             Pour first = solution.GetMove(0);
             boot.TapCuia(first.Source);
-            yield return Wait(0.25f);
-            Save(dir, "03_selected_l7");
+            yield return SnapshotKit.Wait(0.25f);
+            SnapshotKit.Save(dir, "03_selected_l7");
             boot.TapCuia(first.Target);
             // Con la cabeza del chorro ya en la superficie del destino (revisión visual del 2026-10-07: la captura salía con
             // el chorro a medio crecer y parecía terminar en el borde).
             yield return PlayModeHelpers.WaitFor(StreamReachedSurface, "chorro hasta la superficie");
-            Save(dir, "04_pouring_l7");
+            SnapshotKit.Save(dir, "04_pouring_l7");
             yield return PlayModeHelpers.WaitFor(() => boot.View!.IsViewIdle, "fin del vertido");
-            yield return Wait(0.2f);
-            Save(dir, "05_after_pour_l7");
+            yield return SnapshotKit.Wait(0.2f);
+            SnapshotKit.Save(dir, "05_after_pour_l7");
 
             // Nivel 1: tablero de una fila (02b), primer vertido (04b), sellado, celebración y victoria.
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             boot.TapAnywhere();
-            yield return Wait(0.3f);
-            Save(dir, "02b_board_l1");
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "02b_board_l1");
             SolveResult s1 = new AStarSolver().Solve(boot.Flow!.Session.Current, SolverOptions.ForPipeline(boot.Flow.Session.PourMode));
             boot.TapCuia(s1.GetMove(0).Source);
             boot.TapCuia(s1.GetMove(0).Target);
             yield return PlayModeHelpers.WaitFor(StreamReachedSurface, "chorro hasta la superficie (nivel 1)");
-            Save(dir, "04b_pouring_l1");
+            SnapshotKit.Save(dir, "04b_pouring_l1");
             GameBootstrap boot1 = boot;
             yield return PlayModeHelpers.WaitFor(() => boot1.View!.IsViewIdle, "fin del vertido (nivel 1)");
             for (int i = 1; i < s1.MoveCount; i++)
@@ -108,47 +91,47 @@ namespace AF.Tests.PlayMode
 
             LevelFlow f1 = boot.Flow;
             yield return PlayModeHelpers.WaitFor(() => f1.Phase == FlowPhase.Celebration, "celebración");
-            yield return Wait(0.9f); // estallido a mitad de vuelo (arranca a 0,5 s; guía 6.9)
-            Save(dir, "06_celebration_l1");
+            yield return SnapshotKit.Wait(0.9f); // estallido a mitad de vuelo (arranca a 0,5 s; guía 6.9)
+            SnapshotKit.Save(dir, "06_celebration_l1");
             yield return PlayModeHelpers.WaitFor(() => f1.Phase == FlowPhase.VictoryScreen, "victoria");
-            yield return Wait(0.9f); // guía 6.9 y VA-13: Siguiente aparece a 1,4 s del inicio de la celebración
-            Save(dir, "07_victory_l1");
+            yield return SnapshotKit.Wait(0.9f); // guía 6.9 y VA-13: Siguiente aparece a 1,4 s del inicio de la celebración
+            SnapshotKit.Save(dir, "07_victory_l1");
 
             // Nivel 6: Aguas estancadas.
             yield return PlayModeHelpers.LoadGame(6, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             boot.TapAnywhere();
             boot.TapCuia(3);
             boot.TapCuia(4);
             LevelFlow f6 = boot.Flow!;
             yield return PlayModeHelpers.WaitFor(() => f6.Phase == FlowPhase.StuckModal, "modal");
-            yield return Wait(0.4f);
-            Save(dir, "08_stuck_l6");
+            yield return SnapshotKit.Wait(0.4f);
+            SnapshotKit.Save(dir, "08_stuck_l6");
             Assert.That(File.Exists(Path.Combine(dir, "08_stuck_l6.png")), Is.True);
 
             // D-004: nivel 2 (5 cuias de ≈ 47 dp en una fila) y nivel 4 (6 cuias en dos filas de 3, 48 dp).
             yield return PlayModeHelpers.LoadGame(2, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             boot.TapAnywhere();
-            yield return Wait(0.3f);
-            Save(dir, "02d_board_l2");
-            LogBoard("02d_board_l2", boot);
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "02d_board_l2");
+            SnapshotKit.LogBoard("02d_board_l2", boot);
 
             yield return PlayModeHelpers.LoadGame(4, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             boot.TapAnywhere();
-            yield return Wait(0.3f);
-            Save(dir, "02e_board_l4");
-            LogBoard("02e_board_l4", boot);
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "02e_board_l4");
+            SnapshotKit.LogBoard("02e_board_l4", boot);
             Assert.That(File.Exists(Path.Combine(dir, "02e_board_l4.png")), Is.True);
 
             // D-005 y D-006, con el reloj del test: nivel 2 en run, la racha de 3 açaí (2 → 3) durante la 2.ª dosis.
             yield return PlayModeHelpers.LoadGame(2, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             boot.TapAnywhere();
             PlayModeHelpers.StepUntilIdle(boot, 2000);
@@ -161,14 +144,14 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(target3.LiquidLevel, Is.GreaterThan(1f).And.LessThan(3f), "durante la 2.ª dosis");
-            Save(dir, "04c_pouring_run3_l2");
+            SnapshotKit.Save(dir, "04c_pouring_run3_l2");
             PlayModeHelpers.StepUntilIdle(boot, 3000);
 
             // Un vertido que vacía el origen (≈ 92°): nivel 1, último vertido de la solución del informe, 1 → 2 ×3 (tras
             // 0 → 2 y 1 → 0), al terminar la 3.ª dosis.
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             boot.TapAnywhere();
             PlayModeHelpers.StepUntilIdle(boot, 2000);
@@ -185,19 +168,19 @@ namespace AF.Tests.PlayMode
             PourTimings timings = boot.View!.Timings;
             int emptyAt = Mathf.RoundToInt((timings.TravelMs * BoardAnimator.StreamStartFraction) + (3f * timings.DoseMs)) - 8;
             PlayModeHelpers.TickExact(boot, emptyAt);
-            Save(dir, "04d_pouring_empty_l1");
+            SnapshotKit.Save(dir, "04d_pouring_empty_l1");
             Debug.Log("AF_SNAP 04d: inclinación " + Mathf.Abs(boot.View.Views[1].BodyAngle).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "°");
 
             // D-006: tablero de 13 cuias (3 filas de 5/4/4) y un vertido de la fila 3 a la fila 1, con el origen sobre el HUD.
             yield return PlayModeHelpers.LoadGameWithPack(PlayModeHelpers.ThirteenCuiaPack(), 1, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             boot.TapAnywhere();
             PlayModeHelpers.StepUntilIdle(boot, 2000);
             PlayModeHelpers.TickExact(boot, 300);
-            Save(dir, "09_board_13");
-            LogBoard("09_board_13", boot);
+            SnapshotKit.Save(dir, "09_board_13");
+            SnapshotKit.LogBoard("09_board_13", boot);
             // De la cuia 12 (fila 3, a la derecha) a la 0 (fila 1, a la izquierda), con una sola dosis en el origen: al
             // vaciarse queda a ≈ 92° a la altura del borde de la fila 1 y tapa el rótulo del nivel, como Magic Sort en t = 250.
             Pour[]? setup = PlayModeHelpers.FindSetup(boot.Flow!.Session.Current, 12, 0, boot.Flow.Session.PourMode, boot.Flow.Session.FutileRuleEnabled);
@@ -214,7 +197,7 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow.Session.Current[12].Count, Is.EqualTo(0), "el origen se vacía");
             PlayModeHelpers.TickExact(boot, Mathf.RoundToInt((timings.TravelMs * BoardAnimator.StreamStartFraction) + timings.DoseMs) - 8);
             Debug.Log("AF_SNAP 09b: inclinación " + Mathf.Abs(boot.View!.Views[12].BodyAngle).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + "°");
-            Save(dir, "09b_pouring_row1_13");
+            SnapshotKit.Save(dir, "09b_pouring_row1_13");
             Assert.That(File.Exists(Path.Combine(dir, "09b_pouring_row1_13.png")), Is.True);
             PlayModeHelpers.StepUntilIdle(boot, 3000);
 
@@ -223,11 +206,11 @@ namespace AF.Tests.PlayMode
             LaunchOptions.Reset(); // sin el paquete de 13 cuias: el nivel 1 del tutorial
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             boot.TapAnywhere();
             PlayModeHelpers.StepUntilIdle(boot, 2000);
-            LogBoard("02b_board_l1", boot);
+            SnapshotKit.LogBoard("02b_board_l1", boot);
             Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
             PlayModeHelpers.TickExact(boot, 200);
             Assert.That(boot.TapCuia(2).Pour.Pour.Amount, Is.EqualTo(1));
@@ -240,7 +223,7 @@ namespace AF.Tests.PlayMode
                     PlayModeHelpers.TickExact(boot, 100);
                 }
 
-                Save(dir, "10_sheet_l1_" + ms.ToString("0000", System.Globalization.CultureInfo.InvariantCulture));
+                SnapshotKit.Save(dir, "10_sheet_l1_" + ms.ToString("0000", System.Globalization.CultureInfo.InvariantCulture));
                 float rim = dst.FootPosition.y + (dst.HeightU * dst.Unit);
                 Debug.Log("AF_SHEET " + ms + " ms: inclinación " + Mathf.Abs(src.BodyAngle).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
                     + "°, punto más bajo de la boca sobre el borde del destino " + ((src.MouthLowestInContainer().y - rim) / dst.Unit).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
@@ -268,11 +251,11 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator CaptureIntro()
         {
-            string dir = Prepare();
+            string dir = SnapshotKit.Prepare();
 
             yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
             GameBootstrap boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             Replay(boot, 1400, false, "01_intro_l7");
             int[] checkMs = { 300, 700, 1100, 1400 };
@@ -280,7 +263,7 @@ namespace AF.Tests.PlayMode
             foreach (int ms in new[] { 0, 50, 150, 300, 700, 1100, 1400 })
             {
                 boot.View!.Intro.Seek(ms);
-                byte[] png = Capture();
+                byte[] png = SnapshotKit.Capture();
                 File.WriteAllBytes(Path.Combine(dir, "01_intro_l7_" + Ms(ms) + ".png"), png);
                 if (System.Array.IndexOf(checkMs, ms) >= 0)
                 {
@@ -305,7 +288,7 @@ namespace AF.Tests.PlayMode
             foreach (int ms in new[] { 200, 500, 700 })
             {
                 boot.View!.Intro.Seek(ms);
-                Save(dir, "01d_intro_short_l7_" + Ms(ms));
+                SnapshotKit.Save(dir, "01d_intro_short_l7_" + Ms(ms));
             }
 
             Sheet(boot, dir, "21_sheet_l7_retry", 800, true);
@@ -316,18 +299,18 @@ namespace AF.Tests.PlayMode
             foreach (int ms in checkMs)
             {
                 boot.View!.Intro.Seek(ms);
-                Assert.That(Capture(), Is.EqualTo(firstPass[ms]), "captura determinista a " + ms + " ms en dos pasadas");
+                Assert.That(SnapshotKit.Capture(), Is.EqualTo(firstPass[ms]), "captura determinista a " + ms + " ms en dos pasadas");
             }
 
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             Replay(boot, 1400, false, "01c_intro_l1");
             foreach (int ms in new[] { 0, 50, 150, 300, 900, 1300 })
             {
                 boot.View!.Intro.Seek(ms);
-                Save(dir, "01c_intro_l1_" + Ms(ms));
+                SnapshotKit.Save(dir, "01c_intro_l1_" + Ms(ms));
             }
 
             Sheet(boot, dir, "21_sheet_l1_long", 1400, false);
@@ -335,7 +318,7 @@ namespace AF.Tests.PlayMode
 
             yield return PlayModeHelpers.LoadGameWithPack(PlayModeHelpers.ThirteenCuiaPack(), 1, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             Sheet(boot, dir, "21_sheet_13_long", 1400, false);
             Sheet(boot, dir, "21_sheet_13_short", 800, false);
@@ -343,13 +326,13 @@ namespace AF.Tests.PlayMode
             LaunchOptions.Reset();
             yield return PlayModeHelpers.LoadGameWithPack(PlayModeHelpers.SixteenCuiaPack(), 1, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             Replay(boot, 1400, false, "01e_intro_16");
             boot.View!.Intro.Seek(500);
-            Save(dir, "01e_intro_16_0500");
+            SnapshotKit.Save(dir, "01e_intro_16_0500");
             boot.View.Intro.Seek(1250);
-            Save(dir, "01e_intro_16_1250");
+            SnapshotKit.Save(dir, "01e_intro_16_1250");
 
             // Galería de especies: el tablero del nivel 7 en un nivel de cada tramo (guion de la intro §4.2), corta a 300 ms.
             var stretches = new (int World, string WorldId, string Water, int Level)[]
@@ -364,12 +347,12 @@ namespace AF.Tests.PlayMode
                 LaunchOptions.Reset();
                 yield return PlayModeHelpers.LoadGameWithPack(PlayModeHelpers.Level7BoardPack(world, worldId, water, level), level, new MemoryProgressStore());
                 boot = GameBootstrap.Current!;
-                Attach(boot);
+                SnapshotKit.Attach(boot);
                 PlayModeHelpers.TakeClock(boot);
                 Replay(boot, 800, false, "22_species_l" + level);
                 boot.View!.Intro.Seek(300);
                 string id = boot.View.IntroSpecies != null ? boot.View.IntroSpecies.Id : "dosel";
-                Save(dir, "22_species_" + id);
+                SnapshotKit.Save(dir, "22_species_" + id);
                 if (level == 13 || level == 142 || level == 82)
                 {
                     Sheet(boot, dir, "21_sheet_l" + level + "_long", 1400, false);
@@ -385,11 +368,11 @@ namespace AF.Tests.PlayMode
             LaunchOptions.Reset();
             yield return PlayModeHelpers.LoadGame(5, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             boot.TapAnywhere();
             PlayModeHelpers.TickExact(boot, 400);
-            Save(dir, "23_sighting_l5");
+            SnapshotKit.Save(dir, "23_sighting_l5");
 
             Assert.That(File.Exists(Path.Combine(dir, "01e_intro_16_0500.png")), Is.True);
         }
@@ -426,7 +409,7 @@ namespace AF.Tests.PlayMode
             for (int ms = 0; ms <= durationMs + 300; ms += 100)
             {
                 intro.Seek(ms);
-                Save(dir, name + "_" + Ms(ms));
+                SnapshotKit.Save(dir, name + "_" + Ms(ms));
             }
         }
 
@@ -454,13 +437,14 @@ namespace AF.Tests.PlayMode
         /// Pantalla de inicio y sus superposiciones (tarea B1-6; 06 §4.7; D-008 punto 6), para compararlas con el Home de Magic
         /// Sort (ficha §7.1; <c>Logs/device/magicsort/analisis/det_ms/d_000070.jpg</c> y <c>d_011780.jpg</c>):
         /// <c>10_lobby</c> (nivel 4 guardado, 1.240 semillas, sin canoas antes del 31), <c>10b_lobby_l31</c> (con
-        /// <c>af_level_offset</c> = 30: canoas 3/5 con cronómetro), <c>10c_content_end</c> («El río sigue creciendo» tras el 10),
-        /// <c>10d_no_canoes</c> (Sin canoas en el 31, con el cronómetro) y <c>10e_victory_home</c> (victoria con «Inicio»).
+        /// <c>af_level_offset</c> = 30: canoas 3/5 con cronómetro), <c>10c_content_end</c> («El río sigue creciendo» tras el
+        /// 200, el último nivel del catálogo), <c>10d_no_canoes</c> (Sin canoas en el 31, con el cronómetro) y
+        /// <c>10e_victory_home</c> (victoria con «Inicio»).
         /// </summary>
         [UnityTest]
         public IEnumerator CaptureLobby()
         {
-            string dir = Prepare();
+            string dir = SnapshotKit.Prepare();
             var t0 = new System.DateTime(2026, 10, 8, 15, 0, 0, System.DateTimeKind.Utc);
             var clock = new ManualClock(t0, System.TimeSpan.FromHours(-5));
             LaunchOptions.ClockOverride = clock;
@@ -471,9 +455,9 @@ namespace AF.Tests.PlayMode
             p4.Wallet.Seeds = 1240;
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p4));
             GameBootstrap boot = GameBootstrap.Current!;
-            AttachLobby(boot);
-            yield return Wait(0.3f);
-            Save(dir, "10_lobby");
+            SnapshotKit.AttachLobby(boot);
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "10_lobby");
 
             LaunchOptions.LevelOffsetOverride = 30;
             Profile p31 = Wallet.NewProfile(clock);
@@ -484,35 +468,35 @@ namespace AF.Tests.PlayMode
             p31.Wallet.Canoes.NextRegenAt = t0 + System.TimeSpan.FromMinutes(18) + System.TimeSpan.FromSeconds(42);
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p31));
             boot = GameBootstrap.Current!;
-            AttachLobby(boot);
-            yield return Wait(0.3f);
-            Save(dir, "10b_lobby_l31");
+            SnapshotKit.AttachLobby(boot);
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "10b_lobby_l31");
 
             p31.Wallet.Canoes.Count = 0;
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p31));
             boot = GameBootstrap.Current!;
-            AttachLobby(boot);
+            SnapshotKit.AttachLobby(boot);
             Assert.That(boot.PressPlay(), Is.True);
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.NoCanoes));
-            yield return Wait(0.3f);
-            Save(dir, "10d_no_canoes");
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "10d_no_canoes");
 
             LaunchOptions.LevelOffsetOverride = null;
-            Profile p11 = Wallet.NewProfile(clock);
-            p11.Progress.NextLevel = 11;
-            p11.Progress.MaxLevel = 10;
-            p11.Wallet.Seeds = 300;
-            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p11));
+            Profile p201 = Wallet.NewProfile(clock);
+            p201.Progress.NextLevel = 201;
+            p201.Progress.MaxLevel = 200;
+            p201.Wallet.Seeds = 300;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p201));
             boot = GameBootstrap.Current!;
-            AttachLobby(boot);
+            SnapshotKit.AttachLobby(boot);
             Assert.That(boot.PressPlay(), Is.True);
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.ContentEnd));
-            yield return Wait(0.3f);
-            Save(dir, "10c_content_end");
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "10c_content_end");
 
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             SolveResult s1 = new AStarSolver().Solve(boot.Flow!.Session.Current, SolverOptions.ForPipeline(boot.Flow.Session.PourMode));
             boot.TapAnywhere();
             for (int i = 0; i < s1.MoveCount; i++)
@@ -523,8 +507,8 @@ namespace AF.Tests.PlayMode
 
             LevelFlow f1 = boot.Flow;
             yield return PlayModeHelpers.WaitFor(() => f1.Phase == FlowPhase.VictoryScreen, "victoria");
-            yield return Wait(0.9f);
-            Save(dir, "10e_victory_home");
+            yield return SnapshotKit.Wait(0.9f);
+            SnapshotKit.Save(dir, "10e_victory_home");
             Assert.That(File.Exists(Path.Combine(dir, "10e_victory_home.png")), Is.True);
         }
 
@@ -542,95 +526,95 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator CaptureFunnel()
         {
-            string dir = Prepare();
+            string dir = SnapshotKit.Prepare();
             FunnelSetup.Hooks();
 
             // 11: nivel 8 con la Cuia extra regalada y el aviso de Capi; 11b, tras usarla.
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
             yield return PlayModeHelpers.LoadGame(8, new MemoryProgressStore(8, 7));
             GameBootstrap boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             boot.TapAnywhere();
-            yield return Wait(0.4f);
-            Save(dir, "11_tray_l8");
+            yield return SnapshotKit.Wait(0.4f);
+            SnapshotKit.Save(dir, "11_tray_l8");
             boot.PressExtraCuia();
-            yield return Wait(0.9f);
-            Save(dir, "11b_tray_l8_added");
-            LogBoard("11b_tray_l8_added", boot);
+            yield return SnapshotKit.Wait(0.9f);
+            SnapshotKit.Save(dir, "11b_tray_l8_added");
+            SnapshotKit.LogBoard("11b_tray_l8_added", boot);
 
             // 12: nivel 31 (tablero 6 con af_level_offset = 25) con 1.240 semillas: rama A.
             yield return LoadFunnel(31, 1240, 3);
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             yield return StuckRealTime(boot);
-            Save(dir, "12_stuck_l31");
+            SnapshotKit.Save(dir, "12_stuck_l31");
 
             // 13: ¿Seguro? (paso 2).
             boot.PressGiveUp();
-            yield return Wait(0.3f);
-            Save(dir, "13_giveup_confirm");
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "13_giveup_confirm");
 
             // 14: Nivel fallido (paso 3) y 15: Sin canoas (paso 4, tras gastar las canoas que quedan).
             boot.ConfirmGiveUp();
-            yield return Wait(0.3f);
-            Save(dir, "14_level_failed");
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "14_level_failed");
             while (boot.Wallet!.Canoes.Count > 0)
             {
                 boot.Wallet.Apply(AF.Economy.Transaction.HardFail(31));
             }
 
             boot.PressRetry();
-            yield return Wait(0.3f);
-            Save(dir, "15_no_canoes");
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "15_no_canoes");
 
             // 12b: nivel 6, rama C.
             LaunchOptions.LevelOffsetOverride = null;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(310));
             yield return PlayModeHelpers.LoadGame(6, new MemoryProgressStore(6, 5));
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             yield return StuckRealTime(boot);
-            Save(dir, "12b_stuck_l6");
+            SnapshotKit.Save(dir, "12b_stuck_l6");
 
             // 12c: nivel 31 sin saldo: rama B (Puñado y Balsa en el orden T3).
             yield return LoadFunnel(31, 140, 3);
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             yield return StuckRealTime(boot);
-            Save(dir, "12c_stuck_l31_noseeds");
+            SnapshotKit.Save(dir, "12c_stuck_l31_noseeds");
 
             // 16a: la cabecera de partida en el 31 (Semillas 1.240 y Canoas 4/5, 07 §7.4); 16b: pausa, y 16: «¿Salir del nivel?
             // Perderás 1 canoa».
             yield return LoadFunnel(31, 1240, 4);
             boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             boot.TapAnywhere();
-            yield return Wait(0.3f);
-            Save(dir, "16a_hud_l31");
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "16a_hud_l31");
             boot.View!.PauseButton.onClick.Invoke();
-            yield return Wait(0.2f);
-            Save(dir, "16b_pause");
+            yield return SnapshotKit.Wait(0.2f);
+            SnapshotKit.Save(dir, "16b_pause");
             boot.View.Pause.QuitButton.onClick.Invoke();
-            yield return Wait(0.2f);
-            Save(dir, "16_quit_confirm");
+            yield return SnapshotKit.Wait(0.2f);
+            SnapshotKit.Save(dir, "16_quit_confirm");
 
             // 14b: salir confirmado → Nivel fallido → «Reintentar»: la intro corta con «Nivel 31 · intento 2» (02 §2).
             boot.View.Confirm.ConfirmButton.onClick.Invoke();
-            yield return Wait(0.2f);
+            yield return SnapshotKit.Wait(0.2f);
             boot.PressRetry();
-            yield return Wait(0.3f);
-            Save(dir, "14b_retry_l31");
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "14b_retry_l31");
 
             // 20: perfil de una versión más nueva: aviso «Actualiza Tintalú» sobre el tablero (08 §4.4).
             LaunchOptions.LevelOffsetOverride = null;
             LaunchOptions.ProfileStoreOverride = new ReadOnlyProfileStore(ProfileLoadStatus.TooNew);
             yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore(7, 6));
             boot = GameBootstrap.Current!;
-            Attach(boot);
-            AttachOverlay(boot.LockedNotice!.Canvas);
+            SnapshotKit.Attach(boot);
+            SnapshotKit.AttachOverlay(boot.LockedNotice!.Canvas);
             boot.TapAnywhere();
-            yield return Wait(0.3f);
-            Save(dir, "20_profile_locked");
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "20_profile_locked");
             Assert.That(File.Exists(Path.Combine(dir, "20_profile_locked.png")), Is.True);
         }
 
@@ -645,7 +629,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator CaptureVictoryAndAds()
         {
-            string dir = Prepare();
+            string dir = SnapshotKit.Prepare();
             FunnelSetup.Hooks();
             LaunchOptions.AdPresenterOverride = null; // pantallas de verdad: AdOverlay y StoreSheet
             LaunchOptions.PurchasePresenterOverride = null;
@@ -655,34 +639,34 @@ namespace AF.Tests.PlayMode
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(1240));
             yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
             GameBootstrap boot = GameBootstrap.Current!;
-            Attach(boot);
+            SnapshotKit.Attach(boot);
             yield return WinRealTime(boot);
-            yield return Wait(1.2f); // panel arriba (250 ms) y la Cosecha ya contada (250 + 400 ms)
-            Save(dir, "17_victory_l11");
+            yield return SnapshotKit.Wait(1.2f); // panel arriba (250 ms) y la Cosecha ya contada (250 + 400 ms)
+            SnapshotKit.Save(dir, "17_victory_l11");
 
             // 17b: el video de la Cosecha doble (recompensado de 3 s [P]) y 17c: la Cosecha ya doblada.
-            AttachOverlay(boot.AdOverlayView!.Canvas);
+            SnapshotKit.AttachOverlay(boot.AdOverlayView!.Canvas);
             boot.View!.DoubleHarvestButton.onClick.Invoke();
-            yield return Wait(1.0f);
-            Save(dir, "17b_ad_rewarded");
-            yield return Wait(2.2f);
+            yield return SnapshotKit.Wait(1.0f);
+            SnapshotKit.Save(dir, "17b_ad_rewarded");
+            yield return SnapshotKit.Wait(2.2f);
             boot.AdOverlayView.CloseButton.onClick.Invoke();
-            yield return Wait(0.8f);
-            Save(dir, "17c_victory_l11_doubled");
+            yield return SnapshotKit.Wait(0.8f);
+            SnapshotKit.Save(dir, "17c_victory_l11_doubled");
 
             // 18: tercera victoria en 22-60 desde la 2.ª sesión: el intersticial tras «Siguiente» (tablero 3 como nivel 24).
             LaunchOptions.LevelOffsetOverride = 21;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(1240, levelsSinceInterstitial: 2));
             yield return PlayModeHelpers.LoadGame(24, new MemoryProgressStore(24, 23));
             boot = GameBootstrap.Current!;
-            Attach(boot);
-            AttachOverlay(boot.AdOverlayView!.Canvas);
+            SnapshotKit.Attach(boot);
+            SnapshotKit.AttachOverlay(boot.AdOverlayView!.Canvas);
             FunnelSetup.Clock.Advance(System.TimeSpan.FromSeconds(200));
             yield return WinRealTime(boot);
-            yield return Wait(1.0f);
+            yield return SnapshotKit.Wait(1.0f);
             boot.View!.NextButton.onClick.Invoke();
-            yield return Wait(1.0f);
-            Save(dir, "18_ad_interstitial");
+            yield return SnapshotKit.Wait(1.0f);
+            SnapshotKit.Save(dir, "18_ad_interstitial");
             Assert.That(boot.AdOverlayView.Visible, Is.True, "intersticial simulado a pantalla completa");
 
             // 19: Sin canoas en el 31 (tablero 6) con 1 canoa: rendirse, Reintentar y «Canoas infinitas 1 h» → Compra simulada.
@@ -690,16 +674,16 @@ namespace AF.Tests.PlayMode
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(140, canoes: 1));
             yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
             boot = GameBootstrap.Current!;
-            Attach(boot);
-            AttachOverlay(boot.StoreSheetView!.Canvas);
+            SnapshotKit.Attach(boot);
+            SnapshotKit.AttachOverlay(boot.StoreSheetView!.Canvas);
             yield return StuckRealTime(boot);
             boot.PressGiveUp();
             boot.ConfirmGiveUp();
             boot.PressRetry();
-            yield return Wait(0.3f);
+            yield return SnapshotKit.Wait(0.3f);
             boot.View!.NoCanoes.InfiniteButton.onClick.Invoke();
-            yield return Wait(0.3f);
-            Save(dir, "19_store_sheet");
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "19_store_sheet");
             Assert.That(boot.StoreSheetView.Visible, Is.True);
             Assert.That(File.Exists(Path.Combine(dir, "19_store_sheet.png")), Is.True);
         }
@@ -719,13 +703,6 @@ namespace AF.Tests.PlayMode
             yield return PlayModeHelpers.WaitFor(() => flow.Phase == FlowPhase.VictoryScreen, "victoria");
         }
 
-        private void AttachOverlay(Canvas canvas)
-        {
-            canvas.renderMode = RenderMode.ScreenSpaceCamera;
-            canvas.worldCamera = _camera;
-            canvas.planeDistance = 5f;
-        }
-
         private static IEnumerator LoadFunnel(int level, int seeds, int canoes)
         {
             LaunchOptions.LevelOffsetOverride = 25;
@@ -741,98 +718,7 @@ namespace AF.Tests.PlayMode
             boot.TapCuia(4);
             LevelFlow flow = boot.Flow!;
             yield return PlayModeHelpers.WaitFor(() => flow.Phase == FlowPhase.StuckModal, "modal");
-            yield return Wait(0.45f);
-        }
-
-        // Cámara y textura de las capturas (1080 × 2340 px, 20:9 aprox., 360 × 780 dp) con zona segura; devuelve la carpeta.
-        private string Prepare()
-        {
-            GameScreen.SimulatedScreen = new Vector4(Width, Height, 96f, 48f); // 32 dp de cutout arriba, 16 dp de gestos abajo
-            AmbientLayer.Frozen = true;
-            _target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
-            var camGo = new GameObject("SnapshotCamera");
-            Object.DontDestroyOnLoad(camGo);
-            _camera = camGo.AddComponent<Camera>();
-            _camera.targetTexture = _target;
-            _camera.clearFlags = CameraClearFlags.SolidColor;
-            _camera.backgroundColor = Color.black;
-            _camera.orthographic = true;
-            _camera.enabled = false;
-            string dir = Path.Combine(Application.dataPath, "../Logs/snapshots");
-            Directory.CreateDirectory(dir);
-            return dir;
-        }
-
-        private void AttachLobby(GameBootstrap boot)
-        {
-            Canvas canvas = boot.Lobby!.Canvas;
-            canvas.renderMode = RenderMode.ScreenSpaceCamera;
-            canvas.worldCamera = _camera;
-            canvas.planeDistance = 10f;
-        }
-
-        // Medidas del tablero para la comparación con Magic Sort (ficha §2.1 y §2.2): cuias, filas, ancho y alto de la cuia y
-        // paso horizontal, en dp (× 3 = px de la captura).
-        private static void LogBoard(string name, GameBootstrap boot)
-        {
-            CuiaView[] views = boot.View!.Views;
-            var line = new System.Text.StringBuilder("AF_BOARD " + name + ": " + views.Length + " cuias");
-            float u = views[0].Unit;
-            line.Append(", ancho ").Append((2f * u).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))
-                .Append(" dp, alto ").Append((views[0].HeightU * u).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)).Append(" dp");
-            float pitch = 0f;
-            int rows = 1;
-            for (int i = 1; i < views.Length; i++)
-            {
-                if (Mathf.Abs(views[i].FootPosition.y - views[i - 1].FootPosition.y) < 0.5f)
-                {
-                    if (pitch <= 0f)
-                    {
-                        pitch = views[i].FootPosition.x - views[i - 1].FootPosition.x;
-                    }
-                }
-                else
-                {
-                    rows++;
-                }
-            }
-
-            line.Append(", paso ").Append(pitch.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)).Append(" dp, filas ").Append(rows);
-            for (int i = 0; i < views.Length; i++)
-            {
-                line.Append(i == 0 ? " | pies (dp): " : " ").Append('(').Append(views[i].FootPosition.x.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))
-                    .Append(';').Append(views[i].FootPosition.y.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)).Append(')');
-            }
-
-            Debug.Log(line.ToString());
-        }
-
-        private void Attach(GameBootstrap boot)
-        {
-            Canvas canvas = boot.View!.Canvas;
-            canvas.renderMode = RenderMode.ScreenSpaceCamera;
-            canvas.worldCamera = _camera;
-            canvas.planeDistance = 10f;
-        }
-
-        private void Save(string dir, string name)
-        {
-            File.WriteAllBytes(Path.Combine(dir, name + ".png"), Capture());
-        }
-
-        private byte[] Capture()
-        {
-            Canvas.ForceUpdateCanvases();
-            _camera!.Render();
-            RenderTexture previous = RenderTexture.active;
-            RenderTexture.active = _target;
-            var tex = new Texture2D(Width, Height, TextureFormat.RGB24, false);
-            tex.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
-            tex.Apply();
-            RenderTexture.active = previous;
-            byte[] png = tex.EncodeToPNG();
-            Object.Destroy(tex);
-            return png;
+            yield return SnapshotKit.Wait(0.45f);
         }
 
         private static bool StreamReachedSurface()
@@ -847,15 +733,6 @@ namespace AF.Tests.PlayMode
             }
 
             return false;
-        }
-
-        private static IEnumerator Wait(float seconds)
-        {
-            float start = Time.realtimeSinceStartup;
-            while (Time.realtimeSinceStartup - start < seconds)
-            {
-                yield return null;
-            }
         }
     }
 }

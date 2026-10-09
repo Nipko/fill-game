@@ -14,10 +14,45 @@ namespace AF.Tests.EditMode
         /// <summary>Ruta del paquete del tutorial (docs/dev/prototipo-v0.md b).</summary>
         public static string TutorialPath => Path.Combine(Application.dataPath, "_Project/Data/Levels/tutorial_v0.json");
 
+        /// <summary>
+        /// Rutas de los 5 paquetes de la escena, en el orden de <c>GameSceneBuilder.LevelPackPaths</c>: el tutorial (1-10) y la
+        /// campaña 11-200 de <c>pack_schema</c> 2 (traspaso §6 pasos 1.1-1.2).
+        /// </summary>
+        public static string[] CampaignPaths => new[]
+        {
+            TutorialPath,
+            Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_02_v1.json"),
+            Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_03_v1.json"),
+            Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_04_v1.json"),
+            Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_05_v1.json"),
+        };
+
         private static LevelPack? _tutorial;
+        private static LevelPack[]? _campaign;
 
         /// <summary>Paquete <c>tutorial_v0</c> leído del disco (una vez).</summary>
         public static LevelPack Tutorial => _tutorial ??= LevelPackReader.Read(File.ReadAllText(TutorialPath));
+
+        /// <summary>Los 5 paquetes de <see cref="CampaignPaths"/> leídos del disco (una vez).</summary>
+        public static IReadOnlyList<LevelPack> Campaign
+        {
+            get
+            {
+                if (_campaign == null)
+                {
+                    string[] paths = CampaignPaths;
+                    var packs = new LevelPack[paths.Length];
+                    for (int i = 0; i < paths.Length; i++)
+                    {
+                        packs[i] = LevelPackReader.Read(File.ReadAllText(paths[i]));
+                    }
+
+                    _campaign = packs;
+                }
+
+                return _campaign;
+            }
+        }
 
         /// <summary>Paquete mínimo válido con un nivel; <paramref name="levelJson"/> sustituye al nivel por defecto.</summary>
         public static string MinimalPack(string? levelJson = null, string header = "\"subset_of\": \"af-level/1\"")
@@ -27,19 +62,44 @@ namespace AF.Tests.EditMode
                 + "\"lap\": 1, \"water_base\": \"white\", \"levels\": [ " + level + " ] }";
         }
 
-        /// <summary>Nivel 1 de 02 §13 con los campos sustituibles.</summary>
+        /// <summary>
+        /// Nivel 1 de 02 §13 con los campos sustituibles; <paramref name="extra"/> añade campos al final del nivel (p. ej.
+        /// <c>, "intro_mechanic": "hoja"</c>).
+        /// </summary>
         public static string MinimalLevel(
             string cuias = "[[8, 8, 8, 4], [4, 4, 4, 8], []]",
             string caps = "[4, 4, 4]",
             string attrs = "[null, null, null]",
             string murky = "false",
             string hidden = "[]",
-            string units = "4")
+            string units = "4",
+            string extra = "")
         {
             return "{ \"id\": \"m01_v1_n0001\", \"level\": 1, \"world\": 1, \"lap\": 1, \"water_base\": \"white\", "
                 + "\"palette\": [\"acai\", \"aguaje\"], \"units_per_color\": " + units + ", \"caps\": " + caps
                 + ", \"cuias\": " + cuias + ", \"attrs\": " + attrs + ", \"murky\": " + murky + ", \"hidden\": " + hidden
-                + ", \"difficulty\": { \"par\": 3 }, \"relief\": [] }";
+                + ", \"difficulty\": { \"par\": 3 }, \"relief\": []" + extra + " }";
+        }
+
+        /// <summary>
+        /// Paquete <c>pack_schema</c> 2 (D-007; contrato 21) de un nivel con el tablero, las mecánicas (<paramref name="attrs"/>),
+        /// las dosis ocultas (<paramref name="murky"/> y <paramref name="hidden"/>) y <c>units_per_color</c>
+        /// (<paramref name="units"/>) indicados; por defecto, el nivel 1 de 02 §13 con una cuia vacía más (4 cuias). Con
+        /// <paramref name="schema"/> = 1 sirve para probar lo que el esquema 1 no admite.
+        /// </summary>
+        public static string Schema2Pack(
+            string attrs = "[null, null, null, null]",
+            string cuias = "[[8, 8, 8, 4], [4, 4, 4, 8], [], []]",
+            string caps = "[4, 4, 4, 4]",
+            string murky = "false",
+            string hidden = "[]",
+            string units = "4",
+            string extra = "",
+            int schema = 2)
+        {
+            return MinimalPack(
+                MinimalLevel(cuias, caps, attrs, murky, hidden, units, extra),
+                "\"pack_schema\": " + schema.ToString(System.Globalization.CultureInfo.InvariantCulture));
         }
     }
 

@@ -16,7 +16,7 @@ namespace AF.UI.Editor
     /// (<see cref="LevelPackPaths"/>); la UI se
     /// construye por código en tiempo de ejecución. Es la forma versionada de crear la escena (CLAUDE.md, regla dura 3).
     ///
-    /// Uso en batchmode (sin ningún Editor abierto en la carpeta):
+    /// Uso en batchmode (sin ningún Editor abierto en la carpeta; <c>x86_64</c> en un equipo x64):
     ///   unity run &lt;repo&gt; --architecture arm64 --log-file Logs/game-scene.log --non-interactive
     ///             -- -nographics -executeMethod AF.UI.Editor.GameSceneBuilder.CreateGameScene
     /// Códigos de salida (solo en batchmode): 0 escena creada · 2 falta el paquete de niveles · 4 excepción.
@@ -26,14 +26,22 @@ namespace AF.UI.Editor
         /// <summary>Ruta de la escena.</summary>
         public const string ScenePath = "Assets/_Project/Scenes/Game.unity";
 
-        /// <summary>Paquete de niveles del prototipo v0.</summary>
+        /// <summary>Paquete de niveles del tutorial (niveles 1-10; prototipo v0).</summary>
         public const string LevelPackPath = "Assets/_Project/Data/Levels/tutorial_v0.json";
 
         /// <summary>
-        /// Paquetes de la escena, en orden (08 §2.2: índice nivel → paquete; tarea B1-5). En la integración se añaden aquí
-        /// <c>mundo_02</c> … <c>mundo_05</c> y se regenera la escena.
+        /// Paquetes de la escena, en orden (08 §2.2: índice nivel → paquete; tarea B1-5; traspaso §6 pasos 1.1-1.2): el tutorial
+        /// (1-10) y la campaña 11-200 de <c>pack_schema</c> 2 (<c>mundo_02</c> 11-40, <c>mundo_03</c> 41-80, <c>mundo_04</c>
+        /// 81-140 y <c>mundo_05</c> 141-200). El primero va en <c>levelPack</c> y el resto en <c>extraLevelPacks</c>.
         /// </summary>
-        public static readonly string[] LevelPackPaths = { LevelPackPath };
+        public static readonly string[] LevelPackPaths =
+        {
+            LevelPackPath,
+            "Assets/_Project/Data/Levels/mundo_02_v1.json",
+            "Assets/_Project/Data/Levels/mundo_03_v1.json",
+            "Assets/_Project/Data/Levels/mundo_04_v1.json",
+            "Assets/_Project/Data/Levels/mundo_05_v1.json",
+        };
 
         /// <summary>Catálogo de miquitos de la intro «Llenar y teñir» (<c>af-fauna/0</c>; guion de la intro §4.3).</summary>
         public const string FaunaCatalogPath = "Assets/_Project/Data/Fauna/miquitos_v0.json";
