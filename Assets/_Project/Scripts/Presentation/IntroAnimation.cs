@@ -35,8 +35,10 @@ namespace AF.Presentation
     /// capítulos (guion §17). Hasta entonces el GDD manda y esto es una propuesta en su rama.</para>
     /// <para><see cref="Complete"/> deja el estado final en el mismo fotograma; si fue un salto, los restos (frutas, anillos,
     /// chorritos, tiras, capa del río y tropa) se funden en ≤ 100 ms en su sitio, sin moverse ni impactos tardíos.</para>
-    /// <para>Las dosis ocultas (Aguas turbias, aún sin mecánica en el cliente) se llenan de río como las demás, no reciben fruta
-    /// y pasan todas a la vez al pardo opaco #8A7B6A en el fotograma del primer impacto (el «?» queda preparado, 07 §4.3).</para>
+    /// <para>Las dosis ocultas (Aguas turbias) se llenan de río como las demás, no reciben fruta y pasan todas a la vez al pardo
+    /// opaco #8A7B6A con su «?» en el fotograma del primer impacto (07 §4.3; <see cref="Mechanics.MurkyMarks"/>). El Barro no es
+    /// una racha: tampoco recibe fruta ni florece, y aparece con <see cref="Palette.Mud"/> y sus grumos en ese mismo fotograma
+    /// (la regla de 02 §4.2 aplicada al Barro [P]).</para>
     /// <para>Con <see cref="ReduceMotion"/> (07 §7.8, cuando exista el ajuste): fundido de 250 ms al estado final y, en modo
     /// rama, un miquito quieto que se desvanece 600 ms después (guion §9; recomendación Q13 A, pendiente de D-010).</para>
     /// </remarks>
@@ -78,8 +80,8 @@ namespace AF.Presentation
         /// <summary>Los destellos de las tiras viajan a 350 dp/s (guion §11: 300-400 dp/s), en dp/ms.</summary>
         public const float FlowDpPerMs = 0.35f;
 
-        /// <summary>Pardo opaco de las dosis ocultas (07 §4.3).</summary>
-        public static readonly Color MurkyColor = new Color(0x8A / 255f, 0x7B / 255f, 0x6A / 255f, 1f);
+        /// <summary>Pardo opaco de las dosis ocultas (07 §4.3): alias de <see cref="Palette.Murky"/>.</summary>
+        public static readonly Color MurkyColor = Palette.Murky;
 
         /// <summary>Brillos aditivos a la vez como mucho en la intro (guion §13).</summary>
         public const int MaxAdditive = 8;
@@ -422,6 +424,9 @@ namespace AF.Presentation
                 {
                     views[i].SetDose(k, Color.clear, 0f, 0);
                 }
+
+                views[i].Murky.Clear(); // el «?» y los grumos aparecen en el primer impacto
+                views[i].Mud.Clear();
             }
 
             PlanDrops(water);
@@ -724,8 +729,9 @@ namespace AF.Presentation
 
                         bool hidden = final.IsHiddenAt(k);
                         int tint = final.ColorAt(k);
+                        bool inert = hidden || tint == Cuia.MudColor; // ocultas y Barro: sin tinte ni patrón
                         Color c = hidden ? MurkyColor : Palette.Tint(tint);
-                        v.SetDose(k, new Color(c.r, c.g, c.b, s), 1f, hidden ? 0 : tint);
+                        v.SetDose(k, new Color(c.r, c.g, c.b, s), 1f, inert ? 0 : tint);
                     }
                 }
 
@@ -752,10 +758,26 @@ namespace AF.Presentation
                     }
 
                     float fill = Mathf.Clamp01(level - k);
-                    if (_input.Hidden[(i * IntroInput.MaxDoses) + k])
+                    if (_input.IsInert(i, k))
                     {
+                        // Ocultas y Barro: agua del río hasta el primer impacto y, desde ese fotograma, su pardo con su marca.
+                        bool hidden = _input.Hidden[(i * IntroInput.MaxDoses) + k];
                         bool shown = p.FirstImpactMs >= 0f && t >= p.FirstImpactMs;
-                        v.SetDose(k, shown ? MurkyColor : _waterA, shown ? 1f : fill, 0);
+                        if (shown && hidden)
+                        {
+                            v.PaintHiddenDose(k);
+                        }
+                        else if (shown)
+                        {
+                            v.PaintMudDose(k);
+                        }
+                        else
+                        {
+                            v.SetDose(k, _waterA, fill, 0);
+                            v.Murky.HideMark(k);
+                            v.Mud.HideMark(k);
+                        }
+
                         continue;
                     }
 

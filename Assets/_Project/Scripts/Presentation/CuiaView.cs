@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using AF.Core.Board;
+using AF.Presentation.Mechanics;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -12,6 +13,8 @@ namespace AF.Presentation
     /// de la ranura × alto de la cuia + 32 dp) y sombra de contacto sobre la repisa, y un cuerpo móvil con vidrio trasero y
     /// cavidad opaca, líquido (<see cref="LiquidGraphic"/>, shader <c>AF/UI/Liquid</c>), vidrio frontal, tapa de calabaza,
     /// aro de luz y destello. La vista nunca decide reglas: muestra lo que le dice el modelo o la cola de animación (02 §3.2).
+    /// Las dosis ocultas (Aguas turbias) y el Barro los pintan <see cref="MurkyMarks"/> y <see cref="MudMarks"/>, que cuelgan
+    /// del cuerpo encima del líquido.
     /// </summary>
     /// <remarks>
     /// <para>Input (02 §3.1): el touch-down solo avisa (la elevación empieza ya, 0 ms de latencia percibida) y la
@@ -79,6 +82,10 @@ namespace AF.Presentation
         private bool _glassBoost;
         private bool _bodyInFront;
         private int _bodySibling;
+        private MurkyMarks _murky = null!;
+        private MudMarks _mud = null!;
+        private Cuia _shownCuia;
+        private bool _inFlight;
 
         private float _u = 24f;
         private float _liftMs = 120f;
@@ -112,6 +119,18 @@ namespace AF.Presentation
 
         /// <summary>Líquido de la cuia (shader <c>AF/UI/Liquid</c>).</summary>
         public LiquidGraphic Liquid => _liquid;
+
+        /// <summary>Marcas de Aguas turbias: el pardo opaco y el «?» de cada dosis oculta (07 §4.3).</summary>
+        public MurkyMarks Murky => _murky;
+
+        /// <summary>Marcas del Barro: el pardo de várzea y sus grumos (02 §9.1 M5).</summary>
+        public MudMarks Mud => _mud;
+
+        /// <summary>Último estado pintado con <see cref="ShowContent"/> (<c>default</c> antes del primero).</summary>
+        public Cuia ShownCuia => _shownCuia;
+
+        /// <summary>El cuerpo está en vuelo (en la capa de vertido): las marcas de las bandas se ocultan.</summary>
+        public bool InFlight => _inFlight;
 
         /// <summary>Pie de la cuia en reposo, en coordenadas del contenedor del tablero.</summary>
         public Vector2 FootPosition => _root.anchoredPosition;
@@ -174,6 +193,8 @@ namespace AF.Presentation
             _root.sizeDelta = new Vector2(slotWidth, h + TouchHeadroomDp);
             _body.sizeDelta = new Vector2(cuiaWidth, h);
             _liquid.SetUnit(_u);
+            _murky.Layout(_u);
+            _mud.Layout(_u);
 
             // Vidrio horneado a la densidad real de la pantalla (guía 4.1: ceil(u_dp × escala) px/u).
             int ppu = _art.CuiaPixelsPerUFor(_u);
@@ -203,24 +224,67 @@ namespace AF.Presentation
             _liftMs = Mathf.Max(1f, ms);
         }
 
-        /// <summary>Muestra el contenido final de <paramref name="cuia"/> (sin animación).</summary>
+        /// <summary>
+        /// Muestra el contenido final de <paramref name="cuia"/> (sin animación). Una dosis oculta nunca enseña su tinte: la
+        /// pinta <see cref="MurkyMarks.PaintHidden"/> (07 §4.3); el Barro, <see cref="MudMarks.PaintMud"/>. Mientras una marca
+        /// anima, se pinta el líquido pero no se llama a su <c>Show</c> (el final del paso cierra).
+        /// </summary>
         public void ShowContent(Cuia cuia, bool sealedNow)
         {
+            _shownCuia = cuia;
             int count = cuia.Count;
             for (int k = 0; k < Capacity; k++)
             {
-                if (k < count)
+                if (k >= count)
                 {
-                    int tint = cuia.ColorAt(k);
-                    SetDose(k, Palette.Tint(tint), 1f, tint);
+                    SetDose(k, Color.clear, 0f, 0);
+                }
+                else if (cuia.IsHiddenAt(k))
+                {
+                    PaintHiddenDose(k);
                 }
                 else
                 {
-                    SetDose(k, Color.clear, 0f, 0);
+                    int tint = cuia.ColorAt(k);
+                    if (tint == Cuia.MudColor)
+                    {
+                        PaintMudDose(k);
+                    }
+                    else
+                    {
+                        SetDose(k, Palette.Tint(tint), 1f, tint);
+                    }
                 }
             }
 
             SetSealed(sealedNow);
+            if (!_murky.IsAnimating)
+            {
+                _murky.Show(cuia);
+            }
+
+            if (!_mud.IsAnimating)
+            {
+                _mud.Show(cuia);
+            }
+        }
+
+        /// <summary>Pinta la dosis <paramref name="k"/> como oculta (pardo opaco y «?»; la intro en el primer impacto).</summary>
+        internal void PaintHiddenDose(int k)
+        {
+            if ((uint)k < (uint)Capacity)
+            {
+                TrackDose(k, _murky.PaintHidden(_liquid, k), 1f, 0);
+            }
+        }
+
+        /// <summary>Pinta la dosis <paramref name="k"/> como Barro (pardo de várzea y grumos; la intro en el primer impacto).</summary>
+        internal void PaintMudDose(int k)
+        {
+            if ((uint)k < (uint)Capacity)
+            {
+                TrackDose(k, _mud.PaintMud(_liquid, k), 1f, 0);
+            }
         }
 
         /// <summary>Fija el color, el relleno (0..1 de la dosis) y el tinte (0 = agua base) de la dosis <paramref name="k"/>.</summary>
@@ -231,10 +295,16 @@ namespace AF.Presentation
                 return;
             }
 
+            TrackDose(k, color, fill, tint);
+            _liquid.SetDose(k, color, _doseFill[k], tint);
+        }
+
+        // Lleva la cuenta de lo que se ve en la dosis k (DoseColor y LiquidLevel), lo pinte la vista o una marca.
+        private void TrackDose(int k, Color color, float fill, int tint)
+        {
             _doseColor[k] = color;
             _doseFill[k] = Mathf.Clamp01(fill);
             _doseTint[k] = tint;
-            _liquid.SetDose(k, color, _doseFill[k], tint);
         }
 
         /// <summary>Color actual de la dosis <paramref name="k"/>.</summary>
@@ -406,6 +476,7 @@ namespace AF.Presentation
             _body.anchorMax = new Vector2(0f, 1f);
             _body.SetAsLastSibling();
             _body.anchoredPosition = _root.anchoredPosition + BodyOffsetOrZero();
+            SetInFlight(true);
         }
 
         /// <summary>Devuelve el cuerpo visual a su ranura (mismo índice de hermano), en la misma posición de pantalla.</summary>
@@ -422,6 +493,15 @@ namespace AF.Presentation
             _body.anchorMin = new Vector2(0.5f, 0f);
             _body.anchorMax = new Vector2(0.5f, 0f);
             _body.anchoredPosition = BodyOffsetOrZero();
+            SetInFlight(false);
+        }
+
+        // En vuelo, las marcas de las bandas se ocultan: las bandas del líquido no giran con el vaso (guía 6.4).
+        private void SetInFlight(bool inFlight)
+        {
+            _inFlight = inFlight;
+            _murky.SetInFlight(inFlight);
+            _mud.SetInFlight(inFlight);
         }
 
         /// <summary>Devuelve el cuerpo a su ranura y libera el control (la elevación arranca desde 0).</summary>
@@ -583,6 +663,8 @@ namespace AF.Presentation
             }
 
             _liquid.TickRipple(dtMs);
+            _murky.Tick(dtMs);
+            _mud.Tick(dtMs);
         }
 
         /// <inheritdoc />
@@ -777,6 +859,10 @@ namespace AF.Presentation
             _doseColor = new Color[capacity];
             _doseFill = new float[capacity];
             _doseTint = new int[capacity];
+
+            // Marcas de las bandas, encima del líquido y debajo del vidrio frontal: el Barro y, sobre él, los «?».
+            _mud = new MudMarks(_body, capacity, art);
+            _murky = new MurkyMarks(_body, capacity, art);
 
             _front = NewImage("GlassFront", _body, art.CuiaFront(capacity, _glassPpu), Color.white);
             Stretch(_front.rectTransform);

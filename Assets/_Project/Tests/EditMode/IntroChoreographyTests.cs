@@ -213,6 +213,39 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Barro_IsNotARun() // 02 §9.1 M5 y §4.2 aplicada al Barro [P]
+        {
+            var a = new IntroChoreography();
+            var b = new IntroChoreography();
+            IntroInput inA = Input(3, 780f, 1400f, IntroPerch.Branch);
+            IntroInput inB = Input(3, 780f, 1400f, IntroPerch.Branch);
+            // En A la dosis 1 de la cuia 0 es Barro; en B está oculta (con otro color real): se planifican igual.
+            inA.SetCuia(0, inA.CenterX[0], inA.FootY[0], 0, new[] { 8, AF.Core.Board.Cuia.MudColor, 8, 4 });
+            inB.SetCuia(0, inB.CenterX[0], inB.FootY[0], 0, new[] { 8, 13, 8, 4 }, 0b0010);
+            a.Plan(inA);
+            b.Plan(inB);
+            Assert.That(inA.IsInert(0, 1), Is.True);
+            Assert.That(a.RunOf(0, 1), Is.EqualTo(-1), "el Barro no forma racha");
+            Assert.That(a.RunOf(0, 0), Is.Not.EqualTo(a.RunOf(0, 2)), "el Barro corta la racha de açaí");
+            for (int r = 0; r < a.RunCount; r++)
+            {
+                Assert.That(a.RunTint[r], Is.Not.EqualTo(AF.Core.Board.Cuia.MudColor), "ninguna racha de Barro");
+            }
+
+            for (int k = 0; k < a.FruitCount; k++)
+            {
+                Assert.That(a.FruitTint[k], Is.Not.EqualTo(AF.Core.Board.Cuia.MudColor), "ninguna fruta para el Barro");
+                for (int r = a.FruitRunFirst[k]; r <= a.FruitRunLast[k]; r++)
+                {
+                    Assert.That(a.RunCuia[r] == 0 && a.RunFrom[r] <= 1 && a.RunTo[r] >= 1, Is.False, "ninguna fruta tiñe el Barro");
+                }
+            }
+
+            AssertSamePlan(a, b);
+            Assert.That(a.FirstImpactMs, Is.GreaterThan(0f), "el Barro aparece en el primer impacto, como las ocultas");
+        }
+
+        [Test]
         public void SameLevel_SamePlan_ByteForByte([Values(3, 7, 16)] int cuias, [Values(IntroPerch.Canopy, IntroPerch.Branch)] IntroPerch perch)
         {
             var a = new IntroChoreography();

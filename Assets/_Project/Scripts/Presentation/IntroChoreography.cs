@@ -149,7 +149,17 @@ namespace AF.Presentation
             Array.Clear(Hidden, 0, Hidden.Length);
         }
 
-        /// <summary>Fija la cuia <paramref name="i"/> a partir del modelo (tintes, dosis y ocultas).</summary>
+        /// <summary>
+        /// La dosis <paramref name="k"/> de la cuia <paramref name="i"/> no forma racha ni recibe fruta: está oculta (Aguas
+        /// turbias, guion §10) o es Barro (color 15, 02 §9.1 M5: inerte, la regla de 02 §4.2 aplicada al Barro [P]).
+        /// </summary>
+        public bool IsInert(int i, int k)
+        {
+            int index = (i * MaxDoses) + k;
+            return Hidden[index] || Tints[index] == Cuia.MudColor;
+        }
+
+        /// <summary>Fija la cuia <paramref name="i"/> a partir del modelo (tintes, dosis y ocultas; el Barro va como tinte 15).</summary>
         public void SetCuia(int i, float centerX, float footY, int row, Cuia cuia)
         {
             CenterX[i] = centerX;
@@ -206,7 +216,8 @@ namespace AF.Presentation
     /// Sin tope de 3 ciclos de suelta por miquito (guion §7.3): ese tope suponía un miquito por columna; aquí cada miquito
     /// atiende un grupo contiguo y el calendario ya separa sus sueltas (llegada + 50 ms, gesto de 40 ms entre ciclos y como
     /// mucho 2 frutas por ciclo sin moverse), así que cortar en el tercer ciclo solo pasaría frutas al dosel en mitad de la
-    /// tropa.
+    /// tropa. El Barro (color 15) se trata como una dosis oculta: no es una racha, no recibe fruta y corta las rachas
+    /// (<see cref="IntroInput.IsInert"/>).
     /// </remarks>
     public sealed class IntroChoreography
     {
@@ -942,15 +953,15 @@ namespace AF.Presentation
                 int k = 0;
                 while (k < doses)
                 {
-                    if (input.Hidden[(i * D) + k])
+                    if (input.IsInert(i, k))
                     {
-                        k++; // las ocultas no forman racha ni reciben fruta (guion §10)
+                        k++; // las ocultas (guion §10) y el Barro no forman racha ni reciben fruta
                         continue;
                     }
 
                     int tint = input.Tints[(i * D) + k];
                     int from = k;
-                    while (k + 1 < doses && !input.Hidden[(i * D) + k + 1] && input.Tints[(i * D) + k + 1] == tint)
+                    while (k + 1 < doses && !input.IsInert(i, k + 1) && input.Tints[(i * D) + k + 1] == tint)
                     {
                         k++;
                     }

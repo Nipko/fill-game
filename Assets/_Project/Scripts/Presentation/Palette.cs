@@ -1,4 +1,5 @@
 #nullable enable
+using AF.Core.Board;
 using UnityEngine;
 
 namespace AF.Presentation
@@ -37,6 +38,19 @@ namespace AF.Presentation
 
         /// <summary>Agua base clara #2E8B8B (07 §2.1).</summary>
         public static readonly Color WaterClear = Hex(0x2E8B8B);
+
+        /// <summary>
+        /// Agua parda opaca de las dosis ocultas de Aguas turbias, #8A7B6A (07 §4.3; 08 §5.2 <c>_MurkyColor</c>). Una dosis
+        /// oculta nunca enseña su tinte real.
+        /// </summary>
+        public static readonly Color Murky = Hex(0x8A7B6A);
+
+        /// <summary>
+        /// Barro (color 15 del motor; 02 §9.1 M5): pardo oliva de várzea #5F563A [P, hasta el arte final]. ΔE00 ≥ 17 frente a
+        /// los 14 tintes (el más cercano, Cacao) y ≥ 16 frente a <see cref="Murky"/> y a las tres aguas base (02 §4.2;
+        /// direccion-visual-v2 §2.4, regla 1). Lo comprueba <c>MurkyMudContentTests</c>.
+        /// </summary>
+        public static readonly Color Mud = Hex(0x5F563A);
 
         /// <summary>Tapa de calabaza, madera clara #C9A36B (07 §4.4).</summary>
         public static readonly Color CapWood = Hex(0xC9A36B);
@@ -323,9 +337,17 @@ namespace AF.Presentation
             return mark;
         }
 
-        /// <summary>Color del tinte con índice de motor <paramref name="tint"/> (1-14).</summary>
+        /// <summary>
+        /// Color del tinte con índice de motor <paramref name="tint"/> (1-14), o <see cref="Mud"/> para el Barro (15). Fuera de
+        /// rango, magenta (error visible).
+        /// </summary>
         public static Color Tint(int tint)
         {
+            if (tint == Cuia.MudColor)
+            {
+                return Mud;
+            }
+
             if (tint < 1 || tint >= Tints.Length)
             {
                 return Color.magenta;
