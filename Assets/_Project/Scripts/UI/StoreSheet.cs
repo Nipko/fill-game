@@ -94,7 +94,7 @@ namespace AF.UI
             _panel = ModalKit.Card("Panel", _canvas.Root, art, out _surface);
             ModalKit.Header(_panel, art, SimulatedPurchase.Label, out _header);
             _name = ModalKit.Line("Name", _panel, string.Empty, 18f, Palette.FamilyWood.Base);
-            _price = ModalKit.Line("Price", _panel, string.Empty, 26f, Palette.Ink, TextStyle.ModalTitle);
+            _price = ModalKit.Line("Price", _panel, string.Empty, 28f, Palette.Ink, TextStyle.PlainBold);
             _price.color = Palette.FamilyWood.Deep;
             _buy = ModalKit.Cta("BuyButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, UiText.Buy, 22f, () => Close(true), out _);
             _cancel = ModalKit.Link("CancelButton", _panel, UiText.Cancel, () => Close(false), out _);
@@ -102,6 +102,9 @@ namespace AF.UI
         }
 
         public bool Visible => _canvas.Canvas.gameObject.activeSelf;
+
+        /// <summary>Lienzo propio (capturas de prueba).</summary>
+        public Canvas Canvas => _canvas.Canvas;
 
         public string ProductText => _name.text;
 

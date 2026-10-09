@@ -11,9 +11,11 @@ namespace AF.GameFlow
 {
     /// <summary>
     /// Máquina de estados de la pantalla de nivel (GDD 02 §2): LOADING → INTRO → PLAYING → CELEBRATION → VICTORY_SCREEN y
-    /// PLAYING → STUCK_MODAL, con Marea (04 §2.1), Volver a la orilla (04 §2.7), la bandeja de comodines (B2-1) y el
-    /// embudo de bloqueo de D-008 (B2-2 y B2-3, en <c>LevelFlow.Funnel.cs</c>). Sin motor: el tiempo entra por
-    /// <see cref="Tick"/> y la vista solo informa si su cola de animación está vacía.
+    /// PLAYING → STUCK_MODAL, con Marea (04 §2.1), Volver a la orilla (04 §2.7), la bandeja de comodines (B2-1), el
+    /// embudo de bloqueo de D-008 (B2-2 y B2-3, en <c>LevelFlow.Funnel.cs</c>), la victoria con la Cosecha y AD_GATE (B2-4,
+    /// en <c>LevelFlow.Victory.cs</c>) y el nivel en curso guardado tras cada vertido y reabierto al volver a la app (B2-5,
+    /// en <c>LevelFlow.Resume.cs</c>). Sin motor: el tiempo entra por <see cref="Tick"/> y la vista solo informa si su cola
+    /// de animación está vacía.
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
@@ -213,6 +215,8 @@ namespace AF.GameFlow
             Phase = FlowPhase.Loading;
             _level = def;
             _levelNumber = number;
+            _seed = LevelStateSnapshot.SeedOf(def);
+            ResetHarvest();
             _attempt.Enter(number);
             _undo.ResetForLevel(number);
             ResetStuck();
@@ -227,6 +231,7 @@ namespace AF.GameFlow
             }
 
             StartIntro(GameConfig.TintDurationMs(number), false);
+            PersistState();
         }
 
         /// <summary>
@@ -314,6 +319,7 @@ namespace AF.GameFlow
             if (result.Kind == TapKind.Poured)
             {
                 EvaluateStatus();
+                PersistState(); // 02 R8: el nivel en curso se guarda tras cada vertido (no tras la victoria, que lo borra)
             }
 
             return result;
@@ -395,6 +401,7 @@ namespace AF.GameFlow
             Phase = FlowPhase.Playing;
             _listener.OnUndo(undone, fromModal);
             EvaluateStatus();
+            PersistState();
             return true;
         }
 
@@ -436,8 +443,8 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// Siguiente (VICTORY_SCREEN → LOADING(N+1)) si el catálogo tiene N + 1; si no (fin del contenido), devuelve false y no
-        /// cambia nada. En el juego la navegación (con «El río sigue creciendo» y Sin canoas) la lleva
+        /// Siguiente (VICTORY_SCREEN → LOADING(N+1)) si el catálogo tiene N + 1, sin AD_GATE; si no (fin del contenido),
+        /// devuelve false y no cambia nada. En el juego la navegación (AD_GATE, «El río sigue creciendo» y Sin canoas) la lleva
         /// <see cref="AppFlow.PressNext"/>.
         /// </summary>
         public bool Next()
@@ -481,11 +488,13 @@ namespace AF.GameFlow
                 int banner = Math.Max(0, _boosters.AnimRiverLoweredBannerMs);
                 _listener.OnRiverLowered(def.Relief[relief].Type, banner);
                 StartIntro(banner + GameConfig.AnimTintDurationMsLate, true);
+                PersistState();
                 return;
             }
 
             _session!.Restart();
             StartIntro(GameConfig.AnimTintDurationMsLate, true);
+            PersistState();
         }
 
         private void StartIntro(int durationMs, bool isShort)
@@ -515,9 +524,7 @@ namespace AF.GameFlow
             {
                 case LevelStatus.Won:
                     BeginPending(Outcome.Win);
-                    _attempt.Won();
-                    _progress.SaveWin(LevelNumber, LevelNumber + 1);
-                    _listener.OnWin();
+                    ResolveWin();
                     break;
 
                 case LevelStatus.Stuck:

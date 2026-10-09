@@ -115,6 +115,50 @@ namespace AF.Tests.EditMode
             Assert.That(LaunchOptions.ResolveLevelOffset(), Is.EqualTo(0));
         }
 
+        [TestCase("fill", AF.Ads.FakeAdFill.Fill, true)]
+        [TestCase("no_fill", AF.Ads.FakeAdFill.NoFill, true)]
+        [TestCase("error", AF.Ads.FakeAdFill.Error, true)]
+        [TestCase("NoFill", AF.Ads.FakeAdFill.Fill, false)]
+        [TestCase(null, AF.Ads.FakeAdFill.Fill, false)]
+        public void AdsFill_ParsesTheDevExtra(string? value, AF.Ads.FakeAdFill expected, bool known)
+        {
+            // af_ads_fill [P] (B2-6): solo builds de desarrollo; fuera de Android y sin gancho, fill.
+            Assert.That(LaunchOptions.TryParseAdFill(value, out AF.Ads.FakeAdFill fill), Is.EqualTo(known));
+            Assert.That(fill, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void AdsFill_TakesTheTestHook_OrFill()
+        {
+            Assert.That(LaunchOptions.ResolveAdFill(), Is.EqualTo(AF.Ads.FakeAdFill.Fill));
+            Assert.That(LaunchOptions.ReadIntentString(LaunchOptions.IntentExtraAdsFill), Is.Null);
+            LaunchOptions.AdFillOverride = AF.Ads.FakeAdFill.NoFill;
+            Assert.That(LaunchOptions.ResolveAdFill(), Is.EqualTo(AF.Ads.FakeAdFill.NoFill));
+        }
+
+        [Test]
+        public void DevWallet_SetsSeedsAndCanoes_WithTheCanoeClockRunning()
+        {
+            // af_seeds y af_canoes [P] (B2-6): fuera de Android no hay extras y nada cambia.
+            var economy = new EconomyFixture(seeds: 10);
+            Assert.That(LaunchOptions.ReadIntentInt(LaunchOptions.IntentExtraSeeds, -1), Is.EqualTo(-1));
+            Assert.That(LaunchOptions.ApplyDevWallet(economy.Profile, economy.Clock), Is.False);
+            Assert.That(economy.Profile.Wallet.Seeds, Is.EqualTo(10));
+
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[AF\.LaunchOptions\] perfil de desarrollo"));
+            Assert.That(LaunchOptions.ApplyDevWallet(economy.Profile, economy.Clock, 1000, 1, AF.Economy.EconomyConfig.Defaults), Is.True);
+            Assert.That(economy.Profile.Wallet.Seeds, Is.EqualTo(1000));
+            Assert.That(economy.Profile.Wallet.Canoes.Count, Is.EqualTo(1));
+            Assert.That(economy.Profile.Wallet.Canoes.NextRegenAt, Is.EqualTo(EconomyFixture.T0 + System.TimeSpan.FromMinutes(25)), "canoes_regen_min");
+            Assert.That(economy.Wallet.Canoes.Count, Is.EqualTo(1));
+
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[AF\.LaunchOptions\] perfil de desarrollo"));
+            Assert.That(LaunchOptions.ApplyDevWallet(economy.Profile, economy.Clock, -1, 9, AF.Economy.EconomyConfig.Defaults), Is.True);
+            Assert.That(economy.Profile.Wallet.Canoes.Count, Is.EqualTo(5), "como mucho canoes_max");
+            Assert.That(economy.Profile.Wallet.Canoes.NextRegenAt, Is.Null);
+            Assert.That(economy.Profile.Wallet.Seeds, Is.EqualTo(1000), "−1 no toca las semillas");
+        }
+
         [Test]
         public void Reset_ClearsTheProfileClockAndOffsetHooks()
         {

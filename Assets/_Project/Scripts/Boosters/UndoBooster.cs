@@ -83,6 +83,15 @@ namespace AF.Boosters
             FreeLeft = Unlimited ? 0 : _config.UndoFreePerLevel;
         }
 
+        /// <summary>
+        /// Al reabrir el nivel guardado (<c>level_state.undo_free</c>; 02 §14; tarea B2-5): el cupo gratis que quedaba, entre 0 y
+        /// <c>undo_free_per_level</c>. En 1-10 no hay cupo que restaurar.
+        /// </summary>
+        public void RestoreFreeLeft(int freeLeft)
+        {
+            FreeLeft = Unlimited ? 0 : Math.Max(0, Math.Min(freeLeft, _config.UndoFreePerLevel));
+        }
+
         /// <summary>Estado del botón con <paramref name="stock"/> Mareas en el stock.</summary>
         public UndoStatus Status(int stock)
         {

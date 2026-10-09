@@ -205,6 +205,27 @@ namespace AF.UI
         /// <summary>Cancelar la compra simulada.</summary>
         public const string Cancel = "Cancelar";
 
+        /// <summary><c>harvest</c>: fila de la pantalla de victoria con las semillas del nivel (02 §6; glosario §5.1).</summary>
+        public const string Harvest = "Cosecha";
+
+        /// <summary><c>double_harvest</c>: botón de la Cosecha doble (D-008 punto 3; 02 §6; glosario: Cosecha doble, x2).</summary>
+        public const string DoubleHarvest = "Cosecha doble: x2 por video";
+
+        /// <summary>Lo que gana la Cosecha doble (02 §6: «+20 → +40»).</summary>
+        public const string DoubleHarvestDelta = "+{0} → +{1}";
+
+        /// <summary>Formato del anuncio simulado en su pantalla (D-008 punto 4).</summary>
+        public const string SimulatedAdInterstitial = "intersticial";
+
+        /// <summary>Formato del anuncio simulado recompensado.</summary>
+        public const string SimulatedAdRewarded = "recompensado";
+
+        /// <summary>«+20 → +40» para una Cosecha de <paramref name="seeds"/>.</summary>
+        public static string DoubleHarvestGain(int seeds)
+        {
+            return string.Format(CultureInfo.InvariantCulture, DoubleHarvestDelta, Grouped(seeds), Grouped(seeds * 2));
+        }
+
         /// <summary>"Nivel {n}".</summary>
         public static string Level(int level)
         {

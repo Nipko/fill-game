@@ -10,7 +10,8 @@ namespace AF.UI
 {
     /// <summary>
     /// Pantalla «Anuncio simulado» (D-008 punto 4; tarea B1-3, que la pide a la UI, y B2-4, dueña de su forma final): a
-    /// pantalla completa por encima de todo, con el rótulo, la ubicación (p. ej. <c>rv_extra_canoe</c>) y la cuenta atrás;
+    /// pantalla completa y opaca por encima de todo (como los anuncios de Magic Sort, ficha §6.2, sin imitar a ningún
+    /// anunciante), con el rótulo, la ubicación y el tipo (p. ej. <c>rv_extra_canoe · recompensado</c>) y la cuenta atrás;
     /// «Cerrar» se habilita a los 5 s en el intersticial (05 §6.1) y al terminar en el recompensado (3 s [P]), que entonces da
     /// su premio. Sin red ni SDK. La adelantan los recompensados de B2-1 y B2-3 (Marea +3 y Canoa extra), que la necesitan.
     /// Implementa <see cref="ISimulatedAdPresenter"/>: llama una sola vez al cierre.
@@ -31,7 +32,7 @@ namespace AF.UI
         public AdOverlay(Transform host, ProceduralArt art)
         {
             _canvas = new OverlayCanvas("AdOverlayCanvas", host, 60);
-            Image back = UiBuilder.Image("Back", _canvas.Root, null, new Color(0.02f, 0.03f, 0.03f, 0.96f), true);
+            Image back = UiBuilder.Image("Back", _canvas.Root, null, new Color(0.02f, 0.03f, 0.03f, 1f), true); // opaco, como un anuncio real a pantalla completa (ficha §6.2)
             UiBuilder.Stretch(back.rectTransform);
             _title = UiBuilder.Label("Title", _canvas.Root, TextStyle.ModalTitle, SimulatedAd.Label, 28f, Palette.Cream, TextAlignmentOptions.Center);
             _placement = UiBuilder.Label("Placement", _canvas.Root, TextStyle.PlainBold, string.Empty, 16f, Palette.Cream, TextAlignmentOptions.Center);
@@ -41,6 +42,9 @@ namespace AF.UI
         }
 
         public bool Visible => _canvas.Canvas.gameObject.activeSelf;
+
+        /// <summary>Lienzo propio (capturas de prueba).</summary>
+        public Canvas Canvas => _canvas.Canvas;
 
         public string PlacementText => _placement.text;
 
@@ -55,7 +59,7 @@ namespace AF.UI
             _secondsShown = -1;
             _canvas.Canvas.gameObject.SetActive(true);
             _canvas.Measure();
-            _placement.text = ad.Placement.ToId() + (ad.Format == AdFormat.Rewarded ? " · recompensado" : " · intersticial");
+            _placement.text = ad.Placement.ToId() + " · " + (ad.Format == AdFormat.Rewarded ? UiText.SimulatedAdRewarded : UiText.SimulatedAdInterstitial);
             float w = _canvas.Width;
             float h = _canvas.Height;
             UiBuilder.Place(_title.rectTransform, 16f, (h * 0.30f) - 20f, w - 32f, 40f);

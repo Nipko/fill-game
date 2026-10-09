@@ -414,6 +414,98 @@ namespace AF.Tests.PlayMode
             Assert.That(File.Exists(Path.Combine(dir, "16_quit_confirm.png")), Is.True);
         }
 
+        /// <summary>
+        /// Victoria con la cadena corta y anuncios y compras simulados de D-008 (tarea B2-4), para compararlos con Magic Sort
+        /// (ficha §4.6 y §4.8, victoria con «Rewards:» y «Continue», <c>Logs/device/magicsort/analisis/ov/</c>; §6.2, anuncios
+        /// a pantalla completa con «Close»; §5.4, tienda): <c>17_victory_l11</c> (Cosecha +20 con la Cosecha doble «+20 → +40»),
+        /// <c>17b_ad_rewarded</c> (el video de la Cosecha doble con su cuenta atrás), <c>17c_victory_l11_doubled</c> (+40),
+        /// <c>18_ad_interstitial</c> (el intersticial tras «Siguiente» en el 24, 3.ª victoria en 22-60, desde la 2.ª sesión) y
+        /// <c>19_store_sheet</c> («Compra simulada» de Canoas infinitas 1 h desde Sin canoas, con el precio en COP).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CaptureVictoryAndAds()
+        {
+            string dir = Prepare();
+            FunnelSetup.Hooks();
+            LaunchOptions.AdPresenterOverride = null; // pantallas de verdad: AdOverlay y StoreSheet
+            LaunchOptions.PurchasePresenterOverride = null;
+
+            // 17: victoria del nivel 11 (tablero 1 con af_level_offset = 10) con 1.240 semillas.
+            LaunchOptions.LevelOffsetOverride = 10;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(1240));
+            yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Attach(boot);
+            yield return WinRealTime(boot);
+            yield return Wait(1.2f); // panel arriba (250 ms) y la Cosecha ya contada (250 + 400 ms)
+            Save(dir, "17_victory_l11");
+
+            // 17b: el video de la Cosecha doble (recompensado de 3 s [P]) y 17c: la Cosecha ya doblada.
+            AttachOverlay(boot.AdOverlayView!.Canvas);
+            boot.View!.DoubleHarvestButton.onClick.Invoke();
+            yield return Wait(1.0f);
+            Save(dir, "17b_ad_rewarded");
+            yield return Wait(2.2f);
+            boot.AdOverlayView.CloseButton.onClick.Invoke();
+            yield return Wait(0.8f);
+            Save(dir, "17c_victory_l11_doubled");
+
+            // 18: tercera victoria en 22-60 desde la 2.ª sesión: el intersticial tras «Siguiente» (tablero 3 como nivel 24).
+            LaunchOptions.LevelOffsetOverride = 21;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(1240, levelsSinceInterstitial: 2));
+            yield return PlayModeHelpers.LoadGame(24, new MemoryProgressStore(24, 23));
+            boot = GameBootstrap.Current!;
+            Attach(boot);
+            AttachOverlay(boot.AdOverlayView!.Canvas);
+            FunnelSetup.Clock.Advance(System.TimeSpan.FromSeconds(200));
+            yield return WinRealTime(boot);
+            yield return Wait(1.0f);
+            boot.View!.NextButton.onClick.Invoke();
+            yield return Wait(1.0f);
+            Save(dir, "18_ad_interstitial");
+            Assert.That(boot.AdOverlayView.Visible, Is.True, "intersticial simulado a pantalla completa");
+
+            // 19: Sin canoas en el 31 (tablero 6) con 1 canoa: rendirse, Reintentar y «Canoas infinitas 1 h» → Compra simulada.
+            LaunchOptions.LevelOffsetOverride = 25;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(140, canoes: 1));
+            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
+            boot = GameBootstrap.Current!;
+            Attach(boot);
+            AttachOverlay(boot.StoreSheetView!.Canvas);
+            yield return StuckRealTime(boot);
+            boot.PressGiveUp();
+            boot.ConfirmGiveUp();
+            boot.PressRetry();
+            yield return Wait(0.3f);
+            boot.View!.NoCanoes.InfiniteButton.onClick.Invoke();
+            yield return Wait(0.3f);
+            Save(dir, "19_store_sheet");
+            Assert.That(boot.StoreSheetView.Visible, Is.True);
+            Assert.That(File.Exists(Path.Combine(dir, "19_store_sheet.png")), Is.True);
+        }
+
+        // Victoria con la solución del solver, en tiempo real.
+        private static IEnumerator WinRealTime(GameBootstrap boot)
+        {
+            boot.TapAnywhere();
+            LevelFlow flow = boot.Flow!;
+            SolveResult solution = new AStarSolver().Solve(flow.Session.Current, SolverOptions.ForPipeline(flow.Session.PourMode));
+            for (int i = 0; i < solution.MoveCount; i++)
+            {
+                boot.TapCuia(solution.GetMove(i).Source);
+                boot.TapCuia(solution.GetMove(i).Target);
+            }
+
+            yield return PlayModeHelpers.WaitFor(() => flow.Phase == FlowPhase.VictoryScreen, "victoria");
+        }
+
+        private void AttachOverlay(Canvas canvas)
+        {
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = _camera;
+            canvas.planeDistance = 5f;
+        }
+
         private static IEnumerator LoadFunnel(int level, int seeds, int canoes)
         {
             LaunchOptions.LevelOffsetOverride = 25;

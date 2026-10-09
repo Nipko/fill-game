@@ -21,9 +21,11 @@ namespace AF.UI
     /// niveles (TextAsset) y arma el catálogo (tarea B1-5), carga el perfil local (<c>AF.Save</c>, migrando una vez el
     /// <c>af_v0_level</c> de v0), crea la cartera, los anuncios y la tienda simulados (<c>AF.Ads</c> y <c>AF.IAP</c>, sin SDK:
     /// D-008), genera los gráficos provisionales, construye las pantallas de inicio y de nivel, el <see cref="LevelFlow"/> y el
-    /// <see cref="AppFlow"/> y los hace avanzar cada fotograma. La primera vez entra directamente al nivel 1; después, a la
-    /// pantalla de inicio. Sus métodos públicos de input (<see cref="IGameActions"/>) son los mismos que llaman los toques y
-    /// los tests PlayMode.
+    /// <see cref="AppFlow"/> y los hace avanzar cada fotograma. La primera vez entra directamente al nivel 1; con un nivel en
+    /// curso guardado (<c>level_state</c>, tarea B2-5), lo reabre tal cual; si no, la pantalla de inicio. Conecta AD_GATE con
+    /// los anuncios simulados (<see cref="InterstitialGate"/>, tarea B2-4) y la sonda de desarrollo con cada anuncio y
+    /// compra. Sus métodos públicos de input (<see cref="IGameActions"/>) son los mismos que llaman los toques y los tests
+    /// PlayMode.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class GameBootstrap : MonoBehaviour, IAppFlowListener, IGameActions
@@ -195,6 +197,29 @@ namespace AF.UI
         public bool PressHome()
         {
             return _app != null && _app.PressHome();
+        }
+
+        /// <summary>
+        /// «Cosecha doble: x2 por video» (<c>rv_double_harvest</c>, desde el 11; 04 §2.8): al terminar el anuncio, otra Cosecha
+        /// igual con <c>Wallet.Apply</c>. False si no se ofrece o no hay video (sin fill el botón ni aparece).
+        /// </summary>
+        public bool PressDoubleHarvest()
+        {
+            LevelFlow? flow = _flow;
+            AdController? ads = _ads;
+            if (flow == null || ads == null || !InLevel || !flow.DoubleHarvestOffered || !ads.CheckRewarded(AdPlacement.DoubleHarvest).IsAllowed)
+            {
+                return false;
+            }
+
+            ads.ShowRewarded(AdPlacement.DoubleHarvest, r =>
+            {
+                if (r.IsRewarded)
+                {
+                    flow.ApplyDoubleHarvest();
+                }
+            });
+            return true;
         }
 
         /// <summary>«+1 cuia» de la bandeja (04 §2.2): del stock o por 150 semillas.</summary>
@@ -404,7 +429,7 @@ namespace AF.UI
             int level = _flow != null && _flow.HasLevel ? _flow.LevelNumber : (_app?.OverlayLevel ?? 0);
             store.Purchase(new PurchaseRequest(sku, context, level), r =>
             {
-                _probe?.Purchase(r);
+                _probe?.Purchase(r, _wallet);
                 onDone?.Invoke(r);
             });
             return true;
@@ -430,6 +455,11 @@ namespace AF.UI
             IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
             IProfileStore store = LaunchOptions.ProfileStoreOverride ?? new LocalProfileStore(Application.persistentDataPath);
             Profile profile = LoadProfile(store, clock, LaunchOptions.ProfileStoreOverride == null, out bool firstRun);
+            if (LaunchOptions.ApplyDevWallet(profile, clock))
+            {
+                store.TrySave(profile); // extras af_seeds y af_canoes de los builds de desarrollo [P] (B2-6)
+            }
+
             _profile = profile;
             _profileStore = store;
             _wallet = new Wallet(profile, store, clock);
@@ -440,9 +470,14 @@ namespace AF.UI
 
             // Anuncios y compras simulados (D-008 puntos 4 y 5; sin SDK, red ni identificadores): sus pantallas van en lienzos
             // propios por encima de todo; los tests las sustituyen por presentadores inmediatos (LaunchOptions).
-            ISimulatedAdPresenter adPresenter = LaunchOptions.AdPresenterOverride ?? (_adOverlay = new AdOverlay(transform, _art));
+            // Cada anuncio escribe su tipo y su ubicación en la sonda (AF_STATE ad y ad_closed, B2-4).
+            ISimulatedAdPresenter adPresenter = new ProbedAdPresenter(
+                LaunchOptions.AdPresenterOverride ?? (_adOverlay = new AdOverlay(transform, _art)),
+                _probe,
+                () => _flow != null && _flow.HasLevel && InLevel ? _flow.LevelNumber : (_app?.OverlayLevel ?? 0),
+                () => _wallet);
             ISimulatedPurchasePresenter purchasePresenter = LaunchOptions.PurchasePresenterOverride ?? (_storeSheet = new StoreSheet(transform, _art));
-            _ads = AdController.Create(new FakeAdService(adPresenter, LaunchOptions.AdFillOverride ?? FakeAdFill.Fill), profile, store, clock, firstRun);
+            _ads = AdController.Create(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()), profile, store, clock, firstRun);
             _storeLedger = new StoreLedger(profile, _wallet, store, clock);
             _store = new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency);
             _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3);
@@ -452,7 +487,11 @@ namespace AF.UI
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => { }, () => PressBack(), this);
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
-            _flow = new LevelFlow(catalog, progress, _screen, GameConfig.TapSwitchSelection, LaunchOptions.ResolvePourMode(), _wallet);
+            _flow = new LevelFlow(catalog, progress, _screen, GameConfig.TapSwitchSelection, LaunchOptions.ResolvePourMode(), _wallet)
+            {
+                AdGate = new InterstitialGate(_ads, _probe, _wallet), // AD_GATE tras «Siguiente» (B2-4)
+                StateStore = new ProfileLevelStateStore(profile, store), // nivel en curso tras cada vertido (B2-5)
+            };
             _screen.Bind(_flow, _services);
             _app = new AppFlow(_flow, progress, _wallet, this);
             _lobby.Bind(_app, _services);
@@ -469,7 +508,8 @@ namespace AF.UI
             }
             else
             {
-                _app.Start(firstRun);
+                // 02 §14: con un nivel en curso guardado se reabre tal cual (sin intro, con su modal), sin cobrar nada.
+                _app.Start(firstRun, profile.LevelState);
             }
 
             _skipNextDelta = true;
@@ -512,6 +552,7 @@ namespace AF.UI
                 _wallet?.Flush();
                 _ads?.Ledger.Flush();
                 _storeLedger?.Flush();
+                (_flow?.StateStore as ProfileLevelStateStore)?.Flush(); // 02 §14: el nivel en curso ya está en disco
                 return;
             }
 
@@ -620,6 +661,7 @@ namespace AF.UI
         private void OnDestroy()
         {
             _wallet?.Flush();
+            (_flow?.StateStore as ProfileLevelStateStore)?.Flush();
             if (Current == this)
             {
                 Current = null;

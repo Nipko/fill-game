@@ -16,9 +16,10 @@ namespace AF.UI
     /// <c>adb shell am start ... --ei af_level N</c>, docs/dev/prototipo-v0.md c; <c>af_rules_pour_mode</c>, modo de
     /// vertido, <c>--es af_rules_pour_mode single</c> para probar el modo de pruebas, D-005; y <c>af_level_offset</c> [P],
     /// <c>--ei af_level_offset 30</c>, que desplaza los números de nivel para probar las compuertas de 11, 22 y 31 con los
-    /// tableros del tutorial, tarea B1-5) y los ganchos de los tests PlayMode (nivel de arranque, modo de vertido, progreso,
-    /// perfil y reloj en memoria, desplazamiento y paquete de niveles). <see cref="GameBootstrap"/> los lee al arrancar; los
-    /// tests los quitan con <see cref="Reset"/>.
+    /// tableros del tutorial, tarea B1-5; y, para probar el embudo y los anuncios en el teléfono [P], tarea B2-6:
+    /// <c>af_seeds</c>, <c>af_canoes</c> y <c>af_ads_fill</c>) y los ganchos de los tests PlayMode (nivel de arranque, modo de
+    /// vertido, progreso, perfil y reloj en memoria, desplazamiento y paquete de niveles). <see cref="GameBootstrap"/> los lee
+    /// al arrancar; los tests los quitan con <see cref="Reset"/>.
     /// </summary>
     public static class LaunchOptions
     {
@@ -39,6 +40,24 @@ namespace AF.UI
         /// rescate). Escribe esos números en el perfil del dispositivo de pruebas. Nunca se lee en un build de release.
         /// </summary>
         public const string IntentExtraLevelOffset = "af_level_offset";
+
+        /// <summary>
+        /// Extra de intent (int) de los builds de desarrollo [P] (tarea B2-6): fija las semillas del perfil del dispositivo de
+        /// pruebas al arrancar (<c>--ei af_seeds 1000</c>). Nunca se lee en un build de release.
+        /// </summary>
+        public const string IntentExtraSeeds = "af_seeds";
+
+        /// <summary>
+        /// Extra de intent (int) de los builds de desarrollo [P] (tarea B2-6): fija las canoas del perfil (0 a
+        /// <c>canoes_max</c>; <c>--ei af_canoes 1</c>) para recorrer el embudo hasta Sin canoas. Nunca en release.
+        /// </summary>
+        public const string IntentExtraCanoes = "af_canoes";
+
+        /// <summary>
+        /// Extra de intent (string) de los builds de desarrollo [P] (tarea B2-6): qué hace el anuncio simulado,
+        /// <c>fill</c>, <c>no_fill</c> o <c>error</c> (<c>--es af_ads_fill no_fill</c>). Nunca en release.
+        /// </summary>
+        public const string IntentExtraAdsFill = "af_ads_fill";
 
         /// <summary>Nivel de arranque forzado por un test (0 = ninguno).</summary>
         public static int StartLevelOverride { get; set; }
@@ -119,6 +138,100 @@ namespace AF.UI
         }
 
         /// <summary>
+        /// Qué hace el anuncio simulado (tarea B2-6): el del test (<see cref="AdFillOverride"/>), si no el del extra
+        /// <c>af_ads_fill</c> (solo builds de desarrollo en Android) y, si no, <see cref="FakeAdFill.Fill"/>. Un valor
+        /// desconocido se trata como <c>fill</c> y se avisa en el log.
+        /// </summary>
+        public static FakeAdFill ResolveAdFill()
+        {
+            if (AdFillOverride.HasValue)
+            {
+                return AdFillOverride.Value;
+            }
+
+            string? value = ReadIntentString(IntentExtraAdsFill);
+            if (value == null)
+            {
+                return FakeAdFill.Fill;
+            }
+
+            if (!TryParseAdFill(value, out FakeAdFill fill))
+            {
+                Debug.LogWarning("[AF.LaunchOptions] " + IntentExtraAdsFill + " desconocido (\"" + value + "\"): se usa fill.");
+            }
+
+            return fill;
+        }
+
+        /// <summary>Convierte <c>fill</c>, <c>no_fill</c> o <c>error</c> (05 §6.2; modos de <see cref="FakeAdService"/>).</summary>
+        public static bool TryParseAdFill(string? value, out FakeAdFill fill)
+        {
+            switch (value)
+            {
+                case "fill":
+                    fill = FakeAdFill.Fill;
+                    return true;
+                case "no_fill":
+                    fill = FakeAdFill.NoFill;
+                    return true;
+                case "error":
+                    fill = FakeAdFill.Error;
+                    return true;
+                default:
+                    fill = FakeAdFill.Fill;
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Extras <c>af_seeds</c> y <c>af_canoes</c> de los builds de desarrollo [P] (tarea B2-6): los aplica al perfil antes de
+        /// crear la cartera. Devuelve si cambió algo (quien llama guarda el perfil). Fuera de un build de desarrollo en Android
+        /// no hace nada.
+        /// </summary>
+        public static bool ApplyDevWallet(Profile profile, IClock clock)
+        {
+            int seeds = ReadIntentInt(IntentExtraSeeds, -1);
+            int canoes = ReadIntentInt(IntentExtraCanoes, -1);
+            return ApplyDevWallet(profile, clock, seeds, canoes, AF.Economy.EconomyConfig.Defaults);
+        }
+
+        /// <summary>
+        /// Pone <paramref name="seeds"/> semillas y <paramref name="canoes"/> canoas (−1 = no tocar) en el perfil, con el
+        /// cronómetro de la próxima canoa en marcha si no están llenas (04 §7.1). Devuelve si cambió algo.
+        /// </summary>
+        public static bool ApplyDevWallet(Profile profile, IClock clock, int seeds, int canoes, AF.Economy.EconomyConfig config)
+        {
+            if (profile == null || clock == null || config == null)
+            {
+                throw new ArgumentNullException(profile == null ? nameof(profile) : clock == null ? nameof(clock) : nameof(config));
+            }
+
+            bool changed = false;
+            if (seeds >= 0)
+            {
+                profile.Wallet.Seeds = seeds;
+                changed = true;
+            }
+
+            if (canoes >= 0)
+            {
+                int count = Math.Min(canoes, config.CanoesMax);
+                CanoesData data = profile.Wallet.Canoes;
+                data.Count = count;
+                data.NextRegenAt = count < config.CanoesMax ? clock.UtcNow + TimeSpan.FromMinutes(config.CanoesRegenMin) : (DateTime?)null;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                profile.EconomyTs = clock.UtcNow;
+                Debug.LogWarning("[AF.LaunchOptions] perfil de desarrollo: " + IntentExtraSeeds + " = " + seeds + ", " + IntentExtraCanoes + " = " + canoes + " (−1 = sin cambio).");
+            }
+
+            return changed;
+        }
+
+        /// <summary>
         /// Modo de vertido de la partida (D-005): el del test (<see cref="PourModeOverride"/>), si no el del extra
         /// <c>af_rules_pour_mode</c> (solo builds de desarrollo en Android) y, si no, el default compilado de
         /// <c>rules_pour_mode</c> (<see cref="GameConfig.RulesPourMode"/>, <c>"run"</c>, 08 §9). La conversión es la del
@@ -161,9 +274,18 @@ namespace AF.UI
         /// <summary>Extra de intent entero <paramref name="name"/> (solo Android y solo en builds de desarrollo); 0 si no hay.</summary>
         public static int ReadIntentInt(string name)
         {
+            return ReadIntentInt(name, 0);
+        }
+
+        /// <summary>
+        /// Extra de intent entero <paramref name="name"/> (solo Android y solo en builds de desarrollo); <paramref name="missing"/>
+        /// si no hay.
+        /// </summary>
+        public static int ReadIntentInt(string name, int missing)
+        {
             if (!Debug.isDebugBuild || Application.platform != RuntimePlatform.Android)
             {
-                return 0;
+                return missing;
             }
 
 #if UNITY_ANDROID
@@ -171,16 +293,16 @@ namespace AF.UI
             {
                 using (AndroidJavaObject? intent = CurrentIntent())
                 {
-                    return intent == null ? 0 : intent.Call<int>("getIntExtra", name, 0);
+                    return intent == null ? missing : intent.Call<int>("getIntExtra", name, missing);
                 }
             }
             catch (Exception e)
             {
                 Debug.LogWarning("[AF.LaunchOptions] no se pudo leer el extra " + name + ": " + e.Message);
-                return 0;
+                return missing;
             }
 #else
-            return 0;
+            return missing;
 #endif
         }
 
@@ -189,6 +311,12 @@ namespace AF.UI
         /// hay.
         /// </summary>
         public static string? ReadIntentPourMode()
+        {
+            return ReadIntentString(IntentExtraPourMode);
+        }
+
+        /// <summary>Extra de intent de texto <paramref name="name"/> (solo Android y solo en builds de desarrollo); null si no hay.</summary>
+        public static string? ReadIntentString(string name)
         {
             if (!Debug.isDebugBuild || Application.platform != RuntimePlatform.Android)
             {
@@ -200,12 +328,12 @@ namespace AF.UI
             {
                 using (AndroidJavaObject? intent = CurrentIntent())
                 {
-                    return intent == null ? null : intent.Call<string>("getStringExtra", IntentExtraPourMode);
+                    return intent == null ? null : intent.Call<string>("getStringExtra", name);
                 }
             }
             catch (Exception e)
             {
-                Debug.LogWarning("[AF.LaunchOptions] no se pudo leer el extra " + IntentExtraPourMode + ": " + e.Message);
+                Debug.LogWarning("[AF.LaunchOptions] no se pudo leer el extra " + name + ": " + e.Message);
                 return null;
             }
 #else

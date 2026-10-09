@@ -4,8 +4,9 @@ namespace AF.GameFlow
 {
     /// <summary>
     /// Estados de la pantalla de nivel (GDD 02 §2) con el embudo de D-008 (tareas B2-2 y B2-3): GIVE_UP_CONFIRM,
-    /// LEVEL_FAILED y NO_CANOES. FAIL_RESOLVE es instantáneo (<see cref="FailResolve"/>); SKIP_RESOLVE (Salto del Boto),
-    /// AD_GATE (B2-4) y SUSPENDED quedan fuera.
+    /// LEVEL_FAILED y NO_CANOES; y AD_GATE tras «Siguiente» (tarea B2-4). FAIL_RESOLVE es instantáneo
+    /// (<see cref="FailResolve"/>); SKIP_RESOLVE (Salto del Boto) y SUSPENDED quedan fuera (el estado ya está guardado tras
+    /// cada vertido: <see cref="LevelStateSnapshot"/>).
     /// </summary>
     public enum FlowPhase
     {
@@ -35,6 +36,12 @@ namespace AF.GameFlow
 
         /// <summary>NO_CANOES: Sin canoas (04 §7.3) al reintentar o reiniciar con 0 canoas desde el 31 (D-008, paso 4).</summary>
         NoCanoes = 8,
+
+        /// <summary>
+        /// AD_GATE: tras tocar «Siguiente» en VICTORY_SCREEN (02 §2; 05 §6.1 y §6.3; D-008 punto 4): el intersticial simulado,
+        /// si las reglas lo permiten, y después LOADING(N + 1). Nunca por temporizador (<c>victory_autonext_s</c> = 0).
+        /// </summary>
+        AdGate = 9,
     }
 
     /// <summary>Nombres de los estados tal como los escribe 02 §2 (los usa la línea <c>AF_STATE</c>).</summary>
@@ -54,6 +61,7 @@ namespace AF.GameFlow
                 case FlowPhase.GiveUpConfirm: return "GIVE_UP_CONFIRM";
                 case FlowPhase.LevelFailed: return "LEVEL_FAILED";
                 case FlowPhase.NoCanoes: return "NO_CANOES";
+                case FlowPhase.AdGate: return "AD_GATE";
                 default: return "UNKNOWN";
             }
         }

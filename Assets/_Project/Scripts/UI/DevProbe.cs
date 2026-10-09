@@ -18,9 +18,13 @@ namespace AF.UI
     /// <remarks>
     /// <para>Eventos de <c>AF_STATE</c>: <c>load</c>, <c>ready</c>, <c>pour</c>, <c>reject</c>, <c>undo</c>, <c>restart</c>,
     /// <c>win</c> y <c>stuck</c> (contrato) más <c>select</c> y <c>deselect</c> (ayuda para seguir los toques). Del embudo de
-    /// D-008 y los comodines, los de <see cref="Funnel"/>. Fuera del
-    /// nivel (tarea B1-6, <see cref="App"/>): <c>lobby</c>, <c>content_end</c> y <c>no_canoes</c>, con semillas y canoas; y
-    /// <c>AF_LAYOUT</c> de esas pantallas con los botones <c>play</c>, <c>canoes</c>, <c>settings</c> y <c>back</c>.</para>
+    /// D-008 y los comodines, los de <see cref="Funnel"/> (y <c>resume</c> al reabrir el nivel guardado, B2-5). De la
+    /// victoria y los anuncios simulados (B2-4): <c>victory</c>, <c>double_harvest</c> y <c>ad_gate</c>
+    /// (<see cref="Victory"/>), <c>ad_check</c> (<see cref="AdCheck"/>), <c>ad</c> y <c>ad_closed</c> (<see cref="Ad"/>) y
+    /// <c>purchase_sim</c> (<see cref="Purchase"/>). Fuera del nivel (tarea B1-6, <see cref="App"/>): <c>lobby</c>,
+    /// <c>content_end</c> y <c>no_canoes</c>. Todas las del embudo, la victoria, los anuncios, las compras y el inicio llevan
+    /// semillas y canoas (B2-6). <c>AF_LAYOUT</c> de esas pantallas con los botones <c>play</c>, <c>canoes</c>,
+    /// <c>settings</c>, <c>back</c>, <c>double_harvest</c>, <c>next</c> y <c>home</c>.</para>
     /// <para>Cada línea lleva <c>"pour_mode"</c> (run por defecto, D-005; single en pruebas), el modo de la sesión del
     /// nivel, y los eventos con vertido (<c>pour</c>, <c>undo</c>) llevan, además de
     /// <c>"move":[origen,destino,cantidad]</c>, la cantidad suelta en <c>"amount"</c> (en <c>run</c>, la racha que cabe;
@@ -169,31 +173,139 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Línea <c>AF_STATE</c> <c>purchase_sim</c> de una compra simulada (D-008 punto 5): SKU, contexto, resultado y el saldo
-        /// después.
+        /// Línea <c>AF_STATE</c> <c>purchase_sim</c> de una compra simulada (D-008 punto 5): SKU, contexto, resultado, nivel y
+        /// el saldo después (semillas y canoas).
         /// </summary>
-        public void Purchase(AF.IAP.PurchaseResult result)
+        public void Purchase(AF.IAP.PurchaseResult result, AF.Economy.Wallet? wallet = null)
+        {
+            string? line = FormatPurchase(result, wallet);
+            if (line != null)
+            {
+                Debug.Log(line);
+            }
+        }
+
+        /// <summary>Texto de la línea de <see cref="Purchase"/>; null si la sonda no escribe.</summary>
+        public string? FormatPurchase(AF.IAP.PurchaseResult result, AF.Economy.Wallet? wallet)
         {
             if (!Enabled || result == null)
+            {
+                return null;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"purchase_sim\"");
+            AppendTime(sb);
+            sb.Append(",\"sku\":\"").Append(result.Request.Sku).Append('"');
+            sb.Append(",\"context\":\"").Append(result.Request.Context.ToString()).Append('"');
+            sb.Append(",\"status\":\"").Append(result.Status.ToString()).Append('"');
+            sb.Append(",\"level\":").Append(result.Request.Level.ToString(CultureInfo.InvariantCulture));
+            if (wallet != null)
+            {
+                AppendWallet(sb, wallet);
+            }
+            else if (result.Transaction != null)
+            {
+                sb.Append(",\"seeds\":").Append(result.Transaction.SeedsBalance.ToString(CultureInfo.InvariantCulture));
+            }
+
+            sb.Append('}');
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Línea <c>AF_STATE</c> de la victoria (D-008 punto 3; 02 §6; tarea B2-4): <c>victory</c> (pantalla de victoria),
+        /// <c>double_harvest</c> (Cosecha doble cobrada) y <c>ad_gate</c> (se tocó «Siguiente»), con la Cosecha, si se dobló,
+        /// si se ofrece la Cosecha doble y el saldo (semillas y canoas).
+        /// </summary>
+        public void Victory(string evt, LevelFlow flow, bool doubleOffered)
+        {
+            string? line = FormatVictory(evt, flow, doubleOffered);
+            if (line != null)
+            {
+                Debug.Log(line);
+            }
+        }
+
+        /// <summary>Texto de la línea de <see cref="Victory"/>; null si la sonda no escribe o no hay nivel.</summary>
+        public string? FormatVictory(string evt, LevelFlow flow, bool doubleOffered)
+        {
+            if (!Enabled || !flow.HasLevel)
+            {
+                return null;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"").Append(evt).Append('"');
+            AppendTime(sb);
+            sb.Append(",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"phase\":\"").Append(FlowPhaseNames.Of(flow.Phase)).Append('"');
+            sb.Append(",\"harvest\":").Append(flow.HarvestSeeds.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"harvest_base\":").Append(flow.HarvestBase.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"doubled\":").Append(flow.HarvestDoubled ? "true" : "false");
+            sb.Append(",\"double_offered\":").Append(doubleOffered ? "true" : "false");
+            AppendWallet(sb, flow.Wallet);
+            sb.Append('}');
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Línea <c>AF_STATE</c> <c>ad_check</c> de AD_GATE (05 §6.3; tarea B2-4): el nivel ganado y la decisión de las reglas
+        /// (<c>allowed</c> o <c>blocked:Motivo</c>), con el saldo.
+        /// </summary>
+        public void AdCheck(int level, AF.Ads.AdDecision decision, AF.Economy.Wallet? wallet)
+        {
+            if (!Enabled)
             {
                 return;
             }
 
             StringBuilder sb = _sb;
             sb.Clear();
-            sb.Append("AF_STATE {\"event\":\"purchase_sim\"");
-            sb.Append(",\"t\":").Append(((long)(Time.realtimeSinceStartupAsDouble * 1000.0)).ToString(CultureInfo.InvariantCulture));
-            sb.Append(",\"sku\":\"").Append(result.Request.Sku).Append('"');
-            sb.Append(",\"context\":\"").Append(result.Request.Context.ToString()).Append('"');
-            sb.Append(",\"status\":\"").Append(result.Status.ToString()).Append('"');
-            sb.Append(",\"level\":").Append(result.Request.Level.ToString(CultureInfo.InvariantCulture));
-            if (result.Transaction != null)
-            {
-                sb.Append(",\"seeds\":").Append(result.Transaction.SeedsBalance.ToString(CultureInfo.InvariantCulture));
-            }
-
+            sb.Append("AF_STATE {\"event\":\"ad_check\"");
+            AppendTime(sb);
+            sb.Append(",\"placement\":\"interstitial_post_level\"");
+            sb.Append(",\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"decision\":\"").Append(decision.ToString()).Append('"');
+            AppendWallet(sb, wallet);
             sb.Append('}');
             Debug.Log(sb.ToString());
+        }
+
+        /// <summary>
+        /// Línea <c>AF_STATE</c> de un anuncio simulado (D-008 punto 4; B2-4): <c>ad</c> al mostrarse y <c>ad_closed</c> al
+        /// cerrarse, con su tipo (<c>interstitial</c> o <c>rewarded</c>), su ubicación, cómo terminó, el nivel y el saldo.
+        /// </summary>
+        public void Ad(string evt, AF.Ads.SimulatedAd ad, string outcome, int level, AF.Economy.Wallet? wallet)
+        {
+            string? line = FormatAd(evt, ad, outcome, level, wallet);
+            if (line != null)
+            {
+                Debug.Log(line);
+            }
+        }
+
+        /// <summary>Texto de la línea de <see cref="Ad"/>; null si la sonda no escribe.</summary>
+        public string? FormatAd(string evt, AF.Ads.SimulatedAd ad, string outcome, int level, AF.Economy.Wallet? wallet)
+        {
+            if (!Enabled || ad == null)
+            {
+                return null;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"").Append(evt).Append('"');
+            AppendTime(sb);
+            sb.Append(",\"format\":\"").Append(ad.Format == AF.Ads.AdFormat.Interstitial ? "interstitial" : "rewarded").Append('"');
+            sb.Append(",\"placement\":\"").Append(AF.Ads.AdPlacements.ToId(ad.Placement)).Append('"');
+            sb.Append(",\"outcome\":\"").Append(outcome).Append('"');
+            sb.Append(",\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
+            AppendWallet(sb, wallet);
+            sb.Append('}');
+            return sb.ToString();
         }
 
         /// <summary>
@@ -309,6 +421,20 @@ namespace AF.UI
             sb.Append(",\"y\":").Append(y.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"w\":").Append(w.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"h\":").Append(h.ToString(CultureInfo.InvariantCulture));
+        }
+
+        private static void AppendTime(StringBuilder sb)
+        {
+            sb.Append(",\"t\":").Append(((long)(Time.realtimeSinceStartupAsDouble * 1000.0)).ToString(CultureInfo.InvariantCulture));
+        }
+
+        // Saldo de la línea: semillas, canoas y Canoas infinitas (B2-6: «siempre con semillas y canoas»).
+        private static void AppendWallet(StringBuilder sb, AF.Economy.Wallet? wallet)
+        {
+            AF.Economy.CanoesStatus canoes = wallet?.Canoes ?? default;
+            sb.Append(",\"seeds\":").Append((wallet?.Seeds ?? 0).ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"canoes\":").Append(canoes.Count.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"infinite\":").Append(canoes.IsInfinite ? "true" : "false");
         }
 
         private static string StatusName(LevelFlow flow)

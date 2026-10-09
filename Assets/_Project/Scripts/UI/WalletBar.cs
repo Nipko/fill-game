@@ -84,15 +84,19 @@ namespace AF.UI
             UiBuilder.Place(_canoes, left + 124f, top + 4f, 128f, 40f);
         }
 
-        /// <summary>Refresca las cifras de <paramref name="wallet"/>; las canoas solo si <paramref name="showCanoes"/>.</summary>
-        public void Refresh(Wallet? wallet, bool showCanoes)
+        /// <summary>
+        /// Refresca las cifras de <paramref name="wallet"/>; las canoas solo si <paramref name="showCanoes"/>. Con
+        /// <paramref name="seedsPending"/> &gt; 0 (la Cosecha de la victoria mientras cuenta hacia arriba, 02 §6), el saldo
+        /// enseña lo ya contado.
+        /// </summary>
+        public void Refresh(Wallet? wallet, bool showCanoes, int seedsPending = 0)
         {
             if (!_root.gameObject.activeSelf || wallet == null)
             {
                 return;
             }
 
-            int seeds = wallet.Seeds;
+            int seeds = Math.Max(0, wallet.Seeds - Math.Max(0, seedsPending));
             if (seeds != _seedsShown)
             {
                 _seedsShown = seeds;

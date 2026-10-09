@@ -114,6 +114,7 @@ namespace AF.GameFlow
 
             int index = AddCuia(AddedCuiaKind.Extra);
             _listener.OnCuiaAdded(index, AddedCuiaKind.Extra);
+            PersistState();
             return paid;
         }
 
@@ -151,6 +152,7 @@ namespace AF.GameFlow
             }
 
             _attempt.UndoGiftUsed = true;
+            PersistState();
             return true;
         }
 
@@ -210,6 +212,7 @@ namespace AF.GameFlow
 
             Phase = FlowPhase.GiveUpConfirm;
             _listener.OnFunnelPhase(FlowPhase.GiveUpConfirm);
+            PersistState();
             return true;
         }
 
@@ -288,6 +291,7 @@ namespace AF.GameFlow
             Phase = FlowPhase.Playing;
             _listener.OnCuiaAdded(index, AddedCuiaKind.Rescue);
             EvaluateStatus();
+            PersistState();
         }
 
         // Añade una cuia vacía de capacidad 4 al final del tablero (04 §2.2), que persiste al reiniciar y que Marea no quita
@@ -329,6 +333,7 @@ namespace AF.GameFlow
             _phaseMs = 0;
             _quote = _wallet?.QuoteRescue(LevelNumber); // el precio se congela al abrir el modal (04 §6.6)
             _listener.OnStuckModalOpened();
+            PersistState(); // 02 §14: cerrar la app con el modal abierto lo reabre al volver
         }
 
         private void ResetStuck()
@@ -351,6 +356,7 @@ namespace AF.GameFlow
             Fail(FailKind.Hard);
             Phase = FlowPhase.LevelFailed;
             _listener.OnFunnelPhase(FlowPhase.LevelFailed);
+            PersistState(); // el fallo ya se cobró: reabrir Nivel fallido nunca lo vuelve a cobrar
         }
 
         // 04 §7.1 «Qué bloquea»: desde el 31, sin canoas ni Canoas infinitas no se empieza ni se reinicia un nivel.
@@ -364,12 +370,14 @@ namespace AF.GameFlow
             _noCanoesReturn = returnTo;
             Phase = FlowPhase.NoCanoes;
             _listener.OnFunnelPhase(FlowPhase.NoCanoes);
+            PersistState();
         }
 
         private void ExitNoCanoes()
         {
             Phase = _noCanoesReturn;
             _listener.OnFunnelPhase(Phase);
+            PersistState();
         }
     }
 }

@@ -59,7 +59,8 @@ namespace AF.GameFlow
     /// <item>las cuias añadidas (Cuia extra y Cuia de rescate), el tope de rescates del nivel y la recarga gratis de la rama F,
     /// que duran mientras se juega el nivel (persisten al reiniciar) y desaparecen al salir de él.</item>
     /// </list>
-    /// En memoria: guardarlo en <c>level_state</c> del perfil es la tarea B2-5.
+    /// Se guarda en <c>level_state</c> del perfil con <see cref="LevelStateSnapshot"/> (tarea B2-5) y se restaura al reabrir la
+    /// app (<see cref="Restore"/>).
     /// </summary>
     public sealed class LevelAttempt
     {
@@ -113,6 +114,27 @@ namespace AF.GameFlow
         internal void AddCuia(AddedCuiaKind kind)
         {
             _added.Add(kind);
+        }
+
+        /// <summary>
+        /// Lo guardado en <c>level_state</c> (tarea B2-5): el nivel, <c>fails_level</c>, la variante servida y, si el nivel sigue
+        /// en curso, las cuias añadidas y la recarga gratis de la rama F.
+        /// </summary>
+        internal void Restore(int level, int failsLevel, int reliefIndex, IReadOnlyList<AddedCuiaKind>? added, bool undoGiftUsed)
+        {
+            Level = level;
+            FailsLevel = Math.Max(0, failsLevel);
+            ReliefIndex = reliefIndex < 0 ? -1 : reliefIndex;
+            _added.Clear();
+            if (added != null)
+            {
+                for (int i = 0; i < added.Count; i++)
+                {
+                    _added.Add(added[i]);
+                }
+            }
+
+            UndoGiftUsed = undoGiftUsed;
         }
 
         private int Count(AddedCuiaKind kind)

@@ -83,6 +83,12 @@ namespace AF.GameFlow
         public const int AnimConfettiMaxParticles = 60;
 
         /// <summary>
+        /// La Cosecha de la pantalla de victoria cuenta hacia arriba en 400 ms (02 §6: «la cifra cuenta hacia arriba en
+        /// 400 ms»; D-008 punto 3). No es una clave de 08 §9.
+        /// </summary>
+        public const int HarvestCountMs = 400;
+
+        /// <summary>
         /// <c>live_content_end_message</c> = <c>{"next_batch_eta_days":14}</c> (08 §9): días estimados hasta los próximos 100
         /// niveles, que muestra la pantalla «El río sigue creciendo» (06 §9; 08 §6.2).
         /// </summary>

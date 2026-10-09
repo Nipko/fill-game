@@ -2,6 +2,7 @@
 using System;
 using AF.Economy;
 using AF.Levels;
+using AF.Save;
 
 namespace AF.GameFlow
 {
@@ -60,8 +61,11 @@ namespace AF.GameFlow
     /// (<see cref="RefreshNoCanoes"/>).</description></item>
     /// <item><description>Desde el nivel se sale al inicio con <see cref="ExitToLobby"/> (Nivel fallido, Sin canoas o la pausa
     /// en 1-30).</description></item>
-    /// <item><description>El intersticial tras Siguiente (AD_GATE, 05 §6.3) llega con B2-4: irá entre <see cref="PressNext"/>
-    /// y la carga del nivel siguiente.</description></item>
+    /// <item><description>Siguiente pasa por AD_GATE (02 §2; 05 §6.3; tarea B2-4): el intersticial simulado, si las reglas lo
+    /// permiten, va entre <see cref="PressNext"/> y la carga del nivel siguiente (<see cref="LevelFlow.BeginAdGate"/>). Inicio
+    /// no pasa por AD_GATE (02 §6).</description></item>
+    /// <item><description>Al abrir la app con un nivel en curso guardado (<c>level_state</c>), se reabre ese nivel tal cual
+    /// (02 §14; tarea B2-5); si se había salido de él al inicio, se abre el inicio y el nivel recuerda sus fallos.</description></item>
     /// </list>
     /// No es seguro entre hilos.
     /// </summary>
@@ -132,13 +136,40 @@ namespace AF.GameFlow
         public int ContentEndEtaDays => GameConfig.LiveContentEndNextBatchEtaDays;
 
         /// <summary>
-        /// Primera pantalla (08 §2.3): la primera vez (<paramref name="firstRun"/>: no había perfil), directamente el nivel 1;
-        /// si no, el inicio.
+        /// Primera pantalla (08 §2.3): con un nivel en curso guardado (<paramref name="saved"/>, <c>level_state</c>), ese nivel
+        /// reabierto tal cual, sin intro y sin cobrar nada (02 §14; tarea B2-5); la primera vez (<paramref name="firstRun"/>: no
+        /// había perfil), directamente el nivel 1; si no, el inicio. Un estado guardado que ya no sirve se descarta.
         /// </summary>
         /// <exception cref="InvalidOperationException">Ya había arrancado.</exception>
-        public void Start(bool firstRun)
+        public void Start(bool firstRun, LevelStateData? saved = null)
         {
             RequireBoot();
+            if (saved != null)
+            {
+                ResumeCheck check = _level.CheckResume(saved);
+                if (check == ResumeCheck.Resumable)
+                {
+                    // La pantalla de nivel se muestra antes de cargar, como en Enter. Si los vertidos ya no se pueden rehacer,
+                    // el mismo nivel desde el principio (04 §10.2: «se carga el nivel por su número»).
+                    Go(AppScreen.Level);
+                    if (!_level.Resume(saved))
+                    {
+                        _level.Load(saved.Level);
+                    }
+
+                    return;
+                }
+
+                if (check == ResumeCheck.Exited)
+                {
+                    _level.RestoreExited(saved);
+                }
+                else
+                {
+                    _level.DiscardSaved();
+                }
+            }
+
             if (firstRun)
             {
                 Enter(PlayLevel);
@@ -167,7 +198,10 @@ namespace AF.GameFlow
             return Screen == AppScreen.Lobby && Enter(PlayLevel);
         }
 
-        /// <summary>Siguiente en la pantalla de victoria (sin auto-avance, 02 §6): N + 1, o la pantalla que lo impida.</summary>
+        /// <summary>
+        /// Siguiente en la pantalla de victoria (sin auto-avance, 02 §6): AD_GATE (el intersticial, si toca: 05 §6.3) y después
+        /// N + 1, o la pantalla que lo impida. Sin anuncio que mostrar, el nivel siguiente se carga en esta misma llamada.
+        /// </summary>
         public bool PressNext()
         {
             if (Screen != AppScreen.Level || _level.Phase != FlowPhase.VictoryScreen)
@@ -175,7 +209,14 @@ namespace AF.GameFlow
                 return false;
             }
 
-            return Enter(_level.LevelNumber + 1);
+            int next = _level.LevelNumber + 1;
+            return _level.BeginAdGate(() =>
+            {
+                if (Screen == AppScreen.Level && _level.Phase == FlowPhase.AdGate)
+                {
+                    Enter(next);
+                }
+            });
         }
 
         /// <summary>«Inicio» en la pantalla de victoria [P] (06 §4.7; D-008 punto 3): vuelve al inicio.</summary>
@@ -220,6 +261,7 @@ namespace AF.GameFlow
                 return false;
             }
 
+            _level.LeaveLevel(); // el nivel deja de estar en curso; recuerda fails_level y la variante (B2-5)
             Go(AppScreen.Lobby);
             return true;
         }

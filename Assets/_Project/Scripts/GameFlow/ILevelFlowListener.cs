@@ -68,5 +68,21 @@ namespace AF.GameFlow
         /// cuya duración ya incluye el cartel.
         /// </summary>
         void OnRiverLowered(string reliefType, int bannerMs);
+
+        /// <summary>
+        /// Cosecha doble (04 §2.8; <c>rv_double_harvest</c>; tarea B2-4): tras el video, la Cosecha del nivel ya es
+        /// <paramref name="totalSeeds"/> (20 → 40, 60 → 120, 80 → 160) y el botón desaparece.
+        /// </summary>
+        void OnHarvestDoubled(int totalSeeds);
+
+        /// <summary>AD_GATE (02 §2; tarea B2-4): se tocó «Siguiente»; el intersticial, si toca, va encima y después N + 1.</summary>
+        void OnAdGate();
+
+        /// <summary>
+        /// El nivel se reabrió desde <c>level_state</c> (02 §14; tarea B2-5), sin intro: llega tras <see cref="OnLevelLoaded"/>
+        /// con la pantalla que estaba abierta (<see cref="FlowPhase.Playing"/>, <see cref="FlowPhase.StuckModal"/>,
+        /// <see cref="FlowPhase.GiveUpConfirm"/> o <see cref="FlowPhase.LevelFailed"/>).
+        /// </summary>
+        void OnResumed(FlowPhase phase);
     }
 }

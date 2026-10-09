@@ -86,6 +86,9 @@ namespace AF.UI
         /// <summary>Inicio (victoria).</summary>
         bool PressHome();
 
+        /// <summary>«Cosecha doble: x2 por video» (victoria, desde el 11).</summary>
+        bool PressDoubleHarvest();
+
         /// <summary>«+1 cuia» de la bandeja.</summary>
         bool PressExtraCuia();
 

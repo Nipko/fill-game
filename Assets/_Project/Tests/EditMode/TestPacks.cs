@@ -131,6 +131,21 @@ namespace AF.Tests.EditMode
             Events.Add("river:" + reliefType + ":" + bannerMs);
         }
 
+        public void OnHarvestDoubled(int totalSeeds)
+        {
+            Events.Add("harvest_doubled:" + totalSeeds);
+        }
+
+        public void OnAdGate()
+        {
+            Events.Add("ad_gate");
+        }
+
+        public void OnResumed(FlowPhase phase)
+        {
+            Events.Add("resumed:" + phase);
+        }
+
         public bool Saw(string evt)
         {
             return Events.Contains(evt);

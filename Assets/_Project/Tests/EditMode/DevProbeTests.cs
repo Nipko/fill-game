@@ -90,6 +90,46 @@ namespace AF.Tests.EditMode
             Assert.That(line, Does.Not.Contain("\"move\""));
         }
 
+        [Test]
+        public void VictoryLine_CarriesTheHarvest_AndTheBalance()
+        {
+            // B2-4 y B2-6: AF_STATE de la victoria con la Cosecha y el saldo (semillas y canoas).
+            var rig = new LevelStateTests.Rig(offset: 10, seeds: 5);
+            rig.Start(11);
+            LevelStateTests.Win(rig.Flow);
+            rig.Flow.Tick(16, true);
+            rig.Flow.TapAnywhere();
+            string? line = new DevProbe().FormatVictory("victory", rig.Flow, true);
+            Assert.That(line, Does.StartWith("AF_STATE {\"event\":\"victory\""));
+            Assert.That(line, Does.Contain("\"level\":11"));
+            Assert.That(line, Does.Contain("\"phase\":\"VICTORY_SCREEN\""));
+            Assert.That(line, Does.Contain("\"harvest\":20"));
+            Assert.That(line, Does.Contain("\"double_offered\":true"));
+            Assert.That(line, Does.Contain("\"seeds\":25"));
+            Assert.That(line, Does.Contain("\"canoes\":5"));
+            Assert.That(line, Does.EndWith("}"));
+        }
+
+        [Test]
+        public void AdLine_CarriesItsFormatPlacementOutcome_AndTheBalance()
+        {
+            var economy = new EconomyFixture(seeds: 300);
+            var presenter = new AF.Ads.ImmediateAdPresenter();
+            var service = new AF.Ads.FakeAdService(presenter);
+            service.Show(AF.Ads.AdPlacement.InterstitialPostLevel, _ => { });
+            string? line = new DevProbe().FormatAd("ad", presenter.Last!, "shown", 24, economy.Wallet);
+            Assert.That(line, Does.StartWith("AF_STATE {\"event\":\"ad\""));
+            Assert.That(line, Does.Contain("\"format\":\"interstitial\""));
+            Assert.That(line, Does.Contain("\"placement\":\"interstitial_post_level\""));
+            Assert.That(line, Does.Contain("\"outcome\":\"shown\""));
+            Assert.That(line, Does.Contain("\"level\":24"));
+            Assert.That(line, Does.Contain("\"seeds\":300"));
+            Assert.That(line, Does.Contain("\"canoes\":5"));
+
+            service.Show(AF.Ads.AdPlacement.DoubleHarvest, _ => { });
+            Assert.That(new DevProbe().FormatAd("ad_closed", presenter.Last!, "completed", 24, economy.Wallet), Does.Contain("\"format\":\"rewarded\""));
+        }
+
         private sealed class NullAppListener : IAppFlowListener
         {
             public void OnAppScreenChanged(AppScreen screen)

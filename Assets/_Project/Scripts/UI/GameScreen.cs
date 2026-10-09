@@ -21,9 +21,11 @@ namespace AF.UI
     /// las posiciones de 02 §5 y 07 §7.4; bandeja de comodines (<see cref="BoosterTray"/>: Marea y Cuia extra, B2-1); el
     /// embudo de bloqueo de D-008 (B2-2 y B2-3): Aguas estancadas (<see cref="StuckModal"/>), ¿Seguro?, Nivel fallido y Sin
     /// canoas, con los saldos arriba; pausa con «Volver a la orilla» y «Salir» y sus confirmaciones; el cartel «El río
-    /// bajó»; y la victoria con cinta-hoja y estallido (02 §6), con Siguiente y el secundario «Inicio» [P] (06 §4.7; D-008
-    /// punto 3). Escucha a <see cref="LevelFlow"/> y hace que la vista persiga al modelo (02 §3.2). Se oculta mientras se
-    /// ve la pantalla de inicio (<see cref="SetVisible"/>).
+    /// bajó»; y la victoria con cinta-hoja y estallido (02 §6; D-008 punto 3; tarea B2-4): la Cosecha que cuenta hacia arriba
+    /// en 400 ms, desde el 11 «Cosecha doble: x2 por video» (sin anuncio no aparece), Siguiente (→ AD_GATE) y el secundario
+    /// «Inicio» [P] (06 §4.7), con el saldo arriba como en el embudo. Reabre el nivel guardado sin intro, con la pantalla que
+    /// estaba abierta (02 §14; tarea B2-5). Escucha a <see cref="LevelFlow"/> y hace que la vista persiga al modelo (02 §3.2).
+    /// Se oculta mientras se ve la pantalla de inicio (<see cref="SetVisible"/>).
     /// </summary>
     /// <remarks>
     /// Capas de atrás adelante (guía 3.4): panorama, ambiente lejano, muelle, follaje, velo de escena; captura de fondo;
@@ -62,21 +64,24 @@ namespace AF.UI
         private const float ToastMs = 2600f;
 
         /// <summary>
-        /// Panel de victoria (guía 5.3, ajustado al contenido en la revisión visual del 2026-10-07): 30 dp de cinta dentro +
-        /// 12 + 56 (CTA y canto) + 12 (eran 118 dp hasta el marco) y, desde la tarea B1-6, el secundario «Inicio» [P] (07 §7.3:
-        /// 40 dp de cara, área táctil de 48) en <see cref="VictoryHomeTopDp"/>, más 12 + 8 de marco: 176 dp. La fila de 44 dp
-        /// de «Semillas +N» llega con la victoria de B2-4 (guía 12).
+        /// Panel de victoria (guía 5.3, ajustado al contenido en la revisión visual del 2026-10-07; guía 12: la fila de 44 dp de
+        /// «Semillas +N» que llega con la tarea B2-4): 36 dp de cinta dentro, la fila de la Cosecha
+        /// (<see cref="VictoryHarvestDp"/>), desde el 11 la Cosecha doble (CTA de agua, 66 dp), Siguiente (66 dp), el secundario
+        /// «Inicio» [P] (07 §7.3: 40 dp de cara, área táctil de 48) y 18 dp de marco: 218 dp sin Cosecha doble y 286 con ella.
         /// </summary>
-        private const float VictoryPanelDp = 176f;
+        private const float VictoryHarvestTopDp = 36f;
 
-        /// <summary>Borde superior del secundario «Inicio» dentro del panel de victoria (bajo el CTA y su sombra).</summary>
-        private const float VictoryHomeTopDp = 110f;
+        /// <summary>Alto de la fila de la Cosecha (guía 12: 44 dp).</summary>
+        private const float VictoryHarvestDp = 44f;
+
+        /// <summary>Del borde superior del CTA al del secundario «Inicio» (68 dp, como desde B1-6).</summary>
+        private const float VictoryHomeBelowCtaDp = 68f;
 
         /// <summary>Ancho del secundario «Inicio» (dp).</summary>
         private const float VictoryHomeWidthDp = 168f;
 
-        /// <summary>Borde superior del CTA dentro del panel de victoria (centrado entre la cinta y el marco inferior).</summary>
-        private const float VictoryCtaTopDp = 42f;
+        /// <summary>La Cosecha empieza a contar cuando el panel ya subió (250 ms) y cuenta en 400 ms (02 §6).</summary>
+        private const float HarvestCountDelayMs = 250f;
 
         /// <summary>
         /// El horizonte del panorama baja hasta quedar 64 dp por encima del panel, entre 118 y 200 dp (revisión visual del
@@ -186,6 +191,16 @@ namespace AF.UI
         private readonly CanvasGroup _nextGroup;
         private readonly ReliefParts _home;
         private readonly CanvasGroup _homeGroup;
+        private readonly RectTransform _harvestRow;
+        private readonly TextMeshProUGUI _harvestLabel;
+        private readonly Image _harvestSeed;
+        private readonly TextMeshProUGUI _harvestValue;
+        private readonly ReliefParts _double;
+        private readonly CanvasGroup _doubleGroup;
+        private readonly Image _doubleIcon;
+        private readonly TextMeshProUGUI _doubleLabel;
+        private readonly TextMeshProUGUI _doubleSub;
+        private readonly char[] _harvestBuf = new char[16];
 
         private readonly BoardAnimator _animator;
         private readonly IntroAnimation _intro = new IntroAnimation();
@@ -229,6 +244,15 @@ namespace AF.UI
         private float _introDelayMs = -1f;
         private int _introPendingMs;
         private float _relayoutMs = -1f;
+        private float _victoryPanelDp = 218f;
+        private float _victoryCtaTopDp = 84f;
+        private float _victoryHomeTopDp = 152f;
+        private bool _doubleShown;
+        private int _harvestFrom;
+        private int _harvestTo = -1;
+        private int _harvestShown = -1;
+        private float _harvestCountMs = -1f;
+        private bool _harvestCounting;
         private Vector2[] _relayoutFrom = Array.Empty<Vector2>();
         private float[] _relayoutFromWidth = Array.Empty<float>();
         private int _addedView = -1;
@@ -412,6 +436,27 @@ namespace AF.UI
             UiBuilder.PlaceCtaLabel(homeLabel.rectTransform, art.CtaWood);
             UiBuilder.AutoSize(homeLabel, 14f, 18f);
             _home.Relief.Bind(_home.Face, _home.Base, _home.FaceImage, art.CtaWood, null, null, homeLabel);
+
+            // Cosecha (02 §6; D-008 punto 3; guía 12): «Cosecha» y la semilla con +20, +60 u +80, que cuenta hacia arriba en
+            // 400 ms. Hace de «Rewards:» con el montón de monedas de Magic Sort (ficha §4.6 y §4.8), sin su trade dress.
+            _harvestRow = UiBuilder.Rect("Harvest", _victoryPanel);
+            _harvestLabel = UiBuilder.Label("Label", _harvestRow, TextStyle.PlainBold, UiText.Harvest, 20f, Palette.FamilyWood.Base, TextAlignmentOptions.MidlineRight);
+            _harvestSeed = UiBuilder.Image("Seed", _harvestRow, art.IconSeed, Color.white);
+            _harvestSeed.preserveAspect = true;
+            _harvestValue = UiBuilder.Label("Value", _harvestRow, TextStyle.PlainBold, "+0", 30f, Palette.FamilyWood.Deep, TextAlignmentOptions.MidlineLeft);
+
+            // Cosecha doble (04 §2.8; rv_double_harvest, desde el 11): CTA de agua con el icono de video, como «Canoa extra · Ver
+            // video» (el agua es la familia de los videos); «+20 → +40» bajo la etiqueta (02 §6).
+            _double = UiBuilder.Relief("DoubleHarvestButton", _victoryPanel, art.CtaWater, () => _actions.PressDoubleHarvest());
+            _doubleGroup = _double.Face.parent.gameObject.AddComponent<CanvasGroup>();
+            _doubleGroup.blocksRaycasts = false;
+            _doubleIcon = UiBuilder.Image("Video", _double.Face, art.IconVideo, Color.white);
+            _doubleIcon.preserveAspect = true;
+            _doubleLabel = UiBuilder.Label("Label", _double.Face, TextStyle.CtaWater, UiText.DoubleHarvest, 17f, Palette.Cream, TextAlignmentOptions.Center);
+            UiBuilder.AutoSize(_doubleLabel, 13f, 17f);
+            _doubleSub = UiBuilder.Label("Gain", _double.Face, TextStyle.CtaWater, string.Empty, 14f, Palette.Cream, TextAlignmentOptions.Center);
+            _double.Relief.Bind(_double.Face, _double.Base, _double.FaceImage, art.CtaWater, null, null, _doubleLabel);
+            _double.Button.gameObject.SetActive(false);
             _ribbon = UiBuilder.Image("Ribbon", _victoryPanel, art.Ribbon, Color.white);
             // Baloo 2 de 30 dp, mínimo 22 (revisión visual del 2026-10-07; guía 5.5), en la franja de texto de la cinta de
             // 344 × 72 (≈ 262 × 45 dp de hoja_base → hoja_fondo).
@@ -566,6 +611,27 @@ namespace AF.UI
         /// <summary>Botón «Inicio» de la victoria [P].</summary>
         public Button HomeButton => _home.Button;
 
+        /// <summary>Botón «Cosecha doble: x2 por video» de la victoria (desde el 11).</summary>
+        public Button DoubleHarvestButton => _double.Button;
+
+        /// <summary>La victoria ofrece la Cosecha doble (hay video y aún no se usó).</summary>
+        public bool DoubleHarvestShown => _victoryOverlay.gameObject.activeSelf && _double.Button.gameObject.activeSelf;
+
+        /// <summary>Cosecha que se ve en la fila de la victoria (cuenta hacia arriba; −1 si aún no se pintó).</summary>
+        public int HarvestShown => _harvestShown;
+
+        /// <summary>Texto de la fila de la Cosecha (p. ej. «+20»).</summary>
+        public string HarvestText => _harvestValue.text;
+
+        /// <summary>Texto «+20 → +40» del botón de la Cosecha doble.</summary>
+        public string DoubleHarvestGainText => _doubleSub.text;
+
+        /// <summary>La pantalla de victoria está a la vista.</summary>
+        public bool VictoryVisible => _victoryOverlay.gameObject.activeSelf;
+
+        /// <summary>Alto del panel de victoria (dp; tests).</summary>
+        internal float VictoryPanelHeight => _victoryPanelDp;
+
         /// <summary>La pantalla de nivel está visible (oculta mientras se ve la de inicio).</summary>
         public bool Visible => _canvas.gameObject.activeSelf;
 
@@ -631,7 +697,7 @@ namespace AF.UI
                 {
                     _confettiDelay = -1f;
                     // Tras el estallido, ≤ 12 hojas y pétalos caen despacio hasta el CTA de la victoria.
-                    _confetti.Play(GameConfig.AnimConfettiMaxParticles, PanelRect(), _canvasW, _victoryPanelY + VictoryCtaTopDp);
+                    _confetti.Play(GameConfig.AnimConfettiMaxParticles, PanelRect(), _canvasW, _victoryPanelY + _victoryCtaTopDp);
                 }
             }
 
@@ -645,6 +711,7 @@ namespace AF.UI
             TickRelayout(dtMs);
             _banner.Tick(dtMs);
             _toast.Tick(dtMs);
+            TickHarvest(dtMs);
             RefreshHud();
         }
 
@@ -816,13 +883,85 @@ namespace AF.UI
         /// <inheritdoc />
         public void OnVictoryScreen()
         {
+            LevelFlow flow = RequireFlow();
             _skipCatcher.gameObject.SetActive(false);
             _ambient.SetSuspended(true);
             _victoryOverlay.gameObject.SetActive(true);
             SetVictoryLights(true);
+
+            // 02 §6: la Cosecha (ya acreditada en el instante de la victoria) cuenta desde 0; desde el 11, Cosecha doble si hay
+            // video (rv_double_harvest: reglas, tope, cooldown y fill; sin anuncio no aparece).
+            _doubleShown = flow.DoubleHarvestOffered && _services != null && _services.RewardedReady(AdPlacement.DoubleHarvest);
+            if (_doubleShown)
+            {
+                _doubleSub.text = UiText.DoubleHarvestGain(flow.HarvestBase);
+            }
+
+            LayoutVictory();
+            StartHarvestCount(0, flow.HarvestSeeds, HarvestCountDelayMs);
             ShiftBoard(ShiftToClear(_victoryPanelY - RibbonRiseDp, 8f), true);
             _victoryAnim = 0f;
             ApplyVictoryAnim(0f);
+            SyncChrome();
+            _probe.Victory("victory", flow, _doubleShown);
+        }
+
+        /// <inheritdoc />
+        public void OnHarvestDoubled(int totalSeeds)
+        {
+            LevelFlow flow = RequireFlow();
+            int from = _harvestShown < 0 ? flow.HarvestBase : _harvestShown;
+            _doubleShown = false;
+            LayoutVictory();
+            ShiftBoard(ShiftToClear(_victoryPanelY - RibbonRiseDp, 8f), true);
+            if (_victoryAnim >= 0f)
+            {
+                ApplyVictoryAnim(_victoryAnim);
+            }
+            else
+            {
+                ApplyVictoryAnim(PanelSlideMs + 1000f);
+            }
+
+            StartHarvestCount(from, totalSeeds, 0f);
+            _probe.Victory("double_harvest", flow, false);
+        }
+
+        /// <inheritdoc />
+        public void OnAdGate()
+        {
+            // AD_GATE (02 §2): Siguiente, Inicio y la Cosecha doble dejan de responder; el intersticial, si toca, va encima.
+            UiBuilder.SetEnabled(_next.Button, false);
+            UiBuilder.SetEnabled(_home.Button, false);
+            UiBuilder.SetEnabled(_double.Button, false);
+            _probe.Victory("ad_gate", RequireFlow(), false);
+        }
+
+        /// <inheritdoc />
+        public void OnResumed(FlowPhase phase)
+        {
+            // 02 §14: LOADING del mismo nivel desde el estado guardado, sin intro; el tablero ya se construyó con el contenido
+            // de ahora (OnLevelLoaded) y se reabre la pantalla que estaba abierta.
+            LevelFlow flow = RequireFlow();
+            _intro.Complete();
+            _skipCatcher.gameObject.SetActive(false);
+            if (phase == FlowPhase.GiveUpConfirm)
+            {
+                ShowFunnelBackdrop();
+                ShiftBoard(ShiftToClear(_stuckPanelY, 12f), false);
+                _giveUp.Show(StuckModalModel.BuildGiveUpConfirm(StuckContext(flow)), _canvasW, _canvasH);
+            }
+            else if (phase == FlowPhase.LevelFailed)
+            {
+                OnFunnelPhase(FlowPhase.LevelFailed);
+            }
+
+            SyncChrome();
+            _probe.Funnel("resume", flow);
+            if (phase == FlowPhase.Playing)
+            {
+                _probe.State("ready", flow, int.MinValue, null);
+            }
         }
 
         /// <inheritdoc />
@@ -880,12 +1019,7 @@ namespace AF.UI
                     break;
 
                 case FlowPhase.LevelFailed:
-                    _animator.SnapAll();
-                    ClearLifts();
-                    _ambient.SetSuspended(true);
-                    _stuckOverlay.gameObject.SetActive(true);
-                    _stuck.Panel.gameObject.SetActive(false);
-                    _stuckDim.color = new Color(0.04f, 0.06f, 0.05f, 0.30f);
+                    ShowFunnelBackdrop();
                     _giveUp.Hide();
                     _noCanoes.Hide();
                     _failed.Show(flow.LevelNumber, LevelReward(flow), _canvasW, _canvasH);
@@ -956,6 +1090,18 @@ namespace AF.UI
             {
                 _stuck.Place(_canvasW, _stuckPanelY);
             }
+        }
+
+        // Tablero atenuado detrás del embudo (Nivel fallido, y ¿Seguro? reabierto sin pasar por el modal).
+        private void ShowFunnelBackdrop()
+        {
+            _animator.SnapAll();
+            ClearLifts();
+            _ambient.SetSuspended(true);
+            _stuckOverlay.gameObject.SetActive(true);
+            _stuck.Panel.gameObject.SetActive(false);
+            _stuckDim.color = new Color(0.04f, 0.06f, 0.05f, 0.30f);
+            _sceneVeil.color = new Color(0x6B / 255f, 0x6B / 255f, 0x6B / 255f, 0.20f);
         }
 
         private StuckContext StuckContext(LevelFlow flow)
@@ -1107,6 +1253,9 @@ namespace AF.UI
 
             _stuckAnim = -1f;
             _victoryAnim = -1f;
+            _harvestCounting = false;
+            _harvestShown = -1;
+            _doubleShown = false;
             _ambient.SetSuspended(false);
         }
 
@@ -1125,7 +1274,7 @@ namespace AF.UI
             }
 
             _tray.Refresh();
-            _walletBar.Refresh(_services?.Wallet, flow.CanoesLevel);
+            _walletBar.Refresh(_services?.Wallet, flow.CanoesLevel, PendingHarvest(flow));
             if (flow.Phase == FlowPhase.StuckModal && _stuck.Panel.gameObject.activeSelf)
             {
                 // Tras comprar un Puñado o recargar Marea, el modal se rearma con el saldo nuevo y el mismo precio.
@@ -1150,15 +1299,21 @@ namespace AF.UI
             LevelFlow? flow = _flow;
             FlowPhase phase = flow?.Phase ?? FlowPhase.Loading;
             bool funnel = phase == FlowPhase.StuckModal || phase == FlowPhase.GiveUpConfirm || phase == FlowPhase.LevelFailed || phase == FlowPhase.NoCanoes;
-            bool victory = phase == FlowPhase.VictoryScreen || phase == FlowPhase.Celebration;
-            _badge.gameObject.SetActive(!funnel);
-            _restart.Button.gameObject.SetActive(!funnel);
-            _tray.SetVisible(!funnel);
+            bool victoryScreen = phase == FlowPhase.VictoryScreen || phase == FlowPhase.AdGate;
+            bool victory = victoryScreen || phase == FlowPhase.Celebration;
+
+            // En la pantalla de victoria (y en AD_GATE) arriba va el saldo, como en el embudo (ficha §4.8: «el saldo sale
+            // siempre arriba a la izquierda»), y la Cosecha llega a él mientras cuenta (02 §6). Durante la celebración el HUD
+            // sigue a la vista, como Magic Sort (ficha §4.6: «tablero y HUD oscurecidos, no ocultos»).
+            bool balance = funnel || victoryScreen;
+            _badge.gameObject.SetActive(!balance);
+            _restart.Button.gameObject.SetActive(!balance);
+            _tray.SetVisible(!funnel && !victoryScreen);
             bool pause = !victory && (phase == FlowPhase.Playing || phase == FlowPhase.Intro || phase == FlowPhase.StuckModal);
             _pauseButton.Button.gameObject.SetActive(pause);
-            _walletBar.SetVisible(funnel);
+            _walletBar.SetVisible(balance);
             _walletBar.Layout(phase == FlowPhase.StuckModal ? 64f : 16f, TopRowY);
-            _walletBar.Refresh(_services?.Wallet, flow != null && flow.CanoesLevel);
+            _walletBar.Refresh(_services?.Wallet, flow != null && flow.CanoesLevel, flow == null ? 0 : PendingHarvest(flow));
         }
 
         private void ShowToast(string text)
@@ -1406,7 +1561,7 @@ namespace AF.UI
                 ApplyVictoryAnim(_victoryAnim);
                 if (before < PanelSlideMs && _victoryAnim >= PanelSlideMs)
                 {
-                    _probe.Layout("victory", RequireFlow().LevelNumber, null, new[] { "next", "home" }, new[] { (RectTransform)_next.Button.transform, (RectTransform)_home.Button.transform });
+                    EmitVictoryLayout();
                 }
             }
         }
@@ -1434,7 +1589,7 @@ namespace AF.UI
             float fade = Mathf.Clamp01(ms / OverlayFadeMs);
             _victoryDim.color = new Color(0f, 0f, 0f, 0f);
             float slide = 1f - Ease.OutCubic(ms / PanelSlideMs);
-            float panelTop = _victoryPanelY + (slide * (VictoryPanelDp + RibbonRiseDp + 40f));
+            float panelTop = _victoryPanelY + (slide * (_victoryPanelDp + RibbonRiseDp + 40f));
             _victoryPanel.anchoredPosition = new Vector2(_victoryPanel.anchoredPosition.x, -panelTop);
             float rt = Mathf.Clamp01((ms - 100f) / 300f);
             float ribbon = ms < 100f ? 0.6f : Mathf.LerpUnclamped(0.6f, 1f, Ease.OutBack(rt, 2.3f));
@@ -1454,6 +1609,7 @@ namespace AF.UI
             float nt = Mathf.Clamp01((ms - 600f) / 150f);
             _nextGroup.alpha = nt;
             _homeGroup.alpha = nt;
+            _doubleGroup.alpha = nt;
             float breathe = ms > 750f ? 1f + (0.015f * (1f - Mathf.Cos(((ms - 750f) / 1400f) * Mathf.PI * 2f))) : 1f;
             ((RectTransform)_next.Face.parent).localScale = Vector3.one * Mathf.Lerp(0.9f, 1f, Ease.Out(nt)) * breathe;
         }
@@ -1557,18 +1713,122 @@ namespace AF.UI
             _stuckPanelY = _canvasH - _safeBottom - 8f - _stuck.Height;
             _stuck.Place(w, _stuckPanelY);
 
-            _victoryPanelY = _canvasH - _safeBottom - 8f - VictoryPanelDp;
-            UiBuilder.Place(_victoryPanel, (w - panelW) / 2f, _victoryPanelY, panelW, VictoryPanelDp);
-            PlaceAt(_ribbon.rectTransform, panelW / 2f, -RibbonRiseDp + (RibbonHeightDp * 0.5f), RibbonWidthDp, RibbonHeightDp, new Vector2(0.5f, 0.5f));
+            LayoutVictory();
+        }
+
+        // Panel de victoria de arriba abajo según lo que ofrece (con o sin Cosecha doble), con la cinta, los rayos y el velo
+        // centrados en la cinta (02 §6; guía 5.3 y 12).
+        private void LayoutVictory()
+        {
+            float w = _canvasW;
+            float panelW = Mathf.Min(328f, w - 32f);
             float nextW = Mathf.Min(w - 48f, Mathf.Min(312f, panelW - 16f));
-            UiBuilder.Place((RectTransform)_next.Button.transform, (panelW - nextW) / 2f, VictoryCtaTopDp, nextW, 64f);
+            float y = VictoryHarvestTopDp;
+            UiBuilder.Place(_harvestRow, 0f, y, panelW, VictoryHarvestDp);
+            float mid = panelW * 0.5f;
+            UiBuilder.Place(_harvestLabel.rectTransform, 16f, 0f, mid - 22f, VictoryHarvestDp);
+            UiBuilder.Place(_harvestSeed.rectTransform, mid - 2f, 6f, 32f, 32f);
+            UiBuilder.Place(_harvestValue.rectTransform, mid + 34f, 0f, mid - 50f, VictoryHarvestDp);
+            y += VictoryHarvestDp + 4f;
+
+            _double.Button.gameObject.SetActive(_doubleShown);
+            UiBuilder.SetEnabled(_double.Button, true);
+            if (_doubleShown)
+            {
+                UiBuilder.Place((RectTransform)_double.Button.transform, (panelW - nextW) / 2f, y, nextW, ModalKit.HeightOf(_double));
+                float face = _art.CtaWater.FaceHeightDp;
+                UiBuilder.Place(_doubleIcon.rectTransform, 12f, (face - 22f) * 0.5f, 24f, 22f);
+                UiBuilder.Place(_doubleLabel.rectTransform, 40f, 3f, nextW - 52f, face * 0.52f);
+                UiBuilder.Place(_doubleSub.rectTransform, 40f, (face * 0.52f) + 1f, nextW - 52f, face * 0.36f);
+                y += ModalKit.HeightOf(_double) + 2f;
+            }
+
+            _victoryCtaTopDp = y;
+            UiBuilder.Place((RectTransform)_next.Button.transform, (panelW - nextW) / 2f, y, nextW, ModalKit.HeightOf(_next));
+            UiBuilder.SetEnabled(_next.Button, true);
+            UiBuilder.SetEnabled(_home.Button, true);
             float homeW = Mathf.Min(VictoryHomeWidthDp, nextW);
-            UiBuilder.Place((RectTransform)_home.Button.transform, (panelW - homeW) / 2f, VictoryHomeTopDp, homeW, 48f);
+            _victoryHomeTopDp = y + VictoryHomeBelowCtaDp;
+            UiBuilder.Place((RectTransform)_home.Button.transform, (panelW - homeW) / 2f, _victoryHomeTopDp, homeW, 48f);
+            _victoryPanelDp = _victoryHomeTopDp + 48f + 18f;
+
+            _victoryPanelY = _canvasH - _safeBottom - 8f - _victoryPanelDp;
+            UiBuilder.Place(_victoryPanel, (w - panelW) / 2f, _victoryPanelY, panelW, _victoryPanelDp);
+            PlaceAt(_ribbon.rectTransform, panelW / 2f, -RibbonRiseDp + (RibbonHeightDp * 0.5f), RibbonWidthDp, RibbonHeightDp, new Vector2(0.5f, 0.5f));
             float ribbonY = _victoryPanelY - RibbonRiseDp + (RibbonHeightDp * 0.5f);
             PlaceAt(_victoryRays.rectTransform, w * 0.5f, ribbonY, 2f * VictoryRaysRadiusDp, 2f * VictoryRaysRadiusDp, new Vector2(0.5f, 0.5f));
             PlaceAt(_victoryGlow.rectTransform, w * 0.5f, ribbonY, 2f * VictoryGlowRadiusDp, 2f * VictoryGlowRadiusDp, new Vector2(0.5f, 0.5f));
             PlaceAt(_victoryVeil.rectTransform, w * 0.5f, ribbonY, 2f * ProceduralArt.VeilHoleHalfDp, 2f * ProceduralArt.VeilHoleHalfDp, new Vector2(0.5f, 0.5f));
-            _victorySurface.sprite = _art.ModalSurfaceFor(panelW - 16f, VictoryPanelDp - 16f);
+            _victorySurface.sprite = _art.ModalSurfaceFor(panelW - 16f, _victoryPanelDp - 16f);
+        }
+
+        private void EmitVictoryLayout()
+        {
+            _layoutIds.Clear();
+            _layoutRects.Clear();
+            if (_double.Button.gameObject.activeSelf)
+            {
+                _layoutIds.Add("double_harvest");
+                _layoutRects.Add((RectTransform)_double.Button.transform);
+            }
+
+            _layoutIds.Add("next");
+            _layoutRects.Add((RectTransform)_next.Button.transform);
+            _layoutIds.Add("home");
+            _layoutRects.Add((RectTransform)_home.Button.transform);
+            _probe.Layout("victory", RequireFlow().LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
+        }
+
+        // La Cosecha cuenta de from a to en 400 ms (02 §6) tras delayMs; sin asignaciones (SetCharArray).
+        private void StartHarvestCount(int from, int to, float delayMs)
+        {
+            _harvestFrom = Mathf.Max(0, from);
+            _harvestTo = Mathf.Max(0, to);
+            _harvestCountMs = -delayMs;
+            _harvestCounting = true;
+            _harvestShown = -1;
+            WriteHarvest(_harvestFrom);
+        }
+
+        private void TickHarvest(float dtMs)
+        {
+            if (!_harvestCounting)
+            {
+                return;
+            }
+
+            _harvestCountMs += dtMs;
+            float t = _harvestCountMs <= 0f ? 0f : Mathf.Clamp01(_harvestCountMs / GameConfig.HarvestCountMs);
+            WriteHarvest(_harvestFrom + Mathf.RoundToInt((_harvestTo - _harvestFrom) * t));
+            if (t >= 1f)
+            {
+                _harvestCounting = false;
+            }
+        }
+
+        private void WriteHarvest(int value)
+        {
+            if (value == _harvestShown)
+            {
+                return;
+            }
+
+            _harvestShown = value;
+            _harvestBuf[0] = '+';
+            int n = UiText.WriteNumber(_harvestBuf, 1, value, true);
+            _harvestValue.SetCharArray(_harvestBuf, 0, n);
+        }
+
+        // Semillas de la Cosecha que la fila aún no ha contado (el saldo de arriba las enseña cuando llegan).
+        private int PendingHarvest(LevelFlow flow)
+        {
+            bool victory = flow.Phase == FlowPhase.VictoryScreen || flow.Phase == FlowPhase.AdGate;
+            if (!victory || _harvestShown < 0)
+            {
+                return 0;
+            }
+
+            return Mathf.Max(0, flow.HarvestSeeds - _harvestShown);
         }
 
         private void LayoutBoard()
