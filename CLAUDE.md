@@ -29,7 +29,7 @@ La raíz **es** el proyecto Unity; Unity solo importa `Assets/` y `Packages/`.
 - `tools/`: `level-generator/` (.NET 10; `--handmade` genera el pack del tutorial desde `level-generator/specs/tutorial_v0.json` con AF.Core/AF.Solver) y `level-qa/`, `levelgen_proto.py`, `econ_sim.py`, `econ_variants.py`, `validate_schema.py`; salidas en `tools/out/` y `tools/out_inverse/`.
 - Proyecto Unity (URP 2D, creado el 2026-10-06): `Assets/_Project/` con `Scripts/` (asmdef AF.Levels y AF.GameFlow sin motor; AF.Presentation y AF.UI; gráficos provisionales por código), `Data/Levels/tutorial_v0.json` (niveles 1-10, generado: no lo edites a mano), `Scenes/Game.unity` (la crea `GameSceneBuilder.CreateGameScene`), `Tests/` (EditMode y PlayMode) y `Editor/CI/` (AF.EditorTools: `ProjectSetup`, `BuildSmoke`, `BuildDev`); `ProjectSettings/`, `Packages/manifest.json` y `packages-lock.json` (este lo regenera Unity: no lo edites a mano). Prototipo v0: `docs/dev/prototipo-v0.md`.
 - `scripts/`: `unity-compile.ps1`, `unity-test.ps1`. `ci/`: `size-gate.ps1`, `check-16kb.sh`.
-- `.claude/`: `agents/` (7 subagentes), `rules/` (reglas por ruta), `skills/` (`unity-cli`, `unity-pipeline`), `settings.json` (permisos aprobados por el dueño el 2026-10-06).
+- `.claude/`: `agents/` (7 subagentes), `rules/` (reglas por ruta), `skills/` (`unity-cli`, `unity-pipeline`), `settings.json` (permisos aprobados por el dueño el 2026-10-06; el 2026-10-09 pasó todas las reglas «ask» a «allow» para trabajar sin avisos: solo quedan las «deny». Las reglas duras de este archivo siguen valiendo aunque nada pida confirmación).
 - **Pendiente (no crear a mano):**
   - `.github/workflows/`: s30 y s32;
   - `functions/`: Cloud Functions, más adelante.

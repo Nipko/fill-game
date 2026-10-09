@@ -97,9 +97,7 @@
       "PowerShell(gh issue view*)",
       "PowerShell(gh issue list*)",
       "Bash(bash ci/*)",
-      "Bash(bash -n ci/*)"
-    ],
-    "ask": [
+      "Bash(bash -n ci/*)",
       "Bash(unity command *)",
       "Bash(unity cmd *)",
       "Bash(unity install*)",
@@ -249,6 +247,7 @@
       "Edit(/.gitignore)",
       "Edit(/.gitattributes)"
     ],
+    "ask": [],
     "deny": [
       "Bash(unity auth login*)",
       "Bash(unity a login*)",
