@@ -166,6 +166,7 @@ namespace AF.Tests.EditMode
             JsonValue value = JsonParser.Parse("{\"_\":0" + fields + "}");
             Assert.That(value.Kind, Is.EqualTo(JsonKind.Object), fields);
         }
+
         [Test]
         public void PourLine_CarriesThePourMode_AndTheAmountOfThePour()
         {
