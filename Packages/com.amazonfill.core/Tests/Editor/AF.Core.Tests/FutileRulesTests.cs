@@ -278,6 +278,25 @@ namespace AF.Core.Tests
         }
 
         [Test]
+        public void R13_IsCorrectButNotComplete_TwoUsefulPoursCanReturnToTheSameCanonicalState()
+        {
+            // Anexo B, «Pruebas»: el test literal «no existe un ciclo de vertidos útiles que vuelva al mismo estado canónico»
+            // es falso ya en el juego base. A = [1, 2, 2, 2] y B = [3, 3, 2] (cap 4): A→B mueve 1 dosis, B→A mueve 1, los dos
+            // son útiles y el tablero vuelve al inicial. R13 es correcto (no declara bloqueo con progreso posible: P1 de
+            // DotnetOnly/FutilePropertyTests) pero no completo; las propiedades P1-P3 sustituyen a ese test.
+            BoardState start = Board(C(4, 1, 2, 2, 2), C(4, 3, 3, 2));
+
+            Assert.That(PourRules.IsFutile(start, 0, 1), Is.False);
+            BoardState middle = PourRules.Apply(start, 0, 1, PourMode.Run);
+            Assert.That(PourRules.IsFutile(middle, 1, 0), Is.False);
+            BoardState back = PourRules.Apply(middle, 1, 0, PourMode.Run);
+
+            Assert.That(middle.CanonicalHash(), Is.Not.EqualTo(start.CanonicalHash()));
+            Assert.That(back.CanonicalHash(), Is.EqualTo(start.CanonicalHash()));
+            Assert.That(back.Equals(start), Is.True);
+        }
+
+        [Test]
         public void BoardRules_AgreesWithPourRules_OnEveryPairOfTheseBoards()
         {
             // PourRules delega en BoardRules: mismas respuestas de legal, cantidad y futil (y CuiaRules, el envoltorio

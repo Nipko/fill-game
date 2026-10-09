@@ -19,6 +19,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   indexada por el código de mecánica de la cuia (bits 39-42 de `Cuia.Packed`, hoy siempre 0); los ganchos solo se llaman
   para cuias con mecánica. `AF.Core` concede `InternalsVisibleTo("AF.Solver")` para que el solver recorra las mismas
   reglas por sus rutas internas.
+- Pruebas de propiedad de R13, R14 y R16 (C1-2; Q13 de D-007, parte 2), solo dotnet: `DotnetOnly/PropertyBoards`
+  (tableros pequeños con semilla fija, capacidades uniformes o mixtas con Cuia chica 1-3 y Cuia alta 5-6 con su fruta
+  abundante, e `IMechanicInjector` para que cada mecánica añada sus casos antes de su debut, 02 R16) y
+  `DotnetOnly/FutilePropertyTests` sobre todos los estados alcanzables (BFS de `ExhaustiveSearch`), en `run` y en `single`:
+  P1 (R14) todo estado atascado es irresoluble; P2 (R16, `run`) un fútil entre dos cuias sin mecánica y de la misma
+  capacidad no cambia el estado canónico; P3 (anexo B) ningún par monocolor ↔ vacía es útil en los dos sentidos. Unos
+  20.000 estados por combinación (modo × familia), 0 violaciones, unos 1,5 s en total. Con capacidades distintas un fútil sí
+  puede cambiar el estado canónico (test documentado: precisión del texto de R16); la garantía que se prueba es P1.
+- Test compartido documentado del anexo B: «no existe un ciclo de vertidos útiles» es falso ya en el juego base
+  (A = [1, 2, 2, 2], B = [3, 3, 2]); R13 es correcto, no completo, y P1-P3 lo sustituyen.
 - Atributos por cuia (C1-3; 08 §4.1 `{type, key, partner, n, k}`; 03 §3 y §9): `Cuia` empaqueta en los bits 39-60 de
   `Packed` el tipo (`AF.Core.Mechanics.MechanicType`: `None`, `Hoja`, `Brote`, `Liana`, `Matapi`, `Remolino`, `Lluvia`,
   `Pirana`; 4 bits), `key` (tinte − 1), el id de pareja del Remolino, `n`, `k`, el contador y las banderas
