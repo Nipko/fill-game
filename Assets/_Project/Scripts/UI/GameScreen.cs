@@ -1875,7 +1875,10 @@ namespace AF.UI
                 }
 
                 _addedView = -1;
+
+                // LayoutBoard ya avisa de la recolocación (BoardLaidOut y LabelsLayoutBoard): un solo aviso por fotograma.
                 LayoutBoard();
+                return;
             }
 
             _animator.BoardLaidOut();
@@ -2473,7 +2476,7 @@ namespace AF.UI
         // Etiquetas: al final de LayoutHud.
         partial void LabelsLayoutHud();
 
-        // Etiquetas: al final de LayoutBoard y de cada fotograma de TickRelayout (cuia añadida).
+        // Etiquetas: al final de LayoutBoard y de cada fotograma de TickRelayout (cuia añadida), una sola vez por fotograma.
         partial void LabelsLayoutBoard();
 
         // Etiquetas: al final de OnLevelLoaded.
