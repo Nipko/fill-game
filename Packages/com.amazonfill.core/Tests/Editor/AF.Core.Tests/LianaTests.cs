@@ -115,6 +115,19 @@ namespace AF.Core.Tests
         }
 
         [Test]
+        public void M3_Validation_WithBarro_IsNotMixedCapacities_D4_138()
+        {
+            // El Barro (15) no es un color (02 §9.1 M5): no cuenta como un color de U = 1 en el bloqueo provisional de la Liana
+            // con capacidades mixtas (C1-9). Ba+Li va en el 138 del calendario d.4 de D-007.
+            var state = new BoardState(new[]
+            {
+                LianaFruit(1, 4, 2, 2), C(4, 2, Cuia.MudColor, 1), C(4, 1, 1, 1), C(4, 2), Cuia.Empty(4),
+            });
+
+            Assert.That(LevelValidation.Validate(state), Is.Null);
+        }
+
+        [Test]
         public void M3_Validation_FruitCanSealOutside_AndNoHiddenDoses()
         {
             // Propuesta b.2 M3, regla 4 (c puede sellar fuera de la Liana) y Q14 A (sin Aguas turbias con disparadores).

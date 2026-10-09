@@ -4,6 +4,7 @@ using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
 using AF.Solver.Bot;
+using AF.Solver.Murky;
 using AF.Solver.Search;
 using NUnit.Framework;
 
@@ -370,6 +371,99 @@ namespace AF.Core.Tests.DotnetOnly
                 Cuia.Create(4, new[] { 3, 2, 4, 4 }), Cuia.Empty(4).WithMechanic(MechanicType.Matapi), Cuia.Empty(4),
             });
             AssertRulesBotAndSolverDoNotAllocate(state, 13UL);
+        }
+
+        /// <summary>Presupuesto del solver en <see cref="ReferenceBoard_HotLoop_DoesNotAllocate"/>: el bucle es el mismo y la suite sigue rápida.</summary>
+        private const int ReferenceSolveBudget = 5000;
+
+        /// <summary>Presupuesto por realidad de <see cref="SafeMoves"/> en el mismo test (el de Morpho en el cliente sería mayor).</summary>
+        private const int ReferenceRealityBudget = 500;
+
+        private static string[] ReferenceNames()
+        {
+            return ReferenceBoards.Names();
+        }
+
+        [TestCaseSource(nameof(ReferenceNames))]
+        public void ReferenceBoard_HotLoop_DoesNotAllocate(string name)
+        {
+            // C3-3 (CLAUDE.md, regla dura 2), con todas las mecánicas y sus combinaciones del calendario d.4: 0 bytes en
+            // SolverMoves, IsStuck y BoardRules.ApplyInPlace; menos de 1 KB por Solve y por partida del bot ya calentados; menos
+            // de 1 KB por realidad en SafeMoves (tableros con Aguas turbias). No se ejecuta en paralelo: con otros hilos
+            // asignando, una recolección puede hacer saltar GetAllocatedBytesForCurrentThread unos 8 KB (el contexto de
+            // asignación del hilo) sin que el código asigne nada.
+            ReferenceBoard board = ReferenceBoards.Get(name);
+            BoardState state = board.State;
+            int width = state.Count;
+            var cuias = new Cuia[width];
+            var work = new Cuia[width];
+            for (int i = 0; i < width; i++)
+            {
+                cuias[i] = state[i];
+            }
+
+            BoardCanon.Sort(cuias, 0, width);
+            int[] units = state.UnitsTable;
+            var moves = new SolverMove[SolverMoves.MaxMoves];
+            var applied = new SolverMove[SolverMoves.MaxMoves];
+            int count = SolverMoves.Collect(cuias, 0, width, units, PourMode.Run, true, applied);
+            SolverMoves.Collect(cuias, 0, width, units, PourMode.Single, false, moves);
+            BoardRules.IsStuck(cuias, 0, width, units, true);
+            var events = default(PourEvents);
+            Array.Copy(cuias, work, width);
+            BoardRules.ApplyInPlace(work, 0, width, units, applied[0].Source, applied[0].Target, PourMode.Run, applied[0].IsFutile, ref events);
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            int total = 0;
+            for (int repeat = 0; repeat < 50; repeat++)
+            {
+                total += SolverMoves.Collect(cuias, 0, width, units, PourMode.Run, true, moves);
+                total += SolverMoves.Collect(cuias, 0, width, units, PourMode.Single, false, moves);
+                total += BoardRules.IsStuck(cuias, 0, width, units, true) ? 1 : 0;
+                for (int m = 0; m < count; m++)
+                {
+                    Array.Copy(cuias, work, width);
+                    BoardRules.ApplyInPlace(work, 0, width, units, applied[m].Source, applied[m].Target, PourMode.Run, applied[m].IsFutile, ref events);
+                }
+            }
+
+            long rules = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            var solver = new AStarSolver();
+            var options = new SolverOptions(Math.Min(board.ExpandedLimit, ReferenceSolveBudget), 1, true, PourMode.Run);
+            SolveResult warm = solver.Solve(state, options);
+            before = GC.GetAllocatedBytesForCurrentThread();
+            SolveResult again = solver.Solve(state, options);
+            long solve = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            var bot = new CasualBot();
+            bot.FailRate(state, 5UL, PourMode.Run);
+            before = GC.GetAllocatedBytesForCurrentThread();
+            BotResult games = bot.FailRate(state, 5UL, PourMode.Run);
+            long botBytes = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(count, Is.GreaterThan(0), name);
+            Assert.That(total, Is.GreaterThan(0), name);
+            Assert.That(rules, Is.EqualTo(0), name + ": reglas");
+            Assert.That(again.Status, Is.EqualTo(warm.Status), name);
+            Assert.That(solve, Is.LessThan(1024), name + ": Solve");
+            Assert.That(botBytes, Is.LessThan(1024L * games.Runs), name + ": bot");
+            Assert.That(botBytes, Is.EqualTo(0), name + ": bot");
+
+            if (state.HasHidden)
+            {
+                var safe = new SafeMoves();
+                var realityOptions = new SolverOptions(ReferenceRealityBudget, 1, true, PourMode.Run);
+                safe.Find(state, realityOptions);
+                safe.ClearMemo();
+                before = GC.GetAllocatedBytesForCurrentThread();
+                RealityStatus status = safe.Find(state, realityOptions);
+                long safeBytes = GC.GetAllocatedBytesForCurrentThread() - before;
+
+                Assert.That(status, Is.EqualTo(RealityStatus.Ok), name);
+                Assert.That(safe.RealityCount, Is.InRange(1, 24), name);
+                Assert.That(safeBytes, Is.LessThan(1024L * safe.RealityCount), name + ": SafeMoves");
+            }
         }
 
         /// <summary>

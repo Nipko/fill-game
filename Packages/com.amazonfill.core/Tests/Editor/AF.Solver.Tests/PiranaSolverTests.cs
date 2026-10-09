@@ -93,6 +93,29 @@ namespace AF.Solver.Tests
             Assert.That(state.IsWon(), Is.True);
         }
 
+        [Test]
+        public void M7_Single_AFutilePourIntoTheCave_CanShortenTheSolution()
+        {
+            // Hallazgo de C3-3 para la integración (02 §1.4, anexo B y R16): la cueva no está en la lista de cambia_al_recibir,
+            // así que verter una cuia monocolor en la cueva vacía es fútil (cap = U_c). Pero los mordiscos se apilan en la
+            // cueva: en single, llevar el 1 suelto a la cueva hace que el mordisco siguiente le junte otro 1, y la solución
+            // óptima (9 vertidos) pasa por ese fútil; con la poda de 03 §5 el par es 10. P1 se cumple (no se declara Aguas
+            // estancadas con solución; FutilePropertyTests) y en run, el modo de juego (D-005), este tablero da el mismo par
+            // con y sin poda (8), como los 291 tableros con Piraña del barrido de C3-3.
+            var start = new BoardState(new[]
+            {
+                Cuia.Create(4, new[] { 1, 2 }), Cuia.Create(4, new[] { 3, 3, 1, 1 }).WithMechanic(MechanicType.Liana, key: 2),
+                Cuia.Create(4, new[] { 3, 2, 3, 1 }), Cuia.Empty(4).WithMechanic(MechanicType.Pirana, k: 2), Cuia.Create(4, new[] { 2, 2 }),
+            });
+
+            BoardState afterFirst = PourRules.Apply(start, 0, 4, PourMode.Single);
+            Assert.That(PourRules.IsFutile(afterFirst, 0, 3), Is.True);
+            Assert.That(ExhaustiveSearch.Explore(start, PourMode.Single, MaxStates).Distance[0], Is.EqualTo(9));
+            Assert.That(ExhaustiveSearch.Par(start, PourMode.Single, true), Is.EqualTo(10));
+            Assert.That(ExhaustiveSearch.Explore(start, PourMode.Run, MaxStates).Distance[0], Is.EqualTo(8));
+            Assert.That(ExhaustiveSearch.Par(start, PourMode.Run, true), Is.EqualTo(8));
+        }
+
         /// <summary>Mordiscos en todas las aristas del grafo de estados alcanzables (para comprobar que el lote los ejercita).</summary>
         private static int CountBites(BoardState start, PourMode mode)
         {

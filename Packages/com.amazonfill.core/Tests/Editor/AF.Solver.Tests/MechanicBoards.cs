@@ -151,8 +151,10 @@ namespace AF.Solver.Tests
                 Assert.That(exhaustivePruned, Is.GreaterThanOrEqualTo(exhaustive), label + ": la poda no puede acortar el par");
             }
 
-            if (IsUniform(start))
+            if (IsUniform(start) && !(mode == PourMode.Single && HasPirana(start)))
             {
+                // Excepción medida en C3-3: con la Piraña en single, un vertido fútil a la cueva puede acortar la solución
+                // (PiranaSolverTests.M7_Single_AFutilePourIntoTheCave_CanShortenTheSolution).
                 Assert.That(exhaustivePruned, Is.EqualTo(exhaustive), label + ": con capacidades uniformes la poda no cambia el par");
             }
 
@@ -222,6 +224,19 @@ namespace AF.Solver.Tests
 
             colors.Sort();
             return colors;
+        }
+
+        private static bool HasPirana(BoardState board)
+        {
+            for (int i = 0; i < board.Count; i++)
+            {
+                if (board[i].Mechanic == MechanicType.Pirana)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool IsUniform(BoardState board)

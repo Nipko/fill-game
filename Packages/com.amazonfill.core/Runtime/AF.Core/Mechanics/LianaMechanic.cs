@@ -109,7 +109,10 @@ namespace AF.Core.Mechanics
             return colors >= liana.MechanicN ? null : "D-007 (Liana de cuenta): no hay n colores que puedan sellar fuera de ella";
         }
 
-        /// <summary>Alguna cuia no es de capacidad 4 o algún color no tiene 4 dosis (02 §8).</summary>
+        /// <summary>
+        /// Alguna cuia no es de capacidad 4 o algún color no tiene 4 dosis (02 §8). El Barro (15) no es un color (02 §9.1 M5):
+        /// sus dosis no cuentan (corregido en C3-3: un nivel con Barro y Liana, como el 138 del calendario d.4, se rechazaba).
+        /// </summary>
         private static bool HasMixedCapacities(BoardState state)
         {
             for (int i = 0; i < state.Count; i++)
@@ -120,7 +123,7 @@ namespace AF.Core.Mechanics
                 }
             }
 
-            for (int c = Cuia.MinColor; c <= Cuia.MaxColor; c++)
+            for (int c = Cuia.MinColor; c <= Cuia.MaxTintColor; c++)
             {
                 int units = state.UnitsOf(c);
                 if (units != 0 && units != Cuia.DefaultCapacity)

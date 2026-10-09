@@ -6,6 +6,30 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- Solver y bot con todas las mecánicas: rendimiento y asignaciones (C3-3, cierra el núcleo 3; regla dura 2; 03 §5-§6; 08 §14.2;
+  02 T2; GDD §6 #6). Solo dotnet: `DotnetOnly/ReferenceBoards` (36 tableros de 12-14 cuias: las 9 mecánicas de 1-200, Cuia
+  chica, Cuia alta y las 25 combinaciones del calendario d.4 de D-007, generados con `InverseWalk`, superposición y
+  verificación, percentil 75 de 30 semillas; Ll+Li+Al6 queda bloqueado por C1-9 en `LevelValidation`),
+  `DotnetOnly/MechanicsPerformanceTests` (cada tablero válido y resuelto por A* con w = 1 dentro de su número de expandidos
+  fijado con un 25 % de margen y nunca más de 300.000; Morpho con w = 2 y 40.000 determinista; bot ×40 reproducible; tabla de
+  tiempos en Release en un test explícito de la categoría `Performance`, con Morpho < 50 ms) y
+  `HotLoopAllocationTests.ReferenceBoard_HotLoop_DoesNotAllocate` (0 bytes en `SolverMoves`, `IsStuck`,
+  `BoardRules.ApplyInPlace` y el bot calentado; < 1 KB por `Solve` y por realidad en `SafeMoves`). Compartido:
+  `MechanicsSolverTests` (20 combinaciones del calendario sin Aguas turbias, 8 tableros pequeños cada una con el nuevo
+  `CombinedInjector`, en `run` y `single`: A* con y sin poda contra la búsqueda exhaustiva y heurística admisible y
+  consistente). Resultados y reparto de 30 semillas por combinación en la tabla de evidencias del README: A* hasta 186.346
+  expandidos en los tableros de referencia; Morpho 1,0 ms como máximo; bot ×40 4,8 ms como máximo; con el presupuesto de
+  300.000 se agotan sobre todo Ll+Re (13/30), Pi+Ma (7/30) y Re+Ma (5/30); `ceil(H/2)` con Piraña lo agotaría en 29-30 de 30.
+- **Hallazgo de C3-3 para la integración (02 §1.4, anexo B, R16):** la cueva de la Piraña no está en la lista de
+  `cambia_al_recibir`, así que verter una cuia monocolor en la cueva vacía es fútil; pero los mordiscos se apilan en la cueva
+  y, en `single`, ese fútil puede formar parte de la solución óptima: un tablero con Liana y Piraña de capacidades uniformes da
+  par 9 sin poda y 10 con la poda de 03 §5 (`PiranaSolverTests.M7_Single_AFutilePourIntoTheCave_CanShortenTheSolution`). P1
+  se cumple (R14) y en `run`, el modo de juego, no apareció en 291 tableros con Piraña ni en 98 con Liana y Piraña; la
+  comparación «uniforme ⇒ mismo par» de `MechanicBoards` excluye la Piraña en `single`. Si se quiere que la poda no cambie
+  nunca el par, la cueva vacía tendría que contar como `cambia_al_recibir` (decisión del dueño; no se ha tocado la regla).
+  Aparte: `MechanicBoards` puede generar inicios con una cuia sellada (no pasan `LevelValidation`); con una Liana cuya fruta ya
+  está sellada al inicio, la poda deja sin camino útil un tablero resoluble, pero ese estado es inalcanzable en partida (la
+  Liana se suelta en el mismo vertido que sella su fruta).
 - Piraña (C3-2; 02 §9.1 M7 y §9.2; 03 §3 y §9; propuesta de D-007 b.2 M7 y b.2 M10 regla 7; anexo B; D-007, Q10, Q14 A y
   Q18 B; respuesta Q-C del dueño; GDD §6 #6; debut 183). `PiranaMechanic` (interno), registrada en la tabla y aceptada por
   `BoardBuilder` (con ella están portadas todas las mecánicas definidas). La cueva es la cuia marcada (normalmente una Cuia
@@ -294,6 +318,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Cambiado
 
+- C3-3 (corrección de C1-9): `LianaMechanic` ya no cuenta el Barro (15) como un color de `U` = 1 al decidir si las capacidades
+  son mixtas, así que un nivel con Liana y Barro y capacidades uniformes (Ba+Li, nivel 138 del calendario d.4) deja de
+  rechazarse por el bloqueo provisional. Test `LianaTests.M3_Validation_WithBarro_IsNotMixedCapacities_D4_138`.
 - C3-2: `BoardBuilderTests.Mechanics_NotYetPorted_AreRejected` pasa a `Mechanics_EveryDefinedTypeIsPorted` (el fallo
   cerrado sigue en `BoardBuilder` para los tipos que se definan en la 1.1).
 - C3-1: `CuiaRules.IsSealed` no da por sellada una cuia de Lluvia con gotas pendientes (02 §9.1 M6: solo sella con agua);

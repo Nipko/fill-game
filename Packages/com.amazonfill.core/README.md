@@ -88,6 +88,78 @@ del ruido de la máquina (compartida con un Editor de Unity: de +3 % a +14 % fre
 oscilaciones del mismo orden entre repeticiones). El Remolino multiplica los estados alcanzables: sus tests de solver usan
 tableros de hasta 5.000 estados.
 
+Todas las mecánicas (C3-3, 2026-10-08, .NET 10 Release, Windows ARM64; máquina compartida con un Editor de Unity, así que
+los tiempos oscilan un 10-30 % entre repeticiones). Tableros de referencia de 12-14 cuias para cada mecánica y para cada
+combinación del calendario 1-200 de D-007 (d.4) en `dotnet/AF.Core.Tests/DotnetOnly/ReferenceBoards.cs`: tablero base con
+`InverseWalk` (K = 10, E = 2), superposición de las mecánicas (03 §9) y verificación con `LevelValidation` y A*; de 30 semillas
+por combinación se eligió el del percentil 75 de expandidos. Ho Hoja, Ma Matapi, Li Liana con fruta, Tu Aguas turbias, Re
+Remolino, Ba Barro, Ll Lluvia, Br Brote, Pi Piraña, Ch Cuia chica, Al y Al6 Cuia alta. Comando de la tabla:
+`dotnet test dotnet/AmazonFill.slnx -c Release --filter Category=Performance`.
+
+| Tablero | Cuias | Par | A* w = 1: expandidos (ms) | Morpho w = 2 (ms) | Bot ×40 (ms) | 30 semillas: válidos · resueltos · sin presupuesto · irresolubles | Expandidos: mediana / máx. |
+|---|---|---|---|---|---|---|---|
+| Ch | 13 | 18 | 1.105 (28) | 0,35 | 2,9 | 30 · 30 · 0 · 0 | 298 / 25.715 |
+| Al | 12 | 22 | 7.365 (47) | 0,07 | 1,0 | 30 · 30 · 0 · 0 | 4.952 / 19.282 |
+| Ho | 12 | 23 | 3.694 (6) | 0,12 | 0,3 | 30 · 30 · 0 · 0 | 2.492 / 12.492 |
+| Ma | 12 | 23 | 31.188 (71) | 0,13 | 0,6 | 30 · 30 · 0 · 0 | 16.562 / 102.346 |
+| Li | 12 | 21 | 2.975 (6) | 0,05 | 0,3 | 30 · 30 · 0 · 0 | 1.899 / 7.871 |
+| Tu | 13 | 18 | 5.605 (16; 2 realidades: SafeMoves 328 ms en el pipeline, 2,7 ms con Morpho) | 0,07 | 0,4 | 9 · 9 · 0 · 0 | 243 / 20.651 |
+| Re | 12 | 20 | 67.439 (543) | 0,18 | 1,3 | 30 · 26 · 4 · 0 | 25.988 / 249.805 |
+| Ba | 13 | 19 | 4.910 (21) | 0,14 | 0,8 | 30 · 30 · 0 · 0 | 1.132 / 203.333 |
+| Ll | 12 | 21 | 56.095 (155) | 0,38 | 1,6 | 30 · 30 · 0 · 0 | 32.846 / 216.387 |
+| Br | 13 | 18 | 1.753 (10) | 0,13 | 0,7 | 30 · 30 · 0 · 0 | 641 / 7.403 |
+| Pi | 13 | 22 | 126.829 (627) | 0,28 | 1,8 | 30 · 26 · 4 · 0 | 20.387 / 273.047 |
+| Ho+Ch | 13 | 19 | 1.629 (5) | 0,15 | 0,7 | 30 · 30 · 0 · 0 | 758 / 64.095 |
+| Ma+Ho | 13 | 26 | 90.687 (355) | 0,13 | 4,8 | 30 · 29 · 1 · 0 | 24.226 / 168.988 |
+| Li+Ho | 12 | 21 | 2.861 (6) | 0,09 | 0,3 | 30 · 27 · 0 · 3 | 1.366 / 7.491 |
+| Ho+Tu | 13 | 16 | 1.257 (4; 1 realidad: SafeMoves 47 ms en el pipeline, 0,9 ms con Morpho) | 0,10 | 0,8 | 14 · 14 · 0 · 0 | 528 / 48.887 |
+| Re+Li | 12 | 20 | 61.355 (399) | 0,18 | 1,4 | 30 · 27 · 3 · 0 | 11.458 / 267.050 |
+| Ba+Ma | 13 | 18 | 10.598 (53) | 0,14 | 1,8 | 30 · 30 · 0 · 0 | 3.007 / 35.125 |
+| Ll+Ho | 13 | 19 | 186.346 (929) | 0,29 | 0,9 | 30 · 27 · 3 · 0 | 72.290 / 291.403 |
+| Br+Ba | 13 | 17 | 11.149 (34) | 0,10 | 0,6 | 30 · 30 · 0 · 0 | 1.564 / 72.203 |
+| Pi+Ma | 13 | 18 | 66.472 (355) | 0,21 | 1,2 | 30 · 23 · 7 · 0 | 15.986 / 239.855 |
+| Ma+Tu | 13 | 19 | 8.856 (69; 3 realidades: SafeMoves 2.977 ms en el pipeline, 11,1 ms con Morpho) | 0,19 | 1,1 | 14 · 14 · 0 · 0 | 2.824 / 19.626 |
+| Ba+Tu | 13 | 17 | 4.622 (28; 4 realidades: SafeMoves 2.233 ms en el pipeline, 9,9 ms con Morpho) | 0,12 | 0,9 | 10 · 10 · 0 · 0 | 2.575 / 35.762 |
+| Br+Tu | 13 | 19 | 20.841 (70; 1 realidad: SafeMoves 587 ms en el pipeline, 1,3 ms con Morpho) | 0,15 | 0,8 | 7 · 7 · 0 · 0 | 6.636 / 26.824 |
+| Ll+Re | 12 | 20 | 169.921 (1.325) | 1,00 | 1,2 | 30 · 17 · 13 · 0 | 33.694 / 239.972 |
+| Ll+Ba | 13 | 17 | 23.869 (162) | 0,34 | 0,8 | 30 · 29 · 1 · 0 | 8.541 / 267.015 |
+| Br+Ma | 13 | 14 | 1.976 (12) | 0,16 | 0,6 | 30 · 30 · 0 · 0 | 573 / 32.957 |
+| Pi+Li | 12 | 23 | 35.971 (124) | 0,19 | 1,5 | 30 · 30 · 0 · 0 | 21.335 / 213.932 |
+| Re+Ma | 12 | 22 | 111.046 (666) | 0,24 | 1,5 | 30 · 25 · 5 · 0 | 62.132 / 292.464 |
+| Re+Ho | 12 | 21 | 64.796 (314) | 0,18 | 1,5 | 30 · 28 · 2 · 0 | 20.677 / 156.134 |
+| Ba+Li | 13 | 20 | 3.820 (12) | 0,18 | 1,5 | 30 · 30 · 0 · 0 | 776 / 32.486 |
+| Br+Ho | 13 | 15 | 1.385 (5) | 0,15 | 0,5 | 30 · 30 · 0 · 0 | 170 / 4.591 |
+| Ba+Re | 13 | 17 | 31.897 (433) | 0,30 | 1,8 | 30 · 26 · 4 · 0 | 2.955 / 131.883 |
+| Li+Ma | 12 | 23 | 8.903 (22) | 0,18 | 1,5 | 30 · 30 · 0 · 0 | 5.373 / 17.100 |
+| Ll+Li+Al6 | 12 | 22 | 36.553 (113) | 0,81 | 1,2 | 30 · 30 · 0 · 0 | 14.282 / 58.071 |
+| Pi+Ba | 14 | 18 | 8.678 (81) | 0,35 | 1,3 | 30 · 29 · 1 · 0 | 1.105 / 166.983 |
+| Ma+Li | 12 | 22 | 14.292 (43) | 0,25 | 0,5 | 30 · 30 · 0 · 0 | 7.366 / 29.035 |
+
+Ll+Li+Al6 no pasa hoy `LevelValidation` por el bloqueo provisional de la Liana con capacidades mixtas (C1-9); el solver la
+resuelve igual. Criterios de C3-3:
+
+1. **Asignaciones** (`HotLoopAllocationTests.ReferenceBoard_HotLoop_DoesNotAllocate`, los 36 tableros): 0 bytes en
+   `SolverMoves`, `IsStuck`, `BoardRules.ApplyInPlace` y el bot ×40 calentado; menos de 1 KB por `Solve` calentado y por
+   realidad en `SafeMoves`. Cumplido.
+2. **A\* (w = 1)**: los 36 tableros se resuelven con 186.346 expandidos como máximo (Ll+Ho, 0,93 s); el número de cada uno
+   queda fijado con un 25 % de margen (`MechanicsPerformanceTests`). En el reparto de 30 semillas por combinación, el
+   presupuesto de 300.000 se agota en Ll+Re 13/30, Pi+Ma 7/30, Re+Ma 5/30, Re, Pi y Ba+Re 4/30, Re+Li y Ll+Ho 3/30, Re+Ho
+   2/30 y Ma+Ho, Ll+Ba y Pi+Ba 1/30; en el resto, nunca. El Remolino es lo que más estados añade y la Lluvia y la Piraña los
+   multiplican por 2-3, como estimaba 03 §9. El pipeline tendrá que descartar o regenerar esos tableros (sin par exacto).
+3. **Morpho (w = 2, 40.000)**: determinista (mismo resultado con un solver nuevo y con uno reutilizado) y 1,0 ms como máximo
+   (objetivo < 50 ms). En los tableros turbios, `SafeMoves` con las opciones de Morpho tarda 0,9-11,1 ms (02 T2: < 50 ms);
+   con las del pipeline (w = 1 y 20.000 nodos por realidad), 47-2.977 ms por estado, así que la ruta segura de un nivel de 13
+   cuias puede costar minutos offline (dato para P-11).
+4. **Bot ×40**: 4,8 ms como máximo (objetivo < 200 ms) y reproducible por semilla.
+5. **Heurística con Piraña**: `H`, exacta (ver `SolverHeuristic`). Con `ceil(H/2)`, la cota del plan [P], medida con un parche
+   local que no se publicó, el presupuesto se agota en Pi 29/30, Pi+Ma 30/30, Pi+Li 27/30 y Pi+Ba 30/30 (con `H`: 4, 7, 0 y 1)
+   y Morpho tarda 17-85 ms.
+
+**Evidencia para el GDD §6 #6** (Lluvia y Piraña en la 1.0 si el solver con estado temporal pasa los tests): con capacidades
+uniformes y mixtas, A* coincide con la búsqueda exhaustiva y la heurística es admisible y consistente en todos los estados
+alcanzables (32 tableros por mecánica y 8 por combinación del calendario, en `run` y `single`), P1-P3 se cumplen (R14) y los
+tableros de referencia cumplen los presupuestos de 03 §5 y 08 §14.2. La decisión es del dueño.
+
 Pendiente: cancelación por tiempo del solver para Morpho (`hint_timeout_ms`; el núcleo no lee relojes); el generador `fill` y el
 pipeline (`tools/`). Preguntas abiertas: 02 R16 con capacidades mixtas (C1-8, C1-9: la poda de fútiles puede alargar el par o
 dejar sin camino útil un tablero resoluble, y con una Liana hay estados atascados con solución) y la consecuencia de Q-B en
