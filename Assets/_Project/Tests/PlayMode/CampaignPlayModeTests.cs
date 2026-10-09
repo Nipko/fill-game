@@ -74,7 +74,7 @@ namespace AF.Tests.PlayMode
             Assert.That(other, Is.GreaterThanOrEqualTo(0));
             Assert.That(PourRules.IsLegal(before, other, hoja), Is.False);
             Assert.That(flow.TapCuia(other).Kind, Is.EqualTo(TapKind.Selected));
-            Assert.That(flow.TapCuia(hoja).Kind, Is.Not.EqualTo(TapKind.Poured), "otra fruta no entra en la Hoja");
+            Assert.That(flow.TapCuia(hoja).Kind, Is.EqualTo(TapKind.Rejected), "otra fruta no entra en la Hoja: rechazo (C6)");
             Assert.That(flow.Session.Current, Is.EqualTo(before), "el rechazo no cambia el tablero (R11)");
             flow.TapBackground();
 

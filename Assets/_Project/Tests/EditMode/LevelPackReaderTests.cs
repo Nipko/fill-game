@@ -216,25 +216,30 @@ namespace AF.Tests.EditMode
             Assert.That(LevelPackReader.Read(TestPacks.Schema2Pack(extra: ", \"intro_mechanic\": \"hoja\"", schema: 1)).First.IntroMechanic, Is.EqualTo("hoja"));
         }
 
-        [Test]
-        public void Reader_RejectsInconsistentBoards()
+        // Tableros del subconjunto af-level/1 (caps [4, 4, 4]) que el lector rechaza, con el fragmento del mensaje que prueba
+        // su motivo, como InvalidSchema2Levels: el formato lo comprueba ReadBoard, U_c (02 R3) BoardBuilder y la colocación del
+        // Barro (02 §9.1 M5) LevelValidation.
+        private static readonly TestCaseData[] InconsistentBoards =
         {
-            // longitudes distintas, más dosis que capacidad, Barro (15) fuera de su sitio (02 §9.1 M5), tinte fuera de rango,
-            // color 16 reservado (R2) y U_c distinto (02 R3)
-            string[] cuias =
-            {
-                "[[8, 8, 8, 4], [4, 4, 4, 8]]",
-                "[[8, 8, 8, 4, 4], [4, 4, 8], []]",
-                "[[8, 8, 8, 4], [4, 4, 4, 8], [15]]",
-                "[[8, 8, 8, 0], [4, 4, 4, 8], []]",
-                "[[8, 8, 8, 4], [4, 4, 4, 8], [16]]",
-                "[[8, 8, 8, 4], [4, 4, 4, 8], [8]]",
-            };
-            for (int i = 0; i < cuias.Length; i++)
-            {
-                string json = TestPacks.MinimalPack(TestPacks.MinimalLevel(cuias: cuias[i]));
-                Assert.That(() => LevelPackReader.Read(json), Throws.TypeOf<LevelFormatException>(), cuias[i]);
-            }
+            Inconsistent("longitudes distintas", "[[8, 8, 8, 4], [4, 4, 4, 8]]", "'cuias' y 'caps' deben tener la misma longitud"),
+            Inconsistent("más dosis que capacidad", "[[8, 8, 8, 4, 4], [4, 4, 8], []]", "la cuia 0 tiene más dosis que su capacidad"),
+            Inconsistent("Barro fuera de su sitio", "[[8, 8, 8, 4], [4, 4, 4, 8], [15]]", "cuia 2, capa 0: 02 §9.1 M5: el Barro va en la capa 2 o 3"),
+            Inconsistent("tinte 0", "[[8, 8, 8, 0], [4, 4, 4, 8], []]", "color 0 fuera de 1..15"),
+            Inconsistent("color 16 reservado", "[[8, 8, 8, 4], [4, 4, 4, 8], [16]]", "color 16 fuera de 1..15"),
+            Inconsistent("U_c distinto", "[[8, 8, 8, 4], [4, 4, 4, 8], [8]]", "units_per_color: el color 8 tiene 5 dosis y se declararon 4"),
+        };
+
+        private static TestCaseData Inconsistent(string why, string cuias, string expected)
+        {
+            return new TestCaseData(TestPacks.MinimalPack(TestPacks.MinimalLevel(cuias: cuias)), expected)
+                .SetName("Reader_RejectsInconsistentBoards(" + why + ")");
+        }
+
+        [TestCaseSource(nameof(InconsistentBoards))]
+        public void Reader_RejectsInconsistentBoards(string json, string expected)
+        {
+            Assert.That(() => LevelPackReader.Read(json),
+                Throws.TypeOf<LevelFormatException>().With.Message.Contains("m01_v1_n0001").And.Message.Contains(expected));
         }
 
         [TestCase(null, LevelDefinition.LabelNormal)]
