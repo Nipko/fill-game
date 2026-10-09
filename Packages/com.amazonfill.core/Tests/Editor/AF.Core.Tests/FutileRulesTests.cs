@@ -239,8 +239,8 @@ namespace AF.Core.Tests
         }
 
         // Regresiones obligatorias de 04 §5.1 sobre BoardRules, la regla de tablero del anexo B (D-007, Q13). La (4),
-        // "monocolor → vacía bajo Lluvia con gotas pendientes, o conectada a Remolino, no es fútil" (anexo B), queda para
-        // las tareas que portan esas mecánicas (C2-4 Remolino y C3-1 Lluvia).
+        // "monocolor → vacía bajo Lluvia con gotas pendientes, o conectada a Remolino, no es fútil" (anexo B): la parte del
+        // Remolino está en RemolinoTests (C2-4); la de la Lluvia llega con C3-1.
 
         [Test]
         public void BoardRules_Regression1_SmallCuiaToStandardEmpty_IsNotStuck()

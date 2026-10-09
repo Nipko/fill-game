@@ -26,7 +26,9 @@ namespace AF.Solver.Search
     /// ramificación por nodo no cambia); en <c>Single</c> crece el conjunto de estados alcanzables (decisiones.md §2.1.3).
     /// Las cuias idénticas (mismo <see cref="Cuia.Packed"/>, que incluye la capacidad) se expanden una sola vez como
     /// origen y como destino: generalizan "un solo vacío por (capacidad, attr)" de 03 §5 y producen exactamente los
-    /// mismos hijos canónicos.</description></item>
+    /// mismos hijos canónicos. El descarte rápido de destinos «llena u otra cima» de <see cref="SolverMoves"/> solo vale
+    /// para cuias normales sin Barro expuesto: un destino Remolino (que puede estar lleno o tener otra cima, porque la racha
+    /// entra por el fondo de su pareja, 03 §9) o con Barro expuesto lo decide <see cref="BoardRules"/>.</description></item>
     /// <item><description><b>Orden:</b> el de <c>ASTAR</c> en 03 §5 y de <c>tools/levelgen_proto.py</c>, que encolan
     /// <c>(f, g, S)</c> y <c>(f, g, contador, clave)</c>: prioridad <c>f = g + w·H</c>; a igual <c>f</c>, primero el de
     /// <b>menor</b> <c>g</c>; a igualdad total, orden de llegada (<see cref="MinHeap"/>). Con <c>w = 1</c> el par no

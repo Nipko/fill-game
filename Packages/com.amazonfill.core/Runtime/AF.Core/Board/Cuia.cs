@@ -451,6 +451,29 @@ namespace AF.Core.Board
         }
 
         /// <summary>
+        /// Remolino (02 §9.1 M4): devuelve la cuia con <paramref name="amount"/> dosis visibles de <paramref name="color"/>
+        /// insertadas por el <b>fondo</b>; las demás suben (con su visibilidad). Precondición: caben (<see cref="Space"/>).
+        /// Bucle caliente: no valida.
+        /// </summary>
+        internal Cuia InsertAtBottom(int color, int amount)
+        {
+            int count = Count;
+            ulong bottom = 0;
+            for (int i = 0; i < amount; i++)
+            {
+                bottom |= (ulong)(color - 1) << (i * BitsPerDose);
+            }
+
+            ulong doses = (((_bits & DosesFieldMask) << (amount * BitsPerDose)) | bottom) & DosesFieldMask;
+            ulong hidden = ((ulong)HiddenMask << amount) & HiddenFieldMask;
+            ulong bits = (_bits & ~DosesFieldMask & ~(HiddenFieldMask << HiddenShift) & ~(ThreeBitMask << CountShift))
+                | doses
+                | (hidden << HiddenShift)
+                | ((ulong)(count + amount) << CountShift);
+            return new Cuia(bits);
+        }
+
+        /// <summary>
         /// La misma cuia con la dosis <paramref name="index"/> de color <paramref name="color"/>, sin tocar su visibilidad: es
         /// como AF.Solver asigna colores a las posiciones ocultas en cada realidad de Aguas turbias (03 §8). Bucle caliente: no
         /// valida (índice dentro de la cuia, color 1-16).

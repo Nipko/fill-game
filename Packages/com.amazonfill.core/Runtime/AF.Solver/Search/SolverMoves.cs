@@ -62,7 +62,8 @@ namespace AF.Solver.Search
                     }
 
                     Cuia to = board[j];
-                    if (!to.HasMechanic && !to.MudExposed && (to.IsFull || (!to.IsEmpty && to.TopColor != fromTop)))
+                    int toTop = to.TopColor;
+                    if (!to.HasMechanic && toTop != Cuia.MudColor && (to.IsFull || (toTop != Cuia.NoColor && toTop != fromTop)))
                     {
                         // Descarte rápido de destinos normales que la regla normal rechazaría igual. No vale para las cuias
                         // con mecánica (Remolino: entra en la pareja, de cualquier color) ni con Barro en la cima

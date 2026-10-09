@@ -169,13 +169,14 @@ namespace AF.Core.Rules
                 }
             }
 
-            if (to.MudExposed)
+            int top = to.TopColor;
+            if (top == Cuia.MudColor)
             {
                 return true; // barro_expuesto(B): acepta cualquier color (02 §1.2; §9.1 M5); nunca está sellada
             }
 
             // Regla normal: una cuia sellada está llena, así que "no llena" cubre también "no sellada".
-            return !to.IsFull && (to.IsEmpty || to.TopColor == board[source].TopColor);
+            return !to.IsFull && (top == Cuia.NoColor || top == board[source].TopColor);
         }
 
         /// <summary>Cuia que recibirá las dosis de un vertido a <paramref name="target"/>: B, o la pareja en el Remolino.</summary>

@@ -25,6 +25,12 @@ namespace AF.Core.Rules
         /// <summary>Cuia que recibió las dosis: B, salvo en el Remolino (su pareja, 02 §9.1 M4).</summary>
         public int Receiver { get; internal set; }
 
+        /// <summary>
+        /// El vertido pasó por un Remolino: las dosis entraron por el fondo de la pareja de B (<see cref="Receiver"/> ≠
+        /// <see cref="Target"/>; 02 §9.1 M4).
+        /// </summary>
+        public bool ThroughRemolino => Receiver != Target;
+
         /// <summary>Dosis movidas: <c>cantidad(A, B)</c> en el modo de vertido (R9).</summary>
         public int Amount { get; internal set; }
 

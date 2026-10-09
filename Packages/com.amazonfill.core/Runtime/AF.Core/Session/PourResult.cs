@@ -25,10 +25,16 @@ namespace AF.Core.Session
         public Pour Pour { get; }
 
         /// <summary>
-        /// La cuia destino quedó sellada con este vertido (R5, R10 c). El origen no puede sellar al verter:
-        /// pierde dosis y deja de estar llena.
+        /// La cuia que recibió las dosis quedó sellada con este vertido (R5, R10 c): B, o su pareja si B es un Remolino
+        /// (<see cref="Receiver"/>). El origen no puede sellar al verter: pierde dosis y deja de estar llena.
         /// </summary>
         public bool TargetSealed { get; }
+
+        /// <summary>Cuia que recibió las dosis: el destino, o su pareja en el Remolino (02 §9.1 M4).</summary>
+        public int Receiver => Events.Receiver;
+
+        /// <summary>El vertido entró por el fondo de la pareja de un Remolino (02 §9.1 M4).</summary>
+        public bool ThroughRemolino => Events.ThroughRemolino;
 
         /// <summary>Estado de la partida tras el vertido (R10 g, h).</summary>
         public LevelStatus Status { get; }

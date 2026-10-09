@@ -6,6 +6,31 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- Remolino (C2-4, cierra el núcleo 2; 02 §1.2 rama del remolino en `legal` y §9.1 M4; 03 §9; 04 §2.1 b y §5.1 regresión 4;
+  propuesta de D-007 b.2 M4; respuestas Q-A y Q-B del dueño; debut 103). `RemolinoMechanic` (interno), registrada en la
+  tabla y aceptada por `BoardBuilder`: tocar una cuia del par como destino mete la racha por el fondo de la pareja, sea del
+  color que sea (`Cuia.InsertAtBottom`, interno); legal si la cuia tocada no está sellada y la pareja tiene hueco y no está
+  sellada (la tocada puede estar llena); cantidad `min(racha, espacio(pareja))` en `run` y 1 en `single`; como origen, la
+  regla normal; como destino nunca es fútil (`cambia_al_recibir`). **Q-A**: una cuia del par no puede verter en su propia
+  pareja (vertido ilegal, rechazo sin texto, R11). **Q-B**: la exención de `futil` se extiende al origen Remolino
+  (`ExemptAsSource`); la de la Lluvia con gotas pendientes llega con C3-1. La pareja es la otra cuia de Remolino con el
+  mismo id de pareja (el canon ya lo conserva, 03 §3). Eventos: `PourEvents.ThroughRemolino`, `PourResult.Receiver` y
+  `PourResult.ThroughRemolino`; `PourResult.TargetSealed` mira la cuia que recibió (la pareja en el Remolino; sin
+  Remolino no cambia). Validación: exactamente dos cuias por id de pareja (pares simétricos y distintos, los dos de tipo
+  remolino; un Matapi nunca es pareja), sin ocultos [P] y sin Piraña en el nivel [P]. El descarte rápido de destinos de
+  `SolverMoves` ya excluía las cuias con mecánica; la heurística no cambia (un vertido sigue eliminando ≤ 1 corte y sacando
+  un color de ≤ 1 cuia; comprobado). Tests compartidos `RemolinoTests` (cada regla con su §, regresión 4 de 04 §5.1, Q-A y
+  el contraejemplo de Q-B: X = [1, 1] e Y = [1, 1] en par, una vacía y el resto sellado → no hay bloqueo y se gana en 2) y
+  `RemolinoSolverTests` (A* con y sin poda contra la búsqueda exhaustiva y heurística admisible y consistente en 32
+  tableros de hasta 5.000 estados, uniformes y mixtos, en `run` y `single`; inyector `RemolinoInjector`); P1 y P2 con
+  Remolino en `FutilePropertyTests` (unos 20.000-29.000 estados por combinación, sin violaciones) y
+  `HotLoopAllocationTests.RemolinoBoard_HotLoop_DoesNotAllocate` (0 bytes en reglas y bot; solver calentado < 1 KB).
+- **Hallazgo de Q-B para la integración (P3, anexo B):** con la exención de origen, X (Remolino monocolor) → vacía es útil
+  y vacía → X entra por el fondo de la pareja; con la pareja vacía el tablero vuelve al mismo estado canónico (X e Y son
+  simétricos). Es el riesgo que el anexo B describe al eximir orígenes: un ir y venir sin progreso cuenta como útil y puede
+  retrasar el modal de Aguas estancadas. R14 se cumple (P1 sin violaciones). `FutilePropertyTests` cuenta esos vaivenes
+  aparte (1 en `single` con capacidades mixtas) y `P3_Remolino_QB_AUsefulRoundTripCanReturnToTheSameCanonicalState` los
+  fija.
 - Realidades, vertido seguro y ruta segura de Aguas turbias (C2-2; 02 §11 T2, T4, T5 y `validar_turbio`; 03 §8 y §18.3;
   08 §2.2). `AF.Solver.Murky.RealityEnumerator`: asignaciones de las posiciones ocultas coherentes con lo visible, con
   `units_per_color` (menos las gotas pendientes de Lluvia) y con T4; T4 se mira contra la dosis de encima del tablero de
@@ -218,6 +243,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Cambiado
 
+- C2-4: `PourResult.TargetSealed` mira la cuia que recibió las dosis (`Receiver`): en el Remolino, la pareja. Sin Remolino es
+  la misma que antes. `MechanicBoards.Generate` admite un tope de estados alcanzables.
+- C2-2: `AStarSolver.Solve` separa la búsqueda (`Search`) de la construcción de la solución; `SolveLength` (interno) la usa
+  sin construirla. Mismo par y mismos expandidos.
 - C2-1: `LevelSession` ya no rechaza los tableros con dosis ocultas (los tests `HiddenDoses_AreRejected*` pasan a
   `HiddenDoses_AreAccepted*`); I3 e I4 se precisan con la máscara de revelado (I5).
 - C2-3: `BoardState` y `BoardBuilder` aceptan el color 15 (Barro); `CuiaRules.IsSealed` exige un tinte y

@@ -44,6 +44,7 @@ namespace AF.Core.Mechanics
             table[(int)MechanicType.Brote] = new BroteMechanic();
             table[(int)MechanicType.Matapi] = new MatapiMechanic();
             table[(int)MechanicType.Liana] = new LianaMechanic();
+            table[(int)MechanicType.Remolino] = new RemolinoMechanic();
             return table;
         }
 

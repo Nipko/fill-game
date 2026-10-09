@@ -22,7 +22,11 @@ namespace AF.Core.Tests.DotnetOnly
     /// importa es P1.</description></item>
     /// <item><description>P3 (anexo B): ningún par monocolor ↔ vacía es útil en los dos sentidos sin progreso (el vaivén no
     /// vuelve al mismo estado canónico). Con mecánicas un vaivén útil puede existir si cambia el estado: la Hoja de 1 que
-    /// cae y después deja ir su fruta a la «casa correcta» de 4 (02 §1.4).</description></item>
+    /// cae y después deja ir su fruta a la «casa correcta» de 4 (02 §1.4). <b>Excepción del Remolino por Q-B</b>: con la
+    /// exención de origen, X (Remolino monocolor) → vacía es útil y vacía → X entra por el fondo de la pareja, así que con la
+    /// pareja vacía se vuelve al mismo estado canónico (X e Y son simétricos); se cuenta aparte
+    /// (<see cref="Report.RemolinoCycles"/>) y lo fija
+    /// <see cref="P3_Remolino_QB_AUsefulRoundTripCanReturnToTheSameCanonicalState"/>.</description></item>
     /// </list>
     /// Cada mecánica añade su inyector (<see cref="IMechanicInjector"/>) antes de su debut (02 R16). Solo dotnet: lotes
     /// grandes.
@@ -44,6 +48,7 @@ namespace AF.Core.Tests.DotnetOnly
             public int FutilePours;
             public int UsefulMonoToEmpty;
             public int UsefulRoundTrips;
+            public int RemolinoCycles;
             public readonly List<string> Violations = new List<string>();
         }
 
@@ -99,6 +104,40 @@ namespace AF.Core.Tests.DotnetOnly
         {
             // C2-3: 02 R16 antes del debut del Barro (123).
             AssertWith(mode, family, new BarroInjector(), 0xF07E_1231UL);
+        }
+
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithRemolino(PourMode mode, CapacityFamily family)
+        {
+            // C2-4: 02 R16 antes del debut del Remolino (103).
+            AssertWith(mode, family, new RemolinoInjector(), 0xF07E_1031UL);
+        }
+
+        [Test]
+        public void P3_Remolino_QB_AUsefulRoundTripCanReturnToTheSameCanonicalState()
+        {
+            // Consecuencia de la respuesta Q-B (exención de futil también en el origen Remolino) para la integración: el
+            // anexo B avisaba de que eximir orígenes rompe la detección. X = Remolino [1, 1], su pareja Y vacía, una vacía E:
+            // X → E es útil (Q-B) y E → X también (destino Remolino, entra por el fondo de Y): el tablero vuelve al mismo
+            // estado canónico. R13 nunca declara bloqueo con progreso posible (P1 se cumple con Remolino), pero un ir y venir
+            // sin progreso así cuenta como útil y puede retrasar el modal de Aguas estancadas.
+            AF.Core.Mechanics.MechanicType remolino = AF.Core.Mechanics.MechanicType.Remolino;
+            var state = new BoardState(new[]
+            {
+                Cuia.Create(4, new[] { 1, 1 }).WithMechanic(remolino, pairId: 0), Cuia.Empty(4).WithMechanic(remolino, pairId: 0),
+                Cuia.Empty(4), Cuia.Create(4, new[] { 1, 1 }),
+            });
+
+            Assert.That(PourRules.IsFutile(state, 0, 2), Is.False);
+            BoardState middle = PourRules.Apply(state, 0, 2, PourMode.Run);
+            Assert.That(PourRules.IsFutile(middle, 2, 0), Is.False);
+            BoardState back = PourRules.Apply(middle, 2, 0, PourMode.Run);
+
+            Assert.That(back.Equals(state), Is.False);
+            Assert.That(back.CanonicalHash(), Is.EqualTo(state.CanonicalHash()));
         }
 
         private const string LianaMixedBlocked =
@@ -262,7 +301,8 @@ namespace AF.Core.Tests.DotnetOnly
                 + report.Stuck.ToString(CultureInfo.InvariantCulture) + " atascados, "
                 + report.FutilePours.ToString(CultureInfo.InvariantCulture) + " fútiles, "
                 + report.UsefulMonoToEmpty.ToString(CultureInfo.InvariantCulture) + " monocolor→vacía útiles, "
-                + report.UsefulRoundTrips.ToString(CultureInfo.InvariantCulture) + " vaivenes útiles (con progreso)";
+                + report.UsefulRoundTrips.ToString(CultureInfo.InvariantCulture) + " vaivenes útiles (con progreso)"
+                + (report.RemolinoCycles == 0 ? string.Empty : ", " + report.RemolinoCycles.ToString(CultureInfo.InvariantCulture) + " vaivenes Remolino sin progreso (Q-B)");
         }
 
         private static void Check(ExhaustiveSearch.Graph graph, PourMode mode, Report report)
@@ -316,7 +356,14 @@ namespace AF.Core.Tests.DotnetOnly
                                 BoardState back = PourRules.Apply(after, b, a, mode);
                                 if (back.CanonicalHash() == state.CanonicalHash())
                                 {
-                                    Violation(report, "P3 (anexo B)", mode, state, a + "↔" + b + " es útil en los dos sentidos y vuelve al mismo estado");
+                                    if (state[a].Mechanic == AF.Core.Mechanics.MechanicType.Remolino)
+                                    {
+                                        report.RemolinoCycles++; // excepción de Q-B (ver el resumen de la clase)
+                                    }
+                                    else
+                                    {
+                                        Violation(report, "P3 (anexo B)", mode, state, a + "↔" + b + " es útil en los dos sentidos y vuelve al mismo estado");
+                                    }
                                 }
                             }
                         }

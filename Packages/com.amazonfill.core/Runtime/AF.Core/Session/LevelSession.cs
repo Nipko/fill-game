@@ -187,7 +187,7 @@ namespace AF.Core.Session
             Current = next;
             Status = Evaluate(next);
             events.Finish(Status);
-            result = new PourResult(pour, next.IsSealed(target), Status, events);
+            result = new PourResult(pour, next.IsSealed(events.Receiver), Status, events);
             return true;
         }
 

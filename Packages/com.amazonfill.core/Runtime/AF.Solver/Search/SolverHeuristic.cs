@@ -33,6 +33,9 @@ namespace AF.Solver.Search
     /// </remarks>
     public static class SolverHeuristic
     {
+        /// <summary>Bit del Barro (color 15) en las máscaras de colores: <c>h2</c> lo ignora (03 §9).</summary>
+        private const int MudBit = 1 << (Cuia.MudColor - 1);
+
         /// <summary>Cortes de color de una cuia: segmentos de color contiguos − 1 (0 si está vacía).</summary>
         public static int ColorBreaks(Cuia cuia)
         {
@@ -176,19 +179,12 @@ namespace AF.Solver.Search
                 return 0;
             }
 
-            const int mud = Cuia.MudColor;
             int previous = cuia.ColorAt(0);
-            int mask = previous == mud ? 0 : 1 << (previous - 1);
-            int muds = previous == mud ? 1 : 0;
+            int mask = 1 << (previous - 1);
             int bottomRun = count;
             for (int k = 1; k < count; k++)
             {
                 int color = cuia.ColorAt(k);
-                if (color == mud)
-                {
-                    muds++;
-                }
-
                 if (color != previous)
                 {
                     if (bottomRun == count)
@@ -197,26 +193,31 @@ namespace AF.Solver.Search
                     }
 
                     breaks++;
-                    if (color != mud)
-                    {
-                        mask |= 1 << (color - 1);
-                    }
-
+                    mask |= 1 << (color - 1);
                     previous = color;
                 }
             }
 
-            if (muds == 0)
+            above += count - bottomRun;
+            if ((mask & MudBit) == 0)
             {
-                above += count - bottomRun;
-                return mask;
+                return mask; // sin Barro: la heurística de 03 §5 tal cual
             }
 
-            // 03 §9: −1 por cada Barro en h1; en h3 [P] solo cuentan las dosis de tinte sobre la racha del fondo.
+            // 03 §9: −1 por cada Barro en h1 y h2 sin el 15; en h3 [P] solo cuentan las dosis de tinte sobre la racha del
+            // fondo (las de Barro de la racha del fondo ya no estaban contadas).
+            int muds = 0;
+            for (int k = 0; k < count; k++)
+            {
+                if (cuia.ColorAt(k) == Cuia.MudColor)
+                {
+                    muds++;
+                }
+            }
+
             breaks -= muds;
-            int mudsAbove = cuia.ColorAt(0) == mud ? muds - bottomRun : muds;
-            above += count - bottomRun - mudsAbove;
-            return mask;
+            above -= cuia.ColorAt(0) == Cuia.MudColor ? muds - bottomRun : muds;
+            return mask & ~MudBit;
         }
 
         /// <summary>Bits a 1 de <paramref name="value"/> (SWAR; <c>BitOperations</c> no existe en netstandard2.1).</summary>

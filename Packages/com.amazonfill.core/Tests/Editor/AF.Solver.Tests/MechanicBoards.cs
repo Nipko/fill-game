@@ -41,12 +41,22 @@ namespace AF.Solver.Tests
         /// </summary>
         public static List<BoardState> Generate(ulong seed, int count, IMechanicInjector injector, bool mixed)
         {
+            return Generate(seed, count, injector, mixed, MaxStates);
+        }
+
+        /// <summary>
+        /// Como <see cref="Generate(ulong, int, IMechanicInjector, bool)"/> con tableros de como mucho
+        /// <paramref name="maxStates"/> estados alcanzables en <c>single</c> (mecánicas que multiplican los estados, como el
+        /// Remolino, para que el lote siga siendo rápido en Unity).
+        /// </summary>
+        public static List<BoardState> Generate(ulong seed, int count, IMechanicInjector injector, bool mixed, int maxStates)
+        {
             var rng = new Prng(seed);
             var boards = new List<BoardState>();
             for (int attempt = 0; attempt < count * 50 && boards.Count < count; attempt++)
             {
                 BoardState? board = Start(rng, injector, mixed);
-                if (board != null && !PourRules.IsStuck(board, true) && Fits(board))
+                if (board != null && !PourRules.IsStuck(board, true) && Fits(board, maxStates))
                 {
                     boards.Add(board);
                 }
@@ -236,11 +246,11 @@ namespace AF.Solver.Tests
             return true;
         }
 
-        private static bool Fits(BoardState board)
+        private static bool Fits(BoardState board, int maxStates)
         {
             try
             {
-                ExhaustiveSearch.Explore(board, PourMode.Single, MaxStates);
+                ExhaustiveSearch.Explore(board, PourMode.Single, maxStates);
                 return true;
             }
             catch (InvalidOperationException)
@@ -475,6 +485,50 @@ namespace AF.Solver.Tests
             List<int> cuia = doses[candidates[rng.NextInt(candidates.Count)]];
             int layer = cuia.Count == 1 ? 1 : 1 + rng.NextInt(2);
             cuia.Insert(layer, Cuia.MudColor);
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Remolino (02 §9.1 M4): dos cuias sin mecánica pasan a ser un par (<c>partner</c> simétrico). Ninguna de las dos puede
+    /// empezar sellada (03 §17 #5).
+    /// </summary>
+    internal sealed class RemolinoInjector : IMechanicInjector
+    {
+        public string Name => "remolino";
+
+        public bool Inject(Prng rng, int[] caps, List<int>[] doses, MechanicSpec[] attrs)
+        {
+            var units = new int[Cuia.MaxColor + 1];
+            for (int i = 0; i < doses.Length; i++)
+            {
+                for (int k = 0; k < doses[i].Count; k++)
+                {
+                    units[doses[i][k]]++;
+                }
+            }
+
+            var candidates = new List<int>();
+            for (int i = 0; i < caps.Length; i++)
+            {
+                List<int> d = doses[i];
+                bool sealedStart = d.Count == caps[i] && units[d[0]] == caps[i] && MechanicBoards.Colors(new[] { d }).Count == 1;
+                if (attrs[i].IsNone && !sealedStart)
+                {
+                    candidates.Add(i);
+                }
+            }
+
+            if (candidates.Count < 2)
+            {
+                return false;
+            }
+
+            int first = candidates[rng.NextInt(candidates.Count)];
+            candidates.Remove(first);
+            int second = candidates[rng.NextInt(candidates.Count)];
+            attrs[first] = new MechanicSpec(MechanicType.Remolino, partner: second);
+            attrs[second] = new MechanicSpec(MechanicType.Remolino, partner: first);
             return true;
         }
     }
