@@ -2,6 +2,7 @@
 using System;
 using AF.Core.Board;
 using AF.Core.Rules;
+using AF.Solver.Bot;
 using AF.Solver.Search;
 using NUnit.Framework;
 
@@ -141,6 +142,39 @@ namespace AF.Core.Tests.DotnetOnly
 
             Assert.That(warm, Is.GreaterThan(0));
             Assert.That(total, Is.GreaterThanOrEqualTo(2000 * warm));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void WarmCasualBot_DoesNotAllocate()
+        {
+            // C1-5: 0 bytes por paso del bot ya calentado (40 partidas de hasta 400 vertidos).
+            BoardState state = Board();
+            var bot = new CasualBot();
+            BotResult warm = bot.FailRate(state, 11UL, PourMode.Run);
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            BotResult result = bot.FailRate(state, 11UL, PourMode.Run);
+            BotResult other = bot.FailRate(state, 12UL, PourMode.Single);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(result.Failures, Is.EqualTo(warm.Failures));
+            Assert.That(other.Runs, Is.EqualTo(BotOptions.DefaultRuns));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void WarmEarlyTraps_DoesNotAllocate()
+        {
+            BoardState state = Board();
+            var traps = new EarlyTraps();
+            int warm = traps.Count(state, PourMode.Run);
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            int again = traps.Count(state, PourMode.Run) + traps.CountUnavoidable(state, PourMode.Run);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(again, Is.GreaterThanOrEqualTo(warm));
             Assert.That(allocated, Is.EqualTo(0));
         }
 

@@ -34,6 +34,9 @@ namespace AF.Core.Mechanics
         /// <summary><c>espacio_efectivo(B)</c> de 02 §1.2 para la cantidad en <see cref="PourMode.Run"/>.</summary>
         int ReceiveSpace(in BoardSlice board, int target);
 
+        /// <summary>Cuia que recibirá las dosis de un vertido a <paramref name="target"/> (B; la pareja en el Remolino).</summary>
+        int ReceiverOf(in BoardSlice board, int target);
+
         /// <summary>
         /// Transferencia: pone <paramref name="amount"/> dosis de <paramref name="color"/> donde las recibe el destino
         /// (la cima de B por defecto; el fondo de la pareja en el Remolino, 02 §9.1 M4) y devuelve el índice de la cuia

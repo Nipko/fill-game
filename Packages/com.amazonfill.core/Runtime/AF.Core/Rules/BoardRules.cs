@@ -168,6 +168,13 @@ namespace AF.Core.Rules
             return !to.IsFull && (to.IsEmpty || to.TopColor == board[source].TopColor);
         }
 
+        /// <summary>Cuia que recibirá las dosis de un vertido a <paramref name="target"/>: B, o la pareja en el Remolino.</summary>
+        internal static int ReceiverOf(in BoardSlice board, int target)
+        {
+            Cuia to = board[target];
+            return to.HasMechanic ? MechanicTable.Of(to).ReceiverOf(in board, target) : target;
+        }
+
         /// <summary><c>cantidad</c> en <see cref="PourMode.Run"/>: <c>min(racha visible de A, espacio_efectivo(B))</c>.</summary>
         internal static int RunAmount(in BoardSlice board, int source, int target)
         {

@@ -19,6 +19,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   indexada por el código de mecánica de la cuia (bits 39-42 de `Cuia.Packed`, hoy siempre 0); los ganchos solo se llaman
   para cuias con mecánica. `AF.Core` concede `InternalsVisibleTo("AF.Solver")` para que el solver recorra las mismas
   reglas por sus rutas internas.
+- Bot casual ×40 (C1-5; 03 §6-§7; 08 §2.2 y §14.2): `AF.Solver.Bot.CasualBot.FailRate(state, seed, options)` con
+  `BotOptions` (40 partidas, 85/15, tope 400; `ForPipeline(mode)`) y `BotResult` (fallos, partidas y `Rate`). Juega sobre
+  `SolverMoves` en orden canónico y aplica con `BoardRules`, así que admite cada mecánica portada sin código propio.
+  `PUNTUACION_CASUAL` congelada en enteros ×4 [P] (+16 juntar, +40 sellar = la cuia que recibe queda llena y monocolor,
+  −20 vacío, −12 parcial, +8 color expuesto con destino; con mecánicas puntúa la cuia que recibe) y ruido entero
+  `NextInt(131.072)` sobre una escala ×65.536, equivalente a «+ rng()·0,5». Semilla del nivel `SeedFor(seed)` =
+  `SubSeed(SeedFrom(seed), 0xB07)`. Sin asignaciones una vez calentado.
+- `AF.Solver.Search.EarlyTraps` (C1-5; Q16 B): `Count` = primeros vertidos útiles distintos tras los que el tablero queda
+  atascado en ese vertido o puede quedarlo en el siguiente [P]; `CountUnavoidable`, la lectura estricta. En el tutorial v0
+  solo los niveles 6 y 8 tienen trampas (1 cada uno), como el camino a Aguas estancadas que mide `tools/level-generator`.
+- Informe del bot frente al prototipo (`DotnetOnly/BotParityTests`, 40 niveles de `tools/out*/levels_proto.json`): misma
+  etiqueta en 37/40 y diferencia media 0,059 (criterio [P]: 75 % y 0,10). Bot ×40 en un tablero de 12 cuias, Release:
+  0,2-6,8 ms (Python: 20-63 ms, 03 §18). Tests compartidos `CasualBotTests`.
 - PRNG determinista (C1-4; 09 R26, decidido el 2026-10-06: PRNG nuevo en C# y paridad sobre los estados exportados):
   `AF.Core.Determinism.Prng`, xoshiro256** (Blackman y Vigna) sembrado con SplitMix64, escrito desde cero; semilla del
   nivel = FNV-1a de 64 bits de la cadena UTF-8 `amazonfill:v1:m{mm}:v{v}:n{nnnn}` (`LevelSeedText`, `LevelSeed`,

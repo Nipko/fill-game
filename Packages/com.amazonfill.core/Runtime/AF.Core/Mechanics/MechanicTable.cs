@@ -70,6 +70,11 @@ namespace AF.Core.Mechanics
             return board[target].Space;
         }
 
+        public virtual int ReceiverOf(in BoardSlice board, int target)
+        {
+            return target;
+        }
+
         public virtual int Receive(in BoardSlice board, int target, int color, int amount)
         {
             board.Set(target, board[target].AddOnTop(color, amount));
