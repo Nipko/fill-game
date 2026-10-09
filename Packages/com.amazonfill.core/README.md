@@ -35,6 +35,7 @@ dotnet test dotnet/AmazonFill.slnx
 | `AF.Core` | `Rules.PourMode` y `Rules.PourModes`: modo de vertido `Run` (la racha que cabe, con vertido parcial; por defecto y `default(PourMode)`) o `Single` (una dosis por vertido, solo pruebas), con los valores `"run"`/`"single"` de `rules_pour_mode` | D-005, que sustituye a D-001 (`docs/dev/decisiones.md`); 02 §1.2, R6, R9 |
 | `AF.Core` | `Rules.BoardRules`: **única** implementación de las reglas con contexto de tablero y de la aplicación de vertidos: origen, `legal`, `cantidad`, `futil` del anexo B, `ApplyInPlace` con R10 por etapas ((a) revelado, (b) aperturas, (c) sellado, (d) liberaciones, (e) contadores solo en vertidos no fútiles, (f) condiciones, (f′) punto fijo, (g) victoria, (h) bloqueo), sin asignaciones, sobre `(Cuia[], offset, count, U_c)`; `PourRules`, `BoardState`, `LevelSession`, el solver y el bot delegan aquí | 02 §1.2-§1.4; anexo B de la propuesta de D-007 (Q13, Q18 B); 04 §5.1 |
 | `AF.Core` | `Rules.PourEvents`: lo ocurrido en cada etapa de R10 (revelado, aperturas, sellados, liberaciones, contadores, estado), para animar en orden y deshacer en orden inverso | R10 (anexo B) |
+| `AF.Core` | Mecánicas portadas (D-007, núcleo 1): Hoja (M1, debut 43), Matapi (M10, 63), Liana con fruta (M3, 83) y de cuenta (variante, 243) y Brote (M2, 163), como `IMechanic` sin estado; eventos `HojaOpenedMask`, `BroteOpenedMask` y `LianaReleasedMask` en `PourEvents`; cada una con su validación. La Liana con capacidades mixtas está bloqueada en `LevelValidation` hasta decidir la pregunta de 02 R16 (P1 falla) | 02 §9.1; D-007; propuesta de D-007 b.2-b.3 y anexo B |
 | `AF.Core` | `Mechanics.IMechanic` (interno): ganchos de mecánica sin estado (origen, destino, espacio, recepción, `cambia_al_recibir`, exención de origen, etapas (b), (d), (e), (f), victoria y validación), despachados por una tabla estática indexada por el tipo de la cuia | 08 §2.2; 02 §9 |
 | `AF.Core` | `Rules.CuiaRules`: envoltorio heredado sobre cuias sueltas sin mecánicas; capa base de `BoardRules` para el sellado (R5) y el núcleo de `futil` | 02 §1.2, §1.4, §3.1; 04 §5.1 |
 | `AF.Core` | `Rules.Pour` y `Rules.PourRules`: validan argumentos y delegan en `BoardRules`: vertido según el modo (parcial solo en `Run`), `Apply` con `PourEvents`, `CanBeSource`, `IsFutile`, `CollectUsefulMoves`, `HasUsefulMove`, `IsStuck` | 02 §1.2-1.4 R9-R11, R13, R14, R16; §3.1 C1-C2 |
@@ -66,6 +67,8 @@ tableros). A* con `H_single` expande en `Single` como mucho 1.176 estados (nivel
 §2.1.3-§2.1.4. En el tablero de 14 cuias de referencia, `Run` da par 37 con 16.114 expandidos (`Single`: par 48, unos
 17.000). Las firmas sin modo son heredadas (equivalen a `Run`, que desde D-005 es también `PourModes.Default`) hasta T6.
 
-Pendiente de portar: mecánicas (02 §9) y Aguas turbias en la partida (máscara de revelado para Marea, R7), PRNG
-determinista (riesgo R11 del plan de instalación: paridad con MT19937, decisión del dueño), bot casual ×40 (03 §6), cancelación por tiempo del solver para Morpho
-(`hint_timeout_ms`) y enumeración de realidades (03 §8).
+Pendiente de portar: Remolino (C2-4), Barro (colores 15 y 16 en `BoardState`), Lluvia (C3-1) y Piraña (C3-2); Aguas
+turbias en la partida (máscara de revelado para Marea, R7) y enumeración de realidades (03 §8); cancelación por tiempo del
+solver para Morpho (`hint_timeout_ms`); el generador `fill` y el pipeline (`tools/`). Pregunta abierta de 02 R16 (C1-8,
+C1-9): con capacidades mixtas la poda de fútiles puede alargar el par o dejar sin camino útil un tablero resoluble, y con una
+Liana hay estados atascados con solución (P1 de R14 falla); ver el CHANGELOG.

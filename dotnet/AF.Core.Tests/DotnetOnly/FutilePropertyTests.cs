@@ -91,6 +91,45 @@ namespace AF.Core.Tests.DotnetOnly
             AssertWith(mode, family, new MatapiInjector(), 0xF07E_0631UL);
         }
 
+        private const string LianaMixedBlocked =
+            "BLOQUEADO (C1-9): con Liana y capacidades mixtas P1 falla; pregunta de 02 R16 al tech-lead "
+            + "(ver P1_Liana_MixedCapacities_OpenR16Counterexample).";
+
+        [TestCase(PourMode.Run, CapacityFamily.Uniform, true)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed, true, Ignore = LianaMixedBlocked)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform, true)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed, true, Ignore = LianaMixedBlocked)]
+        [TestCase(PourMode.Run, CapacityFamily.Uniform, false)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed, false, Ignore = LianaMixedBlocked)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform, false)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed, false, Ignore = LianaMixedBlocked)]
+        public void P1_P2_P3_HoldWithLiana(PourMode mode, CapacityFamily family, bool withFruit)
+        {
+            // C1-9: 02 R16 antes del debut de la Liana con fruta (83) y de la de cuenta (243). Con capacidades uniformes P1-P3
+            // se cumplen; con mixtas P1 falla (contraejemplo abajo) y LevelValidation bloquea esa combinación.
+            AssertWith(mode, family, new LianaInjector(withFruit), withFruit ? 0xF07E_0831UL : 0xF07E_2431UL);
+        }
+
+        [Test]
+        public void P1_Liana_MixedCapacities_OpenR16Counterexample()
+        {
+            // Contraejemplo de P1 (R14) que para C1-9 (pregunta de 02 R16 y 02 §1.4 para el tech-lead), alcanzable desde un
+            // tablero generado: Cuia alta de 5 con 4 dosis de 2 (la casa de la fruta abundante 1, U_1 = 5, está ocupada),
+            // [1, 1, 1] en una cuia de 4, una Cuia chica de 3 vacía y una Liana con fruta 2 que guarda [1, 1] en la otra cuia
+            // de 4. Solo quedan vertidos fútiles ([1,1,1] → chica y [2,2,2,2] → chica: ninguna es la casa de su fruta), así
+            // que R13 declara Aguas estancadas; pero el fútil [1,1,1] → chica libera una cuia de 4 para el 2, que sella y
+            // suelta la Liana: hay solución. Este test fija el comportamiento actual; cuando se decida la pregunta tendrá
+            // que cambiar.
+            Cuia liana = Cuia.Create(4, new[] { 1, 1 }).WithMechanic(AF.Core.Mechanics.MechanicType.Liana, key: 2);
+            var state = new BoardState(new[] { Cuia.Create(5, new[] { 2, 2, 2, 2 }), Cuia.Create(4, new[] { 1, 1, 1 }), Cuia.Empty(3), liana });
+
+            Assert.That(PourRules.IsStuck(state, true), Is.True);
+            Assert.That(PourRules.IsFutile(state, 1, 2), Is.True);
+            ExhaustiveSearch.Graph graph = ExhaustiveSearch.Explore(state, PourMode.Run, MaxStatesPerBoard);
+            Assert.That(graph.Distance[0], Is.EqualTo(4));
+            Assert.That(LevelValidation.Validate(state), Does.Contain("bloqueo provisional"));
+        }
+
         private static void AssertWith(PourMode mode, CapacityFamily family, IMechanicInjector injector, ulong seed)
         {
             Report report = Run(mode, family, injector, seed);

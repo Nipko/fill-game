@@ -19,6 +19,22 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   indexada por el código de mecánica de la cuia (bits 39-42 de `Cuia.Packed`, hoy siempre 0); los ganchos solo se llaman
   para cuias con mecánica. `AF.Core` concede `InternalsVisibleTo("AF.Solver")` para que el solver recorra las mismas
   reglas por sus rutas internas.
+- Liana con fruta y Liana de cuenta (C1-9; D-007: con fruta en el 83, de cuenta como variante en el 243; propuesta b.2 M3,
+  b.3 y anexo B): `LianaMechanic` (interno). Atada no es origen ni destino (R11); con fruta (`key` = c) se suelta en la
+  etapa (d) de R10 en cuanto existe otra cuia sellada de c; de cuenta (`n` = 1-2), cuando hay `n` cuias selladas; al
+  soltarse pasa a `None` (`PourEvents.LianaReleasedMask`, evento LianaReleased); Marea y Volver a la orilla la vuelven a
+  atar. Validación: exactamente uno de `key` o `n` (`BoardBuilder`), sin dosis ocultas en el nivel (Q14 A), la fruta está
+  en el tablero y puede sellar fuera de la Liana; la de cuenta, con al menos `n` colores que pueden sellar fuera. Tests
+  compartidos `LianaTests` (el obligatorio del anexo B «el vertido que sella c suelta la Liana en el mismo vertido», Marea,
+  cuenta 1 y 2, validación) y `LianaSolverTests` (32 tableros por variante en `run` y `single`, heurística).
+- **Bloqueo de C1-9 (pregunta de 02 R16 para el tech-lead):** P1 (R14) falla con Liana y capacidades mixtas. Contraejemplo
+  alcanzable (`run`): Cuia alta de 5 con `[2,2,2,2]` (casa ocupada de la fruta abundante 1, U_1 = 5), `[1,1,1]` en una
+  cuia de 4, Cuia chica de 3 vacía y Liana con fruta 2 con `[1,1]` en la otra cuia de 4: R13 declara Aguas estancadas (solo
+  quedan vertidos fútiles) y hay solución en 4 vertidos empezando por el fútil `[1,1,1]` → chica. En búsquedas amplias
+  (millones de estados) no aparece en el juego base mixto ni con Hoja, Brote o Matapi, ni con Liana y capacidades
+  uniformes; sí con Liana, Cuia alta y Cuia chica juntas. Provisional y reversible: `LevelValidation` rechaza la Liana con
+  capacidades mixtas; los casos de propiedad mixtos de la Liana quedan `Ignore` y `P1_Liana_MixedCapacities_OpenR16Counterexample`
+  fija el contraejemplo. P1-P3 con Liana y capacidades uniformes pasan.
 - Brote y Matapi, los filtros (C1-8). `BroteMechanic` (02 §9.1 M2, misma regla; debut 163 por D-007): cerrado no es
   origen, como destino sigue la regla normal y al recibir su color germina en la etapa (b) y pasa a `None`
   (`PourEvents.BroteOpenedMask`); validación: 1-3 dosis visibles, sin ocultas y sin llenar. `MatapiMechanic` (D-007, debut

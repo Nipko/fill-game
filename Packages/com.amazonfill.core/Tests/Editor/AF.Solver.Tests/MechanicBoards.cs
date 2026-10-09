@@ -378,4 +378,73 @@ namespace AF.Solver.Tests
             return true;
         }
     }
+
+    /// <summary>
+    /// Liana (D-007): una cuia queda atada; con fruta (una llave que no está dentro y tiene casa fuera) o de cuenta
+    /// (<c>n</c> = 1-2), según <see cref="WithFruit"/>.
+    /// </summary>
+    internal sealed class LianaInjector : IMechanicInjector
+    {
+        public LianaInjector(bool withFruit)
+        {
+            WithFruit = withFruit;
+        }
+
+        public bool WithFruit { get; }
+
+        public string Name => WithFruit ? "liana con fruta" : "liana de cuenta";
+
+        public bool Inject(Prng rng, int[] caps, List<int>[] doses, MechanicSpec[] attrs)
+        {
+            var units = new int[Cuia.MaxColor + 1];
+            for (int i = 0; i < doses.Length; i++)
+            {
+                for (int k = 0; k < doses[i].Count; k++)
+                {
+                    units[doses[i][k]]++;
+                }
+            }
+
+            int index = rng.NextInt(caps.Length);
+            List<int> tied = doses[index];
+            if (!attrs[index].IsNone || (tied.Count == caps[index] && units[tied[0]] == caps[index] && MechanicBoards.Colors(new[] { tied }).Count == 1))
+            {
+                return false; // ya tiene mecánica, o empezaría sellada
+            }
+
+            if (!WithFruit)
+            {
+                attrs[index] = new MechanicSpec(MechanicType.Liana, n: 1 + rng.NextInt(2));
+                return true;
+            }
+
+            var keys = new List<int>();
+            List<int> colors = MechanicBoards.Colors(doses);
+            for (int c = 0; c < colors.Count; c++)
+            {
+                int color = colors[c];
+                if (tied.Contains(color))
+                {
+                    continue;
+                }
+
+                for (int j = 0; j < caps.Length; j++)
+                {
+                    if (j != index && caps[j] == units[color])
+                    {
+                        keys.Add(color);
+                        break;
+                    }
+                }
+            }
+
+            if (keys.Count == 0)
+            {
+                return false;
+            }
+
+            attrs[index] = new MechanicSpec(MechanicType.Liana, key: keys[rng.NextInt(keys.Count)]);
+            return true;
+        }
+    }
 }

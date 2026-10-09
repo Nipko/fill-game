@@ -368,7 +368,7 @@ namespace AF.Core.Rules
                 if (cuia.HasMechanic && MechanicTable.Of(cuia).ReleasedBySeal(in board, i))
                 {
                     board.Set(i, cuia.WithoutMechanic());
-                    events.ReleasedMask |= 1 << i;
+                    events.RecordReleased(i, cuia.Mechanic);
                     changed = true;
                 }
             }

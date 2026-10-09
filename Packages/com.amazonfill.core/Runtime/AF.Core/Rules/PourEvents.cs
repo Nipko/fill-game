@@ -52,6 +52,9 @@ namespace AF.Core.Rules
         /// <summary>(d) Cuias que se soltaron por un sellado (Liana): pasan a ser normales.</summary>
         public int ReleasedMask { get; internal set; }
 
+        /// <summary>(d) Lianas que se soltaron en este vertido (evento LianaReleased; D-007).</summary>
+        public int LianaReleasedMask { get; internal set; }
+
         /// <summary>(e) Los contadores avanzaron (vertido no fútil con alguna mecánica de contador).</summary>
         public bool CountersAdvanced { get; internal set; }
 
@@ -93,6 +96,7 @@ namespace AF.Core.Rules
             BroteOpenedMask = 0;
             SealedMask = 0;
             ReleasedMask = 0;
+            LianaReleasedMask = 0;
             CountersAdvanced = false;
             ChangedMask = (1 << source) | (1 << target);
             FixedPointPasses = 0;
@@ -112,6 +116,17 @@ namespace AF.Core.Rules
             else if (type == Mechanics.MechanicType.Brote)
             {
                 BroteOpenedMask |= bit;
+            }
+        }
+
+        /// <summary>(d) La mecánica <paramref name="type"/> de la cuia <paramref name="index"/> se soltó por un sellado.</summary>
+        internal void RecordReleased(int index, Mechanics.MechanicType type)
+        {
+            int bit = 1 << index;
+            ReleasedMask |= bit;
+            if (type == Mechanics.MechanicType.Liana)
+            {
+                LianaReleasedMask |= bit;
             }
         }
 
