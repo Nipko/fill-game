@@ -10,7 +10,7 @@
 //   Brote (M2)     sobre una cuia con 1-3 dosis visibles (sin Barro); su color es la cima (la del debut, camu camu).
 //   Barro (M5)     en la capa 2 o 3 (índice 1-2) de una cuia de 4 sin mecánica; la dosis desplazada se recoloca en la cima
 //                  de otra cuia con hueco para conservar U_c (lectura de «retira una unidad» de 03 §9 [P]).
-//   Piraña (M7)    cueva = Cuia chica de 2 vacía (03 §9), de 4 si hay Liana (bloqueo C1-9), con k = 4 escrito [P].
+//   Piraña (M7)    cueva = Cuia chica de 2 vacía (03 §9), con k = 4 escrito [P]. Nunca con Liana (LIANA-CAPS, bloqueo C1-9).
 //   Aguas turbias  1-2 cuias sin mecánica con 2-3 dosis: se ocultan las de debajo de la cima (T3), con T4 y como mucho 4
 //                  dosis (T2); en el 100 (Q9) una cuia con 2 dosis ocultas.
 using AF.Core.Board;
@@ -29,9 +29,6 @@ internal sealed class SuperpositionContext
     public required CampaignSpec Spec { get; init; }
     public required int Colors { get; init; }
     public required int[] Units { get; init; }
-
-    /// <summary>La Piraña va con cueva de 4 (Liana en el nivel: bloqueo C1-9).</summary>
-    public bool UniformCaps { get; init; }
 
     /// <summary>Q9: estreno de Aguas turbias en el hito 100 (1 cuia, 2 dosis ocultas).</summary>
     public bool MurkyDebut { get; init; }
@@ -255,8 +252,7 @@ internal static class Superposition
 
     private static string? Pirana(GenBoard b, MechanicInfo m, SuperpositionContext ctx)
     {
-        int cap = ctx.UniformCaps ? Cuia.DefaultCapacity : m.CaveCap;
-        b.AddEmpty(cap, new MechanicSpec(MechanicType.Pirana, k: m.K));
+        b.AddEmpty(m.CaveCap, new MechanicSpec(MechanicType.Pirana, k: m.K));
         return null;
     }
 

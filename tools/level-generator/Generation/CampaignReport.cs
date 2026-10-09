@@ -3,6 +3,8 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using AF.Core.Board;
+using AF.Core.Mechanics;
 using AmazonFill.Tools.LevelGenerator.Campaign;
 using AmazonFill.Tools.LevelGenerator.Metrics;
 
@@ -115,6 +117,11 @@ internal static class CampaignReport
                 notes.Add("fuera de ventana (relajacion agotada)");
             }
 
+            if (l.Slot.MurkyRounds > 0)
+            {
+                notes.Add(F($"{l.Slot.MurkyRounds} ronda(s) extra de candidatos turbios"));
+            }
+
             if (l.Slot.MurkyDropped)
             {
                 notes.Add("sin Aguas turbias (T1)");
@@ -169,6 +176,104 @@ internal static class CampaignReport
         }
 
         W();
+        W("## Apariciones en los packs (debut real y huecos)");
+        W();
+        W("Sobre los tableros publicados, no sobre el calendario: primera aparición (debut real), niveles en los que sale, hueco "
+          + F($"máximo entre dos apariciones y niveles desde la última hasta el {spec.LastLevel} (resumen, punto 6; d.2 regla 4: ≤ {SpecValidator.MaxGap}; ")
+          + "level-qa lo exige con QA-GAP-120). Las capacidades cuentan también cuando el generador las usa como forma de tablero (02 §8); "
+          + "la cueva de la Piraña no cuenta como Cuia chica.");
+        W();
+        W("| Mecánica o capacidad | Debut del calendario | Debut real | Niveles | Hueco máximo | Hasta el final |");
+        W("|---|---|---|---|---|---|");
+        foreach ((string name, int? debut, List<int> seen) in Appearances(spec, levels))
+        {
+            int best = 0;
+            for (int i = 1; i < seen.Count; i++)
+            {
+                best = seen[i] - seen[i - 1] > seen[best] - seen[Math.Max(0, best - 1)] ? i : best;
+            }
+
+            string gap = best == 0 ? "—" : F($"{seen[best] - seen[best - 1]} ({seen[best - 1]}→{seen[best]})");
+
+            string tail = seen.Count == 0 ? "—" : F($"{levels[^1].Plan.Level - seen[^1]}");
+            string first = seen.Count == 0 ? "**no sale**" : seen[0].ToString(CultureInfo.InvariantCulture);
+            W(F($"| {name} | {(debut is int d ? d.ToString(CultureInfo.InvariantCulture) : "—")} | {first} | {seen.Count} | {gap} | {tail} |"));
+        }
+
+        W();
+        W("## Remanso frente a la comodidad del ciclo (c.4)");
+        W();
+        W("p19 es «puro, más fácil que la media de comodidad» (c.4; c.3 regla 5: respiro antes del pico): la colocación exige D(p19) "
+          + "< media de D de las comodidades del ciclo que no son tableros de estreno, y level-qa lo comprueba (QA-REMANSO).");
+        W();
+        W("| Ciclo | Remanso | D | bot_fail | Par | Comodidades | D medio | bot_fail medio | Puesto del remanso por D (de las comodidades y él) |");
+        W("|---|---|---|---|---|---|---|---|---|");
+        foreach (IGrouping<string, GeneratedLevel> g in levels.Where(l => !l.Plan.Ramp).GroupBy(l => CycleName(spec, l.Plan)))
+        {
+            GeneratedLevel? rem = g.FirstOrDefault(l => l.Plan.Role == SlotRole.Remanso);
+            List<GeneratedLevel> comfort = g.Where(l => l.Plan.IsComfortReference).ToList();
+            if (rem is null || comfort.Count == 0)
+            {
+                continue;
+            }
+
+            double dRem = Placement.Rounded(rem.Chosen!.D);
+            int rank = 1 + comfort.Count(l => Placement.Rounded(l.Chosen!.D) > dRem + 1e-9);
+            W(F($"| {g.Key} | {rem.Plan.Level} | {dRem:0.00} | {rem.Chosen!.Bot:0.000} | {rem.Chosen!.Par} | {comfort.Count} | {comfort.Average(l => Placement.Rounded(l.Chosen!.D)):0.00} | {comfort.Average(l => l.Chosen!.Bot):0.000} | {rank} de {comfort.Count + 1} (1 = el más difícil) |"));
+        }
+
+        W();
+        W("## Vacíos de la comodidad y del remanso por rango (03 §4.4 y §11)");
+        W();
+        W("Comodidades sin estreno y remansos. «2 vacíos» = dos o más vacíos libres (sin mecánica, capacidad ≥ 4); «Cuia chica» = Cuia chica de 2 "
+          + "añadida como medio vacío por la relajación de 03 §4.4. Canon: 2 vacíos en 11-30; 1 desde el 31 (03 §11: «2 en respiros y recuperación» en "
+          + "31-60, «2 en 30 % de comodidad» en 61-100 y 1 en 101-200; 03 §4.4: «1 (31+) con 2 en el 30 % de los slots») [P: se revisa con el tech-lead].");
+        W();
+        W("| Rango | Comodidades y remansos | Con 2 vacíos | Con Cuia chica de relajación | Relajados (%) | Canon |");
+        W("|---|---|---|---|---|---|");
+        foreach (RangeInfo r in spec.Ranges)
+        {
+            List<GeneratedLevel> rel = levels.Where(l => l.Plan.Range == r && (l.Plan.IsComfortReference || l.Plan.Role == SlotRole.Remanso)).ToList();
+            if (rel.Count == 0)
+            {
+                continue;
+            }
+
+            int two = rel.Count(l => l.Chosen!.FreeEmpties >= 2);
+            int chica = rel.Count(l => l.Chosen!.Config.Notes.Any(n => n.Contains("Cuia chica de 2 como medio vacio", StringComparison.Ordinal)));
+            string canon = r.First switch
+            {
+                <= 30 => "2",
+                <= 60 => "1 (2 en respiros)",
+                <= 100 => "1 (2 en el 30 %)",
+                _ => "1",
+            };
+            W(F($"| {r.Name} | {rel.Count} | {two} | {chica} | {100.0 * (two + chica) / rel.Count:0} % | {canon} |"));
+        }
+
+        W();
+        W("## Cuias por rango frente a 03 §11");
+        W();
+        W("Con 1 vacío, el K del rango que permiten los pares de riesgo (03 §4.5; `k_plan`) no siempre llega al mínimo de cuias de 03 §11 "
+          + "(aviso QA-CUIAS de level-qa) [P: k_plan, vacíos o la tabla se revisan en la integración].");
+        W();
+        W("| Rango | 03 §11 | Mínimo y máximo generados | Por debajo | Por encima | Niveles por debajo |");
+        W("|---|---|---|---|---|---|");
+        foreach (RangeInfo r in spec.Ranges)
+        {
+            List<GeneratedLevel> inRange = levels.Where(l => l.Plan.Range == r).ToList();
+            if (inRange.Count == 0)
+            {
+                continue;
+            }
+
+            List<GeneratedLevel> below = inRange.Where(l => l.Chosen!.Board.Caps.Length < r.CuiasMin).ToList();
+            int above = inRange.Count(l => l.Chosen!.Board.Caps.Length > r.CuiasMax);
+            string list = below.Count == 0 ? "—" : string.Join(", ", below.Select(l => F($"{l.Plan.Level} ({l.Chosen!.Board.Caps.Length})")));
+            W(F($"| {r.Name} | {r.CuiasMin}-{r.CuiasMax} | {inRange.Min(l => l.Chosen!.Board.Caps.Length)}-{inRange.Max(l => l.Chosen!.Board.Caps.Length)} | {below.Count} | {above} | {list} |"));
+        }
+
+        W();
         W("## Saltos de banda (03 §12: +2,2 / −3,4)");
         W();
         var jumps = new List<string>();
@@ -184,6 +289,49 @@ internal static class CampaignReport
         W(jumps.Count == 0 ? "Ninguno fuera del límite." : "Fuera del límite (blando, registrado): " + string.Join("; ", jumps) + ".");
         return sb.ToString();
     }
+
+    /// <summary>Niveles en los que sale cada mecánica (por código del calendario) y cada capacidad, sobre los tableros elegidos.</summary>
+    private static List<(string Name, int? Debut, List<int> Seen)> Appearances(CampaignSpec spec, List<GeneratedLevel> levels)
+    {
+        var rows = new List<(string, int?, List<int>)>();
+        foreach (MechanicInfo m in spec.MechanicTable)
+        {
+            rows.Add((F2($"{m.Id} ({m.Code})"), m.Debut, levels.Where(l => Has(l.Chosen!.Board, m.Code)).Select(l => l.Plan.Level).ToList()));
+        }
+
+        rows.Add(("Cuia chica (cap 1-3)", spec.CapacityTable.Where(c => c.Id == "chica").Min(c => c.Debut),
+            levels.Where(l => Caps(l.Chosen!.Board).Any(c => c < Cuia.DefaultCapacity)).Select(l => l.Plan.Level).ToList()));
+        rows.Add(("Cuia alta (cap 5-6)", spec.CapacityTable.Where(c => c.Id == "alta").Min(c => c.Debut),
+            levels.Where(l => Caps(l.Chosen!.Board).Any(c => c > Cuia.DefaultCapacity)).Select(l => l.Plan.Level).ToList()));
+        foreach (CapacityInfo cap in spec.CapacityTable.Where(c => c.Code is not ("Ch" or "Al")))
+        {
+            rows.Add((F2($"{cap.Code} (cap {cap.Cap})"), cap.Debut, levels.Where(l => Caps(l.Chosen!.Board).Contains(cap.Cap)).Select(l => l.Plan.Level).ToList()));
+        }
+
+        return rows;
+
+        static string F2(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private static IEnumerable<int> Caps(BoardData b) =>
+        b.Caps.Where((c, i) => c != Cuia.DefaultCapacity && b.Attrs[i].Type != MechanicType.Pirana);
+
+    private static bool Has(BoardData b, string code) => code switch
+    {
+        "Tu" => b.Hidden.Length > 0,
+        "Ba" => b.Cuias.Any(c => c.Contains(Cuia.MudColor)),
+        _ => b.Attrs.Any(a => a.Type == code switch
+        {
+            "Ho" => MechanicType.Hoja,
+            "Br" => MechanicType.Brote,
+            "Li" => MechanicType.Liana,
+            "Ma" => MechanicType.Matapi,
+            "Re" => MechanicType.Remolino,
+            "Ll" => MechanicType.Lluvia,
+            "Pi" => MechanicType.Pirana,
+            _ => MechanicType.None,
+        } && a.Type != MechanicType.None),
+    };
 
     private static string CycleName(CampaignSpec spec, LevelPlan p)
     {

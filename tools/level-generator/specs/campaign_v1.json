@@ -1,7 +1,7 @@
 {
   "spec": "campaign_v1",
   "spec_schema": 1,
-  "description": "Especificación versionada de la campaña 11-200 (vuelta 1) que leen tools/level-generator (--validate-spec y --spec) y tools/level-qa. Datos copiados, no reglas: D-009 (ciclo escalonado; Q1 A, Q2 sí, Q3 A, Q4 A) y D-007 (debuts y combinaciones; Q5 B, Q9, Q14 A), decididos por el dueño el 2026-10-08, con la propuesta docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md (c.1-c.4, c.8, d.1-d.4) mientras el GDD no los recoja; lo que no cambia sale del GDD vigente: 02 §8, §9.2 y §13 (filas 11-12), 03 §4.4, §4.5, §11 y §12, glosario §8, §9 y §11, 08 §9. Las marcas [P] son propuestas de esta especificación. El calendario es literal de d.4 (21-200) y de la rampa 11-20 (d.4, «Niveles 1-20»); los nombres de hito y las notas entre comillas angulares no pasan al pack.",
+  "description": "Especificación versionada de la campaña 11-200 (vuelta 1) que leen tools/level-generator (--validate-spec y --spec) y tools/level-qa. Datos copiados, no reglas: D-009 (ciclo escalonado; Q1 A, Q2 sí, Q3 A, Q4 A) y D-007 (debuts y combinaciones; Q5 B, Q9, Q14 A), decididos por el dueño el 2026-10-08, con la propuesta docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md (c.1-c.4, c.8, d.1-d.4) mientras el GDD no los recoja; lo que no cambia sale del GDD vigente: 02 §8, §9.2 y §13 (filas 11-12), 03 §4.4, §4.5, §11 y §12, glosario §8, §9 y §11, 08 §9. Las marcas [P] son propuestas de esta especificación. El calendario es literal de d.4 (21-200) salvo las cuatro celdas [P] de calendar_note (bloqueo C1-9 de AF.Core, opción (b) de la revisión), más la rampa 11-20 (d.4, «Niveles 1-20»); los nombres de hito y las notas entre comillas angulares no pasan al pack.",
   "lap": 1,
   "first_level": 11,
   "last_level": 200,
@@ -55,12 +55,17 @@
     "empties": 2,
     "source": "walk",
     "window": "[0.00, 0.20)",
-    "note": "Rampa 11-20 a mano en el GDD (02 §8 y §13, filas 11-12; propuesta d.4, «Niveles 1-20»): K = 6, 2 vacíos, Cuia chica de 2 en el 14 y de 1 en el 18, fallo del bot < 20 % [P]."
+    "note": "Rampa 11-20 a mano en el GDD (02 §8 y §13, filas 11-12; propuesta d.4, «Niveles 1-20»): K = 6, 2 vacíos, Cuia chica de 2 en el 14 y de 1 en el 18, fallo del bot < 20 % [P].",
+    "rows": {
+      "11": {"k": 6, "empties": 2, "par": [15, 19], "window": "[0.00, 0.10]"},
+      "12": {"k": 6, "empties": 2, "par": [16, 20], "window": "[0.00, 0.10]"}
+    },
+    "rows_note": "Filas 11 y 12 de la tabla única del arranque (02 §13, que copia 06 §2.2): 8 cuias = 6 colores + 2 vacíos, par [P] 15-19 y 16-20 (en run, D-005) y fallo del bot 0-10 %. Son obligatorias para el generador (rechaza el candidato fuera del par) y para level-qa; en estas filas no se relajan K ni los vacíos: se piden más candidatos y, si walk no basta, deep corto y deep (03 §4.1-§4.2)."
   },
   "cycle": {
     "from_level": 21,
     "length": 20,
-    "note": "Ciclo D-009 (propuesta c.3 y c.4; sustituye las posiciones de 03 §12): p = ((n - 1) mod 20) + 1. Retos en p6, p9, p12, p15 y p18; remanso puro en p19; hito en p20. Vacíos: 2 hasta el nivel 30 en todas las posiciones, en los retos de 21-39 y en los tableros de debut (03 §12; propuesta c.3); 1 en el resto. Fuentes de 03 §4.4 y c.3.",
+    "note": "Ciclo D-009 (propuesta c.3 y c.4; sustituye las posiciones de 03 §12): p = ((n - 1) mod 20) + 1. Retos en p6, p9, p12, p15 y p18; remanso puro en p19; hito en p20. Vacíos: 2 hasta el nivel 30 en todas las posiciones, en los retos de 21-39 y en los tableros de debut (03 §12; propuesta c.3); 1 en el resto. Fuentes de 03 §4.4 y c.3. El remanso (p19) es puro y más fácil que la media de comodidad (c.4; c.3 regla 5): D(p19) < media de D de las comodidades del ciclo que no son tableros de estreno; lo exigen la colocación y level-qa (QA-REMANSO).",
     "positions": [
       {"p": [1, 2], "role": "recovery", "empties": 2, "source": "walk", "k": "recovery"},
       {"p": [3, 4, 5], "role": "comfort", "empties": 1, "source": "walk", "k": "comfort", "debut_slot": true},
@@ -71,8 +76,8 @@
     ],
     "empties_two_until_level": 30,
     "challenge_two_empties_until_level": 39,
-    "windows": {"recovery": "[0.00, 0.30)", "comfort": "[0.20, 0.60]", "debut": "[0.00, 0.20)", "remanso": "[0.20, 0.40]", "challenge_21_40": "[0.50, 0.70]", "challenge_41_59_labeled": "[0.75, 1.00]", "challenge_41_59_soft": "[0.50, 0.75)", "challenge_61": "[0.75, 0.90)", "milestone_40": "[0.75, 0.85]", "milestone_60": "[0.90, 1.00]"},
-    "windows_note": "Ventanas de fallo del bot ×40 de la propuesta c.3 y de D-009: el hito del 40 Difícil con 75-85 %, los hitos desde el 60 Muy difícil con ≥ 90 %, los retos suaves de 41-59 entre el 50 y el 74 % [P] y los retos con etiqueta de 41-59 desde el 75 % (la etiqueta la decide el bot, 03 §7). Desde el 61 los retos apuntan a Difícil: 75-89 % [P], para que un reto no salga Muy difícil (las cuentas 12/5/2/1 de D-009 no cambian).",
+    "windows": {"recovery": "[0.00, 0.30)", "comfort": "[0.20, 0.60]", "debut": "[0.00, 0.20)", "remanso": "[0.20, 0.40]", "challenge_21_40": "[0.50, 0.70]", "challenge_41_59_labeled": "[0.75, 0.90)", "challenge_41_59_soft": "[0.50, 0.75)", "challenge_61": "[0.75, 0.90)", "milestone_40": "[0.75, 0.85]", "milestone_60": "[0.90, 1.00]"},
+    "windows_note": "Ventanas de fallo del bot ×40 de la propuesta c.3 y de D-009: el hito del 40 Difícil con 75-85 %, los hitos desde el 60 Muy difícil con ≥ 90 %, los retos suaves de 41-59 entre el 50 y el 74 % [P] y los retos con etiqueta de 41-59 entre el 75 y el 89 % [P] (la etiqueta la decide el bot, 03 §7; ningún nivel mide Muy difícil antes del primero, el 60, contrato 6). Desde el 61 los retos apuntan a Difícil: 75-89 % [P], para que un reto no salga Muy difícil (las cuentas 12/5/2/1 de D-009 no cambian). Antes del 40 ningún nivel mide ≥ 75 % ni antes del 60 ≥ 90 %, tampoco al relajar (QA-LABEL-EARLY).",
     "labels": {
       "first_hard": 40,
       "first_very_hard": 60,
@@ -99,7 +104,7 @@
     {"code": "Al", "id": "alta", "cap": 5, "debut": 27},
     {"code": "Al6", "id": "alta", "cap": 6, "debut": 160}
   ],
-  "capacities_note": "02 §8 y 03 §9: Cuia chica 14 (cap 2), 18 (cap 1) y 22 (cap 3); Cuia alta 27 (cap 5) y de 6 solo en hitos desde el 141 (primero: 160). Como mucho 2 Cuias chicas y 1 Cuia alta por nivel antes del 200 (02 §8). Las capacidades no cuentan como mecánica en el tope de 2 por nivel [P]. «Ch» sin número en el calendario = Cuia chica de 2 [P].",
+  "capacities_note": "02 §8 y 03 §9: Cuia chica 14 (cap 2), 18 (cap 1) y 22 (cap 3); Cuia alta 27 (cap 5) y de 6 solo en hitos desde el 141 (primero: 160). Como mucho 2 Cuias chicas y 1 Cuia alta por nivel antes del 200 (02 §8). Las capacidades no cuentan como mecánica en el tope de 2 por nivel [P]. «Ch» sin número en el calendario = Cuia chica de 2 [P]. Bloqueo C1-9 de AF.Core: la Liana nunca va con capacidades distintas de 4 ni con la cueva de la Piraña (--validate-spec LIANA-CAPS). Como las mecánicas, la Cuia chica y la Cuia alta (la de 5 y la de 6 juntas) no pasan más de 120 niveles sin volver (GAP-120 en el calendario; QA-GAP-120 sobre los packs) [P].",
   "seasons": {
     "21": "B",
     "41": "A",
@@ -112,7 +117,7 @@
     "181": "B"
   },
   "seasons_note": "Temporadas A (aguas altas) y B (aguas bajas) por ciclo (propuesta d.1 y d.4): solo metadato; no cambian la generación ni pasan al pack.",
-  "calendar_note": "Celda literal por nivel: R recuperación pura, C comodidad pura, S remanso puro; ★ estreno; (s) reto suave sin etiqueta; (D) reto o hito que apunta a Difícil; (MD) hito que apunta a Muy difícil; códigos de mecánica y capacidad unidos con +; (tinte X) = debut de tinte en ese nivel. 21-200 copian d.4 tal cual; 11-20 son la rampa.",
+  "calendar_note": "Celda literal por nivel: R recuperación pura, C comodidad pura, S remanso puro; ★ estreno; (s) reto suave sin etiqueta; (D) reto o hito que apunta a Difícil; (MD) hito que apunta a Muy difícil; códigos de mecánica y capacidad unidos con +; (tinte X) = debut de tinte en ese nivel. 21-200 copian d.4 salvo cuatro celdas [P] por el bloqueo C1-9 de AF.Core (la Liana no admite capacidades mixtas, cueva de la Piraña incluida: P1 de R14 falla con la regla de fútiles del anexo B), aceptado mientras no cambie `futil` (opción (b) de la revisión; la (a), ampliar `futil` y quitar el bloqueo, la decide el tech-lead o el dueño): 94 Ma → Li y 95 Li+Al → Ma+Al (la Liana y el Matapi se cambian un tablero: la Cuia alta vuelve en el reto 95 con la secundaria del ciclo, la Liana conserva sus 8 tableros de debut y el ciclo sus 8 puros), 160 Ll+Li+Al6 → Ll+Al6 (la Cuia alta de 6 se estrena en el hito 160, 02 §8 y 03 §9) y 198 Pi+Li → Pi+Ho (cueva de 2, 03 §9; Pi+Ho es una combinación nueva; con Pi+Br la cuia de holgura del Brote y la cueva dejan el reto demasiado fácil: 0 de 90 candidatos en la ventana). Ninguna celda lleva Liana con capacidades o con Piraña (--validate-spec LIANA-CAPS). d.4 se edita en la integración. 11-20 son la rampa.",
   "calendar": {
     "11": "C (tinte Agua del Tapajós)",
     "12": "C",
@@ -197,8 +202,8 @@
     "91": "Ch",
     "92": "Li+Ho (D)",
     "93": "C",
-    "94": "Ma",
-    "95": "Li+Al (D)",
+    "94": "Li",
+    "95": "Ma+Al (D)",
     "96": "C",
     "97": "C",
     "98": "Li+Ma (D)",
@@ -263,7 +268,7 @@
     "157": "C",
     "158": "Ll+Ba (D)",
     "159": "S",
-    "160": "Ll+Li+Al6 (MD) «Creciente del Itaya» [P]",
+    "160": "Ll+Al6 (MD) «Creciente del Itaya» [P]",
     "161": "R",
     "162": "R",
     "163": "★Br",
@@ -301,7 +306,7 @@
     "195": "Ba+Tu (D)",
     "196": "C",
     "197": "C",
-    "198": "Pi+Li (D)",
+    "198": "Pi+Ho (D)",
     "199": "S",
     "200": "Pi+Ba (MD) «Vaciante de Pacaya-Samiria»"
   }

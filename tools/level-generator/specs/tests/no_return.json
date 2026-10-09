@@ -4,6 +4,7 @@
   "expect_rule": "RETURN",
   "calendar": {
     "86": "Ho (D)",
+    "95": "Ho+Al (D)",
     "98": "Li+Ho (D)"
   }
 }

@@ -120,6 +120,7 @@ foreach (LevelEval e in evals)
 
 issues.AddRange(CycleChecks.Run(ctx));
 issues.AddRange(RepetitionChecks.Run(ctx));
+issues.AddRange(MechanicChecks.RunCampaign(ctx));
 
 foreach (int level in evals.GroupBy(e => e.Level.Level).Where(g => g.Count() > 1).Select(g => g.Key))
 {

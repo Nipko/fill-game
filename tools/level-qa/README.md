@@ -40,6 +40,8 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-PALETTE | `palette` = tintes presentes en `cuias` | 08 §4.1 |
 | QA-BOT | `bot_fail` recalculado con la semilla del nivel, idéntico | 03 §6 |
 | QA-LABEL | etiqueta coherente (≥ 0,75 hard y ≥ 0,90 very_hard, desde el 40 y el 60) | 03 §7, §11 |
+| QA-LABEL-EARLY | ningún nivel mide ≥ 0,90 antes del 60 ni ≥ 0,75 antes del 40 (aunque se publique con la etiqueta inferior) | contrato 6; 03 §11-§12 |
+| QA-CUIAS | aviso: cuias del nivel fuera de las cuias totales del rango | 03 §11 |
 | QA-FIELDS | sin `solution`, `safe_path` ni `qa` | 08 §4.1 |
 | QA-SIZE | ≤ 100 KB por 100 niveles sin `relief` | 03 §17 #11 |
 | QA-EARLY-TRAPS | trampas tempranas dentro del tope: 0 en Normal, 1 en Difícil, sin tope en Muy difícil | D-007 Q16 B |
@@ -48,7 +50,8 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-LABEL-ADJ | nunca dos niveles con etiqueta seguidos | c.3 regla 1 |
 | QA-AFTER-LABEL | tras una etiqueta, el siguiente con D menor (condición necesaria de «bajar una banda») | c.3 regla 2 |
 | QA-LADDER | escalera de D (61+ y 41-59) | c.3 regla 4 |
-| QA-REMANSO | p19 puro | c.3 regla 5 |
+| QA-REMANSO | p19 puro y más fácil que la media de comodidad: D(p19) < media de D de las comodidades del ciclo que no son estreno | c.4; c.3 regla 5 |
+| QA-RAMP | filas 11 y 12: 8 cuias = 6 colores + 2 vacíos, par 15-19 y 16-20, `bot_fail` 0-10 % | 02 §13 |
 | QA-PURE-30 | ≥ 30 % de niveles puros por ciclo completo | d.2 regla 1 |
 | QA-WINDOW | `bot_fail` en la ventana del slot (< 0,20 en los estrenos) | 03 §17 #3 |
 | QA-DEBUT | estrenos con 2 vacíos y un ejemplar; `intro_mechanic` y `skippable` = false solo en el nivel de intro | 02 §9.2 regla 2 |
@@ -62,6 +65,8 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-REPEAT-HAMMING | Hamming ≥ 25 % con los 20 anteriores | 03 §17 #9 |
 | QA-MECH-DEBUT | mecánicas y capacidades con debut anterior o igual al nivel | D-007; 02 §8 |
 | QA-MECH-SPEC | mecánicas permitidas por la celda del calendario | especificación |
+| QA-MECH-CELL | cada mecánica y capacidad de la celda está en el nivel; sin turbias por el respaldo de T1, aviso | especificación; 02 §8 |
+| QA-GAP-120 | ninguna mecánica ni capacidad (Cuia chica, Cuia alta) pasa más de 120 niveles sin volver, sobre lo publicado; solo cuenta un hueco con todos sus niveles en los paquetes | resumen 6; d.2 regla 4 |
 | QA-MECH-KEY | llave presente; agua del mundo en la Lluvia; llave del tutorial en el estreno | 02 §9.1; D-007 |
 | QA-MECH-COUNT | ≤ 2 mecánicas por nivel antes del 300 | 02 §9.2 regla 4 |
 | QA-MURKY-FLAG | `murky` coherente con `hidden` | 08 §4.1 |
@@ -86,5 +91,8 @@ for f in tools/level-qa/fixtures/QA-*.json; do
 done
 ```
 
-Todos deben dar `exit=1` y `presente`. `fixtures/schema/` son los fixtures de `validate_schema.py --pack` (uno válido y
-uno inválido).
+Todos deben dar `exit=1` y `presente`. Los de QA-RAMP (11), QA-LABEL-EARLY (58), QA-MECH-CELL (160) y QA-REMANSO
+(108, 110 y 119, `remanso_mas_dificil_que_la_comodidad`) son niveles de los packs anteriores a la revisión del
+2026-10-09. QA-GAP-120 no tiene fixture (necesita más de 120 niveles seguidos): se comprueba con esos packs anteriores, en
+los que falla («Cuia alta no vuelve desde el 78»). `fixtures/schema/` son los fixtures de `validate_schema.py --pack`
+(uno válido y uno inválido).

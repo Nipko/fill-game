@@ -16,6 +16,8 @@ internal static class MechanicChecks
     [
         ("QA-MECH-DEBUT", "cada mecanica y capacidad con debut anterior o igual al nivel (D-007; 02 sec. 8)"),
         ("QA-MECH-SPEC", "las mecanicas del nivel estan en su celda del calendario (especificacion)"),
+        ("QA-MECH-CELL", "cada mecanica y capacidad de la celda esta en el nivel (sin turbias por T1: aviso) (especificacion; 02 sec. 8)"),
+        ("QA-GAP-120", "ninguna mecanica ni capacidad pasa mas de 120 niveles sin volver, sobre los niveles publicados (resumen, punto 6; d.2 regla 4)"),
         ("QA-MECH-KEY", "llave presente en el tablero; agua del mundo en la Lluvia; llave del tutorial en el estreno (02 sec. 9.1; D-007)"),
         ("QA-MECH-COUNT", "como mucho 2 mecanicas por nivel antes del 300 (02 sec. 9.2 regla 4)"),
     ];
@@ -62,6 +64,64 @@ internal static class MechanicChecks
         return attrs + (remolino / 2) + mud + murky;
     }
 
+    /// <summary>Capacidades distintas de 4 de las cuias que no son la cueva de la Piraña (02 §8).</summary>
+    public static IEnumerable<int> CapacityCaps(BoardData b) =>
+        b.Caps.Where((c, i) => c != Cuia.DefaultCapacity && b.Attrs[i].Type != MechanicType.Pirana);
+
+    /// <summary>
+    /// QA-GAP-120 sobre los niveles publicados: entre dos apariciones de una mecánica (por código del calendario) o de una
+    /// capacidad (Cuia chica o Cuia alta, la de 5 y la de 6 juntas) no pasan más de 120 niveles, ni desde la última hasta el
+    /// último nivel de la especificación. Solo cuenta un hueco cuando todos sus niveles están en los paquetes (un paquete
+    /// suelto no da falsos fallos).
+    /// </summary>
+    public static IEnumerable<QaIssue> RunCampaign(QaContext ctx)
+    {
+        CampaignSpec spec = ctx.Spec;
+        var byLevel = ctx.Levels.GroupBy(e => e.Level.Level).ToDictionary(g => g.Key, g => g.First().Level);
+        var seen = new SortedDictionary<string, List<int>>(StringComparer.Ordinal);
+        foreach (QaLevel lv in byLevel.Values.OrderBy(l => l.Level))
+        {
+            var ids = new SortedSet<string>(Codes(lv.Board), StringComparer.Ordinal);
+            foreach (int cap in CapacityCaps(lv.Board))
+            {
+                ids.Add(cap < Cuia.DefaultCapacity ? "Cuia chica" : "Cuia alta");
+            }
+
+            foreach (string id in ids)
+            {
+                if (!seen.TryGetValue(id, out List<int>? list))
+                {
+                    list = [];
+                    seen[id] = list;
+                }
+
+                list.Add(lv.Level);
+            }
+        }
+
+        bool Covered(int from, int to) => Enumerable.Range(from, Math.Max(0, to - from + 1)).All(byLevel.ContainsKey);
+        foreach ((string id, List<int> levels) in seen)
+        {
+            for (int i = 1; i < levels.Count; i++)
+            {
+                if (levels[i] - levels[i - 1] > SpecValidator.MaxGap && Covered(levels[i - 1], levels[i]))
+                {
+                    QaLevel at = byLevel[levels[i]];
+                    yield return new QaIssue("QA-GAP-120", at.Pack, at.Level, string.Create(CultureInfo.InvariantCulture,
+                        $"{id} pasa {levels[i] - levels[i - 1]} niveles sin volver (del {levels[i - 1]} al {levels[i]})"));
+                }
+            }
+
+            int last = levels[^1];
+            if (spec.LastLevel - last > SpecValidator.MaxGap && Covered(last, spec.LastLevel))
+            {
+                QaLevel at = byLevel[spec.LastLevel];
+                yield return new QaIssue("QA-GAP-120", at.Pack, at.Level, string.Create(CultureInfo.InvariantCulture,
+                    $"{id} no vuelve desde el {last} ({spec.LastLevel - last} niveles hasta el {spec.LastLevel})"));
+            }
+        }
+    }
+
     public static IEnumerable<QaIssue> Run(QaContext ctx, LevelEval e)
     {
         QaLevel lv = e.Level;
@@ -105,6 +165,22 @@ internal static class MechanicChecks
             foreach (string code in codes.Where(c => !allowed.Contains(c)))
             {
                 yield return Fail("QA-MECH-SPEC", $"{code} no esta en la celda del calendario ({plan.Cell.Short})");
+            }
+
+            // Lo que pide la celda está en el nivel: el generador no quita nada en silencio. Única excepción, el respaldo de
+            // T1 (02 §11): un reto turbio que no mide Difícil se publica sin turbias y lo registra el informe.
+            foreach (MechanicInfo m in plan.Mechanics.Where(m => !codes.Contains(m.Code)))
+            {
+                yield return m.Code == "Tu"
+                    ? new QaIssue("QA-MECH-CELL", lv.Pack, lv.Level, $"publicado sin Aguas turbias (respaldo de T1; celda {plan.Cell.Short})", Warning: true)
+                    : Fail("QA-MECH-CELL", $"{m.Id} de la celda ({plan.Cell.Short}) no esta en el nivel");
+            }
+
+            int[] caps = CapacityCaps(b).ToArray();
+            foreach (CapacityInfo cap in plan.Capacities.Where(c => !caps.Contains(c.Cap)))
+            {
+                yield return Fail("QA-MECH-CELL", string.Create(CultureInfo.InvariantCulture,
+                    $"{cap.Code} (cuia de capacidad {cap.Cap}) de la celda ({plan.Cell.Short}) no esta en el nivel"));
             }
         }
 

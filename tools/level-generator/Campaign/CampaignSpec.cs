@@ -64,6 +64,15 @@ internal sealed record RangeInfo(
 
 internal sealed record KPlanRow(int First, int Last, int Recovery, int Comfort, int Challenge, int Milestone);
 
+/// <summary>
+/// Fila fija de la rampa (02 §13, tabla única del arranque: niveles 11 y 12): K, vacíos, par [P] y ventana de fallo del bot.
+/// El generador no relaja K ni los vacíos en estas filas y rechaza el candidato con el par fuera del rango; level-qa lo exige.
+/// </summary>
+internal sealed record RampRow(int Level, int K, int Empties, int ParMin, int ParMax, Interval Window)
+{
+    public bool ParOk(int par) => par >= ParMin && par <= ParMax;
+}
+
 internal sealed record PositionRule(int[] Positions, SlotRole Role, int Empties, string Source, string KKey, bool DebutSlot);
 
 /// <summary>Mecánica del calendario (código de d.4) con su id, clase de Q14 A, debut de D-007 y temporada (d.1).</summary>
@@ -134,6 +143,9 @@ internal sealed class LevelPlan
     /// <summary>Tablero de estreno (★) de una mecánica o capacidad.</summary>
     public required bool DebutBoard { get; init; }
 
+    /// <summary>Fila fija de 02 §13 (niveles 11-12) o null.</summary>
+    public RampRow? Row { get; init; }
+
     /// <summary>intro_mechanic del nivel (primer tablero de debut) o null.</summary>
     public required string? Intro { get; init; }
     public required int MaxRiskPairs { get; init; }
@@ -168,6 +180,12 @@ internal sealed class LevelPlan
 
     /// <summary>Cuantas mecánicas (no capacidades) lleva el nivel.</summary>
     public int MechanicCount => Mechanics.Count;
+
+    /// <summary>
+    /// Comodidad de referencia del remanso (propuesta c.4: p19 «puro, más fácil que la media de comodidad»): rol de comodidad
+    /// del ciclo (p3-p5, p7-p8, p10-p11, p13-p14, p16-p17) que no es tablero de estreno. La usan la colocación y QA-REMANSO.
+    /// </summary>
+    public bool IsComfortReference => !Ramp && Role == SlotRole.Comfort && !DebutBoard;
 }
 
 internal sealed class CampaignSpec
@@ -201,6 +219,7 @@ internal sealed class CampaignSpec
     public required int RampK { get; init; }
     public required int RampEmpties { get; init; }
     public required Interval RampWindow { get; init; }
+    public required IReadOnlyDictionary<int, RampRow> RampRows { get; init; }
     public required int CycleFrom { get; init; }
     public required int TwoEmptiesUntil { get; init; }
     public required int ChallengeTwoEmptiesUntil { get; init; }
@@ -301,12 +320,13 @@ internal sealed class CampaignSpec
         int empties;
         string source;
         Interval window;
+        RampRow? row = ramp && RampRows.TryGetValue(level, out RampRow? r) ? r : null;
         if (ramp)
         {
-            k = RampK;
-            empties = RampEmpties;
+            k = row?.K ?? RampK;
+            empties = row?.Empties ?? RampEmpties;
             source = "walk";
-            window = RampWindow;
+            window = row?.Window ?? RampWindow;
         }
         else
         {
@@ -366,6 +386,7 @@ internal sealed class CampaignSpec
             AllowedLabel = allowed,
             TargetLabel = target,
             DebutBoard = debutBoard,
+            Row = row,
             Intro = intro,
             MaxRiskPairs = MaxRiskPairsAt(level),
             Season = SeasonOf(level),
@@ -413,6 +434,22 @@ internal sealed class CampaignSpec
         }
 
         return botFail >= HardThreshold - 1e-9 && level >= FirstHard ? "hard" : "normal";
+    }
+
+    /// <summary>
+    /// Motivo si el nivel mide por encima de lo que su posición en la campaña admite (contrato 6; 03 §11-§12): ≥ 0,90 antes
+    /// del primer Muy difícil (60) o ≥ 0,75 antes del primer Difícil (40). Null si no.
+    /// </summary>
+    public string? EarlyMeasure(int level, double botFail)
+    {
+        if (level < FirstVeryHard && botFail >= VeryHardThreshold - 1e-9)
+        {
+            return string.Create(CultureInfo.InvariantCulture, $"mide Muy dificil ({botFail:0.000}) antes del {FirstVeryHard}");
+        }
+
+        return level < FirstHard && botFail >= HardThreshold - 1e-9
+            ? string.Create(CultureInfo.InvariantCulture, $"mide Dificil ({botFail:0.000}) antes del {FirstHard}")
+            : null;
     }
 
     public static int LabelRank(string? label) => label switch
@@ -529,6 +566,18 @@ internal sealed class CampaignSpec
         var seasons = root["seasons"]!.AsObject().ToDictionary(
             kv => int.Parse(kv.Key, CultureInfo.InvariantCulture), kv => kv.Value!.GetValue<string>());
         JsonObject rampNode = root["ramp"]!.AsObject();
+        var rampRows = new Dictionary<int, RampRow>();
+        if (rampNode["rows"] is JsonObject rows)
+        {
+            foreach (KeyValuePair<string, JsonNode?> kv in rows)
+            {
+                int level = int.Parse(kv.Key, NumberStyles.None, CultureInfo.InvariantCulture);
+                JsonNode row = kv.Value!;
+                rampRows[level] = new RampRow(
+                    level, Int(row, "k"), Int(row, "empties"), row["par"]![0]!.GetValue<int>(), row["par"]![1]!.GetValue<int>(),
+                    Interval.Parse(Str(row, "window")));
+            }
+        }
 
         var spec = new CampaignSpec
         {
@@ -553,6 +602,7 @@ internal sealed class CampaignSpec
             RampK = Int(rampNode, "k"),
             RampEmpties = Int(rampNode, "empties"),
             RampWindow = Interval.Parse(Str(rampNode, "window")),
+            RampRows = rampRows,
             CycleFrom = Int(cycle, "from_level"),
             TwoEmptiesUntil = Int(cycle, "empties_two_until_level"),
             ChallengeTwoEmptiesUntil = Int(cycle, "challenge_two_empties_until_level"),

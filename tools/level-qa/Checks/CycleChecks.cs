@@ -17,7 +17,8 @@ internal static class CycleChecks
         ("QA-LABEL-ADJ", "nunca dos niveles con etiqueta seguidos (c.3 regla 1)"),
         ("QA-AFTER-LABEL", "tras cada etiqueta, el siguiente con D menor (condicion necesaria de bajar una banda; c.3 regla 2)"),
         ("QA-LADDER", "escalera: 61+ D(p6) <= D(p9) <= D(p12) <= D(p15) <= D(p18) < D(p20); 41-59 D(p6) <= D(p12) <= D(p18) < D(p20), D(p9) < D(p6), D(p15) < D(p12) (c.3 regla 4)"),
-        ("QA-REMANSO", "p19 es un remanso puro y precede al hito; p18 es un reto (c.3 regla 5)"),
+        ("QA-REMANSO", "p19 es un remanso puro y mas facil que la media de comodidad: D(p19) < media de D de las comodidades del ciclo sin estreno (c.4; c.3 regla 5)"),
+        ("QA-RAMP", "filas 11-12 de 02 sec. 13: cuias = 6 colores + 2 vacios, par 15-19 y 16-20, bot_fail 0-10 %"),
         ("QA-PURE-30", "al menos un 30 % de niveles puros por ciclo completo (d.2 regla 1)"),
         ("QA-WINDOW", "bot_fail < 0,20 en los tableros de estreno (03 sec. 17 #3); fuera de la ventana en otro slot, aviso (relajacion registrada por el generador)"),
         ("QA-DEBUT", "tableros de estreno con 2 vacios y un solo ejemplar de la mecanica; intro_mechanic y skippable = false solo en el nivel de intro (02 sec. 9.2 regla 2)"),
@@ -111,6 +112,28 @@ internal static class CycleChecks
                 yield return Fail("QA-REMANSO", "el remanso (p19) lleva mecanicas o capacidades");
             }
 
+            // Filas fijas de la tabla única del arranque (02 §13; especificación ramp.rows).
+            if (plan.Row is RampRow row)
+            {
+                int empties = lv.Board.Cuias.Select((c, i) => (c, i)).Count(x => x.c.Length == 0 && lv.Board.Caps[x.i] == Cuia.DefaultCapacity && lv.Board.Attrs[x.i].IsNone);
+                bool uniform = lv.Board.Caps.All(c => c == Cuia.DefaultCapacity) && lv.Board.Attrs.All(a => a.IsNone);
+                if (lv.K != row.K || empties != row.Empties || lv.Board.Cuias.Length != row.K + row.Empties || !uniform)
+                {
+                    yield return Fail("QA-RAMP", string.Create(CultureInfo.InvariantCulture,
+                        $"{lv.Board.Cuias.Length} cuias = {lv.K} colores + {empties} vacios; 02 sec. 13 fija {row.K + row.Empties} = {row.K} + {row.Empties} (cuias de 4, sin mecanicas)"));
+                }
+
+                if (!row.ParOk(lv.Par))
+                {
+                    yield return Fail("QA-RAMP", string.Create(CultureInfo.InvariantCulture, $"par {lv.Par} fuera de {row.ParMin}-{row.ParMax} (02 sec. 13)"));
+                }
+
+                if (!row.Window.Contains(lv.BotFail))
+                {
+                    yield return Fail("QA-RAMP", string.Create(CultureInfo.InvariantCulture, $"bot_fail {lv.BotFail:0.000} fuera de {row.Window} (02 sec. 13)"));
+                }
+            }
+
             // Vecinos.
             if (byLevel.TryGetValue(lv.Level + 1, out LevelEval? next) && lv.Label != "normal")
             {
@@ -134,6 +157,14 @@ internal static class CycleChecks
             foreach (QaIssue i in Ladder(spec, start, at))
             {
                 yield return i;
+            }
+
+            // Remanso más fácil que la media de comodidad (c.4), con las comodidades presentes del ciclo que no son estreno.
+            List<double> comfort = cycle.Where(e => e.Plan!.IsComfortReference).Select(e => e.Level.D).ToList();
+            if (at.TryGetValue(19, out QaLevel? remanso) && comfort.Count > 0 && !(remanso.D < comfort.Average() - 1e-9))
+            {
+                yield return new QaIssue("QA-REMANSO", remanso.Pack, remanso.Level, string.Create(CultureInfo.InvariantCulture,
+                    $"D(p19) = {remanso.D:0.00} no queda por debajo de la media de comodidad del ciclo ({comfort.Average():0.00}, {comfort.Count} niveles sin estreno)"));
             }
 
             if (at.Count == 20)

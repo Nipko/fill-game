@@ -3,7 +3,9 @@
 //   - tras cada nivel con etiqueta, el siguiente baja al menos una banda entera de D (y su D es menor);
 //   - escalera desde el 61: D(p6) ≤ D(p9) ≤ D(p12) ≤ D(p15) ≤ D(p18) < D(p20);
 //   - escalera en 41-59: D(p6) ≤ D(p12) ≤ D(p18) < D(p20), con D(p9) < D(p6) y D(p15) < D(p12);
-//   - anti-repetición (03 §17 #9): forma distinta de la de los 200 niveles anteriores y Hamming ≥ 25 % con los 20 anteriores.
+//   - anti-repetición (03 §17 #9): forma distinta de la de los 200 niveles anteriores y Hamming ≥ 25 % con los 20 anteriores;
+//   - remanso (p19) más fácil que la media de comodidad del ciclo (c.4; c.3 regla 5): D(p19) < media de D de las comodidades
+//     que no son tableros de estreno (PlaceCycle).
 // Blandas (penalizan y se registran): salto entre niveles consecutivos de +2,2 / −3,4 bandas continuas (03 §12).
 // «Nunca dos etiquetados seguidos», el remanso antes del hito y las dos recuperaciones salen de los roles del calendario.
 // D se compara redondeado a 2 decimales, como se publica.
@@ -104,6 +106,51 @@ internal static class Placement
 
         // Anti-repetición: si choca con la historia o dentro del bloque, se excluye el candidato y se repite (lo hace el llamante).
         return chosen;
+    }
+
+    /// <summary>
+    /// <see cref="PlaceBlock"/> con la restricción del remanso (propuesta c.4: p19 «puro, más fácil que la media de comodidad»;
+    /// c.3 regla 5: respiro antes del pico): D(p19) &lt; media de D de las comodidades del ciclo que no son tableros de estreno.
+    /// La media depende de la colocación, así que se coloca, se comprueba y se excluyen del p19 los candidatos con D ≥ media
+    /// hasta que se cumple o el p19 se queda sin opciones (null: el llamante pide más candidatos).
+    /// </summary>
+    public static Dictionary<int, Candidate>? PlaceCycle(
+        CampaignSpec spec, IReadOnlyList<SlotResult> block, Candidate? previous, IReadOnlyList<Candidate> history,
+        Func<Candidate, bool> excluded, bool strictBand = true)
+    {
+        SlotResult? remanso = block.FirstOrDefault(s => s.Plan.Role == SlotRole.Remanso);
+        var tooHard = new HashSet<Candidate>();
+        for (int guard = 0; guard < 256; guard++)
+        {
+            Dictionary<int, Candidate>? placed = PlaceBlock(spec, block, previous, history, c => excluded(c) || tooHard.Contains(c), strictBand);
+            if (placed is null || remanso is null)
+            {
+                return placed;
+            }
+
+            double? mean = ComfortMean(block.Select(s => s.Plan), placed);
+            if (mean is not double m || Rounded(placed[remanso.Plan.Level].D) < m - 1e-9)
+            {
+                return placed;
+            }
+
+            foreach (Candidate c in remanso.Candidates.Where(c => Rounded(c.D) >= m - 1e-9))
+            {
+                tooHard.Add(c);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Media de D (redondeado como se publica) de las comodidades del bloque que no son tableros de estreno (c.4), o null si no
+    /// hay ninguna. La misma regla la aplica tools/level-qa (QA-REMANSO) sobre el pack.
+    /// </summary>
+    public static double? ComfortMean(IEnumerable<LevelPlan> plans, IReadOnlyDictionary<int, Candidate> placed)
+    {
+        List<double> ds = plans.Where(p => p.IsComfortReference && placed.ContainsKey(p.Level)).Select(p => Rounded(placed[p.Level].D)).ToList();
+        return ds.Count == 0 ? null : ds.Average();
     }
 
     private static int Encode(int slot, int cand) => (slot * 1024) + cand;

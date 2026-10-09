@@ -31,17 +31,19 @@ internal static class SpecValidator
         ("CAP-CYCLE", "una mecanica sale en 6 niveles por ciclo como mucho (8 en su ciclo de debut) (d.2 regla 2)"),
         ("NO-3-ROW", "una mecanica nunca en 3 niveles seguidos fuera de su estreno (d.2 regla 2)"),
         ("SEASONS", "temporadas A/B alternas, nunca mas de 2 ciclos seguidos iguales; el ciclo de debut toma la temporada de la mecanica (d.2 regla 7)"),
-        ("GAP-120", "ninguna mecanica pasa mas de 120 niveles sin volver (resumen, punto 6; d.2 regla 4)"),
+        ("GAP-120", "ninguna mecanica ni capacidad (Cuia chica, Cuia alta) pasa mas de 120 niveles sin volver (resumen, punto 6; d.2 regla 4; 02 sec. 8)"),
         ("FIRST-TIME", "al menos una primera vez por ciclo: estreno, tinte nuevo o primera combinacion (d.2 regla 3)"),
         ("CAPACITIES", "como mucho 2 Cuias chicas (con la cueva de la Pirana) y 1 Cuia alta por nivel antes del 200; Cuia alta de 6 solo en hitos desde el 141 (02 sec. 8)"),
-        ("LIANA-CAPS", "aviso: la Liana con capacidades mixtas esta bloqueada en AF.Core (C1-9); el generador quita la capacidad o pone la cueva de cap 4"),
+        ("LIANA-CAPS", "la Liana nunca va con Cuia chica, Cuia alta ni Pirana (capacidades mixtas, bloqueo C1-9 de AF.Core): el generador no puede cumplir la celda"),
     ];
+
+    /// <summary>Hueco máximo entre dos apariciones de una mecánica o capacidad (resumen, punto 6; d.2 regla 4).</summary>
+    public const int MaxGap = 120;
 
     public static List<SpecIssue> Validate(CampaignSpec spec)
     {
         var issues = new List<SpecIssue>();
         void Fail(string rule, int level, string message) => issues.Add(new SpecIssue(rule, level, message));
-        void Warn(string rule, int level, string message) => issues.Add(new SpecIssue(rule, level, message, Warning: true));
 
         // CAL-COVER
         for (int n = spec.FirstLevel; n <= spec.LastLevel; n++)
@@ -154,10 +156,11 @@ internal static class SpecValidator
                 Fail("CAPACITIES", n, "Cuia alta de 6 fuera de un hito desde el 141");
             }
 
-            // LIANA-CAPS (aviso)
+            // LIANA-CAPS: AF.Core rechaza la Liana con capacidades mixtas (C1-9); la celda no se puede generar tal cual y el
+            // generador no quita en silencio lo que pide el calendario.
             if (c.Has("Li") && (c.Capacities.Count > 0 || c.Has("Pi")))
             {
-                Warn("LIANA-CAPS", n, "Liana con capacidades mixtas (" + c.Short + "): bloqueo C1-9 de AF.Core; el generador lo relaja y lo registra");
+                Fail("LIANA-CAPS", n, "Liana con capacidades mixtas (" + c.Short + "): bloqueo C1-9 de AF.Core; mueve la capacidad o la Pirana a una celda sin Liana");
             }
         }
 
@@ -308,21 +311,24 @@ internal static class SpecValidator
             }
         }
 
-        // GAP-120
-        foreach (MechanicInfo m in spec.MechanicTable)
+        // GAP-120: mecánicas y, por id, las capacidades (la Cuia alta de 5 y la de 6 son la misma Cuia alta).
+        IEnumerable<(string Id, List<int> Levels)> tracked = spec.MechanicTable
+            .Select(m => (m.Id, cells.Where(c => c.Mechanics.Contains(m)).Select(c => c.Level).ToList()))
+            .Concat(spec.CapacityTable.Select(x => x.Id).Distinct()
+                .Select(id => (id, cells.Where(c => c.Capacities.Any(x => x.Id == id)).Select(c => c.Level).ToList())));
+        foreach ((string id, List<int> levels) in tracked)
         {
-            List<int> levels = cells.Where(c => c.Mechanics.Contains(m)).Select(c => c.Level).ToList();
             for (int i = 1; i < levels.Count; i++)
             {
-                if (levels[i] - levels[i - 1] > 120)
+                if (levels[i] - levels[i - 1] > MaxGap)
                 {
-                    Fail("GAP-120", levels[i], $"{m.Id} pasa {levels[i] - levels[i - 1]} niveles sin volver");
+                    Fail("GAP-120", levels[i], $"{id} pasa {levels[i] - levels[i - 1]} niveles sin volver");
                 }
             }
 
-            if (levels.Count > 0 && spec.LastLevel - levels[^1] > 120)
+            if (levels.Count > 0 && spec.LastLevel - levels[^1] > MaxGap)
             {
-                Fail("GAP-120", spec.LastLevel, $"{m.Id} no vuelve desde el {levels[^1]}");
+                Fail("GAP-120", spec.LastLevel, $"{id} no vuelve desde el {levels[^1]}");
             }
         }
 
@@ -475,7 +481,7 @@ internal static class SpecValidator
         int failures = issues.Count(i => !i.Warning);
         int warnings = issues.Count(i => i.Warning);
         Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
-            $"{Rules.Length - 1} reglas; {failures} fallo(s), {warnings} aviso(s)"));
+            $"{Rules.Length} reglas; {failures} fallo(s), {warnings} aviso(s)"));
         if (spec.ExpectRule is not null)
         {
             bool present = issues.Any(i => !i.Warning && i.Rule == spec.ExpectRule);

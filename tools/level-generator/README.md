@@ -27,14 +27,17 @@ que `level-qa` enlaza). Fuentes:
   p19 e hito en p20; propuesta `docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md` c.1-c.4 y c.8.
 - **D-007** (2026-10-08): debuts Hoja 43, Matapi 63, Liana con fruta 83, Aguas turbias 100, Remolino 103, Barro 123,
   Lluvia 143, Brote 163 y Piraña 183; Cuia chica 14/18/22 y Cuia alta 27/160 (02 §8); combinaciones de d.3 y Q14 A.
-- **Calendario d.4** (21-200) literal, más la rampa 11-20 (d.4, «Niveles 1-20»). Leyenda: R, C y S puros; ★ estreno;
+- **Calendario d.4** (21-200) literal salvo cuatro celdas [P] por el bloqueo C1-9 de `AF.Core` (la Liana no admite
+  capacidades mixtas; opción (b) de la revisión, mientras no se amplíe `futil`): 94 Ma → Li y 95 Li+Al → Ma+Al, 160
+  Ll+Li+Al6 → Ll+Al6 y 198 Pi+Li → Pi+Ho (`calendar_note`). Más la rampa 11-20 (d.4, «Niveles 1-20») con las filas 11
+  y 12 de 02 §13 (`ramp.rows`: 8 cuias = 6 + 2, par 15-19 y 16-20, bot 0-10 %). Leyenda: R, C y S puros; ★ estreno;
   (s) reto suave; (D) apunta a Difícil; (MD) apunta a Muy difícil; (tinte X) debut de tinte. Los nombres de hito no
   pasan al pack (pendientes del asesor).
 - **GDD vigente** donde no cambia: rangos de 03 §11 (K, cuias, vacíos, par objetivo y porcentajes de etiquetas),
   pool de tintes del glosario §8-§9, pares de riesgo y `max_pares_riesgo` (03 §4.5), mundos 2-5 y agua base
   (glosario §8, §11).
 - **[P] de la especificación**: K por rol (`k_plan`, limitado por el pool y por los pares de riesgo), ventanas de
-  bot de los retos (41-59 con etiqueta desde 75 %, suaves 50-74 %, desde el 61 75-89 %), «Ch» = Cuia chica de 2.
+  bot de los retos (41-59 con etiqueta 75-89 %, suaves 50-74 %, desde el 61 75-89 %), «Ch» = Cuia chica de 2.
 
 ## `--validate-spec`
 
@@ -64,12 +67,13 @@ un `FAIL [regla]` por cada incumplimiento o un `AVISO`. Reglas (ids estables):
 | CAP-CYCLE | 6 niveles por ciclo como mucho (8 en el de debut) | d.2 regla 2 |
 | NO-3-ROW | nunca 3 niveles seguidos fuera del estreno | d.2 regla 2 |
 | SEASONS | temporadas alternas, el ciclo de debut toma la de la mecánica | d.2 regla 7 |
-| GAP-120 | ninguna mecánica pasa más de 120 niveles sin volver | resumen 6; d.2 regla 4 |
+| GAP-120 | ninguna mecánica ni capacidad (Cuia chica, Cuia alta) pasa más de 120 niveles sin volver | resumen 6; d.2 regla 4; 02 §8 |
 | FIRST-TIME | al menos una primera vez por ciclo | d.2 regla 3 |
 | CAPACITIES | ≤ 2 Cuias chicas (con la cueva) y ≤ 1 Cuia alta antes del 200; Cuia alta de 6 solo en hitos desde el 141 | 02 §8 |
-| LIANA-CAPS | aviso: Liana con capacidades mixtas, bloqueada en `AF.Core` (C1-9); el generador la relaja | C1-9 |
+| LIANA-CAPS | la Liana nunca va con Cuia chica, Cuia alta ni Piraña: `AF.Core` la rechaza (C1-9) y el generador no quita nada de la celda | C1-9 |
 
-Con la especificación literal: 0 fallos y 3 avisos (95 Li+Al, 160 Ll+Li+Al6 y 198 Pi+Li).
+Con `campaign_v1.json`: 21 reglas, 0 fallos. Las reglas comprueban el calendario; lo publicado lo comprueba `level-qa`
+(QA-MECH-CELL y QA-GAP-120).
 
 ### Fixtures negativos: `specs/tests/*.json`
 
@@ -135,12 +139,17 @@ Fases (los tiempos salen por la consola; el informe no lleva tiempos):
    `Prng.SubSeed(semilla, 0x47454E00 + n)`; `gen.candidates` del pack es n + 1.
 2. **Pool e índice D** (`Pool`): z-scores del pool del rango (todos los candidatos en ventana), congelados; banda = cuantil.
 3. **Colocación** (`Placement`, programación dinámica por ciclo): escalera de D-009, bajada de una banda entera de D tras
-   cada etiqueta (y D menor), anti-repetición (forma y Hamming, `Campaign/BoardShape.cs`) y saltos de +2,2 / −3,4 bandas
-   como penalización. Si un ciclo no tiene colocación, se piden más candidatos a sus retos, hito y siguientes (hasta 2
+   cada etiqueta (y D menor), remanso con D por debajo de la media de comodidad del ciclo (c.4; `PlaceCycle`),
+   anti-repetición (forma y Hamming, `Campaign/BoardShape.cs`) y saltos de +2,2 / −3,4 bandas como penalización. Si un ciclo no tiene colocación, se piden más candidatos a sus retos, hito y siguientes (hasta 2
    rondas); un reto o hito que quede fuera de su ventana se publica con la etiqueta que mide (c.2: sin etiqueta si mide
    menos del 75 %) y el informe lo registra.
 4. **Alivio** (`Metrics/Relief.cs`) desde el nivel 31.
 5. **Packs** (`PackWriter`): `pack_schema` 2, minificado con un nivel por línea, UTF-8 sin BOM y LF, decimales fijos.
+
+El informe (`tools/out/campaign_v1_report.md`) trae, además de los packs, el pool, las etiquetas, los ciclos y la tabla
+por nivel: el debut real y el hueco máximo de cada mecánica y capacidad sobre los tableros publicados, el remanso frente a
+la comodidad de su ciclo, el porcentaje de comodidades y remansos relajados a 2 vacíos o a Cuia chica por rango y las
+cuias por rango frente a 03 §11.
 
 Decisiones [P] de la generación (para revisar en la integración):
 
@@ -148,10 +157,15 @@ Decisiones [P] de la generación (para revisar en la integración):
   queda al menos un vacío de 4.
 - La Hoja, el Matapi y la Lluvia ocupan un vacío: en los estrenos, uno de los 2 vacíos (ejemplo de 08 §4.1); en comodidad
   traen un vacío más; en retos e hitos usan los del rol.
-- La Liana con capacidades mixtas está bloqueada en `AF.Core` (C1-9): en 95, 160 y 198 se quitan la Cuia chica y la Cuia
-  alta y la cueva de la Piraña es de 4.
+- La Liana con capacidades mixtas está bloqueada en `AF.Core` (C1-9): ninguna celda la pide (LIANA-CAPS) y el generador
+  nunca quita una capacidad o la cueva de la celda (si llegara a pasar, se detiene).
+- Filas 11 y 12 de 02 §13: K y vacíos fijos; se rechaza el candidato con el par fuera de la fila y, si `walk` no basta,
+  `deep` corto (2.000 nodos) y `deep`.
+- Contrato 6: ningún candidato que mida ≥ 0,90 antes del 60 ni ≥ 0,75 antes del 40 entra en el pool, tampoco al relajar.
+- Remanso (p19): la colocación exige D(p19) < media de D de las comodidades del ciclo que no son tableros de estreno (c.4).
 - Aguas turbias: 1-2 cuias y como mucho 3 dosis ocultas (el tope de 02 T2 es 4) para que la ruta segura cueste segundos.
-- Un nivel turbio que no entre en su ventana se publica sin turbias (T1) y se registra.
+- Un nivel turbio pide hasta 6 rondas más de candidatos turbios (sub-semillas desde el intento 11.000) antes de publicarse
+  sin turbias (respaldo de T1, registrado en el informe y aviso QA-MECH-CELL).
 - Sin `par_approx`: la Piraña deja el par exacto (C3-2).
 
 Diagnóstico: con la variable de entorno `LEVELGEN_TRACE=<nivel>` el generador traza por stderr cada candidato de ese

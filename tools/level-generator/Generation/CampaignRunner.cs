@@ -2,8 +2,8 @@
 // alivio → JSON). Fases:
 //   1. candidatos de cada slot en paralelo (cada slot depende solo de su semilla: el resultado no depende de los hilos);
 //   2. estadísticos del pool por rango de 03 §11 (congelados) e índice D;
-//   3. colocación por bloque (rampa 11-20 y ciclos de 20) con la programación dinámica de Placement; si un ciclo no tiene
-//      asignación, se piden más candidatos a sus slots (hasta 3 rondas);
+//   3. colocación por bloque (rampa 11-20 y ciclos de 20) con la programación dinámica de Placement y el remanso más fácil
+//      que la media de comodidad (c.4); si un ciclo no tiene asignación, se piden más candidatos a sus slots (hasta 3 rondas);
 //   4. alivio (relief) de los niveles colocados desde el 31;
 //   5. un pack por mundo (PackWriter) y el informe (CampaignReport), o --check: comparación byte a byte con el disco.
 // D depende del pool de cada rango: un pack solo se reproduce generando los mismos --levels (rangos completos).
@@ -28,6 +28,12 @@ internal sealed class GeneratedLevel
 internal static class CampaignRunner
 {
     public const int MaxExtraRounds = 2;
+
+    /// <summary>Rondas extra de candidatos con Aguas turbias antes del respaldo de T1 (publicar sin turbias) [P].</summary>
+    public const int MurkyExtraRounds = 6;
+
+    /// <summary>Primer intento de las rondas turbias extra (las de la colocación usan 1000-2999).</summary>
+    public const int MurkyRoundFirstAttempt = 10000;
 
     public static int Run(string specPath, string levelsArg, string outDir, string? reportPath, bool check)
     {
@@ -68,12 +74,23 @@ internal static class CampaignRunner
             var sw = Stopwatch.StartNew();
             SlotGenerator gen = generators.Value!;
             SlotResult slot = gen.Generate(level.Plan);
-            if (level.Plan.Mechanics.Any(m => m.Code == "Tu") && !slot.Candidates.Any(c => c.PoolMember))
+            bool murky = level.Plan.Mechanics.Any(m => m.Code == "Tu");
+            for (int round = 1; murky && round <= MurkyExtraRounds && !slot.Candidates.Any(c => c.PoolMember); round++)
+            {
+                // Antes de publicar sin turbias, más candidatos turbios (los que entran en la ventana a menudo no tienen ruta
+                // segura, 03 §8): sub-semillas de otro tramo de intentos, sin solaparse con las rondas de la colocación.
+                SlotResult more = gen.Generate(level.Plan, firstAttempt: MurkyRoundFirstAttempt + (round * 1000));
+                slot.Candidates.AddRange(more.Candidates);
+                slot = slot with { Attempts = slot.Attempts + more.Attempts, Rejected = slot.Rejected + more.Rejected, MurkyRounds = round };
+            }
+
+            if (murky && !slot.Candidates.Any(c => c.PoolMember))
             {
                 // T1: si ningún candidato con turbias mide Difícil o Muy difícil, se publica sin turbias y se registra.
                 SlotResult plain = gen.Generate(level.Plan, firstAttempt: 2000, dropMurky: true);
-                plain.Notes.Insert(0, "sin Aguas turbias: ningun candidato turbio entro en la ventana");
-                slot = plain;
+                plain.Notes.Insert(0, string.Create(CultureInfo.InvariantCulture,
+                    $"sin Aguas turbias: ningun candidato turbio entro en la ventana ({slot.Attempts} intentos turbios)"));
+                slot = plain with { MurkyRounds = slot.MurkyRounds };
             }
 
             level.Slot = slot;
@@ -100,7 +117,7 @@ internal static class CampaignRunner
             {
                 for (int guard = 0; guard < 50; guard++)
                 {
-                    placed = Placement.PlaceBlock(spec, block.Select(b => b.Slot).ToList(), history.LastOrDefault(), history, excluded.Contains);
+                    placed = Placement.PlaceCycle(spec, block.Select(b => b.Slot).ToList(), history.LastOrDefault(), history, excluded.Contains);
                     if (placed is null)
                     {
                         break;
@@ -143,7 +160,7 @@ internal static class CampaignRunner
                 if (previousPlacement is not null)
                 {
                     // Se vuelve a colocar con los candidatos nuevos; si no mejora, se queda la colocación anterior.
-                    Dictionary<int, Candidate>? retry = Placement.PlaceBlock(spec, block.Select(b => b.Slot).ToList(), history.LastOrDefault(), history, excluded.Contains);
+                    Dictionary<int, Candidate>? retry = Placement.PlaceCycle(spec, block.Select(b => b.Slot).ToList(), history.LastOrDefault(), history, excluded.Contains);
                     placed = retry is not null && RepetitionViolation(block, retry, history) is null ? retry : previousPlacement;
                     break;
                 }
@@ -155,7 +172,7 @@ internal static class CampaignRunner
                 // cada incumplimiento queda en el informe.
                 for (int guard = 0; guard < 50; guard++)
                 {
-                    placed = Placement.PlaceBlock(spec, block.Select(b => b.Slot).ToList(), history.LastOrDefault(), history, excluded.Contains, strictBand: false);
+                    placed = Placement.PlaceCycle(spec, block.Select(b => b.Slot).ToList(), history.LastOrDefault(), history, excluded.Contains, strictBand: false);
                     if (placed is null)
                     {
                         break;

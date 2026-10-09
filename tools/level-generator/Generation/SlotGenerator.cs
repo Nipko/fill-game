@@ -20,7 +20,7 @@ namespace AmazonFill.Tools.LevelGenerator.Generation;
 
 /// <summary>Configuración del tablero base de una etapa.</summary>
 internal sealed record StageConfig(
-    int Stage, int K, int Empties, string Source, int[] Chicas, int AltaCap, bool Slack, bool UniformCaps,
+    int Stage, int K, int Empties, string Source, int[] Chicas, int AltaCap, bool Slack,
     IReadOnlyList<MechanicInfo> Mechanics, IReadOnlyList<string> Notes, int DeepNodes);
 
 internal sealed class Candidate
@@ -59,7 +59,11 @@ internal sealed class Candidate
     public bool Murky => Board.Hidden.Length > 0;
 }
 
-internal sealed record SlotResult(LevelPlan Plan, List<Candidate> Candidates, int Attempts, List<string> Notes, bool MurkyDropped, int Rejected);
+internal sealed record SlotResult(LevelPlan Plan, List<Candidate> Candidates, int Attempts, List<string> Notes, bool MurkyDropped, int Rejected)
+{
+    /// <summary>Rondas extra de candidatos con Aguas turbias antes del respaldo de T1 (CampaignRunner).</summary>
+    public int MurkyRounds { get; init; }
+}
 
 internal sealed class SlotGenerator(CampaignSpec spec)
 {
@@ -78,6 +82,9 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         : config.Source == "walk" ? WalkCandidatesPerStage : CandidatesPerStage;
     public const int Stages = 3;
     public const ulong CandidateStream = 0x47454E00UL;
+
+    /// <summary>Nodos del «deep corto» (03 §4.4: walk/deep corto) en las filas fijas de 02 §13 [P].</summary>
+    public const int RowShortDeepNodes = 2000;
 
     private readonly MetricsEngine _metrics = new();
     private readonly InverseWalk _walk = new();
@@ -222,6 +229,13 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             return;
         }
 
+        if (plan.Row is RampRow row && !row.ParOk(c.Par))
+        {
+            // Fila fija de 02 §13 (niveles 11-12): el par [P] de la tabla única del arranque es obligatorio.
+            c.Reject = string.Create(CultureInfo.InvariantCulture, $"par {c.Par} fuera de {row.ParMin}-{row.ParMax} (02 sec. 13, nivel {row.Level})");
+            return;
+        }
+
         c.EarlyTraps = _metrics.EarlyTraps(c.State);
         int cap = EarlyTrapCap(c.MeasuredLabel);
         if (c.EarlyTraps > cap)
@@ -259,16 +273,11 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         var chicas = plan.Capacities.Where(c => c.Id == "chica").Select(c => c.Cap).ToList();
         int alta = plan.Capacities.Where(c => c.Id == "alta").Select(c => c.Cap).DefaultIfEmpty(0).Max();
         bool liana = mechs.Any(m => m.Code == "Li");
-        if (liana && (chicas.Count > 0 || alta > 0))
+        if (liana && (chicas.Count > 0 || alta > 0 || mechs.Any(m => m.Code == "Pi")))
         {
-            notes.Add("Liana con capacidades mixtas: se quitan Cuia chica y Cuia alta (bloqueo C1-9 de AF.Core)");
-            chicas.Clear();
-            alta = 0;
-        }
-
-        if (liana && mechs.Any(m => m.Code == "Pi"))
-        {
-            notes.Add("Liana con Pirana: cueva de cap 4 (bloqueo C1-9 de AF.Core)");
+            // Bloqueo C1-9 de AF.Core: --validate-spec (LIANA-CAPS) rechaza la celda antes de generar; el generador nunca
+            // quita en silencio una capacidad o la cueva de la celda.
+            throw new InvalidOperationException($"nivel {plan.Level}: Liana con capacidades mixtas en la celda {plan.Cell.Short} (LIANA-CAPS)");
         }
 
         int k = plan.K;
@@ -284,6 +293,13 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         switch (stage)
         {
             case 0:
+                break;
+            case 1 or 2 when plan.Row is not null:
+                // Fila fija de 02 §13 (niveles 11-12): K y vacíos no se relajan; si walk no da el par de la tabla, barajado en
+                // profundidad corto y después el de 03 §4.2 (más profundidad, más par).
+                source = "deep";
+                deepNodes = stage == 1 ? RowShortDeepNodes : InverseDeep.DefaultMaxNodes;
+                notes.Add(stage == 1 ? "fila de 02 sec. 13: deep corto" : "fila de 02 sec. 13: deep");
                 break;
             case 1 or 2 when harder:
                 // Demasiado fácil: barajado inverso en profundidad (03 §4.2), más largo en la segunda etapa.
@@ -420,7 +436,7 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             return null;
         }
 
-        return new StageConfig(stage, k, baseEmpties, source, [.. chicas], alta, slack, liana, mechs, notes, deepNodes);
+        return new StageConfig(stage, k, baseEmpties, source, [.. chicas], alta, slack, mechs, notes, deepNodes);
     }
 
     /// <summary>Un candidato: base, superposición, tintes, orden visual, validación y bot. Null si se rechaza.</summary>
@@ -508,7 +524,6 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             Spec = spec,
             Colors = k,
             Units = units,
-            UniformCaps = config.UniformCaps,
             MurkyDebut = plan.DebutBoard && plan.Mechanics.Any(m => m.Code == "Tu"),
         };
         var rng = new Prng(Prng.SubSeed(seed, 1));
@@ -552,9 +567,12 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         double bot = _metrics.BotFail(state, plan.SeedText);
         string label = spec.MeasuredLabel(plan.Level, bot);
         bool labelAllowed = CampaignSpec.LabelRank(label) <= CampaignSpec.LabelRank(plan.AllowedLabel);
-        bool inWindow = plan.Window.Contains(bot) && labelAllowed;
+        // Contrato 6: el 40 es el primer Difícil y el 60 el primer Muy difícil; antes ningún nivel mide por encima, tampoco al
+        // relajar (MeasuredLabel lo publicaría con la etiqueta inferior y la escalera 58 → 60 no se notaría).
+        string? early = spec.EarlyMeasure(plan.Level, bot);
+        bool inWindow = plan.Window.Contains(bot) && labelAllowed && early is null;
         int realities = 0;
-        string? reject = labelAllowed ? null : $"etiqueta {label} no permitida en el slot";
+        string? reject = !labelAllowed ? $"etiqueta {label} no permitida en el slot" : early;
         if (data.Hidden.Length > 0)
         {
             // La ruta segura (03 §8) es cara: solo se busca para los candidatos que entran en la ventana.

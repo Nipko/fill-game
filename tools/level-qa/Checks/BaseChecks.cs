@@ -26,6 +26,8 @@ internal static class BaseChecks
         ("QA-PALETTE", "palette = tintes presentes en cuias (08 sec. 4.1)"),
         ("QA-BOT", "bot_fail recalculado con la semilla del nivel identico al publicado (03 sec. 6)"),
         ("QA-LABEL", "etiqueta coherente: >= 0,75 hard y >= 0,90 very_hard, desde el 40 y el 60 (03 sec. 7, 11)"),
+        ("QA-LABEL-EARLY", "ningun nivel mide >= 0,90 antes del 60 ni >= 0,75 antes del 40, aunque se publique con la etiqueta inferior (contrato 6; 03 sec. 11-12)"),
+        ("QA-CUIAS", "aviso: cuias del nivel dentro de las cuias totales del rango (03 sec. 11)"),
         ("QA-FIELDS", "sin solution, safe_path ni qa (08 sec. 4.1)"),
         ("QA-SIZE", "pack <= 100 KB por 100 niveles sin relief (03 sec. 17 #11)"),
         ("QA-EARLY-TRAPS", "trampas tempranas dentro del tope de la etiqueta (Q16 B)"),
@@ -168,6 +170,20 @@ internal static class BaseChecks
         if (expected != lv.Label)
         {
             yield return Fail("QA-LABEL", string.Create(CultureInfo.InvariantCulture, $"etiqueta {lv.Label} con bot_fail {lv.BotFail:0.000}; corresponde {expected}"));
+        }
+
+        if (spec.EarlyMeasure(n, lv.BotFail) is string early)
+        {
+            yield return Fail("QA-LABEL-EARLY", string.Create(CultureInfo.InvariantCulture,
+                $"{early} (contrato 6: primer Dificil en el {spec.FirstHard} y primer Muy dificil en el {spec.FirstVeryHard})"));
+        }
+
+        // Cuias por rango (03 §11). Aviso: con 1 vacío y el K que permiten los pares de riesgo (03 §4.5) algunos rangos no
+        // llegan al mínimo de la tabla; se revisa en la integración (k_plan, vacíos o la tabla).
+        if (e.Plan is LevelPlan rp && (b.Cuias.Length < rp.Range.CuiasMin || b.Cuias.Length > rp.Range.CuiasMax))
+        {
+            yield return new QaIssue("QA-CUIAS", pack, n, string.Create(CultureInfo.InvariantCulture,
+                $"{b.Cuias.Length} cuias (K = {lv.K}); el rango {rp.Range.Name} pide {rp.Range.CuiasMin}-{rp.Range.CuiasMax} (03 sec. 11)"), Warning: true);
         }
 
         // Trampas tempranas (Q16 B).
