@@ -19,6 +19,23 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   indexada por el código de mecánica de la cuia (bits 39-42 de `Cuia.Packed`, hoy siempre 0); los ganchos solo se llaman
   para cuias con mecánica. `AF.Core` concede `InternalsVisibleTo("AF.Solver")` para que el solver recorra las mismas
   reglas por sus rutas internas.
+- Brote y Matapi, los filtros (C1-8). `BroteMechanic` (02 §9.1 M2, misma regla; debut 163 por D-007): cerrado no es
+  origen, como destino sigue la regla normal y al recibir su color germina en la etapa (b) y pasa a `None`
+  (`PourEvents.BroteOpenedMask`); validación: 1-3 dosis visibles, sin ocultas y sin llenar. `MatapiMechanic` (D-007, debut
+  63; propuesta b.2 M10, reglas 1-8): nunca es origen (vertido ilegal, R11), como destino la regla normal, nunca fútil como
+  destino, acaba sellado o vacío (R12); validación: vacío o 1-3 dosis visibles de un color, sin Barro ni ocultas y, con
+  dosis, capacidad = `U_c` de su color [P, derivado de R12]. La excepción de la Piraña (regla 7) llega con C3-2. Tests
+  compartidos `BroteTests`, `MatapiTests` y `FilterSolverTests` (32 tableros por mecánica en `run` y `single`, A* con y
+  sin poda contra la búsqueda exhaustiva y heurística admisible y consistente); P1-P3 con cada filtro en
+  `FutilePropertyTests`; tablero con Hoja, Brote y Matapi sin asignaciones en `HotLoopAllocationTests`.
+- Hallazgo para la integración (02 R16; 03 §5), medido en `FutilePropertyTests.R16_MixedCapacities_PrunedParVersusExhaustivePar`:
+  con capacidades mixtas, P1 se cumple (nunca se declara Aguas estancadas con solución), pero podar los fútiles
+  (`MOVIMIENTOS`) puede alargar el par o dejar sin camino útil a la victoria un tablero que lo tiene: en 309 tableros
+  mixtos pequeños, 3 en `run` (1 más largo y 2 sin camino) y 5 en `single`. Ejemplo en `run`: `[cap 5: 2]`,
+  `[2,2,1,3]`, `[3,3,1]`, `[cap 1: 1]`, `[2,3,1,1]` (U_1 = 5): la solución (9 vertidos) necesita llevar el 2 suelto de
+  la Cuia alta (la casa de la fruta abundante 1) a la Cuia chica, un vertido fútil según 02 §1.4 porque la chica no es la
+  casa del 2. Los tests de solver comparan ahora A* con poda con la búsqueda con los mismos movimientos útiles y A* sin
+  poda con la búsqueda completa; con capacidades uniformes exigen además que coincidan.
 - Hoja (C1-7; 02 §9.1 M1 y §9.2; 03 §9; propuesta de D-007 b.2 M1 y anexo B; debut 43): `HojaMechanic` (interno),
   registrada en la tabla de mecánicas y aceptada por `BoardBuilder`. Cuia vacía con hoja y llave `key`: solo recibe
   `key` (en `run`, el tramo que cabe), no es origen mientras tenga la hoja, la hoja cae con el primer vertido en la etapa

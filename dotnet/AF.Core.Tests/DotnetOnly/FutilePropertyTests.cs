@@ -68,11 +68,94 @@ namespace AF.Core.Tests.DotnetOnly
         public void P1_P2_P3_HoldWithHoja(PourMode mode, CapacityFamily family)
         {
             // C1-7: 02 R16 antes del debut de la Hoja (43).
-            Report report = Run(mode, family, new HojaInjector(), 0xF07E_4301UL);
+            AssertWith(mode, family, new HojaInjector(), 0xF07E_4301UL);
+        }
 
-            TestContext.WriteLine(Describe(report));
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithBrote(PourMode mode, CapacityFamily family)
+        {
+            // C1-8: 02 R16 antes del debut del Brote (163).
+            AssertWith(mode, family, new BroteInjector(), 0xF07E_1631UL);
+        }
+
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithMatapi(PourMode mode, CapacityFamily family)
+        {
+            // C1-8: 02 R16 antes del debut del Matapi (63).
+            AssertWith(mode, family, new MatapiInjector(), 0xF07E_0631UL);
+        }
+
+        private static void AssertWith(PourMode mode, CapacityFamily family, IMechanicInjector injector, ulong seed)
+        {
+            Report report = Run(mode, family, injector, seed);
+
+            TestContext.WriteLine(injector.Name + ": " + Describe(report));
             Assert.That(report.Violations, Is.Empty);
             Assert.That(report.States, Is.GreaterThanOrEqualTo(MinStates));
+        }
+
+        [TestCase(PourMode.Run)]
+        [TestCase(PourMode.Single)]
+        public void R16_MixedCapacities_PrunedParVersusExhaustivePar(PourMode mode)
+        {
+            // Hallazgo para la integración (02 R16 y 03 §5): 03 §5 calcula el par con MOVIMIENTOS (sin fútiles) y lo da por
+            // exacto. Con capacidades mixtas un fútil puede cambiar el estado canónico (test de abajo) y, aunque P1 se cumple
+            // (nunca se declara Aguas estancadas con solución), podar los fútiles puede alargar el par o dejar el tablero sin
+            // camino útil a la victoria: hace falta mover una fruta entre dos cuias que no son su casa (p. ej. la dosis suelta
+            // de una fruta abundante de U = 5 de una Cuia chica a una cuia de 4 vacía). Se mide y se informa; la poda nunca
+            // acorta el par.
+            var rng = new Prng(0xF07E_9AA1UL);
+            int boards = 0;
+            int longer = 0;
+            int unreachable = 0;
+            string? example = null;
+            for (int attempt = 0; attempt < 600; attempt++)
+            {
+                BoardState? start = PropertyBoards.Start(rng, CapacityFamily.Mixed, null);
+                if (start == null)
+                {
+                    continue;
+                }
+
+                ExhaustiveSearch.Graph graph;
+                try
+                {
+                    graph = ExhaustiveSearch.Explore(start, mode, MaxStatesPerBoard);
+                }
+                catch (InvalidOperationException)
+                {
+                    continue;
+                }
+
+                if (graph.Distance[0] == int.MaxValue)
+                {
+                    continue;
+                }
+
+                boards++;
+                int pruned = ExhaustiveSearch.Par(start, mode, true);
+                if (pruned < 0)
+                {
+                    unreachable++;
+                    example ??= start + ": par " + graph.Distance[0] + ", sin camino útil con la poda";
+                }
+                else if (pruned != graph.Distance[0])
+                {
+                    Assert.That(pruned, Is.GreaterThan(graph.Distance[0]), "la poda no puede acortar el par");
+                    longer++;
+                    example ??= start + ": par " + graph.Distance[0] + ", con poda " + pruned;
+                }
+            }
+
+            TestContext.WriteLine(mode + ": " + boards + " tableros mixtos resolubles; con la poda, par más largo en " + longer
+                + " y sin camino útil en " + unreachable + (example == null ? string.Empty : " (p. ej. " + example + ")"));
+            Assert.That(boards, Is.GreaterThan(100));
         }
 
         [Test]

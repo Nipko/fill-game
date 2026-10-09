@@ -118,18 +118,34 @@ namespace AF.Solver.Tests
             return built.State;
         }
 
-        /// <summary>A* (w = 1, con y sin poda de fútiles) da el mismo par que la búsqueda exhaustiva con todos los legales.</summary>
+        /// <summary>
+        /// A* (w = 1) da el par exacto: sin poda, el de la búsqueda exhaustiva con todos los legales; con la poda de fútiles
+        /// (<c>MOVIMIENTOS</c> de 03 §5), el de la búsqueda exhaustiva con los mismos movimientos útiles. Con capacidades
+        /// uniformes los dos coinciden; con capacidades mixtas la poda puede alargar el par o dejar el tablero sin camino útil
+        /// a la victoria (ver <c>DotnetOnly/FutilePropertyTests.R16_MixedCapacities_PrunedParVersusExhaustivePar</c>), nunca
+        /// acortarlo.
+        /// </summary>
         public static void AssertAStarMatchesExhaustiveSearch(BoardState start, PourMode mode, string label)
         {
             ExhaustiveSearch.Graph graph = ExhaustiveSearch.Explore(start, mode, MaxStates);
             int exhaustive = graph.Distance[0] == int.MaxValue ? -1 : graph.Distance[0];
+            int exhaustivePruned = ExhaustiveSearch.Par(start, mode, true);
             var solver = new AStarSolver();
             SolveResult pruned = solver.Solve(start, SolverOptions.ForPipeline(mode));
             SolveResult classic = solver.Solve(start, new SolverOptions(SolverOptions.PipelineNodeBudget, 1, false, mode));
 
-            Assert.That(pruned.IsSolved ? pruned.MoveCount : -1, Is.EqualTo(exhaustive), label + ": A*");
             Assert.That(classic.IsSolved ? classic.MoveCount : -1, Is.EqualTo(exhaustive), label + ": A* sin poda");
-            Assert.That(ExhaustiveSearch.Par(start, mode, true), Is.EqualTo(exhaustive), label + ": BFS con poda");
+            Assert.That(pruned.IsSolved ? pruned.MoveCount : -1, Is.EqualTo(exhaustivePruned), label + ": A* con poda");
+            if (exhaustivePruned >= 0)
+            {
+                Assert.That(exhaustivePruned, Is.GreaterThanOrEqualTo(exhaustive), label + ": la poda no puede acortar el par");
+            }
+
+            if (IsUniform(start))
+            {
+                Assert.That(exhaustivePruned, Is.EqualTo(exhaustive), label + ": con capacidades uniformes la poda no cambia el par");
+            }
+
             if (pruned.IsSolved)
             {
                 BoardState state = start;
@@ -198,6 +214,28 @@ namespace AF.Solver.Tests
             return colors;
         }
 
+        private static bool IsUniform(BoardState board)
+        {
+            for (int i = 0; i < board.Count; i++)
+            {
+                int capacity = board[i].Capacity;
+                for (int k = 0; k < board[i].Count; k++)
+                {
+                    if (board.UnitsOf(board[i].ColorAt(k)) != capacity)
+                    {
+                        return false;
+                    }
+                }
+
+                if (capacity != board[0].Capacity)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private static bool Fits(BoardState board)
         {
             try
@@ -258,6 +296,85 @@ namespace AF.Solver.Tests
 
             int index = empties[rng.NextInt(empties.Count)];
             attrs[index] = new MechanicSpec(MechanicType.Hoja, key: colors[rng.NextInt(colors.Count)]);
+            return true;
+        }
+    }
+
+    /// <summary>Brote (02 §9.1 M2): una cuia con 1-3 dosis visibles y sin llenar pasa a tener el tapón cerrado.</summary>
+    internal sealed class BroteInjector : IMechanicInjector
+    {
+        public string Name => "brote";
+
+        public bool Inject(Prng rng, int[] caps, List<int>[] doses, MechanicSpec[] attrs)
+        {
+            var candidates = new List<int>();
+            for (int i = 0; i < caps.Length; i++)
+            {
+                if (attrs[i].IsNone && doses[i].Count >= 1 && doses[i].Count <= 3 && doses[i].Count < caps[i])
+                {
+                    candidates.Add(i);
+                }
+            }
+
+            if (candidates.Count == 0)
+            {
+                return false;
+            }
+
+            attrs[candidates[rng.NextInt(candidates.Count)]] = new MechanicSpec(MechanicType.Brote);
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Matapi (D-007, regla 3): una cuia vacía pasa a ser Matapi o, si hay alguna, una con 1-3 dosis de un solo color y
+    /// capacidad = U_c de ese color.
+    /// </summary>
+    internal sealed class MatapiInjector : IMechanicInjector
+    {
+        public string Name => "matapi";
+
+        public bool Inject(Prng rng, int[] caps, List<int>[] doses, MechanicSpec[] attrs)
+        {
+            var units = new int[Cuia.MaxColor + 1];
+            for (int i = 0; i < doses.Length; i++)
+            {
+                for (int k = 0; k < doses[i].Count; k++)
+                {
+                    units[doses[i][k]]++;
+                }
+            }
+
+            var withDoses = new List<int>();
+            for (int i = 0; i < caps.Length; i++)
+            {
+                List<int> d = doses[i];
+                if (!attrs[i].IsNone || d.Count < 1 || d.Count > 3 || caps[i] != units[d[0]])
+                {
+                    continue;
+                }
+
+                bool mono = true;
+                for (int k = 1; k < d.Count; k++)
+                {
+                    mono &= d[k] == d[0];
+                }
+
+                if (mono)
+                {
+                    withDoses.Add(i);
+                }
+            }
+
+            List<int> empties = MechanicBoards.PlainEmpties(caps, doses, attrs);
+            bool useDoses = withDoses.Count > 0 && (empties.Count == 0 || rng.NextInt(2) == 0);
+            if (!useDoses && empties.Count == 0)
+            {
+                return false;
+            }
+
+            int index = useDoses ? withDoses[rng.NextInt(withDoses.Count)] : empties[rng.NextInt(empties.Count)];
+            attrs[index] = new MechanicSpec(MechanicType.Matapi);
             return true;
         }
     }

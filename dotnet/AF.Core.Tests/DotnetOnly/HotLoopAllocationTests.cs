@@ -24,14 +24,16 @@ namespace AF.Core.Tests.DotnetOnly
             new[] { 9, 7, 1, 7 }, new[] { 10, 10, 6, 4 }, new int[0], new int[0],
         };
 
-        /// <summary>Tablero de 10 cuias con una Hoja (y las mecánicas que se vayan portando).</summary>
+        /// <summary>Tablero de 10 cuias con Hoja, Brote y Matapi (y las mecánicas que se vayan portando).</summary>
         private static BoardState MechanicBoard()
         {
             var cuias = new Cuia[]
             {
                 Cuia.Create(4, new[] { 1, 2, 3, 4 }), Cuia.Create(4, new[] { 5, 6, 1, 2 }), Cuia.Create(4, new[] { 3, 4, 5, 6 }),
-                Cuia.Create(4, new[] { 6, 5, 4, 3 }), Cuia.Create(4, new[] { 2, 1, 6, 5 }), Cuia.Create(4, new[] { 4, 3, 2, 1 }),
+                Cuia.Create(4, new[] { 6, 5, 4, 3 }), Cuia.Create(4, new[] { 2, 1, 6, 5 }),
+                Cuia.Create(4, new[] { 4, 3, 2 }).WithMechanic(MechanicType.Brote, flags: Cuia.FlagClosed), Cuia.Create(4, new[] { 1 }),
                 Cuia.Empty(4).WithMechanic(MechanicType.Hoja, key: 1, flags: Cuia.FlagClosed), Cuia.Empty(4),
+                Cuia.Empty(4).WithMechanic(MechanicType.Matapi),
             };
             return new BoardState(cuias);
         }

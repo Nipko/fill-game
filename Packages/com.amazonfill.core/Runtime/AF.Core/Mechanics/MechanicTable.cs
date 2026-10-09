@@ -41,6 +41,8 @@ namespace AF.Core.Mechanics
             }
 
             table[(int)MechanicType.Hoja] = new HojaMechanic();
+            table[(int)MechanicType.Brote] = new BroteMechanic();
+            table[(int)MechanicType.Matapi] = new MatapiMechanic();
             return table;
         }
 

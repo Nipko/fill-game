@@ -43,6 +43,9 @@ namespace AF.Core.Rules
         /// <summary>(b) Hojas que cayeron en este vertido (evento HojaOpened; 02 §9.1 M1).</summary>
         public int HojaOpenedMask { get; internal set; }
 
+        /// <summary>(b) Brotes que germinaron en este vertido (02 §9.1 M2).</summary>
+        public int BroteOpenedMask { get; internal set; }
+
         /// <summary>(c) Cuias que este vertido dejó selladas (R5).</summary>
         public int SealedMask { get; internal set; }
 
@@ -87,6 +90,7 @@ namespace AF.Core.Rules
             SourceRevealed = false;
             OpenedMask = 0;
             HojaOpenedMask = 0;
+            BroteOpenedMask = 0;
             SealedMask = 0;
             ReleasedMask = 0;
             CountersAdvanced = false;
@@ -104,6 +108,10 @@ namespace AF.Core.Rules
             if (type == Mechanics.MechanicType.Hoja)
             {
                 HojaOpenedMask |= bit;
+            }
+            else if (type == Mechanics.MechanicType.Brote)
+            {
+                BroteOpenedMask |= bit;
             }
         }
 
