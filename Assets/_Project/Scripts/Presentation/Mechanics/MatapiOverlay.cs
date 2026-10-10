@@ -15,8 +15,10 @@ namespace AF.Presentation.Mechanics
     /// para daltónicos (07 §3: 15, 20 y 35 %), y unas rayas verticales sobre la dosis la harían pasar por Camu camu (con los
     /// aros, por la rejilla del Huito). Las dos de los bordes van sobre la pared de vidrio (fuera de la cavidad), de arriba
     /// abajo; las cuatro de dentro se ven por el vidrio vacío, desde la cara superior del líquido hacia arriba, como la parte
-    /// de atrás del cilindro que el líquido tapa, y siguen al nivel mientras se llena la cuia. Nunca se abre: al sellarse,
-    /// el embudo queda cerrado sobre el borde, bajo la tapa, y el cuello de vidrio despejado como en las demás cuias selladas.
+    /// de atrás del cilindro que el líquido tapa, y siguen al nivel mientras se llena la cuia. Nunca se abre: al sellarse, el
+    /// embudo se cierra con el tirón y la tapa lo cubre (se apaga bajo ella en <see cref="FunnelFadeMs"/>), así que el Matapi
+    /// sellado lleva la tapa limpia y el cuello de vidrio despejado, como las demás cuias selladas, y se reconoce por los aros
+    /// y las varillas de los bordes.
     /// </summary>
     /// <remarks>
     /// <para><b>Rechazo</b> (R11, sin texto ni color de error; D-002): si se toca como origen, la cuia se sacude y el embudo
@@ -28,10 +30,12 @@ namespace AF.Presentation.Mechanics
     /// <see cref="TrapLiftU"/> entre 0,18 y 0,40 (easeOutCubic) y vuelve entre 0,40 y 0,62, mientras <see cref="DripCount"/>
     /// gotas se desprenden del aro de abajo por fuera de la silueta y caen a la repisa, donde salpican (<c>Fx.Splash</c>,
     /// con el anillo sobre la repisa y no dentro del vidrio); destellos dorados (<c>Fx.Sparkles</c>) en la boca a 0,45;
-    /// 0,55-0,86 la tapa de calabaza cae con un mini-rebote, como la del sellado normal
-    /// (07 §5.3), y el aro de cuerda se apaga bajo ella; 0,70-1 aparece un brillo cálido. Al terminar, la cola pinta
-    /// <c>ShowContent(After, true)</c> y la tapa de la cuia queda donde cayó la de este paso. No se muestra ninguna
-    /// captura.</para>
+    /// 0,55-0,86 la tapa de calabaza cae con un mini-rebote, como la del sellado normal (07 §5.3), y en cuanto toca el borde
+    /// (0,74) el embudo cerrado y el aro de cuerda se apagan bajo ella, para que no se vean dos tramas sobre el borde; 0,70-1
+    /// aparece un brillo cálido. La cuerda del tirón es corta (<see cref="ProceduralArt.MatapiCordLengthU"/>) y se desvanece
+    /// por la punta: asoma floja, en catenaria, y el tirón la endereza de golpe (easeOutBack en <see cref="CordSnapMs"/>). Al
+    /// terminar, la cola pinta <c>ShowContent(After, true)</c> y la tapa de la cuia queda donde cayó la de este paso. No se
+    /// muestra ninguna captura.</para>
     /// <para>Todo se crea en <see cref="OnAttach"/>; <see cref="Tick"/>, <see cref="Show"/> y los pasos no asignan memoria y
     /// solo escriben lo que cambia (08 §5.4). Sin pasos ni sacudida, nada se mueve (D-002).</para>
     /// </remarks>
@@ -69,6 +73,12 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>Ancho del embudo cerrado, en fracción del abierto [P]: 1,02 u, el del borde de la cuia (1,10 u) bajo la tapa.</summary>
         public const float ClosedFunnelScale = 0.6f;
+
+        /// <summary>Lo que tarda el embudo cerrado en apagarse bajo la tapa cuando esta toca el borde (ms, sin factor) [P].</summary>
+        public const float FunnelFadeMs = 80f;
+
+        /// <summary>Lo que tarda la cuerda en enderezarse con el tirón (ms, sin factor; easeOutBack) [P].</summary>
+        public const float CordSnapMs = 80f;
 
         /// <summary>Alto del embudo cerrado, en fracción del abierto [P]: cabe entero sobre el borde y bajo la tapa.</summary>
         public const float ClosedFunnelScaleY = 0.45f;
@@ -144,6 +154,9 @@ namespace AF.Presentation.Mechanics
         private const float GlowStart = 0.70f;
         private const float TieFadeStart = CapLand;
         private const float TieFadeEnd = CapBounceEnd;
+        private const float FunnelFadeStart = CapLand;
+        private const float FunnelFadeEnd = CapLand + (FunnelFadeMs / SealMs);
+        private const float CordSnapEnd = TugStart + (CordSnapMs / SealMs);
 
         // Gotas de agua clara al salir del agua (vidrio teñido #CFEFE6). El brillo cálido del sellado es cielo_horizonte
         // (Palette.SkyHorizon, #FFE4A8), como el aro de CuiaView.
@@ -192,6 +205,9 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>El embudo se ve cerrado (Matapi sellado).</summary>
         public bool FunnelClosed => _closedLook;
+
+        /// <summary>El embudo está a la vista (abierto, o cerrado hasta que lo cubre la tapa del sellado).</summary>
+        public bool FunnelVisible => _funnel.gameObject.activeSelf && _funnel.color.a > 0.001f;
 
         /// <summary>Cierre actual del embudo (0 abierto, 1 cerrado; el tirón rebota algo por encima de 1).</summary>
         public float FunnelClose => _close;
@@ -300,9 +316,9 @@ namespace AF.Presentation.Mechanics
                 OverlayParts.SetVisible(_hoops[i], on);
             }
 
-            OverlayParts.SetVisible(_funnel, on);
             _closedLook = on && sealedNow;
             _close = _closedLook ? 1f : 0f;
+            ShowFunnel(on && !_closedLook); // sellado, el embudo cerrado queda bajo la tapa
             HideStepParts();
             SetLift(0f);
             ApplyFunnel();
@@ -436,6 +452,7 @@ namespace AF.Presentation.Mechanics
             _reduceMotion = ctx.ReduceMotion;
             _closedLook = false;
             OverlayParts.SetColor(_tie, Color.white);
+            ShowFunnel(true);
             Render(0f);
             return ms;
         }
@@ -452,6 +469,7 @@ namespace AF.Presentation.Mechanics
             _progress = 0f;
             _closedLook = Visible && _sealTarget;
             _close = _closedLook ? 1f : 0f;
+            ShowFunnel(Visible && !_closedLook);
             HideStepParts();
             SetLift(0f);
             ApplyFunnel();
@@ -529,6 +547,11 @@ namespace AF.Presentation.Mechanics
 
             ApplyFunnel();
 
+            // En cuanto la tapa toca el borde, el embudo cerrado se apaga bajo ella (sin dos tramas sobre el borde).
+            float funnelAlpha = 1f - Mathf.Clamp01((p - FunnelFadeStart) / (FunnelFadeEnd - FunnelFadeStart));
+            OverlayParts.SetVisible(_funnel, funnelAlpha > 0.001f);
+            OverlayParts.SetColor(_funnel, new Color(1f, 1f, 1f, funnelAlpha));
+
             bool cordOn = p < CordFadeEnd;
             OverlayParts.SetVisible(_cord, cordOn);
             if (cordOn)
@@ -542,7 +565,8 @@ namespace AF.Presentation.Mechanics
                 float grow = Ease.Out(Mathf.Clamp01(p / CordInEnd));
                 float stretch = 1f + (CordStretch * Mathf.Sin(Mathf.PI * pull)); // el tirón la estira un momento
                 SetScale(_cord.rectTransform, 1f, Mathf.Max(0.001f, grow * stretch));
-                float tilt = Mathf.Lerp(CordSlackTiltDeg, CordTautTiltDeg, Ease.Out(pull));
+                float snap = Ease.OutBack(Mathf.Clamp01((p - TugStart) / (CordSnapEnd - TugStart))); // se endereza de golpe
+                float tilt = Mathf.LerpUnclamped(CordSlackTiltDeg, CordTautTiltDeg, snap);
                 Quaternion lean = Quaternion.Euler(0f, 0f, -tilt);
                 if (_cord.rectTransform.localRotation != lean)
                 {
@@ -712,6 +736,13 @@ namespace AF.Presentation.Mechanics
             {
                 rt.anchoredPosition = pos;
             }
+        }
+
+        // Muestra u oculta el embudo, opaco.
+        private void ShowFunnel(bool on)
+        {
+            OverlayParts.SetVisible(_funnel, on);
+            OverlayParts.SetColor(_funnel, Color.white);
         }
 
         private void HideStepParts()

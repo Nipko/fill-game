@@ -45,14 +45,17 @@ namespace AF.Presentation
         /// <summary>Alto del aro de cuerda del embudo (u): la elipse vista desde delante y un poco desde arriba.</summary>
         public const float MatapiTieHeightU = 0.34f;
 
-        /// <summary>Largo de la cuerda del tirón (u).</summary>
-        public const float MatapiCordLengthU = 1f;
+        /// <summary>Largo de la cuerda del tirón (u): corta, para que no se lea como una pajita clavada en el embudo.</summary>
+        public const float MatapiCordLengthU = 0.6f;
+
+        /// <summary>Tramo de la punta de la cuerda que se desvanece hasta alfa 0 (u): no acaba en un corte seco.</summary>
+        public const float MatapiCordFadeU = 0.25f;
 
         /// <summary>Grosor de la cuerda del tirón (u).</summary>
         public const float MatapiCordWidthU = 0.16f;
 
         /// <summary>Flecha de la catenaria de la cuerda floja, hacia la derecha a media altura (u).</summary>
-        public const float MatapiCordSagU = 0.10f;
+        public const float MatapiCordSagU = 0.08f;
 
         /// <summary>Ancho de los dos sprites de la cuerda (u): el grosor y la flecha a cada lado, con la cuerda centrada.</summary>
         public const float MatapiCordSpriteWidthU = MatapiCordWidthU + (2f * MatapiCordSagU);
@@ -88,7 +91,7 @@ namespace AF.Presentation
         /// <summary>
         /// Cuerda trenzada del tirón, tensa y recta (<see cref="MatapiCordWidthU"/> de grosor y <see cref="MatapiCordLengthU"/>
         /// de largo, centrada en un sprite de <see cref="MatapiCordSpriteWidthU"/>; crece hacia arriba desde su pie;
-        /// <c>DrawRopeSegment</c>).
+        /// <c>DrawRopeSegment</c>), con los últimos <see cref="MatapiCordFadeU"/> u desvanecidos.
         /// </summary>
         internal Sprite MatapiPullCord => _matapiPullCord != null ? _matapiPullCord : (_matapiPullCord = BuildMatapiPullCord(0f, "mech_matapi_cord"));
 
@@ -219,6 +222,20 @@ namespace AF.Presentation
                 var p = new Vector2(cx + (4f * sag * t * (1f - t)), Mathf.Lerp(y0, y1, t));
                 DrawRopeSegment(pc, prev.x, prev.y, p.x, p.y, thick, k);
                 prev = p;
+            }
+
+            // La punta se desvanece hacia arriba: la cuerda sigue hacia quien tira, fuera de la escena, sin un corte seco.
+            float fade = MatapiCordFadeU * MechanicPxPerU;
+            for (int y = 0; y < h; y++)
+            {
+                float a = 1f - Mathf.SmoothStep(0f, 1f, ((y + 0.5f) - (h - fade)) / fade);
+                if (a < 1f)
+                {
+                    for (int x = 0; x < w; x++)
+                    {
+                        pc.MaskAlpha(x, y, a);
+                    }
+                }
             }
 
             return MakeSprite(pc, name, new Vector2(0.5f, 0f), Vector4.zero);

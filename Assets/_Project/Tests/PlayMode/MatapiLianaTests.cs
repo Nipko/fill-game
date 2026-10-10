@@ -23,8 +23,9 @@ namespace AF.Tests.PlayMode
     /// propio paso Seal de 800 ms × factor (tirón, la trampa sale entre gotas y destellos, tapa y brillo) que acaba como el
     /// modelo; en el 83 el Release de la Liana empieza cuando termina el Seal de la cuia de taperebá, con esa cuia como
     /// <c>OtherIndex</c>, la ✓ y el hilo de luz se ven a mitad del paso, el overlay acaba oculto y Marea vuelve a atar la
-    /// Liana; el contenido de la Liana se ve; y los pasos no asignan memoria. Los vertidos se buscan con
-    /// <see cref="MechanicTestKit"/> y el reloj lo lleva el test.
+    /// Liana; entre filas el cometa sale de la tapa con un destello y baja (o sube) por un pasillo entre columnas sin pasar
+    /// por delante de otras cuias; el contenido de la Liana se ve; y los pasos no asignan memoria hasta la vista quieta. Los
+    /// vertidos se buscan con <see cref="MechanicTestKit"/> y el reloj lo lleva el test.
     /// </summary>
     public sealed class MatapiLianaTests
     {
@@ -101,6 +102,8 @@ namespace AF.Tests.PlayMode
             bool sawSlackCord = false;
             bool sawTautCord = false;
             float minCordTilt = 90f;
+            bool funnelUntilCapLands = true;
+            bool funnelGoneUnderCap = false;
             bool sawCap = false;
             bool sawGlow = false;
             int maxDrips = 0;
@@ -137,6 +140,14 @@ namespace AF.Tests.PlayMode
 
                     sawCap |= overlay.StepCapVisible;
                     sawGlow |= overlay.GlowVisible;
+                    if (overlay.SealProgress < 0.7f)
+                    {
+                        funnelUntilCapLands &= overlay.FunnelVisible;
+                    }
+                    else if (overlay.SealProgress > 0.9f)
+                    {
+                        funnelGoneUnderCap |= !overlay.FunnelVisible;
+                    }
                 }
                 else if (!MechanicTestKit.TryFindRecord(screen.Animator, MechanicStepKind.Seal, matapi, out _))
                 {
@@ -157,6 +168,8 @@ namespace AF.Tests.PlayMode
             Assert.That(sawCord, Is.True, "tirón de cuerda");
             Assert.That(sawSlackCord && sawTautCord, Is.True, "la cuerda asoma floja (catenaria) y el tirón la tensa");
             Assert.That(minCordTilt, Is.GreaterThan(15f), "inclinada, para que se lea como cuerda y no como una antena");
+            Assert.That(funnelUntilCapLands, Is.True, "el embudo se ve, abierto y luego cerrado, hasta que la tapa toca el borde");
+            Assert.That(funnelGoneUnderCap, Is.True, "y se apaga bajo la tapa");
             Assert.That(maxClose, Is.GreaterThan(1f), "el embudo se cierra con rebote");
             Assert.That(maxLift, Is.GreaterThan(0.9f * MatapiOverlay.TrapLiftU), "la trampa sube (unos 7 dp en el pico)");
             Assert.That(maxDrips, Is.GreaterThan(0), "gotean gotas del aro de abajo");
@@ -170,8 +183,7 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Sealed, Is.True, "sellado como el modelo");
             Assert.That(overlay.Visible, Is.True, "el Matapi sigue a la vista: nunca se abre");
             Assert.That(overlay.FunnelClosed, Is.True, "con el embudo cerrado");
-            float height = CuiaGeometry.HeightU(view.Capacity);
-            Assert.That(overlay.FunnelCenterU - (0.5f * overlay.FunnelHeightU), Is.GreaterThanOrEqualTo(height - CuiaGeometry.RimU - 0.01f), "el embudo cerrado queda entero sobre el borde: el cuello de vidrio, despejado");
+            Assert.That(overlay.FunnelVisible, Is.False, "bajo la tapa: ninguna trama del embudo sobre el borde, que queda limpio como en las demás selladas");
             Assert.That(overlay.TieVisible, Is.False, "sin el aro de cuerda bajo la tapa");
             Assert.That(overlay.TrapLift, Is.EqualTo(0f), "la trampa vuelve a su sitio");
             Assert.That(overlay.StepCapVisible || overlay.GlowVisible || overlay.CordVisible, Is.False, "sin piezas del paso");
@@ -233,7 +245,8 @@ namespace AF.Tests.PlayMode
             Assert.That(overlay.Visible, Is.True, "la liana sigue a la vista mientras se suelta");
             Assert.That(overlay.CheckVisible, Is.True, "la ✓ verde sobre la fruta");
             Assert.That(overlay.BeamVisible, Is.True, "el hilo de luz");
-            Assert.That(overlay.Beam.transform.parent, Is.SameAs(overlay.AttachedHost!.BoardFrontLayer), "el hilo va en la capa delantera del tablero");
+            Assert.That(overlay.BeamRoot.parent, Is.SameAs(overlay.AttachedHost!.BoardFrontLayer), "el hilo va en la capa delantera del tablero");
+            Assert.That(overlay.Beam.transform.parent, Is.SameAs(overlay.BeamRoot));
 
             BoardAnimator animator = boot.View.Animator;
             float u = view.Unit;
@@ -247,6 +260,8 @@ namespace AF.Tests.PlayMode
             Assert.That(Vector2.Distance(overlay.Beam.Evaluate(0f), overlay.BeamFrom), Is.GreaterThan(1f * u), "solo se ve la cola del cometa, no el arco entero");
             Assert.That(overlay.Beam.color.a, Is.GreaterThan(0.5f));
             Assert.That(overlay.BeamSparkVisible, Is.True, "con el destello en la punta");
+            Assert.That(VisibleTailLength(overlay), Is.LessThanOrEqualTo((LianaOverlay.MaxTailU * u) + 1f), "cola corta: 1,5 u como mucho");
+            Assert.That(overlay.OriginFlashVisible, Is.False, "el destello de la tapa ya se apagó");
             BezierStripGraphic[] strips = overlay.Beam.GetComponentsInChildren<BezierStripGraphic>(false);
             Assert.That(strips.Length, Is.EqualTo(1 + LianaOverlay.BeamHalos), "el núcleo y las tiras del halo, a la vista");
             Assert.That(overlay.FruitGlowVisible, Is.True, "y el brillo de la fruta al llegar");
@@ -319,35 +334,51 @@ namespace AF.Tests.PlayMode
             float cavityTop = CuiaGeometry.CavityTopU(view.Capacity);
             AssertFruitClearsFullCuia(boot.Flow!.Level.Attrs[liana].Key, u);
 
-            // Sobre las dosis solo pasan las vueltas de la liana (trazos finos en diagonal); el resto queda en el hombro y el
-            // cuello. Las vueltas son 2-3 en total (b.2 M3), contando la del cuello, que lleva el mismo sprite con hojitas.
+            // Sobre las dosis solo pasan las vueltas de la liana (trazos finos, con su luz de borde de 1 dp); el resto queda en el
+            // hombro y el cuello. Las vueltas son 2-3 en total (b.2 M3), contando la del cuello, del mismo grosor, que acaba en el
+            // nudo. Las vueltas del cuerpo son paralelas (una hélice: el mismo sprite, sin espejo).
             Image[] images = overlay.AttachedHost!.BodyFront.GetComponentsInChildren<Image>(false);
             int bodyWraps = 0;
             int turns = 0;
             for (int i = 0; i < images.Length; i++)
             {
-                bool body = images[i].name.StartsWith("LianaWrap", System.StringComparison.Ordinal);
-                bool vine = body || (images[i].sprite != null && images[i].sprite.name == "mech_liana_vine");
-                if (vine)
+                string name = images[i].name;
+                bool body = name == "LianaWrap0" || name == "LianaWrap1";
+                if (body || name == "LianaCollar")
                 {
                     turns++;
-                    Assert.That(images[i].color, Is.EqualTo(LianaOverlay.FreshTint), images[i].name + ": liana atada, verde hoja oscuro");
+                    Assert.That(images[i].color, Is.EqualTo(LianaOverlay.FreshTint), name + ": liana atada, verde hoja oscuro");
                 }
 
                 if (body)
                 {
                     bodyWraps++;
+                    Assert.That(images[i].rectTransform.localScale, Is.EqualTo(Vector3.one), name + ": paralela a las demás (hélice)");
+                    Assert.That(images[i].sprite.name, Is.EqualTo("mech_liana_coil"));
                     continue;
+                }
+
+                if (name.StartsWith("LianaShine", System.StringComparison.Ordinal))
+                {
+                    continue; // la luz de borde de una vuelta del cuerpo
                 }
 
                 RectTransform rt = images[i].rectTransform;
                 float centerU = (rt.anchoredPosition.y + ((RectTransform)rt.parent).anchoredPosition.y) / u;
-                Assert.That(centerU, Is.GreaterThan(cavityTop), images[i].name + " queda por encima de las dosis");
+                Assert.That(centerU, Is.GreaterThan(cavityTop), name + " queda por encima de las dosis");
             }
 
             Assert.That(turns, Is.InRange(2, LianaOverlay.MaxWraps), "2-3 vueltas de liana, con la del cuello (b.2 M3)");
             Assert.That(turns, Is.EqualTo(overlay.WrapCount));
             Assert.That(bodyWraps, Is.EqualTo(overlay.BodyWrapCount).And.EqualTo(overlay.WrapCount - 1), "las del cuerpo, más la del cuello");
+
+            // El tramo trasero de cada vuelta va detrás del líquido (BodyBack): solo se ve sobre el vidrio vacío.
+            Image[] back = overlay.AttachedHost.BodyBack.GetComponentsInChildren<Image>(false);
+            Assert.That(back.Length, Is.EqualTo(overlay.BodyWrapCount), "un tramo trasero por vuelta del cuerpo");
+
+            // La fruta cuelga delante del nudo (el nudo, detrás: no se lee como su cáliz).
+            Transform vine = images[0].transform.parent;
+            Assert.That(vine.Find("LianaCollar").GetSiblingIndex(), Is.LessThan(vine.Find("LianaFruit").GetSiblingIndex()), "el nudo, detrás de la fruta");
         }
 
         [UnityTest]
@@ -369,19 +400,52 @@ namespace AF.Tests.PlayMode
             TapResult poured = MechanicTestKit.Tap(boot, path[path.Length - 1]);
             int receiver = poured.Pour.Receiver;
             MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Release, liana, 4000);
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Release, liana, 0.05f);
+            Assert.That(overlay.OriginFlashVisible, Is.True, "un destello en la tapa de la cuia sellada: se ve de dónde sale");
+            Assert.That(Vector2.Distance(overlay.OriginFlashPos, overlay.BeamFrom), Is.LessThan(0.5f), "en la tapa");
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.Release, liana, 0.3f);
             Assert.That(overlay.BeamVisible, Is.True, "el cometa en vuelo");
             Assert.That(Vector2.Distance(overlay.BeamFrom, animator.Foot(receiver)), Is.GreaterThan(4f * u), "sale de la fila de arriba");
             AssertArcUnderCeiling(animator, overlay, receiver, liana, u);
+            AssertAisleRoute(animator, overlay, receiver, liana, u, "el 84");
+            Assert.That(VisibleTailLength(overlay), Is.LessThanOrEqualTo((LianaOverlay.MaxTailU * u) + 1f), "cola corta: 1,5 u como mucho");
             MechanicTestKit.StepToIdle(boot, 4000);
             MechanicTestKit.AssertViewMatchesModel(boot);
         }
 
         [UnityTest]
-        public IEnumerator LianaCount_NoCheck_BeamToKnot()
+        public IEnumerator Liana85_RouteUpTheAisleFromTheRowBelow()
         {
-            // Liana de cuenta (n = 1, variante del 243): un punto en el nudo y el mismo desbloqueo sin la ✓ ni el brillo de la
-            // fruta, con el cometa hasta el nudo; al acabar, oculta.
+            // En el 85 la Liana está en la fila de arriba: si el taperebá se sella en la de abajo, el cometa va por delante de la
+            // repisa hasta el pasillo junto a la Liana y sube por él hasta la fruta, sin pasar por delante de ninguna cuia.
+            yield return MechanicTestKit.LoadPlaying(85);
+            GameBootstrap boot = GameBootstrap.Current!;
+            BoardAnimator animator = boot.View!.Animator;
+            int liana = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Liana);
+            int key = boot.Flow!.Level.Attrs[liana].Key;
+            float lianaFootY = animator.Foot(liana).y;
+            float u = boot.View.Views[liana].Unit;
+            Pour[] path = Trigger(boot, (ev, b, a) => (ev.LianaReleasedMask & (1 << liana)) != 0 && a.IsSealed(ev.Receiver)
+                && a[ev.Receiver].TopColor == key && animator.Foot(ev.Receiver).y < lianaFootY - u);
+            MechanicTestKit.PlayPrefix(boot, path);
+            var overlay = (LianaOverlay)boot.View.Views[liana].Overlay!;
+            TapResult poured = MechanicTestKit.Tap(boot, path[path.Length - 1]);
+            int receiver = poured.Pour.Receiver;
+            MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Release, liana, 4000);
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Release, liana, 0.3f);
+            Assert.That(overlay.BeamVisible, Is.True, "el cometa en vuelo");
+            Assert.That(overlay.BeamTo.y, Is.GreaterThan(overlay.BeamFrom.y + (2f * u)), "sube a la fila de arriba");
+            AssertArcUnderCeiling(animator, overlay, receiver, liana, u);
+            AssertAisleRoute(animator, overlay, receiver, liana, u, "el 85");
+            MechanicTestKit.StepToIdle(boot, 4000);
+            MechanicTestKit.AssertViewMatchesModel(boot);
+        }
+
+        [UnityTest]
+        public IEnumerator LianaCount_NoCheck_BeamToTheDots()
+        {
+            // Liana de cuenta (n = 1, variante del 243): una cuenta bajo el nudo y el mismo desbloqueo sin la ✓ ni el brillo de la
+            // fruta, con el cometa hasta las cuentas; al acabar, oculta.
             yield return null;
             BoardState start = Board(
                 new[] { new[] { 3, 3, 3 }, new[] { 3 }, new[] { 1, 2, 1, 2 }, new[] { 1, 1 }, new[] { 2, 2 }, new int[0] },
@@ -392,7 +456,7 @@ namespace AF.Tests.PlayMode
             var overlay = (LianaOverlay)view.Overlay!;
             Assert.That(overlay.Visible, Is.True);
             Assert.That(overlay.ShownKey, Is.EqualTo(0), "sin fruta");
-            Assert.That(overlay.CountDots, Is.EqualTo(1), "de cuenta: n = 1 punto en el nudo");
+            Assert.That(overlay.CountDots, Is.EqualTo(1), "de cuenta: n = 1 cuenta en la vuelta del cuello");
 
             rig.Pour(start, 1, 0, out _);
             MechanicStepQueue steps = rig.Animator.Steps;
@@ -413,9 +477,9 @@ namespace AF.Tests.PlayMode
             Assert.That(overlay.FruitGlowVisible, Is.False, "ni el brillo de la fruta");
             Assert.That(overlay.BeamVisible, Is.True, "pero sí el cometa");
             float u = view.Unit;
-            Vector2 knot = rig.Animator.Foot(2) + (new Vector2(LianaOverlay.KnotXU, CuiaGeometry.CavityTopU(view.Capacity) + LianaOverlay.KnotAboveCavityU) * u);
-            Assert.That(Vector2.Distance(overlay.BeamTo, knot), Is.LessThan(0.5f), "que llega al nudo, no a la fruta");
-            Assert.That(Vector2.Distance(overlay.Beam.Evaluate(1f), knot), Is.LessThan(0.5f), "y a mitad del paso ya llegó");
+            Vector2 bead = rig.Animator.Foot(2) + (overlay.BeadCenterU(0, 1) * u);
+            Assert.That(Vector2.Distance(overlay.BeamTo, bead), Is.LessThan(0.5f), "que llega a la cuenta");
+            Assert.That(Vector2.Distance(overlay.Beam.Evaluate(1f), bead), Is.LessThan(0.5f), "y a mitad del paso ya llegó");
             Assert.That(overlay.CountDots, Is.EqualTo(1), "los puntos siguen mientras se suelta");
 
             rig.RunUntilIdle(4000);
@@ -575,8 +639,9 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // Sellado de un Matapi, Liana con fruta y Liana de cuenta en el banco; con measure, 60 fotogramas sin asignaciones
-        // (GC.Alloc del Recorder, por la restricción AllocatingGCMemory) desde el toque y otros 60 hasta el final.
+        // Sellado de un Matapi, Liana con fruta y Liana de cuenta en el banco; con measure, sin asignaciones (GC.Alloc del
+        // Recorder, por la restricción AllocatingGCMemory) en los 60 primeros fotogramas desde el toque y, después, hasta la
+        // vista quieta (el final del Release: la caída, SnapStep y el Show que oculta la Liana), sea cual sea la duración.
         private void RunChains(bool measure)
         {
             BoardState[] starts =
@@ -603,8 +668,9 @@ namespace AF.Tests.PlayMode
                 MechanicTestKit.Rig rig = _rig;
                 if (measure)
                 {
-                    Assert.That(() => rig.Run(60 * PlayModeHelpers.FrameMs), Is.Not.AllocatingGCMemory(), "cadena " + c + ": 60 fotogramas desde el toque");
-                    Assert.That(() => rig.Run(60 * PlayModeHelpers.FrameMs), Is.Not.AllocatingGCMemory(), "cadena " + c + ": 60 fotogramas más");
+                    Assert.That(() => { rig.Run(60 * PlayModeHelpers.FrameMs); }, Is.Not.AllocatingGCMemory(), "cadena " + c + ": 60 fotogramas desde el toque");
+                    Assert.That(() => { rig.RunUntilIdle(4000); }, Is.Not.AllocatingGCMemory(), "cadena " + c + ": hasta la vista quieta");
+                    Assert.That(rig.Animator.IsIdle, Is.True, "cadena " + c + ": la medida cubre hasta la vista quieta");
                 }
 
                 rig.RunUntilIdle(4000);
@@ -735,6 +801,53 @@ namespace AF.Tests.PlayMode
             string where = above < float.MaxValue ? "bajo la repisa de la fila de arriba" : "dentro del área de las ranuras";
             Assert.That(overlay.BeamPeakY, Is.LessThanOrEqualTo(ceiling - LianaOverlay.BeamCeilingMarginDp + 0.01f), "el arco del cometa queda " + where);
             Assert.That(overlay.BeamPeakY, Is.GreaterThanOrEqualTo(Mathf.Max(overlay.BeamFrom.y, overlay.BeamTo.y) - 0.01f), "y no baja de sus extremos");
+        }
+
+        // Entre filas, la ruta del cometa no pasa por delante del cuerpo de ninguna cuia: va por un pasillo entre columnas (dos
+        // tramos), y el punto donde cambia de tramo cae en un pasillo (entre las ranuras de dos cuias vecinas de una fila).
+        private static void AssertAisleRoute(BoardAnimator animator, LianaOverlay overlay, int sealedCuia, int liana, float u, string where)
+        {
+            Assert.That(overlay.BeamRouteSegments, Is.EqualTo(2), where + ": por un pasillo entre columnas");
+            Assert.That(overlay.BeamRouteCoverDp, Is.LessThanOrEqualTo(1f), where + ": sin pasar por delante del cuerpo de ninguna cuia (riesgo de T12; direccion-visual-v2 §7)");
+            var board = (ICuiaBoard)animator;
+            Vector2 joint = overlay.RoutePoint(1, 0f);
+            bool aisle = false;
+            for (int i = 0; i < board.Count && !aisle; i++)
+            {
+                for (int k = 0; k < board.Count && !aisle; k++)
+                {
+                    aisle = i != k && Mathf.Abs(board.Foot(i).y - board.Foot(k).y) < 0.5f * u
+                        && Mathf.Abs(board.SlotRect(i).xMax - joint.x) < 1f && Mathf.Abs(board.SlotRect(k).xMin - joint.x) < 1f;
+                }
+            }
+
+            Assert.That(aisle, Is.True, where + ": el pasillo está entre dos ranuras vecinas (x = " + joint.x.ToString("0.0") + ")");
+            TestContext.WriteLine(where + ": cometa de la cuia " + sealedCuia + " a la Liana " + liana + " por el pasillo x = " + joint.x.ToString("0.0")
+                + "; " + overlay.BeamRouteCoverDp.ToString("0.0") + " dp por delante de cuerpos.");
+        }
+
+        // Largo de lo que se ve del cometa (los núcleos a la vista), en dp.
+        private static float VisibleTailLength(LianaOverlay overlay)
+        {
+            float length = 0f;
+            BezierStripGraphic[] strips = overlay.BeamRoot.GetComponentsInChildren<BezierStripGraphic>(false);
+            for (int i = 0; i < strips.Length; i++)
+            {
+                if (!strips[i].name.StartsWith("LianaBeamCore", System.StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                Vector2 prev = strips[i].Evaluate(0f);
+                for (int k = 1; k <= 32; k++)
+                {
+                    Vector2 q = strips[i].Evaluate(k / 32f);
+                    length += Vector2.Distance(prev, q);
+                    prev = q;
+                }
+            }
+
+            return length;
         }
 
         // Nombres de los cometas de Liana (hijos directos de la capa delantera del tablero), separados por comas.
