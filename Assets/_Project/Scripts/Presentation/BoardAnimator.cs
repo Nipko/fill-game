@@ -220,9 +220,8 @@ namespace AF.Presentation
         /// y el salto solo se cuenta en <see cref="MechanicStepQueue.BudgetOverruns"/>.
         /// </summary>
         /// <remarks>
-        /// Enlace PENDIENTE: nadie lo asigna todavía. <c>GameScreen.cs</c> está fuera del alcance de T07, así que la sesión
-        /// principal añade entre olas el gancho <c>_animator.DevEvent = _probe.Event;</c> en el constructor de
-        /// <c>GameScreen</c> (arquitectura del paso 1, §7). Hasta entonces, <c>step_budget</c> no sale en el log.
+        /// Lo asigna el constructor de <c>GameScreen</c> (<c>DevEvent = _probe.Event</c>): en builds de desarrollo,
+        /// <c>step_budget</c> sale como línea AF_STATE.
         /// </remarks>
         public Action<string, string>? DevEvent { get; set; }
 

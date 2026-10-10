@@ -523,7 +523,7 @@ namespace AF.UI
             _skipCatcher.gameObject.AddComponent<PointerDownRelay>().Bind(() => _actions.TapAnywhere());
             _skipCatcher.gameObject.SetActive(false);
 
-            _animator = new BoardAnimator(_streamLayer, _pourFront) { Fx = _fx };
+            _animator = new BoardAnimator(_streamLayer, _pourFront) { Fx = _fx, DevEvent = _probe.Event };
 
             // Ganchos de construcción de los parciales: al final, con todo creado (también la bandeja) y antes de la primera
             // maquetación, para que sus Layout* ya encuentren lo que crean.
