@@ -99,8 +99,14 @@ La sesión del portátil usaba la herramienta Workflow con equipos de agentes Op
 > - la vista sigue al modelo en cada vertido;
 > - AF_STATE informa de las mecánicas.
 >
+> **Ola 2 integrada el 2026-10-09:**
+> - pasos de desbloqueo en el orden de R10 (con el punto fijo f′) y estados intermedios;
+> - presupuesto de 2,8 s desde el toque;
+> - persistencia de lo revelado (historial h2);
+> - destellos, esquirlas y burbujas;
+> - etiquetas D-009 en Jugar y en los modales.
+>
 > **Pendiente:**
-> - ola 2: pasos de desbloqueo en el orden de R10, persistencia de lo revelado, partículas y etiquetas D-009 en el inicio y en los modales;
 > - ola 3: HUD, aspecto y animación de cada mecánica, y lógica de la Luciérnaga;
 > - ola 4: tarjeta previa y tutoriales, y la Luciérnaga en la bandeja;
 > - ola 5: verificación final.
