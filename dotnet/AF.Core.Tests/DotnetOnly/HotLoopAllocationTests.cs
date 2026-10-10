@@ -430,18 +430,30 @@ namespace AF.Core.Tests.DotnetOnly
 
             long rules = GC.GetAllocatedBytesForCurrentThread() - before;
 
+            // Solve y bot: el mínimo de hasta 3 mediciones. Con la máquina muy cargada (Unity y otros procesos compitiendo),
+            // la promoción del JIT por niveles o una recolección pueden sumar unos 8 KB a una sola medición sin que el código
+            // asigne; una asignación real del bucle se repite en cada intento, así que el mínimo la sigue detectando.
             var solver = new AStarSolver();
             var options = new SolverOptions(Math.Min(board.ExpandedLimit, ReferenceSolveBudget), 1, true, PourMode.Run);
             SolveResult warm = solver.Solve(state, options);
-            before = GC.GetAllocatedBytesForCurrentThread();
-            SolveResult again = solver.Solve(state, options);
-            long solve = GC.GetAllocatedBytesForCurrentThread() - before;
+            SolveResult again = warm;
+            long solve = long.MaxValue;
+            for (int attempt = 0; attempt < 3 && solve >= 1024; attempt++)
+            {
+                before = GC.GetAllocatedBytesForCurrentThread();
+                again = solver.Solve(state, options);
+                solve = Math.Min(solve, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
 
             var bot = new CasualBot();
-            bot.FailRate(state, 5UL, PourMode.Run);
-            before = GC.GetAllocatedBytesForCurrentThread();
             BotResult games = bot.FailRate(state, 5UL, PourMode.Run);
-            long botBytes = GC.GetAllocatedBytesForCurrentThread() - before;
+            long botBytes = long.MaxValue;
+            for (int attempt = 0; attempt < 3 && botBytes != 0; attempt++)
+            {
+                before = GC.GetAllocatedBytesForCurrentThread();
+                games = bot.FailRate(state, 5UL, PourMode.Run);
+                botBytes = Math.Min(botBytes, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
 
             Assert.That(count, Is.GreaterThan(0), name);
             Assert.That(total, Is.GreaterThan(0), name);
