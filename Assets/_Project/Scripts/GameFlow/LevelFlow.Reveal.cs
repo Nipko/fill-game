@@ -102,6 +102,11 @@ namespace AF.GameFlow
         // guardar (level_state con la capa en la sección R) → cobrar (04 §2.5 d), en un solo lote de guardado del perfil; si
         // el estado cambia, el mismo camino que tras un vertido. En otra cuia (o si el pago ya no alcanza) cancela sin coste.
         // El toque no llega a la vista como OnTap: la vista recibe OnRevealSelection y OnRevealed.
+        //
+        // Si el revelado gana el nivel (solo con Barro lavado sobre la oculta: ningún nivel de 1-200 lo tiene), el tablero
+        // ganado no se guarda como level_state (IsWonPhase, como tras un vertido ganador): el cobro, el borrado de level_state,
+        // el progreso y la Cosecha de ResolveWin salen en la misma escritura del lote
+        // (RevealFlowTests.Reveal_ThatWins_FollowsThePourPath).
         private TapResult TapRevealTarget(int index)
         {
             LevelSession session = _session!;

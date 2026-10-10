@@ -1,14 +1,17 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Rules;
+using AF.Core.Session;
 using AF.Economy;
 using AF.GameFlow;
 using AF.Levels;
+using AF.Platform;
 using AF.Save;
 using NUnit.Framework;
 using UnityEngine;
@@ -17,15 +20,19 @@ namespace AF.Tests.EditMode
 {
     /// <summary>
     /// Luciérnaga · Revelar en el flujo (tarea T10 del paso 1; 04 §2.5; 02 §11 T6 y §14; 07 §7.6; 08 §9 <c>reveal_seed_price</c>
-    /// = 120): el regalo del estreno de Aguas turbias en el 100, una sola vez y guardado (marca <c>l</c>); el modo de selección,
-    /// que no cobra nada al abrirlo ni al cancelarlo; el revelado con el stock o con 120 semillas en el orden aplicar → guardar
-    /// → cobrar (04 §2.5 d); y lo revelado, que sobrevive a Marea, a Volver a la orilla y a reabrir la app. Con el catálogo real
-    /// (<see cref="TestPacks.Campaign"/>): nivel 100, cuia 0 = [10*, 8*, 6] y cuia 1 = [6]; nivel 106, cuia 6 = [14*, 1].
+    /// = 120 y <c>rv_reveal</c>): el regalo del estreno de Aguas turbias en el 100, una sola vez y guardado (marca <c>l</c>); la
+    /// Luciérnaga del video, que va al stock; el modo de selección, que no cobra nada al abrirlo ni al cancelarlo; el revelado
+    /// con el stock o con 120 semillas en el orden aplicar → guardar → cobrar (04 §2.5 d); el revelado que gana el nivel, por el
+    /// mismo camino que un vertido ganador; y lo revelado, que sobrevive a Marea, a Volver a la orilla y a reabrir la app. Con el
+    /// catálogo real (<see cref="TestPacks.Campaign"/>): nivel 100, cuia 0 = [10*, 8*, 6] y cuia 1 = [6]; nivel 106, cuia 6 =
+    /// [14*, 1].
     /// </summary>
     public sealed class RevealFlowTests
     {
         private const int Level100 = 100;
         private const int MurkyCuia = 0;
+        private const int Level106 = 106;
+        private const int Level106MurkyCuia = 6;
 
         [Test]
         public void ShouldGift_PrimitivesOnly()
@@ -256,6 +263,97 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Reveal_VideoUnit_GrantsOneToStock()
+        {
+            // 04 §2.5: el video rv_reveal da «1 revelado» (el anuncio lo pone T14): +1 Luciérnaga al stock, que después se gasta
+            // con BeginRevealSelection(Stock), como cualquier otra. Nivel 106 (cuia 6 = [14*, 1]): sin regalo, sin stock y sin
+            // semillas.
+            LevelStateTests.Rig rig = Rig();
+            rig.Start(Level106);
+            Assert.That(rig.Flow.RevealAvailable, Is.True);
+            Assert.That(rig.Flow.RevealStock, Is.EqualTo(0));
+            Assert.That(rig.Flow.BeginRevealSelection(RevealPayment.Stock), Is.False, "sin stock no se abre: la vista ofrece el video");
+            Assert.That(rig.Flow.RevealSelecting, Is.False);
+
+            Assert.That(rig.Flow.GrantRevealVideoUnit(), Is.True);
+            Assert.That(rig.Flow.RevealStock, Is.EqualTo(1));
+            Assert.That(rig.Economy.Wallet.Stock.Get(BoosterKind.Reveal), Is.EqualTo(1));
+            Assert.That(rig.Flow.RevealSelecting, Is.False, "la recompensa no abre la selección: la abre la vista después");
+            Assert.That(rig.Listener.Saw("reveal_select:on"), Is.False);
+
+            Assert.That(rig.Flow.BeginRevealSelection(RevealPayment.Stock), Is.True);
+            Assert.That(rig.Flow.TapCuia(Level106MurkyCuia).Kind, Is.EqualTo(TapKind.Ignored));
+            Assert.That(Tail(rig, 2), Is.EqualTo(new[] { "reveal_select:off", "revealed:6:1" }));
+            Assert.That(rig.Flow.Session.Current[Level106MurkyCuia].HiddenMask, Is.EqualTo(0));
+            Assert.That(rig.Flow.Session.RevealedLayers(Level106MurkyCuia), Is.EqualTo(0b01));
+            Assert.That(rig.Economy.Wallet.Stock.Get(BoosterKind.Reveal), Is.EqualTo(0), "se gastó la del video");
+            Assert.That(rig.Flow.RevealStock, Is.EqualTo(0));
+            Assert.That(rig.Economy.Wallet.Seeds, Is.EqualTo(0), "sin tocar las semillas");
+            Assert.That(rig.Store.Load()!.History, Does.EndWith("|601"), "R: la capa 0 de la cuia 6");
+
+            // Sin cartera no hay stock donde dejarla.
+            var noWallet = new LevelFlow(LevelCatalog.Create(TestPacks.Campaign), new MemoryProgressStore(), new RecordingListener());
+            noWallet.Load(Level106);
+            Assert.That(noWallet.TapAnywhere(), Is.True);
+            Assert.That(noWallet.RevealAvailable, Is.True);
+            Assert.That(noWallet.GrantRevealVideoUnit(), Is.False);
+            Assert.That(noWallet.RevealStock, Is.EqualTo(0));
+            Assert.That(noWallet.BeginRevealSelection(RevealPayment.Stock), Is.False);
+        }
+
+        [Test]
+        public void Reveal_ThatWins_FollowsThePourPath()
+        {
+            // T10 §2: «si cambia Status, se sigue el mismo camino que tras un vertido» (R10 g-h). En 1-200 no pasa: con T4, bajo
+            // una oculta nunca va el color de la de encima, y ninguna cuia turbia lleva Barro (MurkyPersistenceTests). La
+            // validación sí admite Barro sobre una oculta (02 §9.1 M5), y con él se llega: cuia 0 = [4*, Barro, 8]. El 8 sella la
+            // cuia 1 y los tres 4 lavan el Barro: [4*, 4, 4, 4], llena pero sin sellar mientras la de abajo siga oculta (R5);
+            // la Luciérnaga la revela, la cuia sella y el nivel queda ganado (R12), como en
+            // LevelSessionMurkyTests.RestoreRevealed_RecomputesStatusLikeReveal_R10gh.
+            LevelPack pack = LevelPackReader.Read(TestPacks.Schema2Pack(
+                cuias: "[[4, 15, 8], [8, 8, 8], [4, 4, 4], []]", murky: "true", hidden: "[[0, 0]]"));
+            var rig = new BatchRig(pack, seeds: 500);
+            LevelFlow flow = rig.Flow;
+            flow.Load(1);
+            Assert.That(flow.TapAnywhere(), Is.True);
+            TapPour(flow, 0, 1);
+            TapPour(flow, 2, 0);
+            Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(flow.Session.Current[0].IsFull, Is.True);
+            Assert.That(flow.Session.Current[0].HiddenMask, Is.EqualTo(0b1));
+            Assert.That(flow.Session.Current.IsSealed(0), Is.False, "R5: no sella con una oculta");
+            Assert.That(flow.Session.Current.IsSealed(1), Is.True);
+
+            Assert.That(flow.BeginRevealSelection(RevealPayment.Seeds), Is.True);
+            rig.Log.Clear();
+            int writes = rig.Disk.SaveCount;
+            Assert.That(flow.TapCuia(0).Kind, Is.EqualTo(TapKind.Ignored));
+            Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Won));
+            int harvest = flow.HarvestSeeds;
+            Assert.That(harvest, Is.GreaterThan(0), "la Cosecha de la victoria");
+
+            // Como tras un vertido ganador, el tablero ganado no se guarda como level_state (IsWonPhase): se cobra la Luciérnaga
+            // y ResolveWin borra level_state y paga la Cosecha, todo en una sola escritura del perfil (el lote de la acción).
+            Assert.That(rig.Log, Is.EqualTo(new[] { "charge:-120", "clear", "charge:" + harvest.ToString(CultureInfo.InvariantCulture) }));
+            Assert.That(rig.Disk.SaveCount, Is.EqualTo(writes + 1), "una escritura: no hay un perfil cobrado sin la victoria");
+            Profile saved = ProfileJson.Deserialize(rig.Disk.Json!);
+            Assert.That(saved.LevelState, Is.Null, "level_state borrado");
+            Assert.That(saved.Progress.MaxLevel, Is.EqualTo(1));
+            Assert.That(saved.Progress.NextLevel, Is.EqualTo(2));
+            Assert.That(saved.Wallet.Seeds, Is.EqualTo(500 - 120 + harvest), "el pago y la Cosecha, en la misma escritura");
+
+            // Y sigue como tras un vertido: el input queda bloqueado hasta que la vista termina; después, celebración y victoria.
+            Assert.That(Tail(rig.Listener, 3), Is.EqualTo(new[] { "reveal_select:off", "revealed:0:1", "win" }));
+            Assert.That(flow.RevealSelecting, Is.False);
+            Assert.That(flow.IsResolving, Is.True);
+            Assert.That(flow.RevealAvailable, Is.False);
+            flow.Tick(0, true);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Celebration));
+            Assert.That(flow.TapAnywhere(), Is.True);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen));
+        }
+
+        [Test]
         public void Reveal_NonMurkyCuia_Cancels()
         {
             LevelStateTests.Rig rig = Rig();
@@ -314,8 +412,20 @@ namespace AF.Tests.EditMode
         // Los últimos n eventos del oyente.
         private static string[] Tail(LevelStateTests.Rig rig, int n)
         {
-            List<string> events = rig.Listener.Events;
+            return Tail(rig.Listener, n);
+        }
+
+        private static string[] Tail(RecordingListener listener, int n)
+        {
+            List<string> events = listener.Events;
             return events.GetRange(events.Count - n, n).ToArray();
+        }
+
+        // Vertido tap-tap de source a target.
+        private static void TapPour(LevelFlow flow, int source, int target)
+        {
+            Assert.That(flow.TapCuia(source).Kind, Is.EqualTo(TapKind.Selected), "selecciona " + source);
+            Assert.That(flow.TapCuia(target).Kind, Is.EqualTo(TapKind.Poured), source + " → " + target);
         }
 
         private static int FirstMurkyCuia(BoardState board)
@@ -331,17 +441,19 @@ namespace AF.Tests.EditMode
             return -1;
         }
 
-        // Nivel en curso en memoria que anota cada guardado con el saldo de ese instante y la sección R de history.
+        // Nivel en curso (en memoria o en inner) que anota cada guardado con el saldo de ese instante y la sección R de history,
+        // y cada borrado.
         private sealed class LoggingStore : ILevelStateStore
         {
-            private readonly MemoryLevelStateStore _inner = new MemoryLevelStateStore();
+            private readonly ILevelStateStore _inner;
             private readonly List<string> _log;
             private readonly Wallet _wallet;
 
-            public LoggingStore(List<string> log, Wallet wallet)
+            public LoggingStore(List<string> log, Wallet wallet, ILevelStateStore? inner = null)
             {
                 _log = log;
                 _wallet = wallet;
+                _inner = inner ?? new MemoryLevelStateStore();
             }
 
             public LevelStateData? Load()
@@ -361,6 +473,45 @@ namespace AF.Tests.EditMode
                 _log.Add("clear");
                 _inner.Clear();
             }
+        }
+
+        // Flujo como en el juego (GameBootstrap): cartera, progreso y nivel en curso en el mismo perfil, guardados por un lote
+        // (una escritura por acción) sobre un disco en memoria. Log anota los cobros de la cartera y los guardados y borrados de
+        // level_state, en orden.
+        private sealed class BatchRig
+        {
+            public BatchRig(LevelPack pack, int seeds)
+            {
+                var clock = new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5));
+                Profile = Wallet.NewProfile(clock);
+                Profile.Wallet.Seeds = seeds;
+                Disk = new MemoryProfileStore();
+                var batch = new ProfileSaveBatch(Disk);
+                var wallet = new Wallet(Profile, batch, clock);
+                wallet.Changed += r => Log.Add("charge:" + r.SeedsDelta.ToString(CultureInfo.InvariantCulture));
+                Listener = new RecordingListener();
+                Flow = new LevelFlow(
+                    LevelCatalog.Create(new[] { pack }),
+                    new ProfileProgressStore(Profile, batch),
+                    Listener,
+                    GameConfig.TapSwitchSelection,
+                    PourModes.Default,
+                    wallet)
+                {
+                    StateStore = new LoggingStore(Log, wallet, new ProfileLevelStateStore(Profile, batch)),
+                    SaveBatch = batch,
+                };
+            }
+
+            public List<string> Log { get; } = new List<string>();
+
+            public Profile Profile { get; }
+
+            public MemoryProfileStore Disk { get; }
+
+            public RecordingListener Listener { get; }
+
+            public LevelFlow Flow { get; }
         }
 
         private sealed class NullApp : IAppFlowListener
