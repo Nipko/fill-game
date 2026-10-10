@@ -19,8 +19,9 @@ namespace AF.UI
     /// <c>rescue_min_level</c>; con Canoas infinitas, ∞ y el tiempo que queda) y Ajustes (deshabilitado hasta que exista su
     /// pantalla);</description></item>
     /// <item><description>en el centro, el Estuario (panorama, muelle y follaje del nivel) y el botón grande «Jugar · Nivel {n}»
-    /// con su centro al 60 % del alto (06 §4.7), con el chip Difícil o Muy difícil encima cuando el nivel lo lleva
-    /// [P];</description></item>
+    /// con su centro al 60 % del alto (06 §4.7), con la etiqueta de D-009 encima cuando el nivel la lleva (propuesta §c.1;
+    /// 07 §7.7; <see cref="DifficultyChip"/>): Difícil, chip ámbar con la rana dardo y la cinta «×3»; Muy difícil, chip índigo
+    /// con el jaguar, «×4» y el botón en variante nocturna [P];</description></item>
     /// <item><description>abajo, la barra de pestañas con «Inicio» [P]: Mercado, Mapa del río, Reto del río y Bitácora quedan
     /// ocultos hasta que existan (D-008).</description></item>
     /// </list>
@@ -46,7 +47,7 @@ namespace AF.UI
         private const float TabBarHeight = 64f;
         private const float PlayTouchHeight = 72f;
         private const float PlayMaxWidth = 296f;
-        private const float ChipHeight = 26f;
+        private const float ChipGapDp = 6f;
         private const float HomeTabWidth = 120f;
         private const float OverlayPanelHeight = 236f;
         private const float MaxHorizonDp = 200f;
@@ -84,8 +85,8 @@ namespace AF.UI
 
         private readonly ReliefParts _play;
         private readonly TextMeshProUGUI _playLabel;
-        private readonly Image _chip;
-        private readonly TextMeshProUGUI _chipLabel;
+        private readonly DifficultyChip _chip;
+        private bool _playNight;
 
         private readonly Image _tabBar;
         private readonly RectTransform _homeTab;
@@ -215,12 +216,9 @@ namespace AF.UI
             _homeTabLabel = UiBuilder.Label("Label", tabFace.transform, TextStyle.PillWood, UiText.Home, 17f, Palette.Cream, TextAlignmentOptions.Center);
             UiBuilder.PlaceCtaLabel(_homeTabLabel.rectTransform, art.CtaWood);
 
-            // ---- Botón central «Jugar · Nivel {n}» (familia Hoja, el primario de 07 §7.2) y chip de dificultad [P]. ----
-            _chip = UiBuilder.Sliced("DifficultyChip", _root, art.RoundedRect, Palette.UiAmber);
-            _chip.pixelsPerUnitMultiplier = 24f / (ChipHeight * 0.5f); // borde 9-slice de 24 px → media altura: píldora
-            _chipLabel = UiBuilder.Label("Label", _chip.transform, TextStyle.PlainBold, string.Empty, 14f, Palette.Ink, TextAlignmentOptions.Center);
-            UiBuilder.Stretch(_chipLabel.rectTransform);
-            _chip.gameObject.SetActive(false);
+            // ---- Botón central «Jugar · Nivel {n}» (familia Hoja, el primario de 07 §7.2; nocturno en Muy difícil) y el chip de
+            // la etiqueta de D-009 encima (propuesta §c.1). ----
+            _chip = DifficultyChip.Create(_root, art);
 
             _play = UiBuilder.Relief("PlayButton", _root, art.CtaLeafLarge, () => _onPlay());
             _playLabel = UiBuilder.Label("Label", _play.Face, TextStyle.CtaLeaf, UiText.PlayLevel(1), 30f, Palette.Cream, TextAlignmentOptions.Center);
@@ -306,17 +304,35 @@ namespace AF.UI
         /// <summary>Pestaña «Inicio».</summary>
         public RectTransform HomeTabRect => _homeTab;
 
-        /// <summary>Chip de dificultad.</summary>
-        public RectTransform ChipRect => _chip.rectTransform;
+        /// <summary>Chip de dificultad entero (sello, píldora y cinta).</summary>
+        public RectTransform ChipRect => _chip.Root;
 
         /// <summary>El contador de canoas se ve (desde el 31).</summary>
         public bool CanoesShown => _canoes.gameObject.activeSelf;
 
         /// <summary>El chip de dificultad se ve.</summary>
-        public bool ChipShown => _chip.gameObject.activeSelf;
+        public bool ChipShown => _chip.Visible;
 
         /// <summary>Texto del chip de dificultad.</summary>
-        public string ChipText => _chipLabel.text;
+        public string ChipText => _chip.Text;
+
+        /// <summary>Texto de la cinta del chip («×3» o «×4»; vacío si no se ve).</summary>
+        public string ChipRibbonText => _chip.RibbonText;
+
+        /// <summary>
+        /// «Jugar · Nivel {n}» va en su variante nocturna [P] (Muy difícil: índigo oscuro con texto marfil; 07 §7.7;
+        /// propuesta §c.1).
+        /// </summary>
+        public bool PlayNight => _playNight;
+
+        /// <summary>Color del texto del botón Jugar.</summary>
+        public Color PlayLabelColor => _playLabel.color;
+
+        /// <summary>Sprite de la cara del botón Jugar (hoja o noche).</summary>
+        public Sprite? PlayFaceSprite => _play.FaceImage.sprite;
+
+        /// <summary>Chip de dificultad (tests y capturas).</summary>
+        internal DifficultyChip Chip => _chip;
 
         /// <summary>Semillas que muestra el contador.</summary>
         public int SeedsShown => _seedsShown;
@@ -329,22 +345,28 @@ namespace AF.UI
 
         /// <summary>
         /// Pares texto / fondo de la pantalla de inicio y su superposición, para la comprobación de contraste ≥ 4,5:1
-        /// (07 §1.2 y §7.8): contadores sobre madera oscura, botón Jugar y Volver sobre hoja, chip Difícil (tinta sobre ámbar)
-        /// y Muy difícil (crema sobre índigo), pestaña sobre madera y el texto de la superposición sobre la madera clara.
+        /// (07 §1.2 y §7.8): contadores sobre madera oscura, botón Jugar y Volver sobre hoja, Jugar nocturno (marfil sobre
+        /// índigo), pestaña sobre madera, el texto de la superposición sobre la madera clara y, al final, el chip y su cinta
+        /// (<see cref="DifficultyChip.ContrastPairs"/>: tinta sobre ámbar, marfil sobre índigo y crema sobre el agua de la cinta).
         /// </summary>
         public static (string Name, Color Text, Color Background)[] ContrastPairs()
         {
-            return new[]
+            (string Name, Color Text, Color Background)[] own =
             {
                 ("contadores", (Color)Palette.Cream, (Color)Palette.WoodDark),
                 ("jugar", (Color)Palette.Cream, Palette.FamilyLeaf.Base),
                 ("jugar (fondo de la cara)", (Color)Palette.Cream, Palette.FamilyLeaf.Deep),
-                ("chip Difícil", (Color)Palette.Ink, (Color)Palette.UiAmber),
-                ("chip Muy difícil", (Color)Palette.Cream, (Color)Palette.UiIndigo),
+                ("jugar nocturno", (Color)Palette.UiPaper, ProceduralArt.FamilyNight.Base),
+                ("jugar nocturno (fondo de la cara)", (Color)Palette.UiPaper, ProceduralArt.FamilyNight.Deep),
                 ("pestaña Inicio", (Color)Palette.Cream, Palette.FamilyWood.Base),
                 ("pestaña Inicio (fondo de la cara)", (Color)Palette.Cream, Palette.FamilyWood.Deep),
                 ("texto de la superposición", Palette.FamilyWood.Base, (Color)Palette.PanelLightLow),
             };
+            (string Name, Color Text, Color Background)[] chip = DifficultyChip.ContrastPairs();
+            var all = new (string Name, Color Text, Color Background)[own.Length + chip.Length];
+            own.CopyTo(all, 0);
+            chip.CopyTo(all, own.Length);
+            return all;
         }
 
         /// <summary>Asocia la navegación y los servicios de Sin canoas (antes de la primera pantalla).</summary>
@@ -447,7 +469,7 @@ namespace AF.UI
             if (!string.Equals(label, _labelShown, StringComparison.Ordinal))
             {
                 _labelShown = label;
-                ApplyChip(label);
+                ApplyChip(label, app.Wallet.Config);
             }
 
             int seeds = app.Wallet.Seeds;
@@ -520,21 +542,45 @@ namespace AF.UI
             }
         }
 
-        private void ApplyChip(string label)
+        private void ApplyChip(string label, EconomyConfig config)
         {
-            string? text = UiText.DifficultyChip(label);
-            _chip.gameObject.SetActive(text != null);
-            if (text == null)
+            // Propuesta §c.1 y 07 §7.7: Difícil, chip ámbar con la rana y «×3»; Muy difícil, chip índigo con el jaguar, «×4» y el
+            // botón en variante nocturna; normal, botón verde sin chip. Sin calavera. La cinta sale de eco_reward_* (§c.2).
+            _chip.Set(label, DifficultyChip.MultiplierFor(config, label));
+            ApplyPlayVariant(label == LevelDefinition.LabelVeryHard);
+            LayoutChip();
+        }
+
+        // Variante nocturna [P] de «Jugar · Nivel {n}» (07 §7.7; propuesta §c.1): la cara y el canto índigo de
+        // ProceduralArt.CtaNightLarge y el texto marfil (10,7:1); en los demás niveles, la hoja de siempre.
+        private void ApplyPlayVariant(bool night)
+        {
+            if (night == _playNight)
             {
                 return;
             }
 
-            // 07 §7.7: Difícil en ámbar con tinta; Muy difícil en índigo con crema (sin calavera).
-            bool veryHard = label == LevelDefinition.LabelVeryHard;
-            _chip.color = veryHard ? (Color)Palette.UiIndigo : (Color)Palette.UiAmber;
-            _chipLabel.color = veryHard ? (Color)Palette.Cream : (Color)Palette.Ink;
-            _chipLabel.text = text;
-            LayoutChip();
+            _playNight = night;
+            ReliefSprites sprites = night ? _art.CtaNightLarge : _art.CtaLeafLarge;
+            _play.FaceImage.sprite = sprites.Face;
+            if (_play.Base != null && sprites.Base != null)
+            {
+                _play.Base.sprite = sprites.Base;
+            }
+
+            // De noche, el contorno de agua profunda (CtaWater: la misma Baloo 2 Bold) en lugar del verde de hoja.
+            TextStyle style = night ? TextStyle.CtaWater : TextStyle.CtaLeaf;
+            TMPro.TMP_FontAsset? font = UiFonts.Font(style);
+            Material? material = UiFonts.Material(style);
+            if (font != null && material != null)
+            {
+                _playLabel.font = font;
+                _playLabel.fontSharedMaterial = material;
+            }
+
+            _playLabel.color = night ? (Color)Palette.UiPaper : (Color)Palette.Cream;
+            _play.Relief.Bind(_play.Face, _play.Base, _play.FaceImage, sprites, null, null, _playLabel);
+            _play.Relief.SetInteractable(_play.Relief.Interactable);
         }
 
         private void ApplyScreenMetrics()
@@ -645,13 +691,13 @@ namespace AF.UI
 
         private void LayoutChip()
         {
-            if (!_chip.gameObject.activeSelf)
+            if (!_chip.Visible)
             {
                 return;
             }
 
-            float width = Mathf.Max(84f, Mathf.Ceil(_chipLabel.preferredWidth) + 28f);
-            UiBuilder.Place(_chip.rectTransform, (_canvasW - width) * 0.5f, _playTop - ChipHeight - 6f, width, ChipHeight);
+            // La píldora, 6 dp por encima de Jugar; el sello sobresale 2 dp por debajo y no llega al botón.
+            _chip.PlaceCentered(_canvasW * 0.5f, _playTop - ChipGapDp - DifficultyChip.PillBottomDp);
         }
 
         private void EmitLayout()

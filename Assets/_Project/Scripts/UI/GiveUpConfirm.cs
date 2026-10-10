@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using AF.Boosters;
+using AF.Levels;
 using AF.Presentation;
 using TMPro;
 using UnityEngine;
@@ -13,7 +14,9 @@ namespace AF.UI
     /// B2-2), con la composición de «Continue?» de Magic Sort (ficha §4.4: título con X, imagen de lo que se pierde, la
     /// frase y un único botón de seguir) y el material de D-003: canoa volcada en lugar del corazón roto. «Perderás 1 canoa»
     /// (o «tu última canoa»), otra vez «Continuar: +1 cuia» con el mismo precio y condiciones (no aparece si el rescate no
-    /// está disponible) y «Rendirse»; la X y «Rendirse» confirman la rendición. Sin anuncio (05 §10).
+    /// está disponible) y «Rendirse»; la X y «Rendirse» confirman la rendición. Sin anuncio (05 §10). La cabecera lleva la
+    /// etiqueta del nivel (propuesta-mecanicas-dificultad.md §c.1; D-009): ámbar con la rana en Difícil, índigo con el jaguar en
+    /// Muy difícil y la madera de siempre en normal (<see cref="SetLabel"/>, aplicada en el siguiente <see cref="Show"/>).
     /// </summary>
     internal sealed class GiveUpConfirm
     {
@@ -22,6 +25,8 @@ namespace AF.UI
         private readonly RectTransform _panel;
         private readonly Image _surface;
         private readonly Image _header;
+        private readonly TextMeshProUGUI _title;
+        private readonly Image _badge;
         private readonly ReliefParts _close;
         private readonly Image _canoe;
         private readonly TextMeshProUGUI _line;
@@ -32,6 +37,8 @@ namespace AF.UI
         private readonly Button _giveUp;
         private float _height = 300f;
         private float _width = 328f;
+        private string _label = LevelDefinition.LabelNormal;
+        private Color? _band;
 
         public GiveUpConfirm(Transform parent, ProceduralArt art, IGameActions actions)
         {
@@ -39,7 +46,8 @@ namespace AF.UI
             _root = UiBuilder.Rect("GiveUpConfirm", parent);
             ModalKit.Dim("Dim", _root, 0.55f);
             _panel = ModalKit.Card("Panel", _root, art, out _surface);
-            ModalKit.Header(_panel, art, UiText.GiveUpConfirmTitle, out _header);
+            _title = ModalKit.Header(_panel, art, UiText.GiveUpConfirmTitle, out _header);
+            _badge = ModalKit.HeaderBadge(_header);
             _close = ModalKit.Close("CloseButton", _panel, art, () => actions.ConfirmGiveUp());
             _canoe = UiBuilder.Image("Canoe", _panel, art.IconCanoeEmpty, Color.white);
             _canoe.preserveAspect = true;
@@ -62,6 +70,27 @@ namespace AF.UI
         /// <summary>Línea de canoa visible (texto), o null sin canoa en juego.</summary>
         public string? LineText => _line.gameObject.activeSelf ? _line.text : null;
 
+        /// <summary><c>difficulty.label</c> que viste la cabecera en el siguiente <see cref="Show"/> (o en el actual).</summary>
+        public string Label => _label;
+
+        /// <summary>Banda de la cabecera aplicada en el último <see cref="Show"/> (<c>ui_ambar</c> o <c>ui_indigo</c>; null = madera).</summary>
+        public Color? HeaderBand => _band;
+
+        /// <summary>Color del título de la cabecera.</summary>
+        public Color TitleColor => _title.color;
+
+        /// <summary>Sello de la etiqueta en la cabecera, o null si no se ve.</summary>
+        public Sprite? HeaderBadge => _badge.gameObject.activeSelf ? _badge.sprite : null;
+
+        /// <summary>
+        /// Guarda la etiqueta del nivel (<c>difficulty.label</c>: <c>normal</c>, <c>hard</c> o <c>very_hard</c>) para la cabecera
+        /// del siguiente <see cref="Show"/>. La llama GameScreen (GameScreen.Funnel.cs) justo antes de abrir el modal.
+        /// </summary>
+        public void SetLabel(string? difficultyLabel)
+        {
+            _label = string.IsNullOrEmpty(difficultyLabel) ? LevelDefinition.LabelNormal : difficultyLabel!;
+        }
+
         public void Hide()
         {
             _root.gameObject.SetActive(false);
@@ -73,6 +102,7 @@ namespace AF.UI
             _width = Mathf.Min(328f, canvasW - 32f);
             float inner = _width - 32f;
             float y = 16f;
+            _band = ModalKit.ApplyHeaderLabel(_header, _title, _badge, _art, _label);
             UiBuilder.Place(_header.rectTransform, 16f, y, inner - 52f, 40f);
             UiBuilder.Place((RectTransform)_close.Button.transform, _width - 16f - ModalKit.CloseDp, y - 4f, ModalKit.CloseDp, ModalKit.CloseDp);
             y += 52f;
