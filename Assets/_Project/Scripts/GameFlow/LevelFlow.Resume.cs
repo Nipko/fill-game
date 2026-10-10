@@ -27,7 +27,8 @@ namespace AF.GameFlow
     /// D-008 «Persistencia»). Se guarda en cada cambio del nivel (carga, vertido, Marea, reinicio, cuia añadida, apertura del
     /// modal, ¿Seguro?, Nivel fallido, Sin canoas) con <see cref="LevelStateSnapshot"/>; la victoria lo borra. Al abrir la app,
     /// LOADING del mismo nivel sin intro y con la pantalla que estaba abierta: cerrar la app nunca cobra canoa ni cuenta como
-    /// fallo (no se resuelve nada al reabrir), y tampoco es una salida gratis del embudo.
+    /// fallo (no se resuelve nada al reabrir), y tampoco es una salida gratis del embudo. Las capas de Aguas turbias ya
+    /// reveladas se guardan en <c>history</c> h2 y se restauran al reabrir (02 R8 y §11 T6: el conocimiento no se revierte).
     /// </summary>
     public sealed partial class LevelFlow
     {
@@ -55,10 +56,11 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// Reabre el nivel guardado (02 §14): LOADING del mismo nivel con el mismo tablero (variante, cuias añadidas y vertidos
-        /// rehechos con las reglas del núcleo), el cupo de Marea que quedaba, <c>fails_level</c> y la pantalla que estaba
-        /// abierta (tablero, Aguas estancadas, ¿Seguro? o Nivel fallido), sin intro. No cobra nada. False si el estado no sirve
-        /// o los vertidos no se pueden rehacer: quien llama carga el nivel de nuevo.
+        /// Reabre el nivel guardado (02 §14): LOADING del mismo nivel con el mismo tablero (variante, cuias añadidas, vertidos
+        /// rehechos con las reglas del núcleo y capas de Aguas turbias ya reveladas, 02 R8 y §11 T6), el cupo de Marea que
+        /// quedaba, <c>fails_level</c> y la pantalla que estaba abierta (tablero, Aguas estancadas, ¿Seguro? o Nivel fallido),
+        /// sin intro. No cobra nada. False, sin excepciones, si el estado no sirve, los vertidos no se pueden rehacer o las capas
+        /// reveladas no son de este tablero: quien llama carga el nivel de nuevo.
         /// </summary>
         public bool Resume(LevelStateData saved)
         {
@@ -134,6 +136,18 @@ namespace AF.GameFlow
                 }
             }
 
+            // 02 R8 y §11 T6: las capas reveladas (R de h2) se restauran tras rehacer los vertidos; las que el historial ya
+            // reveló no suman. Una entrada que no es de este tablero (cuia que no existe o capas que no eran ocultas) rompe el
+            // estado como un vertido que no se puede rehacer: quien llama carga el nivel de nuevo.
+            for (int i = 0; i < history.Revealed.Count; i++)
+            {
+                SavedReveal reveal = history.Revealed[i];
+                if (!TryRestoreRevealed(session, reveal.Cuia, reveal.Layers))
+                {
+                    return false;
+                }
+            }
+
             Phase = FlowPhase.Loading;
             _level = def;
             _levelNumber = number;
@@ -190,6 +204,27 @@ namespace AF.GameFlow
                     break;
             }
 
+            return true;
+        }
+
+        // Restaura las capas reveladas <paramref name="layers"/> de la cuia <paramref name="cuia"/> en una sesión rehecha
+        // (reanudar o añadir una cuia; 02 R8, §11 T6). Sin excepciones: false si la cuia no existe o si alguna capa no es una
+        // dosis oculta del tablero inicial, que es lo que LevelSession.RestoreRevealed rechazaría.
+        //
+        // Se restaura al final del rehacer, no en el punto del historial en que se reveló cada capa: h2 guarda por cuia solo la
+        // máscara. Es exacto en 1-200 porque ver antes una oculta solo cambia lo que pasa después si alarga la racha (R6) o
+        // permite un sellado (R5), y con T4 (bajo una oculta nunca va el color de la de encima) eso solo ocurre si un lavado de
+        // Barro deja sobre ella su mismo color; ningún nivel de la campaña lleva Barro en una cuia turbia
+        // (MurkyPersistenceTests lo comprueba). Si un pack futuro lo combinara, al añadir una cuia el rehacer da otra cantidad,
+        // la cuia no se añade y no se cobra (LastFunnelError); al reanudar habría que guardar el punto del revelado.
+        private static bool TryRestoreRevealed(LevelSession session, int cuia, int layers)
+        {
+            if (cuia < 0 || cuia >= session.Initial.Count || layers <= 0 || (layers & ~session.Initial[cuia].HiddenMask) != 0)
+            {
+                return false;
+            }
+
+            session.RestoreRevealed(cuia, layers);
             return true;
         }
 

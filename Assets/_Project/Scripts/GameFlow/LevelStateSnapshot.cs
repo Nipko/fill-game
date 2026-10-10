@@ -32,6 +32,52 @@ namespace AF.GameFlow
         Exited = 4,
     }
 
+    /// <summary>
+    /// Capas reveladas de una cuia en la sección R de <c>history</c> h2 (02 R8: la máscara de revelado es parte del estado
+    /// persistente; 02 §11 T6): bit k de <see cref="Layers"/> = la dosis oculta inicial <c>[Cuia, k]</c> ya se reveló
+    /// (<see cref="AF.Core.Session.LevelSession.RevealedLayers"/>).
+    /// </summary>
+    public readonly struct SavedReveal : IEquatable<SavedReveal>
+    {
+        /// <summary>Crea la entrada.</summary>
+        public SavedReveal(int cuia, int layers)
+        {
+            Cuia = cuia;
+            Layers = layers;
+        }
+
+        /// <summary>Índice de la cuia en el tablero.</summary>
+        public int Cuia { get; }
+
+        /// <summary>Máscara de capas reveladas (nunca 0 en un historial válido).</summary>
+        public int Layers { get; }
+
+        /// <inheritdoc/>
+        public bool Equals(SavedReveal other)
+        {
+            return Cuia == other.Cuia && Layers == other.Layers;
+        }
+
+        /// <inheritdoc/>
+        public override bool Equals(object? obj)
+        {
+            return obj is SavedReveal other && Equals(other);
+        }
+
+        /// <inheritdoc/>
+        public override int GetHashCode()
+        {
+            return (Cuia * 397) ^ Layers;
+        }
+
+        /// <inheritdoc/>
+        public override string ToString()
+        {
+            return "(" + Cuia.ToString(System.Globalization.CultureInfo.InvariantCulture) + ", "
+                + Layers.ToString(System.Globalization.CultureInfo.InvariantCulture) + ")";
+        }
+    }
+
     /// <summary>Lo que lleva <c>level_state.history</c> además de los campos con nombre propio.</summary>
     public sealed class SavedHistory
     {
@@ -58,6 +104,12 @@ namespace AF.GameFlow
 
         /// <summary>Destinos de los vertidos aplicados, en orden.</summary>
         public List<int> Targets { get; } = new List<int>(64);
+
+        /// <summary>
+        /// Capas reveladas por cuia (sección R de h2), una entrada por cuia con alguna capa revelada; vacía en h1. Es la
+        /// fuente de la verdad del revelado: <c>revealed_cuias</c> solo dice qué cuias, no qué capas.
+        /// </summary>
+        public List<SavedReveal> Revealed { get; } = new List<SavedReveal>(4);
     }
 
     /// <summary>
@@ -69,22 +121,30 @@ namespace AF.GameFlow
     /// (<c>amazonfill:v1:m{mm}:v{v}:n{nnnn}</c>, derivada del <c>id</c> del nivel), <c>variant</c> (<c>base</c> o el
     /// <c>type</c> de la entrada de <c>relief[]</c> servida), <c>fails_level</c>, <c>pours</c>, <c>extra_cuias</c> (todas las
     /// añadidas), <c>rescues_level</c>, <c>undo_free</c> (Marea gratis que queda), <c>revealed_cuias</c> (cuias con dosis
-    /// ocultas que ya se destaparon; se rehacen solas al repetir los vertidos) y <c>stuck</c> (embudo abierto).</description></item>
-    /// <item><description><c>history</c> (su formato lo fija quien reanuda el nivel, 04 §10.1): <c>h1|F|A|M|V</c>, con F la
+    /// ocultas que ya se destaparon; solo índices y por compatibilidad: las capas van en la sección R de <c>history</c>, que
+    /// es la fuente de la verdad) y <c>stuck</c> (embudo abierto).</description></item>
+    /// <item><description><c>history</c> (su formato lo fija quien reanuda el nivel, 04 §10.1): <c>h2|F|A|M|V|R</c>, con F la
     /// pantalla (<c>P</c>, <c>S</c>, <c>G</c>, <c>F</c> o <c>X</c>, <see cref="SavedPhase"/>), A las cuias añadidas en orden
     /// (<c>E</c> Cuia extra, <c>R</c> Cuia de rescate), M las marcas (<c>g</c>: recarga gratis de la rama F ya dada;
     /// <c>c</c>: Capi ya regaló la Cuia extra del nivel, que también se guarda al salir al inicio; <c>b</c>: la Balsa de
-    /// rescate ya se enseñó en este bloqueo, solo con <c>S</c> o <c>G</c>, para reabrir el modal tal cual) y V los vertidos aplicados
-    /// como pares de dígitos hexadecimales origen-destino (16 cuias como mucho). La fase va aquí porque el booleano
-    /// <c>stuck</c> no basta (04 §10.1 con D-008) y <c>AF.Save</c> aún no tiene un campo <c>phase</c>; el regalo, porque el
-    /// perfil aún no tiene un campo propio para él.</description></item>
+    /// rescate ya se enseñó en este bloqueo, solo con <c>S</c> o <c>G</c>, para reabrir el modal tal cual), V los vertidos aplicados
+    /// como pares de dígitos hexadecimales origen-destino (16 cuias como mucho) y R las capas reveladas (Aguas turbias, 02 R8
+    /// y §11 T6): un triple hexadecimal por cuia con alguna capa revelada, en orden, con la cuia (1 dígito) y la máscara de
+    /// <see cref="LevelSession.RevealedLayers"/> (2 dígitos); p. ej. <c>002</c> = capa 1 de la cuia 0. La fase va aquí porque
+    /// el booleano <c>stuck</c> no basta (04 §10.1 con D-008) y <c>AF.Save</c> aún no tiene un campo <c>phase</c>; el regalo y
+    /// las capas reveladas, porque el perfil aún no tiene un campo propio para ellos (<c>revealed_cuias</c> solo guarda
+    /// índices). Se sigue leyendo <c>h1|F|A|M|V</c> (sin R).</description></item>
     /// </list>
-    /// Sin el tablero: se reconstruye con el nivel, la variante, las cuias añadidas y los vertidos, con las reglas del núcleo.
+    /// Sin el tablero: se reconstruye con el nivel, la variante, las cuias añadidas y los vertidos, con las reglas del núcleo,
+    /// y después se restauran las capas reveladas de R (<see cref="LevelSession.RestoreRevealed"/>).
     /// </summary>
     public static class LevelStateSnapshot
     {
-        /// <summary>Versión del formato de <c>history</c>.</summary>
-        public const string HistoryVersion = "h1";
+        /// <summary>Versión del formato de <c>history</c> que se escribe.</summary>
+        public const string HistoryVersion = "h2";
+
+        /// <summary>Versión anterior (sin la sección R de capas reveladas), que se sigue leyendo.</summary>
+        public const string LegacyHistoryVersion = "h1";
 
         private const char Separator = '|';
         private const char UndoGiftMark = 'g';
@@ -136,8 +196,9 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// Escribe <c>history</c> en <paramref name="sb"/> (que se vacía antes). <paramref name="balsaShown"/> solo se anota con
-        /// Aguas estancadas o ¿Seguro? (es del bloqueo en curso).
+        /// Escribe <c>history</c> h2 en <paramref name="sb"/> (que se vacía antes). <paramref name="balsaShown"/> solo se anota
+        /// con Aguas estancadas o ¿Seguro? (es del bloqueo en curso). Sin <paramref name="session"/> (se salió al inicio), V y R
+        /// van vacías.
         /// </summary>
         public static void WriteHistory(
             StringBuilder sb, SavedPhase phase, IReadOnlyList<AddedCuiaKind> added, bool undoGiftUsed, bool extraCuiaGifted, LevelSession? session,
@@ -167,19 +228,39 @@ namespace AF.GameFlow
             }
 
             sb.Append(Separator);
+            if (session != null)
+            {
+                for (int i = 0; i < session.AppliedPours; i++)
+                {
+                    Pour pour = session.GetAppliedPour(i);
+                    sb.Append(HexDigits[pour.Source & 0xF]).Append(HexDigits[pour.Target & 0xF]);
+                }
+            }
+
+            sb.Append(Separator);
             if (session == null)
             {
                 return;
             }
 
-            for (int i = 0; i < session.AppliedPours; i++)
+            // R: una entrada por cuia con capas reveladas, en orden (02 R8). La máscara cabe en 2 dígitos: 6 capas como mucho.
+            int count = session.Current.Count;
+            for (int c = 0; c < count; c++)
             {
-                Pour pour = session.GetAppliedPour(i);
-                sb.Append(HexDigits[pour.Source & 0xF]).Append(HexDigits[pour.Target & 0xF]);
+                int layers = session.RevealedLayers(c);
+                if (layers != 0)
+                {
+                    sb.Append(HexDigits[c & 0xF]).Append(HexDigits[(layers >> 4) & 0xF]).Append(HexDigits[layers & 0xF]);
+                }
             }
         }
 
-        /// <summary>Lee <c>history</c>; false si no es de este formato o está roto.</summary>
+        /// <summary>
+        /// Lee <c>history</c> h2 (6 partes) o h1 (5 partes, sin capas reveladas); false si no es de este formato o está roto.
+        /// En R es roto: una longitud que no es múltiplo de 3, un carácter que no es un dígito hexadecimal en minúscula, una cuia
+        /// repetida o una máscara 0. Que la cuia exista y que las capas sean ocultas del tablero inicial lo comprueba quien
+        /// reanuda (<see cref="LevelFlow.Resume"/>), que tiene el tablero.
+        /// </summary>
         public static bool TryParseHistory(string? history, out SavedHistory parsed)
         {
             parsed = new SavedHistory();
@@ -189,8 +270,9 @@ namespace AF.GameFlow
             }
 
             string[] parts = history!.Split(Separator);
-            if (parts.Length != 5 || !string.Equals(parts[0], HistoryVersion, StringComparison.Ordinal) || parts[1].Length != 1
-                || !TryPhase(parts[1][0], out SavedPhase phase))
+            bool current = parts.Length == 6 && string.Equals(parts[0], HistoryVersion, StringComparison.Ordinal);
+            bool legacy = parts.Length == 5 && string.Equals(parts[0], LegacyHistoryVersion, StringComparison.Ordinal);
+            if (!(current || legacy) || parts[1].Length != 1 || !TryPhase(parts[1][0], out SavedPhase phase))
             {
                 return false;
             }
@@ -252,6 +334,38 @@ namespace AF.GameFlow
 
                 parsed.Sources.Add(source);
                 parsed.Targets.Add(target);
+            }
+
+            return !current || TryParseRevealed(parts[5], parsed.Revealed);
+        }
+
+        // Sección R de h2: triples cuia (1 dígito) y máscara (2 dígitos), sin cuias repetidas ni máscaras 0.
+        private static bool TryParseRevealed(string section, List<SavedReveal> into)
+        {
+            if (section.Length % 3 != 0)
+            {
+                return false;
+            }
+
+            int seen = 0;
+            for (int i = 0; i < section.Length; i += 3)
+            {
+                int cuia = HexDigits.IndexOf(section[i]);
+                int high = HexDigits.IndexOf(section[i + 1]);
+                int low = HexDigits.IndexOf(section[i + 2]);
+                if (cuia < 0 || high < 0 || low < 0 || (seen & (1 << cuia)) != 0)
+                {
+                    return false;
+                }
+
+                int layers = (high << 4) | low;
+                if (layers == 0)
+                {
+                    return false;
+                }
+
+                seen |= 1 << cuia;
+                into.Add(new SavedReveal(cuia, layers));
             }
 
             return true;

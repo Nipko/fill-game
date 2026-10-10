@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using AF.Boosters;
+using AF.Core.Board;
 using AF.Core.Rules;
 using AF.Core.Session;
 using AF.Economy;
@@ -18,6 +19,8 @@ namespace AF.Tests.EditMode
     /// D-008 «Persistencia»): el formato de <c>level_state</c>, el mismo tablero y la misma pantalla al reabrir (tablero,
     /// Aguas estancadas, ¿Seguro? o Nivel fallido), sin cobrar canoa ni contar fallo por cerrar la app; la victoria lo borra;
     /// salir al inicio conserva <c>fails_level</c> y la variante, no las cuias añadidas; un estado de otro tablero se descarta.
+    /// <c>history</c> h2 (tarea T06 del paso 1) añade la sección R de capas reveladas (02 R8, §11 T6) y sigue leyendo h1; la
+    /// restauración con niveles reales está en <see cref="MurkyPersistenceTests"/>.
     /// </summary>
     public sealed class LevelStateTests
     {
@@ -32,7 +35,7 @@ namespace AF.Tests.EditMode
 
             var sb = new StringBuilder();
             LevelStateSnapshot.WriteHistory(sb, SavedPhase.GiveUpConfirm, rig.Flow.Attempt.Added, true, false, rig.Flow.Session);
-            Assert.That(sb.ToString(), Is.EqualTo("h1|G|E|g|02"));
+            Assert.That(sb.ToString(), Is.EqualTo("h2|G|E|g|02|"), "sin capas reveladas: R vacía");
             Assert.That(LevelStateSnapshot.TryParseHistory(sb.ToString(), out SavedHistory parsed), Is.True);
             Assert.That(parsed.Phase, Is.EqualTo(SavedPhase.GiveUpConfirm));
             Assert.That(parsed.Added, Is.EqualTo(new[] { AddedCuiaKind.Extra }));
@@ -43,7 +46,7 @@ namespace AF.Tests.EditMode
 
             // Marca «c»: Capi ya regaló la Cuia extra del nivel (04 §2.2), también en un estado de salida al inicio.
             LevelStateSnapshot.WriteHistory(sb, SavedPhase.Exited, new AddedCuiaKind[0], false, true, null);
-            Assert.That(sb.ToString(), Is.EqualTo("h1|X||c|"));
+            Assert.That(sb.ToString(), Is.EqualTo("h2|X||c||"));
             Assert.That(LevelStateSnapshot.TryParseHistory("h1|X||c|", out SavedHistory gifted), Is.True);
             Assert.That(gifted.ExtraCuiaGifted, Is.True);
             Assert.That(gifted.UndoGiftUsed, Is.False);
@@ -72,9 +75,126 @@ namespace AF.Tests.EditMode
         [TestCase("h1|P||")]
         [TestCase("h1|P||b|")]
         [TestCase("h1|S||bb|")]
+        [TestCase("h1|P|||02|")]
+        [TestCase("h2|Q||||")]
+        [TestCase("h2|P|Z|||")]
+        [TestCase("h2|P||x||")]
+        [TestCase("h2|P||gg||")]
+        [TestCase("h2|P|||0|")]
+        [TestCase("h2|P|||0g|")]
+        [TestCase("h2|P||b||")]
+        [TestCase("h2|P|||02|002|")]
+        [TestCase("h3|P||||")]
         public void History_RejectsBrokenText(string? history)
         {
             Assert.That(LevelStateSnapshot.TryParseHistory(history, out _), Is.False);
+        }
+
+        [Test]
+        public void History_H2_RoundTrip()
+        {
+            // 02 R8 y §11 T6: R lleva un triple por cuia con capas reveladas, en orden: la cuia (1 dígito) y la máscara de
+            // LevelSession.RevealedLayers (2 dígitos). Cuia 0: capa 1 de 2 ocultas (revelado parcial); cuia 11 («b»): su oculta.
+            var cuias = new Cuia[12];
+            cuias[0] = Cuia.Create(4, new[] { 1, 2, 3 }, 0b11);
+            for (int i = 1; i < 11; i++)
+            {
+                cuias[i] = Cuia.Empty(4);
+            }
+
+            cuias[11] = Cuia.Create(4, new[] { 4, 5 }, 0b01);
+            var session = new LevelSession(new BoardState(cuias), true, PourModes.Default);
+            Assert.That(session.RestoreRevealed(0, 0b10), Is.EqualTo(1));
+            Assert.That(session.RestoreRevealed(11, 0b01), Is.EqualTo(1));
+            Assert.That(session.TryPour(0, 1, out _), Is.True, "el 3 a una vacía deja arriba la capa 1, ya revelada");
+            Assert.That(session.TryPour(11, 2, out _), Is.True);
+
+            var sb = new StringBuilder();
+            LevelStateSnapshot.WriteHistory(
+                sb, SavedPhase.StuckModal, new[] { AddedCuiaKind.Extra, AddedCuiaKind.Rescue }, true, true, session, balsaShown: true);
+            Assert.That(sb.ToString(), Is.EqualTo("h2|S|ER|gcb|01b2|002b01"));
+            Assert.That(LevelStateSnapshot.TryParseHistory(sb.ToString(), out SavedHistory parsed), Is.True);
+            Assert.That(parsed.Phase, Is.EqualTo(SavedPhase.StuckModal));
+            Assert.That(parsed.Added, Is.EqualTo(new[] { AddedCuiaKind.Extra, AddedCuiaKind.Rescue }));
+            Assert.That(parsed.UndoGiftUsed && parsed.ExtraCuiaGifted && parsed.BalsaShown, Is.True);
+            Assert.That(parsed.Sources, Is.EqualTo(new[] { 0, 11 }));
+            Assert.That(parsed.Targets, Is.EqualTo(new[] { 1, 2 }));
+            Assert.That(parsed.Revealed, Is.EqualTo(new[] { new SavedReveal(0, 0b10), new SavedReveal(11, 0b01) }));
+            for (int i = 0; i < parsed.Revealed.Count; i++)
+            {
+                SavedReveal reveal = parsed.Revealed[i];
+                Assert.That(reveal.Layers, Is.EqualTo(session.RevealedLayers(reveal.Cuia)), "la máscara sale igual (cuia " + reveal.Cuia + ")");
+            }
+
+            // La máscara entera cabe en 2 dígitos (6 capas: Cuia alta de 6) y la cuia 15 en 1.
+            Assert.That(LevelStateSnapshot.TryParseHistory("h2|P||||f3f", out SavedHistory wide), Is.True);
+            Assert.That(wide.Revealed, Is.EqualTo(new[] { new SavedReveal(15, 0x3f) }));
+
+            // Sin capas reveladas, R va vacía.
+            Assert.That(LevelStateSnapshot.TryParseHistory("h2|P|||0102|", out SavedHistory none), Is.True);
+            Assert.That(none.Revealed, Is.Empty);
+            Assert.That(none.Sources, Is.EqualTo(new[] { 0, 0 }));
+            Assert.That(none.Targets, Is.EqualTo(new[] { 1, 2 }));
+        }
+
+        [Test]
+        public void History_H1_StillParses()
+        {
+            // El formato anterior (5 partes, sin R) se sigue leyendo y reanudando; no trae capas reveladas.
+            Assert.That(LevelStateSnapshot.TryParseHistory("h1|P|RE|g|0f1e", out SavedHistory parsed), Is.True);
+            Assert.That(parsed.Phase, Is.EqualTo(SavedPhase.Playing));
+            Assert.That(parsed.Added, Is.EqualTo(new[] { AddedCuiaKind.Rescue, AddedCuiaKind.Extra }));
+            Assert.That(parsed.UndoGiftUsed, Is.True);
+            Assert.That(parsed.Sources, Is.EqualTo(new[] { 0, 1 }));
+            Assert.That(parsed.Targets, Is.EqualTo(new[] { 15, 14 }));
+            Assert.That(parsed.Revealed, Is.Empty);
+
+            var rig = new Rig();
+            rig.Start(7);
+            SolveResult solution = Solve(rig.Flow);
+            for (int i = 0; i < 2; i++)
+            {
+                rig.Flow.TapCuia(solution.GetMove(i).Source);
+                rig.Flow.TapCuia(solution.GetMove(i).Target);
+            }
+
+            LevelStateData saved = LevelStateSnapshot.Copy(rig.Store.Load()!);
+            string h2 = saved.History!;
+            StringAssert.StartsWith("h2|P|||", h2);
+            Assert.That(h2, Does.EndWith("|"), "el tutorial no tiene ocultas: R vacía");
+            saved.History = "h1" + h2.Substring(2, h2.Length - 3); // el mismo estado, escrito por la versión anterior
+            StringAssert.StartsWith("h1|P|||", saved.History);
+
+            Rig again = rig.Reopen();
+            Assert.That(again.Flow.CheckResume(saved), Is.EqualTo(ResumeCheck.Resumable));
+            Assert.That(again.Flow.Resume(saved), Is.True);
+            Assert.That(again.Flow.Session.Current, Is.EqualTo(rig.Flow.Session.Current));
+            Assert.That(again.Flow.Session.AppliedPours, Is.EqualTo(2));
+        }
+
+        [TestCase("h2|P||||0")]
+        [TestCase("h2|P||||00")]
+        [TestCase("h2|P||||0021")]
+        [TestCase("h2|P||||00g")]
+        [TestCase("h2|P||||g02")]
+        [TestCase("h2|P||||0A2")]
+        [TestCase("h2|P||||00 ")]
+        [TestCase("h2|P||||002002")]
+        [TestCase("h2|P||||002101002")]
+        [TestCase("h2|P||||000")]
+        [TestCase("h2|P||||002100")]
+        public void History_H2_RejectsBadRevealSection(string history)
+        {
+            // R es inválida si su longitud no es múltiplo de 3, si lleva algo que no es un dígito hexadecimal en minúscula, si
+            // repite una cuia o si una máscara es 0: el estado se descarta (CheckResume da Invalid y AppFlow lo borra).
+            Assert.That(LevelStateSnapshot.TryParseHistory(history, out _), Is.False);
+            Assert.That(LevelStateSnapshot.TryParseHistory(history.Substring(0, history.LastIndexOf('|')) + "|002", out _), Is.True, "el resto del historial vale");
+
+            var rig = new Rig();
+            rig.Start(7);
+            LevelStateData saved = LevelStateSnapshot.Copy(rig.Store.Load()!);
+            saved.History = history;
+            Assert.That(rig.Reopen().Flow.CheckResume(saved), Is.EqualTo(ResumeCheck.Invalid));
         }
 
         [Test]
@@ -84,9 +204,9 @@ namespace AF.Tests.EditMode
             // o ¿Seguro?, para reabrir el modal tal cual (02 §14; D-008).
             var sb = new StringBuilder();
             LevelStateSnapshot.WriteHistory(sb, SavedPhase.StuckModal, new AddedCuiaKind[0], false, false, null, balsaShown: true);
-            Assert.That(sb.ToString(), Is.EqualTo("h1|S||b|"));
+            Assert.That(sb.ToString(), Is.EqualTo("h2|S||b||"));
             LevelStateSnapshot.WriteHistory(sb, SavedPhase.Playing, new AddedCuiaKind[0], false, false, null, balsaShown: true);
-            Assert.That(sb.ToString(), Is.EqualTo("h1|P|||"), "fuera del bloqueo no se escribe");
+            Assert.That(sb.ToString(), Is.EqualTo("h2|P||||"), "fuera del bloqueo no se escribe");
             Assert.That(LevelStateSnapshot.TryParseHistory("h1|G||cb|", out SavedHistory parsed), Is.True);
             Assert.That(parsed.BalsaShown && parsed.ExtraCuiaGifted, Is.True);
             Assert.That(LevelStateSnapshot.TryParseHistory("h1|S|||34", out SavedHistory plain), Is.True);
@@ -103,19 +223,19 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Flow.BalsaShownThisBlock, Is.False);
             Assert.That(rig.Flow.MarkBalsaShown(), Is.True);
             Assert.That(rig.Flow.MarkBalsaShown(), Is.False, "una vez por bloqueo");
-            StringAssert.StartsWith("h1|S||b|", rig.Store.Load()!.History);
+            StringAssert.StartsWith("h2|S||b|", rig.Store.Load()!.History);
 
             Rig again = rig.Reopen();
             Assert.That(again.Flow.Resume(rig.Store.Load()!), Is.True);
             Assert.That(again.Flow.Phase, Is.EqualTo(FlowPhase.StuckModal));
             Assert.That(again.Flow.BalsaShownThisBlock, Is.True, "el modal reabierto la sigue ofreciendo sin otra impresión");
-            StringAssert.StartsWith("h1|S||b|", again.Store.Load()!.History, "y la marca sigue guardada");
+            StringAssert.StartsWith("h2|S||b|", again.Store.Load()!.History, "y la marca sigue guardada");
 
             Assert.That(again.Flow.PressGiveUp(), Is.True);
             Assert.That(again.Flow.BalsaShownThisBlock, Is.True, "¿Seguro? es el mismo bloqueo");
-            StringAssert.StartsWith("h1|G||b|", again.Store.Load()!.History);
+            StringAssert.StartsWith("h2|G||b|", again.Store.Load()!.History);
             Assert.That(again.Flow.ConfirmGiveUp(), Is.True);
-            StringAssert.StartsWith("h1|F|||", again.Store.Load()!.History, "en Nivel fallido ya no se escribe");
+            StringAssert.StartsWith("h2|F|||", again.Store.Load()!.History, "en Nivel fallido ya no se escribe");
             Assert.That(again.Flow.PressRetry(), Is.True);
             Assert.That(again.Flow.BalsaShownThisBlock, Is.False, "el bloqueo terminó");
         }
@@ -183,7 +303,7 @@ namespace AF.Tests.EditMode
             GetStuck(rig.Flow);
             LevelStateData saved = rig.Store.Load()!;
             Assert.That(saved.Stuck, Is.True);
-            StringAssert.StartsWith("h1|S|", saved.History);
+            StringAssert.StartsWith("h2|S|", saved.History);
 
             Rig again = rig.Reopen();
             Assert.That(again.Flow.Resume(saved), Is.True);
@@ -202,7 +322,7 @@ namespace AF.Tests.EditMode
             rig.Start(31);
             GetStuck(rig.Flow);
             Assert.That(rig.Flow.PressGiveUp(), Is.True);
-            StringAssert.StartsWith("h1|G|", rig.Store.Load()!.History);
+            StringAssert.StartsWith("h2|G|", rig.Store.Load()!.History);
 
             Rig second = rig.Reopen();
             Assert.That(second.Flow.Resume(rig.Store.Load()!), Is.True);
@@ -213,7 +333,7 @@ namespace AF.Tests.EditMode
             Assert.That(second.Flow.ConfirmGiveUp(), Is.True);
             Assert.That(second.Economy.Wallet.Canoes.Count, Is.EqualTo(4));
             Assert.That(second.Flow.Attempt.FailsLevel, Is.EqualTo(1));
-            StringAssert.StartsWith("h1|F|", second.Store.Load()!.History);
+            StringAssert.StartsWith("h2|F|", second.Store.Load()!.History);
 
             Rig third = second.Reopen();
             Assert.That(third.Flow.Resume(second.Store.Load()!), Is.True);
@@ -263,7 +383,7 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Flow.Attempt.FailsLevel, Is.EqualTo(1));
             rig.Flow.LeaveLevel();
             LevelStateData saved = rig.Store.Load()!;
-            Assert.That(saved.History, Is.EqualTo("h1|X|||"));
+            Assert.That(saved.History, Is.EqualTo("h2|X||||"));
             Assert.That(saved.FailsLevel, Is.EqualTo(1));
 
             Rig again = rig.Reopen();
@@ -281,7 +401,7 @@ namespace AF.Tests.EditMode
             Assert.That(withCuia.Store.Load()!.ExtraCuias, Is.EqualTo(1));
             withCuia.Flow.LeaveLevel();
             Assert.That(withCuia.Store.Load()!.ExtraCuias, Is.EqualTo(0));
-            Assert.That(withCuia.Store.Load()!.History, Is.EqualTo("h1|X||c|"));
+            Assert.That(withCuia.Store.Load()!.History, Is.EqualTo("h2|X||c||"));
         }
 
         [Test]
@@ -311,7 +431,7 @@ namespace AF.Tests.EditMode
             again.Flow.Load(8);
             Assert.That(again.Listener.Saw("gift:1"), Is.False, "el regalo queda en level_state");
             Assert.That(again.Economy.Wallet.Stock.Get(BoosterKind.ExtraCuia), Is.EqualTo(0));
-            StringAssert.StartsWith("h1|P||c|", again.Store.Load()!.History);
+            StringAssert.StartsWith("h2|P||c|", again.Store.Load()!.History);
         }
 
         [Test]
@@ -359,7 +479,7 @@ namespace AF.Tests.EditMode
             Assert.That(resumed.Flow.ConfirmGiveUp(), Is.True);
             Assert.That(app.ExitToLobby(), Is.True, "X de Nivel fallido");
             LevelStateData exited = resumed.Store.Load()!;
-            StringAssert.StartsWith("h1|X|", exited.History);
+            StringAssert.StartsWith("h2|X|", exited.History);
 
             Rig later = resumed.Reopen();
             var lobby = new AppFlow(later.Flow, later.Progress, later.Economy.Wallet, new NullApp());
@@ -381,11 +501,11 @@ namespace AF.Tests.EditMode
         {
             var economy = new EconomyFixture();
             var store = new ProfileLevelStateStore(economy.Profile, economy.Store);
-            var state = new LevelStateData { Level = 7, Seed = "amazonfill:v1:m01:v1:n0007", History = "h1|P|||02", Pours = 1 };
+            var state = new LevelStateData { Level = 7, Seed = "amazonfill:v1:m01:v1:n0007", History = "h2|P|||02|", Pours = 1 };
             store.Save(state);
             Profile saved = ProfileJson.Deserialize(economy.Store.Json!);
             Assert.That(saved.LevelState, Is.Not.Null);
-            Assert.That(saved.LevelState!.History, Is.EqualTo("h1|P|||02"));
+            Assert.That(saved.LevelState!.History, Is.EqualTo("h2|P|||02|"));
             Assert.That(store.LastSaveMs, Is.GreaterThanOrEqualTo(0.0));
             store.Clear();
             Assert.That(ProfileJson.Deserialize(economy.Store.Json!).LevelState, Is.Null);
@@ -425,19 +545,25 @@ namespace AF.Tests.EditMode
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.StuckModal));
         }
 
-        /// <summary>Flujo con cartera y nivel en curso en memoria; <see cref="Reopen"/> es «cerrar y abrir la app».</summary>
+        /// <summary>
+        /// Flujo con cartera y nivel en curso en memoria; <see cref="Reopen"/> es «cerrar y abrir la app». Por defecto sobre el
+        /// tutorial; con <paramref name="packs"/>, sobre esos paquetes (p. ej. <see cref="TestPacks.Campaign"/>, niveles 1-200).
+        /// </summary>
         internal sealed class Rig
         {
             private readonly int _offset;
+            private readonly IReadOnlyList<LevelPack> _packs;
 
-            public Rig(int offset = 0, int seeds = 0, MemoryLevelStateStore? store = null, EconomyFixture? economy = null)
+            public Rig(
+                int offset = 0, int seeds = 0, MemoryLevelStateStore? store = null, EconomyFixture? economy = null, IReadOnlyList<LevelPack>? packs = null)
             {
                 _offset = offset;
+                _packs = packs ?? new[] { TestPacks.Tutorial };
                 Economy = economy ?? new EconomyFixture(seeds);
                 Store = store ?? new MemoryLevelStateStore();
                 Listener = new RecordingListener();
                 Progress = new MemoryProgressStore();
-                Flow = new LevelFlow(LevelCatalog.Create(new[] { TestPacks.Tutorial }, offset), Progress, Listener, GameConfig.TapSwitchSelection, PourModes.Default, Economy.Wallet)
+                Flow = new LevelFlow(LevelCatalog.Create(_packs, offset), Progress, Listener, GameConfig.TapSwitchSelection, PourModes.Default, Economy.Wallet)
                 {
                     StateStore = Store,
                 };
@@ -455,7 +581,7 @@ namespace AF.Tests.EditMode
 
             public Rig Reopen()
             {
-                return new Rig(_offset, store: Store, economy: Economy);
+                return new Rig(_offset, store: Store, economy: Economy, packs: _packs);
             }
 
             public void Start(int level)

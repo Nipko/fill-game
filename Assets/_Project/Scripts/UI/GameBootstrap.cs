@@ -274,7 +274,9 @@ namespace AF.UI
         /// <summary>«+1 cuia» de la bandeja (04 §2.2): del stock o por 150 semillas.</summary>
         public bool PressExtraCuia()
         {
-            TransactionResult? result = _flow != null && InLevel ? _flow.UseExtraCuia() : null;
+            LevelFlow? flow = InLevel ? _flow : null;
+            TransactionResult? result = flow?.UseExtraCuia();
+            LogFunnelError(flow, result, "Cuia extra");
             return result != null && result.IsApplied;
         }
 
@@ -314,8 +316,20 @@ namespace AF.UI
         /// <summary>«Continuar: +1 cuia» en Aguas estancadas o en ¿Seguro?</summary>
         public bool PressRescue()
         {
-            TransactionResult? result = _flow != null && InLevel ? _flow.BuyRescue() : null;
+            LevelFlow? flow = InLevel ? _flow : null;
+            TransactionResult? result = flow?.BuyRescue();
+            LogFunnelError(flow, result, "Cuia de rescate");
             return result != null && result.IsApplied;
+        }
+
+        // AF.GameFlow no tiene motor: el «no aplicado» que no es cosa del jugador (LevelFlow.LastFunnelError, p. ej. un
+        // historial que no se pudo rehacer con la cuia añadida; no se cobró nada) se registra aquí, con el nivel.
+        private static void LogFunnelError(LevelFlow? flow, TransactionResult? result, string action)
+        {
+            if (flow != null && result == null && flow.LastFunnelError != null)
+            {
+                Debug.LogError(LogPrefix + "nivel " + flow.LevelNumber + ": " + action + " no aplicada (" + flow.LastFunnelError + "); no se cobró nada.");
+            }
         }
 
         /// <summary>Puñado de semillas (<c>af_coins_2</c>) desde el modal sin saldo: compra simulada (04 §6.2 <c>PUÑADO_199</c>).</summary>

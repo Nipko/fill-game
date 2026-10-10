@@ -1,5 +1,5 @@
 #nullable enable
-using System;
+using System.Diagnostics.CodeAnalysis;
 using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Rules;
@@ -17,10 +17,24 @@ namespace AF.GameFlow
     /// </summary>
     public sealed partial class LevelFlow
     {
+        /// <summary>
+        /// <see cref="LastFunnelError"/>: no se pudo rehacer el historial con la cuia añadida (Cuia extra, Cuia de rescate o
+        /// Balsa), así que ni se añadió la cuia ni se cobró.
+        /// </summary>
+        public const string AddCuiaReplayError = "add_cuia_replay";
+
         private RescueCheck _rescueCheck;
         private RescueQuote? _quote;
         private FlowPhase _noCanoesReturn = FlowPhase.LevelFailed;
         private bool _balsaShown;
+
+        /// <summary>
+        /// Por qué la última acción del embudo o de la bandeja no se aplicó sin que sea cosa del jugador (null si no falló
+        /// así). Hoy solo <see cref="AddCuiaReplayError"/>: la acción devuelve su «no aplicado» de siempre (null o false), no
+        /// cobra nada ni cambia la sesión ni la fase (04 §2.5 d: nunca se cobra sin entregar). Se borra al empezar cada acción
+        /// del embudo. <c>AF.GameFlow</c> no tiene motor: lo registra quien llama (<c>GameBootstrap</c>).
+        /// </summary>
+        public string? LastFunnelError { get; private set; }
 
         /// <summary>Resultado de «la compra cumple» del bloqueo en curso (04 §6.4).</summary>
         public RescueCheck RescueCheck => _rescueCheck;
@@ -129,6 +143,7 @@ namespace AF.GameFlow
         /// </summary>
         public bool MarkBalsaShown()
         {
+            LastFunnelError = null;
             if (_balsaShown || !(Phase == FlowPhase.StuckModal || Phase == FlowPhase.GiveUpConfirm))
             {
                 return false;
@@ -146,13 +161,23 @@ namespace AF.GameFlow
         /// <summary>
         /// Cuia extra (04 §2.2): con el tablero en juego y algún vertido útil, gasta una del stock o
         /// <c>extra_cuia_seed_price</c> semillas y añade una cuia vacía de capacidad 4 (fila más corta; persiste al reiniciar;
-        /// Marea no la quita). Null si no se puede usar ahora; un resultado rechazado si faltan semillas (no cambia nada).
+        /// Marea no la quita; conserva las capas ya reveladas, 02 §11 T6). Null si no se puede usar ahora, también si el
+        /// historial no se puede rehacer con la cuia (<see cref="LastFunnelError"/>; no se cobra nada); un resultado rechazado
+        /// si faltan semillas (no cambia nada).
         /// </summary>
         public TransactionResult? UseExtraCuia()
         {
+            LastFunnelError = null;
             ExtraCuiaOffer offer = ExtraCuia;
             if (_wallet == null || offer.State != ExtraCuiaState.Ready)
             {
+                return null;
+            }
+
+            // Primero la sesión con la cuia, sin tocar la actual: si no se puede rehacer, ni se cobra ni se añade (04 §2.5 d).
+            if (!TryRebuildWithAddedCuia(out LevelSession? rebuilt))
+            {
+                LastFunnelError = AddCuiaReplayError;
                 return null;
             }
 
@@ -162,10 +187,10 @@ namespace AF.GameFlow
                 TransactionResult paid = ExtraCuiaBooster.Pay(_wallet);
                 if (!paid.IsApplied)
                 {
-                    return paid;
+                    return paid; // la sesión rehecha no se instaló: sigue la de antes
                 }
 
-                int index = AddCuia(AddedCuiaKind.Extra);
+                int index = InstallAddedCuia(rebuilt, AddedCuiaKind.Extra);
                 _listener.OnCuiaAdded(index, AddedCuiaKind.Extra);
                 PersistState(); // el cobro y la cuia añadida, en la misma escritura del perfil
                 return paid;
@@ -175,6 +200,7 @@ namespace AF.GameFlow
         /// <summary>«+3 Deshacer · 30 semillas» (04 §2.1): +<c>undo_refill_amount</c> Mareas al stock. Null sin cartera o fuera de juego.</summary>
         public TransactionResult? RefillUndoWithSeeds()
         {
+            LastFunnelError = null;
             if (_wallet == null || _session == null || !UndoAllowedHere)
             {
                 return null;
@@ -189,12 +215,14 @@ namespace AF.GameFlow
         /// </summary>
         public bool GrantUndoRefill()
         {
+            LastFunnelError = null;
             return _wallet != null && _wallet.Apply(Transaction.GrantStock(BoosterKind.Undo, _wallet.Config.UndoRefillAmount)).IsApplied;
         }
 
         /// <summary>Rama F [P] (04 §6.3): sin cupo y sin rescate que vender, una recarga gratis de +1 Marea, una vez por nivel.</summary>
         public bool GrantUndoGift()
         {
+            LastFunnelError = null;
             if (_wallet == null || Phase != FlowPhase.StuckModal || _attempt.UndoGiftUsed || _rescueCheck != RescueCheck.Unsolvable)
             {
                 return false;
@@ -216,13 +244,23 @@ namespace AF.GameFlow
         /// <summary>
         /// «Continuar: +1 cuia» en Aguas estancadas o en ¿Seguro? (04 §6.2 <c>RESCUE</c>): cobra el precio congelado
         /// (<see cref="Transaction.Rescue"/>), añade la cuia, cierra el embudo y la partida sigue en PLAYING; conserva la
-        /// Crecida y no cuesta canoa. El cobro y el <c>level_state</c> con la cuia van en la misma escritura del perfil: un
-        /// cierre entre los dos no reabre el modal ya cobrado. Null si no se ofrece; un resultado rechazado si faltan semillas.
+        /// Crecida, las capas ya reveladas (02 §11 T6) y no cuesta canoa. El cobro y el <c>level_state</c> con la cuia van en la
+        /// misma escritura del perfil: un cierre entre los dos no reabre el modal ya cobrado. Null si no se ofrece, también si
+        /// el historial no se puede rehacer con la cuia (<see cref="LastFunnelError"/>; no se cobra nada); un resultado
+        /// rechazado si faltan semillas.
         /// </summary>
         public TransactionResult? BuyRescue()
         {
+            LastFunnelError = null;
             if (_wallet == null || !RescueOffered)
             {
+                return null;
+            }
+
+            // Primero la sesión con la cuia, sin tocar la actual: si no se puede rehacer, ni se cobra ni se añade (04 §2.5 d).
+            if (!TryRebuildWithAddedCuia(out LevelSession? rebuilt))
+            {
+                LastFunnelError = AddCuiaReplayError;
                 return null;
             }
 
@@ -231,26 +269,34 @@ namespace AF.GameFlow
                 TransactionResult paid = _wallet.Apply(Transaction.Rescue(LevelNumber, _quote!.Value.Price));
                 if (paid.IsApplied)
                 {
-                    ApplyRescueCuia();
+                    ApplyRescueCuia(rebuilt);
                 }
 
-                return paid;
+                return paid; // rechazado: la sesión rehecha no se instaló y sigue la de antes
             }
         }
 
         /// <summary>
         /// Balsa de rescate comprada (<c>af_rescue</c>; la tienda ya acreditó semillas, Cuia extra al stock y Canoas infinitas):
-        /// aplica la Cuia de rescate sin coste en semillas (04 §6.2 <c>BALSA_499</c>).
+        /// aplica la Cuia de rescate sin coste en semillas (04 §6.2 <c>BALSA_499</c>). False si no se puede, también si el
+        /// historial no se puede rehacer con la cuia (<see cref="LastFunnelError"/>).
         /// </summary>
         public bool ApplyPaidRescue()
         {
+            LastFunnelError = null;
             if (!(Phase == FlowPhase.StuckModal || Phase == FlowPhase.GiveUpConfirm) || _session == null
                 || _session.Current.Count >= BoardState.MaxCuias || _attempt.Rescues >= _boosters.RescueMaxPerLevel)
             {
                 return false;
             }
 
-            ApplyRescueCuia();
+            if (!TryRebuildWithAddedCuia(out LevelSession? rebuilt))
+            {
+                LastFunnelError = AddCuiaReplayError;
+                return false;
+            }
+
+            ApplyRescueCuia(rebuilt);
             return true;
         }
 
@@ -261,6 +307,7 @@ namespace AF.GameFlow
         /// </summary>
         public bool PressGiveUp()
         {
+            LastFunnelError = null;
             if (Phase != FlowPhase.StuckModal || !CanoesLevel)
             {
                 return false;
@@ -281,6 +328,7 @@ namespace AF.GameFlow
         /// <summary>X o «Rendirse» en ¿Seguro? (D-008, paso 2 → 3): fallo duro (−1 canoa) y Nivel fallido.</summary>
         public bool ConfirmGiveUp()
         {
+            LastFunnelError = null;
             if (Phase != FlowPhase.GiveUpConfirm)
             {
                 return false;
@@ -296,6 +344,7 @@ namespace AF.GameFlow
         /// </summary>
         public bool PressRetry()
         {
+            LastFunnelError = null;
             if (Phase != FlowPhase.LevelFailed || _session == null)
             {
                 return false;
@@ -318,6 +367,7 @@ namespace AF.GameFlow
         /// </summary>
         public bool CloseNoCanoes()
         {
+            LastFunnelError = null;
             if (Phase != FlowPhase.NoCanoes)
             {
                 return false;
@@ -334,6 +384,7 @@ namespace AF.GameFlow
         /// </summary>
         public bool ConfirmQuit()
         {
+            LastFunnelError = null;
             if (!CanQuit || !QuitIsHardFail)
             {
                 return false;
@@ -344,11 +395,12 @@ namespace AF.GameFlow
             return true;
         }
 
-        private void ApplyRescueCuia()
+        // Instala la sesión rehecha con la Cuia de rescate (ya cobrada o de la Balsa), cierra el embudo y sigue en PLAYING.
+        private void ApplyRescueCuia(LevelSession rebuilt)
         {
             using (Saves())
             {
-                int index = AddCuia(AddedCuiaKind.Rescue);
+                int index = InstallAddedCuia(rebuilt, AddedCuiaKind.Rescue);
                 _taps.Clear();
                 ResetPending();
                 ResetStuck();
@@ -359,26 +411,53 @@ namespace AF.GameFlow
             }
         }
 
-        // Añade una cuia vacía de capacidad 4 al final del tablero (04 §2.2), que persiste al reiniciar y que Marea no quita
-        // (02 §14). Hasta que el núcleo tenga LevelSession.AddEmptyCuia (tarea C1 de la pista A), la sesión se rehace con el
-        // tablero inicial + la cuia y se vuelven a aplicar los vertidos del historial con las reglas del núcleo: la cuia nueva
-        // va al final, así que los índices y las cantidades no cambian y el historial de Marea se conserva.
-        private int AddCuia(AddedCuiaKind kind)
+        // Primer paso de añadir una cuia vacía de capacidad 4 al final del tablero (04 §2.2), que persiste al reiniciar y que
+        // Marea no quita (02 §14). Hasta que el núcleo tenga LevelSession.AddEmptyCuia (tarea C1 de la pista A), la sesión se
+        // rehace con el tablero inicial + la cuia y se vuelven a aplicar los vertidos del historial con las reglas del núcleo:
+        // la cuia nueva va al final, así que los índices y las cantidades no cambian y el historial de Marea se conserva.
+        // Después se restauran las capas reveladas de cada cuia antigua (02 §11 T6: el conocimiento no se revierte; ver
+        // TryRestoreRevealed). Construye la sesión sin tocar la actual ni el intento y no lanza: false si algún vertido no se
+        // puede rehacer igual (otra cantidad) o alguna máscara no se puede restaurar; entonces quien llama no cobra ni añade
+        // nada (04 §2.5 d). Quien llama cobra después, si hace falta, e instala con InstallAddedCuia solo si el cobro se aplicó:
+        // así un cobro rechazado deja la sesión anterior tal cual, sin nada que deshacer.
+        private bool TryRebuildWithAddedCuia([NotNullWhen(true)] out LevelSession? rebuilt)
         {
-            LevelSession old = _session ?? throw new InvalidOperationException("No hay ningún nivel cargado.");
+            rebuilt = null;
+            LevelSession? old = _session;
+            if (old == null || old.Initial.Count >= BoardState.MaxCuias)
+            {
+                return false;
+            }
+
             var session = new LevelSession(RescueBooster.WithEmptyCuia(old.Initial), old.FutileRuleEnabled, old.PourMode);
             for (int i = 0; i < old.AppliedPours; i++)
             {
                 Pour pour = old.GetAppliedPour(i);
                 if (!session.TryPour(pour.Source, pour.Target, out PourResult replayed) || replayed.Pour.Amount != pour.Amount)
                 {
-                    throw new InvalidOperationException("No se pudo rehacer el historial con la cuia añadida (vertido " + i + ").");
+                    return false;
                 }
             }
 
-            _session = session;
+            for (int c = 0; c < old.Initial.Count; c++)
+            {
+                int layers = old.RevealedLayers(c);
+                if (layers != 0 && !TryRestoreRevealed(session, c, layers))
+                {
+                    return false;
+                }
+            }
+
+            rebuilt = session;
+            return true;
+        }
+
+        // Segundo paso: instala la sesión rehecha y anota la cuia en el intento. Devuelve el índice de la cuia nueva.
+        private int InstallAddedCuia(LevelSession rebuilt, AddedCuiaKind kind)
+        {
+            _session = rebuilt;
             _attempt.AddCuia(kind);
-            return session.Current.Count - 1;
+            return rebuilt.Current.Count - 1;
         }
 
         private void CheckRescue()

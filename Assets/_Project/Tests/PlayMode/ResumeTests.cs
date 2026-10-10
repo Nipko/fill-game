@@ -159,7 +159,7 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.View.Stuck.BalsaButton.gameObject.activeSelf, Is.True);
             Assert.That(boot.Services!.StoreLedger.BalsaShownToday, Is.EqualTo(1), "la impresión cuenta para el tope diario");
             Assert.That(boot.Services.StoreLedger.CanOfferBalsa(31), Is.False, "af_rescue_daily_cap = 1: ya no se ofrecería en otro bloqueo");
-            StringAssert.StartsWith("h1|S||b|", ProfileJson.Deserialize(store.Json!).LevelState!.History, "la Balsa enseñada queda en level_state");
+            StringAssert.StartsWith("h2|S||b|", ProfileJson.Deserialize(store.Json!).LevelState!.History, "la Balsa enseñada queda en level_state");
 
             yield return PlayModeHelpers.LoadApp(store); // como cerrar y abrir la app
             GameBootstrap again = GameBootstrap.Current!;
@@ -179,7 +179,51 @@ namespace AF.Tests.PlayMode
             Assert.That(again.PressUndo(), Is.True);
             Assert.That(again.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
             Assert.That(again.Flow.BalsaShownThisBlock, Is.False);
-            StringAssert.StartsWith("h1|P|||", ProfileJson.Deserialize(store.Json!).LevelState!.History);
+            StringAssert.StartsWith("h2|P|||", ProfileJson.Deserialize(store.Json!).LevelState!.History);
+        }
+
+        [UnityTest]
+        public IEnumerator Resume_MurkyLevel_KeepsRevealedLayers()
+        {
+            // Tarea T06 (02 R8, §11 T6 y §14): nivel 100 del catálogo real de la escena, estreno de Aguas turbias (cuia 0 =
+            // [10*, 8*, 6]). 0 → 1 revela la capa 1 (R7) y Marea lo deshace sin volver a ocultarla (I5). Al cerrar y abrir la
+            // app, el nivel se reabre con esa capa revelada (sección R de history h2) y la vista la enseña; antes se volvía a
+            // ocultar, porque ningún vertido del historial la revela al rehacerlo.
+            var store = new MemoryProfileStore(FunnelSetup.Profile(0));
+            LaunchOptions.ProfileStoreOverride = store;
+            yield return PlayModeHelpers.LoadGame(100, new MemoryProgressStore(100, 99));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            LevelFlow flow = boot.Flow!;
+            Assert.That(flow.Level.IsMurky, Is.True);
+            Assert.That(flow.Session.Current[0].HiddenMask, Is.EqualTo(0b11));
+            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(1).Kind, Is.EqualTo(TapKind.Poured));
+            PlayModeHelpers.StepUntilIdle(boot, 4000);
+            Assert.That(flow.Session.RevealedLayers(0), Is.EqualTo(0b10), "R7: la capa 1 queda arriba y se revela");
+            Assert.That(boot.PressUndo(), Is.True);
+            PlayModeHelpers.StepUntilIdle(boot, 4000);
+            BoardState board = flow.Session.Current;
+            Assert.That(board[0].HiddenMask, Is.EqualTo(0b01), "I5: Marea no la vuelve a ocultar");
+            Assert.That(boot.View!.Views[0].ShownCuia.HiddenMask, Is.EqualTo(0b01));
+            LevelStateData saved = ProfileJson.Deserialize(store.Json!).LevelState!;
+            Assert.That(saved.History, Is.EqualTo("h2|P||||002"), "R: capa 1 (0b10) de la cuia 0");
+            Assert.That(saved.RevealedCuias, Is.EqualTo(new[] { 0 }), "revealed_cuias sigue igual, por compatibilidad");
+
+            yield return PlayModeHelpers.LoadApp(store); // como cerrar y abrir la app
+            GameBootstrap again = GameBootstrap.Current!;
+            Assert.That(again, Is.Not.SameAs(boot));
+            PlayModeHelpers.TakeClock(again);
+            PlayModeHelpers.Step(again, 50);
+            Assert.That(again.App!.Screen, Is.EqualTo(AppScreen.Level), "reabre el nivel");
+            LevelFlow resumed = again.Flow!;
+            Assert.That(resumed.LevelNumber, Is.EqualTo(100));
+            Assert.That(resumed.Phase, Is.EqualTo(FlowPhase.Playing), "sin intro (02 §14)");
+            Assert.That(resumed.Session.RevealedLayers(0), Is.EqualTo(0b10), "02 T6: lo revelado sigue revelado");
+            Assert.That(resumed.Session.Current, Is.EqualTo(board), "el mismo tablero, con la capa 1 a la vista");
+            Assert.That(again.View!.Views[0].ShownCuia.HiddenMask, Is.EqualTo(0b01), "la vista enseña la capa revelada y oculta la otra");
         }
 
         [UnityTest]
