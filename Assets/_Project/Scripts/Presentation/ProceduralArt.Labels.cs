@@ -11,7 +11,8 @@ namespace AF.Presentation
     /// «×3»/«×4» de agua profunda colgada de una anilla de fibra; la píldora ámbar o índigo del chip; la banda de color de las
     /// cabeceras de ¿Seguro? y Nivel fallido; y la variante nocturna del botón «Jugar · Nivel {n}». Todo se genera de forma
     /// perezosa la primera vez que se pide (un inicio sin etiqueta no crea ninguna textura) y, tras <see cref="Dispose"/>, los
-    /// sprites destruidos se vuelven a generar (el == de Unity). Lo sustituye el arte del artista.
+    /// sprites destruidos se vuelven a generar (el == de Unity). Lo sustituye el arte del artista. Los sellos de fauna (rana
+    /// dardo y jaguar) quedan pendientes de revisión del asesor cultural (07 §8.2).
     /// </summary>
     public sealed partial class ProceduralArt
     {
@@ -80,12 +81,14 @@ namespace AF.Presentation
         /// <summary>
         /// Sello de Difícil (32 dp): rana dardo naranja con manchas y patas negras, vista desde arriba, sobre un disco marfil
         /// cálido con aro ámbar tostado (07 §7.7; glosario §6.1). Lo reutilizan el HUD (T09) y la tarjeta previa (T13).
+        /// Pendiente de revisión del asesor cultural (07 §8.2).
         /// </summary>
         public Sprite RanaDardo => _ranaDardo != null ? _ranaDardo : (_ranaDardo = BuildRanaDardo());
 
         /// <summary>
         /// Sello de Muy difícil (32 dp): cabeza de jaguar de perfil con rosetas, solo el animal (07 §7.7), sobre un disco de
-        /// noche índigo con dos estrellas y aro índigo oscuro con un filete marfil.
+        /// noche índigo con dos estrellas y aro índigo oscuro con un filete marfil. Pendiente de revisión del asesor cultural
+        /// (07 §8.2).
         /// </summary>
         public Sprite JaguarHead => _jaguarHead != null ? _jaguarHead : (_jaguarHead = BuildJaguarHead());
 

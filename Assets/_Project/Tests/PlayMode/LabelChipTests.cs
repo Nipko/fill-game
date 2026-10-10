@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections;
 using System.Collections.Generic;
+using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Session;
 using AF.GameFlow;
@@ -48,6 +49,7 @@ namespace AF.Tests.PlayMode
             Assert.That(chip.VeryHard, Is.False);
             Assert.That(chip.Icon!.name, Is.EqualTo("label_rana_dardo"));
             Assert.That(chip.PillColor, Is.EqualTo((Color)Palette.UiAmber));
+            Assert.That(chip.PillSprite!.name, Is.EqualTo("label_pill_hard"), "la píldora pintada es la ámbar");
             Assert.That(chip.TextColor, Is.EqualTo((Color)Palette.Ink), "texto tinta");
             Assert.That(lobby.PlayNight, Is.False, "en Difícil el botón sigue verde");
             Assert.That(lobby.PlayFaceSprite!.name, Does.Contain("cta_leaf_large"));
@@ -66,6 +68,7 @@ namespace AF.Tests.PlayMode
             Assert.That(chip.VeryHard, Is.True);
             Assert.That(chip.Icon!.name, Is.EqualTo("label_jaguar_head"));
             Assert.That(chip.PillColor, Is.EqualTo((Color)Palette.UiIndigo));
+            Assert.That(chip.PillSprite!.name, Is.EqualTo("label_pill_very_hard"), "la píldora pintada es la índigo");
             Assert.That(chip.TextColor, Is.EqualTo((Color)Palette.UiPaper), "texto marfil");
             Assert.That(lobby.PlayNight, Is.True, "propuesta §c.1: el botón en variante nocturna");
             Assert.That(lobby.PlayFaceSprite!.name, Does.Contain("cta_night_large"));
@@ -120,6 +123,22 @@ namespace AF.Tests.PlayMode
             Assert.That(view.GiveUp.Label, Is.EqualTo("very_hard"));
             Assert.That(view.GiveUp.HeaderBand, Is.EqualTo((Color?)Palette.UiIndigo), "cabecera índigo (propuesta §c.1)");
             Assert.That(view.GiveUp.TitleColor, Is.EqualTo((Color)Palette.UiPaper), "marfil sobre índigo, 10,7:1");
+            Assert.That(view.GiveUp.HeaderBadge!.name, Is.EqualTo("label_jaguar_head"));
+
+            // SetLabel a mano en ¿Seguro? abierto da lo mismo que el gancho en el siguiente Show: ámbar con la rana en Difícil y
+            // de vuelta al índigo con el jaguar en Muy difícil.
+            LevelFlow flow = boot.Flow!;
+            float w = view.CanvasWidth;
+            float h = 780f;
+            view.GiveUp.SetLabel("hard");
+            view.GiveUp.Show(StuckModalModel.BuildGiveUpConfirm(flow.BuildStuckContext(false, true, GeoTier.T3)), w, h);
+            Assert.That(view.GiveUp.HeaderBand, Is.EqualTo((Color?)Palette.UiAmber), "cabecera ámbar en Difícil");
+            Assert.That(view.GiveUp.TitleColor, Is.EqualTo((Color)Palette.Ink), "tinta sobre ámbar, 5,4:1");
+            Assert.That(view.GiveUp.HeaderBadge!.name, Is.EqualTo("label_rana_dardo"));
+            view.GiveUp.SetLabel("very_hard");
+            view.GiveUp.Show(StuckModalModel.BuildGiveUpConfirm(flow.BuildStuckContext(false, true, GeoTier.T3)), w, h);
+            Assert.That(view.GiveUp.HeaderBand, Is.EqualTo((Color?)Palette.UiIndigo));
+            Assert.That(view.GiveUp.TitleColor, Is.EqualTo((Color)Palette.UiPaper));
             Assert.That(view.GiveUp.HeaderBadge!.name, Is.EqualTo("label_jaguar_head"));
 
             // Y Nivel fallido, el paso siguiente, también.

@@ -13,7 +13,8 @@ namespace AF.UI
     /// reutilizable en el inicio (sobre «Jugar · Nivel {n}»), en Siguiente y en el HUD (T09): píldora de 26 dp ámbar
     /// <c>ui_ambar</c> con texto tinta y el sello de la rana dardo (Difícil) o índigo <c>ui_indigo</c> con texto marfil y el sello
     /// del jaguar (Muy difícil), y la cinta «×3»/«×4» colgada de su anilla a la derecha (como la «x5» de Magic Sort, ficha
-    /// §3.6). Sin calavera (glosario §6.1). En <c>normal</c> se oculta.
+    /// §3.6). Sin calavera (glosario §6.1). En <c>normal</c> se oculta. Los sellos de fauna (rana dardo y jaguar) quedan
+    /// pendientes de revisión del asesor cultural (07 §8.2).
     /// </summary>
     /// <remarks>
     /// Geometría (dp, desde la esquina superior izquierda de <see cref="Root"/>): el sello de <see cref="MedallionDp"/> a la
@@ -97,8 +98,17 @@ namespace AF.UI
         /// <summary>Sello mostrado (rana dardo o jaguar).</summary>
         public Sprite? Icon => _medallion.sprite;
 
-        /// <summary>Color de la píldora (el del token: <c>ui_ambar</c> o <c>ui_indigo</c>).</summary>
+        /// <summary>
+        /// Color del token de la etiqueta aplicada (<c>ui_ambar</c> o <c>ui_indigo</c>). Se deduce de <see cref="Label"/>, no de lo
+        /// que se pinta: para comprobar la píldora real, <see cref="PillSprite"/>.
+        /// </summary>
         public Color PillColor => VeryHard ? (Color)Palette.UiIndigo : (Color)Palette.UiAmber;
+
+        /// <summary>
+        /// Sprite que pinta la píldora (<c>label_pill_hard</c> o <c>label_pill_very_hard</c>, de
+        /// <see cref="ProceduralArt.DifficultyPill"/>), o null antes del primer <see cref="Set"/> con etiqueta.
+        /// </summary>
+        public Sprite? PillSprite => _pill.sprite;
 
         /// <summary>Color del texto de la píldora (tinta o marfil).</summary>
         public Color TextColor => _text.color;

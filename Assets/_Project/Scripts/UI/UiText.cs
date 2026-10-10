@@ -96,7 +96,10 @@ namespace AF.UI
         /// <summary>Subtítulo temático de Difícil (glosario §6.1; 02 §10): «Aguas bravas».</summary>
         public const string DifficultySubtitleHard = "Aguas bravas";
 
-        /// <summary>Subtítulo temático de Muy difícil (glosario §6.1; 02 §10): «Noche de jaguar».</summary>
+        /// <summary>
+        /// Subtítulo temático de Muy difícil (glosario §6.1; 02 §10): «Noche de jaguar». Nombra fauna: pendiente de revisión del
+        /// asesor cultural (07 §8.2).
+        /// </summary>
         public const string DifficultySubtitleVeryHard = "Noche de jaguar";
 
         /// <summary>
@@ -316,6 +319,7 @@ namespace AF.UI
         /// <summary>
         /// Subtítulo temático de <c>difficulty.label</c> («Aguas bravas» o «Noche de jaguar», glosario §6.1), o null en
         /// <c>normal</c> o con <c>ui_show_difficulty_subtitles</c> apagado (<see cref="GameConfig.UiShowDifficultySubtitles"/>).
+        /// Pendientes de revisión del asesor cultural (07 §8.2).
         /// </summary>
         public static string? DifficultySubtitle(string? label)
         {
