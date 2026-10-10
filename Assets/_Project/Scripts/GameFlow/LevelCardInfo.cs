@@ -39,7 +39,7 @@ namespace AF.GameFlow
         /// <param name="hasMud">Alguna cuia lleva Barro (02 §9.1 M5).</param>
         /// <param name="hasSmallCuia">Alguna cuia es una Cuia chica (02 §8).</param>
         /// <param name="hasTallCuia">Alguna cuia es una Cuia alta (02 §8).</param>
-        /// <param name="isMurky">Nivel de Aguas turbias con dosis ocultas en el tablero servido (02 §11; 07 §7.7).</param>
+        /// <param name="isMurky"><c>murky</c> del nivel: Aguas turbias (02 §11; 07 §7.7).</param>
         /// <param name="revealGifted">Al cargar este nivel se regaló una Luciérnaga (04 §2.5).</param>
         /// <exception cref="ArgumentException">Sin etiqueta y sin estreno no hay tarjeta, o la etiqueta no es de 08 §4.1.</exception>
         public LevelCardInfo(
@@ -115,7 +115,11 @@ namespace AF.GameFlow
         /// <summary>Alguna cuia es una Cuia alta (capacidad mayor que 4, 02 §8).</summary>
         public bool HasTallCuia { get; }
 
-        /// <summary>Nivel de Aguas turbias con dosis ocultas en el tablero servido: chip «?» (02 §11; 07 §7.7).</summary>
+        /// <summary>
+        /// Nivel de Aguas turbias (<see cref="LevelDefinition.IsMurky"/>): chip gris-pardo «?» (02 §11; 07 §7.7). Es la misma
+        /// regla que el chip del HUD (<c>flow.Level.IsMurky</c>), así que los dos coinciden también en la variante aliviada,
+        /// cuyo tablero no tiene ocultas: el modificador es del nivel, no del tablero servido.
+        /// </summary>
         public bool IsMurky { get; }
 
         /// <summary>Al cargar este nivel se regaló una Luciérnaga (04 §2.5): la tarjeta enseña «+1 Luciérnaga».</summary>
@@ -143,10 +147,10 @@ namespace AF.GameFlow
 
         /// <summary>
         /// Tarjeta del nivel <paramref name="level"/> con el número de campaña <paramref name="levelNumber"/>, o null si no
-        /// tiene (<see cref="Shows"/>). <paramref name="hasHidden"/>: el tablero servido tiene dosis ocultas (los tableros de
-        /// alivio no tienen). El premio sale de <paramref name="economy"/>, como la Cosecha.
+        /// tiene (<see cref="Shows"/>). El premio sale de <paramref name="economy"/>, como la Cosecha; el chip «?» sale de
+        /// <see cref="LevelDefinition.IsMurky"/>, como el del HUD.
         /// </summary>
-        public static LevelCardInfo? For(LevelDefinition level, int levelNumber, EconomyConfig economy, bool hasHidden, bool revealGifted)
+        public static LevelCardInfo? For(LevelDefinition level, int levelNumber, EconomyConfig economy, bool revealGifted)
         {
             if (economy == null)
             {
@@ -178,7 +182,7 @@ namespace AF.GameFlow
                 level.HasMud,
                 level.HasSmallCuia,
                 level.HasTallCuia,
-                level.IsMurky && hasHidden,
+                level.IsMurky,
                 revealGifted);
         }
 

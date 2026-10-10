@@ -69,7 +69,7 @@ namespace AF.GameFlow
             }
 
             EconomyConfig economy = _wallet?.Config ?? EconomyConfig.Defaults;
-            LevelCardInfo? card = LevelCardInfo.For(_level, _levelNumber, economy, _session.Initial.HasHidden, revealGifted);
+            LevelCardInfo? card = LevelCardInfo.For(_level, _levelNumber, economy, revealGifted);
             if (card == null)
             {
                 return false;

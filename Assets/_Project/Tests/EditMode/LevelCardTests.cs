@@ -1,4 +1,5 @@
 #nullable enable
+using AF.Boosters;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
 using AF.Economy;
@@ -204,6 +205,102 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Card_OnRetry_WithRelief_CardThenRiverLoweredThenShortIntro()
+        {
+            // [P] Con LevelCardOnRetry, el reintento que sirve la variante aliviada (04 §2.7: al tercer fallo desde el 31) enseña
+            // antes la tarjeta; al cerrarla llegan el cartel «El río bajó» y la intro corta que lo incluye. El cartel sale una vez.
+            LevelStateTests.Rig rig = CardRig();
+            rig.Flow.LevelCardOnRetry = true;
+            LoadCard(rig, 40);
+            StartPlaying(rig.Flow);
+            int baseCount = rig.Flow.Session.Current.Count;
+            Assert.That(rig.Flow.Level.Relief.Count, Is.GreaterThan(0), "03 §13: relief desde el 31");
+            string reliefType = rig.Flow.Level.Relief[0].Type;
+            int banner = BoosterConfig.Defaults.AnimRiverLoweredBannerMs;
+            int shortIntro = GameConfig.AnimTintDurationMsLate;
+
+            // Desde el 31, «Salir» es fallo duro (D-008). Los dos primeros reintentos: la misma semilla, con la tarjeta.
+            for (int fail = 1; fail <= 2; fail++)
+            {
+                Assert.That(rig.Flow.ConfirmQuit(), Is.True, "fallo duro " + fail);
+                Assert.That(rig.Flow.PressRetry(), Is.True);
+                Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
+                Assert.That(rig.Flow.Session.Current.Count, Is.EqualTo(baseCount), "misma semilla hasta el tercer fallo");
+                Assert.That(rig.Flow.DismissLevelCard(), Is.True);
+                Assert.That(rig.Flow.TapAnywhere(), Is.True);
+                Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            }
+
+            Assert.That(RiverEvents(rig), Is.EqualTo(0));
+
+            // Tercer fallo: variante aliviada; la tarjeta va primero y el cartel espera a cerrarla.
+            Assert.That(rig.Flow.ConfirmQuit(), Is.True, "fallo duro 3");
+            int from = rig.Listener.Events.Count;
+            Assert.That(rig.Flow.PressRetry(), Is.True);
+            Assert.That(rig.Flow.Attempt.FailsLevel, Is.EqualTo(3));
+            Assert.That(rig.Flow.Attempt.ReliefIndex, Is.EqualTo(0));
+            Assert.That(rig.Flow.Session.Current.Count, Is.EqualTo(rig.Flow.Level.Relief[0].CuiaCount));
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
+            Assert.That(rig.Flow.LevelCard!.Kind, Is.EqualTo(LevelCardKind.Difficulty));
+            Assert.That(rig.Flow.LevelCard.RevealGifted, Is.False);
+            Assert.That(EventsFrom(rig, from), Is.EqualTo(new[] { "restart:modal", "loaded:40", "card:Difficulty" }), "sin cartel ni intro con la tarjeta abierta");
+
+            from = rig.Listener.Events.Count;
+            Assert.That(rig.Flow.DismissLevelCard(), Is.True);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
+            Assert.That(rig.Flow.IntroDurationMs, Is.EqualTo(banner + shortIntro), "el cartel va antes del teñido");
+            Assert.That(
+                EventsFrom(rig, from),
+                Is.EqualTo(new[] { "river:" + reliefType + ":" + banner, "intro:" + (banner + shortIntro) + ":short" }));
+
+            // Cerrar otra vez no repite el cartel, ni saltar la intro.
+            from = rig.Listener.Events.Count;
+            Assert.That(rig.Flow.DismissLevelCard(), Is.False, "ya no hay tarjeta");
+            Assert.That(EventsFrom(rig, from), Is.Empty);
+            Assert.That(rig.Flow.TapAnywhere(), Is.True);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(RiverEvents(rig), Is.EqualTo(1));
+
+            // La variante se mantiene hasta ganar: el siguiente reintento trae la tarjeta y la intro corta, sin cartel.
+            Assert.That(rig.Flow.PressRestart(), Is.True);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
+            from = rig.Listener.Events.Count;
+            Assert.That(rig.Flow.DismissLevelCard(), Is.True);
+            Assert.That(EventsFrom(rig, from), Is.EqualTo(new[] { "intro:" + shortIntro + ":short" }));
+            Assert.That(rig.Flow.Session.Current.Count, Is.EqualTo(rig.Flow.Level.Relief[0].CuiaCount));
+            Assert.That(RiverEvents(rig), Is.EqualTo(1), "«El río bajó» solo cuando se sirve la variante");
+        }
+
+        [Test]
+        public void Card_MurkyChip_FollowsTheLevel_AlsoOnTheReliefBoard()
+        {
+            // 07 §7.7: el chip gris-pardo «?» va en el HUD y en la tarjeta con la misma regla, el murky del nivel (el HUD de T09
+            // usa flow.Level.IsMurky). La variante aliviada no tiene ocultas, pero el nivel sigue siendo de Aguas turbias: tras 3
+            // fallos en el 100, salir y volver con Jugar sirve el alivio y la tarjeta conserva el chip.
+            LevelStateTests.Rig rig = CardRig();
+            Assert.That(LoadCard(rig, 100).IsMurky, Is.True);
+            StartPlaying(rig.Flow);
+            for (int fail = 1; fail <= 3; fail++)
+            {
+                Assert.That(rig.Flow.ConfirmQuit(), Is.True, "fallo duro " + fail);
+                Assert.That(rig.Flow.PressRetry(), Is.True);
+                Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Intro), "sin tarjeta al reintentar");
+                Assert.That(rig.Flow.TapAnywhere(), Is.True);
+            }
+
+            Assert.That(rig.Flow.Attempt.ReliefIndex, Is.EqualTo(0));
+            Assert.That(rig.Flow.Session.Initial.HasHidden, Is.False, "los tableros de alivio no tienen ocultas");
+
+            LevelCardInfo card = LoadCard(rig, 100);
+            Assert.That(rig.Flow.Attempt.ReliefIndex, Is.EqualTo(0), "la variante se mantiene hasta ganar");
+            Assert.That(rig.Flow.Session.Initial.HasHidden, Is.False);
+            Assert.That(card.Kind, Is.EqualTo(LevelCardKind.Combined));
+            Assert.That(card.IsMurky, Is.True, "chip «?» (07 §7.7)");
+            Assert.That(card.IsMurky, Is.EqualTo(rig.Flow.Level.IsMurky), "la misma regla que el HUD");
+            Assert.That(card.RevealGifted, Is.False, "la Luciérnaga se regala una sola vez (04 §2.5)");
+        }
+
+        [Test]
         public void Dismiss_StartsIntro()
         {
             // 1 toque: DismissLevelCard, TapAnywhere, TapCuia o el fondo la cierran y empieza la intro, que luego llega a PLAYING.
@@ -263,7 +360,7 @@ namespace AF.Tests.EditMode
                 LevelDefinition def = catalog.Find(level)!;
                 bool labeled = def.DifficultyLabel != LevelDefinition.LabelNormal;
                 bool debut = def.IntroMechanic != null;
-                LevelCardInfo? card = LevelCardInfo.For(def, level, economy, def.CreateBoard().HasHidden, false);
+                LevelCardInfo? card = LevelCardInfo.For(def, level, economy, false);
                 Assert.That(card != null, Is.EqualTo(labeled || debut), def.Id);
                 Assert.That(LevelCardInfo.Shows(def), Is.EqualTo(labeled || debut), def.Id);
                 if (card == null)
@@ -323,6 +420,28 @@ namespace AF.Tests.EditMode
             }
 
             return rig.Flow.LevelCard!;
+        }
+
+        private static string[] EventsFrom(LevelStateTests.Rig rig, int from)
+        {
+            var events = new string[rig.Listener.Events.Count - from];
+            for (int i = 0; i < events.Length; i++)
+            {
+                events[i] = rig.Listener.Events[from + i];
+            }
+
+            return events;
+        }
+
+        private static int RiverEvents(LevelStateTests.Rig rig)
+        {
+            int count = 0;
+            for (int i = 0; i < rig.Listener.Events.Count; i++)
+            {
+                count += rig.Listener.Events[i].StartsWith("river:", System.StringComparison.Ordinal) ? 1 : 0;
+            }
+
+            return count;
         }
 
         private static void StartPlaying(LevelFlow flow)
