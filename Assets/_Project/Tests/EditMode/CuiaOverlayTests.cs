@@ -70,8 +70,9 @@ namespace AF.Tests.EditMode
                 CuiaOverlay? overlay = CuiaOverlays.Create(Types[i]);
                 Assert.That(overlay, Is.Not.Null, Types[i].ToString());
                 Assert.That(overlay!.Type, Is.EqualTo(Types[i]));
-                Assert.That(overlay.IsAnimating, Is.False, "sin pasos animados en la ola 1");
-                Assert.That(overlay.StepDurationMs(MechanicStepKind.Open), Is.EqualTo(0f));
+                Assert.That(overlay.IsAnimating, Is.False, "recién creado, sin paso en curso");
+                float open = Types[i] == MechanicType.Hoja ? HojaOverlay.OpenStepMs : (Types[i] == MechanicType.Brote ? BroteOverlay.OpenStepMs : 0f);
+                Assert.That(overlay.StepDurationMs(MechanicStepKind.Open), Is.EqualTo(open), "solo la Hoja y el Brote tienen paso Open propio (T11)");
             }
         }
 
