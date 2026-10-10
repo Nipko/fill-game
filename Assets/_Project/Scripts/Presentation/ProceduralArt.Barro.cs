@@ -9,7 +9,8 @@ namespace AF.Presentation
     /// disuelve. Los grumos son los de T03 (<see cref="MudLumps"/>).
     /// </summary>
     /// <remarks>
-    /// Perezoso: solo lo pide el primer lavado (<c>MudMarks.PlayWash</c>), así que un nivel sin Barro no crea la textura.
+    /// Perezoso: lo pide <c>MudMarks</c> la primera vez que una cuia tiene Barro (al cargar el nivel, fuera de los pasos), así
+    /// que un nivel sin Barro no crea la textura y el lavado nunca la genera a mitad del paso.
     /// Colores horneados en los pardos del Barro (<see cref="Palette.Mud"/> y <see cref="MudLumpColor"/>), con los bordes
     /// difuminados para que la nube no marque el rectángulo de la banda; <c>Image.color</c> solo cambia su alfa.
     /// </remarks>
@@ -36,6 +37,9 @@ namespace AF.Presentation
         /// sedimento claro, y una voluta en espiral que da el remolino del barro al disolverse. Bordes difuminados.
         /// </summary>
         public Sprite BarroCloud => _barroCloud != null ? _barroCloud : (_barroCloud = BuildBarroCloud());
+
+        /// <summary>La nube de barro ya está generada (tests: un nivel sin Barro no la crea).</summary>
+        public bool HasBarroCloud => _barroCloud != null;
 
         private Sprite BuildBarroCloud()
         {

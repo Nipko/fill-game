@@ -9,67 +9,107 @@ namespace AF.Presentation.Mechanics
 {
     /// <summary>
     /// M4 Remolino (02 §9.1 M4; propuesta de D-007 b.2 M4) [P]: una espiral de espuma marfil translúcida sobre un remanso
-    /// oscuro en la base de cada cuia de la pareja, en la ranura (no viaja con la cuia al verter), y un canal bajo el tablero
-    /// que une las dos. Nunca turquesa: ni el turquesa del icono de Marea (#3BB8D9) ni Agua del Tapajós. Si la pareja tiene
-    /// id &gt; 0, <c>id + 1</c> puntos bajo el remanso distinguen las parejas.
+    /// oscuro en la base de cada cuia de la pareja, en la ranura (no viaja con la cuia al verter), y un canal de agua bajo el
+    /// tablero que une las dos. Nunca turquesa: ni el turquesa del icono de Marea (#3BB8D9) ni Agua del Tapajós. Si la pareja
+    /// tiene id &gt; 0, <c>id + 1</c> puntos junto a la boca del canal distinguen las parejas.
     /// </summary>
     /// <remarks>
     /// <para><b>Canal.</b> Lo dibuja una sola vez la cuia de menor índice de la pareja (la pareja se busca por
     /// <see cref="Cuia.MechanicPairId"/> en <see cref="ICuiaBoard.ShownCuia"/>, la misma consulta que
     /// <c>BoardDiff.RemolinoPartner</c>, sin construir un <c>BoardState</c>), en la capa trasera del tablero, y se recoloca en
     /// <see cref="OnBoardLayout"/> (también tras añadir una cuia). Trazado [P]: baja del pie de cada cuia hasta el canto
-    /// inferior de su fila (la repisa) y se une con tramos horizontales bajo las repisas. Si la pareja está en filas distintas,
-    /// en cada fila que cruza baja por el hueco entre dos cuias (el que acorta el camino; a igualdad, el más cercano: una
-    /// escalera hacia la pareja), así que no pasa por detrás de ninguna cuia; si ningún hueco deja 1 dp de margen, por el que
-    /// más deja. Los tramos horizontales van bajo la repisa, en su sombra, sin tocar su cara, y por encima del hueco que deja
-    /// una cuia elevada de la fila de abajo. Los verticales (bajo el pie de la pareja y por los huecos) cruzan la cara de la
-    /// repisa como una ranura de agua de <see cref="ChannelWidthU"/> u (como mucho <see cref="ChannelMaxDp"/> dp). Cada tramo
-    /// es una cápsula (canto oscuro, agua y un filo de espuma), así que los codos son redondos.</para>
+    /// inferior de su fila (la repisa) y se une con tramos horizontales bajo las repisas, en su sombra. Si la pareja está en
+    /// filas distintas, en cada fila que cruza baja por el hueco entre dos cuias (el que acorta el camino; a igualdad, el más
+    /// cercano: una escalera hacia la pareja), así que no pasa por detrás de ninguna cuia; si ningún hueco deja 1 dp de
+    /// margen, por el que más deja.</para>
+    /// <para><b>La repisa va delante del canal</b> (direccion-visual-v2 §4.5: repisa continua por fila). La capa trasera se
+    /// pinta sobre las repisas, así que el canal no se dibuja en la franja de ninguna repisa: los tramos verticales se cortan
+    /// desde <see cref="ShelfClearDp"/> dp sobre su cara superior (pie + <see cref="ShelfTopAboveFootDp"/>) hasta donde
+    /// asoman bajo ella, con extremos redondos, y el canal se lee como agua que pasa por debajo. Bajo el remanso de cada cuia
+    /// de la pareja, el canal sale de una boca elíptica (<see cref="MouthWidthDp"/> × <see cref="MouthHeightDp"/> dp) en el
+    /// canto inferior de la repisa. Los tramos horizontales van <see cref="ChannelGapDp"/> dp bajo el canto de la repisa
+    /// (pie − 15) y miden <see cref="ChannelWidthDp"/> dp, así que bajo la última fila quedan ≥ 2 dp por dentro del canto
+    /// interior del marco (margen del panel de 22 dp menos el marco de 13,5) y entre filas, a ≥ 2 dp de una cuia elevada de
+    /// la fila de abajo (02 §5: elevación de 16 dp y hueco de 24).</para>
+    /// <para><b>Agua</b> (D-003): un lecho de <see cref="ProceduralArt.RemolinoChannelEdge"/> y encima un centro con degradado
+    /// transversal hasta <see cref="ProceduralArt.RemolinoChannelWater"/>, con una línea de espuma discontinua en el eje
+    /// (<see cref="DashThickDp"/> dp, 6 dp de trazo y 6 de hueco). Cada tramo es una cápsula, así que los codos son redondos.</para>
     /// <para><b>Recepción</b> (paso <see cref="MechanicStepKind.Receive"/>, despachado a la pareja; OtherIndex = la cuia
-    /// tocada): <see cref="ReceiveMs"/> (500 ms [P b.2]) × <c>ctx.SpeedFactor</c>. La espuma recorre el canal desde la cuia
-    /// tocada (donde desapareció el chorro), la espiral de la pareja gira y la racha sube por su fondo con burbujas
-    /// (<see cref="IBoardFx.Bubbles"/>; con Reducir movimiento la capa de efectos no emite): las dosis nuevas crecen desde
-    /// abajo y las que ya había suben con ellas, pintadas con <see cref="ICuiaBoard.SetDose"/> en el orden de
-    /// <c>ctx.After</c>. Al empezar, la pareja ya queda en el tablero con su estado de después
-    /// (<see cref="ICuiaBoard.ShownCuia"/> = <c>ctx.After</c>: salta al llegar el caudal, antes de que vuelva el origen, como
-    /// en el vertido de T04) y los fotogramas se pintan encima. Al terminar, la cola pinta <c>ShowContent(ctx.After)</c>.</para>
-    /// <para>Sin asignaciones tras <see cref="CuiaOverlay.Attach"/>: piezas, puntos del trazado y buffers fijos.</para>
+    /// tocada): <see cref="ReceiveMs"/> (500 ms [P b.2]) × <c>ctx.SpeedFactor</c>. La espuma (cápsulas suaves translúcidas
+    /// del ancho del agua) recorre el canal desde la cuia tocada (donde desapareció el chorro), pasando por detrás de las
+    /// repisas; la espiral de la pareja gira y la racha sube por su fondo con burbujas (<see cref="IBoardFx.Bubbles"/>; con
+    /// Reducir movimiento la capa de efectos no emite): las dosis nuevas crecen desde abajo y las que ya había suben con
+    /// ellas, pintadas con <see cref="ICuiaBoard.SetDose"/> en el orden de <c>ctx.After</c>. Al empezar, la pareja ya queda en
+    /// el tablero con su estado de después (<see cref="ICuiaBoard.ShownCuia"/> = <c>ctx.After</c>: salta al llegar el caudal,
+    /// antes de que vuelva el origen, como en el vertido de T04) y los fotogramas se pintan encima. Al terminar, la cola pinta
+    /// <c>ShowContent(ctx.After)</c>.</para>
+    /// <para>Sin asignaciones tras <see cref="CuiaOverlay.Attach"/>: piezas, puntos del trazado y buffers fijos; los sprites
+    /// se piden en <see cref="OnAttach"/>.</para>
     /// </remarks>
     public sealed class RemolinoOverlay : CuiaOverlay
     {
         /// <summary>
-        /// Opacidad de la espuma marfil (<see cref="Palette.UiPaper"/>) sobre el remanso: 0,7 deja la espuma vista a ΔE00 10,7
-        /// del tinte más cercano (Copoazú); con 0,8 bajaría de 10.
+        /// Opacidad de la espuma marfil (<see cref="Palette.UiPaper"/>) de la espiral sobre el remanso: 0,7 deja la espuma
+        /// vista a ΔE00 10,7 del tinte más cercano (Copoazú); con 0,8 bajaría de 10.
         /// </summary>
         public const float FoamAlpha = 0.7f;
 
         /// <summary>Recepción por el fondo de la pareja: 500 ms [P] (propuesta de D-007 b.2 M4).</summary>
         public const float ReceiveMs = 500f;
 
-        /// <summary>Ancho del canal: 0,36 u [P], entre <see cref="ChannelMinDp"/> y <see cref="ChannelMaxDp"/>.</summary>
-        public const float ChannelWidthU = 0.36f;
+        /// <summary>
+        /// Ancho del canal (dp) [P], el mismo en todos los tramos: bajo la última fila caben 8,5 dp entre el canto de la
+        /// repisa y el del marco, menos <see cref="ChannelGapDp"/> y 2 dp de aire hasta el marco.
+        /// </summary>
+        public const float ChannelWidthDp = 5f;
 
-        /// <summary>Ancho mínimo del canal (dp).</summary>
-        public const float ChannelMinDp = 5f;
+        /// <summary>Hueco entre el canto inferior de la repisa (pie − 15) y el canal (dp).</summary>
+        public const float ChannelGapDp = 1.5f;
+
+        /// <summary>Cara superior de la repisa sobre la línea de pie (dp; la repisa de <c>GameScreen</c> empieza en pie + 3).</summary>
+        public const float ShelfTopAboveFootDp = 3f;
+
+        /// <summary>Aire (dp) entre el extremo redondo de un tramo vertical cortado y la cara superior de la repisa.</summary>
+        public const float ShelfClearDp = 1f;
+
+        /// <summary>Ancho de la boca por la que el canal sale de debajo de la repisa de la pareja (dp).</summary>
+        public const float MouthWidthDp = 8f;
+
+        /// <summary>Alto de la boca (dp).</summary>
+        public const float MouthHeightDp = 3f;
+
+        /// <summary>Opacidad de la boca (<see cref="ProceduralArt.RemolinoChannelRim"/>).</summary>
+        public const float MouthAlpha = 0.8f;
+
+        /// <summary>Centro de la boca bajo el canto de <c>SlotRect</c> (pie − 15): en el canto de madera de 2 dp de la repisa.</summary>
+        public const float MouthDropDp = 1f;
+
+        /// <summary>Grosor de la línea de espuma discontinua del eje del canal (dp).</summary>
+        public const float DashThickDp = 1f;
+
+        /// <summary>Opacidad de la línea de espuma del eje (<see cref="Palette.UiPaper"/>).</summary>
+        public const float DashAlpha = 0.5f;
 
         /// <summary>
-        /// Ancho máximo del canal (dp): con el hueco de <see cref="ChannelGapDp"/> bajo la repisa queda a ≤ 8,5 dp de ella,
-        /// dentro de los 9 dp que deja libres una cuia elevada de la fila de abajo (02 §5: elevación de 16 dp y hueco de 24) y
-        /// del canto interior del marco bajo la última fila (margen del panel de 22 dp menos el marco de 13,5).
+        /// Opacidad de la espuma que recorre el canal al recibir (<see cref="Palette.UiPaper"/>): 0,5 la deja a ΔE00 10,6 de
+        /// Guanábana sobre el centro del agua; con 0,55 bajaría a 9,8.
         /// </summary>
-        public const float ChannelMaxDp = 8f;
+        public const float FoamBlobAlpha = 0.5f;
 
-        /// <summary>Hueco entre el canto inferior de la repisa y el canal (dp).</summary>
-        public const float ChannelGapDp = 0.5f;
+        /// <summary>Ancho de cada gota de espuma (dp): menos que el agua, nunca toca el marco ni las repisas.</summary>
+        public const float FoamBlobWidthDp = 4.5f;
 
-        /// <summary>Canto oscuro de cada lado del canal (dp).</summary>
-        public const float ChannelRimDp = 1.25f;
+        /// <summary>Alargamiento de las gotas de espuma en la dirección del tramo.</summary>
+        public const float FoamBlobAspect = 1.8f;
 
         /// <summary>Puntos del trazado como mucho: dos por fila cruzada (3 filas) y los dos pies.</summary>
         public const int MaxChannelPoints = 8;
 
-        /// <summary>Centro del remanso y de la espiral (u sobre el pie): un poco por debajo, para que se vean delante del pie.</summary>
-        public const float PoolCenterU = -0.06f;
+        /// <summary>
+        /// Centro del remanso y de la espiral (u sobre el pie): por debajo, para que se vea ≈ 60 % de la espiral bajo el pie sin
+        /// pasar del frente de la repisa.
+        /// </summary>
+        public const float PoolCenterU = -0.10f;
 
         /// <summary>Vueltas de la espiral durante la recepción [P].</summary>
         public const float SpinTurns = 1.5f;
@@ -87,18 +127,31 @@ namespace AF.Presentation.Mechanics
         public const int BubblesSecond = 3;
 
         private const int MaxSegments = MaxChannelPoints - 1;
+        private const int MaxPieces = MaxSegments + 2;
+        private const int MaxRows = 4;
         private const int PulseBlobs = 4;
         private const int MaxBoard = 32;
         private const float RowTolerance = 1f;
-        private const float ShineAlpha = 0.85f;
+        private const float MinPieceDp = 0.5f;
         private const float SecondBubbles = 0.62f;
         private const float OuterGapPenaltyDp = 2f;
+        private const float PulseFade = 0.15f;
 
-        private readonly Image[] _rim = new Image[MaxSegments];
-        private readonly Image[] _water = new Image[MaxSegments];
-        private readonly Image[] _shine = new Image[MaxSegments];
+        private readonly Image[] _bed = new Image[MaxPieces];
+        private readonly Image[] _core = new Image[MaxPieces];
+        private readonly Image[] _dash = new Image[MaxPieces];
+        private readonly Image[] _mouth = new Image[2];
         private readonly Image[] _pulse = new Image[PulseBlobs];
         private readonly Vector2[] _pts = new Vector2[MaxChannelPoints];
+        private readonly Vector2[] _pieceA = new Vector2[MaxPieces];
+        private readonly Vector2[] _pieceB = new Vector2[MaxPieces];
+        private readonly Vector2[] _mouthAt = new Vector2[2];
+        private readonly float[] _bandLo = new float[MaxRows];
+        private readonly float[] _bandHi = new float[MaxRows];
+        private readonly float[] _pulseLo = new float[MaxRows];
+        private readonly float[] _pulseHi = new float[MaxRows];
+        private readonly float[] _cutS = new float[MaxRows + 1];
+        private readonly float[] _cutE = new float[MaxRows + 1];
         private readonly Vector2[] _pulsePts = new Vector2[MaxChannelPoints];
         private readonly float[] _pulseAt = new float[MaxChannelPoints];
         private readonly float[] _rowX = new float[MaxBoard];
@@ -112,12 +165,14 @@ namespace AF.Presentation.Mechanics
         private int _pairId;
         private int _partner = -1;
         private int _ptCount;
-        private float _width;
+        private int _pieceCount;
+        private int _bandCount;
         private bool _channelShown;
         private int _laidVersion = int.MinValue;
         private int _laidPartner = -2;
         private float _laidU = -1f;
         private int _pulseCount;
+        private int _pulseBands;
         private bool _pulseReverse;
         private bool _animating;
         private float _elapsed;
@@ -140,6 +195,15 @@ namespace AF.Presentation.Mechanics
         /// <summary>Color con el que se ve la espiral: la espuma compuesta en lineal sobre el remanso, como la GPU.</summary>
         public static Color SpiralSeenColor => ColorMath.CompositeLinear(Palette.UiPaper, FoamAlpha, ProceduralArt.WhirlPoolColor);
 
+        /// <summary>Color con el que se ve la espuma que recorre el canal, en el centro del agua.</summary>
+        public static Color FoamSeenColor => ColorMath.CompositeLinear(Palette.UiPaper, FoamBlobAlpha, ProceduralArt.RemolinoChannelWater);
+
+        /// <summary>Color con el que se ve la línea de espuma del eje del canal.</summary>
+        public static Color DashSeenColor => ColorMath.CompositeLinear(Palette.UiPaper, DashAlpha, ProceduralArt.RemolinoChannelWater);
+
+        /// <summary>Color con el que se ve la boca del canal sobre el frente de la repisa.</summary>
+        public static Color MouthSeenColor => ColorMath.CompositeLinear(ProceduralArt.RemolinoChannelRim, MouthAlpha, Palette.ShelfFrontLow);
+
         /// <summary>La otra cuia de la pareja en el tablero mostrado, o −1.</summary>
         public int PartnerIndex => _partner;
 
@@ -149,14 +213,14 @@ namespace AF.Presentation.Mechanics
         /// <summary>El canal de esta cuia está a la vista.</summary>
         public bool ChannelVisible => _channelShown;
 
-        /// <summary>Ancho del canal (dp).</summary>
-        public float ChannelWidthDp => _width;
-
         /// <summary>Puntos del trazado del canal (de esta cuia a su pareja), 0 si no lo dibuja.</summary>
         public int ChannelPointCount => _channelShown ? _ptCount : 0;
 
-        /// <summary>Tramos del canal a la vista.</summary>
-        public int ChannelSegmentCount => _channelShown ? Mathf.Max(0, _ptCount - 1) : 0;
+        /// <summary>Tramos del canal a la vista (los trozos del trazado fuera de las repisas).</summary>
+        public int ChannelSegmentCount => _channelShown ? _pieceCount : 0;
+
+        /// <summary>Bocas del canal a la vista (una bajo el remanso de cada cuia de la pareja).</summary>
+        public int MouthCount => _channelShown ? 2 : 0;
 
         /// <summary>La recepción por el fondo está en curso.</summary>
         public override bool IsAnimating => _animating;
@@ -167,7 +231,7 @@ namespace AF.Presentation.Mechanics
         /// <summary>Giro actual de la espiral (grados; 0 en reposo).</summary>
         public float SpiralAngle => -_spinFrame * (360f / ProceduralArt.RemolinoSpiralFrames);
 
-        /// <summary>Alguna gota de espuma recorre el canal.</summary>
+        /// <summary>Alguna gota de espuma recorre el canal a la vista.</summary>
         public bool PulseVisible
         {
             get
@@ -196,20 +260,28 @@ namespace AF.Presentation.Mechanics
         }
 
         /// <summary>
-        /// Rectángulo (espacio de las capas de tablero) del tramo <paramref name="i"/> del canal, con sus extremos redondos:
-        /// lo que pinta su canto oscuro.
+        /// Rectángulo (espacio de las capas de tablero) del tramo a la vista <paramref name="i"/> del canal, con sus extremos
+        /// redondos: lo que pinta su lecho.
         /// </summary>
         public Rect ChannelSegmentRect(int i)
         {
-            if ((uint)i >= (uint)MaxSegments || _rim[i] == null)
+            if ((uint)i >= (uint)MaxPieces || _bed[i] == null)
             {
                 return Rect.zero;
             }
 
-            RectTransform rt = _rim[i].rectTransform;
-            Vector2 size = rt.sizeDelta;
-            Vector2 center = rt.anchoredPosition + LayerOrigin;
-            return new Rect(center - (0.5f * size), size);
+            return RectOf(_bed[i].rectTransform);
+        }
+
+        /// <summary>Rectángulo (espacio de las capas de tablero) de la boca <paramref name="i"/> (0: esta cuia; 1: la pareja).</summary>
+        public Rect MouthRect(int i)
+        {
+            if ((uint)i >= 2u || _mouth[i] == null)
+            {
+                return Rect.zero;
+            }
+
+            return RectOf(_mouth[i].rectTransform);
         }
 
         /// <inheritdoc />
@@ -232,7 +304,9 @@ namespace AF.Presentation.Mechanics
         {
             OverlayParts.Place(_pool, 0f, PoolCenterU, 2.6f, 0.85f, u);
             OverlayParts.Place(_spiral, 0f, PoolCenterU, ProceduralArt.RemolinoSpiralWidthU, ProceduralArt.RemolinoSpiralHeightU, u);
-            _dots.Layout(0f, -0.62f, 0.13f, 0.2f, u);
+
+            // A la derecha de la boca del canal, en el frente de la repisa, bajo el borde del remanso.
+            _dots.Layout(0.62f, -0.55f, 0.13f, 0.2f, u);
         }
 
         /// <inheritdoc />
@@ -325,9 +399,13 @@ namespace AF.Presentation.Mechanics
         {
             into.Add(ProceduralArt.WhirlPoolColor); // remanso
             into.Add(SpiralSeenColor); // espiral de espuma
-            into.Add(ProceduralArt.Pearl); // puntos de la pareja y espuma que recorre el canal
-            into.Add(ProceduralArt.RemolinoChannelWater); // agua del canal
-            into.Add(ProceduralArt.RemolinoChannelRim); // canto del canal (≤ 2 dp, pero también lejos de los tintes)
+            into.Add(ProceduralArt.Pearl); // puntos de la pareja
+            into.Add(ProceduralArt.RemolinoChannelWater); // centro del agua del canal
+            into.Add(ProceduralArt.RemolinoChannelEdge); // bordes del agua del canal
+            into.Add(FoamSeenColor); // espuma que recorre el canal
+            into.Add(DashSeenColor); // línea de espuma del eje (1 dp, pero también lejos de los tintes)
+            into.Add(ProceduralArt.RemolinoChannelRim); // boca del canal
+            into.Add(MouthSeenColor); // boca, vista sobre el frente de la repisa
         }
 
         /// <inheritdoc />
@@ -352,13 +430,22 @@ namespace AF.Presentation.Mechanics
             _layerRoot.anchoredPosition = Vector2.zero;
             go.AddComponent<LayerLink>().Owner = Host.SlotBack;
 
-            Sprite capsule = Host.Art.RemolinoCapsule;
-            NewStroke(_rim, "ChannelRim", capsule, ProceduralArt.RemolinoChannelRim);
-            NewStroke(_water, "ChannelWater", capsule, ProceduralArt.RemolinoChannelWater);
-            NewStroke(_shine, "ChannelShine", capsule, OverlayParts.Fade(Palette.UiPaper, ShineAlpha));
+            // Orden: todos los lechos, todos los centros y todas las líneas de espuma (los codos no dejan costuras), las bocas
+            // y la espuma que recorre el canal.
+            ProceduralArt art = Host.Art;
+            NewPieces(_bed, "ChannelBed", art.RemolinoCapsule, ProceduralArt.RemolinoChannelEdge, Image.Type.Sliced);
+            NewPieces(_core, "ChannelWater", art.RemolinoCapsuleSoft, ProceduralArt.RemolinoChannelWater, Image.Type.Sliced);
+            NewPieces(_dash, "ChannelFoamLine", art.RemolinoDash, OverlayParts.Fade(Palette.UiPaper, DashAlpha), Image.Type.Tiled);
+            for (int i = 0; i < _mouth.Length; i++)
+            {
+                _mouth[i] = OverlayParts.NewImage("ChannelMouth" + i, _layerRoot, art.RemolinoCapsule, OverlayParts.Fade(ProceduralArt.RemolinoChannelRim, MouthAlpha));
+            }
+
+            Sprite foam = art.RemolinoFoam;
             for (int i = 0; i < PulseBlobs; i++)
             {
-                _pulse[i] = OverlayParts.NewImage("ChannelFoam" + i, _layerRoot, Host.Art.CounterPip, ProceduralArt.Pearl);
+                _pulse[i] = OverlayParts.NewImage("ChannelFoam" + i, _layerRoot, foam, OverlayParts.Fade(Palette.UiPaper, FoamBlobAlpha));
+                _pulse[i].rectTransform.sizeDelta = new Vector2(FoamBlobAspect * FoamBlobWidthDp, FoamBlobWidthDp);
                 PreRegister(_pulse[i]);
             }
         }
@@ -379,6 +466,18 @@ namespace AF.Presentation.Mechanics
 
             go.SetActive(true);
             go.SetActive(false);
+        }
+
+        private Rect RectOf(RectTransform rt)
+        {
+            Vector2 size = rt.sizeDelta;
+            if (Mathf.Abs(rt.localEulerAngles.z - 90f) < 1f)
+            {
+                size = new Vector2(size.y, size.x);
+            }
+
+            Vector2 center = rt.anchoredPosition + LayerOrigin;
+            return new Rect(center - (0.5f * size), size);
         }
 
         // Pareja y canal: la pareja se busca en lo que muestra el tablero; el canal se recalcula si cambia la pareja, el
@@ -410,11 +509,19 @@ namespace AF.Presentation.Mechanics
             _laidPartner = partner;
             _laidVersion = version;
             _laidU = u;
-            _width = Mathf.Clamp(ChannelWidthU * u, ChannelMinDp, ChannelMaxDp);
-            _ptCount = Route(board, Host.Index, partner, _width, _pts);
-            ToRoot(_pts, _ptCount);
-            PlaceStrokes(_pts, _ptCount, _width);
+            _ptCount = Route(board, Host.Index, partner, _pts);
+            Vector2 origin = LayerOrigin;
+            ToRoot(_pts, _ptCount, origin);
+            _mouthAt[0] = MouthCenter(board, Host.Index) - origin;
+            _mouthAt[1] = MouthCenter(board, partner) - origin;
+            BuildPieces(origin.y);
+            PlacePieces();
             _channelShown = true;
+        }
+
+        private static Vector2 MouthCenter(ICuiaBoard board, int i)
+        {
+            return new Vector2(board.Foot(i).x, board.SlotRect(i).yMin - MouthDropDp);
         }
 
         private int FindPartner(ICuiaBoard board)
@@ -439,17 +546,19 @@ namespace AF.Presentation.Mechanics
         }
 
         // Trazado del canal de la cuia a a la b (ver la clase) en pts; devuelve los puntos. Va de la fila de arriba a la de
-        // abajo y, si a está debajo, se invierte al final: el mismo trazado para las dos cuias de la pareja.
-        private int Route(ICuiaBoard board, int a, int b, float width, Vector2[] pts)
+        // abajo y, si a está debajo, se invierte al final: el mismo trazado para las dos cuias de la pareja. Deja en _bandLo y
+        // _bandHi la franja de cada repisa en la que no se pintan los tramos verticales.
+        private int Route(ICuiaBoard board, int a, int b, Vector2[] pts)
         {
+            CollectShelfBands(board);
             Vector2 fa = board.Foot(a);
             Vector2 fb = board.Foot(b);
             bool swap = fb.y > fa.y + RowTolerance;
             int top = swap ? b : a;
             Vector2 ft = swap ? fb : fa;
             Vector2 fl = swap ? fa : fb;
-            float half = 0.5f * width;
-            float y = board.SlotRect(top).yMin - ChannelGapDp - half;
+            const float half = 0.5f * ChannelWidthDp;
+            float y = UnderShelf(board.SlotRect(top).yMin);
             int n = 0;
             pts[n++] = ft;
             pts[n++] = new Vector2(ft.x, y);
@@ -468,7 +577,7 @@ namespace AF.Presentation.Mechanics
                     pts[n++] = new Vector2(gx, y); // bajo la repisa de la fila de arriba, hasta el hueco
                 }
 
-                y = underside - ChannelGapDp - half;
+                y = UnderShelf(underside);
                 pts[n++] = new Vector2(gx, y); // por el hueco de la fila, hasta bajo su repisa
                 x = gx;
                 rowY = nextRow;
@@ -491,6 +600,42 @@ namespace AF.Presentation.Mechanics
             }
 
             return n;
+        }
+
+        // Eje de un tramo horizontal bajo la repisa cuyo canto inferior está en underside.
+        private static float UnderShelf(float underside)
+        {
+            return underside - ChannelGapDp - (0.5f * ChannelWidthDp);
+        }
+
+        // Franja de cada repisa (una por fila) donde no va el eje de un tramo vertical: desde el eje de los tramos horizontales
+        // bajo ella hasta la cara superior, más el aire y el extremo redondo. Sin asignaciones.
+        private void CollectShelfBands(ICuiaBoard board)
+        {
+            _bandCount = 0;
+            int n = Mathf.Min(board.Count, MaxBoard);
+            for (int c = 0; c < n; c++)
+            {
+                float fy = board.Foot(c).y;
+                bool known = false;
+                for (int k = 0; k < _bandCount; k++)
+                {
+                    if (Mathf.Abs(_bandHi[k] - (fy + ShelfTopAboveFootDp + ShelfClearDp + (0.5f * ChannelWidthDp))) <= RowTolerance)
+                    {
+                        known = true;
+                        break;
+                    }
+                }
+
+                if (known || _bandCount >= MaxRows)
+                {
+                    continue;
+                }
+
+                _bandLo[_bandCount] = UnderShelf(board.SlotRect(c).yMin);
+                _bandHi[_bandCount] = fy + ShelfTopAboveFootDp + ShelfClearDp + (0.5f * ChannelWidthDp);
+                _bandCount++;
+            }
         }
 
         // Fila siguiente bajo la de pie rowY sin pasar de la de pie lastY: su línea de pie y el canto inferior de su repisa.
@@ -617,41 +762,146 @@ namespace AF.Presentation.Mechanics
         }
 
         // Pasa los puntos del espacio de la capa (ICuiaBoard) al de la raíz del canal.
-        private void ToRoot(Vector2[] pts, int count)
+        private static void ToRoot(Vector2[] pts, int count, Vector2 origin)
         {
-            Vector2 origin = LayerOrigin;
             for (int i = 0; i < count; i++)
             {
                 pts[i] -= origin;
             }
         }
 
-        // Coloca las cápsulas de los tramos (canto, agua y filo de espuma) y oculta las que sobran.
-        private void PlaceStrokes(Vector2[] pts, int count, float width)
+        // Trozos a la vista del trazado (espacio de la raíz): los tramos horizontales enteros y los verticales sin la franja de
+        // ninguna repisa (originY pasa las franjas, en espacio de la capa, a la raíz).
+        private void BuildPieces(float originY)
         {
-            float water = Mathf.Max(1f, width - (2f * ChannelRimDp));
-            float shine = Mathf.Min(1.8f, 0.34f * water);
-            float shineOffset = (0.5f * water) - (0.5f * shine) - 0.4f;
-            for (int i = 0; i < MaxSegments; i++)
+            _pieceCount = 0;
+            for (int i = 0; i < _ptCount - 1; i++)
             {
-                bool on = i < count - 1 && (pts[i + 1] - pts[i]).sqrMagnitude > 1e-4f;
-                OverlayParts.SetVisible(_rim[i], on);
-                OverlayParts.SetVisible(_water[i], on);
-                OverlayParts.SetVisible(_shine[i], on);
-                if (!on)
+                Vector2 p = _pts[i];
+                Vector2 q = _pts[i + 1];
+                if ((q - p).sqrMagnitude < 1e-4f)
                 {
                     continue;
                 }
 
-                Vector2 a = pts[i];
-                Vector2 b = pts[i + 1];
+                if (Mathf.Abs(q.y - p.y) < 0.01f)
+                {
+                    AddPiece(p, q);
+                    continue;
+                }
+
+                // Vertical: el intervalo [lo, hi] del eje menos las franjas de las repisas.
+                int cuts = 1;
+                _cutS[0] = Mathf.Min(p.y, q.y);
+                _cutE[0] = Mathf.Max(p.y, q.y);
+                for (int k = 0; k < _bandCount; k++)
+                {
+                    float lo = _bandLo[k] - originY;
+                    float hi = _bandHi[k] - originY;
+                    int kept = 0;
+                    for (int c = 0; c < cuts; c++)
+                    {
+                        float s = _cutS[c];
+                        float e = _cutE[c];
+                        if (e <= lo || s >= hi)
+                        {
+                            Keep(ref kept, s, e);
+                            continue;
+                        }
+
+                        if (s < lo)
+                        {
+                            Keep(ref kept, s, lo);
+                        }
+
+                        if (e > hi)
+                        {
+                            Keep(ref kept, hi, e);
+                        }
+                    }
+
+                    cuts = kept;
+                }
+
+                for (int c = 0; c < cuts; c++)
+                {
+                    if (_cutE[c] - _cutS[c] >= MinPieceDp)
+                    {
+                        AddPiece(new Vector2(p.x, _cutS[c]), new Vector2(p.x, _cutE[c]));
+                    }
+                }
+            }
+        }
+
+        // Guarda el intervalo [s, e] en la posición kept de los cortes (≤ MaxRows + 1; los que no caben se pierden).
+        private void Keep(ref int kept, float s, float e)
+        {
+            if (kept < _cutS.Length)
+            {
+                _cutS[kept] = s;
+                _cutE[kept] = e;
+                kept++;
+            }
+        }
+
+        private void AddPiece(Vector2 a, Vector2 b)
+        {
+            if (_pieceCount < MaxPieces)
+            {
+                _pieceA[_pieceCount] = a;
+                _pieceB[_pieceCount] = b;
+                _pieceCount++;
+            }
+        }
+
+        // Coloca lechos, centros y líneas de espuma de los trozos y las dos bocas, y oculta lo que sobra.
+        private void PlacePieces()
+        {
+            const float width = ChannelWidthDp;
+            for (int i = 0; i < MaxPieces; i++)
+            {
+                bool on = i < _pieceCount;
+                OverlayParts.SetVisible(_bed[i], on);
+                OverlayParts.SetVisible(_core[i], on);
+                if (!on)
+                {
+                    OverlayParts.SetVisible(_dash[i], false);
+                    continue;
+                }
+
+                Vector2 a = _pieceA[i];
+                Vector2 b = _pieceB[i];
                 bool horizontal = Mathf.Abs(b.x - a.x) >= Mathf.Abs(b.y - a.y);
                 Vector2 mid = 0.5f * (a + b);
                 float length = horizontal ? Mathf.Abs(b.x - a.x) : Mathf.Abs(b.y - a.y);
-                PlaceCapsule(_rim[i], mid, length, width, horizontal);
-                PlaceCapsule(_water[i], mid, length, water, horizontal);
-                Vector2 lit = horizontal ? new Vector2(0f, shineOffset) : new Vector2(-shineOffset, 0f); // luz de arriba a la izquierda
-                PlaceCapsule(_shine[i], mid + lit, Mathf.Max(0f, length - (0.5f * width)), shine, horizontal);
+                PlaceCapsule(_bed[i], mid, length, width, horizontal);
+                PlaceCapsule(_core[i], mid, length, width, horizontal);
+
+                // Línea de espuma en el eje, sin entrar en los extremos redondos.
+                float dash = length - width;
+                OverlayParts.SetVisible(_dash[i], dash > 1f);
+                if (dash > 1f)
+                {
+                    RectTransform rt = _dash[i].rectTransform;
+                    var size = new Vector2(dash, DashThickDp);
+                    if (rt.sizeDelta != size)
+                    {
+                        rt.sizeDelta = size;
+                    }
+
+                    if (rt.anchoredPosition != mid)
+                    {
+                        rt.anchoredPosition = mid;
+                    }
+
+                    SetRotation(rt, horizontal ? 0f : 90f);
+                }
+            }
+
+            for (int m = 0; m < _mouth.Length; m++)
+            {
+                OverlayParts.SetVisible(_mouth[m], true);
+                OverlayParts.Place(_mouth[m], _mouthAt[m].x, _mouthAt[m].y, MouthWidthDp, MouthHeightDp, 1f);
             }
         }
 
@@ -668,6 +918,15 @@ namespace AF.Presentation.Mechanics
             }
         }
 
+        private static void SetRotation(RectTransform rt, float degrees)
+        {
+            Quaternion q = Quaternion.Euler(0f, 0f, degrees);
+            if (rt.localRotation != q)
+            {
+                rt.localRotation = q;
+            }
+        }
+
         private void HideChannel()
         {
             if (!_channelShown)
@@ -676,30 +935,36 @@ namespace AF.Presentation.Mechanics
             }
 
             _channelShown = false;
-            for (int i = 0; i < MaxSegments; i++)
+            for (int i = 0; i < MaxPieces; i++)
             {
-                OverlayParts.SetVisible(_rim[i], false);
-                OverlayParts.SetVisible(_water[i], false);
-                OverlayParts.SetVisible(_shine[i], false);
+                OverlayParts.SetVisible(_bed[i], false);
+                OverlayParts.SetVisible(_core[i], false);
+                OverlayParts.SetVisible(_dash[i], false);
+            }
+
+            for (int m = 0; m < _mouth.Length; m++)
+            {
+                OverlayParts.SetVisible(_mouth[m], false);
             }
         }
 
-        private void NewStroke(Image[] into, string name, Sprite capsule, Color color)
+        private void NewPieces(Image[] into, string name, Sprite sprite, Color color, Image.Type type)
         {
             for (int i = 0; i < into.Length; i++)
             {
-                Image image = OverlayParts.NewImage(name + i, _layerRoot, capsule, color);
-                image.type = Image.Type.Sliced;
+                Image image = OverlayParts.NewImage(name + i, _layerRoot, sprite, color);
+                image.type = type;
                 into[i] = image;
             }
         }
 
         // Trazado de la espuma: el canal de la pareja (siempre de la de menor índice a la de mayor), recorrido desde la cuia
-        // tocada hasta esta.
+        // tocada hasta esta; las franjas de las repisas, en espacio de la raíz, para ocultar la espuma que pasa por detrás.
         private void PreparePulse(int touched)
         {
             ICuiaBoard? board = _stepBoard;
             _pulseCount = 0;
+            _pulseBands = 0;
             if (board == null || touched < 0 || touched >= board.Count)
             {
                 return;
@@ -708,23 +973,21 @@ namespace AF.Presentation.Mechanics
             int self = Host.Index;
             int a = Mathf.Min(self, touched);
             int b = Mathf.Max(self, touched);
-            float width = Mathf.Clamp(ChannelWidthU * Host.U, ChannelMinDp, ChannelMaxDp);
-            _pulseCount = Route(board, a, b, width, _pulsePts);
-            ToRoot(_pulsePts, _pulseCount);
+            _pulseCount = Route(board, a, b, _pulsePts);
+            Vector2 origin = LayerOrigin;
+            ToRoot(_pulsePts, _pulseCount, origin);
+            _pulseBands = _bandCount;
+            for (int k = 0; k < _bandCount; k++)
+            {
+                _pulseLo[k] = _bandLo[k] - origin.y;
+                _pulseHi[k] = _bandHi[k] - origin.y;
+            }
+
             _pulseReverse = self == a; // el trazado va de a a b; la espuma, de la tocada a esta
             _pulseAt[0] = 0f;
             for (int i = 1; i < _pulseCount; i++)
             {
                 _pulseAt[i] = _pulseAt[i - 1] + Vector2.Distance(_pulsePts[i - 1], _pulsePts[i]);
-            }
-
-            // Espuma algo más ancha que el canal: asoma sobre el panel y se ve de un vistazo.
-            float blob = 1.35f * width;
-            for (int i = 0; i < PulseBlobs; i++)
-            {
-                float side = blob * (1f - (0.15f * i));
-                RectTransform rt = _pulse[i].rectTransform;
-                rt.sizeDelta = new Vector2(side, side);
             }
         }
 
@@ -789,6 +1052,8 @@ namespace AF.Presentation.Mechanics
             }
         }
 
+        // La espuma: 4 cápsulas suaves en fila por el canal, que entran y salen con un fundido y se ocultan por detrás de las
+        // repisas, giradas en la dirección del tramo.
         private void PaintPulse(float t)
         {
             if (_pulseCount < 2 || t >= PulseEnd)
@@ -797,40 +1062,76 @@ namespace AF.Presentation.Mechanics
                 return;
             }
 
+            float k = t / PulseEnd;
             float length = _pulseAt[_pulseCount - 1];
-            float head = Ease.InOut(t / PulseEnd) * length;
-            float spacing = 1.1f * Mathf.Clamp(ChannelWidthU * Host.U, ChannelMinDp, ChannelMaxDp);
+            float head = Ease.InOut(k) * length;
+            float spacing = 1.15f * FoamBlobAspect * FoamBlobWidthDp;
+            float envelope = Mathf.Clamp01(k / PulseFade) * Mathf.Clamp01((1f - k) / PulseFade);
             for (int i = 0; i < PulseBlobs; i++)
             {
                 float s = head - (i * spacing);
                 bool on = s >= 0f && s <= length;
+                int seg = 0;
+                Vector2 at = Vector2.zero;
+                if (on)
+                {
+                    at = PointAt(_pulseReverse ? length - s : s, out seg);
+                    on = !BehindShelf(seg, at);
+                }
+
                 OverlayParts.SetVisible(_pulse[i], on);
                 if (!on)
                 {
                     continue;
                 }
 
-                Vector2 at = PointAt(_pulseReverse ? length - s : s);
                 RectTransform rt = _pulse[i].rectTransform;
                 if (rt.anchoredPosition != at)
                 {
                     rt.anchoredPosition = at;
                 }
+
+                Vector2 d = _pulsePts[seg] - _pulsePts[seg - 1];
+                SetRotation(rt, Mathf.Abs(d.x) >= Mathf.Abs(d.y) ? 0f : 90f);
+                OverlayParts.SetColor(_pulse[i], OverlayParts.Fade(Palette.UiPaper, FoamBlobAlpha * envelope * (1f - (0.15f * i))));
             }
         }
 
-        // Punto del trazado de la espuma a la distancia s de su primer punto.
-        private Vector2 PointAt(float s)
+        // La gota de espuma en at, sobre el tramo seg (vertical), queda en la franja de una repisa: pasa por detrás.
+        private bool BehindShelf(int seg, Vector2 at)
+        {
+            Vector2 d = _pulsePts[seg] - _pulsePts[seg - 1];
+            if (Mathf.Abs(d.x) >= Mathf.Abs(d.y))
+            {
+                return false;
+            }
+
+            float reach = (0.5f * FoamBlobAspect * FoamBlobWidthDp) - (0.5f * ChannelWidthDp); // la gota es más larga que el extremo redondo
+            for (int k = 0; k < _pulseBands; k++)
+            {
+                if (at.y > _pulseLo[k] + 0.01f && at.y < _pulseHi[k] + reach)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Punto del trazado de la espuma a la distancia s de su primer punto, y el tramo (índice de su punto final).
+        private Vector2 PointAt(float s, out int seg)
         {
             for (int i = 1; i < _pulseCount; i++)
             {
                 if (s <= _pulseAt[i] || i == _pulseCount - 1)
                 {
-                    float seg = Mathf.Max(1e-4f, _pulseAt[i] - _pulseAt[i - 1]);
-                    return Vector2.Lerp(_pulsePts[i - 1], _pulsePts[i], Mathf.Clamp01((s - _pulseAt[i - 1]) / seg));
+                    seg = i;
+                    float len = Mathf.Max(1e-4f, _pulseAt[i] - _pulseAt[i - 1]);
+                    return Vector2.Lerp(_pulsePts[i - 1], _pulsePts[i], Mathf.Clamp01((s - _pulseAt[i - 1]) / len));
                 }
             }
 
+            seg = 1;
             return _pulseCount > 0 ? _pulsePts[0] : Vector2.zero;
         }
 

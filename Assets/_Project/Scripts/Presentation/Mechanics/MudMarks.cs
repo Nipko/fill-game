@@ -23,8 +23,10 @@ namespace AF.Presentation.Mechanics
     /// con una salpicadura parda al empezar (<see cref="IBoardFx.Splash"/>; con Reducir movimiento la capa de efectos no
     /// emite). Mientras dura, <see cref="IsAnimating"/> es true y <c>CuiaView.ShowContent</c> no llama a <see cref="Show"/>;
     /// al terminar, la cola llama a <see cref="Snap"/> y a <c>ShowContent(After)</c>.</para>
-    /// <para>Sin asignaciones tras construirse: la nube y los grumos se crean una vez; el sprite de la nube se pide en el
-    /// primer lavado.</para>
+    /// <para>Sin asignaciones tras construirse ni dentro de un paso: la nube y los grumos se crean una vez, y el sprite de la
+    /// nube (<see cref="ProceduralArt.BarroCloud"/>, una textura que se genera la primera vez) se pide la primera vez que la
+    /// cuia tiene Barro, a la vista o bajo una oculta: al cargar el nivel (<see cref="Show"/> desde <c>ShowContent</c>) o al
+    /// pintarlo (<see cref="PaintMud"/>), nunca a mitad del lavado. Un nivel sin Barro no la crea.</para>
     /// </remarks>
     public sealed class MudMarks
     {
@@ -108,6 +110,9 @@ namespace AF.Presentation.Mechanics
         /// <summary>La nube de barro del lavado está a la vista.</summary>
         public bool CloudVisible => _cloud.gameObject.activeSelf;
 
+        /// <summary>El sprite de la nube ya está pedido (la cuia tuvo Barro): el lavado no tiene que generarlo.</summary>
+        public bool CloudReady => _cloud.sprite != null;
+
         /// <summary>Los grumos de la dosis <paramref name="k"/> están a la vista.</summary>
         public bool LumpsVisible(int k)
         {
@@ -120,6 +125,7 @@ namespace AF.Presentation.Mechanics
         /// </summary>
         public Color PaintMud(LiquidGraphic liquid, int k)
         {
+            EnsureCloud();
             liquid.SetDose(k, Palette.Mud, 1f, 0);
             if (!IsAnimating && (uint)k < (uint)_lumps.Length)
             {
@@ -129,17 +135,33 @@ namespace AF.Presentation.Mechanics
             return Palette.Mud;
         }
 
-        /// <summary>Deja grumos en cada dosis visible de Barro de <paramref name="cuia"/> y en ninguna otra. Idempotente.</summary>
+        /// <summary>
+        /// Deja grumos en cada dosis visible de Barro de <paramref name="cuia"/> y en ninguna otra. Idempotente. Si la cuia
+        /// tiene Barro (también bajo una oculta, que se lavará cuando se revele), pide ya el sprite de la nube: así el lavado
+        /// no genera la textura a mitad del paso.
+        /// </summary>
         public void Show(Cuia cuia)
         {
             int mask = 0;
+            bool anyMud = false;
             int count = Mathf.Min(cuia.Count, _lumps.Length);
             for (int k = 0; k < count; k++)
             {
-                if (!cuia.IsHiddenAt(k) && cuia.ColorAt(k) == Cuia.MudColor)
+                if (cuia.ColorAt(k) != Cuia.MudColor)
+                {
+                    continue;
+                }
+
+                anyMud = true;
+                if (!cuia.IsHiddenAt(k))
                 {
                     mask |= 1 << k;
                 }
+            }
+
+            if (anyMud)
+            {
+                EnsureCloud();
             }
 
             SetMask(mask);
@@ -174,10 +196,7 @@ namespace AF.Presentation.Mechanics
             _washElapsed = 0f;
             _washing = true;
             _washFinal = false;
-            if (_cloud.sprite == null)
-            {
-                _cloud.sprite = _art.BarroCloud;
-            }
+            EnsureCloud(); // ya pedido al mostrar el Barro (Show o PaintMud); solo un respaldo, que no asigna si ya está
 
             OverlayParts.Place(_cloud, 0f, CuiaGeometry.CavityBottomU + k + 0.5f, 2f * CuiaGeometry.CavityHalfWidthU, 1f, _u);
             Splash(k);
@@ -349,6 +368,15 @@ namespace AF.Presentation.Mechanics
             Color fruit = _washTint > 0 ? Palette.Tint(_washTint) : Palette.Mud;
             Vector2 surface = _view.FootPosition + new Vector2(0f, (CuiaGeometry.CavityBottomU + k + 1f) * _u);
             fx.Splash(surface, Color.Lerp(fruit, Palette.Mud, 0.6f), _u);
+        }
+
+        // Pide el sprite de la nube (se genera una vez por sesión y agua base) la primera vez que esta cuia tiene Barro.
+        private void EnsureCloud()
+        {
+            if (_cloud.sprite == null)
+            {
+                _cloud.sprite = _art.BarroCloud;
+            }
         }
 
         private void SetMask(int mask)

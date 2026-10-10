@@ -5,10 +5,11 @@ namespace AF.Presentation
 {
     /// <summary>
     /// Arte procedural [P] del Remolino (02 §9.1 M4; propuesta de D-007 b.2 M4: «espiral en la base de las dos cuias, unidas
-    /// por un canal bajo el tablero»; D-003): la cápsula con la que se traza el canal entre las dos cuias de la pareja y la
-    /// espiral de espuma aplanada sobre el remanso, en <see cref="RemolinoSpiralFrames"/> fases para que gire mientras la
-    /// pareja recibe. Los colores del canal quedan a ΔE00 ≥ 10 de los 14 tintes y lejos del turquesa (direccion-visual-v2
-    /// §2.4, regla 1; los comprueba <c>CuiaOverlayTests</c>).
+    /// por un canal bajo el tablero»; D-003): el agua del canal que une las dos cuias de la pareja (un lecho y un centro con
+    /// degradado transversal, y una línea de espuma discontinua), la espuma suave que lo recorre al recibir y la espiral de
+    /// espuma aplanada sobre el remanso, en <see cref="RemolinoSpiralFrames"/> fases para que gire mientras la pareja recibe.
+    /// Los colores del canal quedan a ΔE00 ≥ 10 de los 14 tintes y lejos del turquesa (direccion-visual-v2 §2.4, regla 1; los
+    /// comprueba <c>CuiaOverlayTests</c>).
     /// </summary>
     /// <remarks>
     /// Perezosos, como los de <c>ProceduralArt.Mechanics.cs</c>: un nivel sin Remolino no crea ninguna textura. Blancos, para
@@ -17,7 +18,7 @@ namespace AF.Presentation
     /// </remarks>
     public sealed partial class ProceduralArt
     {
-        /// <summary>Radio (px) del círculo de la cápsula del canal; es también su borde 9-slice.</summary>
+        /// <summary>Radio (px) del círculo de las cápsulas del canal; es también su borde 9-slice.</summary>
         public const int RemolinoCapsuleRadiusPx = 12;
 
         /// <summary>Fases de la espiral (30° cada una): la espiral gira cambiando de fase, sin deformarse.</summary>
@@ -26,36 +27,94 @@ namespace AF.Presentation
         /// <summary>Ancho de la espiral aplanada (u).</summary>
         public const float RemolinoSpiralWidthU = 2.3f;
 
-        /// <summary>Alto de la espiral aplanada (u): la perspectiva del remanso sobre la repisa.</summary>
-        public const float RemolinoSpiralHeightU = 0.66f;
+        /// <summary>Alto de la espiral aplanada (u): la perspectiva del remanso sobre la repisa, dentro de su remanso (0,85 u).</summary>
+        public const float RemolinoSpiralHeightU = 0.8f;
+
+        /// <summary>Vueltas de la espiral: pocas y gruesas, para que los brazos no se peguen al aplanarla.</summary>
+        public const float RemolinoSpiralTurns = 1.6f;
 
         /// <summary>
-        /// Agua del canal del Remolino #7E959B [P]: gris azulado claro de remanso, L* 60, que se lee sobre el panel azul petróleo
-        /// (ΔE00 31-38) y queda a ΔE00 15,8 del tinte más cercano (Agua del Tapajós) y del turquesa.
+        /// Trazo más fino de la espiral (px de la textura, en el centro): 0,105 u, ≥ 2 dp con cuias de 38 dp o más (u ≥ 19, el
+        /// mínimo de la campaña: 16-17 cuias en 3 filas de 6) y 2,5 dp a 48 dp. Crece con u, porque la espiral mide u.
         /// </summary>
-        public static readonly Color RemolinoChannelWater = Palette.Hex(0x7E959B);
+        public const float RemolinoSpiralMinStrokePx = 10.5f;
 
-        /// <summary>Canto oscuro del canal #0F1E22 [P] (≈ 1,5 dp): lo separa de la madera de la repisa que cruza.</summary>
+        /// <summary>Trazo más grueso de la espiral (px de la textura, en el brazo exterior): 3,4 dp a 48 dp.</summary>
+        public const float RemolinoSpiralMaxStrokePx = 14f;
+
+        /// <summary>El brazo exterior se afila hasta 0 en sus últimos grados: sin un extremo suelto.</summary>
+        public const float RemolinoSpiralTaperDeg = 20f;
+
+        /// <summary>
+        /// Ángulo (grados, antihorario desde la derecha) donde termina el brazo exterior en la fase 0: arriba, bajo el pie de
+        /// la cuia, que lo tapa.
+        /// </summary>
+        public const float RemolinoSpiralEndDeg = 90f;
+
+        /// <summary>
+        /// Agua del canal del Remolino, centro #8FA9AE [P]: gris azulado claro de remanso (L* 67), a ΔE00 13,5 del tinte más
+        /// cercano (Agua del Tapajós, que es también el turquesa) y muy claro frente al panel azul petróleo (L* ≈ 17-23).
+        /// </summary>
+        public static readonly Color RemolinoChannelWater = Palette.Hex(0x8FA9AE);
+
+        /// <summary>Agua del canal en los bordes #5E7F86 [P] (L* 51): ΔE00 19,9 del Agua del Tapajós.</summary>
+        public static readonly Color RemolinoChannelEdge = Palette.Hex(0x5E7F86);
+
+        /// <summary>
+        /// Oscuro de remanso #0F1E22 [P]: la boca por la que el canal sale de debajo de la repisa de cada cuia de la pareja.
+        /// </summary>
         public static readonly Color RemolinoChannelRim = Palette.Hex(0x0F1E22);
 
         // Lienzo de una fase de la espiral (px) con 2 px de margen arriba y abajo para que el filtrado no mezcle fases.
         private const int RemolinoSpiralW = (int)(RemolinoSpiralWidthU * MechanicPxPerU);
         private const int RemolinoSpiralH = (int)(RemolinoSpiralHeightU * MechanicPxPerU) + 4;
 
+        // Espuma que recorre el canal: cápsula 1,8:1 de 4,5 dp de ancho con 1,5 dp de borde suave, a 8 px/dp.
+        private const float RemolinoFoamPxPerDp = 8f;
+        private const float RemolinoFoamWidthDp = 4.5f;
+        private const float RemolinoFoamFeatherDp = 1.5f;
+
+        // Línea de espuma del canal: 6 dp de trazo y 6 de hueco, 1 dp de grueso, a 4 px/dp.
+        private const float RemolinoDashPxPerDp = 4f;
+
         private Sprite? _remolinoCapsule;
+        private Sprite? _remolinoCapsuleSoft;
+        private Sprite? _remolinoFoam;
+        private Sprite? _remolinoDash;
         private Sprite?[]? _remolinoSpiral;
 
         /// <summary>
-        /// Cápsula blanca para el canal: un círculo de <see cref="RemolinoCapsuleRadiusPx"/> px de radio con un centro de 2 px y
-        /// borde 9-slice igual al radio. Estirada (<c>Image.Type.Sliced</c>) a (largo + ancho) × ancho da un tramo con los dos
-        /// extremos redondos, así que los tramos que se solapan en un vértice hacen un codo redondo.
+        /// Cápsula blanca de borde nítido (el lecho del canal): un círculo de <see cref="RemolinoCapsuleRadiusPx"/> px de radio
+        /// con un centro de 2 px y borde 9-slice igual al radio. Estirada (<c>Image.Type.Sliced</c>) a (largo + ancho) × ancho
+        /// da un tramo con los dos extremos redondos, así que los tramos que se solapan en un vértice hacen un codo redondo.
+        /// Sin estirar (<c>Image.Type.Simple</c>) es una elipse: la boca del canal.
         /// </summary>
-        public Sprite RemolinoCapsule => _remolinoCapsule != null ? _remolinoCapsule : (_remolinoCapsule = BuildRemolinoCapsule());
+        public Sprite RemolinoCapsule => _remolinoCapsule != null ? _remolinoCapsule : (_remolinoCapsule = BuildRemolinoCapsule(false));
+
+        /// <summary>
+        /// La misma cápsula con el alfa en degradado desde el eje (1) hasta el borde (0): sobre el lecho, el agua del canal
+        /// pasa del centro (<see cref="RemolinoChannelWater"/>) a los bordes (<see cref="RemolinoChannelEdge"/>). Los extremos
+        /// redondos son el mismo degradado radial, así que dos tramos que se solapan en un codo no dejan costura.
+        /// </summary>
+        public Sprite RemolinoCapsuleSoft => _remolinoCapsuleSoft != null ? _remolinoCapsuleSoft : (_remolinoCapsuleSoft = BuildRemolinoCapsule(true));
+
+        /// <summary>
+        /// Espuma que recorre el canal al recibir: cápsula blanca 1,8:1 (eje largo horizontal) con borde suave de 1,5 dp a su
+        /// tamaño de <see cref="RemolinoFoamWidthDp"/> dp de ancho. Nunca un disco opaco: se tiñe de espuma translúcida.
+        /// </summary>
+        public Sprite RemolinoFoam => _remolinoFoam != null ? _remolinoFoam : (_remolinoFoam = BuildRemolinoFoam());
+
+        /// <summary>
+        /// Línea de espuma discontinua del canal para <c>Image.Type.Tiled</c>: 12 × 1 dp con un trazo de 6 dp de puntas
+        /// redondas y 6 de hueco, repetible en horizontal.
+        /// </summary>
+        public Sprite RemolinoDash => _remolinoDash != null ? _remolinoDash : (_remolinoDash = BuildRemolinoDash());
 
         /// <summary>
         /// Fase <paramref name="frame"/> (módulo <see cref="RemolinoSpiralFrames"/>) de la espiral de espuma aplanada (blanca,
-        /// <see cref="RemolinoSpiralWidthU"/> × <see cref="RemolinoSpiralHeightU"/> u): 2,4 vueltas con el trazo más grueso por
-        /// fuera; cada fase gira la espiral 30° en el sentido de las agujas del reloj.
+        /// <see cref="RemolinoSpiralWidthU"/> × <see cref="RemolinoSpiralHeightU"/> u): <see cref="RemolinoSpiralTurns"/>
+        /// vueltas con el trazo más grueso por fuera y el brazo exterior afilado al final; cada fase gira la espiral 30° en el
+        /// sentido de las agujas del reloj.
         /// </summary>
         public Sprite RemolinoSpiralFrame(int frame)
         {
@@ -70,16 +129,63 @@ namespace AF.Presentation
             return frames[f]!;
         }
 
-        private Sprite BuildRemolinoCapsule()
+        private Sprite BuildRemolinoCapsule(bool soft)
         {
             const int r = RemolinoCapsuleRadiusPx;
             const int s = (2 * r) + 2;
             var pc = new PixelCanvas(s, s);
+            if (!soft)
+            {
+                // Cuartos de círculo centrados en las esquinas del centro de 2 px: con el borde 9-slice igual al radio, los
+                // cantos estirados quedan rectos y los extremos, redondos.
+                pc.FillRoundedRect(0.5f, 0.5f, s - 0.5f, s - 0.5f, r - 0.5f, Color.white);
+                return MakeSprite(pc, "remolino_capsule", new Vector2(0.5f, 0.5f), new Vector4(r, r, r, r));
+            }
 
-            // Cuartos de círculo centrados en las esquinas del centro de 2 px: con el borde 9-slice igual al radio, los cantos
-            // estirados quedan rectos y los extremos, redondos.
-            pc.FillRoundedRect(0.5f, 0.5f, s - 0.5f, s - 0.5f, r - 0.5f, Color.white);
-            return MakeSprite(pc, "remolino_capsule", new Vector2(0.5f, 0.5f), new Vector4(r, r, r, r));
+            // Degradado transversal: alfa 1 en el eje (el centro de 2 px) y 0 en el borde, con una curva suave; el borde, con
+            // la misma cobertura de antialias que la cápsula nítida.
+            for (int y = 0; y < s; y++)
+            {
+                for (int x = 0; x < s; x++)
+                {
+                    float px = x + 0.5f;
+                    float py = y + 0.5f;
+                    float d = PixelCanvas.RoundedRectDistance(px, py, r, r, r + 2f, r + 2f, 0f); // distancia al eje
+                    float n = Mathf.Clamp01(d / (r - 0.5f));
+                    float a = 1f - (n * n * (3f - (2f * n)));
+                    float edge = PixelCanvas.Coverage(PixelCanvas.RoundedRectDistance(px, py, 0.5f, 0.5f, s - 0.5f, s - 0.5f, r - 0.5f));
+                    pc.Set(x, y, new Color(1f, 1f, 1f, a * edge));
+                }
+            }
+
+            return MakeSprite(pc, "remolino_capsule_soft", new Vector2(0.5f, 0.5f), new Vector4(r, r, r, r));
+        }
+
+        private Sprite BuildRemolinoFoam()
+        {
+            const float k = RemolinoFoamPxPerDp;
+            float wDp = RemolinoFoamWidthDp;
+            float lDp = 1.8f * wDp;
+            int w = Mathf.CeilToInt(lDp * k);
+            int h = Mathf.CeilToInt(wDp * k);
+            float soft = RemolinoFoamFeatherDp * k;
+            var pc = new PixelCanvas(w, h);
+
+            // La silueta (50 % de la cobertura suave) mide lDp × wDp; el borde suave queda dentro del lienzo.
+            float inset = 0.5f * soft;
+            pc.FillRoundedRectSoft(inset, inset, w - inset, h - inset, (0.5f * h) - inset, soft, Color.white);
+            return MakeSprite(pc, "remolino_foam", new Vector2(0.5f, 0.5f), Vector4.zero, k);
+        }
+
+        private Sprite BuildRemolinoDash()
+        {
+            const float k = RemolinoDashPxPerDp;
+            int w = Mathf.RoundToInt(12f * k);
+            int h = Mathf.RoundToInt(1f * k);
+            var pc = new PixelCanvas(w, h);
+            float r = 0.5f * h;
+            pc.FillCapsule(r, r, (6f * k) - r, r, r, Color.white);
+            return MakeSprite(pc, "remolino_dash", new Vector2(0.5f, 0.5f), Vector4.zero, k, true);
         }
 
         // Las fases en una sola textura (una fila por fase) y un sprite por fase.
@@ -87,11 +193,16 @@ namespace AF.Presentation
         {
             const int w = RemolinoSpiralW;
             const int h = RemolinoSpiralH;
+            float maxR = 0.5f * RemolinoSpiralMaxStrokePx;
+            float rx = (w * 0.5f) - maxR - 2f;
+            float ry = (h * 0.5f) - maxR - 2f;
+            float turns = RemolinoSpiralTurns;
+            float startDeg = RemolinoSpiralEndDeg - (turns * 360f); // el brazo exterior acaba arriba en la fase 0
             var pc = new PixelCanvas(w, h * RemolinoSpiralFrames);
             for (int f = 0; f < RemolinoSpiralFrames; f++)
             {
-                float phase = -f * (2f * Mathf.PI / RemolinoSpiralFrames);
-                DrawRemolinoSpiral(pc, w * 0.5f, (f * h) + (h * 0.5f), (w * 0.5f) - 8f, (h * 0.5f) - 6f, 2.4f, 13f, phase);
+                float phase = (startDeg - (f * (360f / RemolinoSpiralFrames))) * Mathf.Deg2Rad;
+                DrawRemolinoSpiral(pc, w * 0.5f, (f * h) + (h * 0.5f), rx, ry, turns, phase);
             }
 
             Texture2D tex = pc.ToTexture("remolino_spiral");
@@ -110,18 +221,26 @@ namespace AF.Presentation
         }
 
         // Espiral de Arquímedes aplanada (rx × ry) de turns vueltas desde el centro, girada phase radianes, con el trazo de
-        // thick px por fuera y el 40 % en el centro (la espuma se abre al girar).
-        private static void DrawRemolinoSpiral(PixelCanvas pc, float cx, float cy, float rx, float ry, float turns, float thick, float phase)
+        // RemolinoSpiralMinStrokePx en el centro a RemolinoSpiralMaxStrokePx por fuera y afilado a 0 en los últimos
+        // RemolinoSpiralTaperDeg grados.
+        private static void DrawRemolinoSpiral(PixelCanvas pc, float cx, float cy, float rx, float ry, float turns, float phase)
         {
-            int steps = Mathf.CeilToInt(turns * 90f);
-            Vector2 prev = new Vector2(cx + (Mathf.Cos(phase) * 0.02f * rx), cy + (Mathf.Sin(phase) * 0.02f * ry));
+            int steps = Mathf.CeilToInt(turns * 120f);
+            float total = turns * 360f;
+            Vector2 prev = new Vector2(cx + (Mathf.Cos(phase) * 0.06f * rx), cy + (Mathf.Sin(phase) * 0.06f * ry));
             for (int i = 1; i <= steps; i++)
             {
                 float t = i / (float)steps;
                 float angle = phase + (t * turns * Mathf.PI * 2f);
                 float r = 0.06f + (0.94f * t);
                 var p = new Vector2(cx + (Mathf.Cos(angle) * r * rx), cy + (Mathf.Sin(angle) * r * ry));
-                pc.FillCapsule(prev.x, prev.y, p.x, p.y, 0.5f * thick * (0.4f + (0.6f * t)), Color.white);
+                float taper = Mathf.Clamp01((total * (1f - t)) / RemolinoSpiralTaperDeg);
+                float radius = 0.5f * Mathf.Lerp(RemolinoSpiralMinStrokePx, RemolinoSpiralMaxStrokePx, t) * Mathf.Sqrt(taper);
+                if (radius >= 0.6f)
+                {
+                    pc.FillCapsule(prev.x, prev.y, p.x, p.y, radius, Color.white);
+                }
+
                 prev = p;
             }
         }

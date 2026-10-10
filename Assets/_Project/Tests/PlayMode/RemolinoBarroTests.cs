@@ -61,8 +61,8 @@ namespace AF.Tests.PlayMode
             Assert.That(other.PartnerIndex, Is.EqualTo(a));
             Assert.That(drawer.DrawsChannel && drawer.ChannelVisible, Is.True, "el canal lo dibuja la cuia de menor índice");
             Assert.That(other.DrawsChannel || other.ChannelVisible, Is.False, "y solo ella: una sola vez");
-            AssertChannel(view.Animator, view.Views, drawer, a, b, "nivel 103");
-            TestContext.WriteLine("Nivel 103: pareja " + a + "-" + b + ", " + Rows(view.Animator) + " filas, " + drawer.ChannelSegmentCount + " tramos de " + drawer.ChannelWidthDp.ToString("0.0") + " dp.");
+            AssertChannel(view.Animator, view.Views, drawer, a, b, PanelInner(view), "nivel 103");
+            TestContext.WriteLine("Nivel 103: pareja " + a + "-" + b + ", " + Rows(view.Animator) + " filas, " + drawer.ChannelSegmentCount + " tramos a la vista de " + RemolinoOverlay.ChannelWidthDp.ToString("0.0") + " dp.");
         }
 
         [UnityTest]
@@ -234,14 +234,21 @@ namespace AF.Tests.PlayMode
                     RemolinoOverlay drawer = Whirl(_rig.Views[a]);
                     Assert.That(drawer.ChannelVisible, Is.True, what);
                     Assert.That(Whirl(_rig.Views[b]).ChannelVisible, Is.False, what + ": una sola vez");
-                    AssertChannel(_rig.Animator, _rig.Views, drawer, a, b, what);
+
+                    // Panel con el marco más grueso (sin adelgazar): el caso con menos aire bajo la última fila.
+                    Rect inner = PanelInner(l, Art.PanelFrameDp, LayoutOffset(_rig.Animator, l, counts[c]));
+                    AssertChannel(_rig.Animator, _rig.Views, drawer, a, b, inner, what);
+                    int vertical = VerticalPieces(drawer);
                     if (l.RowOf[a] != l.RowOf[b])
                     {
-                        Assert.That(drawer.ChannelSegmentCount, Is.GreaterThanOrEqualTo(4), what + ": baja por un hueco de la fila de abajo");
+                        Assert.That(vertical, Is.GreaterThanOrEqualTo(1), what + ": baja por un hueco de la fila de abajo");
+                        Assert.That(drawer.ChannelSegmentCount, Is.GreaterThanOrEqualTo(2), what);
                     }
                     else
                     {
-                        Assert.That(drawer.ChannelSegmentCount, Is.EqualTo(3), what + ": U bajo la repisa");
+                        // Los dos tramos bajo los pies van por detrás de la repisa: solo se ve el tramo de debajo, entre las bocas.
+                        Assert.That(drawer.ChannelSegmentCount, Is.EqualTo(1), what + ": un tramo bajo la repisa");
+                        Assert.That(vertical, Is.EqualTo(0), what);
                     }
                 }
             }
@@ -267,7 +274,7 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 700);
             Assert.That(view.Animator.LayoutVersion, Is.GreaterThan(version + 1), "recolocado en cada fotograma del relayout");
             Assert.That(drawer.ChannelVisible, Is.True);
-            AssertChannel(view.Animator, view.Views, drawer, a, b, "tras añadir una cuia");
+            AssertChannel(view.Animator, view.Views, drawer, a, b, PanelInner(view), "tras añadir una cuia");
             TestContext.WriteLine("Pie de " + a + ": " + footA + " → " + view.Animator.Foot(a) + "; de " + b + ": " + footB + " → " + view.Animator.Foot(b) + ".");
         }
 
@@ -290,13 +297,20 @@ namespace AF.Tests.PlayMode
             Assert.That(target.Mud.IsAnimating, Is.True, "IsAnimating mientras dura");
             Assert.That(target.Mud.WashLayer, Is.EqualTo(mudLayer), "la dosis donde estaba el barro");
             Assert.That(target.Mud.LumpsVisible(mudLayer), Is.True, "los grumos aún se ven al empezar a disolverse");
+            Assert.That(tint, Is.InRange(1, Cuia.MaxTintColor), "la fruta nueva que lava el barro");
+            Color fruit = Palette.Tint(tint);
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.MudWash, pour.Target, MudMarks.TurbidPeakAt);
-            Assert.That(target.Mud.Turbidity, Is.GreaterThan(0.5f * MudMarks.PeakTurbidity), "el barro enturbia la fruta");
+            float peak = target.Mud.Turbidity;
+            Assert.That(peak, Is.GreaterThan(0.5f * MudMarks.PeakTurbidity), "el barro enturbia la fruta");
             Assert.That(target.Mud.CloudVisible, Is.True, "con su nube parda");
-            Assert.That(target.Mud.WashColor, Is.Not.EqualTo(Palette.Tint(tint)));
+            Color peakColor = target.Mud.WashColor;
+            Assert.That(Distance(peakColor, Color.Lerp(fruit, Palette.Mud, peak)), Is.LessThan(1e-3f), "la dosis es la fruta nueva mezclada con el barro (no el barro solo)");
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.MudWash, pour.Target, 0.8f);
             Assert.That(target.Mud.WashLumpAlpha, Is.EqualTo(0f).Within(1e-4f), "los grumos ya se disolvieron");
-            Assert.That(target.Mud.Turbidity, Is.LessThan(0.5f * MudMarks.PeakTurbidity), "y el agua se aclara");
+            float late = target.Mud.Turbidity;
+            Assert.That(late, Is.LessThan(0.5f * MudMarks.PeakTurbidity), "y el agua se aclara");
+            Assert.That(Distance(target.Mud.WashColor, Color.Lerp(fruit, Palette.Mud, late)), Is.LessThan(1e-3f), "la misma mezcla, con menos barro");
+            Assert.That(Distance(target.Mud.WashColor, fruit), Is.LessThan(Distance(peakColor, fruit)), "se disuelve en la fruta nueva: más cerca de ella que en el pico");
 
             MechanicTestKit.StepToIdle(boot, 6000);
             MechanicStepRecord wash = MechanicTestKit.Record(view.Animator, MechanicStepKind.MudWash, pour.Target);
@@ -351,15 +365,42 @@ namespace AF.Tests.PlayMode
             yield return null;
 
             // Calentamiento: la misma secuencia una vez (JIT, sprites perezosos), y después se mide en un banco nuevo.
-            for (int pass = 0; pass < 2; pass++)
+            RunSteps(Art, false);
+            RunSteps(Art, true);
+
+            // Sin calentar los sprites: con un arte recién creado, la nube del barro (una textura que se genera la primera vez)
+            // se pide al cargar el tablero, no a mitad del lavado.
+            var fresh = new ProceduralArt("white");
+            try
             {
-                RunSteps(pass == 1);
+                Assert.That(fresh.HasBarroCloud, Is.False);
+                RunSteps(fresh, true);
+            }
+            finally
+            {
+                _rig?.Dispose();
+                _rig = null;
+                fresh.Dispose();
+            }
+
+            // Un tablero sin Barro no genera la nube.
+            var clean = new ProceduralArt("white");
+            try
+            {
+                _rig = new MechanicTestKit.Rig(clean, PairBoard(5, 1, 3));
+                Assert.That(clean.HasBarroCloud, Is.False, "sin Barro, sin textura de la nube");
+            }
+            finally
+            {
+                _rig?.Dispose();
+                _rig = null;
+                clean.Dispose();
             }
         }
 
         // Un vertido por el Remolino (recepción por el fondo) y otro sobre el Barro (lavado); con measure, 60 fotogramas sin
         // asignaciones (Recorder GC.Alloc) desde cada toque y otros 60 hasta el final.
-        private void RunSteps(bool measure)
+        private void RunSteps(ProceduralArt art, bool measure)
         {
             BoardState board = Board(
                 new[] { new[] { 1, 1 }, new[] { 2, 2, 2 }, new[] { 3, Cuia.MudColor }, new[] { 4 }, new[] { 3, 3 }, new int[0] },
@@ -369,8 +410,9 @@ namespace AF.Tests.PlayMode
                     new MechanicSpec(MechanicType.Remolino, partner: 0), MechanicSpec.None, MechanicSpec.None,
                 });
             _rig?.Dispose();
-            _rig = new MechanicTestKit.Rig(Art, board);
+            _rig = new MechanicTestKit.Rig(art, board);
             MechanicTestKit.Rig rig = _rig;
+            Assert.That(rig.Views[2].Mud.CloudReady && art.HasBarroCloud, Is.True, "la nube del barro, pedida al cargar el tablero");
             BoardState s = rig.Pour(board, 1, 0, out PourVisual remolino);
             Assert.That(remolino.Events.ThroughRemolino, Is.True);
             if (measure)
@@ -394,14 +436,13 @@ namespace AF.Tests.PlayMode
             Assert.That(MechanicTestKit.TryFindRecord(rig.Animator, MechanicStepKind.MudWash, 2, out _), Is.True, "hubo lavado");
         }
 
-        // El canal de la pareja a-b: une los dos pies con tramos horizontales y verticales, no se mete en ninguna cuia (ni
-        // elevada 16 dp) salvo el extremo redondo bajo el pie de la pareja, sus tramos horizontales no tocan la cara de ninguna
-        // repisa y no se sale de las ranuras del tablero.
-        private static void AssertChannel(BoardAnimator board, CuiaView[] views, RemolinoOverlay drawer, int a, int b, string what)
+        // El canal de la pareja a-b: el trazado une los dos pies con tramos horizontales y verticales; de lo que se ve, ningún
+        // tramo tapa una cuia (ni elevada 16 dp) ni la franja de una repisa (de su canto inferior, 15 dp bajo el pie, a su cara
+        // superior, 3 dp sobre él), todos miden el ancho del canal, no se salen de las ranuras y quedan ≥ 2 dp por dentro del
+        // canto interior del marco (inner); bajo el remanso de cada cuia de la pareja hay una boca en el canto de la repisa.
+        private static void AssertChannel(BoardAnimator board, CuiaView[] views, RemolinoOverlay drawer, int a, int b, Rect inner, string what)
         {
             AssertEnds(board, drawer, a, b, what);
-            float w = drawer.ChannelWidthDp;
-            Assert.That(w, Is.InRange(RemolinoOverlay.ChannelMinDp, RemolinoOverlay.ChannelMaxDp), what);
             for (int i = 1; i < drawer.ChannelPointCount; i++)
             {
                 Vector2 p = drawer.ChannelPoint(i - 1);
@@ -418,28 +459,92 @@ namespace AF.Tests.PlayMode
                 maxX = Mathf.Max(maxX, slot.xMax);
             }
 
+            Assert.That(drawer.ChannelSegmentCount, Is.GreaterThanOrEqualTo(1), what + ": algún tramo a la vista");
             for (int s = 0; s < drawer.ChannelSegmentCount; s++)
             {
                 Rect r = drawer.ChannelSegmentRect(s);
                 string seg = what + ": tramo " + s + " " + r;
+                Assert.That(Mathf.Min(r.width, r.height), Is.EqualTo(RemolinoOverlay.ChannelWidthDp).Within(0.01f), seg + " del ancho del canal");
                 Assert.That(r.xMin >= minX - 0.01f && r.xMax <= maxX + 0.01f, Is.True, seg + " dentro de las ranuras del tablero");
-                bool horizontal = r.width > r.height;
+                Assert.That(
+                    r.xMin >= inner.xMin + 2f - 0.01f && r.xMax <= inner.xMax - 2f + 0.01f && r.yMin >= inner.yMin + 2f - 0.01f && r.yMax <= inner.yMax - 2f + 0.01f,
+                    Is.True,
+                    seg + " a ≥ 2 dp del canto interior del marco " + inner);
                 for (int c = 0; c < views.Length; c++)
                 {
                     Vector2 foot = board.Foot(c);
                     float u = views[c].Unit;
                     float top = foot.y + (views[c].HeightU * u) + CuiaView.LiftDp;
-                    float bottom = c == a || c == b ? foot.y + (0.5f * w) + 0.01f : foot.y; // el extremo redondo, tras el pie
-                    Rect body = Rect.MinMaxRect(foot.x - u, bottom, foot.x + u, top);
+                    Rect body = Rect.MinMaxRect(foot.x - u, foot.y, foot.x + u, top);
                     Assert.That(r.Overlaps(body), Is.False, seg + " no tapa la cuia " + c + " " + body);
-                    if (horizontal)
-                    {
-                        // Cara de la repisa de la fila de c: de su canto inferior (15 dp bajo el pie) a su cara superior (3 dp sobre él).
-                        float shelfLow = board.SlotRect(c).yMin;
-                        Assert.That(r.yMax <= shelfLow + 0.01f || r.yMin >= foot.y + 3f, Is.True, seg + " no tapa la repisa de la cuia " + c);
-                    }
+                    float shelfLow = board.SlotRect(c).yMin;
+                    float shelfTop = foot.y + RemolinoOverlay.ShelfTopAboveFootDp;
+                    Assert.That(r.yMax <= shelfLow + 0.01f || r.yMin >= shelfTop - 0.01f, Is.True, seg + " no tapa la repisa de la cuia " + c + " [" + shelfLow + ", " + shelfTop + "]");
                 }
             }
+
+            Assert.That(drawer.MouthCount, Is.EqualTo(2), what + ": una boca bajo cada remanso");
+            for (int m = 0; m < 2; m++)
+            {
+                int c = m == 0 ? a : b;
+                Rect mouth = drawer.MouthRect(m);
+                Vector2 foot = board.Foot(c);
+                string label = what + ": boca de " + c + " " + mouth;
+                Assert.That(mouth.center.x, Is.EqualTo(foot.x).Within(0.01f), label + " bajo el remanso");
+                Assert.That(mouth.center.y, Is.InRange(foot.y - 17f, foot.y - 15f), label + " en el canto inferior de la repisa");
+                Assert.That(mouth.size.x, Is.EqualTo(RemolinoOverlay.MouthWidthDp).Within(0.01f), label);
+                Assert.That(mouth.size.y, Is.EqualTo(RemolinoOverlay.MouthHeightDp).Within(0.01f), label);
+            }
+        }
+
+        // Tramos verticales a la vista (los que cruzan una fila por un hueco).
+        private static int VerticalPieces(RemolinoOverlay drawer)
+        {
+            int count = 0;
+            for (int s = 0; s < drawer.ChannelSegmentCount; s++)
+            {
+                Rect r = drawer.ChannelSegmentRect(s);
+                if (r.height > r.width)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        // Rectángulo interior del panel (dentro del marco) en el espacio de las capas de tablero, desde el layout del tablero:
+        // el layout va en dp desde arriba y las capas, hacia arriba, desplazadas por offset.
+        private static Rect PanelInner(BoardLayoutResult l, float frame, Vector2 offset)
+        {
+            float xMin = l.PanelX + frame + offset.x;
+            float xMax = l.PanelX + l.PanelWidth - frame + offset.x;
+            float yMax = -(l.PanelY + frame) + offset.y;
+            float yMin = -(l.PanelY + l.PanelHeight - frame) + offset.y;
+            return Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+        }
+
+        private static Rect PanelInner(GameScreen view)
+        {
+            BoardLayoutResult l = view.Layout!;
+            return PanelInner(l, view.PanelFrameDp, LayoutOffset(view.Animator, l, view.Views.Length));
+        }
+
+        // Traslación del layout (pie en (CenterX, −FootY)) a las capas de tablero, igual para la primera y la última cuia.
+        private static Vector2 LayoutOffset(BoardAnimator board, BoardLayoutResult l, int count)
+        {
+            Vector2 first = board.Foot(0) - new Vector2(l.CenterX[0], -l.FootY[0]);
+            Vector2 last = board.Foot(count - 1) - new Vector2(l.CenterX[count - 1], -l.FootY[count - 1]);
+            Assert.That(Vector2.Distance(first, last), Is.LessThan(0.5f), "el layout y las capas difieren solo en una traslación");
+            return first;
+        }
+
+        private static float Distance(Color x, Color y)
+        {
+            float dr = x.r - y.r;
+            float dg = x.g - y.g;
+            float db = x.b - y.b;
+            return Mathf.Sqrt((dr * dr) + (dg * dg) + (db * db));
         }
 
         private static void AssertEnds(BoardAnimator board, RemolinoOverlay drawer, int a, int b, string what)
