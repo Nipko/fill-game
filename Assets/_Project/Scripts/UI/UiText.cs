@@ -1,6 +1,7 @@
 #nullable enable
 using System.Globalization;
 using AF.GameFlow;
+using AF.Levels;
 
 namespace AF.UI
 {
@@ -310,8 +311,8 @@ namespace AF.UI
         {
             switch (label)
             {
-                case "hard": return DifficultyHard;
-                case "very_hard": return DifficultyVeryHard;
+                case LevelDefinition.LabelHard: return DifficultyHard;
+                case LevelDefinition.LabelVeryHard: return DifficultyVeryHard;
                 default: return null;
             }
         }
@@ -339,8 +340,8 @@ namespace AF.UI
 
             switch (label)
             {
-                case "hard": return DifficultySubtitleHard;
-                case "very_hard": return DifficultySubtitleVeryHard;
+                case LevelDefinition.LabelHard: return DifficultySubtitleHard;
+                case LevelDefinition.LabelVeryHard: return DifficultySubtitleVeryHard;
                 default: return null;
             }
         }

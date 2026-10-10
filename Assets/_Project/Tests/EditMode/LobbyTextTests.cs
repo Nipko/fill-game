@@ -117,7 +117,7 @@ namespace AF.Tests.EditMode
             var exceptions = new System.Collections.Generic.Dictionary<string, string>
             {
                 ["JaguarEye"] = "el iris ámbar (4,6 del Taperebá) mide 2,2 × 1,4 dp con la pupila en medio: lo visible son franjas de ≤ 1,4 dp",
-                ["JaguarShade"] = "(5,0 del Agua del Río Negro) solo se pinta en líneas de ≤ 2 dp (borde de la oreja de 0,6 dp y centro de las rosetas de ≤ 1,9 dp) y en la sombra de la nuca con alfa 0,55",
+                ["JaguarShade"] = "(5,0 del Agua del Río Negro) solo se pinta en líneas de ≤ 2 dp (borde de la oreja de 0,6 dp y centro de las rosetas de ≤ 1,9 dp, alrededor de su punto de tinta) y en la sombra de la nuca con alfa 0,55",
             };
             var seen = new System.Collections.Generic.HashSet<string>();
             foreach ((string name, UnityEngine.Color color) in ProceduralArt.LabelSealColors())
@@ -145,9 +145,24 @@ namespace AF.Tests.EditMode
             Assert.That(seen.Contains("JaguarDisc@0.00") && seen.Contains("JaguarDisc@0.50") && seen.Contains("JaguarDisc@1.00"), Is.True);
             Assert.That(seen.Contains("JaguarCream") && seen.Contains("RanaRing") && seen.Contains("RanaDiscGlow"), Is.True);
 
-            // La rana sigue lejos del Aguaje y del Achiote, los dos tintes naranjas.
+            // La rana: su tinte más cercano es el Agua del Río Negro (9,77), y le siguen el Achiote (9,82) y el Aguaje (11,7).
+            // Por debajo de 10: vale para el chip y las cabeceras (≥ 5), no para una superficie que toque una cuia (§2.4, regla 1).
+            Assert.That(ColorMath.DeltaE00(ProceduralArt.FrogOrange, Palette.Tint(14)), Is.EqualTo(9.8f).Within(0.2f), "frente al Agua del Río Negro #A9672E");
             Assert.That(ColorMath.DeltaE00(ProceduralArt.FrogOrange, Palette.Tint(4)), Is.EqualTo(11.7f).Within(0.2f), "frente al Aguaje #EF7D1A");
             Assert.That(ColorMath.DeltaE00(ProceduralArt.FrogOrange, Palette.Tint(5)), Is.EqualTo(9.8f).Within(0.2f), "frente al Achiote #CF3E1C");
+            float frogNearest = float.MaxValue;
+            int frogNearestTint = 0;
+            for (int tint = 1; tint <= 14; tint++)
+            {
+                float d = ColorMath.DeltaE00(ProceduralArt.FrogOrange, Palette.Tint(tint));
+                if (d < frogNearest)
+                {
+                    frogNearest = d;
+                    frogNearestTint = tint;
+                }
+            }
+
+            Assert.That(frogNearestTint, Is.EqualTo(14), "el tinte más cercano a la rana es el Agua del Río Negro");
         }
 
         [Test]

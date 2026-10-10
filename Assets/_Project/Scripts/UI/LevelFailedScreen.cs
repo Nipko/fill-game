@@ -75,6 +75,12 @@ namespace AF.UI
         /// <summary>Color del título de la cabecera («Nivel {n}»).</summary>
         public Color TitleColor => _title.color;
 
+        /// <summary>
+        /// Material del título de la cabecera (tests): el de <c>TextStyle.ModalTitle</c>, con contorno y sombra, sobre la madera
+        /// y el índigo; el de la fuente, sin contorno, con la tinta sobre el ámbar (<c>ModalKit.SetTitleColor</c>).
+        /// </summary>
+        internal Material? TitleMaterial => _title.fontSharedMaterial;
+
         /// <summary>Sello de la etiqueta en la cabecera, o null si no se ve.</summary>
         public Sprite? HeaderBadge => _badge.gameObject.activeSelf ? _badge.sprite : null;
 

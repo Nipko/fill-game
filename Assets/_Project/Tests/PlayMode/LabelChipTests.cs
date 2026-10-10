@@ -193,28 +193,41 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Failed.HeaderBand, Is.Null, "en normal, igual que antes");
             Assert.That(view.Failed.TitleColor, Is.EqualTo((Color)Palette.Cream));
             Assert.That(view.Failed.HeaderBadge, Is.Null);
+            UnityEngine.Material? titleOutline = UiFonts.Material(TextStyle.ModalTitle);
+            Assert.That(titleOutline, Is.Not.Null, "el material del título (contorno y sombra) existe");
+            Assert.That(view.Failed.TitleMaterial, Is.SameAs(titleOutline), "título con el contorno de siempre");
 
-            // SetLabel a mano da el mismo resultado que el gancho, y volver a normal deja la cabecera de siempre.
+            // SetLabel a mano da el mismo resultado que el gancho, y volver a normal deja la cabecera de siempre, también el
+            // material del título: la tinta sobre el ámbar va sin contorno y el crema sobre la madera vuelve a llevarlo.
             float w = 360f;
             float h = 780f;
             view.Failed.SetLabel("hard");
             view.Failed.Show(41, 20, w, h);
             Assert.That(view.Failed.HeaderBand, Is.EqualTo((Color?)Palette.UiAmber));
             Assert.That(view.Failed.TitleColor, Is.EqualTo((Color)Palette.Ink));
-            view.Failed.SetLabel("very_hard");
-            view.Failed.Show(41, 20, w, h);
-            Assert.That(view.Failed.HeaderBand, Is.EqualTo((Color?)Palette.UiIndigo));
-            Assert.That(view.Failed.HeaderBadge!.name, Is.EqualTo("label_jaguar_head"));
+            Assert.That(view.Failed.TitleMaterial, Is.Not.SameAs(titleOutline), "tinta sobre ámbar, sin el contorno oscuro");
             view.Failed.SetLabel("normal");
             view.Failed.Show(41, 20, w, h);
             Assert.That(view.Failed.HeaderBand, Is.Null);
             Assert.That(view.Failed.TitleColor, Is.EqualTo((Color)Palette.Cream));
+            Assert.That(view.Failed.TitleMaterial, Is.SameAs(titleOutline), "de Difícil a normal vuelve el contorno del título");
+            Assert.That(view.Failed.HeaderBadge, Is.Null);
+            view.Failed.SetLabel("very_hard");
+            view.Failed.Show(41, 20, w, h);
+            Assert.That(view.Failed.HeaderBand, Is.EqualTo((Color?)Palette.UiIndigo));
+            Assert.That(view.Failed.HeaderBadge!.name, Is.EqualTo("label_jaguar_head"));
+            Assert.That(view.Failed.TitleMaterial, Is.SameAs(titleOutline), "marfil sobre índigo, con contorno");
+            view.Failed.SetLabel("normal");
+            view.Failed.Show(41, 20, w, h);
+            Assert.That(view.Failed.HeaderBand, Is.Null);
+            Assert.That(view.Failed.TitleColor, Is.EqualTo((Color)Palette.Cream));
+            Assert.That(view.Failed.TitleMaterial, Is.SameAs(titleOutline));
             Assert.That(view.Failed.HeaderBadge, Is.Null);
             view.Failed.SetLabel(null);
             view.Failed.Show(41, 20, w, h);
             Assert.That(view.Failed.HeaderBand, Is.Null, "sin etiqueta es normal");
 
-            // ¿Seguro? igual: de índigo a normal vuelve a la madera, con el título crema y sin sello.
+            // ¿Seguro? igual: de índigo a ámbar y de ámbar a normal vuelve a la madera, con el título crema, su contorno y sin sello.
             LevelFlow flow = boot.Flow!;
             view.GiveUp.SetLabel("very_hard");
             Assert.That(view.GiveUp.Label, Is.EqualTo("very_hard"), "se guarda y se aplica en el siguiente Show");
@@ -222,11 +235,17 @@ namespace AF.Tests.PlayMode
             Assert.That(view.GiveUp.HeaderBand, Is.EqualTo((Color?)Palette.UiIndigo));
             Assert.That(view.GiveUp.TitleColor, Is.EqualTo((Color)Palette.UiPaper));
             Assert.That(view.GiveUp.HeaderBadge!.name, Is.EqualTo("label_jaguar_head"));
+            Assert.That(view.GiveUp.TitleMaterial, Is.SameAs(titleOutline), "marfil sobre índigo, con contorno");
+            view.GiveUp.SetLabel("hard");
+            view.GiveUp.Show(StuckModalModel.BuildGiveUpConfirm(flow.BuildStuckContext(false, true, GeoTier.T3)), w, h);
+            Assert.That(view.GiveUp.HeaderBand, Is.EqualTo((Color?)Palette.UiAmber));
+            Assert.That(view.GiveUp.TitleMaterial, Is.Not.SameAs(titleOutline), "tinta sobre ámbar, sin el contorno oscuro");
             view.GiveUp.SetLabel("normal");
             Assert.That(view.GiveUp.Label, Is.EqualTo("normal"));
             view.GiveUp.Show(StuckModalModel.BuildGiveUpConfirm(flow.BuildStuckContext(false, true, GeoTier.T3)), w, h);
             Assert.That(view.GiveUp.HeaderBand, Is.Null, "en normal, la cabecera de madera de siempre");
             Assert.That(view.GiveUp.TitleColor, Is.EqualTo((Color)Palette.Cream), "título crema, como antes");
+            Assert.That(view.GiveUp.TitleMaterial, Is.SameAs(titleOutline), "de Difícil a normal vuelve el contorno del título");
             Assert.That(view.GiveUp.HeaderBadge, Is.Null, "sin sello");
         }
     }

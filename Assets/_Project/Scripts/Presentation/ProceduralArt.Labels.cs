@@ -42,10 +42,13 @@ namespace AF.Presentation
 
         /// <summary>
         /// Naranja de advertencia de la rana dardo #D05802 [P] (07 §7.7: «naranja/negro»). No es el HEX de ningún tinte (07 §3,
-        /// regla 6; direccion-visual-v2 §2.4.1 y §7): queda a ΔE00 11,7 del Aguaje y 9,8 del Achiote, para que en el HUD (T09),
-        /// junto al tablero, no se lea como una dosis. Es un glifo sobre el disco marfil, así que va a ≥ 3:1 de todo el disco
-        /// (§2.4, regla 2: 3,8:1 sobre el centro y 3,1:1 sobre el borde; el #E85D12 anterior se quedaba en 2,5-3,2:1). Lo
-        /// comprueba <c>LobbyTextTests</c>.
+        /// regla 6; direccion-visual-v2 §2.4.1 y §7): su tinte más cercano es el Agua del Río Negro, a ΔE00 9,8 (9,77), y le
+        /// siguen el Achiote (9,8; 9,82) y el Aguaje (11,7). Cumple el ≥ 5 de §2.4, regla 1, que vale para los tokens de UI que
+        /// no tocan una cuia (el chip del inicio, las cabeceras de los modales y la tarjeta previa). El ≥ 10 de esa misma regla
+        /// (contrato del paso 1, ARQUITECTURA §5, COLOR) solo se le aplica si el sello va sobre una superficie que toque o rodee
+        /// una cuia: si T09 lo pone así en el HUD, este naranja (por debajo de 10) tiene que cambiar o el sello, apartarse. Es un
+        /// glifo sobre el disco marfil, así que va a ≥ 3:1 de todo el disco (§2.4, regla 2: 3,8:1 sobre el centro y 3,1:1 sobre
+        /// el borde; el #E85D12 anterior se quedaba en 2,5-3,2:1). Lo comprueba <c>LobbyTextTests</c>.
         /// </summary>
         public static readonly Color FrogOrange = Palette.Hex(0xD05802);
 
@@ -128,7 +131,9 @@ namespace AF.Presentation
 
         /// <summary>
         /// Sello de Muy difícil (32 dp): cabeza de jaguar de perfil con rosetas, solo el animal (07 §7.7), sobre un disco de
-        /// noche índigo que se apaga hacia un borde pizarra, con dos estrellas y aro índigo oscuro con un filete marfil.
+        /// noche índigo que se apaga hacia un borde pizarra, con dos estrellas y aro índigo oscuro con un filete marfil. Rasgos
+        /// del jaguar y no del guepardo ni del leopardo (fauna real, 07 §8.1): cráneo redondo, hocico corto y ancho, mandíbula pesada,
+        /// rosetas con un punto de tinta dentro y sin la lágrima del ojo al hocico; boca neutra, sin sonrisa.
         /// Pendiente de revisión del asesor cultural (07 §8.2).
         /// </summary>
         public Sprite JaguarHead => _jaguarHead != null ? _jaguarHead : (_jaguarHead = BuildJaguarHead());
@@ -140,7 +145,8 @@ namespace AF.Presentation
         /// el aro con su luz, su filete y su sombra, la rana, el jaguar y los brillos crema y marfil de los ojos y las estrellas.
         /// Las dos excepciones de §2.4 que el test documenta son <c>JaguarEye</c> (el iris visible, alrededor de la pupila, mide
         /// ≤ 1,4 dp de grosor) y <c>JaguarShade</c> (solo se pinta en líneas de ≤ 2 dp, el borde de la oreja y el centro de las
-        /// rosetas, y en la sombra de la nuca con alfa 0,55). Solo para tests: crea el array en cada llamada.
+        /// rosetas, alrededor de su punto de tinta, y en la sombra de la nuca con alfa 0,55). Solo para tests: crea el array en
+        /// cada llamada.
         /// </summary>
         public static (string Name, Color Color)[] LabelSealColors()
         {
@@ -333,15 +339,17 @@ namespace AF.Presentation
             DrawTinyStar(pc, 70f * k, 72f * k, 3.4f * k, ColorMath.WithAlpha(Palette.UiPaper, 0.9f));
             DrawTinyStar(pc, 80f * k, 62f * k, 2.4f * k, ColorMath.WithAlpha(Palette.UiPaper, 0.7f));
 
-            // Silueta engordada en tinta (contorno) y después el pelaje: cuello, cráneo, hocico, mandíbula y oreja.
+            // Silueta engordada en tinta (contorno) y después el pelaje: cuello, cráneo, hocico, mandíbula y oreja. El jaguar es
+            // macizo: cráneo redondo y grande, hocico corto y ancho y mandíbula pesada (con el hocico largo y estrecho se leía
+            // como un guepardo o un leopardo, revisión de las capturas 41 y 43).
             for (int pass = 0; pass < 2; pass++)
             {
                 float grow = pass == 0 ? 2f : 0f;
                 Color fur = pass == 0 ? JaguarInk : JaguarGold;
                 pc.FillCapsule(38f * k, 40f * k, 28f * k, 4f * k, (15f + grow) * k, fur);
-                pc.FillCircle(44f * k, 54f * k, (21f + grow) * k, fur);
-                pc.FillEllipseSoft(65f * k, 45f * k, (15f + grow) * k, (11.5f + grow) * k, 0.8f * k, fur);
-                pc.FillEllipseSoft(58f * k, 35.5f * k, (13f + grow) * k, (8f + grow) * k, 0.8f * k, fur);
+                pc.FillCircle(44f * k, 54f * k, (22.5f + grow) * k, fur);
+                pc.FillEllipseSoft(63f * k, 45f * k, (13f + grow) * k, (12.5f + grow) * k, 0.8f * k, fur);
+                pc.FillEllipseSoft(58f * k, 35.5f * k, (13f + grow) * k, (9.5f + grow) * k, 0.8f * k, fur);
                 pc.FillCircle(32f * k, 72f * k, (8f + grow) * k, pass == 0 ? JaguarInk : JaguarShade);
             }
 
@@ -352,10 +360,11 @@ namespace AF.Presentation
             pc.FillEllipseSoft(48f * k, 66f * k, 10f * k, 5f * k, 3f * k, ColorMath.WithAlpha(JaguarGoldLight, 0.6f));
 
             // Hocico y garganta claros.
-            pc.FillEllipseSoft(69f * k, 42.5f * k, 9.5f * k, 7f * k, 1.6f * k, JaguarCream);
-            pc.FillEllipseSoft(59f * k, 32f * k, 10f * k, 4.6f * k, 1.6f * k, JaguarCream);
+            pc.FillEllipseSoft(67f * k, 42.5f * k, 8f * k, 7f * k, 1.6f * k, JaguarCream);
+            pc.FillEllipseSoft(58.5f * k, 31.5f * k, 10f * k, 5f * k, 1.6f * k, JaguarCream);
 
-            // Rosetas: anillos rotos de tinta con el centro más oscuro que el pelaje, y motas sueltas en la frente y la mejilla.
+            // Rosetas: anillos rotos de tinta con el centro más oscuro que el pelaje y un punto de tinta dentro (la marca del
+            // jaguar; las del leopardo no lo tienen), y motas sueltas en la frente y la mejilla.
             DrawRosette(pc, 40f * k, 52f * k, 4.4f * k, k);
             DrawRosette(pc, 28.5f * k, 40f * k, 4.2f * k, k);
             DrawRosette(pc, 44f * k, 66.5f * k, 3.8f * k, k);
@@ -368,22 +377,22 @@ namespace AF.Presentation
             pc.FillCircle(54.5f * k, 49f * k, 1.1f * k, JaguarInk);
             pc.FillCircle(51f * k, 40.5f * k, 1.2f * k, JaguarInk);
 
-            // Ojo almendrado ámbar con pupila, la lágrima oscura hacia el hocico y la ceja.
+            // Ojo almendrado ámbar con pupila y la ceja. Sin la lágrima oscura del ojo al hocico: es el rasgo del guepardo, que
+            // es africano; el jaguar no la tiene (fauna real, 07 §8.1).
             pc.FillEllipseSoft(60f * k, 56f * k, 4.6f * k, 3.2f * k, 0.8f * k, JaguarInk);
             pc.FillEllipseSoft(60.4f * k, 56.1f * k, 3.3f * k, 2.1f * k, 0.6f * k, JaguarEye);
             pc.FillCircle(61.3f * k, 56f * k, 1.4f * k, JaguarInk);
             pc.FillCircle(60.3f * k, 56.9f * k, 0.7f * k, Palette.Cream);
-            pc.FillCapsule(63.5f * k, 53.5f * k, 68f * k, 49.5f * k, 0.9f * k, JaguarInk);
             pc.FillCapsule(54.5f * k, 60f * k, 63.5f * k, 59.5f * k, 0.9f * k, ColorMath.WithAlpha(JaguarInk, 0.8f));
 
-            // Nariz, boca y bigotes.
-            pc.FillEllipseSoft(78.2f * k, 48f * k, 3.6f * k, 2.7f * k, 0.6f * k, JaguarInk);
-            pc.FillEllipseSoft(78f * k, 48.4f * k, 2.6f * k, 1.8f * k, 0.6f * k, JaguarNose);
-            pc.FillCapsule(77.5f * k, 45.2f * k, 72.5f * k, 40.2f * k, 0.9f * k, JaguarInk);
-            pc.FillCapsule(72.5f * k, 40.2f * k, 64f * k, 38.4f * k, 0.9f * k, JaguarInk);
-            pc.FillCircle(70f * k, 44f * k, 0.8f * k, JaguarInk);
-            pc.FillCircle(73f * k, 45f * k, 0.8f * k, JaguarInk);
-            pc.FillCircle(71f * k, 47f * k, 0.8f * k, JaguarInk);
+            // Nariz en la punta del hocico corto, boca neutra (un único trazo recto de 3 u bajo la nariz, sin la vuelta por la
+            // mandíbula, que dibujaba una sonrisa ladeada y junto a «¿Seguro?» podía leerse como burla) y bigotes.
+            pc.FillEllipseSoft(74.6f * k, 48.5f * k, 3.6f * k, 2.7f * k, 0.6f * k, JaguarInk);
+            pc.FillEllipseSoft(74.4f * k, 48.9f * k, 2.6f * k, 1.8f * k, 0.6f * k, JaguarNose);
+            pc.FillCapsule(74f * k, 45.8f * k, 74f * k, 42.8f * k, 0.9f * k, JaguarInk);
+            pc.FillCircle(67f * k, 44f * k, 0.8f * k, JaguarInk);
+            pc.FillCircle(70f * k, 45.2f * k, 0.8f * k, JaguarInk);
+            pc.FillCircle(68f * k, 47.4f * k, 0.8f * k, JaguarInk);
 
             DrawMedallionRing(pc, k, JaguarRing, JaguarRingLight, ColorMath.WithAlpha(Palette.UiPaper, 0.75f));
             return MakeSprite(pc, "label_jaguar_head", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
@@ -708,10 +717,12 @@ namespace AF.Presentation
             pc.FillCircle(cx, cy, r * 0.32f, c);
         }
 
-        // Roseta del jaguar: anillo de tinta roto en dos arcos con el centro más oscuro que el pelaje.
+        // Roseta del jaguar: anillo de tinta roto en dos arcos con el centro más oscuro que el pelaje y, dentro, un punto macizo
+        // de tinta de 1,2 u de radio: las rosetas con punto central son la marca del jaguar (las del leopardo no lo tienen).
         private static void DrawRosette(PixelCanvas pc, float cx, float cy, float r, float k)
         {
             pc.FillCircle(cx, cy, r * 0.62f, ColorMath.WithAlpha(JaguarShade, 0.9f));
+            pc.FillCircle(cx, cy, 1.2f * k, JaguarInk);
             pc.StrokeArc(cx, cy, r, 1.7f * k, 15f, 150f, JaguarInk);
             pc.StrokeArc(cx, cy, r, 1.7f * k, 190f, 335f, JaguarInk);
         }
