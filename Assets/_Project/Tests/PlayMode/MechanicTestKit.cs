@@ -530,7 +530,15 @@ namespace AF.Tests.PlayMode
                 return t;
             }
 
-            /// <inheritdoc />
+            /// <summary>
+            /// Destruye el banco en el acto (<c>DestroyImmediate</c>), no al final del fotograma: las pruebas sin asignaciones
+            /// calientan en un banco y miden en otro nuevo dentro del mismo fotograma, y con <c>Destroy</c> los gráficos de los
+            /// bancos desechados seguirían activos y registrados en las colecciones globales de UGUI (el
+            /// <c>GraphicRebuildTracker</c> del Editor, la cola de <c>CanvasUpdateRegistry</c> y <c>GraphicRegistry</c>) hasta el
+            /// final del fotograma. El banco medido llegaría entonces a más gráficos vivos que el de calentamiento y esas
+            /// colecciones podrían crecer en mitad de la medida, según cuántas piezas tengan los overlays (T21). En el juego, el
+            /// tablero viejo se va en el fotograma del cambio de nivel, antes del primer vertido.
+            /// </summary>
             public void Dispose()
             {
                 if (_disposed)
@@ -539,7 +547,7 @@ namespace AF.Tests.PlayMode
                 }
 
                 _disposed = true;
-                Object.Destroy(_root);
+                Object.DestroyImmediate(_root);
             }
 
             private static RectTransform NewLayer(string name, RectTransform parent)
