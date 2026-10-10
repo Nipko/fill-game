@@ -21,8 +21,9 @@ namespace AF.Tests.PlayMode
     /// Kit de las pruebas de pasos de mecánica (T07; congelado tras la ola 2, lo usan T11-T17): busca en niveles reales los
     /// vertidos que disparan cada evento de R10 con <see cref="AStarSolver"/> y <see cref="PourRules"/> (búsqueda limitada),
     /// los juega con <see cref="GameBootstrap.TapCuia"/> y el reloj del test (<see cref="PlayModeHelpers.Step"/>), mide del
-    /// toque a la vista quieta, lleva el reloj hasta un instante de un paso y ofrece un banco sintético (<see cref="Rig"/>)
-    /// con overlays de prueba (<see cref="ProbeOverlay"/>).
+    /// toque a la vista quieta, lleva el reloj hasta un instante de un paso, compara el registro de pasos ejecutado con el plan
+    /// del mismo vertido (<see cref="AssertLogFollowsPlan"/>) y ofrece un banco sintético (<see cref="Rig"/>) con overlays de
+    /// prueba (<see cref="ProbeOverlay"/>).
     /// </summary>
     /// <remarks>
     /// Búsqueda de un disparador (<see cref="FindTrigger"/>): primero la solución del solver (presupuesto
@@ -40,6 +41,12 @@ namespace AF.Tests.PlayMode
 
         /// <summary>Del toque a la vista quieta, como mucho (presupuesto de <see cref="MechanicStepQueue"/>).</summary>
         public const int BudgetMs = (int)MechanicStepQueue.BudgetFromTapMs;
+
+        /// <summary>
+        /// Tolerancia (ms) al comparar instantes del registro de pasos: el reloj de la cola y el del plan se suman por
+        /// separado en coma flotante (<see cref="AssertLogFollowsPlan"/>).
+        /// </summary>
+        public const float LogToleranceMs = 0.05f;
 
         /// <summary>Lo que se busca en un vertido: sus eventos de R10, el tablero antes y el de después.</summary>
         public delegate bool PourWanted(PourEvents ev, BoardState before, BoardState after);
@@ -141,6 +148,30 @@ namespace AF.Tests.PlayMode
             return boot.TapCuia(pour.Target);
         }
 
+        /// <summary>
+        /// Juega <paramref name="pour"/> como <see cref="Tap"/>, comprueba que vierte y devuelve el <see cref="PourVisual"/> de
+        /// ese vertido (<see cref="VisualOf"/>, con <c>Session.Current</c> antes y después del toque), para
+        /// <see cref="AssertLogFollowsPlan"/>.
+        /// </summary>
+        public static PourVisual TapPour(GameBootstrap boot, Pour pour, out TapResult poured)
+        {
+            BoardState before = boot.Flow!.Session.Current;
+            poured = Tap(boot, pour);
+            Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured), "vertido " + pour.Source + " → " + pour.Target);
+            return VisualOf(before, poured, boot.Flow.Session.Current);
+        }
+
+        /// <summary>
+        /// El <see cref="PourVisual"/> que la pantalla construye para un vertido del juego (<c>GameScreen.EnqueuePour</c>):
+        /// <paramref name="before"/> es <c>Session.Current</c> antes del toque, <paramref name="poured"/> el toque que vierte
+        /// (su <c>Pour</c> con los <c>Events</c> de R10) y <paramref name="after"/>, <c>Session.Current</c> después.
+        /// </summary>
+        public static PourVisual VisualOf(BoardState before, TapResult poured, BoardState after)
+        {
+            Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured), "el toque vierte");
+            return new PourVisual(poured.Pour.Pour, poured.Pour.Events, before, after);
+        }
+
         /// <summary>Avanza hasta la vista quieta y devuelve los ms (falla pasado <paramref name="maxMs"/>).</summary>
         public static int StepToIdle(GameBootstrap boot, int maxMs)
         {
@@ -238,6 +269,91 @@ namespace AF.Tests.PlayMode
                     Assert.That(overlay.Visible, Is.EqualTo(model[i].Mechanic == overlay.Type), "cuia " + i + ": overlay como el modelo");
                 }
             }
+        }
+
+        /// <summary>
+        /// El registro de pasos de <paramref name="animator"/> es la ejecución del plan de <paramref name="visual"/>
+        /// (<see cref="MechanicStepPlan.Build"/>, arquitectura del paso 1 §4). Se llama con el registro vaciado antes del toque
+        /// (<see cref="LoadPlaying"/> y <see cref="PlayPrefix"/> lo vacían) y el plan ya terminado, sin <c>SnapAll</c>:
+        /// <list type="bullet">
+        /// <item><description>el registro tiene exactamente los pasos del plan (Kind, Stage, Index y OtherIndex), ni uno de
+        /// más ni de menos;</description></item>
+        /// <item><description>en el orden de las etapas: ningún paso empieza antes que uno de una etapa anterior;</description></item>
+        /// <item><description>cada etapa empieza cuando termina el paso más largo de la anterior (StartMs ≥ el mayor EndMs de
+        /// la etapa previa con pasos), y sus pasos van a la vez, justo entonces, salvo los que pintan el origen o lo revelan,
+        /// que pueden empezar más tarde, cuando vuelve a su ranura (SrcDone).</description></item>
+        /// </list>
+        /// Devuelve el número de pasos del plan.
+        /// </summary>
+        public static int AssertLogFollowsPlan(BoardAnimator animator, in PourVisual visual)
+        {
+            MechanicStepQueue steps = animator.Steps;
+            var plan = new StepEntry[MechanicStepPlan.MaxSteps];
+            int count = MechanicStepPlan.Build(in visual, plan);
+            var sb = new System.Text.StringBuilder(" Plan:");
+            for (int e = 0; e < count; e++)
+            {
+                sb.Append(" [").Append(plan[e].ToString()).Append(']');
+            }
+
+            string context = sb.Append(". ").Append(Describe(animator)).ToString();
+            Assert.That(steps.ActiveCount, Is.EqualTo(0), "el plan del vertido terminó." + context);
+            Assert.That(steps.LogCount, Is.EqualTo(count), "el registro tiene los pasos del plan, ni más ni menos." + context);
+
+            var matched = new bool[count];
+            int stage = -1;
+            float stageStart = float.NaN; // inicio común de los pasos de la etapa que no esperan al origen
+            float stageEnd = float.NaN;   // fin del paso más largo de la etapa en curso
+            float previousEnd = float.NaN; // fin del paso más largo de la etapa anterior con pasos
+            for (int i = 0; i < count; i++)
+            {
+                MechanicStepRecord r = steps.LogAt(i);
+                string what = "registro " + i + " (" + r + ")";
+                int at = -1;
+                for (int e = 0; e < count && at < 0; e++)
+                {
+                    if (!matched[e] && plan[e].Kind == r.Kind && plan[e].Stage == r.Stage && plan[e].Index == r.Index && plan[e].OtherIndex == r.OtherIndex)
+                    {
+                        at = e;
+                    }
+                }
+
+                Assert.That(at, Is.GreaterThanOrEqualTo(0), what + ": es un paso del plan (Kind, Stage, Index y OtherIndex)." + context);
+                matched[at] = true;
+                Assert.That((int)r.Stage, Is.GreaterThanOrEqualTo(stage), what + ": en el orden de las etapas." + context);
+                if ((int)r.Stage != stage)
+                {
+                    stage = (int)r.Stage;
+                    previousEnd = stageEnd;
+                    stageStart = float.NaN;
+                    stageEnd = float.NaN;
+                }
+
+                bool waits = r.Kind == MechanicStepKind.Reveal || r.Index == visual.Source || r.OtherIndex == visual.Source;
+                if (!float.IsNaN(previousEnd))
+                {
+                    Assert.That(r.StartMs, Is.GreaterThanOrEqualTo(previousEnd - LogToleranceMs), what + ": empieza cuando termina la etapa anterior." + context);
+                    if (!waits)
+                    {
+                        Assert.That(r.StartMs, Is.EqualTo(previousEnd).Within(LogToleranceMs), what + ": empieza justo al terminar el paso más largo de la etapa anterior." + context);
+                    }
+                }
+
+                if (!waits)
+                {
+                    if (float.IsNaN(stageStart))
+                    {
+                        stageStart = r.StartMs;
+                    }
+
+                    Assert.That(r.StartMs, Is.EqualTo(stageStart).Within(LogToleranceMs), what + ": los pasos de una etapa van a la vez." + context);
+                }
+
+                Assert.That(r.EndMs, Is.GreaterThanOrEqualTo(r.StartMs), what + ": termina después de empezar." + context);
+                stageEnd = float.IsNaN(stageEnd) ? r.EndMs : Math.Max(stageEnd, r.EndMs);
+            }
+
+            return count;
         }
 
         private static bool TryOneMore(BoardState state, PourMode mode, PourWanted wanted, out Pour hit)

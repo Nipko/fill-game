@@ -56,7 +56,7 @@ namespace AF.Tests.PlayMode
             Pour[] path = Trigger(boot, (ev, b, a) => (ev.HojaOpenedMask & (1 << hoja)) != 0);
             MechanicTestKit.PlayPrefix(boot, path);
             CuiaView view = boot.View!.Views[hoja];
-            Assert.That(MechanicTestKit.Tap(boot, path[path.Length - 1]).Kind, Is.EqualTo(TapKind.Poured));
+            PourVisual visual = MechanicTestKit.TapPour(boot, path[path.Length - 1], out _);
             int elapsed = StepWatching(boot, () =>
             {
                 if (!MechanicTestKit.TryFindRecord(boot.View.Animator, MechanicStepKind.Open, hoja, out _))
@@ -65,6 +65,7 @@ namespace AF.Tests.PlayMode
                 }
             });
 
+            MechanicTestKit.AssertLogFollowsPlan(boot.View.Animator, in visual);
             MechanicStepRecord open = MechanicTestKit.Record(boot.View.Animator, MechanicStepKind.Open, hoja);
             Assert.That(open.Stage, Is.EqualTo(StepStage.B));
             Assert.That(open.Owner, Is.EqualTo(MechanicType.Hoja), "despachado al overlay de la Hoja");
@@ -102,7 +103,7 @@ namespace AF.Tests.PlayMode
             Pour[] path = Trigger(boot, (ev, b, a) => (ev.SealedMask & (1 << matapi)) != 0);
             MechanicTestKit.PlayPrefix(boot, path);
             CuiaView view = boot.View!.Views[matapi];
-            Assert.That(MechanicTestKit.Tap(boot, path[path.Length - 1]).Kind, Is.EqualTo(TapKind.Poured));
+            PourVisual visual = MechanicTestKit.TapPour(boot, path[path.Length - 1], out _);
             int elapsed = StepWatching(boot, () =>
             {
                 if (!MechanicTestKit.TryFindRecord(boot.View.Animator, MechanicStepKind.Seal, matapi, out _))
@@ -111,6 +112,7 @@ namespace AF.Tests.PlayMode
                 }
             });
 
+            MechanicTestKit.AssertLogFollowsPlan(boot.View.Animator, in visual);
             MechanicStepRecord seal = MechanicTestKit.Record(boot.View.Animator, MechanicStepKind.Seal, matapi);
             Assert.That(seal.Stage, Is.EqualTo(StepStage.C));
             Assert.That(seal.Owner, Is.EqualTo(MechanicType.Matapi), "al sellar el Matapi se llama a su PlayStep(Seal)");
@@ -128,14 +130,14 @@ namespace AF.Tests.PlayMode
             int liana = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Liana);
             Pour[] path = Trigger(boot, (ev, b, a) => (ev.LianaReleasedMask & (1 << liana)) != 0);
             MechanicTestKit.PlayPrefix(boot, path);
-            TapResult poured = MechanicTestKit.Tap(boot, path[path.Length - 1]);
-            Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured));
+            PourVisual visual = MechanicTestKit.TapPour(boot, path[path.Length - 1], out TapResult poured);
             int receiver = poured.Pour.Receiver;
             int key = boot.Flow!.Level.Attrs[liana].Key;
             Assert.That(boot.Flow.Session.Current[receiver].TopColor, Is.EqualTo(key), "el receptor sella el taperebá, la llave");
             int elapsed = MechanicTestKit.StepToIdle(boot, 6000);
 
             BoardAnimator animator = boot.View!.Animator;
+            MechanicTestKit.AssertLogFollowsPlan(animator, in visual);
             MechanicStepRecord seal = MechanicTestKit.Record(animator, MechanicStepKind.Seal, receiver);
             MechanicStepRecord release = MechanicTestKit.Record(animator, MechanicStepKind.Release, liana);
             Assert.That(seal.Stage, Is.EqualTo(StepStage.C));
@@ -158,7 +160,7 @@ namespace AF.Tests.PlayMode
             Pour pour = path[path.Length - 1];
             CuiaView source = boot.View!.Views[pour.Source];
             BoardAnimator animator = boot.View.Animator;
-            Assert.That(MechanicTestKit.Tap(boot, pour).Kind, Is.EqualTo(TapKind.Poured));
+            PourVisual visual = MechanicTestKit.TapPour(boot, pour, out _);
             Cuia after = boot.Flow!.Session.Current[pour.Source];
             int layer = after.Count - 1;
             float backAt = -1f;
@@ -181,6 +183,7 @@ namespace AF.Tests.PlayMode
                 }
             });
 
+            MechanicTestKit.AssertLogFollowsPlan(animator, in visual);
             MechanicStepRecord reveal = MechanicTestKit.Record(animator, MechanicStepKind.Reveal, pour.Source);
             Assert.That(reveal.Stage, Is.EqualTo(StepStage.A));
             Assert.That(backAt, Is.GreaterThan(0f), "el origen voló y volvió");
@@ -201,8 +204,8 @@ namespace AF.Tests.PlayMode
             Pour[] path = Trigger(boot, (ev, b, a) => ev.ThroughRemolino);
             MechanicTestKit.PlayPrefix(boot, path);
             Pour pour = path[path.Length - 1];
-            BoardState before = boot.Flow!.Session.Current;
-            TapResult poured = MechanicTestKit.Tap(boot, pour);
+            PourVisual visual = MechanicTestKit.TapPour(boot, pour, out TapResult poured);
+            BoardState before = visual.Before;
             int partner = poured.Pour.Receiver;
             Assert.That(partner, Is.Not.EqualTo(pour.Target));
             BoardAnimator animator = boot.View!.Animator;
@@ -216,6 +219,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(animator.ShownOf(pour.Target), Is.EqualTo(before[pour.Target]), "la cuia tocada no cambia");
             });
 
+            MechanicTestKit.AssertLogFollowsPlan(animator, in visual);
             MechanicStepRecord receive = MechanicTestKit.Record(animator, MechanicStepKind.Receive, partner);
             Assert.That(receive.Stage, Is.EqualTo(StepStage.A));
             Assert.That(receive.OtherIndex, Is.EqualTo(pour.Target), "OtherIndex = la cuia tocada");
@@ -235,9 +239,10 @@ namespace AF.Tests.PlayMode
             Pour pour = path[path.Length - 1];
             int mudLayer = boot.Flow!.Session.Current[pour.Target].Count - 1;
             Assert.That(boot.View!.Views[pour.Target].Mud.LumpsVisible(mudLayer), Is.True, "el barro, en la cima");
-            Assert.That(MechanicTestKit.Tap(boot, pour).Kind, Is.EqualTo(TapKind.Poured));
+            PourVisual visual = MechanicTestKit.TapPour(boot, pour, out _);
             int elapsed = MechanicTestKit.StepToIdle(boot, 6000);
 
+            MechanicTestKit.AssertLogFollowsPlan(boot.View.Animator, in visual);
             MechanicStepRecord wash = MechanicTestKit.Record(boot.View.Animator, MechanicStepKind.MudWash, pour.Target);
             Assert.That(wash.Stage, Is.EqualTo(StepStage.A), "el receptor");
             Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs));
@@ -283,11 +288,11 @@ namespace AF.Tests.PlayMode
                 {
                     Assert.That(played++, Is.LessThan(40), "la gota cae en un número acotado de vertidos");
                     boot.View!.Animator.Steps.ClearLog();
-                    TapResult poured = MechanicTestKit.Tap(boot, next[i]);
-                    Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured), "vertido " + next[i].Source + " → " + next[i].Target);
+                    PourVisual visual = MechanicTestKit.TapPour(boot, next[i], out TapResult poured);
                     PourEvents events = poured.Pour.Events;
                     bool dropped = (events.LluviaDropMask & (1 << rain)) != 0;
                     int elapsed = MechanicTestKit.StepToIdle(boot, 6000);
+                    MechanicTestKit.AssertLogFollowsPlan(boot.View.Animator, in visual);
                     if (!events.Futile)
                     {
                         useful++;
@@ -327,10 +332,11 @@ namespace AF.Tests.PlayMode
             int rain = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Lluvia);
             Pour[] path = Trigger(boot, (ev, b, a) => (ev.LluviaEndedMask & ev.SealedMask & (1 << rain)) != 0);
             MechanicTestKit.PlayPrefix(boot, path);
-            Assert.That(MechanicTestKit.Tap(boot, path[path.Length - 1]).Kind, Is.EqualTo(TapKind.Poured));
+            PourVisual visual = MechanicTestKit.TapPour(boot, path[path.Length - 1], out _);
             int elapsed = MechanicTestKit.StepToIdle(boot, 6000);
 
             BoardAnimator animator = boot.View!.Animator;
+            MechanicTestKit.AssertLogFollowsPlan(animator, in visual);
             MechanicStepRecord drop = MechanicTestKit.Record(animator, MechanicStepKind.RainEnd, rain);
             MechanicStepRecord seal = MechanicTestKit.Record(animator, MechanicStepKind.Seal, rain);
             Assert.That(drop.Stage, Is.EqualTo(StepStage.E), "la última gota");
@@ -407,6 +413,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(rain.Overlay!.Visible, Is.False, "sin la nube de la Lluvia (" + t + " ms)");
             }
 
+            MechanicTestKit.AssertLogFollowsPlan(_rig.Animator, in v);
             MechanicStepRecord drop = MechanicTestKit.Record(_rig.Animator, MechanicStepKind.RainEnd, 0);
             MechanicStepRecord seal = MechanicTestKit.Record(_rig.Animator, MechanicStepKind.Seal, 0);
             TestContext.WriteLine(t + " ms del toque a la vista quieta. " + MechanicTestKit.Describe(_rig.Animator));
@@ -511,8 +518,9 @@ namespace AF.Tests.PlayMode
             int devEvents = 0;
             _rig.Animator.DevEvent = (evt, fields) => devEvents++;
 
-            BoardState after = _rig.Pour(counted, 0, 1, out _);
+            BoardState after = _rig.Pour(counted, 0, 1, out PourVisual v);
             int elapsed = _rig.RunUntilIdle(6000);
+            MechanicTestKit.AssertLogFollowsPlan(_rig.Animator, in v);
             TestContext.WriteLine(elapsed + " ms del toque a la vista quieta, factor " + _rig.Animator.Steps.LastSpeedFactor + ". " + MechanicTestKit.Describe(_rig.Animator));
             Assert.That(_rig.Animator.IsIdle, Is.True);
             Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs), "del toque a la vista quieta, con la espera");
@@ -544,7 +552,7 @@ namespace AF.Tests.PlayMode
             Pour[] path = Trigger(boot, (ev, b, a) => (ev.BroteOpenedMask & (1 << brote)) != 0);
             MechanicTestKit.PlayPrefix(boot, path);
             CuiaView view = boot.View!.Views[brote];
-            Assert.That(MechanicTestKit.Tap(boot, path[path.Length - 1]).Kind, Is.EqualTo(TapKind.Poured));
+            PourVisual visual = MechanicTestKit.TapPour(boot, path[path.Length - 1], out _);
             int elapsed = StepWatching(boot, () =>
             {
                 if (!MechanicTestKit.TryFindRecord(boot.View.Animator, MechanicStepKind.Open, brote, out _))
@@ -553,6 +561,7 @@ namespace AF.Tests.PlayMode
                 }
             });
 
+            MechanicTestKit.AssertLogFollowsPlan(boot.View.Animator, in visual);
             MechanicStepRecord open = MechanicTestKit.Record(boot.View.Animator, MechanicStepKind.Open, brote);
             Assert.That(open.Stage, Is.EqualTo(StepStage.B));
             Assert.That(open.Owner, Is.EqualTo(MechanicType.Brote));
@@ -570,8 +579,7 @@ namespace AF.Tests.PlayMode
             Pour[] path = Trigger(boot, (ev, b, a) => (ev.PiranaCaveMask & (1 << cave)) != 0);
             MechanicTestKit.PlayPrefix(boot, path);
             int caveBefore = boot.Flow!.Session.Current[cave].Count;
-            TapResult poured = MechanicTestKit.Tap(boot, path[path.Length - 1]);
-            Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured));
+            PourVisual visual = MechanicTestKit.TapPour(boot, path[path.Length - 1], out TapResult poured);
             int victim = poured.Pour.Receiver;
             int victimAfter = boot.Flow.Session.Current[victim].Count;
             float tapped = boot.View!.Animator.Clock;
@@ -583,6 +591,7 @@ namespace AF.Tests.PlayMode
 
             MechanicTestKit.StepToIdle(boot, 6000);
             float elapsed = boot.View.Animator.Clock - tapped;
+            MechanicTestKit.AssertLogFollowsPlan(boot.View.Animator, in visual);
             MechanicStepRecord bite = MechanicTestKit.Record(boot.View.Animator, MechanicStepKind.Bite, cave);
             Assert.That(bite.Stage, Is.EqualTo(StepStage.E));
             Assert.That(bite.OtherIndex, Is.EqualTo(victim), "el mordisco lo ejecuta la cueva con OtherIndex = la víctima");
@@ -625,6 +634,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(v.Amount, Is.EqualTo(3));
                 int elapsed = _rig.RunUntilIdle(6000);
                 Assert.That(_rig.Animator.IsIdle, Is.True);
+                MechanicTestKit.AssertLogFollowsPlan(_rig.Animator, in v);
                 Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs), "release " + releases[r] + ": del toque a la vista quieta");
                 Assert.That(_rig.Animator.Steps.LastSpeedFactor, Is.LessThan(1f), "se acelera para caber");
                 Assert.That(_rig.Animator.Steps.LastSpeedFactor, Is.GreaterThanOrEqualTo(MechanicStepQueue.MinBudgetSpeed - 1e-4f));
