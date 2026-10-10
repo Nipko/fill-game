@@ -17,10 +17,12 @@ namespace AF.Tests.PlayMode
     /// Capturas de revisión del Matapi y de la Liana con fruta (T12; <c>[Explicit]</c>, no forman parte de la suite):
     /// <c>55_matapi_l63</c> (el Matapi tras la intro), <c>55b_matapi_reject_l63</c> (en el pico del latido del embudo
     /// al rechazarlo como origen), <c>55c_matapi_pattern_l63</c> (con 2 dosis dentro: el patrón de la fruta se sigue
-    /// leyendo entre las varillas, con el 15 % de <see cref="AF.Presentation.Palette.PatternOpacity"/>, porque el ajuste
-    /// Patrones de fruta al 20 % aún no existe en el cliente), <c>56a_matapi_cord_l63</c> (la cuerda floja, inclinada y en
-    /// catenaria, antes del tirón), <c>56_matapi_seal_l63</c> (a mitad del tirón: la cuerda tensa, el embudo cerrándose y
-    /// la trampa saliendo entre gotas), <c>56b_matapi_cap_l63</c> (la tapa y el brillo), <c>56c_matapi_sealed_l63</c>
+    /// leyendo sin varillas delante, con el 15 % de <see cref="AF.Presentation.Palette.PatternOpacity"/>, porque el ajuste
+    /// Patrones de fruta al 20 % aún no existe en el cliente), <c>55d_matapi_achiote_l63</c> (lo mismo con Achiote, que no
+    /// debe leerse rayado como el Camu camu), <c>56a_matapi_cord_l63</c> (la cuerda floja, inclinada y en catenaria, antes
+    /// del tirón), <c>56_matapi_seal_l63</c> (a mitad del tirón: la cuerda tensa y el embudo cerrándose),
+    /// <c>56d_matapi_lift_l63</c> (en el pico de la subida de la trampa, con las gotas cayendo a la repisa por fuera de la
+    /// silueta), <c>56b_matapi_cap_l63</c> (la tapa y el brillo), <c>56c_matapi_sealed_l63</c>
     /// (sellado y quieto: el embudo cerrado sobre el borde, bajo la tapa, y el cuello despejado), <c>57_liana_l83</c> (la
     /// Liana atada tras la intro), <c>58_liana_check_l83</c> (la ✓ sobre la fruta y el cometa saliendo de la tapa),
     /// <c>59_liana_beam_l83</c> (el cometa llegando a la fruta, bajo la repisa de arriba), <c>59b_liana_fall_l83</c> (la
@@ -63,6 +65,8 @@ namespace AF.Tests.PlayMode
             Save(dir, "56a_matapi_cord_l63", boot);
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.Seal, matapi, 0.22f);
             Save(dir, "56_matapi_seal_l63", boot);
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Seal, matapi, 0.4f);
+            Save(dir, "56d_matapi_lift_l63", boot);
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.Seal, matapi, 0.8f);
             Save(dir, "56b_matapi_cap_l63", boot);
             MechanicTestKit.StepToIdle(boot, 4000);
@@ -82,6 +86,22 @@ namespace AF.Tests.PlayMode
             MechanicTestKit.PlayPrefix(boot, path!, skipLast: false);
             PlayModeHelpers.Step(boot, 300);
             Save(dir, "55c_matapi_pattern_l63", boot);
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureMatapiAchioteL63()
+        {
+            // El Matapi con Achiote (urucum, tinte 5: triángulos), el par rojo-rojo que confunde a un daltónico con el Camu camu
+            // (rayas verticales): ninguna varilla cruza el líquido, así que los triángulos no se leen como rayas.
+            string dir = SnapshotKit.Prepare();
+            yield return LoadAttached(63);
+            GameBootstrap boot = GameBootstrap.Current!;
+            int matapi = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Matapi);
+            Pour[]? path = MechanicTestKit.FindTrigger(boot.Flow!, (ev, b, a) => ev.Receiver == matapi && a[matapi].TopColor == 5 && !a.IsSealed(matapi));
+            Assert.That(path, Is.Not.Null, "vertidos que dejan Achiote en el Matapi");
+            MechanicTestKit.PlayPrefix(boot, path!, skipLast: false);
+            PlayModeHelpers.Step(boot, 300);
+            Save(dir, "55d_matapi_achiote_l63", boot);
         }
 
         [UnityTest]

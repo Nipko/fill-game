@@ -8,12 +8,14 @@ using UnityEngine.UI;
 namespace AF.Presentation.Mechanics
 {
     /// <summary>
-    /// M10 Matapi (D-007; propuesta b.2 M10) [P]: un cilindro de 6 varillas de fibra semitransparentes (tonos
-    /// <c>fibra_*</c>) visto de frente, con las varillas juntas hacia los bordes y el centro libre (ninguna a menos de
-    /// <see cref="RodClearHalfU"/> del eje: ni rayas verticales sobre la fruta, que son el patrón del Camu camu, ni rejilla
-    /// con los aros, que es la del Huito, ni barrotes sobre el parche central de VA-05 o el icono de fruta), atadas con tres
-    /// aros de cuerda sobre las juntas de dosis; en la boca, un embudo de fibra ancho hacia dentro, con el canto interior
-    /// claro y el hueco oscuro: la forma ya dice «entra». El contenido se ve entre las varillas. Nunca se abre: al sellarse,
+    /// M10 Matapi (D-007; propuesta b.2 M10) [P]: un cilindro de 6 varillas de fibra (tonos <c>fibra_*</c>) visto de frente,
+    /// repartidas como en un cilindro (±15°, ±45° y ±78°: más juntas hacia los bordes), atadas con tres aros de cuerda sobre
+    /// las juntas de dosis; en la boca, un embudo de fibra ancho hacia dentro, con el canto interior claro y el hueco oscuro:
+    /// la forma ya dice «entra». <b>Ninguna varilla pasa por delante del líquido</b>: el patrón de cada fruta es el canal
+    /// para daltónicos (07 §3: 15, 20 y 35 %), y unas rayas verticales sobre la dosis la harían pasar por Camu camu (con los
+    /// aros, por la rejilla del Huito). Las dos de los bordes van sobre la pared de vidrio (fuera de la cavidad), de arriba
+    /// abajo; las cuatro de dentro se ven por el vidrio vacío, desde la cara superior del líquido hacia arriba, como la parte
+    /// de atrás del cilindro que el líquido tapa, y siguen al nivel mientras se llena la cuia. Nunca se abre: al sellarse,
     /// el embudo queda cerrado sobre el borde, bajo la tapa, y el cuello de vidrio despejado como en las demás cuias selladas.
     /// </summary>
     /// <remarks>
@@ -22,9 +24,11 @@ namespace AF.Presentation.Mechanics
     /// <para><b>Sellado</b> (b.2 M10: «el embudo se cierra con un tirón de cuerda y la trampa sale del agua entre gotas y un
     /// brillo»; solo como receptor, así que la cola lo despacha como paso Seal de esta cuia): dura <see cref="SealMs"/> ×
     /// factor de velocidad. Fases [P] en fracción del paso: 0-0,08 asoma la cuerda, floja (inclinada y con catenaria);
-    /// 0,10-0,30 el tirón la tensa y el aro ciñe el embudo, que se cierra (con rebote) y sube sobre el borde; 0,18-0,62 la
-    /// trampa sube <see cref="TrapLiftU"/> y vuelve, con gotas de agua (<c>Fx.Splash</c>) al salir y destellos dorados
-    /// (<c>Fx.Sparkles</c>) en la boca; 0,55-0,86 la tapa de calabaza cae con un mini-rebote, como la del sellado normal
+    /// 0,10-0,30 el tirón la tensa y el aro ciñe el embudo, que se cierra (con rebote) y sube sobre el borde; la trampa sube
+    /// <see cref="TrapLiftU"/> entre 0,18 y 0,40 (easeOutCubic) y vuelve entre 0,40 y 0,62, mientras <see cref="DripCount"/>
+    /// gotas se desprenden del aro de abajo por fuera de la silueta y caen a la repisa, donde salpican (<c>Fx.Splash</c>,
+    /// con el anillo sobre la repisa y no dentro del vidrio); destellos dorados (<c>Fx.Sparkles</c>) en la boca a 0,45;
+    /// 0,55-0,86 la tapa de calabaza cae con un mini-rebote, como la del sellado normal
     /// (07 §5.3), y el aro de cuerda se apaga bajo ella; 0,70-1 aparece un brillo cálido. Al terminar, la cola pinta
     /// <c>ShowContent(After, true)</c> y la tapa de la cuia queda donde cayó la de este paso. No se muestra ninguna
     /// captura.</para>
@@ -36,17 +40,23 @@ namespace AF.Presentation.Mechanics
         /// <summary>Varillas del cilindro: tres a cada lado del eje.</summary>
         public const int RodCount = 6;
 
-        /// <summary>Opacidad de las varillas de los lados (dejan ver el contenido).</summary>
-        public const float RodAlpha = 0.6f;
+        /// <summary>Opacidad de las dos varillas de los bordes, sobre la pared de vidrio (la silueta del cilindro).</summary>
+        public const float RodAlpha = 0.75f;
 
-        /// <summary>Opacidad del par de varillas más cercano al eje, sobre la fruta.</summary>
+        /// <summary>Opacidad de las cuatro varillas de dentro, que solo se ven por el vidrio vacío.</summary>
         public const float InnerRodAlpha = 0.45f;
-
-        /// <summary>Medio ancho del centro libre de varillas (u desde el eje).</summary>
-        public const float RodClearHalfU = 0.45f;
 
         /// <summary>Distancia del eje a una varilla del todo de lado (u): x = esto × sen(ángulo).</summary>
         public const float RodRadiusU = 0.86f;
+
+        /// <summary>Holgura entre la cara superior del líquido y el pie de una varilla de dentro (u).</summary>
+        public const float RodFaceGapU = 0.03f;
+
+        /// <summary>Tramo más corto de varilla que se dibuja (u): por debajo, la varilla se oculta.</summary>
+        public const float MinRodU = 0.12f;
+
+        /// <summary>Lo alto de las varillas sobre el techo de la cavidad (u), bajo el aro de arriba.</summary>
+        public const float RodTopAboveCavityU = 0.1f;
 
         /// <summary>Sellado del Matapi (ms, sin factor de velocidad) [P b.2 M10: ~800 ms].</summary>
         public const float SealMs = 800f;
@@ -72,8 +82,17 @@ namespace AF.Presentation.Mechanics
         /// <summary>Aros de cuerda del cilindro: abajo, en medio y arriba.</summary>
         public const int BandCount = 3;
 
-        /// <summary>Lo que sube la trampa en el sellado (u) [P].</summary>
-        public const float TrapLiftU = 0.18f;
+        /// <summary>Lo que sube la trampa en el sellado (u) [P]: unos 7 dp, que se lean a 48 dp.</summary>
+        public const float TrapLiftU = 0.32f;
+
+        /// <summary>Gotas que se desprenden del aro de abajo al subir la trampa (b.2 M10: «entre gotas») [P].</summary>
+        public const int DripCount = 4;
+
+        /// <summary>Distancia del eje a la que caen las gotas (u): por fuera de la silueta (cuerpo de 1,00 u de medio ancho).</summary>
+        public const float DripXU = 1.06f;
+
+        /// <summary>Altura a la que llegan las gotas (u desde el pie): sobre la repisa, donde salpican.</summary>
+        public const float DripLandU = -0.05f;
 
         /// <summary>Altura desde la que cae la tapa (u sobre su sitio), como en el sellado normal (07 §5.3).</summary>
         public const float CapDropU = 0.6f;
@@ -109,8 +128,15 @@ namespace AF.Presentation.Mechanics
         private const float CordFadeStart = 0.40f;
         private const float CordFadeEnd = 0.55f;
         private const float LiftStart = 0.18f;
+        private const float LiftPeak = 0.40f;
         private const float LiftEnd = 0.62f;
-        private const float SplashAt = 0.22f;
+        private const float DripFirst = 0.22f;
+        private const float DripGap = 0.05f;
+        private const float DripFall = 0.18f;
+        private const float DripBelowHoopEndU = 0.12f;
+        private const float DripWidthU = 0.16f;
+        private const float DripHeightU = 0.21f;
+        private const float DripSplashScale = 0.5f;
         private const float SparkleAt = 0.45f;
         private const float CapStart = 0.55f;
         private const float CapLand = 0.74f;
@@ -119,14 +145,17 @@ namespace AF.Presentation.Mechanics
         private const float TieFadeStart = CapLand;
         private const float TieFadeEnd = CapBounceEnd;
 
-        // Brillo cálido del sellado: cielo_horizonte #FFE4A8, como el aro de CuiaView.
-        private static readonly Color WarmLight = new Color(1f, 0xE4 / 255f, 0xA8 / 255f, 1f);
-
-        // Gotas de agua clara al salir del agua (vidrio teñido #CFEFE6).
+        // Gotas de agua clara al salir del agua (vidrio teñido #CFEFE6). El brillo cálido del sellado es cielo_horizonte
+        // (Palette.SkyHorizon, #FFE4A8), como el aro de CuiaView.
         private static readonly Color WaterDrop = Palette.GlassTint;
 
         private readonly Image[] _rods = new Image[RodCount];
         private readonly Image[] _hoops = new Image[BandCount];
+        private readonly Image[] _drips = new Image[DripCount];
+        private CuiaView? _view;
+        private float _rodLevel;
+        private int _splashMask;
+        private bool _reduceMotion;
         private RectTransform _trap = null!;
         private Image _funnel = null!;
         private Image _tie = null!;
@@ -146,7 +175,6 @@ namespace AF.Presentation.Mechanics
         private float _elapsed;
         private float _duration = 1f;
         private float _progress;
-        private bool _splashed;
         private bool _sparkled;
         private bool _sealTarget;
         private Vector2 _selfPos;
@@ -198,10 +226,67 @@ namespace AF.Presentation.Mechanics
         /// <summary>Alto actual del embudo (u, con su escala).</summary>
         public float FunnelHeightU => ProceduralArt.MatapiMouthHeightU * _funnel.rectTransform.localScale.y;
 
-        /// <summary>Posición en x (u desde el eje) de la varilla <paramref name="i"/>: tres a cada lado, juntas hacia los bordes.</summary>
+        /// <summary>La gota <paramref name="i"/> del sellado está a la vista.</summary>
+        public bool DripVisible(int i)
+        {
+            return _drips[i].gameObject.activeSelf;
+        }
+
+        /// <summary>Centro de la gota <paramref name="i"/> del sellado (u desde el pie, x desde el eje).</summary>
+        public Vector2 DripPosU(int i)
+        {
+            return _drips[i].rectTransform.anchoredPosition / _u;
+        }
+
+        /// <summary>
+        /// Tramo a la vista de la varilla <paramref name="i"/> tal como está ahora (u desde el pie, sin la subida de la
+        /// trampa); false si está oculta.
+        /// </summary>
+        public bool ShownRodSpanU(int i, out float bottomU, out float topU)
+        {
+            RectTransform rt = _rods[i].rectTransform;
+            float center = rt.anchoredPosition.y / _u;
+            float half = 0.5f * rt.sizeDelta.y / _u;
+            bottomU = center - half;
+            topU = center + half;
+            return _rods[i].gameObject.activeSelf;
+        }
+
+        /// <summary>Posición en x (u desde el eje) de la varilla <paramref name="i"/>: tres a cada lado, como en un cilindro.</summary>
         public static float RodXU(int i)
         {
             return RodRadiusU * RodSide(i);
+        }
+
+        /// <summary>Ancho de la varilla <paramref name="i"/> (u): las de los bordes, de canto, más finas.</summary>
+        public static float RodWidthU(int i)
+        {
+            return Mathf.Lerp(0.10f, 0.07f, Mathf.Abs(RodSide(i)));
+        }
+
+        /// <summary>La varilla <paramref name="i"/> va entera sobre la pared de vidrio, fuera de la cavidad (las de los bordes).</summary>
+        public static bool RodOnWall(int i)
+        {
+            return Mathf.Abs(RodXU(i)) - (0.5f * RodWidthU(i)) >= CuiaGeometry.CavityHalfWidthU;
+        }
+
+        /// <summary>
+        /// Tramo de la varilla <paramref name="i"/> (u desde el pie) con el líquido a <paramref name="level"/> dosis en una
+        /// cuia de <paramref name="capacity"/>: las de la pared, de la base a lo alto; las de dentro, desde la cara superior
+        /// del líquido (su canto de atrás, a la altura de la varilla, más <see cref="RodFaceGapU"/>) hacia arriba. Devuelve
+        /// false si el tramo mide menos de <see cref="MinRodU"/> (la varilla no se dibuja).
+        /// </summary>
+        public static bool RodSpanU(int i, int capacity, float level, out float bottomU, out float topU)
+        {
+            topU = CuiaGeometry.CavityTopU(capacity) + RodTopAboveCavityU;
+            bottomU = CuiaGeometry.FootTopU;
+            if (!RodOnWall(i) && level > 0.001f)
+            {
+                float inner = Mathf.Max(0f, Mathf.Abs(RodXU(i)) - (0.5f * RodWidthU(i)));
+                bottomU = CuiaGeometry.CavityBottomU + level + CuiaGeometry.FaceSagU(inner) + RodFaceGapU;
+            }
+
+            return topU - bottomU >= MinRodU;
         }
 
         /// <inheritdoc />
@@ -209,11 +294,7 @@ namespace AF.Presentation.Mechanics
         {
             bool on = cuia.Mechanic == MechanicType.Matapi;
             Visible = on;
-            for (int i = 0; i < RodCount; i++)
-            {
-                OverlayParts.SetVisible(_rods[i], on);
-            }
-
+            PlaceRods(cuia.Count);
             for (int i = 0; i < BandCount; i++)
             {
                 OverlayParts.SetVisible(_hoops[i], on);
@@ -232,12 +313,16 @@ namespace AF.Presentation.Mechanics
         {
             _u = u;
             _heightU = heightU;
-            float bottom = CuiaGeometry.FootTopU;
-            float top = CuiaGeometry.CavityBottomU + Host.Capacity + 0.1f;
-            for (int i = 0; i < RodCount; i++)
+            float top = CuiaGeometry.CavityTopU(Host.Capacity) + RodTopAboveCavityU;
+            PlaceRods(_rodLevel);
+            for (int i = 0; i < DripCount; i++)
             {
-                float side = RodSide(i);
-                OverlayParts.Place(_rods[i], RodRadiusU * side, (top + bottom) * 0.5f, Mathf.Lerp(0.10f, 0.07f, Mathf.Abs(side)), top - bottom, u);
+                RectTransform drip = _drips[i].rectTransform;
+                var size = new Vector2(DripWidthU * u, DripHeightU * u);
+                if (drip.sizeDelta != size)
+                {
+                    drip.sizeDelta = size;
+                }
             }
 
             float bandH = ProceduralArt.MatapiBandHeightU;
@@ -285,6 +370,17 @@ namespace AF.Presentation.Mechanics
         /// <inheritdoc />
         public override void Tick(float dtMs)
         {
+            // Las varillas de dentro siguen al líquido mientras la cuia se llena (el relleno lo pinta la cola antes que este
+            // Tick, en el mismo fotograma).
+            if (Visible && _view != null)
+            {
+                float level = _view.LiquidLevel;
+                if (Mathf.Abs(level - _rodLevel) > 0.002f)
+                {
+                    PlaceRods(level);
+                }
+            }
+
             if (_pulseElapsed >= 0f)
             {
                 _pulseElapsed += dtMs;
@@ -332,11 +428,12 @@ namespace AF.Presentation.Mechanics
             _duration = ms;
             _elapsed = 0f;
             _progress = 0f;
-            _splashed = false;
+            _splashMask = 0;
             _sparkled = false;
             _sealTarget = ctx.AfterSealed;
             _selfPos = ctx.SelfPos;
             _fx = ctx.Fx ?? Host.Fx;
+            _reduceMotion = ctx.ReduceMotion;
             _closedLook = false;
             OverlayParts.SetColor(_tie, Color.white);
             Render(0f);
@@ -365,7 +462,7 @@ namespace AF.Presentation.Mechanics
         {
             // Varillas, aros, embudo, aro de cuerda y cuerda son de fibra (fibra_*): excepción de la regla 1 de
             // direccion-visual-v2 §2.4. El hueco oscuro de la boca (unos 1,5 × 0,3 u sobre la boca de la cuia) no es de fibra
-            // y cuenta. La tapa y el brillo solo se ven durante el paso de sellado.
+            // y cuenta. Las gotas, la tapa y el brillo solo se ven durante el paso de sellado.
             into.Add(ProceduralArt.MatapiHole);
         }
 
@@ -373,15 +470,16 @@ namespace AF.Presentation.Mechanics
         protected override void OnAttach()
         {
             ProceduralArt art = Host.Art;
+            _view = Host.BodyFront.GetComponentInParent<CuiaView>(); // solo para leer el nivel del líquido (puede no haberla)
             _trap = OverlayParts.NewAnchor("MatapiTrap", Host.BodyFront);
             for (int i = 0; i < RodCount; i++)
             {
-                // El par de dentro, claro y más transparente (pasa sobre la fruta); hacia los lados, en sombra (la luz viene
-                // de delante).
+                // Las de los bordes, sobre la pared de vidrio, en fibra; las de dentro, más claras y transparentes (se ven
+                // por el vidrio vacío: la parte de atrás del cilindro). La luz viene de delante.
                 float side = Mathf.Abs(RodSide(i));
-                bool inner = side < 0.7f;
-                Color fiber = inner ? Palette.FiberLight : (side < 0.9f ? Palette.FiberBase : Palette.FiberShadow);
-                _rods[i] = OverlayParts.NewImage("MatapiRod" + i, _trap, art.MatapiRod, OverlayParts.Fade(fiber, inner ? InnerRodAlpha : RodAlpha));
+                bool wall = RodOnWall(i);
+                Color fiber = wall ? Palette.FiberBase : (side < 0.5f ? Palette.FiberLight : Palette.FiberBase);
+                _rods[i] = OverlayParts.NewImage("MatapiRod" + i, _trap, art.MatapiRod, OverlayParts.Fade(fiber, wall ? RodAlpha : InnerRodAlpha));
             }
 
             for (int i = 0; i < BandCount; i++)
@@ -396,9 +494,14 @@ namespace AF.Presentation.Mechanics
             _cord = OverlayParts.NewImage("MatapiCord", _trap, _cordSlack, Color.white);
             _cord.rectTransform.pivot = new Vector2(0.5f, 0f);
 
-            // Lo que no sube con la trampa: la tapa del paso y el brillo (aditivo, sin Bloom).
+            // Lo que no sube con la trampa: las gotas que caen, la tapa del paso y el brillo (aditivo, sin Bloom).
+            for (int i = 0; i < DripCount; i++)
+            {
+                _drips[i] = OverlayParts.NewImage("MatapiDrip" + i, Host.BodyFront, art.Drop, WaterDrop);
+            }
+
             _cap = OverlayParts.NewImage("MatapiStepCap", Host.BodyFront, art.SealCap, Color.white);
-            _glow = OverlayParts.NewImage("MatapiGlow", Host.BodyFront, art.Glow, OverlayParts.Fade(WarmLight, 0f));
+            _glow = OverlayParts.NewImage("MatapiGlow", Host.BodyFront, art.Glow, OverlayParts.Fade(Palette.SkyHorizon, 0f));
             _star = OverlayParts.NewImage("MatapiStar", Host.BodyFront, art.Star, new Color(1f, 0.98f, 0.9f, 0f));
             Material? additive = UiMaterials.Additive;
             if (additive != null)
@@ -449,25 +552,14 @@ namespace AF.Presentation.Mechanics
                 OverlayParts.SetColor(_cord, new Color(1f, 1f, 1f, 1f - Mathf.Clamp01((p - CordFadeStart) / (CordFadeEnd - CordFadeStart))));
             }
 
-            // La trampa sale del agua y vuelve a su sitio.
-            float lq = Mathf.Clamp01((p - LiftStart) / (LiftEnd - LiftStart));
-            SetLift(TrapLiftU * Mathf.Sin(Mathf.PI * lq));
+            // La trampa sale del agua y vuelve a su sitio, y gotean gotas del aro de abajo por fuera de la silueta.
+            SetLift(LiftAt(p));
             IBoardFx? fx = _fx;
-            if (!_splashed && p >= SplashAt)
-            {
-                _splashed = true;
-                if (fx != null)
-                {
-                    float y = (BottomHoopU + _lift) * _u;
-                    fx.Splash(ToFx(_selfPos + new Vector2(-0.62f * _u, y)), WaterDrop, _u);
-                    fx.Splash(ToFx(_selfPos + new Vector2(0.62f * _u, y)), WaterDrop, _u);
-                }
-            }
-
+            RenderDrips(p, fx);
             if (!_sparkled && p >= SparkleAt)
             {
                 _sparkled = true;
-                fx?.Sparkles(ToFx(_selfPos + new Vector2(0f, (_heightU + _lift) * _u)), WarmLight, SealSparkles, _u);
+                fx?.Sparkles(ToFx(_selfPos + new Vector2(0f, (_heightU + _lift) * _u)), Palette.SkyHorizon, SealSparkles, _u);
             }
 
             // La tapa cae con un mini-rebote (07 §5.3).
@@ -488,7 +580,7 @@ namespace AF.Presentation.Mechanics
             {
                 float g = (p - GlowStart) / (1f - GlowStart);
                 float alpha = 0.85f * (1f - (g * g)) * Mathf.Clamp01(g / 0.15f);
-                OverlayParts.SetColor(_glow, OverlayParts.Fade(WarmLight, alpha));
+                OverlayParts.SetColor(_glow, OverlayParts.Fade(Palette.SkyHorizon, alpha));
                 float scale = Mathf.Lerp(0.8f, 1.3f, Ease.Out(g));
                 SetScale(_glow.rectTransform, scale, scale);
                 float star = g < 0.4f ? Mathf.Lerp(0f, 1.1f, g / 0.4f) : Mathf.Lerp(1.1f, 0f, (g - 0.4f) / 0.6f);
@@ -519,8 +611,72 @@ namespace AF.Presentation.Mechanics
             SetY(_cord.rectTransform, tieAt);
         }
 
-        // Fracción del radio de la varilla i (seno de su ángulo en el cilindro): ±40°, ±59° y ±78°, más juntas hacia los
-        // bordes y con el centro libre (|x| = 0,55, 0,74 y 0,84 u).
+        // Subida de la trampa en p (u): sube con easeOutCubic hasta el pico y vuelve con una bajada suave.
+        private static float LiftAt(float p)
+        {
+            if (p <= LiftStart || p >= LiftEnd)
+            {
+                return 0f;
+            }
+
+            return p < LiftPeak
+                ? TrapLiftU * Ease.OutCubic((p - LiftStart) / (LiftPeak - LiftStart))
+                : TrapLiftU * (1f - Ease.InOutSine((p - LiftPeak) / (LiftEnd - LiftPeak)));
+        }
+
+        // Gotas del sellado en p: se desprenden por turnos (izquierda, derecha…) del canto del aro de abajo, por fuera de la
+        // silueta, caen acelerando hasta la repisa y, la primera de cada lado, salpica allí (Fx.Splash: gotitas y el anillo
+        // sobre la repisa). Con Reducir movimiento no se ven (como las partículas del pool).
+        private void RenderDrips(float p, IBoardFx? fx)
+        {
+            for (int i = 0; i < DripCount; i++)
+            {
+                float start = DripFirst + (i * DripGap);
+                float t = (p - start) / DripFall;
+                float x = ((i % 2) == 0 ? -1f : 1f) * DripXU;
+                bool on = !_reduceMotion && t >= 0f && t < 1f;
+                OverlayParts.SetVisible(_drips[i], on);
+                if (on)
+                {
+                    float from = BottomHoopU + DripBelowHoopEndU + LiftAt(start);
+                    float y = Mathf.LerpUnclamped(from, DripLandU, t * t) + (0.5f * DripHeightU);
+                    var pos = new Vector2(x * _u, y * _u);
+                    RectTransform rt = _drips[i].rectTransform;
+                    if (rt.anchoredPosition != pos)
+                    {
+                        rt.anchoredPosition = pos;
+                    }
+
+                    SetScale(rt, 1f, 1f + (0.35f * t)); // se estira al caer
+                }
+
+                int bit = 1 << i;
+                if (i < 2 && t >= 1f && (_splashMask & bit) == 0)
+                {
+                    _splashMask |= bit;
+                    fx?.Splash(ToFx(_selfPos + new Vector2(x * _u, DripLandU * _u)), WaterDrop, DripSplashScale * _u);
+                }
+            }
+        }
+
+        // Coloca las varillas con el líquido a level dosis (RodSpanU) y oculta las que no se ven o el Matapi entero.
+        private void PlaceRods(float level)
+        {
+            _rodLevel = level;
+            int capacity = Host.Capacity;
+            for (int i = 0; i < RodCount; i++)
+            {
+                bool on = RodSpanU(i, capacity, level, out float bottom, out float top) && Visible;
+                OverlayParts.SetVisible(_rods[i], on);
+                if (on)
+                {
+                    OverlayParts.Place(_rods[i], RodXU(i), (top + bottom) * 0.5f, RodWidthU(i), top - bottom, _u);
+                }
+            }
+        }
+
+        // Fracción del radio de la varilla i (seno de su ángulo en el cilindro): ±15°, ±45° y ±78°, repartidas como en un
+        // cilindro visto de frente, más juntas hacia los bordes (|x| = 0,22, 0,61 y 0,84 u). Las de ±78° van sobre la pared.
         private static float RodSide(int i)
         {
             float deg;
@@ -530,16 +686,16 @@ namespace AF.Presentation.Mechanics
                     deg = -78f;
                     break;
                 case 1:
-                    deg = -59f;
+                    deg = -45f;
                     break;
                 case 2:
-                    deg = -40f;
+                    deg = -15f;
                     break;
                 case 3:
-                    deg = 40f;
+                    deg = 15f;
                     break;
                 case 4:
-                    deg = 59f;
+                    deg = 45f;
                     break;
                 default:
                     deg = 78f;
@@ -560,6 +716,11 @@ namespace AF.Presentation.Mechanics
 
         private void HideStepParts()
         {
+            for (int i = 0; i < DripCount; i++)
+            {
+                OverlayParts.SetVisible(_drips[i], false);
+            }
+
             OverlayParts.SetVisible(_tie, false);
             OverlayParts.SetVisible(_cord, false);
             OverlayParts.SetVisible(_cap, false);

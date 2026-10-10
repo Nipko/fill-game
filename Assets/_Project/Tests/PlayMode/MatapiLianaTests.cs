@@ -103,6 +103,8 @@ namespace AF.Tests.PlayMode
             float minCordTilt = 90f;
             bool sawCap = false;
             bool sawGlow = false;
+            int maxDrips = 0;
+            float lowestDrip = float.MaxValue;
             int elapsed = StepWatching(boot, () =>
             {
                 if (screen.Animator.Steps.IsRunning(MechanicStepKind.Seal, matapi))
@@ -110,6 +112,19 @@ namespace AF.Tests.PlayMode
                     Assert.That(overlay.IsAnimating, Is.True, "el overlay anima su sellado");
                     Assert.That(view.Sealed, Is.False, "la tapa de la cuia la pone el final del paso");
                     maxLift = Mathf.Max(maxLift, overlay.TrapLift);
+                    int drips = 0;
+                    for (int d = 0; d < MatapiOverlay.DripCount; d++)
+                    {
+                        if (overlay.DripVisible(d))
+                        {
+                            drips++;
+                            Vector2 at = overlay.DripPosU(d);
+                            Assert.That(Mathf.Abs(at.x), Is.GreaterThan(CuiaGeometry.BodyOuterHalfWidthU), "gota " + d + " por fuera de la silueta, no dentro del vidrio");
+                            lowestDrip = Mathf.Min(lowestDrip, at.y);
+                        }
+                    }
+
+                    maxDrips = Mathf.Max(maxDrips, drips);
                     maxClose = Mathf.Max(maxClose, overlay.FunnelClose);
                     maxParticles = Mathf.Max(maxParticles, screen.Fx.ActiveCount);
                     sawCord |= overlay.CordVisible;
@@ -143,7 +158,9 @@ namespace AF.Tests.PlayMode
             Assert.That(sawSlackCord && sawTautCord, Is.True, "la cuerda asoma floja (catenaria) y el tirón la tensa");
             Assert.That(minCordTilt, Is.GreaterThan(15f), "inclinada, para que se lea como cuerda y no como una antena");
             Assert.That(maxClose, Is.GreaterThan(1f), "el embudo se cierra con rebote");
-            Assert.That(maxLift, Is.GreaterThan(0.5f * MatapiOverlay.TrapLiftU), "la trampa sube un poco");
+            Assert.That(maxLift, Is.GreaterThan(0.9f * MatapiOverlay.TrapLiftU), "la trampa sube (unos 7 dp en el pico)");
+            Assert.That(maxDrips, Is.GreaterThan(0), "gotean gotas del aro de abajo");
+            Assert.That(lowestDrip, Is.LessThan(CuiaGeometry.FootTopU), "y caen hasta la repisa");
             Assert.That(sawCap, Is.True, "la tapa cae");
             Assert.That(sawGlow, Is.True, "aparece un brillo");
             Assert.That(maxParticles, Is.GreaterThan(0), "gotas y destellos (FxLayer)");
@@ -230,6 +247,8 @@ namespace AF.Tests.PlayMode
             Assert.That(Vector2.Distance(overlay.Beam.Evaluate(0f), overlay.BeamFrom), Is.GreaterThan(1f * u), "solo se ve la cola del cometa, no el arco entero");
             Assert.That(overlay.Beam.color.a, Is.GreaterThan(0.5f));
             Assert.That(overlay.BeamSparkVisible, Is.True, "con el destello en la punta");
+            BezierStripGraphic[] strips = overlay.Beam.GetComponentsInChildren<BezierStripGraphic>(false);
+            Assert.That(strips.Length, Is.EqualTo(1 + LianaOverlay.BeamHalos), "el núcleo y las tiras del halo, a la vista");
             Assert.That(overlay.FruitGlowVisible, Is.True, "y el brillo de la fruta al llegar");
             AssertArcUnderCeiling(animator, overlay, receiver, liana, u);
 
@@ -293,16 +312,12 @@ namespace AF.Tests.PlayMode
                 Assert.That(view.DoseColor(k), Is.EqualTo(Palette.Tint(cuia.ColorAt(k))), "dosis " + k + ": su tinte");
             }
 
-            // La fruta cuelga del nudo sobre el hombro derecho: su centro queda sobre el techo de la cavidad y su celda (con el
-            // margen transparente) tapa como mucho una esquina de la dosis de arriba (aviso de las capturas 34 y 39c).
+            // La fruta cuelga del nudo sobre el hombro derecho y nunca tapa el líquido (aviso de las capturas 34, 39c y 57-59c):
+            // columna a columna, su borde de abajo (el primer píxel visible de la celda) queda al menos 2 dp por encima de la cara
+            // superior de la dosis de arriba con la cuia llena (el canto de atrás de la elipse, a la altura de esa columna).
             float u = view.Unit;
             float cavityTop = CuiaGeometry.CavityTopU(view.Capacity);
-            Rect cell = LianaOverlay.FruitCellRectU;
-            Assert.That(LianaOverlay.FruitCenterAboveCavityU, Is.GreaterThan(0f), "la fruta, encima de la cavidad");
-            float overlapW = Mathf.Max(0f, Mathf.Min(cell.xMax, CuiaGeometry.CavityHalfWidthU) - Mathf.Max(cell.xMin, -CuiaGeometry.CavityHalfWidthU));
-            float overlapH = Mathf.Max(0f, Mathf.Min(cell.yMax, 0f) - Mathf.Max(cell.yMin, -1f));
-            float topDose = 2f * CuiaGeometry.CavityHalfWidthU;
-            Assert.That(overlapW * overlapH / topDose, Is.LessThan(0.2f), "la fruta tapa como mucho una esquina de la dosis de arriba");
+            AssertFruitClearsFullCuia(boot.Flow!.Level.Attrs[liana].Key, u);
 
             // Sobre las dosis solo pasan las vueltas de la liana (trazos finos en diagonal); el resto queda en el hombro y el
             // cuello. Las vueltas son 2-3 en total (b.2 M3), contando la del cuello, que lleva el mismo sprite con hojitas.
@@ -455,18 +470,97 @@ namespace AF.Tests.PlayMode
         }
 
         [Test]
-        public void Matapi_RodsLeaveTheCenterClear()
+        public void Matapi_NoRodInFrontOfTheLiquid()
         {
-            // 07 §3: las rayas verticales son el patrón del Camu camu y, con los aros, la rejilla del Huito; el centro, el parche
-            // de VA-05 y el icono de fruta. Las varillas se juntan en los bordes, como un cilindro visto de frente.
+            // 07 §3: el patrón es el canal para daltónicos (rayas verticales = Camu camu; con los aros, la rejilla del Huito).
+            // Ninguna varilla pasa por delante del líquido: las de los bordes van enteras sobre la pared de vidrio y las de dentro
+            // empiezan sobre la cara superior del líquido (su canto de atrás), con cualquier nivel, también a medio llenar.
             Assert.That(MatapiOverlay.RodCount, Is.EqualTo(6));
+            int wall = 0;
             for (int i = 0; i < MatapiOverlay.RodCount; i++)
             {
                 float x = MatapiOverlay.RodXU(i);
-                Assert.That(Mathf.Abs(x), Is.GreaterThanOrEqualTo(MatapiOverlay.RodClearHalfU), "varilla " + i + " fuera del centro");
-                Assert.That(Mathf.Abs(x), Is.LessThan(CuiaGeometry.CavityHalfWidthU + 0.1f), "varilla " + i + " sobre el cuerpo");
+                float half = 0.5f * MatapiOverlay.RodWidthU(i);
                 Assert.That(MatapiOverlay.RodXU(MatapiOverlay.RodCount - 1 - i), Is.EqualTo(-x).Within(1e-5f), "simétricas");
+                Assert.That(Mathf.Abs(x) + half, Is.LessThanOrEqualTo(CuiaGeometry.BodyOuterHalfWidthU), "varilla " + i + " sobre el cuerpo");
+                if (MatapiOverlay.RodOnWall(i))
+                {
+                    wall++;
+                    Assert.That(Mathf.Abs(x) - half, Is.GreaterThanOrEqualTo(CuiaGeometry.CavityHalfWidthU), "varilla " + i + " entera sobre la pared");
+                }
             }
+
+            Assert.That(wall, Is.EqualTo(2), "las dos de los bordes, sobre la pared; las otras cuatro, dentro");
+            for (int cap = 2; cap <= 6; cap++)
+            {
+                for (float level = 0f; level <= cap + 1e-3f; level += 0.125f)
+                {
+                    int shownInside = 0;
+                    for (int i = 0; i < MatapiOverlay.RodCount; i++)
+                    {
+                        bool shown = MatapiOverlay.RodSpanU(i, cap, level, out float bottom, out float top);
+                        string at = "varilla " + i + ", capacidad " + cap + ", nivel " + level;
+                        if (MatapiOverlay.RodOnWall(i))
+                        {
+                            Assert.That(shown, Is.True, at + ": la de la pared siempre se ve");
+                            continue;
+                        }
+
+                        if (!shown)
+                        {
+                            continue;
+                        }
+
+                        shownInside++;
+                        Assert.That(top - bottom, Is.GreaterThanOrEqualTo(MatapiOverlay.MinRodU), at);
+                        if (level > 0f)
+                        {
+                            float inner = Mathf.Abs(MatapiOverlay.RodXU(i)) - (0.5f * MatapiOverlay.RodWidthU(i));
+                            float face = CuiaGeometry.CavityBottomU + level + CuiaGeometry.FaceSagU(inner);
+                            Assert.That(bottom, Is.GreaterThan(face), at + ": empieza sobre la cara superior del líquido");
+                        }
+                    }
+
+                    if (level <= cap - 1f)
+                    {
+                        Assert.That(shownInside, Is.EqualTo(MatapiOverlay.RodCount - 2), "con una dosis vacía o más, las de dentro se ven por el vidrio (capacidad " + cap + ", nivel " + level + ")");
+                    }
+                }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Matapi_RodsFollowTheLiquidWhileFilling()
+        {
+            // El Matapi con 1 dosis recibe 2 (no sella): en cada fotograma, ninguna varilla de dentro baja de la cara superior
+            // del líquido que se ve (el relleno a medias incluido), y las de la pared siguen enteras.
+            yield return null;
+            BoardState start = Board(
+                new[] { new[] { 6 }, new[] { 6, 6 }, new[] { 1, 2, 1, 2 }, new[] { 6, 1, 1 }, new[] { 2, 2 }, new int[0] },
+                new[] { new MechanicSpec(MechanicType.Matapi), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
+            _rig = new MechanicTestKit.Rig(Art, start);
+            MechanicTestKit.Rig rig = _rig;
+            CuiaView view = rig.Views[0];
+            var overlay = (MatapiOverlay)view.Overlay!;
+            rig.Tick(PlayModeHelpers.FrameMs);
+            AssertRodsAboveLiquid(overlay, view, "antes del vertido");
+            Assert.That(ShownInsideRods(overlay), Is.EqualTo(MatapiOverlay.RodCount - 2), "con 1 dosis, las de dentro se ven por el vidrio vacío");
+
+            rig.Pour(start, 1, 0, out _);
+            float maxLevel = 0f;
+            int t = 0;
+            for (; !rig.Animator.IsIdle; t += PlayModeHelpers.FrameMs)
+            {
+                Assert.That(t, Is.LessThan(4000), "el vertido termina");
+                rig.Tick(PlayModeHelpers.FrameMs);
+                maxLevel = Mathf.Max(maxLevel, view.LiquidLevel);
+                AssertRodsAboveLiquid(overlay, view, "a los " + t + " ms (nivel " + view.LiquidLevel.ToString("0.00") + ")");
+            }
+
+            Assert.That(maxLevel, Is.EqualTo(3f).Within(1e-3f), "el Matapi llega a 3 dosis");
+            Assert.That(ShownInsideRods(overlay), Is.EqualTo(MatapiOverlay.RodCount - 2), "con 3 dosis, aún se ven por la dosis vacía");
+            Assert.That(overlay.ShownRodSpanU(2, out float bottom, out _), Is.True);
+            Assert.That(bottom, Is.GreaterThan(CuiaGeometry.CavityBottomU + 3f), "por encima de la tercera dosis");
         }
 
         [UnityTest]
@@ -523,6 +617,87 @@ namespace AF.Tests.PlayMode
                     Assert.That(r.OtherIndex, Is.EqualTo(0), "la Liana de cuenta se suelta por la cuia sellada");
                 }
             }
+        }
+
+        // Borde de abajo de la fruta llave key (píxeles del atlas procedural, el que usa el juego mientras no haya PNG) frente a
+        // la cara superior de una cuia llena: en cada columna sobre la cavidad, al menos 2 dp de aire. La celda de la fruta es
+        // LianaOverlay.FruitCellRectU (u desde el eje y desde el techo de la cavidad) y el sprite la llena.
+        private static void AssertFruitClearsFullCuia(int key, float u)
+        {
+            Assert.That(key, Is.GreaterThan(0), "Liana con fruta");
+            Assert.That(Resources.Load<Texture2D>(ProceduralArt.FruitFlightAtlasResource), Is.Null, "el juego usa el atlas procedural");
+            Color32[] atlas = ProceduralArt.FruitFlightPixels();
+            RectInt cellPx = ProceduralArt.FruitCell(key);
+            Rect cell = LianaOverlay.FruitCellRectU;
+            float px = cell.width / cellPx.width;
+            float clearU = 2f / u;
+            int columns = 0;
+            float minGapU = float.MaxValue;
+            for (int cx = 0; cx < cellPx.width; cx++)
+            {
+                int lowest = -1;
+                for (int cy = 0; cy < cellPx.height && lowest < 0; cy++)
+                {
+                    if (atlas[((cellPx.y + cy) * ProceduralArt.FruitAtlasWidth) + cellPx.x + cx].a > 26)
+                    {
+                        lowest = cy;
+                    }
+                }
+
+                float x = cell.xMin + ((cx + 0.5f) * px);
+                if (lowest < 0 || Mathf.Abs(x) >= CuiaGeometry.CavityHalfWidthU)
+                {
+                    continue;
+                }
+
+                columns++;
+                float bottom = cell.yMin + (lowest * px);
+                minGapU = Mathf.Min(minGapU, bottom - CuiaGeometry.FaceSagU(x));
+            }
+
+            Assert.That(columns, Is.GreaterThan(0), "la fruta cuelga sobre el hombro, encima de la cavidad");
+            Assert.That(minGapU, Is.GreaterThanOrEqualTo(clearU), "la fruta no tapa la cara superior de la cuia llena: " + (minGapU * u).ToString("0.0") + " dp de aire (mínimo 2)");
+            TestContext.WriteLine("Fruta llave " + key + ": " + (minGapU * u).ToString("0.0") + " dp sobre la cara superior de la cuia llena.");
+        }
+
+        // Las varillas del Matapi a la vista: las de la pared, de la base a lo alto; las de dentro, sobre la cara superior del
+        // líquido que pinta la vista ahora (su canto de atrás a la altura de la varilla).
+        private static void AssertRodsAboveLiquid(MatapiOverlay overlay, CuiaView view, string when)
+        {
+            float level = view.LiquidLevel;
+            for (int i = 0; i < MatapiOverlay.RodCount; i++)
+            {
+                bool shown = overlay.ShownRodSpanU(i, out float bottom, out float top);
+                if (MatapiOverlay.RodOnWall(i))
+                {
+                    Assert.That(shown, Is.True, when + ": varilla " + i + " de la pared");
+                    Assert.That(bottom, Is.EqualTo(CuiaGeometry.FootTopU).Within(1e-3f), when + ": varilla " + i + " desde la base");
+                    continue;
+                }
+
+                if (!shown || level <= 0.001f)
+                {
+                    continue;
+                }
+
+                float inner = Mathf.Abs(MatapiOverlay.RodXU(i)) - (0.5f * MatapiOverlay.RodWidthU(i));
+                float face = CuiaGeometry.CavityBottomU + level + CuiaGeometry.FaceSagU(inner);
+                Assert.That(bottom, Is.GreaterThanOrEqualTo(face), when + ": varilla " + i + " por delante del líquido");
+            }
+        }
+
+        private static int ShownInsideRods(MatapiOverlay overlay)
+        {
+            int n = 0;
+            for (int i = 0; i < MatapiOverlay.RodCount; i++)
+            {
+                if (!MatapiOverlay.RodOnWall(i) && overlay.ShownRodSpanU(i, out _, out _))
+                {
+                    n++;
+                }
+            }
+
+            return n;
         }
 
         // La Liana atada y en reposo: verde, en su sitio, con su fruta y sin piezas del paso.

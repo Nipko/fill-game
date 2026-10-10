@@ -11,18 +11,20 @@ namespace AF.Presentation.Mechanics
     /// M3 Liana atada (02 §9.1 M3; propuesta de D-007 b.2 M3; ficha de Magic Sort §3.3 y §2.7) [P]: 2-3 vueltas de liana
     /// verde hoja oscuro con hojitas (el tallo en <see cref="Palette.LeafMid"/>, a ΔE00 16,3 del Lulo; nunca
     /// <c>LeafLight</c> ni <c>JungleLight</c>, a 7,8 y 6,4) que dejan ver el contenido (Q17 A): 1-2 en diagonal sobre el
-    /// cuerpo y la del cuello, con el nudo a la derecha. Con fruta (<c>key</c> &gt; 0), la fruta llave grande cuelga del nudo
-    /// sobre el hombro derecho, sin tapar la cara de la dosis de arriba; de cuenta (<c>n</c> &gt; 0, variante del 243),
-    /// <c>n</c> puntos en el nudo. Se oculta en cuanto la Liana se suelta.
+    /// cuerpo y la del cuello y la boca, con el nudo a la derecha, a la altura del aro. Con fruta (<c>key</c> &gt; 0), la
+    /// fruta llave grande cuelga del nudo sobre el hombro derecho: puede tapar el cuello y el aro de fibra (la Liana no es
+    /// destino), nunca el líquido; su borde de abajo queda al menos 2 dp por encima de la cara superior de la cuia llena.
+    /// De cuenta (<c>n</c> &gt; 0, variante del 243), <c>n</c> puntos en el nudo. Se oculta en cuanto la Liana se suelta.
     /// </summary>
     /// <remarks>
     /// <para><b>Desbloqueo</b> (paso Release, etapa (d) o (d′), después del Seal de la cuia de la llave; <c>ctx.OtherIndex</c>
     /// = la cuia recién sellada): dura <see cref="ReleaseMs"/> × factor de velocidad. Como la tela de Magic Sort (t = 56,
     /// 362 y 398): una ✓ verde sobre la fruta (sprite: el atlas TMP no tiene U+2713); un cometa de luz que baja desde la tapa
     /// de la cuia sellada hasta la fruta (<see cref="BezierStripGraphic"/> aditivo en la capa delantera del tablero: solo el
-    /// último <see cref="CometTail"/> de la curva recorrida, transparente en la cola, con un destello en la punta, corto y
-    /// con alfa porque puede cruzar otras cuias), con un brillo y destellos al llegar; y la liana se seca (de verde a pajizo
-    /// de fibra) y cae. Fases [P] en fracción del paso: ✓ 0-0,14 (y se apaga 0,64-0,74); cometa 0,08-0,40 (se apaga y entra
+    /// último <see cref="CometTail"/> de la curva recorrida, transparente en la cola, con un halo de caída suave de
+    /// <see cref="BeamHalos"/> tiras que se apilan hacia el núcleo y se afilan hacia la cabeza, y un destello redondo en la
+    /// punta que tapa sus extremos; corto y con alfa porque puede cruzar otras cuias), con un brillo y destellos al llegar;
+    /// y la liana se seca (de verde a pajizo de fibra) y cae. Fases [P] en fracción del paso: ✓ 0-0,14 (y se apaga 0,64-0,74); cometa 0,08-0,40 (se apaga y entra
     /// en la fruta 0,42-0,56); brillo 0,38-0,62; se seca 0,48-0,70; cae 0,66-1. La Liana de cuenta hace lo mismo sin la ✓
     /// ni el brillo de la fruta, y el cometa llega al nudo.</para>
     /// <para>El arco del cometa se queda en el panel: en la misma fila sube poco (bajo la repisa de la fila de arriba) y, entre
@@ -54,17 +56,20 @@ namespace AF.Presentation.Mechanics
         /// </summary>
         public const float FruitCellU = 1.2f;
 
-        /// <summary>Centro de la fruta a la vista: sobre el hombro derecho (u desde el eje).</summary>
-        public const float FruitCenterXU = 0.70f;
+        /// <summary>Centro de la fruta a la vista: cuelga del hombro derecho, junto al cuello (u desde el eje).</summary>
+        public const float FruitCenterXU = 0.55f;
 
-        /// <summary>Centro de la fruta a la vista sobre el techo de la cavidad (u).</summary>
-        public const float FruitCenterAboveCavityU = 0.20f;
+        /// <summary>
+        /// Centro de la fruta a la vista sobre el techo de la cavidad (u): su borde de abajo queda al menos 2 dp por encima de
+        /// la cara superior del líquido con la cuia llena (Q17 A: el contenido se ve entero).
+        /// </summary>
+        public const float FruitCenterAboveCavityU = 0.70f;
 
-        /// <summary>Centro del nudo: en el canto derecho del cuello (u desde el eje).</summary>
-        public const float KnotXU = 0.52f;
+        /// <summary>Centro del nudo: sobre el canto derecho de la boca (u desde el eje).</summary>
+        public const float KnotXU = 0.42f;
 
-        /// <summary>Centro del nudo sobre el techo de la cavidad (u): en el cuello.</summary>
-        public const float KnotAboveCavityU = 0.64f;
+        /// <summary>Centro del nudo sobre el techo de la cavidad (u): a la altura del aro de fibra, sobre el rabito de la fruta.</summary>
+        public const float KnotAboveCavityU = 1.08f;
 
         /// <summary>Lo que cae la liana al soltarse (u) [P].</summary>
         public const float FallU = 1.4f;
@@ -74,6 +79,25 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>Segmentos del hilo de luz.</summary>
         public const int BeamSegments = 24;
+
+        /// <summary>
+        /// Tiras del halo del cometa [P]: de +<see cref="BeamHaloStepU"/> a +4 × <see cref="BeamHaloStepU"/> u de ancho sobre
+        /// el núcleo, cada una con alfa 0,35 × el del halo; aditivas, se apilan de 1 a 4 capas hacia el núcleo (caída suave,
+        /// sin bandas).
+        /// </summary>
+        public const int BeamHalos = 4;
+
+        /// <summary>Lo que cada tira del halo ensancha la anterior (u) [P].</summary>
+        public const float BeamHaloStepU = 0.06f;
+
+        /// <summary>Lado del destello de la punta del cometa (u): tapa los extremos del núcleo y del halo.</summary>
+        public const float BeamSparkU = 1.0f;
+
+        /// <summary>
+        /// Lado de la cabeza del cometa (u): un brillo pequeño e intenso sobre el destello que, sumado a él, satura alrededor
+        /// del extremo del núcleo; la punta se lee redonda, sin el corte recto de la tira.
+        /// </summary>
+        public const float BeamHeadGlowU = 0.6f;
 
         /// <summary>
         /// Tinte de la liana atada [P] #289454: con el gris del tallo (<see cref="ProceduralArt.LianaStemShade"/>) da
@@ -104,32 +128,29 @@ namespace AF.Presentation.Mechanics
         private const float FruitCellDyU = 0.07f;
         private const float CollarWidthU = 1.2f;
         private const float CollarHeightU = 0.42f;
-        private const float CollarAboveCavityU = 0.58f;
+        private const float CollarAboveCavityU = 0.88f;
         private const float KnotWidthU = 0.5f;
         private const float KnotHeightU = 0.42f;
         private const float GlowU = 1.7f;
         private const float CapTopAboveMouthU = 0.31f;
         private const float BeamBaseU = 0.05f;
         private const float BeamHeadU = 0.14f;
-        private const float BeamHaloU = 0.22f;
         private const float BeamHaloAlpha = 0.15f;
-        private const float BeamSparkU = 0.7f;
         private const float MaxBeamLiftU = 2.6f;
         private const float SameRowLiftU = 0.5f;
         private const float SameRowLiftPerU = 0.08f;
         private const float MaxSameRowLiftU = 0.75f;
         private const int CeilingSamples = 16;
 
-        // Brillo cálido, halo del cometa y destellos: cielo_horizonte #FFE4A8.
-        private static readonly Color WarmLight = new Color(1f, 0xE4 / 255f, 0xA8 / 255f, 1f);
-
-        // Luz del cometa (aditiva): de transparente en la cola a casi blanco con alfa 0,9 en la cabeza, y un halo cálido y
-        // tenue de 0,22 u a cada lado, sin borde duro: dos tiras de WarmLight (0,11 y 0,22 u) que suman alfa 0,15 junto al
-        // núcleo y también se desvanecen hacia la cola.
+        // Luz del cometa (aditiva): de transparente en la cola a casi blanco con alfa 0,9 en la cabeza, y un halo cálido
+        // (cielo_horizonte, Palette.SkyHorizon #FFE4A8, como el brillo y los destellos) de caída suave: BeamHalos tiras de
+        // +0,06 a +0,24 u con alfa 0,35 × 0,15 cada una, que se apilan hasta 0,21 junto al núcleo y se desvanecen hacia la
+        // cola y hacia fuera.
         private static readonly Color BeamTail = new Color(1f, 0.86f, 0.52f, 0f);
         private static readonly Color BeamHeadColor = new Color(1f, 0.97f, 0.86f, 0.9f);
-        private static readonly Color HaloTail = new Color(WarmLight.r, WarmLight.g, WarmLight.b, 0f);
-        private static readonly Color HaloHead = new Color(WarmLight.r, WarmLight.g, WarmLight.b, 0.5f * BeamHaloAlpha);
+        private static readonly Color HaloTail = OverlayParts.Fade(Palette.SkyHorizon, 0f);
+        private static readonly Color HaloHead = OverlayParts.Fade(Palette.SkyHorizon, 0.35f * BeamHaloAlpha);
+        private static readonly Color HeadGlow = new Color(1f, 0.98f, 0.9f, 1f);
 
         private readonly Image[] _wraps = new Image[MaxBodyWraps];
         private RectTransform _vine = null!;
@@ -139,10 +160,10 @@ namespace AF.Presentation.Mechanics
         private Image _knot = null!;
         private Image _check = null!;
         private PipRow _dots = null!;
+        private readonly BezierStripGraphic[] _halos = new BezierStripGraphic[BeamHalos];
         private BezierStripGraphic _beam = null!;
-        private BezierStripGraphic _haloInner = null!;
-        private BezierStripGraphic _haloOuter = null!;
         private Image _spark = null!;
+        private Image _head = null!;
         private int _key;
         private int _n;
         private float _u = 24f;
@@ -398,7 +419,7 @@ namespace AF.Presentation.Mechanics
             }
 
             _collar = OverlayParts.NewImage("LianaCollar", _vine, art.LianaVine, FreshTint);
-            _glow = OverlayParts.NewImage("LianaGlow", _vine, art.Glow, OverlayParts.Fade(WarmLight, 0f));
+            _glow = OverlayParts.NewImage("LianaGlow", _vine, art.Glow, OverlayParts.Fade(Palette.SkyHorizon, 0f));
             Material? additive = UiMaterials.Additive;
             if (additive != null)
             {
@@ -418,17 +439,24 @@ namespace AF.Presentation.Mechanics
             GameObject go = _beam.gameObject;
             RectTransform rt = _beam.rectTransform;
             var center = new Vector2(0.5f, 0.5f);
-            _haloOuter = NewStrip("LianaBeamHaloOuter", rt, center, additive);
-            _haloInner = NewStrip("LianaBeamHaloInner", rt, center, additive);
+            for (int k = BeamHalos - 1; k >= 0; k--)
+            {
+                _halos[k] = NewStrip("LianaBeamHalo" + k, rt, center, additive); // de la más ancha a la más estrecha
+            }
 
             // Destello aditivo en la punta del cometa.
-            _spark = OverlayParts.NewImage("LianaBeamSpark", rt, art.Glow, OverlayParts.Fade(WarmLight, 0f));
+            _spark = OverlayParts.NewImage("LianaBeamSpark", rt, art.Glow, OverlayParts.Fade(Palette.SkyHorizon, 0f));
             RectTransform spark = _spark.rectTransform;
             spark.anchorMin = new Vector2(0.5f, 0.5f);
             spark.anchorMax = new Vector2(0.5f, 0.5f);
+            _head = OverlayParts.NewImage("LianaBeamHead", rt, art.Glow, OverlayParts.Fade(HeadGlow, 0f));
+            RectTransform head = _head.rectTransform;
+            head.anchorMin = new Vector2(0.5f, 0.5f);
+            head.anchorMax = new Vector2(0.5f, 0.5f);
             if (additive != null)
             {
                 _spark.material = additive;
+                _head.material = additive;
             }
 
             go.SetActive(false);
@@ -469,10 +497,15 @@ namespace AF.Presentation.Mechanics
                     SetBeamSpan(tail, head);
                     var fadeColor = new Color(1f, 1f, 1f, a);
                     OverlayParts.SetColor(_beam, fadeColor);
-                    OverlayParts.SetColor(_haloInner, fadeColor);
-                    OverlayParts.SetColor(_haloOuter, fadeColor);
+                    for (int k = 0; k < BeamHalos; k++)
+                    {
+                        OverlayParts.SetColor(_halos[k], fadeColor);
+                    }
+
                     OverlayParts.SetVisible(_spark, true);
-                    OverlayParts.SetColor(_spark, OverlayParts.Fade(WarmLight, 0.9f * a));
+                    OverlayParts.SetColor(_spark, OverlayParts.Fade(Palette.SkyHorizon, 0.9f * a));
+                    OverlayParts.SetVisible(_head, true);
+                    OverlayParts.SetColor(_head, OverlayParts.Fade(HeadGlow, a));
                 }
             }
 
@@ -482,7 +515,7 @@ namespace AF.Presentation.Mechanics
             if (glowOn && _key > 0)
             {
                 float g = (p - GlowStart) / (GlowEnd - GlowStart);
-                OverlayParts.SetColor(_glow, OverlayParts.Fade(WarmLight, 0.8f * Mathf.Sin(Mathf.PI * g)));
+                OverlayParts.SetColor(_glow, OverlayParts.Fade(Palette.SkyHorizon, 0.8f * Mathf.Sin(Mathf.PI * g)));
                 float scale = Mathf.Lerp(0.8f, 1.2f, Ease.Out(g));
                 SetScale(_glow.rectTransform, scale, scale);
             }
@@ -490,7 +523,7 @@ namespace AF.Presentation.Mechanics
             if (!_sparkled && p >= BeamArrive)
             {
                 _sparkled = true;
-                _fx?.Sparkles(ToFx(_selfPos + (EndLocalU() * _u)), WarmLight, ReleaseSparkles, _u);
+                _fx?.Sparkles(ToFx(_selfPos + (EndLocalU() * _u)), Palette.SkyHorizon, ReleaseSparkles, _u);
             }
 
             // Se seca y cae.
@@ -571,12 +604,21 @@ namespace AF.Presentation.Mechanics
             _p1 = _p0 + (d * 0.2f) + new Vector2(0f, lift);
             _p2 = _p0 + (d * 0.8f) + new Vector2(0f, lift);
             _beam.SetColors(BeamTail, BeamHeadColor, 0f, Color.clear, 0f);
-            _haloInner.SetColors(HaloTail, HaloHead, 0f, Color.clear, 0f);
-            _haloOuter.SetColors(HaloTail, HaloHead, 0f, Color.clear, 0f);
+            for (int k = 0; k < BeamHalos; k++)
+            {
+                _halos[k].SetColors(HaloTail, HaloHead, 0f, Color.clear, 0f);
+            }
+
             Vector2 spark = new Vector2(BeamSparkU * _u, BeamSparkU * _u);
             if (_spark.rectTransform.sizeDelta != spark)
             {
                 _spark.rectTransform.sizeDelta = spark;
+            }
+
+            Vector2 head = new Vector2(BeamHeadGlowU * _u, BeamHeadGlowU * _u);
+            if (_head.rectTransform.sizeDelta != head)
+            {
+                _head.rectTransform.sizeDelta = head;
             }
 
             _hasBeam = true;
@@ -631,13 +673,22 @@ namespace AF.Presentation.Mechanics
             Vector2 start = Vector2.LerpUnclamped(ef, fg, s);
             float w0 = BeamBaseU * _u;
             float w1 = BeamHeadU * _u;
-            float halo = BeamHaloU * _u;
             _beam.SetCurve(start, fg, g, end, w0, w1);
-            _haloInner.SetCurve(start, fg, g, end, w0 + halo, w1 + halo);
-            _haloOuter.SetCurve(start, fg, g, end, w0 + (2f * halo), w1 + (2f * halo));
+            for (int k = 0; k < BeamHalos; k++)
+            {
+                // Cada tira, más ancha que la anterior y afilada hacia la cabeza (la mitad del ensanche), donde la tapa el
+                // destello.
+                float halo = (k + 1) * BeamHaloStepU * _u;
+                _halos[k].SetCurve(start, fg, g, end, w0 + halo, w1 + (0.5f * halo));
+            }
             if (_spark.rectTransform.anchoredPosition != end)
             {
                 _spark.rectTransform.anchoredPosition = end;
+            }
+
+            if (_head.rectTransform.anchoredPosition != end)
+            {
+                _head.rectTransform.anchoredPosition = end;
             }
         }
 
