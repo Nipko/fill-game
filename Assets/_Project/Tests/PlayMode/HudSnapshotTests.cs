@@ -17,7 +17,8 @@ namespace AF.Tests.PlayMode
     /// (chip y marco índigo y el velo del 15 %), <c>47_next_chip_l39</c> («Difícil ×3» sobre Siguiente), <c>48_counter_lluvia_l143</c>
     /// (contador de la Lluvia tras un vertido útil) y <c>49_counter_pirana_l183</c> (contador de la Piraña), más las variantes de
     /// la banda: <c>45b_hud_tucked_l106</c> (3 filas), <c>46b_hud_tucked_l200</c> (3 filas con el contador),
-    /// <c>46c_hud_l200_16x9</c> y <c>46d_hud_tucked_16_16x9</c> (16:9, 1080 × 1920 px, arriba de la captura) y
+    /// <c>46c_hud_l200_16x9</c> y <c>46d_hud_tucked_16_16x9</c> (16:9, 1080 × 1920 px, arriba de la captura),
+    /// <c>46e_hud_veryhard_l160</c> y <c>46f_hud_veryhard_l180</c> (el marco índigo junto al Huito, C13) y
     /// <c>47b_next_chip_l59</c> («Muy difícil ×4»). Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.HudSnapshotTests</c> sin <c>-nographics</c>; los PNG van a <c>Logs/snapshots/</c>.
     /// </summary>
@@ -47,6 +48,11 @@ namespace AF.Tests.PlayMode
             yield return Shot(dir, 106, "45b_hud_tucked_l106");
             yield return Shot(dir, 60, "46_hud_veryhard_l60");
             yield return Shot(dir, 200, "46b_hud_tucked_l200");
+
+            // C13 (abierta): el índigo del marco (#24305E) está a ΔE00 3,0 del Huito (#1F2F6B). El 160 y el 180 son Muy difícil
+            // y llevan jenipapo: se mira si el marco junto a una cuia de Huito se confunde con el tinte.
+            yield return Shot(dir, 160, "46e_hud_veryhard_l160");
+            yield return Shot(dir, 180, "46f_hud_veryhard_l180");
 
             // 16:9 (1080 × 1920 px): GameScreen lo maqueta en 438,75 × 780 dp, en la parte de arriba de la captura.
             GameScreen.SimulatedScreen = HudLabelTests.Screen640;

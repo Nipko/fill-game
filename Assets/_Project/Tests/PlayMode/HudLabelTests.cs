@@ -163,6 +163,16 @@ namespace AF.Tests.PlayMode
             Assert.That(murky.GlyphSprite!.name, Is.EqualTo("mech_question"), "el «?» es un sprite, no texto");
             Assert.That(murky.Root.GetComponentsInChildren<TMPro.TMP_Text>(true), Is.Empty, "sin texto");
             Assert.That(MurkyChip.GlyphContrast(), Is.GreaterThanOrEqualTo(3f), "«?» marfil sobre gris-pardo ≥ 3:1");
+
+            // 07 §7.8 (≥ 3:1 para un gráfico) contra la cara REAL que queda detrás de la tinta del «?», no contra el gris-pardo
+            // plano: la píldora se aclara arriba (la luz de la pareja, el chip de dificultad) y el arco del «?» empieza hacia el
+            // 15 % del alto. Se miden los píxeles del sprite en las filas de la tinta (sin contar el halo de tinta, que mejora el
+            // borde): la luz fuerte se queda en la franja de encima del glifo y detrás solo se aclara 0,05.
+            Assert.That(MurkyChip.GlyphFaceContrastMin(), Is.GreaterThanOrEqualTo(3f), "«?» marfil ≥ 3:1 frente a la cara real detrás de su tinta");
+            Rect glyph = VictorySetup.CanvasRect(murky.GlyphRect, (RectTransform)view.Canvas.transform);
+            Rect pill = VictorySetup.CanvasRect(murky.Root, (RectTransform)view.Canvas.transform);
+            float inkTop = glyph.yMin + (glyph.height * (1f - (ProceduralArt.QuestionGlyphU / ProceduralArt.QuestionMarkU)) * 0.5f);
+            Assert.That((inkTop - pill.yMin) / murky.Height, Is.EqualTo(MurkyChip.GlyphInkTopFraction).Within(0.01f), "la tinta empieza donde se mide");
             HudSetup.AssertMurkyBesideChip(view);
             HudSetup.AssertHudLabelsClear(view);
             Assert.That(view.NightVeil.gameObject.activeSelf, Is.True, "el 100 es Muy difícil");
@@ -183,6 +193,9 @@ namespace AF.Tests.PlayMode
             Assert.That(view.HudDifficultyChip.TextSize, Is.GreaterThanOrEqualTo(12f), "07 §7.7: 12-14 dp");
             HudSetup.AssertMurkyBesideChip(view);
             HudSetup.AssertHudLabelsClear(view);
+            HudSetup.AssertFrameAroundPanel(view);
+            Assert.That(view.DifficultyFrameTucked, Is.True, "3 filas: el panel pasa bajo la fila del HUD y el marco no asoma por arriba");
+            HudSetup.AssertWalletOffPanel(view);
 
             // El 41 (normal, sin turbias) no lleva «?» aunque se cargue después en la misma escena.
             yield return HudSetup.LoadPlaying(41);
@@ -248,12 +261,13 @@ namespace AF.Tests.PlayMode
             HudCounterChip counter = boot.View!.HudCounter;
             Assert.That(counter.Visible, Is.True, "la Lluvia lleva su contador en el HUD (traspaso §6 paso 1.3)");
             Assert.That(counter.Type, Is.EqualTo(MechanicType.Lluvia));
-            Assert.That(counter.Icon!.name, Is.EqualTo("mech_icon_lluvia"));
+            Assert.That(counter.Icon!.name, Is.EqualTo("hud_counter_cloud"), "la nube sola: las únicas gotas del chip son las pendientes");
             Assert.That(counter.Remaining, Is.EqualTo(3), "lluvia_k_pours = 3");
             Assert.That(counter.Text, Is.EqualTo("3"));
             Assert.That(counter.DropsShown, Is.EqualTo(2), "n = 2 gotas pendientes");
             Assert.That(counter.DropColor, Is.EqualTo(Palette.Tint(10)), "el agua del mundo (Agua del Tapajós)");
             Assert.That(counter.Blocked, Is.False);
+            HudSetup.AssertCounterGroups(counter);
 
             HudSetup.FindUsefulThenFutile(flow, out Pour useful, out Pour futile);
             Assert.That(HudSetup.Tap(boot, useful), Is.EqualTo(TapKind.Poured));
@@ -320,6 +334,88 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Counter_Lluvia143_DropFallsAfterKUsefulPours()
+        {
+            // 143: Lluvia con k = 3 y n = 2 (02 §9.1 M6). Tres vertidos útiles lejos de su cuia (para que no se llene): al
+            // tercero cae una gota, así que quedan 1 gotita en el chip y el contador vuelve a 3 (el núcleo lo dice en el toque:
+            // LabelsBoardChanged tras Poured).
+            yield return HudSetup.LoadPlaying(143);
+            GameBootstrap boot = GameBootstrap.Current!;
+            LevelFlow flow = boot.Flow!;
+            HudCounterChip counter = boot.View!.HudCounter;
+            int lluvia = flow.Session.Counter.CuiaIndex;
+            int countBefore = flow.Session.Current[lluvia].Count;
+            Assert.That(counter.Remaining, Is.EqualTo(3));
+            Assert.That(counter.DropsShown, Is.EqualTo(2));
+
+            int[] remainingAfter = { 2, 1, 3 };
+            int[] dropsAfter = { 2, 2, 1 };
+            for (int p = 0; p < 3; p++)
+            {
+                Pour useful = HudSetup.UsefulPourAvoiding(flow, lluvia);
+                Assert.That(HudSetup.Tap(boot, useful), Is.EqualTo(TapKind.Poured), "vertido útil " + (p + 1));
+                Assert.That(flow.Session.Counter.Remaining, Is.EqualTo(remainingAfter[p]), "núcleo tras el vertido útil " + (p + 1));
+                Assert.That(counter.Remaining, Is.EqualTo(remainingAfter[p]), "chip tras el vertido útil " + (p + 1));
+                Assert.That(counter.DropsShown, Is.EqualTo(dropsAfter[p]), "gotitas tras el vertido útil " + (p + 1));
+                Assert.That(counter.Text, Is.EqualTo(remainingAfter[p].ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                PlayModeHelpers.StepUntilIdle(boot, 6000);
+            }
+
+            Assert.That(flow.Session.Counter.PendingDrops, Is.EqualTo(1), "cayó una de las dos gotas");
+            Assert.That(flow.Session.Current[lluvia].Count, Is.EqualTo(countBefore + 1), "la gota está en la cuia de la Lluvia");
+            Assert.That(counter.Blocked, Is.False);
+            Assert.That(counter.Alpha, Is.EqualTo(1f));
+            HudSetup.AssertCounterGroups(counter);
+            HudSetup.AssertHudLabelsClear(boot.View);
+        }
+
+        [UnityTest]
+        public IEnumerator Counter_Blocked_DimsTheChip()
+        {
+            // T09 §5: «atenuado si Blocked» (LevelCounter.Blocked: la cuia de la Lluvia o la cueva de la Piraña, llenas). Con
+            // tableros sintéticos pintados en el chip del HUD del 143: la vista pinta el contador del núcleo tal cual.
+            yield return HudSetup.LoadPlaying(143);
+            GameBootstrap boot = GameBootstrap.Current!;
+            HudCounterChip counter = boot.View!.HudCounter;
+            Assert.That(counter.Alpha, Is.EqualTo(1f));
+
+            MechanicSpec rain = new MechanicSpec(MechanicType.Lluvia, key: 10, n: 2, k: 3);
+            BoardState full = HudSetup.Board(
+                new[] { new[] { 1, 2 }, new[] { 2 }, new[] { 3 }, new[] { 10, 1, 2, 3 } },
+                new[] { MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, rain });
+            LevelCounter blocked = LevelCounter.Of(full);
+            Assert.That(blocked.Blocked, Is.True, "Lluvia llena: la gota esperará");
+            counter.Show(blocked, full[3].MechanicKey);
+            Assert.That(counter.Blocked, Is.True);
+            Assert.That(counter.Alpha, Is.EqualTo(HudCounterChip.BlockedAlpha), "atenuado");
+            Assert.That(counter.DropsShown, Is.EqualTo(2), "las gotas pendientes se siguen viendo");
+            Assert.That(counter.Remaining, Is.EqualTo(3));
+
+            // Un vertido útil que deja hueco en la Lluvia (su cima, 3, sobre el 3 de la cuia 2): vuelve a opacidad 1.
+            Assert.That(PourRules.IsLegal(full, 3, 2), Is.True);
+            Assert.That(PourRules.IsFutile(full, 3, 2), Is.False);
+            BoardState open = PourRules.Apply(full, 3, 2, PourMode.Run);
+            LevelCounter free = LevelCounter.Of(open);
+            Assert.That(free.Blocked, Is.False);
+            counter.Show(free, open[3].MechanicKey);
+            Assert.That(counter.Blocked, Is.False);
+            Assert.That(counter.Alpha, Is.EqualTo(1f), "con hueco, a opacidad 1");
+            Assert.That(counter.Remaining, Is.EqualTo(free.Remaining));
+
+            // La cueva de la Piraña llena: el mordisco se perderá (Q-C), atenuado igual; sin gotitas.
+            BoardState cave = HudSetup.Board(
+                new[] { new[] { 1, 2 }, new[] { 2 }, new int[0], new[] { 3, 1, 2, 3 } },
+                new[] { MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, new MechanicSpec(MechanicType.Pirana, k: 4) });
+            LevelCounter bite = LevelCounter.Of(cave);
+            Assert.That(bite.Blocked, Is.True);
+            counter.Show(bite, 0);
+            Assert.That(counter.Type, Is.EqualTo(MechanicType.Pirana));
+            Assert.That(counter.Alpha, Is.EqualTo(HudCounterChip.BlockedAlpha));
+            Assert.That(counter.DropsShown, Is.EqualTo(0));
+            Assert.That(counter.Divider.gameObject.activeSelf, Is.False, "sin gotitas no hay filete");
+        }
+
+        [UnityTest]
         public IEnumerator Layout_NoOverlap_360x640_ThreeRows()
         {
             // 360 × 780, nivel 200 (Muy difícil con la Piraña y 11 cuias): 3 filas, pegado bajo la placa con el contador.
@@ -331,12 +427,32 @@ namespace AF.Tests.PlayMode
             Assert.That(view.HudDifficultyChip.Visible && view.HudCounter.Visible, Is.True);
             HudSetup.AssertHudLabelsClear(view);
 
+            // NOTAS de la ola 2 («Para T09»): la píldora de Canoas «5/5» de la cabecera no pisa el canto del panel recortado bajo
+            // el HUD (TopRowY + 40). La columna sube los 9 dp que hay hasta la zona segura y acaba justo en el canto (holgura 0
+            // [P]); el marco índigo no asoma por arriba (pasaría a trozos bajo la insignia, las píldoras y Reiniciar).
+            Assert.That(view.Layout.PanelY, Is.EqualTo(view.TopRowDp + 40f).Within(0.01f), "panel recortado en BoardTop − 8");
+            Assert.That(view.WalletBar.CanoesRect.gameObject.activeSelf, Is.True, "Canoas desde el 31");
+            Assert.That(view.WalletLiftDp, Is.EqualTo(9f).Within(0.01f), "sube hasta la zona segura");
+            Assert.That(view.DifficultyFrameTucked, Is.True);
+            HudSetup.AssertFrameAroundPanel(view);
+            HudSetup.AssertWalletOffPanel(view);
+
+            // Sigue apartada tras un cambio de fase (SyncChrome la vuelve a poner en la fila): Volver a la orilla, en la intro
+            // y de nuevo en juego.
+            Assert.That(boot.PressRestart(), Is.True);
+            PlayModeHelpers.Step(boot, 50);
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Intro));
+            HudSetup.AssertWalletOffPanel(view);
+            HudSetup.SkipIntro(boot);
+            HudSetup.AssertWalletOffPanel(view);
+
             // Con un recorte de 48 dp arriba (la fila superior baja 16 dp) sigue sin solapes.
             GameScreen.SimulatedScreen = Screen780Cutout;
             PlayModeHelpers.Step(boot, 50);
             Assert.That(view.TopRowDp, Is.EqualTo(56f).Within(0.01f));
             Assert.That(view.HudLabelsMode, Is.EqualTo(GameScreen.HudLabelMode.Tucked));
             HudSetup.AssertHudLabelsClear(view);
+            HudSetup.AssertWalletOffPanel(view);
 
             // El mismo nivel en 16:9 (438,75 × 780 dp): 2 filas de 6 y 5 (la cuia de 48 dp gana a la de 46,9 en 3 filas) y el
             // contador a la derecha de la banda.
@@ -346,6 +462,8 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Layout!.Rows, Is.EqualTo(2));
             Assert.That(view.HudLabelsMode, Is.Not.EqualTo(GameScreen.HudLabelMode.Tucked));
             HudSetup.AssertHudLabelsClear(view);
+            HudSetup.AssertFrameAroundPanel(view);
+            HudSetup.AssertWalletOffPanel(view);
 
             // 2 filas con «?» en 16:9 (nivel 100: 10 cuias, Muy difícil y Aguas turbias).
             yield return HudSetup.LoadPlaying(100);
@@ -353,12 +471,14 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Layout!.Rows, Is.EqualTo(2));
             HudSetup.AssertMurkyBesideChip(view);
             HudSetup.AssertHudLabelsClear(view);
+            HudSetup.AssertWalletOffPanel(view);
 
             // Contador y etiqueta con la Lluvia en la fila 1 y una cuia alta: el 160 (Muy difícil, 10 cuias) en 16:9.
             yield return HudSetup.LoadPlaying(160);
             view = GameBootstrap.Current!.View!;
             Assert.That(view.HudCounter.Visible && view.HudDifficultyChip.Visible, Is.True);
             HudSetup.AssertHudLabelsClear(view);
+            HudSetup.AssertWalletOffPanel(view);
 
             // 3 filas en 16:9: 16 cuias (6/5/5) en un nivel Muy difícil (paquete de prueba).
             LaunchOptions.LevelPackJsonOverride = HudSetup.SixteenCuiaVeryHardPack();
@@ -369,12 +489,16 @@ namespace AF.Tests.PlayMode
             Assert.That(view.HudLabelsMode, Is.EqualTo(GameScreen.HudLabelMode.Tucked));
             Assert.That(view.HudDifficultyChip.Visible, Is.True);
             HudSetup.AssertHudLabelsClear(view);
+            HudSetup.AssertFrameAroundPanel(view);
+            HudSetup.AssertWalletOffPanel(view);
 
             // Y a 360 × 780, con las mismas 16 cuias.
             GameScreen.SimulatedScreen = Screen780;
             PlayModeHelpers.Step(GameBootstrap.Current!, 50);
             Assert.That(view.Layout!.Rows, Is.EqualTo(3));
             HudSetup.AssertHudLabelsClear(view);
+            HudSetup.AssertFrameAroundPanel(view);
+            HudSetup.AssertWalletOffPanel(view);
 
             // 1 fila (5 cuias, Difícil y de Aguas turbias; paquete de prueba) en 16:9 y a 360 × 780: chips normales.
             GameScreen.SimulatedScreen = Screen640;
@@ -386,10 +510,14 @@ namespace AF.Tests.PlayMode
             Assert.That(view.HudDifficultyChip.Visible && view.HudMurkyChip.Visible, Is.True);
             HudSetup.AssertMurkyBesideChip(view);
             HudSetup.AssertHudLabelsClear(view);
+            HudSetup.AssertWalletOffPanel(view);
             GameScreen.SimulatedScreen = Screen780;
             PlayModeHelpers.Step(GameBootstrap.Current!, 50);
             Assert.That(view.HudLabelsMode, Is.EqualTo(GameScreen.HudLabelMode.Full));
             HudSetup.AssertHudLabelsClear(view);
+            HudSetup.AssertFrameAroundPanel(view);
+            Assert.That(view.DifficultyFrameTucked, Is.False, "1 fila: el marco rodea el panel también por arriba");
+            HudSetup.AssertWalletOffPanel(view);
         }
     }
 
@@ -491,21 +619,143 @@ namespace AF.Tests.PlayMode
             futile = default;
         }
 
-        /// <summary>El marco rodea el panel 3 dp por fuera y va detrás del relleno del panel.</summary>
+        /// <summary>
+        /// El marco rodea el panel 3 dp por fuera y va detrás del relleno del panel. Si el canto de arriba del panel pasa bajo
+        /// la fila del HUD (la insignia acaba en <c>TopRowY + 50</c>; 3 filas), el marco empieza en el canto del panel y no asoma
+        /// por arriba (recogido); si no, tampoco lo tapa nada de la fila del HUD.
+        /// </summary>
         public static void AssertFrameAroundPanel(GameScreen view)
         {
             Image frame = view.DifficultyFrame;
             BoardLayoutResult l = view.Layout!;
             RectTransform board = view.BoardContainer;
             Assert.That(frame.transform.parent, Is.SameAs(board));
+            bool tucked = l.PanelY - 3f < view.TopRowDp + GameScreen.HudLabelsBelowRowDp;
+            Assert.That(view.DifficultyFrameTucked, Is.EqualTo(tucked), "recogido solo con el panel bajo la fila del HUD");
+            float top = tucked ? l.PanelY : l.PanelY - 3f;
+            Assert.That(view.DifficultyFrameTopDp, Is.EqualTo(top).Within(0.01f));
             RectTransform rt = frame.rectTransform;
             Assert.That(rt.anchoredPosition.x, Is.EqualTo(l.PanelX - 3f).Within(0.01f));
-            Assert.That(-rt.anchoredPosition.y, Is.EqualTo(l.PanelY - 3f).Within(0.01f));
+            Assert.That(-rt.anchoredPosition.y, Is.EqualTo(top).Within(0.01f));
             Assert.That(rt.sizeDelta.x, Is.EqualTo(l.PanelWidth + 6f).Within(0.01f), "3 dp a cada lado (07 §7.7)");
-            Assert.That(rt.sizeDelta.y, Is.EqualTo(l.PanelHeight + 6f).Within(0.01f));
+            Assert.That(rt.sizeDelta.y, Is.EqualTo(l.PanelHeight + (tucked ? 3f : 6f)).Within(0.01f), "3 dp por abajo (y por arriba si no va recogido)");
+            if (!tucked)
+            {
+                Canvas.ForceUpdateCanvases();
+                RectTransform root = (RectTransform)view.Canvas.transform;
+                Assert.That(VictorySetup.CanvasRect(view.LevelBadgeRect, root).yMax, Is.LessThanOrEqualTo(top + 0.05f), "la insignia no tapa el canto de arriba del marco");
+                Assert.That(VictorySetup.CanvasRect((RectTransform)view.RestartButton.transform, root).yMax, Is.LessThanOrEqualTo(top + 0.05f), "Reiniciar tampoco");
+                Assert.That(VictorySetup.CanvasRect((RectTransform)view.PauseButton.transform, root).yMax, Is.LessThanOrEqualTo(top + 0.05f), "ni la pausa");
+            }
+
             Assert.That(frame.transform.GetSiblingIndex(), Is.LessThan(board.Find("PanelFill").GetSiblingIndex()), "detrás del relleno: solo asoma alrededor");
             Assert.That(frame.transform.GetSiblingIndex(), Is.GreaterThan(board.Find("PanelShadow").GetSiblingIndex()), "sobre la sombra del panel");
             Assert.That(frame.raycastTarget, Is.False);
+        }
+
+        /// <summary>
+        /// NOTAS de la ola 2 («Para T09»): la columna de píldoras de la cabecera de partida (Semillas y, desde el 31, Canoas)
+        /// acaba por encima del canto del panel y del canto de arriba del marco, si asoma (holgura ≥ 0 [P]; con el panel
+        /// recortado bajo el HUD no hay sitio para más sin salir de la zona segura), y la píldora de Semillas no sale de la zona
+        /// segura.
+        /// </summary>
+        public static void AssertWalletOffPanel(GameScreen view)
+        {
+            Canvas.ForceUpdateCanvases();
+            RectTransform root = (RectTransform)view.Canvas.transform;
+            BoardLayoutResult l = view.Layout!;
+            WalletBar wallet = view.WalletBar;
+            Assert.That(wallet.Visible && wallet.Compact, Is.True, "la cabecera de partida");
+            Rect seeds = VictorySetup.CanvasRect(wallet.SeedsRect, root);
+            bool canoes = wallet.CanoesRect.gameObject.activeSelf;
+            Rect lowest = canoes ? VictorySetup.CanvasRect(wallet.CanoesRect, root) : seeds;
+            float edge = l.PanelY;
+            Image frame = view.DifficultyFrame;
+            if (frame.gameObject.activeInHierarchy && frame.enabled)
+            {
+                edge = Mathf.Min(edge, view.DifficultyFrameTopDp);
+            }
+
+            string name = canoes ? "Canoas" : "Semillas";
+            Assert.That(lowest.yMax, Is.LessThanOrEqualTo(edge + 0.05f), name + " no pisa el canto del panel ni el del marco: " + lowest + " / canto " + edge
+                + " (subió " + view.WalletLiftDp + " dp)");
+            Assert.That(seeds.yMin, Is.GreaterThanOrEqualTo(view.SafeTopDp - 0.05f), "Semillas dentro de la zona segura: " + seeds + " / " + view.SafeTopDp);
+            Assert.That(view.WalletLiftDp, Is.LessThanOrEqualTo(view.TopRowDp - view.SafeTopDp + 1f), "como mucho hasta la zona segura");
+        }
+
+        /// <summary>
+        /// En el chip de la Lluvia, la cifra (vertidos que faltan) y las gotitas (gotas pendientes) son dos grupos: entre ellos,
+        /// <see cref="HudCounterChip.DropsGapDp"/> con el filete de 1 dp <c>muelle_sombra</c> en medio; la nube va a la izquierda
+        /// de la cifra y las gotitas, a la derecha del filete.
+        /// </summary>
+        public static void AssertCounterGroups(HudCounterChip counter)
+        {
+            Canvas.ForceUpdateCanvases();
+            RectTransform root = counter.Root;
+            Rect icon = VictorySetup.CanvasRect(counter.IconRect, root);
+            Rect value = VictorySetup.CanvasRect(counter.ValueRect, root);
+            Assert.That(icon.xMax, Is.LessThanOrEqualTo(value.xMin + 0.05f), "la nube a la izquierda de la cifra");
+            Image divider = counter.Divider;
+            if (counter.DropsShown == 0)
+            {
+                Assert.That(divider.gameObject.activeSelf, Is.False);
+                return;
+            }
+
+            Assert.That(divider.gameObject.activeSelf, Is.True, "filete entre la cifra y las gotitas");
+            Assert.That(divider.color, Is.EqualTo((Color)Palette.DockShadow), "#5A3D28");
+            Assert.That(divider.raycastTarget, Is.False);
+            Rect line = VictorySetup.CanvasRect(divider.rectTransform, root);
+            Rect firstDrop = VictorySetup.CanvasRect(counter.Drop(0).rectTransform, root);
+            Assert.That(line.width, Is.EqualTo(HudCounterChip.DividerDp).Within(0.01f));
+            Assert.That(firstDrop.xMin - value.xMax, Is.EqualTo(HudCounterChip.DropsGapDp).Within(0.05f), "6 dp entre la caja de la cifra y la primera gotita");
+            Assert.That(line.xMin - value.xMax, Is.EqualTo(firstDrop.xMin - line.xMax).Within(0.05f), "el filete en medio del hueco");
+            Assert.That(line.center.y, Is.EqualTo(value.center.y).Within(0.5f));
+            for (int i = 0; i < counter.DropsShown; i++)
+            {
+                Assert.That(counter.Drop(i).gameObject.activeSelf, Is.True);
+                Assert.That(VictorySetup.CanvasRect(counter.Drop(i).rectTransform, root).xMin, Is.GreaterThanOrEqualTo(line.xMax), "gotita " + i + " tras el filete");
+            }
+        }
+
+        /// <summary>Un vertido útil (legal, no fútil, que no gana ni atasca) que no toca la cuia <paramref name="avoid"/>.</summary>
+        public static Pour UsefulPourAvoiding(LevelFlow flow, int avoid)
+        {
+            BoardState start = flow.Session.Current;
+            PourMode mode = flow.Session.PourMode;
+            for (int a = 0; a < start.Count; a++)
+            {
+                for (int b = 0; b < start.Count; b++)
+                {
+                    if (a == b || a == avoid || b == avoid || !PourRules.IsLegal(start, a, b) || PourRules.IsFutile(start, a, b))
+                    {
+                        continue;
+                    }
+
+                    BoardState next = PourRules.Apply(start, a, b, mode);
+                    if (!next.IsWon() && !PourRules.IsStuck(next, flow.Session.FutileRuleEnabled))
+                    {
+                        return new Pour(a, b, PourRules.Amount(start, a, b, mode));
+                    }
+                }
+            }
+
+            Assert.Fail("no hay un vertido útil lejos de la cuia " + avoid + " en el nivel " + flow.LevelNumber);
+            return default;
+        }
+
+        /// <summary>Tablero sintético de cuias de 4 con <see cref="BoardBuilder"/> (sin contrastar U_c).</summary>
+        public static BoardState Board(int[][] cuias, MechanicSpec[]? attrs)
+        {
+            var caps = new int[cuias.Length];
+            for (int i = 0; i < caps.Length; i++)
+            {
+                caps[i] = 4;
+            }
+
+            BoardBuildResult result = BoardBuilder.Build(caps, cuias, attrs);
+            Assert.That(result.Error, Is.Null);
+            return result.State!;
         }
 
         /// <summary>El «?» va a la derecha del chip de dificultad, en la misma banda y sin tocarlo.</summary>

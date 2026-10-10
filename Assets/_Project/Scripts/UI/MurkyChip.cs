@@ -14,7 +14,9 @@ namespace AF.UI
     /// </summary>
     /// <remarks>
     /// <para>Contraste del «?» (marfil <see cref="Palette.UiPaper"/>) sobre el gris-pardo: ≥ 3:1 (<see cref="GlyphContrast"/>,
-    /// ≈ 3,4:1), y además lleva el halo de tinta del sprite (07 §7.8: no solo color).</para>
+    /// ≈ 3,4:1) y también sobre la cara real detrás de su tinta (<see cref="GlyphFaceContrastMin"/>, ≥ 3,1:1): la luz de
+    /// la parte alta (la de la pareja) se queda en la franja de encima del glifo y detrás de él la cara solo se aclara
+    /// <see cref="GlyphBackLighten"/>. Además lleva el halo de tinta del sprite (07 §7.8: no solo color).</para>
     /// <para>Geometría (dp, desde la esquina superior izquierda de <see cref="Root"/>): la píldora mide el alto pedido
     /// (<see cref="HeightDp"/> o <see cref="CompactHeightDp"/>) con los extremos en semicírculo y la sombra asoma por debajo
     /// (<see cref="ShadowFraction"/> del alto); el ancho es <see cref="AspectRatio"/> veces el alto. El sprite de la píldora
@@ -36,6 +38,22 @@ namespace AF.UI
 
         /// <summary>Lado del sprite del «?» respecto al alto de la píldora: el glifo ocupa ≈ 89 % del sprite (≈ 0,69 del alto).</summary>
         public const float GlyphFraction = 0.78f;
+
+        /// <summary>Borde de arriba de la caja del sprite del «?» en la píldora (fracción del alto, desde arriba): 0,11.</summary>
+        public const float GlyphTopFraction = (1f - GlyphFraction) * 0.5f;
+
+        /// <summary>
+        /// Borde de arriba de la tinta del «?» en la píldora (fracción del alto, desde arriba; ≈ 0,153): la caja del sprite menos
+        /// el margen que deja para el halo (<see cref="ProceduralArt.QuestionGlyphU"/> de <see cref="ProceduralArt.QuestionMarkU"/>).
+        /// </summary>
+        public const float GlyphInkTopFraction = GlyphTopFraction + (GlyphFraction * (1f - (ProceduralArt.QuestionGlyphU / ProceduralArt.QuestionMarkU)) * 0.5f);
+
+        /// <summary>
+        /// Aclarado de la cara detrás del «?» (desde <see cref="GlyphTopFraction"/> hasta el 42 % del alto, donde la cara ya es el
+        /// gris-pardo): 0,05, que deja el marfil a ≥ 3,1:1. La luz de la pareja (0,24, como el chip de dificultad) queda en la
+        /// franja de encima del glifo [P].
+        /// </summary>
+        public const float GlyphBackLighten = 0.05f;
 
         // Sprite de la píldora a 3 px/dp: 40 × (26 + 2) dp con 13 dp de 9-slice a cada lado (el radio).
         private const float PxPerDp = ProceduralArt.UiPxPerDp;
@@ -97,10 +115,36 @@ namespace AF.UI
             return Mathf.Round(height * AspectRatio);
         }
 
-        /// <summary>Contraste del «?» marfil sobre el gris-pardo de la cara (≥ 3:1 para un gráfico; 07 §7.8).</summary>
+        /// <summary>Contraste del «?» marfil sobre el gris-pardo plano de la cara (≥ 3:1 para un gráfico; 07 §7.8).</summary>
         public static float GlyphContrast()
         {
             return ColorMath.ContrastRatio(GlyphColor, PillColor);
+        }
+
+        /// <summary>
+        /// Contraste mínimo del «?» marfil frente a la cara real de la píldora en las filas de su tinta (de
+        /// <see cref="GlyphInkTopFraction"/> a 1 − ese valor), medido en los píxeles del sprite con su luz, su filo y su canto.
+        /// Se mide en la columna central: el 9-slice estira esa parte, que es la que queda detrás del glifo, y ahí la pintura solo
+        /// depende de la altura. No cuenta el halo de tinta del sprite del «?», que lo mejora (07 §7.8: no solo color).
+        /// </summary>
+        internal static float GlyphFaceContrastMin()
+        {
+            Texture2D tex = PillSprite().texture;
+            const float hDp = HeightDp * (1f + ShadowFraction);
+            int x = tex.width / 2;
+            float min = float.MaxValue;
+            for (int y = 0; y < tex.height; y++)
+            {
+                float v = (hDp - ((y + 0.5f) / PxPerDp)) / HeightDp;
+                if (v < GlyphInkTopFraction || v > 1f - GlyphInkTopFraction)
+                {
+                    continue;
+                }
+
+                min = Mathf.Min(min, ColorMath.ContrastRatio(GlyphColor, tex.GetPixel(x, y)));
+            }
+
+            return min;
         }
 
         /// <summary>Muestra u oculta el chip.</summary>
@@ -137,9 +181,10 @@ namespace AF.UI
             UiBuilder.Place(_glyph.rectTransform, (w - glyph) * 0.5f, (height - glyph) * 0.5f, glyph, glyph);
         }
 
-        // Píldora gris-pardo con la pintura de ProceduralArt.DifficultyPill (contorno oscurecido 0,42, luz en el 42 % de arriba,
-        // canto oscurecido 0,16 abajo, filo de luz arriba y sombra de 2 dp), ya coloreada. Una sola textura para toda la app (se
-        // rehace si Unity la destruyó).
+        // Píldora gris-pardo con la pintura de ProceduralArt.DifficultyPill (contorno oscurecido 0,42, luz arriba, canto
+        // oscurecido 0,16 abajo, filo de luz arriba y sombra de 2 dp), ya coloreada. La luz de la pareja (0,24) va solo en la
+        // franja por encima del «?» y baja a GlyphBackLighten detrás de él, para que el marfil quede a ≥ 3:1 en toda su tinta.
+        // Una sola textura para toda la app (se rehace si Unity la destruyó).
         private static Sprite PillSprite()
         {
             if (s_pill != null)
@@ -155,6 +200,7 @@ namespace AF.UI
             Color color = PillColor;
             Color outline = ColorMath.Darken(color, 0.42f);
             Color light = ColorMath.Lighten(color, 0.24f);
+            Color soft = ColorMath.Lighten(color, GlyphBackLighten);
             Color low = ColorMath.Darken(color, 0.16f);
             float r = (pillH * 0.5f) - 0.5f;
             for (int y = 0; y < h; y++)
@@ -176,9 +222,14 @@ namespace AF.UI
                         {
                             float v = yd / pillH;
                             Color face = color;
-                            if (v < 0.42f)
+                            if (v < GlyphTopFraction)
                             {
-                                face = Color.Lerp(light, color, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.04f, 0.42f, v)));
+                                // Franja de luz por encima del «?»: del aclarado de la pareja al suave.
+                                face = Color.Lerp(light, soft, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.04f, GlyphTopFraction, v)));
+                            }
+                            else if (v < 0.42f)
+                            {
+                                face = Color.Lerp(soft, color, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(GlyphTopFraction, 0.42f, v)));
                             }
                             else if (v > 0.8f)
                             {

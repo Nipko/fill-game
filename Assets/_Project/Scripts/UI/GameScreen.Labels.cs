@@ -41,6 +41,10 @@ namespace AF.UI
     /// reanudación, cuia añadida y al final de <c>OnIntroStarted</c>, así que Volver a la orilla lo devuelve a su valor sin
     /// esperar al siguiente vertido) con <see cref="LevelSession.Counter"/>: solo baja con vertidos útiles (Q18 B). Sin
     /// asignaciones por fotograma.</para>
+    /// <para><b>Panel bajo la fila del HUD</b> (3 filas: el panel se recorta en <c>BoardTop − 8 = TopRowY + 40</c>, BoardLayout):
+    /// la columna de píldoras de la cabecera (Semillas y Canoas, <c>TopRowY + 1..49</c>) sube lo justo para no pisar el canto
+    /// del panel, sin salir de la zona segura (<see cref="KeepWalletOffPanel"/>), y el marco de la etiqueta no asoma por
+    /// arriba, donde pasaría a trozos bajo la insignia, las píldoras y Reiniciar (<see cref="DifficultyFrameTucked"/>) [P].</para>
     /// </remarks>
     public sealed partial class GameScreen
     {
@@ -81,6 +85,13 @@ namespace AF.UI
         /// <summary>De la píldora del chip al borde superior de Siguiente (como en Jugar del inicio: 6 dp).</summary>
         internal const float NextChipGapDp = 6f;
 
+        /// <summary>
+        /// Aire que se busca entre la columna de píldoras de la cabecera (Semillas y Canoas) y el canto del panel o del marco
+        /// (dp) [P]. Con el panel recortado bajo el HUD (3 filas) no cabe: la columna sube hasta la zona segura y Canoas acaba
+        /// justo en el canto (holgura 0).
+        /// </summary>
+        internal const float WalletPanelClearDp = 2f;
+
         // Radio exterior del marco tallado del panel (radio 24 más el contorno de 1,5 dp; ProceduralArt.BuildPanelFrame), que
         // se escala con el 9-slice cuando el marco adelgaza (PanelFrameDp).
         private const float PanelOuterRadiusDp = 25.5f;
@@ -99,6 +110,16 @@ namespace AF.UI
         private float _hudLabelsAlpha;
         private int _hudCounterIndex = -1;
         private bool _labelsBuilt;
+        private bool _frameTucked;
+        private float _frameTopDp;
+
+        // Columna de píldoras de la cabecera tal como la dejó KeepWalletOffPanel (para ver en LabelsTick si GameScreen la ha
+        // vuelto a colocar: SyncChrome la pone en TopRowY al cambiar de fase).
+        private float _walletLift;
+        private float _walletSeedsY = float.NaN;
+        private bool _walletVisible;
+        private bool _walletCompact;
+        private bool _walletCanoes;
 
         /// <summary>Cómo va la banda de las etiquetas bajo la insignia.</summary>
         internal enum HudLabelMode
@@ -152,6 +173,21 @@ namespace AF.UI
         /// <summary>Fila superior del HUD (dp desde arriba).</summary>
         internal float TopRowDp => TopRowY;
 
+        /// <summary>Borde de la zona segura superior (dp desde arriba; la fila del HUD va 8 dp más abajo).</summary>
+        internal float SafeTopDp => _safeTop;
+
+        /// <summary>
+        /// El marco de la etiqueta empieza en el canto del panel y no asoma por arriba (el panel pasa bajo la fila del HUD): solo
+        /// se ve por los lados y por abajo.
+        /// </summary>
+        internal bool DifficultyFrameTucked => _frameTucked;
+
+        /// <summary>Borde de arriba del marco de la etiqueta (dp desde arriba): <c>PanelY − 3</c>, o <c>PanelY</c> si va recogido.</summary>
+        internal float DifficultyFrameTopDp => _frameTopDp;
+
+        /// <summary>Lo que ha subido la columna de píldoras de la cabecera para no pisar el panel (dp; 0 si no hizo falta).</summary>
+        internal float WalletLiftDp => _walletLift;
+
         /// <summary>Color del marco de una etiqueta: <c>ui_ambar</c> en Difícil y <c>ui_indigo</c> en Muy difícil (07 §7.7).</summary>
         internal static Color FrameColorFor(bool veryHard)
         {
@@ -194,9 +230,12 @@ namespace AF.UI
 
         partial void LabelsLayoutHud()
         {
+            // LayoutHud acaba de poner la cabecera en la fila superior (LayoutWalletBar): con el panel bajo el HUD, se aparta.
             if (_labelsBuilt)
             {
+                LayoutDifficultyFrame();
                 LayoutHudLabels();
+                KeepWalletOffPanel();
             }
         }
 
@@ -206,6 +245,7 @@ namespace AF.UI
             {
                 LayoutDifficultyFrame();
                 LayoutHudLabels();
+                KeepWalletOffPanel();
             }
         }
 
@@ -230,6 +270,7 @@ namespace AF.UI
             _labelsHudGroup.alpha = 0f;
             LayoutDifficultyFrame();
             LayoutHudLabels();
+            KeepWalletOffPanel();
             EmitHudLabelProbe(flow);
         }
 
@@ -237,6 +278,10 @@ namespace AF.UI
         {
             RefreshHudCounter(flow);
             UpdateHudLabelsAlpha(0f); // al reiniciar (OnIntroStarted) se ocultan en el acto, sin esperar al Tick
+            if (WalletMoved())
+            {
+                KeepWalletOffPanel(); // OnResumed y OnCuiaAdded pasan por SyncChrome justo antes
+            }
         }
 
         partial void LabelsVictoryShown(LevelFlow flow)
@@ -283,6 +328,11 @@ namespace AF.UI
             // El chip va 6 dp por encima de Siguiente, como en Jugar: Siguiente e Inicio bajan NextChipRowDp y el panel crece lo
             // mismo hacia arriba (sigue anclado abajo). LayoutVictory acaba de colocarlo todo, así que esto se rehace entero en
             // cada llamada.
+            // OJO, COPIA: desde aquí hasta los rayos, el brillo, el velo y ModalSurfaceFor se repite el final de
+            // GameScreen.LayoutVictory (GameScreen.cs, desde «_victoryCtaTopDp = y» hasta el final del método) con el panel más
+            // alto. Si cambia allí, hay que cambiarlo aquí. Pendiente de la sesión principal: un gancho
+            // «partial void LabelsVictoryReserve(ref float y)» justo antes de «_victoryCtaTopDp = y» para reservar
+            // NextChipRowDp sin recolocar el panel (y sin pedir a ModalSurfaceFor una superficie que no se usa).
             float w = _canvasW;
             float panelW = Mathf.Min(328f, w - 32f);
             MoveDown((RectTransform)_next.Button.transform, NextChipRowDp);
@@ -303,6 +353,11 @@ namespace AF.UI
         partial void LabelsTick(float dtMs)
         {
             UpdateHudLabelsAlpha(dtMs);
+            if (WalletMoved())
+            {
+                KeepWalletOffPanel(); // SyncChrome (cambio de fase) o Refresh (aparece Canoas) la volvieron a colocar
+            }
+
             if (_nextChip.Visible)
             {
                 float a = _nextGroup.alpha;
@@ -355,12 +410,17 @@ namespace AF.UI
 
         // Marco de 3 dp: un rectángulo redondeado (radio exterior del marco tallado + 3) detrás del panel, que solo asoma
         // alrededor. Sigue al marco cuando este adelgaza (PanelFrameDp) y al panel recortado bajo el HUD (3 filas).
+        // Con el canto de arriba bajo la fila del HUD (la insignia acaba en TopRowY + 50), la línea pasaría bajo la insignia,
+        // las píldoras y Reiniciar y asomaría a trozos entre ellos: ahí el marco empieza en el canto del panel, su lado de
+        // arriba queda detrás del panel y solo se ve por los lados y por abajo, saliendo de debajo del HUD por las esquinas
+        // redondeadas (el panel tallado también pasa bajo el HUD) [P].
         private void LayoutDifficultyFrame()
         {
             BoardLayoutResult? l = _layout;
             if (l == null || _views.Length == 0)
             {
                 _difficultyFrame.enabled = false;
+                _frameTucked = false;
                 return;
             }
 
@@ -369,7 +429,57 @@ namespace AF.UI
             float radius = (PanelOuterRadiusDp * scale) + DifficultyFrameDp;
             _difficultyFrame.pixelsPerUnitMultiplier = ProceduralArt.RoundedRectRadiusPx / radius;
             float d = DifficultyFrameDp;
-            UiBuilder.Place(_difficultyFrame.rectTransform, l.PanelX - d, l.PanelY - d, l.PanelWidth + (2f * d), l.PanelHeight + (2f * d));
+            _frameTucked = l.PanelY - d < TopRowY + HudLabelsBelowRowDp;
+            _frameTopDp = _frameTucked ? l.PanelY : l.PanelY - d;
+            float bottom = l.PanelY + l.PanelHeight + d;
+            UiBuilder.Place(_difficultyFrame.rectTransform, l.PanelX - d, _frameTopDp, l.PanelWidth + (2f * d), bottom - _frameTopDp);
+        }
+
+        // NOTAS de la ola 2 («Para T09»): con el panel recortado bajo el HUD (3 filas: PanelY = BoardTop − 8 = TopRowY + 40),
+        // la píldora de Canoas «5/5» de la cabecera (TopRowY + 27..49, WalletBar) pisaba 9 dp del canto de arriba del panel
+        // (y 12 del marco). La columna de Semillas y Canoas sube lo que haga falta para acabar WalletPanelClearDp por encima del
+        // canto (el del marco si asoma por arriba; si no, el del panel), pero nunca por encima de la zona segura: la píldora de
+        // Semillas, como mucho, en _safeTop = TopRowY − 8. En 3 filas eso da 9 dp, justo lo que pisaba, así que Canoas acaba
+        // en el canto del panel, sin aire [P]. Solo la cabecera de partida (Compact): el saldo grande del embudo y de la
+        // victoria no es del HUD. Parte de donde la pone GameScreen (LayoutWalletBar) para medir sus píldoras sin repetir su
+        // maquetación. Sin asignaciones.
+        private void KeepWalletOffPanel()
+        {
+            RectTransform seeds = _walletBar.SeedsRect;
+            RectTransform canoes = _walletBar.CanoesRect;
+            _walletVisible = _walletBar.Visible;
+            _walletCompact = _walletBar.Compact;
+            _walletCanoes = canoes.gameObject.activeSelf;
+            float lift = 0f;
+            BoardLayoutResult? l = _layout;
+            if (_walletVisible && _walletCompact)
+            {
+                LayoutWalletBar(false); // cabecera de partida: en la fila superior (TopRowY)
+            }
+
+            if (_walletVisible && _walletCompact && l != null && _views.Length > 0)
+            {
+                float seedsTop = -seeds.anchoredPosition.y;
+                float bottom = _walletCanoes ? -canoes.anchoredPosition.y + canoes.sizeDelta.y : seedsTop + seeds.sizeDelta.y;
+                float edge = _difficultyFrame.gameObject.activeSelf && _difficultyFrame.enabled ? Mathf.Min(_frameTopDp, l.PanelY) : l.PanelY;
+                float room = Mathf.Max(0f, seedsTop - _safeTop);
+                lift = Mathf.Clamp(bottom + WalletPanelClearDp - edge, 0f, room);
+                if (lift > 0f)
+                {
+                    _walletBar.Layout(seeds.anchoredPosition.x, TopRowY - lift, seeds.sizeDelta.x);
+                }
+            }
+
+            _walletLift = lift;
+            _walletSeedsY = seeds.anchoredPosition.y;
+        }
+
+        // La cabecera ya no está donde la dejó KeepWalletOffPanel (otra forma, otra fila, Canoas que aparece o desaparece).
+        private bool WalletMoved()
+        {
+            return _walletBar.Visible != _walletVisible || _walletBar.Compact != _walletCompact
+                || _walletBar.CanoesRect.gameObject.activeSelf != _walletCanoes
+                || _walletBar.SeedsRect.anchoredPosition.y != _walletSeedsY;
         }
 
         // Banda de las etiquetas (ver la clase): forma, altura y posición del grupo (chip, «?» y, en 3 filas, el contador) y del
