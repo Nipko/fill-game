@@ -86,12 +86,25 @@ namespace AF.Tests.PlayMode
             Assert.That(amount, Is.GreaterThan(0));
             CuiaView pv = view.Views[partner];
             RemolinoOverlay whirl = Whirl(pv);
+            RemolinoOverlay drawer = Whirl(view.Views[Mathf.Min(partner, touched)]);
 
             MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Receive, partner, 4000);
             Assert.That(whirl.IsAnimating, Is.True, "la pareja anima su recepción");
             Assert.That(pv.LiquidLevel, Is.EqualTo((float)before[partner].Count).Within(1e-3f), "aún no ha entrado nada por el fondo");
+
+            // La racha viaja con su tinte por dentro del canal, de la cuia tocada a la pareja, y por detrás de las repisas que
+            // cruza (las franjas de madera de la cuia que recibe van delante de ella).
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.Receive, partner, 0.15f);
-            Assert.That(whirl.PulseVisible, Is.True, "la espuma recorre el canal desde la cuia tocada");
+            Assert.That(whirl.PulseVisible, Is.True, "la racha recorre el canal desde la cuia tocada");
+            Assert.That(whirl.RachaColor, Is.EqualTo(Palette.Tint(tint)), "con el tinte vertido: la propia fruta en tránsito");
+            AssertRachaInsideChannel(whirl, drawer, "nivel 103 al 15 %");
+            Assert.That(whirl.CoverCount, Is.EqualTo(drawer.CoverCount), "la racha pasa por detrás de las mismas repisas que el canal");
+            float early = whirl.RachaHeadProgress;
+            Assert.That(early, Is.InRange(0.02f, 0.9f), "la cabeza de la racha, de camino");
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Receive, partner, 0.3f);
+            Assert.That(whirl.RachaHeadProgress, Is.GreaterThan(early), "avanza hacia la pareja");
+            AssertRachaInsideChannel(whirl, drawer, "nivel 103 al 30 %");
+            Assert.That(pv.LiquidLevel, Is.EqualTo((float)before[partner].Count).Within(1e-3f), "mientras viaja, aún no entra por el fondo");
 
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.Receive, partner, 0.6f);
             Assert.That(pv.LiquidLevel, Is.GreaterThan(before[partner].Count + 0.05f).And.LessThan(visual.After[partner].Count - 0.05f), "la racha sube a mitad del paso");
@@ -105,7 +118,7 @@ namespace AF.Tests.PlayMode
             Assert.That(animator.ShownOf(touched), Is.EqualTo(before[touched]), "la cuia tocada no cambia");
             Assert.That(view.Views[touched].LiquidLevel, Is.EqualTo((float)before[touched].Count).Within(1e-3f));
             Assert.That(Mathf.Abs(whirl.SpiralAngle), Is.GreaterThan(1f), "la espiral de la pareja gira");
-            Assert.That(whirl.PulseVisible, Is.False, "la espuma ya llegó");
+            Assert.That(whirl.PulseVisible, Is.False, "la racha ya entró en el remanso de la pareja");
 
             MechanicTestKit.StepToIdle(boot, 6000);
             float elapsed = animator.Clock - tapAt;
@@ -127,6 +140,8 @@ namespace AF.Tests.PlayMode
 
             Assert.That(whirl.IsAnimating || whirl.PulseVisible, Is.False);
             Assert.That(whirl.SpiralAngle, Is.EqualTo(0f).Within(0.01f), "la espiral vuelve a su reposo");
+            Assert.That(whirl.CoverCount, Is.EqualTo(whirl.DrawsChannel ? drawer.CoverCount : 0), "las franjas de la racha se van con ella");
+            AssertChannel(animator, view.Views, drawer, Mathf.Min(partner, touched), Mathf.Max(partner, touched), PanelInner(view), "nivel 103 tras recibir");
 
             // Banco: burbujas por el fondo de la pareja (como mucho 5) y, con Reducir movimiento, a × 0,5 y sin partículas.
             BoardState board = Board(
@@ -223,14 +238,8 @@ namespace AF.Tests.PlayMode
                     string what = counts[c] + " cuias, pareja " + a + "-" + b;
                     _rig?.Dispose();
                     _rig = new MechanicTestKit.Rig(Art, PairBoard(counts[c], a, b));
-                    BoardLayoutResult l = BoardLayout.Compute(counts[c], CuiaGeometry.HeightU(4), 360f, 150f, 690f);
+                    BoardLayoutResult l = LayOut(_rig, counts[c]);
                     Assert.That(l.Rows, Is.EqualTo(rows[c]), what);
-                    for (int i = 0; i < counts[c]; i++)
-                    {
-                        _rig.Views[i].SetGeometry(new Vector2(l.CenterX[i], -l.FootY[i]), l.CuiaWidth, l.SlotWidth);
-                    }
-
-                    _rig.Animator.BoardLaidOut();
                     RemolinoOverlay drawer = Whirl(_rig.Views[a]);
                     Assert.That(drawer.ChannelVisible, Is.True, what);
                     Assert.That(Whirl(_rig.Views[b]).ChannelVisible, Is.False, what + ": una sola vez");
@@ -239,15 +248,16 @@ namespace AF.Tests.PlayMode
                     Rect inner = PanelInner(l, Art.PanelFrameDp, LayoutOffset(_rig.Animator, l, counts[c]));
                     AssertChannel(_rig.Animator, _rig.Views, drawer, a, b, inner, what);
                     int vertical = VerticalPieces(drawer);
-                    if (l.RowOf[a] != l.RowOf[b])
+                    int crossed = Mathf.Abs(l.RowOf[a] - l.RowOf[b]);
+                    Assert.That(drawer.CoverCount, Is.EqualTo(crossed), what + ": una franja de madera por cada repisa que cruza");
+                    if (crossed > 0)
                     {
                         Assert.That(vertical, Is.GreaterThanOrEqualTo(1), what + ": baja por un hueco de la fila de abajo");
-                        Assert.That(drawer.ChannelSegmentCount, Is.GreaterThanOrEqualTo(2), what);
                     }
                     else
                     {
-                        // Los dos tramos bajo los pies van por detrás de la repisa: solo se ve el tramo de debajo, entre las bocas.
-                        Assert.That(drawer.ChannelSegmentCount, Is.EqualTo(1), what + ": un tramo bajo la repisa");
+                        // Una U: la bajada de cada remanso y el tramo de debajo de la repisa, sin cruzar ninguna.
+                        Assert.That(drawer.ChannelSegmentCount, Is.EqualTo(3), what + ": bajada, tramo bajo la repisa y bajada");
                         Assert.That(vertical, Is.EqualTo(0), what);
                     }
                 }
@@ -273,6 +283,8 @@ namespace AF.Tests.PlayMode
             AssertEnds(view.Animator, drawer, a, b, "al empezar el relayout");
             PlayModeHelpers.Step(boot, 700);
             Assert.That(view.Animator.LayoutVersion, Is.GreaterThan(version + 1), "recolocado en cada fotograma del relayout");
+            float moved = Mathf.Max(Vector2.Distance(footA, view.Animator.Foot(a)), Vector2.Distance(footB, view.Animator.Foot(b)));
+            Assert.That(moved, Is.GreaterThan(1f), "la cuia añadida mueve la pareja: si no, el canal no tendría nada que seguir");
             Assert.That(drawer.ChannelVisible, Is.True);
             AssertChannel(view.Animator, view.Views, drawer, a, b, PanelInner(view), "tras añadir una cuia");
             TestContext.WriteLine("Pie de " + a + ": " + footA + " → " + view.Animator.Foot(a) + "; de " + b + ": " + footB + " → " + view.Animator.Foot(b) + ".");
@@ -399,7 +411,9 @@ namespace AF.Tests.PlayMode
         }
 
         // Un vertido por el Remolino (recepción por el fondo) y otro sobre el Barro (lavado); con measure, 60 fotogramas sin
-        // asignaciones (Recorder GC.Alloc) desde cada toque y otros 60 hasta el final.
+        // asignaciones (Recorder GC.Alloc) desde cada toque y otros 60 hasta el final. El banco va en 2 filas, como la pantalla,
+        // con la pareja en filas distintas y la que recibe de índice mayor: su racha pasa por detrás de una repisa y sus
+        // franjas de madera aparecen a mitad del paso.
         private void RunSteps(ProceduralArt art, bool measure)
         {
             BoardState board = Board(
@@ -412,13 +426,22 @@ namespace AF.Tests.PlayMode
             _rig?.Dispose();
             _rig = new MechanicTestKit.Rig(art, board);
             MechanicTestKit.Rig rig = _rig;
+            BoardLayoutResult l = LayOut(rig, 6);
+            Assert.That(l.RowOf[0], Is.Not.EqualTo(l.RowOf[3]), "la pareja, en filas distintas");
             Assert.That(rig.Views[2].Mud.CloudReady && art.HasBarroCloud, Is.True, "la nube del barro, pedida al cargar el tablero");
             BoardState s = rig.Pour(board, 1, 0, out PourVisual remolino);
             Assert.That(remolino.Events.ThroughRemolino, Is.True);
+            Assert.That(remolino.Receiver, Is.EqualTo(3), "recibe la de índice mayor, que no dibuja el canal");
             if (measure)
             {
                 Assert.That(() => rig.Run(60 * PlayModeHelpers.FrameMs), Is.Not.AllocatingGCMemory(), "Remolino: 60 fotogramas desde el toque");
                 Assert.That(() => rig.Run(60 * PlayModeHelpers.FrameMs), Is.Not.AllocatingGCMemory(), "Remolino: 60 fotogramas más");
+            }
+            else
+            {
+                RemolinoOverlay receiver = Whirl(rig.Views[3]);
+                RunUntil(rig, () => receiver.CoverCount > 0 && receiver.PulseVisible, 3000);
+                Assert.That(receiver.CoverCount, Is.EqualTo(Whirl(rig.Views[0]).CoverCount), "las franjas de la racha, las mismas que las del canal");
             }
 
             rig.RunUntilIdle(4000);
@@ -436,10 +459,12 @@ namespace AF.Tests.PlayMode
             Assert.That(MechanicTestKit.TryFindRecord(rig.Animator, MechanicStepKind.MudWash, 2, out _), Is.True, "hubo lavado");
         }
 
-        // El canal de la pareja a-b: el trazado une los dos pies con tramos horizontales y verticales; de lo que se ve, ningún
-        // tramo tapa una cuia (ni elevada 16 dp) ni la franja de una repisa (de su canto inferior, 15 dp bajo el pie, a su cara
-        // superior, 3 dp sobre él), todos miden el ancho del canal, no se salen de las ranuras y quedan ≥ 2 dp por dentro del
-        // canto interior del marco (inner); bajo el remanso de cada cuia de la pareja hay una boca en el canto de la repisa.
+        // El canal de la pareja a-b: el trazado une los dos pies con tramos horizontales y verticales; el primero y el último
+        // son las bajadas, en la columna del remanso de cada cuia de la pareja, de bajo su pie hasta debajo de su repisa.
+        // Ningún tramo tapa una cuia (ni elevada 16 dp); todos miden el ancho del canal, no se salen de las ranuras y quedan
+        // ≥ 2 dp por dentro del canto interior del marco (inner). Sobre la madera de una repisa (de su canto inferior, 17 dp
+        // bajo el pie, a su cara superior, 3 dp sobre él) solo hay bajadas en su propia fila o tramos tapados por una franja de
+        // madera, y cada franja cubre la repisa entera de una fila en un hueco entre cuias.
         private static void AssertChannel(BoardAnimator board, CuiaView[] views, RemolinoOverlay drawer, int a, int b, Rect inner, string what)
         {
             AssertEnds(board, drawer, a, b, what);
@@ -459,17 +484,31 @@ namespace AF.Tests.PlayMode
                 maxX = Mathf.Max(maxX, slot.xMax);
             }
 
-            Assert.That(drawer.ChannelSegmentCount, Is.GreaterThanOrEqualTo(1), what + ": algún tramo a la vista");
-            for (int s = 0; s < drawer.ChannelSegmentCount; s++)
+            int n = drawer.ChannelSegmentCount;
+            Assert.That(n, Is.GreaterThanOrEqualTo(3), what + ": bajada, tramo de debajo y bajada");
+            Assert.That(drawer.ChannelSegmentIsDrop(0) && drawer.ChannelSegmentIsDrop(n - 1), Is.True, what + ": el canal sale de los dos remansos");
+            for (int s = 0; s < n; s++)
             {
                 Rect r = drawer.ChannelSegmentRect(s);
                 string seg = what + ": tramo " + s + " " + r;
+                bool drop = drawer.ChannelSegmentIsDrop(s);
+                Assert.That(drop, Is.EqualTo(s == 0 || s == n - 1), seg + ": solo el primero y el último son bajadas");
                 Assert.That(Mathf.Min(r.width, r.height), Is.EqualTo(RemolinoOverlay.ChannelWidthDp).Within(0.01f), seg + " del ancho del canal");
                 Assert.That(r.xMin >= minX - 0.01f && r.xMax <= maxX + 0.01f, Is.True, seg + " dentro de las ranuras del tablero");
                 Assert.That(
                     r.xMin >= inner.xMin + 2f - 0.01f && r.xMax <= inner.xMax - 2f + 0.01f && r.yMin >= inner.yMin + 2f - 0.01f && r.yMax <= inner.yMax - 2f + 0.01f,
                     Is.True,
                     seg + " a ≥ 2 dp del canto interior del marco " + inner);
+                int owner = s == 0 ? a : b;
+                Vector2 ownerFoot = board.Foot(owner);
+                if (drop)
+                {
+                    Assert.That(r.height, Is.GreaterThan(r.width), seg + ": la bajada es vertical");
+                    Assert.That(r.center.x, Is.EqualTo(ownerFoot.x).Within(0.01f), seg + " en la columna del remanso de " + owner);
+                    Assert.That(r.yMax, Is.LessThanOrEqualTo(ownerFoot.y + 0.01f), seg + " arranca bajo el pie, bajo el remanso");
+                    Assert.That(r.yMin, Is.LessThan(ownerFoot.y - RemolinoOverlay.ShelfBottomBelowFootDp), seg + " llega bajo el canto de su repisa");
+                }
+
                 for (int c = 0; c < views.Length; c++)
                 {
                     Vector2 foot = board.Foot(c);
@@ -477,40 +516,118 @@ namespace AF.Tests.PlayMode
                     float top = foot.y + (views[c].HeightU * u) + CuiaView.LiftDp;
                     Rect body = Rect.MinMaxRect(foot.x - u, foot.y, foot.x + u, top);
                     Assert.That(r.Overlaps(body), Is.False, seg + " no tapa la cuia " + c + " " + body);
-                    float shelfLow = board.SlotRect(c).yMin;
+
+                    // La madera de la repisa de la fila de c.
+                    float shelfLow = foot.y - RemolinoOverlay.ShelfBottomBelowFootDp;
                     float shelfTop = foot.y + RemolinoOverlay.ShelfTopAboveFootDp;
-                    Assert.That(r.yMax <= shelfLow + 0.01f || r.yMin >= shelfTop - 0.01f, Is.True, seg + " no tapa la repisa de la cuia " + c + " [" + shelfLow + ", " + shelfTop + "]");
+                    if (r.yMax <= shelfLow + 0.01f || r.yMin >= shelfTop - 0.01f)
+                    {
+                        continue;
+                    }
+
+                    if (drop && Mathf.Abs(foot.y - ownerFoot.y) < 1f)
+                    {
+                        continue; // la bajada, por delante de su propia repisa
+                    }
+
+                    var crossing = Rect.MinMaxRect(r.xMin, Mathf.Max(r.yMin, shelfLow), r.xMax, Mathf.Min(r.yMax, shelfTop));
+                    Assert.That(Covered(drawer, crossing), Is.True, seg + " cruza la repisa de la fila de " + c + " [" + shelfLow + ", " + shelfTop + "] por detrás: tapado por una franja de madera");
                 }
             }
 
-            Assert.That(drawer.MouthCount, Is.EqualTo(2), what + ": una boca bajo cada remanso");
-            for (int m = 0; m < 2; m++)
+            for (int k = 0; k < drawer.CoverCount; k++)
             {
-                int c = m == 0 ? a : b;
-                Rect mouth = drawer.MouthRect(m);
-                Vector2 foot = board.Foot(c);
-                string label = what + ": boca de " + c + " " + mouth;
-                Assert.That(mouth.center.x, Is.EqualTo(foot.x).Within(0.01f), label + " bajo el remanso");
-                Assert.That(mouth.center.y, Is.InRange(foot.y - 17f, foot.y - 15f), label + " en el canto inferior de la repisa");
-                Assert.That(mouth.size.x, Is.EqualTo(RemolinoOverlay.MouthWidthDp).Within(0.01f), label);
-                Assert.That(mouth.size.y, Is.EqualTo(RemolinoOverlay.MouthHeightDp).Within(0.01f), label);
+                Rect cover = drawer.CoverRect(k);
+                string label = what + ": franja " + k + " " + cover;
+                bool onShelf = false;
+                for (int c = 0; c < views.Length; c++)
+                {
+                    Vector2 foot = board.Foot(c);
+                    if (Mathf.Abs(cover.yMin - (foot.y - RemolinoOverlay.ShelfBottomBelowFootDp)) > 0.01f || Mathf.Abs(cover.yMax - (foot.y + RemolinoOverlay.ShelfTopAboveFootDp)) > 0.01f)
+                    {
+                        continue;
+                    }
+
+                    onShelf = true;
+                    float u = views[c].Unit;
+                    Assert.That(cover.xMax <= foot.x - u + 0.01f || cover.xMin >= foot.x + u - 0.01f, Is.True, label + " en un hueco, no bajo la cuia " + c);
+                }
+
+                Assert.That(onShelf, Is.True, label + " cubre la madera de la repisa de una fila");
+                Assert.That(cover.xMin >= minX - 0.01f && cover.xMax <= maxX + 0.01f, Is.True, label + " dentro de las ranuras del tablero");
             }
         }
 
-        // Tramos verticales a la vista (los que cruzan una fila por un hueco).
+        // Alguna franja de madera del canal contiene el rectángulo area.
+        private static bool Covered(RemolinoOverlay drawer, Rect area)
+        {
+            for (int k = 0; k < drawer.CoverCount; k++)
+            {
+                Rect cover = drawer.CoverRect(k);
+                if (area.xMin >= cover.xMin - 0.01f && area.xMax <= cover.xMax + 0.01f && area.yMin >= cover.yMin - 0.01f && area.yMax <= cover.yMax + 0.01f)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Cada trozo a la vista de la racha va por dentro de algún tramo del canal (que dibuja la cuia de menor índice).
+        private static void AssertRachaInsideChannel(RemolinoOverlay racha, RemolinoOverlay drawer, string what)
+        {
+            int seen = 0;
+            for (int i = 0; i < RemolinoOverlay.MaxChannelPoints - 1; i++)
+            {
+                Rect r = racha.RachaRect(i);
+                if (r.width <= 0f)
+                {
+                    continue;
+                }
+
+                seen++;
+                Assert.That(Mathf.Min(r.width, r.height), Is.EqualTo(RemolinoOverlay.RachaWidthDp).Within(0.01f), what + ": trozo " + i + " de la racha " + r);
+                bool inside = false;
+                for (int s = 0; s < drawer.ChannelSegmentCount && !inside; s++)
+                {
+                    Rect c = drawer.ChannelSegmentRect(s);
+                    inside = r.xMin >= c.xMin - 0.01f && r.xMax <= c.xMax + 0.01f && r.yMin >= c.yMin - 0.01f && r.yMax <= c.yMax + 0.01f;
+                }
+
+                Assert.That(inside, Is.True, what + ": trozo " + i + " de la racha " + r + " por dentro del canal");
+            }
+
+            Assert.That(seen, Is.GreaterThan(0), what + ": la racha, a la vista");
+        }
+
+        // Tramos verticales a la vista que no son bajadas (los que cruzan una fila por un hueco).
         private static int VerticalPieces(RemolinoOverlay drawer)
         {
             int count = 0;
             for (int s = 0; s < drawer.ChannelSegmentCount; s++)
             {
                 Rect r = drawer.ChannelSegmentRect(s);
-                if (r.height > r.width)
+                if (r.height > r.width && !drawer.ChannelSegmentIsDrop(s))
                 {
                     count++;
                 }
             }
 
             return count;
+        }
+
+        // Maqueta las cuias del banco como la pantalla (BoardLayout en un lienzo de 360 dp; 2 filas desde 6 cuias, D-006) y avisa
+        // de la recolocación.
+        private static BoardLayoutResult LayOut(MechanicTestKit.Rig rig, int count)
+        {
+            BoardLayoutResult l = BoardLayout.Compute(count, CuiaGeometry.HeightU(4), 360f, 150f, 690f);
+            for (int i = 0; i < count; i++)
+            {
+                rig.Views[i].SetGeometry(new Vector2(l.CenterX[i], -l.FootY[i]), l.CuiaWidth, l.SlotWidth);
+            }
+
+            rig.Animator.BoardLaidOut();
+            return l;
         }
 
         // Rectángulo interior del panel (dentro del marco) en el espacio de las capas de tablero, desde el layout del tablero:

@@ -15,12 +15,14 @@ namespace AF.Tests.PlayMode
 {
     /// <summary>
     /// Capturas de revisión del Remolino y del Barro (T16; <c>[Explicit]</c>, no forman parte de la suite):
-    /// <c>75_remolino_l103</c> (la pareja del 103 con su espiral y su canal), <c>75b_remolino_1fila</c> y
-    /// <c>75c_remolino_3filas</c> (el canal con 1 y 3 filas, en paquetes de prueba), <c>76_remolino_receive_l103</c> (la espuma
-    /// recorre el canal desde la cuia tocada) y <c>76b_remolino_receive_l103</c> (la racha sube por el fondo de la pareja con
-    /// burbujas), <c>77_barro_l123</c> (el Barro en reposo) y <c>78_barro_wash_l123</c> y <c>78b_barro_wash_l123</c> (el barro se
-    /// enturbia y se disuelve en la fruta nueva). Sirven para mirar a 48 dp la legibilidad de la pareja y del canal, los solapes
-    /// con cuias y repisas, los colores y la línea D-003. Necesitan gráficos:
+    /// <c>75_remolino_l103</c> (la pareja del 103 con su espiral y su canal, de la fila 1 a la 3), <c>75b_remolino_1fila</c>,
+    /// <c>75c_remolino_3filas</c> y <c>75d_remolino_2filas</c> (el canal con 1, 3 y 2 filas en paquetes de prueba; en la de 2,
+    /// la pareja en filas vecinas y columnas distintas y una cuia de la fila de abajo elevada justo bajo el canal),
+    /// <c>75e_remolino_mas_cuia</c> (el 103 tras «+1 cuia»: el canal recolocado), <c>76_remolino_receive_l103</c> (la racha
+    /// viaja con su tinte por el canal desde la cuia tocada) y <c>76b_remolino_receive_l103</c> (la racha sube por el fondo de
+    /// la pareja con burbujas), <c>77_barro_l123</c> (el Barro en reposo) y <c>78_barro_wash_l123</c> y
+    /// <c>78b_barro_wash_l123</c> (el barro se enturbia y se disuelve en la fruta nueva). Sirven para mirar a 48 dp la
+    /// legibilidad de la pareja y del canal, los solapes con cuias y repisas, los colores y la línea D-003. Necesitan gráficos:
     /// <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.RemolinoBarroSnapshotTests</c> sin
     /// <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/</c>.
     /// </summary>
@@ -85,6 +87,42 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Save(dir, "75c_remolino_3filas");
             SnapshotKit.LogBoard("75c_remolino_3filas", GameBootstrap.Current!);
             Assert.That(File.Exists(Path.Combine(dir, "75c_remolino_3filas.png")), Is.True);
+            LaunchOptions.Reset();
+
+            // 2 filas: 8 cuias (6 frutas y 2 vacías, 4 + 4), pareja 0-6 en filas vecinas y columnas distintas (codo bajo la
+            // repisa de arriba y bajada por el hueco de la fila 2), con la cuia 4 elevada justo bajo el tramo de arriba.
+            int[][] two =
+            {
+                new[] { 1, 2, 3, 4 }, new[] { 2, 3, 4, 5 }, new[] { 3, 4, 5, 6 }, new[] { 4, 5, 6, 1 },
+                new[] { 5, 6, 1, 2 }, new[] { 6, 1, 2, 3 }, new int[0], new int[0],
+            };
+
+            yield return LoadIdle(103, Pack(two, 0, 6));
+            GameBootstrap boot = GameBootstrap.Current!;
+            boot.TapCuia(4);
+            PlayModeHelpers.Step(boot, 400);
+            Assert.That(boot.View!.Views[4].IsLifted, Is.True, "la cuia 4, elevada bajo el canal");
+            SnapshotKit.Save(dir, "75d_remolino_2filas");
+            SnapshotKit.LogBoard("75d_remolino_2filas", boot);
+            Assert.That(File.Exists(Path.Combine(dir, "75d_remolino_2filas.png")), Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureRemolinoAddCuia()
+        {
+            string dir = SnapshotKit.Prepare();
+
+            // El 103 (11 cuias, 4 + 4 + 3) tras «+1 cuia» (12, 4 + 4 + 4): la cuia de la pareja de la fila 3 se mueve y el canal
+            // la sigue.
+            FunnelSetup.Hooks();
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
+            yield return LoadIdle(103, null);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.PressExtraCuia(), Is.True, "Cuia extra con semillas");
+            PlayModeHelpers.Step(boot, 700);
+            SnapshotKit.Save(dir, "75e_remolino_mas_cuia");
+            SnapshotKit.LogBoard("75e_remolino_mas_cuia", boot);
+            Assert.That(File.Exists(Path.Combine(dir, "75e_remolino_mas_cuia.png")), Is.True);
         }
 
         [UnityTest]

@@ -9,40 +9,50 @@ namespace AF.Presentation.Mechanics
 {
     /// <summary>
     /// M4 Remolino (02 §9.1 M4; propuesta de D-007 b.2 M4) [P]: una espiral de espuma marfil translúcida sobre un remanso
-    /// oscuro en la base de cada cuia de la pareja, en la ranura (no viaja con la cuia al verter), y un canal de agua bajo el
-    /// tablero que une las dos. Nunca turquesa: ni el turquesa del icono de Marea (#3BB8D9) ni Agua del Tapajós. Si la pareja
-    /// tiene id &gt; 0, <c>id + 1</c> puntos junto a la boca del canal distinguen las parejas.
+    /// oscuro en la base de cada cuia de la pareja, en la ranura (no viaja con la cuia al verter), y un canal de agua que sale
+    /// de los dos remansos y los une por debajo del tablero. Nunca turquesa: ni el turquesa del icono de Marea (#3BB8D9) ni
+    /// Agua del Tapajós. Si la pareja tiene id &gt; 0, <c>id + 1</c> puntos junto a la bajada distinguen las parejas.
     /// </summary>
     /// <remarks>
     /// <para><b>Canal.</b> Lo dibuja una sola vez la cuia de menor índice de la pareja (la pareja se busca por
     /// <see cref="Cuia.MechanicPairId"/> en <see cref="ICuiaBoard.ShownCuia"/>, la misma consulta que
     /// <c>BoardDiff.RemolinoPartner</c>, sin construir un <c>BoardState</c>), en la capa trasera del tablero, y se recoloca en
-    /// <see cref="OnBoardLayout"/> (también tras añadir una cuia). Trazado [P]: baja del pie de cada cuia hasta el canto
-    /// inferior de su fila (la repisa) y se une con tramos horizontales bajo las repisas, en su sombra. Si la pareja está en
-    /// filas distintas, en cada fila que cruza baja por el hueco entre dos cuias (el que acorta el camino; a igualdad, el más
+    /// <see cref="OnBoardLayout"/> (también tras añadir una cuia). Trazado [P] (T16: «baja del pie de cada cuia hasta el borde
+    /// inferior de su fila»): de cada remanso baja por el frente de su repisa (la <b>bajada</b>, en la columna del remanso)
+    /// hasta el canto inferior, y lo unen tramos horizontales pegados por debajo a las repisas. Si la pareja está en filas
+    /// distintas, en cada fila que cruza baja por el hueco entre dos cuias (el que acorta el camino; a igualdad, el más
     /// cercano: una escalera hacia la pareja), así que no pasa por detrás de ninguna cuia; si ningún hueco deja 1 dp de
-    /// margen, por el que más deja.</para>
-    /// <para><b>La repisa va delante del canal</b> (direccion-visual-v2 §4.5: repisa continua por fila). La capa trasera se
-    /// pinta sobre las repisas, así que el canal no se dibuja en la franja de ninguna repisa: los tramos verticales se cortan
-    /// desde <see cref="ShelfClearDp"/> dp sobre su cara superior (pie + <see cref="ShelfTopAboveFootDp"/>) hasta donde
-    /// asoman bajo ella, con extremos redondos, y el canal se lee como agua que pasa por debajo. Bajo el remanso de cada cuia
-    /// de la pareja, el canal sale de una boca elíptica (<see cref="MouthWidthDp"/> × <see cref="MouthHeightDp"/> dp) en el
-    /// canto inferior de la repisa. Los tramos horizontales van <see cref="ChannelGapDp"/> dp bajo el canto de la repisa
-    /// (pie − 15) y miden <see cref="ChannelWidthDp"/> dp, así que bajo la última fila quedan ≥ 2 dp por dentro del canto
-    /// interior del marco (margen del panel de 22 dp menos el marco de 13,5) y entre filas, a ≥ 2 dp de una cuia elevada de
-    /// la fila de abajo (02 §5: elevación de 16 dp y hueco de 24).</para>
+    /// margen, por el que más deja. Cada tramo es una cápsula, así que los codos son redondos y no dejan costuras.</para>
+    /// <para><b>La repisa va delante del canal</b> (direccion-visual-v2 §4.5: repisa continua por fila), salvo en las bajadas,
+    /// que son lo único del canal sobre una repisa: así se ve que el canal sale del remanso. La capa trasera se pinta sobre
+    /// las repisas, así que donde un tramo cruza la repisa de otra fila lo tapa una franja de su madera
+    /// (<see cref="ProceduralArt.RemolinoShelfCover"/>, los mismos píxeles de la repisa): el tramo se corta a ras de la cara
+    /// superior y vuelve a asomar a ras del canto inferior, sin extremos redondos sueltos ni codos a la vista detrás de la
+    /// madera. Las franjas siguen a los pies, como el canal: durante el relayout de «+1 cuia» (300 ms) GameScreen pone las
+    /// repisas en su sitio final al empezar mientras las cuias se deslizan, así que si el ancho de la cuia cambia (10 → 11 o
+    /// 15 → 16 cuias) las franjas van con las cuias, desfasadas de su repisa, hasta que el relayout termina.</para>
+    /// <para><b>Medidas.</b> La repisa empieza en pie + <see cref="ShelfTopAboveFootDp"/> (GameScreen) y su madera mide 20 dp
+    /// (ProceduralArt.BuildShelf: cara superior, bisel, frente y un canto inferior de 2 dp), así que acaba en pie −
+    /// <see cref="ShelfBottomBelowFootDp"/>, 2 dp por debajo de <see cref="ICuiaBoard.SlotRect"/>. Los tramos horizontales miden
+    /// <see cref="ChannelWidthDp"/> dp y tocan ese canto: bajo la última fila quedan 2 dp hasta el canto interior del marco
+    /// (15 dp de repisa y 22 de margen del panel menos 13,5 de marco: 23,5 dp bajo el pie) y entre filas, 2,5 dp hasta una cuia
+    /// elevada de la fila de abajo (02 §5: elevación de 16 dp y hueco de 24).</para>
     /// <para><b>Agua</b> (D-003): un lecho de <see cref="ProceduralArt.RemolinoChannelEdge"/> y encima un centro con degradado
     /// transversal hasta <see cref="ProceduralArt.RemolinoChannelWater"/>, con una línea de espuma discontinua en el eje
-    /// (<see cref="DashThickDp"/> dp, 6 dp de trazo y 6 de hueco). Cada tramo es una cápsula, así que los codos son redondos.</para>
+    /// (<see cref="DashThickDp"/> dp, 6 dp de trazo y 6 de hueco) fuera de las bajadas.</para>
     /// <para><b>Recepción</b> (paso <see cref="MechanicStepKind.Receive"/>, despachado a la pareja; OtherIndex = la cuia
-    /// tocada): <see cref="ReceiveMs"/> (500 ms [P b.2]) × <c>ctx.SpeedFactor</c>. La espuma (cápsulas suaves translúcidas
-    /// del ancho del agua) recorre el canal desde la cuia tocada (donde desapareció el chorro), pasando por detrás de las
-    /// repisas; la espiral de la pareja gira y la racha sube por su fondo con burbujas (<see cref="IBoardFx.Bubbles"/>; con
-    /// Reducir movimiento la capa de efectos no emite): las dosis nuevas crecen desde abajo y las que ya había suben con
-    /// ellas, pintadas con <see cref="ICuiaBoard.SetDose"/> en el orden de <c>ctx.After</c>. Al empezar, la pareja ya queda en
-    /// el tablero con su estado de después (<see cref="ICuiaBoard.ShownCuia"/> = <c>ctx.After</c>: salta al llegar el caudal,
-    /// antes de que vuelva el origen, como en el vertido de T04) y los fotogramas se pintan encima. Al terminar, la cola pinta
-    /// <c>ShowContent(ctx.After)</c>.</para>
+    /// tocada): <see cref="ReceiveMs"/> (500 ms [P b.2]) × <c>ctx.SpeedFactor</c>. La racha viaja con su tinte por el canal: sale
+    /// del remanso de la cuia tocada (donde desapareció el chorro), baja por su bajada, pasa por debajo (y por detrás) de las
+    /// repisas y sube por la bajada de la pareja hasta su remanso. Es la propia fruta en tránsito, no una superficie fija: como
+    /// la fruta llave de la Liana, no entra en la regla de ΔE00 (direccion-visual-v2 §2.4). Después la espiral de la pareja
+    /// gira y la racha sube por su fondo con burbujas (<see cref="IBoardFx.Bubbles"/>; con Reducir movimiento la capa de
+    /// efectos no emite): las dosis nuevas crecen desde abajo y las que ya había suben con ellas, pintadas con
+    /// <see cref="ICuiaBoard.SetDose"/> en el orden de <c>ctx.After</c>. Al empezar, la pareja ya queda en el tablero con su
+    /// estado de después (<see cref="ICuiaBoard.ShownCuia"/> = <c>ctx.After</c>: salta al llegar el caudal, antes de que vuelva
+    /// el origen, como en el vertido de T04) y los fotogramas se pintan encima. Al terminar, la cola pinta
+    /// <c>ShowContent(ctx.After)</c>. La racha va en la raíz de la cuia que recibe; si no es la que dibuja el canal, su raíz
+    /// pasa al final de la capa y lleva sus propias franjas de madera, idénticas, para que la racha también pase por detrás de
+    /// las repisas.</para>
     /// <para>Sin asignaciones tras <see cref="CuiaOverlay.Attach"/>: piezas, puntos del trazado y buffers fijos; los sprites
     /// se piden en <see cref="OnAttach"/>.</para>
     /// </remarks>
@@ -58,31 +68,25 @@ namespace AF.Presentation.Mechanics
         public const float ReceiveMs = 500f;
 
         /// <summary>
-        /// Ancho del canal (dp) [P], el mismo en todos los tramos: bajo la última fila caben 8,5 dp entre el canto de la
-        /// repisa y el del marco, menos <see cref="ChannelGapDp"/> y 2 dp de aire hasta el marco.
+        /// Ancho del canal (dp) [P], el mismo en todos los tramos: bajo la última fila caben 6,5 dp entre el canto inferior
+        /// de la repisa y el canto interior del marco, menos 2 dp de aire hasta el marco.
         /// </summary>
-        public const float ChannelWidthDp = 5f;
-
-        /// <summary>Hueco entre el canto inferior de la repisa (pie − 15) y el canal (dp).</summary>
-        public const float ChannelGapDp = 1.5f;
+        public const float ChannelWidthDp = 4.5f;
 
         /// <summary>Cara superior de la repisa sobre la línea de pie (dp; la repisa de <c>GameScreen</c> empieza en pie + 3).</summary>
         public const float ShelfTopAboveFootDp = 3f;
 
-        /// <summary>Aire (dp) entre el extremo redondo de un tramo vertical cortado y la cara superior de la repisa.</summary>
-        public const float ShelfClearDp = 1f;
+        /// <summary>
+        /// Canto inferior de la madera de la repisa bajo la línea de pie (dp): 20 dp de madera desde pie + 3
+        /// (<c>ProceduralArt.BuildShelf</c>); debajo empieza su sombra de 6 dp.
+        /// </summary>
+        public const float ShelfBottomBelowFootDp = 17f;
 
-        /// <summary>Ancho de la boca por la que el canal sale de debajo de la repisa de la pareja (dp).</summary>
-        public const float MouthWidthDp = 8f;
-
-        /// <summary>Alto de la boca (dp).</summary>
-        public const float MouthHeightDp = 3f;
-
-        /// <summary>Opacidad de la boca (<see cref="ProceduralArt.RemolinoChannelRim"/>).</summary>
-        public const float MouthAlpha = 0.8f;
-
-        /// <summary>Centro de la boca bajo el canto de <c>SlotRect</c> (pie − 15): en el canto de madera de 2 dp de la repisa.</summary>
-        public const float MouthDropDp = 1f;
+        /// <summary>
+        /// Arranque de la bajada bajo la línea de pie (dp): bajo el remanso, que la tapa, y con su extremo redondo 0,5 dp por
+        /// debajo del pie, fuera de la cuia.
+        /// </summary>
+        public const float DropTopBelowFootDp = (0.5f * ChannelWidthDp) + 0.5f;
 
         /// <summary>Grosor de la línea de espuma discontinua del eje del canal (dp).</summary>
         public const float DashThickDp = 1f;
@@ -90,17 +94,11 @@ namespace AF.Presentation.Mechanics
         /// <summary>Opacidad de la línea de espuma del eje (<see cref="Palette.UiPaper"/>).</summary>
         public const float DashAlpha = 0.5f;
 
-        /// <summary>
-        /// Opacidad de la espuma que recorre el canal al recibir (<see cref="Palette.UiPaper"/>): 0,5 la deja a ΔE00 10,6 de
-        /// Guanábana sobre el centro del agua; con 0,55 bajaría a 9,8.
-        /// </summary>
-        public const float FoamBlobAlpha = 0.5f;
+        /// <summary>Ancho de la racha que viaja por el canal (dp): por dentro del agua, que deja 0,75 dp de lecho a cada lado.</summary>
+        public const float RachaWidthDp = ChannelWidthDp - 1.5f;
 
-        /// <summary>Ancho de cada gota de espuma (dp): menos que el agua, nunca toca el marco ni las repisas.</summary>
-        public const float FoamBlobWidthDp = 4.5f;
-
-        /// <summary>Alargamiento de las gotas de espuma en la dirección del tramo.</summary>
-        public const float FoamBlobAspect = 1.8f;
+        /// <summary>Largo de la racha que viaja por el canal (dp) [P]; como mucho el 60 % del trazado.</summary>
+        public const float RachaLengthDp = 60f;
 
         /// <summary>Puntos del trazado como mucho: dos por fila cruzada (3 filas) y los dos pies.</summary>
         public const int MaxChannelPoints = 8;
@@ -114,11 +112,11 @@ namespace AF.Presentation.Mechanics
         /// <summary>Vueltas de la espiral durante la recepción [P].</summary>
         public const float SpinTurns = 1.5f;
 
-        /// <summary>Fracción del paso en que la espuma llega al final del canal [P].</summary>
-        public const float PulseEnd = 0.4f;
+        /// <summary>Fracción del paso en que la cola de la racha entra en el remanso de la pareja [P].</summary>
+        public const float PulseEnd = 0.5f;
 
-        /// <summary>Fracción del paso en que la racha empieza a entrar por el fondo de la pareja [P].</summary>
-        public const float FillStart = 0.3f;
+        /// <summary>Fracción del paso en que la racha empieza a entrar por el fondo de la pareja (llega su cabeza) [P].</summary>
+        public const float FillStart = 0.4f;
 
         /// <summary>Burbujas al entrar la racha (≤ 7 de las 44 del tablero entre las dos tandas) [P].</summary>
         public const int BubblesFirst = 4;
@@ -127,31 +125,30 @@ namespace AF.Presentation.Mechanics
         public const int BubblesSecond = 3;
 
         private const int MaxSegments = MaxChannelPoints - 1;
-        private const int MaxPieces = MaxSegments + 2;
         private const int MaxRows = 4;
-        private const int PulseBlobs = 4;
         private const int MaxBoard = 32;
         private const float RowTolerance = 1f;
-        private const float MinPieceDp = 0.5f;
-        private const float SecondBubbles = 0.62f;
+        private const float SecondBubbles = 0.7f;
         private const float OuterGapPenaltyDp = 2f;
-        private const float PulseFade = 0.15f;
+        private const float CoverPadDp = 1f;
+        private const float MinRachaDp = 0.25f;
 
-        private readonly Image[] _bed = new Image[MaxPieces];
-        private readonly Image[] _core = new Image[MaxPieces];
-        private readonly Image[] _dash = new Image[MaxPieces];
-        private readonly Image[] _mouth = new Image[2];
-        private readonly Image[] _pulse = new Image[PulseBlobs];
+        // Lo que un cruce por la punta de una fila corta deja hasta el borde de las ranuras (dp): la repisa empieza ≤ 15,5 dp
+        // dentro (marco de 13,5 + 6 + 8 − 12) y sus 16 dp de punta, con la hoja tallada, no son la madera lisa que copia la
+        // franja (más la mitad de la franja).
+        private const float ShelfEndClearDp = 35f;
+
+        private readonly Image[] _bed = new Image[MaxSegments];
+        private readonly Image[] _core = new Image[MaxSegments];
+        private readonly Image[] _dash = new Image[MaxSegments];
+        private readonly Image[] _racha = new Image[MaxSegments];
+        private readonly Image[] _cover = new Image[MaxRows];
         private readonly Vector2[] _pts = new Vector2[MaxChannelPoints];
-        private readonly Vector2[] _pieceA = new Vector2[MaxPieces];
-        private readonly Vector2[] _pieceB = new Vector2[MaxPieces];
-        private readonly Vector2[] _mouthAt = new Vector2[2];
-        private readonly float[] _bandLo = new float[MaxRows];
-        private readonly float[] _bandHi = new float[MaxRows];
-        private readonly float[] _pulseLo = new float[MaxRows];
-        private readonly float[] _pulseHi = new float[MaxRows];
-        private readonly float[] _cutS = new float[MaxRows + 1];
-        private readonly float[] _cutE = new float[MaxRows + 1];
+        private readonly Vector2[] _pieceA = new Vector2[MaxSegments];
+        private readonly Vector2[] _pieceB = new Vector2[MaxSegments];
+        private readonly bool[] _pieceDrop = new bool[MaxSegments];
+        private readonly Vector2[] _coverAt = new Vector2[MaxRows];
+        private readonly float[] _rowFoot = new float[MaxRows];
         private readonly Vector2[] _pulsePts = new Vector2[MaxChannelPoints];
         private readonly float[] _pulseAt = new float[MaxChannelPoints];
         private readonly float[] _rowX = new float[MaxBoard];
@@ -166,14 +163,15 @@ namespace AF.Presentation.Mechanics
         private int _partner = -1;
         private int _ptCount;
         private int _pieceCount;
-        private int _bandCount;
+        private int _coverCount;
+        private int _rowCount;
         private bool _channelShown;
         private int _laidVersion = int.MinValue;
         private int _laidPartner = -2;
         private float _laidU = -1f;
         private int _pulseCount;
-        private int _pulseBands;
         private bool _pulseReverse;
+        private float _rachaHead = -1f;
         private bool _animating;
         private float _elapsed;
         private float _duration;
@@ -182,6 +180,7 @@ namespace AF.Presentation.Mechanics
         private Cuia _stepAfter;
         private int _stepAmount;
         private int _stepTint;
+        private Color _rachaColor;
         private ICuiaBoard? _stepBoard;
         private IBoardFx? _stepFx;
         private bool _stepReduce;
@@ -195,14 +194,8 @@ namespace AF.Presentation.Mechanics
         /// <summary>Color con el que se ve la espiral: la espuma compuesta en lineal sobre el remanso, como la GPU.</summary>
         public static Color SpiralSeenColor => ColorMath.CompositeLinear(Palette.UiPaper, FoamAlpha, ProceduralArt.WhirlPoolColor);
 
-        /// <summary>Color con el que se ve la espuma que recorre el canal, en el centro del agua.</summary>
-        public static Color FoamSeenColor => ColorMath.CompositeLinear(Palette.UiPaper, FoamBlobAlpha, ProceduralArt.RemolinoChannelWater);
-
         /// <summary>Color con el que se ve la línea de espuma del eje del canal.</summary>
         public static Color DashSeenColor => ColorMath.CompositeLinear(Palette.UiPaper, DashAlpha, ProceduralArt.RemolinoChannelWater);
-
-        /// <summary>Color con el que se ve la boca del canal sobre el frente de la repisa.</summary>
-        public static Color MouthSeenColor => ColorMath.CompositeLinear(ProceduralArt.RemolinoChannelRim, MouthAlpha, Palette.ShelfFrontLow);
 
         /// <summary>La otra cuia de la pareja en el tablero mostrado, o −1.</summary>
         public int PartnerIndex => _partner;
@@ -216,11 +209,26 @@ namespace AF.Presentation.Mechanics
         /// <summary>Puntos del trazado del canal (de esta cuia a su pareja), 0 si no lo dibuja.</summary>
         public int ChannelPointCount => _channelShown ? _ptCount : 0;
 
-        /// <summary>Tramos del canal a la vista (los trozos del trazado fuera de las repisas).</summary>
+        /// <summary>Tramos del canal (uno por tramo del trazado, de esta cuia a su pareja), 0 si no lo dibuja.</summary>
         public int ChannelSegmentCount => _channelShown ? _pieceCount : 0;
 
-        /// <summary>Bocas del canal a la vista (una bajo el remanso de cada cuia de la pareja).</summary>
-        public int MouthCount => _channelShown ? 2 : 0;
+        /// <summary>Franjas de madera a la vista que tapan el canal donde cruza una repisa (las de esta cuia).</summary>
+        public int CoverCount
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < MaxRows; i++)
+                {
+                    if (_cover[i] != null && _cover[i].gameObject.activeSelf)
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+        }
 
         /// <summary>La recepción por el fondo está en curso.</summary>
         public override bool IsAnimating => _animating;
@@ -231,20 +239,45 @@ namespace AF.Presentation.Mechanics
         /// <summary>Giro actual de la espiral (grados; 0 en reposo).</summary>
         public float SpiralAngle => -_spinFrame * (360f / ProceduralArt.RemolinoSpiralFrames);
 
-        /// <summary>Alguna gota de espuma recorre el canal a la vista.</summary>
-        public bool PulseVisible
+        /// <summary>La racha viaja por el canal a la vista.</summary>
+        public bool PulseVisible => RachaPieceCount > 0;
+
+        /// <summary>Trozos a la vista de la racha que viaja por el canal (uno por tramo que ocupa).</summary>
+        public int RachaPieceCount
         {
             get
             {
-                for (int i = 0; i < PulseBlobs; i++)
+                int count = 0;
+                for (int i = 0; i < MaxSegments; i++)
                 {
-                    if (_pulse[i] != null && _pulse[i].gameObject.activeSelf)
+                    if (_racha[i] != null && _racha[i].gameObject.activeSelf)
                     {
-                        return true;
+                        count++;
                     }
                 }
 
-                return false;
+                return count;
+            }
+        }
+
+        /// <summary>Color de la racha que viaja por el canal: el tinte de lo vertido.</summary>
+        public Color RachaColor => _rachaColor;
+
+        /// <summary>
+        /// Avance de la cabeza de la racha por el trazado, desde el pie de la cuia tocada (0) hasta el de la pareja (1); −1 sin
+        /// racha.
+        /// </summary>
+        public float RachaHeadProgress
+        {
+            get
+            {
+                if (_rachaHead < 0f || _pulseCount < 2)
+                {
+                    return -1f;
+                }
+
+                float length = _pulseAt[_pulseCount - 1];
+                return length > 0f ? Mathf.Clamp01(_rachaHead / length) : -1f;
             }
         }
 
@@ -260,12 +293,12 @@ namespace AF.Presentation.Mechanics
         }
 
         /// <summary>
-        /// Rectángulo (espacio de las capas de tablero) del tramo a la vista <paramref name="i"/> del canal, con sus extremos
-        /// redondos: lo que pinta su lecho.
+        /// Rectángulo (espacio de las capas de tablero) del tramo <paramref name="i"/> del canal, con sus extremos redondos: lo
+        /// que pinta su lecho.
         /// </summary>
         public Rect ChannelSegmentRect(int i)
         {
-            if ((uint)i >= (uint)MaxPieces || _bed[i] == null)
+            if ((uint)i >= (uint)MaxSegments || _bed[i] == null)
             {
                 return Rect.zero;
             }
@@ -273,15 +306,32 @@ namespace AF.Presentation.Mechanics
             return RectOf(_bed[i].rectTransform);
         }
 
-        /// <summary>Rectángulo (espacio de las capas de tablero) de la boca <paramref name="i"/> (0: esta cuia; 1: la pareja).</summary>
-        public Rect MouthRect(int i)
+        /// <summary>El tramo <paramref name="i"/> es una bajada: el que sale del remanso por el frente de su repisa.</summary>
+        public bool ChannelSegmentIsDrop(int i)
         {
-            if ((uint)i >= 2u || _mouth[i] == null)
+            return (uint)i < (uint)_pieceCount && _pieceDrop[i];
+        }
+
+        /// <summary>Rectángulo (espacio de las capas de tablero) de la franja de madera <paramref name="i"/>.</summary>
+        public Rect CoverRect(int i)
+        {
+            if ((uint)i >= (uint)MaxRows || _cover[i] == null)
             {
                 return Rect.zero;
             }
 
-            return RectOf(_mouth[i].rectTransform);
+            return RectOf(_cover[i].rectTransform);
+        }
+
+        /// <summary>Rectángulo (espacio de las capas de tablero) del trozo <paramref name="i"/> de la racha.</summary>
+        public Rect RachaRect(int i)
+        {
+            if ((uint)i >= (uint)MaxSegments || _racha[i] == null || !_racha[i].gameObject.activeSelf)
+            {
+                return Rect.zero;
+            }
+
+            return RectOf(_racha[i].rectTransform);
         }
 
         /// <inheritdoc />
@@ -305,7 +355,7 @@ namespace AF.Presentation.Mechanics
             OverlayParts.Place(_pool, 0f, PoolCenterU, 2.6f, 0.85f, u);
             OverlayParts.Place(_spiral, 0f, PoolCenterU, ProceduralArt.RemolinoSpiralWidthU, ProceduralArt.RemolinoSpiralHeightU, u);
 
-            // A la derecha de la boca del canal, en el frente de la repisa, bajo el borde del remanso.
+            // A la derecha de la bajada, en el frente de la repisa, bajo el borde del remanso.
             _dots.Layout(0.62f, -0.55f, 0.13f, 0.2f, u);
         }
 
@@ -341,13 +391,19 @@ namespace AF.Presentation.Mechanics
             _stepAfter = ctx.After;
             _stepAmount = Mathf.Max(0, ctx.After.Count - ctx.Before.Count);
             _stepTint = ctx.Tint;
+            _rachaColor = ctx.Tint == Cuia.MudColor ? Palette.Mud : Palette.Tint(ctx.Tint);
+            for (int i = 0; i < MaxSegments; i++)
+            {
+                OverlayParts.SetColor(_racha[i], _rachaColor);
+            }
+
             _duration = ms;
             _elapsed = 0f;
             _bubbles = 0;
             _finalPainted = false;
             _animating = true;
             PreparePulse(ctx.OtherIndex);
-            _layerRoot.SetAsLastSibling(); // la espuma, sobre el canal que dibuja la otra cuia de la pareja
+            _layerRoot.SetAsLastSibling(); // la racha, sobre el canal que dibuja la otra cuia de la pareja
 
             // La pareja llega al estado de después al llegar el caudal (ShownCuia, como el salto de T04; mientras anima,
             // ShowContent no llama a Show) y cada fotograma pinta encima, con SetDose, cómo sube la racha por el fondo.
@@ -390,8 +446,18 @@ namespace AF.Presentation.Mechanics
             _finalPainted = false;
             _stepBoard = null;
             _stepFx = null;
-            HidePulse();
+            HideRacha();
             SetSpin(0);
+
+            // Las franjas de esta cuia solo siguen si dibuja el canal (las de la racha de la otra cuia ya no hacen falta).
+            if (_channelShown)
+            {
+                ShowCovers(_pts, _ptCount, true);
+            }
+            else
+            {
+                HideCovers();
+            }
         }
 
         /// <inheritdoc />
@@ -402,10 +468,7 @@ namespace AF.Presentation.Mechanics
             into.Add(ProceduralArt.Pearl); // puntos de la pareja
             into.Add(ProceduralArt.RemolinoChannelWater); // centro del agua del canal
             into.Add(ProceduralArt.RemolinoChannelEdge); // bordes del agua del canal
-            into.Add(FoamSeenColor); // espuma que recorre el canal
             into.Add(DashSeenColor); // línea de espuma del eje (1 dp, pero también lejos de los tintes)
-            into.Add(ProceduralArt.RemolinoChannelRim); // boca del canal
-            into.Add(MouthSeenColor); // boca, vista sobre el frente de la repisa
         }
 
         /// <inheritdoc />
@@ -415,7 +478,7 @@ namespace AF.Presentation.Mechanics
             _spiral = OverlayParts.NewImage("RemolinoSpiral", Host.SlotBack, Host.Art.RemolinoSpiralFrame(0), OverlayParts.Fade(Palette.UiPaper, FoamAlpha));
             _dots = new PipRow("RemolinoPair", Host.SlotFront, Host.Art.CounterPip, Host.Art.CounterPipEmpty, ProceduralArt.Pearl);
 
-            // Canal y espuma en la capa trasera del tablero, en una raíz propia anclada a la esquina superior izquierda de la
+            // Canal y racha en la capa trasera del tablero, en una raíz propia anclada a la esquina superior izquierda de la
             // capa, como las ranuras de las cuias: si el tablero cambia de tamaño sin recolocarse (el CanvasScaler al cambiar
             // de pantalla), canal y cuias se mueven juntos. Las posiciones del tablero (ICuiaBoard, relativas al pivote de la
             // capa) se pasan a la raíz restando LayerOrigin. La raíz se va con la cuia (LayerLink).
@@ -430,23 +493,23 @@ namespace AF.Presentation.Mechanics
             _layerRoot.anchoredPosition = Vector2.zero;
             go.AddComponent<LayerLink>().Owner = Host.SlotBack;
 
-            // Orden: todos los lechos, todos los centros y todas las líneas de espuma (los codos no dejan costuras), las bocas
-            // y la espuma que recorre el canal.
+            // Orden: todos los lechos, todos los centros y todas las líneas de espuma (los codos no dejan costuras), la racha
+            // y, delante, las franjas de madera que tapan el canal y la racha donde pasan por detrás de una repisa.
             ProceduralArt art = Host.Art;
             NewPieces(_bed, "ChannelBed", art.RemolinoCapsule, ProceduralArt.RemolinoChannelEdge, Image.Type.Sliced);
             NewPieces(_core, "ChannelWater", art.RemolinoCapsuleSoft, ProceduralArt.RemolinoChannelWater, Image.Type.Sliced);
             NewPieces(_dash, "ChannelFoamLine", art.RemolinoDash, OverlayParts.Fade(Palette.UiPaper, DashAlpha), Image.Type.Tiled);
-            for (int i = 0; i < _mouth.Length; i++)
+            NewPieces(_racha, "ChannelRacha", art.RemolinoCapsule, Color.white, Image.Type.Sliced);
+            for (int i = 0; i < _racha.Length; i++)
             {
-                _mouth[i] = OverlayParts.NewImage("ChannelMouth" + i, _layerRoot, art.RemolinoCapsule, OverlayParts.Fade(ProceduralArt.RemolinoChannelRim, MouthAlpha));
+                PreRegister(_racha[i]);
             }
 
-            Sprite foam = art.RemolinoFoam;
-            for (int i = 0; i < PulseBlobs; i++)
+            Sprite cover = art.RemolinoShelfCover;
+            for (int i = 0; i < _cover.Length; i++)
             {
-                _pulse[i] = OverlayParts.NewImage("ChannelFoam" + i, _layerRoot, foam, OverlayParts.Fade(Palette.UiPaper, FoamBlobAlpha));
-                _pulse[i].rectTransform.sizeDelta = new Vector2(FoamBlobAspect * FoamBlobWidthDp, FoamBlobWidthDp);
-                PreRegister(_pulse[i]);
+                _cover[i] = OverlayParts.NewImage("ChannelShelfCover" + i, _layerRoot, cover, Color.white);
+                PreRegister(_cover[i]); // la de la racha de la otra cuia se ve a mitad de un paso
             }
         }
 
@@ -510,18 +573,11 @@ namespace AF.Presentation.Mechanics
             _laidVersion = version;
             _laidU = u;
             _ptCount = Route(board, Host.Index, partner, _pts);
-            Vector2 origin = LayerOrigin;
-            ToRoot(_pts, _ptCount, origin);
-            _mouthAt[0] = MouthCenter(board, Host.Index) - origin;
-            _mouthAt[1] = MouthCenter(board, partner) - origin;
-            BuildPieces(origin.y);
+            ToRoot(_pts, _ptCount, LayerOrigin);
+            BuildPieces();
             PlacePieces();
+            ShowCovers(_pts, _ptCount, true);
             _channelShown = true;
-        }
-
-        private static Vector2 MouthCenter(ICuiaBoard board, int i)
-        {
-            return new Vector2(board.Foot(i).x, board.SlotRect(i).yMin - MouthDropDp);
         }
 
         private int FindPartner(ICuiaBoard board)
@@ -546,19 +602,18 @@ namespace AF.Presentation.Mechanics
         }
 
         // Trazado del canal de la cuia a a la b (ver la clase) en pts; devuelve los puntos. Va de la fila de arriba a la de
-        // abajo y, si a está debajo, se invierte al final: el mismo trazado para las dos cuias de la pareja. Deja en _bandLo y
-        // _bandHi la franja de cada repisa en la que no se pintan los tramos verticales.
+        // abajo y, si a está debajo, se invierte al final: el mismo trazado para las dos cuias de la pareja. Deja en _rowFoot
+        // la línea de pie de cada fila del tablero.
         private int Route(ICuiaBoard board, int a, int b, Vector2[] pts)
         {
-            CollectShelfBands(board);
+            CollectRows(board);
             Vector2 fa = board.Foot(a);
             Vector2 fb = board.Foot(b);
             bool swap = fb.y > fa.y + RowTolerance;
-            int top = swap ? b : a;
             Vector2 ft = swap ? fb : fa;
             Vector2 fl = swap ? fa : fb;
             const float half = 0.5f * ChannelWidthDp;
-            float y = UnderShelf(board.SlotRect(top).yMin);
+            float y = UnderShelf(ft.y);
             int n = 0;
             pts[n++] = ft;
             pts[n++] = new Vector2(ft.x, y);
@@ -566,7 +621,7 @@ namespace AF.Presentation.Mechanics
             float rowY = ft.y;
             while (n < MaxChannelPoints - 3)
             {
-                if (!TryNextRow(board, rowY, fl.y, out float nextRow, out float underside))
+                if (!TryNextRow(board, rowY, fl.y, out float nextRow))
                 {
                     break;
                 }
@@ -577,8 +632,8 @@ namespace AF.Presentation.Mechanics
                     pts[n++] = new Vector2(gx, y); // bajo la repisa de la fila de arriba, hasta el hueco
                 }
 
-                y = UnderShelf(underside);
-                pts[n++] = new Vector2(gx, y); // por el hueco de la fila, hasta bajo su repisa
+                y = UnderShelf(nextRow);
+                pts[n++] = new Vector2(gx, y); // por el hueco de la fila, por detrás de su repisa, hasta debajo de ella
                 x = gx;
                 rowY = nextRow;
             }
@@ -602,47 +657,41 @@ namespace AF.Presentation.Mechanics
             return n;
         }
 
-        // Eje de un tramo horizontal bajo la repisa cuyo canto inferior está en underside.
-        private static float UnderShelf(float underside)
+        // Eje de un tramo horizontal pegado por debajo a la repisa de la fila de pie footY.
+        private static float UnderShelf(float footY)
         {
-            return underside - ChannelGapDp - (0.5f * ChannelWidthDp);
+            return footY - ShelfBottomBelowFootDp - (0.5f * ChannelWidthDp);
         }
 
-        // Franja de cada repisa (una por fila) donde no va el eje de un tramo vertical: desde el eje de los tramos horizontales
-        // bajo ella hasta la cara superior, más el aire y el extremo redondo. Sin asignaciones.
-        private void CollectShelfBands(ICuiaBoard board)
+        // Línea de pie de cada fila del tablero (como mucho MaxRows), sin asignaciones.
+        private void CollectRows(ICuiaBoard board)
         {
-            _bandCount = 0;
+            _rowCount = 0;
             int n = Mathf.Min(board.Count, MaxBoard);
             for (int c = 0; c < n; c++)
             {
                 float fy = board.Foot(c).y;
                 bool known = false;
-                for (int k = 0; k < _bandCount; k++)
+                for (int k = 0; k < _rowCount; k++)
                 {
-                    if (Mathf.Abs(_bandHi[k] - (fy + ShelfTopAboveFootDp + ShelfClearDp + (0.5f * ChannelWidthDp))) <= RowTolerance)
+                    if (Mathf.Abs(_rowFoot[k] - fy) <= RowTolerance)
                     {
                         known = true;
                         break;
                     }
                 }
 
-                if (known || _bandCount >= MaxRows)
+                if (!known && _rowCount < MaxRows)
                 {
-                    continue;
+                    _rowFoot[_rowCount++] = fy;
                 }
-
-                _bandLo[_bandCount] = UnderShelf(board.SlotRect(c).yMin);
-                _bandHi[_bandCount] = fy + ShelfTopAboveFootDp + ShelfClearDp + (0.5f * ChannelWidthDp);
-                _bandCount++;
             }
         }
 
-        // Fila siguiente bajo la de pie rowY sin pasar de la de pie lastY: su línea de pie y el canto inferior de su repisa.
-        private static bool TryNextRow(ICuiaBoard board, float rowY, float lastY, out float next, out float underside)
+        // Fila siguiente bajo la de pie rowY sin pasar de la de pie lastY: su línea de pie.
+        private static bool TryNextRow(ICuiaBoard board, float rowY, float lastY, out float next)
         {
             next = float.NegativeInfinity;
-            underside = 0f;
             bool found = false;
             int n = Mathf.Min(board.Count, MaxBoard);
             for (int c = 0; c < n; c++)
@@ -651,7 +700,6 @@ namespace AF.Presentation.Mechanics
                 if (fy < rowY - RowTolerance && fy >= lastY - RowTolerance && fy > next)
                 {
                     next = fy;
-                    underside = board.SlotRect(c).yMin;
                     found = true;
                 }
             }
@@ -729,6 +777,11 @@ namespace AF.Presentation.Mechanics
                     continue; // la punta de la fila más ancha da al marco del panel
                 }
 
+                if (outer && (gx < minX + ShelfEndClearDp || gx > maxX - ShelfEndClearDp))
+                {
+                    continue; // la punta tallada de la repisa (hoja y esquina redonda): la franja de madera no la copia
+                }
+
                 float clear = float.PositiveInfinity;
                 for (int i = 0; i < count; i++)
                 {
@@ -770,95 +823,43 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // Trozos a la vista del trazado (espacio de la raíz): los tramos horizontales enteros y los verticales sin la franja de
-        // ninguna repisa (originY pasa las franjas, en espacio de la capa, a la raíz).
-        private void BuildPieces(float originY)
+        // Tramos del trazado (espacio de la raíz): uno por tramo; el primero y el último son las bajadas, que arrancan bajo el
+        // remanso (DropTopBelowFootDp bajo el pie) y no en el pie, para que su extremo redondo no entre en la cuia.
+        private void BuildPieces()
         {
             _pieceCount = 0;
-            for (int i = 0; i < _ptCount - 1; i++)
+            for (int i = 0; i < _ptCount - 1 && _pieceCount < MaxSegments; i++)
             {
                 Vector2 p = _pts[i];
                 Vector2 q = _pts[i + 1];
+                bool drop = i == 0 || i == _ptCount - 2;
+                if (i == 0)
+                {
+                    p.y -= DropTopBelowFootDp;
+                }
+
+                if (i == _ptCount - 2)
+                {
+                    q.y -= DropTopBelowFootDp;
+                }
+
                 if ((q - p).sqrMagnitude < 1e-4f)
                 {
                     continue;
                 }
 
-                if (Mathf.Abs(q.y - p.y) < 0.01f)
-                {
-                    AddPiece(p, q);
-                    continue;
-                }
-
-                // Vertical: el intervalo [lo, hi] del eje menos las franjas de las repisas.
-                int cuts = 1;
-                _cutS[0] = Mathf.Min(p.y, q.y);
-                _cutE[0] = Mathf.Max(p.y, q.y);
-                for (int k = 0; k < _bandCount; k++)
-                {
-                    float lo = _bandLo[k] - originY;
-                    float hi = _bandHi[k] - originY;
-                    int kept = 0;
-                    for (int c = 0; c < cuts; c++)
-                    {
-                        float s = _cutS[c];
-                        float e = _cutE[c];
-                        if (e <= lo || s >= hi)
-                        {
-                            Keep(ref kept, s, e);
-                            continue;
-                        }
-
-                        if (s < lo)
-                        {
-                            Keep(ref kept, s, lo);
-                        }
-
-                        if (e > hi)
-                        {
-                            Keep(ref kept, hi, e);
-                        }
-                    }
-
-                    cuts = kept;
-                }
-
-                for (int c = 0; c < cuts; c++)
-                {
-                    if (_cutE[c] - _cutS[c] >= MinPieceDp)
-                    {
-                        AddPiece(new Vector2(p.x, _cutS[c]), new Vector2(p.x, _cutE[c]));
-                    }
-                }
-            }
-        }
-
-        // Guarda el intervalo [s, e] en la posición kept de los cortes (≤ MaxRows + 1; los que no caben se pierden).
-        private void Keep(ref int kept, float s, float e)
-        {
-            if (kept < _cutS.Length)
-            {
-                _cutS[kept] = s;
-                _cutE[kept] = e;
-                kept++;
-            }
-        }
-
-        private void AddPiece(Vector2 a, Vector2 b)
-        {
-            if (_pieceCount < MaxPieces)
-            {
-                _pieceA[_pieceCount] = a;
-                _pieceB[_pieceCount] = b;
+                _pieceA[_pieceCount] = p;
+                _pieceB[_pieceCount] = q;
+                _pieceDrop[_pieceCount] = drop;
                 _pieceCount++;
             }
         }
 
-        // Coloca lechos, centros y líneas de espuma de los trozos y las dos bocas, y oculta lo que sobra.
+        // Coloca lechos, centros y líneas de espuma de los tramos, y oculta lo que sobra.
         private void PlacePieces()
         {
             const float width = ChannelWidthDp;
-            for (int i = 0; i < MaxPieces; i++)
+            for (int i = 0; i < MaxSegments; i++)
             {
                 bool on = i < _pieceCount;
                 OverlayParts.SetVisible(_bed[i], on);
@@ -877,10 +878,11 @@ namespace AF.Presentation.Mechanics
                 PlaceCapsule(_bed[i], mid, length, width, horizontal);
                 PlaceCapsule(_core[i], mid, length, width, horizontal);
 
-                // Línea de espuma en el eje, sin entrar en los extremos redondos.
+                // Línea de espuma en el eje, sin entrar en los extremos redondos ni en las bajadas.
                 float dash = length - width;
-                OverlayParts.SetVisible(_dash[i], dash > 1f);
-                if (dash > 1f)
+                bool showDash = dash > 1f && !_pieceDrop[i];
+                OverlayParts.SetVisible(_dash[i], showDash);
+                if (showDash)
                 {
                     RectTransform rt = _dash[i].rectTransform;
                     var size = new Vector2(dash, DashThickDp);
@@ -897,11 +899,67 @@ namespace AF.Presentation.Mechanics
                     SetRotation(rt, horizontal ? 0f : 90f);
                 }
             }
+        }
 
-            for (int m = 0; m < _mouth.Length; m++)
+        // Franjas de madera sobre los cruces del trazado pts (espacio de la raíz) con las repisas: cada tramo vertical que no es
+        // una bajada, en cada fila cuya repisa atraviesa; la bajada solo pasa por delante de la repisa de su propia fila.
+        private void ShowCovers(Vector2[] pts, int count, bool show)
+        {
+            _coverCount = 0;
+            float originY = LayerOrigin.y;
+            for (int i = 0; i < count - 1; i++)
             {
-                OverlayParts.SetVisible(_mouth[m], true);
-                OverlayParts.Place(_mouth[m], _mouthAt[m].x, _mouthAt[m].y, MouthWidthDp, MouthHeightDp, 1f);
+                Vector2 p = pts[i];
+                Vector2 q = pts[i + 1];
+                if (Mathf.Abs(q.x - p.x) > 0.01f || Mathf.Abs(q.y - p.y) < 0.01f)
+                {
+                    continue; // horizontal o vacío
+                }
+
+                bool drop = i == 0 || i == count - 2;
+                float footEnd = i == 0 ? p.y : q.y; // el pie de la bajada
+                float lo = Mathf.Min(p.y, q.y);
+                float hi = Mathf.Max(p.y, q.y);
+                for (int r = 0; r < _rowCount; r++)
+                {
+                    float foot = _rowFoot[r] - originY;
+                    float bandLo = foot - ShelfBottomBelowFootDp;
+                    float bandHi = foot + ShelfTopAboveFootDp;
+                    if (hi <= bandLo + 0.01f || lo >= bandHi - 0.01f)
+                    {
+                        continue;
+                    }
+
+                    if (drop && Mathf.Abs(footEnd - foot) <= RowTolerance)
+                    {
+                        continue; // la bajada, por delante de su repisa
+                    }
+
+                    if (_coverCount < MaxRows)
+                    {
+                        _coverAt[_coverCount++] = new Vector2(p.x, 0.5f * (bandLo + bandHi));
+                    }
+                }
+            }
+
+            const float coverW = ChannelWidthDp + (2f * CoverPadDp);
+            const float coverH = ShelfTopAboveFootDp + ShelfBottomBelowFootDp;
+            for (int i = 0; i < MaxRows; i++)
+            {
+                bool on = show && i < _coverCount;
+                OverlayParts.SetVisible(_cover[i], on);
+                if (on)
+                {
+                    OverlayParts.Place(_cover[i], _coverAt[i].x, _coverAt[i].y, coverW, coverH, 1f);
+                }
+            }
+        }
+
+        private void HideCovers()
+        {
+            for (int i = 0; i < MaxRows; i++)
+            {
+                OverlayParts.SetVisible(_cover[i], false);
             }
         }
 
@@ -929,22 +987,22 @@ namespace AF.Presentation.Mechanics
 
         private void HideChannel()
         {
+            if (!_animating)
+            {
+                HideCovers(); // durante la recepción, las franjas tapan la racha de esta cuia
+            }
+
             if (!_channelShown)
             {
                 return;
             }
 
             _channelShown = false;
-            for (int i = 0; i < MaxPieces; i++)
+            for (int i = 0; i < MaxSegments; i++)
             {
                 OverlayParts.SetVisible(_bed[i], false);
                 OverlayParts.SetVisible(_core[i], false);
                 OverlayParts.SetVisible(_dash[i], false);
-            }
-
-            for (int m = 0; m < _mouth.Length; m++)
-            {
-                OverlayParts.SetVisible(_mouth[m], false);
             }
         }
 
@@ -958,13 +1016,13 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // Trazado de la espuma: el canal de la pareja (siempre de la de menor índice a la de mayor), recorrido desde la cuia
-        // tocada hasta esta; las franjas de las repisas, en espacio de la raíz, para ocultar la espuma que pasa por detrás.
+        // Trazado de la racha: el canal de la pareja (siempre de la de menor índice a la de mayor), recorrido desde la cuia
+        // tocada hasta esta, con sus franjas de madera (las mismas que las del canal) delante.
         private void PreparePulse(int touched)
         {
             ICuiaBoard? board = _stepBoard;
             _pulseCount = 0;
-            _pulseBands = 0;
+            _rachaHead = -1f;
             if (board == null || touched < 0 || touched >= board.Count)
             {
                 return;
@@ -974,16 +1032,9 @@ namespace AF.Presentation.Mechanics
             int a = Mathf.Min(self, touched);
             int b = Mathf.Max(self, touched);
             _pulseCount = Route(board, a, b, _pulsePts);
-            Vector2 origin = LayerOrigin;
-            ToRoot(_pulsePts, _pulseCount, origin);
-            _pulseBands = _bandCount;
-            for (int k = 0; k < _bandCount; k++)
-            {
-                _pulseLo[k] = _bandLo[k] - origin.y;
-                _pulseHi[k] = _bandHi[k] - origin.y;
-            }
-
-            _pulseReverse = self == a; // el trazado va de a a b; la espuma, de la tocada a esta
+            ToRoot(_pulsePts, _pulseCount, LayerOrigin);
+            ShowCovers(_pulsePts, _pulseCount, true);
+            _pulseReverse = self == a; // el trazado va de a a b; la racha, de la tocada a esta
             _pulseAt[0] = 0f;
             for (int i = 1; i < _pulseCount; i++)
             {
@@ -991,10 +1042,10 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // Un fotograma de la recepción en t (0..1): espuma por el canal, giro de la espiral, la racha por el fondo y burbujas.
+        // Un fotograma de la recepción en t (0..1): la racha por el canal, giro de la espiral, la racha por el fondo y burbujas.
         private void PaintReceive(float t)
         {
-            PaintPulse(t);
+            PaintRacha(t);
             SetSpin(Mathf.FloorToInt(SpinTurns * ProceduralArt.RemolinoSpiralFrames * Ease.Out(t)));
             float rise = Mathf.Clamp01((t - FillStart) / (1f - FillStart));
             float p = _stepAmount * Ease.Out(rise);
@@ -1052,96 +1103,66 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // La espuma: 4 cápsulas suaves en fila por el canal, que entran y salen con un fundido y se ocultan por detrás de las
-        // repisas, giradas en la dirección del tramo.
-        private void PaintPulse(float t)
+        // La racha: un tramo de RachaLengthDp del tinte vertido que recorre el trazado desde la cuia tocada hasta esta, con
+        // un trozo por tramo del trazado que ocupa (cápsulas, así que los codos son redondos). Entra y sale bajo los
+        // remansos, que la tapan, y las franjas de madera la tapan donde pasa por detrás de una repisa.
+        private void PaintRacha(float t)
         {
             if (_pulseCount < 2 || t >= PulseEnd)
             {
-                HidePulse();
+                HideRacha();
                 return;
             }
 
-            float k = t / PulseEnd;
+            // Sinusoidal (pico de velocidad 1,57 veces la media, como la vuelta del vertido): con la cúbica, a mitad del canal
+            // la racha avanzaría más que su largo en un fotograma y se vería a saltos.
             float length = _pulseAt[_pulseCount - 1];
-            float head = Ease.InOut(k) * length;
-            float spacing = 1.15f * FoamBlobAspect * FoamBlobWidthDp;
-            float envelope = Mathf.Clamp01(k / PulseFade) * Mathf.Clamp01((1f - k) / PulseFade);
-            for (int i = 0; i < PulseBlobs; i++)
+            float band = Mathf.Min(RachaLengthDp, 0.6f * length);
+            float head = Ease.InOutSine(t / PulseEnd) * (length + band);
+            _rachaHead = Mathf.Min(head, length);
+            float tail = head - band;
+
+            // En el sentido del trazado (de la de menor índice a la de mayor): al revés si la tocada es la de mayor índice. Sin
+            // salir de las bajadas, que arrancan DropTopBelowFootDp bajo cada pie.
+            float lo = Mathf.Max(DropTopBelowFootDp, _pulseReverse ? length - head : tail);
+            float hi = Mathf.Min(length - DropTopBelowFootDp, _pulseReverse ? length - tail : head);
+            for (int i = 1; i < MaxChannelPoints; i++)
             {
-                float s = head - (i * spacing);
-                bool on = s >= 0f && s <= length;
-                int seg = 0;
-                Vector2 at = Vector2.zero;
+                Image piece = _racha[i - 1];
+                bool on = i < _pulseCount;
+                float s0 = 0f;
+                float s1 = 0f;
                 if (on)
                 {
-                    at = PointAt(_pulseReverse ? length - s : s, out seg);
-                    on = !BehindShelf(seg, at);
+                    s0 = Mathf.Max(lo, _pulseAt[i - 1]);
+                    s1 = Mathf.Min(hi, _pulseAt[i]);
+                    on = s1 - s0 > MinRachaDp;
                 }
 
-                OverlayParts.SetVisible(_pulse[i], on);
+                OverlayParts.SetVisible(piece, on);
                 if (!on)
                 {
                     continue;
                 }
 
-                RectTransform rt = _pulse[i].rectTransform;
-                if (rt.anchoredPosition != at)
-                {
-                    rt.anchoredPosition = at;
-                }
-
-                Vector2 d = _pulsePts[seg] - _pulsePts[seg - 1];
-                SetRotation(rt, Mathf.Abs(d.x) >= Mathf.Abs(d.y) ? 0f : 90f);
-                OverlayParts.SetColor(_pulse[i], OverlayParts.Fade(Palette.UiPaper, FoamBlobAlpha * envelope * (1f - (0.15f * i))));
+                Vector2 p0 = _pulsePts[i - 1];
+                Vector2 p1 = _pulsePts[i];
+                float len = Mathf.Max(1e-4f, _pulseAt[i] - _pulseAt[i - 1]);
+                Vector2 a = Vector2.Lerp(p0, p1, (s0 - _pulseAt[i - 1]) / len);
+                Vector2 b = Vector2.Lerp(p0, p1, (s1 - _pulseAt[i - 1]) / len);
+                bool horizontal = Mathf.Abs(p1.x - p0.x) >= Mathf.Abs(p1.y - p0.y);
+                PlaceCapsule(piece, 0.5f * (a + b), s1 - s0, RachaWidthDp, horizontal);
             }
         }
 
-        // La gota de espuma en at, sobre el tramo seg (vertical), queda en la franja de una repisa: pasa por detrás.
-        private bool BehindShelf(int seg, Vector2 at)
+        private void HideRacha()
         {
-            Vector2 d = _pulsePts[seg] - _pulsePts[seg - 1];
-            if (Mathf.Abs(d.x) >= Mathf.Abs(d.y))
+            _rachaHead = -1f;
+            for (int i = 0; i < MaxSegments; i++)
             {
-                return false;
-            }
-
-            float reach = (0.5f * FoamBlobAspect * FoamBlobWidthDp) - (0.5f * ChannelWidthDp); // la gota es más larga que el extremo redondo
-            for (int k = 0; k < _pulseBands; k++)
-            {
-                if (at.y > _pulseLo[k] + 0.01f && at.y < _pulseHi[k] + reach)
+                if (_racha[i] != null)
                 {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        // Punto del trazado de la espuma a la distancia s de su primer punto, y el tramo (índice de su punto final).
-        private Vector2 PointAt(float s, out int seg)
-        {
-            for (int i = 1; i < _pulseCount; i++)
-            {
-                if (s <= _pulseAt[i] || i == _pulseCount - 1)
-                {
-                    seg = i;
-                    float len = Mathf.Max(1e-4f, _pulseAt[i] - _pulseAt[i - 1]);
-                    return Vector2.Lerp(_pulsePts[i - 1], _pulsePts[i], Mathf.Clamp01((s - _pulseAt[i - 1]) / len));
-                }
-            }
-
-            seg = 1;
-            return _pulseCount > 0 ? _pulsePts[0] : Vector2.zero;
-        }
-
-        private void HidePulse()
-        {
-            for (int i = 0; i < PulseBlobs; i++)
-            {
-                if (_pulse[i] != null)
-                {
-                    OverlayParts.SetVisible(_pulse[i], false);
+                    OverlayParts.SetVisible(_racha[i], false);
                 }
             }
         }

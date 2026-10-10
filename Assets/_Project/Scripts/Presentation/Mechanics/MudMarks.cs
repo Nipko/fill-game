@@ -6,12 +6,17 @@ using UnityEngine.UI;
 namespace AF.Presentation.Mechanics
 {
     /// <summary>
-    /// Barro en una cuia (02 §9.1 M5; color 15 del motor): pinta cada dosis de Barro de <see cref="Palette.Mud"/>, opaca, sin
-    /// patrón ni brillo de fruta, con grumos más oscuros encima (<see cref="ProceduralArt.MudLumps"/>). <c>CuiaView</c> le
-    /// delega el pintado (<see cref="PaintMud"/>) y la sincroniza con el estado (<see cref="Show"/>), así que el aspecto del
-    /// Barro cambia aquí sin tocar la vista.
+    /// Barro en una cuia (02 §9.1 M5; color 15 del motor): pinta cada dosis de Barro de <see cref="Palette.Mud"/>, opaca y sin
+    /// patrón (tinte 0), con grumos más oscuros encima (<see cref="ProceduralArt.MudLumps"/>). <c>CuiaView</c> le delega el
+    /// pintado (<see cref="PaintMud"/>) y la sincroniza con el estado (<see cref="Show"/>), así que el aspecto del Barro
+    /// cambia aquí sin tocar la vista.
     /// </summary>
     /// <remarks>
+    /// <para><b>Pendiente: el brillo.</b> T16 pide el Barro «opaco, con grumos y sin brillo». <c>LiquidGraphic</c> pinta el
+    /// tinte 0 como agua base, con sus franjas especulares (+10 L*) y, si el barro queda en la cima, la cara superior aclarada
+    /// un 20 % y la línea clara de su borde; los grumos no las tapan. Quitarlas pide una vía mate en <c>LiquidGraphic</c> y su
+    /// shader (dueño en la ola 3: T15), que <see cref="PaintMud"/> usará; hasta entonces el Barro lleva el brillo del agua
+    /// base.</para>
     /// <para>Cuelga del cuerpo de la cuia, encima del líquido. Las bandas no giran con el vaso, así que en vuelo los grumos se
     /// ocultan.</para>
     /// <para><b>Lavado</b> (paso <see cref="MechanicStepKind.MudWash"/> de la cola, etapa (a), en el receptor; propuesta de

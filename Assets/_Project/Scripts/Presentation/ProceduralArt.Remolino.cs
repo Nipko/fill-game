@@ -6,8 +6,9 @@ namespace AF.Presentation
     /// <summary>
     /// Arte procedural [P] del Remolino (02 §9.1 M4; propuesta de D-007 b.2 M4: «espiral en la base de las dos cuias, unidas
     /// por un canal bajo el tablero»; D-003): el agua del canal que une las dos cuias de la pareja (un lecho y un centro con
-    /// degradado transversal, y una línea de espuma discontinua), la espuma suave que lo recorre al recibir y la espiral de
-    /// espuma aplanada sobre el remanso, en <see cref="RemolinoSpiralFrames"/> fases para que gire mientras la pareja recibe.
+    /// degradado transversal, y una línea de espuma discontinua), la franja de madera que lo tapa donde pasa por detrás de una
+    /// repisa y la espiral de espuma aplanada sobre el remanso, en <see cref="RemolinoSpiralFrames"/> fases para que gire
+    /// mientras la pareja recibe.
     /// Los colores del canal quedan a ΔE00 ≥ 10 de los 14 tintes y lejos del turquesa (direccion-visual-v2 §2.4, regla 1; los
     /// comprueba <c>CuiaOverlayTests</c>).
     /// </summary>
@@ -60,26 +61,16 @@ namespace AF.Presentation
         /// <summary>Agua del canal en los bordes #5E7F86 [P] (L* 51): ΔE00 19,9 del Agua del Tapajós.</summary>
         public static readonly Color RemolinoChannelEdge = Palette.Hex(0x5E7F86);
 
-        /// <summary>
-        /// Oscuro de remanso #0F1E22 [P]: la boca por la que el canal sale de debajo de la repisa de cada cuia de la pareja.
-        /// </summary>
-        public static readonly Color RemolinoChannelRim = Palette.Hex(0x0F1E22);
-
         // Lienzo de una fase de la espiral (px) con 2 px de margen arriba y abajo para que el filtrado no mezcle fases.
         private const int RemolinoSpiralW = (int)(RemolinoSpiralWidthU * MechanicPxPerU);
         private const int RemolinoSpiralH = (int)(RemolinoSpiralHeightU * MechanicPxPerU) + 4;
-
-        // Espuma que recorre el canal: cápsula 1,8:1 de 4,5 dp de ancho con 1,5 dp de borde suave, a 8 px/dp.
-        private const float RemolinoFoamPxPerDp = 8f;
-        private const float RemolinoFoamWidthDp = 4.5f;
-        private const float RemolinoFoamFeatherDp = 1.5f;
 
         // Línea de espuma del canal: 6 dp de trazo y 6 de hueco, 1 dp de grueso, a 4 px/dp.
         private const float RemolinoDashPxPerDp = 4f;
 
         private Sprite? _remolinoCapsule;
         private Sprite? _remolinoCapsuleSoft;
-        private Sprite? _remolinoFoam;
+        private Sprite? _remolinoShelfCover;
         private Sprite? _remolinoDash;
         private Sprite?[]? _remolinoSpiral;
 
@@ -99,10 +90,12 @@ namespace AF.Presentation
         public Sprite RemolinoCapsuleSoft => _remolinoCapsuleSoft != null ? _remolinoCapsuleSoft : (_remolinoCapsuleSoft = BuildRemolinoCapsule(true));
 
         /// <summary>
-        /// Espuma que recorre el canal al recibir: cápsula blanca 1,8:1 (eje largo horizontal) con borde suave de 1,5 dp a su
-        /// tamaño de <see cref="RemolinoFoamWidthDp"/> dp de ancho. Nunca un disco opaco: se tiñe de espuma translúcida.
+        /// Franja de la madera de la repisa (<see cref="Shelf"/>) para tapar el canal donde pasa por detrás de una repisa: una
+        /// columna de 2 dp del centro de su textura, que es uniforme en horizontal, con los 20 dp de madera (sin la sombra). Es
+        /// un sprite sobre la misma textura (ninguna textura nueva) y, estirado en horizontal a su ancho y colocado de pie + 3 a
+        /// pie − 17, repite los píxeles de la repisa.
         /// </summary>
-        public Sprite RemolinoFoam => _remolinoFoam != null ? _remolinoFoam : (_remolinoFoam = BuildRemolinoFoam());
+        public Sprite RemolinoShelfCover => _remolinoShelfCover != null ? _remolinoShelfCover : (_remolinoShelfCover = BuildRemolinoShelfCover());
 
         /// <summary>
         /// Línea de espuma discontinua del canal para <c>Image.Type.Tiled</c>: 12 × 1 dp con un trazo de 6 dp de puntas
@@ -161,20 +154,21 @@ namespace AF.Presentation
             return MakeSprite(pc, "remolino_capsule_soft", new Vector2(0.5f, 0.5f), new Vector4(r, r, r, r));
         }
 
-        private Sprite BuildRemolinoFoam()
+        private Sprite BuildRemolinoShelfCover()
         {
-            const float k = RemolinoFoamPxPerDp;
-            float wDp = RemolinoFoamWidthDp;
-            float lDp = 1.8f * wDp;
-            int w = Mathf.CeilToInt(lDp * k);
-            int h = Mathf.CeilToInt(wDp * k);
-            float soft = RemolinoFoamFeatherDp * k;
-            var pc = new PixelCanvas(w, h);
-
-            // La silueta (50 % de la cobertura suave) mide lDp × wDp; el borde suave queda dentro del lienzo.
-            float inset = 0.5f * soft;
-            pc.FillRoundedRectSoft(inset, inset, w - inset, h - inset, (0.5f * h) - inset, soft, Color.white);
-            return MakeSprite(pc, "remolino_foam", new Vector2(0.5f, 0.5f), Vector4.zero, k);
+            // BuildShelf: 26 dp de alto a UiPxPerDp, de arriba abajo 20 dp de madera y 6 de sombra; la fila 0 de la textura es
+            // la de abajo, así que la madera son las filas desde 6 dp. El centro (fuera de los bordes 9-slice de 16 dp) solo
+            // depende de la altura.
+            Texture2D tex = Shelf.texture;
+            const float k = UiPxPerDp;
+            float wood = 20f * k;
+            float x = Mathf.Round((0.5f * tex.width) - k);
+            var rect = new Rect(x, tex.height - wood, 2f * k, wood);
+            Sprite sprite = Sprite.Create(tex, rect, new Vector2(0.5f, 0.5f), 100f * k, 0, SpriteMeshType.FullRect, Vector4.zero);
+            sprite.name = "remolino_shelf_cover";
+            sprite.hideFlags = HideFlags.DontSave;
+            _owned.Add(sprite);
+            return sprite;
         }
 
         private Sprite BuildRemolinoDash()

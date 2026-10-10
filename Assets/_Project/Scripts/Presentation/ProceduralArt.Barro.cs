@@ -30,11 +30,24 @@ namespace AF.Presentation
             0.50f, 0.46f, 0.18f, 0.08f, 2f,
         };
 
+        /// <summary>Barrido máximo de cada arco de sedimento de la nube (grados): abiertos, nunca una espiral.</summary>
+        public const float BarroArcMaxSweepDeg = 120f;
+
+        // Arcos de sedimento: (x, y) del centro relativos a la banda, radio vertical (fracción del alto; el horizontal es 1,6
+        // veces), inicio y barrido (grados) y trazo (px). Repartidos entre las volutas, cada uno con su sentido.
+        private static readonly float[] BarroCloudArcs =
+        {
+            0.36f, 0.50f, 0.17f, 200f, 110f, 4.5f,
+            0.64f, 0.44f, 0.15f, 10f, 100f, 4f,
+            0.52f, 0.66f, 0.12f, 120f, 90f, 3.5f,
+        };
+
         private Sprite? _barroCloud;
 
         /// <summary>
         /// Nube de barro de una banda de dosis (1,6 × 1 u, el ancho de la cavidad): volutas pardas con grumos oscuros y
-        /// sedimento claro, y una voluta en espiral que da el remolino del barro al disolverse. Bordes difuminados.
+        /// sedimento claro, y unos arcos abiertos de sedimento (≤ <see cref="BarroArcMaxSweepDeg"/>°) que dan el remolino suelto
+        /// del barro al disolverse, sin la espiral del Remolino. Bordes difuminados.
         /// </summary>
         public Sprite BarroCloud => _barroCloud != null ? _barroCloud : (_barroCloud = BuildBarroCloud());
 
@@ -60,16 +73,12 @@ namespace AF.Presentation
                 pc.FillEllipseSoft(puffs[i] * w, puffs[i + 1] * h, puffs[i + 2] * h * 1.6f, puffs[i + 3] * h * 1.6f, 6f, c);
             }
 
-            // Voluta en espiral de sedimento claro (el barro que se deshace girando).
-            Vector2 prev = new Vector2(w * 0.5f, h * 0.5f);
-            const int steps = 60;
-            for (int i = 1; i <= steps; i++)
+            // Arcos abiertos de sedimento claro entre las volutas (el barro que se deshace en remolinos sueltos). Nunca una
+            // espiral cerrada: es la seña del Remolino, y en un nivel con las dos mecánicas la cuia lavada no debe parecerlo.
+            float[] arcs = BarroCloudArcs;
+            for (int i = 0; i < arcs.Length; i += 6)
             {
-                float t = i / (float)steps;
-                float angle = t * 1.6f * Mathf.PI * 2f;
-                var p = new Vector2((w * 0.5f) + (Mathf.Cos(angle) * t * w * 0.34f), (h * 0.5f) + (Mathf.Sin(angle) * t * h * 0.3f));
-                pc.FillCapsule(prev.x, prev.y, p.x, p.y, 1.2f + (2.2f * t), ColorMath.WithAlpha(silt, 0.55f * (1f - (0.5f * t))));
-                prev = p;
+                DrawBarroArc(pc, arcs[i] * w, arcs[i + 1] * h, arcs[i + 2] * h * 1.6f, arcs[i + 2] * h, arcs[i + 3], arcs[i + 4], arcs[i + 5], silt);
             }
 
             // Bordes difuminados: la nube se apaga en los últimos 14 px de cada lado.
@@ -85,6 +94,26 @@ namespace AF.Presentation
             }
 
             return MakeSprite(pc, "barro_cloud", new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        // Arco abierto de sedimento: elipse de radios rx × ry centrada en (cx, cy), de startDeg a startDeg + sweepDeg (≤ 120°),
+        // con trazo de stroke px que se afila en los dos extremos.
+        private static void DrawBarroArc(PixelCanvas pc, float cx, float cy, float rx, float ry, float startDeg, float sweepDeg, float stroke, Color silt)
+        {
+            const int steps = 24;
+            float a0 = startDeg * Mathf.Deg2Rad;
+            float sweep = Mathf.Min(sweepDeg, BarroArcMaxSweepDeg) * Mathf.Deg2Rad;
+            var prev = new Vector2(cx + (Mathf.Cos(a0) * rx), cy + (Mathf.Sin(a0) * ry));
+            for (int i = 1; i <= steps; i++)
+            {
+                float t = i / (float)steps;
+                float angle = a0 + (t * sweep);
+                var p = new Vector2(cx + (Mathf.Cos(angle) * rx), cy + (Mathf.Sin(angle) * ry));
+                float taper = Mathf.Sin(t * Mathf.PI); // fino en los extremos, como una estela
+                float radius = 0.5f * stroke * (0.35f + (0.65f * taper));
+                pc.FillCapsule(prev.x, prev.y, p.x, p.y, radius, ColorMath.WithAlpha(silt, 0.45f * (0.4f + (0.6f * taper))));
+                prev = p;
+            }
         }
     }
 }
