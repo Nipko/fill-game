@@ -19,8 +19,9 @@ namespace AF.Tests.PlayMode
     /// salpicadura), <c>81c_lluvia_end_l143</c> (la última gota y la nube que se va), <c>80b_lluvia_wait_l143</c> y
     /// <c>80c_lluvia_full_l143</c> (cuia llena: la gota intenta caer y queda colgando, si el nivel llega a ese estado),
     /// <c>82_pirana_l183</c> (la cueva y el cardumen rondando), <c>82b_pirana_asleep_l183</c> (cueva llena: duerme),
-    /// <c>83_pirana_bite_l183</c> (muerde a la víctima), <c>83b_pirana_carry_l183</c> (se lleva el bocado) y
-    /// <c>83c_pirana_cave_l183</c> (lo deja en la cueva). Sirven para mirar a 48 dp la legibilidad, los solapes, los colores y
+    /// <c>83_pirana_bite_l183</c> (muerde: el bocado sale de la dosis de la víctima y sube por su eje),
+    /// <c>83b_pirana_carry_l183</c> (se lleva el bocado) y <c>83c_pirana_cave_l183</c> (el bocado entra por la boca de la
+    /// cueva). Sirven para mirar a 48 dp la legibilidad, los solapes, los colores y
     /// la línea D-003. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.LluviaPiranaSnapshotTests</c> sin <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/</c>.
     /// </summary>

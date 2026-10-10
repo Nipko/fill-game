@@ -28,17 +28,22 @@ namespace AF.Presentation.Mechanics
     /// <para>Pasos de la etapa (e), despachados a la cueva (<c>Index</c> = la cueva, <c>OtherIndex</c> = la víctima):</para>
     /// <list type="bullet">
     /// <item><description><see cref="MechanicStepKind.Bite"/> (<see cref="BiteStepMs"/> × <c>ctx.SpeedFactor</c>, [P] b.2): el
-    /// cardumen sale de la cueva y nada en arco hasta la boca de la víctima (<c>ctx.OtherPos</c>), la que va delante muerde la
-    /// dosis de arriba (que se ve al empezar: el vertido acabó en <c>ctx.OtherBefore</c>), unas burbujas, y se lleva el bocado
-    /// a la cueva, donde forma su dosis de arriba. Las dos cuias se pintan con <c>ctx.Board.SetDose</c> y, al terminar, con
-    /// <c>ShowContent</c> de <c>ctx.After</c> y <c>ctx.OtherAfter</c>. A mitad del paso la víctima aún tiene la dosis.</description></item>
+    /// cardumen sale de la cueva y nada en arco hasta la boca de la víctima (<c>ctx.OtherPos</c>), que conserva la dosis de
+    /// arriba (el vertido acabó en <c>ctx.OtherBefore</c>). La que va delante baja el morro a la boca y el bocado SALE de esa
+    /// dosis: una cápsula del tinte, con su patrón y un contorno de vidrio, sube por el eje de la víctima hasta su boca (al
+    /// atraparlo, unos destellos del tinte), mientras la dosis se vacía (desde la mitad del paso: a mitad, la víctima aún la
+    /// tiene). El cardumen se lleva el bocado a la cueva, lo suelta sobre su eje y el bocado entra recto por la boca y se
+    /// apaga al cruzar el labio, cuando empieza a formarse la dosis de arriba de la cueva (con su salpicadura). Las dos cuias
+    /// se pintan con <c>ctx.Board.SetDose</c> y, al terminar, con <c>ShowContent</c> de <c>ctx.After</c> y
+    /// <c>ctx.OtherAfter</c>.</description></item>
     /// <item><description><see cref="MechanicStepKind.BiteLost"/> (<see cref="BiteLostStepMs"/> [P]; víctima sellada, Matapi,
     /// la propia cueva o cueva llena): un amago hacia la víctima y vuelta, sin cambiar nada; con la cueva llena, el cardumen
     /// dormido solo se revuelve.</description></item>
     /// </list>
     /// <para>Los puntos se llenan todos al empezar (el vertido que completa el ritmo) y vuelven a los de <c>After</c> con el
-    /// mordisco o el amago. Sin asignaciones en los pasos ni en <see cref="Tick"/>. La Piraña queda pendiente de revisión del
-    /// asesor cultural.</para>
+    /// mordisco o el amago; los vacíos son el aro a <see cref="EmptyPipAlpha"/> (se distinguen por contraste a 48 dp, no por
+    /// un hueco de menos de 2 dp). Sin asignaciones en los pasos ni en <see cref="Tick"/>. La Piraña queda pendiente de
+    /// revisión del asesor cultural.</para>
     /// </remarks>
     public sealed class PiranaOverlay : CuiaOverlay
     {
@@ -57,11 +62,36 @@ namespace AF.Presentation.Mechanics
         /// <summary>Vuelta del cardumen alrededor de su sitio (ms) [P].</summary>
         public const float IdlePeriodMs = 3600f;
 
-        /// <summary>Centro del arco de piedras sobre el canto de la boca (u).</summary>
-        public const float CaveCenterAboveRimU = 0.39f;
+        /// <summary>Centro del arco de piedras sobre el canto de la boca (u): la base del hueco queda 0,06 u bajo la boca.</summary>
+        public const float CaveCenterAboveRimU = 0.415f;
 
         /// <summary>Hueco entre lo alto del arco y el centro del cardumen (u).</summary>
         public const float SchoolAboveCaveU = 0.42f;
+
+        /// <summary>Lado de los puntos del contador en el hueco de la cueva (u; ≈ 7 dp con la cuia de 48 dp).</summary>
+        public const float PipU = 0.28f;
+
+        /// <summary>Paso entre los centros de los puntos (u); con k ≥ 5 se juntan para seguir dentro del hueco.</summary>
+        public const float PipStepU = 0.31f;
+
+        /// <summary>
+        /// Opacidad de los puntos vacíos (el aro) frente a los llenos, en el hueco de la cueva. Perla sobre sombra: con la mezcla
+        /// en lineal del proyecto, al 0,2 el aro queda a la mitad de brillo que el punto lleno (≈ 2,8:1 frente al hueco, el lleno
+        /// ≈ 9,8:1), así que el vertido que falta se ve tenue y no compite con los contados (revisión de T17).
+        /// </summary>
+        public const float EmptyPipAlpha = 0.2f;
+
+        /// <summary>Fracción del paso del mordisco en que el bocado empieza a salir de la dosis de la víctima.</summary>
+        public const float MorselRiseStart = 0.45f;
+
+        /// <summary>Fracción del paso en que la víctima empieza a perder la dosis: hasta la mitad, la conserva entera.</summary>
+        public const float DrainStart = 0.5f;
+
+        /// <summary>Fracción del paso en que la víctima ya no tiene la dosis (120 ms con 500 ms).</summary>
+        public const float DrainEnd = 0.74f;
+
+        /// <summary>Fracción del paso en que el bocado cruza el labio de la cueva y se apaga.</summary>
+        public const float MorselGone = 0.93f;
 
         // La piraña que va delante muerde.
         private const int Lead = 1;
@@ -70,21 +100,44 @@ namespace AF.Presentation.Mechanics
         private const float ClockWrapMs = 50400f;
         private const float BobPeriodMs = 2800f;
 
-        // Fases del mordisco (fracción del paso).
+        // Fases del mordisco (fracción del paso): llega a la víctima, el bocado sube hasta la boca de la que muerde
+        // (MorselRiseStart → CarryStart), se lo lleva a la cueva, lo suelta sobre su eje (CarryEnd → OverCaveEnd), entra recto
+        // por la boca (→ MorselGone) y la dosis de la cueva se forma desde FillStart.
         private const float JoinEnd = 0.12f;
         private const float ReachEnd = 0.40f;
         private const float BiteAt = 0.53f;
-        private const float DrainEnd = 0.66f;
         private const float CarryStart = 0.62f;
         private const float CarryEnd = 0.86f;
-        private const float FillStart = 0.88f;
-        private const float MorselGone = 0.96f;
+        private const float OverCaveEnd = 0.90f;
+        private const float FillStart = 0.92f;
+
+        // El bocado nace a este tamaño en la superficie de la dosis y crece hasta 1 en la boca; su centro sale este tanto (u)
+        // por debajo de lo alto de la dosis, y se suelta este tanto (u) sobre la boca de la cueva.
+        private const float MorselStartScale = 0.4f;
+        private const float MorselStartBelowTopU = 0.2f;
+        private const float MorselOverCaveU = 0.3f;
+
+        // Destellos al atrapar el bocado [P] (del tope común de 44 partículas y 8 aditivas), a tres cuartos de su tamaño: un
+        // acento junto al pez, no una celebración.
+        private const int CatchSparkles = 4;
+        private const float CatchSparkleScale = 0.75f;
+
+        // Patrón del bocado: un rectángulo que cabe dentro de la cápsula (u) [P].
+        private const float MorselPatternWidthU = 0.62f;
+        private const float MorselPatternHeightU = 0.36f;
+
+        // Fila de puntos: centro sobre la boca (u; 0,16 u sobre la base del hueco) y ancho útil del hueco a esa altura (u).
+        private const float PipRowAboveRimU = 0.10f;
+        private const float PipRowMaxU = 1.29f;
 
         // Fases del amago.
         private const float FeintEnd = 0.45f;
         private const float TurnEnd = 0.55f;
         private const float FeintReach = 0.38f;
         private const float LostPipsAt = 0.5f;
+
+        // Contorno del bocado: vidrio_borde al 90 % (se lee con cualquier tinte sobre el panel).
+        private static readonly Color MorselRimColor = new Color(Palette.GlassRim.r, Palette.GlassRim.g, Palette.GlassRim.b, 0.9f);
 
         // Sitio de cada piraña quieta (dormida o con Reducir movimiento), en u desde el centro del cardumen, y hacia dónde mira
         // (+1 a la izquierda).
@@ -96,7 +149,9 @@ namespace AF.Presentation.Mechanics
         private readonly Vector2[] _fishPos = new Vector2[SchoolSize];
         private readonly Vector2[] _start = new Vector2[SchoolSize];
         private Image _arch = null!;
+        private Image _morselRim = null!;
         private Image _morsel = null!;
+        private RawImage _morselPattern = null!;
         private Image _glint = null!;
         private PipRow _pips = null!;
         private RectTransform _school = null!;
@@ -128,11 +183,21 @@ namespace AF.Presentation.Mechanics
         private int _caveDose = -1;
         private int _tint;
         private Color _color;
+        private Color _patternColor;
+        private bool _patternOn;
+        private int _patternTint = -1;
+        private float _carryFacing = 1f;
         private Vector2 _target;
         private Vector2 _cave;
         private Vector2 _caveSurface;
-        private Vector2 _victimMouth;
+        private Vector2 _caveTop;
+        private Vector2 _caveLip;
+        private Vector2 _morselFrom;
+        private Vector2 _morselDrop;
+        private Vector2 _morselPos;
+        private float _morselScale = 1f;
         private bool _sleepy;
+        private bool _caught;
         private bool _bitten;
         private bool _drained;
         private bool _splashed;
@@ -151,6 +216,9 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>Puntos llenos: vertidos útiles contados desde el último mordisco.</summary>
         public int FilledPips => _on ? _pips.Filled : 0;
+
+        /// <summary>Fila de puntos del contador (tests: tamaño y opacidad de cada punto).</summary>
+        public PipRow Pips => _pips;
 
         /// <summary>Atenuada: la cueva está llena y el cardumen duerme (respuesta Q-C).</summary>
         public bool Dimmed => _on && _dimmed;
@@ -203,6 +271,21 @@ namespace AF.Presentation.Mechanics
         /// <summary>El bocado que se lleva el cardumen está a la vista.</summary>
         public bool MorselVisible => _morsel.color.a > 0.01f;
 
+        /// <summary>Opacidad del bocado (su cápsula del tinte).</summary>
+        public float MorselAlpha => _morsel.color.a;
+
+        /// <summary>Centro del bocado, en el espacio de las capas de tablero.</summary>
+        public Vector2 MorselCenter => ToLayer(_morselPos);
+
+        /// <summary>Escala del bocado (crece de 0,4 a 1 mientras sale de la dosis).</summary>
+        public float MorselScale => _morselScale;
+
+        /// <summary>El bocado lleva el patrón de la fruta mordida (07 §3), en el tinte de sus marcas.</summary>
+        public bool MorselPatterned => _patternOn && _morselPattern.color.a > 0.01f;
+
+        /// <summary>Imagen del contorno del bocado (tests: color y tamaño).</summary>
+        public Image MorselRim => _morselRim;
+
         /// <summary>Imagen de la piraña <paramref name="i"/> (tests).</summary>
         public Image Fish(int i)
         {
@@ -228,10 +311,10 @@ namespace AF.Presentation.Mechanics
                 if (dim != _dimmed)
                 {
                     _dimmed = dim;
-                    float alpha = dim ? DimAlpha : 1f;
-                    OverlayParts.SetColor(_arch, new Color(1f, 1f, 1f, alpha));
-                    _pips.SetAlpha(alpha);
+                    OverlayParts.SetColor(_arch, new Color(1f, 1f, 1f, dim ? DimAlpha : 1f));
                 }
+
+                PaintPips();
             }
 
             Apply();
@@ -247,13 +330,14 @@ namespace AF.Presentation.Mechanics
             var fishSize = new Vector2(ProceduralArt.PiranaFishWidthU * u, ProceduralArt.PiranaFishHeightU * u);
             for (int i = 0; i < SchoolSize; i++)
             {
-                RectTransform rt = _fish[i].rectTransform;
-                if (rt.sizeDelta != fishSize)
-                {
-                    rt.sizeDelta = fishSize;
-                }
+                SetSize(_fish[i].rectTransform, fishSize);
             }
 
+            var morselSize = new Vector2(ProceduralArt.PiranaMorselWidthU * u, ProceduralArt.PiranaMorselHeightU * u);
+            SetSize(_morselRim.rectTransform, morselSize);
+            SetSize(_morsel.rectTransform, morselSize);
+            SetSize(_morselPattern.rectTransform, new Vector2(MorselPatternWidthU * u, MorselPatternHeightU * u));
+            SetSize(_glint.rectTransform, new Vector2(0.26f * u, 0.12f * u));
             RecomputeHome();
             if (!_animating)
             {
@@ -358,6 +442,7 @@ namespace AF.Presentation.Mechanics
             _t = 0f;
             _fresh = true;
             _animating = true;
+            _caught = false;
             _bitten = false;
             _drained = false;
             _splashed = false;
@@ -365,6 +450,7 @@ namespace AF.Presentation.Mechanics
             _sleepy = ctx.Before.IsFull;
             int k = ctx.Before.MechanicK;
             _pips.Set(k, k); // el vertido que completa el ritmo llena todos los puntos
+            PaintPips();
             for (int i = 0; i < SchoolSize; i++)
             {
                 _start[i] = _fishPos[i];
@@ -376,18 +462,23 @@ namespace AF.Presentation.Mechanics
             Vector2 self = ToSchool(ctx.SelfPos);
             Vector2 other = ToSchool(ctx.OtherPos);
             _target = hasVictim ? other + new Vector2(0f, (victimHeight + 0.55f) * _u) : _home + new Vector2(0f, 0.45f * _u);
-            _victimMouth = other + new Vector2(0f, (victimHeight - 0.15f) * _u);
             _cave = self + new Vector2(0f, (_heightU + 0.42f) * _u);
+            _carryFacing = FacingFrom(_target, _cave);
             _victimDose = -1;
             _caveDose = -1;
             if (_kind == MechanicStepKind.Bite && hasVictim)
             {
                 _tint = ctx.Tint;
                 _color = Palette.Tint(_tint);
+                SetMorselTint(_tint);
                 _victimDose = ctx.OtherBefore.Count - 1;
                 _caveDose = ctx.Before.Count;
+                float doseTop = CuiaGeometry.CavityBottomU + _victimDose + 1f;
+                _morselFrom = other + new Vector2(0f, (doseTop - MorselStartBelowTopU) * _u);
                 _caveSurface = self + new Vector2(0f, (CuiaGeometry.CavityBottomU + _caveDose) * _u);
-                OverlayParts.SetColor(_morsel, new Color(_color.r, _color.g, _color.b, 0f));
+                _morselDrop = Mouth(Formation(Lead, _cave, _carryFacing), _carryFacing, 0f);
+                _caveTop = self + new Vector2(0f, (_heightU + MorselOverCaveU) * _u);
+                _caveLip = self + new Vector2(0f, _heightU * _u);
                 if (_board != null)
                 {
                     PaintVictim(1f);
@@ -395,6 +486,7 @@ namespace AF.Presentation.Mechanics
                 }
             }
 
+            HideMorsel();
             Pose(0f);
             return _dur;
         }
@@ -421,6 +513,11 @@ namespace AF.Presentation.Mechanics
             into.Add(ProceduralArt.PiranaFishFin);
             into.Add(ProceduralArt.Slate); // contorno de las piedras
             into.Add(ProceduralArt.Pearl); // puntos del contador (el bocado lleva la fruta a propósito)
+            // El punto vacío sobre el hueco (mezcla en sRGB y en lineal, como la pinta la UI) y el lleno con la cueva llena.
+            into.Add(Color.Lerp(ProceduralArt.PiranaCaveDark, ProceduralArt.Pearl, EmptyPipAlpha));
+            into.Add(Color.Lerp(ProceduralArt.PiranaCaveDark.linear, ProceduralArt.Pearl.linear, EmptyPipAlpha).gamma);
+            into.Add(Color.Lerp(ProceduralArt.PiranaCaveFloor.linear, ProceduralArt.Pearl.linear, EmptyPipAlpha).gamma);
+            into.Add(Color.Lerp(ProceduralArt.PiranaCaveDark.linear, ProceduralArt.Pearl.linear, DimAlpha).gamma);
         }
 
         /// <inheritdoc />
@@ -445,7 +542,10 @@ namespace AF.Presentation.Mechanics
                 _fish[i] = SchoolImage("PiranaFish" + i, art.PiranaFishSprite, Color.white);
             }
 
+            // El bocado, delante de las pirañas: contorno de vidrio, cápsula del tinte, marcas del patrón y brillo.
+            _morselRim = SchoolImage("PiranaMorselRim", art.PiranaMorselRimSprite, new Color(1f, 1f, 1f, 0f));
             _morsel = SchoolImage("PiranaMorsel", art.PiranaMorselSprite, new Color(1f, 1f, 1f, 0f));
+            _morselPattern = SchoolPattern("PiranaMorselPattern", art.PatternAtlas);
             _glint = SchoolImage("PiranaMorselGlint", art.CounterPip, new Color(1f, 1f, 1f, 0f));
             go.SetActive(false);
 
@@ -453,6 +553,7 @@ namespace AF.Presentation.Mechanics
             var link = new GameObject("PiranaSchoolLink");
             link.transform.SetParent(Host.SlotBack, false);
             link.AddComponent<SchoolLink>().School = go;
+            PaintPips();
         }
 
         private Image SchoolImage(string name, Sprite sprite, Color color)
@@ -466,6 +567,23 @@ namespace AF.Presentation.Mechanics
             return img;
         }
 
+        // Las marcas del patrón del bocado: el atlas de patrones (07 §3) con la fila del tinte; se muestra con el alfa.
+        private RawImage SchoolPattern(string name, Texture2D atlas)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+            go.transform.SetParent(_school, false);
+            RawImage img = go.GetComponent<RawImage>();
+            img.texture = atlas;
+            img.color = new Color(1f, 1f, 1f, 0f);
+            img.raycastTarget = false;
+            RectTransform rt = img.rectTransform;
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            img.canvasRenderer.cullTransparentMesh = true;
+            return img;
+        }
+
         private bool ReduceMotion
         {
             get
@@ -475,10 +593,37 @@ namespace AF.Presentation.Mechanics
             }
         }
 
+        // Puntos de 0,28 u con paso de 0,31 u en el hueco del arco (≥ 1,3 u de ancho a esa altura); con k ≥ 5 se juntan y
+        // encogen para seguir dentro.
         private void LayoutPips()
         {
-            float step = _pipK >= 5 ? 0.22f : 0.27f; // con k = 5 la fila cabe en el hueco del arco
-            _pips.Layout(0f, _heightU + 0.27f, 0.2f, step, _u);
+            int k = Mathf.Max(1, _pipK);
+            float step = PipStepU;
+            float size = PipU;
+            if (k > 1 && ((k - 1) * step) + size > PipRowMaxU)
+            {
+                step = PipRowMaxU / (k - 0.1f);
+                size = 0.9f * step;
+            }
+
+            _pips.Layout(0f, _heightU + PipRowAboveRimU, size, step, _u);
+        }
+
+        // Los llenos en perla y los vacíos (el aro) más tenues; con la cueva llena, todo atenuado.
+        private void PaintPips()
+        {
+            LluviaOverlay.PaintPips(_pips, ProceduralArt.Pearl, _dimmed ? DimAlpha : 1f, EmptyPipAlpha);
+        }
+
+        private void SetMorselTint(int tint)
+        {
+            _patternOn = ProceduralArt.HasPattern(tint);
+            _patternColor = Palette.PatternMark(_color, tint);
+            if (_patternOn && tint != _patternTint)
+            {
+                _patternTint = tint;
+                _morselPattern.uvRect = Host.Art.PatternUv(tint, MorselPatternWidthU, MorselPatternHeightU);
+            }
         }
 
         private void RecomputeHome()
@@ -532,8 +677,7 @@ namespace AF.Presentation.Mechanics
                 SetFish(i, pos, facing, scale, alpha, 0f);
             }
 
-            OverlayParts.SetColor(_morsel, new Color(_color.r, _color.g, _color.b, 0f));
-            OverlayParts.SetColor(_glint, new Color(1f, 1f, 1f, 0f));
+            HideMorsel();
         }
 
         private void IdlePose(int i, out Vector2 pos, out float facing, out float scale, out float alpha)
@@ -588,12 +732,12 @@ namespace AF.Presentation.Mechanics
             }
             else if (p < CarryEnd)
             {
-                facing = FacingFrom(_target, _cave);
+                facing = _carryFacing;
                 center = Arc(_target, _cave, Ease.InOut((p - CarryStart) / (CarryEnd - CarryStart)));
             }
             else
             {
-                facing = FacingFrom(_target, _cave);
+                facing = _carryFacing;
                 center = Vector2.Lerp(_cave, _home, Ease.Out((p - CarryEnd) / (1f - CarryEnd)));
             }
 
@@ -631,49 +775,68 @@ namespace AF.Presentation.Mechanics
                 }
             }
 
-            // El mordisco: burbujas, la víctima pierde la dosis de arriba y el contador vuelve a empezar.
+            // La mordida: el contador vuelve a empezar.
             if (!_bitten && p >= BiteAt)
             {
                 _bitten = true;
-                Emit(true, 0f);
                 ResetPips();
             }
 
-            if (p >= BiteAt && !_drained)
+            // La víctima pierde la dosis de arriba desde la mitad del paso, poco a poco mientras sube el bocado.
+            if (p >= DrainStart && !_drained)
             {
-                float q = Mathf.Clamp01((p - BiteAt) / (DrainEnd - BiteAt));
-                PaintVictim(1f - Ease.In(q));
+                float q = Mathf.Clamp01((p - DrainStart) / (DrainEnd - DrainStart));
+                PaintVictim(1f - Ease.InOut(q));
                 _drained = q >= 1f;
             }
 
-            // El bocado va en la boca de la que muerde y cae dentro de la cueva, que forma su dosis de arriba.
-            float morselAlpha = 0f;
+            // El bocado: sale de la dosis y sube por el eje de la víctima hasta la boca de la que muerde (creciendo), va en
+            // su boca hasta la cueva, se suelta sobre el eje de la cueva y entra recto por la boca, apagándose en el labio.
+            Vector2 mouth = Mouth(leadPos, facing, leadTilt);
+            Vector2 morselPos = mouth;
             float morselScale = 1f;
-            Vector2 morselPos = Mouth(leadPos, facing, leadTilt);
-            if (p >= BiteAt && p < CarryEnd)
+            float morselAlpha = 0f;
+            if (p >= MorselRiseStart && p < CarryStart)
+            {
+                float q = (p - MorselRiseStart) / (CarryStart - MorselRiseStart);
+                morselPos = new Vector2(Mathf.Lerp(_morselFrom.x, mouth.x, q * q), Mathf.Lerp(_morselFrom.y, mouth.y, Ease.InOut(q)));
+                morselScale = Mathf.Lerp(MorselStartScale, 1f, Ease.Out(q));
+                morselAlpha = Mathf.Clamp01(q / 0.2f);
+            }
+            else if (p >= CarryStart && p < CarryEnd)
             {
                 morselAlpha = 1f;
-                morselScale = 0.6f + (0.4f * Ease.Out(Mathf.Clamp01((p - BiteAt) / 0.06f)));
             }
-            else if (p >= CarryEnd && p < MorselGone)
+            else if (p >= CarryEnd && p < OverCaveEnd)
             {
-                float q = (p - CarryEnd) / (MorselGone - CarryEnd);
-                Vector2 from = Mouth(Formation(Lead, _cave, facing), facing, 0f);
-                Vector2 into = _caveSurface + new Vector2(0f, 0.3f * _u);
-                morselPos = Vector2.Lerp(from, into, Ease.In(q));
-                morselScale = Mathf.Lerp(1f, 0.6f, q);
-                morselAlpha = q < 0.7f ? 1f : 1f - ((q - 0.7f) / 0.3f);
+                morselPos = Vector2.Lerp(_morselDrop, _caveTop, Ease.InOut((p - CarryEnd) / (OverCaveEnd - CarryEnd)));
+                morselAlpha = 1f;
+            }
+            else if (p >= OverCaveEnd && p < MorselGone)
+            {
+                float q = (p - OverCaveEnd) / (MorselGone - OverCaveEnd);
+                morselPos = Vector2.Lerp(_caveTop, _caveLip, Ease.In(q));
+                morselAlpha = 1f - q;
             }
 
             PlaceMorsel(morselPos, morselScale, morselAlpha);
+
+            // Al atrapar el bocado (llega a la boca de la que muerde), unos destellos del tinte: un «ñam» junto al pez, en vez
+            // de burbujas que se quedan en la cuia vacía o en el aire.
+            if (!_caught && p >= CarryStart)
+            {
+                _caught = true;
+                EmitCatch(morselPos);
+            }
+
+            // La dosis de arriba de la cueva se forma cuando entra el bocado, con su salpicadura al empezar.
             if (p >= FillStart)
             {
-                float fill = Ease.Out((p - FillStart) / (1f - FillStart));
-                PaintCave(fill);
-                if (!_splashed && fill >= 0.7f)
+                PaintCave(Ease.Out((p - FillStart) / (1f - FillStart)));
+                if (!_splashed)
                 {
                     _splashed = true;
-                    Emit(false, fill); // en la superficie que sube, no dentro de la dosis ya formada
+                    EmitSplash();
                 }
             }
         }
@@ -695,7 +858,7 @@ namespace AF.Presentation.Mechanics
                     SetFish(i, pos, facing, scale, alpha, (i % 2 == 0 ? 1f : -1f) * wiggle);
                 }
 
-                PlaceMorsel(_home, 1f, 0f);
+                HideMorsel();
                 return;
             }
 
@@ -732,7 +895,7 @@ namespace AF.Presentation.Mechanics
                 SetFish(i, pos, sx, scale, alpha, 0f);
             }
 
-            PlaceMorsel(_home, 1f, 0f);
+            HideMorsel();
         }
 
         // Entra desde donde estaba cada piraña y, al final, vuelve a su ronda.
@@ -836,23 +999,56 @@ namespace AF.Presentation.Mechanics
             OverlayParts.SetColor(fish, new Color(1f, 1f, 1f, alpha));
         }
 
+        // El bocado en pos (espacio del cardumen) con la escala y la opacidad dadas: contorno, cápsula, patrón y brillo.
         private void PlaceMorsel(Vector2 pos, float scale, float alpha)
         {
-            float side = 0.36f * scale * _u;
-            RectTransform rt = _morsel.rectTransform;
-            rt.anchoredPosition = pos;
-            rt.sizeDelta = new Vector2(side, side);
+            _morselPos = pos;
+            _morselScale = scale;
+            var s = new Vector3(scale, scale, 1f);
+            PlacePart(_morselRim.rectTransform, pos, s);
+            PlacePart(_morsel.rectTransform, pos, s);
+            PlacePart(_morselPattern.rectTransform, pos, s);
+            PlacePart(_glint.rectTransform, pos + new Vector2(-0.2f * scale * _u, 0.11f * scale * _u), s);
+            OverlayParts.SetColor(_morselRim, OverlayParts.Fade(MorselRimColor, alpha));
             OverlayParts.SetColor(_morsel, new Color(_color.r, _color.g, _color.b, alpha));
-            RectTransform g = _glint.rectTransform;
-            g.anchoredPosition = pos + new Vector2(-0.25f * side, 0.25f * side);
-            g.sizeDelta = new Vector2(0.3f * side, 0.3f * side);
-            OverlayParts.SetColor(_glint, new Color(1f, 1f, 1f, 0.85f * alpha));
+            OverlayParts.SetColor(_morselPattern, _patternOn ? OverlayParts.Fade(_patternColor, alpha) : new Color(1f, 1f, 1f, 0f));
+            OverlayParts.SetColor(_glint, new Color(1f, 1f, 1f, 0.7f * alpha));
+        }
+
+        private void HideMorsel()
+        {
+            OverlayParts.SetColor(_morselRim, new Color(MorselRimColor.r, MorselRimColor.g, MorselRimColor.b, 0f));
+            OverlayParts.SetColor(_morsel, new Color(_color.r, _color.g, _color.b, 0f));
+            OverlayParts.SetColor(_morselPattern, new Color(1f, 1f, 1f, 0f));
+            OverlayParts.SetColor(_glint, new Color(1f, 1f, 1f, 0f));
+        }
+
+        private static void PlacePart(RectTransform rt, Vector2 pos, Vector3 scale)
+        {
+            if (rt.anchoredPosition != pos)
+            {
+                rt.anchoredPosition = pos;
+            }
+
+            if (rt.localScale != scale)
+            {
+                rt.localScale = scale;
+            }
+        }
+
+        private static void SetSize(RectTransform rt, Vector2 size)
+        {
+            if (rt.sizeDelta != size)
+            {
+                rt.sizeDelta = size;
+            }
         }
 
         private void ResetPips()
         {
             _pipsReset = true;
             _pips.Set(_afterK, _afterCounter);
+            PaintPips();
         }
 
         private void PaintVictim(float fill)
@@ -871,24 +1067,27 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // Burbujas en la boca de la víctima al morder, o salpicadura de la fruta al caer en la cueva. Con Reducir movimiento
-        // el pool no emite.
-        // Los efectos usan el mismo espacio que el cardumen (arriba a la izquierda del tablero).
-        private void Emit(bool bite, float fill)
+        // Destellos del tinte (aclarado, para que se vean también los oscuros) donde la que muerde atrapa el bocado. Con Reducir
+        // movimiento el pool no emite. Los efectos usan el mismo espacio que el cardumen (arriba a la izquierda del tablero).
+        private void EmitCatch(Vector2 at)
         {
             if (_fx == null || _reduceMotion)
             {
                 return;
             }
 
-            if (bite)
+            _fx.Sparkles(at, ColorMath.Lighten(_color, 0.35f), CatchSparkles, CatchSparkleScale * _u);
+        }
+
+        // Salpicadura de la fruta al empezar a formarse su dosis en la cueva.
+        private void EmitSplash()
+        {
+            if (_fx == null || _reduceMotion)
             {
-                _fx.Bubbles(_victimMouth, 3, _u);
+                return;
             }
-            else
-            {
-                _fx.Splash(_caveSurface + new Vector2(0f, fill * _u), _color, _u);
-            }
+
+            _fx.Splash(_caveSurface, _color, _u);
         }
 
         // Termina el paso: las dos cuias pintadas como después (con ShowContent si cierra), el bocado oculto y el cardumen

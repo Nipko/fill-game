@@ -7,28 +7,49 @@ namespace AF.Presentation
     /// Arte procedural [P] de la Piraña (M7; 02 §9.1 M7; propuesta de D-007 b.2 M7; D-003 «Selva brillante premium»): la
     /// boca de la cueva, un arco de piedras grises con musgo y el hueco en sombra; la piraña del cardumen, plateada, de cuerpo
     /// alto, con el lomo oscuro, la cola con banda negra y el ojo grande, sin dientes exagerados ni sangre (también dormida,
-    /// con el ojo cerrado); y el bocado de fruta que se lleva a la cueva. Lo usa <c>PiranaOverlay</c>.
+    /// con el ojo cerrado); y el bocado de fruta que se lleva a la cueva, una cápsula del tinte con su contorno de vidrio. Lo
+    /// usa <c>PiranaOverlay</c>.
     /// </summary>
     /// <remarks>
     /// <para>Color (direccion-visual-v2 §2.4, regla 1): las superficies de más de 2 dp quedan a ΔE00 ≥ 10 de los 14 tintes
     /// (piedras de <see cref="StoneLight"/> y <see cref="StoneDark"/>, hueco <see cref="PiranaCaveDark"/> 18,8, musgo
     /// <see cref="PiranaMoss"/> 30,6, piraña <see cref="PiranaFishSilver"/> 13,6, <see cref="PiranaFishBelly"/> 11,8,
     /// <see cref="PiranaFishBack"/> 17,0 y <see cref="PiranaFishFin"/> 16,4). Brillos, ojo, branquia, motas y banda de la cola
-    /// miden 2 dp o menos. El bocado lleva el tinte de la fruta mordida a propósito: el sprite es gris y lo tiñe
-    /// <c>Image.color</c>. La plata clara se lee sobre el azul petróleo del panel (L* 27 frente a 79), también atenuada.</para>
+    /// miden 2 dp o menos. El bocado lleva el tinte de la fruta mordida a propósito: el sprite es claro y lo tiñe
+    /// <c>Image.color</c>; su contorno (<see cref="PiranaMorselRimSprite"/>, ≈ 1,5 dp de <c>vidrio_borde</c>) lo separa del
+    /// panel con cualquier tinte, también los oscuros (Cacao, Huito, Açaí). La plata clara se lee sobre el azul petróleo del
+    /// panel (L* 27 frente a 79), también atenuada.</para>
     /// <para>Perezosos, como los de <c>ProceduralArt.Mechanics.cs</c>: se generan la primera vez que se piden y tras
     /// <see cref="Dispose"/> se vuelven a generar.</para>
     /// </remarks>
     public sealed partial class ProceduralArt
     {
-        /// <summary>Ancho del sprite de la cueva en u.</summary>
-        public const float PiranaCaveWidthU = 2.1f;
+        /// <summary>
+        /// Ancho del sprite de la cueva en u: el hueco del arco mide ≥ 1,3 u a la altura de los puntos, así que caben 4 (o 5,
+        /// algo más juntos) de 0,28 u (revisión de T17).
+        /// </summary>
+        public const float PiranaCaveWidthU = 2.4f;
 
         /// <summary>Alto del sprite de la cueva en u.</summary>
-        public const float PiranaCaveHeightU = 1.1f;
+        public const float PiranaCaveHeightU = 1.15f;
 
         /// <summary>Base del arco sobre el canto inferior del sprite de la cueva (u).</summary>
         public const float PiranaCaveBaseU = 0.1f;
+
+        /// <summary>Ancho de la cápsula del bocado (u; ≈ 18 dp con la cuia de 48 dp).</summary>
+        public const float PiranaMorselCapsuleWidthU = 0.8f;
+
+        /// <summary>Alto de la cápsula del bocado (u; ≈ 12 dp).</summary>
+        public const float PiranaMorselCapsuleHeightU = 0.55f;
+
+        /// <summary>Contorno del bocado (u; 1,5 dp con u = 24).</summary>
+        public const float PiranaMorselRimU = 0.0625f;
+
+        /// <summary>Ancho de los sprites del bocado (u): la cápsula y su contorno.</summary>
+        public const float PiranaMorselWidthU = PiranaMorselCapsuleWidthU + (2f * PiranaMorselRimU);
+
+        /// <summary>Alto de los sprites del bocado (u): la cápsula y su contorno.</summary>
+        public const float PiranaMorselHeightU = PiranaMorselCapsuleHeightU + (2f * PiranaMorselRimU);
 
         /// <summary>Ancho del sprite de la piraña en u.</summary>
         public const float PiranaFishWidthU = 0.9f;
@@ -70,8 +91,9 @@ namespace AF.Presentation
         private Sprite? _piranaFish;
         private Sprite? _piranaFishAsleep;
         private Sprite? _piranaMorsel;
+        private Sprite? _piranaMorselRim;
 
-        /// <summary>Boca de la cueva: arco de piedras con musgo y hueco en sombra (2,1 × 1,1 u; colores horneados).</summary>
+        /// <summary>Boca de la cueva: arco de piedras con musgo y hueco en sombra (2,4 × 1,15 u; colores horneados).</summary>
         internal Sprite PiranaCaveSprite => _piranaCave != null ? _piranaCave : (_piranaCave = BuildPiranaCave());
 
         /// <summary>Piraña del cardumen mirando a la izquierda (0,9 × 0,5625 u; colores horneados).</summary>
@@ -80,8 +102,18 @@ namespace AF.Presentation
         /// <summary>La misma piraña dormida: el ojo cerrado (cueva llena, respuesta Q-C).</summary>
         internal Sprite PiranaFishAsleepSprite => _piranaFishAsleep != null ? _piranaFishAsleep : (_piranaFishAsleep = BuildPiranaFish(true));
 
-        /// <summary>Bocado de fruta con la mordida (gris con volumen; lo tiñe <c>Image.color</c> con la fruta).</summary>
-        internal Sprite PiranaMorselSprite => _piranaMorsel != null ? _piranaMorsel : (_piranaMorsel = BuildPiranaMorsel());
+        /// <summary>
+        /// Bocado: cápsula de <see cref="PiranaMorselCapsuleWidthU"/> × <see cref="PiranaMorselCapsuleHeightU"/> u, clara con
+        /// volumen (canto de abajo en sombra), dentro de un sprite de <see cref="PiranaMorselWidthU"/> ×
+        /// <see cref="PiranaMorselHeightU"/> u que deja sitio al contorno; lo tiñe <c>Image.color</c> con la fruta.
+        /// </summary>
+        internal Sprite PiranaMorselSprite => _piranaMorsel != null ? _piranaMorsel : (_piranaMorsel = BuildPiranaMorsel(false));
+
+        /// <summary>
+        /// Contorno del bocado: la misma cápsula agrandada <see cref="PiranaMorselRimU"/> por todos lados, blanca, del mismo
+        /// tamaño de sprite (se dibuja detrás, con <c>vidrio_borde</c>).
+        /// </summary>
+        internal Sprite PiranaMorselRimSprite => _piranaMorselRim != null ? _piranaMorselRim : (_piranaMorselRim = BuildPiranaMorsel(true));
 
         private Sprite BuildPiranaCave()
         {
@@ -121,7 +153,8 @@ namespace AF.Presentation
             }
 
             // Siete piedras sobre el arco, de las patas a la clave (la clave, encima de todas), con el lado largo a lo largo
-            // del arco y un casquete de musgo irregular sobre las tres de arriba.
+            // del arco y un casquete de musgo irregular sobre las tres de arriba. Lajas algo largas y delgadas: el arco es
+            // ancho y el hueco queda libre para la fila de puntos.
             float rxArc = w * 0.37f;
             float ryArc = h * 0.64f;
             int[] order = { 0, 6, 1, 5, 2, 4, 3 };
@@ -133,8 +166,8 @@ namespace AF.Presentation
                 float sy = baseY + (Mathf.Sin(angle) * ryArc);
                 var tangent = new Vector2(-Mathf.Sin(angle) * rxArc, Mathf.Cos(angle) * ryArc).normalized;
                 float size = (i == 0 || i == 6 ? 19f : (i == 3 ? 17f : 15.5f)) * k;
-                float along = size * (1.18f + (0.2f * ArtNoise.Hash(i, 7, 53)));
-                float across = size * (0.8f + (0.14f * ArtNoise.Hash(i, 11, 53)));
+                float along = size * (1.3f + (0.2f * ArtNoise.Hash(i, 7, 53)));
+                float across = size * (0.74f + (0.12f * ArtNoise.Hash(i, 11, 53)));
                 DrawPiranaStone(pc, sx, sy, tangent, along, across, 2.6f * k, i);
                 if (i >= 2 && i <= 4)
                 {
@@ -356,49 +389,55 @@ namespace AF.Presentation
             pc.FillTriangle(a, b, c, color);
         }
 
-        private Sprite BuildPiranaMorsel()
+        // Bocado (rim = false): la cápsula, casi blanca para que el tinte se vea tal cual, con el canto de abajo y los extremos
+        // algo en sombra (volumen, como la dosis). Contorno (rim = true): la misma cápsula agrandada PiranaMorselRimU, blanca.
+        // Los dos sprites miden lo mismo, así que las dos imágenes se colocan igual.
+        private Sprite BuildPiranaMorsel(bool rim)
         {
-            const int s = 40;
-            const float c = s * 0.5f;
-            const float r = 15f;
-            const float biteX = 30.5f;
-            const float biteY = 29.5f;
-            const float biteR = 7.5f;
-            var pc = new PixelCanvas(s, s);
-            for (int y = 0; y < s; y++)
+            int w = Mathf.RoundToInt(PiranaMorselWidthU * MechanicPxPerU);
+            int h = Mathf.RoundToInt(PiranaMorselHeightU * MechanicPxPerU);
+            float r = 0.5f * PiranaMorselCapsuleHeightU * MechanicPxPerU;
+            float half = (0.5f * PiranaMorselCapsuleWidthU * MechanicPxPerU) - r; // medio tramo recto entre los dos extremos
+            float rimPx = PiranaMorselRimU * MechanicPxPerU;
+            float cx = w * 0.5f;
+            float cy = h * 0.5f;
+            var pc = new PixelCanvas(w, h);
+            for (int y = 0; y < h; y++)
             {
-                for (int x = 0; x < s; x++)
+                for (int x = 0; x < w; x++)
                 {
                     float px = x + 0.5f;
                     float py = y + 0.5f;
-                    float dx = px - c;
-                    float dy = py - c;
-                    float round = Mathf.Sqrt((dx * dx) + (dy * dy)) - r;
-                    float bx = px - biteX;
-                    float by = py - biteY;
-                    float bite = biteR - Mathf.Sqrt((bx * bx) + (by * by));
-                    float d = Mathf.Max(round, bite); // el círculo menos la mordida
-                    if (d > 1f)
+                    float dx = Mathf.Max(Mathf.Abs(px - cx) - half, 0f);
+                    float dy = py - cy;
+                    float d = Mathf.Sqrt((dx * dx) + (dy * dy)) - r; // distancia con signo a la cápsula (negativa dentro)
+                    if (rim)
                     {
+                        float cover = PixelCanvas.Coverage(d - rimPx);
+                        if (cover > 0f)
+                        {
+                            pc.Blend(x, y, Color.white, cover);
+                        }
+
                         continue;
                     }
 
-                    pc.Blend(x, y, new Color(0.32f, 0.32f, 0.32f, 1f), PixelCanvas.Coverage(d));
-                    float inside = PixelCanvas.Coverage(d + 2.2f);
+                    float inside = PixelCanvas.Coverage(d);
                     if (inside <= 0f)
                     {
                         continue;
                     }
 
-                    // Hasta 0,86: el brillo blanco de encima sigue siendo más claro que la fruta al teñirlo.
-                    float lit = Mathf.Clamp01(0.55f + (0.35f * (dy / r)) - (0.3f * (dx / r)));
-                    float g = Mathf.Lerp(0.62f, 0.86f, lit);
+                    // De abajo (0,80) a arriba (1) y un poco más oscuro junto al canto: el tinte se lee entero en el centro.
+                    float t = Mathf.Clamp01((dy + r) / (2f * r));
+                    float g = Mathf.Lerp(0.8f, 1f, Mathf.SmoothStep(0f, 1f, t));
+                    float edge = Mathf.Clamp01(1f + (d / (0.22f * r)));
+                    g *= Mathf.Lerp(1f, 0.9f, edge * edge);
                     pc.Blend(x, y, new Color(g, g, g, 1f), inside);
                 }
             }
 
-            pc.FillEllipseSoft(c - 5f, c + 5f, 3.6f, 2.6f, 1f, new Color(1f, 1f, 1f, 0.9f));
-            return MakeSprite(pc, "mech_pirana_morsel", new Vector2(0.5f, 0.5f), Vector4.zero);
+            return MakeSprite(pc, rim ? "mech_pirana_morsel_rim" : "mech_pirana_morsel", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
     }
 }

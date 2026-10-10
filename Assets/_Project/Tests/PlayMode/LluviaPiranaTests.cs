@@ -23,10 +23,13 @@ namespace AF.Tests.PlayMode
     /// y 183) y en un banco sintético (<see cref="MechanicTestKit.Rig"/>), los pasos de la etapa (e) los ejecutan sus overlays
     /// con su duración [P] × factor de velocidad, en el orden del plan, pintando las dos cuias desde <c>ctx.Before</c> hasta
     /// <c>ctx.After</c>; tras cada paso la vista coincide con <c>Session.Current</c>. La gota cae con el tercer vertido útil
-    /// (tinte 10 arriba), un fútil no cuenta, la tapa cae después de la gota, con la cuia llena la gota espera colgando y la
-    /// última se lleva la nube. El cardumen sale de la cueva, muerde y se lleva la dosis (a mitad del paso la víctima aún la
-    /// tiene); si el vertido sella la cuia o la cueva está llena, el mordisco se pierde (amago) y con la cueva llena duerme.
-    /// El cardumen no tapa cuias ni captura toques, y nada asigna memoria durante los pasos.
+    /// (tinte 10 arriba), un fútil no cuenta, la tapa cae después de la gota, con la cuia llena la gota que ya colgaba intenta
+    /// caer (baja y la tormenta late) y sigue colgando, y la última se lleva la nube sin pasar del pie de la fila de arriba. El
+    /// cardumen sale de la cueva con el cuarto vertido útil, muerde y se lleva la dosis (a mitad del paso la víctima aún la
+    /// tiene): el bocado sale de esa dosis, sube por el eje de la víctima y entra recto por la boca de la cueva antes de que se
+    /// forme allí la dosis. Si el vertido sella la cuia o la cueva está llena, el mordisco se pierde (amago) y con la cueva
+    /// llena duerme. Los puntos de los contadores miden ≈ 7 dp y los vacíos van más tenues. El cardumen no tapa cuias ni
+    /// captura toques, y nada asigna memoria durante los pasos.
     /// </summary>
     public sealed class LluviaPiranaTests
     {
@@ -63,6 +66,7 @@ namespace AF.Tests.PlayMode
             Assert.That(cloud.PipCount, Is.EqualTo(3));
             Assert.That(cloud.FilledPips, Is.EqualTo(0));
             Assert.That(cloud.DropCount, Is.EqualTo(2), "dos gotas pendientes");
+            Assert.That(cloud.CloudTopAboveMouthDp, Is.LessThanOrEqualTo(LluviaOverlay.CloudTopMaxDp + 0.01f), "la nube no pisa el marco del panel");
 
             // Vertidos hasta la primera gota; se juegan uno a uno contando los útiles (Q18 B) y mirando los puntos.
             Pour[] path = Trigger(boot, (ev, b, a) => (ev.LluviaDropMask & bit) != 0 && ev.LluviaEndedMask == 0);
@@ -78,6 +82,7 @@ namespace AF.Tests.PlayMode
                 MechanicTestKit.AssertViewMatchesModel(boot);
                 Assert.That(cloud.FilledPips, Is.EqualTo(flow.Session.Current[rain].MechanicCounter), "vertido " + i + ": los puntos siguen al contador");
                 Assert.That(MechanicTestKit.TryFindRecord(boot.View.Animator, MechanicStepKind.RainDrop, rain, out _), Is.False, "vertido " + i + ": aún no cae");
+                AssertPipsLegible(cloud.Pips, ProceduralArt.Slate, 1f, LluviaOverlay.EmptyPipAlpha, "vertido " + i);
             }
 
             boot.View.Animator.Steps.ClearLog();
@@ -148,13 +153,22 @@ namespace AF.Tests.PlayMode
             CuiaView view = boot.View.Views[rain];
             PourVisual visual = MechanicTestKit.TapPour(boot, path[path.Length - 1], out _);
 
-            // La última gota cae y la nube sube y se desvanece; la tapa todavía no.
+            // La última gota cae y la nube sube, encoge y se desvanece; la tapa todavía no. En el 143 la Lluvia está en la fila
+            // de arriba: lo alto de la nube nunca pasa del marco del panel (02 §5; revisión de T17).
+            Assert.That(cloud.CloudTopLimitDp, Is.EqualTo(LluviaOverlay.CloudTopMaxDp).Within(1e-3f), "fila de arriba: el límite es el marco");
             MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.RainEnd, rain, 4000);
-            MechanicTestKit.StepToFraction(boot, MechanicStepKind.RainEnd, rain, 0.85f);
+            float highest = 0f;
+            while (boot.View.Animator.Steps.TryGetRunning(MechanicStepKind.RainEnd, rain, out float elapsedMs, out float durationMs) && elapsedMs < 0.85f * durationMs)
+            {
+                PlayModeHelpers.TickExact(boot, 4);
+                highest = Mathf.Max(highest, cloud.CloudTopAboveMouthDp);
+            }
+
             Assert.That(view.Sealed, Is.False, "la tapa no cae con la gota");
             Assert.That(cloud.Visible, Is.True, "la nube aún se ve mientras se va");
             Assert.That(cloud.CloudAlpha, Is.LessThan(0.8f), "la nube se desvanece");
-            Assert.That(cloud.CloudRiseU, Is.GreaterThan(0.2f), "la nube sube");
+            Assert.That(cloud.CloudRiseU, Is.GreaterThan(0.05f), "la nube sube");
+            Assert.That(highest, Is.LessThanOrEqualTo(LluviaOverlay.CloudTopMaxDp + 0.01f), "sin pisar el marco del panel");
 
             // Después, la tapa (c′) sobre las cuatro aguas y sin nube.
             MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Seal, rain, 4000);
@@ -191,15 +205,25 @@ namespace AF.Tests.PlayMode
             BoardState counted = _rig.Pour(start, 1, 3, out _);
             _rig.RunUntilIdle(3000);
             Assert.That(cloud.HangingDrop, Is.True, "llena y con el ritmo a k − 1: la gota cuelga");
+            Assert.That(cloud.HangingDropDipU, Is.EqualTo(0f).Within(1e-3f), "en reposo, en su sitio");
+            Assert.That(cloud.BellyShade, Is.EqualTo(1f), "la tormenta se lee en la panza en sombra");
+            float restDark = cloud.CloudDarkness;
             _rig.Animator.Steps.ClearLog();
 
             BoardState after = _rig.Pour(counted, 2, 4, out PourVisual v);
             Assert.That(v.Events.LluviaWaitingMask, Is.EqualTo(1), "la gota espera");
             RunUntil(_rig, () => _rig.Animator.Steps.IsRunning(MechanicStepKind.RainWait, 0), 3000);
-            RunToFraction(_rig, MechanicStepKind.RainWait, 0, 0.5f);
+
+            // Al empezar la espera, la gota que ya colgaba sigue entera (no se encoge para volver a asomar).
+            RunToFraction(_rig, MechanicStepKind.RainWait, 0, 0.1f);
             Assert.That(cloud.IsAnimating, Is.True);
-            Assert.That(cloud.CloudDarkness, Is.GreaterThan(0.9f), "la nube se oscurece");
-            Assert.That(cloud.HangingDrop, Is.True, "la gota intenta caer");
+            Assert.That(cloud.HangingDrop, Is.True, "la gota sigue colgando");
+            Assert.That(cloud.HangingDropScale, Is.EqualTo(1f).Within(1e-3f), "la que ya colgaba no desaparece al empezar la espera");
+
+            // Hacia la mitad, la gota intenta caer (baja de su sitio) con un pulso más oscuro de la tormenta.
+            RunToFraction(_rig, MechanicStepKind.RainWait, 0, 0.55f);
+            Assert.That(cloud.HangingDropDipU, Is.GreaterThan(0.05f), "la gota baja hacia la boca llena");
+            Assert.That(cloud.CloudDarkness, Is.GreaterThan(restDark + (0.5f * LluviaOverlay.StormPulse)), "el pulso de la tormenta");
             Assert.That(cloud.FilledPips, Is.EqualTo(2), "el vertido completó el ritmo");
             Assert.That(_rig.Views[0].LiquidLevel, Is.EqualTo(4f).Within(1e-3f), "nada cae");
 
@@ -208,22 +232,36 @@ namespace AF.Tests.PlayMode
             AssertOwnStep(MechanicTestKit.Record(_rig.Animator, MechanicStepKind.RainWait, 0), MechanicType.Lluvia, LluviaOverlay.WaitStepMs);
             Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs));
             Assert.That(cloud.Stormy && cloud.HangingDrop, Is.True, "la gota queda colgando");
+            Assert.That(cloud.HangingDropDipU, Is.EqualTo(0f).Within(1e-3f), "y vuelve a su sitio");
+            Assert.That(cloud.CloudDarkness, Is.EqualTo(restDark).Within(1e-3f), "la tormenta, como en reposo");
             Assert.That(cloud.FilledPips, Is.EqualTo(1), "el contador se queda en k − 1");
             Assert.That(cloud.DropCount, Is.EqualTo(2), "siguen las dos gotas");
             AssertRigShowsModel(after);
         }
 
         [UnityTest]
-        public IEnumerator Lluvia_EndRemovesCloud()
+        public IEnumerator Lluvia_EndRemovesCloud([Values(false, true)] bool lowerRow)
         {
-            // La Lluvia [10, 10, 10] con su última gota (k = 2): la gota cae, la nube se va y la tapa (c′) llega después.
+            // La Lluvia [10, 10, 10] con su última gota (k = 2): la gota cae, la nube se va y la tapa (c′) llega después. Sin
+            // fila encima (el banco es una fila) la nube no pasa del marco; una fila más abajo, sube sin llegar al pie de la de
+            // arriba (02 §5; BoardLayout: elevación 16 + separación 24 = 40 dp de su pie a la boca).
             yield return null;
             BoardState start = Board(
                 new[] { 4, 4, 4, 4, 4 },
                 new[] { new[] { 10, 10, 10 }, new[] { 1, 2 }, new[] { 2, 1 }, new[] { 2, 2 }, new[] { 1, 1 } },
                 new[] { new MechanicSpec(MechanicType.Lluvia, key: 10, n: 1, k: 2), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
             _rig = new MechanicTestKit.Rig(Art, start);
+            if (lowerRow)
+            {
+                CuiaView rainView = _rig.Views[0];
+                Vector2 foot = new Vector2(36f, -600f - 40f - (rainView.HeightU * rainView.Unit));
+                rainView.SetGeometry(foot, 40f, 60f);
+                _rig.Animator.BoardLaidOut();
+            }
+
             var cloud = (LluviaOverlay)_rig.Views[0].Overlay!;
+            float limit = lowerRow ? LluviaOverlay.RiseTopMaxDp : LluviaOverlay.CloudTopMaxDp;
+            Assert.That(cloud.CloudTopLimitDp, Is.EqualTo(limit).Within(1e-3f), lowerRow ? "con una fila encima: su pie" : "sin fila encima: el marco");
             BoardState counted = _rig.Pour(start, 1, 3, out _);
             _rig.RunUntilIdle(3000);
             _rig.Animator.Steps.ClearLog();
@@ -231,11 +269,31 @@ namespace AF.Tests.PlayMode
             BoardState after = _rig.Pour(counted, 2, 4, out PourVisual v);
             Assert.That(v.Events.LluviaEndedMask, Is.EqualTo(1), "la última gota");
             Assert.That(after[0].Mechanic, Is.EqualTo(MechanicType.None));
+            Assert.That(cloud.CloudTopAboveMouthDp, Is.LessThanOrEqualTo(LluviaOverlay.CloudTopMaxDp + 0.01f), "en reposo, lejos del marco");
             RunUntil(_rig, () => _rig.Animator.Steps.IsRunning(MechanicStepKind.RainEnd, 0), 3000);
             RunToFraction(_rig, MechanicStepKind.RainEnd, 0, 0.5f);
             Assert.That(cloud.FallingDropVisible, Is.True, "la gota cae");
             Assert.That(cloud.CloudRiseU, Is.GreaterThan(0f), "la nube empieza a subir");
-            RunToFraction(_rig, MechanicStepKind.RainEnd, 0, 0.9f);
+
+            // Al irse, lo alto de la nube no pasa de su límite: el marco o el pie de la fila de arriba (02 §5).
+            float highest = 0f;
+            float rose = 0f;
+            while (_rig.Animator.Steps.TryGetRunning(MechanicStepKind.RainEnd, 0, out float elapsedMs, out float durationMs) && elapsedMs < 0.9f * durationMs)
+            {
+                _rig.Tick(4);
+                if (cloud.CloudAlpha > 0.01f)
+                {
+                    highest = Mathf.Max(highest, cloud.CloudTopAboveMouthDp);
+                    rose = Mathf.Max(rose, cloud.CloudRiseU);
+                }
+            }
+
+            Assert.That(highest, Is.LessThanOrEqualTo(limit + 0.01f), "la nube que se va no pisa el marco ni tapa la fila de arriba");
+            if (lowerRow)
+            {
+                Assert.That(rose, Is.GreaterThan(0.5f), "con sitio encima, sube de verdad");
+            }
+
             Assert.That(cloud.CloudAlpha, Is.LessThan(0.5f), "y se desvanece");
             Assert.That(_rig.Views[0].Sealed, Is.False, "la tapa aún no");
 
@@ -254,25 +312,54 @@ namespace AF.Tests.PlayMode
         {
             yield return MechanicTestKit.LoadPlaying(183);
             GameBootstrap boot = GameBootstrap.Current!;
-            int cave = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Pirana);
-            Pour[] path = Trigger(boot, (ev, b, a) => (ev.PiranaCaveMask & (1 << cave)) != 0);
-            MechanicTestKit.PlayPrefix(boot, path);
+            LevelFlow flow = boot.Flow!;
+            int cave = MechanicTestKit.IndexOf(flow, MechanicType.Pirana);
             var school = (PiranaOverlay)boot.View!.Views[cave].Overlay!;
+            Assert.That(flow.Session.Current[cave].MechanicK, Is.EqualTo(4), "183: un mordisco cada 4 vertidos útiles");
+            Assert.That(school.PipCount, Is.EqualTo(4));
+            Assert.That(school.FilledPips, Is.EqualTo(0));
+
+            // Vertidos hasta el primer mordisco; se juegan uno a uno contando los útiles (Q18 B) y mirando los puntos: antes
+            // del último, ni mordisco ni mordisco perdido.
+            Pour[] path = Trigger(boot, (ev, b, a) => (ev.PiranaCaveMask & (1 << cave)) != 0);
+            int useful = 0;
+            for (int i = 0; i < path.Length - 1; i++)
+            {
+                boot.View.Animator.Steps.ClearLog();
+                MechanicTestKit.TapPour(boot, path[i], out TapResult prior);
+                useful += prior.Pour.Events.Futile ? 0 : 1;
+                MechanicTestKit.StepToIdle(boot, 6000);
+                MechanicTestKit.AssertViewMatchesModel(boot);
+                Assert.That(school.FilledPips, Is.EqualTo(flow.Session.Current[cave].MechanicCounter), "vertido " + i + ": los puntos siguen al contador");
+                Assert.That(MechanicTestKit.TryFindRecord(boot.View.Animator, MechanicStepKind.Bite, cave, out _), Is.False, "vertido " + i + ": aún no muerde");
+                Assert.That(MechanicTestKit.TryFindRecord(boot.View.Animator, MechanicStepKind.BiteLost, cave, out _), Is.False, "vertido " + i + ": ni pierde un mordisco");
+                AssertPipsLegible(school.Pips, ProceduralArt.Pearl, school.Dimmed ? PiranaOverlay.DimAlpha : 1f, PiranaOverlay.EmptyPipAlpha, "vertido " + i);
+            }
+
+            boot.View.Animator.Steps.ClearLog();
             Vector2 home = school.SchoolHome;
-            int caveBefore = boot.Flow!.Session.Current[cave].Count;
+            int caveBefore = flow.Session.Current[cave].Count;
             PourVisual visual = MechanicTestKit.TapPour(boot, path[path.Length - 1], out TapResult poured);
+            Assert.That(poured.Pour.Events.Futile, Is.False);
+            useful++;
+            Assert.That(useful, Is.EqualTo(4), "el cardumen sale con el cuarto vertido útil");
             int victim = poured.Pour.Receiver;
-            int bitten = boot.Flow.Session.Current[cave].TopColor;
+            int bitten = flow.Session.Current[cave].TopColor;
             float tapped = boot.View.Animator.Clock;
             float u = boot.View.Views[cave].Unit;
 
             MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Bite, cave, 4000);
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.Bite, cave, 0.3f);
             Assert.That(school.IsAnimating, Is.True, "el mordisco lo anima la cueva");
+            Assert.That(school.FilledPips, Is.EqualTo(4), "el vertido que completa el ritmo llena los puntos");
             Assert.That((school.SchoolCenter - home).magnitude, Is.GreaterThan(0.5f * u), "el cardumen sale de la cueva");
             Assert.That(school.MorselVisible, Is.False, "aún no ha mordido");
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.Bite, cave, 0.75f);
             Assert.That(school.MorselVisible, Is.True, "se lleva el bocado");
+            Assert.That(school.MorselScale, Is.EqualTo(1f).Within(1e-3f), "el bocado entero, en la boca de la que muerde");
+            Assert.That(school.MorselPatterned, Is.EqualTo(ProceduralArt.HasPattern(bitten)), "con el patrón de la fruta (07 §3)");
+            Assert.That(school.MorselRim.color, Is.EqualTo(new Color(Palette.GlassRim.r, Palette.GlassRim.g, Palette.GlassRim.b, 0.9f)), "contorno de vidrio: se lee con cualquier tinte");
+            Assert.That(school.FilledPips, Is.EqualTo(0), "con el mordisco, el contador vuelve a empezar");
 
             MechanicTestKit.StepToIdle(boot, 6000);
             float elapsed = boot.View.Animator.Clock - tapped;
@@ -306,18 +393,78 @@ namespace AF.Tests.PlayMode
             int bitten = boot.Flow.Session.Current[cave].TopColor;
             CuiaView[] views = boot.View.Views;
 
-            MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Bite, cave, 4000);
-            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Bite, cave, 0.5f);
-            Assert.That(views[victim].DoseFill(victimAfter), Is.GreaterThan(0.99f), "a mitad del paso la víctima aún tiene la dosis");
-            Assert.That(views[victim].DoseColor(victimAfter), Is.EqualTo(Palette.Tint(bitten)), "la fruta que se va a llevar");
-            Assert.That(views[victim].LiquidLevel, Is.EqualTo(victimAfter + 1f).Within(1e-3f));
-            Assert.That(views[cave].LiquidLevel, Is.EqualTo((float)caveBefore).Within(1e-3f), "la cueva aún no la tiene");
+            // El paso entero, de 4 en 4 ms. A mitad, la víctima aún tiene la dosis y el bocado ya sale de ella. Antes y después: el
+            // bocado sale de la dosis de arriba de la víctima y sube por su eje; en la cueva se suelta sobre su eje y entra recto
+            // por la boca, sin pasar nunca por debajo del labio, y la dosis de la cueva empieza a formarse cuando el bocado ya
+            // llega al labio (causa → efecto).
             float u = views[cave].Unit;
-            Vector2 victimMouth = boot.View.Animator.Foot(victim) + new Vector2(0f, views[victim].HeightU * u);
-            Assert.That((school.SchoolCenter - victimMouth).magnitude, Is.LessThan((school.SchoolHome - victimMouth).magnitude), "el cardumen está en la víctima");
+            Vector2 victimFoot = boot.View.Animator.Foot(victim);
+            Vector2 victimMouth = victimFoot + new Vector2(0f, views[victim].HeightU * u);
+            Vector2 caveFoot = boot.View.Animator.Foot(cave);
+            float doseTop = victimFoot.y + ((CuiaGeometry.CavityBottomU + victimAfter + 1f) * u);
+            float caveLip = caveFoot.y + (views[cave].HeightU * u);
+            bool mid = false;
+            bool seen = false;
+            bool overCave = false;
+            bool caveFilling = false;
+            MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Bite, cave, 4000);
+            while (boot.View.Animator.Steps.TryGetRunning(MechanicStepKind.Bite, cave, out float elapsedMs, out float durationMs))
+            {
+                if (!mid && elapsedMs >= 0.5f * durationMs)
+                {
+                    mid = true;
+                    Assert.That(views[victim].DoseFill(victimAfter), Is.GreaterThan(0.99f), "a mitad del paso la víctima aún tiene la dosis");
+                    Assert.That(views[victim].DoseColor(victimAfter), Is.EqualTo(Palette.Tint(bitten)), "la fruta que se va a llevar");
+                    Assert.That(views[victim].LiquidLevel, Is.EqualTo(victimAfter + 1f).Within(1e-3f));
+                    Assert.That(views[cave].LiquidLevel, Is.EqualTo((float)caveBefore).Within(1e-3f), "la cueva aún no la tiene");
+                    Assert.That((school.SchoolCenter - victimMouth).magnitude, Is.LessThan((school.SchoolHome - victimMouth).magnitude), "el cardumen está en la víctima");
+                    Assert.That(school.MorselVisible, Is.True, "el bocado ya sale de la dosis");
+                    Assert.That(school.MorselCenter.y, Is.LessThan(victimMouth.y), "aún dentro de la víctima, por debajo de su boca");
+                }
 
+                PlayModeHelpers.TickExact(boot, 4);
+                caveFilling |= views[cave].DoseFill(caveBefore) > 0.01f;
+                if (!school.MorselVisible)
+                {
+                    Assert.That(seen || !caveFilling, Is.True, "la cueva no recibe la dosis antes de que salga el bocado");
+                    continue;
+                }
+
+                Vector2 m = school.MorselCenter;
+                if (!seen)
+                {
+                    seen = true;
+                    Assert.That(Mathf.Abs(m.x - victimFoot.x), Is.LessThan(0.3f * u), "el bocado sale en el eje de la víctima");
+                    Assert.That(m.y, Is.LessThan(doseTop), "y de su dosis de arriba, no del aire");
+                    Assert.That(school.MorselScale, Is.LessThan(0.6f), "pequeño al salir");
+                }
+
+                if (school.MorselScale < 0.85f)
+                {
+                    Assert.That(Mathf.Abs(m.x - victimFoot.x), Is.LessThan(0.35f * u), "sube por el eje de la víctima");
+                }
+
+                var caveMouth = new Vector2(caveFoot.x, caveLip);
+                bool nearCave = Mathf.Abs(m.x - caveFoot.x) < 1.2f * u && m.y < caveLip + (0.6f * u)
+                    && (m - caveMouth).sqrMagnitude < (m - victimMouth).sqrMagnitude;
+                if (nearCave)
+                {
+                    Assert.That(m.y, Is.GreaterThanOrEqualTo(caveLip - (0.02f * u)), "el bocado nunca pasa por debajo del labio de la cueva");
+                    overCave |= Mathf.Abs(m.x - caveFoot.x) < 0.1f * u;
+                }
+
+                if (caveFilling)
+                {
+                    Assert.That(school.MorselAlpha, Is.LessThan(0.4f), "la dosis de la cueva se forma cuando el bocado entra por la boca");
+                }
+            }
+
+            Assert.That(mid, Is.True, "se miró a mitad del paso");
+            Assert.That(seen, Is.True, "se vio el bocado");
+            Assert.That(overCave, Is.True, "el bocado entra por la boca de la cueva, sobre su eje");
             MechanicTestKit.StepToIdle(boot, 6000);
             Assert.That(views[victim].LiquidLevel, Is.EqualTo((float)victimAfter).Within(1e-3f));
+            Assert.That(views[cave].LiquidLevel, Is.EqualTo(caveBefore + 1f).Within(1e-3f));
             MechanicTestKit.AssertViewMatchesModel(boot);
         }
 
@@ -585,6 +732,24 @@ namespace AF.Tests.PlayMode
             Pour[]? path = MechanicTestKit.FindTrigger(boot.Flow!, wanted);
             Assert.That(path, Is.Not.Null, "vertidos que disparan el evento en el nivel " + boot.Flow!.LevelNumber);
             return path!;
+        }
+
+        // Puntos del contador legibles a 48 dp (02 §5; revisión de T17): de ≈ 7 dp, los llenos en su color con opacidad alpha
+        // y los vacíos (el aro) a emptyAlpha de esa opacidad, así que se distinguen por contraste y no por un hueco de menos de
+        // 2 dp.
+        private static void AssertPipsLegible(PipRow row, Color color, float alpha, float emptyAlpha, string label)
+        {
+            Assert.That(row.Count, Is.GreaterThan(0), label + ": puntos a la vista");
+            for (int i = 0; i < row.Count; i++)
+            {
+                Image pip = row.Pip(i);
+                Vector2 size = pip.rectTransform.sizeDelta;
+                Assert.That(pip.gameObject.activeInHierarchy, Is.True, label + ": punto " + i + " a la vista");
+                Assert.That(Mathf.Min(size.x, size.y), Is.GreaterThanOrEqualTo(6.4f), label + ": punto " + i + " de ≈ 7 dp");
+                float expected = i < row.Filled ? alpha : alpha * emptyAlpha;
+                Assert.That(pip.color.a, Is.EqualTo(expected).Within(1e-3f), label + ": opacidad del punto " + i);
+                Assert.That(pip.color.r, Is.EqualTo(color.r).Within(1e-3f), label + ": color del punto " + i);
+            }
         }
 
         // El paso lo ejecutó el overlay de la mecánica (no el paso por defecto) con su duración nominal × el factor del paso.

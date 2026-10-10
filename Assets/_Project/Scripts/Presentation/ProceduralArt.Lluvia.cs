@@ -12,8 +12,11 @@ namespace AF.Presentation
     /// <remarks>
     /// <para>Color (direccion-visual-v2 §2.4, regla 1): las superficies de la nube quedan a ΔE00 ≥ 10 de los 14 tintes
     /// (<see cref="Pearl"/> 14,9; <see cref="LluviaCloudLit"/> 11,8; <see cref="LluviaCloudBelly"/> 19,0; con la tormenta,
-    /// multiplicadas por <see cref="LluviaStormTint"/>, aún más lejos). El filo de luz mide menos de 2 dp. La gota lleva el agua
-    /// del mundo a propósito (excepción de la regla).</para>
+    /// multiplicadas por <see cref="LluviaStormTint"/> y con la panza en sombra, ≥ 18). El filo de luz mide menos de 2 dp. La
+    /// gota lleva el agua del mundo a propósito (excepción de la regla).</para>
+    /// <para>Contraste (direccion-visual-v2 §2.4, regla 2): cargada de tormenta, la nube perla sigue a ≈ 3,6:1 del panel azul
+    /// petróleo y a ≈ 4:1 de los puntos pizarra; la tormenta se lee en la panza en sombra
+    /// (<see cref="LluviaCloudStormSprite"/>), no apagando toda la nube.</para>
     /// <para>Perezosos: se generan la primera vez que se piden; la gota, una por tinte de agua (como mucho dos en la campaña:
     /// Tapajós y Río Negro). Tras <see cref="Dispose"/> se vuelven a generar.</para>
     /// </remarks>
@@ -35,9 +38,19 @@ namespace AF.Presentation
         public static readonly Color LluviaCloudBelly = Palette.Hex(0x8C96A3);
 
         /// <summary>
-        /// Multiplicador de la nube cargada (la gota espera: la cuia está llena) [P]: perla #B8BEC6 → gris tormenta ≈ #7A8794.
+        /// Multiplicador de la nube cargada (la gota espera: la cuia está llena) [P]: perla #B8BEC6 → ≈ #9098A6, a ≈ 3,6:1 del
+        /// panel y ≈ 4:1 de los puntos pizarra (revisión de T17: con #7A8794 la nube se fundía con el panel).
         /// </summary>
-        public static readonly Color LluviaStormTint = new Color(0.66f, 0.71f, 0.75f, 1f);
+        public static readonly Color LluviaStormTint = new Color(0.78f, 0.80f, 0.84f, 1f);
+
+        /// <summary>
+        /// Sombra de la panza con la tormenta cargada [P]: el canto de abajo de la nube queda × 0,75 (en sRGB) y la sombra se
+        /// apaga hacia arriba hasta el 35 % del alto de la nube, por debajo de los puntos del contador.
+        /// </summary>
+        public const float LluviaBellyShade = 0.75f;
+
+        // Alto de la sombra de la panza (fracción del alto de la silueta).
+        private const float LluviaBellyBand = 0.35f;
 
         // Lóbulos de la nube: (x en fracción del ancho, y y radio en fracción del alto), más una base redondeada.
         private static readonly float[] LluviaCloudLobes =
@@ -50,13 +63,21 @@ namespace AF.Presentation
         };
 
         private Sprite? _lluviaCloud;
+        private Sprite? _lluviaStorm;
         private Sprite?[]? _lluviaDrops;
 
         /// <summary>
         /// Nube con volumen (2,35 × 1 u a 96 px/u), con sus colores horneados: se usa con <c>Image.color</c> blanco y, cargada,
         /// con <see cref="LluviaStormTint"/>.
         /// </summary>
-        internal Sprite LluviaCloudSprite => _lluviaCloud != null ? _lluviaCloud : (_lluviaCloud = BuildLluviaCloud());
+        internal Sprite LluviaCloudSprite => _lluviaCloud != null ? _lluviaCloud : (_lluviaCloud = BuildLluviaCloud(false));
+
+        /// <summary>
+        /// La misma nube cargada de tormenta: la panza en sombra (el canto de abajo × <see cref="LluviaBellyShade"/>, que se
+        /// apaga hacia arriba hasta el 35 % del alto, por debajo de los puntos). Se usa con <see cref="LluviaStormTint"/>. Es
+        /// otro sprite y no otra imagen encima, así la vista de la Lluvia tiene las mismas piezas que antes.
+        /// </summary>
+        internal Sprite LluviaCloudStormSprite => _lluviaStorm != null ? _lluviaStorm : (_lluviaStorm = BuildLluviaCloud(true));
 
         /// <summary>
         /// Gota de vidrio del tinte <paramref name="key"/> (agua del mundo; 0,4 × 0,5 u), con contorno, sombra y brillo blancos
@@ -80,7 +101,7 @@ namespace AF.Presentation
             return drop;
         }
 
-        private Sprite BuildLluviaCloud()
+        private Sprite BuildLluviaCloud(bool storm)
         {
             int w = Mathf.RoundToInt(LluviaCloudWidthU * MechanicPxPerU);
             int h = Mathf.RoundToInt(LluviaCloudHeightU * MechanicPxPerU);
@@ -90,6 +111,7 @@ namespace AF.Presentation
             float bottom = h * 0.07f;
             float top = h * 0.93f;
             Color rimLight = ColorMath.Lighten(LluviaCloudLit, 0.55f);
+            float band = LluviaBellyBand * (top - bottom); // la silueta mide del 7 % al 93 % del alto
             var pc = new PixelCanvas(w, h);
             for (int y = 0; y < h; y++)
             {
@@ -103,7 +125,15 @@ namespace AF.Presentation
                         continue;
                     }
 
-                    pc.Blend(x, y, Slate, PixelCanvas.Coverage(d));
+                    // Tormenta: la panza en sombra, más abajo y apagándose deprisa hacia arriba, (1 − s)².
+                    float shade = 1f;
+                    if (storm)
+                    {
+                        float s = Mathf.Clamp01((py - bottom) / band);
+                        shade = 1f - ((1f - LluviaBellyShade) * (1f - s) * (1f - s));
+                    }
+
+                    pc.Blend(x, y, LluviaShade(Slate, shade), PixelCanvas.Coverage(d));
                     float inside = PixelCanvas.Coverage(d + outline);
                     if (inside <= 0f)
                     {
@@ -131,11 +161,16 @@ namespace AF.Presentation
                         c = Color.Lerp(c, rimLight, 0.75f * edge);
                     }
 
-                    pc.Blend(x, y, c, inside);
+                    pc.Blend(x, y, LluviaShade(c, shade), inside);
                 }
             }
 
-            return MakeSprite(pc, "mech_lluvia_cloud", new Vector2(0.5f, 0.5f), Vector4.zero);
+            return MakeSprite(pc, storm ? "mech_lluvia_cloud_storm" : "mech_lluvia_cloud", new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        private static Color LluviaShade(Color c, float factor)
+        {
+            return new Color(c.r * factor, c.g * factor, c.b * factor, c.a);
         }
 
         // Distancia con signo (px; negativa dentro) a la silueta de la nube: la base redondeada y los lóbulos.
