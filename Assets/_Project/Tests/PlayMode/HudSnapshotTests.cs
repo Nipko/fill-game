@@ -17,9 +17,12 @@ namespace AF.Tests.PlayMode
     /// (chip y marco índigo y el velo del 15 %), <c>47_next_chip_l39</c> («Difícil ×3» sobre Siguiente), <c>48_counter_lluvia_l143</c>
     /// (contador de la Lluvia tras un vertido útil) y <c>49_counter_pirana_l183</c> (contador de la Piraña), más las variantes de
     /// la banda: <c>45b_hud_tucked_l106</c> (3 filas), <c>46b_hud_tucked_l200</c> (3 filas con el contador),
-    /// <c>46c_hud_l200_16x9</c> y <c>46d_hud_tucked_16_16x9</c> (16:9, 1080 × 1920 px, arriba de la captura),
-    /// <c>46e_hud_veryhard_l160</c> y <c>46f_hud_veryhard_l180</c> (el marco índigo junto al Huito, C13) y
-    /// <c>47b_next_chip_l59</c> («Muy difícil ×4»). Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
+    /// <c>46c_hud_l200_16x9</c>, <c>46d_hud_tucked_16_16x9</c> y <c>46g_hud_l160_16x9</c> (16:9, 1080 × 1920 px, arriba de la
+    /// captura; en el 160 el contador va junto a la cabecera compactada),
+    /// <c>46e_hud_veryhard_l160</c> y <c>46f_hud_veryhard_l180</c> (el marco índigo junto al Huito, C13),
+    /// <c>47b_next_chip_l59</c> («Muy difícil ×4») y <c>47c_next_chip_l59_16x9</c> (16:9), y <c>48b_counter_lluvia_l194</c> y
+    /// <c>48c_counter_lluvia_l194_lifted</c> (el contador fuera del cielo de la nube de la fila 1, en reposo y con la cuia
+    /// elevada). Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.HudSnapshotTests</c> sin <c>-nographics</c>; los PNG van a <c>Logs/snapshots/</c>.
     /// </summary>
     [Explicit("Capturas visuales manuales; necesitan dispositivo gráfico.")]
@@ -57,6 +60,7 @@ namespace AF.Tests.PlayMode
             // 16:9 (1080 × 1920 px): GameScreen lo maqueta en 438,75 × 780 dp, en la parte de arriba de la captura.
             GameScreen.SimulatedScreen = HudLabelTests.Screen640;
             yield return Shot(dir, 200, "46c_hud_l200_16x9");
+            yield return Shot(dir, 160, "46g_hud_l160_16x9");
             LaunchOptions.LevelPackJsonOverride = HudSetup.SixteenCuiaVeryHardPack();
             yield return Shot(dir, 1, "46d_hud_tucked_16_16x9");
             LaunchOptions.LevelPackJsonOverride = null;
@@ -78,6 +82,32 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 1200);
             yield return SnapshotKit.Wait(0.3f);
             SnapshotKit.Save(dir, "47b_next_chip_l59");
+
+            // El mismo chip colgado de Siguiente en 16:9 (1080 × 1920 px: 438,75 × 780 dp, en la parte de arriba de la captura).
+            GameScreen.SimulatedScreen = HudLabelTests.Screen640;
+            yield return HudSetup.LoadPlaying(59);
+            boot = GameBootstrap.Current!;
+            SnapshotKit.Attach(boot);
+            VictorySetup.WinToVictoryScreen(boot);
+            PlayModeHelpers.Step(boot, 1200);
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "47c_next_chip_l59_16x9");
+            GameScreen.SimulatedScreen = new Vector4(SnapshotKit.Width, SnapshotKit.Height, 96f, 48f);
+
+            // Lluvia del 194 en la fila 1 de un tablero de 3 filas: el contador, pegado bajo la placa, a la izquierda del cielo de
+            // la nube; en reposo y con la cuia de la Lluvia seleccionada (elevada).
+            yield return HudSetup.LoadPlaying(194);
+            boot = GameBootstrap.Current!;
+            SnapshotKit.Attach(boot);
+            PlayModeHelpers.Step(boot, 100);
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "48b_counter_lluvia_l194");
+            int rain = boot.Flow!.Session.Counter.CuiaIndex;
+            Assert.That(HudSetup.FillIfEmpty(boot, rain), Is.True, "la Lluvia del 194 empieza vacía: antes de elevarla recibe un vertido");
+            boot.TapCuia(rain);
+            PlayModeHelpers.Step(boot, 400);
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "48c_counter_lluvia_l194_lifted");
 
             // Lluvia del 143 tras un vertido útil (3 → 2, dos gotas pendientes) y Piraña del 183.
             yield return HudSetup.LoadPlaying(143);
@@ -102,7 +132,11 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 100);
             yield return SnapshotKit.Wait(0.3f);
             SnapshotKit.Save(dir, name);
-            Debug.Log("AF_HUD " + name + ": forma " + boot.View!.HudLabelsMode + ", filas " + boot.View.Layout!.Rows);
+            GameScreen view = boot.View!;
+            Debug.Log("AF_HUD " + name + ": forma " + view.HudLabelsMode + ", filas " + view.Layout!.Rows + ", TopRowY " + view.TopRowDp
+                + ", panel " + view.Layout.PanelY + ", marco " + view.DifficultyFrameTopDp + (view.DifficultyFrameTucked ? " (recogido)" : string.Empty)
+                + ", sello " + view.HudDifficultyChip.SealShown + ", contador junto a la cabecera " + view.HudCounterBesideWallet
+                + ", cabecera compactada " + view.WalletSqueezed);
         }
     }
 }

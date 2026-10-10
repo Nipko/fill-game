@@ -15,6 +15,10 @@ namespace AF.UI
     /// del jaguar (Muy difícil), y la cinta «×3»/«×4» clavada con un remache a la derecha (como la «x5» de Magic Sort, ficha
     /// §3.6). Sin calavera (glosario §6.1). En <c>normal</c> se oculta. Los sellos de fauna (rana dardo y jaguar) quedan
     /// pendientes de revisión del asesor cultural (07 §8.2).
+    /// <para>La cinta es de <c>madera_oscura</c> #36261C con la cifra crema #FFF8E6 (13,7:1), contorno de madera y un remache de
+    /// latón [P] (<see cref="RibbonColor"/>; revisión de T09): con el agua profunda de antes, la «×4» de Siguiente se leía como
+    /// parte de la oferta del video de encima («Cosecha doble: x2 por video», de la misma familia Agua). La pinta
+    /// <see cref="RibbonSprite"/>, con la forma y las medidas de la cinta de <c>ProceduralArt.RibbonTag</c>.</para>
     /// </summary>
     /// <remarks>
     /// Geometría (dp, desde la esquina superior izquierda de <see cref="Root"/>): el sello de <see cref="MedallionDp"/> a la
@@ -26,6 +30,10 @@ namespace AF.UI
     /// (360 × 640 o tableros de 3 filas): <see cref="CompactHeightDp"/> de alto, sello de 20 dp, píldora de
     /// <see cref="CompactPillDp"/> con la misma pintura (9-slice reducido) y texto de <see cref="CompactTextDp"/>, el mínimo de
     /// 07 §7.7; la cinta, si la hay, a 3/4 [P].</para>
+    /// <para>Sin sello (<see cref="SetSeal"/>; HUD de 3 filas): la píldora sola con su texto. El HUD lo usa cuando el chip va
+    /// pegado bajo la placa, encima del panel que rodea las cuias: el naranja de la rana (#D05802) queda a ΔE00 9,8 del Agua
+    /// del Río Negro y del Achiote, y el disco y el brillo del sello también bajan de 10 (direccion-visual-v2 §2.4, regla 1;
+    /// 07 §3, regla 6; ARQUITECTURA del paso 1, §5, COLOR).</para>
     /// </remarks>
     internal sealed class DifficultyChip
     {
@@ -59,6 +67,18 @@ namespace AF.UI
         /// <summary>Texto de la variante compacta: el mínimo de 07 §7.7 (12-14 dp).</summary>
         public const float CompactTextDp = 12f;
 
+        /// <summary>Margen de la píldora antes del texto cuando no lleva sello (dp).</summary>
+        public const float NoSealPadDp = 8f;
+
+        /// <summary>Cuerpo de la cinta «×n»: <c>madera_oscura</c> #36261C [P].</summary>
+        public static readonly Color RibbonColor = Palette.WoodDark;
+
+        /// <summary>Lo más claro de la cinta, arriba (<see cref="RibbonColor"/> aclarado un 12 %).</summary>
+        public static readonly Color RibbonLight = ColorMath.Lighten(Palette.WoodDark, 0.12f);
+
+        /// <summary>Remache de latón que clava la cinta a la píldora [P] (≤ 3,5 dp).</summary>
+        public static readonly Color RivetColor = Palette.Hex(0xD9A441);
+
         private const float PillTopDp = (HeightDp - ProceduralArt.LabelPillDp) * 0.5f;
         private const float RibbonTextDp = 16f;
         private const float RibbonTopDp = 4f;
@@ -76,6 +96,8 @@ namespace AF.UI
         private const float CompactPillTopDp = (CompactHeightDp - CompactPillDp) * 0.5f;
         private const float CompactRibbonScale = 0.75f;
 
+        private static Sprite? s_ribbon;
+
         private readonly ProceduralArt _art;
         private readonly RectTransform _root;
         private readonly Image _pill;
@@ -87,6 +109,7 @@ namespace AF.UI
         private int _multiplier = -1;
         private float _width;
         private bool _compact;
+        private bool _seal = true;
 
         private DifficultyChip(Transform parent, ProceduralArt art)
         {
@@ -96,7 +119,10 @@ namespace AF.UI
             _pill.type = Image.Type.Sliced;
             _text = UiBuilder.Label("Label", _pill.transform, TextStyle.PlainBold, string.Empty, TextDp, Palette.Ink, TextAlignmentOptions.MidlineLeft);
             _ribbon = UiBuilder.Image("Ribbon", _root, null, Color.white);
-            _ribbonText = UiBuilder.Label("Value", _ribbon.transform, TextStyle.CtaWater, string.Empty, RibbonTextDp, Palette.Cream, TextAlignmentOptions.Center);
+
+            // Baloo 2 ExtraBold con el contorno y la sombra de madera de los títulos sobre placa: el contorno agua_contorno de
+            // los CTA de la familia Agua dejaba un filo azul en la «×n» (revisión de T09).
+            _ribbonText = UiBuilder.Label("Value", _ribbon.transform, TextStyle.ModalTitle, string.Empty, RibbonTextDp, Palette.Cream, TextAlignmentOptions.Center);
             _medallion = UiBuilder.Image("Medallion", _root, null, Color.white);
             _medallion.preserveAspect = true;
             _root.gameObject.SetActive(false);
@@ -131,6 +157,15 @@ namespace AF.UI
 
         /// <summary>Sello mostrado (rana dardo o jaguar).</summary>
         public Sprite? Icon => _medallion.sprite;
+
+        /// <summary>El sello se pinta (el chip se ve y no está en la variante sin sello de <see cref="SetSeal"/>).</summary>
+        public bool SealShown => Visible && _medallion.gameObject.activeSelf;
+
+        /// <summary>Sprite de la cinta (<c>label_ribbon_wood</c>), o null si aún no ha salido ninguna.</summary>
+        public Sprite? RibbonSpriteShown => _ribbon.sprite;
+
+        /// <summary>Material de la cifra de la cinta (el de <c>TextStyle.ModalTitle</c>: contorno y sombra de madera; tests).</summary>
+        public Material? RibbonTextMaterial => _ribbonText.fontSharedMaterial;
 
         /// <summary>
         /// Color del token de la etiqueta aplicada (<c>ui_ambar</c> o <c>ui_indigo</c>). Se deduce de <see cref="Label"/>, no de lo
@@ -204,7 +239,7 @@ namespace AF.UI
 
         /// <summary>
         /// Pares texto / fondo del chip para la comprobación de contraste ≥ 4,5:1 (02 §12; 07 §7.2 y §7.8): tinta sobre ámbar
-        /// (5,4:1), marfil sobre índigo (10,7:1) y crema sobre el agua profunda de la cinta.
+        /// (5,4:1), marfil sobre índigo (10,7:1) y crema sobre la madera oscura de la cinta (13,7:1; 10,1:1 en su parte alta).
         /// </summary>
         public static (string Name, Color Text, Color Background)[] ContrastPairs()
         {
@@ -212,9 +247,45 @@ namespace AF.UI
             {
                 ("chip Difícil", TextOn(false), (Color)Palette.UiAmber),
                 ("chip Muy difícil", TextOn(true), (Color)Palette.UiIndigo),
-                ("cinta ×3/×4", (Color)Palette.Cream, ProceduralArt.RibbonTagColor),
-                ("cinta ×3/×4 (parte alta)", (Color)Palette.Cream, ProceduralArt.RibbonTagLight),
+                ("cinta ×3/×4", (Color)Palette.Cream, RibbonColor),
+                ("cinta ×3/×4 (parte alta)", (Color)Palette.Cream, RibbonLight),
             };
+        }
+
+        /// <summary>
+        /// Colores principales de las superficies de más de 2 dp que pinta el chip ahora (para el test de ΔE00 frente a los
+        /// tintes cuando el chip va sobre el panel; direccion-visual-v2 §2.4, regla 1): la píldora (el token ámbar o índigo, que
+        /// es el centro de su cara) y, con el sello, los colores del sello (<see cref="ProceduralArt.LabelSealColors"/> de la
+        /// rana o del jaguar); con la cinta, su madera. El texto es un glifo (tinta o marfil) y el contorno, el canto y el filo de
+        /// la píldora miden ≤ 2 dp. Solo para tests: asigna.
+        /// </summary>
+        public void CollectSurfaceColors(System.Collections.Generic.List<(string Name, Color Color)> into)
+        {
+            if (!Visible)
+            {
+                return;
+            }
+
+            into.Add((VeryHard ? "píldora índigo" : "píldora ámbar", PillColor));
+            if (SealShown)
+            {
+                (string Name, Color Color)[] seal = ProceduralArt.LabelSealColors();
+                for (int i = 0; i < seal.Length; i++)
+                {
+                    string n = seal[i].Name;
+                    bool jaguar = n.StartsWith("Jaguar", System.StringComparison.Ordinal) || n == "UiPaper";
+                    bool rana = n.StartsWith("Rana", System.StringComparison.Ordinal) || n.StartsWith("Frog", System.StringComparison.Ordinal) || n == "Cream";
+                    if ((VeryHard && jaguar) || (!VeryHard && rana))
+                    {
+                        into.Add(("sello: " + n, seal[i].Color));
+                    }
+                }
+            }
+
+            if (RibbonShown)
+            {
+                into.Add(("cinta", RibbonColor));
+            }
         }
 
         /// <summary>Color del texto sobre la píldora: tinta sobre ámbar y marfil (<c>ui_papel</c>) sobre índigo (07 §7.7).</summary>
@@ -258,11 +329,31 @@ namespace AF.UI
             _ribbon.gameObject.SetActive(ribbon);
             if (ribbon)
             {
-                _ribbon.sprite = _art.RibbonTag;
+                _ribbon.sprite = RibbonSprite();
                 _ribbonText.text = UiText.Ribbon(multiplier);
             }
 
             Layout();
+        }
+
+        /// <summary>
+        /// Con sello (por defecto) o sin él: sin sello va la píldora sola con su texto, que empieza <see cref="NoSealPadDp"/>
+        /// después del extremo izquierdo (HUD de 3 filas: el chip va sobre el panel y el sello no puede ir ahí, ver la clase).
+        /// Recalcula <see cref="Width"/>; quien lo coloca llama después a <see cref="Place"/>. Sin cambios, no hace nada.
+        /// </summary>
+        public void SetSeal(bool seal)
+        {
+            if (seal == _seal)
+            {
+                return;
+            }
+
+            _seal = seal;
+            _medallion.gameObject.SetActive(seal);
+            if (Visible)
+            {
+                Layout();
+            }
         }
 
         /// <summary>
@@ -298,6 +389,94 @@ namespace AF.UI
             Place(Mathf.Round(centerX - (_width * 0.5f)), yTop);
         }
 
+        /// <summary>
+        /// Cinta «×n» de <c>madera_oscura</c> (<c>label_ribbon_wood</c>) con la forma y las medidas de
+        /// <c>ProceduralArt.RibbonTag</c> (<see cref="ProceduralArt.RibbonTagWidthDp"/> × <see cref="ProceduralArt.RibbonTagHeightDp"/>
+        /// dp, el cuerpo desde <see cref="ProceduralArt.RibbonTagBodyLeftDp"/>, la cola en V a la derecha y la zona de texto
+        /// <see cref="ProceduralArt.RibbonTagTextDp"/>): luz arriba con un bisel de <c>ui_madera</c>, canto oscuro abajo, contorno
+        /// más oscuro, sombra suave y, en la esquina superior izquierda, un remache de latón (<see cref="RivetColor"/>) que la
+        /// clava sobre el extremo de la píldora, por encima de la altura de la «x». Una sola textura legible para toda la app.
+        /// </summary>
+        internal static Sprite RibbonSprite()
+        {
+            if (s_ribbon != null)
+            {
+                return s_ribbon;
+            }
+
+            const float k = ChipPaint.PxPerDp;
+            const float wDp = ProceduralArt.RibbonTagWidthDp;
+            const float hDp = ProceduralArt.RibbonTagHeightDp;
+            const float x0 = ProceduralArt.RibbonTagBodyLeftDp;
+            const float x1 = wDp - 0.5f;
+            const float y0 = 2.5f;
+            const float y1 = 20f;
+            int w = Mathf.RoundToInt(wDp * k);
+            int h = Mathf.RoundToInt(hDp * k);
+            var pixels = new Color[w * h];
+            Color body = RibbonColor;
+            Color light = RibbonLight;
+            Color low = ColorMath.Darken(body, 0.18f);
+            Color outline = ColorMath.Darken(body, 0.5f);
+            Color bevel = Palette.UiWood;
+            for (int y = 0; y < h; y++)
+            {
+                float yd = hDp - ((y + 0.5f) / k); // dp desde arriba
+                for (int x = 0; x < w; x++)
+                {
+                    float xd = (x + 0.5f) / k;
+                    var c = new Color(0f, 0f, 0f, 0f);
+                    float sh = TagDistance(xd, yd - 1.5f, x0, y0, x1, y1);
+                    c = ChipPaint.Over(c, new Color(0f, 0f, 0f, 0.32f), ChipPaint.SoftCoverage(sh * k, 2.4f * k));
+                    float d = TagDistance(xd, yd, x0, y0, x1, y1);
+                    float cov = ChipPaint.Coverage(d * k);
+                    if (cov > 0f)
+                    {
+                        c = ChipPaint.Over(c, outline, cov);
+                        float inside = ChipPaint.Coverage((d + 1.1f) * k);
+                        if (inside > 0f)
+                        {
+                            float v = Mathf.Clamp01((yd - y0) / (y1 - y0)); // 0 arriba, 1 abajo
+                            Color face = v < 0.45f
+                                ? Color.Lerp(light, body, Mathf.SmoothStep(0f, 1f, v / 0.45f))
+                                : Color.Lerp(body, low, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.6f, 1f, v)));
+                            if (-d < 2.1f && v < 0.4f)
+                            {
+                                face = Color.Lerp(face, bevel, 0.55f * Mathf.Clamp01(1f - ((-d - 1.1f) / 1f))); // bisel superior
+                            }
+
+                            face.a = 1f;
+                            c = ChipPaint.Over(c, face, inside);
+                        }
+                    }
+
+                    // Remache de latón (3,5 dp) con un brillo crema de 1 dp, por encima de la altura de la «x» del texto.
+                    float rivet = ChipPaint.CircleDistance(xd, yd, x0 + 2.6f, y0 + 2.6f, 1.75f);
+                    c = ChipPaint.Over(c, ColorMath.Darken(RivetColor, 0.45f), ChipPaint.Coverage(rivet * k));
+                    c = ChipPaint.Over(c, RivetColor, ChipPaint.Coverage((rivet + 0.45f) * k));
+                    float glint = ChipPaint.CircleDistance(xd, yd, x0 + 2.15f, y0 + 2.15f, 0.5f);
+                    c = ChipPaint.Over(c, new Color(1f, 0.97f, 0.9f, 0.9f), ChipPaint.Coverage(glint * k));
+                    pixels[(y * w) + x] = c;
+                }
+            }
+
+            s_ribbon = ChipPaint.ToSprite(pixels, w, h, "label_ribbon_wood", Vector4.zero);
+            return s_ribbon;
+        }
+
+        // Distancia con signo (dp, negativa dentro) a la cinta: rectángulo redondeado de radio 3 menos la cola en V de 4 dp a la
+        // derecha (la de ProceduralArt.RibbonTag).
+        private static float TagDistance(float xd, float yd, float x0, float y0, float x1, float y1)
+        {
+            const float notch = 4f;
+            float d = ChipPaint.RoundedRectDistance(xd, yd, x0, y0, x1, y1, 3f);
+            float midY = (y0 + y1) * 0.5f;
+            float half = (y1 - y0) * 0.5f;
+            float vx = x1 - (notch * (1f - (Mathf.Abs(yd - midY) / half)));
+            float notchD = vx - xd; // > 0 a la izquierda de la V (dentro)
+            return Mathf.Max(d, -notchD * 0.9f);
+        }
+
         private void Layout()
         {
             float textW = Mathf.Ceil(_text.preferredWidth);
@@ -309,8 +488,8 @@ namespace AF.UI
             float shadow = _compact ? CompactShadowDp : ProceduralArt.LabelPillShadowDp;
             float rs = _compact ? CompactRibbonScale : 1f;
             float ribbonGap = RibbonGapDp * rs;
-            float pillX = medallion - overlap;
-            float textX = overlap + (_compact ? CompactTextGapDp : TextGapDp); // dentro de la píldora
+            float pillX = _seal ? medallion - overlap : 0f;
+            float textX = _seal ? overlap + (_compact ? CompactTextGapDp : TextGapDp) : NoSealPadDp; // dentro de la píldora
             float pillW = textX + textW + (ribbon ? ribbonGap + (RibbonBodyOverlapDp * rs) : (_compact ? CompactEndPadDp : EndPadDp));
             UiBuilder.Place(_pill.rectTransform, pillX, pillTop, pillW, pillH + shadow);
             UiBuilder.Place(_text.rectTransform, textX, 0f, textW + 2f, pillH);

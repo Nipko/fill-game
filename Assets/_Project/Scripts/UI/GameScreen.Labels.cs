@@ -19,20 +19,32 @@ namespace AF.UI
     /// <list type="bullet">
     /// <item><description>bajo la insignia «Nivel {n}», el chip de dificultad (Difícil o Muy difícil, sin cinta) y, en los
     /// niveles de Aguas turbias, el chip gris-pardo «?» (<see cref="MurkyChip"/>); con un contador de Lluvia o Piraña, su chip
-    /// (<see cref="HudCounterChip"/>) a la derecha de la misma banda;</description></item>
+    /// (<see cref="HudCounterChip"/>), siempre aparte de ese grupo;</description></item>
     /// <item><description>alrededor del panel, un marco propio de 3 dp ámbar (Difícil) o índigo (Muy difícil), y en Muy difícil
     /// un velo propio que oscurece el fondo un 15 %, detrás del panel (la variante noche con LUT queda [P]);</description></item>
-    /// <item><description>en la victoria, sobre Siguiente, el chip del nivel N + 1 con su cinta «×3»/«×4» (el panel crece
+    /// <item><description>en la victoria, el chip del nivel N + 1 con su cinta «×3»/«×4» colgado de Siguiente (el panel crece
     /// <see cref="NextChipRowDp"/> para hacerle sitio).</description></item>
     /// </list>
     /// </summary>
     /// <remarks>
-    /// <para><b>Banda de las etiquetas</b> (<see cref="HudLabelMode"/>): con sitio entre la fila superior y el canto del panel,
-    /// chips normales (30 dp) en <c>TopRowY + 50</c>; si no, la variante compacta de 20 dp: en la misma línea si queda por encima
-    /// de las cuias elevadas de la fila 1, o «pegada bajo la placa» (sobre el canto inferior de la insignia, bajo el texto) en los
-    /// tableros de 3 filas, con el contador en el mismo grupo (a los lados están la pausa, los saldos y Reiniciar) [P]. El grupo
-    /// se centra bajo la insignia y se aparta del cielo de la cuia del contador (su nube y sus puntos, en los 32 dp táctiles de
-    /// encima, 02 §3.3) si está en la fila 1.</para>
+    /// <para><b>Banda de las etiquetas</b> (<see cref="HudLabelMode"/>, <see cref="ModeFor"/>): con sitio entre la fila superior
+    /// y el canto de arriba del tablero (el del marco si asoma, si no el del panel), chips normales (30 dp) en
+    /// <c>TopRowY + 50</c>; si solo caben 20 dp (por encima del canto y de las cuias elevadas de la fila 1, como mucho hasta el
+    /// pie de la fila del HUD), la variante compacta en esa línea; si no (tableros de 3 filas, con el panel recortado bajo el
+    /// HUD), compacta y «pegada bajo la placa» (sobre el canto inferior de la insignia, bajo el texto, entre x 56 y 192: a los
+    /// lados están la pausa, los saldos y Reiniciar) [P]. Si la banda pisa el panel que rodea las cuias (3 filas), el chip va sin sello: los colores de
+    /// la rana y del jaguar no llegan a ΔE00 10 de los tintes (direccion-visual-v2 §2.4, regla 1; 07 §3, regla 6); lo que
+    /// queda sobre el panel (la píldora, el «?» y el contador) sí llega, salvo el índigo de Muy difícil frente al Huito, que es
+    /// el mismo par que el marco de 07 §7.7 (C13, abierta).</para>
+    /// <para><b>Contador</b>: nunca en el mismo grupo que las etiquetas de dificultad («Muy difícil 4» repetiría el patrón de la
+    /// cinta «×4» y haría creer que el premio baja con cada jugada, 02 §10). En la banda normal va a la derecha (x = W − 8 −
+    /// ancho, T09 §5); pegado bajo la placa va a ≥ <see cref="HudCounterGapDp"/> del último chip, con su propio material (cara
+    /// clara, cifra en tinta y contorno de madera oscura) y el icono de la mecánica delante de la cifra. A la derecha de esa
+    /// banda no cabe: la píldora «Reiniciar» ocupa <c>TopRowY + 32..48</c> en x W − 68..W − 8. Si bajo la placa no caben los
+    /// dos (el 160 en 16:9), el contador pasa a la derecha de la insignia, bajo la cabecera compactada y a la izquierda de
+    /// Reiniciar (<see cref="HudCounterBesideWallet"/>) [P]. Todo se aparta del cielo de la cuia del contador si está en la
+    /// fila 1: su nube y sus puntos van en los 32 dp táctiles sobre la boca (02 §3.3) y suben 16 dp con ella al seleccionarla
+    /// (LluviaOverlay: la nube no es más ancha que la cuia).</para>
     /// <para><b>Cuándo se ven</b>: en Playing y en la celebración, con la insignia a la vista (el embudo y la victoria la
     /// ocultan). Durante la intro no: la tropa de miquitos se sienta en la franja entre el HUD y el panel; aparecen con un
     /// fundido de <see cref="HudLabelsFadeMs"/> al terminar, y también esperan al rótulo del intento o «El río bajó» y a la
@@ -42,33 +54,47 @@ namespace AF.UI
     /// esperar al siguiente vertido) con <see cref="LevelSession.Counter"/>: solo baja con vertidos útiles (Q18 B). Sin
     /// asignaciones por fotograma.</para>
     /// <para><b>Panel bajo la fila del HUD</b> (3 filas: el panel se recorta en <c>BoardTop − 8 = TopRowY + 40</c>, BoardLayout):
-    /// la columna de píldoras de la cabecera (Semillas y Canoas, <c>TopRowY + 1..49</c>) sube lo justo para no pisar el canto
-    /// del panel, sin salir de la zona segura (<see cref="KeepWalletOffPanel"/>), y el marco de la etiqueta no asoma por
-    /// arriba, donde pasaría a trozos bajo la insignia, las píldoras y Reiniciar (<see cref="DifficultyFrameTucked"/>) [P].</para>
+    /// la columna de píldoras de la cabecera (Semillas sobre Canoas, de 22 dp con 4 de hueco: <c>TopRowY + 1..49</c>) pisaría
+    /// 9 dp del canto. En vez de subirla fuera de la fila, se compacta dentro de ella (<see cref="KeepWalletOffPanel"/>):
+    /// píldoras de <see cref="WalletSqueezedPillDp"/> con <see cref="WalletSqueezedGapDp"/> de hueco, de <c>TopRowY</c> a
+    /// <c>TopRowY + 38</c>, <see cref="WalletPanelClearDp"/> por encima del canto; el marco de la etiqueta no asoma por arriba,
+    /// donde pasaría a trozos bajo la insignia, las píldoras y Reiniciar (<see cref="DifficultyFrameTucked"/>) [P].</para>
     /// </remarks>
     public sealed partial class GameScreen
     {
         /// <summary>Borde izquierdo de la insignia del nivel (x 56-192, guía 3.5).</summary>
         internal const float HudBadgeLeft = 56f;
 
+        /// <summary>Borde derecho de la insignia del nivel (tests).</summary>
+        internal const float HudBadgeRightDp = HudBadgeRight;
+
         /// <summary>La banda de las etiquetas empieza 50 dp bajo la fila superior (bajo la insignia de 52 dp en TopRowY − 2).</summary>
         internal const float HudLabelsBelowRowDp = 50f;
 
         /// <summary>
         /// Variante «pegada bajo la placa» (3 filas): la parte alta del chip compacto 36 dp bajo la fila superior, sobre el canto
-        /// inferior de la placa, ≈ 3 dp por debajo del contorno del texto «Nivel {n}» y ≥ 5 dp por encima de las cuias elevadas
-        /// de la fila 1 (que con 3 filas empiezan en TopRowY + 61,5) [P].
+        /// inferior de la placa, ≈ 3 dp por debajo del contorno del texto «Nivel {n}» y ≥ <see cref="HudLabelsTuckedClearDp"/>
+        /// por encima de las cuias elevadas de la fila 1 (que con 3 filas empiezan en TopRowY + 61,5) [P].
         /// </summary>
         internal const float HudLabelsTuckedDp = 36f;
+
+        /// <summary>Holgura mínima de la banda pegada bajo la placa con las cuias elevadas de la fila 1 (dp).</summary>
+        internal const float HudLabelsTuckedClearDp = 4f;
 
         /// <summary>Hueco entre chips de la banda (dp).</summary>
         internal const float HudLabelsGapDp = 4f;
 
-        /// <summary>Holgura con el canto del panel y con las cuias elevadas de la fila 1 (dp).</summary>
+        /// <summary>
+        /// Holgura de la banda normal y de la compacta con el canto de arriba visible del tablero y con las cuias elevadas de la
+        /// fila 1 (dp).
+        /// </summary>
         internal const float HudLabelsClearDp = 2f;
 
         /// <summary>Margen lateral del contador (x ≈ W − 8 − ancho).</summary>
         internal const float HudCounterRightDp = 8f;
+
+        /// <summary>Distancia mínima entre el contador y el último chip de las etiquetas (dp) [P].</summary>
+        internal const float HudCounterGapDp = 16f;
 
         /// <summary>Fundido de entrada de las etiquetas al terminar la intro [P].</summary>
         internal const float HudLabelsFadeMs = 180f;
@@ -79,18 +105,32 @@ namespace AF.UI
         /// <summary>Velo de Muy difícil: el fondo un 15 % más oscuro (02 §10).</summary>
         internal const float NightVeilAlpha = 0.15f;
 
-        /// <summary>Lo que crece el panel de victoria para el chip del nivel siguiente (chip de 30 dp y 4 de aire).</summary>
+        /// <summary>Lo que crece el panel de victoria para el chip del nivel siguiente (dp).</summary>
         internal const float NextChipRowDp = 34f;
 
-        /// <summary>De la píldora del chip al borde superior de Siguiente (como en Jugar del inicio: 6 dp).</summary>
-        internal const float NextChipGapDp = 6f;
-
         /// <summary>
-        /// Aire que se busca entre la columna de píldoras de la cabecera (Semillas y Canoas) y el canto del panel o del marco
-        /// (dp) [P]. Con el panel recortado bajo el HUD (3 filas) no cabe: la columna sube hasta la zona segura y Canoas acaba
-        /// justo en el canto (holgura 0).
+        /// El chip del nivel siguiente cuelga de Siguiente: su parte alta va 24 dp por encima del canto del botón, así que el chip
+        /// de 30 dp monta <see cref="NextChipOverlapDp"/> sobre el botón, como la «x5» de Magic Sort (ficha §3.6) [P].
         /// </summary>
+        internal const float NextChipHangDp = 24f;
+
+        /// <summary>Lo que el chip del nivel siguiente monta sobre el canto de arriba de Siguiente (dp).</summary>
+        internal const float NextChipOverlapDp = DifficultyChip.HeightDp - NextChipHangDp;
+
+        /// <summary>Aire entre la columna de píldoras de la cabecera (Semillas y Canoas) y el canto del panel o del marco (dp) [P].</summary>
         internal const float WalletPanelClearDp = 2f;
+
+        /// <summary>Alto de las píldoras de la cabecera compactada en la fila (dp; 22 normalmente) [P].</summary>
+        internal const float WalletSqueezedPillDp = 18f;
+
+        /// <summary>Hueco entre las píldoras de la cabecera compactada (dp; 4 normalmente) [P].</summary>
+        internal const float WalletSqueezedGapDp = 2f;
+
+        /// <summary>Escala de las píldoras de la cabecera compactada: 18 / 22 (las cifras de 15 dp quedan en 12,3 dp).</summary>
+        internal const float WalletSqueezeScale = WalletSqueezedPillDp / WalletBar.CompactPillDp;
+
+        // Alto de la fila superior del HUD (07 §7.4).
+        private const float HudRowDp = 48f;
 
         // Radio exterior del marco tallado del panel (radio 24 más el contorno de 1,5 dp; ProceduralArt.BuildPanelFrame), que
         // se escala con el 9-slice cuando el marco adelgaza (PanelFrameDp).
@@ -105,18 +145,21 @@ namespace AF.UI
         private Image _nightVeil = null!;
         private DifficultyChip _nextChip = null!;
         private CanvasGroup _nextChipGroup = null!;
-        private HudLabelMode _hudMode = HudLabelMode.Full;
+        private Canvas.WillRenderCanvases? _labelsWillRender;
+        private HudLabelMode _hudMode = HudLabelMode.None;
         private string _hudLabel = LevelDefinition.LabelNormal;
         private float _hudLabelsAlpha;
         private int _hudCounterIndex = -1;
+        private bool _hudCounterBesideWallet;
         private bool _labelsBuilt;
         private bool _frameTucked;
         private float _frameTopDp;
 
-        // Columna de píldoras de la cabecera tal como la dejó KeepWalletOffPanel (para ver en LabelsTick si GameScreen la ha
-        // vuelto a colocar: SyncChrome la pone en TopRowY al cambiar de fase).
-        private float _walletLift;
+        // Columna de píldoras de la cabecera tal como la dejó KeepWalletOffPanel (para ver si GameScreen la ha vuelto a colocar:
+        // SyncChrome la pone en TopRowY, a su tamaño, al cambiar de fase).
+        private bool _walletSqueezed;
         private float _walletSeedsY = float.NaN;
+        private float _walletCanoesY = float.NaN;
         private bool _walletVisible;
         private bool _walletCompact;
         private bool _walletCanoes;
@@ -124,14 +167,17 @@ namespace AF.UI
         /// <summary>Cómo va la banda de las etiquetas bajo la insignia.</summary>
         internal enum HudLabelMode
         {
-            /// <summary>Chips normales (30 dp) en TopRowY + 50, por encima del canto del panel.</summary>
-            Full = 0,
+            /// <summary>No hay ninguna etiqueta a la vista (nivel normal, sin «?» ni contador).</summary>
+            None = 0,
 
-            /// <summary>Chips compactos (20 dp) en TopRowY + 50, por encima de las cuias elevadas de la fila 1.</summary>
-            CompactBelow = 1,
+            /// <summary>Chips normales (30 dp) en TopRowY + 50, por encima del canto del tablero.</summary>
+            Full = 1,
 
-            /// <summary>Chips compactos pegados bajo la placa de la insignia (tableros de 3 filas), con el contador en el grupo.</summary>
-            Tucked = 2,
+            /// <summary>Chips compactos (20 dp) en TopRowY + 50, por encima del canto del tablero y de las cuias elevadas.</summary>
+            CompactBelow = 2,
+
+            /// <summary>Chips compactos pegados bajo la placa de la insignia (tableros de 3 filas), sobre el panel y sin sello.</summary>
+            Tucked = 3,
         }
 
         /// <summary>Chip de dificultad del HUD (tests).</summary>
@@ -151,6 +197,9 @@ namespace AF.UI
 
         /// <summary>Chip del nivel siguiente sobre Siguiente (tests).</summary>
         internal DifficultyChip NextChip => _nextChip;
+
+        /// <summary>Grupo del chip del nivel siguiente (tests: no recibe toques, así que Siguiente sigue tocándose debajo).</summary>
+        internal CanvasGroup NextChipGroup => _nextChipGroup;
 
         /// <summary>Forma de la banda de las etiquetas (tests).</summary>
         internal HudLabelMode HudLabelsMode => _hudMode;
@@ -185,13 +234,107 @@ namespace AF.UI
         /// <summary>Borde de arriba del marco de la etiqueta (dp desde arriba): <c>PanelY − 3</c>, o <c>PanelY</c> si va recogido.</summary>
         internal float DifficultyFrameTopDp => _frameTopDp;
 
-        /// <summary>Lo que ha subido la columna de píldoras de la cabecera para no pisar el panel (dp; 0 si no hizo falta).</summary>
-        internal float WalletLiftDp => _walletLift;
+        /// <summary>La columna de píldoras de la cabecera va compactada en la fila para no pisar el canto del tablero.</summary>
+        internal bool WalletSqueezed => _walletSqueezed;
+
+        /// <summary>El contador va a la derecha de la insignia, bajo la cabecera compactada (ver <c>PlaceCounterBesideWallet</c>).</summary>
+        internal bool HudCounterBesideWallet => _hudCounterBesideWallet;
 
         /// <summary>Color del marco de una etiqueta: <c>ui_ambar</c> en Difícil y <c>ui_indigo</c> en Muy difícil (07 §7.7).</summary>
         internal static Color FrameColorFor(bool veryHard)
         {
             return veryHard ? (Color)Palette.UiIndigo : (Color)Palette.UiAmber;
+        }
+
+        /// <summary>
+        /// Forma de la banda de las etiquetas con la fila superior en <paramref name="topRowY"/>, el canto de arriba visible del
+        /// tablero en <paramref name="edge"/> (el del marco si asoma) y las cuias elevadas de la fila 1 desde
+        /// <paramref name="liftedTop"/> (dp desde arriba): <see cref="HudLabelMode.Full"/> si los 30 dp caben en
+        /// <c>TopRowY + 50</c> con <see cref="HudLabelsClearDp"/> por encima de los dos; <see cref="HudLabelMode.CompactBelow"/>
+        /// si los 20 dp caben entre el pie de la fila del HUD (<c>TopRowY + 48</c>) y los dos, también con
+        /// <see cref="HudLabelsClearDp"/>; si no, <see cref="HudLabelMode.Tucked"/>. Así la banda nunca pisa el canto del panel ni
+        /// el marco de la etiqueta.
+        /// </summary>
+        internal static HudLabelMode ModeFor(float topRowY, float edge, float liftedTop)
+        {
+            float limit = Mathf.Min(edge, liftedTop);
+            if (limit - (topRowY + HudLabelsBelowRowDp) >= DifficultyChip.HeightDp + HudLabelsClearDp)
+            {
+                return HudLabelMode.Full;
+            }
+
+            return limit - (topRowY + HudRowDp) >= DifficultyChip.CompactHeightDp + HudLabelsClearDp
+                ? HudLabelMode.CompactBelow
+                : HudLabelMode.Tucked;
+        }
+
+        /// <summary>
+        /// Parte alta de la banda (dp desde arriba) para <paramref name="mode"/>: <c>TopRowY + 50</c> en la normal; en la compacta,
+        /// <see cref="HudLabelsClearDp"/> por encima del canto si cabe, sin subir del pie de la fila del HUD ni bajar de
+        /// <c>TopRowY + 50</c>; pegada bajo la placa, <c>TopRowY + 36</c> y ≥ <see cref="HudLabelsTuckedClearDp"/> sobre las cuias
+        /// elevadas.
+        /// </summary>
+        internal static float BandTopFor(HudLabelMode mode, float topRowY, float edge, float liftedTop)
+        {
+            float below = topRowY + HudLabelsBelowRowDp;
+            switch (mode)
+            {
+                case HudLabelMode.CompactBelow:
+                    float y = Mathf.Min(edge, liftedTop) - HudLabelsClearDp - DifficultyChip.CompactHeightDp;
+                    return Mathf.Clamp(y, topRowY + HudRowDp, below);
+                case HudLabelMode.Tucked:
+                    return Mathf.Min(topRowY + HudLabelsTuckedDp, liftedTop - HudLabelsTuckedClearDp - DifficultyChip.CompactHeightDp);
+                default:
+                    return below;
+            }
+        }
+
+        /// <summary>
+        /// Coloca un tramo de <paramref name="width"/> dp en [<paramref name="lo"/>, <paramref name="hi"/>] lo más cerca posible de
+        /// <paramref name="desired"/> y, si <paramref name="blocked"/>, fuera de [<paramref name="skyLeft"/>, <paramref name="skyRight"/>].
+        /// False si no cabe.
+        /// </summary>
+        internal static bool FitSpan(float width, float desired, float lo, float hi, bool blocked, float skyLeft, float skyRight, out float x)
+        {
+            const float tolerance = 0.01f;
+            x = desired;
+            if (width <= 0f)
+            {
+                return true;
+            }
+
+            if (!blocked || skyRight <= lo || skyLeft >= hi)
+            {
+                if (width > hi - lo + tolerance)
+                {
+                    return false;
+                }
+
+                x = Mathf.Clamp(desired, lo, Mathf.Max(lo, hi - width));
+                return true;
+            }
+
+            bool found = false;
+            float leftHi = Mathf.Min(hi, skyLeft);
+            if (leftHi - lo >= width - tolerance)
+            {
+                x = Mathf.Clamp(desired, lo, Mathf.Max(lo, leftHi - width));
+                found = true;
+            }
+
+            float rightLo = Mathf.Max(lo, skyRight);
+            if (hi - rightLo >= width - tolerance)
+            {
+                float c = Mathf.Clamp(desired, rightLo, Mathf.Max(rightLo, hi - width));
+                if (!found || Mathf.Abs(c - desired) < Mathf.Abs(x - desired))
+                {
+                    x = c;
+                }
+
+                found = true;
+            }
+
+            return found;
         }
 
         partial void LabelsBuild()
@@ -219,18 +362,24 @@ namespace AF.UI
             _nightVeil.transform.SetSiblingIndex(_sceneVeil.transform.GetSiblingIndex() + 1);
             _nightVeil.gameObject.SetActive(false);
 
-            // Chip del nivel siguiente, dentro del panel de victoria (aparece con Siguiente: su opacidad la sigue).
+            // Chip del nivel siguiente, dentro del panel de victoria y delante de Siguiente, del que cuelga (aparece con él: su
+            // opacidad la sigue). No recibe toques: Siguiente se toca también bajo los 6 dp que monta.
             _nextChip = DifficultyChip.Create(_victoryPanel, _art);
             _nextChipGroup = _nextChip.Root.gameObject.AddComponent<CanvasGroup>();
             _nextChipGroup.blocksRaycasts = false;
             _nextChipGroup.interactable = false;
             _nextChipGroup.alpha = 0f;
+
+            // La cabecera compactada se comprueba antes de pintar cada fotograma: SyncChrome puede volver a colocarla (o pasar al
+            // saldo grande del embudo y de la victoria) desde un evento después del Tick de la vista.
+            _labelsWillRender = OnLabelsWillRenderCanvases;
+            Canvas.willRenderCanvases += _labelsWillRender;
             _labelsBuilt = true;
         }
 
         partial void LabelsLayoutHud()
         {
-            // LayoutHud acaba de poner la cabecera en la fila superior (LayoutWalletBar): con el panel bajo el HUD, se aparta.
+            // LayoutHud acaba de poner la cabecera en la fila superior (LayoutWalletBar): con el panel bajo el HUD, se compacta.
             if (_labelsBuilt)
             {
                 LayoutDifficultyFrame();
@@ -288,6 +437,11 @@ namespace AF.UI
         {
             // El chip ya está colocado (LabelsLayoutVictory); entra con Siguiente, que acaba de volver a 0 (ApplyVictoryAnim).
             _nextChipGroup.alpha = _nextChip.Visible ? _nextGroup.alpha : 0f;
+            if (WalletMoved())
+            {
+                KeepWalletOffPanel(); // SyncChrome acaba de pasar al saldo grande de la victoria
+            }
+
             if (!DevProbe.Enabled)
             {
                 return;
@@ -325,8 +479,9 @@ namespace AF.UI
                 return;
             }
 
-            // El chip va 6 dp por encima de Siguiente, como en Jugar: Siguiente e Inicio bajan NextChipRowDp y el panel crece lo
-            // mismo hacia arriba (sigue anclado abajo). LayoutVictory acaba de colocarlo todo, así que esto se rehace entero en
+            // El chip cuelga de Siguiente (24 dp por encima de su canto y 6 sobre el botón, como la «x5» de Magic Sort): Siguiente
+            // e Inicio bajan NextChipRowDp y el panel crece lo mismo hacia arriba (sigue anclado abajo), así que entre el chip y
+            // la Cosecha doble de encima quedan ≈ 12 dp. LayoutVictory acaba de colocarlo todo, así que esto se rehace entero en
             // cada llamada.
             // OJO, COPIA: desde aquí hasta los rayos, el brillo, el velo y ModalSurfaceFor se repite el final de
             // GameScreen.LayoutVictory (GameScreen.cs, desde «_victoryCtaTopDp = y» hasta el final del método) con el panel más
@@ -347,7 +502,7 @@ namespace AF.UI
             PlaceAt(_victoryRays.rectTransform, w * 0.5f, ribbonY, 2f * VictoryRaysRadiusDp, 2f * VictoryRaysRadiusDp, new Vector2(0.5f, 0.5f));
             PlaceAt(_victoryGlow.rectTransform, w * 0.5f, ribbonY, 2f * VictoryGlowRadiusDp, 2f * VictoryGlowRadiusDp, new Vector2(0.5f, 0.5f));
             PlaceAt(_victoryVeil.rectTransform, w * 0.5f, ribbonY, 2f * ProceduralArt.VeilHoleHalfDp, 2f * ProceduralArt.VeilHoleHalfDp, new Vector2(0.5f, 0.5f));
-            _nextChip.PlaceCentered(panelW * 0.5f, _victoryCtaTopDp - NextChipGapDp - _nextChip.PillBottom);
+            _nextChip.PlaceCentered(panelW * 0.5f, _victoryCtaTopDp - NextChipHangDp); // creado tras Siguiente: va delante
         }
 
         partial void LabelsTick(float dtMs)
@@ -365,6 +520,22 @@ namespace AF.UI
                 {
                     _nextChipGroup.alpha = a;
                 }
+            }
+        }
+
+        // Antes de pintar: si SyncChrome ha vuelto a colocar la cabecera desde un evento posterior al Tick (pausa, embudo,
+        // victoria), se recompacta o vuelve a escala 1 en el mismo fotograma. Si la escena ya no existe, se da de baja.
+        private void OnLabelsWillRenderCanvases()
+        {
+            if (_labelsHud == null)
+            {
+                Canvas.willRenderCanvases -= _labelsWillRender;
+                return;
+            }
+
+            if (WalletMoved())
+            {
+                KeepWalletOffPanel();
             }
         }
 
@@ -435,14 +606,25 @@ namespace AF.UI
             UiBuilder.Place(_difficultyFrame.rectTransform, l.PanelX - d, _frameTopDp, l.PanelWidth + (2f * d), bottom - _frameTopDp);
         }
 
-        // NOTAS de la ola 2 («Para T09»): con el panel recortado bajo el HUD (3 filas: PanelY = BoardTop − 8 = TopRowY + 40),
-        // la píldora de Canoas «5/5» de la cabecera (TopRowY + 27..49, WalletBar) pisaba 9 dp del canto de arriba del panel
-        // (y 12 del marco). La columna de Semillas y Canoas sube lo que haga falta para acabar WalletPanelClearDp por encima del
-        // canto (el del marco si asoma por arriba; si no, el del panel), pero nunca por encima de la zona segura: la píldora de
-        // Semillas, como mucho, en _safeTop = TopRowY − 8. En 3 filas eso da 9 dp, justo lo que pisaba, así que Canoas acaba
-        // en el canto del panel, sin aire [P]. Solo la cabecera de partida (Compact): el saldo grande del embudo y de la
-        // victoria no es del HUD. Parte de donde la pone GameScreen (LayoutWalletBar) para medir sus píldoras sin repetir su
-        // maquetación. Sin asignaciones.
+        // Canto de arriba visible del tablero (dp desde arriba): el del marco de la etiqueta si asoma por arriba (PanelY − 3);
+        // si no, el del panel.
+        private float PanelEdgeDp(BoardLayoutResult l)
+        {
+            bool frame = _difficultyFrame.gameObject.activeSelf && _difficultyFrame.enabled && !_frameTucked;
+            return frame ? Mathf.Min(_frameTopDp, l.PanelY) : l.PanelY;
+        }
+
+        // NOTAS de la ola 2 («Para T09») y revisión de T09: con el panel recortado bajo el HUD (3 filas: PanelY = BoardTop − 8 =
+        // TopRowY + 40), la píldora de Canoas «5/5» de la cabecera (TopRowY + 27..49, WalletBar) pisaba 9 dp del canto de arriba
+        // del panel. Subir la columna la sacaba de la fila de 48 dp de 07 §7.4 (hasta el borde de la zona segura, desalineada de
+        // la pausa, la insignia y Reiniciar) y aun así acababa en el canto. Ahora se compacta DENTRO de la fila: Semillas y
+        // Canoas a escala 18/22 (píldoras de 18 dp, cifras de 12,3 dp e icono de Semillas de 16,4 dp) con 2 dp de hueco,
+        // centradas en su hueco horizontal y de TopRowY a TopRowY + 38 como mucho, WalletPanelClearDp por encima del canto [P].
+        // Solo la cabecera de partida con Canoas (desde el 31; Semillas sola va centrada en la fila y no llega al canto); el
+        // saldo grande del embudo y de la victoria vuelve a escala 1. Parte de donde la pone GameScreen (LayoutWalletBar), sin
+        // cambiar el tamaño de las píldoras (solo su escala y su posición), así que WalletBar no se entera. Sin asignaciones.
+        // Pendiente de la sesión principal: WalletBar.Layout con el alto de las píldoras, para no tocar sus RectTransform desde
+        // aquí.
         private void KeepWalletOffPanel()
         {
             RectTransform seeds = _walletBar.SeedsRect;
@@ -450,40 +632,63 @@ namespace AF.UI
             _walletVisible = _walletBar.Visible;
             _walletCompact = _walletBar.Compact;
             _walletCanoes = canoes.gameObject.activeSelf;
-            float lift = 0f;
+            bool squeeze = false;
             BoardLayoutResult? l = _layout;
             if (_walletVisible && _walletCompact)
             {
-                LayoutWalletBar(false); // cabecera de partida: en la fila superior (TopRowY)
-            }
-
-            if (_walletVisible && _walletCompact && l != null && _views.Length > 0)
-            {
-                float seedsTop = -seeds.anchoredPosition.y;
-                float bottom = _walletCanoes ? -canoes.anchoredPosition.y + canoes.sizeDelta.y : seedsTop + seeds.sizeDelta.y;
-                float edge = _difficultyFrame.gameObject.activeSelf && _difficultyFrame.enabled ? Mathf.Min(_frameTopDp, l.PanelY) : l.PanelY;
-                float room = Mathf.Max(0f, seedsTop - _safeTop);
-                lift = Mathf.Clamp(bottom + WalletPanelClearDp - edge, 0f, room);
-                if (lift > 0f)
+                LayoutWalletBar(false); // cabecera de partida: en la fila superior (TopRowY), a su tamaño
+                if (_walletCanoes && l != null && _views.Length > 0)
                 {
-                    _walletBar.Layout(seeds.anchoredPosition.x, TopRowY - lift, seeds.sizeDelta.x);
+                    float edge = PanelEdgeDp(l);
+                    float bottom = -canoes.anchoredPosition.y + canoes.sizeDelta.y;
+                    if (bottom + WalletPanelClearDp > edge || _hudCounterBesideWallet)
+                    {
+                        squeeze = true;
+                        const float column = (2f * WalletSqueezedPillDp) + WalletSqueezedGapDp;
+                        float columnBottom = Mathf.Min(TopRowY + ((HudRowDp + column) * 0.5f), edge - WalletPanelClearDp);
+                        if (_hudCounterBesideWallet)
+                        {
+                            columnBottom = Mathf.Min(columnBottom, TopRowY + column); // el contador va debajo (PlaceCounterBesideWallet)
+                        }
+
+                        float columnTop = Mathf.Max(TopRowY, columnBottom - column);
+                        float x = seeds.anchoredPosition.x + (seeds.sizeDelta.x * (1f - WalletSqueezeScale) * 0.5f);
+                        seeds.anchoredPosition = new Vector2(x, -columnTop);
+                        canoes.anchoredPosition = new Vector2(x, -(columnTop + WalletSqueezedPillDp + WalletSqueezedGapDp));
+                    }
                 }
             }
 
-            _walletLift = lift;
+            float scale = squeeze ? WalletSqueezeScale : 1f;
+            SetUniformScale(seeds, scale);
+            SetUniformScale(canoes, scale);
+            _walletSqueezed = squeeze;
             _walletSeedsY = seeds.anchoredPosition.y;
+            _walletCanoesY = canoes.anchoredPosition.y;
         }
 
-        // La cabecera ya no está donde la dejó KeepWalletOffPanel (otra forma, otra fila, Canoas que aparece o desaparece).
+        // La cabecera ya no está como la dejó KeepWalletOffPanel (otra forma, otra fila, Canoas que aparece o desaparece, otra
+        // posición o la escala de vuelta a 1).
         private bool WalletMoved()
         {
+            RectTransform seeds = _walletBar.SeedsRect;
+            RectTransform canoes = _walletBar.CanoesRect;
             return _walletBar.Visible != _walletVisible || _walletBar.Compact != _walletCompact
-                || _walletBar.CanoesRect.gameObject.activeSelf != _walletCanoes
-                || _walletBar.SeedsRect.anchoredPosition.y != _walletSeedsY;
+                || canoes.gameObject.activeSelf != _walletCanoes
+                || seeds.anchoredPosition.y != _walletSeedsY || canoes.anchoredPosition.y != _walletCanoesY
+                || seeds.localScale.x != (_walletSqueezed ? WalletSqueezeScale : 1f);
         }
 
-        // Banda de las etiquetas (ver la clase): forma, altura y posición del grupo (chip, «?» y, en 3 filas, el contador) y del
-        // contador a la derecha. Sin asignaciones (también en cada fotograma del relayout de una cuia añadida).
+        private static void SetUniformScale(RectTransform rt, float scale)
+        {
+            if (rt.localScale.x != scale || rt.localScale.y != scale)
+            {
+                rt.localScale = new Vector3(scale, scale, 1f);
+            }
+        }
+
+        // Banda de las etiquetas (ver la clase): forma, altura y posición del grupo (chip y «?») y del contador, aparte. Sin
+        // asignaciones (también en cada fotograma del relayout de una cuia añadida).
         private void LayoutHudLabels()
         {
             bool chip = _hudChip.Visible;
@@ -491,20 +696,26 @@ namespace AF.UI
             bool counter = _hudCounter.Visible;
             if (!chip && !murky && !counter)
             {
+                _hudMode = HudLabelMode.None; // la sonda no arrastra la forma del nivel anterior
+                if (_hudCounterBesideWallet)
+                {
+                    _hudCounterBesideWallet = false;
+                    KeepWalletOffPanel();
+                }
+
                 return;
             }
 
             float top = TopRowY;
-            float below = top + HudLabelsBelowRowDp;
-            float panelTop = float.MaxValue;
+            float edge = float.MaxValue;
             float liftedTop = float.MaxValue;
-            float headTop = float.MaxValue;
-            float headLeft = 0f;
-            float headRight = 0f;
+            float skyTop = float.MaxValue;
+            float skyLeft = 0f;
+            float skyRight = 0f;
             BoardLayoutResult? l = _layout;
-            if (l != null)
+            if (l != null && _views.Length > 0)
             {
-                panelTop = l.PanelY;
+                edge = PanelEdgeDp(l);
                 float u = l.CuiaWidth * 0.5f;
                 int n = Mathf.Min(_views.Length, l.RowOf.Length);
                 for (int i = 0; i < n; i++)
@@ -514,54 +725,33 @@ namespace AF.UI
                         continue;
                     }
 
-                    float lifted = l.FootY[i] - (_views[i].HeightU * u) - CuiaView.LiftDp;
-                    liftedTop = Mathf.Min(liftedTop, lifted);
+                    float mouth = l.FootY[i] - (_views[i].HeightU * u);
+                    liftedTop = Mathf.Min(liftedTop, mouth - CuiaView.LiftDp);
                     if (i == _hudCounterIndex)
                     {
-                        // Cielo de la cuia del contador: su nube y sus puntos van en los 32 dp táctiles sobre la boca (02 §3.3).
-                        headTop = l.FootY[i] - (_views[i].HeightU * u) - CuiaView.TouchHeadroomDp;
-                        headLeft = l.CenterX[i] - u - HudLabelsClearDp;
-                        headRight = l.CenterX[i] + u + HudLabelsClearDp;
+                        // Cielo de la cuia del contador con la cuia elevada: los 32 dp táctiles sobre la boca (su nube y sus
+                        // puntos, 02 §3.3) más los 16 dp que sube al seleccionarla, del ancho de la cuia.
+                        skyTop = mouth - CuiaView.LiftDp - CuiaView.TouchHeadroomDp;
+                        skyLeft = l.CenterX[i] - u - HudLabelsClearDp;
+                        skyRight = l.CenterX[i] + u + HudLabelsClearDp;
                     }
                 }
             }
 
-            HudLabelMode mode;
-            float y;
-            if (panelTop - below >= DifficultyChip.HeightDp + HudLabelsClearDp)
-            {
-                mode = HudLabelMode.Full;
-                y = below;
-            }
-            else if (liftedTop - below >= DifficultyChip.CompactHeightDp + HudLabelsClearDp)
-            {
-                mode = HudLabelMode.CompactBelow;
-                y = below;
-            }
-            else
-            {
-                mode = HudLabelMode.Tucked;
-                y = Mathf.Min(top + HudLabelsTuckedDp, liftedTop - HudLabelsClearDp - DifficultyChip.CompactHeightDp);
-            }
-
+            HudLabelMode mode = ModeFor(top, edge, liftedTop);
             _hudMode = mode;
             bool compact = mode != HudLabelMode.Full;
+            bool tucked = mode == HudLabelMode.Tucked;
+            float bandH = compact ? DifficultyChip.CompactHeightDp : DifficultyChip.HeightDp;
+            float y = BandTopFor(mode, top, edge, liftedTop);
             _hudChip.SetCompact(compact);
+            _hudChip.SetSeal(y + bandH <= edge); // sobre el panel que rodea las cuias, sin sello (ver la clase)
             _hudCounter.SetCompact(compact);
-            float chipH = compact ? DifficultyChip.CompactHeightDp : DifficultyChip.HeightDp;
             float murkyH = compact ? MurkyChip.CompactHeightDp : MurkyChip.HeightDp;
             float murkyW = MurkyChip.WidthFor(murkyH);
-            float centerY = y + (chipH * 0.5f);
-            bool overlapsHead = headTop < y + chipH;
+            float centerY = y + (bandH * 0.5f);
+            bool blocked = skyTop < y + bandH;
             float gap = HudLabelsGapDp;
-
-            // El contador, a la derecha de la banda (x ≈ W − 8 − ancho), salvo pegado bajo la placa: ahí, en el grupo.
-            bool counterInGroup = counter && mode == HudLabelMode.Tucked;
-            float counterX = _canvasW - HudCounterRightDp - _hudCounter.Width;
-            if (counter && !counterInGroup && overlapsHead && counterX < headRight && counterX + _hudCounter.Width > headLeft)
-            {
-                counterX = headLeft - gap - _hudCounter.Width;
-            }
 
             float groupW = 0f;
             if (chip)
@@ -574,30 +764,44 @@ namespace AF.UI
                 groupW += (groupW > 0f ? gap : 0f) + murkyW;
             }
 
-            if (counterInGroup)
+            float counterW = counter ? _hudCounter.Width : 0f;
+            float counterY = Mathf.Round(centerY - (_hudCounter.Height * 0.5f));
+            float center = (HudBadgeLeft + HudBadgeRight) * 0.5f;
+            float groupX;
+            float counterX;
+            bool beside = false;
+            if (tucked)
             {
-                groupW += (groupW > 0f ? gap : 0f) + _hudCounter.Width;
-            }
-
-            // Grupo centrado bajo la insignia. Pegado bajo la placa no sale de ella (a los lados, la pausa y los saldos); si no,
-            // va de 8 dp al contador.
-            float minX = mode == HudLabelMode.Tucked ? HudBadgeLeft : 8f;
-            float maxRight = mode == HudLabelMode.Tucked ? HudBadgeRight : (counter && !counterInGroup ? counterX - gap : _canvasW - 8f);
-            float x = Mathf.Clamp(HudBadgeLeft + ((HudBadgeRight - HudBadgeLeft - groupW) * 0.5f), minX, Mathf.Max(minX, maxRight - groupW));
-            if (overlapsHead && groupW > 0f && x < headRight && x + groupW > headLeft)
-            {
-                // Fuera del cielo de la cuia del contador: a su derecha si cabe; si no, a su izquierda.
-                if (headRight + groupW <= maxRight)
+                if (!PlaceTucked(groupW, counterW, center, blocked, skyLeft, skyRight, out groupX, out counterX) && counter && groupW > 0f)
                 {
-                    x = headRight;
-                }
-                else if (headLeft - groupW >= minX)
-                {
-                    x = headLeft - groupW;
+                    beside = PlaceCounterBesideWallet(groupW, counterW, center, edge, liftedTop, skyTop, skyLeft, skyRight, ref groupX, ref counterX, ref counterY);
                 }
             }
+            else
+            {
+                // El contador a la derecha de la banda (x ≈ W − 8 − ancho) fuera del cielo; el grupo, centrado bajo la insignia y
+                // a ≥ HudCounterGapDp del contador.
+                float right = _canvasW - HudCounterRightDp;
+                counterX = right - counterW;
+                if (counter && FitSpan(counterW, counterX, 8f, right, blocked, skyLeft, skyRight, out float cx))
+                {
+                    counterX = cx;
+                }
 
-            x = Mathf.Round(x);
+                float hi = counter ? counterX - HudCounterGapDp : _canvasW - 8f;
+                float desired = center - (groupW * 0.5f);
+                groupX = FitSpan(groupW, desired, 8f, hi, blocked, skyLeft, skyRight, out float gx)
+                    ? gx
+                    : Mathf.Clamp(desired, 8f, Mathf.Max(8f, hi - groupW));
+            }
+
+            float x = Mathf.Round(groupX);
+            float cx0 = Mathf.Round(counterX);
+            if (counter && groupW > 0f && cx0 >= x && cx0 - (x + groupW) < HudCounterGapDp)
+            {
+                cx0 = Mathf.Ceil(x + groupW + HudCounterGapDp); // el redondeo no se come la separación
+            }
+
             if (chip)
             {
                 _hudChip.Place(x, y);
@@ -607,17 +811,96 @@ namespace AF.UI
             if (murky)
             {
                 _hudMurky.Place(x, Mathf.Round(centerY - (murkyH * 0.5f)), murkyH);
-                x += murkyW + gap;
             }
 
             if (counter)
             {
-                float cy = Mathf.Round(centerY - (_hudCounter.Height * 0.5f));
-                _hudCounter.Place(counterInGroup ? x : Mathf.Round(counterX), cy);
+                _hudCounter.Place(cx0, counterY);
+            }
+
+            if (beside != _hudCounterBesideWallet)
+            {
+                _hudCounterBesideWallet = beside;
+                KeepWalletOffPanel(); // la columna de la cabecera se compacta (o vuelve) para dejarle sitio debajo
             }
         }
 
-        // AF_STATE {"event":"hud_label",…} con la etiqueta, el «?», el marco, el velo, la forma de la banda y el contador.
+        // Pegado bajo la placa, el grupo y el contador no caben juntos (el 160 en 16:9: «Muy difícil» y la Lluvia con sus dos
+        // gotitas, y ni la banda normal ni la compacta caben sobre el marco): el grupo, solo bajo la placa, y el contador a la
+        // derecha de la insignia, bajo la columna de la cabecera compactada (TopRowY + 38 + 2) y a la izquierda de Reiniciar,
+        // por encima del canto del tablero y de las cuias elevadas y a ≥ HudCounterGapDp del grupo [P]. False si tampoco cabe.
+        private bool PlaceCounterBesideWallet(float groupW, float counterW, float center, float edge, float liftedTop, float skyTop, float skyLeft, float skyRight, ref float groupX, ref float counterX, ref float counterY)
+        {
+            float y = TopRowY + (2f * WalletSqueezedPillDp) + WalletSqueezedGapDp + HudLabelsClearDp;
+            float h = _hudCounter.Height;
+            if (y + h > Mathf.Min(edge - HudLabelsClearDp, liftedTop - HudLabelsTuckedClearDp))
+            {
+                return false;
+            }
+
+            float bandBottom = TopRowY + HudLabelsTuckedDp + DifficultyChip.CompactHeightDp;
+            if (!FitSpan(groupW, center - (groupW * 0.5f), HudBadgeLeft, HudBadgeRight, skyTop < bandBottom, skyLeft, skyRight, out float gx))
+            {
+                return false;
+            }
+
+            float lo = Mathf.Max(HudBadgeRight + 4f, Mathf.Round(gx) + groupW + HudCounterGapDp);
+            float hi = _canvasW - 8f - 60f - 4f; // a la izquierda de Reiniciar (x = W − 68)
+            if (!FitSpan(counterW, hi - counterW, lo, hi, skyTop < y + h, skyLeft, skyRight, out float cx))
+            {
+                return false;
+            }
+
+            groupX = gx;
+            counterX = cx;
+            counterY = y;
+            return true;
+        }
+
+        // Pegado bajo la placa (x 56-192): el grupo y, a ≥ HudCounterGapDp, el contador, fuera del cielo de la cuia del
+        // contador. Primero todo junto y lo más centrado posible bajo la insignia; si no cabe a un lado del cielo, el grupo a un
+        // lado y el contador al otro (el cielo, del ancho de una cuia, ≥ 28 dp, ya los separa).
+        private static bool PlaceTucked(float groupW, float counterW, float center, bool blocked, float skyLeft, float skyRight, out float groupX, out float counterX)
+        {
+            const float lo = HudBadgeLeft;
+            const float hi = HudBadgeRight;
+            float sep = groupW > 0f && counterW > 0f ? HudCounterGapDp : 0f;
+            float total = groupW + sep + counterW;
+            if (FitSpan(total, center - (total * 0.5f), lo, hi, blocked, skyLeft, skyRight, out float x))
+            {
+                groupX = x;
+                counterX = x + groupW + sep;
+                return true;
+            }
+
+            if (blocked && groupW > 0f && counterW > 0f)
+            {
+                float leftHi = Mathf.Min(hi, skyLeft);
+                float rightLo = Mathf.Max(lo, skyRight);
+                if (groupW <= leftHi - lo && counterW <= hi - rightLo)
+                {
+                    groupX = Mathf.Clamp(center - (groupW * 0.5f), lo, leftHi - groupW);
+                    counterX = Mathf.Clamp(center - (counterW * 0.5f), rightLo, hi - counterW);
+                    return true;
+                }
+
+                if (counterW <= leftHi - lo && groupW <= hi - rightLo)
+                {
+                    counterX = Mathf.Clamp(center - (counterW * 0.5f), lo, leftHi - counterW);
+                    groupX = Mathf.Clamp(center - (groupW * 0.5f), rightLo, hi - groupW);
+                    return true;
+                }
+            }
+
+            // No cabe en ningún reparto bajo la placa: centrado (quien llama prueba a sacar el contador junto a la cabecera; si
+            // tampoco, se queda así, y el barrido de HudLabelTests lo detecta en el catálogo).
+            groupX = Mathf.Max(lo, center - (total * 0.5f));
+            counterX = groupX + groupW + sep;
+            return false;
+        }
+
+        // AF_STATE {"event":"hud_label",…} con la etiqueta, el «?», el marco, el velo, la forma de la banda, el sello, el
+        // contador y la cabecera.
         private void EmitHudLabelProbe(LevelFlow flow)
         {
             if (!DevProbe.Enabled)
@@ -634,18 +917,21 @@ namespace AF.UI
                 + ",\"frame\":\"" + (labeled ? (veryHard ? "indigo" : "amber") : "none") + "\""
                 + ",\"veil\":" + (veryHard ? NightVeilAlpha.ToString("0.00", CultureInfo.InvariantCulture) : "0")
                 + ",\"mode\":\"" + ModeKey(_hudMode) + "\""
+                + ",\"seal\":" + (_hudChip.SealShown ? "true" : "false")
                 + ",\"counter\":\"" + counter + "\""
-                + ",\"remaining\":" + (_hudCounter.Visible ? _hudCounter.Remaining : 0).ToString(CultureInfo.InvariantCulture) + "}";
+                + ",\"remaining\":" + (_hudCounter.Visible ? _hudCounter.Remaining : 0).ToString(CultureInfo.InvariantCulture)
+                + ",\"wallet\":\"" + (_walletSqueezed ? "squeezed" : "row") + "\"}";
             _probe.Event("hud_label", json);
         }
 
-        private static string ModeKey(HudLabelMode mode)
+        internal static string ModeKey(HudLabelMode mode)
         {
             switch (mode)
             {
+                case HudLabelMode.Full: return "full";
                 case HudLabelMode.CompactBelow: return "compact";
                 case HudLabelMode.Tucked: return "tucked";
-                default: return "full";
+                default: return "none";
             }
         }
 
