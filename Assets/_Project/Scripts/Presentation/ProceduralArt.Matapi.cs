@@ -5,10 +5,12 @@ namespace AF.Presentation
 {
     /// <summary>
     /// Arte procedural [P] del Matapi (propuesta de D-007 b.2 M10; D-003): la boca con el embudo de fibra hacia dentro, los
-    /// aros de cuerda del cilindro, el aro que cierra el embudo y la cuerda del tirón. Todo es de fibra (<c>fibra_*</c>,
-    /// excepción de la regla 1 de direccion-visual-v2 §2.4) y reutiliza las cuerdas de la escena (<c>DrawRopeEllipse</c> y
-    /// <c>DrawRopeSegment</c>). Las varillas son las de <c>ProceduralArt.Mechanics.cs</c> (<see cref="MatapiRod"/>). Nunca se
-    /// dibuja una captura (camarón ni pez) ni un cacuri: el Matapi está pendiente del asesor cultural.
+    /// aros de cuerda del cilindro, el aro que cierra el embudo y la cuerda del tirón, floja y tensa. Todo es de fibra
+    /// (<c>fibra_*</c>, excepción de la regla 1 de direccion-visual-v2 §2.4) salvo el hueco oscuro de la boca
+    /// (<see cref="MatapiHole"/>, que cuenta en el test de colores), y reutiliza las cuerdas de la escena
+    /// (<c>DrawRopeEllipse</c> y <c>DrawRopeSegment</c>). Las varillas son las de <c>ProceduralArt.Mechanics.cs</c>
+    /// (<see cref="MatapiRod"/>). Nunca se dibuja una captura (camarón ni pez) ni un cacuri: el Matapi está pendiente del
+    /// asesor cultural.
     /// </summary>
     /// <remarks>
     /// <para>Sustituyen a <see cref="MatapiHoop"/> y <see cref="MatapiFunnel"/> de <c>ProceduralArt.Mechanics.cs</c>: en las
@@ -19,8 +21,11 @@ namespace AF.Presentation
     /// </remarks>
     public sealed partial class ProceduralArt
     {
-        /// <summary>Ancho de la boca del Matapi (u): el aro del embudo, más ancho que el borde de la cuia (1,10 u).</summary>
-        public const float MatapiMouthWidthU = 1.5f;
+        /// <summary>
+        /// Ancho de la boca del Matapi (u): el aro del embudo, bastante más ancho que el borde de la cuia (1,10 u), para que
+        /// domine el «entra».
+        /// </summary>
+        public const float MatapiMouthWidthU = 1.7f;
 
         /// <summary>Alto de la boca del Matapi (u): el aro arriba y el cono que entra por el cuello.</summary>
         public const float MatapiMouthHeightU = 0.95f;
@@ -46,13 +51,23 @@ namespace AF.Presentation
         /// <summary>Grosor de la cuerda del tirón (u).</summary>
         public const float MatapiCordWidthU = 0.16f;
 
-        // Interior de la boca: el hueco oscuro por el que «entra» la fruta.
-        private static readonly Color MatapiHole = Palette.Hex(0x24180E);
+        /// <summary>Flecha de la catenaria de la cuerda floja, hacia la derecha a media altura (u).</summary>
+        public const float MatapiCordSagU = 0.10f;
+
+        /// <summary>Ancho de los dos sprites de la cuerda (u): el grosor y la flecha a cada lado, con la cuerda centrada.</summary>
+        public const float MatapiCordSpriteWidthU = MatapiCordWidthU + (2f * MatapiCordSagU);
+
+        /// <summary>
+        /// Interior de la boca: el hueco oscuro #24180E por el que «entra» la fruta. No es un tono de fibra: está en
+        /// <c>MatapiOverlay.CollectSurfaceColors</c> (a ΔE00 ≥ 10 de los tintes; el más cercano, Cacao).
+        /// </summary>
+        internal static readonly Color MatapiHole = Palette.Hex(0x24180E);
 
         private Sprite? _matapiMouth;
         private Sprite? _matapiBand;
         private Sprite? _matapiTieRing;
         private Sprite? _matapiPullCord;
+        private Sprite? _matapiPullCordSlack;
 
         /// <summary>
         /// Boca del Matapi (<see cref="MatapiMouthWidthU"/> × <see cref="MatapiMouthHeightU"/> u): un aro de cuerda visto
@@ -71,10 +86,17 @@ namespace AF.Presentation
         internal Sprite MatapiTieRing => _matapiTieRing != null ? _matapiTieRing : (_matapiTieRing = BuildMatapiTieRing());
 
         /// <summary>
-        /// Cuerda trenzada vertical del tirón (<see cref="MatapiCordWidthU"/> × <see cref="MatapiCordLengthU"/> u; crece hacia
-        /// arriba desde su pie; <c>DrawRopeSegment</c>).
+        /// Cuerda trenzada del tirón, tensa y recta (<see cref="MatapiCordWidthU"/> de grosor y <see cref="MatapiCordLengthU"/>
+        /// de largo, centrada en un sprite de <see cref="MatapiCordSpriteWidthU"/>; crece hacia arriba desde su pie;
+        /// <c>DrawRopeSegment</c>).
         /// </summary>
-        internal Sprite MatapiPullCord => _matapiPullCord != null ? _matapiPullCord : (_matapiPullCord = BuildMatapiPullCord());
+        internal Sprite MatapiPullCord => _matapiPullCord != null ? _matapiPullCord : (_matapiPullCord = BuildMatapiPullCord(0f, "mech_matapi_cord"));
+
+        /// <summary>
+        /// La misma cuerda floja, antes del tirón: una catenaria ligera con <see cref="MatapiCordSagU"/> de flecha hacia la
+        /// derecha (el overlay la inclina hacia ese lado), del mismo tamaño que <see cref="MatapiPullCord"/>.
+        /// </summary>
+        internal Sprite MatapiPullCordSlack => _matapiPullCordSlack != null ? _matapiPullCordSlack : (_matapiPullCordSlack = BuildMatapiPullCord(MatapiCordSagU, "mech_matapi_cord_slack"));
 
         private Sprite BuildMatapiMouth()
         {
@@ -110,9 +132,22 @@ namespace AF.Presentation
                 pc.FillCapsule(cx - half, y, cx + half, y - (1.5f * k), 1.6f * k, ColorMath.WithAlpha(Palette.FiberShadow, 0.9f));
             }
 
-            // Hueco oscuro dentro del aro, con la pared de atrás del cono en sombra.
+            // Hueco oscuro dentro del aro, con la pared de atrás del cono en sombra y el canto interior del aro en fibra_luz:
+            // el labio claro alrededor del hueco es lo que dice «entra» a 48 dp.
             pc.FillEllipseSoft(cx, cy, rx - (thick * 0.4f), ry - (thick * 0.4f), 1.2f, MatapiHole);
             pc.FillEllipseSoft(cx, cy + (ry * 0.35f), (rx - thick) * 0.8f, ry * 0.32f, 2f, ColorMath.WithAlpha(Palette.FiberShadow, 0.55f));
+            float lipRx = rx - (thick * 0.62f);
+            float lipRy = ry - (thick * 0.62f);
+            const int lipSteps = 48;
+            var lipPrev = new Vector2(cx + lipRx, cy);
+            for (int i = 1; i <= lipSteps; i++)
+            {
+                float a = (i / (float)lipSteps) * Mathf.PI * 2f;
+                var lip = new Vector2(cx + (Mathf.Cos(a) * lipRx), cy + (Mathf.Sin(a) * lipRy));
+                pc.FillCapsule(lipPrev.x, lipPrev.y, lip.x, lip.y, 3.2f * k, Palette.FiberLight);
+                lipPrev = lip;
+            }
+
             DrawRopeEllipse(pc, cx, cy, rx, ry, thick, k);
             return MakeSprite(pc, "mech_matapi_mouth", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
@@ -164,15 +199,29 @@ namespace AF.Presentation
             return MakeSprite(pc, "mech_matapi_tie", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
 
-        private Sprite BuildMatapiPullCord()
+        // Cuerda del tirón de pie a punta, centrada; con sagU > 0, en catenaria (parábola) con esa flecha hacia la derecha.
+        private Sprite BuildMatapiPullCord(float sagU, string name)
         {
             const float k = MechanicPxPerU / 96f;
-            int w = Mathf.RoundToInt(MatapiCordWidthU * MechanicPxPerU);
+            int w = Mathf.RoundToInt(MatapiCordSpriteWidthU * MechanicPxPerU);
             int h = Mathf.RoundToInt(MatapiCordLengthU * MechanicPxPerU);
             float thick = 10f * k;
             var pc = new PixelCanvas(w, h);
-            DrawRopeSegment(pc, w * 0.5f, thick * 0.5f, w * 0.5f, h - (thick * 0.5f), thick, k);
-            return MakeSprite(pc, "mech_matapi_cord", new Vector2(0.5f, 0f), Vector4.zero);
+            float cx = w * 0.5f;
+            float y0 = thick * 0.5f;
+            float y1 = h - (thick * 0.5f);
+            float sag = sagU * MechanicPxPerU;
+            const int pieces = 6;
+            var prev = new Vector2(cx, y0);
+            for (int i = 1; i <= pieces; i++)
+            {
+                float t = i / (float)pieces;
+                var p = new Vector2(cx + (4f * sag * t * (1f - t)), Mathf.Lerp(y0, y1, t));
+                DrawRopeSegment(pc, prev.x, prev.y, p.x, p.y, thick, k);
+                prev = p;
+            }
+
+            return MakeSprite(pc, name, new Vector2(0.5f, 0f), Vector4.zero);
         }
     }
 }

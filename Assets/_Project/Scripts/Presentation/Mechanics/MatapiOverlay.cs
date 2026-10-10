@@ -8,31 +8,45 @@ using UnityEngine.UI;
 namespace AF.Presentation.Mechanics
 {
     /// <summary>
-    /// M10 Matapi (D-007; propuesta b.2 M10) [P]: un cilindro de 7 varillas de fibra semitransparentes (tonos
-    /// <c>fibra_*</c>; más juntas y más oscuras hacia los lados, como en un cilindro) atadas con tres aros de cuerda, y en
-    /// la boca un embudo de fibra hacia dentro, con el hueco oscuro a la vista: la forma ya dice «entra». El contenido se ve
-    /// entre las varillas. Nunca se abre: al sellarse, el embudo queda cerrado con un aro de cuerda y la tapa encima.
+    /// M10 Matapi (D-007; propuesta b.2 M10) [P]: un cilindro de 6 varillas de fibra semitransparentes (tonos
+    /// <c>fibra_*</c>) visto de frente, con las varillas juntas hacia los bordes y el centro libre (ninguna a menos de
+    /// <see cref="RodClearHalfU"/> del eje: ni rayas verticales sobre la fruta, que son el patrón del Camu camu, ni rejilla
+    /// con los aros, que es la del Huito, ni barrotes sobre el parche central de VA-05 o el icono de fruta), atadas con tres
+    /// aros de cuerda sobre las juntas de dosis; en la boca, un embudo de fibra ancho hacia dentro, con el canto interior
+    /// claro y el hueco oscuro: la forma ya dice «entra». El contenido se ve entre las varillas. Nunca se abre: al sellarse,
+    /// el embudo queda cerrado sobre el borde, bajo la tapa, y el cuello de vidrio despejado como en las demás cuias selladas.
     /// </summary>
     /// <remarks>
     /// <para><b>Rechazo</b> (R11, sin texto ni color de error; D-002): si se toca como origen, la cuia se sacude y el embudo
     /// late con la sacudida (escala 1 → <see cref="FunnelPulseScale"/> → 1 en <see cref="PulseMs"/>).</para>
     /// <para><b>Sellado</b> (b.2 M10: «el embudo se cierra con un tirón de cuerda y la trampa sale del agua entre gotas y un
     /// brillo»; solo como receptor, así que la cola lo despacha como paso Seal de esta cuia): dura <see cref="SealMs"/> ×
-    /// factor de velocidad. Fases [P] en fracción del paso: 0-0,28 la cuerda sube y el aro ciñe el embudo con un tirón (con
-    /// rebote); 0,18-0,62 la trampa sube <see cref="TrapLiftU"/> y vuelve, con gotas de agua (<c>Fx.Splash</c>) al salir y
-    /// destellos dorados (<c>Fx.Sparkles</c>) en la boca; 0,55-0,86 la tapa de calabaza cae con un mini-rebote, como la del
-    /// sellado normal (07 §5.3); 0,70-1 aparece un brillo cálido. Al terminar, la cola pinta <c>ShowContent(After, true)</c> y
-    /// la tapa de la cuia queda donde cayó la de este paso. No se muestra ninguna captura.</para>
+    /// factor de velocidad. Fases [P] en fracción del paso: 0-0,08 asoma la cuerda, floja (inclinada y con catenaria);
+    /// 0,10-0,30 el tirón la tensa y el aro ciñe el embudo, que se cierra (con rebote) y sube sobre el borde; 0,18-0,62 la
+    /// trampa sube <see cref="TrapLiftU"/> y vuelve, con gotas de agua (<c>Fx.Splash</c>) al salir y destellos dorados
+    /// (<c>Fx.Sparkles</c>) en la boca; 0,55-0,86 la tapa de calabaza cae con un mini-rebote, como la del sellado normal
+    /// (07 §5.3), y el aro de cuerda se apaga bajo ella; 0,70-1 aparece un brillo cálido. Al terminar, la cola pinta
+    /// <c>ShowContent(After, true)</c> y la tapa de la cuia queda donde cayó la de este paso. No se muestra ninguna
+    /// captura.</para>
     /// <para>Todo se crea en <see cref="OnAttach"/>; <see cref="Tick"/>, <see cref="Show"/> y los pasos no asignan memoria y
     /// solo escriben lo que cambia (08 §5.4). Sin pasos ni sacudida, nada se mueve (D-002).</para>
     /// </remarks>
     public sealed class MatapiOverlay : CuiaOverlay
     {
-        /// <summary>Varillas del cilindro.</summary>
-        public const int RodCount = 7;
+        /// <summary>Varillas del cilindro: tres a cada lado del eje.</summary>
+        public const int RodCount = 6;
 
-        /// <summary>Opacidad de las varillas (dejan ver el contenido).</summary>
+        /// <summary>Opacidad de las varillas de los lados (dejan ver el contenido).</summary>
         public const float RodAlpha = 0.6f;
+
+        /// <summary>Opacidad del par de varillas más cercano al eje, sobre la fruta.</summary>
+        public const float InnerRodAlpha = 0.45f;
+
+        /// <summary>Medio ancho del centro libre de varillas (u desde el eje).</summary>
+        public const float RodClearHalfU = 0.45f;
+
+        /// <summary>Distancia del eje a una varilla del todo de lado (u): x = esto × sen(ángulo).</summary>
+        public const float RodRadiusU = 0.86f;
 
         /// <summary>Sellado del Matapi (ms, sin factor de velocidad) [P b.2 M10: ~800 ms].</summary>
         public const float SealMs = 800f;
@@ -43,11 +57,11 @@ namespace AF.Presentation.Mechanics
         /// <summary>El latido dura lo que la sacudida (02 §4.1: 120 ms).</summary>
         public const float PulseMs = CuiaView.ShakeMs;
 
-        /// <summary>Ancho del embudo cerrado, en fracción del abierto [P]: el del cuello de la cuia.</summary>
+        /// <summary>Ancho del embudo cerrado, en fracción del abierto [P]: 1,02 u, el del borde de la cuia (1,10 u) bajo la tapa.</summary>
         public const float ClosedFunnelScale = 0.6f;
 
-        /// <summary>Alto del embudo cerrado, en fracción del abierto [P]: el aro queda bajo la tapa de calabaza.</summary>
-        public const float ClosedFunnelScaleY = 0.72f;
+        /// <summary>Alto del embudo cerrado, en fracción del abierto [P]: cabe entero sobre el borde y bajo la tapa.</summary>
+        public const float ClosedFunnelScaleY = 0.45f;
 
         /// <summary>Ancho del aro de cuerda con el embudo cerrado, en fracción del suyo [P].</summary>
         public const float ClosedTieScale = 0.55f;
@@ -67,19 +81,31 @@ namespace AF.Presentation.Mechanics
         /// <summary>Destellos de la boca al salir del agua.</summary>
         public const int SealSparkles = 6;
 
-        // Medidas (u) de la boca, del aro y de la tapa. La tapa es la de CuiaView (1,10 × 0,35 u, base a HeightU − 0,04).
-        // La boca se centra 0,12 u bajo el borde: el aro queda sobre el borde de la cuia y el cono entra por el cuello.
+        /// <summary>Inclinación de la cuerda floja, antes del tirón (grados) [P].</summary>
+        public const float CordSlackTiltDeg = 22f;
+
+        /// <summary>Inclinación de la cuerda tensa, tras el tirón (grados) [P].</summary>
+        public const float CordTautTiltDeg = 18f;
+
+        // Medidas (u) de la boca, del aro y de la tapa. La tapa es la de CuiaView (1,10 × 0,35 u, base a HeightU − 0,04) y
+        // el borde de la cuia mide 0,25 u. Abierta, la boca se centra 0,12 u bajo lo alto: el aro queda sobre el borde y el
+        // cono entra por el cuello. Cerrada (0,6 × 0,45), se centra 0,03 u bajo lo alto: de HeightU − 0,24 a HeightU + 0,18,
+        // entera sobre el borde y bajo la tapa, sin colgar en el cuello. El aro de cuerda sube con ella.
         private const float FunnelBelowTopU = 0.12f;
+        private const float ClosedFunnelBelowTopU = 0.03f;
         private const float TieBelowTopU = 0.36f;
+        private const float ClosedTieBelowTopU = 0.17f;
+        private const float ClosedTieScaleY = 0.7f;
+        private const float CordStretch = 0.06f;
         private const float CapWidthU = 1.10f;
         private const float CapHeightU = 0.35f;
         private const float CapSinkU = 0.04f;
         private const float BottomHoopU = 0.42f;
 
         // Fases del sellado (fracción del paso) [P].
-        private const float CordInEnd = 0.10f;
-        private const float TugStart = 0.06f;
-        private const float TugEnd = 0.28f;
+        private const float CordInEnd = 0.08f;
+        private const float TugStart = 0.10f;
+        private const float TugEnd = 0.30f;
         private const float CordFadeStart = 0.40f;
         private const float CordFadeEnd = 0.55f;
         private const float LiftStart = 0.18f;
@@ -90,6 +116,8 @@ namespace AF.Presentation.Mechanics
         private const float CapLand = 0.74f;
         private const float CapBounceEnd = 0.86f;
         private const float GlowStart = 0.70f;
+        private const float TieFadeStart = CapLand;
+        private const float TieFadeEnd = CapBounceEnd;
 
         // Brillo cálido del sellado: cielo_horizonte #FFE4A8, como el aro de CuiaView.
         private static readonly Color WarmLight = new Color(1f, 0xE4 / 255f, 0xA8 / 255f, 1f);
@@ -103,6 +131,8 @@ namespace AF.Presentation.Mechanics
         private Image _funnel = null!;
         private Image _tie = null!;
         private Image _cord = null!;
+        private Sprite _cordSlack = null!;
+        private Sprite _cordTaut = null!;
         private Image _cap = null!;
         private Image _glow = null!;
         private Image _star = null!;
@@ -153,6 +183,27 @@ namespace AF.Presentation.Mechanics
         /// <summary>La cuerda del tirón está a la vista.</summary>
         public bool CordVisible => _cord.gameObject.activeSelf;
 
+        /// <summary>La cuerda del tirón está floja (con catenaria, antes del tirón).</summary>
+        public bool CordSlack => _cord.sprite == _cordSlack;
+
+        /// <summary>Inclinación actual de la cuerda del tirón (grados desde la vertical, hacia la derecha).</summary>
+        public float CordTiltDeg => -Mathf.DeltaAngle(0f, _cord.rectTransform.localEulerAngles.z);
+
+        /// <summary>El aro de cuerda del embudo está a la vista (solo durante el sellado).</summary>
+        public bool TieVisible => _tie.gameObject.activeSelf && _tie.color.a > 0.001f;
+
+        /// <summary>Centro del embudo (u desde el pie, sin la subida de la trampa).</summary>
+        public float FunnelCenterU => _funnel.rectTransform.anchoredPosition.y / _u;
+
+        /// <summary>Alto actual del embudo (u, con su escala).</summary>
+        public float FunnelHeightU => ProceduralArt.MatapiMouthHeightU * _funnel.rectTransform.localScale.y;
+
+        /// <summary>Posición en x (u desde el eje) de la varilla <paramref name="i"/>: tres a cada lado, juntas hacia los bordes.</summary>
+        public static float RodXU(int i)
+        {
+            return RodRadiusU * RodSide(i);
+        }
+
         /// <inheritdoc />
         public override void Show(Cuia cuia, bool sealedNow)
         {
@@ -171,7 +222,6 @@ namespace AF.Presentation.Mechanics
             OverlayParts.SetVisible(_funnel, on);
             _closedLook = on && sealedNow;
             _close = _closedLook ? 1f : 0f;
-            OverlayParts.SetVisible(_tie, _closedLook);
             HideStepParts();
             SetLift(0f);
             ApplyFunnel();
@@ -187,7 +237,7 @@ namespace AF.Presentation.Mechanics
             for (int i = 0; i < RodCount; i++)
             {
                 float side = RodSide(i);
-                OverlayParts.Place(_rods[i], 0.86f * side, (top + bottom) * 0.5f, Mathf.Lerp(0.10f, 0.07f, Mathf.Abs(side)), top - bottom, u);
+                OverlayParts.Place(_rods[i], RodRadiusU * side, (top + bottom) * 0.5f, Mathf.Lerp(0.10f, 0.07f, Mathf.Abs(side)), top - bottom, u);
             }
 
             float bandH = ProceduralArt.MatapiBandHeightU;
@@ -196,14 +246,8 @@ namespace AF.Presentation.Mechanics
             OverlayParts.Place(_hoops[2], 0f, top - 0.14f, ProceduralArt.MatapiBandWidthU, bandH, u);
             OverlayParts.Place(_funnel, 0f, heightU - FunnelBelowTopU, ProceduralArt.MatapiMouthWidthU, ProceduralArt.MatapiMouthHeightU, u);
             OverlayParts.Place(_tie, 0f, heightU - TieBelowTopU, ProceduralArt.MatapiTieWidthU, ProceduralArt.MatapiTieHeightU, u);
-            RectTransform cord = _cord.rectTransform; // pivote en el pie: crece hacia arriba desde el aro
-            var cordPos = new Vector2(0f, (heightU - TieBelowTopU) * u);
-            var cordSize = new Vector2(ProceduralArt.MatapiCordWidthU * u, ProceduralArt.MatapiCordLengthU * u);
-            if (cord.anchoredPosition != cordPos)
-            {
-                cord.anchoredPosition = cordPos;
-            }
-
+            RectTransform cord = _cord.rectTransform; // pivote en el pie: crece hacia arriba desde el aro (ApplyFunnel lo sigue)
+            var cordSize = new Vector2(ProceduralArt.MatapiCordSpriteWidthU * u, ProceduralArt.MatapiCordLengthU * u);
             if (cord.sizeDelta != cordSize)
             {
                 cord.sizeDelta = cordSize;
@@ -213,6 +257,7 @@ namespace AF.Presentation.Mechanics
             OverlayParts.Place(_star, 0f, heightU + 0.1f, 1.6f, 1.6f, u);
             PlaceCap(0f);
             SetLift(_lift, true);
+            ApplyFunnel();
             if (_active)
             {
                 Render(_progress);
@@ -293,6 +338,7 @@ namespace AF.Presentation.Mechanics
             _selfPos = ctx.SelfPos;
             _fx = ctx.Fx ?? Host.Fx;
             _closedLook = false;
+            OverlayParts.SetColor(_tie, Color.white);
             Render(0f);
             return ms;
         }
@@ -309,7 +355,6 @@ namespace AF.Presentation.Mechanics
             _progress = 0f;
             _closedLook = Visible && _sealTarget;
             _close = _closedLook ? 1f : 0f;
-            OverlayParts.SetVisible(_tie, _closedLook);
             HideStepParts();
             SetLift(0f);
             ApplyFunnel();
@@ -319,7 +364,9 @@ namespace AF.Presentation.Mechanics
         public override void CollectSurfaceColors(List<Color> into)
         {
             // Varillas, aros, embudo, aro de cuerda y cuerda son de fibra (fibra_*): excepción de la regla 1 de
-            // direccion-visual-v2 §2.4. La tapa y el brillo solo se ven durante el paso de sellado.
+            // direccion-visual-v2 §2.4. El hueco oscuro de la boca (unos 1,5 × 0,3 u sobre la boca de la cuia) no es de fibra
+            // y cuenta. La tapa y el brillo solo se ven durante el paso de sellado.
+            into.Add(ProceduralArt.MatapiHole);
         }
 
         /// <inheritdoc />
@@ -329,10 +376,12 @@ namespace AF.Presentation.Mechanics
             _trap = OverlayParts.NewAnchor("MatapiTrap", Host.BodyFront);
             for (int i = 0; i < RodCount; i++)
             {
-                // Las del centro, claras; hacia los lados, en sombra (la luz viene de delante).
+                // El par de dentro, claro y más transparente (pasa sobre la fruta); hacia los lados, en sombra (la luz viene
+                // de delante).
                 float side = Mathf.Abs(RodSide(i));
-                Color fiber = side < 0.2f ? Palette.FiberLight : (side < 0.7f ? Palette.FiberBase : Palette.FiberShadow);
-                _rods[i] = OverlayParts.NewImage("MatapiRod" + i, _trap, art.MatapiRod, OverlayParts.Fade(fiber, RodAlpha));
+                bool inner = side < 0.7f;
+                Color fiber = inner ? Palette.FiberLight : (side < 0.9f ? Palette.FiberBase : Palette.FiberShadow);
+                _rods[i] = OverlayParts.NewImage("MatapiRod" + i, _trap, art.MatapiRod, OverlayParts.Fade(fiber, inner ? InnerRodAlpha : RodAlpha));
             }
 
             for (int i = 0; i < BandCount; i++)
@@ -342,7 +391,9 @@ namespace AF.Presentation.Mechanics
 
             _funnel = OverlayParts.NewImage("MatapiMouth", _trap, art.MatapiMouth, Color.white);
             _tie = OverlayParts.NewImage("MatapiTie", _trap, art.MatapiTieRing, Color.white);
-            _cord = OverlayParts.NewImage("MatapiCord", _trap, art.MatapiPullCord, Color.white);
+            _cordSlack = art.MatapiPullCordSlack;
+            _cordTaut = art.MatapiPullCord;
+            _cord = OverlayParts.NewImage("MatapiCord", _trap, _cordSlack, Color.white);
             _cord.rectTransform.pivot = new Vector2(0.5f, 0f);
 
             // Lo que no sube con la trampa: la tapa del paso y el brillo (aditivo, sin Bloom).
@@ -362,18 +413,39 @@ namespace AF.Presentation.Mechanics
         {
             _progress = p;
 
-            // Tirón: la cuerda sube y el aro ciñe el embudo con rebote.
-            float tug = Ease.OutBack(Mathf.Clamp01((p - TugStart) / (TugEnd - TugStart)), 2.2f);
-            _close = tug;
-            OverlayParts.SetVisible(_tie, true);
+            // Tirón: la cuerda asoma floja, el tirón la tensa y el aro ciñe el embudo, que se cierra con rebote y sube sobre
+            // el borde; el aro se apaga bajo la tapa.
+            float pull = Mathf.Clamp01((p - TugStart) / (TugEnd - TugStart));
+            _close = Ease.OutBack(pull, 2.2f);
+            bool tieOn = p < TieFadeEnd;
+            OverlayParts.SetVisible(_tie, tieOn);
+            if (tieOn)
+            {
+                OverlayParts.SetColor(_tie, new Color(1f, 1f, 1f, 1f - Mathf.Clamp01((p - TieFadeStart) / (TieFadeEnd - TieFadeStart))));
+            }
+
             ApplyFunnel();
 
             bool cordOn = p < CordFadeEnd;
             OverlayParts.SetVisible(_cord, cordOn);
             if (cordOn)
             {
+                Sprite rope = p < TugStart ? _cordSlack : _cordTaut;
+                if (_cord.sprite != rope)
+                {
+                    _cord.sprite = rope;
+                }
+
                 float grow = Ease.Out(Mathf.Clamp01(p / CordInEnd));
-                SetScale(_cord.rectTransform, 1f, Mathf.Max(0.001f, grow));
+                float stretch = 1f + (CordStretch * Mathf.Sin(Mathf.PI * pull)); // el tirón la estira un momento
+                SetScale(_cord.rectTransform, 1f, Mathf.Max(0.001f, grow * stretch));
+                float tilt = Mathf.Lerp(CordSlackTiltDeg, CordTautTiltDeg, Ease.Out(pull));
+                Quaternion lean = Quaternion.Euler(0f, 0f, -tilt);
+                if (_cord.rectTransform.localRotation != lean)
+                {
+                    _cord.rectTransform.localRotation = lean;
+                }
+
                 OverlayParts.SetColor(_cord, new Color(1f, 1f, 1f, 1f - Mathf.Clamp01((p - CordFadeStart) / (CordFadeEnd - CordFadeStart))));
             }
 
@@ -431,24 +503,64 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // Escala del embudo y del aro: el cierre (0 abierto, 1 cerrado) por el latido del rechazo.
+        // Escala y sitio del embudo, del aro y del pie de la cuerda: el cierre (0 abierto, 1 cerrado) por el latido del
+        // rechazo. Al cerrarse, el embudo sube sobre el borde de la cuia y el aro con él.
         private void ApplyFunnel()
         {
             float funnelX = Mathf.LerpUnclamped(1f, ClosedFunnelScale, _close) * _pulse;
             float funnelY = Mathf.LerpUnclamped(1f, ClosedFunnelScaleY, _close) * _pulse;
             SetScale(_funnel.rectTransform, funnelX, funnelY);
+            SetY(_funnel.rectTransform, _heightU - Mathf.LerpUnclamped(FunnelBelowTopU, ClosedFunnelBelowTopU, _close));
             float tieX = Mathf.LerpUnclamped(OpenTieScale, ClosedTieScale, _close) * _pulse;
-            SetScale(_tie.rectTransform, tieX, _pulse);
+            float tieY = Mathf.LerpUnclamped(1f, ClosedTieScaleY, _close) * _pulse;
+            SetScale(_tie.rectTransform, tieX, tieY);
+            float tieAt = _heightU - Mathf.LerpUnclamped(TieBelowTopU, ClosedTieBelowTopU, _close);
+            SetY(_tie.rectTransform, tieAt);
+            SetY(_cord.rectTransform, tieAt);
         }
 
-        // Posición de la varilla i en el cilindro: seno de −78° a 78° (más juntas hacia los lados).
+        // Fracción del radio de la varilla i (seno de su ángulo en el cilindro): ±40°, ±59° y ±78°, más juntas hacia los
+        // bordes y con el centro libre (|x| = 0,55, 0,74 y 0,84 u).
         private static float RodSide(int i)
         {
-            return Mathf.Sin(Mathf.Lerp(-78f, 78f, i / (float)(RodCount - 1)) * Mathf.Deg2Rad);
+            float deg;
+            switch (i)
+            {
+                case 0:
+                    deg = -78f;
+                    break;
+                case 1:
+                    deg = -59f;
+                    break;
+                case 2:
+                    deg = -40f;
+                    break;
+                case 3:
+                    deg = 40f;
+                    break;
+                case 4:
+                    deg = 59f;
+                    break;
+                default:
+                    deg = 78f;
+                    break;
+            }
+
+            return Mathf.Sin(deg * Mathf.Deg2Rad);
+        }
+
+        private void SetY(RectTransform rt, float yU)
+        {
+            var pos = new Vector2(0f, yU * _u);
+            if (rt.anchoredPosition != pos)
+            {
+                rt.anchoredPosition = pos;
+            }
         }
 
         private void HideStepParts()
         {
+            OverlayParts.SetVisible(_tie, false);
             OverlayParts.SetVisible(_cord, false);
             OverlayParts.SetVisible(_cap, false);
             OverlayParts.SetVisible(_glow, false);

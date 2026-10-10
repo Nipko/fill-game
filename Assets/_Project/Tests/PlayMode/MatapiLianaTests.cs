@@ -98,6 +98,9 @@ namespace AF.Tests.PlayMode
             float maxClose = 0f;
             int maxParticles = 0;
             bool sawCord = false;
+            bool sawSlackCord = false;
+            bool sawTautCord = false;
+            float minCordTilt = 90f;
             bool sawCap = false;
             bool sawGlow = false;
             int elapsed = StepWatching(boot, () =>
@@ -110,6 +113,13 @@ namespace AF.Tests.PlayMode
                     maxClose = Mathf.Max(maxClose, overlay.FunnelClose);
                     maxParticles = Mathf.Max(maxParticles, screen.Fx.ActiveCount);
                     sawCord |= overlay.CordVisible;
+                    if (overlay.CordVisible)
+                    {
+                        sawSlackCord |= overlay.CordSlack;
+                        sawTautCord |= !overlay.CordSlack;
+                        minCordTilt = Mathf.Min(minCordTilt, overlay.CordTiltDeg);
+                    }
+
                     sawCap |= overlay.StepCapVisible;
                     sawGlow |= overlay.GlowVisible;
                 }
@@ -130,6 +140,8 @@ namespace AF.Tests.PlayMode
             TestContext.WriteLine("Nivel 63: " + elapsed + " ms del toque a la vista quieta. " + MechanicTestKit.Describe(animator));
 
             Assert.That(sawCord, Is.True, "tirón de cuerda");
+            Assert.That(sawSlackCord && sawTautCord, Is.True, "la cuerda asoma floja (catenaria) y el tirón la tensa");
+            Assert.That(minCordTilt, Is.GreaterThan(15f), "inclinada, para que se lea como cuerda y no como una antena");
             Assert.That(maxClose, Is.GreaterThan(1f), "el embudo se cierra con rebote");
             Assert.That(maxLift, Is.GreaterThan(0.5f * MatapiOverlay.TrapLiftU), "la trampa sube un poco");
             Assert.That(sawCap, Is.True, "la tapa cae");
@@ -141,6 +153,9 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Sealed, Is.True, "sellado como el modelo");
             Assert.That(overlay.Visible, Is.True, "el Matapi sigue a la vista: nunca se abre");
             Assert.That(overlay.FunnelClosed, Is.True, "con el embudo cerrado");
+            float height = CuiaGeometry.HeightU(view.Capacity);
+            Assert.That(overlay.FunnelCenterU - (0.5f * overlay.FunnelHeightU), Is.GreaterThanOrEqualTo(height - CuiaGeometry.RimU - 0.01f), "el embudo cerrado queda entero sobre el borde: el cuello de vidrio, despejado");
+            Assert.That(overlay.TieVisible, Is.False, "sin el aro de cuerda bajo la tapa");
             Assert.That(overlay.TrapLift, Is.EqualTo(0f), "la trampa vuelve a su sitio");
             Assert.That(overlay.StepCapVisible || overlay.GlowVisible || overlay.CordVisible, Is.False, "sin piezas del paso");
         }
@@ -211,8 +226,12 @@ namespace AF.Tests.PlayMode
             float cavityTop = CuiaGeometry.CavityTopU(view.Capacity);
             Vector2 fruit = animator.Foot(liana) + (new Vector2(LianaOverlay.FruitCenterXU, cavityTop + LianaOverlay.FruitCenterAboveCavityU) * u);
             Assert.That(Vector2.Distance(overlay.BeamTo, fruit), Is.LessThan(0.5f), "llega a la fruta");
-            Assert.That(Vector2.Distance(overlay.Beam.Evaluate(1f), fruit), Is.LessThan(0.5f), "a mitad del paso el hilo ya llegó");
+            Assert.That(Vector2.Distance(overlay.Beam.Evaluate(1f), fruit), Is.LessThan(0.5f), "a mitad del paso el cometa ya llegó");
+            Assert.That(Vector2.Distance(overlay.Beam.Evaluate(0f), overlay.BeamFrom), Is.GreaterThan(1f * u), "solo se ve la cola del cometa, no el arco entero");
             Assert.That(overlay.Beam.color.a, Is.GreaterThan(0.5f));
+            Assert.That(overlay.BeamSparkVisible, Is.True, "con el destello en la punta");
+            Assert.That(overlay.FruitGlowVisible, Is.True, "y el brillo de la fruta al llegar");
+            AssertArcUnderCeiling(animator, overlay, receiver, liana, u);
 
             MechanicTestKit.StepToIdle(boot, 4000);
             Assert.That(overlay.Visible || overlay.BeamVisible || overlay.CheckVisible, Is.False, "al terminar, todo oculto");
@@ -285,15 +304,24 @@ namespace AF.Tests.PlayMode
             float topDose = 2f * CuiaGeometry.CavityHalfWidthU;
             Assert.That(overlapW * overlapH / topDose, Is.LessThan(0.2f), "la fruta tapa como mucho una esquina de la dosis de arriba");
 
-            // Sobre las dosis solo pasan las vueltas de la liana (trazos finos en diagonal); el resto queda en el hombro y el cuello.
+            // Sobre las dosis solo pasan las vueltas de la liana (trazos finos en diagonal); el resto queda en el hombro y el
+            // cuello. Las vueltas son 2-3 en total (b.2 M3), contando la del cuello, que lleva el mismo sprite con hojitas.
             Image[] images = overlay.AttachedHost!.BodyFront.GetComponentsInChildren<Image>(false);
-            int wraps = 0;
+            int bodyWraps = 0;
+            int turns = 0;
             for (int i = 0; i < images.Length; i++)
             {
-                if (images[i].name.StartsWith("LianaWrap", System.StringComparison.Ordinal))
+                bool body = images[i].name.StartsWith("LianaWrap", System.StringComparison.Ordinal);
+                bool vine = body || (images[i].sprite != null && images[i].sprite.name == "mech_liana_vine");
+                if (vine)
                 {
-                    wraps++;
-                    Assert.That(images[i].color, Is.EqualTo(LianaOverlay.FreshTint), "liana atada, verde hoja oscuro");
+                    turns++;
+                    Assert.That(images[i].color, Is.EqualTo(LianaOverlay.FreshTint), images[i].name + ": liana atada, verde hoja oscuro");
+                }
+
+                if (body)
+                {
+                    bodyWraps++;
                     continue;
                 }
 
@@ -302,7 +330,143 @@ namespace AF.Tests.PlayMode
                 Assert.That(centerU, Is.GreaterThan(cavityTop), images[i].name + " queda por encima de las dosis");
             }
 
-            Assert.That(wraps, Is.EqualTo(overlay.WrapCount), "2-3 vueltas");
+            Assert.That(turns, Is.InRange(2, LianaOverlay.MaxWraps), "2-3 vueltas de liana, con la del cuello (b.2 M3)");
+            Assert.That(turns, Is.EqualTo(overlay.WrapCount));
+            Assert.That(bodyWraps, Is.EqualTo(overlay.BodyWrapCount).And.EqualTo(overlay.WrapCount - 1), "las del cuerpo, más la del cuello");
+        }
+
+        [UnityTest]
+        public IEnumerator Liana84_ArcStaysInPanelFromTopRow()
+        {
+            // En el 84 la Liana está en la fila de abajo y el taperebá se sella en la de arriba: el cometa sale de la fila
+            // superior y su arco no pasa del área táctil de las ranuras (no se sale del marco del panel ni pisa el HUD).
+            yield return MechanicTestKit.LoadPlaying(84);
+            GameBootstrap boot = GameBootstrap.Current!;
+            BoardAnimator animator = boot.View!.Animator;
+            int liana = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Liana);
+            int key = boot.Flow!.Level.Attrs[liana].Key;
+            float lianaFootY = animator.Foot(liana).y;
+            float u = boot.View.Views[liana].Unit;
+            Pour[] path = Trigger(boot, (ev, b, a) => (ev.LianaReleasedMask & (1 << liana)) != 0 && a.IsSealed(ev.Receiver)
+                && a[ev.Receiver].TopColor == key && animator.Foot(ev.Receiver).y > lianaFootY + u);
+            MechanicTestKit.PlayPrefix(boot, path);
+            var overlay = (LianaOverlay)boot.View.Views[liana].Overlay!;
+            TapResult poured = MechanicTestKit.Tap(boot, path[path.Length - 1]);
+            int receiver = poured.Pour.Receiver;
+            MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Release, liana, 4000);
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Release, liana, 0.3f);
+            Assert.That(overlay.BeamVisible, Is.True, "el cometa en vuelo");
+            Assert.That(Vector2.Distance(overlay.BeamFrom, animator.Foot(receiver)), Is.GreaterThan(4f * u), "sale de la fila de arriba");
+            AssertArcUnderCeiling(animator, overlay, receiver, liana, u);
+            MechanicTestKit.StepToIdle(boot, 4000);
+            MechanicTestKit.AssertViewMatchesModel(boot);
+        }
+
+        [UnityTest]
+        public IEnumerator LianaCount_NoCheck_BeamToKnot()
+        {
+            // Liana de cuenta (n = 1, variante del 243): un punto en el nudo y el mismo desbloqueo sin la ✓ ni el brillo de la
+            // fruta, con el cometa hasta el nudo; al acabar, oculta.
+            yield return null;
+            BoardState start = Board(
+                new[] { new[] { 3, 3, 3 }, new[] { 3 }, new[] { 1, 2, 1, 2 }, new[] { 1, 1 }, new[] { 2, 2 }, new int[0] },
+                new[] { MechanicSpec.None, MechanicSpec.None, new MechanicSpec(MechanicType.Liana, n: 1), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
+            _rig = new MechanicTestKit.Rig(Art, start);
+            MechanicTestKit.Rig rig = _rig;
+            CuiaView view = rig.Views[2];
+            var overlay = (LianaOverlay)view.Overlay!;
+            Assert.That(overlay.Visible, Is.True);
+            Assert.That(overlay.ShownKey, Is.EqualTo(0), "sin fruta");
+            Assert.That(overlay.CountDots, Is.EqualTo(1), "de cuenta: n = 1 punto en el nudo");
+
+            rig.Pour(start, 1, 0, out _);
+            MechanicStepQueue steps = rig.Animator.Steps;
+            for (int t = 0; !steps.IsRunning(MechanicStepKind.Release, 2); t += 4)
+            {
+                Assert.That(t, Is.LessThan(4000), "llega el Release de la Liana de cuenta. " + MechanicTestKit.Describe(rig.Animator));
+                rig.Tick(4f);
+            }
+
+            Assert.That(steps.TryGetRunning(MechanicStepKind.Release, 2, out float elapsed, out float duration), Is.True);
+            for (float left = (0.5f * duration) - elapsed; left > 0f; left -= PlayModeHelpers.FrameMs)
+            {
+                rig.Tick(Mathf.Min(left, PlayModeHelpers.FrameMs));
+            }
+
+            Assert.That(overlay.ReleaseProgress, Is.EqualTo(0.5f).Within(0.02f), "a mitad del paso");
+            Assert.That(overlay.CheckVisible, Is.False, "la Liana de cuenta no lleva la ✓");
+            Assert.That(overlay.FruitGlowVisible, Is.False, "ni el brillo de la fruta");
+            Assert.That(overlay.BeamVisible, Is.True, "pero sí el cometa");
+            float u = view.Unit;
+            Vector2 knot = rig.Animator.Foot(2) + (new Vector2(LianaOverlay.KnotXU, CuiaGeometry.CavityTopU(view.Capacity) + LianaOverlay.KnotAboveCavityU) * u);
+            Assert.That(Vector2.Distance(overlay.BeamTo, knot), Is.LessThan(0.5f), "que llega al nudo, no a la fruta");
+            Assert.That(Vector2.Distance(overlay.Beam.Evaluate(1f), knot), Is.LessThan(0.5f), "y a mitad del paso ya llegó");
+            Assert.That(overlay.CountDots, Is.EqualTo(1), "los puntos siguen mientras se suelta");
+
+            rig.RunUntilIdle(4000);
+            Assert.That(rig.Animator.IsIdle, Is.True);
+            Assert.That(overlay.Visible, Is.False, "suelta: oculta");
+            Assert.That(overlay.IsAnimating || overlay.BeamVisible || overlay.CheckVisible, Is.False);
+            MechanicStepRecord r = MechanicTestKit.Record(rig.Animator, MechanicStepKind.Release, 2);
+            Assert.That(r.UsedDefault, Is.False, "el overlay anima el desbloqueo");
+            Assert.That(r.OtherIndex, Is.EqualTo(0), "por la cuia sellada");
+        }
+
+        [UnityTest]
+        public IEnumerator Liana_BeamLeavesWithTheBoard()
+        {
+            // El cometa vive en la capa delantera del tablero, fuera de la cuia: al cambiar de nivel (GameScreen.BuildBoard
+            // destruye las vistas y conserva la capa) no queda ningún LianaBeam huérfano, solo los de las Lianas del nivel nuevo.
+            yield return MechanicTestKit.LoadPlaying(83);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RectTransform front = boot.View!.MechanicFrontLayer;
+            int liana = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Liana);
+            Assert.That(BeamNames(front), Is.EqualTo("LianaBeam" + liana), "un cometa por Liana del 83");
+
+            Pour[] win = Trigger(boot, (ev, b, a) => a.IsWon());
+            MechanicTestKit.PlayPrefix(boot, win, skipLast: false);
+            for (int t = 0; boot.Flow!.Phase != FlowPhase.VictoryScreen; t += PlayModeHelpers.FrameMs)
+            {
+                Assert.That(t, Is.LessThan(20000), "pantalla de victoria del 83 (fase " + boot.Flow.Phase + ")");
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(boot.PressNext(), Is.True, "Siguiente");
+            for (int frames = 0; boot.Flow!.LevelNumber != 84; frames++)
+            {
+                Assert.That(frames, Is.LessThan(600), "carga el 84 (fase " + boot.Flow.Phase + ")");
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                yield return null;
+            }
+
+            yield return null; // Destroy de las vistas y, en su OnDestroy, el del cometa: al final del fotograma
+            yield return null;
+            var expected = new System.Text.StringBuilder();
+            CuiaView[] views = boot.View!.Views;
+            for (int i = 0; i < views.Length; i++)
+            {
+                if (views[i].Overlay is LianaOverlay)
+                {
+                    expected.Append(expected.Length > 0 ? "," : string.Empty).Append("LianaBeam").Append(i);
+                }
+            }
+
+            Assert.That(BeamNames(front), Is.EqualTo(expected.ToString()), "sin el cometa de la Liana del 83, solo los del 84");
+        }
+
+        [Test]
+        public void Matapi_RodsLeaveTheCenterClear()
+        {
+            // 07 §3: las rayas verticales son el patrón del Camu camu y, con los aros, la rejilla del Huito; el centro, el parche
+            // de VA-05 y el icono de fruta. Las varillas se juntan en los bordes, como un cilindro visto de frente.
+            Assert.That(MatapiOverlay.RodCount, Is.EqualTo(6));
+            for (int i = 0; i < MatapiOverlay.RodCount; i++)
+            {
+                float x = MatapiOverlay.RodXU(i);
+                Assert.That(Mathf.Abs(x), Is.GreaterThanOrEqualTo(MatapiOverlay.RodClearHalfU), "varilla " + i + " fuera del centro");
+                Assert.That(Mathf.Abs(x), Is.LessThan(CuiaGeometry.CavityHalfWidthU + 0.1f), "varilla " + i + " sobre el cuerpo");
+                Assert.That(MatapiOverlay.RodXU(MatapiOverlay.RodCount - 1 - i), Is.EqualTo(-x).Within(1e-5f), "simétricas");
+            }
         }
 
         [UnityTest]
@@ -372,6 +536,46 @@ namespace AF.Tests.PlayMode
             Assert.That(overlay.FallAmount, Is.EqualTo(0f), when + ": en su sitio");
             Assert.That(overlay.BeamVisible || overlay.CheckVisible, Is.False, when + ": sin hilo ni ✓");
             Assert.That(VisibleIn(overlay.AttachedHost!.BodyFront), Is.GreaterThanOrEqualTo(overlay.WrapCount + 2), when + ": vueltas, nudo y fruta");
+        }
+
+        // El arco entero del cometa queda bajo el techo: el canto inferior de la ranura (la repisa) de la fila de arriba de la
+        // más alta de las dos cuias o, si esa es la fila superior, el área táctil de las ranuras; con el margen y la cabeza.
+        private static void AssertArcUnderCeiling(BoardAnimator animator, LianaOverlay overlay, int sealedCuia, int liana, float u)
+        {
+            var board = (ICuiaBoard)animator;
+            float highest = Mathf.Max(board.Foot(sealedCuia).y, board.Foot(liana).y);
+            float above = float.MaxValue;
+            float slotsTop = float.MinValue;
+            for (int i = 0; i < board.Count; i++)
+            {
+                Rect slot = board.SlotRect(i);
+                slotsTop = Mathf.Max(slotsTop, slot.yMax);
+                if (board.Foot(i).y > highest + (0.5f * u))
+                {
+                    above = Mathf.Min(above, slot.yMin);
+                }
+            }
+
+            float ceiling = above < float.MaxValue ? above : slotsTop;
+            string where = above < float.MaxValue ? "bajo la repisa de la fila de arriba" : "dentro del área de las ranuras";
+            Assert.That(overlay.BeamPeakY, Is.LessThanOrEqualTo(ceiling - LianaOverlay.BeamCeilingMarginDp + 0.01f), "el arco del cometa queda " + where);
+            Assert.That(overlay.BeamPeakY, Is.GreaterThanOrEqualTo(Mathf.Max(overlay.BeamFrom.y, overlay.BeamTo.y) - 0.01f), "y no baja de sus extremos");
+        }
+
+        // Nombres de los cometas de Liana (hijos directos de la capa delantera del tablero), separados por comas.
+        private static string BeamNames(RectTransform front)
+        {
+            var names = new System.Text.StringBuilder();
+            for (int i = 0; i < front.childCount; i++)
+            {
+                string name = front.GetChild(i).name;
+                if (name.StartsWith("LianaBeam", System.StringComparison.Ordinal))
+                {
+                    names.Append(names.Length > 0 ? "," : string.Empty).Append(name);
+                }
+            }
+
+            return names.ToString();
         }
 
         // D-002: ninguna cuia se eleva ni cambia el brillo de su vidrio por el rechazo.
