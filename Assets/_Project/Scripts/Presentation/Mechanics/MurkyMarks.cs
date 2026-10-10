@@ -22,8 +22,12 @@ namespace AF.Presentation.Mechanics
     /// debajo de los 1,5 s de b.2): como en Magic Sort, primero sale el color nuevo (la dosis pasa del pardo a su tinte entre
     /// <see cref="RuleTintFrom"/> y <see cref="RuleTintFullAt"/>) y el «?» crece, ondula y se disuelve encima, con 3-4
     /// destellos blancos de estrella (<see cref="IBoardFx.Sparkles"/>); sube una burbuja (<see cref="IBoardFx.Bubbles"/>; la
-    /// «boiada» del pirarucú). Así nunca se ve el pardo sin «?» (07 §3, fila Cacao). La cola lo despacha al origen cuando ya
-    /// volvió a su ranura (T07).</para>
+    /// «boiada» del pirarucú). Así nunca se ve el pardo sin «?» (07 §3, fila Cacao). Fundido cruzado sin saltos (D-003): la
+    /// trama se va mientras sale el tinte (≈ 0,10-0,30), entra el patrón de la fruta cuando ya no hay trama (≈ 0,35 hasta
+    /// <see cref="RuleDissolveEndAt"/>, en el shader: <see cref="LiquidGraphic.FruitPatternWeight"/>) y la insignia baja en
+    /// uno justo cuando el «?» termina de irse (<see cref="RuleMarkGoneAt"/>), con un pop de la cifra
+    /// (<see cref="BadgePopScale"/> en <see cref="BadgePopMs"/>; sin él con Reducir movimiento). La cola lo despacha al origen
+    /// cuando ya volvió a su ranura (T07).</para>
     /// <para><b>Luciérnaga</b> (<see cref="RevealStyle.Firefly"/>, 04 §2.5; la usa T14): el pardo se aclara de arriba abajo en
     /// <see cref="RevealFireflyMs"/> (la de abajo llega a su tinte justo al final) y cada «?» gira hasta quedar de canto y
     /// muestra el icono de su fruta (<see cref="ProceduralArt.FruitFlight"/>), que gira de vuelta y se apaga.</para>
@@ -66,10 +70,24 @@ namespace AF.Presentation.Mechanics
         public const float RuleTintFullAt = 0.40f;
 
         /// <summary>
-        /// Por la regla, fracción en la que el «?» ya se disolvió y la trama se fue (el shader los anima de 0 a esta fracción):
-        /// la dosis pasa al patrón de su fruta y la insignia baja en uno [P].
+        /// Por la regla, fracción en la que termina el Dissolve del shader (su avance va de 0 a 1 hasta aquí) [P]: la trama
+        /// se fue (avance <see cref="LiquidGraphic.HatchFadeFrom"/>-<see cref="LiquidGraphic.HatchFadeTo"/>, t ≈ 0,10-0,30), el
+        /// «?» se disolvió y el patrón de la fruta ya entró entero (<see cref="LiquidGraphic.FruitPatternFrom"/>-1,
+        /// t ≈ 0,35-0,55), así que la dosis pasa a pintarse normal sin que cambie nada en pantalla.
         /// </summary>
-        public const float RuleMarkGoneAt = 0.55f;
+        public const float RuleDissolveEndAt = 0.55f;
+
+        /// <summary>
+        /// Por la regla, fracción en la que el «?» termina de irse (<see cref="LiquidGraphic.MarkFadeTo"/> del Dissolve,
+        /// ≈ 0,47): la insignia baja en uno en ese mismo fotograma, con el pop de la cifra [P].
+        /// </summary>
+        public const float RuleMarkGoneAt = RuleDissolveEndAt * LiquidGraphic.MarkFadeTo;
+
+        /// <summary>Pop de la cifra de la insignia al bajar: dura 160 ms (no se escala con el factor de velocidad) [P].</summary>
+        public const float BadgePopMs = 160f;
+
+        /// <summary>Escala máxima del pop de la cifra (1 → 1,2 → 1, ease-out) [P].</summary>
+        public const float BadgePopScale = 1.2f;
 
         /// <summary>Destellos de estrella por capa revelada por la regla (ficha de Magic Sort §3.1: 3 o 4).</summary>
         public const int SparklesPerLayer = 4;
@@ -109,6 +127,8 @@ namespace AF.Presentation.Mechanics
         private int _switched;
         private bool _sparklesDone;
         private bool _bubbleDone;
+        private bool _snapping;
+        private float _popMs = -1f;
         private RevealStyle _style;
 
         /// <summary>Crea las marcas de una cuia de capacidad <paramref name="capacity"/> dentro de <paramref name="body"/>.</summary>
@@ -169,6 +189,9 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>Glifo de la cifra de la insignia (tests).</summary>
         public Image BadgeDigit => _badgeDigit;
+
+        /// <summary>La cifra de la insignia está haciendo su pop (<see cref="BadgePopMs"/> tras bajar la cuenta).</summary>
+        public bool BadgePopping => _popMs >= 0f;
 
         /// <summary>Destellos que pidió el último revelado por la regla (diagnóstico y tests).</summary>
         public int LastSparkles { get; private set; }
@@ -304,9 +327,13 @@ namespace AF.Presentation.Mechanics
             return _animDur;
         }
 
-        /// <summary>Termina en el acto el revelado en curso (las capas con su tinte, sin «?» ni iconos ni efectos nuevos).</summary>
+        /// <summary>
+        /// Termina en el acto el revelado en curso (las capas con su tinte, sin «?» ni iconos ni efectos nuevos: ni destellos,
+        /// ni burbuja, ni pop) y el pop de la cifra que quede.
+        /// </summary>
         public void Snap()
         {
+            StopPop();
             if (!IsAnimating)
             {
                 return;
@@ -314,8 +341,10 @@ namespace AF.Presentation.Mechanics
 
             _sparklesDone = true;
             _bubbleDone = true;
+            _snapping = true;
             ApplyReveal(1f);
             Finish();
+            _snapping = false;
         }
 
         /// <summary>Deja de contar en la insignia la dosis <paramref name="k"/> (la intro, antes de que el agua se enturbie).</summary>
@@ -364,6 +393,7 @@ namespace AF.Presentation.Mechanics
             ApplyBadge();
             if (inFlight)
             {
+                StopPop();
                 for (int k = 0; k < _capacity; k++)
                 {
                     OverlayParts.SetVisible(_fruits[k], false);
@@ -371,9 +401,10 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        /// <summary>Avanza el revelado en curso (sin asignaciones).</summary>
+        /// <summary>Avanza el pop de la cifra y el revelado en curso (sin asignaciones).</summary>
         public void Tick(float dtMs)
         {
+            TickPop(dtMs);
             if (!IsAnimating)
             {
                 return;
@@ -410,8 +441,10 @@ namespace AF.Presentation.Mechanics
             }
 
             // Por la regla: el color pasa del pardo al tinte entre RuleTintFrom y RuleTintFullAt (ease-in-out) y el shader
-            // disuelve encima el «?» y la trama hasta RuleMarkGoneAt; después, la dosis con el patrón de su fruta.
-            float dissolve = Mathf.Clamp01(t / RuleMarkGoneAt);
+            // hace el fundido cruzado hasta RuleDissolveEndAt (la trama se va, el «?» se disuelve encima y entra el patrón de
+            // la fruta, con su franja y su menisco); después, la dosis normal, igual que el último fotograma del Dissolve. La
+            // insignia baja cuando el «?» termina de irse (RuleMarkGoneAt).
+            float dissolve = Mathf.Clamp01(t / RuleDissolveEndAt);
             float e = Ease.InOut(Mathf.Clamp01((t - RuleTintFrom) / (RuleTintFullAt - RuleTintFrom)));
             for (int k = 0; k < _capacity; k++)
             {
@@ -421,14 +454,18 @@ namespace AF.Presentation.Mechanics
                 }
 
                 Color c = Color.Lerp(Palette.Murky, _target[k], e);
-                if (t >= RuleMarkGoneAt)
+                if (t >= RuleDissolveEndAt)
                 {
                     _liquid.SetDose(k, c, 1f, _targetTint[k]);
-                    MarkGone(k);
                 }
                 else
                 {
-                    _liquid.SetDose(k, c, 1f, 0, LiquidGraphic.MurkyLook.Dissolve, dissolve);
+                    _liquid.SetDose(k, c, 1f, _targetTint[k], LiquidGraphic.MurkyLook.Dissolve, dissolve);
+                }
+
+                if (t >= RuleMarkGoneAt)
+                {
+                    MarkGone(k);
                 }
             }
 
@@ -492,7 +529,8 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // El «?» de la capa k ya no se ve: la insignia baja en uno (una vez por capa).
+        // El «?» de la capa k ya no se ve: la insignia baja en uno (una vez por capa) con el pop de la cifra, salvo al saltar
+        // (Snap).
         private void MarkGone(int k)
         {
             int bit = 1 << k;
@@ -503,6 +541,58 @@ namespace AF.Presentation.Mechanics
 
             _switched |= bit;
             SetMask(_mask & ~bit);
+            if (!_snapping)
+            {
+                StartPop();
+            }
+        }
+
+        // Pop de la cifra: 1 → BadgePopScale → 1 en BadgePopMs (1 + 0,2 · sen(π · ease-out), pico hacia los 47 ms y llegada
+        // suave). Sin él con Reducir movimiento, en vuelo o sin insignia (la cuenta llegó a 0).
+        private void StartPop()
+        {
+            IBoardFx? fx = _view != null ? _view.OverlayHost.Fx : null;
+            if (_inFlight || (fx != null && fx.ReduceMotion) || !_badge.gameObject.activeSelf)
+            {
+                return;
+            }
+
+            _popMs = 0f;
+            SetDigitScale(1f);
+        }
+
+        private void TickPop(float dtMs)
+        {
+            if (_popMs < 0f)
+            {
+                return;
+            }
+
+            _popMs += dtMs;
+            if (_popMs >= BadgePopMs)
+            {
+                StopPop();
+                return;
+            }
+
+            float p = _popMs / BadgePopMs;
+            SetDigitScale(1f + ((BadgePopScale - 1f) * Mathf.Sin(Mathf.PI * Ease.Out(p))));
+        }
+
+        private void StopPop()
+        {
+            _popMs = -1f;
+            SetDigitScale(1f);
+        }
+
+        private void SetDigitScale(float s)
+        {
+            var scale = new Vector3(s, s, 1f);
+            RectTransform rt = _badgeDigit.rectTransform;
+            if (rt.localScale != scale)
+            {
+                rt.localScale = scale;
+            }
         }
 
         private void EmitSparkles()
@@ -590,6 +680,10 @@ namespace AF.Presentation.Mechanics
                     _badgeShown = n;
                     _badgeDigit.sprite = _art.MurkyBadgeDigit(n);
                 }
+            }
+            else if (_popMs >= 0f)
+            {
+                StopPop();
             }
 
             OverlayParts.SetVisible(_badge, on);

@@ -12,7 +12,8 @@
 // gira NORMAL y TANGENT con el objeto (la cuia se inclina al verter), así que no sirven para datos. Sin palabras clave
 // (shader_feature) que el build pudiera eliminar. Coste: 1 muestra (patrón) y unas 57 ALU por píxel (el recorte a la
 // silueta añade unas 12; por encima de las 40 de la guía 8: pendiente de medir en un dispositivo de clase A). Las dosis
-// turbias hacen 2 muestras (trama y «?») y unas 25 ALU más; nunca más de 2 muestras por píxel. Sin Bloom.
+// turbias hacen 2 muestras (la trama o, al disolverse, el patrón de la fruta que se revela; y el «?») y unas 30 ALU más;
+// nunca más de 2 muestras por píxel. Sin Bloom.
 //
 // Canales (en u de la cuia, x de 0 a 2 con el centro en 1; y desde el pie):
 //   COLOR      color de la dosis (el Canvas lo pasa a lineal)
@@ -23,8 +24,10 @@
 //   TEXCOORD2  superficie del líquido, amplitud de la onda, fase de la onda, patrón + 4 · índice de la dosis (patrón: -1
 //              sin patrón, 0 marcas en tinta, 1 marcas en marfil, 2 turbia; 2 + 0,45 · avance al disolverse la «?» por la
 //              regla y 2 - 0,45 · avance al girar con la Luciérnaga)
-//   TEXCOORD3  rgb: color del menisco (espacio del shader); a: fila del patrón en el atlas (la turbia en las dosis turbias)
-//   _DpU       1 dp en u (todas las cuias de un nivel miden lo mismo); _PatternRows: filas del atlas
+//   TEXCOORD3  rgb: color del menisco (espacio del shader); a: fila del patrón en el atlas (la turbia en las dosis turbias
+//              quietas o girando; al disolverse por la regla, la de la fruta que se revela + 0,5 si sus marcas van en marfil,
+//              LiquidGraphic.FruitRowCode)
+//   _DpU       1 dp en u (todas las cuias de un nivel miden lo mismo); _PatternRows: filas del atlas; _MurkyRow: la turbia
 //
 // Aguas turbias (07 §4.3; 08 §5.2; LiquidGraphic.MurkyLook): equivale a _HiddenMask (cada banda turbia lleva el patrón 2;
 // también ocultas no contiguas) y a _MurkyColor = #8A7B6A (el color de la banda), que no pueden ir como propiedades porque
@@ -32,7 +35,9 @@
 // trama diagonal (repetible, dos teselas por u) y en R y G el «?» marfil de 0,5 u y su halo de tinta, una sola vez y
 // centrado en la fila. Sobre el pardo: trama al 25 % hacia la tinta y «?» marfil con el halo de tinta al 55 %, en
 // coordenadas de pantalla relativas a su banda (derechos aunque la cuia se incline, y del tamaño de la banda), sin la
-// mezcla fija del 15 % de los patrones de fruta.
+// mezcla fija del 15 % de los patrones de fruta. Al disolverse por la regla, fundido cruzado sin saltos (T15): la trama se
+// va, el «?» se disuelve y después entra el patrón de la fruta en sus coordenadas y con su 15 %, así que al terminar la banda
+// es la dosis normal de esa fruta (LiquidGraphic.MurkyHatchAmount y FruitPatternWeight son los espejos en CPU).
 //   _AF*U      geometría de la cuia (globales que fija LiquidGraphic.ApplyShaderGeometry desde CuiaGeometry, la única
 //              fuente): fondo y medio ancho de la cavidad, medio ancho del cuello, hombro, alto sobre la cavidad, borde y
 //              alto de la cara superior
@@ -52,6 +57,7 @@ Shader "AF/UI/Liquid"
         [PerRendererData] _MainTex ("Pattern Atlas", 2D) = "white" {}
         _DpU ("Un dp en u", Float) = 0.0417
         _PatternRows ("Filas del atlas", Float) = 16
+        _MurkyRow ("Fila turbia del atlas", Float) = 15
         // Vector y no Color: ya vienen en el espacio del shader (LiquidGraphic.Setup, SetVector); una propiedad Color se
         // volvería a pasar a lineal en el proyecto Linear.
         _InkLin ("Tinta en lineal", Vector) = (0.024, 0.015, 0.009, 1)
@@ -127,6 +133,7 @@ Shader "AF/UI/Liquid"
             sampler2D _MainTex;
             float _DpU;
             float _PatternRows;
+            float _MurkyRow;
             half4 _InkLin;
             half4 _PaperLin;
             int _UIVertexColorAlwaysGammaSpace;
@@ -240,8 +247,8 @@ Shader "AF/UI/Liquid"
 
                 // Patrón del tinte (07 §3): marcas al 15 % hacia tinta o marfil, mezcladas en un espacio aproximadamente
                 // gamma (raíz cuadrada) como Palette.PatternMark, encima de los brillos (VA-05b). En una dosis turbia, la misma
-                // muestra lee la trama de la fila turbia, al 25 % hacia la tinta (07 §4.3) y sin la mezcla fija del 15 %.
-                // Aguas turbias: coordenadas de pantalla de su banda, en u de capa (gx: x de la «?» desde el centro de la
+                // muestra lee la trama de la fila turbia (_MurkyRow), al 25 % hacia la tinta (07 §4.3) y sin la mezcla fija del
+                // 15 %. Aguas turbias: coordenadas de pantalla de su banda, en u de capa (gx: x de la «?» desde el centro de la
                 // cuerda; gy: desde el centro de la banda, entre sus arcos), así que la trama y la «?» siguen a la banda
                 // cuando la cuia se inclina. v > 0: revelado por la regla; v < 0: Luciérnaga.
                 float rowH = 1.0 / _PatternRows;
@@ -253,13 +260,23 @@ Shader "AF/UI/Liquid"
                 float turn = murky ? saturate(-v) : 0.0;
                 if (patternMode > -0.5)
                 {
+                    // Fundido cruzado del revelado por la regla (sus espejos en CPU, LiquidGraphic.MurkyHatchAmount y
+                    // FruitPatternWeight: cámbialos juntos): la trama se va entre 0,18 y 0,55 del avance y después, ya sin
+                    // trama, entra el patrón de la fruta (men.a = su fila + 0,5 si sus marcas van en marfil) entre 0,64 y 1,
+                    // en las coordenadas y con el 15 % del patrón normal: al terminar es el de su dosis. Las dos fases no se
+                    // solapan, así que una sola muestra lee la trama o el patrón. Con la Luciérnaga, la trama se va al girar.
+                    half hatch = murky ? 0.25 * (1.0 - smoothstep(0.18, 0.55, dissolve)) * (1.0 - smoothstep(0.3, 1.0, turn)) : 0.0;
+                    bool fruit = !murky || hatch <= 0.0;
+                    float fruitRow = murky ? floor(i.men.a + 0.25) : i.men.a;
+                    half paper = murky ? (half)(2.0 * (i.men.a - fruitRow)) : (half)patternMode;
                     // Dos teselas por u (ProceduralArt.PatternTileU = 0,5 u): desde la pared izquierda de la cavidad o, la
                     // trama, desde el centro de la cuerda de la banda.
-                    float pu = murky ? gx * 2.0 : (x - (1.0 - _AFCavityHalfU)) * 2.0;
-                    float2 puv = float2(pu, (i.men.a * rowH) + (clamp(ya - doseBottom, 0.004, 0.996) * rowH));
+                    float pu = fruit ? (x - (1.0 - _AFCavityHalfU)) * 2.0 : gx * 2.0;
+                    float row = fruit ? fruitRow : _MurkyRow;
+                    float2 puv = float2(pu, (row * rowH) + (clamp(ya - doseBottom, 0.004, 0.996) * rowH));
                     half m = tex2D(_MainTex, puv).a;
-                    half3 baseCol = murky ? _InkLin.rgb : lerp(_InkLin.rgb, _PaperLin.rgb, (half)patternMode);
-                    half amount = murky ? 0.25 * (1.0 - smoothstep(0.3, 1.0, max(dissolve, turn))) : 0.15;
+                    half3 baseCol = fruit ? lerp(_InkLin.rgb, _PaperLin.rgb, paper) : _InkLin.rgb;
+                    half amount = fruit ? 0.15 * (murky ? smoothstep(0.64, 1.0, dissolve) : 1.0) : hatch;
                     half3 g = lerp(sqrt(col), sqrt(baseCol), amount * m);
                     col = g * g;
                 }
@@ -276,7 +293,7 @@ Shader "AF/UI/Liquid"
                     float qx = (gx + wobble) / (grow * squeeze);
                     float qy = gy / grow;
                     float fade = (1.0 - smoothstep(0.35, 0.85, dissolve)) * step(turn, 0.999) * step(abs(qx), 0.25);
-                    float2 quv = float2((qx * 2.0) + 0.5, (i.men.a * rowH) + (clamp(qy + 0.5, 0.004, 0.996) * rowH));
+                    float2 quv = float2((qx * 2.0) + 0.5, (_MurkyRow * rowH) + (clamp(qy + 0.5, 0.004, 0.996) * rowH));
                     half2 q = tex2Dlod(_MainTex, float4(quv, 0.0, 0.0)).rg;
                     col = lerp(col, _InkLin.rgb, 0.55 * q.g * fade);
                     col = lerp(col, _PaperLin.rgb, q.r * fade);

@@ -19,12 +19,14 @@ namespace AF.Tests.PlayMode
     /// <c>70_murky_l100</c> (las 2 ocultas del estreno, pardas con trama y «?»), <c>71_murky_tilt_l106</c> (la cuia turbia
     /// inclinada al verter: la trama y el «?» en su banda), <c>72_reveal_l100</c> (el revelado por la regla al 20 %: el «?» se
     /// deforma entre destellos y el color nuevo empieza a salir), <c>72b_reveal_mid_l100</c> (al 45 %: la dosis ya en su
-    /// tinte, la burbuja y lo último del «?» deshaciéndose encima), <c>72d_reveal_tNNN_l100_zoom</c> (recortes al 30, 40, 50,
-    /// 60 y 70 %), <c>72c_firefly_l100</c> (la Luciérnaga a mitad: de arriba abajo y el icono de la fruta) y
+    /// tinte, la burbuja y lo último del «?» deshaciéndose encima, con el patrón de la fruta entrando),
+    /// <c>72d_reveal_tNNN_l100_zoom</c> (recortes al 30, 35, 40, 48, 50, 54, 56, 60 y 70 %: el fundido cruzado y el pop de la
+    /// cifra), <c>72c_firefly_l100</c> (la Luciérnaga a mitad: de arriba abajo y el icono de la fruta) y
     /// <c>73_murky_badge_l100</c> (tras el revelado, «?×1»). De cada una, además, un recorte a tamaño real de la cuia turbia
     /// (<c>*_zoom</c>) para mirar la legibilidad a 48-56 dp, los solapes, los colores y la línea D-003. Muestrean además los
     /// píxeles: en 70, el «?» del shader en el marfil UiPaper (ΔE00 ≤ 3); del 30 al 70 % del revelado, nunca el pardo sin «?»
-    /// (07 §3); las medidas salen en el log como <c>AF_MURKY</c>. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode
+    /// (07 §3); del 54 al 56 % (paso a la dosis normal), menos del 10 % de los píxeles de la banda cambian; las medidas salen
+    /// en el log como <c>AF_MURKY</c>. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode
     /// PlayMode --filter AF.Tests.PlayMode.MurkySnapshotTests</c> sin <c>-nographics</c>; los PNG quedan en
     /// <c>Logs/snapshots/</c>.
     /// </summary>
@@ -58,7 +60,9 @@ namespace AF.Tests.PlayMode
             Assert.That(paperDe, Is.LessThanOrEqualTo(3f), "el «?» en marfil UiPaper, no #E7D4B3");
 
             // El revelado por la regla: al 20 % (72), al 45 % (72b) y, en recortes, del 30 al 70 % (72d): en ningún fotograma
-            // queda el pardo sin «?» (07 §3; el «?» se disuelve sobre el color nuevo, ficha de Magic Sort §3.1).
+            // queda el pardo sin «?» (07 §3; el «?» se disuelve sobre el color nuevo, ficha de Magic Sort §3.1). Fundido
+            // cruzado (D-003): la trama se va hacia el 30 %, el patrón de la fruta entra del 35 al 55 % y la cifra hace su pop
+            // hacia el 47-50 %; del 54 al 56 % (el paso a la dosis normal) casi ningún píxel de la banda cambia.
             Pour[]? path = MechanicTestKit.FindTrigger(boot.Flow!, (ev, b, a) => ev.RevealedMask != 0);
             Assert.That(path, Is.Not.Null);
             MechanicTestKit.PlayPrefix(boot, path!);
@@ -71,7 +75,8 @@ namespace AF.Tests.PlayMode
             MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Reveal, pour.Source, 4000);
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.Reveal, pour.Source, 0.2f);
             Save(dir, "72_reveal_l100", boot, pour.Source);
-            float[] fractions = { 0.30f, 0.40f, 0.45f, 0.50f, 0.60f, 0.70f };
+            float[] fractions = { 0.30f, 0.35f, 0.40f, 0.45f, 0.48f, 0.50f, 0.54f, 0.56f, 0.60f, 0.70f };
+            Color32[]? beforeSwitch = null;
             for (int i = 0; i < fractions.Length; i++)
             {
                 float f = fractions[i];
@@ -89,8 +94,19 @@ namespace AF.Tests.PlayMode
                 MarkSample band = SampleMark(source, layer);
                 float toMurky = ColorMath.DeltaE00(band.Mean, Palette.Murky);
                 Debug.Log("AF_MURKY " + name + ": media de la banda #" + ColorUtility.ToHtmlStringRGB(band.Mean) + ", ΔE00 " + toMurky.ToString("F1")
-                    + " del pardo y " + ColorMath.DeltaE00(band.Mean, tint).ToString("F1") + " de su tinte; «?» marfil " + band.PaperCount + " px de " + band.Total);
+                    + " del pardo y " + ColorMath.DeltaE00(band.Mean, tint).ToString("F1") + " de su tinte; «?» marfil " + band.PaperCount + " px de " + band.Total
+                    + "; insignia «?×" + source.Murky.BadgeCount + "» a escala " + source.Murky.BadgeDigit.rectTransform.localScale.x.ToString("F2"));
                 Assert.That(toMurky >= 8f || band.PaperCount * 50 >= band.Total, Is.True, name + ": nunca el pardo sin «?» (07 §3)");
+                if (f == 0.54f)
+                {
+                    beforeSwitch = band.Pixels;
+                }
+                else if (f == 0.56f)
+                {
+                    int changed = Changed(beforeSwitch!, band.Pixels, 8);
+                    Debug.Log("AF_MURKY 54 -> 56 %: " + changed + " de " + band.Total + " píxeles de la banda cambian más de 8/255");
+                    Assert.That(changed * 10, Is.LessThan(band.Total), "el paso a la dosis normal no salta (menos del 10 % de los píxeles)");
+                }
             }
 
             MechanicTestKit.StepToIdle(boot, 4000);
@@ -272,8 +288,25 @@ namespace AF.Tests.PlayMode
                 PlateauCount = bestCount,
                 PaperCount = paper,
                 Total = px.Length,
+                Pixels = px,
             };
             return sample;
+        }
+
+        // Píxeles que cambian más de limit (0-255) en algún canal entre dos muestras de la misma caja.
+        private static int Changed(Color32[] a, Color32[] b, int limit)
+        {
+            int n = 0;
+            int count = Mathf.Min(a.Length, b.Length);
+            for (int i = 0; i < count; i++)
+            {
+                if (Mathf.Abs(a[i].r - b[i].r) > limit || Mathf.Abs(a[i].g - b[i].g) > limit || Mathf.Abs(a[i].b - b[i].b) > limit)
+                {
+                    n++;
+                }
+            }
+
+            return n + Mathf.Abs(a.Length - b.Length);
         }
 
         private static int Lowest(int mask)
@@ -311,6 +344,7 @@ namespace AF.Tests.PlayMode
             public int PlateauCount;
             public int PaperCount;
             public int Total;
+            public Color32[] Pixels;
         }
     }
 }

@@ -36,9 +36,14 @@ namespace AF.Presentation
     /// en un modo turbio la banda lleva el patrón <see cref="MurkyPatternMode"/> (± el avance del revelado, ver
     /// <see cref="MurkyLook"/>) y la fila turbia del atlas (<see cref="ProceduralArt.MurkyPatternRow"/>) en
     /// <c>TEXCOORD3.a</c>; el shader pinta encima del pardo la trama diagonal al 25 % y el «?» marfil de 0,5 u, sin la
-    /// mezcla fija del 15 % de los patrones de fruta. Equivale a la máscara <c>_HiddenMask</c> (una banda por dosis, también
-    /// no contiguas) y al color <c>_MurkyColor</c> = #8A7B6A (<see cref="Palette.Murky"/>, el color de la banda) de 08 §5.2,
-    /// que no pueden ir como propiedades: uGUI no admite <c>MaterialPropertyBlock</c> por cuia y todas comparten material.
+    /// mezcla fija del 15 % de los patrones de fruta. Al disolverse por la regla (<see cref="MurkyLook.Dissolve"/>) hay un
+    /// fundido cruzado sin saltos: <c>TEXCOORD3.a</c> pasa a ser la fila de la fruta que se revela
+    /// (<see cref="FruitRowCode"/>; la turbia la da <c>_MurkyRow</c>), la trama se va antes de que entre el patrón de la
+    /// fruta (<see cref="MurkyHatchAmount"/> y <see cref="FruitPatternWeight"/>, espejos en CPU del shader) y la franja y el
+    /// menisco de la fruta entran con su patrón; al final del Dissolve la banda es su dosis normal. Equivale a la máscara
+    /// <c>_HiddenMask</c> (una banda por dosis, también no contiguas) y al color <c>_MurkyColor</c> = #8A7B6A
+    /// (<see cref="Palette.Murky"/>, el color de la banda) de 08 §5.2, que no pueden ir como propiedades: uGUI no admite
+    /// <c>MaterialPropertyBlock</c> por cuia y todas comparten material.
     /// La «?» va derecha en pantalla y centrada en la cuerda de su banda: su x a lo ancho de la pantalla, relativa al centro
     /// de la cuerda y en u de capa, va por vértice en <c>TEXCOORD1.w</c>, que en las bandas normales es el destello del
     /// sellado (una cuia con dosis ocultas nunca está sellada, R5). Con la banda más fina que 1 u (cuia inclinada), la «?»
@@ -63,6 +68,25 @@ namespace AF.Presentation
         /// <summary>Avance de <see cref="MurkyLook.Dissolve"/> en el que el «?» ya no se ve.</summary>
         public const float MarkFadeTo = 0.85f;
 
+        /// <summary>Trama diagonal de una dosis turbia: 25 % hacia la tinta (07 §4.3).</summary>
+        public const float MurkyHatchOpacity = 0.25f;
+
+        /// <summary>
+        /// Avance de <see cref="MurkyLook.Dissolve"/> en el que la trama empieza a irse (shader: smoothstep(0,18; 0,55)) [P]:
+        /// la trama se va mientras la dosis toma su tinte y antes de que entre el patrón de su fruta.
+        /// </summary>
+        public const float HatchFadeFrom = 0.18f;
+
+        /// <summary>Avance de <see cref="MurkyLook.Dissolve"/> en el que la trama ya no se ve.</summary>
+        public const float HatchFadeTo = 0.55f;
+
+        /// <summary>
+        /// Avance de <see cref="MurkyLook.Dissolve"/> en el que el patrón de la fruta que se revela empieza a entrar (shader:
+        /// smoothstep(0,64; 1)) [P]: después de <see cref="HatchFadeTo"/> (la misma muestra lee la trama o el patrón, nunca los
+        /// dos) y entero al final del Dissolve, así que el paso a la dosis normal no salta.
+        /// </summary>
+        public const float FruitPatternFrom = 0.64f;
+
         /// <summary>
         /// Cómo pinta el shader una dosis (07 §4.3; 08 §5.2): normal o turbia, y en este caso si su «?» está quieto, se
         /// disuelve (revelado por la regla, 1.200 ms) o gira de canto (Luciérnaga, 04 §2.5).
@@ -75,7 +99,11 @@ namespace AF.Presentation
             /// <summary>Oculta: pardo opaco, trama diagonal al 25 % y «?» marfil de 0,5 u, sin tinte ni patrón de fruta.</summary>
             Hidden = 1,
 
-            /// <summary>Revelado por la regla (R7): el «?» crece, ondula y se disuelve, y la trama se va (avance 0..1).</summary>
+            /// <summary>
+            /// Revelado por la regla (R7), avance 0..1: la trama se va (<see cref="HatchFadeFrom"/>-<see cref="HatchFadeTo"/>),
+            /// el «?» crece, ondula y se disuelve (<see cref="MarkFadeFrom"/>-<see cref="MarkFadeTo"/>) y entra el patrón de la
+            /// fruta que se revela (<see cref="FruitPatternFrom"/>-1), con su franja y su menisco: al avance 1 es su dosis normal.
+            /// </summary>
             Dissolve = 2,
 
             /// <summary>Revelado con la Luciérnaga: el «?» gira hasta quedar de canto y la trama se va (avance 0..1).</summary>
@@ -111,6 +139,7 @@ namespace AF.Presentation
 
         private static readonly int DpUId = Shader.PropertyToID("_DpU");
         private static readonly int PatternRowsId = Shader.PropertyToID("_PatternRows");
+        private static readonly int MurkyRowId = Shader.PropertyToID("_MurkyRow");
         private static readonly int InkId = Shader.PropertyToID("_InkLin");
         private static readonly int PaperId = Shader.PropertyToID("_PaperLin");
         private static readonly int CavityBottomId = Shader.PropertyToID("_AFCavityBottomU");
@@ -199,6 +228,7 @@ namespace AF.Presentation
             {
                 material = mat;
                 mat.SetFloat(PatternRowsId, atlas.height / (float)ProceduralArt.PatternRowPx);
+                mat.SetFloat(MurkyRowId, ProceduralArt.MurkyPatternRow); // la trama y el «?» (al disolverse, TEXCOORD3.a es la fruta)
                 // Ya en el espacio del shader: van con SetVector, que no convierte. SetColor los volvía a pasar a lineal en
                 // el proyecto Linear (doble conversión): el marfil llegaba como #E7D4B3 en vez de #F4EBDA (el «?» de las
                 // turbias y las marcas claras de los patrones) y la tinta casi negra, lejos de Palette.PatternMark.
@@ -239,9 +269,11 @@ namespace AF.Presentation
 
         /// <summary>
         /// Fija la dosis <paramref name="k"/> con el modo turbio <paramref name="look"/> (07 §4.3; ver <see cref="MurkyLook"/>):
-        /// en un modo turbio el tinte no se usa (va 0: ni su franja, ni su menisco, ni su patrón delatan la fruta oculta) y
-        /// <paramref name="progress"/> (0..1) es el avance de <see cref="MurkyLook.Dissolve"/> o <see cref="MurkyLook.Turn"/>.
-        /// Solo reconstruye la malla si algo cambia; sin asignaciones.
+        /// oculta o girando, el tinte no se usa (va 0: ni su franja, ni su menisco, ni su patrón delatan la fruta oculta); al
+        /// disolverse por la regla, <paramref name="tint"/> es el de la fruta que se revela, cuyo patrón, franja y menisco
+        /// entran con <see cref="FruitPatternWeight"/>. <paramref name="progress"/> (0..1) es el avance de
+        /// <see cref="MurkyLook.Dissolve"/> o <see cref="MurkyLook.Turn"/>. Solo reconstruye la malla si algo cambia; sin
+        /// asignaciones.
         /// </summary>
         public void SetDose(int k, Color color, float fill, int tint, MurkyLook look, float progress = 0f)
         {
@@ -260,7 +292,7 @@ namespace AF.Presentation
                 progress = Mathf.Clamp01(progress);
             }
 
-            if (look != MurkyLook.None)
+            if (look == MurkyLook.Hidden || look == MurkyLook.Turn)
             {
                 tint = 0;
             }
@@ -309,8 +341,7 @@ namespace AF.Presentation
                 case MurkyLook.Hidden:
                     return 1f;
                 case MurkyLook.Dissolve:
-                    float x = Mathf.Clamp01((Mathf.Clamp01(progress) - MarkFadeFrom) / (MarkFadeTo - MarkFadeFrom));
-                    return 1f - (x * x * (3f - (2f * x)));
+                    return 1f - SmoothStep(MarkFadeFrom, MarkFadeTo, progress);
                 case MurkyLook.Turn:
                     return progress < 0.999f ? 1f : 0f;
                 default:
@@ -319,7 +350,62 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// El shader dibuja el «?» de la dosis <paramref name="k"/>: turbia y sin haber terminado de disolverse o de girar.
+        /// Opacidad de la trama diagonal (hacia la tinta) en una banda con <paramref name="look"/> y <paramref name="progress"/>:
+        /// el mismo cálculo que <c>AF_UI_Liquid.shader</c> («hatch»). Quieta, <see cref="MurkyHatchOpacity"/>; al disolverse,
+        /// baja a 0 entre <see cref="HatchFadeFrom"/> y <see cref="HatchFadeTo"/>; al girar, entre 0,3 y 1; 0 en una dosis normal.
+        /// </summary>
+        public static float MurkyHatchAmount(MurkyLook look, float progress)
+        {
+            switch (look)
+            {
+                case MurkyLook.Hidden:
+                    return MurkyHatchOpacity;
+                case MurkyLook.Dissolve:
+                    return MurkyHatchOpacity * (1f - SmoothStep(HatchFadeFrom, HatchFadeTo, progress));
+                case MurkyLook.Turn:
+                    return MurkyHatchOpacity * (1f - SmoothStep(0.3f, 1f, progress));
+                default:
+                    return 0f;
+            }
+        }
+
+        /// <summary>
+        /// Peso (0..1) del patrón, la franja y el menisco propios de la fruta en una banda con <paramref name="look"/> y
+        /// <paramref name="progress"/> (el mismo cálculo que el shader): 1 en una dosis normal; al disolverse por la
+        /// regla, sube entre <see cref="FruitPatternFrom"/> y 1 (con 1, la banda es la dosis normal de esa fruta); 0 oculta o
+        /// girando.
+        /// </summary>
+        public static float FruitPatternWeight(MurkyLook look, float progress)
+        {
+            switch (look)
+            {
+                case MurkyLook.None:
+                    return 1f;
+                case MurkyLook.Dissolve:
+                    return SmoothStep(FruitPatternFrom, 1f, progress);
+                default:
+                    return 0f;
+            }
+        }
+
+        /// <summary>
+        /// Valor de <c>TEXCOORD3.a</c> de una banda que se disuelve hacia la fruta <paramref name="tint"/>: su fila del atlas
+        /// (0, vacía, si no tiene patrón: Guanábana, agua base o Barro) + 0,5 si sus marcas van en marfil
+        /// (<see cref="Palette.PatternBase"/>). El shader lo decodifica con <c>floor(a + 0,25)</c>.
+        /// </summary>
+        public static float FruitRowCode(int tint)
+        {
+            if (!ProceduralArt.HasPattern(tint))
+            {
+                return 0f;
+            }
+
+            return tint + (Palette.PatternBase(tint) == Palette.UiPaper ? 0.5f : 0f);
+        }
+
+        /// <summary>
+        /// El shader dibuja el «?» de la dosis <paramref name="k"/>: turbia y sin haber terminado de disolverse (opacidad
+        /// <see cref="MurkyMarkOpacity"/> por encima de 0,001) o de girar.
         /// </summary>
         public bool MurkyMarkDrawn(int k)
         {
@@ -328,7 +414,7 @@ namespace AF.Presentation
                 return false;
             }
 
-            return _look[k] == MurkyLook.Hidden || _lookProgress[k] < 1f;
+            return MurkyMarkOpacity(_look[k], _lookProgress[k]) > 0.001f;
         }
 
         /// <summary>Valor de <c>TEXCOORD2.w</c> − 4 · dosis de una banda turbia con <paramref name="look"/> y <paramref name="progress"/>.</summary>
@@ -587,7 +673,13 @@ namespace AF.Presentation
             bool tilted = Mathf.Abs(_angle) > 0.01f;
             float surface = bottomU + top + _fill[top];
             int topTint = _tint[top];
-            Color men = ColorMath.Lighten(_color[top], topTint > 0 ? Palette.MeniscusLighten(topTint) : 0.20f);
+            float lighten = topTint > 0 ? Palette.MeniscusLighten(topTint) : 0.20f;
+            if (_look[top] == MurkyLook.Dissolve)
+            {
+                lighten = Mathf.Lerp(0.20f, lighten, FruitPatternWeight(MurkyLook.Dissolve, _lookProgress[top])); // el de su fruta entra con su patrón
+            }
+
+            Color men = ColorMath.Lighten(_color[top], lighten);
             Vector3 menS = ColorMath.ToShaderSpace(men);
 
             // Fronteras por volumen (forma normal, ver LineOffset): _levels[k] es la línea bajo la dosis k (k = 0, el fondo)
@@ -618,14 +710,23 @@ namespace AF.Presentation
 
                 int tint = _tint[k];
                 Color lit = tint > 0 ? Palette.LiquidHighlight(tint, c) : ColorMath.AddLabLightness(c, 10f);
-                Vector3 litS = ColorMath.ToShaderSpace(lit);
                 bool murky = _look[k] != MurkyLook.None;
+                bool dissolving = _look[k] == MurkyLook.Dissolve;
+                if (dissolving && tint > 0)
+                {
+                    // La franja de la fruta que se revela entra con su patrón: al final del Dissolve es la de su dosis normal.
+                    lit = Color.Lerp(ColorMath.AddLabLightness(c, 10f), lit, FruitPatternWeight(MurkyLook.Dissolve, _lookProgress[k]));
+                }
+
+                Vector3 litS = ColorMath.ToShaderSpace(lit);
                 float pattern = -1f; // sin patrón (Guanábana, agua base)
                 float row = tint;
                 if (murky)
                 {
+                    // Oculta o girando, la fila turbia (nada de su fruta); al disolverse, la de la fruta que se revela (su
+                    // patrón entra en el shader cuando ya se fue la trama, que el shader lee de _MurkyRow).
                     pattern = MurkyPattern(_look[k], _lookProgress[k]);
-                    row = ProceduralArt.MurkyPatternRow;
+                    row = dissolving ? FruitRowCode(tint) : ProceduralArt.MurkyPatternRow;
                 }
                 else if (ProceduralArt.HasPattern(tint))
                 {
@@ -830,6 +931,13 @@ namespace AF.Presentation
         {
             var pos = new Vector3(xRel * _unit, yU * _unit, 0f);
             vh.AddVert(pos, color, new Vector4(xRel + 1f, yU, layer, heightU), uv1, uv2, uv3, Vector3.back, new Vector4(1f, 0f, 0f, -1f));
+        }
+
+        // smoothstep de HLSL: 0 hasta a, 1 desde b y la cúbica de Hermite entre medias.
+        private static float SmoothStep(float a, float b, float x)
+        {
+            float t = Mathf.Clamp01((x - a) / (b - a));
+            return t * t * (3f - (2f * t));
         }
 
         private float RippleAmplitude()
