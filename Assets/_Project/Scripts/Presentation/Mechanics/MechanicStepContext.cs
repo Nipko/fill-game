@@ -6,8 +6,10 @@ namespace AF.Presentation.Mechanics
 {
     /// <summary>
     /// Todo lo que necesita un overlay para ejecutar un paso de mecánica (<see cref="CuiaOverlay.PlayStep"/>): qué paso, qué
-    /// cuias, su aspecto antes y después de la etapa, dónde están, las capas y el tablero, el arte y los efectos, y el ritmo.
-    /// Lo rellena la cola de pasos. Al acabar el paso manda <c>ShowContent(After, AfterSealed)</c> en <see cref="Index"/>.
+    /// cuias, su aspecto antes y después de la etapa (<see cref="StepStaging"/>), dónde están, las capas y el tablero, el arte
+    /// y los efectos, y el ritmo. Lo rellena la cola de pasos (<see cref="MechanicStepQueue"/>). Al acabar el paso la cola
+    /// manda <c>ShowContent(After, AfterSealed)</c> en <see cref="Index"/> y <c>ShowContent(OtherAfter, OtherAfterSealed)</c>
+    /// en <see cref="OtherIndex"/>. Contrato congelado desde la ola 3 (T07).
     /// </summary>
     public readonly struct MechanicStepContext
     {
@@ -21,6 +23,7 @@ namespace AF.Presentation.Mechanics
             bool afterSealed,
             Cuia otherBefore,
             Cuia otherAfter,
+            bool otherAfterSealed,
             Vector2 selfPos,
             Vector2 otherPos,
             ICuiaBoard? board,
@@ -41,6 +44,7 @@ namespace AF.Presentation.Mechanics
             AfterSealed = afterSealed;
             OtherBefore = otherBefore;
             OtherAfter = otherAfter;
+            OtherAfterSealed = otherAfterSealed;
             SelfPos = selfPos;
             OtherPos = otherPos;
             Board = board;
@@ -78,10 +82,13 @@ namespace AF.Presentation.Mechanics
         /// <summary>Aspecto de <see cref="OtherIndex"/> después de la etapa.</summary>
         public Cuia OtherAfter { get; }
 
-        /// <summary>Pie de <see cref="Index"/> en el espacio de las capas de tablero.</summary>
+        /// <summary><see cref="OtherIndex"/> queda sellada tras la etapa (la cuia de la llave de una Liana, por ejemplo).</summary>
+        public bool OtherAfterSealed { get; }
+
+        /// <summary>Pie de <see cref="Index"/> en reposo, en el espacio de las capas de tablero (<see cref="ICuiaBoard.Foot"/>).</summary>
         public Vector2 SelfPos { get; }
 
-        /// <summary>Pie de <see cref="OtherIndex"/> en el espacio de las capas de tablero.</summary>
+        /// <summary>Pie de <see cref="OtherIndex"/> en reposo, en el espacio de las capas de tablero (<c>default</c> sin otra cuia).</summary>
         public Vector2 OtherPos { get; }
 
         /// <summary>Tablero (posiciones y pintado de cualquier cuia).</summary>
@@ -99,7 +106,11 @@ namespace AF.Presentation.Mechanics
         /// <summary>Arte procedural.</summary>
         public ProceduralArt? Art { get; }
 
-        /// <summary>Multiplica las duraciones nominales (0,8 desde el 21; × 0,5 con <see cref="ReduceMotion"/>; recorte del presupuesto).</summary>
+        /// <summary>
+        /// Multiplica las duraciones nominales: el factor del nivel (02 §4, <c>anim_speed_factor_*</c>), × 0,5 con
+        /// <see cref="ReduceMotion"/> y el recorte del presupuesto desde el toque (como mucho × 0,35; ver
+        /// <see cref="MechanicStepQueue"/>).
+        /// </summary>
         public float SpeedFactor { get; }
 
         /// <summary>Reducir movimiento (07 §7.8): sin partículas.</summary>

@@ -29,7 +29,12 @@ namespace AF.Presentation
     /// del cuerpo; <c>BodyBack</c> entre el vidrio trasero y el líquido; <c>BodyFront</c> tras las marcas de dosis y antes de
     /// la tapa; <c>SlotFront</c> en la ranura, tras el cuerpo. El overlay de una mecánica se crea la primera vez que
     /// <see cref="ShowContent"/> la ve (también a mitad de nivel: Marea devuelve una Hoja) y recibe <c>Show</c>,
-    /// <c>Layout</c>, <c>OnRejected</c>, <c>Tick</c> y <c>SetInFlight</c> de esta vista.</para>
+    /// <c>Layout</c>, <c>OnBoardLayout</c>, <c>OnRejected</c>, <c>Tick</c> y <c>SetInFlight</c> de esta vista.</para>
+    /// <para>Tablero (contrato congelado desde la ola 3, T07): <see cref="BindBoard"/> rellena en el anfitrión las capas de
+    /// tablero y el tablero (<c>BoardAnimator.Bind</c> lo llama en cada vista). Ningún overlay se une antes: si
+    /// <see cref="ShowContent"/> o <see cref="UseOverlay"/> lo piden sin tablero, se crea o se une en <see cref="BindBoard"/>.
+    /// Los pasos de mecánica de la cola llegan al overlay de la mecánica (<see cref="OverlayOf"/>); el revelado y el lavado
+    /// del barro, a <see cref="PlayReveal"/> y <see cref="PlayMudWash"/>, que delegan en las marcas.</para>
     /// </remarks>
     public sealed class CuiaView : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
     {
@@ -76,7 +81,6 @@ namespace AF.Presentation
         private IBoardFx? _fx;
         private Color[] _doseColor = Array.Empty<Color>();
         private float[] _doseFill = Array.Empty<float>();
-        private int[] _doseTint = Array.Empty<int>();
         private Action<int>? _onDown;
         private Action<int, bool>? _onUp;
         private Vector2 _shownOffset = new Vector2(float.NaN, float.NaN);
@@ -99,6 +103,7 @@ namespace AF.Presentation
         private CuiaOverlayHost _host = null!;
         private readonly CuiaOverlay?[] _overlays = new CuiaOverlay?[(int)MechanicTypes.Last + 1];
         private CuiaOverlay? _overlay;
+        private bool _boardBound;
 
         private float _u = 24f;
         private float _liftMs = 120f;
@@ -150,6 +155,9 @@ namespace AF.Presentation
 
         /// <summary>Lo que esta cuia ofrece a sus overlays: anclas, geometría, arte, efectos y tablero.</summary>
         public CuiaOverlayHost OverlayHost => _host;
+
+        /// <summary>La vista ya tiene tablero (<see cref="BindBoard"/>): sus overlays se crean y se unen al pedirlos.</summary>
+        public bool IsBoardBound => _boardBound;
 
         /// <summary>Pie de la cuia en reposo, en coordenadas del contenedor del tablero.</summary>
         public Vector2 FootPosition => _root.anchoredPosition;
@@ -217,7 +225,11 @@ namespace AF.Presentation
             _host.U = _u;
             for (int t = 0; t < _overlays.Length; t++)
             {
-                _overlays[t]?.Layout(_u, HeightU);
+                CuiaOverlay? o = _overlays[t];
+                if (o != null && o.AttachedHost != null)
+                {
+                    o.Layout(_u, HeightU);
+                }
             }
 
             // Vidrio horneado a la densidad real de la pantalla (guía 4.1: ceil(u_dp × escala) px/u).
@@ -297,7 +309,8 @@ namespace AF.Presentation
 
         /// <summary>
         /// Une <paramref name="overlay"/> a esta cuia en lugar del que crearía la fábrica para su mecánica (pruebas y
-        /// variantes). Después, <see cref="ShowContent"/> lo usa como cualquier otro.
+        /// variantes). Después, <see cref="ShowContent"/> lo usa como cualquier otro. Sin tablero todavía, se une en
+        /// <see cref="BindBoard"/> (el anfitrión nunca llega a un overlay sin capas ni tablero).
         /// </summary>
         /// <exception cref="InvalidOperationException">La cuia ya tiene un overlay de esa mecánica.</exception>
         public void UseOverlay(CuiaOverlay overlay)
@@ -318,8 +331,122 @@ namespace AF.Presentation
                 throw new InvalidOperationException("La cuia ya tiene un overlay de esa mecánica.");
             }
 
-            AttachOverlay(overlay, slot);
+            _overlays[slot] = overlay;
             _overlay = overlay;
+            if (_boardBound)
+            {
+                AttachOverlay(overlay);
+            }
+        }
+
+        /// <summary>
+        /// Une la vista al tablero (lo llama <c>BoardAnimator.Bind</c>): rellena en el anfitrión de los overlays
+        /// <paramref name="board"/> y las capas de tablero y, si algún overlay se pidió antes, lo crea o lo une ahora y lo
+        /// pinta desde el último estado mostrado. Idempotente: volver a llamarla (cuia añadida) solo actualiza las referencias.
+        /// </summary>
+        /// <exception cref="ArgumentNullException">Falta alguno de los tres.</exception>
+        public void BindBoard(ICuiaBoard board, RectTransform backLayer, RectTransform frontLayer)
+        {
+            _host.Board = board ?? throw new ArgumentNullException(nameof(board));
+            _host.BoardBackLayer = backLayer ?? throw new ArgumentNullException(nameof(backLayer));
+            _host.BoardFrontLayer = frontLayer ?? throw new ArgumentNullException(nameof(frontLayer));
+            if (_boardBound)
+            {
+                return;
+            }
+
+            _boardBound = true;
+            for (int t = 0; t < _overlays.Length; t++)
+            {
+                CuiaOverlay? o = _overlays[t];
+                if (o != null && o.AttachedHost == null)
+                {
+                    AttachOverlay(o);
+                }
+            }
+
+            if (_shownCuia.Capacity > 0)
+            {
+                ShowOverlays(_shownCuia, _sealed);
+            }
+        }
+
+        /// <summary>Overlay de la mecánica <paramref name="type"/> de esta cuia (null si nunca se creó o aún no tiene tablero).</summary>
+        public CuiaOverlay? OverlayOf(MechanicType type)
+        {
+            int slot = (int)type;
+            if (slot <= 0 || slot >= _overlays.Length)
+            {
+                return null;
+            }
+
+            CuiaOverlay? o = _overlays[slot];
+            return o != null && o.AttachedHost != null ? o : null;
+        }
+
+        /// <summary>El tablero se recolocó (<c>BoardAnimator.BoardLaidOut</c>): avisa a los overlays (<c>OnBoardLayout</c>).</summary>
+        public void NotifyBoardLayout()
+        {
+            for (int t = 0; t < _overlays.Length; t++)
+            {
+                CuiaOverlay? o = _overlays[t];
+                if (o != null && o.AttachedHost != null)
+                {
+                    o.OnBoardLayout();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Revelado animado de las capas <paramref name="layerMask"/> (paso Reveal de la cola con <see cref="RevealStyle.Rule"/>;
+        /// la Luciérnaga con <see cref="RevealStyle.Firefly"/>): delega en <see cref="MurkyMarks.PlayReveal"/> con el tinte real
+        /// de cada capa del estado mostrado. Las capas se ven turbias desde este fotograma. Devuelve la duración (ms) ya
+        /// multiplicada por <paramref name="speedFactor"/>, o 0.
+        /// </summary>
+        public float PlayReveal(int layerMask, RevealStyle style, float speedFactor = 1f)
+        {
+            float ms = _murky.PlayReveal(_liquid, layerMask, style, _shownCuia, speedFactor);
+            if (ms > 0f)
+            {
+                for (int k = 0; k < Capacity; k++)
+                {
+                    if (((layerMask >> k) & 1) != 0)
+                    {
+                        TrackDose(k, Palette.Murky, 1f);
+                    }
+                }
+            }
+
+            return ms;
+        }
+
+        /// <summary>
+        /// Lavado del barro de las capas <paramref name="layerMask"/> (paso MudWash de la cola): delega en
+        /// <see cref="MudMarks.PlayWash"/>. Devuelve la duración (ms) ya multiplicada por <paramref name="speedFactor"/>; 0 =
+        /// salto.
+        /// </summary>
+        public float PlayMudWash(int layerMask = -1, float speedFactor = 1f)
+        {
+            return _mud.PlayWash(_liquid, layerMask, speedFactor);
+        }
+
+        /// <summary>Duración nominal (ms, sin factor) del revelado <paramref name="style"/> (<see cref="MurkyMarks.StepDurationMs"/>).</summary>
+        public float RevealStepMs(RevealStyle style)
+        {
+            return _murky.StepDurationMs(style);
+        }
+
+        /// <summary>Duración nominal (ms, sin factor) del lavado del barro (<see cref="MudMarks.WashDurationMs"/>).</summary>
+        public float MudWashStepMs => _mud.WashDurationMs;
+
+        /// <summary>Las marcas de turbias o de barro están animando un paso.</summary>
+        public bool MarksAnimating => _murky.IsAnimating || _mud.IsAnimating;
+
+        /// <summary>Termina en el acto el revelado o el lavado en curso (el <c>ShowContent</c> del final del paso cierra).</summary>
+        public void SnapMarks()
+        {
+            _murky.Snap();
+            _mud.Snap();
         }
 
         /// <summary>Pinta la dosis <paramref name="k"/> como oculta (pardo opaco y «?»; la intro en el primer impacto).</summary>
@@ -327,7 +454,7 @@ namespace AF.Presentation
         {
             if ((uint)k < (uint)Capacity)
             {
-                TrackDose(k, _murky.PaintHidden(_liquid, k), 1f, 0);
+                TrackDose(k, _murky.PaintHidden(_liquid, k), 1f);
             }
         }
 
@@ -336,7 +463,7 @@ namespace AF.Presentation
         {
             if ((uint)k < (uint)Capacity)
             {
-                TrackDose(k, _mud.PaintMud(_liquid, k), 1f, 0);
+                TrackDose(k, _mud.PaintMud(_liquid, k), 1f);
             }
         }
 
@@ -348,16 +475,21 @@ namespace AF.Presentation
                 return;
             }
 
-            TrackDose(k, color, fill, tint);
+            TrackDose(k, color, fill);
             _liquid.SetDose(k, color, _doseFill[k], tint);
         }
 
         // Lleva la cuenta de lo que se ve en la dosis k (DoseColor y LiquidLevel), lo pinte la vista o una marca.
-        private void TrackDose(int k, Color color, float fill, int tint)
+        private void TrackDose(int k, Color color, float fill)
         {
             _doseColor[k] = color;
             _doseFill[k] = Mathf.Clamp01(fill);
-            _doseTint[k] = tint;
+        }
+
+        /// <summary>Relleno actual (0..1) de la dosis <paramref name="k"/>.</summary>
+        public float DoseFill(int k)
+        {
+            return _doseFill[k];
         }
 
         /// <summary>Color actual de la dosis <paramref name="k"/>.</summary>
@@ -488,11 +620,7 @@ namespace AF.Presentation
         public void Shake()
         {
             _shakeElapsed = 0f;
-            int slot = (int)_shownCuia.Mechanic;
-            if (slot > 0 && slot < _overlays.Length)
-            {
-                _overlays[slot]?.OnRejected();
-            }
+            OverlayOf(_shownCuia.Mechanic)?.OnRejected();
         }
 
         /// <summary>Celebración (07 §5.4): tras <paramref name="delayMs"/>, aro de luz si está sellada y salto de 0,15 u.</summary>
@@ -562,14 +690,24 @@ namespace AF.Presentation
             _mud.SetInFlight(inFlight);
             for (int t = 0; t < _overlays.Length; t++)
             {
-                _overlays[t]?.SetInFlight(inFlight);
+                CuiaOverlay? o = _overlays[t];
+                if (o != null && o.AttachedHost != null)
+                {
+                    o.SetInFlight(inFlight);
+                }
             }
         }
 
         // Overlay de la mecánica, perezoso (se crea la primera vez que aparece; Marea puede devolver una Hoja a mitad de
         // nivel), y Show en todos los creados: cada uno se oculta si su mecánica ya no está. Ninguno se repinta mientras anima.
+        // Sin tablero, la creación espera a BindBoard (que vuelve a llamar aquí con el último estado mostrado).
         private void ShowOverlays(Cuia cuia, bool sealedNow)
         {
+            if (!_boardBound)
+            {
+                return;
+            }
+
             MechanicType type = cuia.Mechanic;
             if (type != MechanicType.None)
             {
@@ -583,7 +721,7 @@ namespace AF.Presentation
             for (int t = 0; t < _overlays.Length; t++)
             {
                 CuiaOverlay? o = _overlays[t];
-                if (o != null && !o.IsAnimating)
+                if (o != null && o.AttachedHost != null && !o.IsAnimating)
                 {
                     o.Show(cuia, sealedNow);
                 }
@@ -604,17 +742,18 @@ namespace AF.Presentation
                 overlay = CuiaOverlays.Create(type);
                 if (overlay != null)
                 {
-                    AttachOverlay(overlay, slot);
+                    _overlays[slot] = overlay;
+                    AttachOverlay(overlay);
                 }
             }
 
             return overlay;
         }
 
-        private void AttachOverlay(CuiaOverlay overlay, int slot)
+        // Une el overlay con el anfitrión ya completo (capas y tablero; solo tras BindBoard).
+        private void AttachOverlay(CuiaOverlay overlay)
         {
             overlay.Attach(_host);
-            _overlays[slot] = overlay;
             if (_inFlight)
             {
                 overlay.SetInFlight(true);
@@ -784,7 +923,11 @@ namespace AF.Presentation
             _mud.Tick(dtMs);
             for (int t = 0; t < _overlays.Length; t++)
             {
-                _overlays[t]?.Tick(dtMs);
+                CuiaOverlay? o = _overlays[t];
+                if (o != null && o.AttachedHost != null)
+                {
+                    o.Tick(dtMs);
+                }
             }
         }
 
@@ -981,7 +1124,6 @@ namespace AF.Presentation
             _liquid.Setup(capacity, art.PatternAtlas);
             _doseColor = new Color[capacity];
             _doseFill = new float[capacity];
-            _doseTint = new int[capacity];
 
             // Marcas de las bandas, encima del líquido y debajo del vidrio frontal: el Barro y, sobre él, los «?».
             _mud = new MudMarks(_body, capacity, art);
