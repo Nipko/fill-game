@@ -63,6 +63,36 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Plan_LluviaDrop_NotLast_NoFPrime() // una gota que no es la última: RainDrop, sin sellado ni (c′)
+        {
+            PourVisual v = StepBoards.LluviaDrop(out int rain);
+            int n = MechanicStepPlan.Build(in v, _plan);
+            Assert.That(n, Is.EqualTo(1), Describe(n));
+            AssertEntry(0, MechanicStepKind.RainDrop, StepStage.E, rain, -1);
+            Assert.That(_plan[0].Tint, Is.EqualTo(10), "la gota del tinte agua");
+            Assert.That(_plan[0].LayerMask, Is.EqualTo(1 << 2), "la dosis que cae, la tercera");
+            Assert.That(MechanicStepPlan.FixedPointSealMask(in v), Is.EqualTo(0), "la Lluvia no sella mientras tenga la nube");
+        }
+
+        [Test]
+        public void Plan_LluviaWait_RainWaitStep_ReceiverSealIsStep() // la gota que espera es un paso e impide el sellado en el trabajo
+        {
+            PourVisual v = StepBoards.LluviaWait(out int rain, out int receiver);
+            Assert.That(v.Before[receiver].Mechanic, Is.EqualTo(MechanicType.None), "el receptor no tenía mecánica");
+            int n = MechanicStepPlan.Build(in v, _plan);
+            Assert.That(n, Is.EqualTo(2), Describe(n));
+            AssertEntry(0, MechanicStepKind.Seal, StepStage.C, receiver, -1);
+            AssertEntry(1, MechanicStepKind.RainWait, StepStage.E, rain, -1);
+            Assert.That(_plan[1].Tint, Is.EqualTo(10), "la gota del tinte agua");
+            Assert.That(_plan[1].LayerMask, Is.EqualTo(0), "no cae ninguna dosis");
+            Assert.That(MechanicStepPlan.ReceiverSealIsStep(in v), Is.True, "con RainWait, el sellado del receptor es un paso");
+            Assert.That(MechanicStepPlan.SealStage(in v, receiver), Is.EqualTo(StepStage.C));
+            Assert.That(StepStaging.JobEnd(in v, _plan, n, receiver, out Cuia end, out bool sealedNow), Is.True);
+            Assert.That(sealedNow, Is.False, "el trabajo del vertido no lo sella");
+            Assert.That(end, Is.EqualTo(v.After[receiver]), "lleno, sin tapa");
+        }
+
+        [Test]
         public void Plan_DropSealRelease_Synthetic() // test obligatorio del anexo B: una gota que sella libera la Liana
         {
             PourVisual v = StepBoards.DropSealsAndReleases(out int rain, out int liana);
@@ -234,6 +264,46 @@ namespace AF.Tests.EditMode
             BoardState counted = After(b, 4, 2);
             Assert.That(counted[0].MechanicCounter, Is.EqualTo(1));
             return Pour(counted, 3, 5);
+        }
+
+        // Lluvia (0) con dos aguas, dos gotas pendientes y k = 2: el primer vertido útil cuenta y el segundo deja caer una
+        // gota que NO es la última (RainDrop): la nube se queda con una gota pendiente y el contador vuelve a 0.
+        public static PourVisual LluviaDrop(out int rain)
+        {
+            BoardState b = Build(
+                new[] { new[] { 10, 10 }, new[] { 2, 1 }, new[] { 1 }, new[] { 2 }, new[] { 1, 1 }, new[] { 2, 2 }, new int[0] },
+                new[] { new MechanicSpec(MechanicType.Lluvia, key: 10, n: 2, k: 2), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
+            rain = 0;
+            BoardState counted = After(b, 4, 2);
+            Assert.That(counted[0].MechanicCounter, Is.EqualTo(1));
+            PourVisual v = Pour(counted, 3, 5);
+            Assert.That(v.Events.LluviaDropMask, Is.EqualTo(1 << rain), "cae una gota");
+            Assert.That(v.Events.LluviaEndedMask, Is.EqualTo(0), "no es la última");
+            Assert.That(v.After[rain].Mechanic, Is.EqualTo(MechanicType.Lluvia), "la nube se queda");
+            Assert.That(v.After[rain].MechanicN, Is.EqualTo(1), "con una gota pendiente");
+            Assert.That(v.After[rain].MechanicCounter, Is.EqualTo(0), "y el contador a 0");
+            return v;
+        }
+
+        // Lluvia (0) con dos aguas, dos gotas pendientes y k = 2: el primer vertido útil (1 → 0) la llena con la fruta 1 y
+        // deja el contador en k − 1; el segundo (3 → 2) sella el receptor (2) y la gota toca, pero la Lluvia está llena: espera
+        // (02 §9.1 M6) y el contador se queda en k − 1 (RainWait).
+        public static PourVisual LluviaWait(out int rain, out int receiver)
+        {
+            BoardState b = Build(
+                new[] { new[] { 10, 10, 1 }, new[] { 3, 1 }, new[] { 2, 2, 2 }, new[] { 3, 2 }, new[] { 1, 1 }, new[] { 3, 3 } },
+                new[] { new MechanicSpec(MechanicType.Lluvia, key: 10, n: 2, k: 2), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
+            rain = 0;
+            receiver = 2;
+            BoardState full = After(b, 1, 0);
+            Assert.That(full[0].IsFull, Is.True, "la Lluvia, llena");
+            Assert.That(full[0].MechanicCounter, Is.EqualTo(1), "con el contador en k − 1");
+            PourVisual v = Pour(full, 3, 2);
+            Assert.That(v.Events.LluviaWaitingMask, Is.EqualTo(1 << rain), "la gota espera");
+            Assert.That(v.Events.LluviaDropMask, Is.EqualTo(0), "no cae");
+            Assert.That(v.After[rain], Is.EqualTo(full[0]), "la Lluvia no cambia: mismo contenido, n y contador k − 1");
+            Assert.That(v.After.IsSealed(receiver), Is.True, "el vertido sella el receptor");
+            return v;
         }
 
         // Lluvia (0) + Liana con llave agua (1): la última gota sella el agua en f′ y suelta la Liana en (d′).

@@ -53,7 +53,38 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Pre_RainDrop_RemovesTopDose()
+        public void Pre_RainDrop_RemovesTopDose() // gota que no es la última: la nube y la gota pendiente siguen
+        {
+            PourVisual v = StepBoards.LluviaDrop(out int rain);
+            Cuia pre = StepStaging.Pre(in v, rain, StepStage.E);
+            Assert.That(pre.Count, Is.EqualTo(v.After[rain].Count - 1), "sin la gota");
+            Assert.That(pre, Is.EqualTo(v.Before[rain]), "con las dos gotas pendientes y el contador en k − 1 de Before");
+            Assert.That(pre.MechanicN, Is.EqualTo(2));
+            Assert.That(pre.MechanicCounter, Is.EqualTo(1));
+            Assert.That(StepStaging.PreSealed(in v, rain, StepStage.E), Is.False);
+            Assert.That(StepStaging.Pre(in v, rain, StepStage.CPrime), Is.EqualTo(v.After[rain]), "tras la gota, una gota pendiente y el contador a 0");
+            Assert.That(StepStaging.PreSealed(in v, rain, StepStage.DPrime), Is.False, "la Lluvia no sella mientras tenga la nube");
+        }
+
+        [Test]
+        public void Pre_RainWait_KeepsFullContentAndCounter() // la gota espera: nada que deshacer más que el contador, que no cambió
+        {
+            PourVisual v = StepBoards.LluviaWait(out int rain, out _);
+            Cuia pre = StepStaging.Pre(in v, rain, StepStage.E);
+            Assert.That(pre, Is.EqualTo(v.Before[rain]), "llena y con el contador en k − 1");
+            Assert.That(pre, Is.EqualTo(v.After[rain]), "el paso no cambia el contenido ni el contador");
+            Assert.That(pre.MechanicCounter, Is.EqualTo(pre.MechanicK - 1));
+            int n = MechanicStepPlan.Build(in v, _plan);
+            StepStaging.StepStates(in v, _plan, n, rain, StepStage.E, out Cuia before, out Cuia after, out bool afterSealed);
+            Assert.That(before, Is.EqualTo(v.After[rain]), "el paso RainWait empieza como acaba");
+            Assert.That(after, Is.EqualTo(v.After[rain]));
+            Assert.That(afterSealed, Is.False);
+            Assert.That(StepStaging.JobEnd(in v, _plan, n, v.Source, out Cuia source, out _), Is.False, "el origen no tiene pasos");
+            Assert.That(source, Is.EqualTo(v.After[v.Source]));
+        }
+
+        [Test]
+        public void Pre_RainEnd_RemovesTopDose() // la última gota: vuelve la nube y la tapa cae en (c′)
         {
             PourVisual v = StepBoards.LluviaLastDrop(out int rain);
             Cuia pre = StepStaging.Pre(in v, rain, StepStage.E);
@@ -74,7 +105,7 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void LastStep_EqualsAfter([Values("liana", "matapi", "lluvia", "drop_seal_release", "bite", "bite_lost", "reveal", "mud", "remolino", "hoja", "brote")] string scenario)
+        public void LastStep_EqualsAfter([Values("liana", "matapi", "lluvia", "lluvia_drop", "lluvia_wait", "drop_seal_release", "bite", "bite_lost", "reveal", "mud", "remolino", "hoja", "brote")] string scenario)
         {
             PourVisual v = Scenario(scenario);
             int n = MechanicStepPlan.Build(in v, _plan);
@@ -128,6 +159,10 @@ namespace AF.Tests.EditMode
                     return StepBoards.MatapiSeal(out _);
                 case "lluvia":
                     return StepBoards.LluviaLastDrop(out _);
+                case "lluvia_drop":
+                    return StepBoards.LluviaDrop(out _);
+                case "lluvia_wait":
+                    return StepBoards.LluviaWait(out _, out _);
                 case "drop_seal_release":
                     return StepBoards.DropSealsAndReleases(out _, out _);
                 case "bite":
