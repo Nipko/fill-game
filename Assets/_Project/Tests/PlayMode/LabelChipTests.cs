@@ -214,10 +214,20 @@ namespace AF.Tests.PlayMode
             view.Failed.Show(41, 20, w, h);
             Assert.That(view.Failed.HeaderBand, Is.Null, "sin etiqueta es normal");
 
+            // ¿Seguro? igual: de índigo a normal vuelve a la madera, con el título crema y sin sello.
+            LevelFlow flow = boot.Flow!;
             view.GiveUp.SetLabel("very_hard");
             Assert.That(view.GiveUp.Label, Is.EqualTo("very_hard"), "se guarda y se aplica en el siguiente Show");
+            view.GiveUp.Show(StuckModalModel.BuildGiveUpConfirm(flow.BuildStuckContext(false, true, GeoTier.T3)), w, h);
+            Assert.That(view.GiveUp.HeaderBand, Is.EqualTo((Color?)Palette.UiIndigo));
+            Assert.That(view.GiveUp.TitleColor, Is.EqualTo((Color)Palette.UiPaper));
+            Assert.That(view.GiveUp.HeaderBadge!.name, Is.EqualTo("label_jaguar_head"));
             view.GiveUp.SetLabel("normal");
             Assert.That(view.GiveUp.Label, Is.EqualTo("normal"));
+            view.GiveUp.Show(StuckModalModel.BuildGiveUpConfirm(flow.BuildStuckContext(false, true, GeoTier.T3)), w, h);
+            Assert.That(view.GiveUp.HeaderBand, Is.Null, "en normal, la cabecera de madera de siempre");
+            Assert.That(view.GiveUp.TitleColor, Is.EqualTo((Color)Palette.Cream), "título crema, como antes");
+            Assert.That(view.GiveUp.HeaderBadge, Is.Null, "sin sello");
         }
     }
 

@@ -104,27 +104,69 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void LabelArtColors_AreAtLeast5DeltaE00FromEveryTint()
+        public void LabelSeals_EveryColorAndDiscGradientIsAtLeast5DeltaE00FromEveryTint_SaveTheThinOrTranslucentJaguarDetails()
         {
-            // 07 §3, regla 6, y direccion-visual-v2 §2.4.1 y §7 («HEX de tintes en la UI»): los colores de la UI quedan a
-            // ΔE00 ≥ 5 de los 14 tintes. La rana era #F07A12, a 0,8 del Aguaje: en el HUD (T09), junto al tablero, se leería como
-            // una dosis o un icono de Aguaje.
-            (string Name, UnityEngine.Color Color)[] colors =
+            // 07 §3, regla 6, y direccion-visual-v2 §2.4, regla 1, y §7 («HEX de tintes en la UI»): los colores de la UI quedan a
+            // ΔE00 ≥ 5 de los 14 tintes. Se miden TODOS los colores de los dos sellos (ProceduralArt.LabelSealColors): el
+            // degradado de cada disco de DrawMedallionBase cada 5 %, su brillo, el aro con su luz, su filete y su sombra, la rana,
+            // el jaguar y los brillos. En el HUD (T09), junto al tablero, un sello con un color de tinte se leería como una dosis.
+            // Antes fallaban el borde del disco de la rana (1,8 del Copoazú), su brillo (4,3), el hocico del jaguar (4,5 del
+            // Copoazú) y la mitad del degradado de la noche (2,6 del Huito).
+            //
+            // Excepciones de §2.4, regla 1 («líneas de ≤ 2 dp»), con su motivo. Nada más puede quedar por debajo de 5.
+            var exceptions = new System.Collections.Generic.Dictionary<string, string>
             {
-                ("naranja de la rana", ProceduralArt.FrogOrange),
-                ("brillo de la rana", ProceduralArt.FrogOrangeLight),
-                ("oro del jaguar", ProceduralArt.JaguarGold),
+                ["JaguarEye"] = "el iris ámbar (4,6 del Taperebá) mide 2,2 × 1,4 dp con la pupila en medio: lo visible son franjas de ≤ 1,4 dp",
+                ["JaguarShade"] = "(5,0 del Agua del Río Negro) solo se pinta en líneas de ≤ 2 dp (borde de la oreja de 0,6 dp y centro de las rosetas de ≤ 1,9 dp) y en la sombra de la nuca con alfa 0,55",
             };
-            foreach ((string name, UnityEngine.Color color) in colors)
+            var seen = new System.Collections.Generic.HashSet<string>();
+            foreach ((string name, UnityEngine.Color color) in ProceduralArt.LabelSealColors())
             {
+                Assert.That(seen.Add(name), Is.True, "color repetido en la lista: " + name);
+                Assert.That(color.a, Is.EqualTo(1f), name + ": se mide el color opaco");
+                if (exceptions.ContainsKey(name))
+                {
+                    continue;
+                }
+
                 for (int tint = 1; tint <= 14; tint++)
                 {
                     Assert.That(ColorMath.DeltaE00(color, Palette.Tint(tint)), Is.GreaterThanOrEqualTo(5f), name + " frente al tinte " + tint);
                 }
             }
 
-            Assert.That(ColorMath.DeltaE00(ProceduralArt.FrogOrange, Palette.Tint(4)), Is.EqualTo(9.5f).Within(0.2f), "frente al Aguaje #EF7D1A");
-            Assert.That(ColorMath.DeltaE00(ProceduralArt.FrogOrange, Palette.Tint(5)), Is.EqualTo(11.1f).Within(0.2f), "frente al Achiote #CF3E1C");
+            foreach (string name in exceptions.Keys)
+            {
+                Assert.That(seen.Contains(name), Is.True, "la excepción " + name + " tiene que seguir en la lista: " + exceptions[name]);
+            }
+
+            // Se miden los dos discos enteros, del centro al borde.
+            Assert.That(seen.Contains("RanaDisc@0.00") && seen.Contains("RanaDisc@0.50") && seen.Contains("RanaDisc@1.00"), Is.True);
+            Assert.That(seen.Contains("JaguarDisc@0.00") && seen.Contains("JaguarDisc@0.50") && seen.Contains("JaguarDisc@1.00"), Is.True);
+            Assert.That(seen.Contains("JaguarCream") && seen.Contains("RanaRing") && seen.Contains("RanaDiscGlow"), Is.True);
+
+            // La rana sigue lejos del Aguaje y del Achiote, los dos tintes naranjas.
+            Assert.That(ColorMath.DeltaE00(ProceduralArt.FrogOrange, Palette.Tint(4)), Is.EqualTo(11.7f).Within(0.2f), "frente al Aguaje #EF7D1A");
+            Assert.That(ColorMath.DeltaE00(ProceduralArt.FrogOrange, Palette.Tint(5)), Is.EqualTo(9.8f).Within(0.2f), "frente al Achiote #CF3E1C");
+        }
+
+        [Test]
+        public void LabelSeals_FrogAndJaguarGlyphsHaveAtLeast3To1OverTheirWholeDisc()
+        {
+            // direccion-visual-v2 §2.4, regla 2: iconos y glifos ≥ 3:1. El naranja de la rana (#E85D12) se quedaba en 2,5:1 sobre
+            // el borde del disco crema; ahora es #D05802, ≥ 3,1:1 en todo el degradado.
+            float frogMin = float.MaxValue;
+            foreach ((string name, UnityEngine.Color glyph, UnityEngine.Color background) in ProceduralArt.LabelSealContrastPairs())
+            {
+                float ratio = ColorMath.ContrastRatio(glyph, background);
+                Assert.That(ratio, Is.GreaterThanOrEqualTo(3f), name);
+                if (glyph == ProceduralArt.FrogOrange)
+                {
+                    frogMin = UnityEngine.Mathf.Min(frogMin, ratio);
+                }
+            }
+
+            Assert.That(frogMin, Is.EqualTo(3.15f).Within(0.05f), "el naranja de la rana sobre el borde del disco");
         }
 
         [Test]

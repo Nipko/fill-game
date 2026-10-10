@@ -41,11 +41,13 @@ namespace AF.Presentation
         public static readonly Rect RibbonTagTextDp = new Rect(6f, 2.5f, 21f, 17.5f);
 
         /// <summary>
-        /// Naranja de advertencia de la rana dardo #E85D12 [P] (07 §7.7: «naranja/negro»). No es el HEX de ningún tinte (07 §3,
-        /// regla 6; direccion-visual-v2 §2.4.1 y §7): queda a ΔE00 9,5 del Aguaje y 11,1 del Achiote, para que en el HUD (T09),
-        /// junto al tablero, no se lea como una dosis. Lo comprueba <c>LobbyTextTests</c>.
+        /// Naranja de advertencia de la rana dardo #D05802 [P] (07 §7.7: «naranja/negro»). No es el HEX de ningún tinte (07 §3,
+        /// regla 6; direccion-visual-v2 §2.4.1 y §7): queda a ΔE00 11,7 del Aguaje y 9,8 del Achiote, para que en el HUD (T09),
+        /// junto al tablero, no se lea como una dosis. Es un glifo sobre el disco marfil, así que va a ≥ 3:1 de todo el disco
+        /// (§2.4, regla 2: 3,8:1 sobre el centro y 3,1:1 sobre el borde; el #E85D12 anterior se quedaba en 2,5-3,2:1). Lo
+        /// comprueba <c>LobbyTextTests</c>.
         /// </summary>
-        public static readonly Color FrogOrange = Palette.Hex(0xE85D12);
+        public static readonly Color FrogOrange = Palette.Hex(0xD05802);
 
         /// <summary>Brillo del lomo de la rana #FF9A5A [P] (ΔE00 8,5 del Aguaje).</summary>
         public static readonly Color FrogOrangeLight = Palette.Hex(0xFF9A5A);
@@ -73,11 +75,39 @@ namespace AF.Presentation
         public static readonly ButtonFamily FamilyNight = new ButtonFamily(
             Palette.Hex(0x4C5C9E), Palette.UiIndigo, Palette.Hex(0x1A2448), Palette.Hex(0x121A38), Palette.Hex(0x0A0F24));
 
+        // Colores de los sellos [P]. Todos quedan a ΔE00 ≥ 5 de los 14 tintes (07 §3, regla 6; direccion-visual-v2 §2.4,
+        // regla 1), también el degradado de cada disco, salvo las dos excepciones de §2.4 que documenta LabelSealColors:
+        // JaguarEye (≤ 2 dp) y JaguarShade (≤ 2 dp o alfa 0,55). Lo comprueba LobbyTextTests.
+        //
+        // Disco de la rana: marfil rosado. El borde #EFD8A6 anterior estaba a ΔE00 1,8 del Copoazú y el brillo, a 4,3; ahora el
+        // borde queda a 8,6 y el brillo a 8,0.
+        private static readonly Color RanaDiscCenter = Palette.Hex(0xFFF6DE);
+        private static readonly Color RanaDiscEdge = Palette.Hex(0xF8DCC0);
+        private static readonly Color RanaDiscGlow = ColorMath.Lighten(Palette.UiAmber, 0.75f);
+        private static readonly Color RanaRing = ColorMath.Darken(Palette.UiAmber, 0.28f);
+        private static readonly Color RanaRingLight = ColorMath.Lighten(Palette.UiAmber, 0.45f);
+        private static readonly Color RanaRingInner = Palette.Hex(0x5A3A10);
+
+        // Disco del jaguar: noche índigo que se apaga hacia un borde pizarra. Con el borde #1C2752 anterior el degradado pasaba
+        // a ΔE00 2,6 del Huito hacia la mitad del radio; el borde casi neutro lo mantiene a ≥ 5,7.
+        private static readonly Color JaguarDiscCenter = Palette.Hex(0x404E8E);
+        private static readonly Color JaguarDiscEdge = Palette.Hex(0x1E2228);
+        private static readonly Color JaguarDiscGlow = Palette.Hex(0x5468B0);
+        private static readonly Color JaguarRing = Palette.Hex(0x161D3A);
+        private static readonly Color JaguarRingLight = Palette.Hex(0x5A6CB4);
+
+        private static readonly Color JaguarGoldLight = ColorMath.Lighten(JaguarGold, 0.35f);
         private static readonly Color JaguarShade = Palette.Hex(0xB46E1E);
-        private static readonly Color JaguarCream = Palette.Hex(0xF6E3BC);
+
+        // Hocico, garganta y oreja: crema rosada a ΔE00 7,5 del Copoazú (el #F6E3BC anterior estaba a 4,5).
+        private static readonly Color JaguarCream = Palette.Hex(0xF8E4C8);
         private static readonly Color JaguarInk = Palette.Hex(0x1E140C);
         private static readonly Color JaguarEye = Palette.Hex(0xF2C14E);
         private static readonly Color JaguarNose = Palette.Hex(0x8A4B3A);
+        private static readonly Color MedallionShadow = new Color(0f, 0f, 0f, 0.34f);
+
+        // Muestras del degradado de cada disco que miden LabelSealColors y LabelSealContrastPairs (cada 5 % del degradado).
+        private const int MedallionDiscSamples = 20;
 
         private readonly Dictionary<int, Sprite> _headerBands = new Dictionary<int, Sprite>();
         private Sprite? _ranaDardo;
@@ -90,7 +120,7 @@ namespace AF.Presentation
         /// <summary>
         /// Sello de Difícil (32 dp): rana dardo naranja con manchas redondas negras y contorno negro, vista desde arriba y con
         /// las patas recogidas junto al cuerpo (la silueta compacta y naranja se lee como rana a 30 dp; con patas negras abiertas
-        /// en X se leía como un escarabajo o una calavera con tibias), sobre un disco marfil cálido con aro ámbar tostado
+        /// en X se leía como un escarabajo o una calavera con tibias), sobre un disco marfil rosado con aro ámbar tostado
         /// (07 §7.7; glosario §6.1). Lo reutilizan el HUD (T09) y la tarjeta previa (T13). Pendiente de revisión del asesor
         /// cultural (07 §8.2).
         /// </summary>
@@ -98,10 +128,76 @@ namespace AF.Presentation
 
         /// <summary>
         /// Sello de Muy difícil (32 dp): cabeza de jaguar de perfil con rosetas, solo el animal (07 §7.7), sobre un disco de
-        /// noche índigo con dos estrellas y aro índigo oscuro con un filete marfil. Pendiente de revisión del asesor cultural
-        /// (07 §8.2).
+        /// noche índigo que se apaga hacia un borde pizarra, con dos estrellas y aro índigo oscuro con un filete marfil.
+        /// Pendiente de revisión del asesor cultural (07 §8.2).
         /// </summary>
         public Sprite JaguarHead => _jaguarHead != null ? _jaguarHead : (_jaguarHead = BuildJaguarHead());
+
+        /// <summary>
+        /// Todos los colores con los que se pintan los sellos <see cref="RanaDardo"/> y <see cref="JaguarHead"/>, con el nombre de
+        /// su campo, para el test de ΔE00 frente a los 14 tintes (07 §3, regla 6; direccion-visual-v2 §2.4, regla 1): el
+        /// degradado de cada disco de <c>DrawMedallionBase</c> muestreado cada 5 % (<c>RanaDisc@0.35</c>…), el brillo del disco,
+        /// el aro con su luz, su filete y su sombra, la rana, el jaguar y los brillos crema y marfil de los ojos y las estrellas.
+        /// Las dos excepciones de §2.4 que el test documenta son <c>JaguarEye</c> (el iris visible, alrededor de la pupila, mide
+        /// ≤ 1,4 dp de grosor) y <c>JaguarShade</c> (solo se pinta en líneas de ≤ 2 dp, el borde de la oreja y el centro de las
+        /// rosetas, y en la sombra de la nuca con alfa 0,55). Solo para tests: crea el array en cada llamada.
+        /// </summary>
+        public static (string Name, Color Color)[] LabelSealColors()
+        {
+            var colors = new List<(string Name, Color Color)>
+            {
+                ("RanaDiscGlow", RanaDiscGlow),
+                ("RanaRing", RanaRing),
+                ("RanaRingLight", RanaRingLight),
+                ("RanaRingInner", RanaRingInner),
+                ("FrogOrange", FrogOrange),
+                ("FrogOrangeLight", FrogOrangeLight),
+                ("FrogBlack", FrogBlack),
+                ("Cream", Palette.Cream),
+                ("JaguarDiscGlow", JaguarDiscGlow),
+                ("JaguarRing", JaguarRing),
+                ("JaguarRingLight", JaguarRingLight),
+                ("UiPaper", Palette.UiPaper),
+                ("JaguarGold", JaguarGold),
+                ("JaguarGoldLight", JaguarGoldLight),
+                ("JaguarShade", JaguarShade),
+                ("JaguarCream", JaguarCream),
+                ("JaguarInk", JaguarInk),
+                ("JaguarEye", JaguarEye),
+                ("JaguarNose", JaguarNose),
+                ("MedallionShadow", ColorMath.WithAlpha(MedallionShadow, 1f)),
+            };
+            for (int i = 0; i <= MedallionDiscSamples; i++)
+            {
+                float t = i / (float)MedallionDiscSamples;
+                string at = t.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+                colors.Add(("RanaDisc@" + at, MedallionDisc(RanaDiscCenter, RanaDiscEdge, t)));
+                colors.Add(("JaguarDisc@" + at, MedallionDisc(JaguarDiscCenter, JaguarDiscEdge, t)));
+            }
+
+            return colors.ToArray();
+        }
+
+        /// <summary>
+        /// Glifos de los sellos sobre su disco, para el test de contraste ≥ 3:1 de iconos y glifos (direccion-visual-v2 §2.4,
+        /// regla 2): el naranja y el negro de la rana sobre todo el degradado del disco marfil y el oro del jaguar sobre todo el
+        /// de la noche, muestreados cada 5 %. Solo para tests: crea el array en cada llamada.
+        /// </summary>
+        public static (string Name, Color Glyph, Color Background)[] LabelSealContrastPairs()
+        {
+            var pairs = new List<(string Name, Color Glyph, Color Background)>();
+            for (int i = 0; i <= MedallionDiscSamples; i++)
+            {
+                float t = i / (float)MedallionDiscSamples;
+                string at = t.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+                Color rana = MedallionDisc(RanaDiscCenter, RanaDiscEdge, t);
+                pairs.Add(("FrogOrange sobre RanaDisc@" + at, FrogOrange, rana));
+                pairs.Add(("FrogBlack sobre RanaDisc@" + at, FrogBlack, rana));
+                pairs.Add(("JaguarGold sobre JaguarDisc@" + at, JaguarGold, MedallionDisc(JaguarDiscCenter, JaguarDiscEdge, t)));
+            }
+
+            return pairs.ToArray();
+        }
 
         /// <summary>
         /// Cinta «×3»/«×4» (propuesta §c.2: como la «x5» de Magic Sort, ficha §3.6): agua profunda con luz arriba y bisel, cola
@@ -178,7 +274,7 @@ namespace AF.Presentation
             int s = Mathf.RoundToInt(LabelIconDp * UiPxPerDp);
             var pc = new PixelCanvas(s, s);
             float k = s / 96f;
-            DrawMedallionBase(pc, k, Palette.Hex(0xFFF6DE), Palette.Hex(0xEFD8A6), ColorMath.Lighten(Palette.UiAmber, 0.55f));
+            DrawMedallionBase(pc, k, RanaDiscCenter, RanaDiscEdge, RanaDiscGlow);
 
             // Rana vista desde arriba, cabeza hacia arriba, escalada 0,78 alrededor del centro del disco. Las patas, naranjas con
             // contorno negro y recogidas: los dedos quedan a menos de 30 unidades del centro (48, 47) del lienzo, las traseras
@@ -222,7 +318,7 @@ namespace AF.Presentation
             FrogCircle(pc, k, f, 1f, 37.2f, 65.8f, 1.6f, Palette.Cream);
             FrogCircle(pc, k, f, 1f, 56.2f, 65.8f, 1.6f, Palette.Cream);
 
-            DrawMedallionRing(pc, k, ColorMath.Darken(Palette.UiAmber, 0.28f), ColorMath.Lighten(Palette.UiAmber, 0.45f), ColorMath.WithAlpha(Palette.Hex(0x5A3A10), 0.55f));
+            DrawMedallionRing(pc, k, RanaRing, RanaRingLight, ColorMath.WithAlpha(RanaRingInner, 0.55f));
             return MakeSprite(pc, "label_rana_dardo", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
         }
 
@@ -231,7 +327,7 @@ namespace AF.Presentation
             int s = Mathf.RoundToInt(LabelIconDp * UiPxPerDp);
             var pc = new PixelCanvas(s, s);
             float k = s / 96f;
-            DrawMedallionBase(pc, k, Palette.Hex(0x3C4E92), Palette.Hex(0x1C2752), Palette.Hex(0x5468B0));
+            DrawMedallionBase(pc, k, JaguarDiscCenter, JaguarDiscEdge, JaguarDiscGlow);
 
             // Dos estrellas de noche arriba a la derecha, lejos de la cabeza.
             DrawTinyStar(pc, 70f * k, 72f * k, 3.4f * k, ColorMath.WithAlpha(Palette.UiPaper, 0.9f));
@@ -253,7 +349,7 @@ namespace AF.Presentation
             pc.FillCircle(32f * k, 72f * k, 6.2f * k, JaguarGold);
             pc.FillEllipseSoft(33.2f * k, 70.8f * k, 3.2f * k, 4f * k, 1f * k, JaguarCream);
             pc.FillEllipseSoft(31f * k, 46f * k, 11f * k, 18f * k, 4f * k, ColorMath.WithAlpha(JaguarShade, 0.55f));
-            pc.FillEllipseSoft(48f * k, 66f * k, 10f * k, 5f * k, 3f * k, ColorMath.WithAlpha(ColorMath.Lighten(JaguarGold, 0.35f), 0.6f));
+            pc.FillEllipseSoft(48f * k, 66f * k, 10f * k, 5f * k, 3f * k, ColorMath.WithAlpha(JaguarGoldLight, 0.6f));
 
             // Hocico y garganta claros.
             pc.FillEllipseSoft(69f * k, 42.5f * k, 9.5f * k, 7f * k, 1.6f * k, JaguarCream);
@@ -289,7 +385,7 @@ namespace AF.Presentation
             pc.FillCircle(73f * k, 45f * k, 0.8f * k, JaguarInk);
             pc.FillCircle(71f * k, 47f * k, 0.8f * k, JaguarInk);
 
-            DrawMedallionRing(pc, k, Palette.Hex(0x161D3A), Palette.Hex(0x5A6CB4), ColorMath.WithAlpha(Palette.UiPaper, 0.75f));
+            DrawMedallionRing(pc, k, JaguarRing, JaguarRingLight, ColorMath.WithAlpha(Palette.UiPaper, 0.75f));
             return MakeSprite(pc, "label_jaguar_head", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
         }
 
@@ -527,13 +623,20 @@ namespace AF.Presentation
                     }
 
                     float t = Mathf.Pow(Mathf.Clamp01(dist / r), 1.6f);
-                    Color col = Color.Lerp(center, edge, t);
-                    col.a = 1f;
-                    pc.Blend(x, y, col, cov);
+                    pc.Blend(x, y, MedallionDisc(center, edge, t), cov);
                 }
             }
 
             pc.FillEllipseSoft(38f * k, 62f * k, 22f * k, 16f * k, 12f * k, ColorMath.WithAlpha(glow, 0.35f));
+        }
+
+        // Color opaco del degradado del disco en t (0 en el centro, 1 en el borde). Lo comparten DrawMedallionBase y las
+        // muestras que miden los tests (LabelSealColors y LabelSealContrastPairs).
+        private static Color MedallionDisc(Color center, Color edge, float t)
+        {
+            Color col = Color.Lerp(center, edge, t);
+            col.a = 1f;
+            return col;
         }
 
         // Aro del sello: recorta lo que asome fuera del disco (el cuello del jaguar), pinta el aro de 5 px con luz arriba y un
@@ -559,7 +662,7 @@ namespace AF.Presentation
             pc.StrokeArc(c, c, 42.5f * k, 5.2f * k, 0f, 360f, ring);
             pc.StrokeArc(c, c, 44.2f * k, 1.4f * k, 35f, 145f, ColorMath.WithAlpha(light, 0.9f));
             pc.StrokeArc(c, c, 39.6f * k, 1.1f * k, 0f, 360f, inner);
-            var shadow = new Color(0f, 0f, 0f, 0.34f);
+            Color shadow = MedallionShadow;
             float sy = c - (2.4f * k);
             float sr = 44.6f * k;
             for (int y = 0; y < pc.Height; y++)
