@@ -57,6 +57,12 @@ namespace AF.Presentation
         /// <summary>Lo que se aparta del <see cref="MurkyPatternMode"/> el avance 1 de un revelado (ver la constante).</summary>
         public const float MurkyProgressSpan = 0.45f;
 
+        /// <summary>Avance de <see cref="MurkyLook.Dissolve"/> en el que el «?» empieza a apagarse (shader: smoothstep(0,35; 0,85)).</summary>
+        public const float MarkFadeFrom = 0.35f;
+
+        /// <summary>Avance de <see cref="MurkyLook.Dissolve"/> en el que el «?» ya no se ve.</summary>
+        public const float MarkFadeTo = 0.85f;
+
         /// <summary>
         /// Cómo pinta el shader una dosis (07 §4.3; 08 §5.2): normal o turbia, y en este caso si su «?» está quieto, se
         /// disuelve (revelado por la regla, 1.200 ms) o gira de canto (Luciérnaga, 04 §2.5).
@@ -193,10 +199,13 @@ namespace AF.Presentation
             {
                 material = mat;
                 mat.SetFloat(PatternRowsId, atlas.height / (float)ProceduralArt.PatternRowPx);
-                Vector3 ink = ColorMath.ToShaderSpace(Palette.UiInk); // marcas sobre los tintes claros
-                Vector3 paper = ColorMath.ToShaderSpace(Palette.UiPaper); // marcas sobre los tintes oscuros
-                mat.SetColor(InkId, new Color(ink.x, ink.y, ink.z, 1f));
-                mat.SetColor(PaperId, new Color(paper.x, paper.y, paper.z, 1f));
+                // Ya en el espacio del shader: van con SetVector, que no convierte. SetColor los volvía a pasar a lineal en
+                // el proyecto Linear (doble conversión): el marfil llegaba como #E7D4B3 en vez de #F4EBDA (el «?» de las
+                // turbias y las marcas claras de los patrones) y la tinta casi negra, lejos de Palette.PatternMark.
+                Vector3 ink = ColorMath.ToShaderSpace(Palette.UiInk); // marcas sobre los tintes claros y halo del «?»
+                Vector3 paper = ColorMath.ToShaderSpace(Palette.UiPaper); // marcas sobre los tintes oscuros y «?» turbio
+                mat.SetVector(InkId, new Vector4(ink.x, ink.y, ink.z, 1f));
+                mat.SetVector(PaperId, new Vector4(paper.x, paper.y, paper.z, 1f));
             }
 
             SetVerticesDirty();
@@ -279,6 +288,34 @@ namespace AF.Presentation
         public float MurkyProgressAt(int k)
         {
             return (uint)k < (uint)_capacity ? _lookProgress[k] : 0f;
+        }
+
+        /// <summary>Color con el que se pinta la dosis <paramref name="k"/> (el del último <c>SetDose</c>; transparente fuera de rango).</summary>
+        public Color DoseColorAt(int k)
+        {
+            return (uint)k < (uint)_capacity ? _color[k] : Color.clear;
+        }
+
+        /// <summary>
+        /// Opacidad (0..1) del «?» que pinta el shader en una banda turbia con <paramref name="look"/> y
+        /// <paramref name="progress"/>: el mismo cálculo que <c>AF_UI_Liquid.shader</c> («fade»). Quieta, 1; al disolverse
+        /// por la regla, 1 − smoothstep(<see cref="MarkFadeFrom"/>, <see cref="MarkFadeTo"/>, avance); al girar con la
+        /// Luciérnaga, 1 hasta quedar de canto (lo que se ve lo estrecha el giro); 0 en una dosis normal.
+        /// </summary>
+        public static float MurkyMarkOpacity(MurkyLook look, float progress)
+        {
+            switch (look)
+            {
+                case MurkyLook.Hidden:
+                    return 1f;
+                case MurkyLook.Dissolve:
+                    float x = Mathf.Clamp01((Mathf.Clamp01(progress) - MarkFadeFrom) / (MarkFadeTo - MarkFadeFrom));
+                    return 1f - (x * x * (3f - (2f * x)));
+                case MurkyLook.Turn:
+                    return progress < 0.999f ? 1f : 0f;
+                default:
+                    return 0f;
+            }
         }
 
         /// <summary>

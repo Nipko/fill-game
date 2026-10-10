@@ -52,8 +52,10 @@ Shader "AF/UI/Liquid"
         [PerRendererData] _MainTex ("Pattern Atlas", 2D) = "white" {}
         _DpU ("Un dp en u", Float) = 0.0417
         _PatternRows ("Filas del atlas", Float) = 16
-        _InkLin ("Tinta en lineal", Color) = (0.024, 0.015, 0.009, 1)
-        _PaperLin ("Marfil en lineal", Color) = (0.905, 0.831, 0.693, 1)
+        // Vector y no Color: ya vienen en el espacio del shader (LiquidGraphic.Setup, SetVector); una propiedad Color se
+        // volvería a pasar a lineal en el proyecto Linear.
+        _InkLin ("Tinta en lineal", Vector) = (0.024, 0.015, 0.009, 1)
+        _PaperLin ("Marfil en lineal", Vector) = (0.905, 0.831, 0.701, 1)
         _StencilComp ("Stencil Comparison", Float) = 8
         _Stencil ("Stencil ID", Float) = 0
         _StencilOp ("Stencil Operation", Float) = 0
@@ -265,6 +267,7 @@ Shader "AF/UI/Liquid"
                 // «?» marfil de 0,5 u con su halo de tinta al 55 % (07 §4.3; glosario §6.2), una vez y centrada en la banda
                 // (R: marfil; G: halo). Por la regla crece, ondula y se disuelve; con la Luciérnaga gira hasta quedar de
                 // canto. Segunda y última muestra (tex2Dlod: el atlas no tiene mipmaps y así puede ir dentro de la rama).
+                // «fade» tiene su espejo en CPU, LiquidGraphic.MurkyMarkOpacity (MarkFadeFrom y MarkFadeTo): cámbialos juntos.
                 if (murky)
                 {
                     float grow = 1.0 + (0.45 * smoothstep(0.0, 1.0, dissolve));

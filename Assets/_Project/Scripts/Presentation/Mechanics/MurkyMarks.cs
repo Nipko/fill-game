@@ -19,12 +19,14 @@ namespace AF.Presentation.Mechanics
     /// [P]: una píldora gris parda de <see cref="ProceduralArt.MurkyBadgeDp"/> dp con los glifos «?», «×» y la cifra, centrada
     /// bajo el pie, sobre la cara de la repisa (guía 4.5). Cuelga del cuerpo (sube con la selección) y se oculta en vuelo.</para>
     /// <para><b>Revelado por la regla</b> (R7; b.2 y ficha de Magic Sort §3.1; <see cref="RevealRuleMs"/> = 1.200 ms × factor, por
-    /// debajo de los 1,5 s de b.2): el «?» crece, ondula y se disuelve con 3-4 destellos blancos de estrella
-    /// (<see cref="IBoardFx.Sparkles"/>), sube una burbuja (<see cref="IBoardFx.Bubbles"/>; la «boiada» del pirarucú) y la dosis
-    /// pasa a su tinte. La cola lo despacha al origen cuando ya volvió a su ranura (T07).</para>
+    /// debajo de los 1,5 s de b.2): como en Magic Sort, primero sale el color nuevo (la dosis pasa del pardo a su tinte entre
+    /// <see cref="RuleTintFrom"/> y <see cref="RuleTintFullAt"/>) y el «?» crece, ondula y se disuelve encima, con 3-4
+    /// destellos blancos de estrella (<see cref="IBoardFx.Sparkles"/>); sube una burbuja (<see cref="IBoardFx.Bubbles"/>; la
+    /// «boiada» del pirarucú). Así nunca se ve el pardo sin «?» (07 §3, fila Cacao). La cola lo despacha al origen cuando ya
+    /// volvió a su ranura (T07).</para>
     /// <para><b>Luciérnaga</b> (<see cref="RevealStyle.Firefly"/>, 04 §2.5; la usa T14): el pardo se aclara de arriba abajo en
-    /// <see cref="RevealFireflyMs"/> y cada «?» gira hasta quedar de canto y muestra el icono de su fruta
-    /// (<see cref="ProceduralArt.FruitFlight"/>), que gira de vuelta y se apaga.</para>
+    /// <see cref="RevealFireflyMs"/> (la de abajo llega a su tinte justo al final) y cada «?» gira hasta quedar de canto y
+    /// muestra el icono de su fruta (<see cref="ProceduralArt.FruitFlight"/>), que gira de vuelta y se apaga.</para>
     /// <para>Mientras anima (<see cref="IsAnimating"/>), <c>ShowContent</c> no llama a <see cref="Show"/> ni repinta las capas
     /// que se revelan; la cola termina el paso con <see cref="Snap"/> y el <c>ShowContent</c> final. Las imágenes se crean una
     /// vez al construir; los sprites de la insignia, la primera vez que hace falta (<see cref="Prewarm"/>). Sin asignaciones
@@ -50,8 +52,18 @@ namespace AF.Presentation.Mechanics
         /// <summary>Por la regla, fracción en la que sube la burbuja (360 ms) [P].</summary>
         public const float RuleBubbleAt = 0.30f;
 
-        /// <summary>Por la regla, fracción en la que el pardo empieza a pasar al tinte [P].</summary>
-        public const float RuleTintFrom = 0.30f;
+        /// <summary>
+        /// Por la regla, fracción del revelado en la que el pardo empieza a pasar al tinte (120 ms) [P]: antes de que el «?»
+        /// empiece a apagarse (≈ 0,19), para que se disuelva sobre el color nuevo (ficha de Magic Sort §3.1).
+        /// </summary>
+        public const float RuleTintFrom = 0.10f;
+
+        /// <summary>
+        /// Por la regla, fracción en la que la dosis ya tiene su tinte (480 ms; ease-in-out desde <see cref="RuleTintFrom"/>)
+        /// [P]: a mitad del apagado del «?» (≈ 0,33) va ya al 95 % y el «?» termina de irse (≈ 0,47) sobre el tinte, así que
+        /// nunca queda el pardo sin «?» (07 §3).
+        /// </summary>
+        public const float RuleTintFullAt = 0.40f;
 
         /// <summary>
         /// Por la regla, fracción en la que el «?» ya se disolvió y la trama se fue (el shader los anima de 0 a esta fracción):
@@ -397,10 +409,10 @@ namespace AF.Presentation.Mechanics
                 return;
             }
 
-            // Por la regla: el shader disuelve el «?» y la trama hasta RuleMarkGoneAt; después, la dosis con el patrón de su
-            // fruta. El color pasa del pardo al tinte desde RuleTintFrom con ease-in-out.
+            // Por la regla: el color pasa del pardo al tinte entre RuleTintFrom y RuleTintFullAt (ease-in-out) y el shader
+            // disuelve encima el «?» y la trama hasta RuleMarkGoneAt; después, la dosis con el patrón de su fruta.
             float dissolve = Mathf.Clamp01(t / RuleMarkGoneAt);
-            float e = Ease.InOut(Mathf.Clamp01((t - RuleTintFrom) / (1f - RuleTintFrom)));
+            float e = Ease.InOut(Mathf.Clamp01((t - RuleTintFrom) / (RuleTintFullAt - RuleTintFrom)));
             for (int k = 0; k < _capacity; k++)
             {
                 if (((_animMask >> k) & 1) == 0)
@@ -435,7 +447,7 @@ namespace AF.Presentation.Mechanics
 
         // Luciérnaga: de arriba abajo. Cada capa empieza 0,4 / n después de la de encima y dura el resto (la última acaba en
         // t = 1). En su ventana, el «?» gira de canto (hasta FireflyTurnEnd), el icono de su fruta gira de vuelta y se apaga al
-        // final, y el pardo se aclara hasta el tinte.
+        // final, y el pardo se aclara hasta el tinte en toda la ventana: la de abajo lo alcanza justo a los 600 ms × factor.
         private void ApplyFirefly(float t)
         {
             int n = Mathf.Max(1, _animLayers);
@@ -452,7 +464,7 @@ namespace AF.Presentation.Mechanics
                 float local = Mathf.Clamp01((t - (stagger * above)) / window);
                 above++;
                 float turn = Mathf.Clamp01(local / FireflyTurnEnd);
-                Color c = Color.Lerp(Palette.Murky, _target[k], Ease.InOut(Mathf.Clamp01(local / 0.9f)));
+                Color c = Color.Lerp(Palette.Murky, _target[k], Ease.InOut(local));
                 if (turn >= 1f)
                 {
                     _liquid!.SetDose(k, c, 1f, _targetTint[k]);

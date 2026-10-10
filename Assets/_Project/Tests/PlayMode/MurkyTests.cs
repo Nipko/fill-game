@@ -181,11 +181,14 @@ namespace AF.Tests.PlayMode
             PourVisual visual = MechanicTestKit.TapPour(boot, pour, out _);
             Cuia after = boot.Flow!.Session.Current[pour.Source];
             int layer = after.Count - 1;
+            int tint = after.ColorAt(layer);
             float backAt = -1f;
             float revealSeen = -1f;
             bool flew = false;
             int maxAdditive = 0;
             float maxDissolve = 0f;
+            float minTintedFaded = 1f;
+            int fadedFrames = 0;
             int elapsed = StepWatching(boot, () =>
             {
                 flew |= source.BodyInFront;
@@ -203,9 +206,23 @@ namespace AF.Tests.PlayMode
                     }
 
                     maxAdditive = Mathf.Max(maxAdditive, fx.AdditiveCount);
-                    if (source.Liquid.MurkyLookAt(layer) == LiquidGraphic.MurkyLook.Dissolve)
+                    LiquidGraphic.MurkyLook look = source.Liquid.MurkyLookAt(layer);
+                    if (look == LiquidGraphic.MurkyLook.Dissolve)
                     {
                         maxDissolve = Mathf.Max(maxDissolve, source.Liquid.MurkyProgressAt(layer));
+                    }
+
+                    // Como en Magic Sort (ficha §3.1), el «?» se disuelve sobre el color nuevo: en ningún fotograma queda el
+                    // pardo sin «?» (07 §3, fila Cacao). Opacidad del «?» como la calcula el shader.
+                    float mark = LiquidGraphic.MurkyMarkOpacity(look, source.Liquid.MurkyProgressAt(layer));
+                    float tinted = Lighten(source, layer, tint);
+                    string at = "revelado al " + (100f * source.Murky.RevealProgress).ToString("F0") + " %";
+                    Assert.That(Mathf.Max(mark, tinted), Is.GreaterThanOrEqualTo(0.5f), at + ": nunca el pardo sin «?» (07 §3)");
+                    if (mark < 0.5f)
+                    {
+                        fadedFrames++;
+                        minTintedFaded = Mathf.Min(minTintedFaded, tinted);
+                        Assert.That(tinted, Is.GreaterThanOrEqualTo(0.75f), at + ": el «?» se apaga sobre el color nuevo (ficha de Magic Sort §3.1)");
                     }
                 }
                 else if (revealSeen < 0f)
@@ -225,7 +242,9 @@ namespace AF.Tests.PlayMode
             Assert.That(source.Murky.LastBubbles, Is.EqualTo(1), "una burbuja (b.2)");
             Assert.That(maxAdditive, Is.GreaterThanOrEqualTo(3), "los destellos, en la capa de efectos");
             Assert.That(maxDissolve, Is.GreaterThan(0.3f), "el «?» se deforma y se disuelve en el shader");
-            TestContext.WriteLine("Nivel 100: " + elapsed + " ms del toque a la vista quieta. " + MechanicTestKit.Describe(animator));
+            Assert.That(fadedFrames, Is.GreaterThan(3), "fotogramas con el «?» ya apagado comprobados");
+            TestContext.WriteLine("Nivel 100: " + elapsed + " ms del toque a la vista quieta; con el «?» por debajo de la mitad, la dosis va al menos al "
+                + (100f * minTintedFaded).ToString("F0") + " % de su tinte. " + MechanicTestKit.Describe(animator));
 
             MechanicTestKit.AssertViewMatchesModel(boot);
             Assert.That(source.Liquid.MurkyLookAt(layer), Is.EqualTo(LiquidGraphic.MurkyLook.None), "revelada: su tinte");
@@ -250,34 +269,9 @@ namespace AF.Tests.PlayMode
             Assert.That(topLayer, Is.GreaterThan(bottomLayer), "dos ocultas");
             Assert.That(view.RevealStepMs(RevealStyle.Firefly), Is.EqualTo(600f), "04 §2.5: 0,6 s");
 
-            float half = view.PlayReveal(mask, RevealStyle.Firefly, 0.5f);
-            Assert.That(half, Is.EqualTo(300f).Within(1e-3f), "600 ms × factor");
-            view.SnapMarks();
-
-            float ms = view.PlayReveal(mask, RevealStyle.Firefly, 1f);
-            Assert.That(ms, Is.EqualTo(600f).Within(1e-3f));
-            Assert.That(view.Murky.IsAnimating, Is.True);
-            bool topFirst = false;
-            bool fruitSeen = false;
-            ProceduralArt art = view.OverlayHost.Art;
-            for (int t = 0; t < 600; t += 10)
-            {
-                view.Tick(10f);
-                float top = Lighten(view, topLayer, cuia.ColorAt(topLayer));
-                float bottom = Lighten(view, bottomLayer, cuia.ColorAt(bottomLayer));
-                Assert.That(top, Is.GreaterThanOrEqualTo(bottom - 1e-4f), "t = " + t + ": de arriba abajo");
-                topFirst |= top > bottom + 0.05f;
-                if (view.Murky.FruitVisible(topLayer))
-                {
-                    fruitSeen = true;
-                    Assert.That(view.Murky.FruitImage(topLayer).sprite, Is.SameAs(art.FruitFlight(cuia.ColorAt(topLayer))), "el icono de su fruta");
-                }
-            }
-
-            Assert.That(topFirst, Is.True, "la de arriba se aclara antes");
-            Assert.That(fruitSeen, Is.True, "cada «?» gira y muestra su fruta");
-            view.Tick(16f);
-            Assert.That(view.Murky.IsAnimating, Is.False, "termina a los 600 ms");
+            // Con factor 0,5 dura de verdad 300 ms (sigue en curso a los 290) y con factor 1, 600 ms (en curso a los 590).
+            RunFirefly(view, cuia, mask, 0.5f, 300);
+            RunFirefly(view, cuia, mask, 1f, 600);
             Assert.That(view.Murky.FruitVisible(topLayer) || view.Murky.FruitVisible(bottomLayer), Is.False, "sin iconos al terminar");
             Assert.That(view.Liquid.MurkyLookAt(topLayer), Is.EqualTo(LiquidGraphic.MurkyLook.None));
             Assert.That(view.Liquid.MurkyLookAt(bottomLayer), Is.EqualTo(LiquidGraphic.MurkyLook.None));
@@ -470,21 +464,52 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // Cuánto se ha aclarado la dosis k hacia su tinte (0 pardo, 1 su tinte), por la distancia en RGB.
+        // Luciérnaga con factor speed: dura exactamente durationMs (600 ms × factor). Hasta durationMs − 10 sigue en curso y la
+        // capa de abajo aún no llegó a su tinte (no acaba antes de tiempo); justo a los durationMs termina. De arriba abajo y
+        // con el icono de la fruta.
+        private static void RunFirefly(CuiaView view, Cuia cuia, int mask, float speed, int durationMs)
+        {
+            int topLayer = Highest(mask);
+            int bottomLayer = Lowest(mask);
+            float ms = view.PlayReveal(mask, RevealStyle.Firefly, speed);
+            Assert.That(ms, Is.EqualTo((float)durationMs).Within(1e-3f), "600 ms × " + speed);
+            Assert.That(view.Murky.IsAnimating, Is.True);
+            Assert.That(Lighten(view, bottomLayer, cuia.ColorAt(bottomLayer)), Is.EqualTo(0f).Within(1e-4f), "empieza parda");
+            bool topFirst = false;
+            bool fruitSeen = false;
+            ProceduralArt art = view.OverlayHost.Art;
+            for (int t = 10; t < durationMs; t += 10)
+            {
+                view.Tick(10f);
+                string at = "factor " + speed + ", t = " + t + " ms";
+                Assert.That(view.Murky.IsAnimating, Is.True, at + ": sigue en curso (600 ms × factor)");
+                float top = Lighten(view, topLayer, cuia.ColorAt(topLayer));
+                float bottom = Lighten(view, bottomLayer, cuia.ColorAt(bottomLayer));
+                Assert.That(bottom, Is.LessThan(1f), at + ": la de abajo aún no llegó a su tinte");
+                Assert.That(top, Is.GreaterThanOrEqualTo(bottom - 1e-4f), at + ": de arriba abajo");
+                topFirst |= top > bottom + 0.05f;
+                if (view.Murky.FruitVisible(topLayer))
+                {
+                    fruitSeen = true;
+                    Assert.That(view.Murky.FruitImage(topLayer).sprite, Is.SameAs(art.FruitFlight(cuia.ColorAt(topLayer))), "el icono de su fruta");
+                }
+            }
+
+            view.Tick(10f);
+            Assert.That(view.Murky.IsAnimating, Is.False, "factor " + speed + ": termina justo a los " + durationMs + " ms");
+            Assert.That(topFirst, Is.True, "la de arriba se aclara antes");
+            Assert.That(fruitSeen, Is.True, "cada «?» gira y muestra su fruta");
+        }
+
+        // Cuánto se ha aclarado la dosis k hacia su tinte (0 pardo, 1 su tinte), por la distancia en RGB del color con el que
+        // se pinta (sin cuantizar a 8 bits: así se ven también los últimos milisegundos de la curva).
         private static float Lighten(CuiaView view, int k, int tint)
         {
             Color from = Palette.Murky;
             Color to = Palette.Tint(tint);
-            Color now = LiquidColor(view, k);
+            Color now = view.Liquid.DoseColorAt(k);
             float total = Distance(from, to);
             return total > 1e-4f ? Mathf.Clamp01(1f - (Distance(now, to) / total)) : 1f;
-        }
-
-        // Color de la banda k que llega al shader (color de vértice).
-        private static Color LiquidColor(CuiaView view, int k)
-        {
-            List<UIVertex> band = BandVertices(view, k);
-            return band.Count > 0 ? (Color)band[0].color : Color.clear;
         }
 
         private static float Distance(Color a, Color b)
