@@ -326,9 +326,17 @@ namespace AF.UI
         // historial que no se pudo rehacer con la cuia añadida; no se cobró nada) se registra aquí, con el nivel.
         private static void LogFunnelError(LevelFlow? flow, TransactionResult? result, string action)
         {
-            if (flow != null && result == null && flow.LastFunnelError != null)
+            if (result == null)
             {
-                Debug.LogError(LogPrefix + "nivel " + flow.LevelNumber + ": " + action + " no aplicada (" + flow.LastFunnelError + "); no se cobró nada.");
+                LogFunnelError(flow, action, "no se cobró nada");
+            }
+        }
+
+        private static void LogFunnelError(LevelFlow? flow, string action, string consequence)
+        {
+            if (flow != null && flow.LastFunnelError != null)
+            {
+                Debug.LogError(LogPrefix + "nivel " + flow.LevelNumber + ": " + action + " no aplicada (" + flow.LastFunnelError + "); " + consequence + ".");
             }
         }
 
@@ -347,9 +355,12 @@ namespace AF.UI
             LevelFlow? flow = _flow;
             return Purchase(StoreCatalog.Rescue, PurchaseContext.Stuck, r =>
             {
-                if (r.AppliesRescue && flow != null)
+                // La Balsa se cobra antes de aplicar la cuia: si el historial no se puede rehacer con ella (no ocurre en 1-200,
+                // MurkyPersistenceTests), el resto del paquete ya se entregó y la Cuia de rescate no. Queda en el log; comprobarlo
+                // antes de la compra (04 §2.5 d) queda para otra ola.
+                if (r.AppliesRescue && flow != null && !flow.ApplyPaidRescue())
                 {
-                    flow.ApplyPaidRescue();
+                    LogFunnelError(flow, "Cuia de rescate de la Balsa", "la Balsa ya se cobró y el resto del paquete se entregó");
                 }
             });
         }
