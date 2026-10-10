@@ -274,7 +274,9 @@ namespace AF.UI
         /// <summary>«+1 cuia» de la bandeja (04 §2.2): del stock o por 150 semillas.</summary>
         public bool PressExtraCuia()
         {
-            TransactionResult? result = _flow != null && InLevel ? _flow.UseExtraCuia() : null;
+            LevelFlow? flow = InLevel ? _flow : null;
+            TransactionResult? result = flow?.UseExtraCuia();
+            LogFunnelError(flow, result, "Cuia extra");
             return result != null && result.IsApplied;
         }
 
@@ -314,8 +316,28 @@ namespace AF.UI
         /// <summary>«Continuar: +1 cuia» en Aguas estancadas o en ¿Seguro?</summary>
         public bool PressRescue()
         {
-            TransactionResult? result = _flow != null && InLevel ? _flow.BuyRescue() : null;
+            LevelFlow? flow = InLevel ? _flow : null;
+            TransactionResult? result = flow?.BuyRescue();
+            LogFunnelError(flow, result, "Cuia de rescate");
             return result != null && result.IsApplied;
+        }
+
+        // AF.GameFlow no tiene motor: el «no aplicado» que no es cosa del jugador (LevelFlow.LastFunnelError, p. ej. un
+        // historial que no se pudo rehacer con la cuia añadida; no se cobró nada) se registra aquí, con el nivel.
+        private static void LogFunnelError(LevelFlow? flow, TransactionResult? result, string action)
+        {
+            if (result == null)
+            {
+                LogFunnelError(flow, action, "no se cobró nada");
+            }
+        }
+
+        private static void LogFunnelError(LevelFlow? flow, string action, string consequence)
+        {
+            if (flow != null && flow.LastFunnelError != null)
+            {
+                Debug.LogError(LogPrefix + "nivel " + flow.LevelNumber + ": " + action + " no aplicada (" + flow.LastFunnelError + "); " + consequence + ".");
+            }
         }
 
         /// <summary>Puñado de semillas (<c>af_coins_2</c>) desde el modal sin saldo: compra simulada (04 §6.2 <c>PUÑADO_199</c>).</summary>
@@ -333,9 +355,12 @@ namespace AF.UI
             LevelFlow? flow = _flow;
             return Purchase(StoreCatalog.Rescue, PurchaseContext.Stuck, r =>
             {
-                if (r.AppliesRescue && flow != null)
+                // La Balsa se cobra antes de aplicar la cuia: si el historial no se puede rehacer con ella (no ocurre en 1-200,
+                // MurkyPersistenceTests), el resto del paquete ya se entregó y la Cuia de rescate no. Queda en el log; comprobarlo
+                // antes de la compra (04 §2.5 d) queda para otra ola.
+                if (r.AppliesRescue && flow != null && !flow.ApplyPaidRescue())
                 {
-                    flow.ApplyPaidRescue();
+                    LogFunnelError(flow, "Cuia de rescate de la Balsa", "la Balsa ya se cobró y el resto del paquete se entregó");
                 }
             });
         }

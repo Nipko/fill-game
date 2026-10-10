@@ -153,7 +153,7 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Disk.Snapshots.Count, Is.EqualTo(before + 1), "una escritura: no hay un perfil cobrado con el modal abierto");
             Profile saved = rig.Disk.Last;
             Assert.That(saved.Wallet.Seeds, Is.EqualTo(700), "300, el primero del día");
-            StringAssert.StartsWith("h1|P|R|", saved.LevelState!.History, "la cuia de rescate y el tablero en juego");
+            StringAssert.StartsWith("h2|P|R|", saved.LevelState!.History, "la cuia de rescate y el tablero en juego");
             Assert.That(saved.LevelState.RescuesLevel, Is.EqualTo(1));
         }
 
@@ -169,7 +169,7 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Disk.Snapshots.Count, Is.EqualTo(before + 1), "una escritura: ¿Seguro? no se reabre con la canoa cobrada");
             Profile saved = rig.Disk.Last;
             Assert.That(saved.Wallet.Canoes.Count, Is.EqualTo(4));
-            StringAssert.StartsWith("h1|F|", saved.LevelState!.History);
+            StringAssert.StartsWith("h2|F|", saved.LevelState!.History);
 
             // Salir desde la pausa (otra vez en el 36): la canoa y Nivel fallido, también juntos.
             var quit = new BatchRig(offset: 30, seeds: 0, maxLevel: 35);
@@ -178,7 +178,7 @@ namespace AF.Tests.EditMode
             Assert.That(quit.Flow.ConfirmQuit(), Is.True);
             Assert.That(quit.Disk.Snapshots.Count, Is.EqualTo(before + 1));
             Assert.That(quit.Disk.Last.Wallet.Canoes.Count, Is.EqualTo(4));
-            StringAssert.StartsWith("h1|F|", quit.Disk.Last.LevelState!.History);
+            StringAssert.StartsWith("h2|F|", quit.Disk.Last.LevelState!.History);
         }
 
         [Test]
@@ -190,7 +190,7 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Disk.Snapshots.Count, Is.EqualTo(before + 1));
             Profile saved = rig.Disk.Last;
             Assert.That(saved.Stock.ExtraCuia, Is.EqualTo(1));
-            Assert.That(saved.LevelState!.History, Is.EqualTo("h1|P||c|"));
+            Assert.That(saved.LevelState!.History, Is.EqualTo("h2|P||c||"));
         }
 
         /// <summary>Flujo con cartera, progreso y nivel en curso en el mismo perfil, guardado por el lote sobre un disco que graba cada escritura.</summary>
