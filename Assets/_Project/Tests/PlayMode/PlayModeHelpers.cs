@@ -24,7 +24,8 @@ namespace AF.Tests.PlayMode
         /// <summary>
         /// Carga la escena Game directamente en el nivel <paramref name="level"/> (gancho <see cref="LaunchOptions.StartLevelOverride"/>)
         /// con el progreso <paramref name="progress"/>. Si el test no puso un perfil (<see cref="LaunchOptions.ProfileStoreOverride"/>),
-        /// usa uno en memoria: los tests nunca tocan el <c>profile.json</c> del Editor.
+        /// usa uno en memoria: los tests nunca tocan el <c>profile.json</c> del Editor. Sin tarjeta previa (LEVEL_CARD) salvo
+        /// que el test la encienda con <see cref="LaunchOptions.LevelCardsOverride"/> = true (<see cref="NoLevelCardsUnlessSet"/>).
         /// </summary>
         public static IEnumerator LoadGame(int level, IProgressStore progress)
         {
@@ -35,6 +36,7 @@ namespace AF.Tests.PlayMode
                 LaunchOptions.ProfileStoreOverride = new MemoryProfileStore();
             }
 
+            NoLevelCardsUnlessSet();
             yield return LoadScene();
             yield return WaitFor(
                 () => GameBootstrap.Current != null && GameBootstrap.Current.Flow != null && GameBootstrap.Current.Flow.LevelNumber == level,
@@ -44,16 +46,31 @@ namespace AF.Tests.PlayMode
         /// <summary>
         /// Carga la escena Game sin nivel forzado (como el juego: la primera vez el nivel 1, si no la pantalla de inicio) con
         /// el perfil <paramref name="store"/> y espera a que <see cref="GameBootstrap.App"/> haya decidido la primera pantalla.
+        /// Sin tarjeta previa salvo que el test la encienda (<see cref="NoLevelCardsUnlessSet"/>).
         /// </summary>
         public static IEnumerator LoadApp(IProfileStore store)
         {
             LaunchOptions.StartLevelOverride = 0;
             LaunchOptions.ProgressStoreOverride = null;
             LaunchOptions.ProfileStoreOverride = store;
+            NoLevelCardsUnlessSet();
             yield return LoadScene();
             yield return WaitFor(
                 () => GameBootstrap.Current != null && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AppScreen.Boot,
                 "arranque de la escena Game");
+        }
+
+        /// <summary>
+        /// Apaga la tarjeta previa (LEVEL_CARD, 02 §10) si el test no la fijó (<see cref="LaunchOptions.LevelCardsOverride"/> =
+        /// null): los tests que no tratan de ella entran al nivel por la intro, como antes de que existiera, aunque
+        /// <c>GameConfig.LevelCardsEnabledDefault</c> pase a true (T13). <see cref="LaunchOptions.Reset"/> la vuelve a null.
+        /// </summary>
+        public static void NoLevelCardsUnlessSet()
+        {
+            if (LaunchOptions.LevelCardsOverride == null)
+            {
+                LaunchOptions.LevelCardsOverride = false;
+            }
         }
 
         private static IEnumerator LoadScene()

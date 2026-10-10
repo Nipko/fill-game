@@ -107,6 +107,13 @@ namespace AF.UI
         public static bool? DevelopmentBuildOverride { get; set; }
 
         /// <summary>
+        /// Tarjeta previa de 1 toque (LEVEL_CARD, 02 §10) encendida (true) o apagada (false) por un test; null =
+        /// <see cref="GameConfig.LevelCardsEnabledDefault"/>. <c>PlayModeHelpers</c> la pone a false salvo que el test la fije,
+        /// así los tests que no tratan de la tarjeta no la ven. Solo tests: ningún extra de intent la rellena.
+        /// </summary>
+        public static bool? LevelCardsOverride { get; set; }
+
+        /// <summary>
         /// Moneda de los precios simulados [P]: COP (05 §4.2; los wireframes de 04 §6.6 usan pesos colombianos) mientras no
         /// haya precios de la tienda real.
         /// </summary>
@@ -126,6 +133,16 @@ namespace AF.UI
             LevelOffsetOverride = null;
             LevelPackJsonOverride = null;
             DevelopmentBuildOverride = null;
+            LevelCardsOverride = null;
+        }
+
+        /// <summary>
+        /// La partida enseña la tarjeta previa (<see cref="LevelFlow.LevelCardsEnabled"/>): la del test
+        /// (<see cref="LevelCardsOverride"/>) o, si no, <see cref="GameConfig.LevelCardsEnabledDefault"/>.
+        /// </summary>
+        public static bool ResolveLevelCards()
+        {
+            return LevelCardsOverride ?? GameConfig.LevelCardsEnabledDefault;
         }
 
         /// <summary>

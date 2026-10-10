@@ -103,6 +103,21 @@ namespace AF.GameFlow
         public const bool UiShowDifficultySubtitles = true;
 
         /// <summary>
+        /// [P] Tarjeta previa de 1 toque encendida en el juego (02 §10; propuesta de D-009 §c.1; <see cref="LevelFlow.LevelCardsEnabled"/>).
+        /// No es una clave de 08 §9: false hasta que exista la vista de la tarjeta (tarea T13 del paso 1, que la pasa a true),
+        /// para que ningún build intermedio se quede en LEVEL_CARD sin nada que la cierre. Los tests lo fijan con
+        /// <c>LaunchOptions.LevelCardsOverride</c>.
+        /// </summary>
+        public const bool LevelCardsEnabledDefault = false;
+
+        /// <summary>
+        /// [P] La tarjeta previa también sale al reintentar el mismo nivel (Volver a la orilla, «Reintentar» de Nivel fallido o
+        /// la rama C), no solo al entrar con Jugar o Siguiente (<see cref="LevelFlow.LevelCardOnRetry"/>). No es una clave de
+        /// 08 §9; false: al reintentar ya se conoce el nivel y la tarjeta sería fricción (Magic Sort no tiene pantalla previa).
+        /// </summary>
+        public const bool LevelCardOnRetry = false;
+
+        /// <summary>
         /// <c>live_content_end_message</c> = <c>{"next_batch_eta_days":14}</c> (08 §9): días estimados hasta los próximos 100
         /// niveles, que muestra la pantalla «El río sigue creciendo» (06 §9; 08 §6.2).
         /// </summary>

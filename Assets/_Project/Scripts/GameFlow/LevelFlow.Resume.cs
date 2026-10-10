@@ -72,8 +72,8 @@ namespace AF.GameFlow
 
         /// <summary>
         /// <c>level_state</c> de un nivel del que se salió al inicio (<see cref="ResumeCheck.Exited"/>): el nivel recuerda
-        /// <c>fails_level</c>, la variante aliviada y si Capi ya regaló su Cuia extra, para cuando se vuelva a jugar (04 §2.7 y
-        /// §2.2). False si no sirve.
+        /// <c>fails_level</c>, la variante aliviada y si Capi ya regaló su Cuia extra y si ya se regaló la Luciérnaga, para
+        /// cuando se vuelva a jugar (04 §2.7, §2.2 y §2.5). False si no sirve.
         /// </summary>
         public bool RestoreExited(LevelStateData saved)
         {
@@ -82,17 +82,18 @@ namespace AF.GameFlow
                 return false;
             }
 
-            _attempt.Restore(saved.Level, saved.FailsLevel, relief, null, false, history.ExtraCuiaGifted);
+            _attempt.Restore(saved.Level, saved.FailsLevel, relief, null, false, history.ExtraCuiaGifted, history.RevealGifted);
             return true;
         }
 
         /// <summary>
         /// Se sale del nivel al inicio sin ganarlo (X de Nivel fallido, «Volver al inicio», «Salir» en 1-30): se guarda que el
-        /// nivel ya no está en curso, con <c>fails_level</c>, la variante y el regalo de Capi (las cuias añadidas desaparecen:
-        /// 04 §2.2).
+        /// nivel ya no está en curso, con <c>fails_level</c>, la variante y los regalos de Capi y de la Luciérnaga (las cuias
+        /// añadidas desaparecen: 04 §2.2). Si la Luciérnaga estaba eligiendo cuia, se cancela sin coste.
         /// </summary>
         public void LeaveLevel()
         {
+            EndRevealSelection();
             if (StateStore == null || _session == null || _level == null || IsWonPhase)
             {
                 return;
@@ -124,7 +125,7 @@ namespace AF.GameFlow
             }
 
             int number = saved.Level;
-            _attempt.Restore(number, saved.FailsLevel, relief, history.Added, history.UndoGiftUsed, history.ExtraCuiaGifted);
+            _attempt.Restore(number, saved.FailsLevel, relief, history.Added, history.UndoGiftUsed, history.ExtraCuiaGifted, history.RevealGifted);
             var session = new LevelSession(BoardFor(def, relief), GameConfig.FutileRuleEnabled, _pourMode);
             for (int i = 0; i < history.Sources.Count; i++)
             {
@@ -148,6 +149,9 @@ namespace AF.GameFlow
                 }
             }
 
+            // 02 §14: al reanudar no hay tarjeta previa (LEVEL_CARD) ni intro; la Luciérnaga no sigue eligiendo cuia.
+            EndRevealSelection();
+            ResetLevelCard();
             Phase = FlowPhase.Loading;
             _level = def;
             _levelNumber = number;
@@ -279,12 +283,14 @@ namespace AF.GameFlow
             if (inProgress)
             {
                 LevelStateSnapshot.WriteRevealed(session.Initial, session.Current, s.RevealedCuias);
-                LevelStateSnapshot.WriteHistory(_historyBuilder, phase, _attempt.Added, _attempt.UndoGiftUsed, _attempt.ExtraCuiaGifted, session, _balsaShown);
+                LevelStateSnapshot.WriteHistory(
+                    _historyBuilder, phase, _attempt.Added, _attempt.UndoGiftUsed, _attempt.ExtraCuiaGifted, session, _balsaShown, _attempt.RevealGifted);
             }
             else
             {
                 s.RevealedCuias.Clear();
-                LevelStateSnapshot.WriteHistory(_historyBuilder, phase, Array.Empty<AddedCuiaKind>(), false, _attempt.ExtraCuiaGifted, null);
+                LevelStateSnapshot.WriteHistory(
+                    _historyBuilder, phase, Array.Empty<AddedCuiaKind>(), false, _attempt.ExtraCuiaGifted, null, revealGifted: _attempt.RevealGifted);
             }
 
             s.History = _historyBuilder.ToString();
