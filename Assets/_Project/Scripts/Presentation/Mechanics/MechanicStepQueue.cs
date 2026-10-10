@@ -86,8 +86,9 @@ namespace AF.Presentation.Mechanics
     /// trabajo del vertido es quien lo pinta, y un paso que terminara antes (la gota de una Lluvia que es el origen, Q-B)
     /// quedaría debajo del estado con el que el trabajo lo devuelve. Los pasos de esa etapa que no lo tocan van a su hora y
     /// la etapa termina con el más largo de todos; la espera cuenta en el presupuesto.</para>
-    /// <para><b>Pasos por defecto</b> (cifras canónicas × factor de velocidad): Reveal, fundido del pardo al tinte en 300 ms
-    /// con ease-out (<see cref="MurkyMarks.RevealRuleMs"/>; 02 §4.1, 07 §4.3); Seal, <c>SealAnimationAt</c> en 450 ms
+    /// <para><b>Pasos por defecto</b> (cifras canónicas × factor de velocidad): Reveal, lo anima MurkyMarks en
+    /// <see cref="MurkyMarks.RevealRuleMs"/> = 1.200 ms [P] (b.2; sustituye a los 300 ms de 02 §4.1 y 07 §4.3, que se
+    /// alinean en el paso 2); Seal, <c>SealAnimationAt</c> en 450 ms
     /// (07 §5.3); RainDrop y RainEnd, la gota sube como una dosis en <c>anim_pour_dose_ms</c> (280 ms); Bite, la víctima pierde
     /// la dosis de arriba en 280 ms y después la cueva la recibe en 280 ms, en un solo paso; MudWash, 0; los demás, salto.</para>
     /// <para><b>Presupuesto desde el toque.</b> Del toque a la vista quieta, como mucho <see cref="BudgetFromTapMs"/> =

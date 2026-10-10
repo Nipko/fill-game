@@ -188,7 +188,7 @@ namespace AF.Tests.PlayMode
             Assert.That(reveal.Stage, Is.EqualTo(StepStage.A));
             Assert.That(backAt, Is.GreaterThan(0f), "el origen voló y volvió");
             Assert.That(reveal.StartMs, Is.GreaterThanOrEqualTo(backAt - PlayModeHelpers.FrameMs), "el Reveal del origen empieza después de SrcDone");
-            Assert.That(reveal.EndMs - reveal.StartMs, Is.EqualTo(MurkyMarks.RevealRuleMs * reveal.SpeedFactor).Within(1f), "fundido de 300 ms (02 §4.1; 07 §4.3)");
+            Assert.That(reveal.EndMs - reveal.StartMs, Is.EqualTo(MurkyMarks.RevealRuleMs * reveal.SpeedFactor).Within(1f), "revelado por la regla en MurkyMarks.RevealRuleMs (1.200 ms [P], b.2)");
             Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs));
             TestContext.WriteLine("Nivel " + boot.Flow!.LevelNumber + ": " + elapsed + " ms del toque a la vista quieta. " + MechanicTestKit.Describe(boot.View!.Animator));
             MechanicTestKit.AssertViewMatchesModel(boot);
