@@ -20,9 +20,20 @@ namespace AF.Presentation.Mechanics
     /// <c>ShowContent</c>, salvo mientras <see cref="IsAnimating"/>), <see cref="Layout"/> (desde <c>SetGeometry</c>),
     /// <see cref="OnRejected"/> (desde <c>Shake</c>), <see cref="Tick"/> y <see cref="SetInFlight"/> (desde <c>MoveBodyTo</c>
     /// y <c>ReturnBody</c>).</para>
-    /// <para>Pasos de mecánica: <see cref="StepDurationMs"/> da la duración nominal (sin factor de velocidad) y
-    /// <see cref="PlayStep"/> arranca el paso y devuelve <c>StepDurationMs × ctx.SpeedFactor</c>; 0 = paso por defecto.
-    /// <see cref="SnapStep"/> lo termina en el acto. Al acabar cada paso manda <c>ShowContent(ctx.After)</c>.</para>
+    /// <para>Ciclo con el tablero: la vista crea el overlay cuando ya tiene tablero (<c>CuiaView.BindBoard</c>), así que en
+    /// <see cref="OnAttach"/> el anfitrión ya trae <c>BoardBackLayer</c>, <c>BoardFrontLayer</c> y <c>Board</c>.
+    /// <see cref="OnBoardLayout"/> llega tras cada recolocación del tablero (carga, cambio de pantalla, cada fotograma del
+    /// relayout y tras añadir una cuia).</para>
+    /// <para>Pasos de mecánica (<see cref="MechanicStepQueue"/>, en el orden de <see cref="MechanicStepPlan"/>): la cola pide
+    /// <see cref="StepDurationMs"/> (duración nominal, sin factor de velocidad) para el presupuesto y después llama a
+    /// <see cref="PlayStep"/>, que arranca el paso y devuelve <c>StepDurationMs × ctx.SpeedFactor</c>; 0 = paso por defecto de
+    /// la cola. La cola despacha el paso al overlay de la mecánica que la cuia tiene en <c>ctx.Before</c>. Al acabar el
+    /// tiempo devuelto, la cola llama a <see cref="SnapStep"/> y pinta <c>ShowContent(ctx.After, ctx.AfterSealed)</c> (y el de
+    /// la otra cuia); mientras <see cref="IsAnimating"/>, <c>ShowContent</c> no llama a <see cref="Show"/>.
+    /// <c>SnapAll</c> (Marea, celebración, modal) también llama a <see cref="SnapStep"/>. Contrato congelado desde la ola 3
+    /// (T07): <c>Type</c>, <c>Attach</c>, <c>Show</c>, <c>Layout</c>, <c>OnBoardLayout</c>, <c>Tick</c>,
+    /// <c>OnRejected</c>, <c>SetInFlight</c>, <c>StepDurationMs</c>, <c>PlayStep</c>, <c>SnapStep</c>, <c>IsAnimating</c>,
+    /// <c>Visible</c>, <c>AttachedHost</c> y <c>CollectSurfaceColors</c>.</para>
     /// <para>Rendimiento (08 §5.4): nada de LINQ, closures ni <c>new</c> en <see cref="Tick"/>, en los pasos ni en
     /// <see cref="Show"/>; solo se escriben valores que cambian.</para>
     /// <para>Color (direccion-visual-v2 §2.4, regla 1; 07 §3, regla 6): <see cref="CollectSurfaceColors"/> devuelve el color

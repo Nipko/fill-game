@@ -17,8 +17,9 @@ namespace AF.Tests.PlayMode
     /// un Canvas propio y una <see cref="BoardAnimator"/> a la que se encolan <see cref="PourVisual"/> de tableros
     /// sintéticos (<see cref="BoardBuilder"/> y <see cref="PourRules"/>), con el reloj en manos del test. Por un Remolino la
     /// cuia tocada no se llena y la pareja termina como el modelo (02 §9.1 M4); con Barro en la cima el relleno empieza en su
-    /// dosis (M5); la gota de la Lluvia llega a su cuia al terminar el caudal (M6); los vertidos normales siguen encadenando
-    /// (02 §3.2) y los que cambian otras cuias no; y con Reducir movimiento no hay partículas (02 §4).
+    /// dosis (M5); la gota de la Lluvia cae en su cuia como paso de mecánica al terminar el caudal (M6; desde T07, paso
+    /// RainDrop de la etapa (e)); los vertidos normales siguen encadenando (02 §3.2), también con un contador que solo cuenta
+    /// el vertido (T07), y los que cambian otras cuias no; y con Reducir movimiento no hay partículas (02 §4).
     /// </summary>
     public sealed class PourVisualTests
     {
@@ -129,10 +130,15 @@ namespace AF.Tests.PlayMode
             Assert.That(rig.Animator.ShownOf(4), Is.EqualTo(before[4]));
             Assert.That(rig.Views[4].LiquidLevel, Is.EqualTo(1f).Within(1e-4f));
 
-            // Al terminar el caudal la gota ya está, aunque el origen aún vuelve a su ranura.
+            // Al terminar el caudal empieza la gota (paso RainDrop, 280 ms; T07): sube como una dosis.
             rig.Run(48);
+            Assert.That(rig.Animator.Steps.IsRunning(AF.Presentation.Mechanics.MechanicStepKind.RainDrop, 4), Is.True, "la gota cae al llegar el caudal");
+            Assert.That(rig.Views[4].LiquidLevel, Is.InRange(1f, 2f), "la gota a medio caer");
+
+            // La gota termina (550 + 280 = 830 ms) antes de que el origen vuelva a su ranura (870 ms).
+            rig.Run(256);
             Assert.That(rig.Animator.IsIdle, Is.False, "el origen aún vuelve");
-            Assert.That(rig.Animator.ShownOf(4), Is.EqualTo(after[4]), "la Lluvia salta a su estado final al llegar el caudal");
+            Assert.That(rig.Animator.ShownOf(4), Is.EqualTo(after[4]), "la Lluvia termina en su estado final");
 
             rig.RunUntilIdle(3000, null);
             Assert.That(rig.Animator.IsIdle, Is.True);
@@ -156,8 +162,8 @@ namespace AF.Tests.PlayMode
             Assert.That(rig.Animator.LagSnapCount, Is.EqualTo(0), "sin saltos");
             AssertShowsModel(rig, s3);
 
-            // Con una Lluvia, cada vertido útil cambia su contador (otra cuia): no se encadenan y la vista acaba igual que el
-            // modelo.
+            // Con una Lluvia, cada vertido útil solo cambia su contador: no retiene la cuia ni impide el encadenado (T07), el
+            // contador se repinta en el acto y la vista acaba igual que el modelo.
             rig.Dispose();
             BoardState r0 = Build(
                 new[] { new[] { 2, 1, 1, 1 }, new[] { 1 }, new int[0], new[] { 10 } },
@@ -165,7 +171,8 @@ namespace AF.Tests.PlayMode
             yield return StartRig(r0);
             rig = _rig!;
             BoardState r3 = EnqueueThreeSingles(rig, r0);
-            Assert.That(rig.Animator.ChainedCount, Is.EqualTo(0), "con otras cuias que cambian no se encadena");
+            Assert.That(rig.Animator.ChainedCount, Is.EqualTo(2), "un cambio solo de contador no impide el encadenado");
+            Assert.That(rig.Animator.ShownOf(3), Is.EqualTo(r3[3]), "el contador ya se ve");
             rig.RunUntilIdle(6000, null);
             Assert.That(rig.Animator.IsIdle, Is.True);
             AssertShowsModel(rig, r3);

@@ -1,6 +1,9 @@
 #nullable enable
 using System;
+using System.Globalization;
 using AF.Core.Board;
+using AF.Core.Mechanics;
+using AF.Presentation.Mechanics;
 using UnityEngine;
 
 namespace AF.Presentation
@@ -63,13 +66,20 @@ namespace AF.Presentation
     /// vertidos A→B seguidos no superan nunca <c>queue_max_lag_pours</c> y no hay saltos (<see cref="LagSnapCount"/>). Las
     /// dosis siguen cayendo de una en una; solo se ahorran el retorno, la elevación y el traslado intermedios. No se encadena
     /// un vertido con pasos de mecánica (Remolino, Barro, otras cuias que cambian o Aguas turbias reveladas).</para>
-    /// <para><b>Mecánicas</b> (arquitectura del paso 1, §4, ola 1): cada vertido llega como <see cref="PourVisual"/>, con los
-    /// tableros antes y después y las etapas de R10. Ninguna cuia queda desfasada del modelo: el origen y la cuia tocada
-    /// terminan en su estado final como siempre, y el receptor del Remolino y las demás cuias que cambiaron
-    /// (<see cref="BoardDiff.ChangedOthers"/>) saltan a él al llegar el caudal. Todas cuentan para la espera, el retraso
-    /// máximo y el encadenado de 02 §3.2. <see cref="ShownOf"/> dice lo último que se pintó en cada vista.</para>
+    /// <para><b>Mecánicas</b> (arquitectura del paso 1, §4, ola 2): cada vertido llega como <see cref="PourVisual"/>, con los
+    /// tableros antes y después y las etapas de R10. Si tiene pasos de mecánica (<see cref="MechanicStepPlan"/>), al terminar
+    /// el caudal (<c>FlowEnd + StreamGrowMs</c>) los ejecuta su <see cref="MechanicStepQueue"/> por etapas, en el orden de R10
+    /// con el punto fijo f′, y el trabajo deja el origen y la tocada en el estado previo a sus pasos
+    /// (<see cref="StepStaging.JobEnd"/>). Las cuias que cambiaron sin paso saltan a su estado final al llegar el caudal. Un
+    /// cambio solo de contador (la Lluvia o la cueva que cuentan un vertido útil) no retiene la cuia ni impide el encadenado: se
+    /// repinta en el acto si ningún trabajo la usa y, si no, al terminar el último que la usa (lo pinta con el estado del
+    /// modelo). Ninguna cuia queda desfasada del modelo y todas cuentan para la espera y el retraso máximo de 02 §3.2.
+    /// <see cref="ShownOf"/> dice lo último que se pintó en cada vista; con la cola quieta, el modelo.</para>
+    /// <para><b>Tablero de los overlays</b> (<see cref="ICuiaBoard"/>, contrato congelado desde la ola 3): <see cref="Bind"/>
+    /// une cada vista al tablero y a las capas (<see cref="CuiaView.BindBoard"/>), <see cref="BoardLaidOut"/> sube
+    /// <see cref="LayoutVersion"/> y avisa a los overlays, y las posiciones van en el espacio de las capas.</para>
     /// </remarks>
-    public sealed class BoardAnimator
+    public sealed class BoardAnimator : ICuiaBoard
     {
         /// <summary>
         /// Inclinación de Magic Sort al llegar a la boca del destino, 300 ms después de salir: 38° (ficha §2.6, 3.100 ms;
@@ -154,8 +164,12 @@ namespace AF.Presentation
         private readonly RectTransform _streamLayer;
         private readonly RectTransform _frontLayer;
         private readonly PourStream[] _streams;
+        private readonly MechanicStepQueue _steps;
+        private readonly StepEntry[] _plan = new StepEntry[MechanicStepPlan.MaxSteps];
         private CuiaView[] _views = Array.Empty<CuiaView>();
         private Cuia[] _shown = Array.Empty<Cuia>();
+        private Cuia[] _model = Array.Empty<Cuia>();
+        private bool[] _modelSealed = Array.Empty<bool>();
         private PourTimings _timings = new PourTimings(100f, 300f, 280f, 80f, 300f);
         private int _maxLag = 2;
         private int _count;
@@ -175,6 +189,8 @@ namespace AF.Presentation
             {
                 _streams[i] = new PourStream(streamLayer, i);
             }
+
+            _steps = new MechanicStepQueue(this);
         }
 
         /// <summary>
@@ -183,8 +199,21 @@ namespace AF.Presentation
         /// </summary>
         public IBoardFx? Fx { get; set; }
 
-        /// <summary>La cola está vacía (la vista ya muestra el modelo).</summary>
-        public bool IsIdle => _count == 0;
+        /// <summary>La cola está vacía, sin trabajos ni pasos de mecánica (la vista ya muestra el modelo).</summary>
+        public bool IsIdle => _count == 0 && _steps.ActiveCount == 0;
+
+        /// <summary>Cola de pasos de mecánica (diagnóstico y tests: registro, pasos en curso y presupuesto).</summary>
+        public MechanicStepQueue Steps => _steps;
+
+        /// <summary>Reloj de la cola (ms avanzados con <see cref="Tick"/>); lo usan los registros de pasos.</summary>
+        public float Clock { get; private set; }
+
+        /// <summary>
+        /// Eventos sueltos de desarrollo (<c>DevProbe.Event(evento, campos JSON)</c>): hoy <c>step_budget</c>, cuando las últimas
+        /// etapas de un plan saltan por el presupuesto desde el toque. Null = sin sonda (se escribe en el log en builds de
+        /// desarrollo).
+        /// </summary>
+        public Action<string, string>? DevEvent { get; set; }
 
         /// <summary>Trabajos en cola o en curso.</summary>
         public int PendingCount => _count;
@@ -227,8 +256,20 @@ namespace AF.Presentation
         /// </summary>
         public float SpeedFactor { get; set; } = 1f;
 
-        /// <summary>Reducir movimiento (02 §4; 07 §7.8): los pasos de mecánica van más cortos y sin partículas (ola 2).</summary>
+        /// <summary>Reducir movimiento (02 §4; 07 §7.8): los pasos de mecánica van a la mitad de tiempo y sin partículas.</summary>
         public bool ReduceMotion { get; set; }
+
+        /// <summary>Factor de los pasos de mecánica antes del presupuesto: <see cref="SpeedFactor"/>, × 0,5 con <see cref="ReduceMotion"/>.</summary>
+        public float StepSpeedBase => Mathf.Max(0.01f, SpeedFactor) * (ReduceMotion ? 0.5f : 1f);
+
+        /// <summary>
+        /// <c>anim_pour_dose_ms</c> sin el factor de velocidad (280 ms con los defaults de 08 §9): lo que dura la gota de la
+        /// Lluvia y cada mitad del mordisco en sus pasos por defecto.
+        /// </summary>
+        public float DoseNominalMs => _timings.DoseMs / Mathf.Max(0.01f, SpeedFactor);
+
+        /// <summary>Cuias asociadas.</summary>
+        int ICuiaBoard.Count => _views.Length;
 
         /// <summary>
         /// Recolocaciones del tablero avisadas con <see cref="BoardLaidOut"/> (carga, cambio de pantalla y cada fotograma del
@@ -336,27 +377,107 @@ namespace AF.Presentation
         {
             SnapAll();
             Cuia[] shown = _shown.Length == views.Length ? _shown : new Cuia[views.Length];
+            Cuia[] model = _model.Length == views.Length ? _model : new Cuia[views.Length];
+            bool[] modelSealed = _modelSealed.Length == views.Length ? _modelSealed : new bool[views.Length];
             for (int i = 0; i < views.Length; i++)
             {
                 bool same = i < _views.Length && i < _shown.Length && ReferenceEquals(views[i], _views[i]);
                 shown[i] = same ? _shown[i] : default;
+                model[i] = same && i < _model.Length ? _model[i] : default;
+                modelSealed[i] = same && i < _modelSealed.Length && _modelSealed[i];
             }
 
             _shown = shown;
+            _model = model;
+            _modelSealed = modelSealed;
             _views = views;
             _timings = timings;
             _maxLag = Mathf.Max(1, queueMaxLagPours);
             BoardBackLayer = backLayer;
             BoardFrontLayer = frontLayer;
+
+            // Cada vista recibe el tablero y las capas antes de crear ningún overlay (contrato de la ola 3). Sin capas (pruebas
+            // con una vista suelta), el contenedor de las cuias hace de capa.
+            for (int i = 0; i < views.Length; i++)
+            {
+                RectTransform fallback = views[i].Root.parent as RectTransform ?? views[i].Root;
+                views[i].BindBoard(this, backLayer ?? fallback, frontLayer ?? fallback);
+            }
         }
 
         /// <summary>
         /// El tablero se recolocó (al final de cada maquetación y de cada fotograma del relayout, también tras añadir una
-        /// cuia): sube <see cref="LayoutVersion"/>. Desde la ola 2 avisa además a los overlays de mecánica.
+        /// cuia): sube <see cref="LayoutVersion"/> y avisa a los overlays de mecánica (<c>OnBoardLayout</c>).
         /// </summary>
         public void BoardLaidOut()
         {
             LayoutVersion++;
+            for (int i = 0; i < _views.Length; i++)
+            {
+                _views[i].NotifyBoardLayout();
+            }
+        }
+
+        /// <summary>Pie de la cuia <paramref name="i"/> en reposo, en el espacio de las capas de tablero.</summary>
+        public Vector2 Foot(int i)
+        {
+            CuiaView view = _views[i];
+            return ToLayer(view, view.Root.position);
+        }
+
+        /// <summary>Centro del cuerpo de la cuia <paramref name="i"/> en reposo, en el espacio de las capas de tablero.</summary>
+        public Vector2 BodyCenter(int i)
+        {
+            CuiaView view = _views[i];
+            return ToLayer(view, view.Root.TransformPoint(new Vector3(0f, 0.5f * view.HeightU * view.Unit, 0f)));
+        }
+
+        /// <summary>
+        /// Ranura de la cuia <paramref name="i"/> (ancho de ranura, del pie hasta el área táctil sobre la boca), en el espacio
+        /// de las capas de tablero.
+        /// </summary>
+        public Rect SlotRect(int i)
+        {
+            CuiaView view = _views[i];
+            Rect r = view.Root.rect;
+            Vector2 a = ToLayer(view, view.Root.TransformPoint(new Vector3(r.xMin, r.yMin, 0f)));
+            Vector2 b = ToLayer(view, view.Root.TransformPoint(new Vector3(r.xMax, r.yMax, 0f)));
+            return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+        }
+
+        /// <inheritdoc />
+        Cuia ICuiaBoard.ShownCuia(int i)
+        {
+            return ShownOf(i);
+        }
+
+        /// <summary>Pinta la dosis <paramref name="dose"/> de la cuia <paramref name="i"/> (<see cref="CuiaView.SetDose"/>).</summary>
+        public void SetDose(int i, int dose, Color color, float fill, int pattern)
+        {
+            if ((uint)i < (uint)_views.Length)
+            {
+                _views[i].SetDose(dose, color, fill, pattern);
+            }
+        }
+
+        /// <inheritdoc />
+        void ICuiaBoard.ShowContent(int i, Cuia cuia, bool sealedNow)
+        {
+            ShowContentAt(i, cuia, sealedNow);
+        }
+
+        // Punto del mundo en el espacio local de la capa trasera (las dos capas comparten transform); sin capas, el del
+        // contenedor de la cuia.
+        private Vector2 ToLayer(CuiaView view, Vector3 world)
+        {
+            Transform space = (Transform?)BoardBackLayer ?? view.Root.parent ?? view.Root;
+            Vector3 local = space.InverseTransformPoint(world);
+            return new Vector2(local.x, local.y);
+        }
+
+        internal CuiaView? ViewAt(int i)
+        {
+            return (uint)i < (uint)_views.Length ? _views[i] : null;
         }
 
         /// <summary>
@@ -388,6 +509,7 @@ namespace AF.Presentation
             }
 
             ShowContentAt(index, cuia, sealedNow);
+            SetModel(index, cuia, sealedNow);
         }
 
         /// <summary>
@@ -406,6 +528,7 @@ namespace AF.Presentation
             for (int i = 0; i < n; i++)
             {
                 _shown[i] = board[i];
+                SetModel(i, board[i], board.IsSealed(i));
             }
         }
 
@@ -418,11 +541,14 @@ namespace AF.Presentation
         /// se ve hasta que llega el chorro (02 §9.1 M5);</description></item>
         /// <item><description>por un Remolino la cuia tocada no se llena: al terminar el caudal la pareja salta a su estado
         /// final y, si se sella, con su animación (02 §9.1 M4);</description></item>
-        /// <item><description>las demás cuias que cambiaron (<see cref="BoardDiff.ChangedOthers"/>: la gota de la Lluvia, la
-        /// cueva de la Piraña, la Liana que se soltó, el sellado por el punto fijo) saltan a su estado final al terminar el
-        /// caudal, con la animación de sellado si se sellaron;</description></item>
-        /// <item><description>no se encadena por un Remolino, con Barro en la cima del receptor, si cambian otras cuias o si
-        /// el vertido revela Aguas turbias.</description></item>
+        /// <item><description>con pasos de mecánica (<see cref="MechanicStepPlan"/>), al terminar el caudal la cola de pasos
+        /// los ejecuta por etapas (R10 con f′) en la cuia dueña de cada mecánica, y el trabajo deja el origen y la tocada en
+        /// <see cref="StepStaging.JobEnd"/>: sin pasos sobre ellas, en su estado final;</description></item>
+        /// <item><description>las demás cuias que cambiaron sin paso saltan a su estado final al terminar el caudal (con la
+        /// animación de sellado si se sellaron en un vertido sin pasos); un cambio solo de contador no retiene la cuia (ver la
+        /// clase);</description></item>
+        /// <item><description>no se encadena un vertido con pasos, por un Remolino, con Barro en la cima del receptor, si
+        /// cambian otras cuias (salvo contadores) o si el vertido revela Aguas turbias.</description></item>
         /// </list>
         /// Sin asignaciones.
         /// </summary>
@@ -435,29 +561,68 @@ namespace AF.Presentation
             int receiver = v.Receiver;
             bool through = receiver != target;
             int tint = v.Tint;
+            int steps = MechanicStepPlan.Build(in v, _plan);
+            int planMask = 0;
+            for (int e = 0; e < steps; e++)
+            {
+                planMask |= Bit(_plan[e].Index) | Bit(_plan[e].OtherIndex);
+            }
+
             Cuia srcBefore = before[source];
             Cuia srcAfter = after[source];
             bool srcSealed = after.IsSealed(source);
             Cuia tgtBefore = before[target];
             Cuia tgtAfter = through ? tgtBefore : after[target];
             bool tgtSealed = through ? before.IsSealed(target) : after.IsSealed(target);
-            bool onMud = !through && tgtBefore.MudExposed;
-            int others = BoardDiff.ChangedOthers(before, after, source, receiver);
-            int extra = others | (through ? 1 << receiver : 0);
-            int extraSeal = 0;
-            for (int i = 0; i < MaskBits && i < after.Count; i++)
+            if (steps > 0)
             {
-                if (((extra >> i) & 1) != 0 && after.IsSealed(i) && (i >= before.Count || !before.IsSealed(i)))
+                // El trabajo deja el origen y la tocada en el estado previo a sus pasos (StepStaging.JobEnd).
+                if ((planMask & Bit(source)) != 0)
                 {
-                    extraSeal |= 1 << i;
+                    StepStaging.JobEnd(in v, _plan, steps, source, out srcAfter, out srcSealed);
+                }
+
+                if ((planMask & Bit(target)) != 0)
+                {
+                    StepStaging.JobEnd(in v, _plan, steps, target, out tgtAfter, out tgtSealed);
                 }
             }
 
-            bool chainable = !through && !before[receiver].MudExposed && others == 0 && v.RevealedMask == 0;
+            bool onMud = !through && tgtBefore.MudExposed;
+            int others = BoardDiff.ChangedOthers(before, after, source, receiver);
+            int counters = CounterOnly(before, after, others) & ~planMask;
+            others &= ~counters;
+            int extra = others | (through ? Bit(receiver) : 0) | (planMask & ~(Bit(source) | Bit(target)));
+            int jump = extra & ~planMask;
+            int extraSeal = 0;
+            if (steps == 0)
+            {
+                for (int i = 0; i < MaskBits && i < after.Count; i++)
+                {
+                    if (((jump >> i) & 1) != 0 && after.IsSealed(i) && (i >= before.Count || !before.IsSealed(i)))
+                    {
+                        extraSeal |= 1 << i;
+                    }
+                }
+            }
+
+            bool chainable = steps == 0 && !through && !before[receiver].MudExposed && others == 0 && v.RevealedMask == 0;
             if (chainable && TryChain(source, target, v.Amount, tint, srcBefore, srcAfter, srcSealed, tgtBefore, tgtAfter, tgtSealed, after))
             {
                 ChainedCount++;
+                CommitModel(after, counters);
                 return;
+            }
+
+            int plan = -1;
+            if (steps > 0)
+            {
+                plan = _steps.Acquire(in v, _plan, steps);
+                if (plan < 0)
+                {
+                    SnapOldestPlan();
+                    plan = _steps.Acquire(in v, _plan, steps);
+                }
             }
 
             Enqueue(new Job
@@ -473,8 +638,12 @@ namespace AF.Presentation
                 Chainable = chainable,
                 FillBase = onMud ? tgtBefore.Count - 1 : tgtBefore.Count,
                 Extra = extra,
+                Jump = jump,
                 ExtraSeal = extraSeal,
-                ExtraDone = extra == 0,
+                ExtraDone = jump == 0,
+                Plan = plan,
+                PlanMask = plan >= 0 ? planMask : 0,
+                PlanDone = plan < 0,
                 After = after,
                 SrcBefore = srcBefore,
                 SrcAfter = srcAfter,
@@ -484,6 +653,7 @@ namespace AF.Presentation
                 TgtSealedAfter = tgtSealed,
                 Stream = -1,
             });
+            CommitModel(after, counters);
         }
 
         /// <summary>
@@ -493,6 +663,8 @@ namespace AF.Presentation
         /// </summary>
         public void EnqueueUndo(int from, int to, int amount, int tint, Cuia fromBefore, Cuia fromAfter, bool fromSealedAfter, Cuia toBefore, Cuia toAfter, bool toSealedAfter)
         {
+            SetModel(from, fromAfter, fromSealedAfter);
+            SetModel(to, toAfter, toSealedAfter);
             Enqueue(new Job
             {
                 Source = from,
@@ -503,6 +675,8 @@ namespace AF.Presentation
                 IsUndo = true,
                 FillBase = toBefore.Count,
                 ExtraDone = true,
+                Plan = -1,
+                PlanDone = true,
                 SrcBefore = fromBefore,
                 SrcAfter = fromAfter,
                 SrcSealedAfter = fromSealedAfter,
@@ -513,12 +687,19 @@ namespace AF.Presentation
             });
         }
 
-        /// <summary>Lleva todos los trabajos a su fotograma final (Marea, reinicio, vuelta de segundo plano).</summary>
+        /// <summary>
+        /// Lleva todos los trabajos y sus pasos de mecánica a su fotograma final (Marea, reinicio, vuelta de segundo plano,
+        /// celebración y modal): cada paso en curso recibe <c>SnapStep</c> y cada cuia queda con el estado del modelo.
+        /// </summary>
         public void SnapAll()
         {
             for (int i = 0; i < _count; i++)
             {
-                Complete(ref _jobs[i]);
+                Complete(i);
+            }
+
+            for (int i = 0; i < _count; i++)
+            {
                 _jobs[i] = default; // sin referencias a tableros viejos
             }
 
@@ -528,6 +709,12 @@ namespace AF.Presentation
         /// <summary>Avanza la cola <paramref name="dtMs"/> milisegundos.</summary>
         public void Tick(float dtMs)
         {
+            Clock += dtMs;
+            for (int i = 0; i < _count; i++)
+            {
+                _jobs[i].Age += dtMs;
+            }
+
             for (int i = 0; i < _count; i++)
             {
                 if (!_jobs[i].Started && CanStart(i))
@@ -540,7 +727,7 @@ namespace AF.Presentation
             {
                 if (_jobs[i].Started)
                 {
-                    Advance(ref _jobs[i], dtMs);
+                    Advance(i, dtMs);
                 }
             }
 
@@ -624,6 +811,8 @@ namespace AF.Presentation
                 SnapThrough(0);
             }
 
+            job.Age = 0f;
+
             _jobs[_count++] = job;
 
             // 02 §3.2: cada cuia del trabajo (origen, tocada, receptor y las demás que cambian) admite como mucho
@@ -691,11 +880,25 @@ namespace AF.Presentation
             {
                 if (_mark[i])
                 {
-                    Complete(ref _jobs[i]);
+                    Complete(i);
                 }
             }
 
             Compact();
+        }
+
+        // Si no queda sitio para un plan, salta el trabajo más antiguo que tiene uno (y los anteriores que comparten cuias).
+        private void SnapOldestPlan()
+        {
+            for (int i = 0; i < _count; i++)
+            {
+                if (_jobs[i].Plan >= 0 && !_jobs[i].PlanDone)
+                {
+                    LagSnapCount++;
+                    SnapThrough(i);
+                    return;
+                }
+            }
         }
 
         // Cuias que toca el trabajo: origen, cuia tocada, receptor y las demás que saltan al estado final (Extra).
@@ -729,8 +932,8 @@ namespace AF.Presentation
         }
 
         // El trabajo retiene la cuia hasta que su parte termina: el origen al volver, la tocada al terminar su relleno (o su
-        // sellado) y el receptor del Remolino y las demás cuias al saltar a su estado final.
-        private static bool Holds(ref Job job, int cuia)
+        // sellado), las demás cuias sin paso al saltar a su estado final y las cuias del plan al terminar su último paso.
+        private bool Holds(ref Job job, int cuia)
         {
             int bit = 1 << cuia;
             if ((CuiaMask(ref job) & bit) == 0)
@@ -745,7 +948,19 @@ namespace AF.Presentation
 
             return (job.Source == cuia && !job.SrcDone)
                 || (job.Target == cuia && !job.TgtDone)
-                || ((job.Extra & bit) != 0 && !job.ExtraDone);
+                || ((job.Jump & bit) != 0 && !job.ExtraDone)
+                || (PlanPending(ref job) & bit) != 0;
+        }
+
+        // Cuias con pasos sin terminar en el plan del trabajo (todas las del plan antes de que empiece).
+        private int PlanPending(ref Job job)
+        {
+            if (job.Plan < 0 || job.PlanDone)
+            {
+                return 0;
+            }
+
+            return job.PlanBegun ? _steps.PendingMask(job.Plan) : job.PlanMask;
         }
 
         private void Start(ref Job job)
@@ -811,8 +1026,9 @@ namespace AF.Presentation
             job.ExtraEnd = job.ExtraStart + (job.ExtraSeal != 0 ? CuiaView.SealMs : 0f);
         }
 
-        private void Advance(ref Job job, float dtMs)
+        private void Advance(int index, float dtMs)
         {
+            ref Job job = ref _jobs[index];
             job.T += dtMs;
             float time = job.T;
             CuiaView s = _views[job.Source];
@@ -873,7 +1089,7 @@ namespace AF.Presentation
             {
                 if (time >= job.SrcEnd)
                 {
-                    FinishSource(ref job);
+                    FinishSource(index);
                 }
                 else
                 {
@@ -889,7 +1105,7 @@ namespace AF.Presentation
             {
                 if (time >= job.TgtEnd)
                 {
-                    FinishTarget(ref job);
+                    FinishTarget(index);
                 }
                 else
                 {
@@ -924,17 +1140,37 @@ namespace AF.Presentation
             {
                 if (time >= job.ExtraEnd)
                 {
-                    FinishExtras(ref job);
+                    FinishExtras(index);
                 }
                 else if (time >= job.ExtraStart)
                 {
                     if (!job.ExtraShown)
                     {
                         job.ExtraShown = true;
-                        ShowExtras(ref job, false);
+                        ShowExtras(index, false);
                     }
 
                     SealExtrasAt(ref job, time - job.ExtraStart);
+                }
+            }
+
+            // Pasos de mecánica: empiezan al llegar el caudal (etapa (a)), tras el fin del destino y los saltos de este
+            // fotograma; el revelado espera a que el origen vuelva (SrcDone, también en este fotograma).
+            if (job.Plan >= 0 && !job.PlanDone && time >= job.ExtraStart)
+            {
+                float step = dtMs;
+                if (!job.PlanBegun)
+                {
+                    job.PlanBegun = true;
+                    float over = Mathf.Min(dtMs, time - job.ExtraStart);
+                    _steps.Begin(job.Plan, job.Age - over, job.SrcDone ? 0f : job.SrcEnd - job.ExtraStart);
+                    step = over;
+                }
+
+                if (_steps.Tick(job.Plan, step, job.SrcDone))
+                {
+                    _steps.Release(job.Plan);
+                    job.PlanDone = true;
                 }
             }
         }
@@ -1031,8 +1267,9 @@ namespace AF.Presentation
             return t.FootPosition + new Vector2(0f, (t.HeightU + MouthCenterAboveRimU) * t.Unit);
         }
 
-        private void FinishSource(ref Job job)
+        private void FinishSource(int index)
         {
+            ref Job job = ref _jobs[index];
             CuiaView s = _views[job.Source];
             if (job.Started && !job.IsUndo)
             {
@@ -1041,29 +1278,31 @@ namespace AF.Presentation
                 s.Unlock();
             }
 
-            ShowContentAt(job.Source, job.SrcAfter, job.SrcSealedAfter);
             job.SrcDone = true;
+            PaintJobEnd(index, job.Source, job.SrcAfter, job.SrcSealedAfter);
             ReleaseStream(ref job);
         }
 
-        private void FinishTarget(ref Job job)
+        private void FinishTarget(int index)
         {
-            ShowContentAt(job.Target, job.TgtAfter, job.TgtSealedAfter);
+            ref Job job = ref _jobs[index];
             job.TgtDone = true;
+            PaintJobEnd(index, job.Target, job.TgtAfter, job.TgtSealedAfter);
         }
 
-        // Fin de la pareja del Remolino y de las demás cuias: su estado final, sellado incluido. Va después del destino, así
-        // que la cuia tocada por un Remolino que además cambió termina también en su estado final.
-        private void FinishExtras(ref Job job)
+        // Fin de la pareja del Remolino y de las demás cuias sin paso: su estado final, sellado incluido. Va después del
+        // destino, así que la cuia tocada por un Remolino que además cambió termina también en su estado final.
+        private void FinishExtras(int index)
         {
-            ShowExtras(ref job, true);
-            job.ExtraDone = true;
+            ShowExtras(index, true);
+            _jobs[index].ExtraDone = true;
         }
 
-        // Pinta el estado final de las cuias de Extra; con final = false, las que se sellan quedan aún sin tapa (la pone
-        // SealExtrasAt).
-        private void ShowExtras(ref Job job, bool final)
+        // Pinta el estado final de las cuias que saltan (Jump); con final = false, las que se sellan quedan aún sin tapa (la
+        // pone SealExtrasAt).
+        private void ShowExtras(int index, bool final)
         {
+            ref Job job = ref _jobs[index];
             BoardState? after = job.After;
             if (after == null)
             {
@@ -1074,14 +1313,187 @@ namespace AF.Presentation
             for (int i = 0; i < n; i++)
             {
                 int bit = 1 << i;
-                if ((job.Extra & bit) == 0)
+                if ((job.Jump & bit) == 0)
                 {
                     continue;
                 }
 
                 bool sealedNow = after.IsSealed(i) && (final || (job.ExtraSeal & bit) == 0);
-                ShowContentAt(i, after[i], sealedNow);
+                if (final)
+                {
+                    PaintFinal(index, i, after[i], sealedNow);
+                }
+                else
+                {
+                    ShowContentAt(i, after[i], sealedNow);
+                }
             }
+        }
+
+        // Fin de la parte del trabajo en el origen o la tocada: si el plan aún tiene pasos sobre ella, el estado previo a
+        // ellos (JobEnd, ya en SrcAfter o TgtAfter); si no, su estado final.
+        private void PaintJobEnd(int index, int cuia, Cuia state, bool sealedNow)
+        {
+            if ((PlanPending(ref _jobs[index]) & Bit(cuia)) != 0)
+            {
+                ShowContentAt(cuia, state, sealedNow);
+            }
+            else
+            {
+                PaintFinal(index, cuia, state, sealedNow);
+            }
+        }
+
+        // Final de la cuia en el trabajo index: si un trabajo posterior la usa, su estado en este trabajo; si no, el último
+        // estado del modelo (que incluye los contadores que cambiaron sin retenerla).
+        private void PaintFinal(int index, int cuia, Cuia own, bool ownSealed)
+        {
+            int bit = Bit(cuia);
+            for (int j = index + 1; j < _count; j++)
+            {
+                if ((CuiaMask(ref _jobs[j]) & bit) != 0)
+                {
+                    ShowContentAt(cuia, own, ownSealed);
+                    return;
+                }
+            }
+
+            if ((uint)cuia < (uint)_model.Length && _model[cuia].Capacity > 0)
+            {
+                ShowContentAt(cuia, _model[cuia], _modelSealed[cuia]);
+            }
+            else
+            {
+                ShowContentAt(cuia, own, ownSealed);
+            }
+        }
+
+        // Fin de un paso de mecánica del plan slot en la cuia: con last, su final (PaintFinal); si no, el estado intermedio.
+        internal void PaintStepEnd(int slot, int cuia, Cuia state, bool sealedNow, bool last)
+        {
+            if (!last)
+            {
+                ShowContentAt(cuia, state, sealedNow);
+                return;
+            }
+
+            for (int i = 0; i < _count; i++)
+            {
+                if (_jobs[i].Plan == slot && !_jobs[i].PlanDone)
+                {
+                    PaintFinal(i, cuia, state, sealedNow);
+                    return;
+                }
+            }
+
+            ShowContentAt(cuia, state, sealedNow);
+        }
+
+        // step_budget (DevProbe.Event): las últimas etapas de un plan saltaron. Solo asigna cuando ocurre.
+        internal void RaiseStepBudget(float ageMs, float plannedMs, float leftMs, float speed, int skipFrom)
+        {
+            string fields = "\"age_ms\":" + Mathf.RoundToInt(ageMs).ToString(CultureInfo.InvariantCulture)
+                + ",\"planned_ms\":" + Mathf.RoundToInt(plannedMs).ToString(CultureInfo.InvariantCulture)
+                + ",\"left_ms\":" + Mathf.RoundToInt(leftMs).ToString(CultureInfo.InvariantCulture)
+                + ",\"speed\":" + speed.ToString("0.00", CultureInfo.InvariantCulture)
+                + ",\"skip_from\":\"" + ((StepStage)skipFrom).ToString() + "\"";
+            if (DevEvent != null)
+            {
+                DevEvent("step_budget", fields);
+            }
+            else if (Debug.isDebugBuild)
+            {
+                Debug.Log("AF_STATE {\"event\":\"step_budget\"," + fields + "}");
+            }
+        }
+
+        // Último estado del modelo de la cuia (lo que debe verse con la cola quieta).
+        private void SetModel(int index, Cuia cuia, bool sealedNow)
+        {
+            if ((uint)index < (uint)_model.Length)
+            {
+                _model[index] = cuia;
+                _modelSealed[index] = sealedNow;
+            }
+        }
+
+        // Registra el tablero del modelo tras un vertido y repinta en el acto los contadores que ningún trabajo usa (los
+        // demás los pinta el último trabajo que usa la cuia, con PaintFinal).
+        private void CommitModel(BoardState after, int counters)
+        {
+            int n = Mathf.Min(after.Count, _model.Length);
+            for (int i = 0; i < n; i++)
+            {
+                SetModel(i, after[i], after.IsSealed(i));
+            }
+
+            for (int i = 0; i < n && counters != 0; i++)
+            {
+                int bit = Bit(i);
+                if ((counters & bit) == 0)
+                {
+                    continue;
+                }
+
+                bool used = false;
+                for (int j = 0; j < _count && !used; j++)
+                {
+                    used = (CuiaMask(ref _jobs[j]) & bit) != 0;
+                }
+
+                if (!used)
+                {
+                    ShowContentAt(i, _model[i], _modelSealed[i]);
+                }
+            }
+        }
+
+        // Cuias de mask que solo cambiaron el contador de su mecánica (Lluvia o cueva de la Piraña que cuentan un vertido
+        // útil): mismo contenido, mismas ocultas, misma mecánica con sus campos y mismo sellado.
+        private static int CounterOnly(BoardState before, BoardState after, int mask)
+        {
+            int result = 0;
+            int n = Mathf.Min(Mathf.Min(before.Count, after.Count), MaskBits);
+            for (int i = 0; i < n; i++)
+            {
+                if (((mask >> i) & 1) == 0)
+                {
+                    continue;
+                }
+
+                Cuia b = before[i];
+                Cuia a = after[i];
+                MechanicType type = b.Mechanic;
+                if ((type != MechanicType.Lluvia && type != MechanicType.Pirana) || a.Mechanic != type)
+                {
+                    continue;
+                }
+
+                if (b.Count != a.Count || b.HiddenMask != a.HiddenMask || before.IsSealed(i) != after.IsSealed(i)
+                    || b.MechanicKey != a.MechanicKey || b.MechanicN != a.MechanicN || b.MechanicK != a.MechanicK
+                    || b.MechanicFlags != a.MechanicFlags || b.MechanicPairId != a.MechanicPairId)
+                {
+                    continue;
+                }
+
+                bool same = true;
+                for (int k = 0; k < b.Count && same; k++)
+                {
+                    same = b.ColorAt(k) == a.ColorAt(k);
+                }
+
+                if (same)
+                {
+                    result |= 1 << i;
+                }
+            }
+
+            return result;
+        }
+
+        private static int Bit(int index)
+        {
+            return (uint)index < (uint)MaskBits ? 1 << index : 0;
         }
 
         private void SealExtrasAt(ref Job job, float ms)
@@ -1116,21 +1528,29 @@ namespace AF.Presentation
             }
         }
 
-        private void Complete(ref Job job)
+        // Lleva el trabajo index a su final: origen, tocada y saltos, y su plan de pasos (SnapStep y estado final de cada cuia).
+        private void Complete(int index)
         {
+            ref Job job = ref _jobs[index];
             if (!job.SrcDone)
             {
-                FinishSource(ref job);
+                FinishSource(index);
             }
 
             if (!job.TgtDone)
             {
-                FinishTarget(ref job);
+                FinishTarget(index);
             }
 
             if (!job.ExtraDone)
             {
-                FinishExtras(ref job);
+                FinishExtras(index);
+            }
+
+            if (job.Plan >= 0 && !job.PlanDone)
+            {
+                _steps.Snap(job.Plan);
+                job.PlanDone = true;
             }
         }
 
@@ -1139,7 +1559,7 @@ namespace AF.Presentation
             int w = 0;
             for (int i = 0; i < _count; i++)
             {
-                if (_jobs[i].SrcDone && _jobs[i].TgtDone && _jobs[i].ExtraDone)
+                if (_jobs[i].SrcDone && _jobs[i].TgtDone && _jobs[i].ExtraDone && _jobs[i].PlanDone)
                 {
                     continue;
                 }
@@ -1358,6 +1778,7 @@ namespace AF.Presentation
             public bool Chainable;
             public int FillBase;
             public int Extra;
+            public int Jump;
             public int ExtraSeal;
             public bool ExtraDone;
             public bool ExtraShown;
@@ -1370,6 +1791,11 @@ namespace AF.Presentation
             public Cuia TgtBefore;
             public Cuia TgtAfter;
             public bool TgtSealedAfter;
+            public int Plan;
+            public int PlanMask;
+            public bool PlanBegun;
+            public bool PlanDone;
+            public float Age;
             public bool Started;
             public bool SrcDone;
             public bool TgtDone;

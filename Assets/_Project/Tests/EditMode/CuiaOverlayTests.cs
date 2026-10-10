@@ -23,7 +23,8 @@ namespace AF.Tests.EditMode
     /// iguales a <see cref="LevelCounter.Of"/>; y los colores de las superficies de más de 2 dp a ΔE00 ≥ 10 de los 14 tintes
     /// (direccion-visual-v2 §2.4, regla 1; 07 §3, regla 6), que sigue valiendo cuando cada mecánica reescriba su overlay.
     /// <see cref="CuiaView"/> en un Canvas de prueba (con <see cref="BoardBuilder"/> para los contadores); el arte procedural
-    /// se crea una vez (≈ 300 ms en EditMode).
+    /// se crea una vez (≈ 300 ms en EditMode). Desde T07 la vista solo crea overlays con tablero (<see cref="CuiaView.BindBoard"/>):
+    /// cada vista suelta se une a un <see cref="SoloBoard"/> con sus dos capas, como hace <c>BoardAnimator.Bind</c> en el juego.
     /// </summary>
     public sealed class CuiaOverlayTests
     {
@@ -88,9 +89,16 @@ namespace AF.Tests.EditMode
             CuiaOverlayHost host = view.OverlayHost;
             Assert.That(host.Index, Is.EqualTo(0));
             Assert.That(host.Capacity, Is.EqualTo(4));
-            Assert.That(host.Board, Is.Null, "el tablero lo cablea la cola de pasos (ola 2)");
-            Assert.That(host.BoardBackLayer, Is.Null);
-            Assert.That(host.BoardFrontLayer, Is.Null);
+            Assert.That(host.Board, Is.Not.Null, "el tablero lo cablea BindBoard (T07)");
+            Assert.That(host.BoardBackLayer, Is.Not.Null);
+            Assert.That(host.BoardFrontLayer, Is.Not.Null);
+            CuiaView loose = NewView(4, false);
+            Assert.That(loose.OverlayHost.Board, Is.Null, "sin BindBoard, sin tablero");
+            loose.ShowContent(Sample(MechanicType.Hoja), false);
+            Assert.That(loose.Overlay, Is.Null, "sin tablero no se crea ningún overlay");
+            BindToSoloBoard(loose);
+            Assert.That(loose.Overlay, Is.Not.Null, "se crea en BindBoard, con el último estado mostrado");
+            Assert.That(loose.Overlay!.Visible, Is.True);
             Assert.That(host.SlotBack.parent, Is.SameAs(view.Root));
             Assert.That(host.SlotFront.parent, Is.SameAs(view.Root));
             Assert.That(host.SlotBack.GetSiblingIndex(), Is.LessThan(view.Body.GetSiblingIndex()), "SlotBack, antes del cuerpo");
@@ -541,9 +549,70 @@ namespace AF.Tests.EditMode
             return child!.GetSiblingIndex();
         }
 
-        private CuiaView NewView(int capacity = 4)
+        private CuiaView NewView(int capacity = 4, bool bind = true)
         {
-            return CuiaView.Create((RectTransform)_canvas.transform, 0, capacity, _art, _ => { }, (_, __) => { });
+            CuiaView view = CuiaView.Create((RectTransform)_canvas.transform, 0, capacity, _art, _ => { }, (_, __) => { });
+            if (bind)
+            {
+                BindToSoloBoard(view);
+            }
+
+            return view;
+        }
+
+        // Une la vista a un tablero de una sola cuia con dos capas en el lienzo de prueba (como BoardAnimator.Bind).
+        private void BindToSoloBoard(CuiaView view)
+        {
+            var back = new GameObject("MechanicBack", typeof(RectTransform));
+            back.transform.SetParent(_canvas.transform, false);
+            var front = new GameObject("MechanicFront", typeof(RectTransform));
+            front.transform.SetParent(_canvas.transform, false);
+            view.BindBoard(new SoloBoard(view), (RectTransform)back.transform, (RectTransform)front.transform);
+        }
+
+        // Tablero de una sola cuia para las vistas sueltas de estos tests.
+        private sealed class SoloBoard : ICuiaBoard
+        {
+            private readonly CuiaView _view;
+
+            public SoloBoard(CuiaView view)
+            {
+                _view = view;
+            }
+
+            public int Count => 1;
+
+            public int LayoutVersion => 0;
+
+            public Cuia ShownCuia(int i)
+            {
+                return _view.ShownCuia;
+            }
+
+            public Vector2 BodyCenter(int i)
+            {
+                return _view.FootPosition + new Vector2(0f, 0.5f * _view.HeightU * _view.Unit);
+            }
+
+            public Vector2 Foot(int i)
+            {
+                return _view.FootPosition;
+            }
+
+            public Rect SlotRect(int i)
+            {
+                return new Rect(_view.FootPosition, _view.Root.sizeDelta);
+            }
+
+            public void SetDose(int i, int dose, Color color, float fill, int pattern)
+            {
+                _view.SetDose(dose, color, fill, pattern);
+            }
+
+            public void ShowContent(int i, Cuia cuia, bool sealedNow)
+            {
+                _view.ShowContent(cuia, sealedNow);
+            }
         }
 
         // Overlay de prueba: cuenta los Show y anima cuando se le pide.

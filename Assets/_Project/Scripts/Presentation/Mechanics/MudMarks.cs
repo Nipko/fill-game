@@ -13,8 +13,9 @@ namespace AF.Presentation.Mechanics
     /// </summary>
     /// <remarks>
     /// Cuelga del cuerpo de la cuia, encima del líquido. Las bandas no giran con el vaso, así que en vuelo los grumos se
-    /// ocultan. Sin animación en esta versión (<see cref="IsAnimating"/> = false): el lavado (MechanicStepKind.MudWash)
-    /// llega después.
+    /// ocultan. El lavado es un paso de la cola (<see cref="MechanicStepKind.MudWash"/>, etapa (a), en el receptor) que
+    /// <c>CuiaView.PlayMudWash</c> delega en <see cref="PlayWash"/>. En esta versión no anima (duración 0: el paso por
+    /// defecto es un salto, T07) y <see cref="IsAnimating"/> es false; T16 le da el aspecto de b.2 sin tocar la vista.
     /// </remarks>
     public sealed class MudMarks
     {
@@ -42,6 +43,9 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>Hay una animación en curso: mientras, <c>CuiaView.ShowContent</c> no llama a <see cref="Show"/>.</summary>
         public bool IsAnimating => false;
+
+        /// <summary>Duración nominal del lavado (ms, sin factor de velocidad): 0 en esta versión (salto).</summary>
+        public float WashDurationMs => 0f;
 
         /// <summary>Dosis con grumos (bit k = dosis k desde el fondo), estén o no a la vista.</summary>
         public int LumpMask => _mask;
@@ -81,6 +85,21 @@ namespace AF.Presentation.Mechanics
             }
 
             SetMask(mask);
+        }
+
+        /// <summary>
+        /// Arranca el lavado del barro de las capas <paramref name="layerMask"/> (la dosis de barro que el vertido sustituyó) y
+        /// devuelve su duración (ms) ya multiplicada por <paramref name="speedFactor"/>; 0 = sin animación (salto). El
+        /// <c>ShowContent</c> del final del paso deja los grumos del estado.
+        /// </summary>
+        public float PlayWash(LiquidGraphic liquid, int layerMask, float speedFactor)
+        {
+            return 0f;
+        }
+
+        /// <summary>Termina en el acto el lavado en curso, si lo hay.</summary>
+        public void Snap()
+        {
         }
 
         /// <summary>Quita los grumos de la dosis <paramref name="k"/> (la intro, antes de que el agua se enturbie).</summary>

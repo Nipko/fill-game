@@ -5,7 +5,8 @@ namespace AF.Presentation.Mechanics
     /// <summary>
     /// Pasos de mecánica que siguen a un vertido (R10 por etapas con el punto fijo f′; anexo B de la propuesta de D-007). Cada
     /// paso lo ejecuta el overlay de la cuia dueña de la mecánica, que pinta las dos cuias si hace falta. No hay paso de
-    /// «la cueva recibe»: el mordisco lo ejecuta la cueva (<see cref="Bite"/>).
+    /// «la cueva recibe»: el mordisco lo ejecuta la cueva (<see cref="Bite"/>). Contrato congelado desde la ola 3 (T07): el
+    /// orden y las etapas los da <see cref="MechanicStepPlan"/>.
     /// </summary>
     public enum MechanicStepKind
     {
@@ -41,5 +42,18 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>El mordisco se pierde (víctima sellada, Matapi, la propia cueva o cueva llena).</summary>
         BiteLost = 10,
+    }
+
+    /// <summary>
+    /// Cómo se revelan dosis ocultas (<c>CuiaView.PlayReveal</c>, que delega en <see cref="MurkyMarks"/>): por la regla R7
+    /// al llegar a la cima, o con la Luciérnaga (04 §2.5).
+    /// </summary>
+    public enum RevealStyle
+    {
+        /// <summary>R7: la nueva cima del origen se aclara (02 §4.1; 07 §4.3; el aspecto de b.2 lo pone T15).</summary>
+        Rule = 0,
+
+        /// <summary>Luciérnaga: las capas se aclaran de arriba abajo (04 §2.5).</summary>
+        Firefly = 1,
     }
 }

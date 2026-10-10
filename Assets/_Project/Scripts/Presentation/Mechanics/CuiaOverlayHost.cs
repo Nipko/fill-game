@@ -6,8 +6,10 @@ namespace AF.Presentation.Mechanics
 {
     /// <summary>
     /// Lo que una cuia ofrece a su <see cref="CuiaOverlay"/> (contrato de overlays, arquitectura del paso 1 §5): su índice y
-    /// su geometría, cuatro anclas con el origen en el centro del pie (y hacia arriba, en dp), el arte, los efectos y, desde
-    /// la cola de pasos, las capas y el tablero.
+    /// su geometría, cuatro anclas con el origen en el centro del pie (y hacia arriba, en dp), el arte, los efectos, las capas
+    /// de tablero y el tablero. <see cref="BoardBackLayer"/>, <see cref="BoardFrontLayer"/> y <see cref="Board"/> los rellena
+    /// <c>CuiaView.BindBoard</c>, y la vista no crea ningún overlay antes: dentro de <see cref="CuiaOverlay.Attach"/> (y de su
+    /// <c>OnAttach</c>) nunca son null. Contrato congelado desde la ola 3 (T07).
     /// </summary>
     /// <remarks>
     /// Anclas, de atrás adelante:
@@ -74,13 +76,16 @@ namespace AF.Presentation.Mechanics
         /// <summary>Efectos del tablero (gotas, anillos), o null en pruebas sin efectos.</summary>
         public IBoardFx? Fx { get; internal set; }
 
-        /// <summary>Capa del tablero detrás de las cuias (la cablea la cola de pasos; null hasta entonces).</summary>
+        /// <summary>Capa del tablero detrás de las cuias (null hasta <c>CuiaView.BindBoard</c>; nunca dentro de un overlay).</summary>
         public RectTransform? BoardBackLayer { get; internal set; }
 
-        /// <summary>Capa del tablero delante de las cuias (la cablea la cola de pasos; null hasta entonces).</summary>
+        /// <summary>Capa del tablero delante de las cuias (null hasta <c>CuiaView.BindBoard</c>; nunca dentro de un overlay).</summary>
         public RectTransform? BoardFrontLayer { get; internal set; }
 
-        /// <summary>El tablero entero: posiciones y pintado de cualquier cuia (lo cablea la cola de pasos; null hasta entonces).</summary>
+        /// <summary>
+        /// El tablero entero: posiciones y pintado de cualquier cuia (null hasta <c>CuiaView.BindBoard</c>; nunca dentro de un
+        /// overlay).
+        /// </summary>
         public ICuiaBoard? Board { get; internal set; }
     }
 }

@@ -7,8 +7,10 @@ namespace AF.Presentation.Mechanics
     /// <summary>
     /// El tablero visto desde un overlay (contrato de overlays, arquitectura del paso 1 §5): lo que muestra cada cuia, dónde
     /// está y cómo pintarla, para los pasos que tocan dos cuias (el mordisco de la Piraña, el canal del Remolino, el hilo de
-    /// luz de la Liana). Lo implementa la cola de animación del tablero. Las posiciones van en el espacio de las capas de
-    /// tablero (<see cref="CuiaOverlayHost.BoardBackLayer"/> y <see cref="CuiaOverlayHost.BoardFrontLayer"/>).
+    /// luz de la Liana). Lo implementa la cola de animación del tablero (<c>BoardAnimator</c>). Las posiciones van en el
+    /// espacio local de las capas de tablero (<see cref="CuiaOverlayHost.BoardBackLayer"/> y
+    /// <see cref="CuiaOverlayHost.BoardFrontLayer"/>, que comparten transform) y valen hasta que suba
+    /// <see cref="LayoutVersion"/>. Contrato congelado desde la ola 3 (T07).
     /// </summary>
     public interface ICuiaBoard
     {
@@ -18,7 +20,10 @@ namespace AF.Presentation.Mechanics
         /// <summary>Sube cada vez que el tablero se recoloca: lo cacheado con una versión anterior ya no vale.</summary>
         int LayoutVersion { get; }
 
-        /// <summary>Último estado pintado en la cuia <paramref name="i"/>.</summary>
+        /// <summary>
+        /// Último estado pintado en la cuia <paramref name="i"/> por la cola (o por <see cref="ShowContent"/>); con la vista
+        /// quieta, el del modelo.
+        /// </summary>
         Cuia ShownCuia(int i);
 
         /// <summary>Centro del cuerpo de la cuia <paramref name="i"/> en reposo.</summary>
@@ -27,13 +32,20 @@ namespace AF.Presentation.Mechanics
         /// <summary>Centro del pie de la cuia <paramref name="i"/> en reposo.</summary>
         Vector2 Foot(int i);
 
-        /// <summary>Rectángulo de la ranura de la cuia <paramref name="i"/> (ranura y repisa).</summary>
+        /// <summary>
+        /// Rectángulo de la ranura de la cuia <paramref name="i"/>: su ancho de ranura y del pie (la repisa) hasta el área
+        /// táctil sobre la boca (alto de la cuia + 32 dp, 02 §3.3).
+        /// </summary>
         Rect SlotRect(int i);
 
         /// <summary>Fija color, relleno (0..1) y patrón (tinte; 0 = sin patrón) de la dosis <paramref name="dose"/> de la cuia <paramref name="i"/>.</summary>
         void SetDose(int i, int dose, Color color, float fill, int pattern);
 
-        /// <summary>Pinta en la cuia <paramref name="i"/> el estado <paramref name="cuia"/> (contenido, marcas, tapa y overlay).</summary>
+        /// <summary>
+        /// Pinta en la cuia <paramref name="i"/> el estado <paramref name="cuia"/> (contenido, marcas, tapa y overlay) sin tocar
+        /// el estado del modelo que guarda la cola: para pintar estados intermedios a mitad de un paso. El final de cada paso
+        /// lo pinta la cola.
+        /// </summary>
         void ShowContent(int i, Cuia cuia, bool sealedNow);
     }
 }
