@@ -36,60 +36,155 @@ namespace AF.Presentation
     /// en un modo turbio la banda lleva el patrón <see cref="MurkyPatternMode"/> (± el avance del revelado, ver
     /// <see cref="MurkyLook"/>) y la fila turbia del atlas (<see cref="ProceduralArt.MurkyPatternRow"/>) en
     /// <c>TEXCOORD3.a</c>; el shader pinta encima del pardo la trama diagonal al 25 % y el «?» marfil de 0,5 u, sin la
-    /// mezcla fija del 15 % de los patrones de fruta. Al disolverse por la regla (<see cref="MurkyLook.Dissolve"/>) hay un
-    /// fundido cruzado sin saltos: <c>TEXCOORD3.a</c> pasa a ser la fila de la fruta que se revela
-    /// (<see cref="FruitRowCode"/>; la turbia la da <c>_MurkyRow</c>), la trama se va antes de que entre el patrón de la
-    /// fruta (<see cref="MurkyHatchAmount"/> y <see cref="FruitPatternWeight"/>, espejos en CPU del shader) y la franja y el
-    /// menisco de la fruta entran con su patrón; al final del Dissolve la banda es su dosis normal. Equivale a la máscara
-    /// <c>_HiddenMask</c> (una banda por dosis, también no contiguas) y al color <c>_MurkyColor</c> = #8A7B6A
-    /// (<see cref="Palette.Murky"/>, el color de la banda) de 08 §5.2, que no pueden ir como propiedades: uGUI no admite
-    /// <c>MaterialPropertyBlock</c> por cuia y todas comparten material.
-    /// La «?» va derecha en pantalla y centrada en la cuerda de su banda: su x a lo ancho de la pantalla, relativa al centro
-    /// de la cuerda y en u de capa, va por vértice en <c>TEXCOORD1.w</c>, que en las bandas normales es el destello del
-    /// sellado (una cuia con dosis ocultas nunca está sellada, R5). Con la banda más fina que 1 u (cuia inclinada), la «?»
-    /// y la trama se encogen con ella y no salen de la banda.</para>
+    /// mezcla fija del 15 % de los patrones de fruta. En los dos revelados hay un fundido cruzado sin saltos: <c>TEXCOORD3.a</c>
+    /// pasa a ser la fila de la fruta que se revela (<see cref="FruitRowCode"/>; la turbia la da <c>_MurkyRow</c>), la trama se
+    /// va antes de que entre el patrón de la fruta (<see cref="MurkyHatchAmount"/> y <see cref="FruitPatternWeight"/>, espejos
+    /// en CPU del shader) y la franja y el menisco de la fruta entran con su patrón; al final la banda es su dosis normal. Con
+    /// la Luciérnaga (<see cref="MurkyLook.Turn"/>) además baja por la banda un frente de luz [P] (<see cref="FireflyLightAt"/>):
+    /// encima, el color de la dosis, que la CPU florece en OKLab; debajo, el pardo y su brillo (<c>_MurkyLin</c>,
+    /// <c>_MurkyLitLin</c>); el shader solo mezcla en lineal en el borde, de <see cref="FireflyEdgeU"/>.</para>
+    /// <para>[P] Esto sustituye a la máscara <c>_HiddenMask</c> (una banda por dosis, también no contiguas) y al color
+    /// <c>_MurkyColor</c> = #8A7B6A (<see cref="Palette.Murky"/>, el color de la banda) de 08 §5.2, que no pueden ir como
+    /// propiedades porque uGUI no admite <c>MaterialPropertyBlock</c> por cuia y todas comparten material; y el «?» lo pinta
+    /// el shader con la fila turbia del atlas en lugar del «sprite "?"» de 08 §5.2. Se alinea con el GDD en el paso 2.</para>
+    /// <para>El «?» va derecho en pantalla e isótropo (<see cref="MurkyGlyphPlacement"/>): su x en pantalla, relativa a su
+    /// centro y en u, va por vértice en <c>TEXCOORD1.w</c>, que en las bandas normales es el destello del sellado (una cuia
+    /// con dosis ocultas nunca está sellada, R5); su centro en capa y el hueco libre en su columna van empaquetados sobre el
+    /// alto de la cuia en <c>TEXCOORD0.w</c> (<see cref="GlyphPackScale"/>: en las bandas normales no cambia nada). Mide
+    /// <see cref="GlyphSizeU"/> (de <see cref="GlyphMinU"/> a <see cref="GlyphMaxU"/>) y se apaga si la banda es más fina
+    /// (<see cref="GlyphFade"/>): con la cuia inclinada busca la parte más gruesa de la cuña sin tocar el vidrio.</para>
     /// </remarks>
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class LiquidGraphic : MaskableGraphic
     {
         /// <summary>
         /// Patrón de una banda turbia en <c>TEXCOORD2.w</c> (patrón + 4 · dosis): 2 sin animar; 2 + 0,45 · avance al
-        /// disolverse por la regla y 2 − 0,45 · avance al girar con la Luciérnaga (el shader decodifica el modo con
-        /// <c>floor((w + 1,5) / 4)</c>, así que el patrón vive en [−1, 2,5)).
+        /// disolverse por la regla y 2 − 0,45 · avance con la Luciérnaga (el shader decodifica el modo con
+        /// <c>floor((w + 1,5) / 4)</c>, así que el patrón vive en [−1, 2,5)). Shader: <c>AF_MURKY_MODE</c>.
         /// </summary>
         public const float MurkyPatternMode = 2f;
 
-        /// <summary>Lo que se aparta del <see cref="MurkyPatternMode"/> el avance 1 de un revelado (ver la constante).</summary>
+        /// <summary>Lo que se aparta del <see cref="MurkyPatternMode"/> el avance 1 de un revelado (shader: <c>AF_MURKY_SPAN</c>).</summary>
         public const float MurkyProgressSpan = 0.45f;
 
-        /// <summary>Avance de <see cref="MurkyLook.Dissolve"/> en el que el «?» empieza a apagarse (shader: smoothstep(0,35; 0,85)).</summary>
+        /// <summary>Avance de <see cref="MurkyLook.Dissolve"/> en el que el «?» empieza a apagarse (shader: <c>AF_MARK_FADE_FROM</c>).</summary>
         public const float MarkFadeFrom = 0.35f;
 
-        /// <summary>Avance de <see cref="MurkyLook.Dissolve"/> en el que el «?» ya no se ve.</summary>
+        /// <summary>Avance de <see cref="MurkyLook.Dissolve"/> en el que el «?» ya no se ve (shader: <c>AF_MARK_FADE_TO</c>).</summary>
         public const float MarkFadeTo = 0.85f;
 
-        /// <summary>Trama diagonal de una dosis turbia: 25 % hacia la tinta (07 §4.3).</summary>
+        /// <summary>Halo de tinta del «?»: 55 % (glosario §6.2; shader: <c>AF_MARK_HALO</c>).</summary>
+        public const float MarkHaloOpacity = 0.55f;
+
+        /// <summary>
+        /// Avance de <see cref="MurkyLook.Dissolve"/> en el que el halo de tinta del «?» empieza a irse [P] (shader:
+        /// <c>AF_MARK_HALO_FADE_FROM</c>): la tinta se va primero, así el «?» que se disuelve no queda gris sobre la fruta.
+        /// </summary>
+        public const float MarkHaloFadeFrom = 0.15f;
+
+        /// <summary>Avance de <see cref="MurkyLook.Dissolve"/> en el que el halo ya no se ve [P] (shader: <c>AF_MARK_HALO_FADE_TO</c>).</summary>
+        public const float MarkHaloFadeTo = 0.35f;
+
+        /// <summary>
+        /// Avance de <see cref="MurkyLook.Dissolve"/> en el que el marfil del «?» empieza a ir hacia el blanco [P] (shader:
+        /// <c>AF_MARK_WHITE_FROM</c>; ficha de Magic Sort §3.1: se disuelve en destellos blancos, no hacia la banda).
+        /// </summary>
+        public const float MarkWhiteFrom = 0.2f;
+
+        /// <summary>Avance de <see cref="MurkyLook.Dissolve"/> en el que el «?» ya es blanco [P] (shader: <c>AF_MARK_WHITE_TO</c>).</summary>
+        public const float MarkWhiteTo = 0.6f;
+
+        /// <summary>Amplitud de la ondulación del «?» al disolverse (u, con el «?» de 0,5 u) [P] (shader: <c>AF_MARK_WOBBLE_U</c>).</summary>
+        public const float MarkWobbleU = 0.025f;
+
+        /// <summary>Trama diagonal de una dosis turbia: 25 % hacia la tinta (07 §4.3; shader: <c>AF_HATCH_OPACITY</c>).</summary>
         public const float MurkyHatchOpacity = 0.25f;
 
         /// <summary>
-        /// Avance de <see cref="MurkyLook.Dissolve"/> en el que la trama empieza a irse (shader: smoothstep(0,18; 0,55)) [P]:
+        /// Avance de <see cref="MurkyLook.Dissolve"/> en el que la trama empieza a irse (shader: <c>AF_HATCH_FADE_FROM</c>) [P]:
         /// la trama se va mientras la dosis toma su tinte y antes de que entre el patrón de su fruta.
         /// </summary>
         public const float HatchFadeFrom = 0.18f;
 
-        /// <summary>Avance de <see cref="MurkyLook.Dissolve"/> en el que la trama ya no se ve.</summary>
+        /// <summary>Avance de <see cref="MurkyLook.Dissolve"/> en el que la trama ya no se ve (shader: <c>AF_HATCH_FADE_TO</c>).</summary>
         public const float HatchFadeTo = 0.55f;
 
         /// <summary>
         /// Avance de <see cref="MurkyLook.Dissolve"/> en el que el patrón de la fruta que se revela empieza a entrar (shader:
-        /// smoothstep(0,64; 1)) [P]: después de <see cref="HatchFadeTo"/> (la misma muestra lee la trama o el patrón, nunca los
-        /// dos) y entero al final del Dissolve, así que el paso a la dosis normal no salta.
+        /// <c>AF_FRUIT_PATTERN_FROM</c>, hasta 1) [P]: después de <see cref="HatchFadeTo"/> (la misma muestra lee la trama o el
+        /// patrón, nunca los dos) y entero al final del Dissolve, así que el paso a la dosis normal no salta.
         /// </summary>
         public const float FruitPatternFrom = 0.64f;
 
         /// <summary>
+        /// Luciérnaga: parte del avance de una banda en la que su frente de luz la recorre de arriba abajo [P] (shader:
+        /// <c>AF_FIREFLY_FRONT_SPAN</c>); en el resto entra el patrón de su fruta.
+        /// </summary>
+        public const float FireflyFrontSpan = 0.5f;
+
+        /// <summary>Luciérnaga: ancho del borde suave del frente de luz (u de capa; ≤ 0,15 u) [P] (shader: <c>AF_FIREFLY_EDGE_U</c>).</summary>
+        public const float FireflyEdgeU = 0.12f;
+
+        /// <summary>
+        /// Luciérnaga: profundidad del frente (desde arriba de la banda) en la que su «?» empieza a girar, la de lo alto del
+        /// «?» [P] (shader: <c>AF_FIREFLY_TURN_FROM</c>).
+        /// </summary>
+        public const float FireflyTurnFrom = 0.25f;
+
+        /// <summary>
+        /// Luciérnaga: profundidad del frente en la que el «?» queda de canto (su centro; 04 §2.5: «cada "?" gira») [P]
+        /// (shader: <c>AF_FIREFLY_TURN_TO</c>). Desde ahí gira de vuelta el icono de su fruta (<c>MurkyMarks</c>).
+        /// </summary>
+        public const float FireflyTurnTo = 0.5f;
+
+        /// <summary>
+        /// Luciérnaga: avance de la banda en el que empieza a entrar el patrón de su fruta [P] (shader:
+        /// <c>AF_FIREFLY_PATTERN_FROM</c>): después de <see cref="FireflyFrontSpan"/>, cuando el frente ya se llevó la trama.
+        /// </summary>
+        public const float FireflyPatternFrom = 0.55f;
+
+        /// <summary>Luciérnaga: avance en el que el patrón de la fruta ya entró entero [P] (shader: <c>AF_FIREFLY_PATTERN_TO</c>).</summary>
+        public const float FireflyPatternTo = 0.85f;
+
+        /// <summary>«?» de una banda turbia: alto mínimo en pantalla (u) [P] (shader: <c>AF_GLYPH_MIN_U</c>).</summary>
+        public const float GlyphMinU = 0.30f;
+
+        /// <summary>«?» de una banda turbia: alto máximo, el de 07 §4.3 en reposo (u; shader: <c>AF_GLYPH_MAX_U</c>).</summary>
+        public const float GlyphMaxU = 0.50f;
+
+        /// <summary>«?»: alto como fracción del hueco libre de su columna (margen arriba y abajo) [P] (shader: <c>AF_GLYPH_ROOM_RATIO</c>).</summary>
+        public const float GlyphRoomRatio = 0.8f;
+
+        /// <summary>
+        /// «?»: hueco (u de pantalla) por debajo del cual se apaga del todo; un «?» de <see cref="GlyphMinU"/> ya no cabe [P]
+        /// (shader: <c>AF_GLYPH_FADE_FROM</c>).
+        /// </summary>
+        public const float GlyphFadeFrom = 0.30f;
+
+        /// <summary>«?»: hueco desde el que se ve entero [P] (shader: <c>AF_GLYPH_FADE_TO</c>).</summary>
+        public const float GlyphFadeTo = 0.34f;
+
+        /// <summary>
+        /// Empaquetado del sitio del «?» sobre el alto de la cuia en <c>TEXCOORD0.w</c> (shader: <c>AF_GLYPH_PACK_SCALE</c>):
+        /// alto + 16 · (centro + <see cref="GlyphCenterSteps"/> · hueco), con el alto siempre por debajo de 16 u.
+        /// </summary>
+        public const float GlyphPackScale = 16f;
+
+        /// <summary>Pasos del centro del «?» en el empaquetado (shader: <c>AF_GLYPH_CENTER_STEPS</c>).</summary>
+        public const float GlyphCenterSteps = 80f;
+
+        /// <summary>Pasos por u de capa del centro del «?» (shader: <c>AF_GLYPH_CENTER_PER_U</c>; 0,3 en reposo es exacto).</summary>
+        public const float GlyphCenterPerU = 40f;
+
+        /// <summary>Desplazamiento del centro empaquetado (u de capa): el centro va de −0,5 a 1,475 (shader: <c>AF_GLYPH_CENTER_OFFSET</c>).</summary>
+        public const float GlyphCenterOffset = 0.5f;
+
+        /// <summary>Pasos por u de pantalla del hueco del «?» (shader: <c>AF_GLYPH_ROOM_PER_U</c>; 1 en reposo es exacto).</summary>
+        public const float GlyphRoomPerU = 50f;
+
+        /// <summary>
         /// Cómo pinta el shader una dosis (07 §4.3; 08 §5.2): normal o turbia, y en este caso si su «?» está quieto, se
-        /// disuelve (revelado por la regla, 1.200 ms) o gira de canto (Luciérnaga, 04 §2.5).
+        /// disuelve (revelado por la regla, 1.200 ms) o gira de canto con el frente de luz de la Luciérnaga (04 §2.5).
         /// </summary>
         public enum MurkyLook : byte
         {
@@ -101,14 +196,21 @@ namespace AF.Presentation
 
             /// <summary>
             /// Revelado por la regla (R7), avance 0..1: la trama se va (<see cref="HatchFadeFrom"/>-<see cref="HatchFadeTo"/>),
-            /// el «?» crece, ondula y se disuelve (<see cref="MarkFadeFrom"/>-<see cref="MarkFadeTo"/>) y entra el patrón de la
-            /// fruta que se revela (<see cref="FruitPatternFrom"/>-1), con su franja y su menisco: al avance 1 es su dosis normal.
+            /// el «?» crece, ondula, se blanquea y se disuelve (<see cref="MarkFadeFrom"/>-<see cref="MarkFadeTo"/>) y entra el
+            /// patrón de la fruta que se revela (<see cref="FruitPatternFrom"/>-1), con su franja y su menisco: al avance 1 es
+            /// su dosis normal.
             /// </summary>
             Dissolve = 2,
 
-            /// <summary>Revelado con la Luciérnaga: el «?» gira hasta quedar de canto y la trama se va (avance 0..1).</summary>
+            /// <summary>
+            /// Revelado con la Luciérnaga (04 §2.5), avance 0..1: un frente de luz baja por la banda (hasta
+            /// <see cref="FireflyFrontSpan"/>) y se lleva el pardo y la trama, el «?» gira de canto cuando el frente pasa por su
+            /// centro y después entra el patrón de la fruta (<see cref="FireflyPatternFrom"/>-<see cref="FireflyPatternTo"/>),
+            /// con su franja y su menisco: al avance 1 es su dosis normal.
+            /// </summary>
             Turn = 3,
         }
+
         /// <summary>Amplitud inicial de la onda tras un vertido (08 §5.2): 0,03 u.</summary>
         public const float RippleAmplitudeU = 0.03f;
 
@@ -137,11 +239,19 @@ namespace AF.Presentation
         private const int TongueSamples = 48;
         private const int MaxCapacity = 8;
 
+        // Sitio del «?» con la cuia inclinada: columnas de pantalla cada medio ancho del «?», el medio ancho del «?» con su halo
+        // a 0,5 u (≈ 0,18 u) y lo que se acepta perder de hueco para quedarse más cerca del centro de la cuerda [P].
+        private const int GlyphColumns = 112;
+        private const float GlyphHalfWidthU = 0.18f;
+        private const float GlyphRoomTolerance = 0.06f;
+
         private static readonly int DpUId = Shader.PropertyToID("_DpU");
         private static readonly int PatternRowsId = Shader.PropertyToID("_PatternRows");
         private static readonly int MurkyRowId = Shader.PropertyToID("_MurkyRow");
         private static readonly int InkId = Shader.PropertyToID("_InkLin");
         private static readonly int PaperId = Shader.PropertyToID("_PaperLin");
+        private static readonly int MurkyId = Shader.PropertyToID("_MurkyLin");
+        private static readonly int MurkyLitId = Shader.PropertyToID("_MurkyLitLin");
         private static readonly int CavityBottomId = Shader.PropertyToID("_AFCavityBottomU");
         private static readonly int CavityHalfId = Shader.PropertyToID("_AFCavityHalfU");
         private static readonly int NeckHalfId = Shader.PropertyToID("_AFNeckHalfU");
@@ -152,6 +262,10 @@ namespace AF.Presentation
 
         // Silueta interior (cavidad, hombro y cuello hasta el labio) por capacidad, en X = x − 1 e y (u): se crea una vez.
         private static readonly Vector2[]?[] s_silhouettes = new Vector2[MaxCapacity + 1][];
+
+        // Columnas para el sitio del «?» (solo el hilo principal; sin asignaciones).
+        private static readonly float[] s_columnBottom = new float[GlyphColumns + 1];
+        private static readonly float[] s_columnTop = new float[GlyphColumns + 1];
 
         // Polígono de una banda: el rectángulo de la cavidad recortado por dos semiplanos (≤ 6 vértices) y un búfer.
         private readonly Vector2[] _band = new Vector2[8];
@@ -210,6 +324,12 @@ namespace AF.Presentation
             Shader.SetGlobalFloat(TopFaceId, CuiaGeometry.TopFaceU);
         }
 
+        /// <summary>
+        /// Brillo (franja principal) de una dosis turbia: el pardo con +10 L*, como cualquier banda sin tinte. Es el que lleva
+        /// una dosis oculta y el que queda bajo el frente de la Luciérnaga (<c>_MurkyLitLin</c>).
+        /// </summary>
+        public static Color MurkyHighlight => ColorMath.AddLabLightness(Palette.Murky, 10f);
+
         /// <summary>Prepara el gráfico para <paramref name="capacity"/> dosis con el atlas de patrones.</summary>
         public void Setup(int capacity, Texture atlas)
         {
@@ -228,14 +348,14 @@ namespace AF.Presentation
             {
                 material = mat;
                 mat.SetFloat(PatternRowsId, atlas.height / (float)ProceduralArt.PatternRowPx);
-                mat.SetFloat(MurkyRowId, ProceduralArt.MurkyPatternRow); // la trama y el «?» (al disolverse, TEXCOORD3.a es la fruta)
+                mat.SetFloat(MurkyRowId, ProceduralArt.MurkyPatternRow); // la trama y el «?» (al revelarse, TEXCOORD3.a es la fruta)
                 // Ya en el espacio del shader: van con SetVector, que no convierte. SetColor los volvía a pasar a lineal en
                 // el proyecto Linear (doble conversión): el marfil llegaba como #E7D4B3 en vez de #F4EBDA (el «?» de las
                 // turbias y las marcas claras de los patrones) y la tinta casi negra, lejos de Palette.PatternMark.
-                Vector3 ink = ColorMath.ToShaderSpace(Palette.UiInk); // marcas sobre los tintes claros y halo del «?»
-                Vector3 paper = ColorMath.ToShaderSpace(Palette.UiPaper); // marcas sobre los tintes oscuros y «?» turbio
-                mat.SetVector(InkId, new Vector4(ink.x, ink.y, ink.z, 1f));
-                mat.SetVector(PaperId, new Vector4(paper.x, paper.y, paper.z, 1f));
+                SetShaderColor(mat, InkId, Palette.UiInk); // marcas sobre los tintes claros y halo del «?»
+                SetShaderColor(mat, PaperId, Palette.UiPaper); // marcas sobre los tintes oscuros y «?» turbio
+                SetShaderColor(mat, MurkyId, Palette.Murky); // el pardo bajo el frente de la Luciérnaga (_MurkyColor de 08 §5.2 [P])
+                SetShaderColor(mat, MurkyLitId, MurkyHighlight); // y su brillo
             }
 
             SetVerticesDirty();
@@ -269,9 +389,9 @@ namespace AF.Presentation
 
         /// <summary>
         /// Fija la dosis <paramref name="k"/> con el modo turbio <paramref name="look"/> (07 §4.3; ver <see cref="MurkyLook"/>):
-        /// oculta o girando, el tinte no se usa (va 0: ni su franja, ni su menisco, ni su patrón delatan la fruta oculta); al
-        /// disolverse por la regla, <paramref name="tint"/> es el de la fruta que se revela, cuyo patrón, franja y menisco
-        /// entran con <see cref="FruitPatternWeight"/>. <paramref name="progress"/> (0..1) es el avance de
+        /// oculta, el tinte no se usa (va 0: ni su franja, ni su menisco, ni su patrón delatan la fruta oculta); al revelarse
+        /// (por la regla o con la Luciérnaga), <paramref name="tint"/> es el de la fruta que se revela, cuyo patrón, franja y
+        /// menisco entran con <see cref="FruitPatternWeight"/>. <paramref name="progress"/> (0..1) es el avance de
         /// <see cref="MurkyLook.Dissolve"/> o <see cref="MurkyLook.Turn"/>. Solo reconstruye la malla si algo cambia; sin
         /// asignaciones.
         /// </summary>
@@ -292,7 +412,7 @@ namespace AF.Presentation
                 progress = Mathf.Clamp01(progress);
             }
 
-            if (look == MurkyLook.Hidden || look == MurkyLook.Turn)
+            if (look == MurkyLook.Hidden)
             {
                 tint = 0;
             }
@@ -328,11 +448,47 @@ namespace AF.Presentation
             return (uint)k < (uint)_capacity ? _color[k] : Color.clear;
         }
 
+        /// <summary>Tinte de la dosis <paramref name="k"/> tal como llega al shader (0 en una oculta; fuera de rango, 0).</summary>
+        public int DoseTintAt(int k)
+        {
+            return (uint)k < (uint)_capacity ? _tint[k] : 0;
+        }
+
+        /// <summary>
+        /// Espejo en CPU del color de base que pinta el shader a la profundidad <paramref name="depth"/> de la banda
+        /// <paramref name="k"/> (0 arriba, 1 abajo, entre sus arcos), sin degradado, brillos ni marcas: con la Luciérnaga
+        /// (<see cref="MurkyLook.Turn"/>), la mezcla del frente entre el pardo y el color de la dosis
+        /// (<see cref="FireflyLightAt"/>), en el espacio del shader (lineal en el proyecto Linear); si no, el color de la dosis.
+        /// </summary>
+        public Color PaintedColorAt(int k, float depth)
+        {
+            if ((uint)k >= (uint)_capacity)
+            {
+                return Color.clear;
+            }
+
+            Color c = _color[k];
+            if (_look[k] != MurkyLook.Turn)
+            {
+                return c;
+            }
+
+            float on = FireflyLightAt(_lookProgress[k], depth);
+            Color m = Palette.Murky;
+            if (QualitySettings.activeColorSpace != ColorSpace.Linear)
+            {
+                return new Color(Mathf.Lerp(m.r, c.r, on), Mathf.Lerp(m.g, c.g, on), Mathf.Lerp(m.b, c.b, on), c.a);
+            }
+
+            return new Color(MixLinear(m.r, c.r, on), MixLinear(m.g, c.g, on), MixLinear(m.b, c.b, on), c.a);
+        }
+
         /// <summary>
         /// Opacidad (0..1) del «?» que pinta el shader en una banda turbia con <paramref name="look"/> y
-        /// <paramref name="progress"/>: el mismo cálculo que <c>AF_UI_Liquid.shader</c> («fade»). Quieta, 1; al disolverse
-        /// por la regla, 1 − smoothstep(<see cref="MarkFadeFrom"/>, <see cref="MarkFadeTo"/>, avance); al girar con la
-        /// Luciérnaga, 1 hasta quedar de canto (lo que se ve lo estrecha el giro); 0 en una dosis normal.
+        /// <paramref name="progress"/>, sin contar el hueco de su banda (<see cref="GlyphFade"/>): el mismo cálculo que
+        /// <c>AF_UI_Liquid.shader</c> («fade»). Quieta, 1; al disolverse por la regla, 1 − smoothstep(<see cref="MarkFadeFrom"/>,
+        /// <see cref="MarkFadeTo"/>, avance); con la Luciérnaga, 1 hasta que queda de canto (<see cref="FireflyTurnAt"/>; lo que
+        /// se ve lo estrecha el giro); 0 en una dosis normal.
         /// </summary>
         public static float MurkyMarkOpacity(MurkyLook look, float progress)
         {
@@ -343,7 +499,7 @@ namespace AF.Presentation
                 case MurkyLook.Dissolve:
                     return 1f - SmoothStep(MarkFadeFrom, MarkFadeTo, progress);
                 case MurkyLook.Turn:
-                    return progress < 0.999f ? 1f : 0f;
+                    return FireflyTurnAt(progress) < 0.999f ? 1f : 0f;
                 default:
                     return 0f;
             }
@@ -352,9 +508,19 @@ namespace AF.Presentation
         /// <summary>
         /// Opacidad de la trama diagonal (hacia la tinta) en una banda con <paramref name="look"/> y <paramref name="progress"/>:
         /// el mismo cálculo que <c>AF_UI_Liquid.shader</c> («hatch»). Quieta, <see cref="MurkyHatchOpacity"/>; al disolverse,
-        /// baja a 0 entre <see cref="HatchFadeFrom"/> y <see cref="HatchFadeTo"/>; al girar, entre 0,3 y 1; 0 en una dosis normal.
+        /// baja a 0 entre <see cref="HatchFadeFrom"/> y <see cref="HatchFadeTo"/>; con la Luciérnaga, la que queda al fondo de la
+        /// banda, lo último que se lleva el frente (<see cref="MurkyHatchAt"/> a profundidad 1); 0 en una dosis normal.
         /// </summary>
         public static float MurkyHatchAmount(MurkyLook look, float progress)
+        {
+            return MurkyHatchAt(look, progress, 1f);
+        }
+
+        /// <summary>
+        /// Opacidad de la trama a la profundidad <paramref name="depth"/> de la banda (0 arriba, 1 abajo): con la Luciérnaga,
+        /// solo bajo el frente de luz (<see cref="FireflyLightAt"/>); en los demás modos no depende de la profundidad.
+        /// </summary>
+        public static float MurkyHatchAt(MurkyLook look, float progress, float depth)
         {
             switch (look)
             {
@@ -363,7 +529,7 @@ namespace AF.Presentation
                 case MurkyLook.Dissolve:
                     return MurkyHatchOpacity * (1f - SmoothStep(HatchFadeFrom, HatchFadeTo, progress));
                 case MurkyLook.Turn:
-                    return MurkyHatchOpacity * (1f - SmoothStep(0.3f, 1f, progress));
+                    return MurkyHatchOpacity * (1f - FireflyLightAt(progress, depth));
                 default:
                     return 0f;
             }
@@ -371,9 +537,9 @@ namespace AF.Presentation
 
         /// <summary>
         /// Peso (0..1) del patrón, la franja y el menisco propios de la fruta en una banda con <paramref name="look"/> y
-        /// <paramref name="progress"/> (el mismo cálculo que el shader): 1 en una dosis normal; al disolverse por la
-        /// regla, sube entre <see cref="FruitPatternFrom"/> y 1 (con 1, la banda es la dosis normal de esa fruta); 0 oculta o
-        /// girando.
+        /// <paramref name="progress"/> (el mismo cálculo que el shader): 1 en una dosis normal; al disolverse por la regla,
+        /// sube entre <see cref="FruitPatternFrom"/> y 1; con la Luciérnaga, entre <see cref="FireflyPatternFrom"/> y
+        /// <see cref="FireflyPatternTo"/> (con 1, la banda es la dosis normal de esa fruta); 0 oculta.
         /// </summary>
         public static float FruitPatternWeight(MurkyLook look, float progress)
         {
@@ -383,13 +549,85 @@ namespace AF.Presentation
                     return 1f;
                 case MurkyLook.Dissolve:
                     return SmoothStep(FruitPatternFrom, 1f, progress);
+                case MurkyLook.Turn:
+                    return SmoothStep(FireflyPatternFrom, FireflyPatternTo, progress);
                 default:
                     return 0f;
             }
         }
 
         /// <summary>
-        /// Valor de <c>TEXCOORD3.a</c> de una banda que se disuelve hacia la fruta <paramref name="tint"/>: su fila del atlas
+        /// Luciérnaga: profundidad del centro del frente de luz en una banda con avance <paramref name="progress"/> (0 arriba
+        /// de la banda, 1 abajo; espejo del shader): baja de −<see cref="FireflyEdgeU"/>/2 a 1 + <see cref="FireflyEdgeU"/>/2
+        /// mientras el avance va de 0 a <see cref="FireflyFrontSpan"/>, así que el borde entra y sale entero.
+        /// </summary>
+        public static float FireflyFrontDepth(float progress)
+        {
+            float half = 0.5f * FireflyEdgeU;
+            return Mathf.Lerp(-half, 1f + half, Mathf.Clamp01(progress / FireflyFrontSpan));
+        }
+
+        /// <summary>
+        /// Luciérnaga: cuánto ha aclarado el frente la profundidad <paramref name="depth"/> de la banda (1 encima del frente:
+        /// el color de la dosis; 0 debajo: el pardo; espejo del shader, «lightOn»).
+        /// </summary>
+        public static float FireflyLightAt(float progress, float depth)
+        {
+            float half = 0.5f * FireflyEdgeU;
+            float front = FireflyFrontDepth(progress);
+            return 1f - SmoothStep(front - half, front + half, depth);
+        }
+
+        /// <summary>
+        /// Luciérnaga: giro del «?» (0 de frente, 1 de canto) con el frente en <see cref="FireflyFrontDepth"/>: empieza en
+        /// <see cref="FireflyTurnFrom"/> (lo alto del «?») y queda de canto en <see cref="FireflyTurnTo"/> (su centro).
+        /// </summary>
+        public static float FireflyTurnAt(float progress)
+        {
+            return Mathf.Clamp01((FireflyFrontDepth(progress) - FireflyTurnFrom) / (FireflyTurnTo - FireflyTurnFrom));
+        }
+
+        /// <summary>
+        /// Alto (u de pantalla) del «?» de una banda con <paramref name="roomU"/> de hueco en su columna:
+        /// <see cref="GlyphRoomRatio"/> del hueco, entre <see cref="GlyphMinU"/> y <see cref="GlyphMaxU"/> (espejo del shader).
+        /// </summary>
+        public static float GlyphSizeU(float roomU)
+        {
+            return Mathf.Clamp(GlyphRoomRatio * roomU, GlyphMinU, GlyphMaxU);
+        }
+
+        /// <summary>
+        /// Visibilidad (0..1) del «?» por el hueco de su banda (espejo del shader): 0 si no cabe uno de
+        /// <see cref="GlyphMinU"/> (hueco ≤ <see cref="GlyphFadeFrom"/>) y 1 desde <see cref="GlyphFadeTo"/>; entre medias se
+        /// funde, así que al inclinarse la cuia el «?» se apaga sin saltos y solo queda la trama.
+        /// </summary>
+        public static float GlyphFade(float roomU)
+        {
+            return SmoothStep(GlyphFadeFrom, GlyphFadeTo, roomU);
+        }
+
+        /// <summary>
+        /// Código del sitio del «?» que va sobre el alto de la cuia en <c>TEXCOORD0.w</c> (ver <see cref="GlyphPackScale"/>):
+        /// centro en u de capa desde el fondo de la dosis y hueco en u de pantalla, cuantizados.
+        /// </summary>
+        public static int PackGlyph(float centerLayerU, float roomU)
+        {
+            int c = Mathf.Clamp(Mathf.RoundToInt((centerLayerU + GlyphCenterOffset) * GlyphCenterPerU), 0, (int)GlyphCenterSteps - 1);
+            int r = Mathf.Clamp(Mathf.RoundToInt(roomU * GlyphRoomPerU), 0, 63);
+            return c + ((int)GlyphCenterSteps * r);
+        }
+
+        /// <summary>Decodifica <see cref="PackGlyph"/> como el shader: centro (u de capa desde el fondo de la dosis) y hueco (u).</summary>
+        public static void UnpackGlyph(int code, out float centerLayerU, out float roomU)
+        {
+            int r = code / (int)GlyphCenterSteps;
+            int c = code - ((int)GlyphCenterSteps * r);
+            centerLayerU = (c / GlyphCenterPerU) - GlyphCenterOffset;
+            roomU = r / GlyphRoomPerU;
+        }
+
+        /// <summary>
+        /// Valor de <c>TEXCOORD3.a</c> de una banda que se revela hacia la fruta <paramref name="tint"/>: su fila del atlas
         /// (0, vacía, si no tiene patrón: Guanábana, agua base o Barro) + 0,5 si sus marcas van en marfil
         /// (<see cref="Palette.PatternBase"/>). El shader lo decodifica con <c>floor(a + 0,25)</c>.
         /// </summary>
@@ -404,8 +642,9 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// El shader dibuja el «?» de la dosis <paramref name="k"/>: turbia y sin haber terminado de disolverse (opacidad
-        /// <see cref="MurkyMarkOpacity"/> por encima de 0,001) o de girar.
+        /// El shader dibuja el «?» de la dosis <paramref name="k"/>: turbia, sin haber terminado de disolverse (opacidad
+        /// <see cref="MurkyMarkOpacity"/> por encima de 0,001) o de girar, y con hueco para él en su banda (<see cref="GlyphFade"/>
+        /// del hueco cuantizado que lleva la malla). Sin asignaciones.
         /// </summary>
         public bool MurkyMarkDrawn(int k)
         {
@@ -414,7 +653,52 @@ namespace AF.Presentation
                 return false;
             }
 
-            return MurkyMarkOpacity(_look[k], _lookProgress[k]) > 0.001f;
+            if (MurkyMarkOpacity(_look[k], _lookProgress[k]) <= 0.001f)
+            {
+                return false;
+            }
+
+            return MurkyGlyphPlacement(k, out _, out _, out _, out float room) && GlyphFade(room) > 0.001f;
+        }
+
+        /// <summary>
+        /// Sitio del «?» de la banda turbia <paramref name="k"/> tal como lo pinta el shader (con la inclinación de ahora):
+        /// centro en coordenadas de la cuia (X = x − 1 e y, u), alto en pantalla (<see cref="GlyphSizeU"/>) y hueco libre en su
+        /// columna, ya cuantizado como lo lleva la malla. En reposo, centrado en la cuia a media banda entre sus arcos (07
+        /// §4.3: 0,5 u); inclinada, en la columna de la cuña con más hueco que quede más cerca del centro de la cuerda y a media
+        /// altura entre el vidrio (o la banda de debajo) y la de encima o la superficie, así que el punto del «?» no toca el
+        /// vidrio. False si la dosis no es turbia o no tiene banda. Sin asignaciones.
+        /// </summary>
+        public bool MurkyGlyphPlacement(int k, out float centerX, out float centerY, out float sizeU, out float roomU)
+        {
+            centerX = 0f;
+            centerY = 0f;
+            sizeU = 0f;
+            roomU = 0f;
+            if ((uint)k >= (uint)_capacity || _look[k] == MurkyLook.None)
+            {
+                return false;
+            }
+
+            int top = ComputeLevels();
+            if (top < k || _fill[k] <= 0.001f || _levels[k + 1] - _levels[k] < 1e-5f)
+            {
+                return false;
+            }
+
+            float lo = _levels[k];
+            float hi = _levels[k + 1];
+            float rad = _angle * Mathf.Deg2Rad;
+            float sn = Mathf.Sin(rad);
+            float cs = Mathf.Cos(rad);
+            PlaceGlyph(k, lo, hi, _fill[k], sn, cs, out float e, out float d, out float room);
+            float scale = _fill[k] / Mathf.Max(1e-5f, hi - lo);
+            UnpackGlyph(PackGlyph((d - lo) * scale, room), out float centerLayer, out roomU);
+            float dq = lo + (centerLayer / Mathf.Max(1e-5f, scale)); // el centro cuantizado, como lo decodifica el shader
+            centerX = (e * cs) + (dq * sn);
+            centerY = (dq * cs) - (e * sn);
+            sizeU = GlyphSizeU(roomU);
+            return true;
         }
 
         /// <summary>Valor de <c>TEXCOORD2.w</c> − 4 · dosis de una banda turbia con <paramref name="look"/> y <paramref name="progress"/>.</summary>
@@ -652,15 +936,7 @@ namespace AF.Presentation
         protected override void OnPopulateMesh(VertexHelper vh)
         {
             vh.Clear();
-            int top = -1;
-            for (int k = 0; k < _capacity; k++)
-            {
-                if (_fill[k] > 0.001f && _color[k].a > 0.001f)
-                {
-                    top = k;
-                }
-            }
-
+            int top = ComputeLevels();
             if (_unit <= 0f || _capacity <= 0 || top < 0)
             {
                 return;
@@ -669,29 +945,17 @@ namespace AF.Presentation
             float heightU = CuiaGeometry.HeightU(_capacity);
             float bottomU = CuiaGeometry.CavityBottomU;
             float amp = RippleAmplitude();
-            float width = 2f * CuiaGeometry.CavityHalfWidthU;
             bool tilted = Mathf.Abs(_angle) > 0.01f;
             float surface = bottomU + top + _fill[top];
             int topTint = _tint[top];
             float lighten = topTint > 0 ? Palette.MeniscusLighten(topTint) : 0.20f;
-            if (_look[top] == MurkyLook.Dissolve)
+            if (_look[top] == MurkyLook.Dissolve || _look[top] == MurkyLook.Turn)
             {
-                lighten = Mathf.Lerp(0.20f, lighten, FruitPatternWeight(MurkyLook.Dissolve, _lookProgress[top])); // el de su fruta entra con su patrón
+                lighten = Mathf.Lerp(0.20f, lighten, FruitPatternWeight(_look[top], _lookProgress[top])); // el de su fruta entra con su patrón
             }
 
             Color men = ColorMath.Lighten(_color[top], lighten);
             Vector3 menS = ColorMath.ToShaderSpace(men);
-
-            // Fronteras por volumen (forma normal, ver LineOffset): _levels[k] es la línea bajo la dosis k (k = 0, el fondo)
-            // y _levels[k + 1] la de encima. Sin inclinar son alturas: bottom + suma de rellenos.
-            float volume = 0f;
-            _levels[0] = tilted ? LevelForVolume(0f, _angle, _capacity) : bottomU;
-            for (int k = 0; k <= top; k++)
-            {
-                volume += _fill[k] * width;
-                _levels[k + 1] = tilted ? LevelForVolume(volume, _angle, _capacity) : _levels[k] + _fill[k];
-            }
-
             for (int k = 0; k <= top; k++)
             {
                 float fill = _fill[k];
@@ -711,11 +975,11 @@ namespace AF.Presentation
                 int tint = _tint[k];
                 Color lit = tint > 0 ? Palette.LiquidHighlight(tint, c) : ColorMath.AddLabLightness(c, 10f);
                 bool murky = _look[k] != MurkyLook.None;
-                bool dissolving = _look[k] == MurkyLook.Dissolve;
-                if (dissolving && tint > 0)
+                bool revealing = _look[k] == MurkyLook.Dissolve || _look[k] == MurkyLook.Turn;
+                if (revealing && tint > 0)
                 {
-                    // La franja de la fruta que se revela entra con su patrón: al final del Dissolve es la de su dosis normal.
-                    lit = Color.Lerp(ColorMath.AddLabLightness(c, 10f), lit, FruitPatternWeight(MurkyLook.Dissolve, _lookProgress[k]));
+                    // La franja de la fruta que se revela entra con su patrón: al final del revelado es la de su dosis normal.
+                    lit = Color.Lerp(ColorMath.AddLabLightness(c, 10f), lit, FruitPatternWeight(_look[k], _lookProgress[k]));
                 }
 
                 Vector3 litS = ColorMath.ToShaderSpace(lit);
@@ -723,10 +987,10 @@ namespace AF.Presentation
                 float row = tint;
                 if (murky)
                 {
-                    // Oculta o girando, la fila turbia (nada de su fruta); al disolverse, la de la fruta que se revela (su
-                    // patrón entra en el shader cuando ya se fue la trama, que el shader lee de _MurkyRow).
+                    // Oculta, la fila turbia (nada de su fruta); al revelarse, la de la fruta que se revela (su patrón entra
+                    // en el shader cuando ya se fue la trama, que el shader lee de _MurkyRow).
                     pattern = MurkyPattern(_look[k], _lookProgress[k]);
-                    row = dissolving ? FruitRowCode(tint) : ProceduralArt.MurkyPatternRow;
+                    row = revealing ? FruitRowCode(tint) : ProceduralArt.MurkyPatternRow;
                 }
                 else if (ProceduralArt.HasPattern(tint))
                 {
@@ -741,7 +1005,7 @@ namespace AF.Presentation
                 // su frontera en arco (en d, con la escala de la banda).
                 float hiMesh = k == top ? hi + (TopExtraU * (hi - lo) / fill) : hi;
                 float loMesh = lo - (BottomExtraU * (hi - lo) / fill);
-                AddBand(vh, lo, hi, loMesh, hiMesh, bottomU + k, fill, heightU, c, uv1, uv2, uv3, murky);
+                AddBand(vh, k, lo, hi, loMesh, hiMesh, bottomU + k, fill, heightU, c, uv1, uv2, uv3, murky);
             }
 
             if (tilted && _tongue > 0.01f)
@@ -750,14 +1014,46 @@ namespace AF.Presentation
             }
         }
 
+        // Fronteras por volumen (forma normal, ver LineOffset): _levels[k] es la línea bajo la dosis k (k = 0, el fondo) y
+        // _levels[k + 1] la de encima. Sin inclinar son alturas: bottom + suma de rellenos. Devuelve la dosis de arriba con
+        // líquido (−1 si no hay). Sin asignaciones.
+        private int ComputeLevels()
+        {
+            int top = -1;
+            for (int k = 0; k < _capacity; k++)
+            {
+                if (_fill[k] > 0.001f && _color[k].a > 0.001f)
+                {
+                    top = k;
+                }
+            }
+
+            if (top < 0)
+            {
+                return -1;
+            }
+
+            float bottomU = CuiaGeometry.CavityBottomU;
+            float width = 2f * CuiaGeometry.CavityHalfWidthU;
+            bool tilted = Mathf.Abs(_angle) > 0.01f;
+            float volume = 0f;
+            _levels[0] = tilted ? LevelForVolume(0f, _angle, _capacity) : bottomU;
+            for (int k = 0; k <= top; k++)
+            {
+                volume += _fill[k] * width;
+                _levels[k + 1] = tilted ? LevelForVolume(volume, _angle, _capacity) : _levels[k] + _fill[k];
+            }
+
+            return top;
+        }
+
         // Banda entre las líneas loMesh y hiMesh (forma normal): el rectángulo de la cavidad [−w, w] × [fondo en el eje,
         // labio] recortado por los dos semiplanos (≤ 6 vértices, convexo) y dibujado en abanico. El shader recorta luego a
         // la silueta interior (con el fondo en arco) y a la frontera en arco. La y de capa es afín en d: fondo de la dosis +
-        // relleno · (d − lo) / (hi − lo). En una banda turbia, uv1.w de cada vértice es la x de la «?» (ver la clase): la
-        // coordenada horizontal de pantalla e = X · cos θ − y · sen θ, relativa al centro de la cuerda de la banda a media
-        // altura y con la escala de la banda (u de capa por u de pantalla), así que es afín y se interpola exacta. Sin
-        // asignaciones.
-        private void AddBand(VertexHelper vh, float lo, float hi, float loMesh, float hiMesh, float doseBottom, float fill, float heightU, Color c, Vector4 uv1, Vector4 uv2, Vector4 uv3, bool murky)
+        // relleno · (d − lo) / (hi − lo). En una banda turbia, uv1.w de cada vértice es la x del «?» en pantalla (u, desde su
+        // centro: e = X · cos θ − y · sen θ menos la del centro, PlaceGlyph), que es afín y se interpola exacta, y el alto de
+        // la cuia lleva encima el centro y el hueco del «?» (PackGlyph). Sin asignaciones.
+        private void AddBand(VertexHelper vh, int k, float lo, float hi, float loMesh, float hiMesh, float doseBottom, float fill, float heightU, Color c, Vector4 uv1, Vector4 uv2, Vector4 uv3, bool murky)
         {
             float w = CuiaGeometry.CavityHalfWidthU;
             float yMin = CuiaGeometry.CavityFloorU(0f);
@@ -777,7 +1073,14 @@ namespace AF.Presentation
             float rad = _angle * Mathf.Deg2Rad;
             float sn = Mathf.Sin(rad);
             float cs = Mathf.Cos(rad);
-            float chord = murky ? ChordCenter(0.5f * (lo + hi), sn, cs) : 0f;
+            float glyphE = 0f;
+            float height = heightU;
+            if (murky)
+            {
+                PlaceGlyph(k, lo, hi, fill, sn, cs, out glyphE, out float glyphD, out float room);
+                height = heightU + (GlyphPackScale * PackGlyph((glyphD - lo) * scale, room));
+            }
+
             Color32 vc = c;
             int i0 = vh.currentVertCount;
             for (int i = 0; i < n; i++)
@@ -786,10 +1089,10 @@ namespace AF.Presentation
                 float d = LineOffset(p.x, p.y, _angle);
                 if (murky)
                 {
-                    uv1.w = scale * (((p.x * cs) - (p.y * sn)) - chord);
+                    uv1.w = ((p.x * cs) - (p.y * sn)) - glyphE;
                 }
 
-                AddVert(vh, p.x, p.y, doseBottom + ((d - lo) * scale), heightU, vc, uv1, uv2, uv3);
+                AddVert(vh, p.x, p.y, doseBottom + ((d - lo) * scale), height, vc, uv1, uv2, uv3);
             }
 
             for (int i = 1; i + 1 < n; i++)
@@ -798,22 +1101,169 @@ namespace AF.Presentation
             }
         }
 
+        // Sitio del «?» de la banda turbia k entre las líneas lo y hi (ver MurkyGlyphPlacement): columna e y centro d en pantalla
+        // (u, en la base girada de la cuia) y hueco libre en esa columna (u). En reposo, el eje y media banda entre los arcos
+        // (relleno − la flecha de 0,2 u) con todo el relleno de hueco. Inclinada, se mira cada columna de pantalla: el hueco va
+        // del vidrio (fondo en arco) o del arco de su frontera, en las dosis de encima, hasta el arco de la de encima o la
+        // cara superior; con el ancho del «?» (las columnas vecinas). Se queda la columna más cercana al centro de la cuerda
+        // (a media banda) entre las que pierden como mucho GlyphRoomTolerance del mejor hueco, interpolada en el borde, así que
+        // el «?» se mueve sin saltos al inclinarse. Sin asignaciones.
+        private void PlaceGlyph(int k, float lo, float hi, float fill, float sn, float cs, out float e, out float d, out float room)
+        {
+            if (Mathf.Abs(_angle) <= 0.01f)
+            {
+                e = 0f;
+                d = lo + (0.5f * fill) - CuiaGeometry.FaceSagU(0f);
+                room = fill;
+                return;
+            }
+
+            float scale = fill / Mathf.Max(1e-5f, hi - lo);
+            Vector2[] poly = Silhouette(_capacity);
+            float eMin = float.MaxValue;
+            float eMax = float.MinValue;
+            for (int i = 0; i < poly.Length; i++)
+            {
+                float ev = (poly[i].x * cs) - (poly[i].y * sn);
+                eMin = Mathf.Min(eMin, ev);
+                eMax = Mathf.Max(eMax, ev);
+            }
+
+            int count = Mathf.Clamp(Mathf.CeilToInt((eMax - eMin) / (0.5f * GlyphHalfWidthU)), 2, GlyphColumns);
+            float step = (eMax - eMin) / count;
+            int reach = Mathf.Max(1, Mathf.CeilToInt(GlyphHalfWidthU / step));
+            for (int j = 0; j <= count; j++)
+            {
+                ColumnRange(poly, k, lo, hi, scale, eMin + (j * step), sn, cs, out s_columnBottom[j], out s_columnTop[j]);
+            }
+
+            float best = float.MinValue;
+            for (int j = 0; j <= count; j++)
+            {
+                best = Mathf.Max(best, GridRoom(j, count, reach, out _));
+            }
+
+            float wanted = best - GlyphRoomTolerance;
+            float chord = ChordCenter(poly, 0.5f * (lo + hi), sn, cs);
+            e = chord;
+            if (RoomAt(poly, k, lo, hi, scale, chord, sn, cs, out _) < wanted)
+            {
+                int pick = -1;
+                float pickDistance = float.MaxValue;
+                for (int j = 0; j <= count; j++)
+                {
+                    float distance = Mathf.Abs(eMin + (j * step) - chord);
+                    if (GridRoom(j, count, reach, out _) >= wanted && distance < pickDistance)
+                    {
+                        pick = j;
+                        pickDistance = distance;
+                    }
+                }
+
+                if (pick >= 0)
+                {
+                    float pickE = eMin + (pick * step);
+                    e = pickE;
+                    int toward = pickE < chord ? pick + 1 : pick - 1;
+                    if (toward >= 0 && toward <= count)
+                    {
+                        // Hacia el centro de la cuerda hasta donde el hueco deja de bastar (interpolado: sin saltos de columna).
+                        float r0 = GridRoom(pick, count, reach, out _);
+                        float r1 = GridRoom(toward, count, reach, out _);
+                        float f = r0 - r1 > 1e-6f ? Mathf.Clamp01((r0 - wanted) / (r0 - r1)) : 0f;
+                        e = Mathf.Lerp(pickE, eMin + (toward * step), f);
+                        e = pickE < chord ? Mathf.Min(e, chord) : Mathf.Max(e, chord);
+                    }
+                }
+            }
+
+            room = Mathf.Max(0f, RoomAt(poly, k, lo, hi, scale, e, sn, cs, out d));
+        }
+
+        // Hueco de la columna j de la rejilla con sus vecinas a ±reach (el ancho del «?»): lo más bajo de los techos menos lo
+        // más alto de los suelos; center, su mitad.
+        private static float GridRoom(int j, int count, int reach, out float center)
+        {
+            float bottom = float.MinValue;
+            float top = float.MaxValue;
+            for (int i = Mathf.Max(0, j - reach); i <= Mathf.Min(count, j + reach); i++)
+            {
+                bottom = Mathf.Max(bottom, s_columnBottom[i]);
+                top = Mathf.Min(top, s_columnTop[i]);
+            }
+
+            center = 0.5f * (bottom + top);
+            return top - bottom;
+        }
+
+        // Hueco (u) en la columna e con el ancho del «?» (e ± GlyphHalfWidthU) y su centro d.
+        private static float RoomAt(Vector2[] poly, int k, float lo, float hi, float scale, float e, float sn, float cs, out float center)
+        {
+            float bottom = float.MinValue;
+            float top = float.MaxValue;
+            for (int s = -1; s <= 1; s++)
+            {
+                ColumnRange(poly, k, lo, hi, scale, e + (s * GlyphHalfWidthU), sn, cs, out float b, out float t);
+                bottom = Mathf.Max(bottom, b);
+                top = Mathf.Min(top, t);
+            }
+
+            center = 0.5f * (bottom + top);
+            return top - bottom;
+        }
+
+        // Parte visible de la banda k en la columna de pantalla e (d, u): desde el vidrio (con el fondo en arco, que la silueta
+        // tiene plano) o, en las dosis de encima, desde el arco de su frontera, hasta el arco de la de encima o la cara
+        // superior. Fuera de la silueta, vacía.
+        private static void ColumnRange(Vector2[] poly, int k, float lo, float hi, float scale, float e, float sn, float cs, out float bottom, out float top)
+        {
+            int n = poly.Length;
+            float dMin = float.MaxValue;
+            float dMax = float.MinValue;
+            float xAtMin = 0f;
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 p = poly[i];
+                Vector2 q = poly[(i + 1) % n];
+                float fp = (p.x * cs) - (p.y * sn) - e;
+                float fq = (q.x * cs) - (q.y * sn) - e;
+                if ((fp <= 0f && fq > 0f) || (fp > 0f && fq <= 0f))
+                {
+                    Vector2 r = p + ((q - p) * (fp / (fp - fq)));
+                    float dr = (r.x * sn) + (r.y * cs);
+                    if (dr < dMin)
+                    {
+                        dMin = dr;
+                        xAtMin = r.x;
+                    }
+
+                    dMax = Mathf.Max(dMax, dr);
+                }
+            }
+
+            if (dMin > dMax)
+            {
+                bottom = float.MaxValue;
+                top = float.MinValue;
+                return;
+            }
+
+            float glass = dMin - (CuiaGeometry.FaceSagU(xAtMin) * Mathf.Max(0f, cs));
+            float invScale = 1f / Mathf.Max(1e-5f, scale);
+            bottom = k == 0 ? glass : Mathf.Max(lo - (CuiaGeometry.FaceSagU((e * cs) + (lo * sn)) * invScale), glass);
+            top = Mathf.Min(hi - (CuiaGeometry.FaceSagU((e * cs) + (hi * sn)) * invScale), dMax);
+        }
+
         /// <summary>
         /// Centro, en la coordenada horizontal de pantalla <c>e = X · cos θ − y · sen θ</c> (u; sin inclinar, <c>e = X</c>), de
         /// la cuerda que la línea horizontal <c>d</c> (ver <see cref="LineOffset"/>) corta en la silueta interior de una cuia de
-        /// <paramref name="capacity"/> dosis girada <paramref name="angleDeg"/> grados. Es donde se centra la «?» de una banda
-        /// turbia (a media altura de la banda). 0 si la línea no corta la silueta. Sin asignaciones tras la primera llamada por
-        /// capacidad.
+        /// <paramref name="capacity"/> dosis girada <paramref name="angleDeg"/> grados. 0 si la línea no corta la silueta. Sin
+        /// asignaciones tras la primera llamada por capacidad.
         /// </summary>
         public static float ChordCenter(float d, float angleDeg, int capacity)
         {
             float rad = angleDeg * Mathf.Deg2Rad;
             return ChordCenter(Silhouette(capacity), d, Mathf.Sin(rad), Mathf.Cos(rad));
-        }
-
-        private float ChordCenter(float d, float sn, float cs)
-        {
-            return ChordCenter(Silhouette(_capacity), d, sn, cs);
         }
 
         private static float ChordCenter(Vector2[] poly, float d, float sn, float cs)
@@ -926,11 +1376,25 @@ namespace AF.Presentation
             }
         }
 
-        // xRel = x − 1 (u); yU = y local (u); layer = y de capa (u).
+        // xRel = x − 1 (u); yU = y local (u); layer = y de capa (u); heightU = alto de la cuia (y, en una banda turbia, el
+        // sitio de su «?» empaquetado encima).
         private void AddVert(VertexHelper vh, float xRel, float yU, float layer, float heightU, Color32 color, Vector4 uv1, Vector4 uv2, Vector4 uv3)
         {
             var pos = new Vector3(xRel * _unit, yU * _unit, 0f);
             vh.AddVert(pos, color, new Vector4(xRel + 1f, yU, layer, heightU), uv1, uv2, uv3, Vector3.back, new Vector4(1f, 0f, 0f, -1f));
+        }
+
+        // Un color del Palette (sRGB) en el espacio del shader, como vector: SetVector no lo convierte.
+        private static void SetShaderColor(Material mat, int id, Color c)
+        {
+            Vector3 s = ColorMath.ToShaderSpace(c);
+            mat.SetVector(id, new Vector4(s.x, s.y, s.z, 1f));
+        }
+
+        // Mezcla lineal de dos componentes sRGB (como la GPU en el proyecto Linear), de vuelta a sRGB.
+        private static float MixLinear(float a, float b, float t)
+        {
+            return ColorMath.ToSrgb(Mathf.Lerp(ColorMath.ToLinear(a), ColorMath.ToLinear(b), t));
         }
 
         // smoothstep de HLSL: 0 hasta a, 1 desde b y la cúbica de Hermite entre medias.

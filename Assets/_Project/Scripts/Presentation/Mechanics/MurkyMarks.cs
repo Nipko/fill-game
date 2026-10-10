@@ -19,18 +19,25 @@ namespace AF.Presentation.Mechanics
     /// [P]: una píldora gris parda de <see cref="ProceduralArt.MurkyBadgeDp"/> dp con los glifos «?», «×» y la cifra, centrada
     /// bajo el pie, sobre la cara de la repisa (guía 4.5). Cuelga del cuerpo (sube con la selección) y se oculta en vuelo.</para>
     /// <para><b>Revelado por la regla</b> (R7; b.2 y ficha de Magic Sort §3.1; <see cref="RevealRuleMs"/> = 1.200 ms × factor, por
-    /// debajo de los 1,5 s de b.2): como en Magic Sort, primero sale el color nuevo (la dosis pasa del pardo a su tinte entre
-    /// <see cref="RuleTintFrom"/> y <see cref="RuleTintFullAt"/>) y el «?» crece, ondula y se disuelve encima, con 3-4
-    /// destellos blancos de estrella (<see cref="IBoardFx.Sparkles"/>); sube una burbuja (<see cref="IBoardFx.Bubbles"/>; la
-    /// «boiada» del pirarucú). Así nunca se ve el pardo sin «?» (07 §3, fila Cacao). Fundido cruzado sin saltos (D-003): la
+    /// debajo de los 1,5 s de b.2): como en Magic Sort, primero sale el color nuevo (la dosis florece del pardo a su tinte en
+    /// OKLab y con ease-out, la misma floración que la intro (D-010; guion §10) y la curva de 02 §4.1, entre
+    /// <see cref="RuleTintFrom"/> y <see cref="RuleTintFullAt"/>) y el «?» crece, ondula, se blanquea y se disuelve encima, con
+    /// 3-4 destellos blancos de estrella (<see cref="IBoardFx.Sparkles"/>); sube una burbuja (<see cref="IBoardFx.Bubbles"/>;
+    /// la «boiada» del pirarucú). Así nunca se ve el pardo sin «?» (07 §3, fila Cacao). Fundido cruzado sin saltos (D-003): la
     /// trama se va mientras sale el tinte (≈ 0,10-0,30), entra el patrón de la fruta cuando ya no hay trama (≈ 0,35 hasta
     /// <see cref="RuleDissolveEndAt"/>, en el shader: <see cref="LiquidGraphic.FruitPatternWeight"/>) y la insignia baja en
     /// uno justo cuando el «?» termina de irse (<see cref="RuleMarkGoneAt"/>), con un pop de la cifra
     /// (<see cref="BadgePopScale"/> en <see cref="BadgePopMs"/>; sin él con Reducir movimiento). La cola lo despacha al origen
     /// cuando ya volvió a su ranura (T07).</para>
-    /// <para><b>Luciérnaga</b> (<see cref="RevealStyle.Firefly"/>, 04 §2.5; la usa T14): el pardo se aclara de arriba abajo en
-    /// <see cref="RevealFireflyMs"/> (la de abajo llega a su tinte justo al final) y cada «?» gira hasta quedar de canto y
-    /// muestra el icono de su fruta (<see cref="ProceduralArt.FruitFlight"/>), que gira de vuelta y se apaga.</para>
+    /// <para><b>Luciérnaga</b> (<see cref="RevealStyle.Firefly"/>, 04 §2.5: «su luz baja por el vidrio»; la usa T14): un frente
+    /// de luz recorre de arriba abajo las capas que se revelan, de la más alta a la más baja, hasta <see cref="FireflyFrontEnd"/>
+    /// del revelado (ease-in-out sinusoidal) y la de abajo termina justo a los <see cref="RevealFireflyMs"/> × factor. Encima
+    /// del frente, cada capa florece en OKLab del pardo a su tinte (lo calcula la CPU; el shader solo mezcla en el borde del
+    /// frente, <see cref="LiquidGraphic.FireflyLightAt"/>); cuando el frente pasa por su centro, su «?» queda de canto y gira de
+    /// vuelta el icono de su fruta (<see cref="ProceduralArt.FruitFlight"/>) sobre un disco marfil con filo de madera
+    /// (<see cref="ProceduralArt.MurkyFruitDisc"/>, ≥ 3:1 frente a cualquier tinte), que se apaga al final. Ya sin trama entra el
+    /// patrón de su fruta, y la capa sigue en <see cref="LiquidGraphic.MurkyLook.Turn"/> hasta el final de su ventana, cuando
+    /// ya es su dosis normal: pasa a pintarse normal sin que cambie nada en pantalla.</para>
     /// <para>Mientras anima (<see cref="IsAnimating"/>), <c>ShowContent</c> no llama a <see cref="Show"/> ni repinta las capas
     /// que se revelan; la cola termina el paso con <see cref="Snap"/> y el <c>ShowContent</c> final. Las imágenes se crean una
     /// vez al construir; los sprites de la insignia, la primera vez que hace falta (<see cref="Prewarm"/>). Sin asignaciones
@@ -38,7 +45,7 @@ namespace AF.Presentation.Mechanics
     /// </remarks>
     public sealed class MurkyMarks
     {
-        /// <summary>Alto del «?» marfil que pinta el shader, sin el halo (07 §4.3: 0,5 u).</summary>
+        /// <summary>Alto del «?» marfil que pinta el shader en reposo, sin el halo (07 §4.3: 0,5 u).</summary>
         public const float MarkU = ProceduralArt.QuestionGlyphU;
 
         /// <summary>
@@ -57,15 +64,15 @@ namespace AF.Presentation.Mechanics
         public const float RuleBubbleAt = 0.30f;
 
         /// <summary>
-        /// Por la regla, fracción del revelado en la que el pardo empieza a pasar al tinte (120 ms) [P]: antes de que el «?»
-        /// empiece a apagarse (≈ 0,19), para que se disuelva sobre el color nuevo (ficha de Magic Sort §3.1).
+        /// Por la regla, fracción del revelado en la que el pardo empieza a florecer hacia el tinte (120 ms) [P]: antes de que
+        /// el «?» empiece a apagarse (≈ 0,19), para que se disuelva sobre el color nuevo (ficha de Magic Sort §3.1).
         /// </summary>
         public const float RuleTintFrom = 0.10f;
 
         /// <summary>
-        /// Por la regla, fracción en la que la dosis ya tiene su tinte (480 ms; ease-in-out desde <see cref="RuleTintFrom"/>)
-        /// [P]: a mitad del apagado del «?» (≈ 0,33) va ya al 95 % y el «?» termina de irse (≈ 0,47) sobre el tinte, así que
-        /// nunca queda el pardo sin «?» (07 §3).
+        /// Por la regla, fracción en la que la dosis ya tiene su tinte (480 ms; floración OKLab con ease-out desde
+        /// <see cref="RuleTintFrom"/>, 02 §4.1) [P]: a mitad del apagado del «?» (≈ 0,33) va ya al 95 % y el «?» termina de
+        /// irse (≈ 0,47) sobre el tinte, así que nunca queda el pardo sin «?» (07 §3).
         /// </summary>
         public const float RuleTintFullAt = 0.40f;
 
@@ -92,11 +99,32 @@ namespace AF.Presentation.Mechanics
         /// <summary>Destellos de estrella por capa revelada por la regla (ficha de Magic Sort §3.1: 3 o 4).</summary>
         public const int SparklesPerLayer = 4;
 
-        /// <summary>Con la Luciérnaga, parte de la ventana de cada capa en la que su «?» gira hasta quedar de canto [P].</summary>
-        public const float FireflyTurnEnd = 0.35f;
+        /// <summary>
+        /// Con la Luciérnaga, fracción del revelado en la que el frente de luz sale por abajo de la capa más baja [P]: el resto
+        /// es la cola de esa capa (entra el patrón de su fruta y su icono se apaga).
+        /// </summary>
+        public const float FireflyFrontEnd = 0.65f;
+
+        /// <summary>
+        /// Con la Luciérnaga, profundidad del frente (fracción de la capa) a la que la capa ya floreció entera hasta su tinte
+        /// (OKLab, ease-out) [P]: desde ahí el frente baja nítido entre el tinte y el pardo.
+        /// </summary>
+        public const float FireflyBloomDepth = 0.4f;
+
+        /// <summary>
+        /// Con la Luciérnaga, profundidad del frente a la que el icono de la fruta ya giró de vuelta del todo (empieza con el «?»
+        /// de canto, <see cref="LiquidGraphic.FireflyTurnTo"/>) [P].
+        /// </summary>
+        public const float FireflyFlipTo = 0.75f;
+
+        /// <summary>Con la Luciérnaga, avance de la capa desde el que su icono se apaga (hasta el final de su ventana) [P].</summary>
+        public const float FireflyFruitFadeFrom = 0.85f;
 
         /// <summary>Con la Luciérnaga, lado del icono de fruta que aparece al girar el «?» (u) [P].</summary>
         public const float FireflyFruitU = 0.62f;
+
+        /// <summary>Con la Luciérnaga, diámetro del disco marfil bajo el icono (u; ≈ 18 dp con la cuia de 48 dp) [P].</summary>
+        public const float FireflyDiscU = 0.80f;
 
         /// <summary>Hueco entre el pie y el canto de arriba de la insignia (dp) [P].</summary>
         public const float BadgeGapDp = 1f;
@@ -112,8 +140,10 @@ namespace AF.Presentation.Mechanics
         private readonly Image _badgeTimes;
         private readonly Image _badgeDigit;
         private readonly Image[] _fruits;
+        private readonly Image[] _discs;
         private readonly Color[] _target;
         private readonly int[] _targetTint;
+        private readonly float[] _frontOut;
         private int _mask;
         private bool _inFlight;
         private bool _badgeReady;
@@ -139,8 +169,15 @@ namespace AF.Presentation.Mechanics
             _view = body.GetComponentInParent<CuiaView>(true); // la vista que la crea: su pie y sus efectos (IBoardFx)
             _root = OverlayParts.NewAnchor("MurkyMarks", body);
             _fruits = new Image[_capacity];
+            _discs = new Image[_capacity];
             _target = new Color[_capacity];
             _targetTint = new int[_capacity];
+            _frontOut = new float[_capacity];
+            for (int k = 0; k < _capacity; k++)
+            {
+                _discs[k] = OverlayParts.NewImage("MurkyFruitDisc" + k, _root, null, Color.white); // los discos antes: un lote, y los iconos encima
+            }
+
             for (int k = 0; k < _capacity; k++)
             {
                 _fruits[k] = OverlayParts.NewImage("MurkyFruit" + k, _root, null, Color.white);
@@ -200,15 +237,15 @@ namespace AF.Presentation.Mechanics
         public int LastBubbles { get; private set; }
 
         /// <summary>
-        /// El shader dibuja el «?» de la dosis <paramref name="k"/> (turbia y sin disolver del todo). Lo dibuja también con la
-        /// cuia en vuelo: va dentro de su banda.
+        /// El shader dibuja el «?» de la dosis <paramref name="k"/> (turbia, sin disolver del todo y con hueco en su banda). Lo
+        /// dibuja también con la cuia en vuelo: va dentro de su banda (y se apaga si la banda se queda sin hueco para él).
         /// </summary>
         public bool MarkVisible(int k)
         {
             return _liquid != null && _liquid.MurkyMarkDrawn(k);
         }
 
-        /// <summary>Icono de fruta de la dosis <paramref name="k"/> a la vista (revelado con la Luciérnaga).</summary>
+        /// <summary>Icono de fruta de la dosis <paramref name="k"/> a la vista (revelado con la Luciérnaga), con su disco.</summary>
         public bool FruitVisible(int k)
         {
             return (uint)k < (uint)_capacity && _fruits[k].gameObject.activeSelf;
@@ -218,6 +255,12 @@ namespace AF.Presentation.Mechanics
         public Image FruitImage(int k)
         {
             return _fruits[k];
+        }
+
+        /// <summary>Disco marfil bajo el icono de fruta de la dosis <paramref name="k"/> (tests y capturas).</summary>
+        public Image FruitDisc(int k)
+        {
+            return _discs[k];
         }
 
         /// <summary>Duración nominal (ms, sin factor de velocidad) del revelado <paramref name="style"/>.</summary>
@@ -276,7 +319,7 @@ namespace AF.Presentation.Mechanics
         /// Arranca el revelado de las capas <paramref name="layerMask"/> de <paramref name="shown"/> (el estado que muestra la
         /// cuia, con el tinte real de cada capa): las pinta turbias en este mismo fotograma y las lleva a su tinte (ver la
         /// clase). Devuelve la duración (ms) ya multiplicada por <paramref name="speedFactor"/>, o 0 si no hay capas que
-        /// revelar. Sin asignaciones.
+        /// revelar. Sin asignaciones (salvo la primera vez que se piden los sprites de las frutas o del disco).
         /// </summary>
         public float PlayReveal(LiquidGraphic liquid, int layerMask, RevealStyle style, Cuia shown, float speedFactor)
         {
@@ -302,7 +345,8 @@ namespace AF.Presentation.Mechanics
                 LastBubbles = 0;
             }
 
-            for (int k = 0; k < _capacity; k++)
+            int above = 0;
+            for (int k = _capacity - 1; k >= 0; k--)
             {
                 if (((layers >> k) & 1) == 0)
                 {
@@ -315,8 +359,16 @@ namespace AF.Presentation.Mechanics
                 _targetTint[k] = mud ? 0 : tint;
                 if (style == RevealStyle.Firefly)
                 {
+                    // El frente sale por abajo de esta capa (la above-ésima desde arriba, contándola) cuando su avance sinusoidal
+                    // llega a above / n: ahí empieza su cola.
+                    above++;
+                    float reached = (float)above / _animLayers;
+                    _frontOut[k] = FireflyFrontEnd * (Mathf.Acos(1f - (2f * reached)) / Mathf.PI);
                     Image fruit = _fruits[k];
                     fruit.sprite = _art.FruitFlight(mud ? 1 : tint);
+                    Image disc = _discs[k];
+                    disc.sprite = _art.MurkyFruitDisc;
+                    OverlayParts.Place(disc, 0f, MarkCenterU(k), FireflyDiscU, FireflyDiscU, _u);
                     OverlayParts.Place(fruit, 0f, MarkCenterU(k), FireflyFruitU, FireflyFruitU, _u);
                 }
             }
@@ -362,7 +414,7 @@ namespace AF.Presentation.Mechanics
             SetMask(0);
         }
 
-        /// <summary>Coloca la insignia bajo el pie y los iconos de fruta en su banda (u en dp).</summary>
+        /// <summary>Coloca la insignia bajo el pie y los iconos de fruta (con su disco) en su banda (u en dp).</summary>
         public void Layout(float u)
         {
             _u = u;
@@ -382,6 +434,7 @@ namespace AF.Presentation.Mechanics
 
             for (int k = 0; k < _capacity; k++)
             {
+                OverlayParts.Place(_discs[k], 0f, MarkCenterU(k), FireflyDiscU, FireflyDiscU, _u);
                 OverlayParts.Place(_fruits[k], 0f, MarkCenterU(k), FireflyFruitU, FireflyFruitU, _u);
             }
         }
@@ -397,6 +450,7 @@ namespace AF.Presentation.Mechanics
                 for (int k = 0; k < _capacity; k++)
                 {
                     OverlayParts.SetVisible(_fruits[k], false);
+                    OverlayParts.SetVisible(_discs[k], false);
                 }
             }
         }
@@ -419,11 +473,22 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // Centro del «?» de la dosis k (u desde el pie): a media banda entre sus arcos (la banda se ve del arco de abajo, a
-        // media cara superior bajo su nivel, al de arriba).
+        // Centro del «?» de la dosis k en reposo (u desde el pie): a media banda entre sus arcos (la banda se ve del arco de
+        // abajo, a media cara superior bajo su nivel, al de arriba).
         private static float MarkCenterU(int k)
         {
             return CuiaGeometry.CavityBottomU + k + 0.5f - (0.5f * CuiaGeometry.TopFaceU);
+        }
+
+        // Del pardo al tinte de la capa k con la floración OKLab (la de la intro, D-010), sin redondeos en los extremos.
+        private Color Bloom(int k, float amount)
+        {
+            if (amount <= 0f)
+            {
+                return Palette.Murky;
+            }
+
+            return amount >= 1f ? _target[k] : ColorMath.OkLabLerp(Palette.Murky, _target[k], amount);
         }
 
         // Fotograma t (0..1) del revelado (ver la clase).
@@ -440,12 +505,12 @@ namespace AF.Presentation.Mechanics
                 return;
             }
 
-            // Por la regla: el color pasa del pardo al tinte entre RuleTintFrom y RuleTintFullAt (ease-in-out) y el shader
-            // hace el fundido cruzado hasta RuleDissolveEndAt (la trama se va, el «?» se disuelve encima y entra el patrón de
-            // la fruta, con su franja y su menisco); después, la dosis normal, igual que el último fotograma del Dissolve. La
+            // Por la regla: el color florece del pardo al tinte entre RuleTintFrom y RuleTintFullAt (OKLab, ease-out) y el
+            // shader hace el fundido cruzado hasta RuleDissolveEndAt (la trama se va, el «?» se disuelve encima y entra el patrón
+            // de la fruta, con su franja y su menisco); después, la dosis normal, igual que el último fotograma del Dissolve. La
             // insignia baja cuando el «?» termina de irse (RuleMarkGoneAt).
             float dissolve = Mathf.Clamp01(t / RuleDissolveEndAt);
-            float e = Ease.InOut(Mathf.Clamp01((t - RuleTintFrom) / (RuleTintFullAt - RuleTintFrom)));
+            float e = Ease.Out(Mathf.Clamp01((t - RuleTintFrom) / (RuleTintFullAt - RuleTintFrom)));
             for (int k = 0; k < _capacity; k++)
             {
                 if (((_animMask >> k) & 1) == 0)
@@ -453,7 +518,7 @@ namespace AF.Presentation.Mechanics
                     continue;
                 }
 
-                Color c = Color.Lerp(Palette.Murky, _target[k], e);
+                Color c = Bloom(k, e);
                 if (t >= RuleDissolveEndAt)
                 {
                     _liquid.SetDose(k, c, 1f, _targetTint[k]);
@@ -482,15 +547,18 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // Luciérnaga: de arriba abajo. Cada capa empieza 0,4 / n después de la de encima y dura el resto (la última acaba en
-        // t = 1). En su ventana, el «?» gira de canto (hasta FireflyTurnEnd), el icono de su fruta gira de vuelta y se apaga al
-        // final, y el pardo se aclara hasta el tinte en toda la ventana: la de abajo lo alcanza justo a los 600 ms × factor.
+        // Luciérnaga: el frente recorre las n capas que se revelan, de la más alta a la más baja, hasta FireflyFrontEnd
+        // (ease-in-out sinusoidal). En la capa i (desde arriba), su avance p sube hasta FireflyFrontSpan mientras el frente la
+        // cruza y, en su cola (1 − FireflyFrontEnd del revelado desde que el frente sale por abajo), hasta 1; la de abajo acaba
+        // en t = 1. La capa florece en OKLab hasta su tinte mientras el frente baja (entera en FireflyBloomDepth), su «?» gira de
+        // canto cuando el frente pasa por su centro y el icono de su fruta, sobre su disco, gira de vuelta y se apaga al final.
+        // Sigue en Turn hasta p = 1 (todo entró: el patrón y la franja de la fruta) y entonces pasa a la dosis normal.
         private void ApplyFirefly(float t)
         {
             int n = Mathf.Max(1, _animLayers);
-            float stagger = n > 1 ? 0.4f / n : 0f;
-            float window = 1f - (stagger * (n - 1));
-            int above = 0;
+            float front = n * Ease.InOutSine(Mathf.Clamp01(t / FireflyFrontEnd));
+            float tail = Mathf.Max(1e-4f, 1f - FireflyFrontEnd);
+            int i = 0;
             for (int k = _capacity - 1; k >= 0; k--)
             {
                 if (((_animMask >> k) & 1) == 0)
@@ -498,33 +566,44 @@ namespace AF.Presentation.Mechanics
                     continue;
                 }
 
-                float local = Mathf.Clamp01((t - (stagger * above)) / window);
-                above++;
-                float turn = Mathf.Clamp01(local / FireflyTurnEnd);
-                Color c = Color.Lerp(Palette.Murky, _target[k], Ease.InOut(local));
-                if (turn >= 1f)
+                float pass = Mathf.Clamp01(front - i);
+                i++;
+                float rest = t > _frontOut[k] ? Mathf.Clamp01((t - _frontOut[k]) / tail) : 0f;
+                float p = t >= 1f ? 1f : (LiquidGraphic.FireflyFrontSpan * pass) + ((1f - LiquidGraphic.FireflyFrontSpan) * rest);
+                float depth = LiquidGraphic.FireflyFrontDepth(p);
+                if (p >= 1f)
                 {
-                    _liquid!.SetDose(k, c, 1f, _targetTint[k]);
+                    _liquid!.SetDose(k, _target[k], 1f, _targetTint[k]);
                     MarkGone(k);
                 }
                 else
                 {
-                    _liquid!.SetDose(k, c, 1f, 0, LiquidGraphic.MurkyLook.Turn, turn);
+                    Color c = Bloom(k, Ease.Out(Mathf.Clamp01(depth / FireflyBloomDepth)));
+                    _liquid!.SetDose(k, c, 1f, _targetTint[k], LiquidGraphic.MurkyLook.Turn, p);
+                    if (LiquidGraphic.MurkyMarkOpacity(LiquidGraphic.MurkyLook.Turn, p) <= 0f)
+                    {
+                        MarkGone(k); // el «?» ya está de canto: la insignia baja
+                    }
                 }
 
+                float flip = Mathf.Clamp01((depth - LiquidGraphic.FireflyTurnTo) / (FireflyFlipTo - LiquidGraphic.FireflyTurnTo));
+                bool show = !_inFlight && flip > 0f && p < 1f;
                 Image fruit = _fruits[k];
-                bool show = !_inFlight && local > FireflyTurnEnd && local < 1f;
+                Image disc = _discs[k];
                 OverlayParts.SetVisible(fruit, show);
+                OverlayParts.SetVisible(disc, show);
                 if (show)
                 {
-                    float flip = Mathf.Sin(0.5f * Mathf.PI * Mathf.Clamp01((local - FireflyTurnEnd) / 0.2f));
-                    Vector3 scale = new Vector3(Mathf.Max(0.001f, flip), 1f, 1f);
+                    var scale = new Vector3(Mathf.Max(0.001f, Mathf.Sin(0.5f * Mathf.PI * flip)), 1f, 1f);
                     if (fruit.rectTransform.localScale != scale)
                     {
                         fruit.rectTransform.localScale = scale;
+                        disc.rectTransform.localScale = scale;
                     }
 
-                    OverlayParts.SetColor(fruit, new Color(1f, 1f, 1f, 1f - Mathf.Clamp01((local - 0.8f) / 0.2f)));
+                    var tone = new Color(1f, 1f, 1f, 1f - Mathf.Clamp01((p - FireflyFruitFadeFrom) / (1f - FireflyFruitFadeFrom)));
+                    OverlayParts.SetColor(fruit, tone);
+                    OverlayParts.SetColor(disc, tone);
                 }
             }
         }
@@ -647,14 +726,18 @@ namespace AF.Presentation.Mechanics
             {
                 if (((done >> k) & 1) != 0)
                 {
-                    OverlayParts.SetVisible(_fruits[k], false);
                     Image fruit = _fruits[k];
+                    Image disc = _discs[k];
+                    OverlayParts.SetVisible(fruit, false);
+                    OverlayParts.SetVisible(disc, false);
                     if (fruit.rectTransform.localScale != Vector3.one)
                     {
                         fruit.rectTransform.localScale = Vector3.one;
+                        disc.rectTransform.localScale = Vector3.one;
                     }
 
                     OverlayParts.SetColor(fruit, Color.white);
+                    OverlayParts.SetColor(disc, Color.white);
                 }
             }
 

@@ -22,17 +22,21 @@ namespace AF.Tests.PlayMode
     /// Aguas turbias en el shader y su revelado (T15; 07 §4.3; 08 §5.1-§5.2; 02 §11 T3; 02 §4.2; propuesta de D-007 b.2; ficha
     /// de Magic Sort §3.1; 04 §2.5; D-010), con los niveles reales: el 100 (estreno, una cuia turbia con 2 dosis ocultas) y el
     /// 106 (una oculta bajo una fruta que se vierte). Las ocultas las pinta el shader del líquido (pardo, trama y «?», sin su
-    /// tinte) y la cuia muestra «?×n»; inclinada, la trama y el «?» se quedan en su banda; el revelado por la regla empieza
-    /// cuando el origen vuelve y dura 1.200 ms × factor con 3-4 destellos y una burbuja; la Luciérnaga aclara de arriba abajo
-    /// en 600 ms × factor; Marea y Volver a la orilla no vuelven a ocultar nada (I5); en la intro, todas a la vez en el primer
-    /// impacto. El revelado por la regla es un fundido cruzado sin saltos (la trama se va, el «?» se disuelve, entra el patrón
-    /// de la fruta y la insignia baja con un pop cuando el «?» termina de irse; D-003); cortado a medias (Marea, 02 §14) no
-    /// deja destellos ni burbujas tarde; y ni el revelado ni la malla turbia asignan memoria (08 §5.4). El reloj lo lleva el
-    /// test.
+    /// tinte) y la cuia muestra «?×n»; inclinada, la trama y el «?» (isótropo, de 0,30 u como mínimo o apagado) se quedan en su
+    /// banda; el revelado por la regla empieza cuando el origen vuelve y dura 1.200 ms × factor con 3-4 destellos y una
+    /// burbuja; la Luciérnaga baja su frente de luz de arriba abajo en 600 ms × factor, entre capas y dentro de cada capa;
+    /// Marea y Volver a la orilla no vuelven a ocultar nada (I5); en la intro, todas a la vez en el primer impacto (y ya
+    /// turbias en el fundido de Reducir movimiento). Los dos revelados son fundidos cruzados sin saltos (la trama se va, el «?»
+    /// se disuelve o gira, entra el patrón de la fruta y la insignia baja con un pop cuando el «?» se va; D-003); cortado a
+    /// medias (Marea, 02 §14) no deja destellos ni burbujas tarde; con Reducir movimiento, sin pop ni partículas (02 §12); y ni
+    /// el revelado, ni la malla turbia, ni la intro del 100 asignan memoria (08 §5.4; A10). El reloj lo lleva el test.
     /// </summary>
     public sealed class MurkyTests
     {
         private static readonly MethodInfo PopulateMesh = typeof(LiquidGraphic).GetMethod("OnPopulateMesh", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(VertexHelper) }, null)!;
+
+        // Profundidades de una banda (0 arriba, 1 abajo) en las que se mide lo que pinta el frente de la Luciérnaga.
+        private static readonly float[] Depths = { 0.1f, 0.3f, 0.5f, 0.7f, 0.9f };
 
         [TearDown]
         public void TearDown()
@@ -143,6 +147,8 @@ namespace AF.Tests.PlayMode
             MechanicTestKit.Tap(boot, path[path.Length - 1]);
             float maxTilt = 0f;
             int checkedFrames = 0;
+            int glyphFrames = 0;
+            float minGlyph = float.MaxValue;
             int t = 0;
             while (!boot.View.IsViewIdle)
             {
@@ -157,14 +163,29 @@ namespace AF.Tests.PlayMode
                 }
 
                 checkedFrames++;
+                string where = "t = " + t + " ms, " + tilt.ToString("F1") + "°";
                 Assert.That(source.Liquid.MurkyLookAt(hidden), Is.EqualTo(LiquidGraphic.MurkyLook.Hidden), "en vuelo, la oculta sigue turbia");
-                Assert.That(source.Murky.MarkVisible(hidden), Is.True, "la trama y el «?» se ven en vuelo (en su banda)");
                 Assert.That(source.Murky.BadgeVisible, Is.False, "la insignia se oculta en vuelo");
-                AssertMurkyBandUpright(source, hidden, tilt, "t = " + t + " ms, " + tilt.ToString("F1") + "°");
+                Assert.That(source.Liquid.MurkyGlyphPlacement(hidden, out float cx, out float cy, out float size, out float room), Is.True, where);
+                bool drawn = LiquidGraphic.GlyphFade(room) > 0.001f;
+                Assert.That(source.Murky.MarkVisible(hidden), Is.EqualTo(drawn), where + ": el «?» se ve si cabe uno de 0,30 u (si no, solo la trama)");
+                if (drawn)
+                {
+                    glyphFrames++;
+                    minGlyph = Mathf.Min(minGlyph, size);
+                    Assert.That(size, Is.GreaterThanOrEqualTo(LiquidGraphic.GlyphMinU - 1e-4f), where + ": «?» de 0,30 u como mínimo");
+                    Assert.That(size, Is.LessThanOrEqualTo(room + 1e-3f), where + ": el «?» cabe en el hueco de su columna");
+                    AssertGlyphInsideGlass(source, cx, cy, size, tilt, where);
+                }
+
+                AssertMurkyBandUpright(source, hidden, tilt, size, where);
             }
 
             Assert.That(maxTilt, Is.GreaterThan(30f), "el origen se inclinó al verter");
             Assert.That(checkedFrames, Is.GreaterThan(3), "fotogramas inclinados comprobados");
+            Assert.That(glyphFrames, Is.GreaterThan(0), "con el «?» a la vista en vuelo");
+            TestContext.WriteLine("Nivel 106 en vuelo: " + checkedFrames + " fotogramas inclinados, " + glyphFrames + " con «?» (el más pequeño, "
+                + minGlyph.ToString("F2") + " u); inclinación máxima " + maxTilt.ToString("F1") + "°.");
             MechanicTestKit.AssertViewMatchesModel(boot);
             Cuia now = boot.Flow.Session.Current[murky];
             Assert.That(source.Liquid.MurkyLookAt(hidden), Is.EqualTo(now.IsHiddenAt(hidden) ? LiquidGraphic.MurkyLook.Hidden : LiquidGraphic.MurkyLook.None), "de vuelta, como el modelo");
@@ -269,6 +290,33 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Reveal_RuleBloomsInOkLabWithEaseOut() // D-010 (guion §10: una sola floración OKLab); 02 §4.1 (ease-out)
+        {
+            yield return MechanicTestKit.LoadPlaying(100);
+            GameBootstrap boot = GameBootstrap.Current!;
+            int murky = MurkyCuia(boot);
+            CuiaView view = boot.View!.Views[murky];
+            Cuia cuia = boot.Flow!.Session.Current[murky];
+            int layer = Highest(cuia.HiddenMask);
+            Color target = Palette.Tint(cuia.ColorAt(layer));
+            view.PlayReveal(1 << layer, RevealStyle.Rule, 1f);
+            float span = MurkyMarks.RuleTintFullAt - MurkyMarks.RuleTintFrom;
+            for (int ms = 10; view.Murky.IsAnimating; ms += 10)
+            {
+                view.Tick(10f);
+                float t = ms / MurkyMarks.RevealRuleMs;
+                float e = Ease.Out(Mathf.Clamp01((t - MurkyMarks.RuleTintFrom) / span));
+                Color expected = e <= 0f ? Palette.Murky : (e >= 1f ? target : ColorMath.OkLabLerp(Palette.Murky, target, e));
+                if (view.Murky.IsAnimating)
+                {
+                    Assert.That(Distance(view.Liquid.DoseColorAt(layer), expected), Is.LessThan(1e-4f), "t = " + ms + " ms: floración OKLab con ease-out");
+                }
+            }
+
+            Assert.That(view.Liquid.DoseColorAt(layer), Is.EqualTo(target), "al terminar, su tinte exacto");
+        }
+
+        [UnityTest]
         public IEnumerator Reveal_FireflyStyleTopDown()
         {
             yield return MechanicTestKit.LoadPlaying(100);
@@ -290,6 +338,175 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Liquid.MurkyLookAt(bottomLayer), Is.EqualTo(LiquidGraphic.MurkyLook.None));
             Assert.That(Lighten(view, bottomLayer, cuia.ColorAt(bottomLayer)), Is.EqualTo(1f).Within(0.02f), "con su tinte");
             Assert.That(view.Murky.BadgeCount, Is.EqualTo(0), "sin «?» que contar");
+        }
+
+        [UnityTest]
+        public IEnumerator Reveal_FireflyFrontComesDownTheBand() // 04 §2.5: «su luz baja por el vidrio» (hallazgo 12)
+        {
+            yield return MechanicTestKit.LoadPlaying(100);
+            GameBootstrap boot = GameBootstrap.Current!;
+            int murky = MurkyCuia(boot);
+            CuiaView view = boot.View!.Views[murky];
+            Cuia cuia = boot.Flow!.Session.Current[murky];
+            int mask = cuia.HiddenMask;
+            view.PlayReveal(mask, RevealStyle.Firefly, 1f);
+
+            // Cuando el frente pasa por la mitad de cada capa, su mitad de arriba ya es de su color y la de abajo, aún parda.
+            int halfway = 0;
+            var seen = new HashSet<int>();
+            for (int ms = 0; view.Murky.IsAnimating && ms < 700; ms += 2)
+            {
+                view.Tick(2f);
+                for (int k = 0; k < cuia.Count; k++)
+                {
+                    if (((mask >> k) & 1) == 0 || seen.Contains(k) || view.Liquid.MurkyLookAt(k) != LiquidGraphic.MurkyLook.Turn)
+                    {
+                        continue;
+                    }
+
+                    float front = LiquidGraphic.FireflyFrontDepth(view.Liquid.MurkyProgressAt(k));
+                    if (front < 0.5f)
+                    {
+                        continue;
+                    }
+
+                    seen.Add(k);
+                    float upper = ColorMath.DeltaE00(view.Liquid.PaintedColorAt(k, 0.25f), Palette.Murky);
+                    float lower = ColorMath.DeltaE00(view.Liquid.PaintedColorAt(k, 0.75f), Palette.Murky);
+                    TestContext.WriteLine("Capa " + k + " con el frente a " + front.ToString("F2") + " (" + ms + " ms): mitad de arriba a ΔE00 "
+                        + upper.ToString("F1") + " del pardo y la de abajo a " + lower.ToString("F1") + ".");
+                    Assert.That(upper, Is.GreaterThanOrEqualTo(20f), "capa " + k + ": la mitad de arriba ya se aclaró");
+                    Assert.That(lower, Is.LessThanOrEqualTo(5f), "capa " + k + ": la de abajo sigue parda");
+                    Assert.That(LiquidGraphic.MurkyHatchAt(LiquidGraphic.MurkyLook.Turn, view.Liquid.MurkyProgressAt(k), 0.25f), Is.EqualTo(0f).Within(1e-4f), "sin trama encima del frente");
+                    Assert.That(LiquidGraphic.MurkyHatchAt(LiquidGraphic.MurkyLook.Turn, view.Liquid.MurkyProgressAt(k), 0.75f), Is.EqualTo(LiquidGraphic.MurkyHatchOpacity).Within(1e-4f), "con trama debajo");
+                    halfway++;
+                }
+            }
+
+            Assert.That(halfway, Is.EqualTo(2), "el frente pasó por la mitad de las 2 capas");
+            view.SnapMarks();
+        }
+
+        [UnityTest]
+        public IEnumerator Reveal_FireflyCrossfadeWithoutJumps() // D-003; 04 §2.5; 07 §3 y §4.3 (hallazgos 2, 9 y 13)
+        {
+            yield return MechanicTestKit.LoadPlaying(100);
+            GameBootstrap boot = GameBootstrap.Current!;
+            int murky = MurkyCuia(boot);
+            CuiaView view = boot.View!.Views[murky];
+            MurkyMarks marks = view.Murky;
+            Cuia cuia = boot.Flow!.Session.Current[murky];
+            int mask = cuia.HiddenMask;
+            ProceduralArt art = view.OverlayHost.Art;
+            Assert.That(CountBits(mask), Is.EqualTo(2));
+            Assert.That(view.PlayReveal(mask, RevealStyle.Firefly, 1f), Is.EqualTo(MurkyMarks.RevealFireflyMs).Within(1e-3f));
+
+            var prevHatch = new float[cuia.Capacity];
+            var prevFruit = new float[cuia.Capacity];
+            var prevLight = new float[cuia.Capacity];
+            var normalAt = new int[cuia.Capacity];
+            var lastTurn = new UIVertex[cuia.Capacity];
+            var lastTurnProgress = new float[cuia.Capacity];
+            for (int k = 0; k < cuia.Capacity; k++)
+            {
+                prevHatch[k] = LiquidGraphic.MurkyHatchOpacity;
+                normalAt[k] = -1;
+            }
+
+            int count = 2;
+            int drops = 0;
+            for (int ms = 10; marks.IsAnimating; ms += 10)
+            {
+                Assert.That(ms, Is.LessThanOrEqualTo(700), "termina a los 600 ms");
+                view.Tick(10f);
+                for (int k = 0; k < cuia.Count; k++)
+                {
+                    if (((mask >> k) & 1) == 0)
+                    {
+                        continue;
+                    }
+
+                    string at = "capa " + k + ", t = " + ms + " ms";
+                    int tint = cuia.ColorAt(k);
+                    LiquidGraphic.MurkyLook look = view.Liquid.MurkyLookAt(k);
+                    float p = view.Liquid.MurkyProgressAt(k);
+                    float hatch = LiquidGraphic.MurkyHatchAmount(look, p);
+                    float fruit = LiquidGraphic.FruitPatternWeight(look, p);
+                    float light = BandLight(view, k, tint);
+
+                    // Sigue en Turn hasta el final de su ventana y solo entonces pasa a la dosis normal (y ya no vuelve).
+                    if (normalAt[k] >= 0)
+                    {
+                        Assert.That(look, Is.EqualTo(LiquidGraphic.MurkyLook.None), at + ": ya normal, sigue normal");
+                    }
+                    else if (look == LiquidGraphic.MurkyLook.None)
+                    {
+                        normalAt[k] = ms;
+                        Assert.That(lastTurnProgress[k], Is.GreaterThan(LiquidGraphic.FireflyPatternTo), at + ": pasa a normal con todo a 1");
+                        Assert.That(LiquidGraphic.FireflyLightAt(lastTurnProgress[k], 1f), Is.EqualTo(1f).Within(1e-4f), at + ": el frente ya salió por abajo");
+                        Assert.That(LiquidGraphic.FruitPatternWeight(LiquidGraphic.MurkyLook.Turn, lastTurnProgress[k]), Is.EqualTo(1f).Within(1e-4f), at + ": el patrón ya entró");
+                        List<UIVertex> band = BandVertices(view, k);
+                        Assert.That(band.Count, Is.GreaterThanOrEqualTo(3), at + ": la dosis normal tiene malla");
+                        UIVertex first = band[0];
+                        float code = LiquidGraphic.FruitRowCode(tint);
+                        Assert.That(lastTurn[k].uv3.w, Is.EqualTo(code), at + ": con la Luciérnaga, la fila de su fruta (+ 0,5 si va en marfil)");
+                        Assert.That(first.uv3.w, Is.EqualTo((float)tint), at + ": la dosis normal, con la fila de su fruta");
+                        Vector4 a = lastTurn[k].uv1;
+                        Vector4 b = first.uv1;
+                        Assert.That(Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y) + Mathf.Abs(a.z - b.z), Is.LessThan(0.02f), at + ": la franja de su tinte ya entró");
+                        Assert.That(Distance(lastTurn[k].color, first.color), Is.LessThan(2f / 255f), at + ": el color de la dosis ya es su tinte");
+                    }
+                    else
+                    {
+                        Assert.That(look, Is.EqualTo(LiquidGraphic.MurkyLook.Turn), at);
+                        Assert.That(p, Is.LessThan(1f), at);
+                        List<UIVertex> band = BandVertices(view, k, true);
+                        Assert.That(band.Count, Is.GreaterThanOrEqualTo(3), at + ": la banda que se revela tiene malla");
+                        lastTurn[k] = band[0];
+                        lastTurnProgress[k] = p;
+                    }
+
+                    // La trama baja y el patrón de la fruta sube sin saltos, uno después del otro (nunca los dos a la vez); lo
+                    // que pinta el frente solo aclara, y sin saltos.
+                    Assert.That(hatch, Is.LessThanOrEqualTo(prevHatch[k] + 1e-6f), at + ": la trama solo baja");
+                    Assert.That(fruit, Is.GreaterThanOrEqualTo(prevFruit[k] - 1e-6f), at + ": el patrón de la fruta solo sube");
+                    Assert.That(fruit - prevFruit[k], Is.LessThan(0.15f), at + ": y sin saltos (también al pasar a la dosis normal)");
+                    Assert.That(hatch > 0f && fruit > 0f, Is.False, at + ": nunca la trama y el patrón de la fruta a la vez");
+                    Assert.That(light, Is.GreaterThanOrEqualTo(prevLight[k] - 1e-3f), at + ": la capa solo se aclara");
+                    Assert.That(light - prevLight[k], Is.LessThan(0.35f), at + ": y sin saltos");
+                    prevHatch[k] = hatch;
+                    prevFruit[k] = fruit;
+                    prevLight[k] = light;
+                }
+
+                // La insignia baja en uno cuando cada «?» queda de canto, con el pop de la cifra.
+                if (marks.BadgeCount < count)
+                {
+                    Assert.That(marks.BadgeCount, Is.EqualTo(count - 1), "t = " + ms + " ms: de una en una");
+                    count = marks.BadgeCount;
+                    drops++;
+                    if (count > 0)
+                    {
+                        Assert.That(marks.BadgeDigit.sprite, Is.SameAs(art.MurkyBadgeDigit(count)), "la cifra cambia");
+                        Assert.That(marks.BadgePopping, Is.True, "y arranca su pop");
+                    }
+                }
+            }
+
+            Assert.That(drops, Is.EqualTo(2), "la insignia bajó con cada «?»");
+            for (int k = 0; k < cuia.Count; k++)
+            {
+                if (((mask >> k) & 1) != 0)
+                {
+                    Assert.That(normalAt[k], Is.GreaterThan(0), "capa " + k + ": acabó normal");
+                    Assert.That(view.Liquid.DoseColorAt(k), Is.EqualTo(Palette.Tint(cuia.ColorAt(k))), "capa " + k + ": su tinte");
+                }
+            }
+
+            TestContext.WriteLine("Luciérnaga del 100: la capa de arriba pasa a normal a los " + normalAt[Highest(mask)] + " ms y la de abajo a los "
+                + normalAt[Lowest(mask)] + " ms.");
+            Assert.That(normalAt[Highest(mask)], Is.LessThan(normalAt[Lowest(mask)]), "de arriba abajo");
+            Assert.That(marks.BadgeCount, Is.EqualTo(0));
         }
 
         [UnityTest]
@@ -486,6 +703,49 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Reveal_ReduceMotion_NoBadgePop() // 02 §12: Reducir movimiento, sin sacudidas ni partículas (hallazgo 1)
+        {
+            yield return MechanicTestKit.LoadPlaying(100);
+            GameBootstrap boot = GameBootstrap.Current!;
+            int murky = MurkyCuia(boot);
+            CuiaView view = boot.View!.Views[murky];
+            MurkyMarks marks = view.Murky;
+            FxLayer fx = boot.View.Fx;
+            Cuia cuia = boot.Flow!.Session.Current[murky];
+            try
+            {
+                fx.ReduceMotion = true;
+                for (int i = 0; i < 400 && fx.ActiveCount > 0; i++)
+                {
+                    fx.Tick(PlayModeHelpers.FrameMs);
+                }
+
+                Assert.That(fx.ActiveCount, Is.EqualTo(0), "sin partículas antes de empezar");
+                Assert.That(marks.BadgeCount, Is.EqualTo(2));
+                Assert.That(view.PlayReveal(1 << Highest(cuia.HiddenMask), RevealStyle.Rule, 1f), Is.GreaterThan(0f));
+                int ms = 0;
+                while (marks.IsAnimating)
+                {
+                    Assert.That(ms, Is.LessThanOrEqualTo(1300), "termina a los 1.200 ms");
+                    view.Tick(10f);
+                    fx.Tick(10f);
+                    ms += 10;
+                    string at = "t = " + ms + " ms";
+                    Assert.That(marks.BadgePopping, Is.False, at + ": sin pop de la cifra");
+                    Assert.That(marks.BadgeDigit.rectTransform.localScale.x, Is.EqualTo(1f), at + ": la cifra no se mueve");
+                    Assert.That(fx.ActiveCount, Is.EqualTo(0), at + ": sin destellos ni burbuja");
+                }
+
+                Assert.That(marks.BadgeCount, Is.EqualTo(1), "al terminar, «?×1»");
+                Assert.That(marks.BadgeDigit.sprite, Is.SameAs(view.OverlayHost.Art.MurkyBadgeDigit(1)));
+            }
+            finally
+            {
+                fx.ReduceMotion = false;
+            }
+        }
+
+        [UnityTest]
         public IEnumerator Reveal_NoAlloc() // 08 §5.4; arquitectura del paso 1 §12
         {
             yield return MechanicTestKit.LoadPlaying(100);
@@ -499,8 +759,8 @@ namespace AF.Tests.PlayMode
 
             // Pasada 0, calentamiento (primer uso de cada sprite, de cada gráfico y de la malla turbia); pasada 1, medida: el
             // revelado por la regla de la de arriba (destellos, burbuja, la cifra que cambia de sprite con su pop, fundido y
-            // final) y la Luciérnaga de las 2, cada fotograma con la vista, los efectos y la reconstrucción del lienzo
-            // (OnPopulateMesh de la malla turbia).
+            // final) y la Luciérnaga de las 2 (frente, iconos con su disco), cada fotograma con la vista, los efectos y la
+            // reconstrucción del lienzo (OnPopulateMesh de la malla turbia).
             for (int pass = 0; pass < 2; pass++)
             {
                 bool measure = pass == 1;
@@ -613,10 +873,109 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Liquid.MurkyLookAt(Lowest(cuia.HiddenMask)), Is.EqualTo(LiquidGraphic.MurkyLook.Hidden), "al final, turbias");
         }
 
-        // Comprueba en la malla que la banda turbia k de la cuia inclinada tiltDeg grados lleva la «?» derecha en pantalla: su x
-        // (uv1.w) es afín en la x de pantalla e = X · cos θ − y · sen θ, con la escala de la banda (u de capa por u de
-        // pantalla) y el cero dentro de la banda, y la banda abarca la ventana de la «?» (±0,25 u de capa).
-        private static void AssertMurkyBandUpright(CuiaView view, int k, float tiltDeg, string where)
+        [UnityTest]
+        public IEnumerator Intro_ReduceMotion_HiddenFadeInMurky() // 02 §12; 07 §3 (fila Cacao): nunca el pardo sin «?» (hallazgo 1)
+        {
+            yield return PlayModeHelpers.LoadGame(100, new MemoryProgressStore(100, 99));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen screen = boot.View!;
+            int murky = MurkyCuia(boot);
+            Cuia cuia = boot.Flow!.Session.Current[murky];
+            CuiaView view = screen.Views[murky];
+            try
+            {
+                boot.Flow.ReduceMotion = true;
+                screen.DebugReplayIntro(GameConfig.ReducedMotionIntroMs, false);
+                IntroAnimation intro = screen.Intro;
+                Assert.That(intro.ReduceMotion, Is.True, "la intro va en fundido");
+
+                // A mitad del fundido (≈ 100 de 250 ms): las ocultas se funden ya turbias, con su trama y su «?».
+                intro.Seek(100f);
+                int seen = 0;
+                for (int k = 0; k < cuia.Count; k++)
+                {
+                    if (!cuia.IsHiddenAt(k))
+                    {
+                        continue;
+                    }
+
+                    seen++;
+                    float alpha = view.Liquid.DoseColorAt(k).a;
+                    Assert.That(view.Liquid.MurkyLookAt(k), Is.EqualTo(LiquidGraphic.MurkyLook.Hidden), "dosis " + k + ": turbia durante el fundido");
+                    Assert.That(alpha, Is.GreaterThan(0f).And.LessThan(1f), "dosis " + k + ": a medio fundir");
+                    Assert.That(view.Murky.MarkVisible(k), Is.True, "dosis " + k + ": con su «?» (el pardo nunca va sin él)");
+                }
+
+                Assert.That(seen, Is.EqualTo(2));
+                Assert.That(view.Murky.BadgeVisible, Is.False, "la insignia sale al final");
+
+                // Al final del fundido, la insignia con las dos.
+                intro.Seek(GameConfig.ReducedMotionIntroMs);
+                Assert.That(view.Murky.BadgeVisible, Is.True, "al final, «?×2»");
+                Assert.That(view.Murky.BadgeCount, Is.EqualTo(2));
+                for (int k = 0; k < cuia.Count; k++)
+                {
+                    if (cuia.IsHiddenAt(k))
+                    {
+                        Assert.That(view.Liquid.MurkyLookAt(k), Is.EqualTo(LiquidGraphic.MurkyLook.Hidden));
+                        Assert.That(view.Liquid.DoseColorAt(k), Is.EqualTo(Palette.Murky), "opaca");
+                        Assert.That(view.Murky.MarkVisible(k), Is.True);
+                    }
+                }
+            }
+            finally
+            {
+                boot.Flow.ReduceMotion = false;
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator IntroTick_Murky100_AllocatesNothing() // A10 en un nivel con Aguas turbias (hallazgo 4)
+        {
+            yield return PlayModeHelpers.LoadGame(100, new MemoryProgressStore(100, 99));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen screen = boot.View!;
+            int murky = MurkyCuia(boot);
+            CuiaView view = screen.Views[murky];
+            IntroAnimation intro = screen.Intro;
+
+            // Calentamiento: una pasada entera (primer uso de cada gráfico; también la insignia «?×2» en el primer impacto).
+            screen.DebugReplayIntro(1400, false);
+            for (int t = 0; intro.Active && t < 4000; t += 16)
+            {
+                intro.Tick(16f);
+            }
+
+            screen.DebugReplayIntro(1400, false);
+            float impact = intro.Plan.FirstImpactMs;
+            Assert.That(impact, Is.GreaterThan(0f), "hay un primer impacto");
+            int frames = 0;
+            int nearImpact = 0;
+            bool badgeBefore = view.Murky.BadgeVisible;
+            for (int t = 0; intro.Active && t < 4000; t += 16)
+            {
+                TestDelegate step = () => intro.Tick(16f);
+                Assert.That(step, Is.Not.AllocatingGCMemory(), "t = " + t + " ms (primer impacto a los " + impact.ToString("F0") + ")");
+                frames++;
+                if (Mathf.Abs(t - impact) <= 48f)
+                {
+                    nearImpact++;
+                }
+            }
+
+            Assert.That(badgeBefore, Is.False, "sin insignia al arrancar");
+            Assert.That(nearImpact, Is.GreaterThanOrEqualTo(3), "fotogramas medidos alrededor del primer impacto (la insignia sale ahí)");
+            Assert.That(frames, Is.GreaterThan(10), "fotogramas medidos");
+            Assert.That(view.Murky.BadgeVisible, Is.True, "al final, «?×2»");
+            Assert.That(view.Murky.BadgeCount, Is.EqualTo(2));
+        }
+
+        // Comprueba en la malla que la banda turbia k de la cuia inclinada tiltDeg grados lleva el «?» derecho en pantalla: su
+        // x (uv1.w) es la x de pantalla e = X · cos θ − y · sen θ en u, desde el centro del «?» (pendiente 1, cero dentro de la
+        // banda), y la banda abarca la ventana del «?» (medio alto del «?» a cada lado).
+        private static void AssertMurkyBandUpright(CuiaView view, int k, float tiltDeg, float glyphU, string where)
         {
             List<UIVertex> band = BandVertices(view, k, true);
             Assert.That(band.Count, Is.GreaterThanOrEqualTo(3), where + ": la banda turbia tiene malla");
@@ -650,16 +1009,44 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(eMax - eMin, Is.GreaterThan(0.1f), where + ": la banda tiene ancho en pantalla");
-            float scale = (band[b].uv1.w - band[a].uv1.w) / (eMax - eMin);
-            Assert.That(scale, Is.GreaterThan(0.5f), where + ": la «?» sigue la escala de su banda");
+            float slope = (band[b].uv1.w - band[a].uv1.w) / (eMax - eMin);
+            Assert.That(slope, Is.EqualTo(1f).Within(1e-3f), where + ": la x del «?» va en u de pantalla (isótropo)");
             for (int i = 0; i < band.Count; i++)
             {
-                float expected = band[a].uv1.w + (scale * (E(band[i], cs, sn) - eMin));
-                Assert.That(band[i].uv1.w, Is.EqualTo(expected).Within(1e-3f), where + ": la x de la «?» solo depende de la x de pantalla (derecha)");
+                float expected = band[a].uv1.w + (E(band[i], cs, sn) - eMin);
+                Assert.That(band[i].uv1.w, Is.EqualTo(expected).Within(1e-3f), where + ": la x del «?» solo depende de la x de pantalla (derecho)");
             }
 
-            Assert.That(gMin, Is.LessThanOrEqualTo(-0.25f), where + ": la banda abarca la «?» por la izquierda");
-            Assert.That(gMax, Is.GreaterThanOrEqualTo(0.25f), where + ": y por la derecha");
+            float half = 0.5f * Mathf.Max(glyphU, LiquidGraphic.GlyphMinU); // la ventana del «?» (0,25 de la fila con 0,5 u)
+            Assert.That(gMin, Is.LessThanOrEqualTo(-half), where + ": la banda abarca el «?» por la izquierda");
+            Assert.That(gMax, Is.GreaterThanOrEqualTo(half), where + ": y por la derecha");
+        }
+
+        // El «?» de alto sizeU centrado en (cx, cy) (coordenadas de la cuia) con la cuia inclinada tiltDeg: las esquinas de su
+        // caja en pantalla (alto × 0,7 de ancho, con su halo) quedan dentro de la silueta interior, así que el punto del «?» no
+        // toca el vidrio.
+        private static void AssertGlyphInsideGlass(CuiaView view, float cx, float cy, float sizeU, float tiltDeg, string where)
+        {
+            float rad = tiltDeg * Mathf.Deg2Rad;
+            float cs = Mathf.Cos(rad);
+            float sn = Mathf.Sin(rad);
+            float e0 = (cx * cs) - (cy * sn);
+            float d0 = (cx * sn) + (cy * cs);
+            int capacity = view.Capacity;
+            for (int sx = -1; sx <= 1; sx += 2)
+            {
+                for (int sy = -1; sy <= 1; sy += 2)
+                {
+                    float e = e0 + (sx * 0.35f * sizeU);
+                    float d = d0 + (sy * 0.5f * sizeU);
+                    float x = (e * cs) + (d * sn);
+                    float y = (d * cs) - (e * sn);
+                    float floor = CuiaGeometry.CavityFloorU(x);
+                    float wall = CuiaGeometry.InnerHalfWidth(Mathf.Max(y, CuiaGeometry.CavityBottomU), capacity);
+                    Assert.That(y, Is.GreaterThanOrEqualTo(floor - 0.02f), where + ": la esquina (" + sx + ", " + sy + ") del «?» no baja del fondo de vidrio");
+                    Assert.That(Mathf.Abs(x), Is.LessThanOrEqualTo(wall + 0.02f), where + ": ni sale por la pared");
+                }
+            }
         }
 
         private static float E(UIVertex v, float cs, float sn)
@@ -700,9 +1087,9 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // Luciérnaga con factor speed: dura exactamente durationMs (600 ms × factor). Hasta durationMs − 10 sigue en curso y la
-        // capa de abajo aún no llegó a su tinte (no acaba antes de tiempo); justo a los durationMs termina. De arriba abajo y
-        // con el icono de la fruta.
+        // Luciérnaga con factor speed: dura exactamente durationMs (600 ms × factor) y la capa de abajo sigue revelándose (Turn)
+        // hasta el final. Con el espejo del frente (LiquidGraphic.PaintedColorAt), de arriba abajo entre capas (la de arriba se
+        // aclara antes) y dentro de cada capa (su parte de arriba antes que la de abajo); con el icono de la fruta y su disco.
         private static void RunFirefly(CuiaView view, Cuia cuia, int mask, float speed, int durationMs)
         {
             int topLayer = Highest(mask);
@@ -710,7 +1097,7 @@ namespace AF.Tests.PlayMode
             float ms = view.PlayReveal(mask, RevealStyle.Firefly, speed);
             Assert.That(ms, Is.EqualTo((float)durationMs).Within(1e-3f), "600 ms × " + speed);
             Assert.That(view.Murky.IsAnimating, Is.True);
-            Assert.That(Lighten(view, bottomLayer, cuia.ColorAt(bottomLayer)), Is.EqualTo(0f).Within(1e-4f), "empieza parda");
+            Assert.That(BandLight(view, bottomLayer, cuia.ColorAt(bottomLayer)), Is.EqualTo(0f).Within(1e-4f), "empieza parda");
             bool topFirst = false;
             bool fruitSeen = false;
             ProceduralArt art = view.OverlayHost.Art;
@@ -719,15 +1106,26 @@ namespace AF.Tests.PlayMode
                 view.Tick(10f);
                 string at = "factor " + speed + ", t = " + t + " ms";
                 Assert.That(view.Murky.IsAnimating, Is.True, at + ": sigue en curso (600 ms × factor)");
-                float top = Lighten(view, topLayer, cuia.ColorAt(topLayer));
-                float bottom = Lighten(view, bottomLayer, cuia.ColorAt(bottomLayer));
-                Assert.That(bottom, Is.LessThan(1f), at + ": la de abajo aún no llegó a su tinte");
+                Assert.That(view.Liquid.MurkyLookAt(bottomLayer), Is.EqualTo(LiquidGraphic.MurkyLook.Turn), at + ": la de abajo sigue revelándose");
+                float top = BandLight(view, topLayer, cuia.ColorAt(topLayer));
+                float bottom = BandLight(view, bottomLayer, cuia.ColorAt(bottomLayer));
                 Assert.That(top, Is.GreaterThanOrEqualTo(bottom - 1e-4f), at + ": de arriba abajo");
                 topFirst |= top > bottom + 0.05f;
+                for (int k = 0; k < cuia.Count; k++)
+                {
+                    if (((mask >> k) & 1) != 0)
+                    {
+                        int tint = cuia.ColorAt(k);
+                        Assert.That(LightAt(view, k, tint, 0.2f), Is.GreaterThanOrEqualTo(LightAt(view, k, tint, 0.8f) - 1e-4f), at + ", capa " + k + ": dentro de la capa, de arriba abajo");
+                    }
+                }
+
                 if (view.Murky.FruitVisible(topLayer))
                 {
                     fruitSeen = true;
                     Assert.That(view.Murky.FruitImage(topLayer).sprite, Is.SameAs(art.FruitFlight(cuia.ColorAt(topLayer))), "el icono de su fruta");
+                    Assert.That(view.Murky.FruitDisc(topLayer).gameObject.activeSelf, Is.True, "sobre su disco");
+                    Assert.That(view.Murky.FruitDisc(topLayer).sprite, Is.SameAs(art.MurkyFruitDisc));
                 }
             }
 
@@ -735,6 +1133,7 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Murky.IsAnimating, Is.False, "factor " + speed + ": termina justo a los " + durationMs + " ms");
             Assert.That(topFirst, Is.True, "la de arriba se aclara antes");
             Assert.That(fruitSeen, Is.True, "cada «?» gira y muestra su fruta");
+            Assert.That(view.Murky.FruitDisc(topLayer).gameObject.activeSelf || view.Murky.FruitDisc(bottomLayer).gameObject.activeSelf, Is.False, "sin discos al terminar");
         }
 
         // Vuelve a pintar turbias las ocultas de cuia y revela mask con style: frames fotogramas de 16 ms con la vista, los
@@ -797,9 +1196,32 @@ namespace AF.Tests.PlayMode
         // se pinta (sin cuantizar a 8 bits: así se ven también los últimos milisegundos de la curva).
         private static float Lighten(CuiaView view, int k, int tint)
         {
+            return Progress(view.Liquid.DoseColorAt(k), tint);
+        }
+
+        // Lo mismo a la profundidad depth de la banda (0 arriba, 1 abajo), con el espejo del frente de la Luciérnaga: lo que
+        // pinta el shader (LiquidGraphic.PaintedColorAt).
+        private static float LightAt(CuiaView view, int k, int tint, float depth)
+        {
+            return Progress(view.Liquid.PaintedColorAt(k, depth), tint);
+        }
+
+        // Media de LightAt en la banda k (cinco profundidades).
+        private static float BandLight(CuiaView view, int k, int tint)
+        {
+            float sum = 0f;
+            for (int i = 0; i < Depths.Length; i++)
+            {
+                sum += LightAt(view, k, tint, Depths[i]);
+            }
+
+            return sum / Depths.Length;
+        }
+
+        private static float Progress(Color now, int tint)
+        {
             Color from = Palette.Murky;
             Color to = Palette.Tint(tint);
-            Color now = view.Liquid.DoseColorAt(k);
             float total = Distance(from, to);
             return total > 1e-4f ? Mathf.Clamp01(1f - (Distance(now, to) / total)) : 1f;
         }

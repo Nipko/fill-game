@@ -6,21 +6,24 @@ namespace AF.Presentation
 {
     /// <summary>
     /// Arte procedural [P] de las Aguas turbias (07 §4.3; 02 §11 T3; propuesta de D-007 b.2; D-003): la fila turbia del atlas
-    /// de patrones que lee el shader del líquido (<see cref="DrawMurkyRow"/>: trama diagonal y «?» marfil de 0,5 u con su halo)
-    /// y la insignia «?×n» de la cuia turbia (<see cref="MurkyBadgePill"/> y los glifos <see cref="MurkyBadgeQuestion"/>,
-    /// <see cref="MurkyBadgeTimes"/> y <see cref="MurkyBadgeDigit"/>, en sprite porque AF.Presentation no tiene TMP).
+    /// de patrones que lee el shader del líquido (<see cref="DrawMurkyRow"/>: trama diagonal y «?» marfil de 0,5 u con su halo),
+    /// la insignia «?×n» de la cuia turbia (<see cref="MurkyBadgePill"/> y los glifos <see cref="MurkyBadgeQuestion"/>,
+    /// <see cref="MurkyBadgeTimes"/> y <see cref="MurkyBadgeDigit"/>, en sprite porque AF.Presentation no tiene TMP) y el disco
+    /// marfil sobre el que la Luciérnaga muestra el icono de cada fruta (<see cref="MurkyFruitDisc"/>).
     /// </summary>
     /// <remarks>
     /// La insignia se genera de forma perezosa la primera vez que se pide (un nivel sin turbias no crea sus texturas): una
     /// píldora 9-slice y una tira con los 11 glifos en una sola textura (cada glifo es un <see cref="Sprite"/> de esa tira),
-    /// así que son dos texturas para toda la familia.
+    /// así que son dos texturas para toda la familia; el disco, la primera vez que se usa la Luciérnaga (una más).
     /// </remarks>
     public sealed partial class ProceduralArt
     {
         /// <summary>
         /// Fila turbia del atlas de patrones (<see cref="PatternAtlas"/>), tras las de los 14 tintes: es la <c>TEXCOORD3.a</c>
-        /// de las dosis turbias en el shader del líquido (equivale a <c>_HiddenMask</c> de 08 §5.2). Nunca es la fila de una
-        /// fruta (1-14), así que no delata la fruta oculta.
+        /// de las dosis turbias en el shader del líquido. [P] Sustituye a la máscara <c>_HiddenMask</c> de 08 §5.2 (que no puede
+        /// ir como propiedad: uGUI no admite <c>MaterialPropertyBlock</c> por cuia) y, con el «?» que lleva en R y G, al
+        /// «sprite "?"» de 08 §5.2; se alinea con el GDD en el paso 2. Nunca es la fila de una fruta (1-14), así que no delata
+        /// la fruta oculta.
         /// </summary>
         public const int MurkyPatternRow = Cuia.MaxTintColor + 1;
 
@@ -45,20 +48,41 @@ namespace AF.Presentation
         /// </summary>
         public static readonly Color MurkyBadgeFill = Palette.Hex(0x3A332B);
 
+        /// <summary>
+        /// Filo del disco de la fruta de la Luciérnaga: <c>madera_contorno</c> (<see cref="Palette.FamilyWood"/>) [P]. Con el
+        /// relleno marfil <see cref="Palette.UiPaper"/>, el disco queda a ≥ 3:1 de cualquier tinte (direccion-visual-v2 §2.4,
+        /// regla 2): el marfil frente a los oscuros y el filo frente a los claros.
+        /// </summary>
+        public static readonly Color MurkyFruitDiscRim = Palette.FamilyWood.Outline;
+
         // Celdas de la tira de glifos de la insignia (px a 3 px/dp): 30 × 42 px (10 × 14 dp), con el glifo de 18 × 28 px.
         private const int BadgeCellPx = 30;
         private const int BadgeHeightPx = 42;
         private const int BadgeGlyphCount = 11; // «?», «×» y los dígitos 1-9
         private const float BadgeStrokePx = 2.3f;
 
+        // Disco de la fruta de la Luciérnaga: 0,80 u ≈ 19-26 dp (u de 24 a 32 dp); 72 px ≈ 24 dp a 3 px/dp, con un filo de
+        // 1,5 dp (4,5 px) y una sombra de 1 dp (3 px) hacia abajo [P].
+        private const int FruitDiscPx = 72;
+        private const float FruitDiscRimPx = 4.5f;
+        private const float FruitDiscShadowPx = 3f;
+
         private Sprite? _murkyBadgePill;
         private Sprite[]? _murkyBadgeGlyphs;
+        private Sprite? _murkyFruitDisc;
 
         /// <summary>
         /// Píldora de la insignia «?×n» (9-slice en horizontal, <see cref="MurkyBadgeDp"/> de alto a 3 px/dp): relleno
         /// <see cref="MurkyBadgeFill"/>, filo marfil de 1 dp y un brillo suave arriba (la luz de juego de D-003).
         /// </summary>
         public Sprite MurkyBadgePill => _murkyBadgePill != null ? _murkyBadgePill : (_murkyBadgePill = BuildMurkyBadgePill());
+
+        /// <summary>
+        /// Disco bajo el icono de la fruta que muestra la Luciérnaga (04 §2.5; la regla de iconos ≥ 3:1 de direccion-visual-v2
+        /// §2.4): relleno marfil <see cref="Palette.UiPaper"/>, filo de 1,5 dp <see cref="MurkyFruitDiscRim"/>, sombra de 1 dp y
+        /// un brillo suave arriba (D-003). Se genera la primera vez que se pide.
+        /// </summary>
+        public Sprite MurkyFruitDisc => _murkyFruitDisc != null ? _murkyFruitDisc : (_murkyFruitDisc = BuildMurkyFruitDisc());
 
         /// <summary>Glifo «?» marfil de la insignia (celda de 10 × 14 dp).</summary>
         public Sprite MurkyBadgeQuestion => MurkyBadgeGlyphs()[0];
@@ -140,6 +164,19 @@ namespace AF.Presentation
 
             _murkyBadgeGlyphs = sprites;
             return sprites;
+        }
+
+        private Sprite BuildMurkyFruitDisc()
+        {
+            const int s = FruitDiscPx;
+            const float c = s * 0.5f;
+            const float r = c - FruitDiscShadowPx - 0.5f;
+            var pc = new PixelCanvas(s, s);
+            pc.FillCircle(c, c - FruitDiscShadowPx, r, ColorMath.WithAlpha(Color.black, 0.35f)); // sombra de 1 dp hacia abajo
+            pc.FillCircle(c, c, r, MurkyFruitDiscRim);
+            pc.FillCircle(c, c, r - FruitDiscRimPx, Palette.UiPaper);
+            pc.FillEllipseSoft(c, c + (r * 0.42f), r * 0.55f, r * 0.26f, 3f, ColorMath.WithAlpha(Color.white, 0.35f)); // luz de arriba
+            return MakeSprite(pc, "mech_murky_fruit_disc", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
         }
 
         private Sprite BuildMurkyBadgePill()
