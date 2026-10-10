@@ -31,10 +31,50 @@ namespace AF.Presentation
     /// <para>Canales: <c>TEXCOORD0</c> = (x, y local, y de capa, alto de la cuia); <c>TEXCOORD2.w</c> = patrón + 4 · dosis.
     /// La y de capa es la de la dosis sin inclinar (degradado, patrón, cara superior y superficie); la y local, la del
     /// vidrio (brillos y recorte).</para>
+    /// <para><b>Aguas turbias</b> (07 §4.3; 08 §5.2; T15): una dosis oculta se pinta en el shader, no con sprites encima, para
+    /// que la trama y el «?» sigan a su banda cuando la cuia se inclina. Con <see cref="SetDose(int, Color, float, int, MurkyLook, float)"/>
+    /// en un modo turbio la banda lleva el patrón <see cref="MurkyPatternMode"/> (± el avance del revelado, ver
+    /// <see cref="MurkyLook"/>) y la fila turbia del atlas (<see cref="ProceduralArt.MurkyPatternRow"/>) en
+    /// <c>TEXCOORD3.a</c>; el shader pinta encima del pardo la trama diagonal al 25 % y el «?» marfil de 0,5 u, sin la
+    /// mezcla fija del 15 % de los patrones de fruta. Equivale a la máscara <c>_HiddenMask</c> (una banda por dosis, también
+    /// no contiguas) y al color <c>_MurkyColor</c> = #8A7B6A (<see cref="Palette.Murky"/>, el color de la banda) de 08 §5.2,
+    /// que no pueden ir como propiedades: uGUI no admite <c>MaterialPropertyBlock</c> por cuia y todas comparten material.
+    /// La «?» va derecha en pantalla y centrada en la cuerda de su banda: su x a lo ancho de la pantalla, relativa al centro
+    /// de la cuerda y en u de capa, va por vértice en <c>TEXCOORD1.w</c>, que en las bandas normales es el destello del
+    /// sellado (una cuia con dosis ocultas nunca está sellada, R5). Con la banda más fina que 1 u (cuia inclinada), la «?»
+    /// y la trama se encogen con ella y no salen de la banda.</para>
     /// </remarks>
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class LiquidGraphic : MaskableGraphic
     {
+        /// <summary>
+        /// Patrón de una banda turbia en <c>TEXCOORD2.w</c> (patrón + 4 · dosis): 2 sin animar; 2 + 0,45 · avance al
+        /// disolverse por la regla y 2 − 0,45 · avance al girar con la Luciérnaga (el shader decodifica el modo con
+        /// <c>floor((w + 1,5) / 4)</c>, así que el patrón vive en [−1, 2,5)).
+        /// </summary>
+        public const float MurkyPatternMode = 2f;
+
+        /// <summary>Lo que se aparta del <see cref="MurkyPatternMode"/> el avance 1 de un revelado (ver la constante).</summary>
+        public const float MurkyProgressSpan = 0.45f;
+
+        /// <summary>
+        /// Cómo pinta el shader una dosis (07 §4.3; 08 §5.2): normal o turbia, y en este caso si su «?» está quieto, se
+        /// disuelve (revelado por la regla, 1.200 ms) o gira de canto (Luciérnaga, 04 §2.5).
+        /// </summary>
+        public enum MurkyLook : byte
+        {
+            /// <summary>Dosis normal: su color, su tinte y el patrón de su fruta.</summary>
+            None = 0,
+
+            /// <summary>Oculta: pardo opaco, trama diagonal al 25 % y «?» marfil de 0,5 u, sin tinte ni patrón de fruta.</summary>
+            Hidden = 1,
+
+            /// <summary>Revelado por la regla (R7): el «?» crece, ondula y se disuelve, y la trama se va (avance 0..1).</summary>
+            Dissolve = 2,
+
+            /// <summary>Revelado con la Luciérnaga: el «?» gira hasta quedar de canto y la trama se va (avance 0..1).</summary>
+            Turn = 3,
+        }
         /// <summary>Amplitud inicial de la onda tras un vertido (08 §5.2): 0,03 u.</summary>
         public const float RippleAmplitudeU = 0.03f;
 
@@ -84,6 +124,8 @@ namespace AF.Presentation
         private Color[] _color = Array.Empty<Color>();
         private float[] _fill = Array.Empty<float>();
         private int[] _tint = Array.Empty<int>();
+        private MurkyLook[] _look = Array.Empty<MurkyLook>();
+        private float[] _lookProgress = Array.Empty<float>();
         private float[] _levels = Array.Empty<float>();
         private Texture? _atlas;
         private int _capacity;
@@ -140,6 +182,8 @@ namespace AF.Presentation
             _color = new Color[capacity];
             _fill = new float[capacity];
             _tint = new int[capacity];
+            _look = new MurkyLook[capacity];
+            _lookProgress = new float[capacity];
             _levels = new float[capacity + 1];
             _atlas = atlas;
             raycastTarget = false;
@@ -178,8 +222,19 @@ namespace AF.Presentation
             }
         }
 
-        /// <summary>Fija la dosis <paramref name="k"/> (color, relleno 0..1, tinte; 0 = agua base).</summary>
+        /// <summary>Fija la dosis <paramref name="k"/> (color, relleno 0..1, tinte; 0 = agua base), sin modo turbio.</summary>
         public void SetDose(int k, Color color, float fill, int tint)
+        {
+            SetDose(k, color, fill, tint, MurkyLook.None, 0f);
+        }
+
+        /// <summary>
+        /// Fija la dosis <paramref name="k"/> con el modo turbio <paramref name="look"/> (07 §4.3; ver <see cref="MurkyLook"/>):
+        /// en un modo turbio el tinte no se usa (va 0: ni su franja, ni su menisco, ni su patrón delatan la fruta oculta) y
+        /// <paramref name="progress"/> (0..1) es el avance de <see cref="MurkyLook.Dissolve"/> o <see cref="MurkyLook.Turn"/>.
+        /// Solo reconstruye la malla si algo cambia; sin asignaciones.
+        /// </summary>
+        public void SetDose(int k, Color color, float fill, int tint, MurkyLook look, float progress = 0f)
         {
             if ((uint)k >= (uint)_capacity)
             {
@@ -187,7 +242,21 @@ namespace AF.Presentation
             }
 
             fill = Mathf.Clamp01(fill);
-            if (_color[k] == color && Mathf.Approximately(_fill[k], fill) && _tint[k] == tint)
+            if (look == MurkyLook.None || look == MurkyLook.Hidden)
+            {
+                progress = 0f;
+            }
+            else
+            {
+                progress = Mathf.Clamp01(progress);
+            }
+
+            if (look != MurkyLook.None)
+            {
+                tint = 0;
+            }
+
+            if (_color[k] == color && Mathf.Approximately(_fill[k], fill) && _tint[k] == tint && _look[k] == look && Mathf.Approximately(_lookProgress[k], progress))
             {
                 return;
             }
@@ -195,7 +264,48 @@ namespace AF.Presentation
             _color[k] = color;
             _fill[k] = fill;
             _tint[k] = tint;
+            _look[k] = look;
+            _lookProgress[k] = progress;
             SetVerticesDirty();
+        }
+
+        /// <summary>Modo turbio de la dosis <paramref name="k"/> (<see cref="MurkyLook.None"/> fuera de rango).</summary>
+        public MurkyLook MurkyLookAt(int k)
+        {
+            return (uint)k < (uint)_capacity ? _look[k] : MurkyLook.None;
+        }
+
+        /// <summary>Avance (0..1) del revelado de la dosis <paramref name="k"/> en <see cref="MurkyLook.Dissolve"/> o <see cref="MurkyLook.Turn"/>.</summary>
+        public float MurkyProgressAt(int k)
+        {
+            return (uint)k < (uint)_capacity ? _lookProgress[k] : 0f;
+        }
+
+        /// <summary>
+        /// El shader dibuja el «?» de la dosis <paramref name="k"/>: turbia y sin haber terminado de disolverse o de girar.
+        /// </summary>
+        public bool MurkyMarkDrawn(int k)
+        {
+            if ((uint)k >= (uint)_capacity || _look[k] == MurkyLook.None || _fill[k] <= 0.001f || _color[k].a <= 0.001f)
+            {
+                return false;
+            }
+
+            return _look[k] == MurkyLook.Hidden || _lookProgress[k] < 1f;
+        }
+
+        /// <summary>Valor de <c>TEXCOORD2.w</c> − 4 · dosis de una banda turbia con <paramref name="look"/> y <paramref name="progress"/>.</summary>
+        public static float MurkyPattern(MurkyLook look, float progress)
+        {
+            switch (look)
+            {
+                case MurkyLook.Dissolve:
+                    return MurkyPatternMode + (MurkyProgressSpan * Mathf.Clamp01(progress));
+                case MurkyLook.Turn:
+                    return MurkyPatternMode - (MurkyProgressSpan * Mathf.Clamp01(progress));
+                default:
+                    return MurkyPatternMode;
+            }
         }
 
         /// <summary>
@@ -472,21 +582,28 @@ namespace AF.Presentation
                 int tint = _tint[k];
                 Color lit = tint > 0 ? Palette.LiquidHighlight(tint, c) : ColorMath.AddLabLightness(c, 10f);
                 Vector3 litS = ColorMath.ToShaderSpace(lit);
+                bool murky = _look[k] != MurkyLook.None;
                 float pattern = -1f; // sin patrón (Guanábana, agua base)
-                if (ProceduralArt.HasPattern(tint))
+                float row = tint;
+                if (murky)
+                {
+                    pattern = MurkyPattern(_look[k], _lookProgress[k]);
+                    row = ProceduralArt.MurkyPatternRow;
+                }
+                else if (ProceduralArt.HasPattern(tint))
                 {
                     pattern = Palette.PatternBase(tint) == Palette.UiPaper ? 1f : 0f;
                 }
 
                 var uv1 = new Vector4(litS.x, litS.y, litS.z, _flash);
                 var uv2 = new Vector4(surface, amp, _ripplePhase, pattern + (4f * k));
-                var uv3 = new Vector4(menS.x, menS.y, menS.z, tint);
+                var uv3 = new Vector4(menS.x, menS.y, menS.z, row);
 
                 // La dosis superior sube TopExtraU de capa para la cara superior y la onda, y todas bajan BottomExtraU para
                 // su frontera en arco (en d, con la escala de la banda).
                 float hiMesh = k == top ? hi + (TopExtraU * (hi - lo) / fill) : hi;
                 float loMesh = lo - (BottomExtraU * (hi - lo) / fill);
-                AddBand(vh, lo, hi, loMesh, hiMesh, bottomU + k, fill, heightU, c, uv1, uv2, uv3);
+                AddBand(vh, lo, hi, loMesh, hiMesh, bottomU + k, fill, heightU, c, uv1, uv2, uv3, murky);
             }
 
             if (tilted && _tongue > 0.01f)
@@ -498,8 +615,11 @@ namespace AF.Presentation
         // Banda entre las líneas loMesh y hiMesh (forma normal): el rectángulo de la cavidad [−w, w] × [fondo en el eje,
         // labio] recortado por los dos semiplanos (≤ 6 vértices, convexo) y dibujado en abanico. El shader recorta luego a
         // la silueta interior (con el fondo en arco) y a la frontera en arco. La y de capa es afín en d: fondo de la dosis +
-        // relleno · (d − lo) / (hi − lo). Sin asignaciones.
-        private void AddBand(VertexHelper vh, float lo, float hi, float loMesh, float hiMesh, float doseBottom, float fill, float heightU, Color c, Vector4 uv1, Vector4 uv2, Vector4 uv3)
+        // relleno · (d − lo) / (hi − lo). En una banda turbia, uv1.w de cada vértice es la x de la «?» (ver la clase): la
+        // coordenada horizontal de pantalla e = X · cos θ − y · sen θ, relativa al centro de la cuerda de la banda a media
+        // altura y con la escala de la banda (u de capa por u de pantalla), así que es afín y se interpola exacta. Sin
+        // asignaciones.
+        private void AddBand(VertexHelper vh, float lo, float hi, float loMesh, float hiMesh, float doseBottom, float fill, float heightU, Color c, Vector4 uv1, Vector4 uv2, Vector4 uv3, bool murky)
         {
             float w = CuiaGeometry.CavityHalfWidthU;
             float yMin = CuiaGeometry.CavityFloorU(0f);
@@ -516,12 +636,21 @@ namespace AF.Presentation
             }
 
             float scale = fill / Mathf.Max(1e-5f, hi - lo);
+            float rad = _angle * Mathf.Deg2Rad;
+            float sn = Mathf.Sin(rad);
+            float cs = Mathf.Cos(rad);
+            float chord = murky ? ChordCenter(0.5f * (lo + hi), sn, cs) : 0f;
             Color32 vc = c;
             int i0 = vh.currentVertCount;
             for (int i = 0; i < n; i++)
             {
                 Vector2 p = _band[i];
                 float d = LineOffset(p.x, p.y, _angle);
+                if (murky)
+                {
+                    uv1.w = scale * (((p.x * cs) - (p.y * sn)) - chord);
+                }
+
                 AddVert(vh, p.x, p.y, doseBottom + ((d - lo) * scale), heightU, vc, uv1, uv2, uv3);
             }
 
@@ -529,6 +658,47 @@ namespace AF.Presentation
             {
                 vh.AddTriangle(i0, i0 + i, i0 + i + 1);
             }
+        }
+
+        /// <summary>
+        /// Centro, en la coordenada horizontal de pantalla <c>e = X · cos θ − y · sen θ</c> (u; sin inclinar, <c>e = X</c>), de
+        /// la cuerda que la línea horizontal <c>d</c> (ver <see cref="LineOffset"/>) corta en la silueta interior de una cuia de
+        /// <paramref name="capacity"/> dosis girada <paramref name="angleDeg"/> grados. Es donde se centra la «?» de una banda
+        /// turbia (a media altura de la banda). 0 si la línea no corta la silueta. Sin asignaciones tras la primera llamada por
+        /// capacidad.
+        /// </summary>
+        public static float ChordCenter(float d, float angleDeg, int capacity)
+        {
+            float rad = angleDeg * Mathf.Deg2Rad;
+            return ChordCenter(Silhouette(capacity), d, Mathf.Sin(rad), Mathf.Cos(rad));
+        }
+
+        private float ChordCenter(float d, float sn, float cs)
+        {
+            return ChordCenter(Silhouette(_capacity), d, sn, cs);
+        }
+
+        private static float ChordCenter(Vector2[] poly, float d, float sn, float cs)
+        {
+            int n = poly.Length;
+            float eMin = float.MaxValue;
+            float eMax = float.MinValue;
+            for (int i = 0; i < n; i++)
+            {
+                Vector2 p = poly[i];
+                Vector2 q = poly[(i + 1) % n];
+                float fp = (p.x * sn) + (p.y * cs) - d;
+                float fq = (q.x * sn) + (q.y * cs) - d;
+                if ((fp <= 0f && fq > 0f) || (fp > 0f && fq <= 0f))
+                {
+                    Vector2 r = p + ((q - p) * (fp / (fp - fq)));
+                    float e = (r.x * cs) - (r.y * sn);
+                    eMin = Mathf.Min(eMin, e);
+                    eMax = Mathf.Max(eMax, e);
+                }
+            }
+
+            return eMin <= eMax ? 0.5f * (eMin + eMax) : 0f;
         }
 
         // Sutherland-Hodgman con un semiplano: conserva los puntos con sign · (d(p) − limit) ≤ 0. Devuelve los vértices

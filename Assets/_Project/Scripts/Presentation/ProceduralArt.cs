@@ -140,8 +140,9 @@ namespace AF.Presentation
 
         /// <summary>
         /// Atlas de patrones por tinte (07 §3, columna "Patrón"): una fila de <see cref="PatternRowPx"/> px (una dosis)
-        /// por índice de motor 0-14, marcas blancas sobre transparente, repetible en horizontal. Una sola textura para que
-        /// los patrones de todas las cuias vayan en el mismo lote de dibujo.
+        /// por índice de motor 0-14, marcas blancas sobre transparente, repetible en horizontal, y detrás la fila turbia
+        /// (<see cref="MurkyPatternRow"/>: trama diagonal en A y el «?» de las Aguas turbias en R y G; 07 §4.3). Una sola
+        /// textura, lineal y sin mipmaps, para que los patrones de todas las cuias vayan en el mismo lote de dibujo.
         /// </summary>
         public Texture2D PatternAtlas { get; }
 
@@ -255,10 +256,13 @@ namespace AF.Presentation
             return sprite;
         }
 
+        // Atlas de patrones: las filas 0-14 (una por tinte; la 0 y la 1 vacías) y la fila turbia (DrawMurkyRow, en
+        // ProceduralArt.Murky.cs). Lineal: la fila turbia guarda máscaras en R y G (el «?» y su halo) que no deben pasar por la
+        // curva sRGB; las demás solo usan A, que nunca la pasa.
         private Texture2D BuildPatternAtlas()
         {
             const int t = PatternTilePx;
-            int rows = Cuia.MaxTintColor + 1;
+            int rows = MurkyPatternRow + 1;
             var atlas = new PixelCanvas(t, PatternRowPx * rows);
             for (int tint = 2; tint <= Cuia.MaxTintColor; tint++)
             {
@@ -280,7 +284,25 @@ namespace AF.Presentation
                 }
             }
 
-            Texture2D tex = atlas.ToTexture("pattern_atlas", true, false);
+            PixelCanvas murky = DrawMurkyRow();
+            for (int y = 0; y < PatternRowPx; y++)
+            {
+                for (int x = 0; x < t; x++)
+                {
+                    atlas.Set(x, (MurkyPatternRow * PatternRowPx) + y, murky.Get(x, y));
+                }
+            }
+
+            var tex = new Texture2D(atlas.Width, atlas.Height, TextureFormat.RGBA32, false, true)
+            {
+                name = "pattern_atlas",
+                filterMode = FilterMode.Bilinear,
+                wrapModeU = TextureWrapMode.Repeat,
+                wrapModeV = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.DontSave,
+            };
+            tex.SetPixels32(atlas.ToColor32());
+            tex.Apply(false, true);
             _owned.Add(tex);
             return tex;
         }

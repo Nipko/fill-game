@@ -12,20 +12,21 @@ namespace AF.Tests.EditMode
 {
     /// <summary>
     /// Contenido de la cuia con Aguas turbias y Barro (07 §4.3; 02 §11 T3; 02 §9.1 M5; 02 §4.2): una dosis oculta se pinta de
-    /// pardo opaco #8A7B6A con su «?» y nunca con su tinte real; tras revelarse, con su tinte; el Barro tiene color propio a
-    /// ΔE00 ≥ 10 de los 14 tintes, de las turbias y de las 3 aguas base (direccion-visual-v2 §2.4, regla 1), con sus grumos.
-    /// Además del color que lleva la vista, se mira lo que llega al shader en la malla de <see cref="LiquidGraphic"/>: el tinte
-    /// de cada banda (<c>uv3.w</c>, la fila del atlas de patrones para daltónicos) y su patrón (<c>uv2.w</c> − 4 · dosis). Una
-    /// dosis oculta con el patrón de su fruta la delataría aunque fuera parda.
-    /// <see cref="CuiaView"/> en un Canvas de prueba; el arte procedural se crea una vez (≈ 300 ms en EditMode).
+    /// pardo opaco #8A7B6A con su trama y su «?» (en el shader, T15) y nunca con su tinte real, y la cuia muestra «?×n»; tras
+    /// revelarse, con su tinte; el Barro tiene color propio a ΔE00 ≥ 10 de los 14 tintes, de las turbias y de las 3 aguas base
+    /// (direccion-visual-v2 §2.4, regla 1), con sus grumos. Además del color que lleva la vista, se mira lo que llega al shader
+    /// en la malla de <see cref="LiquidGraphic"/>: la fila del atlas de cada banda (<c>uv3.w</c>, la del patrón para
+    /// daltónicos o la turbia) y su patrón (<c>uv2.w</c> − 4 · dosis). Una dosis oculta con la fila o el patrón de su fruta la
+    /// delataría aunque fuera parda. <see cref="CuiaView"/> en un Canvas de prueba; el arte procedural se crea una vez
+    /// (≈ 300 ms en EditMode).
     /// </summary>
     public sealed class MurkyMudContentTests
     {
-        // Lo que se manda hoy al shader para una dosis oculta o de Barro: tinte 0 (agua base, ninguna fila de fruta en el atlas)
-        // y sin marcas. Si las turbias estrenan su propia fila del atlas, HiddenTint y HiddenPattern cambian aquí; lo demás
-        // sigue valiendo: nunca el tinte real, ninguna fila de fruta y nada que dependa de la fruta oculta.
-        private const int HiddenTint = 0;
-        private const int HiddenPattern = NoPattern;
+        // Lo que se manda al shader para una dosis oculta (T15): la fila turbia del atlas (tras las 14 de las frutas) y el patrón
+        // turbio (trama y «?»), iguales para todas las frutas: nunca el tinte real, ninguna fila de fruta y nada que dependa de la
+        // fruta oculta. El Barro: tinte 0 (agua base) y sin marcas.
+        private const int HiddenTint = ProceduralArt.MurkyPatternRow;
+        private const int HiddenPattern = (int)LiquidGraphic.MurkyPatternMode;
         private const int MudTint = 0;
         private const int NoPattern = -1;
         private const int NoBand = int.MinValue;
@@ -70,16 +71,22 @@ namespace AF.Tests.EditMode
                 Assert.That(Same(view.DoseColor(k), Palette.Murky), Is.True, "dosis oculta " + k + " en pardo opaco");
                 Assert.That(Same(view.DoseColor(k), Palette.Tint(cuia.ColorAt(k))), Is.False, "nunca su tinte real");
                 Assert.That(view.Murky.MarkVisible(k), Is.True, "«?» en la dosis oculta " + k);
+                Assert.That(view.Liquid.MurkyLookAt(k), Is.EqualTo(LiquidGraphic.MurkyLook.Hidden), "el shader pinta la trama y el «?»");
             }
 
             for (int k = 2; k < 4; k++)
             {
                 Assert.That(Same(view.DoseColor(k), Palette.Tint(cuia.ColorAt(k))), Is.True, "dosis visible " + k);
                 Assert.That(view.Murky.MarkVisible(k), Is.False, "sin «?» en la dosis visible " + k);
+                Assert.That(view.Liquid.MurkyLookAt(k), Is.EqualTo(LiquidGraphic.MurkyLook.None));
             }
 
             Assert.That(view.LiquidLevel, Is.EqualTo(4f).Within(0.001f), "las ocultas cuentan para la altura");
             Assert.That(view.ShownCuia, Is.EqualTo(cuia));
+            Assert.That(view.Murky.BadgeCount, Is.EqualTo(2), "la cuia muestra «?×2» (02 §11 T3)");
+            Assert.That(view.Murky.BadgeVisible, Is.True);
+            Assert.That(view.Murky.BadgeDigit.sprite, Is.SameAs(_art.MurkyBadgeDigit(2)));
+            Assert.That(LooseQuestionMarks(view), Is.EqualTo(0), "ya no hay «?» sueltos en sprites: los pinta el shader");
 
             // Lo que llega al shader: la oculta no lleva el tinte ni el patrón de su fruta; las visibles, el suyo.
             var tints = new int[4];
@@ -114,7 +121,7 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Hidden_MarksHideInFlight_AndComeBack()
+        public void Hidden_MarkStaysInItsBandInFlight_BadgeHides()
         {
             CuiaView view = NewView();
             view.ShowContent(Cuia.Create(4, new[] { 8, 4, 4 }, 0b0001), false);
@@ -122,26 +129,29 @@ namespace AF.Tests.EditMode
             layer.transform.SetParent(_canvas.transform, false);
             view.MoveBodyTo((RectTransform)layer.transform);
             Assert.That(view.InFlight, Is.True);
-            Assert.That(view.Murky.MarkVisible(0), Is.False, "en vuelo las bandas no giran: el «?» se oculta");
+            Assert.That(view.Murky.MarkVisible(0), Is.True, "en vuelo la trama y el «?» siguen dentro de su banda (los pinta el shader)");
+            Assert.That(view.Murky.BadgeVisible, Is.False, "la insignia «?×n» se oculta en vuelo");
             view.ReturnBody();
-            Assert.That(view.Murky.MarkVisible(0), Is.True, "al volver, el «?» reaparece");
+            Assert.That(view.Murky.MarkVisible(0), Is.True);
+            Assert.That(view.Murky.BadgeVisible, Is.True, "al volver, la insignia reaparece");
+            Assert.That(view.Murky.BadgeCount, Is.EqualTo(1));
         }
 
         [Test]
-        public void Hidden_MarkGlyphIsHalfU() // 07 §4.3: «?» marfil de 0,5 u
+        public void Hidden_ShaderRow_GlyphIsHalfU_HatchIsDiagonal() // 07 §4.3: «?» marfil de 0,5 u y trama diagonal
         {
             Assert.That(MurkyMarks.MarkU, Is.EqualTo(0.5f), "07 §4.3");
+            Assert.That(ProceduralArt.MurkyPatternRow, Is.GreaterThan(Cuia.MaxTintColor), "la fila turbia no es la de ninguna fruta");
+            Assert.That(_art.PatternAtlas.height, Is.EqualTo((ProceduralArt.MurkyPatternRow + 1) * ProceduralArt.PatternRowPx), "una fila más en el atlas");
 
-            // El lienzo del sprite tal como lo dibuja ProceduralArt (la textura no es legible en EditMode). Marfil = alfa ≥ 0,9:
-            // el halo de tinta solo llega a 0,55.
-            object canvas = typeof(ProceduralArt).GetMethod("DrawQuestionMark", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, null)!;
+            // La fila turbia tal como la dibuja ProceduralArt (la textura no es legible en EditMode): R = «?» marfil, G = su halo
+            // de tinta, A = trama. La fila mide 0,5 × 1 u (la dosis entera).
+            object canvas = typeof(ProceduralArt).GetMethod("DrawMurkyRow", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, null)!;
             System.Type type = canvas.GetType();
             int w = (int)type.GetProperty("Width")!.GetValue(canvas)!;
             int h = (int)type.GetProperty("Height")!.GetValue(canvas)!;
             MethodInfo get = type.GetMethod("Get")!;
-            int bottom = -1;
-            int top = -1;
-            float edgeAlpha = 0f;
+            var px = new Color[w, h];
             var args = new object[2];
             for (int y = 0; y < h; y++)
             {
@@ -149,36 +159,80 @@ namespace AF.Tests.EditMode
                 {
                     args[0] = x;
                     args[1] = y;
-                    var c = (Color)get.Invoke(canvas, args)!;
-                    if (c.a >= 0.9f)
+                    px[x, y] = (Color)get.Invoke(canvas, args)!;
+                }
+            }
+
+            Assert.That(w, Is.EqualTo(ProceduralArt.PatternTilePx));
+            Assert.That(h, Is.EqualTo(ProceduralArt.PatternRowPx));
+            float perU = h; // 1 u por fila
+            int bottom = -1;
+            int top = -1;
+            int left = w;
+            int right = -1;
+            float edge = 0f;
+            float hatch = 0f;
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    Color c = px[x, y];
+                    if (c.r >= 0.9f)
                     {
                         bottom = bottom < 0 ? y : bottom;
                         top = y;
+                        left = Mathf.Min(left, x);
+                        right = Mathf.Max(right, x);
                     }
 
                     if (x == 0 || y == 0 || x == w - 1 || y == h - 1)
                     {
-                        edgeAlpha = Mathf.Max(edgeAlpha, c.a);
+                        edge = Mathf.Max(edge, Mathf.Max(c.r, c.g));
                     }
+
+                    hatch += c.a;
+                    Assert.That(px[(x + 1) % w, (y + 1) % h].a, Is.EqualTo(c.a).Within(1e-4f), "trama diagonal en (" + x + ", " + y + ")");
+                    Assert.That(px[(x + (int)ProceduralArt.MurkyHatchPeriodPx) % w, y].a, Is.EqualTo(c.a).Within(1e-4f), "repetible en x");
                 }
             }
 
-            const float px = ProceduralArt.MechanicPxPerU;
-            Assert.That(w, Is.EqualTo(h), "sprite cuadrado");
-            Assert.That(w / px, Is.EqualTo(ProceduralArt.QuestionMarkU).Within(1e-4f), "lado del sprite");
-            Assert.That(_art.QuestionMark.rect.height, Is.EqualTo((float)h), "el sprite es ese lienzo");
-            Assert.That(bottom, Is.GreaterThanOrEqualTo(0), "hay glifo marfil");
-            Assert.That((top - bottom + 1) / px, Is.EqualTo(MurkyMarks.MarkU).Within(1.5f / px), "alto del glifo marfil (u)");
-            Assert.That((bottom + top + 1) * 0.5f, Is.EqualTo(h * 0.5f).Within(1f), "glifo centrado en la caja");
-            Assert.That(edgeAlpha, Is.LessThan(0.02f), "el halo cabe en el margen: nada toca el borde");
+            Assert.That(bottom, Is.GreaterThanOrEqualTo(0), "hay «?» marfil");
+            Assert.That((top - bottom + 1) / perU, Is.EqualTo(MurkyMarks.MarkU).Within(1.5f / perU), "alto del «?» marfil (u)");
+            Assert.That((bottom + top + 1) * 0.5f, Is.EqualTo(h * 0.5f).Within(1f), "centrado en la banda");
+            Assert.That((left + right + 1) * 0.5f, Is.EqualTo(w * 0.5f).Within(1.5f), "centrado a lo ancho de la ventana");
+            Assert.That(edge, Is.LessThan(0.02f), "el «?» y su halo no tocan el borde de la fila (sin costuras al repetir)");
+            float coverage = hatch / (w * h);
+            Assert.That(coverage, Is.InRange(0.15f, 0.45f), "trama: rayas finas, no un relleno");
 
-            // Colocado en la cuia más estrecha (48 dp de ancho): la caja es el sprite entero, así que el glifo mide 0,5 u.
+            // En la malla: la banda oculta lleva la fila turbia y la x de la «?» en uv1.w (en reposo, la x de la cuia).
             CuiaView view = NewView();
             view.SetGeometry(Vector2.zero, 48f, 64f);
             view.ShowContent(Cuia.Create(4, new[] { 8, 4, 4 }, 0b0001), false);
-            var mark = (RectTransform)view.Murky.Root.GetChild(0);
-            Assert.That(mark.sizeDelta.y / view.Unit, Is.EqualTo(ProceduralArt.QuestionMarkU).Within(1e-4f), "caja del «?» (u)");
-            Assert.That(mark.sizeDelta.x, Is.EqualTo(mark.sizeDelta.y), "sin deformar el glifo");
+            List<UIVertex> vertices = Mesh(view);
+            int seen = 0;
+            for (int i = 0; i < vertices.Count; i++)
+            {
+                UIVertex v = vertices[i];
+                if (BandOf(v) == 0)
+                {
+                    seen++;
+                    Assert.That(v.uv3.w, Is.EqualTo((float)ProceduralArt.MurkyPatternRow), "fila turbia");
+                    Assert.That(v.uv1.w, Is.EqualTo(v.uv0.x - 1f).Within(1e-4f), "en reposo la «?» va centrada en la cuia");
+                }
+            }
+
+            Assert.That(seen, Is.GreaterThan(2), "la banda oculta tiene malla");
+        }
+
+        [Test]
+        public void Badge_ColorsFarFromTints() // direccion-visual-v2 §2.4, regla 1: superficies de más de 2 dp junto a la cuia
+        {
+            for (int tint = 1; tint <= Cuia.MaxTintColor; tint++)
+            {
+                Assert.That(ColorMath.DeltaE00(ProceduralArt.MurkyBadgeFill, Palette.Tint(tint)), Is.GreaterThanOrEqualTo(10f), "insignia frente al tinte " + tint);
+            }
+
+            Assert.That(ColorMath.DeltaE00(ProceduralArt.MurkyBadgeFill, Palette.Murky), Is.GreaterThanOrEqualTo(10f), "insignia frente a las turbias");
         }
 
         [Test]
@@ -290,7 +344,7 @@ namespace AF.Tests.EditMode
             for (int i = 0; i < vertices.Count; i++)
             {
                 UIVertex v = vertices[i];
-                int k = Mathf.RoundToInt(v.uv2.w / 4f);
+                int k = BandOf(v);
                 int pattern = Mathf.RoundToInt(v.uv2.w - (4f * k));
                 int tint = Mathf.RoundToInt(v.uv3.w);
                 Assert.That(k >= 0 && k < tints.Length, Is.True, "dosis del vértice " + i + ": " + k);
@@ -305,6 +359,28 @@ namespace AF.Tests.EditMode
                     Assert.That(pattern, Is.EqualTo(patterns[k]), "vértice " + i + " de la dosis " + k + ": patrón");
                 }
             }
+        }
+
+        // Dosis de un vértice como la decodifica el shader: floor((uv2.w + 1,5) / 4) (el patrón vive en [−1, 2,5)).
+        private static int BandOf(UIVertex v)
+        {
+            return Mathf.FloorToInt((v.uv2.w + 1.5f) / 4f);
+        }
+
+        // Imágenes a la vista bajo las marcas de turbias que no son la insignia ni sus glifos («?» sueltos).
+        private static int LooseQuestionMarks(CuiaView view)
+        {
+            int n = 0;
+            Image[] images = view.Murky.Root.GetComponentsInChildren<Image>(false);
+            for (int i = 0; i < images.Length; i++)
+            {
+                if (images[i] != view.Murky.Badge && !images[i].transform.IsChildOf(view.Murky.Badge.transform))
+                {
+                    n++;
+                }
+            }
+
+            return n;
         }
 
         private static List<UIVertex> Mesh(CuiaView view)

@@ -11,17 +11,28 @@
 // (LiquidGraphic.cs) y todas las cuias comparten un material, así que van en un solo lote. Solo canales UV: el Canvas
 // gira NORMAL y TANGENT con el objeto (la cuia se inclina al verter), así que no sirven para datos. Sin palabras clave
 // (shader_feature) que el build pudiera eliminar. Coste: 1 muestra (patrón) y unas 57 ALU por píxel (el recorte a la
-// silueta añade unas 12; por encima de las 40 de la guía 8: pendiente de medir en un dispositivo de clase A).
+// silueta añade unas 12; por encima de las 40 de la guía 8: pendiente de medir en un dispositivo de clase A). Las dosis
+// turbias hacen 2 muestras (trama y «?») y unas 25 ALU más; nunca más de 2 muestras por píxel. Sin Bloom.
 //
 // Canales (en u de la cuia, x de 0 a 2 con el centro en 1; y desde el pie):
 //   COLOR      color de la dosis (el Canvas lo pasa a lineal)
 //   TEXCOORD0  x, y local (vidrio: brillos y recorte), y de capa (dosis sin inclinar: degradado, patrón, menisco y
 //              superficie), alto de la cuia. En reposo las dos y coinciden.
-//   TEXCOORD1  rgb: color de la franja principal (ya en el espacio del shader); a: destello del sellado
+//   TEXCOORD1  rgb: color de la franja principal (ya en el espacio del shader); a: destello del sellado, o, en una dosis
+//              turbia (nunca sellada, R5), la x de la «?» en pantalla (u de capa desde el centro de la cuerda de su banda)
 //   TEXCOORD2  superficie del líquido, amplitud de la onda, fase de la onda, patrón + 4 · índice de la dosis (patrón: -1
-//              sin patrón, 0 marcas en tinta, 1 marcas en marfil)
-//   TEXCOORD3  rgb: color del menisco (espacio del shader); a: fila del patrón en el atlas
+//              sin patrón, 0 marcas en tinta, 1 marcas en marfil, 2 turbia; 2 + 0,45 · avance al disolverse la «?» por la
+//              regla y 2 - 0,45 · avance al girar con la Luciérnaga)
+//   TEXCOORD3  rgb: color del menisco (espacio del shader); a: fila del patrón en el atlas (la turbia en las dosis turbias)
 //   _DpU       1 dp en u (todas las cuias de un nivel miden lo mismo); _PatternRows: filas del atlas
+//
+// Aguas turbias (07 §4.3; 08 §5.2; LiquidGraphic.MurkyLook): equivale a _HiddenMask (cada banda turbia lleva el patrón 2;
+// también ocultas no contiguas) y a _MurkyColor = #8A7B6A (el color de la banda), que no pueden ir como propiedades porque
+// uGUI no admite MaterialPropertyBlock y todas las cuias comparten material. La fila turbia del atlas (lineal) lleva en A la
+// trama diagonal (repetible, dos teselas por u) y en R y G el «?» marfil de 0,5 u y su halo de tinta, una sola vez y
+// centrado en la fila. Sobre el pardo: trama al 25 % hacia la tinta y «?» marfil con el halo de tinta al 55 %, en
+// coordenadas de pantalla relativas a su banda (derechos aunque la cuia se incline, y del tamaño de la banda), sin la
+// mezcla fija del 15 % de los patrones de fruta.
 //   _AF*U      geometría de la cuia (globales que fija LiquidGraphic.ApplyShaderGeometry desde CuiaGeometry, la única
 //              fuente): fondo y medio ancho de la cavidad, medio ancho del cuello, hombro, alto sobre la cavidad, borde y
 //              alto de la cara superior
@@ -40,7 +51,7 @@ Shader "AF/UI/Liquid"
     {
         [PerRendererData] _MainTex ("Pattern Atlas", 2D) = "white" {}
         _DpU ("Un dp en u", Float) = 0.0417
-        _PatternRows ("Filas del atlas", Float) = 15
+        _PatternRows ("Filas del atlas", Float) = 16
         _InkLin ("Tinta en lineal", Color) = (0.024, 0.015, 0.009, 1)
         _PaperLin ("Marfil en lineal", Color) = (0.905, 0.831, 0.693, 1)
         _StencilComp ("Stencil Comparison", Float) = 8
@@ -105,7 +116,7 @@ Shader "AF/UI/Liquid"
                 float4 vertex : SV_POSITION;
                 half4 color : COLOR;
                 float4 uv0 : TEXCOORD0;
-                half4 lit : TEXCOORD1;
+                float4 lit : TEXCOORD1; // float: en las dosis turbias, a es la x de la «?»
                 float4 surf : TEXCOORD2;
                 half4 men : TEXCOORD3;
                 UNITY_VERTEX_OUTPUT_STEREO
@@ -226,16 +237,46 @@ Shader "AF/UI/Liquid"
                 col = lerp(col, i.lit.rgb, hl);
 
                 // Patrón del tinte (07 §3): marcas al 15 % hacia tinta o marfil, mezcladas en un espacio aproximadamente
-                // gamma (raíz cuadrada) como Palette.PatternMark, encima de los brillos (VA-05b).
+                // gamma (raíz cuadrada) como Palette.PatternMark, encima de los brillos (VA-05b). En una dosis turbia, la misma
+                // muestra lee la trama de la fila turbia, al 25 % hacia la tinta (07 §4.3) y sin la mezcla fija del 15 %.
+                // Aguas turbias: coordenadas de pantalla de su banda, en u de capa (gx: x de la «?» desde el centro de la
+                // cuerda; gy: desde el centro de la banda, entre sus arcos), así que la trama y la «?» siguen a la banda
+                // cuando la cuia se inclina. v > 0: revelado por la regla; v < 0: Luciérnaga.
+                float rowH = 1.0 / _PatternRows;
+                bool murky = patternMode > 1.5;
+                float gx = i.lit.a;
+                float gy = ya - doseBottom - 0.5;
+                float v = (patternMode - 2.0) / 0.45;
+                float dissolve = murky ? saturate(v) : 0.0;
+                float turn = murky ? saturate(-v) : 0.0;
                 if (patternMode > -0.5)
                 {
-                    float rowH = 1.0 / _PatternRows;
-                    // Dos teselas por u (ProceduralArt.PatternTileU = 0,5 u) desde la pared izquierda de la cavidad.
-                    float2 puv = float2((x - (1.0 - _AFCavityHalfU)) * 2.0, (i.men.a * rowH) + (clamp(ya - doseBottom, 0.004, 0.996) * rowH));
+                    // Dos teselas por u (ProceduralArt.PatternTileU = 0,5 u): desde la pared izquierda de la cavidad o, la
+                    // trama, desde el centro de la cuerda de la banda.
+                    float pu = murky ? gx * 2.0 : (x - (1.0 - _AFCavityHalfU)) * 2.0;
+                    float2 puv = float2(pu, (i.men.a * rowH) + (clamp(ya - doseBottom, 0.004, 0.996) * rowH));
                     half m = tex2D(_MainTex, puv).a;
-                    half3 baseCol = lerp(_InkLin.rgb, _PaperLin.rgb, (half)patternMode);
-                    half3 g = lerp(sqrt(col), sqrt(baseCol), 0.15 * m);
+                    half3 baseCol = murky ? _InkLin.rgb : lerp(_InkLin.rgb, _PaperLin.rgb, (half)patternMode);
+                    half amount = murky ? 0.25 * (1.0 - smoothstep(0.3, 1.0, max(dissolve, turn))) : 0.15;
+                    half3 g = lerp(sqrt(col), sqrt(baseCol), amount * m);
                     col = g * g;
+                }
+
+                // «?» marfil de 0,5 u con su halo de tinta al 55 % (07 §4.3; glosario §6.2), una vez y centrada en la banda
+                // (R: marfil; G: halo). Por la regla crece, ondula y se disuelve; con la Luciérnaga gira hasta quedar de
+                // canto. Segunda y última muestra (tex2Dlod: el atlas no tiene mipmaps y así puede ir dentro de la rama).
+                if (murky)
+                {
+                    float grow = 1.0 + (0.45 * smoothstep(0.0, 1.0, dissolve));
+                    float wobble = 0.05 * sin(3.14159 * dissolve) * sin((gy * 22.0) + (dissolve * 9.0));
+                    float squeeze = max(cos(1.5708 * turn), 0.001);
+                    float qx = (gx + wobble) / (grow * squeeze);
+                    float qy = gy / grow;
+                    float fade = (1.0 - smoothstep(0.35, 0.85, dissolve)) * step(turn, 0.999) * step(abs(qx), 0.25);
+                    float2 quv = float2((qx * 2.0) + 0.5, (i.men.a * rowH) + (clamp(qy + 0.5, 0.004, 0.996) * rowH));
+                    half2 q = tex2Dlod(_MainTex, float4(quv, 0.0, 0.0)).rg;
+                    col = lerp(col, _InkLin.rgb, 0.55 * q.g * fade);
+                    col = lerp(col, _PaperLin.rgb, q.r * fade);
                 }
 
                 // Cara superior (D-006): la elipse entera con el color aclarado del menisco, más clara que el tinte, y una
@@ -245,8 +286,9 @@ Shader "AF/UI/Liquid"
                 float rim = saturate(1.0 - ((topEdge - y) / dpU));
                 col = lerp(col, half3(1.0, 1.0, 1.0), 0.35 * rim * inFace);
 
-                // Destello del sellado: +15 % de luminosidad durante 100 ms (07 §5.3).
-                col += (1.0 - col) * i.lit.a;
+                // Destello del sellado: +15 % de luminosidad durante 100 ms (07 §5.3). En una dosis turbia lit.a es la x de la
+                // «?» (una cuia con ocultas nunca se sella, R5).
+                col += (1.0 - col) * (murky ? 0.0 : i.lit.a);
 
                 return half4(col, alpha * clip * i.color.a);
             }
