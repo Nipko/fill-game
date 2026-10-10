@@ -70,7 +70,9 @@ namespace AF.Presentation
     /// tableros antes y después y las etapas de R10. Si tiene pasos de mecánica (<see cref="MechanicStepPlan"/>), al terminar
     /// el caudal (<c>FlowEnd + StreamGrowMs</c>) los ejecuta su <see cref="MechanicStepQueue"/> por etapas, en el orden de R10
     /// con el punto fijo f′, y el trabajo deja el origen y la tocada en el estado previo a sus pasos
-    /// (<see cref="StepStaging.JobEnd"/>). Las cuias que cambiaron sin paso saltan a su estado final al llegar el caudal. Un
+    /// (<see cref="StepStaging.JobEnd"/>). Los pasos que pintan el origen no empiezan hasta que vuelve a su ranura, y el fin
+    /// del trabajo nunca pinta ese estado previo encima de pasos ya terminados (pinta el del punto en que va el plan). Las
+    /// cuias que cambiaron sin paso saltan a su estado final al llegar el caudal. Un
     /// cambio solo de contador (la Lluvia o la cueva que cuentan un vertido útil) no retiene la cuia ni impide el encadenado: se
     /// repinta en el acto si ningún trabajo la usa y, si no, al terminar el último que la usa (lo pinta con el estado del
     /// modelo). Ninguna cuia queda desfasada del modelo y todas cuentan para la espera y el retraso máximo de 02 §3.2.
@@ -550,7 +552,8 @@ namespace AF.Presentation
         /// final y, si se sella, con su animación (02 §9.1 M4);</description></item>
         /// <item><description>con pasos de mecánica (<see cref="MechanicStepPlan"/>), al terminar el caudal la cola de pasos
         /// los ejecuta por etapas (R10 con f′) en la cuia dueña de cada mecánica, y el trabajo deja el origen y la tocada en
-        /// <see cref="StepStaging.JobEnd"/>: sin pasos sobre ellas, en su estado final;</description></item>
+        /// <see cref="StepStaging.JobEnd"/>: sin pasos sobre ellas, en su estado final; los pasos que pintan el origen
+        /// esperan a que vuelva a su ranura;</description></item>
         /// <item><description>las demás cuias que cambiaron sin paso saltan a su estado final al terminar el caudal (con la
         /// animación de sellado si se sellaron en un vertido sin pasos); un cambio solo de contador no retiene la cuia (ver la
         /// clase);</description></item>
@@ -1162,7 +1165,7 @@ namespace AF.Presentation
             }
 
             // Pasos de mecánica: empiezan al llegar el caudal (etapa (a)), tras el fin del destino y los saltos de este
-            // fotograma; el revelado espera a que el origen vuelva (SrcDone, también en este fotograma).
+            // fotograma; los que pintan el origen (y el revelado) esperan a que vuelva (SrcDone, también en este fotograma).
             if (job.Plan >= 0 && !job.PlanDone && time >= job.ExtraStart)
             {
                 float step = dtMs;
@@ -1337,17 +1340,49 @@ namespace AF.Presentation
             }
         }
 
-        // Fin de la parte del trabajo en el origen o la tocada: si el plan aún tiene pasos sobre ella, el estado previo a
-        // ellos (JobEnd, ya en SrcAfter o TgtAfter); si no, su estado final.
+        // Fin de la parte del trabajo en el origen o la tocada: si el plan aún tiene pasos sobre ella, el estado de la cuia en
+        // ese punto del plan (PlanPoint); si no, su estado final. Nunca pinta el estado previo a los pasos (JobEnd) encima de
+        // pasos que ya terminaron en esa cuia.
         private void PaintJobEnd(int index, int cuia, Cuia state, bool sealedNow)
         {
-            if ((PlanPending(ref _jobs[index]) & Bit(cuia)) != 0)
+            ref Job job = ref _jobs[index];
+            PlanPoint(ref job, cuia, ref state, ref sealedNow);
+            if ((PlanPending(ref job) & Bit(cuia)) != 0)
             {
                 ShowContentAt(cuia, state, sealedNow);
             }
             else
             {
                 PaintFinal(index, cuia, state, sealedNow);
+            }
+        }
+
+        // Estado de la cuia en el punto en que va el plan del trabajo, si la pinta: antes de que empiece, el que trae quien
+        // llama (JobEnd, en SrcAfter o TgtAfter); en marcha, After si no le quedan pasos o el previo a su primera etapa sin
+        // terminar (MechanicStepQueue.StateAt); terminado, After. Sin plan sobre la cuia, no cambia nada.
+        private void PlanPoint(ref Job job, int cuia, ref Cuia state, ref bool sealedNow)
+        {
+            if (job.Plan < 0 || (job.PlanMask & Bit(cuia)) == 0)
+            {
+                return;
+            }
+
+            if (job.PlanDone)
+            {
+                BoardState? after = job.After;
+                if (after != null && (uint)cuia < (uint)after.Count)
+                {
+                    state = after[cuia];
+                    sealedNow = after.IsSealed(cuia);
+                }
+
+                return;
+            }
+
+            if (job.PlanBegun && _steps.StateAt(job.Plan, cuia, out Cuia at, out bool atSealed))
+            {
+                state = at;
+                sealedNow = atSealed;
             }
         }
 

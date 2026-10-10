@@ -267,34 +267,55 @@ namespace AF.Tests.PlayMode
             MechanicTestKit.StepToIdle(boot, 6000);
             Assert.That(MechanicTestKit.TryFindRecord(boot.View!.Animator, MechanicStepKind.RainDrop, rain, out _), Is.False);
 
-            // La gota cae con el vertido útil que completa los 3.
+            // La gota cae con el vertido útil que completa los 3. Cada camino del buscador se juega vertido a vertido: solo
+            // cuentan los que el núcleo da por útiles (Events.Futile == false; un fútil del camino no cuenta, Q18 B) y en cada
+            // uno se comprueba si cayó la gota. Si la Lluvia estuviera llena al tocarle, la gota espera al siguiente útil
+            // (02 §9.1 M6; RainWait).
+            int needed = k - counter;
             int useful = 0;
-            while (true)
+            int played = 0;
+            bool done = false;
+            while (!done)
             {
                 Pour[]? next = MechanicTestKit.FindTrigger(flow, (ev, b, a) => !ev.Futile && !a.IsWon() && !PourRules.IsStuck(a, true));
                 Assert.That(next, Is.Not.Null, "un vertido útil");
-                Pour pour = next![next.Length - 1];
-                MechanicTestKit.PlayPrefix(boot, next);
-                useful += next.Length;
-                TapResult poured = MechanicTestKit.Tap(boot, pour);
-                Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured));
-                bool dropped = (poured.Pour.Events.LluviaDropMask & (1 << rain)) != 0;
-                int elapsed = MechanicTestKit.StepToIdle(boot, 6000);
-                if (useful < k - counter)
+                for (int i = 0; i < next!.Length && !done; i++)
                 {
-                    Assert.That(dropped, Is.False, "vertido útil " + useful + " de " + (k - counter) + ": aún no cae");
-                    continue;
-                }
+                    Assert.That(played++, Is.LessThan(40), "la gota cae en un número acotado de vertidos");
+                    boot.View!.Animator.Steps.ClearLog();
+                    TapResult poured = MechanicTestKit.Tap(boot, next[i]);
+                    Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured), "vertido " + next[i].Source + " → " + next[i].Target);
+                    PourEvents events = poured.Pour.Events;
+                    bool dropped = (events.LluviaDropMask & (1 << rain)) != 0;
+                    int elapsed = MechanicTestKit.StepToIdle(boot, 6000);
+                    if (!events.Futile)
+                    {
+                        useful++;
+                    }
 
-                Assert.That(dropped, Is.True, "la gota cae con el vertido útil " + useful + " tras el fútil");
-                MechanicStepKind kind = (poured.Pour.Events.LluviaEndedMask & (1 << rain)) != 0 ? MechanicStepKind.RainEnd : MechanicStepKind.RainDrop;
-                MechanicStepRecord drop = MechanicTestKit.Record(boot.View.Animator, kind, rain);
-                Assert.That(drop.Stage, Is.EqualTo(StepStage.E));
-                Assert.That(drop.Owner, Is.EqualTo(MechanicType.Lluvia), "despachado a la cuia de la Lluvia");
-                Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs));
-                TestContext.WriteLine("Nivel " + boot.Flow!.LevelNumber + ": " + elapsed + " ms del toque a la vista quieta. " + MechanicTestKit.Describe(boot.View!.Animator));
-                MechanicTestKit.AssertViewMatchesModel(boot);
-                break;
+                    if (useful < needed)
+                    {
+                        Assert.That(dropped, Is.False, "vertido " + played + (events.Futile ? " (fútil)" : " (útil " + useful + " de " + needed + ")") + ": aún no cae");
+                        continue;
+                    }
+
+                    if ((events.LluviaWaitingMask & (1 << rain)) != 0)
+                    {
+                        Assert.That(dropped, Is.False, "llena: la gota espera");
+                        needed = useful + 1;
+                        continue;
+                    }
+
+                    Assert.That(dropped, Is.True, "la gota cae con el vertido útil " + useful + " tras el fútil");
+                    MechanicStepKind kind = (events.LluviaEndedMask & (1 << rain)) != 0 ? MechanicStepKind.RainEnd : MechanicStepKind.RainDrop;
+                    MechanicStepRecord drop = MechanicTestKit.Record(boot.View!.Animator, kind, rain);
+                    Assert.That(drop.Stage, Is.EqualTo(StepStage.E));
+                    Assert.That(drop.Owner, Is.EqualTo(MechanicType.Lluvia), "despachado a la cuia de la Lluvia");
+                    Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs));
+                    TestContext.WriteLine("Nivel " + boot.Flow!.LevelNumber + ": " + elapsed + " ms del toque a la vista quieta (vertido " + played + ", " + useful + " útiles). " + MechanicTestKit.Describe(boot.View!.Animator));
+                    MechanicTestKit.AssertViewMatchesModel(boot);
+                    done = true;
+                }
             }
         }
 
@@ -318,6 +339,200 @@ namespace AF.Tests.PlayMode
             Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs));
             TestContext.WriteLine("Nivel " + boot.Flow!.LevelNumber + ": " + elapsed + " ms del toque a la vista quieta. " + MechanicTestKit.Describe(boot.View!.Animator));
             MechanicTestKit.AssertViewMatchesModel(boot);
+        }
+
+        [UnityTest]
+        public IEnumerator LluviaSource_LastDropSeals_DropStaysUnderTheSeal()
+        {
+            // Q-B (143): la Lluvia [10, 10, 10, 1] con su última gota es el origen. 3 → 2 cuenta 1 (k = 2) y 0 → 1 vierte su 1:
+            // la gota cae sobre las tres aguas (RainEnd, e) y la sella en (c′). Los dos pasos pintan el origen, así que
+            // esperan a que vuelva a su ranura; mientras, el trabajo lo devuelve con tres aguas, la nube y sin tapa. Desde que
+            // termina la gota hasta el final del sellado, la cuia muestra After (cuatro aguas, sin nube) con la tapa cayendo:
+            // la gota nunca desaparece ni la tapa cae sobre tres dosis.
+            yield return null;
+            BoardState start = Board(
+                new[] { new[] { 10, 10, 10, 1 }, new[] { 1, 1 }, new[] { 2, 2 }, new[] { 2 }, new[] { 1 }, new[] { 2 } },
+                new[] { new MechanicSpec(MechanicType.Lluvia, key: 10, n: 1, k: 2), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
+            _rig = new MechanicTestKit.Rig(Art, start);
+            BoardState counted = _rig.Pour(start, 3, 2, out _);
+            Assert.That(counted[0].MechanicCounter, Is.EqualTo(1), "el primer vertido útil cuenta");
+            _rig.RunUntilIdle(3000);
+            _rig.Animator.Steps.ClearLog();
+
+            BoardState after = _rig.Pour(counted, 0, 1, out PourVisual v);
+            Assert.That(v.Events.LluviaEndedMask & v.Events.SealedMask, Is.EqualTo(1 << 0), "la última gota sella la Lluvia");
+            Assert.That(after[0].Mechanic, Is.EqualTo(MechanicType.None), "sin nube");
+            Assert.That(after[0].Count, Is.EqualTo(4));
+            CuiaView rain = _rig.Views[0];
+            MechanicStepQueue steps = _rig.Animator.Steps;
+            float tapped = _rig.Animator.Clock;
+            float backAt = -1f;
+            bool flew = false;
+            float lastLevel = -1f;
+            int sealFrames = 0;
+            int t = 0;
+            while (!_rig.Animator.IsIdle)
+            {
+                Assert.That(t, Is.LessThan(6000), "la vista no se quedó quieta");
+                _rig.Tick(PlayModeHelpers.FrameMs);
+                t += PlayModeHelpers.FrameMs;
+                flew |= rain.BodyInFront;
+                if (flew && !rain.BodyInFront && backAt < 0f)
+                {
+                    backAt = _rig.Animator.Clock;
+                }
+
+                if (backAt < 0f)
+                {
+                    Assert.That(MechanicTestKit.TryFindRecord(_rig.Animator, MechanicStepKind.RainEnd, 0, out _), Is.False, "la gota no cae en el origen en vuelo");
+                    continue;
+                }
+
+                bool dropDone = MechanicTestKit.TryFindRecord(_rig.Animator, MechanicStepKind.RainEnd, 0, out _) && !steps.IsRunning(MechanicStepKind.RainEnd, 0);
+                if (!dropDone)
+                {
+                    // Del regreso al fin de la gota: sin tapa sobre tres dosis y el nivel nunca baja (la gota no se pierde).
+                    Assert.That(rain.Sealed, Is.False, "sin tapa antes de la gota (" + t + " ms)");
+                    Assert.That(rain.LiquidLevel, Is.GreaterThanOrEqualTo(3f - 1e-3f), "las tres aguas (" + t + " ms)");
+                    Assert.That(rain.LiquidLevel, Is.GreaterThanOrEqualTo(lastLevel - 1e-3f), "la gota solo sube (" + t + " ms)");
+                    lastLevel = rain.LiquidLevel;
+                    continue;
+                }
+
+                // Del fin de la gota al fin del Seal (c′): After con la tapa, cuatro dosis y sin nube.
+                sealFrames += steps.IsRunning(MechanicStepKind.Seal, 0) ? 1 : 0;
+                Assert.That(_rig.Animator.ShownOf(0), Is.EqualTo(after[0]), "After del origen (" + t + " ms). " + MechanicTestKit.Describe(_rig.Animator));
+                Assert.That(rain.Sealed, Is.True, "con la tapa (" + t + " ms)");
+                Assert.That(rain.LiquidLevel, Is.EqualTo(4f).Within(1e-3f), "cuatro dosis (" + t + " ms)");
+                Assert.That(rain.Overlay!.Visible, Is.False, "sin la nube de la Lluvia (" + t + " ms)");
+            }
+
+            MechanicStepRecord drop = MechanicTestKit.Record(_rig.Animator, MechanicStepKind.RainEnd, 0);
+            MechanicStepRecord seal = MechanicTestKit.Record(_rig.Animator, MechanicStepKind.Seal, 0);
+            TestContext.WriteLine(t + " ms del toque a la vista quieta. " + MechanicTestKit.Describe(_rig.Animator));
+            Assert.That(backAt, Is.GreaterThan(0f), "el origen voló y volvió");
+            Assert.That(drop.StartMs, Is.GreaterThanOrEqualTo(backAt - PlayModeHelpers.FrameMs), "la gota espera a que el origen vuelva a su ranura");
+            Assert.That(seal.Stage, Is.EqualTo(StepStage.CPrime));
+            Assert.That(seal.StartMs, Is.GreaterThanOrEqualTo(drop.EndMs - 0.01f), "la tapa cae después de la gota");
+            Assert.That(sealFrames, Is.GreaterThan(0), "se vio el sellado (c′)");
+            Assert.That(_rig.Animator.Clock - tapped, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs), "del toque a la vista quieta");
+            for (int i = 0; i < after.Count; i++)
+            {
+                Assert.That(_rig.Animator.ShownOf(i), Is.EqualTo(after[i]), "cuia " + i);
+                Assert.That(_rig.Views[i].Sealed, Is.EqualTo(after.IsSealed(i)), "tapa de la cuia " + i);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator LluviaSource_DropThenQueuedPourIntoIt_NoGap()
+        {
+            // Q-B: la Lluvia [10, 1] (dos gotas, k = 2) es el origen de 0 → 2 y le cae una gota que no es la última
+            // (RainDrop); el jugador ya ha encolado 1 → 0, agua sobre la gota. Ese vertido llena desde la cima del modelo
+            // (FillBase = 2): mientras dura, la Lluvia muestra al menos las dos dosis de After del primero, sin hueco.
+            yield return null;
+            BoardState start = Board(
+                new[] { new[] { 10, 1 }, new[] { 10 }, new[] { 1, 1 }, new[] { 2, 2 }, new[] { 2 }, new[] { 1 }, new[] { 2 } },
+                new[] { new MechanicSpec(MechanicType.Lluvia, key: 10, n: 2, k: 2), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
+            _rig = new MechanicTestKit.Rig(Art, start);
+            BoardState counted = _rig.Pour(start, 4, 3, out _);
+            Assert.That(counted[0].MechanicCounter, Is.EqualTo(1), "el primer vertido útil cuenta");
+            _rig.RunUntilIdle(3000);
+            _rig.Animator.Steps.ClearLog();
+
+            BoardState dropped = _rig.Pour(counted, 0, 2, out PourVisual first);
+            Assert.That(first.Events.LluviaDropMask, Is.EqualTo(1 << 0), "cae una gota en el origen");
+            Assert.That(first.Events.LluviaEndedMask, Is.EqualTo(0), "no es la última");
+            Assert.That(dropped[0].Mechanic, Is.EqualTo(MechanicType.Lluvia));
+            BoardState after = _rig.Pour(dropped, 1, 0, out PourVisual second);
+            Assert.That(second.Receiver, Is.EqualTo(0));
+            Assert.That(after[0].Count, Is.EqualTo(3));
+            int floor = first.After[0].Count;
+            CuiaView rain = _rig.Views[0];
+            CuiaView water = _rig.Views[1];
+            float backAt = -1f;
+            bool flew = false;
+            bool secondStarted = false;
+            float secondStartAt = -1f;
+            int t = 0;
+            while (!_rig.Animator.IsIdle)
+            {
+                Assert.That(t, Is.LessThan(8000), "la vista no se quedó quieta");
+                _rig.Tick(PlayModeHelpers.FrameMs);
+                t += PlayModeHelpers.FrameMs;
+                flew |= rain.BodyInFront;
+                if (flew && !rain.BodyInFront && backAt < 0f)
+                {
+                    backAt = _rig.Animator.Clock;
+                }
+
+                if (!secondStarted && water.BodyInFront)
+                {
+                    secondStarted = true;
+                    secondStartAt = _rig.Animator.Clock;
+                }
+
+                if (secondStarted)
+                {
+                    Assert.That(rain.LiquidLevel, Is.GreaterThanOrEqualTo(floor - 1e-3f), "durante 1 → 0 la Lluvia conserva la gota (" + t + " ms). " + MechanicTestKit.Describe(_rig.Animator));
+                }
+            }
+
+            MechanicStepRecord drop = MechanicTestKit.Record(_rig.Animator, MechanicStepKind.RainDrop, 0);
+            TestContext.WriteLine(t + " ms hasta la vista quieta. " + MechanicTestKit.Describe(_rig.Animator));
+            Assert.That(secondStarted, Is.True, "el segundo vertido se animó");
+            Assert.That(backAt, Is.GreaterThan(0f), "el origen voló y volvió");
+            Assert.That(drop.StartMs, Is.GreaterThanOrEqualTo(backAt - PlayModeHelpers.FrameMs), "la gota espera a que el origen vuelva a su ranura");
+            Assert.That(secondStartAt, Is.GreaterThanOrEqualTo(drop.EndMs - 0.01f), "el vertido a la Lluvia espera a su gota");
+            for (int i = 0; i < after.Count; i++)
+            {
+                Assert.That(_rig.Animator.ShownOf(i), Is.EqualTo(after[i]), "cuia " + i);
+            }
+
+            Assert.That(rain.LiquidLevel, Is.EqualTo(3f).Within(1e-3f));
+        }
+
+        [UnityTest]
+        public IEnumerator SourceSteps_WaitForReturn_CountInBudget()
+        {
+            // La espera hasta que el origen vuelve (320 ms en el banco: el caudal llega a los 550 y el origen vuelve a los
+            // 870) cuenta en el presupuesto y no se acelera: con una gota de 3.000 ms en la Lluvia que vierte (más la tapa de
+            // 450), el plan se acelera hasta acabar justo antes de los 2.800 ms desde el toque, sin saltar ninguna etapa.
+            yield return null;
+            BoardState start = Board(
+                new[] { new[] { 10, 10, 10, 1 }, new[] { 1, 1 }, new[] { 2, 2 }, new[] { 2 }, new[] { 1 }, new[] { 2 } },
+                new[] { new MechanicSpec(MechanicType.Lluvia, key: 10, n: 1, k: 2), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
+            var probe = new MechanicTestKit.ProbeOverlay(MechanicType.Lluvia);
+            probe.Durations[(int)MechanicStepKind.RainEnd] = 3000f;
+            _rig = new MechanicTestKit.Rig(Art, start, views => views[0].UseOverlay(probe));
+            BoardState counted = _rig.Pour(start, 3, 2, out _);
+            _rig.RunUntilIdle(3000);
+            _rig.Animator.Steps.ClearLog();
+            int overruns = _rig.Animator.Steps.BudgetOverruns;
+            int devEvents = 0;
+            _rig.Animator.DevEvent = (evt, fields) => devEvents++;
+
+            BoardState after = _rig.Pour(counted, 0, 1, out _);
+            int elapsed = _rig.RunUntilIdle(6000);
+            TestContext.WriteLine(elapsed + " ms del toque a la vista quieta, factor " + _rig.Animator.Steps.LastSpeedFactor + ". " + MechanicTestKit.Describe(_rig.Animator));
+            Assert.That(_rig.Animator.IsIdle, Is.True);
+            Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs), "del toque a la vista quieta, con la espera");
+            // El caudal llega a los 550 ms: quedan 2.250 − 1 de margen; la espera (320) no se acelera y la gota y la tapa
+            // (3.000 + 450) se reparten el resto. Sin contar la espera, el factor sería 2.249 / 3.450 y el plan se pasaría.
+            float expected = (MechanicTestKit.BudgetMs - 550f - MechanicStepQueue.BudgetSlackMs - 320f) / 3450f;
+            Assert.That(_rig.Animator.Steps.LastSpeedFactor, Is.EqualTo(expected).Within(1e-3f), "la espera cuenta en el presupuesto");
+            Assert.That(_rig.Animator.Steps.BudgetOverruns, Is.EqualTo(overruns), "cabe sin saltar");
+            Assert.That(devEvents, Is.EqualTo(0), "sin salto no hay step_budget");
+            Assert.That(probe.Steps.Count, Is.EqualTo(1), "la gota llega al overlay");
+            Assert.That(probe.Steps[0].SpeedFactor, Is.EqualTo(expected).Within(1e-3f));
+            Assert.That(probe.Steps[0].Kind, Is.EqualTo(MechanicStepKind.RainEnd));
+            MechanicStepRecord drop = MechanicTestKit.Record(_rig.Animator, MechanicStepKind.RainEnd, 0);
+            MechanicStepRecord seal = MechanicTestKit.Record(_rig.Animator, MechanicStepKind.Seal, 0);
+            Assert.That(seal.Snapped, Is.False, "la tapa no salta");
+            Assert.That(drop.StartMs - (_rig.Animator.Clock - elapsed), Is.EqualTo(870f).Within(0.5f), "la gota empieza cuando vuelve el origen (870 ms)");
+            for (int i = 0; i < after.Count; i++)
+            {
+                Assert.That(_rig.Animator.ShownOf(i), Is.EqualTo(after[i]), "cuia " + i);
+            }
         }
 
         [UnityTest]

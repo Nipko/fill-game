@@ -2,6 +2,7 @@
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
+using AF.GameFlow;
 using AF.Presentation;
 using AF.Presentation.Mechanics;
 using NUnit.Framework;
@@ -164,6 +165,13 @@ namespace AF.Tests.EditMode
             PourVisual brote = StepBoards.BroteOpen(out int bud);
             Assert.That(MechanicStepPlan.Build(in brote, _plan), Is.EqualTo(1));
             AssertEntry(0, MechanicStepKind.Open, StepStage.B, bud, -1);
+        }
+
+        [Test]
+        public void Budget_IsTheViewDrainCapMinus200() // el presupuesto desde el toque sigue al tope [P] de GameConfig
+        {
+            // AF.Presentation no ve AF.GameFlow (08 §2.2): la cifra se copia en MechanicStepQueue y este test la ata al tope.
+            Assert.That(MechanicStepQueue.BudgetFromTapMs, Is.EqualTo((float)(GameConfig.MaxViewDrainWaitMs - 200)));
         }
 
         [Test]

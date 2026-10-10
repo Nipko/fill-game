@@ -78,26 +78,34 @@ namespace AF.Presentation.Mechanics
     /// <remarks>
     /// <para><b>Despacho.</b> Cada paso va al overlay de la mecánica que la cuia dueña tiene en <c>ctx.Before</c>
     /// (<see cref="CuiaOverlay.PlayStep"/>); si no hay overlay o devuelve 0, se usa el paso por defecto. Reveal y MudWash van a
-    /// <c>CuiaView.PlayReveal</c> y <c>CuiaView.PlayMudWash</c> (las marcas), y el Reveal no empieza hasta que el origen vuelve
-    /// a su ranura. Al acabar cada paso, <see cref="CuiaOverlay.SnapStep"/> (o el de las marcas) y
-    /// <c>ShowContent(ctx.After, ctx.AfterSealed)</c> en las dos cuias.</para>
+    /// <c>CuiaView.PlayReveal</c> y <c>CuiaView.PlayMudWash</c> (las marcas). Al acabar cada paso,
+    /// <see cref="CuiaOverlay.SnapStep"/> (o el de las marcas) y <c>ShowContent(ctx.After, ctx.AfterSealed)</c> en las dos
+    /// cuias.</para>
+    /// <para><b>El origen, primero en su ranura.</b> Ningún paso que pinte el origen (su <c>Index</c> o su
+    /// <c>OtherIndex</c>) empieza antes de que vuelva a su ranura (<c>SrcDone</c>), igual que el Reveal: mientras vuela, el
+    /// trabajo del vertido es quien lo pinta, y un paso que terminara antes (la gota de una Lluvia que es el origen, Q-B)
+    /// quedaría debajo del estado con el que el trabajo lo devuelve. Los pasos de esa etapa que no lo tocan van a su hora y
+    /// la etapa termina con el más largo de todos; la espera cuenta en el presupuesto.</para>
     /// <para><b>Pasos por defecto</b> (cifras canónicas × factor de velocidad): Reveal, fundido del pardo al tinte en 300 ms
     /// con ease-out (<see cref="MurkyMarks.RevealRuleMs"/>; 02 §4.1, 07 §4.3); Seal, <c>SealAnimationAt</c> en 450 ms
     /// (07 §5.3); RainDrop y RainEnd, la gota sube como una dosis en <c>anim_pour_dose_ms</c> (280 ms); Bite, la víctima pierde
     /// la dosis de arriba en 280 ms y después la cueva la recibe en 280 ms, en un solo paso; MudWash, 0; los demás, salto.</para>
     /// <para><b>Presupuesto desde el toque.</b> Del toque a la vista quieta, como mucho <see cref="BudgetFromTapMs"/> =
-    /// <c>MaxViewDrainWaitMs</c> − 200 = 2.800 ms (3.000 es el tope [P] del tech-lead de <c>GameConfig</c>, que no cambia). Al
-    /// llegar a (a) se calcula <c>restante</c> = 2.800 − ms desde el toque, y <c>nominal</c> = Σ por etapa del máximo de
-    /// <c>StepDurationMs × SpeedFactor</c> (más la espera del Reveal hasta que vuelva el origen, que no se acelera). Si
-    /// <c>nominal</c> &gt; <c>restante</c>, el factor se multiplica por <c>max(0,35, (restante − 1 ms) / nominal)</c>: el
-    /// milisegundo de margen (<see cref="BudgetSlackMs"/>) absorbe el redondeo de coma flotante, así que el plan acelerado acaba
-    /// antes del presupuesto y nunca después. Si aun así no cabe, saltan las etapas que acabarían después de <c>restante</c>
-    /// (sus pasos terminan en el acto), se cuenta en <see cref="BudgetOverruns"/> y se avisa con <c>step_budget</c> por
+    /// <c>MaxViewDrainWaitMs</c> − 200 = 2.800 ms (3.000 es el tope [P] del tech-lead de <c>GameConfig</c>, que no cambia; un
+    /// test EditMode ata las dos cifras). Al llegar a (a) se calcula <c>restante</c> = 2.800 − ms desde el toque, y el fin
+    /// previsto del plan con la espera <c>w</c> hasta que vuelva el origen, que no se acelera: con el factor <c>f</c>,
+    /// <c>max(f · Σ A, w + f · B)</c>, donde <c>A</c> es el paso más largo de cada etapa (<c>StepDurationMs</c>) y <c>B</c>, el
+    /// camino más largo que empieza en un paso que espera al origen (ese paso y las etapas siguientes). Si no cabe, el factor
+    /// es el mayor que lo deja en <c>restante − 1 ms</c>, y nunca menos de 0,35: el milisegundo de margen
+    /// (<see cref="BudgetSlackMs"/>) absorbe el redondeo de coma flotante, así que el plan acelerado acaba antes del
+    /// presupuesto y nunca después. Si aun así no cabe, saltan las etapas que acabarían después de <c>restante</c> (sus pasos
+    /// terminan en el acto), se cuenta en <see cref="BudgetOverruns"/> y se avisa con <c>step_budget</c> por
     /// <c>BoardAnimator.DevEvent</c>. Ese enlace está PENDIENTE: lo une a <c>DevProbe.Event</c> un gancho en el constructor de
     /// <c>GameScreen</c> (<c>_animator.DevEvent = _probe.Event;</c>) que añade la sesión principal entre olas (arquitectura
-    /// del paso 1, §7); hasta entonces, sin sonda, no se escribe nada. La vista nota el final en el primer fotograma que
-    /// llega a él; el Reveal, además, empieza en el fotograma en que el origen ya volvió. Ese menos de un fotograma lo absorben
-    /// los 200 ms de margen hasta el tope de 3.000.</para>
+    /// del paso 1, §7); hasta entonces, sin sonda, no se escribe nada. Los pasos que esperan al origen empiezan en el instante
+    /// previsto de su vuelta (o en el del fotograma que la nota, si fuera antes), así que el plan sigue el reloj previsto; la
+    /// vista nota el final en el primer fotograma que llega a él, y ese menos de un fotograma lo absorben los 200 ms de margen
+    /// hasta el tope de 3.000.</para>
     /// </remarks>
     public sealed class MechanicStepQueue
     {
@@ -266,6 +274,7 @@ namespace AF.Presentation.Mechanics
                 p.InUse = true;
                 p.Begun = false;
                 p.Visual = v;
+                p.Source = v.Source;
                 p.Count = Math.Min(count, MechanicStepPlan.MaxSteps);
                 p.Touched = 0;
                 for (int e = 0; e < p.Count; e++)
@@ -315,8 +324,48 @@ namespace AF.Presentation.Mechanics
             return mask;
         }
 
+        /// <summary>
+        /// Estado de la cuia <paramref name="cuia"/> en el punto actual del plan <paramref name="slot"/>, ya empezado: el de
+        /// después (<c>After</c>) si no le quedan pasos, y si no, el previo a su primera etapa sin terminar
+        /// (<see cref="StepStaging.Pre"/>). Lo usa el fin del trabajo del vertido para no pintar nunca encima de pasos ya
+        /// terminados. False (sin tocar nada) si el plan no está en marcha o no pinta esa cuia.
+        /// </summary>
+        internal bool StateAt(int slot, int cuia, out Cuia state, out bool sealedNow)
+        {
+            Plan p = _plans[slot];
+            state = default;
+            sealedNow = false;
+            if (!p.InUse || !p.Begun || (p.Touched & Bit(cuia)) == 0)
+            {
+                return false;
+            }
+
+            int first = -1;
+            for (int e = 0; e < p.Count; e++)
+            {
+                int s = (int)p.Entries[e].Stage;
+                if (p.State[e] != Done && p.Entries[e].Touches(cuia) && (first < 0 || s < first))
+                {
+                    first = s;
+                }
+            }
+
+            PourVisual v = p.Visual;
+            if (first < 0)
+            {
+                state = v.After[cuia];
+                sealedNow = v.After.IsSealed(cuia);
+                return true;
+            }
+
+            state = StepStaging.Pre(in v, cuia, (StepStage)first);
+            sealedNow = StepStaging.PreSealed(in v, cuia, (StepStage)first);
+            return true;
+        }
+
         // Empieza el plan al terminar el caudal (etapa (a)): estados de cada paso, overlays, duraciones nominales y
-        // presupuesto. ageMs: ms desde el toque; sourceBackInMs: lo que falta para que el origen vuelva a su ranura.
+        // presupuesto. ageMs: ms desde el toque; sourceBackInMs: lo que falta para que el origen vuelva a su ranura (la espera
+        // de los pasos que lo pintan, que cuenta en el presupuesto).
         internal void Begin(int slot, float ageMs, float sourceBackInMs)
         {
             Plan p = _plans[slot];
@@ -325,11 +374,13 @@ namespace AF.Presentation.Mechanics
             p.Stage = 0;
             p.StageStart = 0f;
             p.SrcDoneAt = -1f;
+            p.SrcBackAt = Mathf.Max(0f, sourceBackInMs);
             float speed = _board.StepSpeedBase;
-            bool hasReveal = false;
+            bool waits = false;
             for (int s = 0; s < MechanicStepPlan.StageCount; s++)
             {
                 p.StageMax[s] = 0f;
+                p.StageWaitMax[s] = -1f;
             }
 
             PourVisual v = p.Visual;
@@ -352,23 +403,47 @@ namespace AF.Presentation.Mechanics
                 p.Nominal[e] = nominal;
                 int stage = (int)se.Stage;
                 p.StageMax[stage] = Mathf.Max(p.StageMax[stage], nominal);
-                hasReveal |= se.Kind == MechanicStepKind.Reveal;
+                if (WaitsForSource(p, e))
+                {
+                    p.StageWaitMax[stage] = Mathf.Max(p.StageWaitMax[stage], nominal);
+                    waits = true;
+                }
             }
 
-            // Presupuesto desde el toque. planned (la espera del Reveal más Σ por etapa) se suma en el mismo orden que el
-            // recorrido de abajo: un plan que cabe sin acelerar da allí los mismos valores y nunca salta por redondeo.
+            // Presupuesto desde el toque. Con el factor f, el plan acaba en max(f · ΣA, w + f · B) (ver la clase): PlannedEnd
+            // lo calcula etapa a etapa igual que el recorrido de los saltos de abajo, así que un plan que cabe sin acelerar da
+            // allí los mismos valores y nunca salta por redondeo.
             float remaining = BudgetFromTapMs - ageMs;
-            float wait = hasReveal ? Mathf.Max(0f, sourceBackInMs) : 0f;
-            float planned = wait;
-            for (int s = 0; s < MechanicStepPlan.StageCount; s++)
+            float wait = waits ? p.SrcBackAt : 0f;
+            float planned = PlannedEnd(p, speed, wait, MechanicStepPlan.StageCount);
+            if (planned > remaining)
             {
-                planned += p.StageMax[s] * speed;
-            }
+                float target = remaining - BudgetSlackMs;
+                float all = 0f;
+                float waitPath = 0f;
+                for (int s = MechanicStepPlan.StageCount - 1; s >= 0; s--)
+                {
+                    if (p.StageWaitMax[s] >= 0f)
+                    {
+                        waitPath = Mathf.Max(waitPath, p.StageWaitMax[s] + all); // ese paso y las etapas siguientes
+                    }
 
-            float nominalSum = planned - wait;
-            if (planned > remaining && nominalSum > 0f)
-            {
-                float factor = Mathf.Max(MinBudgetSpeed, Mathf.Max(0f, remaining - BudgetSlackMs - wait) / nominalSum);
+                    all += p.StageMax[s];
+                }
+
+                // El mayor factor total que deja cada camino en target (la espera no se acelera).
+                float fit = float.MaxValue;
+                if (all > 0f)
+                {
+                    fit = Mathf.Max(0f, target) / all;
+                }
+
+                if (waits && waitPath > 0f)
+                {
+                    fit = Mathf.Min(fit, Mathf.Max(0f, target - wait) / waitPath);
+                }
+
+                float factor = Mathf.Max(MinBudgetSpeed, fit / speed);
                 if (factor < 1f)
                 {
                     speed *= factor;
@@ -381,16 +456,9 @@ namespace AF.Presentation.Mechanics
 
             // Si aun así no cabe, saltan las etapas que acabarían después del presupuesto.
             p.SkipFrom = MechanicStepPlan.StageCount;
-            float end = wait;
             for (int s = 0; s < MechanicStepPlan.StageCount; s++)
             {
-                if (p.StageMax[s] <= 0f && !HasStage(p, s))
-                {
-                    continue;
-                }
-
-                end += p.StageMax[s] * speed;
-                if (end > remaining)
+                if (HasStage(p, s) && PlannedEnd(p, speed, wait, s + 1) > remaining)
                 {
                     p.SkipFrom = s;
                     break;
@@ -402,6 +470,33 @@ namespace AF.Presentation.Mechanics
                 BudgetOverruns++;
                 _board.RaiseStepBudget(ageMs, planned, remaining, speed, p.SkipFrom);
             }
+        }
+
+        // Fin previsto (ms desde (a)) de las etapas anteriores a stages con el factor speed y la espera wait del origen, como
+        // las ejecuta Tick: una etapa empieza al terminar la anterior y sus pasos que pintan el origen, además, no antes de
+        // wait. Las etapas sin pasos no cuentan.
+        private static float PlannedEnd(Plan p, float speed, float wait, int stages)
+        {
+            float end = 0f;
+            for (int s = 0; s < stages; s++)
+            {
+                float start = end;
+                end = start + (p.StageMax[s] * speed);
+                if (p.StageWaitMax[s] >= 0f)
+                {
+                    end = Mathf.Max(end, Mathf.Max(start, wait) + (p.StageWaitMax[s] * speed));
+                }
+            }
+
+            return end;
+        }
+
+        // El paso e pinta el origen (como dueña o como la otra cuia) o es el Reveal: no empieza antes de que el origen vuelva
+        // a su ranura.
+        private static bool WaitsForSource(Plan p, int e)
+        {
+            StepEntry se = p.Entries[e];
+            return se.Kind == MechanicStepKind.Reveal || se.Touches(p.Source);
         }
 
         // Avanza el plan dtMs; devuelve true cuando ha terminado. srcDone: el origen ya volvió a su ranura.
@@ -416,7 +511,8 @@ namespace AF.Presentation.Mechanics
             p.T += dtMs;
             if (srcDone && p.SrcDoneAt < 0f)
             {
-                p.SrcDoneAt = p.T;
+                // El instante previsto de la vuelta (el del presupuesto); el del fotograma si la nota antes.
+                p.SrcDoneAt = Mathf.Min(p.T, p.SrcBackAt);
             }
 
             while (p.Stage < MechanicStepPlan.StageCount)
@@ -432,14 +528,14 @@ namespace AF.Presentation.Mechanics
 
                     if (p.State[e] == Pending)
                     {
-                        bool reveal = p.Entries[e].Kind == MechanicStepKind.Reveal;
-                        if (reveal && p.SrcDoneAt < 0f)
+                        bool waits = WaitsForSource(p, e);
+                        if (waits && p.SrcDoneAt < 0f)
                         {
-                            stageDone = false; // el revelado no empieza antes de que el origen vuelva a su ranura
+                            stageDone = false; // nada pinta el origen antes de que vuelva a su ranura (como el revelado)
                             continue;
                         }
 
-                        StartEntry(p, e, reveal ? Mathf.Max(p.StageStart, p.SrcDoneAt) : p.StageStart);
+                        StartEntry(p, e, waits ? Mathf.Max(p.StageStart, p.SrcDoneAt) : p.StageStart);
                     }
 
                     if (p.State[e] == Running)
@@ -797,9 +893,12 @@ namespace AF.Presentation.Mechanics
             public readonly Cuia[] OtherAfter = new Cuia[MechanicStepPlan.MaxSteps];
             public readonly bool[] OtherAfterSealed = new bool[MechanicStepPlan.MaxSteps];
             public readonly float[] StageMax = new float[MechanicStepPlan.StageCount];
+            public readonly float[] StageWaitMax = new float[MechanicStepPlan.StageCount]; // −1: la etapa no espera al origen
             public bool InUse;
             public bool Begun;
             public PourVisual Visual;
+            public int Source;
+            public float SrcBackAt;
             public int Count;
             public int Touched;
             public float T;

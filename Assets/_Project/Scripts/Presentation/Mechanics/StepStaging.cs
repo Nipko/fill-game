@@ -27,8 +27,8 @@ namespace AF.Presentation.Mechanics
     /// <item><description>Reveal (a): la capa revelada es siempre la nueva cima y R7 no deja representar una cima oculta
     /// (<see cref="Cuia.Create(int, int[], int)"/> la rechaza), así que el contenido se queda como en <c>After</c> y el paso
     /// Reveal pinta turbias las capas de su <c>LayerMask</c> desde su primer fotograma (<c>MurkyMarks.PlayReveal</c>).
-    /// La cola arranca ese paso en el mismo fotograma en que el origen vuelve a su ranura, así que la capa nunca se ve
-    /// revelada antes de tiempo.</description></item>
+    /// La cola arranca ese paso (como todo paso que pinta el origen) cuando el origen vuelve a su ranura, así que la capa
+    /// nunca se ve revelada antes de tiempo.</description></item>
     /// <item><description>MudWash (a): el contenido ya es el de después de la transferencia (la anima el
     /// trabajo).</description></item>
     /// </list>

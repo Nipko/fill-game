@@ -29,7 +29,8 @@ namespace AF.Presentation.Mechanics
     /// <see cref="PlayStep"/>, que arranca el paso y devuelve <c>StepDurationMs × ctx.SpeedFactor</c>; 0 = paso por defecto de
     /// la cola. La cola despacha el paso al overlay de la mecánica que la cuia tiene en <c>ctx.Before</c>. Al acabar el
     /// tiempo devuelto, la cola llama a <see cref="SnapStep"/> y pinta <c>ShowContent(ctx.After, ctx.AfterSealed)</c> (y el de
-    /// la otra cuia); mientras <see cref="IsAnimating"/>, <c>ShowContent</c> no llama a <see cref="Show"/>.
+    /// la otra cuia); mientras <see cref="IsAnimating"/>, <c>ShowContent</c> no llama a <see cref="Show"/>. Un paso que pinta
+    /// el origen del vertido (la gota de una Lluvia que vierte) empieza con el origen ya en su ranura, sin inclinar.
     /// <c>SnapAll</c> (Marea, celebración, modal) también llama a <see cref="SnapStep"/>. Contrato congelado desde la ola 3
     /// (T07): <c>Type</c>, <c>Attach</c>, <c>Show</c>, <c>Layout</c>, <c>OnBoardLayout</c>, <c>Tick</c>,
     /// <c>OnRejected</c>, <c>SetInFlight</c>, <c>StepDurationMs</c>, <c>PlayStep</c>, <c>SnapStep</c>, <c>IsAnimating</c>,

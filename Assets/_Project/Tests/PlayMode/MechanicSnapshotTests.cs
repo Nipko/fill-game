@@ -19,7 +19,8 @@ namespace AF.Tests.PlayMode
     /// <c>39b_pirana_l183</c> y, a mitad de la cadena del 83, <c>39c_chain_l83</c> (la tapa del taperebá cayendo antes de que
     /// se suelte la Liana) y <c>39d_chain_done_l83</c> al terminar. Los pasos por defecto de la cola, a mitad:
     /// <c>39e_reveal_l100</c> (fundido del pardo al tinte), <c>39f_drop_l143</c> (la gota sube como una dosis) y
-    /// <c>39g_bite_l183</c> (la víctima pierde la dosis de arriba). Sirven para mirar a 48 dp la legibilidad, los solapes (la hoja de 2,3 u sobre la cuia de 2 u, la
+    /// <c>39g_bite_l183</c> (la víctima pierde la dosis de arriba) y <c>39h_drop_source_l143</c> (la gota de una Lluvia que
+    /// vierte, con la cuia ya de vuelta en su ranura). Sirven para mirar a 48 dp la legibilidad, los solapes (la hoja de 2,3 u sobre la cuia de 2 u, la
     /// piraña que asoma, la fruta de la Liana sobre la dosis de arriba), los colores y la línea D-003. Necesitan gráficos:
     /// <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.MechanicSnapshotTests</c> sin
     /// <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/</c>.
@@ -100,6 +101,21 @@ namespace AF.Tests.PlayMode
             yield return CaptureMidStep(dir, 100, "39e_reveal_l100", MechanicStepKind.Reveal, (ev, b, a) => ev.RevealedMask != 0, 0.4f);
             yield return CaptureMidStep(dir, 143, "39f_drop_l143", MechanicStepKind.RainDrop, (ev, b, a) => ev.LluviaDropMask != 0 && ev.LluviaEndedMask == 0, 0.5f);
             yield return CaptureMidStep(dir, 183, "39g_bite_l183", MechanicStepKind.Bite, (ev, b, a) => ev.PiranaCaveMask != 0, 0.25f);
+            yield return CaptureMidStep(dir, 143, "39h_drop_source_l143", MechanicStepKind.RainDrop, (ev, b, a) => ev.LluviaEndedMask == 0 && DropOnSource(ev.LluviaDropMask, b, a), 0.5f);
+        }
+
+        // Cae una gota en una Lluvia que vierte (Q-B): la cuia de la gota tiene, después, como mucho lo que tenía antes.
+        private static bool DropOnSource(int dropMask, AF.Core.Board.BoardState before, AF.Core.Board.BoardState after)
+        {
+            for (int i = 0; i < before.Count; i++)
+            {
+                if (((dropMask >> i) & 1) != 0 && after[i].Count <= before[i].Count)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // Carga el nivel, juega hasta el vertido que dispara el paso y captura a la fracción pedida de ese paso.
