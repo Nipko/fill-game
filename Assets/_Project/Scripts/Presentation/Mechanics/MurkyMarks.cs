@@ -16,17 +16,18 @@ namespace AF.Presentation.Mechanics
     /// <para>Cuelga del cuerpo de la cuia, encima del líquido y debajo del vidrio frontal. Las bandas del líquido no giran con
     /// el vaso (guía 6.4), así que con la cuia en vuelo los «?» se ocultan (<see cref="SetInFlight"/>).</para>
     /// <para>Revelado por defecto (T07, hasta que T15 aplique b.2): con <see cref="RevealStyle.Rule"/> (R7, la nueva cima del
-    /// origen) cada capa funde del pardo a su tinte y el «?» se apaga en <see cref="RevealRuleMs"/> (02 §4.1; 07 §4.3); con
-    /// <see cref="RevealStyle.Firefly"/> las capas se aclaran de arriba abajo en <see cref="RevealFireflyMs"/> (04 §2.5). El
-    /// patrón del tinte aparece a mitad del fundido. Mientras anima (<see cref="IsAnimating"/>), <c>ShowContent</c> no llama a
-    /// <see cref="Show"/>; la cola termina el paso con <see cref="Snap"/> y el <c>ShowContent</c> final. Sin asignaciones.</para>
+    /// origen) cada capa funde del pardo a su tinte y el «?» se apaga en <see cref="RevealRuleMs"/> con ease-out (02 §4.1;
+    /// 07 §4.3); con <see cref="RevealStyle.Firefly"/> las capas se aclaran de arriba abajo en <see cref="RevealFireflyMs"/>
+    /// (04 §2.5). El patrón del tinte aparece a mitad del fundido. Mientras anima (<see cref="IsAnimating"/>),
+    /// <c>ShowContent</c> no llama a <see cref="Show"/>; la cola termina el paso con <see cref="Snap"/> y el
+    /// <c>ShowContent</c> final. Sin asignaciones.</para>
     /// </remarks>
     public sealed class MurkyMarks
     {
         /// <summary>Alto del «?» marfil, sin el halo (07 §4.3: 0,5 u).</summary>
         public const float MarkU = ProceduralArt.QuestionGlyphU;
 
-        /// <summary>Revelado por R7: fundido del pardo al tinte en 300 ms (02 §4.1; 07 §4.3) [P hasta b.2, T15].</summary>
+        /// <summary>Revelado por R7: fundido del pardo al tinte en 300 ms con ease-out (02 §4.1; 07 §4.3) [P hasta b.2, T15].</summary>
         public const float RevealRuleMs = 300f;
 
         /// <summary>Revelado de la Luciérnaga: las capas se aclaran de arriba abajo en 600 ms (04 §2.5).</summary>
@@ -211,8 +212,9 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // Fotograma t (0..1) del revelado: cada capa funde del pardo a su tinte y su «?» se apaga; con la Luciérnaga, de
-        // arriba abajo (cada capa ocupa su parte del tiempo).
+        // Fotograma t (0..1) del revelado: cada capa funde del pardo a su tinte y su «?» se apaga. Por R7, con ease-out
+        // (02 §4.1, «Revelado (Aguas turbias)»: 300 ms, ease-out); con la Luciérnaga, de arriba abajo (cada capa ocupa su parte
+        // del tiempo) y con ease-in-out, porque 04 §2.5 no fija la curva.
         private void ApplyReveal(float t)
         {
             if (_liquid == null)
@@ -236,7 +238,7 @@ namespace AF.Presentation.Mechanics
 
                 float local = _style == RevealStyle.Firefly && layers > 1 ? Mathf.Clamp01((t * layers) - above) : t;
                 above++;
-                float e = Ease.InOut(local);
+                float e = _style == RevealStyle.Rule ? Ease.Out(local) : Ease.InOut(local);
                 _liquid.SetDose(k, Color.Lerp(Palette.Murky, _target[k], e), 1f, local >= 0.5f ? _targetTint[k] : 0);
                 OverlayParts.SetColor(_marks[k], new Color(1f, 1f, 1f, 1f - e));
             }

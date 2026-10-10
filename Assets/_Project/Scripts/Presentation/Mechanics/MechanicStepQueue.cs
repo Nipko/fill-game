@@ -82,16 +82,22 @@ namespace AF.Presentation.Mechanics
     /// a su ranura. Al acabar cada paso, <see cref="CuiaOverlay.SnapStep"/> (o el de las marcas) y
     /// <c>ShowContent(ctx.After, ctx.AfterSealed)</c> en las dos cuias.</para>
     /// <para><b>Pasos por defecto</b> (cifras canónicas × factor de velocidad): Reveal, fundido del pardo al tinte en 300 ms
-    /// (<see cref="MurkyMarks.RevealRuleMs"/>; 02 §4.1, 07 §4.3); Seal, <c>SealAnimationAt</c> en 450 ms (07 §5.3); RainDrop y
-    /// RainEnd, la gota sube como una dosis en <c>anim_pour_dose_ms</c> (280 ms); Bite, la víctima pierde la dosis de arriba en
-    /// 280 ms y después la cueva la recibe en 280 ms, en un solo paso; MudWash, 0; los demás, salto.</para>
+    /// con ease-out (<see cref="MurkyMarks.RevealRuleMs"/>; 02 §4.1, 07 §4.3); Seal, <c>SealAnimationAt</c> en 450 ms
+    /// (07 §5.3); RainDrop y RainEnd, la gota sube como una dosis en <c>anim_pour_dose_ms</c> (280 ms); Bite, la víctima pierde
+    /// la dosis de arriba en 280 ms y después la cueva la recibe en 280 ms, en un solo paso; MudWash, 0; los demás, salto.</para>
     /// <para><b>Presupuesto desde el toque.</b> Del toque a la vista quieta, como mucho <see cref="BudgetFromTapMs"/> =
     /// <c>MaxViewDrainWaitMs</c> − 200 = 2.800 ms (3.000 es el tope [P] del tech-lead de <c>GameConfig</c>, que no cambia). Al
     /// llegar a (a) se calcula <c>restante</c> = 2.800 − ms desde el toque, y <c>nominal</c> = Σ por etapa del máximo de
     /// <c>StepDurationMs × SpeedFactor</c> (más la espera del Reveal hasta que vuelva el origen, que no se acelera). Si
-    /// <c>nominal</c> &gt; <c>restante</c>, el factor se multiplica por <c>max(0,35, restante / nominal)</c>; si aun así no cabe,
-    /// las últimas etapas saltan (sus pasos terminan en el acto) y se avisa con <c>step_budget</c>
-    /// (<c>BoardAnimator.DevEvent</c>, que la pantalla une a <c>DevProbe.Event</c>).</para>
+    /// <c>nominal</c> &gt; <c>restante</c>, el factor se multiplica por <c>max(0,35, (restante − 1 ms) / nominal)</c>: el
+    /// milisegundo de margen (<see cref="BudgetSlackMs"/>) absorbe el redondeo de coma flotante, así que el plan acelerado acaba
+    /// antes del presupuesto y nunca después. Si aun así no cabe, saltan las etapas que acabarían después de <c>restante</c>
+    /// (sus pasos terminan en el acto), se cuenta en <see cref="BudgetOverruns"/> y se avisa con <c>step_budget</c> por
+    /// <c>BoardAnimator.DevEvent</c>. Ese enlace está PENDIENTE: lo une a <c>DevProbe.Event</c> un gancho en el constructor de
+    /// <c>GameScreen</c> (<c>_animator.DevEvent = _probe.Event;</c>) que añade la sesión principal entre olas (arquitectura
+    /// del paso 1, §7); hasta entonces, sin sonda, no se escribe nada. La vista nota el final en el primer fotograma que
+    /// llega a él; el Reveal, además, empieza en el fotograma en que el origen ya volvió. Ese menos de un fotograma lo absorben
+    /// los 200 ms de margen hasta el tope de 3.000.</para>
     /// </remarks>
     public sealed class MechanicStepQueue
     {
@@ -106,6 +112,12 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>Factor mínimo del recorte del presupuesto: los pasos nunca van a más de 1/0,35 ≈ 2,9 veces su velocidad.</summary>
         public const float MinBudgetSpeed = 0.35f;
+
+        /// <summary>
+        /// Margen (ms) con el que el plan acelerado apunta por debajo del presupuesto: el redondeo de coma flotante nunca lo
+        /// deja acabar después de <see cref="BudgetFromTapMs"/>.
+        /// </summary>
+        public const float BudgetSlackMs = 1f;
 
         /// <summary>Registros de pasos que se guardan (los más recientes).</summary>
         public const int LogCapacity = 128;
@@ -343,18 +355,20 @@ namespace AF.Presentation.Mechanics
                 hasReveal |= se.Kind == MechanicStepKind.Reveal;
             }
 
-            // Presupuesto desde el toque.
+            // Presupuesto desde el toque. planned (la espera del Reveal más Σ por etapa) se suma en el mismo orden que el
+            // recorrido de abajo: un plan que cabe sin acelerar da allí los mismos valores y nunca salta por redondeo.
             float remaining = BudgetFromTapMs - ageMs;
             float wait = hasReveal ? Mathf.Max(0f, sourceBackInMs) : 0f;
-            float nominalSum = 0f;
+            float planned = wait;
             for (int s = 0; s < MechanicStepPlan.StageCount; s++)
             {
-                nominalSum += p.StageMax[s] * speed;
+                planned += p.StageMax[s] * speed;
             }
 
-            if (nominalSum + wait > remaining && nominalSum > 0f)
+            float nominalSum = planned - wait;
+            if (planned > remaining && nominalSum > 0f)
             {
-                float factor = Mathf.Max(MinBudgetSpeed, Mathf.Max(0f, remaining - wait) / nominalSum);
+                float factor = Mathf.Max(MinBudgetSpeed, Mathf.Max(0f, remaining - BudgetSlackMs - wait) / nominalSum);
                 if (factor < 1f)
                 {
                     speed *= factor;
@@ -365,7 +379,7 @@ namespace AF.Presentation.Mechanics
             p.Speed = speed;
             LastSpeedFactor = speed;
 
-            // Si aun así no cabe, las últimas etapas saltan.
+            // Si aun así no cabe, saltan las etapas que acabarían después del presupuesto.
             p.SkipFrom = MechanicStepPlan.StageCount;
             float end = wait;
             for (int s = 0; s < MechanicStepPlan.StageCount; s++)
@@ -376,7 +390,7 @@ namespace AF.Presentation.Mechanics
                 }
 
                 end += p.StageMax[s] * speed;
-                if (end > remaining + 0.5f)
+                if (end > remaining)
                 {
                     p.SkipFrom = s;
                     break;
@@ -386,7 +400,7 @@ namespace AF.Presentation.Mechanics
             if (p.SkipFrom < MechanicStepPlan.StageCount)
             {
                 BudgetOverruns++;
-                _board.RaiseStepBudget(ageMs, nominalSum + wait, remaining, speed, p.SkipFrom);
+                _board.RaiseStepBudget(ageMs, planned, remaining, speed, p.SkipFrom);
             }
         }
 

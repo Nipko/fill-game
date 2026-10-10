@@ -209,10 +209,15 @@ namespace AF.Presentation
         public float Clock { get; private set; }
 
         /// <summary>
-        /// Eventos sueltos de desarrollo (<c>DevProbe.Event(evento, campos JSON)</c>): hoy <c>step_budget</c>, cuando las últimas
-        /// etapas de un plan saltan por el presupuesto desde el toque. Null = sin sonda (se escribe en el log en builds de
-        /// desarrollo).
+        /// Eventos sueltos de desarrollo, con la firma de <c>DevProbe.Event(evento, campos JSON)</c>: hoy <c>step_budget</c>,
+        /// cuando las últimas etapas de un plan saltan por el presupuesto desde el toque. Null = sin sonda: no se escribe nada
+        /// y el salto solo se cuenta en <see cref="MechanicStepQueue.BudgetOverruns"/>.
         /// </summary>
+        /// <remarks>
+        /// Enlace PENDIENTE: nadie lo asigna todavía. <c>GameScreen.cs</c> está fuera del alcance de T07, así que la sesión
+        /// principal añade entre olas el gancho <c>_animator.DevEvent = _probe.Event;</c> en el constructor de
+        /// <c>GameScreen</c> (arquitectura del paso 1, §7). Hasta entonces, <c>step_budget</c> no sale en el log.
+        /// </remarks>
         public Action<string, string>? DevEvent { get; set; }
 
         /// <summary>Trabajos en cola o en curso.</summary>
@@ -433,14 +438,16 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// Ranura de la cuia <paramref name="i"/> (ancho de ranura, del pie hasta el área táctil sobre la boca), en el espacio
-        /// de las capas de tablero.
+        /// Ranura y repisa de la cuia <paramref name="i"/>, en el espacio de las capas de tablero: el ancho de la ranura, desde
+        /// el canto inferior de la repisa (<see cref="IntroChoreography.ShelfUndersideBelowFootDp"/> = 15 dp bajo la línea de
+        /// pie, como <c>BoardLayout.ShelfDrop</c>) hasta el área táctil sobre la boca (alto de la cuia + 32 dp, 02 §3.3).
         /// </summary>
         public Rect SlotRect(int i)
         {
             CuiaView view = _views[i];
             Rect r = view.Root.rect;
-            Vector2 a = ToLayer(view, view.Root.TransformPoint(new Vector3(r.xMin, r.yMin, 0f)));
+            float shelfBottom = r.yMin - IntroChoreography.ShelfUndersideBelowFootDp; // el pivote de la ranura es el pie
+            Vector2 a = ToLayer(view, view.Root.TransformPoint(new Vector3(r.xMin, shelfBottom, 0f)));
             Vector2 b = ToLayer(view, view.Root.TransformPoint(new Vector3(r.xMax, r.yMax, 0f)));
             return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
         }
@@ -1389,22 +1396,22 @@ namespace AF.Presentation
             ShowContentAt(cuia, state, sealedNow);
         }
 
-        // step_budget (DevProbe.Event): las últimas etapas de un plan saltaron. Solo asigna cuando ocurre.
+        // step_budget por DevEvent (DevProbe.Event, cuando la pantalla lo una): las últimas etapas de un plan saltaron. Sin
+        // sonda no escribe nada (la línea AF_STATE es de DevProbe, con su "t" y su compuerta). Solo asigna cuando ocurre.
         internal void RaiseStepBudget(float ageMs, float plannedMs, float leftMs, float speed, int skipFrom)
         {
+            Action<string, string>? devEvent = DevEvent;
+            if (devEvent == null)
+            {
+                return;
+            }
+
             string fields = "\"age_ms\":" + Mathf.RoundToInt(ageMs).ToString(CultureInfo.InvariantCulture)
                 + ",\"planned_ms\":" + Mathf.RoundToInt(plannedMs).ToString(CultureInfo.InvariantCulture)
                 + ",\"left_ms\":" + Mathf.RoundToInt(leftMs).ToString(CultureInfo.InvariantCulture)
                 + ",\"speed\":" + speed.ToString("0.00", CultureInfo.InvariantCulture)
                 + ",\"skip_from\":\"" + ((StepStage)skipFrom).ToString() + "\"";
-            if (DevEvent != null)
-            {
-                DevEvent("step_budget", fields);
-            }
-            else if (Debug.isDebugBuild)
-            {
-                Debug.Log("AF_STATE {\"event\":\"step_budget\"," + fields + "}");
-            }
+            devEvent("step_budget", fields);
         }
 
         // Último estado del modelo de la cuia (lo que debe verse con la cola quieta).

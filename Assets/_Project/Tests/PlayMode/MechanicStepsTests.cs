@@ -372,7 +372,7 @@ namespace AF.Tests.PlayMode
             Assert.That(bite.Stage, Is.EqualTo(StepStage.E));
             Assert.That(bite.OtherIndex, Is.EqualTo(victim), "el mordisco lo ejecuta la cueva con OtherIndex = la víctima");
             Assert.That(bite.Owner, Is.EqualTo(MechanicType.Pirana));
-            Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs + PlayModeHelpers.FrameMs));
+            Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs), "del toque a la vista quieta");
             TestContext.WriteLine("Nivel " + boot.Flow!.LevelNumber + ": " + elapsed + " ms del toque a la vista quieta. " + MechanicTestKit.Describe(boot.View!.Animator));
             MechanicTestKit.AssertViewMatchesModel(boot);
             Assert.That(views[cave].LiquidLevel, Is.EqualTo(caveBefore + 1f).Within(1e-3f));
@@ -382,7 +382,9 @@ namespace AF.Tests.PlayMode
         public IEnumerator Chain_WithinBudget_FromTap()
         {
             // 1 → 0: tres dosis que sellan el taperebá (el caudal llega a los 1.110 ms) y sueltan la Liana. Con un Release de
-            // 1.500 ms la cadena se acelera; con uno de 6.000 ni a × 0,35 cabe y la etapa (d) salta. Siempre ≤ 2.800 ms.
+            // 1.500 ms la cadena se acelera hasta llenar el presupuesto; con uno de 6.000 ni a × 0,35 cabe y la etapa (d) salta.
+            // Siempre ≤ 2.800 ms: el plan acelerado acaba BudgetSlackMs antes del presupuesto y el banco avanza en fotogramas de
+            // 16 ms desde el toque (2.800 = 175 × 16), así que el fotograma en que la vista queda quieta tampoco se pasa.
             yield return null;
             float[] releases = { 1500f, 6000f };
             for (int r = 0; r < releases.Length; r++)
@@ -394,24 +396,39 @@ namespace AF.Tests.PlayMode
                 probe.Durations[(int)MechanicStepKind.Release] = releases[r];
                 _rig?.Dispose();
                 _rig = new MechanicTestKit.Rig(Art, before, views => views[2].UseOverlay(probe));
+                int devEvents = 0;
+                string? lastEvent = null;
+                string? lastFields = null;
+                _rig.Animator.DevEvent = (evt, fields) =>
+                {
+                    devEvents++;
+                    lastEvent = evt;
+                    lastFields = fields;
+                };
                 int overruns = _rig.Animator.Steps.BudgetOverruns;
                 BoardState after = _rig.Pour(before, 1, 0, out PourVisual v);
                 Assert.That(v.Amount, Is.EqualTo(3));
                 int elapsed = _rig.RunUntilIdle(6000);
                 Assert.That(_rig.Animator.IsIdle, Is.True);
-                Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs + PlayModeHelpers.FrameMs), "release " + releases[r] + ": del toque a la vista quieta");
+                Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs), "release " + releases[r] + ": del toque a la vista quieta");
                 Assert.That(_rig.Animator.Steps.LastSpeedFactor, Is.LessThan(1f), "se acelera para caber");
                 Assert.That(_rig.Animator.Steps.LastSpeedFactor, Is.GreaterThanOrEqualTo(MechanicStepQueue.MinBudgetSpeed - 1e-4f));
+                TestContext.WriteLine("Release " + releases[r] + " ms: " + elapsed + " ms del toque a la vista quieta. " + MechanicTestKit.Describe(_rig.Animator));
                 if (r == 0)
                 {
                     Assert.That(probe.Steps.Count, Is.EqualTo(1), "el Release se ejecuta");
                     Assert.That(probe.Steps[0].SpeedFactor, Is.LessThan(1f));
                     Assert.That(_rig.Animator.Steps.BudgetOverruns, Is.EqualTo(overruns), "cabe sin saltar");
+                    Assert.That(devEvents, Is.EqualTo(0), "sin salto no hay step_budget");
                 }
                 else
                 {
                     Assert.That(_rig.Animator.Steps.BudgetOverruns, Is.EqualTo(overruns + 1), "la última etapa salta (step_budget)");
                     Assert.That(probe.Steps.Count, Is.EqualTo(0), "el Release saltado no llega al overlay");
+                    Assert.That(devEvents, Is.EqualTo(1), "un step_budget por DevEvent (DevProbe.Event)");
+                    Assert.That(lastEvent, Is.EqualTo("step_budget"));
+                    Assert.That(lastFields, Does.Contain("\"skip_from\":\"D\""), "salta desde la etapa (d)");
+                    Assert.That(lastFields, Does.StartWith("\"age_ms\":"), "miembros JSON sin llaves, como pide DevProbe.Event");
                 }
 
                 for (int i = 0; i < after.Count; i++)
@@ -469,7 +486,10 @@ namespace AF.Tests.PlayMode
             Vector2 foot = _rig.Animator.Foot(1);
             Vector2 center = _rig.Animator.BodyCenter(1);
             Assert.That(center.y - foot.y, Is.EqualTo(0.5f * _rig.Views[1].HeightU * _rig.Views[1].Unit).Within(0.01f), "posiciones en el espacio de las capas");
-            Assert.That(_rig.Animator.SlotRect(1).Contains(center), Is.True);
+            Rect slot = _rig.Animator.SlotRect(1);
+            Assert.That(slot.Contains(center), Is.True);
+            Assert.That(slot.yMin, Is.EqualTo(foot.y - IntroChoreography.ShelfUndersideBelowFootDp).Within(0.01f), "ranura y repisa: hasta 15 dp bajo el pie");
+            Assert.That(slot.yMax - foot.y, Is.EqualTo((_rig.Views[1].HeightU * _rig.Views[1].Unit) + CuiaView.TouchHeadroomDp).Within(0.01f), "hasta el área táctil sobre la boca");
             Assert.That(_rig.Animator.Foot(1).x - _rig.Animator.Foot(0).x, Is.EqualTo(64f).Within(0.01f), "paso de 64 dp del banco");
         }
 

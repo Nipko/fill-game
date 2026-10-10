@@ -33,8 +33,9 @@ namespace AF.Presentation.Mechanics
         Vector2 Foot(int i);
 
         /// <summary>
-        /// Rectángulo de la ranura de la cuia <paramref name="i"/>: su ancho de ranura y del pie (la repisa) hasta el área
-        /// táctil sobre la boca (alto de la cuia + 32 dp, 02 §3.3).
+        /// Rectángulo de la ranura y la repisa de la cuia <paramref name="i"/>: su ancho de ranura, desde el canto inferior de
+        /// la repisa (15 dp bajo la línea de pie, guía 3.2 y 4.5) hasta el área táctil sobre la boca (alto de la cuia + 32 dp,
+        /// 02 §3.3). Así un overlay que dibuja sobre la cara de la repisa (la cueva de la Piraña, por ejemplo) la tiene dentro.
         /// </summary>
         Rect SlotRect(int i);
 
