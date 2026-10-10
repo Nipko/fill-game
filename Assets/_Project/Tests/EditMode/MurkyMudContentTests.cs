@@ -321,6 +321,7 @@ namespace AF.Tests.EditMode
             var mirrors = new (string Name, float Value)[]
             {
                 ("AF_PATTERN_OPACITY", Palette.PatternOpacity),
+                ("AF_MATTE_MODE", LiquidGraphic.MattePatternMode),
                 ("AF_MURKY_MODE", LiquidGraphic.MurkyPatternMode),
                 ("AF_MURKY_SPAN", LiquidGraphic.MurkyProgressSpan),
                 ("AF_HATCH_OPACITY", LiquidGraphic.MurkyHatchOpacity),
@@ -544,7 +545,7 @@ namespace AF.Tests.EditMode
             }
         }
 
-        // Dosis de un vértice como la decodifica el shader: floor((uv2.w + 1,5) / 4) (el patrón vive en [−1, 2,5)).
+        // Dosis de un vértice como la decodifica el shader: floor((uv2.w + 1,5) / 4) (el patrón vive en [−1,25; 2,5)).
         private static int BandOf(UIVertex v)
         {
             return Mathf.FloorToInt((v.uv2.w + 1.5f) / 4f);

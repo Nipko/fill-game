@@ -24,8 +24,8 @@
 //   TEXCOORD1  rgb: color de la franja principal (ya en el espacio del shader); a: destello del sellado, o, en una dosis
 //              turbia (nunca sellada, R5), la x del «?» en pantalla (u, desde su centro)
 //   TEXCOORD2  superficie del líquido, amplitud de la onda, fase de la onda, patrón + 4 · índice de la dosis (patrón: -1
-//              sin patrón, 0 marcas en tinta, 1 marcas en marfil, 2 turbia; 2 + 0,45 · avance al disolverse la «?» por la
-//              regla y 2 - 0,45 · avance con la Luciérnaga)
+//              sin patrón, -1,25 sin patrón y mate (el Barro), 0 marcas en tinta, 1 marcas en marfil, 2 turbia; 2 + 0,45 ·
+//              avance al disolverse la «?» por la regla y 2 - 0,45 · avance con la Luciérnaga)
 //   TEXCOORD3  rgb: color del menisco (espacio del shader); a: fila del patrón en el atlas (la turbia en las dosis ocultas;
 //              al revelarse, la de la fruta que se revela + 0,5 si sus marcas van en marfil, LiquidGraphic.FruitRowCode)
 //   _DpU       1 dp en u (todas las cuias de un nivel miden lo mismo); _PatternRows: filas del atlas; _MurkyRow: la turbia;
@@ -51,6 +51,12 @@
 //   _AF*U      geometría de la cuia (globales que fija LiquidGraphic.ApplyShaderGeometry desde CuiaGeometry, la única
 //              fuente): fondo y medio ancho de la cavidad, medio ancho del cuello, hombro, alto sobre la cavidad, borde y
 //              alto de la cara superior
+//
+// Acabado mate (patrón AF_MATTE_MODE; el Barro, 02 §9.1 M5; T16: «opaco, con grumos y sin brillo»;
+// LiquidGraphic.SetMatteDose): ninguno de los brillos de la guía 4.2, ni la franja principal, ni la secundaria, ni el brillo
+// vertical, ni la línea clara del borde de la cara superior, que además llega de su color, sin el aclarado del menisco
+// (TEXCOORD3.rgb). Se quedan el degradado y el oscurecido lateral, que dan volumen y no brillo. Espejos en CPU:
+// LiquidGraphic.IsMattePattern y PaintedHighlightAt.
 //
 // Con la cuia inclinada (al verter) las capas siguen horizontales y llenan la cavidad girada desde su punto más bajo
 // (LiquidGraphic.cs); aquí se recortan a la silueta interior (cavidad recta con el fondo en arco, hombro y cuello) con
@@ -124,6 +130,7 @@ Shader "AF/UI/Liquid"
             // MurkyMudContentTests.ShaderConstants_MatchLiquidGraphic lee este archivo y las compara. [P] salvo las de 07 §4.3
             // (trama al 25 %, «?» de 0,5 u) y el 15 % de los patrones (07 §3).
             #define AF_PATTERN_OPACITY 0.15
+            #define AF_MATTE_MODE -1.25
             #define AF_MURKY_MODE 2.0
             #define AF_MURKY_SPAN 0.45
             #define AF_HATCH_OPACITY 0.25
@@ -242,6 +249,10 @@ Shader "AF/UI/Liquid"
                 float patternMode = i.surf.w - (4.0 * k);
                 float doseBottom = _AFCavityBottomU + k;
 
+                // Acabado mate (el Barro): el patrón AF_MATTE_MODE, por debajo del punto medio entre él y -1 (sin patrón), apaga
+                // los brillos (espejo: LiquidGraphic.IsMattePattern).
+                half gloss = patternMode < (0.5 * (AF_MATTE_MODE - 1.0)) ? (half)0.0 : (half)1.0;
+
                 // Derivadas en pantalla, fuera de toda rama: los anchos de píxel del antialias (= fwidth) y, en el «?», la escala
                 // de la banda (u de capa por u de pantalla: x es local y la cuia solo gira, así que |∇x| mide 1 u de pantalla).
                 float2 dX = float2(ddx(x), ddy(x));
@@ -307,7 +318,8 @@ Shader "AF/UI/Liquid"
                 col *= 1.0 - (0.20 * saturate(1.0 - (wall / 0.20)));
 
                 // Brillos: franja principal de (0,25; alto - 1) a (0,55; 1), gaussiana sigma 0,045 u; secundaria +0,16 u
-                // en x (sigma 0,0125); brillo vertical en x 0,76-0,88. Un brillo por punto (no se solapan).
+                // en x (sigma 0,0125); brillo vertical en x 0,76-0,88. Un brillo por punto (no se solapan). Ninguno en una
+                // dosis mate (gloss = 0).
                 float2 p = float2(x, yl);
                 float2 a = float2(0.25, heightU - 1.0);
                 float2 b = float2(0.55, 1.0);
@@ -316,7 +328,7 @@ Shader "AF/UI/Liquid"
                 float hlMain = exp(-(d1 * d1) / 0.00405) * step(d1, 0.09);
                 float hlSec = exp(-(d2 * d2) / 0.0003125) * step(d2, 0.025);
                 float hlVert = smoothstep(0.74, 0.78, x) * (1.0 - smoothstep(0.86, 0.90, x));
-                float hl = max(hlMain, max(hlSec * 0.5, hlVert * 0.5));
+                float hl = max(hlMain, max(hlSec * 0.5, hlVert * 0.5)) * gloss;
                 half3 litRgb = turning ? lerp(_MurkyLitLin.rgb, i.lit.rgb, lightOn) : i.lit.rgb;
                 col = lerp(col, litRgb, hl);
 
@@ -388,11 +400,11 @@ Shader "AF/UI/Liquid"
                 }
 
                 // Cara superior (D-006): la elipse entera con el color aclarado del menisco, más clara que el tinte, y una
-                // línea clara de 1 dp en su borde trasero.
+                // línea clara de 1 dp en su borde trasero. Mate (el Barro): de su color (lo manda LiquidGraphic) y sin la línea.
                 float inFace = saturate(((y - (top - faceHalf)) / pix) + 0.5);
                 col = lerp(col, i.men.rgb, inFace);
                 float rim = saturate(1.0 - ((topEdge - y) / dpU));
-                col = lerp(col, half3(1.0, 1.0, 1.0), 0.35 * rim * inFace);
+                col = lerp(col, half3(1.0, 1.0, 1.0), 0.35 * rim * inFace * gloss);
 
                 // Destello del sellado: +15 % de luminosidad durante 100 ms (07 §5.3). En una dosis turbia lit.a es la x del
                 // «?» (una cuia con ocultas nunca se sella, R5).

@@ -53,6 +53,12 @@ namespace AF.Presentation
     /// alto de la cuia en <c>TEXCOORD0.w</c> (<see cref="GlyphPackScale"/>: en las bandas normales no cambia nada). Mide
     /// <see cref="GlyphSizeU"/> (de <see cref="GlyphMinU"/> a <see cref="GlyphMaxU"/>) y se apaga si la banda es más fina
     /// (<see cref="GlyphFade"/>): con la cuia inclinada busca la parte más gruesa de la cuña sin tocar el vidrio.</para>
+    /// <para><b>Acabado mate</b> (el Barro: 02 §9.1 M5; T16, «opaco, con grumos y sin brillo»; lo pide
+    /// <c>MudMarks.PaintMud</c> con <see cref="SetMatteDose"/>): la banda lleva el patrón <see cref="MattePatternMode"/>, sin
+    /// patrón como −1, y el shader no le pinta ninguno de los brillos de la guía 4.2: ni la franja principal, ni la secundaria,
+    /// ni el brillo vertical, ni, si es la de arriba, la línea clara del borde de su cara superior, que además va de su color,
+    /// sin el aclarado del menisco. Su franja (<c>TEXCOORD1.rgb</c>) es su color. Conserva el degradado de ±4 % de L y el
+    /// oscurecido lateral, que dan volumen y no brillo. Cualquier otro <c>SetDose</c> de esa dosis le devuelve el brillo.</para>
     /// </remarks>
     [RequireComponent(typeof(CanvasRenderer))]
     public sealed class LiquidGraphic : MaskableGraphic
@@ -60,9 +66,16 @@ namespace AF.Presentation
         /// <summary>
         /// Patrón de una banda turbia en <c>TEXCOORD2.w</c> (patrón + 4 · dosis): 2 sin animar; 2 + 0,45 · avance al
         /// disolverse por la regla y 2 − 0,45 · avance con la Luciérnaga (el shader decodifica el modo con
-        /// <c>floor((w + 1,5) / 4)</c>, así que el patrón vive en [−1, 2,5)). Shader: <c>AF_MURKY_MODE</c>.
+        /// <c>floor((w + 1,5) / 4)</c>, así que el patrón vive en [−1,5; 2,5)). Shader: <c>AF_MURKY_MODE</c>.
         /// </summary>
         public const float MurkyPatternMode = 2f;
+
+        /// <summary>
+        /// Patrón de una banda mate en <c>TEXCOORD2.w</c> (patrón + 4 · dosis; <see cref="SetMatteDose"/>, el Barro): −1,25,
+        /// sin patrón como −1 y además sin brillos (ver la clase). El shader lo separa de −1 por su punto medio
+        /// (<see cref="IsMattePattern"/>). Shader: <c>AF_MATTE_MODE</c>.
+        /// </summary>
+        public const float MattePatternMode = -1.25f;
 
         /// <summary>Lo que se aparta del <see cref="MurkyPatternMode"/> el avance 1 de un revelado (shader: <c>AF_MURKY_SPAN</c>).</summary>
         public const float MurkyProgressSpan = 0.45f;
@@ -275,6 +288,7 @@ namespace AF.Presentation
         private int[] _tint = Array.Empty<int>();
         private MurkyLook[] _look = Array.Empty<MurkyLook>();
         private float[] _lookProgress = Array.Empty<float>();
+        private bool[] _matte = Array.Empty<bool>();
         private float[] _levels = Array.Empty<float>();
         private Texture? _atlas;
         private int _capacity;
@@ -339,6 +353,7 @@ namespace AF.Presentation
             _tint = new int[capacity];
             _look = new MurkyLook[capacity];
             _lookProgress = new float[capacity];
+            _matte = new bool[capacity];
             _levels = new float[capacity + 1];
             _atlas = atlas;
             raycastTarget = false;
@@ -397,12 +412,6 @@ namespace AF.Presentation
         /// </summary>
         public void SetDose(int k, Color color, float fill, int tint, MurkyLook look, float progress = 0f)
         {
-            if ((uint)k >= (uint)_capacity)
-            {
-                return;
-            }
-
-            fill = Mathf.Clamp01(fill);
             if (look == MurkyLook.None || look == MurkyLook.Hidden)
             {
                 progress = 0f;
@@ -417,17 +426,34 @@ namespace AF.Presentation
                 tint = 0;
             }
 
-            if (_color[k] == color && Mathf.Approximately(_fill[k], fill) && _tint[k] == tint && _look[k] == look && Mathf.Approximately(_lookProgress[k], progress))
-            {
-                return;
-            }
+            Store(k, color, fill, tint, look, progress, false);
+        }
 
-            _color[k] = color;
-            _fill[k] = fill;
-            _tint[k] = tint;
-            _look[k] = look;
-            _lookProgress[k] = progress;
-            SetVerticesDirty();
+        /// <summary>
+        /// Fija la dosis <paramref name="k"/> (color y relleno 0..1) sin tinte ni patrón y con acabado mate (el Barro: 02 §9.1
+        /// M5; T16, «opaco, con grumos y sin brillo»; lo usa <c>MudMarks.PaintMud</c>): el shader no le pinta brillos y, si
+        /// es la de arriba, su cara superior va de su color (ver la clase). Cualquier otro <c>SetDose</c> de la dosis le
+        /// devuelve el brillo. Solo reconstruye la malla si algo cambia; sin asignaciones.
+        /// </summary>
+        public void SetMatteDose(int k, Color color, float fill)
+        {
+            Store(k, color, fill, 0, MurkyLook.None, 0f, true);
+        }
+
+        /// <summary>La dosis <paramref name="k"/> se pinta mate (<see cref="SetMatteDose"/>; false fuera de rango).</summary>
+        public bool IsMatteAt(int k)
+        {
+            return (uint)k < (uint)_capacity && _matte[k];
+        }
+
+        /// <summary>
+        /// El shader pinta mate, sin brillos, una banda con el patrón <paramref name="pattern"/> (<c>TEXCOORD2.w</c> − 4 ·
+        /// dosis): el de <see cref="MattePatternMode"/>, por debajo del punto medio entre él y −1 (sin patrón). Espejo del
+        /// shader («gloss»).
+        /// </summary>
+        public static bool IsMattePattern(float pattern)
+        {
+            return pattern < 0.5f * (MattePatternMode - 1f);
         }
 
         /// <summary>Modo turbio de la dosis <paramref name="k"/> (<see cref="MurkyLook.None"/> fuera de rango).</summary>
@@ -473,14 +499,32 @@ namespace AF.Presentation
                 return c;
             }
 
-            float on = FireflyLightAt(_lookProgress[k], depth);
-            Color m = Palette.Murky;
-            if (QualitySettings.activeColorSpace != ColorSpace.Linear)
+            return MixAsShader(Palette.Murky, c, FireflyLightAt(_lookProgress[k], depth));
+        }
+
+        /// <summary>
+        /// Espejo en CPU del color que pinta el shader en el centro de la franja especular principal de la banda
+        /// <paramref name="k"/>, a la profundidad <paramref name="depth"/> (0 arriba, 1 abajo) y, como
+        /// <see cref="PaintedColorAt"/>, sin degradado, oscurecido lateral ni marcas: el de su franja (<c>TEXCOORD1.rgb</c>, guía
+        /// 4.2: <see cref="Palette.LiquidHighlight"/>, o +10 L* sin tinte; con la Luciérnaga, mezclado por el frente con el
+        /// brillo del pardo, <see cref="MurkyHighlight"/>); en una dosis mate (<see cref="SetMatteDose"/>, el Barro), el de base
+        /// (<see cref="PaintedColorAt"/>), porque el shader no le pinta brillos. Mezcla como el shader (en lineal en el proyecto
+        /// Linear) y devuelve sRGB.
+        /// </summary>
+        public Color PaintedHighlightAt(int k, float depth)
+        {
+            if ((uint)k >= (uint)_capacity)
             {
-                return new Color(Mathf.Lerp(m.r, c.r, on), Mathf.Lerp(m.g, c.g, on), Mathf.Lerp(m.b, c.b, on), c.a);
+                return Color.clear;
             }
 
-            return new Color(MixLinear(m.r, c.r, on), MixLinear(m.g, c.g, on), MixLinear(m.b, c.b, on), c.a);
+            if (_matte[k])
+            {
+                return PaintedColorAt(k, depth);
+            }
+
+            Color lit = StripeColor(k);
+            return _look[k] == MurkyLook.Turn ? MixAsShader(MurkyHighlight, lit, FireflyLightAt(_lookProgress[k], depth)) : lit;
         }
 
         /// <summary>
@@ -954,6 +998,11 @@ namespace AF.Presentation
                 lighten = Mathf.Lerp(0.20f, lighten, FruitPatternWeight(_look[top], _lookProgress[top])); // el de su fruta entra con su patrón
             }
 
+            if (_matte[top])
+            {
+                lighten = 0f; // mate (el Barro): la cara superior, de su color; el aclarado del menisco es un brillo más (guía 4.2)
+            }
+
             Color men = ColorMath.Lighten(_color[top], lighten);
             Vector3 menS = ColorMath.ToShaderSpace(men);
             for (int k = 0; k <= top; k++)
@@ -973,16 +1022,9 @@ namespace AF.Presentation
                 }
 
                 int tint = _tint[k];
-                Color lit = tint > 0 ? Palette.LiquidHighlight(tint, c) : ColorMath.AddLabLightness(c, 10f);
                 bool murky = _look[k] != MurkyLook.None;
                 bool revealing = _look[k] == MurkyLook.Dissolve || _look[k] == MurkyLook.Turn;
-                if (revealing && tint > 0)
-                {
-                    // La franja de la fruta que se revela entra con su patrón: al final del revelado es la de su dosis normal.
-                    lit = Color.Lerp(ColorMath.AddLabLightness(c, 10f), lit, FruitPatternWeight(_look[k], _lookProgress[k]));
-                }
-
-                Vector3 litS = ColorMath.ToShaderSpace(lit);
+                Vector3 litS = ColorMath.ToShaderSpace(StripeColor(k));
                 float pattern = -1f; // sin patrón (Guanábana, agua base)
                 float row = tint;
                 if (murky)
@@ -991,6 +1033,10 @@ namespace AF.Presentation
                     // en el shader cuando ya se fue la trama, que el shader lee de _MurkyRow).
                     pattern = MurkyPattern(_look[k], _lookProgress[k]);
                     row = revealing ? FruitRowCode(tint) : ProceduralArt.MurkyPatternRow;
+                }
+                else if (_matte[k])
+                {
+                    pattern = MattePatternMode; // sin patrón y sin brillos (el Barro)
                 }
                 else if (ProceduralArt.HasPattern(tint))
                 {
@@ -1384,11 +1430,68 @@ namespace AF.Presentation
             vh.AddVert(pos, color, new Vector4(xRel + 1f, yU, layer, heightU), uv1, uv2, uv3, Vector3.back, new Vector4(1f, 0f, 0f, -1f));
         }
 
+        // Guarda la dosis k (ya normalizados el avance y el tinte) y reconstruye la malla solo si algo cambia. Sin asignaciones.
+        private void Store(int k, Color color, float fill, int tint, MurkyLook look, float progress, bool matte)
+        {
+            if ((uint)k >= (uint)_capacity)
+            {
+                return;
+            }
+
+            fill = Mathf.Clamp01(fill);
+            if (_color[k] == color && Mathf.Approximately(_fill[k], fill) && _tint[k] == tint && _look[k] == look && Mathf.Approximately(_lookProgress[k], progress) && _matte[k] == matte)
+            {
+                return;
+            }
+
+            _color[k] = color;
+            _fill[k] = fill;
+            _tint[k] = tint;
+            _look[k] = look;
+            _lookProgress[k] = progress;
+            _matte[k] = matte;
+            SetVerticesDirty();
+        }
+
+        // Franja principal de la dosis k como color opaco (guía 4.2; TEXCOORD1.rgb): la de su tinte (Palette.LiquidHighlight)
+        // o, sin tinte, +10 L*; al revelarse, la de su fruta entra con su patrón. Mate (el Barro), su propio color: el shader
+        // no pinta brillos en ella. Sin asignaciones.
+        private Color StripeColor(int k)
+        {
+            Color c = _color[k];
+            if (_matte[k])
+            {
+                return c;
+            }
+
+            int tint = _tint[k];
+            Color lit = tint > 0 ? Palette.LiquidHighlight(tint, c) : ColorMath.AddLabLightness(c, 10f);
+            MurkyLook look = _look[k];
+            if ((look == MurkyLook.Dissolve || look == MurkyLook.Turn) && tint > 0)
+            {
+                // La franja de la fruta que se revela entra con su patrón: al final del revelado es la de su dosis normal.
+                lit = Color.Lerp(ColorMath.AddLabLightness(c, 10f), lit, FruitPatternWeight(look, _lookProgress[k]));
+            }
+
+            return lit;
+        }
+
         // Un color del Palette (sRGB) en el espacio del shader, como vector: SetVector no lo convierte.
         private static void SetShaderColor(Material mat, int id, Color c)
         {
             Vector3 s = ColorMath.ToShaderSpace(c);
             mat.SetVector(id, new Vector4(s.x, s.y, s.z, 1f));
+        }
+
+        // Mezcla de dos colores sRGB como la del shader (en lineal en el proyecto Linear), de vuelta a sRGB, con el alfa de to.
+        private static Color MixAsShader(Color from, Color to, float t)
+        {
+            if (QualitySettings.activeColorSpace != ColorSpace.Linear)
+            {
+                return new Color(Mathf.Lerp(from.r, to.r, t), Mathf.Lerp(from.g, to.g, t), Mathf.Lerp(from.b, to.b, t), to.a);
+            }
+
+            return new Color(MixLinear(from.r, to.r, t), MixLinear(from.g, to.g, t), MixLinear(from.b, to.b, t), to.a);
         }
 
         // Mezcla lineal de dos componentes sRGB (como la GPU en el proyecto Linear), de vuelta a sRGB.
