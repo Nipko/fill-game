@@ -112,6 +112,21 @@ namespace AF.Presentation
         // Muestras del degradado de cada disco que miden LabelSealColors y LabelSealContrastPairs (cada 5 % del degradado).
         private const int MedallionDiscSamples = 20;
 
+        // Manchas de cada roseta del jaguar: tres arcos de 70° cada 120° (huecos de 50°).
+        private const float RosetteBlotchDeg = 70f;
+        private const float RosetteStepDeg = 120f;
+
+        // Rosetas del jaguar (x, y y radio, en u del lienzo de 96): 4 en la nuca y el cuello, con radios de 3,2 a 5,0 u, dentro
+        // de la silueta y lejos de la oreja. Las posiciones dan fases de 7°, 43°, 79° y 102,5° (módulo 120°, el periodo de las
+        // tres manchas), separadas ≥ 20°: los huecos de una roseta no se alinean con los de otra. Lo comprueba LobbyTextTests.
+        private static readonly Vector3[] JaguarRosettes =
+        {
+            new Vector3(27f, 56f, 3.6f), // nuca
+            new Vector3(30f, 41f, 5.0f), // nuca, sobre el cuello
+            new Vector3(29f, 22f, 4.2f), // cuello
+            new Vector3(40.5f, 28f, 3.2f), // cuello, junto a la garganta
+        };
+
         private readonly Dictionary<int, Sprite> _headerBands = new Dictionary<int, Sprite>();
         private Sprite? _ranaDardo;
         private Sprite? _jaguarHead;
@@ -133,8 +148,10 @@ namespace AF.Presentation
         /// Sello de Muy difícil (32 dp): cabeza de jaguar de perfil con rosetas, solo el animal (07 §7.7), sobre un disco de
         /// noche índigo que se apaga hacia un borde pizarra, con dos estrellas y aro índigo oscuro con un filete marfil. Rasgos
         /// del jaguar y no del guepardo ni del leopardo (fauna real, 07 §8.1): cráneo redondo, hocico corto y ancho, mandíbula pesada,
-        /// rosetas con un punto de tinta dentro y sin la lágrima del ojo al hocico; boca neutra, sin sonrisa.
-        /// Pendiente de revisión del asesor cultural (07 §8.2).
+        /// rosetas de tres manchas con un punto de tinta dentro en la nuca y el cuello, motas macizas en la cara y sin la lágrima
+        /// del ojo al hocico. Expresión neutra y atenta, porque es el sello de todo Muy difícil, también junto a «¿Seguro?»: ojo
+        /// redondo con la pupila centrada, sin ceja, y boca neutra, sin sonrisa. Pendiente de revisión del asesor cultural
+        /// (07 §8.2).
         /// </summary>
         public Sprite JaguarHead => _jaguarHead != null ? _jaguarHead : (_jaguarHead = BuildJaguarHead());
 
@@ -144,7 +161,7 @@ namespace AF.Presentation
         /// degradado de cada disco de <c>DrawMedallionBase</c> muestreado cada 5 % (<c>RanaDisc@0.35</c>…), el brillo del disco,
         /// el aro con su luz, su filete y su sombra, la rana, el jaguar y los brillos crema y marfil de los ojos y las estrellas.
         /// Las dos excepciones de §2.4 que el test documenta son <c>JaguarEye</c> (el iris visible, alrededor de la pupila, mide
-        /// ≤ 1,4 dp de grosor) y <c>JaguarShade</c> (solo se pinta en líneas de ≤ 2 dp, el borde de la oreja y el centro de las
+        /// ≤ 0,8 dp de grosor) y <c>JaguarShade</c> (solo se pinta en líneas de ≤ 2 dp, el borde de la oreja y el centro de las
         /// rosetas, alrededor de su punto de tinta, y en la sombra de la nuca con alfa 0,55). Solo para tests: crea el array en
         /// cada llamada.
         /// </summary>
@@ -182,6 +199,23 @@ namespace AF.Presentation
             }
 
             return colors.ToArray();
+        }
+
+        /// <summary>
+        /// Rosetas del sello <see cref="JaguarHead"/> (centro y radio en unidades del lienzo de 96, 3 por dp) con la fase φ de sus
+        /// tres manchas de 70° (grados, 0-360), para el test de que los huecos de las rosetas no quedan alineados. Solo para
+        /// tests: crea el array en cada llamada.
+        /// </summary>
+        public static (Vector2 Center, float Radius, float Phase)[] JaguarRosetteLayout()
+        {
+            var layout = new (Vector2 Center, float Radius, float Phase)[JaguarRosettes.Length];
+            for (int i = 0; i < JaguarRosettes.Length; i++)
+            {
+                Vector3 r = JaguarRosettes[i];
+                layout[i] = (new Vector2(r.x, r.y), r.z, JaguarRosettePhase(r.x, r.y));
+            }
+
+            return layout;
         }
 
         /// <summary>
@@ -363,27 +397,33 @@ namespace AF.Presentation
             pc.FillEllipseSoft(67f * k, 42.5f * k, 8f * k, 7f * k, 1.6f * k, JaguarCream);
             pc.FillEllipseSoft(58.5f * k, 31.5f * k, 10f * k, 5f * k, 1.6f * k, JaguarCream);
 
-            // Rosetas: anillos rotos de tinta con el centro más oscuro que el pelaje y un punto de tinta dentro (la marca del
-            // jaguar; las del leopardo no lo tienen), y motas sueltas en la frente y la mejilla.
-            DrawRosette(pc, 40f * k, 52f * k, 4.4f * k, k);
-            DrawRosette(pc, 28.5f * k, 40f * k, 4.2f * k, k);
-            DrawRosette(pc, 44f * k, 66.5f * k, 3.8f * k, k);
-            DrawRosette(pc, 30f * k, 22f * k, 4.6f * k, k);
-            DrawRosette(pc, 42f * k, 29f * k, 3.8f * k, k);
-            DrawRosette(pc, 24f * k, 58f * k, 3.4f * k, k);
-            pc.FillCircle(53f * k, 66f * k, 1.5f * k, JaguarInk);
+            // Rosetas de tres manchas en la nuca y el cuello (JaguarRosettes) y, en la cabeza, solo motas macizas: en la frente,
+            // en el lado de la cabeza entre la oreja y el ojo, y en la mejilla. Así es el pelaje del jaguar: rosetas en el cuerpo
+            // y el cuello, motas sueltas en la cara.
+            for (int i = 0; i < JaguarRosettes.Length; i++)
+            {
+                DrawRosette(pc, k, JaguarRosettes[i]);
+            }
+
+            pc.FillCircle(53f * k, 66f * k, 1.5f * k, JaguarInk); // frente
             pc.FillCircle(57.5f * k, 69f * k, 1.2f * k, JaguarInk);
-            pc.FillCircle(50f * k, 46f * k, 1.4f * k, JaguarInk);
+            pc.FillCircle(47.5f * k, 67.5f * k, 1.3f * k, JaguarInk);
+            pc.FillCircle(41f * k, 52f * k, 1.6f * k, JaguarInk); // lado de la cabeza
+            pc.FillCircle(45.5f * k, 56.5f * k, 1.2f * k, JaguarInk);
+            pc.FillCircle(38.5f * k, 61f * k, 1.3f * k, JaguarInk);
+            pc.FillCircle(50f * k, 46f * k, 1.4f * k, JaguarInk); // mejilla
             pc.FillCircle(54.5f * k, 49f * k, 1.1f * k, JaguarInk);
             pc.FillCircle(51f * k, 40.5f * k, 1.2f * k, JaguarInk);
 
-            // Ojo almendrado ámbar con pupila y la ceja. Sin la lágrima oscura del ojo al hocico: es el rasgo del guepardo, que
-            // es africano; el jaguar no la tiene (fauna real, 07 §8.1).
-            pc.FillEllipseSoft(60f * k, 56f * k, 4.6f * k, 3.2f * k, 0.8f * k, JaguarInk);
-            pc.FillEllipseSoft(60.4f * k, 56.1f * k, 3.3f * k, 2.1f * k, 0.6f * k, JaguarEye);
-            pc.FillCircle(61.3f * k, 56f * k, 1.4f * k, JaguarInk);
-            pc.FillCircle(60.3f * k, 56.9f * k, 0.7f * k, Palette.Cream);
-            pc.FillCapsule(54.5f * k, 60f * k, 63.5f * k, 59.5f * k, 0.9f * k, ColorMath.WithAlpha(JaguarInk, 0.8f));
+            // Ojo redondo, ámbar y tranquilo: contorno de 4,4 × 3,8 u, iris de 3,4 × 2,8 u y pupila redonda de 1,3 u centrada,
+            // con un brillo crema arriba; mirada neutra y atenta. Sin ceja: junto a «¿Seguro?», la ceja baja sobre el ojo
+            // almendrado con la pupila adelantada se leía como escepticismo o burla, y este sello es el de todo Muy difícil
+            // (lo reutilizan T09 y T13). Sin la lágrima oscura del ojo al hocico: es el rasgo del guepardo, que es africano; el
+            // jaguar no la tiene (fauna real, 07 §8.1).
+            pc.FillEllipseSoft(60f * k, 56f * k, 4.4f * k, 3.8f * k, 0.8f * k, JaguarInk);
+            pc.FillEllipseSoft(60.4f * k, 56.1f * k, 3.4f * k, 2.8f * k, 0.6f * k, JaguarEye);
+            pc.FillCircle(60.6f * k, 56.1f * k, 1.3f * k, JaguarInk);
+            pc.FillCircle(59.9f * k, 57f * k, 0.8f * k, Palette.Cream);
 
             // Nariz en la punta del hocico corto, boca neutra (un único trazo recto de 3 u bajo la nariz, sin la vuelta por la
             // mandíbula, que dibujaba una sonrisa ladeada y junto a «¿Seguro?» podía leerse como burla) y bigotes.
@@ -717,14 +757,33 @@ namespace AF.Presentation
             pc.FillCircle(cx, cy, r * 0.32f, c);
         }
 
-        // Roseta del jaguar: anillo de tinta roto en dos arcos con el centro más oscuro que el pelaje y, dentro, un punto macizo
-        // de tinta de 1,2 u de radio: las rosetas con punto central son la marca del jaguar (las del leopardo no lo tienen).
-        private static void DrawRosette(PixelCanvas pc, float cx, float cy, float r, float k)
+        // Roseta del jaguar (x, y y radio en u del lienzo de 96; k = px por u): tres manchas de tinta de RosetteBlotchDeg con
+        // 2,3 u de grosor, cada RosetteStepDeg a partir de la fase φ de JaguarRosettePhase (huecos de 50°), alrededor de un
+        // centro más oscuro que el pelaje (radio 0,58 r: como mucho 1,9 dp de ancho, una de las excepciones de §2.4) y, dentro,
+        // un punto macizo de tinta de 1,0 u desplazado 0,6 u hacia el segundo hueco: las rosetas con punto central son la marca
+        // del jaguar (las del leopardo no lo tienen). Con dos arcos finos y el punto en el centro se leían como lunares de
+        // juguete y no como piel de felino (D-003).
+        private static void DrawRosette(PixelCanvas pc, float k, Vector3 rosette)
         {
-            pc.FillCircle(cx, cy, r * 0.62f, ColorMath.WithAlpha(JaguarShade, 0.9f));
-            pc.FillCircle(cx, cy, 1.2f * k, JaguarInk);
-            pc.StrokeArc(cx, cy, r, 1.7f * k, 15f, 150f, JaguarInk);
-            pc.StrokeArc(cx, cy, r, 1.7f * k, 190f, 335f, JaguarInk);
+            float cx = rosette.x * k;
+            float cy = rosette.y * k;
+            float r = rosette.z * k;
+            float phase = JaguarRosettePhase(rosette.x, rosette.y);
+            pc.FillCircle(cx, cy, r * 0.58f, ColorMath.WithAlpha(JaguarShade, 0.9f));
+            float dot = (phase + RosetteStepDeg + RosetteBlotchDeg + ((RosetteStepDeg - RosetteBlotchDeg) * 0.5f)) * Mathf.Deg2Rad;
+            pc.FillCircle(cx + (Mathf.Cos(dot) * 0.6f * k), cy + (Mathf.Sin(dot) * 0.6f * k), 1.0f * k, JaguarInk);
+            for (int i = 0; i < 3; i++)
+            {
+                float from = phase + (i * RosetteStepDeg);
+                pc.StrokeArc(cx, cy, r, 2.3f * k, from, from + RosetteBlotchDeg, JaguarInk);
+            }
+        }
+
+        // Fase φ (grados) de las manchas de la roseta centrada en (x, y), en u del lienzo de 96: (37 x + 53 y) mod 360, distinta
+        // en cada roseta para que los huecos no queden alineados.
+        private static float JaguarRosettePhase(float x, float y)
+        {
+            return Mathf.Repeat((x * 37f) + (y * 53f), 360f);
         }
 
         // Coordenadas de la rana: x reflejada en el eje del cuerpo (m = −1, el lado derecho) y escalada f alrededor de (48, 47).

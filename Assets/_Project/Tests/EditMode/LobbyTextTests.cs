@@ -116,7 +116,7 @@ namespace AF.Tests.EditMode
             // Excepciones de §2.4, regla 1 («líneas de ≤ 2 dp»), con su motivo. Nada más puede quedar por debajo de 5.
             var exceptions = new System.Collections.Generic.Dictionary<string, string>
             {
-                ["JaguarEye"] = "el iris ámbar (4,6 del Taperebá) mide 2,2 × 1,4 dp con la pupila en medio: lo visible son franjas de ≤ 1,4 dp",
+                ["JaguarEye"] = "el iris ámbar (4,6 del Taperebá) mide 2,3 × 1,9 dp con la pupila redonda en medio: lo visible es un anillo de ≤ 0,8 dp",
                 ["JaguarShade"] = "(5,0 del Agua del Río Negro) solo se pinta en líneas de ≤ 2 dp (borde de la oreja de 0,6 dp y centro de las rosetas de ≤ 1,9 dp, alrededor de su punto de tinta) y en la sombra de la nuca con alfa 0,55",
             };
             var seen = new System.Collections.Generic.HashSet<string>();
@@ -182,6 +182,38 @@ namespace AF.Tests.EditMode
             }
 
             Assert.That(frogMin, Is.EqualTo(3.15f).Within(0.05f), "el naranja de la rana sobre el borde del disco");
+        }
+
+        [Test]
+        public void JaguarRosettes_FourOnTheNapeAndNeck_WithVariedRadiiAndGapsThatDoNotLineUp()
+        {
+            // D-003 (piel de felino, no lunares de juguete): 4 rosetas de tres manchas de 70° cada 120° en la nuca y el cuello
+            // (detrás del ojo, x ≤ 45 u del lienzo de 96, y por debajo de la oreja, y ≤ 62 u), con radios de 3,2 a 5,0 u que no
+            // se repiten, y una fase por roseta: módulo 120°, el periodo de las manchas, dos rosetas cualesquiera quedan a ≥ 20°,
+            // así que sus huecos no se alinean. En la frente y la mejilla solo hay motas macizas.
+            (UnityEngine.Vector2 Center, float Radius, float Phase)[] rosettes = ProceduralArt.JaguarRosetteLayout();
+            Assert.That(rosettes.Length, Is.EqualTo(4));
+            float minRadius = float.MaxValue;
+            float maxRadius = float.MinValue;
+            for (int i = 0; i < rosettes.Length; i++)
+            {
+                (UnityEngine.Vector2 center, float radius, float phase) = rosettes[i];
+                string where = "roseta " + i + " en " + center;
+                Assert.That(radius, Is.InRange(3.2f, 5.0f), where);
+                Assert.That(center.x, Is.LessThanOrEqualTo(45f), where + ": en la nuca o el cuello, detrás del ojo");
+                Assert.That(center.y + radius, Is.LessThanOrEqualTo(62f), where + ": por debajo de la oreja");
+                Assert.That(phase, Is.InRange(0f, 360f), where);
+                minRadius = UnityEngine.Mathf.Min(minRadius, radius);
+                maxRadius = UnityEngine.Mathf.Max(maxRadius, radius);
+                for (int j = 0; j < i; j++)
+                {
+                    Assert.That(radius, Is.Not.EqualTo(rosettes[j].Radius), where + ": radios variados");
+                    float d = UnityEngine.Mathf.Repeat(phase - rosettes[j].Phase, 120f);
+                    Assert.That(UnityEngine.Mathf.Min(d, 120f - d), Is.GreaterThanOrEqualTo(20f), where + " frente a la roseta " + j + ": huecos alineados");
+                }
+            }
+
+            Assert.That(maxRadius - minRadius, Is.GreaterThanOrEqualTo(1.5f), "el radio varía entre 3,2 y 5,0 u");
         }
 
         [Test]

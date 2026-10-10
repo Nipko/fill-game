@@ -95,8 +95,11 @@ namespace AF.UI
         /// <summary>Multiplicador del premio mostrado en la cinta; ≤ 1 si la cinta no se ve.</summary>
         public int Multiplier => _multiplier;
 
-        /// <summary>La cinta «×n» se ve.</summary>
-        public bool RibbonShown => _ribbon.gameObject.activeSelf;
+        /// <summary>
+        /// La cinta «×n» se ve: el chip se ve y la cinta está activa. Al ocultar el chip (<c>normal</c>), la cinta conserva su
+        /// estado activo para el siguiente <see cref="Set"/>, pero ya no se ve (del 60 al 61 en el mismo inicio).
+        /// </summary>
+        public bool RibbonShown => Visible && _ribbon.gameObject.activeSelf;
 
         /// <summary>Texto de la cinta («×3» o «×4»), o cadena vacía si no se ve.</summary>
         public string RibbonText => RibbonShown ? _ribbonText.text : string.Empty;

@@ -92,6 +92,8 @@ namespace AF.Tests.PlayMode
             LobbyScreen lobby = boot.Lobby!;
             Assert.That(lobby.PlayNight, Is.True, "el 60 es Muy difícil");
             Assert.That(lobby.ChipShown, Is.True);
+            Assert.That(lobby.ChipRibbonText, Is.EqualTo("×4"));
+            Assert.That(lobby.Chip.RibbonShown, Is.True);
             Assert.That(boot.PressPlay(), Is.True);
             Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(60));
             PlayModeHelpers.TakeClock(boot);
@@ -107,6 +109,9 @@ namespace AF.Tests.PlayMode
             Assert.That(lobby.PlayLabelMaterial, Is.SameAs(UiFonts.Material(TextStyle.CtaLeaf)), "contorno de hoja, no el de agua profunda");
             Assert.That(lobby.ChipShown, Is.False, "normal: sin chip (propuesta §c.1)");
             Assert.That(lobby.ChipText, Is.Empty);
+            Assert.That(lobby.ChipRibbonText, Is.Empty, "sin chip no hay cinta: nada de «×4» del 60 (vacío si no se ve)");
+            Assert.That(lobby.Chip.RibbonShown, Is.False, "la cinta del 60 no se ve con el chip oculto");
+            Assert.That(lobby.Chip.Multiplier, Is.LessThanOrEqualTo(1), "≤ 1 si la cinta no se ve");
 
             // Jugar sigue funcionando y entra al 61.
             Assert.That(boot.PressPlay(), Is.True);
