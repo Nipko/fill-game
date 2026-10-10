@@ -12,15 +12,16 @@ namespace AF.UI
     /// Chip de la etiqueta de dificultad de D-009 (propuesta-mecanicas-dificultad.md §c.1-c.2; 07 §7.7; 02 §10; glosario §6.1),
     /// reutilizable en el inicio (sobre «Jugar · Nivel {n}»), en Siguiente y en el HUD (T09): píldora de 26 dp ámbar
     /// <c>ui_ambar</c> con texto tinta y el sello de la rana dardo (Difícil) o índigo <c>ui_indigo</c> con texto marfil y el sello
-    /// del jaguar (Muy difícil), y la cinta «×3»/«×4» colgada de su anilla a la derecha (como la «x5» de Magic Sort, ficha
+    /// del jaguar (Muy difícil), y la cinta «×3»/«×4» clavada con un remache a la derecha (como la «x5» de Magic Sort, ficha
     /// §3.6). Sin calavera (glosario §6.1). En <c>normal</c> se oculta. Los sellos de fauna (rana dardo y jaguar) quedan
     /// pendientes de revisión del asesor cultural (07 §8.2).
     /// </summary>
     /// <remarks>
     /// Geometría (dp, desde la esquina superior izquierda de <see cref="Root"/>): el sello de <see cref="MedallionDp"/> a la
-    /// izquierda monta <see cref="MedallionOverlapDp"/> sobre la píldora, que va centrada en vertical; la cinta monta su anilla
-    /// sobre el extremo derecho de la píldora. <see cref="Root"/> abarca todo (sello, píldora, sombra y cinta), así que sirve
-    /// para comprobar solapes. Solo asigna memoria al cambiar la etiqueta o el multiplicador.
+    /// izquierda monta <see cref="MedallionOverlapDp"/> sobre la píldora, que va centrada en vertical; la cinta monta
+    /// <see cref="RibbonBodyOverlapDp"/> sobre el extremo derecho de la píldora, con el remache en su esquina superior izquierda,
+    /// por encima de la altura de la «x» del texto. <see cref="Root"/> abarca todo (sello, píldora, sombra y cinta), así que
+    /// sirve para comprobar solapes. Solo asigna memoria al cambiar la etiqueta o el multiplicador.
     /// </remarks>
     internal sealed class DifficultyChip
     {
@@ -39,8 +40,13 @@ namespace AF.UI
         /// <summary>Distancia de la parte superior del chip al borde inferior de la píldora (sin la sombra).</summary>
         public const float PillBottomDp = PillTopDp + ProceduralArt.LabelPillDp;
 
+        /// <summary>Lo que el cuerpo de la cinta monta sobre el extremo derecho de la píldora (dp): ahí va el remache.</summary>
+        public const float RibbonBodyOverlapDp = 5f;
+
+        /// <summary>Hueco entre el final de la palabra y el cuerpo de la cinta (dp).</summary>
+        public const float RibbonGapDp = 10f;
+
         private const float PillTopDp = (HeightDp - ProceduralArt.LabelPillDp) * 0.5f;
-        private const float RibbonOverlapDp = 9f;
         private const float RibbonTextDp = 16f;
         private const float RibbonTopDp = 4f;
         private const float TextGapDp = 5f;
@@ -237,14 +243,15 @@ namespace AF.UI
             float pillX = MedallionDp - MedallionOverlapDp;
             float textX = MedallionOverlapDp + TextGapDp; // dentro de la píldora
             bool ribbon = _ribbon.gameObject.activeSelf;
-            float pillW = textX + textW + (ribbon ? RibbonOverlapDp + 6f : EndPadDp);
+            float pillW = textX + textW + (ribbon ? RibbonGapDp + RibbonBodyOverlapDp : EndPadDp);
             UiBuilder.Place(_pill.rectTransform, pillX, PillTopDp, pillW, ProceduralArt.LabelPillDp + ProceduralArt.LabelPillShadowDp);
             UiBuilder.Place(_text.rectTransform, textX, 0f, textW + 2f, ProceduralArt.LabelPillDp);
             UiBuilder.Place(_medallion.rectTransform, 0f, 0f, MedallionDp, MedallionDp);
             _width = pillX + pillW;
             if (ribbon)
             {
-                float ribbonX = pillX + pillW - RibbonOverlapDp;
+                // El cuerpo de la cinta empieza RibbonGapDp después de la palabra y cubre el extremo redondeado de la píldora.
+                float ribbonX = pillX + textX + textW + RibbonGapDp - ProceduralArt.RibbonTagBodyLeftDp;
                 UiBuilder.Place(_ribbon.rectTransform, ribbonX, RibbonTopDp, ProceduralArt.RibbonTagWidthDp, ProceduralArt.RibbonTagHeightDp);
                 Rect t = ProceduralArt.RibbonTagTextDp;
                 UiBuilder.Place(_ribbonText.rectTransform, t.x, t.y, t.width, t.height);

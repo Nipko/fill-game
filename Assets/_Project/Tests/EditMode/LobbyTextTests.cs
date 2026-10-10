@@ -104,6 +104,30 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void LabelArtColors_AreAtLeast5DeltaE00FromEveryTint()
+        {
+            // 07 §3, regla 6, y direccion-visual-v2 §2.4.1 y §7 («HEX de tintes en la UI»): los colores de la UI quedan a
+            // ΔE00 ≥ 5 de los 14 tintes. La rana era #F07A12, a 0,8 del Aguaje: en el HUD (T09), junto al tablero, se leería como
+            // una dosis o un icono de Aguaje.
+            (string Name, UnityEngine.Color Color)[] colors =
+            {
+                ("naranja de la rana", ProceduralArt.FrogOrange),
+                ("brillo de la rana", ProceduralArt.FrogOrangeLight),
+                ("oro del jaguar", ProceduralArt.JaguarGold),
+            };
+            foreach ((string name, UnityEngine.Color color) in colors)
+            {
+                for (int tint = 1; tint <= 14; tint++)
+                {
+                    Assert.That(ColorMath.DeltaE00(color, Palette.Tint(tint)), Is.GreaterThanOrEqualTo(5f), name + " frente al tinte " + tint);
+                }
+            }
+
+            Assert.That(ColorMath.DeltaE00(ProceduralArt.FrogOrange, Palette.Tint(4)), Is.EqualTo(9.5f).Within(0.2f), "frente al Aguaje #EF7D1A");
+            Assert.That(ColorMath.DeltaE00(ProceduralArt.FrogOrange, Palette.Tint(5)), Is.EqualTo(11.1f).Within(0.2f), "frente al Achiote #CF3E1C");
+        }
+
+        [Test]
         public void HeaderBand_IsAmberForHard_IndigoForVeryHard_AndWoodForNormal()
         {
             Assert.That(ModalKit.HeaderBandFor("hard"), Is.EqualTo((UnityEngine.Color?)Palette.UiAmber));

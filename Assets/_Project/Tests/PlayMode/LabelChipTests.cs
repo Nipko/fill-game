@@ -83,6 +83,38 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Lobby_WinLevel60_SameLobbyShowsLevel61WithTheLeafButtonAndNoChip()
+        {
+            // El caso real en la misma app: el inicio está en el 60 (nocturno), se gana el 60 y al volver al MISMO inicio el 61
+            // (normal) lleva otra vez la hoja con el texto crema y el contorno de hoja, sin chip (ApplyPlayVariant(false)).
+            yield return LabelFunnel.LoadLobby(60);
+            GameBootstrap boot = GameBootstrap.Current!;
+            LobbyScreen lobby = boot.Lobby!;
+            Assert.That(lobby.PlayNight, Is.True, "el 60 es Muy difícil");
+            Assert.That(lobby.ChipShown, Is.True);
+            Assert.That(boot.PressPlay(), Is.True);
+            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(60));
+            PlayModeHelpers.TakeClock(boot);
+            VictorySetup.WinToVictoryScreen(boot);
+            Assert.That(boot.PressHome(), Is.True);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+            Assert.That(boot.Lobby, Is.SameAs(lobby), "el mismo inicio, sin recargar la app");
+            Assert.That(boot.App.PlayLevel, Is.EqualTo(61));
+            Assert.That(lobby.PlayLabel, Is.EqualTo("Jugar · Nivel 61"));
+            Assert.That(lobby.PlayNight, Is.False, "el 61 es normal: vuelve la hoja");
+            Assert.That(lobby.PlayFaceSprite!.name, Does.Contain("cta_leaf_large"));
+            Assert.That(lobby.PlayLabelColor, Is.EqualTo((Color)Palette.Cream));
+            Assert.That(lobby.PlayLabelMaterial, Is.SameAs(UiFonts.Material(TextStyle.CtaLeaf)), "contorno de hoja, no el de agua profunda");
+            Assert.That(lobby.ChipShown, Is.False, "normal: sin chip (propuesta §c.1)");
+            Assert.That(lobby.ChipText, Is.Empty);
+
+            // Jugar sigue funcionando y entra al 61.
+            Assert.That(boot.PressPlay(), Is.True);
+            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Level));
+            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(61));
+        }
+
+        [UnityTest]
         public IEnumerator Lobby_Level41_NoChip()
         {
             yield return LabelFunnel.LoadLobby(41);

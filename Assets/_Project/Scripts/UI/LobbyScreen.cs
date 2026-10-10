@@ -331,6 +331,9 @@ namespace AF.UI
         /// <summary>Sprite de la cara del botón Jugar (hoja o noche).</summary>
         public Sprite? PlayFaceSprite => _play.FaceImage.sprite;
 
+        /// <summary>Material del texto del botón Jugar (contorno de hoja, o de agua profunda en la variante nocturna; tests).</summary>
+        internal Material? PlayLabelMaterial => _playLabel.fontSharedMaterial;
+
         /// <summary>Chip de dificultad (tests y capturas).</summary>
         internal DifficultyChip Chip => _chip;
 

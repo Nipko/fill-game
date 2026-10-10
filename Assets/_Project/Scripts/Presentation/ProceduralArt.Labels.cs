@@ -8,7 +8,7 @@ namespace AF.Presentation
     /// Arte procedural [P] de las etiquetas de dificultad de D-009 (propuesta-mecanicas-dificultad.md §c.1-c.2; 07 §7.7; 02 §10;
     /// glosario §6.1), en la línea de D-003 (luz de juego, madera y vidrio; nunca papel ni acuarela): el sello de la rana dardo
     /// naranja y negra (Difícil) y el del jaguar de perfil con rosetas sobre la noche (Muy difícil), sin calavera; la cinta
-    /// «×3»/«×4» de agua profunda colgada de una anilla de fibra; la píldora ámbar o índigo del chip; la banda de color de las
+    /// «×3»/«×4» de agua profunda clavada a la píldora con un remache; la píldora ámbar o índigo del chip; la banda de color de las
     /// cabeceras de ¿Seguro? y Nivel fallido; y la variante nocturna del botón «Jugar · Nivel {n}». Todo se genera de forma
     /// perezosa la primera vez que se pide (un inicio sin etiqueta no crea ninguna textura) y, tras <see cref="Dispose"/>, los
     /// sprites destruidos se vuelven a generar (el == de Unity). Lo sustituye el arte del artista. Los sellos de fauna (rana
@@ -25,20 +25,30 @@ namespace AF.Presentation
         /// <summary>Sombra bajo la píldora, incluida en el sprite de <see cref="DifficultyPill"/> (dp).</summary>
         public const float LabelPillShadowDp = 2f;
 
-        /// <summary>Ancho del sprite de la cinta <see cref="RibbonTag"/> (dp), con la anilla a la izquierda.</summary>
-        public const float RibbonTagWidthDp = 38f;
+        /// <summary>Ancho del sprite de la cinta <see cref="RibbonTag"/> (dp), con su sombra.</summary>
+        public const float RibbonTagWidthDp = 32f;
 
         /// <summary>Alto del sprite de la cinta <see cref="RibbonTag"/> (dp), con su sombra.</summary>
         public const float RibbonTagHeightDp = 24f;
 
+        /// <summary>Borde izquierdo del cuerpo de la cinta dentro de su sprite (dp): lo que queda a la izquierda es margen de antialias.</summary>
+        public const float RibbonTagBodyLeftDp = 2f;
+
         /// <summary>
         /// Zona de texto de la cinta dentro de su sprite (dp desde la esquina superior izquierda: x, y, ancho y alto): el cuerpo
-        /// de madera a la derecha del agujero de la anilla y antes de la cola en V.
+        /// de agua a la derecha del remache y antes de la cola en V.
         /// </summary>
-        public static readonly Rect RibbonTagTextDp = new Rect(12f, 2.5f, 21f, 17.5f);
+        public static readonly Rect RibbonTagTextDp = new Rect(6f, 2.5f, 21f, 17.5f);
 
-        /// <summary>Naranja de advertencia de la rana dardo #F07A12 [P] (07 §7.7: «naranja/negro»).</summary>
-        public static readonly Color FrogOrange = Palette.Hex(0xF07A12);
+        /// <summary>
+        /// Naranja de advertencia de la rana dardo #E85D12 [P] (07 §7.7: «naranja/negro»). No es el HEX de ningún tinte (07 §3,
+        /// regla 6; direccion-visual-v2 §2.4.1 y §7): queda a ΔE00 9,5 del Aguaje y 11,1 del Achiote, para que en el HUD (T09),
+        /// junto al tablero, no se lea como una dosis. Lo comprueba <c>LobbyTextTests</c>.
+        /// </summary>
+        public static readonly Color FrogOrange = Palette.Hex(0xE85D12);
+
+        /// <summary>Brillo del lomo de la rana #FF9A5A [P] (ΔE00 8,5 del Aguaje).</summary>
+        public static readonly Color FrogOrangeLight = Palette.Hex(0xFF9A5A);
 
         /// <summary>Negro de la rana dardo #17120E [P].</summary>
         public static readonly Color FrogBlack = Palette.Hex(0x17120E);
@@ -63,7 +73,6 @@ namespace AF.Presentation
         public static readonly ButtonFamily FamilyNight = new ButtonFamily(
             Palette.Hex(0x4C5C9E), Palette.UiIndigo, Palette.Hex(0x1A2448), Palette.Hex(0x121A38), Palette.Hex(0x0A0F24));
 
-        private static readonly Color FrogOrangeLight = Palette.Hex(0xFFA947);
         private static readonly Color JaguarShade = Palette.Hex(0xB46E1E);
         private static readonly Color JaguarCream = Palette.Hex(0xF6E3BC);
         private static readonly Color JaguarInk = Palette.Hex(0x1E140C);
@@ -79,9 +88,11 @@ namespace AF.Presentation
         private ReliefSprites? _ctaNightLarge;
 
         /// <summary>
-        /// Sello de Difícil (32 dp): rana dardo naranja con manchas y patas negras, vista desde arriba, sobre un disco marfil
-        /// cálido con aro ámbar tostado (07 §7.7; glosario §6.1). Lo reutilizan el HUD (T09) y la tarjeta previa (T13).
-        /// Pendiente de revisión del asesor cultural (07 §8.2).
+        /// Sello de Difícil (32 dp): rana dardo naranja con manchas redondas negras y contorno negro, vista desde arriba y con
+        /// las patas recogidas junto al cuerpo (la silueta compacta y naranja se lee como rana a 30 dp; con patas negras abiertas
+        /// en X se leía como un escarabajo o una calavera con tibias), sobre un disco marfil cálido con aro ámbar tostado
+        /// (07 §7.7; glosario §6.1). Lo reutilizan el HUD (T09) y la tarjeta previa (T13). Pendiente de revisión del asesor
+        /// cultural (07 §8.2).
         /// </summary>
         public Sprite RanaDardo => _ranaDardo != null ? _ranaDardo : (_ranaDardo = BuildRanaDardo());
 
@@ -93,9 +104,11 @@ namespace AF.Presentation
         public Sprite JaguarHead => _jaguarHead != null ? _jaguarHead : (_jaguarHead = BuildJaguarHead());
 
         /// <summary>
-        /// Cinta «×3»/«×4» (propuesta §c.2: como la «x5» de Magic Sort, ficha §3.6, «colgada de una anilla»): agua profunda con
-        /// luz arriba y bisel, cola en V a la derecha y una anilla de fibra a la izquierda; el texto lo pone TextMeshPro en
-        /// <see cref="RibbonTagTextDp"/>. <see cref="RibbonTagWidthDp"/> × <see cref="RibbonTagHeightDp"/> dp.
+        /// Cinta «×3»/«×4» (propuesta §c.2: como la «x5» de Magic Sort, ficha §3.6): agua profunda con luz arriba y bisel, cola
+        /// en V a la derecha y, en la esquina superior izquierda, un remache macizo de <c>madera_oscura</c> que la clava sobre el
+        /// extremo de la píldora. El remache queda arriba, por encima de la altura de la «x» del texto: la anilla hueca que
+        /// había, a media altura entre la palabra y la «×», se leía como una «o» («Difícil o×3»). El texto lo pone TextMeshPro
+        /// en <see cref="RibbonTagTextDp"/>. <see cref="RibbonTagWidthDp"/> × <see cref="RibbonTagHeightDp"/> dp.
         /// </summary>
         public Sprite RibbonTag => _ribbonTag != null ? _ribbonTag : (_ribbonTag = BuildRibbonTag());
 
@@ -167,27 +180,30 @@ namespace AF.Presentation
             float k = s / 96f;
             DrawMedallionBase(pc, k, Palette.Hex(0xFFF6DE), Palette.Hex(0xEFD8A6), ColorMath.Lighten(Palette.UiAmber, 0.55f));
 
-            // Rana vista desde arriba, cabeza hacia arriba, escalada 0,78 alrededor del centro del disco.
+            // Rana vista desde arriba, cabeza hacia arriba, escalada 0,78 alrededor del centro del disco. Las patas, naranjas con
+            // contorno negro y recogidas: los dedos quedan a menos de 30 unidades del centro (48, 47) del lienzo, las traseras
+            // dobladas junto al cuerpo y las delanteras hacia delante y abajo, sin levantar los brazos.
             const float f = 0.78f;
             for (int pass = 0; pass < 2; pass++)
             {
-                // Pasada 0: silueta engordada en negro (contorno); pasada 1: relleno.
+                // Pasada 0: silueta engordada en negro (contorno); pasada 1: relleno naranja.
                 float grow = pass == 0 ? 1.8f : 0f;
-                Color limb = FrogBlack;
+                float limbGrow = pass == 0 ? 1.5f : 0f;
+                Color limb = pass == 0 ? FrogBlack : FrogOrange;
                 for (int side = 0; side < 2; side++)
                 {
                     float m = side == 0 ? 1f : -1f;
-                    FrogCapsule(pc, k, f, m, 40f, 36f, 25f, 42f, 3.4f + grow, limb); // muslo
-                    FrogCapsule(pc, k, f, m, 25f, 42f, 24f, 26f, 2.8f + grow, limb); // pierna
-                    FrogCapsule(pc, k, f, m, 24f, 26f, 15f, 21f, 2.0f + grow, limb); // pie
-                    FrogCircle(pc, k, f, m, 12.5f, 23.5f, 2.1f + grow, limb);
-                    FrogCircle(pc, k, f, m, 13f, 17.5f, 2.1f + grow, limb);
-                    FrogCircle(pc, k, f, m, 18f, 16f, 2.0f + grow, limb);
-                    FrogCapsule(pc, k, f, m, 40f, 56f, 28f, 60f, 2.8f + grow, limb); // brazo
-                    FrogCapsule(pc, k, f, m, 28f, 60f, 24f, 71f, 2.4f + grow, limb); // antebrazo
-                    FrogCircle(pc, k, f, m, 20.5f, 73f, 2.0f + grow, limb);
-                    FrogCircle(pc, k, f, m, 24f, 76.5f, 2.0f + grow, limb);
-                    FrogCircle(pc, k, f, m, 28.5f, 74.5f, 1.9f + grow, limb);
+                    FrogCapsule(pc, k, f, m, 40f, 36f, 25f, 42f, 3.4f + limbGrow, limb); // muslo
+                    FrogCapsule(pc, k, f, m, 25f, 42f, 24f, 26f, 2.8f + limbGrow, limb); // pierna
+                    FrogCapsule(pc, k, f, m, 24f, 26f, 22f, 25f, 2.0f + limbGrow, limb); // pie
+                    FrogCircle(pc, k, f, m, 19.5f, 27.5f, 2.1f + limbGrow, limb);
+                    FrogCircle(pc, k, f, m, 19.8f, 23.2f, 2.1f + limbGrow, limb);
+                    FrogCircle(pc, k, f, m, 23f, 21.5f, 2.0f + limbGrow, limb);
+                    FrogCapsule(pc, k, f, m, 40f, 56f, 28f, 60f, 2.8f + limbGrow, limb); // brazo
+                    FrogCapsule(pc, k, f, m, 28f, 60f, 30f, 66f, 2.4f + limbGrow, limb); // antebrazo, hacia delante
+                    FrogCircle(pc, k, f, m, 26f, 68f, 2.0f + limbGrow, limb);
+                    FrogCircle(pc, k, f, m, 28f, 70.8f, 2.0f + limbGrow, limb);
+                    FrogCircle(pc, k, f, m, 31.2f, 70.2f, 1.9f + limbGrow, limb);
                 }
 
                 Color body = pass == 0 ? FrogBlack : FrogOrange;
@@ -197,16 +213,12 @@ namespace AF.Presentation
                 FrogCircle(pc, k, f, -1f, 38.5f, 64f, 5.4f + grow, FrogBlack);
             }
 
-            // Brillo del lomo, manchas negras de advertencia, motas naranjas en los muslos y ojos con brillo.
+            // Brillo del lomo, manchas negras redondas de advertencia (ningún trazo: abajo se leía como una boca) y ojos con brillo.
             pc.FillEllipseSoft(FrogX(44f, 1f, f) * k, FrogY(55f, f) * k, 6f * f * k, 3.2f * f * k, 2.2f * k, ColorMath.WithAlpha(FrogOrangeLight, 0.85f));
             FrogCircle(pc, k, f, 1f, 43f, 46f, 3.7f, FrogBlack);
             FrogCircle(pc, k, f, -1f, 44.5f, 40f, 3.2f, FrogBlack);
             FrogCircle(pc, k, f, 1f, 49.5f, 52.5f, 2.2f, FrogBlack);
-            FrogCapsule(pc, k, f, 1f, 43f, 33.5f, 51f, 31.5f, 2.2f, FrogBlack);
-            FrogCircle(pc, k, f, 1f, 31f, 40f, 1.5f, FrogOrange);
-            FrogCircle(pc, k, f, -1f, 31f, 40f, 1.5f, FrogOrange);
-            FrogCircle(pc, k, f, 1f, 30f, 60.5f, 1.2f, FrogOrange);
-            FrogCircle(pc, k, f, -1f, 30f, 60.5f, 1.2f, FrogOrange);
+            FrogCircle(pc, k, f, 1f, 47f, 33f, 2.6f, FrogBlack);
             FrogCircle(pc, k, f, 1f, 37.2f, 65.8f, 1.6f, Palette.Cream);
             FrogCircle(pc, k, f, 1f, 56.2f, 65.8f, 1.6f, Palette.Cream);
 
@@ -287,8 +299,8 @@ namespace AF.Presentation
             int w = Mathf.RoundToInt(RibbonTagWidthDp * k);
             int h = Mathf.RoundToInt(RibbonTagHeightDp * k);
             var pc = new PixelCanvas(w, h);
-            const float x0 = 8f;
-            const float x1 = 37.5f;
+            const float x0 = RibbonTagBodyLeftDp;
+            const float x1 = RibbonTagWidthDp - 0.5f;
             const float y0 = 2.5f;
             const float y1 = 20f;
             const float notch = 4f;
@@ -334,11 +346,13 @@ namespace AF.Presentation
                 }
             }
 
-            // Agujero de la anilla y la anilla de fibra que pasa por él (cuelga del chip).
-            pc.FillCircle(10.6f * k, (RibbonTagHeightDp - midY) * k, 1.5f * k, Palette.Groove);
-            float ringY = (RibbonTagHeightDp - midY) * k;
-            pc.StrokeArc(7.2f * k, ringY, 3.5f * k, 1.6f * k, 0f, 360f, Palette.FiberShadow);
-            pc.StrokeArc(7.2f * k, ringY, 3.9f * k, 0.6f * k, 60f, 160f, ColorMath.WithAlpha(Palette.FiberLight, 0.9f));
+            // Remache macizo de madera_oscura (3,5 dp) con un brillo crema de 1 dp, en la esquina superior izquierda: clava la
+            // cinta sobre el extremo de la píldora y queda por encima de la altura de la «x», así que nada circular cae en la
+            // línea del texto entre la palabra y la «×».
+            const float rivetX = x0 + 2.6f;
+            const float rivetY = y0 + 2.6f;
+            pc.FillCircle(rivetX * k, (RibbonTagHeightDp - rivetY) * k, 1.75f * k, Palette.WoodDark);
+            pc.FillCircle((rivetX - 0.45f) * k, (RibbonTagHeightDp - rivetY + 0.45f) * k, 0.5f * k, ColorMath.WithAlpha(Palette.Cream, 0.9f));
             return MakeSprite(pc, "label_ribbon_tag", new Vector2(0.5f, 0.5f), Vector4.zero, k);
         }
 
