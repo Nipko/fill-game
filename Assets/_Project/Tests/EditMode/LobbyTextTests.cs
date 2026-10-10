@@ -269,6 +269,17 @@ namespace AF.Tests.EditMode
             Assert.That(DifficultyChip.MultiplierFor(config, "very_hard"), Is.EqualTo(5));
             config.EcoRewardNormal = 0;
             Assert.That(DifficultyChip.MultiplierFor(config, "very_hard"), Is.EqualTo(1), "sin premio normal no se divide");
+
+            // Premios que no son múltiplos (T09): 60 / 25 = 2,4 anunciaría «×2» y pagaría ×2,4 (02 §10), así que no hay cinta;
+            // 100 / 25 sí es exacto.
+            config = EconomyConfig.Defaults;
+            config.EcoRewardNormal = 25;
+            config.EcoRewardHard = 60;
+            config.EcoRewardVeryHard = 100;
+            Assert.That(DifficultyChip.MultiplierFor(config, "hard"), Is.EqualTo(1), "60 no es múltiplo de 25: sin cinta");
+            Assert.That(DifficultyChip.MultiplierFor(config, "very_hard"), Is.EqualTo(4), "100 / 25 = ×4 exacto");
+            config.EcoRewardVeryHard = 110;
+            Assert.That(DifficultyChip.MultiplierFor(config, "very_hard"), Is.EqualTo(1), "110 / 25 = 4,4: sin cinta (antes redondeaba a ×4)");
         }
 
         [Test]

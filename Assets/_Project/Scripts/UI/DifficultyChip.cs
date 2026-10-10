@@ -22,6 +22,10 @@ namespace AF.UI
     /// <see cref="RibbonBodyOverlapDp"/> sobre el extremo derecho de la píldora, con el remache en su esquina superior izquierda,
     /// por encima de la altura de la «x» del texto. <see cref="Root"/> abarca todo (sello, píldora, sombra y cinta), así que
     /// sirve para comprobar solapes. Solo asigna memoria al cambiar la etiqueta o el multiplicador.
+    /// <para>Variante compacta (<see cref="SetCompact"/>; tarea T09) para el HUD cuando no cabe la de 30 dp bajo la insignia
+    /// (360 × 640 o tableros de 3 filas): <see cref="CompactHeightDp"/> de alto, sello de 20 dp, píldora de
+    /// <see cref="CompactPillDp"/> con la misma pintura (9-slice reducido) y texto de <see cref="CompactTextDp"/>, el mínimo de
+    /// 07 §7.7; la cinta, si la hay, a 3/4 [P].</para>
     /// </remarks>
     internal sealed class DifficultyChip
     {
@@ -46,11 +50,31 @@ namespace AF.UI
         /// <summary>Hueco entre el final de la palabra y el cuerpo de la cinta (dp).</summary>
         public const float RibbonGapDp = 10f;
 
+        /// <summary>Alto total de la variante compacta (dp; T09: «chip de 20 dp pegado bajo la placa» [P]).</summary>
+        public const float CompactHeightDp = 20f;
+
+        /// <summary>Alto de la píldora de la variante compacta, sin la sombra (dp).</summary>
+        public const float CompactPillDp = 18f;
+
+        /// <summary>Texto de la variante compacta: el mínimo de 07 §7.7 (12-14 dp).</summary>
+        public const float CompactTextDp = 12f;
+
         private const float PillTopDp = (HeightDp - ProceduralArt.LabelPillDp) * 0.5f;
         private const float RibbonTextDp = 16f;
         private const float RibbonTopDp = 4f;
         private const float TextGapDp = 5f;
         private const float EndPadDp = 12f;
+
+        // Variante compacta: el sello monta 9 dp (14 × 20 / 30), el texto empieza 3,5 dp después y la píldora acaba 8 dp
+        // después de la palabra. La píldora pintada (28 dp con la sombra) se reduce a 18 + 1,4 con el multiplicador del
+        // 9-slice, así su extremo sigue siendo un semicírculo; la cinta va a 3/4.
+        private const float CompactMedallionDp = CompactHeightDp;
+        private const float CompactMedallionOverlapDp = 9f;
+        private const float CompactTextGapDp = 3.5f;
+        private const float CompactEndPadDp = 8f;
+        private const float CompactShadowDp = ProceduralArt.LabelPillShadowDp * CompactPillDp / ProceduralArt.LabelPillDp;
+        private const float CompactPillTopDp = (CompactHeightDp - CompactPillDp) * 0.5f;
+        private const float CompactRibbonScale = 0.75f;
 
         private readonly ProceduralArt _art;
         private readonly RectTransform _root;
@@ -62,6 +86,7 @@ namespace AF.UI
         private string _label = LevelDefinition.LabelNormal;
         private int _multiplier = -1;
         private float _width;
+        private bool _compact;
 
         private DifficultyChip(Transform parent, ProceduralArt art)
         {
@@ -134,8 +159,17 @@ namespace AF.UI
         /// <summary>Ancho del chip con su contenido actual (dp).</summary>
         public float Width => _width;
 
-        /// <summary>Alto del chip (dp).</summary>
-        public float Height => HeightDp;
+        /// <summary>Alto del chip (dp): <see cref="HeightDp"/>, o <see cref="CompactHeightDp"/> en la variante compacta.</summary>
+        public float Height => _compact ? CompactHeightDp : HeightDp;
+
+        /// <summary>De la parte superior del chip al borde inferior de la píldora, sin la sombra (dp).</summary>
+        public float PillBottom => _compact ? CompactPillTopDp + CompactPillDp : PillBottomDp;
+
+        /// <summary>Variante compacta del HUD (<see cref="SetCompact"/>).</summary>
+        public bool Compact => _compact;
+
+        /// <summary>Tamaño del texto de la píldora (dp).</summary>
+        public float TextSize => _text.fontSize;
 
         /// <summary>Crea el chip, oculto, bajo <paramref name="parent"/>.</summary>
         public static DifficultyChip Create(Transform parent, ProceduralArt art)
@@ -146,8 +180,10 @@ namespace AF.UI
         /// <summary>
         /// Multiplicador del premio de la etiqueta <paramref name="label"/> sobre el de un nivel normal (propuesta §c.2: «×3» y
         /// «×4» = <c>eco_reward_hard</c> / <c>eco_reward_normal</c> = 60 / 20 y <c>eco_reward_very_hard</c> / … = 80 / 20; 08 §9),
-        /// redondeado al entero más cercano. 1 en <c>normal</c>, con una etiqueta desconocida o sin premio normal. Nunca deduce
-        /// la etiqueta del premio: Remote Config puede igualar dos tramos, y entonces la cinta no sale pero el chip sí.
+        /// solo si el cociente es exacto: con premios que no son múltiplos (p. ej. 25 y 60) la cinta anunciaría un multiplicador
+        /// que no se paga (02 §10), así que devuelve 1 y la cinta no sale. 1 también en <c>normal</c>, con una etiqueta
+        /// desconocida o sin premio normal. Nunca deduce la etiqueta del premio: Remote Config puede igualar dos tramos, y
+        /// entonces la cinta no sale pero el chip sí.
         /// </summary>
         public static int MultiplierFor(EconomyConfig config, string? label)
         {
@@ -157,12 +193,13 @@ namespace AF.UI
             }
 
             int normal = config.WinReward(RewardTier.Normal);
-            if (normal <= 0)
+            int reward = config.WinReward(tier);
+            if (normal <= 0 || reward <= 0 || reward % normal != 0)
             {
                 return 1;
             }
 
-            return Mathf.Max(1, Mathf.RoundToInt(config.WinReward(tier) / (float)normal));
+            return Mathf.Max(1, reward / normal);
         }
 
         /// <summary>
@@ -228,10 +265,31 @@ namespace AF.UI
             Layout();
         }
 
+        /// <summary>
+        /// Pasa a la variante compacta del HUD (<see cref="CompactHeightDp"/>) o vuelve a la normal y recalcula
+        /// <see cref="Width"/>; quien lo coloca llama después a <see cref="Place"/>. Sin cambios, no hace nada.
+        /// </summary>
+        public void SetCompact(bool compact)
+        {
+            if (compact == _compact)
+            {
+                return;
+            }
+
+            _compact = compact;
+            _text.fontSize = compact ? CompactTextDp : TextDp;
+            _ribbonText.fontSize = compact ? RibbonTextDp * CompactRibbonScale : RibbonTextDp;
+            _pill.pixelsPerUnitMultiplier = compact ? (ProceduralArt.LabelPillDp + ProceduralArt.LabelPillShadowDp) / (CompactPillDp + CompactShadowDp) : 1f;
+            if (Visible)
+            {
+                Layout();
+            }
+        }
+
         /// <summary>Coloca el chip con su esquina superior izquierda en (<paramref name="x"/>, <paramref name="yTop"/>) del padre.</summary>
         public void Place(float x, float yTop)
         {
-            UiBuilder.Place(_root, x, yTop, _width, HeightDp);
+            UiBuilder.Place(_root, x, yTop, _width, Height);
         }
 
         /// <summary>Coloca el chip centrado en <paramref name="centerX"/> con su parte superior en <paramref name="yTop"/>.</summary>
@@ -243,22 +301,29 @@ namespace AF.UI
         private void Layout()
         {
             float textW = Mathf.Ceil(_text.preferredWidth);
-            float pillX = MedallionDp - MedallionOverlapDp;
-            float textX = MedallionOverlapDp + TextGapDp; // dentro de la píldora
             bool ribbon = _ribbon.gameObject.activeSelf;
-            float pillW = textX + textW + (ribbon ? RibbonGapDp + RibbonBodyOverlapDp : EndPadDp);
-            UiBuilder.Place(_pill.rectTransform, pillX, PillTopDp, pillW, ProceduralArt.LabelPillDp + ProceduralArt.LabelPillShadowDp);
-            UiBuilder.Place(_text.rectTransform, textX, 0f, textW + 2f, ProceduralArt.LabelPillDp);
-            UiBuilder.Place(_medallion.rectTransform, 0f, 0f, MedallionDp, MedallionDp);
+            float medallion = _compact ? CompactMedallionDp : MedallionDp;
+            float overlap = _compact ? CompactMedallionOverlapDp : MedallionOverlapDp;
+            float pillTop = _compact ? CompactPillTopDp : PillTopDp;
+            float pillH = _compact ? CompactPillDp : ProceduralArt.LabelPillDp;
+            float shadow = _compact ? CompactShadowDp : ProceduralArt.LabelPillShadowDp;
+            float rs = _compact ? CompactRibbonScale : 1f;
+            float ribbonGap = RibbonGapDp * rs;
+            float pillX = medallion - overlap;
+            float textX = overlap + (_compact ? CompactTextGapDp : TextGapDp); // dentro de la píldora
+            float pillW = textX + textW + (ribbon ? ribbonGap + (RibbonBodyOverlapDp * rs) : (_compact ? CompactEndPadDp : EndPadDp));
+            UiBuilder.Place(_pill.rectTransform, pillX, pillTop, pillW, pillH + shadow);
+            UiBuilder.Place(_text.rectTransform, textX, 0f, textW + 2f, pillH);
+            UiBuilder.Place(_medallion.rectTransform, 0f, 0f, medallion, medallion);
             _width = pillX + pillW;
             if (ribbon)
             {
                 // El cuerpo de la cinta empieza RibbonGapDp después de la palabra y cubre el extremo redondeado de la píldora.
-                float ribbonX = pillX + textX + textW + RibbonGapDp - ProceduralArt.RibbonTagBodyLeftDp;
-                UiBuilder.Place(_ribbon.rectTransform, ribbonX, RibbonTopDp, ProceduralArt.RibbonTagWidthDp, ProceduralArt.RibbonTagHeightDp);
+                float ribbonX = pillX + textX + textW + ribbonGap - (ProceduralArt.RibbonTagBodyLeftDp * rs);
+                UiBuilder.Place(_ribbon.rectTransform, ribbonX, RibbonTopDp * rs, ProceduralArt.RibbonTagWidthDp * rs, ProceduralArt.RibbonTagHeightDp * rs);
                 Rect t = ProceduralArt.RibbonTagTextDp;
-                UiBuilder.Place(_ribbonText.rectTransform, t.x, t.y, t.width, t.height);
-                _width = ribbonX + ProceduralArt.RibbonTagWidthDp;
+                UiBuilder.Place(_ribbonText.rectTransform, t.x * rs, t.y * rs, t.width * rs, t.height * rs);
+                _width = ribbonX + (ProceduralArt.RibbonTagWidthDp * rs);
             }
 
             _width = Mathf.Ceil(_width);
