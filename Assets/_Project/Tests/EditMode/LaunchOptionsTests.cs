@@ -160,6 +160,22 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void LevelCardsOverride_TakesPriority_AndResetClearsIt()
+        {
+            // Tarea T10 del paso 1: la tarjeta previa (LEVEL_CARD, 02 §10) la decide el gancho del test o, si no,
+            // GameConfig.LevelCardsEnabledDefault (false hasta que T13 traiga su vista). Solo tests: ningún extra de intent.
+            Assert.That(LaunchOptions.LevelCardsOverride, Is.Null);
+            Assert.That(LaunchOptions.ResolveLevelCards(), Is.EqualTo(GameConfig.LevelCardsEnabledDefault));
+            LaunchOptions.LevelCardsOverride = true;
+            Assert.That(LaunchOptions.ResolveLevelCards(), Is.True);
+            LaunchOptions.LevelCardsOverride = false;
+            Assert.That(LaunchOptions.ResolveLevelCards(), Is.False);
+            LaunchOptions.Reset();
+            Assert.That(LaunchOptions.LevelCardsOverride, Is.Null);
+            Assert.That(LaunchOptions.ResolveLevelCards(), Is.EqualTo(GameConfig.LevelCardsEnabledDefault));
+        }
+
+        [Test]
         public void Reset_ClearsTheProfileClockAndOffsetHooks()
         {
             LaunchOptions.ProfileStoreOverride = new AF.Save.MemoryProfileStore();

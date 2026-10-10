@@ -103,12 +103,39 @@ namespace AF.Tests.EditMode
         }
     }
 
-    /// <summary>Oyente que registra los eventos de <see cref="LevelFlow"/> en orden.</summary>
-    internal sealed class RecordingListener : ILevelFlowListener
+    /// <summary>
+    /// Oyente que registra los eventos de <see cref="LevelFlow"/> en orden, también los avisos opcionales de la tarjeta previa
+    /// (<see cref="ILevelCardListener"/>: <c>card:{Kind}</c>) y de la Luciérnaga (<see cref="IRevealListener"/>:
+    /// <c>reveal_gift:{n}</c>, <c>reveal_select:on|off</c> y <c>revealed:{cuia}:{máscara}</c>).
+    /// </summary>
+    internal sealed class RecordingListener : ILevelFlowListener, ILevelCardListener, IRevealListener
     {
         public readonly List<string> Events = new List<string>();
 
         public readonly List<TapResult> Taps = new List<TapResult>();
+
+        public readonly List<LevelCardInfo> Cards = new List<LevelCardInfo>();
+
+        public void OnLevelCard(LevelCardInfo card)
+        {
+            Cards.Add(card);
+            Events.Add("card:" + card.Kind);
+        }
+
+        public void OnRevealGifted(int units)
+        {
+            Events.Add("reveal_gift:" + units);
+        }
+
+        public void OnRevealSelection(bool selecting)
+        {
+            Events.Add(selecting ? "reveal_select:on" : "reveal_select:off");
+        }
+
+        public void OnRevealed(int cuia, int layerMask)
+        {
+            Events.Add("revealed:" + cuia + ":" + layerMask);
+        }
 
         public void OnLevelLoaded(int level)
         {

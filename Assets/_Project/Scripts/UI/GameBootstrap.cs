@@ -579,6 +579,10 @@ namespace AF.UI
                 AdGate = new InterstitialGate(_ads, _probe, _wallet), // AD_GATE tras «Siguiente» (B2-4)
                 StateStore = new ProfileLevelStateStore(profile, batch), // nivel en curso tras cada vertido (B2-5)
                 SaveBatch = batch, // una escritura del perfil por acción del jugador
+
+                // Tarjeta previa (LEVEL_CARD, 02 §10): LaunchOptions.LevelCardsOverride ?? GameConfig.LevelCardsEnabledDefault,
+                // apagada hasta que exista su vista (T13).
+                LevelCardsEnabled = LaunchOptions.ResolveLevelCards(),
             };
             _screen.Bind(_flow, _services);
             _app = new AppFlow(_flow, progress, _wallet, this);

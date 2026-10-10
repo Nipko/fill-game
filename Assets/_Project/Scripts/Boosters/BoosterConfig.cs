@@ -21,6 +21,12 @@ namespace AF.Boosters
         /// <summary>Cuias extra que Capi regala en el nivel de desbloqueo (04 §2.2 y §4: «1 Cuia extra gratis al stock»).</summary>
         public const int ExtraCuiaTutorialUnits = 1;
 
+        /// <summary>
+        /// Luciérnagas que se regalan en el estreno de Aguas turbias (nivel 100; 04 §2.5: «regala 1 Luciérnaga al stock con la
+        /// tarjeta»; D-007: «1 Luciérnaga regalada»).
+        /// </summary>
+        public const int RevealGiftUnits = 1;
+
         /// <summary>Una instancia nueva con los defaults de 08 §9.</summary>
         public static BoosterConfig Defaults => new BoosterConfig();
 

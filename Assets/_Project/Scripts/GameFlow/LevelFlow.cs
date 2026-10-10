@@ -13,9 +13,10 @@ namespace AF.GameFlow
     /// Máquina de estados de la pantalla de nivel (GDD 02 §2): LOADING → INTRO → PLAYING → CELEBRATION → VICTORY_SCREEN y
     /// PLAYING → STUCK_MODAL, con Marea (04 §2.1), Volver a la orilla (04 §2.7), la bandeja de comodines (B2-1), el
     /// embudo de bloqueo de D-008 (B2-2 y B2-3, en <c>LevelFlow.Funnel.cs</c>), la victoria con la Cosecha y AD_GATE (B2-4,
-    /// en <c>LevelFlow.Victory.cs</c>) y el nivel en curso guardado tras cada vertido y reabierto al volver a la app (B2-5,
-    /// en <c>LevelFlow.Resume.cs</c>). Sin motor: el tiempo entra por <see cref="Tick"/> y la vista solo informa si su cola
-    /// de animación está vacía.
+    /// en <c>LevelFlow.Victory.cs</c>), el nivel en curso guardado tras cada vertido y reabierto al volver a la app (B2-5,
+    /// en <c>LevelFlow.Resume.cs</c>), la tarjeta previa de 1 toque LEVEL_CARD (02 §10; en <c>LevelFlow.Cards.cs</c>) y la
+    /// Luciérnaga (04 §2.5; en <c>LevelFlow.Reveal.cs</c>). Sin motor: el tiempo entra por <see cref="Tick"/> y la vista solo
+    /// informa si su cola de animación está vacía.
     /// </summary>
     /// <remarks>
     /// <list type="bullet">
@@ -212,7 +213,10 @@ namespace AF.GameFlow
         /// LOADING del nivel <paramref name="level"/> (o del primero si no existe) y arranque de la intro, con el cupo de Marea
         /// entero. Volver a entrar en el mismo nivel (tras salir al inicio) conserva <c>fails_level</c> y la variante aliviada,
         /// no las cuias añadidas (04 §2.2: desaparecen al abandonar el nivel). En el nivel 8, la primera vez, Capi regala una
-        /// Cuia extra (04 §2.2); el regalo queda anotado en <c>level_state</c> y no se repite al salir y volver a entrar.
+        /// Cuia extra (04 §2.2), y en el estreno de Aguas turbias (100), una Luciérnaga (04 §2.5); los regalos quedan anotados en
+        /// <c>level_state</c> y no se repiten al salir y volver a entrar. Con <see cref="LevelCardsEnabled"/>, un nivel con
+        /// etiqueta o con estreno pasa antes por la tarjeta previa (LEVEL_CARD, 02 §10) y la intro espera a
+        /// <see cref="DismissLevelCard"/>.
         /// </summary>
         public void Load(int level)
         {
@@ -220,6 +224,8 @@ namespace AF.GameFlow
             {
                 int number = ResolveLevel(level);
                 LevelDefinition def = _catalog.Find(number)!;
+                EndRevealSelection();
+                ResetLevelCard();
                 Phase = FlowPhase.Loading;
                 _level = def;
                 _levelNumber = number;
@@ -239,8 +245,14 @@ namespace AF.GameFlow
                     _listener.OnExtraCuiaGifted(BoosterConfig.ExtraCuiaTutorialUnits);
                 }
 
-                StartIntro(ReduceMotion ? GameConfig.ReducedMotionIntroMs : GameConfig.TintDurationMs(number), false);
-                PersistState(); // con el regalo, en la misma escritura del perfil
+                bool revealGifted = GiftRevealOnLoad(def, number);
+                int introMs = ReduceMotion ? GameConfig.ReducedMotionIntroMs : GameConfig.TintDurationMs(number);
+                if (!TryShowLevelCard(introMs, false, revealGifted, null, 0))
+                {
+                    StartIntro(introMs, false);
+                }
+
+                PersistState(); // con los regalos, en la misma escritura del perfil
             }
         }
 
@@ -291,11 +303,17 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// Toque en cualquier punto de la pantalla mientras no hay input de juego: salta Sumergir y teñir (02 §4.2; el
-        /// toque no se interpreta como selección, 02 §14) o la celebración (02 §2). Devuelve true si se consumió.
+        /// Toque en cualquier punto de la pantalla mientras no hay input de juego: cierra la tarjeta previa (LEVEL_CARD, 1
+        /// toque), salta Sumergir y teñir (02 §4.2; el toque no se interpreta como selección, 02 §14) o la celebración (02 §2).
+        /// Devuelve true si se consumió.
         /// </summary>
         public bool TapAnywhere()
         {
+            if (Phase == FlowPhase.LevelCard)
+            {
+                return DismissLevelCard();
+            }
+
             if (Phase == FlowPhase.Intro && GameConfig.AnimTintSkippable)
             {
                 FinishIntro(true);
@@ -311,12 +329,27 @@ namespace AF.GameFlow
             return false;
         }
 
-        /// <summary>Toque en la cuia <paramref name="index"/> (02 §3.1, C1-C6).</summary>
+        /// <summary>
+        /// Toque en la cuia <paramref name="index"/> (02 §3.1, C1-C6). En LEVEL_CARD cierra la tarjeta (1 toque en cualquier
+        /// punto) sin seleccionar nada; con el modo de selección de la Luciérnaga abierto, elige la cuia que se revela (o cancela
+        /// si no tiene ocultas; 04 §2.5) y tampoco selecciona: en los dos casos devuelve <see cref="TapKind.Ignored"/>.
+        /// </summary>
         public TapResult TapCuia(int index)
         {
+            if (Phase == FlowPhase.LevelCard)
+            {
+                DismissLevelCard();
+                return TapResult.Ignored(index, _taps.Selected);
+            }
+
             if (!AcceptsBoardInput || _session == null)
             {
                 return TapResult.Ignored(index, _taps.Selected);
+            }
+
+            if (_revealSelecting)
+            {
+                return TapRevealTarget(index);
             }
 
             TapResult result = _taps.OnCuiaTap(_session, index);
@@ -340,11 +373,26 @@ namespace AF.GameFlow
             return result;
         }
 
-        /// <summary>C7: toque en el fondo; quita la selección si la hay.</summary>
+        /// <summary>
+        /// C7: toque en el fondo; quita la selección si la hay. En LEVEL_CARD cierra la tarjeta y con la Luciérnaga eligiendo
+        /// cuia cancela sin coste (04 §2.5: «tocar fuera cancela sin costo»).
+        /// </summary>
         public TapResult TapBackground()
         {
+            if (Phase == FlowPhase.LevelCard)
+            {
+                DismissLevelCard();
+                return TapResult.Ignored(-1, _taps.Selected);
+            }
+
             if (!AcceptsBoardInput)
             {
+                return TapResult.Ignored(-1, _taps.Selected);
+            }
+
+            if (_revealSelecting)
+            {
+                EndRevealSelection();
                 return TapResult.Ignored(-1, _taps.Selected);
             }
 
@@ -378,10 +426,12 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// Quita la selección sin pasar por el input (02 §14: al volver de segundo plano la selección se limpia).
+        /// Quita la selección sin pasar por el input (02 §14: al volver de segundo plano la selección se limpia), también el
+        /// modo de selección de la Luciérnaga, sin coste.
         /// </summary>
         public void ClearSelection()
         {
+            EndRevealSelection();
             TapResult result = _taps.OnBackgroundTap();
             if (result.Kind != TapKind.Ignored)
             {
@@ -412,6 +462,7 @@ namespace AF.GameFlow
                 bool fromModal = Phase == FlowPhase.StuckModal;
                 Pour undone = _session.GetAppliedPour(_session.AppliedPours - 1);
                 _taps.Clear();
+                EndRevealSelection();
                 _session.Undo();
                 ResetPending();
                 ResetStuck();
@@ -440,6 +491,7 @@ namespace AF.GameFlow
             using (Saves())
             {
                 bool fromModal = Phase == FlowPhase.StuckModal;
+                EndRevealSelection();
                 if (!fromModal && CanoesBlockStart())
                 {
                     _taps.Clear();
@@ -492,13 +544,17 @@ namespace AF.GameFlow
         }
 
         // Nuevo intento del mismo nivel (Volver a la orilla, Reintentar, rama C): misma semilla, o la variante aliviada si
-        // toca por primera vez (cartel «El río bajó» antes del teñido), cupo de Marea entero e INTRO corta.
+        // toca por primera vez (cartel «El río bajó» antes del teñido), cupo de Marea entero e INTRO corta. Sin tarjeta previa
+        // salvo con LevelCardOnRetry [P]: entonces la tarjeta va antes del cartel.
         private void BeginAttempt()
         {
             LevelDefinition def = Level;
+            EndRevealSelection();
+            ResetLevelCard();
             _undo.Restore();
             ResetPending();
             ResetStuck();
+            int shortIntro = ReduceMotion ? GameConfig.ReducedMotionIntroMs : GameConfig.AnimTintDurationMsLate;
             int relief = FailResolve.ChooseRelief(def, _attempt, _boosters);
             if (relief >= 0 && relief != _attempt.ReliefIndex)
             {
@@ -507,14 +563,23 @@ namespace AF.GameFlow
                 Phase = FlowPhase.Loading;
                 _listener.OnLevelLoaded(LevelNumber);
                 int banner = Math.Max(0, _boosters.AnimRiverLoweredBannerMs);
-                _listener.OnRiverLowered(def.Relief[relief].Type, banner);
-                StartIntro(banner + (ReduceMotion ? GameConfig.ReducedMotionIntroMs : GameConfig.AnimTintDurationMsLate), true);
+                string reliefType = def.Relief[relief].Type;
+                if (!(LevelCardOnRetry && TryShowLevelCard(banner + shortIntro, true, false, reliefType, banner)))
+                {
+                    _listener.OnRiverLowered(reliefType, banner);
+                    StartIntro(banner + shortIntro, true);
+                }
+
                 PersistState();
                 return;
             }
 
             _session!.Restart();
-            StartIntro(ReduceMotion ? GameConfig.ReducedMotionIntroMs : GameConfig.AnimTintDurationMsLate, true);
+            if (!(LevelCardOnRetry && TryShowLevelCard(shortIntro, true, false, null, 0)))
+            {
+                StartIntro(shortIntro, true);
+            }
+
             PersistState();
         }
 
@@ -558,6 +623,7 @@ namespace AF.GameFlow
 
         private void BeginPending(Outcome outcome)
         {
+            EndRevealSelection();
             _taps.Clear();
             _pending = outcome;
             _drained = false;

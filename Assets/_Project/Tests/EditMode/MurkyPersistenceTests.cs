@@ -33,7 +33,7 @@ namespace AF.Tests.EditMode
             RevealLayer1ThenUndo(rig.Flow);
             BoardState board = rig.Flow.Session.Current;
             LevelStateData saved = rig.Store.Load()!;
-            Assert.That(saved.History, Is.EqualTo("h2|P||||002"), "R: la capa 1 (0b10) de la cuia 0; V vacía tras Marea");
+            Assert.That(saved.History, Is.EqualTo("h2|P||l||002"), "R: la capa 1 (0b10) de la cuia 0; V vacía tras Marea; l: la Luciérnaga regalada (T10)");
             Assert.That(saved.RevealedCuias, Is.EqualTo(new[] { MurkyCuia }), "revealed_cuias sigue igual, por compatibilidad");
 
             LevelStateTests.Rig again = rig.Reopen();
@@ -55,7 +55,7 @@ namespace AF.Tests.EditMode
             // Volver a la orilla tampoco la oculta (04 §2.7, I5), y se vuelve a guardar.
             Assert.That(again.Flow.Restart(), Is.True);
             Assert.That(again.Flow.Session.Current[MurkyCuia].HiddenMask, Is.EqualTo(0b01));
-            Assert.That(again.Store.Load()!.History, Is.EqualTo("h2|P||||002"));
+            Assert.That(again.Store.Load()!.History, Is.EqualTo("h2|P||l||002"));
         }
 
         [Test]
@@ -76,7 +76,7 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Listener.Saw("cuia:" + cuias + ":Extra"), Is.True);
             Assert.That(rig.Flow.Session.RevealedLayers(MurkyCuia), Is.EqualTo(0b10), "02 T6: rehacer la sesión no oculta la capa");
             Assert.That(rig.Flow.Session.Current[MurkyCuia].HiddenMask, Is.EqualTo(0b01));
-            Assert.That(rig.Store.Load()!.History, Is.EqualTo("h2|P|E|||002"));
+            Assert.That(rig.Store.Load()!.History, Is.EqualTo("h2|P|E|l||002"));
 
             // Al reabrir la app siguen la cuia y la capa.
             LevelStateTests.Rig again = rig.Reopen();
@@ -105,7 +105,7 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Flow.Session.AppliedPours, Is.EqualTo(3), "el historial se conserva (04 §2.1 caso d)");
             Assert.That(rig.Flow.Session.RevealedLayers(MurkyCuia), Is.EqualTo(0b10), "02 T6: la Cuia de rescate no oculta la capa");
             Assert.That(rig.Flow.Session.Current[MurkyCuia].HiddenMask, Is.EqualTo(0b01));
-            Assert.That(rig.Store.Load()!.History, Is.EqualTo("h2|P|R||102132|002"));
+            Assert.That(rig.Store.Load()!.History, Is.EqualTo("h2|P|R|l|102132|002"));
 
             LevelStateTests.Rig again = rig.Reopen();
             Assert.That(again.Flow.Resume(rig.Store.Load()!), Is.True);

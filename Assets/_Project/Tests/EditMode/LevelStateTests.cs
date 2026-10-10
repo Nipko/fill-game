@@ -85,6 +85,10 @@ namespace AF.Tests.EditMode
         [TestCase("h2|P||b||")]
         [TestCase("h2|P|||02|002|")]
         [TestCase("h3|P||||")]
+        [TestCase("h2|P||ll||")]
+        [TestCase("h2|X||lcl||")]
+        [TestCase("h1|P||ll|")]
+        [TestCase("h2|P||L||")]
         public void History_RejectsBrokenText(string? history)
         {
             Assert.That(LevelStateSnapshot.TryParseHistory(history, out _), Is.False);
@@ -211,6 +215,50 @@ namespace AF.Tests.EditMode
             Assert.That(parsed.BalsaShown && parsed.ExtraCuiaGifted, Is.True);
             Assert.That(LevelStateSnapshot.TryParseHistory("h1|S|||34", out SavedHistory plain), Is.True);
             Assert.That(plain.BalsaShown, Is.False);
+        }
+
+        [Test]
+        public void History_RevealGiftMark_RoundTrips()
+        {
+            // Tarea T10 del paso 1 (04 §2.5): la marca «l» (ya se regaló la Luciérnaga del estreno de Aguas turbias) va en
+            // cualquier pantalla, también al salir al inicio, como la «c» de Capi; h2 sin ella se sigue leyendo igual.
+            var sb = new StringBuilder();
+            LevelStateSnapshot.WriteHistory(sb, SavedPhase.Playing, new AddedCuiaKind[0], false, false, null, revealGifted: true);
+            Assert.That(sb.ToString(), Is.EqualTo("h2|P||l||"));
+            LevelStateSnapshot.WriteHistory(sb, SavedPhase.Exited, new AddedCuiaKind[0], false, true, null, revealGifted: true);
+            Assert.That(sb.ToString(), Is.EqualTo("h2|X||cl||"));
+            LevelStateSnapshot.WriteHistory(
+                sb, SavedPhase.StuckModal, new[] { AddedCuiaKind.Extra }, true, true, null, balsaShown: true, revealGifted: true);
+            Assert.That(sb.ToString(), Is.EqualTo("h2|S|E|gcbl||"));
+            LevelStateSnapshot.WriteHistory(sb, SavedPhase.Playing, new AddedCuiaKind[0], false, false, null);
+            Assert.That(sb.ToString(), Is.EqualTo("h2|P||||"), "sin regalo, sin marca");
+
+            Assert.That(LevelStateSnapshot.TryParseHistory("h2|S|E|gcbl||", out SavedHistory all), Is.True);
+            Assert.That(all.RevealGifted && all.ExtraCuiaGifted && all.UndoGiftUsed && all.BalsaShown, Is.True);
+            Assert.That(LevelStateSnapshot.TryParseHistory("h2|X||lc||", out SavedHistory exited), Is.True, "las marcas en cualquier orden");
+            Assert.That(exited.RevealGifted && exited.ExtraCuiaGifted, Is.True);
+            Assert.That(exited.Phase, Is.EqualTo(SavedPhase.Exited));
+            Assert.That(LevelStateSnapshot.TryParseHistory("h2|P||l|01|002", out SavedHistory playing), Is.True);
+            Assert.That(playing.RevealGifted, Is.True);
+            Assert.That(playing.Sources, Is.EqualTo(new[] { 0 }));
+            Assert.That(playing.Revealed, Is.EqualTo(new[] { new SavedReveal(0, 0b10) }));
+            Assert.That(LevelStateSnapshot.TryParseHistory("h2|P||||", out SavedHistory none), Is.True);
+            Assert.That(none.RevealGifted, Is.False);
+            Assert.That(LevelStateSnapshot.TryParseHistory("h1|X||l|", out SavedHistory legacy), Is.True, "también en h1");
+            Assert.That(legacy.RevealGifted, Is.True);
+
+            // Con el flujo: el estreno del 100 lo anota en el nivel en curso y en el de salida, y lo recupera al reabrir.
+            var rig = new Rig(packs: TestPacks.Campaign);
+            rig.Start(100);
+            Assert.That(rig.Store.Load()!.History, Is.EqualTo("h2|P||l||"));
+            Rig again = rig.Reopen();
+            Assert.That(again.Flow.Resume(rig.Store.Load()!), Is.True);
+            Assert.That(again.Flow.Attempt.RevealGifted, Is.True);
+            again.Flow.LeaveLevel();
+            Assert.That(again.Store.Load()!.History, Is.EqualTo("h2|X||l||"));
+            Rig later = again.Reopen();
+            Assert.That(later.Flow.RestoreExited(again.Store.Load()!), Is.True);
+            Assert.That(later.Flow.Attempt.RevealGifted, Is.True);
         }
 
         [Test]

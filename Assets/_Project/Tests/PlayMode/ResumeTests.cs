@@ -209,7 +209,7 @@ namespace AF.Tests.PlayMode
             Assert.That(board[0].HiddenMask, Is.EqualTo(0b01), "I5: Marea no la vuelve a ocultar");
             Assert.That(boot.View!.Views[0].ShownCuia.HiddenMask, Is.EqualTo(0b01));
             LevelStateData saved = ProfileJson.Deserialize(store.Json!).LevelState!;
-            Assert.That(saved.History, Is.EqualTo("h2|P||||002"), "R: capa 1 (0b10) de la cuia 0");
+            Assert.That(saved.History, Is.EqualTo("h2|P||l||002"), "R: capa 1 (0b10) de la cuia 0; l: la Luciérnaga regalada en el 100 (T10)");
             Assert.That(saved.RevealedCuias, Is.EqualTo(new[] { 0 }), "revealed_cuias sigue igual, por compatibilidad");
 
             yield return PlayModeHelpers.LoadApp(store); // como cerrar y abrir la app

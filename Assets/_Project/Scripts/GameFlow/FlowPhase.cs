@@ -42,6 +42,14 @@ namespace AF.GameFlow
         /// si las reglas lo permiten, y después LOADING(N + 1). Nunca por temporizador (<c>victory_autonext_s</c> = 0).
         /// </summary>
         AdGate = 9,
+
+        /// <summary>
+        /// LEVEL_CARD: tarjeta previa de 1 toque entre LOADING e INTRO (02 §10; propuesta de D-009 §c.1), solo con
+        /// <see cref="LevelFlow.LevelCardsEnabled"/> y en un nivel Difícil o Muy difícil o en un estreno (<c>intro_mechanic</c>,
+        /// donde el tutorial hace de tarjeta). Un toque en cualquier punto la cierra y arranca la intro
+        /// (<see cref="LevelFlow.DismissLevelCard"/>). No sale al reanudar (02 §14) ni, por defecto, al reintentar [P].
+        /// </summary>
+        LevelCard = 10,
     }
 
     /// <summary>Nombres de los estados tal como los escribe 02 §2 (los usa la línea <c>AF_STATE</c>).</summary>
@@ -62,6 +70,7 @@ namespace AF.GameFlow
                 case FlowPhase.LevelFailed: return "LEVEL_FAILED";
                 case FlowPhase.NoCanoes: return "NO_CANOES";
                 case FlowPhase.AdGate: return "AD_GATE";
+                case FlowPhase.LevelCard: return "LEVEL_CARD"; // level_card, con la convención de esta tabla (02 §2 no lo nombra)
                 default: return "UNKNOWN";
             }
         }
