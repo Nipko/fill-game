@@ -72,11 +72,15 @@ namespace AF.Presentation
     /// con el punto fijo f′, y el trabajo deja el origen y la tocada en el estado previo a sus pasos
     /// (<see cref="StepStaging.JobEnd"/>). Los pasos que pintan el origen no empiezan hasta que vuelve a su ranura, y el fin
     /// del trabajo nunca pinta ese estado previo encima de pasos ya terminados (pinta el del punto en que va el plan). Las
-    /// cuias que cambiaron sin paso saltan a su estado final al llegar el caudal. Un
-    /// cambio solo de contador (la Lluvia o la cueva que cuentan un vertido útil) no retiene la cuia ni impide el encadenado: se
-    /// repinta en el acto si ningún trabajo la usa y, si no, al terminar el último que la usa (lo pinta con el estado del
-    /// modelo). Ninguna cuia queda desfasada del modelo y todas cuentan para la espera y el retraso máximo de 02 §3.2.
-    /// <see cref="ShownOf"/> dice lo último que se pintó en cada vista; con la cola quieta, el modelo.</para>
+    /// cuias que cambiaron sin paso saltan a su estado final al llegar el caudal.</para>
+    /// <para><b>Contadores</b> (Lluvia y cueva de la Piraña que cuentan un vertido útil; etapa (e) de R10): un cambio solo de
+    /// contador no retiene la cuia ni impide el encadenado (02 §3.2), pero no se pinta en el toque: se repinta cuando llega
+    /// el caudal del trabajo que lo causó (<c>FlowEnd + StreamGrowMs</c>; en el encadenado, el del último vertido sumado),
+    /// después de la transferencia. Si en ese momento otro trabajo usa la cuia, la pinta ese trabajo al terminar con ella. Lo
+    /// que se pinta es el estado del modelo sin los contadores de los trabajos cuyo caudal aún no ha llegado
+    /// (<c>TryModelShown</c>): el overlay recibe en <c>Show(cuia)</c> el valor de ese momento, nunca uno adelantado.
+    /// Ninguna cuia queda desfasada del modelo con la cola quieta. <see cref="ShownOf"/> dice lo último que se pintó en cada
+    /// vista; con la cola quieta, el modelo.</para>
     /// <para><b>Tablero de los overlays</b> (<see cref="ICuiaBoard"/>, contrato congelado desde la ola 3): <see cref="Bind"/>
     /// une cada vista al tablero y a las capas (<see cref="CuiaView.BindBoard"/>), <see cref="BoardLaidOut"/> sube
     /// <see cref="LayoutVersion"/> y avisa a los overlays, y las posiciones van en el espacio de las capas.</para>
@@ -555,8 +559,8 @@ namespace AF.Presentation
         /// <see cref="StepStaging.JobEnd"/>: sin pasos sobre ellas, en su estado final; los pasos que pintan el origen
         /// esperan a que vuelva a su ranura;</description></item>
         /// <item><description>las demás cuias que cambiaron sin paso saltan a su estado final al terminar el caudal (con la
-        /// animación de sellado si se sellaron en un vertido sin pasos); un cambio solo de contador no retiene la cuia (ver la
-        /// clase);</description></item>
+        /// animación de sellado si se sellaron en un vertido sin pasos); un cambio solo de contador no retiene la cuia y se
+        /// repinta también al terminar el caudal, no en el toque (ver la clase);</description></item>
         /// <item><description>no se encadena un vertido con pasos, por un Remolino, con Barro en la cima del receptor, si
         /// cambian otras cuias (salvo contadores) o si el vertido revela Aguas turbias.</description></item>
         /// </list>
@@ -617,10 +621,10 @@ namespace AF.Presentation
             }
 
             bool chainable = steps == 0 && !through && !before[receiver].MudExposed && others == 0 && v.RevealedMask == 0;
-            if (chainable && TryChain(source, target, v.Amount, tint, srcBefore, srcAfter, srcSealed, tgtBefore, tgtAfter, tgtSealed, after))
+            if (chainable && TryChain(source, target, v.Amount, tint, srcBefore, srcAfter, srcSealed, tgtBefore, tgtAfter, tgtSealed, after, counters))
             {
                 ChainedCount++;
-                CommitModel(after, counters);
+                CommitModel(after);
                 return;
             }
 
@@ -654,6 +658,8 @@ namespace AF.Presentation
                 Plan = plan,
                 PlanMask = plan >= 0 ? planMask : 0,
                 PlanDone = plan < 0,
+                Counters = counters,
+                BoardBefore = before,
                 After = after,
                 SrcBefore = srcBefore,
                 SrcAfter = srcAfter,
@@ -663,7 +669,7 @@ namespace AF.Presentation
                 TgtSealedAfter = tgtSealed,
                 Stream = -1,
             });
-            CommitModel(after, counters);
+            CommitModel(after);
         }
 
         /// <summary>
@@ -746,8 +752,10 @@ namespace AF.Presentation
 
         // Encadenado: el último trabajo que toca el origen o el destino (también como receptor u otra cuia que cambió) es un
         // vertido igual y encadenable (no Marea, sin Remolino, Barro, otras cuias ni revelado) que aún no ha empezado o cuyo
-        // chorro sigue saliendo; las dosis nuevas se suman a él y su caudal se alarga. Sin asignaciones.
-        private bool TryChain(int source, int target, int amount, int tint, Cuia sourceBefore, Cuia sourceAfter, bool sourceSealedAfter, Cuia targetBefore, Cuia targetAfter, bool targetSealedAfter, BoardState after)
+        // chorro sigue saliendo; las dosis nuevas se suman a él y su caudal se alarga. Los contadores que solo cambian con este
+        // vertido se suman a los del trabajo: se repintan al llegar su caudal, ya alargado (aún no ha llegado: T < FlowEnd).
+        // Sin asignaciones.
+        private bool TryChain(int source, int target, int amount, int tint, Cuia sourceBefore, Cuia sourceAfter, bool sourceSealedAfter, Cuia targetBefore, Cuia targetAfter, bool targetSealedAfter, BoardState after, int counters)
         {
             if (amount <= 0)
             {
@@ -800,6 +808,7 @@ namespace AF.Presentation
             job.TgtAfter = targetAfter;
             job.TgtSealedAfter = targetSealedAfter;
             job.After = after;
+            job.Counters |= counters;
             if (job.Started)
             {
                 SetEnds(ref job);
@@ -1164,6 +1173,13 @@ namespace AF.Presentation
                 }
             }
 
+            // Contadores que solo cambiaron (Lluvia o cueva que cuentan el vertido, etapa (e) de R10): se repintan al llegar el
+            // caudal, tras la transferencia, y nunca en el toque. Sin el destino ni el plan: no retienen nada.
+            if (job.Counters != 0 && !job.IsUndo && time >= job.ExtraStart)
+            {
+                PaintCounters(index);
+            }
+
             // Pasos de mecánica: empiezan al llegar el caudal (etapa (a)), tras el fin del destino y los saltos de este
             // fotograma; los que pintan el origen (y el revelado) esperan a que vuelva (SrcDone, también en este fotograma).
             if (job.Plan >= 0 && !job.PlanDone && time >= job.ExtraStart)
@@ -1386,8 +1402,8 @@ namespace AF.Presentation
             }
         }
 
-        // Final de la cuia en el trabajo index: si un trabajo posterior la usa, su estado en este trabajo; si no, el último
-        // estado del modelo (que incluye los contadores que cambiaron sin retenerla).
+        // Final de la cuia en el trabajo index: si un trabajo posterior la usa, su estado en este trabajo; si no, el estado del
+        // modelo sin los contadores cuyo caudal aún no ha llegado (TryModelShown).
         private void PaintFinal(int index, int cuia, Cuia own, bool ownSealed)
         {
             int bit = Bit(cuia);
@@ -1400,14 +1416,101 @@ namespace AF.Presentation
                 }
             }
 
-            if ((uint)cuia < (uint)_model.Length && _model[cuia].Capacity > 0)
+            if (TryModelShown(cuia, out Cuia shown, out bool shownSealed))
             {
-                ShowContentAt(cuia, _model[cuia], _modelSealed[cuia]);
+                ShowContentAt(cuia, shown, shownSealed);
             }
             else
             {
                 ShowContentAt(cuia, own, ownSealed);
             }
+        }
+
+        // Repinta los contadores del trabajo index al llegar su caudal (o al saltar a su final). Si otro trabajo usa la cuia
+        // (aún no ha empezado o no ha terminado con ella), la pinta él al terminar (PaintFinal) y aquí no se toca: así no se
+        // pisa una animación en curso. Sin asignaciones.
+        private void PaintCounters(int index)
+        {
+            int counters = _jobs[index].Counters;
+            _jobs[index].Counters = 0;
+            int n = Mathf.Min(_views.Length, MaskBits);
+            for (int i = 0; i < n && counters != 0; i++)
+            {
+                int bit = 1 << i;
+                if ((counters & bit) == 0)
+                {
+                    continue;
+                }
+
+                counters &= ~bit;
+                if (HeldByAny(i))
+                {
+                    continue;
+                }
+
+                if (TryModelShown(i, out Cuia shown, out bool shownSealed))
+                {
+                    ShowContentAt(i, shown, shownSealed);
+                }
+            }
+        }
+
+        // Algún trabajo de la cola retiene la cuia: la pintará al terminar con ella. Los ya terminados del todo (SnapAll los
+        // termina sin haber empezado y aún no se han compactado) no cuentan: ya la pintaron.
+        private bool HeldByAny(int cuia)
+        {
+            for (int j = 0; j < _count; j++)
+            {
+                ref Job job = ref _jobs[j];
+                if (job.SrcDone && job.TgtDone && job.ExtraDone && job.PlanDone)
+                {
+                    continue;
+                }
+
+                if (Holds(ref job, cuia))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Lo que debe verse de la cuia según el modelo sin adelantar contadores: el último estado del modelo, salvo que un
+        // trabajo con un cambio solo de contador en ella aún no haya llegado; entonces, el estado previo al primero de ellos
+        // en la cola, si desde ahí solo cambió el contador (si cambió algo más, el modelo tal cual). Así
+        // dos vertidos seguidos que cuentan en la misma Lluvia la muestran +1 al llegar el primero y +2 al llegar el segundo,
+        // y uno que llega antes que otro anterior no se adelanta a él. False si el modelo aún no se registró.
+        private bool TryModelShown(int cuia, out Cuia state, out bool sealedNow)
+        {
+            state = default;
+            sealedNow = false;
+            if ((uint)cuia >= (uint)_model.Length || _model[cuia].Capacity <= 0)
+            {
+                return false;
+            }
+
+            state = _model[cuia];
+            sealedNow = _modelSealed[cuia];
+            int bit = Bit(cuia);
+            for (int j = 0; j < _count; j++)
+            {
+                if ((_jobs[j].Counters & bit) == 0)
+                {
+                    continue;
+                }
+
+                BoardState? before = _jobs[j].BoardBefore;
+                if (before != null && cuia < before.Count && CounterOnlyChange(before[cuia], before.IsSealed(cuia), state, sealedNow))
+                {
+                    state = before[cuia];
+                    sealedNow = before.IsSealed(cuia);
+                }
+
+                break;
+            }
+
+            return true;
         }
 
         // Fin de un paso de mecánica del plan slot en la cuia: con last, su final (PaintFinal); si no, el estado intermedio.
@@ -1459,78 +1562,60 @@ namespace AF.Presentation
             }
         }
 
-        // Registra el tablero del modelo tras un vertido y repinta en el acto los contadores que ningún trabajo usa (los
-        // demás los pinta el último trabajo que usa la cuia, con PaintFinal).
-        private void CommitModel(BoardState after, int counters)
+        // Registra el tablero del modelo tras un vertido. Los contadores que solo cambian no se pintan aquí, en el toque: los
+        // repinta el trabajo del vertido al llegar su caudal (PaintCounters).
+        private void CommitModel(BoardState after)
         {
             int n = Mathf.Min(after.Count, _model.Length);
             for (int i = 0; i < n; i++)
             {
                 SetModel(i, after[i], after.IsSealed(i));
             }
-
-            for (int i = 0; i < n && counters != 0; i++)
-            {
-                int bit = Bit(i);
-                if ((counters & bit) == 0)
-                {
-                    continue;
-                }
-
-                bool used = false;
-                for (int j = 0; j < _count && !used; j++)
-                {
-                    used = (CuiaMask(ref _jobs[j]) & bit) != 0;
-                }
-
-                if (!used)
-                {
-                    ShowContentAt(i, _model[i], _modelSealed[i]);
-                }
-            }
         }
 
         // Cuias de mask que solo cambiaron el contador de su mecánica (Lluvia o cueva de la Piraña que cuentan un vertido
-        // útil): mismo contenido, mismas ocultas, misma mecánica con sus campos y mismo sellado.
+        // útil): ver CounterOnlyChange.
         private static int CounterOnly(BoardState before, BoardState after, int mask)
         {
             int result = 0;
             int n = Mathf.Min(Mathf.Min(before.Count, after.Count), MaskBits);
             for (int i = 0; i < n; i++)
             {
-                if (((mask >> i) & 1) == 0)
-                {
-                    continue;
-                }
-
-                Cuia b = before[i];
-                Cuia a = after[i];
-                MechanicType type = b.Mechanic;
-                if ((type != MechanicType.Lluvia && type != MechanicType.Pirana) || a.Mechanic != type)
-                {
-                    continue;
-                }
-
-                if (b.Count != a.Count || b.HiddenMask != a.HiddenMask || before.IsSealed(i) != after.IsSealed(i)
-                    || b.MechanicKey != a.MechanicKey || b.MechanicN != a.MechanicN || b.MechanicK != a.MechanicK
-                    || b.MechanicFlags != a.MechanicFlags || b.MechanicPairId != a.MechanicPairId)
-                {
-                    continue;
-                }
-
-                bool same = true;
-                for (int k = 0; k < b.Count && same; k++)
-                {
-                    same = b.ColorAt(k) == a.ColorAt(k);
-                }
-
-                if (same)
+                if (((mask >> i) & 1) != 0 && CounterOnlyChange(before[i], before.IsSealed(i), after[i], after.IsSealed(i)))
                 {
                     result |= 1 << i;
                 }
             }
 
             return result;
+        }
+
+        // De b a a solo cambia (si cambia) el contador de la Lluvia o de la cueva de la Piraña: mismo contenido, mismas
+        // ocultas, misma mecánica con sus campos y mismo sellado.
+        private static bool CounterOnlyChange(Cuia b, bool bSealed, Cuia a, bool aSealed)
+        {
+            MechanicType type = b.Mechanic;
+            if ((type != MechanicType.Lluvia && type != MechanicType.Pirana) || a.Mechanic != type)
+            {
+                return false;
+            }
+
+            if (b.Capacity != a.Capacity || b.Count != a.Count || b.HiddenMask != a.HiddenMask || bSealed != aSealed
+                || b.MechanicKey != a.MechanicKey || b.MechanicN != a.MechanicN || b.MechanicK != a.MechanicK
+                || b.MechanicFlags != a.MechanicFlags || b.MechanicPairId != a.MechanicPairId)
+            {
+                return false;
+            }
+
+            for (int k = 0; k < b.Count; k++)
+            {
+                if (b.ColorAt(k) != a.ColorAt(k))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static int Bit(int index)
@@ -1594,6 +1679,11 @@ namespace AF.Presentation
                 _steps.Snap(job.Plan);
                 job.PlanDone = true;
             }
+
+            if (job.Counters != 0)
+            {
+                PaintCounters(index);
+            }
         }
 
         private void Compact()
@@ -1601,7 +1691,7 @@ namespace AF.Presentation
             int w = 0;
             for (int i = 0; i < _count; i++)
             {
-                if (_jobs[i].SrcDone && _jobs[i].TgtDone && _jobs[i].ExtraDone && _jobs[i].PlanDone)
+                if (_jobs[i].SrcDone && _jobs[i].TgtDone && _jobs[i].ExtraDone && _jobs[i].PlanDone && _jobs[i].Counters == 0)
                 {
                     continue;
                 }
@@ -1826,6 +1916,11 @@ namespace AF.Presentation
             public bool ExtraShown;
             public float ExtraStart;
             public float ExtraEnd;
+
+            // Cuias cuyo único cambio es el contador (fuera de CuiaMask y de Holds: no retienen nada) y aún sin repintar: se
+            // pintan al llegar el caudal (ExtraStart). BoardBefore: el tablero antes del primer vertido del trabajo.
+            public int Counters;
+            public BoardState? BoardBefore;
             public BoardState? After;
             public Cuia SrcBefore;
             public Cuia SrcAfter;
