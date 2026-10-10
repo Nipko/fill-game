@@ -62,6 +62,8 @@ namespace AF.Tests.PlayMode
             Assert.That(leaf.ShownKey, Is.EqualTo(Aguaje));
             Assert.That(leaf.FruitVisible, Is.True, "con la fruta llave en el centro");
             Assert.That(leaf.FruitSprite, Is.SameAs(view.OverlayHost.Art.FruitFlight(Aguaje)), "la fruta llave es el aguaje");
+            Assert.That(leaf.FruitAngleDeg, Is.EqualTo(HojaOverlay.FruitTiltDeg).Within(0.01f), "girada sobre el medallón apaisado: no se lee como un ojo");
+            Assert.That(leaf.FruitGlowAlpha, Is.EqualTo(0f), "sin luz en reposo");
             Assert.That(leaf.FallingLeafVisible || leaf.IsAnimating, Is.False);
 
             string closed = Signature(view.OverlayHost.BodyFront);
@@ -90,6 +92,7 @@ namespace AF.Tests.PlayMode
             Pour[] path = Trigger(boot, (ev, b, a) => (ev.HojaOpenedMask & (1 << hoja)) != 0);
             MechanicTestKit.PlayPrefix(boot, path);
             HojaOverlay leaf = HojaOf(boot.View!.Views[hoja]);
+            int discarded = boot.View.Fx.DiscardedCount;
             PourVisual visual = MechanicTestKit.TapPour(boot, path[path.Length - 1], out _);
             int animatingMs = 0;
             int elapsed = 0;
@@ -114,6 +117,7 @@ namespace AF.Tests.PlayMode
             Assert.That(open.EndMs - open.StartMs, Is.EqualTo(expected).Within(0.05f), "500 ms × factor de velocidad (b.2 M1)");
             Assert.That((float)animatingMs, Is.EqualTo(expected).Within(PlayModeHelpers.FrameMs), "la hoja anima ese tiempo (± 1 fotograma)");
             Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs), "del toque a la vista quieta");
+            Assert.That(boot.View.Fx.DiscardedCount, Is.EqualTo(discarded), "destellos y salpicadura, sin descartes por los topes del pool");
             TestContext.WriteLine("Nivel 43: " + elapsed + " ms del toque a la vista quieta. " + MechanicTestKit.Describe(boot.View.Animator));
 
             MechanicTestKit.AssertViewMatchesModel(boot);
@@ -134,8 +138,19 @@ namespace AF.Tests.PlayMode
             MechanicTestKit.TapPour(boot, path[path.Length - 1], out _);
             MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Open, hoja, 4000);
             Assert.That(leaf.IsAnimating, Is.True, "el paso Open llegó al overlay de la Hoja");
-            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Open, hoja, 0.5f);
 
+            // La llave encaja (ficha de Magic Sort §3.3): salta a 1,3× y se queda opaca, y después se deshace en luz (Glint).
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Open, hoja, 0.14f);
+            Assert.That(leaf.StepProgress, Is.InRange(HojaOverlay.FruitPopEnd, HojaOverlay.FruitHoldEnd), "con la llave quieta");
+            Assert.That(leaf.FruitAlpha, Is.GreaterThan(0.99f), "la fruta llave, opaca");
+            Assert.That(leaf.FruitScale, Is.EqualTo(HojaOverlay.FruitPopScale).Within(0.01f), "ya saltó a 1,3×");
+            Assert.That(leaf.FruitGlowAlpha, Is.EqualTo(0f), "todavía sin luz");
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Open, hoja, 0.24f);
+            Assert.That(leaf.StepProgress, Is.InRange(HojaOverlay.FruitHoldEnd, HojaOverlay.FruitFadeEnd), "a mitad del fundido de la llave");
+            Assert.That(leaf.FruitGlowAlpha, Is.GreaterThan(0.3f), "la llave se aclara hacia la luz");
+            Assert.That(leaf.FruitGlowAlpha + (leaf.FruitAlpha * (1f - leaf.FruitGlowAlpha)), Is.LessThan(0.95f), "y se desvanece");
+
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Open, hoja, 0.5f);
             Assert.That(leaf.IsAnimating, Is.True);
             Assert.That(leaf.StepProgress, Is.InRange(0.4f, 0.62f), "a mitad del paso");
             Assert.That(leaf.ClosedLeafVisible, Is.False, "ya se abrió");
@@ -144,7 +159,7 @@ namespace AF.Tests.PlayMode
             Assert.That(leaf.FallDropU, Is.GreaterThan(0.3f), "ya está por debajo de la boca");
             Assert.That(Mathf.Abs(leaf.FallAngleDeg), Is.GreaterThan(20f), "cae girando");
             Assert.That(leaf.FallScale, Is.LessThan(1f).And.GreaterThan(HojaOverlay.WaterScale), "encoge hacia el agua");
-            Assert.That(leaf.FruitAlpha, Is.LessThan(0.05f), "la fruta llave ya se disolvió");
+            Assert.That(leaf.FruitAlpha + leaf.FruitGlowAlpha, Is.LessThan(0.05f), "la fruta llave ya se disolvió");
             Assert.That(view.LiquidLevel, Is.GreaterThan(0.5f), "con el aguaje dentro");
             Assert.That(leaf.GlowAlpha, Is.EqualTo(0f), "cae con su verde, sin aclararse todavía");
 
@@ -247,7 +262,7 @@ namespace AF.Tests.PlayMode
             Assert.That(cuia.TopColor, Is.EqualTo(CamuCamu), "el 163 estrena el Brote con camu camu en la cima");
             BroteOverlay bud = BroteOf(boot.View!.Views[brote]);
             Assert.That(bud.Visible && bud.CorkVisible && bud.LeavesVisible, Is.True, "tapón-brote con sus dos hojitas");
-            Assert.That(bud.BudColor, Is.EqualTo(Palette.Tint(CamuCamu)), "el tapón, del color de la cima (02 §9.1 M2)");
+            Assert.That(bud.BudColor, Is.EqualTo(Palette.Tint(CamuCamu)), "el tapón pintado (su Image), del color de la cima (02 §9.1 M2)");
             Assert.That(bud.LeafOpenDeg, Is.EqualTo(BroteOverlay.ClosedLeafDeg).Within(0.01f), "hojitas plegadas detrás del tapón");
             Assert.That(bud.IsAnimating, Is.False);
         }
@@ -261,6 +276,7 @@ namespace AF.Tests.PlayMode
             Pour[] path = Trigger(boot, (ev, b, a) => (ev.BroteOpenedMask & (1 << brote)) != 0);
             MechanicTestKit.PlayPrefix(boot, path);
             BroteOverlay bud = BroteOf(boot.View!.Views[brote]);
+            int discarded = boot.View.Fx.DiscardedCount;
             PourVisual visual = MechanicTestKit.TapPour(boot, path[path.Length - 1], out _);
             float tapped = boot.View.Animator.Clock;
             MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Open, brote, 4000);
@@ -269,6 +285,14 @@ namespace AF.Tests.PlayMode
             Assert.That(bud.LeafOpenDeg, Is.GreaterThan(BroteOverlay.ClosedLeafDeg + 10f), "a mitad, las dos hojitas ya se abren hacia fuera");
             Assert.That(bud.CorkAlpha, Is.LessThan(0.8f), "y el tapón se disuelve");
             Assert.That(bud.LeavesVisible, Is.True);
+
+            // El brote abierto en V se queda opaco hasta HoldEnd (para que se vea cuando aterriza el origen) y después se va.
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Open, brote, 0.7f);
+            Assert.That(bud.LeafAlpha, Is.GreaterThan(0.99f), "abierto y opaco");
+            Assert.That(bud.LeafOpenDeg, Is.GreaterThanOrEqualTo(BroteOverlay.OpenLeafDeg - 0.5f), "en V");
+            Assert.That(bud.CorkVisible, Is.False, "el tapón ya se disolvió");
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Open, brote, 0.9f);
+            Assert.That(bud.LeafAlpha, Is.InRange(0.01f, 0.9f), "se desvanece en el último cuarto");
 
             MechanicTestKit.StepToIdle(boot, 6000);
             float elapsed = boot.View.Animator.Clock - tapped;
@@ -280,6 +304,7 @@ namespace AF.Tests.PlayMode
             Assert.That(open.EndMs - open.StartMs, Is.EqualTo(BroteOverlay.OpenStepMs * open.SpeedFactor).Within(0.05f), "350 ms × factor (02 §4.1)");
             Assert.That(open.SpeedFactor, Is.EqualTo(boot.View.Animator.StepSpeedBase).Within(1e-4f));
             Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs), "del toque a la vista quieta");
+            Assert.That(boot.View.Fx.DiscardedCount, Is.EqualTo(discarded), "destellos sin descartes por los topes del pool");
             TestContext.WriteLine("Nivel 163: " + elapsed + " ms del toque a la vista quieta. " + MechanicTestKit.Describe(boot.View.Animator));
             MechanicTestKit.AssertViewMatchesModel(boot);
             Assert.That(boot.Flow!.Session.Current[brote].Mechanic, Is.EqualTo(MechanicType.None), "germinado: cuia normal");
@@ -311,6 +336,7 @@ namespace AF.Tests.PlayMode
                 MechanicTestKit.Rig rig = _rig;
                 int maxParticles = 0;
                 int frames = 0;
+                int discardedBefore = rig.Fx.DiscardedCount;
                 void Run60()
                 {
                     for (int f = 0; f < 60; f++)
@@ -330,7 +356,14 @@ namespace AF.Tests.PlayMode
                     Assert.That(Run60, Is.Not.AllocatingGCMemory(), "60 fotogramas más");
                     Assert.That(frames, Is.EqualTo(120));
                     Assert.That(maxParticles, Is.GreaterThan(0), "destellos y salpicadura del pool común");
-                    Assert.That(maxParticles, Is.LessThanOrEqualTo(FxLayer.MaxParticles), "como mucho 44 partículas");
+
+                    // Garantía estructural, no una medida: el pool de FxLayer (T19) descarta por construcción lo que pase de 44,
+                    // así que esta aserción no puede fallar. Lo que mide algo es que los efectos no se pierdan por los topes, y eso
+                    // se comprueba en los estrenos reales (Hoja43_OpenStepDuration y Brote163_OpenStepDuration), con un solo
+                    // desbloqueo. Aquí, con los dos desbloqueos y los dos vertidos a la vez, el tope de 8 brillos aditivos
+                    // (destellos y aros) puede dejar fuera alguno: es lo que debe hacer el pool, y se anota.
+                    Assert.That(maxParticles, Is.LessThanOrEqualTo(FxLayer.MaxParticles), "garantía estructural del pool");
+                    TestContext.WriteLine("Hoja y Brote a la vez: " + maxParticles + " partículas como mucho; descartadas por los topes: " + (rig.Fx.DiscardedCount - discardedBefore));
                 }
 
                 rig.RunUntilIdle(4000);

@@ -14,11 +14,13 @@ namespace AF.Tests.PlayMode
 {
     /// <summary>
     /// Capturas de revisión de la Hoja y el Brote (T11; <c>[Explicit]</c>, no forman parte de la suite):
-    /// <c>50_hoja_closed_l43</c> (la hoja de palma cerrada con el aguaje, tras la intro), <c>51_hoja_falling_l43</c> (a mitad
-    /// del desbloqueo: la hoja abierta cae girando al agua), <c>51b_hoja_splash_l43</c> (la hoja toca el agua, salpica y se
-    /// desvanece aclarándose hacia la luz, a mitad de ese tramo),
-    /// <c>52_brote_closed_l163</c> (el tapón-brote de camu camu con sus
-    /// dos hojitas plegadas) y <c>53_brote_open_l163</c> (a mitad de la germinación). Sirven para mirar a 48-56 dp la
+    /// <c>50_hoja_closed_l43</c> (la hoja de palma cerrada con el aguaje, tras la intro), <c>50b_hoja_key_l43</c> (t = 0,15:
+    /// la llave encajada, a 1,3× y opaca), <c>50c_hoja_keylight_l43</c> (t = 0,24: la llave se deshace en luz con sus
+    /// destellos), <c>51_hoja_falling_l43</c> (t = 0,55: la hoja abierta cae girando al agua), <c>51b_hoja_splash_l43</c>
+    /// (t = 0,87: la salpicadura ya abierta mientras la hoja se acaba de aclarar en el agua),
+    /// <c>52_brote_closed_l163</c> (el tapón-brote de camu camu con sus dos hojitas plegadas), <c>53_brote_open_l163</c>
+    /// (t = 0,42: a mitad de la germinación) y <c>53b_brote_end_l163</c> (t = 0,85: el brote abierto en V, ya
+    /// desvaneciéndose, con el origen de vuelta en su ranura). Sirven para mirar a 48-56 dp la
     /// legibilidad, los solapes con las vecinas, los colores, que se entienda la mecánica, que la Hoja no se confunda con la
     /// Hoja escudo y la línea D-003. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.HojaBroteSnapshotTests</c> sin <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/</c>.
@@ -38,8 +40,10 @@ namespace AF.Tests.PlayMode
         {
             string dir = SnapshotKit.Prepare();
             yield return CaptureClosed(dir, 43, "50_hoja_closed_l43");
+            yield return CaptureMidOpen(dir, 43, MechanicType.Hoja, "50b_hoja_key_l43", 0.15f);
+            yield return CaptureMidOpen(dir, 43, MechanicType.Hoja, "50c_hoja_keylight_l43", 0.24f);
             yield return CaptureMidOpen(dir, 43, MechanicType.Hoja, "51_hoja_falling_l43", 0.55f);
-            yield return CaptureMidOpen(dir, 43, MechanicType.Hoja, "51b_hoja_splash_l43", 0.84f);
+            yield return CaptureMidOpen(dir, 43, MechanicType.Hoja, "51b_hoja_splash_l43", 0.87f);
         }
 
         [UnityTest]
@@ -48,6 +52,7 @@ namespace AF.Tests.PlayMode
             string dir = SnapshotKit.Prepare();
             yield return CaptureClosed(dir, 163, "52_brote_closed_l163");
             yield return CaptureMidOpen(dir, 163, MechanicType.Brote, "53_brote_open_l163", 0.42f);
+            yield return CaptureMidOpen(dir, 163, MechanicType.Brote, "53b_brote_end_l163", 0.85f);
         }
 
         // Carga el nivel, salta la intro y captura con la vista quieta.

@@ -9,24 +9,27 @@ namespace AF.Presentation.Mechanics
 {
     /// <summary>
     /// M1 Hoja (02 §9.1 M1; propuesta de D-007 b.2 M1) [P]: una hoja de palma alargada y plegada, tendida sobre la boca, con
-    /// la fruta llave grande en el centro sobre un medallón pulido (<see cref="ProceduralArt.FruitFlight"/>). Su silueta es
+    /// la fruta llave grande en el centro, algo girada, sobre un medallón pulido apaisado (<see cref="ProceduralArt.FruitFlight"/>;
+    /// ni el medallón es un disco ni la fruta va derecha, para que el conjunto no se lea como un ojo). Su silueta es
     /// alargada y con puntas para no confundirse con la hoja redonda de la Hoja escudo (02 §9.1; glosario §6.3). Es un estado,
     /// no un resaltado: no se ilumina al seleccionar (D-002), no lleva dedo guía (D-002, P5) y al tocarla como origen solo se
     /// sacude la cuia (<c>CuiaView.Shake</c>).
     /// </summary>
     /// <remarks>
     /// <para><b>Desbloqueo</b> (paso Open de la etapa (b), <see cref="OpenStepMs"/> × <c>ctx.SpeedFactor</c>; b.2: «la hoja se
-    /// abre y cae girando al agua», 400-600 ms; ficha de Magic Sort §3): la hoja se levanta y se abre (el pliegue se aplana) y la
-    /// fruta llave se disuelve con unos destellos de su color; la hoja, ya plana, cae girando dentro de la cuia hasta la
-    /// superficie del agua recién vertida (la de <c>ctx.After</c>), salpica (<see cref="IBoardFx.Splash"/>) y, mientras se hunde
-    /// y encoge, se aclara hacia <see cref="Palette.Glint"/> y se desvanece del todo en <see cref="GoneAt"/>, antes de que acabe
-    /// el paso: nunca se mezcla con el tinte (D-003). Mientras anima (<see cref="IsAnimating"/>), la vista no llama a <see cref="Show"/>; la cola cierra el paso con
+    /// abre y cae girando al agua», 400-600 ms; ficha de Magic Sort §3): la hoja se levanta y se abre (el pliegue se aplana)
+    /// mientras la fruta llave salta a 1,3× y se queda opaca un instante (la llave encaja, §3.3); después suelta sus destellos
+    /// y se deshace en luz (<c>ApplyKey</c>). La hoja, ya plana, cae girando dentro de la cuia hasta la superficie del
+    /// agua recién vertida (la de <c>ctx.After</c>), salpica justo antes del contacto (<see cref="IBoardFx.Splash"/>, más clara
+    /// que el agua) y, mientras se hunde y encoge, se aclara hacia <see cref="Palette.Glint"/> y se desvanece del todo en
+    /// <see cref="GoneAt"/>, antes de que acabe el paso: nunca se mezcla con el tinte (D-003). Mientras anima (<see cref="IsAnimating"/>), la vista no llama a <see cref="Show"/>; la cola cierra el paso con
     /// <see cref="SnapStep"/> y <c>ShowContent(ctx.After)</c>, que la oculta.</para>
     /// <para><b>Marea</b> (02 §14; 04 §2.1): <see cref="SnapStep"/> deja la pose de reposo, así que el <see cref="Show"/> con la
     /// Hoja devuelta vuelve a pintar la hoja cerrada.</para>
     /// <para>Sin asignaciones en <see cref="Tick"/>, <see cref="PlayStep"/> ni <see cref="Show"/> (08 §5.4): las piezas se
-    /// crean en <see cref="OnAttach"/> con sus sprites (perezosos, generados al unirse) y solo se escriben valores que
-    /// cambian. Las partículas salen del pool común de <see cref="FxLayer"/> (tope de 44); con Reducir movimiento el factor
+    /// crean en <see cref="OnAttach"/> con sus sprites (perezosos, generados al unirse; los de la fruta llave y su luz, la
+    /// primera vez que <see cref="Show"/> enseña esa llave, nunca en el paso) y solo se escriben valores que cambian. Las
+    /// partículas salen del pool común de <see cref="FxLayer"/> (tope de 44); con Reducir movimiento el factor
     /// de velocidad ya llega a la mitad y el pool no emite.</para>
     /// </remarks>
     public sealed class HojaOverlay : CuiaOverlay
@@ -73,11 +76,48 @@ namespace AF.Presentation.Mechanics
         /// <summary>Parte del desvanecimiento en la que la hoja ya se aclaró del todo hacia la luz.</summary>
         private const float GlowRampEnd = 0.6f;
 
-        /// <summary>La fruta llave se disuelve con sus destellos (fracción del paso).</summary>
-        public const float SparkleAt = 0.04f;
+        /// <summary>
+        /// La salpicadura sale un poco antes del contacto (fracción del paso; q = 0,95 de la caída, t ≈ 0,77): cuando la hoja se
+        /// aclara, las gotas ya se han abierto y no quedan juntas en el centro de la luz como una pupila.
+        /// </summary>
+        public const float SplashFxAt = OpenEnd + (0.95f * (SplashAt - OpenEnd));
 
-        /// <summary>Fin del fundido de la fruta llave y su medallón (fracción del paso).</summary>
-        public const float FruitFadeEnd = 0.26f;
+        /// <summary>Aclarado de la salpicadura hacia el blanco: sobre el agua de su mismo tinte se lee.</summary>
+        public const float SplashLighten = 0.35f;
+
+        /// <summary>
+        /// Fin del salto de la fruta llave hasta <see cref="FruitPopScale"/> (fracción del paso): la llave encaja (ficha de Magic
+        /// Sort §3.3: el icono confirma antes de que llegue la luz).
+        /// </summary>
+        public const float FruitPopEnd = 0.10f;
+
+        /// <summary>Escala de la fruta llave al saltar.</summary>
+        public const float FruitPopScale = 1.3f;
+
+        /// <summary>Hasta aquí la fruta llave se queda opaca, ya grande (fracción del paso); después se deshace en luz.</summary>
+        public const float FruitHoldEnd = 0.18f;
+
+        /// <summary>Los destellos de la llave (fracción del paso): cuando la fruta empieza a deshacerse en luz.</summary>
+        public const float SparkleAt = FruitHoldEnd;
+
+        /// <summary>Destellos de la llave (en <see cref="Palette.Glint"/>).</summary>
+        public const int KeySparkleCount = 4;
+
+        /// <summary>
+        /// Fin del fundido de la fruta llave (fracción del paso): se desvanece aclarándose hacia <see cref="Palette.Glint"/>, con
+        /// la misma luz encima que la hoja. El medallón se va antes, en las dos terceras partes del fundido.
+        /// </summary>
+        public const float FruitFadeEnd = 0.36f;
+
+        /// <summary>Giro de la fruta llave sobre el medallón (grados; negativo: hacia la derecha) [P]: rompe la simetría de ojo.</summary>
+        public const float FruitTiltDeg = -20f;
+
+        // Parte del fundido de la llave en la que se va el medallón (antes que la fruta, que acaba en luz).
+        private const float BadgeFadePart = 2f / 3f;
+
+        // Sprite del medallón: la forma más su margen por lado (u).
+        private const float BadgeSpriteWidthU = ProceduralArt.HojaBadgeWidthU + (2f * ProceduralArt.HojaBadgePadU);
+        private const float BadgeSpriteHeightU = ProceduralArt.HojaBadgeHeightU + (2f * ProceduralArt.HojaBadgePadU);
 
         // Si la cola nunca cerrara el paso (no debería pasar: siempre llama a SnapStep), el overlay lo cierra solo pasado este
         // margen tras su duración y se repinta desde el tablero.
@@ -88,6 +128,7 @@ namespace AF.Presentation.Mechanics
         private Image _glow = null!;
         private Image _badge = null!;
         private Image _fruit = null!;
+        private Image _fruitGlow = null!;
         private RectTransform _slot = null!;
         private IBoardFx? _fx;
         private int _key;
@@ -98,7 +139,6 @@ namespace AF.Presentation.Mechanics
         private float _surfaceU;
         private float _side = 1f;
         private Color _splashColor;
-        private Color _sparkleColor;
         private bool _sparkled;
         private bool _splashed;
         private bool _posed;
@@ -130,6 +170,15 @@ namespace AF.Presentation.Mechanics
         /// <summary>Opacidad de la fruta llave (0 oculta).</summary>
         public float FruitAlpha => _fruit.gameObject.activeSelf ? _fruit.color.a : 0f;
 
+        /// <summary>Escala de la fruta llave (1 en reposo; <see cref="FruitPopScale"/> al encajar la llave).</summary>
+        public float FruitScale => Mathf.Abs(_fruit.rectTransform.localScale.y);
+
+        /// <summary>Giro de la fruta llave (grados, −180..180).</summary>
+        public float FruitAngleDeg => Mathf.DeltaAngle(0f, _fruit.rectTransform.localEulerAngles.z);
+
+        /// <summary>Opacidad de la luz que aclara la fruta llave al deshacerse (0 oculta).</summary>
+        public float FruitGlowAlpha => _fruitGlow.enabled ? _fruitGlow.color.a : 0f;
+
         /// <summary>Lo que ha bajado la hoja que cae respecto de la hoja cerrada (u; positivo hacia abajo; 0 sin caída).</summary>
         public float FallDropU => _fall.enabled ? ClosedCenterU - (_fall.rectTransform.anchoredPosition.y / _u) : 0f;
 
@@ -158,12 +207,7 @@ namespace AF.Presentation.Mechanics
             Visible = on;
             if (on)
             {
-                int key = cuia.MechanicKey;
-                if (key != _key)
-                {
-                    _key = key;
-                    _fruit.sprite = key > 0 ? Host.Art.FruitFlight(key) : null;
-                }
+                SetKey(cuia.MechanicKey);
             }
 
             if (_posed)
@@ -175,21 +219,20 @@ namespace AF.Presentation.Mechanics
             OverlayParts.SetVisible(_badge, on && _key > 0);
             OverlayParts.SetVisible(_fruit, on && _key > 0);
             ShowFall(false);
+            SetEnabled(_fruitGlow, false);
             if (on)
             {
-                // La hoja que cae y su luz se muestran a mitad del paso: sin asignar (08 §5.4).
-                GraphicPool.EnsureRegistered(_fall);
-                GraphicPool.EnsureRegistered(_glow);
+                // La hoja que cae y las luces se muestran a mitad del paso: sin asignar (08 §5.4).
+                EnsurePooled();
             }
         }
 
         /// <inheritdoc />
         public override void OnBoardLayout()
         {
-            // Si al recolocar el tablero UGUI desregistró la hoja que cae o su luz (ocultas), se vuelven a registrar ahora y no
-            // en el paso.
-            GraphicPool.EnsureRegistered(_fall);
-            GraphicPool.EnsureRegistered(_glow);
+            // Si al recolocar el tablero UGUI desregistró la hoja que cae o las luces (ocultas), se vuelven a registrar ahora y
+            // no en el paso.
+            EnsurePooled();
         }
 
         /// <inheritdoc />
@@ -223,18 +266,16 @@ namespace AF.Presentation.Mechanics
             }
 
             // La fruta y la hoja de antes de la etapa (la cuia ya con el agua dentro, todavía cerrada).
-            if (ctx.Before.Mechanic == MechanicType.Hoja && ctx.Before.MechanicKey != _key)
+            if (ctx.Before.Mechanic == MechanicType.Hoja)
             {
-                _key = ctx.Before.MechanicKey;
-                _fruit.sprite = _key > 0 ? Host.Art.FruitFlight(_key) : null;
+                SetKey(ctx.Before.MechanicKey);
             }
 
             Cuia after = ctx.After;
             int count = after.Count;
             _surfaceU = Mathf.Min(CuiaGeometry.CavityBottomU + Mathf.Max(1, count), CuiaGeometry.CavityTopU(Host.Capacity));
             int top = count - 1;
-            _splashColor = top < 0 ? Palette.Glint : (after.IsHiddenAt(top) ? Palette.Murky : Palette.Tint(after.TopColor));
-            _sparkleColor = _key > 0 ? ColorMath.Lighten(Palette.Tint(_key), 0.35f) : Palette.Glint;
+            _splashColor = top < 0 ? Palette.Glint : ColorMath.Lighten(after.IsHiddenAt(top) ? Palette.Murky : Palette.Tint(after.TopColor), SplashLighten);
             _fx = ctx.Fx ?? Host.Fx;
             _side = (Host.Index & 1) == 0 ? 1f : -1f; // gira hacia un lado u otro según la cuia, sin azar
             _duration = ms;
@@ -282,6 +323,7 @@ namespace AF.Presentation.Mechanics
             _elapsed = -1f;
             PlaceClosed();
             ShowFall(false);
+            SetEnabled(_fruitGlow, false);
             OverlayParts.SetVisible(_leaf, false);
             OverlayParts.SetVisible(_badge, false);
             OverlayParts.SetVisible(_fruit, false);
@@ -295,8 +337,8 @@ namespace AF.Presentation.Mechanics
             into.Add(ProceduralArt.HojaFold); // envés plegado
             into.Add(ProceduralArt.HojaBadgeColor); // medallón de la fruta (la fruta lleva su tinte a propósito)
 
-            // La luz en que se desvanece la hoja (Glint, 40 ms × factor, ya transparente) es un destello del efecto, como los
-            // de FxLayer, no una superficie que rodee la cuia: no entra en la regla 1 de la guía §2.4.
+            // Las luces en que se desvanecen la hoja y la fruta llave (Glint, un instante y ya casi transparentes) son destellos
+            // del efecto, como los de FxLayer, no superficies que rodeen la cuia: no entran en la regla 1 de la guía §2.4.
         }
 
         /// <inheritdoc />
@@ -304,29 +346,60 @@ namespace AF.Presentation.Mechanics
         {
             _slot = (RectTransform)Host.SlotBack.parent;
             _leaf = OverlayParts.NewImage("HojaLeaf", Host.BodyFront, Host.Art.HojaPalm, Color.white);
-            _badge = OverlayParts.NewImage("HojaBadge", Host.BodyFront, Host.Art.HojaBadge, ProceduralArt.HojaBadgeColor);
-            _fruit = OverlayParts.NewImage("HojaFruit", Host.BodyFront, null, Color.white);
+
             // La hoja que cae se muestra y se oculta con Image.enabled (su objeto queda activo y registrado en el Canvas, como
-            // las partículas de FxLayer): activarla por primera vez a mitad del paso haría crecer el registro de UGUI.
-            _fall = OverlayParts.NewImage("HojaFall", Host.BodyFront, Host.Art.HojaFlat, Color.white);
-            _fall.enabled = false;
-            _fall.gameObject.SetActive(true);
-            GraphicPool.EnsureRegistered(_fall);
+            // las partículas de FxLayer): activarla por primera vez a mitad del paso haría crecer el registro de UGUI. Va
+            // detrás de la llave: al empezar a caer sale de debajo de la fruta, que se queda flotando y se deshace en luz.
+            _fall = NewPooled("HojaFall", Host.Art.HojaFlat, Color.white);
 
             // Encima, la misma hoja en luz (silueta clara teñida de Glint), que la aclara mientras se desvanece en el agua.
-            _glow = OverlayParts.NewImage("HojaGlow", Host.BodyFront, Host.Art.HojaGlow, Palette.Glint);
-            _glow.enabled = false;
-            _glow.gameObject.SetActive(true);
-            GraphicPool.EnsureRegistered(_glow);
+            _glow = NewPooled("HojaGlow", Host.Art.HojaGlow, Palette.Glint);
+
+            _badge = OverlayParts.NewImage("HojaBadge", Host.BodyFront, Host.Art.HojaBadge, ProceduralArt.HojaBadgeColor);
+            _fruit = OverlayParts.NewImage("HojaFruit", Host.BodyFront, null, Color.white);
+
+            // Y sobre la fruta, su silueta en luz (la pone SetKey con la llave).
+            _fruitGlow = NewPooled("HojaFruitGlow", null, Palette.Glint);
         }
 
-        // Pose de reposo de las cinco piezas (sin giro ni escala y opacas; la luz, transparente).
+        // Imagen que se muestra y se oculta con Image.enabled: objeto activo y registrada en el Canvas desde el principio.
+        private Image NewPooled(string name, Sprite? sprite, Color color)
+        {
+            Image img = OverlayParts.NewImage(name, Host.BodyFront, sprite, color);
+            img.enabled = false;
+            img.gameObject.SetActive(true);
+            GraphicPool.EnsureRegistered(img);
+            return img;
+        }
+
+        private void EnsurePooled()
+        {
+            GraphicPool.EnsureRegistered(_fall);
+            GraphicPool.EnsureRegistered(_glow);
+            GraphicPool.EnsureRegistered(_fruitGlow);
+        }
+
+        // Fruta llave que se muestra y su silueta en luz (sprites perezosos: se generan aquí, al mostrar la llave, nunca en Tick).
+        private void SetKey(int key)
+        {
+            if (key == _key)
+            {
+                return;
+            }
+
+            _key = key;
+            _fruit.sprite = key > 0 ? Host.Art.FruitFlight(key) : null;
+            _fruitGlow.sprite = key > 0 ? Host.Art.HojaFruitGlow(key) : null;
+        }
+
+        // Pose de reposo de las seis piezas (sin escala y opacas, la fruta girada; las luces, transparentes).
         private void PlaceClosed()
         {
             _posed = false;
             Pose(_leaf, 0f, ClosedCenterU, LeafWidthU, LeafHeightU, 0f, 1f, 1f, 1f);
-            Pose(_badge, 0f, FruitCenterU, ProceduralArt.HojaBadgeU, ProceduralArt.HojaBadgeU, 0f, 1f, 1f, 1f);
-            Pose(_fruit, 0f, FruitCenterU, FruitU, FruitU, 0f, 1f, 1f, 1f);
+            Pose(_badge, 0f, FruitCenterU, BadgeSpriteWidthU, BadgeSpriteHeightU, 0f, 1f, 1f, 1f);
+            Pose(_fruit, 0f, FruitCenterU, FruitU, FruitU, FruitTiltDeg, 1f, 1f, 1f);
+            Pose(_fruitGlow, 0f, FruitCenterU, FruitU, FruitU, FruitTiltDeg, 1f, 1f, 0f);
             Pose(_fall, 0f, ClosedCenterU + LiftU, ProceduralArt.HojaFlatWidthU, ProceduralArt.HojaFlatHeightU, 0f, 1f, 1f, 1f);
             Pose(_glow, 0f, ClosedCenterU + LiftU, ProceduralArt.HojaFlatWidthU, ProceduralArt.HojaFlatHeightU, 0f, 1f, 1f, 0f);
         }
@@ -336,25 +409,7 @@ namespace AF.Presentation.Mechanics
         {
             _posed = true;
             float closedY = ClosedCenterU;
-
-            // La fruta llave y su medallón crecen y se disuelven; al empezar, unos destellos de su color.
-            float fruitP = Mathf.Clamp01(t / FruitFadeEnd);
-            float fruitAlpha = 1f - Mathf.SmoothStep(0f, 1f, fruitP);
-            float fruitScale = 1f + (0.3f * Ease.OutCubic(fruitP));
-            bool keyShown = _key > 0 && fruitAlpha > 0.001f;
-            Pose(_badge, 0f, FruitCenterU + (0.08f * fruitP), ProceduralArt.HojaBadgeU, ProceduralArt.HojaBadgeU, 0f, fruitScale, fruitScale, fruitAlpha);
-            Pose(_fruit, 0f, FruitCenterU + (0.08f * fruitP), FruitU, FruitU, 0f, fruitScale, fruitScale, fruitAlpha);
-            OverlayParts.SetVisible(_badge, keyShown);
-            OverlayParts.SetVisible(_fruit, keyShown);
-            if (!_sparkled && t >= SparkleAt)
-            {
-                _sparkled = true;
-                if (_key > 0)
-                {
-                    _fx?.Sparkles(FxPoint(FruitCenterU), _sparkleColor, 3, _u);
-                }
-            }
-
+            ApplyKey(t);
             if (t < OpenEnd)
             {
                 // Se abre: sube y el pliegue se aplana (escala vertical) con un leve giro.
@@ -366,6 +421,13 @@ namespace AF.Presentation.Mechanics
             }
 
             OverlayParts.SetVisible(_leaf, false);
+            if (!_splashed && t >= SplashFxAt)
+            {
+                // Justo antes del contacto, en un tono más claro que el agua: las gotas ya se abren cuando la hoja se aclara.
+                _splashed = true;
+                _fx?.Splash(FxPoint(_surfaceU), _splashColor, _u);
+            }
+
             float startY = closedY + LiftU;
             float waterY = _surfaceU + 0.1f;
             if (t < SplashAt)
@@ -381,12 +443,6 @@ namespace AF.Presentation.Mechanics
                 SetEnabled(_glow, false);
                 Pose(_fall, x, y, ProceduralArt.HojaFlatWidthU, ProceduralArt.HojaFlatHeightU, angle, scale * flip, scale, 1f);
                 return;
-            }
-
-            if (!_splashed)
-            {
-                _splashed = true;
-                _fx?.Splash(FxPoint(_surfaceU), _splashColor, _u);
             }
 
             // Toca el agua: se hunde un poco, encoge (de WaterScale a GoneScale) y se desvanece con 1 − SmoothStep, sin
@@ -410,6 +466,42 @@ namespace AF.Presentation.Mechanics
             SetEnabled(_glow, true);
             Pose(_fall, 0f, sinkY, ProceduralArt.HojaFlatWidthU, ProceduralArt.HojaFlatHeightU, sinkAngle, sinkScale, sinkScale, leafA);
             Pose(_glow, 0f, sinkY, ProceduralArt.HojaFlatWidthU, ProceduralArt.HojaFlatHeightU, sinkAngle, sinkScale, sinkScale, glowA);
+        }
+
+        // La llave (b.2 M1; ficha de Magic Sort §3.3: el icono confirma primero y después llega la luz): la fruta salta a
+        // FruitPopScale y sube con la hoja que se abre, se queda opaca hasta FruitHoldEnd (la llave encaja) y entonces suelta sus
+        // destellos y se deshace en luz hasta FruitFadeEnd. Como la hoja en el agua, la fruta (opacidad fruitA) y su silueta en
+        // luz encima (glowA) pintan juntas Lerp(fruta, Glint, light) con la opacidad total opacity. El medallón la acompaña en
+        // el salto (a medias) y se va antes. Cuando la hoja empieza a caer, la llave se queda flotando sobre la boca.
+        private void ApplyKey(float t)
+        {
+            if (_key <= 0)
+            {
+                OverlayParts.SetVisible(_badge, false);
+                OverlayParts.SetVisible(_fruit, false);
+                SetEnabled(_fruitGlow, false);
+                return;
+            }
+
+            float scale = 1f + ((FruitPopScale - 1f) * Ease.OutCubic(t / FruitPopEnd));
+            float fade = Mathf.Clamp01((t - FruitHoldEnd) / (FruitFadeEnd - FruitHoldEnd));
+            float opacity = 1f - Mathf.SmoothStep(0f, 1f, fade);
+            float glowA = opacity * Ease.OutCubic(fade / GlowRampEnd);
+            float fruitA = (opacity - glowA) / Mathf.Max(1e-4f, 1f - glowA);
+            float badgeA = 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(fade / BadgeFadePart));
+            float badgeScale = 1f + (0.5f * (scale - 1f));
+            float y = FruitCenterU + (LiftU * Ease.OutCubic(t / OpenEnd)) + (0.1f * fade);
+            Pose(_badge, 0f, y, BadgeSpriteWidthU, BadgeSpriteHeightU, 0f, badgeScale, badgeScale, badgeA);
+            Pose(_fruit, 0f, y, FruitU, FruitU, FruitTiltDeg, scale, scale, fruitA);
+            Pose(_fruitGlow, 0f, y, FruitU, FruitU, FruitTiltDeg, scale, scale, glowA);
+            OverlayParts.SetVisible(_badge, badgeA > 0.001f);
+            OverlayParts.SetVisible(_fruit, opacity > 0.001f);
+            SetEnabled(_fruitGlow, glowA > 0.001f);
+            if (!_sparkled && t >= SparkleAt)
+            {
+                _sparkled = true;
+                _fx?.Sparkles(FxPoint(y), Palette.Glint, KeySparkleCount, _u);
+            }
         }
 
         // Muestra u oculta la hoja que cae; al ocultarla, también su luz.

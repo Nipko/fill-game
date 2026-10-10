@@ -6,7 +6,8 @@ namespace AF.Presentation
     /// <summary>
     /// Arte procedural [P] de la Hoja (M1; 02 §9.1 M1; propuesta de D-007 b.2 M1; D-003 «Selva brillante premium»): la hoja
     /// de palma cerrada, plegada y tendida sobre la boca (<see cref="HojaPalm"/>), la misma hoja ya abierta y plana que cae
-    /// girando al agua (<see cref="HojaFlat"/>) y el medallón pulido sobre el que va la fruta llave (<see cref="HojaBadge"/>).
+    /// girando al agua (<see cref="HojaFlat"/>), sus siluetas en luz para el desvanecimiento (<see cref="HojaGlow"/> y
+    /// <see cref="HojaFruitGlow"/>) y el medallón pulido sobre el que va la fruta llave (<see cref="HojaBadge"/>).
     /// La silueta es alargada, con puntas y pliegues de palma, para no confundirse con la hoja redonda de Victoria amazonica de
     /// la Hoja escudo (glosario §6.3; 02 §9.1).
     /// </summary>
@@ -50,8 +51,20 @@ namespace AF.Presentation
         /// <summary>Alto del sprite de la hoja abierta y plana (u).</summary>
         public const float HojaFlatHeightU = 0.62f;
 
-        /// <summary>Lado del medallón de la fruta llave (u).</summary>
-        public const float HojaBadgeU = 0.92f;
+        /// <summary>
+        /// Ancho del medallón de la fruta llave (u) [P]: un rectángulo redondeado apaisado y no un disco, para que el medallón
+        /// con la fruta no se lea como un ojo (aro claro, iris oscuro y reflejo) sobre la hoja en almendra.
+        /// </summary>
+        public const float HojaBadgeWidthU = 1.0f;
+
+        /// <summary>Alto del medallón de la fruta llave (u).</summary>
+        public const float HojaBadgeHeightU = 0.8f;
+
+        /// <summary>Radio de las esquinas del medallón (u).</summary>
+        public const float HojaBadgeRadiusU = 0.18f;
+
+        /// <summary>Margen del sprite del medallón alrededor de la forma (u): deja sitio a la sombra.</summary>
+        public const float HojaBadgePadU = 3f / MechanicPxPerU;
 
         /// <summary>Haz de la hoja en luz #3A8A55 [P]: ΔE00 13,1 de Lulo, el tinte más cercano.</summary>
         public static readonly Color HojaFaceLight = Palette.Hex(0x3A8A55);
@@ -69,6 +82,7 @@ namespace AF.Presentation
         private Sprite? _hojaFlat;
         private Sprite? _hojaGlow;
         private Sprite? _hojaBadge;
+        private readonly Sprite?[] _hojaFruitGlow = new Sprite?[15]; // tintes 1-14, como el atlas de frutas
 
         /// <summary>
         /// Hoja de palma cerrada (<see cref="HojaPalmWidthU"/> × <see cref="HojaPalmHeightU"/> u): tendida sobre la boca como
@@ -87,8 +101,35 @@ namespace AF.Presentation
         /// </summary>
         internal Sprite HojaGlow => _hojaGlow != null ? _hojaGlow : (_hojaGlow = BuildHojaGlow());
 
-        /// <summary>Medallón pulido redondo (blanco y grises con bisel y brillo; lo tiñe <see cref="HojaBadgeColor"/>).</summary>
+        /// <summary>
+        /// Medallón pulido (<see cref="HojaBadgeWidthU"/> × <see cref="HojaBadgeHeightU"/> u más <see cref="HojaBadgePadU"/> de
+        /// margen por lado): rectángulo redondeado en blanco y grises con bisel y brillo; lo tiñe <see cref="HojaBadgeColor"/>.
+        /// </summary>
         internal Sprite HojaBadge => _hojaBadge != null ? _hojaBadge : (_hojaBadge = BuildHojaBadge());
+
+        /// <summary>
+        /// La fruta llave del tinte <paramref name="tint"/> en luz: su silueta (la de <see cref="FruitFlight"/>, misma celda de
+        /// <see cref="FruitFlightPx"/> px) casi blanca, con el dibujo apenas marcado; la tiñe <see cref="Palette.Glint"/>. Va
+        /// encima de la fruta y la aclara mientras se disuelve (como <see cref="HojaGlow"/> con la hoja). Perezosa, una por
+        /// tinte: el overlay la pide al mostrar la llave, nunca en un paso.
+        /// </summary>
+        /// <remarks>
+        /// Se dibuja con el respaldo procedural de la fruta. Si algún día el atlas sale de los PNG <c>fruta_*</c>
+        /// (<see cref="FruitFlightAtlasResource"/>), la silueta de la luz puede no casar del todo con la del PNG; la luz solo dura
+        /// el fundido de la llave (unos 90 ms × factor).
+        /// </remarks>
+        internal Sprite HojaFruitGlow(int tint)
+        {
+            int k = Mathf.Clamp(tint, 1, 14);
+            Sprite? sprite = _hojaFruitGlow[k];
+            if (sprite == null)
+            {
+                sprite = BuildHojaFruitGlow(k);
+                _hojaFruitGlow[k] = sprite;
+            }
+
+            return sprite;
+        }
 
         private Sprite BuildHojaPalm()
         {
@@ -114,6 +155,23 @@ namespace AF.Presentation
             // La misma hoja abierta, casi blanca: el haz más claro (#3A8A55, luminancia ~0,42) queda en 1 y la nervadura baja
             // hasta 0,84, para que la luz siga leyéndose como hoja. Conserva el alfa (la silueta y su borde suavizado).
             PixelCanvas pc = DrawHojaFlat();
+            Whiten(pc, 0.42f, 0.84f);
+            return MakeSprite(pc, "mech_hoja_glow", new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        private Sprite BuildHojaFruitGlow(int tint)
+        {
+            // La fruta en su celda, casi blanca: de 0,86 en lo más oscuro (contorno de tinta, escamas) a 1 desde luminancia 0,6.
+            var pc = new PixelCanvas(FruitFlightPx, FruitFlightPx);
+            DrawFruit(pc, tint, 0f, 0f);
+            Whiten(pc, 0.6f, 0.86f);
+            return MakeSprite(pc, "mech_hoja_fruit_glow_" + TintIds[tint], new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        // Cada píxel pasa a gris claro según su luminancia (de floor en negro a 1 desde refLum), con el mismo alfa: la silueta y
+        // su borde suavizado se conservan y el dibujo queda apenas marcado.
+        private static void Whiten(PixelCanvas pc, float refLum, float floor)
+        {
             for (int y = 0; y < pc.Height; y++)
             {
                 for (int x = 0; x < pc.Width; x++)
@@ -125,12 +183,10 @@ namespace AF.Presentation
                     }
 
                     float lum = (0.30f * c.r) + (0.59f * c.g) + (0.11f * c.b);
-                    float v = Mathf.Lerp(0.84f, 1f, Mathf.Clamp01(lum / 0.42f));
+                    float v = Mathf.Lerp(floor, 1f, Mathf.Clamp01(lum / refLum));
                     pc.Set(x, y, new Color(v, v, v, c.a));
                 }
             }
-
-            return MakeSprite(pc, "mech_hoja_glow", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
 
         // La hoja ya abierta: casi recta, con las puntas apenas caídas.
@@ -146,35 +202,45 @@ namespace AF.Presentation
 
         private Sprite BuildHojaBadge()
         {
-            int s = Mathf.RoundToInt(HojaBadgeU * MechanicPxPerU);
-            var pc = new PixelCanvas(s, s);
-            float c = s * 0.5f;
-            float r = (s * 0.5f) - 3f;
+            float pad = HojaBadgePadU * MechanicPxPerU;
+            int w = Mathf.RoundToInt((HojaBadgeWidthU + (2f * HojaBadgePadU)) * MechanicPxPerU);
+            int h = Mathf.RoundToInt((HojaBadgeHeightU + (2f * HojaBadgePadU)) * MechanicPxPerU);
+            var pc = new PixelCanvas(w, h);
+            float x0 = pad;
+            float y0 = pad;
+            float x1 = w - pad;
+            float y1 = h - pad;
+            float r = HojaBadgeRadiusU * MechanicPxPerU;
+            float cx = w * 0.5f;
+            float cy = h * 0.5f;
+            float hx = (x1 - x0) * 0.5f;
+            float hy = (y1 - y0) * 0.5f;
+            const float bevel = 2.2f;
 
             // Sombra suave abajo, canto oscuro, cara con bisel (más clara arriba a la izquierda) y un brillo pequeño.
-            pc.FillEllipseSoft(c + 1f, c - 2.5f, r + 1f, r + 0.5f, 2.5f, new Color(0f, 0f, 0f, 0.35f));
-            pc.FillCircle(c, c, r, new Color(0.66f, 0.66f, 0.66f, 1f));
-            for (int y = 0; y < s; y++)
+            pc.FillRoundedRectSoft(x0 + 1f, y0 - 2f, x1 + 1f, y1 - 2f, r, 2.5f, new Color(0f, 0f, 0f, 0.35f));
+            pc.FillRoundedRect(x0, y0, x1, y1, r, new Color(0.66f, 0.66f, 0.66f, 1f));
+            for (int y = 0; y < h; y++)
             {
-                for (int x = 0; x < s; x++)
+                for (int x = 0; x < w; x++)
                 {
-                    float dx = (x + 0.5f) - c;
-                    float dy = (y + 0.5f) - c;
-                    float d = Mathf.Sqrt((dx * dx) + (dy * dy));
-                    float cover = PixelCanvas.Coverage(d - (r - 2.2f));
+                    float d = PixelCanvas.RoundedRectDistance(x + 0.5f, y + 0.5f, x0 + bevel, y0 + bevel, x1 - bevel, y1 - bevel, r - bevel);
+                    float cover = PixelCanvas.Coverage(d);
                     if (cover <= 0f)
                     {
                         continue;
                     }
 
                     // Luz a 35° desde arriba a la izquierda: 1 en el canto alto, 0,84 en el bajo.
-                    float lit = Mathf.Clamp01(0.5f + (((-dx * 0.57f) + (dy * 0.82f)) / (2f * r)));
+                    float dx = ((x + 0.5f) - cx) / hx;
+                    float dy = ((y + 0.5f) - cy) / hy;
+                    float lit = Mathf.Clamp01(0.5f + (((-dx * 0.57f) + (dy * 0.82f)) * 0.5f));
                     float v = Mathf.Lerp(0.84f, 1f, lit);
                     pc.Blend(x, y, new Color(v, v, v, 1f), cover);
                 }
             }
 
-            pc.FillEllipseSoft(c - (r * 0.38f), c + (r * 0.42f), r * 0.26f, r * 0.13f, 1.5f, new Color(1f, 1f, 1f, 0.9f));
+            pc.FillEllipseSoft(cx - (hx * 0.5f), cy + (hy * 0.55f), hx * 0.24f, hy * 0.14f, 1.5f, new Color(1f, 1f, 1f, 0.9f));
             return MakeSprite(pc, "mech_hoja_badge", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
 

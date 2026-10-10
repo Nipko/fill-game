@@ -16,7 +16,10 @@ namespace AF.Presentation.Mechanics
     /// <remarks>
     /// <para><b>Desbloqueo</b> (paso Open de la etapa (b), <see cref="OpenStepMs"/> × <c>ctx.SpeedFactor</c>; 02 §4.1: «brote
     /// germina en 2 hojas», 350 ms; b.2 no cambia esta duración): el tapón se hincha y se disuelve con unos destellos pequeños
-    /// de su color (<see cref="IBoardFx.Sparkles"/>), y las dos hojitas germinan: se abren hacia fuera, crecen y se desvanecen.
+    /// de su color (<see cref="IBoardFx.Sparkles"/>), y las dos hojitas germinan: se abren hacia fuera y crecen (hasta
+    /// <see cref="OpenEnd"/>), se quedan abiertas en V y opacas (hasta <see cref="HoldEnd"/>) y en el último cuarto se
+    /// desvanecen. El paso va en la cuia receptora y no espera a que el origen vuelva (contrato de T07): el brote abierto
+    /// sigue a la vista cuando el origen aterriza.
     /// Mientras anima (<see cref="IsAnimating"/>), la vista no llama a <see cref="Show"/>; la cola cierra el paso con
     /// <see cref="SnapStep"/> y <c>ShowContent(ctx.After)</c>, que lo oculta. Marea lo vuelve a pintar cerrado.</para>
     /// <para>Sin asignaciones en <see cref="Tick"/>, <see cref="PlayStep"/> ni <see cref="Show"/> (08 §5.4); las partículas
@@ -42,8 +45,14 @@ namespace AF.Presentation.Mechanics
         /// <summary>Fin de la anticipación (el tapón se hincha; fracción del paso).</summary>
         public const float SwellEnd = 0.18f;
 
-        /// <summary>Fin de la apertura de las hojitas (fracción del paso); después se desvanecen.</summary>
-        public const float OpenEnd = 0.55f;
+        /// <summary>Fin de la apertura de las hojitas y de la disolución del tapón (fracción del paso).</summary>
+        public const float OpenEnd = 0.45f;
+
+        /// <summary>
+        /// Hasta aquí el brote abierto en V se queda opaco (fracción del paso); después se desvanece hasta el final. Así sigue a
+        /// la vista cuando la cuia de origen, que vuelve en vuelo durante la germinación, aterriza en su ranura.
+        /// </summary>
+        public const float HoldEnd = 0.75f;
 
         /// <summary>Instante de los destellos (fracción del paso).</summary>
         public const float SparkleAt = 0.12f;
@@ -72,8 +81,19 @@ namespace AF.Presentation.Mechanics
         /// <inheritdoc />
         public override MechanicType Type => MechanicType.Brote;
 
-        /// <summary>Color del tapón (el de la cima, o el pardo de las turbias si la cima está oculta).</summary>
-        public Color BudColor => _budColor;
+        /// <summary>
+        /// Color pintado del tapón (el RGB de su <see cref="Image"/>, con alfa 1): el de la cima, o el pardo de las turbias si
+        /// la cima está oculta.
+        /// </summary>
+        public Color BudColor
+        {
+            get
+            {
+                Color c = _cork.color;
+                c.a = 1f;
+                return c;
+            }
+        }
 
         /// <inheritdoc />
         public override bool IsAnimating => _elapsed >= 0f;
@@ -89,6 +109,9 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>Las hojitas están a la vista.</summary>
         public bool LeavesVisible => _leafL.gameObject.activeSelf && _leafL.color.a > 0.001f;
+
+        /// <summary>Opacidad de las hojitas (0 ocultas).</summary>
+        public float LeafAlpha => _leafL.gameObject.activeSelf ? _leafL.color.a : 0f;
 
         /// <summary>Apertura de las hojitas (grados hacia fuera desde la vertical; <see cref="ClosedLeafDeg"/> plegadas).</summary>
         public float LeafOpenDeg => Mathf.DeltaAngle(0f, _leafL.rectTransform.localEulerAngles.z);
@@ -258,7 +281,8 @@ namespace AF.Presentation.Mechanics
                 PoseCork(footY + (0.12f * p), Mathf.Lerp(1.12f, 0.55f, Ease.In(p)), 1f - Mathf.SmoothStep(0f, 1f, p));
             }
 
-            // Hojitas: se abren hacia fuera (de 30° a 48° desde la vertical), crecen y, abiertas, se desvanecen.
+            // Hojitas: se abren hacia fuera (de 30° a 48° desde la vertical) y crecen, se quedan abiertas y opacas en V hasta
+            // HoldEnd (apenas se mecen) y en el último cuarto se desvanecen.
             float open;
             float grow;
             float rise;
@@ -279,13 +303,21 @@ namespace AF.Presentation.Mechanics
                 rise = 0.08f * p;
                 alpha = 1f;
             }
+            else if (t < HoldEnd)
+            {
+                float p = (t - OpenEnd) / (HoldEnd - OpenEnd);
+                open = OpenLeafDeg + (3f * Mathf.Sin(p * Mathf.PI)); // un leve vaivén, abiertas
+                grow = 1.3f + (0.04f * p);
+                rise = 0.08f + (0.04f * p);
+                alpha = 1f;
+            }
             else
             {
-                float p = (t - OpenEnd) / (1f - OpenEnd);
-                open = OpenLeafDeg + (7f * p);
-                grow = 1.3f + (0.1f * p);
-                rise = 0.08f + (0.1f * p);
-                alpha = 1f - Ease.Out(p);
+                float p = (t - HoldEnd) / (1f - HoldEnd);
+                open = OpenLeafDeg + (5f * p);
+                grow = 1.34f + (0.06f * p);
+                rise = 0.12f + (0.08f * p);
+                alpha = 1f - Mathf.SmoothStep(0f, 1f, p);
             }
 
             PoseLeaf(_leafL, -1f, open, grow, rise, alpha);
