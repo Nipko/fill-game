@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using AF.Levels;
 using AF.Presentation;
 using TMPro;
 using UnityEngine;
@@ -122,16 +123,118 @@ namespace AF.UI
             surface.sprite = art.ModalSurfaceFor(w - 16f, h - 16f);
         }
 
-        /// <summary>Placa de cabecera con el título (Baloo 2 de 22 dp, mínimo 16).</summary>
-        public static TextMeshProUGUI Header(RectTransform panel, ProceduralArt art, string text, out Image plate)
+        /// <summary>Lado del sello de la etiqueta en una cabecera con banda (dp).</summary>
+        public const float HeaderBadgeDp = 30f;
+
+        /// <summary>
+        /// Placa de cabecera con el título (Baloo 2 de 22 dp, mínimo 16): la placa de madera oscura de siempre o, con
+        /// <paramref name="band"/>, la banda de ese color (propuesta-mecanicas-dificultad.md §c.1: «cabecera ámbar» o
+        /// «índigo» en Difícil y Muy difícil) con el título en tinta o marfil según contraste (<see cref="HeaderTitleColor"/>).
+        /// </summary>
+        public static TextMeshProUGUI Header(RectTransform panel, ProceduralArt art, string text, out Image plate, Color? band = null)
         {
-            plate = UiBuilder.Image("HeaderPlate", panel, art.HeaderPlate, Color.white);
-            TextMeshProUGUI title = UiBuilder.Label("Title", plate.transform, TextStyle.ModalTitle, text, 22f, Palette.Cream, TextAlignmentOptions.Center);
+            plate = UiBuilder.Image("HeaderPlate", panel, band.HasValue ? art.HeaderBand(band.Value) : art.HeaderPlate, Color.white);
+            TextMeshProUGUI title = UiBuilder.Label("Title", plate.transform, TextStyle.ModalTitle, text, 22f, HeaderTitleColor(band), TextAlignmentOptions.Center);
             UiBuilder.Stretch(title.rectTransform);
             title.rectTransform.offsetMin = new Vector2(8f, 0f);
             title.rectTransform.offsetMax = new Vector2(-8f, 0f);
             UiBuilder.AutoSize(title, 16f, 22f);
+            SetTitleColor(title, HeaderTitleColor(band));
             return title;
+        }
+
+        /// <summary>
+        /// Banda de la cabecera para <c>difficulty.label</c> (propuesta §c.1; 07 §7.2 y §7.7): <c>ui_ambar</c> en Difícil,
+        /// <c>ui_indigo</c> en Muy difícil y null (la madera de siempre) en <c>normal</c>.
+        /// </summary>
+        public static Color? HeaderBandFor(string? label)
+        {
+            switch (label)
+            {
+                case LevelDefinition.LabelHard: return Palette.UiAmber;
+                case LevelDefinition.LabelVeryHard: return Palette.UiIndigo;
+                default: return null;
+            }
+        }
+
+        /// <summary>
+        /// Color del título sobre la cabecera: crema sobre la madera; sobre una banda, tinta o marfil, el de más contraste
+        /// (tinta sobre ámbar 5,4:1; marfil sobre índigo 10,7:1; 07 §7.2).
+        /// </summary>
+        public static Color HeaderTitleColor(Color? band)
+        {
+            if (!band.HasValue)
+            {
+                return Palette.Cream;
+            }
+
+            Color ink = Palette.Ink;
+            Color ivory = Palette.UiPaper;
+            return ColorMath.ContrastRatio(ink, band.Value) >= ColorMath.ContrastRatio(ivory, band.Value) ? ink : ivory;
+        }
+
+        /// <summary>Sello de la etiqueta (rana o jaguar) a la izquierda de la cabecera, oculto hasta <see cref="ApplyHeaderLabel"/>.</summary>
+        public static Image HeaderBadge(Image plate)
+        {
+            Image badge = UiBuilder.Image("Badge", plate.transform, null, Color.white); // el sello, perezoso: ApplyHeaderLabel
+            badge.preserveAspect = true;
+            UiBuilder.Place(badge.rectTransform, 5f, 5f, HeaderBadgeDp, HeaderBadgeDp);
+            badge.gameObject.SetActive(false);
+            return badge;
+        }
+
+        /// <summary>
+        /// Viste la cabecera para <c>difficulty.label</c> (propuesta §c.1: «¿Seguro?» y «Nivel fallido» con cabecera ámbar en
+        /// Difícil e índigo en Muy difícil; en normal, igual que siempre): la banda, el color del título y el sello de la rana
+        /// o del jaguar, para que la etiqueta no dependa solo del color (07 §7.8). Devuelve la banda aplicada (null = madera).
+        /// </summary>
+        public static Color? ApplyHeaderLabel(Image plate, TextMeshProUGUI title, Image badge, ProceduralArt art, string? label)
+        {
+            Color? band = HeaderBandFor(label);
+            Sprite sprite = band.HasValue ? art.HeaderBand(band.Value) : art.HeaderPlate;
+            if (plate.sprite != sprite)
+            {
+                plate.sprite = sprite;
+            }
+
+            SetTitleColor(title, HeaderTitleColor(band));
+            bool badged = band.HasValue;
+            badge.gameObject.SetActive(badged);
+            float inset = badged ? HeaderBadgeDp + 10f : 8f;
+            title.rectTransform.offsetMin = new Vector2(inset, 0f);
+            title.rectTransform.offsetMax = new Vector2(-inset, 0f);
+            if (badged)
+            {
+                badge.sprite = art.DifficultyIcon(label == LevelDefinition.LabelVeryHard);
+            }
+
+            return band;
+        }
+
+        // Color del título y su material: la tinta (sobre ámbar) va sin el contorno oscuro del título, que empastaba las letras
+        // (revisión de la captura 42); el texto claro, con el contorno y la sombra de siempre (TextStyle.ModalTitle).
+        private static void SetTitleColor(TextMeshProUGUI title, Color color)
+        {
+            title.color = color;
+            bool darkText = ColorMath.RelativeLuminance(color) < 0.2f;
+            Material? material = darkText ? (title.font != null ? title.font.material : null) : UiFonts.Material(TextStyle.ModalTitle);
+            if (material != null && title.fontSharedMaterial != material)
+            {
+                title.fontSharedMaterial = material;
+            }
+        }
+
+        /// <summary>Pares texto / fondo de las cabeceras con banda, para la comprobación de contraste ≥ 4,5:1 (02 §12).</summary>
+        public static (string Name, Color Text, Color Background)[] HeaderContrastPairs()
+        {
+            Color amber = Palette.UiAmber;
+            Color indigo = Palette.UiIndigo;
+            return new[]
+            {
+                ("cabecera Difícil", HeaderTitleColor(amber), amber),
+                ("cabecera Muy difícil", HeaderTitleColor(indigo), indigo),
+                ("cabecera normal", HeaderTitleColor(null), (Color)Palette.WoodDark),
+            };
         }
 
         /// <summary>Cierre: disco de madera de 40 dp con la X en crema, en un área de 48 dp.</summary>

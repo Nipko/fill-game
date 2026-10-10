@@ -184,9 +184,29 @@ namespace AF.Tests.PlayMode
             yield return null;
             Assert.That(boot.Lobby!.ChipShown, Is.True);
             Assert.That(boot.Lobby.ChipText, Is.EqualTo("Difícil"));
+            Assert.That(boot.Lobby.ChipRibbonText, Is.EqualTo("×3"), "propuesta §c.2: 60 / 20");
             Rect chip = ScreenRect(boot.Lobby.ChipRect);
             Rect play = ScreenRect((RectTransform)boot.Lobby.PlayButton.transform);
             Assert.That(chip.Overlaps(play), Is.False, "el chip va encima del botón, sin taparlo");
+
+            // T08: el chip entero (sello, píldora y cinta) tampoco lo tapa, ni en Muy difícil con el botón nocturno, a 360 × 640
+            // y a 360 × 800 dp.
+            foreach (Vector2Int size in new[] { new Vector2Int(1080, 1920), new Vector2Int(1080, 2400) })
+            {
+                foreach (string label in new[] { "hard", "very_hard" })
+                {
+                    GameScreen.SimulatedScreen = new Vector4(size.x, size.y, 96f, 48f);
+                    LaunchOptions.LevelPackJsonOverride = PackWithLabel(label);
+                    yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(1)));
+                    LobbyScreen lobby = GameBootstrap.Current!.Lobby!;
+                    yield return null;
+                    string where = size.y + " px, " + label;
+                    Assert.That(lobby.ChipShown, Is.True, where);
+                    Assert.That(lobby.PlayNight, Is.EqualTo(label == "very_hard"), where);
+                    Assert.That(lobby.ChipRibbonText, Is.EqualTo(label == "very_hard" ? "×4" : "×3"), where);
+                    LabelFunnel.AssertChipClearOfPlay(lobby);
+                }
+            }
         }
 
         [UnityTest]

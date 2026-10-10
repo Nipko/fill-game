@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using System.Globalization;
+using AF.Levels;
 using AF.Presentation;
 using TMPro;
 using UnityEngine;
@@ -13,7 +14,10 @@ namespace AF.UI
     /// composición de «Level Failed!» de Magic Sort (ficha §4.4 y §4.8: cabecera «Level N» con X, franja «Level Failed!», el
     /// premio que no se cobra y un botón grande de reintentar) y el material de D-003: cesta de semillas vacía en lugar del
     /// pedestal de monedas, sin corazón roto ni calaveras. «Nivel {n}», «Nivel fallido», «Premio: {20 · 60 · 80} semillas»
-    /// (<c>eco_reward_*</c>; no se cobra), «Reintentar» [P] y X → inicio. Sin intersticial antes ni después (05 §10).
+    /// (<c>eco_reward_*</c>; no se cobra), «Reintentar» [P] y X → inicio. Sin intersticial antes ni después (05 §10). La cabecera
+    /// lleva la etiqueta del nivel (propuesta-mecanicas-dificultad.md §c.1; D-009; como la tarjeta roja de Magic Sort en sus
+    /// SUPER HARD, ficha §3.6, sin calavera): ámbar con la rana en Difícil, índigo con el jaguar en Muy difícil y la madera de
+    /// siempre en normal (<see cref="SetLabel"/>, aplicada en el siguiente <see cref="Show"/>).
     /// </summary>
     internal sealed class LevelFailedScreen
     {
@@ -23,12 +27,15 @@ namespace AF.UI
         private readonly Image _surface;
         private readonly Image _header;
         private readonly TextMeshProUGUI _title;
+        private readonly Image _badge;
         private readonly ReliefParts _close;
         private readonly Image _strip;
         private readonly TextMeshProUGUI _stripLabel;
         private readonly Image _basket;
         private readonly TextMeshProUGUI _reward;
         private readonly ReliefParts _retry;
+        private string _label = LevelDefinition.LabelNormal;
+        private Color? _band;
 
         public LevelFailedScreen(Transform parent, ProceduralArt art, IGameActions actions)
         {
@@ -37,6 +44,7 @@ namespace AF.UI
             ModalKit.Dim("Dim", _root, 0.55f);
             _panel = ModalKit.Card("Panel", _root, art, out _surface);
             _title = ModalKit.Header(_panel, art, UiText.Level(1), out _header);
+            _badge = ModalKit.HeaderBadge(_header);
             _close = ModalKit.Close("CloseButton", _panel, art, () => actions.PressLevelFailedClose());
             _strip = UiBuilder.Sliced("Strip", _panel, art.WoodPlate, Color.white);
             _stripLabel = UiBuilder.Label("Label", _strip.transform, TextStyle.PillWood, UiText.LevelFailed, 20f, Palette.Cream, TextAlignmentOptions.Center);
@@ -58,6 +66,33 @@ namespace AF.UI
 
         public string RewardText => _reward.text;
 
+        /// <summary><c>difficulty.label</c> que viste la cabecera en el siguiente <see cref="Show"/> (o en el actual).</summary>
+        public string Label => _label;
+
+        /// <summary>Banda de la cabecera aplicada en el último <see cref="Show"/> (<c>ui_ambar</c> o <c>ui_indigo</c>; null = madera).</summary>
+        public Color? HeaderBand => _band;
+
+        /// <summary>Color del título de la cabecera («Nivel {n}»).</summary>
+        public Color TitleColor => _title.color;
+
+        /// <summary>
+        /// Material del título de la cabecera (tests): el de <c>TextStyle.ModalTitle</c>, con contorno y sombra, sobre la madera
+        /// y el índigo; el de la fuente, sin contorno, con la tinta sobre el ámbar (<c>ModalKit.SetTitleColor</c>).
+        /// </summary>
+        internal Material? TitleMaterial => _title.fontSharedMaterial;
+
+        /// <summary>Sello de la etiqueta en la cabecera, o null si no se ve.</summary>
+        public Sprite? HeaderBadge => _badge.gameObject.activeSelf ? _badge.sprite : null;
+
+        /// <summary>
+        /// Guarda la etiqueta del nivel (<c>difficulty.label</c>: <c>normal</c>, <c>hard</c> o <c>very_hard</c>) para la cabecera
+        /// del siguiente <see cref="Show"/>. La llama GameScreen (GameScreen.Funnel.cs) justo antes de abrir el modal.
+        /// </summary>
+        public void SetLabel(string? difficultyLabel)
+        {
+            _label = string.IsNullOrEmpty(difficultyLabel) ? LevelDefinition.LabelNormal : difficultyLabel!;
+        }
+
         public void Hide()
         {
             _root.gameObject.SetActive(false);
@@ -72,6 +107,7 @@ namespace AF.UI
             float width = Mathf.Min(328f, canvasW - 32f);
             float inner = width - 32f;
             float y = 16f;
+            _band = ModalKit.ApplyHeaderLabel(_header, _title, _badge, _art, _label);
             UiBuilder.Place(_header.rectTransform, 16f, y, inner - 52f, 40f);
             UiBuilder.Place((RectTransform)_close.Button.transform, width - 16f - ModalKit.CloseDp, y - 4f, ModalKit.CloseDp, ModalKit.CloseDp);
             y += 52f;

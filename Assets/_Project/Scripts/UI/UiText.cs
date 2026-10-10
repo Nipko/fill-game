@@ -1,14 +1,17 @@
 #nullable enable
 using System.Globalization;
+using AF.GameFlow;
+using AF.Levels;
 
 namespace AF.UI
 {
     /// <summary>
     /// Textos ES-419 del prototipo v0 con su clave del glosario (§5.1, §10) y de GDD 04 §6.5. La localización
     /// (Unity Localization, ES-419 / PT-BR / EN) queda fuera de v0: cuando llegue, estas constantes pasan a ser las
-    /// claves de las String Tables.
+    /// claves de las String Tables. Clase parcial (arquitectura del paso 1, §9): los textos de la tarjeta previa y de la
+    /// Luciérnaga van en sus propios archivos (UiText.Cards.cs y UiText.Reveal.cs).
     /// </summary>
-    public static class UiText
+    public static partial class UiText
     {
         /// <summary><c>level_n</c>.</summary>
         public const string LevelN = "Nivel {0}";
@@ -90,6 +93,24 @@ namespace AF.UI
 
         /// <summary><c>very_hard</c> (chip del botón Jugar [P], 06 §4.7).</summary>
         public const string DifficultyVeryHard = "Muy difícil";
+
+        /// <summary>Subtítulo temático de Difícil (glosario §6.1; 02 §10): «Aguas bravas».</summary>
+        public const string DifficultySubtitleHard = "Aguas bravas";
+
+        /// <summary>
+        /// Subtítulo temático de Muy difícil (glosario §6.1; 02 §10): «Noche de jaguar». Nombra fauna: pendiente de revisión del
+        /// asesor cultural (07 §8.2).
+        /// </summary>
+        public const string DifficultySubtitleVeryHard = "Noche de jaguar";
+
+        /// <summary>
+        /// Cinta del premio multiplicado (propuesta-mecanicas-dificultad.md §c.2: «×3» y «×4» sobre las 20 de un nivel normal).
+        /// Con «×» U+00D7, que está en el atlas de las fuentes.
+        /// </summary>
+        public const string RibbonFormat = "×{0}";
+
+        /// <summary>Premio de la tarjeta previa (propuesta §c.1: «Premio: 60»; <c>eco_reward_*</c>, 08 §9).</summary>
+        public const string RewardLineFormat = "Premio: {0}";
 
         /// <summary>Título de la pantalla de final de contenido (06 §9; 08 §6.2).</summary>
         public const string ContentEndTitle = "El río sigue creciendo";
@@ -290,10 +311,51 @@ namespace AF.UI
         {
             switch (label)
             {
-                case "hard": return DifficultyHard;
-                case "very_hard": return DifficultyVeryHard;
+                case LevelDefinition.LabelHard: return DifficultyHard;
+                case LevelDefinition.LabelVeryHard: return DifficultyVeryHard;
                 default: return null;
             }
+        }
+
+        /// <summary>
+        /// Subtítulo temático de <c>difficulty.label</c> («Aguas bravas» o «Noche de jaguar», glosario §6.1), o null en
+        /// <c>normal</c> o con <c>ui_show_difficulty_subtitles</c> apagado (<see cref="GameConfig.UiShowDifficultySubtitles"/>).
+        /// Pendientes de revisión del asesor cultural (07 §8.2).
+        /// </summary>
+        public static string? DifficultySubtitle(string? label)
+        {
+            return DifficultySubtitle(label, GameConfig.UiShowDifficultySubtitles);
+        }
+
+        /// <summary>
+        /// Como <see cref="DifficultySubtitle(string)"/> con el interruptor <paramref name="show"/> explícito (el valor de
+        /// <c>ui_show_difficulty_subtitles</c> que llegue de Remote Config; 02 §10: «se apagan si confunden»).
+        /// </summary>
+        public static string? DifficultySubtitle(string? label, bool show)
+        {
+            if (!show)
+            {
+                return null;
+            }
+
+            switch (label)
+            {
+                case LevelDefinition.LabelHard: return DifficultySubtitleHard;
+                case LevelDefinition.LabelVeryHard: return DifficultySubtitleVeryHard;
+                default: return null;
+            }
+        }
+
+        /// <summary>«×{n}»: cinta del premio multiplicado (propuesta §c.2).</summary>
+        public static string Ribbon(int multiplier)
+        {
+            return string.Format(CultureInfo.InvariantCulture, RibbonFormat, multiplier);
+        }
+
+        /// <summary>«Premio: {n}» (propuesta §c.1), con separador de miles.</summary>
+        public static string RewardLine(int seeds)
+        {
+            return string.Format(CultureInfo.InvariantCulture, RewardLineFormat, Grouped(seeds));
         }
 
         /// <summary>Texto de «El río sigue creciendo» con los días estimados.</summary>

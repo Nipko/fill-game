@@ -95,6 +95,14 @@ namespace AF.GameFlow
         public const int HarvestCountMs = 400;
 
         /// <summary>
+        /// <c>ui_show_difficulty_subtitles</c> (08 §9, fila combinada con <c>ui_river_fact_every_n_levels</c>,
+        /// <c>ui_murky_bonus_enabled</c> y <c>ui_mascot_rescue_anim</c>; default true): muestra los subtítulos temáticos
+        /// «Aguas bravas» y «Noche de jaguar» bajo la etiqueta honesta (02 §10; glosario §6.1). Constante sin
+        /// <c>[RemoteConfigKey]</c>, como el resto de esta clase: <c>EconomyConfigTests</c> solo recorre <c>EconomyConfig</c>.
+        /// </summary>
+        public const bool UiShowDifficultySubtitles = true;
+
+        /// <summary>
         /// <c>live_content_end_message</c> = <c>{"next_batch_eta_days":14}</c> (08 §9): días estimados hasta los próximos 100
         /// niveles, que muestra la pantalla «El río sigue creciendo» (06 §9; 08 §6.2).
         /// </summary>
