@@ -15,7 +15,8 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Capturas de revisión de la Hoja y el Brote (T11; <c>[Explicit]</c>, no forman parte de la suite):
     /// <c>50_hoja_closed_l43</c> (la hoja de palma cerrada con el aguaje, tras la intro), <c>51_hoja_falling_l43</c> (a mitad
-    /// del desbloqueo: la hoja abierta cae girando al agua), <c>51b_hoja_splash_l43</c> (la hoja toca el agua y salpica),
+    /// del desbloqueo: la hoja abierta cae girando al agua), <c>51b_hoja_splash_l43</c> (la hoja toca el agua, salpica y se
+    /// desvanece aclarándose hacia la luz, a mitad de ese tramo),
     /// <c>52_brote_closed_l163</c> (el tapón-brote de camu camu con sus
     /// dos hojitas plegadas) y <c>53_brote_open_l163</c> (a mitad de la germinación). Sirven para mirar a 48-56 dp la
     /// legibilidad, los solapes con las vecinas, los colores, que se entienda la mecánica, que la Hoja no se confunda con la

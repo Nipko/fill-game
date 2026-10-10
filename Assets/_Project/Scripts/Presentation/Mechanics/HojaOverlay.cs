@@ -18,8 +18,9 @@ namespace AF.Presentation.Mechanics
     /// <para><b>Desbloqueo</b> (paso Open de la etapa (b), <see cref="OpenStepMs"/> × <c>ctx.SpeedFactor</c>; b.2: «la hoja se
     /// abre y cae girando al agua», 400-600 ms; ficha de Magic Sort §3): la hoja se levanta y se abre (el pliegue se aplana) y la
     /// fruta llave se disuelve con unos destellos de su color; la hoja, ya plana, cae girando dentro de la cuia hasta la
-    /// superficie del agua recién vertida (la de <c>ctx.After</c>), salpica (<see cref="IBoardFx.Splash"/>) y se desvanece.
-    /// Mientras anima (<see cref="IsAnimating"/>), la vista no llama a <see cref="Show"/>; la cola cierra el paso con
+    /// superficie del agua recién vertida (la de <c>ctx.After</c>), salpica (<see cref="IBoardFx.Splash"/>) y, mientras se hunde
+    /// y encoge, se aclara hacia <see cref="Palette.Glint"/> y se desvanece del todo en <see cref="GoneAt"/>, antes de que acabe
+    /// el paso: nunca se mezcla con el tinte (D-003). Mientras anima (<see cref="IsAnimating"/>), la vista no llama a <see cref="Show"/>; la cola cierra el paso con
     /// <see cref="SnapStep"/> y <c>ShowContent(ctx.After)</c>, que la oculta.</para>
     /// <para><b>Marea</b> (02 §14; 04 §2.1): <see cref="SnapStep"/> deja la pose de reposo, así que el <see cref="Show"/> con la
     /// Hoja devuelta vuelve a pintar la hoja cerrada.</para>
@@ -57,8 +58,20 @@ namespace AF.Presentation.Mechanics
         /// <summary>Fin de la apertura (fracción del paso): después la hoja ya plana cae.</summary>
         public const float OpenEnd = 0.2f;
 
-        /// <summary>La hoja toca el agua y salpica (fracción del paso); después se desvanece.</summary>
+        /// <summary>La hoja toca el agua y salpica (fracción del paso); después se aclara y se desvanece.</summary>
         public const float SplashAt = 0.8f;
+
+        /// <summary>
+        /// La hoja ya se desvaneció del todo (fracción del paso) [P]: acaba antes que el paso y limpia, aclarándose hacia
+        /// <see cref="Palette.Glint"/> en vez de mezclarse con el tinte (D-003: luz de juego).
+        /// </summary>
+        public const float GoneAt = 0.88f;
+
+        /// <summary>Escala de la hoja al desaparecer en el agua (desde <see cref="WaterScale"/>).</summary>
+        public const float GoneScale = 0.30f;
+
+        /// <summary>Parte del desvanecimiento en la que la hoja ya se aclaró del todo hacia la luz.</summary>
+        private const float GlowRampEnd = 0.6f;
 
         /// <summary>La fruta llave se disuelve con sus destellos (fracción del paso).</summary>
         public const float SparkleAt = 0.04f;
@@ -72,6 +85,7 @@ namespace AF.Presentation.Mechanics
 
         private Image _leaf = null!;
         private Image _fall = null!;
+        private Image _glow = null!;
         private Image _badge = null!;
         private Image _fruit = null!;
         private RectTransform _slot = null!;
@@ -107,8 +121,8 @@ namespace AF.Presentation.Mechanics
         /// <summary>La hoja cerrada (tendida sobre la boca) está a la vista.</summary>
         public bool ClosedLeafVisible => _leaf.gameObject.activeSelf && _leaf.color.a > 0.001f;
 
-        /// <summary>La hoja abierta que cae está a la vista.</summary>
-        public bool FallingLeafVisible => _fall.enabled && _fall.color.a > 0.001f;
+        /// <summary>La hoja abierta que cae (o la luz en que se desvanece) está a la vista.</summary>
+        public bool FallingLeafVisible => (_fall.enabled && _fall.color.a > 0.001f) || (_glow.enabled && _glow.color.a > 0.001f);
 
         /// <summary>La fruta llave está a la vista.</summary>
         public bool FruitVisible => _fruit.gameObject.activeSelf && _fruit.color.a > 0.001f;
@@ -125,8 +139,11 @@ namespace AF.Presentation.Mechanics
         /// <summary>Opacidad de la hoja que cae.</summary>
         public float FallAlpha => _fall.enabled ? _fall.color.a : 0f;
 
-        /// <summary>Escala de la hoja que cae (1 al abrirse; <see cref="WaterScale"/> al llegar al agua).</summary>
+        /// <summary>Escala de la hoja que cae (1 al abrirse; <see cref="WaterScale"/> al llegar al agua; <see cref="GoneScale"/> al desaparecer).</summary>
         public float FallScale => _fall.enabled ? Mathf.Abs(_fall.rectTransform.localScale.y) : 0f;
+
+        /// <summary>Opacidad de la luz que aclara la hoja al desvanecerse en el agua (0 oculta).</summary>
+        public float GlowAlpha => _glow.enabled ? _glow.color.a : 0f;
 
         // Centro de la hoja cerrada (u desde el pie).
         private float ClosedCenterU => _heightU + LeafAboveLipU;
@@ -160,15 +177,19 @@ namespace AF.Presentation.Mechanics
             ShowFall(false);
             if (on)
             {
-                GraphicPool.EnsureRegistered(_fall); // la hoja que cae se muestra a mitad del paso: sin asignar (08 §5.4)
+                // La hoja que cae y su luz se muestran a mitad del paso: sin asignar (08 §5.4).
+                GraphicPool.EnsureRegistered(_fall);
+                GraphicPool.EnsureRegistered(_glow);
             }
         }
 
         /// <inheritdoc />
         public override void OnBoardLayout()
         {
-            // Si al recolocar el tablero UGUI desregistró la hoja que cae (oculta), se vuelve a registrar ahora y no en el paso.
+            // Si al recolocar el tablero UGUI desregistró la hoja que cae o su luz (ocultas), se vuelven a registrar ahora y no
+            // en el paso.
             GraphicPool.EnsureRegistered(_fall);
+            GraphicPool.EnsureRegistered(_glow);
         }
 
         /// <inheritdoc />
@@ -273,6 +294,9 @@ namespace AF.Presentation.Mechanics
             into.Add(ProceduralArt.HojaFaceDark); // haz en sombra
             into.Add(ProceduralArt.HojaFold); // envés plegado
             into.Add(ProceduralArt.HojaBadgeColor); // medallón de la fruta (la fruta lleva su tinte a propósito)
+
+            // La luz en que se desvanece la hoja (Glint, 40 ms × factor, ya transparente) es un destello del efecto, como los
+            // de FxLayer, no una superficie que rodee la cuia: no entra en la regla 1 de la guía §2.4.
         }
 
         /// <inheritdoc />
@@ -288,9 +312,15 @@ namespace AF.Presentation.Mechanics
             _fall.enabled = false;
             _fall.gameObject.SetActive(true);
             GraphicPool.EnsureRegistered(_fall);
+
+            // Encima, la misma hoja en luz (silueta clara teñida de Glint), que la aclara mientras se desvanece en el agua.
+            _glow = OverlayParts.NewImage("HojaGlow", Host.BodyFront, Host.Art.HojaGlow, Palette.Glint);
+            _glow.enabled = false;
+            _glow.gameObject.SetActive(true);
+            GraphicPool.EnsureRegistered(_glow);
         }
 
-        // Pose de reposo de las cuatro piezas (sin giro ni escala y opacas).
+        // Pose de reposo de las cinco piezas (sin giro ni escala y opacas; la luz, transparente).
         private void PlaceClosed()
         {
             _posed = false;
@@ -298,6 +328,7 @@ namespace AF.Presentation.Mechanics
             Pose(_badge, 0f, FruitCenterU, ProceduralArt.HojaBadgeU, ProceduralArt.HojaBadgeU, 0f, 1f, 1f, 1f);
             Pose(_fruit, 0f, FruitCenterU, FruitU, FruitU, 0f, 1f, 1f, 1f);
             Pose(_fall, 0f, ClosedCenterU + LiftU, ProceduralArt.HojaFlatWidthU, ProceduralArt.HojaFlatHeightU, 0f, 1f, 1f, 1f);
+            Pose(_glow, 0f, ClosedCenterU + LiftU, ProceduralArt.HojaFlatWidthU, ProceduralArt.HojaFlatHeightU, 0f, 1f, 1f, 0f);
         }
 
         // Fotograma t (0..1) del desbloqueo; los efectos salen una sola vez al cruzar su instante.
@@ -335,7 +366,6 @@ namespace AF.Presentation.Mechanics
             }
 
             OverlayParts.SetVisible(_leaf, false);
-            ShowFall(true);
             float startY = closedY + LiftU;
             float waterY = _surfaceU + 0.1f;
             if (t < SplashAt)
@@ -347,6 +377,8 @@ namespace AF.Presentation.Mechanics
                 float angle = _side * ((6f * (1f - q)) + (330f * q * (0.55f + (0.45f * q))));
                 float scale = Mathf.Lerp(1f, WaterScale, q);
                 float flip = 0.82f + (0.18f * Mathf.Cos(q * 4f * Mathf.PI)); // se ladea dos veces al girar y llega plana
+                ShowFall(true);
+                SetEnabled(_glow, false);
                 Pose(_fall, x, y, ProceduralArt.HojaFlatWidthU, ProceduralArt.HojaFlatHeightU, angle, scale * flip, scale, 1f);
                 return;
             }
@@ -357,18 +389,45 @@ namespace AF.Presentation.Mechanics
                 _fx?.Splash(FxPoint(_surfaceU), _splashColor, _u);
             }
 
-            // Toca el agua: se hunde un poco y se desvanece.
-            float r = (t - SplashAt) / (1f - SplashAt);
-            float sinkAngle = _side * (336f + (24f * r));
-            float sinkScale = WaterScale * (1f - (0.25f * r));
-            Pose(_fall, 0f, waterY - (0.22f * r), ProceduralArt.HojaFlatWidthU, ProceduralArt.HojaFlatHeightU, sinkAngle, sinkScale, sinkScale, 1f - Ease.Out(r));
+            // Toca el agua: se hunde un poco, encoge (de WaterScale a GoneScale) y se desvanece con 1 − SmoothStep, sin
+            // mezclarse con el tinte: mientras se desvanece se aclara hacia Glint. La hoja (opacidad leafA) y su luz encima
+            // (opacidad glowA) pintan juntas Lerp(hoja, Glint, light) con la opacidad total opacity. En GoneAt ya no queda nada.
+            float s = Mathf.Clamp01((t - SplashAt) / (GoneAt - SplashAt));
+            float opacity = 1f - Mathf.SmoothStep(0f, 1f, s);
+            if (opacity <= 0.001f)
+            {
+                ShowFall(false);
+                return;
+            }
+
+            float light = Ease.OutCubic(s / GlowRampEnd);
+            float glowA = opacity * light;
+            float leafA = (opacity - glowA) / Mathf.Max(1e-4f, 1f - glowA);
+            float sinkY = waterY - (0.12f * s);
+            float sinkAngle = _side * (330f + (14f * s));
+            float sinkScale = Mathf.Lerp(WaterScale, GoneScale, s);
+            ShowFall(true);
+            SetEnabled(_glow, true);
+            Pose(_fall, 0f, sinkY, ProceduralArt.HojaFlatWidthU, ProceduralArt.HojaFlatHeightU, sinkAngle, sinkScale, sinkScale, leafA);
+            Pose(_glow, 0f, sinkY, ProceduralArt.HojaFlatWidthU, ProceduralArt.HojaFlatHeightU, sinkAngle, sinkScale, sinkScale, glowA);
         }
 
+        // Muestra u oculta la hoja que cae; al ocultarla, también su luz.
         private void ShowFall(bool on)
         {
-            if (_fall.enabled != on)
+            SetEnabled(_fall, on);
+            if (!on)
             {
-                _fall.enabled = on;
+                SetEnabled(_glow, false);
+            }
+        }
+
+        // La hoja que cae y su luz se muestran y se ocultan con Image.enabled: siguen registradas en el Canvas (sin asignar).
+        private static void SetEnabled(Image img, bool on)
+        {
+            if (img.enabled != on)
+            {
+                img.enabled = on;
             }
         }
 

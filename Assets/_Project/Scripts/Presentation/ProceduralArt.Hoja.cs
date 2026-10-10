@@ -19,10 +19,16 @@ namespace AF.Presentation
     /// más cercano, Lulo, a 13,1 del haz claro). El brillo ancho se limita a una mezcla del 8 % con <c>hoja_brillo</c> (ΔE00
     /// ≥ 10 de Lulo); solo las líneas de 2 dp o menos (aristas de los pliegues, filo del nervio) llevan <c>hoja_brillo</c> a
     /// más alfa, como permite la excepción de la regla.</para>
-    /// <para>No reutiliza <c>DrawFrond</c>: sus foliolos sueltos de açaí van en <c>hoja_clara</c> (#5DBB3F, ΔE00 7,8 de Lulo)
-    /// y dejarían una superficie de más de 2 dp junto a la cuia por debajo de 10 (T03 ya la descartó para la Hoja por dejar la
-    /// boca a la vista y confundirse con el follaje del marco). La hoja de palma (larga, plicada y con el envés plegado) la
-    /// dibuja <c>DrawHojaPalm</c> píxel a píxel; <c>DrawLeafShape</c> y <c>DrawLeaf</c> los reutiliza el Brote.</para>
+    /// <para>Se aparta de «reutiliza <c>DrawFrond</c>» (T11) por la silueta, como ya hizo T03 (ver
+    /// <c>ProceduralArt.Mechanics</c>): la fronda pinnada de açaí es un raquis con foliolos sueltos que cuelgan, deja la boca a
+    /// la vista entre los foliolos y se confunde con el follaje que enmarca la pantalla, mientras que b.2 M1 pide una hoja de
+    /// palma alargada y plegada que tape la boca como una tapa.</para>
+    /// <para>Tampoco reutiliza <c>DrawPalmLeaf</c> de T03, que sigue dibujando el icono de la Hoja (<c>MechanicIcon</c>) con la
+    /// misma silueta (larga, en punta y con el envés oscuro debajo). Esa rutina encadena discos de dos colores planos (haz y
+    /// envés) con trazos de pliegue encima: no da degradado de luz, ni caras de pliegue en luz y en sombra, ni brillo, y es la
+    /// pieza más grande de la cuia (2,4 u), donde D-003 pide volumen y luz de juego. La hoja de palma la dibuja
+    /// <c>DrawHojaPalm</c> píxel a píxel, cerrada (<see cref="HojaPalm"/>) y abierta (<see cref="HojaFlat"/>), y de esta última
+    /// sale la silueta clara de <see cref="HojaGlow"/>. <c>DrawLeafShape</c> y <c>DrawLeaf</c> los reutiliza el Brote.</para>
     /// </remarks>
     public sealed partial class ProceduralArt
     {
@@ -61,6 +67,7 @@ namespace AF.Presentation
 
         private Sprite? _hojaPalm;
         private Sprite? _hojaFlat;
+        private Sprite? _hojaGlow;
         private Sprite? _hojaBadge;
 
         /// <summary>
@@ -72,6 +79,13 @@ namespace AF.Presentation
 
         /// <summary>La hoja ya abierta y plana (<see cref="HojaFlatWidthU"/> × <see cref="HojaFlatHeightU"/> u), la que cae girando. Ya coloreada.</summary>
         internal Sprite HojaFlat => _hojaFlat != null ? _hojaFlat : (_hojaFlat = BuildHojaFlat());
+
+        /// <summary>
+        /// La hoja abierta en luz: la silueta de <see cref="HojaFlat"/> casi blanca, con los pliegues y el nervio apenas
+        /// marcados (lo tiñe <see cref="Palette.Glint"/>). Va encima de la hoja que cae y la aclara mientras se desvanece en el
+        /// agua, porque el tinte de una <c>Image</c> multiplica y no puede aclarar.
+        /// </summary>
+        internal Sprite HojaGlow => _hojaGlow != null ? _hojaGlow : (_hojaGlow = BuildHojaGlow());
 
         /// <summary>Medallón pulido redondo (blanco y grises con bisel y brillo; lo tiñe <see cref="HojaBadgeColor"/>).</summary>
         internal Sprite HojaBadge => _hojaBadge != null ? _hojaBadge : (_hojaBadge = BuildHojaBadge());
@@ -92,14 +106,42 @@ namespace AF.Presentation
 
         private Sprite BuildHojaFlat()
         {
+            return MakeSprite(DrawHojaFlat(), "mech_hoja_flat", new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        private Sprite BuildHojaGlow()
+        {
+            // La misma hoja abierta, casi blanca: el haz más claro (#3A8A55, luminancia ~0,42) queda en 1 y la nervadura baja
+            // hasta 0,84, para que la luz siga leyéndose como hoja. Conserva el alfa (la silueta y su borde suavizado).
+            PixelCanvas pc = DrawHojaFlat();
+            for (int y = 0; y < pc.Height; y++)
+            {
+                for (int x = 0; x < pc.Width; x++)
+                {
+                    Color c = pc.Get(x, y);
+                    if (c.a <= 0f)
+                    {
+                        continue;
+                    }
+
+                    float lum = (0.30f * c.r) + (0.59f * c.g) + (0.11f * c.b);
+                    float v = Mathf.Lerp(0.84f, 1f, Mathf.Clamp01(lum / 0.42f));
+                    pc.Set(x, y, new Color(v, v, v, c.a));
+                }
+            }
+
+            return MakeSprite(pc, "mech_hoja_glow", new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        // La hoja ya abierta: casi recta, con las puntas apenas caídas.
+        private static PixelCanvas DrawHojaFlat()
+        {
             const float k = MechanicPxPerU / 96f;
             int w = Mathf.RoundToInt(HojaFlatWidthU * MechanicPxPerU);
             int h = Mathf.RoundToInt(HojaFlatHeightU * MechanicPxPerU);
             var pc = new PixelCanvas(w, h);
-
-            // Ya abierta: casi recta, con las puntas apenas caídas.
             DrawHojaPalm(pc, w * 0.5f, h * 0.55f, w - (8f * k), 6f * k, 2f, 0.21f * MechanicPxPerU, 4f * k, 4, false, k);
-            return MakeSprite(pc, "mech_hoja_flat", new Vector2(0.5f, 0.5f), Vector4.zero);
+            return pc;
         }
 
         private Sprite BuildHojaBadge()

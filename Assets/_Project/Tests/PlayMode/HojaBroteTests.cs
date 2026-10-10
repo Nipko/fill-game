@@ -146,6 +146,19 @@ namespace AF.Tests.PlayMode
             Assert.That(leaf.FallScale, Is.LessThan(1f).And.GreaterThan(HojaOverlay.WaterScale), "encoge hacia el agua");
             Assert.That(leaf.FruitAlpha, Is.LessThan(0.05f), "la fruta llave ya se disolvió");
             Assert.That(view.LiquidLevel, Is.GreaterThan(0.5f), "con el aguaje dentro");
+            Assert.That(leaf.GlowAlpha, Is.EqualTo(0f), "cae con su verde, sin aclararse todavía");
+
+            // Toca el agua: se desvanece aclarándose hacia la luz (Glint), sin mezclarse con el tinte, y acaba antes que el paso.
+            float mid = (HojaOverlay.SplashAt + HojaOverlay.GoneAt) * 0.5f;
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Open, hoja, mid);
+            Assert.That(leaf.StepProgress, Is.InRange(HojaOverlay.SplashAt, HojaOverlay.GoneAt), "a mitad del desvanecimiento");
+            Assert.That(leaf.FallingLeafVisible, Is.True);
+            Assert.That(leaf.GlowAlpha, Is.GreaterThan(0.2f), "la hoja se aclara hacia la luz");
+            Assert.That(leaf.GlowAlpha + leaf.FallAlpha, Is.LessThan(0.9f), "y se desvanece");
+            Assert.That(leaf.FallScale, Is.LessThan(HojaOverlay.WaterScale).And.GreaterThan(HojaOverlay.GoneScale), "encoge al hundirse");
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Open, hoja, HojaOverlay.GoneAt + 0.04f);
+            Assert.That(leaf.IsAnimating, Is.True, "el paso sigue");
+            Assert.That(leaf.FallingLeafVisible || leaf.ClosedLeafVisible, Is.False, "pero de la hoja ya no queda nada");
 
             MechanicTestKit.StepToIdle(boot, 6000);
             MechanicTestKit.AssertViewMatchesModel(boot);
@@ -384,7 +397,8 @@ namespace AF.Tests.PlayMode
             return result.State!;
         }
 
-        // Estado visible de las piezas bajo un ancla: activación, pose relativa al ancla, color y sprite de cada una.
+        // Estado visible de las piezas bajo un ancla: activación, pose relativa al ancla, Image.enabled (la hoja que cae y su
+        // luz se muestran y se ocultan así; como en CuiaOverlayTests), color y sprite de cada una.
         private static string Signature(Transform anchor)
         {
             var sb = new StringBuilder(512);
@@ -402,7 +416,7 @@ namespace AF.Tests.PlayMode
                 var image = node.GetComponent<UnityEngine.UI.Image>();
                 if (image != null)
                 {
-                    sb.Append(image.color.ToString("F3")).Append(image.sprite != null ? image.sprite.name : "-");
+                    sb.Append(image.enabled ? 'E' : 'D').Append(image.color.ToString("F3")).Append(image.sprite != null ? image.sprite.name : "-");
                 }
 
                 sb.Append('|');
