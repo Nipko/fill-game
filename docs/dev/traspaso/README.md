@@ -106,9 +106,14 @@ La sesión del portátil usaba la herramienta Workflow con equipos de agentes Op
 > - destellos, esquirlas y burbujas;
 > - etiquetas D-009 en Jugar y en los modales.
 >
+> **Ola 3 integrada el 2026-10-10:**
+> - etiquetas D-009 en el HUD y en Siguiente, chip de Aguas turbias y contador de Lluvia y Piraña;
+> - aspecto y desbloqueo al estilo Magic Sort de Hoja, Brote, Matapi, Liana con fruta, Remolino, Barro, Lluvia y Piraña;
+> - Aguas turbias en el shader (pardo con trama y «?»), revelado por la regla y frente de luz de la Luciérnaga;
+> - tarjeta previa (apagada hasta la ola 4) y lógica de la Luciérnaga (regalo del 100, semillas, vídeo).
+>
 > **Pendiente:**
-> - ola 3: HUD, aspecto y animación de cada mecánica, y lógica de la Luciérnaga;
-> - ola 4: tarjeta previa y tutoriales, y la Luciérnaga en la bandeja;
+> - ola 4 (en curso): tarjeta previa y tutoriales (T13), la Luciérnaga en la bandeja (T14) y el Barro mate (T20, arreglo de T16);
 > - ola 5: verificación final.
 >
 > Qué probar en el teléfono tras cada push: en el mensaje del commit.
