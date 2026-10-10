@@ -17,7 +17,8 @@ namespace AF.Presentation
     /// dosel, <see cref="TroopLayer"/>) entra por la boca y su racha florece en 100 ms con interpolación OKLab, de abajo arriba
     /// en la cuia; la última floración termina en T. El calendario lo calcula una vez <see cref="IntroChoreography"/> y todo se
     /// evalúa por tiempo, en un Canvas anidado propio delante de las cuias (<see cref="Layer"/>) con pools preasignados: 7 tiras
-    /// de agua, 16 chorritos, 24 frutas (un atlas), 24 penachos, 24 anillos aditivos (<see cref="FxLayer"/> solo tiene 6) y 20
+    /// de agua, 16 chorritos, 24 frutas (un atlas), 24 penachos, 24 anillos aditivos (propios: el pool común de
+    /// <see cref="FxLayer"/>, de 44 partículas y 8 brillos aditivos, es de los efectos del juego) y 20
     /// gotas; y, en la capa de la tropa, por detrás de la rama (<see cref="AttachFront"/>: labio &lt; rama &lt; tropa, guion
     /// §4.6.5), el labio del río que desborda la orilla hasta el canto del panel con 6 puntos de espuma en la cresta, al 70 %
     /// en la franja de la rama para que se lea «rama sobre la crecida» y no una tabla. Presupuesto del guion §13, con contador
@@ -35,8 +36,10 @@ namespace AF.Presentation
     /// capítulos (guion §17). Hasta entonces el GDD manda y esto es una propuesta en su rama.</para>
     /// <para><see cref="Complete"/> deja el estado final en el mismo fotograma; si fue un salto, los restos (frutas, anillos,
     /// chorritos, tiras, capa del río y tropa) se funden en ≤ 100 ms en su sitio, sin moverse ni impactos tardíos.</para>
-    /// <para>Las dosis ocultas (Aguas turbias) se llenan de río como las demás, no reciben fruta y pasan todas a la vez al pardo
-    /// opaco #8A7B6A con su «?» en el fotograma del primer impacto (07 §4.3; <see cref="Mechanics.MurkyMarks"/>). El Barro no es
+    /// <para>Las dosis ocultas (Aguas turbias) se llenan de río como las demás, no reciben fruta ni nota y pasan todas a la vez al
+    /// pardo opaco #8A7B6A con su trama y su «?» (los pinta el shader del líquido) y la insignia «?×n» en el fotograma del primer
+    /// impacto (02 §4.2; 07 §4.3; D-010; <see cref="Mechanics.MurkyMarks"/>); con <see cref="ReduceMotion"/>, se funden ya
+    /// turbias, con su trama y su «?», y la insignia sale al final. El Barro no es
     /// una racha: tampoco recibe fruta ni florece, y aparece con <see cref="Palette.Mud"/> y sus grumos en ese mismo fotograma
     /// (la regla de 02 §4.2 aplicada al Barro [P]).</para>
     /// <para>Con <see cref="ReduceMotion"/> (07 §7.8, cuando exista el ajuste): fundido de 250 ms al estado final y, en modo
@@ -425,8 +428,12 @@ namespace AF.Presentation
                     views[i].SetDose(k, Color.clear, 0f, 0);
                 }
 
-                views[i].Murky.Clear(); // el «?» y los grumos aparecen en el primer impacto
+                views[i].Murky.Clear(); // la trama, el «?», la insignia y los grumos aparecen en el primer impacto
                 views[i].Mud.Clear();
+                if (board[i].HasHidden)
+                {
+                    views[i].Murky.Prewarm(); // los sprites de la insignia «?×n», ya: el primer impacto no crea texturas (A10)
+                }
             }
 
             PlanDrops(water);
@@ -731,7 +738,12 @@ namespace AF.Presentation
                         int tint = final.ColorAt(k);
                         bool inert = hidden || tint == Cuia.MudColor; // ocultas y Barro: sin tinte ni patrón
                         Color c = hidden ? MurkyColor : Palette.Tint(tint);
-                        v.SetDose(k, new Color(c.r, c.g, c.b, s), 1f, inert ? 0 : tint);
+                        var faded = new Color(c.r, c.g, c.b, s);
+                        v.SetDose(k, faded, 1f, inert ? 0 : tint);
+                        if (hidden)
+                        {
+                            v.Liquid.SetDose(k, faded, 1f, 0, LiquidGraphic.MurkyLook.Hidden); // ya turbia: trama y «?»
+                        }
                     }
                 }
 
