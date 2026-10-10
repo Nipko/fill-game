@@ -137,9 +137,14 @@ namespace AF.Tests.PlayMode
             Assert.That(rig.Animator.Steps.IsRunning(AF.Presentation.Mechanics.MechanicStepKind.RainDrop, 4), Is.True, "la gota cae al llegar el caudal");
             Assert.That(rig.Views[4].LiquidLevel, Is.InRange(1f, 2f), "la gota a medio caer");
 
-            // La gota termina (550 + 280 = 830 ms) antes de que el origen vuelva a su ranura (870 ms).
-            rig.Run(256);
-            Assert.That(rig.Animator.IsIdle, Is.False, "el origen aún vuelve");
+            // La gota la anima el overlay de la Lluvia (desde T17, 500 ms [P]; con el paso por defecto de T07 eran 280): al
+            // terminar su paso, la Lluvia queda en su estado final.
+            for (int t = 0; t < 2000 && rig.Animator.Steps.IsRunning(AF.Presentation.Mechanics.MechanicStepKind.RainDrop, 4); t += FrameMs)
+            {
+                rig.Run(FrameMs);
+            }
+
+            Assert.That(rig.Animator.Steps.IsRunning(AF.Presentation.Mechanics.MechanicStepKind.RainDrop, 4), Is.False, "la gota terminó");
             Assert.That(rig.Animator.ShownOf(4), Is.EqualTo(after[4]), "la Lluvia termina en su estado final");
 
             rig.RunUntilIdle(3000, null);
