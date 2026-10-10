@@ -7,7 +7,8 @@ namespace AF.Presentation
     /// Arte procedural [P] de la Hoja (M1; 02 §9.1 M1; propuesta de D-007 b.2 M1; D-003 «Selva brillante premium»): la hoja
     /// de palma cerrada, plegada y tendida sobre la boca (<see cref="HojaPalm"/>), la misma hoja ya abierta y plana que cae
     /// girando al agua (<see cref="HojaFlat"/>), sus siluetas en luz para el desvanecimiento (<see cref="HojaGlow"/> y
-    /// <see cref="HojaFruitGlow"/>) y el medallón pulido sobre el que va la fruta llave (<see cref="HojaBadge"/>).
+    /// <see cref="HojaFruitGlow"/>), el medallón pulido sobre el que va la fruta llave (<see cref="HojaBadge"/>) y lo que sube
+    /// cada fruta llave girada (<see cref="HojaFruitTop"/>).
     /// La silueta es alargada, con puntas y pliegues de palma, para no confundirse con la hoja redonda de Victoria amazonica de
     /// la Hoja escudo (glosario §6.3; 02 §9.1).
     /// </summary>
@@ -66,6 +67,12 @@ namespace AF.Presentation
         /// <summary>Margen del sprite del medallón alrededor de la forma (u): deja sitio a la sombra.</summary>
         public const float HojaBadgePadU = 3f / MechanicPxPerU;
 
+        /// <summary>
+        /// Giro de la fruta llave sobre el medallón (grados; negativo: hacia la derecha) [P]: rompe la simetría de ojo. Con él se
+        /// mide lo que sube cada fruta (<see cref="HojaFruitTop"/>).
+        /// </summary>
+        public const float HojaFruitTiltDeg = -20f;
+
         /// <summary>Haz de la hoja en luz #3A8A55 [P]: ΔE00 13,1 de Lulo, el tinte más cercano.</summary>
         public static readonly Color HojaFaceLight = Palette.Hex(0x3A8A55);
 
@@ -83,6 +90,7 @@ namespace AF.Presentation
         private Sprite? _hojaGlow;
         private Sprite? _hojaBadge;
         private readonly Sprite?[] _hojaFruitGlow = new Sprite?[15]; // tintes 1-14, como el atlas de frutas
+        private readonly float[] _hojaFruitTop = new float[15];
 
         /// <summary>
         /// Hoja de palma cerrada (<see cref="HojaPalmWidthU"/> × <see cref="HojaPalmHeightU"/> u): tendida sobre la boca como
@@ -116,7 +124,7 @@ namespace AF.Presentation
         /// <remarks>
         /// Se dibuja con el respaldo procedural de la fruta. Si algún día el atlas sale de los PNG <c>fruta_*</c>
         /// (<see cref="FruitFlightAtlasResource"/>), la silueta de la luz puede no casar del todo con la del PNG; la luz solo dura
-        /// el fundido de la llave (unos 90 ms × factor).
+        /// el fundido de la llave (unos 75 ms × factor).
         /// </remarks>
         internal Sprite HojaFruitGlow(int tint)
         {
@@ -129,6 +137,20 @@ namespace AF.Presentation
             }
 
             return sprite;
+        }
+
+        /// <summary>
+        /// Lo más alto de la fruta llave del tinte <paramref name="tint"/>, girada <see cref="HojaFruitTiltDeg"/>, sobre el centro
+        /// de su celda, en fracción del lado de la celda (0,5 = el borde): unos 0,36 el aguaje y 0,5 el lulo, al que el giro
+        /// sube el cáliz hasta el borde. Con eso la llave no pasa de su tope en los tableros de 3 filas aunque la fruta suba más
+        /// que el medallón. Se mide (alfa ≥ 0,5) sobre el dibujo procedural al generar <see cref="HojaFruitGlow"/>, con su
+        /// misma salvedad para los PNG <c>fruta_*</c>; perezosa como la luz: el overlay la pide al mostrar la llave.
+        /// </summary>
+        internal float HojaFruitTop(int tint)
+        {
+            int k = Mathf.Clamp(tint, 1, 14);
+            HojaFruitGlow(k);
+            return _hojaFruitTop[k];
         }
 
         private Sprite BuildHojaPalm()
@@ -164,8 +186,39 @@ namespace AF.Presentation
             // La fruta en su celda, casi blanca: de 0,86 en lo más oscuro (contorno de tinta, escamas) a 1 desde luminancia 0,6.
             var pc = new PixelCanvas(FruitFlightPx, FruitFlightPx);
             DrawFruit(pc, tint, 0f, 0f);
+            _hojaFruitTop[tint] = TiltedTop(pc, HojaFruitTiltDeg);
             Whiten(pc, 0.6f, 0.86f);
             return MakeSprite(pc, "mech_hoja_fruit_glow_" + TintIds[tint], new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        // Lo más alto, sobre el centro y en fracción del lado, de los píxeles con alfa ≥ 0,5 del lienzo girado deg grados
+        // alrededor de su centro (positivo: antihorario, como el giro de una Image): el centro de cada píxel, más medio píxel.
+        private static float TiltedTop(PixelCanvas pc, float deg)
+        {
+            float a = deg * Mathf.Deg2Rad;
+            float sin = Mathf.Sin(a);
+            float cos = Mathf.Cos(a);
+            float cx = pc.Width * 0.5f;
+            float cy = pc.Height * 0.5f;
+            float top = 0f;
+            for (int y = 0; y < pc.Height; y++)
+            {
+                for (int x = 0; x < pc.Width; x++)
+                {
+                    if (pc.Get(x, y).a < 0.5f)
+                    {
+                        continue;
+                    }
+
+                    float rotatedY = (((x + 0.5f) - cx) * sin) + (((y + 0.5f) - cy) * cos) + 0.5f;
+                    if (rotatedY > top)
+                    {
+                        top = rotatedY;
+                    }
+                }
+            }
+
+            return top / pc.Width;
         }
 
         // Cada píxel pasa a gris claro según su luminancia (de floor en negro a 1 desde refLum), con el mismo alfa: la silueta y

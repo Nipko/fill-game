@@ -28,6 +28,8 @@ namespace AF.Tests.PlayMode
     {
         private const int Aguaje = 4; // índice de motor (glosario §9)
         private const int CamuCamu = 6;
+        private const int Lulo = 11;
+        private const int RioNegro = 14;
 
         private static ProceduralArt? s_art;
         private MechanicTestKit.Rig? _rig;
@@ -139,13 +141,21 @@ namespace AF.Tests.PlayMode
             MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Open, hoja, 4000);
             Assert.That(leaf.IsAnimating, Is.True, "el paso Open llegó al overlay de la Hoja");
 
-            // La llave encaja (ficha de Magic Sort §3.3): salta a 1,3× y se queda opaca, y después se deshace en luz (Glint).
+            // Mientras la boca del origen tapa la de la Hoja (D-006), la llave solo sube con la hoja que se abre: aún no salta.
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.Open, hoja, 0.14f);
+            Assert.That(leaf.StepProgress, Is.LessThan(HojaOverlay.FruitPopStart), "antes del salto");
+            Assert.That(leaf.FruitAlpha, Is.GreaterThan(0.99f), "la fruta llave, opaca");
+            Assert.That(leaf.FruitScale, Is.EqualTo(1f).Within(1e-4f), "todavía sin saltar");
+
+            // Con la boca ya libre, la llave encaja (ficha de Magic Sort §3.3): salta a 1,3× y se queda opaca, sin pasar del
+            // tope (no invade la fila de arriba), y después se deshace en luz (Glint).
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Open, hoja, 0.35f);
             Assert.That(leaf.StepProgress, Is.InRange(HojaOverlay.FruitPopEnd, HojaOverlay.FruitHoldEnd), "con la llave quieta");
             Assert.That(leaf.FruitAlpha, Is.GreaterThan(0.99f), "la fruta llave, opaca");
             Assert.That(leaf.FruitScale, Is.EqualTo(HojaOverlay.FruitPopScale).Within(0.01f), "ya saltó a 1,3×");
             Assert.That(leaf.FruitGlowAlpha, Is.EqualTo(0f), "todavía sin luz");
-            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Open, hoja, 0.24f);
+            Assert.That(leaf.KeyTopAboveLipU, Is.GreaterThan(0.5f).And.LessThanOrEqualTo(HojaOverlay.KeyTopMaxU), "el medallón, a la vista y bajo el tope");
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Open, hoja, 0.46f);
             Assert.That(leaf.StepProgress, Is.InRange(HojaOverlay.FruitHoldEnd, HojaOverlay.FruitFadeEnd), "a mitad del fundido de la llave");
             Assert.That(leaf.FruitGlowAlpha, Is.GreaterThan(0.3f), "la llave se aclara hacia la luz");
             Assert.That(leaf.FruitGlowAlpha + (leaf.FruitAlpha * (1f - leaf.FruitGlowAlpha)), Is.LessThan(0.95f), "y se desvanece");
@@ -159,9 +169,11 @@ namespace AF.Tests.PlayMode
             Assert.That(leaf.FallDropU, Is.GreaterThan(0.3f), "ya está por debajo de la boca");
             Assert.That(Mathf.Abs(leaf.FallAngleDeg), Is.GreaterThan(20f), "cae girando");
             Assert.That(leaf.FallScale, Is.LessThan(1f).And.GreaterThan(HojaOverlay.WaterScale), "encoge hacia el agua");
-            Assert.That(leaf.FruitAlpha + leaf.FruitGlowAlpha, Is.LessThan(0.05f), "la fruta llave ya se disolvió");
             Assert.That(view.LiquidLevel, Is.GreaterThan(0.5f), "con el aguaje dentro");
             Assert.That(leaf.GlowAlpha, Is.EqualTo(0f), "cae con su verde, sin aclararse todavía");
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Open, hoja, HojaOverlay.FruitFadeEnd + 0.03f);
+            Assert.That(leaf.FruitAlpha + leaf.FruitGlowAlpha, Is.LessThan(0.05f), "la fruta llave ya se disolvió");
+            Assert.That(leaf.FallingLeafVisible && leaf.FallAlpha > 0.95f, Is.True, "y la hoja sigue cayendo, entera");
 
             // Toca el agua: se desvanece aclarándose hacia la luz (Glint), sin mezclarse con el tinte, y acaba antes que el paso.
             float mid = (HojaOverlay.SplashAt + HojaOverlay.GoneAt) * 0.5f;
@@ -179,6 +191,55 @@ namespace AF.Tests.PlayMode
             MechanicTestKit.AssertViewMatchesModel(boot);
             Assert.That(boot.Flow!.Session.Current[hoja].Mechanic, Is.EqualTo(MechanicType.None));
             Assert.That(leaf.Visible || leaf.FallingLeafVisible, Is.False, "al terminar, oculta");
+        }
+
+        [UnityTest]
+        public IEnumerator Hoja43_KeySeatsWithTheMouthClear()
+        {
+            // La llave encaja (FruitPopEnd) y se queda quieta hasta FruitHoldEnd con el medallón a la vista: el origen, que D-006
+            // dibuja delante de todo con la boca sobre la del destino, ya ha dejado libre la boca al volver a su ranura. En el 43
+            // real, con los tiempos de vertido por defecto (08 §9: anim_return_ms es de Remote Config).
+            yield return MechanicTestKit.LoadPlaying(43);
+            GameBootstrap boot = GameBootstrap.Current!;
+            int hoja = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Hoja);
+            Pour[] path = Trigger(boot, (ev, b, a) => (ev.HojaOpenedMask & (1 << hoja)) != 0);
+            MechanicTestKit.PlayPrefix(boot, path);
+            Pour opening = path[path.Length - 1];
+            CuiaView view = boot.View!.Views[hoja];
+            CuiaView source = boot.View.Views[opening.Source];
+            HojaOverlay leaf = HojaOf(view);
+            MechanicTestKit.TapPour(boot, opening, out _);
+            MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Open, hoja, 4000);
+
+            // Al empezar el Open el origen aún vierte (su retorno arranca 20 ms después, al acabar la cola del chorro): la
+            // comprobación tiene que ver ese solape, o el resto del caso no mediría nada.
+            bool coveredAtStart = SourceCoversKey(source, view, leaf);
+            Assert.That(coveredAtStart, Is.True, "al empezar el Open, la boca del origen tapa la de la Hoja (D-006)");
+            float clearFrom = -1f;
+            int seated = 0;
+            int inFlight = 0;
+            while (leaf.IsAnimating && leaf.StepProgress < HojaOverlay.FruitHoldEnd)
+            {
+                float t = leaf.StepProgress;
+                bool covered = SourceCoversKey(source, view, leaf);
+                clearFrom = covered ? -1f : (clearFrom < 0f ? t : clearFrom);
+                if (t >= HojaOverlay.FruitPopEnd)
+                {
+                    seated++;
+                    inFlight += source.InFlight ? 1 : 0;
+                    Assert.That(covered, Is.False, "t = " + t.ToString("F3") + ": la silueta del origen tapa la llave encajada");
+                }
+
+                PlayModeHelpers.TickExact(boot, 4);
+            }
+
+            Assert.That(seated, Is.GreaterThan(10), "pasos de 4 ms con la llave encajada y quieta");
+            Assert.That(clearFrom, Is.InRange(0f, HojaOverlay.FruitPopEnd), "la boca queda libre antes de que encaje la llave");
+            TestContext.WriteLine("Nivel 43: el origen deja libre la llave desde t = " + clearFrom.ToString("F3") + " (salto de "
+                + HojaOverlay.FruitPopStart.ToString("F2") + " a " + HojaOverlay.FruitPopEnd.ToString("F2") + "); sigue volviendo en "
+                + inFlight + " de los " + seated + " pasos de 4 ms con la llave encajada.");
+            MechanicTestKit.StepToIdle(boot, 6000);
+            MechanicTestKit.AssertViewMatchesModel(boot);
         }
 
         [UnityTest]
@@ -250,6 +311,103 @@ namespace AF.Tests.PlayMode
             Assert.That(leaf.Visible || leaf.ClosedLeafVisible || leaf.FallingLeafVisible || leaf.FruitVisible, Is.False, "abierta: nada de la hoja");
             MechanicStepRecord open = MechanicTestKit.Record(_rig.Animator, MechanicStepKind.Open, 0);
             Assert.That(open.Snapped, Is.True, "el registro anota el cierre anticipado");
+        }
+
+        [UnityTest]
+        public IEnumerator HojaOpen_KeyPopsLate_UnderTheRowAbove()
+        {
+            // La llave salta en la ventana en que el origen ya dejó libre la boca (D-006; Hoja43_KeySeatsWithTheMouthClear lo
+            // mide con la pose del origen) y, en todo el paso, el medallón no pasa de KeyTopMaxU sobre lo alto de la cuia: no
+            // invade el marco ni la repisa de la fila de arriba en un tablero de 3 filas.
+            yield return null;
+            BoardState before = Board(
+                new[] { new int[0], new[] { 3, 4, 4 }, new[] { 4, 4 }, new[] { 3, 3, 3 } },
+                new[] { new MechanicSpec(MechanicType.Hoja, key: Aguaje), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
+            _rig = new MechanicTestKit.Rig(Art, before);
+            HojaOverlay leaf = HojaOf(_rig.Views[0]);
+            float restTop = leaf.KeyTopAboveLipU;
+            Assert.That(restTop, Is.EqualTo(0.70f).Within(0.01f), "en reposo, el medallón llega a 0,70 u sobre la boca");
+            _rig.Pour(before, 1, 0, out _);
+            RunUntil(_rig, () => _rig.Animator.Steps.IsRunning(MechanicStepKind.Open, 0), 3000);
+
+            float maxTop = 0f;
+            bool held = false;
+            int frames = 0;
+            while (leaf.IsAnimating && frames < 200)
+            {
+                float t = leaf.StepProgress;
+                if (leaf.FruitVisible)
+                {
+                    maxTop = Mathf.Max(maxTop, leaf.KeyTopAboveLipU);
+                }
+
+                if (t < HojaOverlay.FruitPopStart)
+                {
+                    Assert.That(leaf.FruitScale, Is.EqualTo(1f).Within(1e-4f), "t = " + t + ": sin saltar mientras el origen tapa la boca");
+                }
+                else if (t >= HojaOverlay.FruitPopEnd && t < HojaOverlay.FruitHoldEnd)
+                {
+                    held = true;
+                    Assert.That(leaf.FruitScale, Is.EqualTo(HojaOverlay.FruitPopScale).Within(0.01f), "t = " + t + ": la llave encajada, a 1,3×");
+                    Assert.That(leaf.FruitAlpha, Is.GreaterThan(0.99f), "t = " + t + ": y opaca");
+                    Assert.That(leaf.FruitGlowAlpha, Is.EqualTo(0f), "t = " + t + ": todavía sin luz");
+                }
+
+                _rig.Tick(PlayModeHelpers.FrameMs);
+                frames++;
+            }
+
+            Assert.That(held, Is.True, "algún fotograma con la llave encajada y quieta");
+            Assert.That(maxTop, Is.GreaterThan(restTop), "sube con la hoja");
+            Assert.That(maxTop, Is.LessThanOrEqualTo(HojaOverlay.KeyTopMaxU + 1e-4f), "y el medallón no pasa del tope en el salto");
+            TestContext.WriteLine("Borde de arriba del medallón: " + restTop.ToString("F3") + " u en reposo y " + maxTop.ToString("F3") + " u como mucho.");
+        }
+
+        [UnityTest]
+        public IEnumerator HojaOpen_EveryKeyStaysUnderTheCap()
+        {
+            // Con cualquiera de las 14 llaves, en reposo y en todo el paso, ni el medallón ni la fruta girada pasan de KeyTopMaxU
+            // sobre lo alto de la cuia. Las frutas que más suben con el giro son el lulo (el cáliz llega al borde de su celda; es
+            // la llave del 198, con la Hoja en la fila 1 de un tablero de 3 filas) y la hoja del Río Negro (la del 92, en la fila
+            // 2): con ellas la llave entera baja hasta el tope.
+            yield return null;
+            var line = new StringBuilder("Lo más alto de la llave sobre la boca (u, en reposo / en el paso):");
+            for (int key = 1; key <= 14; key++)
+            {
+                int other = key == 3 ? 4 : 3;
+                BoardState before = Board(
+                    new[] { new int[0], new[] { other, key, key }, new[] { key, key }, new[] { other, other, other } },
+                    new[] { new MechanicSpec(MechanicType.Hoja, key: key), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
+                _rig = new MechanicTestKit.Rig(Art, before);
+                HojaOverlay leaf = HojaOf(_rig.Views[0]);
+                Assert.That(leaf.ShownKey, Is.EqualTo(key));
+                float rest = Mathf.Max(leaf.KeyTopAboveLipU, leaf.FruitTopAboveLipU);
+                float max = rest;
+                _rig.Pour(before, 1, 0, out _);
+                RunUntil(_rig, () => _rig.Animator.Steps.IsRunning(MechanicStepKind.Open, 0), 3000);
+                for (int frames = 0; leaf.IsAnimating && frames < 200; frames++)
+                {
+                    if (leaf.FruitVisible)
+                    {
+                        max = Mathf.Max(max, Mathf.Max(leaf.KeyTopAboveLipU, leaf.FruitTopAboveLipU));
+                    }
+
+                    _rig.Tick(PlayModeHelpers.FrameMs);
+                }
+
+                Assert.That(max, Is.LessThanOrEqualTo(HojaOverlay.KeyTopMaxU + 1e-4f), "llave " + key + ": no pasa del tope");
+                if (key == Lulo || key == RioNegro)
+                {
+                    Assert.That(max, Is.EqualTo(HojaOverlay.KeyTopMaxU).Within(1e-3f), "llave " + key + ": llega al tope, la llave baja por la fruta");
+                }
+
+                line.Append(' ').Append(key).Append(": ").Append(rest.ToString("F2")).Append(" / ").Append(max.ToString("F2")).Append(';');
+                _rig.Dispose();
+                _rig = null;
+                yield return null;
+            }
+
+            TestContext.WriteLine(line.ToString());
         }
 
         [UnityTest]
@@ -405,6 +563,62 @@ namespace AF.Tests.PlayMode
             Pour[]? path = MechanicTestKit.FindTrigger(boot.Flow!, wanted);
             Assert.That(path, Is.Not.Null, "vertidos que disparan el evento en el nivel " + boot.Flow!.LevelNumber);
             return path!;
+        }
+
+        // ¿La silueta del origen, en su pose de ahora, tapa algún punto del medallón de la llave (rejilla de 5 × 5 puntos)? El
+        // medallón crece la mitad que la fruta y su borde de arriba es KeyTopAboveLipU; la silueta, la de CuiaGeometry (cuerpo,
+        // hombro, cuello y borde de fibra, con 0,1 u más arriba para el cordón) en el espacio del contenedor del tablero.
+        private static bool SourceCoversKey(CuiaView source, CuiaView hoja, HojaOverlay leaf)
+        {
+            float badgeScale = 1f + (0.5f * (leaf.FruitScale - 1f));
+            float halfW = 0.5f * ProceduralArt.HojaBadgeWidthU * badgeScale;
+            float top = leaf.KeyTopAboveLipU;
+            float bottom = top - (ProceduralArt.HojaBadgeHeightU * badgeScale);
+            float u = hoja.Unit;
+            Vector2 lip = hoja.FootPosition + new Vector2(0f, hoja.HeightU * u);
+            Vector2 origin = source.FootPosition + source.BodyOffset;
+            float back = -source.BodyAngle * Mathf.Deg2Rad;
+            for (int ix = 0; ix <= 4; ix++)
+            {
+                for (int iy = 0; iy <= 4; iy++)
+                {
+                    var p = new Vector2(Mathf.Lerp(-halfW, halfW, ix / 4f), Mathf.Lerp(bottom, top, iy / 4f));
+                    Vector2 local = CuiaView.Rotate(lip + (p * u) - origin, back) / source.Unit;
+                    float half = SilhouetteHalfWidthU(local.y, source.HeightU);
+                    if (half >= 0f && Mathf.Abs(local.x) <= half)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        // Media anchura de la silueta de una cuia a la altura y (u desde el pie; CuiaGeometry), o −1 fuera de ella.
+        private static float SilhouetteHalfWidthU(float y, float heightU)
+        {
+            if (y < 0f || y > heightU + 0.1f)
+            {
+                return -1f;
+            }
+
+            float rimBottom = heightU - CuiaGeometry.RimU;
+            float neckBottom = rimBottom - CuiaGeometry.NeckU;
+            float shoulderBottom = neckBottom - CuiaGeometry.ShoulderU;
+            if (y >= rimBottom)
+            {
+                return CuiaGeometry.RimHalfWidthU;
+            }
+
+            if (y >= neckBottom)
+            {
+                return CuiaGeometry.NeckOuterHalfWidthU;
+            }
+
+            return y >= shoulderBottom
+                ? Mathf.Lerp(CuiaGeometry.ShoulderOuterHalfWidthU, CuiaGeometry.NeckOuterHalfWidthU, (y - shoulderBottom) / CuiaGeometry.ShoulderU)
+                : CuiaGeometry.BodyOuterHalfWidthU;
         }
 
         private static void RunUntil(MechanicTestKit.Rig rig, System.Func<bool> condition, int maxMs)

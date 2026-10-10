@@ -17,9 +17,13 @@ namespace AF.Presentation.Mechanics
     /// </summary>
     /// <remarks>
     /// <para><b>Desbloqueo</b> (paso Open de la etapa (b), <see cref="OpenStepMs"/> × <c>ctx.SpeedFactor</c>; b.2: «la hoja se
-    /// abre y cae girando al agua», 400-600 ms; ficha de Magic Sort §3): la hoja se levanta y se abre (el pliegue se aplana)
-    /// mientras la fruta llave salta a 1,3× y se queda opaca un instante (la llave encaja, §3.3); después suelta sus destellos
-    /// y se deshace en luz (<c>ApplyKey</c>). La hoja, ya plana, cae girando dentro de la cuia hasta la superficie del
+    /// abre y cae girando al agua», 400-600 ms; ficha de Magic Sort §3): la hoja se levanta un poco y se abre (el pliegue se
+    /// aplana) con la fruta llave encima. Cuando el origen ya dejó libre la boca (D-006 la tapa con la suya al principio del
+    /// paso), la fruta salta a 1,3× y se queda opaca un instante (la llave encaja, §3.3); después suelta sus destellos y se
+    /// deshace en luz, flotando sobre la boca mientras la hoja cae (<c>ApplyKey</c>). En el salto el medallón crece desde su
+    /// borde de arriba, y ni ese borde ni la fruta girada pasan de <see cref="KeyTopMaxU"/> (si la fruta sube más, la llave
+    /// entera baja): la llave no invade el marco ni la fila de arriba en los tableros de 3 filas.
+    /// La hoja, ya plana, cae girando dentro de la cuia hasta la superficie del
     /// agua recién vertida (la de <c>ctx.After</c>), salpica justo antes del contacto (<see cref="IBoardFx.Splash"/>, más clara
     /// que el agua) y, mientras se hunde y encoge, se aclara hacia <see cref="Palette.Glint"/> y se desvanece del todo en
     /// <see cref="GoneAt"/>, antes de que acabe el paso: nunca se mezcla con el tinte (D-003). Mientras anima (<see cref="IsAnimating"/>), la vista no llama a <see cref="Show"/>; la cola cierra el paso con
@@ -52,8 +56,21 @@ namespace AF.Presentation.Mechanics
         /// </summary>
         public const float LeafAboveLipU = 0.06f;
 
-        /// <summary>Lo que sube la hoja al abrirse (u).</summary>
-        public const float LiftU = 0.3f;
+        /// <summary>
+        /// Lo que sube la hoja al abrirse, y con ella la fruta llave (u) [P]: poco, para que la llave no pase de
+        /// <see cref="KeyTopMaxU"/>.
+        /// </summary>
+        public const float LiftU = 0.12f;
+
+        /// <summary>
+        /// Tope de lo más alto de la llave (el borde de arriba del medallón o la fruta girada, si sube más) sobre lo alto de la
+        /// cuia, también en el salto (u) [P]: unos 60 px a 1080 × 2340 con las cuias de 47 dp de los tableros de 3 filas (D-006),
+        /// por debajo de los 68-70 px que dejan entre los corchos de una fila y el marco del panel o la repisa de la fila de
+        /// arriba. En reposo, el medallón llega a 0,70 u; abierta la hoja, a 0,70 + <see cref="LiftU"/> = 0,82 u, y en el salto
+        /// crece hacia abajo y a los lados desde ese borde. Si la fruta girada sube más que el medallón (el cáliz del lulo llega
+        /// al borde de su celda: <see cref="ProceduralArt.HojaFruitTop"/>), la llave entera baja lo que haga falta.
+        /// </summary>
+        public const float KeyTopMaxU = 0.85f;
 
         /// <summary>Escala de la hoja al llegar al agua: cabe en la cavidad de 1,6 u.</summary>
         public const float WaterScale = 0.48f;
@@ -86,16 +103,27 @@ namespace AF.Presentation.Mechanics
         public const float SplashLighten = 0.35f;
 
         /// <summary>
+        /// Inicio del salto de la fruta llave (fracción del paso) [P]: cuando la hoja ya se abrió y el origen deja libre la boca.
+        /// D-006 dibuja la boca del origen 0,2-0,6 u sobre la del destino y delante de todo, justo donde está el medallón. El
+        /// paso empieza al llegar el caudal y el retorno del origen (<c>anim_return_ms</c>, 300 ms con los defaults de 08 §9),
+        /// 20 ms después, al acabar la cola del chorro: el medallón queda libre unos 120 ms después de que empiece el Open (t ≈
+        /// 0,24 en el 43, con la silueta del origen: Hoja43_KeySeatsWithTheMouthClear), así que el salto empieza con la boca
+        /// casi libre y la llave encaja (<see cref="FruitPopEnd"/>) con el origen ya a media vuelta. Con Reducir movimiento el
+        /// paso va a la mitad y el retorno no: el salto puede empezar con la boca aún tapada.
+        /// </summary>
+        public const float FruitPopStart = OpenEnd;
+
+        /// <summary>
         /// Fin del salto de la fruta llave hasta <see cref="FruitPopScale"/> (fracción del paso): la llave encaja (ficha de Magic
         /// Sort §3.3: el icono confirma antes de que llegue la luz).
         /// </summary>
-        public const float FruitPopEnd = 0.10f;
+        public const float FruitPopEnd = 0.30f;
 
-        /// <summary>Escala de la fruta llave al saltar.</summary>
+        /// <summary>Escala de la fruta llave al saltar (el medallón crece la mitad).</summary>
         public const float FruitPopScale = 1.3f;
 
         /// <summary>Hasta aquí la fruta llave se queda opaca, ya grande (fracción del paso); después se deshace en luz.</summary>
-        public const float FruitHoldEnd = 0.18f;
+        public const float FruitHoldEnd = 0.40f;
 
         /// <summary>Los destellos de la llave (fracción del paso): cuando la fruta empieza a deshacerse en luz.</summary>
         public const float SparkleAt = FruitHoldEnd;
@@ -107,10 +135,10 @@ namespace AF.Presentation.Mechanics
         /// Fin del fundido de la fruta llave (fracción del paso): se desvanece aclarándose hacia <see cref="Palette.Glint"/>, con
         /// la misma luz encima que la hoja. El medallón se va antes, en las dos terceras partes del fundido.
         /// </summary>
-        public const float FruitFadeEnd = 0.36f;
+        public const float FruitFadeEnd = 0.55f;
 
         /// <summary>Giro de la fruta llave sobre el medallón (grados; negativo: hacia la derecha) [P]: rompe la simetría de ojo.</summary>
-        public const float FruitTiltDeg = -20f;
+        public const float FruitTiltDeg = ProceduralArt.HojaFruitTiltDeg;
 
         // Parte del fundido de la llave en la que se va el medallón (antes que la fruta, que acaba en luz).
         private const float BadgeFadePart = 2f / 3f;
@@ -132,6 +160,7 @@ namespace AF.Presentation.Mechanics
         private RectTransform _slot = null!;
         private IBoardFx? _fx;
         private int _key;
+        private float _fruitTop; // lo que sube la fruta llave girada sobre su centro (fracción del lado de su celda)
         private float _u = 24f;
         private float _heightU = 5.6f;
         private float _elapsed = -1f;
@@ -178,6 +207,42 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>Opacidad de la luz que aclara la fruta llave al deshacerse (0 oculta).</summary>
         public float FruitGlowAlpha => _fruitGlow.enabled ? _fruitGlow.color.a : 0f;
+
+        /// <summary>
+        /// Borde de arriba del medallón de la llave sobre lo alto de la cuia (u; 0 con el medallón oculto): como mucho
+        /// <see cref="KeyTopMaxU"/>.
+        /// </summary>
+        public float KeyTopAboveLipU
+        {
+            get
+            {
+                if (!_badge.gameObject.activeSelf)
+                {
+                    return 0f;
+                }
+
+                RectTransform rt = _badge.rectTransform;
+                return (rt.anchoredPosition.y / _u) + (0.5f * ProceduralArt.HojaBadgeHeightU * Mathf.Abs(rt.localScale.y)) - _heightU;
+            }
+        }
+
+        /// <summary>
+        /// Lo más alto de la fruta llave girada sobre lo alto de la cuia (u; 0 con la fruta oculta): como mucho
+        /// <see cref="KeyTopMaxU"/>, como el medallón.
+        /// </summary>
+        public float FruitTopAboveLipU
+        {
+            get
+            {
+                if (!_fruit.gameObject.activeSelf)
+                {
+                    return 0f;
+                }
+
+                RectTransform rt = _fruit.rectTransform;
+                return (rt.anchoredPosition.y / _u) + (_fruitTop * FruitU * Mathf.Abs(rt.localScale.y)) - _heightU;
+            }
+        }
 
         /// <summary>Lo que ha bajado la hoja que cae respecto de la hoja cerrada (u; positivo hacia abajo; 0 sin caída).</summary>
         public float FallDropU => _fall.enabled ? ClosedCenterU - (_fall.rectTransform.anchoredPosition.y / _u) : 0f;
@@ -390,16 +455,27 @@ namespace AF.Presentation.Mechanics
             _key = key;
             _fruit.sprite = key > 0 ? Host.Art.FruitFlight(key) : null;
             _fruitGlow.sprite = key > 0 ? Host.Art.HojaFruitGlow(key) : null;
+            _fruitTop = key > 0 ? Host.Art.HojaFruitTop(key) : 0f;
+            _posed = true; // la pose de reposo depende de la llave (KeyCenterMaxU): Show la vuelve a colocar
+        }
+
+        // Centro más alto de la llave (u desde el pie) con el que ni el medallón (a badgeScale) ni la fruta girada (a fruitScale)
+        // pasan de KeyTopMaxU sobre lo alto de la cuia.
+        private float KeyCenterMaxU(float fruitScale, float badgeScale)
+        {
+            float reach = Mathf.Max(0.5f * ProceduralArt.HojaBadgeHeightU * badgeScale, _fruitTop * FruitU * fruitScale);
+            return _heightU + KeyTopMaxU - reach;
         }
 
         // Pose de reposo de las seis piezas (sin escala y opacas, la fruta girada; las luces, transparentes).
         private void PlaceClosed()
         {
             _posed = false;
+            float keyY = Mathf.Min(FruitCenterU, KeyCenterMaxU(1f, 1f));
             Pose(_leaf, 0f, ClosedCenterU, LeafWidthU, LeafHeightU, 0f, 1f, 1f, 1f);
-            Pose(_badge, 0f, FruitCenterU, BadgeSpriteWidthU, BadgeSpriteHeightU, 0f, 1f, 1f, 1f);
-            Pose(_fruit, 0f, FruitCenterU, FruitU, FruitU, FruitTiltDeg, 1f, 1f, 1f);
-            Pose(_fruitGlow, 0f, FruitCenterU, FruitU, FruitU, FruitTiltDeg, 1f, 1f, 0f);
+            Pose(_badge, 0f, keyY, BadgeSpriteWidthU, BadgeSpriteHeightU, 0f, 1f, 1f, 1f);
+            Pose(_fruit, 0f, keyY, FruitU, FruitU, FruitTiltDeg, 1f, 1f, 1f);
+            Pose(_fruitGlow, 0f, keyY, FruitU, FruitU, FruitTiltDeg, 1f, 1f, 0f);
             Pose(_fall, 0f, ClosedCenterU + LiftU, ProceduralArt.HojaFlatWidthU, ProceduralArt.HojaFlatHeightU, 0f, 1f, 1f, 1f);
             Pose(_glow, 0f, ClosedCenterU + LiftU, ProceduralArt.HojaFlatWidthU, ProceduralArt.HojaFlatHeightU, 0f, 1f, 1f, 0f);
         }
@@ -468,11 +544,12 @@ namespace AF.Presentation.Mechanics
             Pose(_glow, 0f, sinkY, ProceduralArt.HojaFlatWidthU, ProceduralArt.HojaFlatHeightU, sinkAngle, sinkScale, sinkScale, glowA);
         }
 
-        // La llave (b.2 M1; ficha de Magic Sort §3.3: el icono confirma primero y después llega la luz): la fruta salta a
-        // FruitPopScale y sube con la hoja que se abre, se queda opaca hasta FruitHoldEnd (la llave encaja) y entonces suelta sus
-        // destellos y se deshace en luz hasta FruitFadeEnd. Como la hoja en el agua, la fruta (opacidad fruitA) y su silueta en
-        // luz encima (glowA) pintan juntas Lerp(fruta, Glint, light) con la opacidad total opacity. El medallón la acompaña en
-        // el salto (a medias) y se va antes. Cuando la hoja empieza a caer, la llave se queda flotando sobre la boca.
+        // La llave (b.2 M1; ficha de Magic Sort §3.3: el icono confirma primero y después llega la luz): la fruta sube con la hoja
+        // que se abre; cuando el origen ya dejó libre la boca (FruitPopStart) salta a FruitPopScale, se queda opaca hasta
+        // FruitHoldEnd (la llave encaja) y entonces suelta sus destellos y se deshace en luz hasta FruitFadeEnd. Como la hoja en
+        // el agua, la fruta (opacidad fruitA) y su silueta en luz encima (glowA) pintan juntas Lerp(fruta, Glint, light) con la
+        // opacidad total opacity. El medallón la acompaña en el salto (a medias) y se va antes. Cuando la hoja empieza a caer,
+        // la llave se queda flotando sobre la boca.
         private void ApplyKey(float t)
         {
             if (_key <= 0)
@@ -483,14 +560,19 @@ namespace AF.Presentation.Mechanics
                 return;
             }
 
-            float scale = 1f + ((FruitPopScale - 1f) * Ease.OutCubic(t / FruitPopEnd));
+            float scale = 1f + ((FruitPopScale - 1f) * Ease.OutCubic((t - FruitPopStart) / (FruitPopEnd - FruitPopStart)));
             float fade = Mathf.Clamp01((t - FruitHoldEnd) / (FruitFadeEnd - FruitHoldEnd));
             float opacity = 1f - Mathf.SmoothStep(0f, 1f, fade);
             float glowA = opacity * Ease.OutCubic(fade / GlowRampEnd);
             float fruitA = (opacity - glowA) / Mathf.Max(1e-4f, 1f - glowA);
             float badgeA = 1f - Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(fade / BadgeFadePart));
             float badgeScale = 1f + (0.5f * (scale - 1f));
-            float y = FruitCenterU + (LiftU * Ease.OutCubic(t / OpenEnd)) + (0.1f * fade);
+
+            // En el salto, medallón y fruta crecen desde el borde de arriba del medallón (el centro baja lo que crece la mitad de
+            // arriba): la llave se hunde en la boca, como en su cerradura, y el borde no pasa de KeyTopMaxU. Si la fruta girada
+            // sube más que el medallón (el lulo), la llave entera baja para que tampoco pase la fruta.
+            float y = FruitCenterU + (LiftU * Ease.OutCubic(t / OpenEnd)) - (0.5f * ProceduralArt.HojaBadgeHeightU * (badgeScale - 1f));
+            y = Mathf.Min(y, KeyCenterMaxU(scale, badgeScale));
             Pose(_badge, 0f, y, BadgeSpriteWidthU, BadgeSpriteHeightU, 0f, badgeScale, badgeScale, badgeA);
             Pose(_fruit, 0f, y, FruitU, FruitU, FruitTiltDeg, scale, scale, fruitA);
             Pose(_fruitGlow, 0f, y, FruitU, FruitU, FruitTiltDeg, scale, scale, glowA);
