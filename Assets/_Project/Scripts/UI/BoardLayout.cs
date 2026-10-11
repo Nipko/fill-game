@@ -70,10 +70,10 @@ namespace AF.UI
     /// ficha §2.1). Filas: 1 con T ≤ 5; 2 con T = 6-10 (⌈T/2⌉ arriba); con T = 11-14, 2 filas (hasta 7 por fila) o 3
     /// (reparto ⌈restantes/filas⌉ de arriba abajo: 4/4/3, 4/4/4, 5/4/4, 5/5/4), la que dé la cuia más ancha, a igualdad 2
     /// [P]; 3 con T = 15-16 (5/5/5 y 6/5/5). El número de filas se decide al cargar el nivel con las T cuias generadas y no
-    /// cambia a mitad de nivel: Cuia extra y Cuia de rescate van a la derecha de la fila más corta (a igualdad, la de más
-    /// abajo [P]), ninguna cuia cambia de fila y solo se recalcula el ancho. Ranura = (ancho − 24) / cuias de la fila más
-    /// larga; cuia_w = clamp(0,70 × ranura, 28, tope(T)), con tope(T) = 64 / 56 / 48 dp para T ≤ 3 / 4-5 / ≥ 6 (D-004,
-    /// T = cuias en pantalla); alto = (1,60 + capacidad) u (5,60 u con 4 dosis; u = cuia_w / 2; D-006); paso de
+    /// cambia a mitad de nivel: Cuia extra, Cuia de rescate o Balsa van a la derecha de la fila más corta (a igualdad, la
+    /// de más abajo [P]), ninguna cuia cambia de fila y solo se recalcula el ancho. Ranura = (ancho − 24) / cuias de la
+    /// fila más larga; cuia_w = clamp(0,70 × ranura, 28, tope(T)), con tope(T) = 64 / 56 / 48 dp para T ≤ 3 / 4-5 / ≥ 6
+    /// (D-004, T = cuias en pantalla); alto = (1,60 + capacidad) u (5,60 u con 4 dosis; u = cuia_w / 2; D-006); paso de
     /// fila = alto + 16 (elevación) + 24 (hueco: 40 dp con la repisa de D-003). El tablero se centra en horizontal a 480 dp
     /// como máximo (tabletas; la cuia tampoco supera tope(T)) y, desde D-003, también en vertical: el bloque (elevación de
     /// la fila 1, filas, huecos y la repisa de 15 dp bajo la última fila) queda centrado entre <c>boardTop</c> y
