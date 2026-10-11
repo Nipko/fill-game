@@ -65,15 +65,9 @@ namespace AF.GameFlow
 
         /// <summary>Envuelve <paramref name="inner"/>, con escritor en segundo plano si es un <see cref="IProfileByteStore"/>.</summary>
         public ProfileSaveBatch(IProfileStore inner)
-            : this(inner, true)
-        {
-        }
-
-        /// <summary>Envuelve <paramref name="inner"/>; con <paramref name="background"/> = false, todo en síncrono.</summary>
-        public ProfileSaveBatch(IProfileStore inner, bool background)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
-            if (background && inner is IProfileByteStore bytes)
+            if (inner is IProfileByteStore bytes)
             {
                 _bytes = bytes;
                 // AF.Save no lee el reloj (B1-1): la marca de tiempo con la que el escritor mide bg_ms la pone este ensamblado.

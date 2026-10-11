@@ -71,9 +71,6 @@ namespace AF.Save
             _msPerTick = timestamp == null ? 0.0 : 1000.0 / ticksPerSecond;
         }
 
-        /// <summary>El almacén donde escribe.</summary>
-        public IProfileByteStore Store => _store;
-
         /// <summary>No tiene nada en cola ni a medias.</summary>
         public bool IsIdle
         {

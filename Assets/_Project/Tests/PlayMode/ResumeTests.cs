@@ -236,10 +236,13 @@ namespace AF.Tests.PlayMode
             // carpeta temporal. Cada acción del jugador escribe el perfil una sola vez (D-008): el vertido solo serializa y
             // entrega los bytes al escritor de segundo plano (.tmp, Flush(true) y File.Replace con copia, en su hilo), así que
             // save_ms (lo que paga el hilo principal) tiene que dar p95 < 5 ms; la victoria (fin de nivel) espera al escritor
-            // y escribe en síncrono level_state, progreso, Cosecha y cadencia de intersticiales juntos.
+            // y escribe en síncrono level_state, progreso, Cosecha y cadencia de intersticiales juntos. El disco puede retener al
+            // escritor a mitad de una escritura (HoldableProfileDisk), para comprobar sin depender del tiempo que el Flush
+            // síncrono lo espera.
             _dir = Path.Combine(Application.temporaryCachePath, "af_resume_" + Guid.NewGuid().ToString("N"));
-            var store = new LocalProfileStore(_dir);
-            store.Save(FunnelSetup.Profile(0));
+            var local = new LocalProfileStore(_dir);
+            local.Save(FunnelSetup.Profile(0));
+            var store = new HoldableProfileDisk(local);
             LaunchOptions.ProfileStoreOverride = store;
             yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore(7, 6));
             GameBootstrap boot = GameBootstrap.Current!;
@@ -270,12 +273,24 @@ namespace AF.Tests.PlayMode
                     PlayModeHelpers.StepUntilIdle(boot, 4000);
                 }
 
+                if (i == last - 1)
+                {
+                    // La escritura del último vertido se queda a medias en el escritor (un disco lento).
+                    Assert.That(writer.WaitIdle(ProfileSaveBatch.DefaultSyncTimeoutMs), Is.True);
+                    store.Hold();
+                }
+
                 MeasurePour(boot, batch, solution.GetMove(i), pours, json, "vertido " + (i + 1));
             }
 
-            // Con el escritor en marcha (la escritura del último vertido puede seguir en su hilo), el Flush síncrono de
-            // OnApplicationPause(true) y OnApplicationQuit deja en disco el perfil del último vertido.
-            Assert.That(batch.FlushSync(ProfileSaveBatch.DefaultSyncTimeoutMs), Is.True, "el último perfil, en disco");
+            // Con el escritor en marcha (a medias con el último vertido, que se suelta desde otro hilo a los 100 ms), el Flush
+            // síncrono de OnApplicationPause(true) y OnApplicationQuit lo espera y deja en disco el perfil del último vertido.
+            Assert.That(store.WaitEntered(ProfileSaveBatch.DefaultSyncTimeoutMs), Is.True, "el escritor empezó el último vertido");
+            Assert.That(writer.IsIdle, Is.False, "y sigue a medias: el Flush síncrono tiene que esperarlo");
+            var opener = store.ReleaseLater(100);
+            bool flushed = batch.FlushSync(ProfileSaveBatch.DefaultSyncTimeoutMs);
+            opener.Join();
+            Assert.That(flushed, Is.True, "el último perfil, en disco");
             Assert.That(writer.IsIdle, Is.True);
             LevelStateData mid = new LocalProfileStore(_dir).Load().Profile!.LevelState!;
             Assert.That(mid.Pours, Is.EqualTo(boot.Flow.Session.AppliedPours), "el tablero del último vertido");
@@ -300,15 +315,15 @@ namespace AF.Tests.PlayMode
             double max = Percentile(pours, 1.0);
             double jsonMedian = Percentile(json, 0.5);
             Debug.Log("AF_PERF level_state: " + pours.Count + " vertidos, una escritura cada uno en segundo plano; save_ms (hilo principal) p95 "
-                + Ms(p95) + " ms, máximo " + Ms(max) + " ms; bg_ms de la última del escritor " + Ms(batch.LastBackgroundMs) + " ms ("
+                + Ms(p95) + " ms, máximo " + Ms(max) + " ms; bg_ms de la última del escritor " + Ms(batch.LastBackgroundMs) + " ms, retenida 100 ms a propósito ("
                 + writer.BackgroundWrites + " escrituras del escritor); victoria síncrona " + Ms(winMs) + " ms; JSON del perfil mediana "
-                + Ms(jsonMedian) + " ms; " + store.LastSavedBytes + " bytes");
+                + Ms(jsonMedian) + " ms; " + local.LastSavedBytes + " bytes");
 
             Assert.That(batch.PendingSave, Is.False);
             Assert.That(writer.BackgroundWrites, Is.GreaterThan(0), "el disco lo pagó el escritor, no el toque");
             Assert.That(p95, Is.LessThan(PourSaveTargetMs), "save_ms por vertido (solo el hilo principal): p95 < 5 ms en el Editor (T-D)");
             Assert.That(jsonMedian, Is.LessThan(PourSaveTargetMs), "lo que pone la pista B por vertido (estado y JSON)");
-            Assert.That(store.LastSavedBytes, Is.LessThan(100 * 1024), "perfil < 100 KB (08 §4.3)");
+            Assert.That(local.LastSavedBytes, Is.LessThan(100 * 1024), "perfil < 100 KB (08 §4.3)");
         }
 
         // Un vertido medido: una escritura del perfil entregada al escritor, y lo que pagó el hilo principal.
