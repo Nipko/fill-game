@@ -112,9 +112,14 @@ La sesión del portátil usaba la herramienta Workflow con equipos de agentes Op
 > - Aguas turbias en el shader (pardo con trama y «?»), revelado por la regla y frente de luz de la Luciérnaga;
 > - tarjeta previa (apagada hasta la ola 4) y lógica de la Luciérnaga (regalo del 100, semillas, vídeo).
 >
+> **Ola 4 integrada el 2026-10-10:**
+> - tarjeta previa de 1 toque (Difícil y Muy difícil) y tutorial de una pantalla en cada estreno, con el 100 combinado; las tarjetas quedan encendidas;
+> - la Luciérnaga en la bandeja: ranura Revelar, selección de la cuia turbia, compra con stock, semillas o vídeo simulado, vuelo y aviso del regalo;
+> - el Barro mate (arreglo de T16) y el banco de tests de mecánicas, que ahora se destruye en el acto.
+>
 > **Pendiente:**
-> - ola 4 (en curso): tarjeta previa y tutoriales (T13), la Luciérnaga en la bandeja (T14) y el Barro mate (T20, arreglo de T16);
-> - ola 5: verificación final.
+> - limpieza: los hallazgos menores de las revisiones de las olas 3 y 4 (coste del shader en las bandas no turbias, disco de la Luciérnaga, memoria de las tarjetas, ganchos de GameScreen y tests que miden poco);
+> - ola 5: verificación final (T18).
 >
 > Qué probar en el teléfono tras cada push: en el mensaje del commit.
 
