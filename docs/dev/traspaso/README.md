@@ -195,7 +195,7 @@ Material de partida: `docs/research/fauna/propuesta-fauna.md` (10 especies y 18 
 
 - **Preguntas abiertas del guion de la intro** (`docs/research/intro-rio-miquitos/guion.md`, Q1-Q16, y Q17 del agente de docs). El código aplica las recomendaciones, salvo Q11 (evento `af_fauna_sighted`, que necesita migrar el perfil) y Q14 (color del agua negra).
 - **Preguntas de la propuesta de fauna** (`docs/research/fauna/propuesta-fauna.md`) y de la propuesta de Magic Sort (`docs/research/magic-sort/propuesta-tintalu.md` §10.2, sobre todo metajuego, anuncios y tienda).
-- **Bloqueo técnico C1-9 de la pista A:** la propiedad R14 falla con Liana y capacidades mixtas. Por eso el generador quitó la Cuia alta en el 95 y la de 6 en el 160. Está en `Packages/com.amazonfill.core/README.md` y en los informes; hace falta decidir la regla (02 R16).
+- **Bloqueo técnico C1-9 de la pista A:** la propiedad P1 (R14) falla con la Liana y capacidades mixtas, así que `LevelValidation` rechaza la Liana con capacidades distintas de 4, cueva de la Piraña incluida. Por eso el calendario de la campaña movió o quitó la Liana, y no las capacidades, en cuatro celdas [P]: 94 Ma → Li y 95 Li+Al → Ma+Al (la Cuia alta vuelve en el reto 95 con el Matapi), 160 Ll+Li+Al6 → Ll+Al6 (la Cuia alta de 6 se sigue estrenando en el hito 160) y 198 Pi+Li → Pi+Ho (`calendar_note` de `tools/level-generator/specs/campaign_v1.json`). Está en `Packages/com.amazonfill.core/README.md`, en su CHANGELOG y en `tools/out/campaign_v1_report.md`; hace falta decidir la regla (02 R16; pregunta 24 de `docs/GDD.md` §6.3).
 - **Pendientes de la pista B:**
   - guardar en cada vertido cuesta ≈ 6,5 ms en el Editor (objetivo [P] < 5 ms): medir en el teléfono;
   - el reloj anti-trampas necesita hora de servidor: hoy, adelantar el reloj rellena canoas;
@@ -214,10 +214,10 @@ Material de partida: `docs/research/fauna/propuesta-fauna.md` (10 especies y 18 
 | D-004 | Panel azul petróleo y tope de ancho de la cuia por T. La pose y el techo los sustituye D-006 |
 | D-005 | Vertido por tramo, como Magic Sort (`rules_pour_mode` = `run` por defecto) |
 | D-006 | Tablero, cuia y vertido copiados de Magic Sort: pose según las dosis que quedan, boca casi en el destino, ciclo de ≈ 0,9 s, cavidad ≥ 0,80, 3 filas desde 11 cuias |
-| D-007 | Mecánicas (sección 6, paso 2). **Sin registrar** |
+| D-007 | Mecánicas del río: catálogo de 12, estrenos de la 1.0 y reglas finas Q-A, Q-B y Q-C. Registrada el 2026-10-11 (paso 2) |
 | D-008 | Bucle de partida como Magic Sort: estructura de Magic Sort, cifras de nuestro GDD. Las vidas ilimitadas no quitan los anuncios |
-| D-009 | Dificultad escalonada (sección 6, paso 2). **Sin registrar** |
-| D-010 | Intro «Llenar y teñir» con miquitos como datos. La ampliación a ~50 especies (paso 3) está **sin registrar** |
+| D-009 | Dificultad escalonada: ciclo de 20 reordenado, etiqueta antes de jugar y rotación de plantillas. Registrada el 2026-10-11 (paso 2); sus cifras [sim] esperan la aprobación del dueño |
+| D-010 | Intro «Llenar y teñir» con miquitos como datos. La ampliación a ~50 especies quedó registrada el 2026-10-11; su diseño es el paso 3 |
 | D-011 | Prueba en el teléfono (2026-10-11): la victoria se cobra en la vista cuando se ve, avisos legibles, miquitos con más presencia sin frenar el juego y Cosecha doble que avanza sola. **Sin implementar** (paso 1b) |
 
 ## 8. Cómo trabaja el dueño (preferencias aprendidas)
