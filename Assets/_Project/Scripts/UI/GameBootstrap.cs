@@ -62,6 +62,9 @@ namespace AF.UI
         private Profile? _profile;
         private IProfileStore? _profileStore;
         private ProfileSaveBatch? _saveBatch;
+
+        // Fallos del escritor de segundo plano ya registrados (T-D): lo recoja quien lo recoja, cada uno se avisa una vez.
+        private int _reportedBackgroundFailures;
         private DevProbe? _probe;
         private ProfileLockedNotice? _lockedNotice;
         private ProfileLoadStatus _profileStatus = ProfileLoadStatus.NotFound;
@@ -193,8 +196,9 @@ namespace AF.UI
 
         /// <summary>
         /// Toque en una cuia (02 §3.1). Tras un vertido, la sonda de desarrollo escribe lo que costó guardar (AF_PERF, T-D):
-        /// <c>save_ms</c> es solo el hilo principal (serializar y entregar al escritor; con la victoria, la escritura síncrona
-        /// del fin de nivel, que sale como <c>win</c>) y <c>bg_ms</c>, la última escritura terminada del escritor.
+        /// <c>save_ms</c> es solo el hilo principal (serializar y entregar al escritor, o la escritura síncrona si la hubo:
+        /// el vertido que gana es fin de nivel y sale con <c>sync</c> = true, sin salir del cómputo) y <c>bg_ms</c>, la última
+        /// escritura terminada del escritor.
         /// </summary>
         public TapResult TapCuia(int index)
         {
@@ -205,17 +209,16 @@ namespace AF.UI
 
             ProfileSaveBatch? saves = _saveBatch;
             int writes = saves?.WriteCount ?? 0;
-            int failures = saves?.BackgroundFailures ?? 0;
             TapResult result = _flow.TapCuia(index);
-            if (saves != null && saves.BackgroundFailures != failures)
+            if (saves != null)
             {
-                Debug.LogWarning(LogPrefix + "falló la escritura del perfil en segundo plano; sigue en memoria y sale con el siguiente guardado: " + saves.LastBackgroundError);
+                ReportBackgroundFailures(saves);
             }
 
             if (result.Kind == TapKind.Poured && saves != null && DevProbe.Enabled)
             {
-                string evt = _flow.Session.Status == AF.Core.Session.LevelStatus.Won ? "win" : "pour";
-                _probe?.SaveCost(evt, _flow.LevelNumber, saves.WriteCount - writes, saves.LastWriteMs, saves.LastBackgroundMs);
+                int count = saves.WriteCount - writes;
+                _probe?.SaveCost("pour", _flow.LevelNumber, count, saves.LastWriteMs, saves.LastBackgroundMs, count > 0 && !saves.LastWriteInBackground);
             }
 
             return result;
@@ -933,19 +936,52 @@ namespace AF.UI
             PersistNow("cierre");
         }
 
-        // 02 §14 y T-D: al pasar a segundo plano, al cerrar la app y al destruir la escena, lo pendiente de la cartera, los
-        // anuncios, la tienda y el nivel en curso (una escritura fallida) se reintenta, y después se espera al escritor de
-        // segundo plano y se escribe en síncrono lo que falte, con el tope de ProfileSaveBatch.SyncTimeoutMs.
+        // 02 §14 y T-D: al pasar a segundo plano, al cerrar la app y al destruir la escena, el perfil queda en disco con un solo
+        // tope de espera para todo el cierre (ProfileSaveBatch.SyncTimeoutMs). Lo pendiente de la cartera, los anuncios, la
+        // tienda y el nivel en curso (una escritura fallida) se anota dentro de un lote: como todos guardan el mismo perfil,
+        // sus Flush solo limpian su indicador y una sola escritura síncrona (la del cierre del lote o FlushSync, con el tiempo
+        // que quede) lo lleva entero. Si no llega al disco, el lote lo sigue teniendo pendiente.
         private void PersistNow(string when)
         {
-            _wallet?.Flush();
-            _ads?.Ledger.Flush();
-            _storeLedger?.Flush();
-            (_flow?.StateStore as ProfileLevelStateStore)?.Flush(); // el nivel en curso ya está en disco
-            if (_saveBatch != null && !_saveBatch.FlushSync(_saveBatch.SyncTimeoutMs) && !ProfileLocked)
+            ProfileSaveBatch? saves = _saveBatch;
+            if (saves == null)
+            {
+                return;
+            }
+
+            long start = System.Diagnostics.Stopwatch.GetTimestamp();
+            using (saves.Begin())
+            {
+                _wallet?.Flush();
+                _ads?.Ledger.Flush();
+                _storeLedger?.Flush();
+                (_flow?.StateStore as ProfileLevelStateStore)?.Flush(); // el nivel en curso ya está en disco
+            }
+
+            long elapsedMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000L / System.Diagnostics.Stopwatch.Frequency;
+            int left = (int)Math.Max(0L, saves.SyncTimeoutMs - elapsedMs);
+            bool onDisk = saves.FlushSync(left);
+            ReportBackgroundFailures(saves);
+            if (!onDisk && !ProfileLocked)
             {
                 Debug.LogWarning(LogPrefix + "el perfil no quedó en disco (" + when + "): sigue en memoria y sale con el siguiente guardado.");
             }
+        }
+
+        // T-D: un fallo del escritor de segundo plano se recoge en el hilo principal al siguiente guardado, sea cual sea (un
+        // vertido, Marea, un comodín, un anuncio o PersistNow). Se compara con la última cifra registrada, no con una
+        // instantánea del toque, para que ninguno pase en silencio.
+        private void ReportBackgroundFailures(ProfileSaveBatch saves)
+        {
+            int failures = saves.BackgroundFailures;
+            if (failures == _reportedBackgroundFailures)
+            {
+                return;
+            }
+
+            int missed = failures - _reportedBackgroundFailures;
+            _reportedBackgroundFailures = failures;
+            Debug.LogWarning(LogPrefix + "falló la escritura del perfil en segundo plano (fallos nuevos: " + missed + "); sigue en memoria y sale con el siguiente guardado: " + saves.LastBackgroundError);
         }
 
         private void OnDestroy()

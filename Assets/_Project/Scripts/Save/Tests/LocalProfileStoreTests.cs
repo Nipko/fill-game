@@ -314,12 +314,12 @@ namespace AF.Save.Tests
 
         [TestCase("TempHalfWritten", false)]
         [TestCase("TempWritten", false)]
-        [TestCase("TempWritten", true)]
         [TestCase("MainMovedToBackup", true)]
         public void ACutMidWrite_LoadsTheMainOrTheBackup_NeverACorruptProfile(string stage, bool moveFallback)
         {
             // T-D: el proceso muere en ese punto de la escritura (el gancho lanza y nada de lo que sigue se ejecuta). Al
-            // reabrir, Load da el principal o la copia con el último perfil completo, nunca uno corrupto.
+            // reabrir, Load da el principal o la copia con el último perfil completo, nunca uno corrupto. (Un corte en
+            // TempWritten con ForceMoveFallback sería el mismo caso: el reemplazo de dos Move solo actúa después, en Commit.)
             var store = new LocalProfileStore(_dir) { ForceMoveFallback = moveFallback };
             Profile p = SampleProfiles.Full();
             store.Save(p);
@@ -473,12 +473,25 @@ namespace AF.Save.Tests
         [Test]
         public void Writer_WriteNow_WaitsForTheWriter_DropsTheOlderQueue_AndHasACap()
         {
+            // Cada escritura que llega al .tmp completo deja anotado su perfil, en el orden en que se escribe.
             var store = new LocalProfileStore(_dir);
             var reached = new ManualResetEventSlim(false);
             var release = new ManualResetEventSlim(false);
+            var written = new System.Collections.Generic.List<int>();
             store.WriteHook = s =>
             {
-                if (s == LocalProfileStore.WriteStage.TempWritten && Thread.CurrentThread.ManagedThreadId != _mainThread)
+                if (s != LocalProfileStore.WriteStage.TempWritten)
+                {
+                    return;
+                }
+
+                int seeds = ProfileJson.Deserialize(File.ReadAllText(store.TempPath, Utf8NoBom)).Wallet.Seeds;
+                lock (written)
+                {
+                    written.Add(seeds);
+                }
+
+                if (Thread.CurrentThread.ManagedThreadId != _mainThread)
                 {
                     reached.Set();
                     release.Wait(WaitMs);
@@ -490,10 +503,13 @@ namespace AF.Save.Tests
             Assert.That(reached.Wait(WaitMs), Is.True);
             writer.Enqueue(store.Serialize(WithSeeds(2))); // en la cola, más vieja que la síncrona
 
-            // Con el escritor ocupado más que el tope, no escribe a la vez que él: deja los bytes en su cola.
+            // Con el escritor ocupado más que el tope, no escribe a la vez que él: deja los bytes en su cola (la 3 sustituye a la 2).
             Assert.That(writer.WriteNow(store.Serialize(WithSeeds(3)), 50), Is.False);
             Assert.That(File.Exists(store.MainPath), Is.False, "nada escrito todavía");
 
+            // El escritor se suelta desde otro hilo mientras el principal espera en WriteNow(4). Según la carga de la máquina,
+            // la 3 sale antes de que WriteNow(4) vacíe la cola o no sale nunca; lo que no cambia es la regla: la 2 nunca se
+            // escribe y la 3 nunca pisa a la 4.
             var opener = new Thread(() =>
             {
                 Thread.Sleep(100);
@@ -504,9 +520,19 @@ namespace AF.Save.Tests
             opener.Join();
             Assert.That(writer.IsIdle, Is.True);
             Assert.That(writer.AllWritten, Is.True);
-            Assert.That(writer.BackgroundWrites, Is.EqualTo(1), "la 2 y la 3 ya no se escriben: la 4 es más nueva");
+            int[] order;
+            lock (written)
+            {
+                order = written.ToArray();
+            }
+
+            Assert.That(order.Length == 2 || order.Length == 3, Is.True, "la 1 y la 4, y como mucho la 3 entre ellas: " + string.Join(",", order));
+            Assert.That(order[0], Is.EqualTo(1));
+            Assert.That(order[order.Length - 1], Is.EqualTo(4), "la 4 es la última: la 3 nunca la pisa");
+            Assert.That(order, Has.No.Member(2), "la 2 nunca se escribe");
+            Assert.That(writer.BackgroundWrites, Is.EqualTo(order.Length - 1), "en segundo plano, la 1 y quizá la 3; la 4, en este hilo");
             Assert.That(new LocalProfileStore(_dir).Load().Profile!.Wallet.Seeds, Is.EqualTo(4));
-            Assert.That(File.ReadAllText(store.BackupPath), Is.EqualTo(ProfileJson.Serialize(WithSeeds(1))));
+            Assert.That(File.ReadAllText(store.BackupPath), Is.EqualTo(ProfileJson.Serialize(WithSeeds(order[order.Length - 2]))), "la copia es la anterior a la 4 (la 1 o la 3)");
         }
 
         [Test]

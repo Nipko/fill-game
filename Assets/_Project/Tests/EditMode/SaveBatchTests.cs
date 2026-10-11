@@ -239,7 +239,7 @@ namespace AF.Tests.EditMode
             Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(4), "gana el último");
             Assert.That(disk.WritesOnMainThread, Is.EqualTo(0), "el disco nunca en el hilo principal");
             Assert.That(batch.Writer.BackgroundWrites, Is.EqualTo(2));
-            Assert.That(batch.LastBackgroundMs, Is.GreaterThanOrEqualTo(0.0));
+            Assert.That(batch.LastBackgroundMs, Is.GreaterThan(0.0), "bg_ms: escrituras de verdad medidas con el reloj de verdad");
             Assert.That(batch.FlushSync(WaitMs), Is.True, "todo en disco");
             Assert.That(disk.Count, Is.EqualTo(2), "FlushSync no reescribe lo que ya está en disco");
         }
@@ -425,10 +425,94 @@ namespace AF.Tests.EditMode
             Assert.That(disk.WritesOnMainThread, Is.EqualTo(1), "solo la victoria en el hilo principal");
         }
 
+        [Test]
+        public void TheVictoryIsSynchronous_BecauseItIsEndOfLevel_EvenWithAWalletThatDoesNotAskForIt()
+        {
+            // Revisión de C2, punto 2: aísla el RequireDurable de ResolveWin. Con la cartera sobre el lote normal (no por
+            // Durable), la Cosecha no pide escritura síncrona: lo único que hace síncrona la victoria es que es fin de nivel.
+            var rig = new BatchRig(threaded: true, durableWallet: false);
+            rig.Start(7);
+            SolveResult solution = LevelStateTests.Solve(rig.Flow);
+            int last = solution.MoveCount - 1;
+            for (int i = 0; i <= last; i++)
+            {
+                Pour move = solution.GetMove(i);
+                rig.Flow.TapCuia(move.Source);
+                rig.Flow.TapCuia(move.Target);
+                Assert.That(rig.Batch.LastWriteInBackground, Is.EqualTo(i < last), i < last ? "vertido en segundo plano" : "victoria en síncrono");
+            }
+
+            Assert.That(rig.Flow.HarvestSeeds, Is.GreaterThan(0), "la victoria cobró la Cosecha por la cartera");
+            ThreadedDisk disk = rig.Threaded!;
+            Assert.That(disk.LastOnMainThread, Is.True);
+            Assert.That(rig.Batch.Writer!.IsIdle, Is.True, "la victoria esperó al escritor");
+            Profile won = disk.Last;
+            Assert.That(won.LevelState, Is.Null, "en disco al volver del toque, sin Flush");
+            Assert.That(won.Progress.NextLevel, Is.EqualTo(8));
+            Assert.That(won.Wallet.Seeds, Is.EqualTo(rig.Flow.HarvestSeeds));
+        }
+
+        [Test]
+        public void LeavingTheLevel_IsEndOfLevel_AndWritesSynchronouslyOnTheMainThread()
+        {
+            // Revisión de C2, punto 2: salir del nivel sin ganarlo (X de Nivel fallido, «Volver al inicio», «Salir») es fin de
+            // nivel (T-D.sync): espera al escritor y escribe en síncrono, aunque el vertido anterior fuera en segundo plano.
+            var rig = new BatchRig(threaded: true);
+            rig.Start(7);
+            Pour move = LevelStateTests.Solve(rig.Flow).GetMove(0);
+            rig.Flow.TapCuia(move.Source);
+            rig.Flow.TapCuia(move.Target);
+            Assert.That(rig.Batch.LastWriteInBackground, Is.True, "el vertido, en segundo plano");
+
+            int before = rig.Batch.WriteCount;
+            rig.Flow.LeaveLevel();
+            Assert.That(rig.Batch.WriteCount, Is.EqualTo(before + 1), "una escritura");
+            Assert.That(rig.Batch.LastWriteInBackground, Is.False, "fin de nivel: en síncrono");
+            ThreadedDisk disk = rig.Threaded!;
+            Assert.That(disk.LastOnMainThread, Is.True);
+            Assert.That(rig.Batch.Writer!.IsIdle, Is.True, "esperó al escritor");
+            Assert.That(LevelStateSnapshot.TryParseHistory(disk.Last.LevelState!.History, out SavedHistory saved), Is.True);
+            Assert.That(saved.Phase, Is.EqualTo(SavedPhase.Exited), "en disco al volver de LeaveLevel, sin Flush");
+        }
+
+        [Test]
+        public void FlushSync_IsNeverTrueWhileTheLatestProfileIsNotOnDisk()
+        {
+            // Revisión de C2, punto 1 (T-D.sync: FlushSync da true solo con el perfil en disco). Un guardado fuera de lote que
+            // falla en síncrono llega a quien guarda (la cartera) y, además, deja el perfil pendiente en el lote.
+            var disk = new ThreadedDisk();
+            var batch = new ProfileSaveBatch(disk);
+            Profile profile = Wallet.NewProfile(new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5)));
+            profile.Wallet.Seeds = 10;
+            batch.Save(profile);
+            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(10));
+
+            disk.FailuresLeft = 1;
+            profile.Wallet.Seeds = 20;
+            Assert.That(batch.TrySave(profile), Is.False, "fuera de un lote, el fallo llega a quien guarda");
+            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(10), "en disco sigue el perfil anterior");
+            Assert.That(batch.PendingSave, Is.True, "el lote no lo olvida");
+            Assert.That(batch.FlushSync(WaitMs), Is.True, "lo reescribe en síncrono");
+            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(20));
+            Assert.That(disk.LastOnMainThread, Is.True);
+            Assert.That(batch.PendingSave, Is.False);
+
+            // Aunque la escritura síncrona falle sin pasar por Save (el escritor es público), FlushSync no da true sin escribir:
+            // con el escritor parado y la última entrega fuera del disco, la vuelve a escribir.
+            disk.FailuresLeft = 1;
+            profile.Wallet.Seeds = 30;
+            Assert.That(() => batch.Writer!.WriteNow(disk.Serialize(profile), WaitMs), Throws.InstanceOf<IOException>());
+            Assert.That(batch.Writer!.AllWritten, Is.False);
+            Assert.That(batch.FlushSync(WaitMs), Is.True, "lo reescribe en síncrono");
+            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(30));
+            Assert.That(batch.Writer.AllWritten, Is.True);
+            Assert.That(batch.PendingSave, Is.False);
+        }
+
         /// <summary>Flujo con cartera, progreso y nivel en curso en el mismo perfil, guardado por el lote sobre un disco que graba cada escritura.</summary>
         private sealed class BatchRig
         {
-            public BatchRig(int offset = 0, int seeds = 0, int maxLevel = 0, bool threaded = false)
+            public BatchRig(int offset = 0, int seeds = 0, int maxLevel = 0, bool threaded = false, bool durableWallet = true)
             {
                 Clock = new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5));
                 Profile = Wallet.NewProfile(Clock);
@@ -437,7 +521,9 @@ namespace AF.Tests.EditMode
                 Disk = new RecordingProfileStore();
                 Threaded = threaded ? new ThreadedDisk() : null;
                 Batch = new ProfileSaveBatch(Threaded ?? (IProfileStore)Disk);
-                Wallet = new Wallet(Profile, Batch.Durable, Clock); // como GameBootstrap (T-D)
+
+                // Como GameBootstrap (T-D): la cartera guarda por batch.Durable; sin él, por el lote normal.
+                Wallet = new Wallet(Profile, durableWallet ? Batch.Durable : Batch, Clock);
                 Listener = new RecordingListener();
                 Flow = new LevelFlow(
                     LevelCatalog.Create(new[] { TestPacks.Tutorial }, offset),

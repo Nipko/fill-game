@@ -28,7 +28,7 @@ namespace AF.GameFlow
     /// <item><description>la cartera (guarda por <see cref="Durable"/>: cada mutación de semillas, canoas o stock);</description></item>
     /// <item><description><see cref="FlushSync"/> (<c>OnApplicationPause(true)</c>, <c>OnApplicationQuit</c> y <c>OnDestroy</c>);</description></item>
     /// <item><description>cualquier guardado fuera de un lote (pasa tal cual y lanza sus excepciones, como espera
-    /// <c>AF.Economy.Wallet</c>).</description></item>
+    /// <c>AF.Economy.Wallet</c>; si falla, el perfil también queda pendiente en el lote).</description></item>
     /// </list>
     /// Con otro almacén (en memoria, los de los tests) todo es síncrono, como antes de T-D.
     /// </para>
@@ -179,7 +179,18 @@ namespace AF.GameFlow
                 return;
             }
 
-            Write(profile);
+            try
+            {
+                Write(profile);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is InvalidOperationException)
+            {
+                // Fuera de un lote el error llega a quien guarda (AF.Economy.Wallet lo espera), pero el lote no lo olvida: el
+                // perfil sigue pendiente y sale con el siguiente guardado o con FlushSync, que solo da true con él en disco.
+                _pending = profile;
+                throw;
+            }
+
             if (ReferenceEquals(_pending, profile))
             {
                 _pending = null;
@@ -221,7 +232,7 @@ namespace AF.GameFlow
             CollectWriterFailure();
             if (_depth > 0)
             {
-                return _pending == null && (_writer == null || _writer.AllWritten);
+                return _pending == null && LatestOnDisk();
             }
 
             if (_pending == null && _writer != null)
@@ -232,6 +243,12 @@ namespace AF.GameFlow
                 }
 
                 CollectWriterFailure(); // si falló, el perfil vuelve a estar pendiente y se escribe aquí
+                if (_pending == null && !LatestOnDisk())
+                {
+                    // Parado, sin fallo que recoger y con la última entrega fuera del disco (una escritura síncrona que falló
+                    // sin pasar por Save): se vuelve a escribir, para que true signifique siempre «en disco».
+                    _pending = _handedOff;
+                }
             }
 
             if (_pending != null)
@@ -239,7 +256,7 @@ namespace AF.GameFlow
                 TryWriteSync(timeoutMs);
             }
 
-            return _pending == null;
+            return _pending == null && LatestOnDisk();
         }
 
         internal void End()
@@ -373,6 +390,13 @@ namespace AF.GameFlow
             {
                 _pending = _handedOff;
             }
+        }
+
+        // La última entrega al escritor está en disco, o no hay ninguna que importe (sin escritor, o tras Delete, que descarta
+        // la cola a propósito).
+        private bool LatestOnDisk()
+        {
+            return _writer == null || _handedOff == null || _writer.AllWritten;
         }
 
         private static double ElapsedMs(long start)

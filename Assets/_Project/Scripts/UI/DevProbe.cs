@@ -367,14 +367,15 @@ namespace AF.UI
 
         /// <summary>
         /// Línea <c>AF_PERF</c> con lo que costó escribir el perfil tras una acción del jugador (revisión de B2-5; T-D, con el
-        /// objetivo del dueño del 2026-10-09: <c>save_ms</c> p95 &lt; 5 ms y ninguno &gt; 8 ms por vertido): <c>event</c>
-        /// (<c>pour</c>; <c>win</c> si el vertido gana, que escribe en síncrono por ser fin de nivel), nivel, escrituras de esa
-        /// acción (1 con el lote), <c>save_ms</c> = lo que pagó el hilo principal (serializar y entregar al escritor de segundo
-        /// plano, o la escritura síncrona) y <c>bg_ms</c> = lo que tardó la última escritura terminada del escritor (<c>.tmp</c>,
-        /// fsync y Replace; casi siempre la del vertido anterior, porque la de este sigue en marcha). Sirve para medirlo en el
-        /// teléfono con <c>adb logcat -s Unity</c>.
+        /// objetivo del dueño del 2026-10-09: <c>save_ms</c> p95 &lt; 5 ms y ninguno &gt; 8 ms, en todos los vertidos): <c>event</c>
+        /// (<c>pour</c>), nivel, escrituras de esa acción (1 con el lote), <c>save_ms</c> = lo que pagó el hilo principal
+        /// (serializar y entregar al escritor de segundo plano, o la escritura síncrona), <c>bg_ms</c> = lo que tardó la última
+        /// escritura terminada del escritor (<c>.tmp</c>, fsync y Replace; casi siempre la del vertido anterior, porque la de
+        /// este sigue en marcha) y <c>sync</c> = la escritura de esta acción fue síncrona (el vertido que gana es fin de nivel:
+        /// espera al escritor y escribe en el toque). <c>sync</c> solo distingue la línea: sigue contando para el objetivo
+        /// hasta que el dueño decida otra cosa. Sirve para medirlo en el teléfono con <c>adb logcat -s Unity</c>.
         /// </summary>
-        public void SaveCost(string evt, int level, int writes, double ms, double bgMs)
+        public void SaveCost(string evt, int level, int writes, double ms, double bgMs, bool sync)
         {
             if (!Enabled)
             {
@@ -387,7 +388,8 @@ namespace AF.UI
             sb.Append(",\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"writes\":").Append(writes.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"save_ms\":").Append(ms.ToString("0.00", CultureInfo.InvariantCulture));
-            sb.Append(",\"bg_ms\":").Append(bgMs.ToString("0.00", CultureInfo.InvariantCulture)).Append('}');
+            sb.Append(",\"bg_ms\":").Append(bgMs.ToString("0.00", CultureInfo.InvariantCulture));
+            sb.Append(",\"sync\":").Append(sync ? "true" : "false").Append('}');
             Debug.Log(sb.ToString());
         }
 
