@@ -146,6 +146,15 @@ Las tareas detalladas están en `docs/dev/traspaso/planes-integracion.json` (`in
 6. **Verificación completa** (sección 3), **commit y push**. El build de desarrollo y la prueba en el teléfono los hace el portátil (sección 1). En el portátil, por cable: `adb devices` lo muestra como `R5CY92CG81P`. Instala con `adb install -r Builds/Android/dev.apk` y recorre los niveles 1, 11, 41, 81, 101, 141 y 183 grabando con `adb shell screenrecord`.
    - **No uses** el extra `af_level_offset` para probar mundos: desplaza el número de nivel pero deja el tablero y el mundo del tutorial. Con los packs reales basta con `--ei af_level N`.
 
+### Paso 1b · Arreglos de la prueba del dueño en el teléfono (2026-10-11): hazlos antes del paso 2
+
+El dueño probó el `dev.apk` (compilado sobre `80d37fb` o antes) y decidió **D-011** (`docs/dev/decisiones.md`). Las cuatro causas siguen en `7677085`. Tareas, causas con archivo y línea, pruebas y qué probar en el teléfono: `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`.
+
+- **P1:** el saldo no enseña la Cosecha hasta la pantalla de victoria, y la bandeja de comodines no se apaga antes de la celebración. La Cosecha se sigue cobrando en el instante lógico.
+- **P2:** avisos y tarjeta «¡Miquito a la vista!» con duración por lectura (3-7 s). Ninguno sale durante la carga, la tarjeta previa o la intro (el regalo de Capi del nivel 8 hoy sale encima de la intro), y salen de uno en uno.
+- **P3:** miquitos que entran trepando, sueltan igual de rápido, se quedan ≈ 1,5 s en reposo mientras ya se juega y se van en ≈ 0,5 s. T y el toque, sin cambios.
+- **P4:** tras el vídeo de la Cosecha doble, el juego cuenta el doble y pasa solo al nivel siguiente.
+
 ### Paso 2 · Registrar D-007 y D-009 en el GDD
 
 Ninguna de las dos tiene aún su entrada en `docs/dev/decisiones.md`. Están decididas por el dueño:
@@ -209,6 +218,7 @@ Material de partida: `docs/research/fauna/propuesta-fauna.md` (10 especies y 18 
 | D-008 | Bucle de partida como Magic Sort: estructura de Magic Sort, cifras de nuestro GDD. Las vidas ilimitadas no quitan los anuncios |
 | D-009 | Dificultad escalonada (sección 6, paso 2). **Sin registrar** |
 | D-010 | Intro «Llenar y teñir» con miquitos como datos. La ampliación a ~50 especies (paso 3) está **sin registrar** |
+| D-011 | Prueba en el teléfono (2026-10-11): la victoria se cobra en la vista cuando se ve, avisos legibles, miquitos con más presencia sin frenar el juego y Cosecha doble que avanza sola. **Sin implementar** (paso 1b) |
 
 ## 8. Cómo trabaja el dueño (preferencias aprendidas)
 

@@ -14,6 +14,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-006 | 2026-10-08 | Tablero, cuia y vertido como Magic Sort | Decidida por el dueño; en implementación (U2-U6, D1-D6). Pendiente: P12 (ranura de 42 dp en 16:9 con cuias añadidas) |
 | D-008 | 2026-10-08 | Bucle de partida como Magic Sort | Decidida por el dueño. Documentación aplicada el 2026-10-08 en `117f4be` (capítulos de «Archivos afectados»), dentro de la rama de código: **pendiente de la aprobación explícita del dueño antes de fusionar** o de un PR de documentación aparte (cambia el contrato 7). En implementación: pista B (B1-1-B1-6 y B2-1-B2-6). Los textos nuevos y los puntos [P] están pendientes (P14-P16, no bloquean). Abierta: P17, cuándo sale «Canoas infinitas 1 h» en Sin canoas (04 §7.3 y 05 §4.1 se contradicen). El número D-007 queda reservado para las mecánicas especiales, en pausa |
 | D-010 | 2026-10-08 | «Llenar y teñir»: el río llena las cuias y los miquitos las tiñen con fruta | Decidida por el dueño (idea y ampliación del 2026-10-08); guion `docs/research/intro-rio-miquitos/guion.md` aprobado para implementar. Implementada en la rama `intro-rio-miquitos` (`fbdf11e`, `e479cf0` y `8955ef3`), sin fusionar. Documentación aplicada el 2026-10-09 en la misma rama. Pendientes, sin bloquear: confirmar Q1-Q16 del guion (el código aplica sus recomendaciones salvo Q11 y Q14), Q17, toda la fauna con el asesor cultural, el arte del artista y las preguntas abiertas de la propuesta de fauna (F7, F9-F11 y F13). Los números D-007 y D-009 los usa la pista de mecánicas y niveles (rama `fase1-mecanicas-niveles`), sin entrada aún en este registro |
+| D-011 | 2026-10-11 | Ajustes de la prueba en el teléfono: la victoria se cobra cuando se ve, avisos legibles, miquitos que se ven y Cosecha doble que avanza | Decidida por el dueño tras probar el `dev.apk` en el SM-S938B. Sin implementar: tareas P1-P4 de `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`, para el equipo de escritorio |
 
 ---
 
@@ -1082,3 +1083,69 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - F6: sin miquitos en el mundo 13.
 - F8 es Q11, y F12 es Q9.
 - F14: el churuco en el mundo 4.
+
+---
+
+## D-011 · Ajustes de la prueba en el teléfono: la victoria se cobra cuando se ve, avisos legibles, miquitos que se ven y Cosecha doble que avanza
+
+- **Fecha:** 2026-10-11.
+- **Estado:** decidida por el dueño tras probar el `dev.apk` en el SM-S938B (compilado en el portátil sobre `80d37fb` o antes; las cuatro causas siguen en `7677085`). El punto 3 lo eligió entre tres opciones cerradas («Más presencia sin frenar», la recomendada). **Sin implementar:** tareas P1-P4 de `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`.
+
+**Contexto** (palabras del dueño, con la ortografía corregida):
+- «Las semillas se suman antes de dar por ganador el juego […] deberían verse luego de terminar completamente y ahí sumarlo […] pareciera que no lo suma, que ya tenía eso. Pasa lo mismo con las ayudas, que desaparecen: aunque se sabe que se va a ganar, no es bueno darlo ya por hecho; debe ser hasta que ocurra.»
+- «Los letreros que muestra salen y duran muy poco, no se alcanzan a leer: en el nivel 8 salió algo que ni me dio tiempo de leer, como también en un nivel anterior salió algo de monito que no leí todo.»
+- «Los miquitos pueden tirar rápido las semillas al inicio del tablero, pero pueden demorar un poco más en entrar para verlos bien; también duran poco y no se aprecian bien.»
+- «Cuando me pide que puedo ganar el doble por ver anuncio, cuando selecciono y veo el anuncio, debería ahí ya haber avanzado de nivel, pero pasa que veo el anuncio y luego vuelvo a Siguiente.»
+
+**Decisión.**
+1. **Nada se da por ganado antes de que se vea.**
+   - La Cosecha se sigue acreditando en el instante lógico de la victoria, con el progreso y en la misma escritura del perfil, para no perderla si se cierra la app (02 §14).
+   - Lo que cambia es la vista:
+     - el saldo de arriba no la enseña hasta que la cuenta la fila de la Cosecha en la pantalla de victoria: ni durante el último vertido ni durante la celebración;
+     - la bandeja de comodines se queda como estaba mientras termina el último vertido, y se apaga al empezar la celebración.
+2. **Avisos legibles.**
+   - Los avisos del tablero y la tarjeta «¡Miquito a la vista!» duran según lo que hay que leer: **1.000 ms + 55 ms por carácter visible, entre 3.000 y 7.000 ms** [P].
+     - Ejemplos: el regalo de Capi (81 caracteres) dura ≈ 5,5 s; la tarjeta (título, nombre y dato) dura ≈ 5,5-6 s.
+     - Sustituye a los 2,6 s de los avisos y a los 2,5 s de la tarjeta (D-010, punto 5; 07 §6.4; guion de la intro §4.5 y A15).
+   - **Ningún aviso sale durante la carga, la tarjeta previa ni la intro:** espera a que se habilite el toque. Hoy el regalo de Capi del nivel 8 sale al cargar, encima de la intro y de los miquitos.
+   - **Uno cada vez:** si coinciden dos (el regalo de Capi y la tarjeta del miquito, por ejemplo), el segundo espera a que se vaya el primero.
+   - Siguen sin capturar toques.
+   - El cartel «El río bajó» no cambia (2,0 s, 04 §2.7): alargarlo retrasaría cada reintento.
+3. **Miquitos con más presencia, sin frenar el juego.**
+   - **Entrada:** entran trepando por la rama en ≈ 500 ms mientras el río llena las cuias, también en la versión corta (desde el 21, primer intento), donde hoy ya están posados en t = 0.
+   - **Suelta y T:** la fruta cae igual de rápido. T (1.400 / 800 ms), las fases a-d y el momento en que se habilita el toque no cambian.
+   - **Reposo:** tras soltar se quedan ≈ 1.500 ms en la rama con un gesto natural de reposo mientras el jugador ya juega:
+     - por ejemplo, comer la fruta, rascarse, mirar alrededor o balancear la cola;
+     - el gesto rota de forma determinista por nivel, sobre la variación por nivel que ya existe (F13);
+     - después salen trepando en ≈ 500 ms (hoy 300 ms).
+   - **Reglas que se mantienen:** D-010 punto 6 (sin rasgos humanos: nada de saludar ni señalar) y D-002 (no miran, no señalan y no reaccionan a una cuia, a la selección ni a un vertido). La especie sigue cambiando qué se ve, nunca cuánto dura.
+   - **Al saltar la intro** con un toque, la tropa se va como hoy. Al cargar otro nivel, desaparece.
+   - **La tarjeta «¡Miquito a la vista!»** ocupa la misma franja que la rama: sale cuando la tropa se ha ido.
+   - Sin tropa (modo dosel: reintentos, 3 filas sin franja, mundo 13) no cambia nada.
+4. **La Cosecha doble avanza sola.**
+   - Tras ver entero el vídeo de `rv_double_harvest`:
+     - la fila cuenta de +N a +2N (400 ms) y las semillas llegan al saldo;
+     - se ve ≈ 600 ms más;
+     - el juego pasa solo al nivel siguiente por el mismo camino que «Siguiente»: AD_GATE, y después «El río sigue creciendo» o Sin canoas, como hoy.
+   - En AD_GATE no sale intersticial: `AdPolicy` lo bloquea 60 s después de un recompensado (`AfterRewarded`).
+   - Si el vídeo se cierra antes de tiempo (sin recompensa), se queda en la victoria como hoy.
+   - No contradice `victory_autonext_s` = 0 (02 §2): no es un temporizador, sino la respuesta al toque del jugador.
+
+**Consecuencias.**
+- **Código** (todo en Unity; núcleo, solver, packs y Remote Config sin cambios): tareas P1-P4 de la hoja de pruebas, con sus pruebas EditMode y PlayMode.
+- **Tiempos nuevos sin clave de Remote Config** [P]: duración de los avisos por lectura, entrada, reposo y salida de la tropa, y espera de la Cosecha doble. Van como constantes, igual que los de D-010.
+- **GDD y guion** (tarea de documentación de la hoja):
+  - 02 §2 y §6: tras la Cosecha doble, se avanza solo;
+  - 07 §6.4: duración de la tarjeta, y la tropa que se queda en reposo;
+  - el guion de la intro: §4.5, §7.1-§7.3 y A15;
+  - la nota de la tabla de D-010 (F3 y F4: «de 2,5 s»).
+
+**Alternativas descartadas.**
+- **Acreditar la Cosecha al terminar la celebración:** se perdería si se cierra la app durante ella (02 §14).
+- **Intro más larga para los miquitos:** frena cada nivel (opción que el dueño no eligió).
+- **Miquitos que crecen con el progreso:** los primeros niveles se quedarían cortos, que es donde el dueño lo notó (tampoco la eligió).
+- **Avisos que se cierran con un toque:** los avisos no capturan toques para no robar vertidos.
+
+**Cómo revertir.** Volver a las constantes de antes (`GameScreen.ToastMs` = 2.600, `SightingRule.CardMs` = 2.500, `IntroChoreography.ExitMs` = 300 y la tropa posada en t = 0 en la versión corta), quitar la espera del saldo y de la bandeja y el avance tras la Cosecha doble. Siempre con una decisión nueva que sustituya a D-011.
+
+**Archivos afectados** (previstos; la hoja de pruebas los detalla): `Assets/_Project/Scripts/GameFlow/{LevelFlow.cs, SightingRule.cs}`, `Assets/_Project/Scripts/UI/{GameScreen.cs, BoosterTray.cs, Toast.cs, SightingCard.cs, GameBootstrap.cs}`, `Assets/_Project/Scripts/Presentation/{IntroChoreography.cs, TroopLayer.cs, IntroAnimation.cs, MonkeyRig.cs}`, sus tests y la documentación de arriba.
