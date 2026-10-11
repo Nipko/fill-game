@@ -145,7 +145,8 @@ namespace AF.Tests.PlayMode
         public IEnumerator Level31_TappingThePublishedCenters_GivesTheExpectedStates()
         {
             // T-B (la prueba del teléfono, en el Editor): en el 31 con 1 canoa y 100 semillas se toca cada botón en el centro que
-            // publicó la última AF_LAYOUT, como adb shell input tap: Rendirse en Aguas estancadas y en ¿Seguro? (give_up →
+            // publicó la última AF_LAYOUT, como adb shell input tap (AfLayoutLog.Tap: la prueba de impacto del EventSystem en ese
+            // punto tiene que dar el botón, sin nada encima): Rendirse en Aguas estancadas y en ¿Seguro? (give_up →
             // fail_hard_canoe y level_failed) y Reintentar con 0 canoas (retry → no_canoes). Sin canoas ofrece «Llenar canoas»
             // por 200 con «Te faltan 100»; al llegar las semillas que faltan, rehace su layout (el aviso se va y lo de debajo
             // sube) y vuelve a publicar su AF_LAYOUT, una sola vez.
@@ -160,16 +161,16 @@ namespace AF.Tests.PlayMode
             GameScreen view = boot.View!;
             _lines.Clear();
 
-            AfLayoutLog.Tap(_layout.RequireLast("stuck", 31, "Aguas estancadas"), "give_up", view.Stuck.GiveUpButton);
+            yield return AfLayoutLog.Tap(_layout.RequireLast("stuck", 31, "Aguas estancadas"), "give_up", view.Stuck.GiveUpButton);
             Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.GiveUpConfirm));
             Assert.That(Has("giveup_confirm"), Is.True);
 
-            AfLayoutLog.Tap(_layout.RequireLast("giveup_confirm", 31, "¿Seguro?"), "give_up", view.GiveUp.GiveUpButton);
+            yield return AfLayoutLog.Tap(_layout.RequireLast("giveup_confirm", 31, "¿Seguro?"), "give_up", view.GiveUp.GiveUpButton);
             Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed));
             Assert.That(Events("fail_hard_canoe", "level_failed"), Is.EqualTo(new[] { "fail_hard_canoe", "level_failed" }), "give_up → fail_hard_canoe y level_failed");
             AssertBalance("level_failed", 100, 0);
 
-            AfLayoutLog.Tap(_layout.RequireLast("level_failed", 31, "Nivel fallido"), "retry", view.Failed.RetryButton);
+            yield return AfLayoutLog.Tap(_layout.RequireLast("level_failed", 31, "Nivel fallido"), "retry", view.Failed.RetryButton);
             Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.NoCanoes), "retry con 0 canoas → no_canoes");
             Assert.That(Has("no_canoes"), Is.True);
             AssertNoCanoesLayout(view, "Sin canoas");
@@ -186,7 +187,7 @@ namespace AF.Tests.PlayMode
             string after = _layout.RequireLast("no_canoes", 31, "Sin canoas rehecha");
             Assert.That(AfLayoutLog.Button(after, "home")!.Value.y, Is.LessThan(AfLayoutLog.Button(before, "home")!.Value.y), "sin «Te faltan», «Volver al inicio» sube");
             AssertNoCanoesLayout(view, "Sin canoas rehecha");
-            AfLayoutLog.Tap(after, "home", view.NoCanoes.HomeButton);
+            yield return AfLayoutLog.Tap(after, "home", view.NoCanoes.HomeButton);
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
         }
 

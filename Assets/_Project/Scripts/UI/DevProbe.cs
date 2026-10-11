@@ -622,18 +622,22 @@ namespace AF.UI
 
         /// <summary>
         /// Línea <c>AF_LAYOUT</c> de la pantalla <paramref name="screen"/>: tamaño de pantalla, áreas táctiles de las cuias y
-        /// botones con su id. Para tocar, se usa la ÚLTIMA línea que se haya escrito: las pantallas se repiten.
+        /// botones con su id. Para tocar, se usa la última línea de la pantalla que está a la vista (para el tablero, la última
+        /// <c>level</c>): las pantallas se repiten, y cerrar un modal no vuelve a publicar lo que queda debajo (al cerrar la
+        /// Pausa, al cancelar ¿Salir? o ¿Reiniciar?, al Reintentar con canoas sin «El río bajó» o al cerrar Sin canoas para
+        /// seguir jugando, el tablero vuelve a verse sin una línea <c>level</c> nueva).
         /// <list type="bullet">
         /// <item><description><c>level</c> (undo, extra_cuia desde el 8, restart, pause, level_card y reveal si se ven): al final
         /// de <c>GameScreen.OnLevelLoaded</c>, después de los ganchos <c>*LevelLoaded</c> y con la bandeja ya refrescada; otra vez
         /// cuando aparece o se va una ranura de la bandeja (Cuia extra o Revelar, que la recentran), al cambiar la pantalla
         /// y al acabar el re-layout de una cuia añadida (Cuia extra, rescate o Balsa: una sola línea, con las N + 1 cuias en su
-        /// sitio final).</description></item>
-        /// <item><description>Modales del nivel, al abrirse: <c>level_card</c>, <c>pause</c>, <c>quit_confirm</c> y
-        /// <c>restart_confirm</c>, <c>stuck</c> (al terminar de subir el panel) y <c>victory</c>.</description></item>
-        /// <item><description>Embudo del nivel (D-008), al abrirse y al reabrir la app en él: <c>giveup_confirm</c> (close,
-        /// rescue si se ofrece y give_up), <c>level_failed</c> (retry y close) y <c>no_canoes</c> (close, extra_canoe_video,
-        /// refill_canoes e infinite_canoes si se ofrecen, y home), que se repite cada vez que rehace su layout.</description></item>
+        /// sitio final; si en esos 600 ms se abrió un modal del nivel, detrás se repite la línea del modal).</description></item>
+        /// <item><description>Modales del nivel: <c>pause</c>, <c>quit_confirm</c> y <c>restart_confirm</c> al abrirse;
+        /// <c>level_card</c> al terminar su entrada; <c>stuck</c> y <c>victory</c> al terminar de subir el panel.</description></item>
+        /// <item><description>Embudo del nivel (D-008), al abrirse: <c>giveup_confirm</c> (close, rescue si se ofrece y give_up)
+        /// y <c>level_failed</c> (retry y close), también al reabrir la app en ellos, y <c>no_canoes</c> (close,
+        /// extra_canoe_video, refill_canoes e infinite_canoes si se ofrecen, y home), que se repite cada vez que rehace su layout
+        /// (no se guarda: la app se reabre en Nivel fallido o en el nivel).</description></item>
         /// <item><description>Inicio: <c>lobby</c>, <c>content_end</c> y <c>no_canoes</c>.</description></item>
         /// </list>
         /// </summary>

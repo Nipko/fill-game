@@ -24,8 +24,11 @@ namespace AF.Tests.PlayMode
     /// ¿Seguro? o Nivel fallido abiertos, la pantalla reaparece y las canoas no cambian (cerrar la app nunca cobra canoa ni
     /// es una salida gratis del embudo); y cada vertido y la victoria escriben el perfil una sola vez, con su coste en el log
     /// (el objetivo [P] de 5 ms por vertido está pendiente del dueño). Al reabrir un nivel ≥ 8, «+1 cuia» se ve desde el
-    /// primer fotograma (con su «+1» regalado, con su precio o gris si ya se usó) y la última AF_LAYOUT es la de lo que se ve:
-    /// la del nivel con «+1 cuia» o la del modal reabierto (T-A y T-B de la prueba del 2026-10-09).
+    /// primer fotograma (con su «+1» regalado, con su precio o gris si ya se usó) y la pantalla que se ve publica su
+    /// AF_LAYOUT, que es la última línea: la level con «+1 cuia», o la del modal reabierto (¿Seguro? o Nivel fallido; Sin
+    /// canoas no se guarda) (T-A y T-B de la prueba del 2026-10-09). Quien toca por adb usa la última línea de la pantalla
+    /// que está a la vista (DevProbe.Layout). El arreglo de BoosterTray.SetVisible (T-A.1) no se ve aquí: desde T-A.3 la
+    /// bandeja se refresca antes de enseñarse al reabrir; lo protege BoosterTrayTests.TrayShownBeforeTheExtraCuiaSlotExists….
     /// </summary>
     public sealed class ResumeTests
     {
@@ -132,7 +135,7 @@ namespace AF.Tests.PlayMode
             Assert.That(third.View.GiveUp.RescueButton.gameObject.activeSelf, Is.True, "otra vez «Continuar: +1 cuia»");
             Assert.That(third.Wallet!.Canoes.Count, Is.EqualTo(5));
 
-            // T-B: el modal reabierto publica su AF_LAYOUT, y es la última (lo que se toca por adb es lo que se ve).
+            // T-B: el modal reabierto publica su AF_LAYOUT, y es la última línea (la de la pantalla que se ve).
             string giveUp = _layout.RequireLast("giveup_confirm", 31, "¿Seguro? reabierto");
             Assert.That(AfLayoutLog.ButtonIds(giveUp), Is.EqualTo(new[] { "close", "rescue", "give_up" }));
             AfLayoutLog.AssertCenterInside(giveUp, "close", (RectTransform)third.View.GiveUp.CloseButton.transform);

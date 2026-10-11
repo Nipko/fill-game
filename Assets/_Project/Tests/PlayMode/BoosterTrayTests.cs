@@ -160,6 +160,66 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator TrayShownBeforeTheExtraCuiaSlotExists_TheSlotIsSeenAsSoonAsItAppears()
+        {
+            // T-A.1 (prueba del 2026-10-09), aislado: la bandeja se enseña (SetVisible(true)) cuando «+1 cuia» aún no existe y
+            // la ranura aparece después sin otro SetVisible. Tiene que verse en cuanto aparece. Con la línea antigua de
+            // BoosterTray.SetVisible (_extra.SetVisible(visible && _extra.Active)) la ranura se quedaba con «oculta» y Refresh la
+            // activaba sin enseñarla: al reabrir la app, «+1 cuia» no se veía. Desde T-A.3 los flujos normales ya no llegan a
+            // ese orden (Refresh corre en OnLevelLoaded, antes del SetVisible de SyncChrome), así que los tests de reabrir no lo
+            // distinguen y este es el que protege el arreglo. Aquí: en la victoria del 7 (bandeja oculta, sin Cuia extra) se
+            // enseña la bandeja y se pasa al 8, que la trae; se mira antes de cualquier fotograma, sin SyncChrome.
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
+            yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore(7, 6));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            VictorySetup.WinToVictoryScreen(boot);
+            PlayModeHelpers.Step(boot, 900);
+            Assert.That(view.Tray.ExtraCuiaShown, Is.False, "en el 7 la ranura «+1 cuia» no existe");
+            view.Tray.SetVisible(true);
+            Assert.That(view.UndoButton.gameObject.activeInHierarchy, Is.True, "la bandeja se ve");
+            Assert.That(view.ExtraCuiaButton.gameObject.activeInHierarchy, Is.False, "y «+1 cuia» todavía no");
+
+            view.NextButton.onClick.Invoke();
+            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(8));
+            Assert.That(view.Tray.ExtraCuiaShown, Is.True, "la ranura aparece en OnLevelLoaded (T-A.3)");
+            Assert.That(view.ExtraCuiaButton.gameObject.activeInHierarchy, Is.True, "T-A.1: aparece a la vista, sin esperar a otro SetVisible");
+        }
+
+        [UnityTest]
+        public IEnumerator ExtraCuia_PauseOpenedDuringTheRelayout_TheLastLineIsStillThePause()
+        {
+            // T-B: el re-layout de «+1 cuia» (600 ms) no bloquea la entrada. Si a mitad se abre la Pausa, al acabar sale la línea
+            // level con las N + 1 cuias (vale para el tablero cuando se cierre) y, detrás, otra vez la de la Pausa, que es lo que
+            // se ve: la última línea nunca deja el toque debajo del modal.
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
+            yield return PlayModeHelpers.LoadGame(8, new MemoryProgressStore(8, 7));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            int cuias = view.Views.Length;
+            int levels = _layout.AllOf("level", 8).Count;
+            Assert.That(boot.PressExtraCuia(), Is.True);
+            PlayModeHelpers.Step(boot, 100);
+            Assert.That(view.Relayouting, Is.True, "a mitad del re-layout");
+
+            view.PauseButton.onClick.Invoke();
+            Assert.That(view.Pause.Visible, Is.True);
+            string pause = _layout.RequireLast("pause", 8, "Pausa abierta");
+            PlayModeHelpers.Step(boot, 700);
+            Assert.That(view.Relayouting, Is.False);
+            Assert.That(view.Pause.Visible, Is.True, "la Pausa sigue abierta");
+
+            Assert.That(_layout.AllOf("level", 8).Count, Is.EqualTo(levels + 1), "una sola AF_LAYOUT level nueva, al acabar el re-layout");
+            Assert.That(AfLayoutLog.Cuias(_layout.LastOf("level", 8)!).Length, Is.EqualTo(cuias + 1), "con las N + 1 cuias");
+            Assert.That(_layout.AllOf("pause", 8).Count, Is.EqualTo(2), "la de la Pausa, al abrirse y repetida detrás de la level");
+            Assert.That(_layout.RequireLast("pause", 8, "al acabar el re-layout"), Is.EqualTo(pause), "la última línea es la de la Pausa, igual");
+        }
+
+        [UnityTest]
         public IEnumerator From11_MareaShowsItsFreeQuota_AndWithoutQuotaOffersTheRefill()
         {
             LaunchOptions.LevelOffsetOverride = 10;

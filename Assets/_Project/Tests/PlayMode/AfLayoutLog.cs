@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
@@ -33,7 +34,10 @@ namespace AF.Tests.PlayMode
         /// <summary>Líneas capturadas desde el último <see cref="Clear"/>.</summary>
         public int Count => _lines.Count;
 
-        /// <summary>La última línea AF_LAYOUT, de cualquier pantalla (la que usaría quien toca por adb), o null.</summary>
+        /// <summary>
+        /// La última línea AF_LAYOUT, de cualquier pantalla, o null. Quien toca por adb usa la última de la pantalla que está a
+        /// la vista (DevProbe.Layout): coincide con esta cuando lo último que se abrió sigue abierto.
+        /// </summary>
         public string? Last => _lines.Count == 0 ? null : _lines[_lines.Count - 1];
 
         public void Dispose()
@@ -164,14 +168,45 @@ namespace AF.Tests.PlayMode
 
         /// <summary>
         /// Toca <paramref name="button"/> en el centro que publicó la línea para <paramref name="id"/>, como
-        /// <c>adb shell input tap</c>: el centro tiene que caer dentro del botón y el clic llega por el EventSystem (Button
-        /// comprueba que esté activo e interactivo).
+        /// <c>adb shell input tap</c>: el centro tiene que caer dentro del botón; la prueba de impacto del EventSystem en ese
+        /// punto (<c>EventSystem.RaycastAll</c>, la de un toque de verdad) tiene que dar como primer manejador de clic el propio
+        /// botón, así que nada lo tapa (ni el velo, ni otro modal, ni un panel que siga activo); y el clic se entrega a ese
+        /// manejador (Button comprueba que esté activo e interactivo). Antes deja pasar un fotograma, como en el teléfono entre
+        /// lo que se dibuja y el toque: hasta que el lienzo procesa lo que se acaba de enseñar, sus Graphic tienen depth = -1 y
+        /// la prueba de impacto no los ve (Canvas.ForceUpdateCanvases no basta). El juego no avanza: el reloj es del test
+        /// (<see cref="PlayModeHelpers.TakeClock"/>). Se usa con <c>yield return</c>.
         /// </summary>
-        public static void Tap(string line, string id, Button button)
+        public static IEnumerator Tap(string line, string id, Button button)
         {
+            yield return null;
             AssertCenterInside(line, id, (RectTransform)button.transform);
-            var tap = new PointerEventData(EventSystem.current) { position = Center(line, id), button = PointerEventData.InputButton.Left };
-            ExecuteEvents.Execute(button.gameObject, tap, ExecuteEvents.pointerClickHandler);
+            EventSystem? events = EventSystem.current;
+            Assert.That(events, Is.Not.Null, id + ": hay EventSystem");
+            var tap = new PointerEventData(events) { position = Center(line, id), button = PointerEventData.InputButton.Left };
+            var hits = new List<RaycastResult>();
+            events!.RaycastAll(tap, hits);
+            Assert.That(hits.Count, Is.GreaterThan(0), id + ": el toque en " + tap.position + " da en algo (" + line + ")");
+            GameObject? handler = ExecuteEvents.GetEventHandler<IPointerClickHandler>(hits[0].gameObject);
+            Assert.That(handler, Is.SameAs(button.gameObject), id + ": el toque en " + tap.position + " da primero en «" + Path(hits[0].gameObject) + "» (clic: «" + (handler == null ? "nadie" : Path(handler)) + "»), no en «" + Path(button.gameObject) + "»");
+            tap.pointerCurrentRaycast = hits[0];
+            tap.pointerPressRaycast = hits[0];
+            tap.rawPointerPress = hits[0].gameObject;
+            tap.pointerPress = handler;
+            tap.eligibleForClick = true;
+            ExecuteEvents.Execute(handler!, tap, ExecuteEvents.pointerClickHandler);
+        }
+
+        private static string Path(GameObject go)
+        {
+            Transform t = go.transform;
+            string path = t.name;
+            while (t.parent != null)
+            {
+                t = t.parent;
+                path = t.name + "/" + path;
+            }
+
+            return path;
         }
 
         public static Rect WorldRect(RectTransform rt)
