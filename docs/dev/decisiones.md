@@ -12,8 +12,10 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-004 | 2026-10-07 | Panel azul petróleo, vertido a 38° y cuias más anchas con pocas cuias | Decidida por el dueño (respuestas a C16-C18 de `docs/art/direccion-visual-v2.md`); implementada en el árbol de trabajo, sin commitear (código, tests y documentación de «Archivos afectados»; EditMode y PlayMode en verde el 2026-10-07). Pendientes: commit y PR, revisión en el teléfono (`dev.apk`) y nueva medida de C19. Actualización del 2026-10-08: implementada en `b2d34de` (rama `d004-cuias-anchas`); la decisión 2 (38° fijos y labio a 0,6-1,6 u), el techo del vertido [P], la consecuencia «no cambia el número de filas» y el alto de la cuia (1:3, 6 u; pasa a 5,6 u) quedan sustituidos por D-006, que también matiza el recálculo a mitad de nivel: las filas se fijan al cargar y no se recalculan, solo el ancho; el resto sigue (panel azul petróleo y topes 64/56/48 dp) |
 | D-005 | 2026-10-08 | Vertido por tramo, como Magic Sort | Decidida por el dueño; en implementación (C1, L1, U1, D1-D6) |
 | D-006 | 2026-10-08 | Tablero, cuia y vertido como Magic Sort | Decidida por el dueño; en implementación (U2-U6, D1-D6). Pendiente: P12 (ranura de 42 dp en 16:9 con cuias añadidas) |
-| D-008 | 2026-10-08 | Bucle de partida como Magic Sort | Decidida por el dueño. Documentación aplicada el 2026-10-08 en `117f4be` (capítulos de «Archivos afectados»), dentro de la rama de código: **pendiente de la aprobación explícita del dueño antes de fusionar** o de un PR de documentación aparte (cambia el contrato 7). En implementación: pista B (B1-1-B1-6 y B2-1-B2-6). Los textos nuevos y los puntos [P] están pendientes (P14-P16, no bloquean). Abierta: P17, cuándo sale «Canoas infinitas 1 h» en Sin canoas (04 §7.3 y 05 §4.1 se contradicen). El número D-007 queda reservado para las mecánicas especiales, en pausa |
-| D-010 | 2026-10-08 | «Llenar y teñir»: el río llena las cuias y los miquitos las tiñen con fruta | Decidida por el dueño (idea y ampliación del 2026-10-08); guion `docs/research/intro-rio-miquitos/guion.md` aprobado para implementar. Implementada en la rama `intro-rio-miquitos` (`fbdf11e`, `e479cf0` y `8955ef3`), sin fusionar. Documentación aplicada el 2026-10-09 en la misma rama. Pendientes, sin bloquear: confirmar Q1-Q16 del guion (el código aplica sus recomendaciones salvo Q11 y Q14), Q17, toda la fauna con el asesor cultural, el arte del artista y las preguntas abiertas de la propuesta de fauna (F7, F9-F11 y F13). Los números D-007 y D-009 los usa la pista de mecánicas y niveles (rama `fase1-mecanicas-niveles`), sin entrada aún en este registro |
+| D-007 | 2026-10-08 | Mecánicas del río: catálogo de 12, estrenos de la 1.0 y reglas finas | Decidida por el dueño (todas las recomendaciones de la propuesta de cultura ribereña, §(h), y las reglas finas Q-A, Q-B y Q-C). Implementada en el núcleo y el generador (pista A, integrada en `6faf7c3`) y en Unity (paso 1 del traspaso, hasta `ce0ced4`). Registrada y llevada al GDD el 2026-10-11 (paso 2). Pendientes, sin bloquear la 1.0: C1-9 (02 R16 con Liana y capacidades mixtas), el formato de los respaldos del kill-switch, la tabla de novedades de 201-1000 y la revisión del asesor cultural |
+| D-008 | 2026-10-08 | Bucle de partida como Magic Sort | Decidida por el dueño. Documentación aplicada el 2026-10-08 en `117f4be` (capítulos de «Archivos afectados»), dentro de la rama de código: **pendiente de la aprobación explícita del dueño antes de fusionar** o de un PR de documentación aparte (cambia el contrato 7). En implementación: pista B (B1-1-B1-6 y B2-1-B2-6). Los textos nuevos y los puntos [P] están pendientes (P14-P16, no bloquean). Abierta: P17, cuándo sale «Canoas infinitas 1 h» en Sin canoas (04 §7.3 y 05 §4.1 se contradicen). El número D-007 quedó reservado para las mecánicas especiales, en pausa; tiene su entrada desde el 2026-10-11 |
+| D-009 | 2026-10-08 | Dificultad escalonada: ciclo de 20 reordenado, etiqueta antes de jugar y rotación de plantillas | Decidida por el dueño (Q1 A, Q2 sí, Q3 A y Q4 A de la misma propuesta). Implementada en el generador y en `tools/econ_sim.py` (pista A) y en Unity (paso 1). Registrada y llevada al GDD el 2026-10-11 (paso 2). Pendientes: aprobar las cifras [sim] regeneradas con el ciclo nuevo (P-2) y decidir la tabla de etiquetas de 03 §11 frente a la campaña medida |
+| D-010 | 2026-10-08 | «Llenar y teñir»: el río llena las cuias y los miquitos las tiñen con fruta | Decidida por el dueño (idea y ampliación del 2026-10-08); guion `docs/research/intro-rio-miquitos/guion.md` aprobado para implementar. Implementada en la rama `intro-rio-miquitos` (`fbdf11e`, `e479cf0` y `8955ef3`), sin fusionar. Documentación aplicada el 2026-10-09 en la misma rama. Pendientes, sin bloquear: confirmar Q1-Q16 del guion (el código aplica sus recomendaciones salvo Q11 y Q14), Q17, toda la fauna con el asesor cultural, el arte del artista y las preguntas abiertas de la propuesta de fauna (F7, F9-F11 y F13). Los números D-007 y D-009 los usó la pista de mecánicas y niveles (rama `fase1-mecanicas-niveles`); tienen su entrada desde el 2026-10-11. **Ampliación del 2026-10-09** (elenco de unas 50 especies que tiñen, una nueva cada 20 niveles), registrada el 2026-10-11: pendiente del diseño del paso 3 del traspaso |
 | D-011 | 2026-10-11 | Ajustes de la prueba en el teléfono: la victoria se cobra cuando se ve, avisos legibles, miquitos que se ven y Cosecha doble que avanza | Decidida por el dueño tras probar el `dev.apk` en el SM-S938B. Sin implementar: tareas P1-P4 de `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`, para el equipo de escritorio |
 
 ---
@@ -701,11 +703,125 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 
 ---
 
+## D-007 · Mecánicas del río: catálogo de 12, estrenos de la 1.0 y reglas finas
+
+- **Fecha:** 2026-10-08 (respuestas del dueño a las preguntas de la propuesta y reglas finas Q-A, Q-B y Q-C del mismo día). Registrada el 2026-10-11.
+- **Estado:** decidida por el dueño, que aceptó todas las recomendaciones de `docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md` §(h). La parte de dificultad de esa propuesta (Q1-Q4, el ciclo y la rotación) se registra aparte como D-009.
+  - Implementada en el núcleo, el solver, el generador y `tools/level-qa` en la pista A (rama `fase1-mecanicas-niveles`, integrada en `6faf7c3`; packs 11-200 en `56f220d`) y en Unity en el paso 1 del traspaso (olas 1-4 y verificación T18, de `ecb7892` a `ce0ced4`).
+  - Documentación aplicada el 2026-10-11 (paso 2 del traspaso; «Archivos afectados»).
+  - **Toda la fauna, la flora, los lugares, los nombres de las mecánicas nuevas y los textos de los tutoriales quedan pendientes de revisión del asesor cultural** (07 §8.2; lista de la propuesta §(i)).
+  - Pendientes que no bloquean la 1.0: el bloqueo C1-9 (Consecuencias), el formato de los respaldos del kill-switch (02 §9.2, regla 3) y la tabla de novedades de 201-1000 con el alcance de Q8 (D-009, punto 8).
+- **Sustituye:**
+  - el debut del Brote en el 63 (contrato 1; 02 §9.1 y `mech_debut_level`): pasa al 163 y el Matapi ocupa el 63;
+  - la Liana de número como regla de debut (02 §9.1 M3): la Liana debuta con fruta en el 83 y la de número pasa a variante en el 243;
+  - la regla de fútiles de 02 §1.4, su copia de 04 §5.1 y el orden de R10 (02 §1.2), por los del anexo B de la propuesta con la respuesta Q-B;
+  - el criterio de GDD.md §6 #6 y de la decisión 12 de 09 §8: Lluvia y Piraña entran en la 1.0;
+  - en 03 §8, la frase «nunca en niveles con mecánicas con disparador», que Q14 A define.
+- **No sustituye:**
+  - las reglas de Hoja, Brote, Remolino, Barro, Lluvia y Piraña de 02 §9.1, salvo lo que añaden Q-A, Q-B, Q-C y Q18 B;
+  - Aguas turbias (02 §11, T1-T7) ni su estreno en el hito 100 con 1 cuia turbia y la Luciérnaga regalada (04 §2.5);
+  - D-002 (ninguna mecánica resalta destinos) ni D-005 (vertido por tramo);
+  - el formato `af-level/1` ni el nombre de su esquema: sube a `pack_schema` 2 (contrato 21).
+
+**Contexto.**
+- D-008 dejó reservados el número D-007 y la pregunta P13 para las mecánicas especiales, en pausa: el dueño pidió investigar antes la cultura ribereña y la dificultad escalonada.
+- La investigación (`docs/research/cultura-ribera/investigacion.md`, web consultada el 2026-10-08) y la propuesta (misma carpeta) sintetizan dos propuestas puntuadas por jueces, con sus correcciones (anexo A). La propuesta termina con 18 preguntas cerradas (§(h)).
+- Filtro de cada idea (b.0): copia una función probada de Magic Sort; tiene una regla exacta compatible con el vertido por tramo, con D-002, con el solver y con la generación por superposición; no lleva contadores a favor del jugador; se lee en un segundo; cada desbloqueo tiene animación y sonido; nada sagrado ni personas.
+- Antes de programar el Remolino, la Lluvia y la Piraña, la pista A pidió tres reglas finas (Q-A, Q-B y Q-C).
+
+**Decisión.**
+1. **Catálogo de 12 mecánicas de campaña** (propuesta b.1 y b.2): las 7 del canon y 5 nuevas. La numeración M8-M12 es provisional. Aguas turbias es un modificador del canon y no cuenta entre las 12.
+
+   | # | Mecánica | Función de Magic Sort que copia | Regla en una línea | Estreno | Versión |
+   |---|---|---|---|---|---|
+   | M1 | Hoja | Botella atada y frascos cubiertos | Vacío reservado a una fruta; cae con su primer vertido | 43 | 1.0 |
+   | M10 | **Matapi** (nueva) | Frasco «?» (equivalencia [E]: la regla de Magic Sort no está observada en el dispositivo) | Nunca es origen: lo que entra no sale | 63 | 1.0 |
+   | M3 | Liana con fruta | Tela con icono | Atada; se suelta al sellar una cuia de su fruta | 83 | 1.0 |
+   | — | Aguas turbias (modificador) | Capa «?» | Dosis ocultas que se revelan al quedar arriba | 100 | 1.0 |
+   | M4 | Remolino | Portales | Lo vertido entra por el fondo de la pareja | 103 | 1.0 |
+   | M5 | Barro | Slime y caja regalo | Dosis inerte que acepta cualquier fruta al quedar arriba | 123 | 1.0 |
+   | M6 | Lluvia | Caja con temporizador | Cada k vertidos cae agua del mundo | 143 | 1.0 |
+   | M2 | Brote | Corcho por color | Cerrado no es origen; germina con su color | 163 | 1.0 |
+   | M7 | Piraña | Temporizador enemigo | Cada k vertidos muerde la última cuia destino | 183 | 1.0 |
+   | M8 | **Aguapé** (nueva) | Hielo por fila | Un grupo no es origen hasta que una de sus cuias sella | 223 | 1.1 |
+   | M9 | **Palizada** (nueva; sustituye a la «Nasa») | Armario con candado y llave dentro del líquido | Troncos sobre 2 o 4 cuias; se abren cuando la dosis-llave queda arriba | 263 | 1.1 |
+   | M11 | **Lancha** (nueva) | Cortina que cae con N vacíos | La cuia de carga atraca cuando hay v cuias vacías | 303 | 1.1 |
+   | M12 | **Cocha** (nueva) | Temporizador como ventana que se cierra | En v vertidos deja de recibir; solo sirve de origen | 583 | 1.1 |
+
+   - Regla exacta, presentación, desbloqueo, tutorial, base cultural y coste de cada una: propuesta b.2. Las del canon no cambian salvo lo que dicen los puntos 5 y 6.
+   - **Variantes** (b.3), para que haya algo nuevo hasta el 1000: Liana de cuenta (243), Hoja atada (283), Brote de dos hojas (343), Flor de vitória-régia (403), Palizada en cadena (443), Llave en la lancha (520, una combinación sin regla nueva, que no es un estreno), Casiquiare (703), Lancha de vuelta (763) y Aguapé que crece (883).
+   - **Fuera de la campaña** (b.4; Q10): el nido de tortuga, el defeso, la piracema y el revelado rítmico (contadores a favor del jugador, que se gastan con vertidos fútiles), el tipiti, la Cuia de tacacá (cambia el sellado), el mijano y las demás ideas de b.4 van a Travesías y eventos. Descartes: b.5 (Nasa, tronco hueco, tarrafa como hielo, curral, cacuri, friagem, gamitana, «Regla del río», «Repiquete» como subtítulo visible y la llave entre aguas turbias).
+2. **Estrenos de la 1.0** (niveles 1-200; Q5 B):
+   - Cuia chica 14 y Cuia alta 27, sin cambios (02 §8);
+   - Hoja 43, Matapi 63 y Liana con fruta 83;
+   - Aguas turbias 100, con estreno suave (Q9 sí): es lo único especial del nivel, con 1 cuia turbia de 2 dosis ocultas y 1 Luciérnaga regalada. Es la única excepción a «nada debuta en un reto ni en un hito» (D-009) y a las «2 mecánicas activas» del Muy difícil (02 §10);
+   - Remolino 103, Barro 123, Lluvia 143, Brote 163 y Piraña 183.
+   - Cada estreno ocupa p3-p5 de su ciclo con 2 vacíos, la mecánica sola y un solo ejemplar (02 §9.2, regla 2).
+3. **Alcance por versión** (Q8: (c) junto con (b′)):
+   - la 1.0 lleva las mecánicas hasta el 200 (el canon más el Matapi) y cubre 201-700 con las variantes de coste S (Liana de cuenta, Hoja atada, Brote de dos hojas y Flor) y con combinaciones de lo que ya trae;
+   - **1.1:** Aguapé 223, Palizada 263, Lancha 303 y Cocha 583. Llegan en un build, porque exigen código en `AF.Core` y subir `pack_schema`, y sustituyen niveles de 201-700 con `level_overrides` o con una vuelta nueva (08 §4.4). Regla de migración: si el jugador ya pasó el debut de una mecánica, se le sirve una vez su tablero de debut antes de usarla (03 §9, consecuencia 3);
+   - las demás variantes dependen de mecánicas de la 1.1 (Palizada en cadena, Llave en la lancha, Lancha de vuelta y Aguapé que crece) o caen después del 700 (Casiquiare);
+   - Lluvia y Piraña entran en la 1.0: el solver con estado temporal pasa los tests (cierra GDD.md §6 #6 con la evidencia C3-3 de `Packages/com.amazonfill.core/README.md`).
+4. **Respuestas del dueño** (propuesta §(h), todas con la recomendación; Q1-Q4 son de D-009):
+   - **Q5 B:** Matapi en el 63 y Brote en el 163. La equivalencia del Matapi con el frasco «?» de Magic Sort sigue siendo [E]: el Matapi vale como mecánica propia.
+   - **Q6 sí:** la Liana debuta con fruta (`key`) y la de número (`n`) pasa a variante (243).
+   - **Q7 sí:** Aguapé, Palizada, Lancha y Cocha entran en la campaña, con kill-switch y respaldo.
+   - **Q8:** (c) junto con (b′) (punto 3).
+   - **Q9 sí:** el estreno de Aguas turbias en el 100 es lo único especial del nivel, con 2 dosis ocultas (punto 2).
+   - **Q10 sí:** los contadores a favor del jugador van a Travesías y eventos, nunca a la campaña.
+   - **Q11 A:** las temporadas de aguas altas y bajas solo se ven en la LUT del fondo, sin cartel (D-009, punto 6).
+   - **Q12 no:** ni manatí en el elenco ni Rosa como llave de la Palizada; la corriente se lleva el aguapé y la llave es un pez genérico. Se revisa con el arte.
+   - **Q13 sí:** se arreglan la regla de fútiles y el orden de R10 antes de programar mecánicas (anexo B; hecho en el núcleo, `AF.Core.Rules.BoardRules`).
+   - **Q14 A:** una «mecánica con disparador» es una de liberación (Liana, Flor, Aguapé, Palizada, Lancha) o un contador (Lluvia, Piraña, Cocha, Aguapé que crece). Los filtros (Hoja, Brote, Matapi, Barro) sí pueden ir con Aguas turbias.
+   - **Q15 sí:** se encarga la skin Cuia de Santarém a ASARISAN, con pago y crédito, si el asesor y el presupuesto lo permiten.
+   - **Q16 B:** `tools/level-qa` mide las trampas tempranas con un tope por etiqueta: 0 en Normal y 1 en Difícil (D-009, punto 9).
+   - **Q17 A:** el contenido de la Liana y de la Palizada se ve; ninguna mecánica tapa contenido.
+   - **Q18 B:** los vertidos fútiles no avanzan los contadores de Lluvia y Piraña; el contador visible solo baja con vertidos útiles, y R16 se mantiene.
+5. **Reglas finas** (respuestas del dueño a Q-A, Q-B y Q-C, 2026-10-08):
+   - **Q-A:** una cuia del Remolino no vierte en su propia pareja: el vertido es ilegal (rechazo sin texto, R11).
+   - **Q-B:** la exención de `futil` vale también para el origen si es un Remolino o una Lluvia con gotas pendientes, no solo como destino (el anexo B solo eximía destinos). Así R14 se cumple con esas dos mecánicas.
+   - **Q-C:** si la Piraña no puede morder (la cuia que recibió quedó sellada, es un Matapi o la propia cueva, o la cueva está llena), pierde ese mordisco y el contador sigue.
+6. **Reglas del núcleo** (anexo B, Q13, Q-B y Q18 B; `AF.Core.Rules.BoardRules`):
+   - **R10 por etapas:** (a) revelado de la nueva cima de A; (b) aperturas por recepción (Hoja, Brote); (c) sellado; (d) liberaciones por sellado (Liana); (e) contadores (Lluvia, Piraña), una sola vez por vertido y nunca en un fútil; (f) condiciones del tablero (Palizada y Lancha, en la 1.1); (f′) se repiten (c), (d) y (f) hasta que nada cambie; (g) victoria; (h) bloqueo. Marea restaura el estado anterior entero.
+   - **`futil`:** no es fútil verter en una cuia que cambia al recibir (Hoja puesta, Brote cerrado, Matapi, Remolino, Lluvia con gotas pendientes) ni desde un origen exento (Remolino o Lluvia con gotas pendientes, Q-B; en la 1.1, la Cocha cerrada). En lo demás rige 02 §1.4, con la excepción de Aguas turbias.
+   - El test literal del anexo B («no existe un ciclo de vertidos útiles que vuelva al mismo estado canónico») es falso ya en el juego base (A = [1, 2, 2, 2], B = [3, 3, 2]). Lo sustituyen tres propiedades que cada mecánica pasa antes de su debut: P1 (R14: todo estado atascado es irresoluble), P2 (R16 en `run`: un fútil entre dos cuias sin mecánica y de la misma capacidad no cambia el estado canónico) y P3 (ningún par monocolor ↔ vacía es útil en los dos sentidos).
+   - **Restricciones:** como mucho un contador por nivel (Lluvia o Piraña, nunca juntas); las combinaciones prohibidas de la propuesta d.3 (Aguas turbias solo con filtros y capacidades; el Matapi nunca en un par de Remolino, como cuia de Lluvia ni como cueva de Piraña, ni con Barro u ocultas dentro; Lancha y Liana juntas no antes del 401; la dosis-llave de una Palizada nunca en un Remolino ni bajo una dosis de su color); la Pororoca deja fijas las cuias con mecánica cerrada y se deshabilita con Lluvia y Piraña. La implementación añade [P]: sin Remolino junto a la Piraña ni con dosis ocultas.
+
+**Consecuencias.**
+- **Contratos:** cambian el contrato 1 (debuts: Hoja 43 · Matapi 63 · Liana con fruta 83 · Remolino 103 · Barro 123 · Lluvia 143 · Brote 163 · Piraña 183; `mech_debut_level` y `mech_enabled` ganan `matapi`) y el contrato 21 (`pack_schema` 2: tipo `matapi`; Liana con `key` o con `n`, una y solo una; campos obligatorios por tipo; `intro_mechanic` con `chica`, `alta`, `matapi` y `murky` [P], y `difficulty.par_approx` [P]).
+- **Piraña:** con el mordisco inmediato de Q-C la heurística `H` sigue siendo admisible y consistente y el par es exacto: no hacen falta `ceil(H/2)` ni `par_approx` (CHANGELOG del núcleo, C3-2).
+- **Rendimiento** (README del núcleo, C3-3): en los 36 tableros de referencia de 12-14 cuias, A* llega a 186.346 expandidos, Morpho tarda 1,0 ms como máximo y el bot ×40, 4,8 ms. Con el presupuesto de 300.000 se agotan algunos tableros con Remolino, Lluvia y Piraña, que el pipeline descarta o regenera.
+- **Bloqueo C1-9** (pregunta de 02 R16, abierta): la propiedad P1 de R14 falla con Liana y capacidades mixtas (contraejemplo en el CHANGELOG del núcleo). Provisionalmente, `LevelValidation` rechaza la Liana con capacidades mixtas (también con la cueva de la Piraña), y el calendario de la campaña cambia cuatro celdas de d.4 [P] para que la Liana nunca vaya con ellas: 94 Ma → Li y 95 Li+Al → Ma+Al, 160 Ll+Li+Al6 → Ll+Al6 y 198 Pi+Li → Pi+Ho (`tools/level-generator/specs/campaign_v1.json`, `calendar_note`). Las capacidades se quedan: la Cuia alta sigue en el 95 y la de 6, en el 160. Opciones: (a) ampliar `futil` y quitar el bloqueo; (b) mantenerlo. Lo deciden el tech-lead o el dueño.
+- **Capacidades mixtas:** la poda de fútiles del solver puede alargar el par o dejar sin camino útil un tablero que se gana (C1-8; 3 de 309 tableros pequeños en `run`); R14 se cumple. Con Q-B, un vaivén útil del Remolino puede volver al mismo estado canónico y retrasar el modal (P3; medido, sin romper R14).
+- **Kill-switch:** los respaldos por slot de 02 §9.2 (regla 3) no tienen todavía formato de pack ni de id. Hasta decidirlo, `mech_enabled` = false no puede sustituir los niveles de la 1.0.
+- **Paso 1 (Unity):** cada mecánica tiene aspecto procedural [P] (D-003) y desbloqueo al estilo Magic Sort con duraciones [P] (07 §5.6), y cada estreno, su tutorial de una pantalla (02 §8 y §9.1: los 11 textos caben en 2 líneas). El 100 regala la Luciérnaga.
+- **Arte y audio:** unas 20 piezas nuevas entre sprites, animaciones y sonidos (propuesta §(g), 07). Todo el arte nuevo lo hace el artista.
+
+**Alternativas descartadas.**
+- Q5 A (opción mínima): el canon intacto y el Matapi en el 163, intercambiando Ma y Br en todas las columnas 61-200.
+- Q8 (a), todas las mecánicas en la 1.0, y (b), las nuevas por `levels_remote` en la 1.1. La (b) no es posible: los niveles 1-700 van instalados, un paquete nuevo nunca cambia un nivel publicado y el cliente rechaza un `pack_schema` mayor (08 §4.4).
+- Q17 C: tapar el contenido de la Liana y de la Palizada, como la tela de Magic Sort. Sería información oculta desde el 83 en niveles Normales.
+- Q18 A: que los fútiles avancen los contadores. La Piraña quedaría sin bloqueo posible.
+- La Nasa con pez, sustituida por la Palizada, y las demás ideas de b.5.
+- Eximir en `futil` a cualquier origen con mecánica: el ir y venir monocolor contaría como útil y el modal de Aguas estancadas no saldría nunca (anexo B). Q-B lo limita al Remolino y a la Lluvia con gotas.
+
+**Cómo revertir.**
+- Debuts: cambiar el calendario de `campaign_v1.json` y regenerar los packs. Un pack publicado no cambia: hace falta una vuelta nueva o `level_overrides` (08 §4.4).
+- Reglas del núcleo (R10, `futil`, Q-A, Q-B, Q-C y Q18 B): en `BoardRules` y en las mecánicas de `AF.Core`, con sus tests y las propiedades P1-P3.
+- Siempre con una decisión nueva que sustituya a D-007.
+
+**Archivos afectados.**
+- **Núcleo, solver y herramientas** (pista A): `Packages/com.amazonfill.core/Runtime/AF.Core/{Rules, Mechanics, Board, Session, Determinism}`, `Runtime/AF.Solver/{Search, Bot, Generation, Murky}`, sus tests y `dotnet/AF.Core.Tests/DotnetOnly`; `tools/level-generator` (`--spec` y `specs/campaign_v1.json`), `tools/level-qa`, `schemas/af-level-1.schema.json` (`pack_schema` 2) y `tools/validate_schema.py`; los packs `Assets/_Project/Data/Levels/mundo_02_v1.json` a `mundo_05_v1.json` y el informe `tools/out/campaign_v1_report.md`.
+- **Unity** (paso 1): `Assets/_Project/Scripts/{Levels, GameFlow, Boosters, Presentation, UI}` y sus tests (tareas del paso 1 en `docs/dev/traspaso/README.md` §6).
+- **Documentación** (2026-10-11, paso 2): este registro; `docs/GDD.md` §2, §3.3, §4, §6 y §7; `docs/gdd/{00, 01, 02, 03, 04, 06, 07, 08, 09}`; `docs/dev/traspaso/README.md` (§6, paso 4: C1-9, y §7). Las cifras [sim] no cambian (D-009, Consecuencias).
+
+---
+
 ## D-008 · Bucle de partida como Magic Sort
 
 - **Fecha:** 2026-10-08.
 - **Estado:** decidida por el dueño el 2026-10-08: «la estructura se copia de Magic Sort; las cifras salen de nuestro GDD». Su postura general: copiar lo que funciona sin suavizarlo, salvo por política de Google Play.
-  - El número D-007 y la pregunta P13 quedan reservados para las mecánicas especiales, **en pausa**: el dueño pidió investigar antes la cultura ribereña y la dificultad escalonada. Nada de esta entrada depende de D-007.
+  - El número D-007 y la pregunta P13 quedan reservados para las mecánicas especiales, **en pausa**: el dueño pidió investigar antes la cultura ribereña y la dificultad escalonada. Nada de esta entrada depende de D-007. *Nota del 2026-10-11: D-007 y D-009 ya tienen su entrada; D-009 colorea las cabeceras de ¿Seguro? y Nivel fallido con la etiqueta del nivel.*
   - Respuesta del dueño a la pregunta bloqueante 2 del plan de la fase (2026-10-08, transmitida por la sesión principal): AF.Platform, AF.Save, AF.Ads y AF.IAP se crean **solo con interfaces e implementaciones simuladas**. Sin SDK, sin cambios en `Packages/manifest.json` ni `packages-lock.json`, sin permisos de Android, sin claves y sin red. El dueño revisa el resultado al fusionar.
   - Documentación aplicada el 2026-10-08 en los capítulos de «Archivos afectados», en `117f4be`, dentro de la rama de código `fase2-bucle-partida`.
     - El plan de la fase dejaba estas ediciones del GDD (Dc2-Dc6) para después de las respuestas a P13-P16, como lote aprobado por el dueño. Por eso quedan **pendientes de su aprobación explícita antes de fusionar**. Si no las aprueba en el PR de la pista B, van en un PR de documentación aparte.
@@ -885,14 +1001,125 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 
 ---
 
+## D-009 · Dificultad escalonada: ciclo de 20 reordenado, etiqueta antes de jugar y rotación de plantillas
+
+- **Fecha:** 2026-10-08 (respuestas del dueño a Q1-Q4 de la propuesta). Registrada el 2026-10-11.
+- **Estado:** decidida por el dueño con la recomendación de cada pregunta: Q1 A, Q2 sí, Q3 A y Q4 A de `docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md` §(h). El resto de la propuesta (mecánicas) es D-007.
+  - Implementada en la pista A: `tools/level-generator` (`--spec`, con el ciclo y el calendario de `specs/campaign_v1.json`), `tools/level-qa` y `tools/econ_sim.py` (tarea P-2, `0faf51e`). En Unity, en el paso 1 del traspaso: chip y cinta en Jugar y en Siguiente, tarjeta previa, HUD y cabeceras de ¿Seguro? y Nivel fallido.
+  - Documentación aplicada el 2026-10-11 (paso 2 del traspaso).
+  - **Las cifras [sim] regeneradas con el ciclo nuevo esperan la aprobación del dueño** (P-2; `docs/dev/traspaso/planes-integracion.json`). Hasta entonces el GDD conserva las de la corrida del 2026-10-06 (GDD.md §7.3, V5).
+  - Los nombres internos de las posiciones (Vaciante, Aguas bajas, Repiquete, Bajada, Remanso, Pico) y los nombres de hito son [P] y pasan por el asesor cultural.
+- **Sustituye:**
+  - en 03 §12, los retos en p6, p10, p14, p17 y p19 (contrato 1, incidencia 20 de GDD.md §7.2): pasan a p6, p9, p12, p15 y p18, y p19 pasa a ser un remanso puro;
+  - en 03 §11, la regla «el hito siempre va precedido de un reto»: el hito va precedido de un remanso, y este de un reto;
+  - los retos con etiqueta de 41-59 (el modelo de 05 §3.1 usaba p6, p14 y p19): pasan a p6, p12 y p18, y p9 y p15 quedan suaves;
+  - los retos suaves de 21-39 (26, 30, 34, 37 y 39): pasan a 26, 29, 32, 35 y 38;
+  - en 02 §9, «nunca en reto (p6, p10, p14, p17, p19)»;
+  - en 02 §10, la señalización previa (solo la tarjeta): se suman el chip y la cinta en Jugar y en Siguiente.
+- **No sustituye:**
+  - la cuenta del ciclo: 12 de comodidad, 5 retos, 2 de recuperación y 1 hito;
+  - el primer Difícil en el 40 y el primer Muy difícil en el 60 (contrato 6);
+  - los umbrales del bot ×40 (Difícil ≥ 75 %, Muy difícil ≥ 90 %) ni que la etiqueta la decide la medición, no el slot;
+  - los premios de 20, 60 y 80 semillas (`eco_reward_*`);
+  - el reintento con la misma semilla, «El río bajó» al tercer fallo y el Salto del Boto (c.6);
+  - la excepción de debut de 03 §12 (2 vacíos, una sola mecánica y bot < 20 % en p3-p5).
+
+**Contexto.**
+- El dueño pidió una dificultad «escalonada» como la de Magic Sort: dientes de sierra con etiquetas antes de jugar, un respiro tras cada pico y plantillas que rotan y vuelven (traspaso §8).
+- Magic Sort pone la etiqueta y el «x5» en el botón con el que se arranca el nivel y anuncia el pico tras un respiro, como en sus niveles 387 → 388 → 389 (`docs/research/magic-sort/ficha-magic-sort.md` §3.6).
+- En el ciclo anterior, el reto p19 iba seguido del hito p20: dos niveles con etiqueta seguidos (anexo A de la propuesta).
+
+**Decisión.**
+1. **Ciclo de 20 reordenado** (c.3; Q1 A). Desde el 21, `p = ((n − 1) mod 20) + 1`:
+
+   | p | Rol | Nombre interno [P] | Vacíos | Fuente | Ventana de bot (21-40 / 41-60 / 61+) | Etiqueta posible | Contenido |
+   |---|---|---|---|---|---|---|---|
+   | 1-2 | Recuperación | Vaciante | 2 | `walk`, K−1 | < 30 % | — | Puro |
+   | 3-5 | Comodidad o estreno | Aguas bajas | 1 (2 hasta el 30 y en debuts) | `walk` | 20-60 % (< 20 % en debuts) | — | Debut, o 0-1 mecánicas |
+   | **6** | Reto | Repiquete | 1 (2 en 21-39) | `fill`/`deep` | 50-70 / 60-80 / ≥ 75 | Difícil desde el 41 | 1-2 mecánicas |
+   | 7-8 | Comodidad | Bajada | 1 | `walk` | 20-60 % | — | 0-1 mecánicas |
+   | **9** | Reto | Repiquete | ídem | ídem | ídem | Difícil | 1-2 mecánicas |
+   | 10-11 | Comodidad | Bajada | 1 | `walk` | 20-60 % | — | 0-1 mecánicas |
+   | **12** | Reto | Repiquete | ídem | ídem | ídem | Difícil | 1-2 mecánicas |
+   | 13-14 | Comodidad | Bajada | 1 | `walk` | 20-60 % | — | 0-1 mecánicas |
+   | **15** | Reto | Repiquete | ídem | ídem | ídem | Difícil | 1-2 mecánicas |
+   | 16-17 | Comodidad | Bajada | 1 | `walk` | 20-60 % | — | 0-1 mecánicas |
+   | **18** | Reto | Repiquete | ídem | ídem | ídem | Difícil | 1-2 mecánicas |
+   | **19** | Remanso | Remanso | 1 (2 hasta el 30) | `walk` | 20-40 % | — | **Puro** |
+   | **20** | Hito | Pico | 1 | `deep`, K máximo | 75-85 / ≥ 90 / ≥ 90 | Difícil (40) · Muy difícil (60+) | 2 mecánicas (3 desde el 320) |
+
+   Reglas del escalón (c.3):
+   1. Nunca hay dos niveles con etiqueta seguidos: entre dos retos hay siempre dos niveles y p19 no lleva etiqueta.
+   2. Tras cada nivel con etiqueta, comodidad: el índice D baja al menos una banda, dentro del −3,4 de 03 §12.
+   3. Tras el hito, dos niveles de recuperación.
+   4. Los retos suben dentro del ciclo: desde el 61, D(p6) ≤ D(p9) ≤ D(p12) ≤ D(p15) ≤ D(p18) < D(p20); en 41-59 solo cuentan los retos con etiqueta, D(p6) ≤ D(p12) ≤ D(p18) < D(p20).
+   5. El pico se anuncia tras un respiro.
+   6. Nada debuta en un reto ni en un hito. Única excepción: Aguas turbias en el hito 100 (D-007). Una combinación sin regla nueva no es un debut.
+   7. En 41-59, los retos con etiqueta son p6, p12 y p18 (3 de 5); p9 y p15 son suaves. El 40 es el primer Difícil y el 60, el primer Muy difícil.
+
+   La especificación de la campaña concreta las ventanas de los retos [P]: con etiqueta, 75-89 %; suaves, 50-74 % (`tools/level-generator/README.md`).
+2. **La etiqueta se ve antes de jugar** (c.1; Q2 sí):
+
+   | Dónde | Normal | Difícil | Muy difícil |
+   |---|---|---|---|
+   | Botón «Jugar · Nivel n» del inicio (D-008, punto 6) | Sin chip | Chip ámbar con la rana dardo y la cinta «×3» | Chip índigo con el jaguar, la cinta «×4» y el botón en variante nocturna |
+   | Botón «Siguiente» de la victoria (D-008, punto 3; 02 §6) | Sin chip | Chip ámbar y cinta «×3» del nivel siguiente | Chip índigo y cinta «×4» del nivel siguiente |
+   | Tarjeta previa de 1 toque | Ninguna; en un debut, el tutorial hace de tarjeta | Rana, «Difícil», «Aguas bravas», «Premio: 60» e iconos de las mecánicas del nivel [P] | Jaguar, «Muy difícil», «Noche de jaguar», «Premio: 80» e iconos de las mecánicas [P] |
+   | HUD | — | Chip y marco ámbar | Chip y marco índigo, fondo de noche |
+   | ¿Seguro? y Nivel fallido (D-008) | Cabecera normal | Cabecera ámbar | Cabecera índigo |
+
+   - Siguiente lleva la etiqueta porque, con D-008, tras ganar se pasa directo al nivel siguiente sin ver el botón del inicio.
+   - Un reto que mide menos del 75 % se publica sin chip y sin «×3» (c.2). Sin calavera.
+3. **Premios** (c.2; Q3 A): 20, 60 y 80 semillas, mostrados como cinta «×3» y «×4» sobre las 20 de un nivel normal. El «×5» (Muy difícil a 100) exige antes rehacer `tools/econ_sim.py` y `tools/out/econ_*.md` (contrato 18).
+4. **Subtítulos** (c.1; Q4 A): «Aguas bravas» en Difícil y «Noche de jaguar» en Muy difícil, los del canon (glosario §6.1); se apagan con `ui_show_difficulty_subtitles`. «Repiquete» queda como nombre interno de los retos.
+5. **La señal de dificultad es la luz, no la altura del agua** (c.5): el agua alta es la Crecida, que es buena. Muy difícil lleva la variante noche y el fondo un 15 % más oscuro (02 §10); el Difícil puede llevar una luz de tarde [P]. Sin barra ni texto; la luz sigue a la etiqueta medida.
+6. **Rotación de plantillas** (c.4 y d.1-d.2):
+   - **Plantillas por posición** (c.4): p1-p2 puras, con 2 vacíos y K−1. p3-p5: en un ciclo de debut, la mecánica nueva sola en 2-3 tableros; en los demás, comodidad con la titular del ciclo. p7-p8, p10-p11, p13-p14 y p16-p17: 0-1 mecánicas, con al menos 3 de esos 8 niveles puros. Retos: según el ciclo de vida (abajo). p19: puro y más fácil que la media de comodidad. p20: mecánicas con 15 niveles o más desde su debut y que ya salieron en un reto; al final de un mundo, su firma.
+   - **Temporadas** (d.1; Q11 A de D-007): cada ciclo es de aguas altas (A: Lluvia, Aguapé, Lancha, Liana y Flor) o de aguas bajas (B: Matapi, Palizada, Piraña y Cocha); Hoja, Hoja atada, Brote, Remolino, Casiquiare y Barro son de todo el año. La temporada solo cambia el peso de cada mecánica en la bolsa (×2 las de su familia, ×1 las de todo el año, ×0,5 las de la otra) y la LUT del fondo, sin cartel. No sigue el calendario real.
+   - **Ciclo de vida de una mecánica** (d.1): C0, el debut (titular en p3-p5, en p7, sola en el reto p9 y en dos o tres retos más; como mucho 8 niveles en el ciclo); C+1, secundaria de la siguiente titular en 2-3 retos; C+2, descanso o una comodidad; C+3 o C+4, regreso en una combinación nueva; después, la bolsa general.
+   - **Reglas de la bolsa** (d.2): al menos un 30 % de niveles puros por ciclo (p1, p2, p19 y 3 de comodidad); una mecánica en 6 niveles por ciclo como mucho (8 en su ciclo de debut) y nunca en 3 seguidos fuera del estreno; al menos una «primera vez» por ciclo (debut, variante, firma, primera combinación o forma de tablero nueva), con un registro versionado de combinaciones publicadas para que el test de reproducibilidad siga valiendo; toda mecánica vuelve al menos cada 3 ciclos de su temporada (120 niveles o menos) y las de todo el año, cada 2; como mucho 2 mecánicas por nivel antes del 300 y 3 después (3 solo en retos e hitos); un contador por nivel; temporadas alternas, nunca más de 2 ciclos seguidos de la misma, y el ciclo de debut de una mecánica toma su temporada; kill-switch con `mech_enabled.<id>`.
+7. **Calendario 1-200** (d.4): la tabla de la propuesta, nivel a nivel, con los estrenos de D-007, los debuts de tinte, los retos suaves, los retos que apuntan a Difícil, los hitos que apuntan a Muy difícil y los nombres de hito [P], pendientes del asesor. La campaña la copia en `tools/level-generator/specs/campaign_v1.json`, salvo las cuatro celdas [P] del bloqueo C1-9 (D-007, Consecuencias). Cada titular sale 8 veces en su ciclo de debut y vuelve como secundaria en el ciclo siguiente.
+8. **Regla para 201-1000** (d.5): la misma plantilla y las mismas reglas; cerca del 25 % de Difícil y del 5 % de Muy difícil desde el 201 (03 §11, sin cambios); 2 titulares por ciclo (de la temporada o de todo el año) y 1-2 invitadas, y una titular descansa en el siguiente ciclo de su temporada; las temporadas por ciclo de la tabla de d.5 (201 A · 221 A · 241 B…); nunca más de 60 niveles sin algo nunca visto; después del 1000, las vueltas reciclan las plantillas con las LUT de lluvia, noche y alba. La tabla de novedades de d.5 suponía otro alcance de la 1.0: con el (c) de Q8 (D-007) hay que rehacerla.
+9. **Medición** (c.7), además de los KPI de 03 §15:
+   - intentos medios por mecánica en su ciclo de debut: alarma si superan 2,5 en un nivel Normal; se sustituyen los slots con `level_overrides` y nunca se aplaza el estreno siguiente;
+   - trampas tempranas (jugadas iniciales que llevan a Aguas estancadas en 2 vertidos o menos): tope 0 en Normal y 1 en Difícil (Q16 B de D-007);
+   - acierto de etiqueta (retos que alcanzan el 75 %): si baja del 60 % en un ciclo, se revisa el generador de esa posición.
+
+**Consecuencias.**
+- **Simulación** (P-2, `0faf51e`): `tools/econ_sim.py` pasa a `CHALLENGE_POSITIONS` = {6, 9, 12, 15, 18} y a los retos con etiqueta p6, p12 y p18 en 41-59. La cuenta de etiquetas no cambia, pero el orden de los retos mueve un poco las cifras [sim]: saldo final del casual 1.842 → 1.912, del medio 15.510 → 15.856 y del hábil 26.408 → 26.092; primer bloqueo sin recursos del casual 249 → 260; ingreso por victoria 61,4 → 61,5 y 97,7 → 97,6; escenario A 23.815 → 24.043. Los ratios de referencia no cambian (7,7 / 7,2:1). Las cifras del GDD se actualizan cuando el dueño las apruebe (V5).
+- **Campaña v1 medida** (`tools/out/campaign_v1_report.md`):
+  - etiquetas: 31-60, 13,3 % Difícil y 3,3 % Muy difícil; 61-100, 20 % y 5 %; 101-200, 23 % y 5 %. Desde el 61 los cinco retos apuntan a Difícil (25 % por ciclo), por encima del 15 % y del 15-20 % de 03 §11: queda como pregunta abierta;
+  - acierto de etiqueta por ciclo: 67-100 %; cada remanso queda por debajo de la media de comodidad de su ciclo (QA-REMANSO);
+  - cuias y vacíos: en 31-100 hay 22 niveles con menos cuias que el mínimo de 03 §11 y en 101-200 el 64 % de las comodidades y los remansos se relajó, a 2 vacíos o con una Cuia chica de 2 (03 §4.4); el informe los deja para revisar.
+- **Unity** (paso 1): chip y cinta en Jugar y en Siguiente; tarjeta previa de 1 toque (una sola en el 100, combinada con el tutorial de Aguas turbias y la línea T4); chip y marco en el HUD, con un velo que oscurece el fondo un 15 % en Muy difícil (la variante noche con LUT queda [P]); cabeceras de ¿Seguro? y Nivel fallido.
+- **Pendiente técnico:** la temporada de cada ciclo no tiene todavía fuente de datos en el pack (la pista A la dejó solo en `campaign_v1.json`): la LUT de temporada necesita un campo nuevo, que subiría `pack_schema`, o una tabla del cliente.
+
+**Alternativas descartadas.**
+- Q1 B: el ciclo del canon (retos en p6, p10, p14, p17 y p19), con dos etiquetas seguidas en p19 y p20.
+- Q3 B: el Muy difícil a 100 semillas («×5», como Magic Sort) sin rehacer la simulación.
+- Q4 B: «Repiquete» como subtítulo visible, un regionalismo poco conocido.
+- La «Regla del río» como cuarta señal de dificultad y subir el agua en los niveles difíciles: chocan con la barra de la Crecida, donde el agua alta es buena.
+- Un cartel de temporada en p1 (Q11 B): competiría con «El río bajó».
+
+**Cómo revertir.**
+- Volver a las posiciones anteriores en `campaign_v1.json`, `tools/level-qa` y `tools/econ_sim.py`, regenerar `tools/out/econ_*.md` (contrato 18) y regenerar la campaña. Los niveles ya publicados no cambian: hace falta una vuelta nueva o `level_overrides` (08 §4.4).
+- Siempre con una decisión nueva que sustituya a D-009.
+
+**Archivos afectados.**
+- **Herramientas** (pista A): `tools/level-generator` (`Campaign/`, `Generation/` y `specs/campaign_v1.json`), `tools/level-qa` (comprobaciones del ciclo, de banda, del remanso y de trampas), `tools/econ_sim.py` y `tools/out/econ_*.md` (P-2).
+- **Unity** (paso 1): `Assets/_Project/Scripts/UI/{LobbyScreen, DifficultyChip, GameScreen.Labels, GameScreen.Funnel, GiveUpConfirm, LevelFailedScreen, LevelCardView}.cs` y `Assets/_Project/Scripts/GameFlow/{LevelCardInfo, LevelFlow.Cards}.cs`, con sus tests.
+- **Documentación** (2026-10-11, paso 2): este registro; `docs/GDD.md` §2, §4, §6 y §7; `docs/gdd/{00, 02, 03, 04, 05, 06, 07, 08, 09}`, con solo una nota fechada en 05 §2.1 y §3.1. Las cifras [sim] de 01, 04, 05, 09 y GDD.md quedan para cuando el dueño las apruebe (V5).
+
+---
+
 ## D-010 · «Llenar y teñir»: el río llena las cuias y los miquitos las tiñen con fruta
 
-- **Fecha:** 2026-10-08 (idea del dueño y su ampliación, y guion de la intro del mismo día). Registrada el 2026-10-09.
+- **Fecha:** 2026-10-08 (idea del dueño y su ampliación, y guion de la intro del mismo día). Registrada el 2026-10-09. La ampliación del 2026-10-09 (elenco de unas 50 especies que tiñen) se registró el 2026-10-11, al final de esta entrada.
 - **Estado:** decidida por el dueño, con el guion `docs/research/intro-rio-miquitos/guion.md` aprobado para implementar. Implementada en la rama `intro-rio-miquitos` (`fbdf11e`, con las revisiones `e479cf0` y `8955ef3`), **sin fusionar en `main`**.
   - Las 16 preguntas del guion (§18) no tienen respuesta explícita una a una. La implementación aplica la recomendación de cada una, salvo Q11 y Q14. Aquí quedan como **recomendación aplicada, pendiente de confirmación** (tabla del final): no bloquean y el registro no elige por el dueño (CLAUDE.md, regla 10).
   - **Toda la fauna, los nombres comunes, los datos de las tarjetas y la palabra «miquitos» (y su traducción) quedan pendientes de revisión del asesor cultural** (07 §8.2).
   - La propuesta de fauna (`docs/research/fauna/propuesta-fauna.md`) queda como **material de apoyo**, no canon, con sus preguntas abiertas (F1-F14; estado al final). Donde choca con el guion, manda el guion (punto 7).
-  - Numeración: D-007 (mecánicas, debuts) y D-009 (dificultad escalonada) son de la pista de mecánicas y niveles (rama `fase1-mecanicas-niveles`, `tools/level-generator/README.md`), que todavía no ha traído sus entradas a este registro. El código de esta rama cita la intro como «pendiente de D-009» (`IntroAnimation.cs`, `MonkeyRig.cs`, `TroopLayer.cs` y `SightingCard.cs`): debe decir D-010.
+  - Numeración: D-007 (mecánicas, debuts) y D-009 (dificultad escalonada) son de la pista de mecánicas y niveles (rama `fase1-mecanicas-niveles`, `tools/level-generator/README.md`), que todavía no ha traído sus entradas a este registro. El código de esta rama cita la intro como «pendiente de D-009» (`IntroAnimation.cs`, `MonkeyRig.cs`, `TroopLayer.cs` y `SightingCard.cs`): debe decir D-010. *Nota del 2026-10-11: D-007 y D-009 ya tienen su entrada.*
 - **Sustituye:**
   - «Sumergir y teñir» (02 §4.2, 07 §5.1, 08 §5.3 y glosario §6.4): la caída de las cuias (fase a), el agua de inmersión por fila (guía visual v2, 6.11) y «un icono de fruta por dosis desde fuera de pantalla»;
   - la contradicción del orden del teñido (02 §4.2: «de abajo arriba»; 07 §5.1: «la de arriba primero»; el código teñía de arriba abajo): dentro de la cuia, de abajo arriba;
@@ -1083,6 +1310,18 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - F6: sin miquitos en el mundo 13.
 - F8 es Q11, y F12 es Q9.
 - F14: el churuco en el mundo 4.
+
+**Ampliación del 2026-10-09: elenco de unas 50 especies que tiñen.** Decisión del dueño, registrada el 2026-10-11 (traspaso §6, paso 3).
+- **Ritmo:** una especie nueva cada 20 niveles (≈ 50 en 1-1.000), coordinada con los estrenos de mecánicas (D-007) para que no coincidan dos novedades en el mismo nivel.
+- **Quién tiñe:** monos, aves y otros animales que de verdad dejan caer fruta (tucanes, guacamayos, oropéndolas, murciélagos fruteros, kinkajú…), no solo miquitos.
+- **Cómo:** cada tipo con su forma de soltar la fruta (desde la rama, en vuelo, colgado, de noche), siempre en el mundo donde vive la especie.
+- **Qué cambia de esta entrada cuando se diseñe el elenco:** el punto 4 (una especie de miquito por mundo, en 11 tramos) pasa a una especie nueva cada 20 niveles, y los tres modelos de suelta (`fila`, `cuelga` y `sacude`) tendrán que cubrir las formas de soltar de las aves y de los demás animales.
+- **Qué no cambia:** los tiempos de la intro, «nunca la especie de otro mundo», el modo dosel, las reglas duras de representación (punto 6), las especies como datos sin Remote Config y D-002.
+- **Pendiente:**
+  - el diseño del elenco (`docs/research/fauna/elenco-tinteros.md`), con el guion del equipo `docs/dev/traspaso/workflow-elenco-50-especies.js` (investigación, diseño, verificación biológica y técnica, implementación, revisión y documentación), que se lanza después de la integración en Unity;
+  - hasta entonces sigue el catálogo `miquitos_v0.json` (10 especies y una variante);
+  - la tarjeta «¡Miquito a la vista!» y la palabra «miquitos» no nombran aves ni murciélagos: su texto lo fijan el diseño del elenco y el asesor, no esta entrada;
+  - cada especie, su nombre común y su forma de soltar la fruta, pendientes del asesor cultural (07 §8.2).
 
 ---
 
