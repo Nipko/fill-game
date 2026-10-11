@@ -11,37 +11,55 @@ using UnityEngine.UI;
 namespace AF.UI
 {
     /// <summary>
-    /// Bandeja cumbuca de comodines (tarea B2-1; GDD 07 §7.4, 02 §5, 04 §1.1, §2.1 y §2.2) con el orden canónico y los
+    /// Bandeja cumbuca de comodines (tarea B2-1; GDD 07 §7.4, 02 §5, 04 §1.1, §2.1, §2.2 y §2.5) con el orden canónico y los
     /// equivalentes de Magic Sort (ficha §2.3 y §5.2: deshacer, añadir botella; barajar llega con la Pororoca en I6):
     /// <list type="bullet">
     /// <item><description>[Deshacer · Marea]: sin contador en 1-10; desde el 11, badge blanco con el cupo gratis y «+N» ámbar con
     /// el stock; sin cupo ni stock, «+3» con el icono de video (<c>rv_undo_refill</c>) o la etiqueta de precio (30), y tocarlo
     /// recarga; gris sin historial;</description></item>
     /// <item><description>[+1 cuia · Cuia extra] desde el nivel 8: «+N» con stock o el precio (150), en rojo y con «Te faltan
-    /// {n}» encima sin saldo; gris si ya se usó en el nivel, si no queda vertido útil o con 16 cuias.</description></item>
+    /// {n}» encima sin saldo; gris si ya se usó en el nivel, si no queda vertido útil o con 16 cuias;</description></item>
+    /// <item><description>[Revelar · Luciérnaga] (tarea T14) solo en los niveles de Aguas turbias mientras quede alguna dosis
+    /// oculta, siempre la última a la derecha: «+N» con stock; sin stock, el precio (120, <c>reveal_seed_price</c>) y, sin
+    /// saldo, en rojo con «Te faltan {n}»; sin stock ni saldo y con <c>rv_reveal</c>, «+1» con el icono de video
+    /// (<see cref="SetRevealBadge"/>). La visibilidad, la insignia y la acción las pone la pantalla de nivel
+    /// (<c>GameScreen.Reveal.cs</c>).</description></item>
     /// </list>
-    /// Antes del desbloqueo la ranura no existe y la bandeja se centra (07 §7.4): 16 + n·64 + (n − 1)·8 + 16 dp. Morpho
-    /// (12) y Pororoca (30) no están en el cliente: sus ranuras llegan con sus comodines. Se refresca cada fotograma solo
-    /// si algo cambió, sin asignar memoria (08 §5.4).
+    /// Antes del desbloqueo la ranura no existe y la bandeja se centra (07 §7.4): 16 + n·64 + (n − 1)·8 + 16 dp (240 con las
+    /// tres ranuras de un nivel turbio). Con 5 ranuras pasarían a 56 dp (07 §7.4), pero Morpho (12) y Pororoca (30) no están
+    /// en el cliente y en la 1.0 nunca hay más de 3: sus ranuras llegan con sus comodines, y entonces Revelar pasa a ser la 5.ª
+    /// (04 §2.5, a la derecha de Pororoca). Se refresca cada fotograma solo si algo cambió, sin asignar memoria (08 §5.4).
     /// </summary>
     internal sealed class BoosterTray
     {
+        /// <summary>Lo que da un video de <c>rv_reveal</c> (04 §2.5: «1 revelado»): la cifra de la insignia con el icono de video.</summary>
+        public const int RevealVideoUnits = 1;
+
         private const float SlotDp = 64f;
         private const float GapDp = 8f;
         private const float PadDp = 16f;
+
+        // «Te faltan {n}» de dos ranuras vecinas a la vez: cada aviso cabe en su paso de ranura (64 + 8) con 4 dp de aire.
+        private const float MissingNarrowDp = SlotDp + GapDp - 4f;
 
         private readonly ProceduralArt _art;
         private readonly Image _tray;
         private readonly Slot _undo;
         private readonly Slot _extra;
+        private readonly Slot _reveal;
         private readonly char[] _buf = new char[24];
 
         private LevelFlow? _flow;
         private GameServices? _services;
+        private Action? _onReveal;
         private int _key = int.MinValue;
+        private int _revealKey = int.MinValue;
         private float _canvasW = 360f;
         private float _trayTop;
         private int _slots = 1;
+        private int _slotsVersion;
+        private bool _visible = true;
+        private bool _revealPressed;
 
         public BoosterTray(Transform hud, ProceduralArt art, Action onUndo, Action onExtraCuia)
         {
@@ -50,6 +68,8 @@ namespace AF.UI
             _undo = new Slot("UndoButton", hud, art, art.IconUndo, art.IconUndoDisabled, UiText.Undo, onUndo);
             _extra = new Slot("ExtraCuiaButton", hud, art, art.IconCuiaPlus, art.IconCuiaPlusDisabled, UiText.ExtraCuia, onExtraCuia);
             _extra.SetActive(false);
+            _reveal = new Slot("RevealButton", hud, art, art.IconFirefly, art.IconFireflyDisabled, UiText.RevealLabel, () => _onReveal?.Invoke());
+            _reveal.SetActive(false);
         }
 
         /// <summary>Botón de Marea.</summary>
@@ -58,11 +78,23 @@ namespace AF.UI
         /// <summary>Botón de Cuia extra (activo desde el nivel 8).</summary>
         public Button ExtraCuiaButton => _extra.Parts.Button;
 
+        /// <summary>Botón de Revelar · Luciérnaga (solo en los niveles de Aguas turbias con ocultas).</summary>
+        public Button RevealButton => _reveal.Parts.Button;
+
         /// <summary>La ranura de Cuia extra existe en el nivel.</summary>
         public bool ExtraCuiaShown => _extra.Active;
 
+        /// <summary>La ranura de Revelar existe en el nivel (<see cref="SetRevealVisible"/>).</summary>
+        public bool RevealShown => _reveal.Active;
+
         /// <summary>Ranuras visibles.</summary>
         public int SlotCount => _slots;
+
+        /// <summary>
+        /// Sube cada vez que aparece o desaparece una ranura (Cuia extra o Revelar) y la bandeja se vuelve a centrar: las
+        /// ranuras que quedan cambian de sitio y AF_LAYOUT tiene que volver a emitirse (<c>GameScreen.Reveal.cs</c>).
+        /// </summary>
+        public int SlotsVersion => _slotsVersion;
 
         /// <summary>Ancho de la bandeja (dp).</summary>
         public float Width => PadDp + (_slots * SlotDp) + ((_slots - 1) * GapDp) + PadDp;
@@ -79,18 +111,157 @@ namespace AF.UI
         /// <summary>La Cuia extra muestra «Te faltan {n}».</summary>
         public bool ExtraShowsMissing => _extra.MissingShown;
 
+        /// <summary>Texto de la insignia de Revelar («+N» del stock o «+1» del video), o vacío.</summary>
+        public string RevealBadgeText => _reveal.BadgeText;
+
+        /// <summary>Precio que muestra Revelar (0 si no lo muestra).</summary>
+        public int RevealPriceShown => _reveal.PriceShown;
+
+        /// <summary>Revelar muestra «Te faltan {n}».</summary>
+        public bool RevealShowsMissing => _reveal.MissingShown;
+
+        /// <summary>Revelar ofrece el video (<c>rv_reveal</c>): la insignia lleva el icono de video.</summary>
+        public bool RevealShowsVideo => _reveal.VideoShown;
+
+        /// <summary>Texto del aviso «Te faltan {n}» de Revelar (vacío si no se ve).</summary>
+        public string RevealMissingText => _reveal.MissingText;
+
+        /// <summary>Ancho del aviso «Te faltan {n}» de Revelar (dp; tests de solapes).</summary>
+        public float RevealMissingWidth => _reveal.MissingWidth;
+
+        /// <summary>Ancho del aviso «Te faltan {n}» de Cuia extra (dp; tests de solapes).</summary>
+        public float ExtraMissingWidth => _extra.MissingWidth;
+
+        /// <summary>Aviso «Te faltan {n}» de Cuia extra (tests de solapes).</summary>
+        public RectTransform ExtraMissingRect => _extra.MissingRect;
+
+        /// <summary>Aviso «Te faltan {n}» de Revelar (tests de solapes).</summary>
+        public RectTransform RevealMissingRect => _reveal.MissingRect;
+
+        /// <summary>Glifo de la ranura de Revelar (tests y capturas: el icono de la luciérnaga).</summary>
+        public Image RevealGlyph => _reveal.Glyph;
+
+        /// <summary>La cara de Revelar está pulsada porque se está eligiendo la cuia.</summary>
+        public bool RevealPressed => _revealPressed;
+
         public void Bind(LevelFlow flow, GameServices? services)
         {
             _flow = flow;
             _services = services;
             _key = int.MinValue;
+            _revealKey = int.MinValue;
+        }
+
+        /// <summary>Acción del botón Revelar (la pone <c>GameScreen.Reveal.cs</c>: <c>IGameActions.PressReveal</c>).</summary>
+        public void SetRevealAction(Action onReveal)
+        {
+            _onReveal = onReveal ?? throw new ArgumentNullException(nameof(onReveal));
+        }
+
+        /// <summary>
+        /// La ranura de Revelar existe (nivel turbio con ocultas) o no: aparece a la derecha de las demás o desaparece, y la
+        /// bandeja se vuelve a centrar (07 §7.4). Devuelve si cambió.
+        /// </summary>
+        public bool SetRevealVisible(bool visible)
+        {
+            if (visible == _reveal.Active)
+            {
+                return false;
+            }
+
+            _reveal.SetActive(visible);
+            _slots = CountSlots();
+            _slotsVersion++;
+            _revealKey = int.MinValue;
+            Layout(_canvasW, _trayTop);
+            return true;
+        }
+
+        /// <summary>
+        /// Insignia y habilitado de Revelar (04 §2.5; 04 §1.1: el stock se gasta antes que las semillas): con
+        /// <paramref name="stock"/> &gt; 0, «+N» en ámbar; sin stock y con <paramref name="seeds"/> ≥ <paramref name="price"/>, el
+        /// precio; sin saldo y con <paramref name="video"/> (<c>rv_reveal</c> listo), «+1» con el icono de video; sin nada, el
+        /// precio en rojo y «Te faltan {n}» encima, como la Cuia extra. Es el mismo orden en que cobra el botón
+        /// (<c>IGameActions.PressReveal</c>). Con <paramref name="spent"/> (ya no queda ninguna oculta y la ranura solo espera a
+        /// que la luciérnaga salga de ella y se vaya) queda gris y sin insignia, precio ni aviso: nada que comprar. Solo repinta
+        /// si algo cambió; sin asignaciones salvo al cambiar el aviso.
+        /// </summary>
+        public void SetRevealBadge(int stock, int price, int seeds, bool video, bool enabled, bool selecting, bool spent = false)
+        {
+            if (_revealPressed && !_reveal.Parts.Relief.Pressed)
+            {
+                // El botón que soltó el dedo (OnPointerUp u OnPointerExit al levantar el toque) vuelve abajo mientras dure la
+                // selección.
+                _reveal.Parts.Relief.Press(true);
+            }
+
+            int key = Hash(stock, price, seeds, video ? 1 : 0, enabled ? 1 : 0, selecting ? 1 : 0, _reveal.Active ? 1 : 0, _visible ? 1 : 0, spent ? 1 : 0);
+            if (key == _revealKey)
+            {
+                return;
+            }
+
+            _revealKey = key;
+            enabled &= !spent;
+            UiBuilder.SetEnabled(_reveal.Parts.Button, enabled);
+            bool pressed = enabled && selecting;
+            if (pressed != _revealPressed)
+            {
+                // Mientras se elige la cuia, la cara del botón se queda abajo (pulsada); otro toque cancela.
+                _revealPressed = pressed;
+                _reveal.Parts.Relief.Press(pressed);
+            }
+
+            if (spent)
+            {
+                _reveal.ShowBadge(null, false);
+                _reveal.ShowStockBadge(0);
+                _reveal.HidePrice();
+            }
+            else if (stock > 0)
+            {
+                _reveal.ShowBadge(null, false);
+                _reveal.ShowStockBadge(stock);
+                _reveal.HidePrice();
+            }
+            else if (seeds >= price)
+            {
+                _reveal.ShowBadge(null, false);
+                _reveal.ShowStockBadge(0);
+                _reveal.ShowPrice(price, 0);
+            }
+            else if (video)
+            {
+                _reveal.ShowStockBadge(0);
+                _reveal.ShowBadge(Number(RevealVideoUnits, true), true);
+                _reveal.HidePrice();
+            }
+            else
+            {
+                _reveal.ShowBadge(null, false);
+                _reveal.ShowStockBadge(0);
+                _reveal.ShowPrice(price, Math.Max(0, price - seeds));
+            }
+
+            LayoutMissing();
         }
 
         public void SetVisible(bool visible)
         {
+            if (visible && !_visible)
+            {
+                // Al volver (tras el embudo o la victoria), los avisos «Te faltan {n}» se vuelven a pintar.
+                _key = int.MinValue;
+                _revealKey = int.MinValue;
+            }
+
+            // Cada ranura se enseña si la bandeja se ve y la ranura existe (Slot.SetVisible lo combina con Active): pasarle
+            // «visible && Active» la dejaba oculta para siempre si aparecía después (Revelar al cargar un nivel turbio).
+            _visible = visible;
             _tray.gameObject.SetActive(visible);
             _undo.SetVisible(visible);
-            _extra.SetVisible(visible && _extra.Active);
+            _extra.SetVisible(visible);
+            _reveal.SetVisible(visible);
         }
 
         /// <summary>Coloca la bandeja: 80 dp de alto con su borde superior en <paramref name="trayTop"/>, centrada.</summary>
@@ -111,12 +282,22 @@ namespace AF.UI
                 UiBuilder.Place(_tray.rectTransform, trayX - 8f, trayTop - 2f, width + 16f, 94f);
             }
 
+            // Orden canónico de 07 §7.4, de izquierda a derecha y sin huecos: Marea, Cuia extra y Revelar.
             float x = trayX + PadDp;
             _undo.Place(x, trayTop + 4f);
             if (_extra.Active)
             {
-                _extra.Place(x + SlotDp + GapDp, trayTop + 4f);
+                x += SlotDp + GapDp;
+                _extra.Place(x, trayTop + 4f);
             }
+
+            if (_reveal.Active)
+            {
+                x += SlotDp + GapDp;
+                _reveal.Place(x, trayTop + 4f);
+            }
+
+            LayoutMissing();
         }
 
         /// <summary>Refresca badges, precios y habilitado si el estado cambió.</summary>
@@ -144,7 +325,8 @@ namespace AF.UI
             if (showExtra != _extra.Active)
             {
                 _extra.SetActive(showExtra);
-                _slots = showExtra ? 2 : 1;
+                _slots = CountSlots();
+                _slotsVersion++;
                 Layout(_canvasW, _trayTop);
             }
 
@@ -179,32 +361,54 @@ namespace AF.UI
                 }
             }
 
-            if (!showExtra)
+            if (showExtra)
             {
-                return;
+                // Cuia extra (04 §2.2): stock «+N» o precio; gris si ya se usó, sin vertido útil o con 16 cuias.
+                UiBuilder.SetEnabled(_extra.Parts.Button, extra.State == ExtraCuiaState.Ready);
+                if (extra.FromStock)
+                {
+                    _extra.ShowBadge(null, false);
+                    _extra.ShowStockBadge(extra.Stock);
+                    _extra.HidePrice();
+                }
+                else if (extra.State == ExtraCuiaState.Ready)
+                {
+                    _extra.ShowBadge(null, false);
+                    _extra.ShowStockBadge(0);
+                    _extra.ShowPrice(extra.Price, extra.Missing);
+                }
+                else
+                {
+                    // Usada en el nivel, sin vertido útil o con 16 cuias: gris y sin precio.
+                    _extra.ShowBadge(null, false);
+                    _extra.ShowStockBadge(0);
+                    _extra.HidePrice();
+                }
             }
 
-            // Cuia extra (04 §2.2): stock «+N» o precio; gris si ya se usó, sin vertido útil o con 16 cuias.
-            UiBuilder.SetEnabled(_extra.Parts.Button, extra.State == ExtraCuiaState.Ready);
-            if (extra.FromStock)
-            {
-                _extra.ShowBadge(null, false);
-                _extra.ShowStockBadge(extra.Stock);
-                _extra.HidePrice();
-            }
-            else if (extra.State == ExtraCuiaState.Ready)
-            {
-                _extra.ShowBadge(null, false);
-                _extra.ShowStockBadge(0);
-                _extra.ShowPrice(extra.Price, extra.Missing);
-            }
-            else
-            {
-                // Usada en el nivel, sin vertido útil o con 16 cuias: gris y sin precio.
-                _extra.ShowBadge(null, false);
-                _extra.ShowStockBadge(0);
-                _extra.HidePrice();
-            }
+            LayoutMissing();
+        }
+
+        private int CountSlots()
+        {
+            return 1 + (_extra.Active ? 1 : 0) + (_reveal.Active ? 1 : 0);
+        }
+
+        // «Te faltan {n}» encima de cada ranura sin saldo (104 dp, como desde B2-1); si la vecina también lo enseña, los dos
+        // estrechan a su paso de ranura para no pisarse (la cifra se encoge hasta 9 sp si hace falta).
+        private void LayoutMissing()
+        {
+            bool undo = _undo.MissingShown;
+            bool extra = _extra.Active && _extra.MissingShown;
+            bool reveal = _reveal.Active && _reveal.MissingShown;
+
+            // Vecinas en el orden de la bandeja (sin la Cuia extra, Marea y Revelar quedan juntas).
+            bool undoNarrow = undo && (extra || (!_extra.Active && reveal));
+            bool extraNarrow = extra && (undo || reveal);
+            bool revealNarrow = reveal && (extra || (!_extra.Active && undo));
+            _undo.PlaceMissing(undoNarrow ? MissingNarrowDp : Slot.MissingWideDp);
+            _extra.PlaceMissing(extraNarrow ? MissingNarrowDp : Slot.MissingWideDp);
+            _reveal.PlaceMissing(revealNarrow ? MissingNarrowDp : Slot.MissingWideDp);
         }
 
         private string Number(int value, bool plus)
@@ -240,6 +444,9 @@ namespace AF.UI
         // el borde inferior (como Magic Sort, ficha §2.3) y «Te faltan {n}» encima de la ranura sin saldo.
         private sealed class Slot
         {
+            /// <summary>Ancho del aviso «Te faltan {n}» sin vecinas que también lo enseñen (dp).</summary>
+            public const float MissingWideDp = SlotDp + 40f;
+
             private readonly RectTransform _badge;
             private readonly Image _badgeDisc;
             private readonly TextMeshProUGUI _badgeText;
@@ -253,15 +460,17 @@ namespace AF.UI
             private bool _visible = true;
             private float _x;
             private float _y;
+            private float _missingW = MissingWideDp;
+            private int _missingShown = -1;
 
             public Slot(string name, Transform hud, ProceduralArt art, Sprite icon, Sprite iconDisabled, string label, Action onClick)
             {
                 Parts = UiBuilder.Relief(name, hud, art.SlotWater, onClick);
-                Image glyph = UiBuilder.Image("Icon", Parts.Face, icon, Color.white);
-                UiBuilder.Place(glyph.rectTransform, 16f, 6f, 32f, 32f);
+                Glyph = UiBuilder.Image("Icon", Parts.Face, icon, Color.white);
+                UiBuilder.Place(Glyph.rectTransform, 16f, 6f, 32f, 32f);
                 TextMeshProUGUI text = UiBuilder.Label("Label", Parts.Face, TextStyle.SlotWater, label, 12f, Palette.Cream, TextAlignmentOptions.Center);
                 UiBuilder.Place(text.rectTransform, 0f, 41f, 64f, 16f);
-                Parts.Relief.Bind(Parts.Face, Parts.Base, Parts.FaceImage, art.SlotWater, glyph, iconDisabled, text);
+                Parts.Relief.Bind(Parts.Face, Parts.Base, Parts.FaceImage, art.SlotWater, Glyph, iconDisabled, text);
 
                 _badge = UiBuilder.Rect("Badge", Parts.Button.transform);
                 _badgeDisc = UiBuilder.Image("Disc", _badge, art.Disc, Palette.Cream);
@@ -288,11 +497,14 @@ namespace AF.UI
                 missingPlate.pixelsPerUnitMultiplier = 24f / 9f;
                 UiBuilder.Stretch(missingPlate.rectTransform);
                 _missingText = UiBuilder.Label("Value", _missing, TextStyle.PlainBold, string.Empty, 11f, Palette.UiRedWarning, TextAlignmentOptions.Center);
+                UiBuilder.AutoSize(_missingText, 9f, 11f); // con el aviso estrecho de dos vecinas, la cifra cabe
                 UiBuilder.Stretch(_missingText.rectTransform);
                 _missing.gameObject.SetActive(false);
             }
 
             public ReliefParts Parts { get; }
+
+            public Image Glyph { get; }
 
             public bool Active { get; private set; } = true;
 
@@ -301,6 +513,14 @@ namespace AF.UI
             public int PriceShown => _price.Root.gameObject.activeSelf ? _price.Value : 0;
 
             public bool MissingShown => _missing.gameObject.activeSelf;
+
+            public bool VideoShown => _badge.gameObject.activeSelf && _badgeVideo.gameObject.activeSelf;
+
+            public string MissingText => MissingShown ? _missingText.text : string.Empty;
+
+            public float MissingWidth => _missingW;
+
+            public RectTransform MissingRect => _missing;
 
             public void SetActive(bool active)
             {
@@ -326,7 +546,7 @@ namespace AF.UI
                 UiBuilder.Place((RectTransform)Parts.Button.transform, x, y, SlotDp, 72f);
                 UiBuilder.Place(_badge, SlotDp - 16f, -8f, 24f, 24f);
                 UiBuilder.Place(_badgeText.rectTransform, 0f, 0f, 24f, 24f);
-                PlaceMissing();
+                PlaceMissing(_missingW);
             }
 
             public void ShowBadge(string? text, bool video)
@@ -372,10 +592,15 @@ namespace AF.UI
                 _price.Set(price, 0, missing > 0);
                 _price.PlaceAt((SlotDp - _price.Width) * 0.5f, 72f - 16f);
                 _missing.gameObject.SetActive(missing > 0 && Parts.Button.gameObject.activeSelf);
+                if (missing > 0 && missing != _missingShown)
+                {
+                    _missingShown = missing;
+                    _missingText.text = string.Format(System.Globalization.CultureInfo.InvariantCulture, UiText.Missing, UiText.Grouped(missing));
+                }
+
                 if (missing > 0)
                 {
-                    _missingText.text = string.Format(System.Globalization.CultureInfo.InvariantCulture, UiText.Missing, UiText.Grouped(missing));
-                    PlaceMissing();
+                    PlaceMissing(_missingW);
                 }
             }
 
@@ -385,9 +610,11 @@ namespace AF.UI
                 _missing.gameObject.SetActive(false);
             }
 
-            private void PlaceMissing()
+            // «Te faltan {n}» de widthDp centrado sobre la ranura, 24 dp por encima de su canto.
+            public void PlaceMissing(float widthDp)
             {
-                UiBuilder.Place(_missing, _x - 20f, _y - 24f, SlotDp + 40f, 18f);
+                _missingW = widthDp;
+                UiBuilder.Place(_missing, _x + ((SlotDp - widthDp) * 0.5f), _y - 24f, widthDp, 18f);
             }
         }
     }
