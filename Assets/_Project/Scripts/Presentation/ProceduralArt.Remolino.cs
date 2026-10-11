@@ -7,8 +7,8 @@ namespace AF.Presentation
     /// Arte procedural [P] del Remolino (02 §9.1 M4; propuesta de D-007 b.2 M4: «espiral en la base de las dos cuias, unidas
     /// por un canal bajo el tablero»; D-003): el agua del canal que une las dos cuias de la pareja (un lecho y un centro con
     /// degradado transversal, y una línea de espuma discontinua), la franja de madera que lo tapa donde pasa por detrás de una
-    /// repisa y la espiral de espuma aplanada sobre el remanso, en <see cref="RemolinoSpiralFrames"/> fases para que gire
-    /// mientras la pareja recibe.
+    /// repisa, la espiral de espuma aplanada sobre el remanso, en <see cref="RemolinoSpiralFrames"/> fases para que gire
+    /// mientras la pareja recibe, y la ficha que marca igual las dos cuias de la pareja (<see cref="RemolinoPairTag"/>).
     /// Los colores del canal quedan a ΔE00 ≥ 10 de los 14 tintes y lejos del turquesa (direccion-visual-v2 §2.4, regla 1; los
     /// comprueba <c>CuiaOverlayTests</c>).
     /// </summary>
@@ -61,6 +61,18 @@ namespace AF.Presentation
         /// <summary>Agua del canal en los bordes #5E7F86 [P] (L* 51): ΔE00 19,9 del Agua del Tapajós.</summary>
         public static readonly Color RemolinoChannelEdge = Palette.Hex(0x5E7F86);
 
+        /// <summary>
+        /// Radio (px) de la ficha de la pareja (<see cref="RemolinoPairTag"/>); es también su borde 9-slice, así que estirada
+        /// en horizontal es una píldora con los extremos redondos y, cuadrada, un disco.
+        /// </summary>
+        public const int RemolinoPairTagRadiusPx = 24;
+
+        /// <summary>Contorno oscuro de la ficha de la pareja (px de la textura, con el radio de <see cref="RemolinoPairTagRadiusPx"/>).</summary>
+        public const float RemolinoPairTagOutlinePx = 3f;
+
+        /// <summary>Aro de espuma de la ficha de la pareja, por dentro del contorno (px de la textura).</summary>
+        public const float RemolinoPairTagRingPx = 5f;
+
         // Lienzo de una fase de la espiral (px) con 2 px de margen arriba y abajo para que el filtrado no mezcle fases.
         private const int RemolinoSpiralW = (int)(RemolinoSpiralWidthU * MechanicPxPerU);
         private const int RemolinoSpiralH = (int)(RemolinoSpiralHeightU * MechanicPxPerU) + 4;
@@ -72,6 +84,7 @@ namespace AF.Presentation
         private Sprite? _remolinoCapsuleSoft;
         private Sprite? _remolinoShelfCover;
         private Sprite? _remolinoDash;
+        private Sprite? _remolinoPairTag;
         private Sprite?[]? _remolinoSpiral;
 
         /// <summary>
@@ -102,6 +115,15 @@ namespace AF.Presentation
         /// redondas y 6 de hueco, repetible en horizontal.
         /// </summary>
         public Sprite RemolinoDash => _remolinoDash != null ? _remolinoDash : (_remolinoDash = BuildRemolinoDash());
+
+        /// <summary>
+        /// Ficha de la pareja del Remolino (opción C del dueño, 2026-10-11) [P]: un disco del agua del remanso
+        /// (<see cref="WhirlPoolColor"/>) con un aro de espuma (<see cref="Pearl"/>) y un contorno de pizarra
+        /// (<see cref="Slate"/>), ya coloreado (no se tiñe). Borde 9-slice igual al radio
+        /// (<see cref="RemolinoPairTagRadiusPx"/>): con <c>Image.Type.Sliced</c> se estira a la píldora que lleva los puntos de
+        /// la pareja.
+        /// </summary>
+        public Sprite RemolinoPairTag => _remolinoPairTag != null ? _remolinoPairTag : (_remolinoPairTag = BuildRemolinoPairTag());
 
         /// <summary>
         /// Fase <paramref name="frame"/> (módulo <see cref="RemolinoSpiralFrames"/>) de la espiral de espuma aplanada (blanca,
@@ -169,6 +191,21 @@ namespace AF.Presentation
             sprite.hideFlags = HideFlags.DontSave;
             _owned.Add(sprite);
             return sprite;
+        }
+
+        private Sprite BuildRemolinoPairTag()
+        {
+            // Tres discos concéntricos de borde nítido (el 9-slice los convierte en píldoras): contorno, aro y agua. Las esquinas
+            // centradas en el centro de 2 px, como la cápsula del canal, para que los cantos estirados queden rectos.
+            const int r = RemolinoPairTagRadiusPx;
+            const int s = (2 * r) + 2;
+            const float o = RemolinoPairTagOutlinePx;
+            const float ring = o + RemolinoPairTagRingPx;
+            var pc = new PixelCanvas(s, s);
+            pc.FillRoundedRect(0.5f, 0.5f, s - 0.5f, s - 0.5f, r - 0.5f, Slate);
+            pc.FillRoundedRect(0.5f + o, 0.5f + o, s - 0.5f - o, s - 0.5f - o, r - 0.5f - o, Pearl);
+            pc.FillRoundedRect(0.5f + ring, 0.5f + ring, s - 0.5f - ring, s - 0.5f - ring, r - 0.5f - ring, WhirlPoolColor);
+            return MakeSprite(pc, "remolino_pair_tag", new Vector2(0.5f, 0.5f), new Vector4(r, r, r, r));
         }
 
         private Sprite BuildRemolinoDash()

@@ -21,7 +21,10 @@ namespace AF.Tests.PlayMode
     /// <c>82_pirana_l183</c> (la cueva y el cardumen rondando), <c>82b_pirana_asleep_l183</c> (cueva llena: duerme),
     /// <c>83_pirana_bite_l183</c> (muerde: el bocado sale de la dosis de la víctima y sube por su eje),
     /// <c>83b_pirana_carry_l183</c> (se lleva el bocado) y <c>83c_pirana_cave_l183</c> (el bocado entra por la boca de la
-    /// cueva). Sirven para mirar a 48 dp la legibilidad, los solapes, los colores y
+    /// cueva); el mordisco fallido visible (tanda B2): <c>83d_pirana_lost_reach_l183</c>, <c>83e_pirana_lost_bump_l183</c> y
+    /// <c>83f_pirana_lost_back_l183</c> (llega a la tapa de la víctima sellada, choca y rebota), y con la cueva llena
+    /// <c>82c_pirana_peek_l183</c> (se asoma) y <c>82d_pirana_asleep_again_l183</c> (vuelve a dormirse). Sirven para mirar a
+    /// 48 dp la legibilidad, los solapes, los colores y
     /// la línea D-003. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.LluviaPiranaSnapshotTests</c> sin <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/</c>.
     /// </summary>
@@ -136,6 +139,58 @@ namespace AF.Tests.PlayMode
                 TestContext.WriteLine("82b_pirana_asleep_l183: la cueva no se llena dentro de los límites.");
             }
         }
+
+        [UnityTest]
+        public IEnumerator CapturePiranaBiteLost()
+        {
+            // Mordisco fallido visible (decisión C + D del dueño para el 183; tanda B2): el vertido sella la víctima, el cardumen
+            // llega a su tapa, choca y vuelve (83d al llegar, 83e al chocar, 83f al rebotar).
+            string dir = SnapshotKit.Prepare();
+            yield return LoadPlaying(183);
+            GameBootstrap boot = GameBootstrap.Current!;
+            int cave = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Pirana);
+            int bit = 1 << cave;
+            Pour[]? lost = MechanicTestKit.FindTrigger(boot.Flow!, (ev, b, a) => (ev.PiranaBiteLostMask & bit) != 0 && ev.Receiver != cave && (ev.SealedMask & (1 << ev.Receiver)) != 0);
+            Assert.That(lost, Is.Not.Null);
+            MechanicTestKit.PlayPrefix(boot, lost!);
+            MechanicTestKit.Tap(boot, lost![lost.Length - 1]);
+            MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.BiteLost, cave, 4000);
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, 0.36f);
+            Save(dir, "83d_pirana_lost_reach_l183", boot);
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, PiranaOverlay.LostHitAt - 0.01f);
+            Save(dir, "83e_pirana_lost_bump_l183", boot);
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, 0.56f);
+            Save(dir, "83f_pirana_lost_back_l183", boot);
+            MechanicTestKit.StepToIdle(boot, 4000);
+
+            // Cueva llena (el 183 con la cueva ya llena, [acaí, agua del Río Negro]): con el cuarto vertido útil el cardumen se
+            // despierta, se asoma hacia la víctima (82c) y vuelve a dormirse (82d).
+            LaunchOptions.LevelPackJsonOverride = CaveFull183;
+            yield return LoadPlaying(183);
+            boot = GameBootstrap.Current!;
+            Assert.That(boot.Flow!.Session.Current[cave].IsFull, Is.True, "la cueva empieza llena");
+            Pour[]? peek = MechanicTestKit.FindTrigger(boot.Flow!, (ev, b, a) => (ev.PiranaBiteLostMask & bit) != 0 && ev.Receiver != cave);
+            Assert.That(peek, Is.Not.Null);
+            MechanicTestKit.PlayPrefix(boot, peek!);
+            MechanicTestKit.Tap(boot, peek![peek.Length - 1]);
+            MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.BiteLost, cave, 4000);
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, 0.5f);
+            Save(dir, "82c_pirana_peek_l183", boot);
+            MechanicTestKit.StepToIdle(boot, 4000);
+            PlayModeHelpers.Step(boot, 300);
+            Save(dir, "82d_pirana_asleep_again_l183", boot);
+        }
+
+        // El 183 con la cueva (Cuia chica, la 8) ya llena: sus dos dosis salen de la cima de la cuia 0 (8 y 14, acaí y agua del
+        // Río Negro), así que cada color sigue teniendo sus 4 dosis.
+        private const string CaveFull183 =
+            "{ \"pack_schema\": 2, \"pack_id\": \"test_pirana_llena\", \"kind\": \"campaign\", \"world\": 5, \"world_id\": \"w05_loreto\", \"lap\": 1, "
+            + "\"water_base\": \"white\", \"levels\": [ { \"id\": \"m05_v1_n0183\", \"level\": 183, \"world\": 5, \"lap\": 1, \"water_base\": \"white\", "
+            + "\"palette\": [\"cupuacu\", \"tapereba\", \"aguaje\", \"camu_camu\", \"bacaba\", \"acai\", \"agua_tapajos\", \"lulo\", \"agua_negro\"], "
+            + "\"units_per_color\": 4, \"caps\": [4, 4, 4, 4, 4, 4, 4, 4, 2, 4, 4, 4], "
+            + "\"cuias\": [[11, 11], [3, 6, 6, 10], [4, 2, 10, 7], [], [2, 2, 2, 6], [4, 4, 7, 14], [6, 3, 3, 4], [11, 11, 3, 7], [8, 14], [8, 8, 8, 7], [], [14, 14, 10, 10]], "
+            + "\"attrs\": [null, null, null, null, null, null, null, null, {\"type\": \"pirana\", \"k\": 4}, null, null, null], "
+            + "\"murky\": false, \"hidden\": [], \"difficulty\": { \"par\": 1 }, \"relief\": [] } ] }";
 
         // Carga el nivel con la cámara de capturas, salta la intro y deja la vista quieta en Playing.
         private static IEnumerator LoadPlaying(int level)

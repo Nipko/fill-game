@@ -11,9 +11,16 @@ namespace AF.Presentation.Mechanics
     /// M4 Remolino (02 §9.1 M4; propuesta de D-007 b.2 M4) [P]: una espiral de espuma marfil translúcida sobre un remanso
     /// oscuro en la base de cada cuia de la pareja, en la ranura (no viaja con la cuia al verter), y un canal de agua que sale
     /// de los dos remansos y los une por debajo del tablero. Nunca turquesa: ni el turquesa del icono de Marea (#3BB8D9) ni
-    /// Agua del Tapajós. Si la pareja tiene id &gt; 0, <c>id + 1</c> puntos junto a la bajada distinguen las parejas.
+    /// Agua del Tapajós.
     /// </summary>
     /// <remarks>
+    /// <para><b>Ficha de la pareja</b> (opción C del dueño, 2026-10-11: el canal y la MISMA marca en las dos cuias, también
+    /// con un solo par): un disco del agua del remanso con aro de espuma y contorno de pizarra
+    /// (<see cref="ProceduralArt.RemolinoPairTag"/>) clavado en el centro del pie de fibra, sobre el ojo de la espiral, con
+    /// <c>id + 1</c> puntos de espuma (1 con id 0); con más puntos se alarga en píldora. Las dos cuias de una pareja llevan la
+    /// misma ficha y dos parejas, fichas distintas. Va en la ranura (<c>SlotFront</c>), así que no viaja con la cuia ni cambia
+    /// al seleccionar (D-002): con la cuia elevada queda sobre el remanso. Colores a ΔE00 ≥ 10 de los 14 tintes y del
+    /// turquesa de Marea (<see cref="CollectSurfaceColors"/>).</para>
     /// <para><b>Canal.</b> Lo dibuja una sola vez la cuia de menor índice de la pareja (la pareja se busca por
     /// <see cref="Cuia.MechanicPairId"/> en <see cref="ICuiaBoard.ShownCuia"/>, la misma consulta que
     /// <c>BoardDiff.RemolinoPartner</c>, sin construir un <c>BoardState</c>), en la capa trasera del tablero, y se recoloca en
@@ -124,6 +131,30 @@ namespace AF.Presentation.Mechanics
         /// <summary>Burbujas de la segunda tanda, a mitad de la subida [P].</summary>
         public const int BubblesSecond = 3;
 
+        /// <summary>
+        /// Alto de la ficha de la pareja (u) [P]: 15 dp con la cuia de 48 dp y 12 dp con la de 39 dp (3 filas de 6); con un
+        /// punto es un disco.
+        /// </summary>
+        public const float PairTagHeightU = 0.62f;
+
+        /// <summary>
+        /// Centro de la ficha de la pareja sobre el pie (u) [P]: en el pie de fibra (0-0,30 u), sin llegar al fondo de la
+        /// cavidad (0,40 u en el eje) ni a la bajada del canal (bajo el pie).
+        /// </summary>
+        public const float PairTagCenterU = 0.085f;
+
+        /// <summary>Lado de cada punto de la ficha (u): 6,2 dp con la cuia de 48 dp.</summary>
+        public const float PairDotU = 0.26f;
+
+        /// <summary>Paso entre los centros de los puntos de la ficha (u); con muchos puntos se juntan.</summary>
+        public const float PairDotStepU = 0.3f;
+
+        /// <summary>Ancho máximo de la ficha (u): el del pie de fibra (1,60 u).</summary>
+        public const float PairTagMaxWidthU = 2f * CuiaGeometry.FootHalfWidthU;
+
+        /// <summary>Puntos de la ficha como mucho: <c>id + 1</c> con el id de 3 bits (0..7).</summary>
+        public const int MaxPairDots = Cuia.MaxMechanicField + 1;
+
         private const int MaxSegments = MaxChannelPoints - 1;
         private const int MaxRows = 4;
         private const int MaxBoard = 32;
@@ -152,11 +183,14 @@ namespace AF.Presentation.Mechanics
         private readonly Vector2[] _pulsePts = new Vector2[MaxChannelPoints];
         private readonly float[] _pulseAt = new float[MaxChannelPoints];
         private readonly float[] _rowX = new float[MaxBoard];
+        private readonly Image[] _pairDots = new Image[MaxPairDots];
 
         private Image _pool = null!;
         private Image _spiral = null!;
         private int _spinFrame;
-        private PipRow _dots = null!;
+        private Image _pairTag = null!;
+        private int _pairDotCount = -1;
+        private float _pairU = -1f;
         private RectTransform _layerRoot = null!;
         private bool _on;
         private int _pairId;
@@ -189,8 +223,33 @@ namespace AF.Presentation.Mechanics
         /// <inheritdoc />
         public override MechanicType Type => MechanicType.Remolino;
 
-        /// <summary>Puntos de la pareja a la vista (0 con id 0).</summary>
-        public int PairDots => _dots.Visible ? _dots.Count : 0;
+        /// <summary>Puntos de la ficha de la pareja a la vista: <c>id + 1</c> (1 con id 0); 0 sin ficha.</summary>
+        public int PairDots => PairMarkVisible ? _pairDotCount : 0;
+
+        /// <summary>La ficha de la pareja está a la vista (siempre que la cuia tenga el Remolino, también con id 0).</summary>
+        public bool PairMarkVisible => _pairTag != null && _pairTag.gameObject.activeSelf;
+
+        /// <summary>
+        /// Rectángulo de la ficha de la pareja en el espacio de las anclas de la cuia (dp, origen en el centro del pie y hacia
+        /// arriba).
+        /// </summary>
+        public Rect PairMarkRect
+        {
+            get
+            {
+                RectTransform rt = _pairTag.rectTransform;
+                Vector2 size = rt.sizeDelta;
+                return new Rect(rt.anchoredPosition - (0.5f * size), size);
+            }
+        }
+
+        /// <summary>Rectángulo del punto <paramref name="i"/> de la ficha (dp, como <see cref="PairMarkRect"/>).</summary>
+        public Rect PairDotRect(int i)
+        {
+            RectTransform rt = _pairDots[Mathf.Clamp(i, 0, MaxPairDots - 1)].rectTransform;
+            Vector2 size = rt.sizeDelta;
+            return new Rect(rt.anchoredPosition - (0.5f * size), size);
+        }
 
         /// <summary>Color con el que se ve la espiral: la espuma compuesta en lineal sobre el remanso, como la GPU.</summary>
         public static Color SpiralSeenColor => ColorMath.CompositeLinear(Palette.UiPaper, FoamAlpha, ProceduralArt.WhirlPoolColor);
@@ -345,8 +404,7 @@ namespace AF.Presentation.Mechanics
             OverlayParts.SetVisible(_spiral, on);
             int pair = on ? cuia.MechanicPairId : 0;
             _pairId = pair;
-            int dots = pair > 0 ? pair + 1 : 0;
-            _dots.Set(dots, dots);
+            SetPairMark(on ? Mathf.Min(pair + 1, MaxPairDots) : 0, Host.U);
             RefreshChannel(false);
         }
 
@@ -355,9 +413,7 @@ namespace AF.Presentation.Mechanics
         {
             OverlayParts.Place(_pool, 0f, PoolCenterU, 2.6f, 0.85f, u);
             OverlayParts.Place(_spiral, 0f, PoolCenterU, ProceduralArt.RemolinoSpiralWidthU, ProceduralArt.RemolinoSpiralHeightU, u);
-
-            // A la derecha de la bajada, en el frente de la repisa, bajo el borde del remanso.
-            _dots.Layout(0.62f, -0.55f, 0.13f, 0.2f, u);
+            SetPairMark(_pairDotCount, u);
         }
 
         /// <inheritdoc />
@@ -464,9 +520,10 @@ namespace AF.Presentation.Mechanics
         /// <inheritdoc />
         public override void CollectSurfaceColors(List<Color> into)
         {
-            into.Add(ProceduralArt.WhirlPoolColor); // remanso
+            into.Add(ProceduralArt.WhirlPoolColor); // remanso y agua de la ficha de la pareja
             into.Add(SpiralSeenColor); // espiral de espuma
-            into.Add(ProceduralArt.Pearl); // puntos de la pareja
+            into.Add(ProceduralArt.Pearl); // aro y puntos de la ficha de la pareja
+            into.Add(ProceduralArt.Slate); // contorno de la ficha de la pareja
             into.Add(ProceduralArt.RemolinoChannelWater); // centro del agua del canal
             into.Add(ProceduralArt.RemolinoChannelEdge); // bordes del agua del canal
             into.Add(DashSeenColor); // línea de espuma del eje (1 dp, pero también lejos de los tintes)
@@ -477,7 +534,13 @@ namespace AF.Presentation.Mechanics
         {
             _pool = OverlayParts.NewImage("RemolinoPool", Host.SlotBack, Host.Art.WhirlPool, ProceduralArt.WhirlPoolColor);
             _spiral = OverlayParts.NewImage("RemolinoSpiral", Host.SlotBack, Host.Art.RemolinoSpiralFrame(0), OverlayParts.Fade(Palette.UiPaper, FoamAlpha));
-            _dots = new PipRow("RemolinoPair", Host.SlotFront, Host.Art.CounterPip, Host.Art.CounterPipEmpty, ProceduralArt.Pearl);
+            _pairTag = OverlayParts.NewImage("RemolinoPairTag", Host.SlotFront, Host.Art.RemolinoPairTag, Color.white);
+            _pairTag.type = Image.Type.Sliced;
+            for (int i = 0; i < _pairDots.Length; i++)
+            {
+                _pairDots[i] = OverlayParts.NewImage("RemolinoPairDot" + i, Host.SlotFront, Host.Art.CounterPip, ProceduralArt.Pearl);
+            }
+
             // Solo para pintar mate el Barro que reciba (puede no haberla). Con includeInactive, como MurkyMarks: si la cuia se
             // monta con su jerarquía inactiva (una pantalla oculta), sin él la búsqueda daría null y el Barro perdería el mate sin
             // avisar.
@@ -1175,6 +1238,51 @@ namespace AF.Presentation.Mechanics
                 {
                     OverlayParts.SetVisible(_racha[i], false);
                 }
+            }
+        }
+
+        // Ficha de la pareja con count puntos (0 o menos: oculta) a la escala u (dp por u). Solo escribe si cambia el número de
+        // puntos o u (sin asignaciones): una píldora 9-slice cuyo borde es la mitad de su alto, con los puntos centrados.
+        private void SetPairMark(int count, float u)
+        {
+            if (_pairTag == null || (count == _pairDotCount && Mathf.Approximately(u, _pairU)))
+            {
+                return;
+            }
+
+            _pairDotCount = count;
+            _pairU = u;
+            bool on = count > 0 && u > 0f;
+            OverlayParts.SetVisible(_pairTag, on);
+            for (int i = 0; i < _pairDots.Length; i++)
+            {
+                OverlayParts.SetVisible(_pairDots[i], on && i < count);
+            }
+
+            if (!on)
+            {
+                return;
+            }
+
+            float step = PairDotStepU;
+            if (count > 1)
+            {
+                step = Mathf.Min(step, (PairTagMaxWidthU - PairTagHeightU) / (count - 1));
+            }
+
+            float dot = Mathf.Min(PairDotU, 0.8f * step);
+            float width = PairTagHeightU + ((count - 1) * step);
+            OverlayParts.Place(_pairTag, 0f, PairTagCenterU, width, PairTagHeightU, u);
+            float multiplier = ProceduralArt.RemolinoPairTagRadiusPx / Mathf.Max(0.25f, 0.5f * PairTagHeightU * u);
+            if (!Mathf.Approximately(_pairTag.pixelsPerUnitMultiplier, multiplier))
+            {
+                _pairTag.pixelsPerUnitMultiplier = multiplier;
+            }
+
+            float start = -0.5f * step * (count - 1);
+            for (int i = 0; i < count && i < _pairDots.Length; i++)
+            {
+                OverlayParts.Place(_pairDots[i], start + (i * step), PairTagCenterU, dot, dot, u);
             }
         }
 

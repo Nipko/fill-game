@@ -36,12 +36,15 @@ namespace AF.Presentation.Mechanics
     /// apaga al cruzar el labio, cuando empieza a formarse la dosis de arriba de la cueva (con su salpicadura). Las dos cuias
     /// se pintan con <c>ctx.Board.SetDose</c> y, al terminar, con <c>ShowContent</c> de <c>ctx.After</c> y
     /// <c>ctx.OtherAfter</c>.</description></item>
-    /// <item><description><see cref="MechanicStepKind.BiteLost"/> (<see cref="BiteLostStepMs"/> [P]; víctima sellada, Matapi,
-    /// la propia cueva o cueva llena): un amago hacia la víctima y vuelta, sin cambiar nada; con la cueva llena, el cardumen
-    /// dormido solo se revuelve.</description></item>
+    /// <item><description><see cref="MechanicStepKind.BiteLost"/> (<see cref="BiteLostStepMs"/> [P]; víctima sellada, Matapi o
+    /// la propia cueva; decisión C + D del dueño para el 183, mordisco fallido visible): el cardumen sale de la cueva y nada en
+    /// arco hasta la boca de la víctima; la que va delante se lanza de morros contra su tapa (o el embudo del Matapi), choca
+    /// en <see cref="LostHitAt"/> (unos destellos perla, sin rojo), sale rebotada hacia atrás y el cardumen vuelve a su ronda
+    /// sin cambiar nada; las otras dos esperan a los lados de la tapa, bajas, sin subir hacia la fila de arriba. Con la cueva llena (respuesta Q-C) el cardumen, que duerme, se despierta, la que va delante se asoma hacia
+    /// la víctima (<see cref="PeekReachU"/>) y vuelve, y se duermen otra vez.</description></item>
     /// </list>
     /// <para>Los puntos se llenan todos al empezar (el vertido que completa el ritmo) y vuelven a los de <c>After</c> con el
-    /// mordisco o el amago; los vacíos son el aro a <see cref="EmptyPipAlpha"/> (se distinguen por contraste a 48 dp, no por
+    /// mordisco o el mordisco perdido; los vacíos son el aro a <see cref="EmptyPipAlpha"/> (se distinguen por contraste a 48 dp, no por
     /// un hueco de menos de 2 dp). Sin asignaciones en los pasos ni en <see cref="Tick"/>. La Piraña queda pendiente de
     /// revisión del asesor cultural.</para>
     /// </remarks>
@@ -53,7 +56,7 @@ namespace AF.Presentation.Mechanics
         /// <summary>Mordisco: 500 ms [P, b.2 M7].</summary>
         public const float BiteStepMs = 500f;
 
-        /// <summary>Mordisco perdido (amago): 400 ms [P].</summary>
+        /// <summary>Mordisco perdido (sale, choca con la tapa o el embudo y vuelve; o, con la cueva llena, se asoma): 400 ms [P].</summary>
         public const float BiteLostStepMs = 400f;
 
         /// <summary>Pirañas del cardumen (b.2 M7).</summary>
@@ -93,8 +96,38 @@ namespace AF.Presentation.Mechanics
         /// <summary>Fracción del paso en que el bocado cruza el labio de la cueva y se apaga.</summary>
         public const float MorselGone = 0.93f;
 
+        /// <summary>Mordisco perdido: fracción del paso en que el cardumen llega sobre la boca de la víctima.</summary>
+        public const float LostReachEnd = 0.38f;
+
+        /// <summary>Mordisco perdido: fracción del paso en que la que va delante choca con la tapa o el embudo (≈ 190 ms de 400).</summary>
+        public const float LostHitAt = 0.47f;
+
+        /// <summary>Mordisco perdido: fin del rebote (fracción del paso); después el cardumen vuelve a la cueva.</summary>
+        public const float LostReboundEnd = 0.6f;
+
+        /// <summary>Lo alto de la tapa de sellado (y del embudo del Matapi) sobre lo alto de la cuia (u): donde choca la piraña.</summary>
+        public const float LidAboveRimU = 0.3f;
+
+        /// <summary>Cueva llena: lo que se asoma hacia la víctima la que va delante (u) [P].</summary>
+        public const float PeekReachU = 1.2f;
+
+        /// <summary>Cueva llena: fin del despertar (fracción del paso).</summary>
+        public const float PeekWakeEnd = 0.15f;
+
+        /// <summary>Cueva llena: se ha asomado del todo (fracción del paso).</summary>
+        public const float PeekOutEnd = 0.42f;
+
+        /// <summary>Cueva llena: deja de mirar y vuelve (fracción del paso).</summary>
+        public const float PeekHoldEnd = 0.6f;
+
+        /// <summary>Cueva llena: de vuelta en su sitio; después se duerme otra vez (fracción del paso).</summary>
+        public const float PeekBackEnd = 0.85f;
+
+        /// <summary>La piraña que va delante: la que muerde, la que choca y la que se asoma.</summary>
+        public const int LeadFish = 1;
+
         // La piraña que va delante muerde.
-        private const int Lead = 1;
+        private const int Lead = LeadFish;
 
         // Ciclo común de la vuelta y del balanceo (ms): múltiplo de 3.600 y de 2.800, así el reloj se recorta sin saltos.
         private const float ClockWrapMs = 50400f;
@@ -130,11 +163,15 @@ namespace AF.Presentation.Mechanics
         private const float PipRowAboveRimU = 0.10f;
         private const float PipRowMaxU = 1.29f;
 
-        // Fases del amago.
-        private const float FeintEnd = 0.45f;
-        private const float TurnEnd = 0.55f;
-        private const float FeintReach = 0.38f;
+        // El contador vuelve a empezar a mitad del mordisco perdido; morros abajo de la que choca (grados) y destellos del golpe.
+        // El cardumen se queda bajo, sobre la tapa (u), y las otras dos se apartan a los lados de la tapa (u).
+        private const float LostAboveLidU = 0.3f;
+        private const float LostAsideXU = 0.85f;
+        private const float LostAsideYU = 0.2f;
         private const float LostPipsAt = 0.5f;
+        private const float HitTiltDeg = 35f;
+        private const int BumpSparkles = 3;
+        private const float BumpSparkleScale = 0.6f;
 
         // Contorno del bocado: vidrio_borde al 90 % (se lee con cualquier tinte sobre el panel).
         private static readonly Color MorselRimColor = new Color(Palette.GlassRim.r, Palette.GlassRim.g, Palette.GlassRim.b, 0.9f);
@@ -197,6 +234,11 @@ namespace AF.Presentation.Mechanics
         private Vector2 _morselPos;
         private float _morselScale = 1f;
         private bool _sleepy;
+        private bool _awake;
+        private bool _bumped;
+        private Vector2 _lid;
+        private Vector2 _leadMouth;
+        private float _peekDir = 1f;
         private bool _caught;
         private bool _bitten;
         private bool _drained;
@@ -285,6 +327,18 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>Imagen del contorno del bocado (tests: color y tamaño).</summary>
         public Image MorselRim => _morselRim;
+
+        /// <summary>
+        /// Mordisco perdido en curso: el punto de la tapa (o del embudo) de la víctima donde choca la que va delante, en el
+        /// espacio de las capas de tablero.
+        /// </summary>
+        public Vector2 LostContact => ToLayer(_lid);
+
+        /// <summary>Boca de la que va delante en el último fotograma del paso, en el espacio de las capas de tablero.</summary>
+        public Vector2 LeadMouth => ToLayer(_leadMouth);
+
+        /// <summary>En el mordisco perdido en curso, la que va delante ya chocó con la tapa o el embudo de la víctima.</summary>
+        public bool LostBumped => _animating && _bumped;
 
         /// <summary>Imagen de la piraña <paramref name="i"/> (tests).</summary>
         public Image Fish(int i)
@@ -447,7 +501,9 @@ namespace AF.Presentation.Mechanics
             _drained = false;
             _splashed = false;
             _pipsReset = false;
+            _bumped = false;
             _sleepy = ctx.Before.IsFull;
+            _awake = !_sleepy;
             int k = ctx.Before.MechanicK;
             _pips.Set(k, k); // el vertido que completa el ritmo llena todos los puntos
             PaintPips();
@@ -464,6 +520,19 @@ namespace AF.Presentation.Mechanics
             _target = hasVictim ? other + new Vector2(0f, (victimHeight + 0.55f) * _u) : _home + new Vector2(0f, 0.45f * _u);
             _cave = self + new Vector2(0f, (_heightU + 0.42f) * _u);
             _carryFacing = FacingFrom(_target, _cave);
+
+            // Mordisco perdido: choca con la tapa (o el embudo) de la víctima; si la víctima es la propia cueva, con lo alto de su
+            // arco de piedras. Con la cueva llena, se asoma hacia la víctima (o hacia donde mira, sin víctima).
+            float archTop = CaveCenterAboveRimU + (0.5f * ProceduralArt.PiranaCaveHeightU);
+            _lid = hasVictim ? other + new Vector2(0f, (victimHeight + LidAboveRimU) * _u) : self + new Vector2(0f, (_heightU + archTop) * _u);
+            if (_kind == MechanicStepKind.BiteLost)
+            {
+                // Bajo, justo sobre la tapa: entre lo alto de una cuia y la repisa de la fila de arriba solo hay 23 dp.
+                _target = _lid + new Vector2(0f, LostAboveLidU * _u);
+            }
+
+            _peekDir = hasVictim && Mathf.Abs(other.x - self.x) > 0.5f ? Mathf.Sign(other.x - self.x) : -RestFacing[Lead];
+            _leadMouth = _home;
             _victimDose = -1;
             _caveDose = -1;
             if (_kind == MechanicStepKind.Bite && hasVictim)
@@ -850,52 +919,168 @@ namespace AF.Presentation.Mechanics
 
             if (_sleepy)
             {
-                // Cueva llena: el cardumen dormido se revuelve y sigue durmiendo.
-                float wiggle = 12f * Mathf.Sin(5f * Mathf.PI * p) * (1f - p);
-                for (int i = 0; i < SchoolSize; i++)
-                {
-                    IdlePose(i, out Vector2 pos, out float facing, out float scale, out float alpha);
-                    SetFish(i, pos, facing, scale, alpha, (i % 2 == 0 ? 1f : -1f) * wiggle);
-                }
-
+                PosePeek(p);
                 HideMorsel();
                 return;
             }
 
-            // Amago: hacia la víctima un tramo, un lance de la que va delante y vuelta a su sitio.
-            Vector2 feint = Vector2.Lerp(_home, _target, FeintReach);
+            // Sale de la cueva y nada en arco hasta encima de la boca de la víctima; la que va delante se lanza de morros contra
+            // la tapa (o el embudo), choca, sale rebotada hacia atrás y el cardumen vuelve a su ronda.
             float toward = FacingFrom(_home, _target);
+            float hitTilt = HitTiltDeg * Mathf.Deg2Rad;
+            Vector2 contact = _lid - new Vector2(-toward * Mathf.Cos(hitTilt) * 0.42f * _u, ((-Mathf.Sin(hitTilt) * 0.42f) - 0.06f) * _u);
+            Vector2 rebound = contact + new Vector2(toward * 0.32f * _u, 0.08f * _u); // despedida hacia atrás, apenas arriba
             Vector2 center;
             float facingNow = toward;
-            float lunge = 0f;
-            if (p < FeintEnd)
+            if (p < LostReachEnd)
             {
-                center = Vector2.Lerp(_home, feint, Ease.Out(p / FeintEnd));
+                center = Arc(_home, _target, Ease.InOut(p / LostReachEnd));
             }
-            else if (p < TurnEnd)
+            else if (p < LostReboundEnd)
             {
-                center = feint;
-                lunge = Mathf.Sin(Mathf.PI * (p - FeintEnd) / (TurnEnd - FeintEnd));
+                center = _target;
             }
             else
             {
                 facingNow = -toward;
-                center = Vector2.Lerp(feint, _home, Ease.InOut((p - TurnEnd) / (1f - TurnEnd)));
+                center = Arc(_target, _home, Ease.InOut((p - LostReboundEnd) / (1f - LostReboundEnd)));
+            }
+
+            if (!_bumped && p >= LostHitAt)
+            {
+                _bumped = true;
+                EmitBump();
+            }
+
+            // Las otras dos se apartan a los lados de la tapa al llegar (bajas: no suben hacia la fila de arriba) y vuelven a la
+            // formación al irse.
+            float spread;
+            if (p < LostReachEnd)
+            {
+                spread = Mathf.SmoothStep(0f, 1f, (p - (LostReachEnd - 0.1f)) / 0.1f);
+            }
+            else if (p < LostReboundEnd)
+            {
+                spread = 1f;
+            }
+            else
+            {
+                spread = 1f - Mathf.SmoothStep(0f, 1f, (p - LostReboundEnd) / 0.12f);
             }
 
             for (int i = 0; i < SchoolSize; i++)
             {
                 Vector2 pos = Formation(i, center, facingNow);
-                if (i == Lead)
+                float tilt = 0f;
+                float fishFacing = facingNow;
+                if (i == Lead && p >= LostReachEnd)
                 {
-                    pos += new Vector2(-toward * 0.15f * lunge * _u, 0f);
+                    if (p < LostHitAt)
+                    {
+                        // Se lanza: acelera hasta la tapa con el morro cada vez más abajo.
+                        float q = Ease.In((p - LostReachEnd) / (LostHitAt - LostReachEnd));
+                        pos = Vector2.Lerp(Formation(i, _target, toward), contact, q);
+                        tilt = HitTiltDeg * q;
+                    }
+                    else if (p < LostReboundEnd)
+                    {
+                        // Rebota: sale despedida hacia atrás, con el morro levantado.
+                        float r = Ease.Out((p - LostHitAt) / (LostReboundEnd - LostHitAt));
+                        pos = Vector2.Lerp(contact, rebound, r);
+                        tilt = Mathf.Lerp(HitTiltDeg, -15f, r);
+                    }
+                    else
+                    {
+                        // Vuelve a su sitio en la formación al empezar la vuelta.
+                        float b = Ease.Out(Mathf.Clamp01((p - LostReboundEnd) / 0.15f));
+                        pos = Vector2.Lerp(rebound + (center - _target), pos, b);
+                        tilt = Mathf.Lerp(-15f, 0f, b);
+                    }
+                }
+                else if (i != Lead && spread > 0f)
+                {
+                    // A un lado de la tapa, mirando a la que choca; con el golpe dan un respingo hacia fuera.
+                    float side = i == 0 ? -1f : 1f;
+                    Vector2 aside = _lid + new Vector2(side * LostAsideXU * _u, LostAsideYU * _u);
+                    float jolt = _bumped && p < LostReboundEnd ? Mathf.Sin(Mathf.PI * Mathf.Clamp01((p - LostHitAt) / (LostReboundEnd - LostHitAt))) : 0f;
+                    pos = Vector2.Lerp(pos, aside + new Vector2(side * 0.1f * jolt * _u, 0.03f * jolt * _u), spread);
+                    if (spread > 0.5f)
+                    {
+                        fishFacing = side;
+                    }
                 }
 
-                pos = JoinAndLeave(i, p, pos, facingNow, out float sx, out float scale, out float alpha);
-                SetFish(i, pos, sx, scale, alpha, 0f);
+                pos = JoinAndLeave(i, p, pos, fishFacing, out float sx, out float scale, out float alpha);
+                SetFish(i, pos, sx, scale, alpha, tilt * facingNow);
+                if (i == Lead)
+                {
+                    _leadMouth = Mouth(pos, facingNow, tilt);
+                }
             }
 
             HideMorsel();
+        }
+
+        // Cueva llena (respuesta Q-C): el cardumen dormido se despierta, la que va delante se asoma hacia la víctima (morro
+        // abajo), las otras dos le dejan paso o la siguen un poco, miran, vuelven a su sitio y se duermen otra vez (atenuadas y
+        // con los ojos cerrados).
+        private void PosePeek(float p)
+        {
+            float wake = Mathf.Clamp01(p / PeekWakeEnd);
+            float sleep = Mathf.Clamp01((p - PeekBackEnd) / (1f - PeekBackEnd));
+            float lit = Mathf.Min(Ease.Out(wake), 1f - Ease.In(sleep)); // 0 dormido, 1 despierto
+            _awake = p >= 0.05f && p < 0.92f;
+            float out01;
+            if (p < PeekWakeEnd)
+            {
+                out01 = 0f;
+            }
+            else if (p < PeekOutEnd)
+            {
+                out01 = Ease.InOut((p - PeekWakeEnd) / (PeekOutEnd - PeekWakeEnd));
+            }
+            else if (p < PeekHoldEnd)
+            {
+                out01 = 1f;
+            }
+            else
+            {
+                out01 = 1f - Ease.InOut(Mathf.Clamp01((p - PeekHoldEnd) / (PeekBackEnd - PeekHoldEnd)));
+            }
+
+            float look = p >= PeekWakeEnd && p < PeekHoldEnd + (0.5f * (PeekBackEnd - PeekHoldEnd)) ? -_peekDir : 0f; // mirando hacia fuera
+            for (int i = 0; i < SchoolSize; i++)
+            {
+                IdlePose(i, out Vector2 rest, out float restFacing, out float restScale, out float restAlpha);
+                // La que va delante sale por delante de la del lado hacia el que se asoma, que le deja paso (atrás y arriba); la otra
+                // la sigue un poco.
+                bool aside = i != Lead && RestX[i] * _peekDir > 0f;
+                float reach = (i == Lead ? PeekReachU : (aside ? -0.1f : 0.3f)) * out01;
+                float dip = (i == Lead ? 0.3f : (aside ? -0.14f : 0.03f)) * out01;
+                Vector2 pos = rest + new Vector2(_peekDir * reach * _u, -dip * _u);
+                float facing = look != 0f ? look : restFacing;
+                float scale = Mathf.Lerp(restScale, 1f, lit);
+                float alpha = Mathf.Lerp(restAlpha, 1f, lit);
+                float shiver = i == Lead ? 0f : 6f * Mathf.Sin(6f * Mathf.PI * wake) * (1f - wake);
+                float tilt = i == Lead ? 14f * out01 * facing : (i % 2 == 0 ? 1f : -1f) * shiver; // la que se asoma, morro abajo
+                SetFish(i, pos, facing, scale, alpha, tilt);
+                if (i == Lead)
+                {
+                    _leadMouth = Mouth(pos, facing, 0f);
+                }
+            }
+        }
+
+        // Destellos perla donde la que va delante choca con la tapa o el embudo: el golpe se ve, sin rojo ni texto. Con Reducir
+        // movimiento el pool no emite.
+        private void EmitBump()
+        {
+            if (_fx == null || _reduceMotion)
+            {
+                return;
+            }
+
+            _fx.Sparkles(_lid, ProceduralArt.Pearl, BumpSparkles, BumpSparkleScale * _u);
         }
 
         // Entra desde donde estaba cada piraña y, al final, vuelve a su ronda.
@@ -986,9 +1171,9 @@ namespace AF.Presentation.Mechanics
             }
 
             Sprite sprite = _dimmed && !_animating ? Host.Art.PiranaFishAsleepSprite : Host.Art.PiranaFishSprite;
-            if (_sleepy && _animating)
+            if (_sleepy && _animating && !_awake)
             {
-                sprite = Host.Art.PiranaFishAsleepSprite;
+                sprite = Host.Art.PiranaFishAsleepSprite; // con la cueva llena, despierta solo para asomarse
             }
 
             if (fish.sprite != sprite)
@@ -1108,6 +1293,8 @@ namespace AF.Presentation.Mechanics
             _victimDose = -1;
             _caveDose = -1;
             _sleepy = false;
+            _awake = false;
+            _bumped = false;
             PlaceIdle();
             if (paint && board != null)
             {

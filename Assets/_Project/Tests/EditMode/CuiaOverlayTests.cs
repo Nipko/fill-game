@@ -339,14 +339,57 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Remolino_PairDots_OnlyFromPairOne()
+        public void Remolino_PairMark_AlsoForPairZero_SameOnBoth_DistinctAcrossPairs() // opción C del dueño (2026-10-11)
         {
-            CuiaView view = NewView();
-            view.ShowContent(Cuia.Create(4, new[] { 7 }).WithMechanic(MechanicType.Remolino, pairId: 0), false);
-            var whirl = (RemolinoOverlay)view.Overlay!;
-            Assert.That(whirl.PairDots, Is.EqualTo(0), "la primera pareja, sin puntos");
-            view.ShowContent(Cuia.Create(4, new[] { 7 }).WithMechanic(MechanicType.Remolino, pairId: 2), false);
-            Assert.That(whirl.PairDots, Is.EqualTo(3), "id + 1 puntos");
+            // Antes (T16) la pareja 0, la única del 103, no llevaba marca: solo la espiral y el canal. Con la opción C las dos
+            // cuias de la pareja llevan la MISMA ficha, también con id 0 (un punto), y otra pareja lleva otra (id + 1 puntos).
+            CuiaView a = NewView();
+            CuiaView b = NewView();
+            a.SetGeometry(new Vector2(100f, -300f), 48f, 64f);
+            b.SetGeometry(new Vector2(200f, -300f), 48f, 64f);
+            a.ShowContent(Cuia.Create(4, new[] { 7 }).WithMechanic(MechanicType.Remolino, pairId: 0), false);
+            b.ShowContent(Cuia.Create(4, new[] { 3, 3 }).WithMechanic(MechanicType.Remolino, pairId: 0), false);
+            var wa = (RemolinoOverlay)a.Overlay!;
+            var wb = (RemolinoOverlay)b.Overlay!;
+            Assert.That(wa.PairMarkVisible && wb.PairMarkVisible, Is.True, "la pareja 0 también lleva su ficha");
+            Assert.That(wa.PairDots, Is.EqualTo(1), "id 0: un punto");
+            Assert.That(wb.PairDots, Is.EqualTo(wa.PairDots), "la misma marca en las dos cuias de la pareja");
+            AssertSameRect(wb.PairMarkRect, wa.PairMarkRect, "la misma ficha, en el mismo sitio de su cuia");
+
+            // Legible a 48 dp y en su sitio: en el pie de fibra, sin tapar el fondo de la cavidad (el líquido) y sin salirse del
+            // ancho del pie.
+            float u = a.Unit;
+            Rect mark = wa.PairMarkRect;
+            Assert.That(mark.height, Is.GreaterThanOrEqualTo(10f), "la ficha mide ≥ 10 dp con la cuia de 48 dp");
+            Assert.That(wa.PairDotRect(0).width, Is.GreaterThanOrEqualTo(4.5f), "y su punto, ≥ 4,5 dp");
+            Assert.That(mark.yMax, Is.LessThanOrEqualTo(CuiaGeometry.CavityFloorU(0f) * u), "por debajo del fondo de la cavidad");
+            Assert.That(Mathf.Abs(mark.center.x), Is.LessThan(0.01f), "centrada en la cuia");
+            Assert.That(mark.yMin, Is.LessThan(0f).And.GreaterThan(-0.5f * u), "en el pie, sobre el ojo del remanso");
+
+            // Otra pareja: otra ficha, más larga, que sigue dentro del pie de fibra.
+            b.ShowContent(Cuia.Create(4, new[] { 3, 3 }).WithMechanic(MechanicType.Remolino, pairId: 1), false);
+            Assert.That(wb.PairDots, Is.EqualTo(2), "id 1: dos puntos");
+            Assert.That(wb.PairMarkRect.width, Is.GreaterThan(wa.PairMarkRect.width + 1f), "se distingue de la de la pareja 0");
+            a.ShowContent(Cuia.Create(4, new[] { 7 }).WithMechanic(MechanicType.Remolino, pairId: 7), false);
+            Assert.That(wa.PairDots, Is.EqualTo(8), "id 7: ocho puntos");
+            Assert.That(wa.PairMarkRect.width, Is.LessThanOrEqualTo((RemolinoOverlay.PairTagMaxWidthU * u) + 0.01f), "dentro del ancho del pie");
+            for (int i = 1; i < wa.PairDots; i++)
+            {
+                Assert.That(wa.PairDotRect(i).xMin, Is.GreaterThan(wa.PairDotRect(i - 1).xMax), "punto " + i + ": sin pisar el anterior");
+            }
+
+            // Sin el Remolino (la pareja ya no está), sin ficha.
+            a.ShowContent(Cuia.Create(4, new[] { 7 }), false);
+            Assert.That(wa.PairMarkVisible, Is.False);
+            Assert.That(wa.PairDots, Is.EqualTo(0));
+        }
+
+        private static void AssertSameRect(Rect actual, Rect expected, string what)
+        {
+            Assert.That(actual.x, Is.EqualTo(expected.x).Within(0.01f), what + " (x)");
+            Assert.That(actual.y, Is.EqualTo(expected.y).Within(0.01f), what + " (y)");
+            Assert.That(actual.width, Is.EqualTo(expected.width).Within(0.01f), what + " (ancho)");
+            Assert.That(actual.height, Is.EqualTo(expected.height).Within(0.01f), what + " (alto)");
         }
 
         [Test]

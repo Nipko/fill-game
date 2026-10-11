@@ -63,6 +63,35 @@ namespace AF.Tests.PlayMode
             Assert.That(drawer.DrawsChannel && drawer.ChannelVisible, Is.True, "el canal lo dibuja la cuia de menor índice");
             Assert.That(other.DrawsChannel || other.ChannelVisible, Is.False, "y solo ella: una sola vez");
             AssertChannel(view.Animator, view.Views, drawer, a, b, PanelInner(view), "nivel 103");
+
+            // Opción C del dueño (2026-10-11): además del canal, la MISMA ficha en las dos cuias, aunque sea la única pareja
+            // (id 0); ninguna otra cuia la lleva.
+            int pairId = boot.Flow.Session.Current[a].MechanicPairId;
+            Assert.That(drawer.PairMarkVisible && other.PairMarkVisible, Is.True, "la ficha de la pareja, en las dos cuias");
+            Assert.That(drawer.PairDots, Is.EqualTo(pairId + 1), "id + 1 puntos (también con id 0)");
+            Assert.That(other.PairDots, Is.EqualTo(drawer.PairDots), "la misma marca en las dos");
+            Assert.That(other.PairMarkRect.size, Is.EqualTo(drawer.PairMarkRect.size), "del mismo tamaño");
+            Assert.That(other.PairMarkRect.center, Is.EqualTo(drawer.PairMarkRect.center), "en el mismo sitio de su cuia");
+            for (int i = 0; i < view.Views.Length; i++)
+            {
+                if (i != a && i != b)
+                {
+                    CuiaOverlay? overlay = view.Views[i].OverlayOf(MechanicType.Remolino);
+                    Assert.That(overlay is RemolinoOverlay r && r.PairMarkVisible, Is.False, "la cuia " + i + " no lleva ficha");
+                }
+            }
+
+            // La ficha no cambia al seleccionar (D-002): elevada, la cuia la deja sobre su remanso.
+            int lift = boot.Flow.Session.Current[a].IsEmpty ? b : a;
+            RemolinoOverlay lifted = lift == a ? drawer : other;
+            Rect rest = lifted.PairMarkRect;
+            Assert.That(boot.TapCuia(lift).Kind, Is.EqualTo(TapKind.Selected), "la cuia " + lift + " de la pareja, seleccionada");
+            PlayModeHelpers.Step(boot, 300);
+            Assert.That(view.Views[lift].IsLifted, Is.True);
+            Assert.That(lifted.PairMarkVisible, Is.True);
+            Assert.That(lifted.PairMarkRect, Is.EqualTo(rest), "la ficha se queda igual y en su sitio");
+            boot.TapCuia(lift);
+            PlayModeHelpers.Step(boot, 300);
             TestContext.WriteLine("Nivel 103: pareja " + a + "-" + b + ", " + Rows(view.Animator) + " filas, " + drawer.ChannelSegmentCount + " tramos a la vista de " + RemolinoOverlay.ChannelWidthDp.ToString("0.0") + " dp.");
         }
 

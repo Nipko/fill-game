@@ -356,6 +356,89 @@ namespace AF.Tests.PlayMode
             return count;
         }
 
+        /// <summary>
+        /// Criterio de conjunto de los estrenos de la ola 3 (prueba del 2026-10-09): en todo el registro de pasos de
+        /// <paramref name="animator"/>, salvo los terminados antes de tiempo (<c>Snapped</c>),
+        /// <list type="bullet">
+        /// <item><description>ningún Open, Release, Receive, RainDrop, RainEnd, Bite ni MudWash usa el paso por defecto de la
+        /// cola ni dura 0 ms;</description></item>
+        /// <item><description>cada paso dura su nominal (<see cref="NominalStepMs"/>, propuesta de D-007 b.2 y los [P] de la ola 3)
+        /// × su factor de velocidad.</description></item>
+        /// </list>
+        /// Devuelve cuántos pasos de la primera lista comprobó.
+        /// </summary>
+        public static int AssertOwnTimedSteps(BoardAnimator animator, string what)
+        {
+            MechanicStepQueue steps = animator.Steps;
+            int strict = 0;
+            for (int i = 0; i < steps.LogCount; i++)
+            {
+                MechanicStepRecord r = steps.LogAt(i);
+                if (r.Snapped)
+                {
+                    continue;
+                }
+
+                string label = what + ": " + r + ". " + Describe(animator);
+                float ms = r.EndMs - r.StartMs;
+                switch (r.Kind)
+                {
+                    case MechanicStepKind.Open:
+                    case MechanicStepKind.Release:
+                    case MechanicStepKind.Receive:
+                    case MechanicStepKind.RainDrop:
+                    case MechanicStepKind.RainEnd:
+                    case MechanicStepKind.Bite:
+                    case MechanicStepKind.MudWash:
+                        strict++;
+                        Assert.That(r.UsedDefault, Is.False, label + ": lo anima su overlay o sus marcas, no el paso por defecto");
+                        Assert.That(ms, Is.GreaterThan(0f), label + ": dura más de 0 ms");
+                        break;
+                }
+
+                float nominal = NominalStepMs(r);
+                Assert.That(nominal, Is.GreaterThan(0f), label + ": paso con duración nominal conocida");
+                Assert.That(ms, Is.EqualTo(nominal * r.SpeedFactor).Within(0.5f), label + ": " + nominal + " ms × factor " + r.SpeedFactor.ToString("0.###"));
+            }
+
+            return strict;
+        }
+
+        /// <summary>
+        /// Duración nominal (ms, sin factor) del paso registrado <paramref name="r"/> según quién lo animó: la del overlay de su
+        /// mecánica, la de las marcas (revelado y lavado del barro) o, en el sellado sin overlay, la tapa por defecto; −1 si no
+        /// tiene una propia.
+        /// </summary>
+        public static float NominalStepMs(MechanicStepRecord r)
+        {
+            switch (r.Kind)
+            {
+                case MechanicStepKind.Reveal:
+                    return MurkyMarks.RevealRuleMs;
+                case MechanicStepKind.MudWash:
+                    return MudMarks.WashMs;
+                case MechanicStepKind.Receive:
+                    return r.Owner == MechanicType.Remolino ? RemolinoOverlay.ReceiveMs : -1f;
+                case MechanicStepKind.Open:
+                    return r.Owner == MechanicType.Hoja ? HojaOverlay.OpenStepMs : r.Owner == MechanicType.Brote ? BroteOverlay.OpenStepMs : -1f;
+                case MechanicStepKind.Seal:
+                    return r.Owner == MechanicType.Matapi ? MatapiOverlay.SealMs : r.UsedDefault ? CuiaView.SealMs : -1f;
+                case MechanicStepKind.Release:
+                    return r.Owner == MechanicType.Liana ? LianaOverlay.ReleaseMs : -1f;
+                case MechanicStepKind.RainDrop:
+                case MechanicStepKind.RainEnd:
+                    return r.Owner == MechanicType.Lluvia ? LluviaOverlay.DropStepMs : -1f;
+                case MechanicStepKind.RainWait:
+                    return r.Owner == MechanicType.Lluvia ? LluviaOverlay.WaitStepMs : -1f;
+                case MechanicStepKind.Bite:
+                    return r.Owner == MechanicType.Pirana ? PiranaOverlay.BiteStepMs : -1f;
+                case MechanicStepKind.BiteLost:
+                    return r.Owner == MechanicType.Pirana ? PiranaOverlay.BiteLostStepMs : -1f;
+                default:
+                    return -1f;
+            }
+        }
+
         private static bool TryOneMore(BoardState state, PourMode mode, PourWanted wanted, out Pour hit)
         {
             for (int a = 0; a < state.Count; a++)

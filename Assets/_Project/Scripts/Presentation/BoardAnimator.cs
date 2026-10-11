@@ -215,13 +215,15 @@ namespace AF.Presentation
         public float Clock { get; private set; }
 
         /// <summary>
-        /// Eventos sueltos de desarrollo, con la firma de <c>DevProbe.Event(evento, campos JSON)</c>: hoy <c>step_budget</c>,
-        /// cuando las últimas etapas de un plan saltan por el presupuesto desde el toque. Null = sin sonda: no se escribe nada
-        /// y el salto solo se cuenta en <see cref="MechanicStepQueue.BudgetOverruns"/>.
+        /// Eventos sueltos de desarrollo, con la firma de <c>DevProbe.Event(evento, campos JSON)</c>: <c>step_budget</c>, cuando
+        /// las últimas etapas de un plan saltan por el presupuesto desde el toque, y <c>step</c>, al terminar cada paso de
+        /// mecánica (<c>kind</c>, <c>stage</c>, <c>index</c>, <c>other</c>, <c>owner</c>, <c>ms</c>, <c>speed</c>,
+        /// <c>used_default</c> y <c>snapped</c>; solo con <c>Debug.isDebugBuild</c>). Null = sin sonda: no se escribe nada y el
+        /// salto solo se cuenta en <see cref="MechanicStepQueue.BudgetOverruns"/>.
         /// </summary>
         /// <remarks>
         /// Lo asigna el constructor de <c>GameScreen</c> (<c>DevEvent = _probe.Event</c>): en builds de desarrollo,
-        /// <c>step_budget</c> sale como línea AF_STATE.
+        /// <c>step_budget</c> y <c>step</c> salen como líneas AF_STATE.
         /// </remarks>
         public Action<string, string>? DevEvent { get; set; }
 
@@ -1549,6 +1551,29 @@ namespace AF.Presentation
                 + ",\"speed\":" + speed.ToString("0.00", CultureInfo.InvariantCulture)
                 + ",\"skip_from\":\"" + ((StepStage)skipFrom).ToString() + "\"";
             devEvent("step_budget", fields);
+        }
+
+        // AF_STATE "step" por DevEvent (DevProbe.Event, como step_budget), solo en builds de desarrollo: un paso de mecánica
+        // terminó (a su hora o antes de tiempo), con lo que hace falta para comprobar en el teléfono que ninguno usa el paso por
+        // defecto ni dura 0 ms (prueba de conjunto de la ola 3, tanda B2). Sin sonda o en release no hace nada; si escribe,
+        // asigna una vez por paso, no por fotograma.
+        internal void RaiseStepDone(in MechanicStepRecord r)
+        {
+            Action<string, string>? devEvent = DevEvent;
+            if (devEvent == null || !Debug.isDebugBuild)
+            {
+                return;
+            }
+
+            string fields = "\"kind\":\"" + r.Kind.ToString() + "\",\"stage\":\"" + r.Stage.ToString()
+                + "\",\"index\":" + r.Index.ToString(CultureInfo.InvariantCulture)
+                + ",\"other\":" + r.OtherIndex.ToString(CultureInfo.InvariantCulture)
+                + ",\"owner\":\"" + (r.Owner == MechanicType.None ? "-" : MechanicTypes.ToKey(r.Owner))
+                + "\",\"ms\":" + Mathf.RoundToInt(r.EndMs - r.StartMs).ToString(CultureInfo.InvariantCulture)
+                + ",\"speed\":" + r.SpeedFactor.ToString("0.00", CultureInfo.InvariantCulture)
+                + ",\"used_default\":" + (r.UsedDefault ? "true" : "false")
+                + ",\"snapped\":" + (r.Snapped ? "true" : "false");
+            devEvent("step", fields);
         }
 
         // Último estado del modelo de la cuia (lo que debe verse con la cola quieta).

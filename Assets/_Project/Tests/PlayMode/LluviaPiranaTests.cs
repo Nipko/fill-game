@@ -27,9 +27,11 @@ namespace AF.Tests.PlayMode
     /// caer (baja y la tormenta late) y sigue colgando, y la última se lleva la nube sin pasar del pie de la fila de arriba. El
     /// cardumen sale de la cueva con el cuarto vertido útil, muerde y se lleva la dosis (a mitad del paso la víctima aún la
     /// tiene): el bocado sale de esa dosis, sube por el eje de la víctima y entra recto por la boca de la cueva antes de que se
-    /// forme allí la dosis. Si el vertido sella la cuia o la cueva está llena, el mordisco se pierde (amago) y con la cueva
-    /// llena duerme. Los puntos de los contadores miden ≈ 7 dp y los vacíos van más tenues. El cardumen no tapa cuias ni
-    /// captura toques, y nada asigna memoria durante los pasos.
+    /// forme allí la dosis. Si el vertido sella la cuia, el mordisco se pierde y se ve (el cardumen llega a la tapa, choca y
+    /// vuelve); con la cueva llena duerme y en el mordisco perdido se asoma y vuelve a dormirse. La gota tarda ≥ 150 ms ×
+    /// factor en caer, la gotita sale de la nube en cuanto sale la gota, al llenar salpica, y la nube de la última gota se
+    /// desvanece en ≥ 300 ms × factor. Los puntos de los contadores miden ≈ 7 dp y los vacíos van más tenues. El cardumen no
+    /// tapa cuias ni captura toques, y nada asigna memoria durante los pasos.
     /// </summary>
     public sealed class LluviaPiranaTests
     {
@@ -114,6 +116,90 @@ namespace AF.Tests.PlayMode
             Assert.That(cloud.DropCount, Is.EqualTo(1), "queda una gota");
             Assert.That(cloud.IsAnimating, Is.False);
             MechanicTestKit.AssertViewMatchesModel(boot);
+        }
+
+        [UnityTest]
+        public IEnumerator Lluvia_DropFalls150ms_LeavesTheRow_SplashesOnFill([Values(false, true)] bool reduce)
+        {
+            // Criterios de la ola 3 (prueba del 2026-10-09): la gota cae de la nube a la superficie en ≥ 150 ms [P] × factor, la
+            // gotita de la nube se va en cuanto sale la gota (a mitad del paso ya no está) y al llenar salpica con el agua del
+            // mundo; con Reducir movimiento todo va a × 0,5 y sin partículas.
+            yield return null;
+            BoardState start = DropBoard();
+            _rig = new MechanicTestKit.Rig(Art, start);
+            var fx = new RecordingFx(_rig.Fx) { ReduceMotion = reduce };
+            _rig.Animator.Fx = fx;
+            _rig.Animator.ReduceMotion = reduce;
+            var cloud = (LluviaOverlay)_rig.Views[0].Overlay!;
+            BoardState counted = _rig.Pour(start, 1, 3, out _);
+            _rig.RunUntilIdle(3000);
+            int pending = cloud.DropCount;
+            Assert.That(pending, Is.EqualTo(2), "dos gotas pendientes");
+            _rig.Animator.Steps.ClearLog();
+            BoardState after = _rig.Pour(counted, 2, 4, out PourVisual v);
+            Assert.That(v.Events.LluviaDropMask, Is.EqualTo(1), "cae una gota");
+            RunUntil(_rig, () => _rig.Animator.Steps.IsRunning(MechanicStepKind.RainDrop, 0), 3000);
+            Assert.That(cloud.DropCount, Is.EqualTo(pending - 1), "la gotita sale de la fila en cuanto sale la gota");
+            fx.Clear();
+
+            // El paso entero de 4 en 4 ms: cuándo empieza a bajar la gota, cuándo deja de verse y cuándo salpica.
+            float formed = cloud.FallingDropHeightU;
+            float fallFrom = -1f;
+            float fallTo = -1f;
+            float splashAt = -1f;
+            float duration = 0f;
+            bool midChecked = false;
+            while (_rig.Animator.Steps.TryGetRunning(MechanicStepKind.RainDrop, 0, out float elapsed, out float dur))
+            {
+                duration = dur;
+                _rig.Tick(4f);
+                float t = elapsed + 4f;
+                if (cloud.FallingDropVisible)
+                {
+                    if (fallFrom < 0f && cloud.FallingDropHeightU < formed - 0.005f)
+                    {
+                        fallFrom = t;
+                    }
+
+                    fallTo = t;
+                }
+
+                if (splashAt < 0f && fx.SplashCount > 0)
+                {
+                    splashAt = t;
+                }
+
+                if (!midChecked && t >= 0.5f * dur)
+                {
+                    midChecked = true;
+                    Assert.That(cloud.FallingDropVisible, Is.True, "a mitad, la gota cae");
+                    Assert.That(cloud.DropCount, Is.EqualTo(pending - 1), "a mitad, la gotita ya no está en la nube");
+                }
+            }
+
+            MechanicStepRecord drop = MechanicTestKit.Record(_rig.Animator, MechanicStepKind.RainDrop, 0);
+            float factor = drop.SpeedFactor;
+            Assert.That(factor, Is.EqualTo(reduce ? 0.5f : 1f).Within(1e-3f));
+            Assert.That(duration, Is.EqualTo(LluviaOverlay.DropStepMs * factor).Within(0.5f));
+            Assert.That((LluviaOverlay.FallEndFraction - LluviaOverlay.FallStartFraction) * LluviaOverlay.DropStepMs, Is.GreaterThanOrEqualTo(150f), "caída nominal ≥ 150 ms [P]");
+            Assert.That(fallFrom, Is.GreaterThan(0f), "la gota cae");
+            Assert.That(fallTo - fallFrom + 4f, Is.GreaterThanOrEqualTo((150f * factor) - 4f), "la gota tarda ≥ 150 ms × factor en caer de la nube a la superficie");
+            float fallStart = LluviaOverlay.FallStartFraction * duration;
+            Assert.That(fallFrom, Is.InRange(fallStart - 8f, fallStart + 24f), "empieza a caer al terminar de formarse (cae con gravedad: al principio, despacio)");
+            Assert.That(midChecked, Is.True);
+            if (reduce)
+            {
+                Assert.That(fx.SplashCount, Is.EqualTo(0), "con Reducir movimiento, sin salpicadura");
+            }
+            else
+            {
+                Assert.That(splashAt, Is.GreaterThanOrEqualTo(LluviaOverlay.FallEndFraction * duration), "salpica al llenar, cuando la gota ya llegó");
+                Assert.That(fx.LastSplashTint, Is.EqualTo(Palette.Tint(10)), "con el agua del mundo");
+            }
+
+            _rig.RunUntilIdle(3000);
+            Assert.That(cloud.DropCount, Is.EqualTo(pending - 1), "queda una gota");
+            AssertRigShowsModel(after);
         }
 
         [UnityTest]
@@ -305,6 +391,48 @@ namespace AF.Tests.PlayMode
             Assert.That(_rig.Views[0].DoseColor(3), Is.EqualTo(Palette.Tint(10)), "la última gota, arriba");
             Assert.That(_rig.Views[0].Sealed, Is.True, "sellada con el agua");
             AssertRigShowsModel(after);
+
+            // Duración del fundido (criterio de la ola 3: la nube sube y se desvanece en ≥ 300 ms [P] × factor): el mismo vertido
+            // otra vez, mirando la opacidad de la nube de 4 en 4 ms. Entera hasta que cae la gota, todavía > 0,5 a los 150 ms × factor
+            // de fundido, y desde que empieza a desvanecerse hasta que no queda nada, ≥ 300 ms × factor.
+            _rig.Dispose();
+            _rig = new MechanicTestKit.Rig(Art, start);
+            cloud = (LluviaOverlay)_rig.Views[0].Overlay!;
+            counted = _rig.Pour(start, 1, 3, out _);
+            _rig.RunUntilIdle(3000);
+            _rig.Pour(counted, 2, 4, out _);
+            RunUntil(_rig, () => _rig.Animator.Steps.IsRunning(MechanicStepKind.RainEnd, 0), 3000);
+            Assert.That(_rig.Animator.Steps.TryGetRunning(MechanicStepKind.RainEnd, 0, out _, out float fadeDur), Is.True);
+            float factor = fadeDur / LluviaOverlay.DropStepMs;
+            float fadeFrom = LluviaOverlay.FallStartFraction * fadeDur;
+            float lastWhole = -1f;
+            float firstGone = -1f;
+            float halfway = -1f;
+            while (_rig.Animator.Steps.TryGetRunning(MechanicStepKind.RainEnd, 0, out float e, out _))
+            {
+                _rig.Tick(4);
+                float t = e + 4f;
+                float a = cloud.IsAnimating ? cloud.CloudAlpha : 0f; // al cerrar el paso la nube oculta vuelve a alfa 1
+                if (a >= 0.999f)
+                {
+                    lastWhole = t;
+                }
+
+                if (firstGone < 0f && a <= 0.005f)
+                {
+                    firstGone = t;
+                }
+
+                if (halfway < 0f && t >= fadeFrom + (150f * factor))
+                {
+                    halfway = a;
+                }
+            }
+
+            Assert.That(lastWhole, Is.GreaterThanOrEqualTo(fadeFrom - 8f), "la nube sigue entera hasta que cae la gota");
+            Assert.That(halfway, Is.GreaterThan(0.5f), "a los 150 ms × factor de fundido aún se ve más de la mitad");
+            Assert.That(firstGone, Is.GreaterThan(0f), "y al final se ha ido");
+            Assert.That(firstGone - lastWhole, Is.GreaterThanOrEqualTo((300f * factor) - 8f), "se desvanece en ≥ 300 ms × factor (" + (firstGone - lastWhole).ToString("F0") + " ms)");
         }
 
         [UnityTest]
@@ -483,13 +611,36 @@ namespace AF.Tests.PlayMode
             Assert.That(poured.Pour.Events.PiranaCaveMask, Is.EqualTo(0), "sellar la cuia destino evita el mordisco (02 §9.1 M7)");
             Assert.That(boot.Flow.Session.Current.IsSealed(victim), Is.True);
 
+            // Mordisco fallido visible (decisión C + D del dueño para el 183): el cardumen sale de la cueva, la que va delante llega
+            // a la tapa de la víctima, choca, rebota y vuelve. A mitad del paso está junto a la boca de la víctima.
+            float u = boot.View.Views[cave].Unit;
+            Vector2 home = school.SchoolHome;
+            Vector2 victimFoot = boot.View.Animator.Foot(victim);
+            Vector2 lid = victimFoot + new Vector2(0f, (boot.View.Views[victim].HeightU + PiranaOverlay.LidAboveRimU) * u);
             MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.BiteLost, cave, 4000);
+            Assert.That(Vector2.Distance(school.LostContact, lid), Is.LessThan(0.01f), "choca con la tapa de la víctima");
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, 0.25f);
+            Assert.That((school.SchoolCenter - home).magnitude, Is.GreaterThan(0.5f * u), "el cardumen sale de la cueva");
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, PiranaOverlay.LostHitAt - 0.04f);
+            Assert.That(school.LostBumped, Is.False, "aún no ha chocado");
+            for (int ms = 0; ms < 60 && !school.LostBumped; ms++)
+            {
+                PlayModeHelpers.TickExact(boot, 1);
+            }
+
+            Assert.That(school.LostBumped, Is.True, "choca");
+            Assert.That(Vector2.Distance(school.LeadMouth, lid), Is.LessThan(0.2f * u), "la que va delante llega a la tapa");
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, 0.5f);
-            Assert.That(school.IsAnimating, Is.True, "el amago lo anima la cueva");
+            Assert.That(school.IsAnimating, Is.True, "el mordisco perdido lo anima la cueva");
+            Assert.That(Vector2.Distance(school.LeadMouth, lid), Is.LessThan(0.6f * u), "a mitad del paso, junto a la boca de la víctima (rebotando)");
+            Assert.That(school.LeadMouth.y, Is.GreaterThan(lid.y - (0.05f * u)), "rebota hacia arriba: no entra en la víctima");
+            Assert.That((school.SchoolCenter - lid).magnitude, Is.LessThan((home - lid).magnitude), "el cardumen está en la víctima");
             Assert.That(school.MorselVisible, Is.False, "no se lleva nada");
             Assert.That(boot.View.Views[cave].LiquidLevel, Is.EqualTo((float)caveBefore.Count).Within(1e-3f));
+            Assert.That(boot.View.Views[victim].Sealed, Is.True, "la tapa, en su sitio");
 
             MechanicTestKit.StepToIdle(boot, 6000);
+            Assert.That((school.SchoolCenter - school.SchoolHome).magnitude, Is.LessThan(0.8f * u), "y vuelve junto a la cueva");
             BoardAnimator animator = boot.View.Animator;
             MechanicTestKit.AssertLogFollowsPlan(animator, in visual);
             Assert.That(MechanicTestKit.TryFindRecord(animator, MechanicStepKind.Bite, cave, out _), Is.False, "sin mordisco");
@@ -516,9 +667,18 @@ namespace AF.Tests.PlayMode
             BoardState after = _rig.Pour(counted, 3, 5, out PourVisual v);
             Assert.That(v.Events.PiranaBiteLostMask, Is.EqualTo(1), "mordisco perdido");
             Assert.That(v.Events.PiranaCaveMask, Is.EqualTo(0));
+            float u = _rig.Views[0].Unit;
+            Vector2 rest = school.Fish(PiranaOverlay.LeadFish).rectTransform.anchoredPosition;
+            Assert.That(school.SchoolAsleep, Is.True, "antes del paso, dormido");
             RunUntil(_rig, () => _rig.Animator.Steps.IsRunning(MechanicStepKind.BiteLost, 0), 3000);
+
+            // Cueva llena: se despierta, la que va delante se asoma hacia la víctima (a la derecha) y vuelve, y se duermen otra vez.
             RunToFraction(_rig, MechanicStepKind.BiteLost, 0, 0.5f);
             Assert.That(school.IsAnimating, Is.True);
+            Assert.That(school.SchoolAsleep, Is.False, "se despierta para asomarse");
+            Vector2 peek = school.Fish(PiranaOverlay.LeadFish).rectTransform.anchoredPosition;
+            Assert.That(peek.x - rest.x, Is.GreaterThan(0.4f * u), "se asoma hacia la víctima");
+            Assert.That(school.Fish(PiranaOverlay.LeadFish).color.a, Is.EqualTo(1f).Within(1e-3f), "despierta, sin atenuar");
             Assert.That(school.MorselVisible, Is.False);
             Assert.That(_rig.Views[0].LiquidLevel, Is.EqualTo(2f).Within(1e-3f), "la cueva no cambia");
             Assert.That(_rig.Views[5].LiquidLevel, Is.EqualTo(2f).Within(1e-3f), "la víctima no cambia");
@@ -528,6 +688,8 @@ namespace AF.Tests.PlayMode
             AssertOwnStep(MechanicTestKit.Record(_rig.Animator, MechanicStepKind.BiteLost, 0), MechanicType.Pirana, PiranaOverlay.BiteLostStepMs);
             Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs));
             Assert.That(school.Dimmed, Is.True, "sigue durmiendo");
+            Assert.That(school.SchoolAsleep, Is.True, "vuelve a dormirse");
+            Assert.That(Vector2.Distance(school.Fish(PiranaOverlay.LeadFish).rectTransform.anchoredPosition, rest), Is.LessThan(0.1f * u), "de vuelta en su sitio");
             Assert.That(school.FilledPips, Is.EqualTo(0));
             AssertRigShowsModel(after);
         }
@@ -834,6 +996,74 @@ namespace AF.Tests.PlayMode
             float y0 = Mathf.Min(Mathf.Min(corners[0].y, corners[1].y), Mathf.Min(corners[2].y, corners[3].y));
             float y1 = Mathf.Max(Mathf.Max(corners[0].y, corners[1].y), Mathf.Max(corners[2].y, corners[3].y));
             return Rect.MinMaxRect(x0, y0, x1, y1);
+        }
+
+        // Efectos de prueba: cuenta las salpicaduras y apunta el tinte de la última; lo demás lo pasa a la capa de efectos real
+        // (si no hay Reducir movimiento), para que el banco se vea igual.
+        private sealed class RecordingFx : IBoardFx
+        {
+            private readonly IBoardFx _inner;
+
+            public RecordingFx(IBoardFx inner)
+            {
+                _inner = inner;
+            }
+
+            public int SplashCount { get; private set; }
+
+            public Color LastSplashTint { get; private set; }
+
+            public bool ReduceMotion { get; set; }
+
+            public void Clear()
+            {
+                SplashCount = 0;
+                LastSplashTint = Color.clear;
+            }
+
+            public void Splash(Vector2 surface, Color tint, float unitDp)
+            {
+                if (ReduceMotion)
+                {
+                    return;
+                }
+
+                SplashCount++;
+                LastSplashTint = tint;
+                _inner.Splash(surface, tint, unitDp);
+            }
+
+            public void SealDrops(Vector2 rim, Color tint, float unitDp)
+            {
+                if (!ReduceMotion)
+                {
+                    _inner.SealDrops(rim, tint, unitDp);
+                }
+            }
+
+            public void Sparkles(Vector2 pos, Color color, int count, float unitDp)
+            {
+                if (!ReduceMotion)
+                {
+                    _inner.Sparkles(pos, color, count, unitDp);
+                }
+            }
+
+            public void Shards(Vector2 pos, Color color, int count, float unitDp)
+            {
+                if (!ReduceMotion)
+                {
+                    _inner.Shards(pos, color, count, unitDp);
+                }
+            }
+
+            public void Bubbles(Vector2 pos, int count, float unitDp)
+            {
+                if (!ReduceMotion)
+                {
+                    _inner.Bubbles(pos, count, unitDp);
+                }
+            }
         }
 
         // Piezas de overlay a la vista bajo las cuatro anclas de la cuia.

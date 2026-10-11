@@ -516,7 +516,13 @@ namespace AF.Tests.PlayMode
             _rig.Animator.Steps.ClearLog();
             int overruns = _rig.Animator.Steps.BudgetOverruns;
             int devEvents = 0;
-            _rig.Animator.DevEvent = (evt, fields) => devEvents++;
+            int stepEvents = 0;
+            _rig.Animator.DevEvent = (evt, fields) =>
+            {
+                // Solo cuenta step_budget; "step" sale al terminar cada paso (AF_STATE de desarrollo, tanda B2).
+                devEvents += evt == "step_budget" ? 1 : 0;
+                stepEvents += evt == "step" ? 1 : 0;
+            };
 
             BoardState after = _rig.Pour(counted, 0, 1, out PourVisual v);
             int elapsed = _rig.RunUntilIdle(6000);
@@ -530,6 +536,7 @@ namespace AF.Tests.PlayMode
             Assert.That(_rig.Animator.Steps.LastSpeedFactor, Is.EqualTo(expected).Within(1e-3f), "la espera cuenta en el presupuesto");
             Assert.That(_rig.Animator.Steps.BudgetOverruns, Is.EqualTo(overruns), "cabe sin saltar");
             Assert.That(devEvents, Is.EqualTo(0), "sin salto no hay step_budget");
+            Assert.That(stepEvents, Is.EqualTo(_rig.Animator.Steps.LogCount), "un AF_STATE step por paso terminado");
             Assert.That(probe.Steps.Count, Is.EqualTo(1), "la gota llega al overlay");
             Assert.That(probe.Steps[0].SpeedFactor, Is.EqualTo(expected).Within(1e-3f));
             Assert.That(probe.Steps[0].Kind, Is.EqualTo(MechanicStepKind.RainEnd));
@@ -623,8 +630,16 @@ namespace AF.Tests.PlayMode
                 int devEvents = 0;
                 string? lastEvent = null;
                 string? lastFields = null;
+                string? releaseStep = null;
                 _rig.Animator.DevEvent = (evt, fields) =>
                 {
+                    if (evt == "step")
+                    {
+                        // AF_STATE "step" al terminar cada paso (tanda B2); aquí solo interesa el de la Liana.
+                        releaseStep = fields.Contains("\"kind\":\"Release\"") ? fields : releaseStep;
+                        return;
+                    }
+
                     devEvents++;
                     lastEvent = evt;
                     lastFields = fields;
@@ -645,6 +660,8 @@ namespace AF.Tests.PlayMode
                     Assert.That(probe.Steps[0].SpeedFactor, Is.LessThan(1f));
                     Assert.That(_rig.Animator.Steps.BudgetOverruns, Is.EqualTo(overruns), "cabe sin saltar");
                     Assert.That(devEvents, Is.EqualTo(0), "sin salto no hay step_budget");
+                    Assert.That(releaseStep, Does.Contain("\"owner\":\"liana\"").And.Contain("\"used_default\":false").And.Contain("\"snapped\":false"), "AF_STATE step del Release: su overlay, entero");
+                    Assert.That(releaseStep, Does.StartWith("\"kind\":"), "miembros JSON sin llaves, como pide DevProbe.Event");
                 }
                 else
                 {

@@ -864,6 +864,7 @@ namespace AF.Presentation.Mechanics
             if (r.Kind == p.Entries[e].Kind && r.Index == p.Entries[e].Index)
             {
                 _log[at] = new MechanicStepRecord(r.Kind, r.Stage, r.Index, r.OtherIndex, r.Owner, r.UsedDefault, r.StartMs, end, r.SpeedFactor, snapped || r.Snapped);
+                _board.RaiseStepDone(in _log[at]); // AF_STATE "step" en desarrollo (BoardAnimator.DevEvent)
             }
 
             p.Log[e] = -1;
