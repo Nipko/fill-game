@@ -104,11 +104,11 @@ namespace AF.GameFlow
 
         /// <summary>
         /// [P] Tarjeta previa de 1 toque encendida en el juego (02 §10; propuesta de D-009 §c.1; <see cref="LevelFlow.LevelCardsEnabled"/>).
-        /// No es una clave de 08 §9: false hasta que exista la vista de la tarjeta (tarea T13 del paso 1, que la pasa a true),
-        /// para que ningún build intermedio se quede en LEVEL_CARD sin nada que la cierre. Los tests lo fijan con
-        /// <c>LaunchOptions.LevelCardsOverride</c>.
+        /// No es una clave de 08 §9. Estuvo en false hasta que existió la vista de la tarjeta (<c>AF.UI.LevelCardView</c>, tarea
+        /// T13 del paso 1, que la enciende), para que ningún build intermedio se quedara en LEVEL_CARD sin nada que la cerrara.
+        /// Los tests PlayMode la apagan salvo que la fijen con <c>LaunchOptions.LevelCardsOverride</c> (<c>PlayModeHelpers</c>).
         /// </summary>
-        public const bool LevelCardsEnabledDefault = false;
+        public const bool LevelCardsEnabledDefault = true;
 
         /// <summary>
         /// [P] La tarjeta previa también sale al reintentar el mismo nivel (Volver a la orilla, «Reintentar» de Nivel fallido o
