@@ -20,9 +20,10 @@ namespace AF.UI
     /// nivel 31»): píldoras de 22 dp entre la insignia del nivel y Reiniciar. A 360 dp solo quedan ≈ 92 dp entre las dos, así
     /// que desde el 31 la de Semillas va encima de la de Canoas (las dos dentro de la fila de 48 dp) y la de Canoas lleva
     /// «n/5» sin cronómetro (el cronómetro está en el inicio y en Sin canoas). En 1-30, solo Semillas, centrada en la
-    /// fila.</description></item>
+    /// fila. La columna Semillas/Canoas se puede compactar dentro de la fila (<see cref="Layout(float, float, float, float,
+    /// float, float)"/>: píldoras más bajas, a escala, cuando el tablero pasa bajo el HUD).</description></item>
     /// </list>
-    /// Mismo material que la pantalla de inicio (placa de madera oscura). Sin asignaciones al refrescar.
+    /// Mismo material que la pantalla de inicio (placa de madera oscura). Sin asignaciones al refrescar ni al colocar.
     /// </summary>
     internal sealed class WalletBar
     {
@@ -54,10 +55,12 @@ namespace AF.UI
         private int _modeShown = -1;
         private long _timerShown = long.MinValue;
         private bool _compact;
-        private bool _canoesArranged;
         private float _left = 64f;
         private float _top = 40f;
         private float _width = 92f;
+        private float _columnPill = CompactPillDp;
+        private float _columnGap = CompactGapDp;
+        private float _columnTop = 41f;
 
         public WalletBar(Transform parent, ProceduralArt art)
         {
@@ -106,6 +109,12 @@ namespace AF.UI
         /// <summary>Rectángulo de la píldora o placa de Canoas (tests de layout).</summary>
         public RectTransform CanoesRect => _canoes;
 
+        /// <summary>
+        /// La columna Semillas/Canoas de la cabecera de partida va a la vista y compactada: píldoras de menos de
+        /// <see cref="CompactPillDp"/>, a escala (<see cref="Layout(float, float, float, float, float, float)"/>).
+        /// </summary>
+        public bool Squeezed => _root.gameObject.activeSelf && _compact && _canoes.gameObject.activeSelf && _columnPill < CompactPillDp;
+
         public void SetVisible(bool visible)
         {
             if (_root.gameObject.activeSelf != visible)
@@ -135,13 +144,31 @@ namespace AF.UI
 
         /// <summary>
         /// Coloca la barra en la fila superior (<paramref name="top"/>), empezando en <paramref name="left"/>. En la cabecera de
-        /// partida, <paramref name="width"/> es el ancho de las píldoras (el hueco entre la insignia y Reiniciar).
+        /// partida, <paramref name="width"/> es el ancho de las píldoras (el hueco entre la insignia y Reiniciar) y, desde el 31,
+        /// la columna Semillas/Canoas va a su tamaño: píldoras de <see cref="CompactPillDp"/> con <see cref="CompactGapDp"/> de
+        /// hueco desde <c>top + 1</c> (hasta <c>top + 49</c>).
         /// </summary>
         public void Layout(float left, float top, float width = 92f)
+        {
+            Layout(left, top, width, CompactPillDp, CompactGapDp, top + 1f);
+        }
+
+        /// <summary>
+        /// Como <see cref="Layout(float, float, float)"/>, con la columna Semillas/Canoas de la cabecera de partida (desde el 31)
+        /// en píldoras de <paramref name="pillDp"/> de alto (como mucho <see cref="CompactPillDp"/>) con <paramref name="gapDp"/>
+        /// de hueco, desde <paramref name="columnTop"/> (dp desde arriba). Las píldoras más bajas se dibujan a escala
+        /// <c>pillDp / 22</c>, cifras e iconos incluidos, centradas en el ancho (la pantalla de nivel la compacta así dentro de la
+        /// fila cuando el tablero pasa bajo el HUD: <c>GameScreen.LabelsWalletColumn</c>). Sin Canoas, Semillas va centrada en
+        /// la fila a su tamaño; en el saldo grande del embudo y de la victoria, la columna no cuenta y todo va a escala 1.
+        /// </summary>
+        public void Layout(float left, float top, float width, float pillDp, float gapDp, float columnTop)
         {
             _left = left;
             _top = top;
             _width = Mathf.Max(64f, width);
+            _columnPill = Mathf.Clamp(pillDp, 1f, CompactPillDp);
+            _columnGap = Mathf.Max(0f, gapDp);
+            _columnTop = columnTop;
             Arrange();
         }
 
@@ -225,21 +252,36 @@ namespace AF.UI
             return span <= TimeSpan.Zero ? 0L : (span.Ticks + TimeSpan.TicksPerSecond - 1) / TimeSpan.TicksPerSecond;
         }
 
+        private static void SetScale(RectTransform rt, float scale)
+        {
+            if (rt.localScale.x != scale || rt.localScale.y != scale)
+            {
+                rt.localScale = new Vector3(scale, scale, 1f);
+            }
+        }
+
         // Placas en la fila: en el embudo, 112 + 12 + 128 dp en línea; en la cabecera de partida, píldoras de 22 dp en columna
-        // (Semillas encima de Canoas desde el 31) o Semillas sola centrada en la fila de 48 dp.
+        // (Semillas encima de Canoas desde el 31, con la columna de Layout: a escala si va compactada, centradas en el ancho) o
+        // Semillas sola centrada en la fila de 48 dp.
         private void Arrange()
         {
             if (!_compact)
             {
+                SetScale(_seeds, 1f);
+                SetScale(_canoes, 1f);
                 UiBuilder.Place(_seeds, _left, _top + 4f, 112f, 40f);
                 UiBuilder.Place(_canoes, _left + 124f, _top + 4f, 128f, 40f);
                 return;
             }
 
             bool canoes = _canoes.gameObject.activeSelf;
-            float seedsTop = canoes ? _top + 1f : _top + ((48f - CompactPillDp) * 0.5f);
-            UiBuilder.Place(_seeds, _left, seedsTop, _width, CompactPillDp);
-            UiBuilder.Place(_canoes, _left, _top + 1f + CompactPillDp + CompactGapDp, _width, CompactPillDp);
+            float scale = canoes ? _columnPill / CompactPillDp : 1f;
+            float x = _left + (_width * (1f - scale) * 0.5f);
+            float seedsTop = canoes ? _columnTop : _top + ((48f - CompactPillDp) * 0.5f);
+            SetScale(_seeds, scale);
+            SetScale(_canoes, scale);
+            UiBuilder.Place(_seeds, x, seedsTop, _width, CompactPillDp);
+            UiBuilder.Place(_canoes, x, _columnTop + _columnPill + _columnGap, _width, CompactPillDp);
             UiBuilder.Place(_canoesPlate.rectTransform, 0f, 0f, _width, CompactPillDp);
             ArrangeCanoeText(false);
         }

@@ -55,10 +55,12 @@ namespace AF.UI
     /// asignaciones por fotograma.</para>
     /// <para><b>Panel bajo la fila del HUD</b> (3 filas: el panel se recorta en <c>BoardTop − 8 = TopRowY + 40</c>, BoardLayout):
     /// la columna de píldoras de la cabecera (Semillas sobre Canoas, de 22 dp con 4 de hueco: <c>TopRowY + 1..49</c>) pisaría
-    /// 9 dp del canto. En vez de subirla fuera de la fila, se compacta dentro de ella (<see cref="KeepWalletOffPanel"/>):
-    /// píldoras de <see cref="WalletSqueezedPillDp"/> con <see cref="WalletSqueezedGapDp"/> de hueco, de <c>TopRowY</c> a
-    /// <c>TopRowY + 38</c>, <see cref="WalletPanelClearDp"/> por encima del canto; el marco de la etiqueta no asoma por arriba,
-    /// donde pasaría a trozos bajo la insignia, las píldoras y Reiniciar (<see cref="DifficultyFrameTucked"/>) [P].</para>
+    /// 9 dp del canto. En vez de subirla fuera de la fila, se compacta dentro de ella (<c>LabelsWalletColumn</c>, el gancho de
+    /// <c>GameScreen.LayoutWalletBar</c>, que se la pasa a <see cref="WalletBar.Layout(float, float, float, float, float,
+    /// float)"/>): píldoras de <see cref="WalletSqueezedPillDp"/> con <see cref="WalletSqueezedGapDp"/> de hueco, de
+    /// <c>TopRowY</c> a <c>TopRowY + 38</c>, <see cref="WalletPanelClearDp"/> por encima del canto; el marco de la etiqueta no
+    /// asoma por arriba, donde pasaría a trozos bajo la insignia, las píldoras y Reiniciar (<see cref="DifficultyFrameTucked"/>)
+    /// [P].</para>
     /// </remarks>
     public sealed partial class GameScreen
     {
@@ -145,7 +147,6 @@ namespace AF.UI
         private Image _nightVeil = null!;
         private DifficultyChip _nextChip = null!;
         private CanvasGroup _nextChipGroup = null!;
-        private Canvas.WillRenderCanvases? _labelsWillRender;
         private HudLabelMode _hudMode = HudLabelMode.None;
         private string _hudLabel = LevelDefinition.LabelNormal;
         private float _hudLabelsAlpha;
@@ -154,15 +155,6 @@ namespace AF.UI
         private bool _labelsBuilt;
         private bool _frameTucked;
         private float _frameTopDp;
-
-        // Columna de píldoras de la cabecera tal como la dejó KeepWalletOffPanel (para ver si GameScreen la ha vuelto a colocar:
-        // SyncChrome la pone en TopRowY, a su tamaño, al cambiar de fase).
-        private bool _walletSqueezed;
-        private float _walletSeedsY = float.NaN;
-        private float _walletCanoesY = float.NaN;
-        private bool _walletVisible;
-        private bool _walletCompact;
-        private bool _walletCanoes;
 
         /// <summary>Cómo va la banda de las etiquetas bajo la insignia.</summary>
         internal enum HudLabelMode
@@ -235,7 +227,7 @@ namespace AF.UI
         internal float DifficultyFrameTopDp => _frameTopDp;
 
         /// <summary>La columna de píldoras de la cabecera va compactada en la fila para no pisar el canto del tablero.</summary>
-        internal bool WalletSqueezed => _walletSqueezed;
+        internal bool WalletSqueezed => _walletBar.Squeezed;
 
         /// <summary>El contador va a la derecha de la insignia, bajo la cabecera compactada (ver <c>PlaceCounterBesideWallet</c>).</summary>
         internal bool HudCounterBesideWallet => _hudCounterBesideWallet;
@@ -244,6 +236,15 @@ namespace AF.UI
         internal static Color FrameColorFor(bool veryHard)
         {
             return veryHard ? (Color)Palette.UiIndigo : (Color)Palette.UiAmber;
+        }
+
+        /// <summary>
+        /// Medio ancho (u) del cielo de la cuia del contador, sin la holgura: el de la cuia (1 u) o, con la Piraña, el de su cueva
+        /// sobre la boca (<c>max(1, 0,5 × PiranaCaveWidthU)</c> = 1,2 u).
+        /// </summary>
+        internal static float SkyHalfWidthU(MechanicType counter)
+        {
+            return counter == MechanicType.Pirana ? Mathf.Max(1f, 0.5f * ProceduralArt.PiranaCaveWidthU) : 1f;
         }
 
         /// <summary>
@@ -369,17 +370,13 @@ namespace AF.UI
             _nextChipGroup.blocksRaycasts = false;
             _nextChipGroup.interactable = false;
             _nextChipGroup.alpha = 0f;
-
-            // La cabecera compactada se comprueba antes de pintar cada fotograma: SyncChrome puede volver a colocarla (o pasar al
-            // saldo grande del embudo y de la victoria) desde un evento después del Tick de la vista.
-            _labelsWillRender = OnLabelsWillRenderCanvases;
-            Canvas.willRenderCanvases += _labelsWillRender;
             _labelsBuilt = true;
         }
 
         partial void LabelsLayoutHud()
         {
-            // LayoutHud acaba de poner la cabecera en la fila superior (LayoutWalletBar): con el panel bajo el HUD, se compacta.
+            // LayoutHud ya colocó la cabecera (LayoutWalletBar), pero antes de rehacer el marco y la banda, de los que depende la
+            // columna Semillas/Canoas (LabelsWalletColumn): se vuelve a colocar al final.
             if (_labelsBuilt)
             {
                 LayoutDifficultyFrame();
@@ -427,21 +424,12 @@ namespace AF.UI
         {
             RefreshHudCounter(flow);
             UpdateHudLabelsAlpha(0f); // al reiniciar (OnIntroStarted) se ocultan en el acto, sin esperar al Tick
-            if (WalletMoved())
-            {
-                KeepWalletOffPanel(); // OnResumed y OnCuiaAdded pasan por SyncChrome justo antes
-            }
         }
 
         partial void LabelsVictoryShown(LevelFlow flow)
         {
             // El chip ya está colocado (LabelsLayoutVictory); entra con Siguiente, que acaba de volver a 0 (ApplyVictoryAnim).
             _nextChipGroup.alpha = _nextChip.Visible ? _nextGroup.alpha : 0f;
-            if (WalletMoved())
-            {
-                KeepWalletOffPanel(); // SyncChrome acaba de pasar al saldo grande de la victoria
-            }
-
             if (!DevProbe.Enabled)
             {
                 return;
@@ -455,7 +443,7 @@ namespace AF.UI
             _probe.Event("hud_label", json);
         }
 
-        partial void LabelsLayoutVictory()
+        partial void LabelsVictoryReserve(ref float y)
         {
             if (!_labelsBuilt)
             {
@@ -473,46 +461,37 @@ namespace AF.UI
 
             int multiplier = next == null ? 1 : DifficultyChip.MultiplierFor(_services?.Wallet.Config ?? EconomyConfig.Defaults, next);
             _nextChip.Set(next, multiplier);
+
+            // El chip cuelga de Siguiente (24 dp por encima de su canto y 6 sobre el botón, como la «x5» de Magic Sort): Siguiente
+            // e Inicio bajan NextChipRowDp y el panel crece lo mismo hacia arriba (sigue anclado abajo), así que entre el chip y
+            // la Cosecha doble de encima quedan ≈ 12 dp.
+            if (_nextChip.Visible)
+            {
+                y += NextChipRowDp;
+            }
+        }
+
+        partial void LabelsLayoutVictory()
+        {
+            if (!_labelsBuilt)
+            {
+                return;
+            }
+
             if (!_nextChip.Visible)
             {
                 _nextChipGroup.alpha = 0f;
                 return;
             }
 
-            // El chip cuelga de Siguiente (24 dp por encima de su canto y 6 sobre el botón, como la «x5» de Magic Sort): Siguiente
-            // e Inicio bajan NextChipRowDp y el panel crece lo mismo hacia arriba (sigue anclado abajo), así que entre el chip y
-            // la Cosecha doble de encima quedan ≈ 12 dp. LayoutVictory acaba de colocarlo todo, así que esto se rehace entero en
-            // cada llamada.
-            // OJO, COPIA: desde aquí hasta los rayos, el brillo, el velo y ModalSurfaceFor se repite el final de
-            // GameScreen.LayoutVictory (GameScreen.cs, desde «_victoryCtaTopDp = y» hasta el final del método) con el panel más
-            // alto. Si cambia allí, hay que cambiarlo aquí. Pendiente de la sesión principal: un gancho
-            // «partial void LabelsVictoryReserve(ref float y)» justo antes de «_victoryCtaTopDp = y» para reservar
-            // NextChipRowDp sin recolocar el panel (y sin pedir a ModalSurfaceFor una superficie que no se usa).
-            float w = _canvasW;
-            float panelW = Mathf.Min(328f, w - 32f);
-            MoveDown((RectTransform)_next.Button.transform, NextChipRowDp);
-            MoveDown((RectTransform)_home.Button.transform, NextChipRowDp);
-            _victoryCtaTopDp += NextChipRowDp;
-            _victoryHomeTopDp += NextChipRowDp;
-            _victoryPanelDp += NextChipRowDp;
-            _victoryPanelY = _canvasH - _safeBottom - 8f - _victoryPanelDp;
-            UiBuilder.Place(_victoryPanel, (w - panelW) / 2f, _victoryPanelY, panelW, _victoryPanelDp);
-            _victorySurface.sprite = _art.ModalSurfaceFor(panelW - 16f, _victoryPanelDp - 16f);
-            float ribbonY = _victoryPanelY - RibbonRiseDp + (RibbonHeightDp * 0.5f);
-            PlaceAt(_victoryRays.rectTransform, w * 0.5f, ribbonY, 2f * VictoryRaysRadiusDp, 2f * VictoryRaysRadiusDp, new Vector2(0.5f, 0.5f));
-            PlaceAt(_victoryGlow.rectTransform, w * 0.5f, ribbonY, 2f * VictoryGlowRadiusDp, 2f * VictoryGlowRadiusDp, new Vector2(0.5f, 0.5f));
-            PlaceAt(_victoryVeil.rectTransform, w * 0.5f, ribbonY, 2f * ProceduralArt.VeilHoleHalfDp, 2f * ProceduralArt.VeilHoleHalfDp, new Vector2(0.5f, 0.5f));
+            // LayoutVictory ya bajó Siguiente lo que reservó LabelsVictoryReserve: el chip, centrado sobre su canto.
+            float panelW = Mathf.Min(328f, _canvasW - 32f);
             _nextChip.PlaceCentered(panelW * 0.5f, _victoryCtaTopDp - NextChipHangDp); // creado tras Siguiente: va delante
         }
 
         partial void LabelsTick(float dtMs)
         {
             UpdateHudLabelsAlpha(dtMs);
-            if (WalletMoved())
-            {
-                KeepWalletOffPanel(); // SyncChrome (cambio de fase) o Refresh (aparece Canoas) la volvieron a colocar
-            }
-
             if (_nextChip.Visible)
             {
                 float a = _nextGroup.alpha;
@@ -520,22 +499,6 @@ namespace AF.UI
                 {
                     _nextChipGroup.alpha = a;
                 }
-            }
-        }
-
-        // Antes de pintar: si SyncChrome ha vuelto a colocar la cabecera desde un evento posterior al Tick (pausa, embudo,
-        // victoria), se recompacta o vuelve a escala 1 en el mismo fotograma. Si la escena ya no existe, se da de baja.
-        private void OnLabelsWillRenderCanvases()
-        {
-            if (_labelsHud == null)
-            {
-                Canvas.willRenderCanvases -= _labelsWillRender;
-                return;
-            }
-
-            if (WalletMoved())
-            {
-                KeepWalletOffPanel();
             }
         }
 
@@ -620,70 +583,44 @@ namespace AF.UI
         // la pausa, la insignia y Reiniciar) y aun así acababa en el canto. Ahora se compacta DENTRO de la fila: Semillas y
         // Canoas a escala 18/22 (píldoras de 18 dp, cifras de 12,3 dp e icono de Semillas de 16,4 dp) con 2 dp de hueco,
         // centradas en su hueco horizontal y de TopRowY a TopRowY + 38 como mucho, WalletPanelClearDp por encima del canto [P].
-        // Solo la cabecera de partida con Canoas (desde el 31; Semillas sola va centrada en la fila y no llega al canto); el
-        // saldo grande del embudo y de la victoria vuelve a escala 1. Parte de donde la pone GameScreen (LayoutWalletBar), sin
-        // cambiar el tamaño de las píldoras (solo su escala y su posición), así que WalletBar no se entera. Sin asignaciones.
-        // Pendiente de la sesión principal: WalletBar.Layout con el alto de las píldoras, para no tocar sus RectTransform desde
-        // aquí.
-        private void KeepWalletOffPanel()
+        // Lo decide este gancho de GameScreen.LayoutWalletBar y lo dibuja WalletBar (solo con Canoas, desde el 31: Semillas sola
+        // va centrada en la fila y no llega al canto; el saldo grande del embudo y de la victoria va a escala 1). Como
+        // LayoutWalletBar lo pregunta cada vez que coloca la cabecera (también SyncChrome al cambiar de fase, desde cualquier
+        // evento), nada la deja a medias hasta el siguiente fotograma. Sin asignaciones.
+        partial void LabelsWalletColumn(ref float pillDp, ref float gapDp, ref float columnTop)
         {
-            RectTransform seeds = _walletBar.SeedsRect;
-            RectTransform canoes = _walletBar.CanoesRect;
-            _walletVisible = _walletBar.Visible;
-            _walletCompact = _walletBar.Compact;
-            _walletCanoes = canoes.gameObject.activeSelf;
-            bool squeeze = false;
             BoardLayoutResult? l = _layout;
-            if (_walletVisible && _walletCompact)
+            if (!_labelsBuilt || l == null || _views.Length == 0)
             {
-                LayoutWalletBar(false); // cabecera de partida: en la fila superior (TopRowY), a su tamaño
-                if (_walletCanoes && l != null && _views.Length > 0)
-                {
-                    float edge = PanelEdgeDp(l);
-                    float bottom = -canoes.anchoredPosition.y + canoes.sizeDelta.y;
-                    if (bottom + WalletPanelClearDp > edge || _hudCounterBesideWallet)
-                    {
-                        squeeze = true;
-                        const float column = (2f * WalletSqueezedPillDp) + WalletSqueezedGapDp;
-                        float columnBottom = Mathf.Min(TopRowY + ((HudRowDp + column) * 0.5f), edge - WalletPanelClearDp);
-                        if (_hudCounterBesideWallet)
-                        {
-                            columnBottom = Mathf.Min(columnBottom, TopRowY + column); // el contador va debajo (PlaceCounterBesideWallet)
-                        }
-
-                        float columnTop = Mathf.Max(TopRowY, columnBottom - column);
-                        float x = seeds.anchoredPosition.x + (seeds.sizeDelta.x * (1f - WalletSqueezeScale) * 0.5f);
-                        seeds.anchoredPosition = new Vector2(x, -columnTop);
-                        canoes.anchoredPosition = new Vector2(x, -(columnTop + WalletSqueezedPillDp + WalletSqueezedGapDp));
-                    }
-                }
+                return;
             }
 
-            float scale = squeeze ? WalletSqueezeScale : 1f;
-            SetUniformScale(seeds, scale);
-            SetUniformScale(canoes, scale);
-            _walletSqueezed = squeeze;
-            _walletSeedsY = seeds.anchoredPosition.y;
-            _walletCanoesY = canoes.anchoredPosition.y;
-        }
-
-        // La cabecera ya no está como la dejó KeepWalletOffPanel (otra forma, otra fila, Canoas que aparece o desaparece, otra
-        // posición o la escala de vuelta a 1).
-        private bool WalletMoved()
-        {
-            RectTransform seeds = _walletBar.SeedsRect;
-            RectTransform canoes = _walletBar.CanoesRect;
-            return _walletBar.Visible != _walletVisible || _walletBar.Compact != _walletCompact
-                || canoes.gameObject.activeSelf != _walletCanoes
-                || seeds.anchoredPosition.y != _walletSeedsY || canoes.anchoredPosition.y != _walletCanoesY
-                || seeds.localScale.x != (_walletSqueezed ? WalletSqueezeScale : 1f);
-        }
-
-        private static void SetUniformScale(RectTransform rt, float scale)
-        {
-            if (rt.localScale.x != scale || rt.localScale.y != scale)
+            float edge = PanelEdgeDp(l);
+            float bottom = columnTop + (2f * pillDp) + gapDp; // Canoas a su tamaño: hasta TopRowY + 49
+            if (bottom + WalletPanelClearDp <= edge && !_hudCounterBesideWallet)
             {
-                rt.localScale = new Vector3(scale, scale, 1f);
+                return;
+            }
+
+            const float column = (2f * WalletSqueezedPillDp) + WalletSqueezedGapDp;
+            float columnBottom = Mathf.Min(TopRowY + ((HudRowDp + column) * 0.5f), edge - WalletPanelClearDp);
+            if (_hudCounterBesideWallet)
+            {
+                columnBottom = Mathf.Min(columnBottom, TopRowY + column); // el contador va debajo (PlaceCounterBesideWallet)
+            }
+
+            pillDp = WalletSqueezedPillDp;
+            gapDp = WalletSqueezedGapDp;
+            columnTop = Mathf.Max(TopRowY, columnBottom - column);
+        }
+
+        // Vuelve a colocar la cabecera de partida con la columna de LabelsWalletColumn: tras rehacer el marco (el canto) o la
+        // banda (el contador junto a la cabecera). El saldo grande del embudo y de la victoria no depende de ellos.
+        private void KeepWalletOffPanel()
+        {
+            if (_walletBar.Compact)
+            {
+                LayoutWalletBar(false);
             }
         }
 
@@ -730,10 +667,12 @@ namespace AF.UI
                     if (i == _hudCounterIndex)
                     {
                         // Cielo de la cuia del contador con la cuia elevada: los 32 dp táctiles sobre la boca (su nube y sus
-                        // puntos, 02 §3.3) más los 16 dp que sube al seleccionarla, del ancho de la cuia.
+                        // puntos, o la cueva, 02 §3.3) más los 16 dp que sube al seleccionarla, del ancho de la cuia o, en la
+                        // Piraña, del de su cueva, que sobresale 0,2 u por lado (revisión de T09 y T17).
+                        float half = (SkyHalfWidthU(_hudCounter.Type) * u) + HudLabelsClearDp;
                         skyTop = mouth - CuiaView.LiftDp - CuiaView.TouchHeadroomDp;
-                        skyLeft = l.CenterX[i] - u - HudLabelsClearDp;
-                        skyRight = l.CenterX[i] + u + HudLabelsClearDp;
+                        skyLeft = l.CenterX[i] - half;
+                        skyRight = l.CenterX[i] + half;
                     }
                 }
             }
@@ -920,7 +859,7 @@ namespace AF.UI
                 + ",\"seal\":" + (_hudChip.SealShown ? "true" : "false")
                 + ",\"counter\":\"" + counter + "\""
                 + ",\"remaining\":" + (_hudCounter.Visible ? _hudCounter.Remaining : 0).ToString(CultureInfo.InvariantCulture)
-                + ",\"wallet\":\"" + (_walletSqueezed ? "squeezed" : "row") + "\"}";
+                + ",\"wallet\":\"" + (_walletBar.Squeezed ? "squeezed" : "row") + "\"}";
             _probe.Event("hud_label", json);
         }
 
@@ -933,12 +872,6 @@ namespace AF.UI
                 case HudLabelMode.Tucked: return "tucked";
                 default: return "none";
             }
-        }
-
-        private static void MoveDown(RectTransform rt, float dy)
-        {
-            Vector2 p = rt.anchoredPosition;
-            rt.anchoredPosition = new Vector2(p.x, p.y - dy);
         }
     }
 }

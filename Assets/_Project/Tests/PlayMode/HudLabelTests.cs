@@ -655,8 +655,9 @@ namespace AF.Tests.PlayMode
         public IEnumerator Wallet_BackToFullSizeBeforePaint_WhenTheFunnelOpens()
         {
             // La cabecera compactada (3 filas) vuelve a escala 1 en cuanto SyncChrome pasa al saldo grande, también si lo hace desde
-            // un evento posterior al Tick de la vista (aquí, «Salir» confirmado: fallo duro y Nivel fallido): se comprueba antes de
-            // pintar (Canvas.willRenderCanvases). Al reintentar, se compacta otra vez.
+            // un evento posterior al Tick de la vista (aquí, «Salir» confirmado: fallo duro y Nivel fallido): WalletBar dibuja la
+            // columna que le da LayoutWalletBar (con LabelsWalletColumn), así que ya está así antes de pintar ese fotograma. Al
+            // reintentar, se compacta otra vez.
             yield return HudSetup.LoadPlaying(200);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -671,14 +672,12 @@ namespace AF.Tests.PlayMode
             Assert.That(view.WalletSqueezed, Is.False);
 
             PlayModeHelpers.Step(boot, 600);
-            if (boot.Flow.Phase == FlowPhase.LevelFailed)
-            {
-                Assert.That(boot.PressRetry(), Is.True);
-                HudSetup.SkipIntro(boot);
-                Assert.That(view.WalletBar.Compact, Is.True);
-                Assert.That(view.WalletSqueezed, Is.True, "de vuelta al tablero de 3 filas, compactada");
-                HudSetup.AssertWalletOffPanel(view);
-            }
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed), "fallo duro con 5 canoas: Nivel fallido");
+            Assert.That(boot.PressRetry(), Is.True);
+            HudSetup.SkipIntro(boot);
+            Assert.That(view.WalletBar.Compact, Is.True);
+            Assert.That(view.WalletSqueezed, Is.True, "de vuelta al tablero de 3 filas, compactada");
+            HudSetup.AssertWalletOffPanel(view);
         }
 
         [UnityTest]
@@ -1143,7 +1142,15 @@ namespace AF.Tests.PlayMode
 
             BoardLayoutResult l = view.Layout!;
             float u = l.CuiaWidth * 0.5f;
-            int counterCuia = GameBootstrap.Current!.Flow!.Session.Counter.CuiaIndex;
+            LevelCounter levelCounter = GameBootstrap.Current!.Flow!.Session.Counter;
+            int counterCuia = levelCounter.CuiaIndex;
+
+            // El cielo de la cuia del contador es del ancho de la cuia, salvo con la Piraña: su cueva (2,4 u) sobresale 0,2 u por
+            // lado sobre la boca, unos 4,7 dp (revisión de T09 y T17: con el cielo de la cuia ± 2 dp, en la fila 1 de los niveles
+            // 184, 185, 187 y 200 un chip podía quedar sobre sus piedras).
+            float skyHalf = levelCounter.IsActive && levelCounter.Type == MechanicType.Pirana
+                ? Mathf.Max(1f, 0.5f * ProceduralArt.PiranaCaveWidthU) * u
+                : u;
             float liftedTop = float.MaxValue;
             for (int i = 0; i < view.Views.Length; i++)
             {
@@ -1155,8 +1162,10 @@ namespace AF.Tests.PlayMode
                 float h = view.Views[i].HeightU * u;
                 float lifted = l.FootY[i] - h - CuiaView.LiftDp;
                 liftedTop = Mathf.Min(liftedTop, lifted);
-                float top = i == counterCuia ? lifted - CuiaView.TouchHeadroomDp : lifted;
-                obstacles.Add(("cuia " + i + (i == counterCuia ? " elevada con su cielo" : " elevada"), Rect.MinMaxRect(l.CenterX[i] - u, top, l.CenterX[i] + u, l.FootY[i])));
+                bool sky = i == counterCuia;
+                float top = sky ? lifted - CuiaView.TouchHeadroomDp : lifted;
+                float half = sky ? skyHalf : u;
+                obstacles.Add(("cuia " + i + (sky ? " elevada con su cielo" : " elevada"), Rect.MinMaxRect(l.CenterX[i] - half, top, l.CenterX[i] + half, l.FootY[i])));
             }
 
             // Canto de arriba visible del tablero (el del marco si asoma por arriba; si no, el del panel).

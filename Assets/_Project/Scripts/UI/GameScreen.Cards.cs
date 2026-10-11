@@ -21,9 +21,10 @@ namespace AF.UI
     /// nivel). No sale al reanudar ni al reintentar: eso lo decide el flujo (02 §14; <c>GameConfig.LevelCardOnRetry</c> [P]).</para>
     /// <para><b>El tablero detrás</b> [P]: la tarjeta va antes de «Llenar y teñir», así que detrás se ve el tablero como en el
     /// fotograma 0 de la intro (las cuias secas y vacías en su sitio, con sus mecánicas), no el tablero lleno que la intro vaciaría
-    /// de golpe al cerrar la tarjeta. Para eso la intro arranca con la tarjeta y se retiene en t = 0 (<c>IntroAnimation.Seek</c>)
-    /// hasta que el flujo la arranca de verdad; si sale de LEVEL_CARD sin arrancarla (el cartel «El río bajó» del reintento con
-    /// alivio, con <c>LevelCardOnRetry</c>), se suelta y el tablero queda como en ese caso sin tarjeta.</para>
+    /// de golpe al cerrar la tarjeta. Para eso la intro arranca con la tarjeta, se lleva a t = 0 (<c>IntroAnimation.Seek</c>) y se
+    /// retiene (<c>_introHeld</c>: GameScreen.Tick no la avanza) hasta que el flujo la arranca de verdad (StartIntro la suelta);
+    /// si sale de LEVEL_CARD sin arrancarla (el cartel «El río bajó» del reintento con alivio, con <c>LevelCardOnRetry</c>), se
+    /// suelta y el tablero queda como en ese caso sin tarjeta.</para>
     /// <para>En desarrollo, <c>AF_STATE {"event":"level_card",…}</c> con el tipo, el nivel, la etiqueta, el estreno, las líneas y
     /// el tamaño del tutorial, los iconos y la escala; y, al terminar la entrada, <c>AF_LAYOUT {"screen":"level_card",…}</c> con
     /// el rectángulo de la tarjeta (cualquier toque la cierra).</para>
@@ -32,7 +33,6 @@ namespace AF.UI
     {
         private LevelCardView _levelCard = null!;
         private bool _cardsBuilt;
-        private bool _cardIntroHeld;
         private string? _lastCardProbe;
 
         /// <summary>Tarjeta previa (tests y capturas).</summary>
@@ -59,7 +59,7 @@ namespace AF.UI
         internal string? LastCardProbe => _lastCardProbe;
 
         /// <summary>La intro está retenida en t = 0 detrás de la tarjeta (tests).</summary>
-        internal bool CardIntroHeld => _cardIntroHeld;
+        internal bool CardIntroHeld => _introHeld;
 
         /// <summary>Arte procedural con el que se pinta la tarjeta (tests: comparar sprites).</summary>
         internal AF.Presentation.ProceduralArt CardArt => _art;
@@ -112,25 +112,24 @@ namespace AF.UI
                 _levelCard.Dismiss(); // el flujo salió de LEVEL_CARD por otro camino (TapAnywhere, TapCuia, el fondo…)
             }
 
-            if (_cardIntroHeld)
+            // Retenida, la intro no avanza (GameScreen.Tick): se queda en el fotograma 0 sin volver a buscarlo en cada fotograma.
+            if (_introHeld)
             {
                 if (inCard)
                 {
-                    if (_intro.Running)
-                    {
-                        _intro.Seek(0f); // el fotograma 0 de la intro, quieto detrás de la tarjeta
-                    }
-                    else
+                    if (!_intro.Running)
                     {
                         HoldIntroForCard(flow!); // la soltó SnapToModel (vuelta de segundo plano): otra vez en t = 0
                     }
                 }
                 else
                 {
-                    _cardIntroHeld = false;
+                    // Salió de LEVEL_CARD sin arrancar la intro (cartel «El río bajó» antes; si la arrancó, StartIntro ya la
+                    // soltó): se suelta.
+                    _introHeld = false;
                     if (!_introAnimStarted)
                     {
-                        _intro.Clear(); // salió de LEVEL_CARD sin arrancar la intro (cartel «El río bajó» antes): se suelta
+                        _intro.Clear();
                     }
                 }
             }
@@ -146,7 +145,7 @@ namespace AF.UI
         {
             // Otro nivel (o el mismo reanudado): fuera la tarjeta anterior; OnLevelLoaded ya quitó la intro. Si el nivel la tiene,
             // OnLevelCard llega justo después.
-            _cardIntroHeld = false;
+            _introHeld = false;
             _levelCard.HideNow();
         }
 
@@ -184,7 +183,7 @@ namespace AF.UI
             int ms = flow.ReduceMotion ? GameConfig.ReducedMotionIntroMs : GameConfig.TintDurationMs(flow.LevelNumber);
             StartIntro(flow, ms, false);
             _intro.Seek(0f);
-            _cardIntroHeld = true;
+            _introHeld = true; // después de StartIntro, que la suelta
         }
 
         private void EmitCardLayout()

@@ -771,10 +771,12 @@ namespace AF.UI
                 return;
             }
 
-            // 02 §14: al volver de segundo plano la vista salta al modelo sin animar y la selección se limpia.
+            // 02 §14: al volver de segundo plano la vista salta al modelo sin animar (también la luciérnaga en vuelo: la cuia
+            // queda revelada) y la selección se limpia.
             if (_flow != null && _screen != null && InLevel)
             {
                 _screen.SnapToModel();
+                _screen.SettleReveal();
                 _flow.ClearSelection();
             }
         }
