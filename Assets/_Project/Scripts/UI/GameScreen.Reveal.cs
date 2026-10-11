@@ -205,7 +205,8 @@ namespace AF.UI
             }
 
             // En el modo de selección el toque elige la cuia que se revela, no un origen: la elevación de vista previa del
-            // touch-down (02 §3.1) no vale aquí, y la cuia se queda en su repisa.
+            // touch-down (02 §3.1) no vale aquí y OnCuiaDown ya no la empieza; si la selección se abre con una cuia ya pulsada
+            // (otro dedo en el botón), esa cuia vuelve a su repisa.
             if (flow.RevealSelecting && _pressPreview >= 0)
             {
                 SetLift(_pressPreview, false);
@@ -416,7 +417,10 @@ namespace AF.UI
         // Insignia y habilitado de Revelar (BoosterTray.SetRevealBadge, que solo repinta si algo cambió). El video solo se
         // consulta sin stock ni saldo, que es cuando el botón lo pone, y en cada fotograma como mucho cada RevealVideoPollMs
         // (pollNow: en los avisos del flujo, en el acto). Sin ocultas, la ranura solo espera a que la luciérnaga salga de ella y
-        // se vaya: gris y sin precio (revisión de la captura 67a, que enseñaba «120» en rojo).
+        // se vaya: gris y sin precio (revisión de la captura 67a, que enseñaba «120» en rojo). Y cuando no se puede usar ni se
+        // está eligiendo (fuera de PLAYING: intro, tarjeta previa, al resolver), igual que la Cuia extra: gris, con su stock si
+        // lo hay y, si no, sin precio ni «Te faltan {n}» (antes enseñaba el «120» en rojo y saltaba a «+1» con video al llegar a
+        // PLAYING; revisión de T14). SetRevealBadge lo dibuja con su parámetro spent: gris y sin insignia, precio ni aviso.
         private void RefreshRevealBadge(LevelFlow flow, bool pollNow)
         {
             if (!_tray.RevealShown)
@@ -430,6 +434,7 @@ namespace AF.UI
             bool available = flow.RevealAvailable;
             bool selecting = flow.RevealSelecting;
             bool spent = flow.Session.HiddenCount == 0;
+            bool idle = !available && !selecting;
             bool offersVideo = available && !spent && stock == 0 && seeds < price && _services != null;
             if (!offersVideo)
             {
@@ -442,7 +447,8 @@ namespace AF.UI
                 _revealVideoPollMs = RevealVideoPollMs;
             }
 
-            _tray.SetRevealBadge(stock, price, seeds, offersVideo && _revealVideoReady, available || selecting, selecting, spent);
+            bool bare = spent || (idle && stock == 0);
+            _tray.SetRevealBadge(stock, price, seeds, offersVideo && _revealVideoReady, available || selecting, selecting, bare);
         }
 
         // «+1 Luciérnaga» cuando ya no hay tarjeta previa abierta (02 §10; T14 §6): al cerrarla o, sin ella, al empezar la intro.

@@ -33,10 +33,11 @@ namespace AF.UI
     /// Capas de atrás adelante (guía 3.4): panorama, ambiente lejano (con la capa de crecida del río), muelle, follaje, velo
     /// de escena; captura de fondo; tablero (sombra, relleno, sombra interior y marco del panel, repisas, cuias, la capa de
     /// «Llenar y teñir» con su agua, chorritos y frutas, chorros y efectos); la tropa de miquitos y su rama; Capi y el poste;
-    /// velo de estado, HUD y bandeja; polen; capa de vertido (el origen y su chorro mientras vierte, delante de todo, D-006);
-    /// estallido; modales; captura de saltos. Las capas que no son botones ni áreas de cuia no reciben toques (V7). Dentro
-    /// del tablero, las cuias van entre dos capas de mecánicas (detrás y delante; arquitectura del paso 1, §6), y la
-    /// delantera, detrás de la intro, los chorros y los efectos.
+    /// velo de estado, HUD y bandeja; la cuia elevada cuyo cielo entra en la fila del HUD (tableros de 3 filas, [P]); polen;
+    /// capa de vertido (el origen y su chorro mientras vierte, delante de todo, D-006); estallido; modales; captura de saltos.
+    /// Las capas que no son botones ni áreas de cuia no reciben toques (V7). Dentro del tablero, las cuias van entre dos capas
+    /// de mecánicas (detrás y delante; arquitectura del paso 1, §6), y la delantera, detrás de la intro, los chorros y los
+    /// efectos.
     /// <para>Clase parcial (arquitectura del paso 1, §7): los métodos parciales <c>Labels*</c>, <c>Cards*</c>,
     /// <c>Reveal*</c> y <c>FunnelModalShowing</c> son los ganchos que implementan otros archivos (GameScreen.Labels.cs,
     /// GameScreen.Cards.cs, GameScreen.Reveal.cs y GameScreen.Funnel.cs) sin editar este. Sin implementación no hacen
@@ -176,6 +177,7 @@ namespace AF.UI
         private readonly ReliefParts _restart;
         private readonly Image _restartPill;
         private readonly BoosterTray _tray;
+        private readonly RectTransform _liftFront;
         private readonly RectTransform _ambientNearParent;
         private readonly AmbientLayer _ambient;
         private readonly RectTransform _pourFront;
@@ -281,7 +283,12 @@ namespace AF.UI
         private bool _harvestCounting;
         private Vector2[] _relayoutFrom = Array.Empty<Vector2>();
         private float[] _relayoutFromWidth = Array.Empty<float>();
+        private readonly Vector3[] _relayoutShelfFrom = new Vector3[3]; // (x, y desde arriba, ancho) de cada repisa al empezar
         private int _addedView = -1;
+
+        // La intro está retenida en su fotograma 0 (detrás de la tarjeta previa, GameScreen.Cards.cs): Tick no la avanza.
+        // StartIntro la suelta; quien la quiera retenida lo marca después de arrancarla.
+        private bool _introHeld;
 
         /// <summary>
         /// Construye la pantalla bajo <paramref name="host"/>. Las acciones son los puntos de entrada del input
@@ -423,6 +430,14 @@ namespace AF.UI
             // Bandeja de comodines (B2-1; 07 §7.4): Marea y, desde el 8, Cuia extra.
             _tray = new BoosterTray(_hud, art, OnTrayUndo, () => _actions.PressExtraCuia());
 
+            // ---- Cuia elevada cuyo cielo entra en la fila del HUD (revisión de la captura 48c): en los tableros que pasan bajo el
+            // HUD (3 filas a 360 × 780), los 32 dp sobre la boca de una cuia de la fila 1 (la nube de la Lluvia, la cueva de la
+            // Piraña) suben con ella 16 dp al elevarla y la insignia «Nivel {n}» los tapaba. Mientras sube, está elevada o baja,
+            // la cuia entera se dibuja aquí: delante del HUD y de la bandeja, detrás del polen, de la capa de vertido y de la
+            // pausa (capa superior) [P], como el origen que vierte (D-006). Sin Graphic propio, alineada con el tablero (sigue a
+            // ShiftToClear) y vacía casi siempre (SyncLiftFront). ----
+            _liftFront = UiBuilder.Rect("LiftFront", _root);
+
             _ambientNearParent = UiBuilder.Rect("AmbientNearHost", _root);
             _ambient = new AmbientLayer(_ambientFarParent, _ambientNearParent, art);
             _ambient.SetFoliage(_foliage[0].rectTransform, _foliage[1].rectTransform, _foliage[2].rectTransform, _foliage[3].rectTransform);
@@ -562,6 +577,12 @@ namespace AF.UI
 
         /// <summary>Capa del HUD (tests de orden de capas).</summary>
         public RectTransform Hud => _hud;
+
+        /// <summary>
+        /// Capa de la cuia elevada cuyo cielo entra en la fila del HUD (tableros de 3 filas): delante del HUD y detrás de la capa
+        /// de vertido y de la pausa (tests de orden de capas).
+        /// </summary>
+        internal RectTransform LiftFront => _liftFront;
 
         /// <summary>Capa del ambiente cercano (polen), delante del HUD (tests de orden de capas).</summary>
         public RectTransform AmbientNear => _ambientNearParent;
@@ -757,9 +778,9 @@ namespace AF.UI
                 ApplyScreenMetrics(false);
             }
 
-            if (_intro.Active)
+            if (_intro.Active && !_introHeld)
             {
-                _intro.Tick(dtMs);
+                _intro.Tick(dtMs); // retenida detrás de la tarjeta previa, se queda quieta en t = 0
             }
 
             _animator.Tick(dtMs);
@@ -768,6 +789,7 @@ namespace AF.UI
                 _views[i].Tick(dtMs);
             }
 
+            SyncLiftFront();
             if (_confettiDelay >= 0f)
             {
                 _confettiDelay -= dtMs;
@@ -1287,11 +1309,13 @@ namespace AF.UI
         }
 
         // 02 §3.1: la elevación empieza en el touch-down (0 ms percibidos) si, sin selección, la cuia puede ser origen
-        // (lo decide el núcleo); el toque se decide en el touch-up.
+        // (lo decide el núcleo); el toque se decide en el touch-up. En el modo de selección de la Luciérnaga (04 §2.5) el toque
+        // elige la cuia que se revela, no un origen: nada sube.
         private void OnCuiaDown(int index)
         {
             LevelFlow? flow = _flow;
-            if (flow == null || !flow.AcceptsBoardInput || flow.Selected != TapController.NoSelection || _pressPreview >= 0)
+            if (flow == null || !flow.AcceptsBoardInput || flow.Selected != TapController.NoSelection || flow.RevealSelecting
+                || _pressPreview >= 0)
             {
                 return;
             }
@@ -1490,7 +1514,11 @@ namespace AF.UI
             _badge.gameObject.SetActive(!balance);
             _restart.Button.gameObject.SetActive(!balance);
             _tray.SetVisible(!funnel && !victoryScreen);
-            bool pause = !victory && !quitAsk && (phase == FlowPhase.Playing || phase == FlowPhase.Intro || phase == FlowPhase.StuckModal);
+
+            // En LEVEL_CARD la pausa ya está, bajo el velo de la tarjeta previa, que se lleva todos los toques (y sin poder salir
+            // ni reiniciar, OnPause no hace nada): así no aparece de golpe al cerrarla, como tampoco la bandeja [P].
+            bool pause = !victory && !quitAsk && (phase == FlowPhase.Playing || phase == FlowPhase.Intro || phase == FlowPhase.LevelCard
+                || phase == FlowPhase.StuckModal);
             _pauseButton.Button.gameObject.SetActive(pause);
 
             // 07 §7.4 (dueño del HUD) y 02 §5: en INTRO, PLAYING y la celebración, las píldoras de la cabecera, en la capa del
@@ -1510,14 +1538,20 @@ namespace AF.UI
         }
 
         // Saldo grande del embudo a la izquierda (tras la pausa en Aguas estancadas); píldoras de la cabecera de partida entre
-        // la insignia del nivel (x 56-192) y Reiniciar (x W − 68), con 4 dp a cada lado (≈ 92 dp a 360 de ancho).
+        // la insignia del nivel (x 56-192) y Reiniciar (x W − 68), con 4 dp a cada lado (≈ 92 dp a 360 de ancho). La columna
+        // Semillas/Canoas (desde el 31) va a su tamaño, de TopRowY + 1 a TopRowY + 49, salvo que el parcial de las etiquetas la
+        // compacte dentro de la fila (LabelsWalletColumn: el tablero pasa bajo el HUD).
         private void LayoutWalletBar(bool afterPause)
         {
             if (_walletBar.Compact)
             {
                 float left = HudBadgeRight + 4f;
                 float right = _canvasW - 8f - 60f - 4f;
-                _walletBar.Layout(left, TopRowY, Mathf.Min(120f, right - left));
+                float pill = WalletBar.CompactPillDp;
+                float gap = WalletBar.CompactGapDp;
+                float columnTop = TopRowY + 1f;
+                LabelsWalletColumn(ref pill, ref gap, ref columnTop);
+                _walletBar.Layout(left, TopRowY, Mathf.Min(120f, right - left), pill, gap, columnTop);
                 return;
             }
 
@@ -1655,9 +1689,10 @@ namespace AF.UI
         }
 
         // longVersion: la versión la decide la clave que dio la duración (anim_tint_duration_ms_early en el primer intento de
-        // 1-20; _late desde el 21 y en los reintentos), nunca T (guion §7.2-§7.3).
+        // 1-20; _late desde el 21 y en los reintentos), nunca T (guion §7.2-§7.3). Arrancarla la suelta (_introHeld).
         private void StartIntro(LevelFlow flow, int durationMs, bool isShort, bool longVersion)
         {
+            _introHeld = false;
             _introAnimStarted = true;
             _introCfgMs = durationMs;
             IntroInput input = _intro.Input;
@@ -1798,7 +1833,9 @@ namespace AF.UI
         }
 
         // Cuia extra o Cuia de rescate (02 §4.1; D-006 punto 4): la cuia nueva va a la fila más corta y solo cambia el ancho;
-        // las demás se reacomodan en 300 ms y la nueva entra en 600 ms (Capi la trae cuando exista su arte, 04 §2.2).
+        // las demás se reacomodan en 300 ms y la nueva entra en 600 ms (Capi la trae cuando exista su arte, 04 §2.2). Las
+        // repisas se deslizan con las cuias (TickRelayout): si cambia el ancho de la cuia (de 10 a 11 cuias o de 15 a 16), el
+        // pie de cada fila se mueve y lo que se dibuja sobre la repisa (el canal del Remolino) no se desfasa de ella.
         private void AddCuiaView(LevelFlow flow, int index)
         {
             _animator.SnapAll();
@@ -1810,6 +1847,12 @@ namespace AF.UI
             {
                 from[i] = _views[i].FootPosition;
                 fromWidth[i] = _views[i].Unit * CuiaGeometry.WidthU;
+            }
+
+            for (int r = 0; r < _shelves.Length; r++)
+            {
+                RectTransform shelf = _shelves[r].rectTransform;
+                _relayoutShelfFrom[r] = new Vector3(shelf.anchoredPosition.x, -shelf.anchoredPosition.y, shelf.sizeDelta.x);
             }
 
             BoardState board = flow.Session.Current;
@@ -1858,6 +1901,12 @@ namespace AF.UI
             {
                 var to = new Vector2(l.CenterX[i], -l.FootY[i]);
                 _views[i].SetGeometry(Vector2.LerpUnclamped(_relayoutFrom[i], to, t), Mathf.LerpUnclamped(_relayoutFromWidth[i], l.CuiaWidth, t), l.SlotWidth);
+            }
+
+            // Las repisas, con el mismo deslizamiento que los pies de su fila (las filas no cambian: D-006).
+            for (int r = 0; r < l.Rows && r < _shelves.Length; r++)
+            {
+                PlaceShelf(r, Vector3.LerpUnclamped(_relayoutShelfFrom[r], ShelfRect(l, r), t));
             }
 
             if ((uint)_addedView < (uint)_views.Length)
@@ -2097,6 +2146,7 @@ namespace AF.UI
                 y += ModalKit.HeightOf(_double) + 2f;
             }
 
+            LabelsVictoryReserve(ref y); // el chip del nivel siguiente colgado de Siguiente: Siguiente e Inicio bajan, el panel crece
             _victoryCtaTopDp = y;
             UiBuilder.Place((RectTransform)_next.Button.transform, (panelW - nextW) / 2f, y, nextW, ModalKit.HeightOf(_next));
             UiBuilder.SetEnabled(_next.Button, true);
@@ -2258,14 +2308,11 @@ namespace AF.UI
             UiBuilder.Place(_panelInner.rectTransform, px + frame, py + frame, pw - (2f * frame), ph - (2f * frame));
             UiBuilder.Place(_panelFrame.rectTransform, px, py, pw, ph);
 
-            // Una repisa por fila (guía 4.5): de innerLeft + 6 a innerRight − 6, cara superior en pie − 3, 26 dp con sombra.
-            float shelfX = px + frame + 6f;
-            float shelfW = pw - (2f * frame) - 12f;
+            // Una repisa por fila (guía 4.5).
             for (int r = 0; r < l.Rows && r < _shelves.Length; r++)
             {
-                float foot = l.RowFootY[r];
                 _shelves[r].gameObject.SetActive(true);
-                UiBuilder.Place(_shelves[r].rectTransform, shelfX, foot - 3f, shelfW, 26f);
+                PlaceShelf(r, ShelfRect(l, r));
             }
 
             // Capi (solo con su PNG) y el poste en el muelle, si la banda libre bajo el panel es ≥ 64 dp (guía 3.7 y 3.8).
@@ -2284,6 +2331,20 @@ namespace AF.UI
             LayoutBackdrop(py, l.PanelBottom, true);
             _animator.BoardWidth = w; // lado del cuerpo al verter (D-006): el lienzo del layout
             _ambient.SetLayout(new Vector2(w, _canvasH), PanelRect(), new Rect(0f, _horizonY + 4f, w, Mathf.Max(0f, py - _horizonY - 8f)));
+        }
+
+        // Repisa de la fila r (guía 4.5) con el marco tal como se dibuja (PanelFrameDp): x de innerLeft + 6, cara superior en
+        // pie − 3 (y desde arriba) y ancho hasta innerRight − 6.
+        private Vector3 ShelfRect(BoardLayoutResult l, int r)
+        {
+            float frame = PanelFrameDp;
+            return new Vector3(l.PanelX + frame + 6f, l.RowFootY[r] - 3f, l.PanelWidth - (2f * frame) - 12f);
+        }
+
+        // 26 dp de alto con su sombra (guía 4.5).
+        private void PlaceShelf(int r, Vector3 rect)
+        {
+            UiBuilder.Place(_shelves[r].rectTransform, rect.x, rect.y, rect.z, 26f);
         }
 
         // Panorama, cielo, muelle y escena del río según el panel (revisión visual del 2026-10-07):
@@ -2413,6 +2474,58 @@ namespace AF.UI
             _boardShift = shift;
             _board.anchoredPosition = new Vector2(0f, shift);
             _pourFront.anchoredPosition = new Vector2(0f, shift); // la capa de vertido sigue al tablero
+            _liftFront.anchoredPosition = new Vector2(0f, shift); // y la de la cuia elevada
+        }
+
+        // Pie de la insignia «Nivel {n}» (placa de 52 dp desde TopRowY − 2; guía 3.5): lo más bajo del HUD sobre el tablero.
+        private float HudBadgeBottom => TopRowY + 50f;
+
+        // La cuia cuyo cielo (los 32 dp táctiles sobre la boca, con los 16 de la elevación) entra en la fila del HUD se dibuja
+        // en _liftFront mientras sube, está elevada o baja; si no (en reposo, en vuelo hacia la capa de vertido o con su cielo
+        // bajo el HUD, que es lo normal con 1 y 2 filas), en el tablero, en su sitio entre las capas de mecánicas
+        // (OrderBoardLayers). Solo cambia de padre cuando hace falta; sin asignaciones.
+        private void SyncLiftFront()
+        {
+            float hudBottom = HudBadgeBottom;
+            for (int i = 0; i < _views.Length; i++)
+            {
+                CuiaView v = _views[i];
+                RectTransform root = v.Root;
+                bool inFront = root.parent == _liftFront;
+                bool raised = v.IsLifted || (inFront && v.BodyOffset.y > 0.01f);
+                bool front = false;
+                if (raised && !v.BodyInFront)
+                {
+                    float mouth = -v.FootPosition.y - _boardShift - (v.HeightU * v.Unit);
+                    front = mouth - CuiaView.LiftDp - CuiaView.TouchHeadroomDp < hudBottom;
+                }
+
+                if (front && !inFront)
+                {
+                    root.SetParent(_liftFront, false);
+                }
+                else if (!front && inFront)
+                {
+                    root.SetParent(_board, false);
+                    root.SetSiblingIndex(BoardSiblingOf(i));
+                }
+            }
+        }
+
+        // Índice de la cuia i entre las capas de mecánicas del tablero (OrderBoardLayers: la trasera, las cuias en orden y la
+        // delantera), contando solo las cuias que están en el tablero.
+        private int BoardSiblingOf(int i)
+        {
+            int index = _mechanicBackLayer.GetSiblingIndex() + 1;
+            for (int j = 0; j < i; j++)
+            {
+                if (_views[j].Root.parent == _board)
+                {
+                    index++;
+                }
+            }
+
+            return index;
         }
 
         // Capi (guía 3.7; solo con capi_idle.png): respiración (escala Y 1,00 ↔ 1,02, periodo 3 s). El parpadeo llega con su
@@ -2490,8 +2603,17 @@ namespace AF.UI
         // Etiquetas: en OnVictoryScreen, con la pantalla de victoria ya colocada.
         partial void LabelsVictoryShown(LevelFlow flow);
 
+        // Etiquetas: en LayoutVictory, justo antes de colocar Siguiente en y (dp desde el canto de arriba del panel de victoria):
+        // lo que sume a y lo bajan Siguiente e Inicio, y el panel crece lo mismo hacia arriba (sigue anclado abajo).
+        partial void LabelsVictoryReserve(ref float y);
+
         // Etiquetas: al final de LayoutVictory.
         partial void LabelsLayoutVictory();
+
+        // Etiquetas: en LayoutWalletBar, con la cabecera de partida, antes de colocarla: alto de las píldoras de la columna
+        // Semillas/Canoas (desde el 31), hueco entre ellas y borde de arriba de la columna (dp desde arriba). Llegan a su
+        // tamaño (22 y 4 dp desde TopRowY + 1); el parcial puede compactarla dentro de la fila (WalletBar las dibuja a escala).
+        partial void LabelsWalletColumn(ref float pillDp, ref float gapDp, ref float columnTop);
 
         // Etiquetas: en cada Tick, tras el resto de la vista.
         partial void LabelsTick(float dtMs);
