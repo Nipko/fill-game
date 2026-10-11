@@ -122,7 +122,7 @@ La sesión del portátil usaba la herramienta Workflow con equipos de agentes Op
 > - T18: los 14 pasos en verde (packs idénticos con `--check`, EditMode 1.390, PlayMode 322, 434 capturas, AAB de 36,97 MB, 16 KB correcto en AAB y APK, minSdk 26, targetSdk 36 y `dev.apk` de 66,23 MB).
 >
 > **El paso 1 queda cerrado** a falta de la prueba en el teléfono (portátil). Lo siguiente es el paso 2, y quedan los pendientes del dueño de abajo.
-> - La caché de `LocalDateKey` (commit `461536d`, en AF.Platform) está deshecha: necesita el visto bueno del dueño (`.claude/rules/sdk.md`).
+> - La caché de `LocalDateKey` (AF.Platform) la aprobó el dueño el 2026-10-11 y está aplicada (`.claude/rules/sdk.md`).
 > - Los [P] que tiene que ratificar el dueño están en el informe de la sesión del 2026-10-11.
 >
 > Qué probar en el teléfono tras cada push: en el mensaje del commit.
