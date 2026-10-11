@@ -19,7 +19,8 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Remolino y Barro (T16; 02 §9.1 M4 y M5; propuesta de D-007 b.2 M4 y M5): la espiral y el canal de la pareja del 103
     /// sin tapar cuias ni repisas con 1, 2 y 3 filas y tras añadir una cuia; la recepción por el fondo de la pareja en
-    /// <see cref="RemolinoOverlay.ReceiveMs"/> × factor, con burbujas y en el orden del modelo; Marea de un vertido por
+    /// <see cref="RemolinoOverlay.ReceiveMs"/> × factor, con burbujas y en el orden del modelo; el Barro de la pareja que recibe,
+    /// mate durante la recepción aunque el tablero se monte oculto (rama defensiva, en un banco); Marea de un vertido por
     /// Remolino que salta [P]; el lavado del Barro del 123 en <see cref="MudMarks.WashMs"/> × factor con los colores del
     /// modelo; y los pasos sin asignaciones. Vertidos buscados con <see cref="MechanicTestKit"/>; el reloj lo lleva el test.
     /// </summary>
@@ -174,6 +175,45 @@ namespace AF.Tests.PlayMode
                     Assert.That(Vector2.Distance(fx.FirstBubbleAt, expected), Is.LessThan(0.5f), "por el fondo de la pareja");
                 }
             }
+        }
+
+        [UnityTest]
+        public IEnumerator Remolino_BarroInTheReceivingPair_StaysMatte()
+        {
+            yield return null;
+
+            // Rama defensiva de la recepción (solo en un banco: LevelValidation no deja Barro en una cuia con mecánica): la pareja
+            // que recibe, [Barro, 4], tiene el Barro en el fondo; las dosis nuevas entran por debajo, el Barro sube con ellas y
+            // cada fotograma lo pinta mate, como MudMarks.PaintMud (T20). El banco se monta con el tablero inactivo, como una
+            // pantalla aún oculta: el Remolino encuentra igual su vista (GetComponentInParent con includeInactive) y el Barro no
+            // pierde el mate sin avisar a mitad del paso.
+            BoardState board = Board(
+                new[] { new[] { 1, 1 }, new[] { 3, 3, 3 }, new[] { Cuia.MudColor, 4 }, new int[0] },
+                new[] { new MechanicSpec(MechanicType.Remolino, partner: 2), MechanicSpec.None, new MechanicSpec(MechanicType.Remolino, partner: 0), MechanicSpec.None });
+            _rig?.Dispose();
+            _rig = new MechanicTestKit.Rig(Art, board, views => views[0].transform.parent.gameObject.SetActive(false));
+            MechanicTestKit.Rig rig = _rig;
+            GameObject boardLayer = rig.Views[0].transform.parent.gameObject;
+            Assert.That(boardLayer.activeInHierarchy, Is.False, "el Remolino se unió a su cuia con el tablero inactivo");
+            boardLayer.SetActive(true);
+            CuiaView pv = rig.Views[2];
+            Assert.That(pv.Liquid.IsMatteAt(0), Is.True, "en reposo, el Barro del fondo va mate");
+
+            BoardState after = rig.Pour(board, 1, 0, out PourVisual v);
+            Assert.That(v.Receiver, Is.EqualTo(2), "por el Remolino recibe la pareja");
+            int amount = after[2].Count - board[2].Count;
+            Assert.That(amount, Is.EqualTo(2), "entran 2 por el fondo");
+            Assert.That(after[2].ColorAt(amount), Is.EqualTo(Cuia.MudColor), "el Barro sube sobre lo que entra");
+            RunUntil(rig, () => rig.Animator.Steps.IsRunning(MechanicStepKind.Receive, 2), 3000);
+            RunToFraction(rig, MechanicStepKind.Receive, 2, 0.6f);
+            Assert.That(Whirl(pv).IsAnimating, Is.True, "a mitad de la recepción");
+            Assert.That(pv.DoseColor(amount), Is.EqualTo(Palette.Mud), "el Barro, con su color");
+            Assert.That(pv.Liquid.IsMatteAt(amount), Is.True, "y mate a mitad del paso");
+            Assert.That(pv.Liquid.IsMatteAt(0), Is.False, "lo que entra por el fondo, con brillo");
+
+            rig.RunUntilIdle(4000);
+            Assert.That(rig.Animator.ShownOf(2), Is.EqualTo(after[2]));
+            Assert.That(pv.Liquid.IsMatteAt(amount), Is.True, "al terminar, también");
         }
 
         [UnityTest]
@@ -770,6 +810,19 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(condition(), Is.True, "condición del banco");
+        }
+
+        // Avanza el banco hasta la fracción fraction del paso kind en curso de la cuia index, en fotogramas de como mucho 16 ms.
+        private static void RunToFraction(MechanicTestKit.Rig rig, MechanicStepKind kind, int index, float fraction)
+        {
+            Assert.That(rig.Animator.Steps.TryGetRunning(kind, index, out float elapsed, out float duration), Is.True, kind + " en curso");
+            int left = Mathf.FloorToInt((duration * fraction) - elapsed);
+            while (left > 0)
+            {
+                int dt = Mathf.Min(left, PlayModeHelpers.FrameMs);
+                rig.Tick(dt);
+                left -= dt;
+            }
         }
 
         private static BoardState Board(int[][] cuias, MechanicSpec[]? attrs)

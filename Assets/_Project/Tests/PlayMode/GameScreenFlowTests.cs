@@ -19,8 +19,10 @@ namespace AF.Tests.PlayMode
     /// Pantalla de nivel tras las olas 3 y 4 del paso 1 (limpieza L2a), con el catálogo real a 360 × 780: la pausa ya está bajo
     /// el velo de la tarjeta previa y no aparece de golpe al cerrarla; el touch-down no eleva ninguna cuia en el modo de
     /// selección de la Luciérnaga (04 §2.5); al volver de segundo plano la luciérnaga en vuelo salta al modelo (02 §14); la
-    /// ranura Revelar va gris y sin precio fuera de PLAYING, como la Cuia extra; y las repisas se deslizan con su fila durante el
-    /// relayout de «+1 cuia» (02 §4.1).
+    /// ranura Revelar va gris y sin precio fuera de PLAYING, como la Cuia extra; la cuia elevada pasa delante del HUD y vuelve
+    /// al tablero sin saltar; las repisas se deslizan con su fila durante el relayout de «+1 cuia» (02 §4.1); y (L3) la
+    /// luciérnaga genera sus sprites al cargar un nivel turbio, no en el toque del primer revelado, cuando las piezas de la
+    /// cuia turbia ya están registradas en su Canvas.
     /// </summary>
     public sealed class GameScreenFlowTests
     {
@@ -135,6 +137,42 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Firefly_SpritesAndPartsReadyWhenAMurkyLevelLoads()
+        {
+            // Revisión de L2b: el cuerpo y las alas de la luciérnaga no se generan en el fotograma del toque del primer revelado,
+            // sino al cargar un nivel de Aguas turbias con ocultas (RevealFireflyFx.Prewarm), como los discos y los iconos de
+            // MurkyMarks.Prewarm; el primer vuelo solo pone esos sprites en sus imágenes. Un nivel sin ocultas no los pide.
+            yield return LoadPlaying(7, FunnelSetup.Profile(0));
+            GameScreen view = GameBootstrap.Current!.View!;
+            Assert.That(view.Tray.RevealShown, Is.False, "nivel 7: sin Aguas turbias");
+            Assert.That(view.RevealFirefly.SpritesReady, Is.False, "sin ocultas no se genera nada");
+
+            yield return LoadPlaying(100, FunnelSetup.Profile(0));
+            GameBootstrap boot = GameBootstrap.Current!;
+            view = boot.View!;
+            const int murky = 0;
+            Assert.That(view.Tray.RevealShown, Is.True, "nivel turbio con ocultas");
+            Assert.That(view.RevealFirefly.SpritesReady, Is.True, "los sprites, generados al cargar el nivel");
+            Assert.That(view.RevealFirefly.BodySprite, Is.Null, "aún sin poner en sus imágenes: lo hace el primer vuelo");
+
+            // Los discos y los iconos de fruta de la cuia turbia también están ya creados y registrados en su Canvas
+            // (MurkyMarks.Prewarm, al cargar el nivel): mostrarlos a mitad del revelado no hace crecer el registro de UGUI.
+            var marks = view.Views[murky].Murky;
+            Assert.That(marks.FireflyPartsReady, Is.True, "las piezas de la Luciérnaga, preparadas al cargar");
+            for (int k = 0; k < view.Views[murky].Capacity; k++)
+            {
+                Assert.That(GraphicPool.IsRegistered(marks.FruitDisc(k)), Is.True, "disco " + k + ", registrado en su Canvas");
+                Assert.That(GraphicPool.IsRegistered(marks.FruitImage(k)), Is.True, "icono " + k + ", registrado en su Canvas");
+            }
+
+            Assert.That(boot.PressReveal(), Is.True);
+            Assert.That(boot.TapCuia(murky).Kind, Is.EqualTo(TapKind.Ignored), "el toque elige la cuia");
+            Assert.That(view.RevealFirefly.Flying, Is.True, "sale del botón");
+            Assert.That(view.RevealFirefly.BodySprite!.name, Is.EqualTo("firefly_body"), "el primer vuelo pone el cuerpo ya generado");
+            Assert.That(view.RevealFirefly.WingsSprite!.name, Is.EqualTo("firefly_wings"));
+        }
+
+        [UnityTest]
         public IEnumerator RevealSlot_GreyWithoutPriceOutsidePlaying()
         {
             // 106 con 50 semillas, sin stock ni video: en la intro (fuera de PLAYING) la ranura va gris y sin precio, «Te faltan
@@ -212,7 +250,15 @@ namespace AF.Tests.PlayMode
             Rect badge = VictorySetup.CanvasRect(view.LevelBadgeRect, (RectTransform)view.Canvas.transform);
             Assert.That(mouth - CuiaView.LiftDp - CuiaView.TouchHeadroomDp, Is.LessThan(badge.yMax), "elevada, su cielo entra bajo la insignia");
 
+            // Cambia de padre en el primer fotograma tras el toque (SyncLiftFront) sin saltar: con un fotograma de 0 ms la
+            // elevación no avanza, así que su cuerpo sigue en el mismo punto del lienzo, ahora bajo LiftFront (revisión de L2a).
+            Vector2 rest = CanvasPoint(view, cuia);
             Assert.That(boot.TapCuia(rain).Kind, Is.EqualTo(TapKind.Selected));
+            Vector2 beforeSwap = CanvasPoint(view, cuia);
+            Assert.That(cuia.Root.parent, Is.SameAs(view.BoardContainer), "el toque aún no la cambia de capa");
+            view.Tick(0f);
+            Assert.That(cuia.Root.parent, Is.SameAs(view.LiftFront), "delante del HUD desde el primer fotograma");
+            Assert.That(Vector2.Distance(CanvasPoint(view, cuia), beforeSwap), Is.LessThan(0.01f), "al pasar a LiftFront, el cuerpo no salta (dp)");
             PlayModeHelpers.Step(boot, 300);
             Assert.That(cuia.Root.parent, Is.SameAs(view.LiftFront), "elevada, delante del HUD");
             int lift = view.LiftFront.GetSiblingIndex();
@@ -222,10 +268,32 @@ namespace AF.Tests.PlayMode
             Assert.That(lift, Is.LessThan(view.PauseButton.transform.parent.GetSiblingIndex()), "y de la pausa");
             Assert.That(view.LiftFront.anchoredPosition, Is.EqualTo(view.BoardContainer.anchoredPosition), "alineada con el tablero");
 
+            // Al bajar vuelve al tablero sin saltar: en el fotograma del cambio de padre el cuerpo se mueve menos que en el
+            // anterior (la bajada frena al llegar, ease-in) y acaba en el punto de antes de elevarla.
             Assert.That(boot.TapCuia(rain).Kind, Is.EqualTo(TapKind.Deselected));
+            Vector2 last = CanvasPoint(view, cuia);
+            float lastStep = float.PositiveInfinity;
+            bool returned = false;
+            for (int t = 0; t < 400 && !returned; t += 4)
+            {
+                PlayModeHelpers.TickExact(boot, 4);
+                Vector2 now = CanvasPoint(view, cuia);
+                float step = Vector2.Distance(now, last);
+                returned = cuia.Root.parent == view.BoardContainer;
+                if (returned)
+                {
+                    Assert.That(step, Is.LessThanOrEqualTo(lastStep + 0.01f), "al volver al tablero, el cuerpo no salta (" + step + " dp tras " + lastStep + ")");
+                }
+
+                lastStep = step;
+                last = now;
+            }
+
+            Assert.That(returned, Is.True, "vuelve al tablero al terminar de bajar");
             PlayModeHelpers.Step(boot, 400);
             Assert.That(cuia.IsLifted, Is.False);
             Assert.That(cuia.Root.parent, Is.SameAs(view.BoardContainer), "abajo, de vuelta en el tablero");
+            Assert.That(Vector2.Distance(CanvasPoint(view, cuia), rest), Is.LessThan(0.01f), "en el punto de antes de elevarla (dp)");
             int back = view.MechanicBackLayer.GetSiblingIndex();
             Assert.That(cuia.Root.GetSiblingIndex(), Is.EqualTo(back + 1 + rain), "en su sitio entre las capas de mecánicas");
             Assert.That(view.MechanicFrontLayer.GetSiblingIndex(), Is.EqualTo(back + 1 + view.Views.Length));
@@ -334,6 +402,12 @@ namespace AF.Tests.PlayMode
             RectTransform body = view.Body;
             Vector3 world = body.TransformPoint(body.rect.center);
             return RectTransformUtility.WorldToScreenPoint(null, world);
+        }
+
+        // Punto del cuerpo de la cuia en el lienzo (dp), el mismo sea cual sea su padre.
+        private static Vector2 CanvasPoint(GameScreen view, CuiaView cuia)
+        {
+            return view.Canvas.transform.InverseTransformPoint(cuia.Body.position);
         }
     }
 }

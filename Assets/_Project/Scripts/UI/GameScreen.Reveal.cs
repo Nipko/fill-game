@@ -40,9 +40,10 @@ namespace AF.UI
     /// le toca (el de la cola si ya lo pintó; si no, el revelado de antes del cambio, que es de donde parte la animación nueva).
     /// Marea, Volver a la orilla y la Cuia extra lo terminan antes de actuar (<see cref="SettleReveal"/>, desde
     /// <c>GameBootstrap</c>).</para>
-    /// <para>Sin asignaciones por fotograma: las imágenes se crean una vez; el video se consulta como mucho cada
-    /// <see cref="RevealVideoPollMs"/>; la sonda de desarrollo (<c>DevProbe.Event("reveal", …)</c>) solo escribe en desarrollo
-    /// y en los momentos del comodín.</para>
+    /// <para>Sin asignaciones por fotograma: las imágenes se crean una vez y los sprites de la luciérnaga, al cargar el nivel
+    /// turbio (<see cref="RevealFireflyFx.Prewarm"/>); el video se consulta como mucho cada <see cref="RevealVideoPollMs"/> (y
+    /// el de Marea, en la bandeja, cada <see cref="BoosterTray.UndoVideoPollMs"/>); la sonda de desarrollo
+    /// (<c>DevProbe.Event("reveal", …)</c>) solo escribe en desarrollo y en los momentos del comodín.</para>
     /// </remarks>
     public sealed partial class GameScreen : IRevealListener
     {
@@ -198,6 +199,9 @@ namespace AF.UI
 
         partial void RevealTick(float dtMs)
         {
+            // El plazo del video de Marea avanza con el fotograma, como el de Revelar más abajo: la bandeja lo pregunta en
+            // Refresh (RefreshHud) como mucho cada BoosterTray.UndoVideoPollMs.
+            _tray.Tick(dtMs);
             LevelFlow? flow = _flow;
             if (flow == null || !flow.HasLevel)
             {
@@ -251,6 +255,13 @@ namespace AF.UI
             _revealGiftPending = false;
             _revealLayoutVersion = -1;
             SyncRevealSlot(flow, true);
+            if (_tray.RevealShown)
+            {
+                // Nivel turbio con ocultas: la luciérnaga genera ya sus sprites (cuerpo y alas), como MurkyMarks.Prewarm los
+                // discos y los iconos de cada cuia turbia; ni el toque del primer revelado ni el vuelo crean texturas.
+                _revealFx.Prewarm();
+            }
+
             RefreshRevealBadge(flow, true);
         }
 
@@ -420,7 +431,7 @@ namespace AF.UI
         // se vaya: gris y sin precio (revisión de la captura 67a, que enseñaba «120» en rojo). Y cuando no se puede usar ni se
         // está eligiendo (fuera de PLAYING: intro, tarjeta previa, al resolver), igual que la Cuia extra: gris, con su stock si
         // lo hay y, si no, sin precio ni «Te faltan {n}» (antes enseñaba el «120» en rojo y saltaba a «+1» con video al llegar a
-        // PLAYING; revisión de T14). SetRevealBadge lo dibuja con su parámetro spent: gris y sin insignia, precio ni aviso.
+        // PLAYING; revisión de T14). Los dos casos son bare, que SetRevealBadge dibuja gris y sin insignia, precio ni aviso.
         private void RefreshRevealBadge(LevelFlow flow, bool pollNow)
         {
             if (!_tray.RevealShown)

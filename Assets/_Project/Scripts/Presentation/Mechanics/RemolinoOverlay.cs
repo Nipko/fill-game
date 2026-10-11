@@ -478,7 +478,10 @@ namespace AF.Presentation.Mechanics
             _pool = OverlayParts.NewImage("RemolinoPool", Host.SlotBack, Host.Art.WhirlPool, ProceduralArt.WhirlPoolColor);
             _spiral = OverlayParts.NewImage("RemolinoSpiral", Host.SlotBack, Host.Art.RemolinoSpiralFrame(0), OverlayParts.Fade(Palette.UiPaper, FoamAlpha));
             _dots = new PipRow("RemolinoPair", Host.SlotFront, Host.Art.CounterPip, Host.Art.CounterPipEmpty, ProceduralArt.Pearl);
-            _view = Host.SlotBack.GetComponentInParent<CuiaView>(); // solo para pintar mate el Barro que reciba (puede no haberla)
+            // Solo para pintar mate el Barro que reciba (puede no haberla). Con includeInactive, como MurkyMarks: si la cuia se
+            // monta con su jerarquía inactiva (una pantalla oculta), sin él la búsqueda daría null y el Barro perdería el mate sin
+            // avisar.
+            _view = Host.SlotBack.GetComponentInParent<CuiaView>(true);
 
             // Canal y racha en la capa trasera del tablero, en una raíz propia anclada a la esquina superior izquierda de la
             // capa, como las ranuras de las cuias: si el tablero cambia de tamaño sin recolocarse (el CanvasScaler al cambiar

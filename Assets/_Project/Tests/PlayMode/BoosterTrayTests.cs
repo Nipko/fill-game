@@ -21,9 +21,10 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Bandeja de comodines en la escena (tarea B2-1; 07 §7.4; 04 §1.1, §2.1 y §2.2): en 1-7 solo Marea; desde el 8, Marea y
     /// Cuia extra con el regalo de Capi; la cuia añadida va a la fila más corta sin cambiar las filas (D-006); desde el 11,
-    /// el cupo de Marea en el badge, y sin cupo la pregunta por el video en cada fotograma sin asignaciones. Con la Luciérnaga
-    /// (T14; 04 §2.5): 1, 2 y 3 ranuras de 64 dp con Revelar la última, recentradas, y los avisos «Te faltan {n}» de dos
-    /// ranuras vecinas sin solaparse, a 11 sp o más y, con 4 cifras, en dos líneas sobre su ranura.
+    /// el cupo de Marea en el badge, y sin cupo la pregunta por el video como mucho cada 500 ms, sin asignaciones entre dos
+    /// preguntas. Con la Luciérnaga (T14; 04 §2.5): 1, 2 y 3 ranuras de 64 dp con Revelar la última, recentradas, y los avisos
+    /// «Te faltan {n}» de dos ranuras vecinas sin solaparse, a 12 sp (02 §12) y, si la cifra no cabe en una línea, en dos sobre
+    /// su ranura, dentro del hueco entre el tablero y la bandeja.
     /// </summary>
     public sealed class BoosterTrayTests
     {
@@ -36,6 +37,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
 
@@ -105,11 +107,13 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator MareaWithoutQuota_AsksForTheVideoEveryFrame_WithoutAllocating()
+        public IEnumerator MareaWithoutQuota_AsksForTheVideoEvery500ms_WithoutAllocating()
         {
-            // Desde el 11, sin cupo ni stock, la bandeja pregunta en cada fotograma si hay video de rv_undo_refill (B2-1) y los
-            // anuncios leen los contadores del día con la clave de la fecha: 20 fotogramas sin asignaciones (08 §5.4). Con fill,
-            // «+3» lleva el icono de video. La segunda carga mide (la primera calienta).
+            // Desde el 11, sin cupo ni stock, la bandeja ofrece «+3» con el icono de video si hay video de rv_undo_refill
+            // (B2-1). Preguntar a los anuncios lee los contadores del día con la clave de la fecha local (IClock.LocalDateKey),
+            // que crea una cadena cada vez: la bandeja pregunta como mucho cada BoosterTray.UndoVideoPollMs (500 ms, el plazo de
+            // Revelar) y, entre dos preguntas, 20 fotogramas no asignan memoria (08 §5.4). Sin el límite preguntaría en cada
+            // fotograma y la medida fallaría. La segunda carga mide (la primera calienta).
             LaunchOptions.LevelOffsetOverride = 10;
             for (int pass = 0; pass < 2; pass++)
             {
@@ -120,19 +124,26 @@ namespace AF.Tests.PlayMode
                 boot.TapAnywhere();
                 PlayModeHelpers.Step(boot, 50);
                 GameScreen view = boot.View!;
+                BoosterTray tray = view.Tray;
                 for (int i = 0; i < 3; i++)
                 {
                     boot.TapCuia(0);
                     boot.TapCuia(2);
                     PlayModeHelpers.StepUntilIdle(boot, 3000);
+                    Assert.That(tray.UndoVideoPollLeftMs, Is.EqualTo(0f), "con cupo no se pregunta por el video");
                     Assert.That(boot.PressUndo(), Is.True);
                     PlayModeHelpers.StepUntilIdle(boot, 3000);
                 }
 
                 PlayModeHelpers.Step(boot, 50);
                 Assert.That(boot.Flow!.UndoStatus.HasQuota, Is.False, "sin cupo");
-                Assert.That(view.Tray.UndoBadgeText, Is.EqualTo("+3"));
-                Assert.That(view.Tray.UndoShowsVideo, Is.True, "con fill, el video");
+                Assert.That(tray.UndoBadgeText, Is.EqualTo("+3"));
+                Assert.That(tray.UndoShowsVideo, Is.True, "con fill, el video");
+
+                // Justo después de una pregunta, el plazo vuelve a UndoVideoPollMs.
+                StepUntilUndoVideoAsked(boot, tray, 1000);
+                Assert.That(tray.UndoVideoPollLeftMs, Is.GreaterThan(BoosterTray.UndoVideoPollMs - 8f), "acaba de preguntar");
+                float left = tray.UndoVideoPollLeftMs;
 
                 void Run20()
                 {
@@ -143,25 +154,34 @@ namespace AF.Tests.PlayMode
                     }
                 }
 
-                if (pass == 1)
-                {
-                    Assert.That(Run20, Is.Not.AllocatingGCMemory(), "20 fotogramas con Marea sin cupo");
-                }
-                else
+                if (pass == 0)
                 {
                     Run20();
+                    yield return null;
+                    continue;
                 }
 
-                Assert.That(view.Tray.UndoShowsVideo, Is.True);
+                Assert.That(Run20, Is.Not.AllocatingGCMemory(), "20 fotogramas con Marea sin cupo, entre dos preguntas");
+                Assert.That(tray.UndoVideoPollLeftMs, Is.EqualTo(left - (20f * PlayModeHelpers.FrameMs)).Within(0.01f), "en esos 320 ms no volvió a preguntar");
+                Assert.That(tray.UndoShowsVideo, Is.True);
+
+                // Y no deja de preguntar: la siguiente pregunta llega a los 500 ms de la anterior.
+                int more = StepUntilUndoVideoAsked(boot, tray, 1000);
+                Assert.That((20f * PlayModeHelpers.FrameMs) + more, Is.EqualTo(BoosterTray.UndoVideoPollMs).Within(4f), "una pregunta cada 500 ms");
+                Assert.That(tray.UndoShowsVideo, Is.True);
                 yield return null;
             }
         }
 
         [UnityTest]
-        public IEnumerator MissingNotice_AtLeast11sp_AndFourDigitsStayOverTheirSlot()
+        public IEnumerator MissingNotice_At12sp_AndWhatDoesNotFitGoesOnTwoLinesOverItsSlot()
         {
-            // 02 §12: el aviso va a 12 sp si cabe y nunca a menos de 11 [P] (antes bajaba hasta 9). Nivel 106 con 50 semillas y
-            // sin video: Cuia extra (150) y Revelar (120) enseñan a la vez sus avisos estrechos, en una línea.
+            // 02 §12: «Texto ≥ 12 sp»; el aviso va siempre a 12 sp (antes bajaba hasta 11) y lo que no cabe en una línea va en
+            // dos. Nivel 106 a 360 × 780 dp con 50 semillas y sin video: Cuia extra (150) y Revelar (120) enseñan a la vez sus
+            // avisos estrechos; «Te faltan 70» cabe en una línea y «Te faltan 100», no: su cifra baja a una segunda línea y la
+            // placa crece hacia arriba, sobre su ranura y sin pisar el panel del tablero, que en el 106 llega tan abajo como
+            // deja BoardLayout (el peor caso).
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
             LaunchOptions.AdFillOverride = FakeAdFill.NoFill;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(50));
             yield return PlayModeHelpers.LoadGame(106, new MemoryProgressStore(106, 105));
@@ -169,11 +189,18 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.TakeClock(boot);
             boot.TapAnywhere();
             PlayModeHelpers.Step(boot, 1000);
-            BoosterTray tray = boot.View!.Tray;
+            GameScreen view = boot.View!;
+            BoosterTray tray = view.Tray;
             Assert.That(tray.ExtraMissingWidth, Is.LessThan(72f), "estrechos: los dos a la vez");
-            AssertNotice(tray.ExtraMissingLabel, 1, "«Te faltan 100»");
-            AssertNotice(tray.RevealMissingLabel, 1, "«Te faltan 70»");
-            Assert.That(tray.RevealMissingLabel.fontSize, Is.EqualTo(12f).Within(0.01f), "«Te faltan 70» cabe a 12 sp");
+            Assert.That(tray.ExtraMissingText, Is.EqualTo("Te faltan 100"));
+            AssertNotice(tray.ExtraMissingLabel, 2, "«Te faltan 100» estrecho");
+            AssertNotice(tray.RevealMissingLabel, 1, "«Te faltan 70» estrecho");
+            AssertOverItsSlot(tray.ExtraMissingRect, (RectTransform)tray.ExtraCuiaButton.transform, "Cuia extra");
+            AssertOverItsSlot(tray.RevealMissingRect, (RectTransform)tray.RevealButton.transform, "Revelar");
+            Assert.That(WorldRect(tray.ExtraMissingRect).Overlaps(WorldRect(tray.RevealMissingRect)), Is.False, "sin solapes");
+            AssertBelowTheBoard(view, tray.ExtraMissingRect, "«Te faltan 100» en dos líneas");
+            Assert.That(tray.UndoBadgeText, Is.EqualTo("3"), "Marea, con su cupo en la insignia");
+            AssertClearOfDisc(tray.ExtraMissingRect, tray.UndoBadgeRect, "«Te faltan 100» en dos líneas, junto a Marea");
 
             // Un precio de 4 cifras (fuera de los rangos de 08 §9; la API de la bandeja, la misma que llama GameScreen.Reveal):
             // la cifra baja a una segunda línea, la placa crece hacia arriba y el aviso sigue sobre su ranura sin pisar el de
@@ -184,6 +211,7 @@ namespace AF.Tests.PlayMode
             AssertNotice(tray.RevealMissingLabel, 2, "«Te faltan 1.450» estrecho");
             AssertOverItsSlot(tray.RevealMissingRect, (RectTransform)tray.RevealButton.transform, "Revelar");
             Assert.That(WorldRect(tray.ExtraMissingRect).Overlaps(WorldRect(tray.RevealMissingRect)), Is.False, "sin solapes");
+            AssertBelowTheBoard(view, tray.RevealMissingRect, "«Te faltan 1.450» en dos líneas");
 
             // La etiqueta «1.500» se encoge entera hasta caber en su paso de ranura (la cifra, a 12 sp o más) y no pisa la
             // de la vecina.
@@ -209,7 +237,6 @@ namespace AF.Tests.PlayMode
             Assert.That(tray.RevealMissingText, Is.EqualTo("Te faltan 1.300"));
             Assert.That(tray.RevealMissingWidth, Is.GreaterThan(100f), "ancho");
             AssertNotice(tray.RevealMissingLabel, 1, "«Te faltan 1.300» ancho");
-            Assert.That(tray.RevealMissingLabel.fontSize, Is.EqualTo(12f).Within(0.01f));
             AssertOverItsSlot(tray.RevealMissingRect, (RectTransform)tray.RevealButton.transform, "Revelar");
         }
 
@@ -297,13 +324,57 @@ namespace AF.Tests.PlayMode
             return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
         }
 
-        // El aviso, maquetado: ≥ 11 sp, las líneas dadas, entero y con el texto dentro de su placa.
+        // Avanza en fotogramas de 4 ms hasta que la bandeja vuelve a preguntar por el video de Marea (su plazo sube de golpe) y
+        // devuelve los ms avanzados (falla pasado maxMs).
+        private static int StepUntilUndoVideoAsked(GameBootstrap boot, BoosterTray tray, int maxMs)
+        {
+            bool asked = false;
+            int t = 0;
+            float last = tray.UndoVideoPollLeftMs;
+            while (!asked && t < maxMs)
+            {
+                PlayModeHelpers.TickExact(boot, 4);
+                t += 4;
+                float now = tray.UndoVideoPollLeftMs;
+                asked = now > last;
+                last = now;
+            }
+
+            Assert.That(asked, Is.True, "la bandeja vuelve a preguntar por el video de Marea antes de " + maxMs + " ms");
+            return t;
+        }
+
+        // La placa del aviso, en el hueco entre el tablero y la bandeja (02 §5; GameScreen): por debajo del panel del tablero
+        // con 2 dp de aire o más. El 106 a 360 × 780 es el peor caso: su panel llega a 31,5 dp sobre la bandeja (BoardLayout), y
+        // la placa de dos líneas, a 29,5 (BoosterTray: 29,5 dp de alto, a ras de la bandeja).
+        private static void AssertBelowTheBoard(GameScreen view, RectTransform notice, string what)
+        {
+            Canvas.ForceUpdateCanvases();
+            Rect plate = VictorySetup.CanvasRect(notice, (RectTransform)view.Canvas.transform);
+            float panelBottom = view.Layout!.PanelBottom;
+            Assert.That(plate.yMin - panelBottom, Is.GreaterThanOrEqualTo(2f - 0.01f), what + ": por debajo del tablero (su panel acaba en " + panelBottom + " dp y la placa empieza en " + plate.yMin + " dp)");
+        }
+
+        // La placa del aviso no toca el disco de una insignia (24 dp, arriba a la derecha de su ranura; asoma 8 dp sobre el
+        // canto): del centro del disco a la placa hay al menos su radio.
+        private static void AssertClearOfDisc(RectTransform notice, RectTransform disc, string what)
+        {
+            Canvas.ForceUpdateCanvases();
+            Rect n = WorldRect(notice);
+            Rect d = WorldRect(disc);
+            Vector2 c = d.center;
+            float radius = 0.5f * Mathf.Min(d.width, d.height);
+            var closest = new Vector2(Mathf.Clamp(c.x, n.xMin, n.xMax), Mathf.Clamp(c.y, n.yMin, n.yMax));
+            Assert.That(Vector2.Distance(closest, c), Is.GreaterThanOrEqualTo(radius * (1f - 0.001f)), what + ": sin tocar el disco de la insignia");
+        }
+
+        // El aviso, maquetado: a 12 sp (02 §12), las líneas dadas, entero y con el texto dentro de su placa.
         private static void AssertNotice(TextMeshProUGUI label, int lines, string what)
         {
             Canvas.ForceUpdateCanvases();
             label.ForceMeshUpdate(true, true);
             Assert.That(label.gameObject.activeInHierarchy, Is.True, what + " a la vista");
-            Assert.That(label.fontSize, Is.GreaterThanOrEqualTo(11f - 0.01f), what + ": ≥ 11 sp");
+            Assert.That(label.fontSize, Is.EqualTo(12f).Within(0.01f), what + ": 12 sp");
             Assert.That(label.textInfo.lineCount, Is.EqualTo(lines), what + ": líneas");
             Assert.That(label.textInfo.characterCount, Is.EqualTo(label.text.Length), what + " entero");
             Rect r = label.rectTransform.rect;
