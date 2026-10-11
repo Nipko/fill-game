@@ -267,6 +267,21 @@ namespace AF.UI
         /// <summary>Cuerpo de la tarjeta (tests y AF_LAYOUT).</summary>
         public RectTransform Panel => _panel;
 
+        /// <summary>Superficie de madera del cuerpo (tests: su sprite es de la escala de altos compartidos y se estira).</summary>
+        public Image Surface => _surface;
+
+        /// <summary>Placa de la cabecera, o null si no se ve (tests de solapes).</summary>
+        public RectTransform? HeaderRect => _header.gameObject.activeSelf ? _header.rectTransform : null;
+
+        /// <summary>Fila del premio (semilla, «Premio: N» y cinta), o null si no se ve (tests de solapes).</summary>
+        public RectTransform? RewardRowRect => _rewardRow.gameObject.activeSelf ? _rewardRow : null;
+
+        /// <summary>Medallón del estreno, o null si no se ve (tests de solapes).</summary>
+        public RectTransform? MedallionRect => _medallion.gameObject.activeSelf ? _medallion.rectTransform : null;
+
+        /// <summary>Píldora «+1 Luciérnaga», o null si no se ve (tests de solapes).</summary>
+        public RectTransform? GiftRect => _gift.gameObject.activeSelf ? _gift : null;
+
         /// <summary>Contenedor que escala la tarjeta en la entrada y la salida (tests).</summary>
         public RectTransform Pop => _pop;
 
@@ -468,13 +483,15 @@ namespace AF.UI
             _murky.SetVisible(card.IsMurky);
             _iconRow.gameObject.SetActive(_iconCount > 0 || card.IsMurky);
 
-            // Estreno: el icono grande en su medallón.
-            bool hero = card.Kind == LevelCardKind.Debut && intro != null;
+            // Estreno: el icono grande en su medallón (sin icono, sin medallón: el de Aguas turbias no existe, porque su estreno,
+            // el 100, es la tarjeta combinada y no lleva medallón).
+            Sprite? heroIcon = card.Kind == LevelCardKind.Debut ? _art.CardHeroIcon(intro) : null;
+            bool hero = heroIcon != null;
             _medallion.gameObject.SetActive(hero);
             if (hero)
             {
                 _medallion.sprite = _art.CardMedallionFor(intro);
-                _hero.sprite = _art.CardHeroIcon(intro);
+                _hero.sprite = heroIcon;
             }
 
             string? tutorial = UiText.Tutorial(intro);
@@ -592,7 +609,10 @@ namespace AF.UI
             _pop.pivot = new Vector2(0.5f, 0.5f);
             _pop.sizeDelta = new Vector2(cardW, cardH);
             _pop.anchoredPosition = new Vector2(left + (cardW * 0.5f), -(top + (cardH * 0.5f)));
-            ModalKit.Size(_panel, _surface, _art, 0f, 0f, cardW, cardH);
+
+            // La superficie de madera, de la escala de altos compartidos (ModalKit.SharedSurfaceHeight) y estirada al alto de la
+            // tarjeta: con 5 o 6 altos de tarjeta en 1-200, solo se generan y se guardan las superficies de 3 altos.
+            ModalKit.Size(_panel, _surface, _art, 0f, 0f, cardW, cardH, true);
         }
 
         /// <summary>Vuelve a colocar la tarjeta abierta con la última pantalla (tras cambiar <see cref="FontScale"/>).</summary>

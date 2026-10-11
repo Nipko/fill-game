@@ -143,11 +143,16 @@ namespace AF.Tests.PlayMode
             Assert.That(int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture), Is.EqualTo(Mathf.RoundToInt(world.xMin)).Within(1));
             Assert.That(layout, Does.Contain("\"id\":\"undo\"").And.Contain("\"id\":\"extra_cuia\""));
 
-            // Al revelar la última oculta la ranura desaparece y AF_LAYOUT se vuelve a emitir sin ella.
+            // Al revelar la última oculta la ranura desaparece y AF_LAYOUT se vuelve a emitir sin ella; mientras la luciérnaga
+            // vuela (200 ms de un vuelo de 520 × factor), la ranura sigue y AF_LAYOUT no cambia.
             int before = LayoutCount(Level100);
             Assert.That(boot.PressReveal(), Is.True);
             boot.TapCuia(MurkyCuia100);
-            Assert.That(LayoutCount(Level100), Is.EqualTo(before), "la ranura sigue mientras la luciérnaga vuela");
+            PlayModeHelpers.Step(boot, 200);
+            GameScreen view = boot.View!;
+            Assert.That(view.RevealFirefly.Flying, Is.True, "a los 200 ms aún vuela");
+            Assert.That(view.Tray.RevealShown, Is.True, "la ranura sigue mientras la luciérnaga vuela");
+            Assert.That(LayoutCount(Level100), Is.EqualTo(before), "sin volver a emitir AF_LAYOUT mientras vuela");
             StepUntilRevealDone(boot, 5000);
             Assert.That(LayoutCount(Level100), Is.GreaterThan(before), "se vuelve a emitir al desaparecer");
             Assert.That(LastLayout(Level100), Does.Not.Contain("\"id\":\"reveal\""));
@@ -190,6 +195,9 @@ namespace AF.Tests.PlayMode
             Assert.That(ring.yMin, Is.EqualTo(body.yMin).Within(0.5f), "abierto por abajo, hasta el pie");
             Assert.That(ring.yMin, Is.GreaterThanOrEqualTo(chip.yMax - 0.5f), "sin bajar a la insignia «?×2»");
             Assert.That(view.Tray.RevealPressed, Is.True, "el botón queda pulsado mientras se elige");
+            Assert.That(view.Tray.RevealRelief.Pressed, Is.True, "la cara del botón, abajo (ReliefButton)");
+            view.Tray.RevealRelief.Step(200f); // la animación de la cara la avanza Update; aquí, a mano
+            Assert.That(view.Tray.RevealRelief.FaceOffsetDp, Is.GreaterThan(0f), "la cara bajó");
 
             // Late: el alfa cambia de la cresta al valle.
             float crest = view.RevealPulse.Alpha;
@@ -199,6 +207,7 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 32);
             Assert.That(view.RevealPulse.Active, Is.False);
             Assert.That(view.Tray.RevealPressed, Is.False);
+            Assert.That(view.Tray.RevealRelief.Pressed, Is.False, "al cancelar, la cara sube");
             for (int i = 0; i < board.Count; i++)
             {
                 Assert.That(view.RevealPulse.IsPulsing(i), Is.False);
@@ -215,6 +224,8 @@ namespace AF.Tests.PlayMode
             int mask = boot.Flow!.Session.Current[MurkyCuia100].HiddenMask;
             Assert.That(mask, Is.EqualTo(0b11));
             Assert.That(boot.Wallet!.Stock.Get(BoosterKind.Reveal), Is.EqualTo(1));
+            Assert.That(view.RevealFirefly.BodySprite, Is.Null, "cuerpo y alas, perezosos: hasta el primer vuelo no se piden");
+            Assert.That(view.RevealFirefly.WingsSprite, Is.Null);
             Assert.That(boot.PressReveal(), Is.True);
             Assert.That(boot.Flow.RevealSelectionPayment, Is.EqualTo(RevealPayment.Stock));
             int discarded = view.Fx.DiscardedCount;
@@ -225,6 +236,8 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Wallet.Stock.Get(BoosterKind.Reveal), Is.EqualTo(0), "se gastó la regalada");
             Assert.That(view.RevealAnimating, Is.True);
             Assert.That(view.RevealFirefly.Flying, Is.True, "sale del botón");
+            Assert.That(view.RevealFirefly.BodySprite!.name, Is.EqualTo("firefly_body"), "el primer vuelo pide el cuerpo");
+            Assert.That(view.RevealFirefly.WingsSprite!.name, Is.EqualTo("firefly_wings"));
             Assert.That(cuia.ShownCuia.HiddenMask, Is.EqualTo(mask), "mientras vuela, la cuia sigue turbia");
             Assert.That(HasEvent("\"phase\":\"revealed\""), Is.True);
             Rect button = WorldRect((RectTransform)view.Tray.RevealButton.transform);

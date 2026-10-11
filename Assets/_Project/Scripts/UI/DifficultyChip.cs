@@ -18,7 +18,7 @@ namespace AF.UI
     /// <para>La cinta es de <c>madera_oscura</c> #36261C con la cifra crema #FFF8E6 (13,7:1), contorno de madera y un remache de
     /// latón [P] (<see cref="RibbonColor"/>; revisión de T09): con el agua profunda de antes, la «×4» de Siguiente se leía como
     /// parte de la oferta del video de encima («Cosecha doble: x2 por video», de la misma familia Agua). La pinta
-    /// <see cref="RibbonSprite"/>, con la forma y las medidas de la cinta de <c>ProceduralArt.RibbonTag</c>.</para>
+    /// <see cref="RibbonSprite"/>, con las medidas de la cinta de <c>ProceduralArt</c> (<c>RibbonTag*Dp</c>).</para>
     /// </summary>
     /// <remarks>
     /// Geometría (dp, desde la esquina superior izquierda de <see cref="Root"/>): el sello de <see cref="MedallionDp"/> a la
@@ -390,8 +390,8 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Cinta «×n» de <c>madera_oscura</c> (<c>label_ribbon_wood</c>) con la forma y las medidas de
-        /// <c>ProceduralArt.RibbonTag</c> (<see cref="ProceduralArt.RibbonTagWidthDp"/> × <see cref="ProceduralArt.RibbonTagHeightDp"/>
+        /// Cinta «×n» de <c>madera_oscura</c> (<c>label_ribbon_wood</c>) con las medidas de la cinta de <c>ProceduralArt</c>
+        /// (<see cref="ProceduralArt.RibbonTagWidthDp"/> × <see cref="ProceduralArt.RibbonTagHeightDp"/>
         /// dp, el cuerpo desde <see cref="ProceduralArt.RibbonTagBodyLeftDp"/>, la cola en V a la derecha y la zona de texto
         /// <see cref="ProceduralArt.RibbonTagTextDp"/>): luz arriba con un bisel de <c>ui_madera</c>, canto oscuro abajo, contorno
         /// más oscuro, sombra suave y, en la esquina superior izquierda, un remache de latón (<see cref="RivetColor"/>) que la
@@ -465,7 +465,7 @@ namespace AF.UI
         }
 
         // Distancia con signo (dp, negativa dentro) a la cinta: rectángulo redondeado de radio 3 menos la cola en V de 4 dp a la
-        // derecha (la de ProceduralArt.RibbonTag).
+        // derecha.
         private static float TagDistance(float xd, float yd, float x0, float y0, float x1, float y1)
         {
             const float notch = 4f;

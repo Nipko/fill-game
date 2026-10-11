@@ -15,7 +15,8 @@ namespace AF.UI
     /// </summary>
     internal sealed class PriceTag
     {
-        private const float HeightDp = 26f;
+        /// <summary>Alto de la etiqueta (dp).</summary>
+        public const float HeightDp = 26f;
 
         private readonly Image _plate;
         private readonly Image _seed;
@@ -116,11 +117,40 @@ namespace AF.UI
             return panel;
         }
 
-        /// <summary>Coloca la tarjeta y genera su superficie al tamaño exacto.</summary>
-        public static void Size(RectTransform panel, Image surface, ProceduralArt art, float x, float y, float w, float h)
+        /// <summary>
+        /// Primer alto de la escala de superficies compartidas (dp) [P]: con <see cref="SharedSurfaceStep"/>, los altos son
+        /// … 115, 144, 180, 225, 281, 352 … (144 · 1,25ⁿ).
+        /// </summary>
+        public const float SharedSurfaceBaseDp = 144f;
+
+        /// <summary>Razón entre dos altos seguidos de la escala de superficies compartidas [P].</summary>
+        public const float SharedSurfaceStep = 1.25f;
+
+        /// <summary>
+        /// Coloca la tarjeta y le pone su superficie: al tamaño exacto o, con <paramref name="sharedSurface"/>, la de alto
+        /// <see cref="SharedSurfaceHeight"/>, que la imagen estira hasta el alto del cuerpo. La compartida es para los paneles
+        /// cuyo alto cambia con el contenido (la tarjeta previa: en 1-200 tiene 5 o 6 altos distintos): cada superficie es una
+        /// textura que se guarda toda la sesión (unos 0,5-0,9 MB de GPU) y cuesta generarla (1,6-3,5 MB de basura la primera
+        /// vez), así que con la escala se generan como mucho las de 3 altos. El degradado y el lustre de la superficie son
+        /// proporcionales al alto, así que estirarla no los cambia; la veta solo se estira o se encoge en lo que separa el alto
+        /// del de la escala (como mucho un 12 %; en las tarjetas de 1-200, un 7 %).
+        /// </summary>
+        public static void Size(RectTransform panel, Image surface, ProceduralArt art, float x, float y, float w, float h, bool sharedSurface = false)
         {
             UiBuilder.Place(panel, x, y, w, h);
-            surface.sprite = art.ModalSurfaceFor(w - 16f, h - 16f);
+            float surfaceH = h - 16f;
+            surface.sprite = art.ModalSurfaceFor(w - 16f, sharedSurface ? SharedSurfaceHeight(surfaceH) : surfaceH);
+        }
+
+        /// <summary>
+        /// Alto de la superficie compartida para un cuerpo de <paramref name="heightDp"/> dp: el de la escala
+        /// <see cref="SharedSurfaceBaseDp"/> · <see cref="SharedSurfaceStep"/>ⁿ más cercano en proporción (redondeado al dp),
+        /// así la imagen lo estira o lo encoge como mucho √1,25 ≈ 1,12 veces.
+        /// </summary>
+        public static float SharedSurfaceHeight(float heightDp)
+        {
+            float steps = Mathf.Log(Mathf.Max(1f, heightDp) / SharedSurfaceBaseDp) / Mathf.Log(SharedSurfaceStep);
+            return Mathf.Round(SharedSurfaceBaseDp * Mathf.Pow(SharedSurfaceStep, Mathf.Round(steps)));
         }
 
         /// <summary>Lado del sello de la etiqueta en una cabecera con banda (dp).</summary>

@@ -7,9 +7,10 @@ namespace AF.Presentation
     /// <summary>
     /// Arte procedural [P] de las etiquetas de dificultad de D-009 (propuesta-mecanicas-dificultad.md §c.1-c.2; 07 §7.7; 02 §10;
     /// glosario §6.1), en la línea de D-003 (luz de juego, madera y vidrio; nunca papel ni acuarela): el sello de la rana dardo
-    /// naranja y negra (Difícil) y el del jaguar de perfil con rosetas sobre la noche (Muy difícil), sin calavera; la cinta
-    /// «×3»/«×4» de agua profunda clavada a la píldora con un remache; la píldora ámbar o índigo del chip; la banda de color de las
-    /// cabeceras de ¿Seguro? y Nivel fallido; y la variante nocturna del botón «Jugar · Nivel {n}». Todo se genera de forma
+    /// naranja y negra (Difícil) y el del jaguar de perfil con rosetas sobre la noche (Muy difícil), sin calavera; la píldora
+    /// ámbar o índigo del chip; las medidas de la cinta «×3»/«×4» clavada a la píldora (la pinta <c>DifficultyChip.RibbonSprite</c>,
+    /// en AF.UI, de madera oscura); la banda de color de las cabeceras de ¿Seguro? y Nivel fallido; y la variante nocturna del
+    /// botón «Jugar · Nivel {n}». Todo se genera de forma
     /// perezosa la primera vez que se pide (un inicio sin etiqueta no crea ninguna textura) y, tras <see cref="Dispose"/>, los
     /// sprites destruidos se vuelven a generar (el == de Unity). Lo sustituye el arte del artista. Los sellos de fauna (rana
     /// dardo y jaguar) quedan pendientes de revisión del asesor cultural (07 §8.2).
@@ -25,10 +26,13 @@ namespace AF.Presentation
         /// <summary>Sombra bajo la píldora, incluida en el sprite de <see cref="DifficultyPill"/> (dp).</summary>
         public const float LabelPillShadowDp = 2f;
 
-        /// <summary>Ancho del sprite de la cinta <see cref="RibbonTag"/> (dp), con su sombra.</summary>
+        /// <summary>
+        /// Ancho del sprite de la cinta «×3»/«×4» (dp), con su sombra: el de <c>DifficultyChip.RibbonSprite</c>, que lo coloca
+        /// junto a la píldora del chip y en la fila del premio de la tarjeta previa.
+        /// </summary>
         public const float RibbonTagWidthDp = 32f;
 
-        /// <summary>Alto del sprite de la cinta <see cref="RibbonTag"/> (dp), con su sombra.</summary>
+        /// <summary>Alto del sprite de la cinta «×3»/«×4» (dp), con su sombra.</summary>
         public const float RibbonTagHeightDp = 24f;
 
         /// <summary>Borde izquierdo del cuerpo de la cinta dentro de su sprite (dp): lo que queda a la izquierda es margen de antialias.</summary>
@@ -36,7 +40,7 @@ namespace AF.Presentation
 
         /// <summary>
         /// Zona de texto de la cinta dentro de su sprite (dp desde la esquina superior izquierda: x, y, ancho y alto): el cuerpo
-        /// de agua a la derecha del remache y antes de la cola en V.
+        /// a la derecha del remache y antes de la cola en V.
         /// </summary>
         public static readonly Rect RibbonTagTextDp = new Rect(6f, 2.5f, 21f, 17.5f);
 
@@ -60,16 +64,6 @@ namespace AF.Presentation
 
         /// <summary>Oro del pelaje del jaguar #E39B33 [P].</summary>
         public static readonly Color JaguarGold = Palette.Hex(0xE39B33);
-
-        /// <summary>
-        /// Color de la cinta «×3»/«×4» [P]: el agua profunda de la familia Agua (<c>agua_fondo</c> #0F6275), que se distingue del
-        /// ámbar, del índigo, del verde de Jugar y de la madera del muelle (con madera clara se perdía en el muelle, revisión de
-        /// la captura 40); crema encima, 6,5:1.
-        /// </summary>
-        public static readonly Color RibbonTagColor = Palette.FamilyWater.Deep;
-
-        /// <summary>Lo más claro de la cinta, arriba (<see cref="RibbonTagColor"/> aclarado un 12 %).</summary>
-        public static readonly Color RibbonTagLight = ColorMath.Lighten(Palette.FamilyWater.Deep, 0.12f);
 
         /// <summary>
         /// Familia de botón nocturna [P] de «Jugar · Nivel {n}» en Muy difícil (07 §7.7; propuesta §c.1: «el botón en variante
@@ -130,7 +124,6 @@ namespace AF.Presentation
         private readonly Dictionary<int, Sprite> _headerBands = new Dictionary<int, Sprite>();
         private Sprite? _ranaDardo;
         private Sprite? _jaguarHead;
-        private Sprite? _ribbonTag;
         private Sprite? _pillHard;
         private Sprite? _pillVeryHard;
         private ReliefSprites? _ctaNightLarge;
@@ -238,15 +231,6 @@ namespace AF.Presentation
 
             return pairs.ToArray();
         }
-
-        /// <summary>
-        /// Cinta «×3»/«×4» (propuesta §c.2: como la «x5» de Magic Sort, ficha §3.6): agua profunda con luz arriba y bisel, cola
-        /// en V a la derecha y, en la esquina superior izquierda, un remache macizo de <c>madera_oscura</c> que la clava sobre el
-        /// extremo de la píldora. El remache queda arriba, por encima de la altura de la «x» del texto: la anilla hueca que
-        /// había, a media altura entre la palabra y la «×», se leía como una «o» («Difícil o×3»). El texto lo pone TextMeshPro
-        /// en <see cref="RibbonTagTextDp"/>. <see cref="RibbonTagWidthDp"/> × <see cref="RibbonTagHeightDp"/> dp.
-        /// </summary>
-        public Sprite RibbonTag => _ribbonTag != null ? _ribbonTag : (_ribbonTag = BuildRibbonTag());
 
         /// <summary>
         /// Variante nocturna [P] del CTA grande de «Jugar · Nivel {n}» (<see cref="CtaLeafLarge"/>, mismas medidas y 9-slice):
@@ -436,80 +420,6 @@ namespace AF.Presentation
 
             DrawMedallionRing(pc, k, JaguarRing, JaguarRingLight, ColorMath.WithAlpha(Palette.UiPaper, 0.75f));
             return MakeSprite(pc, "label_jaguar_head", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
-        }
-
-        private Sprite BuildRibbonTag()
-        {
-            const float k = UiPxPerDp;
-            int w = Mathf.RoundToInt(RibbonTagWidthDp * k);
-            int h = Mathf.RoundToInt(RibbonTagHeightDp * k);
-            var pc = new PixelCanvas(w, h);
-            const float x0 = RibbonTagBodyLeftDp;
-            const float x1 = RibbonTagWidthDp - 0.5f;
-            const float y0 = 2.5f;
-            const float y1 = 20f;
-            const float notch = 4f;
-            float midY = (y0 + y1) * 0.5f;
-            Color body = RibbonTagColor;
-            Color outline = Palette.FamilyWater.Outline;
-            for (int y = 0; y < h; y++)
-            {
-                float yd = RibbonTagHeightDp - ((y + 0.5f) / k);
-                for (int x = 0; x < w; x++)
-                {
-                    float xd = (x + 0.5f) / k;
-
-                    // Sombra suave 1,5 dp por debajo.
-                    float sh = TagDistance(xd, yd - 1.5f, x0, y0, x1, y1, notch, midY);
-                    pc.Blend(x, y, new Color(0f, 0f, 0f, 0.32f), PixelCanvas.SoftCoverage(sh * k, 2.4f * k));
-
-                    float d = TagDistance(xd, yd, x0, y0, x1, y1, notch, midY);
-                    float cov = PixelCanvas.Coverage(d * k);
-                    if (cov <= 0f)
-                    {
-                        continue;
-                    }
-
-                    pc.Blend(x, y, outline, cov);
-                    float inside = PixelCanvas.Coverage((d + 1.1f) * k);
-                    if (inside <= 0f)
-                    {
-                        continue;
-                    }
-
-                    float v = Mathf.Clamp01((yd - y0) / (y1 - y0)); // 0 arriba, 1 abajo
-                    Color c = v < 0.45f
-                        ? Color.Lerp(RibbonTagLight, body, Smooth(0f, 0.45f, v))
-                        : Color.Lerp(body, ColorMath.Darken(body, 0.18f), Smooth(0.6f, 1f, v));
-                    if (-d < 2.1f && v < 0.4f)
-                    {
-                        c = Color.Lerp(c, Palette.FamilyWater.Light, 0.55f * (1f - ((-d - 1.1f) / 1f))); // bisel superior
-                    }
-
-                    c.a = 1f;
-                    pc.Blend(x, y, c, inside);
-                }
-            }
-
-            // Remache macizo de madera_oscura (3,5 dp) con un brillo crema de 1 dp, en la esquina superior izquierda: clava la
-            // cinta sobre el extremo de la píldora y queda por encima de la altura de la «x», así que nada circular cae en la
-            // línea del texto entre la palabra y la «×».
-            const float rivetX = x0 + 2.6f;
-            const float rivetY = y0 + 2.6f;
-            pc.FillCircle(rivetX * k, (RibbonTagHeightDp - rivetY) * k, 1.75f * k, Palette.WoodDark);
-            pc.FillCircle((rivetX - 0.45f) * k, (RibbonTagHeightDp - rivetY + 0.45f) * k, 0.5f * k, ColorMath.WithAlpha(Palette.Cream, 0.9f));
-            return MakeSprite(pc, "label_ribbon_tag", new Vector2(0.5f, 0.5f), Vector4.zero, k);
-        }
-
-        // Distancia con signo (dp, negativa dentro) a la cinta: rectángulo redondeado [x0, x1] × [y0, y1] menos la cola en V de
-        // profundidad notch en el extremo derecho.
-        private static float TagDistance(float xd, float yd, float x0, float y0, float x1, float y1, float notch, float midY)
-        {
-            float d = PixelCanvas.RoundedRectDistance(xd, yd, x0, y0, x1, y1, 3f);
-            float half = (y1 - y0) * 0.5f;
-            float vx = x1 - (notch * (1f - (Mathf.Abs(yd - midY) / half))); // borde de la V a esa altura
-            float notchD = vx - xd; // > 0 a la izquierda de la V (dentro)
-            return Mathf.Max(d, -notchD * 0.9f);
         }
 
         private Sprite BuildPill(string name, Color color)

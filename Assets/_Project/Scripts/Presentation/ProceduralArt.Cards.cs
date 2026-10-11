@@ -15,7 +15,8 @@ namespace AF.Presentation
     /// referencia y la chica (2 dosis) o la alta (5 dosis) delante, con su cavidad oscura y una marca por dosis;</description></item>
     /// <item><description>el icono grande del estreno (<see cref="CardHeroIcon"/>, <see cref="CardHeroIconDp"/>), dibujado a su
     /// tamaño para que no se vea borroso: el mismo dibujo que los iconos de 32 dp de <c>ProceduralArt.Mechanics</c>
-    /// (<see cref="MechanicIcon"/>, <see cref="MudIcon"/> y <see cref="MurkyIcon"/>) y las cuias de arriba;</description></item>
+    /// (<see cref="MechanicIcon"/> y <see cref="MudIcon"/>, con los dibujos comunes <c>DrawMechanicGlyph</c> y
+    /// <c>DrawMudGlyph</c>) y las cuias de arriba;</description></item>
     /// <item><description>el medallón de madera tallada con el centro claro donde va ese icono (<see cref="CardMedallion"/>; con
     /// el centro de agua oscura, <see cref="CardMedallionWater"/>, para el Matapi, cuya fibra clara se pierde sobre la madera
     /// clara) y la luciérnaga de la píldora «+1 Luciérnaga» (<see cref="CardFirefly"/>; 07 §7.6: amarillo verdoso
@@ -102,8 +103,9 @@ namespace AF.Presentation
 
         /// <summary>
         /// Icono grande (<see cref="CardHeroIconDp"/>) del estreno <paramref name="introMechanic"/> (<c>intro_mechanic</c> de
-        /// D-007: <c>chica</c>, <c>alta</c>, <c>hoja</c>, <c>matapi</c>, <c>liana</c>, <c>murky</c>, <c>remolino</c>,
-        /// <c>barro</c>, <c>lluvia</c>, <c>brote</c> o <c>pirana</c>), o null si no es ninguno.
+        /// D-007: <c>chica</c>, <c>alta</c>, <c>hoja</c>, <c>matapi</c>, <c>liana</c>, <c>remolino</c>, <c>barro</c>,
+        /// <c>lluvia</c>, <c>brote</c> o <c>pirana</c>), o null si no es ninguno. <c>murky</c> no tiene: su estreno, el 100, es la
+        /// tarjeta combinada, que lleva el chip «?» y no el medallón.
         /// </summary>
         public Sprite? CardHeroIcon(string? introMechanic)
         {
@@ -137,95 +139,25 @@ namespace AF.Presentation
                 case "alta":
                     return BuildCuiaSizeIcon(5, CardHeroIconDp, name);
                 case "barro":
-                    return BuildHeroPixels(name, DrawHeroMud);
-                case "murky":
-                    return BuildHeroPixels(name, DrawHeroMurky);
+                    return BuildHeroPixels(name, DrawMudGlyph);
                 default:
                     if (!MechanicTypes.TryParse(key, out MechanicType type) || type == MechanicType.None)
                     {
                         return null;
                     }
 
-                    return BuildHeroPixels(name, (pc, s) => DrawCardMechanicGlyph(pc, type, s / 96f));
+                    return BuildHeroPixels(name, (pc, s) => DrawMechanicGlyph(pc, type, s));
             }
         }
 
+        // El icono grande del estreno, con el mismo dibujo que el de 32 dp (DrawMechanicGlyph y DrawMudGlyph, en
+        // ProceduralArt.Mechanics.cs) en un lienzo de CardHeroIconDp, para que no sea el pequeño estirado.
         private Sprite BuildHeroPixels(string name, System.Action<PixelCanvas, int> draw)
         {
             int s = Mathf.RoundToInt(CardHeroIconDp * UiPxPerDp);
             var pc = new PixelCanvas(s, s);
             draw(pc, s);
             return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
-        }
-
-        // OJO, COPIA: el mismo dibujo que BuildMechanicIcon (ProceduralArt.Mechanics.cs) en un lienzo de s px (k = s / 96), para
-        // que el icono grande del estreno no sea el de 32 dp estirado. Si cambia allí, hay que cambiarlo aquí.
-        private static void DrawCardMechanicGlyph(PixelCanvas pc, MechanicType type, float k)
-        {
-            switch (type)
-            {
-                case MechanicType.Hoja:
-                    DrawPalmLeaf(pc, new Vector2(8f * k, 30f * k), new Vector2(46f * k, 96f * k), new Vector2(88f * k, 42f * k), 20f * k, Palette.JungleMid, Palette.LeafDark, Palette.Vein, 0.8f * k);
-                    break;
-                case MechanicType.Brote:
-                    DrawBud(pc, 48f * k, 18f * k, 70f * k, 24f * k, Palette.LeafMid, Palette.LeafDark, Palette.Vein);
-                    DrawCalyx(pc, 48f * k, 8f * k, 24f * k, 20f * k, Palette.LeafDark);
-                    break;
-                case MechanicType.Liana:
-                    DrawVine(pc, new Vector2(8f * k, 14f * k), new Vector2(60f * k, 30f * k), new Vector2(88f * k, 84f * k), 6f * k, 0.8f * k, true);
-                    pc.FillCircle(70f * k, 46f * k, 9f * k, Palette.Vein);
-                    pc.FillCircle(70f * k, 46f * k, 7f * k, Palette.LeafDark);
-                    break;
-                case MechanicType.Matapi:
-                    for (int i = 0; i < 5; i++)
-                    {
-                        float x = (24f + (i * 12f)) * k;
-                        Color c = (i % 3) == 0 ? Palette.FiberLight : ((i % 3) == 1 ? Palette.FiberBase : Palette.FiberShadow);
-                        pc.FillCapsule(x, 10f * k, x, 64f * k, 3.2f * k, c);
-                    }
-
-                    StrokeEllipse(pc, 48f * k, 18f * k, 30f * k, 8f * k, 5f * k, Palette.FiberBase, true);
-                    StrokeEllipse(pc, 48f * k, 52f * k, 30f * k, 8f * k, 5f * k, Palette.FiberBase, true);
-                    DrawFunnel(pc, 14f * k, 58f * k, 68f * k, 34f * k, 0.7f * k);
-                    break;
-                case MechanicType.Remolino:
-                    pc.FillEllipseSoft(48f * k, 48f * k, 44f * k, 30f * k, 2f * k, WhirlPoolColor);
-                    DrawSpiral(pc, 48f * k, 48f * k, 38f * k, 24f * k, 2.2f, 7f * k, ColorMath.WithAlpha(Palette.UiPaper, 0.6f));
-                    break;
-                case MechanicType.Lluvia:
-                    DrawCloud(pc, 4f * k, 40f * k, 88f * k, 50f * k, Pearl, 0.84f);
-                    for (int i = 0; i < 3; i++)
-                    {
-                        DrawDrop(pc, (30f + (i * 18f)) * k, (18f * k) - ((i % 2) * 6f * k), 6f * k, 13f * k, FishSide);
-                    }
-
-                    break;
-                case MechanicType.Pirana:
-                    DrawPiranha(pc, 48f * k, 48f * k, 88f * k, k);
-                    break;
-            }
-        }
-
-        // OJO, COPIA: el dibujo de MudIcon (ProceduralArt.Mechanics.cs) en un lienzo de s px.
-        private static void DrawHeroMud(PixelCanvas pc, int s)
-        {
-            float c = s * 0.5f;
-            float soft = 1.2f * s / IconPx;
-            pc.FillEllipseSoft(c, c * 0.92f, s * 0.44f, s * 0.32f, soft, ColorMath.Darken(Palette.Mud, 0.35f));
-            pc.FillEllipseSoft(c, c * 0.95f, s * 0.41f, s * 0.29f, soft, Palette.Mud);
-            DrawMudLumps(pc, s * 0.14f, s * 0.2f, s * 0.72f, s * 0.5f, s / (float)MechanicPxPerU);
-        }
-
-        // OJO, COPIA: el dibujo de MurkyIcon (ProceduralArt.Mechanics.cs) en un lienzo de s px: gota parda con el «?» marfil.
-        private static void DrawHeroMurky(PixelCanvas pc, int s)
-        {
-            float c = s * 0.5f;
-            pc.FillCircle(c, c, s * 0.46f, ColorMath.Darken(Palette.Murky, 0.35f));
-            pc.FillCircle(c, c, s * 0.42f, Palette.Murky);
-            float k = s / 64f;
-            float y0 = ((s - (QuestionGlyphHeight * k)) * 0.5f) - (QuestionGlyphBottom * k);
-            DrawQuestionGlyph(pc, c, y0, k, ColorMath.WithAlpha(Palette.Ink, 0.5f), 1.2f * k);
-            DrawQuestionGlyph(pc, c, y0, k, Palette.UiPaper, 0f);
         }
 
         // Dos cuias de pie sobre la misma base y con la misma u: a la izquierda la estándar de 4 en sombra (la referencia) y a la

@@ -39,8 +39,9 @@ namespace AF.UI
         private const float GapDp = 8f;
         private const float PadDp = 16f;
 
-        // «Te faltan {n}» de dos ranuras vecinas a la vez: cada aviso cabe en su paso de ranura (64 + 8) con 4 dp de aire.
-        private const float MissingNarrowDp = SlotDp + GapDp - 4f;
+        // «Te faltan {n}» de dos ranuras vecinas a la vez: cada aviso cabe en su paso de ranura (64 + 8) con 2 dp de aire entre
+        // los dos, lo justo para que una cifra de 3 (el máximo con los precios de 08 §9) quepa a 11 sp en una línea.
+        private const float MissingNarrowDp = SlotDp + GapDp - 2f;
 
         private readonly ProceduralArt _art;
         private readonly Image _tray;
@@ -143,6 +144,24 @@ namespace AF.UI
 
         /// <summary>La cara de Revelar está pulsada porque se está eligiendo la cuia.</summary>
         public bool RevealPressed => _revealPressed;
+
+        /// <summary>Relieve del botón de Revelar: la cara que baja mientras se elige la cuia (tests).</summary>
+        public ReliefButton RevealRelief => _reveal.Parts.Relief;
+
+        /// <summary>Marea ofrece el video (<c>rv_undo_refill</c>): «+3» con el icono de video.</summary>
+        public bool UndoShowsVideo => _undo.VideoShown;
+
+        /// <summary>Texto del aviso «Te faltan {n}» de Revelar (tests de tamaño y desbordes).</summary>
+        public TextMeshProUGUI RevealMissingLabel => _reveal.MissingLabel;
+
+        /// <summary>Texto del aviso «Te faltan {n}» de Cuia extra (tests de tamaño y desbordes).</summary>
+        public TextMeshProUGUI ExtraMissingLabel => _extra.MissingLabel;
+
+        /// <summary>Etiqueta de precio de Revelar (tests de solapes).</summary>
+        public RectTransform RevealPriceRect => _reveal.PriceRect;
+
+        /// <summary>Etiqueta de precio de Cuia extra (tests de solapes).</summary>
+        public RectTransform ExtraPriceRect => _extra.PriceRect;
 
         public void Bind(LevelFlow flow, GameServices? services)
         {
@@ -395,7 +414,9 @@ namespace AF.UI
         }
 
         // «Te faltan {n}» encima de cada ranura sin saldo (104 dp, como desde B2-1); si la vecina también lo enseña, los dos
-        // estrechan a su paso de ranura para no pisarse (la cifra se encoge hasta 9 sp si hace falta).
+        // estrechan a su paso de ranura para no pisarse. El texto va a 12 sp y, si no cabe, hasta 11; si ni así cabe en una
+        // línea (4 cifras con el aviso estrecho), la cifra baja a una segunda línea y la placa crece hacia arriba
+        // (Slot.PlaceMissing).
         private void LayoutMissing()
         {
             bool undo = _undo.MissingShown;
@@ -447,6 +468,28 @@ namespace AF.UI
             /// <summary>Ancho del aviso «Te faltan {n}» sin vecinas que también lo enseñen (dp).</summary>
             public const float MissingWideDp = SlotDp + 40f;
 
+            // Tamaño del aviso: 12 sp (02 §12) y, si en su ancho no cabe, hasta 11 sp, nunca menos (revisión de T14) [P].
+            private const float MissingMaxSp = 12f;
+            private const float MissingMinSp = 11f;
+
+            // Placa del aviso: su borde de abajo, 6 dp sobre el canto de la ranura; 18 dp de alto con una línea y 34 con dos
+            // (2 × 16,4 dp de línea de Nunito a 12 sp y algo de aire). Dos líneas solo si la cifra no cabe en una a 11 sp: la
+            // placa crece hacia arriba y no a los lados, así que nunca se mete en el aviso de la ranura vecina (02 §12: los
+            // contenedores crecen y nada se recorta).
+            private const float MissingGapDp = 6f;
+            private const float MissingOneLineDp = 18f;
+            private const float MissingTwoLinesDp = 34f;
+
+            // Holgura al decidir si el texto cabe en una línea (dp): la de redondeo de las medidas de TextMeshPro.
+            private const float MissingFitSlackDp = 0.5f;
+
+            // Etiqueta de precio: centrada 72 − 3 dp por debajo del canto de arriba de la ranura (montada sobre el borde de
+            // abajo) y, como mucho, del ancho de su paso de ranura con 2 dp de aire (70 dp). Un precio de 4 cifras (fuera de los
+            // rangos de 08 §9) no cabe: la etiqueta entera se encoge hasta caber, sin que su cifra (16 sp) baje de 12 sp (02 §12).
+            private const float PriceCenterDp = 72f - 3f;
+            private const float PriceMaxDp = SlotDp + GapDp - 2f;
+            private const float PriceMinScale = 12f / 16f;
+
             private readonly RectTransform _badge;
             private readonly Image _badgeDisc;
             private readonly TextMeshProUGUI _badgeText;
@@ -462,6 +505,8 @@ namespace AF.UI
             private float _y;
             private float _missingW = MissingWideDp;
             private int _missingShown = -1;
+            private float _missingMinWidth;
+            private bool _missingTwoLines;
 
             public Slot(string name, Transform hud, ProceduralArt art, Sprite icon, Sprite iconDisabled, string label, Action onClick)
             {
@@ -496,8 +541,8 @@ namespace AF.UI
                 Image missingPlate = UiBuilder.Sliced("Plate", _missing, art.RoundedRect, Palette.PanelLight);
                 missingPlate.pixelsPerUnitMultiplier = 24f / 9f;
                 UiBuilder.Stretch(missingPlate.rectTransform);
-                _missingText = UiBuilder.Label("Value", _missing, TextStyle.PlainBold, string.Empty, 11f, Palette.UiRedWarning, TextAlignmentOptions.Center);
-                UiBuilder.AutoSize(_missingText, 9f, 11f); // con el aviso estrecho de dos vecinas, la cifra cabe
+                _missingText = UiBuilder.Label("Value", _missing, TextStyle.PlainBold, string.Empty, MissingMaxSp, Palette.UiRedWarning, TextAlignmentOptions.Center);
+                UiBuilder.AutoSize(_missingText, MissingMinSp, MissingMaxSp);
                 UiBuilder.Stretch(_missingText.rectTransform);
                 _missing.gameObject.SetActive(false);
             }
@@ -521,6 +566,10 @@ namespace AF.UI
             public float MissingWidth => _missingW;
 
             public RectTransform MissingRect => _missing;
+
+            public TextMeshProUGUI MissingLabel => _missingText;
+
+            public RectTransform PriceRect => _price.Root;
 
             public void SetActive(bool active)
             {
@@ -590,12 +639,19 @@ namespace AF.UI
             {
                 _price.Root.gameObject.SetActive(true);
                 _price.Set(price, 0, missing > 0);
-                _price.PlaceAt((SlotDp - _price.Width) * 0.5f, 72f - 16f);
+                float k = Mathf.Clamp(PriceMaxDp / _price.Width, PriceMinScale, 1f);
+                _price.Root.localScale = new Vector3(k, k, 1f);
+                _price.PlaceAt((SlotDp - (_price.Width * k)) * 0.5f, PriceCenterDp - (PriceTag.HeightDp * 0.5f * k));
                 _missing.gameObject.SetActive(missing > 0 && Parts.Button.gameObject.activeSelf);
                 if (missing > 0 && missing != _missingShown)
                 {
                     _missingShown = missing;
-                    _missingText.text = string.Format(System.Globalization.CultureInfo.InvariantCulture, UiText.Missing, UiText.Grouped(missing));
+                    string text = string.Format(System.Globalization.CultureInfo.InvariantCulture, UiText.Missing, UiText.Grouped(missing));
+                    _missingText.text = text;
+
+                    // Ancho en una línea a 11 sp: con el autoajuste encendido, TextMeshPro mide al tamaño máximo (12 sp), y el
+                    // ancho es proporcional al tamaño. Solo cuando cambia la cifra.
+                    _missingMinWidth = _missingText.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x * (MissingMinSp / MissingMaxSp);
                 }
 
                 if (missing > 0)
@@ -610,11 +666,20 @@ namespace AF.UI
                 _missing.gameObject.SetActive(false);
             }
 
-            // «Te faltan {n}» de widthDp centrado sobre la ranura, 24 dp por encima de su canto.
+            // «Te faltan {n}» de widthDp centrado sobre la ranura, con su borde de abajo 6 dp por encima del canto: en una línea
+            // si a 11 sp cabe en widthDp y, si no, en dos («Te faltan» y la cifra), con la placa más alta.
             public void PlaceMissing(float widthDp)
             {
                 _missingW = widthDp;
-                UiBuilder.Place(_missing, _x + ((SlotDp - widthDp) * 0.5f), _y - 24f, widthDp, 18f);
+                bool twoLines = _missingMinWidth > widthDp - MissingFitSlackDp;
+                if (twoLines != _missingTwoLines)
+                {
+                    _missingTwoLines = twoLines;
+                    _missingText.textWrappingMode = twoLines ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+                }
+
+                float h = twoLines ? MissingTwoLinesDp : MissingOneLineDp;
+                UiBuilder.Place(_missing, _x + ((SlotDp - widthDp) * 0.5f), _y - MissingGapDp - h, widthDp, h);
             }
         }
     }

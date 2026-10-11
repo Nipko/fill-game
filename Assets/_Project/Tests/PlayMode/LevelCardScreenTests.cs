@@ -28,9 +28,10 @@ namespace AF.Tests.PlayMode
     /// el 41; los 11 tutoriales con su texto exacto en 2 líneas como máximo a 360 dp y ≥ 12 sp; la tarjeta combinada del 100 con
     /// la línea T4, la de la Luciérnaga, «+1 Luciérnaga» y el chip «?»; el chip en el 106; el Matapi sobre agua oscura (72 y
     /// 63); 1 toque → intro → Playing (también a
-    /// mitad de la entrada, con la salida desde la opacidad y la escala del toque); nada se recorta con la fuente al 130 %
-    /// (también en 16:9); las llaves de 43, 83 y 163 siguen siendo las frutas que nombran los textos; y la tarjeta no sale al
-    /// reanudar ni al reintentar.
+    /// mitad de la entrada, con la salida desde la opacidad y la escala del toque), con el raycast del EventSystem dando
+    /// primero en el velo en las esquinas, en el centro y sobre Reiniciar; nada se recorta con la fuente al 130 % (también en
+    /// 16:9); las superficies de las tarjetas de 1-200 salen de 3 altos compartidos; las llaves de 43, 83 y 163 siguen siendo
+    /// las frutas que nombran los textos; y la tarjeta no sale al reanudar ni al reintentar.
     /// </summary>
     public sealed class LevelCardScreenTests
     {
@@ -448,6 +449,62 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator CardSurfaces_ThreeSharedHeights_StretchedToEachCard()
+        {
+            // Memoria (revisión de T13): cada superficie de madera es una textura que se guarda toda la sesión (0,5-0,9 MB) y
+            // cuesta generarla. Las tarjetas de 1-200 a 360 dp tienen 5 o 6 altos (el 100 sin regalo, el 6.º), pero sus
+            // superficies salen de la escala de altos compartidos (ModalKit.SharedSurfaceHeight): como mucho 3, estiradas al alto
+            // de cada tarjeta como mucho √1,25 ≈ 1,12 veces (el degradado y el lustre son proporcionales al alto).
+            yield return CardSetup.Load(40);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            LevelCardView card = view.LevelCard;
+            LevelCatalog catalog = boot.Flow!.Catalog;
+            var heights = new SortedSet<int>();
+            var surfaces = new Dictionary<Sprite, int>();
+            float worst = 1f;
+            int cards = 0;
+            for (int level = 1; level <= 200; level++)
+            {
+                LevelDefinition? definition = catalog.Find(level);
+                if (definition == null)
+                {
+                    continue;
+                }
+
+                for (int pass = 0; pass < (level == 100 ? 2 : 1); pass++)
+                {
+                    LevelCardInfo? info = LevelCardInfo.For(definition, level, AF.Economy.EconomyConfig.Defaults, level == 100 && pass == 0);
+                    if (info == null)
+                    {
+                        continue;
+                    }
+
+                    card.Show(info, false, view.CanvasWidth, view.CardCanvasHeight, view.SafeTopDp, view.CardSafeBottom);
+                    cards++;
+                    float body = card.Panel.rect.height - 16f;
+                    Sprite surface = card.Surface.sprite;
+                    float surfaceDp = surface.rect.height * 100f / surface.pixelsPerUnit;
+                    Assert.That(card.Surface.rectTransform.rect.height, Is.EqualTo(body).Within(0.01f), "la superficie llena el cuerpo en el " + level);
+                    Assert.That(surfaceDp, Is.EqualTo(ModalKit.SharedSurfaceHeight(body)).Within(0.5f), "de la escala de altos en el " + level);
+                    float stretch = Mathf.Max(body / surfaceDp, surfaceDp / body);
+                    worst = Mathf.Max(worst, stretch);
+                    heights.Add(Mathf.RoundToInt(card.Panel.rect.height));
+                    surfaces[surface] = Mathf.RoundToInt(surfaceDp);
+                }
+            }
+
+            var shared = new List<int>(surfaces.Values);
+            shared.Sort();
+            Debug.Log("AF_T24 tarjetas: " + cards + "; altos " + string.Join(", ", heights) + " dp; superficies " + string.Join(", ", shared)
+                + " dp; estirado máximo " + worst.ToString("F3", System.Globalization.CultureInfo.InvariantCulture));
+            Assert.That(cards, Is.GreaterThan(20), "tarjetas en 1-200");
+            Assert.That(surfaces.Count, Is.LessThanOrEqualTo(3), "superficies distintas en 1-200");
+            Assert.That(surfaces.Count, Is.LessThan(heights.Count), "varios altos comparten superficie");
+            Assert.That(worst, Is.LessThanOrEqualTo(Mathf.Sqrt(ModalKit.SharedSurfaceStep) + 0.005f), "estirado máximo");
+        }
+
+        [UnityTest]
         public IEnumerator Debut_KeysMatchTexts()
         {
             // Los textos nombran la fruta llave: aguaje (4) en la Hoja del 43, taperebá (3) en la Liana del 83 y camu camu (6) en la
@@ -579,11 +636,83 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 300); // entrada de 220 ms
         }
 
-        /// <summary>Un toque en el velo de la tarjeta por el EventSystem (el mismo camino que un dedo).</summary>
+        /// <summary>
+        /// Un toque en la tarjeta por el EventSystem, el mismo camino que un dedo: en las cuatro esquinas de la pantalla, en su
+        /// centro y sobre Reiniciar, el primer impacto de <see cref="EventSystem.RaycastAll"/> es el velo (Dim), así que ningún
+        /// botón de debajo recibe el toque; el clic va a ese primer impacto, en el centro.
+        /// </summary>
         public static void TapCard(LevelCardView card)
         {
-            var data = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left };
-            ExecuteEvents.Execute(card.Dim.gameObject, data, ExecuteEvents.pointerClickHandler);
+            EventSystem events = EventSystem.current;
+            Assert.That(events, Is.Not.Null, "EventSystem de la escena");
+            Canvas canvas = card.Root.GetComponentInParent<Canvas>().rootCanvas;
+            Camera? cam = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
+            GameScreen? view = GameBootstrap.Current != null ? GameBootstrap.Current.View : null;
+
+            // En batchmode la pantalla real es más pequeña que la simulada de la maqueta (360 × 780 dp a 3 px/dp) y parte del HUD
+            // (Reiniciar, arriba a la derecha) queda fuera de ella, donde ningún toque llega: mientras se comprueban los toques,
+            // el lienzo se escala para que toda la maqueta quepa en la pantalla real. Con la cámara de las capturas ya cabe.
+            float scale = canvas.scaleFactor;
+            if (cam == null && view != null)
+            {
+                float fit = Mathf.Min(Screen.width / view.CanvasWidth, Screen.height / view.CardCanvasHeight);
+                if (fit < scale)
+                {
+                    canvas.scaleFactor = fit;
+                }
+            }
+
+            var hits = new List<RaycastResult>();
+            var data = new PointerEventData(events) { button = PointerEventData.InputButton.Left };
+            try
+            {
+                Canvas.ForceUpdateCanvases();
+                var corners = new Vector3[4];
+                ((RectTransform)canvas.transform).GetWorldCorners(corners);
+                Vector2 min = RectTransformUtility.WorldToScreenPoint(cam, corners[0]);
+                Vector2 max = RectTransformUtility.WorldToScreenPoint(cam, corners[2]);
+                var inset = new Vector2(4f, 4f); // px dentro de la pantalla
+                var points = new List<(string Name, Vector2 Point)>
+                {
+                    ("abajo a la izquierda", min + inset),
+                    ("arriba a la izquierda", new Vector2(min.x + inset.x, max.y - inset.y)),
+                    ("arriba a la derecha", max - inset),
+                    ("abajo a la derecha", new Vector2(max.x - inset.x, min.y + inset.y)),
+                    ("en el centro", (min + max) * 0.5f),
+                };
+                if (view != null && view.RestartButton.gameObject.activeInHierarchy)
+                {
+                    var restart = (RectTransform)view.RestartButton.transform;
+                    points.Add(("sobre Reiniciar", RectTransformUtility.WorldToScreenPoint(cam, restart.TransformPoint(restart.rect.center))));
+                }
+
+                foreach ((string name, Vector2 point) in points)
+                {
+                    data.position = point;
+                    hits.Clear();
+                    events.RaycastAll(data, hits);
+                    string where = "el toque " + name + " (" + point + " px; pantalla " + Screen.width + " × " + Screen.height + ")";
+                    Assert.That(hits.Count, Is.GreaterThan(0), where + " da en algo");
+                    Assert.That(hits[0].gameObject, Is.SameAs(card.Dim.gameObject), where + ": el primer impacto es el velo, no " + hits[0].gameObject.name);
+                }
+
+                // El clic, en el centro y al primer impacto.
+                data.position = points[4].Point;
+                hits.Clear();
+                events.RaycastAll(data, hits);
+                data.pointerCurrentRaycast = hits[0];
+                data.pointerPressRaycast = hits[0];
+            }
+            finally
+            {
+                if (canvas.scaleFactor != scale)
+                {
+                    canvas.scaleFactor = scale;
+                    Canvas.ForceUpdateCanvases();
+                }
+            }
+
+            ExecuteEvents.ExecuteHierarchy(hits[0].gameObject, data, ExecuteEvents.pointerClickHandler);
         }
 
         /// <summary>Avanza hasta Playing con la vista quieta (como mucho 4 s).</summary>
@@ -645,7 +774,9 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        /// <summary>Todo lo de la tarjeta (textos, iconos, chip, medallón y píldora) queda dentro de su cuerpo.</summary>
+        /// <summary>
+        /// Todo lo de la tarjeta (textos, iconos, chip, cabecera, fila del premio, medallón y píldora) queda dentro de su cuerpo.
+        /// </summary>
         public static void AssertInsidePanel(GameScreen view)
         {
             Canvas.ForceUpdateCanvases();
@@ -666,6 +797,15 @@ namespace AF.Tests.PlayMode
             if (card.MurkyShown)
             {
                 parts.Add(card.Murky.Root);
+            }
+
+            // Los bloques enteros: la cabecera, la fila del premio (semilla, texto y cinta), el medallón y la píldora.
+            foreach (RectTransform? block in new[] { card.HeaderRect, card.RewardRowRect, card.MedallionRect, card.GiftRect })
+            {
+                if (block != null)
+                {
+                    parts.Add(block);
+                }
             }
 
             foreach (RectTransform part in parts)
