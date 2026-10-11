@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
+using System.Threading;
 using AF.Core.Rules;
 using AF.Economy;
 using AF.GameFlow;
@@ -17,10 +19,16 @@ namespace AF.Tests.EditMode
     /// Una escritura del perfil por acción del jugador (revisión de B2-5; 02 R8 y §14; 08 §5.4): <see cref="ProfileSaveBatch"/>
     /// junta los guardados de la cartera, el progreso y <c>level_state</c> de una acción en una sola escritura, de modo que la
     /// victoria ya no hace cuatro escrituras con su fsync y un cierre entre el cobro y <c>level_state</c> ya no puede reabrir
-    /// el rescate o la rendición y cobrarlos otra vez.
+    /// el rescate o la rendición y cobrarlos otra vez. Con un almacén que separa la serialización del disco
+    /// (<see cref="IProfileByteStore"/>), el cierre del lote entrega los bytes al escritor de segundo plano (T-D, opción B): gana
+    /// el último, sus fallos se publican al hilo principal y dejan el perfil pendiente, y el fin de nivel, la cartera y
+    /// <see cref="ProfileSaveBatch.FlushSync"/> esperan al escritor y escriben en síncrono.
     /// </summary>
     public sealed class SaveBatchTests
     {
+        // Tope de las esperas a otros hilos en estos tests (no se alcanza si todo va bien).
+        private const int WaitMs = 10000;
+
         [Test]
         public void Batch_DefersSaves_AndWritesOnceWhenTheOutermostScopeCloses()
         {
@@ -193,18 +201,243 @@ namespace AF.Tests.EditMode
             Assert.That(saved.LevelState!.History, Is.EqualTo("h2|P||c||"));
         }
 
+        [Test]
+        public void Background_EachBatchHandsItsBytesToTheWriter_AndTheLatestWins()
+        {
+            // T-D: el cierre del lote solo serializa y entrega; el disco va en el hilo del escritor, con cola de 1.
+            var disk = new ThreadedDisk();
+            var batch = new ProfileSaveBatch(disk);
+            Assert.That(batch.Writer, Is.Not.Null, "un IProfileByteStore lleva escritor en segundo plano");
+            Profile profile = Wallet.NewProfile(new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5)));
+
+            disk.Hold(); // el escritor se queda a medias en la primera escritura
+            using (batch.Begin())
+            {
+                profile.Wallet.Seeds = 1;
+                batch.Save(profile);
+            }
+
+            Assert.That(disk.WaitEntered(WaitMs), Is.True, "el escritor empezó la primera");
+            Assert.That(batch.LastWriteInBackground, Is.True);
+            Assert.That(batch.PendingSave, Is.False, "entregado al escritor: no queda nada sin entregar");
+            for (int seeds = 2; seeds <= 4; seeds++)
+            {
+                using (batch.Begin())
+                {
+                    profile.Wallet.Seeds = seeds;
+                    batch.Save(profile);
+                }
+            }
+
+            Assert.That(disk.Count, Is.EqualTo(0), "el hilo principal no espera al disco");
+            Assert.That(batch.WriteCount, Is.EqualTo(4), "una escritura pedida por acción (D-008)");
+            Assert.That(batch.Writer!.IsIdle, Is.False);
+
+            disk.Release();
+            Assert.That(batch.Writer.WaitIdle(WaitMs), Is.True);
+            Assert.That(disk.Count, Is.EqualTo(2), "la primera, ya empezada, y la última: la cola de 1 descarta la 2 y la 3");
+            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(4), "gana el último");
+            Assert.That(disk.WritesOnMainThread, Is.EqualTo(0), "el disco nunca en el hilo principal");
+            Assert.That(batch.Writer.BackgroundWrites, Is.EqualTo(2));
+            Assert.That(batch.LastBackgroundMs, Is.GreaterThanOrEqualTo(0.0));
+            Assert.That(batch.FlushSync(WaitMs), Is.True, "todo en disco");
+            Assert.That(disk.Count, Is.EqualTo(2), "FlushSync no reescribe lo que ya está en disco");
+        }
+
+        [Test]
+        public void Background_AFailedWrite_IsPublishedToTheMainThread_StaysPending_AndIsRetried()
+        {
+            // T-D (la política de B2-5, llevada al escritor): si falla en su hilo, el perfil sigue en memoria y sale con el
+            // siguiente guardado o con el Flush síncrono; la excepción nunca llega a quien guarda.
+            var disk = new ThreadedDisk();
+            var batch = new ProfileSaveBatch(disk);
+            Profile profile = Wallet.NewProfile(new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5)));
+
+            disk.FailuresLeft = 1;
+            using (batch.Begin())
+            {
+                profile.Wallet.Seeds = 50;
+                batch.Save(profile);
+            }
+
+            Assert.That(batch.Writer!.WaitIdle(WaitMs), Is.True);
+            Assert.That(disk.Count, Is.EqualTo(0));
+            Assert.That(batch.PendingSave, Is.True, "el fallo del escritor llega al hilo principal: el perfil sigue pendiente");
+            Assert.That(batch.BackgroundFailures, Is.EqualTo(1));
+            StringAssert.Contains("disco lleno", batch.LastBackgroundError);
+
+            // 1. Reintento con el siguiente guardado (otra vez en segundo plano).
+            using (batch.Begin())
+            {
+                profile.Wallet.Seeds = 60;
+                batch.Save(profile);
+            }
+
+            Assert.That(batch.Writer.WaitIdle(WaitMs), Is.True);
+            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(60));
+            Assert.That(batch.PendingSave, Is.False);
+
+            // 2. Reintento con el Flush síncrono (OnApplicationPause): escribe en el hilo principal.
+            disk.FailuresLeft = 1;
+            using (batch.Begin())
+            {
+                profile.Wallet.Seeds = 70;
+                batch.Save(profile);
+            }
+
+            Assert.That(batch.Writer.WaitIdle(WaitMs), Is.True);
+            Assert.That(batch.FlushSync(WaitMs), Is.True, "se reescribe en síncrono y no se pierde nada");
+            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(70));
+            Assert.That(disk.LastOnMainThread, Is.True);
+            Assert.That(batch.PendingSave, Is.False);
+
+            // 3. Un guardado fuera de lote no recibe la excepción del escritor: escribe el perfil entero y ya está.
+            disk.FailuresLeft = 1;
+            using (batch.Begin())
+            {
+                profile.Wallet.Seeds = 80;
+                batch.Save(profile);
+            }
+
+            Assert.That(batch.Writer.WaitIdle(WaitMs), Is.True);
+            Assert.That(() => batch.Save(profile), Throws.Nothing);
+            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(80));
+            Assert.That(batch.PendingSave, Is.False);
+            Assert.That(batch.BackgroundFailures, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void Durable_TheWalletWaitsForTheWriter_AndWritesOnTheMainThread()
+        {
+            // T-D: la cartera (batch.Durable, como en GameBootstrap) espera al escritor y escribe en síncrono al cerrar su
+            // acción; fuera de un lote sigue viendo sus fallos, como antes.
+            var disk = new ThreadedDisk();
+            var batch = new ProfileSaveBatch(disk);
+            var clock = new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5));
+            Profile profile = Wallet.NewProfile(clock);
+            var wallet = new Wallet(profile, batch.Durable, clock);
+
+            disk.Hold();
+            using (batch.Begin())
+            {
+                profile.Stats.Sessions = 1;
+                batch.Save(profile); // un vertido: se queda a medias en el escritor
+            }
+
+            Assert.That(disk.WaitEntered(WaitMs), Is.True);
+            var opener = new Thread(() =>
+            {
+                Thread.Sleep(100);
+                disk.Release();
+            });
+            opener.Start();
+            using (batch.Begin())
+            {
+                Assert.That(wallet.Apply(Transaction.Earn(SeedSource.Basket, 50)).IsApplied, Is.True);
+            }
+
+            opener.Join();
+            Assert.That(batch.LastWriteInBackground, Is.False, "la cartera escribe en síncrono");
+            Assert.That(disk.Count, Is.EqualTo(2), "primero termina la del escritor y después va la de la cartera");
+            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(50), "en disco al cerrar la acción, sin Flush");
+            Assert.That(disk.LastOnMainThread, Is.True);
+            Assert.That(batch.Writer!.IsIdle, Is.True);
+            Assert.That(batch.PendingSave, Is.False);
+
+            disk.FailuresLeft = 1;
+            TransactionResult direct = wallet.Apply(Transaction.Earn(SeedSource.Basket, 10));
+            Assert.That(direct.Saved, Is.False, "fuera de un lote, el fallo llega a la cartera");
+            Assert.That(wallet.PendingSave, Is.True);
+            Assert.That(wallet.Flush(), Is.True);
+            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(60));
+            Assert.That(disk.LastOnMainThread, Is.True);
+        }
+
+        [Test]
+        public void FlushSync_WaitsForTheWriterWithACap_AndIsTrueOnlyWhenTheLatestIsOnDisk()
+        {
+            var disk = new ThreadedDisk();
+            var batch = new ProfileSaveBatch(disk) { SyncTimeoutMs = 50 };
+            Profile profile = Wallet.NewProfile(new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5)));
+
+            disk.Hold();
+            using (batch.Begin())
+            {
+                profile.Wallet.Seeds = 1;
+                batch.Save(profile);
+            }
+
+            Assert.That(disk.WaitEntered(WaitMs), Is.True);
+            using (batch.Begin())
+            {
+                profile.Wallet.Seeds = 2;
+                batch.Save(profile); // en la cola
+            }
+
+            Assert.That(batch.FlushSync(50), Is.False, "tope de espera: el escritor sigue a medias");
+
+            // Fin de nivel con el escritor atascado más que el tope: no escribe a la vez que él; sigue pendiente.
+            using (batch.Begin())
+            {
+                batch.RequireDurable();
+                profile.Wallet.Seeds = 3;
+                batch.Save(profile);
+            }
+
+            Assert.That(batch.LastWriteInBackground, Is.False);
+            Assert.That(batch.PendingSave, Is.True, "sigue en memoria");
+            Assert.That(disk.Count, Is.EqualTo(0));
+
+            disk.Release();
+            Assert.That(batch.FlushSync(WaitMs), Is.True);
+            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(3), "el último perfil, también en disco");
+            Assert.That(batch.PendingSave, Is.False);
+            Assert.That(batch.Writer!.AllWritten, Is.True);
+        }
+
+        [Test]
+        public void WithTheWriter_EveryPourIsOneBackgroundWrite_AndTheVictoryIsSynchronous()
+        {
+            // T-D y D-008: un vertido, una escritura entregada al escritor; la victoria (fin de nivel), una escritura síncrona
+            // en el hilo principal que ya deja en disco el perfil del nivel ganado.
+            var rig = new BatchRig(threaded: true);
+            rig.Start(7);
+            SolveResult solution = LevelStateTests.Solve(rig.Flow);
+            int last = solution.MoveCount - 1;
+            for (int i = 0; i <= last; i++)
+            {
+                int before = rig.Batch.WriteCount;
+                Pour move = solution.GetMove(i);
+                rig.Flow.TapCuia(move.Source);
+                rig.Flow.TapCuia(move.Target);
+                Assert.That(rig.Batch.WriteCount, Is.EqualTo(before + 1), "vertido " + (i + 1) + ": una escritura");
+                Assert.That(rig.Batch.LastWriteInBackground, Is.EqualTo(i < last), i < last ? "vertido en segundo plano" : "victoria en síncrono");
+            }
+
+            ThreadedDisk disk = rig.Threaded!;
+            Assert.That(disk.LastOnMainThread, Is.True);
+            Profile won = disk.Last;
+            Assert.That(won.LevelState, Is.Null);
+            Assert.That(won.Progress.NextLevel, Is.EqualTo(8));
+            Assert.That(won.Wallet.Seeds, Is.EqualTo(rig.Flow.HarvestSeeds), "la Cosecha va en la misma escritura");
+            Assert.That(rig.Batch.Writer!.IsIdle, Is.True, "la victoria esperó al escritor");
+            Assert.That(rig.Batch.FlushSync(WaitMs), Is.True);
+            Assert.That(disk.WritesOnMainThread, Is.EqualTo(1), "solo la victoria en el hilo principal");
+        }
+
         /// <summary>Flujo con cartera, progreso y nivel en curso en el mismo perfil, guardado por el lote sobre un disco que graba cada escritura.</summary>
         private sealed class BatchRig
         {
-            public BatchRig(int offset = 0, int seeds = 0, int maxLevel = 0)
+            public BatchRig(int offset = 0, int seeds = 0, int maxLevel = 0, bool threaded = false)
             {
                 Clock = new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5));
                 Profile = Wallet.NewProfile(Clock);
                 Profile.Wallet.Seeds = seeds;
                 Profile.Progress.MaxLevel = maxLevel;
                 Disk = new RecordingProfileStore();
-                Batch = new ProfileSaveBatch(Disk);
-                Wallet = new Wallet(Profile, Batch, Clock);
+                Threaded = threaded ? new ThreadedDisk() : null;
+                Batch = new ProfileSaveBatch(Threaded ?? (IProfileStore)Disk);
+                Wallet = new Wallet(Profile, Batch.Durable, Clock); // como GameBootstrap (T-D)
                 Listener = new RecordingListener();
                 Flow = new LevelFlow(
                     LevelCatalog.Create(new[] { TestPacks.Tutorial }, offset),
@@ -224,6 +457,9 @@ namespace AF.Tests.EditMode
             public Profile Profile { get; }
 
             public RecordingProfileStore Disk { get; }
+
+            /// <summary>Disco con escritor en segundo plano (null: <see cref="Disk"/>, síncrono).</summary>
+            public ThreadedDisk? Threaded { get; }
 
             public ProfileSaveBatch Batch { get; }
 
@@ -271,6 +507,160 @@ namespace AF.Tests.EditMode
             public void Delete()
             {
                 Snapshots.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Disco de prueba que separa la serialización de la escritura (<see cref="IProfileByteStore"/>, como
+        /// <c>LocalProfileStore</c>): graba cada escritura con el hilo que la hizo, puede fallar a propósito y puede retener al
+        /// escritor a mitad de una escritura (<see cref="Hold"/>).
+        /// </summary>
+        private sealed class ThreadedDisk : IProfileByteStore
+        {
+            private static readonly UTF8Encoding Utf8 = new UTF8Encoding(false);
+
+            private readonly object _lock = new object();
+            private readonly List<string> _snapshots = new List<string>();
+            private readonly List<bool> _onMain = new List<bool>();
+            private readonly ManualResetEventSlim _open = new ManualResetEventSlim(true);
+            private readonly ManualResetEventSlim _entered = new ManualResetEventSlim(false);
+            private readonly int _mainThread = Thread.CurrentThread.ManagedThreadId;
+            private int _failuresLeft;
+
+            public int FailuresLeft
+            {
+                get
+                {
+                    lock (_lock)
+                    {
+                        return _failuresLeft;
+                    }
+                }
+
+                set
+                {
+                    lock (_lock)
+                    {
+                        _failuresLeft = value;
+                    }
+                }
+            }
+
+            public int Count
+            {
+                get
+                {
+                    lock (_lock)
+                    {
+                        return _snapshots.Count;
+                    }
+                }
+            }
+
+            public Profile Last
+            {
+                get
+                {
+                    lock (_lock)
+                    {
+                        return ProfileJson.Deserialize(_snapshots[_snapshots.Count - 1]);
+                    }
+                }
+            }
+
+            public bool LastOnMainThread
+            {
+                get
+                {
+                    lock (_lock)
+                    {
+                        return _onMain[_onMain.Count - 1];
+                    }
+                }
+            }
+
+            public int WritesOnMainThread
+            {
+                get
+                {
+                    lock (_lock)
+                    {
+                        int n = 0;
+                        for (int i = 0; i < _onMain.Count; i++)
+                        {
+                            n += _onMain[i] ? 1 : 0;
+                        }
+
+                        return n;
+                    }
+                }
+            }
+
+            /// <summary>La siguiente escritura se queda a medias hasta <see cref="Release"/>.</summary>
+            public void Hold()
+            {
+                _entered.Reset();
+                _open.Reset();
+            }
+
+            public void Release()
+            {
+                _open.Set();
+            }
+
+            public bool WaitEntered(int ms)
+            {
+                return _entered.Wait(ms);
+            }
+
+            public ProfileLoadResult Load()
+            {
+                lock (_lock)
+                {
+                    return _snapshots.Count == 0
+                        ? new ProfileLoadResult(ProfileLoadStatus.NotFound, null)
+                        : new ProfileLoadResult(ProfileLoadStatus.Loaded, ProfileJson.Deserialize(_snapshots[_snapshots.Count - 1]));
+                }
+            }
+
+            public void Save(Profile profile)
+            {
+                WriteBytes(Serialize(profile));
+            }
+
+            public void Delete()
+            {
+                lock (_lock)
+                {
+                    _snapshots.Clear();
+                    _onMain.Clear();
+                }
+            }
+
+            public byte[] Serialize(Profile profile)
+            {
+                return Utf8.GetBytes(ProfileJson.Serialize(profile));
+            }
+
+            public void WriteBytes(byte[] bytes)
+            {
+                _entered.Set();
+                if (!_open.Wait(WaitMs))
+                {
+                    throw new IOException("el test no soltó el disco");
+                }
+
+                lock (_lock)
+                {
+                    if (_failuresLeft > 0)
+                    {
+                        _failuresLeft--;
+                        throw new IOException("disco lleno");
+                    }
+
+                    _snapshots.Add(Utf8.GetString(bytes));
+                    _onMain.Add(Thread.CurrentThread.ManagedThreadId == _mainThread);
+                }
             }
         }
     }

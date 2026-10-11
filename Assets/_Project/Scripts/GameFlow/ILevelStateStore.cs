@@ -47,7 +47,9 @@ namespace AF.GameFlow
 
         /// <summary>
         /// Lo que tardó el último guardado, en ms. Con el almacén envuelto en un <see cref="ProfileSaveBatch"/> (el juego), dentro
-        /// de un lote solo se anota el cambio y la escritura de verdad la mide <see cref="ProfileSaveBatch.LastWriteMs"/>.
+        /// de un lote solo se anota el cambio: lo que paga el hilo principal al cerrarlo lo mide
+        /// <see cref="ProfileSaveBatch.LastWriteMs"/>, y la escritura del escritor de segundo plano,
+        /// <see cref="ProfileSaveBatch.LastBackgroundMs"/>.
         /// </summary>
         public double LastSaveMs { get; private set; }
 

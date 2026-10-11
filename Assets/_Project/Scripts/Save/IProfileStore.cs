@@ -6,7 +6,8 @@ namespace AF.Save
     /// <summary>
     /// Almacén del perfil (GDD 08 §2.2 <c>AF.Save</c>; §11): <see cref="LocalProfileStore"/> en el dispositivo y
     /// <see cref="MemoryProfileStore"/> en los tests. La nube (Play Games Saved Games, Firebase) llegará detrás de esta
-    /// misma interfaz cuando el dueño apruebe sus SDK. Se usa desde un solo hilo (el principal).
+    /// misma interfaz cuando el dueño apruebe sus SDK. Se usa desde un solo hilo (el principal); la escritura en segundo
+    /// plano va por <see cref="IProfileByteStore"/> y <see cref="ProfileWriter"/>.
     /// </summary>
     public interface IProfileStore
     {
@@ -30,6 +31,29 @@ namespace AF.Save
         /// levanta la protección de escritura.
         /// </summary>
         void Delete();
+    }
+
+    /// <summary>
+    /// Almacén que separa la serialización de la escritura (T-D, opción B; 08 §5.4 y §11): el hilo principal convierte el
+    /// perfil en bytes con <see cref="Serialize"/> (JSON y UTF-8, &lt; 1 ms) y el disco se queda para
+    /// <see cref="WriteBytes"/>, que puede correr en otro hilo (<see cref="ProfileWriter"/>). <see cref="IProfileStore.Save"/>
+    /// equivale a <c>WriteBytes(Serialize(profile))</c>. Lo implementa <see cref="LocalProfileStore"/>.
+    /// </summary>
+    public interface IProfileByteStore : IProfileStore
+    {
+        /// <summary>
+        /// El perfil tal como se escribiría (en el hilo principal: el perfil no se comparte entre hilos). No toca el disco.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">El almacén protege un perfil más nuevo o una migración fallida.</exception>
+        byte[] Serialize(Profile profile);
+
+        /// <summary>
+        /// Escribe <paramref name="bytes"/> (de <see cref="Serialize"/>) y los deja persistidos, como <see cref="IProfileStore.Save"/>.
+        /// Se puede llamar desde cualquier hilo; el almacén no solapa dos escrituras.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">El almacén protege un perfil más nuevo o una migración fallida.</exception>
+        /// <exception cref="System.IO.IOException">No se pudo escribir.</exception>
+        void WriteBytes(byte[] bytes);
     }
 
     /// <summary>Operaciones comunes sobre un <see cref="IProfileStore"/>.</summary>

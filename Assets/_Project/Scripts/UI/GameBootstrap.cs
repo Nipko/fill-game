@@ -191,7 +191,11 @@ namespace AF.UI
             extraLevelPacks = extra;
         }
 
-        /// <summary>Toque en una cuia (02 §3.1). Tras un vertido, la sonda de desarrollo escribe lo que costó guardar (AF_PERF).</summary>
+        /// <summary>
+        /// Toque en una cuia (02 §3.1). Tras un vertido, la sonda de desarrollo escribe lo que costó guardar (AF_PERF, T-D):
+        /// <c>save_ms</c> es solo el hilo principal (serializar y entregar al escritor; con la victoria, la escritura síncrona
+        /// del fin de nivel, que sale como <c>win</c>) y <c>bg_ms</c>, la última escritura terminada del escritor.
+        /// </summary>
         public TapResult TapCuia(int index)
         {
             if (_flow == null || !InLevel)
@@ -199,11 +203,19 @@ namespace AF.UI
                 return TapResult.Ignored(index, -1);
             }
 
-            int writes = _saveBatch?.WriteCount ?? 0;
+            ProfileSaveBatch? saves = _saveBatch;
+            int writes = saves?.WriteCount ?? 0;
+            int failures = saves?.BackgroundFailures ?? 0;
             TapResult result = _flow.TapCuia(index);
-            if (result.Kind == TapKind.Poured && _saveBatch != null && DevProbe.Enabled)
+            if (saves != null && saves.BackgroundFailures != failures)
             {
-                _probe?.SaveCost("pour", _flow.LevelNumber, _saveBatch.WriteCount - writes, _saveBatch.LastWriteMs);
+                Debug.LogWarning(LogPrefix + "falló la escritura del perfil en segundo plano; sigue en memoria y sale con el siguiente guardado: " + saves.LastBackgroundError);
+            }
+
+            if (result.Kind == TapKind.Poured && saves != null && DevProbe.Enabled)
+            {
+                string evt = _flow.Session.Status == AF.Core.Session.LevelStatus.Won ? "win" : "pour";
+                _probe?.SaveCost(evt, _flow.LevelNumber, saves.WriteCount - writes, saves.LastWriteMs, saves.LastBackgroundMs);
             }
 
             return result;
@@ -656,9 +668,11 @@ namespace AF.UI
 
             // Cartera, progreso, nivel en curso, anuncios y tienda guardan el mismo perfil por el lote: dentro de una acción del
             // jugador (vertido, victoria, rescate, rendición, compra, anuncio) el perfil se escribe una sola vez (revisión B2-5).
+            // Con el perfil en disco (LocalProfileStore), el lote escribe en segundo plano (T-D): el vertido solo serializa en el
+            // hilo principal. La cartera guarda por batch.Durable: cada mutación espera al escritor y escribe en síncrono.
             var batch = new ProfileSaveBatch(store);
             _saveBatch = batch;
-            _wallet = new Wallet(profile, batch, clock);
+            _wallet = new Wallet(profile, batch.Durable, clock);
             IProgressStore progress = LaunchOptions.ProgressStoreOverride ?? new ProfileProgressStore(profile, batch);
 
             _art = SharedArt(catalog.WaterBase);
@@ -762,12 +776,7 @@ namespace AF.UI
         {
             if (paused)
             {
-                // Lo pendiente de la cartera, los anuncios y la tienda (una escritura fallida) se reintenta al pasar a segundo plano.
-                _saveBatch?.Flush();
-                _wallet?.Flush();
-                _ads?.Ledger.Flush();
-                _storeLedger?.Flush();
-                (_flow?.StateStore as ProfileLevelStateStore)?.Flush(); // 02 §14: el nivel en curso ya está en disco
+                PersistNow("segundo plano");
                 return;
             }
 
@@ -919,11 +928,29 @@ namespace AF.UI
             return s_art;
         }
 
+        private void OnApplicationQuit()
+        {
+            PersistNow("cierre");
+        }
+
+        // 02 §14 y T-D: al pasar a segundo plano, al cerrar la app y al destruir la escena, lo pendiente de la cartera, los
+        // anuncios, la tienda y el nivel en curso (una escritura fallida) se reintenta, y después se espera al escritor de
+        // segundo plano y se escribe en síncrono lo que falte, con el tope de ProfileSaveBatch.SyncTimeoutMs.
+        private void PersistNow(string when)
+        {
+            _wallet?.Flush();
+            _ads?.Ledger.Flush();
+            _storeLedger?.Flush();
+            (_flow?.StateStore as ProfileLevelStateStore)?.Flush(); // el nivel en curso ya está en disco
+            if (_saveBatch != null && !_saveBatch.FlushSync(_saveBatch.SyncTimeoutMs) && !ProfileLocked)
+            {
+                Debug.LogWarning(LogPrefix + "el perfil no quedó en disco (" + when + "): sigue en memoria y sale con el siguiente guardado.");
+            }
+        }
+
         private void OnDestroy()
         {
-            _saveBatch?.Flush();
-            _wallet?.Flush();
-            (_flow?.StateStore as ProfileLevelStateStore)?.Flush();
+            PersistNow("destruir la escena");
             if (Current == this)
             {
                 Current = null;
