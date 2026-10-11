@@ -24,19 +24,26 @@ namespace AF.Tests.PlayMode
     /// el cupo de Marea en el badge, y sin cupo la pregunta por el video como mucho cada 500 ms, sin asignaciones entre dos
     /// preguntas. Con la Luciérnaga (T14; 04 §2.5): 1, 2 y 3 ranuras de 64 dp con Revelar la última, recentradas, y los avisos
     /// «Te faltan {n}» de dos ranuras vecinas sin solaparse, a 12 sp (02 §12) y, si la cifra no cabe en una línea, en dos sobre
-    /// su ranura, dentro del hueco entre el tablero y la bandeja.
+    /// su ranura, dentro del hueco entre el tablero y la bandeja. Y la AF_LAYOUT level fiel (T-A y T-B de la prueba del
+    /// 2026-10-09): en el 8, en frío y del 7 al 8, una sola desde la carga y ya con «+1 cuia»; tras «+1 cuia», una sola nueva al
+    /// acabar el re-layout, con las N + 1 cuias en su sitio final.
     /// </summary>
     public sealed class BoosterTrayTests
     {
+        private AfLayoutLog _layout = null!;
+
         [SetUp]
         public void SetUp()
         {
             FunnelSetup.Hooks();
+            _layout = new AfLayoutLog();
         }
 
         [TearDown]
         public void TearDown()
         {
+            _layout?.Dispose();
+            _layout = null!;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
@@ -63,20 +70,93 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 50);
             Assert.That(view.Tray.SlotCount, Is.EqualTo(2));
             Assert.That(view.Tray.ExtraCuiaShown, Is.True);
+            Assert.That(view.ExtraCuiaButton.gameObject.activeInHierarchy, Is.True, "la ranura existe y además se ve (T-A)");
             Assert.That(view.Tray.ExtraBadgeText, Is.EqualTo("+1"), "stock regalado");
             Assert.That(((RectTransform)view.ExtraCuiaButton.transform).rect.width, Is.GreaterThanOrEqualTo(48f));
 
             int rows = view.Layout!.Rows;
             int cuias = view.Views.Length;
+            int layouts = _layout.AllOf("level", 8).Count;
             Assert.That(boot.PressExtraCuia(), Is.True);
             Assert.That(view.Views.Length, Is.EqualTo(cuias + 1));
             Assert.That(view.Relayouting, Is.True, "re-layout de 300 ms y entrada de 600 ms (02 §4.1)");
+            Assert.That(_layout.AllOf("level", 8).Count, Is.EqualTo(layouts), "T-B: en t = 0 del re-layout no se publica (la cuia nueva medía 0 × 0)");
             PlayModeHelpers.Step(boot, 700);
             Assert.That(view.Relayouting, Is.False);
             Assert.That(view.Layout!.Rows, Is.EqualTo(rows), "las filas no cambian a mitad de nivel (D-006)");
             Assert.That(view.Views[cuias].Root.localScale.x, Is.EqualTo(1f).Within(0.001f));
             Assert.That(view.ExtraCuiaButton.interactable, Is.False, "1 por nivel");
             Assert.That(boot.Wallet!.Stock.Get(BoosterKind.ExtraCuia), Is.EqualTo(0));
+
+            // T-B: al acabar el re-layout sale una sola AF_LAYOUT level nueva, con las N + 1 cuias en su sitio final y la nueva
+            // con su tamaño (antes salía en t = 0: las viejas en su sitio anterior y la nueva con w = h = 0).
+            Assert.That(_layout.AllOf("level", 8).Count, Is.EqualTo(layouts + 1), "una sola AF_LAYOUT level nueva, al acabar el re-layout");
+            string last = _layout.RequireLast("level", 8, "tras «+1 cuia»");
+            RectInt[] published = AfLayoutLog.Cuias(last);
+            Assert.That(published.Length, Is.EqualTo(cuias + 1), "N + 1 cuias");
+            for (int i = 0; i < published.Length; i++)
+            {
+                RectInt now = AfLayoutLog.Published(view.Views[i].Root);
+                Assert.That(published[i].width, Is.GreaterThan(0), "cuia " + i + ": w > 0");
+                Assert.That(published[i].height, Is.GreaterThan(0), "cuia " + i + ": h > 0");
+                Assert.That(published[i].x, Is.EqualTo(now.x).Within(2), "cuia " + i + ": x final");
+                Assert.That(published[i].y, Is.EqualTo(now.y).Within(2), "cuia " + i + ": y final");
+                Assert.That(published[i].width, Is.EqualTo(now.width).Within(2), "cuia " + i + ": w final");
+                Assert.That(published[i].height, Is.EqualTo(now.height).Within(2), "cuia " + i + ": h final");
+            }
+
+            AfLayoutLog.AssertCenterInside(last, "undo", (RectTransform)view.UndoButton.transform);
+            AfLayoutLog.AssertCenterInside(last, "extra_cuia", (RectTransform)view.ExtraCuiaButton.transform);
+        }
+
+        [UnityTest]
+        public IEnumerator Level8_Cold_TheLevelLayoutBringsExtraCuia_FromTheFirstLine()
+        {
+            // T-A (prueba del 2026-10-09): la AF_LAYOUT level sale al final de OnLevelLoaded, después de los ganchos y con la
+            // bandeja ya refrescada. En el 8 en frío sale una sola (antes, una primera sin «+1 cuia» y con Marea en el centro de
+            // una bandeja de 1 ranura, y otra en el primer fotograma), y durante la INTRO «+1 cuia» ya está en la ranura 2.
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
+            yield return PlayModeHelpers.LoadGame(8, new MemoryProgressStore(8, 7));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Intro));
+            Assert.That(view.Tray.SlotCount, Is.EqualTo(2), "Marea y Cuia extra");
+            Assert.That(view.ExtraCuiaButton.gameObject.activeInHierarchy, Is.True, "en la INTRO la ranura 2 no está vacía");
+            AssertLevelLayouts(view, 8, "el 8 en frío");
+
+            // Ya en juego no cambia nada: la misma línea sigue valiendo.
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            AssertLevelLayouts(view, 8, "el 8 en juego");
+        }
+
+        [UnityTest]
+        public IEnumerator From7To8_TheSecondSlot_AndItsLayout_ComeWithTheLevel()
+        {
+            // T-A: en el paso del 7 al 8 (Siguiente) «+1 cuia» existe desde OnLevelLoaded, antes de cualquier fotograma, y la
+            // AF_LAYOUT del 8 la trae desde la primera línea; en el primer fotograma se ve.
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
+            yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore(7, 6));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            Assert.That(view.Tray.ExtraCuiaShown, Is.False, "en el 7 no hay Cuia extra");
+            VictorySetup.WinToVictoryScreen(boot);
+            PlayModeHelpers.Step(boot, 900);
+            _layout.Clear();
+            view.NextButton.onClick.Invoke();
+            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(8));
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
+            Assert.That(view.Tray.ExtraCuiaShown, Is.True, "la ranura ya existe al cargar el 8, sin esperar a un fotograma");
+            Assert.That(view.Tray.SlotCount, Is.EqualTo(2));
+            var eight = _layout.AllOf("level", 8);
+            Assert.That(eight.Count, Is.GreaterThanOrEqualTo(1), "AF_LAYOUT level del 8 al cargarlo");
+            Assert.That(AfLayoutLog.ButtonIds(eight[0]), Does.Contain("extra_cuia"), "la primera AF_LAYOUT del 8 trae «+1 cuia»: " + eight[0]);
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.ExtraCuiaButton.gameObject.activeInHierarchy, Is.True, "primer fotograma del 8: la ranura 2 no está vacía");
+            AssertLevelLayouts(view, 8, "del 7 al 8");
         }
 
         [UnityTest]
@@ -297,6 +377,18 @@ namespace AF.Tests.PlayMode
             Assert.That(WorldRect(tray.ExtraMissingRect).Overlaps(WorldRect(tray.RevealMissingRect)), Is.False, "sin solapes");
             Assert.That(tray.ExtraMissingWidth, Is.LessThan(72f));
             Assert.That(tray.RevealMissingWidth, Is.LessThan(72f));
+        }
+
+        // Las AF_LAYOUT level del nivel: una sola desde la carga (ninguna obsoleta antes), con «+1 cuia», y el centro de Marea y
+        // de «+1 cuia» dentro de lo que se ve ahora.
+        private void AssertLevelLayouts(GameScreen view, int level, string what)
+        {
+            var lines = _layout.AllOf("level", level);
+            Assert.That(lines.Count, Is.EqualTo(1), what + ": una sola AF_LAYOUT level, ninguna obsoleta antes:\n" + string.Join("\n", lines));
+            string last = _layout.RequireLast("level", level, what);
+            Assert.That(AfLayoutLog.ButtonIds(last), Does.Contain("undo").And.Contain("extra_cuia"), what);
+            AfLayoutLog.AssertCenterInside(last, "undo", (RectTransform)view.UndoButton.transform);
+            AfLayoutLog.AssertCenterInside(last, "extra_cuia", (RectTransform)view.ExtraCuiaButton.transform);
         }
 
         // n ranuras de 64 dp en el orden dado, con 8 dp entre ellas, y la bandeja (16 + n·64 + (n − 1)·8 + 16) centrada.

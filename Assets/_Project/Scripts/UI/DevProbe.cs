@@ -621,9 +621,21 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Línea <c>AF_LAYOUT</c> de la pantalla <paramref name="screen"/> (<c>level</c>, <c>stuck</c>, <c>victory</c>,
-        /// <c>lobby</c>, <c>content_end</c>, <c>no_canoes</c>): tamaño de pantalla, áreas táctiles de las cuias y botones con
-        /// su id.
+        /// Línea <c>AF_LAYOUT</c> de la pantalla <paramref name="screen"/>: tamaño de pantalla, áreas táctiles de las cuias y
+        /// botones con su id. Para tocar, se usa la ÚLTIMA línea que se haya escrito: las pantallas se repiten.
+        /// <list type="bullet">
+        /// <item><description><c>level</c> (undo, extra_cuia desde el 8, restart, pause, level_card y reveal si se ven): al final
+        /// de <c>GameScreen.OnLevelLoaded</c>, después de los ganchos <c>*LevelLoaded</c> y con la bandeja ya refrescada; otra vez
+        /// cuando aparece o se va una ranura de la bandeja (Cuia extra o Revelar, que la recentran), al cambiar la pantalla
+        /// y al acabar el re-layout de una cuia añadida (Cuia extra, rescate o Balsa: una sola línea, con las N + 1 cuias en su
+        /// sitio final).</description></item>
+        /// <item><description>Modales del nivel, al abrirse: <c>level_card</c>, <c>pause</c>, <c>quit_confirm</c> y
+        /// <c>restart_confirm</c>, <c>stuck</c> (al terminar de subir el panel) y <c>victory</c>.</description></item>
+        /// <item><description>Embudo del nivel (D-008), al abrirse y al reabrir la app en él: <c>giveup_confirm</c> (close,
+        /// rescue si se ofrece y give_up), <c>level_failed</c> (retry y close) y <c>no_canoes</c> (close, extra_canoe_video,
+        /// refill_canoes e infinite_canoes si se ofrecen, y home), que se repite cada vez que rehace su layout.</description></item>
+        /// <item><description>Inicio: <c>lobby</c>, <c>content_end</c> y <c>no_canoes</c>.</description></item>
+        /// </list>
         /// </summary>
         public void Layout(string screen, int level, CuiaView[]? cuias, string[] buttonIds, RectTransform[] buttons)
         {

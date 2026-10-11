@@ -26,8 +26,8 @@ namespace AF.Tests.PlayMode
     /// (al cerrar la tarjeta previa, si la hay), la bandeja de 3 ranuras de 64 dp de los niveles turbios, el botón en
     /// AF_LAYOUT, el modo de selección (solo laten las turbias), el revelado con el stock, con semillas y con el video, el aviso
     /// sin saldo ni video, la cancelación sin coste, la ranura que desaparece sin ocultas y lo revelado que sobrevive a Marea, a
-    /// Volver a la orilla y a reabrir. Con el catálogo real: nivel 100, cuia 0 = [10*, 8*, 6] y cuia 1 = [6]; nivel 106,
-    /// cuia 6 = [14*, 1].
+    /// Volver a la orilla y a reabrir (con alguna oculta, las 3 ranuras desde el primer fotograma y en AF_LAYOUT). Con el
+    /// catálogo real: nivel 100, cuia 0 = [10*, 8*, 6] y cuia 1 = [6]; nivel 106, cuia 6 = [14*, 1].
     /// </summary>
     public sealed class LuciernagaTests
     {
@@ -475,6 +475,44 @@ namespace AF.Tests.PlayMode
             Assert.That(again.View!.Views[MurkyCuia100].ShownCuia.HiddenMask, Is.EqualTo(0), "la vista lo enseña revelado");
             Assert.That(again.View.Views[MurkyCuia100].Murky.BadgeCount, Is.EqualTo(0));
             Assert.That(again.View.Tray.RevealShown, Is.False, "sin ocultas, sin ranura");
+        }
+
+        [UnityTest]
+        public IEnumerator Reopen_WithHiddenLeft_TheThreeSlotsFromTheFirstFrame_AndInTheLayout()
+        {
+            // Luciérnaga en la bandeja (ola 4) tras T-A y T-B: se cierra la app en el 100 con alguna oculta (el vertido 0 → 1
+            // revela la capa 1 y la cuia 0 conserva la 0) y se vuelve a abrir. Sin avanzar ningún fotograma con el reloj del
+            // test, Marea, «+1 cuia» y Revelar se ven, de 64 dp y centradas (240 dp), y la última AF_LAYOUT level trae los tres
+            // con el centro sobre lo dibujado.
+            var store = new MemoryProfileStore(FunnelSetup.Profile(0));
+            LaunchOptions.ProfileStoreOverride = store;
+            yield return LoadPlayingWithStore(Level100);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.TapCuia(MurkyCuia100).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(1).Kind, Is.EqualTo(TapKind.Poured));
+            PlayModeHelpers.StepUntilIdle(boot, 4000);
+            Assert.That(boot.Flow!.Session.Current[MurkyCuia100].HiddenMask, Is.EqualTo(0b01), "queda una oculta");
+
+            _lines.Clear();
+            yield return PlayModeHelpers.LoadApp(store);
+            GameBootstrap again = GameBootstrap.Current!;
+            Assert.That(again, Is.Not.SameAs(boot));
+            PlayModeHelpers.TakeClock(again);
+            GameScreen view = again.View!;
+            Assert.That(again.Flow!.LevelNumber, Is.EqualTo(Level100));
+            Assert.That(again.Flow.Phase, Is.EqualTo(FlowPhase.Playing), "sin intro (02 §14)");
+            BoosterTray tray = view.Tray;
+            Assert.That(tray.UndoButton.gameObject.activeInHierarchy, Is.True, "Marea");
+            Assert.That(tray.ExtraCuiaButton.gameObject.activeInHierarchy, Is.True, "«+1 cuia»");
+            Assert.That(tray.RevealButton.gameObject.activeInHierarchy, Is.True, "Revelar");
+            Assert.That(tray.SlotCount, Is.EqualTo(3));
+            Assert.That(tray.Width, Is.EqualTo(240f).Within(0.01f), "16 + 3·64 + 2·8 + 16");
+            string? layout = LastLayout(Level100);
+            Assert.That(layout, Is.Not.Null, "AF_LAYOUT level del 100 al reabrir");
+            Assert.That(AfLayoutLog.ButtonIds(layout!), Does.Contain("undo").And.Contain("extra_cuia").And.Contain("reveal"), layout);
+            AfLayoutLog.AssertCenterInside(layout!, "undo", (RectTransform)tray.UndoButton.transform);
+            AfLayoutLog.AssertCenterInside(layout!, "extra_cuia", (RectTransform)tray.ExtraCuiaButton.transform);
+            AfLayoutLog.AssertCenterInside(layout!, "reveal", (RectTransform)tray.RevealButton.transform);
         }
 
         [UnityTest]

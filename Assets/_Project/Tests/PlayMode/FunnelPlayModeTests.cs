@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using AF.Economy;
 using AF.GameFlow;
 using AF.Save;
 using AF.UI;
@@ -16,11 +17,14 @@ namespace AF.Tests.PlayMode
     /// desarrollo como las leería <c>adb logcat</c> en el teléfono: en el 31 con 1 canoa, stuck → giveup_confirm →
     /// level_failed → no_canoes → lobby, siempre con semillas y canoas; una victoria desde el 22 con su anuncio simulado
     /// (victory → ad_gate → ad_check → ad → ad_closed → nivel siguiente); una compra simulada (purchase_sim) con el saldo; y
-    /// el nivel reabierto tras cerrar la app (resume).
+    /// el nivel reabierto tras cerrar la app (resume). Y las líneas <c>AF_LAYOUT</c> de los modales del embudo (T-B de la prueba
+    /// del 2026-10-09): giveup_confirm, level_failed y no_canoes con sus ids al abrirse, no_canoes otra vez cuando rehace su
+    /// layout, y tocar sus centros publicados (como <c>adb shell input tap</c>) da el AF_STATE esperado.
     /// </summary>
     public sealed class FunnelPlayModeTests
     {
         private readonly List<string> _lines = new List<string>();
+        private AfLayoutLog _layout = null!;
 
         [SetUp]
         public void SetUp()
@@ -28,11 +32,14 @@ namespace AF.Tests.PlayMode
             FunnelSetup.Hooks();
             _lines.Clear();
             Application.logMessageReceived += OnLog;
+            _layout = new AfLayoutLog();
         }
 
         [TearDown]
         public void TearDown()
         {
+            _layout?.Dispose();
+            _layout = null!;
             Application.logMessageReceived -= OnLog;
             LaunchOptions.Reset();
         }
@@ -51,11 +58,22 @@ namespace AF.Tests.PlayMode
             _lines.Clear();
 
             FunnelSetup.GetStuck(boot);
-            boot.View!.Stuck.GiveUpButton.onClick.Invoke();
-            boot.View.GiveUp.GiveUpButton.onClick.Invoke();
-            boot.View.Failed.RetryButton.onClick.Invoke();
+            GameScreen view = boot.View!;
+            view.Stuck.GiveUpButton.onClick.Invoke();
+            string giveUp = _layout.RequireLast("giveup_confirm", 31, "¿Seguro?");
+            Assert.That(AfLayoutLog.ButtonIds(giveUp), Is.EqualTo(new[] { "close", "rescue", "give_up" }), "T-B: ¿Seguro? publica su AF_LAYOUT");
+            AfLayoutLog.AssertCenterInside(giveUp, "close", (RectTransform)view.GiveUp.CloseButton.transform);
+            AfLayoutLog.AssertCenterInside(giveUp, "rescue", (RectTransform)view.GiveUp.RescueButton.transform);
+            AfLayoutLog.AssertCenterInside(giveUp, "give_up", (RectTransform)view.GiveUp.GiveUpButton.transform);
+            view.GiveUp.GiveUpButton.onClick.Invoke();
+            string failed = _layout.RequireLast("level_failed", 31, "Nivel fallido");
+            Assert.That(AfLayoutLog.ButtonIds(failed), Is.EqualTo(new[] { "retry", "close" }), "T-B: Nivel fallido publica su AF_LAYOUT");
+            AfLayoutLog.AssertCenterInside(failed, "retry", (RectTransform)view.Failed.RetryButton.transform);
+            AfLayoutLog.AssertCenterInside(failed, "close", (RectTransform)view.Failed.CloseButton.transform);
+            view.Failed.RetryButton.onClick.Invoke();
             Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.NoCanoes));
-            boot.View.NoCanoes.HomeButton.onClick.Invoke();
+            AssertNoCanoesLayout(view, "T-B: Sin canoas publica su AF_LAYOUT");
+            view.NoCanoes.HomeButton.onClick.Invoke();
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
 
             string[] sequence = Events("stuck_modal", "giveup_confirm", "level_failed", "no_canoes", "lobby");
@@ -121,6 +139,90 @@ namespace AF.Tests.PlayMode
             AssertBalance("resume", 1000, 5);
             Assert.That(Has("load"), Is.True, "LOADING del mismo nivel");
             Assert.That(Has("ready"), Is.False, "sin intro ni tablero nuevo: el modal reabierto");
+        }
+
+        [UnityTest]
+        public IEnumerator Level31_TappingThePublishedCenters_GivesTheExpectedStates()
+        {
+            // T-B (la prueba del teléfono, en el Editor): en el 31 con 1 canoa y 100 semillas se toca cada botón en el centro que
+            // publicó la última AF_LAYOUT, como adb shell input tap: Rendirse en Aguas estancadas y en ¿Seguro? (give_up →
+            // fail_hard_canoe y level_failed) y Reintentar con 0 canoas (retry → no_canoes). Sin canoas ofrece «Llenar canoas»
+            // por 200 con «Te faltan 100»; al llegar las semillas que faltan, rehace su layout (el aviso se va y lo de debajo
+            // sube) y vuelve a publicar su AF_LAYOUT, una sola vez.
+            LaunchOptions.LevelOffsetOverride = 25;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(100, canoes: 1));
+            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            FunnelSetup.GetStuck(boot);
+            GameScreen view = boot.View!;
+            _lines.Clear();
+
+            AfLayoutLog.Tap(_layout.RequireLast("stuck", 31, "Aguas estancadas"), "give_up", view.Stuck.GiveUpButton);
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.GiveUpConfirm));
+            Assert.That(Has("giveup_confirm"), Is.True);
+
+            AfLayoutLog.Tap(_layout.RequireLast("giveup_confirm", 31, "¿Seguro?"), "give_up", view.GiveUp.GiveUpButton);
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed));
+            Assert.That(Events("fail_hard_canoe", "level_failed"), Is.EqualTo(new[] { "fail_hard_canoe", "level_failed" }), "give_up → fail_hard_canoe y level_failed");
+            AssertBalance("level_failed", 100, 0);
+
+            AfLayoutLog.Tap(_layout.RequireLast("level_failed", 31, "Nivel fallido"), "retry", view.Failed.RetryButton);
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.NoCanoes), "retry con 0 canoas → no_canoes");
+            Assert.That(Has("no_canoes"), Is.True);
+            AssertNoCanoesLayout(view, "Sin canoas");
+            string before = _layout.RequireLast("no_canoes", 31, "Sin canoas");
+            Assert.That(AfLayoutLog.ButtonIds(before), Does.Contain("refill_canoes"), "Llenar canoas, sin saldo");
+            int count = _layout.AllOf("no_canoes", 31).Count;
+            PlayModeHelpers.Step(boot, 100);
+            Assert.That(_layout.AllOf("no_canoes", 31).Count, Is.EqualTo(count), "sin cambios, sin AF_LAYOUT nueva");
+
+            // T-B: Sin canoas rehace su layout y vuelve a publicarlo.
+            Assert.That(boot.Wallet!.Apply(Transaction.Earn(SeedSource.Refund, 100)).IsApplied, Is.True);
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(_layout.AllOf("no_canoes", 31).Count, Is.EqualTo(count + 1), "una AF_LAYOUT no_canoes nueva al rehacer el layout");
+            string after = _layout.RequireLast("no_canoes", 31, "Sin canoas rehecha");
+            Assert.That(AfLayoutLog.Button(after, "home")!.Value.y, Is.LessThan(AfLayoutLog.Button(before, "home")!.Value.y), "sin «Te faltan», «Volver al inicio» sube");
+            AssertNoCanoesLayout(view, "Sin canoas rehecha");
+            AfLayoutLog.Tap(after, "home", view.NoCanoes.HomeButton);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+        }
+
+        // La última AF_LAYOUT es la de Sin canoas del 31, con un id por cada botón que se ve (close, extra_canoe_video,
+        // refill_canoes e infinite_canoes si se ofrecen, y home), en ese orden, y sus centros caen en lo que se ve.
+        private void AssertNoCanoesLayout(GameScreen view, string what)
+        {
+            string line = _layout.RequireLast("no_canoes", 31, what);
+            NoCanoesPanel panel = view.NoCanoes;
+            var expected = new List<string> { "close" };
+            var buttons = new List<UnityEngine.UI.Button> { panel.CloseButton };
+            if (panel.VideoButton.gameObject.activeInHierarchy)
+            {
+                expected.Add("extra_canoe_video");
+                buttons.Add(panel.VideoButton);
+            }
+
+            if (panel.RefillButton.gameObject.activeInHierarchy)
+            {
+                expected.Add("refill_canoes");
+                buttons.Add(panel.RefillButton);
+            }
+
+            if (panel.InfiniteButton.gameObject.activeInHierarchy)
+            {
+                expected.Add("infinite_canoes");
+                buttons.Add(panel.InfiniteButton);
+            }
+
+            expected.Add("home");
+            buttons.Add(panel.HomeButton);
+            Assert.That(AfLayoutLog.ButtonIds(line), Is.EqualTo(expected.ToArray()), what);
+            for (int i = 0; i < expected.Count; i++)
+            {
+                AfLayoutLog.AssertCenterInside(line, expected[i], (RectTransform)buttons[i].transform);
+            }
         }
 
         private void OnLog(string condition, string stackTrace, LogType type)
