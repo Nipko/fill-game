@@ -33,12 +33,9 @@ namespace AF.Tests.PlayMode
     {
         private const string LiquidShaderPath = "_Project/Shaders/Resources/AF_UI_Liquid.shader";
 
-        // Lo que puede pasar de Palette.Mud (L*) lo que pinta el shader en el centro de la franja del Barro: sin brillo, nada; el
-        // margen solo cubre los redondeos. Antes de T20 eran +10 L*, los del agua base.
-        private const float MudMarginL = 1f;
-
         // Lo que aclara como mínimo la franja de una dosis con brillo (guía 4.2: +10 L*, +12 en los tintes de L* < 40). Los
-        // tintes más saturados pierden algo al recortarse a la gama: Aguaje, +7,9; Taperebá, +8,2.
+        // tintes más saturados pierden algo al recortarse a la gama: Aguaje, +7,9; Taperebá, +8,2. Es también lo que la franja
+        // del Barro mate queda, como mínimo, por debajo de la de la misma dosis como agua (antes de T20, +10 L*).
         private const float GlossMinL = 6f;
 
         private static readonly MethodInfo PopulateMesh = typeof(LiquidGraphic).GetMethod("OnPopulateMesh", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(VertexHelper) }, null)!;
@@ -173,16 +170,54 @@ namespace AF.Tests.PlayMode
             AssertTopFace(view, layer, Palette.Mud, "tras la Marea");
         }
 
+        [UnityTest]
+        public IEnumerator Barro123_ReduceMotionIntro_FadesInMatte()
+        {
+            // Con Reducir movimiento, la intro funde las dosis en 250 ms (GameConfig.ReducedMotionIntroMs): el Barro, mate desde
+            // el primer fotograma del fundido, no solo cuando la intro termina y el estado lo pinta con MudMarks.PaintMud (T20).
+            yield return PlayModeHelpers.LoadGame(123, new MemoryProgressStore(123, 122));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            LevelFlow flow = boot.Flow!;
+            flow.ReduceMotion = true;
+            try
+            {
+                flow.Load(123);
+                Assert.That(boot.View!.Intro.ReduceMotion, Is.True);
+                FindMud(flow.Session.Current, out int mud, out int layer);
+                LiquidGraphic liquid = boot.View.Views[mud].Liquid;
+                int fading = 0;
+                for (int t = 25; t < GameConfig.ReducedMotionIntroMs; t += 25)
+                {
+                    PlayModeHelpers.TickExact(boot, 25);
+                    float alpha = liquid.DoseColorAt(layer).a;
+                    if (alpha > 0.001f && alpha < 0.999f)
+                    {
+                        fading++;
+                        Assert.That(liquid.IsMatteAt(layer), Is.True, "a los " + t + " ms del fundido (alfa " + alpha.ToString("F2") + "): el Barro, mate");
+                        Assert.That(liquid.DoseTintAt(layer), Is.EqualTo(0), "a los " + t + " ms: sin tinte de fruta");
+                    }
+                }
+
+                Assert.That(fading, Is.GreaterThan(0), "se miró el Barro a mitad del fundido");
+            }
+            finally
+            {
+                flow.ReduceMotion = false;
+            }
+        }
+
         [Test]
         public void Shader_MatteTurnsOffEveryHighlight()
         {
-            // El texto del shader: el patrón mate apaga las dos franjas y el brillo vertical (hl) y la línea clara del borde de
-            // la cara superior, con el umbral de LiquidGraphic.IsMattePattern (la constante la compara
-            // MurkyMudContentTests.ShaderConstants_MatchLiquidGraphic).
-            string text = File.ReadAllText(Path.Combine(Application.dataPath, LiquidShaderPath));
-            Assert.That(Regex.IsMatch(text, @"half gloss = patternMode < \(0\.5 \* \(AF_MATTE_MODE - 1\.0\)\)"), Is.True, "el punto medio entre el patrón mate y −1");
-            Assert.That(Regex.IsMatch(text, @"float hl = max\(hlMain, max\(hlSec \* 0\.5, hlVert \* 0\.5\)\) \* gloss;"), Is.True, "las franjas y el brillo vertical");
-            Assert.That(Regex.IsMatch(text, @"0\.35 \* rim \* inFace \* gloss"), Is.True, "la línea clara del borde de la cara superior");
+            // El código del shader, sin comentarios (una línea comentada no cuenta): el patrón mate apaga las dos franjas y el
+            // brillo vertical (hl) y la línea clara del borde de la cara superior, con el umbral de LiquidGraphic.IsMattePattern
+            // (la constante la compara MurkyMudContentTests.ShaderConstants_MatchLiquidGraphic).
+            string code = WithoutComments(File.ReadAllText(Path.Combine(Application.dataPath, LiquidShaderPath)));
+            Assert.That(Regex.IsMatch(code, @"half gloss = patternMode < \(0\.5 \* \(AF_MATTE_MODE - 1\.0\)\)"), Is.True, "el punto medio entre el patrón mate y −1");
+            Assert.That(Regex.IsMatch(code, @"float hl = max\(hlMain, max\(hlSec \* 0\.5, hlVert \* 0\.5\)\) \* gloss;"), Is.True, "las franjas y el brillo vertical");
+            Assert.That(Regex.IsMatch(code, @"0\.35 \* rim \* inFace \* gloss"), Is.True, "la línea clara del borde de la cara superior");
+            Assert.That(WithoutComments("a; // b\n/* c\n d */ e"), Is.EqualTo("a; \n e"), "los comentarios se quitan");
 
             // El espejo en CPU separa el patrón mate de todos los demás, y el mate no saca la banda de su dosis al decodificarla.
             Assert.That(LiquidGraphic.IsMattePattern(LiquidGraphic.MattePatternMode), Is.True);
@@ -199,20 +234,36 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // La dosis k de view se pinta mate: lo que pinta el shader en el centro de su franja no pasa de Palette.Mud más
-        // MudMarginL (espejo PaintedHighlightAt) y la malla le lleva el patrón mate, ninguna fila del atlas y la franja de su
-        // propio color.
+        // La dosis k de view se pinta mate: lo que pinta el shader en el centro de su franja (espejo PaintedHighlightAt) queda
+        // al menos GlossMinL por debajo de lo que pintaría la misma dosis como agua, con su brillo (tinte 0, lo que llevaba el
+        // Barro antes de T20): se compara con una dosis con brillo, no consigo misma, que daría 0 por construcción. Además, la
+        // malla le lleva el patrón mate, ninguna fila del atlas y la franja de su propio color.
         private static void AssertMatte(CuiaView view, int k, string where)
         {
             LiquidGraphic liquid = view.Liquid;
             Assert.That(liquid.IsMatteAt(k), Is.True, where + ": mate (LiquidGraphic.SetMatteDose)");
             Assert.That(liquid.DoseTintAt(k), Is.EqualTo(0), where + ": sin tinte de fruta");
-            float mudL = ColorMath.LabLightness(Palette.Mud);
+            Color color = liquid.DoseColorAt(k);
+            Assert.That(color, Is.EqualTo(Palette.Mud), where + ": de Palette.Mud");
+            float fill = view.DoseFill(k);
+            var matte = new float[Depths.Length];
             for (int d = 0; d < Depths.Length; d++)
             {
-                float lift = ColorMath.LabLightness(liquid.PaintedHighlightAt(k, Depths[d])) - mudL;
-                Assert.That(lift, Is.LessThanOrEqualTo(MudMarginL), where + ": sin franja especular a la profundidad " + Depths[d] + " (+" + lift.ToString("F2") + " L*)");
+                matte[d] = ColorMath.LabLightness(liquid.PaintedHighlightAt(k, Depths[d]));
             }
+
+            // La misma dosis como agua (con brillo) y de vuelta a mate, como estaba.
+            liquid.SetDose(k, color, fill, 0);
+            Assert.That(liquid.IsMatteAt(k), Is.False);
+            for (int d = 0; d < Depths.Length; d++)
+            {
+                float water = ColorMath.LabLightness(liquid.PaintedHighlightAt(k, Depths[d]));
+                Assert.That(water - matte[d], Is.GreaterThanOrEqualTo(GlossMinL), where + ": sin la franja especular del agua a la profundidad " + Depths[d]
+                    + " (el agua, L* " + water.ToString("F1") + "; el Barro mate, L* " + matte[d].ToString("F1") + ")");
+            }
+
+            liquid.SetMatteDose(k, color, fill);
+            Assert.That(liquid.IsMatteAt(k), Is.True);
 
             Vector3 own = ColorMath.ToShaderSpace(Palette.Mud);
             List<UIVertex> band = BandVertices(view, k);
@@ -327,6 +378,13 @@ namespace AF.Tests.PlayMode
         private static float Distance(Vector4 a, Vector3 b)
         {
             return Mathf.Abs(a.x - b.x) + Mathf.Abs(a.y - b.y) + Mathf.Abs(a.z - b.z);
+        }
+
+        // El texto de un shader sin sus comentarios (de bloque y de línea).
+        private static string WithoutComments(string text)
+        {
+            string noBlocks = Regex.Replace(text, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
+            return Regex.Replace(noBlocks, @"//[^\r\n]*", string.Empty);
         }
     }
 }

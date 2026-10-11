@@ -736,13 +736,18 @@ namespace AF.Presentation
 
                         bool hidden = final.IsHiddenAt(k);
                         int tint = final.ColorAt(k);
-                        bool inert = hidden || tint == Cuia.MudColor; // ocultas y Barro: sin tinte ni patrón
+                        bool mud = !hidden && tint == Cuia.MudColor;
+                        bool inert = hidden || mud; // ocultas y Barro: sin tinte ni patrón
                         Color c = hidden ? MurkyColor : Palette.Tint(tint);
                         var faded = new Color(c.r, c.g, c.b, s);
                         v.SetDose(k, faded, 1f, inert ? 0 : tint);
                         if (hidden)
                         {
                             v.Liquid.SetDose(k, faded, 1f, 0, LiquidGraphic.MurkyLook.Hidden); // ya turbia: trama y «?»
+                        }
+                        else if (mud)
+                        {
+                            v.Liquid.SetMatteDose(k, faded, 1f); // el Barro, mate desde el primer fotograma (T20)
                         }
                     }
                 }

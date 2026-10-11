@@ -39,9 +39,10 @@ namespace AF.Presentation.Mechanics
     /// patrón de su fruta, y la capa sigue en <see cref="LiquidGraphic.MurkyLook.Turn"/> hasta el final de su ventana, cuando
     /// ya es su dosis normal: pasa a pintarse normal sin que cambie nada en pantalla.</para>
     /// <para>Mientras anima (<see cref="IsAnimating"/>), <c>ShowContent</c> no llama a <see cref="Show"/> ni repinta las capas
-    /// que se revelan; la cola termina el paso con <see cref="Snap"/> y el <c>ShowContent</c> final. Las imágenes se crean una
-    /// vez al construir; los sprites de la insignia, la primera vez que hace falta (<see cref="Prewarm"/>). Sin asignaciones
-    /// al animar.</para>
+    /// que se revelan; la cola termina el paso con <see cref="Snap"/> y el <c>ShowContent</c> final. La insignia se crea al
+    /// construir. Sus sprites, los discos y los iconos de fruta de la Luciérnaga (uno por dosis) y la textura del disco, solo en
+    /// una cuia turbia y al prepararla (<see cref="Prewarm"/>: al arrancar la intro o al mostrar su primera oculta), nunca dentro
+    /// de un paso: una cuia sin ocultas no los crea. Sin asignaciones al animar.</para>
     /// </remarks>
     public sealed class MurkyMarks
     {
@@ -139,14 +140,16 @@ namespace AF.Presentation.Mechanics
         private readonly Image _badgeQuestion;
         private readonly Image _badgeTimes;
         private readonly Image _badgeDigit;
-        private readonly Image[] _fruits;
-        private readonly Image[] _discs;
         private readonly Color[] _target;
         private readonly int[] _targetTint;
         private readonly float[] _frontOut;
+        private Image[] _fruits = System.Array.Empty<Image>();
+        private Image[] _discs = System.Array.Empty<Image>();
         private int _mask;
+        private int _mudMask;
         private bool _inFlight;
         private bool _badgeReady;
+        private bool _fireflyReady;
         private int _badgeShown = -1;
         private float _u = 24f;
         private LiquidGraphic? _liquid;
@@ -168,21 +171,9 @@ namespace AF.Presentation.Mechanics
             _capacity = Mathf.Clamp(capacity, 0, Cuia.MaxCapacity);
             _view = body.GetComponentInParent<CuiaView>(true); // la vista que la crea: su pie y sus efectos (IBoardFx)
             _root = OverlayParts.NewAnchor("MurkyMarks", body);
-            _fruits = new Image[_capacity];
-            _discs = new Image[_capacity];
             _target = new Color[_capacity];
             _targetTint = new int[_capacity];
             _frontOut = new float[_capacity];
-            for (int k = 0; k < _capacity; k++)
-            {
-                _discs[k] = OverlayParts.NewImage("MurkyFruitDisc" + k, _root, null, Color.white); // los discos antes: un lote, y los iconos encima
-            }
-
-            for (int k = 0; k < _capacity; k++)
-            {
-                _fruits[k] = OverlayParts.NewImage("MurkyFruit" + k, _root, null, Color.white);
-            }
-
             _badge = OverlayParts.NewImage("MurkyBadge", _root, null, Color.white);
             _badge.type = Image.Type.Sliced;
             _badgeQuestion = OverlayParts.NewImage("MurkyBadgeQ", _badge.rectTransform, null, Color.white);
@@ -248,18 +239,26 @@ namespace AF.Presentation.Mechanics
         /// <summary>Icono de fruta de la dosis <paramref name="k"/> a la vista (revelado con la Luciérnaga), con su disco.</summary>
         public bool FruitVisible(int k)
         {
-            return (uint)k < (uint)_capacity && _fruits[k].gameObject.activeSelf;
+            return (uint)k < (uint)_fruits.Length && _fruits[k].gameObject.activeSelf;
         }
 
-        /// <summary>Icono de fruta de la dosis <paramref name="k"/> (tests y capturas).</summary>
+        /// <summary>
+        /// Ya están los discos y los iconos de fruta de la Luciérnaga (y la textura del disco): solo en una cuia turbia,
+        /// desde que se preparó (<see cref="Prewarm"/>).
+        /// </summary>
+        public bool FireflyPartsReady => _fireflyReady;
+
+        /// <summary>Icono de fruta de la dosis <paramref name="k"/> (tests y capturas; si aún no estaban, los crea).</summary>
         public Image FruitImage(int k)
         {
+            EnsureFireflyParts();
             return _fruits[k];
         }
 
-        /// <summary>Disco marfil bajo el icono de fruta de la dosis <paramref name="k"/> (tests y capturas).</summary>
+        /// <summary>Disco marfil bajo el icono de fruta de la dosis <paramref name="k"/> (tests y capturas; si aún no estaban, los crea).</summary>
         public Image FruitDisc(int k)
         {
+            EnsureFireflyParts();
             return _discs[k];
         }
 
@@ -270,8 +269,10 @@ namespace AF.Presentation.Mechanics
         }
 
         /// <summary>
-        /// Genera ya los sprites de la insignia (la carga del nivel o el arranque de la intro): así el primer «?×n» no crea
-        /// texturas a mitad de una animación.
+        /// Prepara una cuia turbia (la intro al arrancar o el primer <see cref="Show"/> o <see cref="PaintHidden"/> con ocultas,
+        /// al cargar el nivel): genera ya los sprites de la insignia y la textura del disco y crea los discos y los iconos de
+        /// fruta de la Luciérnaga, así que ni el primer «?×n» ni el primer revelado con la Luciérnaga asignan memoria a mitad
+        /// de un paso. Una cuia sin ocultas nunca llega aquí.
         /// </summary>
         public void Prewarm()
         {
@@ -285,6 +286,7 @@ namespace AF.Presentation.Mechanics
             _badgeQuestion.sprite = _art.MurkyBadgeQuestion;
             _badgeTimes.sprite = _art.MurkyBadgeTimes;
             _badgeShown = -1;
+            EnsureFireflyParts();
         }
 
         /// <summary>
@@ -319,7 +321,8 @@ namespace AF.Presentation.Mechanics
         /// Arranca el revelado de las capas <paramref name="layerMask"/> de <paramref name="shown"/> (el estado que muestra la
         /// cuia, con el tinte real de cada capa): las pinta turbias en este mismo fotograma y las lleva a su tinte (ver la
         /// clase). Devuelve la duración (ms) ya multiplicada por <paramref name="speedFactor"/>, o 0 si no hay capas que
-        /// revelar. Sin asignaciones (salvo la primera vez que se piden los sprites de las frutas o del disco).
+        /// revelar. Sin asignaciones: la insignia, los discos y los iconos ya los preparó la carga de la cuia turbia
+        /// (<see cref="Prewarm"/>; aquí solo es un respaldo).
         /// </summary>
         public float PlayReveal(LiquidGraphic liquid, int layerMask, RevealStyle style, Cuia shown, float speedFactor)
         {
@@ -330,10 +333,12 @@ namespace AF.Presentation.Mechanics
             }
 
             Snap();
+            Prewarm();
             _liquid = liquid;
             _animMask = layers;
             _animLayers = CountBits(layers);
             _switched = 0;
+            _mudMask = 0;
             _sparklesDone = false;
             _bubbleDone = false;
             _style = style;
@@ -354,9 +359,14 @@ namespace AF.Presentation.Mechanics
                 }
 
                 int tint = shown.ColorAt(k);
-                bool mud = tint == Cuia.MudColor;
+                bool mud = tint == Cuia.MudColor; // rama defensiva: LevelValidation no deja Barro oculto
                 _target[k] = mud ? Palette.Mud : Palette.Tint(tint);
                 _targetTint[k] = mud ? 0 : tint;
+                if (mud)
+                {
+                    _mudMask |= 1 << k;
+                }
+
                 if (style == RevealStyle.Firefly)
                 {
                     // El frente sale por abajo de esta capa (la above-ésima desde arriba, contándola) cuando su avance sinusoidal
@@ -366,14 +376,11 @@ namespace AF.Presentation.Mechanics
                     _frontOut[k] = FireflyFrontEnd * (Mathf.Acos(1f - (2f * reached)) / Mathf.PI);
                     Image fruit = _fruits[k];
                     fruit.sprite = _art.FruitFlight(mud ? 1 : tint);
-                    Image disc = _discs[k];
-                    disc.sprite = _art.MurkyFruitDisc;
-                    OverlayParts.Place(disc, 0f, MarkCenterU(k), FireflyDiscU, FireflyDiscU, _u);
+                    OverlayParts.Place(_discs[k], 0f, MarkCenterU(k), FireflyDiscU, FireflyDiscU, _u);
                     OverlayParts.Place(fruit, 0f, MarkCenterU(k), FireflyFruitU, FireflyFruitU, _u);
                 }
             }
 
-            Prewarm();
             SetMask(_mask | layers);
             ApplyReveal(0f);
             return _animDur;
@@ -432,11 +439,7 @@ namespace AF.Presentation.Mechanics
                 badge.sizeDelta = size;
             }
 
-            for (int k = 0; k < _capacity; k++)
-            {
-                OverlayParts.Place(_discs[k], 0f, MarkCenterU(k), FireflyDiscU, FireflyDiscU, _u);
-                OverlayParts.Place(_fruits[k], 0f, MarkCenterU(k), FireflyFruitU, FireflyFruitU, _u);
-            }
+            PlaceFireflyParts();
         }
 
         /// <summary>Con la cuia en vuelo la insignia y los iconos se ocultan (la trama y el «?» siguen en su banda).</summary>
@@ -447,7 +450,7 @@ namespace AF.Presentation.Mechanics
             if (inFlight)
             {
                 StopPop();
-                for (int k = 0; k < _capacity; k++)
+                for (int k = 0; k < _fruits.Length; k++)
                 {
                     OverlayParts.SetVisible(_fruits[k], false);
                     OverlayParts.SetVisible(_discs[k], false);
@@ -478,6 +481,63 @@ namespace AF.Presentation.Mechanics
         private static float MarkCenterU(int k)
         {
             return CuiaGeometry.CavityBottomU + k + 0.5f - (0.5f * CuiaGeometry.TopFaceU);
+        }
+
+        // Discos e iconos de fruta de la Luciérnaga (uno por dosis, ocultos) y la textura del disco, una sola vez y solo en
+        // una cuia turbia (Prewarm), nunca dentro de un paso. Los discos van antes que los iconos (un lote, y los iconos
+        // encima) y los dos, antes de la insignia.
+        private void EnsureFireflyParts()
+        {
+            if (_fireflyReady)
+            {
+                return;
+            }
+
+            _fireflyReady = true;
+            Sprite discSprite = _art.MurkyFruitDisc;
+            _art.FruitFlight(1); // el atlas de las frutas, compartido (en un nivel turbio, la intro ya lo pidió)
+            var discs = new Image[_capacity];
+            var fruits = new Image[_capacity];
+            int sibling = _badge.rectTransform.GetSiblingIndex();
+            for (int k = 0; k < _capacity; k++)
+            {
+                discs[k] = OverlayParts.NewImage("MurkyFruitDisc" + k, _root, discSprite, Color.white);
+                discs[k].rectTransform.SetSiblingIndex(sibling++);
+            }
+
+            for (int k = 0; k < _capacity; k++)
+            {
+                fruits[k] = OverlayParts.NewImage("MurkyFruit" + k, _root, null, Color.white);
+                fruits[k].rectTransform.SetSiblingIndex(sibling++);
+            }
+
+            _discs = discs;
+            _fruits = fruits;
+            PlaceFireflyParts();
+        }
+
+        // Discos e iconos de fruta, centrados en el «?» de su dosis en reposo (si ya están creados).
+        private void PlaceFireflyParts()
+        {
+            for (int k = 0; k < _discs.Length; k++)
+            {
+                OverlayParts.Place(_discs[k], 0f, MarkCenterU(k), FireflyDiscU, FireflyDiscU, _u);
+                OverlayParts.Place(_fruits[k], 0f, MarkCenterU(k), FireflyFruitU, FireflyFruitU, _u);
+            }
+        }
+
+        // La capa k ya es su dosis normal: su fruta, con su tinte y su brillo, o, si lo que se revela es Barro (rama
+        // defensiva: LevelValidation no deja Barro oculto), mate, como lo pinta MudMarks.PaintMud (T20).
+        private void PaintRevealed(int k, Color color)
+        {
+            if (((_mudMask >> k) & 1) != 0)
+            {
+                _liquid!.SetMatteDose(k, color, 1f);
+            }
+            else
+            {
+                _liquid!.SetDose(k, color, 1f, _targetTint[k]);
+            }
         }
 
         // Del pardo al tinte de la capa k con la floración OKLab (la de la intro, D-010), sin redondeos en los extremos.
@@ -521,7 +581,7 @@ namespace AF.Presentation.Mechanics
                 Color c = Bloom(k, e);
                 if (t >= RuleDissolveEndAt)
                 {
-                    _liquid.SetDose(k, c, 1f, _targetTint[k]);
+                    PaintRevealed(k, c);
                 }
                 else
                 {
@@ -573,7 +633,7 @@ namespace AF.Presentation.Mechanics
                 float depth = LiquidGraphic.FireflyFrontDepth(p);
                 if (p >= 1f)
                 {
-                    _liquid!.SetDose(k, _target[k], 1f, _targetTint[k]);
+                    PaintRevealed(k, _target[k]);
                     MarkGone(k);
                 }
                 else
@@ -722,7 +782,7 @@ namespace AF.Presentation.Mechanics
             _animMs = -1f;
             _animMask = 0;
             _animLayers = 0;
-            for (int k = 0; k < _capacity; k++)
+            for (int k = 0; k < _fruits.Length; k++)
             {
                 if (((done >> k) & 1) != 0)
                 {

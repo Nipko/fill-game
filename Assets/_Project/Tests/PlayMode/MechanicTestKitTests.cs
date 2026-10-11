@@ -34,6 +34,7 @@ namespace AF.Tests.PlayMode
         {
             yield return null;
             int before = LiveGraphics();
+            int beforeObjects = LiveTransforms();
 
             // La cadena gota → sello → liana de MechanicStepsTests.NoAllocDuringSteps: overlays, efectos y el cometa de la
             // Liana en la capa delantera del tablero.
@@ -58,6 +59,7 @@ namespace AF.Tests.PlayMode
                 rig.RunUntilIdle(4000);
                 Assert.That(rig.Animator.IsIdle, Is.True);
                 Assert.That(LiveGraphics(), Is.GreaterThan(before), "el banco tiene gráficos");
+                Assert.That(LiveTransforms(), Is.GreaterThan(beforeObjects), "y objetos");
                 view = rig.Views[0];
             }
             finally
@@ -67,12 +69,20 @@ namespace AF.Tests.PlayMode
 
             Assert.That(view == null, Is.True, "las vistas se destruyen al desechar el banco, no al final del fotograma");
             Assert.That(LiveGraphics(), Is.EqualTo(before), "no queda ningún gráfico del banco, tampoco fuera de su raíz");
+            Assert.That(LiveTransforms(), Is.EqualTo(beforeObjects), "ni ningún objeto (anclas, capas y raíces sin gráfico incluidas)");
         }
 
         // Gráficos cargados, también los ocultos y los de objetos inactivos.
         private static int LiveGraphics()
         {
             return Object.FindObjectsByType<Graphic>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length;
+        }
+
+        // Objetos cargados (un Transform por objeto), también los inactivos: cuenta las anclas, las capas y las raíces de los
+        // overlays, que no tienen gráfico.
+        private static int LiveTransforms()
+        {
+            return Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length;
         }
     }
 }

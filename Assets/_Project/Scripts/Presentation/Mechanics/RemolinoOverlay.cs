@@ -184,6 +184,7 @@ namespace AF.Presentation.Mechanics
         private ICuiaBoard? _stepBoard;
         private IBoardFx? _stepFx;
         private bool _stepReduce;
+        private CuiaView? _view;
 
         /// <inheritdoc />
         public override MechanicType Type => MechanicType.Remolino;
@@ -477,6 +478,7 @@ namespace AF.Presentation.Mechanics
             _pool = OverlayParts.NewImage("RemolinoPool", Host.SlotBack, Host.Art.WhirlPool, ProceduralArt.WhirlPoolColor);
             _spiral = OverlayParts.NewImage("RemolinoSpiral", Host.SlotBack, Host.Art.RemolinoSpiralFrame(0), OverlayParts.Fade(Palette.UiPaper, FoamAlpha));
             _dots = new PipRow("RemolinoPair", Host.SlotFront, Host.Art.CounterPip, Host.Art.CounterPipEmpty, ProceduralArt.Pearl);
+            _view = Host.SlotBack.GetComponentInParent<CuiaView>(); // solo para pintar mate el Barro que reciba (puede no haberla)
 
             // Canal y racha en la capa trasera del tablero, en una raíz propia anclada a la esquina superior izquierda de la
             // capa, como las ranuras de las cuias: si el tablero cambia de tamaño sin recolocarse (el CanvasScaler al cambiar
@@ -1067,7 +1069,13 @@ namespace AF.Presentation.Mechanics
                     float fill = k < _stepAmount ? Mathf.Clamp01(p - k) : 1f;
                     if (tint == Cuia.MudColor)
                     {
+                        // Rama defensiva (LevelValidation no deja Barro con mecánica): mate, como lo pinta MudMarks.PaintMud
+                        // (T20). SetDose lleva la cuenta de la vista y SetMatteDose le quita el brillo.
                         board.SetDose(self, k, Palette.Mud, fill, 0);
+                        if (_view != null)
+                        {
+                            _view.Liquid.SetMatteDose(k, Palette.Mud, fill);
+                        }
                     }
                     else
                     {

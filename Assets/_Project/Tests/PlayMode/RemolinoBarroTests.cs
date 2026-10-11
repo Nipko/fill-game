@@ -410,10 +410,11 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // Un vertido por el Remolino (recepción por el fondo) y otro sobre el Barro (lavado); con measure, 60 fotogramas sin
-        // asignaciones (Recorder GC.Alloc) desde cada toque y otros 60 hasta el final. El banco va en 2 filas, como la pantalla,
-        // con la pareja en filas distintas y la que recibe de índice mayor: su racha pasa por detrás de una repisa y sus
-        // franjas de madera aparecen a mitad del paso.
+        // Un vertido por el Remolino (recepción por el fondo) y otro sobre el Barro (lavado); con measure, sin asignaciones
+        // (Recorder GC.Alloc) en los 60 primeros fotogramas desde cada toque y, después, hasta la vista quieta, sea cual sea la
+        // duración (se comprueba que la medida llega a IsIdle). El banco va en 2 filas, como la pantalla, con la pareja en filas
+        // distintas y la que recibe de índice mayor: su racha pasa por detrás de una repisa y sus franjas de madera aparecen a
+        // mitad del paso.
         private void RunSteps(ProceduralArt art, bool measure)
         {
             BoardState board = Board(
@@ -434,8 +435,9 @@ namespace AF.Tests.PlayMode
             Assert.That(remolino.Receiver, Is.EqualTo(3), "recibe la de índice mayor, que no dibuja el canal");
             if (measure)
             {
-                Assert.That(() => rig.Run(60 * PlayModeHelpers.FrameMs), Is.Not.AllocatingGCMemory(), "Remolino: 60 fotogramas desde el toque");
-                Assert.That(() => rig.Run(60 * PlayModeHelpers.FrameMs), Is.Not.AllocatingGCMemory(), "Remolino: 60 fotogramas más");
+                Assert.That(() => { rig.Run(60 * PlayModeHelpers.FrameMs); }, Is.Not.AllocatingGCMemory(), "Remolino: 60 fotogramas desde el toque");
+                Assert.That(() => { rig.RunUntilIdle(4000); }, Is.Not.AllocatingGCMemory(), "Remolino: hasta la vista quieta");
+                Assert.That(rig.Animator.IsIdle, Is.True, "Remolino: la medida cubre hasta la vista quieta");
             }
             else
             {
@@ -449,8 +451,9 @@ namespace AF.Tests.PlayMode
             Assert.That(mud.Events.BarroWashedMask, Is.EqualTo(1 << 2));
             if (measure)
             {
-                Assert.That(() => rig.Run(60 * PlayModeHelpers.FrameMs), Is.Not.AllocatingGCMemory(), "Barro: 60 fotogramas desde el toque");
-                Assert.That(() => rig.Run(60 * PlayModeHelpers.FrameMs), Is.Not.AllocatingGCMemory(), "Barro: 60 fotogramas más");
+                Assert.That(() => { rig.Run(60 * PlayModeHelpers.FrameMs); }, Is.Not.AllocatingGCMemory(), "Barro: 60 fotogramas desde el toque");
+                Assert.That(() => { rig.RunUntilIdle(4000); }, Is.Not.AllocatingGCMemory(), "Barro: hasta la vista quieta");
+                Assert.That(rig.Animator.IsIdle, Is.True, "Barro: la medida cubre hasta la vista quieta");
             }
 
             rig.RunUntilIdle(4000);
