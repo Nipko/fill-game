@@ -16,7 +16,8 @@ namespace AF.Tests.PlayMode
     /// Capturas de revisión de la Luciérnaga · Revelar (T14; <c>[Explicit]</c>, no forman parte de la suite):
     /// <c>65_reveal_tray_l100</c> (la bandeja de 3 ranuras de 64 dp con «Revelar +1»; recortes de la bandeja a tamaño real y
     /// de la ranura a 48 dp, con el glifo a 24 dp), <c>65b_reveal_tray_missing_l106</c> (sin saldo ni video: los precios en
-    /// rojo y los dos «Te faltan {n}» sin pisarse), <c>65c_reveal_tray_video_l106</c> (sin saldo: «+1» con el icono de video),
+    /// rojo y los dos «Te faltan {n}» sin pisarse; <c>65d</c>, con un precio de 4 cifras, el aviso en dos líneas),
+    /// <c>65c_reveal_tray_video_l106</c> (sin saldo: «+1» con el icono de video),
     /// <c>66_reveal_select_l100</c> (el modo de selección: solo late la cuia turbia, con el aro abierto por abajo),
     /// <c>67a_reveal_firefly_flight_l100</c> (la luciérnaga a mitad del vuelo; <c>67a_reveal_tray_spent_l100_zoom</c>, la ranura
     /// ya gastada: gris y sin precio), <c>67b_reveal_firefly_light_l100</c> (posada en el borde, con su luz bajando por el
@@ -110,6 +111,13 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 300);
             SnapshotKit.Save(dir, "65b_reveal_tray_missing_l106");
             SaveCrop(dir, "65b_reveal_tray_missing_l106_zoom", (RectTransform)boot.View!.Tray.RevealButton.transform, 150f, 40f);
+
+            // Con un precio de 4 cifras (fuera de los rangos de 08 §9; la API de la bandeja): «Te faltan 1.450» en dos líneas,
+            // sobre su ranura y sin pisar el aviso de la vecina (limpieza L2b).
+            BoosterTray tray = boot.View!.Tray;
+            tray.SetRevealBadge(0, 1500, 50, false, true, false);
+            SnapshotKit.Save(dir, "65d_reveal_tray_missing_4digits_l106");
+            SaveCrop(dir, "65d_reveal_tray_missing_4digits_l106_zoom", (RectTransform)tray.RevealButton.transform, 150f, 60f);
 
             // Sin saldo y con video: «+1» con el icono de video.
             LaunchOptions.AdFillOverride = null;

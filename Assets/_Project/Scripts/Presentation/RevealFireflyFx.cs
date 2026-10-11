@@ -29,8 +29,11 @@ namespace AF.Presentation
     /// </summary>
     /// <remarks>
     /// Tres imágenes creadas una vez (halo aditivo, alas y cuerpo) bajo una raíz que se mueve y gira; sin asignaciones al
-    /// volar (08 §5.4). Con Reducir movimiento (07 §7.8) no vuela: aparece en el borde con un fundido corto y se apaga sin
-    /// subir, y el pool no emite destellos. Las duraciones son [P] y ya vienen multiplicadas por el factor de velocidad.
+    /// volar (08 §5.4). Los sprites del cuerpo y de las alas (<see cref="ProceduralArt.FireflyBodySprite"/> y
+    /// <see cref="ProceduralArt.FireflyWingsSprite"/>) se piden en el primer <see cref="Play"/>, no al crear la pantalla: una
+    /// partida sin Luciérnaga no genera sus texturas, y el vuelo (cada <see cref="Tick"/>) no asigna. Con Reducir movimiento
+    /// (07 §7.8) no vuela: aparece en el borde con un fundido corto y se apaga sin subir, y el pool no emite destellos. Las
+    /// duraciones son [P] y ya vienen multiplicadas por el factor de velocidad.
     /// </remarks>
     public sealed class RevealFireflyFx
     {
@@ -74,6 +77,7 @@ namespace AF.Presentation
         private readonly Image _glow;
         private readonly Image _wings;
         private readonly Image _body;
+        private readonly ProceduralArt _art;
         private readonly IBoardFx? _fx;
         private Phase _phase;
         private float _t;
@@ -90,7 +94,10 @@ namespace AF.Presentation
         private Vector2 _control;
         private Vector2 _pos;
 
-        /// <summary>Crea las imágenes (ocultas) en <paramref name="layer"/>; los destellos van a <paramref name="fx"/> (null = sin estela).</summary>
+        /// <summary>
+        /// Crea las imágenes (ocultas) en <paramref name="layer"/>, sin los sprites del cuerpo y de las alas (los pide el primer
+        /// <see cref="Play"/>); los destellos van a <paramref name="fx"/> (null = sin estela).
+        /// </summary>
         public RevealFireflyFx(RectTransform layer, ProceduralArt art, IBoardFx? fx)
         {
             if (layer == null)
@@ -98,6 +105,7 @@ namespace AF.Presentation
                 throw new System.ArgumentNullException(nameof(layer));
             }
 
+            _art = art ?? throw new System.ArgumentNullException(nameof(art));
             _fx = fx;
 
             // Canvas anidado propio: moverla cada fotograma no reconstruye el lienzo principal (guía 8).
@@ -115,8 +123,8 @@ namespace AF.Presentation
                 _glow.material = additive;
             }
 
-            _wings = NewImage("Wings", art.FireflyWingsSprite, Color.white);
-            _body = NewImage("Body", art.FireflyBodySprite, Color.white);
+            _wings = NewImage("Wings", null, Color.white);
+            _body = NewImage("Body", null, Color.white);
             go.SetActive(false);
         }
 
@@ -158,6 +166,12 @@ namespace AF.Presentation
         /// <summary>Destellos pedidos al pool en el último efecto (diagnóstico y tests).</summary>
         public int SparklesRequested { get; private set; }
 
+        /// <summary>Sprite del cuerpo, o null si aún no voló ninguna (se pide en el primer <see cref="Play"/>; tests).</summary>
+        public Sprite? BodySprite => _body.sprite;
+
+        /// <summary>Sprite de las alas, o null si aún no voló ninguna (tests).</summary>
+        public Sprite? WingsSprite => _wings.sprite;
+
         /// <summary>Punto donde se posa la luciérnaga para la boca en <paramref name="rimCenter"/> (u = <paramref name="unitDp"/>).</summary>
         public static Vector2 PerchFor(Vector2 rimCenter, float unitDp, float side)
         {
@@ -168,10 +182,19 @@ namespace AF.Presentation
         /// Arranca el efecto: vuela de <paramref name="from"/> (el botón) a <paramref name="perch"/> en
         /// <see cref="FlightMs"/> × <paramref name="speedFactor"/>, se queda posada <paramref name="glowMs"/> ms (la duración del
         /// revelado, ya con el factor) y se va en <see cref="LeaveMs"/> × <paramref name="speedFactor"/>. Un efecto en curso se
-        /// sustituye. Sin asignaciones.
+        /// sustituye. Sin asignaciones, salvo la primera vez que vuela una luciérnaga en la sesión, que genera los sprites del
+        /// cuerpo y de las alas (el arte se comparte entre niveles).
         /// </summary>
         public void Play(Vector2 from, Vector2 perch, float unitDp, float speedFactor, float glowMs, bool reduceMotion)
         {
+            if (_body.sprite == null)
+            {
+                // Perezosos: un nivel sin Luciérnaga no crea estas texturas (ProceduralArt.Firefly). El == de Unity también
+                // las vuelve a pedir si el arte se destruyó.
+                _wings.sprite = _art.FireflyWingsSprite;
+                _body.sprite = _art.FireflyBodySprite;
+            }
+
             float speed = Mathf.Max(0.01f, speedFactor);
             _u = Mathf.Max(1f, unitDp);
             _from = from;
@@ -402,7 +425,7 @@ namespace AF.Presentation
             return _pos + new Vector2((offset.x * Mathf.Cos(rad)) - (offset.y * Mathf.Sin(rad)), (offset.x * Mathf.Sin(rad)) + (offset.y * Mathf.Cos(rad)));
         }
 
-        private Image NewImage(string name, Sprite sprite, Color color)
+        private Image NewImage(string name, Sprite? sprite, Color color)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             go.transform.SetParent(_root, false);

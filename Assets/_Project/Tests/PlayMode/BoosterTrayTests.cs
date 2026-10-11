@@ -9,17 +9,21 @@ using AF.Platform;
 using AF.Save;
 using AF.UI;
 using NUnit.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
+using UnityEngine.TestTools.Constraints;
 using UnityEngine.UI;
+using Is = UnityEngine.TestTools.Constraints.Is;
 
 namespace AF.Tests.PlayMode
 {
     /// <summary>
     /// Bandeja de comodines en la escena (tarea B2-1; 07 §7.4; 04 §1.1, §2.1 y §2.2): en 1-7 solo Marea; desde el 8, Marea y
     /// Cuia extra con el regalo de Capi; la cuia añadida va a la fila más corta sin cambiar las filas (D-006); desde el 11,
-    /// el cupo de Marea en el badge. Con la Luciérnaga (T14; 04 §2.5): 1, 2 y 3 ranuras de 64 dp con Revelar la última,
-    /// recentradas, y los avisos «Te faltan {n}» de dos ranuras vecinas sin solaparse.
+    /// el cupo de Marea en el badge, y sin cupo la pregunta por el video en cada fotograma sin asignaciones. Con la Luciérnaga
+    /// (T14; 04 §2.5): 1, 2 y 3 ranuras de 64 dp con Revelar la última, recentradas, y los avisos «Te faltan {n}» de dos
+    /// ranuras vecinas sin solaparse, a 11 sp o más y, con 4 cifras, en dos líneas sobre su ranura.
     /// </summary>
     public sealed class BoosterTrayTests
     {
@@ -98,6 +102,115 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 20);
             Assert.That(view.Tray.UndoBadgeText, Is.EqualTo("+3"), "sin cupo: «+3» con el precio (sin fill no hay video)");
             Assert.That(boot.PressUndoRefillSeeds(), Is.False, "0 semillas: nada cambia");
+        }
+
+        [UnityTest]
+        public IEnumerator MareaWithoutQuota_AsksForTheVideoEveryFrame_WithoutAllocating()
+        {
+            // Desde el 11, sin cupo ni stock, la bandeja pregunta en cada fotograma si hay video de rv_undo_refill (B2-1) y los
+            // anuncios leen los contadores del día con la clave de la fecha: 20 fotogramas sin asignaciones (08 §5.4). Con fill,
+            // «+3» lleva el icono de video. La segunda carga mide (la primera calienta).
+            LaunchOptions.LevelOffsetOverride = 10;
+            for (int pass = 0; pass < 2; pass++)
+            {
+                LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
+                yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
+                GameBootstrap boot = GameBootstrap.Current!;
+                PlayModeHelpers.TakeClock(boot);
+                boot.TapAnywhere();
+                PlayModeHelpers.Step(boot, 50);
+                GameScreen view = boot.View!;
+                for (int i = 0; i < 3; i++)
+                {
+                    boot.TapCuia(0);
+                    boot.TapCuia(2);
+                    PlayModeHelpers.StepUntilIdle(boot, 3000);
+                    Assert.That(boot.PressUndo(), Is.True);
+                    PlayModeHelpers.StepUntilIdle(boot, 3000);
+                }
+
+                PlayModeHelpers.Step(boot, 50);
+                Assert.That(boot.Flow!.UndoStatus.HasQuota, Is.False, "sin cupo");
+                Assert.That(view.Tray.UndoBadgeText, Is.EqualTo("+3"));
+                Assert.That(view.Tray.UndoShowsVideo, Is.True, "con fill, el video");
+
+                void Run20()
+                {
+                    for (int f = 0; f < 20; f++)
+                    {
+                        view.Tick(PlayModeHelpers.FrameMs);
+                        boot.Flow!.Tick(PlayModeHelpers.FrameMs, view.IsViewIdle);
+                    }
+                }
+
+                if (pass == 1)
+                {
+                    Assert.That(Run20, Is.Not.AllocatingGCMemory(), "20 fotogramas con Marea sin cupo");
+                }
+                else
+                {
+                    Run20();
+                }
+
+                Assert.That(view.Tray.UndoShowsVideo, Is.True);
+                yield return null;
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator MissingNotice_AtLeast11sp_AndFourDigitsStayOverTheirSlot()
+        {
+            // 02 §12: el aviso va a 12 sp si cabe y nunca a menos de 11 [P] (antes bajaba hasta 9). Nivel 106 con 50 semillas y
+            // sin video: Cuia extra (150) y Revelar (120) enseñan a la vez sus avisos estrechos, en una línea.
+            LaunchOptions.AdFillOverride = FakeAdFill.NoFill;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(50));
+            yield return PlayModeHelpers.LoadGame(106, new MemoryProgressStore(106, 105));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 1000);
+            BoosterTray tray = boot.View!.Tray;
+            Assert.That(tray.ExtraMissingWidth, Is.LessThan(72f), "estrechos: los dos a la vez");
+            AssertNotice(tray.ExtraMissingLabel, 1, "«Te faltan 100»");
+            AssertNotice(tray.RevealMissingLabel, 1, "«Te faltan 70»");
+            Assert.That(tray.RevealMissingLabel.fontSize, Is.EqualTo(12f).Within(0.01f), "«Te faltan 70» cabe a 12 sp");
+
+            // Un precio de 4 cifras (fuera de los rangos de 08 §9; la API de la bandeja, la misma que llama GameScreen.Reveal):
+            // la cifra baja a una segunda línea, la placa crece hacia arriba y el aviso sigue sobre su ranura sin pisar el de
+            // la vecina.
+            Assert.That(tray.RevealPriceRect.localScale.x, Is.EqualTo(1f), "con 3 cifras la etiqueta de precio no se encoge");
+            tray.SetRevealBadge(0, 1500, 50, false, true, false);
+            Assert.That(tray.RevealMissingText, Is.EqualTo("Te faltan 1.450"));
+            AssertNotice(tray.RevealMissingLabel, 2, "«Te faltan 1.450» estrecho");
+            AssertOverItsSlot(tray.RevealMissingRect, (RectTransform)tray.RevealButton.transform, "Revelar");
+            Assert.That(WorldRect(tray.ExtraMissingRect).Overlaps(WorldRect(tray.RevealMissingRect)), Is.False, "sin solapes");
+
+            // La etiqueta «1.500» se encoge entera hasta caber en su paso de ranura (la cifra, a 12 sp o más) y no pisa la
+            // de la vecina.
+            Assert.That(tray.RevealPriceShown, Is.EqualTo(1500));
+            Rect price = WorldRect(tray.RevealPriceRect);
+            Rect slot = WorldRect((RectTransform)tray.RevealButton.transform);
+            float dp = slot.width / 64f;
+            Assert.That(price.width / dp, Is.LessThanOrEqualTo(70.01f), "dentro de su paso de ranura (64 + 8 − 2 dp)");
+            Assert.That(price.center.x, Is.EqualTo(slot.center.x).Within(0.5f * dp), "centrada bajo su ranura");
+            Assert.That(tray.RevealPriceRect.localScale.x * 16f, Is.GreaterThanOrEqualTo(12f - 0.01f), "la cifra, a 12 sp o más");
+            Assert.That(price.Overlaps(WorldRect(tray.ExtraPriceRect)), Is.False, "sin pisar el precio de la Cuia extra");
+
+            // Sin la vecina, el aviso ancho (104 dp) lleva las 4 cifras en una línea a 12 sp.
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(200));
+            yield return PlayModeHelpers.LoadGame(106, new MemoryProgressStore(106, 105));
+            boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 1000);
+            tray = boot.View!.Tray;
+            Assert.That(tray.ExtraShowsMissing, Is.False, "con 200 semillas la Cuia extra se paga");
+            tray.SetRevealBadge(0, 1500, 200, false, true, false);
+            Assert.That(tray.RevealMissingText, Is.EqualTo("Te faltan 1.300"));
+            Assert.That(tray.RevealMissingWidth, Is.GreaterThan(100f), "ancho");
+            AssertNotice(tray.RevealMissingLabel, 1, "«Te faltan 1.300» ancho");
+            Assert.That(tray.RevealMissingLabel.fontSize, Is.EqualTo(12f).Within(0.01f));
+            AssertOverItsSlot(tray.RevealMissingRect, (RectTransform)tray.RevealButton.transform, "Revelar");
         }
 
         [UnityTest]
@@ -182,6 +295,36 @@ namespace AF.Tests.PlayMode
             var corners = new Vector3[4];
             rt.GetWorldCorners(corners);
             return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
+        }
+
+        // El aviso, maquetado: ≥ 11 sp, las líneas dadas, entero y con el texto dentro de su placa.
+        private static void AssertNotice(TextMeshProUGUI label, int lines, string what)
+        {
+            Canvas.ForceUpdateCanvases();
+            label.ForceMeshUpdate(true, true);
+            Assert.That(label.gameObject.activeInHierarchy, Is.True, what + " a la vista");
+            Assert.That(label.fontSize, Is.GreaterThanOrEqualTo(11f - 0.01f), what + ": ≥ 11 sp");
+            Assert.That(label.textInfo.lineCount, Is.EqualTo(lines), what + ": líneas");
+            Assert.That(label.textInfo.characterCount, Is.EqualTo(label.text.Length), what + " entero");
+            Rect r = label.rectTransform.rect;
+            Bounds b = label.textBounds;
+            Assert.That(b.min.x, Is.GreaterThanOrEqualTo(r.xMin - 0.5f), what + ": dentro de su placa por la izquierda");
+            Assert.That(b.max.x, Is.LessThanOrEqualTo(r.xMax + 0.5f), what + ": dentro de su placa por la derecha");
+            Assert.That(b.min.y, Is.GreaterThanOrEqualTo(r.yMin - 0.5f), what + ": dentro de su placa por abajo");
+            Assert.That(b.max.y, Is.LessThanOrEqualTo(r.yMax + 0.5f), what + ": dentro de su placa por arriba");
+        }
+
+        // El aviso, centrado sobre su ranura y dentro de su paso (64 + 8 dp, si es estrecho) o de su ancho de 104 dp, encima del
+        // canto de la ranura.
+        private static void AssertOverItsSlot(RectTransform notice, RectTransform slot, string what)
+        {
+            Canvas.ForceUpdateCanvases();
+            Rect n = WorldRect(notice);
+            Rect s = WorldRect(slot);
+            float dp = s.width / 64f; // unidades de mundo por dp
+            Assert.That(n.center.x, Is.EqualTo(s.center.x).Within(0.5f * dp), what + ": centrado sobre la ranura");
+            Assert.That(notice.rect.width, Is.LessThanOrEqualTo(104f + 0.01f), what);
+            Assert.That(n.yMin, Is.GreaterThanOrEqualTo(s.yMax - (0.5f * dp)), what + ": encima del canto de la ranura");
         }
     }
 

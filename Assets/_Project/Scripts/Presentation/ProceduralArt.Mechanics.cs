@@ -144,10 +144,7 @@ namespace AF.Presentation
                 {
                     int s = IconPx;
                     var pc = new PixelCanvas(s, s);
-                    float c = s * 0.5f;
-                    pc.FillEllipseSoft(c, c * 0.92f, s * 0.44f, s * 0.32f, 1.2f, ColorMath.Darken(Palette.Mud, 0.35f));
-                    pc.FillEllipseSoft(c, c * 0.95f, s * 0.41f, s * 0.29f, 1.2f, Palette.Mud);
-                    DrawMudLumps(pc, s * 0.14f, s * 0.2f, s * 0.72f, s * 0.5f, s / (float)MechanicPxPerU);
+                    DrawMudGlyph(pc, s);
                     _mudIcon = MakeSprite(pc, "mech_icon_mud", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
                 }
 
@@ -500,8 +497,17 @@ namespace AF.Presentation
         private Sprite BuildMechanicIcon(MechanicType type)
         {
             int s = IconPx;
-            float k = s / 96f;
             var pc = new PixelCanvas(s, s);
+            DrawMechanicGlyph(pc, type, s);
+            return MakeSprite(pc, "mech_icon_" + MechanicTypes.ToKey(type), new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+        }
+
+        // Dibujo del icono de la mecánica type en un lienzo cuadrado de s px (k = s / 96): el de 32 dp (MechanicIcon) y el
+        // grande del estreno (CardHeroIcon, ProceduralArt.Cards.cs), con el mismo dibujo a su tamaño para que el grande no sea el
+        // pequeño estirado. Sin tintes de fruta (07 §3, regla 6).
+        private static void DrawMechanicGlyph(PixelCanvas pc, MechanicType type, int s)
+        {
+            float k = s / 96f;
             switch (type)
             {
                 case MechanicType.Hoja:
@@ -544,8 +550,17 @@ namespace AF.Presentation
                     DrawPiranha(pc, 48f * k, 48f * k, 88f * k, k);
                     break;
             }
+        }
 
-            return MakeSprite(pc, "mech_icon_" + MechanicTypes.ToKey(type), new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
+        // Mancha de barro de várzea con sus grumos en un lienzo cuadrado de s px: el icono de 32 dp (MudIcon) y el grande del
+        // estreno del Barro (CardHeroIcon). El borde suave crece con el lienzo (1,2 px a 32 dp).
+        private static void DrawMudGlyph(PixelCanvas pc, int s)
+        {
+            float c = s * 0.5f;
+            float soft = 1.2f * (s / (float)IconPx);
+            pc.FillEllipseSoft(c, c * 0.92f, s * 0.44f, s * 0.32f, soft, ColorMath.Darken(Palette.Mud, 0.35f));
+            pc.FillEllipseSoft(c, c * 0.95f, s * 0.41f, s * 0.29f, soft, Palette.Mud);
+            DrawMudLumps(pc, s * 0.14f, s * 0.2f, s * 0.72f, s * 0.5f, s / (float)MechanicPxPerU);
         }
 
         private static Vector2 Quad(Vector2 a, Vector2 c, Vector2 b, float t)

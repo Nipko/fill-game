@@ -7,7 +7,9 @@ namespace AF.Presentation
     /// Arte procedural [P] de la Luciérnaga · Revelar (tarea T14 del paso 1; 07 §7.6: «luciérnaga encendida sobre una cuia
     /// oscura», amarillo verdoso #D8E24A; 04 §2.5; D-003): el glifo de 32 dp de la ranura de la bandeja (y su versión
     /// deshabilitada), la luciérnaga que vuela del botón a la cuia (cuerpo y alas, en u) y el aro del pulso del modo de
-    /// selección (9-slice blanco que se tiñe). Todo perezoso: un nivel sin Aguas turbias no crea más textura que el glifo.
+    /// selección (9-slice blanco que se tiñe). Todo perezoso: un nivel sin Aguas turbias no crea más textura que el glifo, que
+    /// la bandeja pide al crearse; el aro, al abrir el modo de selección, y el cuerpo y las alas, en el primer vuelo
+    /// (<see cref="RevealFireflyFx.Play"/>).
     /// </summary>
     /// <remarks>
     /// <para><b>Color</b>: #D8E24A (<see cref="FireflyLight"/>, el de 07 §7.6) queda a ΔE00 5,7 de Arazá (#BBCC33), por debajo de

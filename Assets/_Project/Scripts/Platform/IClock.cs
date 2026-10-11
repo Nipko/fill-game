@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Globalization;
+using System.Threading;
 
 namespace AF.Platform
 {
@@ -27,6 +28,11 @@ namespace AF.Platform
     /// <summary>Operaciones derivadas de un <see cref="IClock"/>, iguales para todas las implementaciones.</summary>
     public static class ClockExtensions
     {
+        // Última clave de LocalDateKey con su fecha. Se pregunta en cada fotograma (la bandeja de comodines pregunta si hay
+        // video de Marea sin cupo, y los anuncios leen los contadores del día con esta clave) y formatear la fecha crea una
+        // cadena nueva cada vez (08 §5.4: sin asignaciones por fotograma): la clave solo se rehace cuando cambia el día. La
+        // fecha y su clave van juntas en un objeto inmutable, para que se lean a la vez aunque llamen varios hilos.
+        private static DateKey? s_lastKey;
         /// <summary>Hora local del dispositivo (<see cref="DateTimeKind.Unspecified"/>): <c>UtcNow + LocalOffset</c>.</summary>
         public static DateTime LocalNow(this IClock clock)
         {
@@ -46,17 +52,40 @@ namespace AF.Platform
 
         /// <summary>
         /// Fecha local con el formato del guardado, <c>yyyy-MM-dd</c> y calendario gregoriano (InvariantCulture), como
-        /// <c>daily.date_local</c> de 04 §10.1 (p. ej. <c>"2026-10-05"</c>).
+        /// <c>daily.date_local</c> de 04 §10.1 (p. ej. <c>"2026-10-05"</c>). Mientras no cambie el día devuelve la misma
+        /// cadena, sin asignar memoria: solo el primer pedido de cada día la crea.
         /// </summary>
         public static string LocalDateKey(this IClock clock)
         {
-            return FormatDateKey(clock.LocalDate());
+            DateTime date = clock.LocalDate();
+            DateKey? last = Volatile.Read(ref s_lastKey);
+            if (last != null && last.Date == date)
+            {
+                return last.Key;
+            }
+
+            var fresh = new DateKey(date, FormatDateKey(date));
+            Volatile.Write(ref s_lastKey, fresh);
+            return fresh.Key;
         }
 
         /// <summary>Formatea una fecha como <c>yyyy-MM-dd</c> (InvariantCulture, calendario gregoriano).</summary>
         public static string FormatDateKey(DateTime date)
         {
             return date.ToString("yyyy'-'MM'-'dd", CultureInfo.InvariantCulture);
+        }
+
+        private sealed class DateKey
+        {
+            public DateKey(DateTime date, string key)
+            {
+                Date = date;
+                Key = key;
+            }
+
+            public DateTime Date { get; }
+
+            public string Key { get; }
         }
     }
 }
