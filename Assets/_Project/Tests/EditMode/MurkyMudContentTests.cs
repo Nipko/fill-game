@@ -311,9 +311,10 @@ namespace AF.Tests.EditMode
         [Test]
         public void ShaderConstants_MatchLiquidGraphic() // hallazgo 3: los umbrales del shader y sus espejos en CPU no se separan
         {
-            string text = File.ReadAllText(Path.Combine(Application.dataPath, LiquidShaderPath));
+            // Solo el código: un #define o un uso que solo quede en un comentario no cuenta (revisión de T15, n.º 2).
+            string code = WithoutComments(File.ReadAllText(Path.Combine(Application.dataPath, LiquidShaderPath)));
             var defines = new Dictionary<string, float>();
-            foreach (Match m in Regex.Matches(text, @"^\s*#define\s+(AF_[A-Z0-9_]+)\s+(-?[0-9]+(?:\.[0-9]+)?)\s*$", RegexOptions.Multiline))
+            foreach (Match m in Regex.Matches(code, @"^\s*#define\s+(AF_[A-Z0-9_]+)\s+(-?[0-9]+(?:\.[0-9]+)?)\s*$", RegexOptions.Multiline))
             {
                 defines[m.Groups[1].Value] = float.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
             }
@@ -328,6 +329,7 @@ namespace AF.Tests.EditMode
                 ("AF_HATCH_FADE_FROM", LiquidGraphic.HatchFadeFrom),
                 ("AF_HATCH_FADE_TO", LiquidGraphic.HatchFadeTo),
                 ("AF_FRUIT_PATTERN_FROM", LiquidGraphic.FruitPatternFrom),
+                ("AF_FRUIT_PATTERN_TO", LiquidGraphic.FruitPatternTo),
                 ("AF_MARK_FADE_FROM", LiquidGraphic.MarkFadeFrom),
                 ("AF_MARK_FADE_TO", LiquidGraphic.MarkFadeTo),
                 ("AF_MARK_HALO", LiquidGraphic.MarkHaloOpacity),
@@ -350,6 +352,7 @@ namespace AF.Tests.EditMode
                 ("AF_FIREFLY_EDGE_U", LiquidGraphic.FireflyEdgeU),
                 ("AF_FIREFLY_TURN_FROM", LiquidGraphic.FireflyTurnFrom),
                 ("AF_FIREFLY_TURN_TO", LiquidGraphic.FireflyTurnTo),
+                ("AF_FIREFLY_TURN_OFF", LiquidGraphic.FireflyTurnOff),
                 ("AF_FIREFLY_PATTERN_FROM", LiquidGraphic.FireflyPatternFrom),
                 ("AF_FIREFLY_PATTERN_TO", LiquidGraphic.FireflyPatternTo),
             };
@@ -360,7 +363,8 @@ namespace AF.Tests.EditMode
                 mirrored.Add(name);
                 Assert.That(defines.ContainsKey(name), Is.True, "el shader define " + name);
                 Assert.That(defines[name], Is.EqualTo(value).Within(1e-6f), name + ": el shader y LiquidGraphic dicen lo mismo");
-                Assert.That(Regex.Matches(text, @"\b" + name + @"\b").Count, Is.GreaterThanOrEqualTo(2), name + ": el shader lo usa");
+                string uses = Regex.Replace(code, @"^\s*#define\s+" + name + @"\b[^\r\n]*", string.Empty, RegexOptions.Multiline);
+                Assert.That(Regex.Matches(uses, @"\b" + name + @"\b").Count, Is.GreaterThanOrEqualTo(1), name + ": el shader lo usa fuera de su #define");
             }
 
             foreach (string name in defines.Keys)
@@ -486,6 +490,78 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void FireflyParts_OnlyInMurkyCuias_PreparedBeforeTheReveal() // revisión de T15, n.º 4; arquitectura del paso 1 §12
+        {
+            // Con un arte nuevo (el de la clase ya generó el disco): una cuia sin ocultas no crea discos, iconos ni la textura del
+            // disco; una turbia los prepara al mostrar sus ocultas (Prewarm, la carga del nivel), y el revelado con la Luciérnaga
+            // ya no crea nada dentro del paso.
+            var art = new ProceduralArt("white");
+            CuiaView? clear = null;
+            CuiaView? murky = null;
+            try
+            {
+                clear = CuiaView.Create((RectTransform)_canvas.transform, 0, 4, art, _ => { }, (_, __) => { });
+                clear.ShowContent(Cuia.Create(4, new[] { 8, 4, 4 }), false);
+                Assert.That(clear.Murky.FireflyPartsReady, Is.False, "una cuia sin ocultas no prepara la Luciérnaga");
+                Assert.That(FireflyImages(clear), Is.EqualTo(0), "ni crea sus discos e iconos");
+                Assert.That(art.HasMurkyFruitDisc, Is.False, "ni la textura del disco");
+
+                murky = CuiaView.Create((RectTransform)_canvas.transform, 1, 4, art, _ => { }, (_, __) => { });
+                Assert.That(FireflyImages(murky), Is.EqualTo(0), "al construirse, la cuia aún no sabe si será turbia");
+                Cuia cuia = Cuia.Create(4, new[] { 8, 4, 4 }, 0b0001);
+                murky.ShowContent(cuia, false);
+                Assert.That(murky.Murky.FireflyPartsReady, Is.True, "la cuia turbia se prepara al mostrar su oculta");
+                Assert.That(FireflyImages(murky), Is.EqualTo(2 * 4), "un disco y un icono por dosis");
+                Assert.That(art.HasMurkyFruitDisc, Is.True, "y la textura del disco, antes de cualquier paso");
+                Assert.That(murky.Murky.Badge.transform.GetSiblingIndex(), Is.EqualTo(2 * 4), "los discos y los iconos, bajo la insignia");
+
+                Assert.That(murky.PlayReveal(cuia.HiddenMask, RevealStyle.Firefly, 1f), Is.GreaterThan(0f));
+                Assert.That(FireflyImages(murky), Is.EqualTo(2 * 4), "el revelado no crea imágenes");
+                Assert.That(murky.Murky.FruitDisc(0).sprite, Is.SameAs(art.MurkyFruitDisc));
+                Assert.That(murky.Murky.FruitImage(0).sprite, Is.SameAs(art.FruitFlight(8)), "el icono de su fruta");
+                murky.SnapMarks();
+            }
+            finally
+            {
+                if (clear != null)
+                {
+                    Object.DestroyImmediate(clear.gameObject);
+                }
+
+                if (murky != null)
+                {
+                    Object.DestroyImmediate(murky.gameObject);
+                }
+
+                art.Dispose();
+            }
+        }
+
+        [Test]
+        public void HiddenMud_RevealedMatte() // rama defensiva de MurkyMarks (T20): LevelValidation no deja Barro oculto, pero si llega, mate
+        {
+            Cuia cuia = Cuia.Create(4, new[] { Cuia.MudColor, 4, 4 }, 0b0001);
+            RevealStyle[] styles = { RevealStyle.Rule, RevealStyle.Firefly };
+            for (int s = 0; s < styles.Length; s++)
+            {
+                CuiaView view = NewView();
+                view.ShowContent(cuia, false);
+                float ms = view.PlayReveal(cuia.HiddenMask, styles[s], 1f);
+                Assert.That(ms, Is.GreaterThan(0f), styles[s] + ": revela");
+                for (float t = 0f; t < ms && view.Murky.IsAnimating; t += 10f)
+                {
+                    view.Tick(10f);
+                }
+
+                Assert.That(view.Murky.IsAnimating, Is.False, styles[s] + ": terminó");
+                Assert.That(view.Liquid.IsMatteAt(0), Is.True, styles[s] + ": el Barro revelado, mate como lo pinta MudMarks.PaintMud");
+                Assert.That(view.Liquid.DoseColorAt(0), Is.EqualTo(Palette.Mud), styles[s] + ": de Palette.Mud");
+                Assert.That(view.Liquid.DoseTintAt(0), Is.EqualTo(0), styles[s] + ": sin tinte de fruta");
+                Assert.That(view.Liquid.IsMatteAt(1), Is.False, styles[s] + ": la fruta de encima, con su brillo");
+            }
+        }
+
+        [Test]
         public void Tint15_IsMud()
         {
             Assert.That(Palette.Tint(Cuia.MudColor), Is.EqualTo(Palette.Mud));
@@ -500,6 +576,30 @@ namespace AF.Tests.EditMode
         private static bool Same(Color a, Color b)
         {
             return Mathf.Abs(a.r - b.r) + Mathf.Abs(a.g - b.g) + Mathf.Abs(a.b - b.b) < 0.005f;
+        }
+
+        // El texto de un shader sin sus comentarios (de bloque y de línea).
+        private static string WithoutComments(string text)
+        {
+            string noBlocks = Regex.Replace(text, @"/\*.*?\*/", string.Empty, RegexOptions.Singleline);
+            return Regex.Replace(noBlocks, @"//[^\r\n]*", string.Empty);
+        }
+
+        // Imágenes de la Luciérnaga (discos e iconos de fruta, a la vista o no) bajo las marcas de turbias: las que no son la
+        // insignia ni sus glifos.
+        private static int FireflyImages(CuiaView view)
+        {
+            int n = 0;
+            Image[] images = view.Murky.Root.GetComponentsInChildren<Image>(true);
+            for (int i = 0; i < images.Length; i++)
+            {
+                if (images[i] != view.Murky.Badge && !images[i].transform.IsChildOf(view.Murky.Badge.transform))
+                {
+                    n++;
+                }
+            }
+
+            return n;
         }
 
         // Una dosis oculta en la malla: ni el tinte de su fruta ni el de ninguna otra (su fila del atlas la delataría), y el

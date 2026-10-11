@@ -10,10 +10,12 @@
 // uGUI no admite MaterialPropertyBlock en un CanvasRenderer: los datos por cuia y por dosis llegan por vértice
 // (LiquidGraphic.cs) y todas las cuias comparten un material, así que van en un solo lote. Solo canales UV: el Canvas
 // gira NORMAL y TANGENT con el objeto (la cuia se inclina al verter), así que no sirven para datos. Sin palabras clave
-// (shader_feature) que el build pudiera eliminar. Coste: 1 muestra (patrón) y unas 60 ALU por píxel (el recorte a la
-// silueta añade unas 12; por encima de las 40 de la guía 8: pendiente de medir en un dispositivo de clase A). Las dosis
-// turbias hacen 2 muestras (la trama o, al revelarse, el patrón de la fruta; y el «?») y unas 60 ALU más; nunca más de 2
-// muestras por píxel. Sin Bloom.
+// (shader_feature) que el build pudiera eliminar. Coste por píxel, en instrucciones de ps_4_0 ejecutadas (fxc /O3: las ALU,
+// los saltos y las muestras): una banda con patrón, unas 165 y 1 muestra (el patrón); sin patrón o mate, unas 140 y ninguna;
+// el recorte a la silueta es unas 25 de ellas. Por encima de las 40 ALU de la guía 8: pendiente de medir en un dispositivo
+// de clase A. Lo turbio va en ramas uniformes por banda (murky y turning salen solo del patrón, el mismo en todos los
+// vértices de la banda), así que solo lo pagan las dosis turbias: unas 275 y 2 muestras (la trama o, al revelarse, el patrón
+// de la fruta; y el «?»), y unas 285 con la Luciérnaga; nunca más de 2 muestras por píxel. Sin Bloom.
 //
 // Canales (en u de la cuia, x de 0 a 2 con el centro en 1; y desde el pie):
 //   COLOR      color de la dosis (el Canvas lo pasa a lineal)
@@ -137,6 +139,7 @@ Shader "AF/UI/Liquid"
             #define AF_HATCH_FADE_FROM 0.18
             #define AF_HATCH_FADE_TO 0.55
             #define AF_FRUIT_PATTERN_FROM 0.64
+            #define AF_FRUIT_PATTERN_TO 1.0
             #define AF_MARK_FADE_FROM 0.35
             #define AF_MARK_FADE_TO 0.85
             #define AF_MARK_HALO 0.55
@@ -159,6 +162,7 @@ Shader "AF/UI/Liquid"
             #define AF_FIREFLY_EDGE_U 0.12
             #define AF_FIREFLY_TURN_FROM 0.25
             #define AF_FIREFLY_TURN_TO 0.5
+            #define AF_FIREFLY_TURN_OFF 0.999
             #define AF_FIREFLY_PATTERN_FROM 0.55
             #define AF_FIREFLY_PATTERN_TO 0.85
 
@@ -240,10 +244,6 @@ Shader "AF/UI/Liquid"
                 float x = i.uv0.x;
                 float yl = i.uv0.y;  // y local (vidrio)
                 float y = i.uv0.z;   // y de capa (dosis)
-                // Alto de la cuia; en una dosis turbia, con el sitio de su «?» encima (LiquidGraphic.PackGlyph). En las demás
-                // el código es 0 y el alto sale igual.
-                float glyphCode = floor(i.uv0.w * (1.0 / AF_GLYPH_PACK_SCALE));
-                float heightU = i.uv0.w - (AF_GLYPH_PACK_SCALE * glyphCode);
                 float dpU = _DpU;
                 float k = floor((i.surf.w + 1.5) / 4.0);
                 float patternMode = i.surf.w - (4.0 * k);
@@ -258,6 +258,29 @@ Shader "AF/UI/Liquid"
                 float2 dX = float2(ddx(x), ddy(x));
                 float2 dYl = float2(ddx(yl), ddy(yl));
                 float2 dY = float2(ddx(y), ddy(y));
+
+                // Aguas turbias (patrón 2 ± 0,45 · avance): v > 0, revelado por la regla; v < 0, Luciérnaga. murky y turning salen
+                // solo del patrón, que es el mismo en todos los vértices de una banda: sus ramas son uniformes por banda y una
+                // banda normal (o mate) no paga nada de lo turbio. En una dosis turbia, el alto de la cuia lleva encima el sitio de
+                // su «?» (LiquidGraphic.PackGlyph); en las demás, TEXCOORD0.w es el alto tal cual.
+                bool murky = patternMode > 1.5;
+                float heightU = i.uv0.w;
+                float glyphCode = 0.0;
+                float bandScale = 1.0;
+                float dissolve = 0.0;
+                float firefly = 0.0;
+                bool turning = false;
+                UNITY_BRANCH
+                if (murky)
+                {
+                    glyphCode = floor(i.uv0.w * (1.0 / AF_GLYPH_PACK_SCALE));
+                    heightU = i.uv0.w - (AF_GLYPH_PACK_SCALE * glyphCode);
+                    bandScale = length(dY) / max(length(dX), 1e-6);
+                    float v = (patternMode - AF_MURKY_MODE) / AF_MURKY_SPAN;
+                    dissolve = saturate(v);
+                    firefly = saturate(-v);
+                    turning = v < 0.0;
+                }
 
                 // Flecha de los arcos (CuiaGeometry.FaceSagU): medio alto de la cara superior en el eje, 0 en las paredes.
                 float ex = saturate(abs(x - 1.0) / _AFCavityHalfU);
@@ -293,25 +316,28 @@ Shader "AF/UI/Liquid"
                     alpha *= saturate(((ya - doseBottom) / pix) + 0.5);
                 }
 
-                // Aguas turbias (patrón 2 ± 0,45 · avance): v > 0, revelado por la regla; v < 0, Luciérnaga.
-                bool murky = patternMode > 1.5;
-                float v = (patternMode - AF_MURKY_MODE) / AF_MURKY_SPAN;
-                float dissolve = murky ? saturate(v) : 0.0;
-                float firefly = murky ? saturate(-v) : 0.0;
-                bool turning = murky && v < 0.0;
-
-                // Luciérnaga [P]: el frente de luz baja por la banda (profundidad 0 arriba y 1 abajo, entre sus arcos) en la
-                // primera AF_FIREFLY_FRONT_SPAN del avance. Encima, el color de la dosis (que la CPU florece en OKLab); debajo, el
-                // pardo y su brillo; mezcla lineal solo en el borde, de AF_FIREFLY_EDGE_U (espejo: LiquidGraphic.FireflyLightAt).
-                float depth = (doseBottom + 1.0) - ya;
-                float halfEdge = 0.5 * AF_FIREFLY_EDGE_U;
-                float frontD = lerp(-halfEdge, 1.0 + halfEdge, saturate(firefly / AF_FIREFLY_FRONT_SPAN));
-                half lightOn = turning ? (half)(1.0 - smoothstep(frontD - halfEdge, frontD + halfEdge, depth)) : (half)1.0;
+                // Luciérnaga [P] (solo con turning): el frente de luz baja por la banda (profundidad 0 arriba y 1 abajo, entre sus
+                // arcos) en la primera AF_FIREFLY_FRONT_SPAN del avance. Encima, el color de la dosis (que la CPU florece en OKLab) y
+                // su franja; debajo, el pardo y su brillo; mezcla lineal solo en el borde, de AF_FIREFLY_EDGE_U (espejo:
+                // LiquidGraphic.FireflyLightAt). En las demás bandas, el color y la franja que llegan por vértice.
+                half3 doseRgb = i.color.rgb;
+                half3 litRgb = i.lit.rgb;
+                half lightOn = 1.0;
+                float frontD = 0.0;
+                UNITY_BRANCH
+                if (turning)
+                {
+                    float depth = (doseBottom + 1.0) - ya;
+                    float halfEdge = 0.5 * AF_FIREFLY_EDGE_U;
+                    frontD = lerp(-halfEdge, 1.0 + halfEdge, saturate(firefly / AF_FIREFLY_FRONT_SPAN));
+                    lightOn = (half)(1.0 - smoothstep(frontD - halfEdge, frontD + halfEdge, depth));
+                    doseRgb = lerp(_MurkyLin.rgb, i.color.rgb, lightOn);
+                    litRgb = lerp(_MurkyLitLin.rgb, i.lit.rgb, lightOn);
+                }
 
                 // Degradado vertical por dosis: ±4 % de L (OKLab) es ±12 % en lineal; el centro de la dosis, exacto (en el
                 // arco, como la banda).
                 float t = saturate(ya - doseBottom);
-                half3 doseRgb = turning ? lerp(_MurkyLin.rgb, i.color.rgb, lightOn) : i.color.rgb;
                 half3 col = doseRgb * (1.0 + (0.24 * (t - 0.5)));
 
                 // Oscurecido lateral: 0,20 u por pared, negro al 20 % (07 §4.2).
@@ -329,40 +355,49 @@ Shader "AF/UI/Liquid"
                 float hlSec = exp(-(d2 * d2) / 0.0003125) * step(d2, 0.025);
                 float hlVert = smoothstep(0.74, 0.78, x) * (1.0 - smoothstep(0.86, 0.90, x));
                 float hl = max(hlMain, max(hlSec * 0.5, hlVert * 0.5)) * gloss;
-                half3 litRgb = turning ? lerp(_MurkyLitLin.rgb, i.lit.rgb, lightOn) : i.lit.rgb;
                 col = lerp(col, litRgb, hl);
 
-                // Patrón del tinte (07 §3): marcas al 15 % hacia tinta o marfil, mezcladas en un espacio aproximadamente
-                // gamma (raíz cuadrada) como Palette.PatternMark, encima de los brillos (VA-05b). En una dosis turbia, la misma
-                // muestra lee la trama de la fila turbia (_MurkyRow), al 25 % hacia la tinta (07 §4.3) y sin la mezcla fija del
-                // 15 %, en coordenadas de su banda (gx: x de pantalla desde el «?», pasada a u de capa con la escala de la banda;
-                // y de capa desde el arco), así que la trama sigue a la banda cuando la cuia se inclina.
+                // Patrón del tinte (07 §3): marcas al 15 % hacia tinta (patrón 0) o marfil (1), mezcladas en un espacio
+                // aproximadamente gamma (raíz cuadrada) como Palette.PatternMark, encima de los brillos (VA-05b), desde la pared
+                // izquierda de la cavidad y en la fila de la fruta (men.a). En una dosis turbia, la misma muestra lee la trama de
+                // la fila turbia (_MurkyRow), al 25 % hacia la tinta (07 §4.3) y sin la mezcla fija del 15 %, en coordenadas de su
+                // banda (gx: x de pantalla desde el «?», pasada a u de capa con la escala de la banda; y de capa desde el arco),
+                // así que la trama sigue a la banda cuando la cuia se inclina.
                 float rowH = 1.0 / _PatternRows;
                 float gx = i.lit.a;
-                float bandScale = length(dY) / max(length(dX), 1e-6);
                 if (patternMode > -0.5)
                 {
-                    // Fundido cruzado de los revelados (espejos en CPU: LiquidGraphic.MurkyHatchAt y FruitPatternWeight): por la
-                    // regla, la trama se va entre AF_HATCH_FADE_FROM y AF_HATCH_FADE_TO del avance y después, ya sin trama, entra
-                    // el patrón de la fruta (men.a = su fila + 0,5 si sus marcas van en marfil) desde AF_FRUIT_PATTERN_FROM; con
-                    // la Luciérnaga, la trama solo queda bajo el frente y el patrón entra cuando el frente ya pasó. Las fases no se
-                    // solapan, así que una sola muestra lee la trama o el patrón.
-                    half murkLeft = turning ? (half)(1.0 - lightOn) : (half)1.0;
-                    half hatch = murky ? AF_HATCH_OPACITY * (1.0 - smoothstep(AF_HATCH_FADE_FROM, AF_HATCH_FADE_TO, dissolve)) * murkLeft : 0.0;
-                    bool fruit = !murky || hatch <= 0.0;
-                    float fruitRow = murky ? floor(i.men.a + 0.25) : i.men.a;
-                    half paper = murky ? (half)(2.0 * (i.men.a - fruitRow)) : (half)patternMode;
-                    // Dos teselas por u (ProceduralArt.PatternTileU = 0,5 u): desde la pared izquierda de la cavidad o, la
-                    // trama, desde el «?».
-                    float pu = fruit ? (x - (1.0 - _AFCavityHalfU)) * 2.0 : gx * bandScale * 2.0;
-                    float row = fruit ? fruitRow : _MurkyRow;
+                    bool fruit = true;
+                    // Dos teselas por u (ProceduralArt.PatternTileU = 0,5 u).
+                    float pu = (x - (1.0 - _AFCavityHalfU)) * 2.0;
+                    float row = i.men.a;
+                    half paper = (half)patternMode;
+                    half amount = AF_PATTERN_OPACITY;
+                    UNITY_BRANCH
+                    if (murky)
+                    {
+                        // Fundido cruzado de los revelados (espejos en CPU: LiquidGraphic.MurkyHatchAt y FruitPatternWeight): por
+                        // la regla, la trama se va entre AF_HATCH_FADE_FROM y AF_HATCH_FADE_TO del avance y después, ya sin trama,
+                        // entra el patrón de la fruta (men.a = su fila + 0,5 si sus marcas van en marfil) entre
+                        // AF_FRUIT_PATTERN_FROM y AF_FRUIT_PATTERN_TO; con la Luciérnaga, la trama solo queda bajo el frente y el
+                        // patrón entra cuando el frente ya pasó. Las fases no se solapan, así que una sola muestra lee la trama
+                        // (desde el «?») o el patrón.
+                        half murkLeft = turning ? (half)(1.0 - lightOn) : (half)1.0;
+                        half hatch = AF_HATCH_OPACITY * (1.0 - smoothstep(AF_HATCH_FADE_FROM, AF_HATCH_FADE_TO, dissolve)) * murkLeft;
+                        float fruitRow = floor(i.men.a + 0.25);
+                        fruit = hatch <= 0.0;
+                        pu = fruit ? pu : gx * bandScale * 2.0;
+                        row = fruit ? fruitRow : _MurkyRow;
+                        paper = (half)(2.0 * (i.men.a - fruitRow));
+                        half fruitWeight = turning
+                            ? smoothstep(AF_FIREFLY_PATTERN_FROM, AF_FIREFLY_PATTERN_TO, firefly)
+                            : smoothstep(AF_FRUIT_PATTERN_FROM, AF_FRUIT_PATTERN_TO, dissolve);
+                        amount = fruit ? AF_PATTERN_OPACITY * fruitWeight : hatch;
+                    }
+
                     float2 puv = float2(pu, (row * rowH) + (clamp(ya - doseBottom, 0.004, 0.996) * rowH));
                     half m = tex2D(_MainTex, puv).a;
                     half3 baseCol = fruit ? lerp(_InkLin.rgb, _PaperLin.rgb, paper) : _InkLin.rgb;
-                    half fruitWeight = turning
-                        ? smoothstep(AF_FIREFLY_PATTERN_FROM, AF_FIREFLY_PATTERN_TO, firefly)
-                        : (murky ? smoothstep(AF_FRUIT_PATTERN_FROM, 1.0, dissolve) : 1.0);
-                    half amount = fruit ? AF_PATTERN_OPACITY * fruitWeight : hatch;
                     half3 g = lerp(sqrt(col), sqrt(baseCol), amount * m);
                     col = g * g;
                 }
@@ -371,9 +406,10 @@ Shader "AF/UI/Liquid"
                 // isótropo: x por vértice y y desde su centro en capa, pasadas a u de pantalla con la escala de la banda y a la
                 // ventana del «?» con su alto (0,8 del hueco de su columna, entre 0,30 y 0,50 u; se apaga si no cabe uno de
                 // 0,30 u). Por la regla crece, ondula, se blanquea, suelta antes su halo y se disuelve; con la Luciérnaga gira
-                // hasta quedar de canto cuando el frente pasa por su centro. Segunda y última muestra (tex2Dlod: el atlas no
-                // tiene mipmaps y así puede ir dentro de la rama). Espejos en CPU: LiquidGraphic.MurkyMarkOpacity, GlyphSizeU,
-                // GlyphFade y MurkyGlyphPlacement.
+                // hasta quedar de canto cuando el frente pasa por su centro (con el giro por encima de AF_FIREFLY_TURN_OFF ya no
+                // se pinta). Segunda y última muestra (tex2Dlod: el atlas no tiene mipmaps y así puede ir dentro de la rama).
+                // Espejos en CPU: LiquidGraphic.MurkyMarkOpacity, GlyphSizeU, GlyphFade y MurkyGlyphPlacement.
+                UNITY_BRANCH
                 if (murky)
                 {
                     float roomCode = floor((glyphCode + 0.5) / AF_GLYPH_CENTER_STEPS);
@@ -389,7 +425,7 @@ Shader "AF/UI/Liquid"
                     float squeeze = max(cos(1.5708 * turn), 0.001);
                     float qx = (qx0 + wobble) / (grow * squeeze);
                     float qy = qy0 / grow;
-                    float fade = (1.0 - smoothstep(AF_MARK_FADE_FROM, AF_MARK_FADE_TO, dissolve)) * step(turn, 0.999) * step(abs(qx), 0.25)
+                    float fade = (1.0 - smoothstep(AF_MARK_FADE_FROM, AF_MARK_FADE_TO, dissolve)) * step(turn, AF_FIREFLY_TURN_OFF) * step(abs(qx), 0.25)
                         * smoothstep(AF_GLYPH_FADE_FROM, AF_GLYPH_FADE_TO, room);
                     float2 quv = float2((qx * 2.0) + 0.5, (_MurkyRow * rowH) + (clamp(qy + 0.5, 0.004, 0.996) * rowH));
                     half2 q = tex2Dlod(_MainTex, float4(quv, 0.0, 0.0)).rg;

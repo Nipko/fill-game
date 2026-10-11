@@ -639,9 +639,11 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // Sellado de un Matapi, Liana con fruta y Liana de cuenta en el banco; con measure, sin asignaciones (GC.Alloc del
-        // Recorder, por la restricción AllocatingGCMemory) en los 60 primeros fotogramas desde el toque y, después, hasta la
-        // vista quieta (el final del Release: la caída, SnapStep y el Show que oculta la Liana), sea cual sea la duración.
+        // Sellado de un Matapi, Liana con fruta y Liana de cuenta en el banco, y la Liana con fruta una fila más abajo (como
+        // LluviaPiranaTests.Lluvia_EndRemovesCloud(true)), cuyo cometa va por la ruta de 2 Bézier del pasillo entre columnas;
+        // con measure, sin asignaciones (GC.Alloc del Recorder, por la restricción AllocatingGCMemory) en los 60 primeros
+        // fotogramas desde el toque y, después, hasta la vista quieta (el final del Release: la caída, SnapStep y el Show que
+        // oculta la Liana), sea cual sea la duración.
         private void RunChains(bool measure)
         {
             BoardState[] starts =
@@ -655,15 +657,34 @@ namespace AF.Tests.PlayMode
                 Board(
                     new[] { new[] { 3, 3, 3 }, new[] { 3 }, new[] { 1, 2, 1, 2 }, new[] { 1, 1 }, new[] { 2, 2 }, new int[0] },
                     new[] { MechanicSpec.None, MechanicSpec.None, new MechanicSpec(MechanicType.Liana, n: 1), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None }),
+                Board(
+                    new[] { new[] { 3, 3, 3 }, new[] { 3 }, new[] { 1, 2, 1, 2 }, new[] { 1, 1 }, new[] { 2, 2 }, new int[0] },
+                    new[] { MechanicSpec.None, MechanicSpec.None, new MechanicSpec(MechanicType.Liana, key: 3), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None }),
             };
 
-            MechanicStepKind[] kinds = { MechanicStepKind.Seal, MechanicStepKind.Release, MechanicStepKind.Release };
-            int[] owners = { 0, 2, 2 };
-            MechanicType[] types = { MechanicType.Matapi, MechanicType.Liana, MechanicType.Liana };
+            MechanicStepKind[] kinds = { MechanicStepKind.Seal, MechanicStepKind.Release, MechanicStepKind.Release, MechanicStepKind.Release };
+            int[] owners = { 0, 2, 2, 2 };
+            MechanicType[] types = { MechanicType.Matapi, MechanicType.Liana, MechanicType.Liana, MechanicType.Liana };
+            bool[] lianaBelow = { false, false, false, true };
             for (int c = 0; c < starts.Length; c++)
             {
                 _rig?.Dispose();
                 _rig = new MechanicTestKit.Rig(Art, starts[c]);
+                if (lianaBelow[c])
+                {
+                    // Ranuras contiguas, como en la pantalla (los pasillos entre columnas son sus juntas), y la Liana (cuia 2)
+                    // una fila más abajo en su columna: elevación 16 + separación 24 = 40 dp de su pie a la boca de la fila de
+                    // arriba (BoardLayout), como la Lluvia de Lluvia_EndRemovesCloud(true).
+                    for (int i = 0; i < _rig.Views.Length; i++)
+                    {
+                        CuiaView v = _rig.Views[i];
+                        float footY = i == 2 ? -600f - 40f - (v.HeightU * v.Unit) : -600f;
+                        v.SetGeometry(new Vector2(36f + (i * 64f), footY), 40f, 64f);
+                    }
+
+                    _rig.Animator.BoardLaidOut();
+                }
+
                 _rig.Pour(starts[c], 1, 0, out _);
                 MechanicTestKit.Rig rig = _rig;
                 if (measure)
@@ -681,6 +702,13 @@ namespace AF.Tests.PlayMode
                 if (c == 2)
                 {
                     Assert.That(r.OtherIndex, Is.EqualTo(0), "la Liana de cuenta se suelta por la cuia sellada");
+                }
+
+                if (lianaBelow[c])
+                {
+                    Assert.That(r.OtherIndex, Is.EqualTo(0), "cadena " + c + ": la suelta la cuia sellada, una fila más arriba");
+                    var overlay = (LianaOverlay)rig.Views[2].Overlay!;
+                    Assert.That(overlay.BeamRouteSegments, Is.EqualTo(2), "cadena " + c + ": el cometa medido va por el pasillo, en 2 Bézier");
                 }
             }
         }

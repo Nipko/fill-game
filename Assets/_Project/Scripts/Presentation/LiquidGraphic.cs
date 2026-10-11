@@ -124,10 +124,16 @@ namespace AF.Presentation
 
         /// <summary>
         /// Avance de <see cref="MurkyLook.Dissolve"/> en el que el patrón de la fruta que se revela empieza a entrar (shader:
-        /// <c>AF_FRUIT_PATTERN_FROM</c>, hasta 1) [P]: después de <see cref="HatchFadeTo"/> (la misma muestra lee la trama o el
-        /// patrón, nunca los dos) y entero al final del Dissolve, así que el paso a la dosis normal no salta.
+        /// <c>AF_FRUIT_PATTERN_FROM</c>, hasta <see cref="FruitPatternTo"/>) [P]: después de <see cref="HatchFadeTo"/> (la misma
+        /// muestra lee la trama o el patrón, nunca los dos).
         /// </summary>
         public const float FruitPatternFrom = 0.64f;
+
+        /// <summary>
+        /// Avance de <see cref="MurkyLook.Dissolve"/> en el que el patrón de la fruta ya entró entero (shader:
+        /// <c>AF_FRUIT_PATTERN_TO</c>): el final del Dissolve, así que el paso a la dosis normal no salta.
+        /// </summary>
+        public const float FruitPatternTo = 1f;
 
         /// <summary>
         /// Luciérnaga: parte del avance de una banda en la que su frente de luz la recorre de arriba abajo [P] (shader:
@@ -149,6 +155,12 @@ namespace AF.Presentation
         /// (shader: <c>AF_FIREFLY_TURN_TO</c>). Desde ahí gira de vuelta el icono de su fruta (<c>MurkyMarks</c>).
         /// </summary>
         public const float FireflyTurnTo = 0.5f;
+
+        /// <summary>
+        /// Luciérnaga: giro (<see cref="FireflyTurnAt"/>, 0 de frente y 1 de canto) por encima del cual el «?» ya está de canto
+        /// y no se pinta (shader: <c>AF_FIREFLY_TURN_OFF</c>, en <c>step(turn, …)</c>): ahí la insignia baja en uno.
+        /// </summary>
+        public const float FireflyTurnOff = 0.999f;
 
         /// <summary>
         /// Luciérnaga: avance de la banda en el que empieza a entrar el patrón de su fruta [P] (shader:
@@ -531,8 +543,8 @@ namespace AF.Presentation
         /// Opacidad (0..1) del «?» que pinta el shader en una banda turbia con <paramref name="look"/> y
         /// <paramref name="progress"/>, sin contar el hueco de su banda (<see cref="GlyphFade"/>): el mismo cálculo que
         /// <c>AF_UI_Liquid.shader</c> («fade»). Quieta, 1; al disolverse por la regla, 1 − smoothstep(<see cref="MarkFadeFrom"/>,
-        /// <see cref="MarkFadeTo"/>, avance); con la Luciérnaga, 1 hasta que queda de canto (<see cref="FireflyTurnAt"/>; lo que
-        /// se ve lo estrecha el giro); 0 en una dosis normal.
+        /// <see cref="MarkFadeTo"/>, avance); con la Luciérnaga, 1 hasta que queda de canto (<see cref="FireflyTurnAt"/> por
+        /// encima de <see cref="FireflyTurnOff"/>, como <c>step</c>; lo que se ve lo estrecha el giro); 0 en una dosis normal.
         /// </summary>
         public static float MurkyMarkOpacity(MurkyLook look, float progress)
         {
@@ -543,7 +555,7 @@ namespace AF.Presentation
                 case MurkyLook.Dissolve:
                     return 1f - SmoothStep(MarkFadeFrom, MarkFadeTo, progress);
                 case MurkyLook.Turn:
-                    return FireflyTurnAt(progress) < 0.999f ? 1f : 0f;
+                    return FireflyTurnAt(progress) <= FireflyTurnOff ? 1f : 0f;
                 default:
                     return 0f;
             }
@@ -582,8 +594,9 @@ namespace AF.Presentation
         /// <summary>
         /// Peso (0..1) del patrón, la franja y el menisco propios de la fruta en una banda con <paramref name="look"/> y
         /// <paramref name="progress"/> (el mismo cálculo que el shader): 1 en una dosis normal; al disolverse por la regla,
-        /// sube entre <see cref="FruitPatternFrom"/> y 1; con la Luciérnaga, entre <see cref="FireflyPatternFrom"/> y
-        /// <see cref="FireflyPatternTo"/> (con 1, la banda es la dosis normal de esa fruta); 0 oculta.
+        /// sube entre <see cref="FruitPatternFrom"/> y <see cref="FruitPatternTo"/>; con la Luciérnaga, entre
+        /// <see cref="FireflyPatternFrom"/> y <see cref="FireflyPatternTo"/> (con 1, la banda es la dosis normal de esa fruta);
+        /// 0 oculta.
         /// </summary>
         public static float FruitPatternWeight(MurkyLook look, float progress)
         {
@@ -592,7 +605,7 @@ namespace AF.Presentation
                 case MurkyLook.None:
                     return 1f;
                 case MurkyLook.Dissolve:
-                    return SmoothStep(FruitPatternFrom, 1f, progress);
+                    return SmoothStep(FruitPatternFrom, FruitPatternTo, progress);
                 case MurkyLook.Turn:
                     return SmoothStep(FireflyPatternFrom, FireflyPatternTo, progress);
                 default:

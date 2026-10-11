@@ -14,7 +14,8 @@ namespace AF.Presentation
     /// <remarks>
     /// La insignia se genera de forma perezosa la primera vez que se pide (un nivel sin turbias no crea sus texturas): una
     /// píldora 9-slice y una tira con los 11 glifos en una sola textura (cada glifo es un <see cref="Sprite"/> de esa tira),
-    /// así que son dos texturas para toda la familia; el disco, la primera vez que se usa la Luciérnaga (una más).
+    /// así que son dos texturas para toda la familia; el disco, una más, al preparar la primera cuia turbia del nivel
+    /// (<c>MurkyMarks.Prewarm</c>), nunca a mitad del revelado de la Luciérnaga.
     /// </remarks>
     public sealed partial class ProceduralArt
     {
@@ -83,6 +84,9 @@ namespace AF.Presentation
         /// un brillo suave arriba (D-003). Se genera la primera vez que se pide.
         /// </summary>
         public Sprite MurkyFruitDisc => _murkyFruitDisc != null ? _murkyFruitDisc : (_murkyFruitDisc = BuildMurkyFruitDisc());
+
+        /// <summary>Ya se generó el disco de la fruta de la Luciérnaga (<see cref="MurkyFruitDisc"/>; tests).</summary>
+        public bool HasMurkyFruitDisc => _murkyFruitDisc != null;
 
         /// <summary>Glifo «?» marfil de la insignia (celda de 10 × 14 dp).</summary>
         public Sprite MurkyBadgeQuestion => MurkyBadgeGlyphs()[0];

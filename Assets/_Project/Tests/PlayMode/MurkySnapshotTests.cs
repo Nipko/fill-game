@@ -18,16 +18,17 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Capturas de revisión de las Aguas turbias en el shader (T15; <c>[Explicit]</c>, no forman parte de la suite):
     /// <c>70_murky_l100</c> (las 2 ocultas del estreno, pardas con trama y «?»), <c>71_murky_tilt_l106</c> (la cuia turbia
-    /// inclinada al verter: la trama y el «?», isótropo y de 0,30 u como mínimo, en su cuña), <c>72_reveal_l100</c> (el
-    /// revelado por la regla al 20 %: el «?» se deforma entre destellos y el color nuevo empieza a salir),
-    /// <c>72b_reveal_mid_l100</c> (al 45 %: la dosis ya en su tinte, la burbuja y lo último del «?» deshaciéndose en blanco
-    /// encima, con el patrón de la fruta entrando), <c>72d_reveal_tNNN_l100_zoom</c> (recortes al 30, 35, 40, 48, 50, 54, 56, 60
-    /// y 70 %: el fundido cruzado y el pop de la cifra), <c>72c_firefly_l100</c> (la Luciérnaga sobre la oculta que queda),
-    /// <c>72e_firefly_tNNN_l100_zoom</c> (la Luciérnaga sobre las 2 ocultas del estreno, del 10 al 95 %: el frente de luz que
-    /// baja, el «?» que gira y el icono de la fruta sobre su disco) y <c>73_murky_badge_l100</c> (tras el revelado, «?×1»). De
-    /// cada una, además, un recorte a tamaño real de la cuia turbia (<c>*_zoom</c>) para mirar la legibilidad a 48-56 dp, los
-    /// solapes, los colores y la línea D-003. Muestrean además los píxeles: en 70, el «?» del shader en el marfil UiPaper
-    /// (ΔE00 ≤ 3); en 71, el alto del «?» inclinado (≥ 0,30 u, con su punto); del 30 al 70 % del revelado, nunca el pardo sin «?»
+    /// inclinada al verter, en el fotograma más inclinado con el «?» a la vista: la trama y el «?», isótropo y de 0,30 u como
+    /// mínimo, en su cuña), <c>72_reveal_l100</c> (el revelado por la regla al 20 %: el «?» se deforma entre destellos y el
+    /// color nuevo empieza a salir), <c>72b_reveal_mid_l100</c> (al 45 %: la dosis ya en su tinte, la burbuja y lo último del
+    /// «?» deshaciéndose en blanco encima, con el patrón de la fruta entrando), <c>72d_reveal_tNNN_l100_zoom</c> (recortes al
+    /// 30, 35, 40, 48, 50, 54, 56, 60 y 70 %: el fundido cruzado y el pop de la cifra), <c>72c_firefly_l100</c> (la Luciérnaga
+    /// sobre la oculta que queda), <c>72e_firefly_tNNN_l100_zoom</c> (la Luciérnaga sobre las 2 ocultas del estreno, del 10 al
+    /// 95 %: el frente de luz que baja, el «?» que gira y el icono de la fruta sobre su disco) y <c>73_murky_badge_l100</c>
+    /// (tras el revelado, «?×1»). De cada una, además, un recorte a tamaño real de la cuia turbia (<c>*_zoom</c>) para mirar la
+    /// legibilidad a 48-56 dp, los solapes, los colores y la línea D-003. Muestrean además los píxeles: en 70, el «?» del shader
+    /// en el marfil UiPaper (ΔE00 ≤ 3); en 71, que el «?» se ve y su alto inclinado (≥ 0,30 u, con su punto; se exige: sin él
+    /// la captura no mediría nada); del 30 al 70 % del revelado, nunca el pardo sin «?»
     /// (07 §3) y el «?» que se disuelve claro (L* ≥ 75 mientras se ve a más de la mitad); del 54 al 56 % (paso a la dosis normal),
     /// menos del 10 % de los píxeles de la banda cambian; con la Luciérnaga, la mitad de arriba de la capa ya aclarada y la de
     /// abajo aún parda cuando el frente pasa por su mitad, el paso a la dosis normal sin saltos y el disco frente a la banda
@@ -37,6 +38,9 @@ namespace AF.Tests.PlayMode
     [Explicit("Capturas visuales manuales; necesitan dispositivo gráfico.")]
     public sealed class MurkySnapshotTests
     {
+        // Visibilidad del «?» por el hueco de su banda (LiquidGraphic.GlyphFade) desde la que se mide en la captura 71: entero.
+        private const float GlyphShownFade = 0.99f;
+
         [TearDown]
         public void TearDown()
         {
@@ -245,43 +249,61 @@ namespace AF.Tests.PlayMode
             CuiaView source = boot.View!.Views[murky];
             int hidden = Lowest(boot.Flow!.Session.Current[murky].HiddenMask);
             MechanicTestKit.Tap(boot, path![path.Length - 1]);
+
+            // El fotograma más inclinado con el «?» a la vista (revisión de T15, n.º 5: sin él, la captura no mide nada): la
+            // inclinación máxima mientras vierte y, si ahí la cuña no da para el «?» (se apaga por debajo de 0,30 u de hueco), el
+            // primero de la vuelta en que ya se ve entero, con la cuia aún inclinada.
             float best = 0f;
+            bool returning = false;
             for (int t = 0; t < 3000; t += 4)
             {
                 PlayModeHelpers.TickExact(boot, 4);
                 float tilt = Mathf.Abs(source.Liquid.TiltDeg);
-                if (source.BodyInFront && tilt >= best)
+                if (!returning)
                 {
-                    best = tilt;
+                    if (source.BodyInFront && tilt >= best)
+                    {
+                        best = tilt;
+                        continue;
+                    }
+
+                    if (best <= 30f)
+                    {
+                        continue;
+                    }
+
+                    returning = true; // ya pasó la inclinación máxima, mientras vierte
                 }
-                else if (best > 30f)
+
+                if (GlyphShown(source, hidden) || tilt <= 30f)
                 {
-                    break; // la inclinación máxima, mientras vierte
+                    break;
                 }
             }
 
+            float shotTilt = Mathf.Abs(source.Liquid.TiltDeg);
             Assert.That(best, Is.GreaterThan(30f), "inclinada");
             Save(dir, "71_murky_tilt_l106", boot, murky, source.Body);
 
-            // El «?» inclinado: isótropo, de 0,30 u como mínimo y entero (con su punto), o apagado si la cuña no da para él.
+            // El «?» inclinado: a la vista, isótropo, de 0,30 u como mínimo y entero (con su punto).
             Assert.That(source.Liquid.MurkyGlyphPlacement(hidden, out float cx, out float cy, out float size, out float room), Is.True);
-            if (LiquidGraphic.GlyphFade(room) > 0.5f)
-            {
-                GlyphBox glyph = MeasureGlyph(source, cx, cy, size);
-                float pxPerU = PixelsPerU(source);
-                Debug.Log("AF_MURKY 71: inclinada " + source.Liquid.TiltDeg.ToString("F1") + "°, «?» de " + size.ToString("F2") + " u en un hueco de "
-                    + room.ToString("F2") + " u; en la captura, " + glyph.Width + " × " + glyph.Height + " px de marfil (" + (glyph.Height / pxPerU).ToString("F2")
-                    + " u de alto, alto/ancho " + (glyph.Height / Mathf.Max(1f, (float)glyph.Width)).ToString("F2") + ")");
-                Assert.That(glyph.Height / pxPerU, Is.GreaterThanOrEqualTo(0.85f * LiquidGraphic.GlyphMinU), "el «?» inclinado mide 0,30 u como mínimo");
-                Assert.That(glyph.Height / Mathf.Max(1f, (float)glyph.Width), Is.GreaterThan(1.3f), "isótropo: no se aplasta (en reposo, ≈ 1,6)");
-                Assert.That(glyph.Height / pxPerU, Is.GreaterThanOrEqualTo(0.8f * size), "entero: con su punto, sin cortarse en el vidrio");
-            }
-            else
-            {
-                Debug.Log("AF_MURKY 71: inclinada " + source.Liquid.TiltDeg.ToString("F1") + "°, hueco de " + room.ToString("F2") + " u: el «?» se apaga y queda la trama");
-            }
-
+            Assert.That(shotTilt, Is.GreaterThan(30f), "el fotograma elegido sigue inclinado");
+            Assert.That(LiquidGraphic.GlyphFade(room), Is.GreaterThanOrEqualTo(GlyphShownFade), "con el «?» entero a la vista (hueco de " + room.ToString("F2") + " u)");
+            GlyphBox glyph = MeasureGlyph(source, cx, cy, size);
+            float pxPerU = PixelsPerU(source);
+            Debug.Log("AF_MURKY 71: inclinada " + source.Liquid.TiltDeg.ToString("F1") + "° (máximo " + best.ToString("F1") + "°), «?» de " + size.ToString("F2")
+                + " u en un hueco de " + room.ToString("F2") + " u; en la captura, " + glyph.Width + " × " + glyph.Height + " px de marfil ("
+                + (glyph.Height / pxPerU).ToString("F2") + " u de alto, alto/ancho " + (glyph.Height / Mathf.Max(1f, (float)glyph.Width)).ToString("F2") + ")");
+            Assert.That(glyph.Height / pxPerU, Is.GreaterThanOrEqualTo(0.85f * LiquidGraphic.GlyphMinU), "el «?» inclinado mide 0,30 u como mínimo");
+            Assert.That(glyph.Height / Mathf.Max(1f, (float)glyph.Width), Is.GreaterThan(1.3f), "isótropo: no se aplasta (en reposo, ≈ 1,6)");
+            Assert.That(glyph.Height / pxPerU, Is.GreaterThanOrEqualTo(0.8f * size), "entero: con su punto, sin cortarse en el vidrio");
             Assert.That(File.Exists(Path.Combine(dir, "71_murky_tilt_l106.png")), Is.True);
+        }
+
+        // El «?» de la dosis k se ve entero en la banda (GlyphFade del hueco que lleva la malla), con la inclinación de ahora.
+        private static bool GlyphShown(CuiaView view, int k)
+        {
+            return view.Liquid.MurkyGlyphPlacement(k, out _, out _, out _, out float room) && LiquidGraphic.GlyphFade(room) >= GlyphShownFade;
         }
 
         private static IEnumerator Load(int level)
