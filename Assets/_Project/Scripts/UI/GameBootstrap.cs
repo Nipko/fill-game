@@ -389,12 +389,17 @@ namespace AF.UI
             return true;
         }
 
-        /// <summary>«+3 Deshacer · Ver video» (<c>rv_undo_refill</c>): al terminar el anuncio, +3 Mareas al stock.</summary>
+        /// <summary>
+        /// «+3 Deshacer · Ver video» (<c>rv_undo_refill</c>): al terminar el anuncio, +3 Mareas al stock. Solo donde Marea se puede
+        /// usar, como la recarga con semillas: en PLAYING sin victoria ni bloqueo pendiente, o en Aguas estancadas (D-011, punto 1:
+        /// con la victoria pendiente la bandeja sigue habilitada, pero el video no se abre).
+        /// </summary>
         public bool PressUndoRefillVideo()
         {
             LevelFlow? flow = _flow;
             AdController? ads = _ads;
-            if (flow == null || ads == null || !InLevel || !ads.CheckRewarded(AdPlacement.UndoRefill).IsAllowed)
+            if (flow == null || ads == null || !InLevel || !(flow.AcceptsBoardInput || flow.Phase == FlowPhase.StuckModal)
+                || !ads.CheckRewarded(AdPlacement.UndoRefill).IsAllowed)
             {
                 return false;
             }

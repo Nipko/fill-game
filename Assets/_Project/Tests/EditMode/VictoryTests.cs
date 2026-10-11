@@ -39,6 +39,56 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void IsResolvingWin_OnlyWhileTheLogicalVictoryWaitsForTheView()
+        {
+            // D-011, punto 1: la Cosecha se cobra en el instante lógico (02 §14), pero la vista no da la victoria por hecha
+            // mientras termina el último vertido. IsResolvingWin marca ese tramo: PLAYING con la victoria pendiente, ni antes
+            // (INTRO, PLAYING sin nada pendiente) ni después (CELEBRATION, VICTORY_SCREEN), ni con un bloqueo pendiente.
+            var rig = new LevelStateTests.Rig(seeds: 100);
+            LevelFlow flow = rig.Flow;
+            flow.Load(1);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Intro));
+            Assert.That(flow.IsResolvingWin, Is.False, "INTRO");
+            Assert.That(flow.TapAnywhere(), Is.True);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(flow.IsResolvingWin, Is.False, "PLAYING sin nada pendiente");
+            Assert.That(flow.IsResolving, Is.False);
+
+            LevelStateTests.Win(flow);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(flow.IsResolvingWin, Is.True, "victoria lógica: la vista termina el último vertido");
+            Assert.That(flow.IsResolving, Is.True);
+            Assert.That(flow.AcceptsBoardInput, Is.False, "R15: el input ya está bloqueado");
+            Assert.That(rig.Economy.Wallet.Seeds, Is.EqualTo(120), "y la Cosecha ya está cobrada (02 §14)");
+            flow.Tick(16, false);
+            Assert.That(flow.IsResolvingWin, Is.True, "sigue mientras la cola de la vista no se vacía");
+
+            flow.Tick(0, true);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Celebration));
+            Assert.That(flow.IsResolvingWin, Is.False, "CELEBRATION");
+            Assert.That(flow.IsResolving, Is.False);
+            Assert.That(flow.TapAnywhere(), Is.True);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen));
+            Assert.That(flow.IsResolvingWin, Is.False, "VICTORY_SCREEN");
+
+            // Con un bloqueo pendiente (tablero 6 del tutorial: 3 → 4 deja Aguas estancadas), IsResolving sí y IsResolvingWin no.
+            var stuck = new LevelStateTests.Rig();
+            stuck.Start(6);
+            Assert.That(stuck.Flow.TapCuia(3).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(stuck.Flow.TapCuia(4).Kind, Is.EqualTo(TapKind.Poured));
+            Assert.That(stuck.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(stuck.Flow.IsResolving, Is.True, "bloqueo lógico a la espera del modal (R15)");
+            Assert.That(stuck.Flow.IsResolvingWin, Is.False, "un bloqueo no es una victoria");
+            for (int i = 0; i < 100 && stuck.Flow.Phase != FlowPhase.StuckModal; i++)
+            {
+                stuck.Flow.Tick(16, true);
+            }
+
+            Assert.That(stuck.Flow.Phase, Is.EqualTo(FlowPhase.StuckModal));
+            Assert.That(stuck.Flow.IsResolvingWin, Is.False, "STUCK_MODAL");
+        }
+
+        [Test]
         public void From11_TheDoubleHarvest_DoublesExactly_Once()
         {
             var rig = new LevelStateTests.Rig(offset: 10, seeds: 5);

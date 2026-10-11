@@ -22,7 +22,10 @@ namespace AF.GameFlow
         /// <summary>CELEBRATION: victoria (R12), 900 ms o toque.</summary>
         Celebration = 3,
 
-        /// <summary>VICTORY_SCREEN: pantalla de victoria con Siguiente; sin auto-avance.</summary>
+        /// <summary>
+        /// VICTORY_SCREEN: pantalla de victoria con Siguiente; sin auto-avance por tiempo. Tras cobrar la Cosecha doble, la vista
+        /// avanza sola por el camino de Siguiente (D-011, punto 4).
+        /// </summary>
         VictoryScreen = 4,
 
         /// <summary>STUCK_MODAL: modal Aguas estancadas (02 §7).</summary>
@@ -39,7 +42,9 @@ namespace AF.GameFlow
 
         /// <summary>
         /// AD_GATE: tras tocar «Siguiente» en VICTORY_SCREEN (02 §2; 05 §6.1 y §6.3; D-008 punto 4): el intersticial simulado,
-        /// si las reglas lo permiten, y después LOADING(N + 1). Nunca por temporizador (<c>victory_autonext_s</c> = 0).
+        /// si las reglas lo permiten, y después LOADING(N + 1). Nunca por temporizador (<c>victory_autonext_s</c> = 0): solo tras
+        /// tocar Siguiente o, tras la Cosecha doble, por el avance de la vista (D-011, punto 4), cuando <c>AdPolicy</c> bloquea el
+        /// intersticial (<c>AfterRewarded</c>, 60 s tras un recompensado).
         /// </summary>
         AdGate = 9,
 

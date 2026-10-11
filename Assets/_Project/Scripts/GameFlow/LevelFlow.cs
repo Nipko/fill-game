@@ -30,7 +30,9 @@ namespace AF.GameFlow
     /// bloqueo, dentro de esa espera.</description></item>
     /// <item><description>Los niveles salen de un <see cref="LevelCatalog"/> con números de campaña. El progreso se guarda en el
     /// instante lógico de la victoria: <c>max_level</c> = N y <c>next_level</c> = N + 1 (08 §4.3).</description></item>
-    /// <item><description>VICTORY_SCREEN sin auto-avance: <c>victory_autonext_s</c> = 0 (02 §6); solo Siguiente avanza.</description></item>
+    /// <item><description>VICTORY_SCREEN sin auto-avance por tiempo: <c>victory_autonext_s</c> = 0 (02 §6). Avanza Siguiente o,
+    /// tras la Cosecha doble, la vista por el mismo camino que Siguiente (D-011, punto 4: es la respuesta al toque del jugador,
+    /// no un temporizador de la pantalla).</description></item>
     /// <item><description>Marea con su cupo (<see cref="UndoQuota"/>): ilimitada en 1-10 y 3 por nivel desde el 11, contando el
     /// número de campaña (con <c>af_level_offset</c> [P], el tablero del nivel 1 se juega como el 31 con 3 Mareas).</description></item>
     /// <item><description>Sin <see cref="Wallet"/> (tests del núcleo del flujo) no hay stock, compras ni canoas: Marea solo con el
@@ -181,6 +183,14 @@ namespace AF.GameFlow
 
         /// <summary>Victoria o bloqueo lógico a la espera de que la vista termine (input bloqueado).</summary>
         public bool IsResolving => Phase == FlowPhase.Playing && _pending != Outcome.None;
+
+        /// <summary>
+        /// Victoria lógica a la espera de que la vista termine el último vertido (PLAYING con la victoria pendiente, antes de
+        /// CELEBRATION): el input ya está bloqueado (R15) y la Cosecha ya se cobró (02 §14), pero la vista aún no da la victoria
+        /// por hecha (D-011, punto 1): el saldo de arriba no enseña la Cosecha y la bandeja se queda como estaba. Falso con un
+        /// bloqueo pendiente (<see cref="IsResolving"/> sí es cierto) y en cualquier otra fase.
+        /// </summary>
+        public bool IsResolvingWin => Phase == FlowPhase.Playing && _pending == Outcome.Win;
 
         /// <summary>Estado del botón de Marea: ilimitada, cupo gratis y stock (04 §1.1).</summary>
         public UndoStatus UndoStatus => _undo.Status(_wallet?.Stock.Get(BoosterKind.Undo) ?? 0);

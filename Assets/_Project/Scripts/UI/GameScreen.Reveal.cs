@@ -439,6 +439,19 @@ namespace AF.UI
                 return;
             }
 
+            if (flow.IsResolvingWin)
+            {
+                // D-011, punto 1: con la victoria pendiente la ranura se queda como estaba, como el resto de la bandeja
+                // (BoosterTray.Refresh), y se apaga al empezar la celebración. Solo la cara pulsada se suelta si la selección ya
+                // se cerró (la victoria llegó con un revelado o cerró el modo de selección: LevelFlow.BeginPending).
+                if (!flow.RevealSelecting)
+                {
+                    _tray.ReleaseRevealPress();
+                }
+
+                return;
+            }
+
             int stock = flow.RevealStock;
             int price = flow.RevealPrice;
             int seeds = flow.Wallet?.Seeds ?? 0;

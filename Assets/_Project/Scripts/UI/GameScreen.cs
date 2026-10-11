@@ -102,6 +102,12 @@ namespace AF.UI
         private const float HarvestCountDelayMs = 250f;
 
         /// <summary>
+        /// Tras cobrar la Cosecha doble, la fila cuenta de +N a +2N (<see cref="GameConfig.HarvestCountMs"/>, 400 ms) y se ve
+        /// este tiempo más antes de pasar sola al nivel siguiente por el camino de Siguiente (D-011, punto 4) [P].
+        /// </summary>
+        internal const float DoubleHarvestAdvanceMs = 600f;
+
+        /// <summary>
         /// El horizonte del panorama baja hasta quedar 64 dp por encima del panel, entre 118 y 200 dp (revisión visual del
         /// 2026-10-07): en el nivel 1 la franja de río entre el HUD y el panel ya no es un desierto de 150 dp.
         /// </summary>
@@ -281,6 +287,7 @@ namespace AF.UI
         private int _harvestShown = -1;
         private float _harvestCountMs = -1f;
         private bool _harvestCounting;
+        private float _autoNextMs = -1f; // espera tras la Cosecha doble hasta el avance (D-011, punto 4); −1 = sin espera
         private Vector2[] _relayoutFrom = Array.Empty<Vector2>();
         private float[] _relayoutFromWidth = Array.Empty<float>();
         private readonly Vector3[] _relayoutShelfFrom = new Vector3[3]; // (x, y desde arriba, ancho) de cada repisa al empezar
@@ -458,7 +465,8 @@ namespace AF.UI
             _stuck = new StuckModal(_stuckOverlay, art, actions);
             _stuckOverlay.gameObject.SetActive(false);
 
-            // ---- Victoria (02 §6; 07 §5.4; guía 5.3, 5.5 y 6.9): panel abajo, cinta-hoja y Siguiente; sin auto-avance. ----
+            // ---- Victoria (02 §6; 07 §5.4; guía 5.3, 5.5 y 6.9): panel abajo, cinta-hoja y Siguiente; sin auto-avance por
+            // tiempo, salvo tras la Cosecha doble, que avanza sola por el camino de Siguiente (D-011, punto 4; TickAutoNext). ----
             _victoryOverlay = UiBuilder.Rect("VictoryOverlay", _root);
             _victoryDim = UiBuilder.Image("Dim", _victoryOverlay, null, new Color(0f, 0f, 0f, 0f), true);
             UiBuilder.Stretch(_victoryDim.rectTransform);
@@ -473,7 +481,7 @@ namespace AF.UI
             _next.Relief.Bind(_next.Face, _next.Base, _next.FaceImage, art.CtaLeaf, null, null, nextLabel);
 
             // «Inicio» [P] (06 §4.7; D-008 punto 3): secundario de madera (07 §7.3) bajo Siguiente; vuelve a la pantalla de inicio.
-            _home = UiBuilder.Relief("HomeButton", _victoryPanel, art.CtaWood, () => _actions.PressHome());
+            _home = UiBuilder.Relief("HomeButton", _victoryPanel, art.CtaWood, OnVictoryHome);
             _homeGroup = _home.Face.parent.gameObject.AddComponent<CanvasGroup>();
             _homeGroup.blocksRaycasts = false;
             TextMeshProUGUI homeLabel = UiBuilder.Label("Label", _home.Face, TextStyle.PillWood, UiText.Home, 18f, Palette.Cream, TextAlignmentOptions.Center);
@@ -719,6 +727,12 @@ namespace AF.UI
         /// <summary>Cosecha que se ve en la fila de la victoria (cuenta hacia arriba; −1 si aún no se pintó).</summary>
         public int HarvestShown => _harvestShown;
 
+        /// <summary>
+        /// La victoria espera, tras la Cosecha doble, a pasar sola al nivel siguiente (D-011, punto 4): Inicio y la Cosecha doble
+        /// están inactivos y Siguiente puede adelantarlo.
+        /// </summary>
+        internal bool AutoNextPending => _autoNextMs >= 0f;
+
         /// <summary>Texto de la fila de la Cosecha (p. ej. «+20»).</summary>
         public string HarvestText => _harvestValue.text;
 
@@ -813,6 +827,7 @@ namespace AF.UI
             _toast.Tick(dtMs);
             _sighting.Tick(dtMs);
             TickHarvest(dtMs);
+            TickAutoNext(dtMs);
             RefreshHud();
             LabelsTick(dtMs);
             CardsTick(dtMs);
@@ -1083,6 +1098,11 @@ namespace AF.UI
             LevelFlow flow = RequireFlow();
             int from = _harvestShown < 0 ? flow.HarvestBase : _harvestShown;
             _doubleShown = false;
+
+            // D-011, punto 4: la fila cuenta de +N a +2N, se ve un momento más y la victoria pasa sola al nivel siguiente por el
+            // camino de Siguiente (TickAutoNext). Mientras espera, Inicio y la Cosecha doble quedan inactivos (LayoutVictory);
+            // Siguiente puede adelantarlo y entonces AD_GATE cancela la espera (OnAdGate).
+            _autoNextMs = GameConfig.HarvestCountMs + DoubleHarvestAdvanceMs;
             LayoutVictory();
             ShiftBoard(ShiftToClear(_victoryPanelY - RibbonRiseDp, 8f), true);
             if (_victoryAnim >= 0f)
@@ -1101,7 +1121,9 @@ namespace AF.UI
         /// <inheritdoc />
         public void OnAdGate()
         {
-            // AD_GATE (02 §2): Siguiente, Inicio y la Cosecha doble dejan de responder; el intersticial, si toca, va encima.
+            // AD_GATE (02 §2): Siguiente, Inicio y la Cosecha doble dejan de responder; el intersticial, si toca, va encima. Si
+            // Siguiente adelantó el avance tras la Cosecha doble, la espera se cancela: N + 1 se carga una sola vez (D-011).
+            _autoNextMs = -1f;
             UiBuilder.SetEnabled(_next.Button, false);
             UiBuilder.SetEnabled(_home.Button, false);
             UiBuilder.SetEnabled(_double.Button, false);
@@ -1457,6 +1479,7 @@ namespace AF.UI
             _harvestCounting = false;
             _harvestShown = -1;
             _doubleShown = false;
+            _autoNextMs = -1f;
             _ambient.SetSuspended(false);
         }
 
@@ -1569,6 +1592,13 @@ namespace AF.UI
         {
             LevelFlow? flow = _flow;
             if (flow == null)
+            {
+                return;
+            }
+
+            // D-011, punto 1: con la victoria (o el bloqueo) pendiente, la bandeja se queda como estaba, pero el input ya está
+            // bloqueado (R15): Marea no deshace, no recarga con semillas ni abre el video de rv_undo_refill.
+            if (flow.IsResolving)
             {
                 return;
             }
@@ -2134,8 +2164,11 @@ namespace AF.UI
             UiBuilder.Place(_harvestValue.rectTransform, mid + 34f, 0f, mid - 50f, VictoryHarvestDp);
             y += VictoryHarvestDp + 4f;
 
+            // Tras la Cosecha doble, mientras espera a avanzar solo (D-011, punto 4), Inicio y la Cosecha doble quedan inactivos,
+            // también al recolocar la pantalla (LayoutHud); Siguiente sigue activo y puede adelantar el avance.
+            bool autoNext = _autoNextMs >= 0f;
             _double.Button.gameObject.SetActive(_doubleShown);
-            UiBuilder.SetEnabled(_double.Button, true);
+            UiBuilder.SetEnabled(_double.Button, !autoNext);
             if (_doubleShown)
             {
                 UiBuilder.Place((RectTransform)_double.Button.transform, (panelW - nextW) / 2f, y, nextW, ModalKit.HeightOf(_double));
@@ -2150,7 +2183,7 @@ namespace AF.UI
             _victoryCtaTopDp = y;
             UiBuilder.Place((RectTransform)_next.Button.transform, (panelW - nextW) / 2f, y, nextW, ModalKit.HeightOf(_next));
             UiBuilder.SetEnabled(_next.Button, true);
-            UiBuilder.SetEnabled(_home.Button, true);
+            UiBuilder.SetEnabled(_home.Button, !autoNext);
             float homeW = Mathf.Min(VictoryHomeWidthDp, nextW);
             _victoryHomeTopDp = y + VictoryHomeBelowCtaDp;
             UiBuilder.Place((RectTransform)_home.Button.transform, (panelW - homeW) / 2f, _victoryHomeTopDp, homeW, 48f);
@@ -2224,9 +2257,50 @@ namespace AF.UI
             _harvestValue.SetCharArray(_harvestBuf, 0, n);
         }
 
-        // Semillas de la Cosecha que la fila aún no ha contado (el saldo de arriba las enseña cuando llegan).
+        // Avance tras la Cosecha doble (D-011, punto 4): al acabar la espera, la misma acción que Siguiente, solo si la pantalla
+        // sigue en VICTORY_SCREEN (si Siguiente se adelantó, OnAdGate ya la canceló). Sin asignaciones.
+        private void TickAutoNext(float dtMs)
+        {
+            if (_autoNextMs < 0f)
+            {
+                return;
+            }
+
+            _autoNextMs -= dtMs;
+            if (_autoNextMs > 0f)
+            {
+                return;
+            }
+
+            _autoNextMs = -1f;
+            LevelFlow? flow = _flow;
+            if (flow != null && flow.HasLevel && flow.Phase == FlowPhase.VictoryScreen)
+            {
+                _probe.Victory("auto_next", flow, false);
+                _actions.PressNext();
+            }
+        }
+
+        // «Inicio» de la victoria: nada mientras espera a avanzar solo tras la Cosecha doble (D-011, punto 4), aunque el botón ya
+        // esté inactivo (LayoutVictory).
+        private void OnVictoryHome()
+        {
+            if (_autoNextMs < 0f)
+            {
+                _actions.PressHome();
+            }
+        }
+
+        // Semillas de la Cosecha que el saldo de arriba aún no enseña. D-011, punto 1: la Cosecha se cobra en el instante lógico de
+        // la victoria (02 §14), pero no se da por ganada antes de verse: mientras termina el último vertido (la victoria
+        // pendiente) y durante la celebración, el saldo no la enseña. En la pantalla de victoria la recibe mientras la fila cuenta.
         private int PendingHarvest(LevelFlow flow)
         {
+            if (flow.IsResolvingWin || flow.Phase == FlowPhase.Celebration)
+            {
+                return Mathf.Max(0, flow.HarvestSeeds);
+            }
+
             bool victory = flow.Phase == FlowPhase.VictoryScreen || flow.Phase == FlowPhase.AdGate;
             if (!victory || _harvestShown < 0)
             {

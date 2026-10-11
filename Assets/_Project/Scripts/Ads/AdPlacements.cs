@@ -49,7 +49,10 @@ namespace AF.Ads
     /// </summary>
     public enum AdContext
     {
-        /// <summary><c>VICTORY_SCREEN</c>: tras tocar «Siguiente» (AD_GATE; <c>victory_autonext_s</c> = 0).</summary>
+        /// <summary>
+        /// <c>VICTORY_SCREEN</c>: tras tocar «Siguiente» (AD_GATE; <c>victory_autonext_s</c> = 0) o tras el avance que sigue a la
+        /// Cosecha doble (D-011, punto 4), donde la política lo bloquea (<c>AfterRewarded</c>).
+        /// </summary>
         VictoryScreen = 0,
 
         /// <summary><c>LEVEL_START</c>.</summary>
