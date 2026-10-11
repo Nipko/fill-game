@@ -117,9 +117,13 @@ La sesión del portátil usaba la herramienta Workflow con equipos de agentes Op
 > - la Luciérnaga en la bandeja: ranura Revelar, selección de la cuia turbia, compra con stock, semillas o vídeo simulado, vuelo y aviso del regalo;
 > - el Barro mate (arreglo de T16) y el banco de tests de mecánicas, que ahora se destruye en el acto.
 >
-> **Pendiente:**
-> - limpieza: los hallazgos menores de las revisiones de las olas 3 y 4 (coste del shader en las bandas no turbias, disco de la Luciérnaga, memoria de las tarjetas, ganchos de GameScreen y tests que miden poco);
-> - ola 5: verificación final (T18).
+> **Limpieza y verificación final (T18) el 2026-10-11:**
+> - limpieza de los hallazgos menores de las revisiones (L1, L2a, L2b y L3): shader más barato en las bandas normales, Luciérnaga precalentada, tarjetas con 3 superficies compartidas, ganchos de GameScreen, avisos de la bandeja a 12 sp y tests más estrictos;
+> - T18: los 14 pasos en verde (packs idénticos con `--check`, EditMode 1.390, PlayMode 322, 434 capturas, AAB de 36,97 MB, 16 KB correcto en AAB y APK, minSdk 26, targetSdk 36 y `dev.apk` de 66,23 MB).
+>
+> **El paso 1 queda cerrado** a falta de la prueba en el teléfono (portátil). Lo siguiente es el paso 2, y quedan los pendientes del dueño de abajo.
+> - La caché de `LocalDateKey` (commit `461536d`, en AF.Platform) está deshecha: necesita el visto bueno del dueño (`.claude/rules/sdk.md`).
+> - Los [P] que tiene que ratificar el dueño están en el informe de la sesión del 2026-10-11.
 >
 > Qué probar en el teléfono tras cada push: en el mensaje del commit.
 
