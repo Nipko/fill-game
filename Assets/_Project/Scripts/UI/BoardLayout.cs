@@ -72,16 +72,17 @@ namespace AF.UI
     /// [P]; 3 con T = 15-16 (5/5/5 y 6/5/5). El número de filas se decide al cargar el nivel con las T cuias generadas y no
     /// cambia a mitad de nivel: Cuia extra y Cuia de rescate van a la derecha de la fila más corta (a igualdad, la de más
     /// abajo [P]), ninguna cuia cambia de fila y solo se recalcula el ancho. Ranura = (ancho − 24) / cuias de la fila más
-    /// larga; cuia_w = clamp(0,70 × ranura, 28, tope(T)), con tope(T) = 64 / 56 / 48 dp para T ≤ 3 / 4-5 / ≥ 6 (D-004, T = cuias en pantalla); alto = (1,60 + capacidad) u
-    /// (5,60 u con 4 dosis; u = cuia_w / 2; D-006); paso de fila = alto + 16 (elevación) + 24 (hueco: 40 dp con la repisa de
-    /// D-003). El tablero se centra en horizontal a 480 dp como máximo (tabletas; la cuia tampoco supera tope(T)) y, desde
-    /// D-003, también en vertical: el bloque (elevación de la fila 1, filas, huecos y la repisa de 15 dp bajo la última
-    /// fila) queda centrado entre <c>boardTop</c> y <c>boardBottom</c>, sin espacio muerto abajo. El bloque no supera
-    /// <c>(boardBottom − boardTop) − 27</c> dp (<see cref="MinBlockSlack"/> [P]): así la fila 1 elevada queda ≥ 8 dp bajo el
-    /// canto interior del marco de 13,5 dp aunque el panel se recorte bajo el HUD (guía 3.2); si no cabe, las cuias se
-    /// reducen hasta el mínimo de 28 dp. Alrededor del bloque va el panel del tablero, <see cref="PanelMargin"/> (22 dp) por
-    /// abajo y por arriba en todos los tableros, y 8 dp desde los bordes del ancho útil. No hay techo del vertido ni hueco
-    /// reservado para él (D-006): el origen se dibuja delante de todo mientras vierte.
+    /// larga; cuia_w = clamp(0,70 × ranura, 28, tope(T)), con tope(T) = 64 / 56 / 48 dp para T ≤ 3 / 4-5 / ≥ 6 (D-004,
+    /// T = cuias en pantalla); alto = (1,60 + capacidad) u (5,60 u con 4 dosis; u = cuia_w / 2; D-006); paso de
+    /// fila = alto + 16 (elevación) + 24 (hueco: 40 dp con la repisa de D-003). El tablero se centra en horizontal a 480 dp
+    /// como máximo (tabletas; la cuia tampoco supera tope(T)) y, desde D-003, también en vertical: el bloque (elevación de
+    /// la fila 1, filas, huecos y la repisa de 15 dp bajo la última fila) queda centrado entre <c>boardTop</c> y
+    /// <c>boardBottom</c>, sin espacio muerto abajo. El bloque no supera <c>(boardBottom − boardTop) − 27</c> dp
+    /// (<see cref="MinBlockSlack"/> [P]): así la fila 1 elevada queda ≥ 8 dp bajo el canto interior del marco de 13,5 dp
+    /// aunque el panel se recorte bajo el HUD (guía 3.2); si no cabe, las cuias se reducen hasta el mínimo de 28 dp.
+    /// Alrededor del bloque va el panel del tablero, <see cref="PanelMargin"/> (22 dp) por abajo y por arriba en todos los
+    /// tableros, y 8 dp desde los bordes del ancho útil. No hay techo del vertido ni hueco reservado para él (D-006): el
+    /// origen se dibuja delante de todo mientras vierte.
     /// </summary>
     public static class BoardLayout
     {
