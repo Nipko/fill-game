@@ -30,10 +30,12 @@ namespace AF.Presentation
     /// <remarks>
     /// Tres imágenes creadas una vez (halo aditivo, alas y cuerpo) bajo una raíz que se mueve y gira; sin asignaciones al
     /// volar (08 §5.4). Los sprites del cuerpo y de las alas (<see cref="ProceduralArt.FireflyBodySprite"/> y
-    /// <see cref="ProceduralArt.FireflyWingsSprite"/>) se piden en el primer <see cref="Play"/>, no al crear la pantalla: una
-    /// partida sin Luciérnaga no genera sus texturas, y el vuelo (cada <see cref="Tick"/>) no asigna. Con Reducir movimiento
-    /// (07 §7.8) no vuela: aparece en el borde con un fundido corto y se apaga sin subir, y el pool no emite destellos. Las
-    /// duraciones son [P] y ya vienen multiplicadas por el factor de velocidad.
+    /// <see cref="ProceduralArt.FireflyWingsSprite"/>) no se piden al crear la pantalla sino al cargar un nivel de Aguas
+    /// turbias con ocultas (<see cref="Prewarm"/>, desde <c>GameScreen.Reveal.cs</c>, como <c>MurkyMarks.Prewarm</c>): una
+    /// partida sin Luciérnaga no genera sus texturas, y ni el toque del primer revelado (<see cref="Play"/>, que solo los pone
+    /// en sus imágenes) ni el vuelo (cada <see cref="Tick"/>) crean ninguna. Con Reducir movimiento (07 §7.8) no vuela:
+    /// aparece en el borde con un fundido corto y se apaga sin subir, y el pool no emite destellos. Las duraciones son [P] y ya
+    /// vienen multiplicadas por el factor de velocidad.
     /// </remarks>
     public sealed class RevealFireflyFx
     {
@@ -79,6 +81,8 @@ namespace AF.Presentation
         private readonly Image _body;
         private readonly ProceduralArt _art;
         private readonly IBoardFx? _fx;
+        private Sprite? _bodySprite;
+        private Sprite? _wingsSprite;
         private Phase _phase;
         private float _t;
         private float _flightMs;
@@ -95,8 +99,9 @@ namespace AF.Presentation
         private Vector2 _pos;
 
         /// <summary>
-        /// Crea las imágenes (ocultas) en <paramref name="layer"/>, sin los sprites del cuerpo y de las alas (los pide el primer
-        /// <see cref="Play"/>); los destellos van a <paramref name="fx"/> (null = sin estela).
+        /// Crea las imágenes (ocultas) en <paramref name="layer"/>, sin los sprites del cuerpo y de las alas (los genera
+        /// <see cref="Prewarm"/> y los pone el primer <see cref="Play"/>); los destellos van a <paramref name="fx"/> (null = sin
+        /// estela).
         /// </summary>
         public RevealFireflyFx(RectTransform layer, ProceduralArt art, IBoardFx? fx)
         {
@@ -166,11 +171,17 @@ namespace AF.Presentation
         /// <summary>Destellos pedidos al pool en el último efecto (diagnóstico y tests).</summary>
         public int SparklesRequested { get; private set; }
 
-        /// <summary>Sprite del cuerpo, o null si aún no voló ninguna (se pide en el primer <see cref="Play"/>; tests).</summary>
+        /// <summary>Sprite del cuerpo en su imagen, o null si aún no voló ninguna (lo pone el primer <see cref="Play"/>; tests).</summary>
         public Sprite? BodySprite => _body.sprite;
 
-        /// <summary>Sprite de las alas, o null si aún no voló ninguna (tests).</summary>
+        /// <summary>Sprite de las alas en su imagen, o null si aún no voló ninguna (tests).</summary>
         public Sprite? WingsSprite => _wings.sprite;
+
+        /// <summary>
+        /// Los sprites del cuerpo y de las alas ya están generados (<see cref="Prewarm"/>): el primer <see cref="Play"/> no crea
+        /// texturas (tests).
+        /// </summary>
+        public bool SpritesReady => _bodySprite != null && _wingsSprite != null;
 
         /// <summary>Punto donde se posa la luciérnaga para la boca en <paramref name="rimCenter"/> (u = <paramref name="unitDp"/>).</summary>
         public static Vector2 PerchFor(Vector2 rimCenter, float unitDp, float side)
@@ -179,20 +190,39 @@ namespace AF.Presentation
         }
 
         /// <summary>
+        /// Genera ya los sprites del cuerpo y de las alas (sus texturas; el arte los guarda para toda la sesión), que el primer
+        /// <see cref="Play"/> pone en sus imágenes. Lo llama la pantalla al cargar un nivel de Aguas turbias con ocultas, donde
+        /// la ranura Revelar existe, para que ni el toque del primer revelado ni el vuelo creen texturas; un nivel sin ocultas no
+        /// lo llama. Idempotente.
+        /// </summary>
+        public void Prewarm()
+        {
+            // El == de Unity también los vuelve a pedir si el arte se destruyó.
+            if (_wingsSprite == null)
+            {
+                _wingsSprite = _art.FireflyWingsSprite;
+            }
+
+            if (_bodySprite == null)
+            {
+                _bodySprite = _art.FireflyBodySprite;
+            }
+        }
+
+        /// <summary>
         /// Arranca el efecto: vuela de <paramref name="from"/> (el botón) a <paramref name="perch"/> en
         /// <see cref="FlightMs"/> × <paramref name="speedFactor"/>, se queda posada <paramref name="glowMs"/> ms (la duración del
         /// revelado, ya con el factor) y se va en <see cref="LeaveMs"/> × <paramref name="speedFactor"/>. Un efecto en curso se
-        /// sustituye. Sin asignaciones, salvo la primera vez que vuela una luciérnaga en la sesión, que genera los sprites del
-        /// cuerpo y de las alas (el arte se comparte entre niveles).
+        /// sustituye. Sin asignaciones: los sprites del cuerpo y de las alas ya los generó <see cref="Prewarm"/> al cargar el
+        /// nivel (aquí solo se ponen en sus imágenes la primera vez; si nadie los preparó, se generan aquí, como respaldo).
         /// </summary>
         public void Play(Vector2 from, Vector2 perch, float unitDp, float speedFactor, float glowMs, bool reduceMotion)
         {
-            if (_body.sprite == null)
+            if (_body.sprite == null || _wings.sprite == null)
             {
-                // Perezosos: un nivel sin Luciérnaga no crea estas texturas (ProceduralArt.Firefly). El == de Unity también
-                // las vuelve a pedir si el arte se destruyó.
-                _wings.sprite = _art.FireflyWingsSprite;
-                _body.sprite = _art.FireflyBodySprite;
+                Prewarm();
+                _wings.sprite = _wingsSprite;
+                _body.sprite = _bodySprite;
             }
 
             float speed = Mathf.Max(0.01f, speedFactor);

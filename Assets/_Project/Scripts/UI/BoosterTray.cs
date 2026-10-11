@@ -28,19 +28,29 @@ namespace AF.UI
     /// Antes del desbloqueo la ranura no existe y la bandeja se centra (07 §7.4): 16 + n·64 + (n − 1)·8 + 16 dp (240 con las
     /// tres ranuras de un nivel turbio). Con 5 ranuras pasarían a 56 dp (07 §7.4), pero Morpho (12) y Pororoca (30) no están
     /// en el cliente y en la 1.0 nunca hay más de 3: sus ranuras llegan con sus comodines, y entonces Revelar pasa a ser la 5.ª
-    /// (04 §2.5, a la derecha de Pororoca). Se refresca cada fotograma solo si algo cambió, sin asignar memoria (08 §5.4).
+    /// (04 §2.5, a la derecha de Pororoca). Se refresca cada fotograma solo si algo cambió, sin asignar memoria (08 §5.4): el
+    /// video de Marea se pregunta a los anuncios como mucho cada <see cref="UndoVideoPollMs"/> (<see cref="Tick"/>).
     /// </summary>
     internal sealed class BoosterTray
     {
         /// <summary>Lo que da un video de <c>rv_reveal</c> (04 §2.5: «1 revelado»): la cifra de la insignia con el icono de video.</summary>
         public const int RevealVideoUnits = 1;
 
+        /// <summary>
+        /// Cada cuánto se vuelve a preguntar a los anuncios si hay video de <c>rv_undo_refill</c> mientras Marea no tiene cupo
+        /// [P], el mismo plazo que Revelar (<see cref="GameScreen.RevealVideoPollMs"/>, T14): preguntar lee los contadores del
+        /// día con la clave de la fecha local, que crea una cadena cada vez, así que no se hace en cada fotograma (08 §5.4); el
+        /// tope diario y la espera entre videos no cambian más deprisa. Tocar Marea vuelve a preguntar en el acto.
+        /// </summary>
+        public const float UndoVideoPollMs = GameScreen.RevealVideoPollMs;
+
         private const float SlotDp = 64f;
         private const float GapDp = 8f;
         private const float PadDp = 16f;
 
         // «Te faltan {n}» de dos ranuras vecinas a la vez: cada aviso cabe en su paso de ranura (64 + 8) con 2 dp de aire entre
-        // los dos, lo justo para que una cifra de 3 (el máximo con los precios de 08 §9) quepa a 11 sp en una línea.
+        // los dos. A 12 sp, «Te faltan» y una cifra de 2 caben en una línea («Te faltan 70» mide 67,8 dp); con 3 (el máximo con
+        // los precios de 08 §9; 75 dp) la cifra baja a una segunda línea (Slot.PlaceMissing).
         private const float MissingNarrowDp = SlotDp + GapDp - 2f;
 
         private readonly ProceduralArt _art;
@@ -61,6 +71,8 @@ namespace AF.UI
         private int _slotsVersion;
         private bool _visible = true;
         private bool _revealPressed;
+        private bool _undoVideoReady;
+        private float _undoVideoPollMs;
 
         public BoosterTray(Transform hud, ProceduralArt art, Action onUndo, Action onExtraCuia)
         {
@@ -127,6 +139,9 @@ namespace AF.UI
         /// <summary>Texto del aviso «Te faltan {n}» de Revelar (vacío si no se ve).</summary>
         public string RevealMissingText => _reveal.MissingText;
 
+        /// <summary>Texto del aviso «Te faltan {n}» de Cuia extra (vacío si no se ve; tests).</summary>
+        public string ExtraMissingText => _extra.MissingText;
+
         /// <summary>Ancho del aviso «Te faltan {n}» de Revelar (dp; tests de solapes).</summary>
         public float RevealMissingWidth => _reveal.MissingWidth;
 
@@ -139,6 +154,9 @@ namespace AF.UI
         /// <summary>Aviso «Te faltan {n}» de Revelar (tests de solapes).</summary>
         public RectTransform RevealMissingRect => _reveal.MissingRect;
 
+        /// <summary>Insignia de arriba a la derecha de Marea (el cupo o «+3»; un disco de 24 dp; tests de solapes).</summary>
+        public RectTransform UndoBadgeRect => _undo.BadgeRect;
+
         /// <summary>Glifo de la ranura de Revelar (tests y capturas: el icono de la luciérnaga).</summary>
         public Image RevealGlyph => _reveal.Glyph;
 
@@ -150,6 +168,12 @@ namespace AF.UI
 
         /// <summary>Marea ofrece el video (<c>rv_undo_refill</c>): «+3» con el icono de video.</summary>
         public bool UndoShowsVideo => _undo.VideoShown;
+
+        /// <summary>
+        /// Ms que faltan para volver a preguntar por el video de Marea (0 con cupo, o si la próxima <see cref="Refresh"/> pregunta;
+        /// tests).
+        /// </summary>
+        public float UndoVideoPollLeftMs => _undoVideoPollMs;
 
         /// <summary>Texto del aviso «Te faltan {n}» de Revelar (tests de tamaño y desbordes).</summary>
         public TextMeshProUGUI RevealMissingLabel => _reveal.MissingLabel;
@@ -169,6 +193,19 @@ namespace AF.UI
             _services = services;
             _key = int.MinValue;
             _revealKey = int.MinValue;
+            ForgetUndoVideo();
+        }
+
+        /// <summary>
+        /// Avanza <paramref name="dtMs"/> ms el plazo de la próxima pregunta por el video de Marea (<see cref="UndoVideoPollMs"/>):
+        /// lo llama la pantalla en cada fotograma, con <see cref="Refresh"/>. Sin asignaciones.
+        /// </summary>
+        public void Tick(float dtMs)
+        {
+            if (_undoVideoPollMs > 0f)
+            {
+                _undoVideoPollMs -= dtMs;
+            }
         }
 
         /// <summary>Acción del botón Revelar (la pone <c>GameScreen.Reveal.cs</c>: <c>IGameActions.PressReveal</c>).</summary>
@@ -201,11 +238,12 @@ namespace AF.UI
         /// <paramref name="stock"/> &gt; 0, «+N» en ámbar; sin stock y con <paramref name="seeds"/> ≥ <paramref name="price"/>, el
         /// precio; sin saldo y con <paramref name="video"/> (<c>rv_reveal</c> listo), «+1» con el icono de video; sin nada, el
         /// precio en rojo y «Te faltan {n}» encima, como la Cuia extra. Es el mismo orden en que cobra el botón
-        /// (<c>IGameActions.PressReveal</c>). Con <paramref name="spent"/> (ya no queda ninguna oculta y la ranura solo espera a
-        /// que la luciérnaga salga de ella y se vaya) queda gris y sin insignia, precio ni aviso: nada que comprar. Solo repinta
-        /// si algo cambió; sin asignaciones salvo al cambiar el aviso.
+        /// (<c>IGameActions.PressReveal</c>). Con <paramref name="bare"/> queda gris y sin insignia, precio ni aviso, nada que
+        /// comprar ahora: la pantalla lo pide cuando ya no queda ninguna oculta (la ranura solo espera a que la luciérnaga salga
+        /// de ella y se vaya) y, sin stock, cuando la ranura no se puede usar ni se está eligiendo (fuera de PLAYING), como la
+        /// Cuia extra (<c>GameScreen.Reveal.cs</c>). Solo repinta si algo cambió; sin asignaciones salvo al cambiar el aviso.
         /// </summary>
-        public void SetRevealBadge(int stock, int price, int seeds, bool video, bool enabled, bool selecting, bool spent = false)
+        public void SetRevealBadge(int stock, int price, int seeds, bool video, bool enabled, bool selecting, bool bare = false)
         {
             if (_revealPressed && !_reveal.Parts.Relief.Pressed)
             {
@@ -214,14 +252,14 @@ namespace AF.UI
                 _reveal.Parts.Relief.Press(true);
             }
 
-            int key = Hash(stock, price, seeds, video ? 1 : 0, enabled ? 1 : 0, selecting ? 1 : 0, _reveal.Active ? 1 : 0, _visible ? 1 : 0, spent ? 1 : 0);
+            int key = Hash(stock, price, seeds, video ? 1 : 0, enabled ? 1 : 0, selecting ? 1 : 0, _reveal.Active ? 1 : 0, _visible ? 1 : 0, bare ? 1 : 0);
             if (key == _revealKey)
             {
                 return;
             }
 
             _revealKey = key;
-            enabled &= !spent;
+            enabled &= !bare;
             UiBuilder.SetEnabled(_reveal.Parts.Button, enabled);
             bool pressed = enabled && selecting;
             if (pressed != _revealPressed)
@@ -231,7 +269,7 @@ namespace AF.UI
                 _reveal.Parts.Relief.Press(pressed);
             }
 
-            if (spent)
+            if (bare)
             {
                 _reveal.ShowBadge(null, false);
                 _reveal.ShowStockBadge(0);
@@ -269,9 +307,11 @@ namespace AF.UI
         {
             if (visible && !_visible)
             {
-                // Al volver (tras el embudo o la victoria), los avisos «Te faltan {n}» se vuelven a pintar.
+                // Al volver (tras el embudo o la victoria), los avisos «Te faltan {n}» se vuelven a pintar y el video de Marea se
+                // pregunta en el acto (en el embudo pudo verse un video: la espera entre videos ya cuenta).
                 _key = int.MinValue;
                 _revealKey = int.MinValue;
+                ForgetUndoVideo();
             }
 
             // Cada ranura se enseña si la bandeja se ve y la ranura existe (Slot.SetVisible lo combina con Active): pasarle
@@ -330,7 +370,7 @@ namespace AF.UI
 
             UndoStatus undo = flow.UndoStatus;
             ExtraCuiaOffer extra = flow.ExtraCuia;
-            bool video = _services != null && !undo.HasQuota && _services.RewardedReady(AdPlacement.UndoRefill);
+            bool video = UndoVideo(undo);
             int seeds = _services?.Wallet.Seeds ?? 0;
             bool undoEnabled = undo.HasQuota ? flow.CanUndo : flow.AcceptsBoardInput;
             int key = Hash(undo.Unlimited ? 1 : 0, undo.FreeLeft, undo.Stock, video ? 1 : 0, undoEnabled ? 1 : 0, (int)extra.State, extra.Stock, extra.Missing, seeds);
@@ -413,10 +453,37 @@ namespace AF.UI
             return 1 + (_extra.Active ? 1 : 0) + (_reveal.Active ? 1 : 0);
         }
 
+        // ¿«+3» de Marea con el icono de video? Solo sin cupo (B2-1). La respuesta de los anuncios se guarda UndoVideoPollMs
+        // (Tick descuenta el plazo): preguntar crea la cadena de la fecha del contador diario (08 §5.4). Con cupo o sin
+        // servicios se olvida, así que la primera pregunta sin cupo es en el acto.
+        private bool UndoVideo(UndoStatus undo)
+        {
+            GameServices? services = _services;
+            if (services == null || undo.HasQuota)
+            {
+                ForgetUndoVideo();
+                return false;
+            }
+
+            if (_undoVideoPollMs <= 0f)
+            {
+                _undoVideoReady = services.RewardedReady(AdPlacement.UndoRefill);
+                _undoVideoPollMs = UndoVideoPollMs;
+            }
+
+            return _undoVideoReady;
+        }
+
+        private void ForgetUndoVideo()
+        {
+            _undoVideoReady = false;
+            _undoVideoPollMs = 0f;
+        }
+
         // «Te faltan {n}» encima de cada ranura sin saldo (104 dp, como desde B2-1); si la vecina también lo enseña, los dos
-        // estrechan a su paso de ranura para no pisarse. El texto va a 12 sp y, si no cabe, hasta 11; si ni así cabe en una
-        // línea (4 cifras con el aviso estrecho), la cifra baja a una segunda línea y la placa crece hacia arriba
-        // (Slot.PlaceMissing).
+        // estrechan a su paso de ranura para no pisarse. El texto va a 12 sp, el mínimo de 02 §12, y nunca menos: si no cabe en
+        // una línea (una cifra de 3 con el aviso estrecho), la cifra baja a una segunda línea y la placa crece hacia arriba
+        // (Slot.PlaceMissing), sin salir del hueco entre el tablero y la bandeja.
         private void LayoutMissing()
         {
             bool undo = _undo.MissingShown;
@@ -468,17 +535,27 @@ namespace AF.UI
             /// <summary>Ancho del aviso «Te faltan {n}» sin vecinas que también lo enseñen (dp).</summary>
             public const float MissingWideDp = SlotDp + 40f;
 
-            // Tamaño del aviso: 12 sp (02 §12) y, si en su ancho no cabe, hasta 11 sp, nunca menos (revisión de T14) [P].
-            private const float MissingMaxSp = 12f;
-            private const float MissingMinSp = 11f;
+            // Tamaño del aviso: 12 sp, el mínimo de 02 §12 («Texto ≥ 12 sp»), sin encogerlo nunca (revisión de la limpieza L2b:
+            // el autoajuste hasta 11 sp quedaba por debajo); lo que no cabe en una línea va en dos (PlaceMissing).
+            private const float MissingSp = 12f;
 
-            // Placa del aviso: su borde de abajo, 6 dp sobre el canto de la ranura; 18 dp de alto con una línea y 34 con dos
-            // (2 × 16,4 dp de línea de Nunito a 12 sp y algo de aire). Dos líneas solo si la cifra no cabe en una a 11 sp: la
-            // placa crece hacia arriba y no a los lados, así que nunca se mete en el aviso de la ranura vecina (02 §12: los
-            // contenedores crecen y nada se recorta).
+            // Placa del aviso [P]: con una línea, 18 dp de alto (una línea de Nunito a 12 sp mide 16,4) y su borde de abajo 6 dp
+            // sobre el canto de la ranura. Dos líneas solo si la cifra no cabe en una a 12 sp: la placa crece hacia arriba y no
+            // a los lados, así que nunca se mete en el aviso de la ranura vecina (02 §12: los contenedores crecen y nada se
+            // recorta). El hueco es estrecho: el panel del tablero llega hasta 31,5 dp sobre la bandeja (BoardLayout centra el
+            // bloque con ≥ 13,5 dp hasta boardBottom y el panel le suma 22, dentro de los 40 dp entre el tablero y la bandeja) y
+            // las ranuras empiezan 4 dp por debajo de ella. Por eso, con dos líneas, el interlineado baja a 1,09 em (−0,28 em:
+            // 16,4 + 13 = 29,4 dp, con los glifos a unos 4 dp del borde, como con una) y la placa de 29,5 dp va 4 dp sobre el
+            // canto, a ras de la bandeja: queda ≥ 2 dp por debajo del panel y no toca la insignia de la ranura vecina (un disco de
+            // 24 dp que asoma 8 dp sobre el canto). L3: con 34 dp a 6 dp del canto, la placa pisaba 4,5 dp el marco del panel en
+            // el 106 a 360 × 780.
             private const float MissingGapDp = 6f;
+            private const float MissingTwoLinesGapDp = 4f;
             private const float MissingOneLineDp = 18f;
-            private const float MissingTwoLinesDp = 34f;
+            private const float MissingTwoLinesDp = 29.5f;
+
+            // Interlineado de las dos líneas, en centésimas de em (TextMeshPro): −0,28 em.
+            private const float MissingTwoLinesSpacing = -28f;
 
             // Holgura al decidir si el texto cabe en una línea (dp): la de redondeo de las medidas de TextMeshPro.
             private const float MissingFitSlackDp = 0.5f;
@@ -505,7 +582,7 @@ namespace AF.UI
             private float _y;
             private float _missingW = MissingWideDp;
             private int _missingShown = -1;
-            private float _missingMinWidth;
+            private float _missingLineWidth;
             private bool _missingTwoLines;
 
             public Slot(string name, Transform hud, ProceduralArt art, Sprite icon, Sprite iconDisabled, string label, Action onClick)
@@ -541,8 +618,7 @@ namespace AF.UI
                 Image missingPlate = UiBuilder.Sliced("Plate", _missing, art.RoundedRect, Palette.PanelLight);
                 missingPlate.pixelsPerUnitMultiplier = 24f / 9f;
                 UiBuilder.Stretch(missingPlate.rectTransform);
-                _missingText = UiBuilder.Label("Value", _missing, TextStyle.PlainBold, string.Empty, MissingMaxSp, Palette.UiRedWarning, TextAlignmentOptions.Center);
-                UiBuilder.AutoSize(_missingText, MissingMinSp, MissingMaxSp);
+                _missingText = UiBuilder.Label("Value", _missing, TextStyle.PlainBold, string.Empty, MissingSp, Palette.UiRedWarning, TextAlignmentOptions.Center);
                 UiBuilder.Stretch(_missingText.rectTransform);
                 _missing.gameObject.SetActive(false);
             }
@@ -566,6 +642,8 @@ namespace AF.UI
             public float MissingWidth => _missingW;
 
             public RectTransform MissingRect => _missing;
+
+            public RectTransform BadgeRect => _badge;
 
             public TextMeshProUGUI MissingLabel => _missingText;
 
@@ -649,9 +727,8 @@ namespace AF.UI
                     string text = string.Format(System.Globalization.CultureInfo.InvariantCulture, UiText.Missing, UiText.Grouped(missing));
                     _missingText.text = text;
 
-                    // Ancho en una línea a 11 sp: con el autoajuste encendido, TextMeshPro mide al tamaño máximo (12 sp), y el
-                    // ancho es proporcional al tamaño. Solo cuando cambia la cifra.
-                    _missingMinWidth = _missingText.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x * (MissingMinSp / MissingMaxSp);
+                    // Ancho en una línea a 12 sp, solo cuando cambia la cifra.
+                    _missingLineWidth = _missingText.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x;
                 }
 
                 if (missing > 0)
@@ -666,20 +743,22 @@ namespace AF.UI
                 _missing.gameObject.SetActive(false);
             }
 
-            // «Te faltan {n}» de widthDp centrado sobre la ranura, con su borde de abajo 6 dp por encima del canto: en una línea
-            // si a 11 sp cabe en widthDp y, si no, en dos («Te faltan» y la cifra), con la placa más alta.
+            // «Te faltan {n}» de widthDp centrado sobre la ranura: en una línea si a 12 sp cabe en widthDp, con su borde de abajo
+            // 6 dp por encima del canto, y, si no, en dos («Te faltan» y la cifra), con la placa más alta y más cerca del canto.
             public void PlaceMissing(float widthDp)
             {
                 _missingW = widthDp;
-                bool twoLines = _missingMinWidth > widthDp - MissingFitSlackDp;
+                bool twoLines = _missingLineWidth > widthDp - MissingFitSlackDp;
                 if (twoLines != _missingTwoLines)
                 {
                     _missingTwoLines = twoLines;
                     _missingText.textWrappingMode = twoLines ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+                    _missingText.lineSpacing = twoLines ? MissingTwoLinesSpacing : 0f;
                 }
 
                 float h = twoLines ? MissingTwoLinesDp : MissingOneLineDp;
-                UiBuilder.Place(_missing, _x + ((SlotDp - widthDp) * 0.5f), _y - MissingGapDp - h, widthDp, h);
+                float gap = twoLines ? MissingTwoLinesGapDp : MissingGapDp;
+                UiBuilder.Place(_missing, _x + ((SlotDp - widthDp) * 0.5f), _y - gap - h, widthDp, h);
             }
         }
     }

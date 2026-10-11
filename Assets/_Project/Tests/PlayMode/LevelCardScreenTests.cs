@@ -638,8 +638,9 @@ namespace AF.Tests.PlayMode
 
         /// <summary>
         /// Un toque en la tarjeta por el EventSystem, el mismo camino que un dedo: en las cuatro esquinas de la pantalla, en su
-        /// centro y sobre Reiniciar, el primer impacto de <see cref="EventSystem.RaycastAll"/> es el velo (Dim), así que ningún
-        /// botón de debajo recibe el toque; el clic va a ese primer impacto, en el centro.
+        /// centro, sobre Reiniciar y sobre la pausa (a la vista bajo el velo desde la limpieza L2a), el primer impacto de
+        /// <see cref="EventSystem.RaycastAll"/> es el velo (Dim), así que ningún botón de debajo recibe el toque; el clic va a ese
+        /// primer impacto, en el centro.
         /// </summary>
         public static void TapCard(LevelCardView card)
         {
@@ -684,6 +685,15 @@ namespace AF.Tests.PlayMode
                 {
                     var restart = (RectTransform)view.RestartButton.transform;
                     points.Add(("sobre Reiniciar", RectTransformUtility.WorldToScreenPoint(cam, restart.TransformPoint(restart.rect.center))));
+                }
+
+                if (view != null)
+                {
+                    // La pausa ya se ve bajo el velo (limpieza L2a: no aparece de golpe al cerrar la tarjeta), así que es lo más
+                    // fácil de tocar por error: tampoco recibe el toque.
+                    Assert.That(view.PauseButton.gameObject.activeInHierarchy, Is.True, "la pausa, a la vista bajo el velo");
+                    var pause = (RectTransform)view.PauseButton.transform;
+                    points.Add(("sobre la pausa", RectTransformUtility.WorldToScreenPoint(cam, pause.TransformPoint(pause.rect.center))));
                 }
 
                 foreach ((string name, Vector2 point) in points)

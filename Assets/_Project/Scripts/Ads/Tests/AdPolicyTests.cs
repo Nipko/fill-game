@@ -2,8 +2,6 @@
 using System;
 using AF.Save;
 using NUnit.Framework;
-using UnityEngine.TestTools.Constraints;
-using Is = UnityEngine.TestTools.Constraints.Is;
 
 namespace AF.Ads.Tests
 {
@@ -275,32 +273,6 @@ namespace AF.Ads.Tests
             Assert.That(fx.Rewarded(AdPlacement.DailyChest).Reason, Is.EqualTo(AdBlockReason.PlacementOff));
             Assert.Throws<ArgumentException>(() => fx.Policy.CheckRewarded(AdPlacement.InterstitialPostLevel));
             Assert.Throws<NotSupportedException>(() => fx.Controller.Ledger.RecordRewarded(AdPlacement.DailyChest));
-        }
-
-        [Test]
-        public void AskingForARewardedEveryFrame_DoesNotAllocate()
-        {
-            // La bandeja pregunta en cada fotograma si hay video de Marea cuando no queda cupo (BoosterTray.Refresh; 08 §5.4):
-            // los contadores del día se leen con la clave de la fecha local, que solo se crea una vez por día.
-            var fx = new AdsFixture();
-            Assert.That(fx.Rewarded(AdPlacement.UndoRefill).IsRewarded, Is.True, "contadores de hoy en el perfil");
-            fx.Clock.Advance(fx.Config.RewardedCooldown(AdPlacement.UndoRefill));
-            void Ask60()
-            {
-                for (int i = 0; i < 60; i++)
-                {
-                    fx.Controller.CheckRewarded(AdPlacement.UndoRefill);
-                }
-            }
-
-            Assert.That(fx.Controller.CheckRewarded(AdPlacement.UndoRefill).IsAllowed, Is.True);
-            Assert.That(Ask60, Is.Not.AllocatingGCMemory(), "60 preguntas en el mismo día");
-
-            // Pasada la medianoche local (Bogotá, UTC−5), el día nuevo crea su clave una vez y los contadores vuelven a 0.
-            fx.Clock.Set(new DateTime(2026, 10, 9, 5, 0, 0, DateTimeKind.Utc));
-            Assert.That(fx.Controller.Ledger.RewardedToday(AdPlacement.UndoRefill), Is.EqualTo(0), "día nuevo");
-            Assert.That(Ask60, Is.Not.AllocatingGCMemory(), "60 preguntas el día siguiente");
-            Assert.That(fx.Controller.CheckRewarded(AdPlacement.UndoRefill).IsAllowed, Is.True);
         }
 
         [Test]
