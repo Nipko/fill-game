@@ -25,7 +25,8 @@ namespace AF.Tests.PlayMode
     /// preguntas. Con la Luciérnaga (T14; 04 §2.5): 1, 2 y 3 ranuras de 64 dp con Revelar la última, recentradas, y los avisos
     /// «Te faltan {n}» de dos ranuras vecinas sin solaparse, a 12 sp (02 §12) y, si la cifra no cabe en una línea, en dos sobre
     /// su ranura, dentro del hueco entre el tablero y la bandeja. Con la victoria pendiente (D-011, punto 1), la bandeja se
-    /// queda como estaba y sus toques no hacen nada; se apaga al empezar la celebración.
+    /// queda como estaba y sus toques no hacen nada (tampoco cortan el revelado en marcha); se apaga al empezar la
+    /// celebración, y la ranura de Revelar, sin ocultas, se va.
     /// </summary>
     public sealed class BoosterTrayTests
     {
@@ -272,9 +273,100 @@ namespace AF.Tests.PlayMode
             Assert.That(tray.UndoButton.gameObject.activeInHierarchy, Is.True, "la bandeja sigue a la vista durante la celebración");
             Assert.That(tray.UndoButton.interactable, Is.False, "Marea gris en la celebración");
             Assert.That(tray.ExtraCuiaButton.interactable, Is.False, "Cuia extra gris en la celebración");
-            Assert.That(!tray.RevealShown || !tray.RevealButton.interactable, Is.True, "Revelar, si está, gris");
             Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(presented));
             Assert.That(boot.Wallet.Stock.Get(BoosterKind.Undo), Is.EqualTo(0));
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(seeds));
+        }
+
+        [UnityTest]
+        public IEnumerator WhileARevealThatWinsResolves_TrayTapsDoNothing_AndRevealLeavesInTheCelebration()
+        {
+            // D-011, punto 1, con Revelar. Con la victoria pendiente, «+1 cuia» y Revelar se quedan como estaban, pero un toque no
+            // hace nada: tampoco termina antes de tiempo el revelado en marcha (GameScreen.SettleReveal), que quitaría la ranura
+            // y recentraría la bandeja. La luciérnaga solo vuela con la victoria pendiente si el revelado gana el nivel, y ningún
+            // nivel de 1-200 lo tiene (RevealFlowTests.Reveal_ThatWins_FollowsThePourPath): nivel 13 de prueba con la cuia 0 =
+            // [4*, Barro, 8]. El 8 sella la cuia 1, los tres 4 lavan el Barro ([4*, 4, 4, 4], llena pero sin sellar con la
+            // oculta, R5) y la Luciérnaga, pagada con semillas, la revela: la cuia sella y el nivel queda ganado (R12) mientras la
+            // luciérnaga vuela. La cara de Revelar ya no está pulsada (la selección se cerró antes de la victoria) y la ranura,
+            // sin ocultas, está gris. En el primer fotograma de la celebración, la bandeja se apaga y la ranura de Revelar se va
+            // (el revelado termina en el acto fuera de PLAYING).
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
+            yield return PlayModeHelpers.LoadGameWithPack(RevealThatWinsPack(), 13, new MemoryProgressStore(13, 12));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            LevelFlow flow = boot.Flow!;
+            boot.TapAnywhere();
+            for (int t = 0; t < 4000 && (flow.Phase != FlowPhase.Playing || !boot.View!.IsViewIdle); t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            GameScreen view = boot.View!;
+            BoosterTray tray = view.Tray;
+            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(1).Kind, Is.EqualTo(TapKind.Poured), "el 8 sella la cuia 1");
+            Assert.That(boot.TapCuia(2).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Poured), "los tres 4 lavan el Barro");
+            PlayModeHelpers.StepUntilIdle(boot, 5000);
+            PlayModeHelpers.Step(boot, 50);
+            Assert.That(flow.Session.Status, Is.EqualTo(AF.Core.Session.LevelStatus.Playing));
+            Assert.That(flow.Session.Current[0].IsFull, Is.True);
+            Assert.That(flow.Session.HiddenCount, Is.EqualTo(1), "la de abajo sigue oculta");
+            Assert.That(tray.RevealShown, Is.True);
+            Assert.That(tray.ExtraCuiaShown, Is.True);
+            Assert.That(tray.ExtraCuiaButton.interactable, Is.True, "Cuia extra con 500 semillas");
+
+            Assert.That(boot.PressReveal(), Is.True, "la Luciérnaga, con semillas");
+            PlayModeHelpers.Step(boot, 50);
+            Assert.That(flow.RevealSelecting, Is.True);
+            Assert.That(tray.RevealPressed, Is.True, "la cara se queda abajo mientras se elige");
+            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Ignored), "el toque elige la cuia");
+            Assert.That(flow.Session.Status, Is.EqualTo(AF.Core.Session.LevelStatus.Won), "el revelado gana");
+            Assert.That(flow.IsResolvingWin, Is.True);
+            Assert.That(view.RevealAnimating, Is.True, "la luciérnaga vuela con la victoria pendiente");
+            Assert.That(tray.RevealShown, Is.True, "la luciérnaga sale de su botón");
+            Assert.That(tray.RevealPressed, Is.False, "la selección se cerró antes de la victoria");
+            Assert.That(tray.RevealRelief.Pressed, Is.False);
+            Assert.That(tray.RevealButton.interactable, Is.False, "sin ocultas: gris");
+            Assert.That(tray.ExtraCuiaButton.interactable, Is.True, "Cuia extra, como estaba");
+            int seeds = boot.Wallet!.Seeds;
+            int slots = tray.SlotCount;
+            int cuias = view.Views.Length;
+            int presented = FunnelSetup.AdsPresenter.Presented;
+
+            // Un toque en «+1 cuia», en Revelar y en Marea: nada cambia.
+            tray.ExtraCuiaButton.onClick.Invoke();
+            tray.RevealButton.onClick.Invoke();
+            tray.UndoButton.onClick.Invoke();
+            Assert.That(view.RevealAnimating, Is.True, "el revelado sigue: no termina antes de tiempo");
+            Assert.That(tray.RevealShown, Is.True, "la ranura no se va antes de tiempo");
+            Assert.That(tray.SlotCount, Is.EqualTo(slots), "y la bandeja no se recentra");
+            Assert.That(view.Views.Length, Is.EqualTo(cuias), "la Cuia extra no se añade");
+            Assert.That(flow.RevealSelecting, Is.False, "Revelar no abre otra selección");
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(seeds), "ni cobra");
+            Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(presented), "ni abre un video");
+            Assert.That(flow.IsResolvingWin, Is.True);
+
+            // La cola está quieta: el flujo pasa a la celebración enseguida.
+            int frames = 0;
+            while (flow.Phase != FlowPhase.Celebration)
+            {
+                Assert.That(frames, Is.LessThan(1000), "la victoria pendiente termina");
+                Assert.That(flow.IsResolvingWin, Is.True);
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                frames++;
+            }
+
+            // Primer fotograma de la celebración: la vista lo pinta en su siguiente Tick.
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Celebration));
+            Assert.That(view.RevealAnimating, Is.False, "fuera de PLAYING el revelado termina en el acto");
+            Assert.That(tray.RevealShown, Is.False, "sin ocultas, la ranura de Revelar se va");
+            Assert.That(tray.UndoButton.gameObject.activeInHierarchy, Is.True, "la bandeja sigue a la vista durante la celebración");
+            Assert.That(tray.UndoButton.interactable, Is.False, "Marea gris en la celebración");
+            Assert.That(tray.ExtraCuiaButton.interactable, Is.False, "Cuia extra gris en la celebración");
+            Assert.That(view.Views.Length, Is.EqualTo(cuias));
             Assert.That(boot.Wallet.Seeds, Is.EqualTo(seeds));
         }
 
@@ -402,6 +494,20 @@ namespace AF.Tests.PlayMode
             Assert.That(WorldRect(tray.ExtraMissingRect).Overlaps(WorldRect(tray.RevealMissingRect)), Is.False, "sin solapes");
             Assert.That(tray.ExtraMissingWidth, Is.LessThan(72f));
             Assert.That(tray.RevealMissingWidth, Is.LessThan(72f));
+        }
+
+        // Nivel 13 de prueba (mundo 2) con el revelado que gana de RevealFlowTests.Reveal_ThatWins_FollowsThePourPath: la cuia 0
+        // = [4*, Barro, 8] con la de abajo oculta, [8, 8, 8], [4, 4, 4] y una vacía. pack_schema 2, por el Barro (02 §9.1 M5).
+        private static string RevealThatWinsPack()
+        {
+            string[] ids = { "acai", "aguaje" };
+            int[][] board = { new[] { 4, AF.Core.Board.Cuia.MudColor, 8 }, new[] { 8, 8, 8 }, new[] { 4, 4, 4 }, new int[0] };
+            string json = PlayModeHelpers.BoardPack(2, "w02_tapajos", "clear", 13, ids, board);
+            string schema2 = json.Replace("\"subset_of\": \"af-level/1\"", "\"pack_schema\": 2");
+            string murky = schema2.Replace("\"murky\": false, \"hidden\": []", "\"murky\": true, \"hidden\": [[0, 0]]");
+            Assert.That(schema2, Is.Not.EqualTo(json), "el paquete de prueba cambió de forma");
+            Assert.That(murky, Is.Not.EqualTo(schema2), "el paquete de prueba cambió de forma");
+            return murky;
         }
 
         // n ranuras de 64 dp en el orden dado, con 8 dp entre ellas, y la bandeja (16 + n·64 + (n − 1)·8 + 16) centrada.

@@ -198,13 +198,17 @@ namespace AF.Tests.PlayMode
             boot.enabled = false;
         }
 
-        /// <summary>Avanza la vista y el flujo <paramref name="ms"/> milisegundos en pasos de <see cref="FrameMs"/>, como <c>GameBootstrap.Update</c>.</summary>
+        /// <summary>
+        /// Avanza la vista y el flujo <paramref name="ms"/> milisegundos en pasos de <see cref="FrameMs"/>, como
+        /// <c>GameBootstrap.Update</c> (también el avance tras la Cosecha doble, después del Tick del flujo: <see cref="AutoNext"/>).
+        /// </summary>
         public static void Step(GameBootstrap boot, int ms)
         {
             for (int elapsed = 0; elapsed < ms; elapsed += FrameMs)
             {
                 boot.View!.Tick(FrameMs);
                 boot.Flow!.Tick(FrameMs, boot.View.IsViewIdle);
+                AutoNext(boot);
             }
         }
 
@@ -220,7 +224,20 @@ namespace AF.Tests.PlayMode
                 int dt = left < FrameMs ? left : FrameMs;
                 boot.View!.Tick(dt);
                 boot.Flow!.Tick(dt, boot.View.IsViewIdle);
+                AutoNext(boot);
                 left -= dt;
+            }
+        }
+
+        /// <summary>
+        /// Lo que hace <c>GameBootstrap.Update</c> tras el Tick del flujo: si la espera tras la Cosecha doble venció, Siguiente
+        /// (D-011, punto 4; <see cref="GameScreen.TakeAutoNext"/>).
+        /// </summary>
+        public static void AutoNext(GameBootstrap boot)
+        {
+            if (boot.View!.TakeAutoNext())
+            {
+                boot.PressNext();
             }
         }
 

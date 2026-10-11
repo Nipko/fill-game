@@ -20,9 +20,9 @@ namespace AF.Tests.PlayMode
     /// 400 ms hasta +20 y el saldo de arriba la recibe, y no antes (D-011, punto 1: ni durante el último vertido ni en la
     /// celebración); desde el 11, «Cosecha doble: x2 por video» («+20 → +40») la duplica exactamente con un anuncio simulado y
     /// la victoria pasa sola al nivel siguiente por el camino de Siguiente, sin intersticial (D-011, punto 4), con Inicio
-    /// inactivo mientras espera y sin cargar dos veces si se toca Siguiente; sin recompensa se queda; sin fill el botón no
-    /// aparece; antes del 11 no existe; sin la Cosecha doble, Siguiente lleva a N + 1 sin auto-avance; sin solapes y con
-    /// controles ≥ 48 dp.
+    /// inactivo mientras espera, sin cargar dos veces si se toca Siguiente y, como un toque en Siguiente, entre dos fotogramas
+    /// (después del Tick del flujo); sin recompensa se queda; sin fill el botón no aparece; antes del 11 no existe; sin la
+    /// Cosecha doble, Siguiente lleva a N + 1 sin auto-avance; sin solapes y con controles ≥ 48 dp.
     /// </summary>
     public sealed class VictoryFlowTests
     {
@@ -226,6 +226,59 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow.LevelNumber, Is.EqualTo(12), "sin llegar a N + 2");
             Assert.That(boot.Flow.Session, Is.SameAs(loaded), "N + 1 no se vuelve a cargar");
             Assert.That(VictorySetup.InNewLevel(boot.Flow.Phase), Is.True, "en su INTRO, LEVEL_CARD o PLAYING: " + boot.Flow.Phase);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level));
+            Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(1), "solo el recompensado");
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(140));
+        }
+
+        [UnityTest]
+        public IEnumerator Level11_TheAutoAdvance_WaitsForTheFlowTick_LikeATapOnNext()
+        {
+            // D-011, punto 4: al vencer la espera tras la Cosecha doble, la vista no pulsa Siguiente dentro de su fotograma (el
+            // resto de GameScreen.Tick y LevelFlow.Tick correrían sobre N + 1 con el dt de N, y el flujo de N + 1 avanzaría un
+            // fotograma de intro que la vista no animó): la deja vencida, con Inicio aún inactivo, y GameBootstrap.Update pulsa
+            // Siguiente después de LevelFlow.Tick (GameScreen.TakeAutoNext). N + 1 se carga entre dos fotogramas, como con un
+            // toque en Siguiente, y una sola vez.
+            LaunchOptions.LevelOffsetOverride = 10;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(100));
+            yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            VictorySetup.WinToVictoryScreen(boot);
+            PlayModeHelpers.Step(boot, 900);
+            view.DoubleHarvestButton.onClick.Invoke();
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(140));
+            Assert.That(view.AutoNextPending, Is.True);
+            Assert.That(view.TakeAutoNext(), Is.False, "la espera aún no venció");
+
+            // Solo la vista, más allá de la espera (400 + 600 ms): vence, pero no carga nada.
+            for (int t = 0; t < 1200; t += PlayModeHelpers.FrameMs)
+            {
+                view.Tick(PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen), "la vista no pulsa Siguiente dentro de su Tick");
+            Assert.That(flow.LevelNumber, Is.EqualTo(11));
+            Assert.That(view.HarvestText, Is.EqualTo("+40"));
+            Assert.That(view.AutoNextPending, Is.True, "vencida, hasta que se consume");
+            Assert.That(view.HomeButton.interactable, Is.False, "Inicio sigue inactivo");
+            flow.Tick(PlayModeHelpers.FrameMs, view.IsViewIdle);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen), "ni el flujo en el suyo");
+            Assert.That(flow.LevelNumber, Is.EqualTo(11));
+
+            // Después del Tick del flujo, como GameBootstrap.Update: Siguiente, una sola vez.
+            Assert.That(view.TakeAutoNext(), Is.True);
+            Assert.That(view.AutoNextPending, Is.False);
+            Assert.That(view.TakeAutoNext(), Is.False, "una sola vez");
+            Assert.That(boot.PressNext(), Is.True);
+            Assert.That(flow.LevelNumber, Is.EqualTo(12), "N + 1 (en el 11 no hay intersticial)");
+            Assert.That(VictorySetup.InNewLevel(flow.Phase), Is.True, "en su INTRO, LEVEL_CARD o PLAYING: " + flow.Phase);
+            LevelSession loaded = flow.Session;
+            PlayModeHelpers.Step(boot, 2000);
+            Assert.That(flow.LevelNumber, Is.EqualTo(12), "sin llegar a N + 2");
+            Assert.That(flow.Session, Is.SameAs(loaded), "N + 1 no se vuelve a cargar");
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level));
             Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(1), "solo el recompensado");
             Assert.That(boot.Wallet.Seeds, Is.EqualTo(140));

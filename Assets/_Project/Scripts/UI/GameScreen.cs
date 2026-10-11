@@ -287,7 +287,7 @@ namespace AF.UI
         private int _harvestShown = -1;
         private float _harvestCountMs = -1f;
         private bool _harvestCounting;
-        private float _autoNextMs = -1f; // espera tras la Cosecha doble hasta el avance (D-011, punto 4); −1 = sin espera
+        private float _autoNextMs = -1f; // espera tras la Cosecha doble (D-011, punto 4): −1 = sin espera; 0 = vencida (TakeAutoNext)
         private Vector2[] _relayoutFrom = Array.Empty<Vector2>();
         private float[] _relayoutFromWidth = Array.Empty<float>();
         private readonly Vector3[] _relayoutShelfFrom = new Vector3[3]; // (x, y desde arriba, ancho) de cada repisa al empezar
@@ -729,7 +729,8 @@ namespace AF.UI
 
         /// <summary>
         /// La victoria espera, tras la Cosecha doble, a pasar sola al nivel siguiente (D-011, punto 4): Inicio y la Cosecha doble
-        /// están inactivos y Siguiente puede adelantarlo.
+        /// están inactivos y Siguiente puede adelantarlo. Sigue en true con la espera vencida, hasta que
+        /// <see cref="TakeAutoNext"/> la consume.
         /// </summary>
         internal bool AutoNextPending => _autoNextMs >= 0f;
 
@@ -1100,8 +1101,8 @@ namespace AF.UI
             _doubleShown = false;
 
             // D-011, punto 4: la fila cuenta de +N a +2N, se ve un momento más y la victoria pasa sola al nivel siguiente por el
-            // camino de Siguiente (TickAutoNext). Mientras espera, Inicio y la Cosecha doble quedan inactivos (LayoutVictory);
-            // Siguiente puede adelantarlo y entonces AD_GATE cancela la espera (OnAdGate).
+            // camino de Siguiente (TickAutoNext y TakeAutoNext). Mientras espera, Inicio y la Cosecha doble quedan inactivos
+            // (LayoutVictory); Siguiente puede adelantarlo y entonces AD_GATE cancela la espera (OnAdGate).
             _autoNextMs = GameConfig.HarvestCountMs + DoubleHarvestAdvanceMs;
             LayoutVictory();
             ShiftBoard(ShiftToClear(_victoryPanelY - RibbonRiseDp, 8f), true);
@@ -2257,28 +2258,41 @@ namespace AF.UI
             _harvestValue.SetCharArray(_harvestBuf, 0, n);
         }
 
-        // Avance tras la Cosecha doble (D-011, punto 4): al acabar la espera, la misma acción que Siguiente, solo si la pantalla
-        // sigue en VICTORY_SCREEN (si Siguiente se adelantó, OnAdGate ya la canceló). Sin asignaciones.
+        // Espera tras la Cosecha doble (D-011, punto 4): se descuenta con la vista y, al acabar, queda vencida (0) sin cargar
+        // nada dentro de este fotograma; la consume TakeAutoNext después de LevelFlow.Tick. Sin asignaciones.
         private void TickAutoNext(float dtMs)
         {
-            if (_autoNextMs < 0f)
+            if (_autoNextMs <= 0f)
             {
-                return;
+                return; // sin espera (−1) o ya vencida (0)
             }
 
-            _autoNextMs -= dtMs;
-            if (_autoNextMs > 0f)
+            _autoNextMs = Mathf.Max(0f, _autoNextMs - dtMs);
+        }
+
+        /// <summary>
+        /// Avance tras la Cosecha doble (D-011, punto 4): true, una sola vez, si la espera venció y la pantalla sigue en
+        /// VICTORY_SCREEN (si Siguiente se adelantó, <see cref="OnAdGate"/> ya la canceló); quien llama pulsa entonces
+        /// Siguiente. Lo llama <c>GameBootstrap.Update</c> después de <see cref="LevelFlow.Tick"/>, no la vista en su
+        /// <see cref="Tick"/>: así N + 1 se carga entre dos fotogramas, como con un toque en Siguiente, y su vista y su flujo
+        /// empiezan juntos (el resto del fotograma de N no corre sobre N + 1). Sin asignaciones.
+        /// </summary>
+        internal bool TakeAutoNext()
+        {
+            if (_autoNextMs != 0f)
             {
-                return;
+                return false;
             }
 
             _autoNextMs = -1f;
             LevelFlow? flow = _flow;
-            if (flow != null && flow.HasLevel && flow.Phase == FlowPhase.VictoryScreen)
+            if (flow == null || !flow.HasLevel || flow.Phase != FlowPhase.VictoryScreen)
             {
-                _probe.Victory("auto_next", flow, false);
-                _actions.PressNext();
+                return false;
             }
+
+            _probe.Victory("auto_next", flow, false);
+            return true;
         }
 
         // «Inicio» de la victoria: nada mientras espera a avanzar solo tras la Cosecha doble (D-011, punto 4), aunque el botón ya

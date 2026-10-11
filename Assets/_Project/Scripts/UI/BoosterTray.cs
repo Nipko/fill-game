@@ -303,23 +303,6 @@ namespace AF.UI
             LayoutMissing();
         }
 
-        /// <summary>
-        /// Suelta la cara pulsada de Revelar sin repintar nada más (la insignia, el precio y el habilitado se quedan como estaban):
-        /// lo pide la pantalla cuando el modo de selección se cerró con la victoria pendiente, que no repinta la ranura (D-011,
-        /// punto 1). Sin cara pulsada, no hace nada.
-        /// </summary>
-        public void ReleaseRevealPress()
-        {
-            if (!_revealPressed)
-            {
-                return;
-            }
-
-            _revealPressed = false;
-            _reveal.Parts.Relief.Press(false);
-            _revealKey = int.MinValue; // la próxima SetRevealBadge vuelve a pintarlo todo
-        }
-
         public void SetVisible(bool visible)
         {
             if (visible && !_visible)
@@ -379,8 +362,10 @@ namespace AF.UI
         /// <summary>
         /// Refresca badges, precios y habilitado si el estado cambió. Con la victoria pendiente
         /// (<see cref="LevelFlow.IsResolvingWin"/>: termina el último vertido) no repinta nada y se queda como estaba (D-011,
-        /// punto 1: nada se da por ganado antes de verse); los toques ya los bloquea el flujo (R15). Al empezar la celebración,
-        /// el estado ya no es el último pintado y se apaga.
+        /// punto 1: nada se da por ganado antes de verse); sus toques no hacen nada (R15: el flujo no acepta input, y
+        /// <c>GameScreen.OnTrayUndo</c>, <c>GameBootstrap.PressExtraCuia</c> y <c>GameBootstrap.PressReveal</c> no actúan ni
+        /// terminan antes de tiempo el revelado en marcha). Al empezar la celebración, el estado ya no es el último pintado y se
+        /// apaga.
         /// </summary>
         public void Refresh()
         {
