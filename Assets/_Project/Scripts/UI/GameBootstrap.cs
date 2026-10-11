@@ -224,16 +224,34 @@ namespace AF.UI
             return _flow != null && InLevel && _flow.TapAnywhere();
         }
 
-        /// <summary>Marea (bandeja o modal). C8: primero quita la selección (<see cref="LevelFlow.PressUndo"/>).</summary>
+        /// <summary>
+        /// Marea (bandeja o modal). C8: primero quita la selección (<see cref="LevelFlow.PressUndo"/>). Si la Luciérnaga aún
+        /// está revelando, termina antes (la vista salta a lo revelado).
+        /// </summary>
         public bool PressUndo()
         {
-            return _flow != null && InLevel && _flow.PressUndo();
+            if (_flow == null || !InLevel)
+            {
+                return false;
+            }
+
+            _screen?.SettleReveal();
+            return _flow.PressUndo();
         }
 
-        /// <summary>Volver a la orilla (cabecera o modal). C8: primero quita la selección (<see cref="LevelFlow.PressRestart"/>).</summary>
+        /// <summary>
+        /// Volver a la orilla (cabecera o modal). C8: primero quita la selección (<see cref="LevelFlow.PressRestart"/>). Si la
+        /// Luciérnaga aún está revelando, termina antes de que empiece la intro.
+        /// </summary>
         public bool PressRestart()
         {
-            return _flow != null && InLevel && _flow.PressRestart();
+            if (_flow == null || !InLevel)
+            {
+                return false;
+            }
+
+            _screen?.SettleReveal();
+            return _flow.PressRestart();
         }
 
         /// <summary>Siguiente (pantalla de victoria): N + 1, «El río sigue creciendo» o Sin canoas (<see cref="AppFlow.PressNext"/>).</summary>
@@ -275,9 +293,100 @@ namespace AF.UI
         public bool PressExtraCuia()
         {
             LevelFlow? flow = InLevel ? _flow : null;
+            if (flow != null)
+            {
+                _screen?.SettleReveal();
+            }
+
             TransactionResult? result = flow?.UseExtraCuia();
             LogFunnelError(flow, result, "Cuia extra");
             return result != null && result.IsApplied;
+        }
+
+        /// <summary>
+        /// Revelar · Luciérnaga de la bandeja (04 §2.5; tarea T14), en un lote de guardado: con stock, el modo de selección
+        /// pagando con él; sin stock y con <c>reveal_seed_price</c> semillas (120), pagando con ellas; sin saldo y con video
+        /// (<c>rv_reveal</c>), el anuncio (<see cref="PressRevealVideo"/>); sin nada, el aviso «Te faltan {n} semillas» [P], sin
+        /// cobrar (el precio en rojo y «Te faltan {n}» ya se ven en la ranura, como en la Cuia extra). Abrir la selección no cobra:
+        /// el cobro llega al tocar la cuia, después de aplicar y guardar (T10; 04 §2.5 d). Con la selección abierta, otro toque en
+        /// el botón la cancela sin coste [P].
+        /// </summary>
+        public bool PressReveal()
+        {
+            LevelFlow? flow = InLevel ? _flow : null;
+            if (flow == null || !flow.HasLevel)
+            {
+                return false;
+            }
+
+            using (Saves())
+            {
+                if (flow.RevealSelecting)
+                {
+                    return flow.CancelRevealSelection();
+                }
+
+                _screen?.SettleReveal();
+                if (!flow.RevealAvailable)
+                {
+                    return false;
+                }
+
+                if (flow.RevealStock > 0)
+                {
+                    return flow.BeginRevealSelection(RevealPayment.Stock);
+                }
+
+                int price = flow.RevealPrice;
+                int missing = flow.Wallet?.Missing(price) ?? price;
+                if (missing == 0)
+                {
+                    return flow.BeginRevealSelection(RevealPayment.Seeds);
+                }
+
+                if (PressRevealVideo())
+                {
+                    return true;
+                }
+
+                _screen?.ShowRevealMissing(missing);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Video <c>rv_reveal</c> de Revelar (04 §2.5: «1 revelado»; 3 al día y 60 s de espera, <c>AdsConfig</c>): al terminar el
+        /// anuncio, en un lote de guardado, +1 Luciérnaga al stock (<see cref="LevelFlow.GrantRevealVideoUnit"/>) y el modo de
+        /// selección pagando con ella. Sin fill (o con el tope o la espera) devuelve false: el botón de video ni aparece.
+        /// </summary>
+        public bool PressRevealVideo()
+        {
+            LevelFlow? flow = _flow;
+            AdController? ads = _ads;
+            if (flow == null || ads == null || !InLevel || !flow.HasLevel || flow.RevealSelecting || !flow.RevealAvailable
+                || !ads.CheckRewarded(AdPlacement.Reveal).IsAllowed)
+            {
+                return false;
+            }
+
+            _screen?.SettleReveal();
+            ads.ShowRewarded(AdPlacement.Reveal, r =>
+            {
+                if (!r.IsRewarded)
+                {
+                    return;
+                }
+
+                using (Saves())
+                {
+                    // La unidad va al stock aunque ya no se pueda elegir cuia (p. ej. el nivel cambió): nunca se pierde.
+                    if (flow.GrantRevealVideoUnit())
+                    {
+                        flow.BeginRevealSelection(RevealPayment.Stock);
+                    }
+                }
+            });
+            return true;
         }
 
         /// <summary>«+3 Deshacer · Ver video» (<c>rv_undo_refill</c>): al terminar el anuncio, +3 Mareas al stock.</summary>
@@ -491,6 +600,12 @@ namespace AF.UI
         }
 
         private bool InLevel => _app == null || _app.Screen == AppScreen.Level;
+
+        // Lote de guardado de una acción del jugador: el perfil se escribe una vez al cerrarlo (revisión B2-5); sin lote, nada.
+        private ProfileSaveScope Saves()
+        {
+            return _saveBatch == null ? default : _saveBatch.Begin();
+        }
 
         // Compra simulada de sku (05 §4.1); lo comprado se acredita con Wallet.Apply dentro de la tienda.
         private bool Purchase(string sku, PurchaseContext context, Action<PurchaseResult>? onDone)

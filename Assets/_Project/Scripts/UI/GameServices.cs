@@ -107,6 +107,19 @@ namespace AF.UI
         /// <summary>«+1 cuia» de la bandeja.</summary>
         bool PressExtraCuia();
 
+        /// <summary>
+        /// Revelar · Luciérnaga de la bandeja (04 §2.5): abre el modo de selección pagando con el stock, si no con
+        /// <c>reveal_seed_price</c> semillas y, si no, con el video <c>rv_reveal</c>; sin nada, avisa «Te faltan {n} semillas» y
+        /// no cobra. Con la selección ya abierta, la cancela sin coste.
+        /// </summary>
+        bool PressReveal();
+
+        /// <summary>
+        /// Video <c>rv_reveal</c> de Revelar (04 §2.5: «1 revelado»): al terminar el anuncio, +1 Luciérnaga al stock y el modo de
+        /// selección pagando con ella. False si no hay video (sin fill no aparece) o no se puede revelar ahora.
+        /// </summary>
+        bool PressRevealVideo();
+
         /// <summary>«+3 Deshacer · Ver video».</summary>
         bool PressUndoRefillVideo();
 
