@@ -85,6 +85,34 @@ namespace AF.Presentation
     }
 
     /// <summary>
+    /// Gesto de reposo de un miquito en la rama tras su última suelta, ya en juego (D-011, punto 3). Gestos de animal, sin rasgos
+    /// humanos: nada de saludar ni señalar (D-010, punto 6), y la cabeza nunca baja hacia el tablero ni mira una cuia (D-002).
+    /// </summary>
+    public enum RestGesture
+    {
+        /// <summary>Sin gesto.</summary>
+        None = -1,
+
+        /// <summary>Se rasca la cabeza con la mano de detrás (sentado) o con la libre (colgado).</summary>
+        Scratch = 0,
+
+        /// <summary>Mira alrededor: la cabeza sube hacia el cielo y vuelve a mirar a lo largo de la rama, nunca hacia abajo.</summary>
+        LookAround = 1,
+
+        /// <summary>Se acicala el pecho.</summary>
+        Groom = 2,
+
+        /// <summary>Come una fruta de las que soltó: se la lleva a la boca a bocados y se va haciendo pequeña.</summary>
+        EatFruit = 3,
+
+        /// <summary>Balancea la cola (rasgo <c>cola_balancin</c>); con la cola trenzada de la pareja, no.</summary>
+        SwingTail = 4,
+
+        /// <summary>Se balancea colgado (modelo <c>cuelga</c>; la firma de los de cola prensil, <c>cola_enrollada</c>).</summary>
+        SwingBody = 5,
+    }
+
+    /// <summary>
     /// Rig recortable de un miquito en uGUI (guion de la intro §11; recomendación Q16 A, pendiente de D-010): 8 piezas (cola, pierna y brazo de detrás, torso,
     /// pierna de delante, cabeza con su párpado y brazo de delante) más dos opcionales (el bigote del pichico, hijo de la
     /// cabeza, y la fruta abrazada al pecho del churuco) con las piezas de <see cref="MonkeyArt"/> y poses por código
@@ -427,6 +455,126 @@ namespace AF.Presentation
 
             SitTail(art, ref p, new Vector2(-0.22f, 0.22f));
             return p;
+        }
+
+        /// <summary>Boca del miquito sentado (S): adonde se lleva la fruta al comer (delante del hocico, a la altura de la boca).</summary>
+        public static readonly Vector2 SitMouthS = new Vector2(0.36f, 0.57f);
+
+        /// <summary>Mano que mastica, sentado (S): la fruta baja aquí entre bocado y bocado, delante del pecho.</summary>
+        public static readonly Vector2 SitChewS = new Vector2(0.27f, 0.43f);
+
+        /// <summary>Cada bocado: la mano sube a la boca y baja en 900 ms.</summary>
+        public const float EatCycleMs = 900f;
+
+        /// <summary>La cola se balancea ±20° alrededor de su base en 1,6 s.</summary>
+        public const float SwingTailDeg = 20f;
+
+        /// <summary>Periodo del balanceo de la cola.</summary>
+        public const float SwingTailMs = 1600f;
+
+        /// <summary>
+        /// Sentado en reposo tras su última suelta (D-011, punto 3) con el gesto <paramref name="gesture"/>, mezclado con
+        /// <paramref name="amount"/> (0..1) sobre la pose sentada de siempre y animado con el tiempo de la intro
+        /// <paramref name="timeMs"/>: la pose es función del tiempo (capturas deterministas). La cabeza solo sube (D-002).
+        /// </summary>
+        public static MonkeyPose SitRest(MonkeyArt art, float breathe, RestGesture gesture, float amount, float timeMs)
+        {
+            MonkeyPose p = Sit(art, breathe, 0f, -1, 0f);
+            float a = Mathf.Clamp01(amount);
+            if (a <= 0f)
+            {
+                return p;
+            }
+
+            float phase = timeMs * 0.012f;
+            switch (gesture)
+            {
+                case RestGesture.Scratch:
+                    p.BackArmTo = Vector2.Lerp(p.BackArmTo, new Vector2(0.20f, 0.78f + (0.025f * Mathf.Sin(phase))), a);
+                    break;
+                case RestGesture.LookAround:
+                    p.HeadAngle = a * 14f * Mathf.Clamp01(0.5f + (0.5f * Mathf.Sin(phase * 0.25f)));
+                    break;
+                case RestGesture.Groom:
+                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, new Vector2(0.12f + (0.02f * Mathf.Sin(phase)), 0.36f), a);
+                    break;
+                case RestGesture.EatFruit:
+                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, Vector2.Lerp(SitChewS, SitMouthS, Bite(timeMs)), a);
+                    p.HeadAngle = a * 4f * Bite(timeMs); // asiente un poco hacia arriba en cada bocado, nunca hacia abajo
+                    break;
+                case RestGesture.SwingTail:
+                    RotateTail(ref p, a * SwingTailDeg * Mathf.Sin(timeMs * (Mathf.PI * 2f / SwingTailMs)));
+                    break;
+            }
+
+            return p;
+        }
+
+        /// <summary>
+        /// Colgado en reposo tras su última suelta (modelo <c>cuelga</c>; D-011, punto 3): sobre <see cref="Hang"/>, la mano
+        /// libre se rasca la barriga (por delante del cuerpo, sin cruzar la cara), se acicala, se lleva la fruta a la boca o la
+        /// cabeza mira alrededor (el balanceo, <see cref="RestGesture.SwingBody"/>, lo da <paramref name="sway"/>). Nada baja de
+        /// la mano de soltar (A7).
+        /// </summary>
+        public static MonkeyPose HangRest(MonkeyArt art, float sway, RestGesture gesture, float amount, float timeMs)
+        {
+            MonkeyPose p = Hang(art, 0f, sway);
+            float a = Mathf.Clamp01(amount);
+            if (a <= 0f)
+            {
+                return p;
+            }
+
+            float phase = timeMs * 0.012f;
+            switch (gesture)
+            {
+                case RestGesture.Scratch:
+                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, p.TorsoCenter + new Vector2(0.12f, -0.06f + (0.04f * Mathf.Sin(phase))), a);
+                    break;
+                case RestGesture.LookAround:
+                    p.HeadAngle = a * 14f * Mathf.Clamp01(0.5f + (0.5f * Mathf.Sin(phase * 0.25f)));
+                    break;
+                case RestGesture.Groom:
+                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, p.TorsoCenter + new Vector2(0.10f, 0.06f + (0.02f * Mathf.Sin(phase))), a);
+                    break;
+                case RestGesture.EatFruit:
+                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, HangEatHand(p, timeMs), a);
+                    p.HeadAngle = a * 4f * Bite(timeMs);
+                    break;
+            }
+
+            return p;
+        }
+
+        /// <summary>Bocado (0 masticando, 1 en la boca): sube y baja en <see cref="EatCycleMs"/>.</summary>
+        public static float Bite(float timeMs)
+        {
+            return 0.5f - (0.5f * Mathf.Cos(timeMs * (Mathf.PI * 2f / EatCycleMs)));
+        }
+
+        // Mano libre del colgado al comer: de delante del pecho a la boca, bajo la cabeza.
+        private static Vector2 HangEatHand(in MonkeyPose p, float timeMs)
+        {
+            Vector2 mouth = p.HeadCenter + new Vector2(0.17f, -0.07f);
+            Vector2 chew = p.HeadCenter + new Vector2(0.13f, -0.20f);
+            return Vector2.Lerp(chew, mouth, Bite(timeMs));
+        }
+
+        // Gira la cola alrededor de su base (grados; + hacia arriba con el miquito mirando a la derecha).
+        private static void RotateTail(ref MonkeyPose p, float degrees)
+        {
+            float r = degrees * Mathf.Deg2Rad;
+            float c = Mathf.Cos(r);
+            float s = Mathf.Sin(r);
+            p.Tail1 = Rotate(p.Tail1, p.Tail0, c, s);
+            p.Tail2 = Rotate(p.Tail2, p.Tail0, c, s);
+            p.Tail3 = Rotate(p.Tail3, p.Tail0, c, s);
+        }
+
+        private static Vector2 Rotate(Vector2 v, Vector2 pivot, float c, float s)
+        {
+            Vector2 d = v - pivot;
+            return pivot + new Vector2((d.x * c) - (d.y * s), (d.x * s) + (d.y * c));
         }
 
         /// <summary>De viaje por la rama a cuatro patas (balanceo de ±2 dp a 8 Hz y extremidades de ±25°).</summary>
