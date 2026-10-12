@@ -1,6 +1,8 @@
 // Líquido de la cuia para uGUI (GDD 08 §5.2; docs/art/direccion-visual-v2.md 4.2): degradado por dosis (±4 % de L),
 // oscurecido lateral, franja especular, franja secundaria y brillo vertical como color opaco precalculado (un brillo por
-// punto, 2.5), patrón de accesibilidad por tinte (07 §3), cara superior en elipse (D-006, como Magic Sort: alto
+// punto, 2.5), patrón de accesibilidad por tinte a _PatternOpacity (07 §3, regla 1: 0,15 hasta el 40 y 0,20 desde el 41,
+// ui_pattern_opacity de 08 §9; la fija LiquidGraphic.ApplyPatternOpacity al cargar el nivel, nunca un .mat), icono de
+// accesibilidad de la fruta centrado en la dosis (07 §3, reglas 1 y 2; _IconAtlas), cara superior en elipse (D-006, como Magic Sort: alto
 // _AFTopFaceU, ancho de la cavidad, color aclarado del menisco y una línea clara al fondo), fronteras entre dosis y fondo
 // del líquido en arco con la flecha del borde delantero de esa elipse (Magic Sort, d_002340: en el eje todas las dosis
 // miden 1 u, también la de arriba), onda tras verter (A0 = 0,03 u, exp(-t / 0,25 s), lambda 1,30 u, fase 2,5 u/s) y
@@ -11,11 +13,13 @@
 // (LiquidGraphic.cs) y todas las cuias comparten un material, así que van en un solo lote. Solo canales UV: el Canvas
 // gira NORMAL y TANGENT con el objeto (la cuia se inclina al verter), así que no sirven para datos. Sin palabras clave
 // (shader_feature) que el build pudiera eliminar. Coste por píxel, en instrucciones de ps_4_0 ejecutadas (fxc /O3: las ALU,
-// los saltos y las muestras): una banda con patrón, unas 165 y 1 muestra (el patrón); sin patrón o mate, unas 140 y ninguna;
-// el recorte a la silueta es unas 25 de ellas. Por encima de las 40 ALU de la guía 8: pendiente de medir en un dispositivo
-// de clase A. Lo turbio va en ramas uniformes por banda (murky y turning salen solo del patrón, el mismo en todos los
-// vértices de la banda), así que solo lo pagan las dosis turbias: unas 275 y 2 muestras (la trama o, al revelarse, el patrón
-// de la fruta; y el «?»), y unas 285 con la Luciérnaga; nunca más de 2 muestras por píxel. Sin Bloom.
+// los saltos y las muestras; medidas en L1, antes del icono de fruta): una banda con patrón, unas 165 y 1 muestra (el
+// patrón); sin patrón o mate, unas 140 y ninguna; el recorte a la silueta es unas 25 de ellas. Por encima de las 40 ALU de la
+// guía 8: pendiente de medir en un dispositivo de clase A. Lo turbio va en ramas uniformes por banda (murky y turning salen
+// solo del patrón, el mismo en todos los vértices de la banda), así que solo lo pagan las dosis turbias: unas 275 y 2
+// muestras (la trama o, al revelarse, el patrón de la fruta; y el «?»), y unas 285 con la Luciérnaga. El icono de fruta (T-E)
+// va en otra rama uniforme por banda (iconOn: banda normal con su sitio empaquetado, solo con Patrones de fruta o con la cuia
+// elevada) y suma una muestra del atlas de iconos y unas 25 ALU; nunca más de 2 muestras por píxel. Sin Bloom.
 //
 // Canales (en u de la cuia, x de 0 a 2 con el centro en 1; y desde el pie):
 //   COLOR      color de la dosis (el Canvas lo pasa a lineal)
@@ -23,15 +27,25 @@
 //              superficie), alto de la cuia (en una dosis turbia, con el sitio de su «?» empaquetado encima:
 //              alto + AF_GLYPH_PACK_SCALE · (centro + AF_GLYPH_CENTER_STEPS · hueco), LiquidGraphic.PackGlyph). En reposo las
 //              dos y coinciden.
-//   TEXCOORD1  rgb: color de la franja principal (ya en el espacio del shader); a: destello del sellado, o, en una dosis
-//              turbia (nunca sellada, R5), la x del «?» en pantalla (u, desde su centro)
-//   TEXCOORD2  superficie del líquido, amplitud de la onda, fase de la onda, patrón + 4 · índice de la dosis (patrón: -1
+//   TEXCOORD1  rgb: color de la franja principal (ya en el espacio del shader); a: en una banda con marca (el «?» de una
+//              dosis turbia o el icono de fruta), su x en pantalla (u, desde su centro); 0 en las demás
+//   TEXCOORD2  superficie del líquido, amplitud de la onda con el destello del sellado en la parte entera (pasos de
+//              1/AF_FLASH_STEPS; LiquidGraphic.PackSurface), fase de la onda, patrón + 4 · índice de la dosis (patrón: -1
 //              sin patrón, -1,25 sin patrón y mate (el Barro), 0 marcas en tinta, 1 marcas en marfil, 2 turbia; 2 + 0,45 ·
 //              avance al disolverse la «?» por la regla y 2 - 0,45 · avance con la Luciérnaga)
 //   TEXCOORD3  rgb: color del menisco (espacio del shader); a: fila del patrón en el atlas (la turbia en las dosis ocultas;
 //              al revelarse, la de la fruta que se revela + 0,5 si sus marcas van en marfil, LiquidGraphic.FruitRowCode)
 //   _DpU       1 dp en u (todas las cuias de un nivel miden lo mismo); _PatternRows: filas del atlas; _MurkyRow: la turbia;
-//              _MurkyLin y _MurkyLitLin: el pardo #8A7B6A y su brillo (bajo el frente de la Luciérnaga)
+//              _MurkyLin y _MurkyLitLin: el pardo #8A7B6A y su brillo (bajo el frente de la Luciérnaga); _PatternOpacity:
+//              opacidad del patrón del nivel; _IconAtlas: iconos de accesibilidad (ProceduralArt.FruitIconAtlas, una celda
+//              por tinte, AF_ICON_CELLS, la máscara en R)
+//
+// Icono de fruta (07 §3, reglas 1 y 2; T-E): en una banda normal con su sitio empaquetado en TEXCOORD0.w (LiquidGraphic lo
+// pone solo con Patrones de fruta, desde el 41, o con la cuia elevada, y nunca en una oculta, el Barro o el agua base), el
+// icono de su tinte (la celda de TEXCOORD3.a) en tinta o marfil (Palette.PatternBase, como las marcas del patrón) al
+// AF_ICON_OPACITY [P], mezclado como el patrón. Va como el «?»: derecho en pantalla e isótropo, con la caja del «?» (0,8 del
+// hueco de su columna entre 0,30 y 0,50 u; la silueta ocupa 0,9 de la caja: 0,45 u en reposo) y apagado si no cabe una de
+// 0,30 u; la cara superior lo tapa como al patrón. Espejos en CPU: LiquidGraphic.FruitIconDrawn y FruitIconPlacement.
 //
 // Aguas turbias (07 §4.3; 08 §5.2; LiquidGraphic.MurkyLook): [P] esto sustituye a _HiddenMask (cada banda turbia lleva el
 // patrón 2; también ocultas no contiguas) y a _MurkyColor = #8A7B6A (el color de la banda) de 08 §5.2, que no pueden ir como
@@ -82,6 +96,10 @@ Shader "AF/UI/Liquid"
         _PaperLin ("Marfil en lineal", Vector) = (0.905, 0.831, 0.701, 1)
         _MurkyLin ("Pardo turbio en lineal", Vector) = (0.254, 0.198, 0.144, 1)
         _MurkyLitLin ("Brillo del pardo en lineal", Vector) = (0.338, 0.270, 0.200, 1)
+        // Opacidad del patrón del nivel (07 §3, regla 1; ui_pattern_opacity de 08 §9): la fija LiquidGraphic.ApplyPatternOpacity.
+        _PatternOpacity ("Opacidad del patrón", Float) = 0.15
+        // Iconos de accesibilidad por tinte (ProceduralArt.FruitIconAtlas): la fija LiquidGraphic.Setup.
+        _IconAtlas ("Iconos de fruta", 2D) = "black" {}
         _StencilComp ("Stencil Comparison", Float) = 8
         _Stencil ("Stencil ID", Float) = 0
         _StencilOp ("Stencil Operation", Float) = 0
@@ -128,10 +146,13 @@ Shader "AF/UI/Liquid"
             #include "UnityCG.cginc"
             #include "UnityUI.cginc"
 
-            // Constantes con espejo en C# (LiquidGraphic y Palette): cámbialas juntas. El test EditMode
+            // Constantes con espejo en C# (LiquidGraphic y ProceduralArt): cámbialas juntas. El test EditMode
             // MurkyMudContentTests.ShaderConstants_MatchLiquidGraphic lee este archivo y las compara. [P] salvo las de 07 §4.3
-            // (trama al 25 %, «?» de 0,5 u) y el 15 % de los patrones (07 §3).
-            #define AF_PATTERN_OPACITY 0.15
+            // (trama al 25 %, «?» de 0,5 u). La opacidad del patrón (07 §3) no es una constante: es _PatternOpacity.
+            #define AF_ICON_OPACITY 0.9
+            #define AF_ICON_CELLS 16.0
+            #define AF_ICON_PX 64.0
+            #define AF_FLASH_STEPS 256.0
             #define AF_MATTE_MODE -1.25
             #define AF_MURKY_MODE 2.0
             #define AF_MURKY_SPAN 0.45
@@ -196,6 +217,8 @@ Shader "AF/UI/Liquid"
             half4 _PaperLin;
             half4 _MurkyLin;
             half4 _MurkyLitLin;
+            float _PatternOpacity;
+            sampler2D _IconAtlas;
             int _UIVertexColorAlwaysGammaSpace;
 
             // Geometría de la cuia (globales, CuiaGeometry vía LiquidGraphic.ApplyShaderGeometry; D-006).
@@ -261,21 +284,20 @@ Shader "AF/UI/Liquid"
 
                 // Aguas turbias (patrón 2 ± 0,45 · avance): v > 0, revelado por la regla; v < 0, Luciérnaga. murky y turning salen
                 // solo del patrón, que es el mismo en todos los vértices de una banda: sus ramas son uniformes por banda y una
-                // banda normal (o mate) no paga nada de lo turbio. En una dosis turbia, el alto de la cuia lleva encima el sitio de
-                // su «?» (LiquidGraphic.PackGlyph); en las demás, TEXCOORD0.w es el alto tal cual.
+                // banda normal (o mate) no paga nada de lo turbio. En una banda con marca (el «?» de una turbia o el icono de
+                // fruta) el alto de la cuia lleva encima el sitio de la marca (LiquidGraphic.PackGlyph); en las demás,
+                // TEXCOORD0.w es el alto tal cual (código 0). iconOn también es uniforme por banda.
                 bool murky = patternMode > 1.5;
-                float heightU = i.uv0.w;
-                float glyphCode = 0.0;
-                float bandScale = 1.0;
+                float glyphCode = floor(i.uv0.w * (1.0 / AF_GLYPH_PACK_SCALE));
+                float heightU = i.uv0.w - (AF_GLYPH_PACK_SCALE * glyphCode);
+                bool iconOn = !murky && glyphCode > 0.5;
+                float bandScale = length(dY) / max(length(dX), 1e-6);
                 float dissolve = 0.0;
                 float firefly = 0.0;
                 bool turning = false;
                 UNITY_BRANCH
                 if (murky)
                 {
-                    glyphCode = floor(i.uv0.w * (1.0 / AF_GLYPH_PACK_SCALE));
-                    heightU = i.uv0.w - (AF_GLYPH_PACK_SCALE * glyphCode);
-                    bandScale = length(dY) / max(length(dX), 1e-6);
                     float v = (patternMode - AF_MURKY_MODE) / AF_MURKY_SPAN;
                     dissolve = saturate(v);
                     firefly = saturate(-v);
@@ -301,7 +323,9 @@ Shader "AF/UI/Liquid"
                 // de la cavidad y _AFTopFaceU de alto; su mitad trasera sube sobre la superficie y la delantera es la cara.
                 float wall = _AFCavityHalfU - abs(x - 1.0);
                 float clockS = _AFClockFrozen > 0.5 ? _AFTime : _Time.y; // selección exacta: con lerp, _Time.y grande deja un ulp de error
-                float wave = i.surf.y * sin(((x - 1.0) * 4.8332) - (clockS * 12.083) + i.surf.z);
+                float flashSteps = floor(i.surf.y + 0.25); // el destello del sellado, en la parte entera (LiquidGraphic.PackSurface)
+                float amp = max(i.surf.y - flashSteps, 0.0);
+                float wave = amp * sin(((x - 1.0) * 4.8332) - (clockS * 12.083) + i.surf.z);
                 float top = i.surf.x + wave;
                 float topEdge = top + faceHalf;
                 float pix = max(abs(dY.x) + abs(dY.y), 1e-4);
@@ -357,12 +381,13 @@ Shader "AF/UI/Liquid"
                 float hl = max(hlMain, max(hlSec * 0.5, hlVert * 0.5)) * gloss;
                 col = lerp(col, litRgb, hl);
 
-                // Patrón del tinte (07 §3): marcas al 15 % hacia tinta (patrón 0) o marfil (1), mezcladas en un espacio
-                // aproximadamente gamma (raíz cuadrada) como Palette.PatternMark, encima de los brillos (VA-05b), desde la pared
-                // izquierda de la cavidad y en la fila de la fruta (men.a). En una dosis turbia, la misma muestra lee la trama de
-                // la fila turbia (_MurkyRow), al 25 % hacia la tinta (07 §4.3) y sin la mezcla fija del 15 %, en coordenadas de su
-                // banda (gx: x de pantalla desde el «?», pasada a u de capa con la escala de la banda; y de capa desde el arco),
-                // así que la trama sigue a la banda cuando la cuia se inclina.
+                // Patrón del tinte (07 §3): marcas al _PatternOpacity del nivel (0,15 hasta el 40 y 0,20 desde el 41) hacia
+                // tinta (patrón 0) o marfil (1), mezcladas en un espacio aproximadamente gamma (raíz cuadrada) como
+                // Palette.PatternMark, encima de los brillos (VA-05b), desde la pared izquierda de la cavidad y en la fila de la
+                // fruta (men.a). En una dosis turbia, la misma muestra lee la trama de la fila turbia (_MurkyRow), al 25 % hacia la
+                // tinta (07 §4.3) y sin la mezcla del patrón, en coordenadas de su banda (gx: x de pantalla desde el «?», pasada a
+                // u de capa con la escala de la banda; y de capa desde el arco), así que la trama sigue a la banda cuando la cuia
+                // se inclina.
                 float rowH = 1.0 / _PatternRows;
                 float gx = i.lit.a;
                 if (patternMode > -0.5)
@@ -372,7 +397,7 @@ Shader "AF/UI/Liquid"
                     float pu = (x - (1.0 - _AFCavityHalfU)) * 2.0;
                     float row = i.men.a;
                     half paper = (half)patternMode;
-                    half amount = AF_PATTERN_OPACITY;
+                    half amount = (half)_PatternOpacity;
                     UNITY_BRANCH
                     if (murky)
                     {
@@ -392,7 +417,7 @@ Shader "AF/UI/Liquid"
                         half fruitWeight = turning
                             ? smoothstep(AF_FIREFLY_PATTERN_FROM, AF_FIREFLY_PATTERN_TO, firefly)
                             : smoothstep(AF_FRUIT_PATTERN_FROM, AF_FRUIT_PATTERN_TO, dissolve);
-                        amount = fruit ? AF_PATTERN_OPACITY * fruitWeight : hatch;
+                        amount = fruit ? (half)_PatternOpacity * fruitWeight : hatch;
                     }
 
                     float2 puv = float2(pu, (row * rowH) + (clamp(ya - doseBottom, 0.004, 0.996) * rowH));
@@ -400,6 +425,31 @@ Shader "AF/UI/Liquid"
                     half3 baseCol = fruit ? lerp(_InkLin.rgb, _PaperLin.rgb, paper) : _InkLin.rgb;
                     half3 g = lerp(sqrt(col), sqrt(baseCol), amount * m);
                     col = g * g;
+                }
+
+                // Icono de fruta (07 §3, reglas 1 y 2; T-E): la celda de su tinte (men.a, entero en una banda normal) del atlas de
+                // iconos, en la caja del «?» (0,8 del hueco de su columna entre 0,30 y 0,50 u), derecho en pantalla e isótropo
+                // (x por vértice; y desde su centro en capa, pasada a u de pantalla con la escala de la banda); fuera de la caja,
+                // nada, y se apaga si no cabe una caja de 0,30 u. Tinta sobre los tintes claros y marfil sobre los oscuros
+                // (patrón 1; Palette.PatternBase; Guanábana, sin patrón, en tinta), al AF_ICON_OPACITY [P] y mezclado como el
+                // patrón. tex2Dlod: el atlas no tiene mipmaps y así va dentro de la rama. Espejos en CPU:
+                // LiquidGraphic.FruitIconDrawn, FruitIconPlacement y FruitIconSizeU.
+                UNITY_BRANCH
+                if (iconOn)
+                {
+                    float iconRoomCode = floor((glyphCode + 0.5) / AF_GLYPH_CENTER_STEPS);
+                    float iconCenter = ((glyphCode - (AF_GLYPH_CENTER_STEPS * iconRoomCode)) / AF_GLYPH_CENTER_PER_U) - AF_GLYPH_CENTER_OFFSET;
+                    float iconRoom = iconRoomCode / AF_GLYPH_ROOM_PER_U;
+                    float box = clamp(AF_GLYPH_ROOM_RATIO * iconRoom, AF_GLYPH_MIN_U, AF_GLYPH_MAX_U);
+                    float ix = gx / box;
+                    float iy = ((y - doseBottom - iconCenter) / max(bandScale, 1e-4)) / box;
+                    float inBox = step(abs(ix), 0.5) * step(abs(iy), 0.5) * smoothstep(AF_GLYPH_FADE_FROM, AF_GLYPH_FADE_TO, iconRoom);
+                    float cell = floor(i.men.a + 0.25);
+                    float2 iuv = float2(ix + 0.5, (cell + clamp(iy + 0.5, 0.5 / AF_ICON_PX, 1.0 - (0.5 / AF_ICON_PX))) / AF_ICON_CELLS);
+                    half im = tex2Dlod(_IconAtlas, float4(iuv, 0.0, 0.0)).r;
+                    half3 iconCol = patternMode > 0.5 ? _PaperLin.rgb : _InkLin.rgb;
+                    half3 ig = lerp(sqrt(col), sqrt(iconCol), (half)(AF_ICON_OPACITY * inBox) * im);
+                    col = ig * ig;
                 }
 
                 // «?» marfil de 0,5 u con su halo de tinta al 55 % (07 §4.3; glosario §6.2), una vez, derecho en pantalla e
@@ -442,9 +492,9 @@ Shader "AF/UI/Liquid"
                 float rim = saturate(1.0 - ((topEdge - y) / dpU));
                 col = lerp(col, half3(1.0, 1.0, 1.0), 0.35 * rim * inFace * gloss);
 
-                // Destello del sellado: +15 % de luminosidad durante 100 ms (07 §5.3). En una dosis turbia lit.a es la x del
-                // «?» (una cuia con ocultas nunca se sella, R5).
-                col += (1.0 - col) * (murky ? 0.0 : i.lit.a);
+                // Destello del sellado: +15 % de luminosidad durante 100 ms (07 §5.3), en la parte entera de surf.y (lit.a es la
+                // x del «?» o del icono de fruta).
+                col += (1.0 - col) * (flashSteps * (1.0 / AF_FLASH_STEPS));
 
                 return half4(col, alpha * clip * i.color.a);
             }

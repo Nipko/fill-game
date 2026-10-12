@@ -275,6 +275,29 @@ namespace AF.Presentation
         public float StepSpeedBase => Mathf.Max(0.01f, SpeedFactor) * (ReduceMotion ? 0.5f : 1f);
 
         /// <summary>
+        /// Patrones de fruta del nivel (07 §3, regla 1; 02 §12; T-E): con true, cada cuia lleva el icono de su fruta en sus
+        /// dosis visibles (<see cref="CuiaView.SetFruitPatterns"/>). Lo fija <see cref="ApplyLevelPatterns"/>; las vistas que se
+        /// unen después (<see cref="Bind"/>: una cuia añadida) lo reciben al unirse. False por defecto.
+        /// </summary>
+        public bool FruitPatterns { get; private set; }
+
+        /// <summary>
+        /// Patrones de fruta al cargar el nivel <paramref name="level"/> (T-E.1, T-E.4 y T-E.6; sin Remote Config real, con los
+        /// defaults de 08 §9): el interruptor (<see cref="Palette.PatternsOnFor"/>: desde el 41) en cada cuia y la opacidad del
+        /// patrón (<see cref="Palette.PatternOpacityFor"/>: 0,15 hasta el 40 y 0,20 desde el 41) en el material compartido del
+        /// líquido (<see cref="LiquidGraphic.ApplyPatternOpacity"/>). Sin asignaciones.
+        /// </summary>
+        public void ApplyLevelPatterns(int level)
+        {
+            FruitPatterns = Palette.PatternsOnFor(level);
+            LiquidGraphic.ApplyPatternOpacity(Palette.PatternOpacityFor(level));
+            for (int i = 0; i < _views.Length; i++)
+            {
+                _views[i].SetFruitPatterns(FruitPatterns);
+            }
+        }
+
+        /// <summary>
         /// <c>anim_pour_dose_ms</c> sin el factor de velocidad (280 ms con los defaults de 08 §9): lo que dura la gota de la
         /// Lluvia y cada mitad del mordisco en sus pasos por defecto.
         /// </summary>
@@ -414,6 +437,7 @@ namespace AF.Presentation
             {
                 RectTransform fallback = views[i].Root.parent as RectTransform ?? views[i].Root;
                 views[i].BindBoard(this, backLayer ?? fallback, frontLayer ?? fallback);
+                views[i].SetFruitPatterns(FruitPatterns); // la cuia añadida, con los Patrones de fruta del nivel (T-E)
             }
         }
 

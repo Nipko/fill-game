@@ -19,7 +19,11 @@ namespace AF.UI
     /// </summary>
     /// <remarks>
     /// <para>Eventos de <c>AF_STATE</c>: <c>load</c>, <c>ready</c>, <c>pour</c>, <c>reject</c>, <c>undo</c>, <c>restart</c>,
-    /// <c>win</c> y <c>stuck</c> (contrato) más <c>select</c> y <c>deselect</c> (ayuda para seguir los toques). Del embudo de
+    /// <c>win</c> y <c>stuck</c> (contrato) más <c>select</c> y <c>deselect</c> (ayuda para seguir los toques). <c>load</c>
+    /// lleva además los Patrones de fruta del nivel (T-E.7): <c>"patterns":{"on":true,"opacity":0.20}</c>, con <c>on</c> =
+    /// el interruptor del nivel (<see cref="Palette.PatternsOnFor"/>: desde el 41; el icono en cada dosis) y <c>opacity</c> =
+    /// la opacidad del patrón que lleva el shader (<see cref="LiquidGraphic.ShaderPatternOpacity"/>: 0,15 hasta el 40 y 0,20
+    /// desde el 41), con punto decimal. Del embudo de
     /// D-008 y los comodines, los de <see cref="Funnel"/> (y <c>resume</c> al reabrir el nivel guardado, B2-5). De la
     /// victoria y los anuncios simulados (B2-4): <c>victory</c>, <c>double_harvest</c>, <c>auto_next</c> (avance tras la
     /// Cosecha doble, D-011 punto 4) y <c>ad_gate</c> (<see cref="Victory"/>), <c>ad_check</c> (<see cref="AdCheck"/>),
@@ -287,6 +291,26 @@ namespace AF.UI
             }
         }
 
+        /// <summary>
+        /// Campo <c>"patterns":{"on":bool,"opacity":x}</c> del nivel <paramref name="level"/> (T-E.7): el interruptor Patrones de
+        /// fruta (<see cref="Palette.PatternsOnFor"/>) y la opacidad del patrón que lleva el material del líquido
+        /// (<see cref="LiquidGraphic.ShaderPatternOpacity"/>), con dos decimales y punto, como InvariantCulture, sin asignar.
+        /// </summary>
+        internal static void AppendPatterns(StringBuilder sb, int level)
+        {
+            sb.Append(",\"patterns\":{\"on\":").Append(Palette.PatternsOnFor(level) ? "true" : "false");
+            sb.Append(",\"opacity\":");
+            AppendUnit2(sb, LiquidGraphic.ShaderPatternOpacity);
+            sb.Append('}');
+        }
+
+        // Un valor de 0 a 1 con dos decimales y punto («0.20»), como lo escribiría InvariantCulture, sin asignar.
+        private static void AppendUnit2(StringBuilder sb, float value)
+        {
+            int h = Mathf.RoundToInt(Mathf.Clamp01(value) * 100f);
+            sb.Append((char)('0' + (h / 100))).Append('.').Append((char)('0' + ((h / 10) % 10))).Append((char)('0' + (h % 10)));
+        }
+
         private static void AppendAttr(StringBuilder sb, string name, int value, bool always)
         {
             if (always || value > 0)
@@ -359,6 +383,11 @@ namespace AF.UI
             if (hasEvents)
             {
                 AppendPourEvents(sb, in events);
+            }
+
+            if (string.Equals(evt, "load", System.StringComparison.Ordinal))
+            {
+                AppendPatterns(sb, flow.LevelNumber);
             }
 
             sb.Append('}');

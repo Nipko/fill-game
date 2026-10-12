@@ -299,10 +299,55 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// Opacidad del patrón por tinte que se dibuja "siempre" (02 §12; 07 §3, regla 1: 15 % hasta el nivel 40, sin
-        /// Patrones de fruta; el 20 % de <c>ui_pattern_opacity</c> y el icono llegan con ese ajuste, fuera de v0).
+        /// Nivel desde el que el ajuste Patrones de fruta arranca activado: default de <c>ui_patterns_default_from_level</c> = 41
+        /// (08 §9; 07 §3, regla 1; 02 §12; glosario §9). Sin Remote Config real todavía: es la constante.
         /// </summary>
-        public const float PatternOpacity = 0.15f;
+        public const int PatternsDefaultFromLevel = 41;
+
+        /// <summary>
+        /// Opacidad del patrón con Patrones de fruta activado: default de <c>ui_pattern_opacity</c> = 0,20 (08 §9, rango 0,15-0,35;
+        /// 07 §3, regla 1, valor canónico). Sin Remote Config real todavía: es la constante.
+        /// </summary>
+        public const float PatternOpacityOn = 0.20f;
+
+        /// <summary>
+        /// Opacidad del patrón que se dibuja «siempre», sutil, sin Patrones de fruta (02 §12; 07 §3, regla 1: 15 % hasta el
+        /// nivel 40).
+        /// </summary>
+        public const float PatternOpacitySubtle = 0.15f;
+
+        /// <summary>
+        /// Interruptor Patrones de fruta del nivel <paramref name="level"/> (T-E.6): activo desde
+        /// <see cref="PatternsDefaultFromLevel"/>. Es el valor por defecto del toggle de Ajustes (07 §3, reglas 1 y 5; 02 §12),
+        /// que aún no existe: sin pantalla de Ajustes, nadie lo cambia (pendiente en docs/dev/prototipo-v0.md). Gobierna la
+        /// opacidad del 20 % y el icono de cada dosis; el icono de la cuia elevada (07 §3, regla 2) no depende de él.
+        /// </summary>
+        public static bool PatternsOnFor(int level)
+        {
+            return level >= PatternsDefaultFromLevel;
+        }
+
+        /// <summary>
+        /// Opacidad del patrón en el nivel <paramref name="level"/>: <see cref="PatternOpacitySubtle"/> (0,15) hasta el 40 y
+        /// <see cref="PatternOpacityOn"/> (0,20) desde el 41 (<see cref="PatternsOnFor"/>). Sin asignaciones.
+        /// </summary>
+        public static float PatternOpacityFor(int level)
+        {
+            return PatternsOnFor(level) ? PatternOpacityOn : PatternOpacitySubtle;
+        }
+
+        /// <summary>
+        /// Opacidad del patrón del nivel cargado: la que lleva la propiedad <c>_PatternOpacity</c> del material compartido del
+        /// líquido (la fija <see cref="LiquidGraphic.ApplyPatternOpacity"/> al cargar el nivel) y la de <see cref="PatternMark"/>
+        /// (el bocado de la Piraña). Sin nivel cargado, la sutil.
+        /// </summary>
+        public static float PatternOpacity { get; private set; } = PatternOpacitySubtle;
+
+        /// <summary>Fija <see cref="PatternOpacity"/> (solo <see cref="LiquidGraphic.ApplyPatternOpacity"/>, con el material).</summary>
+        internal static void SetPatternOpacity(float opacity)
+        {
+            PatternOpacity = Mathf.Clamp01(opacity);
+        }
 
         /// <summary>
         /// Color de las marcas del patrón: tinta <c>ui_tinta</c> sobre los tintes claros y marfil <c>ui_papel</c> sobre
@@ -325,14 +370,21 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// Color opaco de las marcas del patrón sobre una dosis de color <paramref name="dose"/>: la mezcla al
-        /// <see cref="PatternOpacity"/> se hace aquí, en sRGB, y la marca se pinta opaca. Así el 15 % es el que ve el
-        /// jugador: con el espacio de color Linear del proyecto, un alfa del 15 % en la UI se mezclaría en lineal y no
-        /// daría el mismo contraste (la misma causa que aclaraba los textos con alfa).
+        /// Color opaco de las marcas del patrón sobre una dosis de color <paramref name="dose"/> con la opacidad del nivel
+        /// cargado (<see cref="PatternOpacity"/>: 15 % hasta el 40 y 20 % desde el 41, la misma que el shader del líquido): la
+        /// mezcla se hace aquí, en sRGB, y la marca se pinta opaca. Así el porcentaje es el que ve el jugador: con el espacio de
+        /// color Linear del proyecto, un alfa del 15 % en la UI se mezclaría en lineal y no daría el mismo contraste (la misma
+        /// causa que aclaraba los textos con alfa).
         /// </summary>
         public static Color PatternMark(Color dose, int tint)
         {
-            Color mark = Color.Lerp(dose, PatternBase(tint), PatternOpacity);
+            return PatternMark(dose, tint, PatternOpacity);
+        }
+
+        /// <summary>Como <see cref="PatternMark(Color, int)"/> con la opacidad <paramref name="opacity"/> (0..1).</summary>
+        public static Color PatternMark(Color dose, int tint, float opacity)
+        {
+            Color mark = Color.Lerp(dose, PatternBase(tint), opacity);
             mark.a = dose.a;
             return mark;
         }

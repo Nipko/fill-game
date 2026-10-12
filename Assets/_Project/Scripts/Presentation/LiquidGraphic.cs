@@ -30,13 +30,28 @@ namespace AF.Presentation
     /// (<see cref="SetTongue"/>).</para>
     /// <para>Canales: <c>TEXCOORD0</c> = (x, y local, y de capa, alto de la cuia); <c>TEXCOORD2.w</c> = patrón + 4 · dosis.
     /// La y de capa es la de la dosis sin inclinar (degradado, patrón, cara superior y superficie); la y local, la del
-    /// vidrio (brillos y recorte).</para>
+    /// vidrio (brillos y recorte). <c>TEXCOORD2.y</c> lleva la amplitud de la onda y, en su parte entera, el destello del
+    /// sellado en pasos de 1/<see cref="FlashPackSteps"/> (<see cref="PackSurface"/>): así <c>TEXCOORD1.w</c> queda libre
+    /// para la x del «?» o del icono de fruta en cualquier banda.</para>
+    /// <para><b>Patrón</b> (07 §3, regla 1; T-E): la opacidad es la propiedad <c>_PatternOpacity</c> del material compartido,
+    /// que se fija por código al cargar el nivel (<see cref="ApplyPatternOpacity"/>, desde <c>BoardAnimator.ApplyLevelPatterns</c>:
+    /// 0,15 hasta el 40 y 0,20 desde el 41, <see cref="Palette.PatternOpacityFor"/>); nunca se edita un <c>.mat</c>.</para>
+    /// <para><b>Icono de fruta</b> (07 §3, reglas 1 y 2; T-E.4 y T-E.5): con <see cref="SetFruitIcons"/> (Patrones de fruta
+    /// desde el 41, o la cuia elevada en cualquier nivel), el shader pinta en cada dosis visible el icono de accesibilidad de
+    /// su tinte (<see cref="ProceduralArt.FruitIconAtlas"/>, en <c>_IconAtlas</c>) del color <see cref="Palette.PatternBase"/>
+    /// al <see cref="FruitIconOpacity"/> [P], con la silueta de 0,45 u en reposo. Va como el «?»: derecho en pantalla, en la
+    /// columna de su banda con más hueco (<see cref="PlaceGlyph"/>; su sitio, empaquetado sobre el alto en <c>TEXCOORD0.w</c>,
+    /// y su x por vértice en <c>TEXCOORD1.w</c>), encoge con el hueco y se apaga si no cabe, así que sigue a la banda al
+    /// inclinarse y al llenarse o vaciarse en el vertido. Nunca en una dosis oculta ni mientras se revela (el icono de fruta
+    /// de la Luciérnaga de <c>MurkyMarks</c> manda hasta que la banda vuelve a ser normal), ni en el Barro (mate), ni en el
+    /// agua base (tinte 0) (<see cref="FruitIconDrawn"/>). Un vertido o un cambio de dosis reconstruyen la malla como siempre;
+    /// el icono no asigna memoria.</para>
     /// <para><b>Aguas turbias</b> (07 §4.3; 08 §5.2; T15): una dosis oculta se pinta en el shader, no con sprites encima, para
     /// que la trama y el «?» sigan a su banda cuando la cuia se inclina. Con <see cref="SetDose(int, Color, float, int, MurkyLook, float)"/>
     /// en un modo turbio la banda lleva el patrón <see cref="MurkyPatternMode"/> (± el avance del revelado, ver
     /// <see cref="MurkyLook"/>) y la fila turbia del atlas (<see cref="ProceduralArt.MurkyPatternRow"/>) en
     /// <c>TEXCOORD3.a</c>; el shader pinta encima del pardo la trama diagonal al 25 % y el «?» marfil de 0,5 u, sin la
-    /// mezcla fija del 15 % de los patrones de fruta. En los dos revelados hay un fundido cruzado sin saltos: <c>TEXCOORD3.a</c>
+    /// mezcla de los patrones de fruta (<c>_PatternOpacity</c>). En los dos revelados hay un fundido cruzado sin saltos: <c>TEXCOORD3.a</c>
     /// pasa a ser la fila de la fruta que se revela (<see cref="FruitRowCode"/>; la turbia la da <c>_MurkyRow</c>), la trama se
     /// va antes de que entre el patrón de la fruta (<see cref="MurkyHatchAmount"/> y <see cref="FruitPatternWeight"/>, espejos
     /// en CPU del shader) y la franja y el menisco de la fruta entran con su patrón; al final la banda es su dosis normal. Con
@@ -48,9 +63,9 @@ namespace AF.Presentation
     /// propiedades porque uGUI no admite <c>MaterialPropertyBlock</c> por cuia y todas comparten material; y el «?» lo pinta
     /// el shader con la fila turbia del atlas en lugar del «sprite "?"» de 08 §5.2. Se alinea con el GDD en el paso 2.</para>
     /// <para>El «?» va derecho en pantalla e isótropo (<see cref="MurkyGlyphPlacement"/>): su x en pantalla, relativa a su
-    /// centro y en u, va por vértice en <c>TEXCOORD1.w</c>, que en las bandas normales es el destello del sellado (una cuia
-    /// con dosis ocultas nunca está sellada, R5); su centro en capa y el hueco libre en su columna van empaquetados sobre el
-    /// alto de la cuia en <c>TEXCOORD0.w</c> (<see cref="GlyphPackScale"/>: en las bandas normales no cambia nada). Mide
+    /// centro y en u, va por vértice en <c>TEXCOORD1.w</c> (en las bandas sin marca, 0: el destello del sellado va en
+    /// <c>TEXCOORD2.y</c>); su centro en capa y el hueco libre en su columna van empaquetados sobre el alto de la cuia en
+    /// <c>TEXCOORD0.w</c> (<see cref="GlyphPackScale"/>: en las bandas sin «?» ni icono de fruta no cambia nada). Mide
     /// <see cref="GlyphSizeU"/> (de <see cref="GlyphMinU"/> a <see cref="GlyphMaxU"/>) y se apaga si la banda es más fina
     /// (<see cref="GlyphFade"/>): con la cuia inclinada busca la parte más gruesa de la cuña sin tocar el vidrio.</para>
     /// <para><b>Acabado mate</b> (el Barro: 02 §9.1 M5; T16, «opaco, con grumos y sin brillo»; lo pide
@@ -236,6 +251,18 @@ namespace AF.Presentation
             Turn = 3,
         }
 
+        /// <summary>
+        /// Opacidad del icono de fruta sobre su dosis (T-E.4) [P]: el color <see cref="Palette.PatternBase"/> del tinte casi
+        /// opaco, mezclado como el patrón (shader: <c>AF_ICON_OPACITY</c>).
+        /// </summary>
+        public const float FruitIconOpacity = 0.9f;
+
+        /// <summary>
+        /// Pasos del destello del sellado en la parte entera de <c>TEXCOORD2.y</c> (<see cref="PackSurface"/>; shader:
+        /// <c>AF_FLASH_STEPS</c>): el destello de 0 a 0,15 en pasos de 1/256.
+        /// </summary>
+        public const float FlashPackSteps = 256f;
+
         /// <summary>Amplitud inicial de la onda tras un vertido (08 §5.2): 0,03 u.</summary>
         public const float RippleAmplitudeU = 0.03f;
 
@@ -271,6 +298,8 @@ namespace AF.Presentation
         private const float GlyphRoomTolerance = 0.06f;
 
         private static readonly int DpUId = Shader.PropertyToID("_DpU");
+        private static readonly int PatternOpacityId = Shader.PropertyToID("_PatternOpacity");
+        private static readonly int IconAtlasId = Shader.PropertyToID("_IconAtlas");
         private static readonly int PatternRowsId = Shader.PropertyToID("_PatternRows");
         private static readonly int MurkyRowId = Shader.PropertyToID("_MurkyRow");
         private static readonly int InkId = Shader.PropertyToID("_InkLin");
@@ -309,6 +338,7 @@ namespace AF.Presentation
         private float _ripplePhase;
         private bool _rippleDriven;
         private float _flash;
+        private bool _fruitIcons;
         private float _angle;
         private float _tongue;
         private Color _tongueColor;
@@ -356,8 +386,12 @@ namespace AF.Presentation
         /// </summary>
         public static Color MurkyHighlight => ColorMath.AddLabLightness(Palette.Murky, 10f);
 
-        /// <summary>Prepara el gráfico para <paramref name="capacity"/> dosis con el atlas de patrones.</summary>
-        public void Setup(int capacity, Texture atlas)
+        /// <summary>
+        /// Prepara el gráfico para <paramref name="capacity"/> dosis con el atlas de patrones y el de iconos de fruta
+        /// (<see cref="ProceduralArt.FruitIconAtlas"/>; sin él, los iconos no se ven). Deja en el material compartido la
+        /// opacidad del patrón del nivel cargado (<see cref="Palette.PatternOpacity"/>).
+        /// </summary>
+        public void Setup(int capacity, Texture atlas, Texture? iconAtlas = null)
         {
             _capacity = capacity;
             _color = new Color[capacity];
@@ -376,6 +410,12 @@ namespace AF.Presentation
                 material = mat;
                 mat.SetFloat(PatternRowsId, atlas.height / (float)ProceduralArt.PatternRowPx);
                 mat.SetFloat(MurkyRowId, ProceduralArt.MurkyPatternRow); // la trama y el «?» (al revelarse, TEXCOORD3.a es la fruta)
+                mat.SetFloat(PatternOpacityId, Palette.PatternOpacity); // 07 §3, regla 1: la del nivel (ApplyPatternOpacity)
+                if (iconAtlas != null)
+                {
+                    mat.SetTexture(IconAtlasId, iconAtlas); // iconos de accesibilidad por tinte (07 §3; T-E.3)
+                }
+
                 // Ya en el espacio del shader: van con SetVector, que no convierte. SetColor los volvía a pasar a lineal en
                 // el proyecto Linear (doble conversión): el marfil llegaba como #E7D4B3 en vez de #F4EBDA (el «?» de las
                 // turbias y las marcas claras de los patrones) y la tinta casi negra, lejos de Palette.PatternMark.
@@ -406,6 +446,114 @@ namespace AF.Presentation
             {
                 mat.SetFloat(DpUId, 1f / unitDp);
             }
+        }
+
+        /// <summary>
+        /// Opacidad del patrón del nivel (07 §3, regla 1; 08 §9 <c>ui_pattern_opacity</c>; T-E.1 y T-E.2): la fija en la
+        /// propiedad <c>_PatternOpacity</c> del material compartido del líquido (todas las cuias del nivel) y en
+        /// <see cref="Palette.PatternOpacity"/> (<see cref="Palette.PatternMark"/>, el bocado de la Piraña). Por código al cargar
+        /// el nivel, como <c>_DpU</c>; nunca en un <c>.mat</c>. Sin asignaciones.
+        /// </summary>
+        public static void ApplyPatternOpacity(float opacity)
+        {
+            Palette.SetPatternOpacity(opacity);
+            Material? mat = UiMaterials.Liquid;
+            if (mat != null)
+            {
+                mat.SetFloat(PatternOpacityId, Palette.PatternOpacity);
+            }
+        }
+
+        /// <summary>
+        /// Opacidad del patrón que pinta el shader: la propiedad <c>_PatternOpacity</c> del material compartido (sin material,
+        /// <see cref="Palette.PatternOpacity"/>). Para la sonda de desarrollo y los tests.
+        /// </summary>
+        public static float ShaderPatternOpacity
+        {
+            get
+            {
+                Material? mat = UiMaterials.Liquid;
+                return mat != null ? mat.GetFloat(PatternOpacityId) : Palette.PatternOpacity;
+            }
+        }
+
+        /// <summary>
+        /// Icono de fruta en las dosis visibles (07 §3, reglas 1 y 2; ver la clase): lo pide la vista con Patrones de fruta en
+        /// el nivel o con la cuia elevada. Solo reconstruye la malla si cambia.
+        /// </summary>
+        public void SetFruitIcons(bool on)
+        {
+            if (on != _fruitIcons)
+            {
+                _fruitIcons = on;
+                SetVerticesDirty();
+            }
+        }
+
+        /// <summary>El gráfico pinta el icono de fruta en sus dosis visibles (<see cref="SetFruitIcons"/>).</summary>
+        public bool FruitIcons => _fruitIcons;
+
+        /// <summary>
+        /// La dosis <paramref name="k"/> es de las que llevan icono con <see cref="SetFruitIcons"/>: normal (ni oculta ni
+        /// revelándose), no mate (el Barro) y con uno de los 14 tintes (el agua base, tinte 0, no). No mira el hueco.
+        /// </summary>
+        public bool IsFruitIconDose(int k)
+        {
+            return (uint)k < (uint)_capacity && _look[k] == MurkyLook.None && !_matte[k] && ProceduralArt.HasFruitIcon(_tint[k]);
+        }
+
+        /// <summary>
+        /// El shader dibuja el icono de fruta de la dosis <paramref name="k"/>: iconos encendidos, dosis con icono
+        /// (<see cref="IsFruitIconDose"/>), con banda y con hueco para él (<see cref="GlyphFade"/> del hueco cuantizado de la
+        /// malla, y el sitio empaquetado distinto de 0, como lo decodifica el shader). Sin asignaciones.
+        /// </summary>
+        public bool FruitIconDrawn(int k)
+        {
+            if (!_fruitIcons || !IsFruitIconDose(k) || _fill[k] <= 0.001f || _color[k].a <= 0.001f)
+            {
+                return false;
+            }
+
+            return FruitIconPlacement(k, out _, out _, out _, out float room, out int code) && code > 0 && GlyphFade(room) > 0.001f;
+        }
+
+        /// <summary>
+        /// Sitio del icono de fruta de la dosis <paramref name="k"/> tal como lo pinta el shader (con la inclinación de ahora;
+        /// el mismo que el del «?», <see cref="MurkyGlyphPlacement"/>): centro en coordenadas de la cuia (X = x − 1 e y, u),
+        /// alto de la silueta en pantalla (<see cref="FruitIconSizeU"/>: 0,45 u en reposo) y hueco libre en su columna, ya
+        /// cuantizado como lo lleva la malla. False si la dosis no lleva icono (<see cref="IsFruitIconDose"/>) o no tiene banda;
+        /// no mira si los iconos están encendidos. Sin asignaciones.
+        /// </summary>
+        public bool FruitIconPlacement(int k, out float centerX, out float centerY, out float sizeU, out float roomU)
+        {
+            return FruitIconPlacement(k, out centerX, out centerY, out sizeU, out roomU, out _);
+        }
+
+        /// <summary>
+        /// Alto (u de pantalla) de la silueta del icono de fruta de una banda con <paramref name="roomU"/> de hueco: su caja es la
+        /// del «?» (<see cref="GlyphSizeU"/>, de 0,30 a 0,50 u) y la silueta ocupa <see cref="ProceduralArt.FruitIconFill"/> de
+        /// ella: 0,45 u con la dosis llena (07 §3, regla 1).
+        /// </summary>
+        public static float FruitIconSizeU(float roomU)
+        {
+            return GlyphSizeU(roomU) * ProceduralArt.FruitIconFill;
+        }
+
+        /// <summary>
+        /// <c>TEXCOORD2.y</c> de una banda (ver la clase): el destello del sellado (0..1, en la práctica ≤ 0,15) en pasos de
+        /// 1/<see cref="FlashPackSteps"/> en la parte entera y la amplitud de la onda (u, &lt; 0,75) en la fraccionaria.
+        /// </summary>
+        public static float PackSurface(float amplitudeU, float flash)
+        {
+            return Mathf.Round(Mathf.Clamp01(flash) * FlashPackSteps) + Mathf.Clamp(amplitudeU, 0f, 0.5f);
+        }
+
+        /// <summary>Decodifica <see cref="PackSurface"/> como el shader: floor(y + 0,25) pasos de destello y el resto, la onda.</summary>
+        public static void UnpackSurface(float packed, out float amplitudeU, out float flash)
+        {
+            float steps = Mathf.Floor(packed + 0.25f);
+            amplitudeU = Mathf.Max(packed - steps, 0f);
+            flash = steps / FlashPackSteps;
         }
 
         /// <summary>Fija la dosis <paramref name="k"/> (color, relleno 0..1, tinte; 0 = agua base), sin modo turbio.</summary>
@@ -737,6 +885,40 @@ namespace AF.Presentation
                 return false;
             }
 
+            if (!GlyphPlacement(k, out centerX, out centerY, out roomU, out _))
+            {
+                return false;
+            }
+
+            sizeU = GlyphSizeU(roomU);
+            return true;
+        }
+
+        // Como FruitIconPlacement, con el sitio empaquetado que lleva la malla (code: 0 = el shader no pinta el icono).
+        private bool FruitIconPlacement(int k, out float centerX, out float centerY, out float sizeU, out float roomU, out int code)
+        {
+            centerX = 0f;
+            centerY = 0f;
+            sizeU = 0f;
+            roomU = 0f;
+            code = 0;
+            if (!IsFruitIconDose(k) || !GlyphPlacement(k, out centerX, out centerY, out roomU, out code))
+            {
+                return false;
+            }
+
+            sizeU = FruitIconSizeU(roomU);
+            return true;
+        }
+
+        // Sitio de la marca de la banda k («?» o icono de fruta), como lo pinta el shader con la inclinación de ahora: centro
+        // en coordenadas de la cuia (cuantizado), hueco cuantizado y el código empaquetado. False sin banda. Sin asignaciones.
+        private bool GlyphPlacement(int k, out float centerX, out float centerY, out float roomU, out int code)
+        {
+            centerX = 0f;
+            centerY = 0f;
+            roomU = 0f;
+            code = 0;
             int top = ComputeLevels();
             if (top < k || _fill[k] <= 0.001f || _levels[k + 1] - _levels[k] < 1e-5f)
             {
@@ -750,11 +932,11 @@ namespace AF.Presentation
             float cs = Mathf.Cos(rad);
             PlaceGlyph(k, lo, hi, _fill[k], sn, cs, out float e, out float d, out float room);
             float scale = _fill[k] / Mathf.Max(1e-5f, hi - lo);
-            UnpackGlyph(PackGlyph((d - lo) * scale, room), out float centerLayer, out roomU);
+            code = PackGlyph((d - lo) * scale, room);
+            UnpackGlyph(code, out float centerLayer, out roomU);
             float dq = lo + (centerLayer / Mathf.Max(1e-5f, scale)); // el centro cuantizado, como lo decodifica el shader
             centerX = (e * cs) + (dq * sn);
             centerY = (dq * cs) - (e * sn);
-            sizeU = GlyphSizeU(roomU);
             return true;
         }
 
@@ -1001,7 +1183,7 @@ namespace AF.Presentation
 
             float heightU = CuiaGeometry.HeightU(_capacity);
             float bottomU = CuiaGeometry.CavityBottomU;
-            float amp = RippleAmplitude();
+            float surf = PackSurface(RippleAmplitude(), _flash); // la onda y, en la parte entera, el destello del sellado
             bool tilted = Mathf.Abs(_angle) > 0.01f;
             float surface = bottomU + top + _fill[top];
             int topTint = _tint[top];
@@ -1056,15 +1238,17 @@ namespace AF.Presentation
                     pattern = Palette.PatternBase(tint) == Palette.UiPaper ? 1f : 0f;
                 }
 
-                var uv1 = new Vector4(litS.x, litS.y, litS.z, _flash);
-                var uv2 = new Vector4(surface, amp, _ripplePhase, pattern + (4f * k));
+                // El icono de fruta (T-E.4 y T-E.5) va como el «?» de una turbia: su sitio sobre el alto y su x por vértice.
+                bool glyph = murky || (_fruitIcons && IsFruitIconDose(k));
+                var uv1 = new Vector4(litS.x, litS.y, litS.z, 0f);
+                var uv2 = new Vector4(surface, surf, _ripplePhase, pattern + (4f * k));
                 var uv3 = new Vector4(menS.x, menS.y, menS.z, row);
 
                 // La dosis superior sube TopExtraU de capa para la cara superior y la onda, y todas bajan BottomExtraU para
                 // su frontera en arco (en d, con la escala de la banda).
                 float hiMesh = k == top ? hi + (TopExtraU * (hi - lo) / fill) : hi;
                 float loMesh = lo - (BottomExtraU * (hi - lo) / fill);
-                AddBand(vh, k, lo, hi, loMesh, hiMesh, bottomU + k, fill, heightU, c, uv1, uv2, uv3, murky);
+                AddBand(vh, k, lo, hi, loMesh, hiMesh, bottomU + k, fill, heightU, c, uv1, uv2, uv3, glyph);
             }
 
             if (tilted && _tongue > 0.01f)
@@ -1109,10 +1293,11 @@ namespace AF.Presentation
         // Banda entre las líneas loMesh y hiMesh (forma normal): el rectángulo de la cavidad [−w, w] × [fondo en el eje,
         // labio] recortado por los dos semiplanos (≤ 6 vértices, convexo) y dibujado en abanico. El shader recorta luego a
         // la silueta interior (con el fondo en arco) y a la frontera en arco. La y de capa es afín en d: fondo de la dosis +
-        // relleno · (d − lo) / (hi − lo). En una banda turbia, uv1.w de cada vértice es la x del «?» en pantalla (u, desde su
-        // centro: e = X · cos θ − y · sen θ menos la del centro, PlaceGlyph), que es afín y se interpola exacta, y el alto de
-        // la cuia lleva encima el centro y el hueco del «?» (PackGlyph). Sin asignaciones.
-        private void AddBand(VertexHelper vh, int k, float lo, float hi, float loMesh, float hiMesh, float doseBottom, float fill, float heightU, Color c, Vector4 uv1, Vector4 uv2, Vector4 uv3, bool murky)
+        // relleno · (d − lo) / (hi − lo). En una banda con marca (glyph: el «?» de una turbia o el icono de fruta), uv1.w de
+        // cada vértice es la x de la marca en pantalla (u, desde su centro: e = X · cos θ − y · sen θ menos la del centro,
+        // PlaceGlyph), que es afín y se interpola exacta, y el alto de la cuia lleva encima el centro y el hueco de la marca
+        // (PackGlyph). Sin asignaciones.
+        private void AddBand(VertexHelper vh, int k, float lo, float hi, float loMesh, float hiMesh, float doseBottom, float fill, float heightU, Color c, Vector4 uv1, Vector4 uv2, Vector4 uv3, bool glyph)
         {
             float w = CuiaGeometry.CavityHalfWidthU;
             float yMin = CuiaGeometry.CavityFloorU(0f);
@@ -1134,7 +1319,7 @@ namespace AF.Presentation
             float cs = Mathf.Cos(rad);
             float glyphE = 0f;
             float height = heightU;
-            if (murky)
+            if (glyph)
             {
                 PlaceGlyph(k, lo, hi, fill, sn, cs, out glyphE, out float glyphD, out float room);
                 height = heightU + (GlyphPackScale * PackGlyph((glyphD - lo) * scale, room));
@@ -1146,7 +1331,7 @@ namespace AF.Presentation
             {
                 Vector2 p = _band[i];
                 float d = LineOffset(p.x, p.y, _angle);
-                if (murky)
+                if (glyph)
                 {
                     uv1.w = ((p.x * cs) - (p.y * sn)) - glyphE;
                 }
