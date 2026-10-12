@@ -15,10 +15,14 @@ namespace AF.Presentation
     /// (<see cref="IntroChoreography"/>): entran trepando por la rama desde el follaje de su esquina en ≈ 500 ms mientras el río
     /// llena (también en la corta, si les da tiempo a ≤ 450 dp/s; si no, posados desde t = 0), frenan con la mano sobre sus
     /// columnas, sueltan la fruta, reposan ≈ 1.500 ms en la rama ya en juego con un gesto de reposo según la especie y el
-    /// nivel (<see cref="ChooseRest"/>; D-011, punto 3) y salen en 500 ms trepando hacia el follaje de la esquina más
-    /// cercana, con alfa 1 hasta los últimos 80 ms. Orden de capas (guion §4.6.5; revisión del 2026-10-09): agua &lt; rama
-    /// &lt; tropa. <see cref="WaterSlot"/>, donde la intro dibuja el labio del río que desborda, va por detrás de la rama: la
-    /// rama queda encima de la crecida y los miquitos, sobre la rama, nunca de pie sobre el río. Rasgos de reposo por especie:
+    /// nivel (<see cref="ChooseRest"/>; D-011, punto 3; colgados, suben por la liana hasta casi la rama) y salen en 500 ms
+    /// trepando hacia el follaje de la esquina más cercana (quien no llega a su esquina en ese tiempo, en lienzos anchos,
+    /// trepa igual mientras se funde), con alfa 1 hasta los últimos 80 ms. En la rama baja (<c>fila</c> y <c>sacude</c>), un
+    /// manojo de hojas en cada extremo, por delante de la tropa (<see cref="ProceduralArt.BranchEndFoliage"/>; revisión del
+    /// 2026-10-11): la rama sale de él y los miquitos aparecen y desaparecen dentro de él al trepar. Orden de capas (guion
+    /// §4.6.5; revisión del 2026-10-09): agua &lt; rama &lt; tropa &lt; manojos de los extremos. <see cref="WaterSlot"/>, donde
+    /// la intro dibuja el labio del río que desborda, va por detrás de la rama: la rama queda encima de la crecida y los
+    /// miquitos, sobre la rama, nunca de pie sobre el río. Rasgos de reposo por especie:
     /// la pareja de <c>colas_entrelazadas</c> se sienta lado a lado mirando al mismo sitio con las colas colgando bajo la rama,
     /// trenzadas dos vueltas; el churuco lleva la fruta abrazada al pecho; el segundo individuo usa la <c>paleta_pareja</c>
     /// si la hay; y con <c>iluminacion = noche</c> un velo nocturno cubre la franja mientras no exista la pintura de noche del
@@ -35,6 +39,12 @@ namespace AF.Presentation
         private const float ClimbTiltDeg = 18f;
         private const float EnterTiltDeg = 6f;
         private const int Leaves = 4;
+
+        /// <summary>En el reposo, colgado, la liana se acorta hasta esto (S): cuelga casi de la rama (revisión del 2026-10-11).</summary>
+        public const float RestLianaS = 0.15f;
+
+        /// <summary>El manojo de hojas de cada extremo de la rama baja empieza 3 dp por debajo de ella: la rama sale de él.</summary>
+        public const float BranchEndBelowDp = 3f;
 
         /// <summary>El gesto de reposo entra y sale en 250 ms (sin saltos de pose).</summary>
         public const float RestBlendMs = 250f;
@@ -61,6 +71,7 @@ namespace AF.Presentation
         private readonly Image _night;
         private readonly BezierStripGraphic _branch;
         private readonly Image[] _leaves = new Image[Leaves];
+        private readonly Image[] _ends = new Image[2];
         private readonly RectTransform _water;
         private readonly BezierStripGraphic[] _lianas = new BezierStripGraphic[IntroChoreography.MaxMonkeys];
         private readonly MonkeyRig[] _rigs = new MonkeyRig[IntroChoreography.MaxMonkeys];
@@ -68,6 +79,7 @@ namespace AF.Presentation
         private readonly float[] _restFrom = new float[IntroChoreography.MaxMonkeys];
         private readonly RestGesture[] _restGesture = new RestGesture[IntroChoreography.MaxMonkeys];
         private readonly int[] _restTint = new int[IntroChoreography.MaxMonkeys];
+        private readonly bool[] _reachesCorner = new bool[IntroChoreography.MaxMonkeys];
         private readonly Vector3[] _corners = new Vector3[4];
         private MonkeyArt? _look;
         private MonkeyArt? _lookPair;
@@ -137,6 +149,23 @@ namespace AF.Presentation
             for (int m = 0; m < _rigs.Length; m++)
             {
                 _rigs[m] = new MonkeyRig(_layer, m);
+            }
+
+            // Manojos de hojas de los extremos de la rama baja, por delante de la tropa: trepan por dentro de ellos.
+            for (int i = 0; i < _ends.Length; i++)
+            {
+                var endGo = new GameObject(i == 0 ? "BranchEndLeft" : "BranchEndRight", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                endGo.transform.SetParent(_layer, false);
+                Image img = endGo.GetComponent<Image>();
+                img.sprite = art.BranchEndFoliage;
+                img.raycastTarget = false;
+                RectTransform rt = img.rectTransform;
+                rt.anchorMin = new Vector2(0f, 1f);
+                rt.anchorMax = new Vector2(0f, 1f);
+                rt.pivot = new Vector2(ProceduralArt.BranchEndFoliagePivotX, 0f);
+                rt.localScale = new Vector3(i == 0 ? 1f : -1f, 1f, 1f);
+                img.enabled = false;
+                _ends[i] = img;
             }
 
             // La capa no se desactiva nunca (ni aquí ni en Hide): desactivar un Canvas anidado desregistra sus gráficos ocultos
@@ -291,6 +320,25 @@ namespace AF.Presentation
                 _leaves[i].enabled = true;
             }
 
+            // Manojos de hojas de los extremos de la rama baja (en la alta, el follaje de las esquinas del HUD ya los tapa), de la
+            // rama hacia arriba y nunca sobre el HUD (se encogen si la franja no da).
+            for (int i = 0; i < _ends.Length; i++)
+            {
+                Image end = _ends[i];
+                GraphicPool.EnsureRegistered(end);
+                end.enabled = !high;
+                if (high)
+                {
+                    continue;
+                }
+
+                float ex = i == 0 ? 0f : w;
+                float bottom = plan.BranchCurveY(ex) + BranchEndBelowDp;
+                float scale = Mathf.Clamp01((bottom - _hudBottom - 1f) / ProceduralArt.BranchEndFoliageHeightDp);
+                end.rectTransform.anchoredPosition = new Vector2(ex, -bottom);
+                end.rectTransform.sizeDelta = new Vector2(ProceduralArt.BranchEndFoliageWidthDp, ProceduralArt.BranchEndFoliageHeightDp) * scale;
+            }
+
             for (int m = 0; m < _rigs.Length; m++)
             {
                 bool on = m < plan.MonkeyCount;
@@ -336,6 +384,8 @@ namespace AF.Presentation
 
                 _restFrom[m] = Mathf.Min(rest, plan.ExitStartMs);
                 _restTint[m] = tint;
+                float exitX = plan.MonkeyKeyX[b + keys - 1]; // donde acaba su salida: fuera de la pantalla si llega a su esquina
+                _reachesCorner[m] = exitX <= -0.5f * plan.BodyDp || exitX >= _canvasW + (0.5f * plan.BodyDp);
                 MonkeyArt look = LookOf(m);
                 bool swingTail = _species != null && _species.HasTrait("cola_balancin");
                 _restGesture[m] = ChooseRest(plan.RestVariant, m, plan.MonkeyCount, plan.Model, plan.Pair, swingTail, look.HugsFruit, look.TailCurls);
@@ -436,6 +486,11 @@ namespace AF.Presentation
                 graphics.Add(_leaves[i]);
             }
 
+            for (int i = 0; i < _ends.Length; i++)
+            {
+                graphics.Add(_ends[i]);
+            }
+
             for (int m = 0; m < _rigs.Length; m++)
             {
                 graphics.Add(_lianas[m]);
@@ -461,6 +516,15 @@ namespace AF.Presentation
                 if (_leaves[i].enabled)
                 {
                     _leaves[i].rectTransform.GetWorldCorners(_corners);
+                    rects.Add(ToCanvas());
+                }
+            }
+
+            for (int i = 0; i < _ends.Length; i++)
+            {
+                if (_ends[i].enabled)
+                {
+                    _ends[i].rectTransform.GetWorldCorners(_corners);
                     rects.Add(ToCanvas());
                 }
             }
@@ -499,6 +563,11 @@ namespace AF.Presentation
             for (int i = 0; i < Leaves; i++)
             {
                 _leaves[i].enabled = false;
+            }
+
+            for (int i = 0; i < _ends.Length; i++)
+            {
+                _ends[i].enabled = false;
             }
 
             for (int m = 0; m < _rigs.Length; m++)
@@ -556,6 +625,10 @@ namespace AF.Presentation
             }
 
             float phase = t * (Mathf.PI * 2f * 8f / 1000f); // 8 Hz
+
+            // Reloj de los gestos de reposo: el de la tropa desde su última suelta, con medio ciclo de desfase entre vecinos
+            // (MonkeyRig.GestureCycleMs): en cada instante, cada gesto está en uno de sus extremos.
+            float clock = t - plan.LastReleaseMs + ((m & 1) == 1 ? 0.5f * MonkeyRig.GestureCycleMs : 0f);
             float breathe = 1f + (0.01f * (1f - Mathf.Cos(t * (Mathf.PI * 2f / 1600f))));
             bool blink = !moving && Mathf.Repeat(t + (m * 731f), 2400f) < 120f;
             bool idle = !moving && lift <= 0f && t < _firstRelease[m] && !plan.IsLong;
@@ -573,12 +646,23 @@ namespace AF.Presentation
                 }
 
                 float gripTop = plan.BranchY + 1.5f;
-                float gripY = Mathf.Lerp(gripTop, plan.HangGripY, Ease.OutCubic(settled));
-                float swing = gesture == RestGesture.SwingBody ? 0.06f * rest : 0f; // se balancea colgado
-                float sway = moving ? 0.06f * Mathf.Sin(phase * 0.5f) : (0.02f + swing) * Mathf.Sin(t * 0.004f);
-                pose = rest > 0f ? MonkeyRig.HangRest(look, sway, gesture, rest, t) : MonkeyRig.Hang(look, lift, sway);
+                float hangY = plan.HangGripY;
+                if (!moving && t >= _restFrom[m])
+                {
+                    // En el reposo sube por la liana hasta colgar casi de la rama (revisión del 2026-10-11: la liana larga se leía
+                    // como una cuerda); al salir sigue subiendo desde ahí.
+                    float up = Ease.OutCubic(Mathf.Clamp01((t - _restFrom[m]) / RestBlendMs));
+                    hangY = Mathf.Lerp(hangY, Mathf.Min(hangY, gripTop + (RestLianaS * s)), up);
+                }
+
+                float gripY = Mathf.Lerp(gripTop, hangY, Ease.OutCubic(settled));
+                float sway = moving ? 0.06f * Mathf.Sin(phase * 0.5f) : 0.02f * Mathf.Sin(t * 0.004f);
+                pose = rest > 0f ? MonkeyRig.HangRest(look, sway, gesture, rest, clock) : MonkeyRig.Hang(look, lift, sway);
                 pose.Blink = blink;
-                rig.Place(x, gripY, facing);
+
+                // Se balancea colgado (SwingBody): el cuerpo gira ±10° alrededor de la mano que agarra.
+                float swing = gesture == RestGesture.SwingBody ? rest * MonkeyRig.SwingBodyDeg * MonkeyRig.Wave(clock) : 0f;
+                rig.Place(x, gripY, facing, swing);
                 SetLiana(m, x, gripY, alpha);
             }
             else
@@ -593,6 +677,13 @@ namespace AF.Presentation
                     // Trepa por el follaje solo junto a su esquina (a menos de 1 S del borde, o ya fuera de la pantalla): por
                     // el resto de la rama camina; nunca sube más de 30 dp ni pasa sobre el HUD.
                     float climb = CornerClimb(x, s);
+                    if (exiting && !_reachesCorner[m])
+                    {
+                        // En lienzos anchos (tabletas), quien no llega a su esquina en los 500 ms de la salida trepa igual
+                        // mientras se funde, como antes de D-011 (revisión del 2026-10-11): nadie sale andando en plano.
+                        climb = Mathf.Max(climb, Ease.Out(exitQ));
+                    }
+
                     if (exiting)
                     {
                         // Sale trepando hacia el follaje de la esquina (empieza en la rama: sube en el primer tercio de la salida).
@@ -612,7 +703,7 @@ namespace AF.Presentation
                 }
                 else if (rest > 0f)
                 {
-                    pose = MonkeyRig.SitRest(look, breathe, gesture, rest, t);
+                    pose = MonkeyRig.SitRest(look, breathe, gesture, rest, clock);
                 }
                 else
                 {
@@ -792,6 +883,11 @@ namespace AF.Presentation
             for (int i = 0; i < Leaves; i++)
             {
                 _leaves[i].canvasRenderer.SetAlpha(a);
+            }
+
+            for (int i = 0; i < _ends.Length; i++)
+            {
+                _ends[i].canvasRenderer.SetAlpha(a);
             }
         }
 

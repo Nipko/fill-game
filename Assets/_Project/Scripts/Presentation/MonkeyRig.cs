@@ -23,8 +23,14 @@ namespace AF.Presentation
         /// <summary>Centro de la cabeza.</summary>
         public Vector2 HeadCenter;
 
-        /// <summary>Giro de la cabeza (grados; + mira arriba).</summary>
+        /// <summary>Giro de la cabeza (grados; + mira arriba, también cuando mira atrás).</summary>
         public float HeadAngle;
+
+        /// <summary>
+        /// La cabeza mira atrás, a lo largo de la rama (gesto de mirar alrededor): la pieza se refleja en horizontal, con el
+        /// cráneo en el mismo sitio; nunca mira hacia abajo (D-002).
+        /// </summary>
+        public bool HeadBack;
 
         /// <summary>Hombro y mano del brazo de detrás.</summary>
         public Vector2 BackArmFrom;
@@ -93,10 +99,10 @@ namespace AF.Presentation
         /// <summary>Sin gesto.</summary>
         None = -1,
 
-        /// <summary>Se rasca la cabeza con la mano de detrás (sentado) o con la libre (colgado).</summary>
+        /// <summary>Se rasca detrás de la oreja con la mano libre, a rascadas rápidas (sin cruzar la cara ni subir sobre la cabeza).</summary>
         Scratch = 0,
 
-        /// <summary>Mira alrededor: la cabeza sube hacia el cielo y vuelve a mirar a lo largo de la rama, nunca hacia abajo.</summary>
+        /// <summary>Mira alrededor: la cabeza sube hacia el cielo y luego mira atrás a lo largo de la rama, nunca hacia abajo.</summary>
         LookAround = 1,
 
         /// <summary>Se acicala el pecho.</summary>
@@ -341,10 +347,17 @@ namespace AF.Presentation
                 head.anchoredPosition = hp;
             }
 
-            Quaternion hr = Quaternion.Euler(0f, 0f, pose.HeadAngle);
+            // Mirando atrás, la pieza se refleja y gira al revés: + sigue siendo mirar arriba.
+            Quaternion hr = Quaternion.Euler(0f, 0f, pose.HeadBack ? -pose.HeadAngle : pose.HeadAngle);
             if (head.localRotation != hr)
             {
                 head.localRotation = hr;
+            }
+
+            var hs = new Vector3(pose.HeadBack ? -1f : 1f, 1f, 1f);
+            if (head.localScale != hs)
+            {
+                head.localScale = hs;
             }
 
             if (_eyelid.enabled != pose.Blink)
@@ -463,21 +476,56 @@ namespace AF.Presentation
         /// <summary>Mano que mastica, sentado (S): la fruta baja aquí entre bocado y bocado, delante del pecho.</summary>
         public static readonly Vector2 SitChewS = new Vector2(0.27f, 0.43f);
 
-        /// <summary>Cada bocado: la mano sube a la boca y baja en 900 ms.</summary>
-        public const float EatCycleMs = 900f;
+        /// <summary>
+        /// Ciclo común de los gestos de reposo (ms): todos los gestos lentos (bocado, cola, balanceo colgado, mirar arriba o
+        /// atrás) siguen la misma onda (<see cref="Wave"/>), con el reloj de la tropa (desde su última suelta) y medio ciclo de
+        /// desfase entre miquitos vecinos: en un mismo instante cada gesto está en uno de sus dos extremos (capturas que lo
+        /// prueban) y la tropa no se mueve al unísono.
+        /// </summary>
+        public const float GestureCycleMs = 900f;
 
-        /// <summary>La cola se balancea ±20° alrededor de su base en 1,6 s.</summary>
+        /// <summary>Cada bocado: la mano sube a la boca y baja en un ciclo de gesto (900 ms).</summary>
+        public const float EatCycleMs = GestureCycleMs;
+
+        /// <summary>La cola se balancea ±20° alrededor de su base, un vaivén por ciclo de gesto.</summary>
         public const float SwingTailDeg = 20f;
 
-        /// <summary>Periodo del balanceo de la cola.</summary>
-        public const float SwingTailMs = 1600f;
+        /// <summary>Periodo del balanceo de la cola: el ciclo de gesto.</summary>
+        public const float SwingTailMs = GestureCycleMs;
+
+        /// <summary>Al mirar alrededor, la cabeza sube hasta 28° (se nota a 48 dp; antes 14°).</summary>
+        public const float LookUpDeg = 28f;
+
+        /// <summary>Al mirar atrás por la rama, la cabeza sube como mucho 10° (nunca baja: D-002).</summary>
+        public const float LookBackDeg = 10f;
+
+        /// <summary>Colgado, se balancea ±10° alrededor del agarre (TroopLayer gira la raíz; antes ±3°).</summary>
+        public const float SwingBodyDeg = 10f;
+
+        /// <summary>Se rasca a 3,5 rascadas por segundo.</summary>
+        public const float ScratchHz = 3.5f;
+
+        /// <summary>Recorrido de la mano al rascarse (S, de su centro a cada extremo).</summary>
+        public const float ScratchAmplitudeS = 0.08f;
+
+        /// <summary>
+        /// Onda de los gestos lentos en el reloj <paramref name="clockMs"/>: −1 en 0 (y cada <see cref="GestureCycleMs"/>) y
+        /// +1 a mitad de ciclo; suave en los extremos.
+        /// </summary>
+        public static float Wave(float clockMs)
+        {
+            return -Mathf.Cos(clockMs * (Mathf.PI * 2f / GestureCycleMs));
+        }
 
         /// <summary>
         /// Sentado en reposo tras su última suelta (D-011, punto 3) con el gesto <paramref name="gesture"/>, mezclado con
-        /// <paramref name="amount"/> (0..1) sobre la pose sentada de siempre y animado con el tiempo de la intro
-        /// <paramref name="timeMs"/>: la pose es función del tiempo (capturas deterministas). La cabeza solo sube (D-002).
+        /// <paramref name="amount"/> (0..1) sobre la pose sentada de siempre y animado con el reloj de gestos
+        /// <paramref name="clockMs"/> (ms; ver <see cref="GestureCycleMs"/>): la pose es función del tiempo (capturas
+        /// deterministas). Rascarse: la mano de delante va a la oreja, por detrás de la cara y sin subir por encima de la cabeza,
+        /// y rasca a 3,5 Hz; mirar alrededor: la cabeza sube 28° y luego mira atrás por la rama; la cola, ±20°. La cabeza solo
+        /// sube (D-002).
         /// </summary>
-        public static MonkeyPose SitRest(MonkeyArt art, float breathe, RestGesture gesture, float amount, float timeMs)
+        public static MonkeyPose SitRest(MonkeyArt art, float breathe, RestGesture gesture, float amount, float clockMs)
         {
             MonkeyPose p = Sit(art, breathe, 0f, -1, 0f);
             float a = Mathf.Clamp01(amount);
@@ -486,24 +534,23 @@ namespace AF.Presentation
                 return p;
             }
 
-            float phase = timeMs * 0.012f;
             switch (gesture)
             {
                 case RestGesture.Scratch:
-                    p.BackArmTo = Vector2.Lerp(p.BackArmTo, new Vector2(0.20f, 0.78f + (0.025f * Mathf.Sin(phase))), a);
+                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, ScratchSpot(p, clockMs), a);
                     break;
                 case RestGesture.LookAround:
-                    p.HeadAngle = a * 14f * Mathf.Clamp01(0.5f + (0.5f * Mathf.Sin(phase * 0.25f)));
+                    LookAround(ref p, art, a, clockMs);
                     break;
                 case RestGesture.Groom:
-                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, new Vector2(0.12f + (0.02f * Mathf.Sin(phase)), 0.36f), a);
+                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, new Vector2(0.12f + (0.03f * Scratching(clockMs)), 0.36f), a);
                     break;
                 case RestGesture.EatFruit:
-                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, Vector2.Lerp(SitChewS, SitMouthS, Bite(timeMs)), a);
-                    p.HeadAngle = a * 4f * Bite(timeMs); // asiente un poco hacia arriba en cada bocado, nunca hacia abajo
+                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, Vector2.Lerp(SitChewS, SitMouthS, Bite(clockMs)), a);
+                    p.HeadAngle = a * 4f * Bite(clockMs); // asiente un poco hacia arriba en cada bocado, nunca hacia abajo
                     break;
                 case RestGesture.SwingTail:
-                    RotateTail(ref p, a * SwingTailDeg * Mathf.Sin(timeMs * (Mathf.PI * 2f / SwingTailMs)));
+                    RotateTail(ref p, a * SwingTailDeg * Wave(clockMs));
                     break;
             }
 
@@ -512,11 +559,12 @@ namespace AF.Presentation
 
         /// <summary>
         /// Colgado en reposo tras su última suelta (modelo <c>cuelga</c>; D-011, punto 3): sobre <see cref="Hang"/>, la mano
-        /// libre se rasca la barriga (por delante del cuerpo, sin cruzar la cara), se acicala, se lleva la fruta a la boca o la
-        /// cabeza mira alrededor (el balanceo, <see cref="RestGesture.SwingBody"/>, lo da <paramref name="sway"/>). Nada baja de
-        /// la mano de soltar (A7).
+        /// libre se rasca detrás de la oreja (sin cruzar la cara), se acicala el pecho, se lleva la fruta a la boca o la cabeza
+        /// mira arriba y atrás, con el reloj de gestos <paramref name="clockMs"/>; el balanceo
+        /// (<see cref="RestGesture.SwingBody"/>, ±<see cref="SwingBodyDeg"/>) lo da TroopLayer girando la raíz en el agarre. Nada
+        /// baja de la mano de soltar (A7).
         /// </summary>
-        public static MonkeyPose HangRest(MonkeyArt art, float sway, RestGesture gesture, float amount, float timeMs)
+        public static MonkeyPose HangRest(MonkeyArt art, float sway, RestGesture gesture, float amount, float clockMs)
         {
             MonkeyPose p = Hang(art, 0f, sway);
             float a = Mathf.Clamp01(amount);
@@ -525,21 +573,20 @@ namespace AF.Presentation
                 return p;
             }
 
-            float phase = timeMs * 0.012f;
             switch (gesture)
             {
                 case RestGesture.Scratch:
-                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, p.TorsoCenter + new Vector2(0.12f, -0.06f + (0.04f * Mathf.Sin(phase))), a);
+                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, ScratchSpot(p, clockMs), a);
                     break;
                 case RestGesture.LookAround:
-                    p.HeadAngle = a * 14f * Mathf.Clamp01(0.5f + (0.5f * Mathf.Sin(phase * 0.25f)));
+                    LookAround(ref p, art, a, clockMs);
                     break;
                 case RestGesture.Groom:
-                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, p.TorsoCenter + new Vector2(0.10f, 0.06f + (0.02f * Mathf.Sin(phase))), a);
+                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, p.TorsoCenter + new Vector2(0.10f, 0.06f + (0.03f * Scratching(clockMs))), a);
                     break;
                 case RestGesture.EatFruit:
-                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, HangEatHand(p, timeMs), a);
-                    p.HeadAngle = a * 4f * Bite(timeMs);
+                    p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, HangEatHand(p, clockMs), a);
+                    p.HeadAngle = a * 4f * Bite(clockMs);
                     break;
             }
 
@@ -547,17 +594,64 @@ namespace AF.Presentation
         }
 
         /// <summary>Bocado (0 masticando, 1 en la boca): sube y baja en <see cref="EatCycleMs"/>.</summary>
-        public static float Bite(float timeMs)
+        public static float Bite(float clockMs)
         {
-            return 0.5f - (0.5f * Mathf.Cos(timeMs * (Mathf.PI * 2f / EatCycleMs)));
+            return 0.5f + (0.5f * Wave(clockMs));
         }
 
+        // Rascada rápida (−1..1) a ScratchHz.
+        private static float Scratching(float clockMs)
+        {
+            return Mathf.Sin(clockMs * (Mathf.PI * 2f * ScratchHz / 1000f));
+        }
+
+        // La mano que se rasca, en la oreja (por detrás del centro de la cabeza, a su altura, nunca por encima ni sobre la cara),
+        // rascando arriba y abajo a lo largo del cráneo.
+        private static Vector2 ScratchSpot(in MonkeyPose p, float clockMs)
+        {
+            float w = Scratching(clockMs);
+            return p.HeadCenter + new Vector2(-0.13f + (0.02f * w), 0.02f + (ScratchAmplitudeS * w));
+        }
+
+        // Mirar alrededor: con la onda arriba, la cabeza sube hasta 28°; con la onda abajo, mira atrás por la rama (la pieza
+        // reflejada, el cráneo en su sitio), un poco hacia arriba. Al subir, la cabeza baja lo justo para que su caja girada no
+        // pase de la de antes (la misma altura sentado: SitTopS).
+        private static void LookAround(ref MonkeyPose p, MonkeyArt art, float a, float clockMs)
+        {
+            float w = Wave(clockMs);
+            float half = 0.5f * art.HeadS;
+            if (w >= 0f)
+            {
+                p.HeadAngle = a * LookUpDeg * w;
+                float r = p.HeadAngle * Mathf.Deg2Rad;
+                float grow = half * ((Mathf.Cos(r) + Mathf.Sin(r)) - LookAroundBoxBefore);
+                p.HeadCenter.y -= Mathf.Max(0f, grow);
+                return;
+            }
+
+            p.HeadAngle = a * LookBackDeg * -w;
+            if (a >= 0.5f && w < -0.2f)
+            {
+                p.HeadBack = true;
+                p.HeadCenter.x -= 2f * SkullOffsetS * art.HeadS; // el cráneo (4 px detrás del centro de la celda) no salta
+            }
+        }
+
+        // Caja de la cabeza girada 14° (el mirar al cielo de antes), en medios lados: cos 14° + sin 14°.
+        private static readonly float LookAroundBoxBefore = Mathf.Cos(14f * Mathf.Deg2Rad) + Mathf.Sin(14f * Mathf.Deg2Rad);
+
+        // Cráneo de la pieza de la cabeza (ProceduralArt.DrawHead): centro 4 px detrás y 6 px por debajo del de la celda de
+        // 128 px, radio 40 px más 3,5 de tinta; en fracciones del lado de la cabeza.
+        private const float SkullOffsetS = 4f / 128f;
+        private const float SkullDropS = 6f / 128f;
+        private const float SkullRadiusS = 43.5f / 128f;
+
         // Mano libre del colgado al comer: de delante del pecho a la boca, bajo la cabeza.
-        private static Vector2 HangEatHand(in MonkeyPose p, float timeMs)
+        private static Vector2 HangEatHand(in MonkeyPose p, float clockMs)
         {
             Vector2 mouth = p.HeadCenter + new Vector2(0.17f, -0.07f);
             Vector2 chew = p.HeadCenter + new Vector2(0.13f, -0.20f);
-            return Vector2.Lerp(chew, mouth, Bite(timeMs));
+            return Vector2.Lerp(chew, mouth, Bite(clockMs));
         }
 
         // Gira la cola alrededor de su base (grados; + hacia arriba con el miquito mirando a la derecha).
@@ -604,64 +698,80 @@ namespace AF.Presentation
             return p;
         }
 
+        /// <summary>Ángulo del brazo que agarra la liana con la vertical (grados): sale del hombro hacia la liana, al lado de la cabeza.</summary>
+        public const float HangArmDeg = 22f;
+
         /// <summary>
-        /// Colgado bajo el agarre (modelo <c>cuelga</c>): de un brazo (calitrícidos) o de la cola (atélidos; el maquisapa, de la
-        /// cola y de un brazo arriba), con la mano libre abajo y la fruta en ella (el churuco la lleva abrazada al pecho hasta
-        /// soltarla); <paramref name="lift"/> la adelanta al soltar. Lo más bajo del cuerpo nunca pasa de la mano de soltar
-        /// (<see cref="HangHandS"/>): con extremidades largas el cuerpo queda más arriba y pequeño; con cortas, más abajo.
+        /// Colgado bajo el agarre (modelo <c>cuelga</c>): de un brazo (calitrícidos), de la cola (atélidos) o de la cola y de un
+        /// brazo (el maquisapa), con la mano libre y la fruta en ella (el churuco la lleva abrazada al pecho hasta soltarla);
+        /// <paramref name="lift"/> la lleva a la mano de soltar. Revisión del 2026-10-11 (se leía como una figura colgada de una
+        /// cuerda atada a la cabeza): la mano que agarra está en la liana a un lado de la cabeza, con el brazo saliendo del
+        /// hombro a 22° y a la vista en un largo como el de la cabeza, que no queda bajo el agarre; las piernas, recogidas
+        /// (rodillas hacia delante); y la cola prensil sube a la liana y se enrosca bajo la mano. Lo más bajo del cuerpo nunca
+        /// pasa de la mano de soltar (<see cref="HangHandS"/>).
         /// </summary>
         public static MonkeyPose Hang(MonkeyArt art, float lift, float sway)
         {
             bool tailGrip = art.TailCurls;
+            bool armGrip = art.ArmUp || !tailGrip;
             float l = art.LimbScale;
-            float low = HangHandS.y;
-            float torsoH = art.ArmUp ? 0.36f : 0.46f;
-            float legLen = art.ArmUp ? 0.22f : 0.22f * l;
-            float hipY = art.ArmUp ? -0.62f : low + legLen;
-            float torsoY = hipY + (torsoH * 0.35f);
-            float shoulderY = torsoY + (torsoH * 0.33f);
-            Vector2 rest = art.HugsFruit ? new Vector2(0.16f + sway, torsoY + 0.04f) : new Vector2(0.10f + sway, Mathf.Max(low + 0.02f, shoulderY - (0.52f * l)));
-            Vector2 backTo;
-            if (art.ArmUp || !tailGrip)
-            {
-                backTo = new Vector2(-0.01f, -0.01f); // agarrado a la rama
-            }
-            else
-            {
-                backTo = new Vector2(-0.12f + sway, Mathf.Max(low + 0.04f, shoulderY - (0.48f * l)));
-            }
+            float skullR = SkullRadiusS * art.HeadS;
+
+            // Brazo que agarra (el de detrás): del agarre baja hacia delante hasta el hombro; la cabeza, a su lado, delante.
+            float arm = Mathf.Clamp(0.50f * l, 0.48f, 0.60f);
+            float rad = HangArmDeg * Mathf.Deg2Rad;
+            var down = new Vector2(Mathf.Sin(rad), -Mathf.Cos(rad));
+            var side = new Vector2(Mathf.Cos(rad), Mathf.Sin(rad));
+            Vector2 shoulder = down * arm;
+            Vector2 skull = (down * (arm - 0.06f)) + (side * (skullR + (0.5f * art.LimbWidthS) - 0.01f));
+            Vector2 head = skull + new Vector2(SkullOffsetS * art.HeadS, SkullDropS * art.HeadS);
+
+            // Torso bajo el hombro, metido bajo el cráneo; caderas abajo y piernas recogidas hacia delante.
+            float torsoH = art.ArmUp ? 0.36f : 0.40f;
+            float top = skull.y - skullR + 0.07f;
+            var torso = new Vector2(shoulder.x + 0.08f, top - (TorsoFill * torsoH));
+            var hip = new Vector2(torso.x - 0.01f, torso.y - (TorsoFill * torsoH) + 0.03f);
+            float legLen = art.ArmUp ? 0.17f : Mathf.Min(0.20f, 0.18f * l);
+            Vector2 rest = art.HugsFruit ? torso + new Vector2(0.13f + sway, 0.03f) : torso + new Vector2(0.07f + sway, -0.06f);
 
             var p = new MonkeyPose
             {
-                TorsoCenter = new Vector2(0.02f + sway, torsoY),
+                TorsoCenter = new Vector2(torso.x + sway, torso.y),
                 TorsoSize = new Vector2(0.34f, torsoH),
-                TorsoAngle = sway * 40f,
-                HeadCenter = tailGrip ? new Vector2(0.10f + sway, shoulderY + 0.11f) : new Vector2(0.13f + (sway * 0.5f), shoulderY + 0.13f),
-                BackArmFrom = new Vector2(-0.02f + sway, shoulderY),
-                BackArmTo = backTo,
-                FrontArmFrom = new Vector2(0.08f + sway, shoulderY - 0.02f),
+                TorsoAngle = 8f + (sway * 40f),
+                HeadCenter = new Vector2(head.x + (sway * 0.5f), head.y),
+                BackArmFrom = new Vector2(shoulder.x + sway, shoulder.y),
+                BackArmTo = Vector2.zero, // en la liana
+                FrontArmFrom = new Vector2(shoulder.x + 0.11f + sway, shoulder.y - 0.03f),
                 FrontArmTo = Vector2.Lerp(rest, HangHandS, Mathf.Clamp01(lift)),
-                BackLegFrom = new Vector2(-0.06f + sway, hipY + 0.02f),
-                BackLegTo = new Vector2(-0.12f + (sway * 1.5f), hipY - legLen + 0.03f),
-                FrontLegFrom = new Vector2(0.06f + sway, hipY + 0.02f),
-                FrontLegTo = new Vector2(0.02f + (sway * 1.5f), hipY - legLen + 0.03f),
+                BackLegFrom = new Vector2(hip.x - 0.03f + sway, hip.y),
+                BackLegTo = new Vector2(hip.x + 0.10f + (sway * 1.5f), hip.y - legLen),
+                FrontLegFrom = new Vector2(hip.x + 0.04f + sway, hip.y),
+                FrontLegTo = new Vector2(hip.x + 0.18f + (sway * 1.5f), hip.y - (0.85f * legLen)),
             };
+
+            if (!armGrip)
+            {
+                // Colgado solo de la cola: las dos manos libres, juntas delante del pecho (el churuco abraza ahí su fruta).
+                p.BackArmFrom = new Vector2(shoulder.x + 0.03f + sway, shoulder.y);
+                p.BackArmTo = rest + new Vector2(-0.04f, 0.03f);
+            }
 
             if (tailGrip)
             {
-                // La cola prensil sube hasta la rama y se enrolla en el agarre.
-                p.Tail0 = new Vector2(-0.06f + sway, hipY + 0.10f);
-                p.Tail1 = new Vector2(-0.42f, hipY + 0.32f);
-                p.Tail2 = new Vector2(-0.22f, 0.12f);
-                p.Tail3 = new Vector2(0.02f, 0.02f);
+                // La cola prensil sube por detrás hasta la liana y se enrosca justo bajo el agarre.
+                p.Tail0 = new Vector2(hip.x - 0.09f + sway, hip.y + 0.05f);
+                p.Tail1 = p.Tail0 + new Vector2(-0.32f, -0.10f);
+                p.Tail2 = new Vector2(-0.26f, -0.12f);
+                p.Tail3 = new Vector2(-0.01f, -0.04f);
             }
             else
             {
                 float k = art.TailLength;
-                p.Tail0 = new Vector2(-0.06f + sway, hipY);
-                p.Tail1 = p.Tail0 + (new Vector2(-0.30f, -0.08f) * k);
-                p.Tail2 = p.Tail0 + (new Vector2(-0.46f, 0.20f) * k);
-                p.Tail3 = p.Tail0 + (new Vector2(-0.34f, 0.47f) * k); // hacia arriba: nada cuelga hacia el panel
+                p.Tail0 = new Vector2(hip.x - 0.09f + sway, hip.y + 0.03f);
+                p.Tail1 = p.Tail0 + (new Vector2(-0.26f, -0.12f) * k);
+                p.Tail2 = p.Tail0 + (new Vector2(-0.42f, 0.14f) * k);
+                p.Tail3 = p.Tail0 + (new Vector2(-0.32f, 0.40f) * k); // hacia arriba: nada cuelga hacia el panel
             }
 
             return p;
@@ -676,8 +786,11 @@ namespace AF.Presentation
             }
 
             MonkeyPose p = Hang(art, 0f, 0f);
-            return new Vector2(0.17f, p.TorsoCenter.y + 0.04f);
+            return p.TorsoCenter + new Vector2(0.13f, 0.03f);
         }
+
+        // El torso es una elipse que llena el 70 % del alto de su pieza (ProceduralArt.DrawTorso: 45 px de radio en 128).
+        private const float TorsoFill = 0.35f;
 
         // Cola en arco hacia arriba y atrás (balancín), corta (huapo) o enrollada (atélidos); nunca cuelga hacia el panel.
         private static void SitTail(MonkeyArt art, ref MonkeyPose p, Vector2 base0)

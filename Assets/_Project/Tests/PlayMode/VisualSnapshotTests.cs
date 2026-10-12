@@ -381,22 +381,36 @@ namespace AF.Tests.PlayMode
         /// Miquitos con más presencia (D-011, punto 3) en el nivel 2 (larga, mono ardilla) y el 21 (corta, sagui plateado), con
         /// el instante fijado por el enganche de depuración: <c>24_troop_l&lt;n&gt;_1_entrada</c> (a mitad de la entrada del primer
         /// miquito, trepando desde el follaje mientras el río llena), <c>_2_suelta</c> (la primera fruta en la mano),
-        /// <c>_3_reposo</c> y <c>_4_reposo</c> (T + 600 y T + 1.100 ms, ya en juego, con su gesto) y <c>_5_salida</c> (a mitad de
-        /// la salida, trepando hacia el follaje de su esquina).
+        /// <c>_3_reposo</c> y <c>_4_reposo</c> (ya en juego, en los dos extremos del ciclo de gestos: última suelta + 450 y
+        /// + 900 ms, cada gesto en su pico), <c>_5_salida</c> (a mitad de la salida) y <c>_6_trepa</c> (al 80 % de la salida:
+        /// trepando por el follaje de su esquina; en la rama baja, dentro del manojo de hojas del extremo);
+        /// y el reposo colgado de los atélidos: <c>24_troop_l82_*</c> (churuco, de la cola) y <c>24_troop_l422_*</c> (maquisapa,
+        /// de la cola y un brazo).
         /// </summary>
         [UnityTest]
         public IEnumerator CaptureTroopPresence()
         {
             string dir = SnapshotKit.Prepare();
-            string[] names = { "1_entrada", "2_suelta", "3_reposo", "4_reposo", "5_salida" };
-            foreach (int level in new[] { 2, 21 })
+            string[] names = { "1_entrada", "2_suelta", "3_reposo", "4_reposo", "5_salida", "6_trepa" };
+            foreach (int level in new[] { 2, 21, 82, 422 })
             {
                 LaunchOptions.Reset();
-                yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore(level, level - 1));
+                if (level == 82 || level == 422)
+                {
+                    // Colgados de la cola (churuco) y de la cola y un brazo (maquisapa): el reposo del modelo cuelga, en el
+                    // tablero del nivel 7.
+                    string pack = level == 82 ? PlayModeHelpers.Level7BoardPack(4, "w04_trapecio", "white", 82) : PlayModeHelpers.Level7BoardPack(8, "w08_madidi", "white", 422);
+                    yield return PlayModeHelpers.LoadGameWithPack(pack, level, new MemoryProgressStore(level, level - 1));
+                }
+                else
+                {
+                    yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore(level, level - 1));
+                }
+
                 GameBootstrap boot = GameBootstrap.Current!;
                 SnapshotKit.Attach(boot);
                 PlayModeHelpers.TakeClock(boot);
-                int duration = level == 2 ? 1400 : 800;
+                int duration = level == 21 ? 800 : 1400;
                 Replay(boot, duration, false, "24_troop_l" + level);
                 IntroChoreography p = boot.View!.Intro.Plan;
                 Assert.That(p.Perch, Is.EqualTo(IntroPerch.Branch), "nivel " + level + ": con tropa");
@@ -406,13 +420,23 @@ namespace AF.Tests.PlayMode
                     release = p.FruitMonkey[k] >= 0 ? Mathf.Min(release, p.FruitReleaseMs[k]) : release;
                 }
 
+                // _3 y _4, en los dos extremos del ciclo común de gestos (MonkeyRig.GestureCycleMs, con el reloj de la tropa
+                // desde su última suelta): cada gesto en su pico, y al revés en la otra captura (revisión del 2026-10-11).
+                float peak = p.LastReleaseMs + (0.5f * MonkeyRig.GestureCycleMs);
+                Assert.That(peak, Is.GreaterThan(duration), "nivel " + level + ": el reposo, ya en juego");
+                Assert.That(peak + (0.5f * MonkeyRig.GestureCycleMs), Is.LessThanOrEqualTo(p.ExitStartMs - TroopLayer.RestBlendMs), "nivel " + level + ": antes de la salida");
                 float[] times =
                 {
-                    (p.MonkeyEnterStartMs[0] + p.MonkeyEnterEndMs[0]) * 0.5f, release - 30f, duration + 600f, duration + 1100f,
-                    p.ExitStartMs + (0.5f * IntroChoreography.ExitMs),
+                    (p.MonkeyEnterStartMs[0] + p.MonkeyEnterEndMs[0]) * 0.5f, release - 30f, peak, peak + (0.5f * MonkeyRig.GestureCycleMs),
+                    p.ExitStartMs + (0.5f * IntroChoreography.ExitMs), p.ExitStartMs + (0.8f * IntroChoreography.ExitMs),
                 };
                 for (int i = 0; i < times.Length; i++)
                 {
+                    if ((level == 82 || level == 422) && i != 2 && i != 3)
+                    {
+                        continue; // de estos, solo el reposo
+                    }
+
                     boot.View.Intro.Seek(times[i]);
                     string name = "24_troop_l" + level + "_" + names[i];
                     SnapshotKit.Save(dir, name);

@@ -151,8 +151,9 @@ namespace AF.Tests.EditMode
             MonkeyPose chew = MonkeyRig.SitRest(squirrel, 1f, RestGesture.EatFruit, 1f, 0f);
             Assert.That(Vector2.Distance(chew.FrontArmTo, MonkeyRig.SitChewS), Is.LessThan(0.01f), "entre bocados, delante del pecho");
 
-            MonkeyPose a = MonkeyRig.SitRest(squirrel, 1f, RestGesture.SwingTail, 1f, MonkeyRig.SwingTailMs * 0.25f);
-            MonkeyPose b = MonkeyRig.SitRest(squirrel, 1f, RestGesture.SwingTail, 1f, MonkeyRig.SwingTailMs * 0.75f);
+            // Los dos extremos del ciclo común de gestos (revisión del 2026-10-11: todos los gestos lentos comparten la onda).
+            MonkeyPose a = MonkeyRig.SitRest(squirrel, 1f, RestGesture.SwingTail, 1f, MonkeyRig.GestureCycleMs * 0.5f);
+            MonkeyPose b = MonkeyRig.SitRest(squirrel, 1f, RestGesture.SwingTail, 1f, 0f);
             Assert.That(Vector2.Distance(a.Tail3, b.Tail3), Is.GreaterThan(0.15f), "la punta de la cola va de un lado a otro");
             Assert.That(a.Tail0, Is.EqualTo(b.Tail0), "la base de la cola no se mueve");
             Assert.That(a.TorsoCenter, Is.EqualTo(b.TorsoCenter), "el cuerpo sigue quieto");
@@ -163,6 +164,122 @@ namespace AF.Tests.EditMode
             MonkeyPose sit = MonkeyRig.Sit(squirrel, 1f, 0f, -1, 0f);
             Assert.That(none.FrontArmTo, Is.EqualTo(sit.FrontArmTo));
             Assert.That(none.Tail3, Is.EqualTo(sit.Tail3));
+        }
+
+        /// <summary>
+        /// Gestos que se ven a 48 dp (revisión del 2026-10-11: en el teléfono la mitad no se notaban): mirar alrededor sube la
+        /// cabeza ≥ 25° y luego mira atrás por la rama (la pieza reflejada, un poco hacia arriba, nunca hacia abajo); rascarse
+        /// lleva la mano a la oreja, por detrás del centro de la cabeza y sin subir sobre ella, y rasca a 3-4 Hz con ≥ 0,08 S de
+        /// recorrido a cada lado; sentado y colgado. Los extremos de la onda caen en mitad de ciclo y al empezarlo.
+        /// </summary>
+        [Test]
+        public void LookAround_AndScratch_ReadAt48dp()
+        {
+            FaunaCatalog catalog = FaunaCatalogReader.Read(File.ReadAllText(Path.Combine(Application.dataPath, "_Project/Data/Fauna/miquitos_v0.json")));
+            foreach (string id in new[] { "saimiri_collinsi", "mico_argentatus", "lagothrix_lagothricha", "ateles_chamek" })
+            {
+                MonkeyArt art = Art.MonkeyArtFor(catalog.Find(id)!);
+                foreach (bool hanging in new[] { false, true })
+                {
+                    string where = id + (hanging ? " colgado" : " sentado");
+                    MonkeyPose up = Rest(art, hanging, RestGesture.LookAround, MonkeyRig.GestureCycleMs * 0.5f);
+                    Assert.That(up.HeadAngle, Is.GreaterThanOrEqualTo(25f), where + ": mira al cielo");
+                    Assert.That(up.HeadBack, Is.False);
+                    MonkeyPose back = Rest(art, hanging, RestGesture.LookAround, 0f);
+                    Assert.That(back.HeadBack, Is.True, where + ": mira atrás por la rama");
+                    Assert.That(back.HeadAngle, Is.InRange(0f, MonkeyRig.LookBackDeg + 0.001f), where + ": un poco hacia arriba, nunca hacia abajo");
+
+                    float lo = float.MaxValue;
+                    float hi = float.MinValue;
+                    int crossings = 0;
+                    float prev = 0f;
+                    for (float t = 0f; t < 1000f; t += 5f)
+                    {
+                        MonkeyPose p = Rest(art, hanging, RestGesture.Scratch, t);
+                        Vector2 hand = p.FrontArmTo;
+                        float skullTop = p.HeadCenter.y + (art.HeadS * ((43.5f - 6f) / 128f));
+                        Assert.That(hand.y, Is.LessThanOrEqualTo(skullTop), where + ": la mano no sube por encima de la cabeza a " + t + " ms");
+                        Assert.That(hand.x, Is.LessThan(p.HeadCenter.x - 0.08f), where + ": en la oreja, por detrás de la cara, a " + t + " ms");
+                        Assert.That(Mathf.Abs(hand.y - p.HeadCenter.y), Is.LessThanOrEqualTo(0.5f * art.HeadS), where + ": al costado de la cabeza");
+                        lo = Mathf.Min(lo, hand.y);
+                        hi = Mathf.Max(hi, hand.y);
+                        float d = hand.y - p.HeadCenter.y - 0.02f;
+                        crossings += t > 0f && Mathf.Sign(d) != Mathf.Sign(prev) ? 1 : 0;
+                        prev = d;
+                    }
+
+                    Assert.That(hi - lo, Is.GreaterThanOrEqualTo(2f * 0.08f - 0.001f), where + ": rasca con ≥ 0,08 S a cada lado");
+                    Assert.That(crossings / 2f, Is.InRange(3f, 4f), where + ": a 3-4 rascadas por segundo");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Colgado (revisión del 2026-10-11: se leía como una figura colgada de una cuerda atada a la cabeza): la mano que agarra
+        /// está en la liana (el agarre), a un lado de la cabeza y nunca encima de ella; el brazo sale del hombro a 20-30° y se ve
+        /// en un largo como el de la cabeza; las piernas, recogidas (los pies delante de las caderas); la cola prensil sube a la
+        /// liana y se enrosca bajo la mano; y nada baja de la mano de soltar (A7), también al soltar.
+        /// </summary>
+        [Test]
+        public void Hang_GripsTheLianaBesideTheHead_WithTheLegsTucked()
+        {
+            FaunaCatalog catalog = FaunaCatalogReader.Read(File.ReadAllText(Path.Combine(Application.dataPath, "_Project/Data/Fauna/miquitos_v0.json")));
+            foreach (FaunaSpecies species in catalog.Species)
+            {
+                MonkeyArt art = Art.MonkeyArtFor(species);
+                MonkeyPose p = MonkeyRig.Hang(art, 0f, 0f);
+                string id = species.Id;
+                float skullR = art.HeadS * 43.5f / 128f;
+                Vector2 skull = p.HeadCenter - (new Vector2(4f, 6f) * (art.HeadS / 128f));
+                Assert.That(skull.x - skullR, Is.GreaterThan(0.01f), id + ": la cabeza no queda bajo el agarre");
+                Assert.That(skull.y + skullR, Is.LessThan(0f), id + ": la cabeza, por debajo de la mano que agarra");
+                bool armGrip = art.ArmUp || !art.TailCurls;
+                if (armGrip)
+                {
+                    Assert.That(p.BackArmTo, Is.EqualTo(Vector2.zero), id + ": la mano, en la liana");
+                    Vector2 arm = p.BackArmFrom - p.BackArmTo;
+                    float deg = Mathf.Atan2(arm.x, -arm.y) * Mathf.Rad2Deg;
+                    Assert.That(deg, Is.InRange(20f, 30f), id + ": el brazo sale del hombro a 20-30°");
+                    float visible = 0f;
+                    for (int i = 0; i <= 400; i++)
+                    {
+                        Vector2 q = Vector2.Lerp(p.BackArmTo, p.BackArmFrom, i / 400f);
+                        if (Vector2.Distance(q, skull) <= skullR + (0.5f * art.LimbWidthS))
+                        {
+                            break;
+                        }
+
+                        visible = Vector2.Distance(q, p.BackArmTo);
+                    }
+
+                    Assert.That(visible + (0.5f * art.LimbWidthS), Is.GreaterThanOrEqualTo(2f * skullR), id + ": el brazo se ve en un largo como el de la cabeza");
+                }
+                else
+                {
+                    Assert.That(Vector2.Distance(p.Tail3, Vector2.zero), Is.LessThan(0.06f), id + ": colgado de la cola, la cola en la liana");
+                }
+
+                if (art.TailCurls)
+                {
+                    Assert.That(Vector2.Distance(p.Tail3, Vector2.zero), Is.LessThan(0.06f), id + ": la cola prensil, enroscada bajo la mano");
+                }
+
+                Assert.That(p.BackLegTo.x, Is.GreaterThan(p.BackLegFrom.x + 0.05f), id + ": piernas recogidas");
+                Assert.That(p.FrontLegTo.x, Is.GreaterThan(p.FrontLegFrom.x + 0.05f), id + ": piernas recogidas");
+                foreach (float lift in new[] { 0f, 1f })
+                {
+                    MonkeyPose q = MonkeyRig.Hang(art, lift, 0f);
+                    float lowest = Mathf.Min(Mathf.Min(q.BackLegTo.y, q.FrontLegTo.y), Mathf.Min(Mathf.Min(q.Tail1.y, q.Tail2.y), Mathf.Min(q.Tail3.y, q.FrontArmTo.y)));
+                    Assert.That(lowest, Is.GreaterThanOrEqualTo(MonkeyRig.HangHandS.y - 0.001f), id + ": nada baja de la mano de soltar (A7)");
+                }
+
+                Assert.That(Vector2.Distance(MonkeyRig.Hang(art, 1f, 0f).FrontArmTo, MonkeyRig.HangHandS), Is.LessThan(1e-4f), id + ": suelta desde la mano de soltar de siempre");
+            }
+        }
+
+        private static MonkeyPose Rest(MonkeyArt art, bool hanging, RestGesture gesture, float clockMs)
+        {
+            return hanging ? MonkeyRig.HangRest(art, 0f, gesture, 1f, clockMs) : MonkeyRig.SitRest(art, 1f, gesture, 1f, clockMs);
         }
 
         private static void AssertGesture(MonkeyArt art, RestGesture gesture, bool hanging, string id)

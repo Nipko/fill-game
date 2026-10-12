@@ -124,7 +124,10 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.TapAnywhere(), Is.True, "salta la intro");
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing), "el toque se habilita en ese fotograma");
             Assert.That(view.Intro.TroopVisible, Is.True, "se funde en su sitio");
+            Assert.That(view.Intro.TroopGoneMs - view.Intro.TimeMs, Is.LessThanOrEqualTo(100f), "se habrá ido en lo que dura el fundido, no tras el reposo");
+            Assert.That(view.Intro.TroopGoneMs - view.Intro.TimeMs, Is.GreaterThan(0f));
             PlayModeHelpers.TickExact(boot, 50);
+            Assert.That(view.Intro.TroopGoneMs - view.Intro.TimeMs, Is.LessThanOrEqualTo(50f), "cuenta atrás del fundido");
             Assert.That(RigPositions(view, plan.MonkeyCount), Is.EqualTo(before), "sin moverse al fundirse");
             Assert.That(view.Intro.TroopVisible, Is.True);
             PlayModeHelpers.TickExact(boot, 50);
@@ -293,7 +296,9 @@ namespace AF.Tests.PlayMode
         /// Gestos de reposo en la escena (D-011, punto 3): cada miquito queda quieto en su sitio mientras hace su gesto; el de
         /// <c>cola_balancin</c> (mono ardilla) balancea la cola, el churuco come la fruta (en su mano, cerca de la cabeza), la
         /// pareja sigue con las colas trenzadas y nunca balancea la cola; ninguna cabeza baja hacia el tablero (D-002). Mismo
-        /// nivel, mismos gestos.
+        /// nivel, mismos gestos. Revisión del 2026-10-11 (en el teléfono la mitad de los gestos no se notaban): quien mira
+        /// alrededor sube la cabeza ≥ 25° y mira atrás por la rama (la pieza reflejada); quien se balancea colgado gira ≥ ±8° en
+        /// el agarre.
         /// </summary>
         [UnityTest]
         public IEnumerator RestGestures_InTheScene_FollowTheSpecies_AndTheBodyStaysPut()
@@ -350,6 +355,10 @@ namespace AF.Tests.PlayMode
                 var root = new Vector2[plan.MonkeyCount];
                 var tipMin = new float[plan.MonkeyCount];
                 var tipMax = new float[plan.MonkeyCount];
+                var headUp = new float[plan.MonkeyCount];
+                var lookedBack = new bool[plan.MonkeyCount];
+                var swingMin = new float[plan.MonkeyCount];
+                var swingMax = new float[plan.MonkeyCount];
                 bool held = false;
                 for (float t = from; t < plan.ExitStartMs - TroopLayer.RestBlendMs; t += 50f)
                 {
@@ -363,6 +372,8 @@ namespace AF.Tests.PlayMode
                             root[m] = rig.Root.anchoredPosition;
                             tipMin[m] = float.MaxValue;
                             tipMax[m] = float.MinValue;
+                            swingMin[m] = float.MaxValue;
+                            swingMax[m] = float.MinValue;
                         }
 
                         if (gestures[m] != RestGesture.SwingBody)
@@ -370,8 +381,16 @@ namespace AF.Tests.PlayMode
                             Assert.That(rig.Root.anchoredPosition, Is.EqualTo(root[m]), "quieto en su sitio: " + where);
                         }
 
-                        float head = Mathf.DeltaAngle(0f, rig.Root.Find("Head").localEulerAngles.z);
-                        Assert.That(head, Is.InRange(-0.01f, 15f), "la cabeza nunca baja hacia el tablero: " + where);
+                        // Mirando atrás la pieza se refleja y gira al revés: el ángulo «hacia arriba» es el de la pose.
+                        Transform headPiece = rig.Root.Find("Head");
+                        bool back = headPiece.localScale.x < 0f;
+                        float head = Mathf.DeltaAngle(0f, headPiece.localEulerAngles.z) * (back ? -1f : 1f);
+                        Assert.That(head, Is.InRange(-0.01f, MonkeyRig.LookUpDeg + 0.01f), "la cabeza nunca baja hacia el tablero: " + where);
+                        headUp[m] = Mathf.Max(headUp[m], head);
+                        lookedBack[m] |= back;
+                        float swing = Mathf.DeltaAngle(0f, rig.Root.localEulerAngles.z);
+                        swingMin[m] = Mathf.Min(swingMin[m], swing);
+                        swingMax[m] = Mathf.Max(swingMax[m], swing);
                         float tip = rig.Tail.PointAt(1f).x + rig.Tail.PointAt(1f).y;
                         tipMin[m] = Mathf.Min(tipMin[m], tip);
                         tipMax[m] = Mathf.Max(tipMax[m], tip);
@@ -397,6 +416,26 @@ namespace AF.Tests.PlayMode
                     if (gestures[m] == RestGesture.SwingTail)
                     {
                         Assert.That(tipMax[m] - tipMin[m], Is.GreaterThan(4f), "nivel " + level + ": el miquito " + m + " balancea la cola");
+                    }
+
+                    if (gestures[m] == RestGesture.LookAround)
+                    {
+                        Assert.That(headUp[m], Is.GreaterThanOrEqualTo(25f), "nivel " + level + ": el miquito " + m + " mira al cielo (≥ 25°)");
+                        Assert.That(lookedBack[m], Is.True, "nivel " + level + ": el miquito " + m + " mira atrás por la rama");
+                    }
+                    else
+                    {
+                        Assert.That(lookedBack[m], Is.False, "nivel " + level + ": solo mira atrás quien mira alrededor");
+                    }
+
+                    if (gestures[m] == RestGesture.SwingBody)
+                    {
+                        Assert.That(swingMax[m], Is.GreaterThanOrEqualTo(8f), "nivel " + level + ": el miquito " + m + " se balancea ≥ 8° hacia un lado");
+                        Assert.That(swingMin[m], Is.LessThanOrEqualTo(-8f), "nivel " + level + ": y ≥ 8° hacia el otro");
+                    }
+                    else
+                    {
+                        Assert.That(swingMax[m] - swingMin[m], Is.LessThan(0.01f), "nivel " + level + ": el miquito " + m + " no se balancea");
                     }
                 }
 

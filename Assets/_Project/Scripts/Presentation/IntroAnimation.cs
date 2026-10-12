@@ -320,10 +320,11 @@ namespace AF.Presentation
         public bool TroopVisible => Troop != null && Troop.Active && Active;
 
         /// <summary>
-        /// Tiempo de la intro (ms, el de <see cref="TimeMs"/>) en que la tropa se habrá ido por su cuenta: el fin de su salida
-        /// (o, con Reducir movimiento, el del miquito quieto); −1 sin tropa. Tras un salto se va antes, en 100 ms.
+        /// Tiempo de la intro (ms, el de <see cref="TimeMs"/>) en que la tropa se habrá ido: el fin de su salida (o, con Reducir
+        /// movimiento, el del miquito quieto) o, tras un salto, el fin del fundido de 100 ms (el reloj de la intro queda
+        /// congelado en el toque). Así <c>TroopGoneMs − TimeMs</c> son siempre los ms que le quedan a la vista; −1 sin tropa.
         /// </summary>
-        public float TroopGoneMs => Troop != null && Troop.Active ? _input.TotalMs + TailDuration() : -1f;
+        public float TroopGoneMs => Troop != null && Troop.Active ? (_fadeLeft >= 0f ? _t + _fadeLeft : _input.TotalMs + TailDuration()) : -1f;
 
         /// <summary>Tiempo de la intro (ms).</summary>
         public float TimeMs => _t;

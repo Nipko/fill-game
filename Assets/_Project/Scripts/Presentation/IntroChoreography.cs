@@ -283,15 +283,16 @@ namespace AF.Presentation
         /// La tropa entra trepando por la rama desde el follaje de su esquina en ≈ 500 ms mientras el río llena (D-011, punto 3).
         /// Solo cambia lo que se ve antes de la llegada a su asiento, nunca el calendario: en la larga la llegada es la de antes
         /// y la entrada empieza antes (como mucho a 450 dp/s); en la corta, cada miquito llega ≥ 50 ms antes de su primera
-        /// suelta, así que su entrada dura min(500 ms, su primera suelta − 50 ms), también a ≤ 450 dp/s: quien no llega a tiempo
-        /// sin correr más (con T corta, los que se sientan más lejos de su esquina) sigue posado desde t = 0, como antes.
+        /// suelta al sitio donde su trayectoria lo tiene en ese instante (si ya se había movido, a ese sitio), así que su entrada
+        /// dura min(500 ms, su primera suelta − 50 ms), también a ≤ 450 dp/s: quien no llega a tiempo sin correr más (con T
+        /// corta, los que se sientan hacia el centro, a ≈ 180 dp de su esquina) sigue posado desde t = 0, como antes.
         /// </summary>
         public const float EnterMs = 500f;
 
         /// <summary>
-        /// En la corta, la entrada de cada miquito dura al menos esto: con menos hueco antes de su primera suelta (− 50 ms) o de su
-        /// primer paso (T muy corta o un miquito que se mueve enseguida), sigue posado desde t = 0, y con él los de su esquina que
-        /// se sientan más lejos (R2: nada de borrones).
+        /// En la corta, la entrada de cada miquito dura al menos esto: con menos hueco antes de su primera suelta (− 50 ms) o
+        /// antes de dejar el sitio al que llega (T muy corta), sigue posado desde t = 0, y con él los de su esquina que se sientan
+        /// más lejos (R2: nada de borrones).
         /// </summary>
         public const float MinShortEnterMs = 150f;
 
@@ -415,6 +416,8 @@ namespace AF.Presentation
         private readonly float[] _entryBack = new float[MaxMonkeys];
         private readonly int[] _entryOrder = new int[MaxMonkeys];
         private readonly float[] _entryLimit = new float[MaxMonkeys];
+        private readonly float[] _entryRelease = new float[MaxMonkeys];
+        private readonly int[] _entryAnchor = new int[MaxMonkeys];
         private readonly bool[] _entering = new bool[MaxMonkeys];
         private float _canvasW = 360f;
         private float _corner = 6f;
@@ -2140,8 +2143,9 @@ namespace AF.Presentation
         // tropa de cada esquina sale a la vez ≈ 500 ms antes del primero en llegar, nunca antes de que el río desborde (A3:
         // primero el río), así que cada uno va a ≤ 450 dp/s. Corta: estaban posados desde t = 0; ahora entran desde el follaje
         // de su esquina más cercana (empate: el lado de la variación) y llegan, todos los de una esquina a la vez, ≥ 50 ms antes
-        // de la primera suelta de cualquiera de ellos y antes de su primer desplazamiento: la entrada dura min(500 ms, primera
-        // suelta − 50 ms). Los de una misma esquina salen en fila a 1,1 S, el que va más lejos primero, y llegan a la vez:
+        // de su primera suelta, al sitio donde su trayectoria los tiene en ese instante (si su primer desplazamiento era
+        // temprano, ya en su destino: no se ve) y antes de dejarlo: la entrada dura min(500 ms, primera suelta − 50 ms). Los de
+        // una misma esquina salen en fila a 1,1 S, el que va más lejos primero, y llegan a la vez:
         // como su distancia a su vecino cambia de forma lineal, nunca baja de 1,1 S ni se adelantan. Nadie entra a más de
         // 450 dp/s (R2): si no le da tiempo, se queda posado desde t = 0 el que va más lejos y la fila se acorta.
         private void PlanEntries(IntroInput input)
@@ -2226,98 +2230,144 @@ namespace AF.Presentation
             float w = input.CanvasWidth;
             float mid = w * 0.5f;
 
-            // Llegada de cada uno: ≥ 50 ms antes de su primera suelta y no después de su primer desplazamiento. Entra si le quedan
-            // claves libres y al menos 150 ms para entrar.
+            // Llegada de cada uno: ≥ 50 ms antes de su primera suelta (decisión 1), al sitio donde su trayectoria lo tiene en ese
+            // instante. Si se movía antes (un primer desplazamiento temprano, que antes se veía posado desde t = 0), entra directo
+            // a ese sitio y lo de antes no se ve; si ese sitio lo deja antes, llega antes de dejarlo. Entra si le quedan claves
+            // libres y al menos 150 ms para entrar.
             for (int g = 0; g < m; g++)
             {
                 int b = g * MaxKeys;
-                float seat = MonkeyKeyX[b];
-                _entrySeat[g] = seat;
-                MonkeyFromRight[g] = Math.Abs(seat - mid) <= 0.5f ? EntryFromRight : seat > mid;
-                float end = TotalMs;
-                for (int j = 1; j < MonkeyKeyCount[g]; j++)
-                {
-                    if (Math.Abs(MonkeyKeyX[b + j] - seat) >= 0.01f)
-                    {
-                        end = Math.Min(end, MonkeyKeyT[b + j - 1]); // se va de su primer sitio
-                        break;
-                    }
-                }
-
+                int count = MonkeyKeyCount[g];
+                float limit = TotalMs;
                 for (int k = 0; k < FruitCount; k++)
                 {
                     if (FruitMonkey[k] == g)
                     {
-                        end = Math.Min(end, FruitReleaseMs[k] - ReleaseAfterArrivalMs);
+                        limit = Math.Min(limit, FruitReleaseMs[k] - ReleaseAfterArrivalMs);
                     }
                 }
 
-                _entryLimit[g] = end;
-                _entering[g] = end >= MinShortEnterMs && MonkeyKeyCount[g] + 2 <= MaxKeys;
+                _entryRelease[g] = limit;
+                int anchor = 0;
+                for (int j = 1; j < count; j++)
+                {
+                    if (MonkeyKeyT[b + j] > limit + 0.001f)
+                    {
+                        break;
+                    }
+
+                    anchor = j;
+                }
+
+                if (anchor + 1 < count && Math.Abs(MonkeyKeyX[b + anchor + 1] - MonkeyKeyX[b + anchor]) >= 0.01f)
+                {
+                    limit = Math.Min(limit, MonkeyKeyT[b + anchor]); // deja ese sitio antes: llega antes de irse
+                }
+
+                float seat = MonkeyKeyX[b + anchor];
+                _entryAnchor[g] = anchor;
+                _entrySeat[g] = seat;
+                MonkeyFromRight[g] = Math.Abs(seat - mid) <= 0.5f ? EntryFromRight : seat > mid;
+                _entryLimit[g] = limit;
+                _entering[g] = limit >= MinShortEnterMs && count - anchor + 3 <= MaxKeys;
             }
 
-            for (int side = 0; side < 2; side++)
+            // Quien no puede entrar (menos de 150 ms o sin claves libres) sigue posado desde t = 0, como antes, y con él los de su
+            // esquina que se sientan más lejos: los que entran nunca pasan por encima de un miquito sentado. Si alguno tuviera que
+            // ir a más de 450 dp/s (R2: un borrón; la fila entera tras la cola de los de delante, con T corta), se sienta desde
+            // t = 0 el que va más lejos y se vuelve a planificar con una fila más corta. Cada pasada fallida deja fuera a uno, así
+            // que acaba; y como quien se queda posado puede estar en la mitad de la otra esquina (su sitio de t = 0 no es el de
+            // su llegada), se repiten las dos esquinas hasta que nadie más se quede fuera.
+            float leftStart = -1f;
+            float rightStart = -1f;
+            for (int round = 0; round <= MaxMonkeys; round++)
             {
-                bool right = side == 1;
-
-                // Quien no puede entrar (menos de 150 ms o sin claves libres) sigue posado desde t = 0, como antes, y con él los
-                // de su esquina que se sientan más lejos: los que entran nunca pasan por encima de un miquito sentado. Si alguno
-                // tuviera que ir a más de 450 dp/s (R2: un borrón; la fila entera tras la cola de los de delante, con T corta), se
-                // sienta desde t = 0 el que va más lejos y se vuelve a planificar con una fila más corta. Cada pasada fallida deja
-                // fuera a uno, así que acaba.
-                SeatBeyondTheSeated(right, w);
-                float start = -1f;
-                for (int pass = 0; pass <= MaxMonkeys; pass++)
+                int before = EnteringCount();
+                for (int side = 0; side < 2; side++)
                 {
-                    start = PlanSide(right, w);
-                    if (start < 0f || EntriesKeepTheirPace(right, w, start))
+                    bool right = side == 1;
+                    SeatBeyondTheSeated(right, w);
+                    float start = -1f;
+                    for (int pass = 0; pass <= MaxMonkeys; pass++)
                     {
-                        break;
+                        start = PlanSide(right, w);
+                        if (start < 0f || EntriesKeepTheirPace(right, w, start))
+                        {
+                            break;
+                        }
+
+                        int farthest = OrderOf(right, 0);
+                        if (farthest < 0)
+                        {
+                            start = -1f;
+                            break;
+                        }
+
+                        _entering[farthest] = false;
                     }
 
-                    int farthest = OrderOf(right, 0);
-                    if (farthest < 0)
+                    if (right)
                     {
-                        start = -1f;
-                        break;
-                    }
-
-                    _entering[farthest] = false;
-                    MonkeyEnterStartMs[farthest] = 0f;
-                    MonkeyEnterEndMs[farthest] = 0f;
-                }
-
-                for (int g = 0; g < m; g++)
-                {
-                    if (MonkeyFromRight[g] != right)
-                    {
-                        continue;
-                    }
-
-                    if (start >= 0f && _entering[g])
-                    {
-                        int travel = right ? -1 : 1;
-                        PrependEntry(g, right ? w + _entryBack[g] : -_entryBack[g], travel, start, MonkeyEnterEndMs[g]);
-                        MonkeyStartFacing[g] = travel;
+                        rightStart = start;
                     }
                     else
                     {
-                        MonkeyEnterStartMs[g] = 0f;
-                        MonkeyEnterEndMs[g] = 0f;
+                        leftStart = start;
                     }
+                }
+
+                if (EnteringCount() == before)
+                {
+                    break;
+                }
+            }
+
+            for (int g = 0; g < m; g++)
+            {
+                bool right = MonkeyFromRight[g];
+                float start = right ? rightStart : leftStart;
+                if (start >= 0f && _entering[g])
+                {
+                    int travel = right ? -1 : 1;
+                    PrependEntry(g, _entryAnchor[g], right ? w + _entryBack[g] : -_entryBack[g], travel, start, MonkeyEnterEndMs[g]);
+                    MonkeyStartFacing[g] = travel;
+                }
+                else
+                {
+                    MonkeyEnterStartMs[g] = 0f;
+                    MonkeyEnterEndMs[g] = 0f;
                 }
             }
         }
 
-        // Si alguno de esa esquina no entra, tampoco entran los que se sientan más lejos de ella que él.
+        private int EnteringCount()
+        {
+            int count = 0;
+            for (int g = 0; g < MonkeyCount; g++)
+            {
+                count += _entering[g] ? 1 : 0;
+            }
+
+            return count;
+        }
+
+        // Si alguno no entra (sigue posado desde t = 0), tampoco entran los de esa esquina que se sientan más lejos de ella que
+        // él: cuenta cada sitio por el que pasa antes de su primera suelta, sea de la esquina que sea.
         private void SeatBeyondTheSeated(bool right, float width)
         {
             float nearest = float.MaxValue;
             for (int g = 0; g < MonkeyCount; g++)
             {
-                if (MonkeyFromRight[g] == right && !_entering[g])
+                if (_entering[g])
                 {
-                    nearest = Math.Min(nearest, FromCorner(_entrySeat[g], width, right));
+                    continue;
+                }
+
+                int b = g * MaxKeys;
+                nearest = Math.Min(nearest, FromCorner(MonkeyKeyX[b], width, right));
+                for (int j = 1; j < MonkeyKeyCount[g] && MonkeyKeyT[b + j] <= _entryRelease[g] + 0.001f; j++)
+                {
+                    nearest = Math.Min(nearest, FromCorner(MonkeyKeyX[b + j], width, right));
                 }
             }
 
@@ -2443,32 +2493,55 @@ namespace AF.Presentation
             return right ? width - x : x;
         }
 
-        // Antepone la entrada a las claves del miquito g (posado en su primera clave, en t = 0): en el follaje (from) hasta
-        // start y, en end, en su sitio con su orientación de siempre; el resto de claves no cambia.
-        private void PrependEntry(int g, float from, int travelFacing, float start, float end)
+        // Antepone la entrada a las claves del miquito g: en el follaje (from) hasta start y, en end, en el sitio de su clave
+        // anchor (la de t = 0 o, si su trayectoria ya lo había movido, la del sitio donde está ≥ 50 ms antes de su primera
+        // suelta) con su orientación de siempre. Las claves de antes de anchor (lo que se movía mientras entraba) no se ven; las
+        // de después no cambian. Si llega antes de la clave anchor, la conserva: espera en su sitio hasta ella.
+        private void PrependEntry(int g, int anchor, float from, int travelFacing, float start, float end)
         {
             int b = g * MaxKeys;
             int count = MonkeyKeyCount[g];
-            int add = start > 0.0001f ? 2 : 1;
-            for (int j = count - 1; j >= 0; j--)
+            float seatT = MonkeyKeyT[b + anchor];
+            float seatX = MonkeyKeyX[b + anchor];
+            int seatFacing = MonkeyKeyFacing[b + anchor];
+            bool hold = end < seatT - 0.001f;
+            int head = start > 0.0001f ? 3 : 2; // follaje, (salida) y llegada
+            int src = hold ? anchor : anchor + 1;
+            int keep = count - src;
+            int shift = head - src;
+            if (shift > 0)
             {
-                MonkeyKeyT[b + j + add] = MonkeyKeyT[b + j];
-                MonkeyKeyX[b + j + add] = MonkeyKeyX[b + j];
-                MonkeyKeyFacing[b + j + add] = MonkeyKeyFacing[b + j];
+                for (int j = count - 1; j >= src; j--)
+                {
+                    MonkeyKeyT[b + j + shift] = MonkeyKeyT[b + j];
+                    MonkeyKeyX[b + j + shift] = MonkeyKeyX[b + j];
+                    MonkeyKeyFacing[b + j + shift] = MonkeyKeyFacing[b + j];
+                }
+            }
+            else if (shift < 0)
+            {
+                for (int j = src; j < count; j++)
+                {
+                    MonkeyKeyT[b + j + shift] = MonkeyKeyT[b + j];
+                    MonkeyKeyX[b + j + shift] = MonkeyKeyX[b + j];
+                    MonkeyKeyFacing[b + j + shift] = MonkeyKeyFacing[b + j];
+                }
             }
 
             MonkeyKeyT[b] = 0f;
             MonkeyKeyX[b] = from;
             MonkeyKeyFacing[b] = travelFacing;
-            if (add == 2)
+            if (head == 3)
             {
                 MonkeyKeyT[b + 1] = start;
                 MonkeyKeyX[b + 1] = from;
                 MonkeyKeyFacing[b + 1] = travelFacing;
             }
 
-            MonkeyKeyT[b + add] = end; // su primer sitio (antes, en t = 0)
-            MonkeyKeyCount[g] = count + add;
+            MonkeyKeyT[b + head - 1] = end; // su primer sitio a la vista
+            MonkeyKeyX[b + head - 1] = seatX;
+            MonkeyKeyFacing[b + head - 1] = seatFacing;
+            MonkeyKeyCount[g] = head + keep;
         }
 
         private void AddKey(int m, float t, float x, int facing)
