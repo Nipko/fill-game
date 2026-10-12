@@ -2271,9 +2271,10 @@ namespace AF.UI
                 heightU = Mathf.Max(heightU, _views[i].HeightU);
             }
 
-            // D-006: el número de filas lo fijan las cuias generadas al cargar el nivel y no cambia a mitad de nivel; cuando
-            // Cuia extra o Cuia de rescate añadan una vista (fuera de v0), va a la fila más corta y solo se recalcula el ancho
-            // con el T en pantalla (re-layout de 300 ms, 02 §4.1; tope de D-004).
+            // D-006: el número de filas lo fijan las cuias generadas al cargar el nivel y no cambia a mitad de nivel; cada vista
+            // que añaden Cuia extra, Cuia de rescate o Balsa va a la derecha de la fila más corta (a igualdad, la de más abajo
+            // [P]), ninguna cuia cambia de fila (T-C) y solo se recalcula el ancho con el T en pantalla (re-layout de 300 ms,
+            // 02 §4.1; tope de D-004).
             int generated = _generatedCount > 0 ? Mathf.Min(_generatedCount, _views.Length) : _views.Length;
             _layout = BoardLayout.Compute(_views.Length, generated, heightU, w, BoardTop, BoardBottom);
             BoardLayoutResult l = _layout;

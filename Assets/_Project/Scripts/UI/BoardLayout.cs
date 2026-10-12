@@ -70,18 +70,19 @@ namespace AF.UI
     /// ficha §2.1). Filas: 1 con T ≤ 5; 2 con T = 6-10 (⌈T/2⌉ arriba); con T = 11-14, 2 filas (hasta 7 por fila) o 3
     /// (reparto ⌈restantes/filas⌉ de arriba abajo: 4/4/3, 4/4/4, 5/4/4, 5/5/4), la que dé la cuia más ancha, a igualdad 2
     /// [P]; 3 con T = 15-16 (5/5/5 y 6/5/5). El número de filas se decide al cargar el nivel con las T cuias generadas y no
-    /// cambia a mitad de nivel: Cuia extra y Cuia de rescate van a la fila más corta (a igualdad, la de más abajo [P]) y solo
-    /// se recalcula el ancho. Ranura = (ancho − 24) / cuias de la fila más larga; cuia_w = clamp(0,70 × ranura, 28, tope(T)),
-    /// con tope(T) = 64 / 56 / 48 dp para T ≤ 3 / 4-5 / ≥ 6 (D-004, T = cuias en pantalla); alto = (1,60 + capacidad) u
-    /// (5,60 u con 4 dosis; u = cuia_w / 2; D-006); paso de fila = alto + 16 (elevación) + 24 (hueco: 40 dp con la repisa de
-    /// D-003). El tablero se centra en horizontal a 480 dp como máximo (tabletas; la cuia tampoco supera tope(T)) y, desde
-    /// D-003, también en vertical: el bloque (elevación de la fila 1, filas, huecos y la repisa de 15 dp bajo la última
-    /// fila) queda centrado entre <c>boardTop</c> y <c>boardBottom</c>, sin espacio muerto abajo. El bloque no supera
-    /// <c>(boardBottom − boardTop) − 27</c> dp (<see cref="MinBlockSlack"/> [P]): así la fila 1 elevada queda ≥ 8 dp bajo el
-    /// canto interior del marco de 13,5 dp aunque el panel se recorte bajo el HUD (guía 3.2); si no cabe, las cuias se
-    /// reducen hasta el mínimo de 28 dp. Alrededor del bloque va el panel del tablero, <see cref="PanelMargin"/> (22 dp) por
-    /// abajo y por arriba en todos los tableros, y 8 dp desde los bordes del ancho útil. No hay techo del vertido ni hueco
-    /// reservado para él (D-006): el origen se dibuja delante de todo mientras vierte.
+    /// cambia a mitad de nivel: Cuia extra, Cuia de rescate o Balsa van a la derecha de la fila más corta (a igualdad, la
+    /// de más abajo [P]), ninguna cuia cambia de fila y solo se recalcula el ancho. Ranura = (ancho − 24) / cuias de la
+    /// fila más larga; cuia_w = clamp(0,70 × ranura, 28, tope(T)), con tope(T) = 64 / 56 / 48 dp para T ≤ 3 / 4-5 / ≥ 6
+    /// (D-004, T = cuias en pantalla); alto = (1,60 + capacidad) u (5,60 u con 4 dosis; u = cuia_w / 2; D-006); paso de
+    /// fila = alto + 16 (elevación) + 24 (hueco: 40 dp con la repisa de D-003). El tablero se centra en horizontal a 480 dp
+    /// como máximo (tabletas; la cuia tampoco supera tope(T)) y, desde D-003, también en vertical: el bloque (elevación de
+    /// la fila 1, filas, huecos y la repisa de 15 dp bajo la última fila) queda centrado entre <c>boardTop</c> y
+    /// <c>boardBottom</c>, sin espacio muerto abajo. El bloque no supera <c>(boardBottom − boardTop) − 27</c> dp
+    /// (<see cref="MinBlockSlack"/> [P]): así la fila 1 elevada queda ≥ 8 dp bajo el canto interior del marco de 13,5 dp
+    /// aunque el panel se recorte bajo el HUD (guía 3.2); si no cabe, las cuias se reducen hasta el mínimo de 28 dp.
+    /// Alrededor del bloque va el panel del tablero, <see cref="PanelMargin"/> (22 dp) por abajo y por arriba en todos los
+    /// tableros, y 8 dp desde los bordes del ancho útil. No hay techo del vertido ni hueco reservado para él (D-006): el
+    /// origen se dibuja delante de todo mientras vierte.
     /// </summary>
     public static class BoardLayout
     {
@@ -179,10 +180,14 @@ namespace AF.UI
 
         /// <summary>
         /// Calcula el layout de <paramref name="count"/> cuias en pantalla de un nivel que se generó con
-        /// <paramref name="generatedCount"/> (D-006): las filas son las de las cuias generadas y las de más (Cuia extra,
-        /// Cuia de rescate) van a la fila más corta, a igualdad la de más abajo [P]; el ancho usa la fila más larga y
-        /// tope(<paramref name="count"/>). La línea de pie máxima es <c>boardBottom − 15</c> (<see cref="ShelfDrop"/>) y el
-        /// bloque deja al menos <see cref="MinBlockSlack"/> de holgura en la zona del tablero.
+        /// <paramref name="generatedCount"/> (D-006): las filas son las de las cuias generadas (índices
+        /// <c>0 … generatedCount − 1</c>, fila a fila) y cada cuia de más (Cuia extra, Cuia de rescate, Balsa), en orden de
+        /// índice, va a la derecha de la fila más corta en ese momento, a igualdad la de más abajo [P]. Así
+        /// <see cref="BoardLayoutResult.RowOf"/> de una cuia no cambia al añadir otra (prueba del 2026-10-09, T-C) y, dentro
+        /// de cada fila, <see cref="BoardLayoutResult.CenterX"/> crece con el índice; cada fila se centra con su número final
+        /// de cuias. El ancho usa la fila más larga y tope(<paramref name="count"/>). La línea de pie máxima es
+        /// <c>boardBottom − 15</c> (<see cref="ShelfDrop"/>) y el bloque deja al menos <see cref="MinBlockSlack"/> de holgura
+        /// en la zona del tablero.
         /// </summary>
         public static BoardLayoutResult Compute(int count, int generatedCount, float heightU, float canvasWidth, float boardTop, float boardBottom)
         {
@@ -198,16 +203,28 @@ namespace AF.UI
 
             int rows = RowsFor(generatedCount, heightU, canvasWidth, boardTop, boardBottom);
             var result = new BoardLayoutResult(count, rows);
+
+            // Asignación en dos pasos (D-006; prueba del 2026-10-09, T-C). Mientras se reparte, CenterX guarda la columna de
+            // cada cuia dentro de su fila (sin otro array); al final se convierte en el centro con el PerRow definitivo.
+            // 1) Las generadas, fila a fila como al cargar el nivel: ⌈restantes/filas⌉ de arriba abajo.
             int remaining = generatedCount;
+            int index = 0;
             for (int r = 0; r < rows; r++)
             {
                 int left = rows - r;
                 int n = (remaining + left - 1) / left;
                 result.PerRow[r] = n;
                 remaining -= n;
+                for (int j = 0; j < n; j++)
+                {
+                    result.RowOf[index] = r;
+                    result.CenterX[index] = j;
+                    index++;
+                }
             }
 
-            // Cuias de más (Cuia extra, Cuia de rescate): a la fila más corta; a igualdad, la de más abajo [P].
+            // 2) Cada cuia de más (Cuia extra, Cuia de rescate, Balsa), en orden, a la derecha de la fila más corta en ese
+            // momento; a igualdad, la de más abajo [P]. Ninguna cuia cambia de fila al añadir otra.
             for (int extra = generatedCount; extra < count; extra++)
             {
                 int shortest = rows - 1;
@@ -219,6 +236,8 @@ namespace AF.UI
                     }
                 }
 
+                result.RowOf[extra] = shortest;
+                result.CenterX[extra] = result.PerRow[shortest];
                 result.PerRow[shortest]++;
             }
 
@@ -242,20 +261,18 @@ namespace AF.UI
             result.BlockTop = blockTop;
             result.BlockBottom = blockTop + block;
 
-            int index = 0;
             for (int r = 0; r < rows; r++)
             {
-                int n = result.PerRow[r];
-                float x0 = (canvasWidth - (n * slot)) / 2f;
-                float foot = blockTop + Lift + (r * (cuiaH + Lift + RowGap)) + cuiaH;
-                result.RowFootY[r] = foot;
-                for (int j = 0; j < n; j++)
-                {
-                    result.CenterX[index] = x0 + ((j + 0.5f) * slot);
-                    result.FootY[index] = foot;
-                    result.RowOf[index] = r;
-                    index++;
-                }
+                result.RowFootY[r] = blockTop + Lift + (r * (cuiaH + Lift + RowGap)) + cuiaH;
+            }
+
+            // Cada fila, centrada con su número final de cuias (x0 con el PerRow definitivo); la columna pasa a centro.
+            for (int i = 0; i < count; i++)
+            {
+                int r = result.RowOf[i];
+                float x0 = (canvasWidth - (result.PerRow[r] * slot)) / 2f;
+                result.CenterX[i] = x0 + ((result.CenterX[i] + 0.5f) * slot);
+                result.FootY[i] = result.RowFootY[r];
             }
 
             // Panel (guía 3.2): 8 dp desde el ancho útil (≤ 480) y 22 dp bajo y sobre el bloque en todos los tableros (D-006

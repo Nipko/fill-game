@@ -171,6 +171,82 @@ namespace AF.Tests.EditMode
             Assert.That(() => BoardLayout.Compute(10, 11, H4, 360f, Top, Bottom), Throws.TypeOf<System.ArgumentOutOfRangeException>());
         }
 
+        // Prueba del 2026-10-09, T-C: las generadas conservan su fila y cada cuia añadida (Cuia extra, rescate o Balsa), en
+        // orden, va a la derecha de la fila más corta en ese momento (a igualdad, la de abajo [P]). Antes los índices se
+        // asignaban fila a fila y, con dos cuias añadidas, una cuia generada saltaba de fila.
+        [Test]
+        public void TwoAdded_8Generated_NoGeneratedCuiaChangesRow()
+        {
+            BoardLayoutResult r = BoardLayout.Compute(10, 8, H4, 360f, Top, Bottom);
+            Assert.That(Split(r), Is.EqualTo("5/5"));
+            Assert.That(r.RowOf[4], Is.EqualTo(1), "la 5.ª generada sigue en la fila de abajo (4/4)");
+            Assert.That(r.RowOf[8], Is.EqualTo(1), "la primera añadida, abajo (a igualdad, la de abajo)");
+            Assert.That(r.RowOf[9], Is.EqualTo(0), "la segunda añadida, arriba (la más corta)");
+            AssertRowsConsistent(r);
+        }
+
+        [Test]
+        public void TwoAdded_10Generated_TheSecondGoesToTheRightOfTheTopRow()
+        {
+            BoardLayoutResult r = BoardLayout.Compute(12, 10, H4, 360f, Top, Bottom);
+            Assert.That(Split(r), Is.EqualTo("6/6"));
+            Assert.That(r.RowOf[5], Is.EqualTo(1), "la 6.ª generada sigue abajo");
+            Assert.That(r.RowOf[10], Is.EqualTo(1));
+            Assert.That(r.RowOf[11], Is.EqualTo(0));
+            Assert.That(r.CenterX[11], Is.GreaterThan(r.CenterX[4]), "a la derecha de la última generada de la fila de arriba");
+            AssertRowsConsistent(r);
+        }
+
+        [Test]
+        public void TwoAdded_12Generated_InThreeRows()
+        {
+            BoardLayoutResult r = BoardLayout.Compute(14, 12, H4, 360f, Top, Bottom);
+            Assert.That(Split(r), Is.EqualTo("4/5/5"));
+            Assert.That(r.RowOf[8], Is.EqualTo(2), "la 9.ª generada sigue en la fila 3 (4/4/4)");
+            Assert.That(r.RowOf[12], Is.EqualTo(2));
+            Assert.That(r.RowOf[13], Is.EqualTo(1), "a igualdad entre la 1 y la 2, la de abajo");
+            AssertRowsConsistent(r);
+        }
+
+        [Test]
+        public void TwoAdded_13Generated_InThreeRows()
+        {
+            BoardLayoutResult r = BoardLayout.Compute(15, 13, H4, 360f, Top, Bottom);
+            Assert.That(Split(r), Is.EqualTo("5/5/5"));
+            Assert.That(r.RowOf[9], Is.EqualTo(2), "la 10.ª generada sigue en la fila 3 (5/4/4)");
+            Assert.That(r.RowOf[13], Is.EqualTo(2));
+            Assert.That(r.RowOf[14], Is.EqualTo(1));
+            AssertRowsConsistent(r);
+        }
+
+        [TestCase(Bottom)]
+        [TestCase(Bottom800)]
+        [TestCase(Bottom640)]
+        public void AddingCuias_NeverMovesACuiaToAnotherRow_AndKeepsEachRowInIndexOrder(float bottom)
+        {
+            // Propiedad (T-C) a 360 × 780, 360 × 800 y 360 × 640: con 1-14 generadas y hasta dos añadidas (máximo 16, 02 R1),
+            // RowOf de cada cuia es el mismo antes y después de añadir otra, y dentro de cada fila CenterX crece con el índice.
+            for (int generated = 1; generated <= 14; generated++)
+            {
+                BoardLayoutResult before = BoardLayout.Compute(generated, generated, H4, 360f, Top, bottom);
+                AssertRowsConsistent(before);
+                int max = System.Math.Min(16, generated + 2);
+                for (int count = generated + 1; count <= max; count++)
+                {
+                    BoardLayoutResult after = BoardLayout.Compute(count, generated, H4, 360f, Top, bottom);
+                    string what = "generadas " + generated + ", en pantalla " + count + ", boardBottom " + bottom;
+                    Assert.That(after.Rows, Is.EqualTo(before.Rows), what + ": las filas no cambian (D-006)");
+                    for (int i = 0; i < count - 1; i++)
+                    {
+                        Assert.That(after.RowOf[i], Is.EqualTo(before.RowOf[i]), what + ": fila de la cuia " + i);
+                    }
+
+                    AssertRowsConsistent(after);
+                    before = after;
+                }
+            }
+        }
+
         [Test]
         public void MaxCuiaWidthFor_FollowsT()
         {
@@ -386,6 +462,42 @@ namespace AF.Tests.EditMode
 
             Assert.That(sum, Is.EqualTo(r.CenterX.Length), "todas las cuias tienen fila");
             return string.Join("/", parts);
+        }
+
+        // Cada fila tiene PerRow[r] cuias, con el pie en RowFootY[r], separadas una ranura y centradas en el lienzo, y su
+        // CenterX crece con el índice (las añadidas, a la derecha).
+        private static void AssertRowsConsistent(BoardLayoutResult r)
+        {
+            int count = r.CenterX.Length;
+            for (int row = 0; row < r.Rows; row++)
+            {
+                int n = 0;
+                float first = 0f;
+                float last = float.MinValue;
+                for (int i = 0; i < count; i++)
+                {
+                    if (r.RowOf[i] != row)
+                    {
+                        continue;
+                    }
+
+                    Assert.That(r.FootY[i], Is.EqualTo(r.RowFootY[row]), "pie de la cuia " + i);
+                    if (n == 0)
+                    {
+                        first = r.CenterX[i];
+                    }
+                    else
+                    {
+                        Assert.That(r.CenterX[i] - last, Is.EqualTo(r.SlotWidth).Within(0.01f), "una ranura a la derecha de la anterior: cuia " + i);
+                    }
+
+                    last = r.CenterX[i];
+                    n++;
+                }
+
+                Assert.That(n, Is.EqualTo(r.PerRow[row]), "cuias de la fila " + row);
+                Assert.That(first + last, Is.EqualTo(360f).Within(0.01f), "fila " + row + " centrada en el lienzo de 360 dp");
+            }
         }
     }
 }
