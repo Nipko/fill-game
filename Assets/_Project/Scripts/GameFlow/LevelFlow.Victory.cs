@@ -111,11 +111,12 @@ namespace AF.GameFlow
         // Instante lógico de la victoria (R12): el nivel en curso deja de estarlo, el progreso avanza, se cobra la Cosecha y
         // la victoria cuenta para la cadencia de intersticiales, todo en una sola escritura del perfil (SaveBatch; antes eran
         // cuatro con su fsync cada una). Sin lote, primero se borra level_state: así un cierre a mitad nunca reabre el tablero
-        // de un nivel ya cobrado.
+        // de un nivel ya cobrado. Es fin de nivel (T-D): esa escritura espera al escritor de segundo plano y va en síncrono.
         private void ResolveWin()
         {
             using (Saves())
             {
+                SaveBatch?.RequireDurable();
                 StateStore?.Clear();
                 _attempt.Won();
                 _progress.SaveWin(LevelNumber, LevelNumber + 1);

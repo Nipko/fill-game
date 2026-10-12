@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Threading;
 using AF.Platform;
 using AF.Save.Json;
 using NUnit.Framework;
@@ -12,18 +13,24 @@ namespace AF.Save.Tests
     /// Guardado local atómico del perfil (B1-1; GDD 08 §4.3, §4.4 y §11): <c>profile.json.tmp</c> → flush →
     /// reemplazo con <c>profile.bak</c>; al cargar, principal corrupto o ausente → <c>.bak</c>; un <c>.tmp</c> huérfano se
     /// ignora; migraciones con copia previa y sin tocar nada si fallan; esquema más nuevo → no se pisa; eliminación de
-    /// cuenta → no queda ningún archivo.
+    /// cuenta → no queda ningún archivo. Escritor en segundo plano (T-D, <see cref="ProfileWriter"/>): un corte con la
+    /// escritura a medias nunca deja un perfil corrupto, la cola de 1 la gana el último y sus fallos no salen de su hilo.
     /// </summary>
     public sealed class LocalProfileStoreTests
     {
+        // Tope de las esperas al hilo del escritor (no se alcanza si todo va bien).
+        private const int WaitMs = 10000;
+
         private static readonly UTF8Encoding Utf8NoBom = new UTF8Encoding(false);
 
         private string _dir = "";
+        private int _mainThread;
 
         [SetUp]
         public void SetUp()
         {
             _dir = TempDirs.Create();
+            _mainThread = Thread.CurrentThread.ManagedThreadId;
         }
 
         [TearDown]
@@ -305,6 +312,278 @@ namespace AF.Save.Tests
             Assert.That(ProfileMigrations.Current.TargetSchema, Is.EqualTo(Profile.CurrentSchema));
         }
 
+        [TestCase("TempHalfWritten", false)]
+        [TestCase("TempWritten", false)]
+        [TestCase("MainMovedToBackup", true)]
+        public void ACutMidWrite_LoadsTheMainOrTheBackup_NeverACorruptProfile(string stage, bool moveFallback)
+        {
+            // T-D: el proceso muere en ese punto de la escritura (el gancho lanza y nada de lo que sigue se ejecuta). Al
+            // reabrir, Load da el principal o la copia con el último perfil completo, nunca uno corrupto. (Un corte en
+            // TempWritten con ForceMoveFallback sería el mismo caso: el reemplazo de dos Move solo actúa después, en Commit.)
+            var store = new LocalProfileStore(_dir) { ForceMoveFallback = moveFallback };
+            Profile p = SampleProfiles.Full();
+            store.Save(p);
+            p.Wallet.Seeds = 999;
+            store.Save(p);
+            LocalProfileStore.WriteStage cut = Stage(stage);
+            store.WriteHook = s =>
+            {
+                if (s == cut)
+                {
+                    throw new ProcessKilled();
+                }
+            };
+
+            p.Wallet.Seeds = 5;
+            Assert.Throws<ProcessKilled>(() => store.Save(p));
+
+            var reopened = new LocalProfileStore(_dir);
+            ProfileLoadResult result = reopened.Load();
+            Assert.That(result.Status, Is.EqualTo(ProfileLoadStatus.Loaded).Or.EqualTo(ProfileLoadStatus.LoadedFromBackup), stage);
+            Assert.That(result.Profile!.Wallet.Seeds, Is.EqualTo(999), "el último perfil escrito entero");
+
+            // La sesión siguiente guarda sin problemas sobre lo que quedó (.tmp huérfano o principal ausente).
+            Profile loaded = result.Profile;
+            loaded.Wallet.Seeds = 7;
+            reopened.Save(loaded);
+            Assert.That(new LocalProfileStore(_dir).Load().Profile!.Wallet.Seeds, Is.EqualTo(7));
+            Assert.That(File.Exists(reopened.TempPath), Is.False);
+            Assert.That(new LocalProfileStore(_dir).Load().Status, Is.EqualTo(ProfileLoadStatus.Loaded));
+        }
+
+        [Test]
+        public void ACutAfterDiscardingACorruptMain_LoadsTheBackup()
+        {
+            var store = new LocalProfileStore(_dir);
+            Profile p = SampleProfiles.Full();
+            store.Save(p);
+            p.Wallet.Seeds = 999;
+            store.Save(p);
+            Corrupt(store.MainPath, "garbage");
+
+            var reopened = new LocalProfileStore(_dir);
+            Profile loaded = reopened.Load().Profile!;
+            reopened.WriteHook = s =>
+            {
+                if (s == LocalProfileStore.WriteStage.CorruptMainDeleted)
+                {
+                    throw new ProcessKilled();
+                }
+            };
+
+            loaded.Wallet.Seeds = 5;
+            Assert.Throws<ProcessKilled>(() => reopened.Save(loaded));
+
+            ProfileLoadResult result = new LocalProfileStore(_dir).Load();
+            Assert.That(result.Status, Is.EqualTo(ProfileLoadStatus.LoadedFromBackup));
+            Assert.That(result.Profile!.Wallet.Seeds, Is.EqualTo(1240), "la copia buena sigue ahí");
+        }
+
+        [TestCase("TempHalfWritten", false)]
+        [TestCase("TempWritten", false)]
+        [TestCase("TempWritten", true)]
+        [TestCase("MainMovedToBackup", true)]
+        public void WithTheWriterHalfway_ACutLeavesAWholeProfileOnDisk(string stage, bool moveFallback)
+        {
+            // T-D: el escritor de segundo plano se para en ese punto (como si el force-stop llegara ahí) y otro almacén lee la
+            // carpeta, como la app al reabrir: el principal o la copia, completos.
+            var store = new LocalProfileStore(_dir) { ForceMoveFallback = moveFallback };
+            Profile p = SampleProfiles.Full();
+            store.Save(p);
+            p.Wallet.Seeds = 999;
+            store.Save(p);
+            LocalProfileStore.WriteStage cut = Stage(stage);
+            var reached = new ManualResetEventSlim(false);
+            var release = new ManualResetEventSlim(false);
+            store.WriteHook = s =>
+            {
+                if (s == cut)
+                {
+                    reached.Set();
+                    release.Wait(WaitMs);
+                }
+            };
+
+            var writer = new ProfileWriter(store);
+            try
+            {
+                p.Wallet.Seeds = 5;
+                writer.Enqueue(store.Serialize(p));
+                Assert.That(reached.Wait(WaitMs), Is.True, "el escritor llega a " + stage);
+                Assert.That(writer.IsIdle, Is.False);
+
+                ProfileLoadResult midway = new LocalProfileStore(_dir).Load();
+                Assert.That(midway.Status, Is.EqualTo(ProfileLoadStatus.Loaded).Or.EqualTo(ProfileLoadStatus.LoadedFromBackup), stage);
+                Assert.That(midway.Profile!.Wallet.Seeds, Is.EqualTo(999), "nunca un perfil a medias");
+            }
+            finally
+            {
+                release.Set();
+            }
+
+            Assert.That(writer.WaitIdle(WaitMs), Is.True);
+            Assert.That(writer.TakeFailure(out _), Is.Null);
+            Assert.That(writer.AllWritten, Is.True);
+            Assert.That(new LocalProfileStore(_dir).Load().Profile!.Wallet.Seeds, Is.EqualTo(5));
+            Assert.That(File.ReadAllText(store.BackupPath), Is.EqualTo(ProfileJson.Serialize(WithSeeds(999))), "el anterior pasa a la copia");
+            Assert.That(File.Exists(store.TempPath), Is.False);
+        }
+
+        [Test]
+        public void Writer_QueueOfOne_TheLatestWins()
+        {
+            var store = new LocalProfileStore(_dir);
+            var reached = new ManualResetEventSlim(false);
+            var release = new ManualResetEventSlim(false);
+            int written = 0;
+            store.WriteHook = s =>
+            {
+                if (s == LocalProfileStore.WriteStage.TempWritten && Interlocked.Increment(ref written) == 1)
+                {
+                    reached.Set();
+                    release.Wait(WaitMs);
+                }
+            };
+
+            // Marca de tiempo de prueba que avanza 5 ticks (5 ms) en cada lectura: el escritor lee una al empezar y otra al acabar.
+            long ticks = 0;
+            var writer = new ProfileWriter(store, () => Interlocked.Add(ref ticks, 5), 1000);
+            try
+            {
+                writer.Enqueue(store.Serialize(WithSeeds(1)));
+                Assert.That(reached.Wait(WaitMs), Is.True);
+                writer.Enqueue(store.Serialize(WithSeeds(2)));
+                writer.Enqueue(store.Serialize(WithSeeds(3)));
+                writer.Enqueue(store.Serialize(WithSeeds(4)));
+            }
+            finally
+            {
+                release.Set();
+            }
+
+            Assert.That(writer.WaitIdle(WaitMs), Is.True);
+            Assert.That(writer.BackgroundWrites, Is.EqualTo(2), "la primera, ya empezada, y la última: la 2 y la 3 se descartan");
+            Assert.That(written, Is.EqualTo(2));
+            Assert.That(new LocalProfileStore(_dir).Load().Profile!.Wallet.Seeds, Is.EqualTo(4), "gana el último");
+            Assert.That(File.ReadAllText(store.BackupPath), Is.EqualTo(ProfileJson.Serialize(WithSeeds(1))));
+            Assert.That(writer.LastBackgroundMs, Is.EqualTo(5.0), "bg_ms: lo que tardó la última escritura del escritor");
+            Assert.That(new ProfileWriter(store).LastBackgroundMs, Is.EqualTo(0.0), "sin marca de tiempo no se mide");
+        }
+
+        [Test]
+        public void Writer_WriteNow_WaitsForTheWriter_DropsTheOlderQueue_AndHasACap()
+        {
+            // Cada escritura que llega al .tmp completo deja anotado su perfil, en el orden en que se escribe.
+            var store = new LocalProfileStore(_dir);
+            var reached = new ManualResetEventSlim(false);
+            var release = new ManualResetEventSlim(false);
+            var written = new System.Collections.Generic.List<int>();
+            store.WriteHook = s =>
+            {
+                if (s != LocalProfileStore.WriteStage.TempWritten)
+                {
+                    return;
+                }
+
+                int seeds = ProfileJson.Deserialize(File.ReadAllText(store.TempPath, Utf8NoBom)).Wallet.Seeds;
+                lock (written)
+                {
+                    written.Add(seeds);
+                }
+
+                if (Thread.CurrentThread.ManagedThreadId != _mainThread)
+                {
+                    reached.Set();
+                    release.Wait(WaitMs);
+                }
+            };
+
+            var writer = new ProfileWriter(store);
+            writer.Enqueue(store.Serialize(WithSeeds(1)));
+            Assert.That(reached.Wait(WaitMs), Is.True);
+            writer.Enqueue(store.Serialize(WithSeeds(2))); // en la cola, más vieja que la síncrona
+
+            // Con el escritor ocupado más que el tope, no escribe a la vez que él: deja los bytes en su cola (la 3 sustituye a la 2).
+            Assert.That(writer.WriteNow(store.Serialize(WithSeeds(3)), 50), Is.False);
+            Assert.That(File.Exists(store.MainPath), Is.False, "nada escrito todavía");
+
+            // El escritor se suelta desde otro hilo mientras el principal espera en WriteNow(4). Según la carga de la máquina,
+            // la 3 sale antes de que WriteNow(4) vacíe la cola o no sale nunca; lo que no cambia es la regla: la 2 nunca se
+            // escribe y la 3 nunca pisa a la 4.
+            var opener = new Thread(() =>
+            {
+                Thread.Sleep(100);
+                release.Set();
+            });
+            opener.Start();
+            Assert.That(writer.WriteNow(store.Serialize(WithSeeds(4)), WaitMs), Is.True, "espera al escritor y escribe aquí");
+            opener.Join();
+            Assert.That(writer.IsIdle, Is.True);
+            Assert.That(writer.AllWritten, Is.True);
+            int[] order;
+            lock (written)
+            {
+                order = written.ToArray();
+            }
+
+            Assert.That(order.Length == 2 || order.Length == 3, Is.True, "la 1 y la 4, y como mucho la 3 entre ellas: " + string.Join(",", order));
+            Assert.That(order[0], Is.EqualTo(1));
+            Assert.That(order[order.Length - 1], Is.EqualTo(4), "la 4 es la última: la 3 nunca la pisa");
+            Assert.That(order, Has.No.Member(2), "la 2 nunca se escribe");
+            Assert.That(writer.BackgroundWrites, Is.EqualTo(order.Length - 1), "en segundo plano, la 1 y quizá la 3; la 4, en este hilo");
+            Assert.That(new LocalProfileStore(_dir).Load().Profile!.Wallet.Seeds, Is.EqualTo(4));
+            Assert.That(File.ReadAllText(store.BackupPath), Is.EqualTo(ProfileJson.Serialize(WithSeeds(order[order.Length - 2]))), "la copia es la anterior a la 4 (la 1 o la 3)");
+        }
+
+        [Test]
+        public void Writer_AFailureStaysOnItsThread_AndTheMainThreadCollectsIt()
+        {
+            var store = new LocalProfileStore(_dir);
+            store.Save(WithSeeds(1));
+            store.WriteHook = s =>
+            {
+                if (s == LocalProfileStore.WriteStage.TempWritten)
+                {
+                    throw new IOException("disco lleno");
+                }
+            };
+
+            var writer = new ProfileWriter(store);
+            writer.Enqueue(store.Serialize(WithSeeds(2)));
+            Assert.That(writer.WaitIdle(WaitMs), Is.True);
+            Exception? failure = writer.TakeFailure(out bool latest);
+            Assert.That(failure, Is.InstanceOf<IOException>());
+            Assert.That(latest, Is.True, "ninguna entrega posterior la cubre: hay que reintentar");
+            Assert.That(writer.TakeFailure(out _), Is.Null, "se recoge una vez");
+            Assert.That(writer.AllWritten, Is.False);
+            Assert.That(new LocalProfileStore(_dir).Load().Profile!.Wallet.Seeds, Is.EqualTo(1), "el principal anterior, intacto");
+
+            // Una entrega posterior cubre el fallo anterior.
+            store.WriteHook = null;
+            writer.Enqueue(store.Serialize(WithSeeds(3)));
+            Assert.That(writer.WaitIdle(WaitMs), Is.True);
+            Assert.That(writer.TakeFailure(out _), Is.Null);
+            Assert.That(writer.AllWritten, Is.True);
+            Assert.That(new LocalProfileStore(_dir).Load().Profile!.Wallet.Seeds, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void Serialize_IsWhatSaveWrites_AndRespectsTheWriteBlock()
+        {
+            var store = new LocalProfileStore(_dir);
+            Profile p = SampleProfiles.Full();
+            byte[] bytes = store.Serialize(p);
+            Assert.That(Directory.GetFiles(_dir), Is.Empty, "serializar no toca el disco");
+            store.WriteBytes(bytes);
+            Assert.That(File.ReadAllBytes(store.MainPath), Is.EqualTo(bytes));
+            Assert.That(store.LastSavedBytes, Is.EqualTo(bytes.Length));
+
+            File.WriteAllText(store.MainPath, "{\"profile_schema\": 9}", Utf8NoBom);
+            Assert.That(store.Load().Status, Is.EqualTo(ProfileLoadStatus.TooNew));
+            Assert.Throws<InvalidOperationException>(() => store.Serialize(p));
+            Assert.Throws<InvalidOperationException>(() => store.WriteBytes(bytes));
+        }
+
         [Test]
         public void MemoryStore_ReturnsIndependentCopies()
         {
@@ -331,6 +610,18 @@ namespace AF.Save.Tests
             root.Set("wallet", wallet);
         }
 
+        private static LocalProfileStore.WriteStage Stage(string name)
+        {
+            return (LocalProfileStore.WriteStage)Enum.Parse(typeof(LocalProfileStore.WriteStage), name);
+        }
+
+        private static Profile WithSeeds(int seeds)
+        {
+            Profile p = SampleProfiles.Full();
+            p.Wallet.Seeds = seeds;
+            return p;
+        }
+
         private static void Corrupt(string path, string corruption)
         {
             byte[] bytes = File.ReadAllBytes(path);
@@ -355,6 +646,15 @@ namespace AF.Save.Tests
                     break;
                 default:
                     throw new ArgumentException(corruption);
+            }
+        }
+
+        /// <summary>El proceso «muere» en ese punto de la escritura: nada de lo que sigue se ejecuta.</summary>
+        private sealed class ProcessKilled : Exception
+        {
+            public ProcessKilled()
+                : base("proceso cortado (test)")
+            {
             }
         }
     }

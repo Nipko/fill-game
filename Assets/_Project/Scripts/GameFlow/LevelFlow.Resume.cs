@@ -41,8 +41,9 @@ namespace AF.GameFlow
 
         /// <summary>
         /// Lote de guardado del perfil (revisión de B2-5): cada acción del jugador (vertido, victoria, rescate, rendición,
-        /// salida…) escribe el perfil una sola vez, con la cartera, el progreso y <c>level_state</c> juntos. Null = cada
-        /// almacén guarda por su cuenta (tests del flujo sin perfil).
+        /// salida…) escribe el perfil una sola vez, con la cartera, el progreso y <c>level_state</c> juntos; el vertido, en
+        /// segundo plano, y el fin de nivel, en síncrono (T-D). Null = cada almacén guarda por su cuenta (tests del flujo sin
+        /// perfil).
         /// </summary>
         public ProfileSaveBatch? SaveBatch { get; set; }
 
@@ -89,7 +90,8 @@ namespace AF.GameFlow
         /// <summary>
         /// Se sale del nivel al inicio sin ganarlo (X de Nivel fallido, «Volver al inicio», «Salir» en 1-30): se guarda que el
         /// nivel ya no está en curso, con <c>fails_level</c>, la variante y los regalos de Capi y de la Luciérnaga (las cuias
-        /// añadidas desaparecen: 04 §2.2). Si la Luciérnaga estaba eligiendo cuia, se cancela sin coste.
+        /// añadidas desaparecen: 04 §2.2). Si la Luciérnaga estaba eligiendo cuia, se cancela sin coste. Es fin de nivel
+        /// (T-D): la escritura espera al escritor de segundo plano y va en síncrono.
         /// </summary>
         public void LeaveLevel()
         {
@@ -101,6 +103,7 @@ namespace AF.GameFlow
 
             using (Saves())
             {
+                SaveBatch?.RequireDurable();
                 WriteState(SavedPhase.Exited, false);
             }
         }

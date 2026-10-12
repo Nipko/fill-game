@@ -22,8 +22,8 @@ namespace AF.Tests.PlayMode
     /// Nivel en curso guardado tras cada vertido y reabierto en la escena (tarea B2-5; 02 R8 y §14; 04 §5.2): destruir y
     /// recrear el arranque a mitad de nivel devuelve el mismo tablero y la misma pantalla, sin intro; con Aguas estancadas,
     /// ¿Seguro? o Nivel fallido abiertos, la pantalla reaparece y las canoas no cambian (cerrar la app nunca cobra canoa ni
-    /// es una salida gratis del embudo); y cada vertido y la victoria escriben el perfil una sola vez, con su coste en el log
-    /// (el objetivo [P] de 5 ms por vertido está pendiente del dueño). Al reabrir un nivel ≥ 8, «+1 cuia» se ve desde el
+    /// es una salida gratis del embudo); y cada vertido y la victoria escriben el perfil una sola vez: el vertido en segundo
+    /// plano y la victoria en síncrono (T-D), con su coste en el log. Al reabrir un nivel ≥ 8, «+1 cuia» se ve desde el
     /// primer fotograma (con su «+1» regalado, con su precio o gris si ya se usó) y la pantalla que se ve publica su
     /// AF_LAYOUT, que es la última línea: la level con «+1 cuia», o la del modal reabierto (¿Seguro? o Nivel fallido; Sin
     /// canoas no se guarda) (T-A y T-B de la prueba del 2026-10-09). Quien toca por adb usa la última línea de la pantalla
@@ -32,11 +32,20 @@ namespace AF.Tests.PlayMode
     /// </summary>
     public sealed class ResumeTests
     {
-        // Plan B2-5 [P]: «guardar cuesta < 5 ms por vertido en el Editor»; pendiente de que el dueño lo confirme o lo ajuste.
+        // T-D (decisión 5 del dueño, 2026-10-09): save_ms por vertido, solo el hilo principal, p95 < 5 ms en el Editor.
         private const double PourSaveTargetMs = 5.0;
+
+        // Vertidos de ida y vuelta (con Marea, ilimitada en 1-10) antes de resolver, para que el p95 tenga muestras.
+        private const int PourUndoRounds = 24;
+
+        // Tope de las esperas del test a otros hilos (el escritor, el disco retenido); no se alcanza si todo va bien.
+        private const int WaitMs = 10000;
 
         private string? _dir;
         private AfLayoutLog _layout = null!;
+
+        // El disco que puede retener al escritor (solo en el test del guardado): el TearDown lo suelta.
+        private HoldableProfileDisk? _disk;
 
         [SetUp]
         public void SetUp()
@@ -48,8 +57,21 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            // Si una aserción falló con el disco retenido, se suelta y se espera al escritor antes de borrar la carpeta: así no
+            // se queda retenido hasta su límite y el OnDestroy del test siguiente no agota su tope ni escribe en la carpeta
+            // borrada.
+            if (_disk != null)
+            {
+                _disk.Release();
+                _disk = null;
+                GameBootstrap? boot = GameBootstrap.Current;
+                ProfileSaveBatch? batch = boot != null ? boot.SaveBatch : null;
+                batch?.FlushSync(WaitMs);
+            }
+
             _layout?.Dispose();
             _layout = null!;
+
             LaunchOptions.Reset();
             if (_dir != null && Directory.Exists(_dir))
             {
@@ -330,18 +352,20 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Saving_IsOneWritePerPour_AndOneForTheVictory_AndReportsItsCost()
+        public IEnumerator Saving_IsOneWritePerPour_InTheBackground_AndTheVictoryIsSynchronous()
         {
-            // Revisión de B2-5: cada acción del jugador escribe el perfil una sola vez (ProfileSaveBatch): un vertido, una
-            // escritura; la victoria (level_state, progreso, Cosecha y cadencia de intersticiales), una, no cuatro. Perfil real en
-            // disco (LocalProfileStore de AF.Save: .tmp, Flush(true) y File.Replace con copia) en una carpeta temporal.
-            // El criterio [P] del plan («< 5 ms por vertido en el Editor») no se cumple con una escritura síncrona con fsync en el
-            // hilo principal: lo que pone la pista B (estado y JSON) es < 1 ms y el resto es el disco (AF.Save). Aquí se exige que
-            // la escritura quepa en un fotograma de 60 fps (08 §5.4) y se informa de la cifra (AF_PERF) para que el dueño confirme
-            // o ajuste el umbral; si pasa de 5 ms queda un aviso en el log, no un fallo.
+            // T-D (opción B, aprobada por el dueño el 2026-10-11): perfil real en disco (LocalProfileStore de AF.Save) en una
+            // carpeta temporal. Cada acción del jugador escribe el perfil una sola vez (D-008): el vertido solo serializa y
+            // entrega los bytes al escritor de segundo plano (.tmp, Flush(true) y File.Replace con copia, en su hilo), así que
+            // save_ms (lo que paga el hilo principal) tiene que dar p95 < 5 ms; la victoria (fin de nivel) espera al escritor
+            // y escribe en síncrono level_state, progreso, Cosecha y cadencia de intersticiales juntos. El disco puede retener al
+            // escritor a mitad de una escritura (HoldableProfileDisk), para comprobar sin depender del tiempo que el Flush
+            // síncrono lo espera.
             _dir = Path.Combine(Application.temporaryCachePath, "af_resume_" + Guid.NewGuid().ToString("N"));
-            var store = new LocalProfileStore(_dir);
-            store.Save(FunnelSetup.Profile(0));
+            var local = new LocalProfileStore(_dir);
+            local.Save(FunnelSetup.Profile(0));
+            var store = new HoldableProfileDisk(local);
+            _disk = store;
             LaunchOptions.ProfileStoreOverride = store;
             yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore(7, 6));
             GameBootstrap boot = GameBootstrap.Current!;
@@ -349,55 +373,111 @@ namespace AF.Tests.PlayMode
             boot.TapAnywhere();
             ProfileSaveBatch batch = boot.SaveBatch!;
             Assert.That(batch.Inner, Is.SameAs(store));
+            Assert.That(batch.Writer, Is.Not.Null, "con el perfil en disco, el escritor de segundo plano está en marcha");
+            ProfileWriter writer = batch.Writer!;
             SolveResult solution = new AStarSolver().Solve(boot.Flow!.Session.Current, SolverOptions.ForPipeline(boot.Flow.Session.PourMode));
-            var saves = new List<double>();
+            var pours = new List<double>();
             var json = new List<double>();
-            int last = solution.MoveCount - 1;
-            for (int i = 0; i <= last; i++)
+            Pour first = solution.GetMove(0);
+            for (int k = 0; k < PourUndoRounds; k++)
             {
-                int before = batch.WriteCount;
-                boot.TapCuia(solution.GetMove(i).Source);
-                boot.TapCuia(solution.GetMove(i).Target);
-                Assert.That(batch.WriteCount, Is.EqualTo(before + 1), i == last ? "la victoria: una escritura (antes, cuatro)" : "vertido " + (i + 1) + ": una escritura");
-                saves.Add(batch.LastWriteMs);
-                long start = System.Diagnostics.Stopwatch.GetTimestamp();
-                ProfileJson.Serialize(boot.Profile!);
-                json.Add((System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
-                if (i < last)
+                MeasurePour(boot, batch, first, pours, json, "vertido de ida y vuelta " + (k + 1));
+                PlayModeHelpers.StepUntilIdle(boot, 4000);
+                Assert.That(boot.PressUndo(), Is.True);
+                PlayModeHelpers.StepUntilIdle(boot, 4000);
+            }
+
+            int last = solution.MoveCount - 1;
+            Assert.That(last, Is.GreaterThanOrEqualTo(2));
+            for (int i = 0; i < last; i++)
+            {
+                if (i > 0)
                 {
                     PlayModeHelpers.StepUntilIdle(boot, 4000);
                 }
+
+                if (i == last - 1)
+                {
+                    // La escritura del último vertido se queda a medias en el escritor (un disco lento).
+                    Assert.That(writer.WaitIdle(WaitMs), Is.True);
+                    store.Hold();
+                }
+
+                MeasurePour(boot, batch, solution.GetMove(i), pours, json, "vertido " + (i + 1));
             }
 
+            // Con el escritor en marcha (a medias con el último vertido, que se suelta desde otro hilo a los 100 ms), el Flush
+            // síncrono de OnApplicationPause(true) y OnApplicationQuit lo espera y deja en disco el perfil del último vertido.
+            Assert.That(store.WaitEntered(WaitMs), Is.True, "el escritor empezó el último vertido");
+            Assert.That(writer.IsIdle, Is.False, "y sigue a medias: el Flush síncrono tiene que esperarlo");
+            var opener = store.ReleaseLater(100);
+            bool flushed = batch.FlushSync(ProfileSaveBatch.DefaultSyncTimeoutMs);
+            bool idle = writer.IsIdle; // al volver de FlushSync, antes de esperar al hilo que suelta el disco
+            bool allWritten = writer.AllWritten;
+            opener.Join();
+            Assert.That(flushed, Is.True, "el último perfil, en disco");
+            Assert.That(idle, Is.True, "al volver de FlushSync, el escritor ya terminó");
+            Assert.That(allWritten, Is.True, "y la última entrega está en disco");
+            Assert.That(store.Overlaps, Is.EqualTo(0), "nunca dos escrituras a la vez");
+            LevelStateData mid = new LocalProfileStore(_dir).Load().Profile!.LevelState!;
+            Assert.That(mid.Pours, Is.EqualTo(boot.Flow.Session.AppliedPours), "el tablero del último vertido");
+            Assert.That(mid.History, Is.EqualTo(boot.Profile!.LevelState!.History));
+            PlayModeHelpers.StepUntilIdle(boot, 4000);
+
+            // La victoria: fin de nivel, una escritura síncrona que ya está en disco al volver del toque, sin Flush.
+            int beforeWin = batch.WriteCount;
+            boot.TapCuia(solution.GetMove(last).Source);
+            boot.TapCuia(solution.GetMove(last).Target);
+            Assert.That(batch.WriteCount, Is.EqualTo(beforeWin + 1), "la victoria: una escritura (antes, cuatro)");
+            Assert.That(batch.LastWriteInBackground, Is.False, "fin de nivel: espera al escritor y escribe en síncrono");
+            double winMs = batch.LastWriteMs;
+            Assert.That(writer.AllWritten, Is.True, "nada queda en el escritor");
             ProfileLoadResult onDisk = new LocalProfileStore(_dir).Load();
             // (El progreso de este test va en un MemoryProgressStore; en el juego, ProfileProgressStore escribe por el mismo lote.)
             Assert.That(onDisk.Profile!.LevelState, Is.Null, "la victoria borró level_state…");
             Assert.That(onDisk.Profile.Wallet.Seeds, Is.EqualTo(boot.Flow.HarvestSeeds), "…cobró la Cosecha…");
             Assert.That(onDisk.Profile.Ads.LevelsSinceInterstitial, Is.EqualTo(1), "…y contó para los intersticiales, en la misma escritura");
 
-            Assert.That(saves.Count, Is.GreaterThanOrEqualTo(3));
-            double saveMedian = Median(saves);
-            double saveMax = saves[saves.Count - 1];
-            double jsonMedian = Median(json);
-            Debug.Log("AF_PERF level_state: " + saves.Count + " acciones (vertidos y victoria), una escritura cada una; escritura mediana "
-                + Ms(saveMedian) + " ms, máximo " + Ms(saveMax) + " ms; JSON del perfil mediana " + Ms(jsonMedian) + " ms; "
-                + store.LastSavedBytes + " bytes");
-            if (saveMedian >= PourSaveTargetMs)
-            {
-                Debug.LogWarning("AF_PERF level_state: la escritura por vertido (" + Ms(saveMedian) + " ms) supera el objetivo [P] de "
-                    + Ms(PourSaveTargetMs) + " ms del plan B2-5; pendiente de que el dueño confirme o ajuste el umbral.");
-            }
+            double p95 = Percentile(pours, 0.95);
+            double max = Percentile(pours, 1.0);
+            double jsonMedian = Percentile(json, 0.5);
+            Debug.Log("AF_PERF level_state: " + pours.Count + " vertidos, una escritura cada uno en segundo plano; save_ms (hilo principal) p95 "
+                + Ms(p95) + " ms, máximo " + Ms(max) + " ms; bg_ms de la última del escritor " + Ms(batch.LastBackgroundMs) + " ms, retenida 100 ms a propósito ("
+                + writer.BackgroundWrites + " escrituras del escritor); victoria síncrona " + Ms(winMs) + " ms; JSON del perfil mediana "
+                + Ms(jsonMedian) + " ms; " + local.LastSavedBytes + " bytes");
 
             Assert.That(batch.PendingSave, Is.False);
+            // La victoria llega con el escritor ya parado: aquí solo se comprueba que nunca hubo dos escrituras a la vez. Que la
+            // victoria espera al escritor (retenido) lo prueban SyncSaveTests.AfPerf_… en la escena y
+            // SaveBatchTests.TheVictoryIsSynchronous_….
+            Assert.That(store.Overlaps, Is.EqualTo(0), "nunca dos escrituras a la vez");
+            Assert.That(writer.BackgroundWrites, Is.GreaterThan(0), "el disco lo pagó el escritor, no el toque");
+            Assert.That(p95, Is.LessThan(PourSaveTargetMs), "save_ms por vertido (solo el hilo principal): p95 < 5 ms en el Editor (T-D)");
             Assert.That(jsonMedian, Is.LessThan(PourSaveTargetMs), "lo que pone la pista B por vertido (estado y JSON)");
-            Assert.That(saveMedian, Is.LessThan(1000.0 / 60.0), "la escritura cabe en un fotograma de 60 fps (08 §5.4)");
-            Assert.That(store.LastSavedBytes, Is.LessThan(100 * 1024), "perfil < 100 KB (08 §4.3)");
+            Assert.That(local.LastSavedBytes, Is.LessThan(100 * 1024), "perfil < 100 KB (08 §4.3)");
         }
 
-        private static double Median(List<double> values)
+        // Un vertido medido: una escritura del perfil entregada al escritor, y lo que pagó el hilo principal.
+        private static void MeasurePour(GameBootstrap boot, ProfileSaveBatch batch, Pour move, List<double> pours, List<double> json, string what)
         {
-            values.Sort();
-            return values[values.Count / 2];
+            int before = batch.WriteCount;
+            boot.TapCuia(move.Source);
+            boot.TapCuia(move.Target);
+            Assert.That(batch.WriteCount, Is.EqualTo(before + 1), what + ": una escritura (D-008)");
+            Assert.That(batch.LastWriteInBackground, Is.True, what + ": en segundo plano");
+            pours.Add(batch.LastWriteMs);
+            long start = System.Diagnostics.Stopwatch.GetTimestamp();
+            ProfileJson.Serialize(boot.Profile!);
+            json.Add((System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+        }
+
+        // Percentil por rango más cercano (p = 1 da el máximo), sobre una copia ordenada.
+        private static double Percentile(List<double> values, double p)
+        {
+            var sorted = new List<double>(values);
+            sorted.Sort();
+            int rank = (int)Math.Ceiling(p * sorted.Count) - 1;
+            return sorted[Math.Max(0, Math.Min(sorted.Count - 1, rank))];
         }
 
         private static string Ms(double value)

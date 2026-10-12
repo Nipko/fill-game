@@ -77,7 +77,9 @@ namespace AF.Economy
         /// Un cambio quedó sin guardar porque falló la escritura; se reintenta en la próxima mutación o con <see cref="Flush"/>.
         /// Solo ve los fallos del <c>IProfileStore</c> que recibe: con un almacén que agrupa escrituras
         /// (<c>AF.GameFlow.ProfileSaveBatch</c>, dentro de un lote) el guardado solo se anota y no falla aquí; si la escritura
-        /// del cierre del lote falla, esto sigue en false y el pendiente lo lleva <c>ProfileSaveBatch.PendingSave</c>.
+        /// del cierre del lote falla, esto sigue en false y el pendiente lo lleva <c>ProfileSaveBatch.PendingSave</c>. En el
+        /// juego la cartera guarda por <c>ProfileSaveBatch.Durable</c> (T-D): cada mutación espera al escritor de segundo plano y
+        /// escribe en síncrono al cerrar su acción.
         /// </summary>
         public bool PendingSave { get; private set; }
 
