@@ -62,7 +62,45 @@ namespace AF.Tests.PlayMode
             Assert.That(other.PartnerIndex, Is.EqualTo(a));
             Assert.That(drawer.DrawsChannel && drawer.ChannelVisible, Is.True, "el canal lo dibuja la cuia de menor índice");
             Assert.That(other.DrawsChannel || other.ChannelVisible, Is.False, "y solo ella: una sola vez");
-            AssertChannel(view.Animator, view.Views, drawer, a, b, PanelInner(view), "nivel 103");
+            AssertChannel(view.Animator, view.Views, drawer, a, b, MechanicTestKit.PanelInner(view), "nivel 103");
+
+            // Opción C del dueño (2026-10-11): además del canal, la MISMA ficha en las dos cuias, aunque sea la única pareja
+            // (id 0); ninguna otra cuia la lleva.
+            int pairId = boot.Flow.Session.Current[a].MechanicPairId;
+            Assert.That(drawer.PairMarkVisible && other.PairMarkVisible, Is.True, "la ficha de la pareja, en las dos cuias");
+            Assert.That(drawer.PairDots, Is.EqualTo(pairId + 1), "id + 1 puntos (también con id 0)");
+            Assert.That(other.PairDots, Is.EqualTo(drawer.PairDots), "la misma marca en las dos");
+            Assert.That(other.PairMarkRect.size, Is.EqualTo(drawer.PairMarkRect.size), "del mismo tamaño");
+            AssertPairMarks(view.Animator, view.Views, drawer, a, b, MechanicTestKit.PanelInner(view), "nivel 103");
+            for (int i = 0; i < view.Views.Length; i++)
+            {
+                if (i != a && i != b)
+                {
+                    CuiaOverlay? overlay = view.Views[i].OverlayOf(MechanicType.Remolino);
+                    Assert.That(overlay is RemolinoOverlay r && r.PairMarkVisible, Is.False, "la cuia " + i + " no lleva ficha");
+                }
+            }
+
+            // La ficha no cambia al seleccionar (D-002): elevada, la cuia la deja en la repisa. Se mira en el mundo, no en las
+            // anclas: si la ficha colgara del cuerpo (BodyFront), su rect local tampoco cambiaría, pero subiría con la cuia.
+            int lift = boot.Flow.Session.Current[a].IsEmpty ? b : a;
+            RemolinoOverlay lifted = lift == a ? drawer : other;
+            Rect rest = lifted.PairMarkRect;
+            Rect restWorld = lifted.PairMarkWorldRect;
+            Vector3 bodyRest = view.Views[lift].Body.position;
+            Assert.That(boot.TapCuia(lift).Kind, Is.EqualTo(TapKind.Selected), "la cuia " + lift + " de la pareja, seleccionada");
+            PlayModeHelpers.Step(boot, 300);
+            Assert.That(view.Views[lift].IsLifted, Is.True);
+            float rise = view.Views[lift].Body.position.y - bodyRest.y;
+            Assert.That(rise, Is.GreaterThan(0.5f * restWorld.height), "el cuerpo de la cuia sí sube (" + rise.ToString("F3") + " en el mundo)");
+            Assert.That(lifted.PairMarkVisible, Is.True);
+            Assert.That(lifted.PairMarkRect, Is.EqualTo(rest), "la ficha se queda igual");
+            Rect liftedWorld = lifted.PairMarkWorldRect;
+            Assert.That(Vector2.Distance(liftedWorld.center, restWorld.center), Is.LessThan(1e-3f * restWorld.height), "y en su sitio en la pantalla");
+            Assert.That(liftedWorld.size.x, Is.EqualTo(restWorld.size.x).Within(1e-3f * restWorld.height));
+            Assert.That(liftedWorld.size.y, Is.EqualTo(restWorld.size.y).Within(1e-3f * restWorld.height));
+            boot.TapCuia(lift);
+            PlayModeHelpers.Step(boot, 300);
             TestContext.WriteLine("Nivel 103: pareja " + a + "-" + b + ", " + Rows(view.Animator) + " filas, " + drawer.ChannelSegmentCount + " tramos a la vista de " + RemolinoOverlay.ChannelWidthDp.ToString("0.0") + " dp.");
         }
 
@@ -142,7 +180,7 @@ namespace AF.Tests.PlayMode
             Assert.That(whirl.IsAnimating || whirl.PulseVisible, Is.False);
             Assert.That(whirl.SpiralAngle, Is.EqualTo(0f).Within(0.01f), "la espiral vuelve a su reposo");
             Assert.That(whirl.CoverCount, Is.EqualTo(whirl.DrawsChannel ? drawer.CoverCount : 0), "las franjas de la racha se van con ella");
-            AssertChannel(animator, view.Views, drawer, Mathf.Min(partner, touched), Mathf.Max(partner, touched), PanelInner(view), "nivel 103 tras recibir");
+            AssertChannel(animator, view.Views, drawer, Mathf.Min(partner, touched), Mathf.Max(partner, touched), MechanicTestKit.PanelInner(view), "nivel 103 tras recibir");
 
             // Banco: burbujas por el fondo de la pareja (como mucho 5) y, con Reducir movimiento, a × 0,5 y sin partículas.
             BoardState board = Board(
@@ -269,6 +307,7 @@ namespace AF.Tests.PlayMode
                 new[] { 2, 13, 7, 9, 5, 6, 0, 15, 4, 10 },
             };
 
+            int raised = 0;
             for (int c = 0; c < counts.Length; c++)
             {
                 for (int p = 0; p < pairs[c].Length; p += 2)
@@ -285,8 +324,10 @@ namespace AF.Tests.PlayMode
                     Assert.That(Whirl(_rig.Views[b]).ChannelVisible, Is.False, what + ": una sola vez");
 
                     // Panel con el marco más grueso (sin adelgazar): el caso con menos aire bajo la última fila.
-                    Rect inner = PanelInner(l, Art.PanelFrameDp, LayoutOffset(_rig.Animator, l, counts[c]));
+                    Rect inner = MechanicTestKit.PanelInner(l, Art.PanelFrameDp, MechanicTestKit.LayoutOffset(_rig.Animator, l, counts[c]));
                     AssertChannel(_rig.Animator, _rig.Views, drawer, a, b, inner, what);
+                    AssertPairMarks(_rig.Animator, _rig.Views, drawer, a, b, inner, what);
+                    raised += (Whirl(_rig.Views[a]).PairMarkRaised ? 1 : 0) + (Whirl(_rig.Views[b]).PairMarkRaised ? 1 : 0);
                     int vertical = VerticalPieces(drawer);
                     int crossed = Mathf.Abs(l.RowOf[a] - l.RowOf[b]);
                     Assert.That(drawer.CoverCount, Is.EqualTo(crossed), what + ": una franja de madera por cada repisa que cruza");
@@ -302,6 +343,10 @@ namespace AF.Tests.PlayMode
                     }
                 }
             }
+
+            // Con 6 por fila, la cuia de la punta (la 0 y la 5 del tablero de 16) no tiene sitio para colgar la ficha por fuera:
+            // va levantada sobre su tramo (ningún nivel de la campaña lo necesita, pero el caso queda cubierto).
+            Assert.That(raised, Is.GreaterThan(0), "alguna ficha levantada en las puntas de la fila de 6");
         }
 
         [UnityTest]
@@ -326,7 +371,8 @@ namespace AF.Tests.PlayMode
             float moved = Mathf.Max(Vector2.Distance(footA, view.Animator.Foot(a)), Vector2.Distance(footB, view.Animator.Foot(b)));
             Assert.That(moved, Is.GreaterThan(1f), "la cuia añadida mueve la pareja: si no, el canal no tendría nada que seguir");
             Assert.That(drawer.ChannelVisible, Is.True);
-            AssertChannel(view.Animator, view.Views, drawer, a, b, PanelInner(view), "tras añadir una cuia");
+            AssertChannel(view.Animator, view.Views, drawer, a, b, MechanicTestKit.PanelInner(view), "tras añadir una cuia");
+            AssertPairMarks(view.Animator, view.Views, drawer, a, b, MechanicTestKit.PanelInner(view), "tras añadir una cuia");
             TestContext.WriteLine("Pie de " + a + ": " + footA + " → " + view.Animator.Foot(a) + "; de " + b + ": " + footB + " → " + view.Animator.Foot(b) + ".");
         }
 
@@ -601,6 +647,86 @@ namespace AF.Tests.PlayMode
             }
         }
 
+        // La ficha de cada cuia de la pareja (opción C; revisión de la tanda B2, ronda 2), en el espacio de las capas de tablero
+        // (su rectángulo en dp desde el pie, más el pie): ≥ 13 dp de alto; por el lado contrario al tramo horizontal del canal
+        // de su cuia, colgada de la repisa, o levantada sobre el tramo si colgada no cabe; a ≥ 2 dp de todo el canal (pegada
+        // a un tramo, los dos se leían como una sola pieza); a ≥ 2 dp del canto interior del marco y, a lo ancho, dentro de la
+        // repisa (que empieza 6 dp dentro del marco); sin tapar ninguna cuia, ni elevada; con el ojo de la espiral libre; y la
+        // misma en las dos (tamaño y altura; el lado puede ir en espejo).
+        private static void AssertPairMarks(BoardAnimator board, CuiaView[] views, RemolinoOverlay drawer, int a, int b, Rect inner, string what)
+        {
+            for (int k = 0; k < 2; k++)
+            {
+                int c = k == 0 ? a : b;
+                RemolinoOverlay w = Whirl(views[c]);
+                string label = what + ": ficha de la cuia " + c;
+                Assert.That(w.PairMarkVisible, Is.True, label);
+                Vector2 foot = board.Foot(c);
+                Rect m = w.PairMarkRect;
+                var tag = new Rect(m.position + foot, m.size);
+                label += " " + tag;
+                Assert.That(m.height, Is.GreaterThanOrEqualTo(13f - 0.01f), label + ": ≥ 13 dp");
+                if (w.ChannelSide == 0f)
+                {
+                    // El canal baja recto de la bajada (la pareja está bajo un hueco de la fila de abajo): sin tramo a su lado,
+                    // la ficha cuelga junto a la bajada (a la derecha, si cabe); el aire con el canal se mide abajo.
+                    Assert.That(w.PairMarkRaised, Is.False, label + ": sin tramo, colgada");
+                }
+                else if (w.PairMarkRaised)
+                {
+                    Assert.That(w.PairMarkSide, Is.EqualTo(w.ChannelSide), label + ": levantada, por el lado del tramo");
+                    Assert.That(m.yMin, Is.GreaterThanOrEqualTo(-RemolinoOverlay.ShelfBottomBelowFootDp + RemolinoOverlay.PairTagChannelClearDp - 0.01f), label + ": sobre el tramo");
+                }
+                else
+                {
+                    Assert.That(w.PairMarkSide, Is.EqualTo(-w.ChannelSide), label + ": por el lado contrario al tramo horizontal");
+                    Assert.That(m.yMax, Is.EqualTo(-RemolinoOverlay.PairTagTopBelowFootDp).Within(0.01f), label + ": colgada de la repisa");
+                }
+
+                Assert.That(Mathf.Sign(m.center.x), Is.EqualTo(w.PairMarkSide), label + ": de ese lado de la bajada");
+                for (int s = 0; s < drawer.ChannelSegmentCount; s++)
+                {
+                    Rect r = drawer.ChannelSegmentRect(s);
+                    Assert.That(Gap(tag, r), Is.GreaterThanOrEqualTo(RemolinoOverlay.PairTagChannelClearDp - 0.01f), label + ": a ≥ 2 dp del tramo " + s + " " + r);
+                }
+
+                Assert.That(
+                    tag.xMin >= inner.xMin + 2f - 0.01f && tag.xMax <= inner.xMax - 2f + 0.01f && tag.yMin >= inner.yMin + 2f - 0.01f && tag.yMax <= inner.yMax - 2f + 0.01f,
+                    Is.True,
+                    label + ": a ≥ 2 dp del canto interior del marco " + inner);
+                Assert.That(tag.xMin >= inner.xMin + 6f - 0.01f && tag.xMax <= inner.xMax - 6f + 0.01f, Is.True, label + ": a lo ancho, dentro de la repisa " + inner);
+                float u = views[c].Unit;
+                var eye = new Vector2(foot.x, foot.y + (RemolinoOverlay.PoolCenterU * u));
+                var nearest = new Vector2(Mathf.Clamp(eye.x, tag.xMin, tag.xMax), Mathf.Clamp(eye.y, tag.yMin, tag.yMax));
+                Assert.That(Vector2.Distance(nearest, eye), Is.GreaterThanOrEqualTo(0.25f * u), label + ": el ojo de la espiral, libre");
+                for (int o = 0; o < views.Length; o++)
+                {
+                    Vector2 f = board.Foot(o);
+                    float uo = views[o].Unit;
+                    Rect body = Rect.MinMaxRect(f.x - uo, f.y, f.x + uo, f.y + (views[o].HeightU * uo) + CuiaView.LiftDp);
+                    Assert.That(tag.Overlaps(body), Is.False, label + ": no tapa la cuia " + o + " (elevada) " + body);
+                }
+            }
+
+            RemolinoOverlay wa = Whirl(views[a]);
+            RemolinoOverlay wb = Whirl(views[b]);
+            Assert.That(wb.PairDots, Is.EqualTo(wa.PairDots), what + ": la misma marca");
+            Assert.That(wb.PairMarkRect.size, Is.EqualTo(wa.PairMarkRect.size), what + ": del mismo tamaño");
+            if (!wa.PairMarkRaised && !wb.PairMarkRaised)
+            {
+                Assert.That(Mathf.Abs(wb.PairMarkRect.center.x), Is.EqualTo(Mathf.Abs(wa.PairMarkRect.center.x)).Within(0.01f), what + ": a la misma distancia de su bajada");
+                Assert.That(wb.PairMarkRect.center.y, Is.EqualTo(wa.PairMarkRect.center.y).Within(0.01f), what + ": a la misma altura");
+            }
+        }
+
+        // Distancia entre dos rectángulos (0 si se tocan o se solapan).
+        private static float Gap(Rect x, Rect y)
+        {
+            float dx = Mathf.Max(0f, Mathf.Max(x.xMin - y.xMax, y.xMin - x.xMax));
+            float dy = Mathf.Max(0f, Mathf.Max(x.yMin - y.yMax, y.yMin - x.yMax));
+            return Mathf.Sqrt((dx * dx) + (dy * dy));
+        }
+
         // Alguna franja de madera del canal contiene el rectángulo area.
         private static bool Covered(RemolinoOverlay drawer, Rect area)
         {
@@ -671,32 +797,6 @@ namespace AF.Tests.PlayMode
 
             rig.Animator.BoardLaidOut();
             return l;
-        }
-
-        // Rectángulo interior del panel (dentro del marco) en el espacio de las capas de tablero, desde el layout del tablero:
-        // el layout va en dp desde arriba y las capas, hacia arriba, desplazadas por offset.
-        private static Rect PanelInner(BoardLayoutResult l, float frame, Vector2 offset)
-        {
-            float xMin = l.PanelX + frame + offset.x;
-            float xMax = l.PanelX + l.PanelWidth - frame + offset.x;
-            float yMax = -(l.PanelY + frame) + offset.y;
-            float yMin = -(l.PanelY + l.PanelHeight - frame) + offset.y;
-            return Rect.MinMaxRect(xMin, yMin, xMax, yMax);
-        }
-
-        private static Rect PanelInner(GameScreen view)
-        {
-            BoardLayoutResult l = view.Layout!;
-            return PanelInner(l, view.PanelFrameDp, LayoutOffset(view.Animator, l, view.Views.Length));
-        }
-
-        // Traslación del layout (pie en (CenterX, −FootY)) a las capas de tablero, igual para la primera y la última cuia.
-        private static Vector2 LayoutOffset(BoardAnimator board, BoardLayoutResult l, int count)
-        {
-            Vector2 first = board.Foot(0) - new Vector2(l.CenterX[0], -l.FootY[0]);
-            Vector2 last = board.Foot(count - 1) - new Vector2(l.CenterX[count - 1], -l.FootY[count - 1]);
-            Assert.That(Vector2.Distance(first, last), Is.LessThan(0.5f), "el layout y las capas difieren solo en una traslación");
-            return first;
         }
 
         private static float Distance(Color x, Color y)

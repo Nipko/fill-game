@@ -32,7 +32,8 @@ namespace AF.Presentation.Mechanics
     /// <c>After</c> al caer la gota. Si la gota sella la cuia, la tapa es el paso Seal de la etapa (c′), después: aquí no se
     /// dibuja.</description></item>
     /// <item><description><see cref="MechanicStepKind.RainEnd"/> (la última gota, un único paso con la caída; misma duración):
-    /// como la gota y, mientras cae, la nube sube y se desvanece con sus puntos.</description></item>
+    /// como la gota y, desde que empieza a caer (<see cref="FallStartFraction"/>) hasta el final del paso (350 ms × factor,
+    /// ≥ 300 ms [P]), la nube sube y se desvanece con sus puntos.</description></item>
     /// <item><description><see cref="MechanicStepKind.RainWait"/> (<see cref="WaitStepMs"/>; la cuia está llena): la tormenta
     /// se carga, la gota que ya colgaba intenta caer (baja hacia la boca llena con un pulso más oscuro de la nube), no cabe y
     /// vuelve a colgar con un temblor; los puntos vuelven a <c>k − 1</c>. Si aún no colgaba, asoma primero.</description></item>
@@ -98,9 +99,18 @@ namespace AF.Presentation.Mechanics
         private const float HangSizeOfCloud = 0.42f;
         private const float DropTipAboveBottom = 0.10f;
 
-        // Fases de la gota (fracción del paso): se forma bajo la nube, cae y, al tocar la superficie, llena la dosis.
-        private const float FormEnd = 0.3f;
-        private const float FallEnd = 0.7f;
+        /// <summary>
+        /// La gota, ya formada bajo la nube, empieza a caer (fracción del paso; antes se forma). Con la última gota, la nube
+        /// empieza a subir y a desvanecerse aquí.
+        /// </summary>
+        public const float FallStartFraction = 0.3f;
+
+        /// <summary>
+        /// La gota toca la superficie (fracción del paso): después forma la dosis y salpica. La caída dura
+        /// (<see cref="FallEndFraction"/> − <see cref="FallStartFraction"/>) × <see cref="DropStepMs"/> = 200 ms × factor
+        /// (≥ 150 ms [P]).
+        /// </summary>
+        public const float FallEndFraction = 0.7f;
 
         // Fases de la espera: la gota asoma (si no colgaba), intenta caer y vuelve a colgar.
         private const float WaitGrowEnd = 0.35f;
@@ -657,25 +667,26 @@ namespace AF.Presentation.Mechanics
         private void PoseDrop(float p)
         {
             // Nube: se encoge al soltar la gota; con la última, sube y encoge a la vez sin que lo alto pase de CloudTopLimitDp
-            // (el pie de la fila de arriba o, en la fila de arriba, el marco: allí casi no sube) y se desvanece deprisa con sus
-            // puntos, que van con ella.
-            float squash = p < FormEnd ? Mathf.Sin(Mathf.PI * p / FormEnd) : 0f;
+            // (el pie de la fila de arriba o, en la fila de arriba, el marco: allí casi no sube) y se desvanece con sus puntos,
+            // que van con ella, en todo lo que queda del paso: (1 − FallStartFraction) × 500 = 350 ms × factor (≥ 300 ms [P]),
+            // con la mitad del fundido a los 175 ms.
+            float squash = p < FallStartFraction ? Mathf.Sin(Mathf.PI * p / FallStartFraction) : 0f;
             float rise = 0f;
             float shrink = 1f;
             float alpha = 1f;
-            if (_kind == MechanicStepKind.RainEnd && p > FormEnd)
+            if (_kind == MechanicStepKind.RainEnd && p > FallStartFraction)
             {
-                float q = (p - FormEnd) / (1f - FormEnd);
+                float q = (p - FallStartFraction) / (1f - FallStartFraction);
                 float e = Ease.InOut(q);
                 shrink = 1f - (EndShrink * e);
                 float room = (_topLimitDp / _u) - (CloudGapU + (0.5f * _cloudH) + (0.5f * _cloudH * shrink));
                 rise = Mathf.Min(RiseU * e, Mathf.Max(0f, room));
-                alpha = 1f - Ease.Out(q);
+                alpha = 1f - Ease.InOutSine(q);
                 LayoutPips(rise, shrink);
             }
 
             PlaceCloud(rise, (1f + (0.05f * squash)) * shrink, (1f - (0.08f * squash)) * shrink);
-            float dark = Mathf.Lerp(_startDark, 0f, Mathf.Clamp01(p / FormEnd)); // con hueco, la tormenta se aclara
+            float dark = Mathf.Lerp(_startDark, 0f, Mathf.Clamp01(p / FallStartFraction)); // con hueco, la tormenta se aclara
             ShadeCloud(dark, alpha);
             PaintCloudPips(alpha);
             SetRowAlpha(alpha);
@@ -683,14 +694,14 @@ namespace AF.Presentation.Mechanics
 
             // Gota: se forma bajo la panza, cae con gravedad y, al tocar la superficie, llena la dosis y salpica.
             float surfaceU = CuiaGeometry.CavityBottomU + Mathf.Max(0, _dose);
-            if (p < FormEnd)
+            if (p < FallStartFraction)
             {
-                float grow = 0.55f + (0.45f * Ease.Out(p / FormEnd));
+                float grow = 0.55f + (0.45f * Ease.Out(p / FallStartFraction));
                 PlaceFall(_dropY, grow, 1f, 1f);
             }
-            else if (p < FallEnd)
+            else if (p < FallEndFraction)
             {
-                float q = (p - FormEnd) / (FallEnd - FormEnd);
+                float q = (p - FallStartFraction) / (FallEndFraction - FallStartFraction);
                 float y = Mathf.Lerp(_dropY, surfaceU + (0.5f * FallDropU), q * q);
                 PlaceFall(y, 1f, 1f + (0.25f * q), 1f);
             }
@@ -707,7 +718,7 @@ namespace AF.Presentation.Mechanics
                     }
                 }
 
-                float fill = Ease.Out((p - FallEnd) / (1f - FallEnd));
+                float fill = Ease.Out((p - FallEndFraction) / (1f - FallEndFraction));
                 if (_board != null && _dose >= 0 && _dose < Host.Capacity)
                 {
                     _board.SetDose(_index, _dose, _color, fill, _tint);

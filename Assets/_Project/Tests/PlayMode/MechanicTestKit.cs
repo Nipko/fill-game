@@ -250,6 +250,34 @@ namespace AF.Tests.PlayMode
             return sb.ToString();
         }
 
+        // Rectángulo interior del panel (dentro del marco) en el espacio de las capas de tablero, desde el layout del tablero:
+        // el layout va en dp desde arriba y las capas, hacia arriba, desplazadas por offset.
+        public static Rect PanelInner(BoardLayoutResult l, float frame, Vector2 offset)
+        {
+            float xMin = l.PanelX + frame + offset.x;
+            float xMax = l.PanelX + l.PanelWidth - frame + offset.x;
+            float yMax = -(l.PanelY + frame) + offset.y;
+            float yMin = -(l.PanelY + l.PanelHeight - frame) + offset.y;
+            return Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+        }
+
+        // Rectángulo interior del panel de la pantalla de juego (con el marco tal como se dibuja), en el espacio de las capas de
+        // tablero.
+        public static Rect PanelInner(GameScreen view)
+        {
+            BoardLayoutResult l = view.Layout!;
+            return PanelInner(l, view.PanelFrameDp, LayoutOffset(view.Animator, l, view.Views.Length));
+        }
+
+        // Traslación del layout (pie en (CenterX, −FootY)) a las capas de tablero, igual para la primera y la última cuia.
+        public static Vector2 LayoutOffset(BoardAnimator board, BoardLayoutResult l, int count)
+        {
+            Vector2 first = board.Foot(0) - new Vector2(l.CenterX[0], -l.FootY[0]);
+            Vector2 last = board.Foot(count - 1) - new Vector2(l.CenterX[count - 1], -l.FootY[count - 1]);
+            Assert.That(Vector2.Distance(first, last), Is.LessThan(0.5f), "el layout y las capas difieren solo en una traslación");
+            return first;
+        }
+
         /// <summary>Con la vista quieta, cada cuia muestra el modelo (contenido, tapa y nivel de líquido).</summary>
         public static void AssertViewMatchesModel(GameBootstrap boot)
         {
@@ -356,6 +384,196 @@ namespace AF.Tests.PlayMode
             return count;
         }
 
+        /// <summary>
+        /// Criterio de conjunto de los estrenos de la ola 3 (prueba del 2026-10-09): en todo el registro de pasos de
+        /// <paramref name="animator"/>, salvo los terminados antes de tiempo (<c>Snapped</c>),
+        /// <list type="bullet">
+        /// <item><description>ningún Open, Release, Receive, RainDrop, RainEnd, Bite ni MudWash usa el paso por defecto de la
+        /// cola ni dura 0 ms;</description></item>
+        /// <item><description>cada paso dura su nominal (<see cref="NominalStepMs"/>, la constante de quien lo anima) × su factor
+        /// de velocidad;</description></item>
+        /// <item><description>y esa nominal cae en el rango que fijan los documentos (<see cref="NominalRangeOf"/>, propuesta de
+        /// D-007 b.2, 02 §4.1 y los [P] de la ola 3), escrito con sus números y no con las constantes: un cambio de constante
+        /// fuera de rango hace fallar la prueba aunque el overlay anime lo que dice su constante.</description></item>
+        /// </list>
+        /// Devuelve cuántos pasos de la primera lista comprobó.
+        /// </summary>
+        public static int AssertOwnTimedSteps(BoardAnimator animator, string what)
+        {
+            MechanicStepQueue steps = animator.Steps;
+            int strict = 0;
+            for (int i = 0; i < steps.LogCount; i++)
+            {
+                MechanicStepRecord r = steps.LogAt(i);
+                if (r.Snapped)
+                {
+                    continue;
+                }
+
+                string label = what + ": " + r + ". " + Describe(animator);
+                float ms = r.EndMs - r.StartMs;
+                switch (r.Kind)
+                {
+                    case MechanicStepKind.Open:
+                    case MechanicStepKind.Release:
+                    case MechanicStepKind.Receive:
+                    case MechanicStepKind.RainDrop:
+                    case MechanicStepKind.RainEnd:
+                    case MechanicStepKind.Bite:
+                    case MechanicStepKind.MudWash:
+                        strict++;
+                        Assert.That(r.UsedDefault, Is.False, label + ": lo anima su overlay o sus marcas, no el paso por defecto");
+                        Assert.That(ms, Is.GreaterThan(0f), label + ": dura más de 0 ms");
+                        break;
+                }
+
+                float nominal = NominalStepMs(r);
+                Assert.That(nominal, Is.GreaterThan(0f), label + ": paso con duración nominal conocida");
+                Assert.That(ms, Is.EqualTo(nominal * r.SpeedFactor).Within(0.5f), label + ": " + nominal + " ms × factor " + r.SpeedFactor.ToString("0.###"));
+                AssertNominalInRange(r, nominal, label);
+            }
+
+            return strict;
+        }
+
+        /// <summary>
+        /// Tope (ms) de un vertido, del toque a la vista quieta, según la hoja de la ola 3 («ningún vertido &gt; 2.800 ms»):
+        /// ningún paso puede durar más por sí solo. Va escrito aquí, no leído de la cola, para no comparar la cola consigo misma.
+        /// </summary>
+        public const float PourCapMs = 2800f;
+
+        /// <summary>
+        /// Holgura de «≈ x ms» en los rangos de <see cref="NominalRangeOf"/>: x ± 20 %, la que b.2 da a sus rangos explícitos
+        /// (Hoja 400-600 = 500 ± 20 %; Liana 600-900 = 750 ± 20 %). Es una tolerancia de la prueba, no una regla del juego.
+        /// </summary>
+        public const float AboutTolerance = 0.2f;
+
+        /// <summary>
+        /// Rango documentado de la duración nominal (ms, sin factor) del paso registrado <paramref name="r"/>, con los números de
+        /// las fuentes y no con las constantes de los overlays:
+        /// <list type="bullet">
+        /// <item><description>Reveal (turbias): &gt; 300 y &lt; 1.500 (b.2 y hoja de la ola 3);</description></item>
+        /// <item><description>MudWash (Barro): ≈ 400 (b.2 M5);</description></item>
+        /// <item><description>Receive del Remolino: ≈ 500 (b.2 M4);</description></item>
+        /// <item><description>Open de la Hoja: 400-600 (b.2 M1); del Brote: ≥ 350 (hoja de la ola 3; 02 §4.1: 350) y como
+        /// mucho los 1.500 de los desbloqueos de la propuesta (§g, sobre 02 §4.1: «la propuesta usa 400-1.500 ms»);</description></item>
+        /// <item><description>Seal del Matapi: ≈ 800 (b.2 M10); el sellado por defecto: 450 (02 §4.1, «450 ms total»);</description></item>
+        /// <item><description>Release de la Liana: 600-900 (b.2 M3);</description></item>
+        /// <item><description>RainDrop y RainEnd de la Lluvia: ≈ 500 [P] (arquitectura del paso 1: «gota de Lluvia 500 ms»), que
+        /// también deja la gota más larga que un llenado (280 ms de 08 §9);</description></item>
+        /// <item><description>Bite de la Piraña: ≈ 500 (b.2 M7); BiteLost: ≈ 400 [P] (hoja de la ola 3).</description></item>
+        /// </list>
+        /// «≈ x» es x ± <see cref="AboutTolerance"/>. RainWait (400 ms [P] de LluviaOverlay) no tiene número en ningún documento:
+        /// devuelve un rango sin fuente (<see cref="NominalRange.Documented"/> = false) y solo cumple <see cref="PourCapMs"/>.
+        /// </summary>
+        public static NominalRange NominalRangeOf(MechanicStepRecord r)
+        {
+            switch (r.Kind)
+            {
+                case MechanicStepKind.Reveal:
+                    return new NominalRange(300f, true, 1500f, true, "turbias: > 300 ms y < 1.500 ms (b.2; hoja de la ola 3)");
+                case MechanicStepKind.MudWash:
+                    return NominalRange.About(400f, "Barro (b.2 M5)");
+                case MechanicStepKind.Receive:
+                    return r.Owner == MechanicType.Remolino ? NominalRange.About(500f, "Remolino (b.2 M4)") : default;
+                case MechanicStepKind.Open:
+                    if (r.Owner == MechanicType.Hoja)
+                    {
+                        return new NominalRange(400f, false, 600f, false, "Hoja: 400-600 ms (b.2 M1)");
+                    }
+
+                    return r.Owner == MechanicType.Brote
+                        ? new NominalRange(350f, false, 1500f, false, "Brote: ≥ 350 ms (hoja de la ola 3; 02 §4.1) y ≤ 1.500 ms (desbloqueos de la propuesta, §g)")
+                        : default;
+                case MechanicStepKind.Seal:
+                    if (r.Owner == MechanicType.Matapi)
+                    {
+                        return NominalRange.About(800f, "Matapi (b.2 M10)");
+                    }
+
+                    return r.UsedDefault ? new NominalRange(450f, false, 450f, false, "sellado: 450 ms en total (02 §4.1)") : default;
+                case MechanicStepKind.Release:
+                    return r.Owner == MechanicType.Liana ? new NominalRange(600f, false, 900f, false, "Liana: 600-900 ms (b.2 M3)") : default;
+                case MechanicStepKind.RainDrop:
+                case MechanicStepKind.RainEnd:
+                    return r.Owner == MechanicType.Lluvia ? NominalRange.About(500f, "gota de Lluvia, 500 ms [P] (arquitectura del paso 1)") : default;
+                case MechanicStepKind.Bite:
+                    return r.Owner == MechanicType.Pirana ? NominalRange.About(500f, "Piraña (b.2 M7)") : default;
+                case MechanicStepKind.BiteLost:
+                    return r.Owner == MechanicType.Pirana ? NominalRange.About(400f, "mordisco perdido, 400 ms [P] (hoja de la ola 3)") : default;
+                default:
+                    return default;
+            }
+        }
+
+        /// <summary>
+        /// La duración nominal <paramref name="nominal"/> del paso <paramref name="r"/> cae en su rango documentado
+        /// (<see cref="NominalRangeOf"/>, si lo tiene) y, en todo caso, por debajo de <see cref="PourCapMs"/>.
+        /// </summary>
+        public static void AssertNominalInRange(MechanicStepRecord r, float nominal, string label)
+        {
+            Assert.That(nominal, Is.LessThan(PourCapMs), label + ": un paso dura menos que el vertido entero (2.800 ms)");
+            NominalRange range = NominalRangeOf(r);
+            if (!range.Documented)
+            {
+                return;
+            }
+
+            string what = label + ": " + nominal + " ms en " + range;
+            if (range.MinOpen)
+            {
+                Assert.That(nominal, Is.GreaterThan(range.Min), what);
+            }
+            else
+            {
+                Assert.That(nominal, Is.GreaterThanOrEqualTo(range.Min), what);
+            }
+
+            if (range.MaxOpen)
+            {
+                Assert.That(nominal, Is.LessThan(range.Max), what);
+            }
+            else
+            {
+                Assert.That(nominal, Is.LessThanOrEqualTo(range.Max), what);
+            }
+        }
+
+        /// <summary>
+        /// Duración nominal (ms, sin factor) del paso registrado <paramref name="r"/> según quién lo animó: la del overlay de su
+        /// mecánica, la de las marcas (revelado y lavado del barro) o, en el sellado sin overlay, la tapa por defecto; −1 si no
+        /// tiene una propia.
+        /// </summary>
+        public static float NominalStepMs(MechanicStepRecord r)
+        {
+            switch (r.Kind)
+            {
+                case MechanicStepKind.Reveal:
+                    return MurkyMarks.RevealRuleMs;
+                case MechanicStepKind.MudWash:
+                    return MudMarks.WashMs;
+                case MechanicStepKind.Receive:
+                    return r.Owner == MechanicType.Remolino ? RemolinoOverlay.ReceiveMs : -1f;
+                case MechanicStepKind.Open:
+                    return r.Owner == MechanicType.Hoja ? HojaOverlay.OpenStepMs : r.Owner == MechanicType.Brote ? BroteOverlay.OpenStepMs : -1f;
+                case MechanicStepKind.Seal:
+                    return r.Owner == MechanicType.Matapi ? MatapiOverlay.SealMs : r.UsedDefault ? CuiaView.SealMs : -1f;
+                case MechanicStepKind.Release:
+                    return r.Owner == MechanicType.Liana ? LianaOverlay.ReleaseMs : -1f;
+                case MechanicStepKind.RainDrop:
+                case MechanicStepKind.RainEnd:
+                    return r.Owner == MechanicType.Lluvia ? LluviaOverlay.DropStepMs : -1f;
+                case MechanicStepKind.RainWait:
+                    return r.Owner == MechanicType.Lluvia ? LluviaOverlay.WaitStepMs : -1f;
+                case MechanicStepKind.Bite:
+                    return r.Owner == MechanicType.Pirana ? PiranaOverlay.BiteStepMs : -1f;
+                case MechanicStepKind.BiteLost:
+                    return r.Owner == MechanicType.Pirana ? PiranaOverlay.BiteLostStepMs : -1f;
+                default:
+                    return -1f;
+            }
+        }
+
         private static bool TryOneMore(BoardState state, PourMode mode, PourWanted wanted, out Pour hit)
         {
             for (int a = 0; a < state.Count; a++)
@@ -421,6 +639,55 @@ namespace AF.Tests.PlayMode
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Rango de una duración nominal (ms) con su fuente (<see cref="NominalRangeOf"/>); cada extremo, abierto o cerrado.
+        /// El valor por defecto no tiene fuente (<see cref="Documented"/> = false).
+        /// </summary>
+        public readonly struct NominalRange
+        {
+            /// <summary>Crea el rango de <paramref name="min"/> a <paramref name="max"/> con su fuente.</summary>
+            public NominalRange(float min, bool minOpen, float max, bool maxOpen, string source)
+            {
+                Min = min;
+                MinOpen = minOpen;
+                Max = max;
+                MaxOpen = maxOpen;
+                Source = source;
+            }
+
+            /// <summary>Extremo inferior (ms).</summary>
+            public float Min { get; }
+
+            /// <summary>El extremo inferior queda fuera (&gt; en vez de ≥).</summary>
+            public bool MinOpen { get; }
+
+            /// <summary>Extremo superior (ms).</summary>
+            public float Max { get; }
+
+            /// <summary>El extremo superior queda fuera (&lt; en vez de ≤).</summary>
+            public bool MaxOpen { get; }
+
+            /// <summary>De dónde sale el rango; null si ningún documento lo fija.</summary>
+            public string? Source { get; }
+
+            /// <summary>Algún documento fija el rango.</summary>
+            public bool Documented => Source != null;
+
+            /// <summary>«≈ <paramref name="ms"/> ms»: <paramref name="ms"/> ± <see cref="AboutTolerance"/>, extremos incluidos.</summary>
+            public static NominalRange About(float ms, string source)
+            {
+                return new NominalRange(ms * (1f - AboutTolerance), false, ms * (1f + AboutTolerance), false, "≈ " + ms + " ms ± " + (AboutTolerance * 100f).ToString("0") + " %, " + source);
+            }
+
+            /// <summary>El rango en una línea (mensajes de error).</summary>
+            public override string ToString()
+            {
+                return Documented
+                    ? (MinOpen ? "(" : "[") + Min.ToString("0.#") + ", " + Max.ToString("0.#") + (MaxOpen ? ")" : "]") + " ms: " + Source
+                    : "sin rango documentado (solo el tope de 2.800 ms)";
+            }
         }
 
         /// <summary>
