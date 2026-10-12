@@ -9,7 +9,9 @@ namespace AF.GameFlow
     /// etiqueta, <c>eco_reward_*</c>) se acredita con <see cref="Transaction.Win"/> en el instante lógico de la victoria, con el
     /// progreso, para que cerrar la app durante la celebración no la pierda (02 §14: «sin pérdida de recompensa»); desde el 11
     /// (<c>ads_rv_double_harvest_from_level</c>), la Cosecha doble por video (<c>rv_double_harvest</c>; 04 §2.8); y
-    /// «Siguiente» → AD_GATE (<see cref="IAdGate"/>, sin auto-avance) → N + 1. Sin el calificativo «¡Perfecto!» (pregunta
+    /// «Siguiente» → AD_GATE (<see cref="IAdGate"/>) → N + 1. Sin auto-avance por tiempo (<c>victory_autonext_s</c> = 0); tras
+    /// cobrar la Cosecha doble, la vista avanza sola por el mismo camino que «Siguiente» (D-011, punto 4), y AD_GATE no enseña
+    /// el intersticial porque <c>AdPolicy</c> lo bloquea tras un recompensado. Sin el calificativo «¡Perfecto!» (pregunta
     /// 10.2 #25 abierta).
     /// </summary>
     public sealed partial class LevelFlow

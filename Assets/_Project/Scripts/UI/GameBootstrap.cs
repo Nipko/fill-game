@@ -289,16 +289,21 @@ namespace AF.UI
             return true;
         }
 
-        /// <summary>«+1 cuia» de la bandeja (04 §2.2): del stock o por 150 semillas.</summary>
+        /// <summary>
+        /// «+1 cuia» de la bandeja (04 §2.2): del stock o por 150 semillas. Solo con el tablero en juego (la oferta solo está
+        /// lista con <see cref="LevelFlow.AcceptsBoardInput"/>): con la victoria o el bloqueo pendiente, la bandeja sigue
+        /// habilitada (D-011, punto 1), pero el toque no hace nada, tampoco terminar antes de tiempo el revelado en marcha.
+        /// </summary>
         public bool PressExtraCuia()
         {
             LevelFlow? flow = InLevel ? _flow : null;
-            if (flow != null)
+            if (flow == null || !flow.AcceptsBoardInput)
             {
-                _screen?.SettleReveal();
+                return false;
             }
 
-            TransactionResult? result = flow?.UseExtraCuia();
+            _screen?.SettleReveal();
+            TransactionResult? result = flow.UseExtraCuia();
             LogFunnelError(flow, result, "Cuia extra");
             return result != null && result.IsApplied;
         }
@@ -326,12 +331,15 @@ namespace AF.UI
                     return flow.CancelRevealSelection();
                 }
 
-                _screen?.SettleReveal();
+                // Solo donde la Luciérnaga se puede usar: fuera de ahí (con la victoria o el bloqueo pendiente, D-011 punto 1; o
+                // con la ranura gris mientras la luciérnaga sale de ella) el toque no hace nada, tampoco terminar antes de tiempo
+                // el revelado en marcha.
                 if (!flow.RevealAvailable)
                 {
                     return false;
                 }
 
+                _screen?.SettleReveal();
                 if (flow.RevealStock > 0)
                 {
                     return flow.BeginRevealSelection(RevealPayment.Stock);
@@ -389,12 +397,17 @@ namespace AF.UI
             return true;
         }
 
-        /// <summary>«+3 Deshacer · Ver video» (<c>rv_undo_refill</c>): al terminar el anuncio, +3 Mareas al stock.</summary>
+        /// <summary>
+        /// «+3 Deshacer · Ver video» (<c>rv_undo_refill</c>): al terminar el anuncio, +3 Mareas al stock. Solo donde Marea se puede
+        /// usar, como la recarga con semillas: en PLAYING sin victoria ni bloqueo pendiente, o en Aguas estancadas (D-011, punto 1:
+        /// con la victoria pendiente la bandeja sigue habilitada, pero el video no se abre).
+        /// </summary>
         public bool PressUndoRefillVideo()
         {
             LevelFlow? flow = _flow;
             AdController? ads = _ads;
-            if (flow == null || ads == null || !InLevel || !ads.CheckRewarded(AdPlacement.UndoRefill).IsAllowed)
+            if (flow == null || ads == null || !InLevel || !(flow.AcceptsBoardInput || flow.Phase == FlowPhase.StuckModal)
+                || !ads.CheckRewarded(AdPlacement.UndoRefill).IsAllowed)
             {
                 return false;
             }
@@ -756,6 +769,13 @@ namespace AF.UI
             int whole = (int)_msCarry;
             _msCarry -= whole;
             _flow.Tick(whole, _screen.IsViewIdle);
+
+            // D-011, punto 4: la victoria pasa sola tras la Cosecha doble por el camino de Siguiente, después del Tick del flujo
+            // y no dentro del de la vista: N + 1 se carga entre dos fotogramas, como con un toque en Siguiente.
+            if (_screen.TakeAutoNext())
+            {
+                PressNext();
+            }
         }
 
         private void OnApplicationPause(bool paused)

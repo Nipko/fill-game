@@ -21,10 +21,10 @@ namespace AF.UI
     /// <para>Eventos de <c>AF_STATE</c>: <c>load</c>, <c>ready</c>, <c>pour</c>, <c>reject</c>, <c>undo</c>, <c>restart</c>,
     /// <c>win</c> y <c>stuck</c> (contrato) más <c>select</c> y <c>deselect</c> (ayuda para seguir los toques). Del embudo de
     /// D-008 y los comodines, los de <see cref="Funnel"/> (y <c>resume</c> al reabrir el nivel guardado, B2-5). De la
-    /// victoria y los anuncios simulados (B2-4): <c>victory</c>, <c>double_harvest</c> y <c>ad_gate</c>
-    /// (<see cref="Victory"/>), <c>ad_check</c> (<see cref="AdCheck"/>), <c>ad</c> y <c>ad_closed</c> (<see cref="Ad"/>) y
-    /// <c>purchase_sim</c> (<see cref="Purchase"/>). Fuera del nivel (tarea B1-6, <see cref="App"/>): <c>lobby</c>,
-    /// <c>content_end</c> y <c>no_canoes</c>. Todas las del embudo, la victoria, los anuncios, las compras y el inicio llevan
+    /// victoria y los anuncios simulados (B2-4): <c>victory</c>, <c>double_harvest</c>, <c>auto_next</c> (avance tras la
+    /// Cosecha doble, D-011 punto 4) y <c>ad_gate</c> (<see cref="Victory"/>), <c>ad_check</c> (<see cref="AdCheck"/>),
+    /// <c>ad</c> y <c>ad_closed</c> (<see cref="Ad"/>) y <c>purchase_sim</c> (<see cref="Purchase"/>). Fuera del nivel
+    /// (tarea B1-6, <see cref="App"/>): <c>lobby</c>, <c>content_end</c> y <c>no_canoes</c>. Todas las del embudo, la victoria, los anuncios, las compras y el inicio llevan
     /// semillas y canoas (B2-6). <c>AF_LAYOUT</c> de esas pantallas con los botones <c>play</c>, <c>canoes</c>,
     /// <c>settings</c>, <c>back</c>, <c>double_harvest</c>, <c>next</c> y <c>home</c>.</para>
     /// <para>Cada línea lleva <c>"pour_mode"</c> (run por defecto, D-005; single en pruebas), el modo de la sesión del
@@ -482,8 +482,10 @@ namespace AF.UI
 
         /// <summary>
         /// Línea <c>AF_STATE</c> de la victoria (D-008 punto 3; 02 §6; tarea B2-4): <c>victory</c> (pantalla de victoria),
-        /// <c>double_harvest</c> (Cosecha doble cobrada) y <c>ad_gate</c> (se tocó «Siguiente»), con la Cosecha, si se dobló,
-        /// si se ofrece la Cosecha doble y el saldo (semillas y canoas).
+        /// <c>double_harvest</c> (Cosecha doble cobrada), <c>auto_next</c> (la espera tras la Cosecha doble venció y la victoria
+        /// pasa sola al nivel siguiente, D-011 punto 4; le sigue <c>ad_gate</c>) y <c>ad_gate</c> (Siguiente, tocado o por el
+        /// avance tras la Cosecha doble), con la Cosecha, si se dobló, si se ofrece la Cosecha doble y el saldo (semillas y
+        /// canoas).
         /// </summary>
         public void Victory(string evt, LevelFlow flow, bool doubleOffered)
         {

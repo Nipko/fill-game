@@ -65,6 +65,7 @@ namespace AF.UI
         private Action? _onReveal;
         private int _key = int.MinValue;
         private int _revealKey = int.MinValue;
+        private int _refreshRepaints;
         private float _canvasW = 360f;
         private float _trayTop;
         private int _slots = 1;
@@ -169,11 +170,25 @@ namespace AF.UI
         /// <summary>Marea ofrece el video (<c>rv_undo_refill</c>): «+3» con el icono de video.</summary>
         public bool UndoShowsVideo => _undo.VideoShown;
 
+        /// <summary>Precio que muestra Marea sin cupo ni video (0 si no lo muestra; tests).</summary>
+        public int UndoPriceShown => _undo.PriceShown;
+
+        /// <summary>Texto del aviso «Te faltan {n}» de Marea (vacío si no se ve; tests).</summary>
+        public string UndoMissingText => _undo.MissingText;
+
         /// <summary>
         /// Ms que faltan para volver a preguntar por el video de Marea (0 con cupo, o si la próxima <see cref="Refresh"/> pregunta;
         /// tests).
         /// </summary>
         public float UndoVideoPollLeftMs => _undoVideoPollMs;
+
+        /// <summary>
+        /// Veces que <see cref="Refresh"/> repintó la bandeja porque cambió su clave (tests): oculta en la pantalla de victoria,
+        /// no sube mientras la Cosecha cuenta (08 §5.4). Allí no se puede medir con <c>Is.Not.AllocatingGCMemory</c>: en el
+        /// Editor, <c>TMP_Text.SetCharArray</c> crea una cadena en cada llamada (solo en el Editor), y el saldo de arriba y la
+        /// fila de la Cosecha cuentan con ella.
+        /// </summary>
+        internal int RefreshRepaints => _refreshRepaints;
 
         /// <summary>Texto del aviso «Te faltan {n}» de Revelar (tests de tamaño y desbordes).</summary>
         public TextMeshProUGUI RevealMissingLabel => _reveal.MissingLabel;
@@ -359,11 +374,23 @@ namespace AF.UI
             LayoutMissing();
         }
 
-        /// <summary>Refresca badges, precios y habilitado si el estado cambió.</summary>
-        public void Refresh()
+        /// <summary>
+        /// Refresca badges, precios y habilitado si el estado cambió. Con la victoria pendiente
+        /// (<see cref="LevelFlow.IsResolvingWin"/>: termina el último vertido) no repinta nada y se queda como estaba (D-011,
+        /// punto 1: nada se da por ganado antes de verse); sus toques no hacen nada (R15: el flujo no acepta input, y
+        /// <c>GameScreen.OnTrayUndo</c>, <c>GameBootstrap.PressExtraCuia</c> y <c>GameBootstrap.PressReveal</c> no actúan ni
+        /// terminan antes de tiempo el revelado en marcha). Al empezar la celebración, el estado ya no es el último pintado y se
+        /// apaga. Los precios y los avisos «Te faltan {n}» se calculan con el saldo que enseña el de arriba
+        /// (<see cref="WalletBar.Refresh"/>): las semillas menos <paramref name="seedsPending"/>, la Cosecha que aún no se ve
+        /// (durante la celebración, entera; D-011, punto 1). Lo pendiente entra en la clave de repintado: quien llama no debe
+        /// pasar un valor que cambie en cada fotograma (la cuenta de la Cosecha en la pantalla de victoria, con la bandeja
+        /// oculta), o la bandeja se repintaría en cada uno (08 §5.4; <c>GameScreen.RefreshHud</c> solo lo pasa en la
+        /// celebración).
+        /// </summary>
+        public void Refresh(int seedsPending = 0)
         {
             LevelFlow? flow = _flow;
-            if (flow == null || !flow.HasLevel)
+            if (flow == null || !flow.HasLevel || flow.IsResolvingWin)
             {
                 return;
             }
@@ -371,7 +398,7 @@ namespace AF.UI
             UndoStatus undo = flow.UndoStatus;
             ExtraCuiaOffer extra = flow.ExtraCuia;
             bool video = UndoVideo(undo);
-            int seeds = _services?.Wallet.Seeds ?? 0;
+            int seeds = Math.Max(0, (_services?.Wallet.Seeds ?? 0) - Math.Max(0, seedsPending));
             bool undoEnabled = undo.HasQuota ? flow.CanUndo : flow.AcceptsBoardInput;
             int key = Hash(undo.Unlimited ? 1 : 0, undo.FreeLeft, undo.Stock, video ? 1 : 0, undoEnabled ? 1 : 0, (int)extra.State, extra.Stock, extra.Missing, seeds);
             if (key == _key)
@@ -380,6 +407,7 @@ namespace AF.UI
             }
 
             _key = key;
+            _refreshRepaints++;
             bool showExtra = extra.State != ExtraCuiaState.Hidden;
             if (showExtra != _extra.Active)
             {

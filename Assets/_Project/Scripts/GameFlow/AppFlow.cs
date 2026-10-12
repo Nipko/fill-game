@@ -199,8 +199,10 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// Siguiente en la pantalla de victoria (sin auto-avance, 02 §6): AD_GATE (el intersticial, si toca: 05 §6.3) y después
-        /// N + 1, o la pantalla que lo impida. Sin anuncio que mostrar, el nivel siguiente se carga en esta misma llamada.
+        /// Siguiente en la pantalla de victoria (sin auto-avance por tiempo, 02 §6; tras la Cosecha doble lo llama también la
+        /// vista, D-011 punto 4): AD_GATE (el intersticial, si toca: 05 §6.3) y después N + 1, o la pantalla que lo impida. Sin
+        /// anuncio que mostrar, el nivel siguiente se carga en esta misma llamada. Fuera de VICTORY_SCREEN (una segunda llamada,
+        /// ya en AD_GATE) devuelve false y no hace nada.
         /// </summary>
         public bool PressNext()
         {

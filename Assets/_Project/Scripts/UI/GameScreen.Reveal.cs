@@ -429,13 +429,27 @@ namespace AF.UI
         // consulta sin stock ni saldo, que es cuando el botón lo pone, y en cada fotograma como mucho cada RevealVideoPollMs
         // (pollNow: en los avisos del flujo, en el acto). Sin ocultas, la ranura solo espera a que la luciérnaga salga de ella y
         // se vaya: gris y sin precio (revisión de la captura 67a, que enseñaba «120» en rojo). Y cuando no se puede usar ni se
-        // está eligiendo (fuera de PLAYING: intro, tarjeta previa, al resolver), igual que la Cuia extra: gris, con su stock si
-        // lo hay y, si no, sin precio ni «Te faltan {n}» (antes enseñaba el «120» en rojo y saltaba a «+1» con video al llegar a
-        // PLAYING; revisión de T14). Los dos casos son bare, que SetRevealBadge dibuja gris y sin insignia, precio ni aviso.
+        // está eligiendo (fuera de PLAYING: intro, tarjeta previa; o con el bloqueo pendiente), igual que la Cuia extra: gris,
+        // con su stock si lo hay y, si no, sin precio ni «Te faltan {n}» (antes enseñaba el «120» en rojo y saltaba a «+1» con
+        // video al llegar a PLAYING; revisión de T14). Los dos casos son bare, que SetRevealBadge dibuja gris y sin insignia,
+        // precio ni aviso. Con la victoria pendiente no repinta nada (D-011, punto 1): sin ocultas, la ranura ya no está o ya se
+        // pintó bare (ver el cuerpo).
         private void RefreshRevealBadge(LevelFlow flow, bool pollNow)
         {
             if (!_tray.RevealShown)
             {
+                return;
+            }
+
+            if (flow.IsResolvingWin)
+            {
+                // D-011, punto 1: con la victoria pendiente la ranura no se repinta, como el resto de la bandeja
+                // (BoosterTray.Refresh). No queda nada que soltar: el modo de selección ya se cerró y la ranura ya se repintó en
+                // OnRevealSelection(false) antes de que la victoria quedara pendiente (LevelFlow.BeginPending cierra la selección
+                // antes de fijar _pending; TapRevealTarget la cierra antes de EvaluateStatus), así que la cara de Revelar ya no
+                // está pulsada. Y ganar implica que no quedan ocultas (R12: toda cuia vacía o sellada; R5: una cuia con ocultas
+                // no sella): la ranura ya se fue o solo sigue mientras vuela la luciérnaga, y entonces es bare (gris, sin precio).
+                // Se va al empezar la celebración, cuando el revelado termina en el acto (TickReveal).
                 return;
             }
 

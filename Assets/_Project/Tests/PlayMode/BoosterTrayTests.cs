@@ -24,7 +24,11 @@ namespace AF.Tests.PlayMode
     /// el cupo de Marea en el badge, y sin cupo la pregunta por el video como mucho cada 500 ms, sin asignaciones entre dos
     /// preguntas. Con la Luciérnaga (T14; 04 §2.5): 1, 2 y 3 ranuras de 64 dp con Revelar la última, recentradas, y los avisos
     /// «Te faltan {n}» de dos ranuras vecinas sin solaparse, a 12 sp (02 §12) y, si la cifra no cabe en una línea, en dos sobre
-    /// su ranura, dentro del hueco entre el tablero y la bandeja.
+    /// su ranura, dentro del hueco entre el tablero y la bandeja. Con la victoria pendiente (D-011, punto 1), la bandeja se
+    /// queda como estaba y sus toques no hacen nada (tampoco cortan el revelado en marcha); se apaga al empezar la
+    /// celebración, con sus avisos calculados con el saldo de arriba (sin la Cosecha que aún no se ve), y la ranura de
+    /// Revelar, sin ocultas, se va. En la pantalla de victoria, oculta, no se repinta mientras la Cosecha cuenta (sin
+    /// asignaciones, 08 §5.4).
     /// </summary>
     public sealed class BoosterTrayTests
     {
@@ -174,6 +178,392 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator WhileTheVictoryResolves_TheTrayStaysAsItWas_AndGoesGreyInTheCelebration()
+        {
+            // D-011, punto 1: con el último vertido la bandeja no da la victoria por hecha. Nivel 11 (tablero 1 con
+            // af_level_offset = 10) con 100 semillas: Marea sin cupo ni stock ofrece «+3» con video (rv_undo_refill) y la Cuia
+            // extra, el precio en rojo con «Te faltan 50». Mientras termina el último vertido (victoria pendiente), todo sigue
+            // igual que antes del toque, y un toque en Marea o en la Cuia extra no hace nada: ni deshace, ni abre el video, ni
+            // cobra (R15). En el primer fotograma de la celebración, la bandeja se apaga (y sigue a la vista).
+            LaunchOptions.LevelOffsetOverride = 10;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(100));
+            yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            GameScreen view = boot.View!;
+            BoosterTray tray = view.Tray;
+            LevelFlow flow = boot.Flow!;
+            for (int i = 0; i < 3; i++)
+            {
+                boot.TapCuia(0);
+                boot.TapCuia(2);
+                PlayModeHelpers.StepUntilIdle(boot, 3000);
+                Assert.That(boot.PressUndo(), Is.True);
+                PlayModeHelpers.StepUntilIdle(boot, 3000);
+            }
+
+            Assert.That(flow.UndoStatus.HasQuota, Is.False, "sin cupo ni stock");
+            AF.Core.Rules.Pour last = VictorySetup.PlayAllButTheLastPour(boot);
+            PlayModeHelpers.Step(boot, 50);
+
+            // Antes del último toque.
+            Assert.That(tray.UndoButton.interactable, Is.True, "sin cupo, Marea recarga");
+            Assert.That(tray.UndoBadgeText, Is.EqualTo("+3"));
+            Assert.That(tray.UndoShowsVideo, Is.True, "con fill, el video");
+            Assert.That(tray.ExtraCuiaShown, Is.True);
+            Assert.That(tray.ExtraCuiaButton.interactable, Is.True);
+            Assert.That(tray.ExtraPriceShown, Is.EqualTo(150));
+            Assert.That(tray.ExtraShowsMissing, Is.True);
+            Assert.That(tray.ExtraMissingText, Is.EqualTo("Te faltan 50"));
+            Assert.That(tray.RevealShown, Is.False, "nivel no turbio");
+            Assert.That(tray.UndoButton.gameObject.activeInHierarchy, Is.True, "bandeja a la vista");
+            int cuias = view.Views.Length;
+
+            boot.TapCuia(last.Source);
+            boot.TapCuia(last.Target);
+            Assert.That(flow.IsResolvingWin, Is.True);
+            int seeds = boot.Wallet!.Seeds;
+            Assert.That(seeds, Is.EqualTo(120), "la Cosecha, ya cobrada");
+            int pours = flow.Session.AppliedPours;
+            int presented = FunnelSetup.AdsPresenter.Presented;
+            int frames = 0;
+            bool tapped = false;
+            while (true)
+            {
+                Assert.That(frames, Is.LessThan(1000), "la victoria pendiente termina");
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                if (!flow.IsResolvingWin)
+                {
+                    break;
+                }
+
+                frames++;
+                string at = " (victoria pendiente, fotograma " + frames + ")";
+                Assert.That(tray.UndoButton.interactable, Is.True, "Marea, como estaba" + at);
+                Assert.That(tray.UndoBadgeText, Is.EqualTo("+3"), at);
+                Assert.That(tray.UndoShowsVideo, Is.True, at);
+                Assert.That(tray.ExtraCuiaButton.interactable, Is.True, "Cuia extra, como estaba" + at);
+                Assert.That(tray.ExtraPriceShown, Is.EqualTo(150), at);
+                Assert.That(tray.ExtraShowsMissing, Is.True, at);
+                Assert.That(tray.ExtraMissingText, Is.EqualTo("Te faltan 50"), "con el saldo de antes de ganar" + at);
+                Assert.That(view.WalletBar.SeedsShown, Is.EqualTo(100), "el saldo, sin la Cosecha" + at);
+                if (!tapped)
+                {
+                    // Un toque en Marea sin cupo y con video, y otro en la Cuia extra: nada cambia (R15).
+                    tray.UndoButton.onClick.Invoke();
+                    tray.ExtraCuiaButton.onClick.Invoke();
+                    tapped = true;
+                    Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(presented), "Marea no abre el video de rv_undo_refill");
+                    Assert.That(flow.Session.AppliedPours, Is.EqualTo(pours), "ni deshace");
+                    Assert.That(flow.Session.Status, Is.EqualTo(AF.Core.Session.LevelStatus.Won));
+                    Assert.That(boot.Wallet.Stock.Get(BoosterKind.Undo), Is.EqualTo(0), "ni recarga");
+                    Assert.That(boot.Wallet.Seeds, Is.EqualTo(seeds), "ni cobra");
+                    Assert.That(view.Views.Length, Is.EqualTo(cuias), "la Cuia extra no se añade");
+                    Assert.That(flow.IsResolvingWin, Is.True);
+                }
+            }
+
+            Assert.That(frames, Is.GreaterThan(0), "el último vertido se anima con la victoria pendiente");
+            Assert.That(tapped, Is.True);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Celebration));
+
+            // Primer fotograma de la celebración: la vista lo pinta en su siguiente Tick. Apagada y a la vista.
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Celebration));
+            Assert.That(tray.UndoButton.gameObject.activeInHierarchy, Is.True, "la bandeja sigue a la vista durante la celebración");
+            Assert.That(tray.UndoButton.interactable, Is.False, "Marea gris en la celebración");
+            Assert.That(tray.ExtraCuiaButton.interactable, Is.False, "Cuia extra gris en la celebración");
+            Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(presented));
+            Assert.That(boot.Wallet.Stock.Get(BoosterKind.Undo), Is.EqualTo(0));
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(seeds));
+        }
+
+        [UnityTest]
+        public IEnumerator WithoutVideo_MareaKeepsItsMissingNotice_WithTheBalanceShown_DuringTheCelebration()
+        {
+            // D-011, punto 1: la bandeja calcula sus precios y avisos con el saldo que enseña el de arriba. Nivel 11 sin fill
+            // (sin video de rv_undo_refill) con 10 semillas: Marea sin cupo ni stock enseña «+3» con el precio (30) y «Te faltan
+            // 20». El último vertido cobra la Cosecha (+20, ya 30 semillas), pero durante la celebración el saldo de arriba
+            // sigue en 10 y Marea, ya gris, sigue con «Te faltan 20»; con las 30 semillas de después de ganar, el aviso se iría
+            // antes de que la Cosecha se vea.
+            LaunchOptions.LevelOffsetOverride = 10;
+            LaunchOptions.AdFillOverride = FakeAdFill.NoFill;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(10));
+            yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            GameScreen view = boot.View!;
+            BoosterTray tray = view.Tray;
+            LevelFlow flow = boot.Flow!;
+            for (int i = 0; i < 3; i++)
+            {
+                boot.TapCuia(0);
+                boot.TapCuia(2);
+                PlayModeHelpers.StepUntilIdle(boot, 3000);
+                Assert.That(boot.PressUndo(), Is.True);
+                PlayModeHelpers.StepUntilIdle(boot, 3000);
+            }
+
+            Assert.That(flow.UndoStatus.HasQuota, Is.False, "sin cupo ni stock");
+            AF.Core.Rules.Pour last = VictorySetup.PlayAllButTheLastPour(boot);
+            PlayModeHelpers.Step(boot, 50);
+            Assert.That(tray.UndoBadgeText, Is.EqualTo("+3"));
+            Assert.That(tray.UndoShowsVideo, Is.False, "sin fill no hay video");
+            Assert.That(tray.UndoPriceShown, Is.EqualTo(30));
+            Assert.That(tray.UndoMissingText, Is.EqualTo("Te faltan 20"));
+            Assert.That(view.WalletBar.SeedsShown, Is.EqualTo(10));
+
+            boot.TapCuia(last.Source);
+            boot.TapCuia(last.Target);
+            Assert.That(flow.IsResolvingWin, Is.True);
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(30), "la Cosecha, ya cobrada (eco_reward_normal = 20)");
+            for (int frames = 0; flow.Phase != FlowPhase.Celebration; frames++)
+            {
+                Assert.That(frames, Is.LessThan(1000), "la victoria pendiente termina");
+                Assert.That(tray.UndoMissingText, Is.EqualTo("Te faltan 20"), "victoria pendiente, fotograma " + frames);
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            // Toda la celebración, desde su primer fotograma (la vista lo pinta en su siguiente Tick): gris, con el aviso.
+            int celebration = 0;
+            while (true)
+            {
+                Assert.That(celebration, Is.LessThan(1000), "la celebración termina");
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                if (flow.Phase != FlowPhase.Celebration)
+                {
+                    break;
+                }
+
+                celebration++;
+                string at = " (celebración, fotograma " + celebration + ")";
+                Assert.That(tray.UndoButton.gameObject.activeInHierarchy, Is.True, "la bandeja sigue a la vista" + at);
+                Assert.That(tray.UndoButton.interactable, Is.False, "Marea gris" + at);
+                Assert.That(tray.UndoPriceShown, Is.EqualTo(30), at);
+                Assert.That(tray.UndoMissingText, Is.EqualTo("Te faltan 20"), "con el saldo que se ve arriba" + at);
+                Assert.That(view.WalletBar.SeedsShown, Is.EqualTo(10), "el saldo, sin la Cosecha" + at);
+            }
+
+            Assert.That(celebration, Is.GreaterThan(0), "fotogramas de celebración");
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen));
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(30));
+        }
+
+        [UnityTest]
+        public IEnumerator OnTheVictoryScreen_TheHiddenTrayDoesNotRepaintWhileTheHarvestCounts_WithMareasFreeQuota()
+        {
+            yield return HiddenTrayWhileTheHarvestCounts(true);
+        }
+
+        [UnityTest]
+        public IEnumerator OnTheVictoryScreen_TheHiddenTrayDoesNotRepaintWhileTheHarvestCounts_WithoutQuotaNorVideo()
+        {
+            yield return HiddenTrayWhileTheHarvestCounts(false);
+        }
+
+        // D-011, punto 1, sin asignaciones por fotograma (08 §5.4). En la pantalla de victoria la bandeja está oculta y el saldo
+        // de arriba recibe la Cosecha mientras la fila cuenta: lo que aún no enseña baja en cada fotograma. La bandeja no se
+        // repinta por eso (GameScreen.RefreshHud solo le pasa la Cosecha pendiente en la celebración), ni en la cuenta de +0 a
+        // +N (desde que el panel termina de subir, 250 ms) ni en la de +N a +2N tras la Cosecha doble; si se repintara, cada
+        // repintado crearía cadenas. Se mira con BoosterTray.RefreshRepaints y no con Is.Not.AllocatingGCMemory: en el Editor,
+        // TMP_Text.SetCharArray crea una cadena en cada llamada (solo en el Editor), y el saldo y la fila cuentan con ella.
+        // Nivel 11 (tablero 1 con af_level_offset = 10) con 0 semillas. freeQuota: Marea con su cupo gratis (3), cuya insignia
+        // crea una cadena en cada repintado; si no, sin cupo ni stock y sin video de rv_undo_refill (el tope del día,
+        // ads_rv_cap_undo_refill = 4, ya visto; la Cosecha doble sí tiene el suyo), con «+3», el precio y «Te faltan {n}», que
+        // además formatea y mide el aviso. El primer fotograma tras la Cosecha doble repinta una vez como mucho: el saldo cambió
+        // (+N).
+        private static IEnumerator HiddenTrayWhileTheHarvestCounts(bool freeQuota)
+        {
+            LaunchOptions.LevelOffsetOverride = 10;
+            Profile profile = VictorySetup.Profile(0);
+            if (!freeQuota)
+            {
+                profile.Daily.DateLocal = FunnelSetup.Clock.LocalDateKey();
+                profile.Daily.RvUndoRefill = 4;
+                profile.Daily.RvTotal = 4;
+            }
+
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(profile);
+            yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            GameScreen view = boot.View!;
+            BoosterTray tray = view.Tray;
+            LevelFlow flow = boot.Flow!;
+            if (freeQuota)
+            {
+                Assert.That(flow.UndoStatus.FreeLeft, Is.EqualTo(3), "cupo gratis");
+                Assert.That(tray.UndoBadgeText, Is.EqualTo("3"));
+            }
+            else
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    boot.TapCuia(0);
+                    boot.TapCuia(2);
+                    PlayModeHelpers.StepUntilIdle(boot, 3000);
+                    Assert.That(boot.PressUndo(), Is.True);
+                    PlayModeHelpers.StepUntilIdle(boot, 3000);
+                }
+
+                PlayModeHelpers.Step(boot, 50);
+                Assert.That(flow.UndoStatus.HasQuota, Is.False, "sin cupo ni stock");
+                Assert.That(boot.Ads!.CheckRewarded(AdPlacement.UndoRefill).Reason, Is.EqualTo(AdBlockReason.PlacementCap), "sin video de Marea hoy");
+                Assert.That(tray.UndoBadgeText, Is.EqualTo("+3"));
+                Assert.That(tray.UndoShowsVideo, Is.False);
+                Assert.That(tray.UndoPriceShown, Is.EqualTo(30));
+                Assert.That(tray.UndoMissingText, Is.EqualTo("Te faltan 30"));
+            }
+
+            int playing = tray.RefreshRepaints;
+            VictorySetup.WinToVictoryScreen(boot);
+            Assert.That(tray.RefreshRepaints, Is.GreaterThan(playing), "la bandeja se repinta al apagarse en la celebración: el contador cuenta");
+            int harvest = flow.HarvestSeeds;
+            Assert.That(harvest, Is.EqualTo(20), "eco_reward_normal");
+            Assert.That(view.DoubleHarvestShown, Is.True, "la Cosecha doble, con su video");
+            PlayModeHelpers.Step(boot, 256); // el panel sube en 250 ms; la fila aún no ha contado nada
+            Assert.That(tray.UndoButton.gameObject.activeInHierarchy, Is.False, "la bandeja, oculta en la victoria");
+            Assert.That(view.HarvestShown, Is.EqualTo(0));
+            Assert.That(view.WalletBar.SeedsShown, Is.EqualTo(0));
+
+            // La cuenta de +0 a +N (400 ms, 02 §6), con el saldo de arriba subiendo con ella.
+            int repaints = tray.RefreshRepaints;
+            int changes = CountFrames(boot, view, tray, GameConfig.HarvestCountMs, repaints, "cuenta de +0 a +" + harvest);
+            Assert.That(changes, Is.GreaterThanOrEqualTo(harvest / 2), "el saldo de arriba cambió en casi cada fotograma");
+            Assert.That(view.HarvestShown, Is.EqualTo(harvest), "la fila contó entera");
+            Assert.That(view.WalletBar.SeedsShown, Is.EqualTo(harvest), "el saldo de arriba, con la Cosecha");
+
+            view.DoubleHarvestButton.onClick.Invoke();
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(2 * harvest), "x2 exacto");
+            Assert.That(view.AutoNextPending, Is.True);
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.HarvestShown, Is.InRange(harvest + 1, (2 * harvest) - 1), "la fila ya cuenta hacia +2N");
+            Assert.That(tray.RefreshRepaints, Is.LessThanOrEqualTo(repaints + 1), "como mucho un repintado: el saldo cambió (+N)");
+            repaints = tray.RefreshRepaints;
+            changes = CountFrames(boot, view, tray, GameConfig.HarvestCountMs - PlayModeHelpers.FrameMs, repaints, "cuenta de +" + harvest + " a +" + (2 * harvest));
+            Assert.That(changes, Is.GreaterThanOrEqualTo(harvest / 2), "el saldo de arriba cambió en casi cada fotograma");
+            Assert.That(view.HarvestShown, Is.EqualTo(2 * harvest), "la fila contó entera");
+            Assert.That(view.WalletBar.SeedsShown, Is.EqualTo(2 * harvest));
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen), "aún no avanza (400 + 600 ms)");
+            Assert.That(flow.LevelNumber, Is.EqualTo(11));
+            Assert.That(tray.UndoButton.gameObject.activeInHierarchy, Is.False);
+        }
+
+        // Avanza ms en fotogramas de 16 ms con la bandeja oculta: ningún repintado. Devuelve en cuántos cambió el saldo de arriba.
+        private static int CountFrames(GameBootstrap boot, GameScreen view, BoosterTray tray, int ms, int repaints, string what)
+        {
+            int changes = 0;
+            int shown = view.WalletBar.SeedsShown;
+            for (int t = 0; t < ms; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                changes += view.WalletBar.SeedsShown != shown ? 1 : 0;
+                shown = view.WalletBar.SeedsShown;
+                Assert.That(tray.RefreshRepaints, Is.EqualTo(repaints), what + ", " + (t + PlayModeHelpers.FrameMs) + " ms: la bandeja oculta no se repinta");
+            }
+
+            return changes;
+        }
+
+        [UnityTest]
+        public IEnumerator WhileARevealThatWinsResolves_TrayTapsDoNothing_AndRevealLeavesInTheCelebration()
+        {
+            // D-011, punto 1, con Revelar. Con la victoria pendiente, «+1 cuia» y Revelar se quedan como estaban, pero un toque no
+            // hace nada: tampoco termina antes de tiempo el revelado en marcha (GameScreen.SettleReveal), que quitaría la ranura
+            // y recentraría la bandeja. La luciérnaga solo vuela con la victoria pendiente si el revelado gana el nivel, y ningún
+            // nivel de 1-200 lo tiene (RevealFlowTests.Reveal_ThatWins_FollowsThePourPath): nivel 13 de prueba con la cuia 0 =
+            // [4*, Barro, 8]. El 8 sella la cuia 1, los tres 4 lavan el Barro ([4*, 4, 4, 4], llena pero sin sellar con la
+            // oculta, R5) y la Luciérnaga, pagada con semillas, la revela: la cuia sella y el nivel queda ganado (R12) mientras la
+            // luciérnaga vuela. La cara de Revelar ya no está pulsada (la selección se cerró antes de la victoria) y la ranura,
+            // sin ocultas, está gris. En el primer fotograma de la celebración, la bandeja se apaga y la ranura de Revelar se va
+            // (el revelado termina en el acto fuera de PLAYING).
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
+            yield return PlayModeHelpers.LoadGameWithPack(RevealThatWinsPack(), 13, new MemoryProgressStore(13, 12));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            LevelFlow flow = boot.Flow!;
+            boot.TapAnywhere();
+            for (int t = 0; t < 4000 && (flow.Phase != FlowPhase.Playing || !boot.View!.IsViewIdle); t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            GameScreen view = boot.View!;
+            BoosterTray tray = view.Tray;
+            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(1).Kind, Is.EqualTo(TapKind.Poured), "el 8 sella la cuia 1");
+            Assert.That(boot.TapCuia(2).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Poured), "los tres 4 lavan el Barro");
+            PlayModeHelpers.StepUntilIdle(boot, 5000);
+            PlayModeHelpers.Step(boot, 50);
+            Assert.That(flow.Session.Status, Is.EqualTo(AF.Core.Session.LevelStatus.Playing));
+            Assert.That(flow.Session.Current[0].IsFull, Is.True);
+            Assert.That(flow.Session.HiddenCount, Is.EqualTo(1), "la de abajo sigue oculta");
+            Assert.That(tray.RevealShown, Is.True);
+            Assert.That(tray.ExtraCuiaShown, Is.True);
+            Assert.That(tray.ExtraCuiaButton.interactable, Is.True, "Cuia extra con 500 semillas");
+
+            Assert.That(boot.PressReveal(), Is.True, "la Luciérnaga, con semillas");
+            PlayModeHelpers.Step(boot, 50);
+            Assert.That(flow.RevealSelecting, Is.True);
+            Assert.That(tray.RevealPressed, Is.True, "la cara se queda abajo mientras se elige");
+            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Ignored), "el toque elige la cuia");
+            Assert.That(flow.Session.Status, Is.EqualTo(AF.Core.Session.LevelStatus.Won), "el revelado gana");
+            Assert.That(flow.IsResolvingWin, Is.True);
+            Assert.That(view.RevealAnimating, Is.True, "la luciérnaga vuela con la victoria pendiente");
+            Assert.That(tray.RevealShown, Is.True, "la luciérnaga sale de su botón");
+            Assert.That(tray.RevealPressed, Is.False, "la selección se cerró antes de la victoria");
+            Assert.That(tray.RevealRelief.Pressed, Is.False);
+            Assert.That(tray.RevealButton.interactable, Is.False, "sin ocultas: gris");
+            Assert.That(tray.ExtraCuiaButton.interactable, Is.True, "Cuia extra, como estaba");
+            int seeds = boot.Wallet!.Seeds;
+            int slots = tray.SlotCount;
+            int cuias = view.Views.Length;
+            int presented = FunnelSetup.AdsPresenter.Presented;
+
+            // Un toque en «+1 cuia», en Revelar y en Marea: nada cambia.
+            tray.ExtraCuiaButton.onClick.Invoke();
+            tray.RevealButton.onClick.Invoke();
+            tray.UndoButton.onClick.Invoke();
+            Assert.That(view.RevealAnimating, Is.True, "el revelado sigue: no termina antes de tiempo");
+            Assert.That(tray.RevealShown, Is.True, "la ranura no se va antes de tiempo");
+            Assert.That(tray.SlotCount, Is.EqualTo(slots), "y la bandeja no se recentra");
+            Assert.That(view.Views.Length, Is.EqualTo(cuias), "la Cuia extra no se añade");
+            Assert.That(flow.RevealSelecting, Is.False, "Revelar no abre otra selección");
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(seeds), "ni cobra");
+            Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(presented), "ni abre un video");
+            Assert.That(flow.IsResolvingWin, Is.True);
+
+            // La cola está quieta: el flujo pasa a la celebración enseguida.
+            int frames = 0;
+            while (flow.Phase != FlowPhase.Celebration)
+            {
+                Assert.That(frames, Is.LessThan(1000), "la victoria pendiente termina");
+                Assert.That(flow.IsResolvingWin, Is.True);
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                frames++;
+            }
+
+            // Primer fotograma de la celebración: la vista lo pinta en su siguiente Tick.
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Celebration));
+            Assert.That(view.RevealAnimating, Is.False, "fuera de PLAYING el revelado termina en el acto");
+            Assert.That(tray.RevealShown, Is.False, "sin ocultas, la ranura de Revelar se va");
+            Assert.That(tray.UndoButton.gameObject.activeInHierarchy, Is.True, "la bandeja sigue a la vista durante la celebración");
+            Assert.That(tray.UndoButton.interactable, Is.False, "Marea gris en la celebración");
+            Assert.That(tray.ExtraCuiaButton.interactable, Is.False, "Cuia extra gris en la celebración");
+            Assert.That(view.Views.Length, Is.EqualTo(cuias));
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(seeds));
+        }
+
+        [UnityTest]
         public IEnumerator MissingNotice_At12sp_AndWhatDoesNotFitGoesOnTwoLinesOverItsSlot()
         {
             // 02 §12: «Texto ≥ 12 sp»; el aviso va siempre a 12 sp (antes bajaba hasta 11) y lo que no cabe en una línea va en
@@ -297,6 +687,20 @@ namespace AF.Tests.PlayMode
             Assert.That(WorldRect(tray.ExtraMissingRect).Overlaps(WorldRect(tray.RevealMissingRect)), Is.False, "sin solapes");
             Assert.That(tray.ExtraMissingWidth, Is.LessThan(72f));
             Assert.That(tray.RevealMissingWidth, Is.LessThan(72f));
+        }
+
+        // Nivel 13 de prueba (mundo 2) con el revelado que gana de RevealFlowTests.Reveal_ThatWins_FollowsThePourPath: la cuia 0
+        // = [4*, Barro, 8] con la de abajo oculta, [8, 8, 8], [4, 4, 4] y una vacía. pack_schema 2, por el Barro (02 §9.1 M5).
+        private static string RevealThatWinsPack()
+        {
+            string[] ids = { "acai", "aguaje" };
+            int[][] board = { new[] { 4, AF.Core.Board.Cuia.MudColor, 8 }, new[] { 8, 8, 8 }, new[] { 4, 4, 4 }, new int[0] };
+            string json = PlayModeHelpers.BoardPack(2, "w02_tapajos", "clear", 13, ids, board);
+            string schema2 = json.Replace("\"subset_of\": \"af-level/1\"", "\"pack_schema\": 2");
+            string murky = schema2.Replace("\"murky\": false, \"hidden\": []", "\"murky\": true, \"hidden\": [[0, 0]]");
+            Assert.That(schema2, Is.Not.EqualTo(json), "el paquete de prueba cambió de forma");
+            Assert.That(murky, Is.Not.EqualTo(schema2), "el paquete de prueba cambió de forma");
+            return murky;
         }
 
         // n ranuras de 64 dp en el orden dado, con 8 dp entre ellas, y la bandeja (16 + n·64 + (n − 1)·8 + 16) centrada.
