@@ -28,7 +28,7 @@ namespace AF.Tests.PlayMode
     [Explicit("Capturas visuales manuales; necesitan dispositivo gráfico.")]
     public sealed class MechanicSnapshotTests
     {
-        private static readonly int[] Levels = { 14, 27, 43, 63, 83, 100, 103, 123, 143, 163, 183 };
+        private static readonly int[] Levels = SightingRule.MechanicDebutLevels; // los estrenos de D-007, en orden (T-F)
 
         private static readonly string[] Names =
         {

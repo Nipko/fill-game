@@ -638,7 +638,15 @@ namespace AF.Tests.PlayMode
             boot.TapAnywhere(); // también tras un salto: la tarjeta llega después de la intro
             GameScreen view = boot.View;
             SightingCard card = view.Sighting;
-            Assert.That(card.Visible, Is.True, "primer nivel libre desde el nivel_tarjeta del mono ardilla");
+
+            // D-011, punto 3: la tarjeta espera a que la tropa se vaya (tras un salto, su fundido de 100 ms) y no la tapa.
+            Assert.That(card.Visible, Is.False, "la tropa aún se funde en la rama");
+            Assert.That(view.SightingPending, Is.True);
+            Assert.That(view.Intro.TroopVisible, Is.True);
+            PlayModeHelpers.TickExact(boot, Mathf.CeilToInt(view.Intro.TroopGoneMs - view.Intro.TimeMs) + 1);
+            Assert.That(view.Intro.TroopVisible, Is.False);
+            PlayModeHelpers.TickExact(boot, PlayModeHelpers.FrameMs);
+            Assert.That(card.Visible, Is.True, "primer nivel libre desde el nivel_tarjeta del mono ardilla, ya sin la tropa");
             Assert.That(card.Name, Is.EqualTo("mono ardilla"));
             Assert.That(card.Fact.Length, Is.InRange(1, 50), "una línea de ≤ 50 caracteres");
             var graphics = new List<Graphic>();
@@ -657,11 +665,17 @@ namespace AF.Tests.PlayMode
             bool onDock = r.yMin >= view.Intro.Input.PanelBottom;
             Assert.That(inBand || onDock, Is.True, "posición " + r);
 
+            // D-011, punto 2: dura lo que se tarda en leer el título, el nombre y el dato (unos 5 s), no 2,5 s.
+            int readMs = NoticeTiming.ReadMs(UiText.FaunaSightedCard, card.Name, card.Fact);
+            Assert.That(card.DurationMs, Is.EqualTo(readMs));
+            Assert.That(readMs, Is.EqualTo(4960), "20 + 12 + 40 caracteres");
             PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
             Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected), "la tarjeta no captura toques");
             boot.TapBackground();
-            PlayModeHelpers.TickExact(boot, SightingRule.CardMs + 50);
-            Assert.That(card.Visible, Is.False, "2,5 s y se desvanece");
+            PlayModeHelpers.TickExact(boot, 4500);
+            Assert.That(card.Visible, Is.True, "a los 4,5 s aún se lee");
+            PlayModeHelpers.TickExact(boot, readMs - 4500);
+            Assert.That(card.Visible, Is.False, "y se desvanece a su hora");
 
             // En el reintento no vuelve a salir.
             PlayModeHelpers.StepUntilIdle(boot, 1000);
@@ -959,6 +973,8 @@ namespace AF.Tests.PlayMode
             Assert.That(view.IntroSpecies, Is.Not.Null);
             Assert.That(view.Troop.Active, Is.True);
             boot.TapAnywhere();
+            Assert.That(view.SightingPending, Is.True, "la tarjeta espera a que la tropa se funda (D-011, punto 3)");
+            PlayModeHelpers.TickExact(boot, 100 + PlayModeHelpers.FrameMs);
             Assert.That(view.Sighting.Visible, Is.True);
         }
 

@@ -19,14 +19,20 @@ namespace AF.GameFlow
         public static readonly int[] FruitDebutLevels = { 1, 2, 4, 7, 11, 21, 41, 61, 81, 111, 141, 201, 301 };
 
         /// <summary>
-        /// Hitos y debuts de comodines y mecánicas con su propia presentación (02 §13: Marea 3, Reto del río 7, Cuia extra 8,
-        /// Mercado 10, contador de Marea y Cosecha doble 11, Morpho 12, Cuia chica 14, Cántaro 20, animación corta 21, Cuia alta
-        /// 27, Pororoca 30, Canoas y Cuia de rescate 31; 03 §9 y 02 <c>mech_debut_level</c>: 43, 63, 83, 103, 123, 143 y 183).
+        /// Estrenos con su tutorial de una pantalla (D-007; 02 §9.1 y §11; 04 §2.5), en orden: Cuia chica 14, Cuia alta 27, Hoja
+        /// 43, Matapi 63, Liana con fruta 83, Aguas turbias y la Luciérnaga regalada 100, Remolino 103, Barro 123, Lluvia 143,
+        /// Brote 163 y Piraña 183. Única copia en el código (la usan también los tests del catálogo y las capturas de los
+        /// estrenos); no se modifica.
         /// </summary>
-        public static readonly int[] MilestoneLevels = { 3, 7, 8, 10, 11, 12, 14, 20, 21, 27, 30, 31, 43, 63, 83, 103, 123, 143, 183 };
+        public static readonly int[] MechanicDebutLevels = { 14, 27, 43, 63, 83, 100, 103, 123, 143, 163, 183 };
 
-        /// <summary>Duración de la tarjeta (guion §4.5: 2,5 s).</summary>
-        public const int CardMs = 2500;
+        /// <summary>
+        /// Hitos con su propia presentación (02 §13: Marea 3, Reto del río 7, Cuia extra 8, Mercado 10, contador de Marea y
+        /// Cosecha doble 11, Morpho 12, Cántaro 20, animación corta 21, Pororoca 30, Canoas y Cuia de rescate 31) y todos los
+        /// estrenos de <see cref="MechanicDebutLevels"/> (D-007 y 04 §2.5: 14, 27, 43, 63, 83, 100, 103, 123, 143, 163 y 183),
+        /// en orden y sin repetidos. Se arma con <see cref="MechanicDebutLevels"/>: un estreno nuevo no puede quedarse fuera.
+        /// </summary>
+        public static readonly int[] MilestoneLevels = SortedUnion(new[] { 3, 7, 8, 10, 11, 12, 20, 21, 30, 31 }, MechanicDebutLevels);
 
         /// <summary>El nivel ya tiene banner de mundo, Fruta nueva o un hito propio.</summary>
         public static bool IsBusy(int level)
@@ -60,6 +66,26 @@ namespace AF.GameFlow
         public static bool ShowsCard(int level, int cardLevel, bool firstAttempt, Func<int, bool>? tutorialPending = null)
         {
             return firstAttempt && level >= cardLevel && level == FirstFreeLevel(cardLevel, tutorialPending);
+        }
+
+        // Unión ordenada y sin repetidos de dos listas (una vez, al iniciar el tipo).
+        private static int[] SortedUnion(int[] a, int[] b)
+        {
+            var merged = new int[a.Length + b.Length];
+            Array.Copy(a, merged, a.Length);
+            Array.Copy(b, 0, merged, a.Length, b.Length);
+            Array.Sort(merged);
+            int n = 0;
+            for (int i = 0; i < merged.Length; i++)
+            {
+                if (n == 0 || merged[n - 1] != merged[i])
+                {
+                    merged[n++] = merged[i];
+                }
+            }
+
+            Array.Resize(ref merged, n);
+            return merged;
         }
     }
 }

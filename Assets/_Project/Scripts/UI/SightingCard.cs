@@ -10,10 +10,13 @@ namespace AF.UI
     /// <summary>
     /// Tarjeta «¡Miquito a la vista!» (guion de la intro §4.5; recomendación Q10 A, pendiente de D-010): de la familia de los avisos del tablero (placa de
     /// madera clara, como «El río bajó»), con el retrato de la especie de 40 dp, el título, el nombre local y una línea de ≤ 50
-    /// caracteres con un dato verificado. Sale después de la intro, nunca dentro de la carga; dura 2,5 s con fundido de
-    /// entrada y salida; no captura toques (<c>raycastTarget</c> = false y <see cref="CanvasGroup.blocksRaycasts"/> = false) y
-    /// no tapa cuias ni botones: va sobre la franja del panorama si mide ≥ 64 dp o, si no, sobre el muelle por encima de la
-    /// bandeja. «Avistamiento», nunca «nuevo»; sin confeti. Nombres y textos, pendientes del asesor cultural (07 §8.2).
+    /// caracteres con un dato verificado. Sale después de la intro, nunca dentro de la carga, y cuando la tropa ya se ha ido de
+    /// la rama (D-011, puntos 2 y 3: hasta entonces espera y las etiquetas del HUD siguen a la vista), de una en una con los
+    /// avisos del tablero (la cola de GameScreen). Dura lo que se tarda en leer el título, el nombre y el dato
+    /// (<see cref="AF.GameFlow.NoticeTiming"/>, 3-7 s; unos 5 s el mono ardilla), con fundido de entrada y salida; no captura
+    /// toques (<c>raycastTarget</c> = false y <see cref="CanvasGroup.blocksRaycasts"/> = false) y no tapa cuias ni botones: va
+    /// sobre la franja del panorama si mide ≥ 64 dp o, si no, sobre el muelle por encima de la bandeja. «Avistamiento», nunca
+    /// «nuevo»; sin confeti. Nombres y textos, pendientes del asesor cultural (07 §8.2).
     /// </summary>
     internal sealed class SightingCard
     {
@@ -80,9 +83,16 @@ namespace AF.UI
         /// <summary>Opacidad actual del fundido.</summary>
         public float Alpha => _group.alpha;
 
-        /// <summary>Muestra la tarjeta de la especie durante <paramref name="ms"/> milisegundos.</summary>
-        public void Show(Sprite portrait, string name, string fact, float ms)
+        /// <summary>Duración de la tarjeta a la vista, con sus fundidos (ms; tests).</summary>
+        public float DurationMs => _totalMs;
+
+        /// <summary>
+        /// Muestra la tarjeta de la especie el tiempo de leerla: <see cref="AF.GameFlow.NoticeTiming.ReadMs(string, string, string)"/>
+        /// con el título, el nombre y el dato (D-011, punto 2).
+        /// </summary>
+        public void Show(Sprite portrait, string name, string fact)
         {
+            int ms = AF.GameFlow.NoticeTiming.ReadMs(UiText.FaunaSightedCard, name, fact);
             _portrait.sprite = portrait;
             _name.text = name;
             _fact.text = fact;

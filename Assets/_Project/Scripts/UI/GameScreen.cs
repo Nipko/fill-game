@@ -78,9 +78,6 @@ namespace AF.UI
         /// <summary>Entrada de la cuia que trae Capi (02 §4.1: 600 ms).</summary>
         private const float AddedCuiaMs = 600f;
 
-        /// <summary>Duración del aviso de Capi y de «¡Una cuia más!» [P].</summary>
-        private const float ToastMs = 2600f;
-
         /// <summary>
         /// Panel de victoria (guía 5.3, ajustado al contenido en la revisión visual del 2026-10-07; guía 12: la fila de 44 dp de
         /// «Semillas +N» que llega con la tarea B2-4): 36 dp de cinta dentro, la fila de la Cosecha
@@ -712,7 +709,7 @@ namespace AF.UI
         /// <summary>Tarjeta «¡Miquito a la vista!» (tests).</summary>
         internal SightingCard Sighting => _sighting;
 
-        /// <summary>Texto del aviso en pantalla (regalo de Capi, rescate), o null.</summary>
+        /// <summary>Texto del aviso en pantalla (regalo de Capi, rescate, «+1 Luciérnaga», «Te faltan»…), o null.</summary>
         public string? ToastText => _toast.Visible ? _toast.Text : null;
 
         /// <summary>Hay un relayout de cuia añadida en curso.</summary>
@@ -836,6 +833,7 @@ namespace AF.UI
             _banner.Tick(dtMs);
             _toast.Tick(dtMs);
             _sighting.Tick(dtMs);
+            TickNotices(); // el siguiente aviso, si el anterior se acaba de ocultar (GameScreen.Notices.cs)
             TickHarvest(dtMs);
             TickAutoNext(dtMs);
             RefreshHud();
@@ -862,7 +860,7 @@ namespace AF.UI
             _confettiDelay = -1f;
             HideOverlays();
             _banner.Hide();
-            _sighting.Hide();
+            ClearNotices(); // ningún aviso ni tarjeta del nivel anterior pasa a este (GameScreen.Notices.cs)
             _attemptBanner = false;
             _introDelayMs = -1f;
             BuildBoard(flow);
@@ -946,7 +944,12 @@ namespace AF.UI
             }
 
             _intro.Complete(skipped);
-            MaybeShowSighting(RequireFlow());
+            // Con el toque habilitado salen los avisos que esperaban (D-011, punto 2): el regalo de Capi, «+1 Luciérnaga»…; la
+            // tarjeta del miquito queda pendiente hasta que la tropa se vaya (GameScreen.Notices.cs).
+            LevelFlow ready = RequireFlow();
+            MaybeShowSighting(ready);
+            ShowRevealGiftIfReady(ready);
+            PumpNotices();
             _skipCatcher.gameObject.SetActive(false);
             _probe.State("ready", RequireFlow(), int.MinValue, null);
         }
@@ -1044,6 +1047,7 @@ namespace AF.UI
             _animator.SnapAll();
             ClearLifts();
             HideOverlays();
+            ClearNotices(); // otro intento: los avisos del anterior ya no valen
             _shownBoard = RequireFlow().Session.Current;
             _restartProbePending = true;
         }
@@ -1219,6 +1223,7 @@ namespace AF.UI
         /// <inheritdoc />
         public void OnExtraCuiaGifted(int units)
         {
+            // Llega al cargar el 8 (LOADING): el aviso de Capi espera en la cola y sale al habilitarse el toque (D-011, punto 2).
             ShowToast(UiText.ExtraCuiaGift);
             _probe.Funnel("extra_cuia_gift", RequireFlow());
         }
@@ -1609,12 +1614,6 @@ namespace AF.UI
             _walletBar.Layout(afterPause ? 64f : 16f, TopRowY);
         }
 
-        private void ShowToast(string text)
-        {
-            _toast.Show(text, ToastMs);
-            _toast.Place(_canvasW, TrayTop - 64f);
-        }
-
         // 02 §3.1 C8 y 04 §1.1: Marea con cupo deshace; sin cupo ni stock, el botón recarga (video si hay; si no, semillas).
         private void OnTrayUndo()
         {
@@ -1896,49 +1895,6 @@ namespace AF.UI
             return forCard
                 ? FaunaArtRule.CardArt(development, parts, ArtSlots.Find(species.PortraitSlot) != null)
                 : FaunaArtRule.TroopArt(development, parts);
-        }
-
-        // «¡Miquito a la vista!» (guion de la intro §4.5 y §14): al habilitarse el input tras la intro, en el primer intento del
-        // primer nivel libre desde el nivel_tarjeta de la especie del tramo (nunca la de otro mundo) y solo con su arte
-        // (FaunaArtAvailable: fuera de desarrollo, sin el PNG del retrato no sale). Sobre la franja del panorama si mide ≥ 64 dp;
-        // si no, sobre el muelle, bajo la última fila y por encima de la bandeja; si no cabe sin tapar cuias ni botones, no sale.
-        // Sin persistir ni af_fauna_sighted: eso exige migrar el perfil (Q11, PR aparte).
-        private void MaybeShowSighting(LevelFlow flow)
-        {
-            FaunaCatalog? fauna = Fauna;
-            BoardLayoutResult? l = _layout;
-            if (_introRetry || fauna == null || l == null || !flow.HasLevel)
-            {
-                return;
-            }
-
-            int level = flow.LevelNumber;
-            FaunaSpecies? candidate = fauna.ForLevel(level);
-            bool art = candidate != null && FaunaArtAvailable(candidate, true);
-            FaunaSpecies? species = IntroCast.Resolve(fauna, flow.Level.World, level, 1, art);
-            if (species == null || !SightingRule.ShowsCard(level, species.CardLevel, true))
-            {
-                return;
-            }
-
-            float band = l.PanelY - BoardTop;
-            float top;
-            if (band >= 64f)
-            {
-                top = BoardTop + ((band - SightingCard.HeightDp) * 0.5f);
-            }
-            else
-            {
-                float lowest = l.PanelBottom;
-                top = lowest + 4f;
-                if (top + SightingCard.HeightDp > TrayTop - 8f)
-                {
-                    return;
-                }
-            }
-
-            _sighting.Place(_canvasW, top);
-            _sighting.Show(_art.MonkeyArtFor(species).Portrait, species.NameIn("es"), UiText.FaunaFact(species.FactKey), SightingRule.CardMs);
         }
 
         /// <summary>

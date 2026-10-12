@@ -18,8 +18,9 @@ namespace AF.Tests.EditMode
     public sealed class CampaignPackTests
     {
         // D-007: nivel del estreno → intro_mechanic (Cuia chica 14, Cuia alta 27, Hoja 43, Matapi 63, Liana con fruta 83, Aguas
-        // turbias 100, Remolino 103, Barro 123, Lluvia 143, Brote 163 y Piraña 183).
-        private static readonly int[] DebutLevels = { 14, 27, 43, 63, 83, 100, 103, 123, 143, 163, 183 };
+        // turbias 100, Remolino 103, Barro 123, Lluvia 143, Brote 163 y Piraña 183). La lista es la única del código (T-F):
+        // DebutIntros va en su mismo orden.
+        private static readonly int[] DebutLevels = AF.GameFlow.SightingRule.MechanicDebutLevels;
         private static readonly string[] DebutIntros = { "chica", "alta", "hoja", "matapi", "liana", "murky", "remolino", "barro", "lluvia", "brote", "pirana" };
 
         [Test]
