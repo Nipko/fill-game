@@ -166,7 +166,8 @@ namespace AF.Tests.PlayMode
         public void CaptureIconAtlas()
         {
             // Los 14 iconos de 07 §3 sobre una dosis de su tinte, del color de sus marcas (Palette.PatternBase) al
-            // LiquidGraphic.FruitIconOpacity, × 3 (cada celda de 64 px a 192), en 2 filas de 7.
+            // LiquidGraphic.FruitIconOpacity, con su contorno oscurecido LiquidGraphic.FruitIconRimDarken donde lo llevan
+            // (ProceduralArt.FruitIconHasRim: Achiote y Río Negro), × 3 (cada celda de 64 px a 192), en 2 filas de 7.
             string dir = Path.Combine(Application.dataPath, "../Logs/snapshots");
             Directory.CreateDirectory(dir);
             const int scale = 3;
@@ -184,6 +185,7 @@ namespace AF.Tests.PlayMode
             for (int tint = 1; tint <= Cuia.MaxTintColor; tint++)
             {
                 float[] mask = ProceduralArt.FruitIconMask(tint);
+                float[] rim = ProceduralArt.FruitIconRimMask(tint);
                 int col = (tint - 1) % 7;
                 int row = 1 - ((tint - 1) / 7);
                 int ox = pad + (col * (cell + pad));
@@ -195,7 +197,10 @@ namespace AF.Tests.PlayMode
                     for (int x = 0; x < cell; x++)
                     {
                         float m = Sample(mask, (x + 0.5f) / scale, (y + 0.5f) / scale);
-                        pixels[((oy + y) * w) + ox + x] = Color.Lerp(dose, mark, LiquidGraphic.FruitIconOpacity * m);
+                        float g = Sample(rim, (x + 0.5f) / scale, (y + 0.5f) / scale);
+                        Color under = dose * (1f - (LiquidGraphic.FruitIconRimDarken * g)); // en sRGB ≈ la raíz cuadrada del shader
+                        under.a = 1f;
+                        pixels[((oy + y) * w) + ox + x] = Color.Lerp(under, mark, LiquidGraphic.FruitIconOpacity * m);
                     }
                 }
             }

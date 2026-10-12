@@ -24,7 +24,11 @@ namespace AF.Presentation
     /// <para>Cada celda es la caja del icono (0,5 u con la dosis llena, el alto del «?» de las turbias; 07 §4.3) y la silueta
     /// ocupa <see cref="FruitIconFill"/> de su alto: 0,45 u, el de 07 §3, regla 1 (02 §12 dice «60 % del ancho de la dosis»;
     /// se alinea en el paso 2). Siluetas gruesas, con huecos de 2-3 px como mínimo, para leerse a 48 dp (≈ 30 px en el
-    /// SM-S938B).</para>
+    /// SM-S938B). Revisión de B3: la Guanábana, el Achiote y el Lulo, de cuerpo liso y grande y con los pinchos solo como
+    /// textura interior (con espinas o cerdas por fuera se leían como bichos dentro del jugo), y la hoja hundida dentro de una masa
+    /// de agua rellena, en negativo y sin burbujas.</para>
+    /// <para>Contorno (canal G; <see cref="FruitIconHasRim"/>): los iconos marfil sobre un tinte de L* 45-55 llevan un
+    /// contorno de ≈ 1 dp del propio tinte oscurecido, que los separa de las marcas marfil de su patrón.</para>
     /// </remarks>
     public sealed partial class ProceduralArt
     {
@@ -37,6 +41,25 @@ namespace AF.Presentation
         /// <summary>Fracción del alto de la celda que ocupa la silueta: 0,45 u en la caja de 0,5 u (07 §3, regla 1).</summary>
         public const float FruitIconFill = 0.9f;
 
+        /// <summary>
+        /// Grosor del contorno oscuro de los iconos que lo llevan (<see cref="FruitIconHasRim"/>), en px de la celda [P]: ≈ 1 dp
+        /// con la caja de 0,5 u en reposo y la cuia de ≈ 47 dp de ancho (23,4 dp por u: 64 px / 11,7 dp = 5,5 px por dp). Crece y
+        /// mengua con la caja, como el icono.
+        /// </summary>
+        public const float FruitIconRimPx = 5.5f;
+
+        /// <summary>L* (CIELAB) mínimo del tinte con icono en marfil que lleva contorno (<see cref="FruitIconHasRim"/>) [P].</summary>
+        public const float FruitIconRimLightnessMin = 45f;
+
+        /// <summary>L* (CIELAB) máximo del tinte con icono en marfil que lleva contorno (<see cref="FruitIconHasRim"/>) [P].</summary>
+        public const float FruitIconRimLightnessMax = 55f;
+
+        // «v» huecas de la Guanábana (x, y locales desde su centro, en px): 6, sueltas, sin filas.
+        private static readonly float[] GuanabanaVs = { -7f, 11.5f, 6f, 13.5f, -1f, 3f, 10f, 1.5f, -8f, -6.5f, 4.5f, -11f };
+
+        // Semillas del Achiote en la abertura (x, y, radio en px).
+        private static readonly float[] AchioteSeeds = { 31f, 29f, 3.9f, 36f, 36.5f, 3.9f, 27.5f, 38.5f, 3.9f, 33f, 46f, 3.7f };
+
         private Texture2D? _fruitIconAtlas;
 
         /// <summary>Tiempo de generación del atlas de iconos (ms; 0 si aún no se generó).</summary>
@@ -44,7 +67,8 @@ namespace AF.Presentation
 
         /// <summary>
         /// Atlas de iconos de accesibilidad por tinte (ver la clase): <see cref="FruitIconPx"/> × (<see cref="FruitIconPx"/> ·
-        /// <see cref="FruitIconCells"/>) px, la máscara en RGBA. Lo genera la primera llamada.
+        /// <see cref="FruitIconCells"/>) px, la silueta en R (y en B y A) y su contorno (<see cref="FruitIconRimMask"/>) en G. Lo
+        /// genera la primera llamada.
         /// </summary>
         public Texture2D FruitIconAtlas
         {
@@ -55,15 +79,23 @@ namespace AF.Presentation
                     Stopwatch watch = Stopwatch.StartNew();
                     var px = new Color32[FruitIconPx * FruitIconPx * FruitIconCells];
                     var mask = new float[FruitIconPx * FruitIconPx];
+                    var rim = new float[FruitIconPx * FruitIconPx];
                     for (int tint = 1; tint <= Cuia.MaxTintColor; tint++)
                     {
                         System.Array.Clear(mask, 0, mask.Length);
+                        System.Array.Clear(rim, 0, rim.Length);
                         DrawFruitIcon(mask, tint);
+                        if (FruitIconHasRim(tint))
+                        {
+                            DilateIcon(mask, rim, FruitIconRimPx);
+                        }
+
                         int offset = tint * FruitIconPx * FruitIconPx;
                         for (int i = 0; i < mask.Length; i++)
                         {
                             byte v = (byte)Mathf.RoundToInt(Mathf.Clamp01(mask[i]) * 255f);
-                            px[offset + i] = new Color32(v, v, v, v);
+                            byte g = (byte)Mathf.RoundToInt(Mathf.Clamp01(rim[i]) * 255f);
+                            px[offset + i] = new Color32(v, g, v, v);
                         }
                     }
 
@@ -108,49 +140,84 @@ namespace AF.Presentation
             return mask;
         }
 
+        /// <summary>
+        /// El icono del tinte lleva un contorno de ≈ 1 dp (<see cref="FruitIconRimPx"/>) del propio tinte oscurecido
+        /// (<see cref="LiquidGraphic.FruitIconRimDarken"/>) [P]: los iconos en marfil (<see cref="Palette.PatternBase"/>) sobre
+        /// un tinte de L* entre <see cref="FruitIconRimLightnessMin"/> y <see cref="FruitIconRimLightnessMax"/> (Achiote y Agua
+        /// del Río Negro), donde el marfil al 90 % contrasta poco (≈ 3,5:1) y se funde con las marcas marfil de su patrón. No
+        /// cambia ningún HEX.
+        /// </summary>
+        public static bool FruitIconHasRim(int tint)
+        {
+            if (!HasFruitIcon(tint) || Palette.PatternBase(tint) != Palette.UiPaper)
+            {
+                return false;
+            }
+
+            float l = ColorMath.LabLightness(Palette.Tint(tint));
+            return l >= FruitIconRimLightnessMin && l <= FruitIconRimLightnessMax;
+        }
+
+        /// <summary>
+        /// Máscara (0..1) del contorno del icono del tinte <paramref name="tint"/> (canal G del atlas): la silueta engordada
+        /// <see cref="FruitIconRimPx"/> px, que también rellena los huecos estrechos; vacía si el tinte no lleva contorno
+        /// (<see cref="FruitIconHasRim"/>). Para tests y herramientas (asigna).
+        /// </summary>
+        public static float[] FruitIconRimMask(int tint)
+        {
+            var rim = new float[FruitIconPx * FruitIconPx];
+            if (FruitIconHasRim(tint))
+            {
+                DilateIcon(FruitIconMask(tint), rim, FruitIconRimPx);
+            }
+
+            return rim;
+        }
+
+        // Dilatación con antialias: cada píxel de la silueta (con su cobertura) tiñe los que quedan a radius px o menos.
+        private static void DilateIcon(float[] mask, float[] dst, float radius)
+        {
+            int reach = Mathf.CeilToInt(radius + 1f);
+            for (int qy = 0; qy < FruitIconPx; qy++)
+            {
+                for (int qx = 0; qx < FruitIconPx; qx++)
+                {
+                    float mq = mask[(qy * FruitIconPx) + qx];
+                    if (mq <= 0f)
+                    {
+                        continue;
+                    }
+
+                    int y0 = Mathf.Max(0, qy - reach);
+                    int y1 = Mathf.Min(FruitIconPx - 1, qy + reach);
+                    int x0 = Mathf.Max(0, qx - reach);
+                    int x1 = Mathf.Min(FruitIconPx - 1, qx + reach);
+                    for (int y = y0; y <= y1; y++)
+                    {
+                        for (int x = x0; x <= x1; x++)
+                        {
+                            float dx = x - qx;
+                            float dy = y - qy;
+                            float v = mq * PixelCanvas.Coverage(Mathf.Sqrt((dx * dx) + (dy * dy)) - radius);
+                            int i = (y * FruitIconPx) + x;
+                            if (v > dst[i])
+                            {
+                                dst[i] = v;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Silueta del tinte en la celda de 64 × 64 px (origen abajo a la izquierda): de y ≈ 3 a y ≈ 61 (FruitIconFill).
         private static void DrawFruitIcon(float[] m, int tint)
         {
             switch (tint)
             {
-                case 1: // Guanábana: fruto espinoso (óvalo alargado e inclinado, con espinas cortas y gruesas y su rabito curvo).
-                    {
-                        const float cx = 31f;
-                        const float cy = 29f;
-                        const float rx = 15f;
-                        const float ry = 22f;
-                        const float tilt = -22f;
-                        IconEllipse(m, cx, cy, rx, ry, tilt, false);
-                        float rad = tilt * Mathf.Deg2Rad;
-                        float c = Mathf.Cos(rad);
-                        float s = Mathf.Sin(rad);
-                        for (int i = 0; i < 11; i++)
-                        {
-                            float a = (i + 0.5f) / 11f * Mathf.PI * 2f;
-                            if (a > 1.2f && a < 1.95f)
-                            {
-                                continue; // el rabito
-                            }
-
-                            var local = new Vector2(rx * Mathf.Cos(a), ry * Mathf.Sin(a));
-                            var normal = new Vector2(Mathf.Cos(a) / rx, Mathf.Sin(a) / ry).normalized;
-                            Vector2 p = new Vector2(cx, cy) + Rotate(local, c, s);
-                            Vector2 n = Rotate(normal, c, s);
-                            var t = new Vector2(-n.y, n.x);
-                            IconTriangle(m, p + (t * 4.2f) - (n * 1.5f), p - (t * 4.2f) - (n * 1.5f), p + (n * 6.0f), false);
-                        }
-
-                        // Espinas también dentro de la silueta (huecos en V), para que no se lea como una bola peluda.
-                        for (int i = 0; i < 4; i++)
-                        {
-                            Vector2 q = new Vector2(cx, cy) + Rotate(new Vector2(i % 2 == 0 ? -5f : 5f, -11f + (i * 7.5f)), c, s);
-                            IconTriangle(m, q + new Vector2(-2.6f, -1.8f), q + new Vector2(2.6f, -1.8f), q + new Vector2(0f, 2.8f), true);
-                        }
-
-                        IconCapsule(m, 38f, 48.5f, 39.5f, 54f, 2.5f, false);
-                        IconCapsule(m, 39.5f, 54f, 36f, 59.5f, 2.5f, false);
-                        break;
-                    }
+                case 1: // Guanábana (ver DrawGuanabanaIcon)
+                    DrawGuanabanaIcon(m);
+                    break;
 
                 case 2: // Copoazú: vaina ovalada inclinada, con su costura y el rabito.
                     IconEllipse(m, 30f, 30f, 15f, 28f, -35f, false);
@@ -190,46 +257,9 @@ namespace AF.Presentation
 
                     break;
 
-                case 5: // Achiote: cápsula erizada (gota con la punta arriba, cerdas largas y la juntura de sus valvas).
-                    {
-                        const float cx = 32f;
-                        const float cy = 26f;
-                        const float r = 15f;
-                        var tip = new Vector2(32f, 54f);
-                        float d = tip.y - cy;
-                        float th = Mathf.Acos(r / d);
-                        var left = new Vector2(cx - (r * Mathf.Sin(th)), cy + (r * Mathf.Cos(th)));
-                        var right = new Vector2(cx + (r * Mathf.Sin(th)), cy + (r * Mathf.Cos(th)));
-                        IconCircle(m, cx, cy, r, false);
-                        IconTriangle(m, tip, left, right, false);
-                        for (int i = 0; i < 11; i++)
-                        {
-                            float a = (165f + (i * 21f)) * Mathf.Deg2Rad;
-                            var n = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-                            IconCapsule(m, cx + (n.x * (r - 1f)), cy + (n.y * (r - 1f)), cx + (n.x * (r + 6f)), cy + (n.y * (r + 6f)), 1.2f, false);
-                        }
-
-                        for (int side = -1; side <= 1; side += 2)
-                        {
-                            Vector2 a0 = side < 0 ? left : right;
-                            Vector2 edge = tip - a0;
-                            var n = new Vector2(side * edge.y, -side * edge.x).normalized;
-                            if (n.x * side < 0f)
-                            {
-                                n = -n;
-                            }
-
-                            for (int k = 1; k <= 2; k++)
-                            {
-                                Vector2 p = a0 + (edge * (k / 3f));
-                                IconCapsule(m, p.x - n.x, p.y - n.y, p.x + (n.x * 6f), p.y + (n.y * 6f), 1.2f, false);
-                            }
-                        }
-
-                        IconCapsule(m, tip.x, tip.y - 1f, tip.x, 60f, 1.2f, false);
-                        IconCapsule(m, 32f, 46f, 32f, 14f, 1.3f, true);
-                        break;
-                    }
+                case 5: // Achiote (ver DrawAchioteIcon)
+                    DrawAchioteIcon(m);
+                    break;
 
                 case 6: // Camu camu: cereza (dos bayas con sus rabitos, una hoja y un brillo).
                     IconCircle(m, 21f, 18f, 12.5f, false);
@@ -285,30 +315,8 @@ namespace AF.Presentation
                         break;
                     }
 
-                case 11: // Lulo: fruto peludo (bola con pelillos y el cáliz en estrella).
-                    IconCircle(m, 32f, 27f, 18f, false);
-                    for (int i = 0; i < 24; i++)
-                    {
-                        float deg = i * 15f;
-                        if (deg > 55f && deg < 125f)
-                        {
-                            continue; // el cáliz
-                        }
-
-                        float a = deg * Mathf.Deg2Rad;
-                        IconCapsule(m, 32f + (Mathf.Cos(a) * 16.5f), 27f + (Mathf.Sin(a) * 16.5f), 32f + (Mathf.Cos(a) * 23f), 27f + (Mathf.Sin(a) * 23f), 1.0f, false);
-                    }
-
-                    for (int i = 0; i < 5; i++)
-                    {
-                        float a = (90f + (i * 72f)) * Mathf.Deg2Rad;
-                        var d = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-                        var side = new Vector2(-d.y, d.x);
-                        var c = new Vector2(32f, 46f);
-                        IconTriangle(m, c + (d * 10f), c + (side * 3.4f), c - (side * 3.4f), false);
-                    }
-
-                    IconCapsule(m, 32f, 50f, 30.5f, 59f, 2.0f, false);
+                case 11: // Lulo (ver DrawLuloIcon)
+                    DrawLuloIcon(m);
                     break;
 
                 case 12: // Arazá: fruto aterciopelado (ancho y achatado, punteado, con su coronita y el rabito).
@@ -339,31 +347,104 @@ namespace AF.Presentation
                     IconCapsule(m, 40f, 55f, 42.5f, 59.5f, 2.2f, false);
                     break;
 
-                default: // 14 · Agua del Río Negro: hoja hundida (bajo la línea del agua, con burbujas que suben).
-                    for (int i = 0; i < 12; i++)
-                    {
-                        float x0 = 7f + (i * 4.2f);
-                        float x1 = x0 + 4.2f;
-                        IconCapsule(m, x0, 56f + (2.8f * Mathf.Sin(x0 * 0.37f)), x1, 56f + (2.8f * Mathf.Sin(x1 * 0.37f)), 2.0f, false);
-                    }
-
-                    IconLens(m, 30f, 24f, 21f, 9.5f, 52f, false);
-                    {
-                        float rad = 52f * Mathf.Deg2Rad;
-                        var axis = new Vector2(-Mathf.Sin(rad), Mathf.Cos(rad));
-                        var c = new Vector2(30f, 24f);
-                        Vector2 a = c - (axis * 17f);
-                        Vector2 b = c + (axis * 17f);
-                        IconCapsule(m, a.x, a.y, b.x, b.y, 1.1f, true);
-                        Vector2 stemFrom = c - (axis * 20f);
-                        Vector2 stemTo = c - (axis * 28f);
-                        IconCapsule(m, stemFrom.x, stemFrom.y, stemTo.x, stemTo.y, 1.8f, false);
-                    }
-
-                    IconCircle(m, 45f, 41f, 2.6f, false);
-                    IconCircle(m, 49f, 47.5f, 2.0f, false);
+                default: // 14 · Agua del Río Negro (ver DrawSunkenLeafIcon)
+                    DrawSunkenLeafIcon(m);
                     break;
             }
+        }
+
+        // Guanábana: fruto espinoso como corazón asimétrico de cuerpo liso (más ancho arriba y con la punta de abajo torcida), el
+        // borde en bultos suaves de menos de 1 dp, las espinas solo como «v» huecas por dentro y un pezón corto y recto (sin el
+        // rabito rizado, que parecía una antena, ni las espinas por fuera, que la hacían una mosca o una mancha erizada).
+        private static void DrawGuanabanaIcon(float[] m)
+        {
+            const float cx = 32f;
+            const float cy = 32f;
+            const float tilt = -18f;
+            IconBumpyHeart(m, cx, cy, 18f, 23f, tilt, 0.24f, 0.7f, 11, 1.4f, false);
+            float rad = tilt * Mathf.Deg2Rad;
+            float c = Mathf.Cos(rad);
+            float s = Mathf.Sin(rad);
+            var center = new Vector2(cx, cy);
+            for (int i = 0; i < GuanabanaVs.Length; i += 2)
+            {
+                Vector2 q = center + Rotate(new Vector2(GuanabanaVs[i], GuanabanaVs[i + 1]), c, s);
+                Vector2 tip = q + Rotate(new Vector2(0f, -2.2f), c, s);
+                Vector2 l = q + Rotate(new Vector2(-3.2f, 2.2f), c, s);
+                Vector2 r = q + Rotate(new Vector2(3.2f, 2.2f), c, s);
+                IconCapsule(m, l.x, l.y, tip.x, tip.y, 1.25f, true);
+                IconCapsule(m, r.x, r.y, tip.x, tip.y, 1.25f, true);
+            }
+
+            Vector2 top = center + Rotate(new Vector2(-1.5f, 22.5f), c, s);
+            Vector2 nub = center + Rotate(new Vector2(-2f, 27.5f), c, s);
+            IconCapsule(m, top.x, top.y, nub.x, nub.y, 2.8f, false);
+        }
+
+        // Achiote: cápsula en corazón abierta en dos valvas, con semillas redondas en la abertura y pelillos cortos solo en el
+        // contorno de arriba (sin la raya central de arriba abajo ni las cerdas en abanico, que la hacían una garrapata).
+        private static void DrawAchioteIcon(float[] m)
+        {
+            // El corazón: dos lóbulos arriba y la punta abajo.
+            IconCircle(m, 22f, 41f, 15f, false);
+            IconCircle(m, 42f, 41f, 15f, false);
+            IconTriangle(m, new Vector2(7.6f, 36f), new Vector2(56.4f, 36f), new Vector2(32f, 3f), false);
+            // Abierto en dos valvas desde arriba: la abertura en V, con las semillas dentro, separadas de las valvas por su hueco.
+            IconTriangle(m, new Vector2(32f, 20f), new Vector2(18f, 66f), new Vector2(46f, 66f), true);
+            for (int i = 0; i < AchioteSeeds.Length; i += 3)
+            {
+                IconCircle(m, AchioteSeeds[i], AchioteSeeds[i + 1], AchioteSeeds[i + 2] + 2f, true);
+            }
+
+            for (int i = 0; i < AchioteSeeds.Length; i += 3)
+            {
+                IconCircle(m, AchioteSeeds[i], AchioteSeeds[i + 1], AchioteSeeds[i + 2], false);
+            }
+
+            // Pelillos cortos solo en el contorno de arriba de los lóbulos.
+            for (int side = -1; side <= 1; side += 2)
+            {
+                float lobeX = 32f + (side * 10f);
+                for (int k = 0; k < 6; k++)
+                {
+                    float deg = side < 0 ? 92f + (k * 14f) : 88f - (k * 14f);
+                    float a = deg * Mathf.Deg2Rad;
+                    var n = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                    IconCapsule(m, lobeX + (n.x * 14f), 41f + (n.y * 14f), lobeX + (n.x * 16.8f), 41f + (n.y * 16.8f), 0.95f, false);
+                }
+            }
+        }
+
+        // Lulo: fruto peludo, de cuerpo redondo con el borde algo irregular (el vello) y el cáliz de 5 sépalos en estrella arriba,
+        // separado del cuerpo por su hueco (sin los rayos largos, que lo hacían un virus o un erizo).
+        private static void DrawLuloIcon(float[] m)
+        {
+            IconBumpyHeart(m, 32f, 25f, 20.5f, 20.5f, 0f, 0f, 0f, 24, 1.1f, false);
+            IconStar(m, 32f, 44f, 5, 14f, 3.8f, 36f, 2.2f, true);
+            IconStar(m, 32f, 44f, 5, 14f, 3.8f, 36f, 0f, false);
+            IconCapsule(m, 32f, 46f, 33.5f, 59.5f, 2.3f, false);
+        }
+
+        // Agua del Río Negro: hoja hundida dentro de una masa de agua rellena (canto de arriba en ola suave, de dos crestas, y fondo
+        // en arco), con la hoja en negativo (su hueco en el agua, de ≈ 7 × 4 dp) y el nervio macizo. Sin la ola abierta ni las
+        // burbujas (parecían «líneas de olor»), y sin el agua flotando sobre la hoja, que se leía como una nube.
+        private static void DrawSunkenLeafIcon(float[] m)
+        {
+            // El agua: de y = 3 (en el centro; 9 px más arriba en los lados) al canto ondulado de y ≈ 56,5 ± 3.
+            IconWaterBand(m, 6f, 58f, 56.5f, 3.0f, 26f, -0.9f, 3f, 9f, false);
+            // La hoja hundida, en negativo, con el nervio macizo y el rabito hueco hacia arriba a la izquierda.
+            const float deg = 45f;
+            const float halfLen = 20f;
+            var c = new Vector2(32f, 28f);
+            IconLens(m, c.x, c.y, halfLen, 12f, deg, true);
+            float rad = deg * Mathf.Deg2Rad;
+            var axis = new Vector2(-Mathf.Sin(rad), Mathf.Cos(rad));
+            Vector2 veinFrom = c - (axis * (halfLen - 4f));
+            Vector2 veinTo = c + (axis * (halfLen - 5f));
+            IconCapsule(m, veinFrom.x, veinFrom.y, veinTo.x, veinTo.y, 2.0f, false);
+            Vector2 stemFrom = c + (axis * (halfLen - 2f));
+            Vector2 stemTo = c + (axis * (halfLen + 5.5f));
+            IconCapsule(m, stemFrom.x, stemFrom.y, stemTo.x, stemTo.y, 2.2f, true);
         }
 
         // Fila del racimo de la Bacaba: n bayas de 5,6 px de radio a 13 px, centradas en x = 32 a la altura y.
@@ -435,6 +516,101 @@ namespace AF.Presentation
                     float lx = ((px * c) + (py * s)) / rx;
                     float ly = ((-px * s) + (py * c)) / ry;
                     IconWrite(m, x, y, (Mathf.Sqrt((lx * lx) + (ly * ly)) - 1f) * small, cut);
+                }
+            }
+        }
+
+        // Corazón asimétrico de cuerpo liso (la Guanábana): una elipse de semiejes rx y ry girada deg grados, más ancha arriba
+        // (widenTop: fracción de rx que gana en lo alto y pierde abajo), con la punta de abajo desplazada a un lado (bend, en
+        // fracciones de rx) y el borde en bumps bultos suaves de bumpAmp px hacia fuera.
+        private static void IconBumpyHeart(float[] m, float cx, float cy, float rx, float ry, float deg, float widenTop, float bend, int bumps, float bumpAmp, bool cut)
+        {
+            float rad = deg * Mathf.Deg2Rad;
+            float c = Mathf.Cos(rad);
+            float s = Mathf.Sin(rad);
+            float big = Mathf.Max(rx, ry) + bumpAmp + 2f;
+            IconBox(cx - big, cy - big, cx + big, cy + big, out int x0, out int y0, out int x1, out int y1);
+            for (int y = y0; y <= y1; y++)
+            {
+                for (int x = x0; x <= x1; x++)
+                {
+                    float px = (x + 0.5f) - cx;
+                    float py = (y + 0.5f) - cy;
+                    float lx = (px * c) + (py * s);
+                    float ly = ((-px * s) + (py * c)) / ry;
+                    float low = Mathf.Min(ly, 0f);
+                    float wx = rx * (1f + (widenTop * Mathf.Clamp(ly, -1f, 1f)));
+                    float nx = (lx - (bend * rx * low * low)) / wx;
+                    float r = Mathf.Sqrt((nx * nx) + (ly * ly));
+                    float bump = 0.5f - (0.5f * Mathf.Cos(bumps * Mathf.Atan2(ly, nx)));
+                    IconWrite(m, x, y, ((r - 1f) * rx) - (bumpAmp * bump), cut);
+                }
+            }
+        }
+
+        // Estrella de points puntas (pétalos triangulares del centro a tipR, con medio ancho baseHalfW en la base) girada rotDeg
+        // grados desde la vertical; grow engorda la forma (para recortar su hueco alrededor).
+        private static void IconStar(float[] m, float cx, float cy, int points, float tipR, float baseHalfW, float rotDeg, float grow, bool cut)
+        {
+            float reach = tipR + grow + 1f;
+            IconBox(cx - reach, cy - reach, cx + reach, cy + reach, out int x0, out int y0, out int x1, out int y1);
+            for (int y = y0; y <= y1; y++)
+            {
+                for (int x = x0; x <= x1; x++)
+                {
+                    var p = new Vector2(x + 0.5f, y + 0.5f);
+                    float d = (p - new Vector2(cx, cy)).magnitude - (baseHalfW * 1.15f);
+                    for (int k = 0; k < points; k++)
+                    {
+                        float a = (90f + rotDeg + (k * 360f / points)) * Mathf.Deg2Rad;
+                        var dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                        var side = new Vector2(-dir.y, dir.x);
+                        Vector2 c0 = new Vector2(cx, cy) + (side * baseHalfW);
+                        Vector2 c1 = new Vector2(cx, cy) - (side * baseHalfW);
+                        Vector2 tip = new Vector2(cx, cy) + (dir * tipR);
+                        Vector2 q0 = c0;
+                        Vector2 q1 = c1;
+                        float cross = ((q1.x - q0.x) * (tip.y - q0.y)) - ((q1.y - q0.y) * (tip.x - q0.x));
+                        if (cross < 0f)
+                        {
+                            q0 = c1;
+                            q1 = c0;
+                        }
+
+                        d = Mathf.Min(d, Mathf.Max(IconEdge(q0, q1, p), Mathf.Max(IconEdge(q1, tip, p), IconEdge(tip, q0, p))));
+                    }
+
+                    IconWrite(m, x, y, d - grow, cut);
+                }
+            }
+        }
+
+        // Masa de agua rellena de fromX a toX: el canto de arriba en ola (media topY, amplitud amp px, longitud de onda wave px y
+        // fase phase) y el de abajo en arco suave (bottomY en el centro, sag px más alto en los extremos), con las esquinas
+        // redondeadas.
+        private static void IconWaterBand(float[] m, float fromX, float toX, float topY, float amp, float wave, float phase, float bottomY, float sag, bool cut)
+        {
+            float k = 2f * Mathf.PI / wave;
+            float mid = 0.5f * (fromX + toX);
+            float half = 0.5f * (toX - fromX);
+            IconBox(fromX, bottomY, toX, topY + amp, out int x0, out int y0, out int x1, out int y1);
+            for (int y = y0; y <= y1; y++)
+            {
+                for (int x = x0; x <= x1; x++)
+                {
+                    float px = x + 0.5f;
+                    float py = y + 0.5f;
+                    float slope = amp * k * Mathf.Cos((px * k) + phase);
+                    float dTop = (py - (topY + (amp * Mathf.Sin((px * k) + phase)))) / Mathf.Sqrt(1f + (slope * slope));
+                    float e = (px - mid) / half;
+                    float dBottom = (bottomY + (sag * e * e)) - py;
+                    float dSide = Mathf.Abs(px - mid) - half;
+                    // Esquinas redondeadas (radio 3 px) donde se cruzan el lado y los cantos.
+                    float r = 3f;
+                    float qa = Mathf.Max(dSide + r, 0f);
+                    float qb = Mathf.Max(Mathf.Max(dTop, dBottom) + r, 0f);
+                    float d = Mathf.Sqrt((qa * qa) + (qb * qb)) + Mathf.Min(Mathf.Max(dSide, Mathf.Max(dTop, dBottom)) + r, 0f) - r;
+                    IconWrite(m, x, y, d, cut);
                 }
             }
         }

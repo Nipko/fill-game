@@ -258,6 +258,13 @@ namespace AF.Presentation
         public const float FruitIconOpacity = 0.9f;
 
         /// <summary>
+        /// Oscurecido del contorno de ≈ 1 dp de los iconos que lo llevan (<see cref="ProceduralArt.FruitIconHasRim"/>: marfil
+        /// sobre Achiote y Agua del Río Negro) [P]: el color de la banda al 65 %, en el espacio de raíz cuadrada en que se mezclan
+        /// el patrón y el icono (shader: <c>AF_ICON_RIM_DARKEN</c>). No cambia ningún HEX.
+        /// </summary>
+        public const float FruitIconRimDarken = 0.35f;
+
+        /// <summary>
         /// Pasos del destello del sellado en la parte entera de <c>TEXCOORD2.y</c> (<see cref="PackSurface"/>; shader:
         /// <c>AF_FLASH_STEPS</c>): el destello de 0 a 0,15 en pasos de 1/256.
         /// </summary>

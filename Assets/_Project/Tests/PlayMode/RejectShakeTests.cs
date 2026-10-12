@@ -115,6 +115,17 @@ namespace AF.Tests.PlayMode
                     Assert.That(x, Is.EqualTo(0f), what + ": a los " + t + " ms ya en su sitio, exacto");
                 }
 
+                // Los picos con literales (T-G: ±8 dp, 3 ciclos en 240 ms), sin pasar por las constantes de CuiaView: con
+                // 3 ciclos, +8 dp a los 20 ms (240 / 12) y −8 dp a los 60 ms (240 / 4). Con 2 ciclos saldrían +6,93 y −6,93.
+                if (t == 20)
+                {
+                    Assert.That(x, Is.EqualTo(8f).Within(1e-3f), what + ": +8 dp a los 20 ms (3 ciclos en 240 ms)");
+                }
+                else if (t == 60)
+                {
+                    Assert.That(x, Is.EqualTo(-8f).Within(1e-3f), what + ": −8 dp a los 60 ms (3 ciclos en 240 ms)");
+                }
+
                 if (Mathf.Abs(x) > 1e-4f)
                 {
                     lastMoving = t;
@@ -139,10 +150,10 @@ namespace AF.Tests.PlayMode
             }
 
             TestContext.WriteLine(what + ": pico " + peak.ToString("F3") + " dp, " + crossings + " cruces, " + positiveLobes + "+" + negativeLobes + " lóbulos, último movimiento a los " + lastMoving + " ms.");
-            Assert.That(peak, Is.EqualTo(CuiaView.ShakeDp).Within(0.02f), what + ": pico de ±8 dp");
-            Assert.That(positiveLobes, Is.EqualTo(CuiaView.ShakeCycles), what + ": 3 ciclos (lóbulos a la derecha)");
-            Assert.That(negativeLobes, Is.EqualTo(CuiaView.ShakeCycles), what + ": 3 ciclos (lóbulos a la izquierda)");
-            Assert.That(crossings, Is.EqualTo((2 * CuiaView.ShakeCycles) - 1), what + ": 5 cruces por cero dentro de la sacudida");
+            Assert.That(peak, Is.EqualTo(8f).Within(0.02f), what + ": pico de ±8 dp");
+            Assert.That(positiveLobes, Is.EqualTo(3), what + ": 3 ciclos (lóbulos a la derecha)");
+            Assert.That(negativeLobes, Is.EqualTo(3), what + ": 3 ciclos (lóbulos a la izquierda)");
+            Assert.That(crossings, Is.EqualTo(5), what + ": 5 cruces por cero dentro de la sacudida");
             Assert.That(lastMoving, Is.InRange(235, 239), what + ": dura 240 ms");
             Assert.That(view.Shaking, Is.False, what + ": terminó");
             Assert.That(view.BodyOffset.x, Is.EqualTo(0f), what + ": x = 0 exacto");

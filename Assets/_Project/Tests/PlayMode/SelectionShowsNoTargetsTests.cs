@@ -63,6 +63,7 @@ namespace AF.Tests.PlayMode
 
             Assert.That(CuiaView.ShakeDp, Is.EqualTo(8f), "±8 dp (T-G)");
             Assert.That(CuiaView.ShakeMs, Is.EqualTo(240f), "240 ms (T-G)");
+            Assert.That(CuiaView.ShakeCycles, Is.EqualTo(3), "3 ciclos (T-G)");
             Assert.That(maxShake, Is.InRange(CuiaView.ShakeDp * 0.9f, CuiaView.ShakeDp + 1e-3f), "sacudida de ≈ 8 dp, a pasos de 16 ms");
             Assert.That(empty.Shaking, Is.False, "terminó a los 240 ms");
             Assert.That(empty.Body.anchoredPosition.x, Is.EqualTo(0f).Within(0.001f), "vuelve a su sitio");

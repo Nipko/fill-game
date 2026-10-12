@@ -159,8 +159,9 @@ namespace AF.Tests.EditMode
                 Assert.That(area, Is.InRange(0.15f, 0.65f), "tinte " + tint + ": silueta llena, legible a 48 dp");
             }
 
-            // Pares de riesgo de 07 §3 (y glosario §9): siluetas distintas (IoU de las máscaras binarias < 0,7).
-            int[,] pairs = { { 4, 5 }, { 5, 6 }, { 6, 13 }, { 13, 14 }, { 14, 4 }, { 3, 12 }, { 12, 11 }, { 11, 10 }, { 8, 9 }, { 1, 2 } };
+            // Pares de riesgo de 07 §3 (y glosario §9): siluetas distintas (IoU de las máscaras binarias < 0,7). Además, la
+            // Guanábana frente al Lulo y al Aguaje (revisión de B3: el 1 y el 11 se confundían).
+            int[,] pairs = { { 4, 5 }, { 5, 6 }, { 6, 13 }, { 13, 14 }, { 14, 4 }, { 3, 12 }, { 12, 11 }, { 11, 10 }, { 8, 9 }, { 1, 2 }, { 1, 11 }, { 1, 4 } };
             for (int p = 0; p < pairs.GetLength(0); p++)
             {
                 float iou = Iou(masks[pairs[p, 0]], masks[pairs[p, 1]]);
@@ -169,9 +170,60 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void IconRim_OnlyIvoryOnMidLightnessTints() // revisión de B3: marfil sobre L* 45-55 (Achiote y Río Negro)
+        {
+            const int n = ProceduralArt.FruitIconPx;
+            for (int tint = 0; tint <= Cuia.MudColor; tint++)
+            {
+                bool expected = tint == 5 || tint == 14;
+                Assert.That(ProceduralArt.FruitIconHasRim(tint), Is.EqualTo(expected), "tinte " + tint);
+                float[] rim = ProceduralArt.FruitIconRimMask(tint);
+                if (!expected)
+                {
+                    Assert.That(Sum(rim), Is.EqualTo(0f), "tinte " + tint + ": sin contorno (G = 0)");
+                    continue;
+                }
+
+                Assert.That(Palette.PatternBase(tint), Is.EqualTo(Palette.UiPaper), "tinte " + tint + ": icono en marfil");
+                float l = ColorMath.LabLightness(Palette.Tint(tint));
+                Assert.That(l, Is.InRange(45f, 55f), "tinte " + tint + ": L* " + l.ToString("F1"));
+                float[] m = ProceduralArt.FruitIconMask(tint);
+                int widened = 0;
+                for (int i = 0; i < m.Length; i++)
+                {
+                    Assert.That(rim[i], Is.GreaterThanOrEqualTo(m[i] - 1e-4f), "tinte " + tint + ": el contorno cubre la silueta");
+                    if (rim[i] > 0.5f)
+                    {
+                        // Cada píxel del contorno está a ≈ 1 dp (FruitIconRimPx) de la silueta, como mucho.
+                        int x = i % n;
+                        int y = i / n;
+                        bool near = false;
+                        int reach = Mathf.CeilToInt(ProceduralArt.FruitIconRimPx) + 1;
+                        for (int dy = -reach; dy <= reach && !near; dy++)
+                        {
+                            for (int dx = -reach; dx <= reach && !near; dx++)
+                            {
+                                int xx = x + dx;
+                                int yy = y + dy;
+                                near = xx >= 0 && yy >= 0 && xx < n && yy < n && m[(yy * n) + xx] > 0.5f && ((dx * dx) + (dy * dy)) <= (reach * reach);
+                            }
+                        }
+
+                        Assert.That(near, Is.True, "tinte " + tint + ": contorno a ≤ 1 dp de la silueta en (" + x + ", " + y + ")");
+                        widened += m[i] < 0.5f ? 1 : 0;
+                    }
+                }
+
+                TestContext.WriteLine("Contorno del tinte " + tint + ": " + widened + " px fuera de la silueta.");
+                Assert.That(widened, Is.GreaterThan(400), "tinte " + tint + ": el contorno rodea la silueta");
+            }
+        }
+
+        [Test]
         public void Mesh_IconOnEachVisibleDose_NeverHiddenMudOrWater() // T-E.4: con Patrones de fruta
         {
-            CuiaView view = NewView(0);
+            // Vista de capacidad 5, como la cuia: la dosis 4 existe y está vacía (con capacidad 4 quedaría fuera de rango).
+            CuiaView view = NewView(0, 5);
             view.SetGeometry(Vector2.zero, 48f, 64f);
             Cuia cuia = Cuia.Create(5, new[] { Cuia.MudColor, 8, 4, 4 }, 0b0100);
             view.ShowContent(cuia, false);
@@ -184,6 +236,8 @@ namespace AF.Tests.EditMode
             Assert.That(view.Liquid.FruitIconDrawn(1), Is.True, "la dosis visible de Açaí");
             Assert.That(view.Liquid.FruitIconDrawn(2), Is.False, "la oculta, sin icono (07 §4.3)");
             Assert.That(view.Liquid.FruitIconDrawn(3), Is.True, "la de arriba");
+            Assert.That(view.Capacity, Is.EqualTo(5), "la dosis 4 está dentro de la capacidad");
+            Assert.That(cuia.Count, Is.EqualTo(4), "y vacía");
             Assert.That(view.Liquid.FruitIconDrawn(4), Is.False, "la vacía");
             Assert.That(CodedBands(view), Is.EqualTo((1 << 1) | (1 << 2) | (1 << 3)), "sitio en la malla: las 2 visibles con icono y la oculta con su «?»");
 

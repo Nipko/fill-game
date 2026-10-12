@@ -324,6 +324,7 @@ namespace AF.Tests.EditMode
             var mirrors = new (string Name, float Value)[]
             {
                 ("AF_ICON_OPACITY", LiquidGraphic.FruitIconOpacity),
+                ("AF_ICON_RIM_DARKEN", LiquidGraphic.FruitIconRimDarken),
                 ("AF_ICON_CELLS", ProceduralArt.FruitIconCells),
                 ("AF_ICON_PX", ProceduralArt.FruitIconPx),
                 ("AF_FLASH_STEPS", LiquidGraphic.FlashPackSteps),
@@ -384,6 +385,8 @@ namespace AF.Tests.EditMode
             Assert.That(Regex.IsMatch(code, @"amount = fruit \? \(half\)_PatternOpacity \* fruitWeight : hatch;"), Is.True, "y el de la fruta que se revela");
             Assert.That(Regex.IsMatch(code, @"_IconAtlas\s*\(""[^""]*"",\s*2D\)"), Is.True, "la propiedad del atlas de iconos de fruta");
             Assert.That(Regex.IsMatch(code, @"tex2Dlod\(_IconAtlas,"), Is.True, "que lee la rama del icono");
+            Assert.That(Regex.IsMatch(code, @"tex2Dlod\(_IconAtlas, [^;]*\)\.rg;"), Is.True, "la silueta (R) y el contorno (G) en la misma muestra");
+            Assert.That(Regex.IsMatch(code, @"^\s*float bandScale = 1\.0;", RegexOptions.Multiline), Is.True, "fuera de las ramas, la escala de la banda no se calcula (la pagan solo murky e iconOn)");
             Assert.That(LiquidGraphic.FireflyEdgeU, Is.LessThanOrEqualTo(0.15f), "borde del frente de luz estrecho (≤ 0,15 u)");
             Assert.That(LiquidGraphic.GlyphMaxU, Is.EqualTo(MurkyMarks.MarkU), "en reposo, el «?» de 0,5 u de 07 §4.3");
             Assert.That(LiquidGraphic.HatchFadeTo, Is.LessThan(LiquidGraphic.FruitPatternFrom), "la trama se va antes de que entre el patrón");
