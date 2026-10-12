@@ -32,7 +32,13 @@ namespace AF.Tests.PlayMode
         // Vertidos de ida y vuelta (con Marea, ilimitada en 1-10) antes de resolver, para que el p95 tenga muestras.
         private const int PourUndoRounds = 24;
 
+        // Tope de las esperas del test a otros hilos (el escritor, el disco retenido); no se alcanza si todo va bien.
+        private const int WaitMs = 10000;
+
         private string? _dir;
+
+        // El disco que puede retener al escritor (solo en el test del guardado): el TearDown lo suelta.
+        private HoldableProfileDisk? _disk;
 
         [SetUp]
         public void SetUp()
@@ -43,6 +49,18 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            // Si una aserción falló con el disco retenido, se suelta y se espera al escritor antes de borrar la carpeta: así no
+            // se queda retenido hasta su límite y el OnDestroy del test siguiente no agota su tope ni escribe en la carpeta
+            // borrada.
+            if (_disk != null)
+            {
+                _disk.Release();
+                _disk = null;
+                GameBootstrap? boot = GameBootstrap.Current;
+                ProfileSaveBatch? batch = boot != null ? boot.SaveBatch : null;
+                batch?.FlushSync(WaitMs);
+            }
+
             LaunchOptions.Reset();
             if (_dir != null && Directory.Exists(_dir))
             {
@@ -243,6 +261,7 @@ namespace AF.Tests.PlayMode
             var local = new LocalProfileStore(_dir);
             local.Save(FunnelSetup.Profile(0));
             var store = new HoldableProfileDisk(local);
+            _disk = store;
             LaunchOptions.ProfileStoreOverride = store;
             yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore(7, 6));
             GameBootstrap boot = GameBootstrap.Current!;
@@ -276,7 +295,7 @@ namespace AF.Tests.PlayMode
                 if (i == last - 1)
                 {
                     // La escritura del último vertido se queda a medias en el escritor (un disco lento).
-                    Assert.That(writer.WaitIdle(ProfileSaveBatch.DefaultSyncTimeoutMs), Is.True);
+                    Assert.That(writer.WaitIdle(WaitMs), Is.True);
                     store.Hold();
                 }
 
@@ -285,7 +304,7 @@ namespace AF.Tests.PlayMode
 
             // Con el escritor en marcha (a medias con el último vertido, que se suelta desde otro hilo a los 100 ms), el Flush
             // síncrono de OnApplicationPause(true) y OnApplicationQuit lo espera y deja en disco el perfil del último vertido.
-            Assert.That(store.WaitEntered(ProfileSaveBatch.DefaultSyncTimeoutMs), Is.True, "el escritor empezó el último vertido");
+            Assert.That(store.WaitEntered(WaitMs), Is.True, "el escritor empezó el último vertido");
             Assert.That(writer.IsIdle, Is.False, "y sigue a medias: el Flush síncrono tiene que esperarlo");
             var opener = store.ReleaseLater(100);
             bool flushed = batch.FlushSync(ProfileSaveBatch.DefaultSyncTimeoutMs);
@@ -324,7 +343,10 @@ namespace AF.Tests.PlayMode
                 + Ms(jsonMedian) + " ms; " + local.LastSavedBytes + " bytes");
 
             Assert.That(batch.PendingSave, Is.False);
-            Assert.That(store.Overlaps, Is.EqualTo(0), "la victoria tampoco escribió con el escritor a medias");
+            // La victoria llega con el escritor ya parado: aquí solo se comprueba que nunca hubo dos escrituras a la vez. Que la
+            // victoria espera al escritor (retenido) lo prueban SyncSaveTests.AfPerf_… en la escena y
+            // SaveBatchTests.TheVictoryIsSynchronous_….
+            Assert.That(store.Overlaps, Is.EqualTo(0), "nunca dos escrituras a la vez");
             Assert.That(writer.BackgroundWrites, Is.GreaterThan(0), "el disco lo pagó el escritor, no el toque");
             Assert.That(p95, Is.LessThan(PourSaveTargetMs), "save_ms por vertido (solo el hilo principal): p95 < 5 ms en el Editor (T-D)");
             Assert.That(jsonMedian, Is.LessThan(PourSaveTargetMs), "lo que pone la pista B por vertido (estado y JSON)");

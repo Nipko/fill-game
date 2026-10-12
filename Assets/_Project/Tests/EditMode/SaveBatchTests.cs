@@ -29,6 +29,9 @@ namespace AF.Tests.EditMode
         // Tope de las esperas a otros hilos en estos tests (no se alcanza si todo va bien).
         private const int WaitMs = 10000;
 
+        // El disco retenido se suelta desde otro hilo pasado este tiempo: quien vuelve antes no esperó al escritor.
+        private const int ReleaseAfterMs = 100;
+
         [Test]
         public void Batch_DefersSaves_AndWritesOnceWhenTheOutermostScopeCloses()
         {
@@ -435,7 +438,7 @@ namespace AF.Tests.EditMode
             Assert.That(won.LevelState, Is.Null);
             Assert.That(won.Progress.NextLevel, Is.EqualTo(8));
             Assert.That(won.Wallet.Seeds, Is.EqualTo(rig.Flow.HarvestSeeds), "la Cosecha va en la misma escritura");
-            Assert.That(rig.Batch.Writer!.IsIdle, Is.True, "la victoria esperó al escritor");
+            Assert.That(rig.Batch.Writer!.IsIdle, Is.True, "al volver de la victoria no queda nada en el escritor (que lo espera, con el escritor retenido, lo prueba TheVictoryIsSynchronous_…)");
             Assert.That(rig.Batch.FlushSync(WaitMs), Is.True);
             Assert.That(disk.WritesOnMainThread, Is.EqualTo(1), "solo la victoria en el hilo principal");
             Assert.That(disk.Overlaps, Is.EqualTo(0), "nunca dos escrituras a la vez");
@@ -446,27 +449,53 @@ namespace AF.Tests.EditMode
         {
             // Revisión de C2, punto 2: aísla el RequireDurable de ResolveWin. Con la cartera sobre el lote normal (no por
             // Durable), la Cosecha no pide escritura síncrona: lo único que hace síncrona la victoria es que es fin de nivel.
+            // La escritura del último vertido se queda a medias en el escritor y se suelta desde otro hilo a los 100 ms: el
+            // disco solo retiene al escritor, así que si la victoria escribiera sin esperarlo entraría con él a medias
+            // (Overlaps) y volvería antes de que el vertido llegase al disco.
             var rig = new BatchRig(threaded: true, durableWallet: false);
             rig.Start(7);
+            ThreadedDisk disk = rig.Threaded!;
+            ProfileWriter writer = rig.Batch.Writer!;
             SolveResult solution = LevelStateTests.Solve(rig.Flow);
             int last = solution.MoveCount - 1;
-            for (int i = 0; i <= last; i++)
+            Assert.That(last, Is.GreaterThanOrEqualTo(1), "al menos un vertido antes del que gana");
+            for (int i = 0; i < last; i++)
             {
+                if (i == last - 1)
+                {
+                    Assert.That(writer.WaitIdle(WaitMs), Is.True);
+                    disk.Hold();
+                }
+
                 Pour move = solution.GetMove(i);
                 rig.Flow.TapCuia(move.Source);
                 rig.Flow.TapCuia(move.Target);
-                Assert.That(rig.Batch.LastWriteInBackground, Is.EqualTo(i < last), i < last ? "vertido en segundo plano" : "victoria en síncrono");
+                Assert.That(rig.Batch.LastWriteInBackground, Is.True, "vertido " + (i + 1) + " en segundo plano");
             }
 
-            Assert.That(rig.Flow.HarvestSeeds, Is.GreaterThan(0), "la victoria cobró la Cosecha por la cartera");
-            ThreadedDisk disk = rig.Threaded!;
-            Assert.That(disk.LastOnMainThread, Is.True);
-            Assert.That(rig.Batch.Writer!.IsIdle, Is.True, "la victoria esperó al escritor");
+            Assert.That(disk.WaitEntered(WaitMs), Is.True, "el escritor empezó el último vertido");
+            int written = disk.Count;
+            Thread opener = disk.ReleaseLater(ReleaseAfterMs);
+            Pour win = solution.GetMove(last);
+            rig.Flow.TapCuia(win.Source);
+            rig.Flow.TapCuia(win.Target);
+
+            // Lo que hay al volver del toque, antes de esperar al hilo que suelta el disco.
+            bool idle = writer.IsIdle;
+            int count = disk.Count;
+            bool lastOnMain = disk.LastOnMainThread;
             Profile won = disk.Last;
-            Assert.That(won.LevelState, Is.Null, "en disco al volver del toque, sin Flush");
+            opener.Join();
+            Assert.That(disk.Overlaps, Is.EqualTo(0), "la victoria esperó al escritor: nunca escribió con él a medias");
+            Assert.That(rig.Batch.LastWriteInBackground, Is.False, "victoria en síncrono");
+            Assert.That(idle, Is.True, "al volver del toque, el escritor ya terminó el último vertido");
+            Assert.That(count, Is.EqualTo(written + 2), "primero termina el vertido del escritor y después va la victoria");
+            Assert.That(lastOnMain, Is.True, "la victoria, en el hilo principal");
+            Assert.That(rig.Flow.HarvestSeeds, Is.GreaterThan(0), "la victoria cobró la Cosecha por la cartera");
+            Assert.That(won.LevelState, Is.Null, "la última escritura es la victoria: en disco al volver del toque, sin Flush");
             Assert.That(won.Progress.NextLevel, Is.EqualTo(8));
             Assert.That(won.Wallet.Seeds, Is.EqualTo(rig.Flow.HarvestSeeds));
-            Assert.That(disk.Overlaps, Is.EqualTo(0), "nunca dos escrituras a la vez");
+            Assert.That(disk.Count, Is.EqualTo(count), "y nada más llega después");
         }
 
         [Test]
@@ -474,23 +503,40 @@ namespace AF.Tests.EditMode
         {
             // Revisión de C2, punto 2: salir del nivel sin ganarlo (X de Nivel fallido, «Volver al inicio», «Salir») es fin de
             // nivel (T-D.sync): espera al escritor y escribe en síncrono, aunque el vertido anterior fuera en segundo plano.
+            // La escritura del vertido se queda a medias en el escritor y se suelta desde otro hilo a los 100 ms, como en
+            // TheVictoryIsSynchronous_…: si la salida no lo esperase, entraría con él a medias (Overlaps).
             var rig = new BatchRig(threaded: true);
             rig.Start(7);
+            ThreadedDisk disk = rig.Threaded!;
+            ProfileWriter writer = rig.Batch.Writer!;
             Pour move = LevelStateTests.Solve(rig.Flow).GetMove(0);
+            Assert.That(writer.WaitIdle(WaitMs), Is.True);
+            disk.Hold();
             rig.Flow.TapCuia(move.Source);
             rig.Flow.TapCuia(move.Target);
             Assert.That(rig.Batch.LastWriteInBackground, Is.True, "el vertido, en segundo plano");
+            Assert.That(disk.WaitEntered(WaitMs), Is.True, "y se queda a medias en el escritor");
 
             int before = rig.Batch.WriteCount;
+            int written = disk.Count;
+            Thread opener = disk.ReleaseLater(ReleaseAfterMs);
             rig.Flow.LeaveLevel();
+
+            // Lo que hay al volver de LeaveLevel, antes de esperar al hilo que suelta el disco.
+            bool idle = writer.IsIdle;
+            int count = disk.Count;
+            bool lastOnMain = disk.LastOnMainThread;
+            Profile left = disk.Last;
+            opener.Join();
+            Assert.That(disk.Overlaps, Is.EqualTo(0), "la salida esperó al escritor: nunca escribió con él a medias");
             Assert.That(rig.Batch.WriteCount, Is.EqualTo(before + 1), "una escritura");
             Assert.That(rig.Batch.LastWriteInBackground, Is.False, "fin de nivel: en síncrono");
-            ThreadedDisk disk = rig.Threaded!;
-            Assert.That(disk.LastOnMainThread, Is.True);
-            Assert.That(rig.Batch.Writer!.IsIdle, Is.True, "esperó al escritor");
-            Assert.That(LevelStateSnapshot.TryParseHistory(disk.Last.LevelState!.History, out SavedHistory saved), Is.True);
-            Assert.That(saved.Phase, Is.EqualTo(SavedPhase.Exited), "en disco al volver de LeaveLevel, sin Flush");
-            Assert.That(disk.Overlaps, Is.EqualTo(0), "nunca dos escrituras a la vez");
+            Assert.That(idle, Is.True, "al volver de LeaveLevel, el escritor ya terminó el vertido");
+            Assert.That(count, Is.EqualTo(written + 2), "primero termina el vertido del escritor y después va la salida");
+            Assert.That(lastOnMain, Is.True, "la salida, en el hilo principal");
+            Assert.That(LevelStateSnapshot.TryParseHistory(left.LevelState!.History, out SavedHistory saved), Is.True);
+            Assert.That(saved.Phase, Is.EqualTo(SavedPhase.Exited), "la última escritura es la salida: en disco al volver de LeaveLevel, sin Flush");
+            Assert.That(disk.Count, Is.EqualTo(count), "y nada más llega después");
         }
 
         [Test]
@@ -744,6 +790,18 @@ namespace AF.Tests.EditMode
             public bool WaitEntered(int ms)
             {
                 return _entered.Wait(ms);
+            }
+
+            /// <summary>Suelta el disco desde otro hilo dentro de <paramref name="ms"/> ms (un disco lento que termina).</summary>
+            public Thread ReleaseLater(int ms)
+            {
+                var opener = new Thread(() =>
+                {
+                    Thread.Sleep(ms);
+                    Release();
+                });
+                opener.Start();
+                return opener;
             }
 
             public ProfileLoadResult Load()
