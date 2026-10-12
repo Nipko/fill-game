@@ -257,8 +257,14 @@ namespace AF.Tests.EditMode
             AssertSamePlan(a, b);
         }
 
+        /// <summary>
+        /// Entrada de la larga. Antes (A3 del guion), la tropa no se movía hasta que la fila 1 estaba llena y entraba a 450 dp/s.
+        /// Con D-011, punto 3 (decisión 2 de la sesión principal), entra trepando mientras el río llena: la llegada a su primera
+        /// columna es la de siempre (salir cuando la fila 1 está llena a 450 dp/s), así que el calendario no cambia, y la
+        /// entrada empieza ≈ 500 ms antes, más despacio. De A3 queda «primero el río»: nadie se mueve antes de que desborde.
+        /// </summary>
         [Test]
-        public void Branch_Long_TroopEntersWhenRow1IsFull_AndReleasesAfterArriving([Values(3, 7)] int cuias)
+        public void Branch_Long_TroopEntersWhileTheRiverFills_ArrivesAsBefore_AndReleasesAfterArriving([Values(3, 7)] int cuias)
         {
             var plan = new IntroChoreography();
             IntroInput input = Input(cuias, 780f, 1400f, IntroPerch.Branch);
@@ -268,8 +274,17 @@ namespace AF.Tests.EditMode
             Assert.That(plan.MonkeyDp, Is.LessThanOrEqualTo(Mathf.Min(input.MonkeyDp, input.PanelTop - input.HudBottom - 10f)));
             for (int m = 0; m < plan.MonkeyCount; m++)
             {
-                Assert.That(plan.MonkeyX(m, plan.Row1FullMs), Is.EqualTo(plan.MonkeyX(m, 0f)), "la tropa no se mueve antes de que la fila 1 esté llena (A3)");
-                for (float t = 0f; t < plan.TotalMs; t += 5f)
+                Assert.That(plan.MonkeyX(m, plan.SheetStartMs), Is.EqualTo(plan.MonkeyX(m, 0f)), "nadie se mueve antes de que el río desborde (A3)");
+                float start = plan.MonkeyEnterStartMs[m];
+                float end = plan.MonkeyEnterEndMs[m];
+                Assert.That(start, Is.InRange(plan.SheetStartMs - 0.01f, plan.TroopEnterMs + 0.01f), "sale mientras el río llena");
+                Assert.That(end - start, Is.GreaterThanOrEqualTo(Mathf.Min(IntroChoreography.EnterMs, end - plan.SheetStartMs) - 0.01f), "≈ 500 ms de entrada");
+                float x0 = plan.MonkeyX(m, 0f);
+                Assert.That(x0 < -0.5f * plan.BodyDp || x0 > input.CanvasWidth + (0.5f * plan.BodyDp), Is.True, "en el follaje de su esquina");
+                float seat = plan.MonkeySeatX(m);
+                Assert.That(end, Is.EqualTo(plan.TroopEnterMs + (Mathf.Abs(seat - x0) / IntroChoreography.MonkeySpeedDpPerMs)).Within(0.05f),
+                    "llega cuando llegaba (salir con la fila 1 llena a 450 dp/s): el calendario no cambia");
+                for (float t = 0f; t < plan.ExitStartMs + IntroChoreography.ExitMs; t += 5f)
                 {
                     Assert.That(Mathf.Abs(plan.MonkeyVelocity(m, t)), Is.LessThanOrEqualTo(IntroChoreography.MonkeySpeedDpPerMs + 0.001f), "≤ 450 dp/s");
                 }
@@ -316,6 +331,85 @@ namespace AF.Tests.EditMode
                 {
                     Assert.That(plan.FruitReleaseMs[k], Is.GreaterThanOrEqualTo(100f));
                 }
+            }
+        }
+
+        /// <summary>
+        /// D-011, punto 3 (decisión 1 de la sesión principal): en la corta, que antes estaba posada desde t = 0, la tropa entra
+        /// trepando desde el follaje de su esquina más cercana; la entrada es solo visual: cada miquito llega a su primer sitio
+        /// ≥ 50 ms antes de su primera suelta (dura como mucho min(500 ms, primera suelta − 50 ms)) y desde ahí su trayectoria
+        /// es la de antes (sus sueltas salen de su mano). Los de una esquina no se adelantan ni se acercan a menos de 1,1 S, y nadie
+        /// entra a más de 450 dp/s (R2): quien no llega a tiempo sin correr más (con T corta, el que se sienta más lejos de su
+        /// esquina, tras la cola de los de delante) sigue posado desde t = 0, como antes, y nadie entra pasando por encima de él.
+        /// </summary>
+        [Test]
+        public void Branch_Short_TroopClimbsInFromTheNearestCorner_AndSitsBeforeItsFirstRelease([Values(3, 7)] int cuias, [Values(600f, 800f, 1000f)] float t,
+            [Values(TroopModel.Row, TroopModel.Hang, TroopModel.Shake)] TroopModel model)
+        {
+            var plan = new IntroChoreography();
+            IntroInput input = Input(cuias, 780f, t, IntroPerch.Branch);
+            input.Version = IntroVersion.Short;
+            input.Model = model;
+            input.MonkeyDp = model == TroopModel.Hang ? 34f : 40f;
+            plan.Plan(input);
+            Assert.That(plan.IsLong, Is.False);
+            Assert.That(plan.MonkeyCount, Is.GreaterThanOrEqualTo(2));
+            float w = input.CanvasWidth;
+            int entering = 0;
+            for (int m = 0; m < plan.MonkeyCount; m++)
+            {
+                float start = plan.MonkeyEnterStartMs[m];
+                float end = plan.MonkeyEnterEndMs[m];
+                float seat = plan.MonkeySeatX(m);
+                float x0 = plan.MonkeyX(m, 0f);
+                string who = "miquito " + m;
+                if (end - start <= 0f)
+                {
+                    // Posado desde t = 0, como antes de D-011: los de su esquina que se sientan más lejos tampoco entran.
+                    Assert.That(start, Is.EqualTo(0f), who);
+                    Assert.That(x0, Is.EqualTo(seat), who + ": posado en su sitio desde t = 0");
+                    for (int o = 0; o < plan.MonkeyCount; o++)
+                    {
+                        bool sameSide = plan.MonkeyFromRight[o] == plan.MonkeyFromRight[m];
+                        float dm = plan.MonkeyFromRight[m] ? w - seat : seat;
+                        float d = plan.MonkeyFromRight[m] ? w - plan.MonkeySeatX(o) : plan.MonkeySeatX(o);
+                        if (o != m && sameSide && plan.MonkeyEnterEndMs[o] > 0f)
+                        {
+                            Assert.That(d, Is.LessThan(dm), who + ": el miquito " + o + " entra sin pasar por encima de él");
+                        }
+                    }
+
+                    continue;
+                }
+
+                entering++;
+                Assert.That(end - start, Is.GreaterThanOrEqualTo(IntroChoreography.MinShortEnterMs - 0.01f), who + ": entra");
+                Assert.That(end - start, Is.LessThanOrEqualTo(IntroChoreography.EnterMs + 0.01f), who + ": ≤ 500 ms");
+                Assert.That(start, Is.GreaterThanOrEqualTo(0f));
+                bool fromLeft = x0 < -0.5f * plan.BodyDp;
+                bool fromRight = x0 > w + (0.5f * plan.BodyDp);
+                bool middle = Mathf.Abs(seat - (w * 0.5f)) <= 0.5f; // en el centro, el lado de la variación
+                Assert.That(middle ? fromLeft || fromRight : (seat < w * 0.5f ? fromLeft : fromRight), Is.True, who + ": desde el follaje de su esquina más cercana");
+                Assert.That(plan.MonkeyX(m, start), Is.EqualTo(x0), who + ": quieto en el follaje hasta salir");
+                for (float now = start; now < end; now += 2f)
+                {
+                    Assert.That(Mathf.Abs(plan.MonkeyVelocity(m, now)), Is.LessThanOrEqualTo(IntroChoreography.MonkeySpeedDpPerMs + 0.001f), who + ": ≤ 450 dp/s (R2)");
+                }
+
+                for (int k = 0; k < plan.FruitCount; k++)
+                {
+                    if (plan.FruitMonkey[k] == m)
+                    {
+                        Assert.That(end, Is.LessThanOrEqualTo(plan.FruitReleaseMs[k] - IntroChoreography.ReleaseAfterArrivalMs + 0.01f), who + ": llega ≥ 50 ms antes de soltar");
+                        Assert.That(plan.MonkeyHandX(m, plan.FruitReleaseMs[k]), Is.EqualTo(plan.FruitReleaseX[k]).Within(0.01f), who + ": suelta desde la mano");
+                    }
+                }
+            }
+
+            Assert.That(entering, Is.GreaterThanOrEqualTo(1), "la tropa entra (al menos los que se sientan cerca de su esquina)");
+            if (t >= 1000f)
+            {
+                Assert.That(entering * 2, Is.GreaterThan(plan.MonkeyCount), "con T = 1.000 entra la mayoría");
             }
         }
 
@@ -515,7 +609,7 @@ namespace AF.Tests.EditMode
                 for (int m = 0; m < plan.MonkeyCount; m++)
                 {
                     float x = plan.MonkeyX(m, now);
-                    bool resting = Mathf.Abs(plan.MonkeyVelocity(m, now)) < 0.0001f && now < plan.ExitStartMs && (!plan.IsLong || now > plan.TroopEnterMs);
+                    bool resting = Mathf.Abs(plan.MonkeyVelocity(m, now)) < 0.0001f && now < plan.ExitStartMs && now >= plan.MonkeyEnterEndMs[m];
                     if (resting)
                     {
                         Assert.That(x, Is.InRange(lo - 0.01f, hi + 0.01f), "centro dentro de los márgenes: miquito " + m + " a " + now + " ms");
@@ -573,7 +667,7 @@ namespace AF.Tests.EditMode
             plan.Plan(input);
             Assert.That(plan.Pair, Is.True);
             Assert.That(plan.MonkeyCount, Is.EqualTo(2));
-            float at = plan.IsLong ? plan.ExitStartMs - 1f : 0f;
+            float at = plan.ExitStartMs - 1f; // sentados en su asiento (desde D-011 también la corta entra por la rama)
             float gap = plan.MonkeyX(1, at) - plan.MonkeyX(0, at);
             Assert.That(gap, Is.EqualTo(IntroChoreography.PairGapS * plan.BodyDp).Within(0.01f), "centros a 0,9 S");
             Assert.That(plan.MonkeyFacing(0, at), Is.EqualTo(plan.MonkeyFacing(1, at)), "mirando al mismo sitio");
@@ -612,12 +706,25 @@ namespace AF.Tests.EditMode
             Assert.That(plan.BranchCurveY(-IntroChoreography.BranchOverhangDp), Is.LessThan(low - 5f), "sube hacia las esquinas");
         }
 
+        /// <summary>
+        /// Salida (D-011, punto 3): antes salían en T (<c>ExitStartMs == T</c>) en 300 ms; ahora reposan ≈ 1.500 ms tras la última
+        /// suelta, ya en juego, y salen todos a la vez en 500 ms hacia la esquina más cercana, trepando: los de cada esquina a la
+        /// misma velocidad (≤ 450 dp/s), la que lleva al más lejano en 500 ms.
+        /// </summary>
         [Test]
-        public void Exit_HeadsToTheNearestCorner_AllAtOnce([Values(800f, 1400f)] float t)
+        public void Exit_AfterTheRest_HeadsToTheNearestCorner_AllAtOnce([Values(800f, 1400f)] float t)
         {
             var plan = new IntroChoreography();
             plan.Plan(Input(7, 780f, t, IntroPerch.Branch));
-            Assert.That(plan.ExitStartMs, Is.EqualTo(t).Within(0.01f), "salen en T");
+            float last = 0f;
+            for (int k = 0; k < plan.FruitCount; k++)
+            {
+                last = Mathf.Max(last, plan.FruitReleaseMs[k]);
+            }
+
+            Assert.That(plan.LastReleaseMs, Is.EqualTo(last));
+            Assert.That(plan.ExitStartMs, Is.EqualTo(Mathf.Max(t, last + IntroChoreography.RestMs)).Within(0.01f), "salen tras el reposo de 1.500 ms");
+            float farthest = 0f;
             for (int m = 0; m < plan.MonkeyCount; m++)
             {
                 float x = plan.MonkeyX(m, plan.ExitStartMs);
@@ -625,6 +732,290 @@ namespace AF.Tests.EditMode
                 Assert.That(plan.MonkeyExitDir[m], Is.EqualTo(dir));
                 Assert.That(plan.MonkeyFacing(m, plan.ExitStartMs + 1f), Is.EqualTo(dir), "de espaldas al tablero, hacia su esquina");
                 Assert.That((plan.MonkeyX(m, plan.ExitStartMs + IntroChoreography.ExitMs) - x) * dir, Is.GreaterThan(0f));
+                for (float now = plan.ExitStartMs; now < plan.ExitStartMs + IntroChoreography.ExitMs; now += 5f)
+                {
+                    Assert.That(Mathf.Abs(plan.MonkeyVelocity(m, now)), Is.LessThanOrEqualTo(IntroChoreography.MonkeySpeedDpPerMs + 0.001f), "≤ 450 dp/s");
+                }
+
+                float corner = dir < 0 ? -(0.6f * plan.BodyDp) - IntroChoreography.EdgeMarginDp : 360f + (0.6f * plan.BodyDp) + IntroChoreography.EdgeMarginDp;
+                farthest = Mathf.Max(farthest, Mathf.Abs(corner - x));
+            }
+
+            if (farthest <= IntroChoreography.MonkeySpeedDpPerMs * IntroChoreography.ExitMs)
+            {
+                bool someoneStillClimbs = false;
+                for (int m = 0; m < plan.MonkeyCount; m++)
+                {
+                    someoneStillClimbs |= Mathf.Abs(plan.MonkeyVelocity(m, plan.ExitStartMs + IntroChoreography.ExitMs - 5f)) > 0.0001f;
+                }
+
+                Assert.That(someoneStillClimbs, Is.True, "el más lejano trepa durante los 500 ms de la salida");
+            }
+        }
+
+        /// <summary>
+        /// Reposo en juego (D-011, punto 3): tras su última suelta, cada miquito se queda quieto en su sitio hasta la salida, y la
+        /// tropa se ve ≥ 1.200 ms después de T (opaca hasta los últimos 80 ms de la salida) y se ha ido hacia T + 2,2 s; T, el
+        /// calendario y el toque no cambian. Con 3, 7 y 10 cuias (una fila, 4 + 3 y 5 + 5; con 13 van en 3 filas y la intro es
+        /// de dosel, sin tropa), larga y corta, y en los tres modelos.
+        /// </summary>
+        [Test]
+        public void Troop_RestsInPlay_VisibleAtLeast1200msAfterT_AndGoneBy2200([Values(3, 7, 10)] int cuias, [Values(800f, 1400f)] float t,
+            [Values(TroopModel.Row, TroopModel.Hang, TroopModel.Shake)] TroopModel model)
+        {
+            var plan = new IntroChoreography();
+            IntroInput input = Input(cuias, 780f, t, IntroPerch.Branch);
+            input.Model = model;
+            input.MonkeyDp = model == TroopModel.Hang ? 34f : 40f;
+            plan.Plan(input);
+            Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Branch), "con la tropa en la rama");
+            Assert.That(plan.Rows, Is.EqualTo(cuias == 3 ? 1 : 2));
+            Assert.That(plan.MonkeyCount, Is.GreaterThanOrEqualTo(2));
+            float opaqueUntil = plan.ExitStartMs + IntroChoreography.ExitMs - IntroChoreography.ExitFadeMs;
+            Assert.That(opaqueUntil - t, Is.GreaterThanOrEqualTo(1200f), "a la vista ≥ 1.200 ms después de T");
+            Assert.That(plan.ExitStartMs + IntroChoreography.ExitMs - t, Is.LessThanOrEqualTo(2200f), "se ha ido hacia T + 2,2 s");
+            for (int m = 0; m < plan.MonkeyCount; m++)
+            {
+                float last = -1f;
+                for (int k = 0; k < plan.FruitCount; k++)
+                {
+                    last = plan.FruitMonkey[k] == m ? Mathf.Max(last, plan.FruitReleaseMs[k]) : last;
+                }
+
+                float seat = plan.MonkeyX(m, plan.ExitStartMs);
+                for (float now = Mathf.Max(t, last + IntroChoreography.GestureTailMs); now < plan.ExitStartMs; now += 10f)
+                {
+                    Assert.That(plan.MonkeyX(m, now), Is.EqualTo(seat), "miquito " + m + " quieto en su sitio a " + now + " ms");
+                }
+            }
+        }
+
+        // ---- Calendario dorado (D-011, punto 3: T, las fases a-d, la fruta y el toque no cambian) ----
+
+        // Nivel 2 del tutorial (5 cuias, 1 fila; mono ardilla: fila, tropa de 5, 40 dp) y nivel 21 del mundo 2 (8 cuias, 4 + 4;
+        // sagui plateado: cuelga, tropa de 3, 34 dp), con sus tintes de motor y la semilla de su número de nivel.
+        private static readonly int[][] Level2Board = { new[] { 4, 8, 4, 4 }, new[] { 3, 3, 3, 4 }, new[] { 3, 8, 8, 8 }, Array.Empty<int>(), Array.Empty<int>() };
+
+        private static readonly int[][] Level21Board =
+        {
+            new[] { 3, 3, 3, 1 }, Array.Empty<int>(), new[] { 8, 4, 10, 8 }, new[] { 1, 1, 1, 10 },
+            new[] { 6, 6, 6, 8 }, new[] { 6, 3, 10, 4 }, Array.Empty<int>(), new[] { 4, 4, 8, 10 },
+        };
+
+        // Niveles 27 y 58 (9 cuias de 5, 5 + 4; sagui plateado: cuelga, tropa de 3, 34 dp; con las cuias de 5 la franja baja de
+        // 64 dp y se sienta en la rama baja como fila), con sus tintes de motor.
+        private static readonly int[][] Level27Board =
+        {
+            new[] { 3, 4, 4, 7 }, Array.Empty<int>(), new[] { 4, 6, 4, 3 }, new[] { 6, 6, 6, 8 }, new[] { 10, 7, 8, 1 }, Array.Empty<int>(),
+            new[] { 10, 10, 10, 10, 7 }, new[] { 8, 8, 7, 3 }, new[] { 1, 1, 1, 3 },
+        };
+
+        private static readonly int[][] Level58Board =
+        {
+            new[] { 3, 3, 1, 4 }, new[] { 8, 1, 4, 8 }, Array.Empty<int>(), new[] { 7, 7, 3, 4 }, new[] { 10, 10, 8, 7 }, new[] { 5, 5, 8, 4 },
+            new[] { 10, 5, 5, 3, 1 }, Array.Empty<int>(), new[] { 7, 10, 10, 1 },
+        };
+
+        // Capturado con el planificador de 96f6766 (antes de D-011), con la misma entrada y la misma semilla.
+        private static readonly float[] GoldenL2Release = { 829.68097f, 889.5513f, 996.76794f, 1004.68097f, 1064.5514f, 1123.4014f, 1179.6809f };
+        private static readonly float[] GoldenL2Impact = { 950f, 1008.3333f, 1115.0332f, 1125f, 1183.3334f, 1241.6666f, 1300f };
+        private static readonly float[] GoldenL2ReleaseX = { 45.6f, 113.2f, 180f, 45.6f, 113.2f, 180f, 45.6f };
+        private static readonly float[] GoldenL2ReleaseY = { 225.30402f, 227.50902f, 228.24402f, 225.30402f, 227.50902f, 228.24402f, 225.30402f };
+        private static readonly int[] GoldenL2Monkey = { 0, 1, 2, 0, 1, 2, 0 };
+        private static readonly int[] GoldenL2Cuia = { 0, 1, 2, 0, 1, 2, 0 };
+        private static readonly float[] GoldenL2FillEnd = { 493.3846f, 441.69232f, 390f, -1f, -1f };
+        private static readonly float[] GoldenL2Bloom = { 950f, 1125f, 1300f, 1008.3333f, 1183.3334f, 1115.0332f, 1241.6666f };
+        private static readonly float[] GoldenL2Arrival = { 772.4957f, 798.2735f, 946.71796f };
+        private static readonly float[] GoldenL2Seat = { 33.6f, 101.2f, 192f };
+
+        private static readonly float[] GoldenL21Release =
+        {
+            440.4555f, 449.8305f, 459.2055f, 468.5805f, 477.9555f, 487.3305f, 496.7055f, 536.7055f, 497.3509f, 476.8814f, 497.3509f,
+            497.3509f, 476.8814f, 497.3509f, 476.8814f, 497.3509f, 476.8814f,
+        };
+
+        private static readonly float[] GoldenL21Impact = { 550f, 559.375f, 568.75f, 578.125f, 587.5f, 596.875f, 606.25f, 646.25f, 700f, 700f, 700f, 700f, 700f, 700f, 700f, 700f, 700f };
+        private static readonly float[] GoldenL21ReleaseX = { 54f, 222f, 306f, 54f, 222f, 306f, 222f, 222f, 54f, 138f, 306f, 54f, 138f, 306f, 138f, 306f, 138f };
+
+        private static readonly float[] GoldenL21ReleaseY =
+        {
+            152.1f, 152.1f, 152.1f, 152.1f, 152.1f, 152.1f, 152.1f, 152.1f, 152.1f, 99.80859f, 152.1f, 152.1f, 99.80859f, 152.1f, 99.80859f, 152.1f, 99.80859f,
+        };
+
+        private static readonly int[] GoldenL21Monkey = { 0, 1, 2, 0, 1, 2, 1, 1, 0, -1, 2, 0, -1, 2, -1, 2, -1 };
+        private static readonly int[] GoldenL21Cuia = { 0, 2, 3, 0, 2, 3, 2, 2, 4, 5, 7, 4, 5, 7, 5, 7, 5 };
+        private static readonly float[] GoldenL21FillEnd = { 263.46155f, -1f, 231.15384f, 263.46155f, 333.0351f, 359.2851f, -1f, 333.0351f };
+        private static readonly float[] GoldenL21Bloom = { 550f, 578.125f, 559.375f, 587.5f, 606.25f, 646.25f, 568.75f, 596.875f, 700f, 700f, 700f, 700f, 700f, 700f, 700f, 700f, 700f };
+        private static readonly float[] GoldenL21Seat = { 49.239998f, 226.76f, 310.76f };
+
+        /// <summary>
+        /// P3 no toca el calendario (D-011, punto 3): con la misma entrada y la misma semilla, el plan de los niveles 2 (larga) y
+        /// 21 (corta) da las mismas sueltas, impactos, manos (x e y de la suelta), miquitos, llenados, floraciones, la última
+        /// floración en T y T, que el planificador de antes de D-011 (96f6766). La tropa llega a su primer sitio cuando llegaba
+        /// (larga) o ≥ 50 ms antes de su primera suelta (corta), y desde ahí hasta T sigue donde estaba. Tolerancia de 0,01 ms
+        /// y 0,01 dp (la aritmética de float del motor).
+        /// </summary>
+        [Test]
+        public void Calendar_IsTheSameAsBeforeD011_Level2LongAnd21Short()
+        {
+            var plan = new IntroChoreography();
+            plan.Plan(BoardInput(Level2Board, 1400f, IntroVersion.Long, TroopModel.Row, 5, 40f, 2));
+            Assert.That(plan.IsLong, Is.True);
+            Assert.That(plan.TotalMs, Is.EqualTo(1400f));
+            Assert.That(plan.LastBloomEndMs, Is.EqualTo(1400f).Within(0.01f));
+            Assert.That(plan.TroopEnterMs, Is.EqualTo(493.3846f).Within(0.01f), "la fila 1 se llena cuando se llenaba");
+            AssertGolden(plan, "nivel 2", GoldenL2Release, GoldenL2Impact, GoldenL2ReleaseX, GoldenL2ReleaseY, GoldenL2Monkey, GoldenL2Cuia, GoldenL2FillEnd, GoldenL2Bloom, GoldenL2Seat);
+            for (int m = 0; m < plan.MonkeyCount; m++)
+            {
+                Assert.That(plan.MonkeyEnterEndMs[m], Is.EqualTo(GoldenL2Arrival[m]).Within(0.01f), "nivel 2: el miquito " + m + " llega cuando llegaba");
+            }
+
+            plan.Plan(BoardInput(Level21Board, 800f, IntroVersion.Short, TroopModel.Hang, 3, 34f, 21));
+            Assert.That(plan.IsLong, Is.False);
+            Assert.That(plan.TotalMs, Is.EqualTo(800f));
+            Assert.That(plan.LastBloomEndMs, Is.EqualTo(800f).Within(0.01f));
+            AssertGolden(plan, "nivel 21", GoldenL21Release, GoldenL21Impact, GoldenL21ReleaseX, GoldenL21ReleaseY, GoldenL21Monkey, GoldenL21Cuia, GoldenL21FillEnd, GoldenL21Bloom, GoldenL21Seat);
+        }
+
+        private static void AssertGolden(IntroChoreography plan, string level, float[] release, float[] impact, float[] releaseX, float[] releaseY, int[] monkey,
+            int[] cuia, float[] fillEnd, float[] bloom, float[] seat)
+        {
+            Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Branch), level);
+            Assert.That(plan.FruitCount, Is.EqualTo(release.Length), level + ": frutas");
+            Assert.That(plan.RunCount, Is.EqualTo(bloom.Length), level + ": rachas");
+            Assert.That(plan.MonkeyCount, Is.EqualTo(seat.Length), level + ": miquitos");
+            for (int k = 0; k < release.Length; k++)
+            {
+                string what = level + ", fruta " + k + " (actual: suelta " + plan.FruitReleaseMs[k].ToString("R") + ", impacto " + plan.FruitImpactMs[k].ToString("R") + ")";
+                Assert.That(plan.FruitReleaseMs[k], Is.EqualTo(release[k]).Within(0.01f), what);
+                Assert.That(plan.FruitImpactMs[k], Is.EqualTo(impact[k]).Within(0.01f), what);
+                Assert.That(plan.FruitReleaseX[k], Is.EqualTo(releaseX[k]).Within(0.01f), what);
+                Assert.That(plan.FruitReleaseY[k], Is.EqualTo(releaseY[k]).Within(0.01f), what);
+                Assert.That(plan.FruitMonkey[k], Is.EqualTo(monkey[k]), what);
+                Assert.That(plan.FruitCuia[k], Is.EqualTo(cuia[k]), what);
+            }
+
+            for (int i = 0; i < fillEnd.Length; i++)
+            {
+                Assert.That(plan.FillEndMs[i], Is.EqualTo(fillEnd[i]).Within(0.01f), level + ", llenado de la cuia " + i);
+            }
+
+            for (int r = 0; r < bloom.Length; r++)
+            {
+                Assert.That(plan.RunBloomMs[r], Is.EqualTo(bloom[r]).Within(0.01f), level + ", floración " + r);
+            }
+
+            for (int m = 0; m < seat.Length; m++)
+            {
+                Assert.That(plan.MonkeySeatX(m), Is.EqualTo(seat[m]).Within(0.01f), level + ": primer sitio del miquito " + m);
+                for (int k = 0; k < release.Length; k++)
+                {
+                    if (monkey[k] == m)
+                    {
+                        Assert.That(plan.MonkeyEnterEndMs[m], Is.LessThanOrEqualTo(release[k] - IntroChoreography.ReleaseAfterArrivalMs + 0.01f), level + ": llega antes de soltar");
+                    }
+                }
+
+                for (float t = plan.MonkeyEnterEndMs[m]; t <= plan.TotalMs; t += 5f)
+                {
+                    Assert.That(plan.MonkeyX(m, t), Is.EqualTo(seat[m]).Within(0.01f), level + ": el miquito " + m + " sigue en su sitio a " + t + " ms");
+                }
+            }
+        }
+
+        // Tablero real medido con BoardLayout como en Input (360 × 780), con su especie, su semilla y la capacidad de sus cuias.
+        private static IntroInput BoardInput(int[][] board, float totalMs, IntroVersion version, TroopModel model, int troop, float size, int seed, int capacity = 4)
+        {
+            int count = board.Length;
+            float topRow = 32f + 8f;
+            float boardTop = topRow + 48f;
+            float trayTop = 780f - 24f - 16f - 80f;
+            float boardBottom = trayTop - 40f;
+            BoardLayoutResult l = BoardLayout.Compute(count, AF.Presentation.CuiaGeometry.HeightU(capacity), 360f, boardTop, boardBottom);
+            float leftEdge = float.MaxValue;
+            for (int i = 0; i < count; i++)
+            {
+                leftEdge = Mathf.Min(leftEdge, l.CenterX[i] - (l.CuiaWidth * 0.5f));
+            }
+
+            float frame = 13.5f * Mathf.Clamp((leftEdge - l.PanelX - 8f) / 13.5f, 0.45f, 1f);
+            var input = new IntroInput
+            {
+                Count = count,
+                Unit = l.CuiaWidth * 0.5f,
+                Rows = l.Rows,
+                CanvasWidth = 360f,
+                PanelX = l.PanelX,
+                PanelTop = l.PanelY,
+                PanelWidth = l.PanelWidth,
+                PanelBottom = l.PanelBottom,
+                FrameDp = frame,
+                HudBottom = boardTop,
+                TotalMs = totalMs,
+                Perch = IntroPerch.Branch,
+                Model = model,
+                Troop = troop,
+                MonkeyDp = size,
+                Seed = seed,
+                Version = version,
+            };
+            for (int r = 0; r < l.Rows; r++)
+            {
+                input.RowFootY[r] = l.RowFootY[r];
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                input.SetCuia(i, l.CenterX[i], l.FootY[i], l.RowOf[i], board[i]);
+            }
+
+            return input;
+        }
+
+        /// <summary>
+        /// Corta en tableros reales (revisión del 2026-10-11 de D-011, punto 3): un miquito cuyo primer desplazamiento era
+        /// temprano (antes de su primera suelta − 50 ms) ya no se queda posado desde t = 0: entra trepando directo al sitio al que
+        /// iba, ≥ 50 ms antes de su primera suelta y a ≤ 450 dp/s; lo de antes de llegar no se ve y desde su llegada su
+        /// trayectoria, sus sueltas y el calendario son los de antes. Nivel 27: m1 iba de 237 a 215,5 en t = 0-48 y m2 de 325 a
+        /// 282,7 en t = 0-93 (antes los dos posados en t = 0; solo entraba m0); nivel 58: m1 y m2, igual. Queda pendiente del
+        /// dueño qué hacer con los que se sientan hacia el centro y no llegan a ≤ 450 dp/s (siguen posados; ver la entrega).
+        /// </summary>
+        [Test]
+        public void Branch_Short_RealBoards_EnterStraightToTheSiteOfAnEarlyFirstMove([Values(27, 58)] int level)
+        {
+            var plan = new IntroChoreography();
+            plan.Plan(BoardInput(level == 27 ? Level27Board : Level58Board, 800f, IntroVersion.Short, TroopModel.Hang, 3, 34f, level, 5));
+            Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Branch));
+            Assert.That(plan.Model, Is.EqualTo(TroopModel.Row), "franja de menos de 64 dp: en la rama baja, como fila");
+            Assert.That(plan.MonkeyCount, Is.EqualTo(3));
+            float[] seats = level == 27 ? new[] { 35.4f, 215.5f, 282.7f } : new[] { 35.4f, 148.3f, 282.7f };
+            for (int m = 0; m < plan.MonkeyCount; m++)
+            {
+                string who = "nivel " + level + ", miquito " + m;
+                float start = plan.MonkeyEnterStartMs[m];
+                float end = plan.MonkeyEnterEndMs[m];
+                Assert.That(end - start, Is.GreaterThanOrEqualTo(IntroChoreography.MinShortEnterMs), who + ": entra trepando (antes de la revisión, posado desde t = 0)");
+                float x0 = plan.MonkeyX(m, 0f);
+                Assert.That(x0 < -0.5f * plan.BodyDp || x0 > 360f + (0.5f * plan.BodyDp), Is.True, who + ": en el follaje en t = 0");
+                Assert.That(plan.MonkeySeatX(m), Is.EqualTo(seats[m]).Within(0.05f), who + ": llega al sitio al que iba");
+                for (float now = 0f; now < end; now += 2f)
+                {
+                    Assert.That(Mathf.Abs(plan.MonkeyVelocity(m, now)), Is.LessThanOrEqualTo(IntroChoreography.MonkeySpeedDpPerMs + 0.001f), who + ": ≤ 450 dp/s (R2)");
+                }
+
+                for (int k = 0; k < plan.FruitCount; k++)
+                {
+                    if (plan.FruitMonkey[k] == m)
+                    {
+                        Assert.That(end, Is.LessThanOrEqualTo(plan.FruitReleaseMs[k] - IntroChoreography.ReleaseAfterArrivalMs + 0.01f), who + ": llega ≥ 50 ms antes de soltar");
+                        Assert.That(plan.MonkeyHandX(m, plan.FruitReleaseMs[k]), Is.EqualTo(plan.FruitReleaseX[k]).Within(0.01f), who + ": suelta desde la mano");
+                    }
+                }
+
+                for (float now = end; now <= plan.TotalMs; now += 5f)
+                {
+                    Assert.That(plan.MonkeyX(m, now), Is.EqualTo(seats[m]).Within(0.05f), who + ": desde su llegada, donde estaba antes a esa hora");
+                }
             }
         }
 

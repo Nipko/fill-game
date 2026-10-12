@@ -35,7 +35,9 @@ namespace AF.Presentation
     /// cambian 02 §4.2, 07 §5.1 y 08 §5.3: antes de fusionar en main hace falta la decisión del dueño (D-010) y editar esos
     /// capítulos (guion §17). Hasta entonces el GDD manda y esto es una propuesta en su rama.</para>
     /// <para><see cref="Complete"/> deja el estado final en el mismo fotograma; si fue un salto, los restos (frutas, anillos,
-    /// chorritos, tiras, capa del río y tropa) se funden en ≤ 100 ms en su sitio, sin moverse ni impactos tardíos.</para>
+    /// chorritos, tiras, capa del río y tropa) se funden en ≤ 100 ms en su sitio, sin moverse ni impactos tardíos. Al fin
+    /// natural, la cola sigue ya en juego: la tropa reposa ≈ 1.500 ms tras su última suelta y sale en 500 ms (D-011, punto 3),
+    /// sin recibir toques ni reaccionar a la selección o a los vertidos (D-002); <see cref="Clear"/> la retira en el acto.</para>
     /// <para>Las dosis ocultas (Aguas turbias) se llenan de río como las demás, no reciben fruta ni nota y pasan todas a la vez al
     /// pardo opaco #8A7B6A con su trama y su «?» (los pinta el shader del líquido) y la insignia «?×n» en el fotograma del primer
     /// impacto (02 §4.2; 07 §4.3; D-010; <see cref="Mechanics.MurkyMarks"/>); con <see cref="ReduceMotion"/>, se funden ya
@@ -67,6 +69,9 @@ namespace AF.Presentation
 
         /// <summary>Fundido del miquito quieto.</summary>
         public const float ReducedTroopFadeMs = 150f;
+
+        /// <summary>Cola tras T sin tropa (dosel): 300 ms, como antes de D-011 (los anillos y las gotas acaban antes).</summary>
+        public const float CanopyTailMs = 300f;
 
         /// <summary>Sacudida del follaje de las esquinas en el modo dosel (±6°).</summary>
         public const float CanopyShakeDeg = 6f;
@@ -121,7 +126,6 @@ namespace AF.Presentation
 
         private const int MaxCuias = IntroInput.MaxCuias;
         private const int MaxFruits = IntroChoreography.MaxFruits;
-        private const float TailMs = IntroChoreography.ExitMs;
 
         private readonly IntroChoreography _plan = new IntroChoreography();
         private readonly IntroInput _input = new IntroInput();
@@ -307,6 +311,20 @@ namespace AF.Presentation
 
         /// <summary>Quedan restos cosméticos a la vista (cola natural o fundido del salto).</summary>
         public bool Active => Running || _tail || _fadeLeft >= 0f;
+
+        /// <summary>
+        /// La tropa (rama y miquitos) sigue a la vista: durante la intro, en su reposo y su salida ya en juego (D-011, punto 3)
+        /// o mientras se funde tras un salto. Solo lectura: lo consulta la vista para no tapar la rama con otra cosa (la tarjeta
+        /// «¡Miquito a la vista!» sale cuando la tropa se ha ido).
+        /// </summary>
+        public bool TroopVisible => Troop != null && Troop.Active && Active;
+
+        /// <summary>
+        /// Tiempo de la intro (ms, el de <see cref="TimeMs"/>) en que la tropa se habrá ido: el fin de su salida (o, con Reducir
+        /// movimiento, el del miquito quieto) o, tras un salto, el fin del fundido de 100 ms (el reloj de la intro queda
+        /// congelado en el toque). Así <c>TroopGoneMs − TimeMs</c> son siempre los ms que le quedan a la vista; −1 sin tropa.
+        /// </summary>
+        public float TroopGoneMs => Troop != null && Troop.Active ? (_fadeLeft >= 0f ? _t + _fadeLeft : _input.TotalMs + TailDuration()) : -1f;
 
         /// <summary>Tiempo de la intro (ms).</summary>
         public float TimeMs => _t;
@@ -612,9 +630,21 @@ namespace AF.Presentation
             return best;
         }
 
+        // Cola tras T: con la tropa, su reposo y su salida (D-011, punto 3: hasta ExitStartMs + ExitMs, contado desde T); sin
+        // ella (dosel), los 300 ms de siempre (los anillos y las gotas acaban antes). Con Reducir movimiento, el miquito quieto.
         private float TailDuration()
         {
-            return ReduceMotion ? ReducedTroopHoldMs + ReducedTroopFadeMs : TailMs;
+            if (ReduceMotion)
+            {
+                return ReducedTroopHoldMs + ReducedTroopFadeMs;
+            }
+
+            if (Troop == null || !Troop.Active)
+            {
+                return CanopyTailMs;
+            }
+
+            return Mathf.Max(0f, _plan.ExitStartMs - _input.TotalMs) + IntroChoreography.ExitMs;
         }
 
         private void FinishNatural()

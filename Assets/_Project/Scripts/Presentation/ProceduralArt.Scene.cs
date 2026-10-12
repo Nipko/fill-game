@@ -1132,6 +1132,64 @@ namespace AF.Presentation
             public float Bend { get; }
         }
 
+        /// <summary>Ancho del manojo de hojas de un extremo de la rama de la tropa (dp; se ven los 44 de dentro).</summary>
+        public const float BranchEndFoliageWidthDp = 80f;
+
+        /// <summary>Alto del manojo de hojas de un extremo de la rama de la tropa (dp, de la rama hacia arriba).</summary>
+        public const float BranchEndFoliageHeightDp = 128f;
+
+        /// <summary>Pivote horizontal del manojo: el borde de la pantalla, a 36 dp de su lado de fuera.</summary>
+        public const float BranchEndFoliagePivotX = 36f / BranchEndFoliageWidthDp;
+
+        private Sprite? _branchEnd;
+
+        /// <summary>
+        /// Manojo de hojas del extremo de la rama baja de la tropa (provisional por código hasta el arte; revisión del
+        /// 2026-10-11: sin él, el miquito que trepaba junto al borde parecía levitar sobre el agua y el recorte dejaba una cabeza
+        /// o una cola sueltas): <see cref="BranchEndFoliageWidthDp"/> × <see cref="BranchEndFoliageHeightDp"/> dp con el
+        /// pivote abajo, en el borde de la pantalla (<see cref="BranchEndFoliagePivotX"/>); dibujado para el extremo izquierdo
+        /// (el derecho se refleja). Las hojas quedan dentro de la pieza, sin sombra que se corte en su borde. La rama sale de él
+        /// y la tropa entra y sale trepando por dentro.
+        /// </summary>
+        public Sprite BranchEndFoliage => _branchEnd != null ? _branchEnd : (_branchEnd = BuildBranchEndFoliage());
+
+        // Hojas del manojo en dp con el origen abajo en el borde de la pantalla, x hacia dentro e y hacia arriba: forma (0
+        // filodendro, 3 hoja en flecha), base, ángulo (0 = hacia dentro, 90 = hacia arriba), largo, ancho y curva. Dentro de la
+        // pieza (x de −32 a 36 dp, y de 2 a 117); la parte densa cubre de 0 a ≈ 30 dp hacia dentro y hasta ≈ 90 dp de alto (lo
+        // que sube un miquito al trepar), y dos hojas en flecha llegan a ≈ 115.
+        private static readonly LeafSpec[] BranchEndLeaves =
+        {
+            new LeafSpec(3, 2f, 2f, 86f, 112f, 16f, -0.06f),
+            new LeafSpec(3, -8f, 56f, 72f, 62f, 16f, 0.10f),
+            new LeafSpec(0, -24f, 10f, 60f, 72f, 38f, 0.06f),
+            new LeafSpec(0, -20f, 24f, 30f, 54f, 32f, 0.08f),
+            new LeafSpec(0, -14f, 50f, 14f, 50f, 30f, -0.10f),
+            new LeafSpec(0, -12f, 74f, -2f, 42f, 26f, 0.10f),
+            new LeafSpec(0, -10f, 92f, 34f, 36f, 22f, -0.08f),
+            new LeafSpec(0, -18f, 13f, 10f, 40f, 22f, -0.08f),
+        };
+
+        private Sprite BuildBranchEndFoliage()
+        {
+            const float k = FoliagePxPerDp;
+            int w = Mathf.RoundToInt(BranchEndFoliageWidthDp * k);
+            int h = Mathf.RoundToInt(BranchEndFoliageHeightDp * k);
+            var pc = new PixelCanvas(w, h);
+            float edge = BranchEndFoliagePivotX * w;
+            for (int i = 0; i < BranchEndLeaves.Length; i++)
+            {
+                LeafSpec l = BranchEndLeaves[i];
+                var basePx = new Vector2(edge + (l.Base.x * k), l.Base.y * k);
+                float a = l.AngleDeg * Mathf.Deg2Rad;
+                var dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                LeafShape shape = l.Kind == 3 ? LeafShape.Lanceolate : LeafShape.Ovate;
+                Color dark = i % 2 == 0 ? Palette.LeafDark : Palette.LeafMid;
+                DrawLeaf(pc, basePx, dir, l.Length * k, l.Width * k, l.Bend, shape, dark, Palette.LeafLight, k, 211 + (i * 13));
+            }
+
+            return MakeSprite(pc, "branch_end_foliage", new Vector2(BranchEndFoliagePivotX, 0f), Vector4.zero, k);
+        }
+
         private static LeafSpec[] TopLeaves(bool right)
         {
             if (!right)

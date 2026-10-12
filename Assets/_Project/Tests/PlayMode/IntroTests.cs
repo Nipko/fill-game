@@ -164,7 +164,8 @@ namespace AF.Tests.PlayMode
                 Assert.That(view.Views[i].LiquidLevel, Is.EqualTo((float)board[i].Count).Within(0.001f), "llena hasta sus dosis a 700 ms");
             }
 
-            // La troupe entra cuando la fila 1 está llena y la última floración termina en T (input en T).
+            // La tropa llega a su primera columna cuando la fila 1 está llena (D-011: entra antes, mientras el río llena) y la
+            // última floración termina en T (input en T).
             Assert.That(intro.Plan.Row1FullMs, Is.LessThan(700f));
             Assert.That(intro.Plan.LastBloomEndMs, Is.EqualTo(1400f).Within(1000f / 60f));
             PlayModeHelpers.TickExact(boot, 1400 - now - 1);
@@ -173,9 +174,17 @@ namespace AF.Tests.PlayMode
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing), "Phase == Playing en T (A1)");
             Assert.That(view.Ambient.PollenPaused, Is.False, "el polen vuelve con el input");
             AssertFinalBoard(view, board, "fin natural");
-            PlayModeHelpers.TickExact(boot, 320);
-            Assert.That(view.Intro.Active, Is.False, "a T + 300 ms no queda nada de la intro");
+
+            // D-011, punto 3: antes, a T + 300 ms no quedaba nada; ahora la tropa reposa en la rama ya en juego y se va sola.
+            PlayModeHelpers.TickExact(boot, 1200);
+            Assert.That(view.Troop.Active, Is.True, "la tropa sigue a la vista 1.200 ms después de T");
+            Assert.That(view.Intro.TroopVisible, Is.True);
+            int left = Mathf.CeilToInt(view.Intro.TroopGoneMs - view.Intro.TimeMs) + 1;
+            Assert.That(view.Intro.TroopGoneMs - 1400f, Is.LessThanOrEqualTo(2200f), "se va hacia T + 2,2 s");
+            PlayModeHelpers.TickExact(boot, left);
+            Assert.That(view.Intro.Active, Is.False, "tras la salida no queda nada de la intro");
             Assert.That(view.Troop.Active, Is.False);
+            Assert.That(view.Intro.TroopVisible, Is.False);
         }
 
         [UnityTest]
@@ -246,7 +255,8 @@ namespace AF.Tests.PlayMode
 
                     float hudBottom = view.Intro.Input.HudBottom;
                     float panelTop = view.Intro.Input.PanelTop;
-                    for (int t = 0; t <= duration + 300; t += 25)
+                    float end = plan.ExitStartMs + IntroChoreography.ExitMs; // entrada, sueltas, reposo y salida (D-011)
+                    for (int t = 0; t <= end; t += 25)
                     {
                         view.Intro.Seek(t);
                         rects.Clear();
@@ -273,6 +283,12 @@ namespace AF.Tests.PlayMode
             Assert.That(branches, Is.EqualTo(16), "8 tableros con tropa × 2 versiones");
         }
 
+        /// <summary>
+        /// D-002 en el reposo de la tropa, ya en juego (D-011, punto 3): seleccionar y verter no cambian nada de la tropa en el
+        /// fotograma del toque, y fotogramas después la tropa está exactamente igual (posición, alfa y pose de cada pieza) que
+        /// en una partida sin toques en el mismo instante de la intro; después se va sola, a su hora. Antes la prueba acababa
+        /// con «la tropa ya salió» a T + 360 ms; ahora a esa hora reposa.
+        /// </summary>
         [UnityTest]
         public IEnumerator SelectingOrPouring_ChangesNothingOfTheTroop()
         {
@@ -281,9 +297,18 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.TakeClock(boot);
             LevelFlow flow = boot.Flow!;
             GameScreen view = boot.View!;
+
+            // Sin toques: la tropa en el reposo, a T + 900 ms.
             flow.Load(1);
             Assert.That(view.Intro.Plan.Perch, Is.EqualTo(IntroPerch.Branch));
-            PlayModeHelpers.TickExact(boot, 1400 + 60); // fin natural; la tropa sale de espaldas
+            PlayModeHelpers.TickExact(boot, 1400 + 900);
+            float quietT = view.Intro.TimeMs;
+            Assert.That(quietT, Is.LessThan(view.Intro.Plan.ExitStartMs), "en el reposo, antes de la salida");
+            List<Vector3> quiet = TroopPieces(view);
+
+            // Con toques en el reposo.
+            flow.Load(1);
+            PlayModeHelpers.TickExact(boot, 1400 + 60); // fin natural; la tropa reposa en la rama
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
             Assert.That(view.Troop.Active, Is.True);
             Vector2[] before = TroopPositions(view);
@@ -293,8 +318,12 @@ namespace AF.Tests.PlayMode
             Assert.That(TroopAlphas(view), Is.EqualTo(alpha));
             Assert.That(boot.TapCuia(2).Kind, Is.EqualTo(TapKind.Poured));
             Assert.That(TroopPositions(view), Is.EqualTo(before), "verter no cambia nada de la tropa");
-            PlayModeHelpers.TickExact(boot, 300);
-            Assert.That(view.Troop.Active, Is.False, "la tropa ya salió");
+            PlayModeHelpers.TickExact(boot, 840);
+            Assert.That(view.Intro.TimeMs, Is.EqualTo(quietT).Within(0.01f));
+            AssertSamePieces(TroopPieces(view), quiet, "en el reposo, la tropa está igual que sin toques (D-002)");
+            Assert.That(view.Troop.Active, Is.True, "sigue reposando");
+            PlayModeHelpers.TickExact(boot, Mathf.CeilToInt(view.Intro.TroopGoneMs - view.Intro.TimeMs) + 1);
+            Assert.That(view.Troop.Active, Is.False, "y se va sola, a su hora");
         }
 
         [UnityTest]
@@ -410,8 +439,13 @@ namespace AF.Tests.PlayMode
 
             view.DebugReplayIntro(duration, retry);
             AssertRouteDescribed(view, route, duration > GameConfig.AnimTintDurationMsLate && !retry);
+            float tailEnd = intro.TroopGoneMs;
             int frames = RunRoute(intro, skipAt, (t, step) => Assert.That(step, Is.Not.AllocatingGCMemory(), route + ", t = " + t));
             Assert.That(frames, Is.GreaterThan(10), route + ": fotogramas medidos");
+            if (skipAt < 0 && tailEnd > 0f)
+            {
+                Assert.That(frames * 16f, Is.GreaterThanOrEqualTo(tailEnd - 16f), route + ": también el reposo y la salida de la tropa (D-011)");
+            }
             Assert.That(intro.Active, Is.False, route + ": la intro y sus restos terminan");
             boot.Flow.ReduceMotion = false;
         }
@@ -1046,29 +1080,75 @@ namespace AF.Tests.PlayMode
 
         /// <summary>
         /// Salida de la tropa (revisión: parecían monos fantasma a media salida): trepan hacia el follaje de la esquina más
-        /// cercana, con alfa 1 hasta los últimos 80 ms, y la capa de la tropa está detrás del follaje de las esquinas.
+        /// cercana, con alfa 1 hasta los últimos 80 ms, y la capa de la tropa está detrás del follaje de las esquinas. En un
+        /// teléfono (360 dp) llegan a su esquina y trepan junto a ella; en un lienzo ancho (el de 1.040 dp del Editor sin
+        /// pantalla simulada, como una tableta), a 450 dp/s no llegan en los 500 ms de la salida y trepan igual mientras se
+        /// funden (revisión del 2026-10-11: antes salían andando en plano). En la rama baja, un manojo de hojas en cada extremo,
+        /// por delante de la tropa, de la rama hacia arriba y sin pasar sobre el HUD.
         /// </summary>
         [UnityTest]
-        public IEnumerator TroopExit_ClimbsToTheCornerFoliage_OpaqueUntilTheLast80ms()
+        public IEnumerator TroopExit_ClimbsToTheCornerFoliage_OpaqueUntilTheLast80ms([Values(false, true)] bool wide)
         {
+            GameScreen.SimulatedScreen = wide ? (Vector4?)null : new Vector4(1080f, 2340f, 96f, 48f);
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
             GameScreen view = boot.View!;
             view.DebugReplayIntro(1400, false);
             IntroAnimation intro = view.Intro;
-            float exit = intro.Plan.ExitStartMs;
+            IntroChoreography plan = intro.Plan;
+            Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Branch));
+            float w = view.CanvasWidth;
+            Assert.That(w, wide ? (NUnit.Framework.Constraints.IResolveConstraint)Is.GreaterThan(600f) : Is.EqualTo(360f).Within(0.5f), "lienzo");
+            int short_ = 0;
+            for (int m = 0; m < plan.MonkeyCount; m++)
+            {
+                float end = plan.MonkeyX(m, plan.ExitStartMs + IntroChoreography.ExitMs);
+                short_ += end > 0f && end < w ? 1 : 0;
+            }
+
+            Assert.That(short_ > 0, Is.EqualTo(wide), wide ? "en el lienzo ancho alguno no llega a su esquina" : "en el teléfono todos llegan a su esquina");
+            float exit = plan.ExitStartMs;
             intro.Seek(exit);
-            float y0 = view.Troop.Rig(0).Root.anchoredPosition.y;
+            var y0 = new float[plan.MonkeyCount];
+            for (int m = 0; m < plan.MonkeyCount; m++)
+            {
+                y0[m] = view.Troop.Rig(m).Root.anchoredPosition.y;
+            }
+
             intro.Seek(exit + IntroChoreography.ExitMs - IntroChoreography.ExitFadeMs - 10f);
-            Assert.That(view.Troop.Rig(0).Alpha, Is.EqualTo(1f).Within(0.001f), "opaco hasta los últimos 80 ms");
-            Assert.That(view.Troop.Rig(0).Root.anchoredPosition.y, Is.GreaterThan(y0 + 5f), "trepa hacia el follaje");
+            for (int m = 0; m < plan.MonkeyCount; m++)
+            {
+                MonkeyRig rig = view.Troop.Rig(m);
+                Assert.That(rig.Alpha, Is.EqualTo(1f).Within(0.001f), "miquito " + m + ": opaco hasta los últimos 80 ms");
+                Assert.That(rig.Root.anchoredPosition.y, Is.GreaterThan(y0[m] + 5f), "miquito " + m + ": trepa hacia el follaje");
+                Assert.That(Mathf.Abs(Mathf.DeltaAngle(0f, rig.Root.localEulerAngles.z)), Is.GreaterThan(5f), "miquito " + m + ": inclinado, trepando");
+            }
+
             intro.Seek(exit + IntroChoreography.ExitMs - 40f);
             Assert.That(view.Troop.Rig(0).Alpha, Is.InRange(0.01f, 0.99f), "se funde en los últimos 80 ms");
             Transform scene = view.Troop.Layer.parent;
             Transform foliage = scene.Find("FoliageTL");
             Assert.That(foliage, Is.Not.Null);
             Assert.That(view.Troop.Layer.GetSiblingIndex(), Is.LessThan(foliage.GetSiblingIndex()), "la tropa, por detrás del follaje");
+
+            // Manojos de hojas de los extremos de la rama baja: a la vista, por delante de los miquitos, en x = 0 y x = ancho.
+            float hudBottom = intro.Input.HudBottom;
+            foreach (string name in new[] { "BranchEndLeft", "BranchEndRight" })
+            {
+                Transform end = view.Troop.Layer.Find(name);
+                Assert.That(end, Is.Not.Null, name);
+                Image img = end.GetComponent<Image>();
+                Assert.That(img.enabled, Is.True, name + ": en la rama baja");
+                Assert.That(img.raycastTarget, Is.False);
+                Assert.That(end.GetSiblingIndex(), Is.GreaterThan(view.Troop.Rig(0).Root.GetSiblingIndex()), name + ": por delante de la tropa");
+                var rt = (RectTransform)end;
+                Assert.That(rt.anchoredPosition.x, Is.EqualTo(name == "BranchEndLeft" ? 0f : w).Within(0.01f), name + ": en el borde");
+                float bottom = -rt.anchoredPosition.y;
+                Assert.That(bottom, Is.EqualTo(plan.BranchCurveY(rt.anchoredPosition.x) + TroopLayer.BranchEndBelowDp).Within(0.01f), name + ": la rama sale de él");
+                Assert.That(bottom - rt.sizeDelta.y, Is.GreaterThanOrEqualTo(hudBottom), name + ": sin pasar sobre el HUD");
+                Assert.That(rt.sizeDelta.y, Is.GreaterThan(1.1f * plan.BodyDp), name + ": tapa al miquito que trepa");
+            }
         }
 
         /// <summary>
@@ -1086,10 +1166,11 @@ namespace AF.Tests.PlayMode
             boot.View!.DebugReplayIntro(800, false);
             IntroChoreography p = boot.View.Intro.Plan;
             Assert.That(p.Pair, Is.True, "cotoncillo: la pareja");
-            Assert.That(p.MonkeyX(1, 0f) - p.MonkeyX(0, 0f), Is.EqualTo(IntroChoreography.PairGapS * p.BodyDp).Within(0.01f));
+            Assert.That(p.MonkeySeatX(1) - p.MonkeySeatX(0), Is.EqualTo(IntroChoreography.PairGapS * p.BodyDp).Within(0.01f));
             Assert.That(boot.View.Troop.NightVisible, Is.False);
 
-            boot.View.Intro.Seek(300);
+            // Sentados juntos, ya en el reposo (desde D-011 la corta también entra por la rama: en t = 300 aún llegan).
+            boot.View.Intro.Seek(800 + 300);
             TroopLayer troop = boot.View.Troop;
             Assert.That(troop.Rig(0).Root.localScale.x, Is.EqualTo(troop.Rig(1).Root.localScale.x), "mirando al mismo sitio");
             int crossings = 0;
@@ -1122,7 +1203,10 @@ namespace AF.Tests.PlayMode
             boot.View!.DebugReplayIntro(800, false);
             Assert.That(boot.View.IntroSpecies!.Id, Is.EqualTo("aotus_trivirgatus"));
             Assert.That(boot.View.Troop.NightVisible, Is.True, "mono nocturno: velo de noche sobre la franja");
-            boot.View.Intro.Seek(800 + IntroChoreography.ExitMs + 10);
+            Assert.That(boot.View.Troop.NightVisible, Is.True, "con la tropa en la rama");
+            boot.View.Intro.Seek(800 + 600);
+            Assert.That(boot.View.Troop.NightVisible, Is.True, "el velo sigue mientras la tropa reposa en juego (D-011)");
+            boot.View.Intro.Seek(boot.View.Intro.Plan.ExitStartMs + IntroChoreography.ExitMs + 10);
             Assert.That(boot.View.Troop.NightVisible, Is.False, "el velo se va con la tropa");
         }
 
@@ -1286,6 +1370,46 @@ namespace AF.Tests.PlayMode
             }
 
             return p;
+        }
+
+        // Misma pose: posiciones y tamaños a 0,01 dp, giros a 0,2° y alfas a 0,003 (MonkeyRig no reescribe un giro que cambia
+        // menos de lo que distingue Quaternion ==, unos 0,16°, ni un alfa que cambia menos de 0,002: depende de los fotogramas).
+        private static void AssertSamePieces(List<Vector3> actual, List<Vector3> expected, string what)
+        {
+            Assert.That(actual.Count, Is.EqualTo(expected.Count), what);
+            for (int i = 0; i < actual.Count; i++)
+            {
+                bool pose = i % 2 == 0 && i < actual.Count - IntroChoreography.MaxMonkeys;
+                bool root = i >= actual.Count - IntroChoreography.MaxMonkeys;
+                Assert.That(actual[i].x, Is.EqualTo(expected[i].x).Within(0.01f), what + " [" + i + "].x");
+                Assert.That(actual[i].y, Is.EqualTo(expected[i].y).Within(0.01f), what + " [" + i + "].y");
+                float tol = pose || root ? 0.2f : 0.003f;
+                float dz = pose || root ? Mathf.Abs(Mathf.DeltaAngle(actual[i].z, expected[i].z)) : Mathf.Abs(actual[i].z - expected[i].z);
+                Assert.That(dz, Is.LessThanOrEqualTo(tol), what + " [" + i + "].z");
+            }
+        }
+
+        // Posición, giro y tamaño (x, y, z) de cada pieza de la tropa y su alfa, en orden fijo: la pose entera.
+        private static List<Vector3> TroopPieces(GameScreen view)
+        {
+            var graphics = new List<Graphic>();
+            view.Troop.CollectGraphics(graphics);
+            var pieces = new List<Vector3>();
+            foreach (Graphic g in graphics)
+            {
+                RectTransform rt = g.rectTransform;
+                bool shown = g.enabled && g.gameObject.activeInHierarchy;
+                pieces.Add(shown ? (Vector3)rt.anchoredPosition + new Vector3(0f, 0f, rt.localEulerAngles.z) : Vector3.zero);
+                pieces.Add(shown ? new Vector3(rt.sizeDelta.x, rt.sizeDelta.y, g.canvasRenderer.GetAlpha()) : Vector3.zero);
+            }
+
+            for (int m = 0; m < IntroChoreography.MaxMonkeys; m++)
+            {
+                RectTransform root = view.Troop.Rig(m).Root;
+                pieces.Add(new Vector3(root.anchoredPosition.x, root.anchoredPosition.y, root.localEulerAngles.z));
+            }
+
+            return pieces;
         }
 
         private static float[] TroopAlphas(GameScreen view)
