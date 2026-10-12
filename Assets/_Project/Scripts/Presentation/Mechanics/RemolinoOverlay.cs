@@ -15,12 +15,20 @@ namespace AF.Presentation.Mechanics
     /// </summary>
     /// <remarks>
     /// <para><b>Ficha de la pareja</b> (opción C del dueño, 2026-10-11: el canal y la MISMA marca en las dos cuias, también
-    /// con un solo par): un disco del agua del remanso con aro de espuma y contorno de pizarra
-    /// (<see cref="ProceduralArt.RemolinoPairTag"/>) clavado en el centro del pie de fibra, sobre el ojo de la espiral, con
-    /// <c>id + 1</c> puntos de espuma (1 con id 0); con más puntos se alarga en píldora. Las dos cuias de una pareja llevan la
-    /// misma ficha y dos parejas, fichas distintas. Va en la ranura (<c>SlotFront</c>), así que no viaja con la cuia ni cambia
-    /// al seleccionar (D-002): con la cuia elevada queda sobre el remanso. Colores a ΔE00 ≥ 10 de los 14 tintes y del
-    /// turquesa de Marea (<see cref="CollectSurfaceColors"/>).</para>
+    /// con un solo par): una ficha de dominó de la espuma de la espiral con un contorno fino de pizarra
+    /// (<see cref="ProceduralArt.RemolinoPairTag"/>, <see cref="PairTagHeightDp"/> = 13 dp, esquinas de
+    /// <see cref="PairTagCornerDp"/>) con <c>id + 1</c> puntos del agua del remanso de <see cref="PairDotDp"/> (1 con id 0); con
+    /// más puntos se alarga hacia fuera (revisión de la tanda B2, ronda 2: el disco oscuro con aro de espuma y un punto se leía
+    /// como un botón o un remache; una ficha que se empareja se lee como marca de pareja). Va junto a la bajada
+    /// del canal, por el lado contrario a su tramo horizontal (<see cref="PairMarkSide"/>), colgada del canto inferior de la
+    /// repisa como una plaquita (pie − 8 a pie − 21): así el ojo de la espiral queda libre y el remolino se sigue leyendo
+    /// (revisión de la tanda B2: en el pie, sobre el ojo, la ficha se leía como una arandela o un botón), y la ficha nunca toca
+    /// el canal (≥ <see cref="PairTagChannelClearDp"/>; pegada al tramo, los dos se leían como una sola pieza). Las dos cuias
+    /// de una pareja llevan la misma ficha, cada una al lado de su bajada que queda libre (a veces, en espejo), y dos parejas,
+    /// fichas distintas. Si colgada no cabe en la repisa (una cuia en la punta de la fila más ancha con 6 por fila; ningún
+    /// nivel de la campaña), va levantada sobre el tramo (<see cref="PairMarkRaised"/>). Va en la ranura (<c>SlotFront</c>),
+    /// así que no viaja con la cuia ni cambia al seleccionar (D-002). Colores a ΔE00 ≥ 10 de los 14 tintes y del turquesa de
+    /// Marea (<see cref="CollectSurfaceColors"/>).</para>
     /// <para><b>Canal.</b> Lo dibuja una sola vez la cuia de menor índice de la pareja (la pareja se busca por
     /// <see cref="Cuia.MechanicPairId"/> en <see cref="ICuiaBoard.ShownCuia"/>, la misma consulta que
     /// <c>BoardDiff.RemolinoPartner</c>, sin construir un <c>BoardState</c>), en la capa trasera del tablero, y se recoloca en
@@ -132,25 +140,53 @@ namespace AF.Presentation.Mechanics
         public const int BubblesSecond = 3;
 
         /// <summary>
-        /// Alto de la ficha de la pareja (u) [P]: 15 dp con la cuia de 48 dp y 12 dp con la de 39 dp (3 filas de 6); con un
-        /// punto es un disco.
+        /// Alto de la ficha de la pareja (dp) [P]: 13 dp (≈ 2 mm en el teléfono), para que se reconozca de un vistazo y, con
+        /// dos parejas, se distinga una de otra (revisión de la tanda B2, ronda 2: con 9 dp, 1,4 mm, no se leía); con un punto
+        /// es un disco. En dp, como la repisa, que no escala con la cuia.
         /// </summary>
-        public const float PairTagHeightU = 0.62f;
+        public const float PairTagHeightDp = 13f;
 
         /// <summary>
-        /// Centro de la ficha de la pareja sobre el pie (u) [P]: en el pie de fibra (0-0,30 u), sin llegar al fondo de la
-        /// cavidad (0,40 u en el eje) ni a la bajada del canal (bajo el pie).
+        /// Lo alto de la ficha colgada bajo la línea de pie (dp) [P]: de pie − 8 a pie − 21, por el lado contrario al tramo
+        /// horizontal del canal (por ahí no pasa nada). Solo tapa el borde de abajo del remanso, lejos del ojo de la espiral, y
+        /// cuelga 4 dp bajo el canto de la madera, como una plaquita; bajo la última fila quedan 2,5 dp hasta el canto interior
+        /// del marco (23,5 dp bajo el pie) y entre filas, 3 dp hasta una cuia elevada de la fila de abajo (24 dp bajo el pie).
         /// </summary>
-        public const float PairTagCenterU = 0.085f;
+        public const float PairTagTopBelowFootDp = 8f;
 
-        /// <summary>Lado de cada punto de la ficha (u): 6,2 dp con la cuia de 48 dp.</summary>
-        public const float PairDotU = 0.26f;
+        /// <summary>Radio de las esquinas de la ficha de la pareja (dp) [P]: una ficha de dominó, no un disco ni una píldora.</summary>
+        public const float PairTagCornerDp = 3.5f;
 
-        /// <summary>Paso entre los centros de los puntos de la ficha (u); con muchos puntos se juntan.</summary>
-        public const float PairDotStepU = 0.3f;
+        /// <summary>Aire mínimo entre la ficha y el canal (dp) [P]: así no se leen como una sola pieza.</summary>
+        public const float PairTagChannelClearDp = 2f;
 
-        /// <summary>Ancho máximo de la ficha (u): el del pie de fibra (1,60 u).</summary>
-        public const float PairTagMaxWidthU = 2f * CuiaGeometry.FootHalfWidthU;
+        /// <summary>
+        /// Lo bajo de la ficha levantada (dp bajo la línea de pie), cuando colgada no cabe en la repisa (una cuia en la punta
+        /// de la fila más ancha, con 6 por fila): por el lado del tramo horizontal, <see cref="PairTagChannelClearDp"/> sobre
+        /// él (el tramo empieza en pie − <see cref="ShelfBottomBelowFootDp"/>).
+        /// </summary>
+        public const float PairTagRaisedBottomBelowFootDp = ShelfBottomBelowFootDp - PairTagChannelClearDp;
+
+        /// <summary>Aire entre la bajada del canal (en el eje de la cuia) y el canto de la ficha que da a ella (dp) [P].</summary>
+        public const float PairTagGapDp = 2.25f;
+
+        /// <summary>Canto de la ficha que da a la bajada (dp desde el eje de la cuia): junto a ella, a uno u otro lado.</summary>
+        public const float PairTagNearDp = (0.5f * ChannelWidthDp) + PairTagGapDp;
+
+        /// <summary>
+        /// Canto de fuera de la ficha, como mucho (dp desde el eje de la cuia): dentro de la ranura más estrecha de los
+        /// tableros con Remolino (6 por fila: 56 dp, 28 dp a cada lado del eje), con 2 dp de margen.
+        /// </summary>
+        public const float PairTagMaxOuterDp = 26f;
+
+        /// <summary>Ancho máximo de la ficha (dp): de <see cref="PairTagNearDp"/> a <see cref="PairTagMaxOuterDp"/>.</summary>
+        public const float PairTagMaxWidthDp = PairTagMaxOuterDp - PairTagNearDp;
+
+        /// <summary>Lado de cada punto de la ficha (dp) [P]: ≥ 5,5 dp.</summary>
+        public const float PairDotDp = 5.6f;
+
+        /// <summary>Paso entre los centros de los puntos de la ficha (dp) [P]: ≥ 7 dp; con muchos puntos se juntan.</summary>
+        public const float PairDotStepDp = 7.2f;
 
         /// <summary>Puntos de la ficha como mucho: <c>id + 1</c> con el id de 3 bits (0..7).</summary>
         public const int MaxPairDots = Cuia.MaxMechanicField + 1;
@@ -169,6 +205,13 @@ namespace AF.Presentation.Mechanics
         // franja (más la mitad de la franja).
         private const float ShelfEndClearDp = 35f;
 
+        // Punta de la repisa dentro del borde de las ranuras de la fila más ancha (dp): marco de 13,5 + 6 + 8 − 12 (con el
+        // marco adelgazado, la repisa empieza más fuera, así que es el caso con menos sitio).
+        private const float ShelfInsetDp = 15.5f;
+
+        // Margen de la ficha levantada hasta el borde de su ranura (dp).
+        private const float PairTagSlotClearDp = 2f;
+
         private readonly Image[] _bed = new Image[MaxSegments];
         private readonly Image[] _core = new Image[MaxSegments];
         private readonly Image[] _dash = new Image[MaxSegments];
@@ -184,6 +227,8 @@ namespace AF.Presentation.Mechanics
         private readonly float[] _pulseAt = new float[MaxChannelPoints];
         private readonly float[] _rowX = new float[MaxBoard];
         private readonly Image[] _pairDots = new Image[MaxPairDots];
+        private readonly Vector3[] _corners = new Vector3[4];
+        private readonly Vector2[] _sidePts = new Vector2[MaxChannelPoints];
 
         private Image _pool = null!;
         private Image _spiral = null!;
@@ -191,6 +236,12 @@ namespace AF.Presentation.Mechanics
         private Image _pairTag = null!;
         private int _pairDotCount = -1;
         private float _pairU = -1f;
+        private float _routeSide; // hacia dónde sale el tramo horizontal del canal de esta cuia (−1, +1; 0 sin canal)
+        private float _pairSide = 1f;
+        private bool _pairRaised;
+        private int _sidePartner = -2;
+        private int _sideVersion = int.MinValue;
+        private float _sideU = -1f;
         private RectTransform _layerRoot = null!;
         private bool _on;
         private int _pairId;
@@ -230,6 +281,21 @@ namespace AF.Presentation.Mechanics
         public bool PairMarkVisible => _pairTag != null && _pairTag.gameObject.activeSelf;
 
         /// <summary>
+        /// Lado de la bajada en el que va la ficha (+1 a la derecha, −1 a la izquierda): el contrario al tramo horizontal del
+        /// canal de esta cuia (a la derecha sin canal); levantada (<see cref="PairMarkRaised"/>), el del tramo.
+        /// </summary>
+        public float PairMarkSide => _pairSide;
+
+        /// <summary>
+        /// La ficha va levantada, sobre el tramo horizontal del canal (pie − 2 a pie − 15), porque colgada por el otro lado no
+        /// cabía en la repisa: una cuia en la punta de la fila más ancha con 6 por fila (ningún nivel de la campaña).
+        /// </summary>
+        public bool PairMarkRaised => _pairRaised;
+
+        /// <summary>Hacia dónde sale el tramo horizontal del canal de esta cuia (−1 a la izquierda, +1 a la derecha; 0 sin canal).</summary>
+        public float ChannelSide => _routeSide;
+
+        /// <summary>
         /// Rectángulo de la ficha de la pareja en el espacio de las anclas de la cuia (dp, origen en el centro del pie y hacia
         /// arriba).
         /// </summary>
@@ -242,6 +308,26 @@ namespace AF.Presentation.Mechanics
                 return new Rect(rt.anchoredPosition - (0.5f * size), size);
             }
         }
+
+        /// <summary>
+        /// Rectángulo de la ficha de la pareja en el mundo (sus cuatro esquinas): dónde se ve de verdad, sea cual sea el padre
+        /// (tests: no se mueve al elevar la cuia, D-002).
+        /// </summary>
+        public Rect PairMarkWorldRect
+        {
+            get
+            {
+                _pairTag.rectTransform.GetWorldCorners(_corners);
+                return Rect.MinMaxRect(
+                    Mathf.Min(_corners[0].x, _corners[2].x),
+                    Mathf.Min(_corners[0].y, _corners[2].y),
+                    Mathf.Max(_corners[0].x, _corners[2].x),
+                    Mathf.Max(_corners[0].y, _corners[2].y));
+            }
+        }
+
+        /// <summary>Color de los puntos de la ficha de la pareja.</summary>
+        public Color PairDotColor => _pairDots[0].color;
 
         /// <summary>Rectángulo del punto <paramref name="i"/> de la ficha (dp, como <see cref="PairMarkRect"/>).</summary>
         public Rect PairDotRect(int i)
@@ -520,9 +606,9 @@ namespace AF.Presentation.Mechanics
         /// <inheritdoc />
         public override void CollectSurfaceColors(List<Color> into)
         {
-            into.Add(ProceduralArt.WhirlPoolColor); // remanso y agua de la ficha de la pareja
-            into.Add(SpiralSeenColor); // espiral de espuma
-            into.Add(ProceduralArt.Pearl); // aro y puntos de la ficha de la pareja
+            into.Add(ProceduralArt.WhirlPoolColor); // remanso y puntos de la ficha de la pareja
+            into.Add(SpiralSeenColor); // espiral de espuma (y, opaca, la cara de la ficha: ProceduralArt.RemolinoPairFoam)
+            into.Add(ProceduralArt.RemolinoPairFoam);
             into.Add(ProceduralArt.Slate); // contorno de la ficha de la pareja
             into.Add(ProceduralArt.RemolinoChannelWater); // centro del agua del canal
             into.Add(ProceduralArt.RemolinoChannelEdge); // bordes del agua del canal
@@ -538,7 +624,7 @@ namespace AF.Presentation.Mechanics
             _pairTag.type = Image.Type.Sliced;
             for (int i = 0; i < _pairDots.Length; i++)
             {
-                _pairDots[i] = OverlayParts.NewImage("RemolinoPairDot" + i, Host.SlotFront, Host.Art.CounterPip, ProceduralArt.Pearl);
+                _pairDots[i] = OverlayParts.NewImage("RemolinoPairDot" + i, Host.SlotFront, Host.Art.CounterPip, ProceduralArt.WhirlPoolColor);
             }
 
             // Solo para pintar mate el Barro que reciba (puede no haberla). Con includeInactive, como MurkyMarks: si la cuia se
@@ -622,6 +708,7 @@ namespace AF.Presentation.Mechanics
             {
                 HideChannel();
                 _laidPartner = partner;
+                RefreshPairSide(board, partner, force);
                 return;
             }
 
@@ -646,6 +733,56 @@ namespace AF.Presentation.Mechanics
             PlacePieces();
             ShowCovers(_pts, _ptCount, true);
             _channelShown = true;
+            _sidePartner = partner;
+            _sideVersion = version;
+            _sideU = u;
+            SetRouteSide(RouteSide(_pts, _ptCount));
+        }
+
+        // La cuia que no dibuja el canal (o sin pareja): el lado de su tramo sale del mismo trazado, calculado en un buffer
+        // aparte (Route da el mismo trazado a las dos cuias, empezando por el pie de la que lo pide). Solo si cambian la pareja,
+        // la recolocación del tablero o u (sin asignaciones).
+        private void RefreshPairSide(ICuiaBoard? board, int partner, bool force)
+        {
+            if (board == null || partner < 0)
+            {
+                _sidePartner = partner;
+                SetRouteSide(0f);
+                return;
+            }
+
+            float u = Host.U;
+            int version = board.LayoutVersion;
+            if (!force && partner == _sidePartner && version == _sideVersion && u == _sideU)
+            {
+                return;
+            }
+
+            _sidePartner = partner;
+            _sideVersion = version;
+            _sideU = u;
+            int n = Route(board, Host.Index, partner, _sidePts);
+            SetRouteSide(RouteSide(_sidePts, n));
+        }
+
+        // Hacia dónde sale el tramo horizontal de la cuia del primer punto del trazado pts (su pie): del pie baja por la bajada
+        // (pts[1]) y de ahí sale el tramo (pts[2]). 0 si sigue recto hacia abajo.
+        private static float RouteSide(Vector2[] pts, int count)
+        {
+            if (count < 3)
+            {
+                return 0f;
+            }
+
+            float dx = pts[2].x - pts[1].x;
+            return Mathf.Abs(dx) > 0.01f ? Mathf.Sign(dx) : 0f;
+        }
+
+        // Recoloca la ficha con el lado del tramo y con el tablero de ahora (la punta de la repisa puede haber cambiado).
+        private void SetRouteSide(float side)
+        {
+            _routeSide = side;
+            PlacePairMark();
         }
 
         private int FindPartner(ICuiaBoard board)
@@ -1241,8 +1378,8 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // Ficha de la pareja con count puntos (0 o menos: oculta) a la escala u (dp por u). Solo escribe si cambia el número de
-        // puntos o u (sin asignaciones): una píldora 9-slice cuyo borde es la mitad de su alto, con los puntos centrados.
+        // Ficha de la pareja con count puntos (0 o menos: oculta) a la escala u. Solo recoloca si cambia el número de puntos
+        // o u; el lado lo recoloca SetRouteSide.
         private void SetPairMark(int count, float u)
         {
             if (_pairTag == null || (count == _pairDotCount && Mathf.Approximately(u, _pairU)))
@@ -1252,6 +1389,24 @@ namespace AF.Presentation.Mechanics
 
             _pairDotCount = count;
             _pairU = u;
+            PlacePairMark();
+        }
+
+        // Coloca la ficha (sin asignaciones; Place solo escribe lo que cambia): una ficha 9-slice con esquinas de
+        // PairTagCornerDp y los puntos centrados, junto a la bajada por el lado contrario al tramo horizontal del canal, colgada de
+        // la repisa (pie − 8 a pie − 21) y creciendo hacia fuera con más puntos. Si colgada no cabe en la repisa (la punta de
+        // la fila más ancha con 6 por fila), va levantada por el lado del tramo, 2 dp sobre él, lo más fuera que deja su
+        // ranura (lejos del ojo de la espiral). Las medidas van en dp (la repisa no escala con la cuia): se pasan a u solo para
+        // colocarlas.
+        private void PlacePairMark()
+        {
+            int count = _pairDotCount;
+            float u = _pairU;
+            if (_pairTag == null)
+            {
+                return;
+            }
+
             bool on = count > 0 && u > 0f;
             OverlayParts.SetVisible(_pairTag, on);
             for (int i = 0; i < _pairDots.Length; i++)
@@ -1264,26 +1419,85 @@ namespace AF.Presentation.Mechanics
                 return;
             }
 
-            float step = PairDotStepU;
+            float step = PairDotStepDp;
             if (count > 1)
             {
-                step = Mathf.Min(step, (PairTagMaxWidthU - PairTagHeightU) / (count - 1));
+                step = Mathf.Min(step, (PairTagMaxWidthDp - PairTagHeightDp) / (count - 1));
             }
 
-            float dot = Mathf.Min(PairDotU, 0.8f * step);
-            float width = PairTagHeightU + ((count - 1) * step);
-            OverlayParts.Place(_pairTag, 0f, PairTagCenterU, width, PairTagHeightU, u);
-            float multiplier = ProceduralArt.RemolinoPairTagRadiusPx / Mathf.Max(0.25f, 0.5f * PairTagHeightU * u);
+            float dot = Mathf.Min(PairDotDp, 0.8f * step);
+            float width = PairTagHeightDp + ((count - 1) * step);
+            ResolvePairPlacement(width, out float side, out float near, out bool raised);
+            _pairSide = side;
+            _pairRaised = raised;
+            float centerX = side * (near + (0.5f * width));
+            float centerY = raised
+                ? -(PairTagRaisedBottomBelowFootDp - (0.5f * PairTagHeightDp))
+                : -(PairTagTopBelowFootDp + (0.5f * PairTagHeightDp));
+            OverlayParts.Place(_pairTag, centerX / u, centerY / u, width / u, PairTagHeightDp / u, u);
+            float multiplier = ProceduralArt.RemolinoPairTagRadiusPx / PairTagCornerDp;
             if (!Mathf.Approximately(_pairTag.pixelsPerUnitMultiplier, multiplier))
             {
                 _pairTag.pixelsPerUnitMultiplier = multiplier;
             }
 
-            float start = -0.5f * step * (count - 1);
+            float start = centerX - (0.5f * step * (count - 1));
             for (int i = 0; i < count && i < _pairDots.Length; i++)
             {
-                OverlayParts.Place(_pairDots[i], start + (i * step), PairTagCenterU, dot, dot, u);
+                OverlayParts.Place(_pairDots[i], (start + (i * step)) / u, centerY / u, dot / u, dot / u, u);
             }
+        }
+
+        // Dónde va una ficha de width dp: colgada por el lado contrario al tramo (a la derecha sin canal; sin canal, si no
+        // cabe, a la izquierda) si su canto de fuera queda dentro de la repisa; si no, levantada por el lado del tramo.
+        private void ResolvePairPlacement(float width, out float side, out float near, out bool raised)
+        {
+            float away = _routeSide != 0f ? -_routeSide : 1f;
+            side = away;
+            near = PairTagNearDp;
+            raised = false;
+            ICuiaBoard? board = Host.Board;
+            int self = Host.Index;
+            if (board == null || (uint)self >= (uint)board.Count)
+            {
+                return;
+            }
+
+            float lo = float.PositiveInfinity;
+            float hi = float.NegativeInfinity;
+            int n = Mathf.Min(board.Count, MaxBoard);
+            for (int c = 0; c < n; c++)
+            {
+                Rect r = board.SlotRect(c);
+                lo = Mathf.Min(lo, r.xMin);
+                hi = Mathf.Max(hi, r.xMax);
+            }
+
+            lo += ShelfInsetDp;
+            hi -= ShelfInsetDp;
+            float foot = board.Foot(self).x;
+            float reach = PairTagNearDp + width;
+            if (FitsOnShelf(foot, away, reach, lo, hi))
+            {
+                return;
+            }
+
+            if (_routeSide == 0f && FitsOnShelf(foot, -away, reach, lo, hi))
+            {
+                side = -away;
+                return;
+            }
+
+            side = _routeSide != 0f ? _routeSide : -away;
+            raised = true;
+            float slotHalf = 0.5f * board.SlotRect(self).width;
+            near = Mathf.Max(PairTagNearDp, slotHalf - PairTagSlotClearDp - width);
+        }
+
+        private static bool FitsOnShelf(float foot, float side, float reach, float lo, float hi)
+        {
+            float outer = foot + (side * reach);
+            return side > 0f ? outer <= hi + 0.01f : outer >= lo - 0.01f;
         }
 
         // Giro de la espiral: la fase frame (30° cada una, en el sentido de las agujas del reloj); 0 en reposo.

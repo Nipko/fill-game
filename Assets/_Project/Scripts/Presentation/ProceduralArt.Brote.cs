@@ -11,10 +11,11 @@ namespace AF.Presentation
     /// (<see cref="BroteSprout"/>).
     /// </summary>
     /// <remarks>
-    /// <para>Tamaño (prueba del dueño del 2026-10-09: el brote se veía pequeño): el cáliz mide <see cref="BroteSepalsWidthU"/>
-    /// = 1,32 u, más que el borde de fibra (1,10 u: la boca entera), y el capullo llega a 0,90 u sobre lo alto de la cuia, es
-    /// decir, 1,15 u sobre el labio de vertido (<c>CuiaGeometry.LipU</c>). Las hojitas abiertas asoman más allá del cáliz,
-    /// así que el verde se ve a los dos lados y por encima de la boca.</para>
+    /// <para>Tamaño (prueba del dueño del 2026-10-09: el brote se veía pequeño; «sobresalir ≥ 1 u», medido como la auditoría,
+    /// desde lo alto de la cuia): el cáliz mide <see cref="BroteSepalsWidthU"/> = 1,32 u, más que el borde de fibra (1,10 u:
+    /// la boca entera), y el capullo, de <see cref="BroteCorkHeightU"/> = 1,22 u, llega a 1,0 u sobre lo alto de la cuia
+    /// (1,25 u sobre el labio de vertido, <c>CuiaGeometry.LipU</c>). Las hojitas abiertas asoman más allá del cáliz, así que
+    /// el verde se ve a los dos lados y por encima de la boca.</para>
     /// <para>Silueta distinta de la tapa de sellado (una cúpula de calabaza baja de 1,10 × 0,35 u) y de la Hoja (una hoja de
     /// palma apaisada de 2,3 × 1 u con la fruta llave en un medallón): un capullo alto y en punta, del color de la cima, en una
     /// copa de sépalos verdes con dos hojitas en V.</para>
@@ -31,8 +32,8 @@ namespace AF.Presentation
         /// <summary>Ancho del sprite del capullo (u).</summary>
         public const float BroteCorkWidthU = 1.0f;
 
-        /// <summary>Alto del sprite del capullo (u).</summary>
-        public const float BroteCorkHeightU = 1.12f;
+        /// <summary>Alto del sprite del capullo (u): con su pie 0,22 u bajo lo alto de la cuia, la punta queda 1,0 u por encima.</summary>
+        public const float BroteCorkHeightU = 1.22f;
 
         /// <summary>Ancho del cáliz (u): tapa el borde de fibra de 1,10 u (la boca) con 0,11 u de margen por lado.</summary>
         public const float BroteSepalsWidthU = 1.32f;

@@ -14,13 +14,17 @@ namespace AF.Presentation.Mechanics
     /// (Aguas turbias), el capullo va en el pardo de las turbias y nunca enseña el tinte (07 §4.3).
     /// </summary>
     /// <remarks>
-    /// <para><b>Tamaño</b> (prueba del dueño del 2026-10-09; tanda B2): el cáliz mide <see cref="ProceduralArt.BroteSepalsWidthU"/>
-    /// = 1,32 u (la boca, el borde de fibra, 1,10 u) y baja hasta el labio de vertido; el capullo llega a
-    /// <see cref="TopAboveRimU"/> = 0,90 u sobre lo alto de la cuia, 1,15 u sobre el labio (<c>CuiaGeometry.LipU</c>). Más no
-    /// cabe: entre lo alto de una cuia y la madera de la repisa de la fila de arriba quedan 16 + 24 − 17 = 23 dp, y hasta el
-    /// marco del panel en la fila de arriba, unos 24 dp (<c>BoardLayout</c>); con la cuia más ancha de los tableros de dos o
-    /// más filas (48 dp, u = 24), 0,90 u son 21,6 dp. En todo el paso Open nada pasa de ahí: el capullo se hincha a lo ancho y
-    /// después encoge más deprisa de lo que sube, y las hojitas abiertas no pasan de <see cref="TopAboveRimU"/>.</para>
+    /// <para><b>Tamaño</b> (prueba del dueño del 2026-10-09: «sobresalir ≥ 1 u», medido como la auditoría de la tanda B2,
+    /// desde lo alto de la cuia, <c>HeightU</c>): el cáliz mide <see cref="ProceduralArt.BroteSepalsWidthU"/> = 1,32 u (la
+    /// boca, el borde de fibra, 1,10 u) y baja hasta el labio de vertido; el capullo llega a <see cref="TopAboveRimU"/> = 1,0 u
+    /// sobre lo alto de la cuia (1,25 u sobre el labio, <c>CuiaGeometry.LipU</c>). No tapa la fila de arriba, con el mismo
+    /// límite que la nube de la Lluvia (<see cref="LluviaOverlay.RiseTopMaxDp"/>): el pie de la fila de arriba queda 16 + 24 =
+    /// 40 dp sobre lo alto de la cuia (<c>BoardLayout</c>) y, con la cuia más ancha de los tableros de dos o más filas (48 dp,
+    /// u = 24), 1,0 u son 24 dp. Ese peor caso roza 1 dp la madera de la repisa de la fila de arriba, que acaba 17 dp bajo su
+    /// pie (16 + 24 − 17 = 23 dp) [P, pendiente del dueño: 1,0 u rozando la repisa o 0,9 u sin rozarla]. En la fila de arriba
+    /// no pasa del canto interior del marco del panel (<see cref="LluviaOverlay.CloudTopMaxDp"/>, 24 dp). En todo el paso Open
+    /// nada sube más: el capullo se hincha a lo ancho y después encoge más deprisa de lo que sube, y las hojitas abiertas no
+    /// pasan de <see cref="TopAboveRimU"/>.</para>
     /// <para><b>Desbloqueo</b> (paso Open de la etapa (b), <see cref="OpenStepMs"/> × <c>ctx.SpeedFactor</c>; 02 §4.1: «brote
     /// germina en 2 hojas», 350 ms; b.2 no cambia esta duración): el capullo se hincha y se disuelve con unos destellos pequeños
     /// de su color (<see cref="IBoardFx.Sparkles"/>) mientras el cáliz se abre y se desvanece, y las dos hojitas germinan: se
@@ -37,14 +41,23 @@ namespace AF.Presentation.Mechanics
         /// <summary>Duración nominal de la germinación (ms) [P]: 02 §4.1 (Hoja, Brote y Liana se abren en 350 ms).</summary>
         public const float OpenStepMs = 350f;
 
-        /// <summary>Pie del capullo bajo lo alto de la cuia (u): encaja en el cuello, por dentro del borde de fibra.</summary>
-        public const float CorkBelowLipU = 0.22f;
+        /// <summary>
+        /// Pie del capullo bajo lo alto de la cuia (u; desde <c>HeightU</c>, no desde el labio de vertido): encaja en el cuello,
+        /// por dentro del borde de fibra.
+        /// </summary>
+        public const float CorkBelowTopU = 0.22f;
 
-        /// <summary>Lo más alto del brote sobre lo alto de la cuia (u), en reposo y en todo el paso: la punta del capullo.</summary>
-        public const float TopAboveRimU = ProceduralArt.BroteCorkHeightU - CorkBelowLipU;
+        /// <summary>
+        /// Lo más alto del brote sobre lo alto de la cuia (u; desde <c>HeightU</c>), en reposo y en todo el paso: la punta del
+        /// capullo, 1,0 u (prueba del dueño: ≥ 1 u).
+        /// </summary>
+        public const float TopAboveRimU = ProceduralArt.BroteCorkHeightU - CorkBelowTopU;
 
-        /// <summary>Pie del cáliz bajo lo alto de la cuia (u): cubre el borde de fibra entero (0,25 u) hasta el labio.</summary>
-        public const float SepalsBelowLipU = 0.28f;
+        /// <summary>
+        /// Pie del cáliz bajo lo alto de la cuia (u; desde <c>HeightU</c>): cubre el borde de fibra entero (0,25 u) hasta el
+        /// labio.
+        /// </summary>
+        public const float SepalsBelowTopU = 0.28f;
 
         /// <summary>Giro hacia fuera de cada hojita plegada, que asoma por detrás del capullo (grados desde la vertical).</summary>
         public const float ClosedLeafDeg = 34f;
@@ -76,9 +89,9 @@ namespace AF.Presentation.Mechanics
         // Margen tras la duración con el que el overlay cierra solo un paso que la cola no cerró (no debería pasar).
         private const float StuckGuardMs = 1000f;
 
-        // Hojitas: pie (u desde el eje y sobre lo alto de la cuia) y lo que sube al abrirse, como mucho.
+        // Hojitas: pie (u desde el eje y sobre lo alto de la cuia, HeightU) y lo que sube al abrirse, como mucho.
         private const float LeafFootXU = 0.18f;
-        private const float LeafFootAboveLipU = 0f;
+        private const float LeafFootAboveTopU = 0f;
         private const float LeafRiseU = 0.1f;
 
         private Image _cork = null!;
@@ -318,7 +331,7 @@ namespace AF.Presentation.Mechanics
         private void PlaceClosed()
         {
             _posed = false;
-            PoseCork(_heightU - CorkBelowLipU, 1f, 1f, 1f);
+            PoseCork(_heightU - CorkBelowTopU, 1f, 1f, 1f);
             PoseSepals(1f, 1f, 1f);
             PoseLeaf(_leafL, -1f, ClosedLeafDeg, 1f, 0f, 1f);
             PoseLeaf(_leafR, 1f, ClosedLeafDeg, 1f, 0f, 1f);
@@ -328,7 +341,7 @@ namespace AF.Presentation.Mechanics
         private void Apply(float t)
         {
             _posed = true;
-            float footY = _heightU - CorkBelowLipU;
+            float footY = _heightU - CorkBelowTopU;
             if (!_sparkled && t >= SparkleAt)
             {
                 _sparkled = true;
@@ -348,7 +361,11 @@ namespace AF.Presentation.Mechanics
                 float p = Mathf.Clamp01((t - SwellEnd) / (OpenEnd - SwellEnd));
                 float fade = 1f - Mathf.SmoothStep(0f, 1f, p);
                 float shrink = Mathf.Lerp(1f, 0.55f, Ease.In(p));
-                PoseCork(footY + (0.08f * p), Mathf.Lerp(1.12f, 0.55f, Ease.In(p)), shrink, fade);
+
+                // El pie sube, pero nunca más de lo que encoge el capullo: la punta no pasa de TopAboveRimU en ningún
+                // fotograma (con el pie subiendo 0,08 p sin tope, la punta subía ≈ 0,003 u al empezar a encoger).
+                float lift = Mathf.Min(0.08f * p, ProceduralArt.BroteCorkHeightU * (1f - shrink));
+                PoseCork(footY + lift, Mathf.Lerp(1.12f, 0.55f, Ease.In(p)), shrink, fade);
                 PoseSepals(1.06f + (0.2f * Ease.Out(p)), 1f - (0.3f * Ease.Out(p)), fade);
             }
 
@@ -399,7 +416,7 @@ namespace AF.Presentation.Mechanics
         private void PoseCork(float footY, float sx, float sy, float alpha)
         {
             OverlayParts.Place(_cork, 0f, footY, ProceduralArt.BroteCorkWidthU, ProceduralArt.BroteCorkHeightU, _u);
-            OverlayParts.Place(_gloss, -0.2f, 0.66f, 0.14f, 0.32f, _u); // dentro del capullo, arriba a la izquierda
+            OverlayParts.Place(_gloss, -0.2f, 0.72f, 0.14f, 0.32f, _u); // dentro del capullo, arriba a la izquierda (a 0,59 de su alto)
             SetScale(_cork.rectTransform, sx, sy);
             Color c = _cork.color;
             if (!Mathf.Approximately(c.a, alpha))
@@ -413,7 +430,7 @@ namespace AF.Presentation.Mechanics
         // Cáliz con escala (sx, sy) desde su pie y opacidad.
         private void PoseSepals(float sx, float sy, float alpha)
         {
-            OverlayParts.Place(_sepals, 0f, _heightU - SepalsBelowLipU, ProceduralArt.BroteSepalsWidthU, ProceduralArt.BroteSepalsHeightU, _u);
+            OverlayParts.Place(_sepals, 0f, _heightU - SepalsBelowTopU, ProceduralArt.BroteSepalsWidthU, ProceduralArt.BroteSepalsHeightU, _u);
             SetScale(_sepals.rectTransform, sx, sy);
             OverlayParts.SetColor(_sepals, new Color(1f, 1f, 1f, alpha));
         }
@@ -423,7 +440,7 @@ namespace AF.Presentation.Mechanics
         private void PoseLeaf(Image leaf, float side, float open, float scale, float rise, float alpha)
         {
             float footX = side * (LeafFootXU + (0.06f * Mathf.Clamp01((open - ClosedLeafDeg) / (OpenLeafDeg - ClosedLeafDeg))));
-            float footY = _heightU + LeafFootAboveLipU + rise;
+            float footY = _heightU + LeafFootAboveTopU + rise;
             OverlayParts.Place(leaf, footX, footY, ProceduralArt.BroteSproutWidthU, ProceduralArt.BroteSproutHeightU, _u);
             RectTransform rt = leaf.rectTransform;
             Quaternion rotation = Quaternion.Euler(0f, 0f, -side * open); // la izquierda gira a la izquierda (z positiva) al abrirse

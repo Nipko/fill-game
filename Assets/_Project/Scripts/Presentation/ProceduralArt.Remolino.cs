@@ -62,16 +62,28 @@ namespace AF.Presentation
         public static readonly Color RemolinoChannelEdge = Palette.Hex(0x5E7F86);
 
         /// <summary>
-        /// Radio (px) de la ficha de la pareja (<see cref="RemolinoPairTag"/>); es también su borde 9-slice, así que estirada
-        /// en horizontal es una píldora con los extremos redondos y, cuadrada, un disco.
+        /// Radio (px) de las esquinas de la ficha de la pareja (<see cref="RemolinoPairTag"/>); es también su borde 9-slice, así
+        /// que se estira a una ficha de dominó de esquinas redondas. En pantalla, las esquinas miden
+        /// <c>RemolinoOverlay.PairTagCornerDp</c>.
         /// </summary>
         public const int RemolinoPairTagRadiusPx = 24;
 
-        /// <summary>Contorno oscuro de la ficha de la pareja (px de la textura, con el radio de <see cref="RemolinoPairTagRadiusPx"/>).</summary>
-        public const float RemolinoPairTagOutlinePx = 3f;
+        /// <summary>
+        /// Contorno de pizarra de la ficha de la pareja (px de la textura, con el radio de <see cref="RemolinoPairTagRadiusPx"/>):
+        /// ≈ 0,9 dp con las esquinas de 3,5 dp, para separar la ficha clara de la espuma de la espiral, que la roza por arriba.
+        /// </summary>
+        public const float RemolinoPairTagOutlinePx = 6f;
 
-        /// <summary>Aro de espuma de la ficha de la pareja, por dentro del contorno (px de la textura).</summary>
-        public const float RemolinoPairTagRingPx = 5f;
+        /// <summary>
+        /// Espuma de la ficha de la pareja (su cara), opaca: la espuma marfil de la espiral tal como se ve sobre el remanso
+        /// (<see cref="Palette.UiPaper"/> al 0,7 compuesto en lineal sobre <see cref="WhirlPoolColor"/>, lo mismo que
+        /// <c>RemolinoOverlay.SpiralSeenColor</c>). Propiedad y no campo: no depende del orden en que se inicializan los
+        /// campos estáticos de las parciales.
+        /// </summary>
+        public static Color RemolinoPairFoam => ColorMath.CompositeLinear(Palette.UiPaper, RemolinoPairFoamAlpha, WhirlPoolColor);
+
+        /// <summary>Opacidad de la espuma con la que se compone <see cref="RemolinoPairFoam"/> (la de la espiral, 0,7).</summary>
+        public const float RemolinoPairFoamAlpha = 0.7f;
 
         // Lienzo de una fase de la espiral (px) con 2 px de margen arriba y abajo para que el filtrado no mezcle fases.
         private const int RemolinoSpiralW = (int)(RemolinoSpiralWidthU * MechanicPxPerU);
@@ -117,11 +129,12 @@ namespace AF.Presentation
         public Sprite RemolinoDash => _remolinoDash != null ? _remolinoDash : (_remolinoDash = BuildRemolinoDash());
 
         /// <summary>
-        /// Ficha de la pareja del Remolino (opción C del dueño, 2026-10-11) [P]: un disco del agua del remanso
-        /// (<see cref="WhirlPoolColor"/>) con un aro de espuma (<see cref="Pearl"/>) y un contorno de pizarra
-        /// (<see cref="Slate"/>), ya coloreado (no se tiñe). Borde 9-slice igual al radio
-        /// (<see cref="RemolinoPairTagRadiusPx"/>): con <c>Image.Type.Sliced</c> se estira a la píldora que lleva los puntos de
-        /// la pareja.
+        /// Ficha de la pareja del Remolino (opción C del dueño, 2026-10-11) [P]: una ficha de dominó de la espuma de la espiral
+        /// (<see cref="RemolinoPairFoam"/>) con un contorno fino de pizarra (<see cref="Slate"/>), ya coloreada (no se tiñe);
+        /// los puntos de la pareja van encima, en el agua del remanso. Se lee como una ficha que se empareja, no como un disco
+        /// con aro (en la revisión de la tanda B2, el disco oscuro con aro de espuma y un punto se leía como un botón o un
+        /// remache). Borde 9-slice igual al radio de las esquinas (<see cref="RemolinoPairTagRadiusPx"/>): con
+        /// <c>Image.Type.Sliced</c> se estira al largo que piden los puntos.
         /// </summary>
         public Sprite RemolinoPairTag => _remolinoPairTag != null ? _remolinoPairTag : (_remolinoPairTag = BuildRemolinoPairTag());
 
@@ -195,16 +208,14 @@ namespace AF.Presentation
 
         private Sprite BuildRemolinoPairTag()
         {
-            // Tres discos concéntricos de borde nítido (el 9-slice los convierte en píldoras): contorno, aro y agua. Las esquinas
-            // centradas en el centro de 2 px, como la cápsula del canal, para que los cantos estirados queden rectos.
+            // Dos rectángulos redondeados de borde nítido (el 9-slice los estira): contorno y cara. Las esquinas centradas en el
+            // centro de 2 px, como la cápsula del canal, para que los cantos estirados queden rectos.
             const int r = RemolinoPairTagRadiusPx;
             const int s = (2 * r) + 2;
             const float o = RemolinoPairTagOutlinePx;
-            const float ring = o + RemolinoPairTagRingPx;
             var pc = new PixelCanvas(s, s);
             pc.FillRoundedRect(0.5f, 0.5f, s - 0.5f, s - 0.5f, r - 0.5f, Slate);
-            pc.FillRoundedRect(0.5f + o, 0.5f + o, s - 0.5f - o, s - 0.5f - o, r - 0.5f - o, Pearl);
-            pc.FillRoundedRect(0.5f + ring, 0.5f + ring, s - 0.5f - ring, s - 0.5f - ring, r - 0.5f - ring, WhirlPoolColor);
+            pc.FillRoundedRect(0.5f + o, 0.5f + o, s - 0.5f - o, s - 0.5f - o, r - 0.5f - o, RemolinoPairFoam);
             return MakeSprite(pc, "remolino_pair_tag", new Vector2(0.5f, 0.5f), new Vector4(r, r, r, r));
         }
 

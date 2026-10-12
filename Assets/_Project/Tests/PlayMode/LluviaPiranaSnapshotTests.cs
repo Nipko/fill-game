@@ -21,9 +21,13 @@ namespace AF.Tests.PlayMode
     /// <c>82_pirana_l183</c> (la cueva y el cardumen rondando), <c>82b_pirana_asleep_l183</c> (cueva llena: duerme),
     /// <c>83_pirana_bite_l183</c> (muerde: el bocado sale de la dosis de la víctima y sube por su eje),
     /// <c>83b_pirana_carry_l183</c> (se lleva el bocado) y <c>83c_pirana_cave_l183</c> (el bocado entra por la boca de la
-    /// cueva); el mordisco fallido visible (tanda B2): <c>83d_pirana_lost_reach_l183</c>, <c>83e_pirana_lost_bump_l183</c> y
-    /// <c>83f_pirana_lost_back_l183</c> (llega a la tapa de la víctima sellada, choca y rebota), y con la cueva llena
-    /// <c>82c_pirana_peek_l183</c> (se asoma) y <c>82d_pirana_asleep_again_l183</c> (vuelve a dormirse). Sirven para mirar a
+    /// cueva); el mordisco fallido visible (tanda B2): <c>83d_pirana_lost_reach_l183</c> (llega sobre la tapa de la víctima
+    /// sellada), <c>83e_pirana_lost_bump_l183</c> (el golpe: la que va delante contra la tapa, aplastada, con el
+    /// destello en su punto máximo), <c>83f_pirana_lost_rebound_l183</c> (fin del rebote), <c>83g_pirana_lost_back_l183</c> (a medio camino de
+    /// vuelta a la cueva) y <c>83h_pirana_lost_end_l183</c> (al acabar el paso: sobre el arco, con los puntos de después), y
+    /// con la cueva llena <c>82c_pirana_peek_l183</c> (se asoma), <c>82d_pirana_asleep_again_l183</c> (vuelve a dormirse) y
+    /// <c>82e_pirana_peek_up_l183</c> (con la víctima encima, en la columna de la cueva: se asoma hacia arriba; si el solver pasa
+    /// por ese vertido). Sirven para mirar a
     /// 48 dp la legibilidad, los solapes, los colores y
     /// la línea D-003. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.LluviaPiranaSnapshotTests</c> sin <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/</c>.
@@ -144,7 +148,8 @@ namespace AF.Tests.PlayMode
         public IEnumerator CapturePiranaBiteLost()
         {
             // Mordisco fallido visible (decisión C + D del dueño para el 183; tanda B2): el vertido sella la víctima, el cardumen
-            // llega a su tapa, choca y vuelve (83d al llegar, 83e al chocar, 83f al rebotar).
+            // llega a su tapa, choca y vuelve (83d al llegar, 83e al chocar, 83f al acabar el rebote, 83g de vuelta y 83h al
+            // acabar el paso).
             string dir = SnapshotKit.Prepare();
             yield return LoadPlaying(183);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -157,10 +162,18 @@ namespace AF.Tests.PlayMode
             MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.BiteLost, cave, 4000);
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, 0.36f);
             Save(dir, "83d_pirana_lost_reach_l183", boot);
-            MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, PiranaOverlay.LostHitAt - 0.01f);
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, PiranaOverlay.LostHitAt + 0.03f);
             Save(dir, "83e_pirana_lost_bump_l183", boot);
-            MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, 0.56f);
-            Save(dir, "83f_pirana_lost_back_l183", boot);
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, PiranaOverlay.LostReboundEnd);
+            Save(dir, "83f_pirana_lost_rebound_l183", boot);
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, 0.8f);
+            Save(dir, "83g_pirana_lost_back_l183", boot);
+            for (int ms = 0; ms < 400 && boot.View!.Animator.Steps.TryGetRunning(MechanicStepKind.BiteLost, cave, out _, out _); ms++)
+            {
+                PlayModeHelpers.TickExact(boot, 1);
+            }
+
+            Save(dir, "83h_pirana_lost_end_l183", boot);
             MechanicTestKit.StepToIdle(boot, 4000);
 
             // Cueva llena (el 183 con la cueva ya llena, [acaí, agua del Río Negro]): con el cuarto vertido útil el cardumen se
@@ -179,6 +192,30 @@ namespace AF.Tests.PlayMode
             MechanicTestKit.StepToIdle(boot, 4000);
             PlayModeHelpers.Step(boot, 300);
             Save(dir, "82d_pirana_asleep_again_l183", boot);
+
+            // Cueva llena con la víctima encima, en la columna de la cueva (revisión de la tanda B2, ronda 2): la que va delante
+            // se asoma hacia arriba, sin pasar de la repisa de la fila de encima (82e), si el solver encuentra ese vertido.
+            LaunchOptions.LevelPackJsonOverride = CaveFull183;
+            yield return LoadPlaying(183);
+            boot = GameBootstrap.Current!;
+            AF.Presentation.BoardAnimator animator = boot.View!.Animator;
+            UnityEngine.Vector2 caveFoot = animator.Foot(cave);
+            Pour[]? up = MechanicTestKit.FindTrigger(
+                boot.Flow!,
+                (ev, b, a) => (ev.PiranaBiteLostMask & bit) != 0 && ev.Receiver != cave
+                    && UnityEngine.Mathf.Abs(animator.Foot(ev.Receiver).x - caveFoot.x) < 0.5f && animator.Foot(ev.Receiver).y > caveFoot.y);
+            if (up == null)
+            {
+                TestContext.WriteLine("82e_pirana_peek_up_l183: el solver no pasa por un mordisco perdido contra una víctima de la columna de la cueva.");
+                yield break;
+            }
+
+            MechanicTestKit.PlayPrefix(boot, up);
+            MechanicTestKit.Tap(boot, up[up.Length - 1]);
+            MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.BiteLost, cave, 4000);
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, 0.5f);
+            Save(dir, "82e_pirana_peek_up_l183", boot);
+            MechanicTestKit.StepToIdle(boot, 4000);
         }
 
         // El 183 con la cueva (Cuia chica, la 8) ya llena: sus dos dosis salen de la cima de la cuia 0 (8 y 14, acaí y agua del

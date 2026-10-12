@@ -354,25 +354,46 @@ namespace AF.Tests.EditMode
             Assert.That(wa.PairMarkVisible && wb.PairMarkVisible, Is.True, "la pareja 0 también lleva su ficha");
             Assert.That(wa.PairDots, Is.EqualTo(1), "id 0: un punto");
             Assert.That(wb.PairDots, Is.EqualTo(wa.PairDots), "la misma marca en las dos cuias de la pareja");
-            AssertSameRect(wb.PairMarkRect, wa.PairMarkRect, "la misma ficha, en el mismo sitio de su cuia");
+            AssertSameRect(wb.PairMarkRect, wa.PairMarkRect, "la misma ficha; sin canal (sin tablero), en el mismo sitio de su cuia");
 
-            // Legible a 48 dp y en su sitio: en el pie de fibra, sin tapar el fondo de la cavidad (el líquido) y sin salirse del
-            // ancho del pie.
+            // Legible a 48 dp (revisión de la tanda B2, ronda 2: con 9 dp, 1,4 mm en el teléfono, no se leía): ≥ 13 dp de alto
+            // y puntos de ≥ 5,5 dp. En su sitio: junto a la bajada del canal (en el eje) con ≥ 2 dp de aire, por el lado
+            // contrario a su tramo horizontal (sin canal, a la derecha), colgada de la repisa (pie − 8 a pie − 21) sin tapar el
+            // ojo de la espiral (sobre él, la ficha se leía como una arandela o un botón), a ≥ 2 dp del canto interior del marco
+            // bajo la última fila (23,5 dp bajo el pie) y dentro de su ranura. El aire con el canal de verdad lo mide
+            // RemolinoBarroTests (PlayMode, con tablero).
             float u = a.Unit;
             Rect mark = wa.PairMarkRect;
-            Assert.That(mark.height, Is.GreaterThanOrEqualTo(10f), "la ficha mide ≥ 10 dp con la cuia de 48 dp");
-            Assert.That(wa.PairDotRect(0).width, Is.GreaterThanOrEqualTo(4.5f), "y su punto, ≥ 4,5 dp");
-            Assert.That(mark.yMax, Is.LessThanOrEqualTo(CuiaGeometry.CavityFloorU(0f) * u), "por debajo del fondo de la cavidad");
-            Assert.That(Mathf.Abs(mark.center.x), Is.LessThan(0.01f), "centrada en la cuia");
-            Assert.That(mark.yMin, Is.LessThan(0f).And.GreaterThan(-0.5f * u), "en el pie, sobre el ojo del remanso");
+            Assert.That(wa.PairMarkSide, Is.EqualTo(1f), "sin canal, a la derecha de la bajada");
+            Assert.That(wa.PairMarkRaised, Is.False, "colgada de la repisa");
+            Assert.That(mark.height, Is.GreaterThanOrEqualTo(13f - 0.01f), "la ficha mide ≥ 13 dp de alto [P]");
+            Assert.That(wa.PairDotRect(0).width, Is.GreaterThanOrEqualTo(5.5f), "y su punto, ≥ 5,5 dp");
+            Assert.That(mark.yMax, Is.EqualTo(-RemolinoOverlay.PairTagTopBelowFootDp).Within(0.01f), "cuelga desde pie − 8: fuera del pie de fibra y de la cavidad");
+            Assert.That(mark.yMin, Is.LessThan(-RemolinoOverlay.ShelfBottomBelowFootDp), "y baja del canto de la madera, como una plaquita");
+            Assert.That(mark.yMin, Is.GreaterThanOrEqualTo(-23.5f + 2f), "a ≥ 2 dp del canto interior del marco bajo la última fila");
+            Assert.That(mark.xMin, Is.GreaterThanOrEqualTo((0.5f * RemolinoOverlay.ChannelWidthDp) + RemolinoOverlay.PairTagChannelClearDp - 0.01f), "≥ 2 dp de aire con la bajada del canal (en el eje)");
+            Assert.That(mark.xMin, Is.LessThanOrEqualTo((0.5f * RemolinoOverlay.ChannelWidthDp) + 3f), "junto a la bajada");
+            Assert.That(mark.xMax, Is.LessThanOrEqualTo(RemolinoOverlay.PairTagMaxOuterDp + 0.01f), "dentro de la ranura más estrecha (56 dp)");
+            Vector2 eye = new Vector2(0f, RemolinoOverlay.PoolCenterU * u);
+            Vector2 nearest = new Vector2(Mathf.Clamp(eye.x, mark.xMin, mark.xMax), Mathf.Clamp(eye.y, mark.yMin, mark.yMax));
+            Assert.That(Vector2.Distance(nearest, eye), Is.GreaterThanOrEqualTo(0.25f * u), "el ojo de la espiral queda libre");
+            Assert.That(ProceduralArt.RemolinoPairFoam, Is.EqualTo(RemolinoOverlay.SpiralSeenColor), "la cara de la ficha, en la espuma de la espiral");
+            Assert.That(wa.PairDotColor, Is.EqualTo(ProceduralArt.WhirlPoolColor), "y sus puntos, en el agua del remanso (una ficha de dominó)");
+            Assert.That(RemolinoOverlay.PairTagCornerDp, Is.LessThan(0.4f * RemolinoOverlay.PairTagHeightDp), "esquinas redondas, no un disco");
 
-            // Otra pareja: otra ficha, más larga, que sigue dentro del pie de fibra.
+            // Otra pareja: otra ficha, más larga hacia fuera, con el mismo canto junto a la bajada y dentro de la ranura; sus dos
+            // puntos se distinguen (≥ 7 dp entre centros).
             b.ShowContent(Cuia.Create(4, new[] { 3, 3 }).WithMechanic(MechanicType.Remolino, pairId: 1), false);
             Assert.That(wb.PairDots, Is.EqualTo(2), "id 1: dos puntos");
             Assert.That(wb.PairMarkRect.width, Is.GreaterThan(wa.PairMarkRect.width + 1f), "se distingue de la de la pareja 0");
+            Assert.That(wb.PairMarkRect.xMin, Is.EqualTo(mark.xMin).Within(0.01f), "crece hacia fuera, no hacia la bajada");
+            Assert.That(wb.PairDotRect(1).center.x - wb.PairDotRect(0).center.x, Is.GreaterThanOrEqualTo(7f), "dos puntos a ≥ 7 dp");
+            Assert.That(wb.PairDotRect(1).width, Is.GreaterThanOrEqualTo(5.5f), "de ≥ 5,5 dp");
+            Assert.That(wb.PairMarkRect.xMax, Is.LessThanOrEqualTo(RemolinoOverlay.PairTagMaxOuterDp + 0.01f), "dentro de la ranura más estrecha (56 dp)");
             a.ShowContent(Cuia.Create(4, new[] { 7 }).WithMechanic(MechanicType.Remolino, pairId: 7), false);
             Assert.That(wa.PairDots, Is.EqualTo(8), "id 7: ocho puntos");
-            Assert.That(wa.PairMarkRect.width, Is.LessThanOrEqualTo((RemolinoOverlay.PairTagMaxWidthU * u) + 0.01f), "dentro del ancho del pie");
+            Assert.That(wa.PairMarkRect.width, Is.LessThanOrEqualTo(RemolinoOverlay.PairTagMaxWidthDp + 0.01f), "dentro del ancho máximo");
+            Assert.That(wa.PairMarkRect.xMax, Is.LessThanOrEqualTo(RemolinoOverlay.PairTagMaxOuterDp + 0.01f), "dentro de la ranura");
             for (int i = 1; i < wa.PairDots; i++)
             {
                 Assert.That(wa.PairDotRect(i).xMin, Is.GreaterThan(wa.PairDotRect(i - 1).xMax), "punto " + i + ": sin pisar el anterior");

@@ -339,10 +339,7 @@ namespace AF.Tests.PlayMode
             _rig = new MechanicTestKit.Rig(Art, start);
             if (lowerRow)
             {
-                CuiaView rainView = _rig.Views[0];
-                Vector2 foot = new Vector2(36f, -600f - 40f - (rainView.HeightU * rainView.Unit));
-                rainView.SetGeometry(foot, 40f, 60f);
-                _rig.Animator.BoardLaidOut();
+                PlaceRainOneRowLower(_rig);
             }
 
             var cloud = (LluviaOverlay)_rig.Views[0].Overlay!;
@@ -392,12 +389,20 @@ namespace AF.Tests.PlayMode
             Assert.That(_rig.Views[0].Sealed, Is.True, "sellada con el agua");
             AssertRigShowsModel(after);
 
-            // Duración del fundido (criterio de la ola 3: la nube sube y se desvanece en ≥ 300 ms [P] × factor): el mismo vertido
-            // otra vez, mirando la opacidad de la nube de 4 en 4 ms. Entera hasta que cae la gota, todavía > 0,5 a los 150 ms × factor
-            // de fundido, y desde que empieza a desvanecerse hasta que no queda nada, ≥ 300 ms × factor.
+            // Duración del fundido (criterio de la ola 3: la nube sube y se desvanece en ≥ 300 ms [P] × factor, y llega a ~0 al
+            // final): el mismo vertido otra vez, en la misma fila que arriba (lowerRow), mirando la opacidad de la nube de 4 en 4
+            // ms. Entera hasta que cae la gota, todavía > 0,5 a los 150 ms × factor de fundido, desde que empieza a desvanecerse
+            // hasta que no queda nada ≥ 300 ms × factor, y en el último fotograma del paso (aún animando) ya casi transparente: un
+            // fundido que se quedara a medias y se cortara de golpe al cerrar el paso no pasa.
             _rig.Dispose();
             _rig = new MechanicTestKit.Rig(Art, start);
+            if (lowerRow)
+            {
+                PlaceRainOneRowLower(_rig);
+            }
+
             cloud = (LluviaOverlay)_rig.Views[0].Overlay!;
+            Assert.That(cloud.CloudTopLimitDp, Is.EqualTo(limit).Within(1e-3f), "el fundido se mide en la misma fila");
             counted = _rig.Pour(start, 1, 3, out _);
             _rig.RunUntilIdle(3000);
             _rig.Pour(counted, 2, 4, out _);
@@ -408,11 +413,19 @@ namespace AF.Tests.PlayMode
             float lastWhole = -1f;
             float firstGone = -1f;
             float halfway = -1f;
+            float lastAnimatedAlpha = -1f;
+            float lastAnimatedAt = -1f;
             while (_rig.Animator.Steps.TryGetRunning(MechanicStepKind.RainEnd, 0, out float e, out _))
             {
                 _rig.Tick(4);
                 float t = e + 4f;
                 float a = cloud.IsAnimating ? cloud.CloudAlpha : 0f; // al cerrar el paso la nube oculta vuelve a alfa 1
+                if (cloud.IsAnimating)
+                {
+                    lastAnimatedAlpha = cloud.CloudAlpha;
+                    lastAnimatedAt = t;
+                }
+
                 if (a >= 0.999f)
                 {
                     lastWhole = t;
@@ -431,8 +444,20 @@ namespace AF.Tests.PlayMode
 
             Assert.That(lastWhole, Is.GreaterThanOrEqualTo(fadeFrom - 8f), "la nube sigue entera hasta que cae la gota");
             Assert.That(halfway, Is.GreaterThan(0.5f), "a los 150 ms × factor de fundido aún se ve más de la mitad");
+            Assert.That(lastAnimatedAt, Is.GreaterThanOrEqualTo(fadeDur - 8f), "se mide hasta el último fotograma del paso");
+            Assert.That(lastAnimatedAlpha, Is.LessThanOrEqualTo(0.05f), "al final del paso, aún animando, la nube ya es casi transparente (" + lastAnimatedAlpha.ToString("F3") + "): sin corte brusco");
             Assert.That(firstGone, Is.GreaterThan(0f), "y al final se ha ido");
             Assert.That(firstGone - lastWhole, Is.GreaterThanOrEqualTo((300f * factor) - 8f), "se desvanece en ≥ 300 ms × factor (" + (firstGone - lastWhole).ToString("F0") + " ms)");
+        }
+
+        // La Lluvia (cuia 0) una fila más abajo: su pie, elevación 16 + separación 24 = 40 dp bajo la boca de las demás, que hacen
+        // de fila de arriba (BoardLayout; 02 §5).
+        private static void PlaceRainOneRowLower(MechanicTestKit.Rig rig)
+        {
+            CuiaView rainView = rig.Views[0];
+            Vector2 foot = new Vector2(36f, -600f - 40f - (rainView.HeightU * rainView.Unit));
+            rainView.SetGeometry(foot, 40f, 60f);
+            rig.Animator.BoardLaidOut();
         }
 
         [UnityTest]
@@ -630,15 +655,47 @@ namespace AF.Tests.PlayMode
 
             Assert.That(school.LostBumped, Is.True, "choca");
             Assert.That(Vector2.Distance(school.LeadMouth, lid), Is.LessThan(0.2f * u), "la que va delante llega a la tapa");
+            Assert.That(school.LeadMouth.y, Is.LessThan(lid.y - 0.5f), "y la toca: su boca se hunde en la tapa (" + (lid.y - school.LeadMouth.y).ToString("F1") + " dp)");
+
+            // El golpe se lee en 400 ms (revisión de la tanda B2, ronda 2): a LostHitAt + 0,03 la que va delante sigue contra
+            // la tapa, aplastada a lo largo de su cuerpo, con el destello perla en su punto máximo (su estrella, ≥ 16 dp de
+            // lado: el cuerpo de la estrella, ≥ 8 dp).
+            MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, PiranaOverlay.LostHitAt + 0.03f);
+            Assert.That(school.ImpactFlashSize, Is.GreaterThanOrEqualTo(16f), "el destello del golpe, en su punto máximo");
+            Vector3 squashed = school.Fish(PiranaOverlay.LeadFish).rectTransform.localScale;
+            Assert.That(Mathf.Abs(squashed.x), Is.LessThan(0.9f * Mathf.Abs(squashed.y)), "aplastada por el golpe");
+            Assert.That(school.LeadMouth.y, Is.LessThan(lid.y - 0.5f), "aún contra la tapa");
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.BiteLost, cave, 0.5f);
             Assert.That(school.IsAnimating, Is.True, "el mordisco perdido lo anima la cueva");
             Assert.That(Vector2.Distance(school.LeadMouth, lid), Is.LessThan(0.6f * u), "a mitad del paso, junto a la boca de la víctima (rebotando)");
-            Assert.That(school.LeadMouth.y, Is.GreaterThan(lid.y - (0.05f * u)), "rebota hacia arriba: no entra en la víctima");
+            Assert.That(school.LeadMouth.y, Is.GreaterThan(lid.y - PiranaOverlay.LostDentDp - 0.5f), "no entra en la víctima más que el golpe (LostDentDp)");
             Assert.That((school.SchoolCenter - lid).magnitude, Is.LessThan((home - lid).magnitude), "el cardumen está en la víctima");
             Assert.That(school.MorselVisible, Is.False, "no se lleva nada");
             Assert.That(boot.View.Views[cave].LiquidLevel, Is.EqualTo((float)caveBefore.Count).Within(1e-3f));
             Assert.That(boot.View.Views[victim].Sealed, Is.True, "la tapa, en su sitio");
 
+            // En el 183 la víctima está en la primera columna (revisión de la tanda B2, ronda 2: la que esperaba a la izquierda
+            // de la tapa rozaba el marco): de aquí al final del paso, ninguna piraña sale del canto interior del marco del panel
+            // (≥ 2 dp), y el destello ya se apagó al final.
+            Rect inner = MechanicTestKit.PanelInner(boot.View);
+            int frames = 0;
+            while (boot.View.Animator.Steps.TryGetRunning(MechanicStepKind.BiteLost, cave, out _, out _))
+            {
+                for (int f = 0; f < PiranaOverlay.SchoolSize; f++)
+                {
+                    Rect fish = school.FishLayerRect(f);
+                    Assert.That(
+                        fish.xMin >= inner.xMin + 2f && fish.xMax <= inner.xMax - 2f && fish.yMax <= inner.yMax - 2f,
+                        Is.True,
+                        "la piraña " + f + " " + fish + " dentro del panel " + inner + " con ≥ 2 dp");
+                }
+
+                frames++;
+                PlayModeHelpers.TickExact(boot, 4);
+            }
+
+            Assert.That(frames, Is.GreaterThan(10), "se miró la segunda mitad del paso");
+            Assert.That(school.ImpactFlashSize, Is.EqualTo(0f), "el destello ya se apagó");
             MechanicTestKit.StepToIdle(boot, 6000);
             Assert.That((school.SchoolCenter - school.SchoolHome).magnitude, Is.LessThan(0.8f * u), "y vuelve junto a la cueva");
             BoardAnimator animator = boot.View.Animator;
@@ -652,12 +709,19 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Pirana_BiteLost_QC()
+        public IEnumerator Pirana_BiteLost_QC([Values(false, true)] bool victimAbove)
         {
-            // Cueva llena [3, 4] (k = 2): el segundo vertido útil completa el ritmo y el mordisco se pierde (respuesta Q-C).
+            // Cueva llena [3, 4] (k = 2): el segundo vertido útil completa el ritmo y el mordisco se pierde (respuesta Q-C). Con
+            // victimAbove, la cueva va una fila más abajo, justo debajo de la víctima (como en el 183, donde la cueva tiene dos
+            // víctimas posibles encima, en su columna): la que va delante se asoma hacia arriba (revisión de la tanda B2, ronda 2).
             yield return null;
             BoardState start = CaveFullBoard();
             _rig = new MechanicTestKit.Rig(Art, start);
+            if (victimAbove)
+            {
+                PlaceCaveUnder(_rig, 5);
+            }
+
             var school = (PiranaOverlay)_rig.Views[0].Overlay!;
             Assert.That(school.Dimmed, Is.True, "cueva llena: el cardumen duerme");
             BoardState counted = _rig.Pour(start, 4, 5, out _);
@@ -672,12 +736,32 @@ namespace AF.Tests.PlayMode
             Assert.That(school.SchoolAsleep, Is.True, "antes del paso, dormido");
             RunUntil(_rig, () => _rig.Animator.Steps.IsRunning(MechanicStepKind.BiteLost, 0), 3000);
 
-            // Cueva llena: se despierta, la que va delante se asoma hacia la víctima (a la derecha) y vuelve, y se duermen otra vez.
-            RunToFraction(_rig, MechanicStepKind.BiteLost, 0, 0.5f);
+            // Cueva llena: se despierta, la que va delante se asoma hacia la víctima (a la derecha, o hacia arriba si está encima)
+            // y vuelve, y se duermen otra vez.
+            float shelfAbove = _rig.Animator.Foot(5).y - RemolinoOverlay.ShelfBottomBelowFootDp;
+            float highest = float.NegativeInfinity;
+            while (_rig.Animator.Steps.TryGetRunning(MechanicStepKind.BiteLost, 0, out float e, out float d) && e < 0.5f * d)
+            {
+                _rig.Tick(4);
+                highest = Mathf.Max(highest, school.FishLayerRect(PiranaOverlay.LeadFish).yMax);
+            }
+
             Assert.That(school.IsAnimating, Is.True);
             Assert.That(school.SchoolAsleep, Is.False, "se despierta para asomarse");
             Vector2 peek = school.Fish(PiranaOverlay.LeadFish).rectTransform.anchoredPosition;
-            Assert.That(peek.x - rest.x, Is.GreaterThan(0.4f * u), "se asoma hacia la víctima");
+            Assert.That(school.PeekUp, Is.EqualTo(victimAbove), victimAbove ? "víctima encima: se asoma hacia arriba" : "víctima al lado: se asoma hacia su lado");
+            if (victimAbove)
+            {
+                Assert.That(peek.y - rest.y, Is.GreaterThan(0.3f * u), "sube hacia la víctima (" + ((peek.y - rest.y) / u).ToString("F2") + " u)");
+                Assert.That(Mathf.Abs(peek.x - rest.x), Is.LessThan(0.1f * u), "en su columna");
+                Assert.That(school.LeadMouth.y, Is.GreaterThan(school.FishLayerRect(PiranaOverlay.LeadFish).center.y), "con el morro arriba");
+                Assert.That(highest, Is.LessThanOrEqualTo(shelfAbove - 1f), "sin pasar de la repisa de la fila de arriba (" + (shelfAbove - highest).ToString("F1") + " dp de aire)");
+            }
+            else
+            {
+                Assert.That(peek.x - rest.x, Is.GreaterThan(0.4f * u), "se asoma hacia la víctima");
+            }
+
             Assert.That(school.Fish(PiranaOverlay.LeadFish).color.a, Is.EqualTo(1f).Within(1e-3f), "despierta, sin atenuar");
             Assert.That(school.MorselVisible, Is.False);
             Assert.That(_rig.Views[0].LiquidLevel, Is.EqualTo(2f).Within(1e-3f), "la cueva no cambia");
@@ -692,6 +776,20 @@ namespace AF.Tests.PlayMode
             Assert.That(Vector2.Distance(school.Fish(PiranaOverlay.LeadFish).rectTransform.anchoredPosition, rest), Is.LessThan(0.1f * u), "de vuelta en su sitio");
             Assert.That(school.FilledPips, Is.EqualTo(0));
             AssertRigShowsModel(after);
+        }
+
+        // La cueva (cuia 0) una fila más abajo, justo debajo de la cuia victim: su boca 16 + 24 = 40 dp bajo el pie de la fila
+        // de arriba, contando desde lo alto de la cuia más alta de la fila (BoardLayout; 02 §5).
+        private static void PlaceCaveUnder(MechanicTestKit.Rig rig, int victim)
+        {
+            CuiaView cave = rig.Views[0];
+            CuiaView above = rig.Views[victim];
+            Vector2 victimFoot = rig.Animator.Foot(victim);
+            Vector2 foot = new Vector2(36f + (victim * 64f), -600f - 40f - (above.HeightU * above.Unit));
+            cave.SetGeometry(foot, 40f, 60f);
+            rig.Animator.BoardLaidOut();
+            Assert.That(rig.Animator.Foot(0).x, Is.EqualTo(victimFoot.x).Within(0.01f), "la cueva, en la columna de la víctima");
+            Assert.That(rig.Animator.Foot(0).y, Is.LessThan(victimFoot.y - 40f), "y una fila más abajo");
         }
 
         [UnityTest]
@@ -806,34 +904,61 @@ namespace AF.Tests.PlayMode
         {
             yield return null;
 
-            // Calentamiento: cada cadena una vez en su banco, y después se mide otra vez en un banco nuevo.
+            // Calentamiento: cada cadena una vez en su banco, y después se mide otra vez en un banco nuevo. El mordisco perdido va
+            // por sus ramas: la víctima sellada y el Matapi (el cardumen llega a la tapa o al embudo, choca, con su destello, y
+            // vuelve; PoseLost) y la cueva llena (se asoma hacia un lado, PosePeek, o hacia arriba, PosePeekUp).
             for (int pass = 0; pass < 2; pass++)
             {
                 RunChain(DropBoard(), 1, 3, 2, 4, pass == 1, "gota");
                 RunChain(WaitBoard(), 1, 3, 2, 4, pass == 1, "espera");
                 RunChain(BiteBoard(), 1, 4, 2, 3, pass == 1, "mordisco");
-                RunChain(CaveFullBoard(), 4, 5, 3, 5, pass == 1, "mordisco perdido");
+                RunChain(SealedVictimBoard(), 3, 4, 2, 1, pass == 1, "mordisco perdido contra la tapa", true, 1, true);
+                RunChain(MatapiVictimBoard(), 3, 4, 2, 1, pass == 1, "mordisco perdido contra el embudo del Matapi", true, 1, false);
+                RunChain(CaveFullBoard(), 4, 5, 3, 5, pass == 1, "mordisco perdido con la cueva llena", true, 5, false);
+                RunChain(CaveFullBoard(), 4, 5, 3, 5, pass == 1, "mordisco perdido con la cueva llena y la víctima encima", true, 5, false, true);
             }
         }
 
-        // Dos vertidos en un banco nuevo: el primero cuenta y el segundo dispara el paso; con measure, 60 fotogramas sin
-        // asignaciones desde el toque y otros 60 hasta el final.
-        private void RunChain(BoardState start, int a1, int b1, int a2, int b2, bool measure, string name)
+        // Dos vertidos en un banco nuevo: el primero cuenta y el segundo dispara el paso; con measure, sin asignaciones (GC.Alloc
+        // del Recorder, por la restricción AllocatingGCMemory) en los 60 primeros fotogramas desde el toque y, después, hasta la
+        // vista quieta, sea cual sea la duración. Con lost, el segundo vertido pierde el mordisco (PiranaBiteLostMask) contra la
+        // cuia victim, sellada si victimSealed, y el paso BiteLost lo anima la cueva.
+        private void RunChain(BoardState start, int a1, int b1, int a2, int b2, bool measure, string name, bool lost = false, int victim = -1, bool victimSealed = false, bool caveUnder = false)
         {
             _rig?.Dispose();
             _rig = new MechanicTestKit.Rig(Art, start);
+            if (caveUnder)
+            {
+                PlaceCaveUnder(_rig, victim);
+            }
+
             BoardState counted = _rig.Pour(start, a1, b1, out _);
             _rig.RunUntilIdle(3000);
             _rig.Animator.Steps.ClearLog();
-            _rig.Pour(counted, a2, b2, out _);
+            BoardState after = _rig.Pour(counted, a2, b2, out PourVisual v);
+            if (lost)
+            {
+                Assert.That(v.Events.PiranaBiteLostMask, Is.EqualTo(1), name + ": el vertido completa el ritmo y el mordisco se pierde");
+                Assert.That(v.Events.Receiver, Is.EqualTo(victim), name + ": contra la cuia que recibe");
+                Assert.That((v.Events.SealedMask & (1 << victim)) != 0, Is.EqualTo(victimSealed), name + ": la víctima, sellada por el vertido");
+                Assert.That(after.IsSealed(victim), Is.EqualTo(victimSealed));
+            }
+
             MechanicTestKit.Rig rig = _rig;
             if (measure)
             {
-                Assert.That(() => rig.Run(60 * PlayModeHelpers.FrameMs), Is.Not.AllocatingGCMemory(), name + ": 60 fotogramas desde el toque");
-                Assert.That(() => rig.Run(60 * PlayModeHelpers.FrameMs), Is.Not.AllocatingGCMemory(), name + ": 60 fotogramas más");
+                Assert.That(() => { rig.Run(60 * PlayModeHelpers.FrameMs); }, Is.Not.AllocatingGCMemory(), name + ": 60 fotogramas desde el toque");
+                Assert.That(() => { rig.RunUntilIdle(4000); }, Is.Not.AllocatingGCMemory(), name + ": hasta la vista quieta");
+                Assert.That(rig.Animator.IsIdle, Is.True, name + ": la medida cubre hasta la vista quieta");
             }
 
             rig.RunUntilIdle(4000);
+            if (lost)
+            {
+                MechanicStepRecord r = MechanicTestKit.Record(rig.Animator, MechanicStepKind.BiteLost, 0);
+                Assert.That(r.Owner, Is.EqualTo(MechanicType.Pirana), name + ": el paso lo anima la cueva");
+                Assert.That(r.OtherIndex, Is.EqualTo(victim), name + ": contra su víctima");
+            }
             Assert.That(rig.Animator.IsIdle, Is.True);
             Assert.That(rig.Animator.Steps.LogCount, Is.GreaterThan(0), name + ": hubo pasos");
             for (int i = 0; i < rig.Animator.Steps.LogCount; i++)
@@ -871,6 +996,26 @@ namespace AF.Tests.PlayMode
                 new[] { 2, 4, 4, 4, 4, 4 },
                 new[] { new int[0], new[] { 1, 2 }, new[] { 2, 1 }, new[] { 1, 1 }, new[] { 2, 2 }, new int[0] },
                 new[] { new MechanicSpec(MechanicType.Pirana, k: 2), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
+        }
+
+        // La cueva vacía (k = 2) con la víctima [1, 1, 1]: 3 → 4 cuenta y 2 → 1 completa el ritmo y llena la víctima de una
+        // fruta, que queda sellada; el mordisco se pierde contra su tapa (02 §9.1 M7; decisión C + D del 183).
+        private static BoardState SealedVictimBoard()
+        {
+            return Board(
+                new[] { 2, 4, 4, 4, 4, 4 },
+                new[] { new int[0], new[] { 1, 1, 1 }, new[] { 2, 1 }, new[] { 2, 2 }, new[] { 2 }, new int[0] },
+                new[] { new MechanicSpec(MechanicType.Pirana, k: 2), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
+        }
+
+        // Lo mismo con un Matapi [1] de víctima: 3 → 4 cuenta y 2 → 1 completa el ritmo en el Matapi (no se llena); el mordisco
+        // se pierde contra su embudo (propuesta b.2 M10, regla 7).
+        private static BoardState MatapiVictimBoard()
+        {
+            return Board(
+                new[] { 2, 4, 4, 4, 4, 4 },
+                new[] { new int[0], new[] { 1 }, new[] { 2, 1 }, new[] { 2, 2 }, new[] { 2 }, new int[0] },
+                new[] { new MechanicSpec(MechanicType.Pirana, k: 2), new MechanicSpec(MechanicType.Matapi), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
         }
 
         // La cueva llena [3, 4] (k = 2): 4 → 5 cuenta y 3 → 5 completa el ritmo con la cueva llena (mordisco perdido, Q-C).
@@ -998,8 +1143,9 @@ namespace AF.Tests.PlayMode
             return Rect.MinMaxRect(x0, y0, x1, y1);
         }
 
-        // Efectos de prueba: cuenta las salpicaduras y apunta el tinte de la última; lo demás lo pasa a la capa de efectos real
-        // (si no hay Reducir movimiento), para que el banco se vea igual.
+        // Efectos de prueba: cuenta TODAS las salpicaduras que le piden y apunta el tinte de la última, antes de mirar Reducir
+        // movimiento (así, con Reducir movimiento, SplashCount = 0 prueba que el overlay no la pidió, no que este doble la
+        // filtró); a la capa de efectos real solo pasa lo que se vería (sin Reducir movimiento), para que el banco se vea igual.
         private sealed class RecordingFx : IBoardFx
         {
             private readonly IBoardFx _inner;
@@ -1023,14 +1169,12 @@ namespace AF.Tests.PlayMode
 
             public void Splash(Vector2 surface, Color tint, float unitDp)
             {
-                if (ReduceMotion)
-                {
-                    return;
-                }
-
                 SplashCount++;
                 LastSplashTint = tint;
-                _inner.Splash(surface, tint, unitDp);
+                if (!ReduceMotion)
+                {
+                    _inner.Splash(surface, tint, unitDp);
+                }
             }
 
             public void SealDrops(Vector2 rim, Color tint, float unitDp)

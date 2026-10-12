@@ -250,6 +250,34 @@ namespace AF.Tests.PlayMode
             return sb.ToString();
         }
 
+        // Rectángulo interior del panel (dentro del marco) en el espacio de las capas de tablero, desde el layout del tablero:
+        // el layout va en dp desde arriba y las capas, hacia arriba, desplazadas por offset.
+        public static Rect PanelInner(BoardLayoutResult l, float frame, Vector2 offset)
+        {
+            float xMin = l.PanelX + frame + offset.x;
+            float xMax = l.PanelX + l.PanelWidth - frame + offset.x;
+            float yMax = -(l.PanelY + frame) + offset.y;
+            float yMin = -(l.PanelY + l.PanelHeight - frame) + offset.y;
+            return Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+        }
+
+        // Rectángulo interior del panel de la pantalla de juego (con el marco tal como se dibuja), en el espacio de las capas de
+        // tablero.
+        public static Rect PanelInner(GameScreen view)
+        {
+            BoardLayoutResult l = view.Layout!;
+            return PanelInner(l, view.PanelFrameDp, LayoutOffset(view.Animator, l, view.Views.Length));
+        }
+
+        // Traslación del layout (pie en (CenterX, −FootY)) a las capas de tablero, igual para la primera y la última cuia.
+        public static Vector2 LayoutOffset(BoardAnimator board, BoardLayoutResult l, int count)
+        {
+            Vector2 first = board.Foot(0) - new Vector2(l.CenterX[0], -l.FootY[0]);
+            Vector2 last = board.Foot(count - 1) - new Vector2(l.CenterX[count - 1], -l.FootY[count - 1]);
+            Assert.That(Vector2.Distance(first, last), Is.LessThan(0.5f), "el layout y las capas difieren solo en una traslación");
+            return first;
+        }
+
         /// <summary>Con la vista quieta, cada cuia muestra el modelo (contenido, tapa y nivel de líquido).</summary>
         public static void AssertViewMatchesModel(GameBootstrap boot)
         {

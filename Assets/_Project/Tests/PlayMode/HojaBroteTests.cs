@@ -429,8 +429,9 @@ namespace AF.Tests.PlayMode
         public IEnumerator Brote163_CoversTheMouth_StandsOut_UnderTheRowAbove()
         {
             // Prueba del dueño (2026-10-09; tanda B2): el brote cubre al menos el ancho de la boca (≥ 1,1 u) y sobresale ≥ 1 u
-            // del labio con verde a la vista, se distingue de la tapa de sellado y de la Hoja y no tapa la fila de arriba, ni en
-            // reposo ni en todo el paso Open. En el 163 real y en el peor caso: la cuia más ancha con dos filas (48 dp, u = 24).
+            // de lo alto de la cuia (como lo midió la auditoría) con verde a la vista, se distingue de la tapa de sellado y de la
+            // Hoja y no tapa la fila de arriba (bajo su pie, como la nube de la Lluvia), ni en reposo ni en todo el paso Open. En el
+            // 163 real y en el peor caso: la cuia más ancha con dos filas (48 dp, u = 24).
             yield return MechanicTestKit.LoadPlaying(163);
             GameBootstrap boot = GameBootstrap.Current!;
             int brote = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Brote);
@@ -451,7 +452,7 @@ namespace AF.Tests.PlayMode
                 PlayModeHelpers.TickExact(boot, 4);
             }
 
-            Assert.That(maxTop, Is.LessThanOrEqualTo(view.HeightU + BroteOverlay.TopAboveRimU + 0.01f), "en el paso Open nada sube más que el capullo en reposo");
+            Assert.That(maxTop, Is.LessThanOrEqualTo(view.HeightU + BroteOverlay.TopAboveRimU + 1e-3f), "en el paso Open nada sube más que el capullo en reposo");
             AssertUnderTheRowAbove(boot.View.Animator, view, brote, maxTop, "nivel 163 en el paso Open");
             MechanicTestKit.StepToIdle(boot, 6000);
 
@@ -484,9 +485,11 @@ namespace AF.Tests.PlayMode
                 _rig.Tick(4f);
             }
 
+            Assert.That(rigTop, Is.LessThanOrEqualTo(rigView.HeightU + BroteOverlay.TopAboveRimU + 1e-3f), "48 dp: en el paso Open nada sube más que el capullo en reposo");
             AssertUnderTheRowAbove(_rig.Animator, rigView, 4, rigTop, "48 dp en el paso Open");
-            TestContext.WriteLine("Brote: cáliz de " + rigBud.SepalsRectU.width.ToString("F2") + " u, " + (view.HeightU + BroteOverlay.TopAboveRimU - CuiaGeometry.LipU(4)).ToString("F2")
-                + " u sobre el labio; lo más alto en el paso, " + (rigTop - rigView.HeightU).ToString("F3") + " u sobre la cuia (" + ((rigTop - rigView.HeightU) * rigView.Unit).ToString("F1") + " dp a 48 dp).");
+            TestContext.WriteLine("Brote: cáliz de " + rigBud.SepalsRectU.width.ToString("F2") + " u, " + BroteOverlay.TopAboveRimU.ToString("F2") + " u sobre lo alto de la cuia ("
+                + (view.HeightU + BroteOverlay.TopAboveRimU - CuiaGeometry.LipU(4)).ToString("F2") + " u sobre el labio); lo más alto en el paso, " + (rigTop - rigView.HeightU).ToString("F3")
+                + " u sobre la cuia (" + ((rigTop - rigView.HeightU) * rigView.Unit).ToString("F1") + " dp a 48 dp).");
         }
 
         [UnityTest]
@@ -601,8 +604,8 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // El Brote cerrado de la cuia cuia: cubre la boca, sobresale ≥ 1 u del labio con verde a la vista, lleva el color de la
-        // cima con un capullo alto y en punta (no la cúpula baja de la tapa ni la hoja apaisada de la Hoja) y sin tapa.
+        // El Brote cerrado de la cuia cuia: cubre la boca, sobresale ≥ 1 u de lo alto de la cuia con verde a la vista, lleva el
+        // color de la cima con un capullo alto y en punta (no la cúpula baja de la tapa ni la hoja apaisada de la Hoja) y sin tapa.
         private static void AssertBroteSizeAndLook(BroteOverlay bud, CuiaView view, Cuia cuia, string what)
         {
             Assert.That(bud.Visible && bud.CorkVisible && bud.SepalsVisible && bud.LeavesVisible, Is.True, what + ": capullo, cáliz y hojitas a la vista");
@@ -613,7 +616,11 @@ namespace AF.Tests.PlayMode
             Assert.That(Mathf.Abs(sepals.center.x), Is.LessThan(0.01f), what + ": centrado en la boca");
             Assert.That(sepals.yMin, Is.LessThanOrEqualTo(lip + 0.01f), what + ": baja hasta el labio de vertido");
             Assert.That(sepals.yMax - view.HeightU, Is.GreaterThanOrEqualTo(0.3f), what + ": el verde del cáliz asoma sobre la boca");
-            Assert.That(bud.VisibleTopU - lip, Is.GreaterThanOrEqualTo(1f), what + ": sobresale ≥ 1 u del labio");
+
+            // «Sobresalir ≥ 1 u» (hoja del dueño, 2026-10-09) medido como la auditoría de la tanda B2: desde lo alto de la cuia
+            // (HeightU), no desde el labio de vertido (HeightU − 0,25). El brote viejo sobresalía 0,8 u y el de 985455a, 0,9 u: los
+            // dos fallan aquí.
+            Assert.That(bud.VisibleTopU - view.HeightU, Is.GreaterThanOrEqualTo(1f - 1e-3f), what + ": sobresale ≥ 1 u de lo alto de la cuia");
             Assert.That(bud.VisibleTopU, Is.EqualTo(view.HeightU + BroteOverlay.TopAboveRimU).Within(0.01f), what + ": la punta del capullo es lo más alto");
             for (int side = -1; side <= 1; side += 2)
             {
@@ -631,8 +638,10 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Sealed, Is.False, what + ": sin tapa");
         }
 
-        // Lo más alto del Brote (topU, u desde el pie de la cuia index) no tapa la fila de arriba: queda bajo la madera de su
-        // repisa (17 dp bajo su pie) y, en la fila de arriba, bajo el canto interior del marco (≈ 24 dp sobre la boca).
+        // Lo más alto del Brote (topU, u desde el pie de la cuia index) no tapa la fila de arriba (B2.md, ola3.Brote.forma): queda
+        // bajo su pie, con el mismo límite que la nube de la Lluvia al irse (como mucho RiseTopMaxDp sobre la boca, 1 dp bajo el
+        // pie), y en la fila de arriba, bajo el canto interior del marco (CloudTopMaxDp, ≈ 24 dp sobre la boca). En el peor caso
+        // (48 dp) roza la madera de la repisa de la fila de arriba (17 dp bajo su pie) como mucho 1 dp [P, pendiente del dueño].
         private static void AssertUnderTheRowAbove(BoardAnimator board, CuiaView view, int index, float topU, string what)
         {
             float u = view.Unit;
@@ -652,13 +661,14 @@ namespace AF.Tests.PlayMode
 
             if (float.IsPositiveInfinity(above))
             {
-                Assert.That(top - rim, Is.LessThanOrEqualTo(LluviaOverlay.CloudTopMaxDp), what + ": bajo el marco del panel");
+                Assert.That(top - rim, Is.LessThanOrEqualTo(LluviaOverlay.CloudTopMaxDp + 0.01f), what + ": bajo el marco del panel");
                 return;
             }
 
             float shelfBottom = above - RemolinoOverlay.ShelfBottomBelowFootDp;
-            Assert.That(top, Is.LessThan(above), what + ": bajo el pie de la fila de arriba");
-            Assert.That(top, Is.LessThan(shelfBottom), what + ": bajo la madera de la repisa de arriba (" + (shelfBottom - top).ToString("F1") + " dp de aire)");
+            Assert.That(top - rim, Is.LessThanOrEqualTo(LluviaOverlay.RiseTopMaxDp), what + ": como mucho RiseTopMaxDp sobre la boca, como la nube de la Lluvia");
+            Assert.That(top, Is.LessThanOrEqualTo(above - 1f), what + ": bajo el pie de la fila de arriba (" + (above - top).ToString("F1") + " dp de aire)");
+            Assert.That(top - shelfBottom, Is.LessThanOrEqualTo(1f + 0.01f), what + ": roza la madera de la repisa de arriba como mucho 1 dp [P] (" + (top - shelfBottom).ToString("F1") + " dp)");
         }
 
         private static void AssertClosed(HojaOverlay leaf)
