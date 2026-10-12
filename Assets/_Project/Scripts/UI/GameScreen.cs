@@ -297,6 +297,15 @@ namespace AF.UI
         // StartIntro la suelta; quien la quiera retenida lo marca después de arrancarla.
         private bool _introHeld;
 
+        // Pantallas de AF_LAYOUT de los modales del embudo del nivel (EmitFunnelLayout).
+        private const string GiveUpConfirmLayout = "giveup_confirm";
+        private const string LevelFailedLayout = "level_failed";
+        private const string NoCanoesLayout = "no_canoes";
+
+        // OnLevelLoaded está avisando a los ganchos *LevelLoaded: la AF_LAYOUT level se aplaza a su final (una sola, ya con las
+        // ranuras de la bandeja de este nivel), aunque un gancho la pida antes (Revelar, al aparecer su ranura).
+        private bool _levelLayoutDeferred;
+
         /// <summary>
         /// Construye la pantalla bajo <paramref name="host"/>. Las acciones son los puntos de entrada del input
         /// (los mismos que usan los tests PlayMode).
@@ -861,10 +870,16 @@ namespace AF.UI
             _pressPreview = -1;
             _shownBoard = flow.Session.Current;
             _probe.State("load", flow, int.MinValue, null);
-            EmitLevelLayout();
+
+            // AF_LAYOUT level, después de los ganchos (T-A de la prueba del 2026-10-09): antes salía antes que ellos, sin
+            // «+1 cuia» (la bandeja aún no se había refrescado) y con Marea en el centro de una bandeja de 1 ranura; la
+            // corregía otra un fotograma después. Ahora sale una sola, con la bandeja refrescada (EmitLevelLayout).
+            _levelLayoutDeferred = true;
             LabelsLevelLoaded(flow);
             CardsLevelLoaded(flow);
             RevealLevelLoaded(flow);
+            _levelLayoutDeferred = false;
+            EmitLevelLayout();
         }
 
         /// <inheritdoc />
@@ -1145,10 +1160,11 @@ namespace AF.UI
                 ShiftBoard(ShiftToClear(_stuckPanelY, 12f), false);
                 FunnelModalShowing(phase, flow);
                 _giveUp.Show(StuckModalModel.BuildGiveUpConfirm(StuckContext(flow)), _canvasW, _canvasH);
+                EmitFunnelLayout(GiveUpConfirmLayout);
             }
             else if (phase == FlowPhase.LevelFailed)
             {
-                OnFunnelPhase(FlowPhase.LevelFailed);
+                OnFunnelPhase(FlowPhase.LevelFailed); // también publica su AF_LAYOUT
             }
 
             SyncChrome();
@@ -1219,6 +1235,7 @@ namespace AF.UI
                     _stuck.Panel.gameObject.SetActive(false);
                     FunnelModalShowing(phase, flow);
                     _giveUp.Show(StuckModalModel.BuildGiveUpConfirm(StuckContext(flow)), _canvasW, _canvasH);
+                    EmitFunnelLayout(GiveUpConfirmLayout);
                     _probe.Funnel("giveup_confirm", flow);
                     break;
 
@@ -1228,12 +1245,14 @@ namespace AF.UI
                     _noCanoes.Hide();
                     FunnelModalShowing(phase, flow);
                     _failed.Show(flow.LevelNumber, LevelReward(flow), _canvasW, _canvasH);
+                    EmitFunnelLayout(LevelFailedLayout);
                     _probe.Funnel("level_failed", flow);
                     break;
 
                 case FlowPhase.NoCanoes:
                     _failed.Hide();
                     _noCanoes.Show(_services, _canvasW, _canvasH);
+                    EmitFunnelLayout(NoCanoesLayout);
                     _probe.Funnel("no_canoes", flow);
                     break;
 
@@ -1517,9 +1536,10 @@ namespace AF.UI
                     ShowStuckView(false);
                 }
             }
-            else if (flow.Phase == FlowPhase.NoCanoes)
+            else if (flow.Phase == FlowPhase.NoCanoes && _noCanoes.Refresh(_services))
             {
-                _noCanoes.Refresh(_services);
+                // Sin canoas rehízo el layout (cambió el video, el saldo o lo que se ofrece): sus botones cambiaron de sitio.
+                EmitFunnelLayout(NoCanoesLayout);
             }
         }
 
@@ -1649,10 +1669,15 @@ namespace AF.UI
 
             flow.ClearSelection();
             _pause.Show(flow.CanRestart, _canvasW, _canvasH);
+            EmitPauseLayout();
+        }
+
+        private void EmitPauseLayout()
+        {
             _layoutIds.Clear();
             _layoutRects.Clear();
             _pause.VisibleButtons(_layoutIds, _layoutRects);
-            _probe.Layout("pause", flow.LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
+            _probe.Layout("pause", RequireFlow().LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
         }
 
         private void OnResume()
@@ -1717,6 +1742,86 @@ namespace AF.UI
             _layoutRects.Clear();
             _confirm.VisibleButtons(_layoutIds, _layoutRects);
             _probe.Layout(_confirm.Kind == ConfirmKind.Quit ? "quit_confirm" : "restart_confirm", RequireFlow().LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
+        }
+
+        // AF_LAYOUT de un modal del embudo del nivel (D-008; T-B de la prueba del 2026-10-09): ¿Seguro? (giveup_confirm: close,
+        // rescue si se ofrece y give_up), Nivel fallido (level_failed: retry y close) y Sin canoas (no_canoes: close, y
+        // extra_canoe_video, refill_canoes e infinite_canoes si se ofrecen, y home). Sale al abrirse (¿Seguro? y Nivel fallido,
+        // también al reabrir la app en ellos; Sin canoas no se guarda: se reabre como Nivel fallido o como el nivel) y, en Sin
+        // canoas, cada vez que rehace su layout (RefreshHud). Fuera de desarrollo no hace nada.
+        private void EmitFunnelLayout(string screen)
+        {
+            if (!DevProbe.Enabled)
+            {
+                return;
+            }
+
+            _layoutIds.Clear();
+            _layoutRects.Clear();
+            switch (screen)
+            {
+                case GiveUpConfirmLayout:
+                    _giveUp.VisibleButtons(_layoutIds, _layoutRects);
+                    break;
+                case LevelFailedLayout:
+                    _failed.VisibleButtons(_layoutIds, _layoutRects);
+                    break;
+                default:
+                    _noCanoes.VisibleButtons(_layoutIds, _layoutRects);
+                    break;
+            }
+
+            _probe.Layout(screen, RequireFlow().LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
+        }
+
+        // AF_LAYOUT de Aguas estancadas, al terminar de subir el panel (TickPanels).
+        private void EmitStuckLayout()
+        {
+            _layoutIds.Clear();
+            _layoutRects.Clear();
+            _stuck.VisibleButtons(_layoutIds, _layoutRects);
+            _probe.Layout("stuck", RequireFlow().LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
+        }
+
+        // Vuelve a publicar la AF_LAYOUT del modal del nivel que está abierto sobre el tablero, si ya publicó la suya; sin modal,
+        // nada. La llama el final del re-layout de una cuia añadida justo después de su línea level, para que la última línea
+        // siga siendo la de lo que se ve: ¿Salir? o ¿Reiniciar?, la Pausa, el embudo (¿Seguro?, Nivel fallido y Sin canoas),
+        // Aguas estancadas ya arriba y la victoria ya arriba. La tarjeta previa no hace falta: la línea level ya la trae.
+        private void EmitOpenModalLayout()
+        {
+            if (!DevProbe.Enabled)
+            {
+                return;
+            }
+
+            if (_confirm.Visible)
+            {
+                EmitConfirmLayout();
+            }
+            else if (_pause.Visible)
+            {
+                EmitPauseLayout();
+            }
+            else if (_giveUp.Visible)
+            {
+                EmitFunnelLayout(GiveUpConfirmLayout);
+            }
+            else if (_failed.Visible)
+            {
+                EmitFunnelLayout(LevelFailedLayout);
+            }
+            else if (_noCanoes.Visible)
+            {
+                EmitFunnelLayout(NoCanoesLayout);
+            }
+            else if (RequireFlow().Phase == FlowPhase.StuckModal && _stuck.Panel.gameObject.activeSelf && _stuckAnim < 0f)
+            {
+                EmitStuckLayout();
+            }
+            else if (_victoryAnim >= PanelSlideMs)
+            {
+                EmitVictoryLayout();
+            }
         }
 
         // «Llenar y teñir» (guion de la intro §7): geometría del panel, del marco, de las repisas y del HUD, y la especie del tramo
@@ -1921,8 +2026,10 @@ namespace AF.UI
             _relayoutFromWidth = fromWidth;
             _addedView = index;
             _relayoutMs = 0f;
+
+            // La AF_LAYOUT level sale al acabar el re-layout (TickRelayout), no aquí: en t = 0 las cuias estaban en su sitio
+            // viejo y la nueva medía 0 × 0.
             TickRelayout(0f);
-            EmitLevelLayout();
         }
 
         private void TickRelayout(float dtMs)
@@ -1965,6 +2072,13 @@ namespace AF.UI
 
                 // LayoutBoard ya avisa de la recolocación (BoardLaidOut y LabelsLayoutBoard): un solo aviso por fotograma.
                 LayoutBoard();
+
+                // Una sola AF_LAYOUT level por cuia añadida (Cuia extra, rescate o Balsa), con las N + 1 cuias en su sitio final.
+                // El re-layout no bloquea la entrada: si en esos 600 ms se abrió un modal del nivel (la Pausa, ¿Salir? o
+                // ¿Reiniciar?), lo que se ve es el modal y su línea se repite detrás de esta (la level sigue valiendo para el
+                // tablero cuando se cierre).
+                EmitLevelLayout();
+                EmitOpenModalLayout();
                 return;
             }
 
@@ -1981,10 +2095,7 @@ namespace AF.UI
                 if (_stuckAnim >= PanelSlideMs)
                 {
                     _stuckAnim = -1f;
-                    _layoutIds.Clear();
-                    _layoutRects.Clear();
-                    _stuck.VisibleButtons(_layoutIds, _layoutRects);
-                    _probe.Layout("stuck", RequireFlow().LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
+                    EmitStuckLayout();
                 }
             }
 
@@ -2048,8 +2159,19 @@ namespace AF.UI
             ((RectTransform)_next.Face.parent).localScale = Vector3.one * Mathf.Lerp(0.9f, 1f, Ease.Out(nt)) * breathe;
         }
 
+        // AF_LAYOUT level: al cargar el nivel (al final de OnLevelLoaded, tras sus ganchos), al acabar el re-layout de una cuia
+        // añadida, al cambiar la pantalla y cuando aparece o se va una ranura de la bandeja (Cuia extra o Revelar; los parciales
+        // la vuelven a pedir). Primero se refresca la bandeja (una vez enlazada, Refresh es segura en cualquier momento): así
+        // «+1 cuia» existe ya en OnLevelLoaded, sale en esta línea con Marea en su sitio, y RevealLayoutIds anota esas ranuras
+        // (SlotsVersion), así que el primer fotograma no vuelve a emitir.
         private void EmitLevelLayout()
         {
+            if (_levelLayoutDeferred)
+            {
+                return; // la emite OnLevelLoaded al acabar sus ganchos
+            }
+
+            _tray.Refresh();
             _layoutIds.Clear();
             _layoutRects.Clear();
             _layoutIds.Add("undo");

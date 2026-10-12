@@ -237,8 +237,10 @@ namespace AF.UI
 
             RefreshRevealBadge(flow, false);
 
-            // Si una ranura apareció o se fue después del último AF_LAYOUT (la Cuia extra aparece en el primer fotograma del
-            // nivel, después de OnLevelLoaded), los botones de la bandeja cambiaron de sitio: se vuelve a emitir.
+            // Si una ranura apareció o se fue después del último AF_LAYOUT, los botones de la bandeja cambiaron de sitio: se
+            // vuelve a emitir. Al cargar el nivel no hace falta (desde T-A, EmitLevelLayout refresca la bandeja dentro de
+            // OnLevelLoaded y la Cuia extra ya sale en esa línea): esto cubre las ranuras que cambian después, como la Cuia extra
+            // cuando la bandeja se refresca en RefreshHud o Revelar cuando cambia sin que SyncRevealSlot emita.
             if (_tray.SlotsVersion != _revealLayoutSlots)
             {
                 EmitLevelLayout();

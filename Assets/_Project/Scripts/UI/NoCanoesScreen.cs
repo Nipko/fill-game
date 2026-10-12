@@ -100,12 +100,16 @@ namespace AF.UI
             _root.gameObject.SetActive(false);
         }
 
-        /// <summary>Cronómetro y opciones; rehace el layout solo si cambió lo que se ofrece.</summary>
-        public void Refresh(GameServices? services)
+        /// <summary>
+        /// Cronómetro y opciones; rehace el layout solo si cambió lo que se ofrece (el video, el saldo, las opciones o el tope).
+        /// Devuelve si lo rehízo: los botones pudieron cambiar de sitio y quien publica AF_LAYOUT la vuelve a emitir
+        /// (<c>GameScreen.RefreshHud</c>).
+        /// </summary>
+        public bool Refresh(GameServices? services)
         {
             if (!_root.gameObject.activeSelf)
             {
-                return;
+                return false;
             }
 
             CanoesStatus canoes = services?.Wallet.Canoes ?? default;
@@ -133,11 +137,12 @@ namespace AF.UI
             int key = ((video ? 1 : 0) * 397) ^ (missing * 7) ^ ((refillOn ? 1 : 0) * 13) ^ ((infiniteOn ? 1 : 0) * 8191) ^ canoes.Max;
             if (key == _key)
             {
-                return;
+                return false;
             }
 
             _key = key;
             Layout(services, video, price, missing, refillOn, infiniteOn, canoes.Max);
+            return true;
         }
 
         public void VisibleButtons(List<string> ids, List<RectTransform> rects)

@@ -6,6 +6,7 @@ using System.IO;
 using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Rules;
+using AF.Economy;
 using AF.GameFlow;
 using AF.Presentation;
 using AF.Save;
@@ -22,7 +23,12 @@ namespace AF.Tests.PlayMode
     /// recrear el arranque a mitad de nivel devuelve el mismo tablero y la misma pantalla, sin intro; con Aguas estancadas,
     /// ¿Seguro? o Nivel fallido abiertos, la pantalla reaparece y las canoas no cambian (cerrar la app nunca cobra canoa ni
     /// es una salida gratis del embudo); y cada vertido y la victoria escriben el perfil una sola vez, con su coste en el log
-    /// (el objetivo [P] de 5 ms por vertido está pendiente del dueño).
+    /// (el objetivo [P] de 5 ms por vertido está pendiente del dueño). Al reabrir un nivel ≥ 8, «+1 cuia» se ve desde el
+    /// primer fotograma (con su «+1» regalado, con su precio o gris si ya se usó) y la pantalla que se ve publica su
+    /// AF_LAYOUT, que es la última línea: la level con «+1 cuia», o la del modal reabierto (¿Seguro? o Nivel fallido; Sin
+    /// canoas no se guarda) (T-A y T-B de la prueba del 2026-10-09). Quien toca por adb usa la última línea de la pantalla
+    /// que está a la vista (DevProbe.Layout). El arreglo de BoosterTray.SetVisible (T-A.1) no se ve aquí: desde T-A.3 la
+    /// bandeja se refresca antes de enseñarse al reabrir; lo protege BoosterTrayTests.TrayShownBeforeTheExtraCuiaSlotExists….
     /// </summary>
     public sealed class ResumeTests
     {
@@ -30,16 +36,20 @@ namespace AF.Tests.PlayMode
         private const double PourSaveTargetMs = 5.0;
 
         private string? _dir;
+        private AfLayoutLog _layout = null!;
 
         [SetUp]
         public void SetUp()
         {
             FunnelSetup.Hooks();
+            _layout = new AfLayoutLog();
         }
 
         [TearDown]
         public void TearDown()
         {
+            _layout?.Dispose();
+            _layout = null!;
             LaunchOptions.Reset();
             if (_dir != null && Directory.Exists(_dir))
             {
@@ -125,6 +135,13 @@ namespace AF.Tests.PlayMode
             Assert.That(third.View.GiveUp.RescueButton.gameObject.activeSelf, Is.True, "otra vez «Continuar: +1 cuia»");
             Assert.That(third.Wallet!.Canoes.Count, Is.EqualTo(5));
 
+            // T-B: el modal reabierto publica su AF_LAYOUT, y es la última línea (la de la pantalla que se ve).
+            string giveUp = _layout.RequireLast("giveup_confirm", 31, "¿Seguro? reabierto");
+            Assert.That(AfLayoutLog.ButtonIds(giveUp), Is.EqualTo(new[] { "close", "rescue", "give_up" }));
+            AfLayoutLog.AssertCenterInside(giveUp, "close", (RectTransform)third.View.GiveUp.CloseButton.transform);
+            AfLayoutLog.AssertCenterInside(giveUp, "rescue", (RectTransform)third.View.GiveUp.RescueButton.transform);
+            AfLayoutLog.AssertCenterInside(giveUp, "give_up", (RectTransform)third.View.GiveUp.GiveUpButton.transform);
+
             third.View.GiveUp.GiveUpButton.onClick.Invoke();
             Assert.That(third.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed));
             Assert.That(third.Wallet.Canoes.Count, Is.EqualTo(4));
@@ -134,6 +151,10 @@ namespace AF.Tests.PlayMode
             Assert.That(fourth.Flow!.Phase, Is.EqualTo(FlowPhase.LevelFailed));
             Assert.That(fourth.View!.Failed.Visible, Is.True);
             Assert.That(fourth.Wallet!.Canoes.Count, Is.EqualTo(4), "reabrir Nivel fallido no vuelve a cobrar");
+            string failed = _layout.RequireLast("level_failed", 31, "Nivel fallido reabierto");
+            Assert.That(AfLayoutLog.ButtonIds(failed), Is.EqualTo(new[] { "retry", "close" }));
+            AfLayoutLog.AssertCenterInside(failed, "retry", (RectTransform)fourth.View.Failed.RetryButton.transform);
+            AfLayoutLog.AssertCenterInside(failed, "close", (RectTransform)fourth.View.Failed.CloseButton.transform);
             fourth.View.Failed.RetryButton.onClick.Invoke();
             Assert.That(fourth.Flow.Phase, Is.EqualTo(FlowPhase.Intro), "Reintentar: el mismo tablero desde el principio");
             Assert.That(fourth.Wallet.Canoes.Count, Is.EqualTo(4));
@@ -224,6 +245,88 @@ namespace AF.Tests.PlayMode
             Assert.That(resumed.Session.RevealedLayers(0), Is.EqualTo(0b10), "02 T6: lo revelado sigue revelado");
             Assert.That(resumed.Session.Current, Is.EqualTo(board), "el mismo tablero, con la capa 1 a la vista");
             Assert.That(again.View!.Views[0].ShownCuia.HiddenMask, Is.EqualTo(0b01), "la vista enseña la capa revelada y oculta la otra");
+
+            // T-A: la bandeja reabierta, entera y sin huecos: Marea, «+1 cuia» y Revelar (la cuia 0 conserva una oculta).
+            Assert.That(again.View.ExtraCuiaButton.gameObject.activeInHierarchy, Is.True, "«+1 cuia» se ve al reabrir");
+            Assert.That(again.View.Tray.SlotCount, Is.EqualTo(3), "Marea, Cuia extra y Revelar");
+        }
+
+        [UnityTest]
+        public IEnumerator UsedExtraCuia_Reopened_StaysThereInGray()
+        {
+            // T-A (la prueba del teléfono, en el Editor): nivel 100 con 500 semillas; «+1 cuia» cuesta 150 (quedan 350). Al cerrar
+            // y abrir la app, la ranura sigue en su sitio, gris y sin precio (1 por nivel, 04 §2.2), con la cuia añadida en el
+            // tablero, y la última AF_LAYOUT level la trae donde se dibuja.
+            var store = new MemoryProfileStore(FunnelSetup.Profile(500));
+            LaunchOptions.ProfileStoreOverride = store;
+            yield return PlayModeHelpers.LoadGame(100, new MemoryProgressStore(100, 99));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            int cuias = boot.View!.Views.Length;
+            Assert.That(boot.PressExtraCuia(), Is.True);
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(350), "150 semillas");
+            PlayModeHelpers.Step(boot, 700);
+
+            _layout.Clear();
+            yield return PlayModeHelpers.LoadApp(store); // como cerrar y abrir la app
+            GameBootstrap again = GameBootstrap.Current!;
+            Assert.That(again, Is.Not.SameAs(boot));
+            PlayModeHelpers.TakeClock(again);
+            PlayModeHelpers.Step(again, 50);
+            GameScreen view = again.View!;
+            Assert.That(again.Flow!.LevelNumber, Is.EqualTo(100));
+            Assert.That(again.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(view.Views.Length, Is.EqualTo(cuias + 1), "con la cuia añadida");
+            Assert.That(again.Wallet!.Seeds, Is.EqualTo(350));
+            Assert.That(view.ExtraCuiaButton.gameObject.activeInHierarchy, Is.True, "«+1 cuia» sigue en su ranura");
+            Assert.That(view.ExtraCuiaButton.interactable, Is.False, "gris: ya se usó en este nivel");
+            Assert.That(view.Tray.ExtraPriceShown, Is.EqualTo(0), "sin precio");
+            Assert.That(view.Tray.SlotCount, Is.EqualTo(3), "Marea, Cuia extra y Revelar, sin huecos");
+            string layout = _layout.RequireLast("level", 100, "nivel reabierto");
+            AfLayoutLog.AssertCenterInside(layout, "undo", (RectTransform)view.UndoButton.transform);
+            AfLayoutLog.AssertCenterInside(layout, "extra_cuia", (RectTransform)view.ExtraCuiaButton.transform);
+            Assert.That(AfLayoutLog.Cuias(layout).Length, Is.EqualTo(cuias + 1));
+        }
+
+        [UnityTest]
+        public IEnumerator Level8_TheGiftedExtraCuia_Reopened_CanBeUsed()
+        {
+            // T-A: en el 8 Capi regala una Cuia extra (04 §2.2). Tras un vertido se cierra y se abre la app: la ranura se ve, se
+            // puede usar y lleva su «+1» (antes la ranura quedaba oculta y el regalo no se podía usar en ese nivel).
+            var store = new MemoryProfileStore(FunnelSetup.Profile(0));
+            LaunchOptions.ProfileStoreOverride = store;
+            yield return PlayModeHelpers.LoadGame(8, new MemoryProgressStore(8, 7));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            Assert.That(boot.Wallet!.Stock.Get(BoosterKind.ExtraCuia), Is.EqualTo(1), "el regalo de Capi");
+            SolveResult solution = new AStarSolver().Solve(boot.Flow!.Session.Current, SolverOptions.ForPipeline(boot.Flow.Session.PourMode));
+            boot.TapCuia(solution.GetMove(0).Source);
+            boot.TapCuia(solution.GetMove(0).Target);
+            PlayModeHelpers.StepUntilIdle(boot, 4000);
+            Assert.That(boot.Flow.Session.AppliedPours, Is.EqualTo(1));
+
+            _layout.Clear();
+            yield return PlayModeHelpers.LoadApp(store); // como cerrar y abrir la app
+            GameBootstrap again = GameBootstrap.Current!;
+            Assert.That(again, Is.Not.SameAs(boot));
+            PlayModeHelpers.TakeClock(again);
+            PlayModeHelpers.Step(again, 50);
+            GameScreen view = again.View!;
+            Assert.That(again.Flow!.LevelNumber, Is.EqualTo(8));
+            Assert.That(again.Flow.Phase, Is.EqualTo(FlowPhase.Playing), "sin intro (02 §14)");
+            Assert.That(view.ExtraCuiaButton.gameObject.activeInHierarchy, Is.True, "«+1 cuia» se ve al reabrir");
+            Assert.That(view.ExtraCuiaButton.interactable, Is.True, "y se puede usar");
+            Assert.That(view.Tray.ExtraBadgeText, Is.EqualTo("+1"), "con el regalo de Capi");
+            Assert.That(view.Tray.SlotCount, Is.EqualTo(2));
+            string layout = _layout.RequireLast("level", 8, "nivel reabierto");
+            AfLayoutLog.AssertCenterInside(layout, "undo", (RectTransform)view.UndoButton.transform);
+            AfLayoutLog.AssertCenterInside(layout, "extra_cuia", (RectTransform)view.ExtraCuiaButton.transform);
+            Assert.That(again.PressExtraCuia(), Is.True, "el regalo se puede usar en este nivel");
+            Assert.That(again.Wallet!.Stock.Get(BoosterKind.ExtraCuia), Is.EqualTo(0));
         }
 
         [UnityTest]
