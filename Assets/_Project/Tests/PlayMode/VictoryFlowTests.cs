@@ -20,7 +20,8 @@ namespace AF.Tests.PlayMode
     /// 400 ms hasta +20 y el saldo de arriba la recibe, y no antes (D-011, punto 1: ni durante el último vertido ni en la
     /// celebración); desde el 11, «Cosecha doble: x2 por video» («+20 → +40») la duplica exactamente con un anuncio simulado y
     /// la victoria pasa sola al nivel siguiente por el camino de Siguiente, sin intersticial (D-011, punto 4), con Inicio
-    /// inactivo mientras espera, sin cargar dos veces si se toca Siguiente y, como un toque en Siguiente, entre dos fotogramas
+    /// inactivo mientras espera, sin cargar dos veces si se toca Siguiente (AD_GATE cancela la espera aunque el anuncio siga
+    /// abierto) y, como un toque en Siguiente, entre dos fotogramas
     /// (después del Tick del flujo); sin recompensa se queda; sin fill el botón no aparece; antes del 11 no existe; sin la
     /// Cosecha doble, Siguiente lleva a N + 1 sin auto-avance; sin solapes y con controles ≥ 48 dp.
     /// </summary>
@@ -202,8 +203,10 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Level11_NextDuringTheWait_LoadsTheNextLevelOnlyOnce()
         {
-            // D-011, punto 4: Siguiente puede adelantar el avance tras la Cosecha doble; entonces la espera se cancela y N + 1
-            // se carga una sola vez (ni N + 2 ni una segunda carga de N + 1).
+            // D-011, punto 4: Siguiente puede adelantar el avance tras la Cosecha doble; N + 1 se carga una sola vez (ni N + 2
+            // ni una segunda carga de N + 1). Tras el recompensado no hay intersticial (AfterRewarded), así que Siguiente carga
+            // N + 1 en esa misma llamada y la espera queda sin efecto; que AD_GATE la cancele con el anuncio aún abierto lo mira
+            // Level11_AnAdGateLeftOpen_CancelsTheWait_AndLoadsTheNextLevelOnce.
             LaunchOptions.LevelOffsetOverride = 10;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(100));
             yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
@@ -220,12 +223,63 @@ namespace AF.Tests.PlayMode
 
             view.NextButton.onClick.Invoke();
             Assert.That(boot.Flow.LevelNumber, Is.EqualTo(12));
-            Assert.That(view.AutoNextPending, Is.False, "AD_GATE cancela la espera");
+            Assert.That(view.AutoNextPending, Is.False, "la carga de N + 1 deja la espera sin efecto");
             LevelSession loaded = boot.Flow.Session;
             PlayModeHelpers.Step(boot, 2000);
             Assert.That(boot.Flow.LevelNumber, Is.EqualTo(12), "sin llegar a N + 2");
             Assert.That(boot.Flow.Session, Is.SameAs(loaded), "N + 1 no se vuelve a cargar");
             Assert.That(VictorySetup.InNewLevel(boot.Flow.Phase), Is.True, "en su INTRO, LEVEL_CARD o PLAYING: " + boot.Flow.Phase);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level));
+            Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(1), "solo el recompensado");
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(140));
+        }
+
+        [UnityTest]
+        public IEnumerator Level11_AnAdGateLeftOpen_CancelsTheWait_AndLoadsTheNextLevelOnce()
+        {
+            // D-011, punto 4: si Siguiente adelanta el avance tras la Cosecha doble, AD_GATE cancela la espera (OnAdGate). En el
+            // juego es una defensa: tras el recompensado el intersticial no toca (AfterRewarded) y N + 1 se carga en la misma
+            // llamada a Siguiente. Para dejar AD_GATE abierto con la espera armada, el test cambia la puerta del flujo por una
+            // que retiene el anuncio hasta cerrarlo (ImmediateAdPresenter no puede retenerlo y AdPolicy no se fuerza). Con el
+            // anuncio abierto, la espera ya no corre ni avanza; al cerrarlo, N + 1 se carga una sola vez.
+            LaunchOptions.LevelOffsetOverride = 10;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(100));
+            yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            VictorySetup.WinToVictoryScreen(boot);
+            PlayModeHelpers.Step(boot, 900);
+            view.DoubleHarvestButton.onClick.Invoke();
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(140));
+            Assert.That(view.AutoNextPending, Is.True);
+            var gate = new HeldAdGate();
+            flow.AdGate = gate; // ya contó la victoria (RecordWin) con la puerta del juego
+            PlayModeHelpers.Step(boot, 200);
+
+            view.NextButton.onClick.Invoke();
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.AdGate));
+            Assert.That(gate.Runs, Is.EqualTo(1));
+            Assert.That(flow.LevelNumber, Is.EqualTo(11), "el anuncio sigue abierto");
+            Assert.That(view.AutoNextPending, Is.False, "AD_GATE cancela la espera");
+            Assert.That(view.NextButton.interactable, Is.False);
+            Assert.That(view.HomeButton.interactable, Is.False);
+            Assert.That(view.DoubleHarvestButton.interactable, Is.False);
+
+            PlayModeHelpers.Step(boot, 2000); // más allá de los 400 + 600 ms de la espera
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.AdGate), "la espera no avanza con el anuncio abierto");
+            Assert.That(flow.LevelNumber, Is.EqualTo(11));
+            Assert.That(view.AutoNextPending, Is.False);
+            Assert.That(gate.Runs, Is.EqualTo(1), "Siguiente no se vuelve a pulsar");
+
+            gate.Close();
+            Assert.That(flow.LevelNumber, Is.EqualTo(12));
+            Assert.That(VictorySetup.InNewLevel(flow.Phase), Is.True, "en su INTRO, LEVEL_CARD o PLAYING: " + flow.Phase);
+            LevelSession loaded = flow.Session;
+            PlayModeHelpers.Step(boot, 2000);
+            Assert.That(flow.LevelNumber, Is.EqualTo(12), "sin llegar a N + 2");
+            Assert.That(flow.Session, Is.SameAs(loaded), "N + 1 no se vuelve a cargar");
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level));
             Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(1), "solo el recompensado");
             Assert.That(boot.Wallet.Seeds, Is.EqualTo(140));
@@ -376,6 +430,31 @@ namespace AF.Tests.PlayMode
             finally
             {
                 GameScreen.SimulatedScreen = null;
+            }
+        }
+
+        // AD_GATE que deja el anuncio abierto hasta Close (como un intersticial que el jugador aún no cerró).
+        private sealed class HeldAdGate : IAdGate
+        {
+            private Action? _onDone;
+
+            public int Runs { get; private set; }
+
+            public void RecordWin(int level)
+            {
+            }
+
+            public void Run(int wonLevel, Action onDone)
+            {
+                Runs++;
+                _onDone = onDone;
+            }
+
+            public void Close()
+            {
+                Action? onDone = _onDone;
+                _onDone = null;
+                onDone?.Invoke();
             }
         }
     }
