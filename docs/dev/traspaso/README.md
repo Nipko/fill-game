@@ -148,7 +148,9 @@ Las tareas detalladas están en `docs/dev/traspaso/planes-integracion.json` (`in
 
 ### Paso 1b · Arreglos de la prueba del dueño en el teléfono (2026-10-11): hazlos antes del paso 2
 
-El dueño probó el `dev.apk` (compilado sobre `80d37fb` o antes) y decidió **D-011** (`docs/dev/decisiones.md`). Las cuatro causas siguen en `7677085`. Tareas, causas con archivo y línea, pruebas y qué probar en el teléfono: `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`.
+> *Estado del 2026-10-12: P1, P3 y P4 están hechos en la tanda 1 (integrada en `7d755c4`, con T-A, T-B, T-C, T-D y los criterios de la ola 3 de la hoja del 2026-10-09). P2 (avisos legibles), la tarjeta del miquito tras la tropa y el resto de la hoja (T-E, T-F, T-G, el banner de mundo y el tutorial de la Piraña) van en la tanda 2, en curso. Falta probarlo todo en el teléfono.*
+
+El dueño probó el `dev.apk` (compilado sobre `80d37fb` o antes) y decidió **D-011** (`docs/dev/decisiones.md`). Las cuatro causas seguían en `7677085`. Tareas, causas con archivo y línea, pruebas y qué probar en el teléfono: `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`.
 
 - **P1:** el saldo no enseña la Cosecha hasta la pantalla de victoria, y la bandeja de comodines no se apaga antes de la celebración. La Cosecha se sigue cobrando en el instante lógico.
 - **P2:** avisos y tarjeta «¡Miquito a la vista!» con duración por lectura (3-7 s). Ninguno sale durante la carga, la tarjeta previa o la intro (el regalo de Capi del nivel 8 hoy sale encima de la intro), y salen de uno en uno.
@@ -156,6 +158,8 @@ El dueño probó el `dev.apk` (compilado sobre `80d37fb` o antes) y decidió **D
 - **P4:** tras el vídeo de la Cosecha doble, el juego cuenta el doble y pasa solo al nivel siguiente.
 
 ### Paso 2 · Registrar D-007 y D-009 en el GDD
+
+> *Hecho el 2026-10-11 y el 2026-10-12 (rama `paso2/registrar-d007-d009`, solo documentación): D-007, D-009 y D-012 registradas en `docs/dev/decisiones.md`, con la ampliación de D-010 y el estado de D-011, y llevadas al GDD (§7 de este archivo), con la lista única de estrenos en 02 §9.1, salvo las cifras [sim] regeneradas con D-009, que esperan al dueño (V5). Lo que depende de la tanda 2 (D-011, punto 2; de D-012, el banner de mundo, el tutorial de la Piraña, la sacudida y los patrones) ya está en el GDD como canon, sin darlo por implementado: al integrarla, basta con poner al día su estado en `docs/dev/decisiones.md`. Los pendientes del dueño están en `docs/GDD.md` §6.3 (preguntas 18-38; la 20, decidida). El texto de abajo queda como historial.*
 
 Ninguna de las dos tiene aún su entrada en `docs/dev/decisiones.md`. Están decididas por el dueño:
 
@@ -196,8 +200,9 @@ Material de partida: `docs/research/fauna/propuesta-fauna.md` (10 especies y 18 
 - **Preguntas abiertas del guion de la intro** (`docs/research/intro-rio-miquitos/guion.md`, Q1-Q16, y Q17 del agente de docs). El código aplica las recomendaciones, salvo Q11 (evento `af_fauna_sighted`, que necesita migrar el perfil) y Q14 (color del agua negra).
 - **Preguntas de la propuesta de fauna** (`docs/research/fauna/propuesta-fauna.md`) y de la propuesta de Magic Sort (`docs/research/magic-sort/propuesta-tintalu.md` §10.2, sobre todo metajuego, anuncios y tienda).
 - **Bloqueo técnico C1-9 de la pista A:** la propiedad P1 (R14) falla con la Liana y capacidades mixtas, así que `LevelValidation` rechaza la Liana con capacidades distintas de 4, cueva de la Piraña incluida. Por eso el calendario de la campaña movió o quitó la Liana, y no las capacidades, en cuatro celdas [P]: 94 Ma → Li y 95 Li+Al → Ma+Al (la Cuia alta vuelve en el reto 95 con el Matapi), 160 Ll+Li+Al6 → Ll+Al6 (la Cuia alta de 6 se sigue estrenando en el hito 160) y 198 Pi+Li → Pi+Ho (`calendar_note` de `tools/level-generator/specs/campaign_v1.json`). Está en `Packages/com.amazonfill.core/README.md`, en su CHANGELOG y en `tools/out/campaign_v1_report.md`; hace falta decidir la regla (02 R16; pregunta 24 de `docs/GDD.md` §6.3).
+- **Preguntas nuevas del paso 2:** las 27-38 de `docs/GDD.md` §6.3 (Lluvia y Piraña en la 1.0 al cierre de la Fase 1, «Zafra», Revelar en la 3.ª ranura, formato [P] de `pack_schema` 2, respaldos del kill-switch, fuente de la temporada, novedades de 201-1000, P1-P3 con el Remolino de Q-B, el revelado rítmico, el texto por debajo de 12 sp, el vertido que gana frente a «ninguno > 8 ms» y los [P] de la tanda 1). La 20 (caché de `LocalDateKey`) ya está decidida y aplicada (`7677085`).
 - **Pendientes de la pista B:**
-  - guardar en cada vertido cuesta ≈ 6,5 ms en el Editor (objetivo [P] < 5 ms): medir en el teléfono;
+  - el guardado por vertido ya va con un escritor en segundo plano (T-D, tanda 1; D-012, decisión 5): falta medirlo en el teléfono (p95 < 5 ms y ninguno > 8 ms; pregunta 37 de `docs/GDD.md` §6.3);
   - el reloj anti-trampas necesita hora de servidor: hoy, adelantar el reloj rellena canoas;
   - algunos [P] de nombres de perfil.
 - **Arte:** todo es procedural y provisional. Los prompts para ChatGPT o para el artista están en `docs/art/prompts-chatgpt.md`, y la lista de piezas de los miquitos en el guion de la intro (§11) y en la propuesta de fauna.
@@ -214,11 +219,12 @@ Material de partida: `docs/research/fauna/propuesta-fauna.md` (10 especies y 18 
 | D-004 | Panel azul petróleo y tope de ancho de la cuia por T. La pose y el techo los sustituye D-006 |
 | D-005 | Vertido por tramo, como Magic Sort (`rules_pour_mode` = `run` por defecto) |
 | D-006 | Tablero, cuia y vertido copiados de Magic Sort: pose según las dosis que quedan, boca casi en el destino, ciclo de ≈ 0,9 s, cavidad ≥ 0,80, 3 filas desde 11 cuias |
-| D-007 | Mecánicas del río: catálogo de 12, estrenos de la 1.0 y reglas finas Q-A, Q-B y Q-C. Registrada el 2026-10-11 (paso 2) |
+| D-007 | Mecánicas del río: catálogo de 12, estrenos de la 1.0 y reglas finas Q-A, Q-B y Q-C. Registrada el 2026-10-11 y completada el 2026-10-12 (paso 2), con la lista única de estrenos en 02 §9.1 |
 | D-008 | Bucle de partida como Magic Sort: estructura de Magic Sort, cifras de nuestro GDD. Las vidas ilimitadas no quitan los anuncios |
 | D-009 | Dificultad escalonada: ciclo de 20 reordenado, etiqueta antes de jugar y rotación de plantillas. Registrada el 2026-10-11 (paso 2); sus cifras [sim] esperan la aprobación del dueño |
 | D-010 | Intro «Llenar y teñir» con miquitos como datos. La ampliación a ~50 especies quedó registrada el 2026-10-11; su diseño es el paso 3 |
-| D-011 | Prueba en el teléfono (2026-10-11): la victoria se cobra en la vista cuando se ve, avisos legibles, miquitos con más presencia sin frenar el juego y Cosecha doble que avanza sola. **Sin implementar** (paso 1b) |
+| D-011 | Prueba en el teléfono (2026-10-11): la victoria se cobra en la vista cuando se ve, avisos legibles, miquitos con más presencia sin frenar el juego y Cosecha doble que avanza sola. Puntos 1, 3 y 4 implementados en la tanda 1 (`7d755c4`); punto 2, en curso (tanda 2). Llevada al GDD el 2026-10-12 |
+| D-012 | Decisiones del 2026-10-09 y respuestas del 2026-10-11: estreno de la Piraña con mordisco fallido visible y tutorial animado, banner de mundo (Capi presenta y Rosa asoma; 11, 41, 81 y 141, primer intento, sin banner en el 1), sacudida de ±8 dp, 3 ciclos y 240 ms, patrones e iconos como el GDD, guardado por vertido con escritor en segundo plano (p95 < 5 ms y ninguno > 8 ms), marco del panel sin cambios y Remolino con canal y la misma marca en las dos cuias. Registrada el 2026-10-12 (paso 2). Tanda 1: mordisco fallido, Remolino y guardado; tanda 2, en curso: el resto |
 
 ## 8. Cómo trabaja el dueño (preferencias aprendidas)
 

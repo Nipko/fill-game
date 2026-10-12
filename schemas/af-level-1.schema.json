@@ -176,7 +176,7 @@
     "mechanic_type": {
       "type": "string",
       "enum": ["hoja", "brote", "liana", "matapi", "remolino", "lluvia", "pirana"],
-      "description": "Tipos de attrs (02 §9.1 y §9.3; glosario §6.5; D-007). Debuts de D-007: Hoja 43, Matapi 63, Liana con fruta 83, Remolino 103, Lluvia 143, Brote 163, Piraña 183 (mech_debut_level, 08 §9, pendiente de editar). matapi solo con pack_schema 2. El Barro (debut 123) no es un attr: es la unidad 15 dentro de cuias."
+      "description": "Tipos de attrs (02 §9.1 y §9.3; glosario §6.5; D-007). Debuts de D-007: Hoja 43, Matapi 63, Liana con fruta 83, Remolino 103, Lluvia 143, Brote 163, Piraña 183 (lista única de 02 §9.1; mech_debut_level, 08 §9). matapi solo con pack_schema 2. El Barro (debut 123) no es un attr: es la unidad 15 dentro de cuias."
     },
     "caps": {
       "type": "array",
@@ -276,7 +276,7 @@
         "traps": { "type": "number", "minimum": 0, "maximum": 1 },
         "complexity": { "type": "number", "minimum": 0 },
         "D": { "type": "number", "description": "Índice de 03 §7: suma ponderada de z-scores del pool del rango; puede ser negativo" },
-        "par_approx": { "type": "boolean", "description": "Solo pack_schema 2 [P] (03 §9: par aproximado con Piraña): true si el par no es el óptimo exacto. Si falta, el par es exacto." },
+        "par_approx": { "type": "boolean", "description": "Solo pack_schema 2 [P]: true marcaría un par que no es el óptimo exacto. Ninguna mecánica de la 1.0 lo usa: con el mordisco inmediato de Q-C el par de la Piraña es exacto (03 §9; 08 §4.1). Si falta, el par es exacto." },
         "band": { "type": "string", "enum": ["comfort", "challenge", "recovery", "milestone"], "description": "Posición en el ciclo de 20 (03 §12)." }
       }
     },

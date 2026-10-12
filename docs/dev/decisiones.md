@@ -12,11 +12,12 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-004 | 2026-10-07 | Panel azul petróleo, vertido a 38° y cuias más anchas con pocas cuias | Decidida por el dueño (respuestas a C16-C18 de `docs/art/direccion-visual-v2.md`); implementada en el árbol de trabajo, sin commitear (código, tests y documentación de «Archivos afectados»; EditMode y PlayMode en verde el 2026-10-07). Pendientes: commit y PR, revisión en el teléfono (`dev.apk`) y nueva medida de C19. Actualización del 2026-10-08: implementada en `b2d34de` (rama `d004-cuias-anchas`); la decisión 2 (38° fijos y labio a 0,6-1,6 u), el techo del vertido [P], la consecuencia «no cambia el número de filas» y el alto de la cuia (1:3, 6 u; pasa a 5,6 u) quedan sustituidos por D-006, que también matiza el recálculo a mitad de nivel: las filas se fijan al cargar y no se recalculan, solo el ancho; el resto sigue (panel azul petróleo y topes 64/56/48 dp) |
 | D-005 | 2026-10-08 | Vertido por tramo, como Magic Sort | Decidida por el dueño; en implementación (C1, L1, U1, D1-D6) |
 | D-006 | 2026-10-08 | Tablero, cuia y vertido como Magic Sort | Decidida por el dueño; en implementación (U2-U6, D1-D6). Pendiente: P12 (ranura de 42 dp en 16:9 con cuias añadidas) |
-| D-007 | 2026-10-08 | Mecánicas del río: catálogo de 12, estrenos de la 1.0 y reglas finas | Decidida por el dueño (todas las recomendaciones de la propuesta de cultura ribereña, §(h), y las reglas finas Q-A, Q-B y Q-C). Implementada en el núcleo y el generador (pista A, integrada en `6faf7c3`) y en Unity (paso 1 del traspaso, hasta `ce0ced4`). Registrada y llevada al GDD el 2026-10-11 (paso 2). Pendientes, sin bloquear la 1.0: C1-9 (02 R16 con Liana y capacidades mixtas), el formato de los respaldos del kill-switch, la tabla de novedades de 201-1000 y la revisión del asesor cultural |
+| D-007 | 2026-10-08 | Mecánicas del río: catálogo de 12, estrenos de la 1.0 y reglas finas | Decidida por el dueño (todas las recomendaciones de la propuesta de cultura ribereña, §(h), y las reglas finas Q-A, Q-B y Q-C). Implementada en el núcleo y el generador (pista A, integrada en `6faf7c3`) y en Unity (paso 1 del traspaso, hasta `ce0ced4`). Registrada y llevada al GDD el 2026-10-11 y el 2026-10-12 (paso 2), con la lista única de estrenos en 02 §9.1. Pendientes, sin bloquear la 1.0: C1-9 (02 R16 con Liana y capacidades mixtas), la confirmación de Lluvia y Piraña en la 1.0 (criterio de GDD.md §6 #6), «Zafra», Revelar en la 3.ª ranura, el formato [P] de `pack_schema` 2, el de los respaldos del kill-switch, la tabla de novedades de 201-1000, las propiedades P1-P3 con el Remolino de Q-B, el revelado rítmico y la revisión del asesor cultural (preguntas 24, 27-31 y 33-35 de `docs/GDD.md` §6.3) |
 | D-008 | 2026-10-08 | Bucle de partida como Magic Sort | Decidida por el dueño. Documentación aplicada el 2026-10-08 en `117f4be` (capítulos de «Archivos afectados»), dentro de la rama de código: **pendiente de la aprobación explícita del dueño antes de fusionar** o de un PR de documentación aparte (cambia el contrato 7). En implementación: pista B (B1-1-B1-6 y B2-1-B2-6). Los textos nuevos y los puntos [P] están pendientes (P14-P16, no bloquean). Abierta: P17, cuándo sale «Canoas infinitas 1 h» en Sin canoas (04 §7.3 y 05 §4.1 se contradicen). El número D-007 quedó reservado para las mecánicas especiales, en pausa; tiene su entrada desde el 2026-10-11 |
-| D-009 | 2026-10-08 | Dificultad escalonada: ciclo de 20 reordenado, etiqueta antes de jugar y rotación de plantillas | Decidida por el dueño (Q1 A, Q2 sí, Q3 A y Q4 A de la misma propuesta). Implementada en el generador y en `tools/econ_sim.py` (pista A) y en Unity (paso 1). Registrada y llevada al GDD el 2026-10-11 (paso 2). Pendientes: aprobar las cifras [sim] regeneradas con el ciclo nuevo (P-2) y decidir la tabla de etiquetas de 03 §11 frente a la campaña medida |
+| D-009 | 2026-10-08 | Dificultad escalonada: ciclo de 20 reordenado, etiqueta antes de jugar y rotación de plantillas | Decidida por el dueño (Q1 A, Q2 sí, Q3 A y Q4 A de la misma propuesta). Implementada en el generador y en `tools/econ_sim.py` (pista A) y en Unity (paso 1). Registrada y llevada al GDD el 2026-10-11 (paso 2). Pendientes: aprobar las cifras [sim] regeneradas con el ciclo nuevo (P-2) y decidir la tabla de etiquetas de 03 §11 frente a la campaña medida, la fuente de la temporada del ciclo, que no está en el pack, y la tabla de novedades de 201-1000 (preguntas 25, 26, 32 y 33 de `docs/GDD.md` §6.3); los nombres internos de las posiciones y de los hitos [P] esperan al asesor cultural |
 | D-010 | 2026-10-08 | «Llenar y teñir»: el río llena las cuias y los miquitos las tiñen con fruta | Decidida por el dueño (idea y ampliación del 2026-10-08); guion `docs/research/intro-rio-miquitos/guion.md` aprobado para implementar. Implementada en la rama `intro-rio-miquitos` (`fbdf11e`, `e479cf0` y `8955ef3`), sin fusionar. Documentación aplicada el 2026-10-09 en la misma rama. Pendientes, sin bloquear: confirmar Q1-Q16 del guion (el código aplica sus recomendaciones salvo Q11 y Q14), Q17, toda la fauna con el asesor cultural, el arte del artista y las preguntas abiertas de la propuesta de fauna (F7, F9-F11 y F13). Los números D-007 y D-009 los usó la pista de mecánicas y niveles (rama `fase1-mecanicas-niveles`); tienen su entrada desde el 2026-10-11. **Ampliación del 2026-10-09** (elenco de unas 50 especies que tiñen, una nueva cada 20 niveles), registrada el 2026-10-11: pendiente del diseño del paso 3 del traspaso |
-| D-011 | 2026-10-11 | Ajustes de la prueba en el teléfono: la victoria se cobra cuando se ve, avisos legibles, miquitos que se ven y Cosecha doble que avanza | Decidida por el dueño tras probar el `dev.apk` en el SM-S938B. Sin implementar: tareas P1-P4 de `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`, para el equipo de escritorio |
+| D-011 | 2026-10-11 | Ajustes de la prueba en el teléfono: la victoria se cobra cuando se ve, avisos legibles, miquitos que se ven y Cosecha doble que avanza | Decidida por el dueño tras probar el `dev.apk` en el SM-S938B (tareas P1-P4 de `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`). Puntos 1, 3 y 4 implementados en la tanda 1 (integrada en `7d755c4`); punto 2 (avisos legibles) y la tarjeta del miquito tras la tropa, en curso (tanda 2). Llevada al GDD el 2026-10-12 (paso 2). Pendiente: ratificar sus [P] (pregunta 38 de `docs/GDD.md` §6.3) |
+| D-012 | 2026-10-09 y 2026-10-11 | Prueba del 2026-10-09: estreno de la Piraña, banner de mundo, sacudida, patrones, guardado por vertido y marco del panel, con las respuestas del 2026-10-11 | Decidida por el dueño. Registrada y llevada al GDD el 2026-10-12 (paso 2). Implementados en la tanda 1 (`7d755c4`): el mordisco fallido visible, la marca de pareja del Remolino y el guardado por vertido con escritor en segundo plano (falta medirlo en el teléfono). En curso (tanda 2): el tutorial de la Piraña con mordisco animado, el banner de mundo, la sacudida y los patrones e iconos. Pendiente: el vertido que gana frente a «ninguno > 8 ms» (pregunta 37 de `docs/GDD.md` §6.3) |
 
 ---
 
@@ -708,23 +709,23 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 - **Fecha:** 2026-10-08 (respuestas del dueño a las preguntas de la propuesta y reglas finas Q-A, Q-B y Q-C del mismo día). Registrada el 2026-10-11.
 - **Estado:** decidida por el dueño, que aceptó todas las recomendaciones de `docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md` §(h). La parte de dificultad de esa propuesta (Q1-Q4, el ciclo y la rotación) se registra aparte como D-009.
   - Implementada en el núcleo, el solver, el generador y `tools/level-qa` en la pista A (rama `fase1-mecanicas-niveles`, integrada en `6faf7c3`; packs 11-200 en `56f220d`) y en Unity en el paso 1 del traspaso (olas 1-4 y verificación T18, de `ecb7892` a `ce0ced4`).
-  - Documentación aplicada el 2026-10-11 (paso 2 del traspaso; «Archivos afectados»).
+  - Documentación aplicada el 2026-10-11 y completada el 2026-10-12 (paso 2 del traspaso; «Archivos afectados»).
   - **Toda la fauna, la flora, los lugares, los nombres de las mecánicas nuevas y los textos de los tutoriales quedan pendientes de revisión del asesor cultural** (07 §8.2; lista de la propuesta §(i)).
-  - Pendientes que no bloquean la 1.0: el bloqueo C1-9 (Consecuencias), el formato de los respaldos del kill-switch (02 §9.2, regla 3) y la tabla de novedades de 201-1000 con el alcance de Q8 (D-009, punto 8).
+  - Pendientes que no bloquean la 1.0 (preguntas 24, 27-31 y 33-35 de `docs/GDD.md` §6.3): el bloqueo C1-9 (Consecuencias), la confirmación de Lluvia y Piraña en la 1.0 (punto 3), el formato de los respaldos del kill-switch (02 §9.2, regla 3), la tabla de novedades de 201-1000 con el alcance de Q8 (D-009, punto 8), las propiedades P1-P3 y el Remolino con Q-B (Consecuencias), el destino del revelado rítmico (punto 1), «Zafra» (pregunta 28), Revelar en la 3.ª ranura (pregunta 29) y el formato [P] de `pack_schema` 2 (pregunta 30).
 - **Sustituye:**
   - el debut del Brote en el 63 (contrato 1; 02 §9.1 y `mech_debut_level`): pasa al 163 y el Matapi ocupa el 63;
   - la Liana de número como regla de debut (02 §9.1 M3): la Liana debuta con fruta en el 83 y la de número pasa a variante en el 243;
   - la regla de fútiles de 02 §1.4, su copia de 04 §5.1 y el orden de R10 (02 §1.2), por los del anexo B de la propuesta con la respuesta Q-B;
-  - el criterio de GDD.md §6 #6 y de la decisión 12 de 09 §8: Lluvia y Piraña entran en la 1.0;
   - en 03 §8, la frase «nunca en niveles con mecánicas con disparador», que Q14 A define.
 - **No sustituye:**
   - las reglas de Hoja, Brote, Remolino, Barro, Lluvia y Piraña de 02 §9.1, salvo lo que añaden Q-A, Q-B, Q-C y Q18 B;
   - Aguas turbias (02 §11, T1-T7) ni su estreno en el hito 100 con 1 cuia turbia y la Luciérnaga regalada (04 §2.5);
   - D-002 (ninguna mecánica resalta destinos) ni D-005 (vertido por tramo);
-  - el formato `af-level/1` ni el nombre de su esquema: sube a `pack_schema` 2 (contrato 21).
+  - el formato `af-level/1` ni el nombre de su esquema: sube a `pack_schema` 2 (contrato 21);
+  - el criterio de GDD.md §6 #6 y de la decisión 12 de 09 §8 para Lluvia y Piraña (propuesta §(f): «Criterio de la 1.0 sin cambios»; punto 3).
 
 **Contexto.**
-- D-008 dejó reservados el número D-007 y la pregunta P13 para las mecánicas especiales, en pausa: el dueño pidió investigar antes la cultura ribereña y la dificultad escalonada.
+- D-008 dejó reservados el número D-007 y la pregunta P13 para las mecánicas especiales, en pausa: el dueño pidió investigar antes la cultura ribereña y la dificultad escalonada. Esta entrada cierra P13, reservada por D-008.
 - La investigación (`docs/research/cultura-ribera/investigacion.md`, web consultada el 2026-10-08) y la propuesta (misma carpeta) sintetizan dos propuestas puntuadas por jueces, con sus correcciones (anexo A). La propuesta termina con 18 preguntas cerradas (§(h)).
 - Filtro de cada idea (b.0): copia una función probada de Magic Sort; tiene una regla exacta compatible con el vertido por tramo, con D-002, con el solver y con la generación por superposición; no lleva contadores a favor del jugador; se lee en un segundo; cada desbloqueo tiene animación y sonido; nada sagrado ni personas.
 - Antes de programar el Remolino, la Lluvia y la Piraña, la pista A pidió tres reglas finas (Q-A, Q-B y Q-C).
@@ -750,18 +751,18 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 
    - Regla exacta, presentación, desbloqueo, tutorial, base cultural y coste de cada una: propuesta b.2. Las del canon no cambian salvo lo que dicen los puntos 5 y 6.
    - **Variantes** (b.3), para que haya algo nuevo hasta el 1000: Liana de cuenta (243), Hoja atada (283), Brote de dos hojas (343), Flor de vitória-régia (403), Palizada en cadena (443), Llave en la lancha (520, una combinación sin regla nueva, que no es un estreno), Casiquiare (703), Lancha de vuelta (763) y Aguapé que crece (883).
-   - **Fuera de la campaña** (b.4; Q10): el nido de tortuga, el defeso, la piracema y el revelado rítmico (contadores a favor del jugador, que se gastan con vertidos fútiles), el tipiti, la Cuia de tacacá (cambia el sellado), el mijano y las demás ideas de b.4 van a Travesías y eventos. Descartes: b.5 (Nasa, tronco hueco, tarrafa como hielo, curral, cacuri, friagem, gamitana, «Regla del río», «Repiquete» como subtítulo visible y la llave entre aguas turbias).
+   - **Fuera de la campaña** (b.4; Q10): el nido de tortuga, el defeso y la piracema (contadores a favor del jugador, que se gastan con vertidos fútiles), el tipiti, la Cuia de tacacá (cambia el sellado), el mijano, Dos aguas, la Fiesta de la fruta y las Mareas de equinoccio van a Travesías y eventos, cada una donde dice b.4; el Banzeiro se descarta (b.4: «No»). El revelado rítmico tampoco entra en la campaña, pero las fuentes no coinciden en adónde va: Q10 lo lleva a Travesías y b.4 solo conserva su animación de burbuja para Aguas turbias (pregunta 35 de GDD.md §6.3). Descartes: b.5 (Nasa, tronco hueco, tarrafa como hielo, curral, cacuri, friagem, gamitana, «Regla del río», «Repiquete» como subtítulo visible y la llave entre aguas turbias).
 2. **Estrenos de la 1.0** (niveles 1-200; Q5 B):
    - Cuia chica 14 y Cuia alta 27, sin cambios (02 §8);
    - Hoja 43, Matapi 63 y Liana con fruta 83;
-   - Aguas turbias 100, con estreno suave (Q9 sí): es lo único especial del nivel, con 1 cuia turbia de 2 dosis ocultas y 1 Luciérnaga regalada. Es la única excepción a «nada debuta en un reto ni en un hito» (D-009) y a las «2 mecánicas activas» del Muy difícil (02 §10);
+   - Aguas turbias 100, con estreno suave (Q9 sí): es lo único especial del nivel, con 1 cuia turbia de 2 dosis ocultas y 1 Luciérnaga regalada. Es la única excepción a «nada debuta en un reto ni en un hito» (D-009) y el único Muy difícil sin un segundo componente: para las «2 mecánicas activas» de 02 §10, una capacidad protagonista cuenta como componente [P] (d.4: 60 Ho+Ch y, con el bloqueo C1-9, 160 Ll+Al6);
    - Remolino 103, Barro 123, Lluvia 143, Brote 163 y Piraña 183.
-   - Cada estreno ocupa p3-p5 de su ciclo con 2 vacíos, la mecánica sola y un solo ejemplar (02 §9.2, regla 2).
+   - Cada estreno de bloqueador (43-183) ocupa p3-p5 de su ciclo con 2 vacíos, la mecánica sola y un solo ejemplar (02 §9.2, regla 2). Las capacidades no siguen esa regla: la Cuia chica se estrena en la rampa a mano (14 y 18) y en p2 (22), la Cuia alta de 5 en p7-p8 (27 y 28) y la de 6 en el hito 160 (02 §8; d.4); Aguas turbias, en el hito 100 (p20).
 3. **Alcance por versión** (Q8: (c) junto con (b′)):
    - la 1.0 lleva las mecánicas hasta el 200 (el canon más el Matapi) y cubre 201-700 con las variantes de coste S (Liana de cuenta, Hoja atada, Brote de dos hojas y Flor) y con combinaciones de lo que ya trae;
    - **1.1:** Aguapé 223, Palizada 263, Lancha 303 y Cocha 583. Llegan en un build, porque exigen código en `AF.Core` y subir `pack_schema`, y sustituyen niveles de 201-700 con `level_overrides` o con una vuelta nueva (08 §4.4). Regla de migración: si el jugador ya pasó el debut de una mecánica, se le sirve una vez su tablero de debut antes de usarla (03 §9, consecuencia 3);
    - las demás variantes dependen de mecánicas de la 1.1 (Palizada en cadena, Llave en la lancha, Lancha de vuelta y Aguapé que crece) o caen después del 700 (Casiquiare);
-   - Lluvia y Piraña entran en la 1.0: el solver con estado temporal pasa los tests (cierra GDD.md §6 #6 con la evidencia C3-3 de `Packages/com.amazonfill.core/README.md`).
+   - Lluvia y Piraña: sigue vigente el criterio de GDD.md §6 #6 y de la decisión 12 de 09 §8 (propuesta §(f): «Criterio de la 1.0 sin cambios»). La evidencia C3-3 de `Packages/com.amazonfill.core/README.md` lo cumple y la 1.0 las incluye por Q8 (b′), a falta de que el dueño lo confirme al cierre de la Fase 1, como reserva ese criterio (el README del núcleo: «La decisión es del dueño»; pregunta 27 de GDD.md §6.3).
 4. **Respuestas del dueño** (propuesta §(h), todas con la recomendación; Q1-Q4 son de D-009):
    - **Q5 B:** Matapi en el 63 y Brote en el 163. La equivalencia del Matapi con el frasco «?» de Magic Sort sigue siendo [E]: el Matapi vale como mecánica propia.
    - **Q6 sí:** la Liana debuta con fruta (`key`) y la de número (`n`) pasa a variante (243).
@@ -779,12 +780,11 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
    - **Q18 B:** los vertidos fútiles no avanzan los contadores de Lluvia y Piraña; el contador visible solo baja con vertidos útiles, y R16 se mantiene.
 5. **Reglas finas** (respuestas del dueño a Q-A, Q-B y Q-C, 2026-10-08):
    - **Q-A:** una cuia del Remolino no vierte en su propia pareja: el vertido es ilegal (rechazo sin texto, R11).
-   - **Q-B:** la exención de `futil` vale también para el origen si es un Remolino o una Lluvia con gotas pendientes, no solo como destino (el anexo B solo eximía destinos). Así R14 se cumple con esas dos mecánicas.
+   - **Q-B:** la exención de `futil` vale también para el origen si es un Remolino o una Lluvia con gotas pendientes, no solo como destino: el anexo B solo eximía como origen la Cocha cerrada, y Q-B añade el Remolino y la Lluvia con gotas pendientes. Así R14 se cumple con esas dos mecánicas.
    - **Q-C:** si la Piraña no puede morder (la cuia que recibió quedó sellada, es un Matapi o la propia cueva, o la cueva está llena), pierde ese mordisco y el contador sigue.
 6. **Reglas del núcleo** (anexo B, Q13, Q-B y Q18 B; `AF.Core.Rules.BoardRules`):
    - **R10 por etapas:** (a) revelado de la nueva cima de A; (b) aperturas por recepción (Hoja, Brote); (c) sellado; (d) liberaciones por sellado (Liana); (e) contadores (Lluvia, Piraña), una sola vez por vertido y nunca en un fútil; (f) condiciones del tablero (Palizada y Lancha, en la 1.1); (f′) se repiten (c), (d) y (f) hasta que nada cambie; (g) victoria; (h) bloqueo. Marea restaura el estado anterior entero.
    - **`futil`:** no es fútil verter en una cuia que cambia al recibir (Hoja puesta, Brote cerrado, Matapi, Remolino, Lluvia con gotas pendientes) ni desde un origen exento (Remolino o Lluvia con gotas pendientes, Q-B; en la 1.1, la Cocha cerrada). En lo demás rige 02 §1.4, con la excepción de Aguas turbias.
-   - El test literal del anexo B («no existe un ciclo de vertidos útiles que vuelva al mismo estado canónico») es falso ya en el juego base (A = [1, 2, 2, 2], B = [3, 3, 2]). Lo sustituyen tres propiedades que cada mecánica pasa antes de su debut: P1 (R14: todo estado atascado es irresoluble), P2 (R16 en `run`: un fútil entre dos cuias sin mecánica y de la misma capacidad no cambia el estado canónico) y P3 (ningún par monocolor ↔ vacía es útil en los dos sentidos).
    - **Restricciones:** como mucho un contador por nivel (Lluvia o Piraña, nunca juntas); las combinaciones prohibidas de la propuesta d.3 (Aguas turbias solo con filtros y capacidades; el Matapi nunca en un par de Remolino, como cuia de Lluvia ni como cueva de Piraña, ni con Barro u ocultas dentro; Lancha y Liana juntas no antes del 401; la dosis-llave de una Palizada nunca en un Remolino ni bajo una dosis de su color); la Pororoca deja fijas las cuias con mecánica cerrada y se deshabilita con Lluvia y Piraña. La implementación añade [P]: sin Remolino junto a la Piraña ni con dosis ocultas.
 
 **Consecuencias.**
@@ -792,8 +792,10 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 - **Piraña:** con el mordisco inmediato de Q-C la heurística `H` sigue siendo admisible y consistente y el par es exacto: no hacen falta `ceil(H/2)` ni `par_approx` (CHANGELOG del núcleo, C3-2).
 - **Rendimiento** (README del núcleo, C3-3): en los 36 tableros de referencia de 12-14 cuias, A* llega a 186.346 expandidos, Morpho tarda 1,0 ms como máximo y el bot ×40, 4,8 ms. Con el presupuesto de 300.000 se agotan algunos tableros con Remolino, Lluvia y Piraña, que el pipeline descarta o regenera.
 - **Bloqueo C1-9** (pregunta de 02 R16, abierta): la propiedad P1 de R14 falla con Liana y capacidades mixtas (contraejemplo en el CHANGELOG del núcleo). Provisionalmente, `LevelValidation` rechaza la Liana con capacidades mixtas (también con la cueva de la Piraña), y el calendario de la campaña cambia cuatro celdas de d.4 [P] para que la Liana nunca vaya con ellas: 94 Ma → Li y 95 Li+Al → Ma+Al, 160 Ll+Li+Al6 → Ll+Al6 y 198 Pi+Li → Pi+Ho (`tools/level-generator/specs/campaign_v1.json`, `calendar_note`). Las capacidades se quedan: la Cuia alta sigue en el 95 y la de 6, en el 160. Opciones: (a) ampliar `futil` y quitar el bloqueo; (b) mantenerlo. Lo deciden el tech-lead o el dueño.
-- **Capacidades mixtas:** la poda de fútiles del solver puede alargar el par o dejar sin camino útil un tablero que se gana (C1-8; 3 de 309 tableros pequeños en `run`); R14 se cumple. Con Q-B, un vaivén útil del Remolino puede volver al mismo estado canónico y retrasar el modal (P3; medido, sin romper R14).
-- **Kill-switch:** los respaldos por slot de 02 §9.2 (regla 3) no tienen todavía formato de pack ni de id. Hasta decidirlo, `mech_enabled` = false no puede sustituir los niveles de la 1.0.
+- **Propiedades P1-P3** (hallazgo de la pista A; CHANGELOG del núcleo, C1-2): el test literal del anexo B («no existe un ciclo de vertidos útiles que vuelva al mismo estado canónico») es falso ya en el juego base (A = [1, 2, 2, 2], B = [3, 3, 2]). La pista A lo sustituyó por tres propiedades que cada mecánica pasa antes de su debut, como garantía aplicada [P]: P1 (R14: todo estado atascado es irresoluble), P2 (R16 en `run`: un fútil entre dos cuias sin mecánica y de la misma capacidad no cambia el estado canónico) y P3 (ningún par monocolor ↔ vacía es útil en los dos sentidos). El dueño aceptó el anexo B con Q13, que incluye ese test entre sus pruebas, y no ha ratificado la sustitución (pregunta 34 de GDD.md §6.3).
+- **Capacidades mixtas:** la poda de fútiles del solver puede alargar el par o dejar sin camino útil un tablero que se gana (C1-8; 3 de 309 tableros pequeños en `run`); R14 se cumple.
+- **Remolino con Q-B frente a P3** (pregunta abierta del README del núcleo): con la exención de origen, X (Remolino monocolor) → vacía es útil y vacía → X entra por el fondo de la pareja, así que con la pareja vacía el tablero vuelve al mismo estado canónico (test `P3_Remolino_QB_AUsefulRoundTripCanReturnToTheSameCanonicalState`). P1 se cumple (R14), pero P3 no vale para el Remolino: en un estado cuyo único vertido útil sea ese vaivén, `atascado(S)` no se cumple y Aguas estancadas no sale hasta que el jugador cambie el tablero. Es el riesgo que el anexo B describe al eximir orígenes (pregunta 34 de GDD.md §6.3).
+- **Kill-switch:** los respaldos por slot de 02 §9.2 (regla 3) no tienen todavía formato de pack ni de id. Hasta decidirlo, `mech_enabled` = false no puede sustituir los niveles de la 1.0 (pregunta 31 de GDD.md §6.3).
 - **Paso 1 (Unity):** cada mecánica tiene aspecto procedural [P] (D-003) y desbloqueo al estilo Magic Sort con duraciones [P] (07 §5.6), y cada estreno, su tutorial de una pantalla (02 §8 y §9.1: los 11 textos caben en 2 líneas). El 100 regala la Luciérnaga.
 - **Arte y audio:** unas 20 piezas nuevas entre sprites, animaciones y sonidos (propuesta §(g), 07). Todo el arte nuevo lo hace el artista.
 
@@ -813,7 +815,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 **Archivos afectados.**
 - **Núcleo, solver y herramientas** (pista A): `Packages/com.amazonfill.core/Runtime/AF.Core/{Rules, Mechanics, Board, Session, Determinism}`, `Runtime/AF.Solver/{Search, Bot, Generation, Murky}`, sus tests y `dotnet/AF.Core.Tests/DotnetOnly`; `tools/level-generator` (`--spec` y `specs/campaign_v1.json`), `tools/level-qa`, `schemas/af-level-1.schema.json` (`pack_schema` 2) y `tools/validate_schema.py`; los packs `Assets/_Project/Data/Levels/mundo_02_v1.json` a `mundo_05_v1.json` y el informe `tools/out/campaign_v1_report.md`.
 - **Unity** (paso 1): `Assets/_Project/Scripts/{Levels, GameFlow, Boosters, Presentation, UI}` y sus tests (tareas del paso 1 en `docs/dev/traspaso/README.md` §6).
-- **Documentación** (2026-10-11, paso 2): este registro; `docs/GDD.md` §2, §3.3, §4, §6 y §7; `docs/gdd/{00, 01, 02, 03, 04, 06, 07, 08, 09}`; `docs/dev/traspaso/README.md` (§6, paso 4: C1-9, y §7). Las cifras [sim] no cambian (D-009, Consecuencias).
+- **Documentación** (2026-10-11 y 2026-10-12, paso 2): este registro; `docs/GDD.md` §2, §3.3, §4, §5, §6 y §7; `docs/gdd/{00, 01, 02, 03, 04, 06, 07, 08, 09}`, con la lista única de estrenos de 02 §9.1 copiada en 02 (Parámetros), 08 §9, 00 §6.5 y el contrato 1; las descripciones de `mechanic_type` y `difficulty.par_approx` en `schemas/af-level-1.schema.json` (cambio editorial, sin subir `pack_schema`); `docs/dev/traspaso/README.md` (§6, paso 2: estado, y paso 4: C1-9; §7). Las cifras [sim] no cambian (D-009, Consecuencias).
 
 ---
 
@@ -821,7 +823,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 
 - **Fecha:** 2026-10-08.
 - **Estado:** decidida por el dueño el 2026-10-08: «la estructura se copia de Magic Sort; las cifras salen de nuestro GDD». Su postura general: copiar lo que funciona sin suavizarlo, salvo por política de Google Play.
-  - El número D-007 y la pregunta P13 quedan reservados para las mecánicas especiales, **en pausa**: el dueño pidió investigar antes la cultura ribereña y la dificultad escalonada. Nada de esta entrada depende de D-007. *Nota del 2026-10-11: D-007 y D-009 ya tienen su entrada; D-009 colorea las cabeceras de ¿Seguro? y Nivel fallido con la etiqueta del nivel.*
+  - El número D-007 y la pregunta P13 quedan reservados para las mecánicas especiales, **en pausa**: el dueño pidió investigar antes la cultura ribereña y la dificultad escalonada. Nada de esta entrada depende de D-007. *Nota del 2026-10-11: D-007 y D-009 ya tienen su entrada, y D-007 cierra P13; D-009 colorea las cabeceras de ¿Seguro? y Nivel fallido con la etiqueta del nivel.*
   - Respuesta del dueño a la pregunta bloqueante 2 del plan de la fase (2026-10-08, transmitida por la sesión principal): AF.Platform, AF.Save, AF.Ads y AF.IAP se crean **solo con interfaces e implementaciones simuladas**. Sin SDK, sin cambios en `Packages/manifest.json` ni `packages-lock.json`, sin permisos de Android, sin claves y sin red. El dueño revisa el resultado al fusionar.
   - Documentación aplicada el 2026-10-08 en los capítulos de «Archivos afectados», en `117f4be`, dentro de la rama de código `fase2-bucle-partida`.
     - El plan de la fase dejaba estas ediciones del GDD (Dc2-Dc6) para después de las respuestas a P13-P16, como lote aprobado por el dueño. Por eso quedan **pendientes de su aprobación explícita antes de fusionar**. Si no las aprueba en el PR de la pista B, van en un PR de documentación aparte.
@@ -1086,7 +1088,12 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
    - acierto de etiqueta (retos que alcanzan el 75 %): si baja del 60 % en un ciclo, se revisa el generador de esa posición.
 
 **Consecuencias.**
-- **Simulación** (P-2, `0faf51e`): `tools/econ_sim.py` pasa a `CHALLENGE_POSITIONS` = {6, 9, 12, 15, 18} y a los retos con etiqueta p6, p12 y p18 en 41-59. La cuenta de etiquetas no cambia, pero el orden de los retos mueve un poco las cifras [sim]: saldo final del casual 1.842 → 1.912, del medio 15.510 → 15.856 y del hábil 26.408 → 26.092; primer bloqueo sin recursos del casual 249 → 260; ingreso por victoria 61,4 → 61,5 y 97,7 → 97,6; escenario A 23.815 → 24.043. Los ratios de referencia no cambian (7,7 / 7,2:1). Las cifras del GDD se actualizan cuando el dueño las apruebe (V5).
+- **Simulación** (P-2, `0faf51e`): `tools/econ_sim.py` pasa a `CHALLENGE_POSITIONS` = {6, 9, 12, 15, 18} y a los retos con etiqueta p6, p12 y p18 en 41-59. La cuenta de etiquetas no cambia, pero el orden de los retos mueve las cifras [sim]. Las celdas que cita el GDD (05 §3 y sus copias en 01, 04, 09 y GDD.md) que cambian:
+  - **Escenario B** (canon, `tools/out/econ_B.md`): saldo final del casual 1.842 → 1.912, del medio 15.510 → 15.856, del hábil 26.408 → 26.092 y del pagador ligero 8.393 → 8.843; ingreso gratuito total del casual 30.709 → 30.735, del medio 48.857 → 48.816 y del hábil 46.486 → 46.431; ingreso por victoria 61,4 → 61,5 (casual), 97,7 → 97,6 (medio), 93,0 → 92,9 (hábil) y 97,2 → 97,3 (pagador); Cuias de rescate pagables por día del hábil 2,57 → 2,56; Cuias de rescate usadas 72,5 → 72,3, 72,1 → 71,3, 45,0 → 45,4 y 87,5 → 86,7; bloqueos sin recursos del casual 5,9 → 5,6 por corrida, en el 73 → 74 % de las corridas, con el primero en el 249 → 260; **el primer bloqueo sin recursos del medio pasa del 87 al 44** (corridas afectadas, 2 → 1 %) y **el del pagador ligero, del 311 al 282** (corridas afectadas, 10 → 14 %; 0,4 → 0,5 bloqueos por corrida); neto diario en 101-500 del casual −11 → −9, del medio +316 → +325, del hábil +851 → +841 y del pagador +124 → +138; USD del pagador 3,54 → 3,64. Los ratios de referencia no cambian (7,7 / 7,2:1).
+  - **Escenario A** (`tools/out/econ_A.md`): saldo final del medio 23.815 → 24.043, del hábil 32.107 → 31.727 y del pagador 14.323 → 14.739; **primer bloqueo sin recursos del pagador 110 → 258** y del medio 57 → 49. Los ratios de referencia no cambian (7,0 / 6,6:1).
+  - **B con tramos** (`tools/out/econ_B_tramos.md`): referencia de 101-500, 10,2 → 10,3:1; casual con 21,3 bloqueos por corrida en el 100 % de las corridas → 20,7 en el 99 %, primer bloqueo 198 → 203 y saldo final 895 → 893; medio con 3,1 (45 %) → 2,9 (44 %), neto diario −34 → −23, primer bloqueo 352 → 355 y saldo final 4.224 → 4.670; hábil con saldo final 18.120 → 17.710 y neto +508 → +494; pagador con 12,9 (90 %) → 13,2 (92 %), primer bloqueo 305 → 314 y saldo final 1.536 → 1.584.
+  - **Variantes** (`tools/out/econ_variants.md`): en V0, saldo final del medio 15.686 → 16.067 y del casual 1.876 → 2.014, y casual con bloqueo sin recursos 70 → 76 %; en las demás, los ratios se mueven 0,1 como mucho y los saldos y porcentajes, en la misma medida.
+  - El detalle celda a celda es el diff de `0faf51e` en `tools/out/`. Las cifras del GDD se actualizan cuando el dueño las apruebe (V5; pregunta 25 de GDD.md §6.3).
 - **Campaña v1 medida** (`tools/out/campaign_v1_report.md`):
   - etiquetas: 31-60, 13,3 % Difícil y 3,3 % Muy difícil; 61-100, 20 % y 5 %; 101-200, 23 % y 5 %. Desde el 61 los cinco retos apuntan a Difícil (25 % por ciclo), por encima del 15 % y del 15-20 % de 03 §11: queda como pregunta abierta;
   - acierto de etiqueta por ciclo: 67-100 %; cada remanso queda por debajo de la media de comodidad de su ciclo (QA-REMANSO);
@@ -1305,7 +1312,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 
 Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - F1 es Q7, y F2 es Q6.
-- F3 y F4: tarjeta tras la intro, en el siguiente nivel libre, de 2,5 s y sin bloquear.
+- F3 y F4: tarjeta tras la intro, en el siguiente nivel libre, de 2,5 s y sin bloquear. *Nota del 2026-10-12: D-011 cambia la duración (por lectura, 3-7 s [P]; punto 2) y el momento (cuando la tropa se ha ido; punto 3).*
 - F5: las especies amenazadas entran, con sus reglas. Pendiente de confirmación como Q7.
 - F6: sin miquitos en el mundo 13.
 - F8 es Q11, y F12 es Q9.
@@ -1316,7 +1323,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Quién tiñe:** monos, aves y otros animales que de verdad dejan caer fruta (tucanes, guacamayos, oropéndolas, murciélagos fruteros, kinkajú…), no solo miquitos.
 - **Cómo:** cada tipo con su forma de soltar la fruta (desde la rama, en vuelo, colgado, de noche), siempre en el mundo donde vive la especie.
 - **Qué cambia de esta entrada cuando se diseñe el elenco:** el punto 4 (una especie de miquito por mundo, en 11 tramos) pasa a una especie nueva cada 20 niveles, y los tres modelos de suelta (`fila`, `cuelga` y `sacude`) tendrán que cubrir las formas de soltar de las aves y de los demás animales.
-- **Qué no cambia:** los tiempos de la intro, «nunca la especie de otro mundo», el modo dosel, las reglas duras de representación (punto 6), las especies como datos sin Remote Config y D-002.
+- **Qué no cambia:** T (1.400 / 800 ms) y las fases a-d de la intro (la entrada, el reposo y la salida de la tropa los fija D-011, punto 3), «nunca la especie de otro mundo», el modo dosel, las reglas duras de representación (punto 6), las especies como datos sin Remote Config y D-002.
 - **Pendiente:**
   - el diseño del elenco (`docs/research/fauna/elenco-tinteros.md`), con el guion del equipo `docs/dev/traspaso/workflow-elenco-50-especies.js` (investigación, diseño, verificación biológica y técnica, implementación, revisión y documentación), que se lanza después de la integración en Unity;
   - hasta entonces sigue el catálogo `miquitos_v0.json` (10 especies y una variante);
@@ -1328,7 +1335,9 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 ## D-011 · Ajustes de la prueba en el teléfono: la victoria se cobra cuando se ve, avisos legibles, miquitos que se ven y Cosecha doble que avanza
 
 - **Fecha:** 2026-10-11.
-- **Estado:** decidida por el dueño tras probar el `dev.apk` en el SM-S938B (compilado en el portátil sobre `80d37fb` o antes; las cuatro causas siguen en `7677085`). El punto 3 lo eligió entre tres opciones cerradas («Más presencia sin frenar», la recomendada). **Sin implementar:** tareas P1-P4 de `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`.
+- **Estado:** decidida por el dueño tras probar el `dev.apk` en el SM-S938B (compilado en el portátil sobre `80d37fb` o antes; las cuatro causas seguían en `7677085`). El punto 3 lo eligió entre tres opciones cerradas («Más presencia sin frenar», la recomendada). Tareas P1-P4 de `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`.
+  - *Actualización del 2026-10-12:* los puntos 1 y 4 están implementados en la tanda 1 (A1, integrada en `3035081`) y el punto 3, también (B1, `d8b9ca3`), salvo que la tarjeta «¡Miquito a la vista!» espere a que la tropa se vaya: B1 deja a la vista ese estado (`IntroAnimation.TroopVisible` y `TroopGoneMs`) y la tarjeta lo usa en la tanda 2. El punto 2 (avisos legibles) está en curso en la tanda 2 (A2). Toda la tanda 1 está en `7d755c4`, sin probar todavía en el teléfono.
+  - Documentación aplicada el 2026-10-12 (paso 2 del traspaso): 02 §2, §4.2 y §6; 04 §2.2; 06 §4.7; 07 §5.1, §5.4 y §6.4; 08 §5.3; GDD.md §2 #22; la nota de F3 y F4 de la tabla de D-010 y el guion de la intro (nota de cabecera, §4.5, §7.2, §7.3, §14 y los criterios A3, A8 y A15). Los [P] de la tanda 1 que tiene que ratificar el dueño están en la pregunta 38 de GDD.md §6.3.
 
 **Contexto** (palabras del dueño, con la ortografía corregida):
 - «Las semillas se suman antes de dar por ganador el juego […] deberían verse luego de terminar completamente y ahí sumarlo […] pareciera que no lo suma, que ya tenía eso. Pasa lo mismo con las ayudas, que desaparecen: aunque se sabe que se va a ganar, no es bueno darlo ya por hecho; debe ser hasta que ocurra.»
@@ -1388,3 +1397,97 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Cómo revertir.** Volver a las constantes de antes (`GameScreen.ToastMs` = 2.600, `SightingRule.CardMs` = 2.500, `IntroChoreography.ExitMs` = 300 y la tropa posada en t = 0 en la versión corta), quitar la espera del saldo y de la bandeja y el avance tras la Cosecha doble. Siempre con una decisión nueva que sustituya a D-011.
 
 **Archivos afectados** (previstos; la hoja de pruebas los detalla): `Assets/_Project/Scripts/GameFlow/{LevelFlow.cs, SightingRule.cs}`, `Assets/_Project/Scripts/UI/{GameScreen.cs, BoosterTray.cs, Toast.cs, SightingCard.cs, GameBootstrap.cs}`, `Assets/_Project/Scripts/Presentation/{IntroChoreography.cs, TroopLayer.cs, IntroAnimation.cs, MonkeyRig.cs}`, sus tests y la documentación de arriba.
+
+---
+
+## D-012 · Prueba del 2026-10-09: estreno de la Piraña, banner de mundo, sacudida, patrones, guardado por vertido y marco del panel
+
+- **Fecha:** 2026-10-09 (seis decisiones del dueño sobre la prueba de `80d37fb` en el teléfono, recogidas en la hoja de pruebas de ese día) y 2026-10-11 (sus respuestas a tres preguntas de la auditoría del paso 1b: (a) banner de mundo, (b) Remolino y (c) guardado). Registrada el 2026-10-12. Lleva el número 12 porque D-011 se registró antes.
+- **Estado:** decidida por el dueño.
+  - Implementadas en la tanda 1 (integrada en `7d755c4`): la parte C de la decisión 1 (mordisco fallido visible; tarea B2), la respuesta (b) (marca de pareja del Remolino; B2) y la decisión 5 con la respuesta (c) (guardado por vertido con un escritor en segundo plano; C2, `060b518`). Falta medir en el teléfono el objetivo de la decisión 5.
+  - En curso (tanda 2): la parte D de la decisión 1 (tutorial con mordisco animado; A4), la decisión 2 con la respuesta (a) (banner de mundo; A4), la decisión 3 (sacudida; B3) y la decisión 4 (patrones e iconos; B3).
+  - La decisión 6 no cambia nada.
+  - Documentación aplicada el 2026-10-12 (paso 2 del traspaso; «Archivos afectados»).
+  - **El texto nuevo del tutorial de la Piraña y los nombres de mundos, países y ríos del banner quedan pendientes de revisión del asesor cultural** (07 §8.2).
+- **Sustituye:**
+  - la sacudida de rechazo de ±6 dp, 2 ciclos y 120 ms (contrato 24; GDD.md §2 #3 y §7.2 #30, 02 §3.1 y §4.1, 07 §4.3): pasa a ±8 dp, 3 ciclos y 240 ms (punto 3);
+  - el banner de mundo «tras Siguiente… con Rosa guiando» (02 §6) y el banner del mundo 2 en el Mapa del río tras la victoria del 10 (06 §2.2 y §2.3): sale al cargar el primer nivel del mundo, antes de la intro, y lo presenta Capi (punto 2 y respuesta (a));
+  - el tutorial del estreno de la Piraña como texto con el icono (02 §9.1 M7): enseña un mordisco animado (punto 1, D);
+  - el amago corto de la Piraña que no puede morder (02 §4.1; 07 §4.3 y §5.6): el cardumen llega a la víctima, choca y vuelve (punto 1, C);
+  - en 07 §4.3, «con varias parejas, unos puntos junto a la bajada las distinguen»: las dos cuias de una pareja del Remolino llevan la misma marca también con un solo par (respuesta (b)).
+- **No sustituye:**
+  - las reglas de la Piraña (02 §9.1 M7, con Q-C y Q18 B de D-007) ni los niveles de la campaña: no se regeneran;
+  - el texto del banner (`world_banner`, glosario §10) ni la tabla de 08 §9: no hay claves de Remote Config nuevas;
+  - la opacidad del patrón y el nivel de 07 §3 y 08 §9 (`ui_pattern_opacity` = 0,20; `ui_patterns_default_from_level` = 41): la decisión 4 es «como el GDD»;
+  - D-002 (nada se resalta al seleccionar, tampoco la marca de pareja), D-008 (se guarda tras cada vertido) ni la escritura atómica de 08 §11 (`.tmp`, `Flush(true)` y `File.Replace` con `.bak`);
+  - el marco del panel bajo el HUD con 3 filas (guía visual v2 §3.2).
+
+**Contexto.**
+- El portátil probó `80d37fb` (olas 1 y 2 del paso 1) en el SM-S938B. La hoja del 2026-10-09 (copiada del mensaje del dueño del 2026-10-11) recoge 9 defectos fuera del plan (T-A a T-G), criterios para las olas 3 y 4, correcciones para el paso 2 y estas seis decisiones.
+- Medidas que las motivan:
+  - la sacudida de 120 ms y ±6 dp casi no se veía en el teléfono;
+  - guardar en cada vertido costaba 3,5 ms de mediana, 5,6 de p95 y 23,2 de máximo (nivel 143), con 5 vertidos por encima de 8 ms, el tope de CPU del hilo principal de 08 §5.4. La causa: `LocalProfileStore.Save` hacía `Flush(true)` y `File.Replace` dentro del toque.
+- La auditoría del 2026-10-11 dejó tres preguntas que el dueño respondió ese mismo día:
+  - quién presenta el banner, si lo lleva el nivel 1 y si el del mundo 2 sale en el Mapa del río o en el nivel 11;
+  - cómo se lee la pareja del Remolino entre filas no contiguas (en el 103, filas 1 y 3): A, canal por detrás del panel; B, la misma marca en las dos; C, las dos cosas;
+  - si la tarea del guardado puede tocar `AF.Save` (`.claude/rules/sdk.md`: todo cambio ahí va en un PR aprobado por el dueño).
+- Ese día el dueño aprobó también la caché de `LocalDateKey` en `AF.Platform`, aplicada en `7677085` (pregunta 20 de GDD.md §6.3, decidida).
+
+**Decisión.**
+1. **Estreno de la Piraña (183): opción C + D.** No se regeneran niveles.
+   - **C, mordisco fallido visible** (ola 3): cuando la Piraña no puede morder (Q-C), el cardumen sale de la cueva, llega a la tapa o al Matapi de la víctima, choca y vuelve, en ≈ 400 ms [P]; con la cueva llena, se asoma y vuelve a dormirse.
+   - **D, tutorial con un mordisco animado** (ola 4): la tarjeta de estreno del 183 enseña, antes de jugar, cómo la piraña sale de la cueva y se lleva la dosis de la cima de la cuia que acaba de recibir. El texto añade que sellar a tiempo evita el mordisco [P, pendiente del asesor cultural], en 2 líneas como mucho a 360 dp y a 12 sp o más. Con Reducir movimiento, una versión quieta [P].
+   - Capítulos: 02 §4.1 y §9.1 (M7), 07 §4.3 y §5.6.
+2. **Banner de mundo: opción A**, en la ola 4. Con la respuesta (a) del 2026-10-11:
+   - sale al cargar el primer nivel de cada mundo salvo el Estuario (en la campaña 1-200: 11, 41, 81 y 141); **el nivel 1 no lleva banner**;
+   - antes de Llenar y teñir y **solo en el primer intento** de ese nivel: ni al reintentar ni al reanudar; da igual que se entre con Jugar o con Siguiente [P];
+   - es una tarjeta simple que se cierra con un toque: «Mundo {n}: {nombre} · {país} · {río}» (`world_banner`, glosario §10), con los nombres del glosario §8;
+   - **la presenta Capi con la pata** (`capi_present`) **mientras Rosa asoma** (`rosa_surface`) **y se sumerge** al cerrarla (`rosa_dive`); con Reducir movimiento, quietos [P];
+   - si el nivel tiene también tarjeta previa, primero va el banner [P]; los avisos esperan a que termine (D-011, punto 2).
+   - Capítulos: 02 §2 y §6, 06 §2.2, §2.3 y §4.5, 07 §2.2 (regla 1) y §5.1; el texto ya está en el glosario §10.
+3. **Sacudida de rechazo: ±8 dp, 3 ciclos y 240 ms** (T-G), con el mismo amortiguado. Un toque válido durante la sacudida se atiende igual que antes. El latido del embudo del Matapi la acompaña (240 ms, dentro de los ≤ 300 ms [P] del criterio de la ola 3).
+   - Capítulos: GDD.md §2 #3, §7.2 #30 y §9, 02 §3.1 y §4.1, 07 §4.3, 09 §1.1 y la guía visual v2.
+4. **Patrones e iconos de fruta: como el GDD** (T-E; 07 §3, 02 §12 y 08 §9):
+   - hasta el 40, el patrón del tinte va sutil, al 15 %; desde el 41, Patrones de fruta está activado por defecto: patrón al 20 % e icono de fruta en cada dosis visible, de 0,45 u de alto y del color de la trama del tinte [P];
+   - en cualquier nivel, al levantar una cuia, sus dosis visibles muestran el icono, y al bajarla desaparece;
+   - nunca lleva icono una dosis oculta, el Barro ni el agua base;
+   - el icono es uno por tinte, según la columna «Icono de accesibilidad» de 07 §3, procedural [P] hasta el arte del artista;
+   - mientras no exista la pantalla de Ajustes, el interruptor es una constante del cliente, activa desde el 41 [P].
+   - Capítulos: GDD.md §2 #5, 02 §12, 07 §3 y 08 §9 (columna «Uso», sin claves nuevas).
+5. **Guardado por vertido: se mantiene el objetivo de T-D.** En el hilo principal del teléfono, p95 < 5 ms y ningún guardado > 8 ms, medido en ≥ 200 vertidos de 3 niveles; un force-stop a mitad de nivel deja al reabrir el tablero del último vertido. Con la respuesta (c), la tarea puede tocar `AF.Save` (opción B de T-D):
+   - el vertido serializa en el hilo principal (< 1 ms) y entrega los bytes a un único escritor en segundo plano con cola de 1, en la que gana el último;
+   - el escritor hace la escritura atómica de 08 §11;
+   - al terminar el nivel, en cada mutación de la cartera, al pasar a segundo plano y al cerrar la app, se espera al escritor y se escribe en síncrono;
+   - si el escritor falla, el perfil sigue en memoria y se reintenta en el siguiente guardado;
+   - `AF_PERF` mide en `save_ms` solo el hilo principal y añade `bg_ms`;
+   - sin paquetes nuevos y sin tocar `AF.Platform`.
+   - Capítulos: 08 §5.4 y §11.
+6. **Marco del panel bajo el HUD con 3 filas: se deja como está** (8 dp; guía visual v2 §3.2). Ningún capítulo cambia.
+7. **Remolino, respuesta (b) del 2026-10-11: opción C.** El canal une las bases de la pareja, también entre filas no contiguas, y las dos cuias llevan la misma marca de pareja, también cuando el nivel tiene un solo par; con dos pares, las marcas se distinguen entre sí. La marca está siempre a la vista, a ΔE00 ≥ 10 de los 14 tintes y del turquesa de Marea, y nada cambia al seleccionar (D-002).
+   - Capítulos: 07 §4.3.
+
+**Consecuencias.**
+- **Código** (todo en Unity; núcleo, solver, packs, esquema y Remote Config sin cambios):
+  - tanda 1, integrada en `7d755c4`: B2 (mordisco fallido de ≈ 400 ms, `PiranaOverlay.BiteLostStepMs`; ficha de pareja del Remolino, igual en las dos cuias, con `id + 1` puntos) y C2 (`AF.Save.ProfileWriter`, `ProfileSaveBatch` y los guardados síncronos de `GameBootstrap`, con un tope de espera de 1.000 ms [P]);
+  - tanda 2, en curso: A4 (banner de mundo y mordisco animado en la tarjeta del 183) y B3 (sacudida, patrones e iconos).
+- **Teléfono:** falta medir la decisión 5 (`AF_PERF` con `save_ms`, `bg_ms` y `sync`) y ver la sacudida, el banner y el estreno de la Piraña cuando llegue la tanda 2.
+- **Preguntas abiertas** (`docs/GDD.md` §6.3): el vertido que gana el nivel escribe en síncrono y puede pasar de 8 ms (pregunta 37), y los [P] de la tanda 1, entre ellos el tope de 1.000 ms y el aire de la ficha del Remolino (pregunta 38).
+
+**Alternativas descartadas.**
+- Mantener la sacudida del contrato 24: casi no se veía en el teléfono.
+- Remolino: A (solo el canal, por detrás del panel) y B (solo la marca en las dos cuias).
+- Banner de mundo: presentado por Rosa, en el nivel 1 o, para el mundo 2, en el Mapa del río tras la victoria del 10 (respuesta (a)).
+- Guardado: seguir escribiendo con `Flush(true)` y `File.Replace` dentro del toque.
+
+**Cómo revertir.**
+- Sacudida: las constantes de `CuiaView` (`ShakeDp`, `ShakeMs` y el número de ciclos).
+- Banner: su regla de niveles y su tarjeta (tanda 2).
+- Piraña: el paso `BiteLost` de `PiranaOverlay` y la demostración de la tarjeta del 183 (tanda 2).
+- Patrones e iconos: las constantes de `Palette` y la propiedad del material del líquido (tanda 2).
+- Guardado: volver a la escritura síncrona en `ProfileSaveBatch` (C2).
+- Remolino: la ficha de pareja de `RemolinoOverlay`.
+- Siempre con una decisión nueva que sustituya a D-012.
+
+**Archivos afectados.**
+- **Código** (tanda 1): `Assets/_Project/Scripts/Presentation/Mechanics/{PiranaOverlay.cs, RemolinoOverlay.cs}`, `Assets/_Project/Scripts/Presentation/ProceduralArt.Remolino.cs`, `Assets/_Project/Scripts/Save/{ProfileWriter.cs, LocalProfileStore.cs, IProfileStore.cs}`, `Assets/_Project/Scripts/GameFlow/ProfileSaveBatch.cs`, `Assets/_Project/Scripts/UI/{GameBootstrap.cs, DevProbe.cs}`, sus tests y `docs/dev/prototipo-v0.md`. Tanda 2: los de sus especificaciones (A4 y B3).
+- **Documentación** (2026-10-12, paso 2): este registro; `docs/GDD.md` §2, §6.3, §7.2 y §9; `docs/gdd/{00, 02, 06, 07, 08, 09}`; la guía visual v2 (`docs/art/direccion-visual-v2.md`, revisión 6: la sacudida); `docs/dev/traspaso/README.md` (§6 y §7).
