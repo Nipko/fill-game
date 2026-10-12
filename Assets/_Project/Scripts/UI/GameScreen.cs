@@ -1499,9 +1499,13 @@ namespace AF.UI
             }
 
             // La bandeja, con el mismo saldo que el de arriba: la Cosecha que aún no se ve tampoco cuenta en sus precios ni en sus
-            // avisos «Te faltan {n}» (D-011, punto 1).
+            // avisos «Te faltan {n}» (D-011, punto 1). Solo importa donde se ve con la Cosecha sin enseñar, en la celebración (con
+            // la victoria pendiente, Refresh no repinta). En VICTORY_SCREEN y AD_GATE la bandeja está oculta (SyncChrome) y lo
+            // pendiente baja en cada fotograma mientras la fila cuenta: si entrara en su clave, la bandeja se repintaría entera
+            // en cada uno, con cadenas nuevas (08 §5.4). Allí recibe el saldo entero, que no cambia durante la cuenta, y al volver
+            // a verse (SetVisible) se repinta de todos modos.
             int pending = PendingHarvest(flow);
-            _tray.Refresh(pending);
+            _tray.Refresh(flow.Phase == FlowPhase.Celebration ? pending : 0);
             _walletBar.Refresh(_services?.Wallet, flow.CanoesLevel, pending);
             if (flow.Phase == FlowPhase.StuckModal && _stuck.Panel.gameObject.activeSelf)
             {

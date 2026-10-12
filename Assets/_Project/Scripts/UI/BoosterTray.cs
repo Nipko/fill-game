@@ -65,6 +65,7 @@ namespace AF.UI
         private Action? _onReveal;
         private int _key = int.MinValue;
         private int _revealKey = int.MinValue;
+        private int _refreshRepaints;
         private float _canvasW = 360f;
         private float _trayTop;
         private int _slots = 1;
@@ -180,6 +181,14 @@ namespace AF.UI
         /// tests).
         /// </summary>
         public float UndoVideoPollLeftMs => _undoVideoPollMs;
+
+        /// <summary>
+        /// Veces que <see cref="Refresh"/> repintó la bandeja porque cambió su clave (tests): oculta en la pantalla de victoria,
+        /// no sube mientras la Cosecha cuenta (08 §5.4). Allí no se puede medir con <c>Is.Not.AllocatingGCMemory</c>: en el
+        /// Editor, <c>TMP_Text.SetCharArray</c> crea una cadena en cada llamada (solo en el Editor), y el saldo de arriba y la
+        /// fila de la Cosecha cuentan con ella.
+        /// </summary>
+        internal int RefreshRepaints => _refreshRepaints;
 
         /// <summary>Texto del aviso «Te faltan {n}» de Revelar (tests de tamaño y desbordes).</summary>
         public TextMeshProUGUI RevealMissingLabel => _reveal.MissingLabel;
@@ -373,7 +382,10 @@ namespace AF.UI
         /// terminan antes de tiempo el revelado en marcha). Al empezar la celebración, el estado ya no es el último pintado y se
         /// apaga. Los precios y los avisos «Te faltan {n}» se calculan con el saldo que enseña el de arriba
         /// (<see cref="WalletBar.Refresh"/>): las semillas menos <paramref name="seedsPending"/>, la Cosecha que aún no se ve
-        /// (durante la celebración, entera; D-011, punto 1).
+        /// (durante la celebración, entera; D-011, punto 1). Lo pendiente entra en la clave de repintado: quien llama no debe
+        /// pasar un valor que cambie en cada fotograma (la cuenta de la Cosecha en la pantalla de victoria, con la bandeja
+        /// oculta), o la bandeja se repintaría en cada uno (08 §5.4; <c>GameScreen.RefreshHud</c> solo lo pasa en la
+        /// celebración).
         /// </summary>
         public void Refresh(int seedsPending = 0)
         {
@@ -395,6 +407,7 @@ namespace AF.UI
             }
 
             _key = key;
+            _refreshRepaints++;
             bool showExtra = extra.State != ExtraCuiaState.Hidden;
             if (showExtra != _extra.Active)
             {

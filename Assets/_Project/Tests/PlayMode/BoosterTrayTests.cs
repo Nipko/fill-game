@@ -27,7 +27,8 @@ namespace AF.Tests.PlayMode
     /// su ranura, dentro del hueco entre el tablero y la bandeja. Con la victoria pendiente (D-011, punto 1), la bandeja se
     /// queda como estaba y sus toques no hacen nada (tampoco cortan el revelado en marcha); se apaga al empezar la
     /// celebración, con sus avisos calculados con el saldo de arriba (sin la Cosecha que aún no se ve), y la ranura de
-    /// Revelar, sin ocultas, se va.
+    /// Revelar, sin ocultas, se va. En la pantalla de victoria, oculta, no se repinta mientras la Cosecha cuenta (sin
+    /// asignaciones, 08 §5.4).
     /// </summary>
     public sealed class BoosterTrayTests
     {
@@ -350,6 +351,124 @@ namespace AF.Tests.PlayMode
             Assert.That(celebration, Is.GreaterThan(0), "fotogramas de celebración");
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen));
             Assert.That(boot.Wallet.Seeds, Is.EqualTo(30));
+        }
+
+        [UnityTest]
+        public IEnumerator OnTheVictoryScreen_TheHiddenTrayDoesNotRepaintWhileTheHarvestCounts_WithMareasFreeQuota()
+        {
+            yield return HiddenTrayWhileTheHarvestCounts(true);
+        }
+
+        [UnityTest]
+        public IEnumerator OnTheVictoryScreen_TheHiddenTrayDoesNotRepaintWhileTheHarvestCounts_WithoutQuotaNorVideo()
+        {
+            yield return HiddenTrayWhileTheHarvestCounts(false);
+        }
+
+        // D-011, punto 1, sin asignaciones por fotograma (08 §5.4). En la pantalla de victoria la bandeja está oculta y el saldo
+        // de arriba recibe la Cosecha mientras la fila cuenta: lo que aún no enseña baja en cada fotograma. La bandeja no se
+        // repinta por eso (GameScreen.RefreshHud solo le pasa la Cosecha pendiente en la celebración), ni en la cuenta de +0 a
+        // +N (desde que el panel termina de subir, 250 ms) ni en la de +N a +2N tras la Cosecha doble; si se repintara, cada
+        // repintado crearía cadenas. Se mira con BoosterTray.RefreshRepaints y no con Is.Not.AllocatingGCMemory: en el Editor,
+        // TMP_Text.SetCharArray crea una cadena en cada llamada (solo en el Editor), y el saldo y la fila cuentan con ella.
+        // Nivel 11 (tablero 1 con af_level_offset = 10) con 0 semillas. freeQuota: Marea con su cupo gratis (3), cuya insignia
+        // crea una cadena en cada repintado; si no, sin cupo ni stock y sin video de rv_undo_refill (el tope del día,
+        // ads_rv_cap_undo_refill = 4, ya visto; la Cosecha doble sí tiene el suyo), con «+3», el precio y «Te faltan {n}», que
+        // además formatea y mide el aviso. El primer fotograma tras la Cosecha doble repinta una vez como mucho: el saldo cambió
+        // (+N).
+        private static IEnumerator HiddenTrayWhileTheHarvestCounts(bool freeQuota)
+        {
+            LaunchOptions.LevelOffsetOverride = 10;
+            Profile profile = VictorySetup.Profile(0);
+            if (!freeQuota)
+            {
+                profile.Daily.DateLocal = FunnelSetup.Clock.LocalDateKey();
+                profile.Daily.RvUndoRefill = 4;
+                profile.Daily.RvTotal = 4;
+            }
+
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(profile);
+            yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            GameScreen view = boot.View!;
+            BoosterTray tray = view.Tray;
+            LevelFlow flow = boot.Flow!;
+            if (freeQuota)
+            {
+                Assert.That(flow.UndoStatus.FreeLeft, Is.EqualTo(3), "cupo gratis");
+                Assert.That(tray.UndoBadgeText, Is.EqualTo("3"));
+            }
+            else
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    boot.TapCuia(0);
+                    boot.TapCuia(2);
+                    PlayModeHelpers.StepUntilIdle(boot, 3000);
+                    Assert.That(boot.PressUndo(), Is.True);
+                    PlayModeHelpers.StepUntilIdle(boot, 3000);
+                }
+
+                PlayModeHelpers.Step(boot, 50);
+                Assert.That(flow.UndoStatus.HasQuota, Is.False, "sin cupo ni stock");
+                Assert.That(boot.Ads!.CheckRewarded(AdPlacement.UndoRefill).Reason, Is.EqualTo(AdBlockReason.PlacementCap), "sin video de Marea hoy");
+                Assert.That(tray.UndoBadgeText, Is.EqualTo("+3"));
+                Assert.That(tray.UndoShowsVideo, Is.False);
+                Assert.That(tray.UndoPriceShown, Is.EqualTo(30));
+                Assert.That(tray.UndoMissingText, Is.EqualTo("Te faltan 30"));
+            }
+
+            int playing = tray.RefreshRepaints;
+            VictorySetup.WinToVictoryScreen(boot);
+            Assert.That(tray.RefreshRepaints, Is.GreaterThan(playing), "la bandeja se repinta al apagarse en la celebración: el contador cuenta");
+            int harvest = flow.HarvestSeeds;
+            Assert.That(harvest, Is.EqualTo(20), "eco_reward_normal");
+            Assert.That(view.DoubleHarvestShown, Is.True, "la Cosecha doble, con su video");
+            PlayModeHelpers.Step(boot, 256); // el panel sube en 250 ms; la fila aún no ha contado nada
+            Assert.That(tray.UndoButton.gameObject.activeInHierarchy, Is.False, "la bandeja, oculta en la victoria");
+            Assert.That(view.HarvestShown, Is.EqualTo(0));
+            Assert.That(view.WalletBar.SeedsShown, Is.EqualTo(0));
+
+            // La cuenta de +0 a +N (400 ms, 02 §6), con el saldo de arriba subiendo con ella.
+            int repaints = tray.RefreshRepaints;
+            int changes = CountFrames(boot, view, tray, GameConfig.HarvestCountMs, repaints, "cuenta de +0 a +" + harvest);
+            Assert.That(changes, Is.GreaterThanOrEqualTo(harvest / 2), "el saldo de arriba cambió en casi cada fotograma");
+            Assert.That(view.HarvestShown, Is.EqualTo(harvest), "la fila contó entera");
+            Assert.That(view.WalletBar.SeedsShown, Is.EqualTo(harvest), "el saldo de arriba, con la Cosecha");
+
+            view.DoubleHarvestButton.onClick.Invoke();
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(2 * harvest), "x2 exacto");
+            Assert.That(view.AutoNextPending, Is.True);
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.HarvestShown, Is.InRange(harvest + 1, (2 * harvest) - 1), "la fila ya cuenta hacia +2N");
+            Assert.That(tray.RefreshRepaints, Is.LessThanOrEqualTo(repaints + 1), "como mucho un repintado: el saldo cambió (+N)");
+            repaints = tray.RefreshRepaints;
+            changes = CountFrames(boot, view, tray, GameConfig.HarvestCountMs - PlayModeHelpers.FrameMs, repaints, "cuenta de +" + harvest + " a +" + (2 * harvest));
+            Assert.That(changes, Is.GreaterThanOrEqualTo(harvest / 2), "el saldo de arriba cambió en casi cada fotograma");
+            Assert.That(view.HarvestShown, Is.EqualTo(2 * harvest), "la fila contó entera");
+            Assert.That(view.WalletBar.SeedsShown, Is.EqualTo(2 * harvest));
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen), "aún no avanza (400 + 600 ms)");
+            Assert.That(flow.LevelNumber, Is.EqualTo(11));
+            Assert.That(tray.UndoButton.gameObject.activeInHierarchy, Is.False);
+        }
+
+        // Avanza ms en fotogramas de 16 ms con la bandeja oculta: ningún repintado. Devuelve en cuántos cambió el saldo de arriba.
+        private static int CountFrames(GameBootstrap boot, GameScreen view, BoosterTray tray, int ms, int repaints, string what)
+        {
+            int changes = 0;
+            int shown = view.WalletBar.SeedsShown;
+            for (int t = 0; t < ms; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                changes += view.WalletBar.SeedsShown != shown ? 1 : 0;
+                shown = view.WalletBar.SeedsShown;
+                Assert.That(tray.RefreshRepaints, Is.EqualTo(repaints), what + ", " + (t + PlayModeHelpers.FrameMs) + " ms: la bandeja oculta no se repinta");
+            }
+
+            return changes;
         }
 
         [UnityTest]
