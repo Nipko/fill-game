@@ -169,6 +169,12 @@ namespace AF.UI
         /// <summary>Marea ofrece el video (<c>rv_undo_refill</c>): «+3» con el icono de video.</summary>
         public bool UndoShowsVideo => _undo.VideoShown;
 
+        /// <summary>Precio que muestra Marea sin cupo ni video (0 si no lo muestra; tests).</summary>
+        public int UndoPriceShown => _undo.PriceShown;
+
+        /// <summary>Texto del aviso «Te faltan {n}» de Marea (vacío si no se ve; tests).</summary>
+        public string UndoMissingText => _undo.MissingText;
+
         /// <summary>
         /// Ms que faltan para volver a preguntar por el video de Marea (0 con cupo, o si la próxima <see cref="Refresh"/> pregunta;
         /// tests).
@@ -365,9 +371,11 @@ namespace AF.UI
         /// punto 1: nada se da por ganado antes de verse); sus toques no hacen nada (R15: el flujo no acepta input, y
         /// <c>GameScreen.OnTrayUndo</c>, <c>GameBootstrap.PressExtraCuia</c> y <c>GameBootstrap.PressReveal</c> no actúan ni
         /// terminan antes de tiempo el revelado en marcha). Al empezar la celebración, el estado ya no es el último pintado y se
-        /// apaga.
+        /// apaga. Los precios y los avisos «Te faltan {n}» se calculan con el saldo que enseña el de arriba
+        /// (<see cref="WalletBar.Refresh"/>): las semillas menos <paramref name="seedsPending"/>, la Cosecha que aún no se ve
+        /// (durante la celebración, entera; D-011, punto 1).
         /// </summary>
-        public void Refresh()
+        public void Refresh(int seedsPending = 0)
         {
             LevelFlow? flow = _flow;
             if (flow == null || !flow.HasLevel || flow.IsResolvingWin)
@@ -378,7 +386,7 @@ namespace AF.UI
             UndoStatus undo = flow.UndoStatus;
             ExtraCuiaOffer extra = flow.ExtraCuia;
             bool video = UndoVideo(undo);
-            int seeds = _services?.Wallet.Seeds ?? 0;
+            int seeds = Math.Max(0, (_services?.Wallet.Seeds ?? 0) - Math.Max(0, seedsPending));
             bool undoEnabled = undo.HasQuota ? flow.CanUndo : flow.AcceptsBoardInput;
             int key = Hash(undo.Unlimited ? 1 : 0, undo.FreeLeft, undo.Stock, video ? 1 : 0, undoEnabled ? 1 : 0, (int)extra.State, extra.Stock, extra.Missing, seeds);
             if (key == _key)

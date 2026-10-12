@@ -1498,8 +1498,11 @@ namespace AF.UI
                 SyncChrome();
             }
 
-            _tray.Refresh();
-            _walletBar.Refresh(_services?.Wallet, flow.CanoesLevel, PendingHarvest(flow));
+            // La bandeja, con el mismo saldo que el de arriba: la Cosecha que aún no se ve tampoco cuenta en sus precios ni en sus
+            // avisos «Te faltan {n}» (D-011, punto 1).
+            int pending = PendingHarvest(flow);
+            _tray.Refresh(pending);
+            _walletBar.Refresh(_services?.Wallet, flow.CanoesLevel, pending);
             if (flow.Phase == FlowPhase.StuckModal && _stuck.Panel.gameObject.activeSelf)
             {
                 // Tras comprar un Puñado o recargar Marea, el modal se rearma con el saldo nuevo y el mismo precio.

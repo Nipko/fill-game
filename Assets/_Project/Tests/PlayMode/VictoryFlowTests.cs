@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections;
+using System.Reflection;
 using AF.Ads;
 using AF.Core.Rules;
 using AF.Core.Session;
@@ -21,8 +22,8 @@ namespace AF.Tests.PlayMode
     /// celebración); desde el 11, «Cosecha doble: x2 por video» («+20 → +40») la duplica exactamente con un anuncio simulado y
     /// la victoria pasa sola al nivel siguiente por el camino de Siguiente, sin intersticial (D-011, punto 4), con Inicio
     /// inactivo mientras espera, sin cargar dos veces si se toca Siguiente (AD_GATE cancela la espera aunque el anuncio siga
-    /// abierto) y, como un toque en Siguiente, entre dos fotogramas
-    /// (después del Tick del flujo); sin recompensa se queda; sin fill el botón no aparece; antes del 11 no existe; sin la
+    /// abierto) y, como un toque en Siguiente, entre dos fotogramas (después del Tick del flujo; también con el bucle del
+    /// juego, GameBootstrap.Update); sin recompensa se queda; sin fill el botón no aparece; antes del 11 no existe; sin la
     /// Cosecha doble, Siguiente lleva a N + 1 sin auto-avance; sin solapes y con controles ≥ 48 dp.
     /// </summary>
     public sealed class VictoryFlowTests
@@ -292,7 +293,8 @@ namespace AF.Tests.PlayMode
             // resto de GameScreen.Tick y LevelFlow.Tick correrían sobre N + 1 con el dt de N, y el flujo de N + 1 avanzaría un
             // fotograma de intro que la vista no animó): la deja vencida, con Inicio aún inactivo, y GameBootstrap.Update pulsa
             // Siguiente después de LevelFlow.Tick (GameScreen.TakeAutoNext). N + 1 se carga entre dos fotogramas, como con un
-            // toque en Siguiente, y una sola vez.
+            // toque en Siguiente, y una sola vez. Aquí el final de Update se hace a mano, como PlayModeHelpers.AutoNext; el de
+            // GameBootstrap.Update lo mira Level11_TheAutoAdvance_RunsInTheGameLoop_AfterTheFlowTick, con el bucle del juego.
             LaunchOptions.LevelOffsetOverride = 10;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(100));
             yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
@@ -335,6 +337,65 @@ namespace AF.Tests.PlayMode
             Assert.That(flow.Session, Is.SameAs(loaded), "N + 1 no se vuelve a cargar");
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level));
             Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(1), "solo el recompensado");
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(140));
+        }
+
+        [UnityTest]
+        public IEnumerator Level11_TheAutoAdvance_RunsInTheGameLoop_AfterTheFlowTick()
+        {
+            // D-011, punto 4, con el bucle del juego: GameBootstrap.Update, no PlayModeHelpers.Step (que copia su final en
+            // AutoNext). Tras la Cosecha doble, sin tocar nada, la victoria pasa sola al 12 una sola vez, y no antes de la espera
+            // (400 + 600 ms): el dt de Update está acotado (MaxDeltaMs), así que el tiempo del juego nunca va por delante del
+            // real. Falla si Update deja de pulsar Siguiente cuando la espera vence (GameScreen.TakeAutoNext) y, si los
+            // fotogramas duran 1 ms o más, también si lo hace antes de LevelFlow.Tick: en el fotograma en que se carga el 12, su
+            // flujo aún no ha avanzado nada de su intro.
+            LaunchOptions.LevelOffsetOverride = 10;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(100));
+            yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            VictorySetup.WinToVictoryScreen(boot);
+            PlayModeHelpers.Step(boot, 900);
+            yield return null; // fotograma nuevo con el reloj aún tomado: el primer dt de Update cuenta desde aquí
+
+            view.DoubleHarvestButton.onClick.Invoke();
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(140));
+            Assert.That(view.AutoNextPending, Is.True);
+            float doubledAt = Time.realtimeSinceStartup;
+            boot.enabled = true;
+            while (flow.LevelNumber == 11)
+            {
+                Assert.That(Time.realtimeSinceStartup - doubledAt, Is.LessThan(5f), "la victoria pasa sola con el bucle del juego");
+                Assert.That(flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen), "en el 11, la victoria hasta que avanza");
+                yield return null;
+            }
+
+            // El fotograma en que GameBootstrap.Update cargó el 12 (la corrutina sigue después de Update).
+            float advancedAfter = Time.realtimeSinceStartup - doubledAt;
+            Assert.That(flow.LevelNumber, Is.EqualTo(12), "N + 1 sin tocar nada (en el 11 no hay intersticial)");
+            Assert.That(advancedAfter, Is.GreaterThanOrEqualTo(0.9f), "no antes de la espera (400 + 600 ms): " + advancedAfter + " s");
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Intro), "el 12 empieza por su intro");
+            Assert.That(flow.IntroDurationMs, Is.GreaterThan(0));
+            Assert.That(FlowPhaseMs(flow), Is.EqualTo(0), "Siguiente va después de LevelFlow.Tick: el flujo del 12 no avanzó en el fotograma del 11");
+            Assert.That(view.AutoNextPending, Is.False);
+            Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(1), "solo el recompensado: sin intersticial");
+            LevelSession loaded = flow.Session;
+
+            // Unos fotogramas más: sigue en el 12, sin recargarlo.
+            for (int frame = 0; frame < 30; frame++)
+            {
+                yield return null;
+                Assert.That(flow.LevelNumber, Is.EqualTo(12), "sin llegar a N + 2");
+                Assert.That(flow.Session, Is.SameAs(loaded), "N + 1 no se vuelve a cargar");
+            }
+
+            PlayModeHelpers.TakeClock(boot);
+            Assert.That(VictorySetup.InNewLevel(flow.Phase), Is.True, "en su INTRO, LEVEL_CARD o PLAYING: " + flow.Phase);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level));
+            Assert.That(view.AutoNextPending, Is.False);
+            Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(1));
             Assert.That(boot.Wallet.Seeds, Is.EqualTo(140));
         }
 
@@ -431,6 +492,15 @@ namespace AF.Tests.PlayMode
             {
                 GameScreen.SimulatedScreen = null;
             }
+        }
+
+        // Ms que el flujo lleva en su fase (LevelFlow._phaseMs, privado: el flujo no lo expone y AF.GameFlow no abre sus
+        // internos a los tests). Solo para ver que el nivel recién cargado no avanzó en el fotograma del anterior.
+        private static int FlowPhaseMs(LevelFlow flow)
+        {
+            FieldInfo? field = typeof(LevelFlow).GetField("_phaseMs", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null, "LevelFlow._phaseMs");
+            return (int)field!.GetValue(flow)!;
         }
 
         // AD_GATE que deja el anuncio abierto hasta Close (como un intersticial que el jugador aún no cerró).
