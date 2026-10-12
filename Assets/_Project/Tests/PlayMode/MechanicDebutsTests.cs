@@ -17,8 +17,8 @@ namespace AF.Tests.PlayMode
     /// Prueba de conjunto de los nueve estrenos de la ola 3 (criterio de la prueba del dueño del 2026-10-09; tanda B2,
     /// ola3.conjunto): en 43, 63, 83, 100, 103, 123, 143, 163 y 183 se juega el vertido que dispara la mecánica (y los previos
     /// que lleven a él) y, en el registro de pasos de cada vertido, salvo los terminados antes de tiempo, ningún Open,
-    /// Release, Receive, RainDrop, RainEnd, Bite ni MudWash usa el paso por defecto ni dura 0 ms, cada paso dura su nominal de
-    /// b.2 × factor (<see cref="MechanicTestKit.AssertOwnTimedSteps"/>) y ningún vertido pasa de 2.800 ms del toque a la vista
+    /// Release, Receive, RainDrop, RainEnd, Bite ni MudWash usa el paso por defecto ni dura 0 ms, cada paso dura su nominal × factor,
+    /// dentro del rango de b.2 (<see cref="MechanicTestKit.AssertOwnTimedSteps"/>), y ningún vertido pasa de 2.800 ms del toque a la vista
     /// quieta. El paso que estrena la mecánica lo anima el overlay (o las marcas) de su cuia.
     /// </summary>
     public sealed class MechanicDebutsTests
@@ -68,6 +68,49 @@ namespace AF.Tests.PlayMode
                     + checkedSteps + " pasos Open/Release/Receive/RainDrop/RainEnd/Bite/MudWash propios. " + MechanicTestKit.Describe(animator));
             }
 
+        }
+
+        /// <summary>
+        /// Cada paso con duración propia (la de su overlay, sus marcas o la tapa por defecto) tiene una nominal dentro del rango
+        /// que fijan los documentos (<see cref="MechanicTestKit.NominalRangeOf"/>), también los que los nueve estrenos no juegan
+        /// (RainEnd, BiteLost, el sellado por defecto): la prueba de conjunto compara cada paso con la constante de su overlay y,
+        /// sin esto, una constante fuera de rango no la haría fallar. RainWait no tiene número en ningún documento: solo el tope.
+        /// </summary>
+        [Test]
+        public void NominalDurations_WithinDocumentedRanges()
+        {
+            var steps = new (MechanicStepKind Kind, MechanicType Owner, bool UsedDefault)[]
+            {
+                (MechanicStepKind.Reveal, MechanicType.None, false),
+                (MechanicStepKind.MudWash, MechanicType.None, false),
+                (MechanicStepKind.Receive, MechanicType.Remolino, false),
+                (MechanicStepKind.Open, MechanicType.Hoja, false),
+                (MechanicStepKind.Open, MechanicType.Brote, false),
+                (MechanicStepKind.Seal, MechanicType.Matapi, false),
+                (MechanicStepKind.Seal, MechanicType.None, true),
+                (MechanicStepKind.Release, MechanicType.Liana, false),
+                (MechanicStepKind.RainDrop, MechanicType.Lluvia, false),
+                (MechanicStepKind.RainEnd, MechanicType.Lluvia, false),
+                (MechanicStepKind.RainWait, MechanicType.Lluvia, false),
+                (MechanicStepKind.Bite, MechanicType.Pirana, false),
+                (MechanicStepKind.BiteLost, MechanicType.Pirana, false),
+            };
+
+            int documented = 0;
+            foreach (var s in steps)
+            {
+                var r = new MechanicStepRecord(s.Kind, StepStage.A, 0, -1, s.Owner, s.UsedDefault, 0f, 0f, 1f, false);
+                string label = s.Kind + " de " + s.Owner + (s.UsedDefault ? " (por defecto)" : string.Empty);
+                float nominal = MechanicTestKit.NominalStepMs(r);
+                Assert.That(nominal, Is.GreaterThan(0f), label + ": tiene duración propia");
+                MechanicTestKit.NominalRange range = MechanicTestKit.NominalRangeOf(r);
+                Assert.That(range.Documented, Is.EqualTo(s.Kind != MechanicStepKind.RainWait), label + ": " + range);
+                MechanicTestKit.AssertNominalInRange(r, nominal, label);
+                documented += range.Documented ? 1 : 0;
+                TestContext.WriteLine(label + ": " + nominal + " ms → " + range);
+            }
+
+            Assert.That(documented, Is.EqualTo(steps.Length - 1), "todos con rango documentado salvo RainWait");
         }
 
         // Lo que estrena cada nivel (02 §9.1 con D-007; lista única de debuts del paso 2).
