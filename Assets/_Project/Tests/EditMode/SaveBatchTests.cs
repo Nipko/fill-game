@@ -242,6 +242,7 @@ namespace AF.Tests.EditMode
             Assert.That(batch.LastBackgroundMs, Is.GreaterThan(0.0), "bg_ms: escrituras de verdad medidas con el reloj de verdad");
             Assert.That(batch.FlushSync(WaitMs), Is.True, "todo en disco");
             Assert.That(disk.Count, Is.EqualTo(2), "FlushSync no reescribe lo que ya está en disco");
+            Assert.That(disk.Overlaps, Is.EqualTo(0), "nunca dos escrituras a la vez");
         }
 
         [Test]
@@ -304,13 +305,15 @@ namespace AF.Tests.EditMode
             Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(80));
             Assert.That(batch.PendingSave, Is.False);
             Assert.That(batch.BackgroundFailures, Is.EqualTo(3));
+            Assert.That(disk.Overlaps, Is.EqualTo(0), "nunca dos escrituras a la vez");
         }
 
         [Test]
         public void Durable_TheWalletWaitsForTheWriter_AndWritesOnTheMainThread()
         {
             // T-D: la cartera (batch.Durable, como en GameBootstrap) espera al escritor y escribe en síncrono al cerrar su
-            // acción; fuera de un lote sigue viendo sus fallos, como antes.
+            // acción; fuera de un lote sigue viendo sus fallos, como antes. El disco solo retiene al escritor: si la cartera
+            // escribiera sin esperarlo (o sin pasar por él), entraría con él a medias y lo anotaría Overlaps.
             var disk = new ThreadedDisk();
             var batch = new ProfileSaveBatch(disk);
             var clock = new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5));
@@ -336,12 +339,19 @@ namespace AF.Tests.EditMode
                 Assert.That(wallet.Apply(Transaction.Earn(SeedSource.Basket, 50)).IsApplied, Is.True);
             }
 
+            // Lo que hay al volver de la acción, antes de esperar al hilo que suelta el disco.
+            bool idle = batch.Writer!.IsIdle;
+            int count = disk.Count;
+            int seeds = disk.Last.Wallet.Seeds;
+            bool lastOnMain = disk.LastOnMainThread;
             opener.Join();
+            Assert.That(disk.Overlaps, Is.EqualTo(0), "la cartera esperó al escritor: nunca escribió con él a medias");
+            Assert.That(idle, Is.True, "al volver de la acción, el escritor ya terminó el vertido");
             Assert.That(batch.LastWriteInBackground, Is.False, "la cartera escribe en síncrono");
-            Assert.That(disk.Count, Is.EqualTo(2), "primero termina la del escritor y después va la de la cartera");
-            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(50), "en disco al cerrar la acción, sin Flush");
-            Assert.That(disk.LastOnMainThread, Is.True);
-            Assert.That(batch.Writer!.IsIdle, Is.True);
+            Assert.That(count, Is.EqualTo(2), "primero termina la del escritor y después va la de la cartera");
+            Assert.That(seeds, Is.EqualTo(50), "en disco al cerrar la acción, sin Flush");
+            Assert.That(lastOnMain, Is.True);
+            Assert.That(disk.Count, Is.EqualTo(2), "y nada más llega después");
             Assert.That(batch.PendingSave, Is.False);
 
             disk.FailuresLeft = 1;
@@ -386,13 +396,18 @@ namespace AF.Tests.EditMode
 
             Assert.That(batch.LastWriteInBackground, Is.False);
             Assert.That(batch.PendingSave, Is.True, "sigue en memoria");
-            Assert.That(disk.Count, Is.EqualTo(0));
+            Assert.That(disk.Count, Is.EqualTo(0), "la escritura síncrona no pasó por delante del escritor retenido");
+            Assert.That(disk.Overlaps, Is.EqualTo(0));
 
             disk.Release();
             Assert.That(batch.FlushSync(WaitMs), Is.True);
-            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(3), "el último perfil, también en disco");
+            int[] written = disk.SeedsWritten();
+            Assert.That(written[0], Is.EqualTo(1), "primero termina la que el escritor tenía a medias");
+            Assert.That(written, Has.No.Member(2), "la 2 nunca se escribe: la escritura síncrona vació la cola");
+            Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(3), "el último perfil, también en disco y el último en llegar");
             Assert.That(batch.PendingSave, Is.False);
             Assert.That(batch.Writer!.AllWritten, Is.True);
+            Assert.That(disk.Overlaps, Is.EqualTo(0), "nunca dos escrituras a la vez");
         }
 
         [Test]
@@ -423,6 +438,7 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Batch.Writer!.IsIdle, Is.True, "la victoria esperó al escritor");
             Assert.That(rig.Batch.FlushSync(WaitMs), Is.True);
             Assert.That(disk.WritesOnMainThread, Is.EqualTo(1), "solo la victoria en el hilo principal");
+            Assert.That(disk.Overlaps, Is.EqualTo(0), "nunca dos escrituras a la vez");
         }
 
         [Test]
@@ -450,6 +466,7 @@ namespace AF.Tests.EditMode
             Assert.That(won.LevelState, Is.Null, "en disco al volver del toque, sin Flush");
             Assert.That(won.Progress.NextLevel, Is.EqualTo(8));
             Assert.That(won.Wallet.Seeds, Is.EqualTo(rig.Flow.HarvestSeeds));
+            Assert.That(disk.Overlaps, Is.EqualTo(0), "nunca dos escrituras a la vez");
         }
 
         [Test]
@@ -473,6 +490,7 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Batch.Writer!.IsIdle, Is.True, "esperó al escritor");
             Assert.That(LevelStateSnapshot.TryParseHistory(disk.Last.LevelState!.History, out SavedHistory saved), Is.True);
             Assert.That(saved.Phase, Is.EqualTo(SavedPhase.Exited), "en disco al volver de LeaveLevel, sin Flush");
+            Assert.That(disk.Overlaps, Is.EqualTo(0), "nunca dos escrituras a la vez");
         }
 
         [Test]
@@ -507,6 +525,7 @@ namespace AF.Tests.EditMode
             Assert.That(disk.Last.Wallet.Seeds, Is.EqualTo(30));
             Assert.That(batch.Writer.AllWritten, Is.True);
             Assert.That(batch.PendingSave, Is.False);
+            Assert.That(disk.Overlaps, Is.EqualTo(0), "nunca dos escrituras a la vez");
         }
 
         /// <summary>Flujo con cartera, progreso y nivel en curso en el mismo perfil, guardado por el lote sobre un disco que graba cada escritura.</summary>
@@ -599,7 +618,10 @@ namespace AF.Tests.EditMode
         /// <summary>
         /// Disco de prueba que separa la serialización de la escritura (<see cref="IProfileByteStore"/>, como
         /// <c>LocalProfileStore</c>): graba cada escritura con el hilo que la hizo, puede fallar a propósito y puede retener al
-        /// escritor a mitad de una escritura (<see cref="Hold"/>).
+        /// escritor a mitad de una escritura (<see cref="Hold"/>). Solo retiene al escritor (los hilos que no son el que creó el
+        /// disco, como el gancho de <c>LocalProfileStoreTests</c>): una escritura del hilo principal nunca se queda en la
+        /// compuerta, así que si no esperase al escritor entraría con él a medias, y eso queda anotado en
+        /// <see cref="Overlaps"/> sea cual sea el orden en que los suelte el sistema.
         /// </summary>
         private sealed class ThreadedDisk : IProfileByteStore
         {
@@ -612,6 +634,16 @@ namespace AF.Tests.EditMode
             private readonly ManualResetEventSlim _entered = new ManualResetEventSlim(false);
             private readonly int _mainThread = Thread.CurrentThread.ManagedThreadId;
             private int _failuresLeft;
+
+            // Escrituras dentro de WriteBytes ahora mismo (también la retenida) y las que entraron con otra a medias.
+            private int _inFlight;
+            private int _overlaps;
+
+            /// <summary>
+            /// Escrituras que empezaron con otra a medias (por ejemplo, una síncrona del hilo principal que no esperó al
+            /// escritor retenido). Con el código correcto, siempre 0.
+            /// </summary>
+            public int Overlaps => Volatile.Read(ref _overlaps);
 
             public int FailuresLeft
             {
@@ -665,6 +697,21 @@ namespace AF.Tests.EditMode
                 }
             }
 
+            /// <summary>Las semillas de cada escritura, en el orden en que llegaron al disco.</summary>
+            public int[] SeedsWritten()
+            {
+                lock (_lock)
+                {
+                    var seeds = new int[_snapshots.Count];
+                    for (int i = 0; i < seeds.Length; i++)
+                    {
+                        seeds[i] = ProfileJson.Deserialize(_snapshots[i]).Wallet.Seeds;
+                    }
+
+                    return seeds;
+                }
+            }
+
             public int WritesOnMainThread
             {
                 get
@@ -682,7 +729,7 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            /// <summary>La siguiente escritura se queda a medias hasta <see cref="Release"/>.</summary>
+            /// <summary>La siguiente escritura del escritor (no la del hilo principal) se queda a medias hasta <see cref="Release"/>.</summary>
             public void Hold()
             {
                 _entered.Reset();
@@ -730,22 +777,38 @@ namespace AF.Tests.EditMode
 
             public void WriteBytes(byte[] bytes)
             {
-                _entered.Set();
-                if (!_open.Wait(WaitMs))
+                bool onMain = Thread.CurrentThread.ManagedThreadId == _mainThread;
+                if (Interlocked.Increment(ref _inFlight) > 1)
                 {
-                    throw new IOException("el test no soltó el disco");
+                    Interlocked.Increment(ref _overlaps);
                 }
 
-                lock (_lock)
+                try
                 {
-                    if (_failuresLeft > 0)
+                    if (!onMain)
                     {
-                        _failuresLeft--;
-                        throw new IOException("disco lleno");
+                        _entered.Set();
+                        if (!_open.Wait(WaitMs))
+                        {
+                            throw new IOException("el test no soltó el disco");
+                        }
                     }
 
-                    _snapshots.Add(Utf8.GetString(bytes));
-                    _onMain.Add(Thread.CurrentThread.ManagedThreadId == _mainThread);
+                    lock (_lock)
+                    {
+                        if (_failuresLeft > 0)
+                        {
+                            _failuresLeft--;
+                            throw new IOException("disco lleno");
+                        }
+
+                        _snapshots.Add(Utf8.GetString(bytes));
+                        _onMain.Add(onMain);
+                    }
+                }
+                finally
+                {
+                    Interlocked.Decrement(ref _inFlight);
                 }
             }
         }

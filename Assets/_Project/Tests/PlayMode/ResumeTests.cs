@@ -289,9 +289,13 @@ namespace AF.Tests.PlayMode
             Assert.That(writer.IsIdle, Is.False, "y sigue a medias: el Flush síncrono tiene que esperarlo");
             var opener = store.ReleaseLater(100);
             bool flushed = batch.FlushSync(ProfileSaveBatch.DefaultSyncTimeoutMs);
+            bool idle = writer.IsIdle; // al volver de FlushSync, antes de esperar al hilo que suelta el disco
+            bool allWritten = writer.AllWritten;
             opener.Join();
             Assert.That(flushed, Is.True, "el último perfil, en disco");
-            Assert.That(writer.IsIdle, Is.True);
+            Assert.That(idle, Is.True, "al volver de FlushSync, el escritor ya terminó");
+            Assert.That(allWritten, Is.True, "y la última entrega está en disco");
+            Assert.That(store.Overlaps, Is.EqualTo(0), "nunca dos escrituras a la vez");
             LevelStateData mid = new LocalProfileStore(_dir).Load().Profile!.LevelState!;
             Assert.That(mid.Pours, Is.EqualTo(boot.Flow.Session.AppliedPours), "el tablero del último vertido");
             Assert.That(mid.History, Is.EqualTo(boot.Profile!.LevelState!.History));
@@ -320,6 +324,7 @@ namespace AF.Tests.PlayMode
                 + Ms(jsonMedian) + " ms; " + local.LastSavedBytes + " bytes");
 
             Assert.That(batch.PendingSave, Is.False);
+            Assert.That(store.Overlaps, Is.EqualTo(0), "la victoria tampoco escribió con el escritor a medias");
             Assert.That(writer.BackgroundWrites, Is.GreaterThan(0), "el disco lo pagó el escritor, no el toque");
             Assert.That(p95, Is.LessThan(PourSaveTargetMs), "save_ms por vertido (solo el hilo principal): p95 < 5 ms en el Editor (T-D)");
             Assert.That(jsonMedian, Is.LessThan(PourSaveTargetMs), "lo que pone la pista B por vertido (estado y JSON)");
