@@ -148,7 +148,7 @@ Las tareas detalladas están en `docs/dev/traspaso/planes-integracion.json` (`in
 
 ### Paso 1b · Arreglos de la prueba del dueño en el teléfono (2026-10-11): hazlos antes del paso 2
 
-> *Estado del 2026-10-12: P1, P3 y P4 están hechos en la tanda 1 (integrada en `7d755c4`, con T-A, T-B, T-C, T-D y los criterios de la ola 3 de la hoja del 2026-10-09). P2 (avisos legibles), la tarjeta del miquito tras la tropa y el resto de la hoja (T-E, T-F, T-G, el banner de mundo y el tutorial de la Piraña) van en la tanda 2, en curso. Falta probarlo todo en el teléfono.*
+> *Estado del 2026-10-12: P1, P3 y P4 están hechos en la tanda 1 (integrada en `7d755c4`, con T-A, T-B, T-C, T-D y los criterios de la ola 3 de la hoja del 2026-10-09). P2 (avisos legibles), la tarjeta del miquito tras la tropa y el resto de la hoja (T-E, T-F.1, T-G, el banner de mundo y el tutorial de la Piraña) van en la tanda 2, en curso; T-F.2 (nota de `planes-integracion.json`) está hecha en el paso 2. Falta probarlo todo en el teléfono.*
 
 El dueño probó el `dev.apk` (compilado sobre `80d37fb` o antes) y decidió **D-011** (`docs/dev/decisiones.md`). Las cuatro causas seguían en `7677085`. Tareas, causas con archivo y línea, pruebas y qué probar en el teléfono: `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`.
 

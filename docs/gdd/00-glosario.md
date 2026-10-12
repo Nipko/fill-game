@@ -121,7 +121,7 @@ Pendiente [NV]: búsqueda formal de antecedentes de "Tintalú"/"Tintalu" por un 
 
 ### 3.1 Capi (capibara, mascota principal)
 
-- Rol: guía amable que **trae cuias** (animación de Cuia extra y de Cuia de rescate), presenta los mundos en el banner de país (con la pata, mientras Rosa asoma y se sumerge; D-012) y celebra las victorias desde la orilla. Nunca ocupa de forma permanente el centro inferior de la pantalla con un objeto (el gato con caldero es trade dress de Magic Sort, research/09 §Qué NO copiar [V]).
+- Rol: guía amable que **trae cuias** (animación de Cuia extra y de Cuia de rescate), presenta los mundos en el banner de mundo (`world_banner`, sección 10), con la pata, mientras Rosa asoma y se sumerge (D-012), y celebra las victorias desde la orilla. Nunca ocupa de forma permanente el centro inferior de la pantalla con un objeto (el gato con caldero es trade dress de Magic Sort, research/09 §Qué NO copiar [V]).
 - Por qué: mayor roedor del mundo, vive en grupos, icono global de calma en internet; comunica amistad y compartir (research/07 §5 [V dato, E uso]); dirección 22.
 - Diseño: trazo simple, sin ropa ni accesorios étnicos (research/07 §8). Nombre **Capi** [P]: idéntico en ES/EN/PT, dos sílabas, sin significado adverso conocido en los tres idiomas; pendiente de búsqueda de marca.
 
