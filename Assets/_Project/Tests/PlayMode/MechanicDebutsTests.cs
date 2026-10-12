@@ -19,7 +19,8 @@ namespace AF.Tests.PlayMode
     /// que lleven a él) y, en el registro de pasos de cada vertido, salvo los terminados antes de tiempo, ningún Open,
     /// Release, Receive, RainDrop, RainEnd, Bite ni MudWash usa el paso por defecto ni dura 0 ms, cada paso dura su nominal × factor,
     /// dentro del rango de b.2 (<see cref="MechanicTestKit.AssertOwnTimedSteps"/>), y ningún vertido pasa de 2.800 ms del toque a la vista
-    /// quieta. El paso que estrena la mecánica lo anima el overlay (o las marcas) de su cuia.
+    /// quieta (<see cref="MechanicTestKit.PourCapMs"/>, el número de la hoja, no el presupuesto de la cola, que tampoco puede
+    /// pasar de él). El paso que estrena la mecánica lo anima el overlay (o las marcas) de su cuia.
     /// </summary>
     public sealed class MechanicDebutsTests
     {
@@ -51,7 +52,9 @@ namespace AF.Tests.PlayMode
                 PourVisual visual = MechanicTestKit.TapPour(boot, path[i], out TapResult poured);
                 int elapsed = MechanicTestKit.StepToIdle(boot, 6000);
                 worst = Mathf.Max(worst, elapsed);
-                Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs), what + ": del toque a la vista quieta. " + MechanicTestKit.Describe(animator));
+                // El tope de la hoja (2.800 ms), escrito en la prueba: no el presupuesto de la cola, que es un [P] derivado de
+                // MaxViewDrainWaitMs y, si subiera, dejaría pasar vertidos más largos sin que fallara nada (revisión de B2, ronda 3).
+                Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.PourCapMs), what + ": del toque a la vista quieta. " + MechanicTestKit.Describe(animator));
                 MechanicTestKit.AssertLogFollowsPlan(animator, in visual);
                 checkedSteps += MechanicTestKit.AssertOwnTimedSteps(animator, what);
                 if (!trigger)
@@ -111,6 +114,10 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(documented, Is.EqualTo(steps.Length - 1), "todos con rango documentado salvo RainWait");
+
+            // El presupuesto de la cola (un [P] derivado de MaxViewDrainWaitMs) no puede pasar del tope de la hoja: si subiera,
+            // la cola dejaría acabar vertidos de más de 2.800 ms.
+            Assert.That(MechanicStepQueue.BudgetFromTapMs, Is.LessThanOrEqualTo(MechanicTestKit.PourCapMs), "presupuesto de la cola ≤ tope de la hoja (2.800 ms)");
         }
 
         // Lo que estrena cada nivel (02 §9.1 con D-007; lista única de debuts del paso 2).

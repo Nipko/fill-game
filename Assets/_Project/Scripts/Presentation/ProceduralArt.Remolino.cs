@@ -85,6 +85,29 @@ namespace AF.Presentation
         /// <summary>Opacidad de la espuma con la que se compone <see cref="RemolinoPairFoam"/> (la de la espiral, 0,7).</summary>
         public const float RemolinoPairFoamAlpha = 0.7f;
 
+        /// <summary>
+        /// Brillo de marfil del canto de arriba de la ficha de la pareja (su bisel; revisión de la tanda B2, ronda 3: plana, se
+        /// leía como una pegatina de interfaz): la espuma un 10 % hacia el blanco, lo más claro que deja la regla de los tintes
+        /// (ΔE00 ≈ 10,4 de la Guanábana; más claro, se confundiría con ella).
+        /// </summary>
+        public static Color RemolinoPairTagLight => Color.Lerp(RemolinoPairFoam, Color.white, 0.1f);
+
+        /// <summary>Sombra del canto de abajo de la ficha de la pareja (su bisel): la espuma al 80 % (ΔE00 ≈ 17,5 del Copoazú).</summary>
+        public static Color RemolinoPairTagShade
+        {
+            get
+            {
+                Color foam = RemolinoPairFoam;
+                return new Color(foam.r * 0.8f, foam.g * 0.8f, foam.b * 0.8f, 1f);
+            }
+        }
+
+        /// <summary>Ancho (px de la textura, ≈ 1 dp) del brillo del canto de arriba de la ficha, por dentro del contorno.</summary>
+        public const float RemolinoPairTagLightPx = 7f;
+
+        /// <summary>Ancho (px de la textura, ≈ 2,2 dp) de la sombra del canto de abajo de la ficha, por dentro del contorno.</summary>
+        public const float RemolinoPairTagShadePx = 15f;
+
         // Lienzo de una fase de la espiral (px) con 2 px de margen arriba y abajo para que el filtrado no mezcle fases.
         private const int RemolinoSpiralW = (int)(RemolinoSpiralWidthU * MechanicPxPerU);
         private const int RemolinoSpiralH = (int)(RemolinoSpiralHeightU * MechanicPxPerU) + 4;
@@ -130,7 +153,8 @@ namespace AF.Presentation
 
         /// <summary>
         /// Ficha de la pareja del Remolino (opción C del dueño, 2026-10-11) [P]: una ficha de dominó de la espuma de la espiral
-        /// (<see cref="RemolinoPairFoam"/>) con un contorno fino de pizarra (<see cref="Slate"/>), ya coloreada (no se tiñe);
+        /// (<see cref="RemolinoPairFoam"/>) con un contorno fino de pizarra (<see cref="Slate"/>) y un bisel por dentro (brillo de
+        /// marfil arriba, <see cref="RemolinoPairTagLight"/>, y sombra abajo, <see cref="RemolinoPairTagShade"/>), ya coloreada (no se tiñe);
         /// los puntos de la pareja van encima, en el agua del remanso. Se lee como una ficha que se empareja, no como un disco
         /// con aro (en la revisión de la tanda B2, el disco oscuro con aro de espuma y un punto se leía como un botón o un
         /// remache). Borde 9-slice igual al radio de las esquinas (<see cref="RemolinoPairTagRadiusPx"/>): con
@@ -216,6 +240,48 @@ namespace AF.Presentation
             var pc = new PixelCanvas(s, s);
             pc.FillRoundedRect(0.5f, 0.5f, s - 0.5f, s - 0.5f, r - 0.5f, Slate);
             pc.FillRoundedRect(0.5f + o, 0.5f + o, s - 0.5f - o, s - 0.5f - o, r - 0.5f - o, RemolinoPairFoam);
+
+            // Bisel (revisión de la tanda B2, ronda 3: plana, junto al vidrio, la fibra y la madera con brillo, se leía como una
+            // pegatina de interfaz): por dentro del contorno, un brillo de marfil a lo largo del canto de arriba y una sombra
+            // suave a lo largo del de abajo, que siguen las esquinas redondas; así se lee como una ficha de dominó de hueso con
+            // volumen, con la luz del juego desde arriba. Van en los bordes 9-slice (fijos en alto) y el centro, que se estira,
+            // queda liso.
+            float c = 0.5f * s;
+            float half = c - 0.5f - o; // medio alto de la cara
+            Color light = RemolinoPairTagLight;
+            Color shade = RemolinoPairTagShade;
+            for (int y = 0; y < s; y++)
+            {
+                float yc = y + 0.5f;
+                float up = Mathf.Clamp01(2f * (yc - c) / half);
+                float down = Mathf.Clamp01(2f * (c - yc) / half);
+                if (up <= 0f && down <= 0f)
+                {
+                    continue;
+                }
+
+                for (int x = 0; x < s; x++)
+                {
+                    float d = PixelCanvas.RoundedRectDistance(x + 0.5f, yc, 0.5f + o, 0.5f + o, s - 0.5f - o, s - 0.5f - o, r - 0.5f - o);
+                    float cov = PixelCanvas.Coverage(d);
+                    if (cov <= 0f)
+                    {
+                        continue;
+                    }
+
+                    float inner = Mathf.Max(0f, -d);
+                    if (up > 0f)
+                    {
+                        pc.Blend(x, y, light, cov * up * (1f - Mathf.SmoothStep(0f, 1f, inner / RemolinoPairTagLightPx)));
+                    }
+
+                    if (down > 0f)
+                    {
+                        pc.Blend(x, y, shade, cov * down * (1f - Mathf.SmoothStep(0f, 1f, inner / RemolinoPairTagShadePx)));
+                    }
+                }
+            }
+
             return MakeSprite(pc, "remolino_pair_tag", new Vector2(0.5f, 0.5f), new Vector4(r, r, r, r));
         }
 

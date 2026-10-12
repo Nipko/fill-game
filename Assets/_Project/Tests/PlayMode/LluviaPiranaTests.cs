@@ -28,7 +28,9 @@ namespace AF.Tests.PlayMode
     /// cardumen sale de la cueva con el cuarto vertido útil, muerde y se lleva la dosis (a mitad del paso la víctima aún la
     /// tiene): el bocado sale de esa dosis, sube por el eje de la víctima y entra recto por la boca de la cueva antes de que se
     /// forme allí la dosis. Si el vertido sella la cuia, el mordisco se pierde y se ve (el cardumen llega a la tapa, choca y
-    /// vuelve); con la cueva llena duerme y en el mordisco perdido se asoma y vuelve a dormirse. La gota tarda ≥ 150 ms ×
+    /// vuelve dentro del paso); con la cueva llena duerme y en el mordisco perdido se asoma y vuelve a dormirse antes de que
+    /// acabe el paso. Con la víctima en la columna de la cueva, el cardumen va por el pasillo entre columnas, de ida, con el
+    /// bocado y de vuelta, sin cortar el cuerpo de ninguna cuia (muestreado cada 10 ms en el 183). La gota tarda ≥ 150 ms ×
     /// factor en caer, la gotita sale de la nube en cuanto sale la gota, al llenar salpica, y la nube de la última gota se
     /// desvanece en ≥ 300 ms × factor. Los puntos de los contadores miden ≈ 7 dp y los vacíos van más tenues. El cardumen no
     /// tapa cuias ni captura toques, y nada asigna memoria durante los pasos.
@@ -46,6 +48,7 @@ namespace AF.Tests.PlayMode
             _rig?.Dispose();
             _rig = null;
             LaunchOptions.Reset();
+            GameScreen.SimulatedScreen = null;
         }
 
         [OneTimeTearDown]
@@ -676,10 +679,15 @@ namespace AF.Tests.PlayMode
 
             // En el 183 la víctima está en la primera columna (revisión de la tanda B2, ronda 2: la que esperaba a la izquierda
             // de la tapa rozaba el marco): de aquí al final del paso, ninguna piraña sale del canto interior del marco del panel
-            // (≥ 2 dp), y el destello ya se apagó al final.
+            // (≥ 2 dp), y el destello ya se apagó al final. Y vuelve DENTRO del paso (revisión de la tanda B2, ronda 3: al
+            // cerrarlo, FinishStep pone el cardumen en su ronda pase lo que pase): a p ≈ 0,95 ya está junto a la cueva, y del
+            // último fotograma del paso al primero sin él la que va delante no salta.
             Rect inner = MechanicTestKit.PanelInner(boot.View);
+            RectTransform lead = school.Fish(PiranaOverlay.LeadFish).rectTransform;
+            Vector2 lastInStep = lead.anchoredPosition;
+            bool late = false;
             int frames = 0;
-            while (boot.View.Animator.Steps.TryGetRunning(MechanicStepKind.BiteLost, cave, out _, out _))
+            while (boot.View.Animator.Steps.TryGetRunning(MechanicStepKind.BiteLost, cave, out float e, out float d))
             {
                 for (int f = 0; f < PiranaOverlay.SchoolSize; f++)
                 {
@@ -690,14 +698,27 @@ namespace AF.Tests.PlayMode
                         "la piraña " + f + " " + fish + " dentro del panel " + inner + " con ≥ 2 dp");
                 }
 
+                lastInStep = lead.anchoredPosition;
+                if (!late && e >= 0.95f * d)
+                {
+                    late = true;
+                    Assert.That(school.IsAnimating, Is.True, "aún dentro del paso");
+                    Assert.That(
+                        (school.SchoolCenter - school.SchoolHome).magnitude,
+                        Is.LessThan(0.8f * u),
+                        "a " + (e / d).ToString("F2") + " del paso, de vuelta junto a la cueva (" + ((school.SchoolCenter - school.SchoolHome).magnitude / u).ToString("F2") + " u)");
+                }
+
                 frames++;
                 PlayModeHelpers.TickExact(boot, 4);
             }
 
             Assert.That(frames, Is.GreaterThan(10), "se miró la segunda mitad del paso");
+            Assert.That(late, Is.True, "se miró el final del paso");
+            Assert.That(Vector2.Distance(lead.anchoredPosition, lastInStep), Is.LessThan(0.1f * u), "al cerrar el paso no salta");
             Assert.That(school.ImpactFlashSize, Is.EqualTo(0f), "el destello ya se apagó");
             MechanicTestKit.StepToIdle(boot, 6000);
-            Assert.That((school.SchoolCenter - school.SchoolHome).magnitude, Is.LessThan(0.8f * u), "y vuelve junto a la cueva");
+            Assert.That((school.SchoolCenter - school.SchoolHome).magnitude, Is.LessThan(0.8f * u), "y sigue junto a la cueva");
             BoardAnimator animator = boot.View.Animator;
             MechanicTestKit.AssertLogFollowsPlan(animator, in visual);
             Assert.That(MechanicTestKit.TryFindRecord(animator, MechanicStepKind.Bite, cave, out _), Is.False, "sin mordisco");
@@ -706,6 +727,165 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow.Session.Current[cave].Count, Is.EqualTo(caveBefore.Count), "la cueva no recibe nada");
             Assert.That(school.FilledPips, Is.EqualTo(0), "el contador vuelve a empezar");
             MechanicTestKit.AssertViewMatchesModel(boot);
+        }
+
+        [UnityTest]
+        public IEnumerator Pirana183_LostSwimsBesideVictimInCaveColumn()
+        {
+            // Revisión de la tanda B2, ronda 3 (captura 83g): con la víctima en la columna de la cueva (la cuia 4, sellada, justo
+            // encima de la cueva 8 en el teléfono, 360 × 780 dp: 3 filas de 4), el arco iba recto por el eje de la víctima y el
+            // cardumen se veía dentro del jugo de una cuia sellada. Ahora va por el pasillo entre columnas: muestreado cada 10 ms,
+            // ninguna piraña corta el cuerpo de ninguna cuia entre su pie y su labio; sube (y baja) junto a la víctima, a su lado,
+            // y llega a su tapa por un lado.
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
+            yield return MechanicTestKit.LoadPlaying(183);
+            GameBootstrap boot = GameBootstrap.Current!;
+            BoardAnimator animator = boot.View!.Animator;
+            CuiaView[] views = boot.View.Views;
+            int cave = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Pirana);
+            const int victim = 4;
+            float u = views[cave].Unit;
+            Vector2 caveFoot = animator.Foot(cave);
+            Vector2 victimFoot = animator.Foot(victim);
+            Assert.That(boot.View.Layout!.Rows, Is.EqualTo(3), "12 cuias: 3 filas de 4 a 360 × 780");
+            Assert.That(Mathf.Abs(victimFoot.x - caveFoot.x), Is.LessThan(0.5f * u), "la cuia 4, en la columna de la cueva");
+            Assert.That(victimFoot.y, Is.GreaterThan(caveFoot.y), "y encima de ella");
+            Pour[] path = Trigger(boot, (ev, b, a) => (ev.PiranaBiteLostMask & (1 << cave)) != 0 && ev.Receiver == victim && (ev.SealedMask & (1 << victim)) != 0);
+            MechanicTestKit.PlayPrefix(boot, path);
+            var school = (PiranaOverlay)views[cave].Overlay!;
+            PourVisual visual = MechanicTestKit.TapPour(boot, path[path.Length - 1], out TapResult poured);
+            Assert.That(poured.Pour.Receiver, Is.EqualTo(victim));
+            Assert.That(boot.Flow!.Session.Current.IsSealed(victim), Is.True, "la víctima, sellada");
+
+            // El cuerpo de cada cuia, de su pie a su labio, con su ancho exterior (2 u).
+            Rect[] bodies = BodyRects(animator, views);
+            Rect victimBody = bodies[victim];
+            MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.BiteLost, cave, 4000);
+            Assert.That(school.Detouring, Is.True, "por el pasillo entre columnas");
+            Assert.That(Mathf.Abs(school.DetourCorridorX - victimFoot.x), Is.GreaterThan(0.5f * victimBody.width), "el pasillo, fuera del cuerpo de la víctima");
+            int samples = 0;
+            bool besideUp = false;
+            bool besideDown = false;
+            bool bumped = false;
+            while (animator.Steps.TryGetRunning(MechanicStepKind.BiteLost, cave, out float e, out float d))
+            {
+                string when = " a " + Mathf.RoundToInt(e) + " de " + Mathf.RoundToInt(d) + " ms";
+                AssertFishOutsideBodies(school, bodies, -1, when);
+                Vector2 center = school.SchoolCenter;
+                if (center.y > victimBody.yMin && center.y < victimBody.yMax && Mathf.Abs(center.x - victimFoot.x) > 0.5f * victimBody.width)
+                {
+                    besideUp |= e < 0.5f * d;
+                    besideDown |= e >= 0.5f * d;
+                }
+
+                bumped |= school.LostBumped;
+                samples++;
+                PlayModeHelpers.TickExact(boot, 10);
+            }
+
+            Assert.That(samples, Is.GreaterThanOrEqualTo(30), "se muestreó el paso entero cada 10 ms");
+            Assert.That(besideUp, Is.True, "de ida, sube junto a la víctima, por su lado");
+            Assert.That(besideDown, Is.True, "y de vuelta, baja por su lado");
+            Assert.That(bumped, Is.True, "y llega a la tapa: choca");
+            MechanicTestKit.StepToIdle(boot, 6000);
+            MechanicTestKit.AssertLogFollowsPlan(animator, in visual);
+            AssertOwnStep(MechanicTestKit.Record(animator, MechanicStepKind.BiteLost, cave), MechanicType.Pirana, PiranaOverlay.BiteLostStepMs);
+            MechanicTestKit.AssertViewMatchesModel(boot);
+        }
+
+        [UnityTest]
+        public IEnumerator Pirana_CaveUnderVictim_SwimsBesideIt([Values(false, true)] bool sealedVictim)
+        {
+            // El mordisco y el mordisco perdido contra la tapa con la cueva justo debajo de la víctima (revisión de la tanda B2,
+            // ronda 3): de ida, con el bocado y de vuelta, el cardumen va por el pasillo entre columnas, estrechado para caber
+            // (aquí el pasillo es más estrecho que en el 183); ninguna piraña corta el cuerpo de una cuia entre su pie y su labio
+            // (salvo la que muerde mientras mete el morro en la boca de la víctima), y el paso dura lo suyo.
+            yield return null;
+            BoardState start = sealedVictim ? SealedVictimBoard() : BiteBoard();
+            int victim = sealedVictim ? 1 : 3;
+            MechanicStepKind kind = sealedVictim ? MechanicStepKind.BiteLost : MechanicStepKind.Bite;
+            _rig = new MechanicTestKit.Rig(Art, start);
+            PlaceCaveUnder(_rig, victim);
+            var school = (PiranaOverlay)_rig.Views[0].Overlay!;
+            BoardState counted = _rig.Pour(start, sealedVictim ? 3 : 1, 4, out _);
+            _rig.RunUntilIdle(3000);
+            _rig.Animator.Steps.ClearLog();
+            BoardState after = _rig.Pour(counted, 2, victim, out PourVisual v);
+            Assert.That(sealedVictim ? v.Events.PiranaBiteLostMask : v.Events.PiranaCaveMask, Is.EqualTo(1), sealedVictim ? "mordisco perdido contra la tapa" : "mordisco");
+            Assert.That(after.IsSealed(victim), Is.EqualTo(sealedVictim));
+
+            Rect[] bodies = BodyRects(_rig.Animator, _rig.Views);
+            Vector2 victimFoot = _rig.Animator.Foot(victim);
+            Rect victimBody = bodies[victim];
+            RunUntil(_rig, () => _rig.Animator.Steps.IsRunning(kind, 0), 3000);
+            Assert.That(school.Detouring, Is.True, "por el pasillo entre columnas");
+            bool beside = false;
+            bool carried = false;
+            while (_rig.Animator.Steps.TryGetRunning(kind, 0, out float e, out float d))
+            {
+                float p = e / d;
+                string when = " a " + p.ToString("F2") + " del paso";
+                bool biting = !sealedVictim && p >= PiranaOverlay.BiteReachEnd - 0.02f && p <= PiranaOverlay.BiteCarryStart + 0.02f;
+                AssertFishOutsideBodies(school, bodies, biting ? PiranaOverlay.LeadFish : -1, when);
+                Vector2 center = school.SchoolCenter;
+                beside |= center.y > victimBody.yMin && center.y < victimBody.yMax && Mathf.Abs(center.x - victimFoot.x) > 0.5f * victimBody.width;
+
+                // El bocado, en la boca de la que va delante, tampoco corta ninguna cuia mientras se lo lleva (después entra recto
+                // por la boca de la cueva, a propósito).
+                if (!sealedVictim && school.MorselVisible && p >= PiranaOverlay.BiteCarryStart + 0.02f && p <= PiranaOverlay.BiteCarryEnd - 0.01f)
+                {
+                    carried = true;
+                    float mu = _rig.Views[0].Unit * school.MorselScale;
+                    var size = new Vector2(ProceduralArt.PiranaMorselWidthU * mu, ProceduralArt.PiranaMorselHeightU * mu);
+                    var morsel = new Rect(school.MorselCenter - (0.5f * size), size);
+                    for (int c = 0; c < bodies.Length; c++)
+                    {
+                        Assert.That(morsel.Overlaps(bodies[c]), Is.False, "el bocado " + morsel + " no corta el cuerpo de la cuia " + c + " " + bodies[c] + when);
+                    }
+                }
+
+                _rig.Tick(4);
+            }
+
+            Assert.That(beside, Is.True, "sube junto a la víctima, por el pasillo");
+            Assert.That(carried, Is.EqualTo(!sealedVictim), "se miró el bocado mientras se lo lleva");
+            _rig.RunUntilIdle(3000);
+            float nominal = sealedVictim ? PiranaOverlay.BiteLostStepMs : PiranaOverlay.BiteStepMs;
+            AssertOwnStep(MechanicTestKit.Record(_rig.Animator, kind, 0), MechanicType.Pirana, nominal);
+            AssertRigShowsModel(after);
+        }
+
+        // El cuerpo de cada cuia en el espacio de las capas de tablero: de su pie a su labio de vertido, con su ancho exterior.
+        private static Rect[] BodyRects(BoardAnimator animator, CuiaView[] views)
+        {
+            var bodies = new Rect[views.Length];
+            for (int c = 0; c < views.Length; c++)
+            {
+                Vector2 f = animator.Foot(c);
+                float uc = views[c].Unit;
+                float half = CuiaGeometry.BodyOuterHalfWidthU * uc;
+                bodies[c] = Rect.MinMaxRect(f.x - half, f.y, f.x + half, f.y + ((views[c].HeightU - CuiaGeometry.RimU) * uc));
+            }
+
+            return bodies;
+        }
+
+        // Ninguna piraña (salvo skip) corta el cuerpo de ninguna cuia.
+        private static void AssertFishOutsideBodies(PiranaOverlay school, Rect[] bodies, int skip, string when)
+        {
+            for (int f = 0; f < PiranaOverlay.SchoolSize; f++)
+            {
+                if (f == skip)
+                {
+                    continue; // la que muerde mete el morro en la boca de la víctima: es el mordisco
+                }
+
+                Rect fish = school.FishLayerRect(f);
+                for (int c = 0; c < bodies.Length; c++)
+                {
+                    Assert.That(fish.Overlaps(bodies[c]), Is.False, "la piraña " + f + " " + fish + " no corta el cuerpo de la cuia " + c + " " + bodies[c] + when);
+                }
+            }
         }
 
         [UnityTest]
@@ -767,13 +947,39 @@ namespace AF.Tests.PlayMode
             Assert.That(_rig.Views[0].LiquidLevel, Is.EqualTo(2f).Within(1e-3f), "la cueva no cambia");
             Assert.That(_rig.Views[5].LiquidLevel, Is.EqualTo(2f).Within(1e-3f), "la víctima no cambia");
 
+            // Que vuelva y se duerma DENTRO del paso (revisión de la tanda B2, ronda 3): al cerrarlo, FinishStep deja las pirañas
+            // en su sitio y dormidas pase lo que pase, así que mirarlo después no prueba nada. A e ≥ 0,95·d, aún animando: los
+            // ojos cerrados (desde PeekAsleepAt), la que va delante de vuelta en su sitio, atenuada (DimAlpha) y encogida
+            // (DimScale); y del último fotograma del paso al primero sin él, sin saltos.
+            Image lead = school.Fish(PiranaOverlay.LeadFish);
+            Vector2 lastInStep = lead.rectTransform.anchoredPosition;
+            bool late = false;
+            while (_rig.Animator.Steps.TryGetRunning(MechanicStepKind.BiteLost, 0, out float e, out float d))
+            {
+                lastInStep = lead.rectTransform.anchoredPosition;
+                if (!late && e >= 0.95f * d)
+                {
+                    late = true;
+                    string when = " (a " + (e / d).ToString("F2") + " del paso)";
+                    Assert.That(school.IsAnimating, Is.True, "aún dentro del paso" + when);
+                    Assert.That(school.SchoolAsleep, Is.True, "ya se ha vuelto a dormir" + when);
+                    Assert.That(Vector2.Distance(lastInStep, rest), Is.LessThan(0.1f * u), "la que va delante, de vuelta en su sitio" + when);
+                    Assert.That(lead.color.a, Is.EqualTo(PiranaOverlay.DimAlpha).Within(0.01f), "atenuada otra vez" + when);
+                    Assert.That(Mathf.Abs(lead.rectTransform.localScale.y), Is.EqualTo(PiranaOverlay.DimScale).Within(0.01f), "encogida otra vez" + when);
+                }
+
+                _rig.Tick(4);
+            }
+
+            Assert.That(late, Is.True, "se miró el final del paso");
+            Assert.That(Vector2.Distance(lead.rectTransform.anchoredPosition, lastInStep), Is.LessThan(0.1f * u), "al cerrar el paso no salta");
+
             int elapsed = _rig.RunUntilIdle(3000);
             MechanicTestKit.AssertLogFollowsPlan(_rig.Animator, in v);
             AssertOwnStep(MechanicTestKit.Record(_rig.Animator, MechanicStepKind.BiteLost, 0), MechanicType.Pirana, PiranaOverlay.BiteLostStepMs);
             Assert.That(elapsed, Is.LessThanOrEqualTo(MechanicTestKit.BudgetMs));
             Assert.That(school.Dimmed, Is.True, "sigue durmiendo");
-            Assert.That(school.SchoolAsleep, Is.True, "vuelve a dormirse");
-            Assert.That(Vector2.Distance(school.Fish(PiranaOverlay.LeadFish).rectTransform.anchoredPosition, rest), Is.LessThan(0.1f * u), "de vuelta en su sitio");
+            Assert.That(school.SchoolAsleep, Is.True, "y dormido");
             Assert.That(school.FilledPips, Is.EqualTo(0));
             AssertRigShowsModel(after);
         }
@@ -906,7 +1112,8 @@ namespace AF.Tests.PlayMode
 
             // Calentamiento: cada cadena una vez en su banco, y después se mide otra vez en un banco nuevo. El mordisco perdido va
             // por sus ramas: la víctima sellada y el Matapi (el cardumen llega a la tapa o al embudo, choca, con su destello, y
-            // vuelve; PoseLost) y la cueva llena (se asoma hacia un lado, PosePeek, o hacia arriba, PosePeekUp).
+            // vuelve; PoseLost) y la cueva llena (se asoma hacia un lado, PosePeek, o hacia arriba, PosePeekUp). Con la cueva bajo
+            // la víctima, el mordisco y el mordisco perdido van por el pasillo (DetourPoint).
             for (int pass = 0; pass < 2; pass++)
             {
                 RunChain(DropBoard(), 1, 3, 2, 4, pass == 1, "gota");
@@ -916,6 +1123,8 @@ namespace AF.Tests.PlayMode
                 RunChain(MatapiVictimBoard(), 3, 4, 2, 1, pass == 1, "mordisco perdido contra el embudo del Matapi", true, 1, false);
                 RunChain(CaveFullBoard(), 4, 5, 3, 5, pass == 1, "mordisco perdido con la cueva llena", true, 5, false);
                 RunChain(CaveFullBoard(), 4, 5, 3, 5, pass == 1, "mordisco perdido con la cueva llena y la víctima encima", true, 5, false, true);
+                RunChain(BiteBoard(), 1, 4, 2, 3, pass == 1, "mordisco con la cueva bajo la víctima (por el pasillo)", false, 3, false, true);
+                RunChain(SealedVictimBoard(), 3, 4, 2, 1, pass == 1, "mordisco perdido con la cueva bajo la víctima (por el pasillo)", true, 1, true, true);
             }
         }
 

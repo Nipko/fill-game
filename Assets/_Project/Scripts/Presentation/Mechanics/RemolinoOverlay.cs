@@ -15,7 +15,8 @@ namespace AF.Presentation.Mechanics
     /// </summary>
     /// <remarks>
     /// <para><b>Ficha de la pareja</b> (opción C del dueño, 2026-10-11: el canal y la MISMA marca en las dos cuias, también
-    /// con un solo par): una ficha de dominó de la espuma de la espiral con un contorno fino de pizarra
+    /// con un solo par): una ficha de dominó de la espuma de la espiral con un contorno fino de pizarra y un bisel de hueso
+    /// (brillo de marfil arriba y sombra abajo; revisión de la tanda B2, ronda 3)
     /// (<see cref="ProceduralArt.RemolinoPairTag"/>, <see cref="PairTagHeightDp"/> = 13 dp, esquinas de
     /// <see cref="PairTagCornerDp"/>) con <c>id + 1</c> puntos del agua del remanso de <see cref="PairDotDp"/> (1 con id 0); con
     /// más puntos se alarga hacia fuera (revisión de la tanda B2, ronda 2: el disco oscuro con aro de espuma y un punto se leía
@@ -609,6 +610,8 @@ namespace AF.Presentation.Mechanics
             into.Add(ProceduralArt.WhirlPoolColor); // remanso y puntos de la ficha de la pareja
             into.Add(SpiralSeenColor); // espiral de espuma (y, opaca, la cara de la ficha: ProceduralArt.RemolinoPairFoam)
             into.Add(ProceduralArt.RemolinoPairFoam);
+            into.Add(ProceduralArt.RemolinoPairTagLight); // bisel de la ficha: brillo de arriba y sombra de abajo
+            into.Add(ProceduralArt.RemolinoPairTagShade);
             into.Add(ProceduralArt.Slate); // contorno de la ficha de la pareja
             into.Add(ProceduralArt.RemolinoChannelWater); // centro del agua del canal
             into.Add(ProceduralArt.RemolinoChannelEdge); // bordes del agua del canal
