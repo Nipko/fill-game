@@ -632,11 +632,11 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
             boot.TapAnywhere();
-            Assert.That(boot.View!.Sighting.Visible, Is.False, "nivel 4: Fruta nueva (guanábana), sin tarjeta");
+            AssertNoSightingCard(boot, "nivel 4: Fruta nueva (guanábana), sin tarjeta");
 
             boot.Flow!.Load(5);
             boot.TapAnywhere(); // también tras un salto: la tarjeta llega después de la intro
-            GameScreen view = boot.View;
+            GameScreen view = boot.View!;
             SightingCard card = view.Sighting;
 
             // D-011, punto 3: la tarjeta espera a que la tropa se vaya (tras un salto, su fundido de 100 ms) y no la tapa.
@@ -681,7 +681,7 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.StepUntilIdle(boot, 1000);
             Assert.That(boot.PressRestart(), Is.True);
             boot.TapAnywhere();
-            Assert.That(card.Visible, Is.False);
+            AssertNoSightingCard(boot, "en el reintento no vuelve a salir");
         }
 
         /// <summary>
@@ -965,7 +965,7 @@ namespace AF.Tests.PlayMode
 
             PlayModeHelpers.TickExact(boot, 400);
             Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
-            Assert.That(view.Sighting.Visible, Is.False, "sin tarjeta con el miquito provisional");
+            AssertNoSightingCard(boot, "sin tarjeta con el miquito provisional");
 
             // La misma regla en desarrollo: la tropa provisional y la tarjeta.
             LaunchOptions.DevelopmentBuildOverride = true;
@@ -1351,6 +1351,30 @@ namespace AF.Tests.PlayMode
                     Assert.That(Mathf.Abs(shown.r - expected.r) + Mathf.Abs(shown.g - expected.g) + Mathf.Abs(shown.b - expected.b), Is.LessThan(0.01f), when + ": cuia " + i + ", dosis " + k);
                 }
             }
+        }
+
+        // Sin tarjeta «¡Miquito a la vista!» en este intento. Desde D-011, punto 3, la tarjeta no sale al habilitarse el toque:
+        // queda pendiente hasta que la tropa se va y luego espera su turno en la cola de avisos, así que mirar Sighting.Visible
+        // en ese fotograma no prueba nada. Por eso se comprueba que no queda pendiente y que tampoco sale mientras le queda
+        // tropa a la vista (más 3 fotogramas) ni hasta que la cola se vacía: una tarjeta encolada habría salido antes.
+        private static void AssertNoSightingCard(GameBootstrap boot, string because)
+        {
+            GameScreen view = boot.View!;
+            Assert.That(view.Sighting.Visible, Is.False, because);
+            Assert.That(view.SightingPending, Is.False, because + ": ni pendiente");
+            float troopLeft = view.Intro.TroopVisible ? view.Intro.TroopGoneMs - view.Intro.TimeMs : 0f;
+            int waitMs = Mathf.CeilToInt(Mathf.Max(0f, troopLeft)) + (3 * PlayModeHelpers.FrameMs);
+            const int maxMs = 10000;
+            int t = 0;
+            while (t < maxMs && (t < waitMs || view.NoticesQueued > 0))
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                t += PlayModeHelpers.FrameMs;
+                Assert.That(view.Sighting.Visible, Is.False, because + " (a " + t + " ms)");
+            }
+
+            Assert.That(view.SightingPending, Is.False, because + ": tampoco después");
+            Assert.That(view.NoticesQueued, Is.EqualTo(0), because + ": nada esperando en la cola");
         }
 
         private static void AssertNoIntroGraphicVisible(GameScreen view)

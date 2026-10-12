@@ -1083,6 +1083,9 @@ namespace AF.UI
             _ambient.SetSuspended(true);
             _confettiDelay = 500f;
             _skipCatcher.gameObject.SetActive(true);
+            // Ningún aviso encima de la celebración ni de la victoria (D-011, punto 2): fuera el que se vea (el regalo de Capi
+            // dura 5,5 s; la tarjeta del miquito, unos 5) y lo que esperaba turno (GameScreen.Notices.cs).
+            ClearNotices();
         }
 
         /// <inheritdoc />

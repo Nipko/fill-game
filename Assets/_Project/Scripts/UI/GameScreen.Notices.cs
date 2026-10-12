@@ -12,21 +12,25 @@ namespace AF.UI
     /// (<see cref="NoticeTiming"/>: 1.000 ms + 55 ms por carácter, entre 3 y 7 s).
     /// </summary>
     /// <remarks>
-    /// <para><b>Cuándo</b>: ningún aviso durante LOADING, la tarjeta previa (LEVEL_CARD) ni la INTRO, que incluye el cartel «El
-    /// río bajó» de la variante aliviada. Lo que llega en esas fases (el regalo de Capi del 8 y la Luciérnaga del 100 llegan al
-    /// cargar) espera en la cola y sale al habilitarse el toque (<c>OnIntroFinished</c>), como hacía ya el regalo de la
-    /// Luciérnaga con la tarjeta previa.</para>
+    /// <para><b>Cuándo</b>: solo en PLAYING y sin la victoria pendiente (<c>NoticesHeld</c>). Ninguno durante LOADING, la
+    /// tarjeta previa (LEVEL_CARD) ni la INTRO, que incluye el cartel «El río bajó» de la variante aliviada: lo que llega en esas
+    /// fases (el regalo de Capi del 8 y la Luciérnaga del 100 llegan al cargar) espera en la cola y sale al habilitarse el toque
+    /// (<c>OnIntroFinished</c>), como hacía ya el regalo de la Luciérnaga con la tarjeta previa. Con un modal del embudo abierto,
+    /// la cola espera a que se vuelva a jugar. Y desde la victoria lógica no sale ninguno: al empezar la celebración
+    /// (<c>OnCelebrationStarted</c>) se ocultan el aviso y la tarjeta que se vean y se vacían la cola y la tarjeta pendiente, así
+    /// que nada se dibuja encima de la celebración ni de la pantalla de victoria (un aviso dura hasta 7 s).</para>
     /// <para><b>Uno cada vez</b>: si hay un aviso o la tarjeta a la vista, el siguiente espera a que se oculte; nada se corta ni
     /// se pisa. El mismo texto que ya se ve vuelve a empezar (Revelar tocado otra vez sin saldo) y el que ya espera no se repite.
     /// Con la cola llena (<see cref="NoticeSlots"/>), el que llega se descarta.</para>
     /// <para><b>La tarjeta del miquito</b> espera a que la tropa se haya ido de la rama (<c>IntroAnimation.TroopVisible</c>: tras
     /// su reposo y su salida ya en juego, o tras el fundido de 100 ms si se saltó la intro) y entra entonces en la cola; mientras
-    /// espera, las etiquetas del HUD siguen a la vista, y mientras se ve, se apartan como siempre (GameScreen.Labels.cs). Solo
-    /// sale en PLAYING; si no cabe sin tapar cuias ni botones, no sale.</para>
+    /// espera, las etiquetas del HUD siguen a la vista, y mientras se ve, se apartan como siempre (GameScreen.Labels.cs). Como
+    /// los avisos, solo sale en PLAYING; si no cabe sin tapar cuias ni botones, no sale.</para>
     /// <para>Fuera de la cola, con su propia duración: el cartel (<c>_banner</c>) con «El río bajó» (04 §2.7) y el rótulo del
-    /// intento. La cola se vacía al cargar un nivel y al empezar otro intento (<c>OnRestart</c>); al volver de segundo plano
-    /// (<c>SnapToModel</c>) no se toca: un aviso no es una animación del modelo y el regalo que espera a la intro no se pierde.
-    /// Ningún aviso captura toques. Sin asignaciones: huecos preasignados y solo referencias a textos que ya existen.</para>
+    /// intento. La cola se vacía al cargar un nivel, al empezar otro intento (<c>OnRestart</c>) y al empezar la celebración
+    /// (<c>OnCelebrationStarted</c>); al volver de segundo plano (<c>SnapToModel</c>) no se toca: un aviso no es una animación
+    /// del modelo y el regalo que espera a la intro no se pierde. Ningún aviso captura toques. Sin asignaciones: huecos
+    /// preasignados y solo referencias a textos que ya existen.</para>
     /// </remarks>
     public sealed partial class GameScreen
     {
@@ -47,7 +51,10 @@ namespace AF.UI
         /// <summary>El aviso del tablero (tests: duración y toques).</summary>
         internal Toast NoticeToast => _toast;
 
-        // Ningún aviso en LOADING, LEVEL_CARD ni INTRO (ni sin nivel): esperan a que se habilite el toque.
+        // Los avisos solo salen en PLAYING sin la victoria pendiente: en LOADING, LEVEL_CARD e INTRO esperan a que se habilite el
+        // toque; con un modal (STUCK_MODAL, GIVE_UP_CONFIRM, LEVEL_FAILED, NO_CANOES), a que se vuelva a jugar; y desde la
+        // victoria lógica (el último vertido aún se anima), CELEBRATION, VICTORY_SCREEN y AD_GATE no sale ninguno: la
+        // celebración vacía la cola (OnCelebrationStarted) y el nivel siguiente empieza sin nada (OnLevelLoaded).
         private static bool NoticesHeld(LevelFlow? flow)
         {
             if (flow == null || !flow.HasLevel)
@@ -55,8 +62,7 @@ namespace AF.UI
                 return true;
             }
 
-            FlowPhase phase = flow.Phase;
-            return phase == FlowPhase.Loading || phase == FlowPhase.LevelCard || phase == FlowPhase.Intro;
+            return flow.Phase != FlowPhase.Playing || flow.IsResolvingWin;
         }
 
         // Aviso del tablero: a la cola; sale ya si no hay nada a la vista ni esperando y la fase lo permite.
@@ -103,16 +109,10 @@ namespace AF.UI
         // habilitarse el toque).
         private void PumpNotices()
         {
-            LevelFlow? flow = _flow;
-            while (_noticeCount > 0 && !_toast.Visible && !_sighting.Visible && !NoticesHeld(flow))
+            while (_noticeCount > 0 && !_toast.Visible && !_sighting.Visible && !NoticesHeld(_flow))
             {
                 string? text = _notices[_noticeHead].Text;
                 FaunaSpecies? species = _notices[_noticeHead].Species;
-                if (text == null && flow!.Phase != FlowPhase.Playing)
-                {
-                    return; // la tarjeta del miquito, solo en juego (tras un modal, cuando se vuelve a jugar)
-                }
-
                 _notices[_noticeHead] = default;
                 _noticeHead = (_noticeHead + 1) % NoticeSlots;
                 _noticeCount--;
@@ -131,20 +131,16 @@ namespace AF.UI
         // mismo fotograma): la tarjeta pendiente entra en la cola cuando la tropa se ha ido.
         private void TickNotices()
         {
-            if (_sightingPending != null && !_intro.TroopVisible)
+            if (_sightingPending != null && !_intro.TroopVisible && !NoticesHeld(_flow))
             {
-                LevelFlow? flow = _flow;
-                if (flow != null && flow.HasLevel && flow.Phase == FlowPhase.Playing)
-                {
-                    EnqueueNotice(null, _sightingPending);
-                    _sightingPending = null;
-                }
+                EnqueueNotice(null, _sightingPending);
+                _sightingPending = null;
             }
 
             PumpNotices();
         }
 
-        // Fuera todo: el aviso y la tarjeta a la vista, la cola y la tarjeta pendiente (otro nivel u otro intento).
+        // Fuera todo: el aviso y la tarjeta a la vista, la cola y la tarjeta pendiente (otro nivel, otro intento o la celebración).
         private void ClearNotices()
         {
             for (int i = 0; i < NoticeSlots; i++)

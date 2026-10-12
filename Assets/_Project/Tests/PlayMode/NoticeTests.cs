@@ -1,8 +1,11 @@
 #nullable enable
 using System.Collections;
 using System.Collections.Generic;
+using AF.Core.Rules;
+using AF.Core.Session;
 using AF.GameFlow;
 using AF.Save;
+using AF.Solver.Search;
 using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
@@ -19,8 +22,10 @@ namespace AF.Tests.PlayMode
     /// <see cref="NoticeTiming.ReadMs(string)"/>: 5.455 ms); dos avisos seguidos, o un aviso y la tarjeta «¡Miquito a la
     /// vista!», no se pisan y el segundo sale en el fotograma en que se oculta el primero; la tarjeta espera a que la tropa se
     /// vaya, con las etiquetas del HUD a la vista mientras tanto; el cartel «El río bajó» sigue con sus 2,0 s, fuera de la cola;
-    /// el aviso no captura toques; la cola se vacía al cargar otro nivel y al empezar otro intento; y sin asignaciones por
-    /// fotograma con un aviso a la vista y otro esperando.
+    /// el aviso no captura toques; la cola se vacía al cargar otro nivel y al empezar otro intento; tras una victoria rápida en
+    /// el 8 o en el 5, ni el aviso o la tarjeta que se veían ni lo que esperaba salen encima de la celebración ni de la
+    /// pantalla de victoria (solo hay avisos en PLAYING sin la victoria pendiente); y sin asignaciones por fotograma con un
+    /// aviso a la vista y otro esperando.
     /// </summary>
     public sealed class NoticeTests
     {
@@ -263,6 +268,72 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Level8_QuickWin_NeitherCapisGiftNorTheQueuedNotice_OverTheCelebrationOrTheVictory()
+        {
+            yield return LoadLevel8WithTheGift();
+            GameBootstrap boot = GameBootstrap.Current!;
+            LevelFlow flow = boot.Flow!;
+            GameScreen view = boot.View!;
+            Assert.That(boot.TapAnywhere(), Is.True, "salta la intro");
+            Assert.That(view.ToastText, Is.EqualTo(UiText.ExtraCuiaGift));
+            view.ShowRevealMissing(70);
+            Assert.That(view.NoticesQueued, Is.EqualTo(1), "«Te faltan» espera detrás del regalo");
+
+            // Una victoria rápida: el regalo dura 5.455 ms y la vista termina los vertidos en ≤ 3 s (MaxViewDrainWaitMs).
+            TapTheSolution(boot);
+            Assert.That(flow.IsResolvingWin, Is.True);
+            StepToVictoryWithoutNotices(boot, UiText.ExtraCuiaGift, false);
+        }
+
+        [UnityTest]
+        public IEnumerator Level5_QuickWin_TheSightingCardAndTheQueuedNotice_GoWithTheCelebration()
+        {
+            yield return LoadLevel5FromTheStart();
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            Assert.That(boot.TapAnywhere(), Is.True, "salta la intro: la tropa se funde en 100 ms");
+            for (int t = 0; t < 1000 && !view.Sighting.Visible; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(view.Sighting.Visible, Is.True, "la tarjeta, a la vista");
+            view.ShowRevealMissing(70);
+            Assert.That(view.NoticesQueued, Is.EqualTo(1), "«Te faltan» espera a que se vaya la tarjeta");
+
+            TapTheSolution(boot);
+            Assert.That(boot.Flow!.IsResolvingWin, Is.True);
+            StepToVictoryWithoutNotices(boot, null, true);
+        }
+
+        [UnityTest]
+        public IEnumerator Level5_WonBeforeTheTroopLeaves_TheCardStaysPending_AndNeverShows()
+        {
+            yield return LoadLevel5FromTheStart();
+            GameBootstrap boot = GameBootstrap.Current!;
+            LevelFlow flow = boot.Flow!;
+            GameScreen view = boot.View!;
+            PlayModeHelpers.TickExact(boot, flow.IntroDurationMs);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(view.SightingPending, Is.True, "la tarjeta espera a que se vaya la tropa");
+
+            // El último fotograma con la tropa en la rama: se gana ahí, y la tropa se va mientras se anima el último vertido.
+            int left = Mathf.CeilToInt(view.Intro.TroopGoneMs - view.Intro.TimeMs);
+            Assert.That(left, Is.GreaterThan(PlayModeHelpers.FrameMs));
+            PlayModeHelpers.TickExact(boot, left - 1);
+            Assert.That(view.Intro.TroopVisible, Is.True);
+            TapTheSolution(boot);
+            Assert.That(flow.IsResolvingWin, Is.True);
+            PlayModeHelpers.TickExact(boot, 2);
+            Assert.That(view.Intro.TroopVisible, Is.False, "la tropa se ha ido");
+            Assert.That(flow.IsResolvingWin, Is.True, "con la victoria aún pendiente");
+            Assert.That(view.Sighting.Visible, Is.False, "con la victoria pendiente, la tarjeta no sale");
+            Assert.That(view.SightingPending, Is.True, "y tampoco entra en la cola");
+            Assert.That(view.NoticesQueued, Is.EqualTo(0));
+            StepToVictoryWithoutNotices(boot, null, false);
+        }
+
+        [UnityTest]
         public IEnumerator NoAllocationsPerFrame_WithANoticeShownAndAnotherWaiting()
         {
             yield return LoadLevel8WithTheGift();
@@ -292,6 +363,83 @@ namespace AF.Tests.PlayMode
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
             yield return PlayModeHelpers.LoadGame(8, new MemoryProgressStore(8, 7));
             PlayModeHelpers.TakeClock(GameBootstrap.Current!);
+        }
+
+        // El 5 (nivel_tarjeta del mono ardilla) desde t = 0 de la intro, con la franja del panorama de un teléfono alto.
+        private static IEnumerator LoadLevel5FromTheStart()
+        {
+            GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
+            yield return PlayModeHelpers.LoadGame(5, new MemoryProgressStore(5, 4));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.Flow!.Load(5);
+        }
+
+        // Juega de golpe la solución del solver, sin dejar que la vista avance: el último vertido gana y la victoria queda
+        // pendiente mientras la vista anima los vertidos.
+        private static void TapTheSolution(GameBootstrap boot)
+        {
+            LevelFlow flow = boot.Flow!;
+            SolveResult solution = new AStarSolver().Solve(flow.Session.Current, SolverOptions.ForPipeline(flow.Session.PourMode));
+            Assert.That(solution.IsSolved, Is.True);
+            for (int i = 0; i < solution.MoveCount; i++)
+            {
+                Pour move = solution.GetMove(i);
+                Assert.That(boot.TapCuia(move.Source).Kind, Is.EqualTo(TapKind.Selected));
+                Assert.That(boot.TapCuia(move.Target).Kind, Is.EqualTo(TapKind.Poured));
+            }
+
+            Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Won));
+        }
+
+        // Del instante de la victoria a VICTORY_SCREEN y 8 s más en ella. Mientras la victoria está pendiente (el último vertido
+        // se anima) no empieza ni se acaba nada: sigue lo que se veía (el aviso <toast>, la tarjeta) y lo que esperaba (la
+        // cola, la tarjeta pendiente), y así llega al primer fotograma de CELEBRATION. Desde ahí, ni aviso ni tarjeta, y nada en
+        // la cola ni pendiente: ni el aviso que se veía ni el que esperaba salen encima de la celebración o de la victoria.
+        private static void StepToVictoryWithoutNotices(GameBootstrap boot, string? toast, bool card)
+        {
+            LevelFlow flow = boot.Flow!;
+            GameScreen view = boot.View!;
+            int queued = view.NoticesQueued;
+            bool pending = view.SightingPending;
+            bool celebrated = false;
+            int t = 0;
+            while (t < 15000 && flow.Phase != FlowPhase.VictoryScreen)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                t += PlayModeHelpers.FrameMs;
+                string when = FlowPhaseNames.Of(flow.Phase) + " a " + t + " ms de la victoria";
+                if (flow.IsResolvingWin)
+                {
+                    Assert.That(view.ToastText, Is.EqualTo(toast), "el aviso que se veía, " + when);
+                    Assert.That(view.Sighting.Visible, Is.EqualTo(card), "la tarjeta, " + when);
+                    Assert.That(view.NoticesQueued, Is.EqualTo(queued), "la cola, " + when);
+                    Assert.That(view.SightingPending, Is.EqualTo(pending), "la tarjeta pendiente, " + when);
+                    continue;
+                }
+
+                Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Celebration).Or.EqualTo(FlowPhase.VictoryScreen), when);
+                celebrated |= flow.Phase == FlowPhase.Celebration;
+                AssertNoNotice(view, when);
+            }
+
+            Assert.That(celebrated, Is.True, "hubo celebración");
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen));
+            for (int v = 0; v < 8000; v += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                AssertNoNotice(view, "VICTORY_SCREEN a " + (v + PlayModeHelpers.FrameMs) + " ms");
+            }
+
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen), "sin avance por tiempo");
+        }
+
+        private static void AssertNoNotice(GameScreen view, string when)
+        {
+            Assert.That(view.ToastText, Is.Null, "ningún aviso en " + when);
+            Assert.That(view.Sighting.Visible, Is.False, "ni la tarjeta en " + when);
+            Assert.That(view.NoticesQueued, Is.EqualTo(0), "ni nada en la cola en " + when);
+            Assert.That(view.SightingPending, Is.False, "ni la tarjeta pendiente en " + when);
         }
     }
 }
