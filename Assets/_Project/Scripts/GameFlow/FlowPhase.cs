@@ -52,7 +52,8 @@ namespace AF.GameFlow
         /// LEVEL_CARD: tarjeta previa de 1 toque entre LOADING e INTRO (02 §10; propuesta de D-009 §c.1), solo con
         /// <see cref="LevelFlow.LevelCardsEnabled"/> y en un nivel Difícil o Muy difícil o en un estreno (<c>intro_mechanic</c>,
         /// donde el tutorial hace de tarjeta). Un toque en cualquier punto la cierra y arranca la intro
-        /// (<see cref="LevelFlow.DismissLevelCard"/>). No sale al reanudar (02 §14) ni, por defecto, al reintentar [P].
+        /// (<see cref="LevelFlow.DismissLevelCard"/>). No sale al reanudar (02 §14) ni, por defecto, al reintentar [P]. También la
+        /// usa el banner de entrada a un mundo (<see cref="LevelFlow.WorldBanner"/>; 07 §2.2, regla 1), que va antes de la tarjeta.
         /// </summary>
         LevelCard = 10,
     }

@@ -41,6 +41,9 @@ namespace AF.UI
     /// que a 130 % puede pasar de 2 líneas (el límite de 02 §12 es a 100 %), y el corte de frase elegido a 100 % mientras no
     /// añada líneas (la regla T4 del 100 sigue empezando línea). La escala del sistema aún no llega al juego (no hay ajuste ni
     /// lectura de la escala de Android): hasta entonces vale 1 y los tests la fijan a 1,3 [P].</para>
+    /// <para><b>Estreno de la Piraña</b> (183; D-012, punto 1: opción C + D): en lugar del medallón, un tablero en miniatura con
+    /// el mordisco animado (<see cref="PiranaBiteDemo"/>): una cuia recibe la dosis y la Piraña sale de la cueva y se la lleva;
+    /// termina con la tarjeta abierta y, con «Reducir movimiento», es una versión quieta.</para>
     /// <para>Entra con un fundido y un leve rebote (<see cref="FadeInMs"/>; sin rebote con «Reducir movimiento») y sale con un
     /// fundido de <see cref="FadeOutMs"/> sin bloquear toques, para que el siguiente toque ya salte la intro [P]. Sin asignaciones
     /// por fotograma: todo se coloca al mostrarla, al cambiar la escala o la pantalla.</para>
@@ -98,6 +101,16 @@ namespace AF.UI
         /// <summary>Iconos como mucho en la fila (7 mecánicas, Barro, Cuia chica y Cuia alta).</summary>
         public const int MaxIcons = 10;
 
+        /// <summary><c>intro_mechanic</c> del estreno de la Piraña (183): su tarjeta lleva el mordisco animado.</summary>
+        public const string PiranaIntro = "pirana";
+
+        /// <summary>
+        /// Alto mínimo de la tarjeta con el mordisco animado (dp) [P]: su cuerpo cae en el alto compartido de 281 dp de la
+        /// superficie de madera, el de la tarjeta del 100 (<see cref="ModalKit.SharedSurfaceHeight"/>), y no genera otra textura;
+        /// lo que falta se reparte como aire sobre el escenario.
+        /// </summary>
+        public const float BiteCardMinHeightDp = 272f;
+
         private const float PadDp = 16f;
         private const float HeaderDp = 40f;
         private const float TitleSp = 22f;
@@ -153,6 +166,8 @@ namespace AF.UI
         private readonly Image _giftPlate;
         private readonly Image _giftGlyph;
         private readonly TextMeshProUGUI _giftText;
+        private PiranaBiteDemo? _bite;
+        private bool _biteOn;
         private LevelCardInfo? _card;
         private int _iconCount;
         private float _fontScale = 1f;
@@ -278,6 +293,12 @@ namespace AF.UI
 
         /// <summary>Medallón del estreno, o null si no se ve (tests de solapes).</summary>
         public RectTransform? MedallionRect => _medallion.gameObject.activeSelf ? _medallion.rectTransform : null;
+
+        /// <summary>Mordisco animado del estreno de la Piraña, o null si la tarjeta no lo lleva (tests y capturas).</summary>
+        public PiranaBiteDemo? BiteDemo => _biteOn ? _bite : null;
+
+        /// <summary>Escenario del mordisco animado, o null si no se ve (tests de solapes).</summary>
+        public RectTransform? BiteRect => _biteOn && _bite != null ? _bite.Root : null;
 
         /// <summary>Píldora «+1 Luciérnaga», o null si no se ve (tests de solapes).</summary>
         public RectTransform? GiftRect => _gift.gameObject.activeSelf ? _gift : null;
@@ -484,8 +505,18 @@ namespace AF.UI
             _iconRow.gameObject.SetActive(_iconCount > 0 || card.IsMurky);
 
             // Estreno: el icono grande en su medallón (sin icono, sin medallón: el de Aguas turbias no existe, porque su estreno,
-            // el 100, es la tarjeta combinada y no lleva medallón).
-            Sprite? heroIcon = card.Kind == LevelCardKind.Debut ? _art.CardHeroIcon(intro) : null;
+            // el 100, es la tarjeta combinada y no lleva medallón). La Piraña (183), en su lugar, el mordisco animado.
+            _biteOn = card.Kind == LevelCardKind.Debut && string.Equals(intro, PiranaIntro, StringComparison.Ordinal);
+            if (_biteOn)
+            {
+                _bite ??= new PiranaBiteDemo(_panel, _art);
+            }
+            else
+            {
+                _bite?.Hide();
+            }
+
+            Sprite? heroIcon = card.Kind == LevelCardKind.Debut && !_biteOn ? _art.CardHeroIcon(intro) : null;
             bool hero = heroIcon != null;
             _medallion.gameObject.SetActive(hero);
             if (hero)
@@ -517,6 +548,10 @@ namespace AF.UI
             Layout(canvasW, canvasH, safeTop, safeBottom);
             _animMs = 0f;
             ApplyEnter(0f);
+            if (_biteOn)
+            {
+                _bite!.Show(reduceMotion); // después de colocarla: la versión quieta ya pinta el mordisco
+            }
         }
 
         /// <summary>
@@ -578,6 +613,12 @@ namespace AF.UI
                 y += m + 8f;
             }
 
+            float biteY = y;
+            if (_biteOn && _bite != null)
+            {
+                y += _bite.MeasureHeight() + 10f;
+            }
+
             if (_divider.gameObject.activeSelf)
             {
                 UiBuilder.Place(_divider.rectTransform, PadDp + 24f, y, inner - 48f, 2f);
@@ -601,6 +642,20 @@ namespace AF.UI
             }
 
             float cardH = Mathf.Ceil(y + PadDp - RowGapDp + 4f);
+            if (_biteOn && _bite != null)
+            {
+                // Aire sobre el escenario hasta el alto mínimo (la superficie compartida de 281 dp); el escenario va debajo.
+                float air = Mathf.Max(0f, BiteCardMinHeightDp - cardH);
+                if (air > 0f)
+                {
+                    cardH += air;
+                    ShiftBelow(biteY, air);
+                }
+
+                float stageW = cardW - (2f * TutorialInsetDp);
+                _bite.Layout((cardW - stageW) * 0.5f, biteY + air, stageW);
+            }
+
             float top = Mathf.Round((canvasH - cardH) * 0.45f);
             top = Mathf.Clamp(top, safeTop + 8f, Mathf.Max(safeTop + 8f, canvasH - safeBottom - 8f - cardH));
             float left = (canvasW - cardW) * 0.5f;
@@ -613,6 +668,23 @@ namespace AF.UI
             // La superficie de madera, de la escala de altos compartidos (ModalKit.SharedSurfaceHeight) y estirada al alto de la
             // tarjeta: con 5 o 6 altos de tarjeta en 1-200, solo se generan y se guardan las superficies de 3 altos.
             ModalKit.Size(_panel, _surface, _art, 0f, 0f, cardW, cardH, true);
+        }
+
+        // Baja air dp todo lo colocado desde y (en el cuerpo de la tarjeta): el tutorial, la Luciérnaga y la píldora.
+        private void ShiftBelow(float y, float air)
+        {
+            ShiftIfBelow(_tutorial.rectTransform, y, air);
+            ShiftIfBelow(_firefly.rectTransform, y, air);
+            ShiftIfBelow(_gift, y, air);
+            ShiftIfBelow(_divider.rectTransform, y, air);
+        }
+
+        private static void ShiftIfBelow(RectTransform rt, float y, float air)
+        {
+            if (rt.gameObject.activeSelf && -rt.anchoredPosition.y >= y - 0.01f)
+            {
+                rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, rt.anchoredPosition.y - air);
+            }
         }
 
         /// <summary>Vuelve a colocar la tarjeta abierta con la última pantalla (tras cambiar <see cref="FontScale"/>).</summary>
@@ -640,6 +712,8 @@ namespace AF.UI
         /// <summary>La oculta en el acto (carga de otro nivel).</summary>
         public void HideNow()
         {
+            _bite?.Hide();
+            _biteOn = false;
             _dismissing = false;
             _animMs = -1f;
             _card = null;
@@ -663,9 +737,14 @@ namespace AF.UI
             return true;
         }
 
-        /// <summary>Avanza los fundidos de entrada y salida.</summary>
+        /// <summary>Avanza los fundidos de entrada y salida y el mordisco animado del estreno de la Piraña.</summary>
         public void Tick(float dtMs)
         {
+            if (_biteOn && _bite != null && Visible)
+            {
+                _bite.Tick(dtMs);
+            }
+
             if (_animMs < 0f || !Visible)
             {
                 return;

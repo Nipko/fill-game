@@ -728,6 +728,10 @@ namespace AF.UI
                 // Tarjeta previa (LEVEL_CARD, 02 §10): LaunchOptions.LevelCardsOverride ?? GameConfig.LevelCardsEnabledDefault,
                 // apagada hasta que exista su vista (T13).
                 LevelCardsEnabled = LaunchOptions.ResolveLevelCards(),
+
+                // Banner de entrada a un mundo (07 §2.2, regla 1): con el mismo interruptor que las tarjetas, porque usa su retención
+                // (LEVEL_CARD) y su vista (GameScreen) y los tests PlayMode lo apagan igual (PlayModeHelpers).
+                WorldBannersEnabled = LaunchOptions.ResolveLevelCards(),
             };
             _screen.Bind(_flow, _services);
             _app = new AppFlow(_flow, progress, _wallet, this);

@@ -226,7 +226,8 @@ namespace AF.GameFlow
         /// Cuia extra (04 §2.2), y en el estreno de Aguas turbias (100), una Luciérnaga (04 §2.5); los regalos quedan anotados en
         /// <c>level_state</c> y no se repiten al salir y volver a entrar. Con <see cref="LevelCardsEnabled"/>, un nivel con
         /// etiqueta o con estreno pasa antes por la tarjeta previa (LEVEL_CARD, 02 §10) y la intro espera a
-        /// <see cref="DismissLevelCard"/>.
+        /// <see cref="DismissLevelCard"/>. Con <see cref="WorldBannersEnabled"/>, el primer nivel de un mundo (desde el 2), al entrar
+        /// en él, abre antes el banner de mundo (<see cref="WorldBanner"/>; en LEVEL_CARD, antes de la tarjeta).
         /// </summary>
         public void Load(int level)
         {
@@ -234,6 +235,7 @@ namespace AF.GameFlow
             {
                 int number = ResolveLevel(level);
                 LevelDefinition def = _catalog.Find(number)!;
+                bool firstEntry = _attempt.Level != number; // se entra en el nivel (no se vuelve a entrar en él): el banner de mundo
                 EndRevealSelection();
                 ResetLevelCard();
                 Phase = FlowPhase.Loading;
@@ -257,7 +259,8 @@ namespace AF.GameFlow
 
                 bool revealGifted = GiftRevealOnLoad(def, number);
                 int introMs = ReduceMotion ? GameConfig.ReducedMotionIntroMs : GameConfig.TintDurationMs(number);
-                if (!TryShowLevelCard(introMs, false, revealGifted, null, 0))
+                if (!TryShowWorldBanner(number, firstEntry, introMs, revealGifted)
+                    && !TryShowLevelCard(introMs, false, revealGifted, null, 0))
                 {
                     StartIntro(introMs, false);
                 }

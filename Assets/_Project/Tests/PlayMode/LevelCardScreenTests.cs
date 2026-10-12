@@ -7,6 +7,7 @@ using AF.Core.Rules;
 using AF.GameFlow;
 using AF.Levels;
 using AF.Presentation;
+using AF.Presentation.Mechanics;
 using AF.Save;
 using AF.Solver.Search;
 using AF.UI;
@@ -15,7 +16,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.TestTools;
+using UnityEngine.TestTools.Constraints;
 using UnityEngine.UI;
+using Is = UnityEngine.TestTools.Constraints.Is;
 
 namespace AF.Tests.PlayMode
 {
@@ -31,7 +34,10 @@ namespace AF.Tests.PlayMode
     /// mitad de la entrada, con la salida desde la opacidad y la escala del toque), con el raycast del EventSystem dando
     /// primero en el velo en las esquinas, en el centro y sobre Reiniciar; nada se recorta con la fuente al 130 % (también en
     /// 16:9); las superficies de las tarjetas de 1-200 salen de 3 altos compartidos; las llaves de 43, 83 y 163 siguen siendo
-    /// las frutas que nombran los textos; y la tarjeta no sale al reanudar ni al reintentar.
+    /// las frutas que nombran los textos; y la tarjeta no sale al reanudar ni al reintentar. El estreno de la Piraña (183) lleva,
+    /// en lugar del medallón, el mordisco animado (D-012, punto 1: <see cref="PiranaBiteDemo"/>): avanza, termina con la tarjeta
+    /// abierta, un toque la cierra, con Reducir movimiento es una versión quieta y no asigna memoria por fotograma; su texto dice
+    /// que sellar a tiempo evita el mordisco.
     /// </summary>
     public sealed class LevelCardScreenTests
     {
@@ -132,11 +138,19 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Card_Level41_None()
         {
+            // Normal y sin estreno: ninguna tarjeta previa (§c.1). Desde A4 (decisión del dueño del 2026-10-11), el 41 es el primer
+            // nivel del mundo 3 y abre antes el banner de mundo (WorldBannerTests); al cerrarlo, directo a la intro, sin tarjeta.
             yield return CardSetup.Load(41);
             GameBootstrap boot = GameBootstrap.Current!;
-            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Intro), "normal y sin estreno: directo a la intro (§c.1)");
+            Assert.That(boot.Flow!.WorldBanner, Is.EqualTo(3), "el banner del mundo 3 va antes");
             Assert.That(boot.Flow.LevelCard, Is.Null);
             Assert.That(boot.View!.LevelCard.Visible, Is.False);
+            yield return null; // un fotograma de verdad: el raycast no ve un velo que el lienzo aún no ha pintado
+            WorldBannerSetup.Tap(boot.View.WorldBannerView);
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Intro), "normal y sin estreno: directo a la intro (§c.1)");
+            Assert.That(boot.Flow.LevelCard, Is.Null);
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(boot.View.LevelCard.Visible, Is.False);
             Assert.That(boot.View.LastCardProbe, Is.Null);
             Assert.That(boot.View.CardIntroHeld, Is.False);
         }
@@ -192,8 +206,17 @@ namespace AF.Tests.PlayMode
                     Assert.That(CardSetup.LinesAt(t, text, bigger, card.TextBoxWidth), Is.GreaterThan(LevelCardView.MaxTutorialLines), "a " + bigger + " sp no cabe en el " + level);
                 }
 
-                if (level != 100)
+                if (level == 183)
                 {
+                    // D-012: en lugar del medallón, el mordisco animado (Debut_Level183_AnimatedBite_*).
+                    Assert.That(card.HeroSprite, Is.Null, "sin medallón en el 183");
+                    Assert.That(card.BiteDemo, Is.Not.Null, "el mordisco animado en el 183");
+                    Assert.That(card.TitleText, Is.Null);
+                    Assert.That(card.RewardText, Is.Null);
+                }
+                else if (level != 100)
+                {
+                    Assert.That(card.BiteDemo, Is.Null, "el mordisco animado, solo en el 183");
                     Assert.That(card.HeroSprite, Is.Not.Null, "icono grande del estreno en el " + level);
                     Assert.That(card.HeroSprite!.name, Is.EqualTo("card_hero_" + mechanic));
                     Assert.That(card.TitleText, Is.Null, "en un estreno normal el tutorial hace de tarjeta (§c.1)");
@@ -588,6 +611,147 @@ namespace AF.Tests.PlayMode
             Assert.That(again.View.CardIntroHeld, Is.False);
         }
 
+        [UnityTest]
+        public IEnumerator Debut_Level183_AnimatedBite_EndsWithTheCardOpen_OneTapCloses()
+        {
+            // D-012, punto 1 (opción C + D): antes de jugar, la tarjeta enseña el mordisco: la cuia de la izquierda recibe una dosis
+            // (el vertido que completa el ritmo: los 4 puntos de la cueva) y la Piraña sale de la cueva y se lleva la dosis de la
+            // cima a su cueva. Avanza, termina con la tarjeta abierta (sin repetirse) y un toque la cierra.
+            yield return CardSetup.Load(183);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            LevelCardView card = view.LevelCard;
+            LevelFlow flow = boot.Flow!;
+            PiranaBiteDemo bite = card.BiteDemo!;
+            Assert.That(bite, Is.Not.Null);
+            Assert.That(card.Card!.IntroMechanic, Is.EqualTo("pirana"));
+            Assert.That(bite.Visible && bite.Playing && !bite.Finished, Is.True);
+            Assert.That(bite.RaycastTargetCount(), Is.EqualTo(0), "el escenario no recibe toques: el toque es del velo");
+            Assert.That(card.RaycastTargets(), Is.EqualTo(new Graphic[] { card.Dim }));
+            Assert.That(view.LastCardProbe, Does.Contain("\"bite_demo\":\"animated\""));
+            CardSetup.AssertInsidePanel(view);
+            Canvas.ForceUpdateCanvases();
+            RectTransform root = (RectTransform)view.Canvas.transform;
+            Rect stage = VictorySetup.CanvasRect(card.BiteRect!, root);
+            Rect text = VictorySetup.CanvasRect(card.Tutorial.rectTransform, root);
+            Assert.That(stage.yMax, Is.LessThanOrEqualTo(text.yMin + 0.5f), "el escenario, encima del texto, sin pisarlo");
+
+            // El texto (D-012): sellar a tiempo evita el mordisco, en 2 líneas como mucho y ≥ 12 sp (Debut_AllElevenTexts_TwoLinesMax).
+            Assert.That(card.TutorialText, Is.EqualTo(UiText.TutorialPirana));
+            Assert.That(UiText.TutorialPirana, Does.Contain("a tiempo evita el mordisco"));
+            Assert.That(CardSetup.LineCount(card.Tutorial), Is.InRange(1, LevelCardView.MaxTutorialLines));
+            Assert.That(card.Tutorial.fontSize, Is.GreaterThanOrEqualTo(LevelCardView.MinTutorialSp));
+
+            // Al abrirse: la víctima con 2 dosis y la cueva con 1 y 3 de sus 4 puntos.
+            CuiaView victim = bite.Victim;
+            CuiaView cave = bite.Cave;
+            Assert.That(victim.ShownCuia.Count, Is.EqualTo(2));
+            Assert.That(cave.ShownCuia.Count, Is.EqualTo(1));
+            Assert.That(cave.ShownCuia.MechanicCounter, Is.EqualTo(PiranaBiteDemo.CaveK - 1));
+            Assert.That(bite.CaveOverlay, Is.Not.Null, "el overlay de la Piraña del juego");
+
+            // La cuia recibe la dosis.
+            float t = bite.ElapsedMs;
+            PlayModeHelpers.TickExact(boot, (int)(PiranaBiteDemo.ReceiveStartMs + (PiranaBiteDemo.ReceiveMs * 0.5f) - t));
+            Assert.That(victim.DoseFill(2), Is.InRange(0.2f, 0.99f), "a mitad de la llegada");
+            PlayModeHelpers.TickExact(boot, (int)(PiranaBiteDemo.BiteStartMs - bite.ElapsedMs) - 20);
+            Assert.That(victim.DoseFill(2), Is.EqualTo(1f), "la dosis entera antes del mordisco");
+            Assert.That(victim.ShownCuia.Count, Is.EqualTo(3));
+            Assert.That(bite.Biting, Is.False);
+
+            // El mordisco: el paso Bite del overlay, más despacio que en el tablero; a mitad, la cima se va vaciando.
+            PlayModeHelpers.TickExact(boot, 40);
+            Assert.That(bite.Biting, Is.True);
+            Assert.That(bite.CaveOverlay!.IsAnimating, Is.True);
+            PlayModeHelpers.TickExact(boot, (int)(PiranaOverlay.BiteStepMs * PiranaBiteDemo.BiteSpeed * 0.62f));
+            Assert.That(victim.DoseFill(2), Is.InRange(0.01f, 0.99f), "la víctima pierde la dosis de la cima");
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
+
+            // Termina con la tarjeta abierta: la víctima sin la dosis, la cueva con ella y los puntos a cero.
+            PlayModeHelpers.Step(boot, (int)(PiranaBiteDemo.TotalMs - bite.ElapsedMs) + 100);
+            Assert.That(bite.Finished, Is.True);
+            Assert.That(bite.Playing, Is.False);
+            Assert.That(bite.CaveOverlay.IsAnimating, Is.False);
+            Assert.That(victim.ShownCuia.Count, Is.EqualTo(2));
+            Assert.That(victim.DoseFill(2), Is.EqualTo(0f));
+            Assert.That(cave.ShownCuia.Count, Is.EqualTo(2));
+            Assert.That(cave.ShownCuia.ColorAt(1), Is.EqualTo(PiranaBiteDemo.BittenTint), "la dosis mordida, en la cueva");
+            Assert.That(cave.ShownCuia.MechanicCounter, Is.EqualTo(0));
+            PlayModeHelpers.Step(boot, 3000);
+            Assert.That(bite.Finished, Is.True, "no se repite");
+            Assert.That(victim.ShownCuia.Count, Is.EqualTo(2));
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard), "la tarjeta sigue abierta");
+            Assert.That(card.Visible && !card.Dismissing, Is.True);
+
+            // Un toque la cierra; el escenario se va con la tarjeta.
+            CardSetup.TapCard(card);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Intro));
+            PlayModeHelpers.Step(boot, 160);
+            Assert.That(card.Visible, Is.False);
+            Assert.That(bite.Visible, Is.False);
+
+            // Un toque a mitad del mordisco también la cierra (el paso se suelta sin dejar nada a medias).
+            flow.Load(183);
+            PlayModeHelpers.Step(boot, (int)PiranaBiteDemo.BiteStartMs + 300);
+            Assert.That(card.BiteDemo!.Biting, Is.True);
+            CardSetup.TapCard(card);
+            PlayModeHelpers.Step(boot, 200);
+            Assert.That(card.Visible, Is.False);
+            Assert.That(bite.CaveOverlay.IsAnimating, Is.False);
+            CardSetup.StepUntilPlaying(boot);
+        }
+
+        [UnityTest]
+        public IEnumerator Debut_Level183_ReduceMotion_StillBite()
+        {
+            // 07 §7.8: con Reducir movimiento, una versión quieta, en el instante del mordisco (la cima a medio vaciar), sin que
+            // nada avance.
+            yield return CardSetup.Load(183);
+            GameBootstrap boot = GameBootstrap.Current!;
+            LevelFlow flow = boot.Flow!;
+            flow.ReduceMotion = true;
+            flow.Load(183);
+            PlayModeHelpers.Step(boot, 50);
+            LevelCardView card = boot.View!.LevelCard;
+            PiranaBiteDemo bite = card.BiteDemo!;
+            Assert.That(bite.Still, Is.True);
+            Assert.That(bite.Finished && !bite.Playing, Is.True);
+            Assert.That(boot.View.LastCardProbe, Does.Contain("\"bite_demo\":\"still\""));
+            float fill = bite.Victim.DoseFill(2);
+            Assert.That(fill, Is.InRange(0.01f, 0.99f), "la cima a medio vaciar: el mordisco");
+            PlayModeHelpers.Step(boot, 2000);
+            Assert.That(bite.Victim.DoseFill(2), Is.EqualTo(fill), "quieta");
+            CardSetup.TapCard(card);
+            PlayModeHelpers.Step(boot, 200);
+            Assert.That(card.Visible, Is.False);
+            Assert.That(bite.CaveOverlay!.IsAnimating, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator Debut_Level183_NoAllocWhileBiting()
+        {
+            // 08 §5.4: la llegada de la dosis, el mordisco y la ronda del cardumen no asignan memoria por fotograma.
+            yield return CardSetup.Load(183);
+            GameBootstrap boot = GameBootstrap.Current!;
+            LevelCardView card = boot.View!.LevelCard;
+            PiranaBiteDemo bite = card.BiteDemo!;
+            void Run20()
+            {
+                for (int i = 0; i < 20; i++)
+                {
+                    bite.Tick(PlayModeHelpers.FrameMs);
+                }
+            }
+
+            for (int round = 0; round < 9; round++)
+            {
+                Assert.That(Run20, Is.Not.AllocatingGCMemory(), "20 fotogramas desde " + bite.ElapsedMs + " ms");
+            }
+
+            Assert.That(bite.Finished, Is.True, "toda la demostración");
+            Assert.That(Run20, Is.Not.AllocatingGCMemory(), "la ronda del cardumen al final");
+        }
+
         private static string[] IconNames(LevelCardView card)
         {
             var names = new string[card.IconCount];
@@ -809,8 +973,9 @@ namespace AF.Tests.PlayMode
                 parts.Add(card.Murky.Root);
             }
 
-            // Los bloques enteros: la cabecera, la fila del premio (semilla, texto y cinta), el medallón y la píldora.
-            foreach (RectTransform? block in new[] { card.HeaderRect, card.RewardRowRect, card.MedallionRect, card.GiftRect })
+            // Los bloques enteros: la cabecera, la fila del premio (semilla, texto y cinta), el medallón, el escenario del mordisco
+            // animado y la píldora.
+            foreach (RectTransform? block in new[] { card.HeaderRect, card.RewardRowRect, card.MedallionRect, card.BiteRect, card.GiftRect })
             {
                 if (block != null)
                 {

@@ -25,6 +25,10 @@ namespace AF.UI
     /// retiene (<c>_introHeld</c>: GameScreen.Tick no la avanza) hasta que el flujo la arranca de verdad (StartIntro la suelta);
     /// si sale de LEVEL_CARD sin arrancarla (el cartel «El río bajó» del reintento con alivio, con <c>LevelCardOnRetry</c>), se
     /// suelta y el tablero queda como en ese caso sin tarjeta.</para>
+    /// <para>El banner de entrada a un mundo (GameScreen.WorldBanner.cs) usa los mismos ganchos y la misma retención de la intro
+    /// (es LEVEL_CARD con <c>LevelFlow.WorldBanner</c>); si el nivel tiene además tarjeta, sale al cerrar el banner. En el
+    /// estreno de la Piraña (183), la tarjeta lleva el mordisco animado (<see cref="PiranaBiteDemo"/>): <c>AF_STATE
+    /// level_card</c> lo anota con <c>"bite_demo"</c>.</para>
     /// <para>En desarrollo, <c>AF_STATE {"event":"level_card",…}</c> con el tipo, el nivel, la etiqueta, el estreno, las líneas y
     /// el tamaño del tutorial, los iconos y la escala; y, al terminar la entrada, <c>AF_LAYOUT {"screen":"level_card",…}</c> con
     /// el rectángulo de la tarjeta (cualquier toque la cierra).</para>
@@ -87,6 +91,7 @@ namespace AF.UI
         partial void CardsBuild()
         {
             _levelCard = new LevelCardView(_root, _art, OnLevelCardTapped);
+            BannerBuild(); // el banner de mundo (GameScreen.WorldBanner.cs) va con los mismos ganchos
             _cardsBuilt = true;
         }
 
@@ -95,6 +100,11 @@ namespace AF.UI
             if (_cardsBuilt && _levelCard.Visible)
             {
                 _levelCard.Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
+            }
+
+            if (_cardsBuilt)
+            {
+                BannerLayout();
             }
         }
 
@@ -139,6 +149,8 @@ namespace AF.UI
             {
                 EmitCardLayout();
             }
+
+            BannerTick(dtMs);
         }
 
         partial void CardsLevelLoaded(LevelFlow flow)
@@ -147,6 +159,7 @@ namespace AF.UI
             // OnLevelCard llega justo después.
             _introHeld = false;
             _levelCard.HideNow();
+            BannerLevelLoaded();
         }
 
         partial void CardsLayoutIds(List<string> ids, List<RectTransform> rects)
@@ -155,6 +168,11 @@ namespace AF.UI
             {
                 ids.Add("level_card");
                 rects.Add(_levelCard.Panel);
+            }
+
+            if (_cardsBuilt)
+            {
+                BannerLayoutIds(ids, rects);
             }
         }
 
@@ -245,7 +263,9 @@ namespace AF.UI
             }
 
             sb.Append(']');
-            sb.Append(",\"scale\":").Append(view.FontScale.ToString("0.00", CultureInfo.InvariantCulture)).Append('}');
+            sb.Append(",\"scale\":").Append(view.FontScale.ToString("0.00", CultureInfo.InvariantCulture));
+            PiranaBiteDemo? bite = view.BiteDemo;
+            sb.Append(",\"bite_demo\":").Append(bite == null ? "\"none\"" : (bite.Still ? "\"still\"" : "\"animated\"")).Append('}');
             return sb.ToString();
         }
 
