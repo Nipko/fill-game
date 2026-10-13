@@ -3,6 +3,7 @@ using System;
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
+using AF.Core.Session;
 using AF.Solver.Bot;
 using AF.Solver.Murky;
 using AF.Solver.Search;
@@ -528,6 +529,69 @@ namespace AF.Core.Tests.DotnetOnly
             Assert.That(result.MoveCount, Is.EqualTo(warm.MoveCount));
             Assert.That(rulesAndBot, Is.EqualTo(0));
             Assert.That(solve, Is.LessThan(1024));
+        }
+
+        /// <summary>
+        /// Tablero del nivel 66 tras el bucle que encontró el dueño (D-014): el cierre se recorre entero y se declara (sin
+        /// mecánicas; la Hoja ya se abrió).
+        /// </summary>
+        private static BoardState Level66Loop()
+        {
+            return new BoardState(new[]
+            {
+                Cuia.Create(4, new[] { 3, 8, 10 }), Cuia.Create(4, new[] { 4, 7 }), Cuia.Create(4, new[] { 10, 7, 7, 7 }),
+                Cuia.Create(4, new[] { 14, 14, 14, 14 }), Cuia.Create(4, new[] { 6, 6, 6, 6 }), Cuia.Create(2, new[] { 4, 4 }),
+                Cuia.Create(4, new[] { 3 }), Cuia.Create(4, new[] { 8, 8, 10, 10 }), Cuia.Create(4, new[] { 3, 3, 8, 1 }),
+                Cuia.Create(4, new[] { 1, 1, 1, 4 }),
+            });
+        }
+
+        [Test]
+        public void WarmDeadEndProbe_DoesNotAllocate()
+        {
+            // R13 ampliada (D-014; CLAUDE.md, regla dura 2): el cierre acotado de LevelSession no asigna una vez calentado, ni
+            // cuando se recorre entero (nivel 66), ni cuando se llena (tablero de 14 cuias), ni con mecánicas (los 36 tableros de
+            // referencia), en los dos modos. El mínimo de hasta 3 mediciones, como en ReferenceBoard_HotLoop_DoesNotAllocate:
+            // una asignación real del recorrido se repite en cada intento.
+            var boards = new BoardState[ReferenceBoards.All.Length + 2];
+            boards[0] = Level66Loop();
+            boards[1] = Board();
+            for (int i = 0; i < ReferenceBoards.All.Length; i++)
+            {
+                boards[i + 2] = ReferenceBoards.All[i].State;
+            }
+
+            var probe = new DeadEndProbe();
+            int warm = 0;
+            for (int i = 0; i < boards.Length; i++)
+            {
+                warm += probe.IsDeadEnd(boards[i], PourMode.Run) ? 1 : 0;
+                warm += probe.IsDeadEnd(boards[i], PourMode.Single) ? 1 : 0;
+            }
+
+            bool level66 = probe.IsDeadEnd(boards[0], PourMode.Run);
+
+            long allocated = long.MaxValue;
+            int total = 0;
+            for (int attempt = 0; attempt < 3 && allocated != 0; attempt++)
+            {
+                total = 0;
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                for (int repeat = 0; repeat < 20; repeat++)
+                {
+                    for (int i = 0; i < boards.Length; i++)
+                    {
+                        total += probe.IsDeadEnd(boards[i], PourMode.Run) ? 1 : 0;
+                        total += probe.IsDeadEnd(boards[i], PourMode.Single) ? 1 : 0;
+                    }
+                }
+
+                allocated = Math.Min(allocated, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+
+            Assert.That(level66, Is.True);
+            Assert.That(total, Is.EqualTo(20 * warm));
+            Assert.That(allocated, Is.EqualTo(0));
         }
 
         [Test]

@@ -102,10 +102,10 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Economy.Wallet.Seeds, Is.EqualTo(1000 - price));
             Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
             Assert.That(rig.Flow.Session.Current.Count, Is.EqualTo(cuias + 1));
-            Assert.That(rig.Flow.Session.AppliedPours, Is.EqualTo(3), "el historial se conserva (04 §2.1 caso d)");
+            Assert.That(rig.Flow.Session.AppliedPours, Is.EqualTo(2), "el historial se conserva (04 §2.1 caso d)");
             Assert.That(rig.Flow.Session.RevealedLayers(MurkyCuia), Is.EqualTo(0b10), "02 T6: la Cuia de rescate no oculta la capa");
             Assert.That(rig.Flow.Session.Current[MurkyCuia].HiddenMask, Is.EqualTo(0b01));
-            Assert.That(rig.Store.Load()!.History, Is.EqualTo("h2|P|R|l|102132|002"));
+            Assert.That(rig.Store.Load()!.History, Is.EqualTo("h2|P|R|l|1021|002"));
 
             LevelStateTests.Rig again = rig.Reopen();
             Assert.That(again.Flow.Resume(rig.Store.Load()!), Is.True);
@@ -151,11 +151,13 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Flow.GrantUndoRefill(), Is.True);
             Assert.That(rig.Flow.LastFunnelError, Is.Null);
 
-            // B, en Aguas estancadas: Cuia de rescate comprada y Balsa.
+            // B, en Aguas estancadas: Cuia de rescate comprada y Balsa. Desde D-014 (R13 ampliada) el tablero sale en Aguas
+            // estancadas en cuanto queda perdido, así que la secuencia lo pierde con el vertido que depende de la Luciérnaga.
             rig.Start(32);
-            Play(rig.Flow, 1, 0, 1); // el 3 lava el Barro: [4, 3*, 3]
+            Play(rig.Flow, 2, 1, 2); // [3, 3] sobre [5, 3]
+            Play(rig.Flow, 1, 0, 2); // dos 3 lavan el Barro: [4, 3*, 3, 3]
             Assert.That(rig.Flow.Session.Reveal(0), Is.EqualTo(1));
-            Play(rig.Flow, 0, 2, 2); // sella el 3 y deja Aguas estancadas
+            Play(rig.Flow, 0, 2, 3); // racha de 3 (sin la oculta a la vista, 2) a la vacía: deja Aguas estancadas (D-014)
             OpenStuckModal(rig.Flow);
             Assert.That(rig.Flow.RescueOffered, Is.True);
             AssertNothingChanges(rig, () => rig.Flow.BuyRescue() == null);
@@ -261,13 +263,13 @@ namespace AF.Tests.EditMode
             Assert.That(flow.Session.Current[MurkyCuia].HiddenMask, Is.EqualTo(0b01), "I5: Marea no la vuelve a ocultar");
         }
 
-        // Desde ahí, 1 → 0, 2 → 1 y 3 → 2 dejan Aguas estancadas sin usar la cuia 0 como origen (búsqueda hecha con el núcleo);
-        // con una cuia vacía más se resuelve. Abre el modal (R15).
+        // Desde ahí, 1 → 0 y 2 → 1 dejan el nivel perdido sin usar la cuia 0 como origen (búsqueda hecha con el núcleo): desde
+        // D-014 (R13 ampliada) sale Aguas estancadas ahí mismo, aunque 3 → 2 siga siendo útil (antes hacía falta ese tercer
+        // vertido). Con una cuia vacía más se resuelve. Abre el modal (R15).
         private static void GetStuck(LevelFlow flow)
         {
             Play(flow, 1, 0, 1);
             Play(flow, 2, 1, 1);
-            Play(flow, 3, 2, 1);
             Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Stuck));
             Assert.That(flow.Session.RevealedLayers(MurkyCuia), Is.EqualTo(0b10));
             OpenStuckModal(flow);

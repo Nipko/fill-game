@@ -14,7 +14,11 @@ namespace AF.Core.Session
     /// <para>Invariantes (docs/dev/prototipo-v0.md, a):</para>
     /// <list type="bullet">
     /// <item><description>I1: <see cref="Status"/> se recalcula tras cada cambio en el orden de R10: victoria (R12) y
-    /// después bloqueo (R13).</description></item>
+    /// después bloqueo: R13 (sin vertidos útiles) y, si aún queda alguno, R13 ampliada (D-014): <see cref="DeadEndProbe"/>
+    /// recorre los estados alcanzables con todos los vertidos legales y, si son como mucho 64 [P] y ninguno es victoria, la
+    /// partida queda en <see cref="LevelStatus.Stuck"/> aunque le queden vertidos útiles (el vaivén sin salida del nivel 66).
+    /// Con más de 64 estados o una victoria alcanzable sigue en <see cref="LevelStatus.Playing"/> (conservador). No depende de
+    /// <see cref="FutileRuleEnabled"/>.</description></item>
     /// <item><description>I2: un vertido ilegal (R11) o con <see cref="Status"/> distinto de
     /// <see cref="LevelStatus.Playing"/> devuelve false y no cambia nada (con Aguas estancadas el input está
     /// bloqueado desde el instante lógico del bloqueo, R15).</description></item>
@@ -51,6 +55,9 @@ namespace AF.Core.Session
 
         // Máscara de revelado del nivel (02 T6): bit k de la entrada i = la dosis oculta inicial [i, k] ya se reveló.
         private readonly int[] _revealed;
+
+        // Cierre acotado de R13 ampliada (D-014): búferes propios, reservados una vez por partida.
+        private readonly DeadEndProbe _deadEnd = new DeadEndProbe();
 
         /// <summary>Empieza una partida en <paramref name="initial"/> con el modo de vertido <paramref name="pourMode"/>.</summary>
         /// <param name="initial">Tablero inicial del nivel.</param>
@@ -104,7 +111,10 @@ namespace AF.Core.Session
         /// <summary>Estado de la partida (I1).</summary>
         public LevelStatus Status { get; private set; }
 
-        /// <summary>Si se excluyen los vertidos fútiles al detectar el bloqueo (R13, R16).</summary>
+        /// <summary>
+        /// Si se excluyen los vertidos fútiles al detectar el bloqueo (R13, R16). R13 ampliada (<see cref="DeadEndProbe"/>, D-014)
+        /// no depende de él: recorre siempre todos los vertidos legales.
+        /// </summary>
         public bool FutileRuleEnabled { get; }
 
         /// <summary>
@@ -377,8 +387,15 @@ namespace AF.Core.Session
 
         private LevelStatus Evaluate(BoardState state)
         {
-            // R10 (g) victoria y (h) bloqueo, en ese orden.
-            return BoardRules.EvaluateStatus(state.CuiasArray, 0, state.Count, state.UnitsTable, FutileRuleEnabled);
+            // R10 (g) victoria y (h) bloqueo, en ese orden: R13 (sin vertidos útiles) y, si aún hay alguno, R13 ampliada
+            // (D-014): el cierre acotado de estados alcanzables no tiene victoria.
+            LevelStatus status = BoardRules.EvaluateStatus(state.CuiasArray, 0, state.Count, state.UnitsTable, FutileRuleEnabled);
+            if (status == LevelStatus.Playing && _deadEnd.IsDeadEnd(state.CuiasArray, 0, state.Count, state.UnitsTable, PourMode))
+            {
+                return LevelStatus.Stuck;
+            }
+
+            return status;
         }
 
         private void CheckIndex(int index, string paramName)

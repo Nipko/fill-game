@@ -75,7 +75,8 @@ Este paso va también en la descripción del PR de integración.
 | `AF.Core` | `Mechanics.IMechanic` (interno): ganchos de mecánica sin estado (origen, destino, espacio, recepción, `cambia_al_recibir`, exención de origen, etapas (b), (d), (e), (f), victoria y validación), despachados por una tabla estática indexada por el tipo de la cuia | 08 §2.2; 02 §9 |
 | `AF.Core` | `Rules.CuiaRules`: envoltorio heredado sobre cuias sueltas sin mecánicas; capa base de `BoardRules` para el sellado (R5) y el núcleo de `futil` | 02 §1.2, §1.4, §3.1; 04 §5.1 |
 | `AF.Core` | `Rules.Pour` y `Rules.PourRules`: validan argumentos y delegan en `BoardRules`: vertido según el modo (parcial solo en `Run`), `Apply` con `PourEvents`, `CanBeSource`, `IsFutile`, `CollectUsefulMoves`, `HasUsefulMove`, `IsStuck` | 02 §1.2-1.4 R9-R11, R13, R14, R16; §3.1 C1-C2 |
-| `AF.Core` | `Session.LevelSession`, `LevelStatus`, `PourResult` (con `Events`): partida con R10 en un modo de vertido fijo, Marea (deshacer; una dosis por uso en `Single`) y Volver a la orilla (reinicio) | 02 §1.3-1.4, §2; 04 §2.1, §2.7 |
+| `AF.Core` | `Session.LevelSession`, `LevelStatus`, `PourResult` (con `Events`): partida con R10 en un modo de vertido fijo, Marea (deshacer; una dosis por uso en `Single`) y Volver a la orilla (reinicio); el bloqueo (h) es R13 y, si aún quedan vertidos útiles, R13 ampliada con `DeadEndProbe` | 02 §1.3-1.4, §2; 04 §2.1, §2.7; D-014 |
+| `AF.Core` | `Session.DeadEndProbe`: cierre acotado de Aguas estancadas por bucle (R13 ampliada): estados alcanzables con todos los vertidos legales, en anchura, canónicos (`BoardCanon`, igualdad por valor); ≤ `MaxStates` (64 [P]) y sin victoria ⇒ perdido; sin asignaciones tras calentar (ver «Aguas estancadas por bucle») | 02 R13, R14; D-014 |
 | `AF.Core` | `Determinism.Prng`: xoshiro256** sembrado con SplitMix64 desde la FNV-1a de 64 bits de `amazonfill:v1:m{mm}:v{v}:n{nnnn}` (`LevelSeed`), sub-semillas (`SubSeed`) y `NextInt(bound)` sin sesgo (Lemire); solo enteros, valores dorados en `PrngTests` | 09 R26; 08 §2.1 #5, §4.1 |
 | `AF.Solver` | `Collections.MinHeap`: montículo con desempate FIFO (sustituto de `PriorityQueue`) | 08 §2.2 |
 | `AF.Solver` | `Bot.CasualBot`, `BotOptions`, `BotResult`: bot casual ×40 (85/15, tope 400) sobre `SolverMoves` y `BoardRules`, con `PUNTUACION_CASUAL` ×4 en enteros y ruido entero equivalente, congelada (en el Remolino puntúa la pareja: +16 solo si es monocolor del color vertido y +40 solo si además sella con `cap` = `U_c` [P]); `fallo_bot` reproducible por semilla (`SeedFor`) y sin asignar una vez calentado | 03 §6-§7; 08 §2.2, §14.2 |
@@ -193,7 +194,48 @@ tableros de referencia cumplen los presupuestos de 03 §5 y 08 §14.2. La decisi
 Pendiente: cancelación por tiempo del solver para Morpho (`hint_timeout_ms`; el núcleo no lee relojes); el generador `fill` y el
 pipeline (`tools/`). Preguntas abiertas: 02 R16 con capacidades mixtas (C1-8, C1-9: la poda de fútiles puede alargar el par o
 dejar sin camino útil un tablero resoluble, y con una Liana hay estados atascados con solución) y la consecuencia de Q-B en
-P3 (vaivén útil del Remolino que vuelve al mismo estado); ver el CHANGELOG.
+P3 (vaivén útil del Remolino que vuelve al mismo estado); ver el CHANGELOG. Para el jugador, el vaivén sin salida de la
+pregunta 15 lo cubre R13 ampliada (D-014; sección siguiente).
+
+## Aguas estancadas por bucle (R13 ampliada, D-014)
+
+Defecto que encontró el dueño en el nivel 66 (`docs/dev/traspaso/pruebas-telefono-2026-10-13.md`): tras
+`3>6 4>3 7>4 0>5 1>5 2>0 2>1 5>2 1>5 2>1 0>7 1>2` quedan dos vertidos útiles, `2>1` y `7>0`, que son vaivenes parciales sin
+salida. R13 solo mira si queda algún vertido útil, así que nunca salía Aguas estancadas y el jugador daba vueltas.
+
+**Regla (D-014, decisión del dueño del 2026-10-13).** Con S en `Playing` según R13, `LevelSession` recorre el cierre de estados
+alcanzables desde S (`Session.DeadEndProbe`). Si se agota con **≤ 64 estados [P]** (`DeadEndProbe.MaxStates`, S incluido; constante
+del núcleo, no de Remote Config) y ninguno es victoria (R12), S queda en `Stuck`. Si pasa de 64 o encuentra una victoria, S sigue en
+`Playing`: es conservador. Corre en cada evaluación de estado de la partida (constructor, `TryPour`, `Undo`, `Restart`, `Reveal`,
+`RevealAll`, `RestoreRevealed`; la Cuia extra y la de rescate rehacen la sesión). `BoardRules.EvaluateStatus`, `IsStuck`,
+`PourRules.IsStuck`, el solver, el bot, `EarlyTraps`, `LevelValidation`, el generador y level-qa no cambian: los packs, los informes
+y los pares son idénticos (`--check` del tutorial y de la campaña 11-200).
+
+- **Recorrido:** en anchura, en orden determinista (vertidos (A, B) ascendentes sobre el tablero en orden canónico), con estados
+  canónicos (`BoardCanon.Sort` + FNV-1a de 64 bits; la igualdad se confirma por valor, `Packed` cuia a cuia), aplicando los vertidos
+  con `BoardRules` (R10 completo). Las mecánicas con estado y los contadores de Lluvia y Piraña forman parte del estado: si el cierre
+  crece por ellos más allá de 64, no se declara. Con Aguas turbias usa el estado verdadero (el núcleo conoce las ocultas; un vertido
+  las revela como en la partida). El veredicto no depende del orden (el cierre es un conjunto).
+- **Todos los vertidos legales, no solo los útiles.** El texto de la decisión habla de vertidos útiles, pero con capacidades mixtas
+  un fútil puede ser parte de la única salida (C1-8) y un cierre solo con útiles declararía perdidos tableros que se ganan, en contra
+  de la condición de la misma decisión («nunca declara atascado un tablero que se puede ganar»; R14). Medido: en el propio nivel 66,
+  tras los 6 primeros vertidos del dueño, la búsqueda con solo útiles se agota en 50 estados sin victoria y el nivel se gana en 14
+  con algún fútil; en partidas al azar sobre los niveles 1-200, un cierre solo con útiles habría declarado 327 estados, 56 de ellos
+  ganables. Con capacidades iguales un fútil no cambia el estado canónico en `run` (P2), así que en esos tableros los dos cierres son
+  idénticos. Por eso tampoco depende de `futile_rule_enabled`: el kill-switch devuelve R13 al criterio clásico, pero el cierre sigue.
+- **Nivel 66:** Aguas estancadas sale justo tras el 9.º vertido (`1>5`), cuando el nivel queda perdido de verdad (4 estados
+  alcanzables; A* con todos los legales: irresoluble); los vertidos 10-12 del dueño ya eran vueltas del bucle y ahora no entran
+  (R15). Hasta el 8.º el nivel se gana.
+- **Coste** (.NET 10 Release, equipo de escritorio x64, 2026-10-13; `DeadEndProbePerformanceTests`, comando de la tabla de arriba):
+  0,015 ms en el tablero del 66 (cierre entero), 0,093 ms en el de 14 cuias (se llena) y, en 4.026 estados de partidas al azar sobre
+  los 36 tableros de referencia, 0,043 ms de media y 0,322 ms en el peor (Tu, 64 estados): objetivo < 1 ms. Sin asignaciones tras
+  calentar (`HotLoopAllocationTests.WarmDeadEndProbe_DoesNotAllocate`); cada `LevelSession` reserva sus búferes una vez (unos 8 KB).
+- **Tests:** compartidos `DeadEndProbeTests` (el tablero del 66, la secuencia completa, Marea y Volver a la orilla, el estado ganable
+  del 66 cuyo cierre útil no tiene victoria, orden canónico, los 10 niveles del tutorial a lo largo de su solución, cierre de más de
+  64, el tablero mixto que solo se gana con fútiles, Aguas turbias con la oculta verdadera, tablero ganado) y `RuleCatalogTests`
+  (R13 ampliada, R14 con un cierre grande, R15 con el vaivén); solo dotnet `DeadEndProbePropertyTests` (si el cierre declara, A*
+  exhaustivo da irresoluble, con todos los legales y con la poda: 36 tableros de referencia en `run` y `single` y los niveles 1-200,
+  y los tableros de referencia baratos siguen en Playing a lo largo de su solución).
 
 ## Restaurar las capas reveladas (Aguas turbias)
 

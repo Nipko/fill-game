@@ -99,11 +99,13 @@ namespace AF.Tests.EditMode
         {
             // 02 R8 y §11 T6: R lleva un triple por cuia con capas reveladas, en orden: la cuia (1 dígito) y la máscara de
             // LevelSession.RevealedLayers (2 dígitos). Cuia 0: capa 1 de 2 ocultas (revelado parcial); cuia 11 («b»): su oculta.
+            // Las vacías son de 1 (cada fruta tiene una dosis y sella en ellas) para que el tablero se gane y R13 ampliada (D-014)
+            // no lo declare perdido antes de los vertidos.
             var cuias = new Cuia[12];
             cuias[0] = Cuia.Create(4, new[] { 1, 2, 3 }, 0b11);
             for (int i = 1; i < 11; i++)
             {
-                cuias[i] = Cuia.Empty(4);
+                cuias[i] = Cuia.Empty(1);
             }
 
             cuias[11] = Cuia.Create(4, new[] { 4, 5 }, 0b01);
