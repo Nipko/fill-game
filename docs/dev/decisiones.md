@@ -788,7 +788,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
    - **Restricciones:** como mucho un contador por nivel (Lluvia o Piraña, nunca juntas); las combinaciones prohibidas de la propuesta d.3 (Aguas turbias solo con filtros y capacidades; el Matapi nunca en un par de Remolino, como cuia de Lluvia ni como cueva de Piraña, ni con Barro u ocultas dentro; Lancha y Liana juntas no antes del 401; la dosis-llave de una Palizada nunca en un Remolino ni bajo una dosis de su color); la Pororoca deja fijas las cuias con mecánica cerrada y se deshabilita con Lluvia y Piraña. La implementación añade [P]: sin Remolino junto a la Piraña ni con dosis ocultas.
 
 **Consecuencias.**
-- **Contratos:** cambian el contrato 1 (debuts: Hoja 43 · Matapi 63 · Liana con fruta 83 · Remolino 103 · Barro 123 · Lluvia 143 · Brote 163 · Piraña 183; `mech_debut_level` y `mech_enabled` ganan `matapi`) y el contrato 21 (`pack_schema` 2: tipo `matapi`; Liana con `key` o con `n`, una y solo una; campos obligatorios por tipo; `intro_mechanic` con `chica`, `alta`, `matapi` y `murky` [P], y `difficulty.par_approx` [P]).
+- **Contratos:** cambian el contrato 1 (la lista única de 02 §9.1: 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 Piraña; la Liana de cuenta, variante en el 243; `mech_debut_level` y `mech_enabled` ganan `matapi`) y el contrato 21 (`pack_schema` 2: tipo `matapi`; Liana con `key` o con `n`, una y solo una; campos obligatorios por tipo; `intro_mechanic` con `chica`, `alta`, `matapi` y `murky` [P], y `difficulty.par_approx` [P]).
 - **Piraña:** con el mordisco inmediato de Q-C la heurística `H` sigue siendo admisible y consistente y el par es exacto: no hacen falta `ceil(H/2)` ni `par_approx` (CHANGELOG del núcleo, C3-2).
 - **Rendimiento** (README del núcleo, C3-3): en los 36 tableros de referencia de 12-14 cuias, A* llega a 186.346 expandidos, Morpho tarda 1,0 ms como máximo y el bot ×40, 4,8 ms. Con el presupuesto de 300.000 se agotan algunos tableros con Remolino, Lluvia y Piraña, que el pipeline descarta o regenera.
 - **Bloqueo C1-9** (pregunta de 02 R16, abierta): la propiedad P1 de R14 falla con Liana y capacidades mixtas (contraejemplo en el CHANGELOG del núcleo). Provisionalmente, `LevelValidation` rechaza la Liana con capacidades mixtas (también con la cueva de la Piraña), y el calendario de la campaña cambia cuatro celdas de d.4 [P] para que la Liana nunca vaya con ellas: 94 Ma → Li y 95 Li+Al → Ma+Al, 160 Ll+Li+Al6 → Ll+Al6 y 198 Pi+Li → Pi+Ho (`tools/level-generator/specs/campaign_v1.json`, `calendar_note`). Las capacidades se quedan: la Cuia alta sigue en el 95 y la de 6, en el 160. Opciones: (a) ampliar `futil` y quitar el bloqueo; (b) mantenerlo. Lo deciden el tech-lead o el dueño.
@@ -1097,7 +1097,8 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 - **Campaña v1 medida** (`tools/out/campaign_v1_report.md`):
   - etiquetas: 31-60, 13,3 % Difícil y 3,3 % Muy difícil; 61-100, 20 % y 5 %; 101-200, 23 % y 5 %. Desde el 61 los cinco retos apuntan a Difícil (25 % por ciclo), por encima del 15 % y del 15-20 % de 03 §11: queda como pregunta abierta (pregunta 26 de GDD.md §6.3);
   - acierto de etiqueta por ciclo: 67-100 %; cada remanso queda por debajo de la media de comodidad de su ciclo (QA-REMANSO);
-  - cuias y vacíos: en 31-100 hay 22 niveles con menos cuias que el mínimo de 03 §11 y en 101-200 el 64 % de las comodidades y los remansos se relajó, a 2 vacíos o con una Cuia chica de 2 (03 §4.4); el informe los deja para revisar.
+  - cuias y vacíos: en 31-100 hay 22 niveles con menos cuias que el mínimo de 03 §11 y en 101-200 el 64 % de las comodidades y los remansos se relajó, a 2 vacíos o con una Cuia chica de 2 (03 §4.4); el informe los deja para revisar;
+  - la Cuia chica entre los 2 vacíos: el generador la cuenta como uno de ellos (02 §8; `tools/level-generator/README.md`, decisión [P]), así que el 23, el 26, el 29, el 35 y el 38 llevan un vacío de 4 y una Cuia chica donde la tabla del punto 1 pide 2 vacíos. Queda por ratificar (pregunta 40 de GDD.md §6.3; 03 §12).
 - **Unity** (paso 1): chip y cinta en Jugar y en Siguiente; tarjeta previa de 1 toque (una sola en el 100, combinada con el tutorial de Aguas turbias y la línea T4); chip y marco en el HUD, con un velo que oscurece el fondo un 15 % en Muy difícil (la variante noche con LUT queda [P]); cabeceras de ¿Seguro? y Nivel fallido.
 - **Pendiente técnico:** la temporada de cada ciclo no tiene todavía fuente de datos en el pack (la pista A la dejó solo en `campaign_v1.json`): la LUT de temporada necesita un campo nuevo, que subiría `pack_schema`, o una tabla del cliente (pregunta 32 de GDD.md §6.3).
 
@@ -1337,7 +1338,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Fecha:** 2026-10-11.
 - **Estado:** decidida por el dueño tras probar el `dev.apk` en el SM-S938B (compilado en el portátil sobre `80d37fb` o antes; las cuatro causas seguían en `7677085`). El punto 3 lo eligió entre tres opciones cerradas («Más presencia sin frenar», la recomendada). Tareas P1-P4 de `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`.
   - *Actualización del 2026-10-12:* los puntos 1 y 4 están implementados en la tanda 1 (A1, integrada en `3035081`) y el punto 3, también (B1, `d8b9ca3`), salvo que la tarjeta «¡Miquito a la vista!» espere a que la tropa se vaya: B1 deja a la vista ese estado (`IntroAnimation.TroopVisible` y `TroopGoneMs`) y la tarjeta lo usa en la tanda 2. El punto 2 (avisos legibles) está en curso en la tanda 2 (A2). Toda la tanda 1 está en `7d755c4`, sin probar todavía en el teléfono.
-  - Documentación aplicada el 2026-10-12 (paso 2 del traspaso): 02 §2, §4.2 y §6; 04 §2.2; 06 §4.7; 07 §5.1, §5.4 y §6.4; 08 §5.3; GDD.md §2 #22; la nota de F3 y F4 de la tabla de D-010 y el guion de la intro (nota de cabecera, §4.5, §7.2, §7.3, §14 y los criterios A3, A8 y A15). Los [P] de la tanda 1 que tiene que ratificar el dueño están en la pregunta 38 de GDD.md §6.3.
+  - Documentación aplicada el 2026-10-12 (paso 2 del traspaso): 02 §2, §4.2, §6 y §14; 04 §2.2; 05 §6.1; 06 §4.7; 07 §5.1, §5.4 y §6.4; 08 §5.3 y §9 (columna «Uso» de `victory_autonext_s`); GDD.md §2 #22; la nota de F3 y F4 de la tabla de D-010 y el guion de la intro (nota de cabecera, §4.5, §7.2, §7.3, §14 y los criterios A3, A8 y A15). Los [P] de la tanda 1 que tiene que ratificar el dueño están en la pregunta 38 de GDD.md §6.3.
 
 **Contexto** (palabras del dueño, con la ortografía corregida):
 - «Las semillas se suman antes de dar por ganador el juego […] deberían verse luego de terminar completamente y ahí sumarlo […] pareciera que no lo suma, que ya tenía eso. Pasa lo mismo con las ayudas, que desaparecen: aunque se sabe que se va a ganar, no es bueno darlo ya por hecho; debe ser hasta que ocurra.»
@@ -1438,7 +1439,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 1. **Estreno de la Piraña (183): opción C + D.** No se regeneran niveles.
    - **C, mordisco fallido visible** (ola 3): cuando la Piraña no puede morder (Q-C), el cardumen sale de la cueva, llega a la tapa o al Matapi de la víctima, choca y vuelve, en ≈ 400 ms [P]; con la cueva llena, se asoma y vuelve a dormirse.
    - **D, tutorial con un mordisco animado** (ola 4): la tarjeta de estreno del 183 enseña, antes de jugar, cómo la piraña sale de la cueva y se lleva la dosis de la cima de la cuia que acaba de recibir. El texto añade que sellar a tiempo evita el mordisco [P, pendiente del asesor cultural], en 2 líneas como mucho a 360 dp y a 12 sp o más. Con Reducir movimiento, una versión quieta [P].
-   - Capítulos: 02 §4.1 y §9.1 (M7), 07 §4.3 y §5.6.
+   - Capítulos: 02 §4.1 y §9.1 (M7), 07 §4.3, §5.6, §7.7 (la tarjeta del 183) y §11.
 2. **Banner de mundo: opción A**, en la ola 4. Con la respuesta (a) del 2026-10-11:
    - sale al cargar el primer nivel de cada mundo salvo el Estuario (en la campaña 1-200: 11, 41, 81 y 141); **el nivel 1 no lleva banner**;
    - antes de Llenar y teñir y **solo en el primer intento** de ese nivel: ni al reintentar ni al reanudar; da igual que se entre con Jugar o con Siguiente [P];
@@ -1446,6 +1447,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
    - **la presenta Capi con la pata** (`capi_present`) **mientras Rosa asoma** (`rosa_surface`) **y se sumerge** al cerrarla (`rosa_dive`); con Reducir movimiento, quietos [P];
    - si el nivel tiene también tarjeta previa, primero va el banner [P]; los avisos esperan a que termine (D-011, punto 2).
    - Capítulos: 02 §2 y §6, 06 §2.2, §2.3 y §4.5, 07 §2.2 (regla 1) y §5.1; el texto ya está en el glosario §10.
+   - El dueño no decidió si la tarjeta lleva la oferta del pack de skin que 05 §5 colgaba del «banner de mundo» desde el 41: pregunta 39 de GDD.md §6.3, citada en 05 §4.1 y §5 y en 06 §4.5.
 3. **Sacudida de rechazo: ±8 dp, 3 ciclos y 240 ms** (T-G), sin amortiguar, como antes (seno de amplitud constante). Un toque válido durante la sacudida se atiende igual que antes. El latido del embudo del Matapi la acompaña (240 ms, dentro de los ≤ 300 ms [P] del criterio de la ola 3).
    - Capítulos: GDD.md §2 #3, §7.2 #30 y §9, 02 §3.1 y §4.1, 07 §4.3, 09 §1.1 y la guía visual v2.
 4. **Patrones e iconos de fruta: como el GDD** (T-E; 07 §3, 02 §12 y 08 §9):
@@ -1461,18 +1463,18 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
    - al terminar el nivel, en cada mutación de la cartera, al pasar a segundo plano y al cerrar la app, se espera al escritor y se escribe en síncrono;
    - si el escritor falla, el perfil sigue en memoria y se reintenta en el siguiente guardado;
    - `AF_PERF` mide en `save_ms` solo el hilo principal y añade `bg_ms`;
-   - sin paquetes nuevos y sin tocar `AF.Platform`.
+   - sin paquetes nuevos.
    - Capítulos: 02 §2 (SUSPENDED) y §14, 04 §5.2 y 08 §5.4 y §11.
 6. **Marco del panel bajo el HUD con 3 filas: se deja como está** (8 dp; guía visual v2 §3.2). Ningún capítulo cambia.
-7. **Remolino, respuesta (b) del 2026-10-11: opción C.** El canal une las bases de la pareja, también entre filas no contiguas, y las dos cuias llevan la misma marca de pareja, también cuando el nivel tiene un solo par; con dos pares, las marcas se distinguen entre sí. La marca está siempre a la vista, a ΔE00 ≥ 10 de los 14 tintes y del turquesa de Marea, y nada cambia al seleccionar (D-002).
+7. **Remolino, respuesta (b) del 2026-10-11: opción C.** El canal une las bases de la pareja, también entre filas no contiguas, y las dos cuias llevan la misma marca de pareja, también cuando el nivel tiene un solo par; con dos pares, las marcas se distinguen entre sí. La marca está siempre a la vista, a ΔE00 ≥ 10 del turquesa de Marea (criterio de la ola 3 de la hoja del 2026-10-09), y nada cambia al seleccionar (D-002). La implementación (B2) la aleja también ΔE00 ≥ 10 de los 14 tintes [P].
    - Capítulos: 07 §4.3.
 
 **Consecuencias.**
 - **Código** (todo en Unity; núcleo, solver, packs, esquema y Remote Config sin cambios):
-  - tanda 1, integrada en `7d755c4`: B2 (mordisco fallido de ≈ 400 ms, `PiranaOverlay.BiteLostStepMs`; ficha de pareja del Remolino, igual en las dos cuias, con `id + 1` puntos) y C2 (`AF.Save.ProfileWriter`, `ProfileSaveBatch` y los guardados síncronos de `GameBootstrap`, con un tope de espera de 1.000 ms [P]);
+  - tanda 1, integrada en `7d755c4`: B2 (mordisco fallido de ≈ 400 ms, `PiranaOverlay.BiteLostStepMs`; ficha de pareja del Remolino, igual en las dos cuias, con `id + 1` puntos) y C2 (`AF.Save.ProfileWriter`, `ProfileSaveBatch` y los guardados síncronos de `GameBootstrap`, con un tope de espera de 1.000 ms [P]; la especificación de C2 dejó fuera `AF.Platform`, que no se tocó);
   - tanda 2, en curso: A4 (banner de mundo y mordisco animado en la tarjeta del 183) y B3 (sacudida, patrones e iconos).
 - **Teléfono:** falta medir la decisión 5 (`AF_PERF` con `save_ms`, `bg_ms` y `sync`) y ver la sacudida, el banner y el estreno de la Piraña cuando llegue la tanda 2.
-- **Preguntas abiertas** (`docs/GDD.md` §6.3): el vertido que gana el nivel escribe en síncrono y puede pasar de 8 ms (pregunta 37), y los [P] de la tanda 1, entre ellos el tope de 1.000 ms y el aire de la ficha del Remolino (pregunta 38).
+- **Preguntas abiertas** (`docs/GDD.md` §6.3): el vertido que gana el nivel escribe en síncrono y puede pasar de 8 ms (pregunta 37), los [P] de la tanda 1, entre ellos el tope de 1.000 ms y el aire de la ficha del Remolino (pregunta 38), y el sitio de la oferta del pack de skin ahora que el banner de mundo es una tarjeta simple (pregunta 39).
 
 **Alternativas descartadas.**
 - Mantener la sacudida del contrato 24: casi no se veía en el teléfono.
@@ -1491,4 +1493,4 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 **Archivos afectados.**
 - **Código** (tanda 1): `Assets/_Project/Scripts/Presentation/Mechanics/{PiranaOverlay.cs, RemolinoOverlay.cs}`, `Assets/_Project/Scripts/Presentation/ProceduralArt.Remolino.cs`, `Assets/_Project/Scripts/Save/{ProfileWriter.cs, LocalProfileStore.cs, IProfileStore.cs}`, `Assets/_Project/Scripts/GameFlow/ProfileSaveBatch.cs`, `Assets/_Project/Scripts/UI/{GameBootstrap.cs, DevProbe.cs}`, sus tests y `docs/dev/prototipo-v0.md`. Tanda 2: los de sus especificaciones (A4 y B3).
-- **Documentación** (2026-10-12, paso 2): este registro; `docs/GDD.md` §2, §6.3, §7.2 y §9; `docs/gdd/{00, 02, 04, 06, 07, 08, 09}`; la guía visual v2 (`docs/art/direccion-visual-v2.md`, revisión 6: la sacudida); `docs/dev/traspaso/README.md` (§6 y §7).
+- **Documentación** (2026-10-12, paso 2): este registro; `docs/GDD.md` §2, §6.3, §7.2 y §9; `docs/gdd/{00, 02, 04, 05, 06, 07, 08, 09}`; la guía visual v2 (`docs/art/direccion-visual-v2.md`, revisión 6: la sacudida); `docs/dev/traspaso/README.md` (§6 y §7).

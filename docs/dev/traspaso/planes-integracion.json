@@ -1,5 +1,5 @@
 {
- "nota": "Planes del tech-lead del 2026-10-08. integration_tasks (plan de las pistas) e integration_notes (pista A) describen lo que falta en Unity tras fusionar. integration_tasks I2-I6 son anteriores a D-007. Sus niveles (Luciérnaga 51, Liana 63, Aguapé 83, Nasa 103) no valen: rigen 02 §9.1 con D-007 y 04 §2.5 (Luciérnaga en el 100). D-007 está registrada en docs/dev/decisiones.md.",
+ "nota": "Planes del tech-lead del 2026-10-08. integration_tasks (plan de las pistas) e integration_notes (pista A) describen lo que falta en Unity tras fusionar. integration_tasks I2-I6 son anteriores a D-007, como los debuts que cita I7 (43, 51, 63, 83 y 103). Sus niveles (Luciérnaga 51, Liana 63, Aguapé 83, Nasa 103) no valen: rigen 02 §9.1 con D-007 y 04 §2.5 (Luciérnaga en el 100). D-007 está registrada en docs/dev/decisiones.md.",
  "integration_tasks": [
   {
    "file": "ramas fase1-mecanicas-niveles, fase2-bucle-partida y main (sin archivos propios)",
