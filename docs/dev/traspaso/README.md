@@ -4,6 +4,14 @@ Escrito por la sesión de Claude Code del portátil (Windows 11 ARM64) para la s
 
 ## 1. Resumen
 
+> *Estado del 2026-10-13:*
+> - el paso 1 y el paso 2 de la sección 6 están hechos, y el paso 3 (elenco de ~50 especies) sigue pendiente;
+> - de los arreglos de la prueba en el teléfono (paso 1b), la tanda 1 está integrada en `7d755c4` y probada en el teléfono el 2026-10-12 (cumple);
+> - la tanda 2 está integrada en `integracion-fase1-fase2` en `94905b8`, con D-011 y D-012 implementadas enteras, y falta probarla en el teléfono: sección 6, «Qué probar en el teléfono (tanda 2)»;
+> - lo que la tanda 2 deja al dueño está en las preguntas 41-44 de `docs/GDD.md` §6.3.
+>
+> El resto de este resumen es el del traspaso del 2026-10-09.
+
 - **La rama para seguir es `integracion-fase1-fase2`**: junta todo lo hecho hasta hoy, compila y pasa todas las pruebas (sección 3). `main` sigue en `e8edd1f` (D-005 y D-006) y no se ha tocado.
 - **Ya está hecho:**
   - el núcleo con las 9 mecánicas de la 1.0, el solver y el bot;
@@ -148,7 +156,11 @@ Las tareas detalladas están en `docs/dev/traspaso/planes-integracion.json` (`in
 
 ### Paso 1b · Arreglos de la prueba del dueño en el teléfono (2026-10-11): hazlos antes del paso 2
 
-> *Estado del 2026-10-12: P1, P3 y P4 están hechos en la tanda 1 (integrada en `7d755c4`, con T-A, T-B, T-C, T-D y los criterios de la ola 3 de la hoja del 2026-10-09). P2 (avisos legibles), la tarjeta del miquito tras la tropa y el resto de la hoja (T-E, T-F.1, T-G, el banner de mundo y el tutorial de la Piraña) van en la tanda 2, en curso; T-F.2 (nota de `planes-integracion.json`) está hecha en el paso 2. Falta probarlo todo en el teléfono.*
+> *Estado del 2026-10-13:*
+> - *La tanda 1 está integrada en `7d755c4` y se probó en el teléfono el 2026-10-12: cumple. Lleva P1, P3 y P4, con T-A, T-B, T-C, T-D y los criterios de la ola 3 de la hoja del 2026-10-09.*
+> - *La tanda 2 está integrada en `94905b8`: P2 (avisos legibles), la tarjeta del miquito tras la tropa y T-F.1 con A2 (`35301f9`); T-E y T-G con B3 (`dd208a6`); y el banner de mundo y el tutorial de la Piraña con A4 (`94905b8`).*
+> - *T-F.2 (nota de `planes-integracion.json`) se hizo en el paso 2.*
+> - *Falta probar la tanda 2 en el teléfono: «Qué probar en el teléfono (tanda 2)», al final de este paso.*
 
 El dueño probó el `dev.apk` (compilado sobre `80d37fb` o antes) y decidió **D-011** (`docs/dev/decisiones.md`). Las cuatro causas seguían en `7677085`. Tareas, causas con archivo y línea, pruebas y qué probar en el teléfono: `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`.
 
@@ -159,9 +171,76 @@ El dueño probó el `dev.apk` (compilado sobre `80d37fb` o antes) y decidió **D
 
 **Tanda 1 probada en el teléfono el 2026-10-12** (`main` en `7d755c4`): P1, P3, P4, T-A, T-B, T-C, T-D y los overlays del 103, 163 y 183 cumplen. Hay cinco observaciones que no bloquean (`AfterRewarded` y la cueva llena sin probar en el teléfono, y los tests de Unity que tumban el adb). Resultados y medidas: `docs/dev/traspaso/pruebas-telefono-2026-10-12.md`.
 
+#### Qué probar en el teléfono (tanda 2)
+
+La tanda 2 está en `integracion-fase1-fase2` desde `94905b8`. Los criterios salen de la hoja del 2026-10-09 (T-E y T-G), de `pruebas-telefono-2026-10-11.md` (P2) y de los resúmenes de A2, B3 y A4. Los eventos de logcat están en `docs/dev/prototipo-v0.md` §c y en `Assets/_Project/Scripts/UI/DevProbe.cs`. Apunta los resultados en una hoja nueva, como `pruebas-telefono-2026-10-12.md`, y deja las capturas en `Logs/device/tanda2/` (fuera de git).
+
+**Antes de empezar**
+- **Las pruebas por adb, nunca a la vez que los tests de Unity** (observación 5 de `pruebas-telefono-2026-10-12.md`). `unity-test.ps1` arranca el adb del Editor y reinicia el servidor. El teléfono desaparece de `adb devices` hasta que se desconecta el cable y se desactiva y activa la depuración USB. Haz las pruebas por adb antes o después de los tests.
+- Compila el `dev.apk` desde `94905b8` o posterior e instálalo (sección 1).
+- Abrir un nivel: `adb shell am start -S -n com.amazonfill.dev/com.unity3d.player.UnityPlayerGameActivity --ei af_level N` (extras `--ei af_seeds` y `--ei af_canoes`). Perfil limpio: `adb shell pm clear com.amazonfill.dev`.
+- Logcat: `adb logcat -s Unity | grep -E 'AF_STATE|AF_LAYOUT|AF_PERF|AF_ART'`. Para tocar, usa los centros de la última `AF_LAYOUT` de la pantalla que está a la vista.
+- Los avisos y la tarjeta «¡Miquito a la vista!» no escriben línea propia. Mide cuándo salen y cuánto duran con `adb shell screenrecord` o con ráfagas de capturas, contra el `t` de `AF_STATE ready`.
+- En el portátil ARM64, `WorldBannerArtTests` comprueba en EditMode el presupuesto de 8 ms del hilo principal, medido en el escritorio x64 [P]. Si falla allí, anótalo.
+
+**1. Avisos de 3-7 s, de uno en uno (A2; D-011, punto 2)**
+- **Regalo de Capi en el 8**, con perfil limpio (`pm clear` y `--ei af_level 8`) y sin tocar durante la intro. `AF_STATE extra_cuia_gift` sale en la carga, pero el aviso no se ve durante la intro. Sale con `AF_STATE ready`, sigue a la vista a los 5 s y se va hacia los 5,5 s (5.455 ms: 81 caracteres). Si se salta la intro con un toque, sale en ese momento.
+- **«¡Miquito a la vista!» en el 5**, con perfil limpio y en el primer intento. No sale con `ready`: sale cuando la tropa ya se ha ido de la rama (≈ 1,5 s de reposo y ≈ 0,5 s de salida; si se saltó la intro, ≈ 100 ms después del toque). Dura ≈ 5 s (4.960 ms, el mono ardilla). Con la tarjeta a la vista, un toque en una cuia da `select`: no captura toques.
+- **Luciérnaga en el 100:** `AF_STATE reveal` con `"phase":"gift"` en la carga. «+1 Luciérnaga» sale después de la tarjeta y de la intro, con `"phase":"gift_toast"`, y dura 3 s.
+- **De uno en uno:** si coinciden dos avisos (por ejemplo, la tarjeta del miquito y «Te faltan {n}» de Revelar sin semillas), el segundo sale cuando se va el primero, sin pisarlo.
+- **Nada encima de la victoria:** gana el 8 con el aviso de Capi a la vista. El aviso se oculta al empezar la celebración y no vuelve en la pantalla de victoria.
+- Mira también si el aviso tapa la burbuja «Te faltan {n}» de «+1 cuia» cuando coinciden (pregunta 41 de `docs/GDD.md` §6.3, punto 4).
+
+**2. Patrones e iconos de fruta (B3; D-012, decisión 4)**
+- `AF_STATE load` trae `"patterns":{"on":false,"opacity":0.15}` en el 40 y el 7, y `"patterns":{"on":true,"opacity":0.20}` en el 63, el 100 y el 123. La primera carga de la sesión escribe `AF_ART fruit_icons <ms> ms` (en el Editor, ≤ 30 ms): anótalo.
+- **63:** cada dosis visible lleva su icono, centrado y derecho, y el patrón se ve más marcado que en el 40. En un vertido, los iconos siguen a la banda al inclinarse, y el origen los conserva hasta que empieza su retorno.
+- **40:** sin icono en reposo y con el patrón sutil.
+- **7, con la cuia levantada:** el icono sale solo en la cuia levantada, ya al apoyar el dedo, y desaparece al bajarla. Ninguna otra cuia cambia (D-002).
+- **100:** las dosis turbias van sin icono (solo la trama y el «?») y no chocan con la Luciérnaga.
+- **123:** el Barro va sin icono. Con 3 filas, el icono mide ≈ 10 dp: comprueba que se lee.
+- A tamaño real, en el 63 y el 123, anota para el artista (07 §3, «Iconos del cliente») si la Guanábana (1) y el Aguaje (4) se confunden, si los ganchos de la Guanábana parecen «judías» o si la hoja hundida del Río Negro (14) no se lee. El icono aparece y desaparece sin fundido: di si molesta.
+
+**3. Sacudida de rechazo (B3; D-012, decisión 3)**
+- Toca como origen la Hoja cerrada en el 43 y el Matapi en el 63, y una cuia vacía o una sellada en cualquier nivel. Las cuias con mecánica salen en el campo `mech` de `AF_STATE load`.
+- Cada toque da `AF_STATE reject` con su `tap`. La cuia se sacude ±8 dp (24 px en el SM-S938B), 3 ciclos en 240 ms, sin amortiguar, y vuelve a su sitio exacto. En el 63, el embudo del Matapi late a la vez (240 ms).
+- Un toque válido justo después, con la sacudida en marcha, funciona: `select` y, con el destino, `pour`.
+- Grábalo con `adb shell screenrecord` o con una ráfaga de capturas.
+
+**4. Banner de mundo (A4; D-012, decisión 2)**
+- **41 sí, 42 no.** Al cargar el 41 por primera vez sale, antes de la intro, `AF_STATE world_banner` con `{"level":41,"world":3,"text":"Mundo 3: Manaos · Brasil (Amazonas) · Negro + Solimões","then":"intro","reduce_motion":false}`. En el 42 no sale ninguna línea `world_banner`.
+- **También en el 11, el 81 y el 141**, entrando con Siguiente tras ganar el 10, el 40, el 80 y el 140, y desde Jugar. Sus textos [P, pendientes del asesor] son «Mundo 2: Tapajós · Brasil (Pará) · Tapajós», «Mundo 4: Trapecio · Colombia · Amazonas / Putumayo» y «Mundo 5: Loreto · Perú · Marañón-Ucayali». `then` dice qué viene después, `level_card` o `intro`; en estos cuatro niveles, `intro`, porque ninguno lleva tarjeta previa.
+- **Arte:** cuando la tarjeta empieza a entrar sale `AF_STATE world_banner_art`, con `async`, `wait_ms`, `mascots_ms`, `main_ms` y `fallback`.
+  - `main_ms` ≤ 8 ms: es lo que ocupa el hilo principal (08 §5.4).
+  - `fallback` = `"none"`: Capi presenta con la pata y Rosa asoma.
+  - `wait_ms` ≈ 0 si el arte se pidió antes (Siguiente tras ganar el 10, el 40, el 80 o el 140, o Jugar desde el inicio). Si no, es lo que tardó el pintado, como mucho 800 ms.
+  - Anota `mascots_ms`, el pintado en el otro hilo (en el Editor, ≈ 230 ms).
+  - Si sale `"timeout"`, `"error"` o `"queue"`, el banner entró sin Capi ni Rosa: anótalo con su `wait_ms` (pregunta 43).
+- **Toques:** antes de `world_banner_art` solo se ve el velo y los toques no hacen nada. Después sale `AF_LAYOUT` con `"screen":"world_banner"`, y un toque en cualquier punto, por ejemplo en el centro del rectángulo `world_banner`, lo cierra:
+  - sale `AF_STATE world_banner_closed` con `"next":"intro"` (o `"level_card"`);
+  - Rosa se sumerge y la tarjeta sale en 340 ms; solo después empieza «Llenar y teñir» o sale la tarjeta previa (`level_card`);
+  - un segundo toque durante la salida la termina en el acto.
+- **Solo en el primer intento:** no vuelve a salir al reintentar (Reiniciar o Volver a la orilla), al salir al inicio y volver con Jugar, ni tras `force-stop` y reabrir.
+- Mientras dura el banner, la fase es `LEVEL_CARD`, la misma de la tarjeta previa; lo distinguen `world_banner` y `world_banner_closed`. Ningún aviso sale encima.
+
+**5. Tutorial de la Piraña en el 183 (A4; D-012, decisión 1, D)**
+- En el primer intento, `AF_STATE level_card` trae `"bite_demo":"animated"`.
+- En la tarjeta, la dosis llega con un chorro, que sale de detrás del marco, a la cuia de la derecha. La piraña sale de la cueva (la Cuia chica de 2, a la izquierda) y se lleva la dosis de la cima. La demostración dura ≈ 2,35 s, no se repite, no deja ningún anillo quieto y termina con la tarjeta abierta.
+- El texto ocupa 2 líneas: «Cada cuatro vertidos, la piraña muerde la cuia que acabas de llenar. Sellarla a tiempo evita el mordisco.» [P, pendiente del asesor].
+- Un toque cierra la tarjeta y empieza la intro.
+
+**6. Pendientes de la tanda 1 (opcionales)**
+- Observación 1, `AfterRewarded`: gana un nivel ≥ 22 con la sesión ya «caliente» y usa la Cosecha doble. Tras el vídeo no debe salir intersticial.
+- Observación 4: la Piraña, con la cueva llena, se asoma y vuelve a dormirse.
+- Completar la medida de T-D hasta ≥ 200 vertidos en 3 niveles (`AF_PERF pour`; pregunta 37).
+
 ### Paso 2 · Registrar D-007 y D-009 en el GDD
 
 > *Hecho el 2026-10-11 y el 2026-10-12 (rama `paso2/registrar-d007-d009`, solo documentación): D-007, D-009 y D-012 registradas en `docs/dev/decisiones.md`, con la ampliación de D-010 y el estado de D-011, y llevadas al GDD (§7 de este archivo), con la lista única de estrenos en 02 §9.1, salvo las cifras [sim] regeneradas con D-009, que esperan al dueño (V5). Lo que depende de la tanda 2 (D-011, punto 2 y la tarjeta del miquito tras la tropa; de D-012, el banner de mundo, el tutorial de la Piraña, la sacudida y los patrones) ya está en el GDD como canon, sin darlo por implementado: al integrarla, basta con poner al día su estado en `docs/dev/decisiones.md`. Los pendientes del dueño están en `docs/GDD.md` §6.3 (preguntas 18-40; la 20, decidida). El texto de abajo queda como historial.*
+>
+> *Puesto al día el 2026-10-13 (rama `paso2/estado-tanda2`, solo documentación):*
+> - *la tanda 2 está integrada (`94905b8`), así que D-011 y D-012 constan como implementadas enteras en `docs/dev/decisiones.md`;*
+> - *lo que hace el cliente, con sus [P], está en 02 §4.2, §6 y §9.1, 07 §2.2, §3, §6.4 y §7.7, 08 §5.1 y la guía visual v2 (revisión 7);*
+> - *las desviaciones y decisiones de los agentes que el dueño debe conocer son las preguntas 41-44 de `docs/GDD.md` §6.3, y la 37 recoge la medida del teléfono.*
 
 Ninguna de las dos tiene aún su entrada en `docs/dev/decisiones.md`. Están decididas por el dueño:
 
@@ -202,9 +281,10 @@ Material de partida: `docs/research/fauna/propuesta-fauna.md` (10 especies y 18 
 - **Preguntas abiertas del guion de la intro** (`docs/research/intro-rio-miquitos/guion.md`, Q1-Q16, y Q17 del agente de docs). El código aplica las recomendaciones, salvo Q11 (evento `af_fauna_sighted`, que necesita migrar el perfil) y Q14 (color del agua negra).
 - **Preguntas de la propuesta de fauna** (`docs/research/fauna/propuesta-fauna.md`) y de la propuesta de Magic Sort (`docs/research/magic-sort/propuesta-tintalu.md` §10.2, sobre todo metajuego, anuncios y tienda).
 - **Bloqueo técnico C1-9 de la pista A:** la propiedad P1 (R14) falla con la Liana y capacidades mixtas, así que `LevelValidation` rechaza la Liana con capacidades distintas de 4, cueva de la Piraña incluida. Por eso el calendario de la campaña movió o quitó la Liana, y no las capacidades, en cuatro celdas [P]: 94 Ma → Li y 95 Li+Al → Ma+Al (la Cuia alta vuelve en el reto 95 con el Matapi), 160 Ll+Li+Al6 → Ll+Al6 (la Cuia alta de 6 se sigue estrenando en el hito 160) y 198 Pi+Li → Pi+Ho (`calendar_note` de `tools/level-generator/specs/campaign_v1.json`). Está en `Packages/com.amazonfill.core/README.md`, en su CHANGELOG y en `tools/out/campaign_v1_report.md`; hace falta decidir la regla (02 R16; pregunta 24 de `docs/GDD.md` §6.3).
-- **Preguntas nuevas del paso 2:** las 27-38 de `docs/GDD.md` §6.3 (Lluvia y Piraña en la 1.0 al cierre de la Fase 1, «Zafra», Revelar en la 3.ª ranura, formato [P] de `pack_schema` 2, respaldos del kill-switch, fuente de la temporada, novedades de 201-1000, P1-P3 con el Remolino de Q-B, el revelado rítmico, el texto por debajo de 12 sp, el vertido que gana frente a «ninguno > 8 ms» y los [P] de la tanda 1). La 20 (caché de `LocalDateKey`) ya está decidida y aplicada (`7677085`).
+- **Preguntas nuevas del paso 2:** las 27-38 de `docs/GDD.md` §6.3 (Lluvia y Piraña en la 1.0 al cierre de la Fase 1, «Zafra», Revelar en la 3.ª ranura, formato [P] de `pack_schema` 2, respaldos del kill-switch, fuente de la temporada, novedades de 201-1000, P1-P3 con el Remolino de Q-B, el revelado rítmico, el texto por debajo de 12 sp, el vertido que gana frente a «ninguno > 8 ms» y los [P] de la tanda 1), con la 39 (oferta del pack de skin y banner de mundo) y la 40 (la Cuia chica entre los 2 vacíos). La 20 (caché de `LocalDateKey`) ya está decidida y aplicada (`7677085`).
+- **Preguntas nuevas de la tanda 2** (2026-10-13): las 41-44 de `docs/GDD.md` §6.3. Son los [P] de los avisos, el aviso que ya se ve al abrirse un modal del embudo, el banner de mundo con su arte en otro hilo y su respaldo de 800 ms, y el shader del líquido por encima del presupuesto de la guía visual. Los iconos de fruta procedurales quedan [P] para el artista y el asesor (07 §3, «Iconos del cliente»).
 - **Pendientes de la pista B:**
-  - el guardado por vertido ya va con un escritor en segundo plano (T-D, tanda 1; D-012, decisión 5): falta medirlo en el teléfono (p95 < 5 ms y ninguno > 8 ms; pregunta 37 de `docs/GDD.md` §6.3);
+  - el guardado por vertido ya va con un escritor en segundo plano (T-D, tanda 1; D-012, decisión 5). Se midió en el teléfono el 2026-10-12, en 52 vertidos, y cumple: p95 de 2,15 ms y máximo de 3,67 ms. Falta completar los ≥ 200 vertidos y que el dueño decida la pregunta 37 de `docs/GDD.md` §6.3;
   - el reloj anti-trampas necesita hora de servidor: hoy, adelantar el reloj rellena canoas;
   - algunos [P] de nombres de perfil.
 - **Arte:** todo es procedural y provisional. Los prompts para ChatGPT o para el artista están en `docs/art/prompts-chatgpt.md`, y la lista de piezas de los miquitos en el guion de la intro (§11) y en la propuesta de fauna.
@@ -225,8 +305,8 @@ Material de partida: `docs/research/fauna/propuesta-fauna.md` (10 especies y 18 
 | D-008 | Bucle de partida como Magic Sort: estructura de Magic Sort, cifras de nuestro GDD. Las vidas ilimitadas no quitan los anuncios |
 | D-009 | Dificultad escalonada: ciclo de 20 reordenado, etiqueta antes de jugar y rotación de plantillas. Registrada el 2026-10-11 (paso 2); sus cifras [sim] esperan la aprobación del dueño |
 | D-010 | Intro «Llenar y teñir» con miquitos como datos. La ampliación a ~50 especies quedó registrada el 2026-10-11; su diseño es el paso 3 |
-| D-011 | Prueba en el teléfono (2026-10-11): la victoria se cobra en la vista cuando se ve, avisos legibles, miquitos con más presencia sin frenar el juego y Cosecha doble que avanza sola. Puntos 1, 3 (salvo la tarjeta del miquito tras la tropa) y 4 implementados en la tanda 1 (`7d755c4`); el punto 2 y esa tarjeta, en curso (tanda 2). Llevada al GDD el 2026-10-12 |
-| D-012 | Decisiones del 2026-10-09 y respuestas del 2026-10-11: estreno de la Piraña con mordisco fallido visible y tutorial animado, banner de mundo (Capi presenta y Rosa asoma; 11, 41, 81 y 141, primer intento, sin banner en el 1), sacudida de ±8 dp, 3 ciclos y 240 ms, patrones e iconos como el GDD, guardado por vertido con escritor en segundo plano (p95 < 5 ms y ninguno > 8 ms), marco del panel sin cambios y Remolino con canal y la misma marca en las dos cuias. Registrada el 2026-10-12 (paso 2). Tanda 1: mordisco fallido, Remolino y guardado; tanda 2, en curso: el resto |
+| D-011 | Prueba en el teléfono (2026-10-11): la victoria se cobra en la vista cuando se ve, avisos legibles, miquitos con más presencia sin frenar el juego y Cosecha doble que avanza sola. Implementada entera. Los puntos 1, 3 (salvo la tarjeta del miquito tras la tropa) y 4 van en la tanda 1 (`7d755c4`), probada en el teléfono el 2026-10-12: cumple. El punto 2 y esa tarjeta van en la tanda 2 (`94905b8`), que falta probar en el teléfono. Llevada al GDD el 2026-10-12; preguntas 38, 41 y 42 de `docs/GDD.md` §6.3 |
+| D-012 | Decisiones del 2026-10-09 y respuestas del 2026-10-11: estreno de la Piraña con mordisco fallido visible y tutorial animado, banner de mundo (Capi presenta y Rosa asoma; 11, 41, 81 y 141, primer intento, sin banner en el 1), sacudida de ±8 dp, 3 ciclos y 240 ms, patrones e iconos como el GDD, guardado por vertido con escritor en segundo plano (p95 < 5 ms y ninguno > 8 ms), marco del panel sin cambios y Remolino con canal y la misma marca en las dos cuias. Registrada el 2026-10-12 (paso 2) e implementada entera. La tanda 1 (`7d755c4`: mordisco fallido, Remolino y guardado) se probó en el teléfono el 2026-10-12 y cumple. La tanda 2 (`94905b8`: sacudida, patrones e iconos, banner de mundo y tutorial de la Piraña) falta probarla en el teléfono. Preguntas 37-39, 43 y 44 de `docs/GDD.md` §6.3 |
 
 ## 8. Cómo trabaja el dueño (preferencias aprendidas)
 
