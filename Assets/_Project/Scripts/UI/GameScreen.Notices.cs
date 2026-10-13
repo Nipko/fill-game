@@ -17,7 +17,10 @@ namespace AF.UI
     /// la tarjeta previa (LEVEL_CARD) ni la INTRO, que incluye el cartel «El río bajó» de la variante aliviada: lo que llega en esas
     /// fases (el regalo de Capi del 8 y la Luciérnaga del 100 llegan al cargar) espera en la cola y sale al habilitarse el toque
     /// (<c>OnIntroFinished</c>), como hacía ya el regalo de la Luciérnaga con la tarjeta previa. Desde el bloqueo lógico (antes
-    /// de que se abra Aguas estancadas) y con un modal del embudo abierto, la cola espera a que se vuelva a jugar. Y desde la
+    /// de que se abra Aguas estancadas) y con un modal del embudo abierto, la cola espera a que se vuelva a jugar. Al abrirse
+    /// un modal del embudo (Aguas estancadas, ¿Seguro?, Nivel fallido o Sin canoas), el aviso y la tarjeta que se vean se
+    /// ocultan en el acto, sin salida, como en la celebración, y se descartan: no vuelven al cerrarlo (pregunta 42, opción (b),
+    /// decidida por el dueño el 2026-10-13; <c>HideNoticesForModal</c>). Y desde la
     /// victoria lógica no sale ninguno: al empezar la celebración
     /// (<c>OnCelebrationStarted</c>) se ocultan el aviso y la tarjeta que se vean y se vacían la cola y la tarjeta pendiente, así
     /// que nada se dibuja encima de la celebración ni de la pantalla de victoria (un aviso dura hasta 7 s).</para>
@@ -36,11 +39,36 @@ namespace AF.UI
     /// <para><b>Capa</b>: el aviso y la tarjeta van en su propia capa (<c>_noticeLayer</c>), delante del tablero, del HUD y del
     /// polen y justo detrás de la capa de vertido: el origen que vierte se dibuja delante de ellos (D-006: delante de todo),
     /// como los modales y la pausa. El cartel (<c>_banner</c>) no va en ella.</para>
+    /// <para><b>Dónde va el aviso</b> (<c>PlaceToast</c>; observación 1 de la prueba del 2026-10-13 y pregunta 41 (4); T52) [P]:
+    /// con su alto de siempre (<see cref="Toast.DefaultHeightDp"/>) y su borde de abajo 8 dp sobre la bandeja, como antes. Si se
+    /// ve alguna burbuja «Te faltan {n}» de la bandeja (<see cref="BoosterTray.TryGetMissingTop"/>), sube lo justo para quedar
+    /// <see cref="NoticeBubbleGapDp"/> por encima de la más alta, con su canto: nunca la tapa. Y para no tapar el tablero, se
+    /// encoge hasta su texto (<see cref="Toast.MinHeightDp"/>) si entre la repisa de la última fila (con su sombra,
+    /// <see cref="ShelfShadowBelowFootDp"/> bajo el pie, donde va la ficha «?×n» de las cuias turbias) y su borde de abajo no
+    /// cabe entero. Si ni así cabe (3 filas con burbujas de dos líneas: el 135), sube lo justo sobre las burbujas con el alto
+    /// de su texto y tapa lo menos posible del canto inferior de esa repisa, nunca las cuias: es el compromiso que documentan
+    /// las capturas 92 de T52. Se recoloca en cada fotograma si cambian las burbujas o el tablero (sin asignaciones; solo
+    /// mide el texto cuando cambia).</para>
     /// </remarks>
     public sealed partial class GameScreen
     {
         /// <summary>Huecos de la cola de avisos (preasignados).</summary>
         internal const int NoticeSlots = 4;
+
+        /// <summary>Aire entre el canto de abajo del aviso y la burbuja «Te faltan {n}» más alta de la bandeja (dp) [P].</summary>
+        internal const float NoticeBubbleGapDp = 4f;
+
+        /// <summary>Aire entre el aviso y lo más bajo del tablero (la sombra de la repisa de la última fila; dp) [P].</summary>
+        internal const float NoticeBoardGapDp = 2f;
+
+        /// <summary>
+        /// Lo más bajo del tablero bajo el pie de la última fila (dp): la repisa (de pie − 3 a pie + 17, con la ficha «?×n» de
+        /// la cuia turbia de pie + 1 a pie + 15) y su sombra de 6 dp; el canal y la ficha del Remolino tampoco pasan de ahí.
+        /// </summary>
+        internal const float ShelfShadowBelowFootDp = 23f;
+
+        /// <summary>Borde de abajo del aviso de siempre sobre el borde de arriba de la bandeja (dp).</summary>
+        private const float NoticeAboveTrayDp = 8f;
 
         private readonly RectTransform _noticeLayer;
         private readonly Notice[] _notices = new Notice[NoticeSlots];
@@ -101,7 +129,69 @@ namespace AF.UI
         private void ShowToastNow(string text)
         {
             _toast.Show(text, NoticeTiming.ReadMs(text));
-            _toast.Place(_canvasW, TrayTop - 64f);
+            PlaceToast(true);
+        }
+
+        // El aviso, sin tapar las burbujas «Te faltan {n}» ni, si cabe, el tablero (ver la clase). Cada fotograma con el aviso a
+        // la vista, tras repintar la bandeja (GameScreen.Tick); solo lo mueve si cambia su sitio (force: al mostrarlo).
+        private void PlaceToast(bool force)
+        {
+            if (!_toast.Visible)
+            {
+                return;
+            }
+
+            float bottom = TrayTop - NoticeAboveTrayDp;
+            if (_tray.TryGetMissingTop(out float bubbleTop))
+            {
+                bottom = Mathf.Min(bottom, bubbleTop - NoticeBubbleGapDp - Toast.EdgeDp);
+            }
+
+            float height = Toast.DefaultHeightDp;
+            float floor = BoardContentBottom();
+            if (!float.IsNegativeInfinity(floor))
+            {
+                float room = bottom - (floor + NoticeBoardGapDp);
+                if (room < height)
+                {
+                    height = Mathf.Max(_toast.MinHeightDp(_canvasW), room);
+                }
+            }
+
+            float top = bottom - height;
+            if (force || Mathf.Abs(top - _toast.Top) > 0.01f || Mathf.Abs(height - _toast.Height) > 0.01f || float.IsNaN(_toast.Top))
+            {
+                _toast.Place(_canvasW, top, height);
+            }
+        }
+
+        // Lo más bajo del tablero en el lienzo (dp desde arriba): la sombra de la repisa de la última fila, con el tablero tal
+        // como está desplazado; −∞ sin tablero.
+        private float BoardContentBottom()
+        {
+            BoardLayoutResult? l = _layout;
+            if (l == null || _views.Length == 0 || l.Rows <= 0)
+            {
+                return float.NegativeInfinity;
+            }
+
+            return l.RowFootY[l.Rows - 1] + ShelfShadowBelowFootDp - _boardShift;
+        }
+
+        // Pregunta 42, opción (b) (decidida por el dueño el 2026-10-13; T52): al abrirse un modal del embudo, el aviso y la tarjeta
+        // del miquito que se vean se ocultan en el acto, sin salida (como en la celebración), y se descartan. La cola y la
+        // tarjeta pendiente siguen esperando a que se vuelva a jugar (NoticesHeld).
+        private void HideNoticesForModal()
+        {
+            _toast.Hide();
+            _sighting.Hide();
+        }
+
+        // Aguas estancadas, ¿Seguro?, Nivel fallido y Sin canoas.
+        private static bool IsFunnelModal(FlowPhase phase)
+        {
+            return phase == FlowPhase.StuckModal || phase == FlowPhase.GiveUpConfirm || phase == FlowPhase.LevelFailed
+                || phase == FlowPhase.NoCanoes;
         }
 
         private void EnqueueNotice(string? text, FaunaSpecies? species)
@@ -143,6 +233,13 @@ namespace AF.UI
         // mismo fotograma): la tarjeta pendiente entra en la cola cuando la tropa se ha ido.
         private void TickNotices()
         {
+            // Red de seguridad de HideNoticesForModal: con un modal del embudo abierto por un camino que no avisó, nada a la vista.
+            LevelFlow? flow = _flow;
+            if (flow != null && flow.HasLevel && IsFunnelModal(flow.Phase) && (_toast.Visible || _sighting.Visible))
+            {
+                HideNoticesForModal();
+            }
+
             if (_sightingPending != null && !_intro.TroopVisible && !NoticesHeld(_flow))
             {
                 EnqueueNotice(null, _sightingPending);
