@@ -142,3 +142,28 @@ Medida en vídeo, fotograma a fotograma (pasos de 12 ms; desplazamiento horizont
    - no lanzar tests de Unity con el teléfono en uso;
    - capturas directas al PC (`exec-out screencap -p`) y vídeos de `screenrecord` reducidos, que se bajan y se borran al momento;
    - liberar espacio en el teléfono.
+
+## Defecto encontrado por el dueño: bucle sin «Aguas estancadas» en el 66 (alta)
+
+**Síntoma (dueño, 2026-10-13):** «hay un error, no hay forma de seguir y queda en un loop».
+
+**Reproducción.** En el nivel 66, primer intento, los vertidos `3>6 4>3 7>4 0>5 1>5 2>0 2>1 5>2 1>5 2>1 0>7 1>2` (sacados de logcat; capturas en `Logs/device/loop/`, fuera de git) dejan este tablero:
+
+```
+0 [3,8,10]  1 [4,7]  2 [10,7,7,7]  3 sellada  4 sellada
+5 (cap 2) [4,4]  6 [3]  7 [8,8,10,10]  8 [3,3,8,1]  9 [1,1,1,4]
+```
+
+**Causa:**
+- Reproducido con `LevelSession` del núcleo, el estado es `Playing` con dos vertidos legales, `2>1` y `7>0`.
+- `AStarSolver` lo da por `Unsolvable` tras expandir solo 4 estados.
+- Esos dos vertidos son vaivenes parciales (los tres rosas entre 1 y 2, el azul entre 0 y 7). No son fútiles según 02 R13 y el anexo B, así que `atascado(S)` nunca se cumple y no sale Aguas estancadas.
+- El jugador da vueltas sin rescate ni rendición; solo le quedan Deshacer y Reiniciar a mano.
+- Es el caso que deja abierta la pregunta 15 (02 R16: el anexo B es falso ya en el juego base, CHANGELOG del núcleo C1-2). Ya pasa en un nivel sin mecánicas activas.
+
+**Magic Sort** (ficha §2.8) solo declara el bloqueo sin vertidos legales; si detecta bucles: no observado.
+
+**Para decidir (dueño)** y luego **arreglar (core-dev y unity-gameplay-dev):**
+- **Opción recomendada:** declarar Aguas estancadas cuando ningún vertido útil lleva a un estado nuevo, es decir, cuando el cierre de estados alcanzables con los vertidos útiles es pequeño y no contiene victoria. Se comprueba con una búsqueda acotada (p. ej., ≤ 64 estados, sin asignaciones) tras cada vertido.
+- **Alternativa:** que R13 use el solver con un presupuesto pequeño.
+- **Tests:** este tablero del 66 como caso de regresión (EditMode y núcleo) y P1 (R14) intacta.
