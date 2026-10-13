@@ -779,7 +779,7 @@ Piezas de arte de esa fase que esta guía ya deja preparadas, sin implementarlas
 - `capi_idle.png` (prioridad 8);
 - las siluetas de las ranuras de Cuia extra, Pista (ala, no hoja) y Barajar (3.6);
 - Capi estático en el muelle, que puede adelantarse a F7 si el dueño aprueba `capi_idle.png` (10.2). Desde la revisión visual del 2026-10-07 no hay Capi procedural: sin su PNG, no se dibuja;
-- en el panel de victoria, una fila de 44 dp para «Semillas +N» (el panel pasa de 118 a ~162 dp) y Capi celebrando fuera del tablero (07 §5.4, t = 0,60 / 0,80 s);
+- en el panel de victoria, una fila de 44 dp para «Semillas +N» (el panel pasa de 118 a ~162 dp) y TiTino celebrando fuera del tablero, solo si cabe (07 §5.4, t = 0,60 / 0,80 s; antes, Capi: D-013, T1-A);
 - el detalle por elemento: skin de la cuia, tapa, overlays de mecánicas y banner de mundo.
 
 ## 13. Revisión del crítico de arte (2026-10-07): qué se aplicó y qué se matizó

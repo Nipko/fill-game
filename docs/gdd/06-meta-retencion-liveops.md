@@ -508,8 +508,9 @@ Herramientas: Firebase Analytics con exportación a BigQuery (plan Blaze) y un p
 | `ui_max_takeovers_per_session` | Un solo pop-up fuera de hitos (2.3, 4.7, 5.1); dueño 05 |
 | `live_content_end_message` | Pantalla "El río sigue creciendo" y push local "Nuevos niveles" (9, 10) |
 | `victory_autonext_s` | Pantalla de victoria sin auto-avance: 0 (int) (4.7); dueño 02 |
-| `ui_map_mode` / `ui_map_autopen` / `ui_bg_per_stop` / `ui_stop_label` / `ui_victory_view` / `anim_map_world_ms` | Mapa del río de D-013 (4.5): 100 paradas o el filtro de 13; cuándo sale solo; fondo por parada o el de la gran parada del mundo; rótulo del lugar; victoria con vista; tope del viaje de mundo |
-| `ui_river_fact_every_n_levels` | Cadencia del Dato del río (4.4): la de las llegadas, igual a la de las paradas (10); la línea de fruta, pregunta 45 de GDD.md §6.3; dueño 00 |
+| `ui_map_mode` / `ui_map_autopen` / `ui_bg_per_stop` / `ui_stop_label` / `ui_victory_view` / `anim_map_world_ms` | Mapa del río de D-013 (4.5): 100 paradas o el filtro de 13; cuándo sale solo; fondo por parada o el de la gran parada del mundo; rótulo del lugar; victoria con vista; tope del viaje de mundo en la pantalla del Mapa (al acabarse el contenido y con «Ver mapa»; dentro del banner de mundo manda el tope de ≤ 4 s de Q4-D) |
+| `ui_map_quiz` | «¿Verdad o mito?» del Mapa del río (D-013, Q12-A): experimento de la 1.1, `off` en la 1.0 |
+| `ui_river_fact_every_n_levels` | Cadencia del Dato del río (4.4): default 10, sin cambios hasta que se decida la pregunta 45 de GDD.md §6.3: (a) se queda en 10, la de las paradas, y la línea de fruta lleva clave propia; (b) pasa a 1 y gobierna también la línea de fruta; dueño 00 |
 
 Alias retirados que este capítulo ya no usa (lista de 08 §9): `unlock_level_*`, `starter_first_show`, `push_preprompt_level`, `daily_bands`, `daily_offset`, `daily_reward_seeds`, `daily_murky_bonus_multiplier`, `daily_streak7_reward`, `logbook_*`, `eco_streak_rewards`, `streak_daily_cap_seeds`, `streak_shields_per_day`, `chest_cycle`, `event_active`, `comeback_*`, `max_takeovers_per_session`, `content_end_message`. Los parámetros de anuncios, precios y topes de comodines son de 05 y 04 (defaults también en 08 §9).
 

@@ -369,7 +369,7 @@ Celebración con confeti, sonido y háptico, recompensa y botón "Siguiente". **
 
 | t (s) | Fotograma |
 |---|---|
-| 0,00 | El motor detecta Aguas estancadas (02 R13): no queda vertido útil (research/01 §Implicaciones 8) o, con D-014 (2026-10-13), los vertidos útiles que quedan solo llevan a un bucle sin salida |
+| 0,00 | El motor detecta Aguas estancadas (02 R13): no queda vertido útil (research/01 §Implicaciones 8) o, con D-014 (2026-10-13), los vertidos que quedan solo llevan a un bucle sin salida (qué vertidos cuenta el cierre: pregunta 46 de GDD.md §6.3) |
 | 0,20 | Las superficies se aquietan (A → 0), el fondo baja 20 % de saturación, una niebla fina al 12 % cruza el tablero; zumbido grave de agua quieta |
 | 0,45 | El modal sube desde abajo (0,25 s) y ocupa el tercio inferior; las cuias siguen visibles y atenuadas al 70 %, para que el jugador vea qué deshacer. Titular "No hay más vertidos" (glosario §5.1). Orden: **Marea** (si queda cupo, con contador; ilimitada en 1-10), **Cuia de rescate** (**600 semillas fijas** desde el nivel 31, `rescue_price_bands` = [[31,600]], canon 04 §6.2 / 05; el primer rescate del día cuesta 300 con el 600 tachado; máximo 1 por nivel) y el enlace al pie: **Volver a la orilla** en 1-30 y **Rendirse** [P] desde el 31 (D-008) |
 | 0,45-0,85 | Si `ui_mascot_rescue_anim`: Capi llega remando desde la izquierda, se detiene junto al modal con una cuia en alto (`capi_rescue`), nunca tapa botones; copy "¡Capi llega al rescate con una cuia más! Sigue desde aquí." |
@@ -779,7 +779,7 @@ Research/08 §Implicaciones 3 recomienda 15-20 s; se produce a 30 s con los prim
 | 23-27 | Mundos | La canoa remonta el río de vidrio del Mapa del río, que se llena con su agua real, y el fondo pasa por 4 paradas (Belém, Alter do Chão, el Encuentro de las Aguas y Leticia) (D-013) |
 | 27-30 | Cierre | Tablero resuelto, confeti de guacamayo, TiTino celebrando en su rama (D-013), logo + "Sin wifi" |
 
-### 10.4 Cinco conceptos de creativos de UA con la mascota
+### 10.4 Cinco conceptos de creativos de UA con la mascota (más un sexto [P] con TiTino)
 
 Patrón ganador del subgénero: abrir en gameplay, varios vertidos satisfactorios, fail-state para tensión, mano guía, cierre con selección de niveles; playables idénticos al juego (research/09 §Por qué ganó 7 [V: Mobidictum, Artik]); conceptos emocionales con mascota ("rescate", "carrera contra el tiempo") funcionaron para el líder (research/09 §Por qué ganó 7 [V]). Sin creativos dirigidos a niños (research/08 C5.5 [V]).
 
@@ -807,7 +807,7 @@ Alcance de la 1.0 (canon de 2.1): fondos 1-4 install-time + Loreto (141-200) por
 | Skins | Rim + pie + banda + tapa por skin (Cuia de vidrio, Santarém, Encuentro, Totuma) | 16 | 4 |
 | Líquido | Shader (menisco, onda, patrón, burbujas, agua parda turbia) | 1 shader + 14 texturas de patrón | 4 (con programador) |
 | Frutas | Icono de accesibilidad por tinte (2 tamaños) + sprite de fruta cayendo | 14 × 3 | 5 |
-| Mascotas | Con D-013 (T1-A): TiTino con su hoja de modelo y unas 10 poses, Capi 6 poses (las de traer o guardar cosas), Rosa 6 poses (animación 2D por huesos o frames) | ≈ 22 animaciones | ≈ 19-20 (14 + ≈ 5-6 por TiTino) |
+| Mascotas | Con D-013 (T1-A; 6.1, 6.2 y 6.5): TiTino con su hoja de modelo y unas 10 poses (7 con uso hoy y 3 que esperan a T2); Capi, 10 poses (las 12 de antes sin `capi_cheer` ni `capi_sleep`; la 11.ª, `capi_paddle`, va en la fila del Mapa del río); Rosa, 5 (sin `rosa_fact`; `rosa_farewell` va en la fila del Mapa). Animación 2D por huesos o frames | ≈ 25 animaciones | ≈ 21-22 [E]: 14 + ≈ 5-6 por TiTino (c.7 de su propuesta, que suponía a Capi con 6 poses) + ≈ 2 por las 4 poses de Capi que siguen mientras T2 y T5 estén abiertas (`capi_present`, que además mantiene D-012 en el banner de mundo, `capi_think`, `capi_shrug` y `capi_point`), menos `rosa_fact`. Se recuenta al decidir T2 y T5 |
 | Elenco de fondo | Guacamayo (confeti), nutria, tucán, rana dardo, jaguar (iconos), hoatzin (1.1); el perezoso es TiTino (fila de mascotas) | 5 | 3 |
 | UI | Tokens, botones (4 tipos × 4 estados), paneles de papel (6), bandeja cumbuca, HUD, badges de dificultad, modal Aguas estancadas, banner de mundo, Bitácora, Canasta, Mercado, Ajustes | ~70 piezas | 10 (12 menos los 2 del Mapa del río de 13 paradas, que pasa a su fila) |
 | Mapa del río (D-013) | 5 texturas de terreno, la máscara de zonas del terreno, la canoa con Capi remando, Rosa reducida con `rosa_farewell` y la paleta del bufeo boliviano, la mini cuia y la repisa del Muestrario, la casa y la ventanita de TiTino, las banderas (5 en 1-700) y la rosa de los vientos, placas, boya, baliza y «?» | ≈ 20 piezas | ≈ 9,25 (≈ +7,25 sobre los 2 del Mapa de 13 paradas que contaba antes la fila de UI) |
@@ -818,9 +818,9 @@ Alcance de la 1.0 (canon de 2.1): fondos 1-4 install-time + Loreto (141-200) por
 | Audio música | Lechos mundos 1-5 + genérico, 2 capas de percusión por lecho, toada, tema de menú, 6 stingers | 6 + 12 + 1 + 1 + 6 | 12 (compositor) |
 | Ambientes | Capas agua/lluvia/fauna para 6 fondos | 18 loops | 3 |
 | Tienda | Icono (3 conceptos → 1 final + adaptativo), 8 capturas × 3 idiomas, gráfico de funciones, vídeo 30 s (2 orientaciones) | 1 + 24 + 1 + 2 | 8 |
-| UA | 5 conceptos × (playable + vídeo 15 s + vídeo 30 s) | 15 | 10 (con programador para playables) |
+| UA | 5 conceptos × (playable + vídeo 15 s + vídeo 30 s); el 6.º, «TiTino te anima» [P] (10.4; D-013, T1-A), no se cuenta hasta que se apruebe | 15 | 10 (con programador para playables) |
 | Mecánicas y etiquetas (D-007, D-009) | Estados de las 8 mecánicas de la 1.0 (§4.3; hoy, arte provisional dibujado por código), sus desbloqueos (§5.6), el mordisco animado de la tarjeta del 183 (§7.7; D-012), el revelado de Aguas turbias con la burbuja, el chip y la cinta «×3» / «×4», la tarjeta previa y los sonidos de desbloqueo (§9.2) | ≈ 20 piezas entre sprites, animaciones y sonidos (propuesta de D-007, §(g)) | Por estimar [P] |
-| **Total arte 2D** (sin audio ni playables) | | | **≈ 85 días-persona ≈ 17 semanas de 1 artista**, sin la fila de D-007 y D-009, por estimar. Con D-013, unos **+18 días** en 1-200 (≈ 11 de fondos y ≈ 7,25 del Mapa), **+8** por los kits de 201-700 y **≈ +5-6** por TiTino [E] |
+| **Total arte 2D** (sin audio ni playables) | | | **≈ 85 días-persona ≈ 17 semanas de 1 artista**, sin la fila de D-007 y D-009, por estimar. Con D-013, unos **+18 días** en 1-200 (≈ 11 de fondos y ≈ 7,25 del Mapa), **+8** por los kits de 201-700 y **≈ +7-8** en mascotas (≈ 5-6 por TiTino y ≈ 2 por las poses de Capi que siguen) [E] |
 
 Con dos artistas (o artista + animador) baja a ~9-10 semanas de calendario; los fondos 6-8 de la 1.1, los 9-13 posteriores y las 9 skins suman ≈ 35 días más (research/02 C3.4 conteo [E]).
 

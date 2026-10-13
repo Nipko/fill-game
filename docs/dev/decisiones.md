@@ -19,7 +19,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-011 | 2026-10-11 | Ajustes de la prueba en el teléfono: la victoria se cobra cuando se ve, avisos legibles, miquitos que se ven y Cosecha doble que avanza | Decidida por el dueño tras probar el `dev.apk` en el SM-S938B (tareas P1-P4 de `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`). Implementada entera: los puntos 1, 3 y 4 en la tanda 1 (integrada en `7d755c4`), probada en el teléfono el 2026-10-12 con resultado «cumple» (`docs/dev/traspaso/pruebas-telefono-2026-10-12.md`); el punto 2 (avisos legibles) y la tarjeta del miquito tras la tropa en la tanda 2 (A2, `35301f9`; tanda integrada en `94905b8`), probada en el teléfono el 2026-10-13 con resultado «cumple» (`docs/dev/traspaso/pruebas-telefono-2026-10-13.md`). Llevada al GDD el 2026-10-12 (paso 2). Pendiente: ratificar los [P] de la tanda 1 (pregunta 38 de `docs/GDD.md` §6.3). Las preguntas 41 y 42, que dejó la tanda 2, quedaron decididas el 2026-10-13 (D-015); sus arreglos van en T52 |
 | D-012 | 2026-10-09 y 2026-10-11 | Prueba del 2026-10-09: estreno de la Piraña, banner de mundo, sacudida, patrones, guardado por vertido y marco del panel | Decidida por el dueño. Registrada y llevada al GDD el 2026-10-12 (paso 2). Implementada entera. En la tanda 1 (`7d755c4`), probados en el teléfono el 2026-10-12 con resultado «cumple»: el mordisco fallido visible, la marca de pareja del Remolino y el guardado por vertido con escritor en segundo plano (52 vertidos medidos: p95 de 2,15 ms y máximo de 3,67 ms). En la tanda 2 (`94905b8`), probados en el teléfono el 2026-10-13 con resultado «cumple»: la sacudida y los patrones e iconos (B3, `dd208a6`) y el banner de mundo y el tutorial de la Piraña con mordisco animado (A4, `94905b8`). Pendientes: el vertido que gana frente a «ninguno > 8 ms» y los [P] de la tanda 1, entre ellos el tope de 1.000 ms de los guardados síncronos y el aire de la ficha del Remolino (preguntas 37 y 38 de `docs/GDD.md` §6.3). Las preguntas 39, 43 y 44 quedaron decididas el 2026-10-13 (D-015). D-013 (2026-10-13) cambia la decisión 2: el banner de mundo trae dentro el viaje de mundo (Q4-D). Los iconos de fruta procedurales son [P] del artista y del asesor cultural (07 §3) |
 | D-013 | 2026-10-12 y 2026-10-13 | Mapa del río: remontar el Amazonas hasta donde nace | Decidida por el dueño (río arriba y un fondo por parada el 2026-10-12; la recomendación de cada pregunta de la sección 16 de la propuesta el 2026-10-13, con T1-A y T6-A de TiTino y Q1-A de Frutas del río). Documentación aplicada el 2026-10-13 (T50). Sin implementar: fases F1-F9 de la propuesta. Cambia D-009 (punto 2) y D-012 (decisión 2); D-008 no cambia. Choques entre propuestas: pregunta 45 de `docs/GDD.md` §6.3. Todo nombre, dato y texto, pendiente del asesor cultural |
-| D-014 | 2026-10-13 | Aguas estancadas por bucle (R13 ampliada) | Decidida por el dueño (opción recomendada de la hoja de pruebas del 2026-10-13). Documentación aplicada el 2026-10-13 (T50: 02 R13, R14 y R16). En implementación en el núcleo (T51, `LevelSession`). Resuelve para el jugador la pregunta 15 de 02; la propiedad del anexo B sigue abierta (pregunta 34 de `docs/GDD.md` §6.3) |
+| D-014 | 2026-10-13 | Aguas estancadas por bucle (R13 ampliada) | Decidida por el dueño (opción recomendada de la hoja de pruebas del 2026-10-13). Documentación aplicada el 2026-10-13 (T50: 02 R13, R14 y R16). En implementación en el núcleo (T51, `LevelSession`), **sin integrar hasta que el dueño responda la pregunta 46** de `docs/GDD.md` §6.3: con capacidades mixtas, el cierre de vertidos útiles declara el bloqueo en tableros que se ganan (el propio 66, tras el vertido 6), contra R14. Resuelve para el jugador la pregunta 15 de 02; la propiedad del anexo B sigue abierta (pregunta 34 de `docs/GDD.md` §6.3) |
 | D-015 | 2026-10-13 | Respuestas a las preguntas 39-44 de `docs/GDD.md` §6.3 | Decidida por el dueño (la recomendación de cada pregunta). Documentación aplicada el 2026-10-13 (T50). Los arreglos de las preguntas 41 (punto 4), 42 y 43 (escala de fuente del banner) van en T52 [P]; la medida del shader en un teléfono de clase A es una acción del dueño (pregunta 44) |
 
 ---
@@ -1624,7 +1624,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 12. **«¿Verdad o mito?» (Q12-A).** Experimento de la 1.1 detrás de `ui_map_quiz` = `off`; en la 1.0, el dato simple.
 13. **Textos (Q13-A).** «Rosa te lleva río arriba, al siguiente nivel» (`stuck_skip`).
 14. **Lo que se aprueba con el lote de documentación** (sección 16, «no son preguntas, pero hay que firmarlo»):
-    - las 6 claves de Remote Config (08 §9): `ui_map_mode`, `ui_map_autopen`, `ui_bg_per_stop`, `ui_stop_label`, `ui_victory_view` y `anim_map_world_ms`;
+    - las 6 claves de Remote Config (08 §9): `ui_map_mode`, `ui_map_autopen`, `ui_bg_per_stop`, `ui_stop_label`, `ui_victory_view` y `anim_map_world_ms`, y `ui_map_quiz` (Q12-A, apagada);
     - los 3 eventos (08 §8.2): `af_map_open`, `af_map_close` y `af_stop_arrive`, y el `fact_id` de `af_river_fact_shown` como clave del dato;
     - el campo `progress.map_seen_level` del perfil (08 §4.3): entero, 0 por defecto, gana el máximo en la fusión de 08 §11; no exige migrar el perfil porque el esquema aún no se ha publicado (`Profile.cs`, `CurrentSchema` = 1);
     - los formatos `af-river-map/1` y `af-river-stops/1`: contratos 29 y 30 (GDD.md §7.4; sintaxis en 08 §4.5);
@@ -1650,17 +1650,17 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Dependencias externas:** las descargas de Q11 (dueño); el asesor (datos, sitios marcados, Shanay-Timpishka en el mundo 9, que puede ser parada, vapor lejano o nada, y el bufeo boliviano); el abogado (banderas, Guyana y «TiTino»); el artista (la máscara de zonas del terreno para F2 y los héroes después de VA-20).
 
 **Qué cambia en el GDD** (aplicado el 2026-10-13, T50):
-- `docs/GDD.md`: versión 1.7; §1 (el Mapa, TiTino y «río arriba»); §2 #24; §3.1 (índice); §6 y §6.3 (la 34 apunta a D-014, las 39-44 decididas y la 45 nueva); §7.4 (contratos 29 y 30).
-- 00 glosario: §3.1-§3.3, §5.1-§5.2, §6.4, §7.1, §8 (mundos 9 y 13), §10 (claves del Mapa), §11 (identificadores del Mapa) y «Parámetros».
+- `docs/GDD.md`: versión 1.7; §1 (el Mapa, TiTino y «río arriba»); §2 #24; §3.1 (índice); §4 (fila «Tema y marca»); §6 y §6.3 (la 34 apunta a D-014, las 39-44 decididas y la 45 nueva); §7.4 (contratos 29 y 30).
+- 00 glosario: el resumen, §3.1-§3.3 y §3.4 (nueva: TiTino), §5.1-§5.2, §6.4, §7.1, §8 (mundos 9 y 13), §10 (claves del Mapa), §11 (identificadores del Mapa), «Parámetros» y la pregunta abierta 3 (el nombre de TiTino).
 - 01: el resumen (TiTino y «río arriba») y el concepto de UA «Rosa te lleva río arriba».
-- 02: §2 (estado de la victoria), §5 (pausa y Capi), §6 (llegada, victoria con vista, barra de la Canasta, banner con el viaje, TiTino y una línea por victoria) y §10 (tarjeta del hito p20).
-- 03 §13 (el Mapa, sin salir del nivel) y 04 §2.6, §3 y §6.5 («río arriba»; el Mercado, desde el inicio).
+- 02: §2 (estado de la victoria), §4 (Celebración: TiTino, sin Capi), §5 (pausa y Capi), §6 (llegada, victoria con vista, barra de la Canasta, banner con el viaje, TiTino y una línea por victoria) y §10 (tarjeta del hito p20).
+- 03 §13 (el Mapa, sin salir del nivel) y 04 §2.6, §4 y §6.5 («río arriba»; el Mercado, desde el inicio).
 - 05 §4.1 y §5 (la Mochila en la victoria, el Pase fuera del Mapa, la oferta de skin y el marco de los packs de skin).
 - 06: §2.2, §2.3, §4.4-§4.7, §8, §9, «Parámetros» y «Dependencias».
 - 07: §2.1 (fondos por parada), §2.2 (reglas 1 y 6; fauna del mundo 4), §5.4, §5.5, §6.1-§6.3, §6.5 (nueva: TiTino), §7.6, §7.7, §9.1, §10, §11 y «Parámetros».
 - 08: §2.2, §3, §4.3, §4.5 (nueva), §6.1, §6.2, §8.2, §9 y §11.
 - 09: §1.1 (#20 y #27), §2.3 (fase 3), §2.4 (F3), §5 (arte) y §7 (R34).
-- `docs/art/direccion-visual-v2.md`: revisión 8, §3.4, §9 (VA-20 a VA-23) y §10.3.
+- `docs/art/direccion-visual-v2.md`: revisión 8, §3.4, §9 (VA-20 a VA-23), §10.3 y §12 (TiTino celebra en el panel de victoria).
 - Propuestas marcadas: Mapa (cabecera y sección 16), TiTino (estado, T1, T6 y f.1), Frutas (cabecera, Q1 y los datos k14 y k19 del Tapajós, que hay que cambiar) y `docs/research/magic-sort/propuesta-tintalu.md` (pregunta #16, Escenas del río, respondida).
 
 **Alternativas descartadas.**
@@ -1687,9 +1687,10 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Estado:** decidida por el dueño: la opción recomendada de la hoja `docs/dev/traspaso/pruebas-telefono-2026-10-13.md` («Defecto encontrado por el dueño: bucle sin "Aguas estancadas" en el 66»), con su «Nos vamos por las recomendadas».
   - Documentación aplicada el 2026-10-13 (T50): 02 R13, R14 y R16, y la pregunta 15 de 02; `docs/GDD.md` §6.3, pregunta 34.
   - En implementación en el núcleo (T51, `LevelSession`), con el tablero del 66 como prueba de regresión.
+  - **Revisión del 2026-10-13 (T50): pendiente de la pregunta 46** de `docs/GDD.md` §6.3. El propio 66 es un contraejemplo: con la regla tal como se decidió, Aguas estancadas saltaría tras el vertido 6, cuando el tablero todavía se gana, y eso rompe R14 (P1), que la hoja de pruebas pedía «intacta» (Consecuencias, «El 66, contraejemplo de P1»). T51 no integra la regla hasta que el dueño responda.
 - **Sustituye:**
   - en 02 R13, la única condición de Aguas estancadas («`movimientos_utiles(S)` vacío»): se añade la del bucle sin salida;
-  - en 02 R14, «nunca anuncia "irresoluble" mientras exista un movimiento útil»: pasa a «mientras exista progreso posible», que es lo que protege R14 (P1).
+  - en 02 R14, «nunca anuncia "irresoluble" mientras exista un movimiento útil»: pasa a «mientras exista progreso posible (el tablero es resoluble)», que es lo que protege R14 (P1). La garantía no se rebaja: la regla ampliada tiene que cumplirla (pregunta 46).
 - **No sustituye:**
   - `futil` del anexo B, Q-B ni Q18 B (los fútiles no avanzan contadores), ni el kill-switch `futile_rule_enabled`;
   - el solver (`AStarSolver`), el bot ×40, el generador, `tools/level-qa` ni los packs, que quedan idénticos byte a byte;
@@ -1710,22 +1711,35 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - `AStarSolver` lo da por `Unsolvable` tras expandir solo 4 estados;
   - esos dos vertidos son vaivenes parciales (los tres rosas entre la 1 y la 2, el azul entre la 0 y la 7). No son fútiles según R13 y el anexo B, así que `atascado(S)` no se cumple y no sale Aguas estancadas;
   - el jugador da vueltas sin rescate ni rendición: solo le quedan Deshacer y Reiniciar a mano.
-- **Es el caso que dejaba abierta la pregunta 15 de 02** (R16): el anexo B («no existe un ciclo de vertidos útiles que vuelva al mismo estado canónico») es falso ya en el juego base (CHANGELOG del núcleo, C1-2). Pasa en un nivel sin mecánicas activas.
+- **Es el caso que dejaba abierta la pregunta 15 de 02** (R16): el anexo B («no existe un ciclo de vertidos útiles que vuelva al mismo estado canónico») es falso ya en el juego base (CHANGELOG del núcleo, C1-2).
+- **El 66 no es un nivel sin mecánicas** (`m03_v1_n0066` de `Assets/_Project/Data/Levels/mundo_03_v1.json`): tiene **capacidades mixtas**, con una Cuia chica de 2 en la 5 (`caps` = [4, 4, 4, 4, 4, 2, 4, 4, 4, 4]), y una **Hoja** en la 6 (llave: el color 3), que el primer vertido (`3>6`) abre. En el tablero final ya no queda ninguna mecánica activa, pero las capacidades siguen siendo mixtas: es justo la excepción de P2 (02 R16) que había que vigilar. La hoja de pruebas lo daba por «un nivel sin mecánicas activas».
 - **Magic Sort** (ficha §2.8) solo declara el bloqueo sin vertidos legales; no está observado si detecta bucles.
 
 **Decisión.**
 1. **Regla:** con S en `Playing` según la regla actual, se recorre el cierre de estados alcanzables con vertidos útiles (no fútiles: R13, anexo B, Q-B y Q18 B). **Si se agota con ≤ 64 estados [P] y ninguno es victoria, S queda en Aguas estancadas. Si pasa de 64, no se declara** (conservador).
 2. **Dónde:** solo en la partida del cliente (`LevelSession`, AF.Core), donde hoy se evalúa el estado tras cada cambio. El solver, el bot, el generador y `level-qa` no cambian, y los packs son idénticos.
-3. **El 66** queda como ejemplo en 02 R13 y como prueba de regresión del núcleo.
+3. **El 66** queda como ejemplo en 02 R13 y como prueba de regresión del núcleo. Qué tiene que dar esa prueba depende de la pregunta 46 (Consecuencias).
 
 **Consecuencias.**
 - **Pregunta 15 de 02 y pregunta 34 de GDD.md §6.3:** queda resuelta **para el jugador**: un vaivén que no lleva a ninguna parte ya no retrasa el modal, tampoco el del Remolino con Q-B si su cierre es pequeño. **La propiedad del anexo B sigue abierta para el diseño:** ratificar P1-P3 en su lugar, con la excepción del Remolino, es la pregunta 34, que sigue pendiente.
-- **T51 (core-dev):**
+- **El 66, contraejemplo de P1** (revisión de T50, 2026-10-13). Se comprobó simulando el pack con las reglas de 02 R9 y de `futil` (anexo B), contrastadas con `CuiaRules.IsFutile` y `HojaMechanic`; los 12 vertidos del dueño reproducen exactamente el tablero final.
+  - **Con la regla decidida, Aguas estancadas saltaría tras el vertido 6 (`2>0`), no tras el 12.** El cierre de vertidos útiles ya se agota sin victoria tras el vertido 6 (50 estados), el 7 (22), el 8 (`5>2`, 22) y del 9 al 12 (4).
+  - **Pero tras los vertidos 6, 7 y 8 el tablero se gana.** Tras el 8, por ejemplo, con `6>5 2>6 0>2 7>2 0>7 0>5 1>0 1>6 0>1 9>1 8>9 8>7 5>8`, que empieza por un fútil: `6>5` lleva el 3 suelto de la 6, de capacidad 4, a la Cuia chica vacía y libera una cuia de 4. Es la excepción de P2 con capacidades distintas (02 R16). Tras el 6 y el 7 también hay líneas ganadoras que pasan por `6>5`.
+  - **El tablero solo es irresoluble a partir del vertido 9 (`1>5`):** desde ahí, el cierre con todos los vertidos legales, fútiles incluidos, tiene 4 estados y ninguno es victoria.
+  - **Conclusión:** con capacidades mixtas, «el cierre de vertidos útiles se agota sin victoria» no equivale a «no hay progreso posible», así que la regla decidida rompe R14 (P1), que la hoja de pruebas pedía «intacta». La decisión tiene dos partes que se contradicen en el 66, y el dueño tiene que elegir: **pregunta 46** de GDD.md §6.3.
+    - (a) El cierre recorre todos los vertidos legales, fútiles incluidos, con el mismo tope de 64 estados [P]. En el 66 salta justo tras el vertido 9, y P1 se cumple por construcción: un cierre completo sin victoria significa un tablero irresoluble.
+    - (b) Solo vertidos útiles, aceptando falsos bloqueos con capacidades mixtas.
+    - (c) El bucle, solo con capacidades iguales. No arregla el 66, que tiene capacidades mixtas.
+    - **Recomendación: (a).**
+- **T51 (core-dev)**, que espera a la pregunta 46 para integrar:
   - lo implementa en `LevelSession`, con búferes fijos para 64 estados y sin asignaciones tras calentar (reglas duras 1 y 2: determinista, sin LINQ ni `new` por nodo);
   - el límite de 64 es una constante [P] del núcleo, no una clave de Remote Config; el coste objetivo es de menos de 1 ms por evaluación en un tablero de 14 cuias, dentro de los 8 ms de CPU del hilo principal de 08 §5.4;
-  - pruebas: el tablero del 66 da Aguas estancadas justo tras el último vertido, y no antes; ningún tablero ganable de los tests se declara atascado; un cierre de más de 64 estados no se declara; P1-P3 siguen en verde, con una propiedad nueva (si el cierre da atascado, el solver exhaustivo da irresoluble);
+  - pruebas del 66, según la respuesta:
+    - con (a), el tablero final da Aguas estancadas y, en la secuencia del dueño, salta por primera vez justo tras el vertido 9 (`1>5`), no antes;
+    - con (b), salta tras el vertido 6, y P1 deja de valer para la regla ampliada con capacidades mixtas;
+    - con (c), el 66 no da Aguas estancadas;
+  - pruebas comunes: un cierre de más de 64 estados no se declara y P1-P3 siguen en verde. Hay además una propiedad nueva, que lleva el 66 como caso: si el cierre da atascado, el solver exhaustivo da irresoluble. Con (a) se cumple por construcción; con (c), la propiedad lo comprueba con capacidades iguales; con (b), solo se exige con capacidades iguales;
   - con Aguas turbias, el núcleo conoce las dosis ocultas y el cierre usa el estado verdadero; los contadores de Lluvia y Piraña forman parte del estado.
-- **Lo que hay que vigilar:** con capacidades distintas, un fútil puede cambiar el estado canónico (02 R16, P2). Si en algún tablero el cierre de vertidos útiles se agota sin victoria pero el tablero se gana pasando por un fútil, P1 fallaría: la propiedad nueva de T51 lo tiene que cubrir y, si falla, se vuelve al dueño antes de integrar.
 - **Cliente y analítica:** sin cambios de pantalla; el modal, sus textos y `af_stuck_shown` son los de siempre.
 
 **Alternativas descartadas.**
@@ -1736,7 +1750,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Cómo revertir.** Quitar la comprobación del cierre en la evaluación de `LevelSession` (T51). Siempre con una decisión nueva que sustituya a D-014.
 
 **Archivos afectados.**
-- **Documentación** (2026-10-13, T50): este registro; 02 §1.4 (R13, R14 y R16), §2 (la transición a STUCK_MODAL) y «Preguntas abiertas» 15; 07 §5.5; `docs/GDD.md` §6.3 (pregunta 34); `docs/dev/traspaso/README.md`.
+- **Documentación** (2026-10-13, T50): este registro; 02 §1.4 (R13, R14 y R16), §2 (la transición a STUCK_MODAL) y «Preguntas abiertas» 15 y 16; 07 §5.5; `docs/GDD.md` §6.3 (preguntas 34 y 46); `docs/dev/traspaso/README.md`; una nota en la hoja `docs/dev/traspaso/pruebas-telefono-2026-10-13.md` (el 66 tiene capacidades mixtas).
 - **Código** (T51): `Packages/com.amazonfill.core/Runtime/AF.Core/Session/LevelSession.cs`, una clase nueva del núcleo para el cierre, sus tests compartidos y de `DotnetOnly`, y el README y el CHANGELOG del núcleo.
 
 ---
