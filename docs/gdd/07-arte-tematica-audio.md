@@ -62,17 +62,50 @@ Canon de orden, país, río y rangos: research/02 C3.3 [E] vía glosario §8 (di
 | 2 | **Tapajós** · Brasil (Pará) | 11-40 | Playa de Alter do Chão (Ilha do Amor) con arena blanca; encuentro del Tapajós azul con el Amazonas lechoso frente a Santarém | Mediodía luminoso, cielo alto | Clara · #2E8B8B | AAB |
 | 3 | **Manaos** · Brasil (Amazonas) | 41-80 | Encuentro de las Aguas (línea negra/beige en diagonal); archipiélago de Anavilhanas; silueta lejana del Teatro Amazonas | Tarde, luz rasante | Negra · #4A2C14 | AAB |
 | 4 | **Trapecio** · Colombia | 81-140 | Malecón de Leticia; lagos de Puerto Nariño / Amacayacu; tepuyes de Chiribiquete solo como silueta (sin pictografías) | Mañana nublada tras lluvia | Blanca · #B08A5A | AAB |
-| 5 | **Loreto** · Perú | 141-200 | Barrio flotante de Belén (Iquitos) y Casa de Fierro; "selva de espejos" de Pacaya-Samiria; confluencia Marañón-Ucayali en Nauta | Atardecer reflejado en agua quieta | Blanca · #B08A5A | PAD on-demand (1.0) |
+| 5 | **Loreto** · Perú | 141-200 | Malecón de Iquitos y casas que flotan en la creciente del río Itaya (sin «Belén» como nombre de parada, rótulo ni ranura, y sin pobreza pintoresca: D-013); Casa de Fierro solo como arquitectura, sin el mito de Eiffel; "selva de espejos" de Pacaya-Samiria; confluencia Marañón-Ucayali en Nauta (en la tarjeta y en el Mapa, vista desde arriba) | Atardecer reflejado en agua quieta | Blanca · #B08A5A | PAD on-demand (1.0) |
 | 6 | **Oriente** · Ecuador | 201-300 | Lagunas negras de Cuyabeno; dosel de Yasuní; río Napo ancho | Crepúsculo y noche temprana | Blanca · #B08A5A (fondo nocturno) | PAD (1.1); en 1.0 fondo "río genérico" [P] |
 | 7 | **Madre de Dios** · Perú | 301-420 | Collpa de guacamayos (pared de arcilla); lago Sandoval con palmeras aguaje; río Tambopata | Amanecer (hora de la collpa) | Blanca · #B08A5A | PAD (1.1); en 1.0 fondo "río genérico" [P] |
 | 8 | **Madidi** · Bolivia | 421-560 | Madidi de 180 a 5.760 m (selva con Andes al fondo); cascada Arcoiris de Noel Kempff (88 m); meseta Huanchaca | Mediodía con niebla de cascada | Blanca · #B08A5A (hitos: clara) | PAD (1.1); en 1.0 fondo "río genérico" [P] |
-| 9 | **Ucayali** · Perú | 561-700 | Pucallpa y el Ucayali meándrico; Shanay-Timpishka (río hirviente, ~95 °C) con vapor; Pongo de Manseriche | Mañana con vapor | Blanca · #B08A5A (partículas de vapor en especiales) | PAD (después de 1.1, 09 §3.1 P3); hasta entonces, fondo "río genérico" [P] |
+| 9 | **Ucayali** · Perú | 561-700 | Pucallpa y el Ucayali meándrico; Shanay-Timpishka (río hirviente, ~95 °C) según responda el asesor: parada, solo vapor lejano en el fondo o nada (D-013: que sea un lugar sagrado no está comprobado, y hay comunidades a su orilla); Pongo de Manseriche | Mañana con vapor | Blanca · #B08A5A (partículas de vapor en especiales) | PAD (después de 1.1, 09 §3.1 P3); hasta entonces, fondo "río genérico" [P] |
 | 10 | **Alto Negro** · Venezuela / Brasil | 701-820 | Canal del Casiquiare; Serranía de la Neblina y Pico da Neblina solo como silueta lejana (sagrado yanomami, research/07 §1) | Noche estrellada | Negra · #4A2C14 | PAD (después de 1.1, 09 §3.1 P3) |
 | 11 | **Escudo de Guayana** · Guyana / Surinam / Guayana Francesa | 821-920 | Sabana del Rupununi y montes Kanuku; inselberg Voltzberg; río Maroni | Tarde de sabana, cielo enorme | Blanca · #B08A5A | PAD (después de 1.1, 09 §3.1 P3) |
 | 12 | **Invitados del Orinoco** · Venezuela / Colombia | 921-960 | Caño Cristales rojo (jul-nov); tepuyes de Canaima y Salto Ángel (979 m) al fondo; rótulo permanente "vecinos del Orinoco" (research/07 §1 [V]) | Mediodía | Clara · #2E8B8B | PAD (después de 1.1, 09 §3.1 P3) |
-| 13 | **El origen** · Perú (Andes) | 961-1.000 | Cañón del Marañón (3.000 m); nevados y puna; el río como hilo entre rocas | Alba fría de altura | Blanca · #B08A5A con LUT fría [P] | PAD (después de 1.1, 09 §3.1 P3) |
+| 13 | **El origen** · Perú (Andes) | 961-1.000 | Cañón del Apurímac, puna alta y el nevado Mismi (quebradas Apacheta y Carhuasanta), **una de las nacientes** del Amazonas (D-013, Q7-A; antes, el cañón del Marañón); el río como hilo entre rocas; sin Choquequirao ni ninguna ruina, y Q'eswachaka solo con el asesor | Alba fría de altura | Blanca · #B08A5A con LUT fría [P] | PAD (después de 1.1, 09 §3.1 P3) |
 
-**Fondos de la 1.0** (canon compartido con glosario §8, 03 §17 y 08 §6.2): fondos 1-4 install-time + Loreto (141-200) por PAD; "río genérico" para 201-700 (mundos 6-9) hasta que lleguen sus packs. El mismo "río genérico" cubre cualquier mundo cuyo pack aún no esté descargado al llegar a él (08 §6.2); la lista de piezas está en la sección 11.
+**Fondos de la 1.0** (canon compartido con glosario §8, 03 §17 y 08 §6.2): fondos 1-4 install-time + Loreto (141-200) por PAD; "río genérico" para 201-700 (mundos 6-9) hasta que lleguen sus packs. El mismo "río genérico" cubre cualquier mundo cuyo pack aún no esté descargado al llegar a él (08 §6.2); la lista de piezas está en la sección 11. **Con D-013 (2026-10-13) el fondo de 1-200 es el de cada parada del Mapa del río** (tabla siguiente): la columna «Paisaje» de arriba pasa a ser el repertorio de cada mundo, y la pintura única por mundo deja de producirse. En 201-700, el kit del mundo (`bg_kit_w06` … `bg_kit_w09`) con el rótulo del sitio, sin héroe, así que ahí no hay fondo propio por sitio; el «río genérico» queda de respaldo mientras no lleguen los kits o el pack.
+
+**Fondos por parada (D-013, 2026-10-13; propuesta del Mapa del río, sección 10).** El fondo dice dónde está la canoa del Mapa: el mismo sitio, la misma agua base del mundo y la misma temporada del ciclo (por LUT). La tarjeta de la parada en el Mapa, el inicio, el banner de mundo y la victoria con vista usan la misma composición que el tablero, así que no hay dos dibujos del mismo sitio que puedan contradecirse.
+- **Capas** (las de `docs/art/direccion-visual-v2.md` §3.4, con el panorama dividido): (0a) cielo, sol y nubes por código, con la hora del mundo de esta tabla; (0b) **kit del mundo**: un atlas de 8-10 piezas por mundo (orilla lejana en tiras que se repiten, selva y palmeras del mundo, islas, playas de río, árboles en el agua, barcos lejanos sin personas y una silueta de ciudad genérica), del artista, una vez por mundo; (0c) **héroe del sitio**: un PNG bajo y ancho, de unos **240 × 80 dp**, con el pie en el horizonte de `GameScreen.HorizonFor`: hasta 48 dp de silueta por encima (lo reconocible, en sus 30 dp de abajo, que es lo que se ve con 2 filas) y hasta 32 dp de orilla y reflejo por debajo, que el código alarga con el mismo sprite volteado; (0d) **héroes por código**: las líneas entre aguas de Santarém (clara y blanca) y del Encuentro (negra y beige en diagonal); (0e) la banda de río con el preset del mundo; (1) ambiente por sitio, con 16 partículas como mucho (pericos en Leticia, lomos de delfín en Tarapoto, bruma en Pacaya-Samiria); (2) el muelle compartido; (3) dos juegos de follaje de esquina: Brasil (açaí y heliconia) y Amazonia occidental (aguaje, nuevo); y la **LUT**: temporada del ciclo de D-009, Difícil y Muy difícil, atardecer de la parada 9 y alba de la 19.
+- **Coherencia del agua:** el primer plano es siempre el `water_base` del mundo; el agua del sitio, si es otra (las dos aguas de Santarém y del Encuentro, o el Nanay y el Samiria negros en un mundo de agua blanca), va en segundo plano.
+- **Lo que no cambia:** el panel azul petróleo y su relleno opaco (D-004): nada del sitio entra en el panel.
+- **Cuándo cambia:** al ganar el `10k`, la victoria con vista enseña el sitio nuevo con un fundido de 250 ms; con «Siguiente», el nivel `10k+1` carga ya con su fondo, con 0 ms más de carga y de intro. Con Reducir movimiento, corte directo. **Rótulo del lugar** en el primer nivel de cada parada («Lagos de Tarapoto · Colombia», `stop_label`), con las reglas de lectura de D-011; sobre el horizonte con 1-2 filas y, con 3 filas, como placa bajo el HUD; no sale si el nivel tiene banner, Fruta nueva, tarjeta de miquito, estreno o tutorial.
+- **Legibilidad:** VA-20 a VA-23 de la guía visual (§9); antes de encargar los héroes, VA-20 se valida en el teléfono con un héroe provisional geométrico de la misma altura, empezando por los 3 primeros sitios.
+- **Respaldo:** las piezas por código ya son definitivas; los héroes pintados tienen una silueta geométrica de respaldo y los kits, el panorama procedural actual. El arte provisional nunca va en la ficha, las capturas ni la UA.
+
+| k | Niveles | Parada | Héroe (ranura) | Tipo | Se reconoce por | Temp. | Cuidado (con el asesor) |
+|---|---|---|---|---|---|---|---|
+| 0 | 1-10 | Belém | `bg_hero_ver_o_peso` | Pintado | Hito propio: las torres del mercado de hierro desde la bahía de Guajará, al alba | — | Sin canastos, sin el Círio, sin personas y sin los objetos rituales de las bancas de hierbas |
+| 1 | 11-20 | Santarém | `codigo:dos_aguas_clara_blanca` | Código | Línea entre aguas: el Tapajós verde azulado contra el Amazonas café | — | Sin copiar grafismos de cuias |
+| 2 | 21-30 | Alter do Chão | `bg_hero_alter_do_chao` | Pintado | Hito propio: la Ilha do Amor y el cerro de selva, con el río bajo | B | Sin cocoteros ni turquesa caribeño; sin el Çairé ni bañistas |
+| 3 | 31-40 | Floresta Nacional do Tapajós | `bg_hero_flona_tapajos` | Pintado | Paisaje del tramo: orilla alta de selva sobre el Tapajós claro | B | Sin samaúma, sin comunidades ni madera cortada |
+| 4 | 41-50 | Encuentro de las Aguas | `codigo:dos_aguas_negra_blanca` | Código | Línea entre aguas: la diagonal negra y beige | A | — |
+| 5 | 51-60 | Manaos | `bg_hero_teatro_amazonas` | Pintado | Hito propio: la cúpula del Teatro Amazonas en silueta baja | A | Sin nostalgia del caucho |
+| 6 | 61-70 | Anavilhanas | `bg_hero_anavilhanas` | Pintado | Hito propio: islas sobre agua negra como espejo | B | — |
+| 7 | 71-80 | Lago de Tefé | `bg_hero_lago_tefe` | Pintado | Paisaje del tramo: lago negro con la ciudad lejana | B | **Sin botos y sin orillas secas** (mortandad de 2023); Mamirauá va en la tarjeta |
+| 8 | 81-90 | Leticia | `bg_hero_leticia` | Pintado | Hito propio: el malecón y el río ancho | A | Ni la isla Santa Rosa ni islas con bandera; sin personas |
+| 9 | 91-100 | Leticia al atardecer | = 8, LUT de atardecer | LUT | Hito propio, con la bandada de pericos | A | — |
+| 10 | 101-110 | Amacayacu | `bg_hero_amacayacu` | Pintado | Paisaje del tramo: árboles con el pie en el agua | B | Sin comunidades |
+| 11 | 111-120 | Puerto Nariño | `bg_hero_puerto_narino` | Pintado | Paisaje del tramo: la boca del Loretoyacu y el pueblo lejano | B | **Asesor obligatorio** (aldea identificable); alternativa: solo la boca del río |
+| 12 | 121-130 | Lagos de Tarapoto | `bg_hero_tarapoto` | Pintado | Paisaje del tramo, con lomos de delfín | A | Victorias regias lejos del borde del panel |
+| 13 | 131-140 | El río frontera | `kit:rio_ancho_con_baliza` | Solo kit | Paisaje del tramo y rótulo «El río frontera · Colombia y Perú» | A | Ninguna bandera en el agua ni en islas |
+| 14 | 141-150 | Iquitos | `bg_hero_iquitos` | Pintado | Hito propio: el malecón con lanchas | A | Motocarros solo lejos y sin personas |
+| 15 | 151-160 | Río Itaya (Iquitos) | `bg_hero_itaya_creciente` (reserva: `bg_hero_casa_de_fierro`) | Pintado | Hito propio: casas que flotan en la creciente del Itaya | A | **Asesor obligatorio:** sin «Venecia», sin pobreza pintoresca, sin personas; «Belén» nunca como nombre; la reserva, sin el mito de Eiffel |
+| 16 | 161-170 | Allpahuayo-Mishana | `bg_hero_allpahuayo` | Pintado | Paisaje del tramo: varillal sobre arena blanca y quebrada negra | B | Sin minería |
+| 17 | 171-180 | Nauta | `kit:orilla_de_nauta` | Solo kit | Paisaje del tramo y rótulo «Nauta · Perú» | B | No inventar dos colores: las dos aguas son blancas |
+| 18 | 181-190 | Pacaya-Samiria | `bg_hero_pacaya_samiria` | Pintado | Hito propio: la cocha de agua negra como espejo, en segundo plano | B | Sin comunidades de la reserva |
+| 19 | 191-200 | Pacaya-Samiria al alba | = 18, LUT de alba con bruma | LUT | Hito propio | B | Sin playas al descubierto ni barro agrietado |
+
+Temp.: la temporada del ciclo de D-009 (A, aguas altas; B, aguas bajas), que solo cambia la LUT. Recuento de 1-200: 14 héroes pintados y 1 de reserva, 2 héroes por código y 2 paradas solo con el kit, 5 kits y 2 variantes de luz; de los 18 sitios, 8 se reconocen por un hito propio, 2 por la línea entre aguas y 8 son «paisaje del tramo», que se reconocen sobre todo por el rótulo, el ambiente y la tarjeta. Tamaño y memoria: 08 §6.1. Todo, pendiente del asesor cultural (§8.2).
 
 **Temporadas del ciclo** (D-009 y Q11 A de D-007; 03 §12): cada ciclo de 20 niveles es de aguas altas o de aguas bajas, y la temporada solo se ve en la LUT del fondo, sin cartel, para no competir con «El río bajó»; no sigue el calendario real. La temporada aún no tiene fuente de datos en el pack: hace falta un campo nuevo, que subiría `pack_schema`, o una tabla del cliente (pendiente técnico de D-009). La señal de dificultad es la luz y no la altura del agua (7.7).
 
@@ -83,7 +116,7 @@ Canon de orden, país, río y rangos: research/02 C3.3 [E] vía glosario §8 (di
 | 1 | Estuario | Açaí, Aguaje (1), Taperebá (2), Guanábana (4), Bacaba (7) | Cuia de vidrio (base) | Garzas en la orilla; familia de capibaras (hogar de Capi) | Carimbó: tambor curimbó y maracás (Pará, Patrimonio IPHAN 2014, research/07 §6.3 [V]) |
 | 2 | Tapajós | Agua del Tapajós (11), Camu camu (21) | Cuia de Santarém (cumatê negro, grabado propio) | Tucanes; primera aparición de Rosa (boto) | Carimbó de playa, tempo más lento, maracá y guitarra [P] |
 | 3 | Manaos | Urucum (41), Agua del Río Negro (61) | Cuia del Encuentro (banda bicolor ámbar/beige) | Botos en el Encuentro; guacamayos cruzando | Toada amazónica de estilo propio, sin referencia a Parintins ni a sus asociaciones (Garantido/Caprichoso, glosario §3.3); mismo literal que 06 §10 [P] |
-| 4 | Trapecio | Copoazú (81), Lulo (111) | Totuma (calabaza clara con asa de cuero) | Perezoso en una rama; morphos | Guitarra acústica y flauta de caña sin carácter ritual [P] |
+| 4 | Trapecio | Copoazú (81), Lulo (111) | Totuma (calabaza clara con asa de cuero) | Morphos; pericos al atardecer en Leticia y lomos de delfín en Tarapoto (ambiente del fondo por parada). Sin perezoso de ambiente: el único perezoso del juego es TiTino, que no viaja (D-013, T1-A) | Guitarra acústica y flauta de caña sin carácter ritual [P] |
 | 5 | Loreto | Huito (141) | Huingo (borde de chambira) · 1.1 | Pirarucú que sale a respirar (dato de conservación, research/07 §5 [V]) | Cumbia amazónica suave, tempo bajo (género de Pucallpa/Iquitos, research/07 §6.3 [V género]; uso [P]) |
 | 6 | Oriente | Cacao (201) | Borde de Pastaza (engobe con diseño propio) · 1.1 | Luciérnagas, ranas dardo sobre hojas | Percusión de semillas y cuencos de agua, ambiente nocturno [P] |
 | 7 | Madre de Dios | Arazá (301): paleta completa | Pilche (pie de madera) · 1.1 | Guacamayos en la collpa (research/07 §1 [V]); nutrias gigantes en el lago [P] | Guitarra y cajón ligero [P] |
@@ -94,7 +127,7 @@ Canon de orden, país, río y rangos: research/02 C3.3 [E] vía glosario §8 (di
 | 12 | Invitados del Orinoco | — (skin de evento) | Skin de temporada "Río de cinco colores" | Guacamayos sobre tepuyes | Arpa y maracas de los llanos del Orinoco (fuera de la cuenca, coherente con el rótulo) [P] |
 | 13 | El origen | — (hitos con 13 colores; 14 solo en el evento Encuentro de las Aguas) | Cántaro andino (cerámica roja) · 1.1 | Siluetas de aves de altura; sin fauna en primer plano | Quena y zampoña, permitidas solo aquí (research/07 §6.3 [V]) |
 
-Reglas transversales: (1) el banner de entrada a cada mundo muestra "Mundo {n}: {nombre} · {país} · {río}" (glosario §10) y lo presenta Capi con la pata (`capi_present`) mientras Rosa asoma y se sumerge (`rosa_surface`, `rosa_dive`; 6.1 y 6.2); sale al cargar el primer nivel del mundo, antes de Llenar y teñir y solo en el primer intento, y el Estuario (nivel 1) no lo lleva (D-012; 02 §6). En el cliente desde la tanda 2 (A4, `94905b8`), Capi, Rosa y la viñeta del río son procedurales [P]: se pintan en otro hilo y, si no llegan en 800 ms [P], el banner entra con la viñeta en el color plano del agua y sin las mascotas (pregunta 43 de GDD.md §6.3). El arte del artista necesitará ranuras nuevas para `capi_present` y `rosa_surface`; (2) ninguna aldea identificable, ninguna persona, ninguna pictografía (research/07 §1 [V]); (3) el mundo 12 lleva el rótulo "vecinos del Orinoco" en el banner y en el Dato del río; (4) desde la vuelta 2 (nivel 1.001) las variantes de LUT reciclan las 13 pinturas (research/02 C3.4 [E]); (5) cada mundo del 1 al 12 tiene su especie de miquito en la intro, y el 13 ninguna (D-010; catálogo en §6.4, pendiente del asesor); (6) en los mundos 1-5 (niveles 1-200, calendario d.4), los estrenos y novedades de cada mundo, la firma de su último hito, los Datos del río candidatos y los vetos propios del mundo son los de la propuesta de D-007, §(e) (los debuts van por nivel, no por mundo: 02 §9); en los mundos 6-13, los estrenos, las novedades y las firmas de §(e) son [P], pendientes de la tabla de d.5 rehecha con Q8 (c) + (b′) (D-009, punto 8; pregunta 33 de GDD.md §6.3), y sus Datos del río candidatos y vetos quedan como lista para el asesor; todos los datos, los nombres de hito [P] y los vetos pasan por el asesor (§8.2) antes de usarse; (7) la skin Cuia de Santarém se encarga a las artesanas ribereñas de Santarém de ASARISAN (`docs/research/cultura-ribera/investigacion.md`), con pago y crédito, si el asesor y el presupuesto lo permiten; si no, grabado propio (D-007, Q15).
+Reglas transversales: (1) el banner de entrada a cada mundo muestra "Mundo {n}: {nombre} · {país} · {río}" (glosario §10) y lo presenta Capi con la pata (`capi_present`) mientras Rosa asoma y se sumerge (`rosa_surface`, `rosa_dive`; 6.1 y 6.2); sale al cargar el primer nivel del mundo, antes de Llenar y teñir y solo en el primer intento, y el Estuario (nivel 1) no lo lleva (D-012; 02 §6). En el cliente desde la tanda 2 (A4, `94905b8`), Capi, Rosa y la viñeta del río son procedurales [P]: se pintan en otro hilo y, si no llegan en 800 ms [P], el banner entra con la viñeta en el color plano del agua y sin las mascotas (pregunta 43 de GDD.md §6.3). El arte del artista necesitará ranuras nuevas para `capi_present` y `rosa_surface`. **Con D-013 (2026-10-13, Q4-D), el banner trae dentro el viaje de mundo**: ≤ 4 s, saltable y con «Ver mapa»; la canoa cruza por agua real en una franja del Mapa del río, se iza la bandera si cambia de país y la cabecera trae la pregunta del mundo, sobre el fondo de la gran parada del mundo. La pregunta 43 de GDD.md §6.3 quedó decidida el 2026-10-13 (D-015): (a), con la escala de fuente de 02 §12, pendiente de T52; (2) ninguna aldea identificable, ninguna persona, ninguna pictografía (research/07 §1 [V]); (3) el mundo 12 lleva el rótulo "vecinos del Orinoco" en el banner y en el Dato del río; (4) desde la vuelta 2 (nivel 1.001) las variantes de LUT reciclan las 13 pinturas (research/02 C3.4 [E]); (5) cada mundo del 1 al 12 tiene su especie de miquito en la intro, y el 13 ninguna (D-010; catálogo en §6.4, pendiente del asesor); (6) en los mundos 1-5 (niveles 1-200, calendario d.4), los estrenos y novedades de cada mundo, la firma de su último hito, los Datos del río candidatos y los vetos propios del mundo son los de la propuesta de D-007, §(e) (los debuts van por nivel, no por mundo: 02 §9); **con D-013 (Q16-A), los datos de llegada de cada parada de 1-200 están en `river_stops_v1.json`** (propuesta del Mapa del río, secciones 5.1, 5.1 bis y 6.3), cruzados con §(e): sus candidatos entran como dato u «Otro dato» de la tarjeta de la parada y sus vetos se aplican; en los mundos 6-13, los estrenos, las novedades y las firmas de §(e) son [P], pendientes de la tabla de d.5 rehecha con Q8 (c) + (b′) (D-009, punto 8; pregunta 33 de GDD.md §6.3), y sus Datos del río candidatos y vetos quedan como lista para el asesor; todos los datos, los nombres de hito [P] y los vetos pasan por el asesor (§8.2) antes de usarse; (7) la skin Cuia de Santarém se encarga a las artesanas ribereñas de Santarém de ASARISAN (`docs/research/cultura-ribera/investigacion.md`), con pago y crédito, si el asesor y el presupuesto lo permiten; si no, grabado propio (D-007, Q15).
 
 ## 3. Paleta de 14 tintes
 
@@ -327,21 +360,22 @@ Celebración con confeti, sonido y háptico, recompensa y botón "Siguiente". **
 | 0,00 | Input bloqueado; el último sellado termina (5.3) |
 | 0,30 | Todas las cuias dan un salto de 0,15 u en ola de izquierda a derecha (0,04 s de escalón) |
 | 0,50 | Confeti de plumas rojas y azules de guacamayo (glosario §3.3), 1,2 s, ≤ 60 partículas (`anim_confetti_max_particles`); toada corta de victoria (2-3 s, research/07 §6.3 [E]) |
-| 0,60 | Capi entra desde la orilla izquierda (0,4 s) y celebra en bucle (`capi_cheer`), fuera del tablero |
-| 0,80 | Panel de papel "¡Nivel completado!" sube desde abajo (0,25 s): semillas ganadas con contador de 0,6 s, bonus Difícil / Muy difícil, la barra de la Crecida del HUD (7.4) replicada en grande y avanzando un escalón (desde el 25, `streak_unlock_level`; hitos y recompensas según 05 §2.4; tras pagar el hito 10 vuelve a 0), Canasta si toca (cada 10), Dato del río si toca |
+| 0,60 | **TiTino** asoma con su rama desde el borde izquierdo (0,3 s) y celebra en bucle (`sloth_cheer`; `sloth_cheer_big` en el fin de mundo salvo el 10, el primer Difícil y el primer Muy difícil), fuera del tablero y **solo si cabe** en la franja libre entre la cabecera y las cuias (con 3 filas, no sale); no captura toques ni retrasa nada (D-013, T1-A; antes, Capi con `capi_cheer`). Una sola línea de texto por victoria (T6-A; 02 §6) |
+| 0,50-0,75 | **Victoria con vista** (D-013, Q6-A; `ui_victory_view`): tras la ola de saltos, el panel del tablero y las cuias se desvanecen en 250 ms y se ve el sitio del fondo; en las llegadas (victoria del `10k`), el fondo pasa al sitio nuevo en el mismo fundido. No mueve ningún tiempo de esta tabla. Con Reducir movimiento, corte directo |
+| 0,80 | Panel de papel "¡Nivel completado!" sube desde abajo (0,25 s): semillas ganadas con contador de 0,6 s, bonus Difícil / Muy difícil, la barra de la Crecida del HUD (7.4) replicada en grande y avanzando un escalón (desde el 25, `streak_unlock_level`; hitos y recompensas según 05 §2.4; tras pagar el hito 10 vuelve a 0), Canasta si toca (cada 10), Dato del río si toca. En la victoria del `10k`, en el hueco del Dato del río, la **franja de llegada** del Mapa del río (1,2 s: el agua termina el tramo, llega la canoa, se llena la mini cuia y salen la placa del lugar y la del dato con el retrato de TiTino; 02 §6); en las demás, con Q1-A de Frutas del río, la línea de la serie de frutas. Cómo comparten el `10k`: pregunta 45 de GDD.md §6.3 |
 | 1,40 | Botones: Cosecha doble (desde el 11, con etiqueta "Ver video") y Siguiente; **sin auto-avance por defecto**: la pantalla permanece hasta el toque en Siguiente (`victory_autonext_s` = 0, int; 02 §6 / 08 §9). Tras ver entero el vídeo de la Cosecha doble, la fila cuenta (400 ms), se ve ≈ 600 ms más [P] y el juego pasa solo al nivel siguiente por el camino de Siguiente, sin intersticial (D-011; 02 §6). Si Remote Config fijara un valor > 0, el temporizador solo correría sin oferta de Cosecha doble visible y nunca activaría AD_GATE: el intersticial exige el toque explícito en Siguiente |
 
 ### 5.5 Aguas estancadas y El río bajó
 
 | t (s) | Fotograma |
 |---|---|
-| 0,00 | El motor detecta que no queda vertido legal (research/01 §Implicaciones 8) |
+| 0,00 | El motor detecta Aguas estancadas (02 R13): no queda vertido útil (research/01 §Implicaciones 8) o, con D-014 (2026-10-13), los vertidos útiles que quedan solo llevan a un bucle sin salida |
 | 0,20 | Las superficies se aquietan (A → 0), el fondo baja 20 % de saturación, una niebla fina al 12 % cruza el tablero; zumbido grave de agua quieta |
 | 0,45 | El modal sube desde abajo (0,25 s) y ocupa el tercio inferior; las cuias siguen visibles y atenuadas al 70 %, para que el jugador vea qué deshacer. Titular "No hay más vertidos" (glosario §5.1). Orden: **Marea** (si queda cupo, con contador; ilimitada en 1-10), **Cuia de rescate** (**600 semillas fijas** desde el nivel 31, `rescue_price_bands` = [[31,600]], canon 04 §6.2 / 05; el primer rescate del día cuesta 300 con el 600 tachado; máximo 1 por nivel) y el enlace al pie: **Volver a la orilla** en 1-30 y **Rendirse** [P] desde el 31 (D-008) |
 | 0,45-0,85 | Si `ui_mascot_rescue_anim`: Capi llega remando desde la izquierda, se detiene junto al modal con una cuia en alto (`capi_rescue`), nunca tapa botones; copy "¡Capi llega al rescate con una cuia más! Sigue desde aquí." |
 | Sin saldo | Los botones de precio cambian a Puñado 1,99 y Balsa de rescate 4,99 (máx. 1/día); ninguna de estas ofertas existe antes del nivel 31 (`rescue_min_level`; dirección 10) |
 | ¿Seguro? [P] (D-008) | Desde el 31, tras «Rendirse»: el panel pasa a «¿Seguro?», con «Perderás 1 canoa» (o «tu última canoa») y otra vez «Continuar: +1 cuia»; la X y «Rendirse» confirman. El tablero sigue atenuado detrás; sin anuncio. Wireframe en 04 §6.6 |
-| Nivel fallido [P] (D-008) | Tras confirmar la rendición o salir con el menú: «Nivel {n}», «Nivel fallido», «Premio: {20 · 60 · 80} semillas» (no se cobra), «Reintentar» [P] y X → inicio. Sin anuncio (05 §10). Wireframe en 04 §6.6 |
+| Nivel fallido [P] (D-008) | Tras confirmar la rendición o salir con el menú: «Nivel {n}», «Nivel fallido», «Premio: {20 · 60 · 80} semillas» (no se cobra), «Reintentar» [P] y X → inicio. Sin anuncio (05 §10). Wireframe en 04 §6.6. Con D-013 (T1-A), **TiTino da ánimo aquí**: cuelga de su rama al lado de la cesta vacía, que no se quita (`sloth_encourage`), y dice una frase solo en el primer fallo de cada nivel, como línea de la propia tarjeta; «Reintentar» sale a la vez que hoy. Es la única pantalla del embudo en la que sale: no tiene oferta de pago |
 | Sin canoas | Con 0 canoas, «Reintentar» abre la pantalla de 04 §7.3; en cuanto hay una canoa, vuelve a Nivel fallido [P] (D-008) |
 | El río bajó | Al servir la variante aliviada tras 3 fallos (`relief_after_fails`; qué cuenta como fallo: tabla de 04 §5.2) (dirección 7): la banda de río baja 0,3 u en 0,3 s, aparece un banner de papel de 2,0 s (`anim_river_lowered_banner_ms`) con "El río bajó: esta vez hay un color menos" / "…una cuia más" e icono (−1 fruta o +1 cuia); Rosa asoma y exhala al fondo (sonido de exhalación, research/07 §6.3 [V]) |
 
@@ -365,7 +399,9 @@ En la 1.1 (propuesta b.2): Aguapé, la mata se parte en trozos que se alejan flo
 
 ## 6. Mascotas
 
-### 6.1 Capi (capibara, mascota principal)
+### 6.1 Capi (capibara, el que trae cuias)
+
+**Desde D-013 (2026-10-13, T1-A de la propuesta de TiTino) Capi deja de ser la mascota principal:** el protagonista es TiTino (6.5). Capi conserva todo lo que es «traer o guardar cosas» (Cuia extra, Cuia de rescate, Canasta y Bitácora), presenta el banner de mundo (D-012) y rema la canoa del Mapa del río. La celebración de la victoria pasa a TiTino, y su papel en el arranque, el tutorial y Volver a la orilla sigue como está mientras estén abiertas T2 y T5 de esa propuesta.
 
 **Personalidad**: guía amable, tranquila, servicial; comunica amistad y compartir (research/07 §5 [V dato, E uso]; dirección 22). Nunca regaña, nunca llora para vender: en el bloqueo se preocupa y actúa (trae una cuia), no culpa.
 
@@ -373,20 +409,21 @@ En la 1.1 (propuesta b.2): Aguapé, la mata se parte en trozos que se alejan flo
 
 | ID de pose | Nombre | Dónde aparece | Fotogramas / loop |
 |---|---|---|---|
-| `capi_idle` | Reposo (respira, parpadea) | Mapa del río, Mercado, Bitácora | 24 f loop |
+| `capi_idle` | Reposo (respira, parpadea) | Mercado, Bitácora (en el Mapa del río, Capi rema: `capi_paddle`) | 24 f loop |
 | `capi_present` | Presenta con la pata | Banner de mundo, tutorial (nivel 1-3), Reto del río | 18 f |
 | `capi_carry` | Trae una cuia en la cabeza | Cuia extra (compra), icono del comodín | 20 f |
 | `capi_rescue` | Llega remando con una cuia en alto | Modal Aguas estancadas (desde el 31) | 30 f entrada + 12 f loop |
-| `capi_cheer` | Salta y aplaude | Victoria (desde la orilla) | 16 f loop |
+| `capi_cheer` | Salta y aplaude | Retirada de la victoria: celebra TiTino (`sloth_cheer`, 6.5; D-013) | 16 f loop |
 | `capi_think` | Se rasca la cabeza, mira el tablero | Primeros 2 s del bloqueo antes del 31 (sin rescate) | 14 f |
 | `capi_shrug` | Encoge hombros y señala "otra vez" | Volver a la orilla tras un bloqueo | 12 f |
-| `capi_sleep` | Dormita | Idle largo (> 30 s) en el Mapa del río | 20 f loop |
+| `capi_sleep` | Dormita | Retirada: en el Mapa del río dormita TiTino (`sloth_sleep`; D-013) | 20 f loop |
+| `capi_paddle` [P] | Rema la canoa cargada de cuias atadas con cuerda (sin cestas, que serían la Canasta) | Mapa del río (D-013, Q3-A); el bucle de `capi_rescue` reducido a 32-40 dp, sin pieza nueva, con un mástil para la bandera de cortesía; en el 961 la canoa queda amarrada | Bucle de 12 f |
 | `capi_wave` | Saluda | Pantalla de arranque, Bitácora día nuevo | 12 f |
 | `capi_point` | Señala a la derecha | Tutorial (dedo guía es una mano; Capi acompaña), botón Siguiente en hitos | 10 f |
 | `capi_basket` | Carga la Canasta | Apertura de Canasta cada 10 niveles | 18 f |
 | `capi_stamp` | Sella la página con la pata | Reclamo diario de la Bitácora del río | 12 f |
 
-**Reacciones**: bloqueo → `capi_think` (antes del 31) o `capi_rescue` (desde el 31); victoria → `capi_cheer`; Difícil / Muy difícil completado → `capi_cheer` con salto más alto y plumas extra; fallo con Volver a la orilla → `capi_shrug`. **Límites**: nunca fijo en el centro inferior con un objeto (glosario §3.1); nunca cocina, mezcla ni "prepara" nada (caldero); nunca aparece junto a símbolos sagrados ni con pintura corporal.
+**Reacciones**: bloqueo → `capi_think` (antes del 31) o `capi_rescue` (desde el 31); victoria → TiTino (`sloth_cheer`; D-013), no Capi; fallo con Volver a la orilla → `capi_shrug` mientras siga abierta la pregunta T5 de la propuesta de TiTino. **Límites**: nunca fijo en el centro inferior con un objeto (glosario §3.1); nunca cocina, mezcla ni "prepara" nada (caldero); nunca aparece junto a símbolos sagrados ni con pintura corporal.
 
 ### 6.2 Rosa (boto, mascota secundaria)
 
@@ -398,16 +435,17 @@ En la 1.1 (propuesta b.2): Aguapé, la mata se parte en trozos que se alejan flo
 |---|---|---|
 | `rosa_surface` | Asoma y exhala (sonido real de exhalación, research/07 §6.3 [V]) | Banner de cambio de mundo; El río bajó |
 | `rosa_jump` | Arco completo con salpicadura | Salto del Boto (saltar nivel), transición al siguiente nivel |
-| `rosa_swim` | Nada a lo largo de la línea del río | Mapa del río (guía la posición actual) |
-| `rosa_fact` | Se detiene junto a una tarjeta de papel | Dato del río (conservación: boto En Peligro, pirarucú, Tapajós y minería, research/07 §2 y §5 [V]) |
+| `rosa_swim` | Nada a lo largo de la línea del río | Mapa del río: nada delante de la canoa de Capi por el agua ya llena (D-013) |
+| `rosa_fact` | Se detiene junto a una tarjeta de papel | Retirada con D-013: el Dato del río va en la placa con el retrato de TiTino (6.5), y la «tarjeta de papel» chocaba con D-003 |
+| `rosa_farewell` [P] | Se despide al pie de los Andes: más arriba hay cascadas y agua muy baja, los límites del boto | Mapa del río, viaje del 961 (D-013; con el asesor) |
 | `rosa_idle` | Flota con ondas | Fondo del Mapa del río |
 | `rosa_dive` | Se sumerge | Cierre de banners |
 
-**Límites**: Rosa nunca aparece en el modal de bloqueo ni en pantallas de pago (su papel es avanzar, no vender); nunca se representa como humano ni con sombrero (iconografía del encantado).
+**Límites**: Rosa nunca aparece en el modal de bloqueo ni en pantallas de pago (su papel es avanzar, no vender); nunca se representa como humano ni con sombrero (iconografía del encantado). En el Mapa del río no habla y no entra en los recuadros fuera de la cuenca; en Tarapoto salta con sus parientes. **Bufeo boliviano** (D-013, Q18-A): en los mundos 7 y 8, Rosa se queda en los rápidos de Teotônio y guía un bufeo boliviano, el mismo rig con otra paleta y sin nombre propio; Rosa vuelve en el viaje del 560 (con el asesor).
 
 ### 6.3 Elenco de fondo
 
-Guacamayos (confeti de victoria), nutria gigante (chillido al subir un hito de Crecida), morpho (Morpho), luciérnaga (Luciérnaga), rana dardo (icono Difícil), jaguar (icono Muy difícil, solo animal), perezoso (idle del Mapa del río), hoatzin (Volver a la orilla en el mundo 11), tucán (vertido del tutorial) y, desde D-010, los **miquitos** de la intro, una especie por tramo del río (6.4) (glosario §3.3). Descartados: anaconda como personaje, jaguar-hombre, seres mitológicos, pueblos indígenas como personajes o skins (research/07 §5-6.1 [V]).
+Guacamayos (confeti de victoria), nutria gigante (chillido al subir un hito de Crecida), morpho (Morpho), luciérnaga (Luciérnaga), rana dardo (icono Difícil), jaguar (icono Muy difícil, solo animal), hoatzin (Volver a la orilla en el mundo 11), tucán (vertido del tutorial) y, desde D-010, los **miquitos** de la intro, una especie por tramo del río (6.4) (glosario §3.3). Descartados: anaconda como personaje, jaguar-hombre, seres mitológicos, pueblos indígenas como personajes o skins (research/07 §5-6.1 [V]). El perezoso del elenco pasa a ser **TiTino**, el personaje principal (6.5; D-013): no hay un segundo perezoso de ambiente.
 
 ### 6.4 Miquitos: la tropa de Llenar y teñir (D-010)
 
@@ -458,6 +496,17 @@ Guacamayos (confeti de victoria), nutria gigante (chillido al subir un hito de C
 - Estilo de Capi (6.1): contorno de 2 px de tinta al 80 %, ojos con brillo, postura animal, saturación por debajo de los tintes, luz desde arriba a la izquierda a 35°; legible a 40 dp (churuco y maquisapa, a 64 dp).
 - También: 14 frutas `fruta_<id del tinte>.png` (256 × 256; de ellas sale el atlas de vuelo de 64 px), `rama_<mundo>.png` y `liana_tile.png`. Prioridad: el mono ardilla (niveles 1-10 y vídeo).
 - Mientras no haya PNG, un miquito procedural por esqueleto con los colores del catálogo, **solo en builds de desarrollo**; en un build de release, una especie sin arte final usa el modo dosel. El vídeo de la tienda y el soft launch no se graban con miquitos provisionales.
+
+### 6.5 TiTino (perezoso, personaje principal; D-013)
+
+**Decisión del dueño del 2026-10-13** (D-013, con T1-A y T6-A de `docs/research/personaje/propuesta-titino.md`, que tiene la hoja de modelo, las poses, las 30 frases de ejemplo y las fuentes). Todo nombre, dato y texto, pendiente del asesor cultural; «TiTino», además, de la búsqueda de marca (T4 de la propuesta, abierta).
+
+- **Quién es:** un perezoso de tres dedos de garganta marrón (*Bradypus variegatus*), macho adulto (con el espéculo naranja de la espalda), siempre salvaje y libre en su embaúba de la desembocadura. Tierno, tranquilo y optimista; celebra el orden y el esfuerzo, nunca la velocidad. La lentitud está en su carácter, **nunca en la interfaz**: ninguna aparición bloquea el toque ni retrasa un botón.
+- **Papel:** la cara del juego (ficha, icono, anuncios) y el que celebra la victoria (5.4), anima en Nivel fallido (5.5), vive en el inicio (en la ventanita de casa, Q17-A del Mapa: 06 §4.7) y firma las notificaciones (06 §8). **No viaja:** un perezoso recorre unos 40 m al día, así que en el Mapa del río firma desde casa el dato de cada llegada, en la placa del Dato del río con su retrato (`sloth_present`), y dormita en la espera (`sloth_sleep`, que sustituye a `capi_sleep`). Cómo entra en el arranque (T2) y si aparece durante la partida, en el tutorial y en el aviso de Volver a la orilla (T5), sigue abierto.
+- **Una sola línea de texto por victoria** (T6-A): si coinciden una frase suya y un dato, sale el dato y TiTino solo hace el gesto, salvo en el fin de mundo (salvo el nivel 10), el primer Difícil y el primer Muy difícil, en los que habla él y el dato pasa a la victoria siguiente (cómo encaja con la llegada del Mapa: pregunta 45 de GDD.md §6.3). Su bocadillo, ≤ 50 caracteres en ES, de vidrio esmerilado con borde de madera clara, nunca papel.
+- **Poses que usan la victoria, el fallo y el Mapa** [P]: `sloth_idle`, `sloth_cheer`, `sloth_cheer_big`, `sloth_encourage`, `sloth_present`, `sloth_sleep` y `sloth_sunbathe`. Las de arranque (`sloth_wake`) y saludo (`sloth_wave`, `sloth_look`) esperan a T2 y al resto de su lote. Con Reducir movimiento, pose quieta y fundido de 150 ms.
+- **Límites (reglas duras de la propuesta, g.2):** siempre en su árbol (embaúba; nunca sumaúma ni lupuna; el asesor confirma la embaúba); sin personas, sin ropa ni accesorios, nunca dentro de una cuia, una cesta o una caja, nunca alimentado por el jugador, nunca una cría sola, nunca el brazo estirado hacia la cámara (es miedo, no un saludo), sin lenguaje de mascota («adoptar», «tu perezoso»), **nunca en pantallas de pago** (Aguas estancadas, ¿Seguro?, Sin canoas, Mercado) ni vendiendo, nunca en peligro, herido o atrapado (tampoco en anuncios), sin función de foto o selfi y sin chistes de vago. Nunca mira, señala ni reacciona a una cuia (D-002).
+- **Arte:** rig recortable con el método de los miquitos (6.4): `fauna_bradypus_variegatus_partes`, `fauna_bradypus_variegatus_retrato` y la rama `arbol_embauba` [P]; en el Mapa, además, `map_home` y `map_home_window` (la casa y la ventanita). Hasta el arte final, provisional dibujado por código y nunca en la ficha, las capturas ni la UA. Coste: sección 11.
 
 ## 7. UI kit
 
@@ -533,7 +582,7 @@ Estilo común: glifo de 32 dp en slot de 48 dp (64 en la bandeja, 96 en el Merca
 | Canoas | Canoa de madera de lado, proa a la derecha, con línea de agua; vacía = gris volcada | Madera | Contador "5/5" |
 | Hoja escudo | Hoja gigante de *Victoria amazonica* | Verde | Al pie de la barra de Crecida |
 | Canasta | Cesta de fibra con el contenido asomando | Fibra | El contenido se dibuja real (dirección 15) |
-| Reto del río, Bitácora del río, Cuaderno de campo, Mercado, Mapa del río, Ajustes, Dato del río, Patrones de fruta | Remo con sol, cuaderno con sello, cuaderno con hoja prensada, puesto de Ver-o-Peso, río con 13 puntos, engranaje de madera, gota con "i", cuia con patrón | Tokens UI | Todos de la misma familia de trazo |
+| Reto del río, Bitácora del río, Cuaderno de campo, Mercado, Mapa del río, Ajustes, Dato del río, Patrones de fruta | Remo con sol, cuaderno con sello, cuaderno con hoja prensada, puesto de Ver-o-Peso, río de vidrio a medio llenar (D-013), engranaje de madera, gota con "i", cuia con patrón | Tokens UI | Todos de la misma familia de trazo |
 
 ### 7.7 Etiquetas Difícil / Muy difícil y Aguas turbias
 
@@ -549,6 +598,7 @@ Sin calavera en ningún caso (research/09 §Qué NO copiar [V]). Recompensas (20
 **La etiqueta se ve antes de jugar** (D-009, decisión del dueño del 2026-10-08; 02 §10) [P]:
 - **Botón Jugar del inicio y Siguiente de la victoria:** el chip de la etiqueta del nivel que se va a jugar (en Siguiente, el del N + 1) con una **cinta «×3»** (Difícil) o **«×4»** (Muy difícil) clavada con un remache a la derecha, como la «x5» de Magic Sort; en Muy difícil, el botón Jugar va en variante nocturna. La cinta es el premio como múltiplo de las 20 semillas de un nivel normal (60 / 20 y 80 / 20).
 - **Tarjeta previa de 1 toque:** rana o jaguar, «Difícil» o «Muy difícil», el subtítulo, «Premio: 60» u «80» con la semilla y la cinta, y los iconos de las mecánicas del nivel; en un estreno, el tutorial de una pantalla; en el 100, una sola tarjeta combinada (04 §2.5); en el 183, el tutorial enseña antes de jugar un mordisco animado: la piraña sale de la cueva y se lleva la dosis de la cima de la cuia que acaba de recibir, y con Reducir movimiento va una versión quieta [P] (D-012, decisión 1, D; texto en 02 §9.1, M7). En el cliente desde la tanda 2 (A4, `94905b8`; `PiranaBiteDemo`) [P]: un tablero en miniatura con la cueva, la Cuia chica de 2 del 183, a la izquierda, y la víctima a la derecha, con cuias de 44 dp, más pequeñas que las del tablero; la dosis llega con un chorro en 550 ms y el mordisco va 2,4 veces más lento que en el juego; la demostración dura ≈ 2,35 s, no se repite y termina con la tarjeta abierta. Hoy, sin «Toca para continuar» y con un velo de 0,55 [P] (pregunta 21 de GDD.md §6.3).
+- **Hito p20 (D-013, 2026-10-13):** la tarjeta previa del hito añade «Si lo superas, llegas a {sitio}» (`map_hito_preview`) con la silueta del sitio al que se llega al ganarlo, en madera y vidrio; cambia el contenido que fijaba D-009, punto 2 (02 §10).
 - **HUD:** el chip y el marco de 3 dp de esta tabla; en Muy difícil, la variante noche, que en el cliente del paso 1 es un velo que oscurece el fondo un 15 % (02 §10); la variante con LUT queda [P].
 - **¿Seguro? y Nivel fallido** (D-008): cabecera ámbar en Difícil e índigo en Muy difícil.
 - **La señal de dificultad es la luz, no la altura del agua**: el agua alta es la Crecida, que es buena (c.5 de la propuesta de D-009). El Difícil puede llevar una luz de tarde [P]; sin barra ni texto, y la luz sigue a la etiqueta medida.
@@ -623,7 +673,7 @@ Firma sonora del Amazonas: piha gritona (>110 dB, marcador de selva en el cine),
 | 1 Estuario | Río ancho lento, marea | 20 % | Garzas, mercado lejano sin voces inteligibles, piha ocasional |
 | 2 Tapajós | Olas de playa suaves | 10 % | Tucanes, piha, exhalación de Rosa |
 | 3 Manaos | Dos corrientes (grave + agudo) | 25 % | Botos, guacamayos |
-| 4 Trapecio | Río tras lluvia, goteo | 50 % | Morphos (silencio), perezoso (nada), grillos diurnos |
+| 4 Trapecio | Río tras lluvia, goteo | 50 % | Morphos (silencio), pericos al atardecer en Leticia, grillos diurnos |
 | 5 Loreto | Agua quieta de espejo | 30 % | Pirarucú que respira (burbuja grave), piha |
 | 6 Oriente | Laguna negra nocturna | 40 % | Ranas, grillos, luciérnagas (sin sonido), búho lejano |
 | 7 Madre de Dios | Río medio | 20 % | Guacamayos (collpa), nutrias |
@@ -695,6 +745,7 @@ Reglas de ficha: título ≤ 30 caracteres, prohibidos "Best", "#1", "Free", MAY
 | **A. Cuia que vierte** (recomendado; glosario §1.2) | Una cuia de vidrio inclinada vierte un chorro de Açaí (#6A2C91) sobre una banda de río blanca; dentro, 3 dosis: Aguaje, Taperebá, Açaí; fondo oliva desaturado; sin texto | Dice "water sort" al instante y "Amazonía" por el objeto; el chorro es el gesto del juego | La silueta de la cuia debe leerse a 48 px: cuello y hombro exagerados un 15 % |
 | **B. Capi con cuia** | Capi de frente sostiene una cuia con 4 tintes; fondo ámbar suave | Mascota = marca; ideal para UA | Si Capi no gusta, arrastra el icono; menos "género" |
 | **C. Encuentro de las Aguas** | Dos aguas en diagonal (ámbar #4A2C14 y beige #B08A5A) que no se mezclan, con una cuia de perfil en el centro con dos dosis | Único en la estantería; la metáfora exacta del juego | Menos reconocible como water-sort para quien busca el género |
+| **D. TiTino en su rama** [P] (D-013, T1-A) | TiTino cuelga de su rama sobre una cuia que vierte; la cara de frente con el antifaz, legible a 48 px | El protagonista como marca, como los líderes con personaje | Solo con arte final; el concepto B (Capi) queda como alternativa |
 
 Reglas comunes: sin sonrisa/flecha ni naranja #FF9900 sobre negro (research/08 §4.2 [V]); legible a 48 px sobre fondo claro y oscuro; versión adaptativa de Android con el fondo a sangre.
 
@@ -705,10 +756,10 @@ Reglas comunes: sin sonrisa/flecha ni naranja #FF9900 sobre negro (research/08 �
 | 1 | Gameplay real en Manaos: una cuia vertiendo Açaí con el Encuentro de las Aguas detrás (hook de research/07 §Implicaciones 10) | "Ordena el agua del Amazonas" / "Sort the waters of the Amazon" / "Classifique as águas da Amazônia" |
 | 2 | Tablero del Estuario con 5 cuias, iconos de fruta visibles | "14 frutas, 14 colores" / "14 fruits, 14 colors" / "14 frutas, 14 cores" |
 | 3 | Llenar y teñir a mitad (frutas cayendo) | "Mira cómo se tiñe el río" / "Watch the river take color" / "Veja o rio ganhar cor" |
-| 4 | Mapa del río con 13 paradas y banderas de país | "13 mundos, 8 países" / "13 worlds, 8 countries" / "13 mundos, 8 países" |
+| 4 | Mapa del río con la forma real de la cuenca, el río de vidrio a medio llenar con sus aguas de colores, la canoa con la bandera izada y las paradas (D-013) | "Remonta el Amazonas hasta donde nace" / pendiente del traductor / pendiente del traductor [P] (antes: "13 mundos, 8 países") |
 | 5 | Nivel Difícil con badge rana dardo y una Marea usada en el bloqueo | "Difícil de verdad, justo siempre" / "Honest hard levels" / "Difícil de verdade, sempre justo" |
 | 6 | Patrones de fruta activados, con simulación lado a lado | "Patrones para todos los ojos" / "Patterns for every eye" / "Padrões para todos os olhos" |
-| 7 | Capi trayendo una cuia; Rosa saltando | "Capi y Rosa te acompañan" / "Meet Capi and Rosa" / "Capi e Rosa te acompanham" |
+| 7 | TiTino en su rama celebrando; Capi trayendo una cuia y Rosa saltando, al fondo (D-013, T1-A) | "TiTino te acompaña" / "Meet TiTino" / "TiTino te acompanha" [P] (antes: "Capi y Rosa te acompañan") |
 | 8 | Reto del río + Bitácora del río + Canasta abierta con contenido visible | "Juega sin wifi, vuelve cada día" / "Play offline, come back daily" / "Jogue offline, volte todo dia" |
 
 Las 3 primeras siguen la regla de research/08 §Implicaciones 3 (recipiente autóctono vertiendo río teñido, fondo de un país, texto corto). Gráfico de funciones 1024 × 500: concepto A del icono ampliado con el Encuentro de las Aguas.
@@ -725,8 +776,8 @@ Research/08 §Implicaciones 3 recomienda 15-20 s; se produce a 30 s con los prim
 | 12-15 | Logo | Logotipo "Tintalú" (tilde visible, gota o pincelada de tinte; sección 10) sobre el Encuentro de las Aguas; descriptor "Ordenar agua" |
 | 15-19 | Tensión | Nivel Difícil: dos cuias quedan y el agua se aquieta; aparece Marea y deshace |
 | 19-23 | Mascotas | Capi llega con una cuia (rescate); Rosa salta al siguiente nivel |
-| 23-27 | Mundos | Barrido rápido de 4 fondos (Estuario, Tapajós, Manaos, Trapecio) con el Mapa del río |
-| 27-30 | Cierre | Tablero resuelto, confeti de guacamayo, logo + "Sin wifi" |
+| 23-27 | Mundos | La canoa remonta el río de vidrio del Mapa del río, que se llena con su agua real, y el fondo pasa por 4 paradas (Belém, Alter do Chão, el Encuentro de las Aguas y Leticia) (D-013) |
+| 27-30 | Cierre | Tablero resuelto, confeti de guacamayo, TiTino celebrando en su rama (D-013), logo + "Sin wifi" |
 
 ### 10.4 Cinco conceptos de creativos de UA con la mascota
 
@@ -738,26 +789,28 @@ Patrón ganador del subgénero: abrir en gameplay, varios vertidos satisfactorio
 | 2 | **Dos aguas que no se mezclan** | Plano del Encuentro de las Aguas real (pintura) → corte al tablero del mundo 3 con Agua del Río Negro y Agua del Tapajós; vertidos satisfactorios; "Esto pasa de verdad en Manaos" | CTR; retención D1 de la cohorte |
 | 3 | **El río bajó** | Tres fallos seguidos en el mismo tablero (misma semilla); Rosa asoma; banner "El río bajó" y el nivel se resuelve; "Justo siempre" | CPI en jugadores de 35+; D7 |
 | 4 | **¿Puedes con Noche de jaguar?** | Nivel Muy difícil nocturno; dos vertidos correctos y uno incorrecto; Marea deshace en el bloqueo; "Sin trucos, sin calaveras" | IPM en tier-1 |
-| 5 | **Rosa te lleva río abajo** | Rosa salta entre 4 fondos de mundos mientras el jugador completa niveles cortos; cierre con el Mapa del río; "13 mundos, 8 países, sin wifi" | CPI en BR/MX |
+| 5 | **Rosa te lleva río arriba** (D-013, Q13-A; antes, «río abajo») | Rosa salta entre 4 fondos de parada mientras el jugador completa niveles cortos; cierre con el Mapa del río, que se llena con su agua; "Remonta el Amazonas hasta donde nace, sin wifi" [P] | CPI en BR/MX |
+| 6 [P] | **TiTino te anima** (D-013, T1-A) | Un tablero casi resuelto falla; TiTino asiente desde su rama («Casi. Respira y otra vez»); se reintenta el mismo tablero y se resuelve; cierre con TiTino celebrando. Solo escenas que existen en el juego, nunca TiTino en peligro ni triste para pedir ayuda | Contra el concepto 1 |
 
 Cada concepto se produce como playable (abre en el nivel 3-5 real) y como vídeo de 15 y 30 s; 6-8 variantes por red (AppLovin, Meta, Google Ads, TikTok, Mintegral, research/09 §Mejorar [V]).
 
 ## 11. Lista de assets de la 1.0 (conteo estimado)
 
-Alcance de la 1.0 (canon de 2.1): fondos 1-4 install-time + Loreto (141-200) por PAD; "río genérico" para 201-700 (mundos 6-9) hasta que lleguen sus packs [P] (research/02 C3.3 [E]); 4 skins (glosario §4); estimaciones en días-persona de un artista 2D freelance [P].
+Alcance de la 1.0 (canon de 2.1): fondos 1-4 install-time + Loreto (141-200) por PAD; "río genérico" para 201-700 (mundos 6-9) hasta que lleguen sus packs [P] (research/02 C3.3 [E]); 4 skins (glosario §4); estimaciones en días-persona de un artista 2D freelance [P]. **Con D-013 (2026-10-13)** cambian las filas de fondos, mascotas, elenco y UI: los fondos de 1-200 son por parada (2.1) y el Mapa del río tiene piezas propias; las cifras salen de las secciones 10.8 y 12 de la propuesta del Mapa y de c.7 de la de TiTino [E].
 
 | Categoría | Ítems | Conteo | Días-persona [P] |
 |---|---|---|---|
-| Fondos | Pinturas base Estuario, Tapajós, Manaos, Trapecio, Loreto, río genérico | 6 | 18 (3/fondo) |
+| Fondos | **Por parada en 1-200 (D-013):** 5 kits de mundo (2 d cada uno), 8 héroes de ciudad o de forma única con la reserva (1 d), 7 héroes de naturaleza (0,75 d), 3 sprites de ambiente (pericos, lomo de delfín y bruma), un segundo juego de follaje (Amazonia occidental, con aguaje) y el río genérico (3 d). Con la 1.0 de 1-700, 4 kits más para 201-700 (`bg_kit_w06` … `w09`) | 5 kits + 15 héroes + 3 + 4 + 1; +4 kits | ≈ 28,75 en 1-200 (≈ +11 sobre los 18 de las 6 pinturas de antes) y ≈ 8 por los 4 kits de 201-700 |
 | Variantes de fondo | LUT noche (Muy difícil) y lluvia por fondo; partículas de lluvia y vapor | 12 LUT + 2 sistemas | 4 |
 | Banda de río | 3 presets de agua (negra, blanca, clara) con shader y 1 sprite de orilla por fondo | 3 + 6 | 3 |
 | Cuia | Cuerpos de vidrio por capacidad (1-6) | 6 | 3 |
 | Skins | Rim + pie + banda + tapa por skin (Cuia de vidrio, Santarém, Encuentro, Totuma) | 16 | 4 |
 | Líquido | Shader (menisco, onda, patrón, burbujas, agua parda turbia) | 1 shader + 14 texturas de patrón | 4 (con programador) |
 | Frutas | Icono de accesibilidad por tinte (2 tamaños) + sprite de fruta cayendo | 14 × 3 | 5 |
-| Mascotas | Capi 12 poses, Rosa 6 poses (animación 2D por huesos o frames) | 18 animaciones | 14 |
-| Elenco de fondo | Guacamayo (confeti), nutria, tucán, perezoso, rana dardo, jaguar (iconos), hoatzin (1.1) | 6 | 3 |
-| UI | Tokens, botones (4 tipos × 4 estados), paneles de papel (6), bandeja cumbuca, HUD, badges de dificultad, modal Aguas estancadas, banner de mundo, Bitácora, Canasta, Mercado, Mapa del río (13 paradas), Ajustes | ~70 piezas | 12 |
+| Mascotas | Con D-013 (T1-A): TiTino con su hoja de modelo y unas 10 poses, Capi 6 poses (las de traer o guardar cosas), Rosa 6 poses (animación 2D por huesos o frames) | ≈ 22 animaciones | ≈ 19-20 (14 + ≈ 5-6 por TiTino) |
+| Elenco de fondo | Guacamayo (confeti), nutria, tucán, rana dardo, jaguar (iconos), hoatzin (1.1); el perezoso es TiTino (fila de mascotas) | 5 | 3 |
+| UI | Tokens, botones (4 tipos × 4 estados), paneles de papel (6), bandeja cumbuca, HUD, badges de dificultad, modal Aguas estancadas, banner de mundo, Bitácora, Canasta, Mercado, Ajustes | ~70 piezas | 10 (12 menos los 2 del Mapa del río de 13 paradas, que pasa a su fila) |
+| Mapa del río (D-013) | 5 texturas de terreno, la máscara de zonas del terreno, la canoa con Capi remando, Rosa reducida con `rosa_farewell` y la paleta del bufeo boliviano, la mini cuia y la repisa del Muestrario, la casa y la ventanita de TiTino, las banderas (5 en 1-700) y la rosa de los vientos, placas, boya, baliza y «?» | ≈ 20 piezas | ≈ 9,25 (≈ +7,25 sobre los 2 del Mapa de 13 paradas que contaba antes la fila de UI) |
 | Iconos | Comodines (9), sistemas (10), monedas (2), banderas de 8 países, misc. | ~40 | 5 |
 | VFX | Confeti, salpicadura, gotas, burbujas, aro de sellado, niebla, destello Morpho, chispa Luciérnaga, ola Marea/Pororoca, salto Rosa | 11 sistemas | 5 |
 | Tipografía | Baloo 2 + Nunito (OFL) con atlas latino extendido | 2 | 0,5 |
@@ -767,7 +820,7 @@ Alcance de la 1.0 (canon de 2.1): fondos 1-4 install-time + Loreto (141-200) por
 | Tienda | Icono (3 conceptos → 1 final + adaptativo), 8 capturas × 3 idiomas, gráfico de funciones, vídeo 30 s (2 orientaciones) | 1 + 24 + 1 + 2 | 8 |
 | UA | 5 conceptos × (playable + vídeo 15 s + vídeo 30 s) | 15 | 10 (con programador para playables) |
 | Mecánicas y etiquetas (D-007, D-009) | Estados de las 8 mecánicas de la 1.0 (§4.3; hoy, arte provisional dibujado por código), sus desbloqueos (§5.6), el mordisco animado de la tarjeta del 183 (§7.7; D-012), el revelado de Aguas turbias con la burbuja, el chip y la cinta «×3» / «×4», la tarjeta previa y los sonidos de desbloqueo (§9.2) | ≈ 20 piezas entre sprites, animaciones y sonidos (propuesta de D-007, §(g)) | Por estimar [P] |
-| **Total arte 2D** (sin audio ni playables) | | | **≈ 85 días-persona ≈ 17 semanas de 1 artista**, sin la fila de D-007 y D-009, por estimar |
+| **Total arte 2D** (sin audio ni playables) | | | **≈ 85 días-persona ≈ 17 semanas de 1 artista**, sin la fila de D-007 y D-009, por estimar. Con D-013, unos **+18 días** en 1-200 (≈ 11 de fondos y ≈ 7,25 del Mapa), **+8** por los kits de 201-700 y **≈ +5-6** por TiTino [E] |
 
 Con dos artistas (o artista + animador) baja a ~9-10 semanas de calendario; los fondos 6-8 de la 1.1, los 9-13 posteriores y las 9 skins suman ≈ 35 días más (research/02 C3.4 conteo [E]).
 
@@ -779,12 +832,12 @@ Con dos artistas (o artista + animador) baja a ~9-10 semanas de calendario; los 
 |---|---|
 | Llenar y teñir (5.1) | `anim_tint_duration_ms_early` / `anim_tint_duration_ms_late` (int, ms), `anim_tint_fast_from_level`, `anim_tint_skippable`, `anim_tint_skip_alarm_pct` (dueño 07) |
 | Vertido y sellado (4.3, 5.2) | `anim_lift_ms`, `anim_travel_ms`, `anim_pour_dose_ms`, `anim_pour_tail_ms`, `anim_return_ms`, `anim_speed_factor_early` / `anim_speed_factor_late`, `queue_max_lag_pours` (= 2, cola visual por cuia; dueño 02) |
-| Victoria (5.4) | `victory_autonext_s` = **0** (int; sin auto-avance, valor común a 02, 06, 07 y 08), `anim_celebration_ms`, `anim_confetti_max_particles` (dueño 07) |
+| Victoria (5.4) | `victory_autonext_s` = **0** (int; sin auto-avance, valor común a 02, 06, 07 y 08), `anim_celebration_ms`, `anim_confetti_max_particles` (dueño 07), `ui_victory_view` (victoria con vista; D-013) |
 | Aguas estancadas y El río bajó (5.5) | `ui_mascot_rescue_anim`, `rescue_min_level`, `rescue_price_bands` (= [[31,600]], 600 fijo), `relief_after_fails`, `anim_river_lowered_banner_ms` |
 | Paleta y accesibilidad (3, 7.8) | `ui_pattern_opacity` (20 % con Patrones de fruta; 35 % solo en Alto contraste: canon de la sección 3, dueño 07), `ui_patterns_default_from_level`, `ui_reduce_motion_default` (dueño 07), `anim_reduce_motion_factor`, `ui_haptics_default_on`, `hint_idle_delay_s` |
 | HUD, bandeja y etiquetas (7.4, 7.6, 7.7) | `streak_unlock_level` (barra de la Crecida; dueño 05), `undo_unlimited_until_level`, `undo_free_per_level`, `skip_min_fails`, `skip_min_level`, `ui_show_difficulty_subtitles`, `ui_murky_bonus_enabled` (false en 1.0; true en 1.1), `ui_very_hard_night_lut` (dueño 07) |
 | Audio (9) | `audio_music_default_on`, `audio_sfx_default_on`, `audio_music_percussion_layers`, `audio_ambient_rain_scale` (dueño 07) |
-| Mundos y tienda (2, 10) | `live_world_bg_variant_override` (dueño 07), `biz_store_icon_variant` (solo registro) |
+| Mundos y tienda (2, 10) | `live_world_bg_variant_override` (dueño 07), `biz_store_icon_variant` (solo registro), `ui_bg_per_stop` (fondo por parada o el de la gran parada del mundo) y `ui_stop_label` (rótulo del lugar), de D-013 |
 
 Alias retirados de versiones anteriores de este capítulo (no existen en `RemoteConfigDefaults.json`; la lista general de alias retirados del GDD está en 08 §9): `tint_anim_duration_early` / `tint_anim_duration_late`, `tint_anim_switch_level`, `tint_anim_skip_enabled`, `anim_skip_alarm_pct`, `pour_dose_duration`, `victory_autoadvance_s`, `victory_autoadvance_with_offer`, `pattern_opacity_default`, `confetti_max_particles`, `reduce_motion_default`, `haptics_default_on`, `very_hard_night_lut`, `music_percussion_layers`, `ambient_rain_probability_scale`, `world_bg_variant_override`, `store_icon_variant`.
 

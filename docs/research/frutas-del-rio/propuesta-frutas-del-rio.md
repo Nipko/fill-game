@@ -1,5 +1,7 @@
 # Frutas del río: de qué es cada color, una línea por nivel
 
+> **Actualización del 2026-10-13: la Q1 está decidida (A)**, junto con las preguntas del Mapa del río (**D-013** en `docs/dev/decisiones.md`): la serie de frutas absorbe el Dato del río, con una línea por nivel en la victoria y la misma etiqueta y el mismo evento, y sale de la pantalla de la Canasta. Se llevó al GDD ese día (glosario §6.4, 02 §6, 06 §4.4 y 07 §5.4). **Choque con el Mapa del río** (pregunta 45 de `docs/GDD.md` §6.3): el Mapa deja `ui_river_fact_every_n_levels` en 10, la cadencia de sus paradas, y da a la línea de fruta una clave propia; en la victoria del `10k` manda el dato de llegada, y en el nivel 10 el bocadillo del Mapa es la presentación de TiTino (2.2, regla 7). **Las preguntas 2-7 siguen abiertas.** Además, la sección 15 del Mapa pide cambiar dos líneas del Agua del Tapajós que repiten sus datos de llegada (k14 y k19; nota en 5.3).
+>
 > **Documento de apoyo, no canon.** Manda el GDD (`docs/GDD.md` y `docs/gdd/00-09`). Nada de este archivo cambia reglas, números, claves ni nombres hasta que el dueño decida y se editen los capítulos que toque (lista en la sección 10.1). Todo lo marcado [P] es propuesta.
 >
 > **Todos los nombres, datos y textos de este documento quedan «pendientes de revisión del asesor cultural» (07 §8.2).** Ninguna línea llega a la interfaz sin esa revisión.
@@ -360,12 +362,12 @@ Tarjeta «Fruta nueva» (nivel 11): «Agua del Tapajós: el río de agua clara»
 | 11 | 31 | El río lleva el nombre de los tapajó, pueblo indígena de la región de Santarém. | 79 | T1, T3, T14 | [E] | Pueblo actual (CITA, T14): en presente, sin territorio, conflicto ni creencias. El asesor confirma el nombre y la grafía que usa el propio pueblo. Su reconocimiento se ha discutido en los tribunales: [E] hasta tener una fuente primaria (CITA o ISA/Povos Indígenas no Brasil) |
 | 12 | 32 | En su cuenca viven unas 325 especies de peces; 65 no existen en ningún otro lugar. | 82 | T1 | [E] | — |
 | 13 | 33 | A Alter do Chão la llaman el «Caribe amazónico» por sus playas blancas de río. | 78 | T9 | [E] | Sin nombrar al diario británico |
-| 14 | 34 | La Ilha do Amor es una lengua de arena que asoma con el río bajo y se cubre en la crecida. | 90 | T10, T11 | [E] | — |
+| 14 | 34 | La Ilha do Amor es una lengua de arena que asoma con el río bajo y se cubre en la crecida. | 90 | T10, T11 | [E] | **Se cambia (D-013, 2026-10-13):** repite el dato de llegada del Mapa del río a Alter do Chão (nivel 20). Sustituta, por elegir entre las de reserva (5.14) o una nueva con fuente, con el asesor |
 | 15 | 35 | En el Tapajós nadan dos delfines de río: el boto rosado y el tucuxi, gris y más pequeño. | 88 | T6 | [V] | Boto En Peligro: sin leyenda del encantado |
 | 16 | 36 | Un pez, el cíclido «cabeza de fuego», solo se conoce del bajo Tapajós. | 70 | T1 | [E] | — |
 | 17 | 37 | Cada año, miles de tortugas charapa salen a desovar a las playas de Monte Cristo. | 81 | T7 | [E] | Especie protegida: nunca recolecta de huevos |
 | 18 | 38 | En 2025 desovaron allí unas 19.400 tortugas; en 1979 eran solo 327. | 67 | T7 | [E] | Cifra de una sola fuente periodística (datos del Ibama) |
-| 19 | 39 | La Floresta Nacional do Tapajós, creada en 1974, protege más de 500.000 hectáreas. | 82 | T8 | [V] | — |
+| 19 | 39 | La Floresta Nacional do Tapajós, creada en 1974, protege más de 500.000 hectáreas. | 82 | T8 | [V] | **Se cambia (D-013, 2026-10-13):** repite la tarjeta de llegada del Mapa a la Floresta Nacional (nivel 30). Sustituta, por elegir entre las de reserva (5.14) o una nueva con fuente, con el asesor |
 | 20 | 40 | Lo llamaban el «río azul»; cuidar su cuenca protege su agua clara. ¡Ya conoces el Tapajós! | 90 | T1, T12, T13 | [E] | Cierre. Apodo en pasado («formerly», T1; «once», T12). Sin mercurio ni culpables (minería) |
 
 Fuentes:
@@ -977,7 +979,7 @@ Todo queda **«pendiente del asesor cultural»** (07 §8.2): las 240 líneas, la
 
 | # | Pregunta | Opciones | Recomendación |
 |---|---|---|---|
-| 1 | ¿La serie de frutas **absorbe** el «Dato del río» del GDD? | **A.** Sí: una línea por nivel en la victoria, misma etiqueta, misma clave (default 10 → 1; 0 = apagado) y mismo evento; sale de la pantalla de la Canasta. **B.** Conviven: frutas en la victoria y Dato del río aparte cada 10 niveles. **C.** Se mantiene el canon: un dato cada 10 niveles | **A**: un solo sistema, sin claves ni eventos nuevos, y resuelve que el GDD lo ponga en tres sitios |
+| 1 (**decidida el 2026-10-13: A**, D-013; choque con el Mapa en la pregunta 45 de GDD.md §6.3) | ¿La serie de frutas **absorbe** el «Dato del río» del GDD? | **A.** Sí: una línea por nivel en la victoria, misma etiqueta, misma clave (default 10 → 1; 0 = apagado) y mismo evento; sale de la pantalla de la Canasta. **B.** Conviven: frutas en la victoria y Dato del río aparte cada 10 niveles. **C.** Se mantiene el canon: un dato cada 10 niveles | **A**: un solo sistema, sin claves ni eventos nuevos, y resuelve que el GDD lo ponga en tres sitios |
 | 2 | ¿Cuántas líneas por fruta? | **A.** 20, una por nivel (tu ejemplo). **B.** 10, una cada dos niveles. **C.** 5 | **A**, con la opción de bajar a B desde Remote Config si las métricas dicen que no se lee |
 | 3 | ¿Desde qué nivel sale la línea en la victoria? | **A.** Desde el 1 (el açaí abre el juego). **B.** Desde el 11 (las líneas 1-10 del açaí aparecen ya reveladas en la ficha). **C.** Desde el 21 | **A**: es lo que da sentido al juego desde el principio y no es una pantalla ni una instrucción; se vigila con la alarma del embudo 1-10 y se apaga en remoto si molesta. B si prefieres no tocar nada del tutorial |
 | 4 | ¿Hay una ficha para releer en la 1.0? | **A.** Sí: hoja simple desde la línea y desde Ajustes → Sobre la Amazonía, con el evento nuevo `af_fact_page_open` para medir aperturas. **B.** No: en la 1.0 solo la línea; la ficha llega con el Cuaderno de campo en la 1.1 (lo revelado se recupera solo) | **A**: sin un sitio donde releer, lo que el jugador se salta se pierde, y la ficha es poca obra |

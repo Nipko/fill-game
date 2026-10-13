@@ -10,7 +10,7 @@ Tintalú es un water-sort canónico con la economía del match-3 (el modelo con 
 
 ## 1. Elevator pitch
 
-1. **Tintalú** es el water-sort que ordena el agua del Amazonas teñida con sus frutas: viertes açaí, aguaje y camu camu entre cuias de vidrio hasta que cada una queda de un solo color, río arriba desde el Estuario de Belém hasta El origen en los Andes, guiado por Capi, una capibara que trae cuias, y Rosa, una boto que te lleva río abajo.
+1. **Tintalú** es el water-sort que ordena el agua del Amazonas teñida con sus frutas: viertes açaí, aguaje y camu camu entre cuias de vidrio hasta que cada una queda de un solo color, río arriba desde el Estuario de Belém hasta El origen en los Andes, acompañado por TiTino, un perezoso que lo sigue desde su árbol en la desembocadura, Capi, una capibara que trae cuias y rema la canoa, y Rosa, una boto que te lleva río arriba (D-013: el Mapa del río remonta el Amazonas hasta una de sus nacientes).
 2. Toma el núcleo y la economía que ya probaron ~1.000 M de descargas y ~280 M USD de IAP del subgénero Sort en 2025 (research/01 §1 [V]) y arregla lo que las reseñas más castigan: el rescate abusivo, el reintento que cambia el tablero, los "?" sin lógica, el anuncio tras cada nivel y el peso de la app (research/09 §Qué copiar pero mejorar [V]; research/05 §6 [V]).
 3. Nace para Android en América Latina, donde el líder histórico no está traducido al español ni al portugués y el líder en ingresos cobra tiers de Estados Unidos sin descuento (research/08 §1.1 [V]; research/09 §Catálogo IAP [V]): precios por país, ≤80 MB de descarga inicial y Pix, OXXO y PSE desde el día 1.
 
@@ -239,7 +239,7 @@ Presupuesto de muestra para la fase 1 [P]: 3.000 instalaciones por país a CPI L
 ### 8.3 UA y ASO por fase
 
 - **Fase 1-2 (LatAm):** ASO como motor. Títulos "Tintalú: Ordenar Agua" (21) y "Tintalú: Classificar Água" (25), con tilde; descripción con el gancho del Encuentro de las Aguas y la línea "Juego independiente inspirado en la cuenca amazónica; sin relación con Amazon.com, Inc."; 3 primeras capturas con una cuia vertiendo açaí sobre un fondo de país; vídeo de 15-20 s con Llenar y teñir (research/08 §Implicaciones 3 [E]). Fichas personalizadas: Brasil con Pix y portugués, México con OXXO (research/08 §3.2 [V]). Experimentos de ficha desde el día 1 (hasta 5 idiomas, research/08 §3.2 [V]).
-- **Fase 3 (US):** UA concentrada "pegada al producto": 6-8 playables idénticos al juego, creativos emocionales con Capi y Rosa ("Capi te trae una cuia", "Rosa te lleva río abajo", "carrera contra la Crecida"), umbrales de clics 1/3/10/20/∞ (research/09 §Por qué ganó 7 [V]). Redes: Google Ads, AppLovin, Meta desde el inicio y TikTok/Mintegral como prueba, para no depender de dos redes (research/09 §Mejorar [V]).
+- **Fase 3 (US):** UA concentrada "pegada al producto": 6-8 playables idénticos al juego, creativos emocionales con Capi y Rosa ("Capi te trae una cuia", "Rosa te lleva río arriba" (D-013, Q13-A), "carrera contra la Crecida"), umbrales de clics 1/3/10/20/∞ (research/09 §Por qué ganó 7 [V]). Redes: Google Ads, AppLovin, Meta desde el inicio y TikTok/Mintegral como prueba, para no depender de dos redes (research/09 §Mejorar [V]).
 - **Siempre:** rating ≥4,7 como requisito de entrada al top 10 de búsqueda en ES y PT (research/08 §3.1 [V]); publicar cambios de balance en notas de versión; no someter a A/B la economía núcleo (Cuia de rescate, Canoas) (research/09 §Mejorar [V]).
 
 ## 9. Nombre comercial y riesgos de marca

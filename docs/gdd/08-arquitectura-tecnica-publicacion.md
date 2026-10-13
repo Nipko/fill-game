@@ -50,7 +50,7 @@ Tintalú se construye en **Unity 6.3 LTS 6000.3.25f1 (plan Personal), C#, URP 2D
 |---|---|---|---|---|
 | `AF.Core` | `BoardState`, `Cuia` (capacidad 1-6, `len` + 4 bits por unidad = tinte−1, de modo que caben los 16 índices de K_motor; máscara de ocultos; mecánica), reglas de vertido (sobre vacío o mismo color con espacio; cantidad según `PourMode`: la racha superior contigua que cabe en `Run`, el valor por defecto por decisión del dueño del 2026-10-08 (D-005, que sustituye a D-001), o una dosis en `Single` (solo pruebas); clave `rules_pour_mode`, sección 9; 02 §1.2), sello de Cuia sellada, detección de victoria, `legalNonFutileMoves` (capítulo 4 §5.1), mecánicas Hoja/Matapi/Liana/Remolino/Lluvia/Brote/Piraña (D-007) como `IMechanic` con hooks `OnBeforePour`/`OnAfterPour`, canonicalización (cuias ordenadas) y hash de 64 bits. Desde D-007: las mecánicas son instancias sin estado en una tabla estática indexada por el código de mecánica de la cuia (bits 39-42 de `Cuia.Packed`; todo el estado vive en la cuia, así que el estado canónico basta para el solver y para Marea; los códigos 8-15 quedan libres para la 1.1); el Barro no es un `IMechanic` sino el color 15 del contenido; R10 por etapas, `futil` con Q-B y los contadores con Q18 B viven en `AF.Core.Rules.BoardRules`, la única implementación que aplica vertidos (02 §1.2 y §1.4) | — | Todos | 1.0 |
 | `AF.Solver` | A* ponderado con heurística `max(cortes de color, dispersión)`, poda estándar y presupuesto de nodos parametrizable; bot casual ×40 (85/15, tope 400 pasos); barajado inverso con filtros anti-trivialidad; enumeración de realidades para Aguas turbias (≤4 dosis ocultas → ≤24 realidades, canon de 02 T2 y `lvl_murky_max_hidden_units` = 4; memo por estado canónico y presupuesto de nodos por realidad; sin Pista parcial) (research/02 §2.2, §7.1, Complemento 4.4-4.5 [V/E]) | Core | Boosters (Morpho, Pororoca, verificación "la compra cumple"), Levels (validación), tools | 1.0 |
-| `AF.Levels` (LevelLoader) | Carga de paquetes `mundo_{nn}_v{vuelta}.json` desde Addressables (grupo `levels_install` para los mundos 1-9; `levels_remote` en Unity CCD/R2 para el 10 en adelante y las reposiciones, anunciados por `content_version`); verifica `pack_schema` y `generator.version` antes de activar un paquete remoto; índice nivel → paquete; selección de variante (`base` o la entrada de `relief[]` que corresponda, sección 4.1); aplicación de `level_overrides`; precarga de N+1 mientras se juega N; pool del Reto del río (3 bandas × 730) indexado por fecha | Core, RemoteConfig, Save | GameFlow, UI, Presentation | 1.0 |
+| `AF.Levels` (LevelLoader) | Carga de paquetes `mundo_{nn}_v{vuelta}.json` desde Addressables (grupo `levels_install` para los mundos 1-9; `levels_remote` en Unity CCD/R2 para el 10 en adelante y las reposiciones, anunciados por `content_version`); verifica `pack_schema` y `generator.version` antes de activar un paquete remoto; índice nivel → paquete; selección de variante (`base` o la entrada de `relief[]` que corresponda, sección 4.1); aplicación de `level_overrides`; precarga de N+1 mientras se juega N; pool del Reto del río (3 bandas × 730) indexado por fecha Con D-013, `RiverStopCatalog` (sin motor) lee `river_stops_v1.json` (sección 4.5), lo contrasta con `WorldTable` y da `StopOf(level)` sin asignaciones. | Core, RemoteConfig, Save | GameFlow, UI, Presentation | 1.0 |
 | `AF.Boosters` | Marea, Cuia extra, Morpho, Pororoca, Luciérnaga, Salto del Boto, Volver a la orilla, Cuia de rescate; cupos por nivel, stock, topes diarios y árbol de decisión de Aguas estancadas (capítulo 4 §6.2) | Core, Solver, Economy, Ads, RemoteConfig, Analytics | UI (HUD, modal) | 1.0 |
 | `AF.Economy` | Cartera de semillas y Canoas (regeneración 25 min con reloj validado), stock de comodines, Crecida y Hoja escudo, Bitácora del río, Canasta, Cántaro, Cosecha doble, Mochila de inicio y Sin anuncios como derechos; toda mutación pasa por `Wallet.Apply(Transaction)` que emite `earn_virtual_currency` / `spend_virtual_currency`; las Canoas infinitas evitan gastar canoas, no los anuncios (D-008) | Save, RemoteConfig, Analytics, Platform (`IClock`) | Boosters, LiveOps, UI | 1.0 |
 | `AF.Ads` | Envoltorio de AppLovin MAX: inicialización tras consentimiento, precarga, ubicaciones (`rv_double_harvest`, `rv_undo_refill`, `rv_hint`, `rv_reveal`, `rv_extra_canoe`, `rv_daily_chest`, `interstitial_post_level`), compuertas de cadencia (nivel ≥22, solo tras victoria, cada N niveles, ≥150 s, tope por sesión y día), topes y cooldowns por ubicación, concesión provisional + SSV, `ad_impression` con ILR. Nunca en el embudo de fallo (al reintentar, al rendirse, en Nivel fallido ni en Sin canoas) y las Canoas infinitas no suprimen intersticiales (05 §6.1; D-008). **Fase 2 (D-008):** interfaz con una implementación simulada, sin SDK ni red, que el dueño aprobó el 2026-10-08; MAX entra después, detrás de la misma interfaz | RemoteConfig, Consent, Analytics, Platform (`IClock`) | Boosters, Economy, GameFlow | 1.0 |
@@ -60,10 +60,10 @@ Tintalú se construye en **Unity 6.3 LTS 6000.3.25f1 (plan Personal), C#, URP 2D
 | `AF.RemoteConfig` | Firebase Remote Config con **defaults compilados** (`RemoteConfigDefaults.json`), caché, fetch con intervalo mínimo de 12 h (research/02 Complemento 4.2 [V]), acceso tipado `RC.Get<T>(key)`, congelación de valores al abrir cada pantalla (capítulo 4 §10.2), `rc_variant` para experimentos, origen `Default/Cached/Remote` | Backend | Todos | 1.0 |
 | `AF.LiveOps` | Reto del río (pool por fecha + `daily_overrides` y `live_daily_offset`), Bitácora del río, Crecida, Dato del río, calendario de eventos (`live_events_schedule`); 1.2: Regata, Travesía, Encuentro de las Aguas, Temporada de lluvias, Liga del río (Unity Leaderboards), Pase Expedición | Economy, Levels, RemoteConfig, Platform (`IClock`), Save | UI, Analytics | 1.0 / 1.2 |
 | `AF.Localization` | Unity Localization 1.5.x: String Tables ES-419 / PT-BR / EN, Smart Strings para plurales y números con separador local, Asset Tables para capturas de tutorial; pseudo-localización en QA | — | UI | 1.0 |
-| `AF.Presentation` | Shader de líquido (controlador de `MaterialPropertyBlock` por cuia), chorro Bézier, burbujas, Llenar y teñir, Capi y Rosa, VFX/SFX de comodines, agua base por mundo | Core (solo lectura), RemoteConfig | UI | 1.0 |
-| `AF.UI` | Pantallas (Boot, Consentimiento, Inicio (Lobby, 06 §4.7), Mapa del río, Nivel, Aguas estancadas, ¿Seguro? y Nivel fallido (D-008), Sin canoas, Mercado, Ajustes con "Eliminar cuenta y datos", Bitácora, Canasta), HUD con regla icono + etiqueta funcional, cola de un solo takeover por sesión | Todos vía interfaces | — | 1.0 |
+| `AF.Presentation` | Shader de líquido (controlador de `MaterialPropertyBlock` por cuia), chorro Bézier, burbujas, Llenar y teñir, TiTino, Capi y Rosa, VFX/SFX de comodines, agua base por mundo. Con D-013 (Mapa del río): `StopBackdrop` (compone el fondo de cada parada: kit, héroe, piezas por código y LUT, con el reflejo del héroe por código y el fundido), `RiverRibbonGraphic` (`MaskableGraphic` con tira de triángulos y color por vértice, como `WaterStripGraphic`: vidrio, lleno y frente), `LandGraphic` y `PolylineCursor` (posición por longitud de arco, sin asignaciones), sin shader propio | Core (solo lectura), RemoteConfig | UI | 1.0 |
+| `AF.UI` | Pantallas (Boot, Consentimiento, Inicio (Lobby, 06 §4.7), Mapa del río (`RiverMapScreen` de D-013: construida por código en `Game.unity`, como `LobbyScreen`, en superposición sobre el inicio, la pausa o la victoria), Nivel, Aguas estancadas, ¿Seguro? y Nivel fallido (D-008), Sin canoas, Mercado, Ajustes con "Eliminar cuenta y datos", Bitácora, Canasta), HUD con regla icono + etiqueta funcional, cola de un solo takeover por sesión | Todos vía interfaces | — | 1.0 |
 | `AF.Platform` | Puentes nativos: Play Asset Delivery (Addressables for Android), App Check / Play Integrity, Unity Mobile Notifications (locales; en 1.0 también los mensajes "remotos" del capítulo 6 §8.3 se programan en el dispositivo al cerrar la app: "Nuevos niveles" con `live_content_end_message.next_batch_eta_days`, "Regreso" D7/D14/D30 y "Premio por reclamar" al salir con un premio pendiente; FCM en 1.2), ATT y Privacy Manifest en iOS, `Date` del servidor para el reloj. Reloj inyectable `IClock` (UTC), con la implementación del sistema y una manual para tests: es el único sitio donde se lee la hora del dispositivo (D-008, fase 2) | — | Save, Economy, Ads, LiveOps | 1.0 |
-| `AF.GameFlow` | Máquina de estados: `Boot → Consent → Lobby → LevelLoad → LevelCard → Playing → Stuck → GiveUpConfirm → LevelFailed → NoCanoes / Win → AdGate → Next` (02 §2; embudo de D-008: GiveUpConfirm, LevelFailed y NoCanoes solo desde el 31; `LevelCard`, la tarjeta previa de 1 toque de D-009 en los niveles con etiqueta o con estreno, entre la carga y la intro, que no sale al reanudar ni, por defecto, al reintentar [P]); decide cuándo corre Llenar y teñir (solo con el nivel en memoria, dirección 18) y cuándo el intersticial (solo tras victoria). No depende de la UI (principio 2): la UI lo observa por eventos (`AF.Events`) | Levels, Boosters, Ads, Economy | UI | 1.0 |
+| `AF.GameFlow` | Máquina de estados: `Boot → Consent → Lobby → LevelLoad → LevelCard → Playing → Stuck → GiveUpConfirm → LevelFailed → NoCanoes / Win → AdGate → Next` (02 §2; embudo de D-008: GiveUpConfirm, LevelFailed y NoCanoes solo desde el 31; `LevelCard`, la tarjeta previa de 1 toque de D-009 en los niveles con etiqueta o con estreno, entre la carga y la intro, que no sale al reanudar ni, por defecto, al reintentar [P]); decide cuándo corre Llenar y teñir (solo con el nivel en memoria, dirección 18) y cuándo el intersticial (solo tras victoria). No depende de la UI (principio 2): la UI lo observa por eventos (`AF.Events`) Con D-013, `RiverJourney` (funciones puras sobre `max_level`, `skipped_levels`, `map_seen_level` y `WorldTable`: parada, llenado, bocas pasadas, banderas, km, «Faltan N» y lo pendiente de animar) y `MapMoments` (qué toca en cada victoria: franja de llegada, Mapa automático o nada, según las claves `ui_map_*` de la sección 9), sin motor. | Levels, Boosters, Ads, Economy | UI | 1.0 |
 
 ### 2.3 Secuencia de arranque (presupuesto: primera interacción <20 s, objetivo <6 s [P])
 
@@ -134,6 +134,7 @@ amazon-fill/
         Levels/      mundo_01_v1.json … mundo_09_v1.json (Addressables, grupo levels_install; mundo_10+ en levels_remote)
         Daily/       daily_pool_v1.json (2.190 tableros = 3 bandas × 730)
         Palette/     tints.json (14 tintes, HEX, patrón, debut, pares de riesgo)
+        Map/         river_map_v1.json (af-river-map/1) y river_stops_v1.json (af-river-stops/1): Mapa del río (D-013; sección 4.5)
         Config/      RemoteConfigDefaults.json, iap_catalog.json, ad_placements.json
       Localization/{Tables,Locales}
       Settings/{URP,Addressables,AddressablesForAndroid,Input}
@@ -265,7 +266,7 @@ Extiende el esquema de inventario del capítulo 4 §10.1 (que se mantiene tal cu
   "stock": { "undo": 6, "hint": 2, "reveal": 1, "extra_cuia": 0, "shuffle": 0 },
   "daily": { "…capítulo 4 §10.1…" },
   "progress": { "max_level": 87, "world": 4, "since_last_skip": 14, "skipped_levels": [63],
-                "content_version": "1.0.0" },
+                "content_version": "1.0.0", "map_seen_level": 80 },
   "streak": { "wins": 4, "shield_available": false, "river_full": false },
   "calendar": { "month": "2026-10", "claimed_days": [1,2,3,4,5], "last_claim_date": "2026-10-05" },
   "daily_challenge": { "last_date": "2026-10-05", "result": "win", "streak_days": 6 },
@@ -281,7 +282,7 @@ Extiende el esquema de inventario del capítulo 4 §10.1 (que se mantiene tal cu
 }
 ```
 
-Reglas: blob <100 KB (research/06 §Implicaciones 6 [E]) frente a 3 MB de Play Games Saved Games [V]; nunca se guardan estadísticas por nivel (van a analítica); `economy_ts` se actualiza en cada mutación de `wallet`/`stock`/`daily`; al pagar el hito 10 de la Crecida `streak.wins` vuelve a 0 y `streak.river_full` (río crecido, sin plazo de reloj) sigue en true hasta el siguiente fallo duro no escudado, también con `streak.wins` = 0 (05 §2.4); `hmac` con clave derivada del dispositivo disuade la edición manual del archivo (no es seguridad real: sección 10.6).
+Reglas: blob <100 KB (research/06 §Implicaciones 6 [E]) frente a 3 MB de Play Games Saved Games [V]; nunca se guardan estadísticas por nivel (van a analítica); `economy_ts` se actualiza en cada mutación de `wallet`/`stock`/`daily`; al pagar el hito 10 de la Crecida `streak.wins` vuelve a 0 y `streak.river_full` (río crecido, sin plazo de reloj) sigue en true hasta el siguiente fallo duro no escudado, también con `streak.wins` = 0 (05 §2.4); `hmac` con clave derivada del dispositivo disuade la edición manual del archivo (no es seguridad real: sección 10.6). **`progress.map_seen_level`** (D-013, 2026-10-13): entero, 0 por defecto, el último nivel cuyo estado del Mapa del río ya vio el jugador; se escribe al cerrar el Mapa y tras la franja de llegada de la victoria, y en la fusión de la sección 11 gana el máximo, como `max_level`. Con él, el icono del inicio lleva un punto si hay una llegada sin ver y el Mapa anima exactamente lo pendiente al abrirse. **No exige migrar el perfil:** el esquema aún no se ha publicado y un campo nuevo con un default razonable se añade sin migración (`Profile.cs`, `CurrentSchema` = 1). Todo lo demás del Mapa (posición, llenado, muestras, miradores, afluentes y banderas) se deduce de `max_level`, `skipped_levels`, `WorldTable` y el catálogo de paradas.
 
 ### 4.4 Versionado y migraciones
 
@@ -292,6 +293,49 @@ Reglas: blob <100 KB (research/06 §Implicaciones 6 [E]) frente a 3 MB de Play G
 | Remote Config | `rc_schema` (int, parámetro) | El cliente ignora claves con esquema mayor al que conoce y usa defaults |
 | Datos de SDK | Versiones en `Packages/manifest.json` y `MaxSdk/` | Actualización trimestral con prueba en la matriz QA (sección 14) |
 | Cloud Functions | `api_version` en la ruta (`/v1/ssv`) | Compatibilidad con la versión mínima de app soportada (`biz_min_app_version`) |
+
+### 4.5 Mapa del río: `af-river-map/1` y `af-river-stops/1` (D-013; contratos 29 y 30)
+
+Dos formatos nuevos, aprobados por el dueño el 2026-10-13 con el lote de documentación del Mapa del río (`docs/research/mapa-del-rio/propuesta-mapa-del-rio.md`, sección 11.2). Son contratos 29 y 30 (GDD.md §7.4); esta sección fija su sintaxis y, cuando existan, los esquemas `schemas/af-river-map-1.schema.json` y `schemas/af-river-stops-1.schema.json` serán su copia única. Están sin implementar (fases F1 y F2 de la propuesta). Siguen `.claude/rules/data-json.md` (UTF-8 sin BOM, LF y orden de claves estable) y no van en Remote Config, como el catálogo de fauna.
+
+**`Assets/_Project/Data/Map/river_map_v1.json` (geometría)** [P]:
+
+```json
+{
+  "format": "af-river-map/1",
+  "frame": { "rotation": "cw90", "lat": [-18.0, 7.0], "lon": [-80.0, -47.0], "lat0": -5.0 },
+  "lines": [
+    { "id": "amazonas", "kind": "main", "class": 1, "src": "ne10m", "pts": "<base64 uint16 x,y delta>",
+      "water": [{ "s0": 0.0, "s1": 0.58, "type": "white" }],
+      "splits": [{ "id": "encontro", "s0": 0.214, "s1": 0.219, "left": "black", "right": "white" }] },
+    { "id": "xingu", "kind": "passby", "class": 2, "water": [{ "s0": 0, "s1": 1, "type": "clear" }],
+      "mouth": { "on": "amazonas", "s": 0.053 }, "fill_on_pass": 1.0, "pts": "..." }
+  ],
+  "land": { "verts": "<base64>", "tris": "<base64 uint16>", "zones": [{ "id": "andes", "tile": "rock" }] },
+  "insets": [{ "id": "orinoco", "rect": [0.78, 0.05, 0.98, 0.30], "lines": ["orinoco"], "link": "casiquiare" }],
+  "home": { "on": "para", "s": 0.97 }
+}
+```
+
+- **Proyección:** equirrectangular con el factor cos(lat0), lat0 = −5°, girada 90° en el sentido de las agujas del reloj y sin espejo (Andes arriba, Atlántico abajo y norte a la derecha; 06 §4.5): la forma no se deforma, solo gira.
+- **`lines[].kind`:** `main` (el cauce y el ramal del Pará), `tributary` (afluente de un mundo), `passby` (afluente de paso, que se llena entero al pasar su boca) o `local` (río local de una parada, solo en la vista Mundo). `water[]` da el tipo de agua por tramo (`white`, `black`, `clear` y, en El origen, `andean` [P]); `splits[]`, las franjas de dos aguas de Santarém y del Encuentro; `fill_on_pass`, la fracción que se llena al pasar la boca.
+- **Origen:** lo genera `tools/river-map/` (Python 3.14, solo biblioteca estándar) desde Natural Earth 1:10m (vista Cuenca) y HydroRIVERS (vista Mundo), descargados por el dueño en `tools/river-map/source/` con su SHA-256, y su `--check` valida cada punto de control de `rio-amazonas.json` a ≤ 2 dp de su vista, que los tramos del cauce midan al menos la línea recta, que las rutas no crucen tierra y que los km no retrocedan. Mientras no llegue la geometría de producción, la pantalla se puede construir con `rio-amazonas.json` de respaldo (la forma correcta a escala de cuenca, sin meandros).
+- **Tamaño:** unos 70-90 KB con las 100 paradas [cálculo].
+
+**`Assets/_Project/Data/Map/river_stops_v1.json` (paradas y tramos)** [P]: una entrada por parada (100 en total; 20 en 1-200 y 70 en 1-700), con la ruta de cada tramo para que la canoa siga el agua real, con ida y vuelta por las confluencias:
+
+```json
+{ "n": 14, "levels": [141, 150], "world": 5, "id": "iquitos", "kind": "gate", "country": "PE",
+  "at": { "line": "amazonas", "s": 0.437 }, "km_from_sea": 3700, "sample": "white", "flag_raise": "PE",
+  "arrival_fact": "map.country.pe.dato_01", "facts": ["map.stop.iquitos.dato_01"],
+  "world_question": "map.world.w05.question",
+  "bg": { "kit": "bg_kit_w05", "hero": "bg_hero_iquitos", "code": null, "lut": null },
+  "leg": { "path": [{ "line": "amazonas", "s0": 0.49, "s1": 0.437 }], "via": ["caballococha", "pebas"], "mouths": ["napo"] } }
+```
+
+- **`n`** es la k de la parada (que cubre los niveles `10k+1` … `10k+10`; su id visible es `s{nn}`, glosario §11); **`kind`** ∈ {`gate` (gran parada), `stop` (parada), `close` (cierre de mundo)} [P].
+- **Textos:** solo claves (`arrival_fact`, `facts`, `world_question`), nunca el texto; los textos, con su fuente y su estado `pendiente_asesor`, van en la tabla de textos (glosario §10). El dato mide ≤ 90 caracteres en ES y la pregunta ≤ 50.
+- **Validación** (`RiverStopCatalog`, AF.Levels, sin motor; y el `--check` de la herramienta): toda parada empieza en un nivel `10k+1` y respeta `WorldTable`; cada fondo tiene su ranura o su respaldo; cada dato y cada pregunta existen y miden lo que deben; cada etiqueta [V] o [E] lleva a una fuente con URL. `StopOf(level)` no asigna memoria.
 
 ## 5. Render del líquido y presupuesto de rendimiento
 
@@ -368,7 +412,8 @@ Dispositivo de referencia clase A [E a partir de research/08 §5.2]: Android 8-1
 | SDKs nativos (MAX + 4 adaptadores, Firebase Analytics/Crashlytics/RC/Auth, Play Billing 9, Play Games, PAD, App Check) | ≈12-18 MB | A medir en la semana 1 del proyecto |
 | Atlas UI + comodines + marcos + mascotas | ≈6 MB | ASTC 6×6 |
 | Cuia base + 4 skins de 1.0 + 14 frutas/patrones | ≈5 MB | |
-| Fondos mundos 1-4 (install-time) | ≈4-6 MB | 4 pinturas 1080×2400 ASTC 6×6 + variantes LUT (research/02 C3.4 [E]) |
+| Fondos mundos 1-4 (install-time) | ≈4-6 MB | 4 pinturas 1080×2400 ASTC 6×6 + variantes LUT (research/02 C3.4 [E]). **Con D-013, fondos por parada:** 4 kits y 10 héroes de los mundos 1-4 ocupan ≈ 1,7-2,5 MiB (kits en ASTC 8×8 y héroes en 6×6) [cálculo], porque el cielo pasa a hacerse por código; el margen paga el muelle y los dos juegos de follaje (≈ 1,5 MiB). Loreto suma ≈ 0,6-0,8 MiB, y los 4 kits de 201-700, ≈ 1,0-1,8 MiB; mientras Addressables no esté instalado, todo va en el AAB |
+| Mapa del río (D-013) | ≈1,7 MiB | 5 texturas de terreno de 512², el atlas de UI del Mapa (1024², ASTC 4×4, con las siluetas de las muestras horneadas) y los dos JSON (sección 4.5). Install-time. Se mide con `ci/size-gate.ps1` tras integrar los 3 primeros sitios: impacto neto frente al canon, entre −1 y +3 MB [cálculo] |
 | Audio (4 loops + ambientes + SFX) | ≈7 MB | |
 | Niveles 1-700 (mundos 1-9) + Reto del río 2.190 (3 bandas × 730) + `tints.json` | ≈0,2 MB comprimidos (≈2,5 MB sin comprimir) | sección 4.1; los mundos 10-13 y los paquetes nuevos van por `levels_remote` |
 | Fuentes (latino extendido, 2 familias) | ≈1,5 MB | TextMeshPro atlas |
@@ -379,7 +424,7 @@ Dispositivo de referencia clase A [E a partir de research/08 §5.2]: Android 8-1
 | Grupo Addressables | Contenido | Modo PAD | Tamaño [P] |
 |---|---|---|---|
 | `levels_install` | `mundo_01…09_v1.json` (niveles 1-700: cubre los ≥600 jugables de la dirección 17; el mundo 9 termina en el 700), `daily_pool_v1.json` (2.190 tableros = 3 bandas × 730), `tints.json` | install-time | ≈0,2 MB comprimidos |
-| `core_install` | UI, cuias, frutas, mascotas, audio, fondos w01-w04 y fondo "río genérico" | install-time | ≈22 MB |
+| `core_install` | UI, cuias, frutas, mascotas, audio, fondos w01-w04 (con D-013, sus kits y héroes por parada), el Mapa del río y el fondo "río genérico" | install-time | ≈22 MB |
 | `world_w05` … `world_w13` | Fondo + skin + variantes LUT + ambiente del mundo | **on-demand**, pedido al entrar en el último tercio del mundo anterior (p. ej. w05 se pide en el nivel 121). **En 1.0 solo viaja `world_w05`** (Loreto, 141-200); los niveles 201-700 (mundos 6-9) usan el fondo "río genérico" con la LUT de agua del mundo hasta que lleguen sus packs (glosario §8; 03 §17; 06 §10) | 2-4 MB cada uno |
 | `events_*` | Arte de Encuentro de las Aguas, Temporada de lluvias, Travesía (1.2) | on-demand | 2-3 MB |
 | `levels_remote` | `mundo_10…13_v1.json` (701-1.040), vueltas siguientes, los paquetes de +100 niveles y las reposiciones; anunciados por `content_version` | Addressables remotos en Unity CCD (50 GB/mes gratis, research/06 C6.1 [V]) o Cloudflare R2 (10 GB gratis, egreso 0 [V]); el cliente verifica `pack_schema` y `generator.version` antes de activar | ≈10 KB comprimidos por paquete de 100 niveles |
@@ -449,7 +494,10 @@ Consentimiento: UMP cubre solo EEE/Reino Unido/Suiza y estados de EE. UU. (resea
 | `af_calendar_claim` | `day`, `reward_type`, `reward_value`, `days_missed_before` | Bitácora del río | Reclamo ≥70 % de DAU (cap. 1 §3.1) |
 | `af_piggy` | `state ∈ {unlocked, shown_full, bought}`, `seeds_inside` | Cántaro | Conversión de alcancía (cap. 05) |
 | `af_daily_challenge` | `date`, `result ∈ {win, fail, abandon}`, `t_ms`, `murky_bonus (bool)`, `streak_days` | Reto del río | Participación diaria (cap. 06) |
-| `af_river_fact_shown` | `fact_id`, `dismissed_ms` | Dato del río | Lectura del contenido educativo |
+| `af_river_fact_shown` | `fact_id`, `dismissed_ms` | Dato del río | Lectura del contenido educativo. Con D-013, el `fact_id` del dato de llegada es su clave de contenido (`map.stop.<lugar>.dato_NN`, `map.country.<iso2>.dato_NN`, `map.myth.<tema>`; glosario §10); el de la línea de fruta (Frutas del río, Q1-A) sigue su propuesta (`acai.03`) |
+| `af_map_open` [P] | `source ∈ {l10, world_change, lobby, pause, victory, content_end}`, `stop`, `world` | Apertura del Mapa del río (D-013) | Uso del Mapa; A/B de `ui_map_mode` (D7 y D30 de la cohorte `stops` frente a `worlds`) |
+| `af_map_close` [P] | `dwell_ms`, `stops_tapped`, `view_changes`, `north_up` | Cierre del Mapa del río (D-013) | Interés por el Mapa |
+| `af_stop_arrive` [P] | `stop_id`, `world`, `level`, `view ∈ {victory, map}`, `skipped` | Llegada a una parada del Mapa del río, en la victoria del `10k` o al ponerse al día en el Mapa (D-013) | Llegadas vistas o saltadas |
 | `af_fruit_discovered` | `tint_id` | Primer nivel en que aparece un tinte (tarjeta "Fruta nueva") | Fruta nueva y Cuaderno de campo (cap. 06 §4.5-§4.6) |
 | `af_skin_unlock` | `skin_id`, `source ∈ {world_milestone, iap, event, pass}` | Desbloqueo de una skin de cuia | Skins por hito del Mapa del río (cap. 06 §4.5); compras `af_skin_*` (cap. 05) |
 | `af_comeback_gift` | `days_away` | Entrega del Regalo de regreso (`live_comeback_gift`, ≥7 días sin sesión) | Reactivación por segmento y D7 de los reactivados (cap. 06 §9 y §12) |
@@ -525,8 +573,15 @@ Fuente única: `Assets/_Project/Data/Config/RemoteConfigDefaults.json` (defaults
 | `victory_autonext_s` | int | 0 | 0 (cualquier valor > 0 adelanta la pantalla pero **nunca dispara AD_GATE sin toque**) | 02 | Auto-avance de la pantalla de victoria apagado (incidencia 10; mismo valor en 02 §6, 06 §4.7 y 07 §5.4): el intersticial exige un toque explícito en "Siguiente". Con D-011, tras ver entero el vídeo de la Cosecha doble se avanza solo por AD_GATE, sin intersticial porque lo bloquea la regla de 60 s tras un recompensado (05 §6.1) |
 | `ui_patterns_default_from_level` | int | 41 | 1-80 | 00 | Toggle Patrones activado por defecto (dirección 3). Mientras no exista la pantalla de Ajustes, el cliente usa el default como constante [P] (D-012) |
 | `ui_pattern_opacity` | float | 0.20 | 0.15-0.35 | 07 | `_PatternOpacity` del shader (sección 5.2) con Patrones de fruta activado; sin él (hasta el nivel 40 por defecto), el patrón va sutil al 15 % (07 §3, regla 1; D-012) |
-| `ui_show_difficulty_subtitles` / `ui_river_fact_every_n_levels` / `ui_murky_bonus_enabled` / `ui_mascot_rescue_anim` | bool / int / bool / bool | true / 10 / false (1.1: true) / true | — | 00 | "Aguas bravas" / "Noche de jaguar"; cadencia de Datos del río; tarjeta Aguas turbias · Bonus, contenido de 1.1 (02 T7, 06 §4.1); Capi en la Cuia de rescate |
+| `ui_show_difficulty_subtitles` / `ui_river_fact_every_n_levels` / `ui_murky_bonus_enabled` / `ui_mascot_rescue_anim` | bool / int / bool / bool | true / 10 / false (1.1: true) / true | — | 00 | "Aguas bravas" / "Noche de jaguar"; cadencia de Datos del río (con D-013, tiene que valer lo mismo que la cadencia de paradas del Mapa, 10; si gobierna también la línea de fruta de Frutas del río Q1-A o esta lleva clave propia, pregunta 45 de GDD.md §6.3); tarjeta Aguas turbias · Bonus, contenido de 1.1 (02 T7, 06 §4.1); Capi en la Cuia de rescate |
 | `ui_very_hard_night_lut` | bool | true | — | 07 | Variante nocturna del fondo en Muy difícil |
+| `ui_map_mode` | string | `stops` | `stops` · `worlds` | 06 | Mapa del río de D-013: `stops`, 100 paradas (una cada 10 niveles); `worlds`, solo las grandes paradas y los cierres, sin boyas intermedias (las 13 del canon anterior). Es un filtro de la misma pantalla y del mismo catálogo, no una segunda implementación; interruptor y A/B [P] |
+| `ui_map_autopen` | string | `l10_world` | `l10` · `l10_world` | 06 | Cuándo sale solo el Mapa (D-013, Q4-D): `l10_world`, en el 10 y con el viaje de mundo dentro del banner de los cambios de mundo; `l10`, solo en el 10 (el cambio de mundo, como cualquier llegada, en la victoria) [P] |
+| `ui_bg_per_stop` | bool | true | — | 07 | Fondo por parada (D-013, Q5-A); false = el kit del mundo con el héroe de su gran parada, fijo en todo el mundo. Es un cambio de búsqueda en el catálogo, sin arte ni código aparte [P] |
+| `ui_stop_label` | bool | true | — | 07 | Rótulo del lugar en el primer nivel de cada parada (D-013; reglas de lectura de D-011) [P] |
+| `ui_victory_view` | bool | true | — | 02 | Victoria con vista (D-013, Q6-A): el panel y las cuias se desvanecen en 250 ms y se ve el sitio [P] |
+| `anim_map_world_ms` | int | 6000 | 3000-8000 | 06 | Tope del viaje de mundo del Mapa del río (D-013); dentro del banner de mundo, ≤ 4 s (Q4-D). Las demás duraciones del Mapa son constantes [P]: tramo de 1,2 s, fundido de 250 ms y bandera de 0,8 s [P] |
+| `ui_map_quiz` | string | `off` | `off` · `victory` · `map` | 06 | «¿Verdad o mito?» del Mapa del río: experimento de la 1.1, apagado en la 1.0 (D-013, Q12-A); en la 1.0, el dato simple [P] |
 | `ui_max_takeovers_per_session` | int | 1 | 1 | 05 | Un solo pop-up fuera de hitos por sesión |
 | `ui_haptics_default_on` / `ui_reduce_motion_default` | bool | true / false | — | 02 / 07 | Ajustes iniciales |
 | `audio_music_default_on` / `audio_sfx_default_on` | bool | true / true | — | 07 | Ajustes iniciales |
@@ -666,6 +721,7 @@ ResolveConflict(local, cloud):
   merged.daily = max_by_key(local.daily, cloud.daily)        # topes de video y rescate no se duplican
   merged.applied_purchases = union(local.applied_purchases, cloud.applied_purchases)
   merged.album = union(...); merged.entitlements = or(...)
+  merged.progress.map_seen_level = max(local.progress.map_seen_level, cloud.progress.map_seen_level)   # D-013
   Analytics(af_save_sync result = winner==local ? conflict_local_won : conflict_cloud_won)
   return merged
 ```

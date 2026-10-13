@@ -14,6 +14,8 @@ Revisión 6 (2026-10-12, D-012): la sacudida de rechazo pasa a ±8 dp, 3 ciclos 
 
 Revisión 7 (2026-10-13, tanda 2 de D-012, integrada en `94905b8`): la sacudida de 6.3 ya está en el cliente (B3, `dd208a6`). Los patrones y los iconos de fruta también, con los iconos procedurales [P] de 07 §3 («Iconos del cliente»). Con el icono, el shader del líquido del prototipo queda aún más por encima del presupuesto de la sección 8 (pregunta 44 de `docs/GDD.md` §6.3).
 
+Revisión 8 (2026-10-13, D-013): el Mapa del río trae un fondo por parada. El panorama único de la capa 0 se divide en cielo por código, kit del mundo, héroe bajo del sitio y piezas por código (3.4); entran los criterios VA-20 a VA-23 (sección 9) y las ranuras nuevas del Mapa y de los fondos (10.3). El panel azul petróleo (D-004) no cambia. Canon en 07 §2.1 y en `docs/research/mapa-del-rio/propuesta-mapa-del-rio.md`, sección 10.
+
 Fuentes: `docs/dev/decisiones.md` (D-001 a D-006), GDD 07 (§3 paleta, §4 cuia, §5 storyboards, §6 mascotas, §7 UI kit, §8 pautas culturales), GDD 02 (§3.3, §4, §5, §12), GDD 08 §5 (shader y rendimiento), glosario §0, §3, §9 y §10, `docs/research/09-referencia-magic-sort.md` y `docs/research/magic-sort/c-meta-liveops-ux.md` §4, la revisión del 2026-10-07 (material de entrada, verificado contra el código) y las capturas `Logs/device/v01-fix-*.png` y `docs/reviews/2026-10-07/visual/*.png`.
 
 Convenciones:
@@ -264,10 +266,10 @@ Lectura:
 
 | # | Capa | Ancla y tamaño | Interactiva |
 |---|---|---|---|
-| 0 | Panorama (cielo, orilla lejana, río) | Arriba, a sangre; 360 × 540 dp (`bg_estuario_panorama`) | No |
-| 1 | Ambiente lejano: bruma, destellos del río, garza | Sobre el panorama | No |
+| 0 | Panorama (cielo, orilla lejana, río) | Arriba, a sangre; 360 × 540 dp (`bg_estuario_panorama`). **Con D-013 (2026-10-13) se divide** en: 0a, cielo, sol y nubes por código, con la hora del mundo (07 §2.1); 0b, el **kit del mundo** (`bg_kit_w{nn}`, un atlas de 8-10 piezas: orilla lejana en tiras, selva y palmeras del mundo, islas, playas, árboles en el agua, barcos lejanos sin personas, silueta de ciudad genérica); 0c, el **héroe del sitio** (`bg_hero_<sitio>`, ≈ 240 × 80 dp, bajo y ancho, con el pie en el horizonte de `GameScreen.HorizonFor`: hasta 48 dp de silueta por encima, con lo reconocible en sus 30 dp de abajo, que es lo que se ve con 2 filas, y hasta 32 dp de orilla y reflejo por debajo, que el código alarga hasta 44 dp con el mismo sprite volteado); 0d, las **piezas por código** (las líneas entre aguas de Santarém y del Encuentro); 0e, la banda de río con el preset del mundo. La composición de cada parada es un dato de `river_stops_v1.json` y la compone `StopBackdrop`, como `LayoutBackdrop` hoy; la LUT lleva la temporada del ciclo, Difícil y Muy difícil, el atardecer y el alba | No |
+| 1 | Ambiente lejano: bruma, destellos del río, garza | Sobre el panorama. Con D-013, por sitio y con 16 partículas como mucho (`amb_*`: pericos en Leticia, lomos de delfín en Tarapoto, bruma en Pacaya-Samiria) | No |
 | 2 | Muelle (tablas, viga frontal, postes) | Abajo, a sangre; 360 × 360 dp; borde superior de la viga frontal en `H − 288`, porque el 20 % superior del PNG es transparente (0,2 × 360 = 72 dp) (`bg_estuario_muelle`) | No |
-| 3 | Follaje de esquina: arriba, detrás del HUD; abajo, detrás de la bandeja | 3.8 | No |
+| 3 | Follaje de esquina: arriba, detrás del HUD; abajo, detrás de la bandeja | 3.8. Con D-013, dos juegos: Brasil (açaí y heliconia, el actual) y Amazonia occidental (aguaje, nuevo: `foliage_<juego>_tl/tr/bl/br`) | No |
 | 4 | Sombra proyectada del panel, relleno (por código) y marco (procedural o PNG solo de marco) | 3.2 y 4.6 | No |
 | 5 | Repisas y sombras de contacto | Una por fila (4.5) | No |
 | 6 | Cuias (vidrio trasero, líquido, vidrio delantero, marcas) y chorros. Mientras vierte, el cuerpo del origen y su chorro pasan a la capa 11 (D-006). El agua, las frutas y los anillos de la intro (D-010) van en un Canvas anidado propio delante de las cuias, y la rama y la tropa, en su propia capa (`TroopLayer`); todo sin capturar toques | `CuiaView`, `PourStream`, `IntroAnimation`, `TroopLayer` | Sí, ranuras |
@@ -682,6 +684,10 @@ Las máscaras de panel, HUD y bandeja salen de `AF_LAYOUT` o del layout del test
 | VA-17 | Rendimiento en clase A: p5 de fps ≥ 55 durante 60 s con 16 cuias, vertido y ambiente; presupuestos de 8 | Dispositivo de clase A (pendiente) |
 | VA-18 | Regresión: los comandos de verificación de CLAUDE.md en verde (dotnet, EditMode y PlayMode) | Scripts de `scripts/` |
 | VA-19 | HUD de 07 §7.4: la insignia ocupa x 56-192 y no pasa de 136 dp; queda libre la reserva de Semillas (x 196-288); «Nivel 100» y la escala al 130 % no recortan texto (3.5) | Test de layout y captura |
+| VA-20 | **Hito visible** (D-013): en la captura del tablero de 2 filas a 780 dp, el héroe ocupa ≥ 30 % de la franja visible y se reconoce; en los «paisajes del tramo» basta con que el rótulo y el ambiente lo sitúen (07 §2.1). Se valida con el héroe provisional en `02_board_l7` (2 filas) y `02b_board_l1` (1 fila) **antes de encargar el arte**, empezando por los 3 primeros sitios | Revisión del dueño con el asesor, con capturas del teléfono |
+| VA-21 | **Calma junto al panel** (D-013): en los 16 dp sobre su borde superior, ningún detalle del fondo con ΔL* > 30 | Script |
+| VA-22 | **Sin confusiones** (D-013): ni canoas a menos de 48 dp del HUD, ni canastos, ni frutas sueltas, ni personas, ni banderas, ni cuias en el fondo (las banderas y las mini cuias son del Mapa del río) | Revisión |
+| VA-23 | **Agua coherente** (D-013): la banda del primer plano queda a ΔE00 ≤ 5 del preset del mundo (07 §2.1). La muestra del Muestrario lleva el agua del sitio, que puede ser otra (Allpahuayo-Mishana y Pacaya-Samiria: negra) | Script |
 
 ## 10. Implementación
 
@@ -727,6 +733,8 @@ Cada pieza expone un nombre de ranura igual al del PNG de `docs/art/prompts-chat
 | Geométrica o de material | `ui_btn_hoja`, `ui_btn_agua`, `ui_btn_madera`, `ui_slot_agua`, `ui_disc_madera`, `ui_panel_tablero` (solo marco), `ui_panel_modal` (solo marco), `ui_bandeja`, `ui_placa_nivel`, `wood_dark_tile`, `wood_light_tile` | **Procedural** | PNG opcional (prioridad 3) |
 | Siempre por código | Relleno del panel y de los modales, vidrio, líquido, cavidad, repisas, sombras, partículas | Procedural | — |
 | Fase de jugabilidad | `capi_idle`, `fruta_*` | PNG | — |
+| **Fondos por parada** (D-013) | `bg_kit_w{nn}` (atlas de 2048² a 2×, 8-10 piezas; en ASTC 8×8), `bg_hero_<sitio>` (1440 × 480 a 2×, con capas; en ASTC 6×6), `amb_parakeets`, `amb_dolphin_back`, `amb_mist` (256²), `foliage_<juego>_tl/tr/bl/br` | **PNG**, después de VA-20 | Silueta geométrica de la misma altura para cada héroe (también héroe provisional de VA-20), el panorama procedural para los kits y el «río genérico» de respaldo; nunca para revisión ni para la ficha |
+| **Mapa del río** (D-013) | `map_tile_canopy/varzea/savanna/rock/snow` (512², sin costuras), `map_canoe` (rig de Capi, 12 fotogramas a 32-40 dp), `map_flag_<iso2>` (96 × 64, 2 fotogramas), `map_minicuia` (96 × 160), `map_rack` (9 cortes), `map_home` y `map_home_window` (256² y 9 cortes), `map_compass`, `map_plaque`, `map_buoy`, `map_beacon` y `map_mirador` (atlas de UI); la máscara de zonas del terreno es un dato de `tools/river-map/` | PNG | Geometría de `rio-amazonas.json` y piezas por código mientras no llegue el arte; las siluetas de las muestras se hornean en el atlas del Mapa |
 
 Los ajustes de importación (Sprite, bordes 9-slice, ASTC y mipmaps) los aplica un método o `AssetPostprocessor` de Editor versionado, **nunca** editando el `.meta` a mano (CLAUDE.md, regla 3). El arte final sigue siendo del artista (CLAUDE.md, «Humanos»).
 
