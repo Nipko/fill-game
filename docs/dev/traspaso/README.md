@@ -157,6 +157,8 @@ El dueño probó el `dev.apk` (compilado sobre `80d37fb` o antes) y decidió **D
 - **P3:** miquitos que entran trepando, sueltan igual de rápido, se quedan ≈ 1,5 s en reposo mientras ya se juega y se van en ≈ 0,5 s. T y el toque, sin cambios.
 - **P4:** tras el vídeo de la Cosecha doble, el juego cuenta el doble y pasa solo al nivel siguiente.
 
+**Tanda 1 probada en el teléfono el 2026-10-12** (`main` en `7d755c4`): P1, P3, P4, T-A, T-B, T-C, T-D y los overlays del 103, 163 y 183 cumplen. Hay cinco observaciones que no bloquean (`AfterRewarded` y la cueva llena sin probar en el teléfono, y los tests de Unity que tumban el adb). Resultados y medidas: `docs/dev/traspaso/pruebas-telefono-2026-10-12.md`.
+
 ### Paso 2 · Registrar D-007 y D-009 en el GDD
 
 > *Hecho el 2026-10-11 y el 2026-10-12 (rama `paso2/registrar-d007-d009`, solo documentación): D-007, D-009 y D-012 registradas en `docs/dev/decisiones.md`, con la ampliación de D-010 y el estado de D-011, y llevadas al GDD (§7 de este archivo), con la lista única de estrenos en 02 §9.1, salvo las cifras [sim] regeneradas con D-009, que esperan al dueño (V5). Lo que depende de la tanda 2 (D-011, punto 2 y la tarjeta del miquito tras la tropa; de D-012, el banner de mundo, el tutorial de la Piraña, la sacudida y los patrones) ya está en el GDD como canon, sin darlo por implementado: al integrarla, basta con poner al día su estado en `docs/dev/decisiones.md`. Los pendientes del dueño están en `docs/GDD.md` §6.3 (preguntas 18-40; la 20, decidida). El texto de abajo queda como historial.*
