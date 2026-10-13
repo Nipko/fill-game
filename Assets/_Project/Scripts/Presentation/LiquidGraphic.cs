@@ -42,21 +42,24 @@ namespace AF.Presentation
     /// al <see cref="FruitIconOpacity"/> [P], con la silueta de 0,45 u en reposo. Va como el «?»: derecho en pantalla, en la
     /// columna de su banda con más hueco (<see cref="PlaceGlyph"/>; su sitio, empaquetado sobre el alto en <c>TEXCOORD0.w</c>,
     /// y su x por vértice en <c>TEXCOORD1.w</c>), encoge con el hueco y se apaga si no cabe, así que sigue a la banda al
-    /// inclinarse y al llenarse o vaciarse en el vertido. Nunca en una dosis oculta ni mientras se revela (el icono de fruta
-    /// de la Luciérnaga de <c>MurkyMarks</c> manda hasta que la banda vuelve a ser normal), ni en el Barro (mate), ni en el
-    /// agua base (tinte 0) (<see cref="FruitIconDrawn"/>). Un vertido o un cambio de dosis reconstruyen la malla como siempre;
-    /// el icono no asigna memoria.</para>
+    /// inclinarse y al llenarse o vaciarse en el vertido. En una dosis que se revela entra fundido con el patrón de su fruta
+    /// (<see cref="FruitIconAmount"/>: <see cref="FruitPatternWeight"/>, la misma curva): por la regla, del 35 al 55 % del
+    /// revelado, así que en el paso a la dosis normal ya está entero y no salta (D-003); con la Luciérnaga, bajo el disco
+    /// opaco del icono temporal de <c>MurkyMarks</c>, que al apagarse lo deja ver ya entero. La banda que se revela lo pide
+    /// con <see cref="RevealIconFlag"/> en <c>TEXCOORD3.a</c> (<see cref="RevealRowCode"/>). Nunca en una dosis oculta, ni
+    /// en el Barro (mate), ni en el agua base (tinte 0) (<see cref="FruitIconDrawn"/>). Un vertido o un cambio de dosis
+    /// reconstruyen la malla como siempre; el icono no asigna memoria.</para>
     /// <para><b>Aguas turbias</b> (07 §4.3; 08 §5.2; T15): una dosis oculta se pinta en el shader, no con sprites encima, para
     /// que la trama y el «?» sigan a su banda cuando la cuia se inclina. Con <see cref="SetDose(int, Color, float, int, MurkyLook, float)"/>
     /// en un modo turbio la banda lleva el patrón <see cref="MurkyPatternMode"/> (± el avance del revelado, ver
     /// <see cref="MurkyLook"/>) y la fila turbia del atlas (<see cref="ProceduralArt.MurkyPatternRow"/>) en
     /// <c>TEXCOORD3.a</c>; el shader pinta encima del pardo la trama diagonal al 25 % y el «?» marfil de 0,5 u, sin la
     /// mezcla de los patrones de fruta (<c>_PatternOpacity</c>). En los dos revelados hay un fundido cruzado sin saltos: <c>TEXCOORD3.a</c>
-    /// pasa a ser la fila de la fruta que se revela (<see cref="FruitRowCode"/>; la turbia la da <c>_MurkyRow</c>), la trama se
+    /// pasa a ser la fila de la fruta que se revela (<see cref="RevealRowCode"/>; la turbia la da <c>_MurkyRow</c>), la trama se
     /// va antes de que entre el patrón de la fruta (<see cref="MurkyHatchAmount"/> y <see cref="FruitPatternWeight"/>, espejos
-    /// en CPU del shader) y la franja y el menisco de la fruta entran con su patrón; al final la banda es su dosis normal. Con
-    /// la Luciérnaga (<see cref="MurkyLook.Turn"/>) además baja por la banda un frente de luz [P] (<see cref="FireflyLightAt"/>):
-    /// encima, el color de la dosis, que la CPU florece en OKLab; debajo, el pardo y su brillo (<c>_MurkyLin</c>,
+    /// en CPU del shader) y la franja, el menisco y el icono de la fruta entran con su patrón; al final la banda es su dosis
+    /// normal. Con la Luciérnaga (<see cref="MurkyLook.Turn"/>) además baja por la banda un frente de luz [P]
+    /// (<see cref="FireflyLightAt"/>): encima, el color de la dosis, que la CPU florece en OKLab; debajo, el pardo y su brillo (<c>_MurkyLin</c>,
     /// <c>_MurkyLitLin</c>); el shader solo mezcla en lineal en el borde, de <see cref="FireflyEdgeU"/>.</para>
     /// <para>[P] Esto sustituye a la máscara <c>_HiddenMask</c> (una banda por dosis, también no contiguas) y al color
     /// <c>_MurkyColor</c> = #8A7B6A (<see cref="Palette.Murky"/>, el color de la banda) de 08 §5.2, que no pueden ir como
@@ -263,6 +266,13 @@ namespace AF.Presentation
         /// el patrón y el icono (shader: <c>AF_ICON_RIM_DARKEN</c>). No cambia ningún HEX.
         /// </summary>
         public const float FruitIconRimDarken = 0.35f;
+
+        /// <summary>
+        /// Marca «con icono» de una banda que se revela (<see cref="RevealRowCode"/>; shader: <c>AF_REVEAL_ICON_FLAG</c>): se
+        /// suma a su fila en <c>TEXCOORD3.a</c>, que nunca pasa de <see cref="ProceduralArt.MurkyPatternRow"/> (15), así que el
+        /// shader la separa con un umbral y le resta la marca antes de leer la fila y la celda de su icono.
+        /// </summary>
+        public const float RevealIconFlag = 16f;
 
         /// <summary>
         /// Pasos del destello del sellado en la parte entera de <c>TEXCOORD2.y</c> (<see cref="PackSurface"/>; shader:
@@ -501,22 +511,41 @@ namespace AF.Presentation
         public bool FruitIcons => _fruitIcons;
 
         /// <summary>
-        /// La dosis <paramref name="k"/> es de las que llevan icono con <see cref="SetFruitIcons"/>: normal (ni oculta ni
-        /// revelándose), no mate (el Barro) y con uno de los 14 tintes (el agua base, tinte 0, no). No mira el hueco.
+        /// La dosis <paramref name="k"/> es de las que llevan icono con <see cref="SetFruitIcons"/>: visible (normal, o
+        /// revelándose hacia su fruta, donde entra con su patrón: <see cref="FruitIconAmount"/>; nunca oculta), no mate (el
+        /// Barro) y con uno de los 14 tintes (el agua base, tinte 0, no). No mira el hueco.
         /// </summary>
         public bool IsFruitIconDose(int k)
         {
-            return (uint)k < (uint)_capacity && _look[k] == MurkyLook.None && !_matte[k] && ProceduralArt.HasFruitIcon(_tint[k]);
+            return (uint)k < (uint)_capacity && _look[k] != MurkyLook.Hidden && !_matte[k] && ProceduralArt.HasFruitIcon(_tint[k]);
+        }
+
+        /// <summary>
+        /// Opacidad relativa (0..1) con la que el shader pinta el icono de fruta de la dosis <paramref name="k"/>, sin contar el
+        /// hueco de su banda (<see cref="GlyphFade"/>): 0 con los iconos apagados (<see cref="SetFruitIcons"/>), en una dosis
+        /// sin icono (<see cref="IsFruitIconDose"/>: oculta, Barro o agua base) o vacía; 1 en una dosis normal; y en una que se
+        /// revela, el peso del patrón de su fruta (<see cref="FruitPatternWeight"/>), así que el icono entra con él y el paso a
+        /// la dosis normal no salta (espejo del shader, «iconWeight»). Sin asignaciones.
+        /// </summary>
+        public float FruitIconAmount(int k)
+        {
+            if (!_fruitIcons || !IsFruitIconDose(k) || _fill[k] <= 0.001f || _color[k].a <= 0.001f)
+            {
+                return 0f;
+            }
+
+            return FruitPatternWeight(_look[k], _lookProgress[k]);
         }
 
         /// <summary>
         /// El shader dibuja el icono de fruta de la dosis <paramref name="k"/>: iconos encendidos, dosis con icono
-        /// (<see cref="IsFruitIconDose"/>), con banda y con hueco para él (<see cref="GlyphFade"/> del hueco cuantizado de la
-        /// malla, y el sitio empaquetado distinto de 0, como lo decodifica el shader). Sin asignaciones.
+        /// (<see cref="IsFruitIconDose"/>) que ya se ve (<see cref="FruitIconAmount"/> por encima de 0,001: en una que se
+        /// revela, desde que entra el patrón de su fruta), con banda y con hueco para él (<see cref="GlyphFade"/> del hueco
+        /// cuantizado de la malla, y el sitio empaquetado distinto de 0, como lo decodifica el shader). Sin asignaciones.
         /// </summary>
         public bool FruitIconDrawn(int k)
         {
-            if (!_fruitIcons || !IsFruitIconDose(k) || _fill[k] <= 0.001f || _color[k].a <= 0.001f)
+            if (FruitIconAmount(k) <= 0.001f)
             {
                 return false;
             }
@@ -747,9 +776,10 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// Peso (0..1) del patrón, la franja y el menisco propios de la fruta en una banda con <paramref name="look"/> y
-        /// <paramref name="progress"/> (el mismo cálculo que el shader): 1 en una dosis normal; al disolverse por la regla,
-        /// sube entre <see cref="FruitPatternFrom"/> y <see cref="FruitPatternTo"/>; con la Luciérnaga, entre
+        /// Peso (0..1) del patrón, la franja, el menisco y el icono (<see cref="FruitIconAmount"/>) propios de la fruta en una
+        /// banda con <paramref name="look"/> y <paramref name="progress"/> (el mismo cálculo que el shader, «fruitWeight»): 1 en
+        /// una dosis normal; al disolverse por la regla, sube entre <see cref="FruitPatternFrom"/> y
+        /// <see cref="FruitPatternTo"/>; con la Luciérnaga, entre
         /// <see cref="FireflyPatternFrom"/> y <see cref="FireflyPatternTo"/> (con 1, la banda es la dosis normal de esa fruta);
         /// 0 oculta.
         /// </summary>
@@ -839,18 +869,32 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// Valor de <c>TEXCOORD3.a</c> de una banda que se revela hacia la fruta <paramref name="tint"/>: su fila del atlas
-        /// (0, vacía, si no tiene patrón: Guanábana, agua base o Barro) + 0,5 si sus marcas van en marfil
-        /// (<see cref="Palette.PatternBase"/>). El shader lo decodifica con <c>floor(a + 0,25)</c>.
+        /// Fila de la fruta <paramref name="tint"/> que se revela, sin la marca del icono (ver <see cref="RevealRowCode"/>): su
+        /// fila del atlas de patrones, que es también la celda de su icono (la de la Guanábana, lisa, está vacía en el atlas de
+        /// patrones como la 0; 0 sin icono: agua base o Barro) + 0,5 si las marcas de su patrón van en marfil
+        /// (<see cref="Palette.PatternBase"/>; la Guanábana, sin patrón, en tinta, como en su dosis normal). El shader lo
+        /// decodifica con <c>floor(a + 0,25)</c>.
         /// </summary>
         public static float FruitRowCode(int tint)
         {
-            if (!ProceduralArt.HasPattern(tint))
+            if (!ProceduralArt.HasFruitIcon(tint))
             {
                 return 0f;
             }
 
-            return tint + (Palette.PatternBase(tint) == Palette.UiPaper ? 0.5f : 0f);
+            return tint + (ProceduralArt.HasPattern(tint) && Palette.PatternBase(tint) == Palette.UiPaper ? 0.5f : 0f);
+        }
+
+        /// <summary>
+        /// Valor de <c>TEXCOORD3.a</c> de una banda que se revela hacia la fruta <paramref name="tint"/>: su
+        /// <see cref="FruitRowCode"/> y, si la banda lleva icono (<paramref name="icon"/>: los de <see cref="SetFruitIcons"/>, y
+        /// la fruta lo tiene), + <see cref="RevealIconFlag"/>: el shader pinta entonces su icono con el peso de su patrón
+        /// (<see cref="FruitIconAmount"/>).
+        /// </summary>
+        public static float RevealRowCode(int tint, bool icon)
+        {
+            float row = FruitRowCode(tint);
+            return icon && ProceduralArt.HasFruitIcon(tint) ? row + RevealIconFlag : row;
         }
 
         /// <summary>
@@ -1232,9 +1276,10 @@ namespace AF.Presentation
                 if (murky)
                 {
                     // Oculta, la fila turbia (nada de su fruta); al revelarse, la de la fruta que se revela (su patrón entra
-                    // en el shader cuando ya se fue la trama, que el shader lee de _MurkyRow).
+                    // en el shader cuando ya se fue la trama, que el shader lee de _MurkyRow) y, con iconos, la marca de su
+                    // icono, que entra con el patrón.
                     pattern = MurkyPattern(_look[k], _lookProgress[k]);
-                    row = revealing ? FruitRowCode(tint) : ProceduralArt.MurkyPatternRow;
+                    row = revealing ? RevealRowCode(tint, _fruitIcons) : ProceduralArt.MurkyPatternRow;
                 }
                 else if (_matte[k])
                 {
@@ -1245,7 +1290,8 @@ namespace AF.Presentation
                     pattern = Palette.PatternBase(tint) == Palette.UiPaper ? 1f : 0f;
                 }
 
-                // El icono de fruta (T-E.4 y T-E.5) va como el «?» de una turbia: su sitio sobre el alto y su x por vértice.
+                // El icono de fruta (T-E.4 y T-E.5) va como el «?» de una turbia: su sitio sobre el alto y su x por vértice (en
+                // una banda que se revela, el sitio de su «?», que es el mismo).
                 bool glyph = murky || (_fruitIcons && IsFruitIconDose(k));
                 var uv1 = new Vector4(litS.x, litS.y, litS.z, 0f);
                 var uv2 = new Vector4(surface, surf, _ripplePhase, pattern + (4f * k));

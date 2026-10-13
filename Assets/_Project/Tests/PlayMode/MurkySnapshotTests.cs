@@ -31,7 +31,8 @@ namespace AF.Tests.PlayMode
     /// la captura no mediría nada); del 30 al 70 % del revelado, nunca el pardo sin «?»
     /// (07 §3) y el «?» que se disuelve claro (L* ≥ 75 mientras se ve a más de la mitad); del 54 al 56 % (paso a la dosis normal),
     /// menos del 10 % de los píxeles de la banda cambian; con la Luciérnaga, la mitad de arriba de la capa ya aclarada y la de
-    /// abajo aún parda cuando el frente pasa por su mitad, el paso a la dosis normal sin saltos y el disco frente a la banda
+    /// abajo aún parda cuando el frente pasa por su mitad, el paso a la dosis normal sin saltos (en la banda y en la caja del icono
+    /// de la fruta) y el disco frente a la banda
     /// (≥ 3:1). Las medidas salen en el log como <c>AF_MURKY</c>. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode
     /// --filter AF.Tests.PlayMode.MurkySnapshotTests</c> sin <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/</c>.
     /// </summary>
@@ -70,8 +71,8 @@ namespace AF.Tests.PlayMode
             // El revelado por la regla: al 20 % (72), al 45 % (72b) y, en recortes, del 30 al 70 % (72d): en ningún fotograma
             // queda el pardo sin «?» (07 §3; el «?» se disuelve sobre el color nuevo, ficha de Magic Sort §3.1) y el «?» que se
             // disuelve va hacia el blanco (sin su halo de tinta: claro, nunca gris malva sobre la fruta). Fundido cruzado (D-003):
-            // la trama se va hacia el 30 %, el patrón de la fruta entra del 35 al 55 % y la cifra hace su pop hacia el 47-50 %;
-            // del 54 al 56 % (el paso a la dosis normal) casi ningún píxel de la banda cambia.
+            // la trama se va hacia el 30 %, el patrón y el icono de la fruta entran del 35 al 55 % y la cifra hace su pop hacia
+            // el 47-50 %; del 54 al 56 % (el paso a la dosis normal) casi ningún píxel de la banda cambia.
             Pour[]? path = MechanicTestKit.FindTrigger(boot.Flow!, (ev, b, a) => ev.RevealedMask != 0);
             Assert.That(path, Is.Not.Null);
             MechanicTestKit.PlayPrefix(boot, path!);
@@ -170,6 +171,8 @@ namespace AF.Tests.PlayMode
             var halfway = new HashSet<int>();
             var switched = new HashSet<int>();
             var lastTurn = new Dictionary<int, Color32[]>();
+            var lastTurnMark = new Dictionary<int, Color32[]>();
+            var lastTurnState = new Dictionary<int, string>();
             bool discMeasured = false;
             for (int ms = 2; view.Murky.IsAnimating && ms <= 600; ms += 2)
             {
@@ -207,6 +210,10 @@ namespace AF.Tests.PlayMode
                     {
                         SampleBand(view, k, 0.1f, 0.9f, out Color32[] px);
                         lastTurn[k] = px;
+                        lastTurnMark[k] = SampleMarkUnderDisc(view, k);
+                        lastTurnState[k] = "avance " + p.ToString("F4") + ", icono de la banda al " + (100f * view.Liquid.FruitIconAmount(k)).ToString("F1")
+                            + " %, disco al " + (100f * view.Murky.FruitDisc(k).color.a).ToString("F1") + " %";
+                        SaveCrop(dir, "72e_firefly_switch" + k + "_before_l100_zoom", view.Root, 28f); // el último fotograma en Turn
                     }
                     else if (look == LiquidGraphic.MurkyLook.None && !switched.Contains(k) && lastTurn.ContainsKey(k))
                     {
@@ -215,6 +222,16 @@ namespace AF.Tests.PlayMode
                         int changed = Changed(lastTurn[k], px, 8);
                         Debug.Log("AF_MURKY 72e: capa " + k + " pasa a la dosis normal a los " + ms + " ms: " + changed + " de " + px.Length + " píxeles cambian más de 8/255");
                         Assert.That(changed * 10, Is.LessThan(px.Length), "capa " + k + ": el paso a la dosis normal no salta");
+
+                        // En la caja del icono (la del «?», ±0,3 u), lo que pinta el shader: el icono de Patrones de fruta ya entró
+                        // entero bajo el disco, así que tampoco salta (D-003). Sin el disco ni el icono temporal encima, que se
+                        // apagan solos en alfa hasta este fotograma (sus pasos son los de cualquier otro fotograma de su fundido).
+                        SaveCrop(dir, "72e_firefly_switch" + k + "_after_l100_zoom", view.Root, 28f);
+                        Color32[] mark = SampleMarkUnderDisc(view, k);
+                        int markChanged = Changed(lastTurnMark[k], mark, 8);
+                        Debug.Log("AF_MURKY 72e: capa " + k + ", caja del icono bajo el disco (último fotograma en Turn: " + lastTurnState[k] + "): "
+                            + markChanged + " de " + mark.Length + " píxeles cambian más de 8/255");
+                        Assert.That(markChanged * 10, Is.LessThan(mark.Length), "capa " + k + ": el icono de la fruta no salta al pasar a la dosis normal");
                     }
 
                     if (!discMeasured && view.Murky.FruitVisible(k) && view.Murky.FruitDisc(k).rectTransform.localScale.x > 0.95f && view.Murky.FruitDisc(k).color.a > 0.95f)
@@ -378,6 +395,27 @@ namespace AF.Tests.PlayMode
             finally
             {
                 fx.SetActive(was);
+            }
+        }
+
+        // Los píxeles de SampleMark con el disco y el icono temporal de la Luciérnaga de la dosis k ocultos un momento: lo que pinta
+        // el shader en la caja del icono (el icono de Patrones de fruta, si ya entró).
+        private static Color32[] SampleMarkUnderDisc(CuiaView view, int k)
+        {
+            GameObject disc = view.Murky.FruitDisc(k).gameObject;
+            GameObject fruit = view.Murky.FruitImage(k).gameObject;
+            bool discWas = disc.activeSelf;
+            bool fruitWas = fruit.activeSelf;
+            disc.SetActive(false);
+            fruit.SetActive(false);
+            try
+            {
+                return SampleMark(view, k).Pixels;
+            }
+            finally
+            {
+                disc.SetActive(discWas);
+                fruit.SetActive(fruitWas);
             }
         }
 

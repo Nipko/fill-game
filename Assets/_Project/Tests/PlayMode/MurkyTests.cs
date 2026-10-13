@@ -448,8 +448,11 @@ namespace AF.Tests.PlayMode
                         List<UIVertex> band = BandVertices(view, k);
                         Assert.That(band.Count, Is.GreaterThanOrEqualTo(3), at + ": la dosis normal tiene malla");
                         UIVertex first = band[0];
-                        float code = LiquidGraphic.FruitRowCode(tint);
-                        Assert.That(lastTurn[k].uv3.w, Is.EqualTo(code), at + ": con la Luciérnaga, la fila de su fruta (+ 0,5 si va en marfil)");
+                        // Nivel 100, con Patrones de fruta: la fila lleva además la marca de su icono, que entra con su patrón.
+                        Assert.That(view.FruitIconsOn, Is.True, at + ": nivel con Patrones de fruta");
+                        float code = LiquidGraphic.RevealRowCode(tint, true);
+                        Assert.That(lastTurn[k].uv3.w, Is.EqualTo(code), at + ": con la Luciérnaga, la fila de su fruta (+ 0,5 si va en marfil) y la marca de su icono");
+                        Assert.That(code - LiquidGraphic.RevealIconFlag, Is.EqualTo(LiquidGraphic.FruitRowCode(tint)), at + ": que el shader quita antes de leer la fila");
                         Assert.That(first.uv3.w, Is.EqualTo((float)tint), at + ": la dosis normal, con la fila de su fruta");
                         Vector4 a = lastTurn[k].uv1;
                         Vector4 b = first.uv1;
@@ -639,8 +642,11 @@ namespace AF.Tests.PlayMode
             Assert.That(maxScaleAt - dropAt, Is.InRange(10f, 100f), "con ease-out: el pico llega pronto");
             Assert.That(marks.BadgeCount, Is.EqualTo(1));
             Assert.That(normalSeen, Is.True);
-            float code = LiquidGraphic.FruitRowCode(tint);
-            Assert.That(lastDissolve.uv3.w, Is.EqualTo(code), "al disolverse, la fila de su fruta (+ 0,5 si sus marcas van en marfil)");
+            // Nivel 100, con Patrones de fruta: la fila lleva además la marca de su icono, que entra con su patrón (D-003).
+            Assert.That(view.FruitIconsOn, Is.True, "nivel con Patrones de fruta");
+            Assert.That(lastDissolve.uv3.w, Is.EqualTo(LiquidGraphic.RevealRowCode(tint, true)), "al disolverse, la fila de su fruta (+ 0,5 si sus marcas van en marfil) y la marca de su icono");
+            float code = lastDissolve.uv3.w - LiquidGraphic.RevealIconFlag; // lo que lee el shader tras quitar la marca
+            Assert.That(code, Is.EqualTo(LiquidGraphic.FruitRowCode(tint)), "la fila de su fruta");
             Assert.That(Mathf.Floor(code + 0.25f), Is.EqualTo((float)tint), "el shader decodifica su fila");
             Assert.That(2f * (code - tint), Is.EqualTo(Palette.PatternBase(tint) == Palette.UiPaper ? 1f : 0f), "y el color de sus marcas");
             Assert.That(firstNormal.uv3.w, Is.EqualTo((float)tint), "la dosis normal, con la fila de su fruta");

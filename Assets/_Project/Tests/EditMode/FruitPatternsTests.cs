@@ -6,6 +6,7 @@ using AF.GameFlow;
 using AF.Levels;
 using AF.Levels.Json;
 using AF.Presentation;
+using AF.Presentation.Mechanics;
 using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
@@ -21,7 +22,8 @@ namespace AF.Tests.EditMode
     /// <c>ui_pattern_opacity</c>) en la propiedad <c>_PatternOpacity</c> del material compartido y en
     /// <see cref="Palette.PatternMark"/>; el atlas de iconos de accesibilidad (uno por tinte, 07 §3); y en la malla del líquido,
     /// el sitio del icono en cada dosis visible, nunca en una oculta, en el Barro ni en el agua base, con Patrones de fruta o con
-    /// la cuia elevada (regla 2), y el destello del sellado, que pasó a <c>TEXCOORD2.y</c>.
+    /// la cuia elevada (regla 2); en la que se revela, el icono entra con el patrón de su fruta y no salta al volver a ser normal
+    /// (D-003); y el destello del sellado, que pasó a <c>TEXCOORD2.y</c>.
     /// </summary>
     public sealed class FruitPatternsTests
     {
@@ -449,6 +451,163 @@ namespace AF.Tests.EditMode
             }
 
             liquid.SetTilt(0f);
+        }
+
+        [Test]
+        public void RuleReveal_IconEntersWithPattern_NoJumpToNormal() // D-003; 07 §3: del 35 al 55 % del revelado, sin salto del 54 al 56 %
+        {
+            // Nivel turbio (desde el 100, con Patrones de fruta y el patrón al 20 %): la regla revela la dosis 1 (tinte 8) y la 0
+            // sigue oculta. Fotogramas de 6 ms (200 en los 1.200 ms del revelado).
+            LiquidGraphic.ApplyPatternOpacity(Palette.PatternOpacityFor(100));
+            CuiaView view = NewView(0);
+            view.SetGeometry(Vector2.zero, 48f, 64f);
+            view.ShowContent(Cuia.Create(4, new[] { 4, 8 }, 0b0001), false);
+            view.SetFruitPatterns(true);
+            LiquidGraphic liquid = view.Liquid;
+            const int layer = 1;
+            const int hidden = 0;
+            const float stepMs = 6f;
+            float ms = view.PlayReveal(1 << layer, RevealStyle.Rule, 1f);
+            Assert.That(ms, Is.EqualTo(MurkyMarks.RevealRuleMs), "1.200 ms a velocidad 1");
+            Assert.That(liquid.FruitIconAmount(layer), Is.EqualTo(0f), "al empezar, turbia: sin icono");
+
+            float[] marks = { 0.35f, 0.45f, 0.54f, 0.56f };
+            var at = new float[marks.Length];
+            var drawnAt = new bool[marks.Length];
+            int next = 0;
+            float previous = 0f;
+            float maxStep = 0f;
+            bool meshChecked = false;
+            for (float elapsed = stepMs; view.Murky.IsAnimating && elapsed <= ms + stepMs; elapsed += stepMs)
+            {
+                view.Tick(stepMs);
+                float t = elapsed / ms;
+                float amount = liquid.FruitIconAmount(layer);
+                LiquidGraphic.MurkyLook look = liquid.MurkyLookAt(layer);
+                string label = "al " + (100f * t).ToString("F1") + " %";
+                if (look == LiquidGraphic.MurkyLook.Dissolve)
+                {
+                    Assert.That(amount, Is.EqualTo(LiquidGraphic.FruitPatternWeight(look, liquid.MurkyProgressAt(layer))).Within(1e-6f), label + ": el icono entra con el patrón de su fruta (la misma curva)");
+                }
+                else
+                {
+                    Assert.That(look, Is.EqualTo(LiquidGraphic.MurkyLook.None), label + ": ya es la dosis normal");
+                    Assert.That(amount, Is.EqualTo(1f), label + ": con su icono entero");
+                }
+
+                Assert.That(amount, Is.GreaterThanOrEqualTo(previous - 1e-6f), label + ": el icono nunca vuelve atrás");
+                maxStep = Mathf.Max(maxStep, amount - previous);
+                previous = amount;
+                Assert.That(liquid.MurkyLookAt(hidden), Is.EqualTo(LiquidGraphic.MurkyLook.Hidden), label + ": la otra sigue oculta");
+                Assert.That(liquid.FruitIconAmount(hidden), Is.EqualTo(0f), label + ": y sin icono");
+                Assert.That(liquid.FruitIconDrawn(hidden), Is.False, label + ": nunca en una oculta (07 §4.3)");
+                while (next < marks.Length && t >= marks[next] - 1e-4f)
+                {
+                    at[next] = amount;
+                    drawnAt[next] = liquid.FruitIconDrawn(layer);
+                    next++;
+                }
+
+                if (!meshChecked && look == LiquidGraphic.MurkyLook.Dissolve && amount > 0.2f)
+                {
+                    // El shader: la que se revela trae la marca del icono en uv3.w (su fila + 16) y el sitio de su «?», que es el
+                    // del icono; la oculta, la fila turbia sin marca (peso 0: nunca icono).
+                    meshChecked = true;
+                    foreach (UIVertex v in Band(view, layer))
+                    {
+                        Assert.That(v.uv3.w, Is.EqualTo(LiquidGraphic.RevealRowCode(8, true)), "la que se revela pide su icono (marca en uv3.w)");
+                        Assert.That(v.uv3.w, Is.GreaterThan(LiquidGraphic.RevealIconFlag - 0.25f), "por encima del umbral del shader");
+                    }
+
+                    foreach (UIVertex v in Band(view, hidden))
+                    {
+                        Assert.That(v.uv3.w, Is.EqualTo((float)ProceduralArt.MurkyPatternRow), "la oculta, con la fila turbia y sin marca");
+                    }
+
+                    Assert.That(CodedBands(view) & 0b11, Is.EqualTo(0b11), "las dos con el sitio de su marca empaquetado");
+                }
+            }
+
+            TestContext.WriteLine("Icono de la dosis que se revela: " + at[0].ToString("F3") + " al 35 %, " + at[1].ToString("F3") + " al 45 %, "
+                + at[2].ToString("F4") + " al 54 % y " + at[3].ToString("F4") + " al 56 %; el mayor paso entre fotogramas de 6 ms, " + maxStep.ToString("F3") + ".");
+            Assert.That(meshChecked, Is.True, "se miró la malla con el icono entrando");
+            Assert.That(next, Is.EqualTo(marks.Length), "pasó por el 35, el 45, el 54 y el 56 %");
+            Assert.That(at[0], Is.LessThan(0.01f), "al 35 %, el icono aún no entra (con el patrón)");
+            Assert.That(at[1], Is.InRange(0.1f, 0.9f), "al 45 %, a medio entrar");
+            Assert.That(drawnAt[2], Is.True, "al 54 %, ya se dibuja");
+            Assert.That(at[2], Is.GreaterThan(0.99f), "al 54 %, casi entero");
+            Assert.That(drawnAt[3] && at[3] == 1f, Is.True, "al 56 %, la dosis normal con su icono entero");
+            Assert.That(at[3] - at[2], Is.LessThan(0.01f), "del 54 al 56 % (el paso a la dosis normal) el icono no salta");
+            Assert.That(maxStep, Is.LessThan(0.05f), "entra poco a poco (menos del 5 % por fotograma de 6 ms)");
+
+            // El patrón usa la misma _PatternOpacity (0,20 en un nivel turbio) al revelarse y en la dosis normal, y su peso llega
+            // a 1 con el del icono: tampoco pasa de 0,15 a 0,20 de golpe en el cambio.
+            Assert.That(Palette.PatternOpacity, Is.EqualTo(0.20f), "nivel turbio: el patrón al 20 %");
+            float patternAt54 = Palette.PatternOpacity * LiquidGraphic.FruitPatternWeight(LiquidGraphic.MurkyLook.Dissolve, 0.54f / MurkyMarks.RuleDissolveEndAt);
+            Assert.That(patternAt54, Is.EqualTo(0.20f).Within(0.002f), "al 54 %, el patrón ya casi al 20 %");
+            Assert.That(liquid.FruitIconDrawn(layer), Is.True, "revelada, con su icono");
+        }
+
+        [Test]
+        public void FireflyReveal_IconUnderDisc_WholeWhenDiscFades() // D-003; 04 §2.5: al terminar la Luciérnaga el icono no salta
+        {
+            // Las 2 ocultas de una cuia turbia con Patrones de fruta, con la Luciérnaga en fotogramas de 2 ms: el icono de cada
+            // banda entra con su patrón bajo el disco opaco del icono temporal (MurkyMarks), que solo se apaga cuando aquel ya
+            // está entero, y el paso a la dosis normal no lo cambia.
+            LiquidGraphic.ApplyPatternOpacity(Palette.PatternOpacityFor(100));
+            CuiaView view = NewView(0);
+            view.SetGeometry(Vector2.zero, 48f, 64f);
+            Cuia cuia = Cuia.Create(4, new[] { 4, 8, 3 }, 0b0011);
+            view.ShowContent(cuia, false);
+            view.SetFruitPatterns(true);
+            LiquidGraphic liquid = view.Liquid;
+            float ms = view.PlayReveal(cuia.HiddenMask, RevealStyle.Firefly, 1f);
+            Assert.That(ms, Is.EqualTo(MurkyMarks.RevealFireflyMs), "600 ms a velocidad 1");
+            var last = new float[2];
+            var switched = new bool[2];
+            bool underDisc = false;
+            for (float elapsed = 2f; view.Murky.IsAnimating && elapsed <= ms + 2f; elapsed += 2f)
+            {
+                view.Tick(2f);
+                for (int k = 0; k < 2; k++)
+                {
+                    string label = "a los " + elapsed + " ms, dosis " + k;
+                    LiquidGraphic.MurkyLook look = liquid.MurkyLookAt(k);
+                    float amount = liquid.FruitIconAmount(k);
+                    if (look == LiquidGraphic.MurkyLook.Turn)
+                    {
+                        Assert.That(amount, Is.EqualTo(LiquidGraphic.FruitPatternWeight(look, liquid.MurkyProgressAt(k))).Within(1e-6f), label + ": entra con su patrón");
+                    }
+                    else if (look == LiquidGraphic.MurkyLook.None && !switched[k])
+                    {
+                        switched[k] = true;
+                        Assert.That(amount - last[k], Is.LessThan(0.01f), label + ": al pasar a la dosis normal, el icono no salta");
+                    }
+
+                    if (view.Murky.FruitVisible(k) && liquid.FruitIconDrawn(k))
+                    {
+                        bool opaque = view.Murky.FruitDisc(k).color.a >= 0.999f;
+                        Assert.That(opaque || amount >= 0.999f, Is.True, label + ": bajo el disco opaco, o ya entero mientras el disco se apaga");
+                        Assert.That(liquid.FruitIconPlacement(k, out float cx, out float cy, out _, out float room), Is.True);
+                        float discY = CuiaGeometry.CavityBottomU + k + 0.5f - (0.5f * CuiaGeometry.TopFaceU);
+                        float halfDiagonal = 0.5f * LiquidGraphic.GlyphSizeU(room) * Mathf.Sqrt(2f);
+                        Assert.That(cx, Is.EqualTo(0f).Within(1e-3f), label + ": en el eje, como el disco");
+                        Assert.That(halfDiagonal + Mathf.Abs(cy - discY), Is.LessThanOrEqualTo(0.5f * MurkyMarks.FireflyDiscU), label + ": la caja del icono, dentro del disco");
+                        underDisc |= opaque && amount > 0.001f && amount < 0.999f;
+                    }
+
+                    last[k] = amount;
+                }
+            }
+
+            Assert.That(view.Murky.IsAnimating, Is.False, "terminó");
+            Assert.That(switched[0] && switched[1], Is.True, "las 2 pasaron a su dosis normal");
+            Assert.That(underDisc, Is.True, "el icono entró bajo el disco opaco");
+            for (int k = 0; k < 2; k++)
+            {
+                Assert.That(liquid.FruitIconAmount(k), Is.EqualTo(1f), "dosis " + k + ": entero");
+                Assert.That(liquid.FruitIconDrawn(k), Is.True, "dosis " + k + ": con su icono");
+            }
         }
 
         [Test]
