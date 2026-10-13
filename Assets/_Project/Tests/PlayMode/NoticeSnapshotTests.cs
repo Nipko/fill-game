@@ -60,6 +60,7 @@ namespace AF.Tests.PlayMode
             StepToPlaying(boot);
             PlayModeHelpers.Step(boot, 800);
             Assert.That(boot.View!.ToastText, Is.EqualTo(UiText.ExtraCuiaGift));
+            AssertNoGhostCuias(boot.View, "a2_01_capi_gift_l8");
             SnapshotKit.Save(dir, "a2_01_capi_gift_l8");
 
             // La tarjeta del miquito, cuando la tropa se ha ido, en la franja del panorama (larga en el 5, corta en el 42 y el 142
@@ -77,6 +78,7 @@ namespace AF.Tests.PlayMode
 
             PlayModeHelpers.Step(boot, 400);
             Assert.That(boot.View.ToastText, Is.EqualTo(UiText.RevealMissing(70)));
+            AssertNoGhostCuias(boot.View, "a2_03_toast_after_card_l5");
             SnapshotKit.Save(dir, "a2_03_toast_after_card_l5");
 
             yield return CaptureSighting(dir, 42, "a2_02b_sighting_l42");
@@ -109,6 +111,7 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             boot.Flow!.Load(5);
+            yield return null; // las vistas de la primera carga se destruyen al final del fotograma (AssertNoGhostCuias)
             StepToPlaying(boot);
             GameScreen view = boot.View!;
             LevelSession session = boot.Flow.Session;
@@ -183,6 +186,7 @@ namespace AF.Tests.PlayMode
                 {
                     // Empieza la vuelta: el fotograma anterior fue el de la inclinación máxima y este apenas se mueve.
                     Assert.That(view.Sighting.Visible, Is.True, "la tarjeta sigue a la vista con el origen inclinado del todo");
+                    AssertNoGhostCuias(view, "a2_04b_sighting_pour_l5_92");
                     SnapshotKit.Save(dir, "a2_04b_sighting_pour_l5_92");
                     captured = true;
                 }
@@ -200,6 +204,7 @@ namespace AF.Tests.PlayMode
                 {
                     Assert.That(view.Sighting.Visible, Is.True, "la tarjeta sigue a la vista con el origen dentro");
                     maxInside = inside;
+                    AssertNoGhostCuias(view, "a2_04_sighting_pour_l5_overlap");
                     overlap = SnapshotKit.Capture(); // el fotograma en que el origen entra más en la tarjeta
                 }
             }
@@ -313,6 +318,7 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             boot.Flow!.Load(142);
+            yield return null; // las vistas de la primera carga se destruyen al final del fotograma (AssertNoGhostCuias)
             StepToPlaying(boot);
             GameScreen view = boot.View!;
             Assert.That(view.Views.Length, Is.EqualTo(cuias), name);
@@ -342,6 +348,7 @@ namespace AF.Tests.PlayMode
                 suffix = "_nofit";
             }
 
+            AssertNoGhostCuias(view, name + suffix);
             SnapshotKit.Save(dir, name + suffix);
             SnapshotKit.LogBoard(name, boot);
             TestContext.WriteLine(name + suffix + ": franja " + (panelTop - hudBottom) + " dp, fondo del panel " + panelBottom + " dp, tarjeta "
@@ -374,6 +381,7 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Attach(boot);
             PlayModeHelpers.TakeClock(boot);
             boot.Flow!.Load(level);
+            yield return null; // las vistas de la primera carga se destruyen al final del fotograma (AssertNoGhostCuias)
             StepToPlaying(boot);
             for (int t = 0; t < 5000 && !boot.View!.Sighting.Visible; t += PlayModeHelpers.FrameMs)
             {
@@ -383,8 +391,20 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.View!.Sighting.Visible, Is.True, name);
             Assert.That(boot.View.Intro.TroopVisible, Is.False, name + ": la tropa ya se fue");
             PlayModeHelpers.Step(boot, 400);
+            AssertNoGhostCuias(boot.View, name);
             SnapshotKit.Save(dir, name);
             TestContext.WriteLine(name + ": " + boot.View.Sighting.Name + " · " + boot.View.Sighting.Fact + " · " + boot.View.Sighting.DurationMs + " ms");
+        }
+
+        // Antes de cada captura, tantas CuiaView en el tablero (y en la capa de la cuia elevada) como vistas tiene la pantalla.
+        // GameScreen.BuildBoard destruye las de la carga anterior con Object.Destroy, que espera al final del fotograma, y
+        // PlayModeHelpers.Step y SnapshotKit.Capture (camera.Render) van en el mismo fotograma: sin un yield tras Flow.Load, las
+        // vistas viejas se dibujan debajo de las nuevas (revisión de A2: a2_04 tenía 7 cuias en un nivel de 6).
+        private static void AssertNoGhostCuias(GameScreen view, string name)
+        {
+            int count = view.BoardContainer.GetComponentsInChildren<CuiaView>(true).Length
+                + view.LiftFront.GetComponentsInChildren<CuiaView>(true).Length;
+            Assert.That(count, Is.EqualTo(view.Views.Length), name + ": sin cuias de la carga anterior");
         }
 
         private static void StepToPlaying(GameBootstrap boot)

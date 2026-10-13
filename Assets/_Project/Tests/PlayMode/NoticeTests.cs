@@ -24,10 +24,11 @@ namespace AF.Tests.PlayMode
     /// vista!», no se pisan y el segundo sale en el fotograma en que se oculta el primero; la tarjeta espera a que la tropa se
     /// vaya, con las etiquetas del HUD a la vista mientras tanto; el cartel «El río bajó» sigue con sus 2,0 s, fuera de la cola;
     /// el aviso no captura toques; el aviso y la tarjeta van delante del tablero y del HUD, pero detrás del origen que vierte
-    /// (D-006), de los modales y de la pausa; la cola se vacía al cargar otro nivel y al empezar otro intento; tras una victoria rápida en
-    /// el 8 o en el 5, ni el aviso o la tarjeta que se veían ni lo que esperaba salen encima de la celebración ni de la
-    /// pantalla de victoria (solo hay avisos en PLAYING sin la victoria pendiente); y sin asignaciones por fotograma con un
-    /// aviso a la vista y otro esperando.
+    /// (D-006), de los modales y de la pausa; con el bloqueo pendiente (antes de que se abra Aguas estancadas) no empieza
+    /// ninguno, y el que esperaba sale al volver a jugar; la cola se vacía al cargar otro nivel y al empezar otro intento; tras
+    /// una victoria rápida en el 8 o en el 5, ni el aviso o la tarjeta que se veían ni lo que esperaba salen encima de la
+    /// celebración ni de la pantalla de victoria (solo hay avisos en PLAYING sin victoria ni bloqueo pendientes); y sin
+    /// asignaciones por fotograma con un aviso a la vista y otro esperando.
     /// </summary>
     public sealed class NoticeTests
     {
@@ -293,6 +294,81 @@ namespace AF.Tests.PlayMode
             Assert.That(view.ToastText, Is.EqualTo(UiText.ExtraCuiaGift), "con el aviso a la vista");
             AssertNoticeLayerOrder(view, "durante el vertido");
             PlayModeHelpers.StepUntilIdle(boot, 3000);
+        }
+
+        [UnityTest]
+        public IEnumerator Level31_WithTheStuckPending_NoNoticeStarts_TheWaitingOneComesWhenPlayResumes()
+        {
+            // Revisión de A2: entre el bloqueo lógico y Aguas estancadas, la vista termina el último vertido y espera
+            // StuckModalDelayMs, aún en PLAYING. En esa ventana no empieza ningún aviso: el que esperaba se leería casi entero
+            // detrás del modal. Espera a que se vuelva a jugar (aquí, el rescate).
+            LaunchOptions.LevelOffsetOverride = 25;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1000));
+            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            LevelFlow flow = boot.Flow!;
+            GameScreen view = boot.View!;
+            Assert.That(boot.TapAnywhere(), Is.True, "salta la intro");
+            PlayModeHelpers.Step(boot, 50);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(view.ToastText, Is.Null);
+
+            // Un aviso a la vista al que le quedan 200 ms y otro que espera su turno.
+            string first = UiText.RevealMissing(70);
+            string waiting = UiText.RevealMissing(50);
+            view.ShowRevealMissing(70);
+            view.ShowRevealMissing(50);
+            Assert.That(view.ToastText, Is.EqualTo(first));
+            Assert.That(view.NoticesQueued, Is.EqualTo(1));
+            PlayModeHelpers.TickExact(boot, NoticeTiming.ReadMs(first) - 200);
+            Assert.That(view.ToastText, Is.EqualTo(first));
+
+            // 3 → 4 bloquea el tablero 6 del tutorial (FunnelSetup.GetStuck): bloqueo pendiente, aún en PLAYING.
+            Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(4).Kind, Is.EqualTo(TapKind.Poured));
+            Assert.That(flow.IsResolving, Is.True, "bloqueo pendiente");
+            Assert.That(flow.IsResolvingWin, Is.False);
+            bool firstGone = false;
+            int t = 0;
+            while (t < 5000)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                t += PlayModeHelpers.FrameMs;
+                if (flow.Phase != FlowPhase.Playing)
+                {
+                    break;
+                }
+
+                Assert.That(flow.IsResolving, Is.True, "t = " + t + " ms");
+                Assert.That(view.ToastText, Is.Null.Or.EqualTo(first), "con el bloqueo pendiente no empieza ninguno (t = " + t + " ms)");
+                firstGone |= view.ToastText == null;
+            }
+
+            Assert.That(firstGone, Is.True, "el primero se acaba con el bloqueo pendiente");
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.StuckModal));
+            Assert.That(view.ToastText, Is.Null, "ninguno detrás de Aguas estancadas");
+            Assert.That(view.NoticesQueued, Is.EqualTo(1), "el que esperaba sigue en la cola");
+            PlayModeHelpers.Step(boot, 300);
+            Assert.That(view.ToastText, Is.Null);
+            Assert.That(view.NoticesQueued, Is.EqualTo(1));
+
+            // Con el rescate se vuelve a jugar: sale el que esperaba y «¡Una cuia más!» detrás (uno cada vez, por orden de
+            // llegada). Sin nada en la cola, «¡Una cuia más!» sale en el acto (StuckFunnelTests).
+            view.Stuck.RescueButton.onClick.Invoke();
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(flow.IsResolving, Is.False);
+            Assert.That(view.ToastText, Is.EqualTo(waiting), "el que esperaba sale al volver a jugar");
+            Assert.That(view.NoticesQueued, Is.EqualTo(1));
+            int waited = 0;
+            while (view.ToastText == waiting && waited < 8000)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                waited += PlayModeHelpers.FrameMs;
+            }
+
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RescueApplied), "y después «¡Una cuia más!»");
+            Assert.That(view.NoticesQueued, Is.EqualTo(0));
         }
 
         [UnityTest]

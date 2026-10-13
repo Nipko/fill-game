@@ -13,11 +13,12 @@ namespace AF.UI
     /// (<see cref="NoticeTiming"/>: 1.000 ms + 55 ms por carácter, entre 3 y 7 s).
     /// </summary>
     /// <remarks>
-    /// <para><b>Cuándo</b>: solo en PLAYING y sin la victoria pendiente (<c>NoticesHeld</c>). Ninguno durante LOADING, la
-    /// tarjeta previa (LEVEL_CARD) ni la INTRO, que incluye el cartel «El río bajó» de la variante aliviada: lo que llega en esas
+    /// <para><b>Cuándo</b>: solo en PLAYING y sin victoria ni bloqueo pendientes (<c>NoticesHeld</c>). Ninguno durante LOADING,
+    /// la tarjeta previa (LEVEL_CARD) ni la INTRO, que incluye el cartel «El río bajó» de la variante aliviada: lo que llega en esas
     /// fases (el regalo de Capi del 8 y la Luciérnaga del 100 llegan al cargar) espera en la cola y sale al habilitarse el toque
-    /// (<c>OnIntroFinished</c>), como hacía ya el regalo de la Luciérnaga con la tarjeta previa. Con un modal del embudo abierto,
-    /// la cola espera a que se vuelva a jugar. Y desde la victoria lógica no sale ninguno: al empezar la celebración
+    /// (<c>OnIntroFinished</c>), como hacía ya el regalo de la Luciérnaga con la tarjeta previa. Desde el bloqueo lógico (antes
+    /// de que se abra Aguas estancadas) y con un modal del embudo abierto, la cola espera a que se vuelva a jugar. Y desde la
+    /// victoria lógica no sale ninguno: al empezar la celebración
     /// (<c>OnCelebrationStarted</c>) se ocultan el aviso y la tarjeta que se vean y se vacían la cola y la tarjeta pendiente, así
     /// que nada se dibuja encima de la celebración ni de la pantalla de victoria (un aviso dura hasta 7 s).</para>
     /// <para><b>Uno cada vez</b>: si hay un aviso o la tarjeta a la vista, el siguiente espera a que se oculte; nada se corta ni
@@ -59,10 +60,13 @@ namespace AF.UI
         /// <summary>Capa del aviso y de la tarjeta: delante del HUD, detrás de la capa de vertido (tests de orden de capas).</summary>
         internal RectTransform NoticeLayer => _noticeLayer;
 
-        // Los avisos solo salen en PLAYING sin la victoria pendiente: en LOADING, LEVEL_CARD e INTRO esperan a que se habilite el
-        // toque; con un modal (STUCK_MODAL, GIVE_UP_CONFIRM, LEVEL_FAILED, NO_CANOES), a que se vuelva a jugar; y desde la
-        // victoria lógica (el último vertido aún se anima), CELEBRATION, VICTORY_SCREEN y AD_GATE no sale ninguno: la
-        // celebración vacía la cola (OnCelebrationStarted) y el nivel siguiente empieza sin nada (OnLevelLoaded).
+        // Los avisos solo salen en PLAYING sin victoria ni bloqueo pendientes: en LOADING, LEVEL_CARD e INTRO esperan a que se
+        // habilite el toque; desde el bloqueo lógico (la vista termina el último vertido y espera StuckModalDelayMs, aún en
+        // PLAYING) y con un modal (STUCK_MODAL, GIVE_UP_CONFIRM, LEVEL_FAILED, NO_CANOES), a que se vuelva a jugar, para que
+        // ninguno empiece y se lea detrás de Aguas estancadas (el rescate quita el pendiente antes de añadir la cuia, así que
+        // «¡Una cuia más!» sale en el acto si no espera otro); y desde la victoria lógica (el último vertido aún se anima),
+        // CELEBRATION, VICTORY_SCREEN y AD_GATE no sale ninguno: la celebración vacía la cola (OnCelebrationStarted) y el nivel
+        // siguiente empieza sin nada (OnLevelLoaded).
         private static bool NoticesHeld(LevelFlow? flow)
         {
             if (flow == null || !flow.HasLevel)
@@ -70,7 +74,7 @@ namespace AF.UI
                 return true;
             }
 
-            return flow.Phase != FlowPhase.Playing || flow.IsResolvingWin;
+            return flow.Phase != FlowPhase.Playing || flow.IsResolving;
         }
 
         // Aviso del tablero: a la cola; sale ya si no hay nada a la vista ni esperando y la fase lo permite.
