@@ -24,7 +24,7 @@ namespace AF.Tests.PlayMode
     /// vista!», no se pisan y el segundo sale en el fotograma en que se oculta el primero; la tarjeta espera a que la tropa se
     /// vaya, con las etiquetas del HUD a la vista mientras tanto; el cartel «El río bajó» sigue con sus 2,0 s, fuera de la cola;
     /// el aviso no captura toques; el aviso y la tarjeta van delante del tablero y del HUD, pero detrás del origen que vierte
-    /// (D-006), de los modales y de la pausa; con el bloqueo pendiente (antes de que se abra Aguas estancadas) no empieza
+    /// (D-006), de los modales y de la pausa (el botón y el menú); con el bloqueo pendiente (antes de que se abra Aguas estancadas) no empieza
     /// ninguno, y el que esperaba sale al volver a jugar; la cola se vacía al cargar otro nivel y al empezar otro intento; tras
     /// una victoria rápida en el 8 o en el 5, ni el aviso o la tarjeta que se veían ni lo que esperaba salen encima de la
     /// celebración ni de la pantalla de victoria (solo hay avisos en PLAYING sin victoria ni bloqueo pendientes); y sin
@@ -244,7 +244,7 @@ namespace AF.Tests.PlayMode
         {
             // Revisión de A2: el aviso (hasta 7 s) y la tarjeta (~5 s, ya en juego) van en su capa, delante del tablero, del HUD y
             // del polen, y detrás de la capa de vertido (D-006: el origen que vierte, delante de todo), de los modales y de la
-            // pausa. Mostrarlos no los saca de su capa.
+            // pausa (el botón y el menú; AssertNoticeLayerOrder). Mostrarlos no los saca de su capa.
             yield return LoadLevel8WithTheGift();
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -570,7 +570,9 @@ namespace AF.Tests.PlayMode
         }
 
         // La capa de avisos, delante del tablero, del HUD (con la bandeja), de la cuia elevada y del polen; detrás de la capa de
-        // vertido, de Aguas estancadas y de la pausa.
+        // vertido, de los modales (Aguas estancadas, la victoria, ¿Seguro?, Nivel fallido y Sin canoas), de la capa superior
+        // (el botón de pausa y la cartera), del menú de pausa y del diálogo de confirmación. Cada uno se compara por la capa
+        // del lienzo que lo contiene: reordenar cualquiera de ellos por debajo de los avisos hace fallar el test.
         private static void AssertNoticeLayerOrder(GameScreen view, string when)
         {
             Transform root = view.PourFront.parent;
@@ -580,14 +582,27 @@ namespace AF.Tests.PlayMode
             Assert.That(index, Is.GreaterThan(view.LiftFront.GetSiblingIndex()), "delante de la cuia elevada, " + when);
             Assert.That(index, Is.GreaterThan(view.AmbientNear.GetSiblingIndex()), "delante del polen, " + when);
             Assert.That(index, Is.LessThan(view.PourFront.GetSiblingIndex()), "detrás de la capa de vertido (D-006), " + when);
-            Transform stuck = view.Stuck.Panel;
-            while (stuck.parent != root)
+            AssertBehind(index, view.Stuck.Panel, root, "de Aguas estancadas", when);
+            AssertBehind(index, view.VictoryPanelRect, root, "de la victoria", when);
+            AssertBehind(index, view.GiveUp.Root, root, "de ¿Seguro?", when);
+            AssertBehind(index, view.Failed.Root, root, "de Nivel fallido", when);
+            AssertBehind(index, view.NoCanoes.Root, root, "de Sin canoas", when);
+            AssertBehind(index, view.PauseButton.transform, root, "del botón de pausa y de la cartera (capa superior)", when);
+            AssertBehind(index, view.Pause.Root, root, "del menú de pausa", when);
+            AssertBehind(index, view.Confirm.Root, root, "del diálogo de confirmación", when);
+        }
+
+        // La capa de avisos (hija número <index> del lienzo) va detrás de la capa del lienzo que contiene a <node>.
+        private static void AssertBehind(int index, Transform node, Transform root, string what, string when)
+        {
+            Transform layer = node;
+            while (layer.parent != null && layer.parent != root)
             {
-                stuck = stuck.parent;
+                layer = layer.parent;
             }
 
-            Assert.That(index, Is.LessThan(stuck.GetSiblingIndex()), "detrás de Aguas estancadas, " + when);
-            Assert.That(index, Is.LessThan(view.PauseButton.transform.parent.GetSiblingIndex()), "y de la pausa, " + when);
+            Assert.That(layer.parent, Is.SameAs(root), "la capa " + what + ", en el lienzo de la pantalla de nivel, " + when);
+            Assert.That(index, Is.LessThan(layer.GetSiblingIndex()), "detrás " + what + ", " + when);
         }
 
         private static void AssertNoNotice(GameScreen view, string when)

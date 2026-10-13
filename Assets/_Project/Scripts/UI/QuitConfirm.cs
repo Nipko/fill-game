@@ -70,6 +70,9 @@ namespace AF.UI
 
         public bool Visible => _root.gameObject.activeSelf;
 
+        /// <summary>Raíz del diálogo, hija del lienzo de la pantalla de nivel (tests de orden de capas).</summary>
+        public RectTransform Root => _root;
+
         /// <summary>La pregunta de salida está abierta (cuenta como embudo para la cabecera).</summary>
         public bool QuitVisible => Visible && Kind == ConfirmKind.Quit;
 
