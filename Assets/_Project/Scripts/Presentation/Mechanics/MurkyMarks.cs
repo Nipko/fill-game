@@ -39,10 +39,13 @@ namespace AF.Presentation.Mechanics
     /// patrón de su fruta, y la capa sigue en <see cref="LiquidGraphic.MurkyLook.Turn"/> hasta el final de su ventana, cuando
     /// ya es su dosis normal: pasa a pintarse normal sin que cambie nada en pantalla.</para>
     /// <para>Con Patrones de fruta (07 §3, regla 1; T-E) o con la cuia levantada, el icono de accesibilidad de la fruta lo
-    /// pinta el shader solo en las capas normales (<see cref="LiquidGraphic.FruitIconDrawn"/>): nunca en una oculta ni mientras
-    /// se revela. Así no choca con el icono temporal de la Luciérnaga: este ya se apagó cuando la capa vuelve a ser normal (su
-    /// avance llega a 1) y entonces aparece el de Patrones de fruta; por la regla, al acabar el Dissolve
-    /// (<see cref="RuleDissolveEndAt"/>).</para>
+    /// pinta el shader en las capas visibles (<see cref="LiquidGraphic.FruitIconDrawn"/>), nunca en una oculta, y en la que se
+    /// revela entra fundido con el patrón de su fruta (<see cref="LiquidGraphic.FruitIconAmount"/>, la misma curva), así que
+    /// el paso a la dosis normal no salta (D-003): por la regla, del 35 % al 55 % del revelado
+    /// (<see cref="RuleDissolveEndAt"/>), con el «?» disolviéndose encima; con la Luciérnaga, entre
+    /// <see cref="LiquidGraphic.FireflyPatternFrom"/> y <see cref="LiquidGraphic.FireflyPatternTo"/> del avance de la capa,
+    /// bajo el disco opaco del icono temporal, que solo empieza a apagarse (<see cref="FireflyFruitFadeFrom"/>) cuando el de
+    /// Patrones de fruta ya está entero y lo deja ver al irse.</para>
     /// <para>Mientras anima (<see cref="IsAnimating"/>), <c>ShowContent</c> no llama a <see cref="Show"/> ni repinta las capas
     /// que se revelan; la cola termina el paso con <see cref="Snap"/> y el <c>ShowContent</c> final. La insignia se crea al
     /// construir. Sus sprites, los discos y los iconos de fruta de la Luciérnaga (uno por dosis) y la textura del disco, solo en

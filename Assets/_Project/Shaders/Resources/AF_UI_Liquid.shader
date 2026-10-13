@@ -19,10 +19,14 @@
 // sellado. Por encima de las 40 ALU de la guía 8: pendiente de medir en un dispositivo de clase A. Lo turbio va en ramas
 // uniformes por banda (murky y turning salen solo del patrón, el mismo en todos los vértices de la banda), así que solo lo
 // pagan las dosis turbias: unas 278 y 2 muestras (la trama o, al revelarse, el patrón de la fruta; y el «?»), y unas 288 con
-// la Luciérnaga. El icono de fruta (T-E) va en otra rama uniforme por banda (iconOn: banda normal con su sitio empaquetado,
-// solo con Patrones de fruta o con la cuia elevada) y suma unas 53 y una muestra del atlas de iconos, que lee la silueta y el
-// contorno: unas 226 y 2 muestras con patrón, y unas 202 y 1 sin patrón (la Guanábana). Nunca más de 2 muestras por píxel.
-// Sin Bloom.
+// la Luciérnaga. El icono de fruta (T-E) va en otra rama uniforme por banda (iconOn: banda con su sitio empaquetado y peso de
+// icono, solo con Patrones de fruta o con la cuia elevada) y suma unas 53 y una muestra del atlas de iconos, que lee la
+// silueta y el contorno: unas 226 y 2 muestras con patrón, y unas 202 y 1 sin patrón (la Guanábana). La muestra del «?» solo
+// se lee mientras el «?» de la banda se ve (rama uniforme por banda), así que una turbia que ya lo soltó y la Luciérnaga, cuyo
+// «?» queda de canto antes de que entre el icono, se quedan en 2. La única excepción [P]: la banda que se revela por la
+// regla con iconos lee 3 muestras (el patrón, el icono que entra y el «?» que se disuelve encima) mientras se cruzan, del
+// 0,64 al 0,85 de su avance (≈ 140 ms del revelado, a velocidad 1); fuera de ese cruce, nunca más de 2 muestras por píxel.
+// Esas ramas, sin medir de nuevo con fxc. Sin Bloom.
 //
 // Canales (en u de la cuia, x de 0 a 2 con el centro en 1; y desde el pie):
 //   COLOR      color de la dosis (el Canvas lo pasa a lineal)
@@ -37,7 +41,9 @@
 //              sin patrón, -1,25 sin patrón y mate (el Barro), 0 marcas en tinta, 1 marcas en marfil, 2 turbia; 2 + 0,45 ·
 //              avance al disolverse la «?» por la regla y 2 - 0,45 · avance con la Luciérnaga)
 //   TEXCOORD3  rgb: color del menisco (espacio del shader); a: fila del patrón en el atlas (la turbia en las dosis ocultas;
-//              al revelarse, la de la fruta que se revela + 0,5 si sus marcas van en marfil, LiquidGraphic.FruitRowCode)
+//              al revelarse, la de la fruta que se revela + 0,5 si sus marcas van en marfil, LiquidGraphic.FruitRowCode, y
+//              + AF_REVEAL_ICON_FLAG si la banda lleva icono, LiquidGraphic.RevealRowCode); la fila es también la celda
+//              del icono de la fruta en _IconAtlas
 //   _DpU       1 dp en u (todas las cuias de un nivel miden lo mismo); _PatternRows: filas del atlas; _MurkyRow: la turbia;
 //              _MurkyLin y _MurkyLitLin: el pardo #8A7B6A y su brillo (bajo el frente de la Luciérnaga); _PatternOpacity:
 //              opacidad del patrón del nivel; _IconAtlas: iconos de accesibilidad (ProceduralArt.FruitIconAtlas, una celda
@@ -49,8 +55,11 @@
 // AF_ICON_OPACITY [P], mezclado como el patrón; los marfil sobre un tinte de L* 45-55 (Achiote y Agua del Río Negro) con un
 // contorno de ≈ 1 dp del color de la banda oscurecido AF_ICON_RIM_DARKEN [P]. Va como el «?»: derecho en pantalla e
 // isótropo, con la caja del «?» (0,8 del hueco de su columna entre 0,30 y 0,50 u; la silueta ocupa 0,9 de la caja: 0,45 u en
-// reposo) y apagado si no cabe una de 0,30 u; la cara superior lo tapa como al patrón. Espejos en CPU:
-// LiquidGraphic.FruitIconDrawn y FruitIconPlacement.
+// reposo) y apagado si no cabe una de 0,30 u; la cara superior lo tapa como al patrón. En una banda que se revela con la
+// marca AF_REVEAL_ICON_FLAG en TEXCOORD3.a entra fundido con el patrón de su fruta (iconWeight = fruitWeight, la misma
+// curva; D-003): por la regla, debajo del «?» que se disuelve, y con la Luciérnaga, bajo el disco opaco del icono temporal
+// (MurkyMarks), así que al pasar a la dosis normal ya está entero y no salta. Una oculta nunca lo lleva (sin marca y con
+// peso 0). Espejos en CPU: LiquidGraphic.FruitIconDrawn, FruitIconAmount y FruitIconPlacement.
 //
 // Aguas turbias (07 §4.3; 08 §5.2; LiquidGraphic.MurkyLook): [P] esto sustituye a _HiddenMask (cada banda turbia lleva el
 // patrón 2; también ocultas no contiguas) y a _MurkyColor = #8A7B6A (el color de la banda) de 08 §5.2, que no pueden ir como
@@ -159,6 +168,7 @@ Shader "AF/UI/Liquid"
             #define AF_ICON_RIM_DARKEN 0.35
             #define AF_ICON_CELLS 16.0
             #define AF_ICON_PX 64.0
+            #define AF_REVEAL_ICON_FLAG 16.0
             #define AF_FLASH_STEPS 256.0
             #define AF_MATTE_MODE -1.25
             #define AF_MURKY_MODE 2.0
@@ -296,14 +306,20 @@ Shader "AF/UI/Liquid"
                 // (LiquidGraphic.PackGlyph); en las demás, TEXCOORD0.w es el alto tal cual (código 0). Toda banda decodifica el
                 // alto y mira si lleva icono (unas 4 ALU); la escala de la banda (bandScale) y lo turbio solo se calculan en las
                 // ramas que los usan (murky e iconOn, uniformes por banda), así que una banda normal sin icono, o mate, no los paga.
+                // Peso del patrón, la franja y el icono de la fruta (fruitWeight; espejo: LiquidGraphic.FruitPatternWeight): 1 en
+                // una banda normal; al revelarse, sube con su avance y el icono entra con él (iconWeight; espejo:
+                // LiquidGraphic.FruitIconAmount) si la banda trae la marca AF_REVEAL_ICON_FLAG en men.a, que se resta antes de
+                // leer su fila (rowCode). Una oculta no la trae y su peso es 0: nunca lleva icono.
                 bool murky = patternMode > 1.5;
                 float glyphCode = floor(i.uv0.w * (1.0 / AF_GLYPH_PACK_SCALE));
                 float heightU = i.uv0.w - (AF_GLYPH_PACK_SCALE * glyphCode);
-                bool iconOn = !murky && glyphCode > 0.5;
+                float rowCode = i.men.a;
                 float bandScale = 1.0;
                 float dissolve = 0.0;
                 float firefly = 0.0;
                 bool turning = false;
+                half fruitWeight = 1.0;
+                half iconWeight = 1.0;
                 UNITY_BRANCH
                 if (murky)
                 {
@@ -312,7 +328,15 @@ Shader "AF/UI/Liquid"
                     dissolve = saturate(v);
                     firefly = saturate(-v);
                     turning = v < 0.0;
+                    fruitWeight = turning
+                        ? (half)smoothstep(AF_FIREFLY_PATTERN_FROM, AF_FIREFLY_PATTERN_TO, firefly)
+                        : (half)smoothstep(AF_FRUIT_PATTERN_FROM, AF_FRUIT_PATTERN_TO, dissolve);
+                    bool revealIcon = rowCode > (AF_REVEAL_ICON_FLAG - 0.25);
+                    rowCode -= revealIcon ? AF_REVEAL_ICON_FLAG : 0.0;
+                    iconWeight = revealIcon ? fruitWeight : (half)0.0;
                 }
+
+                bool iconOn = glyphCode > 0.5 && iconWeight > 0.0;
 
                 // Flecha de los arcos (CuiaGeometry.FaceSagU): medio alto de la cara superior en el eje, 0 en las paredes.
                 float ex = saturate(abs(x - 1.0) / _AFCavityHalfU);
@@ -405,7 +429,7 @@ Shader "AF/UI/Liquid"
                     bool fruit = true;
                     // Dos teselas por u (ProceduralArt.PatternTileU = 0,5 u).
                     float pu = (x - (1.0 - _AFCavityHalfU)) * 2.0;
-                    float row = i.men.a;
+                    float row = rowCode;
                     half paper = (half)patternMode;
                     half amount = (half)_PatternOpacity;
                     UNITY_BRANCH
@@ -413,20 +437,17 @@ Shader "AF/UI/Liquid"
                     {
                         // Fundido cruzado de los revelados (espejos en CPU: LiquidGraphic.MurkyHatchAt y FruitPatternWeight): por
                         // la regla, la trama se va entre AF_HATCH_FADE_FROM y AF_HATCH_FADE_TO del avance y después, ya sin trama,
-                        // entra el patrón de la fruta (men.a = su fila + 0,5 si sus marcas van en marfil) entre
-                        // AF_FRUIT_PATTERN_FROM y AF_FRUIT_PATTERN_TO; con la Luciérnaga, la trama solo queda bajo el frente y el
-                        // patrón entra cuando el frente ya pasó. Las fases no se solapan, así que una sola muestra lee la trama
-                        // (desde el «?») o el patrón.
+                        // entra el patrón de la fruta (rowCode = su fila + 0,5 si sus marcas van en marfil, ya sin la marca del
+                        // icono) con fruitWeight, entre AF_FRUIT_PATTERN_FROM y AF_FRUIT_PATTERN_TO; con la Luciérnaga, la trama
+                        // solo queda bajo el frente y el patrón entra cuando el frente ya pasó. Las fases no se solapan, así que
+                        // una sola muestra lee la trama (desde el «?») o el patrón.
                         half murkLeft = turning ? (half)(1.0 - lightOn) : (half)1.0;
                         half hatch = AF_HATCH_OPACITY * (1.0 - smoothstep(AF_HATCH_FADE_FROM, AF_HATCH_FADE_TO, dissolve)) * murkLeft;
-                        float fruitRow = floor(i.men.a + 0.25);
+                        float fruitRow = floor(rowCode + 0.25);
                         fruit = hatch <= 0.0;
                         pu = fruit ? pu : gx * bandScale * 2.0;
                         row = fruit ? fruitRow : _MurkyRow;
-                        paper = (half)(2.0 * (i.men.a - fruitRow));
-                        half fruitWeight = turning
-                            ? smoothstep(AF_FIREFLY_PATTERN_FROM, AF_FIREFLY_PATTERN_TO, firefly)
-                            : smoothstep(AF_FRUIT_PATTERN_FROM, AF_FRUIT_PATTERN_TO, dissolve);
+                        paper = (half)(2.0 * (rowCode - fruitRow));
                         amount = fruit ? (half)_PatternOpacity * fruitWeight : hatch;
                     }
 
@@ -445,7 +466,9 @@ Shader "AF/UI/Liquid"
                 // patrón. Antes, el contorno (canal G del atlas; solo en Achiote y Agua del Río Negro, marfil sobre L* 45-55,
                 // ProceduralArt.FruitIconHasRim): ≈ 1 dp del propio color de la banda oscurecido AF_ICON_RIM_DARKEN en el mismo
                 // espacio de raíz cuadrada [P]; en los demás iconos G vale 0 y no cambia nada. La misma muestra lee R y G.
-                // tex2Dlod: el atlas no tiene mipmaps y así va dentro de la rama. Espejos en CPU: LiquidGraphic.FruitIconDrawn,
+                // tex2Dlod: el atlas no tiene mipmaps y así va dentro de la rama. En una banda que se revela, todo por iconWeight
+                // (entra con el patrón de su fruta) y en tinta o marfil según el 0,5 de su fila (LiquidGraphic.FruitRowCode, lo
+                // mismo que el patrón 1 de su dosis normal). Espejos en CPU: LiquidGraphic.FruitIconDrawn, FruitIconAmount,
                 // FruitIconPlacement y FruitIconSizeU.
                 UNITY_BRANCH
                 if (iconOn)
@@ -458,13 +481,14 @@ Shader "AF/UI/Liquid"
                     float ix = gx / box;
                     float iy = ((y - doseBottom - iconCenter) / max(iconScale, 1e-4)) / box;
                     float inBox = step(abs(ix), 0.5) * step(abs(iy), 0.5) * smoothstep(AF_GLYPH_FADE_FROM, AF_GLYPH_FADE_TO, iconRoom);
-                    float cell = floor(i.men.a + 0.25);
+                    float cell = floor(rowCode + 0.25);
                     float2 iuv = float2(ix + 0.5, (cell + clamp(iy + 0.5, 0.5 / AF_ICON_PX, 1.0 - (0.5 / AF_ICON_PX))) / AF_ICON_CELLS);
                     half2 im = tex2Dlod(_IconAtlas, float4(iuv, 0.0, 0.0)).rg;
-                    half rimK = 1.0 - ((half)(AF_ICON_RIM_DARKEN * inBox) * im.y);
+                    half rimK = 1.0 - ((half)(AF_ICON_RIM_DARKEN * inBox) * iconWeight * im.y);
                     col *= rimK * rimK;
-                    half3 iconCol = patternMode > 0.5 ? _PaperLin.rgb : _InkLin.rgb;
-                    half3 ig = lerp(sqrt(col), sqrt(iconCol), (half)(AF_ICON_OPACITY * inBox) * im.x);
+                    bool paperIcon = murky ? (rowCode - cell) > 0.25 : patternMode > 0.5;
+                    half3 iconCol = paperIcon ? _PaperLin.rgb : _InkLin.rgb;
+                    half3 ig = lerp(sqrt(col), sqrt(iconCol), (half)(AF_ICON_OPACITY * inBox) * iconWeight * im.x);
                     col = ig * ig;
                 }
 
@@ -473,32 +497,38 @@ Shader "AF/UI/Liquid"
                 // ventana del «?» con su alto (0,8 del hueco de su columna, entre 0,30 y 0,50 u; se apaga si no cabe uno de
                 // 0,30 u). Por la regla crece, ondula, se blanquea, suelta antes su halo y se disuelve; con la Luciérnaga gira
                 // hasta quedar de canto cuando el frente pasa por su centro (con el giro por encima de AF_FIREFLY_TURN_OFF ya no
-                // se pinta). Segunda y última muestra (tex2Dlod: el atlas no tiene mipmaps y así puede ir dentro de la rama).
-                // Espejos en CPU: LiquidGraphic.MurkyMarkOpacity, GlyphSizeU, GlyphFade y MurkyGlyphPlacement.
+                // se pinta). Su muestra (tex2Dlod: el atlas no tiene mipmaps y así puede ir dentro de la rama) solo mientras el «?»
+                // queda en la banda (markLeft, uniforme por banda): una turbia que ya lo soltó no la paga y la Luciérnaga, con el
+                // icono de la fruta entrando, se queda en 2 muestras. Espejos en CPU: LiquidGraphic.MurkyMarkOpacity, GlyphSizeU,
+                // GlyphFade y MurkyGlyphPlacement.
                 UNITY_BRANCH
                 if (murky)
                 {
-                    float roomCode = floor((glyphCode + 0.5) / AF_GLYPH_CENTER_STEPS);
-                    float center = ((glyphCode - (AF_GLYPH_CENTER_STEPS * roomCode)) / AF_GLYPH_CENTER_PER_U) - AF_GLYPH_CENTER_OFFSET;
-                    float room = roomCode / AF_GLYPH_ROOM_PER_U;
-                    float size = clamp(AF_GLYPH_ROOM_RATIO * room, AF_GLYPH_MIN_U, AF_GLYPH_MAX_U);
-                    float toGlyph = AF_GLYPH_MAX_U / size;
-                    float qx0 = gx * toGlyph;
-                    float qy0 = ((y - doseBottom - center) / max(bandScale, 1e-4)) * toGlyph;
-                    float grow = 1.0 + (0.45 * smoothstep(0.0, 1.0, dissolve));
-                    float wobble = AF_MARK_WOBBLE_U * sin(3.14159 * dissolve) * sin((qy0 * 22.0) + (dissolve * 9.0));
                     float turn = turning ? saturate((frontD - AF_FIREFLY_TURN_FROM) / (AF_FIREFLY_TURN_TO - AF_FIREFLY_TURN_FROM)) : 0.0;
-                    float squeeze = max(cos(1.5708 * turn), 0.001);
-                    float qx = (qx0 + wobble) / (grow * squeeze);
-                    float qy = qy0 / grow;
-                    float fade = (1.0 - smoothstep(AF_MARK_FADE_FROM, AF_MARK_FADE_TO, dissolve)) * step(turn, AF_FIREFLY_TURN_OFF) * step(abs(qx), 0.25)
-                        * smoothstep(AF_GLYPH_FADE_FROM, AF_GLYPH_FADE_TO, room);
-                    float2 quv = float2((qx * 2.0) + 0.5, (_MurkyRow * rowH) + (clamp(qy + 0.5, 0.004, 0.996) * rowH));
-                    half2 q = tex2Dlod(_MainTex, float4(quv, 0.0, 0.0)).rg;
-                    half halo = AF_MARK_HALO * (1.0 - smoothstep(AF_MARK_HALO_FADE_FROM, AF_MARK_HALO_FADE_TO, dissolve));
-                    half3 ivory = lerp(_PaperLin.rgb, half3(1.0, 1.0, 1.0), smoothstep(AF_MARK_WHITE_FROM, AF_MARK_WHITE_TO, dissolve));
-                    col = lerp(col, _InkLin.rgb, halo * q.g * fade);
-                    col = lerp(col, ivory, q.r * fade);
+                    float markLeft = (1.0 - smoothstep(AF_MARK_FADE_FROM, AF_MARK_FADE_TO, dissolve)) * step(turn, AF_FIREFLY_TURN_OFF);
+                    UNITY_BRANCH
+                    if (markLeft > 0.0)
+                    {
+                        float roomCode = floor((glyphCode + 0.5) / AF_GLYPH_CENTER_STEPS);
+                        float center = ((glyphCode - (AF_GLYPH_CENTER_STEPS * roomCode)) / AF_GLYPH_CENTER_PER_U) - AF_GLYPH_CENTER_OFFSET;
+                        float room = roomCode / AF_GLYPH_ROOM_PER_U;
+                        float size = clamp(AF_GLYPH_ROOM_RATIO * room, AF_GLYPH_MIN_U, AF_GLYPH_MAX_U);
+                        float toGlyph = AF_GLYPH_MAX_U / size;
+                        float qx0 = gx * toGlyph;
+                        float qy0 = ((y - doseBottom - center) / max(bandScale, 1e-4)) * toGlyph;
+                        float grow = 1.0 + (0.45 * smoothstep(0.0, 1.0, dissolve));
+                        float wobble = AF_MARK_WOBBLE_U * sin(3.14159 * dissolve) * sin((qy0 * 22.0) + (dissolve * 9.0));
+                        float squeeze = max(cos(1.5708 * turn), 0.001);
+                        float qx = (qx0 + wobble) / (grow * squeeze);
+                        float qy = qy0 / grow;
+                        float fade = markLeft * step(abs(qx), 0.25) * smoothstep(AF_GLYPH_FADE_FROM, AF_GLYPH_FADE_TO, room);
+                        float2 quv = float2((qx * 2.0) + 0.5, (_MurkyRow * rowH) + (clamp(qy + 0.5, 0.004, 0.996) * rowH));
+                        half2 q = tex2Dlod(_MainTex, float4(quv, 0.0, 0.0)).rg;
+                        half halo = AF_MARK_HALO * (1.0 - smoothstep(AF_MARK_HALO_FADE_FROM, AF_MARK_HALO_FADE_TO, dissolve));
+                        half3 ivory = lerp(_PaperLin.rgb, half3(1.0, 1.0, 1.0), smoothstep(AF_MARK_WHITE_FROM, AF_MARK_WHITE_TO, dissolve));
+                        col = lerp(col, _InkLin.rgb, halo * q.g * fade);
+                        col = lerp(col, ivory, q.r * fade);
+                    }
                 }
 
                 // Cara superior (D-006): la elipse entera con el color aclarado del menisco, más clara que el tinte, y una

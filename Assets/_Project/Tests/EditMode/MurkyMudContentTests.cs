@@ -327,6 +327,7 @@ namespace AF.Tests.EditMode
                 ("AF_ICON_RIM_DARKEN", LiquidGraphic.FruitIconRimDarken),
                 ("AF_ICON_CELLS", ProceduralArt.FruitIconCells),
                 ("AF_ICON_PX", ProceduralArt.FruitIconPx),
+                ("AF_REVEAL_ICON_FLAG", LiquidGraphic.RevealIconFlag),
                 ("AF_FLASH_STEPS", LiquidGraphic.FlashPackSteps),
                 ("AF_MATTE_MODE", LiquidGraphic.MattePatternMode),
                 ("AF_MURKY_MODE", LiquidGraphic.MurkyPatternMode),
@@ -389,9 +390,22 @@ namespace AF.Tests.EditMode
             Assert.That(Regex.IsMatch(code, @"^\s*float bandScale = 1\.0;", RegexOptions.Multiline), Is.True, "fuera de las ramas, la escala de la banda no se calcula (la pagan solo murky e iconOn)");
 
             // Una banda turbia o que se revela lleva empaquetado el sitio de su «?» y, en men.a, la fila de la fruta que se revela
-            // (LiquidGraphic.FruitRowCode): sin !murky, el shader pintaría el icono de esa fruta encima del «?» y del icono
-            // temporal de la Luciérnaga (MurkyMarks). Los tests de vista (FruitPatternsPlayTests) solo ven el espejo de CPU.
-            Assert.That(code.Contains("bool iconOn = !murky && glyphCode > 0.5;"), Is.True, "el icono nunca en una banda turbia ni mientras se revela; espejo: LiquidGraphic.IsFruitIconDose");
+            // (LiquidGraphic.RevealRowCode). El icono de esa fruta entra con su patrón, con el mismo peso (fruitWeight; espejo:
+            // LiquidGraphic.FruitIconAmount), solo si la banda trae la marca AF_REVEAL_ICON_FLAG: una oculta no la trae y su peso
+            // es 0. Así, en el paso a la dosis normal el icono ya está entero y no salta (D-003). Los tests de vista
+            // (FruitPatternsPlayTests, FruitPatternsTests) solo ven el espejo de CPU.
+            Assert.That(code.Contains("bool iconOn = glyphCode > 0.5 && iconWeight > 0.0;"), Is.True, "el icono, en las bandas con sitio y peso de icono; espejo: LiquidGraphic.FruitIconDrawn");
+            Assert.That(Regex.IsMatch(code, @"^\s*half iconWeight = 1\.0;", RegexOptions.Multiline), Is.True, "en una banda normal, entero");
+            Assert.That(code.Contains("iconWeight = revealIcon ? fruitWeight : (half)0.0;"), Is.True, "al revelarse, con el peso del patrón de su fruta; sin la marca (oculta), nunca");
+            Assert.That(code.Contains("bool revealIcon = rowCode > (AF_REVEAL_ICON_FLAG - 0.25);"), Is.True, "la marca, por umbral sobre la fila");
+            Assert.That(code.Contains("rowCode -= revealIcon ? AF_REVEAL_ICON_FLAG : 0.0;"), Is.True, "y se quita antes de leer la fila y la celda");
+            Assert.That(Regex.Matches(code, @"\(half\)\(AF_ICON_[A-Z_]+ \* inBox\) \* iconWeight \* im\.[xy]").Count, Is.EqualTo(2), "el contorno y la silueta, los dos por el peso del icono");
+            Assert.That(Regex.Matches(code, @"smoothstep\(AF_FRUIT_PATTERN_FROM, AF_FRUIT_PATTERN_TO, dissolve\)").Count, Is.EqualTo(1), "un solo peso para el patrón y el icono (la misma curva)");
+            Assert.That(code.Contains("if (markLeft > 0.0)"), Is.True, "la muestra del «?», solo mientras queda en la banda");
+            Assert.That(LiquidGraphic.RevealIconFlag - 0.25f, Is.GreaterThan(ProceduralArt.MurkyPatternRow + 0.5f), "la marca no se confunde con ninguna fila (la turbia es la 15)");
+            Assert.That(LiquidGraphic.RevealIconFlag, Is.GreaterThanOrEqualTo(ProceduralArt.FruitIconCells), "ni con ninguna celda de icono");
+            Assert.That(LiquidGraphic.FireflyPatternTo, Is.LessThanOrEqualTo(MurkyMarks.FireflyFruitFadeFrom), "con la Luciérnaga, el icono ya entró entero bajo el disco cuando este empieza a apagarse");
+            Assert.That(LiquidGraphic.MurkyMarkOpacity(LiquidGraphic.MurkyLook.Turn, LiquidGraphic.FireflyPatternFrom), Is.EqualTo(0f), "y entra cuando su «?» ya quedó de canto (2 muestras como mucho)");
             Assert.That(LiquidGraphic.FireflyEdgeU, Is.LessThanOrEqualTo(0.15f), "borde del frente de luz estrecho (≤ 0,15 u)");
             Assert.That(LiquidGraphic.GlyphMaxU, Is.EqualTo(MurkyMarks.MarkU), "en reposo, el «?» de 0,5 u de 07 §4.3");
             Assert.That(LiquidGraphic.HatchFadeTo, Is.LessThan(LiquidGraphic.FruitPatternFrom), "la trama se va antes de que entre el patrón");

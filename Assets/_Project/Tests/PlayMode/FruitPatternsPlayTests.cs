@@ -202,7 +202,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Level100_MurkyWithoutIcon_RevealShowsIt() // T-E.4: nunca en las ocultas; al revelarse, sin chocar con MurkyMarks
+        public IEnumerator Level100_MurkyWithoutIcon_RevealShowsIt() // T-E.4: nunca en las ocultas; al revelarse, entra con su patrón (D-003)
         {
             yield return MechanicTestKit.LoadPlaying(100);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -214,20 +214,31 @@ namespace AF.Tests.PlayMode
             CuiaView source = boot.View!.Views[pour.Source];
             MechanicTestKit.Tap(boot, pour);
 
-            // FruitIconDrawn es el espejo de CPU (LiquidGraphic.IsFruitIconDose: sin icono si la banda no es normal): esto
-            // prueba que la vista no lo pide. Que el shader tampoco lo pinte en una banda turbia o que se revela (su
-            // «bool iconOn = !murky && …») lo fija MurkyMudContentTests.ShaderConstants_MatchLiquidGraphic.
+            // FruitIconDrawn y FruitIconAmount son los espejos de CPU: esto prueba que la vista no pide icono en una oculta y que
+            // en la que se revela entra con el patrón de su fruta (la misma curva, así que el paso a la dosis normal no salta).
+            // Que el shader haga lo mismo (la marca AF_REVEAL_ICON_FLAG y «iconWeight») lo fija
+            // MurkyMudContentTests.ShaderConstants_MatchLiquidGraphic.
+            bool entering = false;
             for (int t = 0; t < 8000 && !boot.View.IsViewIdle; t += PlayModeHelpers.FrameMs)
             {
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
                 for (int k = 0; k < source.Capacity; k++)
                 {
-                    if (source.Liquid.MurkyLookAt(k) != LiquidGraphic.MurkyLook.None)
+                    LiquidGraphic.MurkyLook look = source.Liquid.MurkyLookAt(k);
+                    if (look == LiquidGraphic.MurkyLook.Hidden)
                     {
-                        Assert.That(source.Liquid.FruitIconDrawn(k), Is.False, "a los " + t + " ms: dosis " + k + " turbia o revelándose, sin icono");
+                        Assert.That(source.Liquid.FruitIconDrawn(k), Is.False, "a los " + t + " ms: dosis " + k + " oculta, sin icono");
+                    }
+                    else if (look == LiquidGraphic.MurkyLook.Dissolve)
+                    {
+                        float weight = LiquidGraphic.FruitPatternWeight(look, source.Liquid.MurkyProgressAt(k));
+                        Assert.That(source.Liquid.FruitIconAmount(k), Is.EqualTo(weight).Within(1e-6f), "a los " + t + " ms: dosis " + k + " revelándose, su icono entra con su patrón");
+                        entering |= weight > 0.05f && weight < 0.95f && source.Liquid.FruitIconDrawn(k);
                     }
                 }
             }
+
+            Assert.That(entering, Is.True, "se vio el icono a medio entrar");
 
             MechanicTestKit.AssertViewMatchesModel(boot);
             Cuia revealed = boot.Flow!.Session.Current[pour.Source];
@@ -236,8 +247,10 @@ namespace AF.Tests.PlayMode
             Assert.That(source.Liquid.FruitIconDrawn(layer), Is.True, "revelada, con su icono");
             AssertIcons(boot, true, "tras revelar");
 
-            // Luciérnaga (04 §2.5): su icono temporal (MurkyMarks) y el de Patrones de fruta nunca a la vez en la misma dosis.
-            // Como arriba, FruitIconDrawn es el espejo de CPU; el lado del shader lo fija MurkyMudContentTests.
+            // Luciérnaga (04 §2.5): el icono de Patrones de fruta entra con el patrón de su fruta bajo el disco opaco del icono
+            // temporal (MurkyMarks) y ya está entero cuando el disco empieza a apagarse; nunca se ven los dos a la vez de otro
+            // modo. Como arriba, FruitIconDrawn y FruitIconAmount son los espejos de CPU; el lado del shader lo fija
+            // MurkyMudContentTests.
             int murky = -1;
             BoardState state = boot.Flow.Session.Current;
             for (int i = 0; i < state.Count && murky < 0; i++)
@@ -260,7 +273,11 @@ namespace AF.Tests.PlayMode
                 {
                     bool temp = view.Murky.FruitVisible(k);
                     tempSeen |= temp;
-                    Assert.That(temp && view.Liquid.FruitIconDrawn(k), Is.False, "fotograma " + f + ", dosis " + k + ": un solo icono");
+                    if (temp && view.Liquid.FruitIconDrawn(k))
+                    {
+                        bool covered = view.Murky.FruitDisc(k).color.a >= 0.999f;
+                        Assert.That(covered || view.Liquid.FruitIconAmount(k) >= 0.999f, Is.True, "fotograma " + f + ", dosis " + k + ": bajo el disco opaco, o ya entero mientras el disco se apaga");
+                    }
                 }
             }
 
