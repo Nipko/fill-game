@@ -34,7 +34,9 @@ namespace AF.UI
     /// de escena; captura de fondo; tablero (sombra, relleno, sombra interior y marco del panel, repisas, cuias, la capa de
     /// «Llenar y teñir» con su agua, chorritos y frutas, chorros y efectos); la tropa de miquitos y su rama; Capi y el poste;
     /// velo de estado, HUD y bandeja; la cuia elevada cuyo cielo entra en la fila del HUD (tableros de 3 filas, [P]); polen;
-    /// capa de vertido (el origen y su chorro mientras vierte, delante de todo, D-006); estallido; modales; captura de saltos.
+    /// avisos del tablero (el aviso y la tarjeta «¡Miquito a la vista!», D-011, punto 2; GameScreen.Notices.cs); capa de vertido
+    /// (el origen y su chorro mientras vierte, delante de todo, D-006, también de los avisos); estallido; modales; captura de
+    /// saltos. El cartel («El río bajó» y el rótulo del intento) se pone encima de todo al salir.
     /// Las capas que no son botones ni áreas de cuia no reciben toques (V7). Dentro del tablero, las cuias van entre dos capas
     /// de mecánicas (detrás y delante; arquitectura del paso 1, §6), y la delantera, detrás de la intro, los chorros y los
     /// efectos.
@@ -456,9 +458,17 @@ namespace AF.UI
             _ambient.SetFoliage(_foliage[0].rectTransform, _foliage[1].rectTransform, _foliage[2].rectTransform, _foliage[3].rectTransform);
             _intro.Ambient = _ambient;
 
+            // ---- Avisos del tablero (D-011, punto 2; GameScreen.Notices.cs): el aviso y la tarjeta «¡Miquito a la vista!»,
+            // delante del tablero, del HUD y del polen, pero justo detrás de la capa de vertido: el origen que vierte va delante
+            // de todo (D-006), y la tarjeta, que dura ~5 s y sale ya en juego, lo alcanza en un vertido de la fila de arriba (en
+            // el 5, la boca del origen que se vacía entra ~13 dp en el canto inferior de la placa; revisión de A2, captura
+            // a2_04). Los modales y la pausa también quedan delante. Sin Graphic ni raycast; no sigue a ShiftToClear (los avisos
+            // se colocan en el lienzo). ----
+            _noticeLayer = UiBuilder.Rect("Notices", _root);
+
             // ---- Capa de vertido (D-006): mientras vierte, el cuerpo del origen y su chorro se dibujan aquí, delante de las
-            // vecinas, del marco del panel, del HUD y del polen, como Magic Sort (t = 250: el origen tapa el rótulo del
-            // nivel). Sin Graphic ni raycast; alineada con el tablero (sigue a ShiftToClear) y vacía en reposo. ----
+            // vecinas, del marco del panel, del HUD, del polen y de los avisos, como Magic Sort (t = 250: el origen tapa el
+            // rótulo del nivel). Sin Graphic ni raycast; alineada con el tablero (sigue a ShiftToClear) y vacía en reposo. ----
             _pourFront = UiBuilder.Rect("PourFront", _root);
 
             _confettiLayer = UiBuilder.Rect("Burst", _root);
@@ -544,8 +554,8 @@ namespace AF.UI
             _pause = new PauseMenu(_root, art, OnResume, OnPauseRestart, OnPauseQuit);
             _confirm = new QuitConfirm(_root, art, OnConfirm, OnConfirmCancel, OnConfirmUndo);
             _banner = new Toast("RiverLowered", _root, art, 18f);
-            _toast = new Toast("Toast", _root, art, 15f);
-            _sighting = new SightingCard(_root, art); // «¡Miquito a la vista!» (guion de la intro §4.5)
+            _toast = new Toast("Toast", _noticeLayer, art, 15f);
+            _sighting = new SightingCard(_noticeLayer, art); // «¡Miquito a la vista!» (guion de la intro §4.5)
 
             // Captura de toques para saltar Sumergir y teñir o la celebración (02 §4.2, §2): por encima de todo.
             _skipCatcher = HitLayer("SkipCatcher", _root);

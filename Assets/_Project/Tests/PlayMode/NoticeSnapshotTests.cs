@@ -1,7 +1,12 @@
 #nullable enable
 using System.Collections;
+using System.Collections.Generic;
 using System.IO;
+using AF.Core.Board;
+using AF.Core.Rules;
+using AF.Core.Session;
 using AF.GameFlow;
+using AF.Presentation;
 using AF.Save;
 using AF.UI;
 using NUnit.Framework;
@@ -17,7 +22,10 @@ namespace AF.Tests.PlayMode
     /// cuando la tropa ya se ha ido, en la franja del panorama; en el 42 tras la intro corta y en el 142 con sus 10 cuias en 2
     /// filas), <c>a2_02d_sighting_rows3_11</c> y <c>a2_02e_sighting_rows3_16</c> (un tablero de prueba de 3 filas en el 142, 11
     /// y 16 cuias: la franja mide &lt; 64 dp y la tarjeta va sobre el muelle o, si no cabe, no sale; el sufijo de la captura dice
-    /// cuál) y <c>a2_03_toast_after_card_l5</c> (el aviso que esperaba a que se fuera la tarjeta). Sirven para mirar a 48 dp
+    /// cuál), <c>a2_03_toast_after_card_l5</c> (el aviso que esperaba a que se fuera la tarjeta) y, en su propia prueba,
+    /// <c>a2_04_sighting_pour_l5_overlap</c> y <c>a2_04b_sighting_pour_l5_92</c> (la tarjeta a la vista durante el vertido de
+    /// la fila de arriba que vacía el origen: el fotograma en que el origen entra más en la tarjeta y el de la inclinación
+    /// máxima, 92°; el origen, delante de la tarjeta, D-006). Sirven para mirar a 48 dp
     /// la legibilidad, los solapes con la tropa, las cuias, el HUD y la bandeja, y la línea de D-003. Necesitan gráficos:
     /// <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.NoticeSnapshotTests</c> sin <c>-nographics</c>; los
     /// PNG quedan en <c>Logs/snapshots/</c>.
@@ -83,6 +91,216 @@ namespace AF.Tests.PlayMode
             yield return CaptureSightingOnThreeRows(dir, 11, "a2_02d_sighting_rows3_11");
             yield return CaptureSightingOnThreeRows(dir, 16, "a2_02e_sighting_rows3_16");
             LaunchOptions.LevelPackJsonOverride = null;
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureSightingDuringATopRowPour()
+        {
+            // Revisión de A2: D-011 alarga la tarjeta a ~5 s y la saca ya en juego. En el 5, con la tarjeta a la vista en la
+            // franja del panorama, el vertido entre dos cuias de la fila de arriba que más sube el origen: el que lo vacía, que
+            // acaba a 92° (D-006: 92° − 9° × dosis que quedan), casi tumbado y con su boca 0,85 u sobre el borde del destino.
+            // Se mide en todo el vertido cuánto sube el origen y si entra en la tarjeta, y se captura el fotograma en que más
+            // entra y el de la inclinación máxima. El origen que vierte va delante de todo (D-006): también de la tarjeta, que
+            // queda delante del HUD.
+            string dir = SnapshotKit.Prepare();
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
+            yield return PlayModeHelpers.LoadGame(5, new MemoryProgressStore(5, 4));
+            GameBootstrap boot = GameBootstrap.Current!;
+            SnapshotKit.Attach(boot);
+            PlayModeHelpers.TakeClock(boot);
+            boot.Flow!.Load(5);
+            StepToPlaying(boot);
+            GameScreen view = boot.View!;
+            LevelSession session = boot.Flow.Session;
+            Assert.That(view.Layout!.Rows, Is.EqualTo(2));
+
+            // El vertido de la fila de arriba que vacía el origen con menos vertidos previos; estos se juegan al instante
+            // (SnapAll), mientras la tropa aún reposa en la rama.
+            int source = -1;
+            int target = -1;
+            Pour[]? setup = null;
+            for (int a = 0; a < view.Views.Length; a++)
+            {
+                for (int b = 0; b < view.Views.Length; b++)
+                {
+                    if (a == b || view.Layout.RowOf[a] != 0 || view.Layout.RowOf[b] != 0)
+                    {
+                        continue;
+                    }
+
+                    Pour[]? found = FindEmptyingSetup(session.Current, a, b, session.PourMode, session.FutileRuleEnabled);
+                    if (found != null && (setup == null || found.Length < setup.Length))
+                    {
+                        setup = found;
+                        source = a;
+                        target = b;
+                    }
+                }
+            }
+
+            Assert.That(setup, Is.Not.Null, "algún vertido de la fila de arriba que vacíe el origen");
+            for (int i = 0; i < setup!.Length; i++)
+            {
+                Assert.That(boot.TapCuia(setup[i].Source).Kind, Is.EqualTo(TapKind.Selected));
+                Assert.That(boot.TapCuia(setup[i].Target).Kind, Is.EqualTo(TapKind.Poured));
+                view.Animator.SnapAll();
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            for (int t = 0; t < 8000 && !view.Sighting.Visible; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(view.Sighting.Visible, Is.True, "la tarjeta, a la vista");
+            PlayModeHelpers.Step(boot, 400);
+            var canvas = (RectTransform)view.Canvas.transform;
+            Rect card = VictorySetup.CanvasRect(view.Sighting.Root, canvas); // la placa; su canto asoma 3 dp por debajo
+
+            CuiaView s = view.Views[source];
+            Assert.That(boot.TapCuia(source).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(target).Kind, Is.EqualTo(TapKind.Poured));
+            Assert.That(session.Current[source].IsEmpty, Is.True, "el vertido vacía el origen");
+            float maxTilt = 0f;
+            float top = float.MaxValue; // lo más alto del origen, en dp desde arriba del lienzo
+            float topTilt = 0f;
+            int maxInside = 0;
+            byte[]? overlap = null;
+            bool captured = false;
+            int elapsed = 0;
+            while (!view.IsViewIdle)
+            {
+                Assert.That(elapsed, Is.LessThan(4000), "la cola visual no se vació");
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                elapsed += PlayModeHelpers.FrameMs;
+                if (s.Body.parent != view.PourFront)
+                {
+                    continue;
+                }
+
+                float tilt = Mathf.Abs(s.BodyAngle);
+                if (!captured && tilt < maxTilt - 0.01f)
+                {
+                    // Empieza la vuelta: el fotograma anterior fue el de la inclinación máxima y este apenas se mueve.
+                    Assert.That(view.Sighting.Visible, Is.True, "la tarjeta sigue a la vista con el origen inclinado del todo");
+                    SnapshotKit.Save(dir, "a2_04b_sighting_pour_l5_92");
+                    captured = true;
+                }
+
+                maxTilt = Mathf.Max(maxTilt, tilt);
+                float bodyTop = VictorySetup.CanvasRect(s.Body, canvas).yMin;
+                if (bodyTop < top)
+                {
+                    top = bodyTop;
+                    topTilt = tilt;
+                }
+
+                int inside = PointsInside(s.Body, canvas, card);
+                if (inside > maxInside)
+                {
+                    Assert.That(view.Sighting.Visible, Is.True, "la tarjeta sigue a la vista con el origen dentro");
+                    maxInside = inside;
+                    overlap = SnapshotKit.Capture(); // el fotograma en que el origen entra más en la tarjeta
+                }
+            }
+
+            if (overlap != null)
+            {
+                File.WriteAllBytes(Path.Combine(dir, "a2_04_sighting_pour_l5_overlap.png"), overlap);
+            }
+
+            Transform cardLayer = view.Sighting.Root;
+            while (cardLayer.parent != view.PourFront.parent)
+            {
+                cardLayer = cardLayer.parent;
+            }
+
+            System.Globalization.CultureInfo inv = System.Globalization.CultureInfo.InvariantCulture;
+            TestContext.WriteLine("a2_04_sighting_pour_l5: " + source + " → " + target + " vacía el origen (" + setup.Length
+                + " vertidos previos); inclinación máxima " + maxTilt.ToString("0.0", inv) + "°; lo más alto del origen a "
+                + top.ToString("0.0", inv) + " dp (a " + topTilt.ToString("0.0", inv) + "°); placa de la tarjeta de "
+                + card.yMin.ToString("0.0", inv) + " a " + card.yMax.ToString("0.0", inv) + " dp (canto hasta "
+                + (card.yMax + 3f).ToString("0.0", inv) + "); puntos del origen dentro de la placa: " + maxInside + "/105; capa de la tarjeta "
+                + cardLayer.name + " (" + cardLayer.GetSiblingIndex() + "), capa de vertido " + view.PourFront.GetSiblingIndex());
+            Assert.That(captured, Is.True, "se capturó la inclinación máxima");
+            Assert.That(maxTilt, Is.GreaterThan(90f), "el origen vacío acaba a 92°");
+            Assert.That(cardLayer.GetSiblingIndex(), Is.LessThan(view.PourFront.GetSiblingIndex()), "la tarjeta, detrás del origen que vierte (D-006)");
+            Assert.That(cardLayer.GetSiblingIndex(), Is.GreaterThan(view.Hud.GetSiblingIndex()), "y delante del HUD");
+        }
+
+        // Puntos de una rejilla de 21 × 5 sobre el cuerpo de rt (de punta a punta y del 10 al 90 % del ancho) que caen dentro
+        // de rect (dp desde arriba a la izquierda del lienzo).
+        private static int PointsInside(RectTransform rt, RectTransform canvas, Rect rect)
+        {
+            Rect r = rt.rect;
+            Rect c = canvas.rect;
+            int inside = 0;
+            for (int i = 0; i <= 20; i++)
+            {
+                for (int j = 0; j < 5; j++)
+                {
+                    Vector3 world = rt.TransformPoint(new Vector3(r.xMin + (r.width * (0.1f + (0.2f * j))), r.yMin + (r.height * i / 20f), 0f));
+                    Vector3 local = canvas.InverseTransformPoint(world);
+                    if (rect.Contains(new Vector2(local.x - c.xMin, c.yMax - local.y)))
+                    {
+                        inside++;
+                    }
+                }
+            }
+
+            return inside;
+        }
+
+        // Vertidos más cortos tras los que source → target es legal y vacía source sin ganar el nivel (BFS como
+        // PlayModeHelpers.FindSetup; los estados ganados o bloqueados no sirven de paso intermedio); null si no aparece.
+        private static Pour[]? FindEmptyingSetup(BoardState state, int source, int target, PourMode mode, bool futileRule)
+        {
+            var parents = new Dictionary<BoardState, (BoardState? Parent, Pour Move)>();
+            var queue = new Queue<BoardState>();
+            parents.Add(state, (null, default));
+            queue.Enqueue(state);
+            int n = state.Count;
+            while (queue.Count > 0 && parents.Count < 20000)
+            {
+                BoardState current = queue.Dequeue();
+                if (PourRules.IsLegal(current, source, target))
+                {
+                    BoardState after = PourRules.Apply(current, source, target, mode);
+                    if (after[source].IsEmpty && !after.IsWon())
+                    {
+                        var path = new List<Pour>();
+                        for (BoardState? at = current; at != null && parents[at].Parent != null; at = parents[at].Parent)
+                        {
+                            path.Add(parents[at].Move);
+                        }
+
+                        path.Reverse();
+                        return path.ToArray();
+                    }
+                }
+
+                for (int a = 0; a < n; a++)
+                {
+                    for (int b = 0; b < n; b++)
+                    {
+                        if (a == b || !PourRules.IsLegal(current, a, b))
+                        {
+                            continue;
+                        }
+
+                        BoardState next = PourRules.Apply(current, a, b, mode);
+                        if (parents.ContainsKey(next) || next.IsWon() || PourRules.IsStuck(next, futileRule))
+                        {
+                            continue;
+                        }
+
+                        parents.Add(next, (current, new Pour(a, b, PourRules.Amount(current, a, b, mode))));
+                        queue.Enqueue(next);
+                    }
+                }
+            }
+
+            return null;
         }
 
         // El 142 con un tablero de prueba de 3 filas: espera a que la tropa se vaya y captura la tarjeta sobre el muelle

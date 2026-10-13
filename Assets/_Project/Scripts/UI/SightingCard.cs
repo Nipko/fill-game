@@ -15,8 +15,9 @@ namespace AF.UI
     /// avisos del tablero (la cola de GameScreen). Dura lo que se tarda en leer el título, el nombre y el dato
     /// (<see cref="AF.GameFlow.NoticeTiming"/>, 3-7 s; unos 5 s el mono ardilla), con fundido de entrada y salida; no captura
     /// toques (<c>raycastTarget</c> = false y <see cref="CanvasGroup.blocksRaycasts"/> = false) y no tapa cuias ni botones: va
-    /// sobre la franja del panorama si mide ≥ 64 dp o, si no, sobre el muelle por encima de la bandeja. «Avistamiento», nunca
-    /// «nuevo»; sin confeti. Nombres y textos, pendientes del asesor cultural (07 §8.2).
+    /// sobre la franja del panorama si mide ≥ 64 dp o, si no, sobre el muelle por encima de la bandeja. Va en la capa de
+    /// avisos de GameScreen: delante del tablero y del HUD, detrás del origen que vierte (D-006) y de los modales.
+    /// «Avistamiento», nunca «nuevo»; sin confeti. Nombres y textos, pendientes del asesor cultural (07 §8.2).
     /// </summary>
     internal sealed class SightingCard
     {
@@ -100,7 +101,7 @@ namespace AF.UI
             _totalMs = Mathf.Max(1f, ms);
             _group.alpha = 0f;
             _root.gameObject.SetActive(true);
-            _root.SetAsLastSibling();
+            _root.SetAsLastSibling(); // dentro de la capa de avisos: sigue detrás de la capa de vertido
         }
 
         /// <summary>Coloca la tarjeta centrada con su borde superior en <paramref name="top"/> (dp desde arriba).</summary>

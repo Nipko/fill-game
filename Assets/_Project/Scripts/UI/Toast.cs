@@ -14,7 +14,9 @@ namespace AF.UI
     /// (<c>_toast</c>): el regalo de Capi en el nivel 8 (04 §2.2), «¡Una cuia más! Sigue desde aquí» (04 §6.5
     /// <c>rescue_applied</c>), «+1 Luciérnaga» y «Te faltan {n} semillas», con la duración por lectura de
     /// <see cref="AF.GameFlow.NoticeTiming"/> y de uno en uno con la tarjeta del miquito (la cola de avisos de GameScreen; D-011,
-    /// punto 2). Placa de madera clara con el texto en madera_base y una entrada de 150 ms.
+    /// punto 2). Placa de madera clara con el texto en madera_base y una entrada de 150 ms. Al salir se pone el último de su
+    /// padre: el cartel, encima de todo; el aviso, dentro de la capa de avisos de GameScreen, que va detrás de la capa de
+    /// vertido (D-006: el origen que vierte, delante de todo).
     /// </summary>
     internal sealed class Toast
     {

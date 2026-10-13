@@ -2,6 +2,7 @@
 using System;
 using AF.GameFlow;
 using AF.Levels;
+using UnityEngine;
 
 namespace AF.UI
 {
@@ -31,12 +32,16 @@ namespace AF.UI
     /// (<c>OnCelebrationStarted</c>); al volver de segundo plano (<c>SnapToModel</c>) no se toca: un aviso no es una animación
     /// del modelo y el regalo que espera a la intro no se pierde. Ningún aviso captura toques. Sin asignaciones: huecos
     /// preasignados y solo referencias a textos que ya existen.</para>
+    /// <para><b>Capa</b>: el aviso y la tarjeta van en su propia capa (<c>_noticeLayer</c>), delante del tablero, del HUD y del
+    /// polen y justo detrás de la capa de vertido: el origen que vierte se dibuja delante de ellos (D-006: delante de todo),
+    /// como los modales y la pausa. El cartel (<c>_banner</c>) no va en ella.</para>
     /// </remarks>
     public sealed partial class GameScreen
     {
         /// <summary>Huecos de la cola de avisos (preasignados).</summary>
         internal const int NoticeSlots = 4;
 
+        private readonly RectTransform _noticeLayer;
         private readonly Notice[] _notices = new Notice[NoticeSlots];
         private int _noticeHead;
         private int _noticeCount;
@@ -50,6 +55,9 @@ namespace AF.UI
 
         /// <summary>El aviso del tablero (tests: duración y toques).</summary>
         internal Toast NoticeToast => _toast;
+
+        /// <summary>Capa del aviso y de la tarjeta: delante del HUD, detrás de la capa de vertido (tests de orden de capas).</summary>
+        internal RectTransform NoticeLayer => _noticeLayer;
 
         // Los avisos solo salen en PLAYING sin la victoria pendiente: en LOADING, LEVEL_CARD e INTRO esperan a que se habilite el
         // toque; con un modal (STUCK_MODAL, GIVE_UP_CONFIRM, LEVEL_FAILED, NO_CANOES), a que se vuelva a jugar; y desde la

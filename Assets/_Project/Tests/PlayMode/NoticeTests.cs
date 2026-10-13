@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections;
 using System.Collections.Generic;
+using AF.Core.Board;
 using AF.Core.Rules;
 using AF.Core.Session;
 using AF.GameFlow;
@@ -22,7 +23,8 @@ namespace AF.Tests.PlayMode
     /// <see cref="NoticeTiming.ReadMs(string)"/>: 5.455 ms); dos avisos seguidos, o un aviso y la tarjeta «¡Miquito a la
     /// vista!», no se pisan y el segundo sale en el fotograma en que se oculta el primero; la tarjeta espera a que la tropa se
     /// vaya, con las etiquetas del HUD a la vista mientras tanto; el cartel «El río bajó» sigue con sus 2,0 s, fuera de la cola;
-    /// el aviso no captura toques; la cola se vacía al cargar otro nivel y al empezar otro intento; tras una victoria rápida en
+    /// el aviso no captura toques; el aviso y la tarjeta van delante del tablero y del HUD, pero detrás del origen que vierte
+    /// (D-006), de los modales y de la pausa; la cola se vacía al cargar otro nivel y al empezar otro intento; tras una victoria rápida en
     /// el 8 o en el 5, ni el aviso o la tarjeta que se veían ni lo que esperaba salen encima de la celebración ni de la
     /// pantalla de victoria (solo hay avisos en PLAYING sin la victoria pendiente); y sin asignaciones por fotograma con un
     /// aviso a la vista y otro esperando.
@@ -237,6 +239,63 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Notices_InFrontOfTheBoardAndTheHud_BehindThePouringSourceAndTheModals()
+        {
+            // Revisión de A2: el aviso (hasta 7 s) y la tarjeta (~5 s, ya en juego) van en su capa, delante del tablero, del HUD y
+            // del polen, y detrás de la capa de vertido (D-006: el origen que vierte, delante de todo), de los modales y de la
+            // pausa. Mostrarlos no los saca de su capa.
+            yield return LoadLevel8WithTheGift();
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 300);
+            Assert.That(view.ToastText, Is.EqualTo(UiText.ExtraCuiaGift));
+            RectTransform notices = view.NoticeLayer;
+            Transform root = view.PourFront.parent;
+            Assert.That(notices.parent, Is.SameAs(root), "la capa de avisos es hermana de la de vertido");
+            Assert.That(notices.GetComponent<Graphic>(), Is.Null, "la capa no tiene Graphic");
+            var graphics = new List<Graphic>();
+            view.NoticeToast.CollectGraphics(graphics);
+            view.Sighting.CollectGraphics(graphics);
+            foreach (Graphic g in graphics)
+            {
+                Assert.That(g.transform.IsChildOf(notices), Is.True, g.name + ": en la capa de avisos");
+            }
+
+            AssertNoticeLayerOrder(view, "con el aviso a la vista");
+
+            // Con el aviso a la vista, un vertido: el origen pasa a la capa de vertido, delante del aviso, y nada se reordena.
+            BoardState board = boot.Flow!.Session.Current;
+            int source = -1;
+            int target = -1;
+            for (int a = 0; a < board.Count && source < 0; a++)
+            {
+                for (int b = 0; b < board.Count && source < 0; b++)
+                {
+                    if (a != b && PourRules.IsLegal(board, a, b))
+                    {
+                        source = a;
+                        target = b;
+                    }
+                }
+            }
+
+            Assert.That(source, Is.GreaterThanOrEqualTo(0), "algún vertido legal");
+            Assert.That(boot.TapCuia(source).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(target).Kind, Is.EqualTo(TapKind.Poured));
+            RectTransform body = view.Views[source].Body;
+            for (int t = 0; t < 1000 && body.parent != view.PourFront; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(body.parent, Is.SameAs(view.PourFront), "el origen, en la capa de vertido");
+            Assert.That(view.ToastText, Is.EqualTo(UiText.ExtraCuiaGift), "con el aviso a la vista");
+            AssertNoticeLayerOrder(view, "durante el vertido");
+            PlayModeHelpers.StepUntilIdle(boot, 3000);
+        }
+
+        [UnityTest]
         public IEnumerator Notices_AreCleared_OnRestart_AndWhenAnotherLevelLoads()
         {
             yield return LoadLevel8WithTheGift();
@@ -432,6 +491,27 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen), "sin avance por tiempo");
+        }
+
+        // La capa de avisos, delante del tablero, del HUD (con la bandeja), de la cuia elevada y del polen; detrás de la capa de
+        // vertido, de Aguas estancadas y de la pausa.
+        private static void AssertNoticeLayerOrder(GameScreen view, string when)
+        {
+            Transform root = view.PourFront.parent;
+            int index = view.NoticeLayer.GetSiblingIndex();
+            Assert.That(index, Is.GreaterThan(view.BoardContainer.GetSiblingIndex()), "delante del tablero, " + when);
+            Assert.That(index, Is.GreaterThan(view.Hud.GetSiblingIndex()), "delante del HUD y de la bandeja, " + when);
+            Assert.That(index, Is.GreaterThan(view.LiftFront.GetSiblingIndex()), "delante de la cuia elevada, " + when);
+            Assert.That(index, Is.GreaterThan(view.AmbientNear.GetSiblingIndex()), "delante del polen, " + when);
+            Assert.That(index, Is.LessThan(view.PourFront.GetSiblingIndex()), "detrás de la capa de vertido (D-006), " + when);
+            Transform stuck = view.Stuck.Panel;
+            while (stuck.parent != root)
+            {
+                stuck = stuck.parent;
+            }
+
+            Assert.That(index, Is.LessThan(stuck.GetSiblingIndex()), "detrás de Aguas estancadas, " + when);
+            Assert.That(index, Is.LessThan(view.PauseButton.transform.parent.GetSiblingIndex()), "y de la pausa, " + when);
         }
 
         private static void AssertNoNotice(GameScreen view, string when)
