@@ -7,7 +7,7 @@ Escrito por la sesión de Claude Code del portátil (Windows 11 ARM64) para la s
 > *Estado del 2026-10-13:*
 > - el paso 1 y el paso 2 de la sección 6 están hechos, y el paso 3 (elenco de ~50 especies) sigue pendiente;
 > - de los arreglos de la prueba en el teléfono (paso 1b), la tanda 1 está integrada en `7d755c4` y probada en el teléfono el 2026-10-12 (cumple);
-> - la tanda 2 está integrada en `integracion-fase1-fase2` en `94905b8`, con D-011 y D-012 implementadas enteras, y falta probarla en el teléfono: sección 6, «Qué probar en el teléfono (tanda 2)»;
+> - la tanda 2 está integrada en `integracion-fase1-fase2` en `94905b8`, con D-011 y D-012 implementadas enteras, y se probó en el teléfono el 2026-10-13 sobre `72a266a`: cumple, con seis observaciones (`docs/dev/traspaso/pruebas-telefono-2026-10-13.md`);
 > - lo que la tanda 2 deja al dueño está en las preguntas 41-44 de `docs/GDD.md` §6.3.
 >
 > El resto de este resumen es el del traspaso del 2026-10-09.
@@ -160,7 +160,7 @@ Las tareas detalladas están en `docs/dev/traspaso/planes-integracion.json` (`in
 > - *La tanda 1 está integrada en `7d755c4` y se probó en el teléfono el 2026-10-12: cumple. Lleva P1, P3 y P4, con T-A, T-B, T-C, T-D y los criterios de la ola 3 de la hoja del 2026-10-09.*
 > - *La tanda 2 está integrada en `94905b8`: P2 (avisos legibles), la tarjeta del miquito tras la tropa y T-F.1 con A2 (`35301f9`); T-E y T-G con B3 (`dd208a6`); y el banner de mundo y el tutorial de la Piraña con A4 (`94905b8`).*
 > - *T-F.2 (nota de `planes-integracion.json`) se hizo en el paso 2.*
-> - *Falta probar la tanda 2 en el teléfono: «Qué probar en el teléfono (tanda 2)», al final de este paso.*
+> - *La tanda 2 se probó en el teléfono el 2026-10-13 (`72a266a`): cumple. Resultados y observaciones en `docs/dev/traspaso/pruebas-telefono-2026-10-13.md`.*
 
 El dueño probó el `dev.apk` (compilado sobre `80d37fb` o antes) y decidió **D-011** (`docs/dev/decisiones.md`). Las cuatro causas seguían en `7677085`. Tareas, causas con archivo y línea, pruebas y qué probar en el teléfono: `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`.
 
@@ -172,6 +172,8 @@ El dueño probó el `dev.apk` (compilado sobre `80d37fb` o antes) y decidió **D
 **Tanda 1 probada en el teléfono el 2026-10-12** (`main` en `7d755c4`): P1, P3, P4, T-A, T-B, T-C, T-D y los overlays del 103, 163 y 183 cumplen. Hay cinco observaciones que no bloquean (`AfterRewarded` y la cueva llena sin probar en el teléfono, y los tests de Unity que tumban el adb). Resultados y medidas: `docs/dev/traspaso/pruebas-telefono-2026-10-12.md`.
 
 #### Qué probar en el teléfono (tanda 2)
+
+**Probada en el teléfono el 2026-10-13** (`main` en `72a266a`): los puntos 1-5 cumplen y, de los pendientes de la tanda 1, `AfterRewarded` y la medida de T-D (216 vertidos) también. Sin probar: «nada encima de la victoria», que no se puede forzar en el teléfono, y la Piraña con la cueva llena. Observaciones para el dueño (pregunta 41: el aviso tapa las burbujas «Te faltan»; y cómo se lee el Remolino) y para el escritorio: `docs/dev/traspaso/pruebas-telefono-2026-10-13.md`.
 
 La tanda 2 está en `integracion-fase1-fase2` desde `94905b8`. Los criterios salen de la hoja del 2026-10-09 (T-E y T-G), de `pruebas-telefono-2026-10-11.md` (P2) y de los resúmenes de A2, B3 y A4. Los eventos de logcat están en `docs/dev/prototipo-v0.md` §c y en `Assets/_Project/Scripts/UI/DevProbe.cs`. Apunta los resultados en una hoja nueva, como `pruebas-telefono-2026-10-12.md`, y deja las capturas en `Logs/device/tanda2/` (fuera de git).
 
@@ -306,7 +308,7 @@ Material de partida: `docs/research/fauna/propuesta-fauna.md` (10 especies y 18 
 | D-009 | Dificultad escalonada: ciclo de 20 reordenado, etiqueta antes de jugar y rotación de plantillas. Registrada el 2026-10-11 (paso 2); sus cifras [sim] esperan la aprobación del dueño |
 | D-010 | Intro «Llenar y teñir» con miquitos como datos. La ampliación a ~50 especies quedó registrada el 2026-10-11; su diseño es el paso 3 |
 | D-011 | Prueba en el teléfono (2026-10-11): la victoria se cobra en la vista cuando se ve, avisos legibles, miquitos con más presencia sin frenar el juego y Cosecha doble que avanza sola. Implementada entera. Los puntos 1, 3 (salvo la tarjeta del miquito tras la tropa) y 4 van en la tanda 1 (`7d755c4`), probada en el teléfono el 2026-10-12: cumple. El punto 2 y esa tarjeta van en la tanda 2 (`94905b8`), que falta probar en el teléfono. Llevada al GDD el 2026-10-12; preguntas 38, 41 y 42 de `docs/GDD.md` §6.3 |
-| D-012 | Decisiones del 2026-10-09 y respuestas del 2026-10-11: estreno de la Piraña con mordisco fallido visible y tutorial animado, banner de mundo (Capi presenta y Rosa asoma; 11, 41, 81 y 141, primer intento, sin banner en el 1), sacudida de ±8 dp, 3 ciclos y 240 ms, patrones e iconos como el GDD, guardado por vertido con escritor en segundo plano (p95 < 5 ms y ninguno > 8 ms), marco del panel sin cambios y Remolino con canal y la misma marca en las dos cuias. Registrada el 2026-10-12 (paso 2) e implementada entera. La tanda 1 (`7d755c4`: mordisco fallido, Remolino y guardado) se probó en el teléfono el 2026-10-12 y cumple. La tanda 2 (`94905b8`: sacudida, patrones e iconos, banner de mundo y tutorial de la Piraña) falta probarla en el teléfono. Preguntas 37-39, 43 y 44 de `docs/GDD.md` §6.3 |
+| D-012 | Decisiones del 2026-10-09 y respuestas del 2026-10-11: estreno de la Piraña con mordisco fallido visible y tutorial animado, banner de mundo (Capi presenta y Rosa asoma; 11, 41, 81 y 141, primer intento, sin banner en el 1), sacudida de ±8 dp, 3 ciclos y 240 ms, patrones e iconos como el GDD, guardado por vertido con escritor en segundo plano (p95 < 5 ms y ninguno > 8 ms), marco del panel sin cambios y Remolino con canal y la misma marca en las dos cuias. Registrada el 2026-10-12 (paso 2) e implementada entera. La tanda 1 (`7d755c4`: mordisco fallido, Remolino y guardado) se probó en el teléfono el 2026-10-12 y cumple. La tanda 2 (`94905b8`: sacudida, patrones e iconos, banner de mundo y tutorial de la Piraña) se probó en el teléfono el 2026-10-13 y cumple. Preguntas 37-39, 43 y 44 de `docs/GDD.md` §6.3 |
 
 ## 8. Cómo trabaja el dueño (preferencias aprendidas)
 
