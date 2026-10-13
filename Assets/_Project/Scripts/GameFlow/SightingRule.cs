@@ -6,15 +6,14 @@ namespace AF.GameFlow
     /// <summary>
     /// En qué nivel sale la tarjeta «¡Miquito a la vista!» (guion de la intro §4.5 y §14): en el primer nivel ≥
     /// <c>nivel_tarjeta</c> que esté libre, sin banner de mundo, sin Fruta nueva, sin debut de mecánica o de comodín y sin
-    /// tutorial pendiente al empezar, con una sola tarjeta por nivel (prioridad tutorial → Fruta nueva → miquito). Regla pura y
-    /// determinista: no guarda nada (persistir los avistamientos y emitir <c>af_fauna_sighted</c> exige migrar el perfil y la
-    /// aprobación del dueño, Q11; PR aparte). Solo en el primer intento del nivel: los reintentos ya la vieron.
+    /// tutorial pendiente al empezar, con una sola tarjeta por nivel (prioridad tutorial → Fruta nueva → miquito). Los niveles
+    /// con banner salen de la única regla que los decide, <see cref="WorldBanners"/> (11, 41, 81, 141…; el 1 no lo lleva por
+    /// decisión del dueño, pero ya está ocupado por la Fruta nueva y el tutorial). Regla pura y determinista: no guarda nada
+    /// (persistir los avistamientos y emitir <c>af_fauna_sighted</c> exige migrar el perfil y la aprobación del dueño, Q11; PR
+    /// aparte). Solo en el primer intento del nivel: los reintentos ya la vieron.
     /// </summary>
     public static class SightingRule
     {
-        /// <summary>Primer nivel de cada mundo: lleva su banner de entrada (07 §2.1 y §2.2, regla 1).</summary>
-        public static readonly int[] WorldBannerLevels = { 1, 11, 41, 81, 141, 201, 301, 421, 561, 701, 821, 921, 961 };
-
         /// <summary>Debut de cada tinte: lleva la tarjeta «Fruta nueva» (07 §3, columna «Debut»; 06 §4.5).</summary>
         public static readonly int[] FruitDebutLevels = { 1, 2, 4, 7, 11, 21, 41, 61, 81, 111, 141, 201, 301 };
 
@@ -28,10 +27,10 @@ namespace AF.GameFlow
         /// <summary>Duración de la tarjeta (guion §4.5: 2,5 s).</summary>
         public const int CardMs = 2500;
 
-        /// <summary>El nivel ya tiene banner de mundo, Fruta nueva o un hito propio.</summary>
+        /// <summary>El nivel ya tiene banner de mundo (<see cref="WorldBanners.ShowsOn"/>), Fruta nueva o un hito propio.</summary>
         public static bool IsBusy(int level)
         {
-            return Array.IndexOf(WorldBannerLevels, level) >= 0 || Array.IndexOf(FruitDebutLevels, level) >= 0
+            return WorldBanners.ShowsOn(level) || Array.IndexOf(FruitDebutLevels, level) >= 0
                 || Array.IndexOf(MilestoneLevels, level) >= 0;
         }
 

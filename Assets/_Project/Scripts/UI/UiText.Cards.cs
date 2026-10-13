@@ -65,11 +65,13 @@ namespace AF.UI
         /// <summary>
         /// Piraña (02 §9.1 M7; estreno en el 183) [P] (D-012, punto 1: opción C + D): que se lleva una dosis a su cueva lo enseña
         /// el mordisco animado de la tarjeta (<c>PiranaBiteDemo</c>), así que el texto dice cuándo muerde y que sellar a tiempo
-        /// evita el mordisco (la regla del núcleo: la cuia que se sella con ese vertido no se muerde). Sustituye al canónico de
-        /// 02 §9.1 M7 («… y se lleva una dosis a su cueva»), que se actualiza en el paso 2. Pendiente de revisión del asesor
-        /// cultural.
+        /// evita el mordisco (la regla del núcleo: la cuia que se sella con ese vertido no se muerde). Conserva «la cuia que
+        /// acabas de llenar» del canónico de 02 §9.1 M7: muerde la que recibe el cuarto vertido (<c>PiranaMechanic</c>,
+        /// <c>events.Receiver</c>), no cualquiera que se haya llenado antes. Sustituye al canónico («… y se lleva una dosis a su
+        /// cueva»), que se actualiza en el paso 2. Cabe en 2 líneas a 360 dp (Debut_AllElevenTexts_TwoLinesMax). Pendiente de
+        /// revisión del asesor cultural.
         /// </summary>
-        public const string TutorialPirana = "Cada cuatro vertidos, la piraña muerde la cuia que llenaste. Sellarla a tiempo evita el mordisco.";
+        public const string TutorialPirana = "Cada cuatro vertidos, la piraña muerde la cuia que acabas de llenar. Sellarla a tiempo evita el mordisco.";
 
         /// <summary>
         /// Línea de la Luciérnaga en la tarjeta del 100 (04 §2.5: «Una luciérnaga ilumina las de una cuia»). Nombra fauna:

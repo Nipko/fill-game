@@ -30,6 +30,7 @@ namespace AF.GameFlow
         private int _cardBannerMs;
         private int _worldBanner;
         private bool _bannerRevealGifted;
+        private bool _bannerThenCard;
 
         /// <summary>
         /// Hay tarjeta previa al cargar un nivel con etiqueta o con estreno. False por defecto: los tests del flujo y cualquier
@@ -56,6 +57,13 @@ namespace AF.GameFlow
         public int WorldBanner => _worldBanner;
 
         /// <summary>
+        /// Al cerrar el banner abierto saldrá la tarjeta previa (el nivel la tiene y las tarjetas están encendidas); false si
+        /// arrancará la intro o si no hay banner. Lo calcula <see cref="TryShowWorldBanner"/> con la misma regla que
+        /// <see cref="DismissWorldBanner"/> (<see cref="LevelCardInfo.For"/>), para la sonda <c>AF_STATE world_banner</c>.
+        /// </summary>
+        public bool WorldBannerThenCard => _worldBanner != 0 && _bannerThenCard;
+
+        /// <summary>
         /// Cierra el banner de mundo (1 toque en cualquier punto): si el nivel tiene tarjeta previa, la abre (sigue en LEVEL_CARD);
         /// si no, arranca la intro que esperaba. False si no hay banner abierto.
         /// </summary>
@@ -67,6 +75,7 @@ namespace AF.GameFlow
             }
 
             _worldBanner = 0;
+            _bannerThenCard = false;
             int introMs = _cardIntroMs;
             bool revealGifted = _bannerRevealGifted;
             _bannerRevealGifted = false;
@@ -152,6 +161,8 @@ namespace AF.GameFlow
             _card = null;
             _worldBanner = world;
             _bannerRevealGifted = revealGifted;
+            _bannerThenCard = LevelCardsEnabled && _level != null
+                && LevelCardInfo.For(_level, _levelNumber, _wallet?.Config ?? EconomyConfig.Defaults, revealGifted) != null;
             _cardIntroMs = introMs;
             _cardIntroShort = false;
             _cardRiverType = null;
@@ -169,6 +180,7 @@ namespace AF.GameFlow
             _cardBannerMs = 0;
             _worldBanner = 0;
             _bannerRevealGifted = false;
+            _bannerThenCard = false;
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Text;
 using AF.Core.Mechanics;
 using AF.GameFlow;
+using AF.Presentation;
 using UnityEngine;
 
 namespace AF.UI
@@ -55,6 +56,7 @@ namespace AF.UI
                 if (_levelCard.Visible)
                 {
                     _levelCard.Relayout();
+                    RestoreBoardUnit();
                 }
             }
         }
@@ -80,6 +82,7 @@ namespace AF.UI
             LevelFlow flow = RequireFlow();
             HoldIntroForCard(flow);
             _levelCard.Show(card, flow.ReduceMotion, _canvasW, _canvasH, _safeTop, _safeBottom);
+            RestoreBoardUnit();
             _levelCard.Root.SetAsLastSibling(); // por encima de todo: el toque en cualquier punto es suyo
             _lastCardProbe = DevProbe.Enabled ? CardProbeJson(card) : null;
             if (_lastCardProbe != null)
@@ -100,11 +103,25 @@ namespace AF.UI
             if (_cardsBuilt && _levelCard.Visible)
             {
                 _levelCard.Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
+                RestoreBoardUnit(); // al cambiar de pantalla, LayoutBoard pone después la unidad nueva
             }
 
             if (_cardsBuilt)
             {
                 BannerLayout();
+            }
+        }
+
+        // El mordisco de la tarjeta del 183 (PiranaBiteDemo) coloca sus cuias de 44 dp con CuiaView.SetGeometry, que escribe su
+        // unidad en el material compartido del líquido (LiquidGraphic.SetUnit: el grosor de 1 dp del borde de la cara de
+        // arriba, AF_UI_Liquid.shader). Todas las cuias de un nivel miden lo mismo (02 §5) y la que manda es la del tablero: se
+        // vuelve a poner en cuanto la tarjeta coloca el escenario, sin tocar nada más del tablero.
+        private void RestoreBoardUnit()
+        {
+            if (_levelCard.BiteDemo != null && _views.Length > 0)
+            {
+                CuiaView board = _views[0];
+                board.Liquid.SetUnit(board.Unit);
             }
         }
 

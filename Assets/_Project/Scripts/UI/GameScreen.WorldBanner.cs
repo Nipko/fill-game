@@ -20,9 +20,13 @@ namespace AF.UI
     /// llama a <see cref="LevelFlow.DismissWorldBanner"/>, que abre la tarjeta previa si el nivel la tiene o arranca la intro.
     /// Al ser LEVEL_CARD, los avisos esperan a que termine (la Luciérnaga regalada, <c>ShowRevealGiftIfReady</c>), la pausa queda
     /// inerte bajo el velo y nada de debajo recibe el toque.</para>
-    /// <para>En desarrollo, <c>AF_STATE {"event":"world_banner",…}</c> con el nivel, el mundo y el texto al abrirse, y
-    /// <c>AF_STATE {"event":"world_banner_closed",…}</c> al cerrarse; al terminar la entrada, <c>AF_LAYOUT
-    /// {"screen":"world_banner",…}</c> con el rectángulo de la tarjeta (cualquier toque la cierra).</para>
+    /// <para>En desarrollo, al abrirse, <c>AF_STATE {"event":"world_banner",…}</c> con <c>level</c>, <c>world</c>,
+    /// <c>text</c> (la clave entera), <c>then</c> (<c>"level_card"</c> si al cerrarlo sale la tarjeta previa, o
+    /// <c>"intro"</c>) y <c>reduce_motion</c> (la versión quieta); al cerrarse, <c>AF_STATE
+    /// {"event":"world_banner_closed",…}</c> con <c>level</c>, <c>world</c> y <c>next</c> (la tarjeta o la fase que
+    /// sigue); y, al terminar la entrada, <c>AF_LAYOUT {"screen":"world_banner",…}</c> con el id <c>world_banner</c> y el
+    /// rectángulo de la tarjeta (cualquier toque la cierra). Pendiente de la sesión principal al integrar (B3 toca esos
+    /// archivos en paralelo): anotarlos en DevProbe.cs y en docs/dev/prototipo-v0.md.</para>
     /// </remarks>
     public sealed partial class GameScreen : IWorldBannerListener
     {
@@ -144,15 +148,17 @@ namespace AF.UI
             _probe.Layout("world_banner", flow.LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
         }
 
-        // AF_STATE world_banner: nivel, mundo, texto (world_banner del glosario §10), si va seguido de la tarjeta previa y si es
-        // la versión quieta.
+        // AF_STATE world_banner: nivel, mundo, texto (world_banner del glosario §10), lo que sale al cerrarlo (la tarjeta previa o
+        // la intro: LevelFlow.WorldBannerThenCard) y si es la versión quieta.
         private string BannerProbeJson(int world, int level)
         {
-            var sb = new StringBuilder(160);
+            LevelFlow flow = RequireFlow();
+            var sb = new StringBuilder(176);
             sb.Append("{\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"world\":").Append(world.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"text\":\"").Append(UiText.WorldBanner(world)).Append('"');
-            sb.Append(",\"reduce_motion\":").Append(RequireFlow().ReduceMotion ? "true" : "false").Append('}');
+            sb.Append(",\"then\":\"").Append(flow.WorldBannerThenCard ? "level_card" : "intro").Append('"');
+            sb.Append(",\"reduce_motion\":").Append(flow.ReduceMotion ? "true" : "false").Append('}');
             return sb.ToString();
         }
     }

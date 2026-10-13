@@ -615,8 +615,9 @@ namespace AF.Tests.PlayMode
         public IEnumerator Debut_Level183_AnimatedBite_EndsWithTheCardOpen_OneTapCloses()
         {
             // D-012, punto 1 (opción C + D): antes de jugar, la tarjeta enseña el mordisco: la cuia de la izquierda recibe una dosis
-            // (el vertido que completa el ritmo: los 4 puntos de la cueva) y la Piraña sale de la cueva y se lleva la dosis de la
-            // cima a su cueva. Avanza, termina con la tarjeta abierta (sin repetirse) y un toque la cierra.
+            // con un chorro (el cuarto vertido, el que completa el ritmo: la cueva pasa de 3 puntos a 0) y la Piraña sale de la
+            // cueva y se lleva la dosis de la cima. La cueva es la del 183: una Cuia chica de 2, vacía antes y con la dosis mordida
+            // en el fondo después. Avanza, termina con la tarjeta abierta (sin repetirse) y un toque la cierra.
             yield return CardSetup.Load(183);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -642,21 +643,54 @@ namespace AF.Tests.PlayMode
             Assert.That(CardSetup.LineCount(card.Tutorial), Is.InRange(1, LevelCardView.MaxTutorialLines));
             Assert.That(card.Tutorial.fontSize, Is.GreaterThanOrEqualTo(LevelCardView.MinTutorialSp));
 
-            // Al abrirse: la víctima con 2 dosis y la cueva con 1 y 3 de sus 4 puntos.
+            // Al abrirse: la víctima, una cuia de 4 como las del 183, con 2 dosis; la cueva, la Cuia chica de 2 del 183
+            // (mundo_05_v1.json: caps[8] = 2, vacía), vacía y con 3 de sus 4 puntos.
             CuiaView victim = bite.Victim;
             CuiaView cave = bite.Cave;
+            BoardState level183 = flow.Level.CreateBoard();
+            Assert.That(victim.Capacity, Is.EqualTo(level183[0].Capacity), "la víctima mide como las cuias del 183");
             Assert.That(victim.ShownCuia.Count, Is.EqualTo(2));
-            Assert.That(cave.ShownCuia.Count, Is.EqualTo(1));
+            int caveIndex = -1;
+            for (int i = 0; i < level183.Count; i++)
+            {
+                if (level183[i].Mechanic == MechanicType.Pirana)
+                {
+                    caveIndex = i;
+                }
+            }
+
+            Assert.That(caveIndex, Is.GreaterThanOrEqualTo(0), "la cueva del 183");
+            Assert.That(cave.Capacity, Is.EqualTo(level183[caveIndex].Capacity), "la cueva de la tarjeta, como la del tablero");
+            Assert.That(cave.Capacity, Is.EqualTo(PiranaBiteDemo.CaveCapacity));
+            Assert.That(cave.Capacity, Is.EqualTo(2), "Cuia chica de 2 (02 §9.1 M7)");
+            Assert.That(level183[caveIndex].Count, Is.EqualTo(0), "en el 183 la cueva empieza vacía");
+            Assert.That(cave.ShownCuia.Count, Is.EqualTo(0), "y en la tarjeta también");
+            Assert.That(cave.HeightU, Is.LessThan(victim.HeightU), "más baja que la víctima, en la misma repisa");
+            Assert.That(cave.FootPosition.y, Is.EqualTo(victim.FootPosition.y).Within(0.01f));
             Assert.That(cave.ShownCuia.MechanicCounter, Is.EqualTo(PiranaBiteDemo.CaveK - 1));
             Assert.That(bite.CaveOverlay, Is.Not.Null, "el overlay de la Piraña del juego");
+            Assert.That(bite.StreamVisible, Is.EqualTo(bite.ElapsedMs >= PiranaBiteDemo.ReceiveStartMs - PiranaBiteDemo.StreamLeadMs), "el chorro empieza justo antes de la dosis");
 
-            // La cuia recibe la dosis.
+            // El escenario mide sus cuias con otra unidad (44 dp), pero el material compartido del líquido conserva la del
+            // tablero: el borde de 1 dp de la cara de arriba de las cuias del 183 no cambia al abrir la tarjeta.
+            Material? liquid = UiMaterials.Liquid;
+            if (liquid != null)
+            {
+                Assert.That(liquid.GetFloat("_DpU"), Is.EqualTo(1f / view.Views[0].Unit).Within(1e-5f), "la unidad del tablero");
+                Assert.That(view.Views[0].Unit, Is.Not.EqualTo(PiranaBiteDemo.UnitDp).Within(0.01f));
+            }
+
+            // La cuia recibe la dosis con un chorro que cae desde arriba.
             float t = bite.ElapsedMs;
             PlayModeHelpers.TickExact(boot, (int)(PiranaBiteDemo.ReceiveStartMs + (PiranaBiteDemo.ReceiveMs * 0.5f) - t));
             Assert.That(victim.DoseFill(2), Is.InRange(0.2f, 0.99f), "a mitad de la llegada");
+            Assert.That(bite.StreamVisible, Is.True, "el chorro, mientras llega la dosis");
+            Assert.That(bite.Stream.Graphic.enabled, Is.True);
             PlayModeHelpers.TickExact(boot, (int)(PiranaBiteDemo.BiteStartMs - bite.ElapsedMs) - 20);
             Assert.That(victim.DoseFill(2), Is.EqualTo(1f), "la dosis entera antes del mordisco");
             Assert.That(victim.ShownCuia.Count, Is.EqualTo(3));
+            Assert.That(bite.StreamVisible, Is.False, "el chorro, cortado antes del mordisco");
+            Assert.That(bite.Stream.Graphic.enabled, Is.False);
             Assert.That(bite.Biting, Is.False);
 
             // El mordisco: el paso Bite del overlay, más despacio que en el tablero; a mitad, la cima se va vaciando.
@@ -674,8 +708,8 @@ namespace AF.Tests.PlayMode
             Assert.That(bite.CaveOverlay.IsAnimating, Is.False);
             Assert.That(victim.ShownCuia.Count, Is.EqualTo(2));
             Assert.That(victim.DoseFill(2), Is.EqualTo(0f));
-            Assert.That(cave.ShownCuia.Count, Is.EqualTo(2));
-            Assert.That(cave.ShownCuia.ColorAt(1), Is.EqualTo(PiranaBiteDemo.BittenTint), "la dosis mordida, en la cueva");
+            Assert.That(cave.ShownCuia.Count, Is.EqualTo(1));
+            Assert.That(cave.ShownCuia.ColorAt(0), Is.EqualTo(PiranaBiteDemo.BittenTint), "la dosis mordida, en el fondo de la cueva");
             Assert.That(cave.ShownCuia.MechanicCounter, Is.EqualTo(0));
             PlayModeHelpers.Step(boot, 3000);
             Assert.That(bite.Finished, Is.True, "no se repite");

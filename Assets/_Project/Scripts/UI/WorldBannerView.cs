@@ -10,10 +10,11 @@ namespace AF.UI
 {
     /// <summary>
     /// Banner de entrada a un mundo (07 §2.2, regla transversal 1; 02 §6; clave <c>world_banner</c> del glosario §10; decisión
-    /// del dueño del 2026-10-11): una tarjeta simple de 1 toque con la cabecera «Mundo {n}», una viñeta del río del mundo (el agua
-    /// de su tipo, 07 §2.1) en la que Capi presenta con la pata (<c>capi_present</c>) y Rosa asoma al abrir
-    /// (<c>rosa_surface</c>, con su soplo) y se sumerge al cerrar (<c>rosa_dive</c>), y debajo «{nombre} · {país} · {río}». El
-    /// texto entero es el de la clave: «Mundo {n}: {nombre} · {país} · {río}» (<see cref="Text"/>). Material de D-003: la
+    /// del dueño del 2026-10-11): una tarjeta simple de 1 toque que enseña la cadena de la clave entera, «Mundo {n}: {nombre} ·
+    /// {país} · {río}» (<see cref="Text"/>), partida en dos: la cabecera «Mundo {n}: {nombre}» y, bajo una viñeta del río del
+    /// mundo (el agua de su tipo, 07 §2.1) en la que Capi presenta con la pata (<c>capi_present</c>) y Rosa asoma al abrir
+    /// (<c>rosa_surface</c>, con su soplo) y se sumerge al cerrar (<c>rosa_dive</c>), la línea «{país} · {río}». Si el nombre no
+    /// cabe en la cabecera a 24 sp, la cabecera dice «Mundo {n}» y el nombre abre la línea, en negrita. Material de D-003: la
     /// tarjeta de madera clara con su marco de las tarjetas previas (<see cref="ModalKit"/>), la placa de madera oscura y la
     /// viñeta con el canto de madera; arte procedural provisional [P] (<c>ProceduralArt.Mascots</c>).
     /// </summary>
@@ -21,8 +22,14 @@ namespace AF.UI
     /// <para>Se cierra con 1 toque en cualquier punto (el velo cubre la pantalla; ningún botón de debajo recibe el toque) y sale
     /// sin bloquear toques: Rosa se sumerge mientras la tarjeta se funde (<see cref="ExitMs"/>), y el toque siguiente ya salta la
     /// intro o cierra la tarjeta previa que llega detrás. No se cierra sola, como la tarjeta previa [P].</para>
+    /// <para>La línea del lugar va en 1 línea o, si no cabe, en 2 con el corte en un « · » (nunca dentro de un nombre: «ríos» o
+    /// «Negro +» no se quedan solos al final de la línea) a 18 sp o, si hace falta, más pequeña hasta 15.</para>
     /// <para>Con «Reducir movimiento» (07 §7.8): solo el fundido, con Capi ya presentando y Rosa ya fuera, sin soplo ni ondas.
-    /// Sin asignaciones por fotograma: todo se crea una vez y se coloca al mostrarla o al cambiar la pantalla.</para>
+    /// Sin asignaciones por fotograma, y quieto del todo al terminar la entrada (<see cref="Settled"/>): Tick ya no toca ninguna
+    /// transformada ni ningún color mientras sigue abierto, así que no obliga a rehacer los lotes del lienzo principal ni el
+    /// recorte de las dos RectMask2D (guía 8, docs/art/direccion-visual-v2.md: el ambiente que se mueve va en Canvas propios).
+    /// El arte (las mascotas y la viñeta) se pide al abrirlo y se libera al cerrarlo (<c>ProceduralArt.ReleaseBannerArt</c>):
+    /// construir la pantalla no genera ninguna textura.</para>
     /// </remarks>
     internal sealed class WorldBannerView
     {
@@ -50,7 +57,13 @@ namespace AF.UI
         /// <summary>Capi presenta con la pata: 18 fotogramas a 24 por segundo (07 §6.1, <c>capi_present</c>).</summary>
         public const float CapiPresentMs = 750f;
 
-        /// <summary>Fin de la entrada (todo quieto, salvo el leve vaivén de Rosa).</summary>
+        /// <summary>Onda al asomar: duración (ms desde <see cref="RosaSurfaceStartMs"/>) [P].</summary>
+        public const float RippleMs = 700f;
+
+        /// <summary>
+        /// Fin de la entrada: desde aquí todo queda quieto (Rosa también, sin vaivén) y <see cref="Tick"/> ya no pinta nada hasta
+        /// que sale.
+        /// </summary>
         public const float EnterMs = SprayStartMs + SprayMs;
 
         /// <summary>Salida: Rosa se sumerge y la tarjeta se funde (ms) [P].</summary>
@@ -83,15 +96,21 @@ namespace AF.UI
         /// <summary>Lo que se ve de Rosa sobre el agua (fracción de su alto).</summary>
         public const float RosaAbove = 0.74f;
 
+        /// <summary>Tamaño de la cabecera y de su título (sp): con el nombre si cabe así; si no, «Mundo {n}».</summary>
+        public const float TitleSp = 24f;
+
+        /// <summary>Tamaño de la línea del lugar (sp), que baja hasta <see cref="PlaceMinSp"/> si no cabe en 2 líneas.</summary>
+        public const float PlaceSp = 18f;
+
+        /// <summary>Tamaño mínimo de la línea del lugar (sp).</summary>
+        public const float PlaceMinSp = 15f;
+
         private const float PadDp = 16f;
         private const float HeaderDp = 40f;
-        private const float TitleSp = 24f;
-        private const float PlaceSp = 18f;
-        private const float PlaceMinSp = 15f;
+        private const float TitleInsetDp = 8f;
+        private const float FitSlackDp = 4f;
         private const float SceneEdgeDp = 2f;
         private const float PopFrom = 0.92f;
-        private const float RosaBobDp = 1.5f;
-        private const float RosaBobMs = 2600f;
 
         private readonly ProceduralArt _art;
         private readonly Action _onTap;
@@ -108,6 +127,7 @@ namespace AF.UI
         private readonly Image _scene;
         private readonly RectTransform _rosaClip;
         private readonly Image _rosa;
+        private readonly Image _foam;
         private readonly Image _spray;
         private readonly Image _ripple;
         private readonly Image _capi;
@@ -115,12 +135,15 @@ namespace AF.UI
         private readonly TextMeshProUGUI _place;
         private int _world;
         private string _text = string.Empty;
+        private string _placeText = string.Empty;
+        private bool _nameInTitle;
         private Color _water;
         private float _ms = -1f;
         private float _exitMs = -1f;
         private bool _dismissing;
         private bool _entered;
         private bool _enteredFired;
+        private bool _settled;
         private bool _reduceMotion;
         private float _canvasW = 360f;
         private float _canvasH = 780f;
@@ -132,7 +155,10 @@ namespace AF.UI
         private float _scaleFrom = 1f;
         private float _rosaRise;
 
-        /// <summary>Crea el banner, oculto, bajo <paramref name="parent"/>; <paramref name="onTap"/> recibe el toque.</summary>
+        /// <summary>
+        /// Crea el banner, oculto, bajo <paramref name="parent"/>; <paramref name="onTap"/> recibe el toque. No pide ningún arte
+        /// (las mascotas y la viñeta se generan al abrirlo, <see cref="Show"/>).
+        /// </summary>
         public WorldBannerView(Transform parent, ProceduralArt art, Action onTap)
         {
             _art = art;
@@ -144,24 +170,26 @@ namespace AF.UI
             _pop = UiBuilder.Rect("Pop", _root);
             _panel = ModalKit.Card("Panel", _pop, art, out _surface);
             _title = ModalKit.Header(_panel, art, string.Empty, out _header);
-            _title.fontSizeMax = TitleSp;
+            _title.enableAutoSizing = false; // a 24 sp: con el nombre si cabe; si no, «Mundo {n}» (Layout)
             _title.fontSize = TitleSp;
 
-            // Viñeta del río con el canto de madera oscura; Rosa en su recorte (todo lo de debajo de la línea del agua no se ve).
+            // Viñeta del río con el canto de madera oscura; Rosa en su recorte (todo lo de debajo de la línea del agua no se ve)
+            // y, encima, la espuma que tapa el corte. Los sprites de las mascotas, al abrirlo (EnsureArt).
             _sceneEdge = UiBuilder.Sliced("SceneEdge", _panel, art.RoundedRect, Palette.FamilyWood.Outline);
             _sceneEdge.pixelsPerUnitMultiplier = ProceduralArt.RoundedRectRadiusPx / (ProceduralArt.BannerSceneRadiusDp + SceneEdgeDp);
             _sceneMask = UiBuilder.Rect("Scene", _panel);
             _sceneMask.gameObject.AddComponent<RectMask2D>();
             _scene = UiBuilder.Image("River", _sceneMask, null, Color.white);
-            _ripple = UiBuilder.Image("Ripple", _sceneMask, art.RosaRipple, new Color(1f, 1f, 1f, 0f));
+            _ripple = UiBuilder.Image("Ripple", _sceneMask, null, new Color(1f, 1f, 1f, 0f));
             _rosaClip = UiBuilder.Rect("RosaClip", _sceneMask);
             _rosaClip.gameObject.AddComponent<RectMask2D>();
-            _rosa = UiBuilder.Image("Rosa", _rosaClip, art.Rosa, Color.white);
-            _spray = UiBuilder.Image("Spray", _sceneMask, art.RosaSpray, new Color(1f, 1f, 1f, 0f));
+            _rosa = UiBuilder.Image("Rosa", _rosaClip, null, Color.white);
+            _foam = UiBuilder.Image("Foam", _sceneMask, null, new Color(1f, 1f, 1f, 0f));
+            _spray = UiBuilder.Image("Spray", _sceneMask, null, new Color(1f, 1f, 1f, 0f));
 
             // Capi, en el banco de arena de la izquierda; la pata va delante del cuerpo y gira en el hombro.
-            _capi = UiBuilder.Image("Capi", _panel, art.CapiPresent, Color.white);
-            _paw = UiBuilder.Image("CapiPaw", _capi.transform, art.CapiPaw, Color.white);
+            _capi = UiBuilder.Image("Capi", _panel, null, Color.white);
+            _paw = UiBuilder.Image("CapiPaw", _capi.transform, null, Color.white);
 
             _place = ModalKit.Line("Place", _panel, string.Empty, PlaceSp, Palette.FamilyWood.Deep);
             _place.enableAutoSizing = false;
@@ -177,17 +205,26 @@ namespace AF.UI
         /// <summary>El banner está saliendo: ya no recibe toques.</summary>
         public bool Dismissing => _dismissing;
 
+        /// <summary>Terminó la entrada y está quieto: <see cref="Tick"/> no pinta nada hasta que sale.</summary>
+        public bool Settled => _settled;
+
         /// <summary>Mundo que presenta (0 si no hay).</summary>
         public int World => _world;
 
         /// <summary>«Mundo {n}: {nombre} · {país} · {río}» (clave <c>world_banner</c>), o null si no se ve.</summary>
         public string? Text => Visible ? _text : null;
 
-        /// <summary>Título de la cabecera («Mundo {n}»).</summary>
+        /// <summary>Título de la cabecera: «Mundo {n}: {nombre}» o, si el nombre no cabe a 24 sp, «Mundo {n}».</summary>
         public string TitleText => _title.text;
 
-        /// <summary>Línea del lugar («{nombre} · {país} · {río}»).</summary>
-        public string PlaceText => _place.text;
+        /// <summary>
+        /// Línea del lugar sin el corte de línea ni la negrita: «{país} · {río}» o, con «Mundo {n}» en la cabecera,
+        /// «{nombre} · {país} · {río}». La cabecera y la línea forman <see cref="Text"/>.
+        /// </summary>
+        public string PlaceText => _placeText;
+
+        /// <summary>El nombre del mundo va en la cabecera («Mundo {n}: {nombre}»); si no, abre la línea del lugar en negrita.</summary>
+        public bool NameInTitle => _nameInTitle;
 
         /// <summary>Velo a pantalla completa que recibe el toque (tests).</summary>
         public Image Dim => _dim;
@@ -201,7 +238,7 @@ namespace AF.UI
         /// <summary>Viñeta del río (tests de solapes).</summary>
         public RectTransform Scene => _sceneMask;
 
-        /// <summary>Sprite de la viñeta (tests: el agua del mundo).</summary>
+        /// <summary>Sprite de la viñeta (tests: el agua del mundo; null cerrado).</summary>
         public Sprite? SceneSprite => _scene.sprite;
 
         /// <summary>Capi (cuerpo) en la viñeta (tests).</summary>
@@ -212,6 +249,12 @@ namespace AF.UI
 
         /// <summary>Rosa (tests).</summary>
         public Image Rosa => _rosa;
+
+        /// <summary>Espuma sobre el corte del cuerpo de Rosa con el agua (tests).</summary>
+        public Image Foam => _foam;
+
+        /// <summary>Soplo de la exhalación (tests).</summary>
+        public Image Spray => _spray;
 
         /// <summary>Recorte de Rosa: su borde de abajo es la línea del agua (tests).</summary>
         public RectTransform RosaClip => _rosaClip;
@@ -256,20 +299,21 @@ namespace AF.UI
         /// <summary>
         /// Muestra el banner del mundo <paramref name="world"/> con el agua <paramref name="water"/> del mundo, colocado en la
         /// pantalla de <paramref name="canvasW"/> × <paramref name="canvasH"/> dp con la zona segura dada; entra con un fundido,
-        /// Rosa asoma y Capi presenta (todo quieto con <paramref name="reduceMotion"/>).
+        /// Rosa asoma y Capi presenta (todo quieto con <paramref name="reduceMotion"/>). Aquí se genera el arte (la primera vez
+        /// desde que se cerró el último banner).
         /// </summary>
         public void Show(int world, Color water, bool reduceMotion, float canvasW, float canvasH, float safeTop, float safeBottom)
         {
             _world = world;
             _text = UiText.WorldBanner(world);
-            _title.text = UiText.WorldTitle(world);
-            _place.text = UiText.WorldPlace(world);
             _water = water;
             _reduceMotion = reduceMotion;
+            EnsureArt();
             _root.gameObject.SetActive(true);
             _dismissing = false;
             _entered = false;
             _enteredFired = false;
+            _settled = false;
             _exitMs = -1f;
             _group.blocksRaycasts = true;
             _group.interactable = true;
@@ -298,45 +342,20 @@ namespace AF.UI
             float inner = cardW - (2f * PadDp);
             float y = PadDp;
             UiBuilder.Place(_header.rectTransform, PadDp, y, inner, HeaderDp);
+
+            // Cabecera «Mundo {n}: {nombre}» (la clave hasta el primer « · ») si cabe a 24 sp; si no, «Mundo {n}» y el nombre abre
+            // la línea del lugar, en negrita. Así el nombre del mundo nunca pesa menos que su número.
+            string heading = UiText.WorldHeading(_world);
+            _nameInTitle = WidthOf(_title, heading) <= inner - (2f * TitleInsetDp) - FitSlackDp;
+            SetText(_title, _nameInTitle ? heading : UiText.WorldTitle(_world));
+            _placeText = _nameInTitle ? UiText.WorldPlace(_world) : UiText.WorldPlaceNamed(_world);
+            string placeRich = _nameInTitle ? _placeText : "<b>" + UiText.WorldName(_world) + "</b>" + UiText.WorldSeparator + UiText.WorldPlace(_world);
             y += HeaderDp + 8f;
             float sceneY = y;
 
-            // El lugar, centrado bajo la viñeta, en 1 o 2 líneas (a 18 sp; si no cabe en 2, más pequeño hasta 15).
-            _place.fontSize = PlaceSp;
-            for (float sp = PlaceSp; sp >= PlaceMinSp; sp -= 1f)
-            {
-                _place.fontSize = sp;
-                if (LinesOf(_place, inner) <= 2)
-                {
-                    break;
-                }
-            }
-
-            // Con 2 líneas, equilibradas: la caja se estrecha hasta el ancho más pequeño con las mismas líneas (sin una palabra
-            // suelta debajo).
-            float placeW = inner;
-            int lines = LinesOf(_place, inner);
-            if (lines >= 2)
-            {
-                float lo = inner * 0.3f;
-                float hi = inner;
-                for (int i = 0; i < 14; i++)
-                {
-                    float mid = (lo + hi) * 0.5f;
-                    if (LinesOf(_place, mid) <= lines)
-                    {
-                        hi = mid;
-                    }
-                    else
-                    {
-                        lo = mid;
-                    }
-                }
-
-                placeW = Mathf.Min(inner, Mathf.Ceil(hi) + 2f);
-            }
-
-            float placeH = Mathf.Ceil(_place.GetPreferredValues(_place.text, placeW, float.PositiveInfinity).y) + 2f;
+            // El lugar, centrado bajo la viñeta, en 1 línea o en 2 cortadas en un « · ».
+            FitPlace(placeRich, inner - FitSlackDp);
+            float placeH = Mathf.Ceil(_place.GetPreferredValues(_place.text, inner, float.PositiveInfinity).y) + 2f;
             float rest = SceneDp + 10f + placeH + PadDp + 4f;
             float sceneH = SceneDp + Mathf.Max(0f, MinHeightDp - (y + rest));
             _sceneW = inner;
@@ -346,11 +365,12 @@ namespace AF.UI
             UiBuilder.Place(_scene.rectTransform, 0f, 0f, inner, sceneH);
             _scene.sprite = _art.BannerScene(inner, sceneH, _water);
             y += sceneH + 10f;
-            UiBuilder.Place(_place.rectTransform, PadDp + Mathf.Round((inner - placeW) * 0.5f), y, placeW, placeH);
+            UiBuilder.Place(_place.rectTransform, PadDp, y, inner, placeH);
             y += placeH;
             float cardH = Mathf.Ceil(y + PadDp + 4f);
 
-            // Rosa: recortada en la línea del agua; su pie (pivote) baja hasta que solo asoma RosaAbove de su alto.
+            // Rosa: recortada en la línea del agua; su pie (pivote) baja hasta que solo asoma RosaAbove de su alto. La espuma,
+            // centrada en la línea del agua sobre el corte del lomo.
             float waterline = sceneH * RosaWaterline;
             UiBuilder.Place(_rosaClip, 0f, 0f, inner, waterline);
             _rosa.rectTransform.anchorMin = new Vector2(0f, 1f);
@@ -358,6 +378,8 @@ namespace AF.UI
             _rosa.rectTransform.pivot = new Vector2(0.5f, 0f);
             _rosa.rectTransform.sizeDelta = new Vector2(ProceduralArt.RosaWidthDp, ProceduralArt.RosaHeightDp);
             Center(_ripple.rectTransform, inner * RosaX, waterline, ProceduralArt.RosaRippleWidthDp, ProceduralArt.RosaRippleHeightDp);
+            float foamX = (inner * RosaX) + ((ProceduralArt.RosaCutCenter - 0.5f) * ProceduralArt.RosaWidthDp);
+            Center(_foam.rectTransform, foamX, waterline, ProceduralArt.RosaFoamWidthDp, ProceduralArt.RosaFoamHeightDp);
             _spray.rectTransform.anchorMin = new Vector2(0f, 1f);
             _spray.rectTransform.anchorMax = new Vector2(0f, 1f);
             _spray.rectTransform.pivot = new Vector2(0.5f, 0f);
@@ -375,8 +397,7 @@ namespace AF.UI
             Vector2 shoulder = ProceduralArt.CapiShoulder;
             paw.anchorMin = new Vector2(shoulder.x, shoulder.y);
             paw.anchorMax = new Vector2(shoulder.x, shoulder.y);
-            Sprite pawSprite = _art.CapiPaw;
-            paw.pivot = new Vector2(pawSprite.pivot.x / pawSprite.rect.width, 0.5f);
+            paw.pivot = ProceduralArt.CapiPawPivot;
             paw.sizeDelta = new Vector2(ProceduralArt.CapiPawLengthDp, ProceduralArt.CapiPawThickDp);
             paw.anchoredPosition = Vector2.zero;
 
@@ -407,6 +428,7 @@ namespace AF.UI
             }
 
             _dismissing = true;
+            _settled = false;
             _group.blocksRaycasts = false;
             _group.interactable = false;
             _fadeFrom = _group.alpha;
@@ -414,10 +436,11 @@ namespace AF.UI
             _exitMs = 0f;
         }
 
-        /// <summary>Lo oculta en el acto (carga de otro nivel).</summary>
+        /// <summary>Lo oculta en el acto (al terminar la salida o al cargar otro nivel) y suelta su arte.</summary>
         public void HideNow()
         {
             _dismissing = false;
+            _settled = false;
             _ms = -1f;
             _exitMs = -1f;
             _world = 0;
@@ -427,6 +450,8 @@ namespace AF.UI
             {
                 _root.gameObject.SetActive(false);
             }
+
+            ReleaseArt();
         }
 
         /// <summary>True una sola vez, cuando la tarjeta termina de entrar (para el AF_LAYOUT del banner).</summary>
@@ -441,7 +466,10 @@ namespace AF.UI
             return true;
         }
 
-        /// <summary>Avanza la entrada (fundido, Rosa, el soplo y la pata de Capi), el vaivén de Rosa y la salida.</summary>
+        /// <summary>
+        /// Avanza la entrada (fundido, Rosa, el soplo y la pata de Capi) y la salida. Entre las dos, con todo quieto
+        /// (<see cref="Settled"/>), no pinta nada.
+        /// </summary>
         public void Tick(float dtMs)
         {
             if (!Visible || _ms < 0f)
@@ -465,7 +493,64 @@ namespace AF.UI
                 _entered = true;
             }
 
+            if (_settled)
+            {
+                return; // quieto: ninguna transformada ni ningún color que cambie (guía 8)
+            }
+
             Apply();
+            if (!_dismissing && _ms >= (_reduceMotion ? FadeInMs : EnterMs))
+            {
+                _settled = true; // Apply acaba de pintar el estado final de la entrada
+            }
+        }
+
+        // Las mascotas, la onda, la espuma y el soplo se piden al abrir el banner (la viñeta, en Layout): construir la pantalla o
+        // jugar un nivel sin banner no genera ninguna textura.
+        private void EnsureArt()
+        {
+            if (_ripple.sprite == null)
+            {
+                _ripple.sprite = _art.RosaRipple;
+            }
+
+            if (_rosa.sprite == null)
+            {
+                _rosa.sprite = _art.Rosa;
+            }
+
+            if (_foam.sprite == null)
+            {
+                _foam.sprite = _art.RosaFoam;
+            }
+
+            if (_spray.sprite == null)
+            {
+                _spray.sprite = _art.RosaSpray;
+            }
+
+            if (_capi.sprite == null)
+            {
+                _capi.sprite = _art.CapiPresent;
+            }
+
+            if (_paw.sprite == null)
+            {
+                _paw.sprite = _art.CapiPaw;
+            }
+        }
+
+        // Al cerrarse: fuera las referencias y el arte del banner (cada banner sale una vez por mundo; el siguiente lo genera).
+        private void ReleaseArt()
+        {
+            _scene.sprite = null;
+            _ripple.sprite = null;
+            _rosa.sprite = null;
+            _foam.sprite = null;
+            _spray.sprite = null;
+            _capi.sprite = null;
+            _paw.sprite = null;
+            _art.ReleaseBannerArt();
         }
 
         // Pinta el instante actual de la entrada o de la salida.
@@ -497,22 +582,24 @@ namespace AF.UI
             _group.alpha = alpha;
             _pop.localScale = new Vector3(k, k, 1f);
 
-            // Rosa: asoma desde bajo el agua (con un vaivén leve una vez fuera) y se sumerge al cerrar.
+            // Rosa: asoma desde bajo el agua y se queda quieta; al cerrar, se sumerge.
             _rosaRise = Mathf.Clamp01(rise) * (1f - dive);
             float waterline = _sceneH * RosaWaterline;
             float hidden = ProceduralArt.RosaHeightDp * (1f - RosaAbove);
             float below = ProceduralArt.RosaHeightDp + 4f;
-            float bob = still || !_entered || _dismissing ? 0f : RosaBobDp * Mathf.Sin(ms * (2f * Mathf.PI / RosaBobMs));
-            float pivotBelow = Mathf.LerpUnclamped(below, hidden, rise) + ((below - hidden) * dive) - bob;
+            float pivotBelow = Mathf.LerpUnclamped(below, hidden, rise) + ((below - hidden) * dive);
             _rosa.rectTransform.anchoredPosition = new Vector2(_sceneW * RosaX, -(waterline + pivotBelow));
             _rosa.rectTransform.localEulerAngles = new Vector3(0f, 0f, dive * -14f);
+
+            // Espuma sobre el corte del lomo con el agua, con Rosa fuera; se apaga al sumergirse.
+            _foam.color = new Color(1f, 1f, 1f, Mathf.Clamp01((_rosaRise - 0.55f) / 0.45f));
 
             // Ondas en el agua al asomar y al sumergirse.
             float ring = 0f;
             float ringScale = 1f;
             if (!still)
             {
-                float t0 = Mathf.Clamp01((ms - RosaSurfaceStartMs) / 700f);
+                float t0 = Mathf.Clamp01((ms - RosaSurfaceStartMs) / RippleMs);
                 if (t0 > 0f && t0 < 1f && !_dismissing)
                 {
                     ring = 0.9f * (1f - t0);
@@ -529,14 +616,14 @@ namespace AF.UI
             _ripple.color = new Color(1f, 1f, 1f, ring);
             _ripple.rectTransform.localScale = new Vector3(ringScale, ringScale, 1f);
 
-            // Soplo de la exhalación sobre el respiradero.
+            // Soplo de la exhalación: el abanico se abre desde el respiradero, pegado a lo alto de la cabeza.
             float sprayT = still || _dismissing ? 1f : Mathf.Clamp01((ms - SprayStartMs) / SprayMs);
             float sprayA = sprayT <= 0f || sprayT >= 1f ? 0f : Mathf.Sin(sprayT * Mathf.PI) * 0.95f;
             Vector2 blow = ProceduralArt.RosaBlowhole;
             float bx = (_sceneW * RosaX) + ((blow.x - 0.5f) * ProceduralArt.RosaWidthDp);
             float by = waterline + pivotBelow - (blow.y * ProceduralArt.RosaHeightDp);
-            _spray.rectTransform.anchoredPosition = new Vector2(bx, -(by - (8f * Ease.Out(sprayT))));
-            float sprayK = 0.5f + (0.6f * Ease.Out(sprayT));
+            _spray.rectTransform.anchoredPosition = new Vector2(bx, -by);
+            float sprayK = 0.45f + (0.65f * Ease.Out(sprayT));
             _spray.rectTransform.localScale = new Vector3(sprayK, sprayK, 1f);
             _spray.color = new Color(1f, 1f, 1f, sprayA);
 
@@ -548,6 +635,55 @@ namespace AF.UI
             Vector2 capiPos = _capi.rectTransform.anchoredPosition;
             float bankY = -((_sceneMask.anchoredPosition.y * -1f) + (_sceneH * ProceduralArt.BannerSceneBankTop) + 3f);
             _capi.rectTransform.anchoredPosition = new Vector2(capiPos.x, bankY + lift);
+        }
+
+        // La línea del lugar en 1 línea o, si no cabe, en 2 cortadas en el « · » más equilibrado (nunca dentro de un nombre), de
+        // 18 a 15 sp. Asigna (cadenas nuevas), pero solo al colocar el banner.
+        private void FitPlace(string rich, float room)
+        {
+            for (float sp = PlaceSp; sp >= PlaceMinSp; sp -= 1f)
+            {
+                _place.fontSize = sp;
+                if (WidthOf(_place, rich) <= room)
+                {
+                    SetText(_place, rich);
+                    return;
+                }
+
+                string? split = BestSplit(rich, room);
+                if (split != null)
+                {
+                    SetText(_place, split);
+                    return;
+                }
+            }
+
+            // Ni a 15 sp caben las dos mitades: el corte más equilibrado, y TMP parte lo que sobre.
+            SetText(_place, BestSplit(rich, float.PositiveInfinity) ?? rich);
+        }
+
+        // El corte en un « · » con la línea más larga más corta (y que quepa en room), o null.
+        private string? BestSplit(string rich, float room)
+        {
+            string sep = UiText.WorldSeparator;
+            string? best = null;
+            float bestW = float.MaxValue;
+            int i = rich.IndexOf(sep, StringComparison.Ordinal);
+            while (i >= 0)
+            {
+                string a = rich.Substring(0, i);
+                string b = rich.Substring(i + sep.Length);
+                float w = Mathf.Max(WidthOf(_place, a), WidthOf(_place, b));
+                if (w <= room && w < bestW)
+                {
+                    bestW = w;
+                    best = a + "\n" + b;
+                }
+
+                i = rich.IndexOf(sep, i + sep.Length, StringComparison.Ordinal);
+            }
+
+            return best;
         }
 
         private void OnTap()
@@ -567,22 +703,18 @@ namespace AF.UI
             rt.anchoredPosition = new Vector2(x, -yFromTop);
         }
 
-        // Líneas de t en una caja de width dp (el alto preferido entre el de una línea).
-        private static int LinesOf(TextMeshProUGUI t, float width)
+        private static void SetText(TextMeshProUGUI t, string text)
         {
-            string text = t.text;
-            if (string.IsNullOrEmpty(text))
+            if (!string.Equals(t.text, text, StringComparison.Ordinal))
             {
-                return 0;
+                t.text = text;
             }
+        }
 
-            float one = t.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).y;
-            if (one <= 0f)
-            {
-                return 1;
-            }
-
-            return Mathf.Max(1, Mathf.RoundToInt(t.GetPreferredValues(text, width, float.PositiveInfinity).y / one));
+        // Ancho de text en una sola línea, al tamaño actual de t.
+        private static float WidthOf(TextMeshProUGUI t, string text)
+        {
+            return t.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x;
         }
     }
 }

@@ -10,26 +10,44 @@ namespace AF.UI
 {
     /// <summary>
     /// Mordisco animado del tutorial de la Piraña en su tarjeta de estreno (nivel 183; D-012, punto 1: opción C + D; 02 §9.1
-    /// M7): un tablero en miniatura, con su panel, su repisa y dos cuias de verdad (<see cref="CuiaView"/>), la de la izquierda
-    /// recibe una dosis (el vertido que completa el ritmo: se encienden los 4 puntos de la cueva) y la Piraña sale de la cueva
-    /// de la derecha y se lleva la dosis de la cima a su cueva. El mordisco es el mismo que en el juego: lo pinta
-    /// <see cref="PiranaOverlay"/> con <see cref="MechanicStepKind.Bite"/> sobre un <see cref="ICuiaBoard"/> propio de la
-    /// tarjeta, así que se ve igual que en el tablero, solo que más despacio (<see cref="BiteSpeed"/>). Las reglas no se tocan: la
-    /// tarjeta no juega, pinta un caso fijo (02 §9.1 M7: el mordisco del cuarto vertido a la cuia que lo recibe).
+    /// M7): un tablero en miniatura, con su panel, su repisa y dos cuias de verdad (<see cref="CuiaView"/>). La de la izquierda,
+    /// una cuia de 4 como las del 183, recibe una dosis con un chorro que cae desde arriba: es el cuarto vertido, el que completa
+    /// el ritmo (la cueva tenía 3 de sus 4 puntos encendidos y se queda a 0), y la Piraña sale de la cueva de la derecha y se
+    /// lleva la dosis de la cima. La cueva es la del 183 y la de los 8 niveles con Piraña (183, 184, 185, 187, 189, 192, 198 y
+    /// 200: <c>{"type":"pirana","k":4}</c> en una Cuia chica de 2 que empieza vacía; 02 §9.1 M7, «normalmente Cuia chica de 2»):
+    /// vacía al empezar y con la dosis mordida en el fondo al acabar, así que al cerrar la tarjeta el jugador la reconoce en el
+    /// tablero. El mordisco es el mismo que en el juego: lo pinta <see cref="PiranaOverlay"/> con
+    /// <see cref="MechanicStepKind.Bite"/> sobre un <see cref="ICuiaBoard"/> propio de la tarjeta, así que se ve igual que en el
+    /// tablero, solo que más despacio (<see cref="BiteSpeed"/>). Las reglas no se tocan: la tarjeta no juega, pinta un caso fijo
+    /// (02 §9.1 M7: el mordisco del cuarto vertido a la cuia que lo recibe).
     /// </summary>
     /// <remarks>
-    /// <para>Cronología [P]: espera a que la tarjeta entre, la cuia recibe la dosis en <see cref="ReceiveMs"/>, una pausa y el
-    /// mordisco (<see cref="PiranaOverlay.BiteStepMs"/> × <see cref="BiteSpeed"/>); acaba en <see cref="TotalMs"/> con la tarjeta
+    /// <para>Cronología [P]: espera a que la tarjeta entre, la cabeza del chorro baja (<see cref="StreamLeadMs"/>), la cuia
+    /// recibe la dosis en <see cref="ReceiveMs"/>, el chorro se corta (<see cref="StreamTailMs"/>), una pausa y el mordisco
+    /// (<see cref="PiranaOverlay.BiteStepMs"/> × <see cref="BiteSpeed"/>); acaba en <see cref="TotalMs"/> con la tarjeta
     /// abierta (no se repite): la cuia sin la dosis, la cueva con ella y el cardumen de vuelta a su ronda. Un toque en cualquier
     /// punto cierra la tarjeta (el escenario no recibe toques: <see cref="CanvasGroup.blocksRaycasts"/> = false).</para>
     /// <para>Con Reducir movimiento (07 §7.8), una versión quieta: el instante del mordisco (<see cref="StillFraction"/>), con
-    /// el bocado ya fuera de la cuia y el cardumen quieto. Sin asignaciones por fotograma (08 §5.4): las vistas, el tablero y
-    /// los estados se crean una vez; el mordisco usa el paso del overlay, que no asigna.</para>
+    /// el bocado ya fuera de la cuia, el cardumen quieto y sin chorro. Sin asignaciones por fotograma (08 §5.4): las vistas, el
+    /// chorro (<see cref="PourStream"/>, la cinta del tablero), el tablero y los estados se crean una vez; el mordisco usa el
+    /// paso del overlay, que no asigna.</para>
+    /// <para>Las cuias del escenario miden 44 dp (<see cref="UnitDp"/>) y las del tablero, 48-64: como el grosor de 1 dp del
+    /// borde del líquido va en el material compartido (<c>LiquidGraphic.SetUnit</c>), GameScreen vuelve a poner la unidad del
+    /// tablero cada vez que coloca el escenario (GameScreen.Cards.cs, <c>RestoreBoardUnit</c>).</para>
     /// </remarks>
     internal sealed class PiranaBiteDemo
     {
         /// <summary>u del escenario (dp): cuias de 44 dp de ancho y 123,2 de alto (las del tablero miden 48-64).</summary>
         public const float UnitDp = 22f;
+
+        /// <summary>Capacidad de la cuia que recibe la dosis: 4, como las demás cuias del 183.</summary>
+        public const int VictimCapacity = 4;
+
+        /// <summary>
+        /// Capacidad de la cueva: la Cuia chica de 2 de los niveles con Piraña (183: <c>caps[8] = 2</c>, vacía al empezar), en la
+        /// que caben 2 bocados.
+        /// </summary>
+        public const int CaveCapacity = 2;
 
         /// <summary>Distancia entre los ejes de las dos cuias (u).</summary>
         public const float CuiaGapU = 4.2f;
@@ -42,6 +60,15 @@ namespace AF.UI
 
         /// <summary>La cuia recibe la dosis (ms) [P].</summary>
         public const float ReceiveMs = 550f;
+
+        /// <summary>
+        /// El chorro aparece este tiempo antes de la dosis: su cabeza baja hasta la superficie y entonces empieza a llenar, como en
+        /// el tablero (<see cref="BoardAnimator.StreamGrowMs"/>).
+        /// </summary>
+        public const float StreamLeadMs = BoardAnimator.StreamGrowMs;
+
+        /// <summary>Cola del chorro tras la dosis: se corta desde arriba (ms) [P].</summary>
+        public const float StreamTailMs = 120f;
 
         /// <summary>Empieza el mordisco (ms desde que se abre la tarjeta) [P].</summary>
         public const float BiteStartMs = 1150f;
@@ -74,8 +101,8 @@ namespace AF.UI
 
         private static readonly int[] VictimBase = { 11, 6 }; // lulo y camu camu
         private static readonly int[] VictimFull = { 11, 6, BittenTint };
-        private static readonly int[] CaveBase = { 8 }; // açaí
-        private static readonly int[] CaveFull = { 8, BittenTint };
+        private static readonly int[] CaveBase = System.Array.Empty<int>(); // la cueva empieza vacía, como en el 183
+        private static readonly int[] CaveFull = { BittenTint }; // la dosis mordida, en el fondo
 
         private readonly ProceduralArt _art;
         private readonly RectTransform _root;
@@ -87,6 +114,7 @@ namespace AF.UI
         private readonly RectTransform _back;
         private readonly RectTransform _front;
         private readonly CuiaView[] _views = new CuiaView[2];
+        private readonly PourStream _stream;
         private readonly StageBoard _board;
         private readonly StageFx _fx = new StageFx();
         private readonly Cuia _victimBefore;
@@ -97,6 +125,7 @@ namespace AF.UI
         private float _ms = -1f;
         private float _biteMs;
         private float _biteDur;
+        private bool _streamOn;
         private Stage _stage = Stage.Hidden;
         private bool _reduceMotion;
         private float _width;
@@ -119,15 +148,16 @@ namespace AF.UI
             _board = new StageBoard(_views, _back);
             for (int i = 0; i < _views.Length; i++)
             {
-                _views[i] = CuiaView.Create(_root, i, 4, art, NoDown, NoUp, _fx);
+                _views[i] = CuiaView.Create(_root, i, i == CaveIndex ? CaveCapacity : VictimCapacity, art, NoDown, NoUp, _fx);
             }
 
             _front = UiBuilder.Rect("MechanicFront", _root);
-            _victimBefore = Cuia.Create(4, VictimBase);
-            _victimReceived = Cuia.Create(4, VictimFull);
+            _stream = new PourStream(_front, 0); // delante de las cuias, como en la capa de vertido del tablero
+            _victimBefore = Cuia.Create(VictimCapacity, VictimBase);
+            _victimReceived = Cuia.Create(VictimCapacity, VictimFull);
             _victimAfter = _victimBefore;
-            _caveBefore = Cuia.Create(4, CaveBase).WithMechanic(MechanicType.Pirana, k: CaveK, counter: CaveK - 1);
-            _caveAfter = Cuia.Create(4, CaveFull).WithMechanic(MechanicType.Pirana, k: CaveK, counter: 0);
+            _caveBefore = Cuia.Create(CaveCapacity, CaveBase).WithMechanic(MechanicType.Pirana, k: CaveK, counter: CaveK - 1);
+            _caveAfter = Cuia.Create(CaveCapacity, CaveFull).WithMechanic(MechanicType.Pirana, k: CaveK, counter: 0);
             for (int i = 0; i < _views.Length; i++)
             {
                 _views[i].BindBoard(_board, _back, _front);
@@ -165,6 +195,12 @@ namespace AF.UI
         /// <summary>El mordisco está en marcha (o quieto en su instante, con Reducir movimiento).</summary>
         public bool Biting => _stage == Stage.Biting || _stage == Stage.Still;
 
+        /// <summary>Se ve el chorro que trae la dosis (tests y capturas).</summary>
+        public bool StreamVisible => _streamOn;
+
+        /// <summary>Cinta del chorro (tests y capturas).</summary>
+        public PourStream Stream => _stream;
+
         /// <summary>Tiempo desde que se abrió la tarjeta (ms; −1 oculta).</summary>
         public float ElapsedMs => _ms;
 
@@ -196,12 +232,14 @@ namespace AF.UI
             return n;
         }
 
-        /// <summary>Alto (dp) que ocupa el escenario con <see cref="UnitDp"/>, sin colocarlo.</summary>
+        /// <summary>
+        /// Alto (dp) que ocupa el escenario con <see cref="UnitDp"/>, sin colocarlo: el aire sobre la boca más alta (la de la cuia
+        /// de 4; la cueva, de 2, queda más baja en la misma repisa), la cuia más alta y la repisa.
+        /// </summary>
         public float MeasureHeight()
         {
             float frame = FrameDp;
-            float foot = frame + ((HeadroomU + CuiaGeometry.HeightU(4)) * UnitDp);
-            return Mathf.Ceil(foot + (ShelfDp - ShelfTopAboveFootDp) + frame + 2f);
+            return Mathf.Ceil(FootY(frame) + (ShelfDp - ShelfTopAboveFootDp) + frame + 2f);
         }
 
         /// <summary>
@@ -218,7 +256,7 @@ namespace AF.UI
             UiBuilder.Place(_fill.rectTransform, frame - 1f, frame - 1f, width - (2f * frame) + 2f, h - (2f * frame) + 2f);
             UiBuilder.Place(_inner.rectTransform, frame, frame, width - (2f * frame), h - (2f * frame));
             UiBuilder.Place(_frame.rectTransform, 0f, 0f, width, h);
-            float footY = frame + ((HeadroomU + CuiaGeometry.HeightU(4)) * UnitDp);
+            float footY = FootY(frame); // las dos en la misma repisa; la cueva, de 2, más baja
             UiBuilder.Place(_shelf.rectTransform, frame + 6f, footY - ShelfTopAboveFootDp, width - (2f * frame) - 12f, ShelfDp);
             float gap = CuiaGapU * UnitDp;
             float cuiaW = CuiaGeometry.WidthU * UnitDp;
@@ -236,7 +274,7 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Abre la demostración desde el principio (la cuia aún sin la dosis y la cueva con 3 de sus 4 puntos); con
+        /// Abre la demostración desde el principio (la cuia aún sin la dosis y la cueva vacía, con 3 de sus 4 puntos); con
         /// <paramref name="reduceMotion"/>, la versión quieta en el instante del mordisco.
         /// </summary>
         public void Show(bool reduceMotion)
@@ -249,6 +287,8 @@ namespace AF.UI
             {
                 overlay.SnapStep();
             }
+
+            HideStream();
 
             _board.ShowContent(VictimIndex, _victimBefore, false);
             _board.ShowContent(CaveIndex, _caveBefore, false); // aquí se une el overlay de la Piraña y crea sus piezas
@@ -281,6 +321,7 @@ namespace AF.UI
                 overlay.SnapStep();
             }
 
+            HideStream();
             _stage = Stage.Hidden;
             _ms = -1f;
             if (_root.gameObject.activeSelf)
@@ -312,6 +353,7 @@ namespace AF.UI
                         PaintReceive(0f);
                     }
 
+                    PaintStream();
                     break;
 
                 case Stage.Receiving:
@@ -324,9 +366,11 @@ namespace AF.UI
                         _stage = Stage.Pause;
                     }
 
+                    PaintStream();
                     break;
 
                 case Stage.Pause:
+                    PaintStream(); // la cola del chorro
                     if (_ms >= BiteStartMs)
                     {
                         _biteDur = PlayBite();
@@ -353,6 +397,45 @@ namespace AF.UI
         private void PaintReceive(float fill)
         {
             _board.SetDose(VictimIndex, VictimBase.Length, Palette.Tint(BittenTint), fill, BittenTint);
+        }
+
+        // El chorro que trae la dosis: cae recto desde lo alto del panel, por el eje de la cuia, hasta su superficie (que sube
+        // mientras se llena). La cabeza baja StreamLeadMs antes de la dosis y la cola se corta desde arriba en StreamTailMs
+        // después; la misma cinta, los mismos grosores y el mismo tinte que el chorro del tablero (guía 6.5). Sin asignaciones.
+        private void PaintStream()
+        {
+            float start = ReceiveStartMs - StreamLeadMs;
+            float flowEnd = ReceiveStartMs + ReceiveMs;
+            if (_ms < start || _ms >= flowEnd + StreamTailMs)
+            {
+                HideStream();
+                return;
+            }
+
+            float head = Mathf.Clamp01((_ms - start) / StreamLeadMs);
+            float tail = _ms > flowEnd ? Mathf.Clamp01((_ms - flowEnd) / StreamTailMs) : 0f;
+            CuiaView victim = Victim;
+            float u = victim.Unit;
+            Vector2 end = victim.SurfaceInContainer();
+            var top = new Vector2(end.x, -(FrameDp + 1f));
+            _stream.Draw(top, (top + end) * 0.5f, end, tail, head, Palette.Tint(BittenTint), BoardAnimator.StreamWidthStartU * u, BoardAnimator.StreamWidthEndU * u);
+            _streamOn = true;
+        }
+
+        private void HideStream()
+        {
+            if (_streamOn)
+            {
+                _stream.Hide();
+                _streamOn = false;
+            }
+        }
+
+        // Pie de las dos cuias (dp desde lo alto del escenario): el aire sobre la boca más alta y la cuia más alta.
+        private float FootY(float frame)
+        {
+            float tallest = Mathf.Max(CuiaGeometry.HeightU(VictimCapacity), CuiaGeometry.HeightU(CaveCapacity));
+            return frame + ((HeadroomU + tallest) * UnitDp);
         }
 
         // El mordisco del juego: el paso Bite del overlay de la cueva sobre el tablero de la tarjeta, más despacio.

@@ -16,7 +16,7 @@ namespace AF.Tests.EditMode
         [Test]
         public void BusyLevels_AreTheCanonicalBannersDebutsAndMilestones()
         {
-            Assert.That(SightingRule.IsBusy(1), Is.True, "banner del Estuario y Fruta nueva");
+            Assert.That(SightingRule.IsBusy(1), Is.True, "Fruta nueva y tutorial (sin banner: decisión del dueño)");
             Assert.That(SightingRule.IsBusy(11), Is.True, "banner del Tapajós");
             Assert.That(SightingRule.IsBusy(12), Is.True, "Morpho");
             Assert.That(SightingRule.IsBusy(41), Is.True, "banner de Manaos y urucum");

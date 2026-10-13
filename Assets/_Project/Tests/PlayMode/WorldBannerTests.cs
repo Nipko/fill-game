@@ -24,7 +24,7 @@ namespace AF.Tests.PlayMode
     /// Banner de entrada a un mundo en la escena (07 §2.2, regla 1; 02 §6; glosario §8 y §10, <c>world_banner</c>; decisión del
     /// dueño del 2026-10-11), con el catálogo real y el banner encendido como en el juego (<see cref="LaunchOptions.LevelCardsOverride"/>
     /// = true; los demás tests lo apagan con las tarjetas, <see cref="PlayModeHelpers"/>): sale en el 41 antes de la intro con
-    /// «Mundo 3: Manaos · Brasil · ríos Negro y Solimões», Capi presentando y Rosa fuera del agua, sin cerrarse solo y con la
+    /// «Mundo 3: Manaos · Brasil (Amazonas) · Negro + Solimões», Capi presentando y Rosa fuera del agua, sin cerrarse solo y con la
     /// intro retenida en t = 0; 1 toque (el velo es lo único que recibe toques) arranca la intro; no sale en el 42, ni al
     /// reintentar, ni al reanudar; si el nivel tiene tarjeta previa, sale después del banner y el regalo de la Luciérnaga espera
     /// a los dos (nivel 141 con el tablero del 100: <see cref="LaunchOptions.LevelOffsetOverride"/> = 41); quieto con Reducir
@@ -61,12 +61,17 @@ namespace AF.Tests.PlayMode
             Assert.That(flow.LevelCard, Is.Null);
             Assert.That(view.LevelCard.Visible, Is.False);
             Assert.That(banner.Visible, Is.True);
-            Assert.That(banner.Text, Is.EqualTo("Mundo 3: Manaos · Brasil · ríos Negro y Solimões"));
+            Assert.That(view.CardArt.MascotsBuilt, Is.True, "las mascotas y la viñeta se generan al abrirlo");
+            Assert.That(view.CardArt.BannerSceneCount, Is.EqualTo(1), "una sola viñeta en memoria");
+            Assert.That(banner.Text, Is.EqualTo("Mundo 3: Manaos · Brasil (Amazonas) · Negro + Solimões"));
             Assert.That(banner.Text, Is.EqualTo(UiText.WorldBanner(3)));
-            Assert.That(banner.TitleText, Is.EqualTo("Mundo 3"));
-            Assert.That(banner.PlaceText, Is.EqualTo("Manaos · Brasil · ríos Negro y Solimões"));
+            Assert.That(banner.NameInTitle, Is.True, "«Mundo 3: Manaos» cabe en la cabecera a 24 sp");
+            Assert.That(banner.TitleText, Is.EqualTo("Mundo 3: Manaos"));
+            Assert.That(banner.PlaceText, Is.EqualTo("Brasil (Amazonas) · Negro + Solimões"));
+            Assert.That(banner.TitleText + UiText.WorldSeparator + banner.PlaceText, Is.EqualTo(banner.Text), "la clave entera, partida en dos");
             Assert.That(view.WorldBannersShown, Is.EqualTo(1));
             Assert.That(view.LastWorldBannerProbe, Does.Contain("\"level\":41").And.Contain("\"world\":3").And.Contain("\"text\":\"Mundo 3: Manaos"));
+            Assert.That(view.LastWorldBannerProbe, Does.Contain("\"then\":\"intro\"").And.Contain("\"reduce_motion\":false"), "sin tarjeta previa detrás");
 
             // Tarjeta de 1 toque: el velo cubre la pantalla y es lo único que recibe toques, por encima de todo.
             Assert.That(banner.RaycastTargets(), Is.EqualTo(new Graphic[] { banner.Dim }));
@@ -82,6 +87,7 @@ namespace AF.Tests.PlayMode
             Assert.That(banner.PawAngle, Is.EqualTo(WorldBannerView.PawUpDeg).Within(0.5f), "Capi presentando con la pata (capi_present)");
             Assert.That(banner.RosaRise, Is.EqualTo(1f).Within(1e-3f), "Rosa fuera del agua (rosa_surface)");
             Assert.That(banner.Alpha, Is.EqualTo(1f));
+            Assert.That(banner.Settled, Is.True, "quieto tras la entrada: Tick ya no pinta nada (guía 8)");
 
             // 1 toque: la intro de siempre; Rosa se sumerge mientras el banner se funde, sin bloquear el toque siguiente.
             yield return null; // un fotograma de verdad: el raycast no ve un velo que el lienzo aún no ha pintado
@@ -94,6 +100,7 @@ namespace AF.Tests.PlayMode
             Assert.That(banner.RosaRise, Is.LessThan(0.6f), "se sumerge (rosa_dive)");
             PlayModeHelpers.Step(boot, 200);
             Assert.That(banner.Visible, Is.False);
+            Assert.That(view.CardArt.MascotsBuilt, Is.False, "el arte del banner se suelta al cerrarlo");
             Assert.That(view.CardIntroHeld, Is.False);
             Assert.That(view.Intro.TimeMs, Is.GreaterThan(0f), "la intro de verdad");
             CardSetup.StepUntilPlaying(boot);
@@ -114,7 +121,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
             WorldBannerView banner = boot.View!.WorldBannerView;
             Assert.That(boot.Flow!.WorldBanner, Is.EqualTo(4));
-            Assert.That(banner.Text, Is.EqualTo("Mundo 4: Trapecio · Colombia · ríos Amazonas y Putumayo"));
+            Assert.That(banner.Text, Is.EqualTo("Mundo 4: Trapecio · Colombia · Amazonas / Putumayo"));
             Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Ignored));
             Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
             Assert.That(boot.Flow.Selected, Is.EqualTo(TapController.NoSelection));
@@ -173,6 +180,7 @@ namespace AF.Tests.PlayMode
             Assert.That(again.Flow.WorldBanner, Is.EqualTo(0));
             Assert.That(again.View!.WorldBannerView.Visible, Is.False);
             Assert.That(again.View.WorldBannersShown, Is.EqualTo(0));
+            Assert.That(again.View.CardArt.MascotsBuilt, Is.False, "sin banner, ninguna textura de las mascotas (ni al arrancar)");
         }
 
         [UnityTest]
@@ -193,8 +201,9 @@ namespace AF.Tests.PlayMode
             Assert.That(flow.WorldBanner, Is.EqualTo(5));
             Assert.That(flow.LevelCard, Is.Null, "primero el banner");
             Assert.That(banner.Visible, Is.True);
-            Assert.That(banner.Text, Is.EqualTo("Mundo 5: Loreto · Perú · ríos Marañón y Ucayali"));
+            Assert.That(banner.Text, Is.EqualTo("Mundo 5: Loreto · Perú · Marañón-Ucayali"));
             Assert.That(view.LevelCard.Visible, Is.False);
+            Assert.That(view.LastWorldBannerProbe, Does.Contain("\"then\":\"level_card\""), "la tarjeta previa va detrás");
             PlayModeHelpers.Step(boot, 1500);
             Assert.That(view.ToastText, Is.Null, "el aviso del regalo espera al banner");
 
@@ -214,11 +223,30 @@ namespace AF.Tests.PlayMode
             Assert.That(banner.Visible, Is.False);
             Assert.That(view.ToastText, Is.Null, "ni encima de la tarjeta");
 
-            // Otro toque: la intro.
+            // Otro toque: la intro. El aviso esperaba, no se perdió: sale después de la tarjeta (al empezar la intro o, con la cola
+            // de avisos de A2, al terminarla), así que se busca en cada fotograma hasta PLAYING y un poco más.
             yield return null; // un fotograma de verdad: el raycast no ve un velo que el lienzo aún no ha pintado
             CardSetup.TapCard(view.LevelCard);
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Intro));
-            CardSetup.StepUntilPlaying(boot);
+            bool giftShown = view.ToastText == UiText.RevealGiftToast;
+            int playingMs = -1;
+            for (int ms = 0; ms < 12000 && (playingMs < 0 || ms - playingMs < 1500) && !(giftShown && playingMs >= 0); ms += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                if (view.ToastText == UiText.RevealGiftToast)
+                {
+                    giftShown = true;
+                }
+
+                if (playingMs < 0 && flow.Phase == FlowPhase.Playing && view.IsViewIdle)
+                {
+                    playingMs = ms;
+                }
+            }
+
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(view.RevealGiftPending, Is.False, "el regalo ya no espera");
+            Assert.That(giftShown, Is.True, "«+1 Luciérnaga» sale tras el banner y la tarjeta");
         }
 
         [UnityTest]

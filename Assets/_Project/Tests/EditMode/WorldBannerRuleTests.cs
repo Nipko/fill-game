@@ -58,16 +58,21 @@ namespace AF.Tests.EditMode
         [Test]
         public void Texts_WorldBanner_FromTheGlossary()
         {
-            Assert.That(UiText.WorldBanner(2), Is.EqualTo("Mundo 2: Tapajós · Brasil · río Tapajós"));
-            Assert.That(UiText.WorldBanner(3), Is.EqualTo("Mundo 3: Manaos · Brasil · ríos Negro y Solimões"));
-            Assert.That(UiText.WorldBanner(4), Is.EqualTo("Mundo 4: Trapecio · Colombia · ríos Amazonas y Putumayo"));
-            Assert.That(UiText.WorldBanner(5), Is.EqualTo("Mundo 5: Loreto · Perú · ríos Marañón y Ucayali"));
+            // El país y el río, tal cual en el glosario §8 (el río sin su tipo de agua), como el ejemplo literal de 06 §2.3.
+            Assert.That(UiText.WorldBanner(2), Is.EqualTo("Mundo 2: Tapajós · Brasil (Pará) · Tapajós"), "06 §2.3");
+            Assert.That(UiText.WorldBanner(3), Is.EqualTo("Mundo 3: Manaos · Brasil (Amazonas) · Negro + Solimões"));
+            Assert.That(UiText.WorldBanner(4), Is.EqualTo("Mundo 4: Trapecio · Colombia · Amazonas / Putumayo"));
+            Assert.That(UiText.WorldBanner(5), Is.EqualTo("Mundo 5: Loreto · Perú · Marañón-Ucayali"));
             Assert.That(UiText.WorldBanner(12), Does.Contain("vecinos del Orinoco"), "07 §2.2, regla 3");
             for (int w = 1; w <= WorldTable.WorldCount; w++)
             {
                 string text = UiText.WorldBanner(w);
                 Assert.That(text, Does.StartWith("Mundo " + w + ": " + UiText.WorldName(w) + " · "), "mundo " + w);
-                Assert.That(text, Is.EqualTo(UiText.WorldTitle(w) + ": " + UiText.WorldPlace(w)));
+                Assert.That(text, Is.EqualTo(UiText.WorldHeading(w) + UiText.WorldSeparator + UiText.WorldPlace(w)));
+                Assert.That(UiText.WorldHeading(w), Is.EqualTo(UiText.WorldTitle(w) + ": " + UiText.WorldName(w)));
+                Assert.That(UiText.WorldPlace(w), Is.EqualTo(UiText.WorldCountry(w) + " · " + UiText.WorldRiver(w)));
+                Assert.That(UiText.WorldPlaceNamed(w), Is.EqualTo(UiText.WorldName(w) + " · " + UiText.WorldPlace(w)));
+                Assert.That(UiText.WorldRiver(w), Does.Not.Contain("(blanca").And.Not.Contain("(clara").And.Not.Contain("(negra"), "sin el tipo de agua");
                 Assert.That(text.Split(new[] { " · " }, StringSplitOptions.None).Length, Is.EqualTo(3), "{nombre} · {país} · {río}: " + text);
                 Assert.That(UiText.WorldBanner(w), Is.SameAs(text), "se arma una vez");
             }
@@ -84,6 +89,7 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
             Assert.That(rig.Flow.WorldBanner, Is.EqualTo(3));
             Assert.That(rig.Flow.LevelCard, Is.Null, "el 41 es normal: sin tarjeta previa");
+            Assert.That(rig.Flow.WorldBannerThenCard, Is.False, "al cerrarlo, la intro (AF_STATE world_banner: \"then\":\"intro\")");
             Assert.That(rig.Events, Is.EqualTo(new[] { "loaded:41", "banner:3:41" }), "sin intro hasta cerrar el banner");
             rig.Flow.Tick(10000, true);
             Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelCard), "no se cierra solo");
@@ -222,9 +228,11 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Flow.Level.DifficultyLabel, Is.EqualTo(LevelDefinition.LabelHard));
             Assert.That(rig.Flow.WorldBanner, Is.EqualTo(3));
             Assert.That(rig.Flow.LevelCard, Is.Null);
+            Assert.That(rig.Flow.WorldBannerThenCard, Is.True, "al cerrarlo, la tarjeta previa (\"then\":\"level_card\")");
             Assert.That(rig.Flow.DismissLevelCard(), Is.True, "DismissLevelCard cierra antes el banner");
             Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
             Assert.That(rig.Flow.WorldBanner, Is.EqualTo(0));
+            Assert.That(rig.Flow.WorldBannerThenCard, Is.False, "ya no hay banner");
             Assert.That(rig.Flow.LevelCard!.Kind, Is.EqualTo(LevelCardKind.Difficulty));
             Assert.That(rig.Flow.DismissWorldBanner(), Is.False, "con la tarjeta abierta no hay banner que cerrar");
             Assert.That(rig.Flow.TapAnywhere(), Is.True);
@@ -242,6 +250,7 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Flow.Level.IntroMechanic, Is.EqualTo(LevelFlow.MurkyIntroMechanic));
             Assert.That(rig.Events, Is.EqualTo(new[] { "loaded:141", "reveal_gift:1", "banner:5:141" }));
             Assert.That(rig.Flow.Attempt.RevealGifted, Is.True);
+            Assert.That(rig.Flow.WorldBannerThenCard, Is.True, "la tarjeta combinada, con el regalo, va después");
             Assert.That(rig.Flow.TapAnywhere(), Is.True);
             Assert.That(rig.Flow.LevelCard!.Kind, Is.EqualTo(LevelCardKind.Combined));
             Assert.That(rig.Flow.LevelCard.RevealGifted, Is.True, "el regalo sigue en la tarjeta que va después del banner");
