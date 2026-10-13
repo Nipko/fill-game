@@ -69,6 +69,7 @@ Este paso va también en la descripción del PR de integración.
 | `AF.Core` | Remolino (M4, debut 103; núcleo 2): `RemolinoMechanic`; tocar una cuia del par mete la racha por el fondo de la pareja (cualquier color; la tocada puede estar llena; la pareja con hueco y sin sellar); `min(racha, espacio(pareja))` en `run`; como origen, la regla normal; nunca fútil como destino ni, por Q-B, como origen; Q-A: verter en la propia pareja es ilegal; `PourResult.Receiver` / `ThroughRemolino`; validación: dos cuias por pareja, sin ocultos ni Piraña [P] | 02 §1.2, §9.1 M4; 03 §9; 04 §5.1; Q-A, Q-B |
 | `AF.Core` | Lluvia (M6, debut 143; C3-1): `LluviaMechanic`; cada `k` vertidos útiles (nunca en un fútil, Q18 B) cae una gota del agua `key` encima, sin regla de color, si hay hueco (si no, espera al siguiente vertido útil); con la última se va la nube; solo sella con agua; con gotas pendientes impide la victoria y no es fútil como destino ni, por Q-B, como origen; `U_agua` = dosis + gotas = 4; eventos `LluviaDropMask`, `LluviaWaitingMask`, `LluviaEndedMask`; validación: `key` 10 o 14, `k` 2-5, sin ocultos, un contador por nivel | 02 R3, §9.1 M6, §9.2; 03 §9; anexo B; Q-B, Q14 A, Q18 B |
 | `AF.Core` | Piraña (M7, debut 183; C3-2): `PiranaMechanic` en la cueva; cada `k` vertidos útiles (nunca en un fútil) muerde la dosis superior de la cuia que recibió el vertido y la lleva a la cueva, salvo sellado, Matapi, la propia cueva o cueva llena (Q-C: el mordisco se pierde y el contador sigue); eventos `PiranaBittenMask`, `PiranaCaveMask`, `PiranaBiteLostMask`; validación: `k` 2-5, sin ocultos ni Remolino [P], un contador por nivel | 02 §9.1 M7, §9.2; 03 §9; anexo B; Q-C, Q14 A, Q18 B |
+| `AF.Core` | Tinaja (M13, debut 323 [P]; T55, D-019): `TinajaMechanic` (capacidad 5, 3-5 dosis ocultas salvo la boca; nunca recibe; **solo vierte en su cuia** por el gancho `IMechanic.AllowsTarget`, la primera línea de `BoardRules.Accepts`; una dosis cada vez por T4; exenta como origen en `futil`; vacía queda inerte) y `CucharonMechanic` (su Cuia chica de 2, contigua: solo recibe de la tinaja, cualquier fruta; exenta como origen mientras cuelga; se suelta en R10 f cuando la tinaja queda vacía y pasa a ser una Cuia chica normal); evento `CucharonReleasedMask`; validación: una tinaja con su cuia, T4 en la columna, sin Barro ni Liana, Remolino, Lluvia o Piraña, única fuente de ocultas con tope propio (4) y fuera de las dos comparaciones de capacidades de 02 §8. Ver «Tinaja (M13)» | Propuesta de la tinaja b.2, c.1-c.2; 02 §1.2, §1.4, R10, R14, §8, §11; Q14 A; Q-Ti1, Q-Ti2, Q-Ti6 |
 | `AF.Core` | `Session.LevelCounter`: contador visible del nivel para el HUD (Lluvia o Piraña: `Remaining` vertidos útiles hasta la gota o el mordisco, gotas pendientes, `Blocked`), en `LevelSession.Counter` y `PourResult.Counter`; solo baja con vertidos útiles | 02 R8, §9.1 M6-M7; D-007, Q10, Q18 B |
 | `AF.Core` | Barro (M5, debut 123; núcleo 2): color 15 inerte dentro del contenido, sin despacho de mecánica. Con Barro en la cima (`Cuia.MudExposed`) la cuia no es origen y acepta cualquier color; el primer vertido lo lava y ocupa su lugar (`CuiaRules.EffectiveSpace`: espacio + 1); una cuia con Barro no está sellada ni vacía; evento `BarroWashedMask` / `PourResult.BarroWashed`; validación: capa 2-3 de una cuia de 4, nunca con mecánica ni oculto | 02 R2, §1.2, §9.1 M5; 03 §9; propuesta b.2 M5 |
 | `AF.Core` | Aguas turbias en la partida (núcleo 2): `LevelSession` con máscara de revelado del nivel (`RevealedLayers`), que persiste tras Marea y Volver a la orilla; `Reveal(cuia)` (Luciérnaga), `RevealAll()` (Pororoca) y `RestoreRevealed(cuia, layers)` (restaurar capas reveladas, también en parte, al reanudar y al rehacer la sesión; ver «Restaurar las capas reveladas»); `PourEvents.RevealedMask`; validación T2-T4 con los límites de 08 §9 como parámetros y las combinaciones de Q14 A | 02 R7, R8, §11 T2-T4, T6, §14; 04 §2.1, §2.2, §2.4 a, §2.5, §2.7, §5.1; D-007 |
@@ -78,15 +79,15 @@ Este paso va también en la descripción del PR de integración.
 | `AF.Core` | `Session.LevelSession`, `LevelStatus`, `PourResult` (con `Events`): partida con R10 en un modo de vertido fijo, Marea (deshacer; una dosis por uso en `Single`) y Volver a la orilla (reinicio) | 02 §1.3-1.4, §2; 04 §2.1, §2.7 |
 | `AF.Core` | `Determinism.Prng`: xoshiro256** sembrado con SplitMix64 desde la FNV-1a de 64 bits de `amazonfill:v1:m{mm}:v{v}:n{nnnn}` (`LevelSeed`), sub-semillas (`SubSeed`) y `NextInt(bound)` sin sesgo (Lemire); solo enteros, valores dorados en `PrngTests` | 09 R26; 08 §2.1 #5, §4.1 |
 | `AF.Solver` | `Collections.MinHeap`: montículo con desempate FIFO (sustituto de `PriorityQueue`) | 08 §2.2 |
-| `AF.Solver` | `Bot.CasualBot`, `BotOptions`, `BotResult`: bot casual ×40 (85/15, tope 400) sobre `SolverMoves` y `BoardRules`, con `PUNTUACION_CASUAL` ×4 en enteros y ruido entero equivalente, congelada (en el Remolino puntúa la pareja: +16 solo si es monocolor del color vertido y +40 solo si además sella con `cap` = `U_c` [P]); `fallo_bot` reproducible por semilla (`SeedFor`) y sin asignar una vez calentado | 03 §6-§7; 08 §2.2, §14.2 |
+| `AF.Solver` | `Bot.CasualBot`, `BotOptions`, `BotResult`: bot casual ×40 (85/15, tope 400) sobre `SolverMoves` y `BoardRules`, con `PUNTUACION_CASUAL` ×4 en enteros y ruido entero equivalente, congelada (en el Remolino puntúa la pareja: +16 solo si es monocolor del color vertido y +40 solo si además sella con `cap` = `U_c` [P]; con la cuia colgada de la Tinaja, +16 y +40 solo si su cima es de la fruta sacada: rama mínima de c.2); `fallo_bot` reproducible por semilla (`SeedFor`) y sin asignar una vez calentado | 03 §6-§7; 08 §2.2, §14.2; propuesta de la tinaja c.2 |
 | `AF.Solver` | `Generation.InverseMoves`, `InverseWalk`, `InverseDeep`, `InverseSpec`, `Complexity` y `Collections.StateSet`: barajado inverso (`WALK` con mejor prefijo; `DEEP` en DFS con 20.000 nodos) sobre K, E, capacidades y `U_c`, con el PRNG del núcleo, la puntuación en enteros, la complejidad de laicwben2 y solución por construcción | 03 §4.1-§4.2; 02 §8 |
 | `AF.Solver` | `Search.EarlyTraps`: trampas tempranas (jugadas iniciales que atascan en ≤ 2 vertidos; `CountUnavoidable` en lectura estricta) | Q16 B de D-007 [P] |
 | `AF.Solver` | `Search.SolverMoves` y `SolverMove`: `MOVIMIENTOS` de 03 §5 (útiles, con la cantidad del modo, cuias idénticas una sola vez y fútiles marcados con el kill-switch apagado), sin asignaciones; los usan el solver, el bot y las métricas | 03 §5 |
-| `AF.Solver` | `Search.AStarSolver`, `SolverOptions`, `SolveResult`, `SolveStatus`: A* (w entero) sobre estados canónicos en los dos modos de vertido (`SolverOptions.ForPipeline(mode)`), presupuesto de expandidos y prueba de irresolubilidad; a igual `f`, primero el de menor `g` (tupla `(f, g, S)` de 03 §5 y del prototipo) | 03 §5; D-005 |
+| `AF.Solver` | `Search.AStarSolver`, `SolverOptions`, `SolveResult`, `SolveStatus`: A* (w entero) sobre estados canónicos en los dos modos de vertido (`SolverOptions.ForPipeline(mode)`), presupuesto de expandidos y prueba de irresolubilidad; a igual `f`, primero el de menor `g` (tupla `(f, g, S)` de 03 §5 y del prototipo). En niveles con Tinaja, sin poda de fútiles: `RequiresUnprunedSearch`, `ForLevel`, `WithFutileRule` y `ForPipeline(mode, level)` (sin tinaja, las opciones de siempre) | 03 §5; D-005; propuesta de la tinaja b.2 R14, c.2 |
 | `AF.Solver` | `Search.SolverHeuristic`: `H = max(cortes, dispersión)`; en `Single`, `H_single = max(dosis sobre la racha del fondo, dispersión)` [P]; con Barro, `h1` resta 1 por barro y `h2` ignora el 15 (03 §9); con Lluvia y Piraña no cambia (una gota no elimina cortes; el mordisco inmediato de Q-C reparte el propio vertido: cada término baja ≤ 1 por paso), así que el par sigue siendo exacto | 03 §5, §9; decisiones.md §2.1.3; Q-C |
 | `AF.Solver` | `Murky.RealityEnumerator`: realidades de Aguas turbias (asignaciones de las posiciones ocultas coherentes con lo visible, `units_per_color` y T4 respecto al tablero inicial; > 24 → `TooMany`, el nivel se rechaza), sin asignaciones | 02 §11 T2, T4; 03 §8; 08 §2.2 |
-| `AF.Solver` | `Murky.SafeMoves`: vertidos útiles seguros en todas las realidades (A* por realidad: 20.000 nodos en el pipeline, `ForPipeline`; el cliente pasa `hint_budget_nodes`), memo exacto por estado canónico y un único `AStarSolver` (`SolveLength`, sin construir la solución); sin seguro, `Count` = 0 (T5: Morpho no cobra) | 02 §11 T5; 03 §8 |
-| `AF.Solver` | `Murky.SafePath`: `RUTA_SEGURA` (hasta 400 pasos; en cada uno, el seguro de menor par en la realidad verdadera), con T4 obligatoria en el tablero inicial (`RejectedT4`) | 03 §8; 02 §11 `validar_turbio` |
+| `AF.Solver` | `Murky.SafeMoves`: vertidos útiles seguros en todas las realidades (A* por realidad: 20.000 nodos en el pipeline, `ForPipeline`; el cliente pasa `hint_budget_nodes`), memo exacto por estado canónico y un único `AStarSolver` (`SolveLength`, sin construir la solución); sin seguro, `Count` = 0 (T5: Morpho no cobra) y `Outcome` dice por qué, en el orden de respuestas de Morpho (`NoExit`, `SomeRealitySolvable` —nunca con R = 1—, `BudgetExceeded`; además `Found`, `Won` y `RealitiesRejected`); `ForPipeline(mode, level)` sin poda con Tinaja | 02 §11 T5; 03 §8; propuesta de la tinaja b.2 «Morpho», c.2 |
+| `AF.Solver` | `Murky.SafePath`: `RUTA_SEGURA` (hasta 400 pasos; en cada uno, el seguro de menor par en la realidad verdadera), con T4 obligatoria en el tablero inicial (`RejectedT4`); con `NoSafeMove`, `NoSafeMoveOutcome` separa «sin salida», «alguna realidad tiene solución» y «presupuesto agotado» para el informe | 03 §8; 02 §11 `validar_turbio`; propuesta de la tinaja c.3 |
 
 Rendimiento medido (2026-10-06, .NET 10 Release, Windows ARM64): los 140 niveles de `tools/out*/levels_*.json` dan el
 mismo par que `levelgen_proto.py`; un tablero de 14 cuias (12 colores, 2 vacíos, par 37) expande 16.114 estados. Con el
@@ -164,9 +165,12 @@ Remolino, Ba Barro, Ll Lluvia, Br Brote, Pi Piraña, Ch Cuia chica, Al y Al6 Cui
 | Ll+Li+Al6 | 12 | 22 | 36.553 (113) | 0,81 | 1,2 | 30 · 30 · 0 · 0 | 14.282 / 58.071 |
 | Pi+Ba | 14 | 18 | 8.678 (81) | 0,35 | 1,3 | 30 · 29 · 1 · 0 | 1.105 / 166.983 |
 | Ma+Li | 12 | 22 | 14.292 (43) | 0,25 | 0,5 | 30 · 30 · 0 · 0 | 7.366 / 29.035 |
+| Ti | 12 | 23 | 7.946 (16, sin poda; 6 realidades: SafeMoves 510 ms en el pipeline, 5,0 ms con Morpho) | 0,25 | 1,0 | 30 · 30 · 0 · 0 | 4.434 / 25.596 |
 
 Ll+Li+Al6 no pasa hoy `LevelValidation` por el bloqueo provisional de la Liana con capacidades mixtas (C1-9); el solver la
-resuelve igual. Criterios de C3-3:
+resuelve igual. **Ti** (Tinaja, M13; T55, 2026-10-13, .NET 10 Release en el equipo de escritorio x64): el reto o hito de c.9
+de la propuesta de la tinaja (K = 9, 1 vacío, 5 dosis con 4 ocultas), con las búsquedas sin poda de fútiles; en sus 30
+semillas, las 30 tienen ruta segura (2-24 realidades). Criterios de C3-3:
 
 1. **Asignaciones** (`HotLoopAllocationTests.ReferenceBoard_HotLoop_DoesNotAllocate`, los 36 tableros): 0 bytes en
    `SolverMoves`, `IsStuck`, `BoardRules.ApplyInPlace` y el bot ×40 calentado; menos de 1 KB por `Solve` calentado y por
@@ -190,7 +194,8 @@ uniformes y mixtas, A* coincide con la búsqueda exhaustiva y la heurística es 
 alcanzables (32 tableros por mecánica y 8 por combinación del calendario, en `run` y `single`), P1-P3 se cumplen (R14) y los
 tableros de referencia cumplen los presupuestos de 03 §5 y 08 §14.2. La decisión es del dueño.
 
-Pendiente: cancelación por tiempo del solver para Morpho (`hint_timeout_ms`; el núcleo no lee relojes); el generador `fill` y el
+Pendiente: cancelación por tiempo del solver para Morpho (`hint_timeout_ms`; el núcleo no lee relojes: `SafeMoves.Outcome` =
+`BudgetExceeded` es la respuesta 4 de Morpho cuando se agotan los nodos); el generador `fill` y el
 pipeline (`tools/`). Preguntas abiertas: 02 R16 con capacidades mixtas (C1-8, C1-9: la poda de fútiles puede alargar el par o
 dejar sin camino útil un tablero resoluble, y con una Liana hay estados atascados con solución) y la consecuencia de Q-B en
 P3 (vaivén útil del Remolino que vuelve al mismo estado); ver el CHANGELOG.
@@ -228,3 +233,34 @@ el vertido siguiente mueve 2 dosis; sin ella, 1.
 La Pororoca queda fuera de los dos usos: su revelado va justo antes de un barajado que vacía el historial y cambia el tablero
 (04 §2.1 y §2.4 a; 02 §14), así que tras una Pororoca la sesión ya no se rehace desde `Initial` más los vertidos (fuera del
 paso 1). Tests: `LevelSessionMurkyTests.RestoreRevealed_*`.
+
+## Tinaja (M13)
+
+T55 (tanda 3) implementa las secciones c.1 y c.2 de `docs/research/cultura-ribera/propuesta-tinaja.md` con su ficha b.2
+(D-019: el dueño aceptó el 2026-10-13 las recomendaciones de (g): Q-Ti1 A, Q-Ti2 A, Q-Ti5 A y Q-Ti6 A). El generador, el
+esquema (`pack_schema` 3), level-qa y Unity son de T56 y de una tarea posterior.
+
+- **Piezas:** `{"type":"tinaja"}` (capacidad 5, 3-5 dosis, `hidden` = todas menos la boca) y `{"type":"cucharon"}` (Cuia chica
+  de 2, vacía y contigua), sin campos: una tinaja por nivel. Las ocultas de la tinaja usan la máscara de Aguas turbias, así
+  que todo lo que hoy lee «hay ocultos» como Aguas turbias tiene que distinguirla (inventario en c.5 y c.6).
+- **`legal`:** el filtro de origen `IMechanic.AllowsTarget` es la primera comprobación de `BoardRules.Accepts`: la tinaja solo
+  vierte en su cuia (ni en una Hoja vacía de su fruta ni en un Barro expuesto). La tinaja nunca recibe; su cuia, mientras
+  cuelga, solo recibe de la tinaja, de cualquier fruta. Sacar mueve siempre 1 (T4).
+- **`futil`:** la tinaja y su cuia colgada están exentas como origen; Φ = 2 · (dosis en la tinaja) + (dosis en su cuia) baja
+  con cada vertido exento, así que no hay ciclos de exentos. Mientras cuelga, R13 solo se declara sin vertidos legales.
+- **R10 (f):** cuando no queda ninguna tinaja con dosis, su cuia se suelta (`CucharonReleasedMask` y `ReleasedMask`) en el
+  mismo vertido en todas las realidades. Marea la vuelve a colgar; lo revelado persiste (I5).
+- **Búsquedas que deciden «hay solución»** (par, `SafePath`, `SafeMoves` del pipeline y de Morpho, paseos, prueba de
+  irresolubilidad, verificación del rescate): en un nivel con tinaja, **sin poda de fútiles**
+  (`SolverOptions.ForPipeline(mode, level)`, `SafeMoves.ForPipeline(mode, level)` u `options.ForLevel(level)`). Todo nivel con
+  tinaja acaba con capacidades mixtas y la poda puede dejar sin camino útil un tablero que se gana: en el contraejemplo de
+  b.2, A* con poda da «irresoluble» y sin poda gana en 10 (`TinajaSolverTests`). El bot sigue con la poda.
+- **Morpho y el informe:** `SafeMoves.Outcome` da la respuesta: `Found` (propone y cobra), `NoExit` («Desde aquí no hay
+  salida»), `SomeRealitySolvable` (Luciérnaga, sin prometer; nunca con R = 1), `BudgetExceeded` («No encuentro un camino»);
+  en los tres últimos no cobra. `SafePathResult.NoSafeMoveOutcome` lo da en la ruta segura.
+- **Medido:** P1-P3 de R14 con capacidades 2, 4, 5 y 6 en `run` y `single` (unos 20.000 estados por combinación, con la cuia
+  colgada y suelta) sin violaciones; A* con y sin poda coincide con la búsqueda exhaustiva en 24 tableros pequeños; `H`
+  admisible y consistente; 0 asignaciones en el bucle caliente; tablero de referencia «Ti» en la tabla de evidencias.
+- **Abierto (no es del núcleo):** el vaivén útil con la cuia ya suelta en un nivel perdido (incompletitud de R13, C1-2; nota
+  [P] para 02 R13), el corte por `hint_timeout_ms`, la Pororoca con la tinaja y el tope de ocultas por tipo de nivel
+  (pipeline).

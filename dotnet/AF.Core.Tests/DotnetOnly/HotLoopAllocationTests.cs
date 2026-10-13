@@ -374,6 +374,121 @@ namespace AF.Core.Tests.DotnetOnly
             AssertRulesBotAndSolverDoNotAllocate(state, 13UL);
         }
 
+        [Test]
+        public void TinajaBoard_HotLoop_DoesNotAllocate()
+        {
+            // M13 (T55; propuesta de la tinaja, c.6): con la tinaja y su cuia (filtro de origen al principio de Accepts, suelta
+            // en la etapa (f) de R10 y punto fijo (f′)), 0 bytes en movimientos útiles, bloqueo, vertido aplicado (también el que
+            // vacía la tinaja y suelta su cuia) y bot calentado; menos de 1 KB en el solver calentado (sin poda de fútiles, b.2
+            // R14) y por realidad en SafeMoves, también cuando no hay vertido seguro y explica por qué (Outcome). El mínimo de 3
+            // intentos, como en ReferenceBoard_HotLoop_DoesNotAllocate.
+            Cuia hung = Cuia.Empty(2).WithMechanic(MechanicType.Cucharon);
+            Cuia[] cuias =
+            {
+                Cuia.Create(4, new[] { 1, 2, 3, 4 }), Cuia.Create(4, new[] { 3, 1, 4, 2 }), Cuia.Create(4, new[] { 2, 3, 4, 1 }),
+                Cuia.Create(4, new[] { 4 }), Cuia.Create(5, new[] { 1, 2, 3 }, 0x3).WithMechanic(MechanicType.Tinaja), hung, Cuia.Empty(4),
+            };
+            var state = new BoardState(cuias);
+            var lastDose = (Cuia[])cuias.Clone();
+            lastDose[4] = Cuia.Create(5, new[] { 3 }).WithMechanic(MechanicType.Tinaja);
+            int[] units = state.UnitsTable;
+            int width = cuias.Length;
+            var work = new Cuia[width];
+            var buffer = new Pour[PourRules.MaxPours];
+            int moves = PourRules.CollectUsefulMoves(state, true, PourMode.Run, buffer);
+            PourRules.IsStuck(state, true);
+            var events = default(PourEvents);
+            Array.Copy(lastDose, work, width);
+            BoardRules.ApplyInPlace(work, 0, width, units, 4, 5, PourMode.Run, false, ref events);
+            Assert.That(events.CucharonReleasedMask, Is.EqualTo(1 << 5));
+
+            long rules = long.MaxValue;
+            int total = 0;
+            for (int attempt = 0; attempt < 3 && rules != 0; attempt++)
+            {
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                for (int repeat = 0; repeat < 200; repeat++)
+                {
+                    total += PourRules.CollectUsefulMoves(state, true, PourMode.Run, buffer);
+                    total += PourRules.IsStuck(state, true) ? 1 : 0;
+                    Array.Copy(cuias, work, width);
+                    BoardRules.ApplyInPlace(work, 0, width, units, 4, 5, PourMode.Run, false, ref events);
+                    Array.Copy(lastDose, work, width);
+                    BoardRules.ApplyInPlace(work, 0, width, units, 4, 5, PourMode.Run, false, ref events);
+                }
+
+                rules = Math.Min(rules, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+
+            var bot = new CasualBot();
+            bot.FailRate(state, 17UL, PourMode.Run);
+            long botBytes = long.MaxValue;
+            for (int attempt = 0; attempt < 3 && botBytes != 0; attempt++)
+            {
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                bot.FailRate(state, 17UL, PourMode.Run);
+                botBytes = Math.Min(botBytes, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+
+            var solver = new AStarSolver();
+            SolverOptions options = SolverOptions.ForPipeline(PourMode.Run, state);
+            SolveResult warm = solver.Solve(state, options);
+            long solve = long.MaxValue;
+            for (int attempt = 0; attempt < 3 && solve >= 1024; attempt++)
+            {
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                solver.Solve(state, options);
+                solve = Math.Min(solve, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+
+            var safe = new SafeMoves();
+            SolverOptions realityOptions = SafeMoves.ForPipeline(PourMode.Run, state);
+            safe.Find(state, realityOptions);
+            long safeBytes = long.MaxValue;
+            for (int attempt = 0; attempt < 3 && safeBytes >= 1024L * safe.RealityCount; attempt++)
+            {
+                safe.ClearMemo();
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                safe.Find(state, realityOptions);
+                safeBytes = Math.Min(safeBytes, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+
+            int safeCount = safe.Count;
+            SafeMovesOutcome found = safe.Outcome;
+            int realities = safe.RealityCount;
+
+            // Tablero perdido de b.2: ningún vertido seguro y Outcome = NoExit (Explain resuelve el estado en cada realidad).
+            var lost = new BoardState(new[]
+            {
+                Cuia.Create(4, new[] { 3, 3, 3 }), Cuia.Create(4, new[] { 1, 2, 1, 1 }), Cuia.Create(4, new[] { 2, 2, 2 }),
+                Cuia.Create(5, new[] { 3, 1 }, 0x1).WithMechanic(MechanicType.Tinaja), hung,
+            });
+            SolverOptions lostOptions = SafeMoves.ForPipeline(PourMode.Run, lost);
+            safe.Find(lost, lostOptions);
+            long explainBytes = long.MaxValue;
+            for (int attempt = 0; attempt < 3 && explainBytes >= 1024L * safe.RealityCount; attempt++)
+            {
+                safe.ClearMemo();
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                safe.Find(lost, lostOptions);
+                explainBytes = Math.Min(explainBytes, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+
+            Assert.That(moves, Is.GreaterThan(0));
+            Assert.That(total, Is.GreaterThan(0));
+            Assert.That(rules, Is.EqualTo(0), "reglas");
+            Assert.That(botBytes, Is.EqualTo(0), "bot");
+            Assert.That(warm.IsSolved, Is.True);
+            Assert.That(options.FutileRuleEnabled, Is.False);
+            Assert.That(solve, Is.LessThan(1024), "Solve");
+            Assert.That(safeCount, Is.GreaterThan(0));
+            Assert.That(found, Is.EqualTo(SafeMovesOutcome.Found));
+            Assert.That(safeBytes, Is.LessThan(1024L * realities), "SafeMoves");
+            Assert.That(safe.Count, Is.EqualTo(0));
+            Assert.That(safe.Outcome, Is.EqualTo(SafeMovesOutcome.NoExit));
+            Assert.That(explainBytes, Is.LessThan(1024L * safe.RealityCount), "SafeMoves sin vertido seguro");
+        }
+
         /// <summary>Presupuesto del solver en <see cref="ReferenceBoard_HotLoop_DoesNotAllocate"/>: el bucle es el mismo y la suite sigue rápida.</summary>
         private const int ReferenceSolveBudget = 5000;
 
@@ -434,7 +549,7 @@ namespace AF.Core.Tests.DotnetOnly
             // la promoción del JIT por niveles o una recolección pueden sumar unos 8 KB a una sola medición sin que el código
             // asigne; una asignación real del bucle se repite en cada intento, así que el mínimo la sigue detectando.
             var solver = new AStarSolver();
-            var options = new SolverOptions(Math.Min(board.ExpandedLimit, ReferenceSolveBudget), 1, true, PourMode.Run);
+            SolverOptions options = new SolverOptions(Math.Min(board.ExpandedLimit, ReferenceSolveBudget), 1, true, PourMode.Run).ForLevel(state);
             SolveResult warm = solver.Solve(state, options);
             SolveResult again = warm;
             long solve = long.MaxValue;
@@ -466,7 +581,7 @@ namespace AF.Core.Tests.DotnetOnly
             if (state.HasHidden)
             {
                 var safe = new SafeMoves();
-                var realityOptions = new SolverOptions(ReferenceRealityBudget, 1, true, PourMode.Run);
+                SolverOptions realityOptions = new SolverOptions(ReferenceRealityBudget, 1, true, PourMode.Run).ForLevel(state);
                 safe.Find(state, realityOptions);
                 safe.ClearMemo();
                 before = GC.GetAllocatedBytesForCurrentThread();

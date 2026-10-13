@@ -19,7 +19,8 @@ namespace AF.Core.Board
     /// <item><description><c>U_c</c> ∈ {4, 5, 6} para todo color (02 R3).</description></item>
     /// <item><description>Cada color puede sellar en una cuia propia con <c>cap = U_c</c>, y cada Cuia alta (5-6) llega con su
     /// fruta abundante (02 §8; 03 §3): para cada <c>v</c>, hay al menos tantas cuias de capacidad <c>v</c> como colores con
-    /// <c>U_c = v</c>, y para <c>v</c> ∈ {5, 6} exactamente tantas.</description></item>
+    /// <c>U_c = v</c>, y para <c>v</c> ∈ {5, 6} exactamente tantas. La Tinaja (M13) no cuenta en ninguna de las dos
+    /// comparaciones: nunca recibe, así que no es casa de ninguna fruta.</description></item>
     /// <item><description>Ninguna cuia sellada al inicio (03 §17 #5).</description></item>
     /// <item><description>Barro (02 §9.1 M5): solo en la capa 2 o 3 (índice 1-2) de una cuia de 4; nunca en una cuia con
     /// mecánica (propuesta de D-007 b.2 M5: «nunca dentro de un Matapi»; D-007) ni como dosis oculta [P].</description></item>
@@ -28,7 +29,11 @@ namespace AF.Core.Board
     /// dosis, nunca está llena y su cima es visible); T4 (bajo una dosis oculta nunca va el color de la dosis de encima);
     /// ocultos solo en cuias sin mecánica; el nivel puede llevar filtros (Hoja, Brote, Matapi, Barro) pero no Liana, Lluvia
     /// ni Piraña (Q14 A) ni Remolino [P: propuesta b.2, «solo junto a filtros»]. T1 (etiqueta y nivel ≥ 100) y Q9 son del
-    /// pipeline.</description></item>
+    /// pipeline. <b>Tinaja</b> (M13; D-019, Q-Ti1 A): si el nivel la lleva, es la única fuente de ocultas (ninguna otra cuia
+    /// turbia), sus ocultas son la excepción a «ocultos solo en cuias sin mecánica» y a T3, y su tope es
+    /// <see cref="TinajaMaxHiddenUnits"/> en lugar de los de Remote Config; las combinaciones prohibidas de Q14 A siguen
+    /// valiendo. El resto de sus reglas (capacidad, dosis, máscara, T4 en la columna, su cuia contigua) son de
+    /// <c>TinajaMechanic</c> y <c>CucharonMechanic</c>.</description></item>
     /// <item><description>Como mucho un contador por nivel (Lluvia o Piraña; propuesta de D-007 b.2 M6-M7 y d.2 regla 6): la
     /// Lluvia y la Piraña nunca van juntas.</description></item>
     /// <item><description>Las reglas propias de cada mecánica (03 §17 #6).</description></item>
@@ -60,6 +65,26 @@ namespace AF.Core.Board
 
         /// <summary><c>U_agua</c> de un nivel con Lluvia: dosis iniciales + gotas pendientes (02 §9.1 M6, R3).</summary>
         public const int LluviaWaterUnits = 4;
+
+        /// <summary>Capacidad de la Tinaja (M13; propuesta de la tinaja, b.2 regla 1: la silueta de la Cuia alta de 5).</summary>
+        public const int TinajaCapacity = 5;
+
+        /// <summary>Dosis mínimas de la Tinaja al empezar (M13, b.2 regla 1).</summary>
+        public const int TinajaMinDoses = 3;
+
+        /// <summary>Dosis máximas de la Tinaja al empezar (M13, b.2 regla 1): puede empezar llena, porque nunca recibe.</summary>
+        public const int TinajaMaxDoses = 5;
+
+        /// <summary>
+        /// Tope propio de dosis ocultas de la Tinaja [P] (M13, b.2 regla 1): 4, el límite de 24 realidades de
+        /// <c>RealityEnumerator</c>. No es <c>lvl_murky_max_hidden_units</c>: si se baja el tope de Aguas turbias (rango 2-4,
+        /// 08 §9), no debe rechazar tinajas ya publicadas. El tope por tipo de nivel (2 en comodidad y práctica, 3-4 en retos e
+        /// hitos) lo comprueba el pipeline.
+        /// </summary>
+        public const int TinajaMaxHiddenUnits = 4;
+
+        /// <summary>Capacidad de la cuia de la Tinaja (M13, b.2 regla 1: una Cuia chica de 2).</summary>
+        public const int CucharonCapacity = 2;
 
         /// <summary>
         /// Comprueba las reglas sobre el tablero inicial. Devuelve null si es válido o el motivo del primer rechazo, en el
@@ -113,7 +138,13 @@ namespace AF.Core.Board
             var cuiasWithCap = new int[Cuia.MaxCapacity + 1];
             for (int i = 0; i < state.Count; i++)
             {
-                cuiasWithCap[state[i].Capacity]++;
+                // M13 (propuesta de la tinaja, b.2 regla 1 y c.1): la Tinaja no es casa de ninguna fruta (nunca recibe), así que
+                // no cuenta en ninguna de las dos comparaciones: ni como Cuia alta sin fruta abundante ni como sitio donde
+                // sellar una fruta de U_c = 5.
+                if (state[i].Mechanic != MechanicType.Tinaja)
+                {
+                    cuiasWithCap[state[i].Capacity]++;
+                }
             }
 
             for (int v = MinUnits; v <= MaxUnits; v++)
@@ -250,11 +281,17 @@ namespace AF.Core.Board
             return null;
         }
 
-        /// <summary>Aguas turbias (02 §11 T2-T4; D-007, Q14 A) o null si el tablero no tiene dosis ocultas o son válidas.</summary>
+        /// <summary>
+        /// Aguas turbias (02 §11 T2-T4; D-007, Q14 A) o null si el tablero no tiene dosis ocultas o son válidas. Con una Tinaja
+        /// (M13; D-019, Q-Ti1 A; propuesta de la tinaja, b.2 y c.1) la tinaja es la única fuente de ocultas del nivel: sus
+        /// ocultas son la excepción a «ocultos solo en cuias sin mecánica» (Q14 A) y a T3 (≤ 3 dosis y nunca llena), su tope
+        /// es <see cref="TinajaMaxHiddenUnits"/> (no los de Remote Config de T2) y T4 se comprueba igual.
+        /// </summary>
         private static string? MurkyError(BoardState state, int maxCuias, int maxHiddenUnits)
         {
             int murkyCuias = 0;
             int hiddenUnits = 0;
+            int tinaja = -1;
             for (int i = 0; i < state.Count; i++)
             {
                 int hidden = state[i].HiddenCount;
@@ -263,6 +300,11 @@ namespace AF.Core.Board
                     murkyCuias++;
                     hiddenUnits += hidden;
                 }
+
+                if (state[i].Mechanic == MechanicType.Tinaja)
+                {
+                    tinaja = i;
+                }
             }
 
             if (murkyCuias == 0)
@@ -270,12 +312,28 @@ namespace AF.Core.Board
                 return null;
             }
 
-            if (murkyCuias > maxCuias)
+            if (tinaja >= 0)
+            {
+                // M13 (b.2, combinaciones): la tinaja es la única fuente de ocultas, sin otras cuias turbias; su tope es propio.
+                // Dos tinajas las rechaza TinajaMechanic.ValidateInitial (una por nivel).
+                for (int i = 0; i < state.Count; i++)
+                {
+                    if (state[i].HasHidden && state[i].Mechanic != MechanicType.Tinaja)
+                    {
+                        return "M13 (combinaciones): la tinaja es la única fuente de dosis ocultas; la cuia " + Num(i) + " es turbia";
+                    }
+                }
+
+                if (hiddenUnits > TinajaMaxHiddenUnits)
+                {
+                    return "M13 (regla 1): " + Num(hiddenUnits) + " dosis ocultas en la tinaja; como mucho " + Num(TinajaMaxHiddenUnits);
+                }
+            }
+            else if (murkyCuias > maxCuias)
             {
                 return "02 T2: " + Num(murkyCuias) + " cuias turbias; como mucho lvl_murky_max_cuias = " + Num(maxCuias);
             }
-
-            if (hiddenUnits > maxHiddenUnits)
+            else if (hiddenUnits > maxHiddenUnits)
             {
                 return "02 T2: " + Num(hiddenUnits) + " dosis ocultas; como mucho lvl_murky_max_hidden_units = " + Num(maxHiddenUnits);
             }
@@ -300,12 +358,13 @@ namespace AF.Core.Board
                 }
 
                 string where = "cuia turbia " + Num(i) + ": ";
-                if (cuia.HasMechanic)
+                bool isTinaja = type == MechanicType.Tinaja;
+                if (cuia.HasMechanic && !isTinaja)
                 {
                     return where + "02 §11: una cuia con mecánica lleva sus dosis visibles; las dosis ocultas solo van en cuias sin mecánica (D-007, Q14 A)";
                 }
 
-                if (cuia.Count > MurkyMaxDoses || cuia.IsFull)
+                if (!isTinaja && (cuia.Count > MurkyMaxDoses || cuia.IsFull))
                 {
                     return where + "02 T3: como mucho 3 dosis al inicio y nunca llena";
                 }

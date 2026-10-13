@@ -15,6 +15,8 @@ namespace AF.Core.Board
     /// <item><description><c>partner</c> del Remolino → id de pareja (0..7) por orden de aparición; la pareja tiene que ser
     /// simétrica.</description></item>
     /// <item><description>Banderas iniciales: Hoja puesta y Brote cerrado llevan <see cref="Cuia.FlagClosed"/> (03 §9).</description></item>
+    /// <item><description>Tinaja y su cuia (M13): <c>{"type":"tinaja"}</c> y <c>{"type":"cucharon"}</c>, sin campos ni id de
+    /// pareja (una tinaja por nivel); las ocultas de la tinaja llegan por <c>hidden</c>, como las de Aguas turbias.</description></item>
     /// <item><description><c>k</c> ausente en Lluvia o Piraña toma el valor por defecto que pasa el llamante
     /// (<c>lluvia_k_pours</c> / <c>pirana_k_pours</c> de Remote Config, 08 §9; 3 y 4 por defecto).</description></item>
     /// <item><description>Falla cerrado: rechaza las mecánicas cuyas reglas aún no están portadas al núcleo (se jugarían como
@@ -262,9 +264,13 @@ namespace AF.Core.Board
                         break;
                     case MechanicType.Brote:
                     case MechanicType.Matapi:
+                    case MechanicType.Tinaja:
+                    case MechanicType.Cucharon:
+                        // M13: la tinaja y su cuia no llevan campos ni id de pareja; con una tinaja por nivel, cada pieza
+                        // encuentra a la otra por su tipo (propuesta de la tinaja, c.1).
                         if (spec.Key != 0 || spec.Partner >= 0 || spec.N != 0 || spec.K != 0)
                         {
-                            return where + "no lleva campos (02 §9.1; D-007)";
+                            return where + "no lleva campos (02 §9.1; D-007; M13)";
                         }
 
                         flags = spec.Type == MechanicType.Brote ? Cuia.FlagClosed : 0;

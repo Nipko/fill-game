@@ -1,5 +1,7 @@
 #nullable enable
 using System;
+using AF.Core.Board;
+using AF.Core.Mechanics;
 using AF.Core.Rules;
 
 namespace AF.Solver.Search
@@ -92,6 +94,58 @@ namespace AF.Solver.Search
         public static SolverOptions ForPipeline(PourMode mode)
         {
             return new SolverOptions(PipelineNodeBudget, 1, true, mode);
+        }
+
+        /// <summary>
+        /// Como <see cref="ForPipeline(PourMode)"/> para el nivel <paramref name="level"/>: sin poda de fútiles si el nivel
+        /// lleva Tinaja (<see cref="RequiresUnprunedSearch"/>); en cualquier otro nivel, exactamente las mismas opciones.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="level"/> es null.</exception>
+        public static SolverOptions ForPipeline(PourMode mode, BoardState level)
+        {
+            return ForPipeline(mode).ForLevel(level);
+        }
+
+        /// <summary>
+        /// Las búsquedas que deciden «hay solución» en este tablero tienen que ir sin poda de fútiles (M13; propuesta de la
+        /// tinaja, b.2 R14 y c.2; hallazgo C1-8): lleva una Tinaja (también vacía e inerte). Todo nivel con tinaja acaba con
+        /// capacidades mixtas (su cuia suelta es una Cuia chica de 2 y la tinaja, de 5), y la poda de <c>MOVIMIENTOS</c> (03
+        /// §5) puede dejar sin camino útil un tablero que se gana. Afecta al par, <c>SafePath</c>, <c>SafeMoves</c> (pipeline y
+        /// Morpho), los paseos, la prueba de irresolubilidad y la verificación del rescate; el bot no cambia.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="state"/> es null.</exception>
+        public static bool RequiresUnprunedSearch(BoardState state)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
+            for (int i = 0; i < state.Count; i++)
+            {
+                if (state[i].Mechanic == MechanicType.Tinaja)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>Las mismas opciones con otro valor de <see cref="FutileRuleEnabled"/>.</summary>
+        public SolverOptions WithFutileRule(bool futileRuleEnabled)
+        {
+            return new SolverOptions(NodeBudget, Weight, futileRuleEnabled, PourMode);
+        }
+
+        /// <summary>
+        /// Las mismas opciones para el nivel <paramref name="level"/>: sin poda de fútiles si <see cref="RequiresUnprunedSearch"/>
+        /// (Tinaja, M13); si no, sin cambios. Vale igual para las opciones de Morpho que pasa el cliente.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="level"/> es null.</exception>
+        public SolverOptions ForLevel(BoardState level)
+        {
+            return RequiresUnprunedSearch(level) ? WithFutileRule(false) : this;
         }
     }
 }

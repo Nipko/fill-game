@@ -18,6 +18,68 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- **Tinaja (M13) en el núcleo** (T55, tanda 3; D-019: «Si» del dueño del 2026-10-13 a las recomendaciones de la sección (g)
+  de `docs/research/cultura-ribera/propuesta-tinaja.md`, con Q-Ti1 A, Q-Ti2 A, Q-Ti5 A y Q-Ti6 A; implementa sus secciones
+  c.1 y c.2 con la ficha b.2; el GDD lo edita T54). Una vasija de capacidad 5 con 3-5 dosis, todas ocultas salvo la boca,
+  que solo se saca con su cuia chica (Cuia chica de 2 colgada a su lado).
+  - **Tipos:** `MechanicType.Tinaja` = 8 y `MechanicType.Cucharon` = 9, claves `"tinaja"` y `"cucharon"`; `MechanicTypes.Last`
+    = `Cucharon` y `Keys` sin huecos. `BoardBuilder` los lee sin campos ni id de pareja (una tinaja por nivel; cada pieza
+    encuentra a la otra por su tipo); las ocultas de la tinaja llegan por `hidden`, como las de Aguas turbias.
+  - **Gancho nuevo `IMechanic.AllowsTarget(in BoardSlice, source, target)`** (filtro de origen con contexto,
+    `solo_vierte_en(A)`; true por defecto en `MechanicBase`): es la **primera línea de `BoardRules.Accepts`**, antes de la
+    rama `to.HasMechanic` (cuyo Accept o Reject sale sin mirar más) y del Barro expuesto (que acepta cualquier color). Lo
+    heredan `IsLegal`, `HasUsefulMove` (R13), `SolverMoves` (solver, bot, `SafeMoves`) y `CasualBot`.
+  - **`TinajaMechanic`** (b.2 reglas 1-4 y 7-9): `AllowsTarget` solo hacia la cuia `Cucharon`; `CheckTarget` = Reject (nunca
+    recibe, tampoco desde su cuia); `ExemptAsSource` (sin la exención, sacar la última fruta visible a su cuia vacía sería
+    fútil y R13 declararía Aguas estancadas en un nivel ganable); `ValidateInitial`: capacidad 5, 3-5 dosis, ocultas = todas
+    menos la boca, T4 en toda la columna, sin Barro, una sola tinaja, su cuia presente y sin Liana, Remolino, Lluvia ni
+    Piraña. Cantidad 1 siempre (T4), en `run` y en `single`. Vacía queda inerte (conserva su tipo): ni origen ni destino, y
+    cuenta como vacía para R12.
+  - **`CucharonMechanic`** (b.2 reglas 5, 6 y 8): `CheckTarget` = Accept solo desde la tinaja y con hueco (cualquier fruta, dos
+    dosis en capas; Q-Ti2 A); como origen, la regla normal y nunca a la tinaja; `ExemptAsSource` mientras cuelga (como el
+    Remolino en Q-B: [x, x] llena a una vacía de 2 o 5 no es fútil); `CheckCondition` (R10 f): si no queda ninguna tinaja con
+    dosis, `WithoutMechanic()` y pasa a ser una Cuia chica normal; `ValidateInitial`: capacidad 2, vacía, una sola y contigua
+    a la tinaja (índice ± 1; la fila la comprueban el layout y level-qa). La suelta depende solo del recuento visible: ocurre
+    en el mismo vertido en todas las realidades (excepción a Q14 A de Q-Ti1). Marea restaura `Packed` y la vuelve a colgar;
+    lo revelado persiste (Q-Ti6 A: `LevelSession` no cambia).
+  - **`PourEvents.CucharonReleasedMask`** (evento CucharonReleased; también en `ReleasedMask`, que ahora cubre las sueltas de
+    (d) y de (f)).
+  - **`LevelValidation`:** la tinaja no cuenta en ninguna de las dos comparaciones de capacidades de 02 §8 (ni Cuia alta sin
+    fruta abundante ni casa de una fruta de U = 5); en Aguas turbias, si hay tinaja es la única fuente de ocultas, sus
+    ocultas son la excepción a Q14 A («ocultos solo en cuias sin mecánica») y a T3, y su tope es la constante propia
+    `TinajaMaxHiddenUnits` = 4 [P] en lugar de `lvl_murky_max_*` (si se baja el tope de Aguas turbias no se rechazan tinajas
+    publicadas); las combinaciones de Q14 A siguen prohibidas. Constantes públicas `TinajaCapacity`, `TinajaMinDoses`,
+    `TinajaMaxDoses`, `TinajaMaxHiddenUnits` y `CucharonCapacity` para el pipeline.
+  - **Bot (`CasualBot.Score`), solo la rama mínima de c.2:** con la cuia colgada como destino, el +16 de «juntar» (y el +40
+    que cuelga de él) solo suma si su cima es de la fruta sacada; sacar a la cuia vacía puntúa 4 − 20 = −16. El resto de
+    `PUNTUACION_CASUAL` sigue congelado; sin tinaja el bot puntúa exactamente igual.
+  - **`SafeMoves.Outcome` (`SafeMovesOutcome`):** por qué no hay vertido seguro, en el orden de respuestas de Morpho de b.2
+    (y de la pista por inactividad; vale también para Aguas turbias, c.10): `Found`, `NoExit` (ninguna realidad tiene solución
+    desde aquí, también con R = 1), `SomeRealitySolvable` (alguna la tiene, pero cada candidato tiene una realidad demostrada
+    irresoluble; nunca con R = 1), `BudgetExceeded` (falta presupuesto para decidir), `Won` y `RealitiesRejected`. Solo con
+    `Count` = 0 resuelve además el estado actual en cada realidad (con el memo y sin asignaciones); con vertidos seguros no
+    cambia nada. `SafePathResult.NoSafeMoveOutcome` lo da para `SafePathStatus.NoSafeMove`, para el informe (c.3).
+  - **Búsquedas sin poda en niveles con tinaja (b.2 R14, C1-8), sin cambiar el comportamiento por defecto:**
+    `SolverOptions.RequiresUnprunedSearch(BoardState)` (hay una tinaja, también vacía), `WithFutileRule(bool)`,
+    `ForLevel(BoardState)`, `SolverOptions.ForPipeline(mode, level)` y `SafeMoves.ForPipeline(mode, level)`: sin tinaja
+    devuelven exactamente las opciones de siempre.
+  - **Tests** (uno por regla, con su §): compartidos `TinajaTests` (M13 reglas 2-8, Hoja y Barro expuesto tras el filtro de
+    origen, `futil` del anexo B y Q-B, R10 f, Marea e I5, Luciérnaga, R14 con la cuia colgada, `BoardBuilder`),
+    `TinajaValidationTests` (las dos comparaciones de 02 §8, Q14 A, T3 y el tope propio, combinaciones prohibidas y
+    permitidas, reglas de las dos piezas) y `TinajaSolverTests` (A* con y sin poda frente a la búsqueda exhaustiva en 24
+    tableros pequeños de `TinajaBoards`, uniformes y mixtos, en `run` y `single`; heurística admisible y consistente; el
+    contraejemplo de b.2: con poda «irresoluble», sin poda 10, `SafeMoves` 0 frente a 1, y alcanzable; la suelta igual en las
+    6 realidades; Morpho: el tablero perdido de b.2 da `NoExit` con R = 1, S0 tiene ruta segura, `SomeRealitySolvable`,
+    `BudgetExceeded`, `Won`; la rama del bot). Solo dotnet: `FutilePropertyTests.P1_P2_P3_HoldWithTinaja` (capacidades 2, 4,
+    5 y 6, `run` y `single`, unos 20.000 estados por combinación con la cuia colgada y suelta, sin violaciones) y
+    `P3_Tinaja_AfterTheRelease_…` (el vaivén útil con la cuia ya suelta vuelve al mismo estado en un nivel perdido: la
+    incompletitud conocida de R13, C1-2), `HotLoopAllocationTests.TinajaBoard_HotLoop_DoesNotAllocate` (0 bytes en reglas,
+    vertido que suelta y bot; < 1 KB en el solver y por realidad en `SafeMoves`, también con `NoExit`) y el tablero de
+    referencia «Ti» (K = 9, 1 vacío, 5 dosis con 4 ocultas) en `ReferenceBoards` y `MechanicsPerformanceTests`, que usan ahora
+    las opciones del nivel (sin cambio para los otros 36). `CuiaAttrTests` cubre las claves nuevas.
+  - **Sin cambios:** `Cuia`, `BoardCanon`, `BoardState`, `CuiaRules`, `LevelSession`, `RealityEnumerator`, `AStarSolver`,
+    `SolverMoves`, `SolverHeuristic`, la generación inversa y `EarlyTraps`. Los packs 1-200 no llevan tinaja: el gancho solo
+    actúa con un origen con mecánica y la rama del bot solo con un destino `Cucharon`.
 - `LevelSession.RestoreRevealed(int cuia, int layers)` (T01, paso 1 del traspaso; 02 R7, R8, §11 T6 y §14; 04 §2.1, §2.2 y
   §6): restaura capas reveladas de Aguas turbias, también en parte (un vertido puede revelar una de las dos ocultas de una
   cuia; en el nivel 100 la cuia 0 tiene dos), que `Reveal` y `RevealAll` no expresan. Hace OR de `layers` en la máscara de

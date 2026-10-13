@@ -14,7 +14,8 @@ namespace AF.Core.Tests.DotnetOnly
     /// <summary>
     /// Solver y bot con todas las mecánicas sobre los tableros de referencia de 12-14 cuias (C3-3; <see cref="ReferenceBoards"/>):
     /// GDD 03 §5 (300.000 nodos en el pipeline con w = 1; Morpho con w = 2 y 40.000), 03 §6 y 08 §14.2 (bot reproducible) y
-    /// GDD §6 #6 (Lluvia y Piraña entran en la 1.0 solo si el solver con estado temporal pasa los tests). Las asignaciones van
+    /// GDD §6 #6 (Lluvia y Piraña entran en la 1.0 solo si el solver con estado temporal pasa los tests). Con Tinaja (M13) las
+    /// búsquedas van sin poda de fútiles (<c>SolverOptions.ForLevel</c>; propuesta de la tinaja, b.2 R14). Las asignaciones van
     /// en <see cref="HotLoopAllocationTests"/>. Los tiempos se miden en un test explícito de la categoría <c>Performance</c>
     /// (<c>dotnet test dotnet/AmazonFill.slnx -c Release --filter Category=Performance</c>) para no hacer frágil la suite.
     /// </summary>
@@ -42,13 +43,14 @@ namespace AF.Core.Tests.DotnetOnly
         [Test]
         public void TheCatalog_CoversEveryMechanicAndEveryCombinationOfTheD4Calendar()
         {
-            // Propuesta de D-007, d.4: las 9 mecánicas de 1-200, las dos capacidades y las 25 combinaciones del calendario.
+            // Propuesta de D-007, d.4: las 9 mecánicas de 1-200, las dos capacidades y las 25 combinaciones del calendario; y la
+            // Tinaja (M13; propuesta de la tinaja, c.6: «una fila en ReferenceBoards y en MechanicsPerformanceTests»).
             string[] expected =
             {
                 "Ch", "Al", "Ho", "Ma", "Li", "Tu", "Re", "Ba", "Ll", "Br", "Pi",
                 "Ho+Ch", "Ma+Ho", "Li+Ho", "Ho+Tu", "Re+Li", "Ba+Ma", "Ll+Ho", "Br+Ba", "Pi+Ma",
                 "Ma+Tu", "Ba+Tu", "Br+Tu", "Ll+Re", "Ll+Ba", "Br+Ma", "Pi+Li", "Re+Ma", "Re+Ho",
-                "Ba+Li", "Br+Ho", "Ba+Re", "Li+Ma", "Ll+Li+Al6", "Pi+Ba", "Ma+Li",
+                "Ba+Li", "Br+Ho", "Ba+Re", "Li+Ma", "Ll+Li+Al6", "Pi+Ba", "Ma+Li", "Ti",
             };
 
             Assert.That(Names(), Is.EqualTo(expected));
@@ -63,7 +65,7 @@ namespace AF.Core.Tests.DotnetOnly
         public void ReferenceBoard_IsValid_AndAStarSolvesItWithinItsPinnedBudget_035(string name)
         {
             // 03 §5: par y solución del pipeline con A* (w = 1) y 300.000 expandidos como máximo; el número observado queda
-            // fijado con un 25 % de margen (ReferenceBoard.ExpandedLimit).
+            // fijado con un 25 % de margen (ReferenceBoard.ExpandedLimit). Con Tinaja, sin poda de fútiles (b.2 R14).
             ReferenceBoard board = ReferenceBoards.Get(name);
             string? error = LevelValidation.Validate(board.State);
             if (board.ExpectedValidation == null)
@@ -75,7 +77,7 @@ namespace AF.Core.Tests.DotnetOnly
                 Assert.That(error, Does.Contain(board.ExpectedValidation), name);
             }
 
-            SolveResult result = new AStarSolver().Solve(board.State, SolverOptions.ForPipeline(PourMode.Run));
+            SolveResult result = new AStarSolver().Solve(board.State, SolverOptions.ForPipeline(PourMode.Run, board.State));
 
             Assert.That(result.Status, Is.EqualTo(SolveStatus.Solved), name);
             Assert.That(result.MoveCount, Is.EqualTo(board.Par), name);
@@ -90,7 +92,7 @@ namespace AF.Core.Tests.DotnetOnly
             // 03 §5: Morpho con w = 2 y 40.000 nodos: el mismo tablero da la misma pista con un solver nuevo y con uno
             // reutilizado (determinismo; en Unity corre en un hilo de fondo).
             ReferenceBoard board = ReferenceBoards.Get(name);
-            var options = new SolverOptions(MorphoBudget, MorphoWeight, true, PourMode.Run);
+            SolverOptions options = new SolverOptions(MorphoBudget, MorphoWeight, true, PourMode.Run).ForLevel(board.State);
             var reused = new AStarSolver();
             reused.Solve(ReferenceBoards.Get(name == "Ch" ? "Al" : "Ch").State, options);
 
@@ -139,10 +141,12 @@ namespace AF.Core.Tests.DotnetOnly
             {
                 ReferenceBoard board = ReferenceBoards.All[i];
                 BoardState state = board.State;
-                SolveResult pipeline = solver.Solve(state, SolverOptions.ForPipeline(PourMode.Run));
-                double pipelineMs = Median(() => solver.Solve(state, SolverOptions.ForPipeline(PourMode.Run)));
-                SolveResult morpho = solver.Solve(state, morphoOptions);
-                double morphoMs = Median(() => solver.Solve(state, morphoOptions));
+                SolverOptions pipelineOptions = SolverOptions.ForPipeline(PourMode.Run, state);
+                SolverOptions levelMorpho = morphoOptions.ForLevel(state);
+                SolveResult pipeline = solver.Solve(state, pipelineOptions);
+                double pipelineMs = Median(() => solver.Solve(state, pipelineOptions));
+                SolveResult morpho = solver.Solve(state, levelMorpho);
+                double morphoMs = Median(() => solver.Solve(state, levelMorpho));
                 ulong seed = BotSeed(board.Name);
                 BotResult botResult = bot.FailRate(state, seed, PourMode.Run);
                 double botMs = Median(() => bot.FailRate(state, seed, PourMode.Run));
@@ -153,19 +157,20 @@ namespace AF.Core.Tests.DotnetOnly
                 {
                     // 03 §8: 20.000 nodos por realidad en el pipeline (w = 1); el cliente pasa las opciones de Morpho (02 T2:
                     // las realidades se enumeran en < 50 ms para Morpho).
-                    safe.Find(state, SafeMoves.ForPipeline(PourMode.Run));
+                    SolverOptions realityOptions = SafeMoves.ForPipeline(PourMode.Run, state);
+                    safe.Find(state, realityOptions);
                     double ms = Median(() =>
                     {
                         safe.ClearMemo();
-                        safe.Find(state, SafeMoves.ForPipeline(PourMode.Run));
+                        safe.Find(state, realityOptions);
                     });
                     realities = safe.RealityCount.ToString(CultureInfo.InvariantCulture);
                     safeMs = ms.ToString("F1", CultureInfo.InvariantCulture);
-                    safe.Find(state, morphoOptions);
+                    safe.Find(state, levelMorpho);
                     double morphoSafe = Median(() =>
                     {
                         safe.ClearMemo();
-                        safe.Find(state, morphoOptions);
+                        safe.Find(state, levelMorpho);
                     });
                     safeMorphoMs = morphoSafe.ToString("F1", CultureInfo.InvariantCulture);
                 }
