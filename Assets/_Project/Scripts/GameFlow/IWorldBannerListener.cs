@@ -14,7 +14,8 @@ namespace AF.GameFlow
         /// El banner del mundo <paramref name="world"/> se abre al cargar <paramref name="level"/>: llega tras
         /// <see cref="ILevelFlowListener.OnLevelLoaded"/> y los regalos del nivel, en LEVEL_CARD y antes de la tarjeta previa (si
         /// el nivel la tiene, <see cref="ILevelCardListener.OnLevelCard"/> llega al cerrar el banner) y de
-        /// <see cref="ILevelFlowListener.OnIntroStarted"/>. Se cierra con <see cref="LevelFlow.DismissWorldBanner"/> (1 toque).
+        /// <see cref="ILevelFlowListener.OnIntroStarted"/>. Se cierra con <see cref="LevelFlow.DismissWorldBanner"/> (1 toque), y la
+        /// tarjeta o la intro esperan a que termine su salida (<see cref="LevelFlow.WorldBannerExitMs"/>, que fija la vista).
         /// </summary>
         void OnWorldBanner(int world, int level);
     }

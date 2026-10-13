@@ -37,6 +37,11 @@ namespace AF.UI
     /// <c>counter</c>); los vertidos añaden <c>recv</c> y <c>ev</c> (<see cref="AppendPourEvents"/>). Los colores de las dosis
     /// ocultas salen en <c>cuias</c>: la sonda solo escribe en desarrollo (<see cref="Enabled"/>), donde hacen falta para
     /// jugar con adb. Los eventos sueltos de la presentación van con <see cref="Event"/>.</para>
+    /// <para>Con <see cref="Event"/>, la tarjeta previa y el banner de mundo (T13 y A4; docs/dev/prototipo-v0.md):
+    /// <c>level_card</c> (con <c>bite_demo</c> en el estreno de la Piraña), <c>world_banner</c> (con <c>then</c>),
+    /// <c>world_banner_art</c> (<c>wait_ms</c>, <c>mascots_ms</c> y <c>main_ms</c>) y <c>world_banner_closed</c> (con
+    /// <c>next</c>, del mismo vocabulario que <c>then</c>: <c>level_card</c> o <c>intro</c>); y <c>AF_LAYOUT</c>
+    /// <c>level_card</c> y <c>world_banner</c> al terminar su entrada.</para>
     /// </remarks>
     public sealed class DevProbe
     {

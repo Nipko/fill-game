@@ -104,6 +104,83 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Flow_ExitHeld_ThenTheIntro_OrASecondTapEndsIt()
+        {
+            // 07 §5.1 (el banner va antes de «Llenar y teñir», no encima) y D-012, punto 2: con la salida de la vista (340 ms),
+            // el primer toque deja el flujo en LEVEL_CARD con el banner saliendo, y la intro solo arranca al terminarla.
+            BannerRig rig = new BannerRig();
+            rig.Flow.WorldBannerExitMs = 340;
+            rig.Flow.Load(41);
+            Assert.That(rig.Flow.WorldBannerClosing, Is.False, "abierto: aún no sale");
+            Assert.That(rig.Flow.TapAnywhere(), Is.True);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
+            Assert.That(rig.Flow.WorldBanner, Is.EqualTo(3));
+            Assert.That(rig.Flow.WorldBannerClosing, Is.True);
+            Assert.That(rig.Flow.WorldBannerThenCard, Is.False, "lo que sigue no cambia mientras sale");
+            Assert.That(rig.Flow.AcceptsBoardInput, Is.False);
+            rig.Flow.Tick(339, true);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelCard), "339 ms: aún sale");
+            Assert.That(rig.Events, Is.EqualTo(new[] { "loaded:41", "banner:3:41" }), "sin intro mientras sale");
+            rig.Flow.Tick(1, true);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Intro), "340 ms: la intro");
+            Assert.That(rig.Flow.WorldBanner, Is.EqualTo(0));
+            Assert.That(rig.Flow.WorldBannerClosing, Is.False);
+            Assert.That(rig.Events[rig.Events.Count - 1], Is.EqualTo("intro:" + GameConfig.TintDurationMs(41)));
+
+            // Un segundo toque durante la salida la termina en el acto (DismissWorldBanner o cualquier toque que cierra la tarjeta).
+            rig.Flow.Load(81);
+            Assert.That(rig.Flow.DismissWorldBanner(), Is.True);
+            rig.Flow.Tick(100, true);
+            Assert.That(rig.Flow.WorldBannerClosing, Is.True);
+            Assert.That(rig.Flow.DismissWorldBanner(), Is.True, "el segundo toque");
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
+            Assert.That(rig.Flow.WorldBanner, Is.EqualTo(0));
+            Assert.That(rig.Flow.DismissWorldBanner(), Is.False, "ya no hay banner");
+            rig.Flow.Load(11);
+            Assert.That(rig.Flow.TapCuia(0).Kind, Is.EqualTo(TapKind.Ignored));
+            Assert.That(rig.Flow.WorldBannerClosing, Is.True);
+            Assert.That(rig.Flow.TapBackground().Kind, Is.EqualTo(TapKind.Ignored));
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Intro), "otro toque, sea cual sea, la termina");
+            Assert.That(rig.Flow.Selected, Is.EqualTo(TapController.NoSelection));
+
+            // Volver a cargar mientras sale (Salir al inicio y otro nivel): nada se queda a medias.
+            rig.Flow.Load(141);
+            Assert.That(rig.Flow.TapAnywhere(), Is.True);
+            Assert.That(rig.Flow.WorldBannerClosing, Is.True);
+            rig.Flow.Load(142);
+            Assert.That(rig.Flow.WorldBannerClosing, Is.False);
+            Assert.That(rig.Flow.WorldBanner, Is.EqualTo(0), "142: sin banner, y nada de la salida del 141");
+            Assert.That(rig.Flow.Phase == FlowPhase.Intro || rig.Flow.LevelCard != null, Is.True, "su intro o su tarjeta");
+        }
+
+        [Test]
+        public void Flow_ExitHeld_ThenTheLevelCard_WithTheGift()
+        {
+            // Con tarjeta previa detrás (el 141 con el tablero del 100: Muy difícil, Aguas turbias y la Luciérnaga regalada): la
+            // tarjeta combinada, con el regalo, solo al terminar la salida del banner; nunca encima de él.
+            BannerRig rig = new BannerRig(offset: 41);
+            rig.Flow.WorldBannerExitMs = 340;
+            rig.Flow.Load(141);
+            Assert.That(rig.Flow.WorldBannerThenCard, Is.True);
+            Assert.That(rig.Flow.TapAnywhere(), Is.True);
+            Assert.That(rig.Flow.WorldBannerClosing, Is.True);
+            Assert.That(rig.Flow.WorldBannerThenCard, Is.True, "mientras sale, la tarjeta sigue detrás");
+            Assert.That(rig.Flow.LevelCard, Is.Null);
+            rig.Flow.Tick(200, true);
+            Assert.That(rig.Flow.LevelCard, Is.Null);
+            rig.Flow.Tick(140, true);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
+            Assert.That(rig.Flow.WorldBanner, Is.EqualTo(0));
+            Assert.That(rig.Flow.LevelCard!.Kind, Is.EqualTo(LevelCardKind.Combined));
+            Assert.That(rig.Flow.LevelCard.RevealGifted, Is.True);
+            Assert.That(rig.Events, Is.EqualTo(new[] { "loaded:141", "reveal_gift:1", "banner:5:141", "card:Combined" }));
+            rig.Flow.Tick(5000, true);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelCard), "la tarjeta, como siempre, no se cierra sola");
+            Assert.That(rig.Flow.TapAnywhere(), Is.True);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
+        }
+
+        [Test]
         public void Flow_TapOnACuiaOrTheBackground_ClosesIt_WithoutSelecting()
         {
             BannerRig rig = new BannerRig();

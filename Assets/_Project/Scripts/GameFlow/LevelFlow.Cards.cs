@@ -15,11 +15,13 @@ namespace AF.GameFlow
     /// el primer nivel de cada mundo desde el 2 (11, 41, 81 y 141), al cargarlo con Jugar o Siguiente y solo en el primer
     /// intento (al entrar en él, no al volver a entrar en el mismo nivel tras salir al inicio), usa la misma retención: el flujo
     /// se queda en LEVEL_CARD con <see cref="WorldBanner"/> y la intro espera. Un toque lo cierra
-    /// (<see cref="DismissWorldBanner"/>, o <see cref="DismissLevelCard"/> y los toques que la llaman); si el nivel tiene además
-    /// tarjeta previa, sale después del banner, y si no, arranca la intro. Como es LEVEL_CARD, todo lo que espera a la tarjeta
-    /// espera también al banner (los avisos y el regalo de la Luciérnaga, la pausa inerte bajo el velo). No sale al reanudar ni
-    /// al reintentar. Va con su propio interruptor (<see cref="WorldBannersEnabled"/>, apagado por defecto), que el juego
-    /// enciende junto con las tarjetas.
+    /// (<see cref="DismissWorldBanner"/>, o <see cref="DismissLevelCard"/> y los toques que la llaman) y el flujo sigue en
+    /// LEVEL_CARD mientras sale (<see cref="WorldBannerExitMs"/>, <see cref="WorldBannerClosing"/>): solo al terminar la salida,
+    /// si el nivel tiene además tarjeta previa, sale la tarjeta, y si no, arranca la intro (07 §5.1, 07:274: «El banner de mundo
+    /// … se muestra antes de esta animación, no encima»; D-012, punto 2). Un segundo toque durante la salida la termina en el
+    /// acto. Como es LEVEL_CARD, todo lo que espera a la tarjeta espera también al banner (los avisos y el regalo de la
+    /// Luciérnaga, la pausa inerte bajo el velo). No sale al reanudar ni al reintentar. Va con su propio interruptor
+    /// (<see cref="WorldBannersEnabled"/>, apagado por defecto), que el juego enciende junto con las tarjetas.
     /// </remarks>
     public sealed partial class LevelFlow
     {
@@ -31,6 +33,7 @@ namespace AF.GameFlow
         private int _worldBanner;
         private bool _bannerRevealGifted;
         private bool _bannerThenCard;
+        private bool _bannerClosing;
 
         /// <summary>
         /// Hay tarjeta previa al cargar un nivel con etiqueta o con estreno. False por defecto: los tests del flujo y cualquier
@@ -64,8 +67,24 @@ namespace AF.GameFlow
         public bool WorldBannerThenCard => _worldBanner != 0 && _bannerThenCard;
 
         /// <summary>
-        /// Cierra el banner de mundo (1 toque en cualquier punto): si el nivel tiene tarjeta previa, la abre (sigue en LEVEL_CARD);
-        /// si no, arranca la intro que esperaba. False si no hay banner abierto.
+        /// Salida del banner de mundo (ms): tras el toque, el flujo sigue este tiempo en LEVEL_CARD con el banner cerrándose
+        /// (<see cref="WorldBannerClosing"/>) y solo después abre la tarjeta previa o arranca la intro, para que «Llenar y teñir»
+        /// no empiece debajo del banner (07 §5.1). La fija la vista con la duración de su salida (Rosa se sumerge y la tarjeta se
+        /// funde; <c>GameScreen.WorldBanner.cs</c>). 0 por defecto (los tests del flujo, sin vista): el toque lo cierra en el acto.
+        /// </summary>
+        public int WorldBannerExitMs { get; set; }
+
+        /// <summary>
+        /// El banner de mundo ya se tocó y está saliendo: sigue en LEVEL_CARD hasta que pasan <see cref="WorldBannerExitMs"/>
+        /// (o hasta otro toque, que termina la salida en el acto). False sin banner o con el banner aún abierto.
+        /// </summary>
+        public bool WorldBannerClosing => _worldBanner != 0 && _bannerClosing;
+
+        /// <summary>
+        /// Cierra el banner de mundo (1 toque en cualquier punto). Con <see cref="WorldBannerExitMs"/> &gt; 0, el primer toque
+        /// empieza la salida (sigue en LEVEL_CARD, <see cref="WorldBannerClosing"/>) y <see cref="Tick"/> la termina; un segundo
+        /// toque durante la salida, o <see cref="WorldBannerExitMs"/> = 0, la termina en el acto: si el nivel tiene tarjeta previa,
+        /// la abre (sigue en LEVEL_CARD); si no, arranca la intro que esperaba. False si no hay banner abierto.
         /// </summary>
         public bool DismissWorldBanner()
         {
@@ -74,17 +93,14 @@ namespace AF.GameFlow
                 return false;
             }
 
-            _worldBanner = 0;
-            _bannerThenCard = false;
-            int introMs = _cardIntroMs;
-            bool revealGifted = _bannerRevealGifted;
-            _bannerRevealGifted = false;
-            if (!TryShowLevelCard(introMs, false, revealGifted, null, 0))
+            if (!_bannerClosing && WorldBannerExitMs > 0)
             {
-                ResetLevelCard();
-                StartIntro(introMs, false);
+                _bannerClosing = true; // la salida: la tarjeta previa o la intro, cuando termine (TickWorldBannerExit)
+                _phaseMs = 0;
+                return true;
             }
 
+            FinishWorldBanner();
             return true;
         }
 
@@ -147,6 +163,37 @@ namespace AF.GameFlow
             return true;
         }
 
+        // En LEVEL_CARD con el banner de mundo saliendo: cuenta la salida y, al terminarla, sigue con la tarjeta previa o la intro.
+        private void TickWorldBannerExit(int deltaMs)
+        {
+            if (!_bannerClosing || _worldBanner == 0)
+            {
+                return;
+            }
+
+            _phaseMs += deltaMs;
+            if (_phaseMs >= WorldBannerExitMs)
+            {
+                FinishWorldBanner();
+            }
+        }
+
+        // Fuera el banner: la tarjeta previa si el nivel la tiene (con el regalo de la Luciérnaga que esperaba) o la intro.
+        private void FinishWorldBanner()
+        {
+            _worldBanner = 0;
+            _bannerThenCard = false;
+            _bannerClosing = false;
+            int introMs = _cardIntroMs;
+            bool revealGifted = _bannerRevealGifted;
+            _bannerRevealGifted = false;
+            if (!TryShowLevelCard(introMs, false, revealGifted, null, 0))
+            {
+                ResetLevelCard();
+                StartIntro(introMs, false);
+            }
+        }
+
         // Banner de mundo en lugar de la tarjeta y de la intro, si está encendido, el nivel es el primero de un mundo (desde el 2) y
         // es el primer intento (firstEntry: se entra en el nivel, no se vuelve a entrar en el mismo tras salir al inicio). La intro
         // (y la tarjeta previa, con el regalo de la Luciérnaga) esperan a DismissWorldBanner.
@@ -160,6 +207,7 @@ namespace AF.GameFlow
 
             _card = null;
             _worldBanner = world;
+            _bannerClosing = false;
             _bannerRevealGifted = revealGifted;
             _bannerThenCard = LevelCardsEnabled && _level != null
                 && LevelCardInfo.For(_level, _levelNumber, _wallet?.Config ?? EconomyConfig.Defaults, revealGifted) != null;
@@ -181,6 +229,7 @@ namespace AF.GameFlow
             _worldBanner = 0;
             _bannerRevealGifted = false;
             _bannerThenCard = false;
+            _bannerClosing = false;
         }
     }
 }

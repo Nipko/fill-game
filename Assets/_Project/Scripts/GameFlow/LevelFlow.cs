@@ -282,6 +282,10 @@ namespace AF.GameFlow
 
             switch (Phase)
             {
+                case FlowPhase.LevelCard:
+                    TickWorldBannerExit(deltaMs); // la salida del banner de mundo, antes de la tarjeta previa o la intro
+                    break;
+
                 case FlowPhase.Intro:
                     _phaseMs += deltaMs;
                     if (_phaseMs >= _introMs)

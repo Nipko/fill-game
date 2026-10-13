@@ -16,20 +16,31 @@ namespace AF.UI
     /// (<c>rosa_surface</c>, con su soplo) y se sumerge al cerrar (<c>rosa_dive</c>), la línea «{país} · {río}». Si el nombre no
     /// cabe en la cabecera a 24 sp, la cabecera dice «Mundo {n}» y el nombre abre la línea, en negrita. Material de D-003: la
     /// tarjeta de madera clara con su marco de las tarjetas previas (<see cref="ModalKit"/>), la placa de madera oscura y la
-    /// viñeta con el canto de madera; arte procedural provisional [P] (<c>ProceduralArt.Mascots</c>).
+    /// viñeta con el canto de madera; arte procedural provisional [P] (<c>ProceduralArt.Mascots</c>). En el mundo 3 la viñeta
+    /// enseña las dos aguas del texto, «Negro + Solimões», con una costura suave (<see cref="MeetingWater"/>) [P].
     /// </summary>
     /// <remarks>
-    /// <para>Se cierra con 1 toque en cualquier punto (el velo cubre la pantalla; ningún botón de debajo recibe el toque) y sale
-    /// sin bloquear toques: Rosa se sumerge mientras la tarjeta se funde (<see cref="ExitMs"/>), y el toque siguiente ya salta la
-    /// intro o cierra la tarjeta previa que llega detrás. No se cierra sola, como la tarjeta previa [P].</para>
+    /// <para>Se cierra con 1 toque en cualquier punto (el velo cubre la pantalla; ningún botón de debajo recibe el toque). Sale
+    /// antes de que empiece nada: Rosa se sumerge con el pico por delante y después la tarjeta se funde, solo en los últimos
+    /// <see cref="FadeTailMs"/> y encogiéndose a <see cref="ExitScale"/> (<see cref="ExitMs"/>); el flujo sigue en LEVEL_CARD
+    /// hasta que termina (<c>LevelFlow.WorldBannerExitMs</c>) y solo entonces abre la tarjeta previa o arranca «Llenar y teñir»
+    /// (07 §5.1: «se muestra antes de esta animación, no encima»). Mientras sale sigue recibiendo el toque: un segundo toque
+    /// termina la salida en el acto. No se cierra sola, como la tarjeta previa [P].</para>
     /// <para>La línea del lugar va en 1 línea o, si no cabe, en 2 con el corte en un « · » (nunca dentro de un nombre: «ríos» o
     /// «Negro +» no se quedan solos al final de la línea) a 18 sp o, si hace falta, más pequeña hasta 15.</para>
     /// <para>Con «Reducir movimiento» (07 §7.8): solo el fundido, con Capi ya presentando y Rosa ya fuera, sin soplo ni ondas.
     /// Sin asignaciones por fotograma, y quieto del todo al terminar la entrada (<see cref="Settled"/>): Tick ya no toca ninguna
     /// transformada ni ningún color mientras sigue abierto, así que no obliga a rehacer los lotes del lienzo principal ni el
     /// recorte de las dos RectMask2D (guía 8, docs/art/direccion-visual-v2.md: el ambiente que se mueve va en Canvas propios).
-    /// El arte (las mascotas y la viñeta) se pide al abrirlo y se libera al cerrarlo (<c>ProceduralArt.ReleaseBannerArt</c>):
-    /// construir la pantalla no genera ninguna textura.</para>
+    /// El arte (las mascotas y la viñeta con Capi) se pide al abrirlo y se libera al cerrarlo
+    /// (<c>ProceduralArt.ReleaseBannerArt</c>): construir la pantalla no genera ninguna textura. El cuerpo de Capi va dibujado
+    /// en la viñeta y no en una imagen aparte: el lienzo funde cada gráfico por separado, y a medio fundir el agua se veía a
+    /// través de él (captura 69e); solo la pata, que se mueve, va aparte.</para>
+    /// <para>El arte se pinta fuera del hilo principal (<see cref="AsyncArt"/>; <c>ProceduralArt.RequestBannerArt</c>): unos
+    /// 230 ms de CPU en el Editor que, en el fotograma de la carga del nivel, lo habrían parado (08 §5.4). Mientras se pinta,
+    /// el banner ya está abierto (el flujo en LEVEL_CARD, el velo recibe el toque) pero no se ve (<see cref="ArtReady"/> false,
+    /// opacidad 0): detrás, el tablero en el fotograma 0 de la intro. Cuando el arte llega, entra como siempre desde t = 0. Un
+    /// toque antes lo salta sin salida (no hay nada que ver salir; GameScreen).</para>
     /// </remarks>
     internal sealed class WorldBannerView
     {
@@ -48,8 +59,8 @@ namespace AF.UI
         /// <summary>Soplo de la exhalación: empieza (ms desde que se abre) y dura <see cref="SprayMs"/> [P].</summary>
         public const float SprayStartMs = 560f;
 
-        /// <summary>Soplo de la exhalación: duración (ms) [P].</summary>
-        public const float SprayMs = 650f;
+        /// <summary>Soplo de la exhalación: una bruma breve (ms) [P, pendiente del asesor cultural].</summary>
+        public const float SprayMs = 480f;
 
         /// <summary>Capi presenta con la pata: empieza (ms desde que se abre) [P].</summary>
         public const float CapiStartMs = 200f;
@@ -66,8 +77,28 @@ namespace AF.UI
         /// </summary>
         public const float EnterMs = SprayStartMs + SprayMs;
 
-        /// <summary>Salida: Rosa se sumerge y la tarjeta se funde (ms) [P].</summary>
+        /// <summary>Salida: Rosa se sumerge y después la tarjeta se funde (ms) [P].</summary>
         public const float ExitMs = 340f;
+
+        /// <summary>
+        /// Rosa se sumerge en esta fracción de la salida (el pico por delante y el lomo el último), antes del fundido de la tarjeta.
+        /// </summary>
+        public const float DiveEnd = 0.62f;
+
+        /// <summary>
+        /// La tarjeta solo se funde en los últimos ms de la salida [P] (revisión de la captura 69e): el lienzo funde cada gráfico
+        /// por separado, así que con un fundido largo se veían el agua a través de Capi y las cuias a través de la tarjeta.
+        /// </summary>
+        public const float FadeTailMs = 120f;
+
+        /// <summary>Escala de la tarjeta al terminar de fundirse [P].</summary>
+        public const float ExitScale = 0.92f;
+
+        /// <summary>Giro de Rosa al sumergirse (grados, antihorario): el pico baja hacia el agua y entra primero [P].</summary>
+        public const float DiveTiltDeg = 24f;
+
+        /// <summary>Desplazamiento de Rosa hacia la izquierda al sumergirse (dp), hacia donde mira [P].</summary>
+        public const float DiveShiftDp = 10f;
 
         /// <summary>Salida con Reducir movimiento: solo el fundido (ms), como la tarjeta previa.</summary>
         public const float ExitReducedMs = LevelCardView.FadeOutMs;
@@ -90,8 +121,8 @@ namespace AF.UI
         /// <summary>Eje de Rosa (fracción del ancho de la viñeta).</summary>
         public const float RosaX = 0.70f;
 
-        /// <summary>Eje de Capi (fracción del ancho de la viñeta).</summary>
-        public const float CapiX = 0.17f;
+        /// <summary>Eje de Capi (fracción del ancho de la viñeta), en lo alto del banco.</summary>
+        public const float CapiX = ProceduralArt.BannerSceneCapiX;
 
         /// <summary>Lo que se ve de Rosa sobre el agua (fracción de su alto).</summary>
         public const float RosaAbove = 0.74f;
@@ -130,7 +161,7 @@ namespace AF.UI
         private readonly Image _foam;
         private readonly Image _spray;
         private readonly Image _ripple;
-        private readonly Image _capi;
+        private readonly RectTransform _capi;
         private readonly Image _paw;
         private readonly TextMeshProUGUI _place;
         private int _world;
@@ -145,6 +176,9 @@ namespace AF.UI
         private bool _enteredFired;
         private bool _settled;
         private bool _reduceMotion;
+        private bool _artReady;
+        private bool _artApplied;
+        private float _artWaitMs;
         private float _canvasW = 360f;
         private float _canvasH = 780f;
         private float _safeTop = 32f;
@@ -187,9 +221,10 @@ namespace AF.UI
             _foam = UiBuilder.Image("Foam", _sceneMask, null, new Color(1f, 1f, 1f, 0f));
             _spray = UiBuilder.Image("Spray", _sceneMask, null, new Color(1f, 1f, 1f, 0f));
 
-            // Capi, en el banco de arena de la izquierda; la pata va delante del cuerpo y gira en el hombro.
-            _capi = UiBuilder.Image("Capi", _panel, null, Color.white);
-            _paw = UiBuilder.Image("CapiPaw", _capi.transform, null, Color.white);
+            // Capi, en el banco de arena de la izquierda: el cuerpo va dibujado en la viñeta y aquí solo queda su cuadrado, sin
+            // gráfico, donde va la pata, delante del cuerpo, que gira en el hombro.
+            _capi = UiBuilder.Rect("Capi", _panel);
+            _paw = UiBuilder.Image("CapiPaw", _capi, null, Color.white);
 
             _place = ModalKit.Line("Place", _panel, string.Empty, PlaceSp, Palette.FamilyWood.Deep);
             _place.enableAutoSizing = false;
@@ -202,11 +237,23 @@ namespace AF.UI
         /// <summary>El banner se ve (también mientras sale).</summary>
         public bool Visible => _root.gameObject.activeSelf;
 
-        /// <summary>El banner está saliendo: ya no recibe toques.</summary>
+        /// <summary>El banner está saliendo (Rosa se sumerge y se funde); un toque más termina la salida en el acto.</summary>
         public bool Dismissing => _dismissing;
 
         /// <summary>Terminó la entrada y está quieto: <see cref="Tick"/> no pinta nada hasta que sale.</summary>
         public bool Settled => _settled;
+
+        /// <summary>
+        /// El arte se pinta en un hilo del grupo y el banner espera a tenerlo (el juego); false, en el acto al abrirlo (los
+        /// tests y las capturas que miden instantes exactos: <c>LaunchOptions.BannerArtSyncOverride</c>).
+        /// </summary>
+        public bool AsyncArt { get; set; } = true;
+
+        /// <summary>El arte del banner abierto ya está puesto y la entrada corre (o ya terminó).</summary>
+        public bool ArtReady => _artReady;
+
+        /// <summary>Lo que esperó el banner abierto a su arte (ms de fotograma; 0 si llegó en el acto).</summary>
+        public float ArtWaitMs => _artWaitMs;
 
         /// <summary>Mundo que presenta (0 si no hay).</summary>
         public int World => _world;
@@ -241,8 +288,8 @@ namespace AF.UI
         /// <summary>Sprite de la viñeta (tests: el agua del mundo; null cerrado).</summary>
         public Sprite? SceneSprite => _scene.sprite;
 
-        /// <summary>Capi (cuerpo) en la viñeta (tests).</summary>
-        public Image Capi => _capi;
+        /// <summary>Cuadrado de Capi en la viñeta (el cuerpo va dibujado en ella; aquí cuelga la pata; tests).</summary>
+        public RectTransform CapiRect => _capi;
 
         /// <summary>Pata que presenta (tests).</summary>
         public Image Paw => _paw;
@@ -274,11 +321,31 @@ namespace AF.UI
         /// <summary>Opacidad del banner y del velo (fundidos).</summary>
         public float Alpha => _group.alpha;
 
-        /// <summary>El banner recibe toques (no mientras sale).</summary>
+        /// <summary>Giro de Rosa (grados; positivo, antihorario: al sumergirse, el pico hacia el agua).</summary>
+        public float RosaTilt => _rosa.rectTransform.localEulerAngles.z > 180f ? _rosa.rectTransform.localEulerAngles.z - 360f : _rosa.rectTransform.localEulerAngles.z;
+
+        /// <summary>El banner recibe toques (también mientras sale: un segundo toque termina la salida).</summary>
         public bool BlocksRaycasts => _group.blocksRaycasts;
 
-        /// <summary>Contenedor que escala la tarjeta en la entrada (tests).</summary>
+        /// <summary>Contenedor que escala la tarjeta en la entrada y en la salida (tests).</summary>
         public RectTransform Pop => _pop;
+
+        /// <summary>Duración de la salida (ms): la que el flujo espera antes de la tarjeta previa o la intro.</summary>
+        public static float ExitDurationMs(bool reduceMotion)
+        {
+            return reduceMotion ? ExitReducedMs : ExitMs;
+        }
+
+        /// <summary>
+        /// Segunda agua de la viñeta del mundo <paramref name="world"/> [P]: el mundo 3, Manaos, es «Negro + Solimões (negra /
+        /// blanca)» (glosario §8), el Encuentro de las Aguas: el agua base del mundo (la negra, té oscuro) a la izquierda y la
+        /// blanca (café con leche) a la derecha, con una costura suave. Los demás mundos de la 1.0, una sola agua. Pendiente de
+        /// revisión del asesor cultural.
+        /// </summary>
+        public static Color? MeetingWater(int world)
+        {
+            return world == 3 ? Palette.WaterWhite : (Color?)null;
+        }
 
         /// <summary>Gráficos del banner que reciben toques (tests: solo el velo).</summary>
         public List<Graphic> RaycastTargets()
@@ -308,19 +375,21 @@ namespace AF.UI
             _text = UiText.WorldBanner(world);
             _water = water;
             _reduceMotion = reduceMotion;
-            EnsureArt();
             _root.gameObject.SetActive(true);
             _dismissing = false;
             _entered = false;
             _enteredFired = false;
             _settled = false;
             _exitMs = -1f;
+            _ms = -1f;
+            _artReady = false;
+            _artApplied = false;
+            _artWaitMs = 0f;
             _group.blocksRaycasts = true;
             _group.interactable = true;
-            _group.alpha = 1f;
-            Layout(canvasW, canvasH, safeTop, safeBottom);
-            _ms = 0f;
-            Apply();
+            _group.alpha = 0f; // hasta que llegue el arte
+            Layout(canvasW, canvasH, safeTop, safeBottom); // pide el arte con las medidas de la viñeta
+            TryApplyArt();
         }
 
         /// <summary>
@@ -363,7 +432,17 @@ namespace AF.UI
             UiBuilder.Place(_sceneEdge.rectTransform, PadDp - SceneEdgeDp, sceneY - SceneEdgeDp, inner + (2f * SceneEdgeDp), sceneH + (2f * SceneEdgeDp));
             UiBuilder.Place(_sceneMask, PadDp, sceneY, inner, sceneH);
             UiBuilder.Place(_scene.rectTransform, 0f, 0f, inner, sceneH);
-            _scene.sprite = _art.BannerScene(inner, sceneH, _water);
+            if (_artReady)
+            {
+                // Otra pantalla con el banner ya a la vista (rara vez): la viñeta nueva, en el acto.
+                _scene.sprite = _art.BannerScene(inner, sceneH, _water, MeetingWater(_world), _world);
+            }
+            else
+            {
+                // Al abrirlo: la viñeta (con Capi ya dibujado) y las mascotas, fuera del hilo principal si AsyncArt.
+                _art.RequestBannerArt(inner, sceneH, _water, MeetingWater(_world), _world, AsyncArt);
+            }
+
             y += sceneH + 10f;
             UiBuilder.Place(_place.rectTransform, PadDp, y, inner, placeH);
             y += placeH;
@@ -385,14 +464,15 @@ namespace AF.UI
             _spray.rectTransform.pivot = new Vector2(0.5f, 0f);
             _spray.rectTransform.sizeDelta = new Vector2(ProceduralArt.RosaSprayDp, ProceduralArt.RosaSprayDp);
 
-            // Capi de pie en el banco (su pivote abajo en el centro) y la pata en su hombro.
+            // El cuadrado de Capi, donde la viñeta lo dibuja sentado en el banco (su pivote abajo en el centro: las patas), y la
+            // pata en su hombro.
             float bank = sceneY + (sceneH * ProceduralArt.BannerSceneBankTop);
-            RectTransform capi = _capi.rectTransform;
+            RectTransform capi = _capi;
             capi.anchorMin = new Vector2(0f, 1f);
             capi.anchorMax = new Vector2(0f, 1f);
             capi.pivot = new Vector2(0.5f, 0f);
             capi.sizeDelta = new Vector2(ProceduralArt.CapiPresentDp, ProceduralArt.CapiPresentDp);
-            capi.anchoredPosition = new Vector2(PadDp + (inner * CapiX), -(bank + 3f));
+            capi.anchoredPosition = new Vector2(PadDp + (inner * CapiX), -(bank + ProceduralArt.BannerSceneCapiFootDp));
             RectTransform paw = _paw.rectTransform;
             Vector2 shoulder = ProceduralArt.CapiShoulder;
             paw.anchorMin = new Vector2(shoulder.x, shoulder.y);
@@ -419,7 +499,10 @@ namespace AF.UI
             Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
         }
 
-        /// <summary>Empieza la salida: deja de recibir toques; Rosa se sumerge y la tarjeta se funde.</summary>
+        /// <summary>
+        /// Empieza la salida: Rosa se sumerge y después la tarjeta se funde. Sigue recibiendo el toque (el velo): un segundo
+        /// toque la termina en el acto (GameScreen).
+        /// </summary>
         public void Dismiss()
         {
             if (!Visible || _dismissing)
@@ -429,11 +512,24 @@ namespace AF.UI
 
             _dismissing = true;
             _settled = false;
-            _group.blocksRaycasts = false;
-            _group.interactable = false;
             _fadeFrom = _group.alpha;
             _scaleFrom = _pop.localScale.x;
             _exitMs = 0f;
+        }
+
+        /// <summary>
+        /// True una sola vez, cuando el arte del banner abierto llega y la entrada empieza (para el <c>AF_STATE
+        /// world_banner_art</c>).
+        /// </summary>
+        public bool ConsumeArtApplied()
+        {
+            if (!_artApplied)
+            {
+                return false;
+            }
+
+            _artApplied = false;
+            return true;
         }
 
         /// <summary>Lo oculta en el acto (al terminar la salida o al cargar otro nivel) y suelta su arte.</summary>
@@ -443,6 +539,8 @@ namespace AF.UI
             _settled = false;
             _ms = -1f;
             _exitMs = -1f;
+            _artReady = false;
+            _artApplied = false;
             _world = 0;
             _group.alpha = 1f;
             _pop.localScale = Vector3.one;
@@ -472,7 +570,24 @@ namespace AF.UI
         /// </summary>
         public void Tick(float dtMs)
         {
-            if (!Visible || _ms < 0f)
+            if (!Visible)
+            {
+                return;
+            }
+
+            if (!_artReady)
+            {
+                // Esperando el arte que se pinta en otro hilo: sin entrada hasta que llega (entonces, desde t = 0).
+                if (!_dismissing)
+                {
+                    _artWaitMs += dtMs;
+                    TryApplyArt();
+                }
+
+                return;
+            }
+
+            if (_ms < 0f)
             {
                 return;
             }
@@ -505,8 +620,30 @@ namespace AF.UI
             }
         }
 
-        // Las mascotas, la onda, la espuma y el soplo se piden al abrir el banner (la viñeta, en Layout): construir la pantalla o
-        // jugar un nivel sin banner no genera ninguna textura.
+        // Si el arte pedido al abrirlo ya está (en el acto o pintado en otro hilo), lo pone y empieza la entrada desde t = 0.
+        private bool TryApplyArt()
+        {
+            if (_artReady)
+            {
+                return true;
+            }
+
+            if (_world == 0 || !_art.TryTakeBannerArt())
+            {
+                return false;
+            }
+
+            _scene.sprite = _art.BannerSceneSprite;
+            EnsureArt();
+            _artReady = true;
+            _artApplied = true;
+            _ms = 0f;
+            Apply();
+            return true;
+        }
+
+        // Las mascotas, la onda, la espuma y el soplo, ya generados con la viñeta (ProceduralArt.RequestBannerArt): construir la
+        // pantalla o jugar un nivel sin banner no genera ninguna textura.
         private void EnsureArt()
         {
             if (_ripple.sprite == null)
@@ -529,11 +666,6 @@ namespace AF.UI
                 _spray.sprite = _art.RosaSpray;
             }
 
-            if (_capi.sprite == null)
-            {
-                _capi.sprite = _art.CapiPresent;
-            }
-
             if (_paw.sprite == null)
             {
                 _paw.sprite = _art.CapiPaw;
@@ -548,7 +680,6 @@ namespace AF.UI
             _rosa.sprite = null;
             _foam.sprite = null;
             _spray.sprite = null;
-            _capi.sprite = null;
             _paw.sprite = null;
             _art.ReleaseBannerArt();
         }
@@ -558,6 +689,12 @@ namespace AF.UI
         {
             if (_world == 0)
             {
+                return;
+            }
+
+            if (!_artReady)
+            {
+                _group.alpha = 0f; // aún sin arte: abierto (recibe el toque) pero sin verse
                 return;
             }
 
@@ -572,11 +709,13 @@ namespace AF.UI
             float dive = 0f;
             if (_dismissing)
             {
-                float exitT = Mathf.Clamp01(_exitMs / (still ? ExitReducedMs : ExitMs));
-                float fade = still ? exitT : Mathf.Clamp01((exitT - 0.3f) / 0.7f);
-                alpha = _fadeFrom * (1f - Ease.Out(fade));
-                k = _scaleFrom;
-                dive = still ? 0f : Ease.In(Mathf.Clamp01(exitT / 0.75f));
+                // Primero Rosa se sumerge con la tarjeta entera; después, solo en los últimos FadeTailMs, la tarjeta se funde y
+                // se encoge (con Reducir movimiento, solo el fundido).
+                float exitMs = still ? ExitReducedMs : ExitMs;
+                float fade = still ? Mathf.Clamp01(_exitMs / exitMs) : Mathf.Clamp01((_exitMs - (exitMs - FadeTailMs)) / FadeTailMs);
+                alpha = _fadeFrom * (1f - Ease.In(fade));
+                k = still ? _scaleFrom : _scaleFrom * Mathf.Lerp(1f, ExitScale, Ease.Out(fade));
+                dive = still ? 0f : Ease.In(Mathf.Clamp01(_exitMs / (DiveEnd * exitMs)));
             }
 
             _group.alpha = alpha;
@@ -588,8 +727,11 @@ namespace AF.UI
             float hidden = ProceduralArt.RosaHeightDp * (1f - RosaAbove);
             float below = ProceduralArt.RosaHeightDp + 4f;
             float pivotBelow = Mathf.LerpUnclamped(below, hidden, rise) + ((below - hidden) * dive);
-            _rosa.rectTransform.anchoredPosition = new Vector2(_sceneW * RosaX, -(waterline + pivotBelow));
-            _rosa.rectTransform.localEulerAngles = new Vector3(0f, 0f, dive * -14f);
+            _rosa.rectTransform.anchoredPosition = new Vector2((_sceneW * RosaX) - (DiveShiftDp * dive), -(waterline + pivotBelow));
+
+            // Al sumergirse gira hacia delante (antihorario: mira a la izquierda), así que el pico entra primero en el agua y el
+            // lomo, lo último; el hundimiento pesa más que el giro, así que la cola cortada del sprite nunca asoma.
+            _rosa.rectTransform.localEulerAngles = new Vector3(0f, 0f, dive * DiveTiltDeg);
 
             // Espuma sobre el corte del lomo con el agua, con Rosa fuera; se apaga al sumergirse.
             _foam.color = new Color(1f, 1f, 1f, Mathf.Clamp01((_rosaRise - 0.55f) / 0.45f));
@@ -607,7 +749,7 @@ namespace AF.UI
                 }
                 else if (_dismissing)
                 {
-                    float t1 = Mathf.Clamp01(_exitMs / ExitMs);
+                    float t1 = Mathf.Clamp01(_exitMs / (ExitMs - (0.5f * FadeTailMs)));
                     ring = 0.9f * Mathf.Sin(t1 * Mathf.PI);
                     ringScale = 0.6f + (0.6f * t1);
                 }
@@ -627,14 +769,10 @@ namespace AF.UI
             _spray.rectTransform.localScale = new Vector3(sprayK, sprayK, 1f);
             _spray.color = new Color(1f, 1f, 1f, sprayA);
 
-            // Capi: la pata sube del costado a presentar, con un leve impulso del cuerpo.
+            // Capi: la pata sube del costado a presentar (el cuerpo, quieto, va dibujado en la viñeta).
             float present = still ? 1f : Ease.OutBack(Mathf.Clamp01((ms - CapiStartMs) / CapiPresentMs), 1.4f);
             float angle = Mathf.LerpUnclamped(PawDownDeg, PawUpDeg, present);
             _paw.rectTransform.localEulerAngles = new Vector3(0f, 0f, angle);
-            float lift = still ? 0f : 2f * Mathf.Sin(Mathf.Clamp01((ms - CapiStartMs) / CapiPresentMs) * Mathf.PI);
-            Vector2 capiPos = _capi.rectTransform.anchoredPosition;
-            float bankY = -((_sceneMask.anchoredPosition.y * -1f) + (_sceneH * ProceduralArt.BannerSceneBankTop) + 3f);
-            _capi.rectTransform.anchoredPosition = new Vector2(capiPos.x, bankY + lift);
         }
 
         // La línea del lugar en 1 línea o, si no cabe, en 2 cortadas en el « · » más equilibrado (nunca dentro de un nombre), de
@@ -686,9 +824,10 @@ namespace AF.UI
             return best;
         }
 
+        // El toque, también mientras sale (GameScreen termina la salida en el acto con el segundo).
         private void OnTap()
         {
-            if (Visible && !_dismissing)
+            if (Visible)
             {
                 _onTap();
             }

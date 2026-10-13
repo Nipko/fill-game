@@ -10,13 +10,15 @@ namespace AF.UI
 {
     /// <summary>
     /// Mordisco animado del tutorial de la Piraña en su tarjeta de estreno (nivel 183; D-012, punto 1: opción C + D; 02 §9.1
-    /// M7): un tablero en miniatura, con su panel, su repisa y dos cuias de verdad (<see cref="CuiaView"/>). La de la izquierda,
-    /// una cuia de 4 como las del 183, recibe una dosis con un chorro que cae desde arriba: es el cuarto vertido, el que completa
-    /// el ritmo (la cueva tenía 3 de sus 4 puntos encendidos y se queda a 0), y la Piraña sale de la cueva de la derecha y se
-    /// lleva la dosis de la cima. La cueva es la del 183 y la de los 8 niveles con Piraña (183, 184, 185, 187, 189, 192, 198 y
-    /// 200: <c>{"type":"pirana","k":4}</c> en una Cuia chica de 2 que empieza vacía; 02 §9.1 M7, «normalmente Cuia chica de 2»):
-    /// vacía al empezar y con la dosis mordida en el fondo al acabar, así que al cerrar la tarjeta el jugador la reconoce en el
-    /// tablero. El mordisco es el mismo que en el juego: lo pinta <see cref="PiranaOverlay"/> con
+    /// M7): un tablero en miniatura, con su panel, su repisa y dos cuias de verdad (<see cref="CuiaView"/>). La de la derecha,
+    /// una cuia de 4 como las del 183, recibe una dosis con un chorro que baja desde detrás del marco y deja el anillo de impacto
+    /// del tablero en la superficie: es el cuarto vertido, el que completa el ritmo (la cueva tenía 3 de sus 4 puntos encendidos
+    /// y se queda a 0), y la Piraña sale de la cueva de la izquierda y se lleva la dosis de la cima. La cueva es la del 183 y la
+    /// de los 8 niveles con Piraña (183, 184, 185, 187, 189, 192, 198 y 200: <c>{"type":"pirana","k":4}</c> en una Cuia chica
+    /// de 2 que empieza vacía; 02 §9.1 M7, «normalmente Cuia chica de 2»): vacía al empezar y con la dosis mordida en el fondo
+    /// al acabar, y a la izquierda, como en el tablero del 183 (la cuia chica de abajo a la izquierda), así que al cerrar la
+    /// tarjeta el jugador la busca y la encuentra en el mismo lado. El mordisco es el mismo que en el juego: lo pinta
+    /// <see cref="PiranaOverlay"/> con
     /// <see cref="MechanicStepKind.Bite"/> sobre un <see cref="ICuiaBoard"/> propio de la tarjeta, así que se ve igual que en el
     /// tablero, solo que más despacio (<see cref="BiteSpeed"/>). Las reglas no se tocan: la tarjeta no juega, pinta un caso fijo
     /// (02 §9.1 M7: el mordisco del cuarto vertido a la cuia que lo recibe).
@@ -27,10 +29,14 @@ namespace AF.UI
     /// (<see cref="PiranaOverlay.BiteStepMs"/> × <see cref="BiteSpeed"/>); acaba en <see cref="TotalMs"/> con la tarjeta
     /// abierta (no se repite): la cuia sin la dosis, la cueva con ella y el cardumen de vuelta a su ronda. Un toque en cualquier
     /// punto cierra la tarjeta (el escenario no recibe toques: <see cref="CanvasGroup.blocksRaycasts"/> = false).</para>
-    /// <para>Con Reducir movimiento (07 §7.8), una versión quieta: el instante del mordisco (<see cref="StillFraction"/>), con
-    /// el bocado ya fuera de la cuia, el cardumen quieto y sin chorro. Sin asignaciones por fotograma (08 §5.4): las vistas, el
-    /// chorro (<see cref="PourStream"/>, la cinta del tablero), el tablero y los estados se crean una vez; el mordisco usa el
-    /// paso del overlay, que no asigna.</para>
+    /// <para>Con Reducir movimiento (07 §7.8), una versión quieta: el instante en que el cardumen se lleva la dosis entera
+    /// (<see cref="StillFraction"/>, el de la captura 64f): la cuia ya sin la capa de la cima y el bocado, entero, a medio
+    /// camino de la cueva; el cardumen quieto y sin chorro. Así no parece que la piraña se lleve solo una parte de la dosis o que
+    /// la copie. Sin asignaciones por fotograma (08 §5.4): las vistas, el chorro (<see cref="PourStream"/>, la cinta del
+    /// tablero), el anillo, el tablero y los estados se crean una vez; el mordisco usa el paso del overlay, que no asigna.</para>
+    /// <para>El chorro empieza dentro del canto de madera del marco, que se pinta encima de todo el escenario: su remate
+    /// redondo queda tapado y se lee como líquido que cae de arriba, no como un palito clavado en la cuia (revisión de la
+    /// captura 64).</para>
     /// <para>Las cuias del escenario miden 44 dp (<see cref="UnitDp"/>) y las del tablero, 48-64: como el grosor de 1 dp del
     /// borde del líquido va en el material compartido (<c>LiquidGraphic.SetUnit</c>), GameScreen vuelve a poner la unidad del
     /// tablero cada vez que coloca el escenario (GameScreen.Cards.cs, <c>RestoreBoardUnit</c>).</para>
@@ -79,14 +85,21 @@ namespace AF.UI
         /// <summary>Fin de la demostración (ms desde que se abre la tarjeta).</summary>
         public const float TotalMs = BiteStartMs + (PiranaOverlay.BiteStepMs * BiteSpeed);
 
-        /// <summary>Con Reducir movimiento, el instante del mordisco que se queda quieto (fracción del paso).</summary>
-        public const float StillFraction = 0.62f;
+        /// <summary>
+        /// Con Reducir movimiento, el instante del mordisco que se queda quieto (fracción del paso): entre el final del vaciado
+        /// (<see cref="PiranaOverlay.DrainEnd"/>, 0,74) y la llegada a la cueva (<see cref="PiranaOverlay.BiteCarryEnd"/>, 0,86),
+        /// el de la captura 64f: la cuia solo tiene las dos de abajo y el cardumen lleva la dosis entera camino de la cueva.
+        /// </summary>
+        public const float StillFraction = 0.78f;
 
-        /// <summary>Cuia que recibe la dosis y pierde la de la cima.</summary>
-        public const int VictimIndex = 0;
+        /// <summary>Cuia con la cueva de la Piraña: la de la izquierda, como en el tablero del 183.</summary>
+        public const int CaveIndex = 0;
 
-        /// <summary>Cuia con la cueva de la Piraña.</summary>
-        public const int CaveIndex = 1;
+        /// <summary>Cuia que recibe la dosis y pierde la de la cima: la de la derecha.</summary>
+        public const int VictimIndex = 1;
+
+        /// <summary>Vida de cada anillo de impacto en la superficie (ms), como el del tablero (FxLayer: 300 ms).</summary>
+        public const float ImpactRingMs = 300f;
 
         /// <summary>Ritmo de la cueva: cada 4 vertidos (02 §9.1 M7; el 183).</summary>
         public const int CaveK = 4;
@@ -111,6 +124,7 @@ namespace AF.UI
         private readonly Image _inner;
         private readonly Image _frame;
         private readonly Image _shelf;
+        private readonly Image _impact;
         private readonly RectTransform _back;
         private readonly RectTransform _front;
         private readonly CuiaView[] _views = new CuiaView[2];
@@ -126,6 +140,7 @@ namespace AF.UI
         private float _biteMs;
         private float _biteDur;
         private bool _streamOn;
+        private bool _impactOn;
         private Stage _stage = Stage.Hidden;
         private bool _reduceMotion;
         private float _width;
@@ -152,7 +167,24 @@ namespace AF.UI
             }
 
             _front = UiBuilder.Rect("MechanicFront", _root);
-            _stream = new PourStream(_front, 0); // delante de las cuias, como en la capa de vertido del tablero
+
+            // El anillo de impacto del tablero (FxLayer.Splash: el aro de 2 × 0,55 u que crece y se apaga) y, encima, el chorro,
+            // delante de las cuias como en la capa de vertido del tablero.
+            _impact = UiBuilder.Image("Impact", _front, art.Ring, new Color(1f, 1f, 1f, 0f));
+            Material? additive = UiMaterials.Additive;
+            if (additive != null)
+            {
+                _impact.material = additive;
+            }
+
+            _impact.rectTransform.anchorMin = new Vector2(0f, 1f);
+            _impact.rectTransform.anchorMax = new Vector2(0f, 1f);
+            _impact.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            _impact.enabled = false;
+            _stream = new PourStream(_front, 0);
+
+            // El marco, encima de todo el escenario: el chorro nace dentro de su canto, que tapa su remate redondo.
+            _frame.transform.SetAsLastSibling();
             _victimBefore = Cuia.Create(VictimCapacity, VictimBase);
             _victimReceived = Cuia.Create(VictimCapacity, VictimFull);
             _victimAfter = _victimBefore;
@@ -197,6 +229,15 @@ namespace AF.UI
 
         /// <summary>Se ve el chorro que trae la dosis (tests y capturas).</summary>
         public bool StreamVisible => _streamOn;
+
+        /// <summary>Se ve el anillo de impacto en la superficie de la cuia que recibe la dosis (tests y capturas).</summary>
+        public bool ImpactVisible => _impactOn;
+
+        /// <summary>Anillo de impacto (tests: su posición y su color).</summary>
+        public Image Impact => _impact;
+
+        /// <summary>Marco del panel en miniatura, que se pinta encima de todo el escenario (tests).</summary>
+        public Image Frame => _frame;
 
         /// <summary>Cinta del chorro (tests y capturas).</summary>
         public PourStream Stream => _stream;
@@ -262,7 +303,7 @@ namespace AF.UI
             float cuiaW = CuiaGeometry.WidthU * UnitDp;
             for (int i = 0; i < _views.Length; i++)
             {
-                float cx = (width * 0.5f) + ((i == VictimIndex ? -0.5f : 0.5f) * gap);
+                float cx = (width * 0.5f) + ((i == CaveIndex ? -0.5f : 0.5f) * gap); // la cueva a la izquierda
                 _views[i].SetGeometry(new Vector2(cx, -footY), cuiaW, gap);
             }
 
@@ -289,6 +330,7 @@ namespace AF.UI
             }
 
             HideStream();
+            HideImpact();
 
             _board.ShowContent(VictimIndex, _victimBefore, false);
             _board.ShowContent(CaveIndex, _caveBefore, false); // aquí se une el overlay de la Piraña y crea sus piezas
@@ -322,6 +364,7 @@ namespace AF.UI
             }
 
             HideStream();
+            HideImpact();
             _stage = Stage.Hidden;
             _ms = -1f;
             if (_root.gameObject.activeSelf)
@@ -351,9 +394,11 @@ namespace AF.UI
                     {
                         _stage = Stage.Receiving;
                         PaintReceive(0f);
+                        Victim.Ripple(); // la cabeza del chorro llega a la superficie y la agita, como cada dosis del tablero
                     }
 
                     PaintStream();
+                    PaintImpact();
                     break;
 
                 case Stage.Receiving:
@@ -362,15 +407,16 @@ namespace AF.UI
                     if (f >= 1f)
                     {
                         _board.ShowContent(VictimIndex, _victimReceived, false);
-                        Victim.Ripple();
                         _stage = Stage.Pause;
                     }
 
                     PaintStream();
+                    PaintImpact();
                     break;
 
                 case Stage.Pause:
                     PaintStream(); // la cola del chorro
+                    PaintImpact(); // y el último anillo
                     if (_ms >= BiteStartMs)
                     {
                         _biteDur = PlayBite();
@@ -381,11 +427,13 @@ namespace AF.UI
                     break;
 
                 case Stage.Biting:
+                    PaintImpact(); // el último anillo termina su vida aunque el mordisco ya haya empezado (si no, se quedaba quieto)
                     _biteMs += dtMs;
                     if (_biteMs >= _biteDur)
                     {
                         CuiaOverlay? overlay = CaveOverlay;
                         overlay?.SnapStep(); // pinta el final: la cuia sin la dosis y la cueva con ella
+                        HideImpact();
                         _stage = Stage.Done;
                     }
 
@@ -399,9 +447,11 @@ namespace AF.UI
             _board.SetDose(VictimIndex, VictimBase.Length, Palette.Tint(BittenTint), fill, BittenTint);
         }
 
-        // El chorro que trae la dosis: cae recto desde lo alto del panel, por el eje de la cuia, hasta su superficie (que sube
-        // mientras se llena). La cabeza baja StreamLeadMs antes de la dosis y la cola se corta desde arriba en StreamTailMs
-        // después; la misma cinta, los mismos grosores y el mismo tinte que el chorro del tablero (guía 6.5). Sin asignaciones.
+        // El chorro que trae la dosis: cae recto desde detrás del canto de arriba del marco (que se pinta encima y tapa su remate
+        // redondo: empieza más arriba que el recorte del escenario, al menos su grosor), por el eje de la cuia, hasta su
+        // superficie (que sube mientras se llena). La cabeza baja StreamLeadMs antes de la dosis y la cola se corta desde arriba
+        // en StreamTailMs después; la misma cinta, los mismos grosores y el mismo tinte que el chorro del tablero (guía 6.5). Sin
+        // asignaciones.
         private void PaintStream()
         {
             float start = ReceiveStartMs - StreamLeadMs;
@@ -417,9 +467,49 @@ namespace AF.UI
             CuiaView victim = Victim;
             float u = victim.Unit;
             Vector2 end = victim.SurfaceInContainer();
-            var top = new Vector2(end.x, -(FrameDp + 1f));
-            _stream.Draw(top, (top + end) * 0.5f, end, tail, head, Palette.Tint(BittenTint), BoardAnimator.StreamWidthStartU * u, BoardAnimator.StreamWidthEndU * u);
+            float width = BoardAnimator.StreamWidthStartU * u;
+            var top = new Vector2(end.x, -(FrameDp - width - 0.5f)); // dentro del canto del marco, que lo tapa
+            _stream.Draw(top, (top + end) * 0.5f, end, tail, head, Palette.Tint(BittenTint), width, BoardAnimator.StreamWidthEndU * u);
             _streamOn = true;
+        }
+
+        // El anillo de impacto del tablero en la superficie mientras cae el chorro (uno cada ImpactRingMs desde que la cabeza
+        // llega; el último termina su vida): crece de 0,4 a 1,3 y se apaga desde 0,40 (FxLayer.Splash). Sin asignaciones.
+        private void PaintImpact()
+        {
+            float age = _ms - ReceiveStartMs;
+            float flowMs = ReceiveMs + StreamTailMs;
+            if (age < 0f || age >= Mathf.Ceil(flowMs / ImpactRingMs) * ImpactRingMs)
+            {
+                HideImpact();
+                return;
+            }
+
+            float t = Mathf.Repeat(age, ImpactRingMs) / ImpactRingMs;
+            CuiaView victim = Victim;
+            float u = victim.Unit;
+            RectTransform rt = _impact.rectTransform;
+            rt.anchoredPosition = victim.SurfaceInContainer();
+            rt.sizeDelta = new Vector2(2f * u, 0.55f * u);
+            float k = Mathf.Lerp(0.4f, 1.3f, Ease.OutCubic(t));
+            rt.localScale = new Vector3(k, k, 1f);
+            Color c = ColorMath.Lighten(Palette.Tint(BittenTint), 0.55f);
+            c.a = 0.40f * (1f - t);
+            _impact.color = c;
+            if (!_impactOn)
+            {
+                _impact.enabled = true;
+                _impactOn = true;
+            }
+        }
+
+        private void HideImpact()
+        {
+            if (_impactOn)
+            {
+                _impact.enabled = false;
+                _impactOn = false;
+            }
         }
 
         private void HideStream()
