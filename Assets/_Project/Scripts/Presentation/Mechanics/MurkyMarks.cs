@@ -38,6 +38,11 @@ namespace AF.Presentation.Mechanics
     /// (<see cref="ProceduralArt.MurkyFruitDisc"/>, ≥ 3:1 frente a cualquier tinte), que se apaga al final. Ya sin trama entra el
     /// patrón de su fruta, y la capa sigue en <see cref="LiquidGraphic.MurkyLook.Turn"/> hasta el final de su ventana, cuando
     /// ya es su dosis normal: pasa a pintarse normal sin que cambie nada en pantalla.</para>
+    /// <para>Con Patrones de fruta (07 §3, regla 1; T-E) o con la cuia levantada, el icono de accesibilidad de la fruta lo
+    /// pinta el shader solo en las capas normales (<see cref="LiquidGraphic.FruitIconDrawn"/>): nunca en una oculta ni mientras
+    /// se revela. Así no choca con el icono temporal de la Luciérnaga: este ya se apagó cuando la capa vuelve a ser normal (su
+    /// avance llega a 1) y entonces aparece el de Patrones de fruta; por la regla, al acabar el Dissolve
+    /// (<see cref="RuleDissolveEndAt"/>).</para>
     /// <para>Mientras anima (<see cref="IsAnimating"/>), <c>ShowContent</c> no llama a <see cref="Show"/> ni repinta las capas
     /// que se revelan; la cola termina el paso con <see cref="Snap"/> y el <c>ShowContent</c> final. La insignia se crea al
     /// construir. Sus sprites, los discos y los iconos de fruta de la Luciérnaga (uno por dosis) y la textura del disco, solo en

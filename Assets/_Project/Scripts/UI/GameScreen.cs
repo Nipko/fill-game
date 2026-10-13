@@ -1425,6 +1425,7 @@ namespace AF.UI
             _animator.SpeedFactor = f;
             _animator.ReduceMotion = flow.ReduceMotion;
             _fx.ReduceMotion = flow.ReduceMotion;
+            _animator.ApplyLevelPatterns(flow.LevelNumber); // Patrones de fruta: 20 % e icono desde el 41 (07 §3; T-E)
             for (int i = 0; i < board.Count; i++)
             {
                 _animator.ShowContent(i, board[i], board.IsSealed(i));

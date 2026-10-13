@@ -22,7 +22,8 @@ namespace AF.Presentation.Mechanics
     /// </summary>
     /// <remarks>
     /// <para><b>Rechazo</b> (R11, sin texto ni color de error; D-002): si se toca como origen, la cuia se sacude y el embudo
-    /// late con la sacudida (escala 1 → <see cref="FunnelPulseScale"/> → 1 en <see cref="PulseMs"/>).</para>
+    /// late con la sacudida (escala 1 → <see cref="FunnelPulseScale"/> → 1 en <see cref="PulseMs"/>, los 240 ms de la sacudida
+    /// de T-G, dentro de los ≤ 300 ms [P] del criterio de la ola 3).</para>
     /// <para><b>Sellado</b> (b.2 M10: «el embudo se cierra con un tirón de cuerda y la trampa sale del agua entre gotas y un
     /// brillo»; solo como receptor, así que la cola lo despacha como paso Seal de esta cuia): dura <see cref="SealMs"/> ×
     /// factor de velocidad. Fases [P] en fracción del paso: 0-0,08 asoma la cuerda, floja (inclinada y con catenaria);
@@ -68,7 +69,10 @@ namespace AF.Presentation.Mechanics
         /// <summary>Escala del embudo en el pico del latido del rechazo [P].</summary>
         public const float FunnelPulseScale = 1.15f;
 
-        /// <summary>El latido dura lo que la sacudida (02 §4.1: 120 ms).</summary>
+        /// <summary>
+        /// El latido dura lo que la sacudida: 240 ms (<see cref="CuiaView.ShakeMs"/>; decisión del dueño del 2026-10-09, T-G, que
+        /// sustituye a los 120 ms de 02 §4.1), dentro de los ≤ 300 ms [P] del criterio de la ola 3.
+        /// </summary>
         public const float PulseMs = CuiaView.ShakeMs;
 
         /// <summary>Ancho del embudo cerrado, en fracción del abierto [P]: 1,02 u, el del borde de la cuia (1,10 u) bajo la tapa.</summary>

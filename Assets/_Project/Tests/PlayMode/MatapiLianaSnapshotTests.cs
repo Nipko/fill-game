@@ -17,10 +17,10 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Capturas de revisión del Matapi y de la Liana con fruta (T12; <c>[Explicit]</c>, no forman parte de la suite):
     /// <c>55_matapi_l63</c> (el Matapi tras la intro), <c>55e_matapi_reject_l63</c> y <c>55b_matapi_reject_l63</c> (al
-    /// rechazarlo como origen, a 15 y 45 ms: la sacudida en +6 y −6 dp, y el embudo latiendo, 1,06 y 1,14),
-    /// <c>55c_matapi_pattern_l63</c> (con 2 dosis dentro: el patrón de la fruta se sigue leyendo sin varillas delante, con el
-    /// 15 % de <see cref="AF.Presentation.Palette.PatternOpacity"/>, porque el ajuste Patrones de fruta al 20 % aún no existe
-    /// en el cliente), <c>55d_matapi_achiote_l63</c> (lo mismo con Achiote, que no debe leerse rayado como el Camu camu),
+    /// rechazarlo como origen, a 20 y 60 ms: la sacudida de T-G en +8 y −8 dp, y el embudo latiendo, ≈ 1,04 y ≈ 1,11),
+    /// <c>55c_matapi_pattern_l63</c> (con 2 dosis dentro: el patrón de la fruta se sigue leyendo sin varillas delante, al 20 %
+    /// de Patrones de fruta, que en el 63 está activo, con el icono de la fruta en cada dosis; T-E),
+    /// <c>55d_matapi_achiote_l63</c> (lo mismo con Achiote, que no debe leerse rayado como el Camu camu),
     /// <c>56a_matapi_cord_l63</c> (la cuerda floja, corta e inclinada, en catenaria, antes del tirón),
     /// <c>56_matapi_seal_l63</c> (a mitad del tirón: la cuerda tensa y el embudo cerrándose), <c>56d_matapi_lift_l63</c> (en
     /// el pico de la subida de la trampa, con las gotas cayendo a la repisa por fuera de la silueta),
@@ -55,13 +55,17 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 300);
             Save(dir, "55_matapi_l63", boot);
 
-            // Rechazo: la sacudida de CuiaView es ShakeDp · sen(4π p), así que a 15 ms va en +6 dp y a 45 ms en −6 dp (a 60 ms,
-            // en 0); el embudo late a 1 + 0,15 · sen(π t / 120 ms).
+            // Rechazo (T-G): la sacudida de CuiaView es ShakeDp · sen(6π p) con p = t / ShakeMs, así que llega a +8 dp en
+            // ShakeMs / 12 (20 ms) y a −8 dp en ShakeMs / 4 (60 ms); el embudo late a 1 + 0,15 · sen(π t / 240 ms).
             int matapi = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Matapi);
             Assert.That(boot.TapCuia(matapi).Kind, Is.EqualTo(TapKind.Rejected));
-            PlayModeHelpers.TickExact(boot, (int)(MatapiOverlay.PulseMs * 0.125f));
+            int plusPeak = (int)(CuiaView.ShakeMs / 12f);
+            int minusPeak = (int)(CuiaView.ShakeMs / 4f);
+            PlayModeHelpers.TickExact(boot, plusPeak);
+            Assert.That(boot.View!.Views[matapi].BodyOffset.x, Is.EqualTo(CuiaView.ShakeDp).Within(0.01f), "pico de +8 dp");
             Save(dir, "55e_matapi_reject_l63", boot);
-            PlayModeHelpers.TickExact(boot, (int)(MatapiOverlay.PulseMs * 0.25f));
+            PlayModeHelpers.TickExact(boot, minusPeak - plusPeak);
+            Assert.That(boot.View.Views[matapi].BodyOffset.x, Is.EqualTo(-CuiaView.ShakeDp).Within(0.01f), "pico de −8 dp");
             Save(dir, "55b_matapi_reject_l63", boot);
             PlayModeHelpers.Step(boot, 300);
 

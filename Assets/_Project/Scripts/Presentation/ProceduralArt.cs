@@ -232,6 +232,7 @@ namespace AF.Presentation
 
             _owned.Clear();
             ForgetIntroArt();
+            _fruitIconAtlas = null; // el atlas de iconos de fruta (ProceduralArt.Icons.cs) se vuelve a generar si hace falta
             _cuiaBack.Clear();
             _cuiaFront.Clear();
             _cuiaMarks.Clear();

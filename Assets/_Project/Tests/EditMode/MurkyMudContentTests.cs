@@ -319,9 +319,15 @@ namespace AF.Tests.EditMode
                 defines[m.Groups[1].Value] = float.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture);
             }
 
+            // La opacidad del patrón ya no es un #define (T-E.2): es la propiedad _PatternOpacity del material, que se fija por
+            // código al cargar el nivel (0,15 hasta el 40 y 0,20 desde el 41), y la usan las dos ramas del patrón.
             var mirrors = new (string Name, float Value)[]
             {
-                ("AF_PATTERN_OPACITY", Palette.PatternOpacity),
+                ("AF_ICON_OPACITY", LiquidGraphic.FruitIconOpacity),
+                ("AF_ICON_RIM_DARKEN", LiquidGraphic.FruitIconRimDarken),
+                ("AF_ICON_CELLS", ProceduralArt.FruitIconCells),
+                ("AF_ICON_PX", ProceduralArt.FruitIconPx),
+                ("AF_FLASH_STEPS", LiquidGraphic.FlashPackSteps),
                 ("AF_MATTE_MODE", LiquidGraphic.MattePatternMode),
                 ("AF_MURKY_MODE", LiquidGraphic.MurkyPatternMode),
                 ("AF_MURKY_SPAN", LiquidGraphic.MurkyProgressSpan),
@@ -372,6 +378,20 @@ namespace AF.Tests.EditMode
                 Assert.That(mirrored.Contains(name), Is.True, name + ": toda constante AF_ del shader tiene su espejo en C# (y su test)");
             }
 
+            Assert.That(defines.ContainsKey("AF_PATTERN_OPACITY"), Is.False, "sin el 15 % fijo de antes (T-E.2)");
+            Assert.That(Regex.IsMatch(code, @"_PatternOpacity\s*\(""[^""]*"",\s*Float\)\s*=\s*0\.15"), Is.True, "la propiedad _PatternOpacity, sutil (0,15) por defecto");
+            Assert.That(Regex.IsMatch(code, @"^\s*float _PatternOpacity;", RegexOptions.Multiline), Is.True, "y su uniforme");
+            Assert.That(Regex.IsMatch(code, @"half amount = \(half\)_PatternOpacity;"), Is.True, "la usa el patrón normal");
+            Assert.That(Regex.IsMatch(code, @"amount = fruit \? \(half\)_PatternOpacity \* fruitWeight : hatch;"), Is.True, "y el de la fruta que se revela");
+            Assert.That(Regex.IsMatch(code, @"_IconAtlas\s*\(""[^""]*"",\s*2D\)"), Is.True, "la propiedad del atlas de iconos de fruta");
+            Assert.That(Regex.IsMatch(code, @"tex2Dlod\(_IconAtlas,"), Is.True, "que lee la rama del icono");
+            Assert.That(Regex.IsMatch(code, @"tex2Dlod\(_IconAtlas, [^;]*\)\.rg;"), Is.True, "la silueta (R) y el contorno (G) en la misma muestra");
+            Assert.That(Regex.IsMatch(code, @"^\s*float bandScale = 1\.0;", RegexOptions.Multiline), Is.True, "fuera de las ramas, la escala de la banda no se calcula (la pagan solo murky e iconOn)");
+
+            // Una banda turbia o que se revela lleva empaquetado el sitio de su «?» y, en men.a, la fila de la fruta que se revela
+            // (LiquidGraphic.FruitRowCode): sin !murky, el shader pintaría el icono de esa fruta encima del «?» y del icono
+            // temporal de la Luciérnaga (MurkyMarks). Los tests de vista (FruitPatternsPlayTests) solo ven el espejo de CPU.
+            Assert.That(code.Contains("bool iconOn = !murky && glyphCode > 0.5;"), Is.True, "el icono nunca en una banda turbia ni mientras se revela; espejo: LiquidGraphic.IsFruitIconDose");
             Assert.That(LiquidGraphic.FireflyEdgeU, Is.LessThanOrEqualTo(0.15f), "borde del frente de luz estrecho (≤ 0,15 u)");
             Assert.That(LiquidGraphic.GlyphMaxU, Is.EqualTo(MurkyMarks.MarkU), "en reposo, el «?» de 0,5 u de 07 §4.3");
             Assert.That(LiquidGraphic.HatchFadeTo, Is.LessThan(LiquidGraphic.FruitPatternFrom), "la trama se va antes de que entre el patrón");

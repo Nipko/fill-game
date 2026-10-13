@@ -47,11 +47,19 @@ namespace AF.Presentation
         /// <summary>Deselección: 100 ms ease-in (02 §4.1).</summary>
         public const float LowerMs = 100f;
 
-        /// <summary>Rechazo: sacudida horizontal de ±6 dp, 2 ciclos, 120 ms (02 §4.1).</summary>
-        public const float ShakeMs = 120f;
+        /// <summary>
+        /// Rechazo: sacudida horizontal de ±8 dp, 3 ciclos (<see cref="ShakeCycles"/>), 240 ms, sin amortiguar (decisión del
+        /// dueño del 2026-10-09, T-G: la de ±6 dp, 2 ciclos y 120 ms de 02 §4.1 casi no se veía en el teléfono; 02 §4.1 y 07
+        /// §4.3 se alinean en el paso 2). Un toque válido durante la sacudida se atiende como siempre: la sacudida no bloquea
+        /// la cola de toques.
+        /// </summary>
+        public const float ShakeMs = 240f;
 
-        /// <summary>Amplitud de la sacudida (dp).</summary>
-        public const float ShakeDp = 6f;
+        /// <summary>Amplitud de la sacudida (dp; T-G).</summary>
+        public const float ShakeDp = 8f;
+
+        /// <summary>Ciclos completos de la sacudida: x = <see cref="ShakeDp"/> · sen(2π · ciclos · t / <see cref="ShakeMs"/>) (T-G).</summary>
+        public const int ShakeCycles = 3;
 
         /// <summary>Sellado completo: 450 ms (02 §4.1; storyboard de 07 §5.3).</summary>
         public const float SealMs = 450f;
@@ -109,6 +117,8 @@ namespace AF.Presentation
         private float _liftMs = 120f;
         private bool _locked;
         private bool _liftTarget;
+        private bool _fruitPatterns;
+        private bool _pourIcons;
         private float _liftValue;
         private float _shakeElapsed = -1f;
         private float _sealElapsed = -1f;
@@ -606,21 +616,94 @@ namespace AF.Presentation
             }
         }
 
-        /// <summary>Elevación de la selección (02 §4.1); se aplica cuando ningún trabajo controla el cuerpo.</summary>
+        /// <summary>
+        /// Elevación de la selección (02 §4.1); se aplica cuando ningún trabajo controla el cuerpo. Mientras está elevada, sus
+        /// dosis visibles muestran el icono de su fruta en cualquier nivel (07 §3, regla 2: «al seleccionar una cuia, cada dosis
+        /// muestra su icono de fruta durante la elevación aunque el toggle esté apagado»; T-E.5), y al bajarla se apaga si el
+        /// nivel no tiene Patrones de fruta (<see cref="SetFruitPatterns"/>) ni la toma un vertido como origen, que los mantiene
+        /// hasta su retorno (<see cref="SetPourIcons"/>; 07 §5.2). Solo la cuia elevada: nada se resalta en los destinos (D-002).
+        /// </summary>
         public void SetLifted(bool lifted)
         {
             _liftTarget = lifted;
             SetGlassBoost(lifted && !_locked);
+            ApplyFruitIcons();
         }
 
         /// <summary>La cuia está elevada o subiendo (selección o touch-down en curso).</summary>
         public bool IsLifted => _liftTarget;
 
-        /// <summary>Rechazo suave: sacudida (02 §4.1, C2, C6). Sin rojo, sin texto y sin cambiar de color (guía 6.3).</summary>
+        /// <summary>
+        /// Patrones de fruta del nivel (07 §3, regla 1; 02 §12; T-E): con true, cada dosis visible lleva el icono de su fruta
+        /// (<see cref="LiquidGraphic.SetFruitIcons"/>), esté elevada o no. Lo fija <c>BoardAnimator.ApplyLevelPatterns</c> al
+        /// cargar el nivel y al unir una cuia añadida; sin él, false (solo el icono de la elevación).
+        /// </summary>
+        public void SetFruitPatterns(bool on)
+        {
+            _fruitPatterns = on;
+            ApplyFruitIcons();
+        }
+
+        /// <summary>El nivel tiene Patrones de fruta (<see cref="SetFruitPatterns"/>).</summary>
+        public bool FruitPatterns => _fruitPatterns;
+
+        /// <summary>
+        /// Iconos del origen mientras un vertido lo tiene tomado (07 §5.2: «iconos de fruta visibles» desde el toque en el
+        /// origen, también en el viaje y el caudal, y «iconos se ocultan» en el retorno; 07 §4.3, fila Seleccionada; T-E.5): el
+        /// toque en el destino baja la selección (<see cref="SetLifted"/> false), pero los iconos siguen hasta que la cuia
+        /// empieza a volver a su ranura. Lo encienden y lo apagan los trabajos de vertido de <c>BoardAnimator</c>; solo en el
+        /// origen, nunca en el destino (D-002). Sin asignaciones.
+        /// </summary>
+        public void SetPourIcons(bool on)
+        {
+            if (_pourIcons == on)
+            {
+                return;
+            }
+
+            _pourIcons = on;
+            ApplyFruitIcons();
+        }
+
+        /// <summary>
+        /// El líquido pinta el icono de fruta en sus dosis visibles: con Patrones de fruta en el nivel, con la cuia elevada o con
+        /// la cuia como origen de un vertido hasta su retorno (07 §3, reglas 1 y 2; 07 §5.2; <see cref="SetPourIcons"/>). Las
+        /// ocultas, el Barro y el agua base nunca lo llevan (<see cref="LiquidGraphic.FruitIconDrawn"/>).
+        /// </summary>
+        public bool FruitIconsOn => _liquid.FruitIcons;
+
+        /// <summary>Rechazo suave: sacudida (02 §4.1, C2, C6; T-G). Sin rojo, sin texto y sin cambiar de color (guía 6.3).</summary>
         public void Shake()
         {
             _shakeElapsed = 0f;
             OverlayOf(_shownCuia.Mechanic)?.OnRejected();
+        }
+
+        /// <summary>Sacudida en curso (desde <see cref="Shake"/> hasta <see cref="ShakeMs"/>, o hasta que un trabajo la bloquea).</summary>
+        public bool Shaking => _shakeElapsed >= 0f;
+
+        /// <summary>
+        /// Desplazamiento horizontal (dp) de la sacudida a los <paramref name="ms"/> ms (T-G): <see cref="ShakeDp"/> ·
+        /// sen(2π · <see cref="ShakeCycles"/> · ms / <see cref="ShakeMs"/>), sin amortiguar; 0 fuera de [0, <see cref="ShakeMs"/>).
+        /// </summary>
+        public static float ShakeOffsetAt(float ms)
+        {
+            if (ms < 0f || ms >= ShakeMs)
+            {
+                return 0f;
+            }
+
+            return ShakeDp * Mathf.Sin(2f * Mathf.PI * ShakeCycles * (ms / ShakeMs));
+        }
+
+        // Icono de fruta en el líquido: con Patrones de fruta, mientras la cuia está elevada o mientras un vertido la tiene como
+        // origen hasta su retorno (07 §3, reglas 1 y 2; 07 §5.2).
+        private void ApplyFruitIcons()
+        {
+            if (_liquid != null)
+            {
+                _liquid.SetFruitIcons(_fruitPatterns || _liftTarget || _pourIcons);
+            }
         }
 
         /// <summary>Celebración (07 §5.4): tras <paramref name="delayMs"/>, aro de luz si está sellada y salto de 0,15 u.</summary>
@@ -895,15 +978,15 @@ namespace AF.Presentation
                 float x = 0f;
                 if (_shakeElapsed >= 0f)
                 {
+                    // T-G: 3 ciclos de ±8 dp en 240 ms; al llegar a 240 ms vuelve a x = 0 exacto (sen(6π) se redondearía).
                     _shakeElapsed += dtMs;
-                    float p = _shakeElapsed / ShakeMs;
-                    if (p >= 1f)
+                    if (_shakeElapsed >= ShakeMs)
                     {
                         _shakeElapsed = -1f;
                     }
                     else
                     {
-                        x = ShakeDp * Mathf.Sin(p * 4f * Mathf.PI);
+                        x = ShakeOffsetAt(_shakeElapsed);
                     }
                 }
 
@@ -1121,7 +1204,7 @@ namespace AF.Presentation
             lrt.pivot = new Vector2(0.5f, 0f);
             lrt.offsetMin = Vector2.zero;
             lrt.offsetMax = Vector2.zero;
-            _liquid.Setup(capacity, art.PatternAtlas);
+            _liquid.Setup(capacity, art.PatternAtlas, art.FruitIconAtlas);
             _doseColor = new Color[capacity];
             _doseFill = new float[capacity];
 
