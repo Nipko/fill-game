@@ -33,7 +33,8 @@ namespace AF.Tests.PlayMode
     /// <see cref="LaunchOptions.LevelOffsetOverride"/> = 41); quieto con Reducir movimiento; sin asignaciones mientras anima ni
     /// mientras espera el arte; el arte pintado fuera del hilo principal, como en el juego: mientras llega, el velo en el acto y
     /// los toques ignorados; si falla, no se puede encolar o no llega en su tiempo límite, la tarjeta sin arte (el respaldo de
-    /// D-012) y el arte tardío descartado; pedido antes en la victoria del 10 y al ofrecer «Jugar» con un nivel que abre mundo;
+    /// D-012) y el arte tardío descartado; el tiempo límite y el <c>wait_ms</c>, de reloj real desde la petición y no la suma
+    /// del dt; pedido antes en la victoria del 10 y al ofrecer «Jugar» con un nivel que abre mundo;
     /// y las sondas <c>AF_STATE world_banner</c>, <c>world_banner_art</c> y <c>world_banner_closed</c> y el
     /// <c>AF_LAYOUT</c>. Salvo los tests del arte en otro hilo, todos lo piden en el acto
     /// (<see cref="LaunchOptions.BannerArtSyncOverride"/>, <see cref="CardSetup.Load"/>).
@@ -374,6 +375,7 @@ namespace AF.Tests.PlayMode
             Assert.That(flow.WorldBanner, Is.EqualTo(0), "el 42 no lo lleva");
             view.CardArt.ReleaseBannerArt(); // el arte es de toda la sesión: nada pedido de antes
 
+            var sinceLoad = Stopwatch.StartNew(); // reloj real del test desde antes de la petición (para wait_ms)
             flow.Load(41);
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
             Assert.That(flow.WorldBanner, Is.EqualTo(3));
@@ -413,9 +415,11 @@ namespace AF.Tests.PlayMode
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
             }
 
+            double loadToCardMs = sinceLoad.Elapsed.TotalMilliseconds;
             Assert.That(banner.ArtReady, Is.True, "el arte llega");
             Assert.That(banner.Fallback, Is.EqualTo(WorldBannerView.FallbackNone));
-            Assert.That(banner.ArtWaitMs, Is.GreaterThan(0f), "reloj real desde la petición");
+            Assert.That(banner.ArtWaitMs, Is.GreaterThan(0f).And.LessThanOrEqualTo((float)loadToCardMs + 1f),
+                "wait_ms: como mucho el reloj real que midió el test entre la petición y la tarjeta (" + loadToCardMs.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " ms)");
             Assert.That(banner.Pop.gameObject.activeSelf, Is.True);
             Assert.That(flow.WorldBannerWaiting, Is.False);
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
@@ -512,6 +516,7 @@ namespace AF.Tests.PlayMode
             WorldBannerView banner = view.WorldBannerView;
             view.CardArt.ReleaseBannerArt();
 
+            var sinceLoad = Stopwatch.StartNew(); // reloj real del test desde antes de la petición (para wait_ms)
             flow.Load(41);
             Assert.That(banner.Waiting, Is.True);
             Assert.That(banner.ArtTimeoutLimitMs, Is.EqualTo(150f), "el umbral inyectado");
@@ -532,8 +537,11 @@ namespace AF.Tests.PlayMode
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
             }
 
+            double loadToCardMs = sinceLoad.Elapsed.TotalMilliseconds;
             WorldBannerSetup.AssertFallback(view, WorldBannerView.FallbackTimeout);
-            Assert.That(banner.ArtWaitMs, Is.GreaterThanOrEqualTo(150f), "reloj real desde la petición");
+            Assert.That(banner.ArtWaitMs, Is.GreaterThanOrEqualTo(150f).And.LessThanOrEqualTo((float)loadToCardMs + 1f),
+                "wait_ms: al menos el límite y como mucho el reloj real que midió el test (" + loadToCardMs.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+                + " ms); que no es la suma del dt lo prueba Banner_TimeoutAndWaitMs_UseTheRealClock");
             Assert.That(view.CardArt.BannerArtPending, Is.False, "el trabajo se abandona");
             Assert.That(view.CardArt.BannerArtFailure, Is.EqualTo(BannerArtFailure.None), "no es un fallo del trabajo");
             watch.Restart();
@@ -572,6 +580,69 @@ namespace AF.Tests.PlayMode
             Assert.That(view.CardArt.MascotsBuilt, Is.False);
             Assert.That(view.CardArt.BannerArtPending, Is.False);
             yield return WorldBannerSetup.CloseThenTheIntro(boot, 81, 4);
+        }
+
+        [UnityTest]
+        public IEnumerator Banner_TimeoutAndWaitMs_UseTheRealClock()
+        {
+            // Revisión 3 de A4, puntos 1b y 4: el tiempo límite del arte (WorldBannerView.ArtTimeoutMs = 800 ms [P]) y el wait_ms
+            // de AF_STATE world_banner_art son de reloj real desde la petición (Stopwatch), no la suma del dt de los fotogramas,
+            // que en el juego llega recortado. Con un trabajo que no acaba hasta que lo cancelan y un límite de 2000 ms: 8 s de dt
+            // en unos pocos ms reales no lo cumplen; esperar el límite en reloj real sin avanzar el dt, sí, y wait_ms es ese
+            // tiempo real (≈ 2 s), no los ≈ 8 s de dt.
+            const float limitMs = 2000f;
+            const int dtMs = 8000;
+            LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.BannerArtFaultOverride = BannerArtFault.Stall;
+            LaunchOptions.BannerArtTimeoutMsOverride = limitMs;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1240));
+            yield return PlayModeHelpers.LoadGame(42, new MemoryProgressStore(42, 41));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            WorldBannerView banner = view.WorldBannerView;
+            view.CardArt.ReleaseBannerArt();
+
+            var sinceLoad = Stopwatch.StartNew(); // reloj real del test desde antes de la petición
+            flow.Load(41);
+            Assert.That(flow.WorldBanner, Is.EqualTo(3));
+            Assert.That(banner.Waiting && flow.WorldBannerWaiting, Is.True);
+            Assert.That(banner.ArtTimeoutLimitMs, Is.EqualTo(limitMs), "el umbral inyectado");
+
+            // (1) 8 s de dt sin esperar nada: pasan en unos pocos ms reales, así que el límite no se cumple. Si contara el dt,
+            // aquí ya habría entrado el respaldo.
+            PlayModeHelpers.Step(boot, dtMs);
+            double stepRealMs = sinceLoad.Elapsed.TotalMilliseconds;
+            Assert.That(stepRealMs, Is.LessThan(limitMs),
+                "condición del test: la carga y los " + dtMs + " ms de dt tardan menos que el límite en reloj real (tardaron "
+                + stepRealMs.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " ms)");
+            Assert.That(banner.Waiting, Is.True, "el dt no cuenta: sigue esperando el arte");
+            Assert.That(flow.WorldBannerWaiting, Is.True, "y ningún toque lo cierra");
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
+            Assert.That(banner.Fallback, Is.EqualTo(WorldBannerView.FallbackNone));
+            Assert.That(banner.ArtWaitMs, Is.EqualTo(0f), "wait_ms, cuando entre la tarjeta");
+            Assert.That(view.LastWorldBannerArtProbe, Is.Null);
+            Assert.That(view.CardArt.BannerArtPending, Is.True, "el trabajo sigue");
+
+            // (2) El límite en reloj real sin avanzar el dt (sin reloj, nadie llama al Tick del banner) y un solo fotograma de 16 ms:
+            // entra el respaldo, y wait_ms es el tiempo real desde la petición, no los 8 s de dt.
+            while (sinceLoad.ElapsedMilliseconds < (long)limitMs + 50)
+            {
+                yield return null;
+            }
+
+            Assert.That(banner.Waiting, Is.True, "sin Tick, nada cambia");
+            PlayModeHelpers.Step(boot, 1);
+            double loadToCardMs = sinceLoad.Elapsed.TotalMilliseconds;
+            WorldBannerSetup.AssertFallback(view, WorldBannerView.FallbackTimeout);
+            Assert.That(banner.ArtWaitMs, Is.InRange(limitMs, (float)loadToCardMs + 1f),
+                "wait_ms: entre el límite y el reloj real que midió el test (" + loadToCardMs.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " ms)");
+            Assert.That(banner.ArtWaitMs, Is.LessThan(dtMs - limitMs), "no la suma del dt (" + (dtMs + PlayModeHelpers.FrameMs) + " ms)");
+            Assert.That(view.LastWorldBannerArtProbe, Does.Contain("\"wait_ms\":" + banner.ArtWaitMs.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + ","),
+                "la sonda publica ese mismo tiempo real");
+            Assert.That(view.CardArt.BannerArtPending, Is.False, "el trabajo se abandona");
+            yield return WorldBannerSetup.CloseThenTheIntro(boot, 41, 3);
         }
 
         [UnityTest]
