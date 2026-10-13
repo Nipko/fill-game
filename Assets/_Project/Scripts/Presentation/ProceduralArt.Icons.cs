@@ -25,9 +25,10 @@ namespace AF.Presentation
     /// ocupa <see cref="FruitIconFill"/> de su alto: 0,45 u, el de 07 §3, regla 1 (02 §12 dice «60 % del ancho de la dosis»;
     /// se alinea en el paso 2). Siluetas gruesas, con huecos de 2-3 px como mínimo, para leerse a 48 dp (≈ 30 px en el
     /// SM-S938B). Revisión de B3: la Guanábana, el Achiote y el Lulo, de cuerpo liso y grande y con los pinchos solo como
-    /// textura interior (con espinas o cerdas por fuera se leían como bichos dentro del jugo); y en su segunda revisión, la hoja
+    /// textura interior (con espinas o cerdas por fuera se leían como bichos dentro del jugo); en su segunda revisión, la hoja
     /// hundida, que cruza en diagonal una banda de agua baja (maciza por encima del agua y en negativo dentro de ella) en lugar
-    /// del bloque de agua lleno, que se leía como un escudo o una pegatina.</para>
+    /// del bloque de agua lleno, que se leía como un escudo o una pegatina; y en la tercera, la Guanábana, que cuelga girada 25°
+    /// y lleva 4 ganchos sueltos en lugar de 6 «v» en hileras (con ellas se leía, como el Aguaje, como una piña de pino).</para>
     /// <para>Contorno (canal G; <see cref="FruitIconHasRim"/>): los iconos marfil sobre un tinte de L* 45-55 llevan un
     /// contorno de ≈ 1 dp del propio tinte oscurecido, que los separa de las marcas marfil de su patrón.</para>
     /// </remarks>
@@ -55,8 +56,21 @@ namespace AF.Presentation
         /// <summary>L* (CIELAB) máximo del tinte con icono en marfil que lleva contorno (<see cref="FruitIconHasRim"/>) [P].</summary>
         public const float FruitIconRimLightnessMax = 55f;
 
-        // «v» huecas de la Guanábana (x, y locales desde su centro, en px): 6, sueltas, sin filas.
-        private static readonly float[] GuanabanaVs = { -7f, 11.5f, 6f, 13.5f, -1f, 3f, 10f, 1.5f, -8f, -6.5f, 4.5f, -11f };
+        // Guanábana colgando (DrawGuanabanaIcon), en px de la celda: el corazón (centro, semiejes, cuánto más ancho arriba y el
+        // giro, en grados desde la vertical) y sus ganchos huecos (radio, grosor de ≈ 1 dp y arco en grados).
+        private const float GuanabanaX = 32f;
+        private const float GuanabanaY = 30f;
+        private const float GuanabanaRx = 22.5f;
+        private const float GuanabanaRy = 24.5f;
+        private const float GuanabanaWiden = 0.35f;
+        private const float GuanabanaTiltDeg = -25f;
+        private const float GuanabanaHookR = 6f;
+        private const float GuanabanaHookThickness = FruitIconRimPx;
+        private const float GuanabanaHookSweepDeg = 125f;
+
+        // Sitio de cada gancho de la Guanábana (el punto medio de su arco; x, y locales del cuerpo antes de girarlo, en px): 4,
+        // sueltos, sin hileras ni columnas en pantalla.
+        private static readonly float[] GuanabanaHooks = { 1f, 11.5f, 4.5f, -13f, 16.5f, 4.5f, -11f, -1.5f };
 
         // Semillas del Achiote en la abertura (x, y, radio en px).
         private static readonly float[] AchioteSeeds = { 31f, 29f, 3.9f, 36f, 36.5f, 3.9f, 27.5f, 38.5f, 3.9f, 33f, 46f, 3.7f };
@@ -313,7 +327,7 @@ namespace AF.Presentation
                     IconCapsule(m, 35.5f, 51.5f, 51f, 56.5f, 1.0f, true);
                     break;
 
-                case 4: // Aguaje: fruto escamoso (huevo con hileras de escamas y una coronita).
+                case 4: // Aguaje: fruto escamoso (huevo derecho y simétrico con hileras de escamas y una coronita).
                     IconEllipse(m, 32f, 29f, 19f, 25f, 0f, false);
                     IconTriangle(m, new Vector2(25f, 51f), new Vector2(29.5f, 51f), new Vector2(26f, 59f), false);
                     IconTriangle(m, new Vector2(29.5f, 52f), new Vector2(34.5f, 52f), new Vector2(32f, 61f), false);
@@ -432,31 +446,32 @@ namespace AF.Presentation
             }
         }
 
-        // Guanábana: fruto espinoso como corazón asimétrico de cuerpo liso (más ancho arriba y con la punta de abajo torcida), el
-        // borde en bultos suaves de menos de 1 dp, las espinas solo como «v» huecas por dentro y un pezón corto y recto (sin el
-        // rabito rizado, que parecía una antena, ni las espinas por fuera, que la hacían una mosca o una mancha erizada).
+        // Guanábana: fruto espinoso colgando (revisión 3 de B3), un corazón ancho de cuerpo liso girado 25° (la punta abajo a
+        // la izquierda y el pezón arriba a la derecha) con el borde en bultos suaves de menos de 1 dp, y 4 ganchos huecos sueltos
+        // de ≈ 1 dp de grueso y 2,4 dp de largo, todos curvados hacia el mismo lado. Se separa del Aguaje (huevo derecho y
+        // simétrico con hileras de escamas y coronita) por la inclinación y la textura, no solo por el contorno: con las 6 «v»
+        // de antes en hileras y el cuerpo casi derecho, a ≈ 10 dp se leían los dos como piñas de pino. Sin espinas por fuera
+        // (la hacían una mosca o una mancha erizada) ni el rabito rizado (parecía una antena).
         private static void DrawGuanabanaIcon(float[] m)
         {
-            const float cx = 32f;
-            const float cy = 32f;
-            const float tilt = -18f;
-            IconBumpyHeart(m, cx, cy, 18f, 23f, tilt, 0.24f, 0.7f, 11, 1.4f, false);
-            float rad = tilt * Mathf.Deg2Rad;
+            IconBumpyHeart(m, GuanabanaX, GuanabanaY, GuanabanaRx, GuanabanaRy, GuanabanaTiltDeg, GuanabanaWiden, 0f, 11, 1.4f, false);
+            float rad = GuanabanaTiltDeg * Mathf.Deg2Rad;
             float c = Mathf.Cos(rad);
             float s = Mathf.Sin(rad);
-            var center = new Vector2(cx, cy);
-            for (int i = 0; i < GuanabanaVs.Length; i += 2)
+            var center = new Vector2(GuanabanaX, GuanabanaY);
+
+            // Cada gancho, un arco con el centro de su curva a GuanabanaHookR a la izquierda (en el cuerpo) de su sitio: todos
+            // abiertos hacia el mismo lado.
+            float from = GuanabanaTiltDeg - (0.5f * GuanabanaHookSweepDeg);
+            float to = GuanabanaTiltDeg + (0.5f * GuanabanaHookSweepDeg);
+            for (int i = 0; i < GuanabanaHooks.Length; i += 2)
             {
-                Vector2 q = center + Rotate(new Vector2(GuanabanaVs[i], GuanabanaVs[i + 1]), c, s);
-                Vector2 tip = q + Rotate(new Vector2(0f, -2.2f), c, s);
-                Vector2 l = q + Rotate(new Vector2(-3.2f, 2.2f), c, s);
-                Vector2 r = q + Rotate(new Vector2(3.2f, 2.2f), c, s);
-                IconCapsule(m, l.x, l.y, tip.x, tip.y, 1.25f, true);
-                IconCapsule(m, r.x, r.y, tip.x, tip.y, 1.25f, true);
+                Vector2 q = center + Rotate(new Vector2(GuanabanaHooks[i] - GuanabanaHookR, GuanabanaHooks[i + 1]), c, s);
+                IconArc(m, q.x, q.y, GuanabanaHookR, GuanabanaHookThickness, from, to, true);
             }
 
-            Vector2 top = center + Rotate(new Vector2(-1.5f, 22.5f), c, s);
-            Vector2 nub = center + Rotate(new Vector2(-2f, 27.5f), c, s);
+            Vector2 top = center + Rotate(new Vector2(-1.5f, GuanabanaRy - 1f), c, s);
+            Vector2 nub = center + Rotate(new Vector2(-2f, 31f), c, s);
             IconCapsule(m, top.x, top.y, nub.x, nub.y, 2.8f, false);
         }
 

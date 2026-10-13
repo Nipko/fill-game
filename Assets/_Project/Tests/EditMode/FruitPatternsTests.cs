@@ -170,6 +170,90 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void GuanabanaIcon_HangsTilted_WithLooseHooks_NotAguaje() // revisión 3 de B3: a ≈ 10 dp, dos piñas de pino
+        {
+            const int n = ProceduralArt.FruitIconPx;
+            float[] guanabana = ProceduralArt.FruitIconMask(1);
+            float[] aguaje = ProceduralArt.FruitIconMask(4);
+
+            // Siluetas a resolución completa y a 1 px/dp: la caja de 0,5 u mide ≈ 11,7 dp (FruitIconRimPx ≈ 1 dp).
+            int dpCells = Mathf.RoundToInt(n / ProceduralArt.FruitIconRimPx);
+            Assert.That(dpCells, Is.EqualTo(12), "1 px/dp: 12 × 12 px por celda");
+            float full = Iou(guanabana, aguaje);
+            float atDp = IouAt(guanabana, aguaje, dpCells);
+            TestContext.WriteLine("IoU Guanábana-Aguaje: " + full.ToString("F2") + " a 64 px y " + atDp.ToString("F2") + " a 1 px/dp (antes, ≈ 0,55 y 0,66).");
+            Assert.That(full, Is.LessThan(0.5f), "1-4 a resolución completa");
+            Assert.That(atDp, Is.LessThan(0.55f), "1-4 a 1 px/dp");
+            int[] others = { 2, 11 };
+            for (int i = 0; i < others.Length; i++)
+            {
+                float iou = IouAt(guanabana, ProceduralArt.FruitIconMask(others[i]), dpCells);
+                Assert.That(iou, Is.LessThan(0.7f), "par de riesgo 1-" + others[i] + " a 1 px/dp: IoU " + iou.ToString("F2"));
+            }
+
+            // Inclinación: cuelga girada unos 25° y ancha; el Aguaje sigue derecho y alargado.
+            float tilt = AxisFromVertical(guanabana);
+            float upright = AxisFromVertical(aguaje);
+            Bounds(guanabana, out int gx0, out int gy0, out int gx1, out int gy1);
+            Bounds(aguaje, out int ax0, out int ay0, out int ax1, out int ay1);
+            float aspect = (gx1 - gx0 + 1) / (float)(gy1 - gy0 + 1);
+            float aguajeAspect = (ax1 - ax0 + 1) / (float)(ay1 - ay0 + 1);
+            TestContext.WriteLine("Eje principal a " + tilt.ToString("F1") + "° de la vertical (Aguaje, " + upright.ToString("F1") + "°); aspecto " + aspect.ToString("F2") + " (Aguaje, " + aguajeAspect.ToString("F2") + ").");
+            Assert.That(tilt, Is.InRange(15f, 35f), "la Guanábana cuelga girada");
+            Assert.That(upright, Is.LessThan(5f), "el Aguaje, derecho");
+            Assert.That(aspect, Is.GreaterThanOrEqualTo(0.85f), "la Guanábana, ancha (aspecto ≥ 0,85)");
+            Assert.That(aguajeAspect, Is.LessThan(0.75f), "el Aguaje, alargado");
+
+            // Textura: 4-5 ganchos huecos sueltos (cerrados dentro del cuerpo), de ≥ 2 dp de largo y ≈ 1 dp de grueso, curvados
+            // todos hacia el mismo lado y sin hileras ni columnas.
+            List<List<int>> hooks = Holes(guanabana);
+            Assert.That(hooks.Count, Is.InRange(4, 5), "4-5 ganchos sueltos");
+            var centroids = new Vector2[hooks.Count];
+            var bulges = new Vector2[hooks.Count];
+            for (int h = 0; h < hooks.Count; h++)
+            {
+                List<int> hook = hooks[h];
+                Assert.That(hook.Count, Is.GreaterThanOrEqualTo(60), "gancho " + h + ": área ≥ 2 dp²");
+                Assert.That(HasDisc(hook, 2), Is.True, "gancho " + h + ": ≈ 1 dp de grueso (cabe un disco de 5 px)");
+                float longest = -1f;
+                Vector2 tipA = Vector2.zero;
+                Vector2 tipB = Vector2.zero;
+                Vector2 sum = Vector2.zero;
+                for (int i = 0; i < hook.Count; i++)
+                {
+                    var p = new Vector2(hook[i] % n, hook[i] / n);
+                    sum += p;
+                    for (int j = i + 1; j < hook.Count; j++)
+                    {
+                        var q = new Vector2(hook[j] % n, hook[j] / n);
+                        float d = (p - q).sqrMagnitude;
+                        if (d > longest)
+                        {
+                            longest = d;
+                            tipA = p;
+                            tipB = q;
+                        }
+                    }
+                }
+
+                centroids[h] = sum / hook.Count;
+                bulges[h] = centroids[h] - (0.5f * (tipA + tipB));
+                Assert.That(Mathf.Sqrt(longest), Is.GreaterThanOrEqualTo(2f * ProceduralArt.FruitIconRimPx), "gancho " + h + ": ≥ 2 dp de largo");
+                Assert.That(bulges[h].magnitude, Is.GreaterThan(0.5f), "gancho " + h + ": curvo");
+            }
+
+            for (int a = 0; a < hooks.Count; a++)
+            {
+                for (int b = a + 1; b < hooks.Count; b++)
+                {
+                    Assert.That(Mathf.Abs(centroids[a].x - centroids[b].x), Is.GreaterThanOrEqualTo(4f), "ganchos " + a + " y " + b + ": sin columnas");
+                    Assert.That(Mathf.Abs(centroids[a].y - centroids[b].y), Is.GreaterThanOrEqualTo(4f), "ganchos " + a + " y " + b + ": sin hileras");
+                    Assert.That(Vector2.Angle(bulges[a], bulges[b]), Is.LessThan(30f), "ganchos " + a + " y " + b + ": curvados hacia el mismo lado");
+                }
+            }
+        }
+
+        [Test]
         public void IconAtlas_GeneratedWithinBudget() // revisión de B3: el atlas se genera en la primera carga de nivel
         {
             Assert.That(_art.FruitIconAtlas, Is.Not.Null); // primera generación (incluye el JIT)
@@ -522,6 +606,157 @@ namespace AF.Tests.EditMode
             }
 
             return union > 0 ? inter / (float)union : 0f;
+        }
+
+        // IoU de las máscaras reducidas a cells × cells px (media por área, con pesos fraccionarios en los bordes).
+        private static float IouAt(float[] a, float[] b, int cells)
+        {
+            return Iou(Downsample(a, cells), Downsample(b, cells));
+        }
+
+        private static float[] Downsample(float[] m, int cells)
+        {
+            const int n = ProceduralArt.FruitIconPx;
+            float step = n / (float)cells;
+            var dst = new float[cells * cells];
+            for (int cy = 0; cy < cells; cy++)
+            {
+                float y0 = cy * step;
+                float y1 = (cy + 1) * step;
+                for (int cx = 0; cx < cells; cx++)
+                {
+                    float x0 = cx * step;
+                    float x1 = (cx + 1) * step;
+                    float acc = 0f;
+                    float weight = 0f;
+                    for (int y = Mathf.FloorToInt(y0); y < Mathf.CeilToInt(y1); y++)
+                    {
+                        float wy = Mathf.Min(y + 1, y1) - Mathf.Max(y, y0);
+                        for (int x = Mathf.FloorToInt(x0); x < Mathf.CeilToInt(x1); x++)
+                        {
+                            float w = wy * (Mathf.Min(x + 1, x1) - Mathf.Max(x, x0));
+                            acc += m[(y * n) + x] * w;
+                            weight += w;
+                        }
+                    }
+
+                    dst[(cy * cells) + cx] = acc / weight;
+                }
+            }
+
+            return dst;
+        }
+
+        // Ángulo (grados, 0-90) entre el eje principal de la silueta (momentos de segundo orden) y la vertical.
+        private static float AxisFromVertical(float[] m)
+        {
+            const int n = ProceduralArt.FruitIconPx;
+            double sx = 0;
+            double sy = 0;
+            int count = 0;
+            for (int i = 0; i < m.Length; i++)
+            {
+                if (m[i] > 0.5f)
+                {
+                    sx += i % n;
+                    sy += i / n;
+                    count++;
+                }
+            }
+
+            double mx = sx / count;
+            double my = sy / count;
+            double cxx = 0;
+            double cyy = 0;
+            double cxy = 0;
+            for (int i = 0; i < m.Length; i++)
+            {
+                if (m[i] > 0.5f)
+                {
+                    double dx = (i % n) - mx;
+                    double dy = (i / n) - my;
+                    cxx += dx * dx;
+                    cyy += dy * dy;
+                    cxy += dx * dy;
+                }
+            }
+
+            double fromX = 0.5 * System.Math.Atan2(2.0 * cxy, cxx - cyy) * (180.0 / System.Math.PI);
+            return (float)(90.0 - System.Math.Abs(fromX));
+        }
+
+        // Huecos cerrados de la silueta: componentes (4-conexas) del fondo que no tocan el borde de la celda, como índices.
+        private static List<List<int>> Holes(float[] m)
+        {
+            const int n = ProceduralArt.FruitIconPx;
+            var seen = new bool[m.Length];
+            var holes = new List<List<int>>();
+            var stack = new Stack<int>();
+            for (int start = 0; start < m.Length; start++)
+            {
+                if (seen[start] || m[start] > 0.5f)
+                {
+                    continue;
+                }
+
+                var component = new List<int>();
+                bool open = false;
+                seen[start] = true;
+                stack.Push(start);
+                while (stack.Count > 0)
+                {
+                    int i = stack.Pop();
+                    component.Add(i);
+                    int x = i % n;
+                    int y = i / n;
+                    open |= x == 0 || y == 0 || x == n - 1 || y == n - 1;
+                    for (int k = 0; k < 4; k++)
+                    {
+                        int xx = x + (k == 0 ? 1 : k == 1 ? -1 : 0);
+                        int yy = y + (k == 2 ? 1 : k == 3 ? -1 : 0);
+                        int j = (yy * n) + xx;
+                        if (xx >= 0 && yy >= 0 && xx < n && yy < n && !seen[j] && m[j] <= 0.5f)
+                        {
+                            seen[j] = true;
+                            stack.Push(j);
+                        }
+                    }
+                }
+
+                if (!open)
+                {
+                    holes.Add(component);
+                }
+            }
+
+            return holes;
+        }
+
+        // El hueco contiene un disco de radio r px entero (su grosor llega a 2r + 1 px en algún sitio).
+        private static bool HasDisc(List<int> hole, int r)
+        {
+            const int n = ProceduralArt.FruitIconPx;
+            var set = new HashSet<int>(hole);
+            for (int i = 0; i < hole.Count; i++)
+            {
+                int x = hole[i] % n;
+                int y = hole[i] / n;
+                bool inside = true;
+                for (int dy = -r; dy <= r && inside; dy++)
+                {
+                    for (int dx = -r; dx <= r && inside; dx++)
+                    {
+                        inside = (dx * dx) + (dy * dy) > r * r || set.Contains(((y + dy) * n) + x + dx);
+                    }
+                }
+
+                if (inside)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
