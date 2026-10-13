@@ -3,6 +3,8 @@
 > **Documento de apoyo, no canon.** Manda el GDD (`docs/GDD.md` y `docs/gdd/00-09`). Nada de este archivo cambia reglas, números ni nombres hasta que el dueño decida y se edite el capítulo que toque (sección 17). Lo marcado [P] es propuesta.
 >
 > **Toda la fauna, la flora y los nombres quedan «pendientes de revisión del asesor cultural» (07 §8.2).** Ningún nombre común de este documento llega a la interfaz sin esa revisión.
+>
+> **Actualización del 2026-10-12 (D-011, decisión del dueño del 2026-10-11; canon en 02 §4.2 y 07 §5.1 y §6.4).** La tropa entra trepando por la rama en ≈ 500 ms mientras el río llena, también en la versión corta (en la larga llega a su sitio a la misma hora que antes y la entrada empieza antes; en la corta, cada miquito llega al menos 50 ms antes de su primera suelta). Tras la última suelta se queda ≈ 1.500 ms en reposo, ya en juego, y sale trepando en ≈ 500 ms (antes, 300 ms en T). La tarjeta «¡Miquito a la vista!» sale cuando la tropa se ha ido y dura según lo que hay que leer (1.000 ms + 55 ms por carácter visible, entre 3.000 y 7.000 ms [P]). T, las fases a-d, el calendario de la fruta y el instante en que se habilita el toque no cambian. Las filas de §4.5, §7.2, §7.3, §14 y §16 (A3, A8 y A15) que lo contradicen quedan sustituidas.
 
 - **Fecha:** 2026-10-08.
 - **Pedido del dueño (literal, dos partes del mismo día).**
@@ -184,7 +186,7 @@ La especie cambia el esqueleto, la paleta, la locomoción y el rasgo de reposo. 
 ### 4.5 Tarjeta «¡Miquito a la vista!» [P]
 
 - **Qué es:** una tarjeta pequeña de la familia de «Fruta nueva» (06 §4.5). Lleva el retrato de 40 dp, «¡Miquito a la vista!», el nombre local y una línea de 50 caracteres o menos con un dato verificado (fuente en «Sobre la Amazonía»).
-- **Cuándo:** al habilitarse el input, después de la intro, nunca dentro de la carga. Dura 2,5 s y se desvanece. No captura toques (`raycastTarget = false`). No tapa cuias ni botones: va sobre la franja del panorama si mide ≥ 64 dp; si no, sobre el muelle, por encima de la bandeja.
+- **Cuándo:** al habilitarse el input, después de la intro, nunca dentro de la carga. Dura 2,5 s y se desvanece. *(Sustituido por D-011: sale cuando la tropa se ha ido y dura por lectura, 3-7 s [P].)* No captura toques (`raycastTarget = false`). No tapa cuias ni botones: va sobre la franja del panorama si mide ≥ 64 dp; si no, sobre el muelle, por encima de la bandeja.
 - **En qué nivel:** el primero ≥ `nivel_tarjeta` que esté «libre»: sin banner de mundo, sin Fruta nueva, sin debut de mecánica y sin tutorial pendiente al empezar (por ejemplo, el tutorial de Marea del nivel 5 si no salió en el 3). Una sola tarjeta por nivel, con prioridad tutorial → Fruta nueva → miquito.
 - **Por qué «a la vista» y no «nuevo»:** «nuevo» suena a adquisición, y tres especies del elenco están amenazadas (sauim CR; churuco y huapo VU; maquisapa EN). En las amenazadas, la línea es una buena noticia de conservación (por ejemplo, los puentes de cuerda de Manaos para el sauim [V S18]), nunca la etiqueta UICN como trofeo. Sin confeti.
 - **Líneas propuestas** (todas al asesor):
@@ -314,12 +316,12 @@ Las fases del canon se conservan como cortes (a 0-300, b 300-700, c 700-950, d 9
 | 120-280 | **Desborda.** La lámina de agua sube por encima del canto superior del marco (alfa 0 → 1 en 60 ms) y se extiende desde el centro hacia las esquinas a 1.300 dp/s. Al llegar a cada esquina, 2 gotas (4 partículas) | — |
 | 150-500 | **Fila 1.** Cuando la lámina pasa sobre el eje de una cuia no vacía, en ≤ 30 ms cae su chorrito desde el borde interior del marco: recto, de 0,16 a 0,10 u de grosor, con el núcleo del agua del río con +10 % de L y la línea especular del chorro (guía 6.5). La cabeza toca el fondo en ~30 ms y, en ≤ 50 ms, el agua sube desde el fondo hasta sus dosis finales en 220 ms (ease-out), con menisco elíptico de 0,4 u, onda y las marcas de dosis apareciendo al paso. En el nivel 7: las dos cuias centrales se abren hacia los 180 ms y las de los extremos hacia los 240; la fila 1 está llena hacia los 490. En el nivel 1: la cuia central hacia los 150, la izquierda hacia los 230; la derecha, vacía, queda seca | Un `sfx_fill` (chorro y gorgoteo) por fila, no por cuia |
 | 270-700 | **Filas siguientes.** Desde las esquinas, dos tiras de agua de 5 dp bajan por el borde interior de los costados del marco a 2.000 dp/s y, al llegar a la repisa de la fila 1 (nivel 7: ~350 ms), corren por su cara desde los dos extremos hacia el centro a 1.600 dp/s. Al pasar sobre cada cuia no vacía de la fila 2, cae su chorrito desde el borde inferior de la repisa (unos 23 dp hasta la boca) y la cuia se llena igual. **Todo el llenado termina antes de t = 700**: si el tablero lo exige, el director sube las velocidades | — |
-| ~490-760 | **Entra la tropa**, cuando la fila 1 está llena. Con el mono ardilla en el nivel 7: 5 miquitos en fila desde el follaje superior izquierdo, a ≤ 450 dp/s (≤ 7,5 dp por fotograma a 60 fps), con la cola en arco. Con tropa de 4 o más, la mitad entra por la esquina derecha, para acortar el recorrido. Con poco contraste: capa media, menos saturados que los tintes, contorno de 2 px como Capi | Sin chillidos aquí, para no robar la mirada al agua |
+| ~490-760 | **Entra la tropa**, cuando la fila 1 está llena *(D-011: ahora trepa ≈ 500 ms antes y llega a su sitio a la misma hora)*. Con el mono ardilla en el nivel 7: 5 miquitos en fila desde el follaje superior izquierdo, a ≤ 450 dp/s (≤ 7,5 dp por fotograma a 60 fps), con la cola en arco. Con tropa de 4 o más, la mitad entra por la esquina derecha, para acortar el recorrido. Con poco contraste: capa media, menos saturados que los tintes, contorno de 2 px como Capi | Sin chillidos aquí, para no robar la mirada al agua |
 | 700-850 | **Se calma.** Los chorritos se cortan (la cola cae en 60 ms y cada boca de la madera suelta 1 gota) y las tiras bajan hacia las esquinas inferiores del panel y se desvanecen. Las superficies se mecen y se calman (onda decreciente de 500 ms) | Goteo |
 | 740-1.300 | **Sueltas.** Cada miquito frena 60 ms sobre cada columna suya y suelta su fruta (gesto de 6 fotogramas, unos 100 ms). La fruta conserva el 30 % de la velocidad del miquito (la suelta se adelanta para compensar la deriva), gira a 180-360 °/s y cae con g = 12.000 dp/s², encogiendo de 0,6 a 0,45 u. La fruta de la fila 2 pasa por delante de la fila 1, como el chorro del vertido (D-006) | — |
 | 950-1.400 | **La fruta tiñe.** Al tocar la superficie: la fruta se funde en 40 ms, un anillo elíptico se abre sobre la superficie (0,4 → 1,3 u, alfa 0,4 → 0, 250 ms) y, solo en el primer impacto de cada fila, 2 gotas (≤ 20 partículas en total). Un penacho del color baja en ≤ 60 ms hasta su racha y la racha florece en 100 ms (OKLab desde el agua del río); el patrón aparece con el tinte, como hoy. **Orden:** filas de arriba abajo; dentro de la fila, por pasadas (primero la racha de abajo de cada cuia, por x; luego la siguiente); dentro de la cuia, de abajo arriba. El «?» de Aguas turbias aparece en el fotograma del primer impacto. La última floración termina exactamente en 1.400 | Un «plic» suave por fruta y `sfx_tint` por racha (la nota pentatónica del tinte); como mucho 6 voces a la vez |
 | 1.400 | **Listo:** el input se habilita en este fotograma. La onda de superficie decae en 0,5 s | — |
-| 1.400-1.700 | La tropa sale en 300 ms hacia la esquina más cercana, **de espaldas al tablero**, sin capturar toques y sin mirar ninguna cuia. El polen vuelve. Si toca tarjeta, aparece ahora | — |
+| 1.400-1.700 | *(D-011: primero reposa ≈ 1.500 ms tras la última suelta y sale en ≈ 500 ms.)* La tropa sale en 300 ms hacia la esquina más cercana, **de espaldas al tablero**, sin capturar toques y sin mirar ninguna cuia. El polen vuelve. Si toca tarjeta, aparece ahora | — |
 
 **Ejemplo, nivel 1** (cuia 1 = açaí × 3 abajo y aguaje arriba; cuia 2 = aguaje × 3 y açaí; cuia 3 vacía; 4 rachas, 4 frutas, 2 miquitos):
 
@@ -340,7 +342,7 @@ Los reintentos de los niveles 1-20 ya usan la versión corta (`LevelFlow.BeginAt
 
 | t (ms) | Qué se ve |
 |---|---|
-| 0 | Cuias vacías y secas en su sitio. **Modo rama:** la tropa ya está posada, en reposo (respira, parpadea, mece la cola) y quieta: es el momento de la especie, y su rasgo de reposo (cola entrelazada, bigote, collar, cara roja) se ve los 800 ms. **Modo dosel:** sin tropa. Saltable desde aquí |
+| 0 | Cuias vacías y secas en su sitio. **Modo rama:** la tropa ya está posada, en reposo (respira, parpadea, mece la cola) y quieta: es el momento de la especie, y su rasgo de reposo (cola entrelazada, bigote, collar, cara roja) se ve los 800 ms. *(D-011: ahora entra trepando y su rasgo se ve en el reposo de ≈ 1.500 ms tras la última suelta; quien no llega a tiempo a su sitio sigue posado desde t = 0.)* **Modo dosel:** sin tropa. Saltable desde aquí |
 | 0-80 | El río crece y sus destellos se deslizan hacia el panel. Con 3 filas, el desborde sale por debajo del HUD |
 | 50-130 | La lámina desborda el canto del marco a 2.600 dp/s, desde el centro |
 | 60-400 | Chorritos de la fila 1 al paso de la lámina; cabeza de 20 ms; llenado de 130 ms. Tiras laterales a 4.000 dp/s y por las repisas a 3.200 dp/s; filas 2 y 3 igual. **Todo lleno antes de t = 400** (el director sube las velocidades si hace falta). Un `sfx_fill` por fila |
@@ -348,7 +350,7 @@ Los reintentos de los niveles 1-20 ya usan la versión corta (`LevelFlow.BeginAt
 | ~300-650 | **Sueltas**, calculadas hacia atrás desde el impacto: las de las filas bajas salen antes porque caen más. **Rama:** cada miquito suelta desde la mano con su ciclo de suelta (100 ms; 1-2 frutas por ciclo; como mucho 3 ciclos por miquito). **Dosel:** el follaje se sacude y cada fruta asoma por debajo del HUD sobre su columna |
 | 550-800 | **La fruta tiñe**, como en la larga. El «?» aparece en el primer impacto. Si hay más de 24 rachas, ver 7.4, paso 2. La última floración termina en 800 |
 | 800 | Input habilitado en este fotograma |
-| 800-1.100 | La tropa sale hacia las esquinas, de espaldas y sin capturar toques |
+| 800-1.100 | La tropa sale hacia las esquinas, de espaldas y sin capturar toques *(D-011: tras ≈ 1.500 ms de reposo y en ≈ 500 ms)* |
 
 ### 7.4 El director: cómo se calcula el calendario
 
@@ -462,7 +464,7 @@ El teléfono del dueño (SM-S938B) es de gama alta: no valida este presupuesto.
 
 ## 14. Orden con otras pantallas
 
-Banner de mundo (antes de la intro, canon) → intro → después, como mucho una de estas: dedo guía del tutorial, «Fruta nueva» o «¡Miquito a la vista!». Si hay dedo guía, aparece cuando la tropa ya ha salido (T + 300 ms); el input está habilitado desde T igualmente. «El río bajó» va antes de la intro (ya es así). Hoy ni el banner de mundo ni «Fruta nueva» existen en el código: la regla de prioridad se implementa con la tarjeta.
+Banner de mundo (antes de la intro, canon) → intro → después, como mucho una de estas: dedo guía del tutorial, «Fruta nueva» o «¡Miquito a la vista!». Si hay dedo guía, aparece cuando la tropa ya ha salido (con D-011, tras el reposo); el input está habilitado desde T igualmente. El banner de mundo lo presenta Capi mientras Rosa asoma y se sumerge, en el 11, 41, 81 y 141, solo en el primer intento y no en el 1 (D-012). «El río bajó» va antes de la intro (ya es así). Hoy ni el banner de mundo ni «Fruta nueva» existen en el código: la regla de prioridad se implementa con la tarjeta.
 
 ## 15. Riesgos
 
@@ -489,19 +491,19 @@ Banner de mundo (antes de la intro, canon) → intro → después, como mucho un
 |---|---|---|---|
 | A1 | Duración | La última floración termina en T ± 1 fotograma para T ∈ {1.200, 1.400, 1.500, 600, 800, 1.000}; `Phase == Playing` en T | EditMode sobre el planificador y PlayMode con `LevelFlow` |
 | A2 | Causalidad | Por cuia: apertura del chorrito − paso del agua por su eje ≤ 30 ms; inicio del llenado − contacto de la cabeza ≤ 50 ms; inicio de la floración = fotograma del impacto | EditMode (calendario) |
-| A3 | Primero el río | En [0, 100] ms solo se mueven la capa del río y sus destellos; en la larga, la tropa no se mueve antes de que la fila 1 esté llena | PlayMode (posiciones por fotograma) |
+| A3 | Primero el río | En [0, 100] ms solo se mueven la capa del río y sus destellos; la tropa no empieza a entrar antes de que el río desborde (D-011; antes, en la larga, no se movía antes de que la fila 1 estuviera llena) | PlayMode (posiciones por fotograma) |
 | A4 | Llenado | Fin del llenado ≤ 700 ms (larga) y ≤ 400 ms (corta) con 3, 7 y 16 cuias; las cuias vacías nunca reciben agua | EditMode |
 | A5 | Fruta | ≤ 24 frutas; con más de 24 rachas, una por cuia no vacía; cada impacto ≥ fin del llenado de su cuia; x del impacto dentro del eje de la cuia ± 0,1 u; tamaño al impacto ≥ 8 dp con 3, 7 y 16 cuias a 360 × 780 y 360 × 640 | EditMode |
 | A6 | Aguas turbias | Ninguna fruta ni nota para una dosis oculta; mismo calendario para dos tableros que solo difieren en el color de una oculta; «?» de todas en el mismo fotograma | EditMode (cuando exista la mecánica) |
 | A7 | Exclusión | Ninguna pieza de la tropa ni de la rama a menos de 8 dp de una cuia, sobre un botón del HUD ni dentro del panel, con 3, 7 y 16 cuias a 360 × 780, 360 × 800 y 360 × 640 | PlayMode con rectángulos |
-| A8 | D-002 | Seleccionar o verter no cambia nada de la capa de la tropa; a T + 300 ms (o 100 ms tras un salto) no queda ninguna pieza de la intro salvo, como mucho, una punta de cola en la esquina | PlayMode |
+| A8 | D-002 | Seleccionar o verter no cambia nada de la capa de la tropa, tampoco en el reposo; la tropa se ve al menos 1.200 ms después de T y se ha ido antes de T + 2,2 s (D-011); tras un salto, a los 100 ms no queda ninguna pieza de la intro salvo, como mucho, una punta de cola en la esquina | PlayMode |
 | A9 | Salto | Toque en t ∈ {0, 1 fotograma, 300, 700, 1.000, 1.399}: estado final en ese fotograma; `TapCuia` en el fotograma siguiente selecciona; restos con alfa 0 en ≤ 100 ms; ningún `Graphic` de la intro con `raycastTarget = true` en ningún momento; un solo `af_anim_skipped` con `anim = tint` | PlayMode |
 | A10 | Rendimiento | En clase A: media ≥ 58 fps durante la intro, ningún fotograma de más de 33 ms, CPU de efectos ≤ 1 ms, GPU ≤ 6 ms, 0 B asignados por fotograma tras `Start`, `Start` ≤ 2 ms, generación de la especie ≤ 10 ms | Profiler por USB (pendiente de dispositivo); en el Editor, las asignaciones y los tiempos de CPU |
 | A11 | Lectura (personas) | 5 personas que no conocen el juego ven las capturas o el vídeo de los niveles 1 y 7: ≥ 4 de 5 dicen que el agua «sale del río» y que el color lo pone «la fruta» o «los monos». Con 16 cuias: ≥ 3 de 5 | Prueba de pasillo |
 | A12 | Determinismo | El mismo nivel produce el mismo calendario, byte a byte | EditMode |
 | A13 | Especies | El catálogo valida (ids únicos; tramos sin solapes ni huecos en 1-1.000; `nivel_tarjeta` dentro del tramo; colores válidos); `IntroCast` devuelve dosel en el mundo 13, en reintentos y sin arte en un build de release, y nunca la especie de otro mundo | EditMode |
 | A14 | Capturas | Nuevas capturas deterministas: `01_intro_l7` a 300, 700, 1.100 y 1.400 ms; `01c_intro_l1` a 300, 900 y 1.300; `01d_intro_short_l7` a 200, 500 y 700; `01e_intro_16` (dosel) a 500. Un enganche de depuración fija el tiempo de la intro para capturar | PlayMode (`VisualSnapshotTests`) |
-| A15 | Tarjeta | Aparece en el nivel libre correcto, dura 2,5 s, no captura toques y no tapa cuias ni botones; `af_fauna_sighted` se registra una vez por especie | PlayMode (cuando se apruebe) |
+| A15 | Tarjeta | Aparece en el nivel libre correcto cuando la tropa se ha ido, dura por lectura (3-7 s [P]; D-011), no captura toques y no tapa cuias ni botones; `af_fauna_sighted` se registra una vez por especie | PlayMode (cuando se apruebe) |
 
 ---
 

@@ -10,6 +10,8 @@ Revisión 4 (2026-10-08, D-005 y D-006): el dueño adoptó el vertido por tramo 
 
 Revisión 5 (2026-10-09, D-010): «Llenar y teñir» sustituye a «Sumergir y teñir». Se retira el agua de inmersión por fila (6.11 y C9) y la intro pasa a su propia capa (tabla de capas, fila 6); el canon está en 07 §5.1 y §6.4.
 
+Revisión 6 (2026-10-12, D-012): la sacudida de rechazo pasa a ±8 dp, 3 ciclos y 240 ms (6.3; canon en 02 §4.1 y 07 §4.3). El marco del panel bajo el HUD con 3 filas se queda como está (3.2).
+
 Fuentes: `docs/dev/decisiones.md` (D-001 a D-006), GDD 07 (§3 paleta, §4 cuia, §5 storyboards, §6 mascotas, §7 UI kit, §8 pautas culturales), GDD 02 (§3.3, §4, §5, §12), GDD 08 §5 (shader y rendimiento), glosario §0, §3, §9 y §10, `docs/research/09-referencia-magic-sort.md` y `docs/research/magic-sort/c-meta-liveops-ux.md` §4, la revisión del 2026-10-07 (material de entrada, verificado contra el código) y las capturas `Logs/device/v01-fix-*.png` y `docs/reviews/2026-10-07/visual/*.png`.
 
 Convenciones:
@@ -587,7 +589,7 @@ Base: 02 §4.1, 07 §5 y `GameConfig`. Todas las duraciones se multiplican por `
 |---|---|---|---|---|
 | 6.1 | **Selección** | El origen sube **16 dp con rebote**: pico de unos 17,6 dp (+10 %) hacia t ≈ 0,58 y asiento en 16. El vidrio sube +10 % de brillo con el sprite `GlassSelect` y la sombra de contacto se encoge (4.1). Solo cambia el origen (D-002) | 100 ms (`anim_lift_ms`; D-006) | easeOutBack (c = 1,70158) |
 | 6.2 | Deselección | Baja a su sitio | 100 ms | easeInQuad |
-| 6.3 | Rechazo | Sacudida de ±6 dp, 2 ciclos. Sin rojo, sin texto y sin cambiar de color | 120 ms | Seno |
+| 6.3 | Rechazo | Sacudida de ±8 dp, 3 ciclos, sin amortiguar, como antes: seno de amplitud constante (D-012, decisión del dueño del 2026-10-09, que sustituye a ±6 dp y 2 ciclos en 120 ms). Sin rojo, sin texto y sin cambiar de color | 240 ms | Seno |
 | 6.4 | Traslado e inclinación | Pose de D-006 (medida en Magic Sort): arco de 0,4 u hasta dejar el centro de la boca sobre el eje del destino (±0,1 u), a 0,85 u del borde [P], con el punto más bajo de la boca a 0,30-0,51 u (0,2-0,6 u); llega a 38° y gira alrededor de la boca hasta 92° − 9° × dosis que quedan al terminar cada dosis (65° con 3, frente a los ≈ 66° que midió Magic Sort; ≈ 92° con 0). El cuerpo queda del lado del que viene (en la misma columna, hacia el centro del tablero); si ese lado saliera del lienzo entre 38° y el ángulo final, al otro lado [P]. Escala 1,00. Mientras vierte se dibuja **delante de todo** (vecinas, marco del panel y HUD), sin techo: se retiran `GameScreen.PourCeilingFor`, `PourCavityDp` y `PourCeilingAirDp`. El líquido no rota | 300 ms | easeInOutCubic |
 | 6.5 | **Chorro** | Bézier desde el canto interior del lado bajo de la boca (0,34 u del eje, `CuiaView.PourEdgeU`) hasta la superficie, de 0,16 a 0,10 u de grosor. Núcleo del tinte con +10 % de L y una línea especular central de 1 dp (blanco 0,40) con UV a 3 u/s. Arranca al 70 % del traslado. Vierte la racha que cabe (`run`, D-005): 280 ms por dosis + 80 ms de cola | 360 ms con 1 dosis (280 + 80); 920 ms con 3 | Lineal |
 | 6.6 | **Salpicadura** [P] | Al tocar la superficie: 4-6 gotas de 0,06-0,10 u del tinte con borde claro, lanzadas a 1,5-2,5 u/s hacia arriba (±35°) con gravedad de 18 u/s². Un anillo elíptico crece de 0,4 a 1,3 u con alfa 0,40 → 0, y empieza la onda de 4.2 | 250 ms las gotas y 300 ms el anillo | Balística / easeOutCubic |
