@@ -28,8 +28,9 @@ namespace AF.UI
     /// el vidrio: <c>CuiaView.PlayReveal(mask, RevealStyle.Firefly)</c>, el pardo que se aclara de arriba abajo en 0,6 s ×
     /// factor y cada «?» que gira y muestra su fruta (T15). Al terminar, la cola registra la cuia revelada
     /// (<c>BoardAnimator.ShowContent</c>).</description></item>
-    /// <item><description><b>Regalo</b> (<see cref="OnRevealGifted"/>, nivel 100): el aviso «+1 Luciérnaga» sale cuando se cierra
-    /// la tarjeta previa (LEVEL_CARD), si la hay, o al empezar la intro.</description></item>
+    /// <item><description><b>Regalo</b> (<see cref="OnRevealGifted"/>, nivel 100): el aviso «+1 Luciérnaga» sale al habilitarse
+    /// el toque, tras la tarjeta previa (LEVEL_CARD), si la hay, y la intro, por la cola de avisos (D-011, punto 2;
+    /// GameScreen.Notices.cs).</description></item>
     /// </list>
     /// </summary>
     /// <remarks>
@@ -86,7 +87,7 @@ namespace AF.UI
         /// <summary>La cuia del revelado ya empezó a aclararse (la luciérnaga se posó).</summary>
         internal bool RevealMarksStarted => _revealCuia >= 0 && _revealMarks;
 
-        /// <summary>El aviso «+1 Luciérnaga» espera a que se cierre la tarjeta previa o empiece la intro.</summary>
+        /// <summary>El aviso «+1 Luciérnaga» espera a que se habilite el toque (tras la tarjeta previa y la intro; D-011, punto 2).</summary>
         internal bool RevealGiftPending => _revealGiftPending;
 
         /// <summary>Ms que faltan para volver a preguntar por el video de <c>rv_reveal</c> (0 si la ranura no lo ofrecería; tests).</summary>
@@ -95,7 +96,7 @@ namespace AF.UI
         /// <inheritdoc />
         public void OnRevealGifted(int units)
         {
-            // Llega en LOADING, antes de la tarjeta previa o de la intro: el aviso sale cuando la tarjeta se cierra (T13).
+            // Llega en LOADING, antes de la tarjeta previa o de la intro: el aviso sale al habilitarse el toque (D-011, punto 2).
             _revealGiftPending = true;
             _revealGiftUnits = units;
             LevelFlow flow = RequireFlow();
@@ -478,10 +479,11 @@ namespace AF.UI
             _tray.SetRevealBadge(stock, price, seeds, offersVideo && _revealVideoReady, available || selecting, selecting, bare);
         }
 
-        // «+1 Luciérnaga» cuando ya no hay tarjeta previa abierta (02 §10; T14 §6): al cerrarla o, sin ella, al empezar la intro.
+        // «+1 Luciérnaga» (02 §10; T14 §6) cuando ya se puede jugar: ningún aviso en LOADING, la tarjeta previa ni la INTRO
+        // (D-011, punto 2; NoticesHeld). Pasa a la cola de avisos al habilitarse el toque (OnIntroFinished).
         private void ShowRevealGiftIfReady(LevelFlow flow)
         {
-            if (!_revealGiftPending || flow.Phase == FlowPhase.Loading || flow.Phase == FlowPhase.LevelCard)
+            if (!_revealGiftPending || NoticesHeld(flow))
             {
                 return;
             }

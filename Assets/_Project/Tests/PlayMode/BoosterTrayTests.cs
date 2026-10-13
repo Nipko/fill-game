@@ -69,8 +69,11 @@ namespace AF.Tests.PlayMode
             boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
             GameScreen view = boot.View!;
-            Assert.That(view.ToastText, Is.EqualTo(UiText.ExtraCuiaGift), "04 §2.2: Capi trae una cuia en el 8");
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Intro));
+            Assert.That(view.ToastText, Is.Null, "D-011, punto 2: ningún aviso durante la intro");
+            Assert.That(view.NoticesQueued, Is.EqualTo(1), "el regalo de Capi espera su turno");
             boot.TapAnywhere();
+            Assert.That(view.ToastText, Is.EqualTo(UiText.ExtraCuiaGift), "04 §2.2: Capi trae una cuia en el 8, al habilitarse el toque");
             PlayModeHelpers.Step(boot, 50);
             Assert.That(view.Tray.SlotCount, Is.EqualTo(2));
             Assert.That(view.Tray.ExtraCuiaShown, Is.True);

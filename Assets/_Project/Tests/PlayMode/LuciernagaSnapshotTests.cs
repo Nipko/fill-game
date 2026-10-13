@@ -22,7 +22,7 @@ namespace AF.Tests.PlayMode
     /// <c>67a_reveal_firefly_flight_l100</c> (la luciérnaga a mitad del vuelo; <c>67a_reveal_tray_spent_l100_zoom</c>, la ranura
     /// ya gastada: gris y sin precio), <c>67b_reveal_firefly_light_l100</c> (posada en el borde, con su luz bajando por el
     /// vidrio), <c>67c_reveal_firefly_done_l100</c> (la cuia ya revelada y la luciérnaga que se va) y <c>68_gift_toast_l100</c>
-    /// («+1 Luciérnaga» al empezar la intro; <c>68b</c>, al cerrar la tarjeta previa). De cada una, un recorte a tamaño real
+    /// («+1 Luciérnaga» al habilitarse el toque tras la intro; <c>68b</c>, lo mismo tras la tarjeta previa: D-011, punto 2). De cada una, un recorte a tamaño real
     /// (<c>*_zoom</c>) para mirar solapes, legibilidad y la línea de D-003. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode
     /// PlayMode --filter AF.Tests.PlayMode.LuciernagaSnapshotTests</c> sin <c>-nographics</c>; los PNG quedan en
     /// <c>Logs/snapshots/</c>.
@@ -134,9 +134,15 @@ namespace AF.Tests.PlayMode
         {
             string dir = SnapshotKit.Prepare();
 
-            // Sin tarjeta: el aviso sale con la intro.
+            // Sin tarjeta: el aviso sale al terminar la intro (D-011, punto 2), no durante ella.
             yield return Load(100, FunnelSetup.Profile(0), false);
             GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.View!.ToastText, Is.Null, "nada durante la intro");
+            for (int t = 0; t < 4000 && boot.Flow!.Phase != FlowPhase.Playing; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
             PlayModeHelpers.Step(boot, 400);
             Assert.That(boot.View!.ToastText, Is.EqualTo(UiText.RevealGiftToast));
             SnapshotKit.Save(dir, "68_gift_toast_l100");
@@ -147,6 +153,12 @@ namespace AF.Tests.PlayMode
             boot = GameBootstrap.Current!;
             Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.LevelCard));
             boot.TapAnywhere();
+            Assert.That(boot.View!.ToastText, Is.Null, "tras la tarjeta viene la intro, aún sin aviso");
+            for (int t = 0; t < 4000 && boot.Flow!.Phase != FlowPhase.Playing; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
             PlayModeHelpers.Step(boot, 400);
             Assert.That(boot.View!.ToastText, Is.EqualTo(UiText.RevealGiftToast));
             SnapshotKit.Save(dir, "68b_gift_toast_after_card_l100");

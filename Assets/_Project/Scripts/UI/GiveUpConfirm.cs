@@ -61,6 +61,9 @@ namespace AF.UI
 
         public bool Visible => _root.gameObject.activeSelf;
 
+        /// <summary>Raíz del modal, hija del lienzo de la pantalla de nivel (tests de orden de capas).</summary>
+        public RectTransform Root => _root;
+
         public Button CloseButton => _close.Button;
 
         public Button RescueButton => _rescue.Button;

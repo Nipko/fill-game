@@ -23,7 +23,7 @@ namespace AF.Tests.PlayMode
 {
     /// <summary>
     /// Luciérnaga · Revelar en la escena (tarea T14 del paso 1; 04 §2.5; 07 §7.4 y §7.6; 02 §5): el regalo del 100 con su aviso
-    /// (al cerrar la tarjeta previa, si la hay), la bandeja de 3 ranuras de 64 dp de los niveles turbios, el botón en
+    /// (al habilitarse el toque, tras la tarjeta previa, si la hay, y la intro: D-011, punto 2), la bandeja de 3 ranuras de 64 dp de los niveles turbios, el botón en
     /// AF_LAYOUT, el modo de selección (solo laten las turbias), el revelado con el stock, con semillas y con el video, el aviso
     /// sin saldo ni video, la cancelación sin coste, la ranura que desaparece sin ocultas y lo revelado que sobrevive a Marea, a
     /// Volver a la orilla y a reabrir (con alguna oculta, las 3 ranuras desde el primer fotograma y en AF_LAYOUT). Con el
@@ -56,7 +56,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Gift_Level100_ToastAndStock()
         {
-            // Perfil nuevo y tarjetas apagadas (el gancho de los tests): el aviso sale al empezar la intro.
+            // Perfil nuevo y tarjetas apagadas (el gancho de los tests): el aviso espera a que se habilite el toque (D-011, punto 2).
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
             yield return PlayModeHelpers.LoadGame(Level100, new MemoryProgressStore(Level100, Level100 - 1));
             GameBootstrap boot = GameBootstrap.Current!;
@@ -65,15 +65,21 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow!.LevelCardsEnabled, Is.False);
             Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
             Assert.That(boot.Wallet!.Stock.Get(BoosterKind.Reveal), Is.EqualTo(1), "04 §2.5: 1 Luciérnaga al stock");
-            Assert.That(view.ToastText, Is.EqualTo(UiText.RevealGiftToast), "«+1 Luciérnaga» sin tarjeta: enseguida");
-            Assert.That(view.RevealGiftPending, Is.False);
+            Assert.That(view.ToastText, Is.Null, "«+1 Luciérnaga» sin tarjeta: no durante la intro");
+            Assert.That(view.RevealGiftPending, Is.True);
             Assert.That(HasEvent("\"phase\":\"gift\""), Is.True, "DevProbe.Event(\"reveal\") del regalo");
+            PlayModeHelpers.Step(boot, 2 * PlayModeHelpers.FrameMs);
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
+            Assert.That(view.ToastText, Is.Null, "aún en la intro");
             boot.TapAnywhere();
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RevealGiftToast), "al habilitarse el toque, «+1 Luciérnaga»");
+            Assert.That(view.RevealGiftPending, Is.False);
+            Assert.That(HasEvent("\"phase\":\"gift_toast\""), Is.True);
             PlayModeHelpers.Step(boot, 100);
             Assert.That(view.Tray.RevealShown, Is.True);
             Assert.That(view.Tray.RevealBadgeText, Is.EqualTo("+1"), "«Revelar +1»");
 
-            // Tarjetas encendidas (las enciende T13; aquí, el gancho): el aviso espera a que se cierre la tarjeta combinada del 100.
+            // Tarjetas encendidas (las enciende T13; aquí, el gancho): el aviso espera a la tarjeta combinada del 100 y a la intro.
             LaunchOptions.LevelCardsOverride = true;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
             yield return PlayModeHelpers.LoadGame(Level100, new MemoryProgressStore(Level100, Level100 - 1));
@@ -89,7 +95,13 @@ namespace AF.Tests.PlayMode
             Assert.That(view.ToastText, Is.Null);
             Assert.That(boot.TapAnywhere(), Is.True, "un toque cierra la tarjeta");
             Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
-            Assert.That(view.ToastText, Is.EqualTo(UiText.RevealGiftToast), "al cerrarla, «+1 Luciérnaga»");
+            Assert.That(view.ToastText, Is.Null, "al cerrarla empieza la intro: el aviso sigue esperando (D-011, punto 2)");
+            Assert.That(view.RevealGiftPending, Is.True);
+            PlayModeHelpers.Step(boot, 2 * PlayModeHelpers.FrameMs);
+            Assert.That(view.ToastText, Is.Null);
+            Assert.That(boot.TapAnywhere(), Is.True, "salta la intro");
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RevealGiftToast), "con el toque habilitado, «+1 Luciérnaga»");
             Assert.That(view.RevealGiftPending, Is.False);
         }
 
