@@ -12,6 +12,8 @@ Revisión 5 (2026-10-09, D-010): «Llenar y teñir» sustituye a «Sumergir y te
 
 Revisión 6 (2026-10-12, D-012): la sacudida de rechazo pasa a ±8 dp, 3 ciclos y 240 ms (6.3; canon en 02 §4.1 y 07 §4.3). El marco del panel bajo el HUD con 3 filas se queda como está (3.2).
 
+Revisión 7 (2026-10-13, tanda 2 de D-012, integrada en `94905b8`): la sacudida de 6.3 ya está en el cliente (B3, `dd208a6`). Los patrones y los iconos de fruta también, con los iconos procedurales [P] de 07 §3 («Iconos del cliente»). Con el icono, el shader del líquido del prototipo queda aún más por encima del presupuesto de la sección 8 (pregunta 44 de `docs/GDD.md` §6.3).
+
 Fuentes: `docs/dev/decisiones.md` (D-001 a D-006), GDD 07 (§3 paleta, §4 cuia, §5 storyboards, §6 mascotas, §7 UI kit, §8 pautas culturales), GDD 02 (§3.3, §4, §5, §12), GDD 08 §5 (shader y rendimiento), glosario §0, §3, §9 y §10, `docs/research/09-referencia-magic-sort.md` y `docs/research/magic-sort/c-meta-liveops-ux.md` §4, la revisión del 2026-10-07 (material de entrada, verificado contra el código) y las capturas `Logs/device/v01-fix-*.png` y `docs/reviews/2026-10-07/visual/*.png`.
 
 Convenciones:
@@ -634,7 +636,7 @@ La referencia es la clase A de 08 §5.4 (Mali-G52 o Adreno 610, 3 GB). La clase 
 | Overdraw medio | ≤ 2,5× | Vista de overdraw o RenderDoc |
 | Partículas | ≤ 60 simultáneas, ambiente ≤ 16 (6) | Contador de `DevProbe` [P] |
 | Brillos aditivos | ≤ 8 a la vez, cada uno ≤ 96 × 96 dp | — |
-| Shaders | Sin postproceso ni Bloom. Líquido ≤ 40 ALU y ≤ 2 muestras (08 §5.2). Vidrio horneado | — |
+| Shaders | Sin postproceso ni Bloom. Líquido ≤ 40 ALU y ≤ 2 muestras (08 §5.2). Vidrio horneado. Hoy no se cumple en ALU: el shader uGUI del prototipo (`AF_UI_Liquid.shader`) mide 149-288 instrucciones por camino desde la tanda 2 (142-165 antes del icono de fruta); las muestras sí cumplen. Pendiente de medir en un teléfono de clase A (pregunta 44 de `docs/GDD.md` §6.3) | fxc /O3 por camino; Profiler por USB en clase A |
 | Texturas pintadas | ASTC 6×6 en fondos y 4×4 en UI, sin mipmaps en UI y atlas de 2048² (08 §5.4). Los degradados oscuros (relleno del panel, interiores de modales) no van en PNG ni en ASTC: por código (4.6) | Build report |
 | Texturas procedurales | RGBA32 ≤ 16 MB en total, incluidas las de la cuia a 72-128 px/u (4.1). Respaldos de escena a media resolución (≤ 540 × 1200 px) y generados una sola vez, no por nivel | Memory Profiler |
 | Generación procedural al arrancar | ≤ 300 ms de CPU en clase A. Solo se generan piezas geométricas o de material (10.3), sin desenfoques por píxel, y se guardan en caché en `persistentDataPath` con clave de versión (4.9): desde el segundo arranque, solo se leen | Stopwatch y línea de log en builds de desarrollo [P] |

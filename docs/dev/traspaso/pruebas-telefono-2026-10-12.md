@@ -127,6 +127,8 @@ Para ganar los niveles por adb, una herramienta temporal (fuera del repo) sacó 
 
 ## Lo que sigue (tanda 2, aún no está en `main`)
 
+*Nota del 2026-10-13: la tanda 2 está integrada en `integracion-fase1-fase2` en `94905b8`. Los criterios completos, con los eventos de logcat, están en `docs/dev/traspaso/README.md`, «Qué probar en el teléfono (tanda 2)».*
+
 - **Avisos de 3-7 s y en cola:** comprobar la tarjeta «¡Miquito a la vista!» con la tropa ya ida, y el regalo de Capi en el 8 con perfil limpio (`adb shell pm clear com.amazonfill.dev`).
 - **Patrones e iconos desde el 41:** 63, 40, 100 y 7.
 - **Sacudida de 240 ms:** 43 y 63.
