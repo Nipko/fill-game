@@ -387,6 +387,11 @@ namespace AF.Tests.EditMode
             Assert.That(Regex.IsMatch(code, @"tex2Dlod\(_IconAtlas,"), Is.True, "que lee la rama del icono");
             Assert.That(Regex.IsMatch(code, @"tex2Dlod\(_IconAtlas, [^;]*\)\.rg;"), Is.True, "la silueta (R) y el contorno (G) en la misma muestra");
             Assert.That(Regex.IsMatch(code, @"^\s*float bandScale = 1\.0;", RegexOptions.Multiline), Is.True, "fuera de las ramas, la escala de la banda no se calcula (la pagan solo murky e iconOn)");
+
+            // Una banda turbia o que se revela lleva empaquetado el sitio de su «?» y, en men.a, la fila de la fruta que se revela
+            // (LiquidGraphic.FruitRowCode): sin !murky, el shader pintaría el icono de esa fruta encima del «?» y del icono
+            // temporal de la Luciérnaga (MurkyMarks). Los tests de vista (FruitPatternsPlayTests) solo ven el espejo de CPU.
+            Assert.That(code.Contains("bool iconOn = !murky && glyphCode > 0.5;"), Is.True, "el icono nunca en una banda turbia ni mientras se revela; espejo: LiquidGraphic.IsFruitIconDose");
             Assert.That(LiquidGraphic.FireflyEdgeU, Is.LessThanOrEqualTo(0.15f), "borde del frente de luz estrecho (≤ 0,15 u)");
             Assert.That(LiquidGraphic.GlyphMaxU, Is.EqualTo(MurkyMarks.MarkU), "en reposo, el «?» de 0,5 u de 07 §4.3");
             Assert.That(LiquidGraphic.HatchFadeTo, Is.LessThan(LiquidGraphic.FruitPatternFrom), "la trama se va antes de que entre el patrón");

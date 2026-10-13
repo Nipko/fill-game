@@ -118,6 +118,7 @@ namespace AF.Presentation
         private bool _locked;
         private bool _liftTarget;
         private bool _fruitPatterns;
+        private bool _pourIcons;
         private float _liftValue;
         private float _shakeElapsed = -1f;
         private float _sealElapsed = -1f;
@@ -619,8 +620,8 @@ namespace AF.Presentation
         /// Elevación de la selección (02 §4.1); se aplica cuando ningún trabajo controla el cuerpo. Mientras está elevada, sus
         /// dosis visibles muestran el icono de su fruta en cualquier nivel (07 §3, regla 2: «al seleccionar una cuia, cada dosis
         /// muestra su icono de fruta durante la elevación aunque el toggle esté apagado»; T-E.5), y al bajarla se apaga si el
-        /// nivel no tiene Patrones de fruta (<see cref="SetFruitPatterns"/>). Solo la cuia elevada: nada se resalta en los
-        /// destinos (D-002).
+        /// nivel no tiene Patrones de fruta (<see cref="SetFruitPatterns"/>) ni la toma un vertido como origen, que los mantiene
+        /// hasta su retorno (<see cref="SetPourIcons"/>; 07 §5.2). Solo la cuia elevada: nada se resalta en los destinos (D-002).
         /// </summary>
         public void SetLifted(bool lifted)
         {
@@ -647,8 +648,27 @@ namespace AF.Presentation
         public bool FruitPatterns => _fruitPatterns;
 
         /// <summary>
-        /// El líquido pinta el icono de fruta en sus dosis visibles: con Patrones de fruta en el nivel o con la cuia elevada (07
-        /// §3, reglas 1 y 2). Las ocultas, el Barro y el agua base nunca lo llevan (<see cref="LiquidGraphic.FruitIconDrawn"/>).
+        /// Iconos del origen mientras un vertido lo tiene tomado (07 §5.2: «iconos de fruta visibles» desde el toque en el
+        /// origen, también en el viaje y el caudal, y «iconos se ocultan» en el retorno; 07 §4.3, fila Seleccionada; T-E.5): el
+        /// toque en el destino baja la selección (<see cref="SetLifted"/> false), pero los iconos siguen hasta que la cuia
+        /// empieza a volver a su ranura. Lo encienden y lo apagan los trabajos de vertido de <c>BoardAnimator</c>; solo en el
+        /// origen, nunca en el destino (D-002). Sin asignaciones.
+        /// </summary>
+        public void SetPourIcons(bool on)
+        {
+            if (_pourIcons == on)
+            {
+                return;
+            }
+
+            _pourIcons = on;
+            ApplyFruitIcons();
+        }
+
+        /// <summary>
+        /// El líquido pinta el icono de fruta en sus dosis visibles: con Patrones de fruta en el nivel, con la cuia elevada o con
+        /// la cuia como origen de un vertido hasta su retorno (07 §3, reglas 1 y 2; 07 §5.2; <see cref="SetPourIcons"/>). Las
+        /// ocultas, el Barro y el agua base nunca lo llevan (<see cref="LiquidGraphic.FruitIconDrawn"/>).
         /// </summary>
         public bool FruitIconsOn => _liquid.FruitIcons;
 
@@ -676,12 +696,13 @@ namespace AF.Presentation
             return ShakeDp * Mathf.Sin(2f * Mathf.PI * ShakeCycles * (ms / ShakeMs));
         }
 
-        // Icono de fruta en el líquido: con Patrones de fruta o mientras la cuia está elevada (07 §3, reglas 1 y 2).
+        // Icono de fruta en el líquido: con Patrones de fruta, mientras la cuia está elevada o mientras un vertido la tiene como
+        // origen hasta su retorno (07 §3, reglas 1 y 2; 07 §5.2).
         private void ApplyFruitIcons()
         {
             if (_liquid != null)
             {
-                _liquid.SetFruitIcons(_fruitPatterns || _liftTarget);
+                _liquid.SetFruitIcons(_fruitPatterns || _liftTarget || _pourIcons);
             }
         }
 

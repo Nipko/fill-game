@@ -25,8 +25,9 @@ namespace AF.Presentation
     /// ocupa <see cref="FruitIconFill"/> de su alto: 0,45 u, el de 07 §3, regla 1 (02 §12 dice «60 % del ancho de la dosis»;
     /// se alinea en el paso 2). Siluetas gruesas, con huecos de 2-3 px como mínimo, para leerse a 48 dp (≈ 30 px en el
     /// SM-S938B). Revisión de B3: la Guanábana, el Achiote y el Lulo, de cuerpo liso y grande y con los pinchos solo como
-    /// textura interior (con espinas o cerdas por fuera se leían como bichos dentro del jugo), y la hoja hundida dentro de una masa
-    /// de agua rellena, en negativo y sin burbujas.</para>
+    /// textura interior (con espinas o cerdas por fuera se leían como bichos dentro del jugo); y en su segunda revisión, la hoja
+    /// hundida, que cruza en diagonal una banda de agua baja (maciza por encima del agua y en negativo dentro de ella) en lugar
+    /// del bloque de agua lleno, que se leía como un escudo o una pegatina.</para>
     /// <para>Contorno (canal G; <see cref="FruitIconHasRim"/>): los iconos marfil sobre un tinte de L* 45-55 llevan un
     /// contorno de ≈ 1 dp del propio tinte oscurecido, que los separa de las marcas marfil de su patrón.</para>
     /// </remarks>
@@ -60,9 +61,32 @@ namespace AF.Presentation
         // Semillas del Achiote en la abertura (x, y, radio en px).
         private static readonly float[] AchioteSeeds = { 31f, 29f, 3.9f, 36f, 36.5f, 3.9f, 27.5f, 38.5f, 3.9f, 33f, 46f, 3.7f };
 
+        // Hoja hundida del Agua del Río Negro (DrawSunkenLeafIcon), en px de la celda: la banda de agua (su canto, una sola ola
+        // de la longitud de la banda: la cresta a la izquierda y el valle a la derecha) y la hoja que la cruza.
+        private const float SunkenWaterFromX = 5f;
+        private const float SunkenWaterToX = 59f;
+        private const float SunkenWaterBottomY = 3f;
+        private const float SunkenWaterTopY = 27f;
+        private const float SunkenWaterAmp = 4f;
+        private const float SunkenWaterPhase = -0.25f;
+        private const float SunkenWaterCorner = 7f;
+        private const float SunkenWaterWave = 56f;
+        private const float SunkenLeafX = 31f;
+        private const float SunkenLeafY = 32f;
+        private const float SunkenLeafHalfLen = 24f;
+        private const float SunkenLeafHalfWidth = 13.5f;
+        private const float SunkenLeafDeg = -38f;
+        private const float SunkenLeafVein = 1.6f;
+        private const float SunkenLeafStem = 7f;
+        private const float SunkenLeafGap = 2.2f;
+
         private Texture2D? _fruitIconAtlas;
 
-        /// <summary>Tiempo de generación del atlas de iconos (ms; 0 si aún no se generó).</summary>
+        /// <summary>
+        /// Tiempo de generación del atlas de iconos (ms; 0 si aún no se generó). Se paga una vez por sesión, en la primera carga
+        /// de nivel: presupuesto de 30 ms en el Editor tras el JIT (<c>FruitPatternsTests.IconAtlas_GeneratedWithinBudget</c>);
+        /// en el teléfono lo da la línea <c>AF_ART fruit_icons</c> de los builds de desarrollo.
+        /// </summary>
         public double FruitIconAtlasMs { get; private set; }
 
         /// <summary>
@@ -93,8 +117,8 @@ namespace AF.Presentation
                         int offset = tint * FruitIconPx * FruitIconPx;
                         for (int i = 0; i < mask.Length; i++)
                         {
-                            byte v = (byte)Mathf.RoundToInt(Mathf.Clamp01(mask[i]) * 255f);
-                            byte g = (byte)Mathf.RoundToInt(Mathf.Clamp01(rim[i]) * 255f);
+                            byte v = IconByte(mask[i]);
+                            byte g = IconByte(rim[i]);
                             px[offset + i] = new Color32(v, g, v, v);
                         }
                     }
@@ -112,6 +136,10 @@ namespace AF.Presentation
                     _fruitIconAtlas = tex;
                     watch.Stop();
                     FruitIconAtlasMs = watch.Elapsed.TotalMilliseconds;
+                    if (UnityEngine.Debug.isDebugBuild)
+                    {
+                        UnityEngine.Debug.Log("AF_ART fruit_icons " + FruitIconAtlasMs.ToString("F1", System.Globalization.CultureInfo.InvariantCulture) + " ms");
+                    }
                 }
 
                 return _fruitIconAtlas;
@@ -174,17 +202,39 @@ namespace AF.Presentation
             return rim;
         }
 
-        // Dilatación con antialias: cada píxel de la silueta (con su cobertura) tiñe los que quedan a radius px o menos.
+        // Cobertura 0..1 en un byte (al más cercano).
+        private static byte IconByte(float v)
+        {
+            return (byte)(int)((Mathf.Clamp01(v) * 255f) + 0.5f);
+        }
+
+        // Dilatación con antialias: cada píxel de la silueta (con su cobertura) tiñe los que quedan a radius px o menos. Los del
+        // interior (lleno, con sus 8 vecinos llenos) solo se tiñen a sí mismos: la silueta engordada es la silueta más los discos
+        // de su borde, y a cualquier píxel al que llegue el disco de uno interior le llega antes, más cerca y con cobertura 1, el
+        // de un píxel lleno del borde. La raíz solo se calcula en el canto del disco (de radius − 0,5 a radius + 0,5 px).
         private static void DilateIcon(float[] mask, float[] dst, float radius)
         {
             int reach = Mathf.CeilToInt(radius + 1f);
+            float outer = (radius + 0.5f) * (radius + 0.5f);
+            float inner = radius > 0.5f ? (radius - 0.5f) * (radius - 0.5f) : 0f;
             for (int qy = 0; qy < FruitIconPx; qy++)
             {
                 for (int qx = 0; qx < FruitIconPx; qx++)
                 {
-                    float mq = mask[(qy * FruitIconPx) + qx];
+                    int q = (qy * FruitIconPx) + qx;
+                    float mq = mask[q];
                     if (mq <= 0f)
                     {
+                        continue;
+                    }
+
+                    if (IsInteriorIconPixel(mask, qx, qy))
+                    {
+                        if (mq > dst[q])
+                        {
+                            dst[q] = mq;
+                        }
+
                         continue;
                     }
 
@@ -198,7 +248,13 @@ namespace AF.Presentation
                         {
                             float dx = x - qx;
                             float dy = y - qy;
-                            float v = mq * PixelCanvas.Coverage(Mathf.Sqrt((dx * dx) + (dy * dy)) - radius);
+                            float d2 = (dx * dx) + (dy * dy);
+                            if (d2 >= outer)
+                            {
+                                continue;
+                            }
+
+                            float v = d2 <= inner ? mq : mq * PixelCanvas.Coverage(Mathf.Sqrt(d2) - radius);
                             int i = (y * FruitIconPx) + x;
                             if (v > dst[i])
                             {
@@ -208,6 +264,29 @@ namespace AF.Presentation
                     }
                 }
             }
+        }
+
+        // El píxel y sus 8 vecinos están llenos (cobertura 1); en el borde de la celda, nunca.
+        private static bool IsInteriorIconPixel(float[] mask, int x, int y)
+        {
+            if (x <= 0 || y <= 0 || x >= FruitIconPx - 1 || y >= FruitIconPx - 1)
+            {
+                return false;
+            }
+
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                int row = (y + dy) * FruitIconPx;
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    if (mask[row + x + dx] < 1f)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         // Silueta del tinte en la celda de 64 × 64 px (origen abajo a la izquierda): de y ≈ 3 a y ≈ 61 (FruitIconFill).
@@ -425,26 +504,42 @@ namespace AF.Presentation
             IconCapsule(m, 32f, 46f, 33.5f, 59.5f, 2.3f, false);
         }
 
-        // Agua del Río Negro: hoja hundida dentro de una masa de agua rellena (canto de arriba en ola suave, de dos crestas, y fondo
-        // en arco), con la hoja en negativo (su hueco en el agua, de ≈ 7 × 4 dp) y el nervio macizo. Sin la ola abierta ni las
-        // burbujas (parecían «líneas de olor»), y sin el agua flotando sobre la hoja, que se leía como una nube.
+        // Agua del Río Negro: hoja hundida (revisión 2 de B3). El agua es una banda horizontal en la mitad de abajo de la caja
+        // (de y = 3 al canto de una sola ola suave, con el fondo recto y las esquinas redondeadas: sin copa ni pie, para que no
+        // recuerde al bol del Açaí), y la hoja la cruza en diagonal: por encima de la línea del agua, silueta maciza con el nervio
+        // en negativo y el rabito; por debajo, en negativo dentro del agua, con un hueco de ≈ 2 px que la separa del agua donde
+        // se cruzan. Sin el bloque lleno de antes (se leía como un escudo o una pegatina).
         private static void DrawSunkenLeafIcon(float[] m)
         {
-            // El agua: de y = 3 (en el centro; 9 px más arriba en los lados) al canto ondulado de y ≈ 56,5 ± 3.
-            IconWaterBand(m, 6f, 58f, 56.5f, 3.0f, 26f, -0.9f, 3f, 9f, false);
-            // La hoja hundida, en negativo, con el nervio macizo y el rabito hueco hacia arriba a la izquierda.
-            const float deg = 45f;
-            const float halfLen = 20f;
-            var c = new Vector2(32f, 28f);
-            IconLens(m, c.x, c.y, halfLen, 12f, deg, true);
-            float rad = deg * Mathf.Deg2Rad;
-            var axis = new Vector2(-Mathf.Sin(rad), Mathf.Cos(rad));
-            Vector2 veinFrom = c - (axis * (halfLen - 4f));
-            Vector2 veinTo = c + (axis * (halfLen - 5f));
-            IconCapsule(m, veinFrom.x, veinFrom.y, veinTo.x, veinTo.y, 2.0f, false);
-            Vector2 stemFrom = c + (axis * (halfLen - 2f));
-            Vector2 stemTo = c + (axis * (halfLen + 5.5f));
-            IconCapsule(m, stemFrom.x, stemFrom.y, stemTo.x, stemTo.y, 2.2f, true);
+            float k = 2f * Mathf.PI / SunkenWaterWave;
+            LensCircles(SunkenLeafHalfLen, SunkenLeafHalfWidth, out float radius, out float offset);
+            float rad = SunkenLeafDeg * Mathf.Deg2Rad;
+            float c = Mathf.Cos(rad);
+            float s = Mathf.Sin(rad);
+            var axis = new Vector2(-s, c);
+            var center = new Vector2(SunkenLeafX, SunkenLeafY);
+            Vector2 veinFrom = center - (axis * (SunkenLeafHalfLen - 6f));
+            Vector2 veinTo = center + (axis * (SunkenLeafHalfLen - 4.5f));
+            Vector2 stemFrom = center + (axis * (SunkenLeafHalfLen - 2f));
+            Vector2 stemTo = center + (axis * (SunkenLeafHalfLen + SunkenLeafStem));
+            for (int y = 0; y < FruitIconPx; y++)
+            {
+                for (int x = 0; x < FruitIconPx; x++)
+                {
+                    float px = x + 0.5f;
+                    float py = y + 0.5f;
+                    float water = WaterBandDistance(px, py, SunkenWaterFromX, SunkenWaterToX, SunkenWaterTopY, SunkenWaterAmp, k, SunkenWaterPhase, SunkenWaterBottomY, SunkenWaterCorner, out float line);
+                    float leaf = LensDistance(px - center.x, py - center.y, c, s, radius, offset);
+
+                    // Arriba: la hoja maciza sobre la línea del agua, con el nervio en negativo, y el rabito.
+                    float above = Mathf.Max(Mathf.Max(leaf, -line), -CapsuleDistance(px, py, veinFrom, veinTo, SunkenLeafVein));
+                    float stem = CapsuleDistance(px, py, stemFrom, stemTo, 2.2f);
+
+                    // Abajo: el agua sin la hoja (en negativo) ni su hueco.
+                    float below = Mathf.Max(water, -(leaf - SunkenLeafGap));
+                    IconWrite(m, x, y, Mathf.Min(Mathf.Min(above, stem), below), false);
+                }
+            }
         }
 
         // Fila del racimo de la Bacaba: n bayas de 5,6 px de radio a 13 px, centradas en x = 32 a la altura y.
@@ -552,32 +647,50 @@ namespace AF.Presentation
         // grados desde la vertical; grow engorda la forma (para recortar su hueco alrededor).
         private static void IconStar(float[] m, float cx, float cy, int points, float tipR, float baseHalfW, float rotDeg, float grow, bool cut)
         {
+            // Los 3 bordes de cada pétalo (n · p + c), calculados una vez por pétalo y no por píxel.
+            var edges = new float[points * 9];
+            var center = new Vector2(cx, cy);
+            for (int k = 0; k < points; k++)
+            {
+                float a = (90f + rotDeg + (k * 360f / points)) * Mathf.Deg2Rad;
+                var dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
+                var side = new Vector2(-dir.y, dir.x);
+                Vector2 q0 = center + (side * baseHalfW);
+                Vector2 q1 = center - (side * baseHalfW);
+                Vector2 tip = center + (dir * tipR);
+                float cross = ((q1.x - q0.x) * (tip.y - q0.y)) - ((q1.y - q0.y) * (tip.x - q0.x));
+                if (cross < 0f)
+                {
+                    Vector2 t = q0;
+                    q0 = q1;
+                    q1 = t;
+                }
+
+                int e = k * 9;
+                IconEdgeLine(q0, q1, out edges[e], out edges[e + 1], out edges[e + 2]);
+                IconEdgeLine(q1, tip, out edges[e + 3], out edges[e + 4], out edges[e + 5]);
+                IconEdgeLine(tip, q0, out edges[e + 6], out edges[e + 7], out edges[e + 8]);
+            }
+
             float reach = tipR + grow + 1f;
+            float hub = baseHalfW * 1.15f;
             IconBox(cx - reach, cy - reach, cx + reach, cy + reach, out int x0, out int y0, out int x1, out int y1);
             for (int y = y0; y <= y1; y++)
             {
+                float py = y + 0.5f;
                 for (int x = x0; x <= x1; x++)
                 {
-                    var p = new Vector2(x + 0.5f, y + 0.5f);
-                    float d = (p - new Vector2(cx, cy)).magnitude - (baseHalfW * 1.15f);
+                    float px = x + 0.5f;
+                    float ox = px - cx;
+                    float oy = py - cy;
+                    float d = Mathf.Sqrt((ox * ox) + (oy * oy)) - hub;
                     for (int k = 0; k < points; k++)
                     {
-                        float a = (90f + rotDeg + (k * 360f / points)) * Mathf.Deg2Rad;
-                        var dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-                        var side = new Vector2(-dir.y, dir.x);
-                        Vector2 c0 = new Vector2(cx, cy) + (side * baseHalfW);
-                        Vector2 c1 = new Vector2(cx, cy) - (side * baseHalfW);
-                        Vector2 tip = new Vector2(cx, cy) + (dir * tipR);
-                        Vector2 q0 = c0;
-                        Vector2 q1 = c1;
-                        float cross = ((q1.x - q0.x) * (tip.y - q0.y)) - ((q1.y - q0.y) * (tip.x - q0.x));
-                        if (cross < 0f)
-                        {
-                            q0 = c1;
-                            q1 = c0;
-                        }
-
-                        d = Mathf.Min(d, Mathf.Max(IconEdge(q0, q1, p), Mathf.Max(IconEdge(q1, tip, p), IconEdge(tip, q0, p))));
+                        int e = k * 9;
+                        float d0 = (edges[e] * px) + (edges[e + 1] * py) + edges[e + 2];
+                        float d1 = (edges[e + 3] * px) + (edges[e + 4] * py) + edges[e + 5];
+                        float d2 = (edges[e + 6] * px) + (edges[e + 7] * py) + edges[e + 8];
+                        d = Mathf.Min(d, Mathf.Max(d0, Mathf.Max(d1, d2)));
                     }
 
                     IconWrite(m, x, y, d - grow, cut);
@@ -585,34 +698,33 @@ namespace AF.Presentation
             }
         }
 
-        // Masa de agua rellena de fromX a toX: el canto de arriba en ola (media topY, amplitud amp px, longitud de onda wave px y
-        // fase phase) y el de abajo en arco suave (bottomY en el centro, sag px más alto en los extremos), con las esquinas
-        // redondeadas.
-        private static void IconWaterBand(float[] m, float fromX, float toX, float topY, float amp, float wave, float phase, float bottomY, float sag, bool cut)
+        // Distancia con signo (px, negativa dentro) a una banda de agua de fromX a toX: el canto de arriba en ola (media topY,
+        // amplitud amp px, número de onda k y fase phase), el de abajo recto en bottomY y las esquinas redondeadas (radio corner
+        // px). En line, la distancia con signo a la línea del agua (positiva por encima).
+        private static float WaterBandDistance(float px, float py, float fromX, float toX, float topY, float amp, float k, float phase, float bottomY, float corner, out float line)
         {
-            float k = 2f * Mathf.PI / wave;
             float mid = 0.5f * (fromX + toX);
             float half = 0.5f * (toX - fromX);
-            IconBox(fromX, bottomY, toX, topY + amp, out int x0, out int y0, out int x1, out int y1);
-            for (int y = y0; y <= y1; y++)
-            {
-                for (int x = x0; x <= x1; x++)
-                {
-                    float px = x + 0.5f;
-                    float py = y + 0.5f;
-                    float slope = amp * k * Mathf.Cos((px * k) + phase);
-                    float dTop = (py - (topY + (amp * Mathf.Sin((px * k) + phase)))) / Mathf.Sqrt(1f + (slope * slope));
-                    float e = (px - mid) / half;
-                    float dBottom = (bottomY + (sag * e * e)) - py;
-                    float dSide = Mathf.Abs(px - mid) - half;
-                    // Esquinas redondeadas (radio 3 px) donde se cruzan el lado y los cantos.
-                    float r = 3f;
-                    float qa = Mathf.Max(dSide + r, 0f);
-                    float qb = Mathf.Max(Mathf.Max(dTop, dBottom) + r, 0f);
-                    float d = Mathf.Sqrt((qa * qa) + (qb * qb)) + Mathf.Min(Mathf.Max(dSide, Mathf.Max(dTop, dBottom)) + r, 0f) - r;
-                    IconWrite(m, x, y, d, cut);
-                }
-            }
+            float slope = amp * k * Mathf.Cos((px * k) + phase);
+            line = (py - (topY + (amp * Mathf.Sin((px * k) + phase)))) / Mathf.Sqrt(1f + (slope * slope));
+            float dBottom = bottomY - py;
+            float dSide = Mathf.Abs(px - mid) - half;
+            float qa = Mathf.Max(dSide + corner, 0f);
+            float qb = Mathf.Max(Mathf.Max(line, dBottom) + corner, 0f);
+            return Mathf.Sqrt((qa * qa) + (qb * qb)) + Mathf.Min(Mathf.Max(dSide, Mathf.Max(line, dBottom)) + corner, 0f) - corner;
+        }
+
+        // Distancia con signo (px, negativa dentro) a la cápsula de a a b con radio r.
+        private static float CapsuleDistance(float px, float py, Vector2 a, Vector2 b, float r)
+        {
+            float vx = b.x - a.x;
+            float vy = b.y - a.y;
+            float qx = px - a.x;
+            float qy = py - a.y;
+            float t = Mathf.Clamp01(((qx * vx) + (qy * vy)) / Mathf.Max(1e-6f, (vx * vx) + (vy * vy)));
+            float dx = qx - (vx * t);
+            float dy = qy - (vy * t);
+            return Mathf.Sqrt((dx * dx) + (dy * dy)) - r;
         }
 
         // Media elipse por debajo de cy (el cuenco del bol).
@@ -662,24 +774,32 @@ namespace AF.Presentation
                 p2 = t;
             }
 
+            IconEdgeLine(p0, p1, out float ax, out float ay, out float ac);
+            IconEdgeLine(p1, p2, out float bx, out float by, out float bc);
+            IconEdgeLine(p2, p0, out float cx, out float cy, out float cc);
             IconBox(Mathf.Min(p0.x, Mathf.Min(p1.x, p2.x)), Mathf.Min(p0.y, Mathf.Min(p1.y, p2.y)), Mathf.Max(p0.x, Mathf.Max(p1.x, p2.x)), Mathf.Max(p0.y, Mathf.Max(p1.y, p2.y)), out int x0, out int y0, out int x1, out int y1);
             for (int y = y0; y <= y1; y++)
             {
+                float py = y + 0.5f;
                 for (int x = x0; x <= x1; x++)
                 {
-                    var p = new Vector2(x + 0.5f, y + 0.5f);
-                    float d = Mathf.Max(IconEdge(p0, p1, p), Mathf.Max(IconEdge(p1, p2, p), IconEdge(p2, p0, p)));
+                    float px = x + 0.5f;
+                    float d = Mathf.Max((ax * px) + (ay * py) + ac, Mathf.Max((bx * px) + (by * py) + bc, (cx * px) + (cy * py) + cc));
                     IconWrite(m, x, y, d, cut);
                 }
             }
         }
 
-        // Distancia con signo al borde a → b (positiva fuera, con el triángulo en sentido antihorario).
-        private static float IconEdge(Vector2 a, Vector2 b, Vector2 p)
+        // Recta del borde a → b como n · p + c = distancia con signo (positiva fuera, con el triángulo en sentido antihorario):
+        // con la normal y la longitud calculadas una vez por borde y no por píxel.
+        private static void IconEdgeLine(Vector2 a, Vector2 b, out float nx, out float ny, out float c)
         {
-            Vector2 e = b - a;
-            float len = Mathf.Max(1e-6f, e.magnitude);
-            return -(((e.x * (p.y - a.y)) - (e.y * (p.x - a.x))) / len);
+            float ex = b.x - a.x;
+            float ey = b.y - a.y;
+            float len = Mathf.Max(1e-6f, Mathf.Sqrt((ex * ex) + (ey * ey)));
+            nx = ey / len;
+            ny = -ex / len;
+            c = -((nx * a.x) + (ny * a.y));
         }
 
         private static void IconRoundBox(float[] m, float minX, float minY, float maxX, float maxY, float r, bool cut)

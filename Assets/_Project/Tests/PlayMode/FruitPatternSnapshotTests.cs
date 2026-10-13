@@ -19,7 +19,8 @@ namespace AF.Tests.PlayMode
     /// y <c>90c_patterns_fill_l63</c> (a mitad de un vertido: los iconos siguen a sus bandas en el origen inclinado y en la
     /// dosis que se llena),
     /// <c>91_patterns_l40</c> (hasta el 40: patrón al 15 % y sin icono), <c>92_patterns_lift_l7</c> y
-    /// <c>92b_patterns_rest_l7</c> (el icono solo con la cuia levantada; 07 §3, regla 2), <c>93_patterns_murky_l100</c> (las
+    /// <c>92b_patterns_rest_l7</c> (el icono solo con la cuia levantada; 07 §3, regla 2), <c>92c_patterns_pour_l7</c> (el
+    /// origen conserva sus iconos en el caudal, hasta el retorno; 07 §5.2), <c>93_patterns_murky_l100</c> (las
     /// turbias sin icono ni patrón), <c>93b_patterns_barro_l123</c> (el Barro sin icono) y <c>94_fruit_icons_atlas</c> (los 14
     /// iconos de 07 §3 sobre su tinte, × 3). De cada captura del tablero, un recorte a tamaño real (<c>*_zoom</c>) para mirar a
     /// 48 dp la legibilidad, los solapes y la línea D-003. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode
@@ -129,6 +130,30 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 300);
             SnapshotKit.Save(dir, "92b_patterns_rest_l7");
             SaveBoardCrop(dir, "92b_patterns_rest_l7_zoom", boot);
+
+            // A mitad del vertido (07 §5.2): el origen, ya bajada la selección, sigue con sus iconos en el caudal; el destino, sin
+            // ellos (D-002).
+            int target = -1;
+            for (int b = 0; b < state.Count && target < 0; b++)
+            {
+                target = b != source && PourRules.IsLegal(state, source, b) ? b : -1;
+            }
+
+            Assert.That(target, Is.GreaterThanOrEqualTo(0), "un destino legal para el origen");
+            Assert.That(boot.TapCuia(source).Kind, Is.EqualTo(TapKind.Selected));
+            PlayModeHelpers.Step(boot, 200);
+            Assert.That(boot.TapCuia(target).Kind, Is.EqualTo(TapKind.Poured));
+            CuiaView src = boot.View!.Views[source];
+            CuiaView dst = boot.View.Views[target];
+            for (int t = 0; t < 2000 && Mathf.Abs(src.BodyAngle) < 50f; t += 4)
+            {
+                PlayModeHelpers.TickExact(boot, 4);
+            }
+
+            Assert.That(src.FruitIconsOn && !dst.FruitIconsOn, Is.True, "iconos en el origen que vierte y no en el destino");
+            SnapshotKit.Save(dir, "92c_patterns_pour_l7");
+            SaveCrop(dir, "92c_patterns_pour_l7_zoom", src.Body, dst.Root, 20f, 20f);
+            PlayModeHelpers.StepUntilIdle(boot, 4000);
         }
 
         [UnityTest]

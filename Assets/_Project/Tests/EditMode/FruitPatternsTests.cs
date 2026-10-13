@@ -170,6 +170,31 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void IconAtlas_GeneratedWithinBudget() // revisión de B3: el atlas se genera en la primera carga de nivel
+        {
+            Assert.That(_art.FruitIconAtlas, Is.Not.Null); // primera generación (incluye el JIT)
+            double best = double.MaxValue;
+            for (int i = 0; i < 3; i++)
+            {
+                var art = new ProceduralArt("white");
+                try
+                {
+                    Assert.That(art.FruitIconAtlasMs, Is.EqualTo(0.0), "perezoso: 0 hasta que se pide");
+                    Assert.That(art.FruitIconAtlas, Is.Not.Null);
+                    best = System.Math.Min(best, art.FruitIconAtlasMs);
+                }
+                finally
+                {
+                    art.Dispose();
+                }
+            }
+
+            TestContext.WriteLine("Atlas de iconos de fruta: " + best.ToString("F1") + " ms (mínimo de 3, tras el JIT).");
+            Assert.That(best, Is.GreaterThan(0.0), "se mide");
+            Assert.That(best, Is.LessThan(30.0), "14 siluetas y 2 contornos en menos de 30 ms (Editor, tras el JIT)");
+        }
+
+        [Test]
         public void IconRim_OnlyIvoryOnMidLightnessTints() // revisión de B3: marfil sobre L* 45-55 (Achiote y Río Negro)
         {
             const int n = ProceduralArt.FruitIconPx;

@@ -694,6 +694,15 @@ namespace AF.Presentation
                 TgtSealedAfter = tgtSealed,
                 Stream = -1,
             });
+
+            // 07 §5.2: el origen sigue con sus iconos de fruta desde el toque en el destino (la selección ya bajó) si el trabajo
+            // arranca en el próximo fotograma; si espera a otro que retiene alguna de sus cuias, desde que arranca (Start).
+            int last = _count - 1;
+            if (last >= 0 && _jobs[last].Source == source && !_jobs[last].Started && CanStart(last))
+            {
+                _views[source].SetPourIcons(true);
+            }
+
             CommitModel(after);
         }
 
@@ -1031,6 +1040,7 @@ namespace AF.Presentation
             }
 
             s.Lock();
+            s.SetPourIcons(true); // 07 §5.2: iconos del origen en el viaje y el caudal, hasta el retorno
             job.StartOffset = s.BodyOffset;
             job.Before = job.SrcBefore.Count;
             job.DoseMs = _timings.DoseMs;
@@ -1089,6 +1099,10 @@ namespace AF.Presentation
             if (!job.IsUndo && !job.SrcDone && time < job.SrcEnd)
             {
                 s.SetPose(PoseOffset(ref job, time, s.Unit), PoseAngle(ref job, time));
+                if (time >= job.ReturnStart)
+                {
+                    s.SetPourIcons(false); // 07 §5.2, Retorno: «iconos se ocultan» (con Patrones de fruta o elevada, siguen)
+                }
             }
 
             if (!job.IsUndo && job.Stream >= 0)
@@ -1327,6 +1341,11 @@ namespace AF.Presentation
                 s.SetTongue(0f, Color.clear, 0);
                 s.ReturnBody();
                 s.Unlock();
+            }
+
+            if (!job.IsUndo)
+            {
+                s.SetPourIcons(false); // también si salta a su final antes del retorno o sin haber empezado
             }
 
             job.SrcDone = true;

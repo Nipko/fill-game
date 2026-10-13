@@ -113,6 +113,95 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Level7_PourKeepsSourceIcons_UntilReturn() // T-E.5; 07 §5.2 (storyboard del vertido) y §4.3; D-002
+        {
+            yield return MechanicTestKit.LoadPlaying(7);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen screen = boot.View!;
+            CuiaView[] views = screen.Views;
+            BoardState state = boot.Flow!.Session.Current;
+            int source = -1;
+            int target = -1;
+            for (int a = 0; a < state.Count && source < 0; a++)
+            {
+                for (int b = 0; b < state.Count; b++)
+                {
+                    if (a != b && PourRules.IsLegal(state, a, b))
+                    {
+                        source = a;
+                        target = b;
+                        break;
+                    }
+                }
+            }
+
+            Assert.That(source, Is.GreaterThanOrEqualTo(0), "un vertido legal en el 7");
+            CuiaView src = views[source];
+            CuiaView dst = views[target];
+            Assert.That(boot.TapCuia(source).Kind, Is.EqualTo(TapKind.Selected));
+            PlayModeHelpers.Step(boot, 200);
+            Assert.That(src.FruitIconsOn, Is.True, "0,00 · toque en el origen: iconos de fruta visibles");
+
+            TapResult poured = boot.TapCuia(target);
+            Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured));
+            Assert.That(src.IsLifted, Is.False, "el toque en el destino baja la selección");
+            Assert.That(src.FruitIconsOn, Is.True, "0,10 · toque en el destino: el origen sigue con sus iconos");
+            Assert.That(dst.FruitIconsOn, Is.False, "el destino, sin iconos (D-002)");
+
+            // El retorno empieza cuando acaba la cola del chorro (07 §5.2): hasta entonces, viaje, inclinación y caudal con los
+            // iconos del origen; desde entonces, sin ellos. El trabajo arranca en el primer fotograma y avanza su dt en él.
+            PourTimings timings = screen.Timings;
+            float returnStart = BoardAnimator.PourDurationMs(timings, poured.Pour.Pour.Amount) - timings.ReturnMs;
+            int receiving = dst.ShownCuia.Count;
+            Assert.That(receiving, Is.LessThan(dst.Capacity), "el destino tiene sitio");
+            int elapsed = 0;
+            int onTilted = 0;
+            int onFlowing = 0;
+            int drawnFrames = 0;
+            int offReturning = 0;
+            for (; elapsed < 4000 && !screen.IsViewIdle;)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                elapsed += PlayModeHelpers.FrameMs;
+                string at = "a los " + elapsed + " ms del toque en el destino (retorno a los " + returnStart.ToString("F0") + ")";
+                for (int i = 0; i < views.Length; i++)
+                {
+                    if (i != source)
+                    {
+                        Assert.That(views[i].FruitIconsOn, Is.False, at + ": cuia " + i + " sin iconos (D-002)");
+                    }
+                }
+
+                if (elapsed < returnStart)
+                {
+                    Assert.That(src.FruitIconsOn, Is.True, at + ": viaje y caudal, el origen con sus iconos");
+                    onTilted += Mathf.Abs(src.BodyAngle) > 20f ? 1 : 0;
+                    onFlowing += dst.DoseFill(receiving) > 0.05f ? 1 : 0;
+                    bool drawn = false;
+                    for (int k = 0; k < src.Capacity; k++)
+                    {
+                        drawn |= src.Liquid.FruitIconDrawn(k);
+                    }
+
+                    drawnFrames += drawn ? 1 : 0;
+                }
+                else
+                {
+                    Assert.That(src.FruitIconsOn, Is.False, at + ": retorno, iconos ocultos");
+                    offReturning++;
+                }
+            }
+
+            TestContext.WriteLine("Vertido " + source + " → " + target + ": " + onTilted + " fotogramas inclinado y " + onFlowing + " con caudal, con iconos (" + drawnFrames + " con alguno a la vista); " + offReturning + " de retorno sin ellos.");
+            Assert.That(screen.IsViewIdle, Is.True);
+            Assert.That(onTilted, Is.GreaterThan(5), "se vio el origen inclinado con sus iconos");
+            Assert.That(onFlowing, Is.GreaterThan(5), "y durante el caudal");
+            Assert.That(drawnFrames, Is.GreaterThan(10), "con algún icono del origen a la vista en su banda");
+            Assert.That(offReturning, Is.GreaterThan(5), "y el retorno sin ellos (0,30 s)");
+            AssertIcons(boot, false, "tras el vertido");
+        }
+
+        [UnityTest]
         public IEnumerator Level100_MurkyWithoutIcon_RevealShowsIt() // T-E.4: nunca en las ocultas; al revelarse, sin chocar con MurkyMarks
         {
             yield return MechanicTestKit.LoadPlaying(100);
@@ -124,6 +213,10 @@ namespace AF.Tests.PlayMode
             Pour pour = path![path.Length - 1];
             CuiaView source = boot.View!.Views[pour.Source];
             MechanicTestKit.Tap(boot, pour);
+
+            // FruitIconDrawn es el espejo de CPU (LiquidGraphic.IsFruitIconDose: sin icono si la banda no es normal): esto
+            // prueba que la vista no lo pide. Que el shader tampoco lo pinte en una banda turbia o que se revela (su
+            // «bool iconOn = !murky && …») lo fija MurkyMudContentTests.ShaderConstants_MatchLiquidGraphic.
             for (int t = 0; t < 8000 && !boot.View.IsViewIdle; t += PlayModeHelpers.FrameMs)
             {
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
@@ -144,6 +237,7 @@ namespace AF.Tests.PlayMode
             AssertIcons(boot, true, "tras revelar");
 
             // Luciérnaga (04 §2.5): su icono temporal (MurkyMarks) y el de Patrones de fruta nunca a la vez en la misma dosis.
+            // Como arriba, FruitIconDrawn es el espejo de CPU; el lado del shader lo fija MurkyMudContentTests.
             int murky = -1;
             BoardState state = boot.Flow.Session.Current;
             for (int i = 0; i < state.Count && murky < 0; i++)

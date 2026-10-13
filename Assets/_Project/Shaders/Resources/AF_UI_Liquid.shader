@@ -58,16 +58,17 @@
 // con la fila turbia del atlas en lugar del «sprite "?"» de 08 §5.2 (se alinea con el GDD en el paso 2). La fila turbia del
 // atlas (lineal) lleva en A la trama diagonal (repetible, dos teselas por u) y en R y G el «?» marfil de 0,5 u y su halo de
 // tinta, una sola vez y centrado en la fila. Sobre el pardo: trama al 25 % hacia la tinta y «?» marfil con el halo de tinta
-// al 55 %, sin la mezcla fija del 15 % de los patrones de fruta. El «?» va derecho en pantalla e isótropo: su x llega por
-// vértice (TEXCOORD1.w, u de pantalla), su centro en capa y el hueco libre en su columna empaquetados en TEXCOORD0.w, y la
-// escala de la banda (u de capa por u de pantalla) sale de las derivadas; mide 0,8 del hueco entre 0,30 y 0,50 u y se apaga
-// si no cabe uno de 0,30 u (solo queda la trama). Al disolverse por la regla, fundido cruzado sin saltos (T15): la trama se
-// va, el «?» se blanquea, suelta antes su halo de tinta y se disuelve (ficha de Magic Sort §3.1: en destellos blancos) y
-// después entra el patrón de la fruta en sus coordenadas y con su 15 %, así que al terminar la banda es la dosis normal de
+// al 55 %, sin la mezcla de los patrones de fruta (_PatternOpacity). El «?» va derecho en pantalla e isótropo: su x llega
+// por vértice (TEXCOORD1.w, u de pantalla), su centro en capa y el hueco libre en su columna empaquetados en TEXCOORD0.w, y
+// la escala de la banda (u de capa por u de pantalla) sale de las derivadas; mide 0,8 del hueco entre 0,30 y 0,50 u y se
+// apaga si no cabe uno de 0,30 u (solo queda la trama). Al disolverse por la regla, fundido cruzado sin saltos (T15): la
+// trama se va, el «?» se blanquea, suelta antes su halo de tinta y se disuelve (ficha de Magic Sort §3.1: en destellos
+// blancos) y después entra el patrón de la fruta en sus coordenadas y con su _PatternOpacity (0,15 hasta el 40 y 0,20 desde
+// el 41; en los niveles con Aguas turbias, desde el 100, siempre 0,20), así que al terminar la banda es la dosis normal de
 // esa fruta. Con la Luciérnaga (04 §2.5: «su luz baja por el vidrio») [P], un frente de luz baja por la banda: encima, el
 // color de la dosis, que la CPU florece en OKLab hacia su tinte; debajo, el pardo, su brillo y la trama; solo en el borde
-// suave del frente (AF_FIREFLY_EDGE_U) hay mezcla lineal. El «?» gira de canto cuando el frente pasa por su centro y, ya sin
-// trama, entra el patrón de la fruta. LiquidGraphic tiene los espejos en CPU (MurkyHatchAmount, FruitPatternWeight,
+// suave del frente (AF_FIREFLY_EDGE_U) hay mezcla lineal. El «?» gira de canto cuando el frente pasa por su centro y, ya
+// sin trama, entra el patrón de la fruta. LiquidGraphic tiene los espejos en CPU (MurkyHatchAmount, FruitPatternWeight,
 // MurkyMarkOpacity, FireflyLightAt, GlyphSizeU y GlyphFade).
 //   _AF*U      geometría de la cuia (globales que fija LiquidGraphic.ApplyShaderGeometry desde CuiaGeometry, la única
 //              fuente): fondo y medio ancho de la cavidad, medio ancho del cuello, hombro, alto sobre la cavidad, borde y
