@@ -625,6 +625,13 @@ namespace AF.UI
             _screen?.SetVisible(screen == AppScreen.Level);
             _lobby?.Show(screen);
             _skipNextDelta = true;
+
+            // «Jugar» con un nivel que abre mundo (11, 41, 81 y 141, en el primer intento): el arte de su banner se pinta ya en
+            // otro hilo, así que al entrar el banner suele salir en el acto (A4, D-012; GameScreen.PrefetchWorldBanner).
+            if (screen == AppScreen.Lobby && _app != null)
+            {
+                _screen?.PrefetchWorldBanner(_app.PlayLevel);
+            }
         }
 
         private bool InLevel => _app == null || _app.Screen == AppScreen.Level;
@@ -728,6 +735,10 @@ namespace AF.UI
                 // Tarjeta previa (LEVEL_CARD, 02 §10): LaunchOptions.LevelCardsOverride ?? GameConfig.LevelCardsEnabledDefault,
                 // apagada hasta que exista su vista (T13).
                 LevelCardsEnabled = LaunchOptions.ResolveLevelCards(),
+
+                // Banner de entrada a un mundo (07 §2.2, regla 1): con el mismo interruptor que las tarjetas, porque usa su retención
+                // (LEVEL_CARD) y su vista (GameScreen) y los tests PlayMode lo apagan igual (PlayModeHelpers).
+                WorldBannersEnabled = LaunchOptions.ResolveLevelCards(),
             };
             _screen.Bind(_flow, _services);
             _app = new AppFlow(_flow, progress, _wallet, this);

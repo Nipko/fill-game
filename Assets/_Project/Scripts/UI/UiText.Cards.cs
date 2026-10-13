@@ -7,9 +7,10 @@ namespace AF.UI
     /// Textos ES-419 de la tarjeta previa de 1 toque y del tutorial de una pantalla de cada estreno (tarea T13 del paso 1; 02 §8,
     /// §9.1, §11 T4, §12 y §13; propuesta-mecanicas-dificultad.md §b.0 #4 y §b.2; 04 §2.5). Cada tutorial ocupa 2 líneas como
     /// máximo a 360 dp con la fuente al 100 %, en 16, 14 o 12 sp (02 §12: «textos del tutorial ≤2 líneas»; mínimo de 12 sp): lo
-    /// comprueba <c>LevelCardScreenTests</c>. Los 11 textos son los canónicos (ninguno ha hecho falta acortarlo: caben en 2 líneas
-    /// en la caja de la tarjeta). Todos nombran frutas, objetos o fauna, así que quedan pendientes de revisión del asesor cultural
-    /// (07 §8.2); los de §b.2 son [P].
+    /// comprueba <c>LevelCardScreenTests</c>. Los textos son los canónicos (ninguno ha hecho falta acortarlo: caben en 2 líneas
+    /// en la caja de la tarjeta), salvo el de la Piraña, que desde D-012 dice que sellar a tiempo evita el mordisco [P]. Todos
+    /// nombran frutas, objetos o fauna, así que quedan pendientes de revisión del asesor cultural (07 §8.2); los de §b.2 son
+    /// [P].
     /// </summary>
     public static partial class UiText
     {
@@ -61,8 +62,16 @@ namespace AF.UI
         /// </summary>
         public const string TutorialBrote = "El brote está cerrado: vierte más camu camu encima para que germine.";
 
-        /// <summary>Piraña (02 §9.1 M7; estreno en el 183). Pendiente de revisión del asesor cultural.</summary>
-        public const string TutorialPirana = "Cada cuatro vertidos la piraña muerde la cuia que acabas de llenar y se lleva una dosis a su cueva.";
+        /// <summary>
+        /// Piraña (02 §9.1 M7; estreno en el 183) [P] (D-012, punto 1: opción C + D): que se lleva una dosis a su cueva lo enseña
+        /// el mordisco animado de la tarjeta (<c>PiranaBiteDemo</c>), así que el texto dice cuándo muerde y que sellar a tiempo
+        /// evita el mordisco (la regla del núcleo: la cuia que se sella con ese vertido no se muerde). Conserva «la cuia que
+        /// acabas de llenar» del canónico de 02 §9.1 M7: muerde la que recibe el cuarto vertido (<c>PiranaMechanic</c>,
+        /// <c>events.Receiver</c>), no cualquiera que se haya llenado antes. Sustituye al canónico («… y se lleva una dosis a su
+        /// cueva»), que se actualiza en el paso 2. Cabe en 2 líneas a 360 dp (Debut_AllElevenTexts_TwoLinesMax). Pendiente de
+        /// revisión del asesor cultural.
+        /// </summary>
+        public const string TutorialPirana = "Cada cuatro vertidos, la piraña muerde la cuia que acabas de llenar. Sellarla a tiempo evita el mordisco.";
 
         /// <summary>
         /// Línea de la Luciérnaga en la tarjeta del 100 (04 §2.5: «Una luciérnaga ilumina las de una cuia»). Nombra fauna:

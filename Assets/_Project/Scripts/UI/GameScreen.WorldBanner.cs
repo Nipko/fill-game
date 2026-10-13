@@ -1,0 +1,372 @@
+#nullable enable
+using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
+using AF.GameFlow;
+using AF.Levels;
+using AF.Presentation;
+using UnityEngine;
+
+namespace AF.UI
+{
+    /// <summary>
+    /// Parcial del banner de entrada a un mundo (07 §2.2, regla 1; 02 §6; glosario §10, <c>world_banner</c>; decisión del dueño
+    /// del 2026-10-11) sin editar GameScreen.cs: implementa <see cref="IWorldBannerListener"/> y pinta el banner con
+    /// <see cref="WorldBannerView"/>. Lo llaman los ganchos <c>Cards*</c> de GameScreen.Cards.cs (los métodos parciales solo
+    /// admiten una implementación).
+    /// </summary>
+    /// <remarks>
+    /// <para><b>Flujo</b>: el banner es LEVEL_CARD con <see cref="LevelFlow.WorldBanner"/> (LevelFlow.Cards.cs): llega tras
+    /// <c>OnLevelLoaded</c> y los regalos, la intro se retiene en t = 0 detrás de él como detrás de la tarjeta previa, y 1 toque
+    /// llama a <see cref="LevelFlow.DismissWorldBanner"/>, que empieza su salida: el flujo sigue en LEVEL_CARD
+    /// (<see cref="LevelFlow.WorldBannerClosing"/>) los <see cref="WorldBannerView.ExitDurationMs"/> que esta parcial le fija al
+    /// abrirlo (<see cref="LevelFlow.WorldBannerExitMs"/>), y solo después abre la tarjeta previa si el nivel la tiene o arranca
+    /// la intro: «Llenar y teñir» nunca empieza debajo del banner (07 §5.1). Un segundo toque durante la salida la termina en el
+    /// acto. Al ser LEVEL_CARD, los avisos esperan a que termine (la Luciérnaga regalada, <c>ShowRevealGiftIfReady</c>), la
+    /// pausa queda inerte bajo el velo y nada de debajo recibe el toque.</para>
+    /// <para><b>Arte</b>: se pinta fuera del hilo principal (<see cref="WorldBannerView.AsyncArt"/>; 08 §5.4). Mientras llega,
+    /// el velo sale en el acto y los toques se ignoran (<see cref="LevelFlow.WorldBannerWaiting"/>, también los del flujo:
+    /// <c>TapAnywhere</c>, <c>TapCuia</c> y el fondo); la tarjeta entra cuando llega o, si el trabajo falla, no se puede encolar
+    /// o pasan <see cref="WorldBannerView.ArtTimeoutMs"/> de reloj real, sin él (el respaldo de D-012: la tarjeta, la placa y el
+    /// texto, con la viñeta del color plano del agua y sin Rosa ni Capi). Así el banner nunca se pierde sin verse. Para que casi
+    /// siempre esté ya, se pide antes (<see cref="PrefetchWorldBanner"/>): en la victoria del nivel anterior (el 10, el 40, el 80
+    /// y el 140) y al ofrecer «Jugar» con un nivel que abre mundo (GameBootstrap). Los tests que miden instantes exactos lo piden
+    /// en el acto con <see cref="LaunchOptions.BannerArtSyncOverride"/>; los del respaldo lo fuerzan con
+    /// <see cref="LaunchOptions.BannerArtFaultOverride"/> y <see cref="LaunchOptions.BannerArtTimeoutMsOverride"/>.</para>
+    /// <para>En desarrollo (los documenta docs/dev/prototipo-v0.md): al abrirse, <c>AF_STATE {"event":"world_banner",…}</c>
+    /// con <c>level</c>, <c>world</c>, <c>text</c> (la clave entera), <c>then</c> (<c>"level_card"</c> si al cerrarlo sale la
+    /// tarjeta previa, o <c>"intro"</c>) y <c>reduce_motion</c> (la versión quieta); cuando la tarjeta empieza a entrar, con su
+    /// arte o con el respaldo, <c>AF_STATE {"event":"world_banner_art",…}</c> con <c>level</c>, <c>world</c>, <c>async</c>,
+    /// <c>wait_ms</c> (lo que esperó, en reloj real desde la petición), <c>mascots_ms</c> (lo que costó pintarlo),
+    /// <c>main_ms</c> (lo que ocupó el hilo principal) y <c>fallback</c> (<c>"none"</c> con su arte; si no,
+    /// <c>"error"</c>, <c>"queue"</c> o <c>"timeout"</c>); al tocarlo, <c>AF_STATE {"event":"world_banner_closed",…}</c> con
+    /// <c>level</c>, <c>world</c> y <c>next</c>, con los mismos valores que <c>then</c> y antes de que se abra lo que sigue (la
+    /// línea <c>level_card</c>, si la hay, sale después); y, al terminar la entrada, <c>AF_LAYOUT {"screen":"world_banner",…}</c>
+    /// con el id <c>world_banner</c> y el rectángulo de la tarjeta (cualquier toque la cierra). En el <c>AF_LAYOUT</c> del nivel,
+    /// <c>world_banner</c> solo sale con la tarjeta a la vista (no mientras espera el arte).</para>
+    /// </remarks>
+    public sealed partial class GameScreen : IWorldBannerListener
+    {
+        /// <summary>Lo que sigue al banner (<c>then</c> y <c>next</c> de la sonda): la tarjeta previa.</summary>
+        internal const string BannerNextLevelCard = "level_card";
+
+        /// <summary>Lo que sigue al banner (<c>then</c> y <c>next</c> de la sonda): la intro.</summary>
+        internal const string BannerNextIntro = "intro";
+
+        private WorldBannerView _worldBanner = null!;
+        private string? _lastBannerProbe;
+        private string? _lastBannerClosedProbe;
+        private string? _lastBannerArtProbe;
+        private int _worldBannerShown;
+        private int _bannerPrefetchLevel;
+
+        /// <summary>Banner de entrada a un mundo (tests y capturas).</summary>
+        internal WorldBannerView WorldBannerView => _worldBanner;
+
+        /// <summary>Campos de la última línea <c>AF_STATE world_banner</c> (tests; null si aún no hubo banner o sin sonda).</summary>
+        internal string? LastWorldBannerProbe => _lastBannerProbe;
+
+        /// <summary>
+        /// Campos de la última línea <c>AF_STATE world_banner_closed</c> (tests; null si aún no se cerró ninguno o sin sonda).
+        /// </summary>
+        internal string? LastWorldBannerClosedProbe => _lastBannerClosedProbe;
+
+        /// <summary>
+        /// Campos de la última línea <c>AF_STATE world_banner_art</c> (tests; null si aún no entró la tarjeta de ninguno o sin
+        /// sonda).
+        /// </summary>
+        internal string? LastWorldBannerArtProbe => _lastBannerArtProbe;
+
+        /// <summary>Banners abiertos desde que existe la pantalla (tests: no sale al reintentar ni al reanudar).</summary>
+        internal int WorldBannersShown => _worldBannerShown;
+
+        /// <inheritdoc />
+        public void OnWorldBanner(int world, int level)
+        {
+            LevelFlow flow = RequireFlow();
+            HoldIntroForCard(flow); // el tablero espera detrás en el fotograma 0 de la intro, como con la tarjeta previa
+
+            // La tarjeta previa o la intro, solo cuando el banner haya salido del todo (07 §5.1: antes de la intro, no encima).
+            flow.WorldBannerExitMs = Mathf.CeilToInt(WorldBannerView.ExitDurationMs(flow.ReduceMotion));
+            Color water = Palette.WaterBase(flow.Level.WaterBase);
+            ApplyBannerArtHooks();
+            _worldBanner.AsyncArt = LaunchOptions.BannerArtSyncOverride != true; // el arte, fuera del fotograma de la carga
+            _worldBanner.Show(world, water, flow.ReduceMotion, _canvasW, _canvasH, _safeTop, _safeBottom);
+            _worldBanner.Root.SetAsLastSibling(); // por encima de todo: el toque en cualquier punto es suyo
+            flow.WorldBannerWaiting = !_worldBanner.CardShown; // sin tarjeta a la vista, ningún toque lo cierra
+            _worldBannerShown++;
+            _lastBannerProbe = DevProbe.Enabled ? BannerProbeJson(world, level) : null;
+            if (_lastBannerProbe != null)
+            {
+                _probe.Event("world_banner", _lastBannerProbe);
+            }
+
+            if (_worldBanner.ConsumeCardShown())
+            {
+                EmitBannerArt(flow); // en el acto: el arte ya estaba (pedido antes o sin hilo) o el respaldo
+            }
+        }
+
+        /// <summary>
+        /// Pide ya el arte del banner que abrirá el nivel <paramref name="level"/> si, cargado ahora, lo abriría
+        /// (<see cref="LevelFlow.WorldBannerAhead"/>): en un hilo del grupo y con las medidas de esta pantalla, así que al abrirse
+        /// suele estar ya (<see cref="WorldBannerView.Prefetch"/>). Lo llaman la victoria del nivel anterior (BannerTick) y
+        /// GameBootstrap al ofrecer «Jugar». Sin efecto con el banner abierto, si el nivel no lo abriría o si los tests lo piden
+        /// en el acto (<see cref="LaunchOptions.BannerArtSyncOverride"/>). True si lo pidió.
+        /// </summary>
+        internal bool PrefetchWorldBanner(int level)
+        {
+            LevelFlow? flow = _flow;
+            if (flow == null || _worldBanner == null || _worldBanner.Visible || LaunchOptions.BannerArtSyncOverride == true)
+            {
+                return false;
+            }
+
+            int world = flow.WorldBannerAhead(level);
+            LevelDefinition? def = world == 0 ? null : flow.Catalog.Find(flow.ResolveLevel(level));
+            if (def == null)
+            {
+                return false;
+            }
+
+            ApplyBannerArtHooks();
+            _worldBanner.Prefetch(world, Palette.WaterBase(def.WaterBase), _canvasW);
+            return true;
+        }
+
+        private void BannerBuild()
+        {
+            _worldBanner = new WorldBannerView(_root, _art, OnWorldBannerTapped);
+        }
+
+        private void BannerLayout()
+        {
+            if (_worldBanner.Visible)
+            {
+                _worldBanner.Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
+            }
+        }
+
+        private void BannerTick(float dtMs)
+        {
+            LevelFlow? flow = _flow;
+            if (!_worldBanner.Visible)
+            {
+                if (flow != null && flow.HasLevel)
+                {
+                    BannerPrefetchOnWin(flow);
+                }
+
+                return;
+            }
+
+            bool inBanner = flow != null && flow.HasLevel && flow.Phase == FlowPhase.LevelCard && flow.WorldBanner != 0;
+            if (!inBanner)
+            {
+                // El flujo ya siguió (terminó la salida, un segundo toque la cortó): la tarjeta previa o la intro ya están en
+                // marcha, así que el banner se quita en el acto y nunca queda encima de ellas.
+                if (!_worldBanner.Dismissing && flow != null && flow.HasLevel)
+                {
+                    EmitBannerClosed(flow);
+                }
+
+                _worldBanner.HideNow();
+                return;
+            }
+
+            if (flow!.WorldBannerClosing && !_worldBanner.Dismissing)
+            {
+                StartBannerExit(flow); // el flujo lo cerró por otro camino (TapAnywhere, TapCuia, el fondo…): su salida
+                if (!_worldBanner.Visible)
+                {
+                    return;
+                }
+            }
+
+            _worldBanner.Tick(dtMs); // esperando el arte: entra con él, o sin él al fallar o al cumplirse su tiempo límite
+            if (_worldBanner.ConsumeCardShown())
+            {
+                flow.WorldBannerWaiting = false; // ya se ve: un toque lo cierra
+                EmitBannerArt(flow);
+            }
+
+            if (_worldBanner.ConsumeEntered())
+            {
+                EmitBannerLayout();
+            }
+        }
+
+        // En la victoria (la celebración o la pantalla de victoria) del nivel anterior a uno que abre mundo (el 10, el 40, el 80 y
+        // el 140): su arte se pide ya, una vez por nivel, para que el banner entre en el acto tras «Siguiente».
+        private void BannerPrefetchOnWin(LevelFlow flow)
+        {
+            FlowPhase phase = flow.Phase;
+            if (phase != FlowPhase.Celebration && phase != FlowPhase.VictoryScreen)
+            {
+                return;
+            }
+
+            int next = flow.LevelNumber + 1;
+            if (_bannerPrefetchLevel == next)
+            {
+                return;
+            }
+
+            _bannerPrefetchLevel = next;
+            PrefetchWorldBanner(next);
+        }
+
+        private void BannerLevelLoaded()
+        {
+            // Otro nivel (o el mismo reanudado): fuera el banner anterior. Con el banner cerrado no hay nada que quitar, y el arte
+            // pedido antes (PrefetchWorldBanner) se queda para el banner que abre este nivel.
+            if (_worldBanner.Visible)
+            {
+                _worldBanner.HideNow();
+            }
+
+            _bannerPrefetchLevel = 0;
+        }
+
+        private void BannerLayoutIds(List<string> ids, List<RectTransform> rects)
+        {
+            // Solo con la tarjeta a la vista (con su arte o con el respaldo): mientras espera el arte solo se ve el velo.
+            if (_worldBanner.Visible && _worldBanner.CardShown && !_worldBanner.Dismissing)
+            {
+                ids.Add("world_banner");
+                rects.Add(_worldBanner.Panel);
+            }
+        }
+
+        // 1 toque en cualquier punto: el flujo empieza la salida (la tarjeta previa o la intro esperan a que termine) y el banner
+        // sale. Un segundo toque durante la salida la termina en el acto. Mientras espera el arte (solo el velo), nada.
+        private void OnWorldBannerTapped()
+        {
+            if (!_worldBanner.Visible || !_worldBanner.CardShown)
+            {
+                return;
+            }
+
+            LevelFlow flow = RequireFlow();
+            if (_worldBanner.Dismissing)
+            {
+                flow.DismissWorldBanner(); // con el banner saliendo, sigue ya con la tarjeta previa o la intro
+                _worldBanner.HideNow();
+                return;
+            }
+
+            StartBannerExit(flow);
+        }
+
+        // La salida del banner: la línea world_banner_closed antes de que el flujo siga (con lo que vendrá detrás), el flujo
+        // empieza la salida (si no la empezó ya por otro camino) y el banner sale. Los toques no lo cierran mientras espera el arte
+        // (LevelFlow.WorldBannerWaiting), así que aquí la tarjeta ya se ve; si aun así no se viera (nada que ver salir), sin
+        // salida: WorldBannerExitMs = 0, el flujo sigue en el acto (o en su propio Tick de este fotograma) y el banner se quita.
+        private void StartBannerExit(LevelFlow flow)
+        {
+            EmitBannerClosed(flow);
+            bool shown = _worldBanner.CardShown;
+            if (!shown)
+            {
+                flow.WorldBannerExitMs = 0;
+                flow.WorldBannerWaiting = false;
+            }
+
+            if (!flow.WorldBannerClosing)
+            {
+                flow.DismissWorldBanner();
+            }
+
+            if (!shown)
+            {
+                _worldBanner.HideNow();
+                return;
+            }
+
+            _worldBanner.Dismiss();
+        }
+
+        // Los ganchos de test del arte del banner (solo tests; en el juego, sin fallo y con el tiempo límite de 800 ms [P]): el
+        // arte es compartido entre escenas, así que se fijan antes de cada petición.
+        private void ApplyBannerArtHooks()
+        {
+            _art.BannerArtFault = LaunchOptions.BannerArtFaultOverride ?? BannerArtFault.None;
+            _worldBanner.ArtTimeoutLimitMs = LaunchOptions.BannerArtTimeoutMsOverride ?? WorldBannerView.ArtTimeoutMs;
+        }
+
+        // AF_STATE world_banner_art: cuándo entró la tarjeta del banner, lo que costó su arte (08 §5.4;
+        // ProceduralArt.RequestBannerArt) y si entró sin él (fallback).
+        private void EmitBannerArt(LevelFlow flow)
+        {
+            if (!DevProbe.Enabled || !flow.HasLevel)
+            {
+                return;
+            }
+
+            ProceduralArt art = _art;
+            var sb = new StringBuilder(192);
+            sb.Append("{\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"world\":").Append(_worldBanner.World.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"async\":").Append(_worldBanner.AsyncArt ? "true" : "false");
+            sb.Append(",\"wait_ms\":").Append(_worldBanner.ArtWaitMs.ToString("0", CultureInfo.InvariantCulture));
+            sb.Append(",\"mascots_ms\":").Append(art.MascotsMs.ToString("0.0", CultureInfo.InvariantCulture));
+            sb.Append(",\"main_ms\":").Append(art.MascotsMainMs.ToString("0.0", CultureInfo.InvariantCulture));
+            sb.Append(",\"fallback\":\"").Append(_worldBanner.Fallback).Append("\"}");
+            _lastBannerArtProbe = sb.ToString();
+            _probe.Event("world_banner_art", _lastBannerArtProbe);
+        }
+
+        // AF_STATE world_banner_closed: nivel, mundo y lo que sigue, con los valores de "then" (BannerNext).
+        private void EmitBannerClosed(LevelFlow flow)
+        {
+            if (!DevProbe.Enabled || !flow.HasLevel)
+            {
+                return;
+            }
+
+            _lastBannerClosedProbe = "{\"level\":" + flow.LevelNumber.ToString(CultureInfo.InvariantCulture)
+                + ",\"world\":" + _worldBanner.World.ToString(CultureInfo.InvariantCulture)
+                + ",\"next\":\"" + BannerNext(flow) + "\"}";
+            _probe.Event("world_banner_closed", _lastBannerClosedProbe);
+        }
+
+        // Lo que sigue al banner, con un solo vocabulario para "then" y "next": la tarjeta previa ("level_card") o la intro
+        // ("intro"). Con el banner abierto o saliendo, lo que saldrá al terminar (LevelFlow.WorldBannerThenCard); ya cerrado, lo
+        // que está en marcha.
+        private static string BannerNext(LevelFlow flow)
+        {
+            bool card = flow.WorldBanner != 0 ? flow.WorldBannerThenCard : flow.LevelCard != null;
+            return card ? BannerNextLevelCard : BannerNextIntro;
+        }
+
+        private void EmitBannerLayout()
+        {
+            LevelFlow? flow = _flow;
+            if (!DevProbe.Enabled || flow == null || !flow.HasLevel)
+            {
+                return;
+            }
+
+            _layoutIds.Clear();
+            _layoutRects.Clear();
+            _layoutIds.Add("world_banner");
+            _layoutRects.Add(_worldBanner.Panel);
+            _probe.Layout("world_banner", flow.LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
+        }
+
+        // AF_STATE world_banner: nivel, mundo, texto (world_banner del glosario §10), lo que sale al cerrarlo (la tarjeta previa o
+        // la intro: BannerNext) y si es la versión quieta. Lo que costó su arte va aparte, cuando entra la tarjeta
+        // (world_banner_art).
+        private string BannerProbeJson(int world, int level)
+        {
+            LevelFlow flow = RequireFlow();
+            var sb = new StringBuilder(176);
+            sb.Append("{\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"world\":").Append(world.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"text\":\"").Append(UiText.WorldBanner(world)).Append('"');
+            sb.Append(",\"then\":\"").Append(BannerNext(flow)).Append('"');
+            sb.Append(",\"reduce_motion\":").Append(flow.ReduceMotion ? "true" : "false").Append('}');
+            return sb.ToString();
+        }
+    }
+}

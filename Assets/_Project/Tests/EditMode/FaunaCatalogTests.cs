@@ -160,9 +160,12 @@ namespace AF.Tests.EditMode
             Assert.That(WorldTable.WorldOf(1000), Is.EqualTo(13));
             Assert.Throws<System.ArgumentOutOfRangeException>(() => WorldTable.WorldOf(0));
             Assert.Throws<System.ArgumentOutOfRangeException>(() => WorldTable.WorldOf(1001));
+            int[] firstLevels = { 1, 11, 41, 81, 141, 201, 301, 421, 561, 701, 821, 921, 961 }; // glosario §8
             for (int w = 1; w <= WorldTable.WorldCount; w++)
             {
-                Assert.That(SightingRule.WorldBannerLevels[w - 1], Is.EqualTo(WorldTable.FirstLevel(w)), "banner del mundo " + w);
+                Assert.That(WorldTable.FirstLevel(w), Is.EqualTo(firstLevels[w - 1]), "primer nivel del mundo " + w);
+                Assert.That(WorldBanners.ShowsOn(firstLevels[w - 1]), Is.EqualTo(w >= WorldBanners.FirstBannerWorld), "banner del mundo " + w);
+                Assert.That(SightingRule.IsBusy(firstLevels[w - 1]), Is.True, "sin tarjeta del miquito en el primer nivel del mundo " + w);
                 Assert.That(WorldTable.WorldOf(WorldTable.LastLevelOf(w)), Is.EqualTo(w));
             }
         }

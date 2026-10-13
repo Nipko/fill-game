@@ -114,6 +114,26 @@ namespace AF.UI
         public static bool? LevelCardsOverride { get; set; }
 
         /// <summary>
+        /// true: el arte del banner de mundo se pinta en el acto al abrirlo, en el hilo principal, para los tests y las capturas
+        /// que miden instantes exactos de su entrada; null o false: en un hilo del grupo, como en el juego
+        /// (<c>WorldBannerView.AsyncArt</c>). Solo tests: ningún extra de intent la rellena.
+        /// </summary>
+        public static bool? BannerArtSyncOverride { get; set; }
+
+        /// <summary>
+        /// Fallo forzado en el arte del banner de mundo (<c>ProceduralArt.BannerArtFault</c>: en el hilo, en la cola o un
+        /// trabajo que no acaba), para probar que el banner entra sin él; null = sin fallo, como en el juego. Solo tests: ningún
+        /// extra de intent la rellena.
+        /// </summary>
+        public static AF.Presentation.BannerArtFault? BannerArtFaultOverride { get; set; }
+
+        /// <summary>
+        /// Tiempo límite del arte del banner de mundo (ms de reloj real; <c>WorldBannerView.ArtTimeoutLimitMs</c>); null =
+        /// <c>WorldBannerView.ArtTimeoutMs</c> (800 ms [P]). Solo tests: ningún extra de intent la rellena.
+        /// </summary>
+        public static float? BannerArtTimeoutMsOverride { get; set; }
+
+        /// <summary>
         /// Moneda de los precios simulados [P]: COP (05 §4.2; los wireframes de 04 §6.6 usan pesos colombianos) mientras no
         /// haya precios de la tienda real.
         /// </summary>
@@ -134,6 +154,9 @@ namespace AF.UI
             LevelPackJsonOverride = null;
             DevelopmentBuildOverride = null;
             LevelCardsOverride = null;
+            BannerArtSyncOverride = null;
+            BannerArtFaultOverride = null;
+            BannerArtTimeoutMsOverride = null;
         }
 
         /// <summary>
