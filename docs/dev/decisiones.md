@@ -1088,12 +1088,12 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
    - acierto de etiqueta (retos que alcanzan el 75 %): si baja del 60 % en un ciclo, se revisa el generador de esa posición.
 
 **Consecuencias.**
-- **Simulación** (P-2, `0faf51e`): `tools/econ_sim.py` pasa a `CHALLENGE_POSITIONS` = {6, 9, 12, 15, 18} y a los retos con etiqueta p6, p12 y p18 en 41-59. La cuenta de etiquetas no cambia, pero el orden de los retos mueve las cifras [sim]. Las celdas que cita el GDD (05 §3 y sus copias en 01, 04, 09 y GDD.md) que cambian:
-  - **Escenario B** (canon, `tools/out/econ_B.md`): saldo final del casual 1.842 → 1.912, del medio 15.510 → 15.856, del hábil 26.408 → 26.092 y del pagador ligero 8.393 → 8.843; ingreso gratuito total del casual 30.709 → 30.735, del medio 48.857 → 48.816 y del hábil 46.486 → 46.431; ingreso por victoria 61,4 → 61,5 (casual), 97,7 → 97,6 (medio), 93,0 → 92,9 (hábil) y 97,2 → 97,3 (pagador); Cuias de rescate pagables por día del hábil 2,57 → 2,56; Cuias de rescate usadas 72,5 → 72,3, 72,1 → 71,3, 45,0 → 45,4 y 87,5 → 86,7; bloqueos sin recursos del casual 5,9 → 5,6 por corrida, en el 73 → 74 % de las corridas, con el primero en el 249 → 260; **el primer bloqueo sin recursos del medio pasa del 87 al 44** (corridas afectadas, 2 → 1 %) y **el del pagador ligero, del 311 al 282** (corridas afectadas, 10 → 14 %; 0,4 → 0,5 bloqueos por corrida); neto diario en 101-500 del casual −11 → −9, del medio +316 → +325, del hábil +851 → +841 y del pagador +124 → +138; USD del pagador 3,54 → 3,64. Los ratios de referencia no cambian (7,7 / 7,2:1).
+- **Simulación** (P-2, `0faf51e`): `tools/econ_sim.py` pasa a `CHALLENGE_POSITIONS` = {6, 9, 12, 15, 18} y a los retos con etiqueta p6, p12 y p18 en 41-59. La cuenta de etiquetas no cambia, pero el orden de los retos mueve las cifras [sim]. Algunas de las celdas que cita el GDD (05 §3 y sus copias en 01, 04, 09 y GDD.md) que cambian; es una selección, no la lista completa, que es el diff de `0faf51e` en `tools/out/econ_*.md`:
+  - **Escenario B** (canon, `tools/out/econ_B.md`): saldo final del casual 1.842 → 1.912, del medio 15.510 → 15.856, del hábil 26.408 → 26.092 y del pagador ligero 8.393 → 8.843; ingreso gratuito total del casual 30.709 → 30.735, del medio 48.857 → 48.816 y del hábil 46.486 → 46.431; ingreso por victoria 61,4 → 61,5 (casual), 97,7 → 97,6 (medio), 93,0 → 92,9 (hábil) y 97,2 → 97,3 (pagador); Cuias de rescate pagables por día del hábil 2,57 → 2,56; Cuias de rescate usadas 72,5 → 72,3, 72,1 → 71,3, 45,0 → 45,4 y 87,5 → 86,7; bloqueos sin recursos del casual 5,9 → 5,6 por corrida, en el 73 → 74 % de las corridas, con el primero en el 249 → 260; **el primer bloqueo sin recursos del medio pasa del 87 al 44** (corridas afectadas, 2 → 1 %) y **el del pagador ligero, del 311 al 282** (corridas afectadas, 10 → 14 %; 0,4 → 0,5 bloqueos por corrida); neto diario en 101-500 del casual −11 → −9, del medio +316 → +325, del hábil +851 → +841 y del pagador +124 → +138; saldo del medio al cerrar el 100, 5.331 → 5.431 (sigue por encima de la palanca de 4.000 de 05 §3.5, el argumento de 05 §3.6 y de su pregunta 2); USD del pagador 3,54 → 3,64. Los ratios de referencia no cambian (7,7 / 7,2:1).
   - **Escenario A** (`tools/out/econ_A.md`): saldo final del medio 23.815 → 24.043, del hábil 32.107 → 31.727 y del pagador 14.323 → 14.739; **primer bloqueo sin recursos del pagador 110 → 258** y del medio 57 → 49. Los ratios de referencia no cambian (7,0 / 6,6:1).
   - **B con tramos** (`tools/out/econ_B_tramos.md`): referencia de 101-500, 10,2 → 10,3:1; casual con 21,3 bloqueos por corrida en el 100 % de las corridas → 20,7 en el 99 %, primer bloqueo 198 → 203 y saldo final 895 → 893; medio con 3,1 (45 %) → 2,9 (44 %), neto diario −34 → −23, primer bloqueo 352 → 355 y saldo final 4.224 → 4.670; hábil con saldo final 18.120 → 17.710 y neto +508 → +494; pagador con 12,9 (90 %) → 13,2 (92 %), primer bloqueo 305 → 314 y saldo final 1.536 → 1.584.
   - **Variantes** (`tools/out/econ_variants.md`): en V0, saldo final del medio 15.686 → 16.067 y del casual 1.876 → 2.014, y casual con bloqueo sin recursos 70 → 76 %; en las demás, los ratios se mueven 0,1 como mucho y los saldos y porcentajes, en la misma medida.
-  - El detalle celda a celda es el diff de `0faf51e` en `tools/out/`. Las cifras del GDD se actualizan cuando el dueño las apruebe (V5; pregunta 25 de GDD.md §6.3).
+  - El detalle celda a celda, con las celdas que esta selección no recoge, es el diff de `0faf51e` en `tools/out/econ_*.md`. Las cifras del GDD se actualizan cuando el dueño las apruebe (V5; pregunta 25 de GDD.md §6.3).
 - **Campaña v1 medida** (`tools/out/campaign_v1_report.md`):
   - etiquetas: 31-60, 13,3 % Difícil y 3,3 % Muy difícil; 61-100, 20 % y 5 %; 101-200, 23 % y 5 %. Desde el 61 los cinco retos apuntan a Difícil (25 % por ciclo), por encima del 15 % y del 15-20 % de 03 §11: queda como pregunta abierta (pregunta 26 de GDD.md §6.3);
   - acierto de etiqueta por ciclo: 67-100 %; cada remanso queda por debajo de la media de comodidad de su ciclo (QA-REMANSO);
@@ -1413,8 +1413,8 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - la sacudida de rechazo de ±6 dp, 2 ciclos y 120 ms (contrato 24; GDD.md §2 #3 y §7.2 #30, 02 §3.1 y §4.1, 07 §4.3): pasa a ±8 dp, 3 ciclos y 240 ms (punto 3);
   - el banner de mundo «tras Siguiente… con Rosa guiando» (02 §6) y el banner del mundo 2 en el Mapa del río tras la victoria del 10 (06 §2.2 y §2.3): sale al cargar el primer nivel del mundo, antes de la intro, y lo presenta Capi (punto 2 y respuesta (a));
   - el tutorial del estreno de la Piraña como texto con el icono (02 §9.1 M7): enseña un mordisco animado (punto 1, D);
-  - el amago corto de la Piraña que no puede morder (02 §4.1; 07 §4.3 y §5.6): el cardumen llega a la víctima, choca y vuelve (punto 1, C);
-  - en 07 §4.3, «con varias parejas, unos puntos junto a la bajada las distinguen»: las dos cuias de una pareja del Remolino llevan la misma marca también con un solo par (respuesta (b)).
+  - 02 §2, SUSPENDED («el estado ya está en disco tras cada vertido»), 02 §14 («el estado se guardó tras cada vertido») y 08 §11 (guardado solo al terminar el nivel, en la cartera y al pasar a segundo plano): el vertido entrega el perfil al escritor y se escribe en síncrono al pasar a segundo plano (decisión 5);
+  - 02 §12: el icono pasa de «60 % del ancho de la dosis» a 0,45 u de alto, como 07 §3 (decisión 4).
 - **No sustituye:**
   - las reglas de la Piraña (02 §9.1 M7, con Q-C y Q18 B de D-007) ni los niveles de la campaña: no se regeneran;
   - el texto del banner (`world_banner`, glosario §10) ni la tabla de 08 §9: no hay claves de Remote Config nuevas;
@@ -1432,6 +1432,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - cómo se lee la pareja del Remolino entre filas no contiguas (en el 103, filas 1 y 3): A, canal por detrás del panel; B, la misma marca en las dos; C, las dos cosas;
   - si la tarea del guardado puede tocar `AF.Save` (`.claude/rules/sdk.md`: todo cambio ahí va en un PR aprobado por el dueño).
 - Ese día el dueño aprobó también la caché de `LocalDateKey` en `AF.Platform`, aplicada en `7677085` (pregunta 20 de GDD.md §6.3, decidida).
+- La presentación del mordisco perdido de Q-C y la marca de pareja del Remolino no estaban en el GDD: D-012 las fija (02 §4.1; 07 §4.3 y §5.6). El borrador del paso 2 (`6d04279`) decía «amaga» y «con varias parejas, unos puntos junto a la bajada las distinguen».
 
 **Decisión.**
 1. **Estreno de la Piraña (183): opción C + D.** No se regeneran niveles.
@@ -1453,7 +1454,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
    - nunca lleva icono una dosis oculta, el Barro ni el agua base;
    - el icono es uno por tinte, según la columna «Icono de accesibilidad» de 07 §3, procedural [P] hasta el arte del artista;
    - mientras no exista la pantalla de Ajustes, el interruptor es una constante del cliente, activa desde el 41 [P].
-   - Capítulos: GDD.md §2 #5, 02 §12, 07 §3 y 08 §9 (columna «Uso», sin claves nuevas).
+   - Capítulos: GDD.md §2 #5, 02 §12, 07 §3 y 08 §5.1, §5.2 y §9 (en §9, solo la columna «Uso», sin claves nuevas).
 5. **Guardado por vertido: se mantiene el objetivo de T-D.** En el hilo principal del teléfono, p95 < 5 ms y ningún guardado > 8 ms, medido en ≥ 200 vertidos de 3 niveles; un force-stop a mitad de nivel deja al reabrir el tablero del último vertido. Con la respuesta (c), la tarea puede tocar `AF.Save` (opción B de T-D):
    - el vertido serializa en el hilo principal (< 1 ms) y entrega los bytes a un único escritor en segundo plano con cola de 1, en la que gana el último;
    - el escritor hace la escritura atómica de 08 §11;
@@ -1461,7 +1462,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
    - si el escritor falla, el perfil sigue en memoria y se reintenta en el siguiente guardado;
    - `AF_PERF` mide en `save_ms` solo el hilo principal y añade `bg_ms`;
    - sin paquetes nuevos y sin tocar `AF.Platform`.
-   - Capítulos: 08 §5.4 y §11.
+   - Capítulos: 02 §2 (SUSPENDED) y §14, 04 §5.2 y 08 §5.4 y §11.
 6. **Marco del panel bajo el HUD con 3 filas: se deja como está** (8 dp; guía visual v2 §3.2). Ningún capítulo cambia.
 7. **Remolino, respuesta (b) del 2026-10-11: opción C.** El canal une las bases de la pareja, también entre filas no contiguas, y las dos cuias llevan la misma marca de pareja, también cuando el nivel tiene un solo par; con dos pares, las marcas se distinguen entre sí. La marca está siempre a la vista, a ΔE00 ≥ 10 de los 14 tintes y del turquesa de Marea, y nada cambia al seleccionar (D-002).
    - Capítulos: 07 §4.3.
@@ -1490,4 +1491,4 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 **Archivos afectados.**
 - **Código** (tanda 1): `Assets/_Project/Scripts/Presentation/Mechanics/{PiranaOverlay.cs, RemolinoOverlay.cs}`, `Assets/_Project/Scripts/Presentation/ProceduralArt.Remolino.cs`, `Assets/_Project/Scripts/Save/{ProfileWriter.cs, LocalProfileStore.cs, IProfileStore.cs}`, `Assets/_Project/Scripts/GameFlow/ProfileSaveBatch.cs`, `Assets/_Project/Scripts/UI/{GameBootstrap.cs, DevProbe.cs}`, sus tests y `docs/dev/prototipo-v0.md`. Tanda 2: los de sus especificaciones (A4 y B3).
-- **Documentación** (2026-10-12, paso 2): este registro; `docs/GDD.md` §2, §6.3, §7.2 y §9; `docs/gdd/{00, 02, 06, 07, 08, 09}`; la guía visual v2 (`docs/art/direccion-visual-v2.md`, revisión 6: la sacudida); `docs/dev/traspaso/README.md` (§6 y §7).
+- **Documentación** (2026-10-12, paso 2): este registro; `docs/GDD.md` §2, §6.3, §7.2 y §9; `docs/gdd/{00, 02, 04, 06, 07, 08, 09}`; la guía visual v2 (`docs/art/direccion-visual-v2.md`, revisión 6: la sacudida); `docs/dev/traspaso/README.md` (§6 y §7).

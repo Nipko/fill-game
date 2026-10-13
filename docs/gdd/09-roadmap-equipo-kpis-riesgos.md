@@ -192,7 +192,7 @@ La columna "Contenido (programador)" la cubren ahora los agentes (sección 0.1);
 
 Prioridad P1 = entra en la versión salvo bloqueo; P2 = entra si hay capacidad; P3 = candidato. Esfuerzo en semanas de programación (A / B) [E]; artista en semanas-artista. **Con el equipo de agentes (sección 0)** la columna A es histórica: se usa la columna B como tamaño relativo y 1.1 y 1.2 conservan el alcance completo de B; los recortes a P1 y el paso a 1.3 que se describen para A no aplican.
 
-### 3.1 v1.1 (B: alcance completo en la semana 6 del soft launch; A: solo P1, 3,5-4,5 semanas de programación, en la semana 10 del soft launch = S42; condición: D1 ≥28 %, GDD cap. 06 §11)
+### 3.1 v1.1 (B: alcance completo en la semana 6 del soft launch; A: solo P1, 3,5-4,5 semanas de programación, en la semana 10 del soft launch = S42; plazos y esfuerzos sin las mecánicas de la 1.1 de D-007, por estimar; condición: D1 ≥28 %, GDD cap. 06 §11)
 
 | Pri. | Ítem | Evidencia | Esfuerzo A / B | Artista |
 |---|---|---|---|---|
