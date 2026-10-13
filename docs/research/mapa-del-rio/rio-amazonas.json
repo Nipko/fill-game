@@ -1,0 +1,8081 @@
+{
+ "formato": "af-rio-amazonas/0 [P]",
+ "titulo": "Geografía limpia del Amazonas para el Mapa del río (Tintalú / Amazon Fill)",
+ "estado": "Material de apoyo, no canon (docs/research). Lo usa generar_mapa.py para la muestra; el trazado de producción sale de Natural Earth (y de HydroRIVERS para las vistas de Mundo) con tools/river-map/ (propuesta §3.6). Nombres, datos y textos: pendientes del asesor cultural (07 §8.2). Revisado el 2026-10-13 con 41 hallazgos (propuesta, cabecera). Las paradas detalladas son las de 1-200 (mundos 1-5); si la 1.0 son los niveles 1-700, como dice el GDD (§2 #21), faltan las paradas 20-69 (pregunta Q14 de la propuesta).",
+ "fecha": "2026-10-12",
+ "datum": "WGS84, grados decimales (4 decimales)",
+ "etiquetas": {
+  "V": "verificado: dos referencias concordantes o una fuente primaria o fiable; error de posición < 2 km",
+  "E": "estimado: una sola referencia secundaria (Wikidata, recuadro de Wikipedia), redondeo o punto de 2-15 km del cauce",
+  "NV": "no verificado: trazado aproximado del agente para la muestra; se sustituye con Natural Earth",
+  "P": "propuesta de diseño (no es un hecho geográfico)"
+ },
+ "licencia": {
+  "este_archivo": "Recopilación de hechos geográficos (coordenadas, nombres, km). Las coordenadas vienen de Wikidata (CC0) y de los recuadros de Wikipedia citados en 'fuentes'; los hechos no tienen derechos de autor y los textos de este archivo son del proyecto. Sin datos de OpenStreetMap.",
+  "produccion": "Natural Earth 1:10m (dominio público, sin atribución obligatoria) para ríos, tierra y costa; si falta un río (Takutu, Casiquiare), los puntos de este archivo. OSM no se usa (ODbL obliga a compartir las bases derivadas)."
+ },
+ "proyeccion": {
+  "tipo": "equirrectangular con factor cos(lat0), girada 90° en el sentido de las agujas del reloj (rotación pura, sin espejo)",
+  "lat0": -5.0,
+  "caja": {
+   "lat_min": -18.0,
+   "lat_max": 7.0,
+   "lon_min": -80.0,
+   "lon_max": -47.0
+  },
+  "ejes": "x de 0 (sur, izquierda) a 1 (norte, derecha); y de 0 (oeste: Andes, arriba) a 1 (este: Atlántico, abajo)",
+  "formula": "x = (lat − lat_min) / (lat_max − lat_min); y = (lon − lon_min) / (lon_max − lon_min)",
+  "aspecto_alto_sobre_ancho": 1.31498,
+  "uso": "px = x · W; py = y · W · aspecto. La escala es la misma en los dos ejes: la forma no se deforma.",
+  "norte_arriba": "Vista «Norte arriba»: X = y; Y = 1 − x, con aspecto (alto/ancho) = 1 / aspecto_alto_sobre_ancho",
+  "error_escala_este_oeste": "≤ 5 % en toda la caja: cos(5°) / cos(18°) = 1,047 en el borde sur y 1,004 en el norte [cálculo]",
+  "en_pantalla": "Con 328 dp útiles (360 − 2 × 16) salen 13,1 dp por grado de latitud y la cuenca mide unos 431 dp de alto [cálculo]"
+ },
+ "rios": [
+  {
+   "id": "amazonas",
+   "nombre": "Cauce principal: Carhuasanta → Apurímac → Ene → Tambo → Ucayali → Amazonas/Solimões → Amazonas",
+   "tipo": "cauce",
+   "orden_puntos": "del nacimiento (nevado Mismi) a la desembocadura (canal norte)",
+   "agua": "andina en la cabecera; blanca desde el Apurímac bajo (Sioli)",
+   "paises": [
+    "PE",
+    "CO",
+    "BR"
+   ],
+   "mundos": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    9,
+    13
+   ],
+   "conf": "V/E (ver cada punto)",
+   "fuentes": [
+    "wp_amazon",
+    "wp_source",
+    "wd",
+    "wp_rios"
+   ],
+   "nota": "105 puntos que siguen la forma real a escala de cuenca; no dibujan todos los meandros (la poligonal mide 4.783 km frente a 6.575). Km desde el nacimiento sobre 6.575 km (Wikipedia, desde el Mismi) [E]. Los km de los puntos [V] (y del nacimiento y la desembocadura) son los de la route map de Wikipedia; los demás se reparten entre dos anclas por la longitud de la poligonal [cálculo, provisional], porque la route map daba tramos más cortos que la línea recta (Fonte Boa → boca del Juruá: 11 km frente a 39,7). Tabatinga y Parintins no son anclas por la misma razón. El valor de la route map queda en km_route_map como contraste. En producción, los km salen de Natural Earth en tools/river-map (propuesta §11.3).",
+   "puntos": [
+    {
+     "lat": -15.512,
+     "lon": -71.702,
+     "nombre": "Naciente de mayor caudal continuo: quebrada Carhuasanta (Laguna Bohemia), nevado Mismi",
+     "conf": "E",
+     "km_desde_nacimiento": 0,
+     "km_desde_el_mar": 6575,
+     "pais": "PE",
+     "rio_local": "Carhuasanta",
+     "agua": "andina",
+     "xy": [
+      0.09952,
+      0.25145
+     ]
+    },
+    {
+     "lat": -15.1771,
+     "lon": -71.6357,
+     "nombre": "Confluencia del Hornillos (ya río Apurímac)",
+     "conf": "E",
+     "km_desde_nacimiento": 64,
+     "km_desde_el_mar": 6511,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.11292,
+      0.25346
+     ]
+    },
+    {
+     "lat": -14.9772,
+     "lon": -71.6097,
+     "nombre": "Confluencias Cerritambo y Callumani (Suykutambo, Espinar)",
+     "conf": "E",
+     "km_desde_nacimiento": 102,
+     "km_desde_el_mar": 6473,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.12091,
+      0.25425
+     ]
+    },
+    {
+     "lat": -14.8273,
+     "lon": -71.4836,
+     "nombre": "Confluencia del Huayllumayo",
+     "conf": "E",
+     "km_desde_nacimiento": 139,
+     "km_desde_el_mar": 6436,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.12691,
+      0.25807
+     ]
+    },
+    {
+     "lat": -14.7539,
+     "lon": -71.4806,
+     "nombre": "Confluencia del Qquero",
+     "conf": "E",
+     "km_desde_nacimiento": 152,
+     "km_desde_el_mar": 6423,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.12984,
+      0.25816
+     ]
+    },
+    {
+     "lat": -14.708,
+     "lon": -71.447,
+     "nombre": "Confluencia del Salado (baja de Yauri)",
+     "conf": "E",
+     "km_desde_nacimiento": 163,
+     "km_desde_el_mar": 6412,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.13168,
+      0.25918
+     ]
+    },
+    {
+     "lat": -14.3813,
+     "lon": -71.484,
+     "nombre": "Puente Q'eswachaka",
+     "conf": "V",
+     "km_desde_nacimiento": 225,
+     "km_desde_el_mar": 6350,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.14475,
+      0.25806
+     ]
+    },
+    {
+     "lat": -14.1164,
+     "lon": -71.6998,
+     "nombre": "Confluencia del Livitaca",
+     "conf": "E",
+     "km_desde_nacimiento": 274,
+     "km_desde_el_mar": 6301,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.15534,
+      0.25152
+     ],
+     "km_route_map": 284
+    },
+    {
+     "lat": -13.9536,
+     "lon": -71.7609,
+     "nombre": "Pillpinto (puente)",
+     "conf": "E",
+     "km_desde_nacimiento": 299,
+     "km_desde_el_mar": 6276,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.16186,
+      0.24967
+     ],
+     "km_route_map": 315
+    },
+    {
+     "lat": -13.8315,
+     "lon": -71.9402,
+     "nombre": "Confluencia del Velille",
+     "conf": "E",
+     "km_desde_nacimiento": 330,
+     "km_desde_el_mar": 6245,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.16674,
+      0.24424
+     ],
+     "km_route_map": 345
+    },
+    {
+     "lat": -13.7842,
+     "lon": -72.1347,
+     "nombre": "Confluencia del Santo Tomás",
+     "conf": "E",
+     "km_desde_nacimiento": 359,
+     "km_desde_el_mar": 6216,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.16863,
+      0.23834
+     ],
+     "km_route_map": 372
+    },
+    {
+     "lat": -13.6421,
+     "lon": -72.4007,
+     "nombre": "Confluencia del Vilcabamba",
+     "conf": "E",
+     "km_desde_nacimiento": 402,
+     "km_desde_el_mar": 6173,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.17432,
+      0.23028
+     ],
+     "km_route_map": 414
+    },
+    {
+     "lat": -13.5561,
+     "lon": -72.548,
+     "nombre": "Puente Cunyac (carretera Cusco-Abancay)",
+     "conf": "E",
+     "km_desde_nacimiento": 426,
+     "km_desde_el_mar": 6149,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.17776,
+      0.22582
+     ],
+     "km_route_map": 437
+    },
+    {
+     "lat": -13.3877,
+     "lon": -72.8977,
+     "nombre": "Bajo Choquequirao (confluencia del Yanama)",
+     "conf": "E",
+     "km_desde_nacimiento": 482,
+     "km_desde_el_mar": 6093,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.18449,
+      0.21522
+     ],
+     "km_route_map": 491
+    },
+    {
+     "lat": -13.4433,
+     "lon": -73.16,
+     "nombre": "Confluencia del Pachachaca",
+     "conf": "E",
+     "km_desde_nacimiento": 520,
+     "km_desde_el_mar": 6055,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.18227,
+      0.20727
+     ],
+     "km_route_map": 527
+    },
+    {
+     "lat": -13.4199,
+     "lon": -73.2124,
+     "nombre": "Confluencia del Pampas",
+     "conf": "E",
+     "km_desde_nacimiento": 528,
+     "km_desde_el_mar": 6047,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "andina",
+     "xy": [
+      0.1832,
+      0.20568
+     ],
+     "km_route_map": 535
+    },
+    {
+     "lat": -13.1111,
+     "lon": -73.3689,
+     "nombre": "Confluencia del Choquesayra",
+     "conf": "E",
+     "km_desde_nacimiento": 578,
+     "km_desde_el_mar": 5997,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "blanca",
+     "xy": [
+      0.19556,
+      0.20094
+     ],
+     "km_route_map": 584
+    },
+    {
+     "lat": -12.5303,
+     "lon": -73.8343,
+     "nombre": "Pichari",
+     "conf": "E",
+     "km_desde_nacimiento": 686,
+     "km_desde_el_mar": 5889,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "blanca",
+     "xy": [
+      0.21879,
+      0.18684
+     ],
+     "km_route_map": 687
+    },
+    {
+     "lat": -12.5116,
+     "lon": -73.8588,
+     "nombre": "Sivia",
+     "conf": "E",
+     "km_desde_nacimiento": 690,
+     "km_desde_el_mar": 5885,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "blanca",
+     "xy": [
+      0.21954,
+      0.1861
+     ],
+     "km_route_map": 691
+    },
+    {
+     "lat": -12.4052,
+     "lon": -73.9021,
+     "nombre": "Llochegua",
+     "conf": "E",
+     "km_desde_nacimiento": 707,
+     "km_desde_el_mar": 5868,
+     "pais": "PE",
+     "rio_local": "Apurímac",
+     "agua": "blanca",
+     "xy": [
+      0.22379,
+      0.18478
+     ],
+     "km_route_map": 708
+    },
+    {
+     "lat": -12.2594,
+     "lon": -73.9847,
+     "nombre": "Apurímac + Mantaro = río Ene",
+     "conf": "V",
+     "km_desde_nacimiento": 731,
+     "km_desde_el_mar": 5844,
+     "pais": "PE",
+     "rio_local": "Ene",
+     "agua": "blanca",
+     "xy": [
+      0.22962,
+      0.18228
+     ]
+    },
+    {
+     "lat": -11.91,
+     "lon": -73.95,
+     "nombre": "Confluencias del Anapatí y del Quimpiri",
+     "conf": "E",
+     "km_desde_nacimiento": 787,
+     "km_desde_el_mar": 5788,
+     "pais": "PE",
+     "rio_local": "Ene",
+     "agua": "blanca",
+     "xy": [
+      0.2436,
+      0.18333
+     ]
+    },
+    {
+     "lat": -11.599,
+     "lon": -74.0859,
+     "nombre": "Confluencia del Sanibeni",
+     "conf": "E",
+     "km_desde_nacimiento": 841,
+     "km_desde_el_mar": 5734,
+     "pais": "PE",
+     "rio_local": "Ene",
+     "agua": "blanca",
+     "xy": [
+      0.25604,
+      0.17922
+     ]
+    },
+    {
+     "lat": -11.1608,
+     "lon": -74.2467,
+     "nombre": "Puerto Prado: Ene + Perené = río Tambo",
+     "conf": "V",
+     "km_desde_nacimiento": 915,
+     "km_desde_el_mar": 5660,
+     "pais": "PE",
+     "rio_local": "Tambo",
+     "agua": "blanca",
+     "xy": [
+      0.27357,
+      0.17434
+     ]
+    },
+    {
+     "lat": -11.1514,
+     "lon": -74.0169,
+     "nombre": "Confluencia del Masarobeni",
+     "conf": "E",
+     "km_desde_nacimiento": 962,
+     "km_desde_el_mar": 5613,
+     "pais": "PE",
+     "rio_local": "Tambo",
+     "agua": "blanca",
+     "xy": [
+      0.27394,
+      0.18131
+     ]
+    },
+    {
+     "lat": -10.7069,
+     "lon": -73.7608,
+     "nombre": "Atalaya: Tambo + Urubamba = río Ucayali",
+     "conf": "V",
+     "km_desde_nacimiento": 1070,
+     "km_desde_el_mar": 5505,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.29172,
+      0.18907
+     ]
+    },
+    {
+     "lat": -10.5881,
+     "lon": -73.9641,
+     "nombre": "Confluencia del Unine",
+     "conf": "E",
+     "km_desde_nacimiento": 1119,
+     "km_desde_el_mar": 5456,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.29648,
+      0.18291
+     ],
+     "km_route_map": 1116
+    },
+    {
+     "lat": -10.2802,
+     "lon": -73.9928,
+     "nombre": "Confluencia del Cohengua",
+     "conf": "E",
+     "km_desde_nacimiento": 1184,
+     "km_desde_el_mar": 5391,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.30879,
+      0.18204
+     ],
+     "km_route_map": 1176
+    },
+    {
+     "lat": -10.0644,
+     "lon": -74.005,
+     "nombre": "Bolognesi",
+     "conf": "E",
+     "km_desde_nacimiento": 1229,
+     "km_desde_el_mar": 5346,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.31742,
+      0.18167
+     ],
+     "km_route_map": 1219
+    },
+    {
+     "lat": -9.6687,
+     "lon": -74.0763,
+     "nombre": "Confluencia del Sheshea",
+     "conf": "E",
+     "km_desde_nacimiento": 1314,
+     "km_desde_el_mar": 5261,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.33325,
+      0.17951
+     ],
+     "km_route_map": 1298
+    },
+    {
+     "lat": -8.7689,
+     "lon": -74.5331,
+     "nombre": "Confluencia del Pachitea",
+     "conf": "E",
+     "km_desde_nacimiento": 1526,
+     "km_desde_el_mar": 5049,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.36924,
+      0.16566
+     ],
+     "km_route_map": 1495
+    },
+    {
+     "lat": -8.4973,
+     "lon": -74.3732,
+     "nombre": "Confluencia del Abujao",
+     "conf": "E",
+     "km_desde_nacimiento": 1592,
+     "km_desde_el_mar": 4983,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.38011,
+      0.17051
+     ],
+     "km_route_map": 1580
+    },
+    {
+     "lat": -8.3833,
+     "lon": -74.55,
+     "nombre": "Pucallpa",
+     "conf": "V",
+     "km_desde_nacimiento": 1636,
+     "km_desde_el_mar": 4939,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.38467,
+      0.16515
+     ]
+    },
+    {
+     "lat": -8.2172,
+     "lon": -74.5341,
+     "nombre": "Confluencia del Utiquinía",
+     "conf": "E",
+     "km_desde_nacimiento": 1674,
+     "km_desde_el_mar": 4901,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.39131,
+      0.16563
+     ],
+     "km_route_map": 1679
+    },
+    {
+     "lat": -8.0565,
+     "lon": -74.6445,
+     "nombre": "Confluencia del Aguaytía",
+     "conf": "E",
+     "km_desde_nacimiento": 1718,
+     "km_desde_el_mar": 4857,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.39774,
+      0.16229
+     ],
+     "km_route_map": 1730
+    },
+    {
+     "lat": -7.6542,
+     "lon": -75.0355,
+     "nombre": "Confluencia del Pisqui",
+     "conf": "E",
+     "km_desde_nacimiento": 1844,
+     "km_desde_el_mar": 4731,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.41383,
+      0.15044
+     ],
+     "km_route_map": 1875
+    },
+    {
+     "lat": -7.3493,
+     "lon": -75.0086,
+     "nombre": "Contamana",
+     "conf": "E",
+     "km_desde_nacimiento": 1913,
+     "km_desde_el_mar": 4662,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.42603,
+      0.15125
+     ],
+     "km_route_map": 1955
+    },
+    {
+     "lat": -7.1223,
+     "lon": -75.2585,
+     "nombre": "Confluencia del Cushabatay",
+     "conf": "E",
+     "km_desde_nacimiento": 1989,
+     "km_desde_el_mar": 4586,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.43511,
+      0.14368
+     ],
+     "km_route_map": 2014
+    },
+    {
+     "lat": -6.9117,
+     "lon": -75.1575,
+     "nombre": "Orellana",
+     "conf": "E",
+     "km_desde_nacimiento": 2042,
+     "km_desde_el_mar": 4533,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.44353,
+      0.14674
+     ],
+     "km_route_map": 2055
+    },
+    {
+     "lat": -6.6529,
+     "lon": -75.1272,
+     "nombre": "Confluencia del Santa Catalina",
+     "conf": "E",
+     "km_desde_nacimiento": 2101,
+     "km_desde_el_mar": 4474,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.45388,
+      0.14766
+     ],
+     "km_route_map": 2117
+    },
+    {
+     "lat": -6.055,
+     "lon": -74.707,
+     "nombre": "Confluencia del Maquía (zona del canal de Puinahua)",
+     "conf": "E",
+     "km_desde_nacimiento": 2266,
+     "km_desde_el_mar": 4309,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.4778,
+      0.16039
+     ],
+     "km_route_map": 2291
+    },
+    {
+     "lat": -5.7777,
+     "lon": -74.2895,
+     "nombre": "Confluencia del Guanache",
+     "conf": "E",
+     "km_desde_nacimiento": 2379,
+     "km_desde_el_mar": 4196,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.48889,
+      0.17305
+     ],
+     "km_route_map": 2411
+    },
+    {
+     "lat": -5.0569,
+     "lon": -73.8515,
+     "nombre": "Requena (boca del Tapiche)",
+     "conf": "E",
+     "km_desde_nacimiento": 2569,
+     "km_desde_el_mar": 4006,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.51772,
+      0.18632
+     ],
+     "km_route_map": 2612
+    },
+    {
+     "lat": -4.9058,
+     "lon": -73.6677,
+     "nombre": "Jenaro Herrera",
+     "conf": "E",
+     "km_desde_nacimiento": 2623,
+     "km_desde_el_mar": 3952,
+     "pais": "PE",
+     "rio_local": "Ucayali",
+     "agua": "blanca",
+     "xy": [
+      0.52377,
+      0.19189
+     ],
+     "km_route_map": 2652
+    },
+    {
+     "lat": -4.4454,
+     "lon": -73.4532,
+     "nombre": "Ucayali + Marañón = río Amazonas (cerca de Nauta)",
+     "conf": "V",
+     "km_desde_nacimiento": 2738,
+     "km_desde_el_mar": 3837,
+     "pais": "PE",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.54218,
+      0.19839
+     ]
+    },
+    {
+     "lat": -4.0019,
+     "lon": -73.1628,
+     "nombre": "Tamshiyacu",
+     "conf": "E",
+     "km_desde_nacimiento": 2829,
+     "km_desde_el_mar": 3746,
+     "pais": "PE",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.55992,
+      0.20719
+     ]
+    },
+    {
+     "lat": -3.7494,
+     "lon": -73.2443,
+     "nombre": "Iquitos",
+     "conf": "V",
+     "km_desde_nacimiento": 2875,
+     "km_desde_el_mar": 3700,
+     "pais": "PE",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.57002,
+      0.20472
+     ]
+    },
+    {
+     "lat": -3.7007,
+     "lon": -73.247,
+     "nombre": "Desembocadura del Nanay",
+     "conf": "E",
+     "km_desde_nacimiento": 2883,
+     "km_desde_el_mar": 3692,
+     "pais": "PE",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.57197,
+      0.20464
+     ]
+    },
+    {
+     "lat": -3.4983,
+     "lon": -73.0444,
+     "nombre": "Indiana",
+     "conf": "E",
+     "km_desde_nacimiento": 2929,
+     "km_desde_el_mar": 3646,
+     "pais": "PE",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.58007,
+      0.21078
+     ]
+    },
+    {
+     "lat": -3.4546,
+     "lon": -72.7414,
+     "nombre": "Confluencia del Napo",
+     "conf": "V",
+     "km_desde_nacimiento": 2979,
+     "km_desde_el_mar": 3596,
+     "pais": "PE",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.58182,
+      0.21996
+     ]
+    },
+    {
+     "lat": -3.4822,
+     "lon": -72.1722,
+     "nombre": "Confluencia del Apayacu",
+     "conf": "E",
+     "km_desde_nacimiento": 3055,
+     "km_desde_el_mar": 3520,
+     "pais": "PE",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.58071,
+      0.23721
+     ],
+     "km_route_map": 3044
+    },
+    {
+     "lat": -3.3255,
+     "lon": -71.851,
+     "nombre": "Pebas (boca del Ampiyacu)",
+     "conf": "E",
+     "km_desde_nacimiento": 3102,
+     "km_desde_el_mar": 3473,
+     "pais": "PE",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.58698,
+      0.24694
+     ],
+     "km_route_map": 3085
+    },
+    {
+     "lat": -4.0302,
+     "lon": -71.1059,
+     "nombre": "San Pablo de Loreto",
+     "conf": "E",
+     "km_desde_nacimiento": 3238,
+     "km_desde_el_mar": 3337,
+     "pais": "PE",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.55879,
+      0.26952
+     ],
+     "km_route_map": 3251
+    },
+    {
+     "lat": -3.8398,
+     "lon": -70.619,
+     "nombre": "Boca del Atacuari: empieza la frontera fluvial Perú-Colombia",
+     "conf": "E",
+     "km_desde_nacimiento": 3307,
+     "km_desde_el_mar": 3268,
+     "pais": "PE/CO",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.56641,
+      0.28427
+     ],
+     "km_route_map": 3335
+    },
+    {
+     "lat": -3.9058,
+     "lon": -70.5164,
+     "nombre": "Caballococha (orilla peruana)",
+     "conf": "E",
+     "km_desde_nacimiento": 3323,
+     "km_desde_el_mar": 3252,
+     "pais": "PE/CO",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.56377,
+      0.28738
+     ],
+     "km_route_map": 3355
+    },
+    {
+     "lat": -3.7806,
+     "lon": -70.3625,
+     "nombre": "Puerto Nariño (orilla colombiana)",
+     "conf": "E",
+     "km_desde_nacimiento": 3350,
+     "km_desde_el_mar": 3225,
+     "pais": "PE/CO",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.56878,
+      0.29205
+     ],
+     "km_route_map": 3370
+    },
+    {
+     "lat": -4.215,
+     "lon": -69.9411,
+     "nombre": "Leticia (Tres Fronteras)",
+     "conf": "V",
+     "km_desde_nacimiento": 3430,
+     "km_desde_el_mar": 3145,
+     "pais": "CO/PE/BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.5514,
+      0.30482
+     ]
+    },
+    {
+     "lat": -4.2525,
+     "lon": -69.9381,
+     "nombre": "Tabatinga: el río entra en Brasil y se llama Solimões",
+     "conf": "V",
+     "km_desde_nacimiento": 3436,
+     "km_desde_el_mar": 3139,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.5499,
+      0.30491
+     ],
+     "km_route_map": 3432
+    },
+    {
+     "lat": -4.3744,
+     "lon": -70.0093,
+     "nombre": "Boca del Javari (Benjamin Constant; frontera Perú-Brasil)",
+     "conf": "E",
+     "km_desde_nacimiento": 3458,
+     "km_desde_el_mar": 3117,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.54502,
+      0.30275
+     ],
+     "km_route_map": 3447
+    },
+    {
+     "lat": -3.4569,
+     "lon": -68.8139,
+     "nombre": "São Paulo de Olivença (boca del Jandiatuba)",
+     "conf": "E",
+     "km_desde_nacimiento": 3696,
+     "km_desde_el_mar": 2879,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.58172,
+      0.33897
+     ],
+     "km_route_map": 3693
+    },
+    {
+     "lat": -3.3639,
+     "lon": -68.1978,
+     "nombre": "Amaturá",
+     "conf": "E",
+     "km_desde_nacimiento": 3794,
+     "km_desde_el_mar": 2781,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.58544,
+      0.35764
+     ],
+     "km_route_map": 3793
+    },
+    {
+     "lat": -3.135,
+     "lon": -67.9741,
+     "nombre": "Boca del Putumayo-Içá (Santo Antônio do Içá)",
+     "conf": "V",
+     "km_desde_nacimiento": 3845,
+     "km_desde_el_mar": 2730,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.5946,
+      0.36442
+     ]
+    },
+    {
+     "lat": -2.8689,
+     "lon": -67.7769,
+     "nombre": "Boca del Tonantins",
+     "conf": "E",
+     "km_desde_nacimiento": 3893,
+     "km_desde_el_mar": 2682,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.60524,
+      0.3704
+     ],
+     "km_route_map": 3894
+    },
+    {
+     "lat": -2.7392,
+     "lon": -66.7678,
+     "nombre": "Boca del Jutaí",
+     "conf": "E",
+     "km_desde_nacimiento": 4041,
+     "km_desde_el_mar": 2534,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.61043,
+      0.40098
+     ],
+     "km_route_map": 4045
+    },
+    {
+     "lat": -2.5139,
+     "lon": -66.0917,
+     "nombre": "Fonte Boa",
+     "conf": "E",
+     "km_desde_nacimiento": 4144,
+     "km_desde_el_mar": 2431,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.61944,
+      0.42146
+     ],
+     "km_route_map": 4234
+    },
+    {
+     "lat": -2.6318,
+     "lon": -65.7548,
+     "nombre": "Boca del Juruá",
+     "conf": "E",
+     "km_desde_nacimiento": 4196,
+     "km_desde_el_mar": 2379,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.61473,
+      0.43167
+     ],
+     "km_route_map": 4245
+    },
+    {
+     "lat": -2.99,
+     "lon": -65.1078,
+     "nombre": "Uarini",
+     "conf": "E",
+     "km_desde_nacimiento": 4304,
+     "km_desde_el_mar": 2271,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.6004,
+      0.45128
+     ],
+     "km_route_map": 4374
+    },
+    {
+     "lat": -3.2,
+     "lon": -64.8333,
+     "nombre": "Alvarães (frente a Tefé)",
+     "conf": "E",
+     "km_desde_nacimiento": 4354,
+     "km_desde_el_mar": 2221,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.592,
+      0.4596
+     ],
+     "km_route_map": 4434
+    },
+    {
+     "lat": -3.1656,
+     "lon": -64.7808,
+     "nombre": "Boca del Japurá-Caquetá",
+     "conf": "E",
+     "km_desde_nacimiento": 4363,
+     "km_desde_el_mar": 2212,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.59338,
+      0.46119
+     ],
+     "km_route_map": 4445
+    },
+    {
+     "lat": -3.3539,
+     "lon": -64.7108,
+     "nombre": "Tefé (a orillas del lago Tefé, agua negra)",
+     "conf": "E",
+     "km_desde_nacimiento": 4392,
+     "km_desde_el_mar": 2183,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.58584,
+      0.46331
+     ],
+     "km_route_map": 4469
+    },
+    {
+     "lat": -4.085,
+     "lon": -63.1408,
+     "nombre": "Coari",
+     "conf": "E",
+     "km_desde_nacimiento": 4643,
+     "km_desde_el_mar": 1932,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.5566,
+      0.51088
+     ],
+     "km_route_map": 4668
+    },
+    {
+     "lat": -3.8369,
+     "lon": -62.0569,
+     "nombre": "Codajás",
+     "conf": "E",
+     "km_desde_nacimiento": 4805,
+     "km_desde_el_mar": 1770,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.56652,
+      0.54373
+     ],
+     "km_route_map": 4840
+    },
+    {
+     "lat": -3.7728,
+     "lon": -61.6442,
+     "nombre": "Anori",
+     "conf": "E",
+     "km_desde_nacimiento": 4865,
+     "km_desde_el_mar": 1710,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.56909,
+      0.55624
+     ],
+     "km_route_map": 4892
+    },
+    {
+     "lat": -3.6931,
+     "lon": -61.47,
+     "nombre": "Boca del Purus",
+     "conf": "E",
+     "km_desde_nacimiento": 4893,
+     "km_desde_el_mar": 1682,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.57228,
+      0.56152
+     ],
+     "km_route_map": 4915
+    },
+    {
+     "lat": -3.3,
+     "lon": -60.6206,
+     "nombre": "Manacapuru",
+     "conf": "E",
+     "km_desde_nacimiento": 5029,
+     "km_desde_el_mar": 1546,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.588,
+      0.58725
+     ],
+     "km_route_map": 5036
+    },
+    {
+     "lat": -3.285,
+     "lon": -60.1886,
+     "nombre": "Iranduba",
+     "conf": "E",
+     "km_desde_nacimiento": 5092,
+     "km_desde_el_mar": 1483,
+     "pais": "BR",
+     "rio_local": "Solimões",
+     "agua": "blanca",
+     "xy": [
+      0.5886,
+      0.60035
+     ],
+     "km_route_map": 5085
+    },
+    {
+     "lat": -3.1367,
+     "lon": -59.9047,
+     "nombre": "Encuentro de las Aguas (Negro + Solimões), Manaos",
+     "conf": "V",
+     "km_desde_nacimiento": 5138,
+     "km_desde_el_mar": 1437,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.59453,
+      0.60895
+     ]
+    },
+    {
+     "lat": -3.2208,
+     "lon": -59.8258,
+     "nombre": "Careiro da Várzea",
+     "conf": "E",
+     "km_desde_nacimiento": 5151,
+     "km_desde_el_mar": 1424,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.59117,
+      0.61134
+     ]
+    },
+    {
+     "lat": -3.1703,
+     "lon": -59.1511,
+     "nombre": "Boca del Preto da Eva",
+     "conf": "E",
+     "km_desde_nacimiento": 5227,
+     "km_desde_el_mar": 1348,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.59319,
+      0.63178
+     ]
+    },
+    {
+     "lat": -3.3685,
+     "lon": -58.7509,
+     "nombre": "Boca del Madeira",
+     "conf": "V",
+     "km_desde_nacimiento": 5277,
+     "km_desde_el_mar": 1298,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.58526,
+      0.64391
+     ]
+    },
+    {
+     "lat": -3.1428,
+     "lon": -58.4439,
+     "nombre": "Itacoatiara",
+     "conf": "E",
+     "km_desde_nacimiento": 5322,
+     "km_desde_el_mar": 1253,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.59429,
+      0.65322
+     ],
+     "km_route_map": 5319
+    },
+    {
+     "lat": -3.1308,
+     "lon": -58.155,
+     "nombre": "Urucurituba",
+     "conf": "E",
+     "km_desde_nacimiento": 5355,
+     "km_desde_el_mar": 1220,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.59477,
+      0.66197
+     ],
+     "km_route_map": 5357
+    },
+    {
+     "lat": -2.7489,
+     "lon": -58.0219,
+     "nombre": "Itapiranga",
+     "conf": "E",
+     "km_desde_nacimiento": 5403,
+     "km_desde_el_mar": 1172,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.61004,
+      0.666
+     ],
+     "km_route_map": 5410
+    },
+    {
+     "lat": -2.6278,
+     "lon": -56.7358,
+     "nombre": "Parintins (isla Tupinambarana)",
+     "conf": "V",
+     "km_desde_nacimiento": 5554,
+     "km_desde_el_mar": 1021,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.61489,
+      0.70498
+     ],
+     "km_route_map": 5579
+    },
+    {
+     "lat": -2.2,
+     "lon": -56.6833,
+     "nombre": "Boca del Nhamundá (límite Amazonas-Pará)",
+     "conf": "E",
+     "km_desde_nacimiento": 5604,
+     "km_desde_el_mar": 971,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.632,
+      0.70657
+     ],
+     "km_route_map": 5621
+    },
+    {
+     "lat": -2.1519,
+     "lon": -56.0919,
+     "nombre": "Juruti",
+     "conf": "E",
+     "km_desde_nacimiento": 5674,
+     "km_desde_el_mar": 901,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.63392,
+      0.72449
+     ],
+     "km_route_map": 5680
+    },
+    {
+     "lat": -1.883,
+     "lon": -55.6311,
+     "nombre": "Boca del Trombetas",
+     "conf": "E",
+     "km_desde_nacimiento": 5736,
+     "km_desde_el_mar": 839,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.64468,
+      0.73845
+     ],
+     "km_route_map": 5732
+    },
+    {
+     "lat": -1.9178,
+     "lon": -55.5178,
+     "nombre": "Óbidos (el río se estrecha a ~2 km)",
+     "conf": "E",
+     "km_desde_nacimiento": 5750,
+     "km_desde_el_mar": 825,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.64329,
+      0.74188
+     ],
+     "km_route_map": 5751
+    },
+    {
+     "lat": -1.9161,
+     "lon": -55.1303,
+     "nombre": "Boca del Curuá",
+     "conf": "E",
+     "km_desde_nacimiento": 5796,
+     "km_desde_el_mar": 779,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.64336,
+      0.75363
+     ]
+    },
+    {
+     "lat": -2.4094,
+     "lon": -54.7157,
+     "nombre": "Santarém: boca del Tapajós",
+     "conf": "V",
+     "km_desde_nacimiento": 5871,
+     "km_desde_el_mar": 704,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.62362,
+      0.76619
+     ]
+    },
+    {
+     "lat": -2.0078,
+     "lon": -54.0689,
+     "nombre": "Monte Alegre",
+     "conf": "E",
+     "km_desde_nacimiento": 5957,
+     "km_desde_el_mar": 618,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.63969,
+      0.78579
+     ],
+     "km_route_map": 5950
+    },
+    {
+     "lat": -1.8,
+     "lon": -53.48,
+     "nombre": "Prainha",
+     "conf": "E",
+     "km_desde_nacimiento": 6027,
+     "km_desde_el_mar": 548,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.648,
+      0.80364
+     ],
+     "km_route_map": 6023
+    },
+    {
+     "lat": -1.5356,
+     "lon": -52.6294,
+     "nombre": "Boca del Paru",
+     "conf": "E",
+     "km_desde_nacimiento": 6128,
+     "km_desde_el_mar": 447,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.65858,
+      0.82941
+     ],
+     "km_route_map": 6125
+    },
+    {
+     "lat": -1.5228,
+     "lon": -52.5819,
+     "nombre": "Almeirim",
+     "conf": "E",
+     "km_desde_nacimiento": 6133,
+     "km_desde_el_mar": 442,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.65909,
+      0.83085
+     ],
+     "km_route_map": 6131
+    },
+    {
+     "lat": -1.5242,
+     "lon": -51.8671,
+     "nombre": "Boca del Xingu",
+     "conf": "E",
+     "km_desde_nacimiento": 6214,
+     "km_desde_el_mar": 361,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.65903,
+      0.85251
+     ],
+     "km_route_map": 6225
+    },
+    {
+     "lat": -1.405,
+     "lon": -51.64,
+     "nombre": "Gurupá",
+     "conf": "E",
+     "km_desde_nacimiento": 6243,
+     "km_desde_el_mar": 332,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.6638,
+      0.85939
+     ],
+     "km_route_map": 6265
+    },
+    {
+     "lat": -0.8012,
+     "lon": -51.7079,
+     "nombre": "Boca del Cajari (canal norte)",
+     "conf": "E",
+     "km_desde_nacimiento": 6312,
+     "km_desde_el_mar": 263,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.68795,
+      0.85734
+     ],
+     "km_route_map": 6328
+    },
+    {
+     "lat": -0.5357,
+     "lon": -51.5363,
+     "nombre": "Boca del Maracá",
+     "conf": "E",
+     "km_desde_nacimiento": 6347,
+     "km_desde_el_mar": 228,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.69857,
+      0.86254
+     ],
+     "km_route_map": 6360
+    },
+    {
+     "lat": -0.115,
+     "lon": -51.2889,
+     "nombre": "Mazagão",
+     "conf": "E",
+     "km_desde_nacimiento": 6402,
+     "km_desde_el_mar": 173,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.7154,
+      0.87003
+     ],
+     "km_route_map": 6411
+    },
+    {
+     "lat": -0.035,
+     "lon": -51.175,
+     "nombre": "Santana (puerto de Macapá)",
+     "conf": "E",
+     "km_desde_nacimiento": 6418,
+     "km_desde_el_mar": 157,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.7186,
+      0.87348
+     ],
+     "km_route_map": 6425
+    },
+    {
+     "lat": 0.033,
+     "lon": -51.0653,
+     "nombre": "Macapá (Marco Cero, línea del ecuador)",
+     "conf": "E",
+     "km_desde_nacimiento": 6433,
+     "km_desde_el_mar": 142,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.72132,
+      0.87681
+     ],
+     "km_route_map": 6438
+    },
+    {
+     "lat": 0.2172,
+     "lon": -50.77,
+     "nombre": "Boca del Pedreira",
+     "conf": "E",
+     "km_desde_nacimiento": 6472,
+     "km_desde_el_mar": 103,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.72869,
+      0.88576
+     ],
+     "km_route_map": 6476
+    },
+    {
+     "lat": 0.2994,
+     "lon": -50.7042,
+     "nombre": "Boca del Macacoari",
+     "conf": "E",
+     "km_desde_nacimiento": 6484,
+     "km_desde_el_mar": 91,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.73198,
+      0.88775
+     ],
+     "km_route_map": 6487
+    },
+    {
+     "lat": 0.6833,
+     "lon": -50.4167,
+     "nombre": "Boca del Jupati",
+     "conf": "E",
+     "km_desde_nacimiento": 6538,
+     "km_desde_el_mar": 37,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.74733,
+      0.89646
+     ],
+     "km_route_map": 6539
+    },
+    {
+     "lat": 0.7078,
+     "lon": -50.0894,
+     "nombre": "Desembocadura en el océano Atlántico (canal norte, entre Amapá y Marajó)",
+     "conf": "E",
+     "km_desde_nacimiento": 6575,
+     "km_desde_el_mar": 0,
+     "pais": "BR",
+     "rio_local": "Amazonas",
+     "agua": "blanca",
+     "xy": [
+      0.74831,
+      0.90638
+     ]
+    }
+   ]
+  },
+  {
+   "id": "para",
+   "nombre": "Ramal del Pará (furos de Breves → bahía de Guajará → bahía de Marajó)",
+   "tipo": "ramal",
+   "orden_puntos": "de Gurupá (bifurcación) a la boca del Pará",
+   "agua": "blanca (Amazonas por los furos) con agua clara del Tocantins; salobre hacia la bahía [E]",
+   "paises": [
+    "BR"
+   ],
+   "mundos": [
+    1
+   ],
+   "conf": "E",
+   "fuentes": [
+    "wp_para",
+    "wd"
+   ],
+   "nota": "Belém no está en el cauce principal, sino en el estuario del Pará, unido al Amazonas por los furos de Breves [V wp_para]. De Gurupá a Belém por esta poligonal hay unos 361 km en tramos rectos [cálculo, mínimo]: es la base de km_casa (km_desde_el_mar − km de Gurupá + este ramal).",
+   "puntos": [
+    {
+     "lat": -1.405,
+     "lon": -51.64,
+     "nombre": "Gurupá (bifurcación hacia los furos de Breves)",
+     "conf": "E",
+     "xy": [
+      0.6638,
+      0.85939
+     ]
+    },
+    {
+     "lat": -1.6804,
+     "lon": -50.4791,
+     "nombre": "Breves (furos que unen Amazonas y Pará)",
+     "conf": "E",
+     "xy": [
+      0.65278,
+      0.89457
+     ]
+    },
+    {
+     "lat": -1.7178,
+     "lon": -48.8828,
+     "nombre": "Abaetetuba (zona de la boca del Tocantins)",
+     "conf": "E",
+     "xy": [
+      0.65129,
+      0.94295
+     ]
+    },
+    {
+     "lat": -1.4558,
+     "lon": -48.5039,
+     "nombre": "Belém (bahía de Guajará, estuario del Pará)",
+     "conf": "E",
+     "xy": [
+      0.66177,
+      0.95443
+     ]
+    },
+    {
+     "lat": -0.7169,
+     "lon": -48.5228,
+     "nombre": "Soure (isla de Marajó)",
+     "conf": "E",
+     "xy": [
+      0.69132,
+      0.95385
+     ]
+    },
+    {
+     "lat": -0.43,
+     "lon": -48.1447,
+     "nombre": "Boca del Pará en la bahía de Marajó (Atlántico)",
+     "conf": "E",
+     "xy": [
+      0.7028,
+      0.96531
+     ]
+    }
+   ]
+  },
+  {
+   "id": "tapajos",
+   "nombre": "Tapajós",
+   "tipo": "afluente_mundo",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "clara de natural [V] (hoy turbia en largos tramos por sedimentos [E]; el texto no lo menciona: 07 §8.1)",
+   "paises": [
+    "BR"
+   ],
+   "mundos": [
+    2
+   ],
+   "conf": "V/E",
+   "fuentes": [
+    "wd",
+    "wp_rios"
+   ],
+   "nota": "Mundo 2. Nace de Juruena + Teles Pires; ~840 km (2.080 con el Juruena).",
+   "puntos": [
+    {
+     "lat": -7.3375,
+     "lon": -58.1431,
+     "nombre": "Juruena + Teles Pires = Tapajós",
+     "conf": "V",
+     "xy": [
+      0.4265,
+      0.66233
+     ]
+    },
+    {
+     "lat": -7.2267,
+     "lon": -58.1344,
+     "nombre": "Boca del Cururu",
+     "conf": "E",
+     "xy": [
+      0.43093,
+      0.66259
+     ]
+    },
+    {
+     "lat": -6.2239,
+     "lon": -57.7539,
+     "nombre": "Jacareacanga",
+     "conf": "E",
+     "xy": [
+      0.47104,
+      0.67412
+     ]
+    },
+    {
+     "lat": -6.125,
+     "lon": -57.6083,
+     "nombre": "Boca del Das Tropas",
+     "conf": "E",
+     "xy": [
+      0.475,
+      0.67854
+     ]
+    },
+    {
+     "lat": -5.7353,
+     "lon": -57.3208,
+     "nombre": "Boca del Crepori",
+     "conf": "E",
+     "xy": [
+      0.49059,
+      0.68725
+     ]
+    },
+    {
+     "lat": -4.7594,
+     "lon": -56.4381,
+     "nombre": "Boca del Jamanxim",
+     "conf": "E",
+     "xy": [
+      0.52962,
+      0.714
+     ]
+    },
+    {
+     "lat": -4.2758,
+     "lon": -55.9839,
+     "nombre": "Itaituba",
+     "conf": "E",
+     "xy": [
+      0.54897,
+      0.72776
+     ]
+    },
+    {
+     "lat": -3.8314,
+     "lon": -55.4975,
+     "nombre": "Fordlândia",
+     "conf": "V",
+     "xy": [
+      0.56674,
+      0.7425
+     ]
+    },
+    {
+     "lat": -3.723,
+     "lon": -55.4037,
+     "nombre": "Boca del Cupari",
+     "conf": "E",
+     "xy": [
+      0.57108,
+      0.74534
+     ]
+    },
+    {
+     "lat": -3.6058,
+     "lon": -55.3319,
+     "nombre": "Aveiro",
+     "conf": "E",
+     "xy": [
+      0.57577,
+      0.74752
+     ]
+    },
+    {
+     "lat": -2.6358,
+     "lon": -54.9369,
+     "nombre": "Belterra",
+     "conf": "E",
+     "xy": [
+      0.61457,
+      0.75949
+     ]
+    },
+    {
+     "lat": -2.5167,
+     "lon": -54.95,
+     "nombre": "Alter do Chão",
+     "conf": "E",
+     "xy": [
+      0.61933,
+      0.75909
+     ]
+    },
+    {
+     "lat": -2.4094,
+     "lon": -54.7157,
+     "nombre": "Santarém: entra en el Amazonas",
+     "conf": "V",
+     "xy": [
+      0.62362,
+      0.76619
+     ]
+    }
+   ]
+  },
+  {
+   "id": "negro",
+   "nombre": "Negro",
+   "tipo": "afluente_mundo",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "negra [V] (pH ~5,1; color de té fuerte)",
+   "paises": [
+    "CO",
+    "VE",
+    "BR"
+   ],
+   "mundos": [
+    3,
+    10,
+    11,
+    12
+   ],
+   "conf": "V/E",
+   "fuentes": [
+    "wd",
+    "wp_rios"
+   ],
+   "nota": "Mundos 3 y 10. Nace en Colombia como Guainía; frontera CO-VE; recibe el Casiquiare; ~2.250 km.",
+   "puntos": [
+    {
+     "lat": 1.9472,
+     "lon": -70.0319,
+     "nombre": "Nacimiento del Guainía (Colombia)",
+     "conf": "E",
+     "xy": [
+      0.79789,
+      0.30206
+     ]
+    },
+    {
+     "lat": 2.7364,
+     "lon": -67.5625,
+     "nombre": "Maroa (VE)",
+     "conf": "E",
+     "xy": [
+      0.82946,
+      0.37689
+     ]
+    },
+    {
+     "lat": 2.0013,
+     "lon": -67.1149,
+     "nombre": "Boca del Casiquiare: desde aquí se llama río Negro",
+     "conf": "V",
+     "xy": [
+      0.80005,
+      0.39046
+     ]
+    },
+    {
+     "lat": 1.92,
+     "lon": -67.0611,
+     "nombre": "San Carlos de Río Negro (VE) / San Felipe (CO)",
+     "conf": "E",
+     "xy": [
+      0.7968,
+      0.39209
+     ]
+    },
+    {
+     "lat": 1.2,
+     "lon": -66.8333,
+     "nombre": "Cucuí: trifinio Brasil-Colombia-Venezuela (Piedra del Cocuy)",
+     "conf": "E",
+     "xy": [
+      0.768,
+      0.39899
+     ]
+    },
+    {
+     "lat": 0.4784,
+     "lon": -67.3313,
+     "nombre": "Boca del Içana",
+     "conf": "E",
+     "xy": [
+      0.73914,
+      0.3839
+     ]
+    },
+    {
+     "lat": 0.0342,
+     "lon": -67.2806,
+     "nombre": "Boca del Vaupés",
+     "conf": "E",
+     "xy": [
+      0.72137,
+      0.38544
+     ]
+    },
+    {
+     "lat": -0.13,
+     "lon": -67.0889,
+     "nombre": "São Gabriel da Cachoeira",
+     "conf": "E",
+     "xy": [
+      0.7148,
+      0.39125
+     ]
+    },
+    {
+     "lat": -0.4244,
+     "lon": -66.3958,
+     "nombre": "Boca del Marié",
+     "conf": "E",
+     "xy": [
+      0.70302,
+      0.41225
+     ]
+    },
+    {
+     "lat": -0.4139,
+     "lon": -65.0189,
+     "nombre": "Santa Isabel do Rio Negro",
+     "conf": "E",
+     "xy": [
+      0.70344,
+      0.45397
+     ]
+    },
+    {
+     "lat": -0.7747,
+     "lon": -62.9428,
+     "nombre": "Boca del Demini",
+     "conf": "E",
+     "xy": [
+      0.68901,
+      0.51688
+     ]
+    },
+    {
+     "lat": -0.975,
+     "lon": -62.9239,
+     "nombre": "Barcelos",
+     "conf": "E",
+     "xy": [
+      0.681,
+      0.51746
+     ]
+    },
+    {
+     "lat": -1.3938,
+     "lon": -61.8462,
+     "nombre": "Boca del Branco",
+     "conf": "V",
+     "xy": [
+      0.66425,
+      0.55012
+     ]
+    },
+    {
+     "lat": -1.9036,
+     "lon": -61.4272,
+     "nombre": "Boca del Jaú",
+     "conf": "E",
+     "xy": [
+      0.64386,
+      0.56281
+     ]
+    },
+    {
+     "lat": -2.6208,
+     "lon": -60.9439,
+     "nombre": "Novo Airão (Anavilhanas)",
+     "conf": "E",
+     "xy": [
+      0.61517,
+      0.57746
+     ]
+    },
+    {
+     "lat": -3.0815,
+     "lon": -60.2335,
+     "nombre": "Paricatuba, final de Anavilhanas",
+     "conf": "E",
+     "xy": [
+      0.59674,
+      0.59898
+     ]
+    },
+    {
+     "lat": -3.1189,
+     "lon": -60.0217,
+     "nombre": "Manaos",
+     "conf": "V",
+     "xy": [
+      0.59524,
+      0.6054
+     ]
+    },
+    {
+     "lat": -3.1244,
+     "lon": -59.8956,
+     "nombre": "Encuentro de las Aguas con el Solimões",
+     "conf": "V",
+     "xy": [
+      0.59502,
+      0.60922
+     ]
+    }
+   ]
+  },
+  {
+   "id": "casiquiare",
+   "nombre": "Casiquiare",
+   "tipo": "afluente_mundo",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "mixta / oscura [NV]",
+   "paises": [
+    "VE"
+   ],
+   "mundos": [
+    10,
+    12
+   ],
+   "conf": "V/E",
+   "fuentes": [
+    "wd",
+    "wp_rios"
+   ],
+   "nota": "Canal natural que une Orinoco y Amazonas (bifurcación, la mayor del mundo); 320-340 km; Humboldt y Bonpland, 1800. Puerta del mundo 12 (Orinoco).",
+   "puntos": [
+    {
+     "lat": 3.1385,
+     "lon": -65.8785,
+     "nombre": "Se separa del Orinoco",
+     "conf": "V",
+     "xy": [
+      0.84554,
+      0.42792
+     ]
+    },
+    {
+     "lat": 2.0014,
+     "lon": -67.0983,
+     "nombre": "Entra en el Negro (junto a San Carlos)",
+     "conf": "V",
+     "xy": [
+      0.80006,
+      0.39096
+     ]
+    }
+   ]
+  },
+  {
+   "id": "branco",
+   "nombre": "Branco",
+   "tipo": "afluente_mundo",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca tradicionalmente, a veces clara [V]",
+   "paises": [
+    "BR"
+   ],
+   "mundos": [
+    11
+   ],
+   "conf": "V/E",
+   "fuentes": [
+    "wd",
+    "wp_rios"
+   ],
+   "nota": "Mundo 11. Nace de Uraricoera + Takutu junto a Boa Vista; ~560-775 km.",
+   "puntos": [
+    {
+     "lat": 3.0246,
+     "lon": -60.4875,
+     "nombre": "Uraricoera + Takutu = Branco",
+     "conf": "V",
+     "xy": [
+      0.84098,
+      0.59129
+     ]
+    },
+    {
+     "lat": 2.85,
+     "lon": -60.6333,
+     "nombre": "Boca del Cauamé",
+     "conf": "E",
+     "xy": [
+      0.834,
+      0.58687
+     ]
+    },
+    {
+     "lat": 2.82,
+     "lon": -60.6719,
+     "nombre": "Boa Vista",
+     "conf": "E",
+     "xy": [
+      0.8328,
+      0.5857
+     ]
+    },
+    {
+     "lat": 2.4325,
+     "lon": -60.8431,
+     "nombre": "Boca del Mucajaí",
+     "conf": "E",
+     "xy": [
+      0.8173,
+      0.58051
+     ]
+    },
+    {
+     "lat": 1.8158,
+     "lon": -61.1278,
+     "nombre": "Caracaraí",
+     "conf": "E",
+     "xy": [
+      0.79263,
+      0.57188
+     ]
+    },
+    {
+     "lat": 0.9728,
+     "lon": -61.3539,
+     "nombre": "Boca del Anauá",
+     "conf": "E",
+     "xy": [
+      0.75891,
+      0.56503
+     ]
+    },
+    {
+     "lat": 0.4686,
+     "lon": -61.7131,
+     "nombre": "Boca del Catrimani",
+     "conf": "E",
+     "xy": [
+      0.73874,
+      0.55415
+     ]
+    },
+    {
+     "lat": -0.4374,
+     "lon": -61.7968,
+     "nombre": "Boca del Itapará",
+     "conf": "E",
+     "xy": [
+      0.7025,
+      0.55161
+     ]
+    },
+    {
+     "lat": -1.3938,
+     "lon": -61.8462,
+     "nombre": "Entra en el Negro",
+     "conf": "V",
+     "xy": [
+      0.66425,
+      0.55012
+     ]
+    }
+   ]
+  },
+  {
+   "id": "takutu",
+   "nombre": "Takutu",
+   "tipo": "afluente_mundo",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "[NV]",
+   "paises": [
+    "GY",
+    "BR"
+   ],
+   "mundos": [
+    11
+   ],
+   "conf": "V/E",
+   "fuentes": [
+    "wd",
+    "wp_rios"
+   ],
+   "nota": "Mundo 11. Frontera Guyana-Brasil (puente Lethem-Bonfim).",
+   "puntos": [
+    {
+     "lat": 1.9577,
+     "lon": -59.7411,
+     "nombre": "Nacimiento",
+     "conf": "E",
+     "xy": [
+      0.79831,
+      0.61391
+     ]
+    },
+    {
+     "lat": 3.3833,
+     "lon": -59.8,
+     "nombre": "Lethem (GY) / Bonfim (BR)",
+     "conf": "E",
+     "xy": [
+      0.85533,
+      0.61212
+     ]
+    },
+    {
+     "lat": 3.4246,
+     "lon": -59.8417,
+     "nombre": "Boca del Arraia",
+     "conf": "E",
+     "xy": [
+      0.85698,
+      0.61086
+     ]
+    },
+    {
+     "lat": 3.55,
+     "lon": -59.85,
+     "nombre": "Boca del Ireng (Maú)",
+     "conf": "E",
+     "xy": [
+      0.862,
+      0.61061
+     ]
+    },
+    {
+     "lat": 3.3736,
+     "lon": -60.3217,
+     "nombre": "Boca del Surumu",
+     "conf": "E",
+     "xy": [
+      0.85494,
+      0.59631
+     ]
+    },
+    {
+     "lat": 3.0167,
+     "lon": -60.4833,
+     "nombre": "Se une al Uraricoera: nace el Branco",
+     "conf": "V",
+     "xy": [
+      0.84067,
+      0.59142
+     ]
+    }
+   ]
+  },
+  {
+   "id": "putumayo_ica",
+   "nombre": "Putumayo-Içá",
+   "tipo": "afluente_paso",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca [V]",
+   "paises": [
+    "CO",
+    "EC",
+    "PE",
+    "BR"
+   ],
+   "mundos": [
+    4
+   ],
+   "conf": "V/E",
+   "fuentes": [
+    "wd",
+    "wp_rios"
+   ],
+   "nota": "Mundo 4. Frontera CO-EC y casi toda la CO-PE; en Brasil se llama Içá; 1.813-2.005 km.",
+   "puntos": [
+    {
+     "lat": 1.123,
+     "lon": -77.056,
+     "nombre": "Nacimiento en los Andes al este de Pasto (CO)",
+     "conf": "E",
+     "xy": [
+      0.76492,
+      0.08921
+     ]
+    },
+    {
+     "lat": 0.5006,
+     "lon": -76.4989,
+     "nombre": "Puerto Asís",
+     "conf": "E",
+     "xy": [
+      0.74002,
+      0.10609
+     ]
+    },
+    {
+     "lat": 0.1182,
+     "lon": -75.8673,
+     "nombre": "Boca del San Miguel (empieza la frontera CO-EC)",
+     "conf": "E",
+     "xy": [
+      0.72473,
+      0.12523
+     ]
+    },
+    {
+     "lat": -0.1194,
+     "lon": -75.2574,
+     "nombre": "Boca del Güeppí: trifinio CO-EC-PE",
+     "conf": "E",
+     "xy": [
+      0.71522,
+      0.14372
+     ]
+    },
+    {
+     "lat": -0.1936,
+     "lon": -74.7825,
+     "nombre": "Puerto Leguízamo",
+     "conf": "E",
+     "xy": [
+      0.71226,
+      0.15811
+     ]
+    },
+    {
+     "lat": -0.9909,
+     "lon": -74.2576,
+     "nombre": "Boca del Yubineto",
+     "conf": "E",
+     "xy": [
+      0.68036,
+      0.17401
+     ]
+    },
+    {
+     "lat": -1.7239,
+     "lon": -73.5156,
+     "nombre": "Boca del Campuya",
+     "conf": "E",
+     "xy": [
+      0.65104,
+      0.1965
+     ]
+    },
+    {
+     "lat": -2.1992,
+     "lon": -73.175,
+     "nombre": "Boca del Eré",
+     "conf": "E",
+     "xy": [
+      0.63203,
+      0.20682
+     ]
+    },
+    {
+     "lat": -2.3862,
+     "lon": -71.291,
+     "nombre": "Boca del Mutún",
+     "conf": "E",
+     "xy": [
+      0.62455,
+      0.26391
+     ]
+    },
+    {
+     "lat": -2.7652,
+     "lon": -70.1325,
+     "nombre": "Boca del Yaguas (termina la frontera CO-PE)",
+     "conf": "E",
+     "xy": [
+      0.60939,
+      0.29902
+     ]
+    },
+    {
+     "lat": -2.8789,
+     "lon": -69.7439,
+     "nombre": "Tarapacá (CO)",
+     "conf": "E",
+     "xy": [
+      0.60484,
+      0.31079
+     ]
+    },
+    {
+     "lat": -3.0147,
+     "lon": -69.0331,
+     "nombre": "Boca del Pureté",
+     "conf": "E",
+     "xy": [
+      0.59941,
+      0.33233
+     ]
+    },
+    {
+     "lat": -3.135,
+     "lon": -67.9741,
+     "nombre": "Entra en el Solimões (Santo Antônio do Içá)",
+     "conf": "V",
+     "xy": [
+      0.5946,
+      0.36442
+     ]
+    }
+   ]
+  },
+  {
+   "id": "napo",
+   "nombre": "Napo",
+   "tipo": "afluente_mundo",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca [V]",
+   "paises": [
+    "EC",
+    "PE"
+   ],
+   "mundos": [
+    6
+   ],
+   "conf": "V/E",
+   "fuentes": [
+    "wd",
+    "wp_rios"
+   ],
+   "nota": "Mundo 6 (Oriente). 1.075-1.130 km; ruta de Orellana en 1541-1542 [E].",
+   "puntos": [
+    {
+     "lat": -1.0469,
+     "lon": -77.8075,
+     "nombre": "Jatunyacu + Anzu = Napo (cerca de Puerto Napo)",
+     "conf": "V",
+     "xy": [
+      0.67812,
+      0.06644
+     ]
+    },
+    {
+     "lat": -1.0336,
+     "lon": -77.6686,
+     "nombre": "Puerto Misahuallí",
+     "conf": "E",
+     "xy": [
+      0.67866,
+      0.07065
+     ]
+    },
+    {
+     "lat": -0.4694,
+     "lon": -76.9742,
+     "nombre": "El Coca (Puerto Francisco de Orellana), boca del Coca",
+     "conf": "V",
+     "xy": [
+      0.70122,
+      0.09169
+     ]
+    },
+    {
+     "lat": -0.819,
+     "lon": -75.544,
+     "nombre": "Boca del Tiputini",
+     "conf": "E",
+     "xy": [
+      0.68724,
+      0.13503
+     ]
+    },
+    {
+     "lat": -0.9317,
+     "lon": -75.3875,
+     "nombre": "Boca del Yasuní / Nuevo Rocafuerte",
+     "conf": "E",
+     "xy": [
+      0.68273,
+      0.13977
+     ]
+    },
+    {
+     "lat": -0.9833,
+     "lon": -75.2,
+     "nombre": "Boca del Aguarico (frontera EC-PE)",
+     "conf": "E",
+     "xy": [
+      0.68067,
+      0.14545
+     ]
+    },
+    {
+     "lat": -2.3604,
+     "lon": -74.0918,
+     "nombre": "Boca del Curaray",
+     "conf": "E",
+     "xy": [
+      0.62558,
+      0.17904
+     ]
+    },
+    {
+     "lat": -2.4876,
+     "lon": -73.6797,
+     "nombre": "Santa Clotilde",
+     "conf": "E",
+     "xy": [
+      0.6205,
+      0.19152
+     ]
+    },
+    {
+     "lat": -3.4975,
+     "lon": -73.0915,
+     "nombre": "Mazán",
+     "conf": "E",
+     "xy": [
+      0.5801,
+      0.20935
+     ]
+    },
+    {
+     "lat": -3.4546,
+     "lon": -72.7414,
+     "nombre": "Entra en el Amazonas",
+     "conf": "V",
+     "xy": [
+      0.58182,
+      0.21996
+     ]
+    }
+   ]
+  },
+  {
+   "id": "maranon",
+   "nombre": "Marañón",
+   "tipo": "afluente_mundo",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca [V]",
+   "paises": [
+    "PE"
+   ],
+   "mundos": [
+    5,
+    13
+   ],
+   "conf": "V/E",
+   "fuentes": [
+    "wd",
+    "wp_rios"
+   ],
+   "nota": "Mundos 5 y 13 (según el GDD). 1.737 km; Pongo de Manseriche entre la boca del Santiago y Borja.",
+   "puntos": [
+    {
+     "lat": -10.313,
+     "lon": -76.696,
+     "nombre": "Laguna Lauricocha (fuente histórica)",
+     "conf": "E",
+     "xy": [
+      0.30748,
+      0.10012
+     ]
+    },
+    {
+     "lat": -9.988,
+     "lon": -76.683,
+     "nombre": "Lauricocha + Nupe = Marañón",
+     "conf": "V",
+     "xy": [
+      0.32048,
+      0.10052
+     ]
+    },
+    {
+     "lat": -9.0749,
+     "lon": -76.9453,
+     "nombre": "Boca del Puchca",
+     "conf": "E",
+     "xy": [
+      0.357,
+      0.09257
+     ]
+    },
+    {
+     "lat": -8.0031,
+     "lon": -77.6426,
+     "nombre": "Boca del San Sebastián",
+     "conf": "E",
+     "xy": [
+      0.39988,
+      0.07144
+     ]
+    },
+    {
+     "lat": -7.3452,
+     "lon": -77.8283,
+     "nombre": "Boca del Crisnejas",
+     "conf": "E",
+     "xy": [
+      0.42619,
+      0.06581
+     ]
+    },
+    {
+     "lat": -6.0865,
+     "lon": -78.508,
+     "nombre": "Boca del Silaco",
+     "conf": "E",
+     "xy": [
+      0.47654,
+      0.04521
+     ]
+    },
+    {
+     "lat": -5.7836,
+     "lon": -78.7012,
+     "nombre": "Boca del Chamaya",
+     "conf": "E",
+     "xy": [
+      0.48866,
+      0.03936
+     ]
+    },
+    {
+     "lat": -5.5274,
+     "lon": -78.551,
+     "nombre": "Boca del Utcubamba",
+     "conf": "E",
+     "xy": [
+      0.4989,
+      0.04391
+     ]
+    },
+    {
+     "lat": -4.6511,
+     "lon": -78.1481,
+     "nombre": "Boca del Cenepa",
+     "conf": "E",
+     "xy": [
+      0.53396,
+      0.05612
+     ]
+    },
+    {
+     "lat": -4.435,
+     "lon": -77.6402,
+     "nombre": "Boca del Santiago (antes del Pongo de Manseriche)",
+     "conf": "E",
+     "xy": [
+      0.5426,
+      0.07151
+     ]
+    },
+    {
+     "lat": -4.5656,
+     "lon": -77.4158,
+     "nombre": "Saramiriza",
+     "conf": "E",
+     "xy": [
+      0.53738,
+      0.07831
+     ]
+    },
+    {
+     "lat": -4.7416,
+     "lon": -77.0653,
+     "nombre": "Boca del Morona",
+     "conf": "E",
+     "xy": [
+      0.53034,
+      0.08893
+     ]
+    },
+    {
+     "lat": -4.9167,
+     "lon": -76.4,
+     "nombre": "Boca del Pastaza",
+     "conf": "E",
+     "xy": [
+      0.52333,
+      0.10909
+     ]
+    },
+    {
+     "lat": -5.1034,
+     "lon": -75.5978,
+     "nombre": "Boca del Huallaga",
+     "conf": "E",
+     "xy": [
+      0.51586,
+      0.1334
+     ]
+    },
+    {
+     "lat": -4.7208,
+     "lon": -74.3561,
+     "nombre": "Boca del Samiria (Pacaya-Samiria)",
+     "conf": "E",
+     "xy": [
+      0.53117,
+      0.17103
+     ]
+    },
+    {
+     "lat": -4.4854,
+     "lon": -74.0664,
+     "nombre": "Boca del Tigre",
+     "conf": "E",
+     "xy": [
+      0.54058,
+      0.17981
+     ]
+    },
+    {
+     "lat": -4.5061,
+     "lon": -73.5757,
+     "nombre": "Nauta",
+     "conf": "V",
+     "xy": [
+      0.53976,
+      0.19468
+     ]
+    },
+    {
+     "lat": -4.4454,
+     "lon": -73.4532,
+     "nombre": "Se une al Ucayali: nace el Amazonas",
+     "conf": "V",
+     "xy": [
+      0.54218,
+      0.19839
+     ]
+    }
+   ]
+  },
+  {
+   "id": "madre_de_dios",
+   "nombre": "Madre de Dios",
+   "tipo": "afluente_mundo",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca [V]",
+   "paises": [
+    "PE",
+    "BO"
+   ],
+   "mundos": [
+    7
+   ],
+   "conf": "V/E",
+   "fuentes": [
+    "wd",
+    "wp_rios"
+   ],
+   "nota": "Mundo 7. 1.347 km; Manu y Tambopata en su cuenca; cruza a Bolivia en Puerto Heath.",
+   "puntos": [
+    {
+     "lat": -12.8881,
+     "lon": -71.3601,
+     "nombre": "Nacimiento (Alto Madre de Dios, cordillera de Paucartambo)",
+     "conf": "E",
+     "xy": [
+      0.20448,
+      0.26182
+     ]
+    },
+    {
+     "lat": -12.2715,
+     "lon": -70.9328,
+     "nombre": "Boca Manu (Manu + Alto Madre de Dios)",
+     "conf": "V",
+     "xy": [
+      0.22914,
+      0.27476
+     ]
+    },
+    {
+     "lat": -12.3829,
+     "lon": -70.7082,
+     "nombre": "Boca del Blanco",
+     "conf": "E",
+     "xy": [
+      0.22468,
+      0.28157
+     ]
+    },
+    {
+     "lat": -12.6044,
+     "lon": -70.4042,
+     "nombre": "Boca del Colorado",
+     "conf": "E",
+     "xy": [
+      0.21582,
+      0.29078
+     ]
+    },
+    {
+     "lat": -12.5789,
+     "lon": -70.0719,
+     "nombre": "Boca del Los Amigos",
+     "conf": "E",
+     "xy": [
+      0.21684,
+      0.30085
+     ]
+    },
+    {
+     "lat": -12.7148,
+     "lon": -69.7416,
+     "nombre": "Boca del Inambari",
+     "conf": "E",
+     "xy": [
+      0.21141,
+      0.31086
+     ]
+    },
+    {
+     "lat": -12.5074,
+     "lon": -69.2184,
+     "nombre": "Boca del Las Piedras",
+     "conf": "E",
+     "xy": [
+      0.2197,
+      0.32672
+     ]
+    },
+    {
+     "lat": -12.5971,
+     "lon": -69.1665,
+     "nombre": "Puerto Maldonado (boca del Tambopata)",
+     "conf": "V",
+     "xy": [
+      0.21612,
+      0.32829
+     ]
+    },
+    {
+     "lat": -12.5026,
+     "lon": -68.6526,
+     "nombre": "Puerto Heath: frontera Perú-Bolivia (boca del Heath)",
+     "conf": "V",
+     "xy": [
+      0.2199,
+      0.34386
+     ]
+    },
+    {
+     "lat": -11.4761,
+     "lon": -67.2447,
+     "nombre": "Boca del Manupare",
+     "conf": "E",
+     "xy": [
+      0.26096,
+      0.38652
+     ]
+    },
+    {
+     "lat": -10.9892,
+     "lon": -66.0794,
+     "nombre": "Riberalta: entra en el Beni",
+     "conf": "V",
+     "xy": [
+      0.28043,
+      0.42184
+     ]
+    }
+   ]
+  },
+  {
+   "id": "beni",
+   "nombre": "Beni",
+   "tipo": "afluente_mundo",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca [E]",
+   "paises": [
+    "BO"
+   ],
+   "mundos": [
+    8
+   ],
+   "conf": "V/E",
+   "fuentes": [
+    "wd",
+    "wp_rios"
+   ],
+   "nota": "Mundo 8 (Madidi). ~1.100 km.",
+   "puntos": [
+    {
+     "lat": -15.1083,
+     "lon": -67.6736,
+     "nombre": "Alto Beni + Kaka = Beni",
+     "conf": "E",
+     "xy": [
+      0.11567,
+      0.37353
+     ]
+    },
+    {
+     "lat": -14.63,
+     "lon": -67.53,
+     "nombre": "Boca del Quiquibey",
+     "conf": "E",
+     "xy": [
+      0.1348,
+      0.37788
+     ]
+    },
+    {
+     "lat": -14.5941,
+     "lon": -67.5397,
+     "nombre": "Boca del Tuichi (viene del Madidi)",
+     "conf": "E",
+     "xy": [
+      0.13624,
+      0.37758
+     ]
+    },
+    {
+     "lat": -14.4422,
+     "lon": -67.5283,
+     "nombre": "Rurrenabaque / San Buenaventura",
+     "conf": "E",
+     "xy": [
+      0.14231,
+      0.37793
+     ]
+    },
+    {
+     "lat": -12.5622,
+     "lon": -66.9725,
+     "nombre": "Boca del Madidi",
+     "conf": "E",
+     "xy": [
+      0.21751,
+      0.39477
+     ]
+    },
+    {
+     "lat": -11.005,
+     "lon": -66.0661,
+     "nombre": "Riberalta (recibe el Madre de Dios)",
+     "conf": "V",
+     "xy": [
+      0.2798,
+      0.42224
+     ]
+    },
+    {
+     "lat": -10.8156,
+     "lon": -66.0294,
+     "nombre": "Boca del Orthon",
+     "conf": "E",
+     "xy": [
+      0.28738,
+      0.42335
+     ]
+    },
+    {
+     "lat": -10.5367,
+     "lon": -65.5972,
+     "nombre": "Cachuela Esperanza",
+     "conf": "E",
+     "xy": [
+      0.29853,
+      0.43645
+     ]
+    },
+    {
+     "lat": -10.3821,
+     "lon": -65.3903,
+     "nombre": "Villa Bella: Beni + Mamoré = Madeira",
+     "conf": "V",
+     "xy": [
+      0.30472,
+      0.44272
+     ]
+    }
+   ]
+  },
+  {
+   "id": "mamore",
+   "nombre": "Mamoré",
+   "tipo": "afluente_mundo",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca [E]",
+   "paises": [
+    "BO",
+    "BR"
+   ],
+   "mundos": [
+    8
+   ],
+   "conf": "V/E",
+   "fuentes": [
+    "wd",
+    "wp_rios"
+   ],
+   "nota": "Mundo 8. 1.930 km; frontera Bolivia-Brasil en su tramo final.",
+   "puntos": [
+    {
+     "lat": -17.633,
+     "lon": -64.934,
+     "nombre": "Nacimiento (sierra de Cochabamba, cerca de Pojo)",
+     "conf": "E",
+     "xy": [
+      0.01468,
+      0.45655
+     ]
+    },
+    {
+     "lat": -15.9449,
+     "lon": -64.7587,
+     "nombre": "Boca del Chapare",
+     "conf": "E",
+     "xy": [
+      0.0822,
+      0.46186
+     ]
+    },
+    {
+     "lat": -15.8025,
+     "lon": -64.7297,
+     "nombre": "Boca del Río Grande",
+     "conf": "E",
+     "xy": [
+      0.0879,
+      0.46274
+     ]
+    },
+    {
+     "lat": -15.2292,
+     "lon": -64.9358,
+     "nombre": "Boca del Isiboro",
+     "conf": "E",
+     "xy": [
+      0.11083,
+      0.45649
+     ]
+    },
+    {
+     "lat": -14.6808,
+     "lon": -65.0156,
+     "nombre": "Boca del Ibare (puerto de Trinidad)",
+     "conf": "E",
+     "xy": [
+      0.13277,
+      0.45407
+     ]
+    },
+    {
+     "lat": -13.6578,
+     "lon": -65.3328,
+     "nombre": "Boca del Yacuma",
+     "conf": "E",
+     "xy": [
+      0.17369,
+      0.44446
+     ]
+    },
+    {
+     "lat": -11.8875,
+     "lon": -65.0314,
+     "nombre": "Boca del Guaporé-Iténez",
+     "conf": "V",
+     "xy": [
+      0.2445,
+      0.45359
+     ]
+    },
+    {
+     "lat": -11.6169,
+     "lon": -65.2219,
+     "nombre": "Boca del Sotério",
+     "conf": "E",
+     "xy": [
+      0.25532,
+      0.44782
+     ]
+    },
+    {
+     "lat": -10.8267,
+     "lon": -65.3567,
+     "nombre": "Guayaramerín (BO) / Guajará-Mirim (BR)",
+     "conf": "E",
+     "xy": [
+      0.28693,
+      0.44374
+     ]
+    },
+    {
+     "lat": -10.4847,
+     "lon": -65.43,
+     "nombre": "Boca del Yata",
+     "conf": "E",
+     "xy": [
+      0.30061,
+      0.44152
+     ]
+    },
+    {
+     "lat": -10.3821,
+     "lon": -65.3903,
+     "nombre": "Se une al Beni: nace el Madeira",
+     "conf": "V",
+     "xy": [
+      0.30472,
+      0.44272
+     ]
+    }
+   ]
+  },
+  {
+   "id": "itenez",
+   "nombre": "Iténez-Guaporé",
+   "tipo": "afluente_mundo",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "clara [V]",
+   "paises": [
+    "BR",
+    "BO"
+   ],
+   "mundos": [
+    8
+   ],
+   "conf": "V/E",
+   "fuentes": [
+    "wd",
+    "wp_rios"
+   ],
+   "nota": "Mundo 8. 1.260 km; 920 km son frontera Bolivia-Brasil.",
+   "puntos": [
+    {
+     "lat": -14.5994,
+     "lon": -58.9531,
+     "nombre": "Nacimiento (chapada dos Parecis, Mato Grosso)",
+     "conf": "V",
+     "xy": [
+      0.13602,
+      0.63778
+     ]
+    },
+    {
+     "lat": -15.0078,
+     "lon": -59.9508,
+     "nombre": "Vila Bela da Santíssima Trindade",
+     "conf": "E",
+     "xy": [
+      0.11969,
+      0.60755
+     ]
+    },
+    {
+     "lat": -13.9928,
+     "lon": -60.3824,
+     "nombre": "Boca del Verde",
+     "conf": "E",
+     "xy": [
+      0.16029,
+      0.59447
+     ]
+    },
+    {
+     "lat": -13.4825,
+     "lon": -61.0467,
+     "nombre": "Pimenteiras do Oeste",
+     "conf": "E",
+     "xy": [
+      0.1807,
+      0.57434
+     ]
+    },
+    {
+     "lat": -13.5311,
+     "lon": -61.8375,
+     "nombre": "Boca del Paraguá",
+     "conf": "E",
+     "xy": [
+      0.17876,
+      0.55038
+     ]
+    },
+    {
+     "lat": -13.0851,
+     "lon": -62.2758,
+     "nombre": "Boca del Mequéns",
+     "conf": "E",
+     "xy": [
+      0.1966,
+      0.5371
+     ]
+    },
+    {
+     "lat": -12.7536,
+     "lon": -63.1322,
+     "nombre": "Boca del San Simón",
+     "conf": "E",
+     "xy": [
+      0.20986,
+      0.51115
+     ]
+    },
+    {
+     "lat": -12.4517,
+     "lon": -64.2222,
+     "nombre": "Boca del São Domingos / Costa Marques",
+     "conf": "E",
+     "xy": [
+      0.22193,
+      0.47812
+     ]
+    },
+    {
+     "lat": -12.2128,
+     "lon": -64.5944,
+     "nombre": "Boca del Cautário",
+     "conf": "E",
+     "xy": [
+      0.23149,
+      0.46684
+     ]
+    },
+    {
+     "lat": -11.8875,
+     "lon": -65.0314,
+     "nombre": "Entra en el Mamoré",
+     "conf": "V",
+     "xy": [
+      0.2445,
+      0.45359
+     ]
+    }
+   ]
+  },
+  {
+   "id": "madeira",
+   "nombre": "Madeira",
+   "tipo": "afluente_mundo",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca [V]",
+   "paises": [
+    "BO",
+    "BR"
+   ],
+   "mundos": [
+    7,
+    8
+   ],
+   "conf": "V/E",
+   "fuentes": [
+    "wd",
+    "wp_rios",
+    "wp_madeira"
+   ],
+   "nota": "1.450 km (3.250-3.380 con el Mamoré). Desemboca aguas abajo de Manaos. De su formación (Villa Bella) a la boca del Abunã es frontera Bolivia-Brasil [E wp_madeira]. Los rápidos de Teotônio, hoy bajo el embalse de Santo Antônio, separan la población boliviana de delfín de río [E wp_boto].",
+   "puntos": [
+    {
+     "lat": -10.3821,
+     "lon": -65.3903,
+     "nombre": "Villa Bella: Beni + Mamoré = Madeira",
+     "conf": "V",
+     "xy": [
+      0.30472,
+      0.44272
+     ]
+    },
+    {
+     "lat": -9.6717,
+     "lon": -65.4464,
+     "nombre": "Boca del Abunã (frontera BO-BR)",
+     "conf": "E",
+     "xy": [
+      0.33313,
+      0.44102
+     ]
+    },
+    {
+     "lat": -9.207,
+     "lon": -64.3941,
+     "nombre": "Boca del Jaci-Paraná",
+     "conf": "E",
+     "xy": [
+      0.35172,
+      0.47291
+     ]
+    },
+    {
+     "lat": -8.7619,
+     "lon": -63.9039,
+     "nombre": "Porto Velho",
+     "conf": "E",
+     "xy": [
+      0.36952,
+      0.48776
+     ]
+    },
+    {
+     "lat": -8.0487,
+     "lon": -62.9007,
+     "nombre": "Boca del Ji-Paraná",
+     "conf": "E",
+     "xy": [
+      0.39805,
+      0.51816
+     ]
+    },
+    {
+     "lat": -7.5061,
+     "lon": -63.0208,
+     "nombre": "Humaitá",
+     "conf": "E",
+     "xy": [
+      0.41976,
+      0.51452
+     ]
+    },
+    {
+     "lat": -6.1448,
+     "lon": -61.7844,
+     "nombre": "Boca del Dos Marmelos",
+     "conf": "E",
+     "xy": [
+      0.47421,
+      0.55199
+     ]
+    },
+    {
+     "lat": -5.8089,
+     "lon": -61.3,
+     "nombre": "Manicoré",
+     "conf": "E",
+     "xy": [
+      0.48764,
+      0.56667
+     ]
+    },
+    {
+     "lat": -5.1186,
+     "lon": -60.3819,
+     "nombre": "Novo Aripuanã (boca del Aripuanã)",
+     "conf": "E",
+     "xy": [
+      0.51526,
+      0.59449
+     ]
+    },
+    {
+     "lat": -4.3878,
+     "lon": -59.5939,
+     "nombre": "Borba",
+     "conf": "E",
+     "xy": [
+      0.54449,
+      0.61837
+     ]
+    },
+    {
+     "lat": -3.8878,
+     "lon": -59.0939,
+     "nombre": "Nova Olinda do Norte",
+     "conf": "E",
+     "xy": [
+      0.56449,
+      0.63352
+     ]
+    },
+    {
+     "lat": -3.3685,
+     "lon": -58.7509,
+     "nombre": "Entra en el Amazonas",
+     "conf": "V",
+     "xy": [
+      0.58526,
+      0.64391
+     ]
+    }
+   ]
+  },
+  {
+   "id": "maroni",
+   "nombre": "Maroni",
+   "tipo": "fuera_de_cuenca",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "[NV]",
+   "paises": [
+    "SR",
+    "GF"
+   ],
+   "mundos": [
+    11
+   ],
+   "conf": "V/E",
+   "fuentes": [
+    "wd",
+    "wp_rios"
+   ],
+   "nota": "OJO: NO es de la cuenca amazónica; desemboca directamente en el Atlántico. Frontera (en parte disputada) Surinam-Guayana Francesa; 612 km (Litani-Lawa-Maroni). Para el mundo 11 hace falta un recuadro fuera de la cuenca.",
+   "puntos": [
+    {
+     "lat": 2.0,
+     "lon": -54.0,
+     "nombre": "Nacimiento aproximado (montes Tumuk Humak, como Litani)",
+     "conf": "E",
+     "xy": [
+      0.8,
+      0.78788
+     ]
+    },
+    {
+     "lat": 3.6411,
+     "lon": -54.0278,
+     "nombre": "Maripasoula (GF)",
+     "conf": "E",
+     "xy": [
+      0.86564,
+      0.78704
+     ]
+    },
+    {
+     "lat": 5.5039,
+     "lon": -54.0289,
+     "nombre": "Saint-Laurent-du-Maroni (GF)",
+     "conf": "E",
+     "xy": [
+      0.94016,
+      0.787
+     ]
+    },
+    {
+     "lat": 5.5,
+     "lon": -54.05,
+     "nombre": "Albina (SR)",
+     "conf": "E",
+     "xy": [
+      0.94,
+      0.78636
+     ]
+    },
+    {
+     "lat": 5.7458,
+     "lon": -53.9684,
+     "nombre": "Desembocadura en el Atlántico",
+     "conf": "E",
+     "xy": [
+      0.94983,
+      0.78884
+     ]
+    }
+   ]
+  },
+  {
+   "id": "tocantins",
+   "nombre": "Tocantins (desemboca en el estuario del Pará)",
+   "tipo": "afluente_paso",
+   "orden_puntos": "del nacimiento a la boca",
+   "agua": "clara [E wp_tipos: «Tapajós, Xingu, Tocantins»]",
+   "paises": [
+    "BR"
+   ],
+   "mundos": [
+    1
+   ],
+   "conf": "E",
+   "fuentes": [
+    "wp_tocantins",
+    "wd_tocantins",
+    "wp_tipos"
+   ],
+   "nota": "Canon del mundo 1: «Amazonas / Tocantins» (glosario §8). No es afluente del Amazonas en sentido estricto: desemboca en el estuario del Pará, junto a Belém, y solo a veces se incluye en la cuenca [E wp_tocantins]. Se dibuja lleno desde el primer Mapa (casa de TiTino). Puntos: las sedes municipales de Wikidata, a pocos km del río; los tramos entre ellas, en línea recta [NV].",
+   "puntos": [
+    {
+     "lat": -13.8342,
+     "lon": -48.3044,
+     "nombre": "Nacimiento (embalse de Serra da Mesa, Minaçu)",
+     "conf": "E",
+     "xy": [
+      0.16663,
+      0.96047
+     ]
+    },
+    {
+     "lat": -12.025,
+     "lon": -48.5389,
+     "nombre": "Peixe",
+     "conf": "E",
+     "xy": [
+      0.239,
+      0.95337
+     ]
+    },
+    {
+     "lat": -10.7078,
+     "lon": -48.4169,
+     "nombre": "Porto Nacional",
+     "conf": "E",
+     "xy": [
+      0.29169,
+      0.95706
+     ]
+    },
+    {
+     "lat": -10.1844,
+     "lon": -48.3336,
+     "nombre": "Palmas (lago del embalse)",
+     "conf": "E",
+     "xy": [
+      0.31262,
+      0.95959
+     ]
+    },
+    {
+     "lat": -9.5669,
+     "lon": -48.3919,
+     "nombre": "Miracema do Tocantins",
+     "conf": "E",
+     "xy": [
+      0.33732,
+      0.95782
+     ]
+    },
+    {
+     "lat": -8.9678,
+     "lon": -48.175,
+     "nombre": "Pedro Afonso",
+     "conf": "E",
+     "xy": [
+      0.36129,
+      0.96439
+     ]
+    },
+    {
+     "lat": -7.3328,
+     "lon": -47.4689,
+     "nombre": "Carolina",
+     "conf": "E",
+     "xy": [
+      0.42669,
+      0.98579
+     ]
+    },
+    {
+     "lat": -6.5608,
+     "lon": -47.4508,
+     "nombre": "Estreito",
+     "conf": "E",
+     "xy": [
+      0.45757,
+      0.98634
+     ]
+    },
+    {
+     "lat": -5.5258,
+     "lon": -47.4758,
+     "nombre": "Imperatriz",
+     "conf": "E",
+     "xy": [
+      0.49897,
+      0.98558
+     ]
+    },
+    {
+     "lat": -5.3689,
+     "lon": -49.1178,
+     "nombre": "Marabá (aguas abajo de la boca del Araguaia)",
+     "conf": "E",
+     "xy": [
+      0.50524,
+      0.93582
+     ]
+    },
+    {
+     "lat": -3.7678,
+     "lon": -49.6728,
+     "nombre": "Tucuruí",
+     "conf": "E",
+     "xy": [
+      0.56929,
+      0.91901
+     ]
+    },
+    {
+     "lat": -2.2439,
+     "lon": -49.4958,
+     "nombre": "Cametá",
+     "conf": "E",
+     "xy": [
+      0.63024,
+      0.92437
+     ]
+    },
+    {
+     "lat": -1.75,
+     "lon": -49.167,
+     "nombre": "Boca en el estuario del Pará",
+     "conf": "E",
+     "xy": [
+      0.65,
+      0.93433
+     ]
+    }
+   ]
+  },
+  {
+   "id": "xingu",
+   "nombre": "Xingu",
+   "tipo": "afluente_paso",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "clara [E wp_xingu: «one of the largest clearwater rivers»]",
+   "paises": [
+    "BR"
+   ],
+   "mundos": [],
+   "conf": "E",
+   "fuentes": [
+    "wp_xingu",
+    "wp_sao_felix",
+    "wp_altamira"
+   ],
+   "nota": "Se pasa su boca en la pierna Belém → Santarém (niveles 1-10). Tramo entre la cabecera y São Félix sin puntos intermedios: línea recta a esta escala.",
+   "puntos": [
+    {
+     "lat": -12.9249,
+     "lon": -52.826,
+     "nombre": "Cabecera (Culuene + Sete de Setembro)",
+     "conf": "E",
+     "xy": [
+      0.203,
+      0.82345
+     ]
+    },
+    {
+     "lat": -6.6333,
+     "lon": -51.9833,
+     "nombre": "São Félix do Xingu",
+     "conf": "E",
+     "xy": [
+      0.45467,
+      0.84899
+     ]
+    },
+    {
+     "lat": -3.2028,
+     "lon": -52.2058,
+     "nombre": "Altamira",
+     "conf": "E",
+     "xy": [
+      0.59189,
+      0.84225
+     ]
+    },
+    {
+     "lat": -1.5272,
+     "lon": -51.8692,
+     "nombre": "Boca en el Amazonas",
+     "conf": "E",
+     "xy": [
+      0.65891,
+      0.85245
+     ]
+    }
+   ]
+  },
+  {
+   "id": "trombetas",
+   "nombre": "Trombetas",
+   "tipo": "afluente_paso",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "clara [E wp_tipos: la lista entre los ríos de agua clara del escudo guayanés]",
+   "paises": [
+    "BR"
+   ],
+   "mundos": [],
+   "conf": "E/NV",
+   "fuentes": [
+    "wp_trombetas",
+    "wp_oriximina"
+   ],
+   "nota": "Solo el tramo bajo. El punto de aguas arriba es aproximado [NV].",
+   "puntos": [
+    {
+     "lat": -1.08,
+     "lon": -57.04,
+     "nombre": "Tramo medio (aprox.)",
+     "conf": "NV",
+     "xy": [
+      0.6768,
+      0.69576
+     ]
+    },
+    {
+     "lat": -1.7658,
+     "lon": -55.8658,
+     "nombre": "Oriximiná",
+     "conf": "E",
+     "xy": [
+      0.64937,
+      0.73134
+     ]
+    },
+    {
+     "lat": -1.8811,
+     "lon": -55.6361,
+     "nombre": "Boca en el Amazonas, junto a Óbidos",
+     "conf": "E",
+     "xy": [
+      0.64476,
+      0.7383
+     ]
+    }
+   ]
+  },
+  {
+   "id": "purus",
+   "nombre": "Purus",
+   "tipo": "afluente_paso",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca [E wp_blanca]",
+   "paises": [
+    "PE",
+    "BR"
+   ],
+   "mundos": [],
+   "conf": "E",
+   "fuentes": [
+    "wp_purus",
+    "wp_boca_do_acre",
+    "wp_labrea",
+    "wp_tapaua"
+   ],
+   "nota": "Se pasa su boca en la pierna Anavilhanas → Tefé (niveles 61-70).",
+   "puntos": [
+    {
+     "lat": -10.7489,
+     "lon": -71.7872,
+     "nombre": "Cabecera",
+     "conf": "E",
+     "xy": [
+      0.29004,
+      0.24887
+     ]
+    },
+    {
+     "lat": -8.7519,
+     "lon": -67.3978,
+     "nombre": "Boca do Acre",
+     "conf": "E",
+     "xy": [
+      0.36992,
+      0.38188
+     ]
+    },
+    {
+     "lat": -7.2589,
+     "lon": -64.7978,
+     "nombre": "Lábrea",
+     "conf": "E",
+     "xy": [
+      0.42964,
+      0.46067
+     ]
+    },
+    {
+     "lat": -5.6278,
+     "lon": -63.1828,
+     "nombre": "Tapauá",
+     "conf": "E",
+     "xy": [
+      0.49489,
+      0.50961
+     ]
+    },
+    {
+     "lat": -3.6931,
+     "lon": -61.47,
+     "nombre": "Boca en el Solimões",
+     "conf": "V",
+     "xy": [
+      0.57228,
+      0.56152
+     ]
+    }
+   ]
+  },
+  {
+   "id": "jurua",
+   "nombre": "Juruá",
+   "tipo": "afluente_paso",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca [E wp_blanca]",
+   "paises": [
+    "PE",
+    "BR"
+   ],
+   "mundos": [],
+   "conf": "E",
+   "fuentes": [
+    "wp_jurua",
+    "wp_cruzeiro_do_sul",
+    "wp_eirunepe",
+    "wp_carauari"
+   ],
+   "nota": "Se pasa su boca en el viaje Tefé → Leticia (80 → 81).",
+   "puntos": [
+    {
+     "lat": -10.0935,
+     "lon": -72.199,
+     "nombre": "Cabecera",
+     "conf": "E",
+     "xy": [
+      0.31626,
+      0.23639
+     ]
+    },
+    {
+     "lat": -7.6308,
+     "lon": -72.67,
+     "nombre": "Cruzeiro do Sul",
+     "conf": "E",
+     "xy": [
+      0.41477,
+      0.22212
+     ]
+    },
+    {
+     "lat": -6.66,
+     "lon": -69.8739,
+     "nombre": "Eirunepé",
+     "conf": "E",
+     "xy": [
+      0.4536,
+      0.30685
+     ]
+    },
+    {
+     "lat": -4.8828,
+     "lon": -66.8958,
+     "nombre": "Carauari",
+     "conf": "E",
+     "xy": [
+      0.52469,
+      0.3971
+     ]
+    },
+    {
+     "lat": -2.6358,
+     "lon": -65.7561,
+     "nombre": "Boca en el Solimões",
+     "conf": "E",
+     "xy": [
+      0.61457,
+      0.43163
+     ]
+    }
+   ]
+  },
+  {
+   "id": "japura",
+   "nombre": "Japurá (Caquetá en Colombia)",
+   "tipo": "afluente_paso",
+   "orden_puntos": "de La Pedrera a la boca",
+   "agua": "blanca [E wp_blanca]",
+   "paises": [
+    "CO",
+    "BR"
+   ],
+   "mundos": [],
+   "conf": "E",
+   "fuentes": [
+    "wp_japura",
+    "wp_la_pedrera",
+    "wp_maraa"
+   ],
+   "nota": "Solo desde La Pedrera (frontera CO-BR): la cabecera andina del Caquetá no tiene coordenadas comprobadas en esta sesión. Se pasa su boca en el viaje Tefé → Leticia.",
+   "puntos": [
+    {
+     "lat": -1.317,
+     "lon": -69.567,
+     "nombre": "La Pedrera (frontera Colombia-Brasil)",
+     "conf": "E",
+     "xy": [
+      0.66732,
+      0.31615
+     ]
+    },
+    {
+     "lat": -1.8558,
+     "lon": -65.5808,
+     "nombre": "Maraã",
+     "conf": "E",
+     "xy": [
+      0.64577,
+      0.43695
+     ]
+    },
+    {
+     "lat": -3.1656,
+     "lon": -64.7808,
+     "nombre": "Boca principal, frente a Tefé",
+     "conf": "E",
+     "xy": [
+      0.59338,
+      0.46119
+     ]
+    }
+   ]
+  },
+  {
+   "id": "nanay",
+   "nombre": "Nanay (desvío a Allpahuayo-Mishana)",
+   "tipo": "rio_local",
+   "orden_puntos": "de la reserva a la boca",
+   "agua": "negra [E actualidad_allpahuayo]",
+   "paises": [
+    "PE"
+   ],
+   "mundos": [
+    5
+   ],
+   "conf": "NV",
+   "fuentes": [
+    "wp_allpahuayo",
+    "wd_rios_locales"
+   ],
+   "nota": "Esbozo de muestra: solo la boca [E] y la reserva [E] son comprobadas; el trazado entre ellas es aproximado [NV] y lo sustituye Natural Earth. Nacimiento según Wikidata: -3,1150, -74,8130 [E wd_rios_locales]; el tramo de producción sale de HydroRIVERS.",
+   "puntos": [
+    {
+     "lat": -3.928,
+     "lon": -73.556,
+     "nombre": "Reserva Nacional Allpahuayo-Mishana",
+     "conf": "E",
+     "xy": [
+      0.56288,
+      0.19527
+     ]
+    },
+    {
+     "lat": -3.83,
+     "lon": -73.4,
+     "nombre": "Tramo bajo del Nanay (aprox.)",
+     "conf": "NV",
+     "xy": [
+      0.5668,
+      0.2
+     ]
+    },
+    {
+     "lat": -3.7007,
+     "lon": -73.247,
+     "nombre": "Boca del Nanay en el Amazonas",
+     "conf": "E",
+     "xy": [
+      0.57197,
+      0.20464
+     ]
+    }
+   ]
+  },
+  {
+   "id": "loretoyacu",
+   "nombre": "Loretoyacu (Puerto Nariño)",
+   "tipo": "rio_local",
+   "orden_puntos": "de aguas arriba a la boca",
+   "agua": "[NV]",
+   "paises": [
+    "CO"
+   ],
+   "mundos": [
+    4
+   ],
+   "conf": "E/NV",
+   "fuentes": [
+    "eswp_loretoyacu",
+    "wd"
+   ],
+   "nota": "Parada 11 (y acceso a Tarapoto, parada 12). Esbozo: un punto del río [E] y la boca junto a Puerto Nariño [E]; trazado de producción con HydroRIVERS.",
+   "puntos": [
+    {
+     "lat": -3.759,
+     "lon": -70.4054,
+     "nombre": "Punto del río (Wikipedia ES)",
+     "conf": "E",
+     "xy": [
+      0.56964,
+      0.29075
+     ]
+    },
+    {
+     "lat": -3.7806,
+     "lon": -70.3625,
+     "nombre": "Boca, junto a Puerto Nariño",
+     "conf": "E",
+     "xy": [
+      0.56878,
+      0.29205
+     ]
+    }
+   ]
+  },
+  {
+   "id": "atacuari",
+   "nombre": "Atacuari (boca: empieza la frontera fluvial Perú-Colombia)",
+   "tipo": "rio_local",
+   "orden_puntos": "solo la boca",
+   "solo_boca": true,
+   "agua": "[NV]",
+   "paises": [
+    "PE",
+    "CO"
+   ],
+   "mundos": [
+    4
+   ],
+   "conf": "E",
+   "fuentes": [
+    "wp_atacuari",
+    "wd_rios_locales"
+   ],
+   "nota": "Parada 13. 207 km; sus últimos 13 km son frontera con Colombia [E wp_atacuari]. Sin trazado comprobado: solo la boca.",
+   "puntos": [
+    {
+     "lat": -3.8277,
+     "lon": -70.6067,
+     "nombre": "Boca en el Amazonas",
+     "conf": "E",
+     "xy": [
+      0.56689,
+      0.28465
+     ]
+    }
+   ]
+  },
+  {
+   "id": "itaya",
+   "nombre": "Itaya (Iquitos)",
+   "tipo": "rio_local",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "[NV]",
+   "paises": [
+    "PE"
+   ],
+   "mundos": [
+    5
+   ],
+   "conf": "E/NV",
+   "fuentes": [
+    "eswp_itaya",
+    "wd_rios_locales"
+   ],
+   "nota": "Parada 15. Esbozo: cabecera [E] y boca [E] en línea recta [NV]; trazado de producción con HydroRIVERS.",
+   "puntos": [
+    {
+     "lat": -4.22,
+     "lon": -73.96,
+     "nombre": "Zona de la cabecera",
+     "conf": "E",
+     "xy": [
+      0.5512,
+      0.18303
+     ]
+    },
+    {
+     "lat": -3.7144,
+     "lon": -73.2342,
+     "nombre": "Boca en el Amazonas (Iquitos)",
+     "conf": "E",
+     "xy": [
+      0.57142,
+      0.20502
+     ]
+    }
+   ]
+  },
+  {
+   "id": "samiria",
+   "nombre": "Samiria (Pacaya-Samiria)",
+   "tipo": "rio_local",
+   "orden_puntos": "solo la boca",
+   "solo_boca": true,
+   "agua": "negra [E actualidad_pacaya_48]",
+   "paises": [
+    "PE"
+   ],
+   "mundos": [
+    5
+   ],
+   "conf": "E",
+   "fuentes": [
+    "wd_rios_locales",
+    "actualidad_pacaya_48"
+   ],
+   "nota": "Paradas 18 y 19: la canoa entra por su boca, en el Marañón. Sin trazado comprobado: solo la boca.",
+   "puntos": [
+    {
+     "lat": -4.7208,
+     "lon": -74.3561,
+     "nombre": "Boca en el Marañón",
+     "conf": "E",
+     "xy": [
+      0.53117,
+      0.17103
+     ]
+    }
+   ]
+  },
+  {
+   "id": "pacaya",
+   "nombre": "Pacaya",
+   "tipo": "rio_local",
+   "orden_puntos": "del nacimiento a la boca",
+   "agua": "[NV]",
+   "paises": [
+    "PE"
+   ],
+   "mundos": [
+    5
+   ],
+   "conf": "E/NV",
+   "fuentes": [
+    "wd_rios_locales"
+   ],
+   "nota": "Paradas 18 y 19. Esbozo: nacimiento [E] y boca [E] en línea recta [NV]; trazado de producción con HydroRIVERS.",
+   "puntos": [
+    {
+     "lat": -6.4749,
+     "lon": -75.5214,
+     "nombre": "Nacimiento",
+     "conf": "E",
+     "xy": [
+      0.461,
+      0.13572
+     ]
+    },
+    {
+     "lat": -5.2492,
+     "lon": -74.3596,
+     "nombre": "Boca (sistema del Ucayali-Puinahua)",
+     "conf": "E",
+     "xy": [
+      0.51003,
+      0.17092
+     ]
+    }
+   ]
+  },
+  {
+   "id": "orinoco",
+   "nombre": "Orinoco (alto)",
+   "tipo": "fuera_de_cuenca",
+   "orden_puntos": "de la cabecera a Puerto Ayacucho",
+   "agua": "otra cuenca: «vecinos del Orinoco» (07 §2.2, regla 3)",
+   "paises": [
+    "VE",
+    "CO"
+   ],
+   "mundos": [
+    12
+   ],
+   "conf": "E/V",
+   "fuentes": [
+    "wp_orinoco",
+    "wd",
+    "wp_san_fernando"
+   ],
+   "nota": "No es amazónico. Se une al Negro por el Casiquiare, que sale del Orinoco en Tamatama. Tramos entre puntos en línea recta [NV].",
+   "puntos": [
+    {
+     "lat": 2.3181,
+     "lon": -63.3617,
+     "nombre": "Cabecera (cerro Delgado-Chalbaud)",
+     "conf": "E",
+     "xy": [
+      0.81272,
+      0.50419
+     ]
+    },
+    {
+     "lat": 3.1385,
+     "lon": -65.8785,
+     "nombre": "Bifurcación del Casiquiare",
+     "conf": "V",
+     "xy": [
+      0.84554,
+      0.42792
+     ]
+    },
+    {
+     "lat": 4.05,
+     "lon": -67.7,
+     "nombre": "San Fernando de Atabapo",
+     "conf": "E",
+     "xy": [
+      0.882,
+      0.37273
+     ]
+    },
+    {
+     "lat": 5.6631,
+     "lon": -67.6264,
+     "nombre": "Puerto Ayacucho",
+     "conf": "E",
+     "xy": [
+      0.94652,
+      0.37496
+     ]
+    }
+   ]
+  }
+ ],
+ "paradas_1_200": [
+  {
+   "k": 0,
+   "id": "belem",
+   "nombre": "Belém",
+   "niveles": [
+    1,
+    10
+   ],
+   "llegada_al_ganar": null,
+   "mundo": 1,
+   "mundo_id": "w01_estuario",
+   "tipo": "gran_parada",
+   "pais": "BR",
+   "rio": "Pará (estuario)",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -1.4558,
+   "lon": -48.5039,
+   "conf": "V",
+   "ancla_rio": "para",
+   "km_desde_el_mar": null,
+   "temporada": "— (LUT del nivel 9: alba → mañana, canon)",
+   "dato_del_nivel": {
+    "clave": "map.stop.estuario.dato_03",
+    "texto": "Bajo el agua turbia de la desembocadura hay un arrecife que la ciencia describió en 2016.",
+    "etiqueta": "V",
+    "fuente": "MR-F06"
+   },
+   "nota_dato": "Es el Dato del río 1 del nivel 10 (06 §2.3: frase sobre el estuario): la despedida de casa. Otros datos (§(e) de la propuesta de D-007, canon de 07 §2.2, regla 6): Ver-o-Peso, protegido por el IPHAN desde 1977 [E CR-F62]; el chibé [E CR-F72]. Vetos del mundo 1: peconha y trabajo infantil; objetos rituales de las bancas de hierbas.",
+   "fondo": {
+    "kit": "bg_kit_w01",
+    "heroe": "bg_hero_ver_o_peso",
+    "tipo": "pintado",
+    "hito": "Torres del mercado de hierro de Ver-o-Peso (1901) vistas desde la bahía de Guajará al alba; palmeras de açaí",
+    "cuidado": "Sin canastos (Canasta), sin el Círio y sin personas"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Frutas nuevas 1, 2, 4 y 7",
+    "miquito 5"
+   ],
+   "notas": "Casa de TiTino (embaúba en la orilla de la bahía). Desde aquí sale la canoa.",
+   "km_desde_el_mar_conf": "— (Belém no está en el cauce; km_casa = 0)",
+   "xy": [
+    0.66177,
+    0.95443
+   ],
+   "km_casa": 0,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 1,
+   "id": "santarem",
+   "nombre": "Santarém",
+   "niveles": [
+    11,
+    20
+   ],
+   "llegada_al_ganar": 10,
+   "mundo": 2,
+   "mundo_id": "w02_tapajos",
+   "tipo": "gran_parada",
+   "pais": "BR",
+   "rio": "Tapajós y Amazonas",
+   "agua_del_sitio": "clara y blanca (dos aguas)",
+   "agua_base_mundo": "clear",
+   "lat": -2.4428,
+   "lon": -54.7078,
+   "conf": "V",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 704,
+   "temporada": "— (rampa 11-20)",
+   "dato_del_nivel": null,
+   "nota_dato": "El 10 lleva el dato del estuario (canon). Los de Santarém van en su tarjeta: map.stop.santarem.dato_02 [V MR-F97] (las cuias del Bajo Amazonas, patrimonio de Brasil desde 2015; también en §(e)) y dato_01 [E]. Veto del mundo 2: copiar grafismos de las cuias.",
+   "fondo": {
+    "kit": "bg_kit_w02",
+    "heroe": "codigo:dos_aguas_clara_blanca",
+    "tipo": "codigo",
+    "hito": "La línea entre el Tapajós verde azulado (primer plano) y el Amazonas color café (fondo), con la orla lejana del kit",
+    "cuidado": "—"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "banner 11",
+    "Agua del Tapajós 11",
+    "miquito 13",
+    "Cuia chica 14"
+   ],
+   "pregunta_del_mundo": {
+    "texto": "¿Por qué el agua del Tapajós es clara?",
+    "se_responde_en": 30
+   },
+   "km_desde_el_mar_conf": "E",
+   "xy": [
+    0.62229,
+    0.76643
+   ],
+   "km_casa": 733,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 2,
+   "id": "alter_do_chao",
+   "nombre": "Alter do Chão",
+   "niveles": [
+    21,
+    30
+   ],
+   "llegada_al_ganar": 20,
+   "mundo": 2,
+   "mundo_id": "w02_tapajos",
+   "tipo": "parada",
+   "pais": "BR",
+   "rio": "Tapajós",
+   "agua_del_sitio": "clara",
+   "agua_base_mundo": "clear",
+   "lat": -2.5167,
+   "lon": -54.95,
+   "conf": "E",
+   "ancla_rio": "tapajos",
+   "km_desde_el_mar": 735,
+   "temporada": "B (aguas bajas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.stop.alter_do_chao.dato_01",
+    "texto": "Cuando el río baja aparece una isla de arena blanca: la Ilha do Amor.",
+    "etiqueta": "E",
+    "fuente": "MR-F19"
+   },
+   "fondo": {
+    "kit": "bg_kit_w02",
+    "heroe": "bg_hero_alter_do_chao",
+    "tipo": "pintado",
+    "hito": "La lengua de arena blanca de la Ilha do Amor y el cerro de selva; agua clara",
+    "cuidado": "Sin cocoteros ni turquesa caribeño (direccion-visual-v2 §7), sin el Çairé y sin bañistas"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "camu camu 21",
+    "Cuia alta 27"
+   ],
+   "km_desde_el_mar_conf": "cálculo (confluencia + recorrido sin meandros: valor mínimo)",
+   "xy": [
+    0.61933,
+    0.75909
+   ],
+   "nota_dato": "Dato de lugar: es del Mapa. La serie «Agua del Tapajós» de Frutas del río lo repite en k14 (nivel 34): se cambia allí (propuesta §15). Para el asesor: hoy el Tapajós baja turbio en largos tramos; el texto no lo menciona.",
+   "km_casa": 764,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 3,
+   "id": "flona_tapajos",
+   "nombre": "Floresta Nacional do Tapajós",
+   "niveles": [
+    31,
+    40
+   ],
+   "llegada_al_ganar": 30,
+   "mundo": 2,
+   "mundo_id": "w02_tapajos",
+   "tipo": "castillo",
+   "pais": "BR",
+   "rio": "Tapajós",
+   "agua_del_sitio": "clara",
+   "agua_base_mundo": "clear",
+   "lat": -3.517,
+   "lon": -55.073,
+   "conf": "E",
+   "ancla_rio": "tapajos",
+   "km_desde_el_mar": 840,
+   "temporada": "B (aguas bajas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.stop.flona_tapajos.dato_01",
+    "texto": "De natural, el Tapajós es claro: baja de rocas muy viejas que sueltan poco barro.",
+    "etiqueta": "E",
+    "fuente": "wp_tipos"
+   },
+   "nota_dato": "Responde la pregunta del mundo 2 con la causa (rocas cristalinas antiguas y suelos arenosos, con pocos sedimentos [E wp_tipos]), sin «aquí» ni «se ve el fondo». Para el asesor: hoy baja turbio en largos tramos (sedimentos); el texto no lo menciona y no nombra la minería (07 §8.1). Otro dato: unidad creada por el decreto 73.684 de 1974 [E wp_flona]; Frutas k19 (nivel 39) lo repite y se cambia allí (propuesta §15).",
+   "fondo": {
+    "kit": "bg_kit_w02",
+    "heroe": "bg_hero_flona_tapajos",
+    "tipo": "pintado",
+    "hito": "Orilla alta de selva de tierra firme sobre el Tapajós claro y una playa estrecha",
+    "cuidado": "Sin samaúma (07 §8.1: árbol sagrado), sin comunidades, personas ni madera cortada"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "hito 40 «Cuias de Santarém» (D-009)",
+    "skin Cuia de Santarém 40"
+   ],
+   "notas": "Coordenada = centro de la unidad (Wikipedia); la canoa se amarra en la orilla del Tapajós más cercana.",
+   "km_desde_el_mar_conf": "cálculo (confluencia + recorrido sin meandros: valor mínimo)",
+   "xy": [
+    0.57932,
+    0.75536
+   ],
+   "km_casa": 869,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 4,
+   "id": "encontro",
+   "nombre": "Encuentro de las Aguas",
+   "niveles": [
+    41,
+    50
+   ],
+   "llegada_al_ganar": 40,
+   "mundo": 3,
+   "mundo_id": "w03_manaos",
+   "tipo": "gran_parada",
+   "pais": "BR",
+   "rio": "Negro y Solimões",
+   "agua_del_sitio": "negra y blanca (dos aguas)",
+   "agua_base_mundo": "black",
+   "lat": -3.1367,
+   "lon": -59.9047,
+   "conf": "V",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 1437,
+   "temporada": "A (aguas altas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.stop.manaos.dato_01",
+    "texto": "El Negro, oscuro y tibio, y el Solimões, color café y más fresco, van 6 km sin mezclarse.",
+    "etiqueta": "E",
+    "fuente": "MR-F24"
+   },
+   "fondo": {
+    "kit": "bg_kit_w03",
+    "heroe": "codigo:dos_aguas_negra_blanca",
+    "tipo": "codigo",
+    "hito": "La diagonal negra y beige (canon 07 §2.1) con Manaos lejana, del kit",
+    "cuidado": "El nombre también es una skin y un evento: el texto habla del fenómeno"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "banner 41",
+    "achiote 41",
+    "miquito 42",
+    "Hoja 43"
+   ],
+   "pregunta_del_mundo": {
+    "texto": "¿Por qué el río Negro es negro?",
+    "se_responde_en": 60
+   },
+   "km_desde_el_mar_conf": "E",
+   "xy": [
+    0.59453,
+    0.60895
+   ],
+   "nota_dato": "Otro dato (§(e)): el Encuentro de las Aguas es patrimonio del IPHAN desde 2010 [V CR-F25]. Vetos del mundo 3: la sequía de 2024 como juego; Parintins; la demolición de la Ciudad Flotante.",
+   "km_casa": 1466,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 5,
+   "id": "manaos",
+   "nombre": "Manaos",
+   "niveles": [
+    51,
+    60
+   ],
+   "llegada_al_ganar": 50,
+   "mundo": 3,
+   "mundo_id": "w03_manaos",
+   "tipo": "parada",
+   "pais": "BR",
+   "rio": "Negro",
+   "agua_del_sitio": "negra",
+   "agua_base_mundo": "black",
+   "lat": -3.1189,
+   "lon": -60.0217,
+   "conf": "V",
+   "ancla_rio": "negro",
+   "km_desde_el_mar": 1450,
+   "temporada": "A (aguas altas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.stop.manaos.dato_02",
+    "texto": "En Brasil el río se llama Solimões hasta aquí; con el Negro ya se llama Amazonas.",
+    "etiqueta": "E",
+    "fuente": "MR-F03, MR-F24"
+   },
+   "fondo": {
+    "kit": "bg_kit_w03",
+    "heroe": "bg_hero_teatro_amazonas",
+    "tipo": "pintado",
+    "hito": "La cúpula del Teatro Amazonas sobre la ciudad, el puerto flotante y el puente del río Negro al fondo",
+    "cuidado": "Sin nostalgia del caucho"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "hito 60 (primer Muy difícil)"
+   ],
+   "km_desde_el_mar_conf": "cálculo (confluencia + recorrido sin meandros: valor mínimo)",
+   "xy": [
+    0.59524,
+    0.6054
+   ],
+   "nota_dato": "[E]: MR-F03 y MR-F24 son Wikipedia. Para [V], una fuente primaria (ANA o IBGE). Otros datos (§(e)): la régua del puerto mide el Negro a diario desde 1902 [V CR-F11]; los flutuantes [E CR-F32].",
+   "km_casa": 1479,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 6,
+   "id": "anavilhanas",
+   "nombre": "Anavilhanas",
+   "niveles": [
+    61,
+    70
+   ],
+   "llegada_al_ganar": 60,
+   "mundo": 3,
+   "mundo_id": "w03_manaos",
+   "tipo": "parada",
+   "pais": "BR",
+   "rio": "Negro",
+   "agua_del_sitio": "negra",
+   "agua_base_mundo": "black",
+   "lat": -2.6208,
+   "lon": -60.9439,
+   "conf": "E",
+   "ancla_rio": "negro",
+   "km_desde_el_mar": 1570,
+   "temporada": "B (aguas bajas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.general.dato_negra",
+    "texto": "Mira el Negro: su color de té viene de las hojas que se deshacen en el agua.",
+    "etiqueta": "V",
+    "fuente": "wp_tipos, rios_villamizar"
+   },
+   "nota_dato": "Responde la pregunta del mundo 3. Otro dato: map.stop.anavilhanas.dato_01 [E] (unas 400 islas; Mariuá, río arriba, es mayor).",
+   "fondo": {
+    "kit": "bg_kit_w03",
+    "heroe": "bg_hero_anavilhanas",
+    "tipo": "pintado",
+    "hito": "Islas de selva sobre agua negra como espejo y playas blancas",
+    "cuidado": "—"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Agua del Río Negro 61",
+    "Matapi 63"
+   ],
+   "notas": "Desvío río Negro arriba (Novo Airão); la canoa vuelve a la confluencia en la pierna siguiente.",
+   "km_desde_el_mar_conf": "cálculo (confluencia + recorrido sin meandros: valor mínimo)",
+   "xy": [
+    0.61517,
+    0.57746
+   ],
+   "km_casa": 1599,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 7,
+   "id": "tefe",
+   "nombre": "Lago de Tefé",
+   "niveles": [
+    71,
+    80
+   ],
+   "llegada_al_ganar": 70,
+   "mundo": 3,
+   "mundo_id": "w03_manaos",
+   "tipo": "castillo",
+   "pais": "BR",
+   "rio": "lago de Tefé (río Tefé, junto al Solimões)",
+   "agua_del_sitio": "negra (el lago)",
+   "agua_base_mundo": "black",
+   "lat": -3.3539,
+   "lon": -64.7108,
+   "conf": "E",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 2183,
+   "temporada": "B (aguas bajas, LUT) — ojo: la LUT de aguas bajas no puede evocar la sequía de 2023 (asesor)",
+   "dato_del_nivel": {
+    "clave": "map.stop.tefe.dato_01",
+    "texto": "El río Tefé es de agua negra y, justo antes del Solimões, se abre en este lago.",
+    "etiqueta": "E",
+    "fuente": "wp_tefe_rio"
+   },
+   "fondo": {
+    "kit": "bg_kit_w03",
+    "heroe": "bg_hero_lago_tefe",
+    "tipo": "pintado",
+    "hito": "Lago de Tefé, de agua negra, con la orilla de la ciudad lejana y bosque; sin botos y sin orillas secas",
+    "cuidado": "Asesor obligatorio: en 2023 hubo una mortandad masiva de botos en este lago, con la sequía y el agua muy caliente [V icmbio_tefe_2023] (la cifra exacta no se pudo releer el 2026-10-13). Nada de aguas bajas, playas al descubierto ni botos (07 §8.1: sequías de 2023-2024)"
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 80 «Puerto de Manaos» [P] (proponer «Lago de Tefé»)",
+    "skin Cuia del Encuentro 80"
+   ],
+   "km_desde_el_mar_conf": "E",
+   "xy": [
+    0.58584,
+    0.46331
+   ],
+   "nota_dato": "Tarjeta: «Cerca de aquí, en Mamirauá, se cuentan los pirarucús de cada lago antes de pescar.» (82 car.) [E MR-F32]. Mamirauá es várzea de agua blanca, entre el Solimões, el Japurá y el Auati-Paraná, unos 150 km al noroeste [E wp_mamiraua, wp_varzea]: no es el lago negro del fondo.",
+   "km_casa": 2212,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 8,
+   "id": "leticia",
+   "nombre": "Leticia",
+   "niveles": [
+    81,
+    90
+   ],
+   "llegada_al_ganar": 80,
+   "mundo": 4,
+   "mundo_id": "w04_trapecio",
+   "tipo": "gran_parada",
+   "pais": "CO",
+   "rio": "Amazonas",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -4.215,
+   "lon": -69.9411,
+   "conf": "V",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 3145,
+   "temporada": "A (aguas altas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.country.co.dato_01",
+    "texto": "La Amazonia ocupa cerca del 42 % del territorio continental de Colombia.",
+    "etiqueta": "V",
+    "fuente": "MR-F78"
+   },
+   "nota_dato": "Primer país nuevo: placa «Colombia te da la bienvenida» y se iza la bandera de cortesía. Veto del mundo 4: máscaras ticuna; Cobra Grande.",
+   "fondo": {
+    "kit": "bg_kit_w04",
+    "heroe": "bg_hero_leticia",
+    "tipo": "pintado",
+    "hito": "El malecón de Leticia y el río ancho, con la orilla de Tabatinga al fondo",
+    "cuidado": "Sin la isla Santa Rosa ni islas con bandera; sin personas en el malecón"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "banner 81",
+    "copoazú 81",
+    "miquito 82",
+    "Liana 83"
+   ],
+   "pregunta_del_mundo": {
+    "texto": "¿Un río puede ser frontera?",
+    "se_responde_en": 130
+   },
+   "bandera": "CO",
+   "km_desde_el_mar_conf": "E",
+   "xy": [
+    0.5514,
+    0.30482
+   ],
+   "km_casa": 3174,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 9,
+   "id": "leticia_atardecer",
+   "nombre": "Leticia al atardecer",
+   "niveles": [
+    91,
+    100
+   ],
+   "llegada_al_ganar": 90,
+   "mundo": 4,
+   "mundo_id": "w04_trapecio",
+   "tipo": "variante",
+   "pais": "CO",
+   "rio": "Amazonas",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -4.215,
+   "lon": -69.9411,
+   "conf": "V",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 3145,
+   "temporada": "A (aguas altas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.stop.leticia.dato_02",
+    "texto": "Al atardecer llegan miles de pericos a dormir en los árboles del parque Santander.",
+    "etiqueta": "E",
+    "fuente": "MR-F35, CR-F103"
+   },
+   "fondo": {
+    "kit": "bg_kit_w04",
+    "heroe": "bg_hero_leticia + LUT de atardecer",
+    "tipo": "variante_lut",
+    "hito": "El mismo malecón al atardecer con la bandada de pericos (ambiente por código)",
+    "cuidado": "—"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Aguas turbias 100 (hito y estreno)",
+    "Canasta grande 100"
+   ],
+   "km_desde_el_mar_conf": "E",
+   "xy": [
+    0.5514,
+    0.30482
+   ],
+   "nota_dato": "[E]: un portal turístico y una noticia de prensa (también en §(e) como «loros de Leticia»).",
+   "km_casa": 3174,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 10,
+   "id": "amacayacu",
+   "nombre": "Amacayacu",
+   "niveles": [
+    101,
+    110
+   ],
+   "llegada_al_ganar": 100,
+   "mundo": 4,
+   "mundo_id": "w04_trapecio",
+   "tipo": "parada",
+   "pais": "CO",
+   "rio": "Amazonas",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -3.483,
+   "lon": -70.2,
+   "conf": "E",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 3185,
+   "temporada": "B (aguas bajas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.stop.amacayacu.dato_01",
+    "texto": "Amacayacu, de 1975, fue el primer parque nacional de la Amazonia colombiana.",
+    "etiqueta": "E",
+    "fuente": "parques_amacayacu, wp_amacayacu"
+   },
+   "fondo": {
+    "kit": "bg_kit_w04",
+    "heroe": "bg_hero_amacayacu",
+    "tipo": "pintado",
+    "hito": "Árboles con el pie en el agua de la várzea y el dosel alto",
+    "cuidado": "Sin comunidades"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Remolino 103"
+   ],
+   "notas": "Coordenada = centro del parque (al norte del río); la canoa se amarra en la orilla del Amazonas.",
+   "km_desde_el_mar_conf": "E (frente del parque en el río, entre Leticia y Puerto Nariño)",
+   "xy": [
+    0.58068,
+    0.29697
+   ],
+   "km_casa": 3214,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 11,
+   "id": "puerto_narino",
+   "nombre": "Puerto Nariño",
+   "niveles": [
+    111,
+    120
+   ],
+   "llegada_al_ganar": 110,
+   "mundo": 4,
+   "mundo_id": "w04_trapecio",
+   "tipo": "parada",
+   "pais": "CO",
+   "rio": "Loretoyacu y Amazonas",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -3.7806,
+   "lon": -70.3625,
+   "conf": "E",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 3225,
+   "temporada": "B (aguas bajas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.stop.puerto_narino.dato_01",
+    "texto": "En Puerto Nariño no hay carros ni motos: se camina entre casas de colores.",
+    "etiqueta": "E",
+    "fuente": "MR-F37, CR-F104"
+   },
+   "fondo": {
+    "kit": "bg_kit_w04",
+    "heroe": "bg_hero_puerto_narino",
+    "tipo": "pintado",
+    "hito": "La boca del Loretoyacu, la orilla verde y el pueblo lejano y sin rasgos",
+    "cuidado": "Asesor obligatorio (07 §8.1: ninguna aldea identificable)",
+    "alternativa": "Solo la boca del Loretoyacu, sin pueblo"
+   },
+   "asesor": true,
+   "coincidencias": [
+    "lulo 111"
+   ],
+   "km_desde_el_mar_conf": "E",
+   "xy": [
+    0.56878,
+    0.29205
+   ],
+   "rios_locales": [
+    "loretoyacu"
+   ],
+   "km_casa": 3254,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 12,
+   "id": "tarapoto",
+   "nombre": "Lagos de Tarapoto",
+   "niveles": [
+    121,
+    130
+   ],
+   "llegada_al_ganar": 120,
+   "mundo": 4,
+   "mundo_id": "w04_trapecio",
+   "tipo": "parada",
+   "pais": "CO",
+   "rio": "lagos de la várzea del Amazonas",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -3.7764,
+   "lon": -70.5397,
+   "conf": "V",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 3245,
+   "temporada": "A (aguas altas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.stop.tarapoto.dato_01",
+    "texto": "Estos lagos son la «guardería» de los delfines de río: aquí crían a sus bebés.",
+    "etiqueta": "V",
+    "fuente": "MR-F38"
+   },
+   "nota_dato": "MinAmbiente: «funciona como una “guardería” para los delfines» y «es un lugar clave para su crianza» (leída el 2026-10-12). No dice que «enseñen a pescar» ni distingue delfines rosados y grises: esa versión quedaría [NV] y no se publica. Otro dato: primer humedal Ramsar de la Amazonia colombiana (sitio 2336, 2017) [V ramsar_tarapoto, CR-F105].",
+   "fondo": {
+    "kit": "bg_kit_w04",
+    "heroe": "bg_hero_tarapoto",
+    "tipo": "pintado",
+    "hito": "Lago quieto con lomos de delfín rosado y gris y palmeras",
+    "cuidado": "Victorias regias lejos del borde del panel (no confundir con la mecánica Hoja)"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Barro 123",
+    "Rosa salta con sus parientes"
+   ],
+   "km_desde_el_mar_conf": "cálculo (confluencia + recorrido sin meandros: valor mínimo)",
+   "xy": [
+    0.56894,
+    0.28668
+   ],
+   "rios_locales": [
+    "loretoyacu"
+   ],
+   "km_casa": 3274,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 13,
+   "id": "rio_frontera",
+   "nombre": "El río frontera (boca del Atacuari)",
+   "niveles": [
+    131,
+    140
+   ],
+   "llegada_al_ganar": 130,
+   "mundo": 4,
+   "mundo_id": "w04_trapecio",
+   "tipo": "castillo",
+   "pais": "CO/PE",
+   "rio": "Amazonas",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -3.8398,
+   "lon": -70.619,
+   "conf": "E",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 3268,
+   "temporada": "A (aguas altas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.stop.rio_frontera.dato_01",
+    "texto": "Sí: aquí el Amazonas hace de frontera, con Colombia en una orilla y el Perú en la otra.",
+    "etiqueta": "E",
+    "fuente": "trapecio"
+   },
+   "nota_dato": "Responde la pregunta del mundo 4.",
+   "fondo": {
+    "kit": "bg_kit_w04",
+    "heroe": "kit:rio_ancho_con_baliza",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Amazonas ancho entre dos orillas de várzea, con una baliza de navegación (piezas del kit)",
+    "cuidado": "Ninguna bandera en el agua ni en islas. Se reconoce por el rótulo «El río frontera · Colombia y Perú», no por un hito"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "hito 140 «Remolinos del Trapecio»",
+    "skin Totuma 140"
+   ],
+   "km_desde_el_mar_conf": "E",
+   "xy": [
+    0.56641,
+    0.28427
+   ],
+   "rios_locales": [
+    "atacuari"
+   ],
+   "km_casa": 3297,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 14,
+   "id": "iquitos",
+   "nombre": "Iquitos",
+   "niveles": [
+    141,
+    150
+   ],
+   "llegada_al_ganar": 140,
+   "mundo": 5,
+   "mundo_id": "w05_loreto",
+   "tipo": "gran_parada",
+   "pais": "PE",
+   "rio": "Amazonas e Itaya",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -3.7494,
+   "lon": -73.2443,
+   "conf": "V",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 3700,
+   "temporada": "A (aguas altas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.country.pe.dato_01",
+    "texto": "El Perú es el segundo país de América Latina con más bosque tropical, después de Brasil.",
+    "etiqueta": "V",
+    "fuente": "MR-F77"
+   },
+   "nota_dato": "Entrada al Perú: placa «El Perú te da la bienvenida» y bandera de cortesía. Texto ajustado a la fuente: MINAM habla de «bosques tropicales» de América Latina, no de bosque amazónico. Vetos del mundo 5 (§(e)): Pasaje Paquito; caucho y Putumayo; mito de Eiffel; karuara; Yacumama; Belén como nombre de nivel.",
+   "fondo": {
+    "kit": "bg_kit_w05",
+    "heroe": "bg_hero_iquitos",
+    "tipo": "pintado",
+    "hito": "El malecón con lanchas y los techos de la ciudad",
+    "cuidado": "Motocarros solo lejos y sin personas"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "banner 141",
+    "huito 141",
+    "miquito 142",
+    "Lluvia 143"
+   ],
+   "pregunta_del_mundo": {
+    "texto": "¿Dónde empieza el Amazonas?",
+    "se_responde_en": 170
+   },
+   "bandera": "PE",
+   "km_desde_el_mar_conf": "E",
+   "xy": [
+    0.57002,
+    0.20472
+   ],
+   "km_casa": 3729,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 15,
+   "id": "itaya",
+   "nombre": "Río Itaya (Iquitos)",
+   "niveles": [
+    151,
+    160
+   ],
+   "llegada_al_ganar": 150,
+   "mundo": 5,
+   "mundo_id": "w05_loreto",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Itaya",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -3.7643,
+   "lon": -73.2505,
+   "conf": "E",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 3702,
+   "temporada": "A (aguas altas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.stop.iquitos.dato_01",
+    "texto": "Ninguna carretera une Iquitos con el resto del país: se llega en avión o en barco.",
+    "etiqueta": "V",
+    "fuente": "MR-F39"
+   },
+   "fondo": {
+    "kit": "bg_kit_w05",
+    "heroe": "bg_hero_itaya_creciente",
+    "tipo": "pintado",
+    "hito": "Casas que flotan sobre balsas en la creciente del Itaya (canon 07 §2.1), sin rasgos de barrio",
+    "cuidado": "Asesor obligatorio: sin «Venecia», sin pobreza pintoresca y sin personas (07 §8.1)",
+    "alternativa": "bg_hero_casa_de_fierro (arquitectura pública), sin el mito de Eiffel"
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 160 «Creciente del Itaya»"
+   ],
+   "km_desde_el_mar_conf": "E",
+   "xy": [
+    0.56943,
+    0.20453
+   ],
+   "rios_locales": [
+    "itaya"
+   ],
+   "nota_dato": "Otro dato (§(e)): «En la creciente, el agua sube 5-6 m y hay casas que flotan con ella.» (68 car.) [E CR-F28]. «Belén» solo puede salir dentro de la tarjeta, si el asesor lo aprueba: nunca como nombre de parada, rótulo ni nivel (07 §8.1; §(e), vetos del mundo 5).",
+   "km_casa": 3731,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 16,
+   "id": "allpahuayo_mishana",
+   "nombre": "Allpahuayo-Mishana",
+   "niveles": [
+    161,
+    170
+   ],
+   "llegada_al_ganar": 160,
+   "mundo": 5,
+   "mundo_id": "w05_loreto",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Nanay",
+   "agua_del_sitio": "negra (Nanay)",
+   "agua_base_mundo": "white",
+   "lat": -3.928,
+   "lon": -73.556,
+   "conf": "E",
+   "ancla_rio": "nanay",
+   "km_desde_el_mar": 3735,
+   "temporada": "B (aguas bajas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.stop.allpahuayo.dato_01",
+    "texto": "En esta arena blanca vive un ave que solo existe en esta parte del Perú.",
+    "etiqueta": "E",
+    "fuente": "wp_antbird, actualidad_allpahuayo, wp_gnatcatcher"
+   },
+   "fondo": {
+    "kit": "bg_kit_w05",
+    "heroe": "bg_hero_allpahuayo",
+    "tipo": "pintado",
+    "hito": "Varillal de troncos finos sobre arena blanca; la quebrada negra en segundo plano (primer plano: agua blanca del mundo)",
+    "cuidado": "Sin minería de arena ni de oro"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Brote 163"
+   ],
+   "notas": "Desvío por el Nanay; la reserva queda a 23 km al suroeste de Iquitos [E wp_allpahuayo].",
+   "km_desde_el_mar_conf": "cálculo (confluencia + recorrido sin meandros: valor mínimo)",
+   "xy": [
+    0.56288,
+    0.19527
+   ],
+   "nota_dato": "El texto vale para las dos aves de esta arena blanca que solo se conocen de Loreto: el hormiguero de Allpahuayo (Percnostola arenarum), que vive en las cuencas del Nanay y del Itaya y en el Morona, no solo en la reserva [E wp_antbird], y la perlita de Iquitos (Polioptila clementsi), conocida solo de la reserva, cuya condición de especie se discute (BirdLife no la separa) [E wp_gnatcatcher, actualidad_allpahuayo]. Son dos especies distintas: la tarjeta nombra una sola (recomendado: el hormiguero de Allpahuayo, de especie indiscutida). Fuentes releídas el 2026-10-13.",
+   "rios_locales": [
+    "nanay"
+   ],
+   "km_casa": 3764,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 17,
+   "id": "nauta",
+   "nombre": "Nauta: nace el nombre",
+   "niveles": [
+    171,
+    180
+   ],
+   "llegada_al_ganar": 170,
+   "mundo": 5,
+   "mundo_id": "w05_loreto",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Marañón y Ucayali",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -4.4454,
+   "lon": -73.4532,
+   "conf": "V",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 3837,
+   "temporada": "B (aguas bajas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.stop.nauta.dato_01",
+    "texto": "Aquí el Marañón y el Ucayali forman el Amazonas. ¡Pero su agua viene de más arriba!",
+    "etiqueta": "V",
+    "fuente": "MR-F42"
+   },
+   "nota_dato": "Responde la pregunta del mundo 5. Clímax: todo el río que se llama Amazonas queda lleno.",
+   "fondo": {
+    "kit": "bg_kit_w05",
+    "heroe": "kit:orilla_de_nauta",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el río muy ancho con Nauta lejana (piezas del kit). La confluencia en Y es una forma vista desde arriba: va en la tarjeta y en el Mapa, no en el panorama lateral",
+    "cuidado": "Se reconoce por el rótulo «Nauta · Perú». No inventar dos colores: las dos aguas son blancas",
+    "alternativa": "Héroe pintado desde un punto alto real de Nauta, si se encuentra uno con fuente [NV]"
+   },
+   "asesor": false,
+   "coincidencias": [],
+   "km_desde_el_mar_conf": "E",
+   "xy": [
+    0.54218,
+    0.19839
+   ],
+   "km_casa": 3866,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 18,
+   "id": "pacaya_samiria",
+   "nombre": "Pacaya-Samiria",
+   "niveles": [
+    181,
+    190
+   ],
+   "llegada_al_ganar": 180,
+   "mundo": 5,
+   "mundo_id": "w05_loreto",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "cochas entre el Marañón y el Ucayali",
+   "agua_del_sitio": "negra (Samiria)",
+   "agua_base_mundo": "white",
+   "lat": -5.25,
+   "lon": -74.6667,
+   "conf": "E",
+   "ancla_rio": "maranon",
+   "km_desde_el_mar": 3995,
+   "temporada": "B (aguas bajas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.stop.pacaya_samiria.dato_01",
+    "texto": "Le dicen «la selva de los espejos»: su agua oscura y quieta refleja el bosque.",
+    "etiqueta": "E",
+    "fuente": "actualidad_pacaya_48, mongabay_pacaya"
+   },
+   "fondo": {
+    "kit": "bg_kit_w05",
+    "heroe": "bg_hero_pacaya_samiria",
+    "tipo": "pintado",
+    "hito": "Primer plano: el agua blanca del mundo 5 (§10.1). Segundo plano: la cocha de agua negra como espejo, con palmeras de aguaje reflejadas",
+    "cuidado": "Sin comunidades de la reserva"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Piraña 183",
+    "hito 180"
+   ],
+   "notas": "Coordenada = centro aproximado de la reserva; la canoa entra por la boca del Samiria, en el Marañón.",
+   "km_desde_el_mar_conf": "cálculo (confluencia + recorrido sin meandros: valor mínimo)",
+   "xy": [
+    0.51,
+    0.16162
+   ],
+   "rios_locales": [
+    "samiria",
+    "pacaya"
+   ],
+   "nota_dato": "El espejo viene de las aguas negras del Samiria [E actualidad_pacaya_48; mongabay_pacaya]. Otro dato (§(e)): el programa de tortugas (charapa y taricaya) de la reserva, con crédito a las comunidades [V CR-F14]; «charapa» solo con contexto (07 §8.1).",
+   "km_casa": 4024,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  },
+  {
+   "k": 19,
+   "id": "pacaya_alba",
+   "nombre": "Pacaya-Samiria al alba",
+   "niveles": [
+    191,
+    200
+   ],
+   "llegada_al_ganar": 190,
+   "mundo": 5,
+   "mundo_id": "w05_loreto",
+   "tipo": "castillo",
+   "pais": "PE",
+   "rio": "cochas entre el Marañón y el Ucayali",
+   "agua_del_sitio": "negra (Samiria)",
+   "agua_base_mundo": "white",
+   "lat": -5.25,
+   "lon": -74.6667,
+   "conf": "E",
+   "ancla_rio": "maranon",
+   "km_desde_el_mar": 3995,
+   "temporada": "B (aguas bajas, LUT)",
+   "dato_del_nivel": {
+    "clave": "map.stop.pacaya_samiria.dato_02",
+    "texto": "Pacaya-Samiria protege unos 2 millones de hectáreas: es el mayor humedal de la Amazonia.",
+    "etiqueta": "E",
+    "fuente": "MR-F43"
+   },
+   "nota_dato": "Texto ajustado a la fuente (MR-F43 no da la parte inundable). En el 200, el Dato del río es map.myth.source [E wp_source, natgeo2014]: el Amazonas no tiene una sola naciente y la ciencia aún discute cuál es la más lejana. La pregunta que se plantea en el 200 es la del mundo 6 (propuesta §2.1).",
+   "fondo": {
+    "kit": "bg_kit_w05",
+    "heroe": "bg_hero_pacaya_samiria + LUT de alba",
+    "tipo": "variante_lut",
+    "hito": "La misma cocha al alba, con bruma baja. La hora base de Loreto ya es el atardecer (07 §2.1), así que la variante es el alba",
+    "cuidado": "Sin playas al descubierto ni barro agrietado (riesgo R3)"
+   },
+   "asesor": false,
+   "coincidencias": [
+    "hito 200 «Vaciante de Pacaya-Samiria»",
+    "Canasta grande 200",
+    "skin Huingo (1.1)",
+    "fin de los mundos 1-5; fin de la 1.0 solo si el dueño elige Q14-B"
+   ],
+   "km_desde_el_mar_conf": "cálculo (confluencia + recorrido sin meandros: valor mínimo)",
+   "xy": [
+    0.51,
+    0.16162
+   ],
+   "rios_locales": [
+    "samiria",
+    "pacaya"
+   ],
+   "km_casa": 4024,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
+  }
+ ],
+ "paradas_201_1000": [
+  {
+   "mundo": 6,
+   "mundo_id": "w06_oriente",
+   "nombre": "Oriente",
+   "niveles": [
+    201,
+    300
+   ],
+   "paradas": 10,
+   "viaje_de_entrada": "Pacaya-Samiria → Nauta → Iquitos → boca del Napo → Napo arriba",
+   "banderas_de_cortesia": [
+    "EC (boca del Aguarico)"
+   ],
+   "pregunta_del_mundo": "¿Cuántas especies de árbol caben en una hectárea? → más de 655 en una hectárea de Yasuní [V bass2010_yasuni]",
+   "sitios": [
+    {
+     "nombre": "Napo peruano (Mazán, Santa Clotilde)",
+     "paradas": 2,
+     "lat": -2.4876,
+     "lon": -73.6797,
+     "conf": "E",
+     "xy": [
+      0.6205,
+      0.19152
+     ]
+    },
+    {
+     "nombre": "Nuevo Rocafuerte, frontera",
+     "paradas": 1,
+     "lat": -0.9317,
+     "lon": -75.3875,
+     "conf": "E",
+     "xy": [
+      0.68273,
+      0.13977
+     ]
+    },
+    {
+     "nombre": "Yasuní",
+     "paradas": 2,
+     "lat": -1.0,
+     "lon": -76.0,
+     "conf": "E",
+     "nota": "Sin petróleo, sin la consulta de 2023 ni pueblos aislados",
+     "xy": [
+      0.68,
+      0.12121
+     ]
+    },
+    {
+     "nombre": "Lagunas de Cuyabeno (desvío por el Aguarico)",
+     "paradas": 2,
+     "lat": -0.1167,
+     "lon": -75.8333,
+     "conf": "E",
+     "xy": [
+      0.71533,
+      0.12626
+     ]
+    },
+    {
+     "nombre": "El Coca",
+     "paradas": 2,
+     "lat": -0.4625,
+     "lon": -76.9842,
+     "conf": "E",
+     "xy": [
+      0.7015,
+      0.09139
+     ]
+    },
+    {
+     "nombre": "Napo alto y Misahuallí",
+     "paradas": 1,
+     "lat": -1.0336,
+     "lon": -77.6686,
+     "conf": "E",
+     "xy": [
+      0.67866,
+      0.07065
+     ]
+    }
+   ],
+   "cuidado": "Sin petróleo ni pueblos en aislamiento; nombres kichwa solo con hablante",
+   "pregunta_se_plantea_en": 200
+  },
+  {
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "nombre": "Madre de Dios",
+   "niveles": [
+    301,
+    420
+   ],
+   "paradas": 12,
+   "viaje_de_entrada": "Napo abajo → Amazonas (repaso de lo ya lleno) → Madeira (rápidos de Teotônio) → Villa Bella → Beni (Cachuela Esperanza, Riberalta) → Madre de Dios → Puerto Heath",
+   "banderas_de_cortesia": [
+    "PE y BR de paso por el Amazonas",
+    "BO en Villa Bella (300): la parada de Puerto Heath está en Bolivia",
+    "PE en Puerto Maldonado (310)"
+   ],
+   "pregunta_del_mundo": "¿Por qué los guacamayos comen arcilla? → la hipótesis más apoyada: buscan la sal que les falta [E npr2017_collpas]",
+   "sitios": [
+    {
+     "nombre": "Madre de Dios bajo (Puerto Heath, Bolivia)",
+     "paradas": 1,
+     "lat": -12.5026,
+     "lon": -68.6526,
+     "conf": "V",
+     "xy": [
+      0.2199,
+      0.34386
+     ],
+     "pais": "BO",
+     "nota": "Puerto Heath está en el departamento de La Paz (Bolivia), en la boca del Heath [E wp_puerto_heath]"
+    },
+    {
+     "nombre": "Puerto Maldonado",
+     "paradas": 2,
+     "lat": -12.5971,
+     "lon": -69.1665,
+     "conf": "V",
+     "xy": [
+      0.21612,
+      0.32829
+     ],
+     "pais": "PE"
+    },
+    {
+     "nombre": "Lago Sandoval",
+     "paradas": 2,
+     "lat": -12.6,
+     "lon": -69.0,
+     "conf": "E",
+     "xy": [
+      0.216,
+      0.33333
+     ]
+    },
+    {
+     "nombre": "Collpa del Tambopata",
+     "paradas": 3,
+     "nota": "Coordenadas por fijar [NV]"
+    },
+    {
+     "nombre": "Boca Manu",
+     "paradas": 2,
+     "lat": -12.2715,
+     "lon": -70.9328,
+     "conf": "V",
+     "xy": [
+      0.22914,
+      0.27476
+     ]
+    },
+    {
+     "nombre": "Manu alto",
+     "paradas": 2,
+     "nota": "Coordenadas por fijar [NV]"
+    }
+   ],
+   "cuidado": "Sin minería; el istmo de Fitzcarrald no es ruta (era del caucho); tinaja en el 323; Rosa y los rápidos de Teotônio: ver la propuesta §6.1 (Q3 y asesor)",
+   "puntos_de_paso_del_viaje": [
+    {
+     "lat": -10.3821,
+     "lon": -65.3903,
+     "nombre": "Villa Bella: Beni + Mamoré = Madeira (Bolivia)",
+     "conf": "V",
+     "xy": [
+      0.30472,
+      0.44272
+     ]
+    },
+    {
+     "lat": -10.5367,
+     "lon": -65.5972,
+     "nombre": "Cachuela Esperanza (Beni, aguas abajo de Riberalta)",
+     "conf": "E",
+     "xy": [
+      0.29853,
+      0.43645
+     ]
+    },
+    {
+     "lat": -11.005,
+     "lon": -66.0661,
+     "nombre": "Riberalta",
+     "conf": "V",
+     "xy": [
+      0.2798,
+      0.42224
+     ]
+    }
+   ]
+  },
+  {
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "nombre": "Madidi",
+   "niveles": [
+    421,
+    560
+   ],
+   "paradas": 14,
+   "viaje_de_entrada": "Madre de Dios abajo → Riberalta → Beni arriba; después Beni abajo → Mamoré arriba",
+   "banderas_de_cortesia": [
+    "BO (Riberalta)"
+   ],
+   "pregunta_del_mundo": "¿Cómo cabe tanta vida en un solo parque? → va de la selva a más de 5.700 m [E wp_madidi]",
+   "sitios": [
+    {
+     "nombre": "Riberalta y la castaña",
+     "paradas": 3,
+     "lat": -11.005,
+     "lon": -66.0661,
+     "conf": "V",
+     "xy": [
+      0.2798,
+      0.42224
+     ],
+     "nota": "Cachuela Esperanza, aguas abajo de Riberalta, pasa a punto de paso (viaje del 300 y Beni abajo)"
+    },
+    {
+     "nombre": "Rurrenabaque",
+     "paradas": 2,
+     "lat": -14.4422,
+     "lon": -67.5283,
+     "conf": "E",
+     "xy": [
+      0.14231,
+      0.37793
+     ]
+    },
+    {
+     "nombre": "Madidi",
+     "paradas": 3,
+     "lat": -14.5941,
+     "lon": -67.5397,
+     "conf": "E",
+     "nota": "Boca del Tuichi",
+     "xy": [
+      0.13624,
+      0.37758
+     ]
+    },
+    {
+     "nombre": "Guayaramerín",
+     "paradas": 1,
+     "lat": -10.8267,
+     "lon": -65.3567,
+     "conf": "E",
+     "xy": [
+      0.28693,
+      0.44374
+     ]
+    },
+    {
+     "nombre": "Iténez y Noel Kempff",
+     "paradas": 2,
+     "lat": -14.5,
+     "lon": -60.8,
+     "conf": "E",
+     "xy": [
+      0.14,
+      0.58182
+     ]
+    },
+    {
+     "nombre": "Trinidad y Llanos de Moxos",
+     "paradas": 3,
+     "lat": -14.6808,
+     "lon": -65.0156,
+     "conf": "E",
+     "nota": "Casarabe solo con el asesor",
+     "xy": [
+      0.13277,
+      0.45407
+     ]
+    }
+   ],
+   "cuidado": "Bandera de cortesía: la tricolor, la bandera nacional de uso náutico [P]; la wiphala también es símbolo del Estado (Constitución de 2009, art. 6.II) [E lexivox_ds241]: la elección pasa por el abogado y el asesor. Casarabe con el asesor"
+  },
+  {
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "nombre": "Ucayali",
+   "niveles": [
+    561,
+    700
+   ],
+   "paradas": 14,
+   "viaje_de_entrada": "Mamoré → Madeira → Amazonas (repaso) → Nauta → Ucayali arriba",
+   "banderas_de_cortesia": [
+    "PE (Nauta)"
+   ],
+   "pregunta_del_mundo": "¿Por qué el río dibuja tantas curvas? → Yarinacocha fue una curva del Ucayali [E scielo_yarinacocha]",
+   "sitios": [
+    {
+     "nombre": "Jenaro Herrera",
+     "paradas": 1,
+     "lat": -4.9058,
+     "lon": -73.6677,
+     "conf": "E",
+     "xy": [
+      0.52377,
+      0.19189
+     ]
+    },
+    {
+     "nombre": "Requena",
+     "paradas": 2,
+     "lat": -5.0569,
+     "lon": -73.8515,
+     "conf": "E",
+     "xy": [
+      0.51772,
+      0.18632
+     ]
+    },
+    {
+     "nombre": "Contamana",
+     "paradas": 2,
+     "lat": -7.3493,
+     "lon": -75.0086,
+     "conf": "E",
+     "xy": [
+      0.42603,
+      0.15125
+     ]
+    },
+    {
+     "nombre": "Pucallpa y Yarinacocha",
+     "paradas": 3,
+     "lat": -8.3833,
+     "lon": -74.55,
+     "conf": "V",
+     "nota": "Comunidades shipibo-konibo: no como atracción; asesor",
+     "xy": [
+      0.38467,
+      0.16515
+     ]
+    },
+    {
+     "nombre": "Ucayali medio (Bolognesi)",
+     "paradas": 2,
+     "lat": -10.0644,
+     "lon": -74.005,
+     "conf": "E",
+     "xy": [
+      0.31742,
+      0.18167
+     ]
+    },
+    {
+     "nombre": "Atalaya: nace el Ucayali",
+     "paradas": 2,
+     "lat": -10.7069,
+     "lon": -73.7608,
+     "conf": "V",
+     "xy": [
+      0.29172,
+      0.18907
+     ]
+    },
+    {
+     "nombre": "Tambo bajo (Puerto Prado)",
+     "paradas": 2,
+     "lat": -11.1608,
+     "lon": -74.2467,
+     "conf": "V",
+     "xy": [
+      0.27357,
+      0.17434
+     ]
+    }
+   ],
+   "cuidado": "Shanay-Timpishka: el canon la pone como paisaje con vapor (glosario §8; 07 §2.1). Que sea un lugar sagrado no está comprobado [NV]: la fuente leída cuenta que los chamanes locales atribuyen el agua hirviente a la Yacumama, que §(e) veta, y que a su orilla hay comunidades (Mayantuyacu, Santuario Huishtín) [E wp_shanay]. Pregunta para el asesor: ¿parada, solo vapor lejano en el fondo (alternativa canónica) o nada? Comunidades shipibo-konibo con el asesor; el Pongo de Manseriche es del Marañón: mirador"
+  },
+  {
+   "mundo": 10,
+   "mundo_id": "w10_alto_negro",
+   "nombre": "Alto Negro",
+   "niveles": [
+    701,
+    820
+   ],
+   "paradas": 12,
+   "viaje_de_entrada": "Ucayali abajo → Amazonas → Encuentro → Negro arriba (Anavilhanas, ya lleno)",
+   "banderas_de_cortesia": [
+    "BR (Negro)",
+    "VE en San Carlos de Río Negro (780); en ese tramo el Negro también es frontera con Colombia [E]"
+   ],
+   "pregunta_del_mundo": "¿Puede un río unir dos cuencas? → el Casiquiare [E wp_casiquiare]",
+   "sitios": [
+    {
+     "nombre": "Parque Nacional do Jaú",
+     "paradas": 2,
+     "lat": -1.9036,
+     "lon": -61.4272,
+     "conf": "E",
+     "nota": "Coordenada de la boca del Jaú",
+     "xy": [
+      0.64386,
+      0.56281
+     ]
+    },
+    {
+     "nombre": "Barcelos y Mariuá",
+     "paradas": 2,
+     "lat": -0.975,
+     "lon": -62.9239,
+     "conf": "E",
+     "xy": [
+      0.681,
+      0.51746
+     ]
+    },
+    {
+     "nombre": "Santa Isabel do Rio Negro",
+     "paradas": 1,
+     "lat": -0.4139,
+     "lon": -65.0189,
+     "conf": "E",
+     "xy": [
+      0.70344,
+      0.45397
+     ]
+    },
+    {
+     "nombre": "São Gabriel da Cachoeira",
+     "paradas": 2,
+     "lat": -0.13,
+     "lon": -67.0889,
+     "conf": "E",
+     "nota": "Asesor obligatorio",
+     "xy": [
+      0.7148,
+      0.39125
+     ]
+    },
+    {
+     "nombre": "Cucuí (trifinio)",
+     "paradas": 1,
+     "lat": 1.2,
+     "lon": -66.8333,
+     "conf": "E",
+     "xy": [
+      0.768,
+      0.39899
+     ]
+    },
+    {
+     "nombre": "San Carlos de Río Negro",
+     "paradas": 2,
+     "lat": 1.92,
+     "lon": -67.0611,
+     "conf": "E",
+     "xy": [
+      0.7968,
+      0.39209
+     ]
+    },
+    {
+     "nombre": "El Casiquiare",
+     "paradas": 2,
+     "lat": 2.0014,
+     "lon": -67.0983,
+     "conf": "V",
+     "xy": [
+      0.80006,
+      0.39096
+     ]
+    }
+   ],
+   "cuidado": "Neblina solo como silueta y sin su sentido yanomami"
+  },
+  {
+   "mundo": 11,
+   "mundo_id": "w11_escudo_guayana",
+   "nombre": "Escudo de Guayana",
+   "niveles": [
+    821,
+    920
+   ],
+   "paradas": 10,
+   "viaje_de_entrada": "Negro abajo → Branco arriba → Boa Vista → Takutu",
+   "banderas_de_cortesia": [
+    "GY en Bonfim y Lethem (850): revisión del asesor y del abogado"
+   ],
+   "pregunta_del_mundo": "¿Toda esta selva va al Amazonas? → no: algunos ríos van directo al mar [E]",
+   "sitios": [
+    {
+     "nombre": "Caracaraí",
+     "paradas": 1,
+     "lat": 1.8158,
+     "lon": -61.1278,
+     "conf": "E",
+     "xy": [
+      0.79263,
+      0.57188
+     ]
+    },
+    {
+     "nombre": "Boa Vista",
+     "paradas": 2,
+     "lat": 2.82,
+     "lon": -60.6719,
+     "conf": "E",
+     "xy": [
+      0.8328,
+      0.5857
+     ]
+    },
+    {
+     "nombre": "Bonfim y Lethem (Takutu)",
+     "paradas": 2,
+     "lat": 3.3833,
+     "lon": -59.8,
+     "conf": "E",
+     "xy": [
+      0.85533,
+      0.61212
+     ]
+    },
+    {
+     "nombre": "Sabana del Rupununi",
+     "paradas": 2,
+     "lat": 3.4,
+     "lon": -59.8,
+     "conf": "E",
+     "nota": "Zona que reclama Venezuela (Esequibo): sin líneas ni bandera en tierra",
+     "xy": [
+      0.856,
+      0.61212
+     ]
+    },
+    {
+     "nombre": "Recuadro «Amazonia fuera de la cuenca»: Voltzberg (Surinam)",
+     "paradas": 2,
+     "lat": 4.7,
+     "lon": -56.2,
+     "conf": "E",
+     "nota": "Sin ruta de canoa",
+     "xy": [
+      0.908,
+      0.72121
+     ]
+    },
+    {
+     "nombre": "Recuadro: Saül (Guayana Francesa)",
+     "paradas": 1,
+     "nota": "Sin bandera propia; coordenadas por fijar [NV]"
+    }
+   ],
+   "cuidado": "Esequibo y Guayana Francesa: sin fronteras dibujadas",
+   "recuadro_fuera_de_la_cuenca": "891-920 (Voltzberg y Saül), sin canoa ni bandera"
+  },
+  {
+   "mundo": 12,
+   "mundo_id": "w12_orinoco",
+   "nombre": "Invitados del Orinoco",
+   "niveles": [
+    921,
+    960
+   ],
+   "paradas": 4,
+   "viaje_de_entrada": "Takutu → Branco → Negro → Casiquiare → Orinoco (recuadro)",
+   "banderas_de_cortesia": [
+    "VE",
+    "Colombia (Caño Cristales) va en recuadro, sin canoa ni bandera"
+   ],
+   "pregunta_del_mundo": "¿Este río también es del Amazonas? → no, es del Orinoco [E wp_orinoco]",
+   "sitios": [
+    {
+     "nombre": "Orinoco alto (Tamatama)",
+     "paradas": 1,
+     "lat": 3.1385,
+     "lon": -65.8785,
+     "conf": "V",
+     "xy": [
+      0.84554,
+      0.42792
+     ]
+    },
+    {
+     "nombre": "Puerto Ayacucho",
+     "paradas": 1,
+     "lat": 5.6631,
+     "lon": -67.6264,
+     "conf": "E",
+     "xy": [
+      0.94652,
+      0.37496
+     ]
+    },
+    {
+     "nombre": "Caño Cristales (Colombia, recuadro)",
+     "paradas": 1,
+     "lat": 2.2642,
+     "lon": -73.7944,
+     "conf": "E",
+     "xy": [
+      0.81057,
+      0.18805
+     ]
+    },
+    {
+     "nombre": "Salto Ángel (recuadro)",
+     "paradas": 1,
+     "lat": 5.97,
+     "lon": -62.54,
+     "conf": "E",
+     "nota": "Coordenada aproximada de datos.md [E]",
+     "xy": [
+      0.9588,
+      0.52909
+     ]
+    }
+   ],
+   "cuidado": "Rótulo «vecinos del Orinoco» siempre (07 §2.2, regla 3)",
+   "paises": [
+    "VE",
+    "CO"
+   ]
+  },
+  {
+   "mundo": 13,
+   "mundo_id": "w13_origen",
+   "nombre": "El origen",
+   "niveles": [
+    961,
+    1000
+   ],
+   "paradas": 4,
+   "viaje_de_entrada": "Gran viaje por agua ya llena: Orinoco → Casiquiare → Negro → Amazonas → Nauta → Ucayali → Tambo → Ene → Apurímac. Rosa se despide al pie de los Andes",
+   "banderas_de_cortesia": [
+    "PE"
+   ],
+   "pregunta_del_mundo": "¿De dónde sale tanta agua? → de la lluvia de toda la selva; aquí arriba solo nace un hilo [E mit_ciclo_agua, wp_source]",
+   "sitios": [
+    {
+     "nombre": "Cañón del Apurímac (puente Cunyac)",
+     "paradas": 1,
+     "lat": -13.5561,
+     "lon": -72.548,
+     "conf": "E",
+     "xy": [
+      0.17776,
+      0.22582
+     ]
+    },
+    {
+     "nombre": "Puna alta del Apurímac",
+     "paradas": 1,
+     "lat": -14.708,
+     "lon": -71.447,
+     "conf": "E",
+     "xy": [
+      0.13168,
+      0.25918
+     ]
+    },
+    {
+     "nombre": "Quebradas Apacheta y Carhuasanta",
+     "paradas": 1,
+     "lat": -15.512,
+     "lon": -71.702,
+     "conf": "E",
+     "xy": [
+      0.09952,
+      0.25145
+     ]
+    },
+    {
+     "nombre": "Nevado Mismi (meta del 1.000): una de las nacientes del Amazonas",
+     "paradas": 1,
+     "lat": -15.5253,
+     "lon": -71.6908,
+     "conf": "V",
+     "xy": [
+      0.09899,
+      0.25179
+     ],
+     "nota": "La quebrada Carhuasanta, que baja del Mismi, es la naciente más lejana con agua todo el año («the most distant source of uninterrupted flow»); el Mantaro es la más lejana según Contos y Tripcevich (2014), pero se corta varios meses al año [E wp_source, natgeo2014]. La Laguna Bohemia está a 5.148 m [E wp_source]"
+    }
+   ],
+   "cuidado": "Sin Choquequirao (ruinas, direccion-visual-v2 §7) y Q'eswachaka solo con el asesor (ritual). Si el dueño elige «Marañón alto», ver la nota de la propuesta §5.5. Sin «consenso» ni «aquí nace el agua»: el Amazonas no tiene una sola naciente [E wp_source]"
+  }
+ ],
+ "puntos_de_paso_1_200": [
+  {
+   "lat": -1.6804,
+   "lon": -50.4791,
+   "nombre": "Breves (furos)",
+   "conf": "E",
+   "xy": [
+    0.65278,
+    0.89457
+   ]
+  },
+  {
+   "lat": -1.405,
+   "lon": -51.64,
+   "nombre": "Gurupá",
+   "conf": "E",
+   "xy": [
+    0.6638,
+    0.85939
+   ]
+  },
+  {
+   "lat": -1.5242,
+   "lon": -51.8671,
+   "nombre": "boca del Xingu",
+   "conf": "E",
+   "xy": [
+    0.65903,
+    0.85251
+   ]
+  },
+  {
+   "lat": -2.0078,
+   "lon": -54.0689,
+   "nombre": "Monte Alegre",
+   "conf": "E",
+   "xy": [
+    0.63969,
+    0.78579
+   ]
+  },
+  {
+   "lat": -1.9178,
+   "lon": -55.5178,
+   "nombre": "Óbidos",
+   "conf": "E",
+   "dato": "map.stop.obidos.dato_01 [V MR-F21]: el río se aprieta a unos 2 km",
+   "xy": [
+    0.64329,
+    0.74188
+   ]
+  },
+  {
+   "lat": -2.6278,
+   "lon": -56.7358,
+   "nombre": "Parintins",
+   "conf": "E",
+   "xy": [
+    0.61489,
+    0.70498
+   ]
+  },
+  {
+   "lat": -3.1428,
+   "lon": -58.4439,
+   "nombre": "Itacoatiara",
+   "conf": "E",
+   "xy": [
+    0.59429,
+    0.65322
+   ]
+  },
+  {
+   "lat": -3.3685,
+   "lon": -58.7509,
+   "nombre": "boca del Madeira",
+   "conf": "E",
+   "xy": [
+    0.58526,
+    0.64391
+   ]
+  },
+  {
+   "lat": -3.6931,
+   "lon": -61.47,
+   "nombre": "boca del Purus",
+   "conf": "E",
+   "xy": [
+    0.57228,
+    0.56152
+   ]
+  },
+  {
+   "lat": -4.085,
+   "lon": -63.1408,
+   "nombre": "Coari",
+   "conf": "E",
+   "xy": [
+    0.5566,
+    0.51088
+   ]
+  },
+  {
+   "lat": -2.5139,
+   "lon": -66.0917,
+   "nombre": "Fonte Boa",
+   "conf": "E",
+   "xy": [
+    0.61944,
+    0.42146
+   ]
+  },
+  {
+   "lat": -3.135,
+   "lon": -67.9741,
+   "nombre": "Santo Antônio do Içá",
+   "conf": "E",
+   "xy": [
+    0.5946,
+    0.36442
+   ]
+  },
+  {
+   "lat": -4.2525,
+   "lon": -69.9381,
+   "nombre": "Tabatinga",
+   "conf": "E",
+   "xy": [
+    0.5499,
+    0.30491
+   ]
+  },
+  {
+   "lat": -3.9058,
+   "lon": -70.5164,
+   "nombre": "Caballococha",
+   "conf": "E",
+   "xy": [
+    0.56377,
+    0.28738
+   ]
+  },
+  {
+   "lat": -3.3255,
+   "lon": -71.851,
+   "nombre": "Pebas",
+   "conf": "E",
+   "xy": [
+    0.58698,
+    0.24694
+   ]
+  },
+  {
+   "lat": -3.4546,
+   "lon": -72.7414,
+   "nombre": "boca del Napo",
+   "conf": "E",
+   "xy": [
+    0.58182,
+    0.21996
+   ]
+  },
+  {
+   "lat": -4.0019,
+   "lon": -73.1628,
+   "nombre": "Tamshiyacu",
+   "conf": "E",
+   "xy": [
+    0.55992,
+    0.20719
+   ]
+  }
+ ],
+ "miradores_1_200": [
+  {
+   "lat": 0.7078,
+   "lon": -50.0894,
+   "nombre": "Boca del Amazonas",
+   "conf": "E",
+   "dato": "map.stop.estuario.dato_01 [E MR-F03]: el agua dulce se nota a cientos de km mar adentro",
+   "xy": [
+    0.74831,
+    0.90638
+   ]
+  },
+  {
+   "lat": 0.033,
+   "lon": -51.0653,
+   "nombre": "Macapá y la línea del ecuador",
+   "conf": "E",
+   "dato": "map.stop.macapa.dato_01 [E MR-F15]: la línea del ecuador",
+   "xy": [
+    0.72132,
+    0.87681
+   ]
+  },
+  {
+   "lat": -0.9786,
+   "lon": -49.5817,
+   "nombre": "Isla de Marajó",
+   "conf": "V",
+   "dato": "map.stop.marajo.dato_01 [V MR-F11]: unos 40.000 km²",
+   "xy": [
+    0.68086,
+    0.92177
+   ]
+  }
+ ],
+ "cruces_de_pais": [
+  {
+   "lat": -1.4558,
+   "lon": -48.5039,
+   "nombre": "Brasil: bandera del primer Mapa",
+   "conf": "V",
+   "nivel": 10,
+   "pais": "BR",
+   "llega_en": {
+    "parada_1_200": 0
+   },
+   "xy": [
+    0.66177,
+    0.95443
+   ]
+  },
+  {
+   "lat": -4.215,
+   "lon": -69.9411,
+   "nombre": "Entrada en Colombia (Leticia)",
+   "conf": "V",
+   "nivel": 80,
+   "pais": "CO",
+   "llega_en": {
+    "parada_1_200": 8
+   },
+   "xy": [
+    0.5514,
+    0.30482
+   ]
+  },
+  {
+   "lat": -3.8398,
+   "lon": -70.619,
+   "nombre": "Entrada en el Perú (boca del Atacuari)",
+   "conf": "E",
+   "nivel": 140,
+   "pais": "PE",
+   "llega_en": {
+    "parada_1_200": 14
+   },
+   "xy": [
+    0.56641,
+    0.28427
+   ]
+  },
+  {
+   "lat": -0.9833,
+   "lon": -75.2,
+   "nombre": "Entrada en Ecuador (boca del Aguarico, Nuevo Rocafuerte)",
+   "conf": "E",
+   "nivel": 220,
+   "pais": "EC",
+   "llega_en": {
+    "mundo": 6,
+    "sitio": "Nuevo Rocafuerte"
+   },
+   "xy": [
+    0.68067,
+    0.14545
+   ]
+  },
+  {
+   "lat": -10.3821,
+   "lon": -65.3903,
+   "nombre": "Entrada en Bolivia (Villa Bella; la parada de Puerto Heath está en Bolivia)",
+   "conf": "V",
+   "nivel": 300,
+   "pais": "BO",
+   "llega_en": {
+    "viaje_de_entrada": 7
+   },
+   "xy": [
+    0.30472,
+    0.44272
+   ]
+  },
+  {
+   "lat": -12.5971,
+   "lon": -69.1665,
+   "nombre": "Entrada en el Perú (Puerto Maldonado)",
+   "conf": "V",
+   "nivel": 310,
+   "pais": "PE",
+   "llega_en": {
+    "mundo": 7,
+    "sitio": "Puerto Maldonado"
+   },
+   "xy": [
+    0.21612,
+    0.32829
+   ],
+   "vuelta": true
+  },
+  {
+   "lat": -12.5026,
+   "lon": -68.6526,
+   "nombre": "Vuelta a Bolivia (Madre de Dios abajo, Puerto Heath)",
+   "conf": "V",
+   "nivel": 420,
+   "pais": "BO",
+   "llega_en": {
+    "viaje_de_entrada": 8
+   },
+   "xy": [
+    0.2199,
+    0.34386
+   ],
+   "vuelta": true
+  },
+  {
+   "lat": 1.92,
+   "lon": -67.0611,
+   "nombre": "Entrada en Venezuela (San Carlos de Río Negro)",
+   "conf": "E",
+   "nivel": 780,
+   "pais": "VE",
+   "llega_en": {
+    "mundo": 10,
+    "sitio": "San Carlos de Río Negro"
+   },
+   "xy": [
+    0.7968,
+    0.39209
+   ]
+  },
+  {
+   "lat": 3.3833,
+   "lon": -59.8,
+   "nombre": "Entrada en Guyana (Bonfim y Lethem, Takutu)",
+   "conf": "E",
+   "nivel": 850,
+   "pais": "GY",
+   "nota": "Asesor y abogado: zona reclamada (Esequibo)",
+   "llega_en": {
+    "mundo": 11,
+    "sitio": "Bonfim y Lethem"
+   },
+   "xy": [
+    0.85533,
+    0.61212
+   ]
+  },
+  {
+   "lat": -3.8398,
+   "lon": -70.619,
+   "nombre": "Vuelta al Perú (viaje de entrada del mundo 9: Amazonas arriba hasta Nauta)",
+   "conf": "E",
+   "nivel": 560,
+   "pais": "PE",
+   "llega_en": {
+    "viaje_de_entrada": 9
+   },
+   "vuelta": true,
+   "xy": [
+    0.56641,
+    0.28427
+   ]
+  },
+  {
+   "lat": -4.2525,
+   "lon": -69.9381,
+   "nombre": "Vuelta a Brasil (viaje de entrada del mundo 10: Ucayali y Amazonas abajo)",
+   "conf": "E",
+   "nivel": 700,
+   "pais": "BR",
+   "llega_en": {
+    "viaje_de_entrada": 10
+   },
+   "vuelta": true,
+   "xy": [
+    0.5499,
+    0.30491
+   ]
+  },
+  {
+   "lat": 1.92,
+   "lon": -67.0611,
+   "nombre": "Vuelta a Venezuela (viaje de entrada del mundo 12: Negro arriba y Casiquiare)",
+   "conf": "E",
+   "nivel": 920,
+   "pais": "VE",
+   "llega_en": {
+    "viaje_de_entrada": 12
+   },
+   "vuelta": true,
+   "xy": [
+    0.7968,
+    0.39209
+   ]
+  },
+  {
+   "lat": -3.8398,
+   "lon": -70.619,
+   "nombre": "Vuelta al Perú (viaje de entrada del mundo 13: el gran viaje hasta Nauta)",
+   "conf": "E",
+   "nivel": 960,
+   "pais": "PE",
+   "llega_en": {
+    "viaje_de_entrada": 13
+   },
+   "vuelta": true,
+   "xy": [
+    0.56641,
+    0.28427
+   ]
+  }
+ ],
+ "rotulos_de_pais": [
+  {
+   "lat": -6.0,
+   "lon": -57.5,
+   "nombre": "Brasil",
+   "conf": "P",
+   "uso": "posición del rótulo, no frontera",
+   "xy": [
+    0.48,
+    0.68182
+   ]
+  },
+  {
+   "lat": -8.0,
+   "lon": -76.6,
+   "nombre": "Perú",
+   "conf": "P",
+   "uso": "posición del rótulo, no frontera",
+   "xy": [
+    0.4,
+    0.10303
+   ]
+  },
+  {
+   "lat": -0.3,
+   "lon": -71.4,
+   "nombre": "Colombia",
+   "conf": "P",
+   "uso": "posición del rótulo, no frontera",
+   "xy": [
+    0.708,
+    0.26061
+   ]
+  },
+  {
+   "lat": -1.7,
+   "lon": -77.6,
+   "nombre": "Ecuador",
+   "conf": "P",
+   "uso": "posición del rótulo, no frontera",
+   "xy": [
+    0.652,
+    0.07273
+   ]
+  },
+  {
+   "lat": -13.6,
+   "lon": -63.3,
+   "nombre": "Bolivia",
+   "conf": "P",
+   "uso": "posición del rótulo, no frontera",
+   "xy": [
+    0.176,
+    0.50606
+   ]
+  },
+  {
+   "lat": 4.6,
+   "lon": -65.6,
+   "nombre": "Venezuela",
+   "conf": "P",
+   "uso": "posición del rótulo, no frontera",
+   "xy": [
+    0.904,
+    0.43636
+   ]
+  },
+  {
+   "lat": 5.0,
+   "lon": -57.9,
+   "nombre": "Guyana",
+   "conf": "P",
+   "uso": "posición del rótulo, no frontera",
+   "xy": [
+    0.92,
+    0.6697
+   ]
+  },
+  {
+   "lat": 4.2,
+   "lon": -55.9,
+   "nombre": "Surinam",
+   "conf": "P",
+   "uso": "posición del rótulo, no frontera",
+   "xy": [
+    0.888,
+    0.7303
+   ]
+  },
+  {
+   "lat": 3.6,
+   "lon": -53.2,
+   "nombre": "Guayana Francesa (Francia)",
+   "conf": "P",
+   "uso": "posición del rótulo, no frontera",
+   "xy": [
+    0.864,
+    0.81212
+   ]
+  }
+ ],
+ "decorado_de_la_muestra": {
+  "nota": "Solo para la muestra (no son datos de producción): la costa sale de Natural Earth (land y coastline) y el relieve lo pinta el artista. La caja (lat −18 a +7) solo enseña el norte de Sudamérica.",
+  "costa_atlantica": [
+   {
+    "lat": 7.0,
+    "lon": -58.62,
+    "nombre": "Borde de la caja (costa de Guyana)",
+    "conf": "NV",
+    "xy": [
+     1.0,
+     0.64788
+    ]
+   },
+   {
+    "lat": 6.8013,
+    "lon": -58.1551,
+    "nombre": "Georgetown",
+    "conf": "NV",
+    "xy": [
+     0.99205,
+     0.66197
+    ]
+   },
+   {
+    "lat": 6.25,
+    "lon": -57.52,
+    "nombre": "New Amsterdam",
+    "conf": "NV",
+    "xy": [
+     0.97,
+     0.68121
+    ]
+   },
+   {
+    "lat": 5.95,
+    "lon": -56.98,
+    "nombre": "Nieuw Nickerie",
+    "conf": "NV",
+    "xy": [
+     0.958,
+     0.69758
+    ]
+   },
+   {
+    "lat": 5.852,
+    "lon": -55.204,
+    "nombre": "Paramaribo",
+    "conf": "NV",
+    "xy": [
+     0.95408,
+     0.75139
+    ]
+   },
+   {
+    "lat": 5.7458,
+    "lon": -53.9684,
+    "nombre": "Boca del Maroni",
+    "conf": "E",
+    "xy": [
+     0.94983,
+     0.78884
+    ]
+   },
+   {
+    "lat": 4.9372,
+    "lon": -52.326,
+    "nombre": "Cayena",
+    "conf": "E",
+    "xy": [
+     0.91749,
+     0.83861
+    ]
+   },
+   {
+    "lat": 4.2356,
+    "lon": -51.6147,
+    "nombre": "Boca del Oiapoque",
+    "conf": "E",
+    "xy": [
+     0.88942,
+     0.86016
+    ]
+   },
+   {
+    "lat": 3.0,
+    "lon": -50.8,
+    "nombre": "Costa del Amapá (aprox.)",
+    "conf": "NV",
+    "xy": [
+     0.84,
+     0.88485
+    ]
+   },
+   {
+    "lat": 1.7,
+    "lon": -49.93,
+    "nombre": "Cabo Norte (aprox.)",
+    "conf": "NV",
+    "xy": [
+     0.788,
+     0.91121
+    ]
+   },
+   {
+    "lat": 0.7078,
+    "lon": -50.0894,
+    "nombre": "Desembocadura (canal norte)",
+    "conf": "E",
+    "xy": [
+     0.74831,
+     0.90638
+    ]
+   },
+   {
+    "lat": 0.05,
+    "lon": -49.55,
+    "nombre": "Costa norte de Marajó (aprox.)",
+    "conf": "NV",
+    "xy": [
+     0.722,
+     0.92273
+    ]
+   },
+   {
+    "lat": -0.3,
+    "lon": -48.4,
+    "nombre": "Cabo Maguarinho (aprox.)",
+    "conf": "NV",
+    "xy": [
+     0.708,
+     0.95758
+    ]
+   },
+   {
+    "lat": -0.43,
+    "lon": -48.1447,
+    "nombre": "Boca del Pará",
+    "conf": "E",
+    "xy": [
+     0.7028,
+     0.96531
+    ]
+   },
+   {
+    "lat": -0.6276,
+    "lon": -47.3456,
+    "nombre": "Salinópolis",
+    "conf": "E",
+    "xy": [
+     0.6949,
+     0.98953
+    ]
+   },
+   {
+    "lat": -0.76,
+    "lon": -47.0,
+    "nombre": "Borde de la caja",
+    "conf": "NV",
+    "xy": [
+     0.6896,
+     1.0
+    ]
+   }
+  ],
+  "picos_y_cabeceras": [
+   {
+    "lat": -15.5253,
+    "lon": -71.6908,
+    "nombre": "Nevado Mismi (5.597 m)",
+    "conf": "V",
+    "xy": [
+     0.09899,
+     0.25179
+    ]
+   },
+   {
+    "lat": -10.313,
+    "lon": -76.696,
+    "nombre": "Laguna Lauricocha (fuente histórica del Marañón)",
+    "conf": "E",
+    "xy": [
+     0.30748,
+     0.10012
+    ]
+   },
+   {
+    "lat": -10.732,
+    "lon": -76.648,
+    "nombre": "Cabecera del Mantaro",
+    "conf": "E",
+    "xy": [
+     0.29072,
+     0.10158
+    ]
+   },
+   {
+    "lat": -1.0469,
+    "lon": -77.8075,
+    "nombre": "Cabecera del Napo",
+    "conf": "V",
+    "xy": [
+     0.67812,
+     0.06644
+    ]
+   },
+   {
+    "lat": 1.123,
+    "lon": -77.056,
+    "nombre": "Cabecera del Putumayo",
+    "conf": "E",
+    "xy": [
+     0.76492,
+     0.08921
+    ]
+   },
+   {
+    "lat": -12.8881,
+    "lon": -71.3601,
+    "nombre": "Cabecera del Madre de Dios",
+    "conf": "E",
+    "xy": [
+     0.20448,
+     0.26182
+    ]
+   },
+   {
+    "lat": -15.1083,
+    "lon": -67.6736,
+    "nombre": "Cabecera del Beni",
+    "conf": "E",
+    "xy": [
+     0.11567,
+     0.37353
+    ]
+   },
+   {
+    "lat": -17.633,
+    "lon": -64.934,
+    "nombre": "Cabecera del Mamoré",
+    "conf": "E",
+    "xy": [
+     0.01468,
+     0.45655
+    ]
+   }
+  ],
+  "pie_oriental_de_los_andes": [
+   {
+    "lat": 7.0,
+    "lon": -72.6,
+    "conf": "NV",
+    "xy": [
+     1.0,
+     0.22424
+    ]
+   },
+   {
+    "lat": 4.0,
+    "lon": -73.9,
+    "conf": "NV",
+    "xy": [
+     0.88,
+     0.18485
+    ]
+   },
+   {
+    "lat": 1.5,
+    "lon": -76.2,
+    "conf": "NV",
+    "xy": [
+     0.78,
+     0.11515
+    ]
+   },
+   {
+    "lat": -1.0,
+    "lon": -77.3,
+    "conf": "NV",
+    "xy": [
+     0.68,
+     0.08182
+    ]
+   },
+   {
+    "lat": -4.5,
+    "lon": -77.6,
+    "conf": "NV",
+    "xy": [
+     0.54,
+     0.07273
+    ]
+   },
+   {
+    "lat": -7.0,
+    "lon": -76.6,
+    "conf": "NV",
+    "xy": [
+     0.44,
+     0.10303
+    ]
+   },
+   {
+    "lat": -9.5,
+    "lon": -75.6,
+    "conf": "NV",
+    "xy": [
+     0.34,
+     0.13333
+    ]
+   },
+   {
+    "lat": -11.5,
+    "lon": -74.4,
+    "conf": "NV",
+    "xy": [
+     0.26,
+     0.1697
+    ]
+   },
+   {
+    "lat": -13.0,
+    "lon": -72.6,
+    "conf": "NV",
+    "xy": [
+     0.2,
+     0.22424
+    ]
+   },
+   {
+    "lat": -14.0,
+    "lon": -69.8,
+    "conf": "NV",
+    "xy": [
+     0.16,
+     0.30909
+    ]
+   },
+   {
+    "lat": -15.2,
+    "lon": -67.4,
+    "conf": "NV",
+    "xy": [
+     0.112,
+     0.38182
+    ]
+   },
+   {
+    "lat": -17.0,
+    "lon": -65.3,
+    "conf": "NV",
+    "xy": [
+     0.04,
+     0.44545
+    ]
+   },
+   {
+    "lat": -18.0,
+    "lon": -64.0,
+    "conf": "NV",
+    "xy": [
+     0.0,
+     0.48485
+    ]
+   }
+  ],
+  "costa_pacifica": [
+   {
+    "lat": 7.0,
+    "lon": -77.8,
+    "nombre": "Borde de la caja (costa del Chocó)",
+    "conf": "NV",
+    "xy": [
+     1.0,
+     0.06667
+    ]
+   },
+   {
+    "lat": 6.2242,
+    "lon": -77.4039,
+    "nombre": "Bahía Solano",
+    "conf": "E",
+    "xy": [
+     0.96897,
+     0.07867
+    ]
+   },
+   {
+    "lat": 5.7069,
+    "lon": -77.2703,
+    "nombre": "Nuquí",
+    "conf": "E",
+    "xy": [
+     0.94828,
+     0.08272
+    ]
+   },
+   {
+    "lat": 3.8772,
+    "lon": -77.0267,
+    "nombre": "Buenaventura",
+    "conf": "E",
+    "xy": [
+     0.87509,
+     0.0901
+    ]
+   },
+   {
+    "lat": 2.5708,
+    "lon": -77.8856,
+    "nombre": "Guapi",
+    "conf": "E",
+    "xy": [
+     0.82283,
+     0.06407
+    ]
+   },
+   {
+    "lat": 1.8067,
+    "lon": -78.7647,
+    "nombre": "Tumaco",
+    "conf": "E",
+    "xy": [
+     0.79227,
+     0.03743
+    ]
+   },
+   {
+    "lat": 0.95,
+    "lon": -79.6667,
+    "nombre": "Esmeraldas",
+    "conf": "E",
+    "xy": [
+     0.758,
+     0.0101
+    ]
+   },
+   {
+    "lat": 0.4,
+    "lon": -80.0,
+    "nombre": "Borde de la caja (la costa de Ecuador sigue al oeste)",
+    "conf": "NV",
+    "xy": [
+     0.736,
+     0.0
+    ]
+   },
+   {
+    "lat": -2.0,
+    "lon": -80.0,
+    "nombre": "Borde de la caja",
+    "conf": "NV",
+    "xy": [
+     0.64,
+     0.0
+    ]
+   },
+   {
+    "lat": -2.19,
+    "lon": -79.8875,
+    "nombre": "Guayaquil (golfo)",
+    "conf": "E",
+    "xy": [
+     0.6324,
+     0.00341
+    ]
+   },
+   {
+    "lat": -3.3,
+    "lon": -80.0,
+    "nombre": "Borde de la caja (la costa de Tumbes y Piura sigue al oeste)",
+    "conf": "NV",
+    "xy": [
+     0.588,
+     0.0
+    ]
+   },
+   {
+    "lat": -6.4,
+    "lon": -80.0,
+    "nombre": "Borde de la caja",
+    "conf": "NV",
+    "xy": [
+     0.464,
+     0.0
+    ]
+   },
+   {
+    "lat": -6.8367,
+    "lon": -79.9342,
+    "nombre": "Pimentel (Chiclayo)",
+    "conf": "E",
+    "xy": [
+     0.44653,
+     0.00199
+    ]
+   },
+   {
+    "lat": -8.2214,
+    "lon": -78.9764,
+    "nombre": "Salaverry (Trujillo)",
+    "conf": "E",
+    "xy": [
+     0.39114,
+     0.03102
+    ]
+   },
+   {
+    "lat": -9.0745,
+    "lon": -78.5936,
+    "nombre": "Chimbote",
+    "conf": "E",
+    "xy": [
+     0.35702,
+     0.04262
+    ]
+   },
+   {
+    "lat": -11.1067,
+    "lon": -77.605,
+    "nombre": "Huacho",
+    "conf": "E",
+    "xy": [
+     0.27573,
+     0.07258
+    ]
+   },
+   {
+    "lat": -12.0522,
+    "lon": -77.1392,
+    "nombre": "Callao (Lima)",
+    "conf": "E",
+    "xy": [
+     0.23791,
+     0.08669
+    ]
+   },
+   {
+    "lat": -13.71,
+    "lon": -76.2032,
+    "nombre": "Pisco",
+    "conf": "E",
+    "xy": [
+     0.1716,
+     0.11505
+    ]
+   },
+   {
+    "lat": -15.3653,
+    "lon": -75.1625,
+    "nombre": "San Juan de Marcona",
+    "conf": "E",
+    "xy": [
+     0.10539,
+     0.14659
+    ]
+   },
+   {
+    "lat": -16.6239,
+    "lon": -72.7106,
+    "nombre": "Camaná",
+    "conf": "E",
+    "xy": [
+     0.05504,
+     0.22089
+    ]
+   },
+   {
+    "lat": -17.0167,
+    "lon": -72.0167,
+    "nombre": "Mollendo",
+    "conf": "E",
+    "xy": [
+     0.03933,
+     0.24192
+    ]
+   },
+   {
+    "lat": -17.6486,
+    "lon": -71.3306,
+    "nombre": "Ilo",
+    "conf": "E",
+    "xy": [
+     0.01406,
+     0.26271
+    ]
+   },
+   {
+    "lat": -18.0,
+    "lon": -70.9,
+    "nombre": "Borde de la caja (costa de Tacna)",
+    "conf": "NV",
+    "xy": [
+     0.0,
+     0.27576
+    ]
+   }
+  ],
+  "costa_pacifica_fuente": "wd_costa_pacifica"
+ },
+ "estado_de_muestra_nivel_200": {
+  "descripcion": "Estado del Mapa al ganar el nivel 200 (último de los mundos 1-5). Lleno = agua real del tramo; el resto, vidrio. Es fin de la 1.0 solo si el dueño elige Q14-B; con el GDD (Q14-A), la 1.0 sigue hasta el 700.",
+  "cauce": {
+   "lleno_desde_km_desde_nacimiento": 2678,
+   "nota": "Lleno de la desembocadura a Nauta (km 2.738) y la boca del Ucayali (unos 60 km, anticipo); arriba, vidrio con la silueta «Ucayali · Nivel 561»"
+  },
+  "ramal_para": "lleno (estuario, progreso regalado)",
+  "afluentes_llenos_hasta_km_desde_la_boca": {
+   "tapajos": 130,
+   "negro": 160,
+   "maranon": 120,
+   "xingu": "entero",
+   "trombetas": "entero",
+   "purus": "entero",
+   "jurua": "entero",
+   "japura": "entero",
+   "putumayo_ica": "entero",
+   "madeira": 120,
+   "napo": 80,
+   "tocantins": "entero"
+  },
+  "regla": "Afluente de paso (ningún mundo lo visita): se llena entero («entero») al pasar su boca. Afluente de un mundo futuro: solo su boca (unos 80-120 km) y su silueta «Mundo · Nivel n». Afluente visitado: hasta la parada. Los ríos locales de las paradas (Nanay, Loretoyacu, Itaya, Samiria, Pacaya y Atacuari) solo se dibujan en la vista Mundo (recuadros de la muestra): llenos si su agua está comprobada, punteados si es [NV]."
+ },
+ "fuentes": [
+  {
+   "id": "wd",
+   "nombre": "Wikidata (P625 y P403)",
+   "url": "https://query.wikidata.org/",
+   "licencia": "CC0",
+   "uso": "Coordenadas de lugares y bocas (investigación del 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_amazon",
+   "nombre": "Wikipedia EN, Amazon River (infobox y route map)",
+   "url": "https://en.wikipedia.org/wiki/Amazon_River",
+   "licencia": "CC BY-SA 4.0 (texto); los datos son hechos",
+   "uso": "Km del cauce",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_source",
+   "nombre": "Wikipedia EN, Source of the Amazon River",
+   "url": "https://en.wikipedia.org/wiki/Source_of_the_Amazon_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Nacientes: «not considered to have one unique source»; el Mantaro es la más lejana, pero se corta varios meses al año; la Carhuasanta, «the most distant source of uninterrupted flow»; la Laguna Bohemia a 5.148 m (releída el 2026-10-13)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_mismi",
+   "nombre": "Wikipedia EN, Mismi",
+   "url": "https://en.wikipedia.org/wiki/Mismi",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Mismi",
+   "etiqueta": "E"
+  },
+  {
+   "id": "natgeo2014",
+   "nombre": "National Geographic (2014), fuente del Amazonas",
+   "url": "https://www.nationalgeographic.com/adventure/article/140213-amazon-river-length-source-maps-science",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Nacientes",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_rios",
+   "nombre": "Wikipedia EN, infoboxes de los ríos (Apurímac, Ene, Tambo, Ucayali, Marañón, Napo, Putumayo, Negro, Tapajós, Madeira, Mamoré, Beni, Guaporé, Madre de Dios, Branco, Casiquiare, Takutu, Maroni)",
+   "url": "https://en.wikipedia.org/wiki/Napo_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Afluentes",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_para",
+   "nombre": "Wikipedia EN, Pará River",
+   "url": "https://en.wikipedia.org/wiki/Par%C3%A1_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Ramal del Pará",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_tipos",
+   "nombre": "Wikipedia EN, Clearwater / Blackwater / Whitewater river",
+   "url": "https://en.wikipedia.org/wiki/Clearwater_river_(river_type)",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Tipos de agua",
+   "etiqueta": "E"
+  },
+  {
+   "id": "rios_villamizar",
+   "nombre": "Ríos-Villamizar y otros (2014), química de los tipos de agua",
+   "url": "https://www.witpress.com/elibrary/wit-transactions-on-ecology-and-the-environment/178/25051",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Tipos de agua",
+   "etiqueta": "V"
+  },
+  {
+   "id": "trapecio",
+   "nombre": "Sociedad Geográfica de Colombia, El Trapecio Amazónico",
+   "url": "https://sogeocol.edu.co/documentos/004_01_el_trape_amazo.pdf",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Frontera fluvial",
+   "etiqueta": "E"
+  },
+  {
+   "id": "santa_rosa",
+   "nombre": "El Espectador (2025), disputa por la isla Santa Rosa",
+   "url": "https://www.elespectador.com/mundo/america/peru-responde-a-colombia-por-disputa-territorial-sobre-la-isla-santa-rosa/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "No dibujar islas con bandera",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_xingu",
+   "nombre": "Wikipedia EN, Xingu River",
+   "url": "https://en.wikipedia.org/wiki/Xingu_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Cabecera y boca (leído el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_sao_felix",
+   "nombre": "Wikipedia EN, São Félix do Xingu",
+   "url": "https://en.wikipedia.org/wiki/S%C3%A3o_F%C3%A9lix_do_Xingu",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_altamira",
+   "nombre": "Wikipedia EN, Altamira, Pará",
+   "url": "https://en.wikipedia.org/wiki/Altamira,_Par%C3%A1",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_trombetas",
+   "nombre": "Wikipedia EN, Trombetas River",
+   "url": "https://en.wikipedia.org/wiki/Trombetas_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Boca",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_oriximina",
+   "nombre": "Wikipedia EN, Oriximiná",
+   "url": "https://en.wikipedia.org/wiki/Oriximin%C3%A1",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_purus",
+   "nombre": "Wikipedia EN, Purus River",
+   "url": "https://en.wikipedia.org/wiki/Purus_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Cabecera y boca",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_boca_do_acre",
+   "nombre": "Wikipedia EN, Boca do Acre",
+   "url": "https://en.wikipedia.org/wiki/Boca_do_Acre",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_labrea",
+   "nombre": "Wikipedia EN, Lábrea",
+   "url": "https://en.wikipedia.org/wiki/L%C3%A1brea",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_tapaua",
+   "nombre": "Wikipedia EN, Tapauá",
+   "url": "https://en.wikipedia.org/wiki/Tapau%C3%A1",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_jurua",
+   "nombre": "Wikipedia EN, Juruá River",
+   "url": "https://en.wikipedia.org/wiki/Juru%C3%A1_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Cabecera y boca",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_cruzeiro_do_sul",
+   "nombre": "Wikipedia EN, Cruzeiro do Sul, Acre",
+   "url": "https://en.wikipedia.org/wiki/Cruzeiro_do_Sul,_Acre",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_eirunepe",
+   "nombre": "Wikipedia EN, Eirunepé",
+   "url": "https://en.wikipedia.org/wiki/Eirunep%C3%A9",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_carauari",
+   "nombre": "Wikipedia EN, Carauari",
+   "url": "https://en.wikipedia.org/wiki/Carauari",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_japura",
+   "nombre": "Wikipedia EN, Japurá River",
+   "url": "https://en.wikipedia.org/wiki/Japur%C3%A1_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Boca",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_la_pedrera",
+   "nombre": "Wikipedia EN, La Pedrera, Amazonas",
+   "url": "https://en.wikipedia.org/wiki/La_Pedrera,_Amazonas",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_maraa",
+   "nombre": "Wikipedia EN, Maraã",
+   "url": "https://en.wikipedia.org/wiki/Mara%C3%A3",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_orinoco",
+   "nombre": "Wikipedia EN, Orinoco",
+   "url": "https://en.wikipedia.org/wiki/Orinoco",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Cabecera",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_san_fernando",
+   "nombre": "Wikipedia EN, San Fernando de Atabapo",
+   "url": "https://en.wikipedia.org/wiki/San_Fernando_de_Atabapo",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_amacayacu",
+   "nombre": "Wikipedia EN, Amacayacu National Park",
+   "url": "https://en.wikipedia.org/wiki/Amacayacu_National_Park",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada y año (1975)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "parques_amacayacu",
+   "nombre": "Parques Nacionales Naturales de Colombia, parques abiertos al ecoturismo",
+   "url": "https://www.parquesnacionales.gov.co/sala-prensa/noticias/colombia-suma-hoy-23-parques-naturales-abiertos-al-ecoturismo/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Amacayacu",
+   "etiqueta": "V"
+  },
+  {
+   "id": "wp_allpahuayo",
+   "nombre": "Wikipedia EN, Allpahuayo-Mishana National Reserve",
+   "url": "https://en.wikipedia.org/wiki/Allpahuayo-Mishana_National_Reserve",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada, 23 km al SO de Iquitos, 2004",
+   "etiqueta": "E"
+  },
+  {
+   "id": "actualidad_allpahuayo",
+   "nombre": "Actualidad Ambiental, Allpahuayo-Mishana",
+   "url": "https://www.actualidadambiental.pe/loreto-reserva-nacional-allpahuayo-mishana-celebra-16-anos-conservando-biodiversidad/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "La perlita de Iquitos, «ave endémica de esta zona», que «se encuentra solo en la RNAM»; varillal y chamizal sobre arena blanca (releída el 2026-10-13). No habla del hormiguero de Allpahuayo",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_flona",
+   "nombre": "Wikipedia EN, Tapajós National Forest",
+   "url": "https://en.wikipedia.org/wiki/Tapaj%C3%B3s_National_Forest",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada, decreto 73.684 de 1974, 549.066 ha",
+   "etiqueta": "E"
+  },
+  {
+   "id": "ramsar_tarapoto",
+   "nombre": "Ramsar, sitio 2336: Complejo de humedales Lagos de Tarapoto",
+   "url": "https://rsis.ramsar.org/ris/2336",
+   "licencia": "Ramsar (hechos)",
+   "uso": "Coordenada 03°46'35\"S 70°32'23\"W, 2017",
+   "etiqueta": "V"
+  },
+  {
+   "id": "wp_belen",
+   "nombre": "Wikipedia EN, Belén District, Maynas",
+   "url": "https://en.wikipedia.org/wiki/Bel%C3%A9n_District,_Maynas",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Coordenada del distrito",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_cayenne",
+   "nombre": "Wikipedia EN, Cayenne",
+   "url": "https://en.wikipedia.org/wiki/Cayenne",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Costa",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_oiapoque",
+   "nombre": "Wikipedia EN, Oiapoque River",
+   "url": "https://en.wikipedia.org/wiki/Oiapoque_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Costa",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_salinopolis",
+   "nombre": "Wikipedia EN, Salinópolis",
+   "url": "https://en.wikipedia.org/wiki/Salin%C3%B3polis",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Costa",
+   "etiqueta": "E"
+  },
+  {
+   "id": "ne_terms",
+   "nombre": "Natural Earth, condiciones de uso",
+   "url": "https://www.naturalearthdata.com/about/terms-of-use/",
+   "licencia": "Dominio público",
+   "uso": "Licencia de la geometría de producción",
+   "etiqueta": "V"
+  },
+  {
+   "id": "ne_rivers",
+   "nombre": "Natural Earth 1:10m Rivers + lake centerlines",
+   "url": "https://www.naturalearthdata.com/downloads/10m-physical-vectors/10m-rivers-lake-centerlines/",
+   "licencia": "Dominio público",
+   "uso": "Geometría de producción (su web avisa de alineaciones dudosas en partes de la cuenca)",
+   "etiqueta": "V"
+  },
+  {
+   "id": "hydrorivers",
+   "nombre": "HydroRIVERS (HydroSHEDS)",
+   "url": "https://www.hydrosheds.org/products/hydrorivers",
+   "licencia": "Uso comercial libre con cita",
+   "uso": "Alternativa para zoom fino",
+   "etiqueta": "E"
+  },
+  {
+   "id": "osm",
+   "nombre": "OpenStreetMap, licencia",
+   "url": "https://www.openstreetmap.org/copyright",
+   "licencia": "ODbL (compartir igual)",
+   "uso": "No se usa",
+   "etiqueta": "V"
+  },
+  {
+   "id": "MR-F03",
+   "nombre": "Wikipedia EN, Amazon River",
+   "url": "https://en.wikipedia.org/wiki/Amazon_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Datos 3.2-02 (Wikipedia: [E])",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "E"
+  },
+  {
+   "id": "MR-F06",
+   "nombre": "Agência FAPESP (Science Advances, 2016), arrecife del Amazonas",
+   "url": "https://agencia.fapesp.br/scientists-discover-reef-concealed-by-amazon-rivers-plume/23216",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Dato del nivel 10",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "V"
+  },
+  {
+   "id": "MR-F19",
+   "nombre": "Correio Braziliense, Alter do Chão",
+   "url": "https://www.correiobraziliense.com.br/cbradar/o-caribe-amazonico-que-viralizou-gracas-as-aguas-transparentes-e-clima-paradisiaco/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Ilha do Amor",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "E"
+  },
+  {
+   "id": "MR-F24",
+   "nombre": "Wikipedia EN, Meeting of Waters",
+   "url": "https://en.wikipedia.org/wiki/Meeting_of_Waters",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Encuentro (Wikipedia: [E])",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "E"
+  },
+  {
+   "id": "MR-F32",
+   "nombre": "BID, bosque inundado (Mamirauá)",
+   "url": "https://www.iadb.org/en/news/man-and-nature-flooded-forest",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Pirarucú contado en Mamirauá (noticia institucional: [E])",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "E"
+  },
+  {
+   "id": "MR-F35",
+   "nombre": "Colombia Travel (oficial), aves del Amazonas",
+   "url": "https://colombia.travel/es/amazonas/avistamiento-de-aves-en-el-amazonas",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Pericos del parque Santander (portal turístico oficial: [E])",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "E"
+  },
+  {
+   "id": "MR-F37",
+   "nombre": "Colombia Travel, Puerto Nariño",
+   "url": "https://colombia.travel/es/puerto-narino",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Sin carros",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "E"
+  },
+  {
+   "id": "MR-F38",
+   "nombre": "MinAmbiente de Colombia, Lagos de Tarapoto",
+   "url": "https://www.minambiente.gov.co/lagos-de-tarapoto-nuevo-humedal-ramsar-en-colombia",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Tarapoto: «guardería» de los delfines de río y lugar clave para su crianza (leída el 2026-10-12); Ramsar",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "V"
+  },
+  {
+   "id": "MR-F39",
+   "nombre": "Guinness World Records, mayor ciudad sin conexión vial",
+   "url": "https://www.guinnessworldrecords.com/world-records/101153-largest-city-with-no-major-road-connection",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Iquitos",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "V"
+  },
+  {
+   "id": "MR-F42",
+   "nombre": "Resumen AGU 2014 y Wikipedia, Nauta",
+   "url": "https://en.wikipedia.org/wiki/Nauta",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Nace el nombre: el resumen de la AGU (2014) es la fuente primaria ([V]); Wikipedia, el contraste",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "url_extra": [
+    "https://agu.confex.com/agu/fm14/webprogram/Paper31820.html"
+   ],
+   "etiqueta": "V"
+  },
+  {
+   "id": "MR-F43",
+   "nombre": "Actualidad Ambiental, Pacaya-Samiria",
+   "url": "https://www.actualidadambiental.pe/fotos-pacaya-samiria-la-selva-de-los-espejos-cumple-medio-siglo-de-conservacion/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Unos 2.080.000 ha y el humedal más extenso de la Amazonia (leída el 2026-10-12; no explica el apodo)",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "E"
+  },
+  {
+   "id": "MR-F77",
+   "nombre": "MINAM, los bosques en cifras",
+   "url": "https://www.minam.gob.pe/bosques/los-bosques-en-cifras/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "El Perú, segundo país de América Latina con más bosque tropical, después de Brasil (leída el 2026-10-12)",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "V"
+  },
+  {
+   "id": "MR-F97",
+   "nombre": "O Liberal, las cuias del Bajo Amazonas (registro del IPHAN, 2015)",
+   "url": "https://www.oliberal.com/belem/da-arvore-a-tradicao-cuias-carregam-seculos-de-historia-e-resistem-no-cotidiano-da-amazonia-1.1009052",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Santarém, tarjeta",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "V"
+  },
+  {
+   "id": "MR-F11",
+   "nombre": "Britannica, Marajó Island",
+   "url": "https://www.britannica.com/place/Marajo-Island",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Mirador de Marajó (40.100 km²)",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "V"
+  },
+  {
+   "id": "MR-F15",
+   "nombre": "RuaCEP, Macapá y la línea del ecuador",
+   "url": "https://www.ruacep.com.br/guias/localidades/macapa-linha-do-equador/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Mirador de Macapá",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "E"
+  },
+  {
+   "id": "MR-F21",
+   "nombre": "Britannica, Óbidos",
+   "url": "https://www.britannica.com/place/Obidos",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Punto de paso de Óbidos (unos 2 km de ancho)",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "V"
+  },
+  {
+   "id": "MR-F78",
+   "nombre": "SINCHI, región amazónica colombiana",
+   "url": "https://en.sinchi.org.co/region-amazonica-colombiana",
+   "licencia": "copyright (solo hechos)",
+   "uso": "42 % de Colombia",
+   "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
+   "etiqueta": "V"
+  },
+  {
+   "id": "CR-F11",
+   "nombre": "Acta Amazonica (2001), régua de Manaos",
+   "url": "https://www.scielo.br/j/aa/a/KH8cBzrnZSQTSppFSB55Bjg/?lang=pt",
+   "licencia": "copyright (solo hechos)",
+   "uso": "La régua del puerto de Manaos mide el Negro a diario desde 1902. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
+   "etiqueta": "V"
+  },
+  {
+   "id": "CR-F14",
+   "nombre": "Soini, Folia Amazónica 8(1), IIAP 1996",
+   "url": "https://revistas.iiap.gob.pe/index.php/foliaamazonica/article/download/310/271",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Tortugas (charapa y taricaya) de la Reserva Nacional Pacaya-Samiria. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
+   "etiqueta": "V"
+  },
+  {
+   "id": "CR-F25",
+   "nombre": "Tombamento del Encontro das Águas (Confea)",
+   "url": "https://www.confea.org.br/node/109909",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Encuentro de las Aguas, patrimonio del IPHAN desde 2010. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
+   "etiqueta": "V"
+  },
+  {
+   "id": "CR-F32",
+   "nombre": "Portal Amazônia, flutuantes (2021-06-14)",
+   "url": "https://portalamazonia.com/cidades/flutuantes-casas-sobre-os-rios-da-amazonia/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Flutuantes (casas que flotan). de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
+   "etiqueta": "E"
+  },
+  {
+   "id": "CR-F62",
+   "nombre": "Wikipedia EN, Ver-o-Peso Complex",
+   "url": "https://en.wikipedia.org/wiki/Ver-o-Peso_Complex",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Ver-o-Peso, protegido por el IPHAN desde 1977. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
+   "etiqueta": "E"
+  },
+  {
+   "id": "CR-F72",
+   "nombre": "Portal Amazônia, chibé (2021-07-08)",
+   "url": "https://portalamazonia.com/amazonia-de-a-a-z/c/chibe/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "El chibé. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
+   "etiqueta": "E"
+  },
+  {
+   "id": "CR-F103",
+   "nombre": "Semana (2017-09-18), los loros del parque de Leticia",
+   "url": "https://www.semana.com/nacion/articulo/los-loros-que-viven-en-el-parque-de-leticia/540875",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Loros del parque de Leticia (prensa: [E]). de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
+   "etiqueta": "E"
+  },
+  {
+   "id": "CR-F104",
+   "nombre": "Blu Radio, Puerto Nariño sin vehículos",
+   "url": "https://www.bluradio.com/turismo/puerto-narino-pesebre-natural-de-colombia-sin-vehiculos-ni-edificios-asi-se-llega-desde-bogota-so35",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Puerto Nariño sin carros (prensa: [E]). de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
+   "etiqueta": "E"
+  },
+  {
+   "id": "CR-F105",
+   "nombre": "SINCHI (2018-02-09), Tarapoto, sitio Ramsar",
+   "url": "https://en.sinchi.org.co/tarapoto-lakes-declared-ramsar-site-and-first-for-colombian-amazon",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Tarapoto, primer sitio Ramsar de la Amazonia colombiana. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
+   "etiqueta": "V"
+  },
+  {
+   "id": "actualidad_pacaya_48",
+   "nombre": "Actualidad Ambiental, «Pacaya Samiria: la selva de los espejos cumple 48 años»",
+   "url": "https://www.actualidadambiental.pe/?p=61457",
+   "licencia": "copyright (solo hechos)",
+   "uso": "«la cuenca del Samiria que -gracias a sus aguas negras- crea la sensación de ser un espejo del cielo» (leída el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "mongabay_pacaya",
+   "nombre": "Mongabay Latam (2020), Pacaya-Samiria en fotos",
+   "url": "https://es.mongabay.com/2020/10/pacaya-samiria-amazonia-peru-fotos/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Aguas «de un color oscuro intenso» que reflejan el paisaje (leída el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_antbird",
+   "nombre": "Wikipedia EN, Allpahuayo antbird (Percnostola arenarum)",
+   "url": "https://en.wikipedia.org/wiki/Allpahuayo_antbird",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "El hormiguero de Allpahuayo (Percnostola arenarum): solo en Loreto, en las cuencas del Nanay y del Itaya y con una subpoblación en el Morona (leída el 2026-10-12). No es la perlita de Iquitos",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_tefe_rio",
+   "nombre": "Wikipedia EN, Tefé River",
+   "url": "https://en.wikipedia.org/wiki/Tef%C3%A9_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "«The Tefé River is a blackwater river»; forma el lago de Tefé antes del Solimões (leída el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_mamiraua",
+   "nombre": "Wikipedia EN, Mamirauá Sustainable Development Reserve",
+   "url": "https://en.wikipedia.org/wiki/Mamirau%C3%A1_Sustainable_Development_Reserve",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Entre el Solimões, el Japurá y el Auati-Paraná; ecorregión de várzea del Purus; -2,26, -65,68 (leída el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_varzea",
+   "nombre": "Wikipedia EN, Várzea forest",
+   "url": "https://en.wikipedia.org/wiki/V%C3%A1rzea_forest",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Várzea = bosque inundado por ríos de agua blanca, distinto del igapó de agua negra (leída el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "icmbio_tefe_2023",
+   "nombre": "ICMBio e Instituto Mamirauá, boletín técnico sobre la mortandad de botos del lago de Tefé (octubre de 2023)",
+   "url": "https://static.poder360.com.br/2023/10/boletim-tecnico-botos-lago-tefe-icmbio.pdf",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Tema sensible: no evocarlo en el fondo de la parada 7 (07 §8.1)",
+   "etiqueta": "V"
+  },
+  {
+   "id": "mit_ciclo_agua",
+   "nombre": "MIT 12.000 (2006), ciclo del agua amazónico",
+   "url": "https://web.mit.edu/12.000/www/m2006/teams/r6/final2/watercycle.htm",
+   "licencia": "copyright (solo hechos)",
+   "uso": "La mitad de la lluvia de la cuenca entra del océano y la otra mitad se recicla en la selva (leída el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "bass2010_yasuni",
+   "nombre": "Bass y otros (2010), PLoS ONE 5(1): e8767, Global conservation significance of Ecuador's Yasuní National Park",
+   "url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008767",
+   "licencia": "CC BY 4.0",
+   "uso": "«a typical hectare of terra firme forest in Yasuní contains upwards of 655 tree species» (leída el 2026-10-12)",
+   "etiqueta": "V"
+  },
+  {
+   "id": "npr2017_collpas",
+   "nombre": "NPR (2017), Why do parrots (and people) eat clay?",
+   "url": "https://www.npr.org/sections/thesalt/2017/09/07/547981850/why-do-parrots-and-people-eat-clay",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Hipótesis del sodio de Brightsmith: la más apoyada, sin prueba definitiva (búsqueda del 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_madidi",
+   "nombre": "Wikipedia EN, Madidi National Park",
+   "url": "https://en.wikipedia.org/wiki/Madidi_National_Park",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "De 180 a 5.760 m; «from the Andes Mountains to the rainforests» (leída el 2026-10-12; no habla de glaciares)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "scielo_yarinacocha",
+   "nombre": "Biota Neotropica (SciELO), laguna de Yarinacocha",
+   "url": "https://scielo.br/j/bn/a/kP34JQdCqtmbsWbS3P8zdLv/abstract/?lang=pt",
+   "licencia": "CC BY (solo hechos)",
+   "uso": "Origen meándrico, por la erosión de las orillas del Ucayali (resumen visto en el buscador el 2026-10-12: reabrir)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_casiquiare",
+   "nombre": "Wikipedia EN, Casiquiare canal",
+   "url": "https://en.wikipedia.org/wiki/Casiquiare_canal",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Canal natural entre el Orinoco y el Amazonas; la mayor bifurcación del mundo (leída el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_boto",
+   "nombre": "Wikipedia EN, Amazon river dolphin",
+   "url": "https://en.wikipedia.org/wiki/Amazon_river_dolphin",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Límites de su área: cascadas (Xingu, Tapajós) y agua muy baja; los rápidos del Madeira aíslan la población boliviana, río arriba de Teotônio (leída el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_madeira",
+   "nombre": "Wikipedia EN, Madeira River",
+   "url": "https://en.wikipedia.org/wiki/Madeira_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Frontera Bolivia-Brasil desde su formación hasta la boca del Abunã; rápidos de Teotônio, hoy bajo el embalse de Santo Antônio (leída el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_puerto_heath",
+   "nombre": "Wikipedia EN, Puerto Heath Airport",
+   "url": "https://en.wikipedia.org/wiki/Puerto_Heath_Airport",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Puerto Heath está en el departamento de La Paz (Bolivia), en la boca del Heath (leída el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_tocantins",
+   "nombre": "Wikipedia EN, Tocantins River",
+   "url": "https://en.wikipedia.org/wiki/Tocantins_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Boca (-1,75, -49,167) y nacimiento (-13,834, -48,304); «sometimes included in definitions of the Amazon basin», pero no es afluente del Amazonas (leída el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_atacuari",
+   "nombre": "Wikipedia EN, Atacuari River",
+   "url": "https://en.wikipedia.org/wiki/Atacuari_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Boca (-3,8277, -70,6067); 207 km; sus últimos 13 km son frontera con Colombia (leída el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "eswp_itaya",
+   "nombre": "Wikipedia ES, Río Itaya",
+   "url": "https://es.wikipedia.org/wiki/R%C3%ADo_Itaya",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Cabecera hacia -4,22, -73,96; desemboca en el Amazonas (leída el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "eswp_loretoyacu",
+   "nombre": "Wikipedia ES, Río Loretoyacu",
+   "url": "https://es.wikipedia.org/wiki/R%C3%ADo_Loretoyacu",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Punto del río -3,759, -70,405; desemboca en el Amazonas junto a Puerto Nariño (leída el 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wd_costa_pacifica",
+   "nombre": "Wikidata (P625) de las ciudades costeras del Pacífico (Bahía Solano, Nuquí, Buenaventura, Guapi, Tumaco, Esmeraldas, Guayaquil, Pimentel, Salaverry, Chimbote, Huacho, Callao, Pisco, San Juan de Marcona, Camaná, Mollendo, Ilo)",
+   "url": "https://query.wikidata.org/",
+   "licencia": "CC0",
+   "uso": "Costa pacífica de la muestra (consulta del 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wd_tocantins",
+   "nombre": "Wikidata (P625) de las ciudades del Tocantins (Cametá, Tucuruí, Marabá, Imperatriz, Estreito, Carolina, Pedro Afonso, Miracema do Tocantins, Palmas, Porto Nacional, Peixe)",
+   "url": "https://query.wikidata.org/",
+   "licencia": "CC0",
+   "uso": "Trazado del Tocantins de la muestra (consulta del 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wd_rios_locales",
+   "nombre": "Wikidata (P625 con calificador de boca o de nacimiento) de los ríos Itaya, Nanay, Samiria, Pacaya y Atacuari",
+   "url": "https://query.wikidata.org/",
+   "licencia": "CC0",
+   "uso": "Bocas y nacimientos de los ríos de las paradas 11-18 (consulta del 2026-10-12)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "lexivox_ds241",
+   "nombre": "Bolivia, Decreto Supremo 0241 (2009), símbolos del Estado",
+   "url": "https://www.lexivox.org/norms/BO-DS-N241.html",
+   "licencia": "texto legal (hechos)",
+   "uso": "La wiphala está entre los símbolos del Estado (Constitución de 2009, art. 6.II) [E: no leído en esta sesión]",
+   "etiqueta": "E"
+  },
+  {
+   "id": "CR-F28",
+   "nombre": "Wikipedia EN, Belén District, Maynas (= wp_belen)",
+   "url": "https://en.wikipedia.org/wiki/Bel%C3%A9n_District,_Maynas",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "El río sube 5-6 m de febrero a julio; casas que flotan. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_blanca",
+   "nombre": "Wikipedia EN, Whitewater river (river type)",
+   "url": "https://en.wikipedia.org/wiki/Whitewater_river_(river_type)",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Ríos de agua blanca: Solimões-Amazonas, Caquetá-Japurá, Putumayo, Marañón, Ucayali, Javari, Juruá, Purus, Madre de Dios y Madeira (leída el 2026-10-13)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "wp_shanay",
+   "nombre": "Wikipedia EN, Shanay-timpishka",
+   "url": "https://en.wikipedia.org/wiki/Shanay-Timpishka",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Chamanes locales atribuyen el agua hirviente a la Yacumama; a su orilla, Mayantuyacu y el Santuario Huishtín. No la llama lugar sagrado (leída el 2026-10-13)",
+   "etiqueta": "E"
+  },
+  {
+   "id": "CR-F35",
+   "etiqueta": "V",
+   "url": "https://periodicos.ufpb.br/index.php/gaia/article/view/50238",
+   "nombre": "Coêlho, Imbiriba, Serrão y Zacardi, Gaia Scientia 14(1), 2020: el matapi",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Matapi del Bajo Amazonas. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí"
+  },
+  {
+   "id": "CR-F44",
+   "etiqueta": "E",
+   "url": "https://portalamazonia.com/meio-ambiente/saber-antigo-de-contar-pirarucu-e-aliado-ao-manejo-sustentavel-da-especie-entenda/",
+   "nombre": "Portal Amazônia (2018-12-05), conteo de pirarucú",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Pirarucú y su manejo. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí"
+  },
+  {
+   "id": "CR-F47",
+   "etiqueta": "E",
+   "url": "https://portalamazonia.com/amazonia-de-a-a-z/rebojo/",
+   "nombre": "Portal Amazônia (2022-01-07), rebojo",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Rebojo (dato del Remolino). de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí"
+  },
+  {
+   "id": "CR-F59",
+   "etiqueta": "V",
+   "url": "https://agencia.fapesp.br/cuias-feitas-por-mulheres-indigenas-abasteciam-o-mercado-de-luxo-europeu-no-seculo-xviii/53069",
+   "nombre": "Agência FAPESP (2024-10-18), cuias del siglo XVIII",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Cuias de Santarém. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí"
+  },
+  {
+   "id": "CR-F60",
+   "etiqueta": "E",
+   "url": "https://portalamazonia.com/cultura/cuias-mulheres-indigenas-amazonia-luxo-europeu/",
+   "nombre": "Portal Amazônia (2024-10-21), cuias y lujo europeo",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Cuias de Santarém. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí"
+  },
+  {
+   "id": "CR-F80",
+   "etiqueta": "E",
+   "url": "https://en.wikipedia.org/wiki/Iquitos",
+   "nombre": "Wikipedia EN, Iquitos",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Iquitos sin carretera. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí"
+  },
+  {
+   "id": "CR-F90",
+   "etiqueta": "E",
+   "url": "https://en.wikipedia.org/wiki/Tambaqui",
+   "nombre": "Wikipedia EN, Tambaqui",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "La gamitana come fruta. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí"
+  },
+  {
+   "id": "CR-F91",
+   "etiqueta": "E",
+   "url": "https://en.wikipedia.org/wiki/Arapaima",
+   "nombre": "Wikipedia EN, Arapaima",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Pirarucú. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí"
+  },
+  {
+   "id": "CR-F122",
+   "etiqueta": "E",
+   "url": "https://www.actualidadambiental.pe/aguaje-entre-la-tradicion-y-la-urgencia-de-una-cosecha-sostenible/",
+   "nombre": "Actualidad Ambiental, aguaje y cosecha sostenible",
+   "licencia": "copyright (solo hechos)",
+   "uso": "El aguaje con subidor. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí"
+  },
+  {
+   "id": "CR-F145",
+   "etiqueta": "E",
+   "url": "https://en.wikipedia.org/wiki/Japur%C3%A1_River",
+   "nombre": "Wikipedia EN, Japurá River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "El Japurá nace en Colombia como Caquetá. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí"
+  },
+  {
+   "id": "CR-F148",
+   "etiqueta": "V",
+   "url": "https://revistapesquisa.fapesp.br/en/amazonian-manatee-knows-just-when-to-migrate/",
+   "nombre": "Revista Pesquisa FAPESP, el manatí sabe cuándo migrar",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Manatí del medio Solimões. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí"
+  },
+  {
+   "id": "wp_gnatcatcher",
+   "etiqueta": "E",
+   "url": "https://en.wikipedia.org/wiki/Iquitos_gnatcatcher",
+   "nombre": "Wikipedia EN, Iquitos gnatcatcher (Polioptila clementsi)",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "La perlita de Iquitos: descrita en 2005, conocida solo de la reserva Allpahuayo-Mishana, en bosque de arena blanca; BirdLife no la separa como especie (leída el 2026-10-13)"
+  }
+ ]
+}
