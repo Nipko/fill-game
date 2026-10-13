@@ -215,6 +215,7 @@ namespace AF.Presentation
         /// <summary>Destruye texturas y sprites generados.</summary>
         public void Dispose()
         {
+            AbandonBannerArt(); // el arte del banner que aún se pinta en otro hilo para y se descarta (ProceduralArt.Mascots.cs)
             for (int i = 0; i < _owned.Count; i++)
             {
                 if (_owned[i] != null)

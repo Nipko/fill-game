@@ -23,11 +23,15 @@ namespace AF.Presentation
     /// <para>Coste (08 §5.4: carga de nivel &lt; 300 ms e hilo principal ≤ 8 ms por fotograma; guía 8): el banner se abre en el
     /// fotograma en que se carga el nivel (11, 41, 81 y 141), y pintar sus píxeles cuesta unos 230 ms de CPU en el Editor
     /// (revisión 2 de A4; la viñeta, a 3 px/dp con Capi dentro, se lleva casi todo). Por eso la vista lo pide con
-    /// <see cref="RequestBannerArt"/>: los píxeles se pintan en un hilo del grupo y el hilo principal solo crea las texturas
-    /// (<see cref="TryTakeBannerArt"/>); el banner entra cuando están. Se mide (<see cref="MascotsMs"/>, lo pintado, y
-    /// <see cref="MascotsMainMs"/>, lo que tocó al hilo principal; la vista los lleva al <c>AF_STATE world_banner_art</c>) y se
-    /// acota en EditMode (<c>WorldBannerArtTests</c>). Además: los senos y cosenos de los giros fijos de las elipses y las cajas
-    /// se calculan una sola vez (<see cref="Rot"/>); Capi, Rosa y la pata solo evalúan su silueta en las celdas de 6 px que
+    /// <see cref="RequestBannerArt"/>: los píxeles se pintan en un hilo del grupo, que también los pasa a <see cref="Color32"/>, y
+    /// el hilo principal solo crea las texturas y las sube con <see cref="Texture2D.SetPixels32(Color32[], int)"/>
+    /// (<see cref="TryTakeBannerArt"/>); el banner entra cuando están. Si el trabajo falla o no se puede encolar, nada lanza en
+    /// el hilo principal: queda el estado de fallo (<see cref="BannerArtFailure"/>, con un solo aviso en el log) y la vista entra
+    /// sin arte; si el banner deja de esperarlo (su tiempo límite, <see cref="AbandonBannerArt"/>) o se cierra
+    /// (<see cref="ReleaseBannerArt"/>), el trabajo se cancela (lo mira por fila) y lo que pintó se descarta. Se mide
+    /// (<see cref="MascotsMs"/>, lo pintado, y <see cref="MascotsMainMs"/>, lo que tocó al hilo principal; la vista los lleva al
+    /// <c>AF_STATE world_banner_art</c>) y se acota en EditMode (<c>WorldBannerArtTests</c>). Además: los senos y cosenos de
+    /// los giros fijos de las elipses y las cajas se calculan una sola vez (<see cref="Rot"/>); Capi, Rosa y la pata solo evalúan su silueta en las celdas de 6 px que
     /// pueden tocarla (las distancias son 1-lipschitzianas, con margen, así que el resultado es el mismo que evaluando todos los
     /// píxeles); el lomo de Rosa se busca en una tabla de 97 puntos; y la viñeta calcula por columna las siluetas de la orilla y
     /// por fila el agua, el reflejo y las filas de olas.</para>
@@ -178,6 +182,12 @@ namespace AF.Presentation
         private static readonly Vector2[] RosaSpineTable = BuildRosaSpineTable();
         private static readonly Vector2 RosaFinAt = RosaSpine(0.42f) + (new Vector2(0.03f, 1f).normalized * (RosaRadius(0.42f) * 0.92f));
 
+        // Lo que pinta el trabajo del banner en el otro hilo, sin cierre ni asignación por petición.
+        private static readonly WaitCallback RunBannerJobCallback = RunBannerJob;
+
+        // Trabajos del banner que siguen en marcha en algún hilo (los tests comprueban que los cancelados paran).
+        private static int s_bannerJobsRunning;
+
         private readonly Dictionary<string, Sprite> _bannerScenes = new Dictionary<string, Sprite>();
         private BannerArtJob? _bannerJob;
         private string? _bannerSceneKey;
@@ -250,13 +260,32 @@ namespace AF.Presentation
         public bool BannerArtPending => _bannerJob != null;
 
         /// <summary>
+        /// El último arte pedido con <see cref="RequestBannerArt"/> no llegará: el trabajo falló en su hilo
+        /// (<see cref="BannerArtFailure.Error"/>, al recogerlo con <see cref="TryTakeBannerArt"/>) o no se pudo encolar
+        /// (<see cref="BannerArtFailure.Queue"/>). Cada fallo deja un solo <c>Debug.LogWarning</c>; la vista entra sin arte.
+        /// Vuelve a <see cref="BannerArtFailure.None"/> con otra petición o con <see cref="ReleaseBannerArt"/>.
+        /// </summary>
+        public BannerArtFailure BannerArtFailure { get; private set; }
+
+        /// <summary>
+        /// Solo tests: fuerza un fallo en los trabajos que se pidan desde ahora (en el hilo, en la cola o un trabajo que no
+        /// acaba hasta que lo cancelan). El juego no lo toca (<see cref="BannerArtFault.None"/>); la vista lo copia de
+        /// <c>LaunchOptions.BannerArtFaultOverride</c> antes de cada petición.
+        /// </summary>
+        public BannerArtFault BannerArtFault { get; set; }
+
+        /// <summary>Trabajos del banner que siguen en marcha en algún hilo, de cualquier instancia (tests de la cancelación).</summary>
+        public static int BannerArtJobsRunning => Volatile.Read(ref s_bannerJobsRunning);
+
+        /// <summary>
         /// Destruye las texturas y los sprites del banner (las mascotas y la viñeta): la vista los suelta al cerrarse el banner y
-        /// se vuelven a generar en el siguiente (el de otro mundo). Si el arte pedido aún se estaba pintando en otro hilo, su
-        /// resultado se descarta. Sin efecto si no hay ninguno.
+        /// se vuelven a generar en el siguiente (el de otro mundo). Si el arte pedido aún se estaba pintando en otro hilo, se
+        /// cancela y su resultado se descarta. Sin efecto si no hay ninguno.
         /// </summary>
         public void ReleaseBannerArt()
         {
-            _bannerJob = null; // el hilo termina por su cuenta y nadie recoge lo que pintó
+            AbandonBannerArt(); // el hilo para en la fila siguiente y nadie recoge lo que pintó
+            BannerArtFailure = BannerArtFailure.None;
             ReleaseBannerSprite(ref _capiPaw);
             ReleaseBannerSprite(ref _rosa);
             ReleaseBannerSprite(ref _rosaSpray);
@@ -269,12 +298,27 @@ namespace AF.Presentation
         }
 
         /// <summary>
+        /// El banner deja de esperar el arte pedido (su tiempo límite: entra sin él): el trabajo pendiente se cancela (lo mira
+        /// por fila, así que deja de gastar CPU) y, si aun así termina, nadie lo recoge. No toca lo ya recogido. Sin efecto si no
+        /// hay nada pendiente.
+        /// </summary>
+        public void AbandonBannerArt()
+        {
+            BannerArtJob? job = _bannerJob;
+            _bannerJob = null;
+            job?.Cancel();
+        }
+
+        /// <summary>
         /// Pide todo el arte de un banner: la viñeta de <paramref name="widthDp"/> × <paramref name="heightDp"/> dp (como
-        /// <see cref="BannerScene"/>) y las mascotas que falten. Con <paramref name="offMainThread"/>, sus píxeles se pintan en un
-        /// hilo del grupo (<see cref="ThreadPool"/>: solo cuentas con <see cref="Color"/> y <see cref="Mathf"/>, sin API de
-        /// Unity) y <see cref="TryTakeBannerArt"/> crea las texturas en el hilo principal cuando acaban; así abrir el banner no
-        /// para el fotograma de la carga del nivel (08 §5.4; revisión 2 de A4: unos 230 ms de CPU en el Editor). Sin él, en el
-        /// acto. Si ya está pedido o hecho con las mismas medidas, no hace nada.
+        /// <see cref="BannerScene"/>) y las mascotas que falten. Con <paramref name="offMainThread"/>, sus píxeles se pintan y se
+        /// pasan a <see cref="Color32"/> en un hilo del grupo (<see cref="ThreadPool"/>: solo cuentas con <see cref="Color"/> y
+        /// <see cref="Mathf"/>, sin API de Unity) y <see cref="TryTakeBannerArt"/> crea las texturas en el hilo principal cuando
+        /// acaban; así abrir el banner no para el fotograma de la carga del nivel (08 §5.4; revisión 2 de A4: unos 230 ms de CPU
+        /// en el Editor). Si el grupo no lo acepta (<see cref="ThreadPool.QueueUserWorkItem(WaitCallback, object)"/> devuelve
+        /// false o lanza <see cref="System.NotSupportedException"/>, como en <c>ProfileWriter.Start</c>), no se pinta en el hilo
+        /// principal: queda <see cref="BannerArtFailure.Queue"/> y la vista entra sin arte. Sin <paramref name="offMainThread"/>,
+        /// en el acto. Si ya está pedido o hecho con las mismas medidas, no hace nada; otra petición pendiente se cancela.
         /// </summary>
         public void RequestBannerArt(float widthDp, float heightDp, Color water, Color? meetWater, int seed, bool offMainThread)
         {
@@ -295,16 +339,23 @@ namespace AF.Presentation
 
             if (BannerArtReadyFor(key))
             {
-                _bannerJob = null;
+                AbandonBannerArt();
                 return;
             }
 
+            AbandonBannerArt(); // otra petición con otras medidas: la anterior para y se descarta
+            BannerArtFailure = BannerArtFailure.None;
             var job = new BannerArtJob(key, w, h, water, meetWater, seed, _capiPaw == null, _rosa == null, _rosaSpray == null,
-                _rosaRipple == null, _rosaFoam == null);
+                _rosaRipple == null, _rosaFoam == null, BannerArtFault);
             _bannerJob = job;
             if (offMainThread)
             {
-                ThreadPool.QueueUserWorkItem(RunBannerJob, job);
+                if (!QueueBannerJob(job))
+                {
+                    _bannerJob = null;
+                    FailBannerArt(BannerArtFailure.Queue, null);
+                }
+
                 return;
             }
 
@@ -316,9 +367,10 @@ namespace AF.Presentation
         }
 
         /// <summary>
-        /// En el hilo principal: si el arte pedido con <see cref="RequestBannerArt"/> ya está pintado, crea sus texturas y sus
-        /// sprites (<see cref="BannerSceneSprite"/> y las mascotas) y devuelve true; true también si ya estaba listo, y false
-        /// mientras otro hilo lo sigue pintando o si no se pidió nada.
+        /// En el hilo principal: si el arte pedido con <see cref="RequestBannerArt"/> ya está pintado, crea sus texturas (sube los
+        /// <see cref="Color32"/> del otro hilo) y sus sprites (<see cref="BannerSceneSprite"/> y las mascotas) y devuelve true;
+        /// true también si ya estaba listo, y false mientras otro hilo lo sigue pintando, si no se pidió nada o si el trabajo
+        /// falló. Nunca lanza por un fallo del otro hilo: lo deja en <see cref="BannerArtFailure"/> con un solo aviso en el log.
         /// </summary>
         public bool TryTakeBannerArt()
         {
@@ -334,14 +386,16 @@ namespace AF.Presentation
             }
 
             _bannerJob = null;
-            if (job.Error != null)
+            BannerPixels? scene = job.Scene;
+            if (job.Error != null || scene == null)
             {
-                throw new System.InvalidOperationException("No se pudo pintar el arte del banner de mundo.", job.Error);
+                FailBannerArt(BannerArtFailure.Error, job.Error);
+                return false;
             }
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
             ReleaseBannerScenes(); // solo la última
-            _bannerScenes[job.Key] = SceneSprite(job.Scene!, job.Key);
+            _bannerScenes[job.Key] = SceneSprite(scene, job.Key);
             _bannerSceneKey = job.Key;
             _capiPaw = _capiPaw != null ? _capiPaw : PawSprite(job.Paw!);
             _rosa = _rosa != null ? _rosa : RosaSprite(job.Rosa!);
@@ -387,6 +441,38 @@ namespace AF.Presentation
             ((BannerArtJob)state!).Run();
         }
 
+        // Encola el trabajo en el grupo de hilos; false si el grupo no lo acepta (devuelve false o lanza NotSupportedException,
+        // como en ProfileWriter.Start). Los fallos de cola que fuerzan los tests pasan por el mismo camino.
+        private static bool QueueBannerJob(BannerArtJob job)
+        {
+            try
+            {
+                switch (job.Fault)
+                {
+                    case BannerArtFault.QueueRejected:
+                        return false;
+                    case BannerArtFault.QueueNotSupported:
+                        throw new System.NotSupportedException("Grupo de hilos no disponible (BannerArtFault.QueueNotSupported).");
+                    default:
+                        return ThreadPool.QueueUserWorkItem(RunBannerJobCallback, job);
+                }
+            }
+            catch (System.NotSupportedException)
+            {
+                return false;
+            }
+        }
+
+        // El arte del banner no llegará: el estado de fallo y un solo aviso (el hilo principal nunca lanza por ello).
+        private void FailBannerArt(BannerArtFailure failure, System.Exception? error)
+        {
+            BannerArtFailure = failure;
+            string why = failure == BannerArtFailure.Queue
+                ? "no se pudo encolar en el grupo de hilos"
+                : "falló al pintarse" + (error != null ? " (" + error.GetType().Name + ": " + error.Message + ")" : string.Empty);
+            Debug.LogWarning("[AF.ProceduralArt] El arte del banner de mundo " + why + "; el banner entra sin él.");
+        }
+
         private static string BannerSceneKey(int w, int h, Color water, Color? meetWater, int seed)
         {
             return w.ToString(System.Globalization.CultureInfo.InvariantCulture) + "x" + h.ToString(System.Globalization.CultureInfo.InvariantCulture)
@@ -427,6 +513,60 @@ namespace AF.Presentation
         private Sprite FoamSprite(PixelCanvas pc)
         {
             return MakeSprite(pc, "rosa_foam", new Vector2(0.5f, 0.5f), Vector4.zero, MascotPxPerDp);
+        }
+
+        // Las mismas piezas desde los Color32 que convirtió el otro hilo (RequestBannerArt): el hilo principal solo crea la
+        // textura y la sube.
+        private Sprite SceneSprite(BannerPixels px, string key)
+        {
+            return MakeSprite32(px, "banner_scene_" + key, new Vector2(0.5f, 0.5f), BannerScenePxPerDp);
+        }
+
+        private Sprite PawSprite(BannerPixels px)
+        {
+            return MakeSprite32(px, "capi_present_paw", CapiPawPivot, MascotPxPerDp);
+        }
+
+        private Sprite RosaSprite(BannerPixels px)
+        {
+            return MakeSprite32(px, "rosa_surface", new Vector2(0.5f, 0f), MascotPxPerDp);
+        }
+
+        private Sprite SpraySprite(BannerPixels px)
+        {
+            return MakeSprite32(px, "rosa_spray", new Vector2(0.5f, 0f), MascotPxPerDp);
+        }
+
+        private Sprite RippleSprite(BannerPixels px)
+        {
+            return MakeSprite32(px, "rosa_ripple", new Vector2(0.5f, 0.5f), MascotPxPerDp);
+        }
+
+        private Sprite FoamSprite(BannerPixels px)
+        {
+            return MakeSprite32(px, "rosa_foam", new Vector2(0.5f, 0.5f), MascotPxPerDp);
+        }
+
+        // Como MakeSprite (la textura de PixelCanvas.ToTexture: RGBA32 sRGB, bilineal, sin repetir, sin copia en CPU tras
+        // subirla), pero con los Color32 ya convertidos en el otro hilo: SetPixels32 en lugar de convertir aquí cada Color.
+        private Sprite MakeSprite32(BannerPixels px, string name, Vector2 pivot, float pxPerDp)
+        {
+            var tex = new Texture2D(px.Width, px.Height, TextureFormat.RGBA32, false)
+            {
+                name = name,
+                filterMode = FilterMode.Bilinear,
+                wrapModeU = TextureWrapMode.Clamp,
+                wrapModeV = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.DontSave,
+            };
+            tex.SetPixels32(px.Pixels);
+            tex.Apply(false, true);
+            Sprite sprite = Sprite.Create(tex, new Rect(0, 0, px.Width, px.Height), pivot, 100f * pxPerDp, 0, SpriteMeshType.FullRect, Vector4.zero);
+            sprite.name = name;
+            sprite.hideFlags = HideFlags.DontSave;
+            _owned.Add(tex);
+            _owned.Add(sprite);
+            return sprite;
         }
 
         /// <summary>
@@ -1147,7 +1287,9 @@ namespace AF.Presentation
         // agua, el camino de destellos del sol, olas cortas (2-5 % del ancho) y algo arqueadas, cada una con su cresta clara y su
         // seno oscuro, más pequeñas y apretadas hacia el horizonte; el banco, de arena mojada con el canto oscuro donde toca el
         // agua; y en el mundo 3, las dos aguas con una costura suave.
-        private static PixelCanvas DrawBannerScene(int w, int h, Color water, Color? meetWater, int seed)
+        // job: el trabajo que la pinta en otro hilo (null en el hilo principal); si lo cancelan, para en la fila siguiente y
+        // devuelve el lienzo a medias, que nadie recoge.
+        private static PixelCanvas DrawBannerScene(int w, int h, Color water, Color? meetWater, int seed, BannerArtJob? job = null)
         {
             var pc = new PixelCanvas(w, h);
             float k = BannerScenePxPerDp;
@@ -1178,6 +1320,11 @@ namespace AF.Presentation
 
             for (int y = 0; y < h; y++)
             {
+                if (job != null && job.Cancelled)
+                {
+                    return pc; // huérfano: deja de gastar CPU
+                }
+
                 float yc = y + 0.5f;
                 bool sky = y >= horizon;
 
@@ -1315,6 +1462,11 @@ namespace AF.Presentation
                     c.a = 1f;
                     pc.Blend(x, y, c, cov);
                 }
+            }
+
+            if (job != null && job.Cancelled)
+            {
+                return pc;
             }
 
             // Capi sentado en lo alto del banco, con su sombra de contacto en la arena.
@@ -1466,13 +1618,38 @@ namespace AF.Presentation
         }
 
         /// <summary>
+        /// Píxeles de una pieza del banner ya pasados a <see cref="Color32"/> (<see cref="PixelCanvas.ToColor32"/>) en el hilo
+        /// que la pintó: el hilo principal solo crea la textura y los sube (<see cref="MakeSprite32"/>).
+        /// </summary>
+        private sealed class BannerPixels
+        {
+            public BannerPixels(PixelCanvas pc)
+            {
+                Width = pc.Width;
+                Height = pc.Height;
+                Pixels = pc.ToColor32();
+            }
+
+            public int Width { get; }
+
+            public int Height { get; }
+
+            public Color32[] Pixels { get; }
+        }
+
+        /// <summary>
         /// Píxeles de un banner pintados de una vez (<see cref="RequestBannerArt"/>), en un hilo del grupo o en el hilo principal:
         /// solo funciones estáticas de este parcial sobre <see cref="PixelCanvas"/> propios, con <see cref="Color"/>,
         /// <see cref="Vector2"/> y <see cref="Mathf"/> (ninguna API de Unity que exija el hilo principal) y tablas estáticas de
-        /// solo lectura ya iniciadas. El hilo principal solo lee los resultados cuando <see cref="Done"/> es true.
+        /// solo lectura ya iniciadas; cada pieza sale ya en <see cref="Color32"/>. El hilo principal solo lee los resultados
+        /// cuando <see cref="Done"/> es true. <see cref="Cancel"/> (el banner dejó de esperarlo o se cerró) lo para entre piezas y
+        /// en cada fila de la viñeta. Un fallo se queda en <see cref="Error"/>: nunca sale del hilo.
         /// </summary>
         private sealed class BannerArtJob
         {
+            // Lo más que espera un trabajo con BannerArtFault.Stall a que lo cancelen antes de darse por fallido (ms).
+            private const int StallMaxMs = 30000;
+
             private readonly int _w;
             private readonly int _h;
             private readonly Color _water;
@@ -1484,9 +1661,10 @@ namespace AF.Presentation
             private readonly bool _ripple;
             private readonly bool _foam;
             private volatile bool _done;
+            private volatile bool _cancelled;
 
             public BannerArtJob(string key, int w, int h, Color water, Color? meet, int seed, bool paw, bool rosa, bool spray,
-                bool ripple, bool foam)
+                bool ripple, bool foam, BannerArtFault fault)
             {
                 Key = key;
                 _w = w;
@@ -1499,40 +1677,79 @@ namespace AF.Presentation
                 _spray = spray;
                 _ripple = ripple;
                 _foam = foam;
+                Fault = fault;
             }
 
             public string Key { get; }
 
+            public BannerArtFault Fault { get; }
+
             public bool Done => _done;
 
-            public PixelCanvas? Scene { get; private set; }
+            /// <summary>Nadie va a recoger lo que pinte: para en la fila siguiente (lo mira <c>DrawBannerScene</c>).</summary>
+            public bool Cancelled => _cancelled;
 
-            public PixelCanvas? Paw { get; private set; }
+            public BannerPixels? Scene { get; private set; }
 
-            public PixelCanvas? Rosa { get; private set; }
+            public BannerPixels? Paw { get; private set; }
 
-            public PixelCanvas? Spray { get; private set; }
+            public BannerPixels? Rosa { get; private set; }
 
-            public PixelCanvas? Ripple { get; private set; }
+            public BannerPixels? Spray { get; private set; }
 
-            public PixelCanvas? Foam { get; private set; }
+            public BannerPixels? Ripple { get; private set; }
+
+            public BannerPixels? Foam { get; private set; }
 
             public double RasterMs { get; private set; }
 
             public System.Exception? Error { get; private set; }
 
-            // Pinta lo pedido; la escritura volátil de _done publica los resultados para el hilo principal.
+            public void Cancel()
+            {
+                _cancelled = true;
+            }
+
+            // Pinta lo pedido y lo pasa a Color32; la escritura volátil de _done publica los resultados para el hilo principal.
+            // Cancelado, deja de pintar y no publica nada (nadie lo recoge).
             public void Run()
             {
+                Interlocked.Increment(ref s_bannerJobsRunning);
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 try
                 {
-                    Scene = DrawBannerScene(_w, _h, _water, _meet, _seed);
-                    Paw = _paw ? DrawCapiPaw() : null;
-                    Rosa = _rosa ? DrawRosa() : null;
-                    Spray = _spray ? DrawRosaSpray() : null;
-                    Ripple = _ripple ? DrawRosaRipple() : null;
-                    Foam = _foam ? DrawRosaFoam() : null;
+                    switch (Fault)
+                    {
+                        case BannerArtFault.Throw:
+                            throw new System.InvalidOperationException("Fallo forzado del arte del banner (BannerArtFault.Throw).");
+                        case BannerArtFault.Stall:
+                            Stall();
+                            return;
+                    }
+
+                    PixelCanvas scene = DrawBannerScene(_w, _h, _water, _meet, _seed, this);
+                    if (_cancelled)
+                    {
+                        return;
+                    }
+
+                    BannerPixels? sceneOut = new BannerPixels(scene);
+                    BannerPixels? paw = _paw && !_cancelled ? new BannerPixels(DrawCapiPaw()) : null;
+                    BannerPixels? rosa = _rosa && !_cancelled ? new BannerPixels(DrawRosa()) : null;
+                    BannerPixels? spray = _spray && !_cancelled ? new BannerPixels(DrawRosaSpray()) : null;
+                    BannerPixels? ripple = _ripple && !_cancelled ? new BannerPixels(DrawRosaRipple()) : null;
+                    BannerPixels? foam = _foam && !_cancelled ? new BannerPixels(DrawRosaFoam()) : null;
+                    if (_cancelled)
+                    {
+                        return;
+                    }
+
+                    Scene = sceneOut;
+                    Paw = paw;
+                    Rosa = rosa;
+                    Spray = spray;
+                    Ripple = ripple;
+                    Foam = foam;
                 }
                 catch (System.Exception e)
                 {
@@ -1543,8 +1760,62 @@ namespace AF.Presentation
                     watch.Stop();
                     RasterMs = watch.Elapsed.TotalMilliseconds;
                     _done = true;
+                    Interlocked.Decrement(ref s_bannerJobsRunning);
+                }
+            }
+
+            // BannerArtFault.Stall: un trabajo que no acaba hasta que lo cancelan (el tiempo límite de la vista) y, si nadie lo
+            // cancela en StallMaxMs, falla.
+            private void Stall()
+            {
+                var watch = System.Diagnostics.Stopwatch.StartNew();
+                while (!_cancelled)
+                {
+                    if (watch.ElapsedMilliseconds >= StallMaxMs)
+                    {
+                        throw new System.TimeoutException("Trabajo del arte del banner detenido (BannerArtFault.Stall).");
+                    }
+
+                    Thread.Sleep(2);
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Por qué no llegará el arte del banner pedido (<see cref="ProceduralArt.BannerArtFailure"/>): la vista entra sin él.
+    /// </summary>
+    public enum BannerArtFailure
+    {
+        /// <summary>Sin fallo: el arte está, se está pintando o no se pidió.</summary>
+        None = 0,
+
+        /// <summary>El trabajo lanzó una excepción en su hilo (o no dejó nada que recoger).</summary>
+        Error = 1,
+
+        /// <summary>El grupo de hilos no aceptó el trabajo (<c>QueueUserWorkItem</c> devolvió false o lanzó <c>NotSupportedException</c>).</summary>
+        Queue = 2,
+    }
+
+    /// <summary>
+    /// Solo tests (<see cref="ProceduralArt.BannerArtFault"/>, <c>LaunchOptions.BannerArtFaultOverride</c>): un fallo forzado
+    /// en el arte del banner para probar que entra sin él.
+    /// </summary>
+    public enum BannerArtFault
+    {
+        /// <summary>Sin fallo (el juego).</summary>
+        None = 0,
+
+        /// <summary>El trabajo lanza en su hilo (o en el principal, pedido en el acto).</summary>
+        Throw = 1,
+
+        /// <summary>El trabajo no acaba hasta que lo cancelan: el banner entra sin arte al cumplirse su tiempo límite.</summary>
+        Stall = 2,
+
+        /// <summary>El grupo de hilos lo rechaza: <c>QueueUserWorkItem</c> devuelve false.</summary>
+        QueueRejected = 3,
+
+        /// <summary>El grupo de hilos no está disponible: <c>NotSupportedException</c> al encolarlo.</summary>
+        QueueNotSupported = 4,
     }
 }

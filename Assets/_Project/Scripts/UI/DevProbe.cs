@@ -38,10 +38,14 @@ namespace AF.UI
     /// ocultas salen en <c>cuias</c>: la sonda solo escribe en desarrollo (<see cref="Enabled"/>), donde hacen falta para
     /// jugar con adb. Los eventos sueltos de la presentación van con <see cref="Event"/>.</para>
     /// <para>Con <see cref="Event"/>, la tarjeta previa y el banner de mundo (T13 y A4; docs/dev/prototipo-v0.md):
-    /// <c>level_card</c> (con <c>bite_demo</c> en el estreno de la Piraña), <c>world_banner</c> (con <c>then</c>),
-    /// <c>world_banner_art</c> (<c>wait_ms</c>, <c>mascots_ms</c> y <c>main_ms</c>) y <c>world_banner_closed</c> (con
-    /// <c>next</c>, del mismo vocabulario que <c>then</c>: <c>level_card</c> o <c>intro</c>); y <c>AF_LAYOUT</c>
-    /// <c>level_card</c> y <c>world_banner</c> al terminar su entrada.</para>
+    /// <c>level_card</c> (con <c>bite_demo</c> en el estreno de la Piraña); <c>world_banner</c> al abrirse, con <c>level</c>,
+    /// <c>world</c>, <c>text</c> (la clave entera), <c>then</c> (<c>level_card</c> o <c>intro</c>) y <c>reduce_motion</c>;
+    /// <c>world_banner_art</c> cuando su tarjeta empieza a entrar, con <c>level</c>, <c>world</c>, <c>async</c>,
+    /// <c>wait_ms</c> (reloj real desde que pidió el arte), <c>mascots_ms</c>, <c>main_ms</c> y <c>fallback</c> (<c>none</c>,
+    /// o <c>error</c>, <c>queue</c> o <c>timeout</c> si entró sin arte); y <c>world_banner_closed</c> al tocarlo, con
+    /// <c>level</c>, <c>world</c> y <c>next</c> (del mismo vocabulario que <c>then</c>). Y <c>AF_LAYOUT</c> con
+    /// <c>"screen":"level_card"</c> o <c>"screen":"world_banner"</c> (id <c>world_banner</c>, el rectángulo de la tarjeta) al
+    /// terminar su entrada; en la línea <c>level</c>, el id <c>world_banner</c> solo con la tarjeta a la vista.</para>
     /// </remarks>
     public sealed class DevProbe
     {

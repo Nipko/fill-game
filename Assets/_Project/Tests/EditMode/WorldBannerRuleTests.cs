@@ -196,6 +196,77 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Flow_WhileTheViewWaitsForTheArt_NoTapClosesIt()
+        {
+            // Revisión 3 de A4, punto 2: mientras la vista espera el arte del banner (solo el velo), ningún toque lo cierra, así que
+            // no se salta sin verse; cuando la tarjeta entra (con su arte o con el respaldo, como mucho en su tiempo límite), un
+            // toque lo cierra como siempre.
+            BannerRig rig = new BannerRig();
+            rig.Flow.WorldBannerExitMs = 340;
+            rig.Flow.WorldBannerWaiting = true;
+            Assert.That(rig.Flow.WorldBannerWaiting, Is.False, "sin banner no hay espera");
+            rig.Flow.Load(41);
+            Assert.That(rig.Flow.WorldBannerWaiting, Is.False, "la pone la vista, no la carga");
+            rig.Flow.WorldBannerWaiting = true;
+            Assert.That(rig.Flow.WorldBannerWaiting, Is.True);
+            Assert.That(rig.Flow.TapAnywhere(), Is.False, "TapAnywhere");
+            Assert.That(rig.Flow.TapCuia(0).Kind, Is.EqualTo(TapKind.Ignored));
+            Assert.That(rig.Flow.TapBackground().Kind, Is.EqualTo(TapKind.Ignored));
+            Assert.That(rig.Flow.DismissLevelCard(), Is.False);
+            Assert.That(rig.Flow.DismissWorldBanner(), Is.False);
+            rig.Flow.Tick(10000, true);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
+            Assert.That(rig.Flow.WorldBanner, Is.EqualTo(3));
+            Assert.That(rig.Flow.WorldBannerClosing, Is.False, "ningún toque empezó la salida");
+            Assert.That(rig.Flow.Selected, Is.EqualTo(TapController.NoSelection));
+            Assert.That(rig.Events, Is.EqualTo(new[] { "loaded:41", "banner:3:41" }), "ni intro ni tarjeta");
+
+            // La tarjeta entra: un toque empieza la salida y, al terminarla, la intro.
+            rig.Flow.WorldBannerWaiting = false;
+            Assert.That(rig.Flow.TapAnywhere(), Is.True);
+            Assert.That(rig.Flow.WorldBannerClosing, Is.True);
+            rig.Flow.Tick(340, true);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
+            Assert.That(rig.Flow.WorldBannerWaiting, Is.False);
+
+            // Otro nivel con la vista aún esperando: la espera no pasa al banner siguiente.
+            rig.Flow.Load(81);
+            rig.Flow.WorldBannerWaiting = true;
+            rig.Flow.Load(141);
+            Assert.That(rig.Flow.WorldBanner, Is.EqualTo(5));
+            Assert.That(rig.Flow.WorldBannerWaiting, Is.False);
+            Assert.That(rig.Flow.TapAnywhere(), Is.True);
+        }
+
+        [Test]
+        public void Flow_WorldBannerAhead_TheSameRuleAsTheLoad()
+        {
+            // Para pedir antes el arte del banner (en la victoria del 10, el 40, el 80 y el 140, y al ofrecer «Jugar»): el mundo
+            // del banner que abriría ahora la carga de ese nivel, con su misma regla (primer nivel de un mundo desde el 2 y primer
+            // intento).
+            BannerRig rig = new BannerRig();
+            Assert.That(rig.Flow.WorldBannerAhead(11), Is.EqualTo(2));
+            Assert.That(rig.Flow.WorldBannerAhead(41), Is.EqualTo(3));
+            Assert.That(rig.Flow.WorldBannerAhead(81), Is.EqualTo(4));
+            Assert.That(rig.Flow.WorldBannerAhead(141), Is.EqualTo(5));
+            foreach (int level in new[] { 1, 10, 12, 40, 42, 140 })
+            {
+                Assert.That(rig.Flow.WorldBannerAhead(level), Is.EqualTo(0), "nivel " + level);
+            }
+
+            rig.Flow.Load(40);
+            Assert.That(rig.Flow.WorldBannerAhead(rig.Flow.LevelNumber + 1), Is.EqualTo(3), "en la victoria del 40, el banner del 41");
+            rig.Flow.Load(41);
+            Assert.That(rig.Flow.WorldBanner, Is.EqualTo(3), "y la carga lo abre");
+            Assert.That(rig.Flow.WorldBannerAhead(41), Is.EqualTo(0), "volver a entrar en el 41 no es el primer intento");
+            rig.Flow.Load(41);
+            Assert.That(rig.Flow.WorldBanner, Is.EqualTo(0), "y la carga tampoco lo abre");
+
+            var off = new LevelFlow(LevelCatalog.Create(TestPacks.Campaign), new MemoryProgressStore(), new BannerListener());
+            Assert.That(off.WorldBannerAhead(41), Is.EqualTo(0), "con el banner apagado, nunca");
+        }
+
+        [Test]
         public void Flow_NoBannerOn1_12_42()
         {
             BannerRig rig = new BannerRig();

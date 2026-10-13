@@ -21,7 +21,9 @@ namespace AF.GameFlow
     /// … se muestra antes de esta animación, no encima»; D-012, punto 2). Un segundo toque durante la salida la termina en el
     /// acto. Como es LEVEL_CARD, todo lo que espera a la tarjeta espera también al banner (los avisos y el regalo de la
     /// Luciérnaga, la pausa inerte bajo el velo). No sale al reanudar ni al reintentar. Va con su propio interruptor
-    /// (<see cref="WorldBannersEnabled"/>, apagado por defecto), que el juego enciende junto con las tarjetas.
+    /// (<see cref="WorldBannersEnabled"/>, apagado por defecto), que el juego enciende junto con las tarjetas. Mientras la vista
+    /// espera el arte del banner (<see cref="WorldBannerWaiting"/>, con su tiempo límite), los toques no lo cierran: el banner no
+    /// se pierde sin verse.
     /// </remarks>
     public sealed partial class LevelFlow
     {
@@ -34,6 +36,7 @@ namespace AF.GameFlow
         private bool _bannerRevealGifted;
         private bool _bannerThenCard;
         private bool _bannerClosing;
+        private bool _bannerWaiting;
 
         /// <summary>
         /// Hay tarjeta previa al cargar un nivel con etiqueta o con estreno. False por defecto: los tests del flujo y cualquier
@@ -81,14 +84,45 @@ namespace AF.GameFlow
         public bool WorldBannerClosing => _worldBanner != 0 && _bannerClosing;
 
         /// <summary>
+        /// La vista abrió el banner de mundo con el velo pero aún espera su arte (como mucho su tiempo límite: después entra sin
+        /// él): mientras, ningún toque lo cierra (<see cref="DismissWorldBanner"/>, <see cref="TapAnywhere"/>,
+        /// <see cref="TapCuia"/> y <see cref="TapBackground"/> lo ignoran), así que no se puede saltar sin haberse visto. La pone
+        /// la vista al abrirlo y la quita cuando la tarjeta entra; vuelve a false al cerrarse o al cargar otro nivel. False sin
+        /// banner (una vista sin banner nunca la pone).
+        /// </summary>
+        public bool WorldBannerWaiting
+        {
+            get => _worldBanner != 0 && _bannerWaiting;
+            set => _bannerWaiting = value && _worldBanner != 0;
+        }
+
+        /// <summary>
+        /// Mundo cuyo banner abriría ahora <see cref="Load"/>(<paramref name="level"/>), o 0: el banner está encendido, el nivel
+        /// (<see cref="ResolveLevel"/>) es el primero de un mundo desde el 2 (<see cref="WorldBanners"/>) y sería el primer
+        /// intento (se entra en él, no se vuelve a entrar), con la misma regla que la carga. La vista lo usa para pedir antes el
+        /// arte del banner: en la victoria del 10, el 40, el 80 y el 140, y al ofrecer «Jugar» con un nivel que abre mundo.
+        /// </summary>
+        public int WorldBannerAhead(int level)
+        {
+            if (!WorldBannersEnabled)
+            {
+                return 0;
+            }
+
+            int number = ResolveLevel(level);
+            return _attempt.Level != number ? WorldBanners.WorldAt(number) : 0;
+        }
+
+        /// <summary>
         /// Cierra el banner de mundo (1 toque en cualquier punto). Con <see cref="WorldBannerExitMs"/> &gt; 0, el primer toque
         /// empieza la salida (sigue en LEVEL_CARD, <see cref="WorldBannerClosing"/>) y <see cref="Tick"/> la termina; un segundo
         /// toque durante la salida, o <see cref="WorldBannerExitMs"/> = 0, la termina en el acto: si el nivel tiene tarjeta previa,
-        /// la abre (sigue en LEVEL_CARD); si no, arranca la intro que esperaba. False si no hay banner abierto.
+        /// la abre (sigue en LEVEL_CARD); si no, arranca la intro que esperaba. False si no hay banner abierto o si la vista aún
+        /// espera su arte (<see cref="WorldBannerWaiting"/>: el toque se ignora).
         /// </summary>
         public bool DismissWorldBanner()
         {
-            if (Phase != FlowPhase.LevelCard || _worldBanner == 0)
+            if (Phase != FlowPhase.LevelCard || _worldBanner == 0 || _bannerWaiting)
             {
                 return false;
             }
@@ -184,6 +218,7 @@ namespace AF.GameFlow
             _worldBanner = 0;
             _bannerThenCard = false;
             _bannerClosing = false;
+            _bannerWaiting = false;
             int introMs = _cardIntroMs;
             bool revealGifted = _bannerRevealGifted;
             _bannerRevealGifted = false;
@@ -208,6 +243,7 @@ namespace AF.GameFlow
             _card = null;
             _worldBanner = world;
             _bannerClosing = false;
+            _bannerWaiting = false;
             _bannerRevealGifted = revealGifted;
             _bannerThenCard = LevelCardsEnabled && _level != null
                 && LevelCardInfo.For(_level, _levelNumber, _wallet?.Config ?? EconomyConfig.Defaults, revealGifted) != null;
@@ -230,6 +266,7 @@ namespace AF.GameFlow
             _bannerRevealGifted = false;
             _bannerThenCard = false;
             _bannerClosing = false;
+            _bannerWaiting = false;
         }
     }
 }

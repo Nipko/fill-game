@@ -625,6 +625,13 @@ namespace AF.UI
             _screen?.SetVisible(screen == AppScreen.Level);
             _lobby?.Show(screen);
             _skipNextDelta = true;
+
+            // «Jugar» con un nivel que abre mundo (11, 41, 81 y 141, en el primer intento): el arte de su banner se pinta ya en
+            // otro hilo, así que al entrar el banner suele salir en el acto (A4, D-012; GameScreen.PrefetchWorldBanner).
+            if (screen == AppScreen.Lobby && _app != null)
+            {
+                _screen?.PrefetchWorldBanner(_app.PlayLevel);
+            }
         }
 
         private bool InLevel => _app == null || _app.Screen == AppScreen.Level;

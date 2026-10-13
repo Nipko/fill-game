@@ -17,6 +17,7 @@ using UnityEngine.TestTools;
 using UnityEngine.TestTools.Constraints;
 using UnityEngine.UI;
 using Is = UnityEngine.TestTools.Constraints.Is;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 namespace AF.Tests.PlayMode
 {
@@ -29,23 +30,31 @@ namespace AF.Tests.PlayMode
     /// previa) solo arranca cuando el banner ya no se ve (07 §5.1: «antes de esta animación, no encima»); un segundo toque
     /// durante la salida la termina en el acto; no sale en el 42, ni al reintentar, ni al reanudar; si el nivel tiene tarjeta
     /// previa, sale después del banner y el regalo de la Luciérnaga espera a los dos (nivel 141 con el tablero del 100:
-    /// <see cref="LaunchOptions.LevelOffsetOverride"/> = 41); quieto con Reducir movimiento; sin asignaciones mientras anima; el
-    /// arte pintado fuera del hilo principal, como en el juego (el banner espera a tenerlo); y las sondas <c>AF_STATE
-    /// world_banner</c>, <c>world_banner_art</c> y <c>world_banner_closed</c>. Salvo el test del arte en otro hilo, todos lo
-    /// piden en el acto (<see cref="LaunchOptions.BannerArtSyncOverride"/>, <see cref="CardSetup.Load"/>).
+    /// <see cref="LaunchOptions.LevelOffsetOverride"/> = 41); quieto con Reducir movimiento; sin asignaciones mientras anima ni
+    /// mientras espera el arte; el arte pintado fuera del hilo principal, como en el juego: mientras llega, el velo en el acto y
+    /// los toques ignorados; si falla, no se puede encolar o no llega en su tiempo límite, la tarjeta sin arte (el respaldo de
+    /// D-012) y el arte tardío descartado; pedido antes en la victoria del 10 y al ofrecer «Jugar» con un nivel que abre mundo;
+    /// y las sondas <c>AF_STATE world_banner</c>, <c>world_banner_art</c> y <c>world_banner_closed</c> y el
+    /// <c>AF_LAYOUT</c>. Salvo los tests del arte en otro hilo, todos lo piden en el acto
+    /// (<see cref="LaunchOptions.BannerArtSyncOverride"/>, <see cref="CardSetup.Load"/>).
     /// </summary>
     public sealed class WorldBannerTests
     {
+        private readonly List<string> _lines = new List<string>();
+
         [SetUp]
         public void SetUp()
         {
             FunnelSetup.Hooks();
             GameScreen.SimulatedScreen = HudLabelTests.Screen780; // 360 × 780 dp con zona segura
+            _lines.Clear();
+            Application.logMessageReceived += OnLog;
         }
 
         [TearDown]
         public void TearDown()
         {
+            Application.logMessageReceived -= OnLog;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
@@ -346,12 +355,15 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Banner_ArtOffTheMainThread_ThenEnters_AndATapBeforeSkipsIt()
+        public IEnumerator Banner_ArtOffTheMainThread_VeilAtOnce_TapsIgnoredUntilTheCardEnters()
         {
             // Como en el juego (sin BannerArtSyncOverride): abrir el banner no pinta su arte en el fotograma de la carga (08 §5.4).
-            // El banner está abierto (LEVEL_CARD, el velo recibe el toque) pero no se ve hasta que el arte llega de otro hilo;
-            // entonces entra desde t = 0. Un toque antes lo salta sin salida.
+            // Mientras se pinta en otro hilo, el velo sale en el acto, la tarjeta aún no y ningún toque lo cierra (ni el velo, ni
+            // TapAnywhere, ni una cuia): no se puede saltar sin verse (revisión 3 de A4, punto 2). Cuando el arte llega, la tarjeta
+            // entra desde t = 0 y un toque lo cierra como siempre. El tiempo límite se sube para no depender de la máquina (el
+            // respaldo tiene sus propios tests).
             LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.BannerArtTimeoutMsOverride = 60000f;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1240));
             yield return PlayModeHelpers.LoadGame(42, new MemoryProgressStore(42, 41));
             GameBootstrap boot = GameBootstrap.Current!;
@@ -360,72 +372,336 @@ namespace AF.Tests.PlayMode
             LevelFlow flow = boot.Flow!;
             WorldBannerView banner = view.WorldBannerView;
             Assert.That(flow.WorldBanner, Is.EqualTo(0), "el 42 no lo lleva");
+            view.CardArt.ReleaseBannerArt(); // el arte es de toda la sesión: nada pedido de antes
 
             flow.Load(41);
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
             Assert.That(flow.WorldBanner, Is.EqualTo(3));
             Assert.That(banner.Visible && banner.AsyncArt, Is.True);
             Assert.That(banner.ArtReady, Is.False, "el arte se pinta en otro hilo");
-            Assert.That(banner.Alpha, Is.EqualTo(0f), "sin arte, no se ve");
+            Assert.That(banner.Waiting && !banner.CardShown, Is.True);
+            Assert.That(banner.VeilAlpha, Is.EqualTo(1f), "el velo, en el acto");
+            Assert.That(banner.Dim.gameObject.activeInHierarchy, Is.True);
+            Assert.That(banner.Pop.gameObject.activeSelf, Is.False, "la tarjeta, cuando llegue el arte");
+            Assert.That(banner.Alpha, Is.EqualTo(0f), "sin tarjeta a la vista");
+            Assert.That(flow.WorldBannerWaiting, Is.True, "ningún toque lo cierra");
             Assert.That(view.CardArt.BannerArtPending, Is.True);
             Assert.That(view.CardArt.MascotsBuilt, Is.False);
             Assert.That(view.CardArt.MascotsMainMs, Is.EqualTo(0d), "nada pintado en el hilo principal");
             Assert.That(view.CardIntroHeld, Is.True);
             Assert.That(view.LastWorldBannerProbe, Does.Contain("\"level\":41"));
+            Assert.That(view.LastWorldBannerArtProbe, Is.Null, "world_banner_art, cuando entre la tarjeta");
             Assert.That(banner.RaycastTargets(), Is.EqualTo(new Graphic[] { banner.Dim }));
 
-            var watch = System.Diagnostics.Stopwatch.StartNew();
-            while (!banner.ArtReady && watch.ElapsedMilliseconds < 20000)
+            // Mientras espera, ningún toque lo cierra: ni el velo, ni TapAnywhere, ni una cuia.
+            yield return null; // un fotograma de verdad para el raycast (con el reloj quitado, el banner no avanza)
+            Assert.That(banner.Waiting, Is.True);
+            WorldBannerSetup.Tap(banner);
+            Assert.That(boot.TapAnywhere(), Is.False, "TapAnywhere tampoco");
+            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Ignored));
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
+            Assert.That(flow.WorldBanner, Is.EqualTo(3));
+            Assert.That(flow.WorldBannerClosing, Is.False, "ningún toque empezó la salida");
+            Assert.That(banner.Visible && !banner.Dismissing, Is.True);
+            Assert.That(view.LastWorldBannerClosedProbe, Is.Null);
+
+            // El arte llega: la tarjeta entra desde t = 0 y, desde ahí, un toque lo cierra.
+            var watch = Stopwatch.StartNew();
+            while (!banner.CardShown && watch.ElapsedMilliseconds < 20000)
             {
                 yield return null; // tiempo de verdad para el hilo que pinta
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
             }
 
             Assert.That(banner.ArtReady, Is.True, "el arte llega");
-            Assert.That(banner.ArtWaitMs, Is.GreaterThan(0f));
+            Assert.That(banner.Fallback, Is.EqualTo(WorldBannerView.FallbackNone));
+            Assert.That(banner.ArtWaitMs, Is.GreaterThan(0f), "reloj real desde la petición");
+            Assert.That(banner.Pop.gameObject.activeSelf, Is.True);
+            Assert.That(flow.WorldBannerWaiting, Is.False);
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
             Assert.That(view.Intro.TimeMs, Is.EqualTo(0f));
             Assert.That(view.CardArt.MascotsBuilt && !view.CardArt.BannerArtPending, Is.True);
             Assert.That(view.CardArt.MascotsMs, Is.GreaterThan(0d));
             Assert.That(view.CardArt.MascotsMainMs, Is.LessThan(view.CardArt.MascotsMs), "en el hilo principal, solo las texturas");
-            Assert.That(view.LastWorldBannerArtProbe, Does.Contain("\"level\":41").And.Contain("\"async\":true"));
+            Assert.That(view.LastWorldBannerArtProbe, Does.Contain("\"level\":41").And.Contain("\"async\":true").And.Contain("\"fallback\":\"none\""));
             Assert.That(banner.SceneSprite, Is.Not.Null);
+            Assert.That(banner.FlatWater.gameObject.activeSelf, Is.False);
             Assert.That(banner.Rosa.sprite, Is.Not.Null);
             Assert.That(banner.Paw.sprite, Is.Not.Null);
             PlayModeHelpers.Step(boot, 1500);
             Assert.That(banner.Alpha, Is.EqualTo(1f));
+            Assert.That(banner.VeilAlpha, Is.EqualTo(1f));
             Assert.That(banner.PawAngle, Is.EqualTo(WorldBannerView.PawUpDeg).Within(0.5f));
             Assert.That(banner.Settled, Is.True);
             WorldBannerSetup.AssertLaidOut(view);
 
-            // Un toque antes de que llegue el arte: no hay nada que ver salir, así que el flujo sigue en el acto.
-            flow.Load(81);
-            Assert.That(flow.WorldBanner, Is.EqualTo(4));
-            Assert.That(banner.ArtReady, Is.False);
-            yield return null; // un fotograma de verdad para el raycast (con el reloj quitado, el banner no avanza)
-            Assert.That(banner.ArtReady, Is.False);
+            yield return null; // un fotograma de verdad: el raycast no ve un velo que el lienzo aún no ha pintado
             WorldBannerSetup.Tap(banner);
+            Assert.That(flow.WorldBannerClosing && banner.Dismissing, Is.True, "ya se ve: un toque empieza la salida");
+            Assert.That(view.LastWorldBannerClosedProbe, Is.EqualTo("{\"level\":41,\"world\":3,\"next\":\"intro\"}"));
+            PlayModeHelpers.Step(boot, 400);
+            Assert.That(banner.Visible, Is.False);
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Intro));
-            Assert.That(flow.WorldBanner, Is.EqualTo(0));
-            Assert.That(banner.Visible, Is.False);
-            Assert.That(view.CardArt.BannerArtPending, Is.False, "lo que se pintaba se descarta");
             Assert.That(view.CardArt.MascotsBuilt, Is.False);
-            Assert.That(view.LastWorldBannerClosedProbe, Is.EqualTo("{\"level\":81,\"world\":4,\"next\":\"intro\"}"));
             CardSetup.StepUntilPlaying(boot);
+        }
 
-            // Cerrado por otro camino (TapAnywhere, TapCuia, el fondo) antes de que llegue el arte: tampoco hay salida, y el flujo
-            // sigue en su propio Tick de ese fotograma (la vista no lo hace avanzar desde el suyo).
-            flow.Load(11);
-            Assert.That(flow.WorldBanner, Is.EqualTo(2));
-            Assert.That(banner.ArtReady, Is.False);
-            Assert.That(boot.TapAnywhere(), Is.True);
-            Assert.That(flow.WorldBannerClosing, Is.True);
+        [UnityTest]
+        public IEnumerator Banner_ArtFails_EntersWithoutIt_ATapClosesIt_AndTheIntroFollows()
+        {
+            // Revisión 3 de A4, punto 1: si el trabajo del arte falla en su hilo, o si el grupo de hilos no lo acepta (devuelve false
+            // o lanza NotSupportedException), nada lanza en el hilo principal (un solo aviso en el log) y el banner entra sin arte:
+            // la tarjeta, la placa y el texto de D-012, con la viñeta del color plano del agua y sin Rosa ni Capi. Un toque lo
+            // cierra y la intro sigue.
+            LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.BannerArtFaultOverride = BannerArtFault.Throw;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1240));
+            yield return PlayModeHelpers.LoadGame(42, new MemoryProgressStore(42, 41));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            WorldBannerView banner = view.WorldBannerView;
+            view.CardArt.ReleaseBannerArt();
+
+            flow.Load(41);
+            var watch = Stopwatch.StartNew();
+            while (!banner.CardShown && watch.ElapsedMilliseconds < 10000)
+            {
+                yield return null;
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            WorldBannerSetup.AssertFallback(view, WorldBannerView.FallbackError);
+            Assert.That(ArtWarnings("falló al pintarse"), Is.EqualTo(1), "un solo aviso");
+            yield return WorldBannerSetup.CloseThenTheIntro(boot, 41, 3);
+
+            // El grupo de hilos lo rechaza: el respaldo en el acto (no se pinta en el hilo principal).
+            LaunchOptions.BannerArtFaultOverride = BannerArtFault.QueueRejected;
+            flow.Load(81);
+            Assert.That(banner.CardShown, Is.True, "sin cola, en el acto");
+            Assert.That(view.CardArt.MascotsMainMs, Is.EqualTo(0d), "nada pintado en el hilo principal");
+            WorldBannerSetup.AssertFallback(view, WorldBannerView.FallbackQueue);
+            yield return WorldBannerSetup.CloseThenTheIntro(boot, 81, 4);
+
+            // Sin grupo de hilos (NotSupportedException al encolar): igual.
+            LaunchOptions.BannerArtFaultOverride = BannerArtFault.QueueNotSupported;
+            flow.Load(141);
+            Assert.That(banner.CardShown, Is.True);
+            WorldBannerSetup.AssertFallback(view, WorldBannerView.FallbackQueue);
+            yield return WorldBannerSetup.CloseThenTheIntro(boot, 141, 5);
+            Assert.That(ArtWarnings("no se pudo encolar"), Is.EqualTo(2), "un aviso por banner");
+        }
+
+        [UnityTest]
+        public IEnumerator Banner_ArtTimesOut_EntersWithoutIt_AndTheLateArtIsDiscarded()
+        {
+            // Revisión 3 de A4, puntos 1b y 5: si el arte no llega en el tiempo límite (aquí 150 ms inyectados; en el juego
+            // WorldBannerView.ArtTimeoutMs = 800 ms [P], de reloj real desde la petición), el banner entra sin él, el trabajo se
+            // cancela y lo que llegue después se descarta. Mientras espera, el AF_LAYOUT del nivel no publica world_banner; con la
+            // tarjeta a la vista, sí.
+            LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.BannerArtFaultOverride = BannerArtFault.Stall; // un trabajo que no acaba hasta que lo cancelan
+            LaunchOptions.BannerArtTimeoutMsOverride = 150f;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1240));
+            yield return PlayModeHelpers.LoadGame(42, new MemoryProgressStore(42, 41));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            WorldBannerView banner = view.WorldBannerView;
+            view.CardArt.ReleaseBannerArt();
+
+            flow.Load(41);
+            Assert.That(banner.Waiting, Is.True);
+            Assert.That(banner.ArtTimeoutLimitMs, Is.EqualTo(150f), "el umbral inyectado");
+            Assert.That(flow.WorldBannerWaiting, Is.True);
+
+            // Otra pantalla del mismo ancho (otra muesca) vuelve a colocarlo todo y publica el AF_LAYOUT del nivel: sin el banner.
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780Cutout;
             PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            string? waiting = LastLevelLayout(41);
+            Assert.That(waiting, Is.Not.Null, "AF_LAYOUT level al cambiar la pantalla");
+            Assert.That(waiting, Does.Not.Contain("\"id\":\"world_banner\""), "mientras espera, solo el velo");
+            Assert.That(HasLine("AF_LAYOUT {\"screen\":\"world_banner\""), Is.False);
+
+            var watch = Stopwatch.StartNew();
+            while (!banner.CardShown && watch.ElapsedMilliseconds < 10000)
+            {
+                yield return null;
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            WorldBannerSetup.AssertFallback(view, WorldBannerView.FallbackTimeout);
+            Assert.That(banner.ArtWaitMs, Is.GreaterThanOrEqualTo(150f), "reloj real desde la petición");
+            Assert.That(view.CardArt.BannerArtPending, Is.False, "el trabajo se abandona");
+            Assert.That(view.CardArt.BannerArtFailure, Is.EqualTo(BannerArtFailure.None), "no es un fallo del trabajo");
+            watch.Restart();
+            while (ProceduralArt.BannerArtJobsRunning > 0 && watch.ElapsedMilliseconds < 5000)
+            {
+                yield return null;
+            }
+
+            Assert.That(ProceduralArt.BannerArtJobsRunning, Is.EqualTo(0), "cancelado, el trabajo deja de gastar CPU");
+            PlayModeHelpers.Step(boot, 1500);
+            Assert.That(HasLine("AF_LAYOUT {\"screen\":\"world_banner\",\"level\":41,"), Is.True, "al terminar la entrada");
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(LastLevelLayout(41), Does.Contain("\"id\":\"world_banner\""), "con la tarjeta a la vista");
+            yield return WorldBannerSetup.CloseThenTheIntro(boot, 41, 3);
+
+            // Un arte de verdad que tarda más que el límite (1 ms: ningún trabajo pinta en tan poco): entra sin él y, aunque el
+            // otro hilo siguiera, nada de lo que pinte se pone.
+            LaunchOptions.BannerArtFaultOverride = null;
+            LaunchOptions.BannerArtTimeoutMsOverride = 1f;
+            flow.Load(81);
+            yield return null;
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            WorldBannerSetup.AssertFallback(view, WorldBannerView.FallbackTimeout);
+            watch.Restart();
+            while (watch.ElapsedMilliseconds < 1000)
+            {
+                yield return null;
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(banner.Fallback, Is.EqualTo(WorldBannerView.FallbackTimeout), "el arte que llegue tarde se descarta");
+            Assert.That(banner.ArtReady, Is.False);
+            Assert.That(banner.SceneSprite, Is.Null);
+            Assert.That(banner.Rosa.gameObject.activeInHierarchy, Is.False);
+            Assert.That(view.CardArt.MascotsBuilt, Is.False);
+            Assert.That(view.CardArt.BannerArtPending, Is.False);
+            yield return WorldBannerSetup.CloseThenTheIntro(boot, 81, 4);
+        }
+
+        [UnityTest]
+        public IEnumerator Banner_NoAllocWhileWaitingForTheArt()
+        {
+            // 08 §5.4 (revisión 3 de A4, punto 6): mientras espera el arte (aquí, un trabajo que no acaba hasta que lo cancelan),
+            // el Tick del banner y el de la pantalla y el flujo solo miran si llegó y el reloj real: sin asignaciones. Después,
+            // con el límite cumplido, entra sin arte y un toque lo cierra.
+            LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.BannerArtFaultOverride = BannerArtFault.Stall;
+            LaunchOptions.BannerArtTimeoutMsOverride = 60000f;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1240));
+            yield return PlayModeHelpers.LoadGame(42, new MemoryProgressStore(42, 41));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            WorldBannerView banner = view.WorldBannerView;
+            view.CardArt.ReleaseBannerArt();
+            flow.Load(41);
+            Assert.That(banner.Waiting, Is.True);
+
+            // Calentamiento: lo que asigna la pantalla en los primeros fotogramas tras cargar cualquier nivel (también el 43, con su
+            // tarjeta previa y sin banner) no es de la espera.
+            PlayModeHelpers.Step(boot, 1500);
+            Assert.That(banner.Waiting, Is.True, "el trabajo no acaba: sigue esperando");
+            void Banner20()
+            {
+                for (int i = 0; i < 20; i++)
+                {
+                    banner.Tick(PlayModeHelpers.FrameMs);
+                }
+            }
+
+            void Screen20()
+            {
+                for (int i = 0; i < 20; i++)
+                {
+                    view.Tick(PlayModeHelpers.FrameMs);
+                    flow.Tick(PlayModeHelpers.FrameMs, view.IsViewIdle);
+                }
+            }
+
+            Assert.That(Banner20, Is.Not.AllocatingGCMemory(), "Tick del banner esperando el arte");
+            Assert.That(Banner20, Is.Not.AllocatingGCMemory(), "Tick del banner esperando el arte");
+            Assert.That(Screen20, Is.Not.AllocatingGCMemory(), "Tick de la pantalla y del flujo esperando el arte");
+            Assert.That(banner.Waiting && flow.WorldBannerWaiting, Is.True, "sigue esperando");
+
+            banner.ArtTimeoutLimitMs = 0f; // se cumple el límite
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            WorldBannerSetup.AssertFallback(view, WorldBannerView.FallbackTimeout);
+            yield return WorldBannerSetup.CloseThenTheIntro(boot, 41, 3);
+        }
+
+        [UnityTest]
+        public IEnumerator Banner_ArtRequestedAtTheVictoryOf10_EntersAtOnceOn11()
+        {
+            // Revisión 3 de A4, punto 2: en la victoria del 10 (y del 40, el 80 y el 140) el arte del banner del nivel siguiente se
+            // pide ya, en otro hilo; tras «Siguiente», el banner del 11 entra en el acto con su arte, sin esperar.
+            LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.BannerArtTimeoutMsOverride = 60000f;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(1240));
+            yield return PlayModeHelpers.LoadGame(10, new MemoryProgressStore(10, 9));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            WorldBannerView banner = view.WorldBannerView;
+            view.CardArt.ReleaseBannerArt();
+            if (flow.Phase == FlowPhase.LevelCard)
+            {
+                Assert.That(boot.TapAnywhere(), Is.True, "la tarjeta previa del 10, si la hay");
+            }
+
+            Assert.That(view.CardArt.BannerArtPending, Is.False, "jugando el 10, nada pedido");
+            VictorySetup.WinToVictoryScreen(boot);
+            Assert.That(view.CardArt.BannerArtPending, Is.True, "en la victoria del 10, el arte del banner del 11, pedido");
             Assert.That(banner.Visible, Is.False);
-            Assert.That(flow.WorldBanner, Is.EqualTo(0));
-            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Intro), "sin esperar los " + WorldBannerView.ExitMs + " ms de una salida que no se ve");
-            Assert.That(view.LastWorldBannerClosedProbe, Is.EqualTo("{\"level\":11,\"world\":2,\"next\":\"intro\"}"));
-            CardSetup.StepUntilPlaying(boot);
+            Assert.That(view.CardArt.MascotsBuilt, Is.False, "sin texturas hasta abrirlo");
+            Assert.That(view.CardArt.WaitForBannerArt(30000), Is.True, "pintado en otro hilo durante la victoria");
+
+            Assert.That(boot.PressNext(), Is.True);
+            for (int ms = 0; ms < 5000 && flow.LevelNumber != 11; ms += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(flow.LevelNumber, Is.EqualTo(11));
+            Assert.That(flow.WorldBanner, Is.EqualTo(2));
+            Assert.That(banner.AsyncArt, Is.True);
+            Assert.That(banner.CardShown && banner.ArtReady, Is.True, "entra en el acto, con su arte");
+            Assert.That(banner.Fallback, Is.EqualTo(WorldBannerView.FallbackNone));
+            Assert.That(flow.WorldBannerWaiting, Is.False);
+            Assert.That(view.CardArt.MascotsMainMs, Is.LessThan(view.CardArt.MascotsMs), "en el hilo principal, solo las texturas");
+            Assert.That(view.LastWorldBannerArtProbe, Does.Contain("\"level\":11").And.Contain("\"async\":true").And.Contain("\"fallback\":\"none\""));
+            PlayModeHelpers.Step(boot, 1500);
+            Assert.That(banner.Alpha, Is.EqualTo(1f));
+            yield return WorldBannerSetup.CloseThenTheIntro(boot, 11, 2);
+        }
+
+        [UnityTest]
+        public IEnumerator Banner_ArtRequestedWhenPlayOffersAWorldLevel()
+        {
+            // Revisión 3 de A4, punto 2: el inicio ofrece «Jugar · Nivel 81» (primer intento del primero del mundo 4): el arte de su
+            // banner se pide ya, en otro hilo, y al entrar el banner sale en el acto con su arte.
+            LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.BannerArtTimeoutMsOverride = 60000f;
+            Profile profile = FunnelSetup.Profile(1240);
+            profile.Progress.NextLevel = 81;
+            profile.Progress.MaxLevel = 80;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+            Assert.That(boot.App.PlayLevel, Is.EqualTo(81));
+            GameScreen view = boot.View!;
+            WorldBannerView banner = view.WorldBannerView;
+            Assert.That(view.CardArt.BannerArtPending, Is.True, "«Jugar · Nivel 81»: el arte del banner del mundo 4, pedido");
+            Assert.That(banner.Visible, Is.False);
+            Assert.That(view.CardArt.WaitForBannerArt(30000), Is.True);
+
+            Assert.That(boot.PressPlay(), Is.True);
+            LevelFlow flow = boot.Flow!;
+            Assert.That(flow.LevelNumber, Is.EqualTo(81));
+            Assert.That(flow.WorldBanner, Is.EqualTo(4));
+            Assert.That(banner.CardShown && banner.ArtReady, Is.True, "entra en el acto, con su arte");
+            Assert.That(flow.WorldBannerWaiting, Is.False);
+            Assert.That(view.LastWorldBannerArtProbe, Does.Contain("\"level\":81").And.Contain("\"fallback\":\"none\""));
+            PlayModeHelpers.Step(boot, 1500);
+            yield return WorldBannerSetup.CloseThenTheIntro(boot, 81, 4);
         }
 
         [UnityTest]
@@ -460,11 +736,129 @@ namespace AF.Tests.PlayMode
 
             Assert.That(Exit, Is.Not.AllocatingGCMemory(), "salida");
         }
+
+        // Las líneas de la sonda (AF_STATE y AF_LAYOUT) y los avisos del arte, en orden.
+        private void OnLog(string condition, string stackTrace, LogType type)
+        {
+            if (condition.StartsWith("AF_", StringComparison.Ordinal) || condition.StartsWith("[AF.ProceduralArt]", StringComparison.Ordinal))
+            {
+                _lines.Add(condition);
+            }
+        }
+
+        private bool HasLine(string prefix)
+        {
+            for (int i = 0; i < _lines.Count; i++)
+            {
+                if (_lines[i].StartsWith(prefix, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // La última línea AF_LAYOUT del tablero del nivel (null si no hay).
+        private string? LastLevelLayout(int level)
+        {
+            string tag = "AF_LAYOUT {\"screen\":\"level\",\"level\":" + level.ToString(System.Globalization.CultureInfo.InvariantCulture) + ",";
+            for (int i = _lines.Count - 1; i >= 0; i--)
+            {
+                if (_lines[i].StartsWith(tag, StringComparison.Ordinal))
+                {
+                    return _lines[i];
+                }
+            }
+
+            return null;
+        }
+
+        // Avisos del arte del banner (un Debug.LogWarning por fallo) que contienen fragment.
+        private int ArtWarnings(string fragment)
+        {
+            int n = 0;
+            for (int i = 0; i < _lines.Count; i++)
+            {
+                if (_lines[i].StartsWith("[AF.ProceduralArt] El arte del banner de mundo", StringComparison.Ordinal) && _lines[i].Contains(fragment))
+                {
+                    n++;
+                }
+            }
+
+            return n;
+        }
     }
 
     /// <summary>Toque y comprobaciones comunes del banner de mundo (tarea A4).</summary>
     internal static class WorldBannerSetup
     {
+        /// <summary>
+        /// El banner abierto entró sin arte por <paramref name="reason"/> (el respaldo de D-012): la tarjeta, la placa y el texto
+        /// entero, con la viñeta del color plano del agua del nivel y sin Rosa ni Capi; ya a la vista, así que un toque lo cierra;
+        /// y la sonda <c>world_banner_art</c> lo dice.
+        /// </summary>
+        public static void AssertFallback(GameScreen view, string reason)
+        {
+            WorldBannerView banner = view.WorldBannerView;
+            LevelFlow flow = GameBootstrap.Current!.Flow!;
+            Assert.That(banner.Visible && banner.CardShown, Is.True, reason + ": la tarjeta, a la vista");
+            Assert.That(banner.ArtReady, Is.False, reason);
+            Assert.That(banner.Fallback, Is.EqualTo(reason));
+            Assert.That(flow.WorldBannerWaiting, Is.False, reason + ": ya se ve, un toque lo cierra");
+            Assert.That(banner.Pop.gameObject.activeSelf, Is.True, reason);
+            Assert.That(banner.Text, Is.EqualTo(UiText.WorldBanner(flow.WorldBanner)), reason + ": el texto de D-012, entero");
+            Assert.That(banner.TitleText, Does.StartWith(UiText.WorldTitle(flow.WorldBanner)), reason + ": la placa");
+            Assert.That(banner.PlaceText, Does.EndWith(UiText.WorldPlace(flow.WorldBanner)), reason);
+            Assert.That(banner.SceneSprite, Is.Null, reason + ": sin la viñeta pintada");
+            Assert.That(banner.FlatWater.gameObject.activeInHierarchy, Is.True, reason + ": la viñeta, del color plano del agua");
+            Assert.That(banner.FlatWater.color, Is.EqualTo(Palette.WaterBase(flow.Level.WaterBase)), reason);
+            Assert.That(banner.Rosa.gameObject.activeInHierarchy, Is.False, reason + ": sin Rosa");
+            Assert.That(banner.Paw.gameObject.activeInHierarchy, Is.False, reason + ": sin Capi");
+            Assert.That(banner.Foam.gameObject.activeInHierarchy || banner.Spray.gameObject.activeInHierarchy, Is.False, reason);
+            Assert.That(view.CardArt.MascotsBuilt, Is.False, reason + ": ninguna textura del banner");
+            Assert.That(banner.RaycastTargets(), Is.EqualTo(new Graphic[] { banner.Dim }), reason);
+            Assert.That(view.LastWorldBannerArtProbe, Does.Contain("\"level\":" + flow.LevelNumber + ",").And.Contain("\"fallback\":\"" + reason + "\""));
+        }
+
+        /// <summary>
+        /// Con la tarjeta del banner a la vista (con su arte o sin él): la deja entrar, comprueba que se ve entera y colocada, la
+        /// cierra con 1 toque y, tras su salida (y la tarjeta previa, si la hay), sigue la intro hasta PLAYING.
+        /// </summary>
+        public static IEnumerator CloseThenTheIntro(GameBootstrap boot, int level, int world)
+        {
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            WorldBannerView banner = view.WorldBannerView;
+            Assert.That(flow.LevelNumber, Is.EqualTo(level));
+            Assert.That(flow.WorldBanner, Is.EqualTo(world));
+            Assert.That(banner.CardShown, Is.True);
+            PlayModeHelpers.Step(boot, 1500);
+            Assert.That(banner.Alpha, Is.EqualTo(1f), "entera");
+            Assert.That(banner.Settled, Is.True);
+            AssertLaidOut(view);
+            bool card = flow.WorldBannerThenCard;
+            yield return null; // un fotograma de verdad: el raycast no ve un velo que el lienzo aún no ha pintado
+            Tap(banner);
+            Assert.That(flow.WorldBannerClosing && banner.Dismissing, Is.True, "un toque empieza la salida");
+            string next = card ? GameScreen.BannerNextLevelCard : GameScreen.BannerNextIntro;
+            Assert.That(view.LastWorldBannerClosedProbe, Is.EqualTo("{\"level\":" + level + ",\"world\":" + world + ",\"next\":\"" + next + "\"}"));
+            PlayModeHelpers.Step(boot, 400);
+            Assert.That(banner.Visible, Is.False);
+            Assert.That(view.CardArt.MascotsBuilt, Is.False, "el arte del banner se suelta al cerrarlo");
+            if (card)
+            {
+                Assert.That(view.LevelCard.Visible, Is.True, "la tarjeta previa, tras el banner");
+                yield return null;
+                CardSetup.TapCard(view.LevelCard);
+            }
+
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Intro), "la intro sigue");
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.Intro.TimeMs, Is.GreaterThan(0f));
+            CardSetup.StepUntilPlaying(boot);
+        }
+
         /// <summary>
         /// Un toque en el banner por el EventSystem, como un dedo: en las esquinas, en el centro, sobre Reiniciar y sobre la pausa
         /// el primer impacto de <see cref="EventSystem.RaycastAll"/> es el velo; el clic va a ese primer impacto, en el centro.

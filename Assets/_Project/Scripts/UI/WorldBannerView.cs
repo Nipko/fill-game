@@ -32,20 +32,43 @@ namespace AF.UI
     /// Sin asignaciones por fotograma, y quieto del todo al terminar la entrada (<see cref="Settled"/>): Tick ya no toca ninguna
     /// transformada ni ningún color mientras sigue abierto, así que no obliga a rehacer los lotes del lienzo principal ni el
     /// recorte de las dos RectMask2D (guía 8, docs/art/direccion-visual-v2.md: el ambiente que se mueve va en Canvas propios).
-    /// El arte (las mascotas y la viñeta con Capi) se pide al abrirlo y se libera al cerrarlo
+    /// El arte (las mascotas y la viñeta con Capi) se pide al abrirlo (o antes, con <see cref="Prefetch"/>) y se libera al cerrarlo
     /// (<c>ProceduralArt.ReleaseBannerArt</c>): construir la pantalla no genera ninguna textura. El cuerpo de Capi va dibujado
     /// en la viñeta y no en una imagen aparte: el lienzo funde cada gráfico por separado, y a medio fundir el agua se veía a
     /// través de él (captura 69e); solo la pata, que se mueve, va aparte.</para>
     /// <para>El arte se pinta fuera del hilo principal (<see cref="AsyncArt"/>; <c>ProceduralArt.RequestBannerArt</c>): unos
-    /// 230 ms de CPU en el Editor que, en el fotograma de la carga del nivel, lo habrían parado (08 §5.4). Mientras se pinta,
-    /// el banner ya está abierto (el flujo en LEVEL_CARD, el velo recibe el toque) pero no se ve (<see cref="ArtReady"/> false,
-    /// opacidad 0): detrás, el tablero en el fotograma 0 de la intro. Cuando el arte llega, entra como siempre desde t = 0. Un
-    /// toque antes lo salta sin salida (no hay nada que ver salir; GameScreen).</para>
+    /// 230 ms de CPU en el Editor que, en el fotograma de la carga del nivel, lo habrían parado (08 §5.4). Mientras se pinta, el
+    /// velo sale en el acto (el flujo en LEVEL_CARD, detrás el tablero en el fotograma 0 de la intro) pero la tarjeta aún no
+    /// (<see cref="Waiting"/>) y los toques se ignoran: el banner no se puede perder sin verse. La tarjeta entra desde t = 0
+    /// cuando llega el arte (<see cref="ArtReady"/>) o, si el trabajo falla o no se puede encolar, o si pasan
+    /// <see cref="ArtTimeoutMs"/> de reloj real desde que se pidió, sin él (<see cref="Fallback"/>): la tarjeta, la placa y el
+    /// texto de D-012, con la viñeta del color plano del agua y sin Rosa ni Capi; el arte que llegue tarde se descarta. En los
+    /// dos casos <see cref="CardShown"/>, y desde entonces un toque lo cierra como siempre. Si el arte ya estaba (pedido antes con
+    /// <see cref="Prefetch"/>, o en el acto), entra como antes, con el velo y la tarjeta fundiéndose juntos.</para>
     /// </remarks>
     internal sealed class WorldBannerView
     {
         /// <summary>Opacidad del velo (la de la tarjeta previa).</summary>
         public const float DimAlpha = LevelCardView.DimAlpha;
+
+        /// <summary>
+        /// Tiempo límite del arte (ms de reloj real, <see cref="System.Diagnostics.Stopwatch"/>, desde que el banner lo pide al
+        /// abrirse) [P]: si para entonces no ha llegado, el banner entra sin él (<see cref="FallbackTimeout"/>) y lo que llegue
+        /// después se descarta. Los tests lo cambian con <see cref="ArtTimeoutLimitMs"/>.
+        /// </summary>
+        public const float ArtTimeoutMs = 800f;
+
+        /// <summary>Respaldo (<see cref="Fallback"/>; <c>fallback</c> de <c>AF_STATE world_banner_art</c>): ninguno, con su arte.</summary>
+        public const string FallbackNone = "none";
+
+        /// <summary>Respaldo: el trabajo del arte falló en su hilo.</summary>
+        public const string FallbackError = "error";
+
+        /// <summary>Respaldo: el grupo de hilos no aceptó el trabajo del arte.</summary>
+        public const string FallbackQueue = "queue";
+
+        /// <summary>Respaldo: el arte no llegó en <see cref="ArtTimeoutMs"/>.</summary>
+        public const string FallbackTimeout = "timeout";
 
         /// <summary>Entrada de la tarjeta: fundido y rebote (ms) [P].</summary>
         public const float FadeInMs = 220f;
@@ -149,6 +172,7 @@ namespace AF.UI
         private readonly CanvasGroup _group;
         private readonly Image _dim;
         private readonly RectTransform _pop;
+        private readonly CanvasGroup _popGroup;
         private readonly RectTransform _panel;
         private readonly Image _surface;
         private readonly Image _header;
@@ -156,6 +180,7 @@ namespace AF.UI
         private readonly Image _sceneEdge;
         private readonly RectTransform _sceneMask;
         private readonly Image _scene;
+        private readonly Image _flatWater;
         private readonly RectTransform _rosaClip;
         private readonly Image _rosa;
         private readonly Image _foam;
@@ -177,7 +202,10 @@ namespace AF.UI
         private bool _settled;
         private bool _reduceMotion;
         private bool _artReady;
-        private bool _artApplied;
+        private string? _fallback;
+        private bool _cardShownFired;
+        private bool _veilEarly;
+        private long _requestTicks;
         private float _artWaitMs;
         private float _canvasW = 360f;
         private float _canvasH = 780f;
@@ -186,6 +214,7 @@ namespace AF.UI
         private float _sceneW;
         private float _sceneH;
         private float _fadeFrom = 1f;
+        private float _cardFrom = 1f;
         private float _scaleFrom = 1f;
         private float _rosaRise;
 
@@ -202,6 +231,7 @@ namespace AF.UI
             _dim = ModalKit.Dim("Dim", _root, DimAlpha);
             _dim.gameObject.AddComponent<PointerTapRelay>().Bind(OnTap);
             _pop = UiBuilder.Rect("Pop", _root);
+            _popGroup = _pop.gameObject.AddComponent<CanvasGroup>(); // la tarjeta, aparte del velo: el velo sale antes si el arte tarda
             _panel = ModalKit.Card("Panel", _pop, art, out _surface);
             _title = ModalKit.Header(_panel, art, string.Empty, out _header);
             _title.enableAutoSizing = false; // a 24 sp: con el nombre si cabe; si no, «Mundo {n}» (Layout)
@@ -214,6 +244,11 @@ namespace AF.UI
             _sceneMask = UiBuilder.Rect("Scene", _panel);
             _sceneMask.gameObject.AddComponent<RectMask2D>();
             _scene = UiBuilder.Image("River", _sceneMask, null, Color.white);
+
+            // Respaldo sin arte: la viñeta del color plano del agua, con las esquinas de la viñeta pintada (Fallback).
+            _flatWater = UiBuilder.Sliced("FlatWater", _sceneMask, art.RoundedRect, Color.white);
+            _flatWater.pixelsPerUnitMultiplier = ProceduralArt.RoundedRectRadiusPx / ProceduralArt.BannerSceneRadiusDp;
+            _flatWater.gameObject.SetActive(false);
             _ripple = UiBuilder.Image("Ripple", _sceneMask, null, new Color(1f, 1f, 1f, 0f));
             _rosaClip = UiBuilder.Rect("RosaClip", _sceneMask);
             _rosaClip.gameObject.AddComponent<RectMask2D>();
@@ -252,7 +287,31 @@ namespace AF.UI
         /// <summary>El arte del banner abierto ya está puesto y la entrada corre (o ya terminó).</summary>
         public bool ArtReady => _artReady;
 
-        /// <summary>Lo que esperó el banner abierto a su arte (ms de fotograma; 0 si llegó en el acto).</summary>
+        /// <summary>
+        /// La tarjeta del banner abierto se ve (o está entrando): con su arte (<see cref="ArtReady"/>) o con el respaldo
+        /// (<see cref="Fallback"/>). Antes, solo el velo, y los toques se ignoran.
+        /// </summary>
+        public bool CardShown => _artReady || _fallback != null;
+
+        /// <summary>El banner está abierto con el velo, esperando su arte (aún sin tarjeta; los toques se ignoran).</summary>
+        public bool Waiting => Visible && !CardShown;
+
+        /// <summary>
+        /// Por qué entró sin arte (<see cref="FallbackError"/>, <see cref="FallbackQueue"/> o <see cref="FallbackTimeout"/>), o
+        /// <see cref="FallbackNone"/> (con su arte, esperándolo o cerrado).
+        /// </summary>
+        public string Fallback => _fallback ?? FallbackNone;
+
+        /// <summary>
+        /// Tiempo límite del arte (ms de reloj real); por defecto <see cref="ArtTimeoutMs"/> [P]. Los tests lo bajan
+        /// (<c>LaunchOptions.BannerArtTimeoutMsOverride</c>) o lo suben para no depender de la máquina.
+        /// </summary>
+        public float ArtTimeoutLimitMs { get; set; } = ArtTimeoutMs;
+
+        /// <summary>
+        /// Lo que esperó el banner abierto a su arte o a su respaldo: ms de reloj real (<see cref="System.Diagnostics.Stopwatch"/>)
+        /// desde que lo pidió al abrirse hasta que la tarjeta empezó a entrar (≈ 0 si ya estaba).
+        /// </summary>
         public float ArtWaitMs => _artWaitMs;
 
         /// <summary>Mundo que presenta (0 si no hay).</summary>
@@ -285,8 +344,11 @@ namespace AF.UI
         /// <summary>Viñeta del río (tests de solapes).</summary>
         public RectTransform Scene => _sceneMask;
 
-        /// <summary>Sprite de la viñeta (tests: el agua del mundo; null cerrado).</summary>
+        /// <summary>Sprite de la viñeta (tests: el agua del mundo; null cerrado, esperando el arte o con el respaldo).</summary>
         public Sprite? SceneSprite => _scene.sprite;
+
+        /// <summary>Viñeta del respaldo, del color plano del agua (tests; activa solo con <see cref="Fallback"/>).</summary>
+        public Image FlatWater => _flatWater;
 
         /// <summary>Cuadrado de Capi en la viñeta (el cuerpo va dibujado en ella; aquí cuelga la pata; tests).</summary>
         public RectTransform CapiRect => _capi;
@@ -318,8 +380,11 @@ namespace AF.UI
         /// <summary>Cuánto ha asomado Rosa (0 = bajo el agua, 1 = fuera).</summary>
         public float RosaRise => _rosaRise;
 
-        /// <summary>Opacidad del banner y del velo (fundidos).</summary>
-        public float Alpha => _group.alpha;
+        /// <summary>Opacidad de la tarjeta (fundidos; 0 mientras espera el arte): la del velo por la suya.</summary>
+        public float Alpha => CardShown ? _group.alpha * _popGroup.alpha : 0f;
+
+        /// <summary>Opacidad del velo (1 mientras espera el arte: sale en el acto).</summary>
+        public float VeilAlpha => _group.alpha;
 
         /// <summary>Giro de Rosa (grados; positivo, antihorario: al sumergirse, el pico hacia el agua).</summary>
         public float RosaTilt => _rosa.rectTransform.localEulerAngles.z > 180f ? _rosa.rectTransform.localEulerAngles.z - 360f : _rosa.rectTransform.localEulerAngles.z;
@@ -366,8 +431,9 @@ namespace AF.UI
         /// <summary>
         /// Muestra el banner del mundo <paramref name="world"/> con el agua <paramref name="water"/> del mundo, colocado en la
         /// pantalla de <paramref name="canvasW"/> × <paramref name="canvasH"/> dp con la zona segura dada; entra con un fundido,
-        /// Rosa asoma y Capi presenta (todo quieto con <paramref name="reduceMotion"/>). Aquí se genera el arte (la primera vez
-        /// desde que se cerró el último banner).
+        /// Rosa asoma y Capi presenta (todo quieto con <paramref name="reduceMotion"/>). Aquí se pide el arte (si no se pidió
+        /// antes con <see cref="Prefetch"/>) y empieza a contar su tiempo límite; si no está, sale solo el velo
+        /// (<see cref="Waiting"/>) hasta que llega o hasta el respaldo.
         /// </summary>
         public void Show(int world, Color water, bool reduceMotion, float canvasW, float canvasH, float safeTop, float safeBottom)
         {
@@ -383,13 +449,40 @@ namespace AF.UI
             _exitMs = -1f;
             _ms = -1f;
             _artReady = false;
-            _artApplied = false;
+            _fallback = null;
+            _cardShownFired = false;
+            _veilEarly = false;
             _artWaitMs = 0f;
             _group.blocksRaycasts = true;
             _group.interactable = true;
-            _group.alpha = 0f; // hasta que llegue el arte
+            _group.alpha = 1f; // el velo: en el acto si el arte tarda; si ya está, la entrada lo funde desde 0 con la tarjeta
+            _popGroup.alpha = 1f;
+            SetCardActive(true); // colocada aunque aún no se vea
+            _requestTicks = System.Diagnostics.Stopwatch.GetTimestamp(); // desde aquí cuentan el tiempo límite y wait_ms
             Layout(canvasW, canvasH, safeTop, safeBottom); // pide el arte con las medidas de la viñeta
-            TryApplyArt();
+            if (!TryApplyArt())
+            {
+                // Aún sin arte: el velo ya, la tarjeta cuando llegue (o con el respaldo). Los toques se ignoran mientras.
+                _veilEarly = true;
+                SetCardActive(false);
+            }
+        }
+
+        /// <summary>
+        /// Pide ya, con el banner cerrado, el arte del banner del mundo <paramref name="world"/> que se abrirá en una pantalla de
+        /// <paramref name="canvasW"/> dp de ancho (la victoria del nivel anterior o «Jugar» en el inicio; GameScreen): con las
+        /// mismas medidas que <see cref="Show"/>, así que la petición de Show es la misma y el arte, pintado en otro hilo mientras
+        /// tanto, ya está al abrirlo. Sin efecto con el banner abierto. No crea ninguna textura (eso, al abrirlo).
+        /// </summary>
+        public void Prefetch(int world, Color water, float canvasW)
+        {
+            if (Visible || world <= 0)
+            {
+                return;
+            }
+
+            Measure(world, canvasW, out _, out float inner, out float sceneH, out _);
+            _art.RequestBannerArt(inner, sceneH, water, MeetingWater(world), world, true);
         }
 
         /// <summary>
@@ -407,39 +500,26 @@ namespace AF.UI
                 return;
             }
 
-            float cardW = Mathf.Min(LevelCardView.MaxWidthDp, canvasW - (2f * LevelCardView.SideMarginDp));
-            float inner = cardW - (2f * PadDp);
             float y = PadDp;
+            Measure(_world, canvasW, out float cardW, out float inner, out float sceneH, out float placeH);
             UiBuilder.Place(_header.rectTransform, PadDp, y, inner, HeaderDp);
-
-            // Cabecera «Mundo {n}: {nombre}» (la clave hasta el primer « · ») si cabe a 24 sp; si no, «Mundo {n}» y el nombre abre
-            // la línea del lugar, en negrita. Así el nombre del mundo nunca pesa menos que su número.
-            string heading = UiText.WorldHeading(_world);
-            _nameInTitle = WidthOf(_title, heading) <= inner - (2f * TitleInsetDp) - FitSlackDp;
-            SetText(_title, _nameInTitle ? heading : UiText.WorldTitle(_world));
-            _placeText = _nameInTitle ? UiText.WorldPlace(_world) : UiText.WorldPlaceNamed(_world);
-            string placeRich = _nameInTitle ? _placeText : "<b>" + UiText.WorldName(_world) + "</b>" + UiText.WorldSeparator + UiText.WorldPlace(_world);
             y += HeaderDp + 8f;
             float sceneY = y;
-
-            // El lugar, centrado bajo la viñeta, en 1 línea o en 2 cortadas en un « · ».
-            FitPlace(placeRich, inner - FitSlackDp);
-            float placeH = Mathf.Ceil(_place.GetPreferredValues(_place.text, inner, float.PositiveInfinity).y) + 2f;
-            float rest = SceneDp + 10f + placeH + PadDp + 4f;
-            float sceneH = SceneDp + Mathf.Max(0f, MinHeightDp - (y + rest));
             _sceneW = inner;
             _sceneH = sceneH;
             UiBuilder.Place(_sceneEdge.rectTransform, PadDp - SceneEdgeDp, sceneY - SceneEdgeDp, inner + (2f * SceneEdgeDp), sceneH + (2f * SceneEdgeDp));
             UiBuilder.Place(_sceneMask, PadDp, sceneY, inner, sceneH);
             UiBuilder.Place(_scene.rectTransform, 0f, 0f, inner, sceneH);
+            UiBuilder.Place(_flatWater.rectTransform, 0f, 0f, inner, sceneH);
             if (_artReady)
             {
                 // Otra pantalla con el banner ya a la vista (rara vez): la viñeta nueva, en el acto.
                 _scene.sprite = _art.BannerScene(inner, sceneH, _water, MeetingWater(_world), _world);
             }
-            else
+            else if (_fallback == null)
             {
-                // Al abrirlo: la viñeta (con Capi ya dibujado) y las mascotas, fuera del hilo principal si AsyncArt.
+                // Al abrirlo: la viñeta (con Capi ya dibujado) y las mascotas, fuera del hilo principal si AsyncArt. Con el
+                // respaldo ya no se pide nada: lo que llegara después se descartaría.
                 _art.RequestBannerArt(inner, sceneH, _water, MeetingWater(_world), _world, AsyncArt);
             }
 
@@ -513,22 +593,23 @@ namespace AF.UI
             _dismissing = true;
             _settled = false;
             _fadeFrom = _group.alpha;
+            _cardFrom = _popGroup.alpha;
             _scaleFrom = _pop.localScale.x;
             _exitMs = 0f;
         }
 
         /// <summary>
-        /// True una sola vez, cuando el arte del banner abierto llega y la entrada empieza (para el <c>AF_STATE
-        /// world_banner_art</c>).
+        /// True una sola vez, cuando la tarjeta del banner abierto empieza a entrar: con su arte o con el respaldo (para el
+        /// <c>AF_STATE world_banner_art</c>, y para que el flujo deje de ignorar los toques).
         /// </summary>
-        public bool ConsumeArtApplied()
+        public bool ConsumeCardShown()
         {
-            if (!_artApplied)
+            if (!CardShown || _cardShownFired)
             {
                 return false;
             }
 
-            _artApplied = false;
+            _cardShownFired = true;
             return true;
         }
 
@@ -540,10 +621,15 @@ namespace AF.UI
             _ms = -1f;
             _exitMs = -1f;
             _artReady = false;
-            _artApplied = false;
+            _fallback = null;
+            _cardShownFired = false;
+            _veilEarly = false;
             _world = 0;
             _group.alpha = 1f;
+            _popGroup.alpha = 1f;
             _pop.localScale = Vector3.one;
+            SetCardActive(true);
+            ShowArtPieces(true);
             if (_root.gameObject.activeSelf)
             {
                 _root.gameObject.SetActive(false);
@@ -566,7 +652,8 @@ namespace AF.UI
 
         /// <summary>
         /// Avanza la entrada (fundido, Rosa, el soplo y la pata de Capi) y la salida. Entre las dos, con todo quieto
-        /// (<see cref="Settled"/>), no pinta nada.
+        /// (<see cref="Settled"/>), no pinta nada. Mientras espera el arte, solo mira si llegó o si pasó su tiempo límite (reloj
+        /// real; sin asignaciones).
         /// </summary>
         public void Tick(float dtMs)
         {
@@ -575,12 +662,11 @@ namespace AF.UI
                 return;
             }
 
-            if (!_artReady)
+            if (!CardShown)
             {
-                // Esperando el arte que se pinta en otro hilo: sin entrada hasta que llega (entonces, desde t = 0).
+                // Esperando el arte que se pinta en otro hilo: la tarjeta entra cuando llega o con el respaldo (desde t = 0).
                 if (!_dismissing)
                 {
-                    _artWaitMs += dtMs;
                     TryApplyArt();
                 }
 
@@ -614,32 +700,109 @@ namespace AF.UI
             }
 
             Apply();
-            if (!_dismissing && _ms >= (_reduceMotion ? FadeInMs : EnterMs))
+            if (!_dismissing && _ms >= (_reduceMotion || _fallback != null ? FadeInMs : EnterMs))
             {
                 _settled = true; // Apply acaba de pintar el estado final de la entrada
             }
         }
 
-        // Si el arte pedido al abrirlo ya está (en el acto o pintado en otro hilo), lo pone y empieza la entrada desde t = 0.
+        // Si el arte pedido al abrirlo ya está (en el acto o pintado en otro hilo), lo pone y empieza la entrada desde t = 0; si
+        // no llegará (el trabajo falló o no se pudo encolar) o pasó el tiempo límite, la entrada empieza con el respaldo. True si
+        // la tarjeta ya se ve.
         private bool TryApplyArt()
         {
-            if (_artReady)
+            if (CardShown)
             {
                 return true;
             }
 
-            if (_world == 0 || !_art.TryTakeBannerArt())
+            if (_world == 0)
             {
                 return false;
             }
 
-            _scene.sprite = _art.BannerSceneSprite;
-            EnsureArt();
-            _artReady = true;
-            _artApplied = true;
+            if (_art.TryTakeBannerArt())
+            {
+                _scene.sprite = _art.BannerSceneSprite;
+                EnsureArt();
+                _artReady = true;
+                StartEntry();
+                return true;
+            }
+
+            BannerArtFailure failure = _art.BannerArtFailure;
+            if (failure != BannerArtFailure.None)
+            {
+                StartFallback(failure == BannerArtFailure.Queue ? FallbackQueue : FallbackError);
+                return true;
+            }
+
+            if (!_art.BannerArtPending)
+            {
+                StartFallback(FallbackError); // nada pendiente ni listo: no llegará nunca
+                return true;
+            }
+
+            if (ElapsedMs() >= ArtTimeoutLimitMs)
+            {
+                _art.AbandonBannerArt(); // el trabajo para y lo que pinte ya no se recoge
+                StartFallback(FallbackTimeout);
+                return true;
+            }
+
+            return false;
+        }
+
+        // Sin arte (D-012 sin las mascotas): la tarjeta, la placa y el texto, con la viñeta del color plano del agua y sin Rosa ni
+        // Capi; nada de lo que llegue después se pone.
+        private void StartFallback(string reason)
+        {
+            _fallback = reason;
+            _scene.sprite = null;
+            _scene.enabled = false;
+            _flatWater.color = _water;
+            _flatWater.gameObject.SetActive(true);
+            ShowArtPieces(false);
+            StartEntry();
+        }
+
+        // La tarjeta empieza a entrar desde t = 0 (con su arte o con el respaldo): lo que esperó, en reloj real.
+        private void StartEntry()
+        {
+            _artWaitMs = (float)ElapsedMs();
             _ms = 0f;
+            SetCardActive(true);
             Apply();
-            return true;
+        }
+
+        // Milisegundos de reloj real desde que el banner pidió su arte (sin asignaciones).
+        private double ElapsedMs()
+        {
+            long ticks = System.Diagnostics.Stopwatch.GetTimestamp() - _requestTicks;
+            return ticks * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        }
+
+        private void SetCardActive(bool active)
+        {
+            if (_pop.gameObject.activeSelf != active)
+            {
+                _pop.gameObject.SetActive(active);
+            }
+        }
+
+        // Rosa (con la espuma, el soplo y la onda) y la pata de Capi: fuera con el respaldo, de vuelta al cerrarse.
+        private void ShowArtPieces(bool on)
+        {
+            SetActive(_rosaClip.gameObject, on);
+            SetActive(_foam.gameObject, on);
+            SetActive(_spray.gameObject, on);
+            SetActive(_ripple.gameObject, on);
+            SetActive(_capi.gameObject, on);
+            if (on)
+            {
+                _scene.enabled = true;
+                SetActive(_flatWater.gameObject, false);
+            }
         }
 
         // Las mascotas, la onda, la espuma y el soplo, ya generados con la viñeta (ProceduralArt.RequestBannerArt): construir la
@@ -687,23 +850,20 @@ namespace AF.UI
         // Pinta el instante actual de la entrada o de la salida.
         private void Apply()
         {
-            if (_world == 0)
+            if (_world == 0 || !CardShown)
             {
-                return;
-            }
-
-            if (!_artReady)
-            {
-                _group.alpha = 0f; // aún sin arte: abierto (recibe el toque) pero sin verse
-                return;
+                return; // aún sin tarjeta: solo el velo, que Show ya puso
             }
 
             float ms = Mathf.Max(0f, _ms);
             bool still = _reduceMotion;
 
-            // La tarjeta: fundido y leve rebote (sin rebote con Reducir movimiento); al salir, fundido desde donde estaba.
+            // La tarjeta: fundido y leve rebote (sin rebote con Reducir movimiento); al salir, fundido desde donde estaba. Si el
+            // velo salió antes (esperando el arte), se queda entero y solo entra la tarjeta.
             float enter = Mathf.Clamp01(ms / FadeInMs);
-            float alpha = Ease.Out(enter);
+            float card = Ease.Out(enter);
+            float veil = _veilEarly ? 1f : card;
+            card = _veilEarly ? card : 1f;
             float k = still ? 1f : Mathf.LerpUnclamped(PopFrom, 1f, Ease.OutBack(enter, 1.6f));
             float rise = still ? 1f : Ease.OutBack(Mathf.Clamp01((ms - RosaSurfaceStartMs) / RosaSurfaceMs), 1.2f);
             float dive = 0f;
@@ -713,13 +873,19 @@ namespace AF.UI
                 // se encoge (con Reducir movimiento, solo el fundido).
                 float exitMs = still ? ExitReducedMs : ExitMs;
                 float fade = still ? Mathf.Clamp01(_exitMs / exitMs) : Mathf.Clamp01((_exitMs - (exitMs - FadeTailMs)) / FadeTailMs);
-                alpha = _fadeFrom * (1f - Ease.In(fade));
+                veil = _fadeFrom * (1f - Ease.In(fade));
+                card = _cardFrom;
                 k = still ? _scaleFrom : _scaleFrom * Mathf.Lerp(1f, ExitScale, Ease.Out(fade));
                 dive = still ? 0f : Ease.In(Mathf.Clamp01(_exitMs / (DiveEnd * exitMs)));
             }
 
-            _group.alpha = alpha;
+            _group.alpha = veil;
+            _popGroup.alpha = card;
             _pop.localScale = new Vector3(k, k, 1f);
+            if (_fallback != null)
+            {
+                return; // sin Rosa ni Capi
+            }
 
             // Rosa: asoma desde bajo el agua y se queda quieta; al cerrar, se sumerge.
             _rosaRise = Mathf.Clamp01(rise) * (1f - dive);
@@ -775,6 +941,37 @@ namespace AF.UI
             _paw.rectTransform.localEulerAngles = new Vector3(0f, 0f, angle);
         }
 
+        // Las medidas de la tarjeta del mundo world en una pantalla de canvasW dp (las mismas para Show y para Prefetch, así que
+        // la petición del arte es la misma): coloca la cabecera «Mundo {n}: {nombre}» (la clave hasta el primer « · ») si cabe a
+        // 24 sp o, si no, «Mundo {n}» con el nombre abriendo la línea del lugar en negrita (así el nombre del mundo nunca pesa
+        // menos que su número); parte el lugar en 1 o 2 líneas; y devuelve el ancho de la tarjeta, el interior, el alto de la
+        // viñeta y el de la línea del lugar.
+        private void Measure(int world, float canvasW, out float cardW, out float inner, out float sceneH, out float placeH)
+        {
+            cardW = Mathf.Min(LevelCardView.MaxWidthDp, canvasW - (2f * LevelCardView.SideMarginDp));
+            inner = cardW - (2f * PadDp);
+            string heading = UiText.WorldHeading(world);
+            _nameInTitle = WidthOf(_title, heading) <= inner - (2f * TitleInsetDp) - FitSlackDp;
+            SetText(_title, _nameInTitle ? heading : UiText.WorldTitle(world));
+            _placeText = _nameInTitle ? UiText.WorldPlace(world) : UiText.WorldPlaceNamed(world);
+            string placeRich = _nameInTitle ? _placeText : "<b>" + UiText.WorldName(world) + "</b>" + UiText.WorldSeparator + UiText.WorldPlace(world);
+
+            // El lugar, centrado bajo la viñeta, en 1 línea o en 2 cortadas en un « · »; la viñeta crece hasta el alto mínimo.
+            FitPlace(placeRich, inner - FitSlackDp);
+            placeH = Mathf.Ceil(_place.GetPreferredValues(_place.text, inner, float.PositiveInfinity).y) + 2f;
+            float sceneY = PadDp + HeaderDp + 8f;
+            float rest = SceneDp + 10f + placeH + PadDp + 4f;
+            sceneH = SceneDp + Mathf.Max(0f, MinHeightDp - (sceneY + rest));
+        }
+
+        private static void SetActive(GameObject go, bool active)
+        {
+            if (go.activeSelf != active)
+            {
+                go.SetActive(active);
+            }
+        }
+
         // La línea del lugar en 1 línea o, si no cabe, en 2 cortadas en el « · » más equilibrado (nunca dentro de un nombre), de
         // 18 a 15 sp. Asigna (cadenas nuevas), pero solo al colocar el banner.
         private void FitPlace(string rich, float room)
@@ -824,10 +1021,10 @@ namespace AF.UI
             return best;
         }
 
-        // El toque, también mientras sale (GameScreen termina la salida en el acto con el segundo).
+        // El toque, también mientras sale (GameScreen termina la salida en el acto con el segundo); mientras espera el arte, nada.
         private void OnTap()
         {
-            if (Visible)
+            if (Visible && CardShown)
             {
                 _onTap();
             }
