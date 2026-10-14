@@ -47,6 +47,8 @@ namespace AF.Core.Mechanics
             table[(int)MechanicType.Remolino] = new RemolinoMechanic();
             table[(int)MechanicType.Lluvia] = new LluviaMechanic();
             table[(int)MechanicType.Pirana] = new PiranaMechanic();
+            table[(int)MechanicType.Tinaja] = new TinajaMechanic();
+            table[(int)MechanicType.Cucharon] = new CucharonMechanic();
             return table;
         }
 
@@ -65,6 +67,11 @@ namespace AF.Core.Mechanics
         public virtual bool BlocksSource(Cuia self)
         {
             return false;
+        }
+
+        public virtual bool AllowsTarget(in BoardSlice board, int source, int target)
+        {
+            return true;
         }
 
         public virtual TargetVerdict CheckTarget(in BoardSlice board, int source, int target)

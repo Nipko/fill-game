@@ -23,6 +23,14 @@ namespace AF.Core.Tests.DotnetOnly
     /// representativa, no el peor caso); el reparto completo está en la tabla de evidencias del README del paquete.</para>
     /// <para><see cref="ReferenceBoard.Expanded"/> es el número de estados que expandió A* al generarlo; los tests lo fijan
     /// con un margen del 25 % (nunca más de 300.000, 03 §5).</para>
+    /// <para><b>Ti</b> (Tinaja, M13; T55, 2026-10-13, con un programa fuera del repositorio): el reto o hito de c.9 de la
+    /// propuesta de la tinaja (K = 9, 1 vacío, 5 dosis con 4 ocultas). Tablero base con <c>InverseWalk</c> (K = 9, E = 1); el
+    /// paso «Ti» de c.3 saca 5 dosis de las cimas, las ordena con T4 (boca visible, las demás ocultas) y añade la tinaja de 5
+    /// y su cuia de 2 al final; verificación con <see cref="LevelValidation"/>, A* sin poda de fútiles (b.2 R14:
+    /// <c>SolverOptions.ForPipeline(mode, level)</c>) y <c>SafePath</c>. De 30 semillas: 30 válidos, 30 resueltos y 30 con
+    /// ruta segura (2-24 realidades; 130-7.525 ms en Release); expandidos: mediana 4.434, máximo 25.596; percentil 75 en la
+    /// semilla 27 (par 23, 6 realidades). Con la poda, A* expande lo mismo o unos pocos estados menos y da el mismo par en las
+    /// 30.</para>
     /// </remarks>
     internal static class ReferenceBoards
     {
@@ -33,7 +41,10 @@ namespace AF.Core.Tests.DotnetOnly
 
         private static readonly int[] E = new int[0];
 
-        /// <summary>Los 36 tableros: 11 de una mecánica o capacidad y las 25 combinaciones del calendario d.4.</summary>
+        /// <summary>
+        /// Los 37 tableros: 11 de una mecánica o capacidad, las 25 combinaciones del calendario d.4 y la Tinaja (M13, reto con
+        /// 5 dosis).
+        /// </summary>
         public static readonly ReferenceBoard[] All =
         {
             Board("Ch", 18, 1105,
@@ -185,6 +196,11 @@ namespace AF.Core.Tests.DotnetOnly
                 Caps(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4),
                 Doses(D(1, 1, 1, 5), D(2, 2, 2, 3), D(3, 1, 4, 7), D(4, 4, 4, 10), D(5, 5, 8, 9), D(6, 6, 8, 7), E, D(8, 7, 9, 7), E, D(10, 10, 10, 9), D(2, 3, 8, 9), D(6, 6, 3, 5)),
                 Attrs(At(0, MechanicType.Liana, key: 3), At(8, MechanicType.Matapi))),
+            Board("Ti", 23, 7946,
+                Caps(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 5, 2),
+                Doses(E, D(7, 3, 1, 3), D(9, 9, 7, 4), D(4, 4), D(5, 5, 3, 7), D(6, 6, 6), D(2, 2, 2, 8), D(8, 8, 8), D(9, 9, 7), D(5, 6, 3, 1), D(5, 1, 2, 1, 4), E),
+                Attrs(At(10, MechanicType.Tinaja), At(11, MechanicType.Cucharon)),
+                Hidden(H(10, 3), H(10, 2), H(10, 1), H(10, 0))),
         };
 
         /// <summary>Tablero <paramref name="name"/> (por ejemplo <c>"Ll+Re"</c>).</summary>
@@ -289,14 +305,14 @@ namespace AF.Core.Tests.DotnetOnly
 
         /// <summary>
         /// Combinación del calendario d.4 (Ho Hoja, Ma Matapi, Li Liana con fruta, Tu Aguas turbias, Re Remolino, Ba Barro, Ll
-        /// Lluvia, Br Brote, Pi Piraña, Ch Cuia chica, Al y Al6 Cuia alta).
+        /// Lluvia, Br Brote, Pi Piraña, Ch Cuia chica, Al y Al6 Cuia alta) o Ti, la Tinaja con su cuia (M13).
         /// </summary>
         public string Name { get; }
 
-        /// <summary>Par (A*, w = 1, <c>run</c>).</summary>
+        /// <summary>Par (A*, w = 1, <c>run</c>; sin poda de fútiles si lleva Tinaja, b.2 R14).</summary>
         public int Par { get; }
 
-        /// <summary>Estados expandidos por A* (w = 1, <c>run</c>) al generarlo.</summary>
+        /// <summary>Estados expandidos por A* (w = 1, <c>run</c>; sin poda si lleva Tinaja) al generarlo.</summary>
         public int Expanded { get; }
 
         /// <summary>Tope que fijan los tests: <see cref="Expanded"/> + 25 % (+ 1.000), nunca más de 300.000 (03 §5).</summary>

@@ -67,11 +67,22 @@ namespace AF.Core.Rules
         /// <summary>(c) Cuias que este vertido dejó selladas (R5).</summary>
         public int SealedMask { get; internal set; }
 
-        /// <summary>(d) Cuias que se soltaron por un sellado (Liana): pasan a ser normales.</summary>
+        /// <summary>
+        /// (d) Cuias que se soltaron por un sellado (Liana) y (f) por una condición del tablero (la cuia de la Tinaja, M13):
+        /// pasan a ser normales.
+        /// </summary>
         public int ReleasedMask { get; internal set; }
 
         /// <summary>(d) Lianas que se soltaron en este vertido (evento LianaReleased; D-007).</summary>
         public int LianaReleasedMask { get; internal set; }
+
+        /// <summary>
+        /// (f) Cuias de la Tinaja que bajaron del jirau en este vertido (evento CucharonReleased; M13, propuesta de la tinaja
+        /// b.2 regla 8): la tinaja quedó vacía y su cuia pasó a ser una Cuia chica normal. También están en
+        /// <see cref="ReleasedMask"/>. Depende solo del recuento visible, así que ocurre en el mismo vertido en todas las
+        /// realidades.
+        /// </summary>
+        public int CucharonReleasedMask { get; internal set; }
 
         /// <summary>(e) Los contadores avanzaron (vertido no fútil con alguna mecánica de contador).</summary>
         public bool CountersAdvanced { get; internal set; }
@@ -126,7 +137,7 @@ namespace AF.Core.Rules
             return ((SealedMask >> index) & 1) != 0;
         }
 
-        /// <summary>La mecánica de la cuia <paramref name="index"/> se abrió (b) o se soltó (d) en este vertido.</summary>
+        /// <summary>La mecánica de la cuia <paramref name="index"/> se abrió (b) o se soltó (d, f) en este vertido.</summary>
         public bool WasUnlocked(int index)
         {
             return (((OpenedMask | ReleasedMask) >> index) & 1) != 0;
@@ -149,6 +160,7 @@ namespace AF.Core.Rules
             SealedMask = 0;
             ReleasedMask = 0;
             LianaReleasedMask = 0;
+            CucharonReleasedMask = 0;
             CountersAdvanced = false;
             ChangedMask = (1 << source) | (1 << target);
             LluviaDropMask = 0;
@@ -183,7 +195,10 @@ namespace AF.Core.Rules
             }
         }
 
-        /// <summary>(d) La mecánica <paramref name="type"/> de la cuia <paramref name="index"/> se soltó por un sellado.</summary>
+        /// <summary>
+        /// (d) La mecánica <paramref name="type"/> de la cuia <paramref name="index"/> se soltó por un sellado (Liana) o (f) por
+        /// una condición del tablero (la cuia de la Tinaja).
+        /// </summary>
         internal void RecordReleased(int index, Mechanics.MechanicType type)
         {
             int bit = 1 << index;
@@ -191,6 +206,10 @@ namespace AF.Core.Rules
             if (type == Mechanics.MechanicType.Liana)
             {
                 LianaReleasedMask |= bit;
+            }
+            else if (type == Mechanics.MechanicType.Cucharon)
+            {
+                CucharonReleasedMask |= bit;
             }
         }
 

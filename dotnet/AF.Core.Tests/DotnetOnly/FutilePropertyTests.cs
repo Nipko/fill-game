@@ -28,8 +28,8 @@ namespace AF.Core.Tests.DotnetOnly
     /// (<see cref="Report.RemolinoCycles"/>) y lo fija
     /// <see cref="P3_Remolino_QB_AUsefulRoundTripCanReturnToTheSameCanonicalState"/>.</description></item>
     /// </list>
-    /// Cada mecánica añade su inyector (<see cref="IMechanicInjector"/>) antes de su debut (02 R16). Solo dotnet: lotes
-    /// grandes.
+    /// Cada mecánica añade su inyector (<see cref="IMechanicInjector"/>) antes de su debut (02 R16); la Tinaja (M13), que añade
+    /// dos cuias y la máscara de ocultos, su propio generador (<see cref="TinajaBoards"/>). Solo dotnet: lotes grandes.
     /// </summary>
     [TestFixture]
     public sealed class FutilePropertyTests
@@ -49,6 +49,8 @@ namespace AF.Core.Tests.DotnetOnly
             public int UsefulMonoToEmpty;
             public int UsefulRoundTrips;
             public int RemolinoCycles;
+            public int CucharonHung;
+            public int CucharonReleased;
             public readonly List<string> Violations = new List<string>();
         }
 
@@ -137,6 +139,61 @@ namespace AF.Core.Tests.DotnetOnly
             // C3-2: 02 R16 antes del debut de la Piraña (183), con Q18 B (los fútiles no avanzan el contador) y la respuesta
             // Q-C (mordisco perdido si no puede morder). La cueva es una cuia normal para futil.
             AssertWith(mode, family, new PiranaInjector(), 0xF07E_1831UL);
+        }
+
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithTinaja(PourMode mode, CapacityFamily family)
+        {
+            // M13 (propuesta de la tinaja, b.2 R14 y c.6), antes del estreno: con capacidades 2, 4 y 5 (uniformes: cuias de 4,
+            // la tinaja de 5 y su Cuia chica de 2) y además 1-3 y 6 (mixtas: Cuia alta de 5-6 con su fruta abundante y Cuia
+            // chica normal), en run y en single, con las exenciones de futil de la tinaja y de su cuia colgada. Los estados
+            // alcanzables incluyen los dos lados de la suelta (con la cuia colgada y ya suelta): Marea restaura el estado
+            // anterior entero, que es uno de ellos, y la vuelve a colgar.
+            bool mixed = family == CapacityFamily.Mixed;
+            Report report = Run(mode, mixed ? 0xF07E_3232UL : 0xF07E_3231UL, rng => TinajaBoards.Start(rng, mixed));
+
+            TestContext.WriteLine("tinaja: " + Describe(report));
+            Assert.That(report.Violations, Is.Empty);
+            Assert.That(report.States, Is.GreaterThanOrEqualTo(MinStates));
+            Assert.That(report.CucharonHung, Is.GreaterThan(0));
+            Assert.That(report.CucharonReleased, Is.GreaterThan(0));
+        }
+
+        [TestCase(PourMode.Run)]
+        [TestCase(PourMode.Single)]
+        public void P3_Tinaja_AfterTheRelease_AUsefulBackAndForthReturnsToTheSameState_R13IsNotComplete(PourMode mode)
+        {
+            // b.2 futil, «Lo que Φ no dice» (y la propuesta [P] para P3): tras la suelta, la Cuia chica con 1 dosis y una cuia con
+            // racha de 2 o más de esa fruta forman un vaivén «útil» en los dos sentidos, aunque el nivel esté perdido. Desde el
+            // tablero perdido de b.2 (N[c,c,c] N[a,b,a,a] N[b,b,b] T[c(o),a] Ch[]): sacar a, sacar c (la cuia se suelta con
+            // [a, c]) y ch→N1 (sella c). Queda N[c,c,c,c] N[a,b,a,a] N[b,b,b] T[] ch[a], y N2→ch / ch→N2 vuelven al mismo estado.
+            // R14 se cumple. PourRules.IsStuck (R13 de reglas) no lo declara; la partida sí, por D-014 (cierre ≤ 64 estados sin
+            // victoria en LevelSession; T51). Este test fija solo lo de las reglas.
+            Cuia tinaja = Cuia.Create(5, new[] { 3, 1 }, 0x1).WithMechanic(AF.Core.Mechanics.MechanicType.Tinaja);
+            Cuia hung = Cuia.Empty(2).WithMechanic(AF.Core.Mechanics.MechanicType.Cucharon);
+            var lost = new BoardState(new[] { Cuia.Create(4, new[] { 3, 3, 3 }), Cuia.Create(4, new[] { 1, 2, 1, 1 }), Cuia.Create(4, new[] { 2, 2, 2 }), tinaja, hung });
+
+            BoardState state = PourRules.Apply(lost, 3, 4, mode);
+            state = PourRules.Apply(state, 3, 4, mode);
+            Assert.That(state[4].Packed, Is.EqualTo(Cuia.Create(2, new[] { 1, 3 }).Packed)); // ya suelta
+            state = PourRules.Apply(state, 4, 0, mode);
+            Assert.That(state.IsSealed(0), Is.True);
+
+            Assert.That(PourRules.IsLegal(state, 1, 4), Is.True);
+            Assert.That(PourRules.IsFutile(state, 1, 4), Is.False);
+            BoardState there = PourRules.Apply(state, 1, 4, mode);
+            Assert.That(PourRules.IsLegal(there, 4, 1), Is.True);
+            Assert.That(PourRules.IsFutile(there, 4, 1), Is.False);
+            BoardState back = PourRules.Apply(there, 4, 1, mode);
+
+            Assert.That(back.Equals(state), Is.True);
+            Assert.That(PourRules.IsStuck(state, true), Is.False);
+            Assert.That(PourRules.IsStuck(there, true), Is.False);
+            Assert.That(ExhaustiveSearch.Explore(state, mode, MaxStatesPerBoard).Distance[0], Is.EqualTo(int.MaxValue)); // perdido
+            Assert.That(ExhaustiveSearch.Explore(lost, mode, MaxStatesPerBoard).Distance[0], Is.EqualTo(int.MaxValue));
         }
 
         [Test]
@@ -289,11 +346,20 @@ namespace AF.Core.Tests.DotnetOnly
         /// </summary>
         internal static Report Run(PourMode mode, CapacityFamily family, IMechanicInjector? injector, ulong seed)
         {
+            return Run(mode, seed, rng => PropertyBoards.Start(rng, family, injector));
+        }
+
+        /// <summary>
+        /// Como <see cref="Run(PourMode, CapacityFamily, IMechanicInjector, ulong)"/> con otro generador de tableros iniciales
+        /// (la Tinaja añade dos cuias y la máscara de ocultos: <see cref="TinajaBoards"/>).
+        /// </summary>
+        internal static Report Run(PourMode mode, ulong seed, Func<Prng, BoardState?> startBoard)
+        {
             var report = new Report();
             var rng = new Prng(seed);
             for (int attempt = 0; attempt < MaxBoards && report.States < TargetStates; attempt++)
             {
-                BoardState? start = PropertyBoards.Start(rng, family, injector);
+                BoardState? start = startBoard(rng);
                 if (start == null)
                 {
                     continue;
@@ -325,7 +391,9 @@ namespace AF.Core.Tests.DotnetOnly
                 + report.FutilePours.ToString(CultureInfo.InvariantCulture) + " fútiles, "
                 + report.UsefulMonoToEmpty.ToString(CultureInfo.InvariantCulture) + " monocolor→vacía útiles, "
                 + report.UsefulRoundTrips.ToString(CultureInfo.InvariantCulture) + " vaivenes útiles (con progreso)"
-                + (report.RemolinoCycles == 0 ? string.Empty : ", " + report.RemolinoCycles.ToString(CultureInfo.InvariantCulture) + " vaivenes Remolino sin progreso (Q-B)");
+                + (report.RemolinoCycles == 0 ? string.Empty : ", " + report.RemolinoCycles.ToString(CultureInfo.InvariantCulture) + " vaivenes Remolino sin progreso (Q-B)")
+                + (report.CucharonHung + report.CucharonReleased == 0 ? string.Empty : ", " + report.CucharonHung.ToString(CultureInfo.InvariantCulture)
+                    + " con la cuia de la tinaja colgada y " + report.CucharonReleased.ToString(CultureInfo.InvariantCulture) + " con la tinaja vacía");
         }
 
         private static void Check(ExhaustiveSearch.Graph graph, PourMode mode, Report report)
@@ -334,6 +402,7 @@ namespace AF.Core.Tests.DotnetOnly
             {
                 BoardState state = graph.States[s];
                 report.States++;
+                CountTinaja(state, report);
                 bool stuck = PourRules.IsStuck(state, true);
                 if (stuck)
                 {
@@ -392,6 +461,25 @@ namespace AF.Core.Tests.DotnetOnly
                         }
                     }
                 }
+            }
+        }
+
+        /// <summary>Cuenta los estados con tinaja: con su cuia colgada o con la tinaja ya vacía (la cuia suelta).</summary>
+        private static void CountTinaja(BoardState state, Report report)
+        {
+            int tinaja = TinajaBoards.TinajaIndex(state);
+            if (tinaja < 0)
+            {
+                return;
+            }
+
+            if (state[tinaja].IsEmpty)
+            {
+                report.CucharonReleased++;
+            }
+            else
+            {
+                report.CucharonHung++;
             }
         }
 

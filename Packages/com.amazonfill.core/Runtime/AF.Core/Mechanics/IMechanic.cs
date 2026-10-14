@@ -25,6 +25,15 @@ namespace AF.Core.Mechanics
         bool BlocksSource(Cuia self);
 
         /// <summary>
+        /// Filtro de origen con contexto (<c>solo_vierte_en(A)</c> de la propuesta de la tinaja, b.2 regla 3, y c.1): false si
+        /// la cuia <paramref name="source"/>, que lleva esta mecánica y ya es origen válido, no puede verter en
+        /// <paramref name="target"/>. Es la primera comprobación de <see cref="BoardRules.Accepts"/>, antes que los filtros de la
+        /// mecánica del destino (<see cref="CheckTarget"/>) y que el Barro expuesto, que aceptan sin mirar más. Por defecto,
+        /// true (hoy solo lo usa la Tinaja).
+        /// </summary>
+        bool AllowsTarget(in BoardSlice board, int source, int target);
+
+        /// <summary>
         /// Filtro de destino de 02 §1.2 (<c>bloqueada_destino</c>, Hoja, Remolino…), evaluado cuando el origen ya es válido
         /// y el destino no está sellado. <see cref="TargetVerdict.Normal"/> deja la regla normal (no llena; vacía o con la
         /// misma cima).

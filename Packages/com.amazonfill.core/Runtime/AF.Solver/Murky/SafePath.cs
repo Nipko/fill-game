@@ -57,7 +57,8 @@ namespace AF.Solver.Murky
         /// posiciones ocultas).
         /// </summary>
         /// <param name="start">Tablero inicial con sus dosis ocultas.</param>
-        /// <param name="options">Opciones por realidad (<see cref="SafeMoves.ForPipeline"/>: 20.000 nodos, w = 1).</param>
+        /// <param name="options">Opciones por realidad (<see cref="SafeMoves.ForPipeline(PourMode)"/>: 20.000 nodos, w = 1; en
+        /// un nivel con Tinaja, sin poda de fútiles: <see cref="SafeMoves.ForPipeline(PourMode, BoardState)"/>, b.2 R14).</param>
         /// <param name="enforceT4">Exigir T4 (true en campaña; false solo para la paridad con el prototipo).</param>
         /// <param name="maxRealities">Máximo de realidades por estado (24 por defecto, 02 T2).</param>
         public SafePathResult Find(BoardState start, SolverOptions options, bool enforceT4 = true, int maxRealities = RealityEnumerator.DefaultMaxRealities)
@@ -119,7 +120,7 @@ namespace AF.Solver.Murky
 
                 if (best < 0)
                 {
-                    return Result(SafePathStatus.NoSafeMove, steps, maxSeen, firstSafe);
+                    return Result(SafePathStatus.NoSafeMove, steps, maxSeen, firstSafe, _safe.Count > 0 ? SafeMovesOutcome.Found : _safe.Outcome);
                 }
 
                 Pour pour = _safe.GetMove(best);
@@ -128,11 +129,11 @@ namespace AF.Solver.Murky
             }
         }
 
-        private SafePathResult Result(SafePathStatus status, int steps, int maxRealities, int firstSafe)
+        private SafePathResult Result(SafePathStatus status, int steps, int maxRealities, int firstSafe, SafeMovesOutcome outcome = SafeMovesOutcome.Found)
         {
             var moves = new Pour[steps];
             Array.Copy(_path, moves, steps);
-            return new SafePathResult(status, moves, maxRealities, firstSafe);
+            return new SafePathResult(status, moves, maxRealities, firstSafe, outcome);
         }
     }
 
@@ -141,13 +142,22 @@ namespace AF.Solver.Murky
     {
         private readonly Pour[] _moves;
 
-        internal SafePathResult(SafePathStatus status, Pour[] moves, int maxRealities, int firstSafeMoves)
+        internal SafePathResult(SafePathStatus status, Pour[] moves, int maxRealities, int firstSafeMoves, SafeMovesOutcome noSafeMoveOutcome = SafeMovesOutcome.Found)
         {
             Status = status;
             _moves = moves;
             MaxRealities = maxRealities;
             FirstSafeMoves = firstSafeMoves;
+            NoSafeMoveOutcome = noSafeMoveOutcome;
         }
+
+        /// <summary>
+        /// Con <see cref="SafePathStatus.NoSafeMove"/>, por qué no hubo vertido seguro en el último estado de la ruta (propuesta
+        /// de la tinaja, c.2 y c.3: el informe separa «sin vertido seguro» de «presupuesto agotado»):
+        /// <see cref="SafeMovesOutcome.NoExit"/>, <see cref="SafeMovesOutcome.SomeRealitySolvable"/> o
+        /// <see cref="SafeMovesOutcome.BudgetExceeded"/>. En los demás estados, <see cref="SafeMovesOutcome.Found"/>.
+        /// </summary>
+        public SafeMovesOutcome NoSafeMoveOutcome { get; }
 
         /// <summary>Ruta segura encontrada o motivo del rechazo.</summary>
         public SafePathStatus Status { get; }

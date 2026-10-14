@@ -103,7 +103,7 @@ namespace AF.Core.Tests
         {
             Cuia cuia = Cuia.Empty(4);
 
-            Assert.That(() => cuia.WithMechanic((MechanicType)9), Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.That(() => cuia.WithMechanic((MechanicType)((int)MechanicTypes.Last + 1)), Throws.TypeOf<ArgumentOutOfRangeException>());
             Assert.That(() => cuia.WithMechanic(MechanicType.Hoja, key: 17), Throws.TypeOf<ArgumentOutOfRangeException>());
             Assert.That(() => cuia.WithMechanic(MechanicType.Remolino, pairId: 8), Throws.TypeOf<ArgumentOutOfRangeException>());
             Assert.That(() => cuia.WithMechanic(MechanicType.Liana, n: -1), Throws.TypeOf<ArgumentOutOfRangeException>());
@@ -124,8 +124,9 @@ namespace AF.Core.Tests
         [Test]
         public void MechanicTypes_ConvertTheJsonKeys()
         {
-            // 08 §4.1 attrs.type; el Barro no es un type (02 §9.1 M5).
-            string[] keys = { "hoja", "brote", "liana", "matapi", "remolino", "lluvia", "pirana" };
+            // 08 §4.1 attrs.type; el Barro no es un type (02 §9.1 M5). La tinaja y su cuia (M13) son 8 y 9, sin huecos.
+            string[] keys = { "hoja", "brote", "liana", "matapi", "remolino", "lluvia", "pirana", "tinaja", "cucharon" };
+            Assert.That(keys.Length, Is.EqualTo((int)MechanicTypes.Last));
             for (int i = 0; i < keys.Length; i++)
             {
                 Assert.That(MechanicTypes.TryParse(keys[i], out MechanicType type), Is.True);

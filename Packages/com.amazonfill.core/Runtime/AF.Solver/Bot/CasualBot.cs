@@ -2,6 +2,7 @@
 using System;
 using AF.Core.Board;
 using AF.Core.Determinism;
+using AF.Core.Mechanics;
 using AF.Core.Rules;
 using AF.Solver.Search;
 
@@ -24,8 +25,10 @@ namespace AF.Solver.Bot
     /// porque no es un color, 02 §9.1 M5 [P]). Con mecánicas puntúa la cuia que
     /// recibe las dosis (la pareja en el Remolino) [P]. En el Remolino la racha entra por el fondo de la pareja y de
     /// cualquier color (02 §9.1 M4), así que el +16 exige que la pareja sea monocolor del color vertido y el +40, además,
-    /// que quede llena con <c>cap</c> = <c>U_c</c> (sella, 02 R5); si la pareja mezcla colores no suma nada [P]. Las
-    /// demás mecánicas no añaden ramas.</para>
+    /// que quede llena con <c>cap</c> = <c>U_c</c> (sella, 02 R5); si la pareja mezcla colores no suma nada [P]. <b>Rama
+    /// mínima de la Tinaja</b> (M13; D-019, Q-Ti2 A; propuesta de la tinaja, c.2): la cuia colgada de la tinaja recibe
+    /// cualquier fruta, así que el +16 (y el +40 que depende de él) solo suma si su cima es de la fruta sacada; sacar a la
+    /// cuia vacía puntúa 4 − 20 = −16. Las demás mecánicas no añaden ramas y el resto de la puntuación sigue congelado.</para>
     /// <para><b>Ruido:</b> el «+ rng()·0,5» de 03 §6 pasa a un entero equivalente: la clave es
     /// <c>puntos·65.536 + NextInt(131.072)</c>, un ruido en [0, 2) unidades de la puntuación ×4, es decir [0, 0,5) de la
     /// original. Como las puntuaciones distintas se separan al menos 4 unidades, el ruido solo desempata, como en el
@@ -168,14 +171,20 @@ namespace AF.Solver.Bot
             int score = 4 * amount;
             if (to.IsEmpty)
             {
-                score -= 20; // gastar un vacío parece caro
+                score -= 20; // gastar un vacío parece caro (sacar a la cuia de la tinaja vacía: 4 − 20 = −16)
             }
             else if (receiver == move.Target)
             {
-                score += 16; // juntar con el mismo color
-                if (to.IsMonocolor && to.Count + amount == to.Capacity)
+                // Rama mínima de la Tinaja (M13; D-019, Q-Ti2 A; propuesta de la tinaja, c.2): su cuia colgada recibe cualquier
+                // fruta, así que «juntar» (y lo que cuelga de él) solo vale si su cima es de la fruta sacada. En el resto de
+                // destinos la regla normal ya garantiza el color.
+                if (to.Mechanic != MechanicType.Cucharon || to.TopColor == from.TopColor)
                 {
-                    score += 40; // sella una cuia (llena y monocolor, 02 R5)
+                    score += 16; // juntar con el mismo color
+                    if (to.IsMonocolor && to.Count + amount == to.Capacity)
+                    {
+                        score += 40; // sella una cuia (llena y monocolor, 02 R5)
+                    }
                 }
             }
             else

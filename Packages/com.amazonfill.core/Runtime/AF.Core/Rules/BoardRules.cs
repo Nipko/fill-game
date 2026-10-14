@@ -25,13 +25,16 @@ namespace AF.Core.Rules
     /// está sellada ni vacía (R5, R12).</para>
     /// <para><b>R10 (anexo B).</b> Tras cada vertido: (a) revelado de la nueva cima de A (R7); (b) aperturas por recepción
     /// en B (Hoja, Brote); (c) sellado (R5); (d) liberaciones por sellado (Liana); (e) contadores (Lluvia, Piraña), una sola
-    /// vez por vertido y solo si el vertido no es fútil (respuesta Q18 B); (f) condiciones del tablero; (f′) se repiten
+    /// vez por vertido y solo si el vertido no es fútil (respuesta Q18 B); (f) condiciones del tablero (la cuia de la Tinaja
+    /// se suelta cuando la tinaja queda vacía, M13); (f′) se repiten
     /// (c), (d) y (f) hasta que nada cambie; (g) victoria (R12); (h) bloqueo (R13-R15). El orden es contrato con el solver y
     /// con Marea, que restaura el estado anterior entero.</para>
     /// <para><b><c>futil</c> (anexo B).</b> No es fútil si <c>cambia_al_recibir(B)</c> (Hoja puesta, Brote cerrado,
     /// Matapi, Remolino, Lluvia con gotas pendientes…) ni si el origen está exento (<c>no_puede_recibir(A)</c> y la respuesta
-    /// Q-B: cuia de Remolino o Lluvia con gotas pendientes); en lo demás, la regla de 02 §1.4 con la excepción de Aguas
-    /// turbias de 04 §5.1 (<see cref="CuiaRules.IsFutile"/>).</para>
+    /// Q-B: cuia de Remolino o Lluvia con gotas pendientes; la Tinaja y su cuia colgada, M13); en lo demás, la regla de 02
+    /// §1.4 con la excepción de Aguas turbias de 04 §5.1 (<see cref="CuiaRules.IsFutile"/>).</para>
+    /// <para><b>Filtro de origen</b> (M13, propuesta de la tinaja b.2 regla 3 y c.1): <c>legal</c> evalúa primero
+    /// <c>IMechanic.AllowsTarget</c> de la mecánica de A (la Tinaja solo vierte en su cuia) y después los filtros de B.</para>
     /// </remarks>
     public static class BoardRules
     {
@@ -48,8 +51,9 @@ namespace AF.Core.Rules
         }
 
         /// <summary>
-        /// <c>legal(A, B)</c> de 02 §1.2: A ≠ B; A puede ser origen; B no sellada ni <c>bloqueada_destino</c>; los filtros
-        /// de la mecánica de B; y la regla normal (B no llena y vacía o con la misma cima que A).
+        /// <c>legal(A, B)</c> de 02 §1.2: A ≠ B; A puede ser origen; el filtro de origen de la mecánica de A (la Tinaja solo
+        /// vierte en su cuia, M13); B no sellada ni <c>bloqueada_destino</c>; los filtros de la mecánica de B; y la regla
+        /// normal (B no llena y vacía o con la misma cima que A).
         /// </summary>
         public static bool IsLegal(Cuia[] cuias, int offset, int count, int[] units, int source, int target)
         {
@@ -151,9 +155,21 @@ namespace AF.Core.Rules
             return !cuia.HasMechanic || !MechanicTable.Of(cuia).BlocksSource(cuia);
         }
 
-        /// <summary>Parte de <c>legal(A, B)</c> que mira el destino; el llamante ya comprobó que A es origen y A ≠ B.</summary>
+        /// <summary>
+        /// Parte de <c>legal(A, B)</c> que mira el par (A, B); el llamante ya comprobó que A es origen y A ≠ B. Primero el
+        /// filtro de origen de la mecánica de A (<c>solo_vierte_en(A)</c>; propuesta de la tinaja, b.2 regla 3 y c.1): va antes
+        /// que la rama de la mecánica de B (cuyo veredicto Accept o Reject sale sin mirar más) y que el Barro expuesto (que
+        /// acepta cualquier color); si fuera después, la tinaja podría verter en una Hoja vacía de la fruta de su boca o en una
+        /// cuia con Barro expuesto. Lo heredan <c>IsLegal</c>, <c>HasUsefulMove</c> (R13), <c>SolverMoves</c> y el bot.
+        /// </summary>
         internal static bool Accepts(in BoardSlice board, int source, int target)
         {
+            Cuia from = board[source];
+            if (from.HasMechanic && !MechanicTable.Of(from).AllowsTarget(in board, source, target))
+            {
+                return false; // solo_vierte_en(A): la Tinaja solo vierte en su cuia (M13, regla 3; R11)
+            }
+
             Cuia to = board[target];
             if (to.HasMechanic)
             {
@@ -176,7 +192,7 @@ namespace AF.Core.Rules
             }
 
             // Regla normal: una cuia sellada está llena, así que "no llena" cubre también "no sellada".
-            return !to.IsFull && (top == Cuia.NoColor || top == board[source].TopColor);
+            return !to.IsFull && (top == Cuia.NoColor || top == from.TopColor);
         }
 
         /// <summary>Cuia que recibirá las dosis de un vertido a <paramref name="target"/>: B, o la pareja en el Remolino.</summary>

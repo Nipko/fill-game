@@ -7,6 +7,42 @@ using AF.Solver.Search;
 namespace AF.Solver.Murky
 {
     /// <summary>
+    /// Resultado de <see cref="SafeMoves.Find(BoardState, SolverOptions, BoardState, bool, int)"/> y, si no hay vertido
+    /// seguro, por qué: el orden de respuestas de Morpho y de la pista por inactividad (propuesta de la tinaja, b.2
+    /// «Morpho», y c.2; vale también para Aguas turbias, c.10) y la causa que separa el informe del pipeline (c.3).
+    /// </summary>
+    public enum SafeMovesOutcome
+    {
+        /// <summary>Hay al menos un vertido seguro en todas las realidades (respuesta 1: Morpho lo propone y cobra).</summary>
+        Found = 0,
+
+        /// <summary>
+        /// Ninguna realidad tiene solución desde aquí, también con una sola realidad (respuesta 2: «Desde aquí no hay salida:
+        /// la Marea o la orilla», con Deshacer y Volver a la orilla; no cobra).
+        /// </summary>
+        NoExit = 1,
+
+        /// <summary>
+        /// Alguna realidad tiene solución, pero ningún vertido es seguro en todas (respuesta 3: «No veo un vertido seguro: la
+        /// luciérnaga ilumina…», sin prometer nada; no cobra). Nunca con una sola realidad: si esa realidad tiene solución, el
+        /// primer vertido de su solución es seguro, así que solo puede faltar presupuesto.
+        /// </summary>
+        SomeRealitySolvable = 2,
+
+        /// <summary>
+        /// Se agotó el presupuesto antes de decidir entre las respuestas 1-3 (respuesta 4: «No encuentro un camino desde
+        /// aquí»; no cobra). El corte por <c>hint_timeout_ms</c> lo pone el cliente: el núcleo no lee relojes.
+        /// </summary>
+        BudgetExceeded = 3,
+
+        /// <summary>El tablero ya es victoria (R12): no hay nada que proponer.</summary>
+        Won = 4,
+
+        /// <summary>La enumeración de realidades falló (<see cref="SafeMoves.Status"/> no es <see cref="RealityStatus.Ok"/>).</summary>
+        RealitiesRejected = 5,
+    }
+
+    /// <summary>
     /// Vertidos seguros de Aguas turbias (02 §11 T5 y <c>validar_turbio</c>; 03 §8): los vertidos útiles
     /// (<c>MOVIMIENTOS</c> de 03 §5, <see cref="SolverMoves"/>) que dejan el tablero resoluble en <b>todas</b> las realidades
     /// coherentes con lo visible (<see cref="RealityEnumerator"/>). Lo usan el pipeline (<see cref="SafePath"/>), Morpho y la
@@ -24,6 +60,15 @@ namespace AF.Solver.Murky
     /// <item><description><b>Memo por estado canónico</b> (03 §8): cada estado ya resuelto (canónico exacto, con
     /// <see cref="BoardCanon"/>, sin colisiones) guarda su par; vale entre pasos, entre llamadas y entre niveles mientras no
     /// cambien las opciones. Un único <see cref="AStarSolver"/> reutilizado.</description></item>
+    /// <item><description><b>Por qué no hay vertido seguro</b> (<see cref="Outcome"/>; propuesta de la tinaja, b.2 «Morpho» y
+    /// c.2): con <see cref="Count"/> = 0 se resuelve además el estado actual en cada realidad (con el memo) y se separan
+    /// «ninguna realidad tiene solución» (<see cref="SafeMovesOutcome.NoExit"/>), «alguna la tiene, pero ningún vertido es
+    /// seguro en todas» (<see cref="SafeMovesOutcome.SomeRealitySolvable"/>: cada candidato tiene una realidad demostrada
+    /// irresoluble) y «se agotó el presupuesto antes de decidir» (<see cref="SafeMovesOutcome.BudgetExceeded"/>). Con
+    /// vertidos seguros no se busca nada más, y el resultado de <see cref="Count"/> y de los vertidos no cambia.</description></item>
+    /// <item><description><b>Tinaja</b> (M13): la premisa se cumple (sacar solo depende de que su cuia tenga hueco y siempre
+    /// mueve 1; la suelta depende del recuento visible). En un nivel con tinaja las opciones van sin poda de fútiles
+    /// (<see cref="SolverOptions.ForLevel"/> y <see cref="ForPipeline(PourMode, BoardState)"/>; b.2 R14).</description></item>
     /// <item><description>Sin asignaciones una vez calentada, salvo el crecimiento del memo. No es segura entre
     /// hilos.</description></item>
     /// </list>
@@ -43,6 +88,8 @@ namespace AF.Solver.Murky
         private readonly RealityEnumerator _realities = new RealityEnumerator();
         private readonly SolverMove[] _candidates = new SolverMove[SolverMoves.MaxMoves];
         private readonly SolverMove[] _safe = new SolverMove[SolverMoves.MaxMoves];
+        private readonly int[] _failPar = new int[SolverMoves.MaxMoves];
+        private readonly int[] _failReality = new int[SolverMoves.MaxMoves];
         private readonly Cuia[] _state = new Cuia[BoardState.MaxCuias];
         private readonly Cuia[] _child = new Cuia[BoardState.MaxCuias];
         private readonly Cuia[] _canon = new Cuia[BoardState.MaxCuias];
@@ -52,6 +99,7 @@ namespace AF.Solver.Murky
         private SolverOptions _memoOptions;
         private int _width;
         private int _count;
+        private SafeMovesOutcome _outcome = SafeMovesOutcome.RealitiesRejected;
 
         /// <summary>Opciones del pipeline en el modo <paramref name="mode"/>: 20.000 nodos por realidad, w = 1, con fútiles (03 §8).</summary>
         public static SolverOptions ForPipeline(PourMode mode)
@@ -59,8 +107,25 @@ namespace AF.Solver.Murky
             return new SolverOptions(PipelineRealityBudget, 1, true, mode);
         }
 
-        /// <summary>Vertidos seguros de la última llamada (0 = ninguno, T5).</summary>
+        /// <summary>
+        /// Como <see cref="ForPipeline(PourMode)"/> para el nivel <paramref name="level"/>: sin poda de fútiles si lleva Tinaja
+        /// (<see cref="SolverOptions.RequiresUnprunedSearch"/>; propuesta de la tinaja, b.2 R14 y c.2); en cualquier otro
+        /// nivel, las mismas opciones.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="level"/> es null.</exception>
+        public static SolverOptions ForPipeline(PourMode mode, BoardState level)
+        {
+            return ForPipeline(mode).ForLevel(level);
+        }
+
+        /// <summary>Vertidos seguros de la última llamada (0 = ninguno, T5; el motivo, en <see cref="Outcome"/>).</summary>
         public int Count => _count;
+
+        /// <summary>
+        /// Resultado de la última llamada: <see cref="SafeMovesOutcome.Found"/> si <see cref="Count"/> &gt; 0 y, si no, por qué
+        /// no hay vertido seguro (orden de respuestas de Morpho; propuesta de la tinaja, b.2 y c.2).
+        /// </summary>
+        public SafeMovesOutcome Outcome => _outcome;
 
         /// <summary>Realidades de la última llamada (<see cref="RealityEnumerator.Count"/>).</summary>
         public int RealityCount => _realities.Count;
@@ -149,6 +214,7 @@ namespace AF.Solver.Murky
             _options = options;
             _width = width;
             _count = 0;
+            _outcome = SafeMovesOutcome.RealitiesRejected;
             Array.Copy(cuias, 0, _state, 0, width);
             Array.Copy(units, _units, CuiaRules.UnitsTableLength);
             RealityStatus status = _realities.Enumerate(cuias, 0, width, units, reference, referenceWidth, enforceT4, maxRealities);
@@ -164,12 +230,17 @@ namespace AF.Solver.Murky
             {
                 SolverMove move = _candidates[m];
                 bool safe = true;
-                for (int r = 0; r < count && safe; r++)
+                for (int r = 0; r < count; r++)
                 {
-                    Array.Copy(realities, r * width, _child, 0, width);
-                    var events = default(PourEvents);
-                    BoardRules.ApplyInPlace(_child, 0, width, _units, move.Source, move.Target, options.PourMode, move.IsFutile, ref events);
-                    safe = ParOfChild() >= 0;
+                    int par = ParAfter(realities, r, move);
+                    if (par < 0)
+                    {
+                        // Primera realidad en la que el vertido no es seguro: irresoluble o presupuesto agotado (para Outcome).
+                        safe = false;
+                        _failPar[m] = par;
+                        _failReality[m] = r;
+                        break;
+                    }
                 }
 
                 if (safe)
@@ -178,7 +249,78 @@ namespace AF.Solver.Murky
                 }
             }
 
+            _outcome = _count > 0 ? SafeMovesOutcome.Found : Explain(candidates, realities, count);
             return status;
+        }
+
+        /// <summary>
+        /// Por qué no hay vertido seguro (orden de respuestas de Morpho; propuesta de la tinaja, b.2 y c.2), con el memo y sin
+        /// asignaciones: victoria; si ninguna realidad tiene solución demostrada desde aquí, «sin salida» o, si alguna agotó el
+        /// presupuesto, «presupuesto agotado»; si alguna la tiene, «alguna realidad tiene solución» solo si cada candidato
+        /// tiene una realidad demostrada irresoluble tras él (si no, falta presupuesto para decidirlo).
+        /// </summary>
+        private SafeMovesOutcome Explain(int candidates, Cuia[] realities, int count)
+        {
+            int width = _width;
+            if (BoardRules.IsWon(_state, 0, width, _units))
+            {
+                return SafeMovesOutcome.Won;
+            }
+
+            bool solvable = false;
+            bool budget = false;
+            for (int r = 0; r < count; r++)
+            {
+                Array.Copy(realities, r * width, _child, 0, width);
+                int par = ParOfChild();
+                solvable |= par >= 0;
+                budget |= par == BudgetExceeded;
+            }
+
+            if (!solvable)
+            {
+                return budget ? SafeMovesOutcome.BudgetExceeded : SafeMovesOutcome.NoExit;
+            }
+
+            if (count == 1)
+            {
+                // Una realidad con solución: el primer vertido de esa solución deja el tablero resoluble, así que si no salió
+                // como seguro es que su búsqueda agotó el presupuesto. Nunca la Luciérnaga con R = 1 (b.2, respuesta 3). Con
+                // w = 1 y H consistente no ocurre (los expandidos desde el hijo óptimo no superan los del padre); con w > 1 sí
+                // (TinajaSolverTests.Morpho_OneSolvableReality_WithoutASafePour_IsOutOfBudget_NeverTheFirefly).
+                return SafeMovesOutcome.BudgetExceeded;
+            }
+
+            for (int m = 0; m < candidates; m++)
+            {
+                if (_failPar[m] == Unsolvable)
+                {
+                    continue;
+                }
+
+                bool proven = false;
+                for (int r = _failReality[m] + 1; r < count && !proven; r++)
+                {
+                    proven = ParAfter(realities, r, _candidates[m]) == Unsolvable;
+                }
+
+                if (!proven)
+                {
+                    return SafeMovesOutcome.BudgetExceeded; // este vertido podría ser seguro con más presupuesto
+                }
+            }
+
+            return SafeMovesOutcome.SomeRealitySolvable;
+        }
+
+        /// <summary>Par (con el memo) de la realidad <paramref name="reality"/> tras el vertido <paramref name="move"/>.</summary>
+        private int ParAfter(Cuia[] realities, int reality, SolverMove move)
+        {
+            int width = _width;
+            Array.Copy(realities, reality * width, _child, 0, width);
+            var events = default(PourEvents);
+            BoardRules.ApplyInPlace(_child, 0, width, _units, move.Source, move.Target, _options.PourMode, move.IsFutile, ref events);
+            return ParOfChild();
         }
 
         /// <summary>Par de <see cref="_child"/>: 0 si ya es victoria; si no, del memo o de una búsqueda A*.</summary>
