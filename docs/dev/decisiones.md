@@ -12,22 +12,23 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-004 | 2026-10-07 | Panel azul petróleo, vertido a 38° y cuias más anchas con pocas cuias | Decidida por el dueño (respuestas a C16-C18 de `docs/art/direccion-visual-v2.md`); implementada en el árbol de trabajo, sin commitear (código, tests y documentación de «Archivos afectados»; EditMode y PlayMode en verde el 2026-10-07). Pendientes: commit y PR, revisión en el teléfono (`dev.apk`) y nueva medida de C19. Actualización del 2026-10-08: implementada en `b2d34de` (rama `d004-cuias-anchas`); la decisión 2 (38° fijos y labio a 0,6-1,6 u), el techo del vertido [P], la consecuencia «no cambia el número de filas» y el alto de la cuia (1:3, 6 u; pasa a 5,6 u) quedan sustituidos por D-006, que también matiza el recálculo a mitad de nivel: las filas se fijan al cargar y no se recalculan, solo el ancho; el resto sigue (panel azul petróleo y topes 64/56/48 dp) |
 | D-005 | 2026-10-08 | Vertido por tramo, como Magic Sort | Decidida por el dueño; en implementación (C1, L1, U1, D1-D6) |
 | D-006 | 2026-10-08 | Tablero, cuia y vertido como Magic Sort | Decidida por el dueño; en implementación (U2-U6, D1-D6). Pendiente: P12 (ranura de 42 dp en 16:9 con cuias añadidas) |
-| D-007 | 2026-10-08 | Mecánicas del río: catálogo de 12, estrenos de la 1.0 y reglas finas | Decidida por el dueño (todas las recomendaciones de la propuesta de cultura ribereña, §(h), y las reglas finas Q-A, Q-B y Q-C). Implementada en el núcleo y el generador (pista A, integrada en `6faf7c3`) y en Unity (paso 1 del traspaso, hasta `ce0ced4`). Registrada y llevada al GDD el 2026-10-11 y el 2026-10-12 (paso 2), con la lista única de estrenos en 02 §9.1. Las preguntas 27-31 y 33-35 de `docs/GDD.md` §6.3 quedaron decididas el 2026-10-13 con su recomendación (D-020): Lluvia y Piraña en la 1.0, «Zafra» solo como nombre del hito 420, Revelar en la 3.ª ranura, el formato [P] de `pack_schema` 2, `level_overrides` como respaldo del kill-switch en la 1.0, la tabla de novedades de 201-1000 antes de generar 201-700, P1-P3 con la excepción del Remolino y solo la burbuja del revelado rítmico. Pendientes, sin bloquear la 1.0: C1-9 (02 R16 con Liana y capacidades mixtas; pregunta 24) y la revisión del asesor cultural. D-019 (2026-10-13) añade al catálogo una mecánica propia, la Tinaja (M13) |
+| D-007 | 2026-10-08 | Mecánicas del río: catálogo de 12, estrenos de la 1.0 y reglas finas | Decidida por el dueño (todas las recomendaciones de la propuesta de cultura ribereña, §(h), y las reglas finas Q-A, Q-B y Q-C). Implementada en el núcleo y el generador (pista A, integrada en `6faf7c3`) y en Unity (paso 1 del traspaso, hasta `ce0ced4`). Registrada y llevada al GDD el 2026-10-11 y el 2026-10-12 (paso 2), con la lista única de estrenos en 02 §9.1. Las preguntas 27-31 y 33-35 de `docs/GDD.md` §6.3 quedaron decididas el 2026-10-13 con su recomendación (D-020): Lluvia y Piraña en la 1.0, «Zafra» solo como nombre del hito 420, Revelar en la 3.ª ranura, el formato [P] de `pack_schema` 2, `level_overrides` como respaldo del kill-switch en la 1.0, la tabla de novedades de 201-1000 antes de generar 201-700, P1-P3 con la excepción del Remolino y solo la burbuja del revelado rítmico. Pendientes, sin bloquear la 1.0: C1-9 (02 R16 con Liana y capacidades mixtas; pregunta 24) y la revisión del asesor cultural. D-019 (2026-10-13) añade al catálogo una mecánica propia, la Tinaja (M13). El formato de las variantes de la 1.0 en `pack_schema` 3 (Hoja atada, Brote de dos hojas y Flor) se firmó el 2026-10-14 (D-023) |
 | D-008 | 2026-10-08 | Bucle de partida como Magic Sort | Decidida por el dueño. Documentación aplicada el 2026-10-08 en `117f4be` (capítulos de «Archivos afectados»), dentro de la rama de código: **pendiente de la aprobación explícita del dueño antes de fusionar** o de un PR de documentación aparte (cambia el contrato 7). En implementación: pista B (B1-1-B1-6 y B2-1-B2-6). Los textos nuevos y los puntos [P] están pendientes (P14-P16, no bloquean). Abierta: P17, cuándo sale «Canoas infinitas 1 h» en Sin canoas (04 §7.3 y 05 §4.1 se contradicen). El número D-007 quedó reservado para las mecánicas especiales, en pausa; tiene su entrada desde el 2026-10-11 |
 | D-009 | 2026-10-08 | Dificultad escalonada: ciclo de 20 reordenado, etiqueta antes de jugar y rotación de plantillas | Decidida por el dueño (Q1 A, Q2 sí, Q3 A y Q4 A de la misma propuesta). Implementada en el generador y en `tools/econ_sim.py` (pista A) y en Unity (paso 1). Registrada y llevada al GDD el 2026-10-11 (paso 2). Pendientes: aprobar las cifras [sim] regeneradas con el ciclo nuevo (P-2) y decidir la tabla de etiquetas de 03 §11 frente a la campaña medida (preguntas 25 y 26 de `docs/GDD.md` §6.3). La fuente de la temporada del ciclo (pregunta 32: una tabla del cliente por ciclo) y la tabla de novedades de 201-1000 (pregunta 33: rehacerla antes de generar 201-700) quedaron decididas el 2026-10-13 (D-020); los nombres internos de las posiciones y de los hitos [P] esperan al asesor cultural. La pregunta 40 (la Cuia chica entre los 2 vacíos) quedó decidida el 2026-10-13 (D-015). D-013 (2026-10-13) cambia el contenido de la tarjeta previa del hito p20 (punto 2): añade «Si lo superas, llegas a {sitio}» |
 | D-010 | 2026-10-08 | «Llenar y teñir»: el río llena las cuias y los miquitos las tiñen con fruta | Decidida por el dueño (idea y ampliación del 2026-10-08); guion `docs/research/intro-rio-miquitos/guion.md` aprobado para implementar. Implementada en la rama `intro-rio-miquitos` (`fbdf11e`, `e479cf0` y `8955ef3`), sin fusionar. Documentación aplicada el 2026-10-09 en la misma rama. Pendientes, sin bloquear: confirmar Q1-Q16 del guion (el código aplica sus recomendaciones salvo Q11 y Q14), Q17, toda la fauna con el asesor cultural, el arte del artista y las preguntas abiertas de la propuesta de fauna (F7, F9-F11 y F13). Los números D-007 y D-009 los usó la pista de mecánicas y niveles (rama `fase1-mecanicas-niveles`); tienen su entrada desde el 2026-10-11. **Ampliación del 2026-10-09** (elenco de unas 50 especies que tiñen, una nueva cada 20 niveles), registrada el 2026-10-11: pendiente del diseño del paso 3 del traspaso |
 | D-011 | 2026-10-11 | Ajustes de la prueba en el teléfono: la victoria se cobra cuando se ve, avisos legibles, miquitos que se ven y Cosecha doble que avanza | Decidida por el dueño tras probar el `dev.apk` en el SM-S938B (tareas P1-P4 de `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`). Implementada entera: los puntos 1, 3 y 4 en la tanda 1 (integrada en `7d755c4`), probada en el teléfono el 2026-10-12 con resultado «cumple» (`docs/dev/traspaso/pruebas-telefono-2026-10-12.md`); el punto 2 (avisos legibles) y la tarjeta del miquito tras la tropa en la tanda 2 (A2, `35301f9`; tanda integrada en `94905b8`), probada en el teléfono el 2026-10-13 con resultado «cumple» (`docs/dev/traspaso/pruebas-telefono-2026-10-13.md`). Llevada al GDD el 2026-10-12 (paso 2). Los [P] de la tanda 1 se ratificaron el 2026-10-13 (pregunta 38, D-020). Las preguntas 41 y 42, que dejó la tanda 2, quedaron decididas el 2026-10-13 (D-015); sus arreglos están en T52, integrada en `d2ce284` |
 | D-012 | 2026-10-09 y 2026-10-11 | Prueba del 2026-10-09: estreno de la Piraña, banner de mundo, sacudida, patrones, guardado por vertido y marco del panel | Decidida por el dueño. Registrada y llevada al GDD el 2026-10-12 (paso 2). Implementada entera. En la tanda 1 (`7d755c4`), probados en el teléfono el 2026-10-12 con resultado «cumple»: el mordisco fallido visible, la marca de pareja del Remolino y el guardado por vertido con escritor en segundo plano (52 vertidos medidos: p95 de 2,15 ms y máximo de 3,67 ms). En la tanda 2 (`94905b8`), probados en el teléfono el 2026-10-13 con resultado «cumple»: la sacudida y los patrones e iconos (B3, `dd208a6`) y el banner de mundo y el tutorial de la Piraña con mordisco animado (A4, `94905b8`). El vertido que gana cuenta en «ninguno > 8 ms» y los [P] de la tanda 1 (entre ellos el tope de 1.000 ms de los guardados síncronos y el aire de la ficha del Remolino) quedaron decididos el 2026-10-13 (preguntas 37 y 38 de `docs/GDD.md` §6.3, D-020): en el teléfono, máximo de 4,83 ms en 216 vertidos. Las preguntas 39, 43 y 44 quedaron decididas el 2026-10-13 (D-015). D-013 (2026-10-13) cambia la decisión 2: el banner de mundo trae dentro el viaje de mundo (Q4-D). Los iconos de fruta procedurales son [P] del artista y del asesor cultural (07 §3) |
-| D-013 | 2026-10-12 y 2026-10-13 | Mapa del río: remontar el Amazonas hasta donde nace | Decidida por el dueño (río arriba y un fondo por parada el 2026-10-12; la recomendación de cada pregunta de la sección 16 de la propuesta el 2026-10-13, con T1-A y T6-A de TiTino y Q1-A de Frutas del río). Documentación aplicada el 2026-10-13 (T50). Sin implementar: fases F1-F9 de la propuesta. Cambia D-009 (punto 2) y D-012 (decisión 2); D-008 no cambia. Choques entre propuestas: pregunta 45 de `docs/GDD.md` §6.3, decidida el 2026-10-14 en la (a) (D-022). Todo nombre, dato y texto, pendiente del asesor cultural. Lo que dejaba abierto el punto 15 (T2, T4 y T5 de TiTino, Q2-Q7 de Frutas, Q1-Q12 de idiomas y Q-Ti1-Q-Ti7 de la tinaja) se decidió el 2026-10-13: D-016 a D-019 |
+| D-013 | 2026-10-12 y 2026-10-13 | Mapa del río: remontar el Amazonas hasta donde nace | Decidida por el dueño (río arriba y un fondo por parada el 2026-10-12; la recomendación de cada pregunta de la sección 16 de la propuesta el 2026-10-13, con T1-A y T6-A de TiTino y Q1-A de Frutas del río). Documentación aplicada el 2026-10-13 (T50). Sin implementar: fases F1-F9 de la propuesta. Cambia D-009 (punto 2) y D-012 (decisión 2); D-008 no cambia. Choques entre propuestas: pregunta 45 de `docs/GDD.md` §6.3, decidida el 2026-10-14 en la (a) (D-022). Todo nombre, dato y texto, pendiente del asesor cultural. Lo que dejaba abierto el punto 15 (T2, T4 y T5 de TiTino, Q2-Q7 de Frutas, Q1-Q12 de idiomas y Q-Ti1-Q-Ti7 de la tinaja) se decidió el 2026-10-13: D-016 a D-019. Las preguntas P-M1 a P-M8 de su plan de implementación se decidieron el 2026-10-14 con su recomendación (D-023) |
 | D-014 | 2026-10-13 | Aguas estancadas por bucle (R13 ampliada) | Decidida por el dueño (opción recomendada de la hoja de pruebas del 2026-10-13). Documentación aplicada el 2026-10-13 (T50: 02 R13, R14 y R16). La pregunta 46 de `docs/GDD.md` §6.3 quedó decidida el 2026-10-13 en la opción (a), la recomendada (D-020): el cierre recorre todos los vertidos legales, fútiles incluidos, y así cumple R14 con capacidades mixtas. Implementada en el núcleo (T51, `DeadEndProbe` en `LevelSession`) e integrada en `1ad712c`, con el tablero del 66 como prueba de regresión. Resuelve para el jugador la pregunta 15 de 02; P1-P3 en lugar del anexo B se ratificaron el mismo día (pregunta 34, D-020) |
 | D-015 | 2026-10-13 | Respuestas a las preguntas 39-44 de `docs/GDD.md` §6.3 | Decidida por el dueño (la recomendación de cada pregunta). Documentación aplicada el 2026-10-13 (T50) y completada el 2026-10-14 (T54: 02 §4 y 08 §5.1). Los arreglos de las preguntas 41 (punto 4), 42 y 43 (escala de fuente del banner) están en T52, integrada en `d2ce284`; sus [P] eran la pregunta 47 de `docs/GDD.md` §6.3, ratificada el 2026-10-14 (D-022). La medida del shader en un teléfono de clase A es una acción del dueño (pregunta 44) |
 | D-016 | 2026-10-13 | TiTino: personaje principal | Decidida por el dueño (T1-A y T6-A con D-013; T2-A, T4-A y T5-B con su «Si» a las recomendadas; T3 resuelta: *Bradypus variegatus*). Documentación aplicada el 2026-10-14 (T54). Sin implementar: plan (i) de `docs/research/personaje/propuesta-titino.md`. Nombre pendiente de la búsqueda de marca y del asesor cultural |
 | D-017 | 2026-10-13 | Frutas del río | Decidida por el dueño (Q1-A con D-013; Q2-A a Q7-A con su «Si»). Documentación aplicada el 2026-10-14 (T54), con el contrato 31 (`af-facts/1`). Sin implementar: pasos F1-F9 de la propuesta. Choques: pregunta 45 y pregunta 49 (claves y columnas de la tabla de textos) de `docs/GDD.md` §6.3, decididas el 2026-10-14 en la (a) (D-022): canales separados con una línea por victoria y prioridad, y dos familias de claves con una columna de estado por idioma. Todas las líneas, pendientes del asesor cultural |
-| D-018 | 2026-10-13 | Idiomas y localización | Decidida por el dueño (Q1-A a Q12-A con su «Si»), con dos aprobaciones: el paquete Unity Localization 1.5.13 en la fase 3 del roadmap y la partida de traducción de la 1.0, de 1.300-3.000 €. Documentación aplicada el 2026-10-14 (T54), con el contrato 32 (tablas de textos). Sin implementar: niveles 1-4 de la sección 6 de `docs/research/idiomas/propuesta-idiomas.md`. Choques decididos el 2026-10-14 (D-022): la pregunta 49 de `docs/GDD.md` §6.3, en la (a), y la 51 (los datos de fruta y fauna con IA y revisión nativa, dentro de la partida aprobada), en la (b) |
-| D-019 | 2026-10-13 | Tinaja (M13): mecánica propia | Decidida por el dueño (Q-Ti1-A a Q-Ti6-A con su «Si»; Q-Ti7, solo si el asesor confirma el riesgo, y entonces A). Núcleo implementado en T55 (integrada en `451856e`). Documentación aplicada el 2026-10-14 (T54), con la ficha M13 en 02 §9.1. Pendientes: generador, esquema (`pack_schema` 3) y level-qa (T56), Unity y el corte por tiempo de Morpho. Choque: pregunta 50 de `docs/GDD.md` §6.3, decidida el 2026-10-14 en la (a) (D-022): sus Datos del río, como «Otro dato» de la parada k = 32. Todo nombre y texto, pendiente del asesor cultural |
+| D-018 | 2026-10-13 | Idiomas y localización | Decidida por el dueño (Q1-A a Q12-A con su «Si»), con dos aprobaciones: el paquete Unity Localization 1.5.13 en la fase 3 del roadmap y la partida de traducción de la 1.0, de 1.300-3.000 €. Documentación aplicada el 2026-10-14 (T54), con el contrato 32 (tablas de textos). Sin implementar: niveles 1-4 de la sección 6 de `docs/research/idiomas/propuesta-idiomas.md`. Choques decididos el 2026-10-14 (D-022): la pregunta 49 de `docs/GDD.md` §6.3, en la (a), y la 51 (los datos de fruta y fauna con IA y revisión nativa, dentro de la partida aprobada), en la (b). Detalles de la implementación (idioma automático en es-419 y es-CO sin región [P], textos del Mapa en `facts.csv` y compuerta en el build): D-023 |
+| D-019 | 2026-10-13 | Tinaja (M13): mecánica propia | Decidida por el dueño (Q-Ti1-A a Q-Ti6-A con su «Si»; Q-Ti7, solo si el asesor confirma el riesgo, y entonces A). Núcleo implementado en T55 (integrada en `451856e`). Documentación aplicada el 2026-10-14 (T54), con la ficha M13 en 02 §9.1. Pendientes: generador, esquema (`pack_schema` 3) y level-qa (T56), Unity y el corte por tiempo de Morpho. Choque: pregunta 50 de `docs/GDD.md` §6.3, decidida el 2026-10-14 en la (a) (D-022): sus Datos del río, como «Otro dato» de la parada k = 32. La máscara de la tinaja en `relief` y la Cuia de la casa fuera de la 1.0, decididas el 2026-10-14 (D-023). Todo nombre y texto, pendiente del asesor cultural |
 | D-020 | 2026-10-13 | Respuestas a las preguntas 27-38 y 46 de `docs/GDD.md` §6.3 | Decidida por el dueño (la recomendación de cada pregunta). Documentación aplicada el 2026-10-14 (T54). La 46 ya está en el núcleo (T51, `1ad712c`). Tareas que dejan: el cliente con `level_overrides` como respaldo del kill-switch (31), la tabla de temporada del cliente (32), la tabla de novedades de 201-1000 antes de generar 201-700 (33) y los textos a 12 sp como mínimo (36) |
 | D-021 | 2026-10-14 | Miquitos por los lados en los tableros de 3 filas, alternando | Decidida por el dueño (idea propia, 2026-10-14). Frecuencia y restricciones [P] de este registro. Sin implementar: tarea de la tropa lateral en `docs/dev/traspaso/README.md`, paso 3 |
 | D-022 | 2026-10-14 | Respuestas a las preguntas 45, 47-50 y 51 de `docs/GDD.md` §6.3 | Decidida por el dueño (la recomendación de la 45 y de las 47-50; la 51, «traducción con ia»: (b)). Documentación aplicada el 2026-10-14 (T58). Tareas que deja: la línea única de la victoria con su prioridad y la clave `ui_fruit_line_every_n_levels` [P] (45), la burbuja de Revelar sin aviso (48), la cabecera de las tablas de textos (49) y el «Otro dato» de la parada k = 32 (50) |
+| D-023 | 2026-10-14 | Decisiones de detalle de la tanda 4: preguntas de sus planes y [P] del plan consolidado | Decidida por el dueño (la recomendación de cada pregunta, por «Sí, aplica las recomendadas también»): las P-M1 a P-M8 del plan del Mapa del río, las preguntas del plan consolidado de la tanda 4 (textos del Mapa en `facts.csv`, firma de las variantes de `pack_schema` 3, máscara de la tinaja en `relief`, Cuia de la casa fuera de la 1.0, idioma automático y región, alto de la llegada y tabla de D2) y los detalles [P] del plan. Documentación aplicada el 2026-10-14 (D1, que absorbe M1.7). En implementación: tanda 4 |
 
 ---
 
@@ -1653,6 +1654,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Código:** nada todavía. El plan de la sección 13 de la propuesta, sin escena nueva, sin prefabs, sin YAML a mano, sin paquetes nuevos, sin shader propio y sin tocar `Packages/com.amazonfill.core/`:
   - F1 (agente de C#): `RiverJourney` y `MapMoments` (AF.GameFlow, sin motor), `RiverStopCatalog` (AF.Levels), `river_stops_v1.json` de 1-200 y el campo `progress.map_seen_level`, con tests EditMode;
   - F2 (herramientas): `tools/river-map/` (Python 3.14, solo biblioteca estándar) con `--check`, que se añadirá a los comandos de verificación de `CLAUDE.md` cuando exista;
+    - *Actualización del 2026-10-14 (D-023, punto 32):* los generadores siguen solo con la biblioteca estándar, y las pruebas validan los esquemas del Mapa con `jsonschema`, que ya está en el stack;
   - F3-F6 (`unity-gameplay-dev`, con Editor): fondos por parada (`StopBackdrop`), victoria (franja, barra, «Faltan N», tarjeta del hito y victoria con vista), la pantalla del Mapa (`RiverMapScreen`, `RiverRibbonGraphic`, `LandGraphic` y `PolylineCursor`) y las secuencias;
   - F7 (claves de RC y eventos en logcat), F8 (QA y medida del AAB) y F9 (paradas de 201-700).
 - **Coste [E]** (sección 13): unos 25,5 días de agente (unos 19 en la versión mínima) más unos 5,5 de F9; unos +18 días de artista sobre el canon en 1-200 más 8 por los 4 kits de 201-700; calendario de 4-5 semanas con un agente de Editor y de unas 3 con dos (regla dura 7).
@@ -2202,3 +2204,148 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Archivos afectados.**
 - **Documentación** (2026-10-14, T58): este registro y los de «Qué cambia en el GDD».
 - **Código** (previsto, tanda 4): `Assets/_Project/Scripts/{GameFlow, UI}` (la línea de la victoria y la burbuja de Revelar), `Assets/_Project/Data/Loc/{strings.csv, facts.csv}` y los datos de las paradas de 201-700, con sus tests.
+
+---
+
+## D-023 · Decisiones de detalle de la tanda 4: preguntas de sus planes y [P] del plan consolidado
+
+- **Fecha:** 2026-10-14. Registrada el 2026-10-14 (D1, tanda 4).
+- **Estado:** decidida por el dueño; en implementación (tanda 4).
+  - Para todo lo pendiente, el dueño tiene dicho «Sí, aplica las recomendadas también» (2026-10-13), y lo aplicó el 2026-10-14 a las preguntas de los dos planes de la tanda 4, como en D-022. Gana la recomendación de cada pregunta.
+  - **Fuentes:**
+    - el plan del Mapa del río (tech-lead, revisión 2, posterior a T50): 37 tareas (M1.0-M5.5), las preguntas P-M1 a P-M8 y cuatro críticas comprobadas;
+    - el plan consolidado de la tanda 4 (tech-lead, revisión 2, 2026-10-14): 101 tareas en 9 olas, su lista de decisiones que registrar y 18 acciones del dueño, de las que 12 son preguntas cerradas.
+  - Los dos planes viven fuera del repositorio, en el espacio de trabajo de la sesión principal: **este registro es su copia**, y cada punto cita su fuente.
+  - Los detalles marcados [P] son del plan (tech-lead): el dueño los puede cambiar sin coste mientras no estén implementados.
+  - Documentación aplicada el 2026-10-14 (D1, que absorbe la tarea M1.7 del plan del Mapa; «Qué cambia en el GDD»).
+- **Sustituye:**
+  - el archivo de textos del Mapa `Assets/_Project/Data/Map/river_texts_v1.json` (`af-river-texts/1`) que proponía P-M1 (a): los textos del Mapa van en `facts.csv` (contrato 32), como ya decía 08 §4.7 (punto 4);
+  - en D-013 («Consecuencias», F2), «Python 3.14, solo biblioteca estándar» para todo `tools/river-map/`: los generadores siguen solo con la biblioteca estándar, y las pruebas validan los esquemas con `jsonschema`, que ya está en el stack (punto 32);
+  - el nombre [P] del hito 80, «Puerto de Manaos», en la tabla d.4 de la propuesta de mecánicas y en el ejemplo de 07 §8.2: pasa a «Lago de Tefé» [P], como D-013 («Estado», implementación) ya pedía para `campaign_v1.json` (punto 21);
+  - en el plan consolidado, lo que esperaba a la 45 y a la 50 (el árbitro en `Canon` «hasta la 45», la cadencia de la línea de fruta «fuera de 08 §9 hasta la 45» y el «Otro dato» de la parada k = 32 «reservado»): D-022 ya las decidió (puntos 22 y 38).
+- **No sustituye:** D-013 a D-022. La prioridad de la victoria y `ui_fruit_line_every_n_levels` (D-022, punto 1), las claves y columnas de las tablas de textos (D-022, punto 4) y los datos de Pará en la parada k = 32 (D-022, punto 5) siguen como están: aquí solo se dice cómo se implementan. No cambian Remote Config, la analítica, la economía ni las reglas del núcleo.
+
+**Contexto.**
+- El plan del Mapa dejó ocho preguntas cerradas, P-M1 a P-M8, y comprobó cuatro críticas. Su tarea de documentación, M1.7, llevaba al GDD lo que T50 no cubrió: la fila de 04 §5.2, los formatos de P-M1 y las claves de P-M2.
+- El plan consolidado de la tanda 4 junta el Mapa, TiTino, Frutas del río, la base de idiomas, la Tinaja, las variantes de la 1.0 y los niveles 201-700. Deja 30 decisiones de detalle por registrar y 18 acciones del dueño: 12 preguntas cerradas y 6 acciones físicas.
+- Las preguntas del plan consolidado que eran preguntas de `docs/GDD.md` §6.3 (la 45 y las 47-50) ya están en D-022; aquí van las demás.
+
+**Decisión.**
+
+*A. Respuestas a las preguntas del plan consolidado* (numeración del plan; 2026-10-14).
+1. **Pregunta 1 → sí.** G1: los límites del equipo, la regla de localización (`.claude/rules/localizacion.md`) y los comandos del Mapa en los agentes, las reglas y `CLAUDE.md`.
+2. **Pregunta 2 → sí.** S12 va en un solo PR con el rol de `sdk-integrator`: AF.Save (ajustes, estado de TiTino y `progress.map_seen_level`), `IDeviceLocale` e IAP por clave (los nombres de la tienda, por clave de texto).
+3. **Preguntas 3-6** (las 49, 47, 48, 45 y 50 de `docs/GDD.md` §6.3): en D-022, también la columna `args` [P] que preguntaba la 3 (D-022, punto 4).
+4. **Pregunta 7 → sí.** Los textos del Mapa van en `facts.csv` (contrato 32; 08 §4.7), no en `river_texts_v1.json`: así entran en el flujo de traducción y en la compuerta de release. El bloque `map.*` de `facts.csv` lo regenera solo `tools/river-map/stops.py`.
+5. **Pregunta 8 → se firma** la parte de las variantes de `pack_schema` 3:
+   - `hoja_atada` con `key`;
+   - `brote` con `n` ∈ {1, 2};
+   - `flor` con `key` y `key2`, distintas;
+   - `intro_mechanic` con `hoja_atada`, `brote_n2` [P], `flor` y `liana_n` [P].
+   Con la parte de la tinaja (`tinaja`, `cucharon` e `intro_mechanic` `tinaja`, aprobada con D-019), `pack_schema` 3 entra en dos pasos, siempre antes de publicar ningún pack 3 (contrato 21; glosario §11). Los packs 1-200 no cambian.
+6. **Máscara de la tinaja en `relief` (pregunta de la tarea P2a) → (a).** Con `pack_schema` 3, `relief_board` admite `hidden` (el mismo `$defs/hidden`, como mucho 4 pares) si y solo si sus `attrs` llevan la tinaja, con la máscara de todas sus capas menos la boca; las variantes de Aguas turbias siguen sin `hidden`. Lo cambian el esquema, el generador y 08 §4.1 (P1), y lo comprueban level-qa (P3) y el cliente (TJ1). Es el contrato 21, y ningún pack 3 se ha publicado.
+7. **Pregunta 9 → no.** La Cuia de la casa (V3 de la tinaja) no entra en la 1.0: D-019 la deja como variante posterior. La tarea K4 sale del plan.
+8. **Pregunta 10 → sí.** Mientras EN y PT-BR no estén completos, el idioma automático se queda en es-419 [P]; si el teléfono no da región, las cifras van con es-CO [P].
+9. **Pregunta 11 → (a)**, solo si las medidas de la ranura (punto 24) dicen que la llegada no cabe en el alto de la línea de fruta: se compacta la llegada (la fila del agua más una placa con lugar y dato, sin bienvenida aparte).
+10. **Pregunta 12 → la recomendación de D2.** Cuando la tarea D2 entregue la tabla de novedades de 201-1000 con sus dos variantes (con la tinaja y sin ella) y 701-1000 orientativa, se aplica la variante que recomiende (pregunta 33, D-020).
+11. **Preguntas 13-18:** son acciones del dueño, no decisiones:
+    - el teléfono de clase A antes de cerrar la ola 4 (pregunta 44, D-015);
+    - curar retos e hitos por mundo;
+    - los encargos al artista, al asesor y al abogado;
+    - las descargas de Natural Earth y HydroRIVERS (D-013, punto 5);
+    - la prueba en el teléfono al cerrar cada ola;
+    - aprobar los merges.
+
+*B. Mapa del río* (plan del Mapa; todas con su recomendación, la (a)).
+
+12. **P-M1:** los extras [P] de los contratos 29 y 30, en 08 §4.5:
+    - en las paradas: la raíz `{format, source, stops}`; `km_home`, `answers_world_question` y `country_name`; los nombres por convención, con la forma de claves de la 49 (a): `map.stop.<id>.name`, `map.stop.<id>.river`, `map.stop.<id>.country` y `map.country.<iso2>.name`; `bg.code` con `codigo:<pieza>` o `kit:<pieza>`; `flag_raise` = BR en n = 0 (la bandera del primer Mapa); y `bg.pieces` cuando se pinten los kits;
+    - en el Mapa: `labels[]` (los países en su región), `viewpoints[]` (los miradores, con `reveal_on`) y `passing[]` (los puntos de paso, con su dato);
+    - la codificación de `pts`, `verts` y `tris`: base64 (RFC 4648) de uint16 little-endian, con el primer par absoluto y los demás como deltas módulo 65.536 (`tris`, índices absolutos);
+    - los esquemas `schemas/af-river-stops-1.schema.json` y `schemas/af-river-map-1.schema.json` son, con 08 §4.5, la copia única;
+    - **matiz:** sin `river_texts_v1.json` (punto 4).
+13. **P-M2:** diez claves de UI del Mapa [P] en el glosario §10, pendientes del traductor y del asesor: `map_view_world`, `map_view_basin`, `map_label_andes`, `map_label_atlantic`, `map_back_to_level`, `map_open`, `map_card_other_fact`, `map_card_source`, `map_facts_count` y `map_l10_intro`. «Andes ↑» y «Océano Atlántico ↓» se pintan en Baloo 2, que tiene las flechas; el ✓ de la pregunta del mundo es un icono procedural, porque ninguna de las dos familias lo tiene.
+14. **P-M3, provisional:** en los hitos de T6-A, la llegada lleva su dato en todos los `10k` (`ArrivalEverywhere`) solo mientras no exista la caja de TiTino. Al fusionar su tarea (TI6a), el valor por defecto pasa a `SlothHito`, porque T6-A está decidida (D-013, punto 15; D-016, punto 5), y la 45 también (D-022).
+15. **P-M4:** si en la victoria del 10 se pulsa Inicio o se cierra la app, la secuencia del Mapa del 10 (06 §2.3) sale una vez al entrar al inicio, con `max_level` ≥ 10 y `progress.map_seen_level` < 10. No hace falta estado nuevo.
+16. **P-M5:** el arte provisional del Mapa (las siluetas de héroe, las banderas simplificadas y el retrato y la ventanita procedurales de TiTino) solo sale en el Editor y en los builds de desarrollo (`MapArtRule`, como `FaunaArtRule`). En release no se pinta hasta que exista su PNG, y nunca va en la ficha, las capturas ni la UA.
+17. **P-M6:** el 31 lleva el rótulo del lugar, por la cola de avisos y después de su presentación de hito (el tutorial de 02 §13 es 1-12).
+18. **P-M7:** la placa «{país} te da la bienvenida» (`map_country_welcome`) va en la franja de la victoria del 80 y del 140, antes de la placa del dato; el banner del 81 y del 141 solo iza la bandera.
+19. **P-M8:** el guía del Mapa se deduce del mundo (el bufeo boliviano en los mundos 7 y 8) y el relevo ocurre en el punto de paso `teotonio` del tramo, sin campo nuevo en el contrato 30.
+20. **Las críticas del plan:**
+    - no se abre una pregunta para el choque entre la llegada y TiTino: es la 45 (D-022);
+    - «río abajo» no se edita: T50 ya lo corrigió. El grep en `docs/gdd` y `docs/GDD.md` (2026-10-14) solo da menciones históricas («antes, "río abajo"») y, en 07, los troncos de la Palizada, que sí van río abajo;
+    - el dato de llegada del 200 es `map.myth.source`, el `arrival_fact` de la parada 20 (Q16-A);
+    - la tolerancia de la geometría es «≤ 2 dp de su vista (≤ 15 km en la vista Cuenca)», con rutas que no cruzan tierra.
+21. **Hito 80, «Lago de Tefé» [P]**, en `tools/level-generator/specs/campaign_v1.json` (tarea M1.9; es solo metadato y los packs no cambian), en la tabla d.4 de la propuesta de mecánicas y en el ejemplo de 07 §8.2 (D-013, «Estado», implementación). El 80 se juega en la parada 7, el lago de Tefé, no en Manaos. Queda pendiente del asesor, como todo nombre de hito.
+
+*C. La victoria* (plan consolidado, arquitectura común).
+
+22. **Árbitro [P]** `VictoryLineArbiter` (AF.GameFlow, sin motor ni asignaciones): decide la única línea de cada victoria con la prioridad de la 45 (D-022).
+    - Lleva el interruptor `RiverFactPolicy` {`Canon`, `SingleKey`}. `Canon` es la (a) y el valor por defecto; `SingleKey` (la (b): una sola clave y la llegada solo con la placa del lugar) queda como alternativa apagada.
+    - La cadencia de la línea de fruta es `ui_fruit_line_every_n_levels` [P] = 1, ya en 08 §9 (D-022); en el cliente, una constante de `GameConfig` hasta que haya Remote Config.
+23. **Cuándo habla TiTino en un hito** (`SlothCanSpeak`): solo si `ui_sloth_enabled` es true, si sus mensajes están activos (`settings.sloth_messages`) y si cabe su caja (≥ 104 dp; propuesta de TiTino, d.4), medida antes de decidir la línea. Si no puede hablar, el hito es una victoria normal y la llegada lleva su dato (02 §6).
+24. **Ranura del Dato del río:** alto fijo, el de la línea de fruta más larga (Q7-A de D-017), según el idioma, la escala de texto y el ancho. Se mide con cadenas sintéticas del peor caso: 90 caracteres en es-419 y 117 en en, pt-BR y en-XA. La llegada tiene que caber en ese alto; si no cabe, el punto 9.
+
+*D. Idiomas y textos.*
+
+25. **Cifras de los textos largos:** van con `{n}` y el valor en la columna `args` [P] (D-022, punto 4; Q8-A). Ningún texto de `facts.csv` lleva cifras con separador ni decimales, y una prueba lo comprueba.
+26. **Resolución del idioma:**
+    - orden: el extra de desarrollo `af_lang` > `settings.language` (si no es `auto`) > el teléfono > `en`;
+    - es-* → es-419, pt-* → pt-BR y el resto → en, solo hacia idiomas completos (`Loc.IsComplete`); si no lo es, es-419 [P] (punto 8);
+    - el idioma del teléfono se lee con `java.util.Locale` por el JNI de Unity, en AF.UI, sin plugin ni permiso, con `CultureInfo` de respaldo; sin región, es-CO [P] (punto 8);
+    - los números usan una tabla propia de separadores por región (Q8-A), con U+00A0 en lugar de U+202F.
+27. **Compuerta de release de los textos** (08 §4.7) en el build (`LocReleaseGate`, tarea B1): avisa con `com.amazonfill.dev` y falla con cualquier otro `applicationId` si falta la UI de un idioma ofrecido o hay texto cultural sin `aprobado_es`.
+28. **Escala de texto de desarrollo y pruebas [P]** (`UiBuilder.TextScale` con `LaunchOptions.FontScaleOverride`), para probar al 130 %; la escala de fuente de Android aún no llega al juego.
+29. **Pseudolocalización `en-XA`:** alarga un 35 % [P] (08 §14.2 pide +30 % como mínimo, y la propuesta de idiomas, §3.7, da +30-40 % en las frases largas), con corchetes y solo letras de Latin-1, y solo en desarrollo y en las pruebas.
+30. **`glossary.csv`** se crea en su propia tarea (L2c; contrato 32).
+31. **Orden de las filas de las tablas de textos: ordinal** por clave (`sorted()` en Python y `StringComparer.Ordinal` en C#), en UTF-8 sin BOM y con LF (`.claude/rules/data-json.md`, G1; 08 §4.7).
+
+*E. Herramientas, packs y núcleo.*
+
+32. Los esquemas del Mapa se validan en `tools/river-map/test_schemas.py` con `jsonschema`, y `tools/validate_schema.py` sigue siendo solo de `af-level/1`. Los generadores de `tools/river-map/` usan solo la biblioteca estándar.
+33. Las pruebas de `tools/` van como fixtures (`specs/tests/*.json` y `fixtures/QA-*.json`) y modos `--self-test`, sin proyectos de tests nuevos en la solución.
+34. En el núcleo, los códigos [P] de las variantes, que no se persisten: 10 para la Hoja atada y 11 para la Flor en `MechanicType`. La `key2` de la Flor va en los bits de `N` y `K` de `MechanicSpec`.
+35. El solver consulta la cancelación cada 256 expansiones [P]. La compuerta de coste de Morpho usa un factor 8× [P] en una constante, hasta medirlo en un teléfono de clase A (tarea PF1); si la medida lo cambia, se regeneran los packs que dependen de ella.
+36. D2 entrega dos variantes del calendario de 201-700 (con la tinaja y sin ella), las dos con la regla de novedad de 60 niveles (NOVELTY-60: nunca más de 60 niveles sin algo nunca visto), y rehace la tabla de 701-1000 sin generar esos niveles.
+37. El tablero del 66 tiene un helper único (`Level66Board`) para las pruebas del núcleo y de dotnet, pero no para `StuckLoopTests`: es PlayMode y no puede referenciar `AF.Core.Tests`, cuyo asmdef es solo de Editor.
+
+*F. Cliente.*
+
+38. **«Otro dato» de la parada k = 32:** ya decidido (D-022, punto 5): los datos de Pará del estreno de la Tinaja, con el asesor.
+39. **Cola de avisos:** pasa a un enum de tipos {`Text`, `Species`, `StopLabel`, `FruitNew`, `Sloth`, `Tutorial`}. Tras la intro, la prioridad es tutorial > Fruta nueva > miquito > rótulo, con una tarjeta por nivel como mucho (07 §6.4; guion de la intro, §14) y la duración de D-011.
+40. **Kill-switch (pregunta 31 (b), D-020):** si una mecánica está apagada y no hay `level_overrides` para ese nivel, se juega el nivel publicado y se registra un aviso [P], hasta el formato de respaldo de la 1.1.
+
+*G. Organización del trabajo.*
+
+41. La investigación de los datos de 201-700 (M3.7) se parte por mundo, y la hace un subagente de documentación que no programa (regla dura 9). S1 y S2 van en un solo PR (S12; punto 2).
+42. `Assets/_Project/Scenes/Game.unity` solo se regenera con `GameSceneBuilder.CreateGameScene`, en este orden: L2b → M1.2 → F1F2 → M3.3 → C1a → SE2 → C1b. Si dos coinciden, la segunda rebasa y regenera; nunca se resuelve YAML a mano.
+
+**Consecuencias.**
+- **Contratos:**
+  - el 29 y el 30 ganan los extras [P] de P-M1 (08 §4.5; `docs/GDD.md` §7.4);
+  - el 21 gana la firma de las variantes de `pack_schema` 3 y la máscara de la tinaja en `relief` (`docs/GDD.md` §7.5). El esquema y 08 §4.1 los cambian P1 y P2b;
+  - el 32 no cambia: los textos del Mapa ya iban en `facts.csv`.
+- **Canon que no es decisión nueva:** la fila de 04 §5.2 «Abrir el Mapa del río desde la pausa» desarrolla D-013 (punto 7).
+- **Sin cambios** en Remote Config, la analítica, la economía ni las reglas del núcleo (el núcleo gana las variantes, con la firma).
+- **Sondas de desarrollo previstas** (`stop`, `arrival`, `stop_arrive`, `river_fact_shown` y `loc`, y el id `arrival` de `AF_LAYOUT`): en `docs/dev/prototipo-v0.md`.
+- **Código:** las tareas de la tanda 4.
+
+**Qué cambia en el GDD** (aplicado el 2026-10-14, D1):
+- `docs/GDD.md`: versión 1.10, estado, §2 #11, §6.3 (entrada), §7.1 (fila 7), §7.4 (contratos 29 y 30), §7.5 (contrato 21) y §9 (paso 19).
+- 00: §10 (las diez claves de P-M2) y §11 (las variantes de `pack_schema` 3 y los nombres por convención del Mapa).
+- 03: §13 (remite a la fila de 04 §5.2).
+- 04: §5.2 (la fila del Mapa del río desde la pausa).
+- 07: §8.2 (el hito 80, «Lago de Tefé»).
+- 08: §4.5 (los extras de P-M1, la codificación, los esquemas y los textos en `facts.csv`), §4.7 (orden ordinal y LF) y §14.2 (pseudolocalización).
+- Fuera del GDD: `docs/dev/prototipo-v0.md` (sondas previstas), la propuesta de mecánicas (`docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md`, d.4), `docs/dev/traspaso/README.md` (§7, la fila de D-023), este registro (la nota de D-013 en F2 y el estado de D-007, D-013, D-018 y D-019 en la tabla) y `.claude/rules/localizacion.md` (el `context` de los textos largos y el alcance de la regla).
+
+**Alternativas descartadas.**
+- P-M1 (b) y (c); P-M2 (b) y (c); P-M3 (b); P-M4 (b) y (c); P-M5 (b); P-M6 (b); P-M7 (b); P-M8 (b).
+- Preguntas del plan: 7 (no), 8 (no se firma), 9 (sí), 10 (no) y 11 (b) y (c).
+- Una pregunta nueva para el choque entre la llegada y TiTino, y editar otra vez «río abajo» (críticas del plan del Mapa).
+
+**Cómo revertir.** Con una decisión nueva que sustituya a D-023, punto a punto. Los [P] los puede ajustar el dueño.
+
+**Archivos afectados.**
+- **Documentación** (2026-10-14, D1): este registro y los de «Qué cambia en el GDD».
+- **Código y datos** (tanda 4): las tareas del plan consolidado; nada de esto está aún en el cliente.

@@ -215,13 +215,14 @@ Precisiones:
 
 Esta tabla es la **definición canónica de fallo** para todo el GDD: 02 §2 ("Definición de fallo") y §7, 03 §13 y 06 §4.3 remiten aquí y no redefinen el término. De ella dependen canoas, Crecida, "El río bajó" y Salto del Boto, así que el jugador debe poder predecirla con una sola regla: **desde el 31, solo cuesta canoa rendirse tras quedarse sin vertidos o salir del nivel con el menú (D-008); reiniciar por voluntad propia nunca cuesta canoa ni rompe la Crecida, y cerrar la app nunca es fallo.**
 
-*Actualizada el 2026-10-08 por D-008: la fila «Salir al Mapa del río o cerrar la app con el modal abierto» se sustituye por las dos filas de salida y la de cierre de la app.*
+*Actualizada el 2026-10-08 por D-008: la fila «Salir al Mapa del río o cerrar la app con el modal abierto» se sustituye por las dos filas de salida y la de cierre de la app. Ampliada el 2026-10-14 (D1) con la fila del Mapa del río desde la pausa, que D-013 (punto 7) no deja como salida del nivel.*
 
 | Evento | ¿Canoa? (≥31) | ¿Rompe Crecida? | ¿Cuenta para "El río bajó" (3) y Salto (5)? |
 |---|---|---|---|
 | **Fallo duro** (D-008): en 1-30, Volver a la orilla desde Aguas estancadas (STUCK_MODAL); desde el 31, confirmar la rendición («Rendirse» → ¿Seguro? → X o «Rendirse»), que lleva a Nivel fallido | Sí, −1 (salvo Canoas infinitas) | Sí, salvo Hoja escudo disponible; al romperla termina también el río crecido (§8) | Sí (`fails_level` +1) |
 | **Salir del nivel con el menú**, desde el 31 (D-008): pausa → «Salir» → «¿Salir del nivel? Perderás 1 canoa» [P] → Nivel fallido → inicio. Cuesta la canoa aunque no haya vertidos [P] (P16) | Sí, −1 (salvo Canoas infinitas) | Sí, salvo Hoja escudo disponible | Sí (`fails_level` +1) |
 | Salir del nivel con el menú en 1-30 | No | No | No |
+| **Abrir el Mapa del río desde la pausa** (D-013, punto 7): se abre encima del nivel en pausa y «Jugar» pasa a «Volver al nivel»; no es salir del nivel | No (no gasta canoa) | No | No (no cuenta como fallo) |
 | **Fallo blando** [P]: Volver a la orilla voluntario con ≥ `restart_confirm_min_pours` (8) vertidos | No | No | Sí (`fails_level` +1) |
 | Reinicio voluntario con <8 vertidos | No | No | No |
 | Marea desde el modal | No | No | No |
@@ -230,7 +231,7 @@ Esta tabla es la **definición canónica de fallo** para todo el GDD: 02 §2 ("D
 | Crash de la app o pérdida de red | No | No | No |
 | Salto del Boto | No (no gasta canoa) | No (no la rompe ni la avanza) | Reinicia `fails_level` a 0 (y `since_last_skip` a 0) |
 
-Lectura para 02 y 03: cerrar la app nunca es fallo. En 1-30, solo lo es la salida del modal con Volver a la orilla. Desde el 31, lo son la rendición confirmada y la salida del nivel con el menú (D-008). El umbral del fallo blando es `restart_confirm_min_pours` (8), no 5. Salto del Boto nunca cuenta como fallo para la Crecida.
+Lectura para 02 y 03: cerrar la app nunca es fallo. En 1-30, solo lo es la salida del modal con Volver a la orilla. Desde el 31, lo son la rendición confirmada y la salida del nivel con el menú (D-008); abrir el Mapa del río desde la pausa no es salir del nivel ni fallo (D-013). El umbral del fallo blando es `restart_confirm_min_pours` (8), no 5. Salto del Boto nunca cuenta como fallo para la Crecida.
 
 ## 6. Aguas estancadas: árbol de decisión completo
 

@@ -623,7 +623,7 @@ Ch y Al marcan los niveles donde la capacidad es protagonista. En el resto, el g
 | 17 | 37 Al | 57 Ch | 77 C | 97 C | 117 C | 137 C | 157 C | 177 C | 197 C |
 | **18** | 38 Ch (s) | 58 Ho+Al (D) | 78 Ma+Al (D) | 98 Li+Ma (D) | 118 Re+Ho (D) | 138 Ba+Li (D) | 158 Ll+Ba (D) | 178 Br+Ma (D) | 198 Pi+Li (D) |
 | 19 | 39 S | 59 S | 79 S | 99 S | 119 S | 139 S | 159 S | 179 S | 199 S |
-| **20** | 40 Ch+Al (D) «Cuias de Santarém» | 60 Ho+Ch (MD) | 80 Ho+Ma (MD) «Puerto de Manaos» [P] | 100 ★Tu (MD; sola, 1 cuia, 2 ocultas) | 120 Re+Ma (MD) | 140 Re+Li (MD) «Remolinos del Trapecio» [P] | 160 Ll+Li+Al6 (MD) «Creciente del Itaya» [P] | 180 Ma+Li (MD) | 200 Pi+Ba (MD) «Vaciante de Pacaya-Samiria» |
+| **20** | 40 Ch+Al (D) «Cuias de Santarém» | 60 Ho+Ch (MD) | 80 Ho+Ma (MD) «Lago de Tefé» [P] | 100 ★Tu (MD; sola, 1 cuia, 2 ocultas) | 120 Re+Ma (MD) | 140 Re+Li (MD) «Remolinos del Trapecio» [P] | 160 Ll+Li+Al6 (MD) «Creciente del Itaya» [P] | 180 Ma+Li (MD) | 200 Pi+Ba (MD) «Vaciante de Pacaya-Samiria» |
 
 **Comprobaciones de la tabla:**
 - **Cada titular aparece 8 veces en su ciclo de debut** (por ejemplo, Hoja: 43, 44, 45, 47, 49, 52, 58 y 60).
@@ -633,7 +633,7 @@ Ch y Al marcan los niveles donde la capacidad es protagonista. En el resto, el g
 - **Un contador por nivel como mucho** (Lluvia y Piraña nunca juntas).
 - **Cada mecánica vuelve en el ciclo siguiente como secundaria:** Hoja en el 66, Matapi en el 86, Liana en el 112, Remolino en el 126, Barro en el 146, Lluvia en el 166 y Brote en el 186.
 - **Opción mínima (Q5, A):** se intercambian Ma y Br en **todas** las columnas 61-200. Intercambiarlos solo en 61-80 y 161-180 no vale: el Matapi seguiría en 86, 94, 98, 111, 115, 120, 132, 154 y 155, antes de su debut en el 163, y ningún reto ni hito puede usar una mecánica antes de sus tableros de debut (03 §9, consecuencia 3; 02 §9.2, regla 2). Las temporadas siguen valiendo: el ciclo 61-80 (B) estrenaría el Brote, que es de todo el año, y el 161-180 (B), el Matapi, que es de aguas bajas.
-- **Nombres de hitos [P]:** «Puerto de Manaos» (80), «Remolinos del Trapecio» (140) y «Creciente del Itaya» (160) sustituyen a «Encuentro», «Rebojo del Caquetá» y «Belén en creciente». «Encuentro» ya nombra una skin y un evento, y el de Manaos es Negro + Solimões; «Rebojo del Caquetá» mezclaba un término brasileño con un río colombiano que no es del mundo 4; «Belén» es un barrio con pobreza extrema [V F28]. Todos pasan al asesor.
+- **Nombres de hitos [P]:** «Puerto de Manaos» (80), «Remolinos del Trapecio» (140) y «Creciente del Itaya» (160) sustituyen a «Encuentro», «Rebojo del Caquetá» y «Belén en creciente». «Encuentro» ya nombra una skin y un evento, y el de Manaos es Negro + Solimões; «Rebojo del Caquetá» mezclaba un término brasileño con un río colombiano que no es del mundo 4; «Belén» es un barrio con pobreza extrema [V F28]. Todos pasan al asesor. *Actualización del 2026-10-14 (D-023):* el 80 pasa a «Lago de Tefé» [P] (D-013, Estado (Implementación); `tools/level-generator/specs/campaign_v1.json`), porque con el Mapa del río el 80 se juega en la parada del lago de Tefé y no en Manaos; es solo metadato y los packs no cambian. «Puerto de Manaos» queda como estaba en (e) y en (i), que son de la revisión del 2026-10-08.
 
 ### d.5 Regla para 201-1000
 
