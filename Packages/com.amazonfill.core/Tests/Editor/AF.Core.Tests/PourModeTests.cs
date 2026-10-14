@@ -536,8 +536,9 @@ namespace AF.Core.Tests
         public void I3_Single_UndoReturnsOneDosePerUse()
         {
             // 04 §2.1 en Single (modo de pruebas desde D-005): tres vertidos iguales de una dosis se deshacen de uno en uno,
-            // al estado anterior exacto.
-            BoardState start = Board(C(4, 2, 1, 1, 1), Cuia.Empty(4), C(4, 2, 2, 2));
+            // al estado anterior exacto. La cuia [1] completa U_1 = 4 para que el tablero se gane y R13 ampliada (D-014) no lo
+            // declare a mitad de la prueba.
+            BoardState start = Board(C(4, 2, 1, 1, 1), Cuia.Empty(4), C(4, 2, 2, 2), C(4, 1));
             var session = new LevelSession(start, true, PourMode.Single);
             var states = new BoardState[4];
             states[0] = session.Current;

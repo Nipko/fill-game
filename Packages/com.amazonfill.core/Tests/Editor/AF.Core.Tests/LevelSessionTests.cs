@@ -150,13 +150,35 @@ namespace AF.Core.Tests
         }
 
         [Test]
-        public void KillSwitchOff_SameBoard_IsPlaying()
+        public void KillSwitchOff_OnlyFutileBoardWithASolution_IsPlaying()
         {
-            // R16: con futile_rule_enabled = false solo cuenta "sin vertidos legales".
-            var session = new LevelSession(new BoardState(new[] { C(5, 1, 1, 1, 1), Cuia.Empty(5), C(4, 2, 2, 2, 2) }), false);
+            // R16: con futile_rule_enabled = false R13 solo cuenta "sin vertidos legales". Es el contraejemplo de P1 de la
+            // Liana con capacidades mixtas (bloqueo C1-9, FutilePropertyTests): con la regla de fútiles R13 lo declara
+            // atascado, y sin ella se juega y se gana empezando por el fútil [1, 1, 1] → chica. R13 ampliada (D-014) no lo
+            // declara: su cierre recorre también los fútiles y encuentra la victoria.
+            Cuia liana = C(4, 1, 1).WithMechanic(AF.Core.Mechanics.MechanicType.Liana, key: 2);
+            var board = new BoardState(new[] { C(5, 2, 2, 2, 2), C(4, 1, 1, 1), Cuia.Empty(3), liana });
 
-            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
-            Assert.That(session.FutileRuleEnabled, Is.False);
+            var off = new LevelSession(board, false);
+            var on = new LevelSession(board, true);
+
+            Assert.That(off.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(off.FutileRuleEnabled, Is.False);
+            Assert.That(on.Status, Is.EqualTo(LevelStatus.Stuck));
+        }
+
+        [Test]
+        public void KillSwitchOff_LostBoardWithFewStates_IsStuckByR13b()
+        {
+            // R16 y R13 ampliada (D-014): sin la regla de fútiles R13 no declara este tablero (le quedan los vertidos legales
+            // 1 ↔ vacía), pero el 1 nunca sella (cuias de 5 con U_1 = 4) y solo se alcanza un estado canónico: el cierre
+            // acotado lo declara, porque no depende de futile_rule_enabled (recorre todos los vertidos legales).
+            var board = new BoardState(new[] { C(5, 1, 1, 1, 1), Cuia.Empty(5), C(4, 2, 2, 2, 2) });
+
+            var session = new LevelSession(board, false);
+
+            Assert.That(PourRules.IsStuck(board, false), Is.False);
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck));
         }
 
         [Test]
@@ -275,8 +297,9 @@ namespace AF.Core.Tests
         public void HiddenDoses_AreAccepted()
         {
             // C2-1: Aguas turbias en la partida (02 §11), con la máscara de revelado de Marea y Volver a la orilla (R7,
-            // 04 §2.1, §2.7); el detalle, en LevelSessionMurkyTests.
-            var board = new BoardState(new[] { Cuia.Create(4, new[] { 1, 2, 1 }, 0x1), C(4, 2, 2, 1, 1), Cuia.Empty(4) });
+            // 04 §2.1, §2.7); el detalle, en LevelSessionMurkyTests. Se gana (la cuia [2] completa el 2), así que R13 ampliada
+            // (D-014) no lo declara.
+            var board = new BoardState(new[] { Cuia.Create(4, new[] { 1, 2, 1 }, 0x1), C(4, 2, 2, 1, 1), Cuia.Empty(4), C(4, 2) });
 
             var session = new LevelSession(board, true);
 

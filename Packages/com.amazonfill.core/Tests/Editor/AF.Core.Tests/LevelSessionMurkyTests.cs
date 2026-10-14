@@ -199,8 +199,9 @@ namespace AF.Core.Tests
         public void Regression3_0451_HiddenMonocolorVisibleToEmpty_KeepsTheSessionPlaying()
         {
             // 04 §5.1, regresión (3): [2*, 1, 1, 1] → vacía no es fútil (verter revela información). Es el único vertido útil:
-            // sin la excepción la partida empezaría en Aguas estancadas.
-            var initial = new BoardState(new[] { Murky(4, 0x1, 2, 1, 1, 1), C(4, 2, 2, 2), Cuia.Empty(4) });
+            // sin la excepción la partida empezaría en Aguas estancadas. La vacía es una Cuia chica de 3 (U_1 = 3) para que el
+            // tablero se gane y R13 ampliada (D-014) no lo declare: el 1 sella en ella y el 2 revelado completa [2, 2, 2].
+            var initial = new BoardState(new[] { Murky(4, 0x1, 2, 1, 1, 1), C(4, 2, 2, 2), Cuia.Empty(3) });
             Assert.That(PourRules.IsFutile(initial, 1, 2), Is.True);
             Assert.That(PourRules.IsFutile(initial, 0, 2), Is.False);
 

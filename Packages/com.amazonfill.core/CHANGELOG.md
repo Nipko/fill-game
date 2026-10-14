@@ -6,6 +6,18 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Pendiente de integración (obligatorio antes del merge)
 
+- **Aguas estancadas por bucle (T51): no integrar hasta la respuesta del dueño a la pregunta 46 de `docs/GDD.md` §6.3 (D-014).**
+  `DeadEndProbe` aplica la opción (a), la recomendada: el cierre recorre todos los vertidos legales, fútiles incluidos, y no solo
+  los útiles que dice el texto de D-014 y de T51. Si el dueño elige (b) o (c), cambian `DeadEndProbe.Expand`, sus tests y el del
+  66 (con (b), `if (futile) continue;` antes de aplicar, el bloqueo saltaría tras el vertido 6 y
+  `RuleCatalogTests.R14_ASolvableBoardWithUsefulPours_IsNeverDeclaredStuck_AlongItsSolution` fallaría al empezar: es el falso
+  bloqueo que (b) acepta). Desvío respecto a T51, que
+  sigue de la opción (a): en la secuencia del dueño, Aguas estancadas sale justo tras el 9.º vertido (`1>5`), cuando el nivel
+  queda perdido de verdad, y no tras el 12.º (`R13b_Level66_TheOwnersSequence_IsStuckRightAfterTheNinthPour`). Riesgo al
+  reanudar: una partida guardada con un build anterior a mitad de un bucle (con vertidos posteriores a un estado que ahora es
+  `Stuck`, como la del dueño en el 66 con 12) no se puede rehacer, porque `TryPour` devuelve false fuera de `Playing`
+  (`LevelFlow.Resume`), y el nivel vuelve a empezar (02 §14; 04 §10.2). Va también en la descripción del PR y en la nota para
+  el dueño.
 - **`.meta` del paquete y verificación en Unity** (regla dura 3; README, «Paso obligatorio de integración en Unity»). La rama
   `fase1-mecanicas-niveles` se escribió sin Editor: los 59 archivos `.cs` nuevos del paquete (32 en `Runtime/` y 27 en
   `Tests/Editor/`) y las 5 carpetas nuevas (`Runtime/AF.Core/Determinism`, `Runtime/AF.Core/Mechanics`, `Runtime/AF.Solver/Bot`,
@@ -18,6 +30,32 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- **Aguas estancadas por bucle, R13 ampliada** (T51; D-014, decisión del dueño del 2026-10-13; 02 R13, R14; defecto del nivel 66
+  en `docs/dev/traspaso/pruebas-telefono-2026-10-13.md`). `AF.Core.Session.DeadEndProbe`: cierre acotado de los estados
+  alcanzables desde S, en anchura y en orden determinista, con estados canónicos (`BoardCanon` y FNV-1a de 64 bits; igualdad
+  confirmada por valor) y los vertidos aplicados con `BoardRules`; `IsDeadEnd` = el cierre se agota con ≤ `MaxStates` (64 [P],
+  `DeadEndProbeMaxStates`, constante del núcleo) estados y ninguno es victoria. `LevelSession` lo usa en su evaluación (h) cuando R13
+  da `Playing` (constructor, `TryPour`, `Undo`, `Restart`, `Reveal`, `RevealAll` y `RestoreRevealed`): el 66 sale en Aguas estancadas
+  justo tras el 9.º vertido del dueño (`1>5`), cuando el nivel queda perdido de verdad; los vertidos 10-12 ya eran el bucle. Más de 64
+  estados o una victoria alcanzable: sigue en `Playing` (conservador). Aguas turbias: usa el estado verdadero; contadores de Lluvia y
+  Piraña: parte del estado. **Recorre todos los vertidos legales, también los fútiles**, aunque el texto de la decisión diga «útiles»:
+  con capacidades mixtas un fútil puede ser parte de la única salida (C1-8), y solo con útiles el cierre declararía tableros que se
+  ganan, contra la condición de la misma decisión y R14. En el 66, tras el 6.º vertido, la búsqueda con útiles se agota en 50
+  estados y el nivel se gana en 14 con algún fútil; en partidas al azar sobre los niveles 1-200, un cierre solo con útiles habría
+  declarado 327 estados, 56 ganables (con todos los legales: 271, ninguno ganable). Con capacidades iguales los dos son idénticos (P2).
+  No depende de `futile_rule_enabled`. Es la opción (a) de la pregunta 46 de `docs/GDD.md` §6.3 (T50), la recomendada: pendiente de
+  la confirmación del dueño antes del merge (ver «Pendiente de integración»). Sin asignaciones tras calentar y < 1 ms en Release (0,015 ms en el 66; peor
+  medido 0,322 ms en 4.026 estados de los tableros de referencia). Sin cambios en `BoardRules`, `PourRules`, el solver, el bot, `EarlyTraps`,
+  `LevelValidation`, el generador ni level-qa: packs, informes y pares idénticos (`--check`). Tests compartidos `DeadEndProbeTests`
+  (`R13b_Level66_Loop_IsStuck`, `_TheOwnersSequence_IsStuckRightAfterTheNinthPour`,
+  `_AWinnableStateWhoseUsefulClosureHasNoWin_IsPlaying`, `_MareaAndRestart_ReevaluateTheLoop`, orden canónico, los 10 niveles del
+  tutorial a lo largo de su solución A*, cierre de más de 64, tablero mixto que solo se gana con fútiles, Aguas turbias, tablero
+  ganado) y `RuleCatalogTests` (`R13b_AnUnsolvableBoardWithFewReachableStates_IsStuck` y
+  `R14_ASolvableBoardWithUsefulPours_IsNeverDeclaredStuck_AlongItsSolution`); solo dotnet `DeadEndProbePropertyTests` (si el
+  cierre declara, A* exhaustivo da `Unsolvable` con todos los legales y con la poda: 36 tableros de referencia en `run` y `single` y
+  los niveles 1-200; los tableros de referencia baratos siguen en `Playing` a lo largo de su solución),
+  `HotLoopAllocationTests.WarmDeadEndProbe_DoesNotAllocate` y `DeadEndProbePerformanceTests` (explícito, `Performance`). README,
+  «Aguas estancadas por bucle».
 - `LevelSession.RestoreRevealed(int cuia, int layers)` (T01, paso 1 del traspaso; 02 R7, R8, §11 T6 y §14; 04 §2.1, §2.2 y
   §6): restaura capas reveladas de Aguas turbias, también en parte (un vertido puede revelar una de las dos ocultas de una
   cuia; en el nivel 100 la cuia 0 tiene dos), que `Reveal` y `RevealAll` no expresan. Hace OR de `layers` en la máscara de
@@ -351,6 +389,20 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Cambiado
 
+- T51 (D-014): `LevelSession.Status` pasa a `Stuck` también con vertidos útiles si el cierre acotado no tiene victoria (ver
+  «Añadido»). R14 se reformula con D-014 (no se anuncia irresoluble mientras exista progreso posible); P1 se mantiene y la comprueba
+  `DeadEndProbePropertyTests`. `RuleCatalogTests.R14_AnUnsolvableBoardWithUsefulPours_IsNotDeclaredStuck` sí cambia lo que
+  prueba, porque probaba la R14 anterior («mientras exista un movimiento útil»), que D-014 sustituye: su tablero, perdido con
+  vertidos útiles y pocos estados alcanzables, ahora es Aguas estancadas y pasa a
+  `R13b_AnUnsolvableBoardWithFewReachableStates_IsStuck`. En su lugar, `R14_ASolvableBoardWithUsefulPours_IsNeverDeclaredStuck_AlongItsSolution`
+  prueba la R14 reformulada: el tablero mixto que solo se gana empezando por fútiles (C1-8) sigue en `Playing` tras cada vertido
+  de su solución A*, para R13 y para R13 ampliada, hasta la victoria. Los demás tests compartidos cuyo tablero estaba perdido con
+  pocos estados alcanzables y esperaban `Playing` se adaptan sin cambiar lo que prueban: `R15_StuckBlocksInput_AndMareaReturnsToPlaying`
+  usa un tablero que se gana y un vertido que lo pierde (vaivén de D-014); `LevelSessionTests.KillSwitchOff_SameBoard_IsPlaying` se
+  parte en `KillSwitchOff_OnlyFutileBoardWithASolution_IsPlaying` (el contraejemplo de la Liana de C1-9) y
+  `KillSwitchOff_LostBoardWithFewStates_IsStuckByR13b`; `HiddenDoses_AreAccepted`,
+  `LevelSessionMurkyTests.Regression3_0451_…` y `PourModeTests.I3_Single_UndoReturnsOneDosePerUse` usan tableros que se ganan (una
+  cuia más o una Cuia chica de 3).
 - Revisión de la fase 1 (03 §6-§7; 02 §9.1 M4 y R5): `CasualBot.Score` con Remolino. La racha entra por el fondo de la pareja
   y de cualquier color, así que el bot daba +16 («juntar con el mismo color») y +40 («sella») a vertidos que mezclaban
   colores. Ahora, cuando la cuia que recibe es la pareja de un Remolino, +16 solo si es monocolor del color vertido y +40

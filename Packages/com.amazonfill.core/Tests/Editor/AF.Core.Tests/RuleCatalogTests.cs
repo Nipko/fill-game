@@ -203,26 +203,62 @@ namespace AF.Core.Tests
         }
 
         [Test]
-        public void R14_AnUnsolvableBoardWithUsefulPours_IsNotDeclaredStuck()
+        public void R14_ASolvableBoardWithUsefulPours_IsNeverDeclaredStuck_AlongItsSolution()
         {
-            // 02 R14: el motor no anuncia "irresoluble" mientras exista un vertido útil. El solver lo demuestra
-            // irresoluble, pero el núcleo sigue en Playing.
+            // 02 R14 (reformulada con D-014): el motor nunca anuncia "irresoluble" de forma espontánea mientras exista progreso
+            // posible, es decir, mientras el tablero sea resoluble. Es P1 de R16 para R13 (atascado(S)), y la ampliación de
+            // D-014 (R13 ampliada) también tiene que cumplirla. Tablero de capacidades mixtas con vertidos útiles cuya única
+            // salida empieza por fútiles (C1-8): con solo los útiles no se gana. Tras cada vertido de su solución A*, ni R13 ni
+            // el cierre de R13 ampliada lo declaran, hasta la victoria. Con un cierre solo de vertidos útiles (opción (b) de la
+            // pregunta 46 de GDD.md §6.3) se declararía al empezar.
+            BoardState state = Board(C(6, 1, 2, 2, 2, 2), C(4, 1, 1), Cuia.Empty(2), C(4, 1, 1, 1));
+            var solver = new AStarSolver();
+
+            SolveResult pruned = solver.Solve(state, new SolverOptions(SolverOptions.PipelineNodeBudget, 1, true, PourMode.Run));
+            SolveResult solution = solver.Solve(state, new SolverOptions(SolverOptions.PipelineNodeBudget, 1, false, PourMode.Run));
+
+            Assert.That(pruned.Status, Is.EqualTo(SolveStatus.Unsolvable));
+            Assert.That(solution.IsSolved, Is.True);
+            var session = new LevelSession(state, true, PourMode.Run);
+            Assert.That(PourRules.IsStuck(state, true), Is.False);
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
+
+            for (int i = 0; i < solution.MoveCount; i++)
+            {
+                Pour pour = solution.GetMove(i);
+                Assert.That(session.TryPour(pour.Source, pour.Target, out _), Is.True, "vertido " + (i + 1));
+                LevelStatus expected = i == solution.MoveCount - 1 ? LevelStatus.Won : LevelStatus.Playing;
+                Assert.That(session.Status, Is.EqualTo(expected), "tras el vertido " + (i + 1));
+                if (expected == LevelStatus.Playing)
+                {
+                    Assert.That(PourRules.IsStuck(session.Current, true), Is.False, "tras el vertido " + (i + 1));
+                }
+            }
+        }
+
+        [Test]
+        public void R13b_AnUnsolvableBoardWithFewReachableStates_IsStuck()
+        {
+            // 02 R13 ampliada (D-014): el tablero que antes ilustraba R14 tiene vertidos útiles, pero desde él solo se alcanzan
+            // unos pocos estados y ninguno es victoria: Aguas estancadas, aunque R13 sin ampliar no lo declare.
             BoardState state = Board(C(4, 2, 1, 1, 2), C(4, 2, 1, 1, 2), Cuia.Empty(4));
 
             SolveResult proof = new AStarSolver().Solve(state, SolverOptions.Pipeline);
 
             Assert.That(proof.Status, Is.EqualTo(SolveStatus.Unsolvable));
             Assert.That(PourRules.IsStuck(state, true), Is.False);
-            Assert.That(new LevelSession(state, true).Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(new LevelSession(state, true).Status, Is.EqualTo(LevelStatus.Stuck));
         }
 
         [Test]
         public void R15_StuckBlocksInput_AndMareaReturnsToPlaying()
         {
-            // 02 R15 (parte del núcleo): input bloqueado desde el instante lógico del bloqueo, aunque quede un
-            // vertido legal (fútil); Marea restaura el estado. El retraso de 400 ms y el modal son de la UI.
-            var session = new LevelSession(Board(C(5, 1, 1, 1), C(5, 1), Cuia.Empty(5), C(4, 2, 2, 2, 2)), true);
-            Assert.That(session.TryPour(1, 0, out _), Is.True);
+            // 02 R15 (parte del núcleo): input bloqueado desde el instante lógico del bloqueo, aunque quede un vertido legal
+            // (aquí, incluso útil: el vaivén parcial 0 ↔ 1 de R13 ampliada, D-014); Marea restaura el estado. El retraso de
+            // 400 ms y el modal son de la UI. El tablero inicial se gana en 5; el vertido 2 → 0 lo pierde.
+            var session = new LevelSession(Board(C(4, 2, 1, 2), C(4, 1, 1, 2), C(4, 1, 2)), true);
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(session.TryPour(2, 0, out _), Is.True);
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck));
             Assert.That(PourRules.IsLegal(session.Current, 0, 1), Is.True);
 
