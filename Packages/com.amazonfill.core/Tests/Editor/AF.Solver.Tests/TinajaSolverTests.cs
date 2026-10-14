@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
+using AF.Core.Session;
 using AF.Solver.Bot;
 using AF.Solver.Murky;
 using AF.Solver.Search;
@@ -14,7 +15,8 @@ namespace AF.Solver.Tests
     /// Tinaja en AF.Solver (M13; D-019; propuesta de la tinaja, b.2 R14 y «Morpho», c.2 y c.6): A* con y sin poda de fútiles
     /// frente a la búsqueda exhaustiva (con el contraejemplo de b.2), heurística admisible y consistente, búsquedas sin poda
     /// en niveles con tinaja, suelta igual en todas las realidades (Q14 A), el orden de respuestas de Morpho
-    /// (<see cref="SafeMoves.Outcome"/>) y la rama mínima del bot. Test compartido (NUnit 3.5, C# 9).
+    /// (<see cref="SafeMoves.Outcome"/>), la rama mínima del bot y Aguas estancadas por bucle (D-014) en los tableros perdidos
+    /// de b.2 con <see cref="LevelSession"/>. Test compartido (NUnit 3.5, C# 9).
     /// </summary>
     [TestFixture]
     public sealed class TinajaSolverTests
@@ -58,6 +60,17 @@ namespace AF.Solver.Tests
         private static BoardState LostBoard()
         {
             return Board(C(4, 3, 3, 3), C(4, 1, 2, 1, 1), C(4, 2, 2, 2), T(0x1, 3, 1), Ch());
+        }
+
+        /// <summary>
+        /// Vaivén tras la suelta (b.2 futil, «Lo que Φ no dice»; <c>FutilePropertyTests.P3_Tinaja_AfterTheRelease_…</c>):
+        /// N[c,c,c,c] N[a,b,a,a] N[b,b,b] T[] (inerte) ch[a] (ya una Cuia chica normal). Se llega desde
+        /// <see cref="LostBoard"/> sacando a, sacando c (la cuia se suelta con [a, c]) y ch→N1 (sella c); N2→ch y ch→N2 son
+        /// útiles y vuelven al mismo estado.
+        /// </summary>
+        private static BoardState SwingAfterTheRelease()
+        {
+            return Board(C(4, 3, 3, 3, 3), C(4, 1, 2, 1, 1), C(4, 2, 2, 2), Cuia.Empty(LevelValidation.TinajaCapacity).WithMechanic(MechanicType.Tinaja), C(2, 1));
         }
 
         /// <summary>
@@ -227,7 +240,8 @@ namespace AF.Solver.Tests
         {
             // b.2 «Morpho», respuesta 2: si ninguna realidad tiene solución (también con R = 1, cuando ya no queda nada que ver),
             // «Desde aquí no hay salida» y no cobra. Nunca la Luciérnaga con R = 1. PourRules.IsStuck (R13 de reglas) no lo declara
-            // (sacar está exento); la partida sí, por D-014 (cierre ≤ 64 estados sin victoria en LevelSession; T51).
+            // (sacar está exento); la partida sí, por D-014 (cierre ≤ 64 estados sin victoria en LevelSession; T51): lo fijan
+            // R13b_TheLostBoardsOfB2_… y R13b_TheDetourOfB2_….
             BoardState lost = LostBoard();
             var safe = new SafeMoves();
 
@@ -243,6 +257,71 @@ namespace AF.Solver.Tests
             state = PourRules.Apply(state, 0, 1, PourMode.Run);
             state = PourRules.Apply(state, 4, 0, PourMode.Run);
             Assert.That(state.Equals(lost), Is.True, state.ToString());
+        }
+
+        [TestCase(PourMode.Run)]
+        [TestCase(PourMode.Single)]
+        public void R13b_TheLostBoardsOfB2_AreAguasEstancadasInLevelSession_NotForPourRulesIsStuck_D014(PourMode mode)
+        {
+            // 02 R13 ampliada (D-014; T51) con la tinaja (punto abierto de T55; README del núcleo, «Tinaja (M13)»): en los dos
+            // tableros perdidos de b.2 queda un vertido útil (sacar, exento como origen; el vaivén N2↔ch tras la suelta), así
+            // que R13 de reglas (PourRules.IsStuck) no los declara, y sigue así. La partida sí: el cierre de estados alcanzables
+            // con todos los vertidos legales es pequeño y no tiene victoria, así que LevelSession da Aguas estancadas, también
+            // con el kill-switch de fútiles apagado, y bloquea la entrada (R15). P1 (R14): la búsqueda sin poda de fútiles (la
+            // de un nivel con tinaja, c.2) confirma que los dos están perdidos.
+            BoardState reached = LostBoard();
+            reached = PourRules.Apply(reached, 3, 4, mode); // saca a
+            reached = PourRules.Apply(reached, 3, 4, mode); // saca c: la tinaja queda vacía y su cuia se suelta con [a, c]
+            reached = PourRules.Apply(reached, 4, 0, mode); // ch→N1: sella c
+            Assert.That(reached.Equals(SwingAfterTheRelease()), Is.True, reached.ToString());
+
+            BoardState[] boards = { LostBoard(), SwingAfterTheRelease() };
+            string[] names = { "el perdido de b.2", "el vaivén tras la suelta" };
+            var useful = new Pour[PourRules.MaxPours];
+            var probe = new DeadEndProbe();
+            var solver = new AStarSolver();
+            for (int i = 0; i < boards.Length; i++)
+            {
+                BoardState board = boards[i];
+                Assert.That(PourRules.CollectUsefulMoves(board, true, mode, useful), Is.GreaterThan(0), names[i] + ": queda un vertido útil");
+                Assert.That(PourRules.IsStuck(board, true), Is.False, names[i] + ": R13 de reglas no lo declara");
+                Assert.That(probe.IsDeadEnd(board, mode), Is.True, names[i] + ": cierre sin victoria");
+                Assert.That(probe.LastStateCount, Is.InRange(2, DeadEndProbe.MaxStates), names[i]);
+
+                var session = new LevelSession(board, true, mode);
+                Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck), names[i] + ": Aguas estancadas en la partida (D-014)");
+                Assert.That(new LevelSession(board, false, mode).Status, Is.EqualTo(LevelStatus.Stuck), names[i] + ": no depende de futile_rule_enabled");
+                Assert.That(session.TryPour(useful[0].Source, useful[0].Target, out _), Is.False, names[i] + ": R15, la entrada queda bloqueada");
+                Assert.That(session.Current.Equals(board), Is.True, names[i]);
+                Assert.That(solver.Solve(board, SolverOptions.ForPipeline(mode, board)).Status, Is.EqualTo(SolveStatus.Unsolvable), names[i] + ": P1 (R14)");
+            }
+        }
+
+        [TestCase(PourMode.Run)]
+        [TestCase(PourMode.Single)]
+        public void R13b_TheDetourOfB2_StopsTheGameAtTheFirstLostBoard_D014(PourMode mode)
+        {
+            // b.2 llega al tablero perdido desde S0 con un desvío legal de 3 vertidos (sacar, N1→N2 y Ch→N1). En la partida,
+            // Aguas estancadas (D-014) sale ya tras el 2.º, N1→N2, el primero que deja el nivel perdido (la búsqueda sin poda lo
+            // confirma), y no antes; el 3.º ya no entra (R15), así que el tablero perdido de b.2 no se alcanza jugando. Marea
+            // vuelve a Playing (04 §2.1).
+            var session = new LevelSession(DebutS0(), true, mode);
+            var solver = new AStarSolver();
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
+
+            Assert.That(session.TryPour(3, 4, out PourResult draw), Is.True);
+            Assert.That(draw.Status, Is.EqualTo(LevelStatus.Playing), "tras sacar: el nivel aún se gana");
+            Assert.That(solver.Solve(session.Current, SolverOptions.ForPipeline(mode, session.Current)).IsSolved, Is.True);
+
+            Assert.That(session.TryPour(0, 1, out PourResult detour), Is.True);
+            Assert.That(detour.Status, Is.EqualTo(LevelStatus.Stuck), "tras N1→N2: perdido");
+            Assert.That(PourRules.IsStuck(session.Current, true), Is.False, "solo por D-014");
+            Assert.That(solver.Solve(session.Current, SolverOptions.ForPipeline(mode, session.Current)).Status, Is.EqualTo(SolveStatus.Unsolvable));
+            Assert.That(session.TryPour(4, 0, out _), Is.False, "el 3.º vertido del desvío ya no entra (R15)");
+            Assert.That(session.AppliedPours, Is.EqualTo(2));
+
+            Assert.That(session.Undo(), Is.True);
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
         }
 
         [Test]

@@ -46,25 +46,71 @@ namespace AF.Core.Tests
             return Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x3, 3, 1, 3), Ch());
         }
 
+        /// <summary>
+        /// Tablero ganable de la regla 2: N[1,1,1,3] T[2(o),3] Ch[3] N[2,2,3,3] N5[] N[1,2]. La 3 de la boca está en la cima de
+        /// una cuia normal (0), de su cuia (2) y en racha (3), y la tinaja tiene hueco; U_3 = 5 (sella en la vacía de 5).
+        /// </summary>
+        private static BoardState NeverReceivesBoard()
+        {
+            return Board(C(4, 1, 1, 1, 3), T(0x1, 2, 3), Ch(3), C(4, 2, 2, 3, 3), Cuia.Empty(5), C(4, 1, 2));
+        }
+
+        /// <summary>Una victoria de <see cref="NeverReceivesBoard"/>: juntar la 3 en la de 5, sacar las dos y sellar la 1 y la 2.</summary>
+        private static readonly int[][] WinsNeverReceives =
+        {
+            new[] { 0, 4 }, new[] { 3, 4 }, new[] { 2, 4 }, new[] { 1, 2 }, new[] { 2, 4 }, new[] { 1, 2 }, new[] { 5, 3 },
+            new[] { 5, 0 }, new[] { 2, 3 },
+        };
+
+        /// <summary>
+        /// Tablero ganable de la regla 3: T[2(o),3] Ch[] N[1,3] N[] N[1,1,1] N[2,2,2]. U_3 = 2: la 3 sella en su cuia cuando
+        /// se suelta (Cuia chica de 2).
+        /// </summary>
+        private static BoardState PoursOnlyIntoItsCuiaBoard()
+        {
+            return Board(T(0x1, 2, 3), Ch(), C(4, 1, 3), Cuia.Empty(4), C(4, 1, 1, 1), C(4, 2, 2, 2));
+        }
+
+        /// <summary>Una victoria de <see cref="PoursOnlyIntoItsCuiaBoard"/>: sacar, apartar la 3, sellar la 1, sacar, sellar la 2 y la 3.</summary>
+        private static readonly int[][] WinsPoursOnlyIntoItsCuia =
+        {
+            new[] { 0, 1 }, new[] { 2, 3 }, new[] { 4, 2 }, new[] { 0, 1 }, new[] { 1, 5 }, new[] { 3, 1 },
+        };
+
+        /// <summary>Juega <paramref name="pours"/> en la partida: todos se aceptan, sigue en Playing y el último gana (R12).</summary>
+        private static void PlayToTheWin(LevelSession session, int[][] pours)
+        {
+            for (int i = 0; i < pours.Length; i++)
+            {
+                Assert.That(session.TryPour(pours[i][0], pours[i][1], out PourResult result), Is.True, "vertido " + (i + 1));
+                LevelStatus expected = i == pours.Length - 1 ? LevelStatus.Won : LevelStatus.Playing;
+                Assert.That(result.Status, Is.EqualTo(expected), "tras el vertido " + (i + 1));
+            }
+        }
+
         [Test]
         public void Tinaja_NeverReceives_M13r2()
         {
             // b.2 regla 2: «La tinaja nunca recibe (bloqueada_destino permanente). Tampoco desde su cuia» (R11, sin texto).
             // Los tres orígenes tienen en la cima la fruta de la boca (3) y la tinaja tiene hueco: con la regla normal los tres
-            // vertidos serían legales, así que solo el Reject de la tinaja (CheckTarget) puede rechazarlos.
-            BoardState state = Board(C(4, 1, 3), T(0x1, 2, 3), Ch(3), C(4, 1, 3, 3), Cuia.Empty(4));
+            // vertidos serían legales, así que solo el Reject de la tinaja (CheckTarget) puede rechazarlos. El tablero se gana
+            // (WinsNeverReceives), así que la partida está en Playing (D-014: un tablero perdido daría Stuck, y TryPour daría
+            // false por R15 y no por la regla 2): con U_3 = 5, la 3 sella en la cuia vacía de 5.
+            BoardState state = NeverReceivesBoard();
 
             Assert.That(PourRules.IsLegal(state, 0, 1), Is.False);
             Assert.That(PourRules.IsLegal(state, 2, 1), Is.False); // tampoco desde su cuia, aunque su cima sea la fruta de la boca
             Assert.That(PourRules.IsLegal(state, 3, 1), Is.False); // ni una racha de esa fruta
             Assert.That(PourRules.IsLegal(state, 3, 4), Is.True); // control: la cuia 3 sí es origen
             var session = new LevelSession(state, true, PourMode.Run);
-            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing), "condición del test: el rechazo es de la regla 2, no de R15");
             Assert.That(session.TryPour(0, 1, out _), Is.False);
             Assert.That(session.TryPour(2, 1, out _), Is.False);
             Assert.That(session.TryPour(3, 1, out _), Is.False);
             Assert.That(session.Current.Equals(state), Is.True);
             Assert.That(session.AppliedPours, Is.EqualTo(0));
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
+            PlayToTheWin(session, WinsNeverReceives);
 
             // Vacía queda inerte: ni origen (está vacía) ni destino (regla 8).
             BoardState inert = Board(C(4, 1, 3), Cuia.Empty(LevelValidation.TinajaCapacity).WithMechanic(MechanicType.Tinaja), C(2, 2), Cuia.Empty(4));
@@ -77,8 +123,10 @@ namespace AF.Core.Tests
         public void Tinaja_PoursOnlyIntoItsCuia_M13r3()
         {
             // b.2 regla 3: «La tinaja solo vierte en su cuia» (solo_vierte_en(A)); tinaja → otra cuia es ilegal (R11), también
-            // a una vacía o a una cuia con su misma fruta en la cima y hueco.
-            BoardState state = Board(T(0x1, 2, 3), Ch(), C(4, 1, 3), Cuia.Empty(4), C(4, 1, 1, 1));
+            // a una vacía o a una cuia con su misma fruta en la cima y hueco. El tablero se gana (WinsPoursOnlyIntoItsCuia: la 3
+            // sella en su cuia ya suelta, con U_3 = 2), así que la partida está en Playing y el rechazo es de la regla 3; el
+            // tablero de antes (sin la cuia [2, 2, 2]) estaba perdido y, con D-014, en Stuck: TryPour daba false por R15.
+            BoardState state = PoursOnlyIntoItsCuiaBoard();
 
             Assert.That(PourRules.CanBeSource(state, 0), Is.True);
             Assert.That(PourRules.IsLegal(state, 0, 1), Is.True);
@@ -86,8 +134,12 @@ namespace AF.Core.Tests
             Assert.That(PourRules.IsLegal(state, 0, 3), Is.False);
             Assert.That(PourRules.IsLegal(state, 0, 4), Is.False);
             var session = new LevelSession(state, true, PourMode.Run);
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing), "condición del test: el rechazo es de la regla 3, no de R15");
+            Assert.That(session.TryPour(0, 2, out _), Is.False);
             Assert.That(session.TryPour(0, 3, out _), Is.False);
             Assert.That(session.Current.Equals(state), Is.True);
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
+            PlayToTheWin(session, WinsPoursOnlyIntoItsCuia);
 
             // Con su cuia llena no hay adónde sacar.
             BoardState full = Board(T(0x1, 2, 3), Ch(1, 2), C(4, 1, 3), Cuia.Empty(4), C(4, 1, 1));
