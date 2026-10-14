@@ -1,13 +1,13 @@
 # Encargo de arte: fondos por parada y Mapa del río
 
-Fecha: 2026-10-14 · Autor: documentación (agente; tanda 4, tarea M1.8) · Para: el dueño, que lo envía al artista 2D freelance, y el asesor cultural · Estado: **listo para enviar en el orden de la sección 2**; ninguna parte sale antes de su condición.
+Fecha: 2026-10-14 · Autor: documentación (agente; tanda 4, tarea M1.8) · Para: el dueño, que lo envía al artista 2D freelance, y el asesor cultural · Estado: **listo para enviar en el orden de la sección 2**, con dos preguntas para el dueño antes de los pasos 2 y 3 (sección 8); ninguna parte sale antes de su condición.
 
 Fuentes:
-- `docs/dev/decisiones.md`: D-013 (Mapa del río: Q5-A, Q8-A, Q14-A, Q18-A y «Dependencias externas») y D-023 (puntos 12 y 16);
+- `docs/dev/decisiones.md`: D-013 (Mapa del río: Q5-A, Q8-A, Q14-A, Q18-A, «Consecuencias» y «Dependencias externas») y D-023 (puntos 12 y 16);
 - glosario §3.2 y §11 (nombres de las ranuras);
-- 07 §2.1 (tabla de paradas y fondos), §6.1, §8.1 y §8.2;
+- 07 §2.1 (tabla de paradas y fondos), §6.1, §8.1 y §8.2; 08 §5.4;
 - `docs/art/direccion-visual-v2.md` §7, §9 (VA-20 a VA-23) y §10.3;
-- `docs/research/mapa-del-rio/propuesta-mapa-del-rio.md` §5.3, §10.2, §10.3, §10.6, §10.7, §10.8, §11.3 y §12;
+- `docs/research/mapa-del-rio/propuesta-mapa-del-rio.md` §5.3, §10.2, §10.3, §10.4, §10.6, §10.7, §10.8, §11.3 y §12;
 - CLAUDE.md, «Humanos».
 
 La medida, el uso, el respaldo y la compresión de cada ranura están en `Assets/_Project/Art/Generated/README.md` («Ranuras reservadas»). Este documento dice qué se pinta, en qué orden y con qué condiciones.
@@ -23,8 +23,9 @@ Convenciones: **dp**, unidad del lienzo de UI (3 px por dp en el teléfono de pr
    - el asesor cultural revisa antes de pintar los sitios marcados y antes de integrar;
    - el dueño envía el encargo y aprueba.
 3. **Cuándo:**
-   - los héroes, después de VA-20 en el teléfono, al cerrar la Ola 2;
-   - los kits, en paralelo con los héroes en cuanto la estimación de peso (tarea B0) esté lista, **sin esperar a una medida del AAB**;
+   - los 3 primeros héroes, después de VA-20 en el teléfono, al cerrar la Ola 2. La selección es una propuesta [P] que decide el dueño (sección 8);
+   - los kits, en paralelo con los héroes en cuanto la estimación de peso (tarea B0) esté lista, **sin esperar a una medida del AAB**, como pide el plan de la tanda 4. Esto se aparta de D-013, y el dueño tiene que confirmarlo (sección 8);
+   - los otros héroes, después de medir el AAB con los 3 primeros (D-013);
    - las piezas del Mapa, al final.
 
 ## 1. Reglas para todas las piezas
@@ -32,7 +33,9 @@ Convenciones: **dp**, unidad del lienzo de UI (3 px por dp en el teléfono de pr
 - **Estilo:** D-003, «Selva brillante premium»: vidrio, madera y luz de juego, con la luz desde arriba a la izquierda. Se pinta con la clave de estilo de `docs/art/prompts-chatgpt.md` (sección 1). **Nada de papel, pergamino ni acuarela.**
 - **Referencias:** varias fotos de cada sitio, sin calcar ninguna, y las que dé el asesor.
 - **Lo que nunca aparece:**
-  - la lista «Evitar» de la guía visual (§7) y la columna «No» de 07 §8.1;
+  - la lista «Evitar» de la guía visual (§7) y la columna «No» de 07 §8.1. La fila «Lugar equivocado» de la guía se lee así:
+    - la «playa» vetada es la de mar, con cocoteros y turquesa caribeño. Las playas de río y las islas de arena sí van donde las pide el canon: en los kits (3.2; 07 §2.1, capa 0b), en la Ilha do Amor de Alter do Chão (07 §2.1), en las islas de Anavilhanas (propuesta del Mapa §10.3) y en la arena blanca del varillal de Allpahuayo-Mishana (07 §2.1). Pacaya-Samiria al alba va sin playas al descubierto (07 §2.1);
+    - los cerros y las montañas solo van donde los nombra el canon: el cerro de selva de Alter do Chão, los tepuyes de Chiribiquete solo como silueta lejana en el Trapecio (07 §2.1 y §8.1) y los Andes del kit de Madidi (`bg_kit_w08`; propuesta del Mapa §10.4);
   - **en los fondos** (VA-22):
     - personas;
     - canastos, que son la Canasta;
@@ -59,9 +62,9 @@ Convenciones: **dp**, unidad del lienzo de UI (3 px por dp en el teléfono de pr
 | Paso | Qué | Condición para enviarlo | Quién | Qué pasa después |
 |---|---|---|---|---|
 | 1 | **VA-20 en el teléfono.** No se encarga nada: es la prueba | Al cerrar la Ola 2, con la hoja de las 20 composiciones (`02f_board_stops_sheet.png`, tarea M2.4) y el héroe provisional geométrico en las capturas `02_board_l7` (2 filas) y `02b_board_l1` (1 fila) | Dueño y asesor | Si un sitio no pasa, se cambia su composición antes de encargarlo |
-| 2 | **Los 3 primeros héroes:** `bg_hero_ver_o_peso`, `bg_hero_teatro_amazonas` y `bg_hero_leticia` (3.3) | VA-20 aprobado | Dueño → artista | La tarea M5.2 los importa y mide el AAB, el 16 KB y el arranque frente a la estimación de B0 |
-| 3 | **Los kits:** `bg_kit_w01` … `bg_kit_w05` (1-200) y `bg_kit_w06` … `bg_kit_w09` (201-700, Q14-A), con los sprites de ambiente (3.4) | En paralelo con los héroes, en cuanto la tarea B0 (Ola 3) dé la estimación de peso. **No espera a ninguna medida del AAB** | Dueño → artista | La tarea M5.3 los integra con las piezas de `bg.pieces` y el ambiente |
-| 3 bis | **Los otros 11 héroes y la reserva** (3.3) | Cuando los 3 primeros pasen la revisión del dueño y del asesor. La medida real del AAB (M5.2) confirma la estimación de B0, pero no bloquea el encargo | Dueño → artista | Integración por sitio |
+| 2 | **Los 3 primeros héroes** [P]: `bg_hero_ver_o_peso`, `bg_hero_teatro_amazonas` y `bg_hero_leticia` (3.3). La selección la decide el dueño (sección 8) | VA-20 aprobado | Dueño → artista | La tarea M5.2 los importa y mide el AAB, el 16 KB y el arranque frente a la estimación de B0 |
+| 3 | **Los kits:** `bg_kit_w01` … `bg_kit_w05` (1-200) y `bg_kit_w06` … `bg_kit_w09` (201-700, Q14-A), con los sprites de ambiente (3.4) | En paralelo con los héroes, en cuanto la tarea B0 (Ola 3) dé la estimación de peso, **sin esperar a ninguna medida del AAB**, como pide el plan de la tanda 4 (tareas M1.8 y B0). **Se aparta de D-013**, que mide el AAB tras integrar los 3 primeros sitios, «antes de encargar el resto» («Consecuencias»). Hasta que el dueño lo confirme y se registre, es una pregunta abierta (sección 8); sin su confirmación, los kits esperan a la medida de M5.2, como el paso 3 bis | Dueño → artista | La tarea M5.3 los integra con las piezas de `bg.pieces` y el ambiente |
+| 3 bis | **Los otros 11 héroes y la reserva** (3.3) | Cuando los 3 primeros pasen la revisión del dueño y del asesor, y **tras la medida del AAB de M5.2 con los 3 primeros sitios** (D-013, «Consecuencias»; propuesta del Mapa §10.7 y §12) | Dueño → artista | Integración por sitio |
 | 4 | **Las piezas del Mapa** (sección 4), con la **máscara de zonas** para la geometría de producción (tarea M5.1) | Después de los kits. La casa de TiTino espera además al visto bueno del asesor sobre la embaúba; las banderas, que son las oficiales, pasan por el abogado y el asesor antes de usarse en release (sección 4) | Dueño → artista | M5.1 vectoriza la máscara; M5.2 importa el arte del Mapa y hornea el atlas de siluetas |
 
 ## 3. Fondos por parada
@@ -105,7 +108,10 @@ El muelle y el follaje de Brasil ya son del canon. La misma composición sirve a
   - por debajo, hasta 32 dp de orilla. El reflejo lo alarga el código con el mismo sprite volteado, y el agua la pinta el código.
 - **Compresión:** ASTC 6×6. Es el detalle reconocible.
 
-**Los 3 primeros** (paso 2; 07 §2.1):
+**Los 3 primeros [P]** (paso 2). El canon solo dice «empezando por los 3 primeros sitios», sin nombrarlos (07 §2.1, «Legibilidad»; guía visual, VA-20; propuesta del Mapa §10.7 y §12).
+- **Propuesta:** un sitio por cada mundo con fondo en el AAB y héroe de ciudad: 1 Estuario, 3 Manaos y 4 Trapecio. Son tres hitos propios en tres mundos, con tres luces distintas (alba, tarde y mañana tras la lluvia).
+- **Alternativa:** el orden de la ruta, con los tres primeros sitios pintados: Ver-o-Peso, Alter do Chão y Flona Tapajós (paradas 0, 2 y 3; la 1, Santarém, es un héroe por código).
+- **Lo decide el dueño** (sección 8). Lo que se reconoce y lo que hay que evitar en cada sitio está en la tabla de paradas de 07 §2.1:
 
 | Ranura | Parada | Se reconoce por | Cuidado |
 |---|---|---|---|
@@ -194,16 +200,28 @@ Además:
 - **Peso** (§10.7):
   - fondos de 1-200, ≈ 2,35 MiB con los kits en 8×8;
   - Mapa, ≈ 1,7 MiB;
-  - en total, unos 6,4-8,2 MiB residentes, muy por debajo del tope de 80 MB del AAB.
+  - **memoria:** todo residente, unos 6,4-8,2 MiB con los kits de 201-700, el muelle y el follaje, muy por debajo de los 120 MB de texturas residentes de 08 §5.4;
+  - **AAB:** el impacto neto frente al canon es de entre −1 y +3 MB con Q14-A [cálculo], frente al AAB de humo de 35 MB y la compuerta de 80 MB.
 
   La estimación temprana es de la tarea B0, y la medida real, de M5.2.
 
-## 8. Pendientes que no bloquean el envío de los pasos 1-3
+## 8. Pendientes
 
-1. **Nombre de ranura del segundo juego de follaje** (3.5), en el glosario §11.
-2. **Dónde viven los máster con capas (PSD o PSB).** Fuera de `Assets/_Project/Art/Generated/`, que solo admite los PNG de las ranuras: dentro de `Assets/`, Unity los importaría. Lo decide el dueño.
-3. **Cómo pasan los héroes y los kits de 2× a 1× en el build.** Lo decide la tarea de importación, M5.2. El peso cambia por 4 (README, «Para estimar el peso»).
-4. **La guía de proyección para la máscara de zonas** (propuesta del Mapa §11.3, punto 5). Aún no tiene tarea:
+**Preguntas para el dueño, antes de enviar los pasos 2 y 3.** Cada respuesta se registra en `docs/dev/decisiones.md` (carril de documentación):
+1. **Cuáles son los 3 primeros héroes** (paso 2; 3.3). El canon dice «empezando por los 3 primeros sitios», sin nombrarlos.
+   - Propuesta [P]: Ver-o-Peso, Teatro Amazonas y Leticia, uno por cada mundo con fondo en el AAB y héroe de ciudad.
+   - Alternativa: el orden de la ruta (Ver-o-Peso, Alter do Chão y Flona Tapajós). Con ella cambian 3.3 (la tabla y la lista de los otros 11) y los provisionales de `docs/art/prompts-chatgpt.md` (revisión 4 y 3.17).
+2. **Encargar los kits con la estimación de B0, sin la medida del AAB** (paso 3).
+   - Lo pide el plan de la tanda 4 (tareas M1.8 y B0).
+   - D-013 («Consecuencias») y la propuesta del Mapa (§10.7 y §12) dicen otra cosa: el AAB se mide tras integrar los 3 primeros sitios, «antes de encargar el resto».
+   - Si el dueño lo confirma, se registra como cambio a D-013. Si no, los kits esperan a la medida de M5.2, como el paso 3 bis.
+
+**Pendientes que no bloquean el envío de los pasos 1-3:**
+
+3. **Nombre de ranura del segundo juego de follaje** (3.5), en el glosario §11.
+4. **Dónde viven los máster con capas (PSD o PSB).** Fuera de `Assets/_Project/Art/Generated/`, que solo admite los PNG de las ranuras: dentro de `Assets/`, Unity los importaría. Lo decide el dueño.
+5. **Cómo pasan los héroes y los kits de 2× a 1× en el build.** Lo decide la tarea de importación, M5.2. El peso cambia por 4 (README, «Para estimar el peso»).
+6. **La guía de proyección para la máscara de zonas** (propuesta del Mapa §11.3, punto 5). Aún no tiene tarea:
    - hoy solo existe la muestra `docs/research/mapa-del-rio/mapa-muestra.svg`, de `generar_mapa.py`;
    - antes del paso 4 hace falta una guía por mundo con la proyección de `river_map_v1.json`;
    - es una pregunta para el tech-lead.

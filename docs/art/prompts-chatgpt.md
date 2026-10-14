@@ -11,7 +11,7 @@ Revisión 2 (2026-10-07), tras la revisión del crítico de arte (guía, secció
 
 Revisión 3 (2026-10-07), tras la revisión visual de las capturas del respaldo procedural: el río se leía como arena o playa y la escena era casi monocroma marrón. Cambian el panorama (3.1: reflejos oscuros de la selva en el agua, columna de destellos bajo el sol y el reflejo dorado solo junto al horizonte; nada de arena ni de playa) y el muelle (3.2: más estrecho que la pantalla, con río a los lados, madera más clara, haces de sol y sin postes que asomen sobre la viga). También el cielo de arriba (#5BC0EB) y la madera del muelle (#C08A58, #A8774C) de la paleta de referencia.
 
-Revisión 4 (2026-10-14, tanda 4; D-013): entran los provisionales de los fondos por parada, en la familia S8 (3.17 y 3.18): los tres primeros héroes (Ver-o-Peso, el Teatro Amazonas y el malecón de Leticia) y el kit del Estuario.
+Revisión 4 (2026-10-14, tanda 4; D-013): entran los provisionales de los fondos por parada, en la familia S8 (3.17 y 3.18): tres héroes (Ver-o-Peso, el Teatro Amazonas y el malecón de Leticia) y el kit del Estuario. Son los tres primeros del encargo al artista según una propuesta [P] que decide el dueño (`docs/art/encargo-mapa-del-rio.md`, 3.3 y sección 8).
 - Son opcionales y no piden personas, canastos, banderas ni cuias.
 - **Nunca van en la ficha, las capturas ni la UA** (propuesta del Mapa del río §10.2; 07 §2.1).
 - El arte final de esas piezas, del Mapa, de TiTino, de Frutas del río y de la Tinaja es del artista: `docs/art/encargo-mapa-del-rio.md` y `docs/art/encargo-titino-frutas-tinaja.md`.
@@ -42,7 +42,7 @@ Qué son estos recursos:
    - recortar al contenido más el margen indicado **con la proporción del tamaño final**: si el recorte no la tiene, amplía el lienzo con transparencia hasta tenerla;
    - redimensionar con Lanczos al **tamaño final exacto**, siempre de forma **uniforme**. Nunca estirar en una sola dirección: las esquinas redondeadas se volverían elípticas y el 9-slice se rompería;
    - en las teselas, Filtros › Mapa › «Teselado perfecto», o el modo envolvente de Krita, y comprobar que los cuatro bordes casan;
-   - exportar PNG de 8 bits por canal, sRGB, sin metadatos y de ≤ 2 MB.
+   - exportar PNG de 8 bits por canal, sRGB, sin metadatos y de ≤ 2 MB (el atlas del kit, ≤ 8 MB [P]: 3.18).
 7. **Comprobación** (sección 4) antes de guardar, incluida la hoja de contacto de la familia.
 8. **Guardar** con el **nombre exacto** en `Assets/_Project/Art/Generated/`.
    - Los PNG van por Git LFS (`.gitattributes`: `*.png filter=lfs`).
@@ -390,7 +390,7 @@ Ranura de Pista · Morpho, a partir del nivel 12 (fuera de v0). Silueta de **ala
 
 > **Aviso: provisionales.** Estos PNG sirven para ver un sitio pintado en desarrollo antes de que llegue el arte del artista. **Nunca van en la ficha de la tienda, en las capturas ni en los creativos de UA** (propuesta del Mapa del río §10.2; 07 §2.1), la misma regla que los miquitos provisionales (07 §6.4). Antes de grabar o capturar nada para la tienda o la UA, se sustituyen por los del artista o se quitan de la carpeta; el registro del README dice cuáles son provisionales. Los héroes no sustituyen a VA-20, que se valida con la silueta geométrica (guía 9). El arte final es del artista: `docs/art/encargo-mapa-del-rio.md`.
 
-Familia S8: los tres en la misma conversación, con la clave adjunta. Son los tres primeros sitios del encargo al artista, uno por cada mundo con fondo en el AAB y héroe de ciudad: 1 Estuario, 3 Manaos y 4 Trapecio. Qué se reconoce y qué evitar en cada uno: 07 §2.1 (tabla de paradas).
+Familia S8: los tres en la misma conversación, con la clave adjunta. Son los tres primeros sitios del encargo al artista según una propuesta [P] (`docs/art/encargo-mapa-del-rio.md`, 3.3): uno por cada mundo con fondo en el AAB y héroe de ciudad, 1 Estuario, 3 Manaos y 4 Trapecio. El canon solo dice «empezando por los 3 primeros sitios», sin nombrarlos, y la selección la decide el dueño (encargo, sección 8). Si elige el orden de la ruta (Ver-o-Peso, Alter do Chão y Flona Tapajós), los prompts del Teatro Amazonas y de Leticia se sustituyen por otros de esos dos sitios, con la misma estructura. Qué se reconoce y qué evitar en cada uno: 07 §2.1 (tabla de paradas).
 
 Formato (propuesta del Mapa §10.2 y §10.6):
 - **Generar** a 1536 × 1024. **Recortar** una banda de 1536 × 512 que deje el horizonte (el pie del hito) al 60 % de su alto y llevarla a **1440 × 480** con escalado uniforme: es el doble de 240 × 80 dp, a 6 px por dp.
@@ -463,6 +463,7 @@ Familia S8, en la misma conversación que los héroes. El kit es un **atlas de 2
 - **Reparto del atlas:** provisional [P]. El definitivo lo decide el artista, y la posición de cada pieza va en `bg.pieces` de `river_stops_v1.json` (D-023, punto 12), que escribe la tarea que integra los kits.
 - **Sin playas:** en el Estuario, el río pardo se leía como arena (revisión 3).
 - **Sin agua:** la banda de río la pinta el código; solo los árboles con el pie en el agua llevan un anillo fino de ondas.
+- **Peso: excepción al tope de 2 MB** (paso 6 de la sección 1 y comprobación 11). Un atlas pintado de 2048 × 2048 con alfa suele pasar de 2 MB, así que su tope es **≤ 8 MB** [P]. Ese peso cuenta en Git LFS, donde cada versión subida ocupa espacio: conviene subir solo la aprobada. En el build no pesa el PNG: Unity lo comprime en ASTC 8×8 (1 MiB a 2×; README, «Para estimar el peso»).
 
 | Zona del atlas (px) | Pieza | Generar | Llevar a |
 |---|---|---|---|
@@ -532,7 +533,7 @@ Comprobar:
 | 8 | Teselas: sin costura visible al repetir 2 × 2 | Repetir la tesela en un lienzo de 1024 × 1024 |
 | 9 | Botánica: açaí en palmeras finas y en grupo, y su racimo unido a la fronda; aguaje con escamas; taperebá como ciruela pequeña; guanábana verde con espinas blandas; bacaba en racimo de escoba. Ninguna parece un cítrico (error del concepto de la revisión) | Comparar con la descripción del prompt |
 | 10 | Capi: anatomía de capibara, sin ropa ni accesorios, mirando al frente | Inspección |
-| 11 | ≤ 2 MB y en sRGB | Propiedades del archivo |
+| 11 | ≤ 2 MB y en sRGB; el atlas del kit (S8), ≤ 8 MB [P] (3.18) | Propiedades del archivo |
 | 12 | **Hoja de contacto:** todos los PNG de la familia, y después todos los aprobados, lado a lado junto al panorama en un lienzo neutro, a su tamaño relativo en pantalla. Mismo acabado, grosor de línea, saturación y luz. El que desentone se regenera con la clave adjunta | Lienzo de 2048 px de ancho en GIMP o Krita, antes de integrar nada |
 | 13 | **Escalado uniforme:** la proporción del recorte es la del tamaño final; nada se ha estirado en una sola dirección (las esquinas redondeadas siguen siendo circulares) | Comparar la proporción del recorte con la tabla 2 |
 | 14 | **Marcos** (`ui_panel_tablero`, `ui_panel_modal`): interior y exterior 100 % transparentes, sin sombra ni relleno | Ver sobre magenta |
