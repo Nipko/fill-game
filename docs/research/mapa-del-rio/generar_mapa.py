@@ -239,7 +239,10 @@ CLAVE_DATO = re.compile(r"^map\.(stop|country)\.[a-z0-9_]+\.dato_\d{2}$")
 FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 # Q8-A (D-018): ninguna cifra con separador de miles ni decimales dentro del texto; van como {n} con su valor en «args».
 CIFRA_CON_SEPARADOR = re.compile(r"\d[.,]\d|\d[ \u00a0\u202f]\d{3}(?!\d)")
-MARCADOR = re.compile(r"\{([a-z_]+)(?::([^{}]*))?\}")
+# Marcador con nombre: «{n}», «{n:formato}» o el plural de Smart Strings del contrato 32, «{n:plural:a|b}», cuyas
+# formas pueden llevar «{}» para la cifra («{n:plural:Te falta {} semilla|Te faltan {} semillas}», propuesta de
+# idiomas 3.3). El nombre (grupo 1) siempre necesita su valor en «args»; el formato (grupo 2) solo cuenta al medir.
+MARCADOR = re.compile(r"\{([a-z_]+)(?::((?:[^{}]|\{\})*))?\}")
 CANDIDATOS_5_1_BIS = {  # id de la parada: claves que tienen que estar en sus «otros_datos» (propuesta §5.1 bis)
     "belem": ("map.stop.belem.dato_01", "map.stop.belem.dato_02"),          # Ver-o-Peso (1977) y el chibé
     "santarem": ("map.stop.santarem.dato_01",),                              # las cuias del Bajo Amazonas
@@ -256,26 +259,42 @@ def sin_tildes(texto):
     return "".join(c for c in unicodedata.normalize("NFD", texto) if not unicodedata.combining(c)).casefold()
 
 
+def es_cifra(valor):
+    return isinstance(valor, (int, float)) and not isinstance(valor, bool)
+
+
 def texto_mostrado(texto, args):
     """El texto con sus marcadores resueltos en el caso más largo: cifras con separador de miles y, en los plurales
-    «{n:plural:a|b}», la forma más larga. Sirve para medir el límite de caracteres."""
+    «{n:plural:a|b}», la forma más larga con su «{}» resuelto; del plural solo se quita el formato. Sirve para medir
+    el límite de caracteres."""
+    def cifra(valor):
+        return f"{valor:,}".replace(",", ".")
+
     def sustituye(m):
         nombre, formato = m.group(1), m.group(2) or ""
-        if formato.startswith("plural:"):
-            return max(formato[len("plural:"):].split("|"), key=len)
         valor = args.get(nombre)
-        if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+        if formato.startswith("plural:"):
+            formas = formato[len("plural:"):].split("|")
+            if es_cifra(valor):
+                formas = [f.replace("{}", cifra(valor)) for f in formas]
+            return max(formas, key=len)
+        if not es_cifra(valor):
             return m.group(0)
-        return f"{valor:,}".replace(",", ".")
+        return cifra(valor)
     return MARCADOR.sub(sustituye, texto)
 
 
 def revisar_texto(donde, texto, args, errores, medir=True):
     """Reglas comunes a todo texto visible de una parada: ≤ 90 caracteres, Q8-A y el veto de «Belén» (07 §8.1).
-    El dato del nivel ya se mide arriba (medir=False), para no dar dos veces el mismo error."""
-    nombres = {m.group(1) for m in MARCADOR.finditer(texto) if not (m.group(2) or "").startswith("plural:")}
+    Todo marcador, también el del plural, necesita su valor en «args» (el del plural, una cifra). El dato del nivel
+    ya se mide arriba (medir=False), para no dar dos veces el mismo error."""
+    marcadores = list(MARCADOR.finditer(texto))
+    nombres = {m.group(1) for m in marcadores}
     if nombres != set(args):
         errores.append(f"{donde}: marcadores {sorted(nombres)} y args {sorted(args)} no coinciden")
+    for m in marcadores:
+        if (m.group(2) or "").startswith("plural:") and m.group(1) in args and not es_cifra(args[m.group(1)]):
+            errores.append(f"{donde}: el plural «{m.group(1)}» necesita una cifra en args")
     if CIFRA_CON_SEPARADOR.search(texto):
         errores.append(f"{donde}: cifra con separador o decimales en el texto (va como {{n}} con su valor en args, Q8-A)")
     n = len(texto_mostrado(texto, args))
@@ -299,6 +318,9 @@ def revisar_otros_datos(doc, ids, etiqueta_de, errores):
             continue
         for i, o in enumerate(otros):
             donde = f"parada {s['id']}: otros_datos[{i}]"
+            if not isinstance(o, dict):
+                errores.append(f"{donde}: no es un objeto")
+                continue
             faltan = [c for c in CAMPOS_OTRO_DATO if not o.get(c)]
             if faltan:
                 errores.append(f"{donde}: faltan {', '.join(faltan)}")
@@ -331,10 +353,29 @@ def revisar_otros_datos(doc, ids, etiqueta_de, errores):
             errores.append(f"clave {clave} repetida ({', '.join(donde)})")
     por_id = {s["id"]: s for s in doc["paradas_1_200"]}
     for sid, requeridas in CANDIDATOS_5_1_BIS.items():
-        tiene = {o.get("clave") for o in (por_id.get(sid, {}).get("otros_datos") or [])}
+        otros = por_id.get(sid, {}).get("otros_datos")
+        tiene = {o.get("clave") for o in otros if isinstance(o, dict)} if isinstance(otros, list) else set()
         for c in requeridas:
             if c not in tiene:
                 errores.append(f"parada {sid}: falta el candidato de §5.1 bis {c} en «otros_datos»")
+
+
+def autoprueba_marcadores():
+    """Casos fijos de revisar_texto con el plural del contrato 32 (M2.7f): el positivo no da errores y mide la forma
+    más larga con su cifra; el negativo (plural sin su valor en «args») sí los da. Devuelve los fallos de la prueba."""
+    plural = "Faltan {n:plural:{} nivel|{} niveles} para el lago."
+    fallos = []
+    positivo = []
+    revisar_texto("autoprueba positiva", plural, {"n": 1200}, positivo)
+    if positivo:
+        fallos.append(f"autoprueba: el plural con su valor en args da errores ({'; '.join(positivo)})")
+    if texto_mostrado(plural, {"n": 1200}) != "Faltan 1.200 niveles para el lago.":
+        fallos.append(f"autoprueba: el plural se mide como «{texto_mostrado(plural, {'n': 1200})}»")
+    negativo = []
+    revisar_texto("autoprueba negativa", plural, {}, negativo)
+    if not any("no coinciden" in e for e in negativo):
+        fallos.append("autoprueba: el plural sin su valor en args no da error")
+    return fallos
 
 
 def primer_nivel_del_sitio(mundo, nombre):
@@ -395,8 +436,9 @@ def check(doc, pr):
             errores.append(f"parada {s['id']}: los km hasta casa retroceden ({s['km_casa']} < {km_prev})")
         km_prev = s["km_casa"]
         d = s.get("dato_del_nivel")
-        if d and len(d["texto"]) > 90:
-            errores.append(f"parada {s['id']}: dato de {len(d['texto'])} caracteres (> 90)")
+        largo = len(texto_mostrado(d["texto"], d.get("args", {}))) if d else 0
+        if largo > 90:
+            errores.append(f"parada {s['id']}: dato de {largo} caracteres (> 90)")
         if not s.get("fondo", {}).get("heroe"):
             errores.append(f"parada {s['id']}: sin fondo")
         q = s.get("pregunta_del_mundo")
@@ -444,6 +486,7 @@ def check(doc, pr):
                 errores.append(f"parada {s['id']}: dato [V] sin ninguna fuente [V]")
     # «Otro dato» de cada tarjeta (M2.7): campos, claves únicas, texto, etiqueta, fuentes reabiertas y candidatos.
     revisar_otros_datos(doc, ids, etiqueta_de, errores)
+    errores.extend(autoprueba_marcadores())
     # Toda etiqueta «[V id]» / «[E id]» de cualquier texto del JSON (datos, notas, preguntas, cuidado, miradores, puntos
     # de paso, ríos, cruces…) tiene que llevar a una entrada de «fuentes» con su URL.
     def textos(o, ruta):
