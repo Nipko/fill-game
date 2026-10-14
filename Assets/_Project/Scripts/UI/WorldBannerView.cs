@@ -28,6 +28,13 @@ namespace AF.UI
     /// termina la salida en el acto. No se cierra sola, como la tarjeta previa [P].</para>
     /// <para>La línea del lugar va en 1 línea o, si no cabe, en 2 con el corte en un « · » (nunca dentro de un nombre: «ríos» o
     /// «Negro +» no se quedan solos al final de la línea) a 18 sp o, si hace falta, más pequeña hasta 15.</para>
+    /// <para><b>Escala de la fuente</b> (<see cref="FontScale"/>; 02 §12: hasta el 130 % sin desbordes ni recortes; pregunta 43,
+    /// decidida por el dueño el 2026-10-13; T52), con el mismo mecanismo que la tarjeta previa (<see cref="LevelCardView"/>):
+    /// los textos se multiplican por ella (la cabecera de 24 sp y la línea del lugar de 18 a 15 sp) y la tarjeta crece en alto:
+    /// la placa de la cabecera hasta el alto de línea de su título y la línea del lugar en las líneas que necesite (a 130 %
+    /// puede pasar de 2, como el tutorial de la tarjeta previa). La viñeta, Capi y Rosa no cambian de tamaño. Si el nombre no
+    /// cabe en la cabecera a la escala de ahora, abre la línea del lugar. La escala del sistema aún no llega al juego: hasta
+    /// entonces vale 1 y los tests la fijan a 1,3 [P].</para>
     /// <para>Con «Reducir movimiento» (07 §7.8): solo el fundido, con Capi ya presentando y Rosa ya fuera, sin soplo ni ondas.
     /// Sin asignaciones por fotograma, y quieto del todo al terminar la entrada (<see cref="Settled"/>): Tick ya no toca ninguna
     /// transformada ni ningún color mientras sigue abierto, así que no obliga a rehacer los lotes del lienzo principal ni el
@@ -190,6 +197,9 @@ namespace AF.UI
         private readonly Image _paw;
         private readonly TextMeshProUGUI _place;
         private int _world;
+        private float _fontScale = 1f;
+        private float _cardW;
+        private float _cardH;
         private string _text = string.Empty;
         private string _placeText = string.Empty;
         private bool _nameInTitle;
@@ -268,6 +278,19 @@ namespace AF.UI
 
         /// <summary>Raíz del banner (con el velo), estirada a la pantalla.</summary>
         public RectTransform Root => _root;
+
+        /// <summary>
+        /// Escala de la fuente del sistema, entre 1 y <see cref="LevelCardView.MaxFontScale"/> (02 §12), como la de la tarjeta
+        /// previa. Quien la cambia con el banner abierto llama después a <see cref="Relayout"/>.
+        /// </summary>
+        public float FontScale
+        {
+            get => _fontScale;
+            set => _fontScale = Mathf.Clamp(value, 1f, LevelCardView.MaxFontScale);
+        }
+
+        /// <summary>Medidas de la superficie de madera de la tarjeta colocada (dp; las de <c>ModalKit.Size</c> compartida).</summary>
+        public Vector2 SurfaceSizeDp => new Vector2(_cardW - 16f, ModalKit.SharedSurfaceHeight(_cardH - 16f));
 
         /// <summary>El banner se ve (también mientras sale).</summary>
         public bool Visible => _root.gameObject.activeSelf;
@@ -481,8 +504,8 @@ namespace AF.UI
                 return;
             }
 
-            Measure(world, canvasW, out _, out float inner, out float sceneH, out _);
-            _art.RequestBannerArt(inner, sceneH, water, MeetingWater(world), world, true);
+            Measure(world, canvasW, out float cardW, out float inner, out _, out float sceneH, out _, out float cardH);
+            _art.RequestBannerArt(inner, sceneH, water, MeetingWater(world), world, true, cardW - 16f, ModalKit.SharedSurfaceHeight(cardH - 16f));
         }
 
         /// <summary>
@@ -501,9 +524,9 @@ namespace AF.UI
             }
 
             float y = PadDp;
-            Measure(_world, canvasW, out float cardW, out float inner, out float sceneH, out float placeH);
-            UiBuilder.Place(_header.rectTransform, PadDp, y, inner, HeaderDp);
-            y += HeaderDp + 8f;
+            Measure(_world, canvasW, out float cardW, out float inner, out float headerH, out float sceneH, out float placeH, out float cardH);
+            UiBuilder.Place(_header.rectTransform, PadDp, y, inner, headerH);
+            y += headerH + 8f;
             float sceneY = y;
             _sceneW = inner;
             _sceneH = sceneH;
@@ -518,15 +541,13 @@ namespace AF.UI
             }
             else if (_fallback == null)
             {
-                // Al abrirlo: la viñeta (con Capi ya dibujado) y las mascotas, fuera del hilo principal si AsyncArt. Con el
-                // respaldo ya no se pide nada: lo que llegara después se descartaría.
-                _art.RequestBannerArt(inner, sceneH, _water, MeetingWater(_world), _world, AsyncArt);
+                // Al abrirlo: la viñeta (con Capi ya dibujado), las mascotas y la superficie de madera de la tarjeta, fuera del
+                // hilo principal si AsyncArt. Con el respaldo ya no se pide nada: lo que llegara después se descartaría.
+                _art.RequestBannerArt(inner, sceneH, _water, MeetingWater(_world), _world, AsyncArt, cardW - 16f, ModalKit.SharedSurfaceHeight(cardH - 16f));
             }
 
             y += sceneH + 10f;
             UiBuilder.Place(_place.rectTransform, PadDp, y, inner, placeH);
-            y += placeH;
-            float cardH = Mathf.Ceil(y + PadDp + 4f);
 
             // Rosa: recortada en la línea del agua; su pie (pivote) baja hasta que solo asoma RosaAbove de su alto. La espuma,
             // centrada en la línea del agua sobre el corte del lomo.
@@ -569,7 +590,17 @@ namespace AF.UI
             _pop.pivot = new Vector2(0.5f, 0.5f);
             _pop.sizeDelta = new Vector2(cardW, cardH);
             _pop.anchoredPosition = new Vector2(left + (cardW * 0.5f), -(top + (cardH * 0.5f)));
-            ModalKit.Size(_panel, _surface, _art, 0f, 0f, cardW, cardH, true);
+
+            // La superficie de madera, solo con la tarjeta a la vista: mientras espera su arte, el mismo trabajo la pinta en otro
+            // hilo (StartEntry la pone al entrar); pedirla aquí la pintaría en el hilo principal (T52).
+            _cardW = cardW;
+            _cardH = cardH;
+            UiBuilder.Place(_panel, 0f, 0f, cardW, cardH);
+            if (CardShown)
+            {
+                ApplySurface();
+            }
+
             Apply();
         }
 
@@ -769,10 +800,17 @@ namespace AF.UI
         // La tarjeta empieza a entrar desde t = 0 (con su arte o con el respaldo): lo que esperó, en reloj real.
         private void StartEntry()
         {
+            ApplySurface(); // ya en la caché si llegó el arte (se pintó con él); con el respaldo, aquí
             _artWaitMs = (float)ElapsedMs();
             _ms = 0f;
             SetCardActive(true);
             Apply();
+        }
+
+        // La superficie de madera de la tarjeta colocada: la de la escala de altos compartidos, estirada (ModalKit.Size).
+        private void ApplySurface()
+        {
+            ModalKit.Size(_panel, _surface, _art, 0f, 0f, _cardW, _cardH, true);
         }
 
         // Milisegundos de reloj real desde que el banner pidió su arte (sin asignaciones).
@@ -941,27 +979,40 @@ namespace AF.UI
             _paw.rectTransform.localEulerAngles = new Vector3(0f, 0f, angle);
         }
 
-        // Las medidas de la tarjeta del mundo world en una pantalla de canvasW dp (las mismas para Show y para Prefetch, así que
-        // la petición del arte es la misma): coloca la cabecera «Mundo {n}: {nombre}» (la clave hasta el primer « · ») si cabe a
-        // 24 sp o, si no, «Mundo {n}» con el nombre abriendo la línea del lugar en negrita (así el nombre del mundo nunca pesa
-        // menos que su número); parte el lugar en 1 o 2 líneas; y devuelve el ancho de la tarjeta, el interior, el alto de la
-        // viñeta y el de la línea del lugar.
-        private void Measure(int world, float canvasW, out float cardW, out float inner, out float sceneH, out float placeH)
+        // Las medidas de la tarjeta del mundo world en una pantalla de canvasW dp con la escala de ahora (las mismas para Show y
+        // para Prefetch, así que la petición del arte es la misma): coloca la cabecera «Mundo {n}: {nombre}» (la clave hasta el
+        // primer « · ») si cabe a 24 sp por la escala o, si no, «Mundo {n}» con el nombre abriendo la línea del lugar en negrita
+        // (así el nombre del mundo nunca pesa menos que su número); parte el lugar en 1 o 2 líneas; y devuelve el ancho de la
+        // tarjeta, el interior, el alto de la cabecera (crece con su título, 02 §12: «los contenedores crecen»), el de la viñeta,
+        // el de la línea del lugar y el de la tarjeta.
+        private void Measure(int world, float canvasW, out float cardW, out float inner, out float headerH, out float sceneH, out float placeH, out float cardH)
         {
+            float s = _fontScale;
             cardW = Mathf.Min(LevelCardView.MaxWidthDp, canvasW - (2f * LevelCardView.SideMarginDp));
             inner = cardW - (2f * PadDp);
+            _title.fontSize = TitleSp * s;
             string heading = UiText.WorldHeading(world);
             _nameInTitle = WidthOf(_title, heading) <= inner - (2f * TitleInsetDp) - FitSlackDp;
             SetText(_title, _nameInTitle ? heading : UiText.WorldTitle(world));
             _placeText = _nameInTitle ? UiText.WorldPlace(world) : UiText.WorldPlaceNamed(world);
             string placeRich = _nameInTitle ? _placeText : "<b>" + UiText.WorldName(world) + "</b>" + UiText.WorldSeparator + UiText.WorldPlace(world);
 
+            // Con la escala, la placa de la cabecera crece con ella y, como en la tarjeta previa, al menos hasta el alto de línea de
+            // su título (Baloo 2: ≈ 1,6 veces el tamaño); a 100 % se queda en sus 40 dp de siempre.
+            headerH = HeaderDp;
+            if (s > 1f)
+            {
+                float titleH = Mathf.Ceil(_title.GetPreferredValues(_title.text, float.PositiveInfinity, float.PositiveInfinity).y);
+                headerH = Mathf.Max(HeaderDp * s, titleH + 2f);
+            }
+
             // El lugar, centrado bajo la viñeta, en 1 línea o en 2 cortadas en un « · »; la viñeta crece hasta el alto mínimo.
-            FitPlace(placeRich, inner - FitSlackDp);
+            FitPlace(placeRich, inner - FitSlackDp, s);
             placeH = Mathf.Ceil(_place.GetPreferredValues(_place.text, inner, float.PositiveInfinity).y) + 2f;
-            float sceneY = PadDp + HeaderDp + 8f;
+            float sceneY = PadDp + headerH + 8f;
             float rest = SceneDp + 10f + placeH + PadDp + 4f;
             sceneH = SceneDp + Mathf.Max(0f, MinHeightDp - (sceneY + rest));
+            cardH = Mathf.Ceil(sceneY + sceneH + 10f + placeH + PadDp + 4f);
         }
 
         private static void SetActive(GameObject go, bool active)
@@ -973,12 +1024,12 @@ namespace AF.UI
         }
 
         // La línea del lugar en 1 línea o, si no cabe, en 2 cortadas en el « · » más equilibrado (nunca dentro de un nombre), de
-        // 18 a 15 sp. Asigna (cadenas nuevas), pero solo al colocar el banner.
-        private void FitPlace(string rich, float room)
+        // 18 a 15 sp por la escala scale. Asigna (cadenas nuevas), pero solo al colocar el banner.
+        private void FitPlace(string rich, float room, float scale)
         {
             for (float sp = PlaceSp; sp >= PlaceMinSp; sp -= 1f)
             {
-                _place.fontSize = sp;
+                _place.fontSize = sp * scale;
                 if (WidthOf(_place, rich) <= room)
                 {
                     SetText(_place, rich);

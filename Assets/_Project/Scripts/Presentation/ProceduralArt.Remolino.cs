@@ -108,6 +108,25 @@ namespace AF.Presentation
         /// <summary>Ancho (px de la textura, ≈ 2,2 dp) de la sombra del canto de abajo de la ficha, por dentro del contorno.</summary>
         public const float RemolinoPairTagShadePx = 15f;
 
+        /// <summary>
+        /// Contorno del remolino de la superficie de la cuia tocada (<see cref="RemolinoIntakeFrame"/>; px de la textura, a cada
+        /// lado del trazo): ≈ 1 dp con el remolino de 24-40 dp de ancho (revisión de T52: la espuma marfil sola apenas se leía
+        /// sobre una dosis amarilla o blanca).
+        /// </summary>
+        public const int RemolinoIntakeRimPx = 7;
+
+        /// <summary>Opacidad del contorno del remolino de la superficie (<c>madera_base</c>, <see cref="Palette.FamilyWood"/>) [P].</summary>
+        public const float RemolinoIntakeRimAlpha = 0.45f;
+
+        /// <summary>
+        /// Lo que la imagen del remolino de la superficie es más ancha que su espiral, por el margen del contorno (las fases de
+        /// <see cref="RemolinoIntakeFrame"/> llevan la misma espiral que <see cref="RemolinoSpiralFrame"/> y el contorno alrededor).
+        /// </summary>
+        public const float RemolinoIntakeGrowX = (RemolinoSpiralW + (2 * RemolinoIntakeRimPx)) / (float)RemolinoSpiralW;
+
+        /// <summary>Lo mismo a lo alto (ver <see cref="RemolinoIntakeGrowX"/>).</summary>
+        public const float RemolinoIntakeGrowY = (RemolinoSpiralH + (2 * RemolinoIntakeRimPx)) / (float)RemolinoSpiralH;
+
         // Lienzo de una fase de la espiral (px) con 2 px de margen arriba y abajo para que el filtrado no mezcle fases.
         private const int RemolinoSpiralW = (int)(RemolinoSpiralWidthU * MechanicPxPerU);
         private const int RemolinoSpiralH = (int)(RemolinoSpiralHeightU * MechanicPxPerU) + 4;
@@ -121,6 +140,7 @@ namespace AF.Presentation
         private Sprite? _remolinoDash;
         private Sprite? _remolinoPairTag;
         private Sprite?[]? _remolinoSpiral;
+        private Sprite?[]? _remolinoIntake;
 
         /// <summary>
         /// Cápsula blanca de borde nítido (el lecho del canal): un círculo de <see cref="RemolinoCapsuleRadiusPx"/> px de radio
@@ -176,6 +196,27 @@ namespace AF.Presentation
             {
                 frames = BuildRemolinoSpiral();
                 _remolinoSpiral = frames;
+            }
+
+            return frames[f]!;
+        }
+
+        /// <summary>
+        /// Fase <paramref name="frame"/> del remolino de la superficie de la cuia tocada que se traga el chorro (revisión de T52)
+        /// [P]: la espiral de <see cref="RemolinoSpiralFrame"/> en espuma marfil (<see cref="Palette.UiPaper"/> al 0,7, como en el
+        /// remanso) con un contorno de <see cref="RemolinoIntakeRimPx"/> px de <c>madera_base</c> al
+        /// <see cref="RemolinoIntakeRimAlpha"/> por fuera del trazo, para que se lea sobre cualquier tinte: el marfil sobre los
+        /// oscuros y el contorno sobre los claros (Guanábana, Taperebá). Colores ya puestos: la imagen va en blanco y solo se
+        /// funde con su alfa. La imagen es <see cref="RemolinoIntakeGrowX"/> × <see cref="RemolinoIntakeGrowY"/> veces la espiral.
+        /// </summary>
+        public Sprite RemolinoIntakeFrame(int frame)
+        {
+            int f = ((frame % RemolinoSpiralFrames) + RemolinoSpiralFrames) % RemolinoSpiralFrames;
+            Sprite?[]? frames = _remolinoIntake;
+            if (frames == null || frames[f] == null)
+            {
+                frames = BuildRemolinoIntake();
+                _remolinoIntake = frames;
             }
 
             return frames[f]!;
@@ -328,10 +369,74 @@ namespace AF.Presentation
             return frames;
         }
 
+        // Las fases del remolino de la superficie (RemolinoIntakeFrame) en una textura: la misma espiral que BuildRemolinoSpiral
+        // (mismos rx, ry y fases) en un lienzo con RemolinoIntakeRimPx más a cada lado; el trazo, en espuma marfil, y el mismo
+        // trazo engordado RemolinoIntakeRimPx, en madera_base, solo donde no llega el trazo (el contorno no oscurece la espuma).
+        private Sprite?[] BuildRemolinoIntake()
+        {
+            const int rim = RemolinoIntakeRimPx;
+            const int w = RemolinoSpiralW + (2 * rim);
+            const int h = RemolinoSpiralH + (2 * rim);
+            float maxR = 0.5f * RemolinoSpiralMaxStrokePx;
+            float rx = (RemolinoSpiralW * 0.5f) - maxR - 2f;
+            float ry = (RemolinoSpiralH * 0.5f) - maxR - 2f;
+            float turns = RemolinoSpiralTurns;
+            float startDeg = RemolinoSpiralEndDeg - (turns * 360f);
+            var stroke = new PixelCanvas(w, h * RemolinoSpiralFrames);
+            var wide = new PixelCanvas(w, h * RemolinoSpiralFrames);
+            for (int f = 0; f < RemolinoSpiralFrames; f++)
+            {
+                float phase = (startDeg - (f * (360f / RemolinoSpiralFrames))) * Mathf.Deg2Rad;
+                float cy = (f * h) + (h * 0.5f);
+                DrawRemolinoSpiral(stroke, w * 0.5f, cy, rx, ry, turns, phase);
+                DrawRemolinoSpiral(wide, w * 0.5f, cy, rx, ry, turns, phase, rim);
+            }
+
+            Color foam = Palette.UiPaper;
+            Color wood = Palette.FamilyWood.Base;
+            for (int y = 0; y < wide.Height; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float a = stroke.Get(x, y).a;
+                    float d = wide.Get(x, y).a;
+                    float fa = FoamAlphaOfSpiral * a;
+                    float ra = RemolinoIntakeRimAlpha * Mathf.Max(0f, d - a) * (1f - fa);
+                    float alpha = fa + ra;
+                    if (alpha <= 0f)
+                    {
+                        wide.Set(x, y, Color.clear);
+                        continue;
+                    }
+
+                    Color c = ((foam * fa) + (wood * ra)) / alpha;
+                    c.a = alpha;
+                    wide.Set(x, y, c);
+                }
+            }
+
+            Texture2D tex = wide.ToTexture("remolino_intake");
+            _owned.Add(tex);
+            var frames = new Sprite?[RemolinoSpiralFrames];
+            for (int f = 0; f < RemolinoSpiralFrames; f++)
+            {
+                Sprite sprite = Sprite.Create(tex, new Rect(0f, f * h, w, h), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, Vector4.zero);
+                sprite.name = "remolino_intake_" + f;
+                sprite.hideFlags = HideFlags.DontSave;
+                _owned.Add(sprite);
+                frames[f] = sprite;
+            }
+
+            return frames;
+        }
+
+        // Espuma de la espiral sobre el remanso (la de RemolinoOverlay.FoamAlpha y RemolinoPairFoamAlpha).
+        private const float FoamAlphaOfSpiral = RemolinoPairFoamAlpha;
+
         // Espiral de Arquímedes aplanada (rx × ry) de turns vueltas desde el centro, girada phase radianes, con el trazo de
-        // RemolinoSpiralMinStrokePx en el centro a RemolinoSpiralMaxStrokePx por fuera y afilado a 0 en los últimos
-        // RemolinoSpiralTaperDeg grados.
-        private static void DrawRemolinoSpiral(PixelCanvas pc, float cx, float cy, float rx, float ry, float turns, float phase)
+        // RemolinoSpiralMinStrokePx en el centro a RemolinoSpiralMaxStrokePx por fuera (más extraPx a cada lado) y afilado a 0 en
+        // los últimos RemolinoSpiralTaperDeg grados.
+        private static void DrawRemolinoSpiral(PixelCanvas pc, float cx, float cy, float rx, float ry, float turns, float phase, float extraPx = 0f)
         {
             int steps = Mathf.CeilToInt(turns * 120f);
             float total = turns * 360f;
@@ -343,7 +448,7 @@ namespace AF.Presentation
                 float r = 0.06f + (0.94f * t);
                 var p = new Vector2(cx + (Mathf.Cos(angle) * r * rx), cy + (Mathf.Sin(angle) * r * ry));
                 float taper = Mathf.Clamp01((total * (1f - t)) / RemolinoSpiralTaperDeg);
-                float radius = 0.5f * Mathf.Lerp(RemolinoSpiralMinStrokePx, RemolinoSpiralMaxStrokePx, t) * Mathf.Sqrt(taper);
+                float radius = (0.5f * Mathf.Lerp(RemolinoSpiralMinStrokePx, RemolinoSpiralMaxStrokePx, t) * Mathf.Sqrt(taper)) + extraPx;
                 if (radius >= 0.6f)
                 {
                     pc.FillCapsule(prev.x, prev.y, p.x, p.y, radius, Color.white);

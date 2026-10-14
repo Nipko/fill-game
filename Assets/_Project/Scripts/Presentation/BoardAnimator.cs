@@ -577,8 +577,9 @@ namespace AF.Presentation
         /// <item><description>el traslado, la inclinación y el chorro van siempre a la cuia tocada (D-006);</description></item>
         /// <item><description>el relleno va al receptor; con Barro en su cima, empieza en <c>Count − 1</c>, sobre el barro, que
         /// se ve hasta que llega el chorro (02 §9.1 M5);</description></item>
-        /// <item><description>por un Remolino la cuia tocada no se llena: al terminar el caudal la pareja salta a su estado
-        /// final y, si se sella, con su animación (02 §9.1 M4);</description></item>
+        /// <item><description>por un Remolino la cuia tocada no se llena: se traga el chorro, que se curva hacia el remolino de
+        /// su superficie sin salpicar, con su espiral girando e iluminada (<see cref="RemolinoOverlay.BeginIntake"/>, T52), y al
+        /// terminar el caudal la pareja salta a su estado final y, si se sella, con su animación (02 §9.1 M4);</description></item>
         /// <item><description>con pasos de mecánica (<see cref="MechanicStepPlan"/>), al terminar el caudal la cola de pasos
         /// los ejecuta por etapas (R10 con f′) en la cuia dueña de cada mecánica, y el trabajo deja el origen y la tocada en
         /// <see cref="StepStaging.JobEnd"/>: sin pasos sobre ellas, en su estado final; los pasos que pintan el origen
@@ -1112,6 +1113,13 @@ namespace AF.Presentation
                 {
                     float u = t.Unit;
                     StreamCurve(s, t, out Vector2 lip, out Vector2 control, out Vector2 surface);
+                    if (job.Through)
+                    {
+                        // Por un Remolino (T52), el chorro se curva hacia el remolino que se abre en la superficie de la cuia
+                        // tocada, en su eje (RemolinoOverlay.BeginIntake), y no salpica: se lo traga.
+                        surface = t.SurfaceInContainer();
+                    }
+
                     float head = Mathf.Clamp01((time - job.StreamStart) / StreamGrowMs);
                     float tail = time > job.FlowEnd ? Mathf.Clamp01((time - job.FlowEnd) / Mathf.Max(1f, _timings.TailMs)) : 0f;
                     stream.Draw(lip, control, surface, tail, head, color, StreamWidthStartU * s.Unit, StreamWidthEndU * u);
@@ -1121,8 +1129,9 @@ namespace AF.Presentation
                     }
 
                     // Cada dosis que empieza a caer salpica y agita la superficie del destino: una por dosis (D-005: un
-                    // vertido mueve la racha que cabe; con el encadenado de single, también una por dosis).
-                    if (time >= job.StreamStart + StreamGrowMs)
+                    // vertido mueve la racha que cabe; con el encadenado de single, también una por dosis). Por un Remolino,
+                    // no: el remolino de la superficie se traga el chorro (T52).
+                    if (!job.Through && time >= job.StreamStart + StreamGrowMs)
                     {
                         int due = Mathf.Min(job.Amount, 1 + Mathf.FloorToInt(Mathf.Max(0f, p)));
                         while (job.Splashes < due)
@@ -1141,6 +1150,15 @@ namespace AF.Presentation
                         s.SetTongue(0f, color, job.Tint);
                     }
                 }
+            }
+
+            // Por un Remolino (T52, observación 5 de la prueba del 2026-10-13): desde que la cabeza del chorro llega a la cuia
+            // tocada hasta el final de su cola, su remolino se lo traga (la espiral gira, se ilumina y late, y en su superficie
+            // se abre un remolino). Solo acompaña: no cambia ninguna duración del trabajo.
+            if (job.Through && !job.Intake && !job.IsUndo && time >= job.StreamStart + StreamGrowMs)
+            {
+                job.Intake = true;
+                WhirlOf(job.Target)?.BeginIntake(Mathf.Max(0f, job.StreamEnd - time), StepSpeedBase, ReduceMotion);
             }
 
             if (!job.SrcDone)
@@ -1751,6 +1769,24 @@ namespace AF.Presentation
             {
                 PaintCounters(index);
             }
+
+            EndIntake(ref job);
+        }
+
+        // La cuia tocada deja de tragarse el chorro (T52): al terminar el trabajo o al llevarlo a su final.
+        private void EndIntake(ref Job job)
+        {
+            if (job.Intake)
+            {
+                job.Intake = false;
+                WhirlOf(job.Target)?.EndIntake();
+            }
+        }
+
+        // El overlay del Remolino de la cuia i, o null.
+        private RemolinoOverlay? WhirlOf(int i)
+        {
+            return (uint)i < (uint)_views.Length ? _views[i].OverlayOf(MechanicType.Remolino) as RemolinoOverlay : null;
         }
 
         private void Compact()
@@ -1760,6 +1796,7 @@ namespace AF.Presentation
             {
                 if (_jobs[i].SrcDone && _jobs[i].TgtDone && _jobs[i].ExtraDone && _jobs[i].PlanDone && _jobs[i].Counters == 0)
                 {
+                    EndIntake(ref _jobs[i]);
                     continue;
                 }
 
@@ -1973,6 +2010,7 @@ namespace AF.Presentation
             public int Tint;
             public bool IsUndo;
             public bool Through;
+            public bool Intake; // por un Remolino, la cuia tocada se está tragando el chorro (T52; RemolinoOverlay.BeginIntake)
             public bool OnMud;
             public bool Chainable;
             public int FillBase;

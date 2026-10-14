@@ -30,7 +30,9 @@ namespace AF.UI
     /// o pasan <see cref="WorldBannerView.ArtTimeoutMs"/> de reloj real, sin él (el respaldo de D-012: la tarjeta, la placa y el
     /// texto, con la viñeta del color plano del agua y sin Rosa ni Capi). Así el banner nunca se pierde sin verse. Para que casi
     /// siempre esté ya, se pide antes (<see cref="PrefetchWorldBanner"/>): en la victoria del nivel anterior (el 10, el 40, el 80
-    /// y el 140) y al ofrecer «Jugar» con un nivel que abre mundo (GameBootstrap). Los tests que miden instantes exactos lo piden
+    /// y el 140) y al ofrecer «Jugar» con un nivel que abre mundo (GameBootstrap). El mismo trabajo pinta la superficie de madera
+    /// de la tarjeta (T52, observación 4 de la prueba del 2026-10-13: se pintaba en el hilo principal al abrir el banner, de 66
+    /// a 111 ms en el teléfono, y era eso lo que medía <c>wait_ms</c> al entrar con «Siguiente» aunque el arte ya estuviera). Los tests que miden instantes exactos lo piden
     /// en el acto con <see cref="LaunchOptions.BannerArtSyncOverride"/>; los del respaldo lo fuerzan con
     /// <see cref="LaunchOptions.BannerArtFaultOverride"/> y <see cref="LaunchOptions.BannerArtTimeoutMsOverride"/>.</para>
     /// <para>En desarrollo (los documenta docs/dev/prototipo-v0.md): al abrirse, <c>AF_STATE {"event":"world_banner",…}</c>
@@ -79,6 +81,24 @@ namespace AF.UI
 
         /// <summary>Banners abiertos desde que existe la pantalla (tests: no sale al reintentar ni al reanudar).</summary>
         internal int WorldBannersShown => _worldBannerShown;
+
+        /// <summary>
+        /// Escala de la fuente del sistema para el banner, de 1 a 1,3 (02 §12; pregunta 43; T52), con el mismo mecanismo que la
+        /// de la tarjeta previa (<see cref="CardFontScale"/>; tests y capturas: la escala de Android aún no llega al juego [P]).
+        /// Con el banner abierto, lo vuelve a colocar en el acto.
+        /// </summary>
+        internal float BannerFontScale
+        {
+            get => _worldBanner.FontScale;
+            set
+            {
+                _worldBanner.FontScale = value;
+                if (_worldBanner.Visible)
+                {
+                    _worldBanner.Relayout();
+                }
+            }
+        }
 
         /// <inheritdoc />
         public void OnWorldBanner(int world, int level)

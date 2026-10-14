@@ -69,6 +69,37 @@ namespace AF.Presentation.Mechanics
     /// <c>ShowContent(ctx.After)</c>. La racha va en la raíz de la cuia que recibe; si no es la que dibuja el canal, su raíz
     /// pasa al final de la capa y lleva sus propias franjas de madera, idénticas, para que la racha también pase por detrás de
     /// las repisas.</para>
+    /// <para><b>Lectura del remolino</b> (T52; observación 5 de la prueba del 2026-10-13: desde fuera parecía que se vertía en una
+    /// cuia llena) [P], en la línea de D-003 y de los desbloqueos de Magic Sort, sin cambiar ninguna duración ni el presupuesto
+    /// del vertido y sin ayudas implícitas (D-002): solo se anima lo que ya ocurre, después del toque.</para>
+    /// <list type="bullet">
+    /// <item><description><b>La cuia tocada se traga el chorro</b> (<see cref="BeginIntake"/>, que llama <c>BoardAnimator</c> cuando
+    /// la cabeza del chorro llega, hasta el final de su cola): en su superficie se abre un remolino de espuma
+    /// (<see cref="IntakeSwirlVisible"/>, la misma espiral aplanada con un contorno de <c>madera_base</c> que la hace legible sobre
+    /// cualquier tinte, también la Guanábana blanca: <see cref="ProceduralArt.RemolinoIntakeFrame"/>; revisión de T52) hacia
+    /// cuyo centro, en el eje de la cuia, se curva el chorro, sin salpicar; y su espiral de la base gira deprisa
+    /// (<see cref="IntakeTurnsPerSecond"/>) y se ilumina: la espuma pasa de <see cref="FoamAlpha"/> a <see cref="LitFoamAlpha"/>,
+    /// late hasta <see cref="PulseScale"/> y el remanso entero se aclara hacia el agua del canal (<see cref="PoolLightMix"/>;
+    /// revisión de T52, ronda 2: el brillo aditivo que iba detrás del remanso no se veía). Al acabar el chorro se apaga en
+    /// <see cref="IntakeTailMs"/>, mientras la racha sale por el canal.</description></item>
+    /// <item><description><b>La pareja se ilumina y late al recibir</b>, desde su remolino: durante la recepción su espiral se
+    /// ilumina y late igual (hasta <see cref="PulseScale"/>), con el remanso aclarado (máximo hacia la mitad de la subida), y al
+    /// entrar la racha por el fondo salen las burbujas y <see cref="SparklesBottom"/> destellos en el fondo de la cavidad
+    /// (<see cref="IBoardFx.Sparkles"/>). Sobre su líquido y su cavidad no se pinta nada: la dosis que crece desde abajo es
+    /// la del vertido de siempre. Revisión de T52: se probó a encender la pareja por dentro y se retiró dos veces. En la ronda
+    /// 2, la cavidad teñida del color de la racha se leía como una dosis más, translúcida, y aclaraba la cavidad oscura (D-003;
+    /// VA-06). En la ronda 3, un filo marfil con alfa por dentro de cada pared, sobre el líquido, aclaraba la dosis +15 a +28
+    /// L* y se apilaba con la línea de la pared de la cavidad (guía v2 §2.5, regla 2; §4.1 y §7, «brillos blancos con alfa
+    /// apilados sobre el líquido»), y a tamaño de teléfono no se veía (capturas 94b y 95b reducidas a 0,4).</description></item>
+    /// <item><description><b>Presupuesto de la guía v2 §8</b> (≤ 8 brillos aditivos a la vez, de ≤ 96 × 96 dp): los únicos
+    /// brillos aditivos del Remolino son esos destellos, que pide a <see cref="FxLayer"/> y cuentan en su tope
+    /// (<see cref="FxLayer.MaxAdditive"/>; lo que no cabe se descarta) y en el de 44 partículas. El remanso aclarado es un color
+    /// con alfa normal (<see cref="AdditiveImageCount"/> = 0).</description></item>
+    /// <item><description>Con Reducir movimiento, sin giros, latidos ni partículas: solo los fundidos de la espuma, del remolino
+    /// de la superficie y del remanso, que son entonces la señal de la cuia tocada y de la pareja. Los colores en reposo no
+    /// cambian (<see cref="CollectSurfaceColors"/>): la espuma más clara y el remanso aclarado solo duran lo que el chorro o la
+    /// recepción, como las salpicaduras.</description></item>
+    /// </list>
     /// <para>Sin asignaciones tras <see cref="CuiaOverlay.Attach"/>: piezas, puntos del trazado y buffers fijos; los sprites
     /// se piden en <see cref="OnAttach"/>.</para>
     /// </remarks>
@@ -125,6 +156,12 @@ namespace AF.Presentation.Mechanics
         /// </summary>
         public const float PoolCenterU = -0.10f;
 
+        /// <summary>Ancho del remanso (u).</summary>
+        public const float PoolWidthU = 2.6f;
+
+        /// <summary>Alto del remanso (u).</summary>
+        public const float PoolHeightU = 0.85f;
+
         /// <summary>Vueltas de la espiral durante la recepción [P].</summary>
         public const float SpinTurns = 1.5f;
 
@@ -139,6 +176,41 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>Burbujas de la segunda tanda, a mitad de la subida [P].</summary>
         public const int BubblesSecond = 3;
+
+        /// <summary>Destellos en el fondo de la pareja al entrar la racha (T52) [P].</summary>
+        public const int SparklesBottom = 3;
+
+        /// <summary>Giro de la espiral de la cuia tocada mientras se traga el chorro (vueltas por segundo; T52) [P].</summary>
+        public const float IntakeTurnsPerSecond = 2.5f;
+
+        /// <summary>Opacidad de la espuma de la espiral en su punto más claro, al tragarse el chorro o al recibir (T52) [P].</summary>
+        public const float LitFoamAlpha = 1f;
+
+        /// <summary>
+        /// Lo que crece la espiral al latir, en su punto más claro (T52) [P]: 1,15 (con 1,08, en las capturas 94 y 95 el latido
+        /// apenas se notaba; revisión de T52).
+        /// </summary>
+        public const float PulseScale = 1.15f;
+
+        /// <summary>
+        /// El remanso se aclara mientras la cuia se traga el chorro o recibe (revisión de T52, ronda 2) [P]: su color va de
+        /// <see cref="ProceduralArt.WhirlPoolColor"/> hacia el agua del canal (<see cref="ProceduralArt.RemolinoChannelWater"/>,
+        /// #8FA9AE) hasta esta fracción en lo más claro, con la luz de la espuma. Pinta el remanso entero, con alfa normal: no
+        /// es un brillo aditivo (guía v2 §8: ≤ 8 a la vez, todos en <see cref="FxLayer"/>). En reposo, el color de siempre.
+        /// </summary>
+        public const float PoolLightMix = 0.6f;
+
+        /// <summary>Entrada del brillo y del remolino de la superficie al llegar el chorro (ms; T52) [P].</summary>
+        public const float IntakeFadeMs = 120f;
+
+        /// <summary>Lo que tardan en apagarse tras el chorro (ms, × el factor de los pasos; T52) [P].</summary>
+        public const float IntakeTailMs = 220f;
+
+        /// <summary>Alto máximo del remolino de la superficie (u): el de la cara de arriba del líquido.</summary>
+        public const float IntakeSwirlHeightU = CuiaGeometry.TopFaceU;
+
+        /// <summary>Margen del remolino de la superficie hasta la pared de la cavidad, a cada lado (u).</summary>
+        public const float IntakeSwirlInsetU = 0.1f;
 
         /// <summary>
         /// Alto de la ficha de la pareja (dp) [P]: 13 dp (≈ 2 mm en el teléfono), para que se reconozca de un vistazo y, con
@@ -233,7 +305,13 @@ namespace AF.Presentation.Mechanics
 
         private Image _pool = null!;
         private Image _spiral = null!;
+        private Image _swirl = null!;
         private int _spinFrame;
+        private float _intakeMs = -1f;
+        private float _intakeDuration;
+        private float _intakeTail;
+        private bool _intakeReduce;
+        private float _spiralLight = -1f;
         private Image _pairTag = null!;
         private int _pairDotCount = -1;
         private float _pairU = -1f;
@@ -380,6 +458,116 @@ namespace AF.Presentation.Mechanics
         /// <summary>La recepción por el fondo está en curso.</summary>
         public override bool IsAnimating => _animating;
 
+        /// <summary>
+        /// La cuia se está tragando un chorro (es la tocada de un vertido por el Remolino): su espiral gira, se ilumina y late y
+        /// en su superficie se ve el remolino (<see cref="BeginIntake"/>). No retiene la cola ni cuenta en
+        /// <see cref="IsAnimating"/>: acompaña al vertido.
+        /// </summary>
+        public bool IntakeActive => _intakeMs >= 0f;
+
+        /// <summary>El remolino de la superficie de la cuia tocada está a la vista.</summary>
+        public bool IntakeSwirlVisible => _swirl != null && _swirl.gameObject.activeSelf;
+
+        /// <summary>Opacidad del remolino de la superficie (0 si no se ve).</summary>
+        public float IntakeSwirlAlpha => IntakeSwirlVisible ? _swirl.color.a : 0f;
+
+        /// <summary>Centro del remolino de la superficie en las anclas de la cuia (u sobre el pie; tests).</summary>
+        public Vector2 IntakeSwirlCenterU => _swirl != null && Host.U > 0f ? _swirl.rectTransform.anchoredPosition / Host.U : Vector2.zero;
+
+        /// <summary>Tamaño del remolino de la superficie (u; tests).</summary>
+        public Vector2 IntakeSwirlSizeU => _swirl != null && Host.U > 0f ? _swirl.rectTransform.sizeDelta / Host.U : Vector2.zero;
+
+        /// <summary>Opacidad de la espuma de la espiral de la base: <see cref="FoamAlpha"/> en reposo, más clara al iluminarse.</summary>
+        public float SpiralFoamAlpha => _spiral != null ? _spiral.color.a : 0f;
+
+        /// <summary>Escala de la espiral de la base: 1 en reposo, hasta <see cref="PulseScale"/> al latir.</summary>
+        public float SpiralScale => _spiral != null ? _spiral.rectTransform.localScale.x : 1f;
+
+        /// <summary>
+        /// Lo que el remanso se ha aclarado hacia el agua del canal (0 en reposo, hasta <see cref="PoolLightMix"/>; tests).
+        /// </summary>
+        public float PoolLightNow => _on && _spiralLight > 0f ? PoolLightMix * _spiralLight : 0f;
+
+        /// <summary>Color con el que se pinta ahora el remanso (tests y capturas).</summary>
+        public Color PoolColorNow => _pool != null ? _pool.color : ProceduralArt.WhirlPoolColor;
+
+        /// <summary>
+        /// Imágenes del Remolino con el material aditivo (tests: 0, los brillos aditivos del Remolino son solo los destellos de
+        /// <see cref="FxLayer"/>, que cuentan en su tope de <see cref="FxLayer.MaxAdditive"/>; guía v2 §8).
+        /// </summary>
+        public int AdditiveImageCount
+        {
+            get
+            {
+                Material? additive = UiMaterials.Additive;
+                if (additive == null)
+                {
+                    return 0;
+                }
+
+                int count = 0;
+                count += _pool != null && _pool.material == additive ? 1 : 0;
+                count += _spiral != null && _spiral.material == additive ? 1 : 0;
+                count += _swirl != null && _swirl.material == additive ? 1 : 0;
+                count += _pairTag != null && _pairTag.material == additive ? 1 : 0;
+                return count;
+            }
+        }
+
+        /// <summary>
+        /// La cuia tocada de un vertido por el Remolino empieza a tragarse el chorro (lo llama <c>BoardAnimator</c> cuando la cabeza
+        /// del chorro llega a ella): durante <paramref name="durationMs"/> (hasta el final de su cola) su espiral gira, se ilumina
+        /// y late, y en su superficie se abre el remolino; después se apagan en <see cref="IntakeTailMs"/> ×
+        /// <paramref name="speed"/>. Con <paramref name="reduceMotion"/>, sin giros ni latidos. Sin efecto en la cuia que está
+        /// recibiendo por el fondo. Sin asignaciones.
+        /// </summary>
+        public void BeginIntake(float durationMs, float speed, bool reduceMotion)
+        {
+            if (!_on || _animating || _swirl == null)
+            {
+                return;
+            }
+
+            _intakeMs = 0f;
+            _intakeDuration = Mathf.Max(0f, durationMs);
+            _intakeTail = IntakeTailMs * Mathf.Max(0.01f, speed);
+            _intakeReduce = reduceMotion;
+
+            // El remolino de la superficie: en el eje, sobre la cara de arriba del líquido (el fondo de la cavidad si está
+            // vacía), tan ancho como la cavidad allí con su margen.
+            ICuiaBoard? board = Host.Board;
+            int count = board != null && (uint)Host.Index < (uint)board.Count ? board.ShownCuia(Host.Index).Count : 0;
+            float surface = CuiaGeometry.CavityBottomU + count;
+            float width = 2f * Mathf.Max(0.2f, CuiaGeometry.InnerHalfWidth(surface - 0.01f, Host.Capacity) - IntakeSwirlInsetU);
+            float height = Mathf.Min(IntakeSwirlHeightU, width * (ProceduralArt.RemolinoSpiralHeightU / ProceduralArt.RemolinoSpiralWidthU));
+
+            // La espiral mide width × height; la imagen, algo más, por el contorno (revisión de T52).
+            OverlayParts.Place(_swirl, 0f, surface, width * ProceduralArt.RemolinoIntakeGrowX, height * ProceduralArt.RemolinoIntakeGrowY, Host.U);
+            OverlayParts.SetVisible(_swirl, true);
+            PaintIntake();
+        }
+
+        /// <summary>Apaga en el acto lo que la cuia hacía al tragarse un chorro (fin del vertido, Marea, otro nivel…).</summary>
+        public void EndIntake()
+        {
+            if (_intakeMs < 0f)
+            {
+                return;
+            }
+
+            _intakeMs = -1f;
+            if (_swirl != null)
+            {
+                OverlayParts.SetVisible(_swirl, false);
+            }
+
+            if (!_animating)
+            {
+                SetSpin(0);
+                SetSpiralLight(0f, false);
+            }
+        }
+
         /// <summary>Avance de la recepción en curso (0..1; 0 sin paso).</summary>
         public float ReceiveProgress => _animating && _duration > 0f ? Mathf.Clamp01(_elapsed / _duration) : 0f;
 
@@ -485,6 +673,11 @@ namespace AF.Presentation.Mechanics
         public override void Show(Cuia cuia, bool sealedNow)
         {
             bool on = cuia.Mechanic == MechanicType.Remolino;
+            if (!on)
+            {
+                EndIntake();
+            }
+
             Visible = on;
             _on = on;
             OverlayParts.SetVisible(_pool, on);
@@ -498,7 +691,7 @@ namespace AF.Presentation.Mechanics
         /// <inheritdoc />
         public override void Layout(float u, float heightU)
         {
-            OverlayParts.Place(_pool, 0f, PoolCenterU, 2.6f, 0.85f, u);
+            OverlayParts.Place(_pool, 0f, PoolCenterU, PoolWidthU, PoolHeightU, u);
             OverlayParts.Place(_spiral, 0f, PoolCenterU, ProceduralArt.RemolinoSpiralWidthU, ProceduralArt.RemolinoSpiralHeightU, u);
             SetPairMark(_pairDotCount, u);
         }
@@ -529,6 +722,7 @@ namespace AF.Presentation.Mechanics
                 return 0f;
             }
 
+            EndIntake(); // por si aún se apagaba un chorro anterior: ahora recibe
             _stepBoard = ctx.Board ?? Host.Board;
             _stepFx = ctx.Fx;
             _stepReduce = ctx.ReduceMotion;
@@ -559,6 +753,19 @@ namespace AF.Presentation.Mechanics
         /// <inheritdoc />
         public override void Tick(float dtMs)
         {
+            if (_intakeMs >= 0f)
+            {
+                _intakeMs += dtMs;
+                if (_intakeMs >= _intakeDuration + _intakeTail)
+                {
+                    EndIntake();
+                }
+                else
+                {
+                    PaintIntake();
+                }
+            }
+
             if (!_animating || _finalPainted)
             {
                 return;
@@ -592,6 +799,7 @@ namespace AF.Presentation.Mechanics
             _stepFx = null;
             HideRacha();
             SetSpin(0);
+            SetSpiralLight(0f, false);
 
             // Las franjas de esta cuia solo siguen si dibuja el canal (las de la racha de la otra cuia ya no hacen falta).
             if (_channelShown)
@@ -621,8 +829,15 @@ namespace AF.Presentation.Mechanics
         /// <inheritdoc />
         protected override void OnAttach()
         {
+            // El remanso se aclara él mismo al tragarse el chorro o al recibir (SetSpiralLight; revisión de T52, ronda 2): sin
+            // brillo aditivo aparte, que detrás del remanso no se veía.
             _pool = OverlayParts.NewImage("RemolinoPool", Host.SlotBack, Host.Art.WhirlPool, ProceduralArt.WhirlPoolColor);
             _spiral = OverlayParts.NewImage("RemolinoSpiral", Host.SlotBack, Host.Art.RemolinoSpiralFrame(0), OverlayParts.Fade(Palette.UiPaper, FoamAlpha));
+
+            // El remolino de la superficie de la cuia tocada (T52): en el cuerpo, sobre el líquido, solo mientras se traga un chorro;
+            // con su contorno (revisión de T52), que se pinta ya aquí y no a mitad del primer vertido.
+            _swirl = OverlayParts.NewImage("RemolinoIntakeSwirl", Host.BodyFront, Host.Art.RemolinoIntakeFrame(0), new Color(1f, 1f, 1f, 0f));
+            PreRegister(_swirl); // se ve a mitad de un vertido: sin asignaciones al mostrarlo
             _pairTag = OverlayParts.NewImage("RemolinoPairTag", Host.SlotFront, Host.Art.RemolinoPairTag, Color.white);
             _pairTag.type = Image.Type.Sliced;
             for (int i = 0; i < _pairDots.Length; i++)
@@ -1250,11 +1465,13 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // Un fotograma de la recepción en t (0..1): la racha por el canal, giro de la espiral, la racha por el fondo y burbujas.
+        // Un fotograma de la recepción en t (0..1): la racha por el canal, giro de la espiral (que se ilumina y late, más hacia la
+        // mitad de la subida: T52), la racha por el fondo y burbujas.
         private void PaintReceive(float t)
         {
             PaintRacha(t);
             SetSpin(Mathf.FloorToInt(SpinTurns * ProceduralArt.RemolinoSpiralFrames * Ease.Out(t)));
+            SetSpiralLight(Mathf.Sin(Mathf.PI * Mathf.Clamp01((t - 0.25f) / 0.75f)), !_stepReduce);
             float rise = Mathf.Clamp01((t - FillStart) / (1f - FillStart));
             float p = _stepAmount * Ease.Out(rise);
             ICuiaBoard? board = _stepBoard;
@@ -1308,6 +1525,7 @@ namespace AF.Presentation.Mechanics
             {
                 _bubbles = 1;
                 fx.Bubbles(foot + new Vector2(0f, (CuiaGeometry.CavityBottomU + 0.15f) * u), BubblesFirst, u);
+                fx.Sparkles(foot + new Vector2(0f, (CuiaGeometry.CavityBottomU + 0.25f) * u), Palette.UiPaper, SparklesBottom, u); // destello en el fondo (T52)
             }
 
             if (_bubbles == 1 && t >= SecondBubbles)
@@ -1501,6 +1719,50 @@ namespace AF.Presentation.Mechanics
         {
             float outer = foot + (side * reach);
             return side > 0f ? outer <= hi + 0.01f : outer >= lo - 0.01f;
+        }
+
+        // Un fotograma de la cuia tocada que se traga el chorro (T52): brillo y remolino de la superficie que entran en
+        // IntakeFadeMs y se apagan en la cola; la espiral gira a IntakeTurnsPerSecond y late (sin giro ni latido con Reducir
+        // movimiento).
+        private void PaintIntake()
+        {
+            float t = _intakeMs;
+            float rise = Mathf.Clamp01(t / IntakeFadeMs);
+            float fall = _intakeTail > 0f ? Mathf.Clamp01((_intakeDuration + _intakeTail - t) / _intakeTail) : (t < _intakeDuration ? 1f : 0f);
+            float k = Mathf.Min(rise, fall);
+            int frame = _intakeReduce ? 0 : Mathf.FloorToInt(t * 0.001f * IntakeTurnsPerSecond * ProceduralArt.RemolinoSpiralFrames);
+            SetSpin(frame);
+            SetSpiralLight(k, !_intakeReduce);
+            Sprite swirl = Host.Art.RemolinoIntakeFrame(frame);
+            if (_swirl.sprite != swirl)
+            {
+                _swirl.sprite = swirl;
+            }
+
+            // Espuma y contorno ya van en el sprite (ProceduralArt.RemolinoIntakeFrame): solo se funde.
+            OverlayParts.SetColor(_swirl, new Color(1f, 1f, 1f, k));
+        }
+
+        // Brillo de la espiral de la base (0 = en reposo, 1 = la espuma más clara) y, con pulse, su latido (T52).
+        private void SetSpiralLight(float light, bool pulse)
+        {
+            if (_spiral == null || Mathf.Approximately(light, _spiralLight) && (pulse || Mathf.Approximately(_spiral.rectTransform.localScale.x, 1f)))
+            {
+                return;
+            }
+
+            _spiralLight = light;
+            OverlayParts.SetColor(_spiral, OverlayParts.Fade(Palette.UiPaper, Mathf.Lerp(FoamAlpha, LitFoamAlpha, light)));
+            float k = pulse ? Mathf.Lerp(1f, PulseScale, light) : 1f;
+            var scale = new Vector3(k, k, 1f);
+            if (_spiral.rectTransform.localScale != scale)
+            {
+                _spiral.rectTransform.localScale = scale;
+            }
+
+            // El remanso se aclara hacia el agua del canal con la luz de la espuma (también con Reducir movimiento: es un
+            // fundido); con light = 0, el color de siempre.
+            OverlayParts.SetColor(_pool, Color.Lerp(ProceduralArt.WhirlPoolColor, ProceduralArt.RemolinoChannelWater, PoolLightMix * Mathf.Clamp01(light)));
         }
 
         // Giro de la espiral: la fase frame (30° cada una, en el sentido de las agujas del reloj); 0 en reposo.

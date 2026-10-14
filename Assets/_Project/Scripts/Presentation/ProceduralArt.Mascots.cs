@@ -243,7 +243,8 @@ namespace AF.Presentation
 
         /// <summary>
         /// Tiempo de CPU (ms) de pintar las piezas del banner desde la última liberación (las mascotas y la viñeta con Capi, en
-        /// píxeles): en un hilo del grupo si se pidieron con <see cref="RequestBannerArt"/> en asíncrono, o en el hilo principal.
+        /// píxeles, y desde T52 la superficie de madera de su tarjeta si no estaba): en un hilo del grupo si se pidieron con
+        /// <see cref="RequestBannerArt"/> en asíncrono, o en el hilo principal.
         /// Mide lo que espera el banner antes de entrar; la vista lo lleva al <c>AF_STATE world_banner_art</c> como
         /// <c>mascots_ms</c> para medirlo en el teléfono.
         /// </summary>
@@ -319,12 +320,29 @@ namespace AF.Presentation
         /// false o lanza <see cref="System.NotSupportedException"/>, como en <c>ProfileWriter.Start</c>), no se pinta en el hilo
         /// principal: queda <see cref="BannerArtFailure.Queue"/> y la vista entra sin arte. Sin <paramref name="offMainThread"/>,
         /// en el acto. Si ya está pedido o hecho con las mismas medidas, no hace nada; otra petición pendiente se cancela.
+        /// <para>Con <paramref name="surfaceWidthDp"/> × <paramref name="surfaceHeightDp"/> &gt; 0, el mismo trabajo pinta la
+        /// superficie de madera de la tarjeta (<see cref="ModalSurfaceFor"/>) si aún no está en la caché, y
+        /// <see cref="TryTakeBannerArt"/> la deja en ella: así abrir el banner tampoco la pinta en el hilo principal (T52,
+        /// observación 4 de la prueba del 2026-10-13: costaba 66-111 ms en el teléfono y unos 220 ms en el Editor, y era lo que
+        /// medía <c>wait_ms</c> al entrar con «Siguiente» aunque el arte ya estuviera pintado).</para>
         /// </summary>
-        public void RequestBannerArt(float widthDp, float heightDp, Color water, Color? meetWater, int seed, bool offMainThread)
+        public void RequestBannerArt(float widthDp, float heightDp, Color water, Color? meetWater, int seed, bool offMainThread, float surfaceWidthDp = 0f, float surfaceHeightDp = 0f)
         {
             int w = Mathf.RoundToInt(widthDp * BannerScenePxPerDp);
             int h = Mathf.RoundToInt(heightDp * BannerScenePxPerDp);
             string key = BannerSceneKey(w, h, water, meetWater, seed);
+            int surfaceKey = 0;
+            int surfaceW = 0;
+            int surfaceH = 0;
+            if (surfaceWidthDp > 0f && surfaceHeightDp > 0f)
+            {
+                surfaceKey = ModalSurfaceKey(surfaceWidthDp, surfaceHeightDp, out surfaceW, out surfaceH);
+                if (_surfaces.ContainsKey(surfaceKey))
+                {
+                    surfaceW = 0; // ya está: nada que pintar
+                    surfaceH = 0;
+                }
+            }
             BannerArtJob? pending = _bannerJob;
             if (pending != null && pending.Key == key)
             {
@@ -346,7 +364,7 @@ namespace AF.Presentation
             AbandonBannerArt(); // otra petición con otras medidas: la anterior para y se descarta
             BannerArtFailure = BannerArtFailure.None;
             var job = new BannerArtJob(key, w, h, water, meetWater, seed, _capiPaw == null, _rosa == null, _rosaSpray == null,
-                _rosaRipple == null, _rosaFoam == null, BannerArtFault);
+                _rosaRipple == null, _rosaFoam == null, BannerArtFault, surfaceKey, surfaceW, surfaceH);
             _bannerJob = job;
             if (offMainThread)
             {
@@ -402,6 +420,11 @@ namespace AF.Presentation
             _rosaSpray = _rosaSpray != null ? _rosaSpray : SpraySprite(job.Spray!);
             _rosaRipple = _rosaRipple != null ? _rosaRipple : RippleSprite(job.Ripple!);
             _rosaFoam = _rosaFoam != null ? _rosaFoam : FoamSprite(job.Foam!);
+            if (job.Surface != null)
+            {
+                AdoptModalSurface(job.SurfaceKey, job.SurfaceWidthDp, job.SurfaceHeightDp, job.Surface);
+            }
+
             watch.Stop();
             MascotsMs += job.RasterMs;
             MascotsMainMs += watch.Elapsed.TotalMilliseconds;
@@ -1664,8 +1687,11 @@ namespace AF.Presentation
             private volatile bool _cancelled;
 
             public BannerArtJob(string key, int w, int h, Color water, Color? meet, int seed, bool paw, bool rosa, bool spray,
-                bool ripple, bool foam, BannerArtFault fault)
+                bool ripple, bool foam, BannerArtFault fault, int surfaceKey, int surfaceWidthDp, int surfaceHeightDp)
             {
+                SurfaceKey = surfaceKey;
+                SurfaceWidthDp = surfaceWidthDp;
+                SurfaceHeightDp = surfaceHeightDp;
                 Key = key;
                 _w = w;
                 _h = h;
@@ -1700,6 +1726,15 @@ namespace AF.Presentation
             public BannerPixels? Ripple { get; private set; }
 
             public BannerPixels? Foam { get; private set; }
+
+            /// <summary>Superficie de madera de la tarjeta (<see cref="ModalSurfaceFor"/>), o null si no se pidió o ya estaba.</summary>
+            public BannerPixels? Surface { get; private set; }
+
+            public int SurfaceKey { get; }
+
+            public int SurfaceWidthDp { get; }
+
+            public int SurfaceHeightDp { get; }
 
             public double RasterMs { get; private set; }
 
@@ -1739,11 +1774,15 @@ namespace AF.Presentation
                     BannerPixels? spray = _spray && !_cancelled ? new BannerPixels(DrawRosaSpray()) : null;
                     BannerPixels? ripple = _ripple && !_cancelled ? new BannerPixels(DrawRosaRipple()) : null;
                     BannerPixels? foam = _foam && !_cancelled ? new BannerPixels(DrawRosaFoam()) : null;
+                    BannerPixels? surface = SurfaceWidthDp > 0 && SurfaceHeightDp > 0 && !_cancelled
+                        ? new BannerPixels(PaintModalSurface(SurfaceWidthDp, SurfaceHeightDp))
+                        : null;
                     if (_cancelled)
                     {
                         return;
                     }
 
+                    Surface = surface;
                     Scene = sceneOut;
                     Paw = paw;
                     Rosa = rosa;

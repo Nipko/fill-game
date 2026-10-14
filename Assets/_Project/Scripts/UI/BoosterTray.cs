@@ -202,6 +202,19 @@ namespace AF.UI
         /// <summary>Etiqueta de precio de Cuia extra (tests de solapes).</summary>
         public RectTransform ExtraPriceRect => _extra.PriceRect;
 
+        /// <summary>
+        /// Borde de arriba (dp desde arriba del lienzo) del aviso «Te faltan {n}» más alto a la vista, de cualquier ranura: lo
+        /// que el aviso del tablero no debe tapar (GameScreen.Notices.cs, T52). False si no se ve ninguno. Sin asignaciones.
+        /// </summary>
+        public bool TryGetMissingTop(out float top)
+        {
+            top = float.PositiveInfinity;
+            _undo.MinMissingTop(ref top);
+            _extra.MinMissingTop(ref top);
+            _reveal.MinMissingTop(ref top);
+            return !float.IsPositiveInfinity(top);
+        }
+
         public void Bind(LevelFlow flow, GameServices? services)
         {
             _flow = flow;
@@ -676,6 +689,15 @@ namespace AF.UI
             public TextMeshProUGUI MissingLabel => _missingText;
 
             public RectTransform PriceRect => _price.Root;
+
+            // El borde de arriba de su aviso «Te faltan {n}», si se ve y está más alto que top (dp desde arriba).
+            public void MinMissingTop(ref float top)
+            {
+                if (_missing.gameObject.activeInHierarchy)
+                {
+                    top = Mathf.Min(top, -_missing.anchoredPosition.y);
+                }
+            }
 
             public void SetActive(bool active)
             {

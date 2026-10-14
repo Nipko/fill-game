@@ -850,6 +850,7 @@ namespace AF.UI
             LabelsTick(dtMs);
             CardsTick(dtMs);
             RevealTick(dtMs);
+            PlaceToast(false); // con la bandeja ya repintada: el aviso no tapa sus burbujas «Te faltan {n}» (GameScreen.Notices.cs)
         }
 
         /// <summary>Vuelta de segundo plano (02 §14): la vista salta al modelo sin animar.</summary>
@@ -1171,6 +1172,11 @@ namespace AF.UI
             LevelFlow flow = RequireFlow();
             _intro.Clear();
             _skipCatcher.gameObject.SetActive(false);
+            if (IsFunnelModal(phase))
+            {
+                HideNoticesForModal();
+            }
+
             if (phase == FlowPhase.GiveUpConfirm)
             {
                 ShowFunnelBackdrop();
@@ -1198,6 +1204,7 @@ namespace AF.UI
         /// <inheritdoc />
         public void OnStuckModalOpened()
         {
+            HideNoticesForModal(); // pregunta 42 (b): el aviso que se veía se oculta y no vuelve (GameScreen.Notices.cs)
             _animator.SnapAll();
             _ambient.SetSuspended(true);
             _stuckOverlay.gameObject.SetActive(true);
@@ -1247,6 +1254,11 @@ namespace AF.UI
             LevelFlow flow = RequireFlow();
             _pause.Hide();
             _confirm.Hide();
+            if (IsFunnelModal(phase))
+            {
+                HideNoticesForModal(); // pregunta 42 (b): nada del aviso que se veía detrás del modal (GameScreen.Notices.cs)
+            }
+
             switch (phase)
             {
                 case FlowPhase.GiveUpConfirm:

@@ -49,6 +49,19 @@ namespace AF.Presentation
         public bool Painted { get; }
     }
 
+    /// <summary>Dónde se pintó una superficie de modal de la caché (<see cref="ProceduralArt.ModalSurfaceOriginOf"/>; tests).</summary>
+    public enum ModalSurfaceOrigin
+    {
+        /// <summary>No está en la caché.</summary>
+        None,
+
+        /// <summary>La pintó <see cref="ProceduralArt.ModalSurfaceFor"/> en el hilo principal.</summary>
+        MainThread,
+
+        /// <summary>La pintó otro hilo (el trabajo del arte del banner de mundo) y el hilo principal solo creó la textura.</summary>
+        OtherThread,
+    }
+
     public sealed partial class ProceduralArt
     {
         /// <summary>Canto visible de un botón en reposo (guía 5.1).</summary>
@@ -59,6 +72,10 @@ namespace AF.Presentation
 
         private readonly Dictionary<int, Sprite> _trays = new Dictionary<int, Sprite>();
         private readonly Dictionary<int, Sprite> _surfaces = new Dictionary<int, Sprite>();
+        private readonly Dictionary<int, ModalSurfaceOrigin> _surfaceOrigin = new Dictionary<int, ModalSurfaceOrigin>();
+
+        // Resolución de la superficie de los modales (px por dp).
+        private const float ModalSurfacePxPerDp = 1.5f;
 
         /// <summary>CTA de la familia Hoja (Siguiente): cara de 50 dp + canto de 6 (56, 02 §3.3), 9-slice horizontal.</summary>
         public ReliefSprites CtaLeaf { get; private set; } = null!;
@@ -92,16 +109,65 @@ namespace AF.Presentation
         /// </summary>
         public Sprite ModalSurfaceFor(float widthDp, float heightDp)
         {
-            int w = Mathf.Max(8, Mathf.RoundToInt(widthDp));
-            int h = Mathf.Max(8, Mathf.RoundToInt(heightDp));
-            int key = (w * 4096) + h;
+            int key = ModalSurfaceKey(widthDp, heightDp, out int w, out int h);
             if (!_surfaces.TryGetValue(key, out Sprite? sprite))
             {
                 sprite = BuildModalSurface(w, h);
                 _surfaces[key] = sprite;
+                _surfaceOrigin[key] = ModalSurfaceOrigin.MainThread;
             }
 
             return sprite;
+        }
+
+        /// <summary>
+        /// La superficie de <see cref="ModalSurfaceFor"/> de esas medidas ya está generada (no costará nada pedirla; tests del
+        /// banner de mundo, que la pinta en otro hilo con su arte: <see cref="RequestBannerArt"/>).
+        /// </summary>
+        public bool HasModalSurface(float widthDp, float heightDp)
+        {
+            return _surfaces.ContainsKey(ModalSurfaceKey(widthDp, heightDp, out _, out _));
+        }
+
+        /// <summary>
+        /// Dónde se pintó la superficie de esas medidas que está en la caché (tests: el banner de mundo no debe pintar la suya en
+        /// el hilo principal al abrirse, T52): <see cref="ModalSurfaceOrigin.None"/> si no está.
+        /// </summary>
+        public ModalSurfaceOrigin ModalSurfaceOriginOf(float widthDp, float heightDp)
+        {
+            int key = ModalSurfaceKey(widthDp, heightDp, out _, out _);
+            return _surfaces.ContainsKey(key) && _surfaceOrigin.TryGetValue(key, out ModalSurfaceOrigin origin) ? origin : ModalSurfaceOrigin.None;
+        }
+
+        /// <summary>
+        /// Solo para tests: saca de la caché la superficie de esas medidas sin destruirla (la sigue llevando lo generado, que la
+        /// destruye en <see cref="Dispose"/>, y quien ya la usa la conserva), para que la siguiente petición parta de cero aunque
+        /// otro test de la sesión ya la hubiera generado en este arte compartido. True si estaba.
+        /// </summary>
+        public bool ForgetModalSurface(float widthDp, float heightDp)
+        {
+            int key = ModalSurfaceKey(widthDp, heightDp, out _, out _);
+            _surfaceOrigin.Remove(key);
+            return _surfaces.Remove(key);
+        }
+
+        // Clave de la caché de superficies y sus medidas en dp enteros (las de ModalSurfaceFor).
+        private static int ModalSurfaceKey(float widthDp, float heightDp, out int w, out int h)
+        {
+            w = Mathf.Max(8, Mathf.RoundToInt(widthDp));
+            h = Mathf.Max(8, Mathf.RoundToInt(heightDp));
+            return (w * 4096) + h;
+        }
+
+        // La superficie que pintó otro hilo (el arte del banner de mundo, RequestBannerArt), a la caché si aún no está: el hilo
+        // principal solo crea la textura.
+        private void AdoptModalSurface(int key, int w, int h, BannerPixels px)
+        {
+            if (!_surfaces.ContainsKey(key))
+            {
+                _surfaces[key] = MakeSprite32(px, ModalSurfaceName(w, h), new Vector2(0.5f, 0.5f), ModalSurfacePxPerDp);
+                _surfaceOrigin[key] = ModalSurfaceOrigin.OtherThread;
+            }
         }
 
         /// <summary>Cinta-hoja de victoria, 344 × 72 dp (ranura <c>ui_cinta_hoja</c>; guía 5.5 con la revisión visual del 2026-10-07).</summary>
@@ -468,7 +534,28 @@ namespace AF.Presentation
 
         private Sprite BuildModalSurface(int widthDp, int heightDp)
         {
-            const float k = 1.5f;
+            return MakeSprite(PaintModalSurface(widthDp, heightDp), ModalSurfaceName(widthDp, heightDp), new Vector2(0.5f, 0.5f), Vector4.zero, ModalSurfacePxPerDp);
+        }
+
+        private static string ModalSurfaceName(int widthDp, int heightDp)
+        {
+            return "modal_surface_" + widthDp + "x" + heightDp;
+        }
+
+        /// <summary>
+        /// Píxeles de la superficie de <see cref="ModalSurfaceFor"/> de <paramref name="widthDp"/> × <paramref name="heightDp"/> dp
+        /// (enteros), de abajo arriba, sin crear ninguna textura (tests: la veta que se pinta en otro hilo es la de siempre).
+        /// </summary>
+        public static Color32[] ModalSurfacePixels(int widthDp, int heightDp)
+        {
+            return PaintModalSurface(widthDp, heightDp).ToColor32();
+        }
+
+        // Los píxeles de la superficie (ver ModalSurfaceFor): solo cuentas con Color, Mathf y ArtNoise sobre un PixelCanvas
+        // propio, así que también se pinta en otro hilo (el arte del banner de mundo, ProceduralArt.Mascots.cs).
+        private static PixelCanvas PaintModalSurface(int widthDp, int heightDp)
+        {
+            const float k = ModalSurfacePxPerDp;
             int w = Mathf.RoundToInt(widthDp * k);
             int h = Mathf.RoundToInt(heightDp * k);
             var pc = new PixelCanvas(w, h);
@@ -484,23 +571,45 @@ namespace AF.Presentation
                 yLine += 7f + (ArtNoise.Hash(lines, 3, 557) * 4f);
             }
 
+            // Periodo de la ondulación y tono de cada línea, una vez por línea (T52: antes, una vez por píxel y línea).
+            float[] period = new float[maxLines];
+            float[] tone = new float[maxLines];
+            for (int i = 0; i < lines; i++)
+            {
+                period[i] = 40f + (ArtNoise.Hash(i, 5, 557) * 40f);
+                tone[i] = Mathf.Lerp(0.94f, 0.96f, ArtNoise.Hash(i, 7, 557));
+            }
+
+            // En cada fila solo cuentan las líneas a menos de 1,2 dp + la ondulación (±1,5 dp): las demás nunca llegan a la
+            // fila, así que se saltan sin cambiar ningún píxel (T52: la superficie de 328 × 281 dp costaba ≈ 220 ms en el
+            // Editor recorriendo todas las líneas en cada píxel).
+            int[] near = new int[maxLines];
             for (int y = 0; y < h; y++)
             {
                 float yd = heightDp - ((y + 0.5f) / k); // dp desde arriba
                 float t = Mathf.Clamp01(yd / heightDp);
                 Color baseC = Color.Lerp(Palette.PanelLight, Palette.PanelLightLow, t);
+                int nearCount = 0;
+                for (int i = 0; i < lines; i++)
+                {
+                    if (Mathf.Abs(yd - lineY[i]) < 2.75f)
+                    {
+                        near[nearCount++] = i;
+                    }
+                }
+
                 for (int x = 0; x < w; x++)
                 {
                     float xd = (x + 0.5f) / k;
                     float mult = 1f;
-                    for (int i = 0; i < lines; i++)
+                    for (int n = 0; n < nearCount; n++)
                     {
-                        float wave = 1.5f * Mathf.Sin((xd / (40f + (ArtNoise.Hash(i, 5, 557) * 40f))) * Mathf.PI * 2f + i);
+                        int i = near[n];
+                        float wave = 1.5f * Mathf.Sin((xd / period[i]) * Mathf.PI * 2f + i);
                         float d = Mathf.Abs(yd - (lineY[i] + wave));
                         if (d < 1.2f)
                         {
-                            float m = Mathf.Lerp(0.94f, 0.96f, ArtNoise.Hash(i, 7, 557));
-                            mult = Mathf.Min(mult, Mathf.Lerp(m, 1f, d / 1.2f));
+                            mult = Mathf.Min(mult, Mathf.Lerp(tone[i], 1f, d / 1.2f));
                         }
                     }
 
@@ -513,7 +622,7 @@ namespace AF.Presentation
                 }
             }
 
-            return MakeSprite(pc, "modal_surface_" + widthDp + "x" + heightDp, new Vector2(0.5f, 0.5f), Vector4.zero, k);
+            return pc;
         }
 
         private Sprite BuildRibbon()

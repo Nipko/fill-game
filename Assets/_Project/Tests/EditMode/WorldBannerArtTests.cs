@@ -126,6 +126,102 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void BannerArt_PaintsTheCardSurfaceOffTheMainThread_TheMainThreadStillFitsTheFrame()
+        {
+            // T52 (observación 4 de la prueba del 2026-10-13): la superficie de madera de la tarjeta del banner (328 × 281 dp, la
+            // compartida) se pintaba en el hilo principal al abrirlo (≈ 220 ms en el Editor, 66-111 ms en el teléfono). Ahora la
+            // pinta el mismo trabajo del arte y el hilo principal solo la sube con el resto, dentro de los 8 ms; queda en la caché
+            // de superficies (no se suelta con el arte del banner: la comparten las tarjetas previas).
+            const float surfaceW = LevelCardView.MaxWidthDp - 16f;
+            const float surfaceH = 281f;
+            double bestMain = double.MaxValue;
+            string bestLine = string.Empty;
+            for (int round = 0; round < 3; round++)
+            {
+                var art = new ProceduralArt("white");
+                try
+                {
+                    Assert.That(art.HasModalSurface(surfaceW, surfaceH), Is.False);
+                    var watch = Stopwatch.StartNew();
+                    art.RequestBannerArt(Inner, SceneH, Palette.WaterBlack, WorldBannerView.MeetingWater(3), 3, true, surfaceW, surfaceH);
+                    watch.Stop();
+                    double request = watch.Elapsed.TotalMilliseconds;
+                    Assert.That(art.WaitForBannerArt(30000), Is.True, "el hilo termina");
+                    Assert.That(art.HasModalSurface(surfaceW, surfaceH), Is.False, "nada hasta recogerlo en el hilo principal");
+                    Assert.That(art.TryTakeBannerArt(), Is.True);
+                    Assert.That(art.HasModalSurface(surfaceW, surfaceH), Is.True, "la superficie llega con el arte");
+                    Sprite surface = art.ModalSurfaceFor(surfaceW, surfaceH);
+                    Assert.That(surface.texture.width, Is.EqualTo(Mathf.RoundToInt(surfaceW * 1.5f)));
+                    Assert.That(surface.texture.height, Is.EqualTo(Mathf.RoundToInt(surfaceH * 1.5f)));
+                    Assert.That(surface.texture.isReadable, Is.False, "subida a la GPU sin copia en la CPU");
+                    double main = request + art.MascotsMainMs;
+                    string line = "main=" + Ms(main) + " (pedir " + Ms(request) + ") raster=" + Ms(art.MascotsMs);
+                    Debug.Log("AF_ART banner+surface round " + round.ToString(CultureInfo.InvariantCulture) + ": " + line);
+                    if (main < bestMain)
+                    {
+                        bestMain = main;
+                        bestLine = line;
+                    }
+
+                    art.ReleaseBannerArt();
+                    Assert.That(art.HasModalSurface(surfaceW, surfaceH), Is.True, "la superficie se queda en la caché de la sesión");
+                    Assert.That(art.ModalSurfaceFor(surfaceW, surfaceH), Is.SameAs(surface));
+
+                    // Con la superficie ya en la caché, otra petición no la vuelve a pintar.
+                    art.RequestBannerArt(Inner, SceneH, Palette.WaterBlack, WorldBannerView.MeetingWater(3), 3, true, surfaceW, surfaceH);
+                    Assert.That(art.WaitForBannerArt(30000) && art.TryTakeBannerArt(), Is.True);
+                    Assert.That(art.ModalSurfaceFor(surfaceW, surfaceH), Is.SameAs(surface), "la misma de antes");
+                    art.ReleaseBannerArt();
+                }
+                finally
+                {
+                    art.Dispose();
+                }
+            }
+
+            Assert.That(bestMain, Is.LessThanOrEqualTo(MainBudgetMs), "arte del banner con la superficie, en el hilo principal (ms): " + bestLine);
+            Assert.That(_warnings, Is.Empty, "sin avisos");
+        }
+
+        [TestCase(328, 281)]
+        [TestCase(296, 144)]
+        [TestCase(120, 90)]
+        public void ModalSurface_PaintedFaster_SamePixelsAsBefore(int widthDp, int heightDp)
+        {
+            // T52: la veta de la superficie de madera solo recorre, en cada fila, las líneas que pueden llegar a ella (a menos de
+            // 1,2 dp más su ondulación de ±1,5): exactamente los mismos píxeles que recorriendo todas las líneas en cada píxel. Y el
+            // periodo y el tono de cada línea, calculados una vez por línea, solo cambian el redondeo de la coma flotante (el JIT
+            // del Editor guarda los intermedios con más precisión): como mucho 1/255 en algún píxel suelto frente al código de
+            // antes.
+            Color32[] fast = ProceduralArt.ModalSurfacePixels(widthDp, heightDp);
+            Color32[] allLines = ReferenceModalSurface(widthDp, heightDp, true);
+            Color32[] before = ReferenceModalSurface(widthDp, heightDp, false);
+            Assert.That(fast.Length, Is.EqualTo(allLines.Length));
+            Assert.That(fast.Length, Is.EqualTo(before.Length));
+            int differ = 0;
+            int rounding = 0;
+            int worst = 0;
+            for (int i = 0; i < fast.Length; i++)
+            {
+                if (!fast[i].Equals(allLines[i]))
+                {
+                    differ++;
+                }
+
+                int d = Mathf.Max(Mathf.Max(Mathf.Abs(fast[i].r - before[i].r), Mathf.Abs(fast[i].g - before[i].g)), Mathf.Abs(fast[i].b - before[i].b));
+                if (d > 0 || fast[i].a != before[i].a)
+                {
+                    rounding++;
+                    worst = Mathf.Max(worst, d);
+                }
+            }
+
+            Assert.That(differ, Is.EqualTo(0), "saltar las líneas lejanas no cambia ningún píxel (de " + fast.Length + ")");
+            Assert.That(worst, Is.LessThanOrEqualTo(1), "frente al código de antes, como mucho 1/255 por canal");
+            Assert.That(rounding, Is.LessThanOrEqualTo(fast.Length / 10000), "y en algún píxel suelto (" + rounding + " de " + fast.Length + ")");
+        }
+
+        [Test]
         [Explicit("Rendimiento: lo que tarda en pintarse el arte depende de la máquina (RasterBudgetMs [P], medido en el Editor).")]
         [Category("Performance")]
         public void BannerArt_Raster_FitsItsBudget()
@@ -336,6 +432,76 @@ namespace AF.Tests.EditMode
         private static string Ms(double ms)
         {
             return ms.ToString("0.0", CultureInfo.InvariantCulture);
+        }
+
+        // La superficie de madera recorriendo todas las líneas de veta en cada píxel, con el mismo hash: con perLine, con el
+        // periodo y el tono calculados una vez por línea (como ahora); sin él, en cada píxel (el código de antes de T52).
+        private static Color32[] ReferenceModalSurface(int widthDp, int heightDp, bool perLine)
+        {
+            const float k = 1.5f;
+            int w = Mathf.RoundToInt(widthDp * k);
+            int h = Mathf.RoundToInt(heightDp * k);
+            var px = new Color32[w * h];
+            const int maxLines = 64;
+            float[] lineY = new float[maxLines];
+            int lines = 0;
+            float yLine = 4f;
+            while (yLine < heightDp && lines < maxLines)
+            {
+                lineY[lines++] = yLine;
+                yLine += 7f + (Hash(lines, 3, 557) * 4f);
+            }
+
+            float[] period = new float[maxLines];
+            float[] tone = new float[maxLines];
+            for (int i = 0; i < lines; i++)
+            {
+                period[i] = 40f + (Hash(i, 5, 557) * 40f);
+                tone[i] = Mathf.Lerp(0.94f, 0.96f, Hash(i, 7, 557));
+            }
+
+            for (int y = 0; y < h; y++)
+            {
+                float yd = heightDp - ((y + 0.5f) / k);
+                float t = Mathf.Clamp01(yd / heightDp);
+                Color baseC = Color.Lerp(Palette.PanelLight, Palette.PanelLightLow, t);
+                for (int x = 0; x < w; x++)
+                {
+                    float xd = (x + 0.5f) / k;
+                    float mult = 1f;
+                    for (int i = 0; i < lines; i++)
+                    {
+                        float wave = perLine
+                            ? 1.5f * Mathf.Sin((xd / period[i]) * Mathf.PI * 2f + i)
+                            : 1.5f * Mathf.Sin((xd / (40f + (Hash(i, 5, 557) * 40f))) * Mathf.PI * 2f + i);
+                        float d = Mathf.Abs(yd - (lineY[i] + wave));
+                        if (d < 1.2f)
+                        {
+                            float m = perLine ? tone[i] : Mathf.Lerp(0.94f, 0.96f, Hash(i, 7, 557));
+                            mult = Mathf.Min(mult, Mathf.Lerp(m, 1f, d / 1.2f));
+                        }
+                    }
+
+                    var c = new Color(baseC.r * mult, baseC.g * mult, baseC.b * mult, 1f);
+                    float lustre = Mathf.Clamp01(1f - (yd / Mathf.Max(12f, heightDp * 0.3f)));
+                    c = Color.Lerp(c, Color.white, 0.08f * lustre);
+                    px[(y * w) + x] = c;
+                }
+            }
+
+            return px;
+        }
+
+        // ArtNoise.Hash (interno de AF.Presentation), copiado tal cual.
+        private static float Hash(int x, int y, int seed)
+        {
+            unchecked
+            {
+                uint hh = (uint)((x * 374761393) + (y * 668265263) + (seed * 1442695041));
+                hh = (hh ^ (hh >> 13)) * 1274126177u;
+                hh ^= hh >> 16;
+                return (hh & 0x00FFFFFF) / 16777216f;
+            }
         }
 
         private void OnLog(string condition, string stackTrace, LogType type)
