@@ -349,7 +349,8 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow.Session.Current[MurkyCuia106].HiddenMask, Is.EqualTo(0));
             StepUntilRevealDone(boot, 5000);
 
-            // Sin fill: el video no aparece; sin saldo, el precio en rojo con «Te faltan {n}», y tocar avisa sin cobrar.
+            // Sin fill: el video no aparece; sin saldo, el precio en rojo con «Te faltan {n}», y tocar no cobra ni saca aviso:
+            // responde la burbuja (pregunta 48 (b), D-022).
             LaunchOptions.AdFillOverride = FakeAdFill.NoFill;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(50));
             yield return LoadPlayingWithStore(Level106);
@@ -362,7 +363,9 @@ namespace AF.Tests.PlayMode
             presented = FunnelSetup.AdsPresenter.Presented;
             Assert.That(boot.PressRevealVideo(), Is.False);
             Assert.That(boot.PressReveal(), Is.False);
-            Assert.That(view.ToastText, Is.EqualTo(UiText.RevealMissing(70)), "«Te faltan 70 semillas»");
+            Assert.That(view.ToastText, Is.Null, "sin aviso del tablero (pregunta 48 b)");
+            Assert.That(view.NoticesQueued, Is.EqualTo(0));
+            Assert.That(view.Tray.RevealMissingPulsing, Is.True, "responde la burbuja «Te faltan 70»");
             Assert.That(boot.Flow!.RevealSelecting, Is.False);
             Assert.That(boot.Wallet!.Seeds, Is.EqualTo(50), "ningún cobro");
             Assert.That(boot.Wallet.Stock.Get(BoosterKind.Reveal), Is.EqualTo(0));

@@ -167,14 +167,13 @@ namespace AF.UI
             y += 50f;
             UiBuilder.Place(_canoe.rectTransform, (width - 110f) * 0.5f, y, 110f, 65f);
             y += 68f;
-            UiBuilder.Place(_timer.rectTransform, 16f, y, inner, 24f);
-            y += 32f;
+            y += ModalKit.PlaceLine(_timer, 16f, y, inner, 24f) + 8f;
 
             _video.Button.gameObject.SetActive(video);
             if (video)
             {
                 ModalKit.Place(_video, 16f, y, inner);
-                UiBuilder.Place(_videoIcon.rectTransform, 12f, (_art.CtaWater.FaceHeightDp - 20f) * 0.5f, 22f, 20f);
+                UiBuilder.Place(_videoIcon.rectTransform, 12f, (ModalKit.FaceHeightOf(_video) - 20f) * 0.5f, 22f, 20f);
                 _videoLabel.rectTransform.sizeDelta = new Vector2(-52f, _videoLabel.rectTransform.sizeDelta.y);
                 _videoLabel.rectTransform.anchoredPosition = new Vector2(14f, _videoLabel.rectTransform.anchoredPosition.y);
                 y += ModalKit.HeightOf(_video) + 8f;
@@ -188,7 +187,7 @@ namespace AF.UI
                 UiBuilder.SetEnabled(_refill.Button, missing == 0);
                 _refillPrice.Set(price, 0, missing > 0);
                 ModalKit.Place(_refill, 16f, y, inner);
-                _refillPrice.PlaceAt(inner - _refillPrice.Width - 12f, (_art.CtaLeaf.FaceHeightDp - 26f) * 0.5f);
+                _refillPrice.PlaceAt(inner - _refillPrice.Width - 12f, (ModalKit.FaceHeightOf(_refill) - _refillPrice.Height) * 0.5f);
                 _refillLabel.rectTransform.sizeDelta = new Vector2(-(_refillPrice.Width + 36f), _refillLabel.rectTransform.sizeDelta.y);
                 _refillLabel.rectTransform.anchoredPosition = new Vector2(-(_refillPrice.Width + 12f) * 0.5f, _refillLabel.rectTransform.anchoredPosition.y);
                 y += ModalKit.HeightOf(_refill);
@@ -196,8 +195,7 @@ namespace AF.UI
                 {
                     _refillNote.gameObject.SetActive(true);
                     _refillNote.text = UiText.MissingSeeds(missing);
-                    UiBuilder.Place(_refillNote.rectTransform, 16f, y, inner, 18f);
-                    y += 20f;
+                    y += ModalKit.PlaceLine(_refillNote, 16f, y, inner, 18f) + 2f;
                 }
 
                 y += 8f;

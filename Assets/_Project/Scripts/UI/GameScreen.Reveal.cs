@@ -171,21 +171,24 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Aviso de Revelar sin stock, sin saldo y sin video [P]: «Te faltan {n} semillas» (como el rescate), sin cobrar nada. Es
-        /// la respuesta [P] de siempre (paso 1, T14), sin cambios respecto a <c>f64c19a</c>, y ninguna pregunta de
-        /// <c>docs/GDD.md</c> §6.3 la recoge todavía (está por ratificar). Lo único que viene de una decisión del dueño es que
-        /// salga por la cola de avisos y de uno en uno (D-011, punto 2). Con la burbuja «Te faltan {n}» de la bandeja a la vista,
-        /// el aviso sube por encima de ella y no la tapa (<c>PlaceToast</c>, GameScreen.Notices.cs; observación 1 de la prueba
-        /// del 2026-10-13, T52).
+        /// Respuesta a Revelar sin stock, sin saldo y sin video, sin cobrar nada (pregunta 48 (b), decidida por el dueño; D-022;
+        /// tarea A1): ningún aviso del tablero. Responde la burbuja «Te faltan {n}» de la ranura, que ya lo dice: un latido y los
+        /// colores del precio sin saldo; con Reducir movimiento, solo los colores (<see cref="BoosterTray.PulseRevealMissing"/>).
+        /// Sin texto nuevo: antes salía «Te faltan {n} semillas» por la cola de avisos, que repetía la burbuja durante 3-7 s y,
+        /// con 3 filas, tapaba la repisa de abajo (pregunta 47). La insignia se repinta antes con el video consultado en el acto,
+        /// así la burbuja lleva la cifra de ahora.
         /// </summary>
         internal void ShowRevealMissing(int missing)
         {
-            ShowToast(UiText.RevealMissing(missing));
             LevelFlow? flow = _flow;
-            if (flow != null && flow.HasLevel)
+            if (flow == null || !flow.HasLevel)
             {
-                RevealProbe("missing", flow, -1, 0, null);
+                return;
             }
+
+            RefreshRevealBadge(flow, true);
+            _tray.PulseRevealMissing(missing, flow.ReduceMotion);
+            RevealProbe("missing", flow, -1, 0, null);
         }
 
         // Al final del constructor, con la bandeja ya creada: la acción del botón, el pulso y la luciérnaga (en la capa de

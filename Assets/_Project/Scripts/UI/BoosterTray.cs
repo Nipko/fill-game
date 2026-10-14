@@ -44,6 +44,35 @@ namespace AF.UI
         /// </summary>
         public const float UndoVideoPollMs = GameScreen.RevealVideoPollMs;
 
+        /// <summary>
+        /// Respuesta de «Te faltan {n}» de Revelar al toque sin stock, sin saldo y sin video (pregunta 48 (b), D-022; tarea A1)
+        /// [P]: cada mitad de su único latido (crece y vuelve), en ms. La primera prueba (T52, 2 × 180 ms) duraba un tercio de
+        /// segundo y en el teléfono se perdía: este latido es algo más lento y el color sigue después.
+        /// </summary>
+        public const float MissingPulseBeatMs = 220f;
+
+        /// <summary>
+        /// Lo que crece «Te faltan {n}» en lo alto del latido, desde el centro de su pie (crece hacia arriba y a los lados, nunca
+        /// hacia el cordón de la bandeja) [P]. Con una burbuja vecina (las dos estrechas, 70 dp con 2 dp de aire), menos: lo que
+        /// deja <see cref="MissingPulseClearDp"/> hasta ella (≈ 1,043; <see cref="RevealMissingPulseMaxScale"/>).
+        /// </summary>
+        public const float MissingPulseScale = 1.08f;
+
+        /// <summary>Aire que el latido deja siempre hasta la burbuja «Te faltan {n}» vecina (dp) [P].</summary>
+        public const float MissingPulseClearDp = 0.5f;
+
+        /// <summary>Los colores de la etiqueta de precio sin saldo (texto crema sobre el rojo) entran en estos ms [P].</summary>
+        public const float MissingColorInMs = 100f;
+
+        /// <summary>Se mantienen hasta estos ms desde el toque (≈ 1,1 s en total con la salida) [P].</summary>
+        public const float MissingColorHoldMs = 900f;
+
+        /// <summary>Con Reducir movimiento (sin latido: solo el color), se mantienen hasta estos ms [P].</summary>
+        public const float MissingColorHoldReducedMs = 1000f;
+
+        /// <summary>Y vuelven a los de la burbuja en estos ms [P].</summary>
+        public const float MissingColorOutMs = 200f;
+
         private const float SlotDp = 64f;
         private const float GapDp = 8f;
         private const float PadDp = 16f;
@@ -52,6 +81,9 @@ namespace AF.UI
         // los dos. A 12 sp, «Te faltan» y una cifra de 2 caben en una línea («Te faltan 70» mide 67,8 dp); con 3 (el máximo con
         // los precios de 08 §9; 75 dp) la cifra baja a una segunda línea (Slot.PlaceMissing).
         private const float MissingNarrowDp = SlotDp + GapDp - 2f;
+
+        // Aire entre dos burbujas «Te faltan {n}» vecinas (dp): el paso de ranura menos su ancho.
+        private const float MissingNeighborGapDp = SlotDp + GapDp - MissingNarrowDp;
 
         private readonly ProceduralArt _art;
         private readonly Image _tray;
@@ -139,6 +171,21 @@ namespace AF.UI
 
         /// <summary>Texto del aviso «Te faltan {n}» de Revelar (vacío si no se ve).</summary>
         public string RevealMissingText => _reveal.MissingText;
+
+        /// <summary>«Te faltan {n}» de Revelar responde al toque (<see cref="PulseRevealMissing"/>; tests).</summary>
+        public bool RevealMissingPulsing => _reveal.PulsingNow;
+
+        /// <summary>Escala de «Te faltan {n}» de Revelar en su latido (1 en reposo; tests y capturas).</summary>
+        public float RevealMissingPulseScale => _reveal.PulseScaleNow;
+
+        /// <summary>Lo más que crece ahora «Te faltan {n}» de Revelar en el latido (con su vecina a la vista, menos; tests).</summary>
+        public float RevealMissingPulseMaxScale => _reveal.PulseMaxScale;
+
+        /// <summary>
+        /// Cuánto lleva «Te faltan {n}» de Revelar los colores de la etiqueta de precio sin saldo (0 en reposo: texto rojo sobre
+        /// la placa clara; 1: texto crema sobre el rojo; tests y capturas).
+        /// </summary>
+        public float RevealMissingPulseColor => _reveal.PulseColorNow;
 
         /// <summary>Texto del aviso «Te faltan {n}» de Cuia extra (vacío si no se ve; tests).</summary>
         public string ExtraMissingText => _extra.MissingText;
@@ -234,6 +281,24 @@ namespace AF.UI
             {
                 _undoVideoPollMs -= dtMs;
             }
+
+            _reveal.TickMissingPulse(dtMs);
+        }
+
+        /// <summary>
+        /// Respuesta al toque de Revelar sin stock, sin saldo y sin video, en lugar de un aviso del tablero (pregunta 48 (b),
+        /// decidida por el dueño; D-022; tarea A1) [P]: si su burbuja «Te faltan {n}» se ve con la cifra
+        /// <paramref name="missing"/>, late una vez (de 1 a <see cref="MissingPulseScale"/> y vuelta en 2 ×
+        /// <see cref="MissingPulseBeatMs"/>, desde el centro de su pie) y toma los colores de la etiqueta de precio sin saldo
+        /// (texto crema sobre el rojo del precio): entran en <see cref="MissingColorInMs"/>, se mantienen hasta
+        /// <see cref="MissingColorHoldMs"/> y vuelven a los suyos en <see cref="MissingColorOutMs"/>. Con
+        /// <paramref name="reduceMotion"/>, solo el color, que se mantiene hasta <see cref="MissingColorHoldReducedMs"/>. Sin texto
+        /// nuevo y sin capturar toques; otro toque lo vuelve a empezar. Devuelve false si la burbuja no se ve o lleva otra cifra.
+        /// Sin asignaciones.
+        /// </summary>
+        public bool PulseRevealMissing(int missing, bool reduceMotion)
+        {
+            return _reveal.PulseMissing(missing, reduceMotion);
         }
 
         /// <summary>Acción del botón Revelar (la pone <c>GameScreen.Reveal.cs</c>: <c>IGameActions.PressReveal</c>).</summary>
@@ -616,8 +681,17 @@ namespace AF.UI
             private readonly TextMeshProUGUI _stockText;
             private readonly PriceTag _price;
             private readonly RectTransform _missing;
+            private readonly RectTransform _missingBody;
+            private readonly Image _missingPlate;
             private readonly TextMeshProUGUI _missingText;
             private readonly char[] _buf = new char[24];
+            private readonly float _scale;
+            private float _pulseMs = -1f;
+            private bool _pulseReduce;
+            private float _pulseScale = 1f;
+            private float _pulseMaxScale = MissingPulseScale;
+            private float _pulseColor;
+            private float _pulseColorFrom;
             private bool _visible = true;
             private float _x;
             private float _y;
@@ -628,6 +702,7 @@ namespace AF.UI
 
             public Slot(string name, Transform hud, ProceduralArt art, Sprite icon, Sprite iconDisabled, string label, Action onClick)
             {
+                _scale = UiBuilder.TextScale;
                 Parts = UiBuilder.Relief(name, hud, art.SlotWater, onClick);
                 Glyph = UiBuilder.Image("Icon", Parts.Face, icon, Color.white);
                 UiBuilder.Place(Glyph.rectTransform, 16f, 6f, 32f, 32f);
@@ -656,10 +731,14 @@ namespace AF.UI
                 _price.Root.gameObject.SetActive(false);
 
                 _missing = UiBuilder.Rect("Missing", hud);
-                Image missingPlate = UiBuilder.Sliced("Plate", _missing, art.RoundedRect, Palette.PanelLight);
-                missingPlate.pixelsPerUnitMultiplier = 24f / 9f;
-                UiBuilder.Stretch(missingPlate.rectTransform);
-                _missingText = UiBuilder.Label("Value", _missing, TextStyle.PlainBold, string.Empty, MissingSp, Palette.UiRedWarning, TextAlignmentOptions.Center);
+                // Estirada, con el pivote en el centro de su pie: el latido de la pregunta 48 (b) crece hacia arriba y a los
+                // lados, nunca hacia el cordón de la bandeja.
+                _missingBody = UiBuilder.Rect("Body", _missing);
+                _missingBody.pivot = new Vector2(0.5f, 0f);
+                _missingPlate = UiBuilder.Sliced("Plate", _missingBody, art.RoundedRect, Palette.PanelLight);
+                _missingPlate.pixelsPerUnitMultiplier = 24f / 9f;
+                UiBuilder.Stretch(_missingPlate.rectTransform);
+                _missingText = UiBuilder.Label("Value", _missingBody, TextStyle.PlainBold, string.Empty, MissingSp, Palette.UiRedWarning, TextAlignmentOptions.Center);
                 UiBuilder.Stretch(_missingText.rectTransform);
                 _missing.gameObject.SetActive(false);
             }
@@ -689,6 +768,74 @@ namespace AF.UI
             public TextMeshProUGUI MissingLabel => _missingText;
 
             public RectTransform PriceRect => _price.Root;
+
+            public bool PulsingNow => _pulseMs >= 0f;
+
+            public float PulseScaleNow => _pulseScale;
+
+            public float PulseMaxScale => _pulseMaxScale;
+
+            public float PulseColorNow => _pulseColor;
+
+            // «Te faltan {n}» responde al toque si se ve con la cifra missing (BoosterTray.PulseRevealMissing).
+            public bool PulseMissing(int missing, bool reduceMotion)
+            {
+                if (!_missing.gameObject.activeInHierarchy || missing <= 0 || missing != _missingShown)
+                {
+                    return false;
+                }
+
+                // Otro toque con la respuesta en marcha la vuelve a empezar desde el color que ya lleva (sin parpadeo).
+                _pulseColorFrom = _pulseMs >= 0f ? _pulseColor : 0f;
+                _pulseMs = 0f;
+                _pulseReduce = reduceMotion;
+                ApplyPulse(0f, _pulseColorFrom);
+                return true;
+            }
+
+            // Un fotograma de la respuesta (ms desde el toque): el latido de 2 × MissingPulseBeatMs y los colores sin saldo que
+            // entran, se mantienen y vuelven; si la burbuja deja de verse, todo vuelve a reposo.
+            public void TickMissingPulse(float dtMs)
+            {
+                if (_pulseMs < 0f)
+                {
+                    return;
+                }
+
+                _pulseMs += dtMs;
+                float t = _pulseMs;
+                float hold = _pulseReduce ? MissingColorHoldReducedMs : MissingColorHoldMs;
+                if (t >= hold + MissingColorOutMs || !_missing.gameObject.activeInHierarchy)
+                {
+                    _pulseMs = -1f;
+                    ApplyPulse(0f, 0f);
+                    return;
+                }
+
+                float beatMs = 2f * MissingPulseBeatMs;
+                float beat = _pulseReduce || t >= beatMs ? 0f : Mathf.Sin(Mathf.PI * (t / beatMs));
+                float color = t < MissingColorInMs ? Mathf.Lerp(_pulseColorFrom, 1f, t / MissingColorInMs) : (t <= hold ? 1f : 1f - ((t - hold) / MissingColorOutMs));
+                ApplyPulse(beat, Mathf.Clamp01(color));
+            }
+
+            // beat = 0 en reposo, 1 en lo alto del latido (escala; sin Reducir movimiento); color = 0..1 hacia los de la etiqueta
+            // de precio sin saldo (texto crema sobre el rojo). Solo escribe lo que cambia.
+            private void ApplyPulse(float beat, float color)
+            {
+                float scale = Mathf.Lerp(1f, _pulseMaxScale, beat);
+                if (!Mathf.Approximately(scale, _pulseScale))
+                {
+                    _pulseScale = scale;
+                    _missingBody.localScale = new Vector3(scale, scale, 1f);
+                }
+
+                if (!Mathf.Approximately(color, _pulseColor))
+                {
+                    _pulseColor = color;
+                    _missingPlate.color = Color.Lerp(Palette.PanelLight, Palette.UiRedWarning, color);
+                    _missingText.color = Color.Lerp(Palette.UiRedWarning, Palette.Cream, color);
+                }
+            }
 
             // El borde de arriba de su aviso «Te faltan {n}», si se ve y está más alto que top (dp desde arriba).
             public void MinMissingTop(ref float top)
@@ -769,7 +916,7 @@ namespace AF.UI
                 _price.Set(price, 0, missing > 0);
                 float k = Mathf.Clamp(PriceMaxDp / _price.Width, PriceMinScale, 1f);
                 _price.Root.localScale = new Vector3(k, k, 1f);
-                _price.PlaceAt((SlotDp - (_price.Width * k)) * 0.5f, PriceCenterDp - (PriceTag.HeightDp * 0.5f * k));
+                _price.PlaceAt((SlotDp - (_price.Width * k)) * 0.5f, PriceCenterDp - (_price.Height * 0.5f * k));
                 _missing.gameObject.SetActive(missing > 0 && Parts.Button.gameObject.activeSelf);
                 if (missing > 0 && missing != _missingShown)
                 {
@@ -795,6 +942,7 @@ namespace AF.UI
 
             // «Te faltan {n}» de widthDp centrado sobre la ranura: en una línea si a 12 sp cabe en widthDp, con su borde de abajo
             // 6 dp por encima del canto, y, si no, en dos («Te faltan» y la cifra), con la placa más alta y más cerca del canto.
+            // Con la escala de texto, la placa y su aire crecen con ella (02 §12: la placa crece hacia arriba; tarea A1).
             public void PlaceMissing(float widthDp)
             {
                 _missingW = widthDp;
@@ -806,9 +954,14 @@ namespace AF.UI
                     _missingText.lineSpacing = twoLines ? MissingTwoLinesSpacing : 0f;
                 }
 
-                float h = twoLines ? MissingTwoLinesDp : MissingOneLineDp;
-                float gap = twoLines ? MissingTwoLinesGapDp : MissingGapDp;
+                float h = (twoLines ? MissingTwoLinesDp : MissingOneLineDp) * _scale;
+                float gap = (twoLines ? MissingTwoLinesGapDp : MissingGapDp) * _scale;
                 UiBuilder.Place(_missing, _x + ((SlotDp - widthDp) * 0.5f), _y - gap - h, widthDp, h);
+
+                // Lo más que crece en el latido: con una vecina (la burbuja estrecha), sin pisarla.
+                _pulseMaxScale = widthDp < MissingWideDp - 0.01f
+                    ? Mathf.Clamp(1f + (2f * (MissingNeighborGapDp - MissingPulseClearDp) / widthDp), 1f, MissingPulseScale)
+                    : MissingPulseScale;
             }
         }
     }

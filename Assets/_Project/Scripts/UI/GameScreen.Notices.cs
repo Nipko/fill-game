@@ -13,7 +13,7 @@ namespace AF.UI
 {
     /// <summary>
     /// Avisos legibles del tablero (D-011, punto 2; prueba en el teléfono del 2026-10-11, §P2 y §P3): el aviso (<c>_toast</c>:
-    /// regalo de Capi, «¡Una cuia más!», «+1 Luciérnaga», «Te faltan {n} semillas») y la tarjeta «¡Miquito a la vista!»
+    /// regalo de Capi, «¡Una cuia más!» y «+1 Luciérnaga») y la tarjeta «¡Miquito a la vista!»
     /// (<c>_sighting</c>) salen de uno en uno, por orden de llegada, y cada uno dura lo que se tarda en leerlo
     /// (<see cref="NoticeTiming"/>: 1.000 ms + 55 ms por carácter, entre 3 y 7 s).
     /// </summary>
@@ -30,7 +30,7 @@ namespace AF.UI
     /// (<c>OnCelebrationStarted</c>) se ocultan el aviso y la tarjeta que se vean y se vacían la cola y la tarjeta pendiente, así
     /// que nada se dibuja encima de la celebración ni de la pantalla de victoria (un aviso dura hasta 7 s).</para>
     /// <para><b>Uno cada vez</b>: si hay un aviso o la tarjeta a la vista, el siguiente espera a que se oculte; nada se corta ni
-    /// se pisa. El mismo texto que ya se ve vuelve a empezar (Revelar tocado otra vez sin saldo) y el que ya espera no se repite.
+    /// se pisa. El mismo texto que ya se ve vuelve a empezar y el que ya espera no se repite.
     /// Con la cola llena (<see cref="NoticeSlots"/>), el que llega se descarta.</para>
     /// <para><b>La tarjeta del miquito</b> espera a que la tropa se haya ido de la rama (<c>IntroAnimation.TroopVisible</c>: tras
     /// su reposo y su salida ya en juego, o tras el fundido de 100 ms si se saltó la intro) y entra entonces en la cola; mientras
@@ -47,7 +47,8 @@ namespace AF.UI
     /// <para><b>Dónde va el aviso</b> (<c>PlaceToast</c>; observación 1 de la prueba del 2026-10-13 y pregunta 41 (4); T52 y su
     /// revisión) [P]. Las alturas van en dp del lienzo, que crecen hacia abajo (la convención de <see cref="BoardLayoutResult"/>):
     /// «pie + n» es n dp bajo la línea de pie de la fila y «pie − n», n dp por encima. Con su alto de siempre
-    /// (<see cref="Toast.DefaultHeightDp"/>) y su borde de abajo 8 dp sobre la bandeja, como antes. Si se ve alguna burbuja
+    /// (<see cref="Toast.DefaultHeightDp"/>, o el que pide su texto con la escala de texto o si no cabe ni a 12 sp:
+    /// <see cref="Toast.PreferredHeightDp"/>, tarea A1) y su borde de abajo 8 dp sobre la bandeja, como antes. Si se ve alguna burbuja
     /// «Te faltan {n}» de la bandeja (<see cref="BoosterTray.TryGetMissingTop"/>), sube lo justo para quedar
     /// <see cref="NoticeBubbleGapDp"/> por encima de la más alta, con su canto: nunca la tapa. Para no tapar
     /// el tablero, se encoge hasta su texto (<see cref="Toast.MinHeightDp"/>) si entre la repisa de la última fila (con su
@@ -61,7 +62,7 @@ namespace AF.UI
     /// esa repisa sin fichas, con <see cref="NoticeChipClearDp"/> de aire, lo más centrado posible: tapa la cara de la repisa
     /// en su tramo, no fichas. Es lo que pasa en el 135 tras el rescate (12 cuias; captura 92 de T52): «¡Una cuia más! Sigue
     /// desde aquí», de unos 253 dp, va a la derecha de la ficha «?×1» (de 73 a 326 dp) y tapa la cara de la repisa de abajo en
-    /// ese tramo durante los 3 s que dura; y con «Te faltan 120 semillas» de Revelar sin semillas (captura 92d). Solo cuentan
+    /// ese tramo durante los 3 s que dura. Solo cuentan
     /// como fichas la «?×n» y la de la pareja del Remolino (<c>CollectNoticeChips</c>): si una cuia de una pareja del
     /// Remolino está en la fila de abajo, el aviso también puede tapar en parte, en su tramo, lo que de ese Remolino queda
     /// bajo el pie (la bajada del canal por el frente de la repisa; el tramo horizontal pegado bajo ella, de pie + 17 a pie +
@@ -78,12 +79,10 @@ namespace AF.UI
     /// repisa: en el 115 tras el rescate (12 cuias, la ficha «?×2» bajo la tercera cuia de la fila de abajo; captura 92f de
     /// T52).</description></item>
     /// </list>
-    /// <para>«Te faltan {n} semillas» de Revelar sin stock, saldo ni video sigue saliendo como aviso
-    /// (<see cref="ShowRevealMissing"/>): es el [P] de siempre (paso 1, T14), sin cambios respecto a <c>f64c19a</c>, y lo
-    /// único decidido es que vaya por la cola y de uno en uno (D-011, punto 2). Se descartó dibujar las burbujas delante del
-    /// aviso: aunque el aviso se encogiera, taparían su texto, y eso choca con D-011, punto 2 (avisos legibles). Es un compromiso [P] para el
-    /// dueño (capturas 92, 92d, 92f y 92g de T52), con alternativas: un aviso que no llegue a la repisa (más estrecho y en dos
-    /// líneas, o arriba, en la franja del panorama cuando la hay), el aviso detrás de la capa de las repisas, o aceptarlo así. Se
+    /// <para>Este compromiso lo ratificó el dueño (pregunta 47, (1); D-022): se deja como está y se prueba (capturas 92, 92f y
+    /// 92g de T52; MinTextSnapshotTests, A1). Se descartó dibujar las burbujas delante del aviso: aunque el aviso se encogiera,
+    /// taparían su texto, y eso choca con D-011, punto 2 (avisos legibles). Revelar sin stock, saldo ni video ya no saca aviso:
+    /// responde su burbuja «Te faltan {n}», que ya lo dice (pregunta 48 (b), D-022; <see cref="ShowRevealMissing"/>). Se
     /// recoloca en cada fotograma si cambian las burbujas, las fichas o el tablero (sin asignaciones; solo mide el texto cuando
     /// cambia).</para>
     /// </remarks>
@@ -161,7 +160,7 @@ namespace AF.UI
         {
             if (_toast.Visible && string.Equals(_toast.Text, text, StringComparison.Ordinal))
             {
-                ShowToastNow(text); // el mismo aviso otra vez (Revelar sin saldo): vuelve a empezar, como antes de la cola
+                ShowToastNow(text); // el mismo aviso otra vez: vuelve a empezar, como antes de la cola
                 return;
             }
 
@@ -209,7 +208,7 @@ namespace AF.UI
 
             float width = Toast.FullWidthDp(_canvasW);
             float left = (_canvasW - width) * 0.5f;
-            float height = Toast.DefaultHeightDp;
+            float height = _toast.PreferredHeightDp(_canvasW);
             float floor = BoardContentBottom();
             if (!float.IsNegativeInfinity(floor))
             {
@@ -224,6 +223,15 @@ namespace AF.UI
                         float top0 = bottom - height;
                         PlaceToastBesideChips(bottom, ref left, ref width, ref top0);
                         height = bottom - top0;
+                    }
+
+                    // Nunca por encima del pie de la última fila: no tapa las cuias (pregunta 47). Si ni a su alto mínimo cabe
+                    // (con la escala de texto y 3 filas: las burbujas «Te faltan {n}» crecen con ella), la placa se queda en el
+                    // hueco y su texto se encoge, nunca por debajo de 12 sp (tarea A1).
+                    float foot = BoardLastRowFoot();
+                    if (bottom - height < foot)
+                    {
+                        height = Mathf.Max(0f, bottom - foot);
                     }
                 }
             }
@@ -407,6 +415,14 @@ namespace AF.UI
             return l.RowFootY[l.Rows - 1] + ShelfShadowBelowFootDp - _boardShift;
         }
 
+        // El pie de la última fila en el lienzo (dp desde arriba), con el tablero tal como está desplazado: lo más bajo de sus
+        // cuias. Solo con tablero (BoardContentBottom finito).
+        private float BoardLastRowFoot()
+        {
+            BoardLayoutResult l = _layout!;
+            return l.RowFootY[l.Rows - 1] - _boardShift;
+        }
+
         // Pregunta 42, opción (b) (decidida por el dueño el 2026-10-13; T52): al abrirse un modal del embudo, el aviso y la tarjeta
         // del miquito que se vean se ocultan en el acto, sin salida (como en la celebración), y se descartan. La cola y la
         // tarjeta pendiente siguen esperando a que se vuelva a jugar (NoticesHeld).
@@ -523,8 +539,9 @@ namespace AF.UI
             _sightingPending = species;
         }
 
-        // Sobre la franja del panorama si mide ≥ 64 dp; si no, sobre el muelle, bajo la última fila y por encima de la bandeja;
-        // si no cabe sin tapar cuias ni botones, no sale.
+        // Sobre la franja del panorama si mide al menos el alto de la tarjeta + 4 dp (antes, 64 dp fijos); si no,
+        // sobre el muelle, bajo la última fila y por encima de la bandeja; si no cabe sin tapar cuias ni botones, no sale. El
+        // alto es el de la tarjeta con su nombre y su dato (crece si el dato va en dos líneas o con la escala de texto; A1).
         private void ShowSightingNow(FaunaSpecies species)
         {
             BoardLayoutResult? l = _layout;
@@ -533,24 +550,27 @@ namespace AF.UI
                 return;
             }
 
+            // El nombre en el idioma de la UI (D-018; tarea L1): el catálogo trae es, pt y en, y cae al español si falta.
+            string name = species.NameIn(UiText.FaunaLanguage(Loc.Locale));
+            string fact = UiText.FaunaFact(species.FactKey);
+            float height = _sighting.Measure(_canvasW, name, fact);
             float band = l.PanelY - BoardTop;
             float top;
-            if (band >= 64f)
+            if (band >= height + 4f)
             {
-                top = BoardTop + ((band - SightingCard.HeightDp) * 0.5f);
+                top = BoardTop + ((band - height) * 0.5f);
             }
             else
             {
                 top = l.PanelBottom + 4f;
-                if (top + SightingCard.HeightDp > TrayTop - 8f)
+                if (top + height > TrayTop - 8f)
                 {
                     return;
                 }
             }
 
             _sighting.Place(_canvasW, top);
-            // El nombre en el idioma de la UI (D-018; tarea L1): el catálogo trae es, pt y en, y cae al español si falta.
-            _sighting.Show(_art.MonkeyArtFor(species).Portrait, species.NameIn(UiText.FaunaLanguage(Loc.Locale)), UiText.FaunaFact(species.FactKey));
+            _sighting.Show(_art.MonkeyArtFor(species).Portrait, name, fact);
         }
 
         private struct Notice
