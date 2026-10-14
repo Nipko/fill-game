@@ -16,9 +16,10 @@ namespace AF.UI
     /// <see cref="AF.GameFlow.NoticeTiming"/> y de uno en uno con la tarjeta del miquito (la cola de avisos de GameScreen; D-011,
     /// punto 2). Placa de madera clara con el texto en madera_base y una entrada de 150 ms. Al salir se pone el último de su
     /// padre: el cartel, encima de todo; el aviso, dentro de la capa de avisos de GameScreen, que va detrás de la capa de
-    /// vertido (D-006: el origen que vierte, delante de todo). Mide <see cref="DefaultHeightDp"/> de alto; el aviso puede
-    /// encogerse hasta su texto (<see cref="MinHeightDp"/>) para no tapar las burbujas «Te faltan {n}» ni la repisa de abajo
-    /// (GameScreen.Notices.cs, T52) [P].
+    /// vertido (D-006: el origen que vierte, delante de todo). Mide <see cref="DefaultHeightDp"/> de alto y
+    /// <see cref="FullWidthDp"/> de ancho; el aviso puede encogerse hasta su texto, a lo alto (<see cref="MinHeightDp"/>) y, si
+    /// hace falta, a lo ancho (<see cref="FitWidthDp"/>), para no tapar las burbujas «Te faltan {n}» de la bandeja, la repisa
+    /// de abajo ni sus fichas (GameScreen.Notices.cs, T52) [P].
     /// </summary>
     internal sealed class Toast
     {
@@ -28,12 +29,17 @@ namespace AF.UI
         /// <summary>El canto de madera asoma este alto bajo la placa (dp): el aviso se ve hasta su borde de abajo + esto.</summary>
         public const float EdgeDp = 3f;
 
+        /// <summary>Aire del texto a cada lado dentro de la placa (dp).</summary>
+        public const float SidePadDp = 14f;
+
         private const float FadeMs = 150f;
 
         // Aire del texto a lo alto dentro de la placa (dp): el de siempre y el mínimo con la placa encogida a su texto [P].
         private const float PadDp = 6f;
         private const float MinPadDp = 4f;
-        private const float SidePadDp = 14f;
+
+        // Holgura del ancho ajustado al texto (dp): la de redondeo de las medidas de TextMeshPro, para que no salte a dos líneas.
+        private const float FitSlackDp = 2f;
 
         private readonly RectTransform _root;
         private readonly CanvasGroup _group;
@@ -43,11 +49,14 @@ namespace AF.UI
         private float _leftMs = -1f;
         private float _totalMs;
         private float _top = float.NaN;
+        private float _left;
         private float _height = DefaultHeightDp;
         private float _width;
         private string? _measuredText;
         private float _measuredWidth = -1f;
         private float _textHeight;
+        private string? _lineText;
+        private float _lineWidth;
 
         public Toast(string name, Transform parent, ProceduralArt art, float size)
         {
@@ -103,8 +112,20 @@ namespace AF.UI
         /// <summary>Alto de la placa (dp), sin el canto que asoma debajo (<see cref="EdgeDp"/>).</summary>
         public float Height => _height;
 
+        /// <summary>Borde izquierdo de la placa (dp desde la izquierda del lienzo).</summary>
+        public float Left => _left;
+
+        /// <summary>Ancho de la placa (dp).</summary>
+        public float Width => _width;
+
         /// <summary>Rectángulo del aviso tal como se ve, con el canto de abajo (dp desde arriba del lienzo; tests de solapes).</summary>
-        public Rect SeenRect => new Rect(_root.anchoredPosition.x, _top, _width, _height + EdgeDp);
+        public Rect SeenRect => new Rect(_left, _top, _width, _height + EdgeDp);
+
+        /// <summary>Ancho de siempre de la placa en un lienzo de <paramref name="canvasW"/> dp, centrada.</summary>
+        public static float FullWidthDp(float canvasW)
+        {
+            return Mathf.Min(320f, canvasW - 32f);
+        }
 
         /// <summary>Texto del aviso (tests de desbordes).</summary>
         public TextMeshProUGUI Label => _label;
@@ -124,13 +145,24 @@ namespace AF.UI
         /// </summary>
         public void Place(float canvasW, float top, float height)
         {
-            float w = Mathf.Min(320f, canvasW - 32f);
-            float h = Mathf.Min(DefaultHeightDp, height);
+            float w = FullWidthDp(canvasW);
+            PlaceAt((canvasW - w) * 0.5f, top, w, Mathf.Min(DefaultHeightDp, height));
+        }
+
+        /// <summary>
+        /// Coloca la placa con su esquina de arriba a la izquierda en (<paramref name="left"/>, <paramref name="top"/>) y
+        /// <paramref name="width"/> × <paramref name="height"/> dp (GameScreen.Notices.cs: la placa ajustada a su texto junto a
+        /// las fichas de la repisa, o la que las tapa enteras). El texto conserva su tamaño; el aire de arriba y de abajo se
+        /// reparte, de 1 a 6 dp.
+        /// </summary>
+        public void PlaceAt(float left, float top, float width, float height)
+        {
             _top = top;
-            _height = h;
-            _width = w;
-            UiBuilder.Place(_root, (canvasW - w) * 0.5f, top, w, h);
-            float pad = Mathf.Clamp((h - TextHeight(w)) * 0.5f, 1f, PadDp);
+            _left = left;
+            _height = height;
+            _width = width;
+            UiBuilder.Place(_root, left, top, width, height);
+            float pad = Mathf.Clamp((height - TextHeight(width)) * 0.5f, 1f, PadDp);
             _label.rectTransform.offsetMin = new Vector2(SidePadDp, pad);
             _label.rectTransform.offsetMax = new Vector2(-SidePadDp, -pad);
         }
@@ -141,7 +173,25 @@ namespace AF.UI
         /// </summary>
         public float MinHeightDp(float canvasW)
         {
-            return Mathf.Min(DefaultHeightDp, Mathf.Ceil(TextHeight(Mathf.Min(320f, canvasW - 32f))) + (2f * MinPadDp));
+            return Mathf.Min(DefaultHeightDp, Mathf.Ceil(TextHeight(FullWidthDp(canvasW))) + (2f * MinPadDp));
+        }
+
+        /// <summary>
+        /// Ancho de la placa ajustada al texto de ahora en una sola línea, a su tamaño de siempre: el texto, una holgura de
+        /// redondeo y <see cref="SidePadDp"/> a cada lado (T52 [P]; ≈ 182 dp para «Te faltan 120 semillas» a 15 sp); como mucho
+        /// el de siempre (<see cref="FullWidthDp"/>), que es también lo que da si el texto no cabe en una línea. Mide solo si
+        /// cambia el texto.
+        /// </summary>
+        public float FitWidthDp(float canvasW)
+        {
+            string text = _label.text;
+            if (!ReferenceEquals(text, _lineText))
+            {
+                _lineText = text;
+                _lineWidth = string.IsNullOrEmpty(text) ? 0f : _label.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x;
+            }
+
+            return Mathf.Min(FullWidthDp(canvasW), Mathf.Ceil(_lineWidth + FitSlackDp) + (2f * SidePadDp));
         }
 
         // Alto del texto de ahora en una placa de w dp de ancho, al tamaño máximo del autoajuste (lo que mide TMP con él).

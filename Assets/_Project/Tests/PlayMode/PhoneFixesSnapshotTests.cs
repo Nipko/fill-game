@@ -22,13 +22,17 @@ namespace AF.Tests.PlayMode
     /// <list type="bullet">
     /// <item><description><c>90_banner_l41_130</c>, <c>90b_banner_l41_100</c>, <c>90c_banner_l41_130_16x9</c> y
     /// <c>90d_banner_l141_130</c>: el banner de mundo con la escala de fuente de 02 §12 (pregunta 43);</description></item>
-    /// <item><description><c>92_l135_aviso_burbujas_despues</c> (3 filas, con las dos burbujas de dos líneas: el compromiso),
-    /// <c>92b_l135_aviso_sin_burbujas</c> (encogido sobre la bandeja, sin tapar la repisa ni la ficha «?×n»),
-    /// <c>93_1fila_aviso_burbuja_despues</c> y <c>93b_l31_aviso_burbuja_despues</c> (observación 1); las de antes del cambio,
-    /// con el sufijo <c>_antes</c>, se sacaron con el código de <c>f64c19a</c>;</description></item>
-    /// <item><description><c>94_remolino_l103_chorro</c> y <c>95_remolino_l140_chorro</c> (la cuia tocada se traga el chorro)
-    /// y <c>94b_remolino_l103_recibe</c> y <c>95b_remolino_l140_recibe</c> (la pareja se ilumina al recibir; observación
-    /// 5).</description></item>
+    /// <item><description><c>92_l135_aviso_burbujas_despues</c> (3 filas, con las dos burbujas de dos líneas y el aviso del
+    /// rescate, que no cabe junto a la ficha «?×1» y la tapa entera: el compromiso [P]), <c>92c_l135_aviso_corto_burbujas</c>
+    /// («+1 Luciérnaga», ajustado a su texto junto a la ficha, sin taparla), <c>92d_l135_revelar_sin_semillas</c> (Revelar sin
+    /// semillas ni video: sin aviso, la burbuja «Te faltan 120» late), <c>92b_l135_aviso_sin_burbujas</c> (encogido sobre la
+    /// bandeja, sin tapar la repisa ni la ficha «?×n»), <c>93_1fila_aviso_burbuja_despues</c> y
+    /// <c>93b_l31_aviso_burbuja_despues</c> (observación 1); las de antes del cambio, con el sufijo <c>_antes</c>, se sacaron
+    /// con el código de <c>f64c19a</c>;</description></item>
+    /// <item><description><c>94_remolino_l103_chorro</c> y <c>95_remolino_l140_chorro</c> (la cuia tocada se traga el chorro),
+    /// <c>94b_remolino_l103_recibe</c> y <c>95b_remolino_l140_recibe</c> (la pareja se ilumina al recibir) y
+    /// <c>96_remolino_blanca_l{n}_chorro</c> (el remolino de la superficie, con su contorno, sobre una dosis blanca de
+    /// Guanábana; observación 5 y revisión de T52).</description></item>
     /// </list>
     /// Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.PhoneFixesSnapshotTests</c>
     /// sin <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/</c>.
@@ -54,17 +58,30 @@ namespace AF.Tests.PlayMode
         {
             string dir = SnapshotKit.Prepare();
 
-            // El 135 (3 filas) sin semillas ni video: «Te faltan 150» de «+1 cuia» y «Te faltan 120» de Revelar, y el aviso.
+            // El 135 (3 filas) sin semillas ni video: «Te faltan 150» de «+1 cuia» y «Te faltan 120» de Revelar, y el aviso del
+            // rescate, que no cabe junto a la ficha «?×1»: la tapa entera (el compromiso [P]).
             yield return LoadWithBubbles(135, 0, 0);
             GameBootstrap boot = GameBootstrap.Current!;
-            boot.View!.ShowRevealMissing(120);
+            boot.View!.ShowNotice(UiText.RescueApplied);
             PlayModeHelpers.Step(boot, 400);
             yield return SaveNow(dir, "92_l135_aviso_burbujas_despues", boot);
+
+            // Un aviso corto («+1 Luciérnaga»): ajustado a su texto junto a la ficha, sin taparla.
+            boot.View.NoticeToast.Hide();
+            boot.View.ShowNotice(UiText.RevealGiftToast);
+            PlayModeHelpers.Step(boot, 400);
+            yield return SaveNow(dir, "92c_l135_aviso_corto_burbujas", boot);
+
+            // Revelar sin semillas ni video: sin aviso, la burbuja «Te faltan 120» late (en lo alto del latido).
+            boot.View.NoticeToast.Hide();
+            Assert.That(boot.PressReveal(), Is.False);
+            PlayModeHelpers.TickExact(boot, Mathf.RoundToInt(BoosterTray.MissingPulseHalfMs));
+            yield return SaveNow(dir, "92d_l135_revelar_sin_semillas", boot);
 
             // El 135 con semillas: sin burbujas, el aviso encogido sobre la bandeja, sin tapar la repisa ni la ficha «?×n».
             yield return LoadWithBubbles(135, 0, 1000);
             boot = GameBootstrap.Current!;
-            boot.View!.ShowRevealMissing(120);
+            boot.View!.ShowNotice(UiText.RevealMissing(120));
             PlayModeHelpers.Step(boot, 400);
             yield return SaveNow(dir, "92b_l135_aviso_sin_burbujas", boot);
 
@@ -100,6 +117,26 @@ namespace AF.Tests.PlayMode
             string dir = SnapshotKit.Prepare();
             yield return CaptureRemolino(dir, 103, "94");
             yield return CaptureRemolino(dir, 140, "95");
+
+            // Revisión de T52: el remolino de la superficie sobre una dosis blanca (Guanábana), el caso con menos contraste. El
+            // primer nivel con Remolino cuya solución vierte por él en una cuia con la blanca arriba.
+            bool found = false;
+            foreach (int level in new[] { 104, 120, 103, 105, 107, 109, 112, 118, 126, 140, 146, 166, 191 })
+            {
+                yield return MechanicTestKit.LoadPlaying(level);
+                Pour[]? path = MechanicTestKit.FindTrigger(GameBootstrap.Current!.Flow!, (ev, b, a) => ev.ThroughRemolino
+                    && !b[ev.Target].IsEmpty && ColorMath.RelativeLuminance(Palette.Tint(b[ev.Target].TopColor)) > 0.85f);
+                if (path == null)
+                {
+                    continue;
+                }
+
+                found = true;
+                yield return CaptureRemolinoPath(dir, level, path, "96_remolino_blanca_l" + level + "_chorro", null);
+                break;
+            }
+
+            Assert.That(found, Is.True, "algún vertido por el Remolino en una cuia con la blanca arriba");
         }
 
         [UnityTest]
@@ -167,22 +204,33 @@ namespace AF.Tests.PlayMode
         private static IEnumerator CaptureRemolino(string dir, int level, string prefix)
         {
             yield return MechanicTestKit.LoadPlaying(level);
+            Pour[]? path = MechanicTestKit.FindTrigger(GameBootstrap.Current!.Flow!, (ev, b, a) => ev.ThroughRemolino);
+            Assert.That(path, Is.Not.Null, "vertido por el Remolino en el " + level);
+            yield return CaptureRemolinoPath(dir, level, path!, prefix + "_remolino_l" + level + "_chorro", prefix + "b_remolino_l" + level + "_recibe");
+        }
+
+        // Juega el camino path del nivel ya cargado y captura el último vertido (por el Remolino) a mitad del chorro (stream) y,
+        // si receive no es null, a mitad de la recepción de la pareja.
+        private static IEnumerator CaptureRemolinoPath(string dir, int level, Pour[] path, string stream, string? receive)
+        {
             GameBootstrap boot = GameBootstrap.Current!;
             SnapshotKit.Attach(boot);
-            Pour[]? path = MechanicTestKit.FindTrigger(boot.Flow!, (ev, b, a) => ev.ThroughRemolino);
-            Assert.That(path, Is.Not.Null, "vertido por el Remolino en el " + level);
-            MechanicTestKit.PlayPrefix(boot, path!);
+            MechanicTestKit.PlayPrefix(boot, path);
             GameScreen view = boot.View!;
             PourTimings timings = view.Timings;
-            TapResult poured = MechanicTestKit.Tap(boot, path![path.Length - 1]);
-            Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured));
+            TapResult poured = MechanicTestKit.Tap(boot, path[path.Length - 1]);
+            Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured), "nivel " + level);
             int partner = poured.Pour.Receiver;
             float mid = (timings.TravelMs * BoardAnimator.StreamStartFraction) + BoardAnimator.StreamGrowMs + (0.5f * timings.DoseMs);
             PlayModeHelpers.TickExact(boot, Mathf.RoundToInt(mid) + PlayModeHelpers.FrameMs);
-            yield return SaveNow(dir, prefix + "_remolino_l" + level + "_chorro", boot);
-            MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Receive, partner, 4000);
-            MechanicTestKit.StepToFraction(boot, MechanicStepKind.Receive, partner, 0.55f);
-            yield return SaveNow(dir, prefix + "b_remolino_l" + level + "_recibe", boot);
+            yield return SaveNow(dir, stream, boot);
+            if (receive != null)
+            {
+                MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Receive, partner, 4000);
+                MechanicTestKit.StepToFraction(boot, MechanicStepKind.Receive, partner, 0.55f);
+                yield return SaveNow(dir, receive, boot);
+            }
+
             MechanicTestKit.StepToIdle(boot, 4000);
         }
 

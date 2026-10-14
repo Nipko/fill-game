@@ -1,7 +1,11 @@
 #nullable enable
 using System;
+using AF.Core.Board;
+using AF.Core.Mechanics;
 using AF.GameFlow;
 using AF.Levels;
+using AF.Presentation;
+using AF.Presentation.Mechanics;
 using UnityEngine;
 
 namespace AF.UI
@@ -39,16 +43,33 @@ namespace AF.UI
     /// <para><b>Capa</b>: el aviso y la tarjeta van en su propia capa (<c>_noticeLayer</c>), delante del tablero, del HUD y del
     /// polen y justo detrás de la capa de vertido: el origen que vierte se dibuja delante de ellos (D-006: delante de todo),
     /// como los modales y la pausa. El cartel (<c>_banner</c>) no va en ella.</para>
-    /// <para><b>Dónde va el aviso</b> (<c>PlaceToast</c>; observación 1 de la prueba del 2026-10-13 y pregunta 41 (4); T52) [P]:
-    /// con su alto de siempre (<see cref="Toast.DefaultHeightDp"/>) y su borde de abajo 8 dp sobre la bandeja, como antes. Si se
-    /// ve alguna burbuja «Te faltan {n}» de la bandeja (<see cref="BoosterTray.TryGetMissingTop"/>), sube lo justo para quedar
-    /// <see cref="NoticeBubbleGapDp"/> por encima de la más alta, con su canto: nunca la tapa. Y para no tapar el tablero, se
-    /// encoge hasta su texto (<see cref="Toast.MinHeightDp"/>) si entre la repisa de la última fila (con su sombra,
-    /// <see cref="ShelfShadowBelowFootDp"/> bajo el pie, donde va la ficha «?×n» de las cuias turbias) y su borde de abajo no
-    /// cabe entero. Si ni así cabe (3 filas con burbujas de dos líneas: el 135), sube lo justo sobre las burbujas con el alto
-    /// de su texto y tapa lo menos posible del canto inferior de esa repisa, nunca las cuias: es el compromiso que documentan
-    /// las capturas 92 de T52. Se recoloca en cada fotograma si cambian las burbujas o el tablero (sin asignaciones; solo
-    /// mide el texto cuando cambia).</para>
+    /// <para><b>Dónde va el aviso</b> (<c>PlaceToast</c>; observación 1 de la prueba del 2026-10-13 y pregunta 41 (4); T52 y su
+    /// revisión) [P]: con su alto de siempre (<see cref="Toast.DefaultHeightDp"/>) y su borde de abajo 8 dp sobre la bandeja,
+    /// como antes. Si se ve alguna burbuja «Te faltan {n}» de la bandeja (<see cref="BoosterTray.TryGetMissingTop"/>), sube lo
+    /// justo para quedar <see cref="NoticeBubbleGapDp"/> por encima de la más alta, con su canto: nunca la tapa. Para no tapar
+    /// el tablero, se encoge hasta su texto (<see cref="Toast.MinHeightDp"/>) si entre la repisa de la última fila (con su
+    /// sombra, <see cref="ShelfShadowBelowFootDp"/> bajo el pie, donde van la ficha «?×n» de las cuias turbias y la de la pareja
+    /// del Remolino) y su borde de abajo no cabe entero. Si ni así cabe, tapa parte de esa repisa, nunca las cuias. Pasa con 3
+    /// filas y las burbujas de dos líneas: en el 135 a 360 × 780 dp, entre el pie de la ficha «?×1» (606 dp) y la burbuja más
+    /// alta (630,5) quedan 24 dp, y el aviso más bajo ocupa 29 + 3 de canto + 4 de aire. Entonces, para no dejar a medias una
+    /// ficha («?×n» cuenta las dosis ocultas, la única información oculta del juego: 02, T1 y T3):</para>
+    /// <list type="bullet">
+    /// <item><description>se ajusta a su texto también a lo ancho (<see cref="Toast.FitWidthDp"/>) y va en el tramo más ancho de
+    /// esa repisa sin fichas, con <see cref="NoticeChipClearDp"/> de aire, lo más centrado posible: tapa madera, no fichas
+    /// («+1 Luciérnaga»);</description></item>
+    /// <item><description>si así no cabe (el rescate, «¡Una cuia más! Sigue desde aquí», en el 135: unos 280 dp para los 226
+    /// libres a la derecha de la ficha), va de su ancho de siempre y sube hasta tapar enteras las fichas que alcanza: su borde de
+    /// arriba, <see cref="NoticeChipCoverDp"/> sobre ellas y nunca por encima del pie de la fila. Así no asoma una tira suelta
+    /// de la ficha, que parecía un fallo de dibujo (captura 92 de la primera versión de T52), pero tapa los 23 dp bajo el pie:
+    /// la cara de la repisa de abajo y sus fichas durante lo que dura el aviso (3-7 s).</description></item>
+    /// </list>
+    /// <para>«Te faltan {n} semillas» de Revelar, el caso que vio el dueño, ya no sale como aviso mientras su burbuja está a la
+    /// vista, que es casi siempre que sale: la burbuja late como respuesta al toque (<see cref="ShowRevealMissing"/>). Se
+    /// descartó dibujar las burbujas delante del aviso: aunque el aviso se encogiera, taparían su texto, y eso choca con D-011,
+    /// punto 2 (avisos legibles). Es un compromiso [P] para el dueño (capturas 92 de T52), con alternativas: un aviso que no
+    /// llegue a la repisa (más estrecho y en dos líneas, o arriba, en la franja del panorama cuando la hay), el aviso detrás de
+    /// la capa de las repisas, o aceptarlo así. Se recoloca en cada fotograma si cambian las burbujas, las fichas o el tablero
+    /// (sin asignaciones; solo mide el texto cuando cambia).</para>
     /// </remarks>
     public sealed partial class GameScreen
     {
@@ -67,11 +88,25 @@ namespace AF.UI
         /// </summary>
         internal const float ShelfShadowBelowFootDp = 23f;
 
+        /// <summary>Aire a lo ancho entre el aviso ajustado a su texto y una ficha de la repisa que no tapa (dp) [P].</summary>
+        internal const float NoticeChipClearDp = 4f;
+
+        /// <summary>Lo que el borde de arriba del aviso queda sobre una ficha de la repisa que tapa entera (dp) [P].</summary>
+        internal const float NoticeChipCoverDp = 2f;
+
         /// <summary>Borde de abajo del aviso de siempre sobre el borde de arriba de la bandeja (dp).</summary>
         private const float NoticeAboveTrayDp = 8f;
 
+        // Fichas de la repisa como mucho (la «?×n» y la del Remolino de cada cuia).
+        private const int MaxNoticeChips = 2 * BoardState.MaxCuias;
+
         private readonly RectTransform _noticeLayer;
         private readonly Notice[] _notices = new Notice[NoticeSlots];
+        private readonly float[] _chipX0 = new float[MaxNoticeChips];
+        private readonly float[] _chipX1 = new float[MaxNoticeChips];
+        private readonly float[] _chipY0 = new float[MaxNoticeChips];
+        private readonly float[] _chipY1 = new float[MaxNoticeChips];
+        private readonly float[] _chipFoot = new float[MaxNoticeChips];
         private int _noticeHead;
         private int _noticeCount;
         private FaunaSpecies? _sightingPending;
@@ -132,6 +167,15 @@ namespace AF.UI
             PlaceToast(true);
         }
 
+        /// <summary>
+        /// Un aviso del tablero por la cola, como los del juego (tests y capturas: el rescate o «+1 Luciérnaga» sin pasar por su
+        /// camino entero).
+        /// </summary>
+        internal void ShowNotice(string text)
+        {
+            ShowToast(text);
+        }
+
         // El aviso, sin tapar las burbujas «Te faltan {n}» ni, si cabe, el tablero (ver la clase). Cada fotograma con el aviso a
         // la vista, tras repintar la bandeja (GameScreen.Tick); solo lo mueve si cambia su sitio (force: al mostrarlo).
         private void PlaceToast(bool force)
@@ -147,6 +191,8 @@ namespace AF.UI
                 bottom = Mathf.Min(bottom, bubbleTop - NoticeBubbleGapDp - Toast.EdgeDp);
             }
 
+            float width = Toast.FullWidthDp(_canvasW);
+            float left = (_canvasW - width) * 0.5f;
             float height = Toast.DefaultHeightDp;
             float floor = BoardContentBottom();
             if (!float.IsNegativeInfinity(floor))
@@ -154,15 +200,182 @@ namespace AF.UI
                 float room = bottom - (floor + NoticeBoardGapDp);
                 if (room < height)
                 {
-                    height = Mathf.Max(_toast.MinHeightDp(_canvasW), room);
+                    float min = _toast.MinHeightDp(_canvasW);
+                    height = Mathf.Max(min, room);
+                    if (room < min)
+                    {
+                        // Llega a la repisa de abajo: que no deje a medias ninguna de sus fichas.
+                        float top0 = bottom - height;
+                        PlaceToastBesideChips(bottom, ref left, ref width, ref top0);
+                        height = bottom - top0;
+                    }
                 }
             }
 
             float top = bottom - height;
-            if (force || Mathf.Abs(top - _toast.Top) > 0.01f || Mathf.Abs(height - _toast.Height) > 0.01f || float.IsNaN(_toast.Top))
+            if (force || float.IsNaN(_toast.Top) || Mathf.Abs(top - _toast.Top) > 0.01f || Mathf.Abs(height - _toast.Height) > 0.01f
+                || Mathf.Abs(left - _toast.Left) > 0.01f || Mathf.Abs(width - _toast.Width) > 0.01f)
             {
-                _toast.Place(_canvasW, top, height);
+                _toast.PlaceAt(left, top, width, height);
             }
+        }
+
+        // El aviso que llega a la repisa de la última fila (ver la clase): ajustado a su texto en el tramo más ancho sin fichas,
+        // lo más centrado posible; si no cabe, de su ancho de siempre y con su borde de arriba sobre las fichas que alcanza, para
+        // taparlas enteras, sin pasar del pie de su fila. Sin asignaciones.
+        private void PlaceToastBesideChips(float bottom, ref float left, ref float width, ref float top)
+        {
+            int n = CollectNoticeChips();
+            float seenBottom = bottom + Toast.EdgeDp;
+            if (!AnyChipIn(n, top, seenBottom))
+            {
+                return;
+            }
+
+            float fit = _toast.FitWidthDp(_canvasW);
+            if (fit < width - 0.01f && TryChipFreeSpan(left, left + width, fit, n, top, seenBottom, out float x))
+            {
+                left = x;
+                width = fit;
+                return;
+            }
+
+            // Tapa enteras las fichas que alcanza; al subir puede alcanzar otra de la misma repisa (la del Remolino baja más que
+            // la «?×n»): se repite hasta que no cambia (como mucho una vez por ficha).
+            for (int pass = 0; pass <= n; pass++)
+            {
+                bool moved = false;
+                for (int i = 0; i < n; i++)
+                {
+                    if (_chipY1[i] <= top || _chipY0[i] >= seenBottom)
+                    {
+                        continue;
+                    }
+
+                    float want = Mathf.Max(_chipFoot[i], _chipY0[i] - NoticeChipCoverDp);
+                    if (want < top - 0.01f)
+                    {
+                        top = want;
+                        moved = true;
+                    }
+                }
+
+                if (!moved)
+                {
+                    break;
+                }
+            }
+        }
+
+        // Las fichas de la repisa a la vista (la «?×n» de las cuias con ocultas y la de la pareja del Remolino), en el lienzo
+        // (dp desde arriba), con el pie de su cuia. La «?×n» se cuenta aunque su cuia esté en vuelo (se oculta mientras vierte y
+        // vuelve después): así el aviso no salta durante un vertido.
+        private int CollectNoticeChips()
+        {
+            BoardLayoutResult? l = _layout;
+            if (l == null)
+            {
+                return 0;
+            }
+
+            int n = 0;
+            int count = Mathf.Min(_views.Length, l.CenterX.Length);
+            for (int i = 0; i < count && n < MaxNoticeChips - 1; i++)
+            {
+                CuiaView view = _views[i];
+                float x = l.CenterX[i];
+                float foot = l.FootY[i] - _boardShift;
+                if (view.Murky.BadgeCount > 0)
+                {
+                    float half = 0.5f * ProceduralArt.MurkyBadgeWidthDp;
+                    float y0 = foot + MurkyMarks.BadgeGapDp;
+                    AddNoticeChip(ref n, x - half, x + half, y0, y0 + ProceduralArt.MurkyBadgeDp, foot);
+                }
+
+                if (view.OverlayOf(MechanicType.Remolino) is RemolinoOverlay whirl && whirl.PairMarkVisible)
+                {
+                    Rect r = whirl.PairMarkRect; // dp desde el centro del pie, hacia arriba
+                    AddNoticeChip(ref n, x + r.xMin, x + r.xMax, foot - r.yMax, foot - r.yMin, foot);
+                }
+            }
+
+            return n;
+        }
+
+        private void AddNoticeChip(ref int n, float x0, float x1, float y0, float y1, float foot)
+        {
+            _chipX0[n] = x0;
+            _chipX1[n] = x1;
+            _chipY0[n] = y0;
+            _chipY1[n] = y1;
+            _chipFoot[n] = foot;
+            n++;
+        }
+
+        private bool AnyChipIn(int n, float top, float bottom)
+        {
+            for (int i = 0; i < n; i++)
+            {
+                if (_chipY1[i] > top && _chipY0[i] < bottom)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // El sitio (borde izquierdo) de un aviso de width dp entre lo y hi sin tocar, con NoticeChipClearDp de aire, ninguna
+        // ficha que alcance a lo alto (de top a bottom): en el tramo libre que lo deja más cerca del centro del lienzo. Sin
+        // asignaciones (las fichas se recorren por orden con una búsqueda del siguiente hueco, ≤ 32).
+        private bool TryChipFreeSpan(float lo, float hi, float width, int n, float top, float bottom, out float left)
+        {
+            float center = 0.5f * _canvasW;
+            float best = float.PositiveInfinity;
+            left = lo;
+            float cursor = lo;
+            while (cursor < hi)
+            {
+                // La siguiente ficha que alcanza, a la derecha del cursor (o que lo cubre): la de borde izquierdo más a la izquierda.
+                float nextX0 = hi;
+                float nextX1 = hi;
+                for (int i = 0; i < n; i++)
+                {
+                    if (_chipY1[i] <= top || _chipY0[i] >= bottom)
+                    {
+                        continue;
+                    }
+
+                    float x0 = _chipX0[i] - NoticeChipClearDp;
+                    float x1 = _chipX1[i] + NoticeChipClearDp;
+                    if (x1 > cursor && x0 < nextX0)
+                    {
+                        nextX0 = x0;
+                        nextX1 = x1;
+                    }
+                }
+
+                float gapEnd = Mathf.Min(nextX0, hi);
+                if (gapEnd - cursor >= width - 0.01f)
+                {
+                    float x = Mathf.Clamp(center - (0.5f * width), cursor, gapEnd - width);
+                    float d = Mathf.Abs(x + (0.5f * width) - center);
+                    if (d < best)
+                    {
+                        best = d;
+                        left = x;
+                    }
+                }
+
+                if (nextX0 >= hi)
+                {
+                    break;
+                }
+
+                cursor = Mathf.Max(cursor, nextX1);
+            }
+
+            return !float.IsPositiveInfinity(best);
         }
 
         // Lo más bajo del tablero en el lienzo (dp desde arriba): la sombra de la repisa de la última fila, con el tablero tal

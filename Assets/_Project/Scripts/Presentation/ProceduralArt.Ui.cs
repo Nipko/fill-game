@@ -49,6 +49,19 @@ namespace AF.Presentation
         public bool Painted { get; }
     }
 
+    /// <summary>Dónde se pintó una superficie de modal de la caché (<see cref="ProceduralArt.ModalSurfaceOriginOf"/>; tests).</summary>
+    public enum ModalSurfaceOrigin
+    {
+        /// <summary>No está en la caché.</summary>
+        None,
+
+        /// <summary>La pintó <see cref="ProceduralArt.ModalSurfaceFor"/> en el hilo principal.</summary>
+        MainThread,
+
+        /// <summary>La pintó otro hilo (el trabajo del arte del banner de mundo) y el hilo principal solo creó la textura.</summary>
+        OtherThread,
+    }
+
     public sealed partial class ProceduralArt
     {
         /// <summary>Canto visible de un botón en reposo (guía 5.1).</summary>
@@ -59,6 +72,7 @@ namespace AF.Presentation
 
         private readonly Dictionary<int, Sprite> _trays = new Dictionary<int, Sprite>();
         private readonly Dictionary<int, Sprite> _surfaces = new Dictionary<int, Sprite>();
+        private readonly Dictionary<int, ModalSurfaceOrigin> _surfaceOrigin = new Dictionary<int, ModalSurfaceOrigin>();
 
         // Resolución de la superficie de los modales (px por dp).
         private const float ModalSurfacePxPerDp = 1.5f;
@@ -100,6 +114,7 @@ namespace AF.Presentation
             {
                 sprite = BuildModalSurface(w, h);
                 _surfaces[key] = sprite;
+                _surfaceOrigin[key] = ModalSurfaceOrigin.MainThread;
             }
 
             return sprite;
@@ -112,6 +127,28 @@ namespace AF.Presentation
         public bool HasModalSurface(float widthDp, float heightDp)
         {
             return _surfaces.ContainsKey(ModalSurfaceKey(widthDp, heightDp, out _, out _));
+        }
+
+        /// <summary>
+        /// Dónde se pintó la superficie de esas medidas que está en la caché (tests: el banner de mundo no debe pintar la suya en
+        /// el hilo principal al abrirse, T52): <see cref="ModalSurfaceOrigin.None"/> si no está.
+        /// </summary>
+        public ModalSurfaceOrigin ModalSurfaceOriginOf(float widthDp, float heightDp)
+        {
+            int key = ModalSurfaceKey(widthDp, heightDp, out _, out _);
+            return _surfaces.ContainsKey(key) && _surfaceOrigin.TryGetValue(key, out ModalSurfaceOrigin origin) ? origin : ModalSurfaceOrigin.None;
+        }
+
+        /// <summary>
+        /// Solo para tests: saca de la caché la superficie de esas medidas sin destruirla (la sigue llevando lo generado, que la
+        /// destruye en <see cref="Dispose"/>, y quien ya la usa la conserva), para que la siguiente petición parta de cero aunque
+        /// otro test de la sesión ya la hubiera generado en este arte compartido. True si estaba.
+        /// </summary>
+        public bool ForgetModalSurface(float widthDp, float heightDp)
+        {
+            int key = ModalSurfaceKey(widthDp, heightDp, out _, out _);
+            _surfaceOrigin.Remove(key);
+            return _surfaces.Remove(key);
         }
 
         // Clave de la caché de superficies y sus medidas en dp enteros (las de ModalSurfaceFor).
@@ -129,6 +166,7 @@ namespace AF.Presentation
             if (!_surfaces.ContainsKey(key))
             {
                 _surfaces[key] = MakeSprite32(px, ModalSurfaceName(w, h), new Vector2(0.5f, 0.5f), ModalSurfacePxPerDp);
+                _surfaceOrigin[key] = ModalSurfaceOrigin.OtherThread;
             }
         }
 

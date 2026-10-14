@@ -26,14 +26,18 @@ namespace AF.Tests.PlayMode
     /// <item><description>pregunta 42 (b): el aviso a la vista se oculta en el fotograma en que se abre Aguas estancadas, no
     /// vuelve al cerrarlo, y el que esperaba en la cola sale después, como antes;</description></item>
     /// <item><description>observación 1 / pregunta 41 (4): el aviso no tapa las burbujas «Te faltan {n}» de la bandeja, con 1 y
-    /// con 3 filas (el 135), y sin burbujas tampoco tapa la repisa de abajo ni la ficha «?×n» del 135;</description></item>
+    /// con 3 filas (el 135); sin burbujas tampoco tapa la repisa de abajo ni la ficha «?×n» del 135; con ellas no deja a medias
+    /// ninguna ficha (o va junto a ella, ajustado a su texto, o la tapa entera: el compromiso [P]); y Revelar sin semillas ni
+    /// video ya no saca el aviso: la burbuja «Te faltan {n}» late (revisión de T52);</description></item>
     /// <item><description>pregunta 43: el banner de mundo admite la escala de fuente de 02 §12 hasta el 130 %, con las mismas
     /// comprobaciones que la tarjeta previa;</description></item>
     /// <item><description>observación 4: tras ver la victoria del 40, el banner del 41 entra con «Siguiente» sin esperar
-    /// (<c>wait_ms</c> ≤ 16 ms y sin respaldo): la superficie de madera ya se pintó en otro hilo con su arte;</description></item>
-    /// <item><description>observación 5: por el Remolino, la cuia tocada se traga el chorro (remolino en su superficie y espiral
-    /// que gira, se ilumina y late) y la pareja se ilumina y late al recibir, con destellos en el fondo; dentro del presupuesto
-    /// de 2.800 ms, sin asignaciones por fotograma y, con Reducir movimiento, sin giros, latidos ni partículas.</description></item>
+    /// (<c>wait_ms</c> ≤ 16 ms y sin respaldo): la superficie de madera ya se pintó en otro hilo con su arte (el test la saca
+    /// antes de la caché del arte compartido, así que no depende de los tests que corrieron antes);</description></item>
+    /// <item><description>observación 5: por el Remolino, la cuia tocada se traga el chorro (remolino con contorno en su
+    /// superficie y espiral que gira, se ilumina, late y enciende un brillo detrás del remanso) y la pareja se ilumina y late al
+    /// recibir, con su vidrio que brilla y destellos en el fondo; dentro del presupuesto de 2.800 ms, sin asignaciones por
+    /// fotograma y, con Reducir movimiento, sin giros, latidos ni partículas (ni siquiera pedidas): solo fundidos.</description></item>
     /// </list>
     /// </summary>
     public sealed class PhoneFixesTests
@@ -176,31 +180,132 @@ namespace AF.Tests.PlayMode
             GameScreen view = boot.View!;
             Assert.That(view.Layout!.Rows, Is.EqualTo(3), "el 135, de 3 filas");
             Assert.That(view.Tray.ExtraShowsMissing && view.Tray.RevealShowsMissing, Is.True, "las dos burbujas");
-            view.ShowRevealMissing(120);
-            PlayModeHelpers.Step(boot, 200);
-            Assert.That(view.ToastText, Is.EqualTo(UiText.RevealMissing(120)));
-            AssertToastClearOfBubbles(view, "3 filas");
-            AssertToastTextFits(view);
-
-            // No tapa ninguna cuia: queda bajo el pie de la última fila. El compromiso (capturas 92 de T52): con las dos burbujas
-            // de dos líneas no cabe entre ellas y la repisa, así que tapa lo menos posible del canto de la repisa de abajo.
+            Assert.That(VisibleChips(view).Count, Is.GreaterThan(0), "condición del test: la ficha «?×1» de la fila de abajo");
             BoardLayoutResult l = view.Layout;
             float foot = l.RowFootY[l.Rows - 1];
-            Assert.That(view.NoticeToast.Top, Is.GreaterThan(foot), "no tapa las cuias de la fila de abajo");
-            float covered = Mathf.Max(0f, BoardFloor(view) - view.NoticeToast.Top);
-            Assert.That(view.NoticeToast.Height, Is.EqualTo(view.NoticeToast.MinHeightDp(view.CanvasWidth)).Within(0.05f), "encogido a su texto");
-            TestContext.WriteLine("135 con burbujas: el aviso tapa " + covered.ToString("0.0") + " dp de la repisa de abajo (con su sombra).");
+
+            // El rescate (≈ 280 dp de ancho, no cabe a la derecha de la ficha): del ancho de siempre, tapa enteras las fichas que
+            // alcanza, nunca las cuias ni las burbujas. Es el compromiso [P] (capturas 92): tapa los 23 dp bajo el pie.
+            view.ShowNotice(UiText.RescueApplied);
+            PlayModeHelpers.Step(boot, 200);
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RescueApplied));
+            AssertToastClearOfBubbles(view, "3 filas, el rescate");
+            AssertToastTextFits(view);
+            Assert.That(view.NoticeToast.Width, Is.EqualTo(Toast.FullWidthDp(view.CanvasWidth)).Within(0.05f), "no cabe junto a la ficha: del ancho de siempre");
+            Assert.That(view.NoticeToast.Top, Is.GreaterThanOrEqualTo(foot - 0.05f), "no tapa las cuias de la fila de abajo");
+            int covered = AssertChipsWholeOrClear(view, "3 filas, el rescate");
+            Assert.That(covered, Is.GreaterThan(0), "tapa la ficha entera, sin dejar una tira suelta");
+            float coveredDp = Mathf.Max(0f, BoardFloor(view) - view.NoticeToast.Top);
+            Assert.That(coveredDp, Is.LessThanOrEqualTo(GameScreen.ShelfShadowBelowFootDp + 0.05f), "como mucho, lo que hay bajo el pie");
+            TestContext.WriteLine("135 con burbujas, el rescate: tapa " + coveredDp.ToString("0.0") + " dp bajo la fila de abajo y " + covered + " ficha(s) enteras.");
+
+            // «+1 Luciérnaga» (corto): ajustado a su texto en el tramo sin fichas, lo más centrado posible; no tapa ninguna ficha.
+            view.NoticeToast.Hide();
+            view.ShowNotice(UiText.RevealGiftToast);
+            PlayModeHelpers.Step(boot, 200);
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RevealGiftToast));
+            AssertToastClearOfBubbles(view, "3 filas, «+1 Luciérnaga»");
+            AssertToastTextFits(view);
+            Assert.That(view.NoticeToast.Width, Is.LessThan(Toast.FullWidthDp(view.CanvasWidth) - 1f), "ajustado a su texto");
+            Assert.That(view.NoticeToast.Width, Is.EqualTo(view.NoticeToast.FitWidthDp(view.CanvasWidth)).Within(0.05f));
+            Assert.That(view.NoticeToast.Top, Is.GreaterThanOrEqualTo(foot - 0.05f), "no tapa las cuias de la fila de abajo");
+            Assert.That(AssertChipsWholeOrClear(view, "3 filas, «+1 Luciérnaga»"), Is.EqualTo(0), "no tapa ninguna ficha");
+            TestContext.WriteLine("135 con burbujas, «+1 Luciérnaga»: " + view.NoticeToast.SeenRect);
 
             // Sin burbujas, encogido a su texto entre la repisa (con su sombra y la ficha «?×n») y la bandeja: no la tapa.
             yield return LoadWithBubbles(135, 0, 1000);
             boot = GameBootstrap.Current!;
             view = boot.View!;
             Assert.That(view.Tray.ExtraShowsMissing || view.Tray.RevealShowsMissing, Is.False);
-            view.ShowRevealMissing(120);
+            view.ShowNotice(UiText.RevealMissing(120));
             PlayModeHelpers.Step(boot, 200);
             Assert.That(view.NoticeToast.Top, Is.GreaterThanOrEqualTo(BoardFloor(view) + GameScreen.NoticeBoardGapDp - 0.05f), "sin tapar la repisa ni la ficha «?×n»");
             Assert.That(view.NoticeToast.Height, Is.LessThan(Toast.DefaultHeightDp).And.GreaterThanOrEqualTo(view.NoticeToast.MinHeightDp(view.CanvasWidth) - 0.05f));
+            Assert.That(view.NoticeToast.Width, Is.EqualTo(Toast.FullWidthDp(view.CanvasWidth)).Within(0.05f));
+            Assert.That(AssertChipsWholeOrClear(view, "3 filas sin burbujas"), Is.EqualTo(0));
             AssertToastTextFits(view);
+        }
+
+        [UnityTest]
+        public IEnumerator RevealWithoutSeedsNorVideo_TheBubbleAnswers_NoNotice_Level135()
+        {
+            // Revisión de T52 [P]: «Te faltan 120 semillas» ya no sale como aviso cuando la burbuja «Te faltan 120» de Revelar está
+            // a la vista (lo repetía y, con 3 filas, tapaba la repisa de abajo y la ficha «?×n»): la burbuja late y toma los colores
+            // del precio sin saldo.
+            yield return LoadWithBubbles(135, 0, 0);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            Assert.That(view.Tray.RevealShowsMissing, Is.True);
+            Assert.That(view.Tray.RevealMissingText, Is.EqualTo("Te faltan 120"));
+            Assert.That(boot.PressReveal(), Is.False, "sin stock, saldo ni video: no hace nada más");
+            Assert.That(view.ToastText, Is.Null, "sin aviso");
+            Assert.That(view.NoticesQueued, Is.EqualTo(0));
+            Assert.That(view.Tray.RevealMissingPulsing, Is.True, "la burbuja responde");
+            Assert.That(boot.Flow!.RevealSelecting, Is.False);
+            Rect rest = VictorySetup.CanvasRect(view.Tray.RevealMissingRect, Root(view));
+            PlayModeHelpers.Step(boot, Mathf.RoundToInt(BoosterTray.MissingPulseHalfMs));
+            Assert.That(view.Tray.RevealMissingPulseScale, Is.GreaterThan(1.1f).And.LessThanOrEqualTo(BoosterTray.MissingPulseScale + 1e-4f), "late: 1 → 1,12 → 1");
+            Assert.That(view.Tray.RevealMissingPulseColor, Is.GreaterThan(0.9f), "con los colores del precio sin saldo");
+            Assert.That(VictorySetup.CanvasRect(view.Tray.RevealMissingRect, Root(view)), Is.EqualTo(rest), "su sitio no cambia (los toques ni el aviso del tablero)");
+            PlayModeHelpers.Step(boot, Mathf.RoundToInt(BoosterTray.MissingPulseHalfMs) + 50);
+            Assert.That(view.Tray.RevealMissingPulsing, Is.False, "en 2 × 180 ms");
+            Assert.That(view.Tray.RevealMissingPulseScale, Is.EqualTo(1f));
+            Assert.That(view.Tray.RevealMissingPulseColor, Is.EqualTo(0f));
+            Assert.That(view.Tray.RevealMissingLabel.color, Is.EqualTo(Palette.UiRedWarning), "de vuelta a sus colores");
+
+            // Con Reducir movimiento, sin latido: solo el fundido de color.
+            boot.Flow.ReduceMotion = true;
+            Assert.That(boot.PressReveal(), Is.False);
+            Assert.That(view.ToastText, Is.Null);
+            float maxScale = 1f;
+            float maxColor = 0f;
+            for (int ms = 0; ms < 600; ms += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                maxScale = Mathf.Max(maxScale, view.Tray.RevealMissingPulseScale);
+                maxColor = Mathf.Max(maxColor, view.Tray.RevealMissingPulseColor);
+            }
+
+            Assert.That(maxScale, Is.EqualTo(1f), "sin latido");
+            Assert.That(maxColor, Is.GreaterThan(0.9f), "con el fundido de color");
+            Assert.That(view.Tray.RevealMissingPulsing, Is.False, "en 2 × 200 ms");
+            Assert.That(view.ToastText, Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator NoAllocationsPerFrame_NoticeBesideTheChips_AndTheBubblePulse_Level135()
+        {
+            // 08 §5.4: el aviso que busca sitio entre las fichas de la repisa (cada fotograma) y el latido de la burbuja no asignan.
+            yield return LoadWithBubbles(135, 0, 0);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            PlayModeHelpers.TickExact(boot, 1200); // en régimen: los ~2,2 s que siguen al salto de la intro asignan (NoticeTests)
+            foreach (string text in new[] { UiText.RescueApplied, UiText.RevealGiftToast })
+            {
+                view.NoticeToast.Hide();
+                view.ShowNotice(text);
+                view.Tick(PlayModeHelpers.FrameMs); // la primera colocación mide el texto (una vez por texto)
+                Assert.That(view.ToastText, Is.EqualTo(text));
+                Assert.That(() =>
+                {
+                    for (int f = 0; f < 30; f++)
+                    {
+                        view.Tick(PlayModeHelpers.FrameMs);
+                    }
+                }, Is.Not.AllocatingGCMemory(), "30 fotogramas con «" + text + "» junto a las fichas");
+            }
+
+            view.NoticeToast.Hide();
+            Assert.That(boot.PressReveal(), Is.False);
+            Assert.That(view.Tray.RevealMissingPulsing, Is.True);
+            Assert.That(() =>
+            {
+                for (int f = 0; f < 20; f++)
+                {
+                    view.Tick(PlayModeHelpers.FrameMs);
+                }
+            }, Is.Not.AllocatingGCMemory(), "20 fotogramas del latido de la burbuja");
+            Assert.That(view.Tray.RevealMissingPulsing, Is.True, "aún late (2 × 180 ms)");
         }
 
         // ---- 2 · Pregunta 43: el banner de mundo admite la escala de fuente de 02 §12 ----
@@ -259,16 +364,24 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.TakeClock(boot);
             GameScreen view = boot.View!;
             LevelFlow flow = boot.Flow!;
-            view.CardArt.ReleaseBannerArt(); // el arte es compartido entre escenas: nada de un banner de otro test
+            ProceduralArt art = view.CardArt;
+            art.ReleaseBannerArt(); // el arte es compartido entre escenas: nada de un banner de otro test
             if (flow.Phase == FlowPhase.LevelCard)
             {
                 Assert.That(boot.TapAnywhere(), Is.True, "la tarjeta previa del 40, si la hay");
             }
 
-            VictorySetup.WinToVictoryScreen(boot);
-            Assert.That(view.CardArt.BannerArtPending, Is.True, "en la victoria del 40, el arte del banner del 41, pedido");
-            Assert.That(view.CardArt.WaitForBannerArt(30000), Is.True, "pintado en otro hilo mientras se ve la victoria");
+            // Condición de partida fija: la superficie de 328 × 281 dp, fuera de la caché del arte compartido de la sesión (las
+            // tarjetas del 100 y del 183 y el banner del 41 de otros tests ya la habían generado: sin esto el test pasaría aunque
+            // el banner la pintara en el hilo principal al abrirse, como en f64c19a).
             var surface = new Vector2(LevelCardView.MaxWidthDp - 16f, 281f);
+            art.ForgetModalSurface(surface.x, surface.y);
+            Assert.That(art.HasModalSurface(surface.x, surface.y), Is.False, "condición del test: la superficie, sin generar");
+            Assert.That(art.ModalSurfaceOriginOf(surface.x, surface.y), Is.EqualTo(ModalSurfaceOrigin.None));
+
+            VictorySetup.WinToVictoryScreen(boot);
+            Assert.That(art.BannerArtPending, Is.True, "en la victoria del 40, el arte del banner del 41, pedido");
+            Assert.That(art.WaitForBannerArt(30000), Is.True, "pintado en otro hilo mientras se ve la victoria");
 
             Assert.That(boot.PressNext(), Is.True);
             for (int ms = 0; ms < 5000 && flow.LevelNumber != 41; ms += PlayModeHelpers.FrameMs)
@@ -282,7 +395,8 @@ namespace AF.Tests.PlayMode
             Assert.That(banner.AsyncArt, Is.True);
             Assert.That(banner.CardShown && banner.ArtReady, Is.True, "entra en el acto, con su arte");
             Assert.That(banner.SurfaceSizeDp, Is.EqualTo(surface), "la superficie compartida de 281 dp");
-            Assert.That(view.CardArt.HasModalSurface(surface.x, surface.y), Is.True, "la superficie llegó con el arte");
+            Assert.That(art.HasModalSurface(surface.x, surface.y), Is.True, "la superficie llegó con el arte");
+            Assert.That(art.ModalSurfaceOriginOf(surface.x, surface.y), Is.EqualTo(ModalSurfaceOrigin.OtherThread), "pintada en el trabajo del arte, no en el hilo principal al abrir el banner");
             Assert.That(banner.ArtWaitMs, Is.LessThanOrEqualTo(16f), "wait_ms ≈ 0 (≤ 16 ms en el Editor)");
             Assert.That(view.LastWorldBannerArtProbe, Does.Contain("\"level\":41").And.Contain("\"fallback\":\"none\""));
             TestContext.WriteLine("AF_STATE world_banner_art tras «Siguiente»: " + view.LastWorldBannerArtProbe);
@@ -331,7 +445,9 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 160);
             Assert.That(intake.IntakeActive, Is.True);
             Assert.That(intake.SpiralFoamAlpha, Is.GreaterThan(RemolinoOverlay.FoamAlpha + 0.2f), "la espiral de la base se ilumina");
-            Assert.That(intake.SpiralScale, Is.GreaterThan(1.03f), "y late");
+            Assert.That(intake.SpiralScale, Is.GreaterThan(1.08f), "y late (hasta 1,15)");
+            Assert.That(intake.PoolGlowAlphaNow, Is.GreaterThan(0.5f * RemolinoOverlay.PoolGlowAlpha), "con el brillo detrás del remanso");
+            Assert.That(intake.GlowsAdditive, Is.True, "aditivo, sin Bloom");
             Assert.That(intake.SpiralAngle, Is.Not.EqualTo(angle), "y gira deprisa");
             Assert.That(intake.IntakeSwirlAlpha, Is.GreaterThan(0.5f));
             Assert.That(intake.IsAnimating, Is.False, "acompaña al vertido: no es un paso");
@@ -341,8 +457,11 @@ namespace AF.Tests.PlayMode
             MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Receive, partner, 4000);
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.Receive, partner, 0.6f);
             Assert.That(receive.SpiralFoamAlpha, Is.GreaterThan(RemolinoOverlay.FoamAlpha + 0.2f), "la pareja se ilumina al recibir");
-            Assert.That(receive.SpiralScale, Is.GreaterThan(1.03f), "y late");
+            Assert.That(receive.SpiralScale, Is.GreaterThan(1.08f), "y late");
+            Assert.That(receive.PoolGlowAlphaNow, Is.GreaterThan(0.5f * RemolinoOverlay.PoolGlowAlpha), "con el brillo del remanso");
+            Assert.That(receive.GlassGlowAlphaNow, Is.GreaterThan(0.05f).And.LessThanOrEqualTo(RemolinoOverlay.GlassGlowAlpha), "y su vidrio brilla al llegar la racha al fondo");
             Assert.That(intake.IntakeActive || intake.IntakeSwirlVisible, Is.False, "la cuia tocada ya se apagó");
+            Assert.That(intake.PoolGlowAlphaNow, Is.EqualTo(0f), "y su brillo también");
             Assert.That(intake.SpiralFoamAlpha, Is.EqualTo(RemolinoOverlay.FoamAlpha).Within(1e-3f));
             Assert.That(intake.SpiralScale, Is.EqualTo(1f).Within(1e-4f));
             Assert.That(intake.SpiralAngle, Is.EqualTo(0f).Within(0.01f));
@@ -356,6 +475,7 @@ namespace AF.Tests.PlayMode
             MechanicTestKit.AssertViewMatchesModel(boot);
             Assert.That(receive.SpiralFoamAlpha, Is.EqualTo(RemolinoOverlay.FoamAlpha).Within(1e-3f), "en reposo, la espuma de siempre");
             Assert.That(receive.SpiralScale, Is.EqualTo(1f).Within(1e-4f));
+            Assert.That(receive.PoolGlowAlphaNow + receive.GlassGlowAlphaNow, Is.EqualTo(0f), "y sin brillos");
             TestContext.WriteLine("Nivel 103: " + elapsed + " ms del toque a la vista quieta.");
         }
 
@@ -400,12 +520,15 @@ namespace AF.Tests.PlayMode
                 _rig.Animator.Fx = fx;
                 _rig.Animator.ReduceMotion = reduce;
                 RemolinoOverlay intake = Whirl(_rig.Views[0]);
+                RemolinoOverlay partner = Whirl(_rig.Views[2]);
                 BoardState after = _rig.Pour(board, 1, 0, out PourVisual v);
                 Assert.That(v.Receiver, Is.EqualTo(2));
                 bool lit = false;
                 bool spun = false;
                 bool pulsed = false;
                 bool swirl = false;
+                bool poolGlow = false;
+                bool glassGlow = false;
                 for (int t = 0; t < 4000 && !_rig.Animator.IsIdle; t += PlayModeHelpers.FrameMs)
                 {
                     _rig.Tick(PlayModeHelpers.FrameMs);
@@ -413,18 +536,22 @@ namespace AF.Tests.PlayMode
                     spun |= Mathf.Abs(intake.SpiralAngle) > 0.01f;
                     pulsed |= intake.SpiralScale > 1.001f;
                     swirl |= intake.IntakeSwirlVisible && intake.IntakeSwirlAlpha > 0.3f;
+                    poolGlow |= intake.PoolGlowAlphaNow > 0.1f;
+                    glassGlow |= partner.GlassGlowAlphaNow > 0.05f;
                 }
 
                 string what = reduce ? "con Reducir movimiento" : "normal";
                 Assert.That(_rig.Animator.IsIdle, Is.True, what);
                 Assert.That(_rig.Animator.ShownOf(2), Is.EqualTo(after[2]), what);
                 Assert.That(lit && swirl, Is.True, what + ": la espuma se ilumina y el remolino de la superficie se funde");
+                Assert.That(poolGlow && glassGlow, Is.True, what + ": el brillo del remanso y el del vidrio de la pareja (fundidos, también con Reducir movimiento)");
+                Assert.That(intake.PoolGlowAlphaNow + partner.PoolGlowAlphaNow + partner.GlassGlowAlphaNow, Is.EqualTo(0f), what + ": al terminar, sin brillos");
                 Assert.That(spun, Is.EqualTo(!reduce), what + ": la espiral gira solo sin Reducir movimiento");
                 Assert.That(pulsed, Is.EqualTo(!reduce), what + ": y late");
                 Assert.That(intake.IntakeActive || intake.IntakeSwirlVisible, Is.False, what + ": al terminar, en reposo");
                 if (reduce)
                 {
-                    Assert.That(fx.Sparkles + fx.Bubbles, Is.EqualTo(0), "con Reducir movimiento, sin partículas");
+                    Assert.That(fx.Sparkles + fx.Bubbles, Is.EqualTo(0), "con Reducir movimiento, el Remolino no pide partículas");
                 }
                 else
                 {
@@ -527,6 +654,57 @@ namespace AF.Tests.PlayMode
             Assert.That(view.NoticeToast.Top + view.NoticeToast.Height + Toast.EdgeDp, Is.LessThanOrEqualTo(top - GameScreen.NoticeBubbleGapDp + 0.05f));
         }
 
+        // Las fichas de la repisa a la vista (la «?×n» de las cuias con ocultas y la de la pareja del Remolino), en el lienzo.
+        private static List<Rect> VisibleChips(GameScreen view)
+        {
+            Canvas.ForceUpdateCanvases();
+            RectTransform root = Root(view);
+            var chips = new List<Rect>();
+            foreach (CuiaView cuia in view.Views)
+            {
+                if (cuia.Murky.BadgeVisible)
+                {
+                    chips.Add(VictorySetup.CanvasRect(cuia.Murky.Badge.rectTransform, root));
+                }
+
+                if (cuia.OverlayOf(MechanicType.Remolino) is RemolinoOverlay whirl && whirl.PairMarkVisible)
+                {
+                    chips.Add(VictorySetup.CanvasRect((RectTransform)cuia.transform.Find("SlotFront/RemolinoPairTag")!, root));
+                }
+            }
+
+            return chips;
+        }
+
+        // El aviso no deja a medias ninguna ficha de la repisa: o no la toca (con NoticeChipClearDp de aire a lo ancho) o la tapa
+        // entera, con su borde de arriba sobre ella. Devuelve las que tapa.
+        private static int AssertChipsWholeOrClear(GameScreen view, string what)
+        {
+            Canvas.ForceUpdateCanvases();
+            Rect toast = VictorySetup.CanvasRect(view.NoticeToast.Root, Root(view));
+            toast.yMax += Toast.EdgeDp;
+            int covered = 0;
+            foreach (Rect chip in VisibleChips(view))
+            {
+                if (!toast.Overlaps(chip))
+                {
+                    if (chip.yMax > toast.yMin && chip.yMin < toast.yMax)
+                    {
+                        float gap = chip.xMin >= toast.xMax ? chip.xMin - toast.xMax : toast.xMin - chip.xMax;
+                        Assert.That(gap, Is.GreaterThanOrEqualTo(GameScreen.NoticeChipClearDp - 0.6f), what + ": aire entre el aviso " + toast + " y la ficha " + chip);
+                    }
+
+                    continue;
+                }
+
+                covered++;
+                Assert.That(chip.xMin >= toast.xMin && chip.xMax <= toast.xMax && chip.yMax <= toast.yMax, Is.True, what + ": el aviso " + toast + " tapa entera la ficha " + chip);
+                Assert.That(chip.yMin, Is.GreaterThanOrEqualTo(toast.yMin + 0.5f), what + ": sin una tira suelta de la ficha " + chip + " sobre el aviso " + toast);
+            }
+
+            return covered;
+        }
+
         // El texto del aviso cabe entero, a su tamaño de siempre (15 sp), sin desbordes.
         private static void AssertToastTextFits(GameScreen view)
         {
@@ -619,7 +797,8 @@ namespace AF.Tests.PlayMode
             return (RemolinoOverlay)overlay!;
         }
 
-        // Efectos de prueba: cuenta lo que se pide (con Reducir movimiento, nada, como FxLayer).
+        // Efectos de prueba: cuenta todo lo que se pide, también con Reducir movimiento (FxLayer lo descartaría, pero aquí se
+        // comprueba que quien anima ni siquiera lo pide).
         private sealed class CountingFx : IBoardFx
         {
             public int Sparkles;
@@ -631,10 +810,7 @@ namespace AF.Tests.PlayMode
 
             public void Splash(Vector2 surface, Color tint, float unitDp)
             {
-                if (!ReduceMotion)
-                {
-                    Splashes++;
-                }
+                Splashes++;
             }
 
             public void SealDrops(Vector2 rim, Color tint, float unitDp)
@@ -643,11 +819,6 @@ namespace AF.Tests.PlayMode
 
             void IBoardFx.Sparkles(Vector2 pos, Color color, int count, float unitDp)
             {
-                if (ReduceMotion)
-                {
-                    return;
-                }
-
                 if (Sparkles == 0)
                 {
                     FirstSparkleAt = pos;
@@ -662,10 +833,7 @@ namespace AF.Tests.PlayMode
 
             void IBoardFx.Bubbles(Vector2 pos, int count, float unitDp)
             {
-                if (!ReduceMotion)
-                {
-                    Bubbles += count;
-                }
+                Bubbles += count;
             }
         }
     }

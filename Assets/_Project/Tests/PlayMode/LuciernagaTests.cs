@@ -362,7 +362,8 @@ namespace AF.Tests.PlayMode
             presented = FunnelSetup.AdsPresenter.Presented;
             Assert.That(boot.PressRevealVideo(), Is.False);
             Assert.That(boot.PressReveal(), Is.False);
-            Assert.That(view.ToastText, Is.EqualTo(UiText.RevealMissing(70)), "«Te faltan 70 semillas»");
+            Assert.That(view.Tray.RevealMissingPulsing, Is.True, "«Te faltan 70» de la burbuja late como respuesta (revisión de T52)");
+            Assert.That(view.ToastText, Is.Null, "y no sale el aviso «Te faltan 70 semillas»: lo dice la burbuja");
             Assert.That(boot.Flow!.RevealSelecting, Is.False);
             Assert.That(boot.Wallet!.Seeds, Is.EqualTo(50), "ningún cobro");
             Assert.That(boot.Wallet.Stock.Get(BoosterKind.Reveal), Is.EqualTo(0));
