@@ -1,0 +1,10 @@
+{
+  "note": "Decisiones [P] de P-M1 (a) que rio-amazonas.json no lleva en sus campos. Las aplica tools/river-map/stops.py, y su --check falla si una entrada no corresponde a ninguna parada o lleva un campo desconocido (campos admitidos: country, country_name y why).",
+  "stops": {
+    "rio_frontera": {
+      "country": "CO",
+      "country_name": "map.stop.rio_frontera.country",
+      "why": "La parada 13 (El río frontera, boca del Atacuari) tiene a Colombia en una orilla y al Perú en la otra: rio-amazonas.json dice «CO/PE». P-M1 (a): country = CO, el país del mundo 4 (la bandera del Perú se iza al llegar a Iquitos, n = 14), y la placa nombra los dos países con la clave country_name («Colombia y Perú») [P]."
+    }
+  }
+}

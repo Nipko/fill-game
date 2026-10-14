@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:amazonfill:schemas:af-river-stops-1",
+  "title": "Amazon Fill · paradas del Mapa del río af-river-stops/1",
+  "description": "JSON Schema del formato af-river-stops/1 (Mapa del río, D-013; contrato 30 de docs/GDD.md §7.4; sintaxis en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.5, con los extras [P] de P-M1 (a): km_home, answers_world_question y country_name). Junto con 08 §4.5 es la copia única del formato. Lo emite tools/river-map/stops.py en Assets/_Project/Data/Map/river_stops_v1.json y lo valida tools/river-map/test_schemas.py (nunca tools/validate_schema.py, que es solo de af-level/1). Solo lleva claves de texto, nunca textos: los textos de las claves map.* van en Assets/_Project/Data/Loc/facts.csv (contrato 32). Lo que el esquema no puede expresar lo comprueban stops.py --check y RiverStopCatalog (AF.Levels): n contiguos desde 0 y levels = [10n+1, 10n+10]; world igual a WorldTable; gate en el primer tramo de cada mundo y close en el último (salvo el mundo 1, de un solo tramo); bg.kit = bg_kit_w{world con 2 cifras}; uno y solo uno de bg.hero y bg.code; ids únicos; flag_raise al empezar y al cambiar de país; arrival_fact null solo en n = 0; country_name = map.stop.<id>.country; world_question = map.world.w{world}.question y una sola parada que la responde, después de plantearla, en el mismo mundo; ningún «Belén». Los campos at y leg (ruta de la canoa) los añade M2.6; hasta entonces son opcionales. Cambiar este archivo es cambiar un contrato.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "source", "stops"],
+  "properties": {
+    "format": { "type": "string", "const": "af-river-stops/1" },
+    "source": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Ruta, desde la raíz del repositorio, de la fuente de las paradas (hoy docs/research/mapa-del-rio/rio-amazonas.json)."
+    },
+    "stops": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": { "$ref": "#/$defs/stop" },
+      "description": "Una entrada por parada, en orden de n (0-99): 20 en 1-200, 70 en 1-700 y 100 en total (08 §4.5)."
+    }
+  },
+  "$defs": {
+    "iso2": { "type": "string", "pattern": "^[A-Z]{2}$" },
+    "slug": { "type": "string", "pattern": "^[a-z0-9_]+$", "not": { "pattern": "belen" } },
+    "fact_key": {
+      "type": "string",
+      "pattern": "^map\\.(stop\\.[a-z0-9_]+\\.dato_[0-9]{2}|country\\.[a-z]{2}\\.dato_[0-9]{2}|myth\\.[a-z0-9_]+|general\\.[a-z0-9_]+)$",
+      "not": { "pattern": "belen" },
+      "description": "Clave de contenido de un dato del Mapa (glosario §10): map.stop.<lugar>.dato_NN, map.country.<iso2>.dato_NN, map.myth.<tema> o map.general.*. Es también el fact_id de af_river_fact_shown (08 §8.2)."
+    },
+    "unit": { "type": "number", "minimum": 0, "maximum": 1 },
+    "stop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n", "levels", "world", "id", "kind", "country", "country_name", "km_from_sea", "km_home", "sample", "flag_raise", "arrival_fact", "facts", "world_question", "answers_world_question", "bg"],
+      "properties": {
+        "n": { "type": "integer", "minimum": 0, "maximum": 99, "description": "k de la parada: cubre los niveles 10k+1 … 10k+10 y se llega a ella al ganar el 10k; su id visible es s{nn} (glosario §11)." },
+        "levels": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "integer", "minimum": 1, "maximum": 1000 },
+            { "type": "integer", "minimum": 1, "maximum": 1000 }
+          ],
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "[10n+1, 10n+10]."
+        },
+        "world": { "type": "integer", "minimum": 1, "maximum": 13 },
+        "id": { "$ref": "#/$defs/slug", "description": "Id del sitio en minúsculas con guiones bajos (glosario §11); nunca «belen»." },
+        "kind": { "type": "string", "enum": ["gate", "stop", "close"], "description": "gate (gran parada: la primera de cada mundo), stop (parada) o close (cierre de mundo, el «castillo») [P]." },
+        "country": { "$ref": "#/$defs/iso2", "description": "País de la parada (ISO 3166-1 alfa-2)." },
+        "country_name": {
+          "oneOf": [
+            { "type": "string", "pattern": "^map\\.stop\\.[a-z0-9_]+\\.country$", "not": { "pattern": "belen" } },
+            { "type": "null" }
+          ],
+          "description": "[P-M1] Clave del nombre de país de la placa cuando no basta con map.country.<iso2>.name (n = 13, «Colombia y Perú»); null en las demás."
+        },
+        "at": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["line", "s"],
+          "properties": {
+            "line": { "$ref": "#/$defs/slug" },
+            "s": { "$ref": "#/$defs/unit" }
+          },
+          "description": "Posición de la parada en una línea de river_map_v1.json (fracción s de su longitud). Desde M2.6."
+        },
+        "km_from_sea": { "type": ["integer", "null"], "minimum": 0, "description": "Km desde el mar por el cauce; null en n = 0 (Belém no está en el cauce)." },
+        "km_home": { "type": "integer", "minimum": 0, "description": "[P-M1] Km por agua hasta casa (Belém), para «Casa · a unos {km} km»." },
+        "sample": { "type": "string", "enum": ["white", "black", "clear", "clear_white", "black_white"], "description": "Agua del sitio para la mini cuia del Muestrario [P]." },
+        "flag_raise": {
+          "oneOf": [{ "$ref": "#/$defs/iso2" }, { "type": "null" }],
+          "description": "Bandera que se iza al llegar (BR en n = 0, la del primer Mapa) o null."
+        },
+        "arrival_fact": {
+          "oneOf": [{ "$ref": "#/$defs/fact_key" }, { "type": "null" }],
+          "description": "Clave del dato de llegada; null en n = 0. En n = 1, map.stop.estuario.dato_03 (el Dato del río 1 del Mapa del 10, 06 §2.3)."
+        },
+        "facts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/fact_key" },
+          "description": "Claves de los «Otro dato» de la tarjeta de la parada (vacío hasta M2.6)."
+        },
+        "world_question": {
+          "oneOf": [
+            { "type": "string", "pattern": "^map\\.world\\.w(0[1-9]|1[0-3])\\.question$" },
+            { "type": "null" }
+          ],
+          "description": "Clave de la pregunta del mundo en la parada que la plantea, o null."
+        },
+        "answers_world_question": { "type": "boolean", "description": "[P-M1] true en la parada cuyo dato de llegada responde la pregunta de su mundo (✓ en la cabecera del Mapa)." },
+        "bg": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kit", "hero", "code", "lut"],
+          "properties": {
+            "kit": { "type": "string", "pattern": "^bg_kit_w(0[1-9]|1[0-3])$", "description": "Kit del mundo (bg_kit_w{nn}, glosario §11)." },
+            "hero": {
+              "oneOf": [
+                { "type": "string", "pattern": "^bg_hero_[a-z0-9_]+$", "not": { "pattern": "belen" } },
+                { "type": "null" }
+              ],
+              "description": "Héroe pintado del sitio, bg_hero_<sitio>, o null."
+            },
+            "code": {
+              "oneOf": [
+                { "type": "string", "pattern": "^(codigo|kit):[a-z0-9_]+$", "not": { "pattern": "belen" } },
+                { "type": "null" }
+              ],
+              "description": "Pieza por código (codigo:<pieza>) o parada solo con el kit (kit:<pieza>), o null (glosario §11)."
+            },
+            "lut": {
+              "oneOf": [{ "type": "string", "enum": ["dusk", "dawn"] }, { "type": "null" }],
+              "description": "Variante de luz del sitio (atardecer o alba) o null."
+            }
+          }
+        },
+        "leg": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "via", "mouths"],
+          "properties": {
+            "path": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["line", "s0", "s1"],
+                "properties": {
+                  "line": { "$ref": "#/$defs/slug" },
+                  "s0": { "$ref": "#/$defs/unit" },
+                  "s1": { "$ref": "#/$defs/unit" }
+                }
+              }
+            },
+            "via": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/slug" } },
+            "mouths": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/slug" } }
+          },
+          "description": "Ruta del tramo que lleva a esta parada, por agua y con ida y vuelta por las confluencias: tramos de línea, puntos de paso y bocas que se llenan. Desde M2.6."
+        }
+      }
+    }
+  }
+}
