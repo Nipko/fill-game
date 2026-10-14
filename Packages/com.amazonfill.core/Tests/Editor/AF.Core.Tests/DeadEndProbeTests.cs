@@ -12,41 +12,12 @@ namespace AF.Core.Tests
     /// Aguas estancadas por bucle (02 R13 ampliada; D-014, decisión del dueño del 2026-10-13): con vertidos útiles, la partida
     /// queda en <see cref="LevelStatus.Stuck"/> si los estados alcanzables son como mucho <see cref="DeadEndProbe.MaxStates"/>
     /// (64 [P]) y ninguno es victoria; si son más, o alguno gana, sigue en <see cref="LevelStatus.Playing"/> (conservador, R14).
-    /// Regresión del nivel 66 (docs/dev/traspaso/pruebas-telefono-2026-10-13.md, «Defecto encontrado por el dueño»). Test
-    /// compartido (NUnit 3.5, C# 9).
+    /// Regresión del nivel 66 (docs/dev/traspaso/pruebas-telefono-2026-10-13.md, «Defecto encontrado por el dueño»; tablero y
+    /// secuencia en <see cref="Level66Board"/>). Test compartido (NUnit 3.5, C# 9).
     /// </summary>
     [TestFixture]
     public sealed class DeadEndProbeTests
     {
-        /// <summary>
-        /// Nivel 66 (<c>m03_v1_n0066</c>), tablero inicial copiado de <c>Assets/_Project/Data/Levels/mundo_03_v1.json</c> (los
-        /// tests compartidos no leen los packs): 10 cuias de 4 salvo la 5 (Cuia chica de 2), Hoja con fruta 3 en la 6.
-        /// </summary>
-        private static readonly int[] Level66Caps = { 4, 4, 4, 4, 4, 2, 4, 4, 4, 4 };
-
-        private static readonly int[][] Level66Start =
-        {
-            new[] { 3, 8, 10, 7 }, new[] { 4, 7, 4, 7 }, new[] { 10, 7, 4, 10 }, new[] { 14, 14, 14, 3 }, new[] { 6, 6, 6, 14 },
-            new int[0], new int[0], new[] { 8, 8, 10, 6 }, new[] { 3, 3, 8, 1 }, new[] { 1, 1, 1, 4 },
-        };
-
-        /// <summary>Primer intento del dueño en el teléfono (logcat del 2026-10-13): 3>6 4>3 7>4 0>5 1>5 2>0 2>1 5>2 1>5 2>1 0>7 1>2.</summary>
-        private static readonly int[][] Level66Loop =
-        {
-            new[] { 3, 6 }, new[] { 4, 3 }, new[] { 7, 4 }, new[] { 0, 5 }, new[] { 1, 5 }, new[] { 2, 0 },
-            new[] { 2, 1 }, new[] { 5, 2 }, new[] { 1, 5 }, new[] { 2, 1 }, new[] { 0, 7 }, new[] { 1, 2 },
-        };
-
-        /// <summary>
-        /// Tablero tras los 12 vertidos: 0 [3,8,10] · 1 [4,7] · 2 [10,7,7,7] · 3 sellada · 4 sellada · 5 (cap 2) [4,4] · 6 [3] ·
-        /// 7 [8,8,10,10] · 8 [3,3,8,1] · 9 [1,1,1,4]; la Hoja ya se abrió (sin mecánicas).
-        /// </summary>
-        private static readonly int[][] Level66Final =
-        {
-            new[] { 3, 8, 10 }, new[] { 4, 7 }, new[] { 10, 7, 7, 7 }, new[] { 14, 14, 14, 14 }, new[] { 6, 6, 6, 6 },
-            new[] { 4, 4 }, new[] { 3 }, new[] { 8, 8, 10, 10 }, new[] { 3, 3, 8, 1 }, new[] { 1, 1, 1, 4 },
-        };
-
         /// <summary>Niveles 1-10 del tutorial (<c>Assets/_Project/Data/Levels/tutorial_v0.json</c>), todas las cuias de 4.</summary>
         private static readonly int[][][] Tutorial =
         {
@@ -74,18 +45,6 @@ namespace AF.Core.Tests
             return built.State!;
         }
 
-        private static BoardState Level66Initial()
-        {
-            var attrs = new MechanicSpec[Level66Caps.Length];
-            attrs[6] = new MechanicSpec(MechanicType.Hoja, key: 3);
-            return Build(Level66Caps, Level66Start, attrs);
-        }
-
-        private static BoardState Level66Stuck()
-        {
-            return Build(Level66Caps, Level66Final, null);
-        }
-
         private static BoardState UniformBoard(int[][] cuias)
         {
             var caps = new int[cuias.Length];
@@ -102,7 +61,7 @@ namespace AF.Core.Tests
         {
             // 02 R13 ampliada (D-014): quedan dos vertidos legales y útiles, 2 → 1 y 7 → 0, que son vaivenes parciales (los tres
             // 7 entre 1 y 2, el 10 entre 0 y 7). R13 sin ampliar no lo declara; el cierre tiene pocos estados y ninguno gana.
-            BoardState state = Level66Stuck();
+            BoardState state = Level66Board.Final();
             var useful = new Pour[PourRules.MaxPours];
 
             int count = PourRules.CollectUsefulMoves(state, true, PourMode.Run, useful);
@@ -125,7 +84,7 @@ namespace AF.Core.Tests
             // Reproducción completa del nivel 66. El 9.º vertido (1 → 5) deja el nivel perdido de verdad: desde ahí solo se
             // alcanzan 4 estados (los vertidos 10-12 del dueño ya eran vueltas del bucle) y la búsqueda con todos los vertidos
             // legales lo confirma. Aguas estancadas sale justo tras él y no antes; el resto de la secuencia ya no entra (R15).
-            BoardState initial = Level66Initial();
+            BoardState initial = Level66Board.Initial();
             Assert.That(LevelValidation.Validate(initial), Is.Null);
             var session = new LevelSession(initial, true, PourMode.Run);
             var solver = new AStarSolver();
@@ -135,7 +94,7 @@ namespace AF.Core.Tests
             for (int i = 0; i < 9; i++)
             {
                 Assert.That(solver.Solve(session.Current, allLegal).IsSolved, Is.True, "antes del vertido " + (i + 1));
-                bool ok = session.TryPour(Level66Loop[i][0], Level66Loop[i][1], out PourResult result);
+                bool ok = session.TryPour(Level66Board.Source(i), Level66Board.Target(i), out PourResult result);
 
                 Assert.That(ok, Is.True, "vertido " + (i + 1));
                 LevelStatus expected = i == 8 ? LevelStatus.Stuck : LevelStatus.Playing;
@@ -144,9 +103,9 @@ namespace AF.Core.Tests
             }
 
             Assert.That(solver.Solve(session.Current, allLegal).Status, Is.EqualTo(SolveStatus.Unsolvable));
-            for (int i = 9; i < Level66Loop.Length; i++)
+            for (int i = 9; i < Level66Board.PourCount; i++)
             {
-                Assert.That(session.TryPour(Level66Loop[i][0], Level66Loop[i][1], out _), Is.False, "vertido " + (i + 1));
+                Assert.That(session.TryPour(Level66Board.Source(i), Level66Board.Target(i), out _), Is.False, "vertido " + (i + 1));
             }
 
             Assert.That(session.AppliedPours, Is.EqualTo(9));
@@ -158,10 +117,10 @@ namespace AF.Core.Tests
             // Por qué el cierre recorre también los fútiles (R14; CHANGELOG del núcleo, C1-8): tras los 6 primeros vertidos del
             // dueño el nivel se gana en 14, pero solo con algún fútil (Cuia chica de 2). Con solo los vertidos útiles (la poda del
             // solver) no hay victoria en 50 estados: un cierre limitado a los útiles habría declarado Aguas estancadas aquí.
-            var session = new LevelSession(Level66Initial(), true, PourMode.Run);
+            var session = new LevelSession(Level66Board.Initial(), true, PourMode.Run);
             for (int i = 0; i < 6; i++)
             {
-                Assert.That(session.TryPour(Level66Loop[i][0], Level66Loop[i][1], out _), Is.True, "vertido " + (i + 1));
+                Assert.That(session.TryPour(Level66Board.Source(i), Level66Board.Target(i), out _), Is.True, "vertido " + (i + 1));
             }
 
             var solver = new AStarSolver();
@@ -180,10 +139,10 @@ namespace AF.Core.Tests
         {
             // 04 §2.1 y §2.7 con D-014: Marea desde el bloqueo por bucle vuelve a Playing (el estado se evalúa otra vez), el
             // mismo vertido lo vuelve a declarar y Volver a la orilla parte de un tablero que se gana.
-            var session = new LevelSession(Level66Initial(), true, PourMode.Run);
+            var session = new LevelSession(Level66Board.Initial(), true, PourMode.Run);
             for (int i = 0; i < 9; i++)
             {
-                Assert.That(session.TryPour(Level66Loop[i][0], Level66Loop[i][1], out _), Is.True, "vertido " + (i + 1));
+                Assert.That(session.TryPour(Level66Board.Source(i), Level66Board.Target(i), out _), Is.True, "vertido " + (i + 1));
             }
 
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck));
@@ -204,7 +163,7 @@ namespace AF.Core.Tests
         {
             // Determinismo (CLAUDE.md, regla dura 1): estados canónicos, así que el veredicto y el tamaño del cierre no dependen
             // del orden de las cuias en pantalla.
-            BoardState state = Level66Stuck();
+            BoardState state = Level66Board.Final();
             var reversed = new Cuia[state.Count];
             for (int i = 0; i < reversed.Length; i++)
             {

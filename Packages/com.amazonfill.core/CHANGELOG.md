@@ -28,9 +28,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   con capacidades mixtas un fútil puede ser parte de la única salida (C1-8), y solo con útiles el cierre declararía tableros que se
   ganan, contra la condición de la misma decisión y R14. En el 66, tras el 6.º vertido, la búsqueda con útiles se agota en 50
   estados y el nivel se gana en 14 con algún fútil; en partidas al azar sobre los niveles 1-200, un cierre solo con útiles habría
-  declarado 327 estados, 56 ganables (con todos los legales: 271, ninguno ganable). Con capacidades iguales los dos son idénticos (P2).
-  No depende de `futile_rule_enabled`. Es la opción (a) de la pregunta 46 de `docs/GDD.md` §6.3 (T50), la recomendada,
-  aplicada por el dueño el 2026-10-13. Sin asignaciones tras calentar y < 1 ms en Release (0,015 ms en el 66; peor
+  declarado 327 estados, 56 ganables (con todos los legales: 271, ninguno ganable). En `run`, un fútil entre dos cuias sin mecánica y
+  de la misma capacidad no cambia el estado canónico; con capacidades distintas sí puede cambiarlo (P2, 02 R16). Así que, sin
+  mecánicas y con capacidades iguales, los dos cierres son idénticos en `run`. No depende de `futile_rule_enabled`.
+  Es la opción (a) de la pregunta 46 de `docs/GDD.md` §6.3 (T50), la recomendada, aplicada por el dueño el 2026-10-13. Sin asignaciones tras calentar y < 1 ms en Release (0,015 ms en el 66; peor
   medido 0,322 ms en 4.026 estados de los tableros de referencia). Sin cambios en `BoardRules`, `PourRules`, el solver, el bot, `EarlyTraps`,
   `LevelValidation`, el generador ni level-qa: packs, informes y pares idénticos (`--check`). Tests compartidos `DeadEndProbeTests`
   (`R13b_Level66_Loop_IsStuck`, `_TheOwnersSequence_IsStuckRightAfterTheNinthPour`,
@@ -445,6 +446,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Cambiado
 
+- K1 (tanda 4; bajas de la revisión de T51): el tablero del nivel 66 (`m03_v1_n0066`) y la secuencia del dueño están en un solo
+  helper compartido, `Level66Board` (AF.Core.Tests), con `Initial()` (Hoja cerrada en la 6), `Final()` (el bucle, tras los 12
+  vertidos) y los vertidos de la secuencia. Lo usan `DeadEndProbeTests` y, solo en dotnet, `DeadEndProbePerformanceTests` y
+  `HotLoopAllocationTests.WarmDeadEndProbe_DoesNotAllocate`, que antes llevaban su propia copia del tablero final con el nombre
+  `Level66Loop` (que en `DeadEndProbeTests` era la secuencia). No cambia lo que comprueban. `StuckLoopTests` (PlayMode) no puede
+  usarlo, porque AF.Core.Tests es solo de Editor. P2 se cita en el README y aquí con la redacción de 02 R16 (entre dos cuias sin
+  mecánica y de la misma capacidad; con capacidades distintas sí puede cambiar el estado canónico), y el README ya no da por
+  pendientes el generador `fill` y el pipeline de `tools/`, que existen. Sin cambios en `Runtime/`.
 - T51 (D-014): `LevelSession.Status` pasa a `Stuck` también con vertidos útiles si el cierre acotado no tiene victoria (ver
   «Añadido»). R14 se reformula con D-014 (no se anuncia irresoluble mientras exista progreso posible); P1 se mantiene y la comprueba
   `DeadEndProbePropertyTests`. `RuleCatalogTests.R14_AnUnsolvableBoardWithUsefulPours_IsNotDeclaredStuck` sí cambia lo que

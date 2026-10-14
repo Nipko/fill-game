@@ -646,21 +646,6 @@ namespace AF.Core.Tests.DotnetOnly
             Assert.That(solve, Is.LessThan(1024));
         }
 
-        /// <summary>
-        /// Tablero del nivel 66 tras el bucle que encontró el dueño (D-014): el cierre se recorre entero y se declara (sin
-        /// mecánicas; la Hoja ya se abrió).
-        /// </summary>
-        private static BoardState Level66Loop()
-        {
-            return new BoardState(new[]
-            {
-                Cuia.Create(4, new[] { 3, 8, 10 }), Cuia.Create(4, new[] { 4, 7 }), Cuia.Create(4, new[] { 10, 7, 7, 7 }),
-                Cuia.Create(4, new[] { 14, 14, 14, 14 }), Cuia.Create(4, new[] { 6, 6, 6, 6 }), Cuia.Create(2, new[] { 4, 4 }),
-                Cuia.Create(4, new[] { 3 }), Cuia.Create(4, new[] { 8, 8, 10, 10 }), Cuia.Create(4, new[] { 3, 3, 8, 1 }),
-                Cuia.Create(4, new[] { 1, 1, 1, 4 }),
-            });
-        }
-
         [Test]
         public void WarmDeadEndProbe_DoesNotAllocate()
         {
@@ -669,7 +654,7 @@ namespace AF.Core.Tests.DotnetOnly
             // referencia), en los dos modos. El mínimo de hasta 3 mediciones, como en ReferenceBoard_HotLoop_DoesNotAllocate:
             // una asignación real del recorrido se repite en cada intento.
             var boards = new BoardState[ReferenceBoards.All.Length + 2];
-            boards[0] = Level66Loop();
+            boards[0] = Level66Board.Final(); // tras el bucle del dueño (D-014): el cierre se recorre entero y se declara
             boards[1] = Board();
             for (int i = 0; i < ReferenceBoards.All.Length; i++)
             {

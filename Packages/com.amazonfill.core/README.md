@@ -197,9 +197,8 @@ alcanzables (32 tableros por mecánica y 8 por combinación del calendario, en `
 tableros de referencia cumplen los presupuestos de 03 §5 y 08 §14.2. La decisión es del dueño.
 
 Pendiente: cancelación por tiempo del solver para Morpho (`hint_timeout_ms`; el núcleo no lee relojes: `SafeMoves.Outcome` =
-`BudgetExceeded` es la respuesta 4 de Morpho cuando se agotan los nodos); el generador `fill` y el
-pipeline (`tools/`). Preguntas abiertas: 02 R16 con capacidades mixtas (C1-8, C1-9: la poda de fútiles puede alargar el par o
-dejar sin camino útil un tablero resoluble, y con una Liana hay estados atascados con solución) y la consecuencia de Q-B en
+`BudgetExceeded` es la respuesta 4 de Morpho cuando se agotan los nodos). Preguntas abiertas: 02 R16 con capacidades mixtas
+(C1-8, C1-9: la poda de fútiles puede alargar el par o dejar sin camino útil un tablero resoluble, y con una Liana hay estados atascados con solución) y la consecuencia de Q-B en
 P3 (vaivén útil del Remolino que vuelve al mismo estado); ver el CHANGELOG. Para el jugador, el vaivén sin salida de la
 pregunta 15 lo cubre R13 ampliada (D-014; sección siguiente).
 
@@ -227,8 +226,9 @@ y los pares son idénticos (`--check` del tutorial y de la campaña 11-200).
   de la condición de la misma decisión («nunca declara atascado un tablero que se puede ganar»; R14). Medido: en el propio nivel 66,
   tras los 6 primeros vertidos del dueño, la búsqueda con solo útiles se agota en 50 estados sin victoria y el nivel se gana en 14
   con algún fútil; en partidas al azar sobre los niveles 1-200, un cierre solo con útiles habría declarado 327 estados, 56 de ellos
-  ganables. Con capacidades iguales un fútil no cambia el estado canónico en `run` (P2), así que en esos tableros los dos cierres son
-  idénticos. Por eso tampoco depende de `futile_rule_enabled`: el kill-switch devuelve R13 al criterio clásico, pero el cierre sigue.
+  ganables. En `run`, un fútil entre dos cuias sin mecánica y de la misma capacidad no cambia el estado canónico; con capacidades
+  distintas sí puede cambiarlo (P2, 02 R16). Así que, sin mecánicas y con capacidades iguales, los dos cierres son idénticos en `run`.
+  Por eso tampoco depende de `futile_rule_enabled`: el kill-switch devuelve R13 al criterio clásico, pero el cierre sigue.
   Es la opción (a) de la pregunta 46 de `docs/GDD.md` §6.3 (T50), la recomendada, aplicada por el dueño el 2026-10-13. R14 se reformula con D-014 («mientras exista progreso posible») y P1 se sigue exigiendo (`DeadEndProbePropertyTests`).
 - **Nivel 66:** Aguas estancadas sale justo tras el 9.º vertido (`1>5`), cuando el nivel queda perdido de verdad (4 estados
   alcanzables; A* con todos los legales: irresoluble); los vertidos 10-12 del dueño ya eran vueltas del bucle y ahora no entran
@@ -243,7 +243,10 @@ y los pares son idénticos (`--check` del tutorial y de la campaña 11-200).
   (R13 ampliada; R14 reformulada, con el tablero mixto que solo se gana con fútiles a lo largo de su solución; R15 con el vaivén);
   solo dotnet `DeadEndProbePropertyTests` (si el cierre declara, A*
   exhaustivo da irresoluble, con todos los legales y con la poda: 36 tableros de referencia en `run` y `single` y los niveles 1-200,
-  y los tableros de referencia baratos siguen en Playing a lo largo de su solución).
+  y los tableros de referencia baratos siguen en Playing a lo largo de su solución). El tablero del 66 y la secuencia del dueño
+  están en un solo helper compartido, `Level66Board` (K1), que usan `DeadEndProbeTests`, `DeadEndProbePerformanceTests` y
+  `HotLoopAllocationTests`. `StuckLoopTests` (PlayMode) juega el 66 desde su pack y lleva su propia copia de la secuencia, porque
+  AF.Core.Tests es solo de Editor.
 
 ## Restaurar las capas reveladas (Aguas turbias)
 
