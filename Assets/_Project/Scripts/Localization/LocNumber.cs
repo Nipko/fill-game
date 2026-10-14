@@ -61,7 +61,7 @@ namespace AF.Localization
     public static class LocNumber
     {
         /// <summary>Espacio duro (U+00A0), separador de miles de fr, ru y pt-PT.</summary>
-        public const char NoBreakSpace = ' ';
+        public const char NoBreakSpace = '\u00A0';
 
         /// <summary>Máximo de decimales de <see cref="Write(char[], int, double, int, bool, in LocNumberFormat)"/>.</summary>
         public const int MaxDecimals = 9;
@@ -73,7 +73,7 @@ namespace AF.Localization
         public const string FallbackTag = "en";
 
         /// <summary>Todos los caracteres que puede escribir: cifras, signo y separadores (para los glifos de la fuente, B1).</summary>
-        public const string Characters = "0123456789-.," + " ";
+        public const string Characters = "0123456789-.,\u00A0";
 
         private static readonly LocNumberFormat[] Table =
         {

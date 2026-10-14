@@ -10,16 +10,22 @@ namespace AF.Localization
     /// en cualquier orden:
     /// <list type="bullet">
     /// <item><c>key</c> y <c>es-419</c> (el texto fuente), obligatorias.</item>
-    /// <item>Una columna por idioma (<c>en</c>, <c>pt-BR</c> y, en la tanda 2, <c>fr</c>, <c>de</c>…; vacía = pendiente).</item>
+    /// <item>Una columna por idioma, solo de la lista cerrada <see cref="LocLocale.TableLocales"/> y escrita igual (glosario
+    /// §11: <c>en</c>, <c>pt-BR</c> y, en la tanda 2, <c>fr</c>, <c>de</c>, <c>it</c>, <c>nl</c>, <c>tr</c>, <c>ja</c>,
+    /// <c>ko</c> y <c>ru</c>; vacía = pendiente).</item>
     /// <item><c>context</c>, <c>max_chars</c> (entero o vacío) y <c>notes</c>.</item>
     /// <item>El estado, de dos formas (pregunta 49 de GDD.md §6.3): <c>status</c> solo, que recorre todo el flujo para la fila
-    /// entera, o <c>status</c> (el del texto fuente) más <c>status_&lt;idioma&gt;</c> por cada traducción, como la cabecera de
-    /// Frutas que eligió el dueño con la 49 (a): <c>key,es-419,en,pt-BR,context,max_chars,status,status_en,status_pt-BR,notes</c>.</item>
+    /// entera (los cinco estados), o <c>status</c> (el del texto fuente: <c>borrador</c>, <c>pendiente_asesor</c> o
+    /// <c>aprobado_es</c>) más <c>status_&lt;idioma&gt;</c> por cada traducción (<c>borrador</c>, <c>traducido</c> o
+    /// <c>revisado_nativo</c>; 08 §4.7 y Frutas §6.1), como la cabecera de Frutas que eligió el dueño con la 49 (a):
+    /// <c>key,es-419,en,pt-BR,context,max_chars,status,status_en,status_pt-BR,notes</c>. Un estado de la otra familia en una
+    /// columna es un error con su línea.</item>
     /// <item><c>args</c> [P], al final: los valores de las cifras de los textos largos (Q8-A; <see cref="LocArgs.TryParse"/>).</item>
     /// </list>
     /// Las claves van en <c>[a-z0-9_.]</c> (UI en <c>snake_case</c> y contenido con puntos; 49 a) y no se repiten. Cualquier
-    /// otra columna es un error, para que una errata no se lea como un idioma. El orden alfabético de las filas lo comprueban
-    /// los tests de las tablas (<see cref="UnsortedAt"/>).
+    /// otra columna es un error (con la forma correcta si solo cambian las mayúsculas o el separador: «pt-br» → «pt-BR»), para
+    /// que una errata no se lea como un idioma. El orden alfabético de las filas lo comprueban los tests de las tablas
+    /// (<see cref="UnsortedAt"/>).
     /// </summary>
     public sealed class LocTable
     {
@@ -161,19 +167,18 @@ namespace AF.Localization
                     case NotesColumn: notesColumn = c; break;
                     case ArgsColumn: argsColumn = c; break;
                     default:
-                        if (name.StartsWith(StatusPrefix, StringComparison.Ordinal) && IsLocaleName(name.Substring(StatusPrefix.Length)))
+                        if (name.StartsWith(StatusPrefix, StringComparison.Ordinal) && LocLocale.IsTableLocale(name.Substring(StatusPrefix.Length)))
                         {
                             statusByLocale[name.Substring(StatusPrefix.Length)] = c;
                         }
-                        else if (IsLocaleName(name))
+                        else if (LocLocale.IsTableLocale(name))
                         {
                             locales.Add(name);
                             localeColumns.Add(c);
                         }
                         else
                         {
-                            throw new LocCsvException(file, header.Line, "columna desconocida «" + name
-                                + "» (se esperan key, los idiomas, context, max_chars, status, status_<idioma>, notes y args)");
+                            throw new LocCsvException(file, header.Line, UnknownColumnMessage(name));
                         }
 
                         break;
@@ -283,7 +288,11 @@ namespace AF.Localization
                 var rowStatus = new LocStatus[locales.Count];
                 for (int l = 0; l < locales.Count; l++)
                 {
-                    rowStatus[l] = ParseStatus(localeStatusColumns[l] < 0 ? string.Empty : fields[localeStatusColumns[l]], file, record.Line);
+                    int sc = localeStatusColumns[l];
+                    StatusRole role = !perLocale ? StatusRole.Row
+                        : locales[l] == LocLocale.SourceLocale ? StatusRole.Source
+                        : StatusRole.Translation;
+                    rowStatus[l] = sc < 0 ? LocStatus.Draft : ParseStatus(fields[sc], role, columns[sc], file, record.Line);
                 }
 
                 status[r] = rowStatus;
@@ -409,47 +418,6 @@ namespace AF.Localization
             return true;
         }
 
-        /// <summary>Si <paramref name="name"/> tiene forma de idioma: <c>es-419</c>, <c>pt-BR</c>, <c>en</c>, <c>zh-Hant</c>…</summary>
-        public static bool IsLocaleName(string name)
-        {
-            if (name == null || name.Length < 2)
-            {
-                return false;
-            }
-
-            int i = 0;
-            while (i < name.Length && name[i] >= 'a' && name[i] <= 'z')
-            {
-                i++;
-            }
-
-            if (i < 2 || i > 3)
-            {
-                return false;
-            }
-
-            while (i < name.Length)
-            {
-                if (name[i] != '-')
-                {
-                    return false;
-                }
-
-                int start = ++i;
-                while (i < name.Length && ((name[i] >= 'a' && name[i] <= 'z') || (name[i] >= 'A' && name[i] <= 'Z') || (name[i] >= '0' && name[i] <= '9')))
-                {
-                    i++;
-                }
-
-                if (i - start < 2 || i - start > 8)
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
         /// <summary>Si <paramref name="key"/> vale como clave: no vacía y solo con a-z, 0-9, «_» y «.».</summary>
         public static bool IsValidKey(string? key)
         {
@@ -506,7 +474,7 @@ namespace AF.Localization
             return value;
         }
 
-        private static LocStatus ParseStatus(string text, string file, int line)
+        private static LocStatus ParseStatus(string text, StatusRole role, string column, string file, int line)
         {
             if (text.Length == 0)
             {
@@ -515,11 +483,88 @@ namespace AF.Localization
 
             if (!LocStatusNames.TryParse(text, out LocStatus status))
             {
-                throw new LocCsvException(file, line, "estado «" + text
-                    + "» desconocido (borrador, pendiente_asesor, aprobado_es, traducido o revisado_nativo)");
+                throw new LocCsvException(file, line, "estado «" + text + "» desconocido en «" + column
+                    + "» (borrador, pendiente_asesor, aprobado_es, traducido o revisado_nativo)");
+            }
+
+            if (role == StatusRole.Source && status > LocStatus.ApprovedEs)
+            {
+                throw new LocCsvException(file, line, "estado «" + text + "» en «" + column + "»: con estado por idioma, «" + StatusColumn
+                    + "» es el del texto fuente (borrador, pendiente_asesor o aprobado_es) y el de cada traducción va en su status_<idioma>");
+            }
+
+            if (role == StatusRole.Translation && (status == LocStatus.PendingAdvisor || status == LocStatus.ApprovedEs))
+            {
+                throw new LocCsvException(file, line, "estado «" + text + "» en «" + column
+                    + "»: el estado de una traducción es borrador, traducido o revisado_nativo (el del texto fuente va en «" + StatusColumn + "»)");
             }
 
             return status;
+        }
+
+        private static string UnknownColumnMessage(string name)
+        {
+            string message = "columna desconocida «" + name + "»";
+            string? meant = MeantColumn(name);
+            if (meant != null)
+            {
+                message += " (¿«" + meant + "»? los nombres se escriben exactamente así)";
+            }
+
+            var known = new List<string>(LocLocale.TableLocales);
+            string last = known[known.Count - 1];
+            known.RemoveAt(known.Count - 1);
+            return message + ": se esperan key, context, max_chars, status, notes, args, los idiomas del glosario §11 ("
+                + string.Join(", ", known) + " y " + last + ") y status_<idioma>";
+        }
+
+        /// <summary>
+        /// Columna que seguramente se quiso escribir: la misma salvo mayúsculas o, en un idioma, «_» por «-» («pt-br»,
+        /// «PT_BR» → «pt-BR»; «Status_EN» → «status_en»); null si no se parece a ninguna.
+        /// </summary>
+        private static string? MeantColumn(string name)
+        {
+            string[] fixedColumns = { KeyColumn, ContextColumn, MaxCharsColumn, StatusColumn, NotesColumn, ArgsColumn };
+            for (int i = 0; i < fixedColumns.Length; i++)
+            {
+                if (string.Equals(fixedColumns[i], name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return fixedColumns[i];
+                }
+            }
+
+            string prefix = string.Empty;
+            string bare = name;
+            if (name.StartsWith(StatusPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                prefix = StatusPrefix;
+                bare = name.Substring(StatusPrefix.Length);
+            }
+
+            string dashed = bare.Replace('_', '-');
+            IReadOnlyList<string> locales = LocLocale.TableLocales;
+            for (int i = 0; i < locales.Count; i++)
+            {
+                if (string.Equals(locales[i], dashed, StringComparison.OrdinalIgnoreCase))
+                {
+                    return prefix + locales[i];
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>Qué estados admite una columna de estado (08 §4.7; pregunta 49 a; Frutas §6.1).</summary>
+        private enum StatusRole : byte
+        {
+            /// <summary><c>status</c> sin columnas por idioma: recorre todo el flujo, así que admite los cinco.</summary>
+            Row = 0,
+
+            /// <summary><c>status</c> con columnas por idioma: el del texto fuente (borrador, pendiente_asesor o aprobado_es).</summary>
+            Source = 1,
+
+            /// <summary><c>status_&lt;idioma&gt;</c>: el de una traducción (borrador, traducido o revisado_nativo).</summary>
+            Translation = 2,
         }
     }
 }

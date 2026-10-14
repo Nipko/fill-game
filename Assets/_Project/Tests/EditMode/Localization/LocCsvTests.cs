@@ -49,12 +49,12 @@ namespace AF.Tests.EditMode
         [Test]
         public void Parse_Bom_IsAnErrorWithItsLine()
         {
-            var atStart = Assert.Throws<LocCsvException>(() => LocCsv.Parse("﻿key,es-419\nnext,Siguiente\n", "strings.csv"));
+            var atStart = Assert.Throws<LocCsvException>(() => LocCsv.Parse("\uFEFFkey,es-419\nnext,Siguiente\n", "strings.csv"));
             Assert.That(atStart!.Line, Is.EqualTo(1));
             Assert.That(atStart.File, Is.EqualTo("strings.csv"));
             Assert.That(atStart.Message, Does.Contain("BOM").And.Contain("strings.csv, línea 1"));
 
-            var inside = Assert.Throws<LocCsvException>(() => LocCsv.Parse("key,es-419\nnext,Siguiente\n﻿play,Jugar\n", "strings.csv"));
+            var inside = Assert.Throws<LocCsvException>(() => LocCsv.Parse("key,es-419\nnext,Siguiente\n\uFEFFplay,Jugar\n", "strings.csv"));
             Assert.That(inside!.Line, Is.EqualTo(3), "un BOM pegado a mitad del archivo (dos archivos unidos) da su línea");
         }
 
@@ -188,6 +188,66 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Table_LocaleColumns_AreTheClosedListOfTheGlossary()
+        {
+            Assert.That(LocLocale.TableLocales, Is.EqualTo(new[] { "es-419", "pt-BR", "en", "fr", "de", "it", "nl", "tr", "ja", "ko", "ru" }),
+                "glosario §11, fila Localización: tanda 1 y tanda 2");
+            LocTable all = LocTable.Parse("key,es-419,pt-BR,en,fr,de,it,nl,tr,ja,ko,ru\nnext,Siguiente,,,,,,,,,,\n", "strings.csv");
+            Assert.That(all.Locales, Is.EqualTo(LocLocale.TableLocales));
+            Assert.That(LocLocale.IsTableLocale("pt-BR"), Is.True);
+            Assert.That(LocLocale.IsTableLocale("pt-br"), Is.False, "escrito exactamente así");
+            Assert.That(LocLocale.IsTableLocale("en-XA"), Is.False, "en-XA no es una columna: sale de es-419");
+            Assert.That(LocLocale.IsTableLocale(null), Is.False);
+
+            // Una errata en la cabecera no crea un idioma fantasma (pt-BR dejaría de ofrecerse sin aviso): error con la forma buena.
+            Assert.That(AssertError("key,es-419,pt-br\nnext,Siguiente,Próximo\n", 1, "«pt-br»").Message, Does.Contain("¿«pt-BR»?"));
+            Assert.That(AssertError("key,es-419,pt_BR\nnext,Siguiente,Próximo\n", 1, "«pt_BR»").Message, Does.Contain("¿«pt-BR»?"));
+            Assert.That(AssertError("key,es-419,pt-BR,status,status_pt-br\nnext,Siguiente,Próximo,,\n", 1, "«status_pt-br»").Message,
+                Does.Contain("¿«status_pt-BR»?"));
+            Assert.That(AssertError("Key,es-419\nnext,Siguiente\n", 1, "«Key»").Message, Does.Contain("¿«key»?"));
+
+            // Lo que no se parece a nada: error sin sugerencia, con la lista de idiomas.
+            LocCsvException ctx = AssertError("key,es-419,ctx\nnext,Siguiente,c\n", 1, "«ctx»");
+            Assert.That(ctx.Message, Does.Not.Contain("¿"));
+            Assert.That(ctx.Message, Does.Contain("es-419, pt-BR, en, fr, de, it, nl, tr, ja, ko y ru"));
+            AssertError("key,es-419,en-XA\nnext,Siguiente,[Sígúíéñté]\n", 1, "«en-XA»");
+            AssertError("key,es-419,zh-Hant\nnext,Siguiente,Next\n", 1, "«zh-Hant»");
+        }
+
+        [Test]
+        public void Table_PerLocaleStatus_EachColumnTakesOnlyItsOwnStates()
+        {
+            const string header = "key,es-419,en,status,status_en\n";
+            LocTable table = LocTable.Parse(header +
+                "a,Uno,One,,\n" +
+                "b,Dos,Two,borrador,borrador\n" +
+                "c,Tres,Three,pendiente_asesor,traducido\n" +
+                "d,Cuatro,Four,aprobado_es,revisado_nativo\n", "facts.csv");
+            Assert.That(table.StatusAt(table.IndexOf("a"), "en"), Is.EqualTo(LocStatus.Draft), "celda vacía = borrador");
+            Assert.That(table.StatusAt(table.IndexOf("b"), "es-419"), Is.EqualTo(LocStatus.Draft));
+            Assert.That(table.StatusAt(table.IndexOf("b"), "en"), Is.EqualTo(LocStatus.Draft));
+            Assert.That(table.StatusAt(table.IndexOf("c"), "es-419"), Is.EqualTo(LocStatus.PendingAdvisor));
+            Assert.That(table.StatusAt(table.IndexOf("c"), "en"), Is.EqualTo(LocStatus.Translated));
+            Assert.That(table.IsApprovedAt(table.IndexOf("d"), "en"), Is.True);
+
+            // «status» es el del texto fuente: un estado de traducción ahí es un error con su línea.
+            AssertError(header + "a,Uno,One,aprobado_es,traducido\nb,Dos,Two,traducido,traducido\n", 3, "«traducido» en «status»");
+            AssertError(header + "a,Uno,One,revisado_nativo,revisado_nativo\n", 2, "«revisado_nativo» en «status»");
+
+            // status_<idioma> es el de una traducción: un estado del texto fuente ahí también.
+            AssertError(header + "a,Uno,One,aprobado_es,aprobado_es\n", 2, "«aprobado_es» en «status_en»");
+            AssertError(header + "a,Uno,One,aprobado_es,traducido\nb,Dos,Two,aprobado_es,pendiente_asesor\n", 3, "«pendiente_asesor» en «status_en»");
+            AssertError("key,es-419,en,pt-BR,status,status_en,status_pt-BR\na,Uno,One,Um,aprobado_es,traducido,aprobado_es\n", 2,
+                "«status_pt-BR»");
+
+            // Con una sola columna, «status» recorre todo el flujo de la fila: valen los cinco.
+            LocTable single = LocTable.Parse("key,es-419,en,status\na,Uno,One,traducido\nb,Dos,Two,pendiente_asesor\n", "strings.csv");
+            Assert.That(single.StatusAt(single.IndexOf("a"), "es-419"), Is.EqualTo(LocStatus.ApprovedEs));
+            Assert.That(single.StatusAt(single.IndexOf("a"), "en"), Is.EqualTo(LocStatus.Translated));
+            Assert.That(single.StatusAt(single.IndexOf("b"), "en"), Is.EqualTo(LocStatus.Draft));
+        }
+
+        [Test]
         public void Table_RowErrors_GiveTheirLine()
         {
             AssertError("key,es-419,status\nnext,Siguiente\n", 2, "campos");
@@ -227,11 +287,12 @@ namespace AF.Tests.EditMode
             Assert.That(LocStatus.ApprovedEs > LocStatus.PendingAdvisor, Is.True, "el orden es el del flujo");
         }
 
-        private static void AssertError(string csv, int line, string fragment)
+        private static LocCsvException AssertError(string csv, int line, string fragment)
         {
             var error = Assert.Throws<LocCsvException>(() => LocTable.Parse(csv, "t.csv"));
             Assert.That(error!.Line, Is.EqualTo(line), error.Message);
             Assert.That(error.Message, Does.Contain(fragment));
+            return error;
         }
     }
 }

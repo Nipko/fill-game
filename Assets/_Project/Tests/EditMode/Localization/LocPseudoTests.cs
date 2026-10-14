@@ -83,14 +83,14 @@ namespace AF.Tests.EditMode
                 char c = pseudo[i];
                 if (text.IndexOf(c) < 0)
                 {
-                    Assert.That(c <= 'ÿ', Is.True, "U+" + ((int)c).ToString("X4") + " no es de Latin-1");
+                    Assert.That(c <= '\u00FF', Is.True, "U+" + ((int)c).ToString("X4") + " no es de Latin-1");
                     Assert.That(LocPseudo.Characters.IndexOf(c), Is.GreaterThanOrEqualTo(0), "B1 lo cubre con LocPseudo.Characters");
                 }
             }
 
             for (int i = 0; i < LocPseudo.Characters.Length; i++)
             {
-                Assert.That(LocPseudo.Characters[i] <= 'ÿ', Is.True);
+                Assert.That(LocPseudo.Characters[i] <= '\u00FF', Is.True);
             }
         }
 

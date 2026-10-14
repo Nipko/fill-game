@@ -74,6 +74,41 @@ namespace AF.Localization
         /// <summary>Valor de <c>settings.language</c> que significa «seguir al teléfono» (D-018, Q7-A).</summary>
         public const string Auto = "auto";
 
+        private static readonly string[] s_tableLocales =
+        {
+            SpanishLatinAmerica, PortugueseBrazil, English, "fr", "de", "it", "nl", "tr", "ja", "ko", "ru",
+        };
+
+        private static readonly IReadOnlyList<string> s_tableLocalesView = Array.AsReadOnly(s_tableLocales);
+
+        /// <summary>
+        /// Idiomas que pueden ser una columna de las tablas de textos, escritos exactamente así (glosario §11, fila
+        /// Localización; 08 §4.7): es-419, pt-BR y en (tanda 1) y fr, de, it, nl, tr, ja, ko y ru (tanda 2). Es una lista
+        /// cerrada para que una errata en la cabecera («pt-br», «ctx») sea un error y no un idioma fantasma que nunca está
+        /// completo; un idioma nuevo entra aquí cuando entre en el glosario. en-XA no es una columna: sale de es-419
+        /// (<see cref="LocPseudo"/>).
+        /// </summary>
+        public static IReadOnlyList<string> TableLocales => s_tableLocalesView;
+
+        /// <summary>Si <paramref name="name"/> es uno de <see cref="TableLocales"/>, escrito igual (ordinal). Sin asignaciones.</summary>
+        public static bool IsTableLocale(string? name)
+        {
+            if (name == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < s_tableLocales.Length; i++)
+            {
+                if (string.Equals(s_tableLocales[i], name, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// Idioma de la UI para una etiqueta (Q7-A): en-XA tal cual; es-* → es-419; pt-* → pt-BR; cualquier otro → en. Null,
         /// vacío o <c>auto</c> → null (no hay candidato).

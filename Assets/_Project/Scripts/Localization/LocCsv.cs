@@ -50,7 +50,7 @@ namespace AF.Localization
     public static class LocCsv
     {
         /// <summary>El BOM de UTF-8 como carácter (U+FEFF).</summary>
-        public const char ByteOrderMark = '﻿';
+        public const char ByteOrderMark = '\uFEFF';
 
         private const string BomMessage = "el archivo lleva BOM (U+FEFF): las tablas van en UTF-8 sin BOM (contrato 32)";
 

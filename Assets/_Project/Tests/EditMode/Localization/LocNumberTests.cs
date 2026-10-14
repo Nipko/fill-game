@@ -27,9 +27,9 @@ namespace AF.Tests.EditMode
         [TestCase("es-PE", "1,234,567", "1,234.5")]
         [TestCase("en", "1,234,567", "1,234.5")]
         [TestCase("ja", "1,234,567", "1,234.5")]
-        [TestCase("fr", "1 234 567", "1 234,5")]
-        [TestCase("ru", "1 234 567", "1 234,5")]
-        [TestCase("pt-PT", "1 234 567", "1 234,5")]
+        [TestCase("fr", "1\u00A0234\u00A0567", "1\u00A0234,5")]
+        [TestCase("ru", "1\u00A0234\u00A0567", "1\u00A0234,5")]
+        [TestCase("pt-PT", "1\u00A0234\u00A0567", "1\u00A0234,5")]
         public void Table_GivesTheSeparatorsOfEachRegion(string tag, string integer, string real)
         {
             LocNumberFormat format = LocNumber.For(tag);
@@ -67,9 +67,9 @@ namespace AF.Tests.EditMode
             Assert.That(LocNumber.Format(5200L, true, LocNumber.For("pt-BR")), Is.EqualTo("5.200"));
             Assert.That(LocNumber.Format(5200L, true, LocNumber.For("en-US")), Is.EqualTo("5,200"));
             string french = LocNumber.Format(12345.5, 1, LocNumber.For("fr-FR"));
-            Assert.That(french, Is.EqualTo("12 345,5"));
-            Assert.That(french.IndexOf(' '), Is.EqualTo(-1), "U+202F se cambia por U+00A0 (Q9-A)");
-            Assert.That(LocNumber.Characters.IndexOf(' '), Is.EqualTo(-1));
+            Assert.That(french, Is.EqualTo("12\u00A0345,5"));
+            Assert.That(french.IndexOf('\u202F'), Is.EqualTo(-1), "U+202F se cambia por U+00A0 (Q9-A)");
+            Assert.That(LocNumber.Characters.IndexOf('\u202F'), Is.EqualTo(-1));
             Assert.That(LocNumber.Characters.IndexOf(LocNumber.NoBreakSpace), Is.GreaterThanOrEqualTo(0));
         }
 
