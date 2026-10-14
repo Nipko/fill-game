@@ -2072,6 +2072,12 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 5. **31 → (b).** En la 1.0, con `mech_enabled.<id>` = false, los niveles que usan esa mecánica se sustituyen con `level_overrides` (08 §4.4); el formato de respaldo por slot se fija con el build de la 1.1. Tarea: el cliente aún no lee `mech_enabled`.
 6. **32 → (b).** La temporada del ciclo (aguas altas o bajas) sale de una **tabla del cliente por ciclo, copiada del calendario versionado** (`tools/level-generator/specs/campaign_v1.json`); no toca el formato del pack. Tarea de código.
 7. **33 → (a).** Se rehace la tabla d.5 de novedades de 201-1000 (con Q8 c y b′ de D-007, la Tinaja en el 323 de D-019 y las variantes), con el **registro versionado de combinaciones publicadas** junto al calendario, **antes de generar 201-700**. Es tarea de planificación (tech-lead) y del pipeline (level-pipeline-dev).
+   - *Actualización del 2026-10-14 (D2):* hecha, en la propuesta de mecánicas (`docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md`), d.5:
+     - el calendario de 201-700, nivel a nivel, en dos variantes: **A**, con la Tinaja (estreno en el 323), y **B**, sin ella, que es la salida B de D-019, con un respaldo para cada celda. Las dos cumplen la regla de 60 niveles, con 34 como mucho entre dos primeras veces;
+     - la tabla de 701-1000, orientativa y sin generar;
+     - el formato [P] del registro de combinaciones, `tools/level-generator/specs/combinations_registry_v1.json`, que genera la tarea P4.
+
+     Se aplica la recomendación (la A, con la B guardada) por D-023, punto 10. Cambian 03 §11, §12 y §17.
 8. **34 → (a).** Se ratifican P1-P3 en lugar de la prueba del anexo B, con la excepción del Remolino en P3.
    - **Encaje con D-014:** D-014 no cambia esas propiedades del núcleo: P1-P3 se siguen probando igual (`FutilePropertyTests`, antes de cada estreno). Lo que hace D-014 es detectar **en la partida** (`LevelSession`, `DeadEndProbe`) el bucle sin salida, cuando el cierre de estados alcanzables con todos los vertidos legales se agota con ≤ 64 estados sin victoria. Así, el vaivén útil del Remolino con Q-B y el de la cuia ya suelta de la Tinaja ya no retrasan el modal cuando no llevan a ninguna parte. P1 se sigue exigiendo para la regla ampliada (`DeadEndProbePropertyTests`).
 9. **35 → (a).** Del revelado rítmico solo queda la burbuja del revelado de Aguas turbias (02 §4.1); no hay Travesía con revelado por contador.
