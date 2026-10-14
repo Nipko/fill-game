@@ -383,7 +383,7 @@ namespace AF.Solver.Tests
     /// <summary>
     /// Hoja atada (02 §1.2; propuesta de D-007 b.3): una cuia sin mecánica que no empieza sellada pasa a llevar la hoja atada
     /// de la fruta de su fondo o, si está vacía, de una fruta del tablero; en los dos casos, de una fruta cuya casa puede ser
-    /// (capacidad = <c>U_c</c> de la llave, la regla [P] de <c>HojaAtadaMechanic</c>).
+    /// (capacidad = <c>U_c</c> de la llave, la regla de <c>HojaAtadaMechanic</c>, D-024, punto 1).
     /// </summary>
     internal sealed class HojaAtadaInjector : IMechanicInjector
     {

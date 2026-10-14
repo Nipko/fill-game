@@ -70,7 +70,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
     a la búsqueda exhaustiva y heurística en 32 tableros por variante, uniformes y mixtos, en `run` y `single`; inyectores
     `HojaAtadaInjector` y `BroteDosHojasInjector` en `MechanicBoards`) y `CuiaAttrTests` (claves y `MechanicKey`). Solo dotnet:
     `FutilePropertyTests` (P1-P3 en `run` y `single`, uniformes y mixtas, con una Hoja atada o dos de frutas distintas; el
-    contraejemplo de la regla [P] y los de dos Hojas atadas de la misma fruta),
+    contraejemplo de la regla de la capacidad, D-024, punto 1, y los de dos Hojas atadas de la misma fruta),
     `HotLoopAllocationTests` (`HojaAtadaBoard_` y `BroteDosHojasBoard_HotLoop_DoesNotAllocate`: 0 bytes en reglas, vertidos,
     también el que abre una hoja, y bot; < 1 KB por `Solve`) y las filas HoA y Br2 de `ReferenceBoards` y
     `MechanicsPerformanceTests` (percentil 75 de 30 semillas; 1.965 y 2.068 expandidos, par 17 y 18).
@@ -539,8 +539,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
     está atada a la fruta c»), así que `LevelValidation` (y con él el generador, P5, y level-qa, P6) las rechaza. Cierra a la vez
     P3, que dos de la misma fruta incumplían (el vaivén útil entre las dos vuelve al mismo estado canónico), y la cuenta de
     capacidades de 02 §8, que contaba la segunda como casa de otra fruta de la misma `U_c` y dejaba pasar tableros irresolubles.
-    Con un ejemplar por fruta la cuenta es exacta. Las reglas de vertido, el solver, el bot y la heurística no cambian. Packs
-    1-200 idénticos (`--check` del tutorial y de 11-200): ninguno lleva Hojas atadas.
+    Las reglas de vertido, el solver, el bot y la heurística no cambian. Packs 1-200 idénticos (`--check` del tutorial y de
+    11-200): ninguno lleva Hojas atadas.
+  - **Cuias de una sola fruta en la cuenta de 02 §8** (revisión de FIXK; 02 §8 y 03 §3: «cada color puede sellar en una cuia
+    propia con cap = `U_c`»): D-024 no bastaba para que la cuenta fuera exacta. Un Matapi con dosis de `c` nunca es origen y solo
+    recibe `c`, así que es la única casa de `c`; una Hoja atada a `c` en el mismo tablero (02 §9.2 regla 7 no prohíbe juntarlos)
+    no es la casa de nadie, pero contada solo por capacidad pasaba por casa de otra fruta de la misma `U_c`, y el validador dejaba
+    pasar tableros irresolubles. `LevelValidation` cuenta ahora cada cuia de una sola fruta (la Hoja atada por su llave y el
+    Matapi con dosis por su color, si su capacidad es la `U_c` de esa fruta; si no, la rechaza su mecánica, como antes) solo como
+    casa de su fruta, una sola por fruta, y exige que las demás frutas de esa `U_c` tengan cuias que admitan cualquier fruta
+    («02 §8: hay n colores con U_c = v y solo m cuias de capacidad v donde sellar: una Hoja atada o un Matapi con dosis solo es
+    casa de su fruta, y una sola por fruta (03 §3)»). Dos Hojas atadas de la misma fruta sin otras casas las rechaza ahora esta
+    cuenta, que va antes que D-024. Las otras dos comparaciones no cambian. Packs 1-200 idénticos (`--check`) y level-qa sin
+    fallos en 11-200: llevan Matapi pero no Hoja atada.
   - **Capacidad de la Hoja atada = `U_c` de su llave:** el [P] de K3a queda ratificado (D-024, punto 1); el motivo del rechazo
     cita D-024 en lugar de «[P]».
   - **Citas:** la firma de `pack_schema` 3 se cita como «D-023, punto 5» en lugar de «pregunta 8» (que en el repositorio es otra
@@ -556,9 +567,15 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
     contraejemplos de dos Hojas atadas de la misma fruta pasan a comprobar el rechazo
     (`P3_HojaAtada_TwoOfTheSameFruit_ARoundTripReturnsToTheSameState_D024RejectsIt`,
     `P3_TwoHojasAtadasOfTheSameFruit_FailsOnGeneratedBoards_AndD024RejectsThem`), y se añaden
-    `TwoHojasAtadasOfTheSameFruit_PassThe02_8Count_Unsolvable_D024RejectsIt` y
-    `D024_WithHojasAtadas_TheCountOf02_8IsExact_EveryValidBoardHasAHomeForEachFruit` (reparto exacto de casas en tableros
-    generados, uniformes y mixtos).
+    `TwoHojasAtadasOfTheSameFruit_PassTheCapacityOnlyCount_Unsolvable_02_8AndD024RejectIt`. Por la cuenta de 02 §8: compartido
+    `HojaAtadaTests.Validation_02_8_AMatapiWithDosesAndAHojaAtadaOfTheSameFruit_AreOneHome_TheOtherFruitHasNowhereToSeal` (el
+    tablero de la revisión, rechazado, y su control, válido) y, solo dotnet,
+    `MatapiWithDosesAndHojaAtadaOfTheSameFruit_PassTheCapacityOnlyCount_Unsolvable_02_8RejectsIt` (irresoluble en `run` y
+    `single`; el control se gana) y `SingleFruitCuias_TheCountOf02_8IsExact_EveryValidBoardHasAHomeForEachFruit` (reparto exacto
+    de casas en tableros generados, uniformes y mixtos, con una Hoja atada, dos de frutas distintas o de la misma, un Matapi, y
+    un Matapi y una Hoja atada; en los mixtos el generador llega al agujero y la cuenta lo cierra). Comentarios de
+    `MechanicBoards.HojaAtadaInjector` y de la fila HoA de `ReferenceBoards`: la regla de la capacidad se cita como D-024, punto 1,
+    y no como [P].
 - K3a (tanda 4; bajas de la revisión de K1 y K2): `DeadEndProbe` cita P2 con «entre cuias sin mecánica» y la pregunta 46 como
   decidida (D-020); el README da por decidida la consecuencia de Q-B en P3 (pregunta 34 (a), D-020, 02 R16); `DeadEndProbeTests`
   pierde el parámetro `attrs` y el `using` que sobraban; `SolverCancellationTests` comprueba que `ForLevel` conserva la bandera

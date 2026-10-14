@@ -19,10 +19,15 @@ namespace AF.Core.Board
     /// <item><description><c>U_c</c> ∈ {4, 5, 6} para todo color (02 R3).</description></item>
     /// <item><description>Cada color puede sellar en una cuia propia con <c>cap = U_c</c>, y cada Cuia alta (5-6) llega con su
     /// fruta abundante (02 §8; 03 §3): para cada <c>v</c>, hay al menos tantas cuias de capacidad <c>v</c> como colores con
-    /// <c>U_c = v</c>, y para <c>v</c> ∈ {5, 6} exactamente tantas. La Tinaja (M13) no cuenta en ninguna de las dos
-    /// comparaciones: nunca recibe, así que no es casa de ninguna fruta. La Hoja atada sí cuenta, y la cuenta es exacta porque
-    /// solo es casa de su fruta, con capacidad = <c>U_c</c> de su llave y como mucho una por fruta (D-024; las comprueba
-    /// <c>HojaAtadaMechanic</c> más abajo): dos de la misma fruta contarían la segunda como casa de otra fruta.</description></item>
+    /// <c>U_c = v</c>, y para <c>v</c> ∈ {5, 6} exactamente tantas. La Tinaja (M13) no cuenta en ninguna de las
+    /// comparaciones: nunca recibe, así que no es casa de ninguna fruta. Las cuias de una sola fruta, la Hoja atada (solo recibe
+    /// su llave; D-024) y el Matapi con dosis (nunca es origen y solo recibe su color; D-007, reglas 1-3), solo son casa de esa
+    /// fruta, y una sola por fruta: una tercera comparación exige que, para cada <c>v</c>, las frutas con <c>U_c = v</c> sin una
+    /// de ellas tengan bastantes cuias de capacidad <c>v</c> que admitan cualquier fruta. Sin ella, un Matapi con dosis de
+    /// <c>c</c> y una Hoja atada a <c>c</c> contaban como casas de dos frutas, y la segunda fruta podía quedarse sin dónde sellar
+    /// (<c>FutilePropertyTests.MatapiWithDosesAndHojaAtadaOfTheSameFruit_PassTheCapacityOnlyCount_Unsolvable_02_8RejectsIt</c>).
+    /// Con ella la cuenta es exacta para esas mecánicas: equivale a que cada fruta tenga una casa propia
+    /// (<c>FutilePropertyTests.SingleFruitCuias_TheCountOf02_8IsExact_EveryValidBoardHasAHomeForEachFruit</c>).</description></item>
     /// <item><description>Ninguna cuia sellada al inicio (03 §17 #5).</description></item>
     /// <item><description>Barro (02 §9.1 M5): solo en la capa 2 o 3 (índice 1-2) de una cuia de 4; nunca en una cuia con
     /// mecánica (propuesta de D-007 b.2 M5: «nunca dentro de un Matapi»; D-007) ni como dosis oculta [P].</description></item>
@@ -147,15 +152,36 @@ namespace AF.Core.Board
                 colorsWithUnits[u]++;
             }
 
+            // 02 §8 y 03 §3: cada color puede sellar en una cuia propia con cap = U_c. cuiasWithCap cuenta las cuias por
+            // capacidad (las dos comparaciones de siempre, también la de la Cuia alta); openWithCap, las que pueden ser la casa de
+            // cualquier fruta de su capacidad, y housedWithUnits, las frutas que ya tienen casa en una cuia de una sola fruta
+            // (SingleFruitOf: una Hoja atada o un Matapi con dosis), una vez por fruta. La segunda cuia de una sola fruta de la
+            // misma fruta no es casa de nadie, así que no cuenta para las demás frutas de su U_c.
             var cuiasWithCap = new int[Cuia.MaxCapacity + 1];
+            var openWithCap = new int[Cuia.MaxCapacity + 1];
+            var housedWithUnits = new int[MaxUnits + 1];
+            var housed = new bool[Cuia.MaxTintColor + 1];
             for (int i = 0; i < state.Count; i++)
             {
                 // M13 (propuesta de la tinaja, b.2 regla 1 y c.1): la Tinaja no es casa de ninguna fruta (nunca recibe), así que
-                // no cuenta en ninguna de las dos comparaciones: ni como Cuia alta sin fruta abundante ni como sitio donde
+                // no cuenta en ninguna de las comparaciones: ni como Cuia alta sin fruta abundante ni como sitio donde
                 // sellar una fruta de U_c = 5.
-                if (state[i].Mechanic != MechanicType.Tinaja)
+                Cuia cuia = state[i];
+                if (cuia.Mechanic == MechanicType.Tinaja)
                 {
-                    cuiasWithCap[state[i].Capacity]++;
+                    continue;
+                }
+
+                cuiasWithCap[cuia.Capacity]++;
+                int fruit = SingleFruitOf(cuia, units);
+                if (fruit == Cuia.NoColor)
+                {
+                    openWithCap[cuia.Capacity]++;
+                }
+                else if (!housed[fruit])
+                {
+                    housed[fruit] = true;
+                    housedWithUnits[units[fruit]]++;
                 }
             }
 
@@ -169,6 +195,12 @@ namespace AF.Core.Board
                 if (v > Cuia.DefaultCapacity && cuiasWithCap[v] > colorsWithUnits[v])
                 {
                     return "02 §8: cada Cuia alta de " + Num(v) + " llega con su fruta abundante (U_c = " + Num(v) + "); hay " + Num(cuiasWithCap[v]) + " cuias y " + Num(colorsWithUnits[v]) + " frutas";
+                }
+
+                if (openWithCap[v] < colorsWithUnits[v] - housedWithUnits[v])
+                {
+                    return "02 §8: hay " + Num(colorsWithUnits[v]) + " colores con U_c = " + Num(v) + " y solo " + Num(housedWithUnits[v] + openWithCap[v])
+                        + " cuias de capacidad " + Num(v) + " donde sellar: una Hoja atada o un Matapi con dosis solo es casa de su fruta, y una sola por fruta (03 §3)";
                 }
             }
 
@@ -224,6 +256,37 @@ namespace AF.Core.Board
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// La fruta de la que la cuia solo puede ser la casa (02 §8 y 03 §3: «cada color puede sellar en una cuia propia con
+        /// cap = U_c»), o <see cref="Cuia.NoColor"/> si puede serlo de cualquier fruta de su capacidad:
+        /// <list type="bullet">
+        /// <item><description>la Hoja atada solo recibe su fruta (02 §1.2) y nunca se suelta, así que solo es la casa de su llave
+        /// (D-024);</description></item>
+        /// <item><description>un Matapi con dosis nunca es origen y solo recibe la fruta de su cima (D-007, reglas 1-3), así que
+        /// es la casa de su color, y la única: tiene que acabar sellado (R12).</description></item>
+        /// </list>
+        /// Solo cuenta si su capacidad es la <c>U_c</c> de esa fruta, como exigen las dos mecánicas; si no (o si el Matapi no es
+        /// monocolor), cuenta como siempre, por su capacidad, y la rechaza su mecánica más abajo, con su propio motivo.
+        /// </summary>
+        private static int SingleFruitOf(Cuia cuia, int[] units)
+        {
+            int fruit;
+            if (cuia.Mechanic == MechanicType.HojaAtada)
+            {
+                fruit = cuia.MechanicKey;
+            }
+            else if (cuia.Mechanic == MechanicType.Matapi && !cuia.IsEmpty && cuia.IsMonocolor)
+            {
+                fruit = cuia.TopColor;
+            }
+            else
+            {
+                return Cuia.NoColor;
+            }
+
+            return fruit >= Cuia.MinColor && fruit <= Cuia.MaxTintColor && units[fruit] == cuia.Capacity ? fruit : Cuia.NoColor;
         }
 
         /// <summary>

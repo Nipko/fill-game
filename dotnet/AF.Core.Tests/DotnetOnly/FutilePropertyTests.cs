@@ -469,14 +469,15 @@ namespace AF.Core.Tests.DotnetOnly
         }
 
         [Test]
-        public void TwoHojasAtadasOfTheSameFruit_PassThe02_8Count_Unsolvable_D024RejectsIt()
+        public void TwoHojasAtadasOfTheSameFruit_PassTheCapacityOnlyCount_Unsolvable_02_8AndD024RejectIt()
         {
-            // El otro efecto de dos Hojas atadas de la misma fruta (revisión de K3a): la cuenta de capacidades de 02 §8 en
-            // LevelValidation cuenta la segunda como casa de otra fruta de la misma U_c, aunque solo recibe la suya. Aquí el 1 y
-            // el 2 tienen U_c = 4 y las únicas cuias de 4 son las dos Hojas atadas al 1: la cuenta sale (2 cuias de 4 para 2
-            // frutas de 4) y el nivel no empieza atascado, pero el 2 no tiene dónde sellar, así que es irresoluble. Sin D-024,
-            // LevelValidation lo dejaba pasar; con D-024 (punto 2) lo rechaza. Con la segunda cambiada por una cuia de 4 sin
-            // mecánica (una Hoja atada por fruta) la cuenta vuelve a ser exacta y el nivel se gana.
+            // El otro efecto de dos Hojas atadas de la misma fruta (revisión de K3a): contadas solo por capacidad, la segunda
+            // contaba como casa de otra fruta de la misma U_c, aunque solo recibe la suya. Aquí el 1 y el 2 tienen U_c = 4 y las
+            // únicas cuias de 4 son las dos Hojas atadas al 1: la cuenta por capacidad sale (2 cuias de 4 para 2 frutas de 4) y el
+            // nivel no empieza atascado, pero el 2 no tiene dónde sellar, así que es irresoluble. Ahora lo rechazan las dos reglas:
+            // la cuenta de 02 §8, que cuenta una sola cuia de una sola fruta por fruta (y llega antes), y D-024, punto 2, en la
+            // propia mecánica. Con la segunda cambiada por una cuia de 4 sin mecánica (una Hoja atada por fruta) cada fruta tiene
+            // casa y el nivel se gana.
             MechanicType hojaAtada = MechanicType.HojaAtada;
             Cuia[] smalls = { Cuia.Create(3, new[] { 1, 2, 2 }), Cuia.Create(3, new[] { 2, 1, 1 }), Cuia.Create(2, new[] { 1, 2 }) };
             var twoOfTheSameFruit = new BoardState(new[]
@@ -488,12 +489,13 @@ namespace AF.Core.Tests.DotnetOnly
                 Cuia.Empty(4).WithMechanic(hojaAtada, key: 1), Cuia.Empty(4), smalls[0], smalls[1], smalls[2],
             });
 
-            Assert.That(PassesThe02_8Count(twoOfTheSameFruit), Is.True);
+            Assert.That(PassesTheCapacityOnlyCount(twoOfTheSameFruit), Is.True);
             Assert.That(EveryFruitHasAHome(twoOfTheSameFruit), Is.False);
             Assert.That(PourRules.IsStuck(twoOfTheSameFruit, true), Is.False);
             Assert.That(ExhaustiveSearch.Explore(twoOfTheSameFruit, PourMode.Run, MaxStatesPerBoard).Distance[0], Is.EqualTo(int.MaxValue));
             Assert.That(ExhaustiveSearch.Explore(twoOfTheSameFruit, PourMode.Single, MaxStatesPerBoard).Distance[0], Is.EqualTo(int.MaxValue));
-            Assert.That(LevelValidation.Validate(twoOfTheSameFruit), Does.Contain("D-024"));
+            Assert.That(LevelValidation.Validate(twoOfTheSameFruit), Does.StartWith("02 §8").And.Contain("una sola por fruta"));
+            Assert.That(MechanicTable.Of(twoOfTheSameFruit[0]).ValidateInitial(twoOfTheSameFruit, 0), Does.Contain("D-024"));
 
             Assert.That(EveryFruitHasAHome(onePerFruit), Is.True);
             Assert.That(LevelValidation.Validate(onePerFruit), Is.Null);
@@ -501,17 +503,62 @@ namespace AF.Core.Tests.DotnetOnly
             Assert.That(ExhaustiveSearch.Explore(onePerFruit, PourMode.Single, MaxStatesPerBoard).Distance[0], Is.Not.EqualTo(int.MaxValue));
         }
 
+        [Test]
+        public void MatapiWithDosesAndHojaAtadaOfTheSameFruit_PassTheCapacityOnlyCount_Unsolvable_02_8RejectsIt()
+        {
+            // Revisión de FIXK: el mismo agujero por otro camino, con un ejemplar por fruta y sin combinación prohibida (02 §9.2,
+            // regla 7, no prohíbe juntar Matapi y Hoja atada). Un Matapi con dosis del 1 nunca es origen y solo recibe el 1
+            // (D-007, reglas 1-3), así que es la única casa del 1 (tiene que acabar sellado, R12); la Hoja atada al 1 solo recibe
+            // el 1, así que no es la casa de nadie. El 1 y el 2 tienen U_c = 4 y las únicas cuias de 4 son esas dos: la cuenta por
+            // capacidad sale, el nivel no empieza atascado y es irresoluble en run y en single. La cuenta de 02 §8 de
+            // LevelValidation lo rechaza: cada cuia de una sola fruta solo es casa de su fruta, y una sola por fruta (03 §3: «cada
+            // color puede sellar en una cuia propia con cap = U_c»). Control: con el Matapi vacío (casa del 2) y el 1 fuera, es
+            // válido y se gana.
+            MechanicType hojaAtada = MechanicType.HojaAtada;
+            var oneHome = new BoardState(new[]
+            {
+                Cuia.Create(4, new[] { 1 }).WithMechanic(MechanicType.Matapi), Cuia.Empty(4).WithMechanic(hojaAtada, key: 1),
+                Cuia.Create(3, new[] { 1, 2, 2 }), Cuia.Create(3, new[] { 2, 1, 2 }), Cuia.Create(2, new[] { 1 }),
+            });
+            var control = new BoardState(new[]
+            {
+                Cuia.Empty(4).WithMechanic(MechanicType.Matapi), Cuia.Empty(4).WithMechanic(hojaAtada, key: 1),
+                Cuia.Create(3, new[] { 1, 2, 2 }), Cuia.Create(3, new[] { 2, 1, 2 }), Cuia.Create(2, new[] { 1, 1 }),
+            });
+
+            Assert.That(PassesTheCapacityOnlyCount(oneHome), Is.True);
+            Assert.That(EveryFruitHasAHome(oneHome), Is.False);
+            Assert.That(PourRules.IsStuck(oneHome, true), Is.False);
+            Assert.That(ExhaustiveSearch.Explore(oneHome, PourMode.Run, MaxStatesPerBoard).Distance[0], Is.EqualTo(int.MaxValue));
+            Assert.That(ExhaustiveSearch.Explore(oneHome, PourMode.Single, MaxStatesPerBoard).Distance[0], Is.EqualTo(int.MaxValue));
+            Assert.That(MechanicTable.Of(oneHome[0]).ValidateInitial(oneHome, 0), Is.Null);
+            Assert.That(MechanicTable.Of(oneHome[1]).ValidateInitial(oneHome, 1), Is.Null);
+            Assert.That(LevelValidation.Validate(oneHome), Does.StartWith("02 §8").And.Contain("una sola por fruta"));
+
+            Assert.That(EveryFruitHasAHome(control), Is.True);
+            Assert.That(LevelValidation.Validate(control), Is.Null);
+            Assert.That(ExhaustiveSearch.Explore(control, PourMode.Run, MaxStatesPerBoard).Distance[0], Is.Not.EqualTo(int.MaxValue));
+            Assert.That(ExhaustiveSearch.Explore(control, PourMode.Single, MaxStatesPerBoard).Distance[0], Is.Not.EqualTo(int.MaxValue));
+        }
+
         [TestCase(CapacityFamily.Uniform)]
         [TestCase(CapacityFamily.Mixed)]
-        public void D024_WithHojasAtadas_TheCountOf02_8IsExact_EveryValidBoardHasAHomeForEachFruit(CapacityFamily family)
+        public void SingleFruitCuias_TheCountOf02_8IsExact_EveryValidBoardHasAHomeForEachFruit(CapacityFamily family)
         {
-            // 02 §8 con la Hoja atada (D-024): la Hoja atada solo es casa de su fruta. Con capacidad = U_c de su llave (punto 1)
-            // y como mucho una por fruta (punto 2), la cuenta de LevelValidation (cuias de capacidad v ≥ frutas con U_c = v)
-            // equivale a que cada fruta tenga una casa propia donde sellar: se casa cada Hoja atada con su fruta y las demás
-            // frutas de esa U_c con las cuias sin Hoja atada. Se comprueba con el reparto exacto (EveryFruitHasAHome) en tableros
-            // generados con una Hoja atada, con dos de frutas distintas y con dos de la misma fruta: todo tablero que
-            // LevelValidation acepta tiene casa para cada fruta, y los de dos de la misma fruta nunca se aceptan.
-            IMechanicInjector[] injectors = { new HojaAtadaInjector(), new TwoHojasAtadasInjector(sameFruit: false), new TwoHojasAtadasInjector(sameFruit: true) };
+            // 02 §8 y 03 §3 con las cuias de una sola fruta: la Hoja atada (D-024: capacidad = U_c de su llave y una por fruta) y
+            // el Matapi con dosis (capacidad = U_c de su color [P]). Cada una solo es casa de su fruta, y una sola por fruta. La
+            // cuenta de LevelValidation equivale a que cada fruta tenga una casa propia donde sellar: se casa cada fruta con su
+            // cuia de una sola fruta y las demás frutas de esa U_c con las cuias que admiten cualquier fruta. Se comprueba con el
+            // reparto exacto (EveryFruitHasAHome) en tableros generados con una Hoja atada, con dos de frutas distintas, con dos de
+            // la misma fruta, con un Matapi y con un Matapi y una Hoja atada (a veces de la misma fruta): todo tablero que
+            // LevelValidation acepta tiene casa para cada fruta. Contadas solo por capacidad, las Hojas atadas (una por fruta) y
+            // el Matapi solo ya eran exactas; con un Matapi con dosis y una Hoja atada de la misma fruta, no.
+            IMechanicInjector[] injectors =
+            {
+                new HojaAtadaInjector(), new TwoHojasAtadasInjector(sameFruit: false), new TwoHojasAtadasInjector(sameFruit: true),
+                new MatapiInjector(), new MatapiAndHojaAtadaInjector(),
+            };
+            int matapiAndAtadaGaps = 0;
             for (int k = 0; k < injectors.Length; k++)
             {
                 var rng = new Prng(0xF07E_0824UL + (ulong)k);
@@ -525,7 +572,7 @@ namespace AF.Core.Tests.DotnetOnly
                         continue;
                     }
 
-                    if (PassesThe02_8Count(start) && !EveryFruitHasAHome(start))
+                    if (PassesTheCapacityOnlyCount(start) && !EveryFruitHasAHome(start))
                     {
                         countWithoutHome++;
                     }
@@ -541,16 +588,29 @@ namespace AF.Core.Tests.DotnetOnly
 
                 TestContext.WriteLine(injectors[k].Name + " (" + family + "): " + accepted.ToString(CultureInfo.InvariantCulture)
                     + " tableros válidos; " + countWithoutHome.ToString(CultureInfo.InvariantCulture)
-                    + " pasan la cuenta de 02 §8 sin casa para alguna fruta");
-                if (k < 2)
+                    + " pasan la cuenta solo por capacidad sin casa para alguna fruta");
+                if (k == 2)
                 {
-                    Assert.That(accepted, Is.GreaterThan(0), injectors[k].Name);
-                    Assert.That(countWithoutHome, Is.EqualTo(0), injectors[k].Name);
+                    Assert.That(accepted, Is.EqualTo(0), injectors[k].Name);
+                    continue;
+                }
+
+                Assert.That(accepted, Is.GreaterThan(0), injectors[k].Name);
+                if (k == 4)
+                {
+                    matapiAndAtadaGaps = countWithoutHome;
                 }
                 else
                 {
-                    Assert.That(accepted, Is.EqualTo(0), injectors[k].Name);
+                    Assert.That(countWithoutHome, Is.EqualTo(0), injectors[k].Name);
                 }
+            }
+
+            if (family == CapacityFamily.Mixed)
+            {
+                // El generador mixto llega al agujero que cierra la cuenta (los uniformes siempre tienen un vacío de 4 de más), y
+                // todos esos tableros se rechazan (arriba).
+                Assert.That(matapiAndAtadaGaps, Is.GreaterThan(0));
             }
         }
 
@@ -787,10 +847,11 @@ namespace AF.Core.Tests.DotnetOnly
         }
 
         /// <summary>
-        /// La cuenta de capacidades de 02 §8 de <c>LevelValidation</c>, sin Tinaja: para cada <c>v</c>, cuias de capacidad
-        /// <c>v</c> ≥ frutas con <c>U_c = v</c>.
+        /// La cuenta de capacidades de 02 §8 contada solo por capacidad, como la hacía <c>LevelValidation</c> antes de la revisión
+        /// de FIXK, sin Tinaja: para cada <c>v</c>, cuias de capacidad <c>v</c> ≥ frutas con <c>U_c = v</c>. Deja pasar los
+        /// tableros en los que una cuia de una sola fruta cuenta como casa de otra.
         /// </summary>
-        private static bool PassesThe02_8Count(BoardState state)
+        private static bool PassesTheCapacityOnlyCount(BoardState state)
         {
             int[] units = state.UnitsTable;
             for (int v = LevelValidation.MinUnits; v <= LevelValidation.MaxUnits; v++)
@@ -823,10 +884,11 @@ namespace AF.Core.Tests.DotnetOnly
         }
 
         /// <summary>
-        /// Reparto exacto de casas (02 §8) cuando la única mecánica es la Hoja atada: cada fruta necesita una cuia propia de
-        /// capacidad <c>U_c</c> que la acepte (sin mecánica, o una Hoja atada a ella). Cada Hoja atada solo sirve a su llave, así
-        /// que se casan primero (una por fruta, aunque haya dos de la misma) y las demás frutas de esa <c>U_c</c> van a las
-        /// cuias sin Hoja atada.
+        /// Reparto exacto de casas (02 §8; 03 §3) cuando las únicas mecánicas son la Hoja atada y el Matapi: cada fruta necesita
+        /// una cuia propia de capacidad <c>U_c</c> que la acepte hasta sellar. La Hoja atada solo sirve a su llave; el Matapi con
+        /// dosis, solo a su color (nunca es origen y solo recibe su cima); el Matapi vacío y las cuias sin mecánica, a cualquiera.
+        /// Las de una sola fruta se casan primero (una por fruta, aunque haya dos de la misma) y las demás frutas de esa
+        /// <c>U_c</c> van a las cuias que admiten cualquier fruta.
         /// </summary>
         private static bool EveryFruitHasAHome(BoardState state)
         {
@@ -834,7 +896,7 @@ namespace AF.Core.Tests.DotnetOnly
             for (int v = LevelValidation.MinUnits; v <= LevelValidation.MaxUnits; v++)
             {
                 int fruits = 0;
-                int housedByAtada = 0;
+                int housedAlone = 0;
                 for (int c = Cuia.MinColor; c <= Cuia.MaxTintColor; c++)
                 {
                     if (units[c] != v)
@@ -845,30 +907,41 @@ namespace AF.Core.Tests.DotnetOnly
                     fruits++;
                     for (int i = 0; i < state.Count; i++)
                     {
-                        if (state[i].Mechanic == MechanicType.HojaAtada && state[i].MechanicKey == c && state[i].Capacity == v)
+                        if (state[i].Capacity == v && OnlyFruitOf(state[i]) == c)
                         {
-                            housedByAtada++;
+                            housedAlone++;
                             break;
                         }
                     }
                 }
 
-                int plain = 0;
+                int open = 0;
                 for (int i = 0; i < state.Count; i++)
                 {
-                    if (state[i].Capacity == v && state[i].Mechanic != MechanicType.HojaAtada)
+                    if (state[i].Capacity == v && OnlyFruitOf(state[i]) == Cuia.NoColor)
                     {
-                        plain++;
+                        open++;
                     }
                 }
 
-                if (plain < fruits - housedByAtada)
+                if (open < fruits - housedAlone)
                 {
                     return false;
                 }
             }
 
             return true;
+        }
+
+        /// <summary>La única fruta que la cuia puede recibir en toda la partida, o <c>NoColor</c> si puede recibir cualquiera.</summary>
+        private static int OnlyFruitOf(Cuia cuia)
+        {
+            if (cuia.Mechanic == MechanicType.HojaAtada)
+            {
+                return cuia.MechanicKey;
+            }
+
+            return cuia.Mechanic == MechanicType.Matapi && !cuia.IsEmpty ? cuia.ColorAt(0) : Cuia.NoColor;
         }
 
         /// <summary>
@@ -912,6 +985,23 @@ namespace AF.Core.Tests.DotnetOnly
                 }
 
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Un Matapi (<see cref="MatapiInjector"/>: vacío o con dosis de un color y capacidad = <c>U_c</c>) y una Hoja atada
+        /// (<see cref="HojaAtadaInjector"/>) en otra cuia; la llave puede ser la fruta del Matapi.
+        /// </summary>
+        private sealed class MatapiAndHojaAtadaInjector : IMechanicInjector
+        {
+            private readonly MatapiInjector _matapi = new MatapiInjector();
+            private readonly HojaAtadaInjector _atada = new HojaAtadaInjector();
+
+            public string Name => "matapi y hoja atada";
+
+            public bool Inject(Prng rng, int[] caps, List<int>[] doses, MechanicSpec[] attrs)
+            {
+                return _matapi.Inject(rng, caps, doses, attrs) && _atada.Inject(rng, caps, doses, attrs);
             }
         }
     }

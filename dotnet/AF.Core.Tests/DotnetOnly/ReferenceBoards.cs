@@ -35,10 +35,10 @@ namespace AF.Core.Tests.DotnetOnly
     /// escritorio x64, .NET 10 Release): tablero base con <c>InverseWalk</c> (K = 10 colores de 4, 13 cuias de 4 y E = 2, con
     /// una cuia de más para que haya cuias a medias), y superposición de la variante en una cuia elegida con el PRNG del núcleo:
     /// la Hoja atada sobre una cuia con dosis y no sellada, con la llave = la fruta de su fondo (b.3: «puede empezar con dosis
-    /// cuyo fondo es c»; capacidad 4 = <c>U_c</c>, la regla [P] de K3a); el Brote de dos hojas (<c>n</c> = 2) sobre una cuia
-    /// con 1-3 dosis y espacio ≥ 2. Verificación con <see cref="LevelValidation"/>, A* (w = 1, 300.000 nodos) y Morpho (w = 2,
-    /// 40.000). De 30 semillas: 30 válidos, 30 resueltos y 30 con Morpho; expandidos, mediana 498 y máximo 25.202 (HoA) y 580
-    /// y 25.266 (Br2); percentil 75 en la semilla 23 (HoA) y 29 (Br2).</para>
+    /// cuyo fondo es c»; capacidad 4 = <c>U_c</c>, la regla de K3a, ratificada en D-024, punto 1); el Brote de dos hojas
+    /// (<c>n</c> = 2) sobre una cuia con 1-3 dosis y espacio ≥ 2. Verificación con <see cref="LevelValidation"/>, A* (w = 1,
+    /// 300.000 nodos) y Morpho (w = 2, 40.000). De 30 semillas: 30 válidos, 30 resueltos y 30 con Morpho; expandidos, mediana
+    /// 498 y máximo 25.202 (HoA) y 580 y 25.266 (Br2); percentil 75 en la semilla 23 (HoA) y 29 (Br2).</para>
     /// <para><b>Fl</b> (Flor de vitória-régia, variante de la 1.0, K3b, 2026-10-14, con un programa fuera del repositorio en el
     /// equipo de escritorio x64, .NET 10 Release): el mismo tablero base que HoA y Br2 (<c>InverseWalk</c> con K = 10 en 13 cuias
     /// de 4 y E = 2) y la Flor sobre una cuia con contenido y no sellada, elegida con el PRNG del núcleo

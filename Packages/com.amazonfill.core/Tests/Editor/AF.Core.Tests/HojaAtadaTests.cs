@@ -267,6 +267,32 @@ namespace AF.Core.Tests
             Assert.That(LevelValidation.Validate(BoardBuilder.Build(caps, cuias, attrs).State!), Is.Null);
         }
 
+        [Test]
+        public void Validation_02_8_AMatapiWithDosesAndAHojaAtadaOfTheSameFruit_AreOneHome_TheOtherFruitHasNowhereToSeal()
+        {
+            // 02 §8 y 03 §3: cada color puede sellar en una cuia propia con cap = U_c. Un Matapi con dosis del 1 nunca es origen
+            // y solo recibe el 1 (D-007, reglas 1-3), así que es la casa del 1, y la única; la Hoja atada al 1 solo recibe el 1
+            // (D-024), así que no es la casa de nadie. El 1 y el 2 tienen U_c = 4 y las únicas cuias de 4 son esas dos: contadas
+            // por capacidad salían 2 casas para 2 frutas, pero el 2 no tiene dónde sellar (el nivel es irresoluble; lo comprueba
+            // DotnetOnly/FutilePropertyTests). Las dos mecánicas son válidas cada una por su cuenta.
+            BoardState oneHome = new BoardState(new[]
+            {
+                C(4, 1).WithMechanic(MechanicType.Matapi), Atada(4, 1), C(3, 1, 2, 2), C(3, 2, 1, 2), C(2, 1),
+            });
+            string? error = LevelValidation.Validate(oneHome);
+            Assert.That(error, Does.StartWith("02 §8"));
+            Assert.That(error, Does.Contain("U_c = 4"));
+            Assert.That(error, Does.Contain("una sola por fruta"));
+
+            // Control: con el Matapi vacío (puede ser la casa de cualquier fruta, aquí del 2) y el 1 que tenía fuera, el tablero es
+            // válido: el 1 sella en su Hoja atada y el 2 en el Matapi.
+            BoardState control = new BoardState(new[]
+            {
+                Cuia.Empty(4).WithMechanic(MechanicType.Matapi), Atada(4, 1), C(3, 1, 2, 2), C(3, 2, 1, 2), C(2, 1, 1),
+            });
+            Assert.That(LevelValidation.Validate(control), Is.Null);
+        }
+
         private static string? Validate(int[] caps, int[][] cuias, int index, MechanicSpec spec)
         {
             BoardBuildResult built = BoardBuilder.Build(caps, cuias, Attrs(caps.Length, index, spec));

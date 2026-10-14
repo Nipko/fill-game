@@ -37,15 +37,21 @@ namespace AF.Core.Mechanics
     /// <c>run</c>, uno solo ya deja el mismo estado canónico, así que <c>atascado(S)</c> no se cumplía mientras existiera el par
     /// (<c>FutilePropertyTests.P3_HojaAtada_TwoOfTheSameFruit_ARoundTripReturnsToTheSameState_D024RejectsIt</c> y
     /// <c>P3_TwoHojasAtadasOfTheSameFruit_FailsOnGeneratedBoards_AndD024RejectsThem</c>);</description></item>
-    /// <item><description>la cuenta de capacidades de 02 §8 en <see cref="LevelValidation"/>, que contaba la segunda como casa de
-    /// otra fruta de la misma <c>U_c</c>, aunque solo recibe la suya: dejaba pasar tableros irresolubles
-    /// (<c>FutilePropertyTests.TwoHojasAtadasOfTheSameFruit_PassThe02_8Count_Unsolvable_D024RejectsIt</c>).</description></item>
+    /// <item><description>la cuenta de capacidades de 02 §8 en <see cref="LevelValidation"/>, que, contada solo por capacidad,
+    /// tomaba la segunda por casa de otra fruta de la misma <c>U_c</c>, aunque solo recibe la suya: dejaba pasar tableros
+    /// irresolubles (<c>FutilePropertyTests.TwoHojasAtadasOfTheSameFruit_PassTheCapacityOnlyCount_Unsolvable_02_8AndD024RejectIt</c>).
+    /// </description></item>
     /// </list>
-    /// Con un ejemplar por fruta, cada Hoja atada es la casa de una sola fruta, la de su llave, cuya <c>U_c</c> es su capacidad:
-    /// la cuenta de 02 §8 es exacta (se casa cada hoja atada con su fruta y las demás frutas de esa <c>U_c</c> con las cuias sin
-    /// filtro) y P1-P3 se cumplen en <c>run</c> y <c>single</c> con capacidades uniformes y mixtas (<c>P1_P2_P3_HoldWithHojaAtada</c>
-    /// y <c>P1_P2_P3_HoldWithTwoHojasAtadasOfDifferentFruits</c>). Como la Tinaja, la regla de «una por» la comprueba la propia
-    /// mecánica: el informe sale en la primera de las dos y nombra la otra.</description></item>
+    /// La cuenta de 02 §8 ya no depende de esta regla: <see cref="LevelValidation"/> cuenta cada cuia de una sola fruta (la Hoja
+    /// atada y el Matapi con dosis) solo como casa de su fruta, y una sola por fruta, y casa las demás frutas de esa <c>U_c</c>
+    /// con las cuias que admiten cualquier fruta. Así es exacta también cuando un Matapi con dosis de la fruta comparte la llave
+    /// con una Hoja atada, que entonces no es la casa de nadie (revisión de FIXK:
+    /// <c>FutilePropertyTests.MatapiWithDosesAndHojaAtadaOfTheSameFruit_PassTheCapacityOnlyCount_Unsolvable_02_8RejectsIt</c> y
+    /// <c>SingleFruitCuias_TheCountOf02_8IsExact_EveryValidBoardHasAHomeForEachFruit</c>). Con un ejemplar por fruta, P1-P3 se
+    /// cumplen en <c>run</c> y <c>single</c> con capacidades uniformes y mixtas (<c>P1_P2_P3_HoldWithHojaAtada</c> y
+    /// <c>P1_P2_P3_HoldWithTwoHojasAtadasOfDifferentFruits</c>). Como la Tinaja, la regla de «una por» la comprueba la propia
+    /// mecánica: el informe sale en la primera de las dos y nombra la otra (si la cuenta de 02 §8, que va antes, no rechazó
+    /// ya el tablero).</description></item>
     /// </list>
     /// </remarks>
     internal sealed class HojaAtadaMechanic : MechanicBase
