@@ -178,6 +178,31 @@ namespace AF.UI
         }
 
         /// <summary>
+        /// Ancho que necesita el texto de ahora de <paramref name="text"/> en una sola línea a su tamaño más pequeño (el mínimo
+        /// del autoajuste o, sin él, su tamaño; dp), como <see cref="MinTextHeight"/>: al colocar, nunca por fotograma; 0 sin
+        /// texto.
+        /// </summary>
+        public static float MinTextWidth(TextMeshProUGUI text)
+        {
+            string value = text.text;
+            if (string.IsNullOrEmpty(value))
+            {
+                return 0f;
+            }
+
+            if (!text.enableAutoSizing)
+            {
+                return text.GetPreferredValues(value, float.PositiveInfinity, float.PositiveInfinity).x;
+            }
+
+            float max = text.fontSizeMax;
+            text.fontSizeMax = text.fontSizeMin;
+            float width = text.GetPreferredValues(value, float.PositiveInfinity, float.PositiveInfinity).x;
+            text.fontSizeMax = max;
+            return width;
+        }
+
+        /// <summary>
         /// Botón con relieve (guía 5.1): el objeto con <see cref="Button"/> es el área táctil (invisible); dentro, la base
         /// fija (sombra, canto y contorno) y la cara, que baja al pulsar con su contenido. El contenido (glifo, etiqueta)
         /// se añade bajo <see cref="ReliefParts.Face"/> y después se llama a <see cref="ReliefButton.Bind"/>.

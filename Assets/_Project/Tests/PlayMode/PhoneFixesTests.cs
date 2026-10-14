@@ -922,8 +922,9 @@ namespace AF.Tests.PlayMode
         }
 
         // El aviso no deja a medias ninguna ficha de la repisa: o no la toca (con NoticeChipClearDp de aire a lo ancho) o la tapa
-        // entera, con su borde de arriba sobre ella. Devuelve las que tapa.
-        private static int AssertChipsWholeOrClear(GameScreen view, string what)
+        // entera, con su borde de arriba sobre ella (pregunta 47, (1)). Devuelve las que tapa. También lo usa MinTextSizeTests
+        // (el 135 al 100 % y al 130 %, A1).
+        internal static int AssertChipsWholeOrClear(GameScreen view, string what)
         {
             Canvas.ForceUpdateCanvases();
             Rect toast = VictorySetup.CanvasRect(view.NoticeToast.Root, Root(view));

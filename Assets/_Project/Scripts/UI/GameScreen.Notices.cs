@@ -35,7 +35,8 @@ namespace AF.UI
     /// <para><b>La tarjeta del miquito</b> espera a que la tropa se haya ido de la rama (<c>IntroAnimation.TroopVisible</c>: tras
     /// su reposo y su salida ya en juego, o tras el fundido de 100 ms si se saltó la intro) y entra entonces en la cola; mientras
     /// espera, las etiquetas del HUD siguen a la vista, y mientras se ve, se apartan como siempre (GameScreen.Labels.cs). Como
-    /// los avisos, solo sale en PLAYING; si no cabe sin tapar cuias ni botones, no sale.</para>
+    /// los avisos, solo sale en PLAYING; si no cabe sin tapar cuias, botones ni las burbujas «Te faltan {n}» de la bandeja, no
+    /// sale, y si una burbuja sale después bajo la tarjeta del muelle, la tarjeta se oculta (A1, criterio 3).</para>
     /// <para>Fuera de la cola, con su propia duración: el cartel (<c>_banner</c>) con «El río bajó» (04 §2.7) y el rótulo del
     /// intento. La cola se vacía al cargar un nivel, al empezar otro intento (<c>OnRestart</c>) y al empezar la celebración
     /// (<c>OnCelebrationStarted</c>); al volver de segundo plano (<c>SnapToModel</c>) no se toca: un aviso no es una animación
@@ -77,7 +78,9 @@ namespace AF.UI
     /// pie: la repisa de abajo y sus fichas durante lo que dura el aviso (3-7 s), y con una pareja del Remolino en esa fila,
     /// también la mitad de abajo de su remanso y su canal en ese tramo. Se da en el juego cuando una ficha parte el tramo de la
     /// repisa: en el 115 tras el rescate (12 cuias, la ficha «?×2» bajo la tercera cuia de la fila de abajo; captura 92f de
-    /// T52).</description></item>
+    /// T52). Y en el 135 tras el rescate con la escala de texto al 130 % (A1): ajustado a su texto ya no cabe junto a la ficha
+    /// «?×1», así que la tapa entera con su borde de arriba en el pie de la fila (la placa se queda en el hueco, sin pasar de
+    /// ahí, y su texto se encoge hacia 12 sp × 1,3; MinTextSizeTests y a1_07_l135_3_filas_130).</description></item>
     /// </list>
     /// <para>Este compromiso lo ratificó el dueño (pregunta 47, (1); D-022): se deja como está y se prueba (capturas 92, 92f y
     /// 92g de T52; MinTextSnapshotTests, A1). Se descartó dibujar las burbujas delante del aviso: aunque el aviso se encogiera,
@@ -125,6 +128,7 @@ namespace AF.UI
         private int _noticeHead;
         private int _noticeCount;
         private FaunaSpecies? _sightingPending;
+        private float _sightingDockBottom = float.NaN; // borde de abajo de la placa de la tarjeta sobre el muelle; NaN si no
 
         /// <summary>Avisos que esperan turno (sin contar el que se ve; tests).</summary>
         internal int NoticesQueued => _noticeCount;
@@ -192,9 +196,12 @@ namespace AF.UI
         }
 
         // El aviso, sin tapar las burbujas «Te faltan {n}» ni, si cabe, el tablero (ver la clase). Cada fotograma con el aviso a
-        // la vista, tras repintar la bandeja (GameScreen.Tick); solo lo mueve si cambia su sitio (force: al mostrarlo).
+        // la vista, tras repintar la bandeja (GameScreen.Tick); solo lo mueve si cambia su sitio (force: al mostrarlo). Es también
+        // el punto de cada fotograma tras repintar la bandeja para la tarjeta del miquito sobre el muelle
+        // (KeepSightingClearOfBubbles).
         private void PlaceToast(bool force)
         {
+            KeepSightingClearOfBubbles();
             if (!_toast.Visible)
             {
                 return;
@@ -540,11 +547,13 @@ namespace AF.UI
         }
 
         // Sobre la franja del panorama si mide al menos el alto de la tarjeta + 4 dp (antes, 64 dp fijos); si no,
-        // sobre el muelle, bajo la última fila y por encima de la bandeja; si no cabe sin tapar cuias ni botones, no sale. El
-        // alto es el de la tarjeta con su nombre y su dato (crece si el dato va en dos líneas o con la escala de texto; A1).
+        // sobre el muelle, bajo la última fila y por encima de la bandeja y de sus burbujas «Te faltan {n}» (SightingDockLimit);
+        // si no cabe sin tapar cuias, botones ni burbujas, no sale. El alto es el de la tarjeta con su nombre y su dato (crece si
+        // el dato va en dos líneas o con la escala de texto; A1).
         private void ShowSightingNow(FaunaSpecies species)
         {
             BoardLayoutResult? l = _layout;
+            _sightingDockBottom = float.NaN;
             if (l == null)
             {
                 return;
@@ -563,14 +572,61 @@ namespace AF.UI
             else
             {
                 top = l.PanelBottom + 4f;
-                if (top + height > TrayTop - 8f)
+                if (top + height > SightingDockLimit())
                 {
                     return;
                 }
+
+                _sightingDockBottom = top + height;
             }
 
             _sighting.Place(_canvasW, top);
             _sighting.Show(_art.MonkeyArtFor(species).Portrait, name, fact);
+        }
+
+        /// <summary>
+        /// La tarjeta del miquito de <paramref name="species"/> en el acto, por su camino de colocación (tests y capturas: el
+        /// muelle con una burbuja «Te faltan {n}» a la vista, sin esperar a su nivel_tarjeta). Devuelve si sale.
+        /// </summary>
+        internal bool ShowSighting(FaunaSpecies species)
+        {
+            _sighting.Hide();
+            ShowSightingNow(species);
+            return _sighting.Visible;
+        }
+
+        /// <summary>La tarjeta del miquito va sobre el muelle (no en la franja del panorama; tests).</summary>
+        internal bool SightingOnDock => _sighting.Visible && !float.IsNaN(_sightingDockBottom);
+
+        // Lo más bajo que puede llegar la placa de la tarjeta sobre el muelle (dp desde arriba): 8 dp sobre la bandeja, como el
+        // aviso, y, si se ve alguna burbuja «Te faltan {n}» (pregunta 41 (4)), con su canto NoticeBubbleGapDp por encima de la
+        // más alta: no la tapa (A1, criterio 3; revisión de A1: antes solo miraba la bandeja).
+        private float SightingDockLimit()
+        {
+            float limit = TrayTop - NoticeAboveTrayDp;
+            if (_tray.TryGetMissingTop(out float bubbleTop))
+            {
+                limit = Mathf.Min(limit, bubbleTop - NoticeBubbleGapDp - SightingCard.EdgeDp);
+            }
+
+            return limit;
+        }
+
+        // Con la tarjeta sobre el muelle, una burbuja «Te faltan {n}» que sale después debajo de ella (p. ej. tras gastar
+        // semillas en un comodín) se taparía: la tarjeta no puede subir sin tapar las cuias, así que se oculta en el acto, como
+        // ante un modal. Cada fotograma, con la bandeja ya repintada (desde PlaceToast); sin asignaciones.
+        private void KeepSightingClearOfBubbles()
+        {
+            if (float.IsNaN(_sightingDockBottom) || !_sighting.Visible)
+            {
+                return;
+            }
+
+            if (_sightingDockBottom > SightingDockLimit() + 0.01f)
+            {
+                _sighting.Hide();
+                _sightingDockBottom = float.NaN;
+            }
         }
 
         private struct Notice

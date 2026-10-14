@@ -23,10 +23,11 @@ namespace AF.Tests.PlayMode
     /// <c>a1_04_sin_canoas_l31</c>: Sin canoas (0/5);</description></item>
     /// <item><description><c>a1_05_aviso_2_lineas_l8</c>: el regalo de Capi del 8, el aviso más largo;</description></item>
     /// <item><description><c>a1_06_miquito_l5</c>: la tarjeta «¡Miquito a la vista!» del 5 (mono ardilla) cuando la tropa se
-    /// va, y <c>a1_06b_miquito_dato_largo</c>: la del dato más largo del catálogo, en la misma franja (sin 16:9: ahí, al
-    /// 130 %, no cabe y no sale);</description></item>
+    /// va, y <c>a1_06b_miquito_dato_largo</c>: la del dato más largo del catálogo, en el mismo sitio, con el dato en dos líneas
+    /// equilibradas al 130 % (sin 16:9: ahí, al 130 %, no cabe y no sale; pendiente del dueño);</description></item>
     /// <item><description><c>a1_07_l135_3_filas</c>: el 135 tras el rescate de verdad (12 cuias, 3 filas, las dos burbujas
-    /// «Te faltan {n}»): «¡Una cuia más!» junto a la ficha «?×1», el compromiso ratificado (pregunta 47); y
+    /// «Te faltan {n}»): «¡Una cuia más!» junto a la ficha «?×1» al 100 % y, al 130 %, tapándola entera (las dos ramas del
+    /// compromiso ratificado en la pregunta 47, (1)); y
     /// <c>a1_07b_l135_revelar_sin_medios</c>: Revelar sin semillas ni video, sin aviso: la burbuja en lo alto de su latido y
     /// con los colores del precio sin saldo (pregunta 48 (b)); a 360 × 780 dp.</description></item>
     /// </list>
@@ -93,9 +94,10 @@ namespace AF.Tests.PlayMode
                 Assert.That(boot.View!.ToastText, Is.EqualTo(UiText.ExtraCuiaGift));
                 yield return SaveNow(dir, "a1_05_aviso_2_lineas_l8" + suffix, boot);
 
-                // La tarjeta del miquito en el 5, cuando la tropa se ha ido. Al 130 % en 16:9 la tarjeta (≈ 80 dp) no cabe ni en
-                // la franja del panorama ni sobre el muelle y no sale (la regla de siempre: si no cabe sin tapar cuias ni botones,
-                // no sale; MinTextSizeTests prueba sus textos a esa escala).
+                // La tarjeta del miquito en el 5, cuando la tropa se ha ido. Al 130 % en 16:9 la tarjeta (≈ 100 dp, con el dato en
+                // dos líneas) no cabe ni en la franja del panorama (71 dp) ni sobre el muelle (99 dp) y no sale (la regla de
+                // siempre: si no cabe sin tapar cuias, botones ni burbujas, no sale; MinTextSizeTests prueba sus textos a esa
+                // escala y su camino de verdad; la pérdida, pendiente del dueño).
                 if (sixteenNine)
                 {
                     continue;

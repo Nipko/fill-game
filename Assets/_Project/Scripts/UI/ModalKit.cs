@@ -11,27 +11,39 @@ namespace AF.UI
     /// <summary>
     /// Etiqueta de precio en semillas (07 §7.3: «pill ámbar con icono semilla 20 dp y cifra»; tinta sobre ámbar 5,4:1): la
     /// cifra, opcionalmente el precio sin descuento tachado (04 §6.6: «300 ~600~») y, sin saldo, en rojo aviso (07 §7.2:
-    /// «errores de compra») con crema. Sin asignaciones al refrescar si la cifra no cambia.
+    /// «errores de compra») con crema. Su ancho sale de medir las cifras (revisión de A1: antes se estimaba por dígito, la
+    /// placa dejaba unos 18-21 dp vacíos a la derecha y, con la escala de texto, le quitaba ese sitio a la etiqueta del CTA,
+    /// que se encogía al 130 %), con el mismo aire a los dos lados: la semilla se dibuja a unos 9 dp del borde izquierdo y la
+    /// última cifra queda a <see cref="RightPadDp"/> del derecho. Mide solo cuando cambia la cifra; sin asignaciones al
+    /// refrescar si no cambia.
     /// </summary>
     internal sealed class PriceTag
     {
         /// <summary>Alto de la etiqueta (dp).</summary>
         public const float HeightDp = 26f;
 
+        /// <summary>Aire a la derecha de la última cifra (dp): el que deja a la izquierda la semilla, que se dibuja más estrecha que su caja.</summary>
+        public const float RightPadDp = 9f;
+
+        // La semilla (caja de 22 dp a 5 dp del borde), el hueco hasta la cifra y el que separa la cifra del precio tachado (dp).
+        private const float SeedXDp = 5f;
+        private const float SeedDp = 22f;
+        private const float SeedGapDp = 3f;
+        private const float StrikeGapDp = 4f;
+        private const float ValueXDp = SeedXDp + SeedDp + SeedGapDp;
+
         private readonly Image _plate;
         private readonly Image _seed;
         private readonly TextMeshProUGUI _value;
         private readonly TextMeshProUGUI _strike;
         private readonly char[] _buf = new char[16];
-        private readonly float _scale;
         private int _shown = int.MinValue;
         private int _strikeShown = int.MinValue;
         private int _missingShown = -1;
 
         public PriceTag(string name, Transform parent, ProceduralArt art)
         {
-            _scale = UiBuilder.TextScale;
-            Height = HeightDp * _scale;
+            Height = HeightDp * UiBuilder.TextScale;
             Root = UiBuilder.Rect(name, parent);
             _plate = UiBuilder.Sliced("Plate", Root, art.RoundedRect, Palette.UiAmber);
             _plate.pixelsPerUnitMultiplier = 24f / (Height * 0.5f);
@@ -85,13 +97,15 @@ namespace AF.UI
                 _strike.SetCharArray(_buf, 0, m);
             }
 
-            // Las cifras crecen con la escala de texto: su sitio también (a 1, el de siempre).
-            float valueW = (9f * n + 4f) * _scale;
-            float strikeW = strike > 0 ? (8f * UiText.WriteNumber(_buf, 0, strike, true) + 6f) * _scale : 0f;
-            Width = 6f + 22f + 2f + valueW + strikeW + 8f;
-            UiBuilder.Place(_seed.rectTransform, 5f, (Height - 22f) * 0.5f, 22f, 22f);
-            UiBuilder.Place(_value.rectTransform, 29f, 0f, valueW + 2f, Height);
-            UiBuilder.Place(_strike.rectTransform, 29f + valueW, 1f, strikeW, Height);
+            // El ancho de las cifras medido con TextMeshPro (crecen con la escala de texto, y su sitio con ellas), solo aquí, al
+            // cambiar la cifra: la placa se ajusta a lo que lleva.
+            float valueW = Mathf.Ceil(_value.GetPreferredValues().x);
+            float strikeW = strike > 0 ? Mathf.Ceil(_strike.GetPreferredValues().x) : 0f;
+            float strikeX = ValueXDp + valueW + StrikeGapDp;
+            Width = (strike > 0 ? strikeX + strikeW : ValueXDp + valueW) + RightPadDp;
+            UiBuilder.Place(_seed.rectTransform, SeedXDp, (Height - SeedDp) * 0.5f, SeedDp, SeedDp);
+            UiBuilder.Place(_value.rectTransform, ValueXDp, 0f, valueW + 2f, Height);
+            UiBuilder.Place(_strike.rectTransform, strikeX, 1f, strikeW + 2f, Height);
         }
 
         /// <summary>Coloca la etiqueta con su esquina superior izquierda en (<paramref name="x"/>, <paramref name="y"/>).</summary>
