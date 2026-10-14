@@ -207,8 +207,8 @@ namespace AF.UI
             }
             else
             {
-                // En la fila de dos botones cada etiqueta va en dos líneas: el salto es el {sep} de su plantilla (UiText), nunca un
-                // Replace sobre el texto; sin el video, la de semillas va en una.
+                // En la fila de dos botones cada etiqueta va en dos líneas, con el salto en su plantilla (UiText), nunca un Replace
+                // sobre el texto: fijo («\n») en la del video y el {sep} en la de semillas, que sin el video va en una.
                 _refillVideoLabel.text = UiText.StuckRefillVideo(amount);
                 _refillSeedsLabel.text = UiText.StuckRefillSeeds(amount, view.UndoRefillPrice, view.UndoVideo);
                 UiBuilder.SetEnabled(_refillSeeds.Button, view.UndoRefillMissing == 0);

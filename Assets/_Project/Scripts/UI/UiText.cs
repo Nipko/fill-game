@@ -14,7 +14,8 @@ namespace AF.UI
     /// <para>Idiomas, nivel 1 (D-018; propuesta de idiomas §3.1, §3.2 y §6; tarea L1 de la tanda 4): sin trampas para traducir y
     /// sin cambiar ningún texto en es-419 (lo comprueba el golden de <c>UiTextTrapsTests</c>). Las plantillas que aún viven aquí
     /// llevan marcadores con nombre (<c>{n}</c>, <c>{price}</c>), plurales con la sintaxis de la tabla
-    /// (<c>{n:plural:a|b}</c>, nunca <c>n == 1</c>) y el corte <c>{sep}</c> donde una pantalla puede partir la línea; se
+    /// (<c>{n:plural:a|b}</c>, nunca <c>n == 1</c>), el salto «\n» dentro de la cadena donde es fijo (lo decide el traductor,
+    /// regla de G1) y el corte <c>{sep}</c> solo donde la pantalla elige de verdad si parte la línea; se
     /// formatean con <see cref="LocFormat"/> en es-419, su idioma, y las cifras con los separadores de <see cref="Loc"/> (hoy
     /// es-CO, «1.000»: aún no se lee la región del teléfono). Ninguna pantalla pega trozos ni hace <c>Replace</c> sobre texto
     /// visible. L2b las pasa a <c>Data/Loc/strings.csv</c> y <c>facts.csv</c> con estas mismas claves. Quedan posicionales
@@ -185,14 +186,16 @@ namespace AF.UI
         public const string Missing = "Te faltan {0}";
 
         /// <summary>
-        /// <c>stuck_undo_refill_ad</c> (la cifra es <c>undo_refill_amount</c>): «+{n} Deshacer · Ver video», con el corte
-        /// <c>{sep}</c> que Aguas estancadas da como salto de línea (<see cref="StuckRefillVideo"/>).
+        /// <c>stuck_undo_refill_ad</c> (la cifra es <c>undo_refill_amount</c>): «+{n} Deshacer», salto de línea y «Ver video»
+        /// (<see cref="StuckRefillVideo"/>). Aguas estancadas siempre la parte ahí: el salto es fijo y va en la cadena («\n»),
+        /// donde el traductor puede moverlo; sin <c>{sep}</c>.
         /// </summary>
-        public const string StuckUndoRefillAd = "+{n} Deshacer{sep}Ver video";
+        public const string StuckUndoRefillAd = "+{n} Deshacer\nVer video";
 
         /// <summary>
         /// <c>stuck_undo_refill_seeds</c> (cifras: <c>undo_refill_amount</c> y <c>undo_refill_seed_price</c>): «+{n} Deshacer ·
-        /// {price} semillas», con plural y el corte <c>{sep}</c> (<see cref="StuckRefillSeeds"/>).
+        /// {price} semillas», con plural y el corte <c>{sep}</c>: aquí sí elige la pantalla, en una línea o en dos
+        /// (<see cref="StuckRefillSeeds"/>).
         /// </summary>
         public const string StuckUndoRefillSeeds = "+{n} Deshacer{sep}{price:plural:{} semilla|{} semillas}";
 
@@ -200,16 +203,16 @@ namespace AF.UI
         public const string StuckUndoGift = "+1 Deshacer · gratis";
 
         /// <summary>
-        /// <c>stuck_pack_199</c>: «Puñado de semillas · 1.000 · {precio_local}», con un corte <c>{sep}</c> en cada « · »
-        /// (<see cref="StuckPackLine"/>).
+        /// <c>stuck_pack_199</c> («Puñado de semillas · 1.000 · {precio_local}») como la pinta su tarjeta: «Puñado de semillas»,
+        /// salto de línea y «{seeds} · {price}» (<see cref="StuckPackLine"/>). El salto es fijo y va en la cadena («\n»).
         /// </summary>
-        public const string StuckPack = "Puñado de semillas{sep}{seeds}{sep}{price}";
+        public const string StuckPack = "Puñado de semillas\n{seeds} · {price}";
 
         /// <summary>
-        /// <c>stuck_balsa_499</c>, primera parte: «Balsa de rescate · {precio_local}», con el corte <c>{sep}</c>
-        /// (<see cref="StuckBalsaLine"/>).
+        /// <c>stuck_balsa_499</c>, primera parte («Balsa de rescate · {precio_local}») como la pinta su tarjeta: «Balsa de
+        /// rescate», salto de línea y el precio (<see cref="StuckBalsaLine"/>). El salto es fijo y va en la cadena («\n»).
         /// </summary>
-        public const string StuckBalsa = "Balsa de rescate{sep}{price}";
+        public const string StuckBalsa = "Balsa de rescate\n{price}";
 
         /// <summary><c>stuck_balsa_499</c>, segunda parte.</summary>
         public const string StuckBalsaContent = "Todo para seguir: semillas, una cuia y canoas infinitas";
@@ -373,11 +376,11 @@ namespace AF.UI
 
         /// <summary>
         /// Recarga de Marea por video en Aguas estancadas: «+{n} Deshacer», salto de línea y «Ver video»
-        /// (<see cref="StuckUndoRefillAd"/>; el corte lo pone la plantilla, nunca un <c>Replace</c>).
+        /// (<see cref="StuckUndoRefillAd"/>; el salto va en la plantilla, nunca un <c>Replace</c>).
         /// </summary>
         public static string StuckRefillVideo(int amount)
         {
-            return Format(StuckUndoRefillAd, LocArgs.OfDigits("n", amount), 1);
+            return Format(StuckUndoRefillAd, LocArgs.OfDigits("n", amount));
         }
 
         /// <summary>
@@ -391,17 +394,20 @@ namespace AF.UI
 
         /// <summary>
         /// Tarjeta del Puñado en Aguas estancadas: «Puñado de semillas», salto de línea y «{seeds} · {price}»
-        /// (<see cref="StuckPack"/>; <paramref name="price"/>, el de la tienda tal cual).
+        /// (<see cref="StuckPack"/>, con el salto en la plantilla; <paramref name="price"/>, el de la tienda tal cual).
         /// </summary>
         public static string StuckPackLine(int seeds, string price)
         {
-            return Format(StuckPack, LocArgs.Of("seeds", NonNegative(seeds)).And("price", price), 1);
+            return Format(StuckPack, LocArgs.Of("seeds", NonNegative(seeds)).And("price", price));
         }
 
-        /// <summary>Tarjeta de la Balsa en Aguas estancadas: «Balsa de rescate», salto de línea y el precio de la tienda.</summary>
+        /// <summary>
+        /// Tarjeta de la Balsa en Aguas estancadas: «Balsa de rescate», salto de línea y el precio de la tienda
+        /// (<see cref="StuckBalsa"/>, con el salto en la plantilla).
+        /// </summary>
         public static string StuckBalsaLine(string price)
         {
-            return Format(StuckBalsa, LocArgs.Of("price", price), 1);
+            return Format(StuckBalsa, LocArgs.Of("price", price));
         }
 
         /// <summary>

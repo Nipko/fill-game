@@ -149,6 +149,34 @@ namespace AF.Tests.EditMode
             Assert.That(UiText.StuckBalsaLine("A · {n}"), Is.EqualTo("Balsa de rescate\nA · {n}"));
         }
 
+        /// <summary>
+        /// Donde el salto es fijo, va en la cadena («\n»), donde el traductor puede moverlo (regla de G1; propuesta de idiomas
+        /// §6, nivel 1), y no en un <c>{sep}</c> que el código elige por posición: así la plantilla da lo mismo con el formato
+        /// por defecto de la tabla (<c>Loc.T(key, args)</c>, que convierte cada <c>{sep}</c> en salto), sin <c>breaks</c>.
+        /// El <c>{sep}</c> queda solo donde la pantalla elige de verdad: la recarga por semillas (1 o 2 líneas) y el banner.
+        /// </summary>
+        [Test]
+        public void StuckCards_FixedBreaksLiveInTheString_SepOnlyWhereTheScreenChooses()
+        {
+            foreach (string fixedBreak in new[] { UiText.StuckUndoRefillAd, UiText.StuckPack, UiText.StuckBalsa })
+            {
+                Assert.That(LocFormat.SeparatorCount(fixedBreak), Is.EqualTo(0), "«" + fixedBreak + "»: sin {sep}");
+                Assert.That(fixedBreak.IndexOf('\n'), Is.GreaterThan(0), "«" + fixedBreak + "»: el salto, en la cadena");
+                Assert.That(fixedBreak.IndexOf('\n'), Is.EqualTo(fixedBreak.LastIndexOf('\n')), "«" + fixedBreak + "»: un solo salto");
+            }
+
+            Assert.That(LocFormat.SeparatorCount(UiText.StuckUndoRefillSeeds), Is.EqualTo(1), "la recarga por semillas sí elige");
+
+            // Lo mismo que hará Loc.T(key, args) cuando L2b las lleve a la tabla: cada {sep} sería un salto, y aquí no hay.
+            LocNumberFormat numbers = Loc.NumberFormat;
+            Assert.That(LocFormat.Format(UiText.StuckUndoRefillAd, LocArgs.OfDigits("n", 3), LocLocale.SourceLocale, numbers),
+                Is.EqualTo(UiText.StuckRefillVideo(3)));
+            Assert.That(LocFormat.Format(UiText.StuckPack, LocArgs.Of("seeds", 1000L).And("price", "US$ 1,99"), LocLocale.SourceLocale, numbers),
+                Is.EqualTo(UiText.StuckPackLine(1000, "US$ 1,99")));
+            Assert.That(LocFormat.Format(UiText.StuckBalsa, LocArgs.Of("price", "COP 3.900"), LocLocale.SourceLocale, numbers),
+                Is.EqualTo(UiText.StuckBalsaLine("COP 3.900")));
+        }
+
         [Test]
         public void Templates_AreNamedAndValid_ExceptTheFourStillUsedWithStringFormat()
         {
