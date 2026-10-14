@@ -2075,9 +2075,9 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
    - *Actualización del 2026-10-14 (D2):* hecha, en la propuesta de mecánicas (`docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md`), d.5:
      - el calendario de 201-700, nivel a nivel, en dos variantes: **A**, con la Tinaja (estreno en el 323), y **B**, sin ella, que es la salida B de D-019, con un respaldo para cada celda. Las dos cumplen la regla de 60 niveles, con 34 como mucho entre dos primeras veces;
      - la tabla de 701-1000, orientativa y sin generar;
-     - el formato [P] del registro de combinaciones, `tools/level-generator/specs/combinations_registry_v1.json`, que genera la tarea P4.
+     - el formato [P] del registro de combinaciones, `tools/level-generator/specs/combinations_registry_v1.json`, que genera la tarea P4, con una entrada por conjunto de códigos nuevo.
 
-     Se aplica la recomendación (la A, con la B guardada) por D-023, punto 10. Cambian 03 §11, §12 y §17.
+     Se aplica la recomendación (la A, con la B guardada) por D-023, punto 10. La B se guarda en los tres mundos de 301-700 (tareas P7b, P7c y P7d), y la condición de D-019 se comprueba al integrar los mundos 7-9 en el cliente (tarea C1b). Cambian 03 §11, §12 y §17.
 8. **34 → (a).** Se ratifican P1-P3 en lugar de la prueba del anexo B, con la excepción del Remolino en P3.
    - **Encaje con D-014:** D-014 no cambia esas propiedades del núcleo: P1-P3 se siguen probando igual (`FutilePropertyTests`, antes de cada estreno). Lo que hace D-014 es detectar **en la partida** (`LevelSession`, `DeadEndProbe`) el bucle sin salida, cuando el cierre de estados alcanzables con todos los vertidos legales se agota con ≤ 64 estados sin victoria. Así, el vaivén útil del Remolino con Q-B y el de la cuia ya suelta de la Tinaja ya no retrasan el modal cuando no llevan a ninguna parte. P1 se sigue exigiendo para la regla ampliada (`DeadEndProbePropertyTests`).
 9. **35 → (a).** Del revelado rítmico solo queda la burbuja del revelado de Aguas turbias (02 §4.1); no hay Travesía con revelado por contador.

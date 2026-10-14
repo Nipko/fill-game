@@ -637,7 +637,7 @@ Ch y Al marcan los niveles donde la capacidad es protagonista. En el resto, el g
 
 ### d.5 Regla para 201-1000
 
-> **Rehecha el 2026-10-14 (D2).** El dueño decidió rehacer la tabla de novedades antes de generar 201-700 (pregunta 33 de `docs/GDD.md` §6.3, (a); D-020), con el alcance de la 1.0 de D-007 (Q8 c + b′), la Tinaja en el 323 (D-019) y las variantes. Los puntos 1, 2, 4 y 6 no cambian; el 3 añade cómo se leen «invitada» y «descansa», y el 5 cambia entero. El calendario de 201-700 va nivel a nivel, como d.4, en dos variantes: **A**, con la Tinaja, y **B**, sin ella (la salida B de D-019). Las dos cumplen la regla de 60 niveles (d.5.1-d.5.5). El apartado tiene además el registro de combinaciones (d.5.6), la tabla de 701-1000, orientativa (d.5.7), y la recomendación (d.5.8), que se aplica por D-023, punto 10. La columna «Estrenos y novedades» y las firmas de la sección (e) para los mundos 6-13 son de la revisión del 2026-10-08: mandan las de este apartado.
+> **Rehecha el 2026-10-14 (D2).** El dueño decidió rehacer la tabla de novedades antes de generar 201-700 (pregunta 33 de `docs/GDD.md` §6.3, (a); D-020), con el alcance de la 1.0 de D-007 (Q8 c + b′), la Tinaja en el 323 (D-019) y las variantes. Los puntos 1, 2, 4 y 6 no cambian; el 3 añade cómo se leen «invitada» y «descansa» y el ciclo de vida de las variantes y la Tinaja, y el 5 cambia entero. El calendario de 201-700 va nivel a nivel, como d.4, en dos variantes: **A**, con la Tinaja, y **B**, sin ella (la salida B de D-019). Las dos cumplen la regla de 60 niveles (d.5.1-d.5.5). El apartado tiene además el registro de combinaciones (d.5.6), la tabla de 701-1000, orientativa (d.5.7), y la recomendación (d.5.8), que se aplica por D-023, punto 10. La columna «Estrenos y novedades» y las firmas de la sección (e) para los mundos 6-13 son de la revisión del 2026-10-08: mandan las de este apartado.
 
 1. **Plantilla del ciclo:** la misma de c.3 y c.4, con las reglas de d.2 y d.3.
 2. **Etiquetas:** cerca del 25 % de Difícil y del 5 % de Muy difícil desde el 201 (03 §11, sin cambios).
@@ -645,7 +645,12 @@ Ch y Al marcan los niveles donde la capacidad es protagonista. En el resto, el g
    - **invitadas:** las mecánicas que acompañan a las titulares en los retos y el hito, sin contar Aguas turbias;
    - **regresos:** las comodidades de una mecánica (p3-p5 fuera de un estreno, p8, p11, p14 y p17) traen de vuelta, de una en una, las de la bolsa que lo necesitan para cumplir d.2, regla 4, como en d.4 (171 Ho, 191 Re);
    - **descansa:** no es titular en el siguiente ciclo de su temporada (las de todo el año, en el ciclo siguiente), pero puede salir como invitada o en una comodidad;
-   - **las variantes y la Tinaja** siguen el ciclo de vida de d.1 desde su estreno: 8 niveles en su ciclo, secundaria en 2 retos del siguiente (a veces también en su hito) y descanso en el C+2.
+   - **las variantes y la Tinaja** siguen el ciclo de vida de d.1 desde su estreno: 8 niveles en su ciclo (C0), secundaria en 2 retos del siguiente (C+1; a veces también en su hito), descanso en el C+2 y regreso con una combinación nueva (una entrada del registro, d.5.6) en el C+3 o el C+4:
+     - la Liana de cuenta, en el reto 318, con la Lluvia (C+3);
+     - la Hoja atada, en la comodidad 354, con la Cuia alta (C+3). Es su única celda con una capacidad: si K3a encuentra que la Hoja atada con capacidades mixtas falla P1, como la Liana (bloqueo C1-9), el 354 vuelve a ser Ha sola y su regreso pasa al 389, con el Barro (C+5) [P];
+     - la Tinaja, en el reto 392, con la Hoja atada (C+3; solo en la variante A);
+     - el Brote de dos hojas, en el hito 420, con la Flor (C+3);
+     - la Flor, en el reto 498, con la Hoja atada (C+4).
 4. **Temporadas** (inicio de cada ciclo):
 
 | Niveles | Temporadas por ciclo |
@@ -704,7 +709,7 @@ Variante A, con la Tinaja. Titulares: las dos del ciclo. Invitadas: las demás m
 | 241-260 | 6 Oriente | B | Liana de cuenta (estreno), Matapi | Remolino, Barro | 243: Liana de cuenta | Variante | 14 |
 | 261-280 | 6 Oriente | B | Piraña, Barro | Brote, Liana de cuenta | 266: Piraña con Brote | Combinación | 23 |
 | 281-300 | 6 Oriente | A | Hoja atada (estreno), Liana con fruta | Remolino, Brote | 283: Hoja atada<br>300: «Cuyabeno» [P]: Hoja atada + Liana con fruta | Variante<br>Firma de fin de mundo | 17<br>17 |
-| 301-320 | 7 Madre de Dios | A | Lluvia, Brote | Hoja, Hoja atada | 301: Tinte Arazá (paleta completa)<br>320: Primer trío: Hoja atada + Lluvia + Brote | Tinte<br>Trío (hito) | 1<br>19 |
+| 301-320 | 7 Madre de Dios | A | Lluvia, Brote | Hoja atada, Liana de cuenta | 301: Tinte Arazá (paleta completa)<br>320: Primer trío: Hoja atada + Lluvia + Brote | Tinte<br>Trío (hito) | 1<br>19 |
 | 321-340 | 7 Madre de Dios | B | Tinaja (estreno), Matapi | Hoja, Brote | 323: Tinaja | Mecánica (M13) | 3 |
 | 341-360 | 7 Madre de Dios | A | Brote de dos hojas (estreno), Liana de cuenta | Remolino, Tinaja | 343: Brote de dos hojas | Variante | 20 |
 | 361-380 | 7 Madre de Dios | B | Piraña, Hoja | Barro, Brote de dos hojas | 366: Piraña con Brote de dos hojas | Combinación | 23 |
@@ -713,9 +718,9 @@ Variante A, con la Tinaja. Titulares: las dos del ciclo. Invitadas: las demás m
 | 421-440 | 8 Madidi | B | Matapi, Hoja | Remolino, Flor | 426: Flor con Matapi | Combinación | 6 |
 | 441-460 | 8 Madidi | B | Piraña, Brote | Remolino, Barro | 449: Brote con Remolino | Combinación | 23 |
 | 461-480 | 8 Madidi | A | Liana con fruta, Brote de dos hojas | Hoja, Liana de cuenta | 466: Liana con fruta con Brote de dos hojas | Combinación | 17 |
-| 481-500 | 8 Madidi | B | Matapi, Hoja atada | Remolino, Barro | 486: Matapi con Hoja atada | Combinación | 20 |
-| 501-520 | 8 Madidi | A | Lluvia, Barro | Hoja atada, Flor | 509: Flor con Hoja atada | Combinación | 23 |
-| 521-540 | 8 Madidi | B | Piraña, Remolino | Hoja, Hoja atada | 526: Piraña con Hoja atada | Combinación | 17 |
+| 481-500 | 8 Madidi | B | Matapi, Hoja atada | Barro, Flor | 486: Matapi con Hoja atada<br>498: Flor con Hoja atada | Combinación<br>Combinación | 20<br>12 |
+| 501-520 | 8 Madidi | A | Lluvia, Barro | Hoja atada, Flor | 514: Lluvia con la Cuia alta<br>520: Lluvia + Barro + Hoja atada | Combinación<br>Combinación (trío, hito) | 16<br>6 |
+| 521-540 | 8 Madidi | B | Piraña, Remolino | Hoja, Hoja atada | 526: Piraña con Hoja atada | Combinación | 6 |
 | 541-560 | 8 Madidi | A | Flor, Hoja | Remolino, Liana de cuenta | 560: «Riberalta» [P]: Flor + Remolino | Firma de fin de mundo | 34 |
 | 561-580 | 9 Ucayali | B | Matapi, Brote de dos hojas | Remolino, Barro | 580: Primer hito de 14 cuias (K = 13 + 1 vacío): Matapi + Brote de dos hojas | Forma de tablero | 20 |
 | 581-600 | 9 Ucayali | B | Piraña, Hoja atada | Barro, Brote de dos hojas | 589: Hoja atada con Brote de dos hojas | Combinación | 9 |
@@ -767,11 +772,11 @@ Leyenda de d.4, más Ln (Liana de cuenta), Ha (Hoja atada), Ti (Tinaja), B2 (Bro
 | 11 | 311 Ba | 331 Ma | 351 Ln | 371 Re | 391 Li |
 | **12** | 312 Ha+Br (D) | 332 Ti+Ho (D) | 352 B2+Ti (D) | 372 B2+Ho (D) | 392 Ti+Ha (D) |
 | 13 | 313 C | 333 C | 353 C | 373 C | 393 C |
-| 14 | 314 Ho | 334 Re | 354 Ha | 374 Al | 394 Ch |
+| 14 | 314 Ho | 334 Re | 354 Ha+Al | 374 Al | 394 Ch |
 | **15** | 315 Br+Tu (D) | 335 Ma+Ho (D) | 355 Ti (D) | 375 Pi+Ba (D) | 395 Ba+Tu (D) |
 | 16 | 316 C | 336 C | 356 C | 376 C | 396 C |
 | 17 | 317 Ll | 337 Ba | 357 Br | 377 Br | 397 Ho |
-| **18** | 318 Ll+Ho (D) | 338 Ti+Ma (D) | 358 B2+Ln (D) | 378 Pi+Ho (D) | 398 Li+Ha (D) |
+| **18** | 318 Ln+Ll (D) | 338 Ti+Ma (D) | 358 B2+Ln (D) | 378 Pi+Ho (D) | 398 Li+Ha (D) |
 | 19 | 319 S | 339 S | 359 S | 379 S | 399 S |
 | **20** | 320 Ha+Ll+Br (MD) | 340 Ti+Br (MD) | 360 B2+Re (MD) | 380 Pi+B2 (MD) | 400 Li+Ha+Ba (MD) |
 
@@ -784,7 +789,7 @@ Leyenda de d.4, más Ln (Liana de cuenta), Ha (Hoja atada), Ti (Tinaja), B2 (Bro
 | 5 | 405 ★Fl | 425 Ho | 445 Br | 465 B2 | 485 Ha |
 | **6** | 406 Ba+Ll (D) | 426 Fl+Ma (D) | 446 Pi+Ba (D) | 466 Li+B2 (D) | 486 Ma+Ha (D) |
 | 7 | 407 Fl | 427 C | 447 C | 467 C | 487 C |
-| 8 | 408 C | 428 Ba | 448 Ho | 468 Re | 488 Ho |
+| 8 | 408 C | 428 Ba | 448 Ho | 468 Re | 488 Re |
 | **9** | 409 Fl (D) | 429 Ma+Re (D) | 449 Br+Re (D) | 469 Ln+B2 (D) | 489 Ma+Ba (D) |
 | 10 | 410 C | 430 C | 450 C | 470 C | 490 C |
 | 11 | 411 Re | 431 B2 | 451 Pi | 471 Br | 491 Br |
@@ -794,7 +799,7 @@ Leyenda de d.4, más Ln (Liana de cuenta), Ha (Hoja atada), Ti (Tinaja), B2 (Bro
 | **15** | 415 Ba+Tu (D) | 435 Ma+Tu (D) | 455 Br+Tu (D) | 475 Ho+Tu (D) | 495 Ma+Tu (D) |
 | 16 | 416 C | 436 C | 456 C | 476 C | 496 C |
 | 17 | 417 Ha | 437 Ha | 457 Ha | 477 Ba | 497 B2 |
-| **18** | 418 Fl+Ll (D) | 438 Ho+Re (D) | 458 Ba+Re (D) | 478 Ln+Ho (D) | 498 Ha+Re (D) |
+| **18** | 418 Fl+Ll (D) | 438 Ho+Re (D) | 458 Ba+Re (D) | 478 Ln+Ho (D) | 498 Fl+Ha (D) |
 | 19 | 419 S | 439 S | 459 S | 479 S | 499 S |
 | **20** | 420 Fl+B2 (MD) «Zafra» [P] | 440 Ma+Ho (MD) | 460 Pi+Br+Ba (MD) | 480 Li+B2+Ho (MD) | 500 Ma+Ha (MD) |
 
@@ -813,7 +818,7 @@ Leyenda de d.4, más Ln (Liana de cuenta), Ha (Hoja atada), Ti (Tinaja), B2 (Bro
 | 11 | 511 Li | 531 Ti | 551 Ll | 571 Ho | 591 Ti |
 | **12** | 512 Ll+Ha (D) | 532 Pi+Ho (D) | 552 Fl (D) | 572 Ma+Ba (D) | 592 Pi+B2 (D) |
 | 13 | 513 C | 533 C | 553 C | 573 C | 593 C |
-| 14 | 514 Al | 534 Ch | 554 Al | 574 Ti | 594 Al |
+| 14 | 514 Ll+Al | 534 Ch | 554 Al | 574 Ti | 594 Al |
 | **15** | 515 Ba+Tu (D) | 535 Ho+Tu (D) | 555 Ho+Tu (D) | 575 Ma+Tu (D) | 595 Ba+Tu (D) |
 | 16 | 516 C | 536 C | 556 C | 576 C | 596 C |
 | 17 | 517 B2 | 537 B2 | 557 Br | 577 Br | 597 Br |
@@ -846,7 +851,7 @@ Leyenda de d.4, más Ln (Liana de cuenta), Ha (Hoja atada), Ti (Tinaja), B2 (Bro
 
 #### d.5.4 Variante B: sin la Tinaja (salida B de D-019)
 
-Si al generar 201-700 la Tinaja no pasa sus pruebas, o Morpho (con corte por tiempo) y la Luciérnaga no están en el cliente, el 323 sale sin ella y la Tinaja pasa a la 1.1 con el mismo nivel (D-019, Q-Ti3-A). La variante B cambia solo las 19 celdas con Tinaja, cada una por su respaldo; el resto del calendario es idéntico.
+La condición de D-019 (Q-Ti3-A) es que la Tinaja pase sus pruebas en el pipeline y que Morpho (con corte por tiempo) y la Luciérnaga estén en el cliente. Se comprueba al integrar los mundos 7-9 en el cliente (tarea C1b; d.5.8): si no se cumple, el 323 sale sin la Tinaja y esta pasa a la 1.1 con el mismo nivel. La variante B cambia solo las 19 celdas con Tinaja, cada una por su respaldo; el resto del calendario es idéntico. Esas celdas están en los tres mundos: 11 en el mundo 7 (323-340, 352, 355 y 392), 3 en el 8 (454, 494 y 531) y 5 en el 9 (574, 591, 631, 651 y 691).
 
 | Nivel | p | Con Tinaja (A) | Sin Tinaja (B) |
 |---|---|---|---|
@@ -877,7 +882,7 @@ Si al generar 201-700 la Tinaja no pasa sus pruebas, o Morpho (con corte por tie
 
 #### d.5.5 Comprobaciones
 
-Las dos variantes se comprobaron con un script el 2026-10-14, junto con 11-200 (`campaign_v1.json`). P4 lleva estas reglas a `--validate-spec`. En las dos se cumple:
+Las dos variantes se comprobaron con un script el 2026-10-14, junto con 11-200 (`campaign_v1.json`), y otra vez el mismo día tras los arreglos de la revisión de D2: el regreso de las variantes en el C+3 o el C+4 cambió los niveles 318, 354, 488, 498 y 514. P4 lleva estas reglas a `--validate-spec`. En las dos se cumple:
 - **Celdas:** R en p1-p2, S en p19, (D) en los cinco retos y (MD) en el hito.
 - **Puros:** 7-8 por ciclo en A y 7-9 en B (≥ 30 %), y al menos 4 de las 8 comodidades de p7-p17. En total, 196 de 500 en A (39 %) y 206 en B (41 %).
 - **Topes:**
@@ -885,7 +890,8 @@ Las dos variantes se comprobaron con un script el 2026-10-14, junto con 11-200 (
   - una mecánica, en 6 niveles por ciclo como mucho (8 en su ciclo de estreno);
   - nunca 3 niveles seguidos fuera de su estreno;
   - un contador por nivel.
-- **Estrenos:** las 4 variantes y la Tinaja están en p3-p5, solas y en 3 tableros seguidos, con 8 apariciones en su ciclo. Las de la Tinaja son 323, 324, 325, 327, 329, 332, 338 y 340, como en la propuesta de la Tinaja, d.3. Vuelven como secundarias en 2 retos del ciclo siguiente, y a veces en su hito, y descansan en el C+2.
+- **Estrenos:** las 4 variantes y la Tinaja están en p3-p5, solas y en 3 tableros seguidos, con 8 apariciones en su ciclo. Las de la Tinaja son 323, 324, 325, 327, 329, 332, 338 y 340, como en la propuesta de la Tinaja, d.3.
+- **Ciclo de vida (d.1; 03 §12):** las variantes y la Tinaja vuelven como secundarias en 2 retos del ciclo siguiente, y a veces en su hito; descansan en el C+2, donde no salen; y vuelven con una entrada nueva del registro en el C+3 o el C+4 (318, 354, 392, 420 y 498; d.5, punto 3).
 - **Hitos:** mecánicas con 15 niveles o más desde su estreno y que ya salieron en un reto, y la firma al final de cada mundo.
 - **Prohibidas:**
   - ninguna combinación de d.3 ni de 02 §9.2, regla 7, ni las de d.5.1;
@@ -896,7 +902,7 @@ Las dos variantes se comprobaron con un script el 2026-10-14, junto con 11-200 (
   - las de todo el año salen en cada par de ciclos seguidos;
   - las de temporada, al menos una vez en cada 3 ciclos de su temporada;
   - ninguna mecánica ni capacidad pasa más de 120 niveles sin volver, contando 11-200. El hueco más largo es el de la Liana de cuenta, 111 niveles.
-- **Primera vez por ciclo (d.2, regla 3):** todos los ciclos tienen un estreno, un tinte o una combinación de dos códigos nunca vista (FIRST-TIME de `--validate-spec`).
+- **Primera vez por ciclo (d.2, regla 3):** todos los ciclos tienen un estreno, un tinte o una entrada del registro, es decir, un conjunto de códigos nunca visto (d.5.6). También se cumple con la lectura por pares del FIRST-TIME de `--validate-spec` de hoy (un estreno, un tinte o un par de códigos nunca visto).
 - **NOVELTY-60:** el hueco máximo es de 34 niveles, con la columna «Novedad» y con el registro.
 
 #### d.5.6 Registro de combinaciones publicadas [P]
@@ -923,20 +929,21 @@ Es la entrada versionada del pipeline que pide d.2, regla 3 (03 §17, comprobaci
 
 - **Una entrada por conjunto de códigos:**
   - los códigos son las mecánicas y las capacidades de la celda, sin R, C ni S, marcas, tintes ni nombres;
-  - la entrada va en el primer nivel donde sale el conjunto, con los códigos en orden ordinal, como `SpecValidator.Combinations`, y las entradas por nivel;
+  - **la entrada es el conjunto completo de la celda, no sus pares [P]:** un trío es una combinación nueva si esos tres códigos nunca salieron juntos, aunque sus pares ya hayan salido. Así cuenta d.5, punto 5, el primer trío (320) y el primer reto con tres mecánicas (646), y así entran los 12 tríos de 201-700 (320, 400, 460, 480, 520, 600, 620, 640, 646, 660, 680 y 700), aunque ninguno trae un par nuevo. Es como lee el registro «la primera combinación de dos mecánicas» de d.2, regla 3: cualquier conjunto nuevo de dos códigos o más, con las capacidades, como hoy en 11-200;
+  - la entrada va en el primer nivel donde sale el conjunto, y las entradas, por nivel. Los códigos van en orden ordinal (`StringComparer.Ordinal`), el mismo con el que `SpecValidator.Combinations` ordena hoy los códigos antes de formar sus pares;
   - un conjunto que ya salió no vuelve a entrar: una combinación de 11-200 nunca cuenta como nueva en 201-700.
 - **`kind`:**
   - `debut`: un código solo, en su celda con ★ (mecánica del catálogo, Tinaja o capacidad);
   - `variant`: un código solo, en la ★ de una variante (Ln, Ha, B2 o Fl);
   - `combination`: dos o más códigos.
 - **Lo que comprueba P4 con él,** en las dos variantes:
-  - FIRST-TIME: cada ciclo tiene una ★, un tinte nuevo o una entrada del registro;
+  - FIRST-TIME: cada ciclo tiene una ★, un tinte nuevo o una entrada del registro. Hoy `--validate-spec` cuenta pares: `SpecValidator.Combinations` devuelve «A+B» para cada par de códigos de la celda. P4 pasa FIRST-TIME a conjuntos, contra el registro. Por conjuntos la regla es algo menos estricta, porque un par nuevo siempre trae un conjunto nuevo, así que `campaign_v1.json` sigue en verde; el calendario de 201-700 cumple con las dos lecturas (d.5.5);
   - NOVELTY-60: entre dos primeras veces seguidas (entradas del registro o tintes nuevos) nunca hay más de 60 niveles, desde el 200 y hasta el 700.
-- **Cifras de este calendario:** 100 entradas con la Tinaja (40 de 11-200 y 60 de 201-700) y 94 sin ella.
+- **Cifras de este calendario:** 102 entradas con la Tinaja (40 de 11-200 y 62 de 201-700) y 96 sin ella (40 y 56).
 
 #### d.5.7 Tabla de 701-1000 (orientativa, sin generar)
 
-701-1000 no son de la 1.0: llegan después, por `levels_remote` (08 §6.2), cuando el build de la 1.1 ya trae Aguapé, Palizada, Lancha y Cocha. La tabla supone ese catálogo; si una mecánica de la 1.1 no llega, su fila se cambia por una combinación nueva con lo que haya. Las filas [P] son ejemplos: al generar, cada novedad tiene que ser primera vez en el registro, como en 201-700, y si ya está se elige otra. Siguen los hitos de 14 cuias (K = 13 + 1 vacío). K = 14 solo se juega en el evento Encuentro de las Aguas (03 §11).
+701-1000 no son de la 1.0: llegan después, por `levels_remote` (08 §6.2), cuando el build de la 1.1 ya trae Aguapé, Palizada, Lancha y Cocha. La tabla supone ese catálogo; si una mecánica de la 1.1 no llega, su fila se cambia por una combinación nueva con lo que haya. Las filas [P] son ejemplos: al generar, cada combinación nueva tiene que ser primera vez en el registro, como en 201-700, y si ya está se elige otra. Las firmas son la excepción: cuentan como primera vez por ser firmas (d.2, regla 3), aunque su combinación ya esté en el registro, como la del 960. Siguen los hitos de 14 cuias (K = 13 + 1 vacío). K = 14 solo se juega en el evento Encuentro de las Aguas (03 §11).
 
 | Ciclo · mundo | Temp. | Novedad | Tipo | Distancia |
 |---|---|---|---|---|
@@ -956,7 +963,9 @@ Es la entrada versionada del pipeline que pide d.2, regla 3 (03 §17, comprobaci
 | 961-980 · 13 El origen | A | 969: Casiquiare con Aguapé que crece [P] | Combinación | 9 |
 | 981-1000 · 13 | B | 1000: «Aguas cruzadas» [P]: Lluvia + Palizada + Hoja | Pico final (trío) | 31 |
 
-- **Hueco máximo:** 37 niveles (883 → 920). Sin las filas [P] es de 60 (703 → 763), justo en el límite: por eso cada ciclo lleva su combinación nueva.
+- **Hueco máximo:** 37 niveles (883 → 920), contando las firmas como primera vez (d.2, regla 3).
+- **El 960 no es entrada del registro:** Hoja + Brote ya salió en el reto 186 y en el hito 240. Con la cuenta de P4, en la que FIRST-TIME y NOVELTY-60 solo cuentan estrellas, tintes y entradas del registro (d.5.6), el 960 no cuenta y el hueco máximo pasa a 40 (929 → 969). Al generar 941-960, el ciclo necesitará además otra entrada del registro para FIRST-TIME.
+- **Sin las combinaciones [P] de relleno** (729, 749, 789, 829, 929 y 969), el hueco máximo es de 60 (703 → 763), justo en el límite, y de 80 (920 → 1000) si el 960 no cuenta: por eso cada ciclo lleva su combinación nueva.
 - **Respecto a la revisión del 2026-10-08:**
   - el 860 pasa a ser «el primer trío con el Aguapé», porque 201-700 ya tiene tríos con la Lluvia (320, 520 y 620);
   - el primer trío de aguas bajas pasa del 640 al 880, porque necesita la Palizada y la Cocha;
@@ -967,8 +976,14 @@ Es la entrada versionada del pipeline que pide d.2, regla 3 (03 §17, comprobaci
 
 **Variante A, con la Tinaja.** Es lo que decidió D-019 (Q-Ti3-A: la seña propia en la 1.0), y es la única variante con el estreno de una mecánica entre el 201 y el 700.
 - **P4** copia las dos variantes en `campaign_v2.json`: cada celda con Tinaja lleva su respaldo, y `--variant b` genera con ellos.
-- **P7b** genera la A para publicar y guarda la B en `tools/out`.
-- **La B se publica solo si,** al cerrar la generación de 301-420, no se cumple la condición de D-019: que la Tinaja pase sus pruebas en el pipeline y que Morpho (con corte por tiempo) y la Luciérnaga estén en el cliente. La B cumple la regla de 60 y todas las demás; solo pierde la seña propia, que vuelve en la 1.1.
+- **P7b, P7c y P7d** generan cada uno las dos variantes de su mundo: la A, para publicar, y la B (`--variant b`), que se guarda en `tools/out`. La B cambia celdas de los tres mundos (d.5.4): las 8 de 323-340 y otras 11 entre el 341 y el 700 (352, 355 y 392 en el mundo 7; 454, 494 y 531 en el 8; 574, 591, 631, 651 y 691 en el 9).
+- **La A o la B se elige al integrar los mundos 7-9 en el cliente (tarea C1b, Ola 7), no al cerrar la generación de 301-420.** Cuando se cierra P7b (Ola 4), Morpho todavía no está en el cliente (llega con MO1 y MO2, en la Ola 6), ni la Luciérnaga con la Tinaja (TJ4, Ola 7), así que la condición de D-019 aún no se puede comprobar. En C1b ya están verificados:
+  - las pruebas de la Tinaja en el pipeline: level-qa de P7b-P7d, con la compuerta de coste de Morpho calibrada con la medida de PF1;
+  - Morpho en el cliente, con corte por tiempo (MO1 y MO2);
+  - la Luciérnaga con la Tinaja (TJ4).
+
+  Si TJ4 y la compuerta de PF1 están en verde, se publica la A. Si no, se publica la B de los tres mundos, y se anota para el dueño.
+- **La B** cumple la regla de 60 y todas las demás; solo pierde la seña propia, que vuelve en la 1.1.
 
 El dueño decidió aplicar la recomendación de esta tabla (D-023, punto 10).
 
