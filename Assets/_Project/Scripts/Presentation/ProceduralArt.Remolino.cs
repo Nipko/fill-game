@@ -141,6 +141,15 @@ namespace AF.Presentation
         private Sprite? _remolinoPairTag;
         private Sprite?[]? _remolinoSpiral;
         private Sprite?[]? _remolinoIntake;
+        private Sprite? _remolinoWallLight;
+
+        /// <summary>
+        /// Filo de luz de la pared de la pareja del Remolino al recibir (revisión de T52, ronda 3) [P]: blanco, con el alfa en
+        /// rampa lineal de 1 abajo a 0 arriba y uniforme a lo ancho, para que lo tiña <c>Image.color</c> (marfil neutro) y lo
+        /// estire <c>RemolinoOverlay</c> por dentro de cada pared (2 dp de ancho, el 40 % de la cavidad de alto): la luz sube
+        /// desde el fondo.
+        /// </summary>
+        public Sprite RemolinoWallLight => _remolinoWallLight != null ? _remolinoWallLight : (_remolinoWallLight = BuildRemolinoWallLight());
 
         /// <summary>
         /// Cápsula blanca de borde nítido (el lecho del canal): un círculo de <see cref="RemolinoCapsuleRadiusPx"/> px de radio
@@ -220,6 +229,24 @@ namespace AF.Presentation
             }
 
             return frames[f]!;
+        }
+
+        private Sprite BuildRemolinoWallLight()
+        {
+            // 4 × 64 px; la fila 0 es la de abajo (PixelCanvas): alfa 1 abajo y 0 arriba, en rampa lineal por el centro de cada fila.
+            const int w = 4;
+            const int h = 64;
+            var pc = new PixelCanvas(w, h);
+            for (int y = 0; y < h; y++)
+            {
+                float a = 1f - ((y + 0.5f) / h);
+                for (int x = 0; x < w; x++)
+                {
+                    pc.Set(x, y, new Color(1f, 1f, 1f, a));
+                }
+            }
+
+            return MakeSprite(pc, "remolino_wall_light", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
 
         private Sprite BuildRemolinoCapsule(bool soft)

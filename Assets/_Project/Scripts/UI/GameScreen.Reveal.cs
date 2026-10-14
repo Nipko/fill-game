@@ -171,21 +171,15 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Respuesta a Revelar sin stock, sin saldo y sin video, sin cobrar nada [P]. Si la burbuja «Te faltan {n}» de Revelar ya
-        /// lo dice (se ve con la misma cifra, que es lo normal: sale justo sin stock, saldo ni video), late como respuesta al toque
-        /// (<see cref="BoosterTray.PulseRevealMissing"/>) y no sale ningún aviso: el aviso repetía lo que ya se veía y, con 3
-        /// filas, tapaba la repisa de abajo y su ficha «?×n» (observación 1 de la prueba del 2026-10-13; revisión de T52). Si no
-        /// se ve (el video dejó de estar listo entre dos consultas, <see cref="RevealVideoPollMs"/>), el aviso «Te faltan {n}
-        /// semillas» (como el rescate) por la cola, como antes.
+        /// Aviso de Revelar sin stock, sin saldo y sin video [P]: «Te faltan {n} semillas» (como el rescate), sin cobrar nada,
+        /// por la cola de avisos (D-011, punto 2; ratificado por el dueño en la pregunta 41, D-015). Con la burbuja «Te faltan
+        /// {n}» de la bandeja a la vista, el aviso sube por encima de ella y no la tapa (<c>PlaceToast</c>, GameScreen.Notices.cs;
+        /// observación 1 de la prueba del 2026-10-13, T52).
         /// </summary>
         internal void ShowRevealMissing(int missing)
         {
+            ShowToast(UiText.RevealMissing(missing));
             LevelFlow? flow = _flow;
-            if (!_tray.PulseRevealMissing(missing, flow != null && flow.ReduceMotion))
-            {
-                ShowToast(UiText.RevealMissing(missing));
-            }
-
             if (flow != null && flow.HasLevel)
             {
                 RevealProbe("missing", flow, -1, 0, null);

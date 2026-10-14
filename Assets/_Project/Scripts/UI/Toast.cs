@@ -203,9 +203,9 @@ namespace AF.UI
 
         /// <summary>
         /// Ancho de la placa ajustada al texto de ahora en una sola línea, a su tamaño de siempre: el texto, una holgura de
-        /// redondeo y <see cref="SidePadDp"/> a cada lado (T52 [P]; ≈ 182 dp para «Te faltan 120 semillas» a 15 sp); como mucho
-        /// el de siempre (<see cref="FullWidthDp"/>), que es también lo que da si el texto no cabe en una línea. Mide solo si
-        /// cambia el texto.
+        /// redondeo y <see cref="SidePadDp"/> a cada lado (T52 [P]; a 15 sp, 186 dp para «Te faltan 120 semillas» y 253 para
+        /// «¡Una cuia más! Sigue desde aquí»); como mucho el de siempre (<see cref="FullWidthDp"/>), que es también lo que da si
+        /// el texto no cabe en una línea. Mide solo si cambia el texto.
         /// </summary>
         public float FitWidthDp(float canvasW)
         {

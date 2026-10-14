@@ -2,10 +2,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using AF.Ads;
+using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
-using AF.Economy;
 using AF.GameFlow;
 using AF.Presentation;
 using AF.Presentation.Mechanics;
@@ -28,9 +28,10 @@ namespace AF.Tests.PlayMode
     /// vuelve al cerrarlo, y el que esperaba en la cola sale después, como antes;</description></item>
     /// <item><description>observación 1 / pregunta 41 (4): el aviso no tapa las burbujas «Te faltan {n}» de la bandeja, con 1 y
     /// con 3 filas (el 135); sin burbujas tampoco tapa la repisa de abajo ni la ficha «?×n» del 135; con ellas no deja a medias
-    /// ninguna ficha (o va junto a ella, ajustado a su texto, o la tapa entera: el compromiso [P]); y Revelar sin semillas ni
-    /// video ya no saca el aviso: la burbuja «Te faltan {n}» late dos veces desde su pie sin pisar la vecina, se queda roja
-    /// ≈ 1,1 s y el botón tiembla (revisión de T52, rondas 1 y 2); el aire del cartel no depende del texto anterior;</description></item>
+    /// ninguna ficha: o va junto a ella, ajustado a su texto (el 135 tras el rescate de verdad, con 12 cuias, y Revelar sin
+    /// semillas ni video, «Te faltan 120 semillas», que sigue saliendo por la cola como decidió el dueño, D-015), o la tapa
+    /// entera (el 115 tras el rescate de verdad; y un estado forzado del 135 con 11 cuias): el compromiso [P]; el aire del cartel
+    /// no depende del texto anterior;</description></item>
     /// <item><description>pregunta 43: el banner de mundo admite la escala de fuente de 02 §12 hasta el 130 %, con las mismas
     /// comprobaciones que la tarjeta previa;</description></item>
     /// <item><description>observación 4: tras ver la victoria del 40, el banner del 41 entra con «Siguiente» sin esperar
@@ -38,9 +39,10 @@ namespace AF.Tests.PlayMode
     /// antes de la caché del arte compartido, así que no depende de los tests que corrieron antes);</description></item>
     /// <item><description>observación 5: por el Remolino, la cuia tocada se traga el chorro (remolino con contorno en su
     /// superficie y espiral que gira, se ilumina y late, con el remanso que se aclara) y la pareja se ilumina y late al recibir,
-    /// con la zona vacía de su cavidad teñida del color de la racha y destellos en el fondo; sin brillos aditivos fuera de
-    /// FxLayer (guía v2 §8), dentro del presupuesto de 2.800 ms, sin asignaciones por fotograma y, con Reducir movimiento, sin
-    /// giros, latidos ni partículas (ni siquiera pedidas): solo fundidos.</description></item>
+    /// con una luz marfil que sube por las paredes de su vidrio desde el fondo (sin teñir la cavidad: revisión de T52, ronda 3)
+    /// y destellos en el fondo; sin brillos aditivos fuera de FxLayer (guía v2 §8), dentro del presupuesto de 2.800 ms, sin
+    /// asignaciones por fotograma y, con Reducir movimiento, sin giros, latidos ni partículas (ni siquiera pedidas): solo
+    /// fundidos.</description></item>
     /// </list>
     /// </summary>
     public sealed class PhoneFixesTests
@@ -187,8 +189,11 @@ namespace AF.Tests.PlayMode
             BoardLayoutResult l = view.Layout;
             float foot = l.RowFootY[l.Rows - 1];
 
-            // El rescate (≈ 280 dp de ancho, no cabe a la derecha de la ficha): del ancho de siempre, tapa enteras las fichas que
-            // alcanza, nunca las cuias ni las burbujas. Es el compromiso [P] (capturas 92): tapa los 23 dp bajo el pie.
+            // Estado FORZADO (el juego no lo da en el 135: tras el rescate de verdad hay 12 cuias y el aviso cabe junto a la ficha,
+            // Toast_AfterTheRealRescue_ThreeRows): el aviso del rescate con 11 cuias, sin rescate. La ficha «?×1» queda bajo la
+            // primera cuia de una fila de 3 y a su derecha no cabe el aviso ajustado a su texto (≈ 253 dp): va del ancho de siempre
+            // y tapa enteras las fichas que alcanza, nunca las cuias ni las burbujas, como en el 115 tras el rescate de verdad
+            // (captura 92f): tapa los 23 dp bajo el pie.
             view.ShowNotice(UiText.RescueApplied);
             PlayModeHelpers.Step(boot, 200);
             Assert.That(view.ToastText, Is.EqualTo(UiText.RescueApplied));
@@ -200,9 +205,10 @@ namespace AF.Tests.PlayMode
             Assert.That(covered, Is.GreaterThan(0), "tapa la ficha entera, sin dejar una tira suelta");
             float coveredDp = Mathf.Max(0f, BoardFloor(view) - view.NoticeToast.Top);
             Assert.That(coveredDp, Is.LessThanOrEqualTo(GameScreen.ShelfShadowBelowFootDp + 0.05f), "como mucho, lo que hay bajo el pie");
-            TestContext.WriteLine("135 con burbujas, el rescate: tapa " + coveredDp.ToString("0.0") + " dp bajo la fila de abajo y " + covered + " ficha(s) enteras.");
+            TestContext.WriteLine("135 con burbujas y 11 cuias (forzado), el rescate: tapa " + coveredDp.ToString("0.0") + " dp bajo la fila de abajo y " + covered + " ficha(s) enteras.");
 
-            // «+1 Luciérnaga» (corto): ajustado a su texto en el tramo sin fichas, lo más centrado posible; no tapa ninguna ficha.
+            // «+1 Luciérnaga» (corto; forzado: el regalo solo sale en el 100): ajustado a su texto en el tramo sin fichas, lo más
+            // centrado posible; no tapa ninguna ficha.
             view.NoticeToast.Hide();
             view.ShowNotice(UiText.RevealGiftToast);
             PlayModeHelpers.Step(boot, 200);
@@ -215,7 +221,8 @@ namespace AF.Tests.PlayMode
             Assert.That(AssertChipsWholeOrClear(view, "3 filas, «+1 Luciérnaga»"), Is.EqualTo(0), "no tapa ninguna ficha");
             TestContext.WriteLine("135 con burbujas, «+1 Luciérnaga»: " + view.NoticeToast.SeenRect);
 
-            // Sin burbujas, encogido a su texto entre la repisa (con su sombra y la ficha «?×n») y la bandeja: no la tapa.
+            // Sin burbujas, encogido a su texto entre la repisa (con su sombra y la ficha «?×n») y la bandeja: no la tapa (el texto
+            // es forzado, con semillas no sale; la colocación es la de cualquier aviso sin burbujas, como el del rescate de 92b).
             yield return LoadWithBubbles(135, 0, 1000);
             boot = GameBootstrap.Current!;
             view = boot.View!;
@@ -230,93 +237,108 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator RevealWithoutSeedsNorVideo_TheBubbleAnswers_NoNotice_Level135()
+        public IEnumerator RevealWithoutSeedsNorVideo_TheNoticeGoesAboveTheBubbles_BesideTheChip_Level135()
         {
-            // Revisión de T52 [P]: «Te faltan 120 semillas» ya no sale como aviso cuando la burbuja «Te faltan 120» de Revelar está
-            // a la vista (lo repetía y, con 3 filas, tapaba la repisa de abajo y la ficha «?×n»): la burbuja late y toma los colores
-            // del precio sin saldo.
+            // Revelar sin stock, saldo ni video en el 135 (3 filas, las dos burbujas en dos líneas): «Te faltan 120 semillas» sale
+            // por la cola de avisos, como decidió el dueño (D-011, punto 2; pregunta 41, D-015), encima de las burbujas sin
+            // taparlas (observación 1) y, como llega a la repisa de abajo, ajustado a su texto junto a la ficha «?×1», sin taparla
+            // ni tapar las cuias. Estado del juego, sin forzar nada.
             yield return LoadWithBubbles(135, 0, 0);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
-            Assert.That(view.Tray.RevealShowsMissing, Is.True);
+            BoardLayoutResult l = view.Layout!;
+            Assert.That(l.Rows, Is.EqualTo(3));
+            Assert.That(view.Tray.ExtraShowsMissing && view.Tray.RevealShowsMissing, Is.True, "las dos burbujas");
             Assert.That(view.Tray.RevealMissingText, Is.EqualTo("Te faltan 120"));
             Assert.That(boot.PressReveal(), Is.False, "sin stock, saldo ni video: no hace nada más");
-            Assert.That(view.ToastText, Is.Null, "sin aviso");
-            Assert.That(view.NoticesQueued, Is.EqualTo(0));
-            Assert.That(view.Tray.RevealMissingPulsing, Is.True, "la burbuja responde");
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RevealMissing(120)), "«Te faltan 120 semillas», en el acto");
             Assert.That(boot.Flow!.RevealSelecting, Is.False);
-            RectTransform root = Root(view);
-            Rect rest = VictorySetup.CanvasRect(view.Tray.RevealMissingRect, root);
-            Rect neighbour = VictorySetup.CanvasRect(view.Tray.ExtraMissingRect, root);
-            var body = (RectTransform)view.Tray.RevealMissingRect.Find("Body")!;
-            var button = (RectTransform)view.Tray.RevealButton.transform;
-            Rect buttonRest = VictorySetup.CanvasRect(button, root);
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(0), "ningún cobro");
+            PlayModeHelpers.Step(boot, 200);
+            AssertToastClearOfBubbles(view, "135, Revelar sin semillas");
+            AssertToastTextFits(view);
+            Assert.That(view.NoticeToast.Top, Is.GreaterThanOrEqualTo(l.RowFootY[l.Rows - 1] - 0.05f), "no tapa las cuias de la fila de abajo");
+            Assert.That(view.NoticeToast.Width, Is.EqualTo(view.NoticeToast.FitWidthDp(view.CanvasWidth)).Within(0.05f), "ajustado a su texto");
+            Assert.That(AssertChipsWholeOrClear(view, "135, Revelar sin semillas"), Is.EqualTo(0), "junto a la ficha «?×1», sin taparla");
+            TestContext.WriteLine("135, «Te faltan 120 semillas»: " + view.NoticeToast.SeenRect);
 
-            // Revisión de T52, ronda 2: dos latidos (2 × 2 × 150 ms) desde el centro del pie, los colores sin saldo sostenidos
-            // ≈ 1,1 s y el botón Revelar que tiembla ± 4 dp, 3 ciclos en 300 ms. Con la burbuja vecina («Te faltan 150»), el latido
-            // no la pisa: crece como mucho lo que deja 0,5 dp de aire.
-            float max = view.Tray.RevealMissingPulseMaxScale;
-            Assert.That(max, Is.GreaterThan(1.03f).And.LessThan(BoosterTray.MissingPulseScale), "con vecina, menos que 1,08");
-            Response normal = TrackResponse(boot, view, body, neighbour, rest, button, buttonRest);
-            Assert.That(normal.Beats, Is.EqualTo(BoosterTray.MissingPulseBeats), "dos latidos");
-            Assert.That(normal.MaxScale, Is.GreaterThan(max - 0.01f).And.LessThanOrEqualTo(max + 1e-4f), "hasta lo que deja la vecina");
-            Assert.That(normal.LastBeatMs, Is.LessThanOrEqualTo((4f * BoosterTray.MissingPulseBeatMs) + PlayModeHelpers.FrameMs), "en 600 ms");
-            Assert.That(normal.FullColorFromMs, Is.LessThanOrEqualTo(BoosterTray.MissingColorInMs + PlayModeHelpers.FrameMs), "el rojo entra en 100 ms");
-            Assert.That(normal.FullColorUntilMs, Is.GreaterThanOrEqualTo(BoosterTray.MissingColorHoldMs - PlayModeHelpers.FrameMs), "y se mantiene hasta los 900 ms");
-            Assert.That(normal.EndMs, Is.InRange(BoosterTray.MissingColorHoldMs + BoosterTray.MissingColorOutMs, BoosterTray.MissingColorHoldMs + BoosterTray.MissingColorOutMs + PlayModeHelpers.FrameMs), "≈ 1,1 s en total");
-            Assert.That(normal.MaxShake, Is.GreaterThan(0.75f * BoosterTray.RevealShakeDp).And.LessThanOrEqualTo(BoosterTray.RevealShakeDp + 1e-3f), "Revelar tiembla ± 4 dp");
-            Assert.That(normal.ShakeEndMs, Is.LessThanOrEqualTo(BoosterTray.RevealShakeMs + PlayModeHelpers.FrameMs), "en 300 ms");
-            Assert.That(view.Tray.RevealMissingPulseScale, Is.EqualTo(1f));
-            Assert.That(view.Tray.RevealMissingPulseColor, Is.EqualTo(0f));
-            Assert.That(view.Tray.RevealShakeOffset, Is.EqualTo(0f));
-            Assert.That(VictorySetup.CanvasRect(button, root), Is.EqualTo(buttonRest), "el botón vuelve a su sitio");
-            Assert.That(view.Tray.RevealMissingLabel.color, Is.EqualTo(Palette.UiRedWarning), "de vuelta a sus colores");
-
-            // Con Reducir movimiento, sin latido ni temblor: el rojo sostenido 1 s y su fundido de 200 ms.
-            boot.Flow.ReduceMotion = true;
+            // Otro toque con el aviso a la vista: vuelve a empezar, sin repetirse en la cola.
+            PlayModeHelpers.Step(boot, 1000);
+            float left = view.NoticeToast.LeftMs;
             Assert.That(boot.PressReveal(), Is.False);
-            Assert.That(view.ToastText, Is.Null);
-            Response reduced = TrackResponse(boot, view, body, neighbour, rest, button, buttonRest);
-            Assert.That(reduced.MaxScale, Is.EqualTo(1f), "sin latido");
-            Assert.That(reduced.MaxShake, Is.EqualTo(0f), "sin temblor");
-            Assert.That(reduced.FullColorUntilMs, Is.GreaterThanOrEqualTo(BoosterTray.MissingColorHoldReducedMs - PlayModeHelpers.FrameMs), "el rojo, sostenido 1 s");
-            Assert.That(reduced.EndMs, Is.InRange(BoosterTray.MissingColorHoldReducedMs + BoosterTray.MissingColorOutMs, BoosterTray.MissingColorHoldReducedMs + BoosterTray.MissingColorOutMs + PlayModeHelpers.FrameMs));
-            Assert.That(view.ToastText, Is.Null);
+            Assert.That(view.NoticeToast.LeftMs, Is.GreaterThan(left + 900f), "el mismo aviso vuelve a empezar");
+            Assert.That(view.NoticesQueued, Is.EqualTo(0));
         }
 
         [UnityTest]
-        public IEnumerator RevealWithoutSeedsNorVideo_TheBubbleAlone_BeatsUpTo108_FromItsFoot()
+        public IEnumerator Toast_AfterTheRealRescue_ThreeRows_BesideTheChipIn135_CoversTheWholeChipIn115()
         {
-            // Sin la burbuja vecina (una Cuia extra en el stock: «+1 cuia» no enseña precio), la de Revelar va ancha y late hasta
-            // 1,08 desde el centro de su pie: su borde de abajo no baja hacia el cordón de la bandeja (revisión de T52, ronda 2).
-            yield return LoadWithBubbles(135, 0, 0);
+            // El 135 con las 300 semillas justas: Aguas estancadas por un camino de vertidos útiles y el rescate comprado de verdad
+            // (12 cuias, 4/4/4; sin semillas, las dos burbujas). La ficha «?×1» queda bajo la primera cuia de la fila de abajo y
+            // «¡Una cuia más! Sigue desde aquí», ajustado a su texto, cabe a su derecha: no tapa ninguna ficha ni las cuias, solo la
+            // cara de la repisa de abajo en su tramo, los 3 s que dura (el compromiso [P], captura 92).
+            yield return LoadWithBubbles(135, 0, 300);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
-            Assert.That(boot.Wallet!.Apply(Transaction.GrantStock(BoosterKind.ExtraCuia, 1)).IsApplied, Is.True);
-            PlayModeHelpers.Step(boot, 50);
-            Assert.That(view.Tray.ExtraShowsMissing, Is.False, "condición del test: «+1 cuia» con stock, sin burbuja");
-            Assert.That(view.Tray.RevealShowsMissing, Is.True);
-            Assert.That(view.Tray.RevealMissingPulseMaxScale, Is.EqualTo(BoosterTray.MissingPulseScale), "sola, hasta 1,08");
-            RectTransform root = Root(view);
-            Rect rest = VictorySetup.CanvasRect(view.Tray.RevealMissingRect, root);
-            var body = (RectTransform)view.Tray.RevealMissingRect.Find("Body")!;
-            var button = (RectTransform)view.Tray.RevealButton.transform;
+            RescueForReal(boot, null, "135");
+            Assert.That(view.Views.Length, Is.EqualTo(12));
+            Assert.That(view.Tray.ExtraShowsMissing && view.Tray.RevealShowsMissing, Is.True, "las dos burbujas, sin semillas");
+            BoardLayoutResult l = view.Layout!;
+            float foot = l.RowFootY[l.Rows - 1];
+            AssertToastClearOfBubbles(view, "135 tras el rescate");
+            AssertToastTextFits(view);
+            Assert.That(view.NoticeToast.Top, Is.GreaterThanOrEqualTo(foot - 0.05f), "no tapa las cuias de la fila de abajo");
+            Assert.That(view.NoticeToast.Top, Is.LessThan(BoardFloor(view) - 1f), "tapa la cara de la repisa de abajo en su tramo");
+            Assert.That(view.NoticeToast.Width, Is.EqualTo(view.NoticeToast.FitWidthDp(view.CanvasWidth)).Within(0.05f), "ajustado a su texto");
+            Assert.That(view.NoticeToast.Width, Is.LessThan(Toast.FullWidthDp(view.CanvasWidth) - 1f));
+            Assert.That(AssertChipsWholeOrClear(view, "135 tras el rescate"), Is.EqualTo(0), "junto a la ficha «?×1», sin taparla");
+            TestContext.WriteLine("135 tras el rescate (12 cuias): «¡Una cuia más!» en " + view.NoticeToast.SeenRect + "; pie de la fila de abajo a " + foot.ToString("0.0") + " dp.");
+
+            // De uno en uno: Revelar sin semillas con el aviso del rescate a la vista espera su turno y sale después, en su sitio.
             Assert.That(boot.PressReveal(), Is.False);
-            Assert.That(view.ToastText, Is.Null);
-            Response r = TrackResponse(boot, view, body, Rect.zero, rest, button, VictorySetup.CanvasRect(button, root));
-            Assert.That(r.Beats, Is.EqualTo(BoosterTray.MissingPulseBeats));
-            Assert.That(r.MaxScale, Is.GreaterThan(BoosterTray.MissingPulseScale - 0.01f).And.LessThanOrEqualTo(BoosterTray.MissingPulseScale + 1e-4f));
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RescueApplied), "el del rescate sigue");
+            Assert.That(view.NoticesQueued, Is.EqualTo(1), "«Te faltan 120 semillas» espera su turno");
+            for (int ms = 0; ms < 8000 && view.ToastText != UiText.RevealMissing(120); ms += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RevealMissing(120)), "sale al ocultarse el del rescate");
+            PlayModeHelpers.Step(boot, 200);
+            AssertToastClearOfBubbles(view, "135 tras el rescate, Revelar sin semillas");
+            Assert.That(AssertChipsWholeOrClear(view, "135 tras el rescate, Revelar sin semillas"), Is.EqualTo(0));
+
+            // El 115, igual: tras el rescate (12 cuias), la cuia 10, con 2 ocultas, es la tercera de la fila de abajo y su ficha
+            // «?×2» parte el tramo de la repisa. El aviso del rescate no cabe ajustado a su texto a ningún lado: va del ancho de
+            // siempre y tapa entera la ficha (sin dejar una tira suelta), nunca las cuias ni las burbujas. Es la otra rama del
+            // compromiso [P], que se da en el juego (captura 92f): tapa la repisa de abajo y su ficha los 3 s que dura.
+            yield return LoadWithBubbles(115, 0, 300);
+            boot = GameBootstrap.Current!;
+            view = boot.View!;
+            RescueForReal(boot, s => s[10].HasHidden, "115");
+            Assert.That(view.Views.Length, Is.EqualTo(12));
+            Assert.That(view.Tray.ExtraShowsMissing && view.Tray.RevealShowsMissing, Is.True, "las dos burbujas, sin semillas");
+            l = view.Layout!;
+            foot = l.RowFootY[l.Rows - 1];
+            Assert.That(l.Rows, Is.EqualTo(3));
+            AssertToastClearOfBubbles(view, "115 tras el rescate");
+            AssertToastTextFits(view);
+            Assert.That(view.NoticeToast.Width, Is.EqualTo(Toast.FullWidthDp(view.CanvasWidth)).Within(0.05f), "no cabe junto a la ficha: del ancho de siempre");
+            Assert.That(view.NoticeToast.Top, Is.GreaterThanOrEqualTo(foot - 0.05f), "no tapa las cuias de la fila de abajo");
+            int covered = AssertChipsWholeOrClear(view, "115 tras el rescate");
+            Assert.That(covered, Is.GreaterThan(0), "tapa la ficha «?×2» entera");
+            TestContext.WriteLine("115 tras el rescate (12 cuias): «¡Una cuia más!» en " + view.NoticeToast.SeenRect + ", tapa " + covered + " ficha(s); pie de la fila de abajo a " + foot.ToString("0.0") + " dp.");
         }
 
         [UnityTest]
-        public IEnumerator NoAllocationsPerFrame_NoticeBesideTheChips_AndTheBubblePulse_Level135()
+        public IEnumerator NoAllocationsPerFrame_NoticeBesideTheChips_Level135()
         {
-            // 08 §5.4: el aviso que busca sitio entre las fichas de la repisa (cada fotograma) y el latido de la burbuja no asignan.
+            // 08 §5.4: el aviso que busca sitio entre las fichas de la repisa (cada fotograma) no asigna.
             yield return LoadWithBubbles(135, 0, 0);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             PlayModeHelpers.TickExact(boot, 1200); // en régimen: los ~2,2 s que siguen al salto de la intro asignan (NoticeTests)
-            foreach (string text in new[] { UiText.RescueApplied, UiText.RevealGiftToast })
+            foreach (string text in new[] { UiText.RescueApplied, UiText.RevealGiftToast, UiText.RevealMissing(120) })
             {
                 view.NoticeToast.Hide();
                 view.ShowNotice(text);
@@ -330,18 +352,6 @@ namespace AF.Tests.PlayMode
                     }
                 }, Is.Not.AllocatingGCMemory(), "30 fotogramas con «" + text + "» junto a las fichas");
             }
-
-            view.NoticeToast.Hide();
-            Assert.That(boot.PressReveal(), Is.False);
-            Assert.That(view.Tray.RevealMissingPulsing, Is.True);
-            Assert.That(() =>
-            {
-                for (int f = 0; f < 20; f++)
-                {
-                    view.Tick(PlayModeHelpers.FrameMs);
-                }
-            }, Is.Not.AllocatingGCMemory(), "20 fotogramas del latido de la burbuja y del temblor de Revelar");
-            Assert.That(view.Tray.RevealMissingPulsing, Is.True, "aún responde (≈ 1,1 s)");
         }
 
         [UnityTest]
@@ -525,7 +535,7 @@ namespace AF.Tests.PlayMode
             Assert.That(receive.SpiralFoamAlpha, Is.GreaterThan(RemolinoOverlay.FoamAlpha + 0.2f), "la pareja se ilumina al recibir");
             Assert.That(receive.SpiralScale, Is.GreaterThan(1.08f), "y late");
             Assert.That(receive.PoolLightNow, Is.GreaterThan(0.5f * RemolinoOverlay.PoolLightMix), "con el remanso aclarado");
-            AssertCavityGlow(receive, view.Views[partner], "la pareja, al 60 % de la recepción");
+            AssertWallLight(receive, view.Views[partner], "la pareja, al 60 % de la recepción");
             Assert.That(receive.AdditiveImageCount, Is.EqualTo(0), "sin brillos aditivos fuera de FxLayer (guía v2 §8)");
             Assert.That(intake.IntakeActive || intake.IntakeSwirlVisible, Is.False, "la cuia tocada ya se apagó");
             Assert.That(intake.PoolLightNow, Is.EqualTo(0f), "y su remanso también");
@@ -547,8 +557,8 @@ namespace AF.Tests.PlayMode
             Assert.That(receive.PoolColorNow, Is.EqualTo(ProceduralArt.WhirlPoolColor));
 
             // La luz de la cavidad se apaga sola tras la recepción (≤ 100 ms × el factor de los pasos más), sin retener la cola.
-            PlayModeHelpers.Step(boot, Mathf.CeilToInt((RemolinoOverlay.CavityGlowMs - ((1f - RemolinoOverlay.FillStart) * RemolinoOverlay.ReceiveMs)) * record.SpeedFactor) + PlayModeHelpers.FrameMs);
-            Assert.That(receive.CavityGlowAlphaNow, Is.EqualTo(0f), "y la luz de la cavidad, apagada");
+            PlayModeHelpers.Step(boot, Mathf.CeilToInt((RemolinoOverlay.WallLightMs - ((1f - RemolinoOverlay.FillStart) * RemolinoOverlay.ReceiveMs)) * record.SpeedFactor) + PlayModeHelpers.FrameMs);
+            Assert.That(receive.WallLightAlphaNow, Is.EqualTo(0f), "y la luz de las paredes, apagada");
             TestContext.WriteLine("Nivel 103: " + elapsed + " ms del toque a la vista quieta.");
         }
 
@@ -602,8 +612,8 @@ namespace AF.Tests.PlayMode
                 bool swirl = false;
                 bool poolLit = false;
                 bool partnerPoolLit = false;
-                bool cavityGlow = false;
-                int glowFrames = 0;
+                bool wallLight = false;
+                int lightFrames = 0;
                 for (int t = 0; t < 4000 && !_rig.Animator.IsIdle; t += PlayModeHelpers.FrameMs)
                 {
                     _rig.Tick(PlayModeHelpers.FrameMs);
@@ -613,8 +623,8 @@ namespace AF.Tests.PlayMode
                     swirl |= intake.IntakeSwirlVisible && intake.IntakeSwirlAlpha > 0.3f;
                     poolLit |= intake.PoolLightNow > 0.5f * RemolinoOverlay.PoolLightMix;
                     partnerPoolLit |= partner.PoolLightNow > 0.5f * RemolinoOverlay.PoolLightMix;
-                    cavityGlow |= partner.CavityGlowAlphaNow > 0.25f;
-                    glowFrames += partner.CavityGlowAlphaNow > 0f ? 1 : 0;
+                    wallLight |= partner.WallLightAlphaNow > 0.35f;
+                    lightFrames += partner.WallLightAlphaNow > 0f ? 1 : 0;
                     Assert.That(intake.AdditiveImageCount + partner.AdditiveImageCount, Is.EqualTo(0), "sin brillos aditivos fuera de FxLayer");
                 }
 
@@ -622,16 +632,16 @@ namespace AF.Tests.PlayMode
                 Assert.That(_rig.Animator.IsIdle, Is.True, what);
                 Assert.That(_rig.Animator.ShownOf(2), Is.EqualTo(after[2]), what);
                 Assert.That(lit && swirl, Is.True, what + ": la espuma se ilumina y el remolino de la superficie se funde");
-                Assert.That(poolLit && partnerPoolLit && cavityGlow, Is.True, what + ": los remansos se aclaran y la cavidad de la pareja se ilumina (fundidos, también con Reducir movimiento)");
-                Assert.That(glowFrames, Is.GreaterThan(3), what + ": la luz de la cavidad dura varios fotogramas");
+                Assert.That(poolLit && partnerPoolLit && wallLight, Is.True, what + ": los remansos se aclaran y la luz sube por las paredes de la pareja (fundidos, también con Reducir movimiento)");
+                Assert.That(lightFrames, Is.GreaterThan(3), what + ": la luz de las paredes dura varios fotogramas");
 
-                // La luz de la cavidad se apaga sola tras la recepción (≤ CavityGlowMs × el factor de los pasos desde el fondo).
-                for (int t = 0; t < RemolinoOverlay.CavityGlowMs && partner.CavityGlowAlphaNow > 0f; t += PlayModeHelpers.FrameMs)
+                // La luz de las paredes se apaga sola tras la recepción (≤ WallLightMs × el factor de los pasos desde el fondo).
+                for (int t = 0; t < RemolinoOverlay.WallLightMs && partner.WallLightAlphaNow > 0f; t += PlayModeHelpers.FrameMs)
                 {
                     _rig.Tick(PlayModeHelpers.FrameMs);
                 }
 
-                Assert.That(intake.PoolLightNow + partner.PoolLightNow + partner.CavityGlowAlphaNow, Is.EqualTo(0f), what + ": al terminar, en reposo");
+                Assert.That(intake.PoolLightNow + partner.PoolLightNow + partner.WallLightAlphaNow, Is.EqualTo(0f), what + ": al terminar, en reposo");
                 Assert.That(partner.PoolColorNow, Is.EqualTo(ProceduralArt.WhirlPoolColor), what);
                 Assert.That(spun, Is.EqualTo(!reduce), what + ": la espiral gira solo sin Reducir movimiento");
                 Assert.That(pulsed, Is.EqualTo(!reduce), what + ": y late");
@@ -679,94 +689,109 @@ namespace AF.Tests.PlayMode
 
         // ---- Ayudas ----
 
-        // Sigue la respuesta de la burbuja de Revelar fotograma a fotograma hasta que termina (≤ 2 s): latidos, escala, colores y
-        // temblor del botón. En cada fotograma, la burbuja no se mueve de su sitio, crece desde el centro de su pie (su borde de
-        // abajo no baja), no pisa la vecina (si la hay: neighbour no vacío) y el botón solo se desplaza a lo ancho, lo que dice
-        // RevealShakeOffset.
-        private static Response TrackResponse(GameBootstrap boot, GameScreen view, RectTransform body, Rect neighbour, Rect rest, RectTransform button, Rect buttonRest)
+        /// <summary>
+        /// El rescate de verdad (también lo usan las capturas 92, 92b, 92f, 93 y 93b): desde el nivel ya cargado, con 300
+        /// semillas o más, juega un camino de vertidos útiles hasta Aguas estancadas con el rescate a la venta (y, si
+        /// <paramref name="accept"/> no es null, con el tablero bloqueado que cumple <paramref name="accept"/>), compra
+        /// «Continuar: +1 cuia» (300, el primero del día) y deja la vista con el aviso «¡Una cuia más!» ya entero y la cuia añadida
+        /// en su sitio. Devuelve los vertidos del camino.
+        /// </summary>
+        internal static int RescueForReal(GameBootstrap boot, System.Func<BoardState, bool>? accept, string what)
         {
-            var r = new Response { MaxScale = 1f, FullColorFromMs = -1f, FullColorUntilMs = -1f, EndMs = -1f };
-            RectTransform root = Root(view);
-            float prev = 1f;
-            bool rising = false;
-            for (int ms = PlayModeHelpers.FrameMs; ms <= 2000; ms += PlayModeHelpers.FrameMs)
+            LevelFlow flow = boot.Flow!;
+            GameScreen view = boot.View!;
+            Pour[]? path = FindRescuableStuck(flow, accept);
+            Assert.That(path, Is.Not.Null, what + ": un camino de vertidos útiles hasta Aguas estancadas con el rescate a la venta");
+            MechanicTestKit.PlayPrefix(boot, path!, false);
+            for (int ms = 0; ms < 5000 && flow.Phase != FlowPhase.StuckModal; ms += PlayModeHelpers.FrameMs)
             {
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
-                if (!view.Tray.RevealMissingPulsing)
-                {
-                    r.EndMs = ms;
-                    break;
-                }
-
-                float scale = view.Tray.RevealMissingPulseScale;
-                if (scale > prev + 1e-5f)
-                {
-                    rising = true;
-                }
-                else if (rising && scale < prev - 1e-5f)
-                {
-                    rising = false;
-                    r.Beats++;
-                }
-
-                prev = scale;
-                r.MaxScale = Mathf.Max(r.MaxScale, scale);
-                if (scale > 1.0001f)
-                {
-                    r.LastBeatMs = ms;
-                }
-
-                if (view.Tray.RevealMissingPulseColor >= 0.999f)
-                {
-                    if (r.FullColorFromMs < 0f)
-                    {
-                        r.FullColorFromMs = ms;
-                    }
-
-                    r.FullColorUntilMs = ms;
-                }
-
-                float shake = view.Tray.RevealShakeOffset;
-                r.MaxShake = Mathf.Max(r.MaxShake, Mathf.Abs(shake));
-                if (Mathf.Abs(shake) > 1e-3f)
-                {
-                    r.ShakeEndMs = ms;
-                }
-
-                Canvas.ForceUpdateCanvases();
-                string at = " (" + ms + " ms)";
-                Assert.That(VictorySetup.CanvasRect(view.Tray.RevealMissingRect, root), Is.EqualTo(rest), "la burbuja no se mueve de su sitio" + at);
-                Rect b = VictorySetup.CanvasRect(body, root);
-                Assert.That(b.yMax, Is.EqualTo(rest.yMax).Within(0.05f), "crece desde su pie: no baja hacia el cordón" + at);
-                Assert.That(b.center.x, Is.EqualTo(rest.center.x).Within(0.05f), "centrada" + at);
-                if (neighbour.width > 0f)
-                {
-                    float gap = b.xMin >= neighbour.center.x ? b.xMin - neighbour.xMax : neighbour.xMin - b.xMax;
-                    Assert.That(gap, Is.GreaterThanOrEqualTo(BoosterTray.MissingPulseClearDp - 0.05f), "no pisa la burbuja vecina " + neighbour + ": " + b + at);
-                }
-
-                Rect btn = VictorySetup.CanvasRect(button, root);
-                Assert.That(btn.xMin - buttonRest.xMin, Is.EqualTo(shake).Within(0.05f), "el botón tiembla a lo ancho" + at);
-                Assert.That(btn.yMin, Is.EqualTo(buttonRest.yMin).Within(0.05f), "y no a lo alto" + at);
             }
 
-            Assert.That(r.EndMs, Is.GreaterThan(0f), "la respuesta termina");
-            TestContext.WriteLine("Respuesta de «Te faltan {n}»: " + r.Beats + " latidos hasta " + r.MaxScale.ToString("0.000") + " (el último a los "
-                + r.LastBeatMs + " ms), rojo pleno de " + r.FullColorFromMs + " a " + r.FullColorUntilMs + " ms, temblor ± "
-                + r.MaxShake.ToString("0.00") + " dp hasta " + r.ShakeEndMs + " ms, fin a los " + r.EndMs + " ms.");
-            return r;
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.StuckModal), what);
+            PlayModeHelpers.Step(boot, 300); // el panel termina de subir
+            Assert.That(view.Stuck.View!.Rescue, Is.EqualTo(StuckRescueKind.Available), what);
+            Assert.That(view.Stuck.RescuePriceShown, Is.EqualTo(300), what + ": el primer rescate del día");
+            int seeds = boot.Wallet!.Seeds;
+            view.Stuck.RescueButton.onClick.Invoke();
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing), what);
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(seeds - 300), what + ": cobra los 300");
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RescueApplied), what);
+            PlayModeHelpers.Step(boot, 700); // la recolocación de «+1 cuia» (600 ms) y el aviso ya entero
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RescueApplied), what);
+            return path!.Length;
         }
 
-        private struct Response
+        // Un camino de vertidos útiles desde el tablero de ahora hasta Aguas estancadas (R13) con el rescate a la venta (04 §6.4:
+        // resoluble con una cuia más) y, si accept no es null, con el tablero bloqueado que lo cumple; en profundidad, sin
+        // repetir tableros ni ganar; null si no lo encuentra.
+        private static Pour[]? FindRescuableStuck(LevelFlow flow, System.Func<BoardState, bool>? accept)
         {
-            public int Beats;
-            public float MaxScale;
-            public float LastBeatMs;
-            public float FullColorFromMs;
-            public float FullColorUntilMs;
-            public float EndMs;
-            public float MaxShake;
-            public float ShakeEndMs;
+            var search = new StuckSearch(flow.Session.PourMode, flow.Session.FutileRuleEnabled, new RescueBooster(flow.Boosters), accept);
+            return search.Run(flow.Session.Current);
+        }
+
+        // Búsqueda en profundidad de FindRescuableStuck (solo tests: asigna sin cuidado).
+        private sealed class StuckSearch
+        {
+            private const int MaxDepth = 60;
+            private const int MaxStates = 50000;
+
+            private readonly PourMode _mode;
+            private readonly bool _futile;
+            private readonly RescueBooster _rescue;
+            private readonly System.Func<BoardState, bool>? _accept;
+            private readonly HashSet<BoardState> _seen = new HashSet<BoardState>();
+            private readonly List<Pour> _path = new List<Pour>();
+
+            public StuckSearch(PourMode mode, bool futile, RescueBooster rescue, System.Func<BoardState, bool>? accept)
+            {
+                _mode = mode;
+                _futile = futile;
+                _rescue = rescue;
+                _accept = accept;
+            }
+
+            public Pour[]? Run(BoardState start)
+            {
+                return Visit(start, 0) ? _path.ToArray() : null;
+            }
+
+            private bool Visit(BoardState state, int depth)
+            {
+                if (depth >= MaxDepth || _seen.Count >= MaxStates || !_seen.Add(state))
+                {
+                    return false;
+                }
+
+                var moves = new Pour[PourRules.MaxPours];
+                int n = PourRules.CollectUsefulMoves(state, _futile, _mode, moves);
+                for (int i = 0; i < n; i++)
+                {
+                    BoardState next = PourRules.Apply(state, moves[i].Source, moves[i].Target, _mode);
+                    if (next.IsWon())
+                    {
+                        continue;
+                    }
+
+                    _path.Add(moves[i]);
+                    if (PourRules.IsStuck(next, _futile))
+                    {
+                        if (RescueBooster.IsOffered(_rescue.Check(next, _mode, _futile)) && (_accept == null || _accept(next)))
+                        {
+                            return true;
+                        }
+                    }
+                    else if (Visit(next, depth + 1))
+                    {
+                        return true;
+                    }
+
+                    _path.RemoveAt(_path.Count - 1);
+                }
+
+                return false;
+            }
         }
 
         // Nivel level (con LaunchOptions.LevelOffsetOverride = offset si no es 0) con seeds semillas, sin video ni Luciérnagas,
@@ -977,23 +1002,39 @@ namespace AF.Tests.PlayMode
             Assert.That(255f * Mathf.Min(now.r - rest.r, Mathf.Min(now.g - rest.g, now.b - rest.b)), Is.GreaterThanOrEqualTo(40f), what + ": el remanso se aclara ≥ 40 niveles RGB (" + now + ")");
         }
 
-        // La luz de la cavidad de la pareja (revisión de T52, ronda 2): encendida, del color de la racha aclarado, dentro de la zona
-        // de dosis de la cavidad y detrás del líquido (en BodyBack, antes que el líquido).
-        private static void AssertCavityGlow(RemolinoOverlay whirl, CuiaView view, string what)
+        // La luz que sube por las paredes de la pareja (revisión de T52, ronda 3): encendida, en marfil neutro (nunca el color de
+        // la racha), un filo de 2 dp por dentro de cada pared, del fondo de la cavidad al 40 % de su alto, delante del líquido
+        // (BodyFront), con alfa normal; y nada del Remolino detrás del líquido (BodyBack): la zona vacía de la cavidad no se tiñe
+        // (D-003; VA-06).
+        private static void AssertWallLight(RemolinoOverlay whirl, CuiaView view, string what)
         {
-            Assert.That(whirl.CavityGlowAlphaNow, Is.GreaterThan(0.25f).And.LessThanOrEqualTo(RemolinoOverlay.CavityGlowAlpha + 1e-4f), what + ": la cavidad se ilumina");
-            Color expected = ColorMath.Lighten(whirl.RachaColor, RemolinoOverlay.CavityGlowLighten);
-            Color glow = whirl.CavityGlowColor;
-            Assert.That(new Vector3(glow.r, glow.g, glow.b), Is.EqualTo(new Vector3(expected.r, expected.g, expected.b)), what + ": del color de la racha, aclarado");
-            Rect r = whirl.CavityGlowRectU;
-            Assert.That(r.xMin, Is.GreaterThanOrEqualTo(-CuiaGeometry.CavityHalfWidthU), what + ": dentro de la cavidad");
-            Assert.That(r.xMax, Is.LessThanOrEqualTo(CuiaGeometry.CavityHalfWidthU), what);
-            Assert.That(r.yMin, Is.EqualTo(CuiaGeometry.CavityBottomU).Within(0.01f), what + ": desde el fondo junto a las paredes");
-            Assert.That(r.yMax, Is.EqualTo(CuiaGeometry.CavityTopU(view.Capacity)).Within(0.01f), what + ": hasta el techo de las dosis");
-            Transform? glowT = view.transform.Find("Body/BodyBack/RemolinoCavityGlow");
-            Assert.That(glowT, Is.Not.Null, what + ": en BodyBack");
-            Transform liquid = view.transform.Find("Body/Liquid")!;
-            Assert.That(glowT!.parent.GetSiblingIndex(), Is.LessThan(liquid.GetSiblingIndex()), what + ": detrás del líquido");
+            Assert.That(whirl.WallLightAlphaNow, Is.GreaterThan(0.35f).And.LessThanOrEqualTo(RemolinoOverlay.WallLightAlpha + 1e-4f), what + ": la luz sube por las paredes");
+            Color c = whirl.WallLightColor;
+            Color paper = Palette.UiPaper;
+            Assert.That(new Vector3(c.r, c.g, c.b), Is.EqualTo(new Vector3(paper.r, paper.g, paper.b)), what + ": marfil neutro, no el color de la racha");
+            float u = view.Unit;
+            float cavity = CuiaGeometry.CavityTopU(view.Capacity) - CuiaGeometry.CavityBottomU;
+            for (int side = 0; side < 2; side++)
+            {
+                string s = what + (side == 0 ? " (pared izquierda)" : " (pared derecha)");
+                Rect r = whirl.WallLightRectU(side);
+                Assert.That(r.width * u, Is.EqualTo(RemolinoOverlay.WallLightWidthDp).Within(0.01f), s + ": un filo de 2 dp");
+                Assert.That(side == 0 ? r.xMin : r.xMax, Is.EqualTo(side == 0 ? -CuiaGeometry.CavityHalfWidthU : CuiaGeometry.CavityHalfWidthU).Within(1e-3f), s + ": por dentro de la pared");
+                Assert.That(r.yMin, Is.EqualTo(CuiaGeometry.CavityBottomU).Within(0.01f), s + ": desde el fondo de la cavidad");
+                Assert.That(r.height, Is.EqualTo(RemolinoOverlay.WallLightHeightFraction * cavity).Within(0.01f), s + ": hasta el 40 % de su alto");
+                UnityEngine.UI.Image img = whirl.WallLightImage(side);
+                Assert.That(img.gameObject.activeSelf, Is.True, s);
+                Assert.That(img.transform.parent.name, Is.EqualTo("BodyFront"), s + ": delante del líquido");
+                Assert.That(img.color.a, Is.EqualTo(whirl.WallLightAlphaNow).Within(1e-5f), s + ": las dos a la vez");
+                Assert.That(img.sprite != null ? img.sprite.name : null, Is.EqualTo("remolino_wall_light"), s + ": la rampa de 1 abajo a 0 arriba");
+            }
+
+            Transform back = view.transform.Find("Body/BodyBack")!;
+            for (int i = 0; i < back.childCount; i++)
+            {
+                Transform child = back.GetChild(i);
+                Assert.That(child.name.StartsWith("Remolino") && child.gameObject.activeSelf, Is.False, what + ": nada del Remolino tiñe la cavidad (" + child.name + ")");
+            }
         }
 
         private static RemolinoOverlay Whirl(CuiaView view)

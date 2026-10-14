@@ -44,50 +44,6 @@ namespace AF.UI
         /// </summary>
         public const float UndoVideoPollMs = GameScreen.RevealVideoPollMs;
 
-        /// <summary>
-        /// Latido de «Te faltan {n}» como respuesta al toque de su ranura sin saldo (revisión de T52, ronda 2) [P]: cada mitad de
-        /// un latido (crece o vuelve), en ms; son <see cref="MissingPulseBeats"/> latidos seguidos (600 ms). Con uno de 2 × 180 ms
-        /// la respuesta duraba un tercio de segundo y en el teléfono se perdía.
-        /// </summary>
-        public const float MissingPulseBeatMs = 150f;
-
-        /// <summary>Latidos de «Te faltan {n}» por toque [P].</summary>
-        public const int MissingPulseBeats = 2;
-
-        /// <summary>
-        /// Lo que crece «Te faltan {n}» en lo alto de cada latido, desde el centro de su pie (crece hacia arriba y a los lados,
-        /// nunca hacia el cordón de la bandeja) [P]. Con una burbuja vecina (las dos estrechas, 70 dp con 2 dp de aire), menos:
-        /// lo que deja <see cref="MissingPulseClearDp"/> hasta ella (≈ 1,043; <see cref="RevealMissingPulseMaxScale"/>).
-        /// </summary>
-        public const float MissingPulseScale = 1.08f;
-
-        /// <summary>Aire que el latido deja siempre hasta la burbuja «Te faltan {n}» vecina (dp) [P].</summary>
-        public const float MissingPulseClearDp = 0.5f;
-
-        /// <summary>Los colores de la etiqueta de precio sin saldo entran en estos ms [P].</summary>
-        public const float MissingColorInMs = 100f;
-
-        /// <summary>Se mantienen hasta estos ms desde el toque (≈ 1,1 s en total con la salida) [P].</summary>
-        public const float MissingColorHoldMs = 900f;
-
-        /// <summary>Con Reducir movimiento (sin latido ni temblor), se mantienen hasta estos ms [P].</summary>
-        public const float MissingColorHoldReducedMs = 1000f;
-
-        /// <summary>Y vuelven a los de la burbuja en estos ms [P].</summary>
-        public const float MissingColorOutMs = 200f;
-
-        /// <summary>
-        /// El botón Revelar tiembla a lo ancho al tocarlo sin saldo (revisión de T52, ronda 2; opcional) [P]: ± estos dp,
-        /// <see cref="RevealShakeCycles"/> ciclos en <see cref="RevealShakeMs"/>. Sin temblor con Reducir movimiento.
-        /// </summary>
-        public const float RevealShakeDp = 4f;
-
-        /// <summary>Ciclos del temblor de Revelar [P].</summary>
-        public const int RevealShakeCycles = 3;
-
-        /// <summary>Duración del temblor de Revelar (ms) [P].</summary>
-        public const float RevealShakeMs = 300f;
-
         private const float SlotDp = 64f;
         private const float GapDp = 8f;
         private const float PadDp = 16f;
@@ -96,9 +52,6 @@ namespace AF.UI
         // los dos. A 12 sp, «Te faltan» y una cifra de 2 caben en una línea («Te faltan 70» mide 67,8 dp); con 3 (el máximo con
         // los precios de 08 §9; 75 dp) la cifra baja a una segunda línea (Slot.PlaceMissing).
         private const float MissingNarrowDp = SlotDp + GapDp - 2f;
-
-        // Aire entre dos burbujas «Te faltan {n}» vecinas (dp): el paso de ranura menos su ancho.
-        private const float MissingNeighborGapDp = SlotDp + GapDp - MissingNarrowDp;
 
         private readonly ProceduralArt _art;
         private readonly Image _tray;
@@ -186,24 +139,6 @@ namespace AF.UI
 
         /// <summary>Texto del aviso «Te faltan {n}» de Revelar (vacío si no se ve).</summary>
         public string RevealMissingText => _reveal.MissingText;
-
-        /// <summary>«Te faltan {n}» de Revelar está latiendo como respuesta al toque (<see cref="PulseRevealMissing"/>; tests).</summary>
-        public bool RevealMissingPulsing => _reveal.PulsingNow;
-
-        /// <summary>Lo más que crece ahora «Te faltan {n}» de Revelar en un latido (con su vecina a la vista, menos; tests).</summary>
-        public float RevealMissingPulseMaxScale => _reveal.PulseMaxScale;
-
-        /// <summary>Desplazamiento a lo ancho del botón Revelar por el temblor (dp; 0 en reposo; tests).</summary>
-        public float RevealShakeOffset => _reveal.ShakeOffset;
-
-        /// <summary>Escala de «Te faltan {n}» de Revelar en su latido (1 en reposo; tests y capturas).</summary>
-        public float RevealMissingPulseScale => _reveal.PulseScaleNow;
-
-        /// <summary>
-        /// Cuánto lleva «Te faltan {n}» de Revelar los colores de la etiqueta de precio sin saldo (0 en reposo: texto rojo sobre
-        /// la placa clara; 1: texto crema sobre el rojo; tests y capturas).
-        /// </summary>
-        public float RevealMissingPulseColor => _reveal.PulseColorNow;
 
         /// <summary>Texto del aviso «Te faltan {n}» de Cuia extra (vacío si no se ve; tests).</summary>
         public string ExtraMissingText => _extra.MissingText;
@@ -299,24 +234,6 @@ namespace AF.UI
             {
                 _undoVideoPollMs -= dtMs;
             }
-
-            _reveal.TickMissingPulse(dtMs);
-        }
-
-        /// <summary>
-        /// Respuesta al toque de Revelar sin stock, sin saldo y sin video (revisión de T52) [P], en lugar del aviso «Te faltan {n}
-        /// semillas» del tablero: si su burbuja «Te faltan {n}» se ve con la cifra <paramref name="missing"/>, late dos veces
-        /// (de 1 a <see cref="MissingPulseScale"/> y vuelta, 2 × 2 × <see cref="MissingPulseBeatMs"/>, desde el centro de su pie)
-        /// y toma los colores de la etiqueta de precio sin saldo (texto crema sobre el rojo del precio): entran en
-        /// <see cref="MissingColorInMs"/>, se mantienen hasta <see cref="MissingColorHoldMs"/> y vuelven a los suyos en
-        /// <see cref="MissingColorOutMs"/> (≈ 1,1 s); el botón Revelar tiembla a lo ancho (<see cref="RevealShakeDp"/>). Con
-        /// <paramref name="reduceMotion"/>, sin latido ni temblor: los colores se mantienen hasta
-        /// <see cref="MissingColorHoldReducedMs"/> y vuelven en <see cref="MissingColorOutMs"/>. Otro toque lo vuelve a empezar.
-        /// Devuelve false si la burbuja no se ve o lleva otra cifra (entonces sale el aviso). Sin asignaciones.
-        /// </summary>
-        public bool PulseRevealMissing(int missing, bool reduceMotion)
-        {
-            return _reveal.PulseMissing(missing, reduceMotion);
         }
 
         /// <summary>Acción del botón Revelar (la pone <c>GameScreen.Reveal.cs</c>: <c>IGameActions.PressReveal</c>).</summary>
@@ -699,16 +616,8 @@ namespace AF.UI
             private readonly TextMeshProUGUI _stockText;
             private readonly PriceTag _price;
             private readonly RectTransform _missing;
-            private readonly RectTransform _missingBody;
-            private readonly Image _missingPlate;
             private readonly TextMeshProUGUI _missingText;
             private readonly char[] _buf = new char[24];
-            private float _pulseMs = -1f;
-            private bool _pulseReduce;
-            private float _pulseScale = 1f;
-            private float _pulseMaxScale = MissingPulseScale;
-            private float _pulseColor;
-            private float _shakeOffset;
             private bool _visible = true;
             private float _x;
             private float _y;
@@ -747,14 +656,10 @@ namespace AF.UI
                 _price.Root.gameObject.SetActive(false);
 
                 _missing = UiBuilder.Rect("Missing", hud);
-                // Estirada, con el pivote en el centro de su pie: el latido crece hacia arriba y a los lados, nunca hacia el cordón
-                // de la bandeja (revisión de T52, ronda 2).
-                _missingBody = UiBuilder.Rect("Body", _missing);
-                _missingBody.pivot = new Vector2(0.5f, 0f);
-                _missingPlate = UiBuilder.Sliced("Plate", _missingBody, art.RoundedRect, Palette.PanelLight);
-                _missingPlate.pixelsPerUnitMultiplier = 24f / 9f;
-                UiBuilder.Stretch(_missingPlate.rectTransform);
-                _missingText = UiBuilder.Label("Value", _missingBody, TextStyle.PlainBold, string.Empty, MissingSp, Palette.UiRedWarning, TextAlignmentOptions.Center);
+                Image missingPlate = UiBuilder.Sliced("Plate", _missing, art.RoundedRect, Palette.PanelLight);
+                missingPlate.pixelsPerUnitMultiplier = 24f / 9f;
+                UiBuilder.Stretch(missingPlate.rectTransform);
+                _missingText = UiBuilder.Label("Value", _missing, TextStyle.PlainBold, string.Empty, MissingSp, Palette.UiRedWarning, TextAlignmentOptions.Center);
                 UiBuilder.Stretch(_missingText.rectTransform);
                 _missing.gameObject.SetActive(false);
             }
@@ -783,82 +688,7 @@ namespace AF.UI
 
             public TextMeshProUGUI MissingLabel => _missingText;
 
-            public bool PulsingNow => _pulseMs >= 0f;
-
-            public float PulseScaleNow => _pulseScale;
-
-            public float PulseMaxScale => _pulseMaxScale;
-
-            public float PulseColorNow => _pulseColor;
-
-            public float ShakeOffset => _shakeOffset;
-
             public RectTransform PriceRect => _price.Root;
-
-            // «Te faltan {n}» responde al toque si se ve con la cifra missing (BoosterTray.PulseRevealMissing).
-            public bool PulseMissing(int missing, bool reduceMotion)
-            {
-                if (!_missing.gameObject.activeInHierarchy || missing <= 0 || missing != _missingShown)
-                {
-                    return false;
-                }
-
-                _pulseMs = 0f;
-                _pulseReduce = reduceMotion;
-                ApplyPulse(0f, 0f, 0f);
-                return true;
-            }
-
-            // Un fotograma de la respuesta (ms desde el toque): dos latidos de 2 × MissingPulseBeatMs, los colores sin saldo que
-            // entran, se mantienen y vuelven, y el temblor del botón; si la burbuja deja de verse, todo vuelve a reposo.
-            public void TickMissingPulse(float dtMs)
-            {
-                if (_pulseMs < 0f)
-                {
-                    return;
-                }
-
-                _pulseMs += dtMs;
-                float t = _pulseMs;
-                float hold = _pulseReduce ? MissingColorHoldReducedMs : MissingColorHoldMs;
-                if (t >= hold + MissingColorOutMs || !_missing.gameObject.activeInHierarchy)
-                {
-                    _pulseMs = -1f;
-                    ApplyPulse(0f, 0f, 0f);
-                    return;
-                }
-
-                float beats = 2f * MissingPulseBeatMs * MissingPulseBeats;
-                float beat = _pulseReduce || t >= beats ? 0f : Mathf.Abs(Mathf.Sin(Mathf.PI * (t / (2f * MissingPulseBeatMs))));
-                float color = t < MissingColorInMs ? t / MissingColorInMs : (t <= hold ? 1f : 1f - ((t - hold) / MissingColorOutMs));
-                float shake = _pulseReduce || t >= RevealShakeMs ? 0f : RevealShakeDp * Mathf.Sin(2f * Mathf.PI * RevealShakeCycles * (t / RevealShakeMs));
-                ApplyPulse(beat, Mathf.Clamp01(color), shake);
-            }
-
-            // beat = 0 en reposo, 1 en lo alto de un latido (escala, sin Reducir movimiento); color = 0..1 hacia los de la etiqueta
-            // de precio sin saldo (texto crema sobre el rojo); shake = desplazamiento del botón (dp). Solo escribe lo que cambia.
-            private void ApplyPulse(float beat, float color, float shake)
-            {
-                float scale = Mathf.Lerp(1f, _pulseMaxScale, beat);
-                if (!Mathf.Approximately(scale, _pulseScale))
-                {
-                    _pulseScale = scale;
-                    _missingBody.localScale = new Vector3(scale, scale, 1f);
-                }
-
-                if (!Mathf.Approximately(color, _pulseColor))
-                {
-                    _pulseColor = color;
-                    _missingPlate.color = Color.Lerp(Palette.PanelLight, Palette.UiRedWarning, color);
-                    _missingText.color = Color.Lerp(Palette.UiRedWarning, Palette.Cream, color);
-                }
-
-                if (!Mathf.Approximately(shake, _shakeOffset))
-                {
-                    _shakeOffset = shake;
-                    ((RectTransform)Parts.Button.transform).anchoredPosition = new Vector2(_x + shake, -_y);
-                }
-            }
 
             // El borde de arriba de su aviso «Te faltan {n}», si se ve y está más alto que top (dp desde arriba).
             public void MinMissingTop(ref float top)
@@ -979,11 +809,6 @@ namespace AF.UI
                 float h = twoLines ? MissingTwoLinesDp : MissingOneLineDp;
                 float gap = twoLines ? MissingTwoLinesGapDp : MissingGapDp;
                 UiBuilder.Place(_missing, _x + ((SlotDp - widthDp) * 0.5f), _y - gap - h, widthDp, h);
-
-                // Lo más que crece en un latido: con una vecina (la burbuja estrecha), sin pisarla (revisión de T52, ronda 2).
-                _pulseMaxScale = widthDp < MissingWideDp - 0.01f
-                    ? Mathf.Clamp(1f + (2f * (MissingNeighborGapDp - MissingPulseClearDp) / widthDp), 1f, MissingPulseScale)
-                    : MissingPulseScale;
             }
         }
     }

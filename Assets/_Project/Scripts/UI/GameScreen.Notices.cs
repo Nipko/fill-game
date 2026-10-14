@@ -50,26 +50,29 @@ namespace AF.UI
     /// el tablero, se encoge hasta su texto (<see cref="Toast.MinHeightDp"/>) si entre la repisa de la última fila (con su
     /// sombra, <see cref="ShelfShadowBelowFootDp"/> bajo el pie, donde van la ficha «?×n» de las cuias turbias y la de la pareja
     /// del Remolino) y su borde de abajo no cabe entero. Si ni así cabe, tapa parte de esa repisa, nunca las cuias. Pasa con 3
-    /// filas y las burbujas de dos líneas: en el 135 a 360 × 780 dp, entre el pie de la ficha «?×1» (606 dp) y la burbuja más
-    /// alta (630,5) quedan 24 dp, y el aviso más bajo ocupa 29 + 3 de canto + 4 de aire. Entonces, para no dejar a medias una
-    /// ficha («?×n» cuenta las dosis ocultas, la única información oculta del juego: 02, T1 y T3):</para>
+    /// filas y las dos burbujas en dos líneas (sin semillas ni video): en el 135 a 360 × 780 dp, entre el pie de la ficha «?×1»
+    /// y la burbuja más alta quedan 24 dp, y el aviso más bajo ocupa 29 + 3 de canto + 4 de aire. Entonces, para no dejar a
+    /// medias una ficha («?×n» cuenta las dosis ocultas, la única información oculta del juego: 02, T1 y T3):</para>
     /// <list type="bullet">
     /// <item><description>se ajusta a su texto también a lo ancho (<see cref="Toast.FitWidthDp"/>) y va en el tramo más ancho de
-    /// esa repisa sin fichas, con <see cref="NoticeChipClearDp"/> de aire, lo más centrado posible: tapa madera, no fichas
-    /// («+1 Luciérnaga»);</description></item>
-    /// <item><description>si así no cabe (el rescate, «¡Una cuia más! Sigue desde aquí», en el 135: unos 280 dp para los 226
-    /// libres a la derecha de la ficha), va de su ancho de siempre y sube hasta tapar enteras las fichas que alcanza: su borde de
-    /// arriba, <see cref="NoticeChipCoverDp"/> sobre ellas y nunca por encima del pie de la fila. Así no asoma una tira suelta
-    /// de la ficha, que parecía un fallo de dibujo (captura 92 de la primera versión de T52), pero tapa los 23 dp bajo el pie:
-    /// la cara de la repisa de abajo y sus fichas durante lo que dura el aviso (3-7 s).</description></item>
+    /// esa repisa sin fichas, con <see cref="NoticeChipClearDp"/> de aire, lo más centrado posible: tapa la cara de la repisa
+    /// en su tramo, no fichas. Es lo que pasa en el 135 tras el rescate (12 cuias; captura 92 de T52): «¡Una cuia más! Sigue
+    /// desde aquí», de unos 253 dp, va a la derecha de la ficha «?×1» (de 73 a 326 dp) y tapa la cara de la repisa de abajo en
+    /// ese tramo durante los 3 s que dura; y con «Te faltan 120 semillas» de Revelar sin semillas (captura 92d);</description></item>
+    /// <item><description>si así no cabe, va de su ancho de siempre y sube hasta tapar enteras las fichas que alcanza: su borde
+    /// de arriba, <see cref="NoticeChipCoverDp"/> sobre ellas y nunca por encima del pie de la fila. Así no asoma una tira
+    /// suelta de la ficha, que parecía un fallo de dibujo (captura 92 de la primera versión de T52), pero tapa los 23 dp bajo el
+    /// pie: la repisa de abajo y sus fichas durante lo que dura el aviso (3-7 s). Se da en el juego cuando una ficha parte el
+    /// tramo de la repisa: en el 115 tras el rescate (12 cuias, la ficha «?×2» bajo la tercera cuia de la fila de abajo;
+    /// captura 92f de T52).</description></item>
     /// </list>
-    /// <para>«Te faltan {n} semillas» de Revelar, el caso que vio el dueño, ya no sale como aviso mientras su burbuja está a la
-    /// vista, que es casi siempre que sale: la burbuja late como respuesta al toque (<see cref="ShowRevealMissing"/>). Se
-    /// descartó dibujar las burbujas delante del aviso: aunque el aviso se encogiera, taparían su texto, y eso choca con D-011,
-    /// punto 2 (avisos legibles). Es un compromiso [P] para el dueño (capturas 92 de T52), con alternativas: un aviso que no
-    /// llegue a la repisa (más estrecho y en dos líneas, o arriba, en la franja del panorama cuando la hay), el aviso detrás de
-    /// la capa de las repisas, o aceptarlo así. Se recoloca en cada fotograma si cambian las burbujas, las fichas o el tablero
-    /// (sin asignaciones; solo mide el texto cuando cambia).</para>
+    /// <para>«Te faltan {n} semillas» de Revelar sin stock, saldo ni video sigue saliendo como aviso, por la cola
+    /// (<see cref="ShowRevealMissing"/>; pregunta 41, D-015). Se descartó dibujar las burbujas delante del aviso: aunque el
+    /// aviso se encogiera, taparían su texto, y eso choca con D-011, punto 2 (avisos legibles). Es un compromiso [P] para el
+    /// dueño (capturas 92, 92d y 92f de T52), con alternativas: un aviso que no llegue a la repisa (más estrecho y en dos
+    /// líneas, o arriba, en la franja del panorama cuando la hay), el aviso detrás de la capa de las repisas, o aceptarlo así. Se
+    /// recoloca en cada fotograma si cambian las burbujas, las fichas o el tablero (sin asignaciones; solo mide el texto cuando
+    /// cambia).</para>
     /// </remarks>
     public sealed partial class GameScreen
     {
