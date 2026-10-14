@@ -223,6 +223,8 @@ y los pares son idénticos (`--check` del tutorial y de la campaña 11-200).
   con algún fútil; en partidas al azar sobre los niveles 1-200, un cierre solo con útiles habría declarado 327 estados, 56 de ellos
   ganables. Con capacidades iguales un fútil no cambia el estado canónico en `run` (P2), así que en esos tableros los dos cierres son
   idénticos. Por eso tampoco depende de `futile_rule_enabled`: el kill-switch devuelve R13 al criterio clásico, pero el cierre sigue.
+  Es la opción (a) de la pregunta 46 de `docs/GDD.md` §6.3 (T50), la recomendada; pendiente de la confirmación del dueño antes del
+  merge. R14 se reformula con D-014 («mientras exista progreso posible») y P1 se sigue exigiendo (`DeadEndProbePropertyTests`).
 - **Nivel 66:** Aguas estancadas sale justo tras el 9.º vertido (`1>5`), cuando el nivel queda perdido de verdad (4 estados
   alcanzables; A* con todos los legales: irresoluble); los vertidos 10-12 del dueño ya eran vueltas del bucle y ahora no entran
   (R15). Hasta el 8.º el nivel se gana.

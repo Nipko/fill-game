@@ -31,8 +31,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   ganan, contra la condición de la misma decisión y R14. En el 66, tras el 6.º vertido, la búsqueda con útiles se agota en 50
   estados y el nivel se gana en 14 con algún fútil; en partidas al azar sobre los niveles 1-200, un cierre solo con útiles habría
   declarado 327 estados, 56 ganables (con todos los legales: 271, ninguno ganable). Con capacidades iguales los dos son idénticos (P2).
-  No depende de `futile_rule_enabled`. Sin asignaciones tras calentar y < 1 ms en Release (0,015 ms en el 66; peor medido 0,322 ms
-  en 4.026 estados de los tableros de referencia). Sin cambios en `BoardRules`, `PourRules`, el solver, el bot, `EarlyTraps`,
+  No depende de `futile_rule_enabled`. Es la opción (a) de la pregunta 46 de `docs/GDD.md` §6.3 (T50), la recomendada: pendiente de
+  la confirmación del dueño antes del merge. Sin asignaciones tras calentar y < 1 ms en Release (0,015 ms en el 66; peor
+  medido 0,322 ms en 4.026 estados de los tableros de referencia). Sin cambios en `BoardRules`, `PourRules`, el solver, el bot, `EarlyTraps`,
   `LevelValidation`, el generador ni level-qa: packs, informes y pares idénticos (`--check`). Tests compartidos `DeadEndProbeTests`
   (`R13b_Level66_Loop_IsStuck`, `_TheOwnersSequence_IsStuckRightAfterTheNinthPour`,
   `_AWinnableStateWhoseUsefulClosureHasNoWin_IsPlaying`, `_MareaAndRestart_ReevaluateTheLoop`, orden canónico, los 10 niveles del
@@ -376,7 +377,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 ### Cambiado
 
 - T51 (D-014): `LevelSession.Status` pasa a `Stuck` también con vertidos útiles si el cierre acotado no tiene victoria (ver
-  «Añadido»); R14 ya no vale para esos estados. Los tests compartidos cuyo tablero estaba perdido con pocos estados alcanzables y
+  «Añadido»). R14 se reformula con D-014 (no se anuncia irresoluble mientras exista progreso posible); P1 se mantiene y la comprueba
+  `DeadEndProbePropertyTests`. Los tests compartidos cuyo tablero estaba perdido con pocos estados alcanzables y
   esperaban `Playing` se adaptan sin cambiar lo que prueban: `RuleCatalogTests.R14_…` pasa a
   `R14_AnUnsolvableBoardWithUsefulPours_IsNotDeclaredStuck_WhenItsClosureIsLarge` (tablero perdido con más de 64 estados) y su
   tablero anterior pasa a `R13b_AnUnsolvableBoardWithFewReachableStates_IsStuck`; `R15_StuckBlocksInput_AndMareaReturnsToPlaying`
