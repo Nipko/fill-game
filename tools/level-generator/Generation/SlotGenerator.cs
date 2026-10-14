@@ -2,9 +2,10 @@
 // fill), superposición de mecánicas (03 §9), tintes (03 §4.5), orden visual, verificación con AF.Core/AF.Solver
 // (BoardBuilder, LevelValidation, SafePath en Aguas turbias, A* con par ≥ 2K) y medición (bot ×40 con la semilla del nivel,
 // trampas tempranas con el tope de su etiqueta, métricas de la ruta para el índice D).
-// Tinaja (D-019; propuesta de la tinaja c.3): vacíos sin contar la pareja (Superposition.TinajaEmpties), búsquedas sin poda
-// de fútiles (SolverOptions.ForLevel: par, fill, ruta segura, paseos) y, al medir, los filtros de TinajaWalks (ruta segura,
-// paseos seguros y casuales, «S0 sin trampas» en el estreno y compuerta de coste de Morpho).
+// Tinaja (D-019; propuesta de la tinaja c.3): vacíos sin contar la pareja (Superposition.TinajaEmpties), como mucho 12 cuias
+// con la pareja (02 §5; Superposition.TinajaMaxCuias: se baja K), búsquedas sin poda de fútiles (SolverOptions.ForLevel: par,
+// fill, ruta segura, paseos) y, al medir, los filtros de TinajaWalks (ruta segura, paseos seguros y casuales, «S0 sin
+// trampas» en el estreno y compuerta de coste de Morpho).
 // Rechazo por ventana (03 §4.4): hasta 30 candidatos por etapa; si no se llena el pool, se relaja en el orden de 03 §4.4
 // (comodidad: Cuia chica de 2 como «medio vacío» y después 2 vacíos; reto e hito: fill con 2 vacíos) y se registra.
 // Cada candidato sale de una sub-semilla de la semilla del nivel (03 §2, regla 1): el slot se reproduce desde su seed.
@@ -308,10 +309,11 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         int k = plan.K;
         int empties = plan.Empties;
         bool tinaja = mechs.Any(m => m.Code == "Ti");
+        bool tinajaRelax = false;
         if (tinaja)
         {
-            // Vacíos de 4 sin contar la pareja (propuesta de la tinaja c.3 punto 2) [P]: 2 en estreno y comodidad, 1 en
-            // práctica, retos e hito.
+            // Vacíos de 4 sin contar la pareja (propuesta de la tinaja c.3 punto 2): 2 en los tableros de estreno y 1 en los
+            // demás (la comodidad fuera del estreno, 1 [P] pendiente de decisión; Superposition.TinajaEmpties).
             empties = Superposition.TinajaEmpties(plan);
             if (plan.DebutBoard && k > Superposition.TinajaDebutMaxK)
             {
@@ -347,14 +349,14 @@ internal sealed class SlotGenerator(CampaignSpec spec)
 
                 break;
             case 1 or 2 when tinaja:
-                // Tinaja: los vacíos son los de su tipo de nivel (c.3 punto 2) y no se relajan; se alivia con K − 1 una vez [P].
-                if (stage == 2 || k <= 3)
+                // Tinaja: los vacíos son los de su tipo de nivel (c.3 punto 2) y no se relajan; se alivia con K − 1 una vez [P],
+                // por debajo del tope de 12 cuias (abajo).
+                if (stage == 2)
                 {
                     return null;
                 }
 
-                k--;
-                notes.Add("relajacion: K - 1 (tinaja: vacios fijos)");
+                tinajaRelax = true;
                 break;
             case 1:
                 if (plan.Role == SlotRole.Recovery || (plan.Role is SlotRole.Comfort or SlotRole.Remanso && !debutLike && empties >= 2))
@@ -475,6 +477,34 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         int caves = mechs.Count(m => m.Code == "Pi");
         int pair = tinaja ? 2 : 0; // la tinaja y su cuia chica (M13)
         int total = k + baseEmpties + chicas.Count + (slack ? 1 : 0) + caves + pair;
+        if (tinaja && total > Superposition.TinajaMaxCuias)
+        {
+            // Como mucho 12 cuias con tinaja (02 §5, fila «Tinaja y su cuia»; d.3: «K alto … dentro del tope de 12 cuias con
+            // tinaja») [P]: se baja K, como el K ≤ 6 del estreno; los vacíos de la tinaja no se tocan. Si K quedara por
+            // debajo de 3, la etapa no aplica.
+            int over = total - Superposition.TinajaMaxCuias;
+            if (k - over < 3)
+            {
+                return null;
+            }
+
+            k -= over;
+            total -= over;
+            notes.Add(string.Create(CultureInfo.InvariantCulture, $"tinaja: K <= {k} por el tope de {Superposition.TinajaMaxCuias} cuias con tinaja (02 sec. 5)"));
+        }
+
+        if (tinajaRelax)
+        {
+            if (k <= 3)
+            {
+                return null;
+            }
+
+            k--;
+            total--;
+            notes.Add("relajacion: K - 1 (tinaja: vacios fijos)");
+        }
+
         if (total > 14 && slack)
         {
             slack = false;

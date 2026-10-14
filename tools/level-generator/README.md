@@ -156,7 +156,8 @@ Fases (los tiempos salen por la consola; el informe no lleva tiempos):
    piden más candidatos a sus retos, hito, siguientes y recuperaciones (hasta 2 rondas); un reto o hito que quede fuera de
    su ventana se publica con la etiqueta que mide (c.2: sin etiqueta si mide menos del 75 %) y el informe lo registra.
 4. **Alivio** (`Metrics/Relief.cs`) desde el nivel 31.
-5. **Packs** (`PackWriter`): `pack_schema` 2, minificado con un nivel por línea, UTF-8 sin BOM y LF, decimales fijos.
+5. **Packs** (`PackWriter`): `pack_schema` 2, o 3 si algún nivel lleva la tinaja (D-019); minificado con un nivel por
+   línea, UTF-8 sin BOM y LF, decimales fijos.
 
 El informe (`tools/out/campaign_v1_report.md`) trae, además de los packs, el pool, las etiquetas, los ciclos y la tabla
 por nivel: el debut real y el hueco máximo de cada mecánica y capacidad sobre los tableros publicados, el remanso frente a
@@ -203,9 +204,17 @@ superposición (`Generation/Superposition.cs`), antes de «Tu»:
   cuias, 2 con 6-10, 2 o 3 con 11-14, 3 con 15-16), con la tinaja a la izquierda o a la derecha [P];
 - solo consume números aleatorios en los slots con tinaja: los packs 11-200 no cambian (`--check`).
 
-Tablero base [P] (c.3 punto 2): vacíos de 4 sin contar la pareja, 2 en el estreno y en la comodidad (p3-p5 sin estrella)
-y 1 en la práctica (comodidades p7-p17), los retos y el hito; K ≤ 6 en el estreno (c.3 y d.3). Al relajar, los vacíos no
-cambian: K − 1 una vez, o `deep` si los candidatos quedan por debajo de la ventana.
+Tablero base (c.3 punto 2): vacíos de 4 sin contar la pareja, 2 en los tableros de estreno (d.3; 03 §12, p3-p5: «1 (2
+hasta el 30 y en debuts)») y 1 en los demás: práctica, retos, hito y la comodidad fuera del estreno. Esta última va con 1
+[P], **pendiente de decisión**: c.3 punto 2 dice «2 … en el debut (K ≤ 6) y en comodidad», pero ninguna fuente dice qué
+posiciones son «comodidad» y cuáles «práctica»; 03 §12 da 1 vacío a p3-p5 fuera de los debuts y, con 2 vacíos, el bot casi
+no falla (c.9: 0-2 %) y el tablero no entra en la ventana de comodidad (20-60 %). K ≤ 6 en el estreno (c.3 y d.3).
+
+**Como mucho 12 cuias con la pareja** (02 §5, fila «Tinaja y su cuia»: «como mucho 12 cuias en un nivel con tinaja» [P];
+`Superposition.TinajaMaxCuias`): si la etapa pasa de 12, se baja K y el informe lo anota («tinaja: K <= n por el tope de 12
+cuias»); si K quedara por debajo de 3, la etapa no aplica. Es un tope de layout, así que tampoco se publica un
+`plus_empty` de 13 cuias [P]. Al relajar, los vacíos no cambian: K − 1 una vez (por debajo del tope), o `deep` si los
+candidatos quedan por debajo de la ventana.
 
 En los niveles con tinaja todas las búsquedas que deciden «hay solución» van **sin poda de fútiles**
 (`SolverOptions.ForLevel`, `SafeMoves.ForPipeline(mode, level)`; C1-8): par y trampas (`Metrics.cs`), el rechazo de `fill`
@@ -220,15 +229,29 @@ Filtros (`Generation/TinajaWalks.cs`), en cada candidato que se mide:
 | Paseos seguros [P] | 20, con un vertido seguro al azar hasta ganar: ninguno llega a un estado sin vertido seguro ni pasa de 400 vertidos |
 | Paseos casuales [P] | 30, con cualquier vertido útil al azar: el primer estado sin vertido seguro de cada paseo tiene que ser irresoluble en la realidad verdadera (error del jugador); si es resoluble, habría que adivinar y el nivel se rechaza |
 | S0 sin trampas | Solo en el estreno: todo vertido útil de S0 es seguro (por hash canónico) |
-| Coste de Morpho | w = 2 y 40.000 nodos por realidad (`hint_weight`, `hint_budget_nodes`), desde cero en S0, en la ruta y en los paseos: Morpho da un vertido seguro y expande como mucho `MorphoNodeCap` = 150 ms × `PcNodesPerMs` [E] ÷ `MorphoDeviceFactor` (8× [P], hasta PF1) |
+| Coste de Morpho | w = 2 y 40.000 nodos por realidad (`hint_weight`, `hint_budget_nodes`), desde cero en S0, en la ruta y en los paseos: Morpho da un vertido seguro y expande como mucho `MorphoNodeCap` = 150 ms × `PcNodesPerMs` [E] ÷ `MorphoDeviceFactor` (8× [P], hasta PF1) = 18.750 nodos |
+
+`PcNodesPerMs` = 1.000 [E] sale de la calibración de `--self-test tinaja` (líneas INFO «calibracion»): Morpho desde cero en
+el estado más pesado de los filtros de los retos 329 y 332 y del hito 340 del pack de muestra (8.298, 10.356 y 10.606 nodos
+por consulta). Medido el 2026-10-14 en el equipo de escritorio x64 del dueño (AMD Ryzen 9 9900X, Windows 11, .NET 10.0.402
+Release), con otros agentes en marcha: 1.000-1.463 nodos/ms por nivel en cuatro ejecuciones (6-10 ms por consulta; medias
+de 1.083-1.377). 1.000 es el mínimo medido, con el equipo cargado; con más carga podría bajar. Es la velocidad de un PC, no
+la del teléfono: el factor 8× [P] la convierte en el tope del teléfono hasta que PF1 lo mida en uno de clase A. Antes se
+calibraba con 20 consultas de 32 nodos sobre el S0 de b.2, que miden sobre todo el coste fijo; ya no.
 
 El motivo del rechazo separa «sin vertido seguro» de «presupuesto agotado» (`SafeMoves.Outcome`); el informe lo cuenta por
 nivel en su sección «Tinaja». Alivio (03 §13): `minus_color` nunca quita una fruta de la tinaja; las variantes conservan la
-máscara de la tinaja y repiten la ruta segura y los paseos, sin la compuerta de coste y con las opciones de Morpho (w = 2 y
-40.000 nodos por realidad) en lugar de las del pipeline [P]: un alivio tiene más espacio libre que su nivel y, sin poda de
-fútiles, A* óptimo agota los 20.000 nodos por realidad en tableros que se ganan; lo que cuenta en la variante es que Morpho
-encuentre siempre un vertido seguro (un «seguro» solo sale de soluciones encontradas, así que el filtro no se relaja). El
-`plus_empty` pone su vacío donde la pareja siga en la misma fila.
+máscara de la tinaja y repiten la ruta segura y los paseos, sin la compuerta de coste. **Opciones de las variantes [P],
+pendientes de decisión del tech-lead y del dueño** (revisión de P1; D-023 o la siguiente): `TinajaWalks.ReliefOptions`, que
+hoy son las de Morpho (w = 2 y 40.000 nodos por realidad) y no las del pipeline de 03 §8 (w = 1 y 20.000 nodos por
+realidad, la fila «Aguas turbias (seguridad por realidad)» de la tabla de 03 §5). Motivo: un alivio tiene más espacio libre
+que su nivel y, sin poda de fútiles, A* óptimo agota los 20.000 nodos por realidad en tableros que se ganan; lo que cuenta en
+la variante es que Morpho encuentre siempre un vertido seguro (un «seguro» solo sale de soluciones encontradas, así que el
+filtro no se relaja). 03 §13 solo dice que «las variantes repiten la ruta segura y los paseos». Es el contrato entre el
+generador y level-qa: P3 (`ReliefChecks`) usa `TinajaWalks.ReliefOptions` (level-qa enlaza `Generation/*.cs`). Si el dueño
+lo rechaza, `ReliefOptions` pasa a `SafeMoves.ForPipeline(PourMode.Run, s0)` y las variantes que agotan el presupuesto se
+tratan aparte (03 §13 exige `relief` no vacío desde el 31). El `plus_empty` pone su vacío donde la pareja siga en la misma
+fila.
 
 `PackWriter`: un pack con la tinaja sale con `pack_schema` 3 (`{"type":"tinaja"}` y `{"type":"cucharon"}` sin campos,
 `murky` = true, `hidden` con las capas de la tinaja menos la boca e `intro_mechanic` = `tinaja` en su estreno), y cada

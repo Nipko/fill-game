@@ -9,7 +9,10 @@
 //     trampas y el JSON del pack (attrs, murky, hidden, intro_mechanic y pack_schema 3);
 //   - el alivio: minus_color nunca quita una fruta de la tinaja, las variantes conservan la máscara y la pareja, y su JSON
 //     lleva la máscara en hidden (08 §4.1: relief_board admite hidden si y solo si su attrs contiene la tinaja);
-//   - «S0 sin trampas» detecta un vertido útil inseguro (el tablero perdido de b.2) y los filtros pasan en el S0 de b.2.
+//   - el tope de 12 cuias con tinaja (02 §5): la etapa baja K y plus_empty no pasa de 12 cuias;
+//   - «S0 sin trampas» detecta un vertido útil inseguro (el tablero perdido de b.2) y los filtros pasan en el S0 de b.2;
+//   - la calibración de PcNodesPerMs (INFO): Morpho desde cero en el estado más pesado de los retos 329 y 332 y del hito 340
+//     del pack de muestra (tools/out/sample_tinaja), las consultas que deciden la compuerta.
 // Imprime ASCII (PASS / FAIL / INFO) y sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra la especificación.
 using System.Diagnostics;
 using System.Globalization;
@@ -55,7 +58,9 @@ internal static class TinajaSelfTest
         Rows(Check);
         StepOnFixedBase(spec, Check);
         Slot323(spec, Check, Info);
+        CuiaCap(spec, Check);
         B2Boards(Check, Info);
+        MorphoCalibration(spec, Check, Info);
 
         Console.WriteLine(failures == 0 ? "self-test tinaja: todo PASS" : $"self-test tinaja: {failures} FAIL");
         return failures == 0 ? 0 : 1;
@@ -79,7 +84,65 @@ internal static class TinajaSelfTest
             }
         }
 
+        // Una comodidad p3-p5 fuera del ciclo de estreno (el 324 sin estrella): 1 vacío, como la práctica (03 §12; 2 solo en los
+        // tableros de estreno, d.3) [P], pendiente de decisión.
+        LevelPlan comfort = WithPlan(spec.Plan(324), debut: false);
+        check(Superposition.TinajaDoses(comfort) == (3, 3) && Superposition.TinajaEmpties(comfort) == 1,
+            F($"comodidad p{comfort.Position} sin estreno: 3 dosis y {Superposition.TinajaEmpties(comfort)} vacio sin la pareja (se espera 1; 2 solo en el estreno)"));
+
         static string Show((int, int)? d) => d is (int a, int b) ? F($"{a}-{b}") : "sin tinaja";
+    }
+
+    /// <summary>Copia de <paramref name="p"/> con otro K o sin la estrella de estreno (para probar las reglas por tipo de nivel).</summary>
+    private static LevelPlan WithPlan(LevelPlan p, int? k = null, bool? debut = null) => new()
+    {
+        Level = p.Level,
+        World = p.World,
+        Range = p.Range,
+        Position = p.Position,
+        Ramp = p.Ramp,
+        Role = p.Role,
+        Cell = p.Cell,
+        K = k ?? p.K,
+        Empties = p.Empties,
+        Source = p.Source,
+        Window = p.Window,
+        AllowedLabel = p.AllowedLabel,
+        TargetLabel = p.TargetLabel,
+        DebutBoard = debut ?? p.DebutBoard,
+        Row = p.Row,
+        Intro = debut == false ? null : p.Intro,
+        MaxRiskPairs = p.MaxRiskPairs,
+        Season = p.Season,
+    };
+
+    /// <summary>
+    /// Tope de 12 cuias con tinaja (02 §5, fila «Tinaja y su cuia»; Superposition.TinajaMaxCuias): con K = 10 u 11 en un reto
+    /// (el rango 9-11 de 03 §11 para 301-400), la etapa baja K hasta 12 cuias con la pareja y el vacío, y la relajación
+    /// (K − 1) queda por debajo; plus_empty no publica una variante de 13 cuias.
+    /// </summary>
+    private static void CuiaCap(CampaignSpec spec, Action<bool, string> check)
+    {
+        var gen = new SlotGenerator(spec);
+        foreach (int k in new[] { 10, 11 })
+        {
+            LevelPlan plan = WithPlan(spec.Plan(329), k: k);
+            StageConfig? s0 = gen.Config(plan, 0, dropMurky: false);
+            StageConfig? s1 = gen.Config(plan, 1, dropMurky: false);
+            int Cuias(StageConfig c) => c.K + c.Empties + c.Chicas.Length + (c.Slack ? 1 : 0) + 2;
+            check(s0 is not null && s0.K == 9 && Cuias(s0) == Superposition.TinajaMaxCuias && s1 is not null && s1.K == 8,
+                F($"reto con tinaja y K = {k}: la etapa 0 baja a K = {s0?.K} ({(s0 is null ? 0 : Cuias(s0))} cuias con la pareja) y la relajacion a K = {s1?.K} (tope de 12 cuias, 02 sec. 5)"));
+        }
+
+        // Un tablero de 12 cuias con tinaja (K = 9, 1 vacío y la pareja): plus_empty no pasa del tope.
+        LevelPlan p = WithPlan(spec.Plan(329), k: 9);
+        int[] caps = [.. Enumerable.Repeat(Cuia.DefaultCapacity, 10)];
+        int[] units = [.. Enumerable.Repeat(Cuia.DefaultCapacity, 9)];
+        BoardState baseState = new InverseWalk().Generate(new InverseSpec(caps, units, 1, -1, -1, PourMode.Run), 0x5EED0329UL).State!;
+        GenBoard board = Step(spec, p, baseState, 7);
+        ReliefBoard plus = Relief.PlusEmpty(gen.Metrics, board.ToData(), 1.0, p.SeedText);
+        check(board.Count == Superposition.TinajaMaxCuias && !plus.Meets && plus.Board.Caps.Length == Superposition.TinajaMaxCuias + 1,
+            F($"alivio de un tablero de {board.Count} cuias con tinaja: plus_empty no se publica ({plus.Note})"));
     }
 
     private static void Rows(Action<bool, string> check)
@@ -270,17 +333,7 @@ internal static class TinajaSelfTest
                 F($"b.2: S0 con ruta segura ({r.RoutePours} vertidos), {r.SafeWalksWon}/{r.SafeWalks} paseos seguros y 0 de adivinar (casuales {r.CasualWon}/{r.CasualLost}/{r.CasualGuess}/{r.CasualOpen}) {r.Reject}"));
             int traps = walks.S0Traps(s0.State!, SafeMoves.ForPipeline(PourMode.Run, s0.State!));
             info(F($"b.2: vertidos utiles de S0 que no son seguros: {traps}"));
-
-            // Calibración de la compuerta de Morpho: nodos por milisegundo de este PC (consultas desde cero, w = 2).
-            long nodes = 0;
-            var sw = Stopwatch.StartNew();
-            for (int i = 0; i < 20; i++)
-            {
-                nodes += walks.MorphoQuery(s0.State!, s0.State!).Nodes;
-            }
-
-            double ms = Math.Max(1e-3, sw.Elapsed.TotalMilliseconds);
-            info(F($"Morpho en S0 de b.2: {nodes / 20} nodos por consulta; {nodes / ms:0} nodos/ms en este PC (constante [E]: {TinajaWalks.PcNodesPerMs})"));
+            info(F($"Morpho en S0 de b.2: {walks.MorphoQuery(s0.State!, s0.State!).Nodes} nodos (consulta pequena: mide sobre todo el coste fijo; la calibracion va al final)"));
         }
 
         // Estado perdido de b.2: N[c,c,c] N[a,b,a,a] N[b,b,b] T[c(o),a] Ch[]; el único vertido útil (sacar) no es seguro.
@@ -290,6 +343,90 @@ internal static class TinajaSelfTest
         {
             int traps = new TinajaWalks().S0Traps(lost.State!, SafeMoves.ForPipeline(PourMode.Run, lost.State!));
             check(traps == 1, F($"S0 sin trampas detecta el vertido util inseguro del tablero perdido de b.2 ({traps} de 1)"));
+        }
+    }
+
+    /// <summary>Pack de muestra (lo regenera <c>--spec specs/sample_tinaja.json</c>; README del generador).</summary>
+    public const string SamplePack = "tools/out/sample_tinaja/mundo_07_v1.json";
+
+    /// <summary>Repeticiones de cada consulta en la calibración (tras una de calentamiento).</summary>
+    private const int CalibrationRuns = 10;
+
+    /// <summary>
+    /// Calibración de <see cref="TinajaWalks.PcNodesPerMs"/> (revisión de P1): Morpho desde cero (w = 2, 40.000 nodos por
+    /// realidad) en el estado en el que más expande de los filtros de los retos 329 y 332 y del hito 340 del pack de muestra
+    /// (8.000-10.600 nodos: las consultas que deciden la compuerta), no en consultas de pocas decenas de nodos, que miden sobre
+    /// todo el coste fijo. Los nodos son deterministas (PASS); los milisegundos dependen del equipo y de la carga (INFO).
+    /// </summary>
+    private static void MorphoCalibration(CampaignSpec spec, Action<bool, string> check, Action<string> info)
+    {
+        if (!File.Exists(SamplePack))
+        {
+            info("calibracion de Morpho: falta " + SamplePack + " (regenera la muestra; README del generador)");
+            return;
+        }
+
+        JsonArray levels = JsonNode.Parse(File.ReadAllText(SamplePack))!["levels"]!.AsArray();
+        long allNodes = 0;
+        double allMs = 0;
+        double slowest = double.MaxValue;
+        foreach (int level in new[] { 329, 332, 340 })
+        {
+            JsonObject json = levels.Single(l => l!["level"]!.GetValue<int>() == level)!.AsObject();
+            BoardBuildResult built = FromJson(json);
+            LevelPlan plan = spec.Plan(level);
+            var walks = new TinajaWalks();
+            TinajaCheckResult r = built.IsValid ? walks.Check(built.State!, plan.DebutBoard, plan.SeedText) : new TinajaCheckResult();
+            check(built.IsValid && r.Reject is null && r.MorphoMaxState is not null,
+                F($"calibracion: el {level} del pack de muestra pasa los filtros de la tinaja ({r.MorphoStates} estados de Morpho, {r.MorphoMaxNodes} nodos como maximo) {built.Error}{r.Reject}"));
+            if (r.MorphoMaxState is not BoardState heavy)
+            {
+                continue;
+            }
+
+            BoardState s0 = built.State!;
+            long warm = walks.MorphoQuery(heavy, s0).Nodes;
+            long nodes = 0;
+            var sw = Stopwatch.StartNew();
+            for (int i = 0; i < CalibrationRuns; i++)
+            {
+                nodes += walks.MorphoQuery(heavy, s0).Nodes;
+            }
+
+            double ms = Math.Max(1e-3, sw.Elapsed.TotalMilliseconds);
+            check(warm == r.MorphoMaxNodes && nodes == CalibrationRuns * warm, F($"calibracion: Morpho desde cero en el estado mas pesado del {level} expande siempre {warm} nodos"));
+            allNodes += nodes;
+            allMs += ms;
+            slowest = Math.Min(slowest, nodes / ms);
+            info(F($"calibracion del {level}: {warm} nodos por consulta en {ms / CalibrationRuns:0.00} ms, {nodes / ms:0} nodos/ms en este PC"));
+        }
+
+        if (allMs > 0)
+        {
+            double rate = Math.Min(slowest, allNodes / allMs);
+            info(F($"calibracion de Morpho: {allNodes / allMs:0} nodos/ms de media y {slowest:0} en el nivel mas lento (constante [E] PcNodesPerMs = {TinajaWalks.PcNodesPerMs}")
+                + (rate < TinajaWalks.PcNodesPerMs ? ": ESTE PC VA POR DEBAJO; ver README" : "") + F($"; tope {TinajaWalks.MorphoNodeCap} nodos por consulta)"));
+        }
+    }
+
+    /// <summary>Tablero inicial de un nivel del pack (caps, cuias, attrs y hidden; 08 §4.1).</summary>
+    private static BoardBuildResult FromJson(JsonObject level)
+    {
+        int[] caps = [.. level["caps"]!.AsArray().Select(c => c!.GetValue<int>())];
+        int[][] cuias = [.. level["cuias"]!.AsArray().Select(c => c!.AsArray().Select(x => x!.GetValue<int>()).ToArray())];
+        MechanicSpec[] attrs = [.. level["attrs"]!.AsArray().Select(a => a is null ? MechanicSpec.None : Attr(a.AsObject()))];
+        int[][] hidden = [.. level["hidden"]!.AsArray().Select(h => h!.AsArray().Select(x => x!.GetValue<int>()).ToArray())];
+        return BoardBuilder.Build(caps, cuias, attrs.Any(a => !a.IsNone) ? attrs : null, hidden.Length > 0 ? hidden : null);
+
+        static MechanicSpec Attr(JsonObject a)
+        {
+            if (!MechanicTypes.TryParse(a["type"]!.GetValue<string>(), out MechanicType type))
+            {
+                throw new InvalidOperationException("tipo de mecanica desconocido: " + a["type"]);
+            }
+
+            int Int(string name, int none) => a[name] is JsonNode n ? n.GetValue<int>() : none;
+            return new MechanicSpec(type, Int("key", 0), Int("partner", -1), Int("n", 0), Int("k", 0));
         }
     }
 

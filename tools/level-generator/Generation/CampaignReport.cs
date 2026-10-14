@@ -386,7 +386,8 @@ internal static class CampaignReport
             + F($"por realidad desde cero en S0, en la ruta y en los paseos, con un tope de {TinajaWalks.MorphoNodeCap} nodos por consulta ")
             + F($"({TinajaWalks.HintTimeoutMs} ms × {TinajaWalks.PcNodesPerMs} nodos/ms del PC [E] ÷ factor {TinajaWalks.MorphoDeviceFactor}× del teléfono [P], hasta PF1). ")
             + "Todas las búsquedas van sin poda de fútiles. Dosis por tipo de nivel (D-019, Q-Ti1 A): 3 en estreno, comodidad y práctica; "
-            + "4-5 en retos; 5 en el hito; vacíos sin contar la pareja: 2 en estreno y comodidad (p3-p5), 1 en práctica, retos e hito [P].");
+            + "4-5 en retos; 5 en el hito. Vacíos sin contar la pareja: 2 en los tableros de estreno y 1 en los demás (la comodidad fuera "
+            + F($"del estreno, 1 [P], pendiente de decisión). Como mucho {Superposition.TinajaMaxCuias} cuias con la pareja (02 §5) [P]: si no caben, se baja K."));
         W();
         W("| Nivel | p | Rol | Dosis (ocultas) | Realidades | Ruta segura | Paseos seguros | Casuales (g / p / a / s) | S0 sin trampas | Morpho: estados, nodos máx. | Candidatos rechazados por la tinaja |");
         W("|---|---|---|---|---|---|---|---|---|---|---|");
@@ -416,7 +417,7 @@ internal static class CampaignReport
         }
 
         W();
-        W(F($"Alivio (03 §13): `minus_color` nunca quita una fruta de la tinaja y las variantes repiten la ruta segura y los paseos (con las opciones de Morpho: w = {TinajaWalks.MorphoWeight} y {TinajaWalks.MorphoRealityBudget} nodos por realidad [P]) con la máscara de la tinaja, que el pack escribe en su `hidden` (`pack_schema` {PackWriter.TinajaPackSchema}; 08 §4.1: `relief_board` admite `hidden` si y solo si su `attrs` contiene la tinaja)."));
+        W(F($"Alivio (03 §13): `minus_color` nunca quita una fruta de la tinaja y las variantes repiten la ruta segura y los paseos (con `TinajaWalks.ReliefOptions`, las de Morpho: w = {TinajaWalks.MorphoWeight} y {TinajaWalks.MorphoRealityBudget} nodos por realidad [P], pendiente de decisión) con la máscara de la tinaja, que el pack escribe en su `hidden` (`pack_schema` {PackWriter.TinajaPackSchema}; 08 §4.1: `relief_board` admite `hidden` si y solo si su `attrs` contiene la tinaja). `plus_empty` no se publica si pasa de {Superposition.TinajaMaxCuias} cuias (02 §5) [P]."));
     }
 
     /// <summary>Niveles en los que sale cada mecánica (por código del calendario) y cada capacidad, sobre los tableros elegidos.</summary>

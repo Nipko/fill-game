@@ -338,13 +338,22 @@ internal static class Superposition
     public const int TinajaDebutMaxK = 6;
 
     /// <summary>
-    /// Vacíos de 4 del tablero base de un nivel con tinaja, sin contar la pareja (propuesta de la tinaja c.3 punto 2; P1 de
-    /// la tanda 4) [P]: 2 en el estreno y en la comodidad (p3-p5 sin estrella), 1 en la práctica (comodidades p7-p17),
-    /// los retos y el hito. La tinaja nunca recibe y su cuia solo recibe de ella mientras cuelga, así que no cuentan en la
-    /// aritmética de 02 §8.
+    /// Cuias como mucho en un nivel con tinaja, contando la tinaja y su cuia (02 §5, fila «Tinaja y su cuia (D-019)»: «como
+    /// mucho 12 cuias en un nivel con tinaja» [P]; propuesta de la tinaja (f) y d.3). Es un tope de layout, así que rige
+    /// también en las variantes de alivio, que el cliente dibuja igual [P]. El tope general de 14 (02 R1) queda por encima.
     /// </summary>
-    public static int TinajaEmpties(LevelPlan plan) =>
-        plan.DebutBoard || (plan.Role == SlotRole.Comfort && plan.Position is >= 3 and <= 5) ? 2 : 1;
+    public const int TinajaMaxCuias = 12;
+
+    /// <summary>
+    /// Vacíos de 4 del tablero base de un nivel con tinaja, sin contar la pareja (propuesta de la tinaja c.3 punto 2; P1 de
+    /// la tanda 4): 2 en los tableros de estreno (d.3: p3-p5 del ciclo de estreno, «2 vacíos sin contar la pareja»; 03 §12, p3-p5:
+    /// «1 (2 hasta el 30 y en debuts)») y 1 en los demás: práctica, comodidad, retos e hito. La comodidad fuera del estreno queda con 1 [P],
+    /// PENDIENTE DE DECISIÓN: c.3 punto 2 dice «2 en el debut y en comodidad», pero ninguna fuente define qué posiciones son
+    /// «comodidad» y cuáles «práctica», 03 §12 da 1 vacío a p3-p5 fuera de los debuts y, con 2 vacíos, el bot casi no falla
+    /// (c.9: 0-2 %) y el tablero no entra en la ventana de comodidad (20-60 %). La tinaja nunca recibe y su cuia solo recibe
+    /// de ella mientras cuelga, así que no cuentan en la aritmética de 02 §8.
+    /// </summary>
+    public static int TinajaEmpties(LevelPlan plan) => plan.DebutBoard ? 2 : 1;
 
     private static string? Tinaja(GenBoard b, SuperpositionContext ctx, Prng rng)
     {

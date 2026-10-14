@@ -11,6 +11,8 @@
 //                   estado de la ruta y en los de los paseos (los casuales, hasta su primer estado sin vertido seguro): Morpho
 //                   tiene que encontrar un vertido seguro y sus nodos, con el factor del teléfono (MorphoDeviceFactor, 8× [P]
 //                   hasta PF1), caber en hint_timeout_ms (150 ms). Contar nodos es determinista.
+// Las variantes de alivio repiten la ruta segura y los paseos con ReliefOptions (las de Morpho) [P], pendiente de decisión
+// del tech-lead y del dueño; level-qa (P3, ReliefChecks) usa las mismas.
 // Todas las búsquedas van sin poda de fútiles (SafeMoves.ForPipeline(mode, level) y SolverOptions.ForLevel; C1-8). El motivo
 // del rechazo separa «sin vertido seguro» de «presupuesto agotado» (SafeMoves.Outcome; c.2). Una instancia por hilo: el memo
 // de SafeMoves se vacía al empezar cada tablero, así que el resultado no depende de qué tableros midió antes el hilo.
@@ -52,6 +54,12 @@ internal sealed record TinajaCheckResult
 
     /// <summary>Máximo de nodos expandidos por Morpho en un estado, desde cero.</summary>
     public long MorphoMaxNodes { get; init; }
+
+    /// <summary>
+    /// Estado en el que Morpho expandió <see cref="MorphoMaxNodes"/> (null si no se midió): con él, <c>--self-test tinaja</c>
+    /// mide los nodos por milisegundo del PC (<see cref="TinajaWalks.PcNodesPerMs"/>) en las consultas que cuentan.
+    /// </summary>
+    public BoardState? MorphoMaxState { get; init; }
 }
 
 internal sealed class TinajaWalks
@@ -81,9 +89,14 @@ internal sealed class TinajaWalks
     public const int MorphoDeviceFactor = 8;
 
     /// <summary>
-    /// Nodos expandidos por milisegundo de AF.Solver en el PC del pipeline [E]: medido con <c>--self-test tinaja</c> (consultas
-    /// de Morpho desde cero, w = 2, sobre los tableros de muestra; .NET 10 Release, equipo de escritorio x64 del dueño) y
-    /// redondeado a la baja. Con <see cref="MorphoDeviceFactor"/> convierte el tope de tiempo en un tope de nodos determinista.
+    /// Nodos expandidos por milisegundo de Morpho (AF.Solver) en el PC del pipeline [E], redondeado a la baja. Lo mide
+    /// <c>--self-test tinaja</c> (INFO «calibracion»): Morpho desde cero (w = 2, 40.000 nodos por realidad) en el estado más
+    /// pesado de los filtros de los retos 329 y 332 y del hito 340 del pack de muestra, de 8.298-10.606 nodos por consulta.
+    /// Medido el 2026-10-14 en el equipo de escritorio x64 del dueño (AMD Ryzen 9 9900X, Windows 11, .NET 10.0.402 Release) con
+    /// otros agentes en marcha: 1.000-1.463 nodos/ms por nivel en cuatro ejecuciones (6-10 ms por consulta; medias de
+    /// 1.083-1.377). 1.000 es el mínimo medido, con el equipo cargado; con más carga podría bajar. Es una medida de un PC, no
+    /// del teléfono: con <see cref="MorphoDeviceFactor"/> convierte el tope de tiempo en un tope de nodos determinista, y PF1
+    /// sustituye el factor por la medida en un teléfono de clase A.
     /// </summary>
     public const int PcNodesPerMs = 1000;
 
@@ -113,17 +126,30 @@ internal sealed class TinajaWalks
         new SolverOptions(MorphoRealityBudget, MorphoWeight, true, PourMode.Run).ForLevel(level);
 
     /// <summary>
+    /// Opciones de la ruta segura y de los paseos en una variante de alivio con tinaja (03 §13: «las variantes repiten la ruta
+    /// segura y los paseos») [P], PENDIENTE DE DECISIÓN del tech-lead y del dueño (revisión de P1; D-023 o la siguiente): las
+    /// de Morpho (<see cref="MorphoOptions"/>: w = 2 y 40.000 nodos por realidad) en lugar de las del pipeline de 03 §8
+    /// (<c>SafeMoves.ForPipeline</c>: w = 1 y 20.000 nodos por realidad, la fila «Aguas turbias (seguridad por realidad)» de la
+    /// tabla de presupuestos de 03 §5). Motivo: un alivio tiene más espacio libre que su nivel (un vacío más o un color menos)
+    /// y, sin poda de fútiles, A* óptimo agota los 20.000 nodos por realidad en tableros que se ganan; lo que cuenta en la
+    /// variante es que Morpho, con lo que tiene en el teléfono, encuentre siempre un vertido seguro (un «seguro» solo sale de
+    /// soluciones encontradas, así que el criterio no se relaja). Es el contrato entre el generador y level-qa: P3
+    /// (<c>ReliefChecks</c>) tiene que usar exactamente estas opciones. Si el dueño lo rechaza, aquí va
+    /// <c>SafeMoves.ForPipeline(PourMode.Run, relief)</c> y las variantes que agotan el presupuesto se tratan aparte (03 §13
+    /// exige <c>relief</c> no vacío desde el 31).
+    /// </summary>
+    public static SolverOptions ReliefOptions(BoardState relief) => MorphoOptions(relief);
+
+    /// <summary>
     /// Pasa los filtros de la tinaja sobre el tablero inicial <paramref name="s0"/> (con los colores reales en las posiciones
     /// ocultas). <paramref name="debut"/>: tablero de estreno («S0 sin trampas»). <paramref name="morphoGate"/>: medir el coste
     /// de Morpho (las variantes de alivio solo repiten la ruta y los paseos, 03 §13). Las semillas de los paseos salen de
-    /// <paramref name="seedText"/>. <paramref name="relief"/>: variante de alivio, que se verifica con las opciones de Morpho
-    /// (<see cref="MorphoOptions"/>) en lugar de las del pipeline [P]: un alivio tiene más espacio libre que su nivel (un vacío
-    /// más o un color menos) y, sin poda de fútiles, A* óptimo agota los 20.000 nodos por realidad de 03 §8 en tableros que se
-    /// ganan; lo que cuenta en la variante es que Morpho, con lo que tiene en el teléfono, encuentre siempre un vertido seguro.
+    /// <paramref name="seedText"/>. <paramref name="relief"/>: variante de alivio, que se verifica con
+    /// <see cref="ReliefOptions"/> [P] (pendiente de decisión) en lugar de con las opciones del pipeline.
     /// </summary>
     public TinajaCheckResult Check(BoardState s0, bool debut, string seedText, bool morphoGate = true, bool relief = false)
     {
-        SolverOptions options = relief ? MorphoOptions(s0) : SafeMoves.ForPipeline(PourMode.Run, s0);
+        SolverOptions options = relief ? ReliefOptions(s0) : SafeMoves.ForPipeline(PourMode.Run, s0);
         SolverOptions morpho = MorphoOptions(s0);
         SafeMoves safe = _safePath.Moves;
         safe.ClearMemo();
@@ -354,7 +380,12 @@ internal sealed class TinajaWalks
         RealityStatus status = _morpho.Find(state, morpho, s0);
         long nodes = _morpho.Expanded;
         stats.MorphoStates++;
-        stats.MorphoMaxNodes = Math.Max(stats.MorphoMaxNodes, nodes);
+        if (nodes > stats.MorphoMaxNodes)
+        {
+            stats.MorphoMaxNodes = nodes;
+            stats.MorphoMaxState = state;
+        }
+
         if (status != RealityStatus.Ok || _morpho.Outcome != SafeMovesOutcome.Found)
         {
             return "tinaja: Morpho (w = 2, 40.000 nodos por realidad) no da vertido seguro: " + (status == RealityStatus.Ok ? Outcome(_morpho.Outcome) : status.ToString());
@@ -391,6 +422,7 @@ internal sealed class TinajaWalks
         public int S0Traps = -1;
         public int MorphoStates;
         public long MorphoMaxNodes;
+        public BoardState? MorphoMaxState;
 
         public TinajaCheckResult Result(string? kind, string? reject) => new()
         {
@@ -409,6 +441,7 @@ internal sealed class TinajaWalks
             S0Traps = S0Traps,
             MorphoStates = MorphoStates,
             MorphoMaxNodes = MorphoMaxNodes,
+            MorphoMaxState = MorphoMaxState,
         };
     }
 }

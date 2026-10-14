@@ -32,7 +32,9 @@ const string Usage = """
     --self-test: pruebas de la herramienta sin proyecto de tests (hoy solo "tinaja", la de por defecto): el paso Ti de la
       Tinaja con semillas fijas (tope de dosis por tipo de nivel, T4, boca, hidden, su cuia contigua y en la misma fila),
       el slot 323 de specs/sample_tinaja.json con sus filtros (ruta segura, paseos, S0 sin trampas) y su JSON
-      (pack_schema 3), el alivio sin frutas de la tinaja y los tableros de la ficha b.2. Desde la raiz del repositorio.
+      (pack_schema 3), el alivio sin frutas de la tinaja, el tope de 12 cuias con tinaja (02 sec. 5), los tableros de la
+      ficha b.2 y, como INFO, la calibracion de Morpho (nodos/ms del PC) en los estados mas pesados del pack de muestra
+      (tools/out/sample_tinaja). Desde la raiz del repositorio.
       Codigos: 0 = todo PASS; 1 = algun FAIL; 2 = uso o especificacion ilegible.
     --parity: recalcula con AF.Core/AF.Solver par, complejidad, ramificacion, trampas y la variante -1 color de los 40
       niveles del prototipo (tools/out/levels_proto.json y tools/out_inverse/levels_proto.json; GDD 03 sec. 17-18, 09 R26)
@@ -48,7 +50,8 @@ const string Usage = """
       defecto, asi que un pack generado con single solo vale para jugar en single. El informe lo declara.
     --spec: generacion procedural de la campana (GDD 03 sec. 2; D-009 y D-007): candidatos por slot (walk, deep o fill),
       superposicion de mecanicas, tintes, A*, bot x40, trampas tempranas, indice D, colocacion en el ciclo de 20, alivio y
-      un pack por mundo mundo_{mm}_v1.json (af-level/1, pack_schema 2). --levels por defecto 11-200; D depende del pool
+      un pack por mundo mundo_{mm}_v1.json (af-level/1, pack_schema 2, o 3 si algun nivel lleva la tinaja, D-019).
+      --levels por defecto 11-200; D depende del pool
       de cada rango de 03 sec. 11, asi que --check debe usar los mismos --levels. Con --check no escribe nada y compara
       byte a byte con los packs del disco. Los tiempos salen por consola; el informe no lleva tiempos.
     Codigos de salida: 0 = correcto o ayuda; 1 = la generacion o las comprobaciones fallaron;

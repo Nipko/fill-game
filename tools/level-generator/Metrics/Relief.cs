@@ -10,10 +10,11 @@
 // Aguas turbias las variantes van sin ocultos (el esquema no los admite en relief sin la tinaja [P]).
 // Tinaja (D-019; 03 §13; propuesta de la tinaja c.3 punto 4): minus_color nunca quita una fruta que esté en la tinaja (está
 // dentro de una cuia con mecánica: rompería T4 y la máscara); las variantes conservan la máscara de la tinaja (todas sus capas
-// menos la boca, la que exige AF.Core) y repiten la ruta segura y los paseos (TinajaWalks con las opciones de Morpho, w = 2 y
-// 40.000 nodos por realidad [P], sin la compuerta de coste). El pack escribe esa máscara en el hidden de la variante
-// (decisión del dueño del 2026-10-14, opción a de la revisión de P2a; 08 §4.1: relief_board admite hidden si y solo si su
-// attrs contiene la tinaja).
+// menos la boca, la que exige AF.Core) y repiten la ruta segura y los paseos (TinajaWalks con TinajaWalks.ReliefOptions, las
+// de Morpho: w = 2 y 40.000 nodos por realidad [P], pendiente de decisión; sin la compuerta de coste). plus_empty no se
+// publica si pasa de 12 cuias (02 §5: «como mucho 12 cuias en un nivel con tinaja»; Superposition.TinajaMaxCuias) [P]. El
+// pack escribe la máscara en el hidden de la variante (decisión del dueño del 2026-10-14, opción a de la revisión de P2a;
+// 08 §4.1: relief_board admite hidden si y solo si su attrs contiene la tinaja).
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Solver.Search;
@@ -90,7 +91,8 @@ internal static class Relief
         return type == "plus_empty" || (par is int p && p < basePar);
     }
 
-    private static ReliefBoard PlusEmpty(MetricsEngine metrics, BoardData board, double baseBot, string seedText)
+    /// <summary>Variante +1 vacío (03 §13); interna y no privada para <c>--self-test tinaja</c> (tope de 12 cuias, 02 §5).</summary>
+    internal static ReliefBoard PlusEmpty(MetricsEngine metrics, BoardData board, double baseBot, string seedText)
     {
         var data = new BoardData(
             [.. board.Caps, Cuia.DefaultCapacity],
@@ -99,6 +101,12 @@ internal static class Relief
             board.Hidden);
         if (board.HasTinaja)
         {
+            if (data.Caps.Length > Superposition.TinajaMaxCuias)
+            {
+                return new ReliefBoard("plus_empty", data, null, null, 1, false,
+                    "tinaja: con un vacio mas pasa del tope de 12 cuias con tinaja (02 sec. 5)");
+            }
+
             BoardData? withPair = PlusEmptyWithTinaja(board);
             if (withPair is null)
             {
