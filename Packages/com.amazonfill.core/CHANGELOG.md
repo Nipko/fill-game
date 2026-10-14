@@ -9,7 +9,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 - **Aguas estancadas por bucle (T51): no integrar hasta la respuesta del dueño a la pregunta 46 de `docs/GDD.md` §6.3 (D-014).**
   `DeadEndProbe` aplica la opción (a), la recomendada: el cierre recorre todos los vertidos legales, fútiles incluidos, y no solo
   los útiles que dice el texto de D-014 y de T51. Si el dueño elige (b) o (c), cambian `DeadEndProbe.Expand`, sus tests y el del
-  66 (con (b), `if (futile) continue;` antes de aplicar, y el bloqueo saltaría tras el vertido 6). Desvío respecto a T51, que
+  66 (con (b), `if (futile) continue;` antes de aplicar, el bloqueo saltaría tras el vertido 6 y
+  `RuleCatalogTests.R14_ASolvableBoardWithUsefulPours_IsNeverDeclaredStuck_AlongItsSolution` fallaría al empezar: es el falso
+  bloqueo que (b) acepta). Desvío respecto a T51, que
   sigue de la opción (a): en la secuencia del dueño, Aguas estancadas sale justo tras el 9.º vertido (`1>5`), cuando el nivel
   queda perdido de verdad, y no tras el 12.º (`R13b_Level66_TheOwnersSequence_IsStuckRightAfterTheNinthPour`). Riesgo al
   reanudar: una partida guardada con un build anterior a mitad de un bucle (con vertidos posteriores a un estado que ahora es
@@ -48,7 +50,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   (`R13b_Level66_Loop_IsStuck`, `_TheOwnersSequence_IsStuckRightAfterTheNinthPour`,
   `_AWinnableStateWhoseUsefulClosureHasNoWin_IsPlaying`, `_MareaAndRestart_ReevaluateTheLoop`, orden canónico, los 10 niveles del
   tutorial a lo largo de su solución A*, cierre de más de 64, tablero mixto que solo se gana con fútiles, Aguas turbias, tablero
-  ganado) y `RuleCatalogTests.R13b_AnUnsolvableBoardWithFewReachableStates_IsStuck`; solo dotnet `DeadEndProbePropertyTests` (si el
+  ganado) y `RuleCatalogTests` (`R13b_AnUnsolvableBoardWithFewReachableStates_IsStuck` y
+  `R14_ASolvableBoardWithUsefulPours_IsNeverDeclaredStuck_AlongItsSolution`); solo dotnet `DeadEndProbePropertyTests` (si el
   cierre declara, A* exhaustivo da `Unsolvable` con todos los legales y con la poda: 36 tableros de referencia en `run` y `single` y
   los niveles 1-200; los tableros de referencia baratos siguen en `Playing` a lo largo de su solución),
   `HotLoopAllocationTests.WarmDeadEndProbe_DoesNotAllocate` y `DeadEndProbePerformanceTests` (explícito, `Performance`). README,
@@ -388,10 +391,13 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 - T51 (D-014): `LevelSession.Status` pasa a `Stuck` también con vertidos útiles si el cierre acotado no tiene victoria (ver
   «Añadido»). R14 se reformula con D-014 (no se anuncia irresoluble mientras exista progreso posible); P1 se mantiene y la comprueba
-  `DeadEndProbePropertyTests`. Los tests compartidos cuyo tablero estaba perdido con pocos estados alcanzables y
-  esperaban `Playing` se adaptan sin cambiar lo que prueban: `RuleCatalogTests.R14_…` pasa a
-  `R14_AnUnsolvableBoardWithUsefulPours_IsNotDeclaredStuck_WhenItsClosureIsLarge` (tablero perdido con más de 64 estados) y su
-  tablero anterior pasa a `R13b_AnUnsolvableBoardWithFewReachableStates_IsStuck`; `R15_StuckBlocksInput_AndMareaReturnsToPlaying`
+  `DeadEndProbePropertyTests`. `RuleCatalogTests.R14_AnUnsolvableBoardWithUsefulPours_IsNotDeclaredStuck` sí cambia lo que
+  prueba, porque probaba la R14 anterior («mientras exista un movimiento útil»), que D-014 sustituye: su tablero, perdido con
+  vertidos útiles y pocos estados alcanzables, ahora es Aguas estancadas y pasa a
+  `R13b_AnUnsolvableBoardWithFewReachableStates_IsStuck`. En su lugar, `R14_ASolvableBoardWithUsefulPours_IsNeverDeclaredStuck_AlongItsSolution`
+  prueba la R14 reformulada: el tablero mixto que solo se gana empezando por fútiles (C1-8) sigue en `Playing` tras cada vertido
+  de su solución A*, para R13 y para R13 ampliada, hasta la victoria. Los demás tests compartidos cuyo tablero estaba perdido con
+  pocos estados alcanzables y esperaban `Playing` se adaptan sin cambiar lo que prueban: `R15_StuckBlocksInput_AndMareaReturnsToPlaying`
   usa un tablero que se gana y un vertido que lo pierde (vaivén de D-014); `LevelSessionTests.KillSwitchOff_SameBoard_IsPlaying` se
   parte en `KillSwitchOff_OnlyFutileBoardWithASolution_IsPlaying` (el contraejemplo de la Liana de C1-9) y
   `KillSwitchOff_LostBoardWithFewStates_IsStuckByR13b`; `HiddenDoses_AreAccepted`,

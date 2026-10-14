@@ -203,19 +203,37 @@ namespace AF.Core.Tests
         }
 
         [Test]
-        public void R14_AnUnsolvableBoardWithUsefulPours_IsNotDeclaredStuck_WhenItsClosureIsLarge()
+        public void R14_ASolvableBoardWithUsefulPours_IsNeverDeclaredStuck_AlongItsSolution()
         {
-            // 02 R14 con R13 ampliada (D-014): el motor no anuncia "irresoluble" mientras exista un vertido útil, salvo que
-            // los estados alcanzables sean pocos (≤ 64 [P]) y ninguno gane. Aquí el 1 nunca sella (U_1 = 3 y todas las cuias
-            // son de 4), así que el solver lo demuestra irresoluble, pero los otros tres colores dan más de 64 estados: el
-            // núcleo sigue en Playing (conservador).
-            BoardState state = Board(C(4, 3, 4, 5, 3), C(4, 4, 5, 3, 4), C(4, 5, 3, 4, 5), C(4, 1, 1, 1), Cuia.Empty(4), Cuia.Empty(4));
+            // 02 R14 (reformulada con D-014): el motor nunca anuncia "irresoluble" de forma espontánea mientras exista progreso
+            // posible, es decir, mientras el tablero sea resoluble. Es P1 de R16 para R13 (atascado(S)), y la ampliación de
+            // D-014 (R13 ampliada) también tiene que cumplirla. Tablero de capacidades mixtas con vertidos útiles cuya única
+            // salida empieza por fútiles (C1-8): con solo los útiles no se gana. Tras cada vertido de su solución A*, ni R13 ni
+            // el cierre de R13 ampliada lo declaran, hasta la victoria. Con un cierre solo de vertidos útiles (opción (b) de la
+            // pregunta 46 de GDD.md §6.3) se declararía al empezar.
+            BoardState state = Board(C(6, 1, 2, 2, 2, 2), C(4, 1, 1), Cuia.Empty(2), C(4, 1, 1, 1));
+            var solver = new AStarSolver();
 
-            SolveResult proof = new AStarSolver().Solve(state, new SolverOptions(SolverOptions.PipelineNodeBudget, 1, false, PourMode.Run));
+            SolveResult pruned = solver.Solve(state, new SolverOptions(SolverOptions.PipelineNodeBudget, 1, true, PourMode.Run));
+            SolveResult solution = solver.Solve(state, new SolverOptions(SolverOptions.PipelineNodeBudget, 1, false, PourMode.Run));
 
-            Assert.That(proof.Status, Is.EqualTo(SolveStatus.Unsolvable));
+            Assert.That(pruned.Status, Is.EqualTo(SolveStatus.Unsolvable));
+            Assert.That(solution.IsSolved, Is.True);
+            var session = new LevelSession(state, true, PourMode.Run);
             Assert.That(PourRules.IsStuck(state, true), Is.False);
-            Assert.That(new LevelSession(state, true).Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
+
+            for (int i = 0; i < solution.MoveCount; i++)
+            {
+                Pour pour = solution.GetMove(i);
+                Assert.That(session.TryPour(pour.Source, pour.Target, out _), Is.True, "vertido " + (i + 1));
+                LevelStatus expected = i == solution.MoveCount - 1 ? LevelStatus.Won : LevelStatus.Playing;
+                Assert.That(session.Status, Is.EqualTo(expected), "tras el vertido " + (i + 1));
+                if (expected == LevelStatus.Playing)
+                {
+                    Assert.That(PourRules.IsStuck(session.Current, true), Is.False, "tras el vertido " + (i + 1));
+                }
+            }
         }
 
         [Test]

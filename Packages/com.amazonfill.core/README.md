@@ -235,7 +235,8 @@ y los pares son idénticos (`--check` del tutorial y de la campaña 11-200).
 - **Tests:** compartidos `DeadEndProbeTests` (el tablero del 66, la secuencia completa, Marea y Volver a la orilla, el estado ganable
   del 66 cuyo cierre útil no tiene victoria, orden canónico, los 10 niveles del tutorial a lo largo de su solución, cierre de más de
   64, el tablero mixto que solo se gana con fútiles, Aguas turbias con la oculta verdadera, tablero ganado) y `RuleCatalogTests`
-  (R13 ampliada, R14 con un cierre grande, R15 con el vaivén); solo dotnet `DeadEndProbePropertyTests` (si el cierre declara, A*
+  (R13 ampliada; R14 reformulada, con el tablero mixto que solo se gana con fútiles a lo largo de su solución; R15 con el vaivén);
+  solo dotnet `DeadEndProbePropertyTests` (si el cierre declara, A*
   exhaustivo da irresoluble, con todos los legales y con la poda: 36 tableros de referencia en `run` y `single` y los niveles 1-200,
   y los tableros de referencia baratos siguen en Playing a lo largo de su solución).
 
