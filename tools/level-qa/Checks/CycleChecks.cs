@@ -25,19 +25,26 @@ internal static class CycleChecks
         ("QA-LABEL-ACCURACY", "aviso: acierto de etiqueta por ciclo < 60 % (c.7)"),
     ];
 
-    /// <summary>El nivel lleva la mecánica o capacidad de su intro_mechanic.</summary>
+    /// <summary>
+    /// El nivel lleva la mecánica o capacidad de su intro_mechanic. Distingue la tinaja (M13) de Aguas turbias y de las
+    /// capacidades (propuesta de la tinaja c.5): «murky» pide ocultas fuera de la tinaja; «chica» y «alta», una Cuia chica o
+    /// una Cuia alta que no sea la tinaja, su cuia ni la cueva de la Piraña; «tinaja», la tinaja (attrs).
+    /// </summary>
     public static bool Presents(BoardData b, string intro) => intro switch
     {
-        "murky" => b.Hidden.Length > 0,
+        "murky" => MechanicChecks.MurkyHidden(b).Length > 0,
         "barro" => b.Cuias.Any(c => c.Contains(Cuia.MudColor)),
-        "chica" => b.Caps.Where((c, i) => b.Attrs[i].Type != AF.Core.Mechanics.MechanicType.Pirana).Any(c => c < Cuia.DefaultCapacity),
-        "alta" => b.Caps.Any(c => c > Cuia.DefaultCapacity),
+        "chica" => MechanicChecks.CapacityCaps(b).Any(c => c < Cuia.DefaultCapacity),
+        "alta" => MechanicChecks.CapacityCaps(b).Any(c => c > Cuia.DefaultCapacity),
         _ => b.Attrs.Any(a => !a.IsNone && AF.Core.Mechanics.MechanicTypes.ToKey(a.Type) == intro),
     };
 
+    /// <summary>
+    /// Nivel puro: ni mecánicas (la tinaja con su cuia, las Aguas turbias y el Barro cuentan; MechanicChecks.Codes) ni
+    /// capacidades de 02 §8.
+    /// </summary>
     public static bool IsPure(BoardData b) =>
-        b.Attrs.All(a => a.IsNone) && b.Hidden.Length == 0 && b.Caps.All(c => c == Cuia.DefaultCapacity)
-        && b.Cuias.All(c => !c.Contains(Cuia.MudColor));
+        b.Attrs.All(a => a.IsNone) && MechanicChecks.Codes(b).Count == 0 && !MechanicChecks.CapacityCaps(b).Any();
 
     public static IEnumerable<QaIssue> Run(QaContext ctx)
     {
@@ -77,12 +84,14 @@ internal static class CycleChecks
 
             // Estreno (02 §9.2 regla 2; 03 §9 consecuencia 3): 2 vacíos y un solo ejemplar. El estreno de una capacidad fuera de
             // la rampa y del hito (la Cuia chica de 3 en el 22, p2) también lleva 2 vacíos libres (02 §8: «la mecánica debuta en
-            // 2-3 tableros fáciles»); su Cuia chica no cuenta como vacío.
+            // 2-3 tableros fáciles»); su Cuia chica no cuenta como vacío, ni la tinaja y su cuia (propuesta de la tinaja c.3
+            // punto 2: «2 vacíos sin contar la pareja»).
             bool mechanicDebut = plan.DebutBoard && plan.Mechanics.Count > 0 && plan.Role == SlotRole.Comfort;
             bool capacityDebut = plan.DebutBoard && plan.Mechanics.Count == 0 && !plan.Ramp && plan.Role is SlotRole.Recovery or SlotRole.Comfort;
             if (mechanicDebut || capacityDebut)
             {
-                int empties = lv.Board.Cuias.Select((c, i) => (c, i)).Count(x => x.c.Length == 0 && lv.Board.Caps[x.i] >= Cuia.DefaultCapacity);
+                int empties = lv.Board.Cuias.Select((c, i) => (c, i)).Count(x => x.c.Length == 0 && lv.Board.Caps[x.i] >= Cuia.DefaultCapacity
+                    && !MechanicChecks.IsTinajaPair(lv.Board.Attrs[x.i].Type));
                 if (empties < 2)
                 {
                     yield return Fail("QA-DEBUT", string.Create(CultureInfo.InvariantCulture, $"tablero de estreno con {empties} vacio(s); lleva 2"));

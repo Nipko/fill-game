@@ -1,7 +1,8 @@
 // level-qa: control de calidad de paquetes de niveles de Amazon Fill (GDD 08 §2.4 y §4.1 «Validación en tools/level-qa»;
 // 03 §17). Lee los paquetes con System.Text.Json, construye cada tablero con BoardBuilder y lo recalcula con AF.Core y
-// AF.Solver (par, bot ×40, trampas tempranas, ruta segura de Aguas turbias, variantes de alivio); comprueba el ciclo de
-// D-009 con la especificación de la campaña (tools/level-generator/specs/campaign_v1.json, mismo lector que el generador).
+// AF.Solver (par, bot ×40, trampas tempranas, ruta segura de Aguas turbias, filtros de la tinaja, variantes de alivio);
+// comprueba el ciclo de D-009 con la especificación de la campaña (tools/level-generator/specs/campaign_v1.json, mismo
+// lector que el generador).
 // Es la compuerta completa en un solo comando (Checks/GateChecks.cs): también valida el esquema JSON (QA-SCHEMA, con
 // python tools/validate_schema.py --pack), regenera la campaña para comprobar que la semilla reproduce cada pack (QA-REPRO,
 // 03 §17 #10) y mide la banda de cada nivel en el pool regenerado (QA-BAND-Q, 03 §7). --no-reproduce salta las dos últimas.
@@ -26,8 +27,9 @@ const string Usage = """
     Recalcula cada nivel con AF.Core y AF.Solver y comprueba: estructura, U_c, selladas, Aguas estancadas al inicio, par
     (A* w = 1, run) y par >= 2K, paleta y debuts de tinte, K, pares de riesgo, bot x40 con la semilla del nivel y su
     etiqueta, trampas tempranas por etiqueta (Q16 B), tamano, el ciclo de 20 de D-009 (bandas, etiquetas, escalera,
-    remanso, puros, ventanas, estrenos), alivio, anti-repeticion, mecanicas y Aguas turbias. La especificacion por
-    defecto es tools/level-generator/specs/campaign_v1.json (ejecutar desde la raiz del repositorio).
+    remanso, puros, ventanas, estrenos), alivio, anti-repeticion, mecanicas, Aguas turbias y la tinaja (forma, mascara,
+    topes por tipo de nivel, ruta segura, paseos y coste de Morpho, tambien en sus variantes de alivio). La especificacion
+    por defecto es tools/level-generator/specs/campaign_v1.json (ejecutar desde la raiz del repositorio).
 
     Es la compuerta completa de 08 sec. 4.1 en un solo comando:
       QA-SCHEMA  cada pack contra schemas/af-level-1.schema.json (python tools/validate_schema.py --pack; exige Python 3
@@ -149,6 +151,7 @@ foreach (LevelEval e in evals)
     issues.AddRange(BaseChecks.Run(ctx, e));
     issues.AddRange(MechanicChecks.Run(ctx, e));
     issues.AddRange(MurkyChecks.Run(e));
+    issues.AddRange(TinajaChecks.Run(e));
     issues.AddRange(ReliefChecks.Run(e));
 }
 
@@ -193,7 +196,7 @@ foreach (QaIssue i in ordered)
 
 int failures = issues.Count(i => !i.Warning);
 var allIds = BaseChecks.Ids.Concat(CycleChecks.Ids).Concat(ReliefChecks.Ids).Concat(RepetitionChecks.Ids)
-    .Concat(MechanicChecks.Ids).Concat(MurkyChecks.Ids).Concat(GateChecks.Ids).ToList();
+    .Concat(MechanicChecks.Ids).Concat(MurkyChecks.Ids).Concat(TinajaChecks.Ids).Concat(GateChecks.Ids).ToList();
 Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
     $"{evals.Count} niveles, {allIds.Count} comprobaciones: {failures} fallo(s), {issues.Count(i => i.Warning)} aviso(s)"));
 if (report is not null)

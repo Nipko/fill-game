@@ -21,10 +21,26 @@ asignan el esquema y el determinismo por semilla): además de las comprobaciones
 Con `--no-reproduce` salta QA-REPRO y QA-BAND-Q (fixtures negativos, pruebas rápidas) y lo deja como aviso; el CI nunca lo
 usa.
 
+**Tinaja (M13; D-019, Q-Ti1 A; propuesta de la tinaja c.5; P3 de la tanda 4).** «Hay ocultas» ya no quiere decir «Aguas
+turbias»: la tinaja y su cuia son una sola mecánica (`Ti`, un ejemplar; sus capacidades 5 y 2 no son Cuia alta ni Cuia
+chica) y solo cuenta `Tu` con ocultas fuera de la tinaja. Sus controles (QA-TINAJA-*, abajo) repiten lo que el esquema no
+puede expresar y los filtros del generador con el mismo código y las mismas semillas (`TinajaWalks.Check`: ruta segura, 20
+paseos seguros y 30 casuales, «S0 sin trampas» en el estreno y la compuerta de coste de Morpho con el tope y el factor de P1;
+en las variantes de alivio, la ruta y los paseos con `TinajaWalks.ReliefOptions` [P], sin la compuerta). Todas las búsquedas
+van con las opciones del nivel: el par y las trampas con `SolverOptions.ForLevel` y la ruta segura de Aguas turbias con
+`SafeMoves.ForPipeline(modo, nivel)`, sin poda de fútiles en los niveles con tinaja. Los packs sin tinaja dan el mismo
+resultado que antes.
+
 ## Uso
 
 ```
 dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_02_v1.json Assets/_Project/Data/Levels/mundo_03_v1.json Assets/_Project/Data/Levels/mundo_04_v1.json Assets/_Project/Data/Levels/mundo_05_v1.json --report tools/out/level_qa_report.md
+```
+
+Pack de muestra de la tinaja (P1; `pack_schema` 3, niveles 321-340), con su especificación:
+
+```
+dotnet run --project tools/level-qa -c Release -- tools/out/sample_tinaja/mundo_07_v1.json --spec tools/level-generator/specs/sample_tinaja.json
 ```
 
 Opciones: `--report <informe.md>` (Markdown UTF-8 con cada comprobación y sus fallos), `--spec <campaign.json>` (por
@@ -68,13 +84,15 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-RAMP | filas 11 y 12: 8 cuias = 6 colores + 2 vacíos, par 15-19 y 16-20, `bot_fail` 0-10 % | 02 §13 |
 | QA-PURE-30 | ≥ 30 % de niveles puros por ciclo completo | d.2 regla 1 |
 | QA-WINDOW | `bot_fail` en la ventana del slot: falla en recuperación, comodidad, estreno (< 0,20), remanso y rampa; un reto o el hito fuera de su ventana es aviso (se publica con la etiqueta que mide) | 03 §17 #3; 08 §4.1; c.2 |
-| QA-DEBUT | estrenos con 2 vacíos (también el de una capacidad fuera de la rampa y del hito: la Cuia chica de 3 en el 22) y un ejemplar; `intro_mechanic` y `skippable` = false solo en el nivel de intro | 02 §9.2 regla 2; 02 §8 |
+| QA-DEBUT | estrenos con 2 vacíos sin contar la tinaja ni su cuia (también el de una capacidad fuera de la rampa y del hito: la Cuia chica de 3 en el 22) y un ejemplar (la tinaja con su cuia es uno); `intro_mechanic` y `skippable` = false solo en el nivel de intro | 02 §9.2 regla 2; 02 §8; propuesta de la tinaja c.5 |
 | QA-LABEL-ACCURACY | aviso: acierto de etiqueta por ciclo < 60 % | c.7 |
 | QA-RELIEF-MIN | ≥ 1 variante desde el 31 | 03 §13 |
-| QA-RELIEF-VALID | variantes válidas | 03 §13 |
-| QA-RELIEF-MINUS | `minus_color` resoluble con el par entero publicado | 03 §13 |
-| QA-RELIEF-PLUS | `plus_empty` con exactamente un vacío más | 03 §13 |
+| QA-RELIEF-VALID | variantes válidas; con tinaja, también su forma (una, su cuia contigua y en la misma fila, ≤ 12 cuias, T4 y combinaciones) | 03 §13; 02 §9.1 M13 |
+| QA-RELIEF-MINUS | `minus_color` resoluble con el par entero publicado y sin quitar una fruta de la tinaja | 03 §13; propuesta de la tinaja c.3 punto 4 |
+| QA-RELIEF-PLUS | `plus_empty` = el base con exactamente un vacío de 4 más: al final o, con tinaja, en la ranura que deja la pareja en la misma fila | 03 §13 |
 | QA-RELIEF-BOT | `bot_fail` de la variante recalculado; baja ≥ 0,20 (base < 0,20: par menor o vacío extra) | 03 §17 #8 |
+| QA-RELIEF-MASK | la variante de un nivel con tinaja la conserva y su `hidden` es la máscara (todas sus capas menos la boca); una variante sin tinaja no lleva `hidden` | 08 §4.1 (decisión del 2026-10-14, opción a de P2a) |
+| QA-RELIEF-SAFE | variante con tinaja: ruta segura y paseos seguros y casuales (opciones de Morpho [P], pendiente de decisión; semilla del nivel + `/` + tipo) | 03 §13; propuesta de la tinaja c.3 punto 4 |
 | QA-REPEAT-SHAPE | forma distinta de los 200 niveles anteriores | 03 §17 #9 |
 | QA-REPEAT-HAMMING | Hamming ≥ 25 % con los 20 anteriores | 03 §17 #9 |
 | QA-MECH-DEBUT | mecánicas y capacidades con debut anterior o igual al nivel | D-007; 02 §8 |
@@ -82,13 +100,24 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-MECH-CELL | cada mecánica y capacidad de la celda está en el nivel; sin turbias por el respaldo de T1, aviso | especificación; 02 §8 |
 | QA-GAP-120 | ninguna mecánica ni capacidad (Cuia chica, Cuia alta) pasa más de 120 niveles sin volver, sobre lo publicado; solo cuenta un hueco con todos sus niveles en los paquetes | resumen 6; d.2 regla 4 |
 | QA-MECH-KEY | llave presente; agua del mundo en la Lluvia; llave del tutorial en el estreno | 02 §9.1; D-007 |
-| QA-MECH-COUNT | ≤ 2 mecánicas por nivel antes del 300 | 02 §9.2 regla 4 |
-| QA-MURKY-FLAG | `murky` coherente con `hidden` | 08 §4.1 |
-| QA-MURKY-T1 | solo desde el 100 y en Difícil o Muy difícil | 02 T1 |
+| QA-MECH-COUNT | ≤ 2 mecánicas por nivel antes del 300 (la tinaja con su cuia cuenta como una) | 02 §9.2 regla 4 |
+| QA-MURKY-FLAG | `murky` coherente con `hidden` (Aguas turbias o tinaja) | 08 §4.1 |
+| QA-MURKY-T1 | Aguas turbias solo desde el 100 y en Difícil o Muy difícil; la tinaja queda fuera (excepción de D-019) | 02 T1; D-019, Q-Ti1 A |
 | QA-MURKY-LIMITS | ≤ 3 cuias y ≤ 4 dosis ocultas; T4 | 02 T2-T4 |
 | QA-MURKY-SAFE | ruta segura en cada estado | 03 §8; 02 T5 |
 | QA-MURKY-COMBO | sin Lluvia, Piraña, Liana ni Remolino | Q14 A |
 | QA-MURKY-Q9 | estreno del 100: una cuia, 2 dosis ocultas, sin otra mecánica | Q9 |
+| QA-TINAJA-TIER | dosis de la tinaja por tipo de nivel: estreno, comodidad y práctica 3 (2 ocultas); retos 4-5 (3-4); hito 5 (4) (`Superposition.TinajaDoses`) | D-019, Q-Ti1 A; 02 §9.1 M13 |
+| QA-TINAJA-ONE | una sola tinaja y una sola cuia suya | 02 §9.1 M13 regla 1 |
+| QA-TINAJA-PAIR | su cuia en la ranura contigua y en la misma fila con cualquiera de las filas del cliente (`Superposition.SameRow`) | 02 §9.1 M13 regla 1; D-006 |
+| QA-TINAJA-CUIAS | como mucho 12 cuias con la tinaja, contando la pareja | 02 §5 [P] |
+| QA-TINAJA-MASK | `hidden` = todas las capas de la tinaja menos la boca, y nada oculto fuera de ella (sin Aguas turbias) | 02 §9.1 M13 regla 1; propuesta de la tinaja c.4 |
+| QA-TINAJA-T4 | T4 en toda la columna de la tinaja | 02 §9.1 M13 regla 1 |
+| QA-TINAJA-COMBO | sin Liana, Remolino, Lluvia ni Piraña, y sin Barro dentro de la tinaja o de su cuia (fuera de la pareja, sí) | 02 §9.1 M13, combinaciones |
+| QA-TINAJA-SLOT | ninguna tinaja en p1, p2, p19 ni en la rampa | D-019, Q-Ti1 A |
+| QA-TINAJA-DEBUT | tablero de estreno con tinaja: sola y un ejemplar, 2 vacíos sin contar la pareja, `bot_fail` < 0,20 y S0 sin trampas (todo vertido útil de S0 es seguro) | 02 §9.2 regla 2; propuesta de la tinaja c.3 y d.3 |
+| QA-TINAJA-SAFE | ruta segura, 20 paseos seguros y 30 casuales [P] (`TinajaWalks.Check`, la misma semilla que el generador); el motivo separa «sin vertido seguro» de «presupuesto agotado» | 03 §8; D-019, Q-Ti1 A |
+| QA-TINAJA-MORPHO | coste de Morpho (w = 2, 40.000 nodos por realidad) en S0, la ruta y los paseos: tope de nodos = 150 ms × nodos/ms del PC ÷ factor del teléfono (8× [P] hasta PF1), el mismo que P1 | propuesta de la tinaja c.3 punto 3; 08 §9 |
 | QA-SCHEMA | JSON válido contra `schemas/af-level-1.schema.json` (`python tools/validate_schema.py --pack`); sin Python o sin `jsonschema`, falla | 08 §4.1; 03 §17 #11 |
 | QA-REPRO | la especificación y las semillas reproducen cada pack byte a byte (campaña regenerada en memoria) | 03 §17 #10; 08 §2.4 y §4.1 |
 | QA-BAND-Q | banda medida (cuantil de D en el pool regenerado) acorde al rol: comodidad, estreno, remanso y rampa ≤ 0,70; recuperación ≤ 0,10 o, como mínimo, D por debajo de la comodidad más fácil del ciclo; hito > 0,95 o, como mínimo, par − 2K ≥ la media del pool del rango. Cumplir solo el mínimo es aviso. Un pack que no se reproduce se mide con su D publicada (aproximado) | 03 §7; c.3 reglas 3 y 5 |
@@ -104,7 +133,8 @@ Cada fixture es un paquete con un defecto. El nombre empieza por el id de la com
 ```
 for f in tools/level-qa/fixtures/QA-*.json; do
   id=$(basename "$f" | sed 's/__.*//')
-  out=$(dotnet run --project tools/level-qa -c Release --no-build -- "$f" --no-reproduce); code=$?
+  case "$f" in *__tinaja_*) spec="--spec tools/level-generator/specs/sample_tinaja.json";; *) spec="";; esac
+  out=$(dotnet run --project tools/level-qa -c Release --no-build -- "$f" --no-reproduce $spec); code=$?
   echo "$(basename "$f"): exit=$code $(echo "$out" | grep -q "\[$id\]" && echo presente || echo AUSENTE)"
 done
 ```
@@ -121,3 +151,13 @@ QA-BAND-Q en las recuperaciones 21, 22, 61, 81, 122, 141 y 161, las comodidades 
 (un vacío libre y `bot_fail` 0,275 en el estreno de la Cuia chica de 3). `fixtures/schema/` son los fixtures de
 `validate_schema.py --pack` (uno válido y uno inválido); cualquier fixture con un JSON fuera del esquema daría además
 QA-SCHEMA.
+
+Los de la tinaja (`QA-*__tinaja_*.json`) son niveles 321-340 y se pasan con la
+especificación de la muestra de P1 (`specs/sample_tinaja.json`, la única con la tinaja en el calendario hasta P4). Salen del
+pack de muestra con un defecto (QA-TINAJA-ONE, PAIR, CUIAS, MASK, T4, COMBO, SLOT en p1 y en p19, TIER, QA-RELIEF-MASK y
+QA-RELIEF-MINUS) o de tableros que rechazan los filtros del generador: QA-TINAJA-DEBUT es un estreno con 10 vertidos útiles
+de S0 que no son seguros; QA-TINAJA-SAFE, un candidato del reto 338 de la muestra que el generador rechazó por «adivinar» (un
+paseo casual llega a un estado sin vertido seguro con la realidad verdadera resoluble); QA-TINAJA-MORPHO, un hito de 12
+cuias con 5 dosis en el que Morpho expande 66.496 nodos en S0 (tope 18.750), y QA-RELIEF-SAFE, una variante `minus_color`
+válida para AF.Core y sin Aguas estancadas al empezar en la que ninguna realidad tiene solución (con las opciones de alivio,
+los tableros de prueba que se ganan en la realidad verdadera siempre tuvieron ruta segura; por eso da también QA-RELIEF-MINUS).

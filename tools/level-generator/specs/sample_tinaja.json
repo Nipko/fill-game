@@ -30,8 +30,9 @@
     {"world": 7, "world_id": "w07_madre_de_dios", "name": "Madre de Dios", "levels": [321, 340], "water_base": "white", "water_tint": "agua_tapajos"}
   ],
   "ranges": [
-    {"levels": [321, 340], "k": [9, 11], "cuias": [11, 13], "empties": 1, "par": [22, 36], "pct_hard": [25, 25], "pct_very_hard": [5, 5]}
+    {"levels": [321, 340], "k": [9, 11], "cuias": [11, 13], "empties": 1, "par": [16, 26], "pct_hard": [25, 25], "pct_very_hard": [5, 5]}
   ],
+  "ranges_note": "Rango de MUESTRA [P]: k, cuias, empties y los porcentajes se copian de la fila 201-400 de 03 §11 solo para el informe. El par objetivo es el de la fila 61-100 (16-26; K 7-8 → 8-9, la más cercana al k_plan de esta muestra, K 7-8, con su hito) y no el de 201-400 (22-36, para K 9-11): level-qa lo exige con ±30 % (QA-PAR) y la generación no lo usa (el pack y el informe no cambian). Lo rehace P4 con la especificación de 201-700.",
   "k_plan_note": "K de la muestra [P]: el de las tablas medidas de la propuesta de la tinaja (c.9: estreno con K = 6, retos e hito con K = 7-8), por debajo del rango 201-400 de 03 §11 (K 9-11), que se copia en ranges solo para el informe. El estreno de la tinaja va con K ≤ 6 (Superposition.TinajaDebutMaxK).",
   "k_plan": [
     {"levels": [321, 340], "recovery": 7, "comfort": 7, "challenge": 8, "milestone": 8}
