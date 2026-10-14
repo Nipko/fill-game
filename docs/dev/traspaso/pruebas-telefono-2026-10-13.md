@@ -167,3 +167,5 @@ Medida en vídeo, fotograma a fotograma (pasos de 12 ms; desplazamiento horizont
 - **Opción recomendada:** declarar Aguas estancadas cuando ningún vertido útil lleva a un estado nuevo, es decir, cuando el cierre de estados alcanzables con los vertidos útiles es pequeño y no contiene victoria. Se comprueba con una búsqueda acotada (p. ej., ≤ 64 estados, sin asignaciones) tras cada vertido.
 - **Alternativa:** que R13 use el solver con un presupuesto pequeño.
 - **Tests:** este tablero del 66 como caso de regresión (EditMode y núcleo) y P1 (R14) intacta.
+
+> **Nota del 2026-10-13 (revisión de T50; D-014).** El 66 no es un nivel sin mecánicas. Tiene capacidades mixtas, con una Cuia chica de 2 en la 5, y una Hoja en la 6, que abre el primer vertido (`3>6`). Con capacidades mixtas, la opción recomendada declararía el bloqueo ya tras el vertido 6 (`2>0`), cuando el tablero todavía se gana pasando por un fútil (`6>5`, cuando `5>2` vacía la Cuia chica; tras el vertido 8, una línea ganadora empieza por él), y eso choca con «P1 (R14) intacta». El tablero solo es irresoluble desde el vertido 9 (`1>5`). Va al dueño como pregunta 46 de `docs/GDD.md` §6.3.

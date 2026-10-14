@@ -1,6 +1,6 @@
 # Capítulo 4 · Comodines, Canoas y Cuia de rescate
 
-Fecha: 2026-10-06 (revisión cruzada; versión anterior 2026-10-05; actualizado el 2026-10-08 con la decisión del dueño **D-008**, bucle de partida como Magic Sort: §2.7, §3, §5.2, §6, §7, §10.1 y §11, y con la nota de la pregunta P17 en §7.3; alineado el mismo día con lo construido en la pista B y con Magic Sort: panel de Aguas estancadas sin ilustración ni `stuck_rescue_copy` en §6.5-§6.6 y cronómetro de canoas fuera de la cabecera de partida en §7.1, ambos [P]; registro en `docs/dev/decisiones.md`; actualizado el 2026-10-11 con **D-007**, mecánicas del río, y lo construido en el paso 1 del traspaso: Resumen, §2.1, §2.2, §2.4, §2.5, §2.6, §4, §5.1 y Dependencias; actualizado el 2026-10-12 (paso 2 del traspaso) con D-011 (el aviso del regalo de Capi espera a la intro: §2.2), D-012 (guardado por vertido con escritor en segundo plano: §5.2), la lista única de estrenos de 02 §9.1 y lo que pidió la revisión: §2.5 (Inventario y HUD), §2.6, §4, §5.1 y Dependencias) · Proyecto Amazon Fill (nombre comercial Tintalú) · Convención de evidencia: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas de jugadores, **[NV]** no verificado, **[P]** propuesta de este capítulo a calibrar en soft launch. "(dirección N)" remite a las decisiones de dirección vinculantes. Nombres según `docs/gdd/00-glosario.md`.
+Fecha: 2026-10-06 (revisión cruzada; versión anterior 2026-10-05; actualizado el 2026-10-08 con la decisión del dueño **D-008**, bucle de partida como Magic Sort: §2.7, §3, §5.2, §6, §7, §10.1 y §11, y con la nota de la pregunta P17 en §7.3; alineado el mismo día con lo construido en la pista B y con Magic Sort: panel de Aguas estancadas sin ilustración ni `stuck_rescue_copy` en §6.5-§6.6 y cronómetro de canoas fuera de la cabecera de partida en §7.1, ambos [P]; registro en `docs/dev/decisiones.md`; actualizado el 2026-10-11 con **D-007**, mecánicas del río, y lo construido en el paso 1 del traspaso: Resumen, §2.1, §2.2, §2.4, §2.5, §2.6, §4, §5.1 y Dependencias; actualizado el 2026-10-12 (paso 2 del traspaso) con D-011 (el aviso del regalo de Capi espera a la intro: §2.2), D-012 (guardado por vertido con escritor en segundo plano: §5.2), la lista única de estrenos de 02 §9.1 y lo que pidió la revisión: §2.5 (Inventario y HUD), §2.6, §4, §5.1 y Dependencias; actualizado el 2026-10-13 con **D-013**, el Mapa del río («río arriba» en §2.6 y §6.5; el Mercado, desde el inicio y no desde el Mapa, en §4), y **D-014**, Aguas estancadas por bucle (§5.1, pendiente de la pregunta 46 de GDD.md §6.3)) · Proyecto Amazon Fill (nombre comercial Tintalú) · Convención de evidencia: **[V]** verificado en el informe citado, **[E]** estimación del informe, **[R]** reseñas de jugadores, **[NV]** no verificado, **[P]** propuesta de este capítulo a calibrar en soft launch. "(dirección N)" remite a las decisiones de dirección vinculantes. Nombres según `docs/gdd/00-glosario.md`.
 
 ## Resumen
 
@@ -106,11 +106,11 @@ Tintalú copia el set de ayudas probado del género (Deshacer, +1 recipiente, Pi
 |---|---|
 | Función exacta | Marca el nivel actual como superado **sin recompensa** (0 semillas, sin avance ni rotura de la Crecida, cuenta para la Canasta de cada 10 niveles) y carga el siguiente. El nivel saltado queda marcado en el Mapa del río con el icono de Rosa; en 1.0 no se puede volver a jugar (campaña lineal). |
 | Regla de uso | Tres condiciones simultáneas (dirección 9): **≥5 fallos en el mismo nivel** (fallos duros y blandos, §5.2), **≥10 niveles desde el último salto** y nivel ≥31 [P: antes del 31 la variante aliviada del tercer fallo y el reinicio gratuito bastan, y se mantiene limpio el tramo sin sumideros]. El nivel debe ser `skippable=true`: los niveles que introducen una mecánica no se saltan (estrenos según la lista única de 02 §9.1 y `mech_debut_level`: 14 Cuia chica · 27 Cuia alta · 43 Hoja · 63 Matapi · 83 Liana con fruta · 100 Aguas turbias · 103 Remolino · 123 Barro · 143 Lluvia · 163 Brote · 183 Piraña; la Liana de cuenta (con número) es una variante, en el 243; D-007). En los packs, `skippable` = false solo en el nivel de `intro_mechanic` (QA-DEBUT de `tools/level-qa`). Confirmación de una línea. |
-| Desbloqueo y tutorial | Sin tutorial propio: la primera vez que se cumplen las condiciones, el modal Aguas estancadas añade la opción con la frase "Rosa te lleva río abajo, al siguiente nivel" y el icono de Rosa aparece también en el menú de pausa. |
+| Desbloqueo y tutorial | Sin tutorial propio: la primera vez que se cumplen las condiciones, el modal Aguas estancadas añade la opción con la frase "Rosa te lleva río arriba, al siguiente nivel" (D-013, Q13-A: antes, «río abajo») y el icono de Rosa aparece también en el menú de pausa. |
 | Usos gratis | Ninguno. |
 | Costo en semillas | **300** (dirección 9) ≈ 0,60 USD. |
 | Anuncio recompensado | No (la dirección 9 fija solo semillas; research/03 §Catálogo proponía 1/día por video, descartado para que el salto siga siendo raro). |
-| Inventario y HUD | No vive en la barra: aparece en el modal Aguas estancadas (tercera opción, §6.6 wireframe D), en el menú de pausa y como banner en la pantalla previa del nivel cuando es elegible ("Rosa puede llevarte río abajo · 300"). |
+| Inventario y HUD | No vive en la barra: aparece en el modal Aguas estancadas (tercera opción, §6.6 wireframe D), en el menú de pausa y como banner en la pantalla previa del nivel cuando es elegible ("Rosa puede llevarte río arriba · 300"). |
 | VFX / SFX | Rosa emerge en el río de fondo con una exhalación, las cuias del jugador flotan corriente abajo y la cámara acompaña hasta el siguiente tablero (1,5 s). Sonido: exhalación de delfín + agua; háptico medio. Dato del río opcional al llegar: "El boto es el mayor delfín de río y está En Peligro" (research/07 §5 [V]). |
 | Casos borde | (a) No consume canoa ni rompe la Crecida. (b) Saltar un nivel Muy difícil (hito) está permitido si es `skippable`; 03 decide qué hitos se protegen. (c) Si el nivel saltado tenía Cuia extra aplicada, se pierde sin reembolso (aviso en la confirmación). (d) `since_last_skip` se guarda en el perfil y se sincroniza (§10). (e) El Reto del río y los eventos no admiten Salto del Boto. |
 
@@ -153,7 +153,7 @@ Las posiciones de la bandeja siguen el orden canónico de 07 §7.4 (ver §2). To
 | 1 | Marea visible (sin tutorial) | — | Posición estándar del género (research/01 §3 [V]) |
 | 3 | Tutorial Marea | Vertido tentador → tooltip de Capi | research/02 §Curva [E] |
 | 8 | Cuia extra (1 gratis) | Capi la trae; sin precio; remite a la Canasta, no al Mercado | research/03 y research/05 [E]; boosters en nivel hacia el 7-9 (research/05 §4 [E]) |
-| 10 | Mercado accesible | Entrada desde el Mapa del río (06); sin tutorial propio | 05 §2.1: ninguna oferta antes del 10; primera vez que un comodín muestra precio fuera del nivel |
+| 10 | Mercado accesible | Entrada desde el inicio (06 §4.7); el Mapa del río no lleva ofertas ni entrada al Mercado (D-013, Q10-A); sin tutorial propio | 05 §2.1: ninguna oferta antes del 10; primera vez que un comodín muestra precio fuera del nivel |
 | 11 | Cosecha doble | Botón x2 en victoria | dirección 13 |
 | 12 | Morpho (3 gratis) | Tarjeta de Capi | research/03 [E] |
 | 14 · 27 | Cuia chica (14, cap 2); Cuia alta (27, cap 5; cap 6 solo en hitos desde el 141) | Tutorial de una pantalla al debut (02 §8) | dirección 4; 02 §8 |
@@ -193,15 +193,16 @@ function legalNonFutileMoves(state):
     # Lluvia: la gota no es un movimiento del jugador y no cuenta
     return moves
 
-function afterPourAnimation(state):
+function afterPourAnimation(state):                          # solo en la partida del cliente (LevelSession)
     if state.isSolved(): return WIN
-    if legalNonFutileMoves(state).isEmpty():
+    if legalNonFutileMoves(state).isEmpty() or bucle_sin_salida(state):   # 02 §1.4 y R13: `aguas_estancadas`; el bucle, con D-014 (pregunta 46 de GDD.md §6.3)
         wait(400 ms)                                          # el jugador ve el tablero final
         openStuckModal(buildContext(state))
 ```
 
 Precisiones:
 
+- **Bucle sin salida** (D-014, 2026-10-13; 02 §1.4 y R13): en la partida del cliente, Aguas estancadas sale también cuando el cierre de estados alcanzables con vertidos útiles se agota con ≤ 64 estados [P] y ninguno es victoria (`bucle_sin_salida`, 02 §1.4); si pasa de 64, no se declara. Es la única condición que el cliente añade a `legalNonFutileMoves`: el solver, el bot casual, el generador y `tools/level-qa` siguen solo con `legalNonFutileMoves` (y `futil` sigue siendo una sola función), y los packs no cambian. Qué vertidos recorre el cierre con capacidades mixtas (solo útiles o todos los legales, para cumplir R14) está **pendiente de la pregunta 46** de `docs/GDD.md` §6.3, que bloquea la integración de T51; el nivel 66 es el ejemplo y la prueba de regresión (02 R13).
 - **Aguas turbias**: una cuia con racha superior monocolor pero unidades ocultas debajo **no** es fútil al verterla en un vacío, porque revela información. Sin esta excepción el detector declararía bloqueo en tableros resolubles.
 - **Casa correcta** (02 §1.4, R16): mover una cuia monocolor a una vacía **sí** progresa cuando A no puede sellar ese color y B sí (`cap_A ≠ U_c` y `cap_B = U_c`). Es el caso de la Cuia chica: 2 dosis de un color en una Cuia chica de 2 con una cuia estándar vacía como único destino **no es Aguas estancadas**.
 - **Destinos que cambian al recibir** (Hoja puesta, Brote cerrado, Matapi, Remolino y Lluvia con gotas pendientes) nunca son fútiles, y por Q-B tampoco lo es el origen Remolino o Lluvia con gotas pendientes: el estado canónico cambia (02 §1.4). Eximir a cualquier origen con mecánica haría que el ir y venir monocolor contara siempre como útil y el modal no saliera nunca. Un vertido fútil es legal, pero **no avanza los contadores** de Lluvia ni de Piraña (Q18 B de D-007).
@@ -389,7 +390,7 @@ La rama F debe ser excepcional (<0,5 % de bloqueos); si un nivel la dispara más
 | `stuck_undo_refill_seeds` | +3 Deshacer · 30 semillas |
 | `stuck_pack_199` | Puñado de semillas · 1.000 · {precio_local} |
 | `stuck_balsa_499` | Balsa de rescate · {precio_local} · Todo para seguir: semillas, una cuia y canoas infinitas |
-| `stuck_skip` | Salto del Boto · 300 · Rosa te lleva río abajo, al siguiente nivel |
+| `stuck_skip` | Salto del Boto · 300 · Rosa te lleva río arriba, al siguiente nivel (D-013, Q13-A) |
 | `stuck_restart` | Volver a la orilla (gratis) |
 | `stuck_canoe_lost` | Travesía perdida: −1 canoa |
 | `stuck_canoe_lost_last` | Travesía perdida: tu última canoa |

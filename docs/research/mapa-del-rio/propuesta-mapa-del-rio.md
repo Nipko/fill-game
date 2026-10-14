@@ -1,5 +1,7 @@
 # Mapa del río: remontar el Amazonas hasta donde nace (propuesta final)
 
+> **Decidida el 2026-10-13: D-013** (`docs/dev/decisiones.md`). El dueño aceptó la recomendación de cada pregunta de la sección 16 («Nos vamos por las recomendadas y necesitamos seguir avanzando»), con T1-A y T6-A de TiTino y Q1-A de Frutas del río, y el lote de documentación de la sección 15 se aplicó ese día al GDD (T50). Un choque con Frutas del río y con T6 quedó como pregunta 45 de `docs/GDD.md` §6.3. Desde entonces manda el GDD; este documento queda como material de apoyo y como plan de implementación (secciones 11-13). Lo que no se tocó: `tools/level-generator/specs/campaign_v1.json` (el hito 80, «Lago de Tefé» [P]), que cambia la fase F1 con su `--check`.
+>
 > **Documento de apoyo, no canon.** Manda el GDD (`docs/GDD.md` y `docs/gdd/00-09`). Nada de este archivo cambia reglas, números, claves, nombres ni versiones hasta que el dueño decida y se editen los capítulos que toque (lista en la sección 15). Lo marcado [P] es propuesta. La decisión se registraría como **D-013** [P]: D-012 ya está registrada en la rama `paso2/registrar-d007-d009`.
 >
 > **Todo nombre, dato y texto de este documento queda «pendiente de revisión del asesor cultural» (07 §8.2).** «TiTino» queda además pendiente de la búsqueda de marca del abogado.
@@ -1234,6 +1236,8 @@ Todo va en el lote de documentación tras la aprobación del dueño. Las citas v
 ---
 
 ## 16. Preguntas al dueño (cerradas, con recomendación)
+
+> **Decididas el 2026-10-13 (D-013):** todas con su recomendación: Q14-A, Q1-A, Q2-A, Q3-A, **Q4-D**, Q5-A, Q6-A, Q7-A, Q8-A, Q9-A, Q10-A, Q11-A, Q12-A, Q13-A, Q15-A, Q16-A, Q17-A y Q18-A, junto con T1-A y T6-A de TiTino y Q1-A de Frutas del río. Lo que «se aprueba en el lote de documentación» (al final de esta sección) quedó aprobado con ellas: las claves y los eventos están en 08 §9 y §8.2, el campo `progress.map_seen_level` en 08 §4.3 y los formatos, como contratos 29 y 30 (GDD.md §7.4; 08 §4.5). El mensaje del dueño hablaba de «las 13 preguntas» (las de la primera versión); Q14-Q18 se registraron con la misma respuesta, y D-013 lo dice.
 
 | # | Pregunta | Opciones | Recomendación |
 |---|---|---|---|
