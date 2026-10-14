@@ -18,9 +18,9 @@ namespace AF.Tests.PlayMode
     /// el nivel 66 real de la campaña (<c>m03_v1_n0066</c>) con la secuencia que el dueño jugó en el teléfono (hoja
     /// <c>docs/dev/traspaso/pruebas-telefono-2026-10-13.md</c>, «Defecto encontrado por el dueño»), con toques de verdad. La
     /// partida entra en Aguas estancadas justo tras el 9.º vertido (1 → 5), como fija
-    /// <c>DeadEndProbeTests.R13b_Level66_TheOwnersSequence_IsStuckRightAfterTheNinthPour</c>, aunque 2 → 1 y 7 → 0 sigan siendo
-    /// útiles para R13 de reglas; los vertidos que siguen se ignoran (R15) y el modal es el embudo de D-008 para un nivel ≥ 31:
-    /// Marea primero (04 §6.2, regla 0), «Continuar: +1 cuia» y «Rendirse».
+    /// <c>DeadEndProbeTests.R13b_Level66_TheOwnersSequence_IsStuckRightAfterTheNinthPour</c>, aunque 2 → 1 y 0 → 7 (los vertidos
+    /// 10.º y 11.º del dueño) sigan siendo útiles para R13 de reglas; los vertidos que siguen se ignoran (R15) y el modal es el
+    /// embudo de D-008 para un nivel ≥ 31: Marea primero (04 §6.2, regla 0), «Continuar: +1 cuia» y «Rendirse».
     /// </summary>
     public sealed class StuckLoopTests
     {
@@ -88,8 +88,9 @@ namespace AF.Tests.PlayMode
                 }
             }
 
-            // Solo por D-014: R13 de reglas aún ve vertidos útiles (los vaivenes 2 → 1 y 7 → 0). La entrada queda bloqueada desde
-            // el instante lógico del bloqueo, también mientras se anima el 9.º (R15).
+            // Solo por D-014: R13 de reglas aún ve vertidos útiles (los vaivenes 2 → 1 y 0 → 7, los vertidos 10.º y 11.º del
+            // dueño; 7 → 0 no es legal aquí porque la 0 está llena). La entrada queda bloqueada desde el instante lógico del
+            // bloqueo, también mientras se anima el 9.º (R15).
             BoardState stuck = flow.Session.Current;
             Assert.That(PourRules.HasUsefulMove(stuck, true), Is.True);
             Assert.That(PourRules.IsStuck(stuck, true), Is.False, "R13 de reglas no lo declara: es el bucle de D-014");
