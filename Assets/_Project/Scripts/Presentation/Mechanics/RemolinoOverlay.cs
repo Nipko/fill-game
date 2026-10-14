@@ -82,23 +82,23 @@ namespace AF.Presentation.Mechanics
     /// late hasta <see cref="PulseScale"/> y el remanso entero se aclara hacia el agua del canal (<see cref="PoolLightMix"/>;
     /// revisión de T52, ronda 2: el brillo aditivo que iba detrás del remanso no se veía). Al acabar el chorro se apaga en
     /// <see cref="IntakeTailMs"/>, mientras la racha sale por el canal.</description></item>
-    /// <item><description><b>La pareja se ilumina al recibir</b>: durante la recepción su espiral se ilumina y late igual, con el
-    /// remanso aclarado (máximo hacia la mitad de la subida); al entrar la racha por el fondo, una luz sube desde él por las
-    /// paredes interiores del vidrio (un filo marfil de <see cref="WallLightWidthDp"/> en cada pared, de
-    /// <see cref="WallLightAlpha"/> en el fondo a 0 al <see cref="WallLightHeightFraction"/> del alto de la cavidad, que se
-    /// apaga en <see cref="WallLightMs"/>; revisión de T52, ronda 3: la cavidad teñida del color de la racha se leía como una
-    /// dosis más, translúcida, en lo alto de la cuia, y aclaraba la cavidad oscura de la que depende la legibilidad, D-003 y
-    /// VA-06) y, además de las burbujas, salen <see cref="SparklesBottom"/> destellos en el fondo de la cavidad
-    /// (<see cref="IBoardFx.Sparkles"/>).</description></item>
+    /// <item><description><b>La pareja se ilumina y late al recibir</b>, desde su remolino: durante la recepción su espiral se
+    /// ilumina y late igual (hasta <see cref="PulseScale"/>), con el remanso aclarado (máximo hacia la mitad de la subida), y al
+    /// entrar la racha por el fondo salen las burbujas y <see cref="SparklesBottom"/> destellos en el fondo de la cavidad
+    /// (<see cref="IBoardFx.Sparkles"/>). Sobre su líquido y su cavidad no se pinta nada: la dosis que crece desde abajo es
+    /// la del vertido de siempre. Revisión de T52: se probó a encender la pareja por dentro y se retiró dos veces. En la ronda
+    /// 2, la cavidad teñida del color de la racha se leía como una dosis más, translúcida, y aclaraba la cavidad oscura (D-003;
+    /// VA-06). En la ronda 3, un filo marfil con alfa por dentro de cada pared, sobre el líquido, aclaraba la dosis +15 a +28
+    /// L* y se apilaba con la línea de la pared de la cavidad (guía v2 §2.5, regla 2; §4.1 y §7, «brillos blancos con alfa
+    /// apilados sobre el líquido»), y a tamaño de teléfono no se veía (capturas 94b y 95b reducidas a 0,4).</description></item>
     /// <item><description><b>Presupuesto de la guía v2 §8</b> (≤ 8 brillos aditivos a la vez, de ≤ 96 × 96 dp): los únicos
     /// brillos aditivos del Remolino son esos destellos, que pide a <see cref="FxLayer"/> y cuentan en su tope
-    /// (<see cref="FxLayer.MaxAdditive"/>; lo que no cabe se descarta) y en el de 44 partículas. El remanso aclarado y la luz de
-    /// las paredes son colores con alfa normal (<see cref="AdditiveImageCount"/> = 0).</description></item>
+    /// (<see cref="FxLayer.MaxAdditive"/>; lo que no cabe se descarta) y en el de 44 partículas. El remanso aclarado es un color
+    /// con alfa normal (<see cref="AdditiveImageCount"/> = 0).</description></item>
     /// <item><description>Con Reducir movimiento, sin giros, latidos ni partículas: solo los fundidos de la espuma, del remolino
-    /// de la superficie, del remanso y de la luz de las paredes, que son entonces la señal de la cuia tocada y de la pareja. Los
-    /// colores en reposo no cambian (<see cref="CollectSurfaceColors"/>): la espuma más clara, el remanso aclarado y la luz de
-    /// las paredes solo duran lo que el chorro o la recepción (la luz, hasta 100 ms × el factor de los pasos más), como las
-    /// salpicaduras.</description></item>
+    /// de la superficie y del remanso, que son entonces la señal de la cuia tocada y de la pareja. Los colores en reposo no
+    /// cambian (<see cref="CollectSurfaceColors"/>): la espuma más clara y el remanso aclarado solo duran lo que el chorro o la
+    /// recepción, como las salpicaduras.</description></item>
     /// </list>
     /// <para>Sin asignaciones tras <see cref="CuiaOverlay.Attach"/>: piezas, puntos del trazado y buffers fijos; los sprites
     /// se piden en <see cref="OnAttach"/>.</para>
@@ -199,29 +199,6 @@ namespace AF.Presentation.Mechanics
         /// es un brillo aditivo (guía v2 §8: ≤ 8 a la vez, todos en <see cref="FxLayer"/>). En reposo, el color de siempre.
         /// </summary>
         public const float PoolLightMix = 0.6f;
-
-        /// <summary>
-        /// Luz que sube por las paredes de la pareja al llegar la racha a su fondo (revisión de T52, ronda 3) [P]: un filo en cada
-        /// pared interior del vidrio, delante del líquido (<see cref="CuiaOverlayHost.BodyFront"/>), en marfil neutro
-        /// (<see cref="Palette.UiPaper"/>, el de los destellos del fondo), con este alfa en el fondo de la cavidad, que baja a 0 al
-        /// <see cref="WallLightHeightFraction"/> de su alto y se apaga a 0 en <see cref="WallLightMs"/> × el factor de los pasos.
-        /// No tiñe la cavidad: su zona vacía sigue opaca y oscura (D-003; guía v2 §0.3 y §4.3; VA-06, ΔL* ≥ 50 entre las dosis y
-        /// la cavidad, también mientras se ve), ni es aditivo (guía v2 §8).
-        /// </summary>
-        public const float WallLightAlpha = 0.5f;
-
-        /// <summary>Ancho del filo de luz de cada pared (dp) [P], por dentro de la pared de la cavidad.</summary>
-        public const float WallLightWidthDp = 2f;
-
-        /// <summary>Alto del filo de luz, en fracción del alto de la cavidad desde su fondo (0,4: 1,6 u en la de 4) [P].</summary>
-        public const float WallLightHeightFraction = 0.4f;
-
-        /// <summary>
-        /// Duración de la luz de las paredes de la pareja (ms, × el factor de los pasos) [P], desde que la racha llega a su fondo
-        /// (<see cref="FillStart"/>). Pasa del final de la recepción (300 ms × el factor) y se apaga sola después, sin retener
-        /// la cola (como la cola del chorro, <see cref="IntakeTailMs"/>).
-        /// </summary>
-        public const float WallLightMs = 400f;
 
         /// <summary>Entrada del brillo y del remolino de la superficie al llegar el chorro (ms; T52) [P].</summary>
         public const float IntakeFadeMs = 120f;
@@ -329,10 +306,6 @@ namespace AF.Presentation.Mechanics
         private Image _pool = null!;
         private Image _spiral = null!;
         private Image _swirl = null!;
-        private Image _wallLightL = null!;
-        private Image _wallLightR = null!;
-        private float _wallLightAge = -1f; // ms desde que la racha llegó al fondo de la pareja; −1: apagada
-        private float _wallLightSpan;
         private int _spinFrame;
         private float _intakeMs = -1f;
         private float _intakeDuration;
@@ -519,38 +492,6 @@ namespace AF.Presentation.Mechanics
         public Color PoolColorNow => _pool != null ? _pool.color : ProceduralArt.WhirlPoolColor;
 
         /// <summary>
-        /// Alfa de la luz de las paredes de la pareja en el fondo de la cavidad (0 apagada, hasta <see cref="WallLightAlpha"/>;
-        /// tests). Por la pared baja hasta 0 al <see cref="WallLightHeightFraction"/> de la cavidad (el sprite).
-        /// </summary>
-        public float WallLightAlphaNow => _wallLightL != null && _wallLightL.gameObject.activeSelf ? _wallLightL.color.a : 0f;
-
-        /// <summary>Color (sin alfa) de la luz de las paredes: marfil neutro, nunca el de la racha (tests).</summary>
-        public Color WallLightColor => _wallLightL != null ? new Color(_wallLightL.color.r, _wallLightL.color.g, _wallLightL.color.b, 1f) : Palette.UiPaper;
-
-        /// <summary>
-        /// Rectángulo del filo de luz de la pared izquierda (<paramref name="side"/> = 0) o derecha (1), en las anclas de la cuia
-        /// (u sobre el pie, desde el eje; tests).
-        /// </summary>
-        public Rect WallLightRectU(int side)
-        {
-            Image? img = side == 0 ? _wallLightL : _wallLightR;
-            if (img == null || Host.U <= 0f)
-            {
-                return Rect.zero;
-            }
-
-            RectTransform rt = img.rectTransform;
-            Vector2 size = rt.sizeDelta / Host.U;
-            return new Rect((rt.anchoredPosition / Host.U) - (0.5f * size), size);
-        }
-
-        /// <summary>Imagen del filo de luz de la pared izquierda (0) o derecha (1) (tests: capa, sprite y material).</summary>
-        public Image WallLightImage(int side)
-        {
-            return side == 0 ? _wallLightL : _wallLightR;
-        }
-
-        /// <summary>
         /// Imágenes del Remolino con el material aditivo (tests: 0, los brillos aditivos del Remolino son solo los destellos de
         /// <see cref="FxLayer"/>, que cuentan en su tope de <see cref="FxLayer.MaxAdditive"/>; guía v2 §8).
         /// </summary>
@@ -568,8 +509,6 @@ namespace AF.Presentation.Mechanics
                 count += _pool != null && _pool.material == additive ? 1 : 0;
                 count += _spiral != null && _spiral.material == additive ? 1 : 0;
                 count += _swirl != null && _swirl.material == additive ? 1 : 0;
-                count += _wallLightL != null && _wallLightL.material == additive ? 1 : 0;
-                count += _wallLightR != null && _wallLightR.material == additive ? 1 : 0;
                 count += _pairTag != null && _pairTag.material == additive ? 1 : 0;
                 return count;
             }
@@ -737,7 +676,6 @@ namespace AF.Presentation.Mechanics
             if (!on)
             {
                 EndIntake();
-                StopWallLight();
             }
 
             Visible = on;
@@ -755,19 +693,6 @@ namespace AF.Presentation.Mechanics
         {
             OverlayParts.Place(_pool, 0f, PoolCenterU, PoolWidthU, PoolHeightU, u);
             OverlayParts.Place(_spiral, 0f, PoolCenterU, ProceduralArt.RemolinoSpiralWidthU, ProceduralArt.RemolinoSpiralHeightU, u);
-
-            // La luz de las paredes: un filo de WallLightWidthDp por dentro de cada pared de la cavidad, desde su fondo junto a
-            // las paredes hasta el WallLightHeightFraction de su alto.
-            if (u > 0f)
-            {
-                float bottom = CuiaGeometry.CavityBottomU;
-                float h = WallLightHeightFraction * (CuiaGeometry.CavityTopU(Host.Capacity) - bottom);
-                float w = WallLightWidthDp / u;
-                float x = CuiaGeometry.CavityHalfWidthU - (0.5f * w);
-                OverlayParts.Place(_wallLightL, -x, bottom + (0.5f * h), w, h, u);
-                OverlayParts.Place(_wallLightR, x, bottom + (0.5f * h), w, h, u);
-            }
-
             SetPairMark(_pairDotCount, u);
         }
 
@@ -815,8 +740,6 @@ namespace AF.Presentation.Mechanics
             _bubbles = 0;
             _finalPainted = false;
             _animating = true;
-            StopWallLight(); // la de un paso anterior que aún se apagaba: se enciende otra vez al llegar esta racha al fondo
-            _wallLightSpan = WallLightMs * (ms / ReceiveMs);
             PreparePulse(ctx.OtherIndex);
             _layerRoot.SetAsLastSibling(); // la racha, sobre el canal que dibuja la otra cuia de la pareja
 
@@ -845,13 +768,6 @@ namespace AF.Presentation.Mechanics
 
             if (!_animating || _finalPainted)
             {
-                // Tras la recepción, la luz de las paredes termina de apagarse sola (no retiene la cola).
-                if (_wallLightAge >= 0f)
-                {
-                    _wallLightAge += dtMs;
-                    PaintWallLight();
-                }
-
                 return;
             }
 
@@ -884,9 +800,6 @@ namespace AF.Presentation.Mechanics
             HideRacha();
             SetSpin(0);
             SetSpiralLight(0f, false);
-
-            // La luz de las paredes, si ya se encendió, sigue apagándose en Tick (≤ WallLightMs × el factor de los pasos): sobre
-            // el contenido final ya pintado, también tras un salto (Marea, vuelta de segundo plano).
 
             // Las franjas de esta cuia solo siguen si dibuja el canal (las de la racha de la otra cuia ya no hacen falta).
             if (_channelShown)
@@ -925,13 +838,6 @@ namespace AF.Presentation.Mechanics
             // con su contorno (revisión de T52), que se pinta ya aquí y no a mitad del primer vertido.
             _swirl = OverlayParts.NewImage("RemolinoIntakeSwirl", Host.BodyFront, Host.Art.RemolinoIntakeFrame(0), new Color(1f, 1f, 1f, 0f));
             PreRegister(_swirl); // se ve a mitad de un vertido: sin asignaciones al mostrarlo
-
-            // La luz que sube por las paredes de la pareja al recibir (revisión de T52, ronda 3): un filo marfil por dentro de cada
-            // pared, delante del líquido y del vidrio, con alfa normal; no toca la zona vacía de la cavidad.
-            _wallLightL = OverlayParts.NewImage("RemolinoWallLightL", Host.BodyFront, Host.Art.RemolinoWallLight, OverlayParts.Fade(Palette.UiPaper, 0f));
-            _wallLightR = OverlayParts.NewImage("RemolinoWallLightR", Host.BodyFront, Host.Art.RemolinoWallLight, OverlayParts.Fade(Palette.UiPaper, 0f));
-            PreRegister(_wallLightL);
-            PreRegister(_wallLightR);
             _pairTag = OverlayParts.NewImage("RemolinoPairTag", Host.SlotFront, Host.Art.RemolinoPairTag, Color.white);
             _pairTag.type = Image.Type.Sliced;
             for (int i = 0; i < _pairDots.Length; i++)
@@ -1566,12 +1472,6 @@ namespace AF.Presentation.Mechanics
             PaintRacha(t);
             SetSpin(Mathf.FloorToInt(SpinTurns * ProceduralArt.RemolinoSpiralFrames * Ease.Out(t)));
             SetSpiralLight(Mathf.Sin(Mathf.PI * Mathf.Clamp01((t - 0.25f) / 0.75f)), !_stepReduce);
-            if (t >= FillStart)
-            {
-                _wallLightAge = (t - FillStart) * _duration; // desde que la racha llega al fondo
-                PaintWallLight();
-            }
-
             float rise = Mathf.Clamp01((t - FillStart) / (1f - FillStart));
             float p = _stepAmount * Ease.Out(rise);
             ICuiaBoard? board = _stepBoard;
@@ -1863,37 +1763,6 @@ namespace AF.Presentation.Mechanics
             // El remanso se aclara hacia el agua del canal con la luz de la espuma (también con Reducir movimiento: es un
             // fundido); con light = 0, el color de siempre.
             OverlayParts.SetColor(_pool, Color.Lerp(ProceduralArt.WhirlPoolColor, ProceduralArt.RemolinoChannelWater, PoolLightMix * Mathf.Clamp01(light)));
-        }
-
-        // Luz de las paredes de la pareja (revisión de T52, ronda 3): de WallLightAlpha (en el fondo; el sprite la lleva a 0 al
-        // WallLightHeightFraction de la cavidad) a 0 en _wallLightSpan desde que la racha llega a su fondo, con un apagado que
-        // empieza lento (se lee mientras sube la racha); oculta antes y después. Igual con Reducir movimiento: es un fundido.
-        private void PaintWallLight()
-        {
-            float span = _wallLightSpan;
-            bool on = _on && _wallLightAge >= 0f && span > 0f && _wallLightAge < span;
-            if (!on)
-            {
-                StopWallLight();
-                return;
-            }
-
-            float s = _wallLightAge / span;
-            Color c = OverlayParts.Fade(Palette.UiPaper, WallLightAlpha * (1f - (s * s)));
-            OverlayParts.SetVisible(_wallLightL, true);
-            OverlayParts.SetVisible(_wallLightR, true);
-            OverlayParts.SetColor(_wallLightL, c);
-            OverlayParts.SetColor(_wallLightR, c);
-        }
-
-        private void StopWallLight()
-        {
-            _wallLightAge = -1f;
-            if (_wallLightL != null)
-            {
-                OverlayParts.SetVisible(_wallLightL, false);
-                OverlayParts.SetVisible(_wallLightR, false);
-            }
         }
 
         // Giro de la espiral: la fase frame (30° cada una, en el sentido de las agujas del reloj); 0 en reposo.

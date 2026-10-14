@@ -58,18 +58,27 @@ namespace AF.UI
     /// esa repisa sin fichas, con <see cref="NoticeChipClearDp"/> de aire, lo más centrado posible: tapa la cara de la repisa
     /// en su tramo, no fichas. Es lo que pasa en el 135 tras el rescate (12 cuias; captura 92 de T52): «¡Una cuia más! Sigue
     /// desde aquí», de unos 253 dp, va a la derecha de la ficha «?×1» (de 73 a 326 dp) y tapa la cara de la repisa de abajo en
-    /// ese tramo durante los 3 s que dura; y con «Te faltan 120 semillas» de Revelar sin semillas (captura 92d);</description></item>
+    /// ese tramo durante los 3 s que dura; y con «Te faltan 120 semillas» de Revelar sin semillas (captura 92d). Solo cuentan
+    /// como fichas la «?×n» y la de la pareja del Remolino (<c>CollectNoticeChips</c>): si una cuia de una pareja del
+    /// Remolino está en la fila de abajo, el aviso también puede tapar en parte, en su tramo, lo que de ese Remolino queda
+    /// bajo el pie (la bajada del canal por el frente de la repisa, el tramo horizontal pegado bajo ella, de pie − 17 a pie −
+    /// 21,5, y, si el aviso sube más, la mitad de abajo del remanso, que llega a pie − 12,6 dp con u = 24 dp) durante lo que
+    /// dura (3-7 s), y el canal se ve cortado. Pasa en el 103 tras el rescate (captura 92g de T52): con la cuia 8 de la pareja
+    /// bajo la primera cuia de la fila de abajo, «¡Una cuia más!» va a la derecha de su ficha (de 53,5 a 306,5 dp, desde pie
+    /// − 12,5) y tapa la bajada y el tramo horizontal; el remanso, no;</description></item>
     /// <item><description>si así no cabe, va de su ancho de siempre y sube hasta tapar enteras las fichas que alcanza: su borde
     /// de arriba, <see cref="NoticeChipCoverDp"/> sobre ellas y nunca por encima del pie de la fila. Así no asoma una tira
     /// suelta de la ficha, que parecía un fallo de dibujo (captura 92 de la primera versión de T52), pero tapa los 23 dp bajo el
-    /// pie: la repisa de abajo y sus fichas durante lo que dura el aviso (3-7 s). Se da en el juego cuando una ficha parte el
-    /// tramo de la repisa: en el 115 tras el rescate (12 cuias, la ficha «?×2» bajo la tercera cuia de la fila de abajo;
-    /// captura 92f de T52).</description></item>
+    /// pie: la repisa de abajo y sus fichas durante lo que dura el aviso (3-7 s), y con una pareja del Remolino en esa fila,
+    /// también la mitad de abajo de su remanso y su canal en ese tramo. Se da en el juego cuando una ficha parte el tramo de la
+    /// repisa: en el 115 tras el rescate (12 cuias, la ficha «?×2» bajo la tercera cuia de la fila de abajo; captura 92f de
+    /// T52).</description></item>
     /// </list>
-    /// <para>«Te faltan {n} semillas» de Revelar sin stock, saldo ni video sigue saliendo como aviso, por la cola
-    /// (<see cref="ShowRevealMissing"/>; pregunta 41, D-015). Se descartó dibujar las burbujas delante del aviso: aunque el
-    /// aviso se encogiera, taparían su texto, y eso choca con D-011, punto 2 (avisos legibles). Es un compromiso [P] para el
-    /// dueño (capturas 92, 92d y 92f de T52), con alternativas: un aviso que no llegue a la repisa (más estrecho y en dos
+    /// <para>«Te faltan {n} semillas» de Revelar sin stock, saldo ni video sigue saliendo como aviso
+    /// (<see cref="ShowRevealMissing"/>): es el [P] de siempre (paso 1, T14), sin cambios respecto a <c>f64c19a</c>, y lo
+    /// único decidido es que vaya por la cola y de uno en uno (D-011, punto 2). Se descartó dibujar las burbujas delante del
+    /// aviso: aunque el aviso se encogiera, taparían su texto, y eso choca con D-011, punto 2 (avisos legibles). Es un compromiso [P] para el
+    /// dueño (capturas 92, 92d, 92f y 92g de T52), con alternativas: un aviso que no llegue a la repisa (más estrecho y en dos
     /// líneas, o arriba, en la franja del panorama cuando la hay), el aviso detrás de la capa de las repisas, o aceptarlo así. Se
     /// recoloca en cada fotograma si cambian las burbujas, las fichas o el tablero (sin asignaciones; solo mide el texto cuando
     /// cambia).</para>

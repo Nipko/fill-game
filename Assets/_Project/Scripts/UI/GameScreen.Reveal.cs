@@ -171,10 +171,12 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Aviso de Revelar sin stock, sin saldo y sin video [P]: «Te faltan {n} semillas» (como el rescate), sin cobrar nada,
-        /// por la cola de avisos (D-011, punto 2; ratificado por el dueño en la pregunta 41, D-015). Con la burbuja «Te faltan
-        /// {n}» de la bandeja a la vista, el aviso sube por encima de ella y no la tapa (<c>PlaceToast</c>, GameScreen.Notices.cs;
-        /// observación 1 de la prueba del 2026-10-13, T52).
+        /// Aviso de Revelar sin stock, sin saldo y sin video [P]: «Te faltan {n} semillas» (como el rescate), sin cobrar nada. Es
+        /// la respuesta [P] de siempre (paso 1, T14), sin cambios respecto a <c>f64c19a</c>, y ninguna pregunta de
+        /// <c>docs/GDD.md</c> §6.3 la recoge todavía (está por ratificar). Lo único que viene de una decisión del dueño es que
+        /// salga por la cola de avisos y de uno en uno (D-011, punto 2). Con la burbuja «Te faltan {n}» de la bandeja a la vista,
+        /// el aviso sube por encima de ella y no la tapa (<c>PlaceToast</c>, GameScreen.Notices.cs; observación 1 de la prueba
+        /// del 2026-10-13, T52).
         /// </summary>
         internal void ShowRevealMissing(int missing)
         {

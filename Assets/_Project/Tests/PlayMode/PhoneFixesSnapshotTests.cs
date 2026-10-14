@@ -33,6 +33,9 @@ namespace AF.Tests.PlayMode
     /// derecha de la ficha «?×1», sin taparla: solo tapa la cara de la repisa de abajo en su tramo, los 3 s que dura; el
     /// compromiso [P]); <c>92f_l115_aviso_tapa_ficha</c> (el 115, igual: su ficha «?×2» queda bajo la tercera cuia de la fila de
     /// abajo, el aviso no cabe a ningún lado y la tapa entera: la otra rama del compromiso [P], que también se da en el juego);
+    /// <c>92g_l103_aviso_canal</c> (el 103 tras el rescate de verdad: la cuia 8, de la pareja del Remolino, está en la fila de
+    /// abajo, y el aviso ajustado a su texto junto a su ficha tapa en su tramo la bajada y el tramo horizontal del canal, que
+    /// no cuentan como fichas, y el canal se ve cortado; el remanso no: parte del compromiso [P]; revisión de T52, ronda 4);
     /// <c>92b_l135_aviso_sin_burbujas</c> (el rescate de verdad con 1.000 semillas: sin burbujas, el aviso encogido a su texto
     /// sobre la bandeja, sin tapar la repisa ni la ficha); <c>93_1fila_aviso_burbuja_despues</c> (el tablero 6 del tutorial como
     /// nivel 46) y <c>93b_l31_aviso_burbuja_despues</c> (2 filas), las dos con el rescate de verdad y «Te faltan 150» de
@@ -41,8 +44,9 @@ namespace AF.Tests.PlayMode
     /// <item><description><c>93z_diag_lienzo_tarde</c> y <c>93z_diag_lienzo_tarde_regenerado</c>: diagnóstico del texto
     /// desenfocado tras el rescate de las capturas 92, 93 y 93b de la ronda 2 (ver <see cref="SaveNow"/>);</description></item>
     /// <item><description><c>94_remolino_l103_chorro</c> y <c>95_remolino_l140_chorro</c> (la cuia tocada se traga el chorro),
-    /// <c>94b_remolino_l103_recibe</c> y <c>95b_remolino_l140_recibe</c> (la pareja se ilumina al recibir: la luz sube por las
-    /// paredes de su vidrio desde el fondo, sin teñir la cavidad) y <c>96_remolino_blanca_l{n}_chorro</c> (el remolino de la
+    /// <c>94b_remolino_l103_recibe</c> y <c>95b_remolino_l140_recibe</c> (la pareja recibe por el fondo: su espiral, iluminada,
+    /// late sobre el remanso aclarado, con burbujas y destellos en el fondo de la cavidad; sobre su líquido y su cavidad no se
+    /// pinta nada; revisión de T52, ronda 4) y <c>96_remolino_blanca_l{n}_chorro</c> (el remolino de la
     /// superficie, con su contorno, sobre una dosis blanca de Guanábana; observación 5 y revisión de T52).</description></item>
     /// </list>
     /// Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.PhoneFixesSnapshotTests</c>
@@ -118,6 +122,20 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Save(dir, "93z_diag_lienzo_tarde_regenerado");
             Debug.Log("AF_T52 sdf 93z: aviso " + F(stored) + " → " + F(fresh) + " (" + F(fresh / stored) + "×), burbuja " + F(bubbleStored) + " → "
                 + F(bubbleFresh) + " (" + F(bubbleFresh / bubbleStored) + "×); escala del lienzo " + F(boot.View.Canvas.scaleFactor));
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureToastOverRemolinoChannel()
+        {
+            // Revisión de T52, ronda 4 (compromiso [P]): el 103 (3 filas; la cuia 8, de la pareja del Remolino, en la fila de abajo)
+            // con las 300 semillas justas. El rescate de verdad deja 12 cuias y, sin semillas, «Te faltan 150» de «+1 cuia»;
+            // «¡Una cuia más!» llega a la repisa de abajo y va ajustado a su texto junto a la ficha de la pareja, sin taparla, pero
+            // en su tramo tapa lo que de ese Remolino queda bajo el pie: la bajada y el tramo horizontal del canal (el log dice si
+            // también el remanso).
+            string dir = SnapshotKit.Prepare();
+            yield return LoadWithBubbles(103, 0, 300);
+            yield return Rescue(dir, "92g_l103_aviso_canal", null, 12);
+            LogRemolinoUnderToast("92g_l103_aviso_canal", GameBootstrap.Current!);
         }
 
         [UnityTest]
@@ -250,7 +268,8 @@ namespace AF.Tests.PlayMode
                 MechanicTestKit.StepUntilRunning(boot, MechanicStepKind.Receive, partner, 4000);
                 MechanicTestKit.StepToFraction(boot, MechanicStepKind.Receive, partner, 0.55f);
                 RemolinoOverlay? whirl = view.Views[partner].OverlayOf(MechanicType.Remolino) as RemolinoOverlay;
-                Debug.Log("AF_T52 captura " + receive + ": luz de las paredes al " + F(whirl != null ? whirl.WallLightAlphaNow : -1f));
+                Debug.Log("AF_T52 captura " + receive + ": espuma de la espiral " + F(whirl != null ? whirl.SpiralFoamAlpha : -1f) + ", latido "
+                    + F(whirl != null ? whirl.SpiralScale : -1f) + ", remanso aclarado " + F(whirl != null ? whirl.PoolLightNow : -1f));
                 yield return SaveNow(dir, receive, boot);
             }
 
@@ -296,6 +315,35 @@ namespace AF.Tests.PlayMode
                 + view.Tray.ExtraShowsMissing + "/" + view.Tray.RevealShowsMissing);
             LogToast(name, boot);
             yield return SaveNow(dir, name, boot);
+        }
+
+        // Para cada cuia del Remolino de la fila de abajo: qué tapa el aviso de lo que de su Remolino queda bajo el pie (dp del
+        // lienzo; el remanso, de 2,6 × 0,85 u centrado 0,10 u bajo el pie; la bajada, en su eje, y el tramo horizontal del canal,
+        // de pie + 17 a pie + 21,5 hacia ChannelSide).
+        private static void LogRemolinoUnderToast(string name, GameBootstrap boot)
+        {
+            GameScreen view = boot.View!;
+            BoardLayoutResult l = view.Layout!;
+            Rect toast = view.NoticeToast.SeenRect;
+            float rowFoot = l.RowFootY[l.Rows - 1];
+            for (int i = 0; i < view.Views.Length && i < l.CenterX.Length; i++)
+            {
+                if (!(view.Views[i].OverlayOf(MechanicType.Remolino) is RemolinoOverlay whirl) || !whirl.PairMarkVisible || Mathf.Abs(l.FootY[i] - rowFoot) > 0.5f)
+                {
+                    continue;
+                }
+
+                float u = view.Views[i].Unit;
+                float x = l.CenterX[i];
+                float foot = l.FootY[i];
+                var pool = Rect.MinMaxRect(x - (0.5f * RemolinoOverlay.PoolWidthU * u), foot, x + (0.5f * RemolinoOverlay.PoolWidthU * u),
+                    foot + ((0.5f * RemolinoOverlay.PoolHeightU) - RemolinoOverlay.PoolCenterU) * u);
+                var drop = Rect.MinMaxRect(x - (0.5f * RemolinoOverlay.ChannelWidthDp), foot, x + (0.5f * RemolinoOverlay.ChannelWidthDp),
+                    foot + RemolinoOverlay.ShelfBottomBelowFootDp + RemolinoOverlay.ChannelWidthDp);
+                Debug.Log("AF_T52 " + name + ": cuia " + i + " (pareja " + whirl.PartnerIndex + ", tramo hacia " + F(whirl.ChannelSide) + ") en x = " + F(x)
+                    + " dp, pie " + F(foot) + " dp; aviso " + toast + "; tapa el remanso: " + toast.Overlaps(pool) + ", la bajada: " + toast.Overlaps(drop)
+                    + ", ficha " + whirl.PairMarkRect);
+            }
         }
 
         private static void LogToast(string name, GameBootstrap boot)

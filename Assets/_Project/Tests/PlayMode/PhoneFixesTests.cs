@@ -29,7 +29,8 @@ namespace AF.Tests.PlayMode
     /// <item><description>observación 1 / pregunta 41 (4): el aviso no tapa las burbujas «Te faltan {n}» de la bandeja, con 1 y
     /// con 3 filas (el 135); sin burbujas tampoco tapa la repisa de abajo ni la ficha «?×n» del 135; con ellas no deja a medias
     /// ninguna ficha: o va junto a ella, ajustado a su texto (el 135 tras el rescate de verdad, con 12 cuias, y Revelar sin
-    /// semillas ni video, «Te faltan 120 semillas», que sigue saliendo por la cola como decidió el dueño, D-015), o la tapa
+    /// semillas ni video, «Te faltan 120 semillas», que sigue saliendo como aviso, el [P] de T14 sin cambios desde f64c19a, por
+    /// la cola de D-011, punto 2), o la tapa
     /// entera (el 115 tras el rescate de verdad; y un estado forzado del 135 con 11 cuias): el compromiso [P]; el aire del cartel
     /// no depende del texto anterior;</description></item>
     /// <item><description>pregunta 43: el banner de mundo admite la escala de fuente de 02 §12 hasta el 130 %, con las mismas
@@ -38,9 +39,10 @@ namespace AF.Tests.PlayMode
     /// (<c>wait_ms</c> ≤ 16 ms y sin respaldo): la superficie de madera ya se pintó en otro hilo con su arte (el test la saca
     /// antes de la caché del arte compartido, así que no depende de los tests que corrieron antes);</description></item>
     /// <item><description>observación 5: por el Remolino, la cuia tocada se traga el chorro (remolino con contorno en su
-    /// superficie y espiral que gira, se ilumina y late, con el remanso que se aclara) y la pareja se ilumina y late al recibir,
-    /// con una luz marfil que sube por las paredes de su vidrio desde el fondo (sin teñir la cavidad: revisión de T52, ronda 3)
-    /// y destellos en el fondo; sin brillos aditivos fuera de FxLayer (guía v2 §8), dentro del presupuesto de 2.800 ms, sin
+    /// superficie y espiral que gira, se ilumina y late, con el remanso que se aclara) y la pareja se ilumina y late al recibir
+    /// desde su remolino (su espiral, con el remanso aclarado), con burbujas y destellos en el fondo y nada pintado sobre su
+    /// líquido ni su cavidad (revisión de T52, ronda 4; guía v2 §2.5, §4.1 y §7; D-003 y VA-06); sin brillos aditivos fuera de
+    /// FxLayer (guía v2 §8), dentro del presupuesto de 2.800 ms, sin
     /// asignaciones por fotograma y, con Reducir movimiento, sin giros, latidos ni partículas (ni siquiera pedidas): solo
     /// fundidos.</description></item>
     /// </list>
@@ -240,9 +242,9 @@ namespace AF.Tests.PlayMode
         public IEnumerator RevealWithoutSeedsNorVideo_TheNoticeGoesAboveTheBubbles_BesideTheChip_Level135()
         {
             // Revelar sin stock, saldo ni video en el 135 (3 filas, las dos burbujas en dos líneas): «Te faltan 120 semillas» sale
-            // por la cola de avisos, como decidió el dueño (D-011, punto 2; pregunta 41, D-015), encima de las burbujas sin
-            // taparlas (observación 1) y, como llega a la repisa de abajo, ajustado a su texto junto a la ficha «?×1», sin taparla
-            // ni tapar las cuias. Estado del juego, sin forzar nada.
+            // como aviso, el [P] de T14 (paso 1) sin cambios desde f64c19a, por la cola de avisos y de uno en uno (D-011, punto 2),
+            // encima de las burbujas sin taparlas (observación 1) y, como llega a la repisa de abajo, ajustado a su texto junto a
+            // la ficha «?×1», sin taparla ni tapar las cuias. Estado del juego, sin forzar nada.
             yield return LoadWithBubbles(135, 0, 0);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -535,7 +537,7 @@ namespace AF.Tests.PlayMode
             Assert.That(receive.SpiralFoamAlpha, Is.GreaterThan(RemolinoOverlay.FoamAlpha + 0.2f), "la pareja se ilumina al recibir");
             Assert.That(receive.SpiralScale, Is.GreaterThan(1.08f), "y late");
             Assert.That(receive.PoolLightNow, Is.GreaterThan(0.5f * RemolinoOverlay.PoolLightMix), "con el remanso aclarado");
-            AssertWallLight(receive, view.Views[partner], "la pareja, al 60 % de la recepción");
+            AssertNothingOnTheBody(view.Views[partner], "la pareja, al 60 % de la recepción");
             Assert.That(receive.AdditiveImageCount, Is.EqualTo(0), "sin brillos aditivos fuera de FxLayer (guía v2 §8)");
             Assert.That(intake.IntakeActive || intake.IntakeSwirlVisible, Is.False, "la cuia tocada ya se apagó");
             Assert.That(intake.PoolLightNow, Is.EqualTo(0f), "y su remanso también");
@@ -555,10 +557,7 @@ namespace AF.Tests.PlayMode
             Assert.That(receive.SpiralScale, Is.EqualTo(1f).Within(1e-4f));
             Assert.That(receive.PoolLightNow, Is.EqualTo(0f), "y el remanso de siempre");
             Assert.That(receive.PoolColorNow, Is.EqualTo(ProceduralArt.WhirlPoolColor));
-
-            // La luz de la cavidad se apaga sola tras la recepción (≤ 100 ms × el factor de los pasos más), sin retener la cola.
-            PlayModeHelpers.Step(boot, Mathf.CeilToInt((RemolinoOverlay.WallLightMs - ((1f - RemolinoOverlay.FillStart) * RemolinoOverlay.ReceiveMs)) * record.SpeedFactor) + PlayModeHelpers.FrameMs);
-            Assert.That(receive.WallLightAlphaNow, Is.EqualTo(0f), "y la luz de las paredes, apagada");
+            AssertNothingOnTheBody(view.Views[partner], "la pareja, en reposo");
             TestContext.WriteLine("Nivel 103: " + elapsed + " ms del toque a la vista quieta.");
         }
 
@@ -612,8 +611,8 @@ namespace AF.Tests.PlayMode
                 bool swirl = false;
                 bool poolLit = false;
                 bool partnerPoolLit = false;
-                bool wallLight = false;
-                int lightFrames = 0;
+                bool partnerLit = false;
+                int partnerLitFrames = 0;
                 for (int t = 0; t < 4000 && !_rig.Animator.IsIdle; t += PlayModeHelpers.FrameMs)
                 {
                     _rig.Tick(PlayModeHelpers.FrameMs);
@@ -623,25 +622,20 @@ namespace AF.Tests.PlayMode
                     swirl |= intake.IntakeSwirlVisible && intake.IntakeSwirlAlpha > 0.3f;
                     poolLit |= intake.PoolLightNow > 0.5f * RemolinoOverlay.PoolLightMix;
                     partnerPoolLit |= partner.PoolLightNow > 0.5f * RemolinoOverlay.PoolLightMix;
-                    wallLight |= partner.WallLightAlphaNow > 0.35f;
-                    lightFrames += partner.WallLightAlphaNow > 0f ? 1 : 0;
+                    partnerLit |= partner.SpiralFoamAlpha > RemolinoOverlay.FoamAlpha + 0.2f;
+                    partnerLitFrames += partner.SpiralFoamAlpha > RemolinoOverlay.FoamAlpha + 0.01f ? 1 : 0;
                     Assert.That(intake.AdditiveImageCount + partner.AdditiveImageCount, Is.EqualTo(0), "sin brillos aditivos fuera de FxLayer");
+                    AssertNothingOnTheBody(_rig.Views[2], "la pareja a los " + t + " ms");
                 }
 
                 string what = reduce ? "con Reducir movimiento" : "normal";
                 Assert.That(_rig.Animator.IsIdle, Is.True, what);
                 Assert.That(_rig.Animator.ShownOf(2), Is.EqualTo(after[2]), what);
                 Assert.That(lit && swirl, Is.True, what + ": la espuma se ilumina y el remolino de la superficie se funde");
-                Assert.That(poolLit && partnerPoolLit && wallLight, Is.True, what + ": los remansos se aclaran y la luz sube por las paredes de la pareja (fundidos, también con Reducir movimiento)");
-                Assert.That(lightFrames, Is.GreaterThan(3), what + ": la luz de las paredes dura varios fotogramas");
-
-                // La luz de las paredes se apaga sola tras la recepción (≤ WallLightMs × el factor de los pasos desde el fondo).
-                for (int t = 0; t < RemolinoOverlay.WallLightMs && partner.WallLightAlphaNow > 0f; t += PlayModeHelpers.FrameMs)
-                {
-                    _rig.Tick(PlayModeHelpers.FrameMs);
-                }
-
-                Assert.That(intake.PoolLightNow + partner.PoolLightNow + partner.WallLightAlphaNow, Is.EqualTo(0f), what + ": al terminar, en reposo");
+                Assert.That(poolLit && partnerPoolLit && partnerLit, Is.True, what + ": los remansos se aclaran y la espiral de la pareja se ilumina (fundidos, también con Reducir movimiento)");
+                Assert.That(partnerLitFrames, Is.GreaterThan(3), what + ": la espiral de la pareja se ilumina varios fotogramas");
+                Assert.That(intake.PoolLightNow + partner.PoolLightNow, Is.EqualTo(0f), what + ": al terminar, en reposo");
+                Assert.That(partner.SpiralFoamAlpha, Is.EqualTo(RemolinoOverlay.FoamAlpha).Within(1e-3f), what + ": la espuma de siempre");
                 Assert.That(partner.PoolColorNow, Is.EqualTo(ProceduralArt.WhirlPoolColor), what);
                 Assert.That(spun, Is.EqualTo(!reduce), what + ": la espiral gira solo sin Reducir movimiento");
                 Assert.That(pulsed, Is.EqualTo(!reduce), what + ": y late");
@@ -1002,38 +996,21 @@ namespace AF.Tests.PlayMode
             Assert.That(255f * Mathf.Min(now.r - rest.r, Mathf.Min(now.g - rest.g, now.b - rest.b)), Is.GreaterThanOrEqualTo(40f), what + ": el remanso se aclara ≥ 40 niveles RGB (" + now + ")");
         }
 
-        // La luz que sube por las paredes de la pareja (revisión de T52, ronda 3): encendida, en marfil neutro (nunca el color de
-        // la racha), un filo de 2 dp por dentro de cada pared, del fondo de la cavidad al 40 % de su alto, delante del líquido
-        // (BodyFront), con alfa normal; y nada del Remolino detrás del líquido (BodyBack): la zona vacía de la cavidad no se tiñe
-        // (D-003; VA-06).
-        private static void AssertWallLight(RemolinoOverlay whirl, CuiaView view, string what)
+        // La pareja que recibe no lleva nada del Remolino en su cuerpo (revisión de T52, ronda 4): ni delante del líquido
+        // (BodyFront: brillos blancos con alfa sobre el líquido, guía v2 §2.5, regla 2; §4.1 y §7) ni detrás (BodyBack: la zona
+        // vacía de la cavidad no se tiñe; D-003 y VA-06). Su señal es su remolino, en la ranura: la espiral que se ilumina y
+        // late, el remanso aclarado, las burbujas y los destellos del fondo (FxLayer).
+        private static void AssertNothingOnTheBody(CuiaView view, string what)
         {
-            Assert.That(whirl.WallLightAlphaNow, Is.GreaterThan(0.35f).And.LessThanOrEqualTo(RemolinoOverlay.WallLightAlpha + 1e-4f), what + ": la luz sube por las paredes");
-            Color c = whirl.WallLightColor;
-            Color paper = Palette.UiPaper;
-            Assert.That(new Vector3(c.r, c.g, c.b), Is.EqualTo(new Vector3(paper.r, paper.g, paper.b)), what + ": marfil neutro, no el color de la racha");
-            float u = view.Unit;
-            float cavity = CuiaGeometry.CavityTopU(view.Capacity) - CuiaGeometry.CavityBottomU;
-            for (int side = 0; side < 2; side++)
+            CuiaOverlayHost host = view.OverlayHost;
+            foreach (UnityEngine.UI.Graphic g in host.BodyFront.GetComponentsInChildren<UnityEngine.UI.Graphic>(false))
             {
-                string s = what + (side == 0 ? " (pared izquierda)" : " (pared derecha)");
-                Rect r = whirl.WallLightRectU(side);
-                Assert.That(r.width * u, Is.EqualTo(RemolinoOverlay.WallLightWidthDp).Within(0.01f), s + ": un filo de 2 dp");
-                Assert.That(side == 0 ? r.xMin : r.xMax, Is.EqualTo(side == 0 ? -CuiaGeometry.CavityHalfWidthU : CuiaGeometry.CavityHalfWidthU).Within(1e-3f), s + ": por dentro de la pared");
-                Assert.That(r.yMin, Is.EqualTo(CuiaGeometry.CavityBottomU).Within(0.01f), s + ": desde el fondo de la cavidad");
-                Assert.That(r.height, Is.EqualTo(RemolinoOverlay.WallLightHeightFraction * cavity).Within(0.01f), s + ": hasta el 40 % de su alto");
-                UnityEngine.UI.Image img = whirl.WallLightImage(side);
-                Assert.That(img.gameObject.activeSelf, Is.True, s);
-                Assert.That(img.transform.parent.name, Is.EqualTo("BodyFront"), s + ": delante del líquido");
-                Assert.That(img.color.a, Is.EqualTo(whirl.WallLightAlphaNow).Within(1e-5f), s + ": las dos a la vez");
-                Assert.That(img.sprite != null ? img.sprite.name : null, Is.EqualTo("remolino_wall_light"), s + ": la rampa de 1 abajo a 0 arriba");
+                Assert.That(g.color.a, Is.EqualTo(0f), what + ": nada sobre el líquido de la pareja (" + g.name + ")");
             }
 
-            Transform back = view.transform.Find("Body/BodyBack")!;
-            for (int i = 0; i < back.childCount; i++)
+            foreach (UnityEngine.UI.Graphic g in host.BodyBack.GetComponentsInChildren<UnityEngine.UI.Graphic>(false))
             {
-                Transform child = back.GetChild(i);
-                Assert.That(child.name.StartsWith("Remolino") && child.gameObject.activeSelf, Is.False, what + ": nada del Remolino tiñe la cavidad (" + child.name + ")");
+                Assert.That(g.name.StartsWith("Remolino"), Is.False, what + ": nada del Remolino tiñe su cavidad (" + g.name + ")");
             }
         }
 
