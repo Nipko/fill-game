@@ -20,7 +20,9 @@ namespace AF.Core.Board
     /// <item><description>Cada color puede sellar en una cuia propia con <c>cap = U_c</c>, y cada Cuia alta (5-6) llega con su
     /// fruta abundante (02 §8; 03 §3): para cada <c>v</c>, hay al menos tantas cuias de capacidad <c>v</c> como colores con
     /// <c>U_c = v</c>, y para <c>v</c> ∈ {5, 6} exactamente tantas. La Tinaja (M13) no cuenta en ninguna de las dos
-    /// comparaciones: nunca recibe, así que no es casa de ninguna fruta.</description></item>
+    /// comparaciones: nunca recibe, así que no es casa de ninguna fruta. La Hoja atada sí cuenta, y la cuenta es exacta porque
+    /// solo es casa de su fruta, con capacidad = <c>U_c</c> de su llave y como mucho una por fruta (D-024; las comprueba
+    /// <c>HojaAtadaMechanic</c> más abajo): dos de la misma fruta contarían la segunda como casa de otra fruta.</description></item>
     /// <item><description>Ninguna cuia sellada al inicio (03 §17 #5).</description></item>
     /// <item><description>Barro (02 §9.1 M5): solo en la capa 2 o 3 (índice 1-2) de una cuia de 4; nunca en una cuia con
     /// mecánica (propuesta de D-007 b.2 M5: «nunca dentro de un Matapi»; D-007) ni como dosis oculta [P].</description></item>
@@ -43,10 +45,10 @@ namespace AF.Core.Board
     /// <item><description>Como mucho un contador por nivel (Lluvia o Piraña; propuesta de D-007 b.2 M6-M7 y d.2 regla 6): la
     /// Lluvia y la Piraña nunca van juntas.</description></item>
     /// <item><description>Las reglas propias de cada mecánica (03 §17 #6), con las de las variantes de la 1.0 (K3a; propuesta
-    /// de D-007 b.3): la Hoja atada, con su llave en el tablero, su fruta en el fondo si empieza con dosis y capacidad =
-    /// <c>U_c</c> de su llave [P]; el Brote de dos hojas, con espacio ≥ 2; y la Flor de vitória-régia (K3b), con dos llaves
-    /// distintas en el tablero que pueden sellar fuera de ella a la vez y, mientras dure el bloqueo C1-9 de la Liana (pregunta
-    /// 24 b), sin capacidades mixtas.</description></item>
+    /// de D-007 b.3): la Hoja atada, con su llave en el tablero, su fruta en el fondo si empieza con dosis, capacidad =
+    /// <c>U_c</c> de su llave y como mucho una por fruta (D-024); el Brote de dos hojas, con espacio ≥ 2; y la Flor de
+    /// vitória-régia (K3b), con dos llaves distintas en el tablero que pueden sellar fuera de ella a la vez y, mientras dure el
+    /// bloqueo C1-9 de la Liana (pregunta 24 b), sin capacidades mixtas.</description></item>
     /// <item><description><c>atascado(S0)</c> = false con la <c>futil</c> única (02 §9.2 regla 1).</description></item>
     /// </list>
     /// </remarks>

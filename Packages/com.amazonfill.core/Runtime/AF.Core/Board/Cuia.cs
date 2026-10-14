@@ -27,7 +27,7 @@ namespace AF.Core.Board
     /// que le faltan, 2 o 1, y 0 en el Brote normal).</description></item>
     /// <item><description>53-55: <c>k</c>, ritmo en vertidos de Lluvia y Piraña (2-5, 08 §9).</description></item>
     /// <item><description>En la Flor de vitória-régia, que no usa <c>n</c> ni <c>k</c>, los bits 50-53 guardan <c>key2</c>, tinte
-    /// − 1, y los 54-55 valen 0 (K3b; firma de <c>pack_schema</c> 3, pregunta 8). Las demás mecánicas no cambian de bits ni de
+    /// − 1, y los 54-55 valen 0 (K3b; firma de <c>pack_schema</c> 3, D-023, punto 5). Las demás mecánicas no cambian de bits ni de
     /// hash.</description></item>
     /// <item><description>56-58: contador de vertidos (Lluvia, Piraña).</description></item>
     /// <item><description>59-60: banderas (bit 59 = cerrada: Hoja puesta, Brote cerrado; bit 60 reservado).</description></item>

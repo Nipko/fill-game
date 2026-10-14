@@ -7,7 +7,7 @@ namespace AF.Core.Mechanics
     /// <summary>
     /// M2 Brote (GDD 02 §9.1 y §9.2; 03 §9: 1 bit; D-007: la regla no cambia y el debut pasa del 63 al 163): cuia con 1-3
     /// dosis visibles y un tapón-brote en la boca del color de su cima. Con <c>n</c> = 2 es el <b>Brote de dos hojas</b>
-    /// (variante de la 1.0, debut 343; 02 R10 b; propuesta de D-007 b.3; firma de <c>pack_schema</c> 3, pregunta 8).
+    /// (variante de la 1.0, debut 343; 02 R10 b; propuesta de D-007 b.3; firma de <c>pack_schema</c> 3, D-023, punto 5).
     /// </summary>
     /// <remarks>
     /// <list type="bullet">

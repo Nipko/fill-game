@@ -130,7 +130,7 @@ namespace AF.Core.Tests
         public void MechanicTypes_ConvertTheJsonKeys()
         {
             // 08 §4.1 attrs.type; el Barro no es un type (02 §9.1 M5). La tinaja y su cuia (M13) son 8 y 9, y la Hoja atada y la
-            // Flor de vitória-régia (b.3; firma de pack_schema 3, pregunta 8) son 10 y 11 [P], sin huecos.
+            // Flor de vitória-régia (b.3; firma de pack_schema 3, D-023, punto 5) son 10 y 11 [P], sin huecos.
             string[] keys = { "hoja", "brote", "liana", "matapi", "remolino", "lluvia", "pirana", "tinaja", "cucharon", "hoja_atada", "flor" };
             Assert.That(keys.Length, Is.EqualTo((int)MechanicTypes.Last));
             for (int i = 0; i < keys.Length; i++)

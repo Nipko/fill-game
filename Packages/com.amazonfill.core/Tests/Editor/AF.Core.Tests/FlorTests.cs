@@ -10,10 +10,10 @@ namespace AF.Core.Tests
 {
     /// <summary>
     /// Flor de vitória-régia (K3b; variante de la Liana con fruta de la 1.0 con debut en el 403; D-007, propuesta de D-007 b.3;
-    /// 02 §1.2, R10 (d) y §9.1; firma de <c>pack_schema</c> 3, pregunta 8: <c>flor {key, key2}</c> con key ≠ key2): cerrada no es
-    /// origen ni destino y se abre cuando existen cuias selladas de sus dos frutas. El solver (A* frente a la búsqueda exhaustiva
-    /// y heurística) está en <c>LianaSolverTests</c> y P1-P3, en <c>DotnetOnly/FutilePropertyTests</c>. Test compartido (NUnit
-    /// 3.5, C# 9).
+    /// 02 §1.2, R10 (d) y §9.1; firma de <c>pack_schema</c> 3 (D-023, punto 5): <c>flor {key, key2}</c> con key ≠ key2):
+    /// cerrada no es origen ni destino y se abre cuando existen cuias selladas de sus dos frutas. El solver (A* frente a la
+    /// búsqueda exhaustiva y heurística) está en <c>LianaSolverTests</c> y P1-P3, en <c>DotnetOnly/FutilePropertyTests</c>. Test
+    /// compartido (NUnit 3.5, C# 9).
     /// </summary>
     [TestFixture]
     public sealed class FlorTests
@@ -160,7 +160,7 @@ namespace AF.Core.Tests
         [Test]
         public void Format_Flor_KeyKey2AndBuilder_PackSchema3Signature()
         {
-            // Firma de pack_schema 3 (pregunta 8): {"type":"flor","key":c1,"key2":c2} con c1 ≠ c2; código 11 [P], que no se
+            // Firma de pack_schema 3 (D-023, punto 5): {"type":"flor","key":c1,"key2":c2} con c1 ≠ c2; código 11 [P], que no se
             // persiste; sin bandera (se deduce del estado).
             Assert.That(MechanicTypes.TryParse("flor", out MechanicType type), Is.True);
             Assert.That(type, Is.EqualTo(MechanicType.Flor));
@@ -245,8 +245,9 @@ namespace AF.Core.Tests
         [Test]
         public void Validation_DistinctKeysOnTheBoard_NotInside_AbleToSealOutsideAtOnce_0317_6()
         {
-            // Firma de la pregunta 8 (key ≠ key2); 03 §17 #6 (llaves en el tablero); b.3, como la Liana con fruta (regla 4): sus
-            // frutas no tienen dosis dentro y las dos pueden sellar fuera a la vez (una cuia de capacidad U_c para cada una).
+            // Firma de pack_schema 3, D-023, punto 5 (key ≠ key2); 03 §17 #6 (llaves en el tablero); b.3, como la Liana con
+            // fruta (regla 4): sus frutas no tienen dosis dentro y las dos pueden sellar fuera a la vez (una cuia de capacidad U_c
+            // para cada una).
             int[] caps = { 4, 4, 4, 4, 4 };
             int[][] cuias = { new[] { 1, 2, 1, 2 }, new[] { 2, 1, 2, 1 }, new[] { 3, 3 }, new[] { 3, 3 }, new int[0] };
             Assert.That(Validate(caps, cuias, 2, new MechanicSpec(MechanicType.Flor, key: 1, key2: 2)), Is.Null);

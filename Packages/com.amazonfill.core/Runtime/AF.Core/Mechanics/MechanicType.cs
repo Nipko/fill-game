@@ -12,10 +12,10 @@ namespace AF.Core.Mechanics
     /// ocultos (02 §11).</para>
     /// <para>Los códigos 8 y 9 son la Tinaja (M13) y su cuia chica (D-019; propuesta
     /// <c>docs/research/cultura-ribera/propuesta-tinaja.md</c>, c.1). El 10 [P] es la Hoja atada y el 11 [P], la Flor de
-    /// vitória-régia, variantes de la 1.0 (D-007, propuesta de D-007 b.3; firma de <c>pack_schema</c> 3, pregunta 8). El Brote de
-    /// dos hojas no es un tipo: es el Brote con <c>n</c> = 2 (<see cref="Board.Cuia.MechanicN"/>). Los códigos 12-15 quedan libres
-    /// para la 1.1 (Aguapé, Palizada, Lancha y Cocha; Q7 y Q8 b′ de D-007) y las demás variantes. Nadie persiste el valor numérico
-    /// fuera de la cuia: el JSON usa las claves de <see cref="MechanicTypes.ToKey"/>.</para>
+    /// vitória-régia, variantes de la 1.0 (D-007, propuesta de D-007 b.3; firma de <c>pack_schema</c> 3, D-023, punto 5). El
+    /// Brote de dos hojas no es un tipo: es el Brote con <c>n</c> = 2 (<see cref="Board.Cuia.MechanicN"/>). Los códigos 12-15
+    /// quedan libres para la 1.1 (Aguapé, Palizada, Lancha y Cocha; Q7 y Q8 b′ de D-007) y las demás variantes. Nadie persiste el
+    /// valor numérico fuera de la cuia: el JSON usa las claves de <see cref="MechanicTypes.ToKey"/>.</para>
     /// </remarks>
     public enum MechanicType
     {
@@ -70,9 +70,9 @@ namespace AF.Core.Mechanics
 
         /// <summary>
         /// Flor de vitória-régia (variante de la Liana con fruta de la 1.0, debut 403; D-007, propuesta de D-007 b.3; 02 §1.2 y
-        /// R10 (d); firma de <c>pack_schema</c> 3, pregunta 8: <c>{"type":"flor","key":c1,"key2":c2}</c> con c1 ≠ c2): cerrada no
-        /// es origen ni destino; se abre en la etapa (d) de R10 cuando existen cuias selladas de las dos frutas (lógica Y). Se
-        /// deduce del estado, sin bandera. Código 11 [P]; clave <c>"flor"</c>.
+        /// R10 (d); firma de <c>pack_schema</c> 3 (D-023, punto 5): <c>{"type":"flor","key":c1,"key2":c2}</c> con c1 ≠ c2):
+        /// cerrada no es origen ni destino; se abre en la etapa (d) de R10 cuando existen cuias selladas de las dos frutas (lógica
+        /// Y). Se deduce del estado, sin bandera. Código 11 [P]; clave <c>"flor"</c>.
         /// </summary>
         Flor = 11,
     }

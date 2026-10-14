@@ -3,15 +3,16 @@ using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
 using AF.Core.Session;
+using AF.Solver.Search;
 using NUnit.Framework;
 
 namespace AF.Core.Tests
 {
     /// <summary>
     /// Hoja atada (K3a; variante de la 1.0 con debut en el 283; D-007, propuesta de D-007 b.3; 02 §1.2 y §1.4; firma de
-    /// <c>pack_schema</c> 3, pregunta 8): filtro persistente de la fruta <c>key</c> que sí es origen y nunca se suelta. El solver
-    /// (A* frente a la búsqueda exhaustiva y heurística) está en <c>FilterSolverTests</c> y P1-P3, en
-    /// <c>DotnetOnly/FutilePropertyTests</c>. Test compartido (NUnit 3.5, C# 9).
+    /// <c>pack_schema</c> 3, D-023, punto 5; reglas de validación, D-024): filtro persistente de la fruta <c>key</c> que sí es
+    /// origen y nunca se suelta. El solver (A* frente a la búsqueda exhaustiva y heurística) está en <c>FilterSolverTests</c> y
+    /// P1-P3, en <c>DotnetOnly/FutilePropertyTests</c>. Test compartido (NUnit 3.5, C# 9).
     /// </summary>
     [TestFixture]
     public sealed class HojaAtadaTests
@@ -31,6 +32,23 @@ namespace AF.Core.Tests
             var attrs = new MechanicSpec[count];
             attrs[index] = spec;
             return attrs;
+        }
+
+        private static int LegalPours(BoardState state)
+        {
+            int legal = 0;
+            for (int a = 0; a < state.Count; a++)
+            {
+                for (int b = 0; b < state.Count; b++)
+                {
+                    if (a != b && PourRules.IsLegal(state, a, b))
+                    {
+                        legal++;
+                    }
+                }
+            }
+
+            return legal;
         }
 
         [Test]
@@ -120,20 +138,34 @@ namespace AF.Core.Tests
             Assert.That(PourRules.IsFutile(after, 1, 2), Is.True);
         }
 
-        [Test]
-        public void R_0214_TheOnlyUsefulPour_IntoItsHojaAtada_AvoidsStuck_R14()
+        [TestCase(PourMode.Run)]
+        [TestCase(PourMode.Single)]
+        public void R_0214_R14_TheOnlyLegalPour_IntoItsEmptyHojaAtada_IsNotFutile_SoAWinnableBoardIsNotStuck(PourMode mode)
         {
-            // Anexo B (02 §1.4): con la regla anterior, A [1, 1] → su Hoja atada vacía era fútil y este tablero, que se gana, se
-            // declaraba en Aguas estancadas (rompía R14).
-            var withAtada = new BoardState(new[] { C(4, 1, 1), Atada(4, 1), C(4, 2, 2, 1, 1), C(4, 2, 2) });
-            var withPlainEmpty = new BoardState(new[] { C(4, 1, 1), Cuia.Empty(4), C(4, 2, 2, 1, 1), C(4, 2, 2) });
+            // Anexo B (02 §1.4, «también la Hoja atada» en cambia_al_recibir) frente a R14: el único vertido legal es
+            // [1, 1] → su Hoja atada vacía (las demás cuias están llenas y ninguna tiene el 1, lo único que recibe la hoja, en la
+            // cima). La regla base de futil de 02 §1.4, sin la línea del anexo B, lo da por fútil ([1, 1] monocolor ya en una
+            // cuia de 4 = U_1, hacia una vacía: no es la rama «casa correcta»), así que sin la exención el tablero estaría en
+            // Aguas estancadas con solución. Con ella no lo está, y se gana en run y en single.
+            var state = new BoardState(new[] { C(4, 1, 1), Atada(4, 1), C(4, 1, 2, 3, 2), C(4, 1, 3, 2, 3), C(2, 2, 3) });
 
-            Assert.That(PourRules.IsStuck(withAtada, true), Is.False);
-            Assert.That(PourRules.IsFutile(withPlainEmpty, 0, 1), Is.True);
-            BoardState s = PourRules.Apply(withAtada, 0, 1, PourMode.Run);
-            s = PourRules.Apply(s, 2, 1, PourMode.Run);
-            s = PourRules.Apply(s, 3, 2, PourMode.Run);
-            Assert.That(s.IsWon(), Is.True);
+            Assert.That(LegalPours(state), Is.EqualTo(1));
+            Assert.That(PourRules.IsLegal(state, 0, 1), Is.True);
+            Assert.That(CuiaRules.IsFutile(state[0], state[1], state.UnitsTable), Is.True, "regla base de 02 §1.4, sin el anexo B");
+            Assert.That(PourRules.IsFutile(state, 0, 1), Is.False);
+            Assert.That(PourRules.IsStuck(state, true), Is.False);
+            Assert.That(LevelValidation.Validate(state), Is.Null);
+
+            SolveResult solution = new AStarSolver().Solve(state, SolverOptions.ForPipeline(mode));
+            Assert.That(solution.IsSolved, Is.True);
+            var session = new LevelSession(state, true, mode);
+            for (int i = 0; i < solution.MoveCount; i++)
+            {
+                Pour pour = solution.GetMove(i);
+                Assert.That(session.TryPour(pour.Source, pour.Target, out _), Is.True);
+            }
+
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Won));
         }
 
         [Test]
@@ -155,7 +187,7 @@ namespace AF.Core.Tests
         [Test]
         public void Format_HojaAtada_KeyAndBuilder_PackSchema3Signature()
         {
-            // Firma de pack_schema 3 (pregunta 8): {"type":"hoja_atada","key":c}; código 10 [P], que no se persiste.
+            // Firma de pack_schema 3 (D-023, punto 5): {"type":"hoja_atada","key":c}; código 10 [P], que no se persiste.
             Assert.That(MechanicTypes.TryParse("hoja_atada", out MechanicType type), Is.True);
             Assert.That(type, Is.EqualTo(MechanicType.HojaAtada));
             Assert.That(MechanicTypes.ToKey(MechanicType.HojaAtada), Is.EqualTo("hoja_atada"));
@@ -179,8 +211,8 @@ namespace AF.Core.Tests
         [Test]
         public void Validation_KeyOnTheBoard_FruitAtTheBottom_HomeOfItsFruit_NoHidden_0317_6()
         {
-            // 03 §17 #6 (llave en el tablero); b.3 (empieza vacía o con su fruta en el fondo); [P] de K3a (capacidad = U_c de su
-            // llave: 02 R16, P3); 02 §11 (una cuia con mecánica lleva sus dosis visibles).
+            // 03 §17 #6 (llave en el tablero); b.3 (empieza vacía o con su fruta en el fondo); D-024, punto 1 (capacidad = U_c de
+            // su llave: 02 R16, P3); 02 §11 (una cuia con mecánica lleva sus dosis visibles).
             int[] caps = { 4, 4, 4, 4 };
             int[][] cuias = { new[] { 1, 2, 1, 2 }, new[] { 2, 1, 2 }, new[] { 1 }, new int[0] };
             Assert.That(Validate(caps, cuias, 2, new MechanicSpec(MechanicType.HojaAtada, key: 1)), Is.Null);
@@ -194,6 +226,45 @@ namespace AF.Core.Tests
 
             BoardState hidden = BoardBuilder.Build(caps, cuias, Attrs(4, 1, new MechanicSpec(MechanicType.HojaAtada, key: 2)), new[] { new[] { 1, 0 } }).State!;
             Assert.That(LevelValidation.Validate(hidden), Does.Contain("visibles"));
+        }
+
+        [Test]
+        public void Validation_D024_AtMostOneHojaAtadaPerFruit_TwoOfDifferentFruitsAreValid()
+        {
+            // D-024, punto 2 (02 R16, P3; 02 §8): una Hoja atada por fruta. Dos de frutas distintas son válidas: cada una es la
+            // casa de su fruta.
+            int[] caps = { 4, 4, 4, 4 };
+            int[][] cuias = { new[] { 1, 2, 1, 2 }, new[] { 2, 1, 2, 1 }, new int[0], new int[0] };
+            var attrs = new MechanicSpec[4];
+            attrs[2] = new MechanicSpec(MechanicType.HojaAtada, key: 1);
+            attrs[3] = new MechanicSpec(MechanicType.HojaAtada, key: 2);
+            BoardBuildResult built = BoardBuilder.Build(caps, cuias, attrs);
+
+            Assert.That(built.Error, Is.Null);
+            Assert.That(LevelValidation.Validate(built.State!), Is.Null);
+        }
+
+        [Test]
+        public void Validation_D024_TwoHojasAtadasOfTheSameFruit_AreRejected()
+        {
+            // D-024, punto 2: dos Hojas atadas de la misma fruta (las dos de capacidad U_c, válidas cada una por su cuenta) se
+            // rechazan con un motivo que nombra la otra. BoardBuilder las acepta: es una regla del nivel, no del formato.
+            int[] caps = { 4, 4, 4, 4, 4 };
+            int[][] cuias = { new[] { 1, 2, 3, 1 }, new[] { 2, 3, 1, 2 }, new[] { 3, 1, 2, 3 }, new int[0], new int[0] };
+            var attrs = new MechanicSpec[5];
+            attrs[3] = new MechanicSpec(MechanicType.HojaAtada, key: 1);
+            attrs[4] = new MechanicSpec(MechanicType.HojaAtada, key: 1);
+            BoardBuildResult built = BoardBuilder.Build(caps, cuias, attrs);
+            Assert.That(built.Error, Is.Null);
+
+            string? error = LevelValidation.Validate(built.State!);
+            Assert.That(error, Does.Contain("D-024"));
+            Assert.That(error, Does.Contain("como mucho una Hoja atada por fruta"));
+            Assert.That(error, Does.Contain("cuia 4"));
+
+            // Con la segunda atada a otra fruta, el mismo tablero es válido.
+            attrs[4] = new MechanicSpec(MechanicType.HojaAtada, key: 3);
+            Assert.That(LevelValidation.Validate(BoardBuilder.Build(caps, cuias, attrs).State!), Is.Null);
         }
 
         private static string? Validate(int[] caps, int[][] cuias, int index, MechanicSpec spec)

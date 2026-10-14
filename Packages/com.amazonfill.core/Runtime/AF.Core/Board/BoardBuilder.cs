@@ -15,7 +15,7 @@ namespace AF.Core.Board
     /// <item><description><c>partner</c> del Remolino → id de pareja (0..7) por orden de aparición; la pareja tiene que ser
     /// simétrica.</description></item>
     /// <item><description>Banderas iniciales: Hoja puesta y Brote cerrado llevan <see cref="Cuia.FlagClosed"/> (03 §9).</description></item>
-    /// <item><description>Variantes de la 1.0 con la firma de <c>pack_schema</c> 3 (pregunta 8; propuesta de D-007 b.3): la Hoja
+    /// <item><description>Variantes de la 1.0 con la firma de <c>pack_schema</c> 3 (D-023, punto 5; propuesta de D-007 b.3): la Hoja
     /// atada, <c>{"type":"hoja_atada","key":c}</c>, con su llave y sin bandera (nunca se cierra ni se suelta); el Brote, con
     /// <c>n</c> ∈ {1, 2} opcional: sin <c>n</c> o con 1 es el Brote normal (<c>n</c> = 0 en la cuia: el mismo
     /// <see cref="Cuia.Packed"/> y el mismo hash que antes) y con 2, el Brote de dos hojas (<c>n</c> = 2 en la cuia: las hojas
@@ -255,7 +255,7 @@ namespace AF.Core.Board
                 string where = "attrs[" + Num(i) + "] (" + MechanicTypes.ToKey(spec.Type) + "): ";
                 if (spec.Key2 != 0 && spec.Type != MechanicType.Flor)
                 {
-                    return where + "key2 solo lo lleva la Flor de vitória-régia (pregunta 8)";
+                    return where + "key2 solo lo lleva la Flor de vitória-régia (D-023, punto 5)";
                 }
 
                 int flags = 0;
@@ -278,7 +278,7 @@ namespace AF.Core.Board
                     case MechanicType.HojaAtada:
                         if (!IsTint(spec.Key) || spec.Partner >= 0 || spec.N != 0 || spec.K != 0)
                         {
-                            return where + "lleva solo key, un tinte de 1 a 14 (propuesta de D-007 b.3; pregunta 8)";
+                            return where + "lleva solo key, un tinte de 1 a 14 (propuesta de D-007 b.3; D-023, punto 5)";
                         }
 
                         key = spec.Key;
@@ -286,7 +286,7 @@ namespace AF.Core.Board
                     case MechanicType.Brote:
                         if (spec.Key != 0 || spec.Partner >= 0 || spec.K != 0 || spec.N < 0 || spec.N > BroteMechanic.TwoLeaves)
                         {
-                            return where + "lleva como mucho n, 1 o 2 (Brote de dos hojas; propuesta de D-007 b.3; pregunta 8)";
+                            return where + "lleva como mucho n, 1 o 2 (Brote de dos hojas; propuesta de D-007 b.3; D-023, punto 5)";
                         }
 
                         n = spec.N == BroteMechanic.TwoLeaves ? BroteMechanic.TwoLeaves : 0;
@@ -325,10 +325,10 @@ namespace AF.Core.Board
                         n = spec.N;
                         break;
                     case MechanicType.Flor:
-                        // Firma de pack_schema 3 (pregunta 8): flor {key, key2} con key ≠ key2; sin bandera (K3b).
+                        // Firma de pack_schema 3 (D-023, punto 5): flor {key, key2} con key ≠ key2; sin bandera (K3b).
                         if (!IsTint(spec.Key) || !IsTint(spec.Key2) || spec.Key == spec.Key2 || spec.Partner >= 0 || spec.N != 0 || spec.K != 0)
                         {
-                            return where + "lleva solo key y key2, dos tintes distintos de 1 a 14 (propuesta de D-007 b.3; pregunta 8)";
+                            return where + "lleva solo key y key2, dos tintes distintos de 1 a 14 (propuesta de D-007 b.3; D-023, punto 5)";
                         }
 
                         key = spec.Key;

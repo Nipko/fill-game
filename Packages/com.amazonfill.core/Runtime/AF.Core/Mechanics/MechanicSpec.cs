@@ -6,7 +6,7 @@ namespace AF.Core.Mechanics
 {
     /// <summary>
     /// Espejo de un <c>attrs[i]</c> de <c>af-level/1</c> (08 §4.1): <c>{type, key, partner, n, k}</c> y, con la firma de
-    /// <c>pack_schema</c> 3 (pregunta 8), <c>key2</c> de la Flor de vitória-régia; con los campos que usa cada mecánica según
+    /// <c>pack_schema</c> 3 (D-023, punto 5), <c>key2</c> de la Flor de vitória-régia; con los campos que usa cada mecánica según
     /// 02 §9.1, D-007 y la propuesta de D-007 b.3. Es la entrada de <see cref="Board.BoardBuilder"/>; dentro de la cuia los
     /// atributos viven empaquetados en <see cref="Board.Cuia.Packed"/>.
     /// </summary>

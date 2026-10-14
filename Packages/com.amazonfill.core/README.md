@@ -57,7 +57,7 @@ Este paso va también en la descripción del PR de integración.
 | Ensamblado | Tipo | Reglas del GDD |
 |---|---|---|
 | `AF.Core` | `Board.Cuia`: cuia empaquetada en un `ulong` (capacidad, dosis, máscara de ocultos y atributos de mecánica en los bits 39-60: tipo, `key`, id de pareja, `n`, `k`, contador y banderas; en la Flor, `key2` en los bits de `n` y `k`; bits libres a 0) | 02 §1.1 R1, R2, R4, R6, R7; 08 §2.2, §4.1; 03 §3 |
-| `AF.Core` | `Mechanics.MechanicType`, `MechanicTypes` (claves `attrs.type`) y `MechanicSpec` (espejo de `attrs[i]`, con `key2` de la Flor) | 02 §9.1; D-007; 08 §4.1; pregunta 8 |
+| `AF.Core` | `Mechanics.MechanicType`, `MechanicTypes` (claves `attrs.type`) y `MechanicSpec` (espejo de `attrs[i]`, con `key2` de la Flor) | 02 §9.1; D-007; 08 §4.1; D-023, punto 5 |
 | `AF.Core` | `Board.BoardBuilder` y `UnitsPerColor`: tablero desde `caps`, `cuias`, `attrs`, `hidden` y `units_per_color` (entero u objeto), con los campos obligatorios por mecánica, el id de pareja del Remolino y el motivo del rechazo; falla cerrado con las mecánicas sin portar | 08 §4.1; 02 §9.1; 03 §3 |
 | `AF.Core` | `Board.LevelValidation`: reglas estructurales del tablero inicial (≤ 16 cuias, `U_c` ∈ {4, 5, 6}, una cuia propia por color y fruta abundante por Cuia alta, sin sellos ni victoria al inicio, reglas de cada mecánica, `atascado(S0)` = false) | 03 §17 #5-#6; 02 §8; 02 §9.2 regla 1 |
 | `AF.Core` | `Board.BoardState`: tablero inmutable, `U_c`, sellado, victoria, igualdad por valor (`IEquatable`) y `CanonicalHash()` | 02 §1.1 R3, R5; §1.3 R12; 03 §3 |
@@ -70,8 +70,8 @@ Este paso va también en la descripción del PR de integración.
 | `AF.Core` | Lluvia (M6, debut 143; C3-1): `LluviaMechanic`; cada `k` vertidos útiles (nunca en un fútil, Q18 B) cae una gota del agua `key` encima, sin regla de color, si hay hueco (si no, espera al siguiente vertido útil); con la última se va la nube; solo sella con agua; con gotas pendientes impide la victoria y no es fútil como destino ni, por Q-B, como origen; `U_agua` = dosis + gotas = 4; eventos `LluviaDropMask`, `LluviaWaitingMask`, `LluviaEndedMask`; validación: `key` 10 o 14, `k` 2-5, sin ocultos, un contador por nivel | 02 R3, §9.1 M6, §9.2; 03 §9; anexo B; Q-B, Q14 A, Q18 B |
 | `AF.Core` | Piraña (M7, debut 183; C3-2): `PiranaMechanic` en la cueva; cada `k` vertidos útiles (nunca en un fútil) muerde la dosis superior de la cuia que recibió el vertido y la lleva a la cueva, salvo sellado, Matapi, la propia cueva o cueva llena (Q-C: el mordisco se pierde y el contador sigue); eventos `PiranaBittenMask`, `PiranaCaveMask`, `PiranaBiteLostMask`; validación: `k` 2-5, sin ocultos ni Remolino [P], un contador por nivel | 02 §9.1 M7, §9.2; 03 §9; anexo B; Q-C, Q14 A, Q18 B |
 | `AF.Core` | Tinaja (M13, debut 323 [P]; T55, D-019): `TinajaMechanic` (capacidad 5, 3-5 dosis ocultas salvo la boca; nunca recibe; **solo vierte en su cuia** por el gancho `IMechanic.AllowsTarget`, la primera línea de `BoardRules.Accepts`; una dosis cada vez por T4; exenta como origen en `futil`; vacía queda inerte) y `CucharonMechanic` (su Cuia chica de 2, contigua: solo recibe de la tinaja, cualquier fruta; exenta como origen mientras cuelga; se suelta en R10 f cuando la tinaja queda vacía y pasa a ser una Cuia chica normal); evento `CucharonReleasedMask`; validación: una tinaja con su cuia, T4 en la columna, sin Barro ni Liana, Remolino, Lluvia o Piraña, única fuente de ocultas con tope propio (4) y fuera de las dos comparaciones de capacidades de 02 §8. Ver «Tinaja (M13)» | Propuesta de la tinaja b.2, c.1-c.2; 02 §1.2, §1.4, R10, R14, §8, §11; Q14 A; Q-Ti1, Q-Ti2, Q-Ti6 |
-| `AF.Core` | Variantes de la 1.0 (K3a; propuesta de D-007 b.3; firma de `pack_schema` 3, pregunta 8): **Hoja atada** (`MechanicType.HojaAtada` = 10 [P], clave `hoja_atada`, debut 283; `HojaAtadaMechanic`: solo recibe su fruta `key`, vacía o con ella en la cima; sí es origen; nunca se suelta, ni al sellar; nunca es fútil como destino; puede empezar con su fruta en el fondo; capacidad = `U_c` de su llave [P]; dos de la misma fruta incumplen P3, pregunta abierta) y **Brote de dos hojas** (el Brote con `n` = 2, debut 343: `Cuia.MechanicN` = hojas que le faltan, resta las dosis recibidas en la etapa (b) y germina al llegar a 0; un tramo de 2 lo abre de una vez en `run`; evento `BroteLeafOpenedMask`; espacio ≥ 2 al empezar). Ver «Variantes de la 1.0 (K3a)» | 02 §1.2, §1.4, R10 (b), R16; 02 §9.1; propuesta de D-007 b.3 |
-| `AF.Core` | Variante de la 1.0 (K3b; propuesta de D-007 b.3; firma de `pack_schema` 3, pregunta 8): **Flor de vitória-régia** (`MechanicType.Flor` = 11 [P], clave `flor`, debut 403; `FlorMechanic`): la Liana con dos llaves, `key` y `key2` (`Cuia.MechanicKey2`, en los bits de `n` y `k`), en lógica Y; cerrada no es origen ni destino; se abre en la etapa (d) de R10 cuando existen cuias selladas de sus dos frutas (`PourEvents.ReleasedMask`); validación: llaves distintas, en el tablero, sin dosis dentro y capaces de sellar fuera a la vez; sin ocultas ni Tinaja (es un disparador) y, mientras dure el bloqueo C1-9 de la Liana, sin capacidades mixtas (P1 falla). Ver «Variante de la 1.0: Flor de vitória-régia (K3b)» | 02 §1.2, R10 (d), R16, T1, §9.2 regla 7; propuesta de D-007 b.3; pregunta 24 b |
+| `AF.Core` | Variantes de la 1.0 (K3a; propuesta de D-007 b.3; firma de `pack_schema` 3, D-023, punto 5): **Hoja atada** (`MechanicType.HojaAtada` = 10 [P], clave `hoja_atada`, debut 283; `HojaAtadaMechanic`: solo recibe su fruta `key`, vacía o con ella en la cima; sí es origen; nunca se suelta, ni al sellar; nunca es fútil como destino; puede empezar con su fruta en el fondo; capacidad = `U_c` de su llave y como mucho una por fruta, D-024) y **Brote de dos hojas** (el Brote con `n` = 2, debut 343: `Cuia.MechanicN` = hojas que le faltan, resta las dosis recibidas en la etapa (b) y germina al llegar a 0; un tramo de 2 lo abre de una vez en `run`; evento `BroteLeafOpenedMask`; espacio ≥ 2 al empezar). Ver «Variantes de la 1.0 (K3a)» | 02 §1.2, §1.4, R10 (b), R16; 02 §9.1; propuesta de D-007 b.3 |
+| `AF.Core` | Variante de la 1.0 (K3b; propuesta de D-007 b.3; firma de `pack_schema` 3, D-023, punto 5): **Flor de vitória-régia** (`MechanicType.Flor` = 11 [P], clave `flor`, debut 403; `FlorMechanic`): la Liana con dos llaves, `key` y `key2` (`Cuia.MechanicKey2`, en los bits de `n` y `k`), en lógica Y; cerrada no es origen ni destino; se abre en la etapa (d) de R10 cuando existen cuias selladas de sus dos frutas (`PourEvents.ReleasedMask`); validación: llaves distintas, en el tablero, sin dosis dentro y capaces de sellar fuera a la vez; sin ocultas ni Tinaja (es un disparador) y, mientras dure el bloqueo C1-9 de la Liana, sin capacidades mixtas (P1 falla). Ver «Variante de la 1.0: Flor de vitória-régia (K3b)» | 02 §1.2, R10 (d), R16, T1, §9.2 regla 7; propuesta de D-007 b.3; pregunta 24 b |
 | `AF.Core` | `Session.LevelCounter`: contador visible del nivel para el HUD (Lluvia o Piraña: `Remaining` vertidos útiles hasta la gota o el mordisco, gotas pendientes, `Blocked`), en `LevelSession.Counter` y `PourResult.Counter`; solo baja con vertidos útiles | 02 R8, §9.1 M6-M7; D-007, Q10, Q18 B |
 | `AF.Core` | Barro (M5, debut 123; núcleo 2): color 15 inerte dentro del contenido, sin despacho de mecánica. Con Barro en la cima (`Cuia.MudExposed`) la cuia no es origen y acepta cualquier color; el primer vertido lo lava y ocupa su lugar (`CuiaRules.EffectiveSpace`: espacio + 1); una cuia con Barro no está sellada ni vacía; evento `BarroWashedMask` / `PourResult.BarroWashed`; validación: capa 2-3 de una cuia de 4, nunca con mecánica ni oculto | 02 R2, §1.2, §9.1 M5; 03 §9; propuesta b.2 M5 |
 | `AF.Core` | Aguas turbias en la partida (núcleo 2): `LevelSession` con máscara de revelado del nivel (`RevealedLayers`), que persiste tras Marea y Volver a la orilla; `Reveal(cuia)` (Luciérnaga), `RevealAll()` (Pororoca) y `RestoreRevealed(cuia, layers)` (restaurar capas reveladas, también en parte, al reanudar y al rehacer la sesión; ver «Restaurar las capas reveladas»); `PourEvents.RevealedMask`; validación T2-T4 con los límites de 08 §9 como parámetros y las combinaciones de Q14 A | 02 R7, R8, §11 T2-T4, T6, §14; 04 §2.1, §2.2, §2.4 a, §2.5, §2.7, §5.1; D-007 |
@@ -375,34 +375,43 @@ cobrar). **El núcleo no lee relojes.**
 
 Fuentes: 02 §1.2 (`legal`: «la Hoja atada sí es origen» y «solo recibe su fruta (vacía o con ella en la cima)»), 02 §1.4 (anexo B:
 la Hoja atada en `cambia_al_recibir`), 02 R10 (b) (el Brote de dos hojas «resta las dosis recibidas»), 02 R16 (P1-P3 antes de cada
-estreno), 02 §9.1 (variantes de D-007) y la propuesta de D-007 b.3; formato, la firma de `pack_schema` 3 (pregunta 8:
-`hoja_atada {key}` y `brote` con `n` ∈ {1, 2}). Estrenos: Hoja atada en el 283 y Brote de dos hojas en el 343.
+estreno), 02 §9.1 (variantes de D-007) y la propuesta de D-007 b.3; formato, la firma de `pack_schema` 3 (D-023, punto 5:
+`hoja_atada {key}` y `brote` con `n` ∈ {1, 2}); reglas de validación de la Hoja atada, D-024 (2026-10-14). Estrenos: Hoja atada
+en el 283 y Brote de dos hojas en el 343.
 
 - **Hoja atada** (`MechanicType.HojaAtada` = 10 [P], que no se persiste; clave `"hoja_atada"`; `HojaAtadaMechanic`): filtro de
   destino persistente de la fruta `key` (solo su fruta, y solo vacía o con ella en la cima; la regla normal decide el resto). Sí es
   origen y nunca se suelta, ni al recibir ni al sellar (sellada sigue atada y vale para ganar). Como destino nunca es fútil (anexo
   B); como origen no está exenta. Sin estado propio. Puede empezar con dosis si la del fondo es de su fruta (b.3). `BoardBuilder`
   exige `key` (un tinte de 1 a 14) y nada más; no lleva bandera. `Cuia.MechanicKey` devuelve su llave.
-- **La Hoja atada es la casa de su fruta [P]** (validación): su capacidad es la `U_c` de su llave. Sin esta regla, con capacidades
-  mixtas la exención de destino de `futil` rompe P3 de 02 R16: la fruta va de su casa a la hoja atada (útil, porque cambia al
-  recibir) y vuelve (útil, porque va a la casa correcta), y el tablero vuelve al mismo estado canónico; lo fija
-  `FutilePropertyTests.P3_HojaAtada_NotTheHomeOfItsFruit_ARoundTripReturnsToTheSameState`. Con la regla, P1-P3 se cumplen en `run`
-  y `single` con capacidades uniformes y mixtas **con un ejemplar por fruta**: una Hoja atada, o dos de frutas distintas, por
-  tablero (`P1_P2_P3_HoldWithHojaAtada` y `P1_P2_P3_HoldWithTwoHojasAtadasOfDifferentFruits`). Es coherente con b.3 («conserva la
-  cuerda tras sellar»). **Pregunta para el dueño** (con el generador, P2b, que tiene que respetarla): ratificarla o elegir otra
-  salida (una excepción de P3, como la del Remolino).
-- **Dos Hojas atadas de la misma fruta incumplen P3 (pregunta abierta, revisión de K3a; 02 R16).** Las dos son válidas con la regla
-  de la casa (capacidad `U_c`), y nada limita cuántas lleva una fruta: ni `HojaAtadaMechanic.ValidateInitial` ni `LevelValidation`
-  (la única regla de «una por nivel» es la de la Tinaja). Con la fruta en una y la otra vacía, el vertido de una a otra es útil en
-  los dos sentidos (la de destino cambia al recibir) y, en `run`, uno solo ya deja el mismo estado canónico, porque el multiconjunto
-  de cuias no cambia: mientras exista el par, `atascado(S)` no se cumple. Es el problema del Remolino con Q-B, pero sin una excepción
-  decidida. P1 sí se cumple, y en la partida el cierre de D-014 (`DeadEndProbe`) declara perdido el tablero en el que solo queda ese
-  vaivén. Lo fijan `FutilePropertyTests.P3_HojaAtada_TwoOfTheSameFruit_OpenR16Counterexample`,
-  `P3_HojaAtada_TwoOfTheSameFruit_RulesNeverDeclareTheLostBoard_DeadEndProbeDoes` y
-  `P3_TwoHojasAtadasOfTheSameFruit_FailsOnGeneratedBoards`; tendrán que cambiar cuando se decida. Opciones: (a) una regla [P] en
-  `HojaAtadaMechanic.ValidateInitial`, «como mucho una Hoja atada por fruta» (o por nivel), con su test y su contraejemplo en
-  `FutilePropertyTests`; (b) una excepción de P3 como la del Remolino, con su test. Los estrenos (02 §9.2, regla 2: un solo
-  ejemplar) no se ven afectados.
+- **La Hoja atada es la casa de su fruta** (validación; D-024, punto 1, que ratifica el [P] de K3a con el precedente del Matapi de
+  02 §9.1): su capacidad es la `U_c` de su llave. Sin esta regla, con capacidades mixtas la exención de destino de `futil` rompe P3
+  de 02 R16: la fruta va de su casa a la hoja atada (útil, porque cambia al recibir) y vuelve (útil, porque va a la casa correcta),
+  y el tablero vuelve al mismo estado canónico; lo fija
+  `FutilePropertyTests.P3_HojaAtada_NotTheHomeOfItsFruit_ARoundTripReturnsToTheSameState`. Es coherente con b.3 («conserva la
+  cuerda tras sellar»). La respetan el generador (P5, que coloca las variantes con `LevelValidation`) y level-qa (P6, QA-VALID).
+- **Como mucho una Hoja atada por fruta** (validación; D-024, punto 2, la opción (a) de la revisión de K3a; 02 R16, P3, y 02 §8).
+  `HojaAtadaMechanic.ValidateInitial` rechaza dos Hojas atadas de la misma llave, con un motivo que nombra la otra cuia; como la
+  regla de «una tinaja por nivel», la comprueba la propia mecánica. Dos de la misma fruta, las dos de capacidad `U_c`, rompían dos
+  cosas a la vez:
+  - **P3:** con la fruta en una y la otra vacía, el vertido de una a otra es útil en los dos sentidos (la de destino cambia al
+    recibir) y, en `run`, uno solo ya deja el mismo estado canónico, porque el multiconjunto de cuias no cambia: mientras existía el
+    par, `atascado(S)` no se cumplía. Era el problema del Remolino con Q-B, y el dueño eligió no hacer otra excepción de P3. Lo fijan
+    `FutilePropertyTests.P3_HojaAtada_TwoOfTheSameFruit_ARoundTripReturnsToTheSameState_D024RejectsIt` y
+    `P3_TwoHojasAtadasOfTheSameFruit_FailsOnGeneratedBoards_AndD024RejectsThem` (P3 falla en tableros generados con dos de la misma
+    fruta, y `LevelValidation` los rechaza todos). Las reglas de vertido no cambian: el vaivén sigue existiendo, pero no puede
+    salir en un nivel válido, porque las Hojas atadas ni aparecen ni se sueltan durante la partida; y si saliera, el cierre de
+    D-014 (`DeadEndProbe`) declara perdido el tablero en el que solo queda ese vaivén
+    (`P3_HojaAtada_TwoOfTheSameFruit_RulesNeverDeclareTheLostBoard_DeadEndProbeDoes`).
+  - **La cuenta de capacidades de 02 §8** de `LevelValidation` contaba la segunda como casa de otra fruta de la misma `U_c`, aunque
+    solo recibe la suya, y dejaba pasar tableros irresolubles (`TwoHojasAtadasOfTheSameFruit_PassThe02_8Count_Unsolvable_D024RejectsIt`:
+    dos frutas de 4 cuyas únicas cuias de 4 son dos Hojas atadas a la misma). Con un ejemplar por fruta, la cuenta es exacta: cada
+    Hoja atada es la casa de su fruta y las demás frutas de esa `U_c` van a las cuias sin filtro
+    (`D024_WithHojasAtadas_TheCountOf02_8IsExact_EveryValidBoardHasAHomeForEachFruit`, con el reparto exacto en tableros generados).
+
+  Con las dos reglas, P1-P3 se cumplen en `run` y `single` con capacidades uniformes y mixtas, con una Hoja atada o dos de frutas
+  distintas por tablero (`P1_P2_P3_HoldWithHojaAtada` y `P1_P2_P3_HoldWithTwoHojasAtadasOfDifferentFruits`). Los estrenos (02 §9.2,
+  regla 2: un solo ejemplar) no se ven afectados.
 - **Brote de dos hojas** (el Brote con `n` = 2; `BroteMechanic`): `Cuia.MechanicN` guarda las hojas cerradas que le faltan (2 al
   empezar, 1 tras recibir una dosis; 0 en el Brote normal, que equivale a una). En la etapa (b) de R10 resta las dosis recibidas
   (`IMechanic.OnReceived` recibe ahora la cantidad) y germina al llegar a 0, como el Brote normal; en `run` un tramo de 2 lo abre
@@ -417,12 +426,12 @@ estreno), 02 §9.1 (variantes de D-007) y la propuesta de D-007 b.3; formato, la
   (`FilterSolverTests`). El bot no cambia (su puntuación sigue congelada).
 - **Combinaciones:** la Hoja atada es un filtro (02 §9.1 la cuenta así en la Tinaja), así que `LevelValidation` la deja ir con
   Aguas turbias y con la Tinaja, como la Hoja; nunca lleva ocultas ni Barro (reglas generales de las cuias con mecánica).
-- **Pack:** el núcleo acepta los campos; que solo aparezcan con `pack_schema` 3 lo comprueban el esquema y el generador (P2b) y el
-  cliente (TJ1). Los packs 1-200 no cambian (`--check` del tutorial y de la campaña 11-200).
+- **Pack:** el núcleo acepta los campos; que solo aparezcan con `pack_schema` 3 lo comprueban el esquema (P2b) y el generador (P5) y
+  el cliente (TJ1). Los packs 1-200 no cambian (`--check` del tutorial y de la campaña 11-200).
 - **Tests:** compartidos `HojaAtadaTests` y `BroteDosHojasTests` (una regla por test, con su §), `FilterSolverTests` (A* y
   heurística) y `CuiaAttrTests` (claves y `MechanicKey`); solo dotnet `FutilePropertyTests` (P1-P3 en `run` y `single`, uniformes y
-  mixtas, con una Hoja atada o dos de frutas distintas; el contraejemplo de la regla [P] y los de dos Hojas atadas de la misma
-  fruta), `HotLoopAllocationTests` (un tablero por variante: 0 bytes en reglas, vertidos y bot;
+  mixtas, con una Hoja atada o dos de frutas distintas; los contraejemplos que justifican las dos reglas de D-024 y la cuenta de
+  02 §8), `HotLoopAllocationTests` (un tablero por variante: 0 bytes en reglas, vertidos y bot;
   menos de 1 KB por `Solve`) y una fila por variante en `ReferenceBoards` y `MechanicsPerformanceTests` (HoA y Br2).
 
 ## Variante de la 1.0: Flor de vitória-régia (K3b)
@@ -430,7 +439,7 @@ estreno), 02 §9.1 (variantes de D-007) y la propuesta de D-007 b.3; formato, la
 Fuentes: 02 §1.2 (`legal`: «la Flor cerrada, como la Liana» en `bloqueada_origen` y `bloqueada_destino`), 02 R10 (d) (liberaciones
 por sellado: «y la Flor de vitória-régia»), 02 R16 (P1-P3 antes de cada estreno), 02 T1 y §9.2 regla 7 (combinaciones), 02 §9.1
 (variantes de D-007) y la propuesta de D-007 b.3 («dos llaves, c1 y c2, en lógica Y: se abre cuando existen cuias selladas de las
-dos frutas»; «se deduce del estado, sin bits»); formato, la firma de `pack_schema` 3 (pregunta 8: `flor {key, key2}` con
+dos frutas»; «se deduce del estado, sin bits»); formato, la firma de `pack_schema` 3 (D-023, punto 5: `flor {key, key2}` con
 key ≠ key2). Estreno en el 403.
 
 - **Tipo y formato:** `MechanicType.Flor` = 11 [P] (no se persiste), clave `"flor"`, `MechanicTypes.Last` = `Flor`.
@@ -460,7 +469,7 @@ key ≠ key2). Estreno en el 403.
   las reglas de diseño. Con capacidades uniformes, P1-P3 se cumplen en `run` y `single`.
 - **Solver, bot y heurística:** sin código propio, como la Liana. A* frente a la búsqueda exhaustiva y la heurística en todos los
   estados alcanzables de 32 tableros (uniformes y mixtos) en `run` y `single` (`LianaSolverTests`).
-- **Pack:** el núcleo acepta los campos; que solo aparezcan con `pack_schema` 3 lo comprueban el esquema y el generador (P2b y P5) y
+- **Pack:** el núcleo acepta los campos; que solo aparezcan con `pack_schema` 3 lo comprueban el esquema (P2b) y el generador (P5) y
   el cliente (TJ1), que leen `key2`. Los packs 1-200 no cambian (`--check` del tutorial y de la campaña 11-200).
 - **Tests:** compartidos `FlorTests` (una regla por test, con su §: origen y destino, apertura con las dos frutas en cualquier orden,
   la gota que sella la segunda, Marea y Volver a la orilla, formato y firma, `Packed` y hash, validación), `LianaSolverTests` (A* y

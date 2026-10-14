@@ -17,7 +17,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 ### Añadido
 
 - **Flor de vitória-régia en el núcleo, con la segunda llave** (K3b, tanda 4; variante de la 1.0 de D-007, estreno 403; 02 §1.2,
-  R10 (d), R16, T1 y §9.2 regla 7; propuesta de D-007 b.3; firma de `pack_schema` 3, pregunta 8: `flor {key, key2}` con
+  R10 (d), R16, T1 y §9.2 regla 7; propuesta de D-007 b.3; firma de `pack_schema` 3 (D-023, punto 5): `flor {key, key2}` con
   key ≠ key2). README, «Variante de la 1.0: Flor de vitória-régia (K3b)».
   - **Tipo:** `MechanicType.Flor` = 11 [P] (no se persiste), clave `"flor"`, `MechanicTypes.Last` = `Flor`, y `FlorMechanic`:
     cerrada no es origen ni destino; se abre en la etapa (d) de R10 cuando existen otras cuias selladas de sus dos frutas
@@ -47,22 +47,17 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
     (0 bytes en reglas, en el vertido que la abre y en el bot; < 1 KB por `Solve`) y la fila Fl de `ReferenceBoards` y
     `MechanicsPerformanceTests` (percentil 75 de 30 semillas: semilla 15, par 18, 3.591 expandidos).
 - **Hoja atada y Brote de dos hojas en el núcleo** (K3a, tanda 4; variantes de la 1.0 de D-007, estrenos 283 y 343; 02 §1.2,
-  §1.4, R10 (b) y R16; propuesta de D-007 b.3; firma de `pack_schema` 3, pregunta 8: `hoja_atada {key}` y `brote` con
+  §1.4, R10 (b) y R16; propuesta de D-007 b.3; firma de `pack_schema` 3 (D-023, punto 5): `hoja_atada {key}` y `brote` con
   `n` ∈ {1, 2}). README, «Variantes de la 1.0 (K3a)».
   - **Hoja atada:** `MechanicType.HojaAtada` = 10 [P] (no se persiste), clave `"hoja_atada"`, `MechanicTypes.Last` =
     `HojaAtada`, y `HojaAtadaMechanic`: solo recibe su fruta `key` (vacía o con ella en la cima), sí es origen, nunca se suelta
     (tampoco al sellar), nunca es fútil como destino (anexo B) y no está exenta como origen. `BoardBuilder` exige `key` (tinte
     1-14) sin más campos ni bandera; `Cuia.MechanicKey` devuelve su llave. Validación: llave en el tablero, su fruta en el fondo
-    si empieza con dosis (b.3) y, **[P]**, capacidad = `U_c` de su llave: sin esa regla, con capacidades mixtas, la exención de
-    destino de `futil` rompe P3 (un vaivén útil entre la casa de su fruta y la hoja atada vuelve al mismo estado;
-    `FutilePropertyTests.P3_HojaAtada_NotTheHomeOfItsFruit_ARoundTripReturnsToTheSameState`). Pregunta para el dueño. Con la
-    regla, P1-P3 se cumplen solo con un ejemplar por fruta (una Hoja atada, o dos de frutas distintas, por tablero).
-  - **Pregunta abierta (revisión de K3a; 02 R16, P3):** dos Hojas atadas de la misma fruta, válidas las dos, incumplen P3. El
-    vertido de una a otra es útil en los dos sentidos y, en `run`, uno solo deja el mismo estado canónico, así que `atascado(S)`
-    no se cumple mientras exista el par. P1 se cumple, y `DeadEndProbe` (D-014) declara perdido el tablero en el que solo queda
-    ese vaivén. Nada limita hoy cuántas Hojas atadas lleva una fruta. Opciones: (a) regla [P] «como mucho una Hoja atada por
-    fruta» (o por nivel) en `ValidateInitial`; (b) excepción de P3 como la del Remolino. Lo fijan
-    `FutilePropertyTests.P3_HojaAtada_TwoOfTheSameFruit_*` y `P3_TwoHojasAtadasOfTheSameFruit_FailsOnGeneratedBoards`.
+    si empieza con dosis (b.3) y capacidad = `U_c` de su llave (D-024, punto 1, que ratifica el [P] de K3a): sin esa regla, con
+    capacidades mixtas, la exención de destino de `futil` rompe P3 (un vaivén útil entre la casa de su fruta y la hoja atada
+    vuelve al mismo estado; `FutilePropertyTests.P3_HojaAtada_NotTheHomeOfItsFruit_ARoundTripReturnsToTheSameState`). Con la
+    regla, P1-P3 se cumplen solo con un ejemplar por fruta (una Hoja atada, o dos de frutas distintas, por tablero); FIXK añade
+    «como mucho una Hoja atada por fruta» (D-024, punto 2; ver «Cambiado»).
   - **Brote de dos hojas:** el Brote con `n` = 2. `Cuia.MechanicN` guarda las hojas que le faltan (2, luego 1; 0 en el Brote
     normal); en la etapa (b) resta las dosis recibidas y germina al llegar a 0 (en `run` un tramo de 2 lo abre de una vez). El
     gancho interno `IMechanic.OnReceived` recibe ahora la cantidad. Evento nuevo `PourEvents.BroteLeafOpenedMask` (una hoja
@@ -538,6 +533,32 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Cambiado
 
+- **FIXK (tanda 4, cierre de la ola 1; D-024 y pendientes de la revisión de K3a):**
+  - **Como mucho una Hoja atada por fruta** (D-024, punto 2, la opción (a); 02 R16, P3, y 02 §8): `HojaAtadaMechanic.ValidateInitial`
+    rechaza dos Hojas atadas de la misma llave («D-024 (02 R16, P3; 02 §8): como mucho una Hoja atada por fruta; la cuia j también
+    está atada a la fruta c»), así que `LevelValidation` (y con él el generador, P5, y level-qa, P6) las rechaza. Cierra a la vez
+    P3, que dos de la misma fruta incumplían (el vaivén útil entre las dos vuelve al mismo estado canónico), y la cuenta de
+    capacidades de 02 §8, que contaba la segunda como casa de otra fruta de la misma `U_c` y dejaba pasar tableros irresolubles.
+    Con un ejemplar por fruta la cuenta es exacta. Las reglas de vertido, el solver, el bot y la heurística no cambian. Packs
+    1-200 idénticos (`--check` del tutorial y de 11-200): ninguno lleva Hojas atadas.
+  - **Capacidad de la Hoja atada = `U_c` de su llave:** el [P] de K3a queda ratificado (D-024, punto 1); el motivo del rechazo
+    cita D-024 en lugar de «[P]».
+  - **Citas:** la firma de `pack_schema` 3 se cita como «D-023, punto 5» en lugar de «pregunta 8» (que en el repositorio es otra
+    pregunta, la de Aguas turbias), en la documentación y en los motivos de `BoardBuilder` y `FlorMechanic`; `LevelSession` y
+    `LevelStatus` dan la pregunta 46 por decidida (D-020), como `DeadEndProbe`. El README atribuye el esquema a P2b, el generador
+    a P5 y level-qa a P6.
+  - **Tests:** compartidos `HojaAtadaTests.R_0214_R14_TheOnlyLegalPour_IntoItsEmptyHojaAtada_IsNotFutile_SoAWinnableBoardIsNotStuck`
+    (sustituye a `R_0214_TheOnlyUsefulPour_IntoItsHojaAtada_AvoidsStuck_R14`, que no probaba lo que decía: ahora el único vertido
+    legal es el de la fruta a su Hoja atada vacía, la regla base de `futil` sin el anexo B lo da por fútil y el tablero no está
+    atascado y se gana en `run` y `single`), `Validation_D024_AtMostOneHojaAtadaPerFruit_TwoOfDifferentFruitsAreValid` y
+    `Validation_D024_TwoHojasAtadasOfTheSameFruit_AreRejected`; `BroteDosHojasTests.R_0212_Closed_IsNotASource_AsTargetTheNormalRule`
+    pierde la aserción de `futil`, que no podía fallar (el Brote nunca está vacío). Solo dotnet, en `FutilePropertyTests`: los
+    contraejemplos de dos Hojas atadas de la misma fruta pasan a comprobar el rechazo
+    (`P3_HojaAtada_TwoOfTheSameFruit_ARoundTripReturnsToTheSameState_D024RejectsIt`,
+    `P3_TwoHojasAtadasOfTheSameFruit_FailsOnGeneratedBoards_AndD024RejectsThem`), y se añaden
+    `TwoHojasAtadasOfTheSameFruit_PassThe02_8Count_Unsolvable_D024RejectsIt` y
+    `D024_WithHojasAtadas_TheCountOf02_8IsExact_EveryValidBoardHasAHomeForEachFruit` (reparto exacto de casas en tableros
+    generados, uniformes y mixtos).
 - K3a (tanda 4; bajas de la revisión de K1 y K2): `DeadEndProbe` cita P2 con «entre cuias sin mecánica» y la pregunta 46 como
   decidida (D-020); el README da por decidida la consecuencia de Q-B en P3 (pregunta 34 (a), D-020, 02 R16); `DeadEndProbeTests`
   pierde el parámetro `attrs` y el `using` que sobraban; `SolverCancellationTests` comprueba que `ForLevel` conserva la bandera

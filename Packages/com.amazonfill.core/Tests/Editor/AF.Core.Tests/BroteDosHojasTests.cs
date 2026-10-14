@@ -9,7 +9,7 @@ namespace AF.Core.Tests
 {
     /// <summary>
     /// Brote de dos hojas (K3a; variante de la 1.0 con debut en el 343; 02 R10 b; propuesta de D-007 b.3; firma de
-    /// <c>pack_schema</c> 3, pregunta 8: <c>brote</c> con <c>n</c> ∈ {1, 2}): germina al recibir 2 dosis de su color, en uno o
+    /// <c>pack_schema</c> 3 (D-023, punto 5): <c>brote</c> con <c>n</c> ∈ {1, 2}): germina al recibir 2 dosis de su color, en uno o
     /// varios vertidos. El solver está en <c>FilterSolverTests</c> y P1-P3, en <c>DotnetOnly/FutilePropertyTests</c>. Test
     /// compartido (NUnit 3.5, C# 9).
     /// </summary>
@@ -47,8 +47,8 @@ namespace AF.Core.Tests
         [Test]
         public void Format_BroteN_PackSchema3Signature_N1IsTheNormalBrote()
         {
-            // Pregunta 8: brote con n ∈ {1, 2}. Sin n o con 1 es el Brote normal, con el mismo Packed y el mismo hash que antes
-            // (los packs 1-200 no cambian); con 2, el de dos hojas, cerrado y con sus 2 hojas en n.
+            // Firma de pack_schema 3 (D-023, punto 5): brote con n ∈ {1, 2}. Sin n o con 1 es el Brote normal, con el mismo
+            // Packed y el mismo hash que antes (los packs 1-200 no cambian); con 2, el de dos hojas, cerrado y con sus 2 hojas en n.
             int[] caps = { 4, 4, 4, 4 };
             int[][] cuias = { new[] { 2, 1 }, new[] { 1, 2, 1, 2 }, new[] { 2, 1 }, new int[0] };
 
@@ -141,16 +141,17 @@ namespace AF.Core.Tests
         }
 
         [Test]
-        public void R_0212_Closed_IsNotASource_AsTargetTheNormalRule_NeverFutile()
+        public void R_0212_Closed_IsNotASource_AsTargetTheNormalRule()
         {
-            // 02 §1.2: Brote cerrado en bloqueada_origen; como destino, la regla normal; 02 §1.4: cambia al recibir.
+            // 02 §1.2: Brote cerrado en bloqueada_origen; como destino, la regla normal. No se comprueba futil como destino: el
+            // Brote nunca está vacío (empieza con 1-3 dosis y solo las gana), y futil solo puede dar true hacia una vacía, así
+            // que nunca es destino fútil por construcción, como dice BroteMechanic (02 §1.4: además cambia al recibir).
             BoardState state = Board();
 
             Assert.That(PourRules.CanBeSource(state, 0), Is.False);
             Assert.That(PourRules.IsLegal(state, 0, 3), Is.False);
             Assert.That(PourRules.IsLegal(state, 1, 0), Is.True);
             Assert.That(PourRules.IsLegal(new BoardState(new[] { Brote2(4, 2, 1), C(4, 1, 2, 2), C(4, 1, 1, 2), Cuia.Empty(4) }), 1, 0), Is.False);
-            Assert.That(PourRules.IsFutile(state, 1, 0), Is.False);
         }
 
         [Test]

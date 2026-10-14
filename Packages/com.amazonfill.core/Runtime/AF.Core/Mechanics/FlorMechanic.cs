@@ -6,7 +6,7 @@ namespace AF.Core.Mechanics
 {
     /// <summary>
     /// Flor de vitória-régia (variante de la Liana con fruta de la 1.0, debut 403; D-007, propuesta de D-007 b.3; 02 §1.2,
-    /// R10 (d) y §9.1; firma de <c>pack_schema</c> 3, pregunta 8: <c>{"type":"flor","key":c1,"key2":c2}</c> con c1 ≠ c2): una
+    /// R10 (d) y §9.1; firma de <c>pack_schema</c> 3 (D-023, punto 5): <c>{"type":"flor","key":c1,"key2":c2}</c> con c1 ≠ c2): una
     /// flor cerrada sobre la cuia, con dos llaves en lógica Y.
     /// </summary>
     /// <remarks>
@@ -21,7 +21,7 @@ namespace AF.Core.Mechanics
     /// deshace con Marea, que restaura el estado anterior entero y la vuelve a cerrar; Volver a la orilla también.</description></item>
     /// <item><description>No impide la victoria: vacía vale como cualquier cuia (R12); con dosis, se abre antes de poder sellar.</description></item>
     /// <item><description>Validación (03 §17 #6; b.3, como la Liana con fruta, regla 4): las dos llaves son frutas distintas
-    /// (c1 ≠ c2, la firma de la pregunta 8), están en el tablero y pueden sellar fuera de la flor a la vez (ninguna dosis de
+    /// (c1 ≠ c2, la firma de D-023, punto 5), están en el tablero y pueden sellar fuera de la flor a la vez (ninguna dosis de
     /// ellas dentro y una cuia de capacidad <c>U_c</c> para cada una, dos si comparten <c>U_c</c>). Sin dosis ocultas en el
     /// nivel ni Tinaja: es un disparador (02 T1 y §9.2 regla 7; Q14 A), y lo rechaza <see cref="LevelValidation"/>.</description></item>
     /// <item><description><b>Bloqueo provisional</b> (C1-9, pregunta 24 b de GDD §6.3): con capacidades mixtas la propiedad P1
@@ -82,7 +82,7 @@ namespace AF.Core.Mechanics
             int key2 = flor.MechanicKey2;
             if (key == key2)
             {
-                return "pregunta 8 (firma de pack_schema 3): las dos llaves de la Flor son frutas distintas (key ≠ key2)";
+                return "D-023, punto 5 (firma de pack_schema 3): las dos llaves de la Flor son frutas distintas (key ≠ key2)";
             }
 
             if (state.UnitsOf(key) == 0 || state.UnitsOf(key2) == 0)
