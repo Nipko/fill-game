@@ -297,6 +297,20 @@ El guion del equipo está en `docs/dev/traspaso/workflow-elenco-50-especies.js`:
 
 Material de partida: `docs/research/fauna/propuesta-fauna.md` (10 especies y 18 animales «que hacen cosas») y `docs/research/intro-rio-miquitos/guion.md`.
 
+**Tropa lateral en los tableros de 3 filas (D-021, 2026-10-14): hazla antes del elenco o junto a él.**
+- Hoy, con 3 filas, la intro va en modo dosel sin tropa. Pasa en 77 de los 100 niveles del 101-200, así que las especies de los mundos 4 y 5 casi no se ven.
+- El dueño decidió que los miquitos bajen por los lados (trepando o colgados de una liana, desde el follaje de las esquinas) y lancen la fruta, **alternando**:
+  - siempre en el primer nivel de 3 filas de cada mundo o especie;
+  - en 1 de cada 3 de los demás [P];
+  - nunca en los reintentos.
+- **Restricciones:**
+  - T, las fases y el calendario de la fruta no cambian;
+  - sin reposo ya en juego;
+  - nada a menos de 8 dp de una cuia, ni sobre el HUD ni sobre la bandeja;
+  - D-002 y las reglas de representación de D-010.
+- Si no cabe, para y pregunta con capturas.
+- Detalle en `docs/dev/decisiones.md`, D-021. Agente: `unity-gameplay-dev`, con revisión visual en el teléfono.
+
 ### Paso 4 · Pendientes del dueño y del equipo
 
 - **Preguntas abiertas del guion de la intro** (`docs/research/intro-rio-miquitos/guion.md`, Q1-Q16, y Q17 del agente de docs). El código aplica las recomendaciones, salvo Q11 (evento `af_fauna_sighted`, que necesita migrar el perfil) y Q14 (color del agua negra).
@@ -340,6 +354,7 @@ Material de partida: `docs/research/fauna/propuesta-fauna.md` (10 especies y 18 
 | D-018 | Idiomas (2026-10-13): ES-419, PT-BR y EN en la 1.0, los 11 de Magic Sort al salir al mundo (el ruso, el último) y más según datos; base de localización ya, sin paquetes (CSV, fachada `Loc`, idioma falso en las capturas); idioma del teléfono con selector; cifras con la región. **Aprobados:** Unity Localization 1.5.13 en la fase 3 y la traducción de la 1.0 a 1.300-3.000 €. Pregunta 49 |
 | D-019 | Tinaja, M13 (2026-10-13): mecánica propia con contenido oculto en niveles Normales (con tope, ruta segura y suelta por recuento visible), su cuia chica recibe cualquier fruta, estreno en el 323 de la 1.0 si cumple su condición (si no, 1.1), no enseña su contenido, se acepta espiar reiniciando. Núcleo hecho (T55); generador, esquema y level-qa en T56. Pregunta 50 |
 | D-020 | Respuestas del 2026-10-13 a las preguntas 27-38 y 46 de `docs/GDD.md` §6.3, todas con su recomendación: Lluvia y Piraña en la 1.0, «Zafra» solo como nombre, Revelar en la 3.ª ranura, `pack_schema` 2, `level_overrides` como respaldo, temporada en una tabla del cliente, tabla de novedades antes de 201-700, P1-P3, solo la burbuja, 12 sp, el vertido que gana cuenta, [P] de la tanda 1 y el cierre de D-014 con todos los vertidos legales |
+| D-021 | Miquitos por los lados en los tableros de 3 filas, alternando (siempre en el primer nivel de 3 filas de cada mundo y en 1 de cada 3 de los demás [P]), sin cambiar T ni tapar cuias. **Sin implementar** (paso 3) |
 
 ## 8. Cómo trabaja el dueño (preferencias aprendidas)
 

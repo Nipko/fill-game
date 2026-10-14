@@ -26,6 +26,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-018 | 2026-10-13 | Idiomas y localización | Decidida por el dueño (Q1-A a Q12-A con su «Si»), con dos aprobaciones: el paquete Unity Localization 1.5.13 en la fase 3 del roadmap y la partida de traducción de la 1.0, de 1.300-3.000 €. Documentación aplicada el 2026-10-14 (T54), con el contrato 32 (tablas de textos). Sin implementar: niveles 1-4 de la sección 6 de `docs/research/idiomas/propuesta-idiomas.md`. Choque: pregunta 49 de `docs/GDD.md` §6.3 |
 | D-019 | 2026-10-13 | Tinaja (M13): mecánica propia | Decidida por el dueño (Q-Ti1-A a Q-Ti6-A con su «Si»; Q-Ti7, solo si el asesor confirma el riesgo, y entonces A). Núcleo implementado en T55 (integrada en `451856e`). Documentación aplicada el 2026-10-14 (T54), con la ficha M13 en 02 §9.1. Pendientes: generador, esquema (`pack_schema` 3) y level-qa (T56), Unity y el corte por tiempo de Morpho. Choque: pregunta 50 de `docs/GDD.md` §6.3. Todo nombre y texto, pendiente del asesor cultural |
 | D-020 | 2026-10-13 | Respuestas a las preguntas 27-38 y 46 de `docs/GDD.md` §6.3 | Decidida por el dueño (la recomendación de cada pregunta). Documentación aplicada el 2026-10-14 (T54). La 46 ya está en el núcleo (T51, `1ad712c`). Tareas que dejan: el cliente con `level_overrides` como respaldo del kill-switch (31), la tabla de temporada del cliente (32), la tabla de novedades de 201-1000 antes de generar 201-700 (33) y los textos a 12 sp como mínimo (36) |
+| D-021 | 2026-10-14 | Miquitos por los lados en los tableros de 3 filas, alternando | Decidida por el dueño (idea propia, 2026-10-14). Frecuencia y restricciones [P] de este registro. Sin implementar: tarea de la tropa lateral en `docs/dev/traspaso/README.md`, paso 3 |
 
 ---
 
@@ -2084,3 +2085,47 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Archivos afectados.**
 - **Documentación** (2026-10-14, T54): este registro y los de «Qué cambia en el GDD».
 - **Código:** la 46, en `Packages/com.amazonfill.core/Runtime/AF.Core/Session/DeadEndProbe.cs` (T51, hecho); las tareas de las preguntas 31, 32, 33 y 36, sin asignar.
+
+---
+
+## D-021 · Miquitos por los lados en los tableros de 3 filas, alternando
+
+- **Fecha:** 2026-10-14.
+- **Estado:** decidida por el dueño. La frecuencia y las restricciones son [P] de este registro y las puede ajustar el dueño. **Sin implementar.**
+
+**Contexto.**
+- D-010, punto 4, pasa la intro a **modo dosel** (sin tropa) cuando no hay una franja libre de 44 dp entre el HUD y el panel, que es lo que ocurre con 3 filas (11 cuias o más, D-006).
+- Medido en los packs el 2026-10-14 (`docs/dev/traspaso/validacion-niveles-2026-10-14.md`): hay tableros de 3 filas desde el 86, y lo son **77 de los 100 niveles del 101-200**. La especie del mundo 4 (churuco) y la del 5 (huapo colorado) casi nunca se ven, y con más niveles irá a peor. Eso choca con la ampliación de D-010 (especies que van apareciendo, elenco de ~50).
+- **El dueño, al verlo en el teléfono:** «Podríamos alternar, podemos mostrarlos de otra forma, por los lados, bajando y tirando; no en todos los niveles, pero sí para tenerlos presentes».
+
+**Decisión.**
+1. **Tropa lateral** en los tableros de 3 filas: los miquitos de la especie del mundo bajan por los lados de la pantalla, desde el follaje de las esquinas (trepando o colgados de una liana, según su modelo de suelta), y desde ahí lanzan la fruta a las cuias.
+2. **Alternando, no en todos los niveles.** El resto de los niveles de 3 filas sigue en modo dosel. Frecuencia [P]:
+   - siempre en el primer nivel de 3 filas de cada mundo (y de cada especie nueva del elenco);
+   - después, en 1 de cada 3 niveles de 3 filas, de forma determinista por el número de nivel;
+   - nunca en los reintentos, que van en dosel como hoy (D-010).
+3. **Se mantiene de D-010:**
+   - T (800 ms desde el 21) y las fases a-d no cambian; el toque se habilita a la misma hora;
+   - la tropa entra mientras el río llena, lanza la fruta con el calendario de siempre y se va en cuanto se habilita el toque;
+   - con 3 filas **no reposa ya en juego**, para no tapar cuias ni botones mientras se juega;
+   - las reglas de representación (punto 6: sin rasgos humanos ni gestos de señalar);
+   - D-002: no miran, no señalan y no reaccionan a una cuia;
+   - la especie cambia qué se ve, nunca cuánto dura.
+4. **Sustituye:** el descarte de «lianas laterales con 3 filas» del guion de la intro (§3, «Posaderos») y de D-010 (punto 7 y «Alternativas descartadas»). La razón del descarte (la distancia de 8 dp a las cuias) se convierte en restricción:
+   - durante la intro, que no admite toques, la tropa puede pisar los márgenes laterales y el marco del panel;
+   - nunca tapa una cuia (≥ 8 dp de cualquier cuia, la distancia del guion de la intro, §3, «Posaderos»), ni el HUD, ni la bandeja.
+   - Si con el ancho real no cabe (margen lateral total de 24 dp, 12 por lado, 07 §4.1), **para y pregunta** con capturas antes de encoger los miquitos por debajo de `MinMonkeyDp` (28 dp).
+
+**Consecuencias.**
+- **Código** (Unity: `IntroChoreography`, `TroopLayer`, `MonkeyRig` y la decisión de posadero), con tests:
+  - mismo calendario de fruta y misma T;
+  - 0 B por fotograma;
+  - nada recibe toques;
+  - ninguna pieza a menos de 8 dp de una cuia;
+  - la frecuencia, determinista.
+- **Analítica y Remote Config:** sin cambios.
+- **Arte:** usa las mismas piezas por especie; la liana lateral es procedural.
+- **GDD:** 02 §4.2 y 07 §6.4 (posaderos y frecuencia), el guion de la intro (§3 y §7.1) y la tabla de D-010.
+
+**Cómo revertir.** Volver al modo dosel en todos los tableros de 3 filas, siempre con una decisión nueva que sustituya a D-021.
+
