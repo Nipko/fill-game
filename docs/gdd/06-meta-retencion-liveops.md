@@ -238,7 +238,7 @@ on_app_open():
 
 ### 4.6 Cuaderno de campo (`album`, v1.1): reglas anticipadas
 
-Tres páginas: Frutas (14 tintes), Fauna (12 animales del elenco del glosario §3.3 y de research/07 §5), Ríos (13 mundos). Con D-013, la página Ríos es el **Muestrario del río** del Mapa (sección 4.5): una mini cuia por parada, con su tarjeta, que se llena sola y hacia atrás. Cada carta tiene una **condición de desbloqueo visible** ("Descubre el tinte", "Completa el mundo 4", "Sella 20 Retos en un mes", "Termina una Travesía"): colección por hitos, sin sobres, sin azar, sin compra (dirección 15; research/08 C5.3 [V]). Página completa → 300 semillas + marco [P]. Las colecciones están en el 75 % de los casual y los álbumes en el 66 % (research/05 §3 [V]); aquí sustituyen a las cartas de loot box de Magic Sort.
+Tres páginas: Frutas (14 tintes), Fauna (12 animales del elenco del glosario §3.3 y de research/07 §5), Ríos (el Muestrario: una muestra por parada, 100). Con D-013, la página Ríos es el **Muestrario del río** del Mapa (sección 4.5): cada muestra es una mini cuia con su tarjeta, que se llena sola y hacia atrás. Cada carta tiene una **condición de desbloqueo visible** ("Descubre el tinte", "Completa el mundo 4", "Sella 20 Retos en un mes", "Termina una Travesía"): colección por hitos, sin sobres, sin azar, sin compra (dirección 15; research/08 C5.3 [V]). Página completa → 300 semillas + marco [P]. Las colecciones están en el 75 % de los casual y los álbumes en el 66 % (research/05 §3 [V]); aquí sustituyen a las cartas de loot box de Magic Sort.
 
 ### 4.7 Pantallas de v1.0 (resumen para UI)
 
@@ -510,7 +510,7 @@ Herramientas: Firebase Analytics con exportación a BigQuery (plan Blaze) y un p
 | `victory_autonext_s` | Pantalla de victoria sin auto-avance: 0 (int) (4.7); dueño 02 |
 | `ui_map_mode` / `ui_map_autopen` / `ui_bg_per_stop` / `ui_stop_label` / `ui_victory_view` / `anim_map_world_ms` | Mapa del río de D-013 (4.5): 100 paradas o el filtro de 13; cuándo sale solo; fondo por parada o el de la gran parada del mundo; rótulo del lugar; victoria con vista; tope del viaje de mundo en la pantalla del Mapa (al acabarse el contenido y con «Ver mapa»; dentro del banner de mundo manda el tope de ≤ 4 s de Q4-D) |
 | `ui_map_quiz` | «¿Verdad o mito?» del Mapa del río (D-013, Q12-A): experimento de la 1.1, `off` en la 1.0 |
-| `ui_river_fact_every_n_levels` | Cadencia del Dato del río (4.4): default 10, sin cambios hasta que se decida la pregunta 45 de GDD.md §6.3: (a) se queda en 10, la de las paradas, y la línea de fruta lleva clave propia; (b) pasa a 1 y gobierna también la línea de fruta; dueño 00 |
+| `ui_river_fact_every_n_levels` | Cadencia del Dato del río (4.4): default 10, sin cambios hasta que se decida la pregunta 45 de GDD.md §6.3: con (a) o (d) se queda en 10, la de las paradas, y la línea de fruta lleva clave propia; con (b) pasa a 1 y gobierna también la línea de fruta; dueño 00 |
 
 Alias retirados que este capítulo ya no usa (lista de 08 §9): `unlock_level_*`, `starter_first_show`, `push_preprompt_level`, `daily_bands`, `daily_offset`, `daily_reward_seeds`, `daily_murky_bonus_multiplier`, `daily_streak7_reward`, `logbook_*`, `eco_streak_rewards`, `streak_daily_cap_seeds`, `streak_shields_per_day`, `chest_cycle`, `event_active`, `comeback_*`, `max_takeovers_per_session`, `content_end_message`. Los parámetros de anuncios, precios y topes de comodines son de 05 y 04 (defaults también en 08 §9).
 

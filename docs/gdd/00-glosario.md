@@ -452,7 +452,7 @@ Este capítulo solo nombra. **La tabla única de Remote Config, con defaults y r
 |---|---|---|
 | `ui_show_difficulty_subtitles` | bool | Mostrar "Aguas bravas" / "Noche de jaguar" bajo la etiqueta honesta |
 | `ui_patterns_default_from_level` | int | Nivel desde el que el toggle Patrones arranca activado (dirección 3) |
-| `ui_river_fact_every_n_levels` | int | Cadencia de Datos del río: default 10, sin cambios hasta que se decida la pregunta 45 de GDD.md §6.3: (a) se queda en 10, la cadencia de paradas del Mapa (D-013), y la línea de fruta (Frutas Q1-A) lleva clave propia; (b) pasa a 1 y gobierna también la línea de fruta |
+| `ui_river_fact_every_n_levels` | int | Cadencia de Datos del río: default 10, sin cambios hasta que se decida la pregunta 45 de GDD.md §6.3: con (a) o (d) se queda en 10, la cadencia de paradas del Mapa (D-013), y la línea de fruta (Frutas Q1-A) lleva clave propia; con (b) pasa a 1 y gobierna también la línea de fruta |
 | `ui_murky_bonus_enabled` | bool | Mostrar la tarjeta Aguas turbias · Bonus (contenido de 1.1, 06 §4.1): apagada en 1.0 y encendida en 1.1; el default vive en 08 §9 |
 | `ui_mascot_rescue_anim` | bool | Capi en la Cuia de rescate (desactivable si alarga el modal) |
 | `biz_store_title_variant` | string | Solo registro: variante de ficha activa para correlacionar instalaciones (los títulos se cambian en Play Console, no en RC). Sustituye al alias retirado `store_title_variant` |
