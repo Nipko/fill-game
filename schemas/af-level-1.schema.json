@@ -138,7 +138,7 @@
     {
       "if": { "properties": { "pack_schema": { "const": 3 } }, "required": ["pack_schema"] },
       "then": {
-        "description": "pack_schema 3 (D-019, punto 9; contrato 21): todo lo del 2 más la Tinaja (M13), con los tipos tinaja y cucharon, sin campos, en attrs del base y de relief, e intro_mechanic tinaja.",
+        "description": "pack_schema 3 (D-019, punto 9; contrato 21): todo lo del 2 más la Tinaja (M13), con los tipos tinaja y cucharon, sin campos, e intro_mechanic tinaja. Pendiente del dueño (contrato 21): una variante de relief repite la tinaja (03 §13) y AF.Core la exige con su máscara (todas sus capas menos la boca), pero relief_board no admite hidden (08 §4.1). El esquema acepta hoy tinaja y cucharon en relief[].attrs sin máscara, y AF.Core (TinajaMechanic.ValidateInitial) y con él AF.Levels y tools/level-qa rechazan esa variante: hasta decidir cómo la lleva, ningún pack 3 con la tinaja desde el nivel 31 se publica.",
         "properties": {
           "levels": {
             "items": {
@@ -263,7 +263,7 @@
       ]
     },
     "attr_pack3": {
-      "description": "Restricción de una entrada de attrs con pack_schema 3 (D-019, punto 9; contrato 21): los tipos del 2 más tinaja y cucharon, con los campos de attr_fields (se combina con attr). Una sola tinaja por nivel, su cuia contigua en la misma fila y hidden = todas sus capas menos la boca los comprueba tools/level-qa.",
+      "description": "Restricción de una entrada de attrs con pack_schema 3 (D-019, punto 9; contrato 21): los tipos del 2 más tinaja y cucharon, con los campos de attr_fields (se combina con attr). Una sola tinaja por nivel, su cuia contigua en la misma fila y hidden = todas sus capas menos la boca los comprueba tools/level-qa. En relief[].attrs la tinaja necesita la misma máscara, que relief_board aún no puede llevar: pendiente del dueño (contrato 21; rama del 3 en allOf).",
       "anyOf": [
         { "type": "null" },
         { "type": "object", "$ref": "#/$defs/attr_fields" }
@@ -326,7 +326,7 @@
       "if": { "properties": { "type": { "const": "minus_color" } } },
       "then": { "required": ["removed"], "properties": { "par": { "type": "integer" } } },
       "else": { "not": { "required": ["removed"] } },
-      "description": "Tablero completo pregenerado (+1 cuia vacía o -1 color). El orden de la lista es la prioridad: relief[0] se sirve al tercer fallo consecutivo (relief_after_fails), relief[1] si existe un segundo alivio (relief_second_step_fails). minus_color lleva siempre par entero; plus_empty puede publicarse con par null (03 §13)."
+      "description": "Tablero completo pregenerado (+1 cuia vacía o -1 color). El orden de la lista es la prioridad: relief[0] se sirve al tercer fallo consecutivo (relief_after_fails), relief[1] si existe un segundo alivio (relief_second_step_fails). minus_color lleva siempre par entero; plus_empty puede publicarse con par null (03 §13). No admite hidden (08 §4.1): en Aguas turbias las variantes van sin dosis ocultas [P]; con la Tinaja (pack_schema 3), cómo lleva la variante la máscara de la tinaja está pendiente del dueño (contrato 21)."
     },
     "level": {
       "type": "object",

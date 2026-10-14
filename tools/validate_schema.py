@@ -19,10 +19,12 @@ Casos (contrato 21 del GDD; docs/gdd/08-arquitectura-tecnica-publicacion.md §4.
         tipo (hoja: key; remolino: partner; lluvia: key y n), intro_mechanic matapi/chica/alta/murky [P] y
         difficulty.par_approx [P]; con pack_schema 1 nada de eso valida y todo lo demas sigue igual; una version que
         el esquema no conoce (pack_schema 4) falla;
-    (f) pack_schema 3 (D-019, punto 9; contrato 21): la Tinaja (M13) con los tipos tinaja y cucharon, sin campos, en
-        attrs del base y de relief, e intro_mechanic tinaja; murky = true y hidden con las capas de la tinaja menos la
-        boca (como mucho 4 pares, como siempre); el 3 conserva todo lo del 2 (campos obligatorios por tipo, matapi,
-        intro_mechanic y par_approx); tinaja, cucharon e intro_mechanic tinaja fallan con pack_schema 1 y 2.
+    (f) pack_schema 3 (D-019, punto 9; contrato 21): la Tinaja (M13) con los tipos tinaja y cucharon, sin campos, e
+        intro_mechanic tinaja; murky = true y hidden con las capas de la tinaja menos la boca (como mucho 4 pares, como
+        siempre); el 3 conserva todo lo del 2 (campos obligatorios por tipo, matapi, intro_mechanic y par_approx); tinaja,
+        cucharon e intro_mechanic tinaja fallan con pack_schema 1 y 2. PENDIENTE del dueno (contrato 21): como lleva una
+        variante de relief la mascara de la tinaja, que relief_board no admite (08 §4.1); f1 y f2 llevan la tinaja en
+        relief sin mascara solo porque el esquema de hoy lo acepta, no como formato publicable (AF.Core la rechaza).
 
 Imprime PASS/FAIL por caso y termina con codigo 1 si alguno falla. Requiere jsonschema >= 4.18.
 
@@ -336,7 +338,12 @@ def main() -> int:
         de jar_sources pasan a la tinaja (capacidad 5; con estas cuias, T4 en toda la columna), que se anade con su cuia
         chica de 2, vacia y contigua (attrs tinaja y cucharon, sin campos); murky = true y hidden = todas las capas de la
         tinaja menos la boca. Conserva los 2 vacios del ejemplo. relief[0] (minus_color) quita una fruta que no esta en la
-        tinaja (03 §13) y relief[1] (plus_empty) anade un vacio al final; las dos llevan la tinaja."""
+        tinaja (03 §13) y relief[1] (plus_empty) anade un vacio al final; las dos llevan la tinaja, pero SIN su mascara:
+        relief_board no admite hidden (08 §4.1) y como la lleva una variante esta pendiente del dueno (contrato 21).
+        AF.Core rechaza esas variantes (TinajaMechanic.ValidateInitial: «todas las dosis de la tinaja estan ocultas salvo
+        la boca»), y por eso tambien AF.Levels y tools/level-qa (QA-RELIEF-VALID): no son un formato publicable ni una
+        referencia para el generador, el QA o el cliente. Al decidirse, cambian estas variantes, f1, f2 y sus casos
+        invalidos."""
         p = copy.deepcopy(example)
         p.update({"pack_schema": pack, "pack_id": "mundo_07_v1", "world": 7, "world_id": "w07_madre_de_dios",
                   "water_base": "white"})
@@ -369,10 +376,10 @@ def main() -> int:
             board["attrs"] = [None if a and a["type"] in ("tinaja", "cucharon") else a for a in board["attrs"]]
         return p
 
-    check(validator, "f1", "pack 3: estreno de la Tinaja en el 323 (p3, 3 dosis y 2 ocultas; tinaja y cucharon en el base "
-          "y en relief; intro_mechanic tinaja)", tinaja_level(), True)
-    check(validator, "f2", "pack 3: tinaja de 5 dosis con 4 ocultas en el hito 340 (el tope de hidden)",
-          tinaja_level(level=340, band="milestone", intro=None, doses=5), True)
+    check(validator, "f1", "pack 3: estreno de la Tinaja en el 323 (p3, 3 dosis y 2 ocultas; intro_mechanic tinaja; "
+          "relief con la tinaja sin mascara, pendiente del contrato 21)", tinaja_level(), True)
+    check(validator, "f2", "pack 3: tinaja de 5 dosis con 4 ocultas en el hito 340 (el tope de hidden; relief con la "
+          "tinaja sin mascara, pendiente del contrato 21)", tinaja_level(level=340, band="milestone", intro=None, doses=5), True)
     d = tinaja_level(level=340, band="milestone", intro=None, doses=5)
     d["levels"][0]["hidden"].append([9, 4])
     check(validator, "f3", "pack 3: hidden con las 5 capas de la tinaja, boca incluida (hidden sigue en 4 pares como mucho)",
