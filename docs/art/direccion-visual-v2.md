@@ -16,6 +16,8 @@ Revisión 7 (2026-10-13, tanda 2 de D-012, integrada en `94905b8`): la sacudida 
 
 Revisión 8 (2026-10-13, D-013): el Mapa del río trae un fondo por parada. El panorama único de la capa 0 se divide en cielo por código, kit del mundo, héroe bajo del sitio y piezas por código (3.4); entran los criterios VA-20 a VA-23 (sección 9) y las ranuras nuevas del Mapa y de los fondos (10.3). El panel azul petróleo (D-004) no cambia. Canon en 07 §2.1 y en `docs/research/mapa-del-rio/propuesta-mapa-del-rio.md`, sección 10.
 
+Revisión 9 (2026-10-13, D-015): la pregunta 44 queda decidida. El presupuesto del líquido de la sección 8 no cambia, con una excepción aceptada por el dueño: la banda que se revela con icono lleva 3 muestras durante ≈ 140 ms. El shader se mide en un teléfono de clase A antes de añadir más efectos al líquido (acción del dueño).
+
 Fuentes: `docs/dev/decisiones.md` (D-001 a D-006), GDD 07 (§3 paleta, §4 cuia, §5 storyboards, §6 mascotas, §7 UI kit, §8 pautas culturales), GDD 02 (§3.3, §4, §5, §12), GDD 08 §5 (shader y rendimiento), glosario §0, §3, §9 y §10, `docs/research/09-referencia-magic-sort.md` y `docs/research/magic-sort/c-meta-liveops-ux.md` §4, la revisión del 2026-10-07 (material de entrada, verificado contra el código) y las capturas `Logs/device/v01-fix-*.png` y `docs/reviews/2026-10-07/visual/*.png`.
 
 Convenciones:
@@ -638,7 +640,7 @@ La referencia es la clase A de 08 §5.4 (Mali-G52 o Adreno 610, 3 GB). La clase 
 | Overdraw medio | ≤ 2,5× | Vista de overdraw o RenderDoc |
 | Partículas | ≤ 60 simultáneas, ambiente ≤ 16 (6) | Contador de `DevProbe` [P] |
 | Brillos aditivos | ≤ 8 a la vez, cada uno ≤ 96 × 96 dp | — |
-| Shaders | Sin postproceso ni Bloom. Líquido ≤ 40 ALU y ≤ 2 muestras (08 §5.2). Vidrio horneado. Hoy no se cumple en ALU: el shader uGUI del prototipo (`AF_UI_Liquid.shader`) mide 149-288 instrucciones por camino desde la tanda 2 (142-165 antes del icono de fruta); las muestras sí cumplen. Pendiente de medir en un teléfono de clase A (pregunta 44 de `docs/GDD.md` §6.3) | fxc /O3 por camino; Profiler por USB en clase A |
+| Shaders | Sin postproceso ni Bloom. Líquido ≤ 40 ALU y ≤ 2 muestras (08 §5.2). Vidrio horneado. Hoy no se cumple en ALU: el shader uGUI del prototipo (`AF_UI_Liquid.shader`) mide 149-288 instrucciones por camino desde la tanda 2 (142-165 antes del icono de fruta). Las muestras cumplen salvo en la banda que se revela con icono, con 3 muestras durante ≈ 140 ms (del 0,64 al 0,85 del Dissolve): excepción aceptada por el dueño el 2026-10-13 (D-015; pregunta 44 de `docs/GDD.md` §6.3). Se mide en un teléfono de clase A (Mali-G52 o Adreno 610) antes de añadir más efectos al líquido y se optimiza solo si no cumple; conseguir el teléfono es una acción del dueño | fxc /O3 por camino; Profiler por USB en clase A |
 | Texturas pintadas | ASTC 6×6 en fondos y 4×4 en UI, sin mipmaps en UI y atlas de 2048² (08 §5.4). Los degradados oscuros (relleno del panel, interiores de modales) no van en PNG ni en ASTC: por código (4.6) | Build report |
 | Texturas procedurales | RGBA32 ≤ 16 MB en total, incluidas las de la cuia a 72-128 px/u (4.1). Respaldos de escena a media resolución (≤ 540 × 1200 px) y generados una sola vez, no por nivel | Memory Profiler |
 | Generación procedural al arrancar | ≤ 300 ms de CPU en clase A. Solo se generan piezas geométricas o de material (10.3), sin desenfoques por píxel, y se guardan en caché en `persistentDataPath` con clave de versión (4.9): desde el segundo arranque, solo se leen | Stopwatch y línea de log en builds de desarrollo [P] |

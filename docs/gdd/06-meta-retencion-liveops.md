@@ -425,7 +425,7 @@ El calendario siguiente corresponde a la configuración de equipo **B** de 09 §
 
 | Semana desde el soft launch | Contenido | Live-ops | Versión |
 |---|---|---|---|
-| 0 | Niveles 1-700 instalados (mundos 1-9; ≥600 con QA completa); fondos 1-4 + Loreto (141-200) por PAD; "río genérico" en 201-700; skins 1-4 | Reto del río, Bitácora, Crecida, Canasta, Dato del río | 1.0 |
+| 0 | Niveles 1-700 instalados (mundos 1-9; ≥600 con QA completa); fondos 1-4 + Loreto (141-200) por PAD; "río genérico" en 201-700 (con D-013, el kit del mundo con el rótulo del sitio, y el «río genérico» de respaldo; 07 §2.1); skins 1-4 | Reto del río, Bitácora, Crecida, Canasta, Dato del río | 1.0 |
 | 2 | +100 (701-800, por `levels_remote`) | — | 1.0.x |
 | 4 | +100 (900) | Primer ajuste de curva por embudo (Remote Config) | 1.0.x |
 | 6 | +100 (1.000); fondos 6-8 por PAD | Cuaderno de campo (retroactivo), logros, Aguas turbias · Bonus, skins 5-13, Mochila de regreso | 1.1 |

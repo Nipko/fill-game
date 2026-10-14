@@ -1558,11 +1558,12 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - **D-009, punto 2** (contenido de la tarjeta previa): la del hito p20 añade «Si lo superas, llegas a {sitio}» y la silueta del sitio (02 §10; 07 §7.7);
   - **D-012, decisión 2** (banner de mundo): con Q4-D, el banner del primer nivel de cada mundo trae dentro el viaje de mundo;
   - la fuente de los Datos del río de los mundos 1-5 (07 §2.2, regla 6: «los de la propuesta de D-007, §(e)»): los datos de llegada salen de `river_stops_v1.json`, cruzados con §(e) (Q16-A);
-  - las ofertas «en el Mapa del río» (05 §4.1 y §5) y la entrada al Mercado desde el Mapa (04 §4): el Mapa va sin ofertas ni precios (Q10-A).
+  - las ofertas «en el Mapa del río» (05 §4.1 y §5) y la entrada al Mercado desde el Mapa (04 §4): el Mapa va sin ofertas ni precios (Q10-A);
+  - **matiza el contrato 25** (fondos de la 1.0; GDD.md §2 #20, 03 §17 y 08 §6.2): en 201-700 el fondo deja de ser el «río genérico» y pasa a ser el kit del mundo con el rótulo del sitio, sin héroe (punto 2), dentro del AAB mientras no haya Addressables; el «río genérico» queda de respaldo mientras falte el kit o el pack.
 - **No sustituye** (sección 15 de la propuesta, comprobado contra el GDD):
   - el orden de los mundos, los packs 1-200, `WorldTable`, las semillas de nivel ni los debuts de tinte;
   - la economía: `tools/econ_sim.py` y `tools/out/econ_*.md` no cambian, y llegar a una parada no da semillas;
-  - el alcance de la 1.0 (GDD.md §2 #20-21: niveles 1-700, mundos 1-9; Q14-A) ni el contrato 25 (fondos de la 1.0), cuyo «río genérico» queda de respaldo;
+  - el alcance de la 1.0 (GDD.md §2 #20-21: niveles 1-700, mundos 1-9; Q14-A);
   - **D-008**: con Q4-D, la cadena corta de 02 §6 (Celebración → victoria → Siguiente → AD_GATE → N+1) no cambia. Solo habría cambiado con Q4-A, que no se eligió (sección 15 de la propuesta);
   - D-004 (panel azul petróleo), D-010 (miquitos) ni D-011 (sus reglas de lectura valen también para el rótulo del lugar);
   - D-012 en todo lo demás: el banner sale al cargar el 11, el 41, el 81 y el 141, solo en el primer intento, y lo presenta Capi mientras Rosa asoma. La tabla f.2 de la propuesta de TiTino lo daba a Rosa; D-012 es posterior y manda.
@@ -1638,7 +1639,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
     - **Siguen abiertas** y no se dan por decididas: de TiTino, T2 (cómo entra en el arranque y en el tutorial), T4 (nombre y grafía) y T5 (si aparece durante la partida: tutorial y aviso de Volver a la orilla); de Frutas, Q2-Q7; de la propuesta de idiomas, Q1-Q12; de la tinaja, Q-Ti1-Q-Ti7. Mientras T2 y T5 estén abiertas, el arranque, el tutorial, el aviso de Volver a la orilla y la orilla con Capi del HUD (conflicto C4 de la guía visual) se quedan como están. El resto del lote f.3 de TiTino (el ajuste «Mensajes de TiTino» con la migración del perfil, las claves `ui_sloth_*`, los textos `sloth_line_*` y la hoja de modelo completa) queda para cuando se decidan.
 
 **Consecuencias.**
-- **Choque entre propuestas** (pregunta 45 de GDD.md §6.3): la llegada del Mapa (secciones 6.2 y 9), la línea de fruta de Frutas Q1-A (§1.3 y §2.2, regla 7) y la excepción de los tres hitos de T6-A quieren el mismo hueco de la victoria del `10k` y no casan del todo: la clave que gobierna cada cadencia, qué pasa con la línea de fruta del `10k`, qué sale en los tres hitos y qué va en el bocadillo del Mapa del 10. Hasta que el dueño decida, el GDD describe los dos canales y remite a la pregunta. No bloquea: nada de esto está en el cliente.
+- **Choque entre propuestas** (pregunta 45 de GDD.md §6.3): la llegada del Mapa (secciones 6.2 y 9), la línea de fruta de Frutas Q1-A (§1.3 y §2.2, regla 7) y la excepción de los tres hitos de T6-A quieren el mismo hueco de la victoria del `10k` y no casan del todo: la clave que gobierna cada cadencia, qué pasa con la línea de fruta del `10k`, qué sale en los tres hitos y qué va en el bocadillo del Mapa del 10. Hasta que el dueño decida, el GDD describe los dos canales y remite a la pregunta. La opción recomendada, (a), deja en la ficha de la fruta las líneas que se desplazan, así que supone la Q4-A de Frutas (ficha en la 1.0), que sigue abierta: conviene contestar las dos a la vez. No bloquea: nada de esto está en el cliente.
 - **Código:** nada todavía. El plan de la sección 13 de la propuesta, sin escena nueva, sin prefabs, sin YAML a mano, sin paquetes nuevos, sin shader propio y sin tocar `Packages/com.amazonfill.core/`:
   - F1 (agente de C#): `RiverJourney` y `MapMoments` (AF.GameFlow, sin motor), `RiverStopCatalog` (AF.Levels), `river_stops_v1.json` de 1-200 y el campo `progress.map_seen_level`, con tests EditMode;
   - F2 (herramientas): `tools/river-map/` (Python 3.14, solo biblioteca estándar) con `--check`, que se añadirá a los comandos de verificación de `CLAUDE.md` cuando exista;
@@ -1650,16 +1651,16 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Dependencias externas:** las descargas de Q11 (dueño); el asesor (datos, sitios marcados, Shanay-Timpishka en el mundo 9, que puede ser parada, vapor lejano o nada, y el bufeo boliviano); el abogado (banderas, Guyana y «TiTino»); el artista (la máscara de zonas del terreno para F2 y los héroes después de VA-20).
 
 **Qué cambia en el GDD** (aplicado el 2026-10-13, T50):
-- `docs/GDD.md`: versión 1.7; §1 (el Mapa, TiTino y «río arriba»); §2 #24; §3.1 (índice); §4 (fila «Tema y marca»); §6 y §6.3 (la 34 apunta a D-014, las 39-44 decididas y la 45 nueva); §7.4 (contratos 29 y 30).
-- 00 glosario: el resumen, §3.1-§3.3 y §3.4 (nueva: TiTino), §5.1-§5.2, §6.4, §7.1, §8 (mundos 9 y 13), §10 (claves del Mapa), §11 (identificadores del Mapa), «Parámetros» y la pregunta abierta 3 (el nombre de TiTino).
-- 01: el resumen (TiTino y «río arriba») y el concepto de UA «Rosa te lleva río arriba».
+- `docs/GDD.md`: versión 1.7; §1 (el Mapa, TiTino y «río arriba»); §2 #20 (contrato 25, matizado: fondos de 201-700) y #24; §3.1 (índice); §4 (fila «Tema y marca»); §6, §6.2 (fondos de la 1.0) y §6.3 (la 34 apunta a D-014, las 39-44 decididas y la 45 nueva); §7.2 (#18, contrato 25) y §7.4 (contratos 29 y 30); §9 (paso 16).
+- 00 glosario: el resumen, §3.1-§3.3 y §3.4 (nueva: TiTino), §5.1-§5.2, §6.4, §7.1, §8 (mundos 9 y 13), §10 (claves del Mapa), §11 (identificadores del Mapa y de TiTino), «Parámetros» y la pregunta abierta 3 (el nombre de TiTino).
+- 01: el resumen (TiTino y «río arriba»), el concepto de UA «Rosa te lleva río arriba» y los fondos de 201-700 (§5, diferencial 6, y §11, término «AAB / PAD»).
 - 02: §2 (estado de la victoria), §4 (Celebración: TiTino, sin Capi), §5 (pausa y Capi), §6 (llegada, victoria con vista, barra de la Canasta, banner con el viaje, TiTino y una línea por victoria) y §10 (tarjeta del hito p20).
-- 03 §13 (el Mapa, sin salir del nivel) y 04 §2.6, §4 y §6.5 («río arriba»; el Mercado, desde el inicio).
+- 03 §13 (el Mapa, sin salir del nivel) y §17 (fondos de 201-700); 04 §2.6, §4 y §6.5 («río arriba»; el Mercado, desde el inicio).
 - 05 §4.1 y §5 (la Mochila en la victoria, el Pase fuera del Mapa, la oferta de skin y el marco de los packs de skin).
-- 06: §2.2, §2.3, §4.4-§4.7, §8, §9, «Parámetros» y «Dependencias».
-- 07: §2.1 (fondos por parada), §2.2 (reglas 1 y 6; fauna del mundo 4), §5.4, §5.5, §6.1-§6.3, §6.5 (nueva: TiTino), §7.6, §7.7, §9.1, §10, §11 y «Parámetros».
-- 08: §2.2, §3, §4.3, §4.5 (nueva), §6.1, §6.2, §8.2, §9 y §11.
-- 09: §1.1 (#20 y #27), §2.3 (fase 3), §2.4 (F3), §5 (arte) y §7 (R34).
+- 06: §2.2, §2.3, §4.4-§4.7, §8, §9, §10 (fila 0: fondos de la 1.0), «Parámetros» y «Dependencias».
+- 07: §2.1 (fondos por parada), §2.2 (reglas 1 y 6; fauna del mundo 4), §5.4, §5.5, §6.1-§6.3 (en 6.1, `capi_point` solo en el tutorial: en la victoria de los hitos celebra TiTino), §6.5 (nueva: TiTino), §7.6, §7.7, §9.1, §10, §11, «Parámetros», «Preguntas abiertas» 2 (fondos de 201-700) y «Dependencias» (fila 09).
+- 08: §2.2, §3, §4.3, §4.5 (nueva), §6.1, §6.2 (fila `world_w05` … `world_w13`: los kits de 201-700), §8.2, §9, §11 y §13.1 (comprobación 17).
+- 09: §1.1 (#20, #26 y #27), §2.3 (fase 3), §2.4 (F3), §5 (arte), §7 (R34) y §8, decisión 22 (fondos de 201-700).
 - `docs/art/direccion-visual-v2.md`: revisión 8, §3.4, §9 (VA-20 a VA-23), §10.3 y §12 (TiTino celebra en el panel de victoria).
 - Propuestas marcadas: Mapa (cabecera y sección 16), TiTino (estado, T1, T6 y f.1), Frutas (cabecera, Q1 y los datos k14 y k19 del Tapajós, que hay que cambiar) y `docs/research/magic-sort/propuesta-tintalu.md` (pregunta #16, Escenas del río, respondida).
 
@@ -1685,7 +1686,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 - **Fecha:** 2026-10-13. Registrada el 2026-10-13.
 - **Estado:** decidida por el dueño: la opción recomendada de la hoja `docs/dev/traspaso/pruebas-telefono-2026-10-13.md` («Defecto encontrado por el dueño: bucle sin "Aguas estancadas" en el 66»), con su «Nos vamos por las recomendadas».
-  - Documentación aplicada el 2026-10-13 (T50): 02 R13, R14 y R16, y la pregunta 15 de 02; `docs/GDD.md` §6.3, pregunta 34.
+  - Documentación aplicada el 2026-10-13 (T50): 02 §1.4 (R13, R14 y R16), §2 (la transición a STUCK_MODAL) y «Preguntas abiertas» 15 y 16; 04 §5.1 (la condición del cliente en `afterPourAnimation`); 07 §5.5; `docs/GDD.md` §6.3 (preguntas 34 y 46); `docs/dev/traspaso/README.md` y una nota en la hoja `docs/dev/traspaso/pruebas-telefono-2026-10-13.md`.
   - En implementación en el núcleo (T51, `LevelSession`), con el tablero del 66 como prueba de regresión.
   - **Revisión del 2026-10-13 (T50): pendiente de la pregunta 46** de `docs/GDD.md` §6.3. El propio 66 es un contraejemplo: con la regla tal como se decidió, Aguas estancadas saltaría tras el vertido 6, cuando el tablero todavía se gana, y eso rompe R14 (P1), que la hoja de pruebas pedía «intacta» (Consecuencias, «El 66, contraejemplo de P1»). T51 no integra la regla hasta que el dueño responda.
 - **Sustituye:**
@@ -1750,7 +1751,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Cómo revertir.** Quitar la comprobación del cierre en la evaluación de `LevelSession` (T51). Siempre con una decisión nueva que sustituya a D-014.
 
 **Archivos afectados.**
-- **Documentación** (2026-10-13, T50): este registro; 02 §1.4 (R13, R14 y R16), §2 (la transición a STUCK_MODAL) y «Preguntas abiertas» 15 y 16; 07 §5.5; `docs/GDD.md` §6.3 (preguntas 34 y 46); `docs/dev/traspaso/README.md`; una nota en la hoja `docs/dev/traspaso/pruebas-telefono-2026-10-13.md` (el 66 tiene capacidades mixtas).
+- **Documentación** (2026-10-13, T50): este registro; 02 §1.4 (R13, R14 y R16), §2 (la transición a STUCK_MODAL) y «Preguntas abiertas» 15 y 16; 04 §5.1 (`afterPourAnimation` y una precisión: el solver, el bot y `level-qa` siguen solo con `legalNonFutileMoves`); 07 §5.5; `docs/GDD.md` §6.3 (preguntas 34 y 46); `docs/dev/traspaso/README.md`; una nota en la hoja `docs/dev/traspaso/pruebas-telefono-2026-10-13.md` (el 66 tiene capacidades mixtas).
 - **Código** (T51): `Packages/com.amazonfill.core/Runtime/AF.Core/Session/LevelSession.cs`, una clase nueva del núcleo para el cierre, sus tests compartidos y de `DotnetOnly`, y el README y el CHANGELOG del núcleo.
 
 ---
@@ -1759,7 +1760,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 - **Fecha:** 2026-10-13. Registrada el 2026-10-13.
 - **Estado:** decidida por el dueño. El escritorio le pasó las preguntas 39-44 («Cada una lleva mi recomendación; si te valen, basta con "acepto las recomendaciones"») y el dueño respondió: «Nos vamos por las recomendadas y necesitamos seguir avanzando».
-  - Documentación aplicada el 2026-10-13 (T50): `docs/GDD.md` §6.3 (las seis filas pasan a decididas), 02 §6, 05 §4.1 y §5, 06 §4.5, 07 §2.2 y este registro.
+  - Documentación aplicada el 2026-10-13 (T50): `docs/GDD.md` §6.3 (las seis filas pasan a decididas), 02 §6, 05 §4.1 y §5, 06 §4.5, 07 §2.2, `docs/art/direccion-visual-v2.md` (§8, fila Shaders, con la excepción de la pregunta 44, y revisión 9) y este registro.
   - Lo que pide código lo hace **T52** [P]: el aviso que tapa las burbujas «Te faltan {n}» (pregunta 41, punto 4), el aviso que se oculta al abrirse un modal del embudo (42) y la escala de fuente del banner de mundo (43).
   - La medida del shader en un teléfono de clase A (44) es una **acción del dueño**: hace falta conseguir el teléfono.
 - **Sustituye:** los [P] y las opciones abiertas de esas seis preguntas.
@@ -1787,5 +1788,5 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Cómo revertir.** Con una decisión nueva que sustituya a D-015, pregunta a pregunta.
 
 **Archivos afectados.**
-- **Documentación** (2026-10-13, T50): este registro; `docs/GDD.md` §6.3; 02 §6; 05 §4.1 y §5; 06 §4.5; 07 §2.2.
+- **Documentación** (2026-10-13, T50): este registro; `docs/GDD.md` §6.3; 02 §6; 05 §4.1 y §5; 06 §4.5; 07 §2.2; `docs/art/direccion-visual-v2.md` §8 (fila Shaders) y revisión 9.
 - **Código** (T52): los avisos (`GameScreen.Notices.cs`), la bandeja (`BoosterTray.cs`) y el banner de mundo (`WorldBannerView.cs` y `GameScreen.WorldBanner.cs`), con sus tests.

@@ -427,7 +427,7 @@ Eventos de analítica (Firebase): los de la taxonomía única de 08 §8.2, con s
 | Lanzamiento | 700 niveles instalados en el AAB (`levels_install`, mundos 1-9; cubre los ≥ 600 jugables de la dirección 17; 08 §6.2); 701-1.040 en Addressables remotos (`levels_remote`) | — | — | — |
 | Cadencia | +100 niveles cada 1-2 semanas: generar (1 h), curar los 30 retos/hitos (2 días), QA (1 día), publicar por Addressables + RC | 3-4 días/pack | 1 persona a tiempo parcial | 1 persona a tiempo parcial |
 
-Fondos de 1.0: los mundos 1-4 van pintados en la instalación (dirección 16) y Loreto (141-200) llega por Play Asset Delivery; los niveles 201-700 (mundos 6-9) usan el fondo "río genérico" con la LUT de agua del mundo hasta que lleguen sus packs (07 §11; 08 §6.2).
+Fondos de 1.0: los mundos 1-4 van pintados en la instalación (dirección 16) y Loreto (141-200) llega por Play Asset Delivery; los niveles 201-700 (mundos 6-9) usan el fondo "río genérico" con la LUT de agua del mundo hasta que lleguen sus packs (07 §11; 08 §6.2). Con D-013 (2026-10-13; Q14-A), en 1-200 el fondo es el de cada parada del Mapa del río y en 201-700, el kit del mundo (`bg_kit_w06` … `bg_kit_w09`) con el rótulo del sitio, sin héroe, dentro del AAB mientras no haya Addressables; el «río genérico» queda de respaldo (07 §2.1; 08 §6.1-§6.2).
 
 **Checklist de QA por nivel** (checks automáticos de `tools/level-qa`, que hacen fallar el CI, salvo donde se indica "humana"):
 
