@@ -166,11 +166,28 @@ class FieldTests(unittest.TestCase):
                 self.assertEqual(stops.KIND[r["tipo"]], s["kind"])
 
     def test_no_text_only_keys(self):
-        key = re.compile(r"map\.[a-z0-9_.]+")
+        # fullmatch con los patrones del generador: una clave seguida de texto («map.x Manaos es grande») no pasa.
+        def assertKey(pattern: re.Pattern, value, where: str):
+            with self.subTest(where=where):
+                self.assertIsInstance(value, str)
+                self.assertNotIn(" ", value)
+                self.assertIsNotNone(pattern.fullmatch(value), f"{value!r} no es una clave {pattern.pattern}")
+
+        self.assertIsNone(stops.RE_FACT_KEY.fullmatch("map.stop.manaos.dato_01 Manaos es grande"))
         for s in self.doc["stops"]:
-            for field in ("arrival_fact", "world_question", "country_name"):
-                if s[field] is not None:
-                    self.assertRegex(s[field], key)
+            n = s["n"]
+            if s["arrival_fact"] is not None:
+                assertKey(stops.RE_FACT_KEY, s["arrival_fact"], f"n={n} arrival_fact")
+            for i, fact in enumerate(s["facts"]):
+                assertKey(stops.RE_FACT_KEY, fact, f"n={n} facts[{i}]")
+            if s["world_question"] is not None:
+                assertKey(stops.RE_QUESTION, s["world_question"], f"n={n} world_question")
+            if s["country_name"] is not None:
+                assertKey(re.compile(rf"map\.stop\.{re.escape(s['id'])}\.country"), s["country_name"],
+                          f"n={n} country_name")
+        self.assertEqual(19, sum(s["arrival_fact"] is not None for s in self.doc["stops"]))
+        self.assertEqual(4, sum(s["world_question"] is not None for s in self.doc["stops"]))
+        self.assertEqual(1, sum(s["country_name"] is not None for s in self.doc["stops"]))
 
 
 class WorldTableSyncTests(unittest.TestCase):
@@ -314,6 +331,8 @@ def _question_nobody_answers(src: dict, ov: dict) -> None:
 FIXTURES = [
     ("levels mal", _set_rec(5, "niveles", [52, 61]), "levels"),
     ("n no contiguo (falta la parada 7)", _drop_rec(7), "n no contiguo"),
+    ("falta la ultima parada (k=19)", _drop_rec(19),
+     "no cubre los niveles 1-200 (D-013, punto 3): faltan las paradas k=[19]"),
     ("mundo mal", _set_rec(4, "mundo", 2), "WorldTable"),
     ("gate mal colocado", _set_rec(2, "tipo", "gran_parada"), "gate fuera"),
     ("primera parada del mundo sin gate", _set_rec(8, "tipo", "parada"), "tiene que ser gate"),
@@ -358,6 +377,33 @@ class InvalidFixtureTests(unittest.TestCase):
                     self.assertEqual(1, proc.returncode, out)
                     self.assertIn(expected, out)
                     self.assertTrue(is_ascii(proc.stdout + proc.stderr), out)
+
+    def test_truncated_source_reports_the_world_left_without_close(self):
+        # Sin las paradas 18 y 19, el mundo 5 se quedaria sin su close: falla por la cobertura de paradas_1_200 y por
+        # el final del documento, y no escribe nada.
+        src = copy.deepcopy(self.source)
+        src["paradas_1_200"] = [r for r in src["paradas_1_200"] if r["k"] < 18]
+        with tempfile.TemporaryDirectory() as tmp:
+            src_path = Path(tmp) / "rio.json"
+            out = Path(tmp) / "river_stops_v1.json"
+            src_path.write_text(json.dumps(src, ensure_ascii=False), encoding="utf-8")
+            proc = run_stops("--source", str(src_path), "--out", str(out))
+            text = proc.stdout.decode("ascii", "replace")
+            self.assertEqual(1, proc.returncode, text)
+            self.assertIn("faltan las paradas k=[18, 19]", text)
+            self.assertIn("el documento termina en el nivel 180 y el mundo 5 acaba en el 200", text)
+            self.assertFalse(out.exists(), "con errores no se escribe nada")
+
+    def test_validate_requires_the_document_to_end_a_world(self):
+        # Regla generica (vale tambien para 1-700): la ultima parada cierra un mundo.
+        wt = WorldTable.from_cs()
+        doc, errors = stops.build(copy.deepcopy(self.source), copy.deepcopy(self.overrides), wt)
+        self.assertEqual([], errors)
+        for last_n, ok in ((19, True), (18, False), (14, False), (13, True), (7, True), (5, False), (0, True)):
+            with self.subTest(last_n=last_n):
+                cut = dict(doc, stops=doc["stops"][:last_n + 1])
+                ending = [e for e in stops.validate(cut, wt) if "el documento termina" in e]
+                self.assertEqual(ok, not ending, ending)
 
     def test_writing_refuses_an_invalid_source(self):
         src = copy.deepcopy(self.source)

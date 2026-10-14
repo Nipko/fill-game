@@ -60,7 +60,9 @@ Solo claves de texto, nunca textos (08 §4.5): los textos de `arrival_fact`, `fa
 
 ### Validaciones de `--check`
 
+- `paradas_1_200` cubre k = 0-19, es decir, los niveles 1-200 (D-013, punto 3).
 - `n` contiguos desde 0 y `levels` = [10n+1, 10n+10]; `world` igual a `WorldTable.cs` en los dos extremos del tramo.
+- El documento termina en el último nivel de un mundo (regla genérica, vale también para 1-700): así cada mundo presente está completo.
 - `gate` en el primer tramo de cada mundo y `close` en el último (el mundo 1, de un solo tramo, solo lleva `gate`).
 - `bg.kit` = `bg_kit_w` + el mundo con 2 cifras; uno y solo uno de `hero` y `code`; `fondo.tipo` coherente (pintado, código, solo kit o variante de luz).
 - Ids únicos (`[a-z0-9_]+`); ningún «Belén» ni «belen» en ninguna cadena (D-013, punto 11). «Belém» (`belem`, la parada 0) no cae en el veto.

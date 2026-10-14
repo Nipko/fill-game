@@ -15,6 +15,8 @@ Opciones para pruebas y fixtures: --source, --overrides, --worldtable y --out ca
 Determinista: misma entrada, mismos bytes (UTF-8 sin BOM, LF, orden de claves fijo). Mensajes solo en ASCII.
 
 Conversion (paradas_1_200 -> stops[n]; plan del Mapa, M1.1):
+- paradas_1_200 cubre k = 0..19 (niveles 1-200, D-013 punto 3); ademas, la validacion exige que el documento termine
+  en el ultimo nivel de un mundo, para que ninguno se quede sin su close.
 - n = k, levels = niveles, world = mundo, id = id; kind: gran_parada -> gate, parada y variante -> stop,
   castillo -> close.
 - country = pais (ISO2); si la parada tiene dos paises, overrides.json decide country y country_name (n = 13).
@@ -56,6 +58,10 @@ from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
 )
 
 FORMAT = "af-river-stops/1"
+
+# paradas_1_200 cubre los niveles 1-200 (D-013, punto 3): 20 paradas, k = 0..19.
+LAST_LEVEL_1_200 = 200
+STOPS_1_200 = LAST_LEVEL_1_200 // 10
 
 # Orden fijo de los campos de cada parada (08 §4.5 con los extras de P-M1). M2.6 anade «at» tras country_name y «leg»
 # al final (el esquema ya los admite).
@@ -241,6 +247,13 @@ def convert(source: dict, overrides: dict) -> tuple[dict | None, list[str]]:
     for r in records:
         if _is_int(r.get("k")):
             by_k.setdefault(r.get("k"), r)
+    missing = sorted(set(range(STOPS_1_200)) - set(by_k))
+    if missing:
+        errors.append(f"paradas_1_200 no cubre los niveles 1-{LAST_LEVEL_1_200} (D-013, punto 3): "
+                      f"faltan las paradas k={missing}")
+    outside = sorted(k for k in by_k if not 0 <= k < STOPS_1_200)
+    if outside:
+        errors.append(f"paradas_1_200: k={outside} fuera de 0-{STOPS_1_200 - 1} (niveles 1-{LAST_LEVEL_1_200})")
     flags, errs = _crossings(source, set(by_k))
     errors += errs
     answer_levels, errs = _questions(records)
@@ -464,6 +477,18 @@ def validate(doc: dict, wt: WorldTable) -> list[str]:
                 errors.append(f"{tag}: bg.code {code!r} no es codigo:<pieza> ni kit:<pieza>")
             if lut is not None and lut not in LUTS:
                 errors.append(f"{tag}: bg.lut {lut!r} no es dusk, dawn ni null")
+
+    # El documento termina en el ultimo nivel de un mundo (1-200: el 200 del mundo 5; vale igual para 1-700). Con n
+    # contiguos y levels = [10n+1, 10n+10], asi cada mundo presente esta completo: su gate y, si tiene mas de un
+    # tramo, su close.
+    last = stops[-1]
+    end, world = last.get("levels"), last.get("world")
+    end = end[1] if isinstance(end, list) and len(end) == 2 else None
+    if (_is_int(end) and 1 <= end <= wt.last_level and _is_int(world) and 1 <= world <= wt.world_count
+            and wt.world_of(end) == world and end != wt.last_level_of(world)):
+        errors.append(f"parada n={last.get('n')!r} ({last.get('id')!r}): el documento termina en el nivel {end} y el "
+                      f"mundo {world} acaba en el {wt.last_level_of(world)}; las paradas tienen que llegar al final "
+                      "de un mundo (faltan las ultimas del mundo, con su close)")
 
     for world, qn in sorted(questions.items()):
         got = answers.get(world, [])
