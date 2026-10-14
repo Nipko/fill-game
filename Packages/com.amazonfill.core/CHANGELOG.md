@@ -6,6 +6,16 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Pendiente de integración (obligatorio antes del merge)
 
+- **Aguas estancadas por bucle (T51): no integrar hasta la respuesta del dueño a la pregunta 46 de `docs/GDD.md` §6.3 (D-014).**
+  `DeadEndProbe` aplica la opción (a), la recomendada: el cierre recorre todos los vertidos legales, fútiles incluidos, y no solo
+  los útiles que dice el texto de D-014 y de T51. Si el dueño elige (b) o (c), cambian `DeadEndProbe.Expand`, sus tests y el del
+  66 (con (b), `if (futile) continue;` antes de aplicar, y el bloqueo saltaría tras el vertido 6). Desvío respecto a T51, que
+  sigue de la opción (a): en la secuencia del dueño, Aguas estancadas sale justo tras el 9.º vertido (`1>5`), cuando el nivel
+  queda perdido de verdad, y no tras el 12.º (`R13b_Level66_TheOwnersSequence_IsStuckRightAfterTheNinthPour`). Riesgo al
+  reanudar: una partida guardada con un build anterior a mitad de un bucle (con vertidos posteriores a un estado que ahora es
+  `Stuck`, como la del dueño en el 66 con 12) no se puede rehacer, porque `TryPour` devuelve false fuera de `Playing`
+  (`LevelFlow.Resume`), y el nivel vuelve a empezar (02 §14; 04 §10.2). Va también en la descripción del PR y en la nota para
+  el dueño.
 - **`.meta` del paquete y verificación en Unity** (regla dura 3; README, «Paso obligatorio de integración en Unity»). La rama
   `fase1-mecanicas-niveles` se escribió sin Editor: los 59 archivos `.cs` nuevos del paquete (32 en `Runtime/` y 27 en
   `Tests/Editor/`) y las 5 carpetas nuevas (`Runtime/AF.Core/Determinism`, `Runtime/AF.Core/Mechanics`, `Runtime/AF.Solver/Bot`,
@@ -32,7 +42,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   estados y el nivel se gana en 14 con algún fútil; en partidas al azar sobre los niveles 1-200, un cierre solo con útiles habría
   declarado 327 estados, 56 ganables (con todos los legales: 271, ninguno ganable). Con capacidades iguales los dos son idénticos (P2).
   No depende de `futile_rule_enabled`. Es la opción (a) de la pregunta 46 de `docs/GDD.md` §6.3 (T50), la recomendada: pendiente de
-  la confirmación del dueño antes del merge. Sin asignaciones tras calentar y < 1 ms en Release (0,015 ms en el 66; peor
+  la confirmación del dueño antes del merge (ver «Pendiente de integración»). Sin asignaciones tras calentar y < 1 ms en Release (0,015 ms en el 66; peor
   medido 0,322 ms en 4.026 estados de los tableros de referencia). Sin cambios en `BoardRules`, `PourRules`, el solver, el bot, `EarlyTraps`,
   `LevelValidation`, el generador ni level-qa: packs, informes y pares idénticos (`--check`). Tests compartidos `DeadEndProbeTests`
   (`R13b_Level66_Loop_IsStuck`, `_TheOwnersSequence_IsStuckRightAfterTheNinthPour`,

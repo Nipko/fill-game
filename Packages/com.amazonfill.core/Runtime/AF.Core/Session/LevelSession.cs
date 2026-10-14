@@ -15,8 +15,9 @@ namespace AF.Core.Session
     /// <list type="bullet">
     /// <item><description>I1: <see cref="Status"/> se recalcula tras cada cambio en el orden de R10: victoria (R12) y
     /// después bloqueo: R13 (sin vertidos útiles) y, si aún queda alguno, R13 ampliada (D-014): <see cref="DeadEndProbe"/>
-    /// recorre los estados alcanzables con todos los vertidos legales y, si son como mucho 64 [P] y ninguno es victoria, la
-    /// partida queda en <see cref="LevelStatus.Stuck"/> aunque le queden vertidos útiles (el vaivén sin salida del nivel 66).
+    /// recorre los estados alcanzables con todos los vertidos legales (opción (a) de la pregunta 46, pendiente del dueño) y,
+    /// si son como mucho 64 [P] y ninguno es victoria, la partida queda en <see cref="LevelStatus.Stuck"/> aunque le queden
+    /// vertidos útiles (el vaivén sin salida del nivel 66).
     /// Con más de 64 estados o una victoria alcanzable sigue en <see cref="LevelStatus.Playing"/> (conservador). No depende de
     /// <see cref="FutileRuleEnabled"/>.</description></item>
     /// <item><description>I2: un vertido ilegal (R11) o con <see cref="Status"/> distinto de
