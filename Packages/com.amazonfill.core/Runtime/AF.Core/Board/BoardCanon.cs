@@ -11,7 +11,8 @@ namespace AF.Core.Board
     /// <list type="bullet">
     /// <item><description>Orden canónico: <see cref="Cuia.Packed"/> ascendente. <c>Packed</c> incluye la capacidad,
     /// las dosis, la máscara de ocultos y los atributos de la mecánica (tipo, <c>key</c>, id de pareja, <c>n</c>, <c>k</c>,
-    /// contador y banderas), así que dos cuias con el mismo <c>Packed</c> son idénticas, el orden es total y la clave es la
+    /// contador y banderas) y, en la Flor de vitória-régia, <c>key2</c> en los bits de <c>n</c> y <c>k</c> (K3b), así que dos
+    /// cuias con el mismo <c>Packed</c> son idénticas, el orden es total y la clave es la
     /// <c>(cap, attr, contenido)</c> más los contadores de 03 §3. Una cuia sin mecánica tiene esos bits a 0: los tableros
     /// sin mecánicas conservan su orden y su hash.</description></item>
     /// <item><description>Remolino (03 §3: «las dos cuias de un Remolino se canonicalizan como unidad»): el id de pareja va en
