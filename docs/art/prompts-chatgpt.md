@@ -93,7 +93,7 @@ Qué no se genera:
 - **Estado deshabilitado:** es plano y se hace por código (guía 5.1).
 - **Vidrio, líquido, repisas y partículas** (gotas, plumas, hojas, destellos): procedurales.
 - **Fondos de otros mundos:** con D-013 son fondos por parada (cielo por código, kit del mundo y héroe del sitio). Aquí solo van los provisionales de 3.17 y 3.18; los demás kits y héroes los pinta el artista (`docs/art/encargo-mapa-del-rio.md`).
-- **TiTino, la ficha de Frutas del río y la Tinaja:** solo los pinta el artista (`docs/art/encargo-titino-frutas-tinaja.md`). TiTino se encarga después del visto bueno del asesor; la ficha y la Tinaja pasan por el asesor antes de integrarse.
+- **TiTino, la ficha de Frutas del río y la Tinaja:** solo los pinta el artista (`docs/art/encargo-titino-frutas-tinaja.md`). TiTino se encarga después del visto bueno del asesor y con la búsqueda de marca del nombre en marcha (D-016; condiciones en el encargo); la ficha y la Tinaja pasan por el asesor antes de integrarse.
 
 Cómo medir el 9-slice:
 - Los números son píxeles del **PNG final**.
@@ -433,7 +433,7 @@ Style: premium casual mobile game background, polished hand-painted 2.5D look, l
 Do not include: people or crowds; flags or flagpoles; boats, ships or canoes; baskets; gourds, calabash bowls, cups or bottles; loose fruit; rubber trees, rubber tappers or any historical scene; cars or traffic; text, letters, signs, logos, signature or watermark; sky, clouds, sun or birds; water or reflections; frames or borders; paper or watercolor texture.
 ```
 
-`bg_hero_leticia.png` (Leticia, niveles 81-100; mañana tras la lluvia; la parada 9 lo reutiliza con la LUT de atardecer):
+`bg_hero_leticia.png` (Leticia, niveles 81-100; mañana nublada tras la lluvia; la parada 9 lo reutiliza con la LUT de atardecer):
 
 ```text
 Wide, low landmark element for the background of a vertical mobile puzzle game, 1536x1024 pixels, PNG with a fully transparent background. The image will be cropped to a 3:1 horizontal strip, so keep everything between 25% and 75% of the image height.
@@ -444,7 +444,7 @@ Composition:
 - below the horizon, only the front wall and the steps of the promenade, down to 75% of the image height at most; no water and no reflection;
 - toward both ends it fades into low riverbank trees;
 - everything else, including the whole sky, is fully transparent.
-Light: soft, bright morning light from the upper left just after rain, wet surfaces with gentle highlights.
+Light: soft diffuse light of an overcast morning just after rain, coming from the upper left, wet surfaces with gentle highlights.
 Style: premium casual mobile game background, polished hand-painted 2.5D look, luminous and saturated but harmonious, soft atmospheric perspective, clean readable shapes; the silhouette must read clearly when the whole strip is shown 240 points wide.
 Do not include: people or crowds; flags or flagpoles; islands; boats, ships or canoes; baskets or market stalls; gourds, calabash bowls, cups or bottles; loose fruit; text, letters, signs, logos, signature or watermark; sky, clouds, sun or birds; water or reflections; frames or borders; paper or watercolor texture.
 ```
@@ -477,7 +477,9 @@ Familia S8, en la misma conversación que los héroes. El kit es un **atlas de 2
 | x 512-1023, y 1536-2047 | 8. Silueta de ciudad genérica | 1024 × 1024 | 512 × 512 |
 | x 1024-2047, y 1536-2047 | Libre (transparente) | — | — |
 
-Las tiras son lo único que se amplía (×1,33): se acepta en piezas lejanas con bruma, nunca en un héroe. Cada pieza va centrada en su celda, con su base en el borde de abajo de la celda y sin salirse de ella.
+Las tiras son lo único que se amplía (×1,33): se acepta en piezas lejanas con bruma, nunca en un héroe. Cada pieza va centrada en su celda y sin salirse de ella. Dónde queda su base:
+- **tiras (piezas 1 y 2):** en el borde de abajo de su banda, que es la línea del agua;
+- **piezas 3-8:** donde la pone su prompt, al 90 % del alto de la celda (y ≈ 461 px de sus 512, unos 51 px sobre el borde de abajo), porque solo se redimensionan. Quien integre el kit anota esa base en `bg.pieces` (D-023, punto 12), para no dejarlas flotando sobre la línea del agua.
 
 Tiras (piezas 1 y 2), con la misma estructura:
 
@@ -515,6 +517,7 @@ Líneas `Element:`:
 Comprobar:
 - las tiras casan al repetirlas, sin costura ni árbol cortado;
 - ninguna pieza se sale de su zona del atlas;
+- la base de las piezas 3-8 queda al 90 % del alto de su celda, como en su prompt;
 - las palmeras son de açaí (finas y en grupo), nunca de coco, y no hay sumaúma;
 - el barco es un barco de pasajeros lejano, sin nadie a bordo, nunca una canoa (el icono de Canoas; VA-22);
 - nada de personas, canastos, banderas, cuias ni frutas.

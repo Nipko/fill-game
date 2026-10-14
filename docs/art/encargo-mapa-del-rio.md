@@ -3,11 +3,11 @@
 Fecha: 2026-10-14 · Autor: documentación (agente; tanda 4, tarea M1.8) · Para: el dueño, que lo envía al artista 2D freelance, y el asesor cultural · Estado: **listo para enviar en el orden de la sección 2**, con dos preguntas para el dueño antes de los pasos 2 y 3 (sección 8); ninguna parte sale antes de su condición.
 
 Fuentes:
-- `docs/dev/decisiones.md`: D-013 (Mapa del río: Q5-A, Q8-A, Q14-A, Q18-A, «Consecuencias» y «Dependencias externas») y D-023 (puntos 12 y 16);
+- `docs/dev/decisiones.md`: D-013 (Mapa del río: Q5-A, Q8-A, Q14-A, Q18-A, punto 11, «Consecuencias» y «Dependencias externas») y D-023 (puntos 12 y 16);
 - glosario §3.2 y §11 (nombres de las ranuras);
-- 07 §2.1 (tabla de paradas y fondos), §6.1, §8.1 y §8.2; 08 §5.4;
+- 07 §2.1 (tabla de paradas y fondos), §6.1, §8.1, §8.2 y §11; 08 §5.4 y §6.2;
 - `docs/art/direccion-visual-v2.md` §7, §9 (VA-20 a VA-23) y §10.3;
-- `docs/research/mapa-del-rio/propuesta-mapa-del-rio.md` §5.3, §10.2, §10.3, §10.4, §10.6, §10.7, §10.8, §11.3 y §12;
+- `docs/research/mapa-del-rio/propuesta-mapa-del-rio.md` §5.3, §10.2, §10.3, §10.6, §10.7, §10.8, §11.3 y §12;
 - CLAUDE.md, «Humanos».
 
 La medida, el uso, el respaldo y la compresión de cada ranura están en `Assets/_Project/Art/Generated/README.md` («Ranuras reservadas»). Este documento dice qué se pinta, en qué orden y con qué condiciones.
@@ -24,7 +24,7 @@ Convenciones: **dp**, unidad del lienzo de UI (3 px por dp en el teléfono de pr
    - el dueño envía el encargo y aprueba.
 3. **Cuándo:**
    - los 3 primeros héroes, después de VA-20 en el teléfono, al cerrar la Ola 2. La selección es una propuesta [P] que decide el dueño (sección 8);
-   - los kits, en paralelo con los héroes en cuanto la estimación de peso (tarea B0) esté lista, **sin esperar a una medida del AAB**, como pide el plan de la tanda 4. Esto se aparta de D-013, y el dueño tiene que confirmarlo (sección 8);
+   - los kits, en paralelo con los héroes en cuanto la estimación de peso (tarea B0) esté lista, **sin esperar a una medida del AAB**, como pide el plan de la tanda 4. Esto se aparta de D-013, y el dueño tiene que confirmarlo (sección 8). El de Ucayali (`bg_kit_w09`) espera además a la respuesta del asesor sobre Shanay-Timpishka (sección 5);
    - los otros héroes, después de medir el AAB con los 3 primeros (D-013);
    - las piezas del Mapa, al final.
 
@@ -35,7 +35,7 @@ Convenciones: **dp**, unidad del lienzo de UI (3 px por dp en el teléfono de pr
 - **Lo que nunca aparece:**
   - la lista «Evitar» de la guía visual (§7) y la columna «No» de 07 §8.1. La fila «Lugar equivocado» de la guía se lee así:
     - la «playa» vetada es la de mar, con cocoteros y turquesa caribeño. Las playas de río y las islas de arena sí van donde las pide el canon: en los kits (3.2; 07 §2.1, capa 0b), en la Ilha do Amor de Alter do Chão (07 §2.1), en las islas de Anavilhanas (propuesta del Mapa §10.3) y en la arena blanca del varillal de Allpahuayo-Mishana (07 §2.1). Pacaya-Samiria al alba va sin playas al descubierto (07 §2.1);
-    - los cerros y las montañas solo van donde los nombra el canon: el cerro de selva de Alter do Chão, los tepuyes de Chiribiquete solo como silueta lejana en el Trapecio (07 §2.1 y §8.1) y los Andes del kit de Madidi (`bg_kit_w08`; propuesta del Mapa §10.4);
+    - los cerros y las montañas solo van donde los nombra el canon: son los relieves del repertorio de cada mundo en 07 §2.1 (con D-013, la columna «Paisaje» es ese repertorio; «Fondos de la 1.0») y de su tabla de paradas. Por ejemplo, el cerro de selva de Alter do Chão; los tepuyes de Chiribiquete, solo como silueta lejana en el Trapecio (07 §2.1 y §8.1); en el kit de Madidi (`bg_kit_w08`; 07 §2.1, fila 8), los Andes al fondo de la selva, la meseta de Huanchaca y el escarpe de la cascada Arcoiris de Noel Kempff; y en el de Ucayali (`bg_kit_w09`; 07 §2.1, fila 9), el Pongo de Manseriche;
   - **en los fondos** (VA-22):
     - personas;
     - canastos, que son la Canasta;
@@ -63,7 +63,7 @@ Convenciones: **dp**, unidad del lienzo de UI (3 px por dp en el teléfono de pr
 |---|---|---|---|---|
 | 1 | **VA-20 en el teléfono.** No se encarga nada: es la prueba | Al cerrar la Ola 2, con la hoja de las 20 composiciones (`02f_board_stops_sheet.png`, tarea M2.4) y el héroe provisional geométrico en las capturas `02_board_l7` (2 filas) y `02b_board_l1` (1 fila) | Dueño y asesor | Si un sitio no pasa, se cambia su composición antes de encargarlo |
 | 2 | **Los 3 primeros héroes** [P]: `bg_hero_ver_o_peso`, `bg_hero_teatro_amazonas` y `bg_hero_leticia` (3.3). La selección la decide el dueño (sección 8) | VA-20 aprobado | Dueño → artista | La tarea M5.2 los importa y mide el AAB, el 16 KB y el arranque frente a la estimación de B0 |
-| 3 | **Los kits:** `bg_kit_w01` … `bg_kit_w05` (1-200) y `bg_kit_w06` … `bg_kit_w09` (201-700, Q14-A), con los sprites de ambiente (3.4) | En paralelo con los héroes, en cuanto la tarea B0 (Ola 3) dé la estimación de peso, **sin esperar a ninguna medida del AAB**, como pide el plan de la tanda 4 (tareas M1.8 y B0). **Se aparta de D-013**, que mide el AAB tras integrar los 3 primeros sitios, «antes de encargar el resto» («Consecuencias»). Hasta que el dueño lo confirme y se registre, es una pregunta abierta (sección 8); sin su confirmación, los kits esperan a la medida de M5.2, como el paso 3 bis | Dueño → artista | La tarea M5.3 los integra con las piezas de `bg.pieces` y el ambiente |
+| 3 | **Los kits:** `bg_kit_w01` … `bg_kit_w05` (1-200) y `bg_kit_w06` … `bg_kit_w09` (201-700, Q14-A), con los sprites de ambiente (3.4) | En paralelo con los héroes, en cuanto la tarea B0 (Ola 3) dé la estimación de peso, **sin esperar a ninguna medida del AAB**, como pide el plan de la tanda 4 (tareas M1.8 y B0). **Se aparta de D-013**, que mide el AAB tras integrar los 3 primeros sitios, «antes de encargar el resto» («Consecuencias»). Hasta que el dueño lo confirme y se registre, es una pregunta abierta (sección 8); sin su confirmación, los kits esperan a la medida de M5.2, como el paso 3 bis. `bg_kit_w09` espera además a que el asesor responda sobre Shanay-Timpishka (sección 5, punto 5) | Dueño → artista | La tarea M5.3 los integra con las piezas de `bg.pieces` y el ambiente |
 | 3 bis | **Los otros 11 héroes y la reserva** (3.3) | Cuando los 3 primeros pasen la revisión del dueño y del asesor, y **tras la medida del AAB de M5.2 con los 3 primeros sitios** (D-013, «Consecuencias»; propuesta del Mapa §10.7 y §12) | Dueño → artista | Integración por sitio |
 | 4 | **Las piezas del Mapa** (sección 4), con la **máscara de zonas** para la geometría de producción (tarea M5.1) | Después de los kits. La casa de TiTino espera además al visto bueno del asesor sobre la embaúba; las banderas, que son las oficiales, pasan por el abogado y el asesor antes de usarse en release (sección 4) | Dueño → artista | M5.1 vectoriza la máscara; M5.2 importa el arte del Mapa y hornea el atlas de siluetas |
 
@@ -92,7 +92,7 @@ El muelle y el follaje de Brasil ya son del canon. La misma composición sirve a
   - una silueta de ciudad genérica.
 
   La posición de cada pieza la anota quien integra el kit en `bg.pieces` de `river_stops_v1.json` (D-023, punto 12).
-- **El paisaje de cada mundo** sale del repertorio y de la hora de 07 §2.1 (Estuario al alba con bruma baja, Tapajós a mediodía, Manaos con luz rasante de tarde, Trapecio por la mañana tras la lluvia, Loreto al atardecer, y así hasta Ucayali).
+- **El paisaje de cada mundo** sale del repertorio y de la hora de 07 §2.1 (Estuario al alba con bruma baja, Tapajós a mediodía, Manaos con luz rasante de tarde, Trapecio en una mañana nublada tras la lluvia, Loreto al atardecer, y así hasta Ucayali). El kit de Ucayali espera además a la respuesta del asesor sobre Shanay-Timpishka (sección 5).
 - **Dos paradas de 1-200 van solo con el kit**, así que sus kits llevan esas piezas:
   - el río frontera (parada 13, `kit:rio_ancho_con_baliza`, en `bg_kit_w04`): el Amazonas ancho entre dos orillas de várzea, con una baliza de navegación;
   - Nauta (parada 17, `kit:orilla_de_nauta`, en `bg_kit_w05`): el río muy ancho con Nauta lejana. Las dos aguas son blancas: no se inventan dos colores.
@@ -109,7 +109,7 @@ El muelle y el follaje de Brasil ya son del canon. La misma composición sirve a
 - **Compresión:** ASTC 6×6. Es el detalle reconocible.
 
 **Los 3 primeros [P]** (paso 2). El canon solo dice «empezando por los 3 primeros sitios», sin nombrarlos (07 §2.1, «Legibilidad»; guía visual, VA-20; propuesta del Mapa §10.7 y §12).
-- **Propuesta:** un sitio por cada mundo con fondo en el AAB y héroe de ciudad: 1 Estuario, 3 Manaos y 4 Trapecio. Son tres hitos propios en tres mundos, con tres luces distintas (alba, tarde y mañana tras la lluvia).
+- **Propuesta:** un sitio por cada mundo con fondo en el AAB y héroe de ciudad: 1 Estuario, 3 Manaos y 4 Trapecio. Son tres hitos propios en tres mundos, con tres luces distintas (alba, tarde y mañana nublada tras la lluvia).
 - **Alternativa:** el orden de la ruta, con los tres primeros sitios pintados: Ver-o-Peso, Alter do Chão y Flona Tapajós (paradas 0, 2 y 3; la 1, Santarém, es un héroe por código).
 - **Lo decide el dueño** (sección 8). Lo que se reconoce y lo que hay que evitar en cada sitio está en la tabla de paradas de 07 §2.1:
 
@@ -117,7 +117,7 @@ El muelle y el follaje de Brasil ya son del canon. La misma composición sirve a
 |---|---|---|---|
 | `bg_hero_ver_o_peso` | 0, Belém (niveles 1-10). Mundo 1, agua blanca, alba dorada con bruma baja | Las torres del mercado de hierro (1901) desde la bahía de Guajará, con palmeras de açaí. Silueta de dos agujas sobre un rectángulo | Sin canastos, sin el Círio, sin personas y sin los objetos rituales de las bancas de hierbas |
 | `bg_hero_teatro_amazonas` | 5, Manaos (niveles 51-60). Mundo 3, agua negra, tarde con luz rasante | La cúpula del Teatro Amazonas sobre la ciudad, en silueta baja, con el puerto flotante y el puente del río Negro al fondo. Silueta de un semicírculo con tambor | Sin nostalgia del caucho |
-| `bg_hero_leticia` | 8 y 9, Leticia (niveles 81-100). Mundo 4, agua blanca, mañana tras la lluvia; la parada 9 lo reutiliza con la LUT de atardecer y la bandada de pericos | El malecón y el río ancho, con la orilla de Tabatinga al fondo | Ni la isla Santa Rosa ni islas con bandera; sin personas |
+| `bg_hero_leticia` | 8 y 9, Leticia (niveles 81-100). Mundo 4, agua blanca, mañana nublada tras la lluvia; la parada 9 lo reutiliza con la LUT de atardecer y la bandada de pericos | El malecón y el río ancho, con la orilla de Tabatinga al fondo | Ni la isla Santa Rosa ni islas con bandera; sin personas |
 
 **Los otros 11 y la reserva** (paso 3 bis): `bg_hero_alter_do_chao`, `bg_hero_flona_tapajos`, `bg_hero_anavilhanas`, `bg_hero_lago_tefe`, `bg_hero_amacayacu`, `bg_hero_puerto_narino`, `bg_hero_tarapoto`, `bg_hero_iquitos`, `bg_hero_itaya_creciente`, `bg_hero_allpahuayo` y `bg_hero_pacaya_samiria`, más la reserva `bg_hero_casa_de_fierro`.
 - Lo que se reconoce y lo que hay que evitar en cada uno está en la tabla de paradas de 07 §2.1.
@@ -166,6 +166,7 @@ Antes de pintar estos sitios y estas piezas, el asesor da su visto bueno o propo
    - **«Belén» nunca** como nombre de parada, rótulo ni ranura;
    - la reserva, `bg_hero_casa_de_fierro`, va sin el mito de Eiffel.
 4. **El bufeo** (mundos 7 y 8). Rosa se queda en los rápidos de Teotônio y guía un **bufeo boliviano**: el rig de Rosa con otra paleta y sin nombre propio. Rosa vuelve en el viaje del 560 (D-013, Q18-A; glosario §3.2). El asesor confirma el relevo y la paleta.
+5. **Shanay-Timpishka** (mundo 9, `bg_kit_w09`). El río hirviente (~95 °C) entra en el repertorio de Ucayali «según responda el asesor: parada, solo vapor lejano en el fondo o nada»: que sea un lugar sagrado no está comprobado, y hay comunidades a su orilla (07 §2.1, fila 9; D-013, punto 11 y «Dependencias externas»). **Se decide con el asesor antes de pintar el kit de Ucayali**, y el paso 3 envía `bg_kit_w09` solo con esa respuesta.
 
 Además:
 - las **banderas**, con el abogado (sección 4);
@@ -187,17 +188,18 @@ Además:
 
 ## 7. Coste y peso [E]
 
-- **Fondos de 1-200** (propuesta del Mapa §10.8): ≈ 28,75 días de artista:
+- **Fondos de 1-200** (propuesta del Mapa §10.8; 07 §11): ≈ 28,75 días de artista en total, ≈ +11 sobre los 18 de las 6 pinturas de antes. De ellos, **≈ 25,75 son de este encargo** [cálculo]:
   - kits, 10;
   - héroes de ciudad o de forma única con la reserva, 8;
   - héroes de naturaleza, 5,25;
   - ambiente, 1;
   - segundo follaje, 1,5;
-  - río genérico, 3.
+  - río genérico, 3: pieza del canon, fuera de este encargo (07 §11; 08 §6.2).
 
   Los 4 kits de 201-700 suman unos 8 días más (Q14-A).
-- **Mapa** (§12): ≈ 7,25 días de artista.
-- **Peso** (§10.7):
+- **Mapa** (propuesta del Mapa §12; 07 §11): ≈ 9,25 días de artista, todos de este encargo (sección 4). Son ≈ +7,25 sobre el canon de antes, porque los 2 días del Mapa de 13 paradas ya estaban en la fila de UI de 07 §11.
+- **Total de este encargo:** ≈ 35 días (fondos de 1-200 sin el río genérico, y el Mapa), más ≈ 8 por los kits de 201-700 [cálculo].
+- **Peso** (propuesta del Mapa §10.7):
   - fondos de 1-200, ≈ 2,35 MiB con los kits en 8×8;
   - Mapa, ≈ 1,7 MiB;
   - **memoria:** todo residente, unos 6,4-8,2 MiB con los kits de 201-700, el muelle y el follaje, muy por debajo de los 120 MB de texturas residentes de 08 §5.4;

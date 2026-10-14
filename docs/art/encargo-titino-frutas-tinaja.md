@@ -1,6 +1,6 @@
 # Encargo de arte: TiTino, Frutas del río y la Tinaja
 
-Fecha: 2026-10-14 · Autor: documentación (agente; tanda 4, tarea M1.8) · Para: el dueño, que lo envía al artista 2D freelance, y el asesor cultural · Estado: **Frutas del río y las piezas de la Tinaja, listas para enviar al fusionar este cambio; los sonidos de la Tinaja, cuando tengan ID; TiTino, condicionado** (sección 0).
+Fecha: 2026-10-14 · Autor: documentación (agente; tanda 4, tarea M1.8) · Para: el dueño, que lo envía al artista 2D freelance, y el asesor cultural · Estado: **Frutas del río y la Tinaja (piezas y sonidos), listas para enviar al fusionar este cambio; TiTino, condicionado** (sección 0).
 
 Fuentes:
 - `docs/dev/decisiones.md`: D-016 («Consecuencias»: el asesor, el artista y el abogado), D-017 («Arte») y D-019 («Consecuencias», coste);
@@ -8,7 +8,7 @@ Fuentes:
 - 07 §2.1, §4.1, §4.3, §4.5, §6.4, §6.5, §8.1, §8.2, §9.2, §9.5 y §11;
 - `docs/research/personaje/propuesta-titino.md` c.1, c.4-c.7 y g.2;
 - `docs/research/frutas-del-rio/propuesta-frutas-del-rio.md` §3.2, §7 y F9;
-- `docs/research/cultura-ribera/propuesta-tinaja.md` b.2 («Aspecto»), c.7 y (h);
+- `docs/research/cultura-ribera/propuesta-tinaja.md` b.2 («Aspecto» y «Cultura: la trama con fuentes»), c.7 y (h);
 - `docs/art/direccion-visual-v2.md` §7;
 - CLAUDE.md, «Humanos».
 
@@ -21,7 +21,7 @@ Convenciones: **u**, alto de una dosis, igual a la mitad del ancho de la cuia (0
 | Parte | Se envía | Antes de integrarla | Quién la integra |
 |---|---|---|---|
 | **Frutas del río:** escenas de ficha, sello y marcos (sección 2) | **Al fusionar este cambio**, empezando por las cinco primeras: açaí, Agua del Tapajós, achiote, Agua del Río Negro y copoazú | Revisión del asesor de cada escena con la lista de 07 §8.2; el achiote y el huito, con cuidado especial por la pintura corporal | La tarea de integración del arte final (AR1), una entrega por PR |
-| **La Tinaja:** piezas y 4 sonidos (sección 3) | Las piezas, **al fusionar este cambio**. Los 4 sonidos, cuando el dueño fije sus IDs en el glosario §11 (07 §9.2; sección 5, pendiente 2) | Revisión del asesor: el gesto de sacar, el diseño neutro y su cuia colgada del jirau (sección 3.4) | Ídem |
+| **La Tinaja:** piezas y 4 sonidos (sección 3) | Las piezas y los 4 sonidos, **al fusionar este cambio**. Los nombres de las piezas y los IDs de los sonidos se fijan en el glosario §11 antes de integrarlos (sección 5, pendientes 1 y 2) | Revisión del asesor: el gesto de sacar, el diseño neutro y su cuia colgada del jirau (sección 3.4) | Ídem |
 | **TiTino:** hoja de modelo, rig, retrato, rama y bocadillo (sección 4) | **Solo cuando se cumplan las dos condiciones del recuadro** (D-016). Las piezas del rig (`fauna_bradypus_variegatus_partes`) esperan además a su plantilla de celdas y pivotes [P] (4.1; sección 5, pendiente 3); la hoja de modelo, el retrato, la rama y el bocadillo no la necesitan | El asesor revisa la hoja de modelo antes del arte final | Ídem |
 
 > **Condición de TiTino (D-016).** El encargo de TiTino no se envía hasta que:
@@ -100,7 +100,7 @@ Los iconos `fruta_<id del tinte>` (256 × 256) ya estaban en la lista de D-010 (
 | Boca abajo | La tinaja vacía, tumbada boca abajo sobre el jirau, a secar | Es la suelta: su cuia baja del jirau y queda libre |
 | Jirau | La tabla de varas de madera bajo las dos ranuras, la de la tinaja y la de su cuia | Es la plataforma donde se ponen los utensilios, no un pie. Es estado permanente, no un resaltado: no cambia al seleccionar (D-002). Se estira en horizontal [P] |
 | Asa de la cuia | El asa pequeña de fibra de la que su cuia chica cuelga del jirau, como las cuias pitingas | Solo arte, para que se lea como el cazo de la casa. La cuia de vidrio la dibuja el código |
-| 4 sonidos | «Glup» de calabaza en el agua al sacar; gota en el revelado; roce de fibra en la suelta; y el «toc», hueco en la suelta y grave de barro al seleccionarla (07 §9.2) | Nunca burbujas ni hervor. Originales o con licencia comercial perpetua; nada CC BY-NC (07 §9.5). Si el artista 2D no hace audio, van al diseñador de sonido de los efectos (07 §11; brief de audio de 07 §8.2). Aún no tienen ID: se envían cuando el dueño fije sus IDs (sección 5, pendiente 2) |
+| 4 sonidos | «Glup» de calabaza en el agua al sacar; gota en el revelado; roce de fibra en la suelta; y el «toc», hueco en la suelta y grave de barro al seleccionarla (07 §9.2) | Nunca burbujas ni hervor. Originales o con licencia comercial perpetua; nada CC BY-NC (07 §9.5). Si el artista 2D no hace audio, van al diseñador de sonido de los efectos (07 §11; brief de audio de 07 §8.2). Aún no tienen ID: se envían al fusionar este cambio, como las piezas, y su ID se fija en el glosario §11 antes de integrarlos (sección 5, pendiente 2) |
 
 - **Medida [P]:** se dibuja en vector o a 4× del tamaño máximo, como la cuia (07 §4.1). El canon fija el alto (6,60 u, el de la Cuia alta de 5; 07 §4.5), pero no el ancho del cuerpo: solo dice que es más alta que ancha, que ocupa una ranura y que la boca mide 0,70 del ancho de la cuia o más (07 §4.3; propuesta de la Tinaja, b.2, «Aspecto»). **Suponiendo un ancho igual al de la cuia (2 u)**, el lienzo mide **256 × 845 px** a 4× [cálculo]:
   - de ancho, 2 u × 32 dp × 4 px/dp;
@@ -112,7 +112,9 @@ Los iconos `fruta_<id del tinte>` (256 × 256) ya estaban en la lista de D-010 (
 ### 3.2 Vetos (07 §4.3 y §8.1; propuesta de la Tinaja, «Aspecto»)
 
 - **Decoración:** nada de kené, marajoara ni tapajônica.
-- **Forma:** ni cara, ni dos bocas, ni forma de cruz, ni tamaño de urna.
+- **Forma:**
+  - ni cara, ni dos bocas, ni forma de cruz, ni tamaño de urna;
+  - que no recuerde el chomo shipibo, las tinajas kukama, la mucawa, la igaçaba ni el camucim (07 §8.1). El chomo y las tinajas kukama guardan masato, la mucawa es de chicha ceremonial, y la igaçaba y el camucim son urnas funerarias (propuesta de la Tinaja, b.2, «Cultura: la trama con fuentes»).
 - **El caldero de Magic Sort:** nunca redonda y baja, ni morada, ni con fuego, vapor o burbujas.
 - **Lo que evoca el masato:**
   - sin hoja en la boca: las tinajas de masato se tapan con hojas de plátano;
@@ -138,7 +140,7 @@ El gesto de sacar (la cuia chica entra por la boca y sale goteando), el revelado
 1. **El gesto de sacar.** En la Amazonía peruana, la tinaja con la bebida guardada y el pate que saca es la escena del masato. ¿Evoca el masato? Si el asesor confirma el riesgo, rige Q-Ti7 A de D-019: se mantiene el gesto con el encuadre «solo agua», sin servir a nadie.
 2. **El estreno en un mundo peruano** (7, Madre de Dios) con un dato de Pará.
 3. **Su cuia colgada del jirau,** como las cuias pitingas: ¿choca con algún uso real?
-4. **Que ninguna tinaja jugable recuerde** el chomo shipibo, las tinajas kukama o la mucawa kichwa.
+4. **La comprobación del diseño final:** el asesor confirma que el diseño final no recuerda ninguna de las vasijas que 07 §8.1 ya veta (3.2, «Forma»). No es una pregunta abierta: el veto es del canon.
 5. **Sus nombres** en PT y EN.
 
 **Coste:** D-019 no lo estima en días de artista.
@@ -224,13 +226,13 @@ Nunca en el tablero durante la partida.
 - los agentes solo integran, y cada PNG se anota en el registro del README como «Artista»;
 - el crédito del artista y del asesor va en la pantalla de créditos (07 §8.2).
 
-**Pendientes.** Ninguno bloquea el envío de Frutas del río ni el de las piezas de la Tinaja. El 2 bloquea el de los sonidos de la Tinaja, y el 3, el de las piezas del rig de TiTino (no el de su hoja de modelo).
+**Pendientes.** Ninguno bloquea el envío de Frutas del río ni el de la Tinaja (piezas y sonidos). El 3 bloquea el de las piezas del rig de TiTino (no el de su hoja de modelo).
 1. **Nombres de ranura** en el glosario §11, antes de integrar:
    - el sello «Ya conoces» y los dos marcos de Frutas del río;
    - el bocadillo de TiTino;
    - las piezas de la Tinaja.
 
    Hasta entonces, ningún PNG lleva un nombre inventado.
-2. **Los IDs de los 4 sonidos de la Tinaja:** aún no tienen. Como los de los desbloqueos de mecánica, «su ID se fija al encargarlos» (07 §9.2): los sonidos no se envían hasta que el dueño fije sus IDs en el glosario §11. Hoy el cliente no tiene audio.
+2. **Los IDs de los 4 sonidos de la Tinaja:** aún no tienen. Se envían igual que las piezas, al fusionar este cambio, y sus IDs se fijan en el glosario §11 antes de integrarlos, como los nombres de la pendiente 1. De los sonidos de los desbloqueos de mecánica, 07 §9.2 dice que «su ID se fija al encargarlos»: los IDs se pueden fijar ya al enviar el encargo, pero el envío no los espera. Hoy el cliente no tiene audio.
 3. **La plantilla de celdas y pivotes del rig de TiTino** (4.1) [P]: tiene que existir antes de enviar las piezas del rig. Ninguna tarea la produce (TI4 hace el rig provisional, no la plantilla para el artista): es una pregunta para el tech-lead.
 4. **Dónde viven los máster con capas:** fuera de `Assets/_Project/Art/Generated/` (la misma pregunta que en el encargo del Mapa).
