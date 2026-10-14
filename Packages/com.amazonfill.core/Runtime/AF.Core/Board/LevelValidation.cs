@@ -32,8 +32,11 @@ namespace AF.Core.Board
     /// pipeline. <b>Tinaja</b> (M13; D-019, Q-Ti1 A): si el nivel la lleva, es la única fuente de ocultas (ninguna otra cuia
     /// turbia), sus ocultas son la excepción a «ocultos solo en cuias sin mecánica» y a T3, y su tope es
     /// <see cref="TinajaMaxHiddenUnits"/> en lugar de los de Remote Config; las combinaciones prohibidas de Q14 A siguen
-    /// valiendo y solo se comprueban aquí, con un motivo que nombra la tinaja. El resto de sus reglas (capacidad, dosis,
-    /// máscara, T4 en la columna, su cuia contigua) son de <c>TinajaMechanic</c> y <c>CucharonMechanic</c>.</description></item>
+    /// valiendo y solo se comprueban aquí, con un motivo que nombra la tinaja. También solo se comprueban aquí T4 en toda su
+    /// columna (con su máscara, todas sus dosis menos la boca están ocultas), su tope de ocultas y «sin Barro» (lo rechaza la
+    /// regla del Barro de arriba: va en una cuia de 4 y nunca en una cuia con mecánica). El resto de sus reglas (capacidad,
+    /// dosis, máscara, una sola tinaja y su cuia contigua) son de <c>TinajaMechanic</c> y
+    /// <c>CucharonMechanic</c>.</description></item>
     /// <item><description>Como mucho un contador por nivel (Lluvia o Piraña; propuesta de D-007 b.2 M6-M7 y d.2 regla 6): la
     /// Lluvia y la Piraña nunca van juntas.</description></item>
     /// <item><description>Las reglas propias de cada mecánica (03 §17 #6).</description></item>
@@ -214,7 +217,10 @@ namespace AF.Core.Board
             return null;
         }
 
-        /// <summary>Colocación del Barro (02 §9.1 M5; D-007, propuesta b.2 M5) o null si es válida.</summary>
+        /// <summary>
+        /// Colocación del Barro (02 §9.1 M5; D-007, propuesta b.2 M5) o null si es válida. Es la única comprobación de «sin
+        /// Barro» en la Tinaja (M13, b.2 regla 1): en su cuia de 5 da «el Barro va en una cuia de 4».
+        /// </summary>
         private static string? MudError(BoardState state)
         {
             for (int i = 0; i < state.Count; i++)
@@ -286,9 +292,10 @@ namespace AF.Core.Board
         /// (M13; D-019, Q-Ti1 A; propuesta de la tinaja, b.2 y c.1) la tinaja es la única fuente de ocultas del nivel: sus
         /// ocultas son la excepción a «ocultos solo en cuias sin mecánica» (Q14 A) y a T3 (≤ 3 dosis y nunca llena), su tope
         /// es <see cref="TinajaMaxHiddenUnits"/> (no los de Remote Config de T2) y T4 se comprueba igual. Las combinaciones
-        /// prohibidas (Liana, Remolino, Lluvia y Piraña; b.2) se rechazan aquí con un motivo propio de la tinaja: es su única
-        /// comprobación, porque una tinaja válida siempre llega con ocultas (sin ellas la rechaza su máscara en
-        /// <c>TinajaMechanic.ValidateInitial</c>).
+        /// prohibidas (Liana, Remolino, Lluvia y Piraña; b.2; con un motivo propio de la tinaja), el tope y T4 en toda la
+        /// columna de la tinaja (b.2 regla 1) se rechazan solo aquí: una tinaja válida siempre llega con ocultas (sin ellas la
+        /// rechaza su máscara en <c>TinajaMechanic.ValidateInitial</c>), y con esa máscara todas sus dosis menos la boca pasan
+        /// por la comprobación de T4.
         /// </summary>
         private static string? MurkyError(BoardState state, int maxCuias, int maxHiddenUnits)
         {

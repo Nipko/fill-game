@@ -167,12 +167,11 @@ namespace AF.Core.Tests.DotnetOnly
         public void P3_Tinaja_AfterTheRelease_AUsefulBackAndForthReturnsToTheSameState_R13IsNotComplete(PourMode mode)
         {
             // b.2 futil, «Lo que Φ no dice» (y la propuesta [P] para P3): tras la suelta, la Cuia chica con 1 dosis y una cuia con
-            // racha de 2 o más de esa fruta forman un vaivén «útil» en los dos sentidos, así que el juego no declara Aguas
-            // estancadas aunque el nivel esté perdido. Desde el tablero perdido de b.2 (N[c,c,c] N[a,b,a,a] N[b,b,b] T[c(o),a]
-            // Ch[]): sacar a, sacar c (la cuia se suelta con [a, c]) y ch→N1 (sella c). Queda N[c,c,c,c] N[a,b,a,a] N[b,b,b] T[]
-            // ch[a], y N2→ch / ch→N2 vuelven al mismo estado. Es la incompletitud conocida de R13 (C1-2): R14 se cumple, R13 no
-            // es completo. Fija el comportamiento actual (nota [P] para 02 R13: ofrecer el modal si un estado canónico se repite
-            // sin revelar nada).
+            // racha de 2 o más de esa fruta forman un vaivén «útil» en los dos sentidos, aunque el nivel esté perdido. Desde el
+            // tablero perdido de b.2 (N[c,c,c] N[a,b,a,a] N[b,b,b] T[c(o),a] Ch[]): sacar a, sacar c (la cuia se suelta con
+            // [a, c]) y ch→N1 (sella c). Queda N[c,c,c,c] N[a,b,a,a] N[b,b,b] T[] ch[a], y N2→ch / ch→N2 vuelven al mismo estado.
+            // R14 se cumple. PourRules.IsStuck (R13 de reglas) no lo declara; la partida sí, por D-014 (cierre ≤ 64 estados sin
+            // victoria en LevelSession; T51). Este test fija solo lo de las reglas.
             Cuia tinaja = Cuia.Create(5, new[] { 3, 1 }, 0x1).WithMechanic(AF.Core.Mechanics.MechanicType.Tinaja);
             Cuia hung = Cuia.Empty(2).WithMechanic(AF.Core.Mechanics.MechanicType.Cucharon);
             var lost = new BoardState(new[] { Cuia.Create(4, new[] { 3, 3, 3 }), Cuia.Create(4, new[] { 1, 2, 1, 1 }), Cuia.Create(4, new[] { 2, 2, 2 }), tinaja, hung });

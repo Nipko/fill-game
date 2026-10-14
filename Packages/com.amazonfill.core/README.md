@@ -248,7 +248,8 @@ esquema (`pack_schema` 3), level-qa y Unity son de T56 y de una tarea posterior.
   vierte en su cuia (ni en una Hoja vacía de su fruta ni en un Barro expuesto). La tinaja nunca recibe; su cuia, mientras
   cuelga, solo recibe de la tinaja, de cualquier fruta. Sacar mueve siempre 1 (T4).
 - **`futil`:** la tinaja y su cuia colgada están exentas como origen; Φ = 2 · (dosis en la tinaja) + (dosis en su cuia) baja
-  con cada vertido exento, así que no hay ciclos de exentos. Mientras cuelga, R13 solo se declara sin vertidos legales.
+  con cada vertido exento, así que no hay ciclos de exentos. Mientras cuelga, R13 de reglas (`PourRules.IsStuck`) solo se
+  declara sin vertidos legales.
 - **R10 (f):** cuando no queda ninguna tinaja con dosis, su cuia se suelta (`CucharonReleasedMask` y `ReleasedMask`) en el
   mismo vertido en todas las realidades. Marea la vuelve a colgar; lo revelado persiste (I5).
 - **Búsquedas que deciden «hay solución»** (par, `SafePath`, `SafeMoves` del pipeline y de Morpho, paseos, prueba de
@@ -262,6 +263,9 @@ esquema (`pack_schema` 3), level-qa y Unity son de T56 y de una tarea posterior.
 - **Medido:** P1-P3 de R14 con capacidades 2, 4, 5 y 6 en `run` y `single` (unos 20.000 estados por combinación, con la cuia
   colgada y suelta) sin violaciones; A* con y sin poda coincide con la búsqueda exhaustiva en 24 tableros pequeños; `H`
   admisible y consistente; 0 asignaciones en el bucle caliente; tablero de referencia «Ti» en la tabla de evidencias.
-- **Abierto (no es del núcleo):** el vaivén útil con la cuia ya suelta en un nivel perdido (incompletitud de R13, C1-2; nota
-  [P] para 02 R13), el corte por `hint_timeout_ms`, la Pororoca con la tinaja y el tope de ocultas por tipo de nivel
-  (pipeline).
+- **Vaivén útil en un nivel perdido** (el tablero perdido de b.2 y el vaivén con la cuia ya suelta): `PourRules.IsStuck`
+  (R13 de reglas) no lo declara; la partida sí, por D-014 (cierre ≤ 64 estados sin victoria en `LevelSession`; T51). La
+  antigua nota [P] para 02 R13 queda sustituida por D-014. `TinajaSolverTests.Morpho_TheLostBoardOfB2_…` y
+  `FutilePropertyTests.P3_Tinaja_AfterTheRelease_…` fijan solo lo de las reglas.
+- **Abierto (no es del núcleo):** el corte por `hint_timeout_ms`, la Pororoca con la tinaja y el tope de ocultas por tipo de
+  nivel (pipeline).

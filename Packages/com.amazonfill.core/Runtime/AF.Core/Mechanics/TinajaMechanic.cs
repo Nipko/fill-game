@@ -13,7 +13,8 @@ namespace AF.Core.Mechanics
     /// <list type="number">
     /// <item><description>Capacidad 5 (<see cref="LevelValidation.TinajaCapacity"/>) con 3-5 dosis al empezar; todas ocultas
     /// salvo la boca (R7), con T4 en toda la columna y sin Barro. Una sola tinaja por nivel y como mucho 4 ocultas, con una
-    /// constante propia (<see cref="LevelValidation.TinajaMaxHiddenUnits"/>), no con <c>lvl_murky_max_hidden_units</c>.</description></item>
+    /// constante propia (<see cref="LevelValidation.TinajaMaxHiddenUnits"/>), no con <c>lvl_murky_max_hidden_units</c>. T4,
+    /// el Barro y el tope los comprueba solo <see cref="LevelValidation"/>; <see cref="ValidateInitial"/>, el resto.</description></item>
     /// <item><description>Nunca recibe (<c>bloqueada_destino</c> permanente), tampoco desde su cuia: rechazo sin texto
     /// (R11).</description></item>
     /// <item><description>Solo vierte en su cuia (<c>solo_vierte_en(A)</c>, <see cref="AllowsTarget"/>): es el filtro de origen
@@ -66,23 +67,12 @@ namespace AF.Core.Mechanics
                 return "M13 (regla 1): todas las dosis de la tinaja están ocultas salvo la boca";
             }
 
-            if (tinaja.HiddenCount > LevelValidation.TinajaMaxHiddenUnits)
-            {
-                return "M13 (regla 1): como mucho " + Num(LevelValidation.TinajaMaxHiddenUnits) + " dosis ocultas en la tinaja (≤ 24 realidades)";
-            }
-
-            for (int k = 0; k < count; k++)
-            {
-                if (tinaja.ColorAt(k) == Cuia.MudColor)
-                {
-                    return "M13 (regla 1): sin Barro en la tinaja";
-                }
-
-                if (k + 1 < count && tinaja.ColorAt(k) == tinaja.ColorAt(k + 1))
-                {
-                    return "M13 (regla 1): T4 en toda la columna, la dosis " + Num(k) + " repite la fruta de la de encima";
-                }
-            }
+            // El tope de ocultas, T4 en toda la columna y «sin Barro» (b.2 regla 1) no se comprueban aquí: las comprueba solo
+            // LevelValidation, antes que ValidateInitial (TinajaValidationTests fija sus motivos). El tope no se puede superar
+            // tras las tres comprobaciones de arriba (capacidad 5, como mucho 5 dosis y todas ocultas menos la boca: ≤ 4), y
+            // MurkyError lo mira antes. T4 lo comprueba MurkyError en cada dosis oculta, que con la máscara de arriba son todas
+            // menos la boca. El Barro lo rechaza siempre MudError, que va antes que MurkyError (solo en una cuia de 4, en la capa
+            // 2 o 3 y nunca en una cuia con mecánica): en la cuia de 5 de la tinaja, «el Barro va en una cuia de 4».
 
             // Las combinaciones prohibidas de b.2 (Liana, Remolino, Lluvia y Piraña; «LevelValidation ya lo prohíbe con
             // ocultos») no se comprueban aquí: si se llega a este punto, la máscara de arriba garantiza ≥ 2 ocultas, así que

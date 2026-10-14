@@ -134,18 +134,36 @@ namespace AF.Core.Tests
         [Test]
         public void Tinaja_OwnRules_c1()
         {
-            // c.1, TinajaMechanic.ValidateInitial: capacidad 5, 3-5 dosis, ocultas = todas menos la boca, T4 en la columna, sin
-            // Barro, una sola tinaja y con su cuia.
+            // c.1 y b.2 regla 1, con el motivo exacto que da Validate en cada caso y la comprobación que lo rechaza:
+            // TinajaMechanic.ValidateInitial (capacidad 5, 3-5 dosis, ocultas = todas menos la boca, una sola tinaja y con su
+            // cuia); LevelValidation.MurkyError (T4 en la columna: con la máscara de la tinaja, todas sus dosis menos la boca
+            // están ocultas) y LevelValidation.MudError (sin Barro: en su cuia de 5, «el Barro va en una cuia de 4»), que van
+            // antes que ValidateInitial y son las únicas comprobaciones de esas dos reglas.
             Cuia four = Cuia.Create(4, new[] { 3, 1, 3 }, 0x3).WithMechanic(MechanicType.Tinaja);
-            Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), four, Ch(), C(4))), Does.Contain("capacidad 5"));
-            Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1, 3), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x1, 1, 3), Ch())), Does.Contain("3-5 dosis"));
-            Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x1, 3, 1, 3), Ch())), Does.Contain("salvo la boca"));
-            Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 2, 1), C(4, 2, 2, 2), T(0x3, 3, 1, 1), Ch(), C(4, 3))), Does.Contain("T4"));
-            Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x3, Cuia.MudColor, 1, 3), Ch(), C(4, 3))), Does.Contain("Barro"));
-            Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x3, 3, 1, 3), C(2), C(4))), Does.Contain("su cuia chica"));
+            Assert.That(
+                LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), four, Ch(), C(4))),
+                Is.EqualTo("cuia 3 (tinaja): M13 (regla 1): la tinaja es de capacidad 5"));
+            Assert.That(
+                LevelValidation.Validate(Board(C(4, 3, 3, 1, 3), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x1, 1, 3), Ch())),
+                Is.EqualTo("cuia 3 (tinaja): M13 (regla 1): la tinaja empieza con 3-5 dosis"));
+            Assert.That(
+                LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x1, 3, 1, 3), Ch())),
+                Is.EqualTo("cuia 3 (tinaja): M13 (regla 1): todas las dosis de la tinaja están ocultas salvo la boca"));
+            Assert.That(
+                LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 2, 1), C(4, 2, 2, 2), T(0x3, 3, 1, 1), Ch(), C(4, 3))),
+                Is.EqualTo("cuia turbia 3: 02 T4: la dosis oculta 1 repite el color de la de encima"));
+            Assert.That(
+                LevelValidation.Validate(Board(C(4, 3, 3, 3), C(4, 2, 2), C(4, 2, 1), T(0xF, 1, 1, 2, 1, 3), Ch())),
+                Is.EqualTo("cuia turbia 3: 02 T4: la dosis oculta 0 repite el color de la de encima")); // llena: toda la columna
+            Assert.That(
+                LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x3, Cuia.MudColor, 1, 3), Ch(), C(4, 3))),
+                Is.EqualTo("cuia 3, capa 0: 02 §9.1 M5: el Barro va en una cuia de 4"));
+            Assert.That(
+                LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x3, 3, 1, 3), C(2), C(4))),
+                Is.EqualTo("cuia 3 (tinaja): M13 (regla 1): la tinaja lleva su cuia chica, una sola (hay 0)"));
             Assert.That(
                 LevelValidation.Validate(Board(C(4, 3, 3), C(4, 2, 1), C(4, 2, 2), T(0x3, 3, 1, 3), Ch(), C(4), T(0x3, 1, 2, 1), Ch())),
-                Does.Contain("una sola tinaja"));
+                Is.EqualTo("cuia 3 (tinaja): M13 (regla 1): una sola tinaja por nivel (otra en la cuia 6)"));
 
             // b.2 regla 1, «una sola tinaja con su cuia»: con dos cuias de tinaja, la tinaja (que va antes) cuenta 2.
             Assert.That(

@@ -226,7 +226,8 @@ namespace AF.Solver.Tests
         public void Morpho_TheLostBoardOfB2_SaysNoExit_AndNeverTheFireflyWithOneReality()
         {
             // b.2 «Morpho», respuesta 2: si ninguna realidad tiene solución (también con R = 1, cuando ya no queda nada que ver),
-            // «Desde aquí no hay salida» y no cobra. Nunca la Luciérnaga con R = 1. Aguas estancadas no sale (sacar está exento).
+            // «Desde aquí no hay salida» y no cobra. Nunca la Luciérnaga con R = 1. PourRules.IsStuck (R13 de reglas) no lo declara
+            // (sacar está exento); la partida sí, por D-014 (cierre ≤ 64 estados sin victoria en LevelSession; T51).
             BoardState lost = LostBoard();
             var safe = new SafeMoves();
 
