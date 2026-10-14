@@ -212,7 +212,7 @@ La especie cambia el esqueleto, la paleta, la locomoción y el rasgo de reposo. 
 
 1. **Siempre libres, en su árbol, sin personas.** Nada de collar, correa, pañal, ropa, jaula, hombros ni manos humanas. Con humanos en la imagen sube el deseo de tenerlos como mascota en capuchinos y monos ardilla [V S35].
 2. **Sin rasgos humanos:** ni de pie como personas, ni sonrisas humanas, ni accesorios, ni **pintura de urucum o huito en el pelaje o las manos** (07 §8.1).
-3. **No son guías de capítulo:** no hablan, no presentan el banner y no dan consejos (07 §1.3). Presenta Capi.
+3. **No son guías de capítulo:** no hablan, no presentan el banner y no dan consejos (07 §1.3). El banner lo presenta Capi (D-012) y el tutorial, TiTino (D-016, 2026-10-13: T2-A y T5-B de `docs/research/personaje/propuesta-titino.md`).
 4. **D-002 y V7:** durante el juego ningún miquito mira, señala ni reacciona a una cuia, a una selección o a un vertido. Nada depende de la legalidad.
 5. **Nunca cruzan el río** ni aparecen en la orilla de enfrente [V S14]. La rama sale del follaje de las esquinas superiores, en primer plano, con el río detrás. Sin reflejo de la tropa en el agua.
 6. **La máscara del mono ardilla no se lee como calavera** (en holandés y alemán lo llaman «cabecita de muerto» [E S36]).
@@ -464,7 +464,7 @@ El teléfono del dueño (SM-S938B) es de gama alta: no valida este presupuesto.
 
 ## 14. Orden con otras pantallas
 
-Banner de mundo (antes de la intro, canon) → intro → después, como mucho una de estas: dedo guía del tutorial, «Fruta nueva» o «¡Miquito a la vista!». Si hay dedo guía, aparece cuando la tropa ya ha salido (con D-011, tras el reposo); el input está habilitado desde T igualmente. El banner de mundo lo presenta Capi mientras Rosa asoma y se sumerge, en el 11, 41, 81 y 141, solo en el primer intento y no en el 1 (D-012). «El río bajó» va antes de la intro (ya es así). Hoy ni el banner de mundo ni «Fruta nueva» existen en el código: la regla de prioridad se implementa con la tarjeta.
+Banner de mundo (antes de la intro, canon) → intro → después, como mucho una de estas: dedo guía del tutorial (con el retrato de TiTino en los niveles 1-3, 6 y 12; D-016), «Fruta nueva», «¡Miquito a la vista!» o, tras Volver a la orilla en 1-30, el aviso de TiTino (D-016, T5-B: solo en el primer reinicio de cada nivel y solo si el nivel no tiene instrucción del tutorial, que ya lleva a TiTino; dura por lectura y sale por la cola de avisos, D-011). Si hay dedo guía, aparece cuando la tropa ya ha salido (con D-011, tras el reposo); el input está habilitado desde T igualmente. El banner de mundo lo presenta Capi mientras Rosa asoma y se sumerge, en el 11, 41, 81 y 141, solo en el primer intento y no en el 1 (D-012). «El río bajó» va antes de la intro (ya es así). Hoy ni el banner de mundo ni «Fruta nueva» existen en el código: la regla de prioridad se implementa con la tarjeta.
 
 ## 15. Riesgos
 

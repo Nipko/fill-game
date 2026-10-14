@@ -18,6 +18,8 @@ Revisión 8 (2026-10-13, D-013): el Mapa del río trae un fondo por parada. El p
 
 Revisión 9 (2026-10-13, D-015): la pregunta 44 queda decidida. El presupuesto del líquido de la sección 8 no cambia, con una excepción aceptada por el dueño: la banda que se revela con icono lleva 3 muestras durante ≈ 140 ms. El shader se mide en un teléfono de clase A antes de añadir más efectos al líquido (acción del dueño).
 
+Revisión 10 (2026-10-14, D-016 y D-019): con T5-B de TiTino, ninguna mascota se queda fija en el muelle durante la partida (C4 cerrado; 3.7 y 3.8): TiTino solo asoma sobre el muelle en la instrucción del tutorial y en el aviso tras Volver a la orilla, cuando la franja del panorama mide menos de 64 dp. La Tinaja (M13) tiene su paleta de barro y sus vetos en 07 §4.3. El presupuesto de texturas de la sección 8 admite los kits de mundo en ASTC 8×8 (D-013).
+
 Fuentes: `docs/dev/decisiones.md` (D-001 a D-006), GDD 07 (§3 paleta, §4 cuia, §5 storyboards, §6 mascotas, §7 UI kit, §8 pautas culturales), GDD 02 (§3.3, §4, §5, §12), GDD 08 §5 (shader y rendimiento), glosario §0, §3, §9 y §10, `docs/research/09-referencia-magic-sort.md` y `docs/research/magic-sort/c-meta-liveops-ux.md` §4, la revisión del 2026-10-07 (material de entrada, verificado contra el código) y las capturas `Logs/device/v01-fix-*.png` y `docs/reviews/2026-10-07/visual/*.png`.
 
 Convenciones:
@@ -326,6 +328,8 @@ En v0 solo se dibujan la insignia y Reiniciar, pero en estas posiciones: así na
 
 ### 3.7 Capi en la pantalla de juego
 
+> **Retirado por D-016 (2026-10-14; T5-B de la propuesta de TiTino, decidida el 2026-10-13):** ninguna mascota fija en el muelle durante la partida, ni Capi ni TiTino, como Magic Sort (C4 cerrado). Capi solo entra en escena para la Cuia extra, la Cuia de rescate y el banner de mundo. TiTino asoma sobre el muelle solo en la instrucción del tutorial (niveles 1-3, 6 y 12) y en el aviso tras Volver a la orilla (1-30), y solo si la franja del panorama mide menos de 64 dp (si no, sobre el panorama), con `raycastTarget = false`, sin tapar cuias ni la bandeja y sin quedarse. Lo que sigue se conserva como historia y como caja de referencia de esas apariciones.
+
 Está fuera de v0: es la prioridad 8 de la fase de jugabilidad. Se fija aquí su sitio para no tener que rehacer la composición.
 
 - **Lugar:** el muelle, abajo a la izquierda (02 §5: «orilla inferior izquierda»). Nunca centrado abajo ni con un objeto fijo (glosario §3.1).
@@ -342,7 +346,7 @@ Está fuera de v0: es la prioridad 8 de la fase de jugabilidad. Se fija aquí su
 | Esquina superior derecha | x 220…380, y 0…130 | Ídem. El disco de Reiniciar queda delante. La parte densa no baja de y 65 ni entra a la izquierda de x 284, para no tapar las palmeras. Puede llevar **un racimo de açaí colgado de la fronda** (el icono más reconocible del Estuario), siempre unido a ella, por encima de y 110 y lejos del tablero: nunca un fruto suelto, que parecería un coleccionable |
 | Esquinas inferiores | 140 × 140 en cada esquina inferior | Delante del muelle y detrás de la bandeja y de Capi |
 | Lianas laterales [P] | Franjas de ≤ 8 dp en x 0-8 y W − 8…W | Solo a lo largo del panel. A partir del nivel 25 la derecha deja sitio a la barra de la Crecida (x 348-356, 07 §7.4) |
-| Accesorio del muelle | Poste de amarre con cuerda enrollada: 40 × 48 en x W − 56, apoyado en `trayTop + 4` | Visible con la misma condición que Capi. Nada de cestas (se confundirían con la Canasta), canoas (Canoas) ni frutas (coleccionables) |
+| Accesorio del muelle | Poste de amarre con cuerda enrollada: 40 × 48 en x W − 56, apoyado en `trayTop + 4` | Visible si `trayTop − panel.bottom ≥ 64` (la condición que tenía Capi, retirado del muelle por D-016). Nada de cestas (se confundirían con la Canasta), canoas (Canoas) ni frutas (coleccionables) |
 
 **Exclusión, para toda decoración.** Nada a menos de 8 dp del contorno de una cuia. Nada dentro de un área táctil de cuia: ranura × (alto + 32 dp) de 02 §3.3. Nada dentro de un botón. Nada en la trayectoria del chorro (VA-08).
 
@@ -641,7 +645,7 @@ La referencia es la clase A de 08 §5.4 (Mali-G52 o Adreno 610, 3 GB). La clase 
 | Partículas | ≤ 60 simultáneas, ambiente ≤ 16 (6) | Contador de `DevProbe` [P] |
 | Brillos aditivos | ≤ 8 a la vez, cada uno ≤ 96 × 96 dp | — |
 | Shaders | Sin postproceso ni Bloom. Líquido ≤ 40 ALU y ≤ 2 muestras (08 §5.2). Vidrio horneado. Hoy no se cumple en ALU: el shader uGUI del prototipo (`AF_UI_Liquid.shader`) mide 149-288 instrucciones por camino desde la tanda 2 (142-165 antes del icono de fruta). Las muestras cumplen salvo en la banda que se revela con icono, con 3 muestras durante ≈ 140 ms (del 0,64 al 0,85 del Dissolve): excepción aceptada por el dueño el 2026-10-13 (D-015; pregunta 44 de `docs/GDD.md` §6.3). Se mide en un teléfono de clase A (Mali-G52 o Adreno 610) antes de añadir más efectos al líquido y se optimiza solo si no cumple; conseguir el teléfono es una acción del dueño | fxc /O3 por camino; Profiler por USB en clase A |
-| Texturas pintadas | ASTC 6×6 en fondos y 4×4 en UI, sin mipmaps en UI y atlas de 2048² (08 §5.4). Los degradados oscuros (relleno del panel, interiores de modales) no van en PNG ni en ASTC: por código (4.6) | Build report |
+| Texturas pintadas | ASTC 6×6 en fondos y 4×4 en UI, sin mipmaps en UI y atlas de 2048² (08 §5.4). Excepción: los kits de mundo de los fondos por parada (`bg_kit_w{nn}`) van en ASTC 8×8 (D-013; propuesta del Mapa del río, 10.7). Los degradados oscuros (relleno del panel, interiores de modales) no van en PNG ni en ASTC: por código (4.6) | Build report |
 | Texturas procedurales | RGBA32 ≤ 16 MB en total, incluidas las de la cuia a 72-128 px/u (4.1). Respaldos de escena a media resolución (≤ 540 × 1200 px) y generados una sola vez, no por nivel | Memory Profiler |
 | Generación procedural al arrancar | ≤ 300 ms de CPU en clase A. Solo se generan piezas geométricas o de material (10.3), sin desenfoques por píxel, y se guardan en caché en `persistentDataPath` con clave de versión (4.9): desde el segundo arranque, solo se leen | Stopwatch y línea de log en builds de desarrollo [P] |
 | Atlas de fuentes | Estáticos, Alpha8, ≤ 2048 × 1024 por fuente y 5 fuentes como máximo (5.6) | Memory Profiler |
@@ -747,7 +751,7 @@ Los ajustes de importación (Sprite, bordes 9-slice, ASTC y mipmaps) los aplica 
 | C1 | Barra inferior con tres botones (Deshacer, Pista, Reiniciar) | La pedía el encargo de esta tarea, pero contradice 07 §7.4 y 02 §5 (Reiniciar en la fila superior; comodines solo en la bandeja; la ranura de Pista no existe antes del 12) y D-003 («posiciones del HUD sin cambios») | **Se sigue el GDD.** Si el dueño quiere esa barra, hace falta una decisión nueva del registro que edite 07 §7.4 y 02 §5. Riesgo: el HUD de IEC/Guru, que 07 §1.3 prohíbe copiar, es deshacer/pista/+tubo |
 | C2 | «¡Genial!» en la cinta | No existe en el glosario §10. El canon es `level_complete` = «¡Nivel completado!» | Usar el canon. Si se quiere «¡Genial!», crear la clave con su ES, EN y PT-BR en el glosario |
 | C3 | Ancho de la bandeja | 07 §7.4 dice «ancho 328, centrada» y que, antes del desbloqueo, la ranura no existe y la bandeja se centra | Leer 328 como **máximo** y ajustar el ancho al contenido (96 dp en v0). Confirmar |
-| C4 | Capi durante el juego | 07 §6.1 fija 96-140 dp solo en banners y modales; 02 §5 lo sitúa en la orilla inferior izquierda | 64 × 56 dp en el muelle, con las condiciones de 3.7 [P] |
+| C4 | Capi durante el juego | 07 §6.1 fija 96-140 dp solo en banners y modales; 02 §5 lo sitúa en la orilla inferior izquierda | **Cerrado (2026-10-13, D-016, T5-B):** ninguna mascota fija en el muelle durante la partida; 02 §5 y 3.7 ya lo dicen. Antes: 64 × 56 dp en el muelle, con las condiciones de 3.7 [P] |
 | C5 | Relieve de los botones | Lo cubre P8, todavía abierta | La guía aplica la recomendación de P8 (5.1) |
 | C6 | Umbrales de contraste compuesto | Los cubre P9, todavía abierta | Usarlos ya en el test (VA-06) |
 | C7 | 07 §4.2 y §7.2 | Brillos del vidrio más intensos (franja con pico de 0,55 frente a «marfil 18 %») y tokens de UI nuevos frente a «solo los 8 tokens» (07 §1.2) | Llevarlo al lote de documentación de P10 junto con el resto de 07 §1-§7 |

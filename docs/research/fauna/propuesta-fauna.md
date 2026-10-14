@@ -286,7 +286,7 @@ Rol: **A** = ambiente con microinteracción · **C** = celebración · **H** = c
 | 11 | Nutria gigante / ariranha | C, Co | 7 (y 3) | Larga y oscura, con una **mancha clara única en la garganta** | En los hitos de la Crecida, la familia **asoma la cabeza** («periscopio») en el río del panorama y chilla (canon) | Canon: Crecida (glosario §3.3) | Periscopio, manchas únicas, grupos de 3-8, 22 tipos de voz y EN [V W46]; lago Sandoval [E W47] |
 | 12 | Hoatzin o shansho / cigana | A, H, Co | 11 (canon) y 5-6 | Penacho erizado, cara azul y ojo rojo | Al tocarlo: una cría se deja caer al agua y **vuelve a trepar con las garras de las alas**. Es la metáfora exacta de «Volver a la orilla» | Canon: reinicio del mundo 11 (glosario §3.3) | [V W48] |
 | 13 | **Jacana** / jaçanã | C, A | 1-5 (lagunas) | Patas de dedos larguísimos | Cuando la **Hoja escudo** salva la Crecida, una jacana cruza la hoja gigante | Celebración de la Hoja escudo (glosario §6.3) | Camina sobre hojas flotantes gracias a sus dedos [E W51] |
-| 14 | Perezoso / preguiça | A, Co | 4 (canon) y Mapa | Pelaje con un **tinte verdoso de algas** | Al tocarlo gira la cabeza muy despacio (3 s). En el Mapa del río dormita | Canon: idle del Mapa (glosario §3.3) | Algas en el pelo, polillas que viven en él, buen nadador, duerme 15-18 h [V W49] |
+| 14 | Perezoso / preguiça | A, Co | 4 (canon) y Mapa | Pelaje con un **tinte verdoso de algas** | Al tocarlo gira la cabeza muy despacio (3 s). En el Mapa del río dormita | Canon: idle del Mapa (glosario §3.3) | Algas en el pelo, polillas que viven en él, buen nadador, duerme 15-18 h [V W49] (**corregido el 2026-10-14**, D-016; g.5 de `docs/research/personaje/propuesta-titino.md`: 15-18 h es la cifra de cautiverio; en libertad, unas 9-10 h, 9,63 h medidas con EEG en 3 hembras de Panamá, Rattenborg et al. 2008 [V]. El perezoso del mundo 4 y del Mapa es TiTino, solo en el Mapa: no hay un segundo perezoso de ambiente) |
 | 15 | **Leoncito** / sagui-leãozinho | A, Co | 4 | Diminuto (13 cm de cuerpo), cola anillada | Pegado a un tronco del follaje, **roe un agujerito** y brilla una gota de savia. Al tocarlo se esconde detrás del tronco | Cameo: no siembra fruta (b.1) | Come sobre todo exudados; VU [V W36] |
 | 16 | Rana dardo / sapo-flecha | Co, A | 6 | Canon (icono Difícil) | Carta del Cuaderno y cameo en una hoja: el **padre lleva el renacuajo** en la espalda hasta el agua de una bromelia | Canon: etiqueta Difícil. Nunca «veneno» jugable (glosario §3.3) | [E W50] |
 | 17 | Hormigas cortadoras / saúvas | A | 1-9 | Fila de trocitos de hoja verde | Cruzan el muelle en fila llevando trozos de hoja. Al tocarlas, rodean el dedo | Muelle (direccion-visual-v2 §3.8): nada de cestas, canoas ni frutas, que confundirían | Llevan las hojas al nido para cultivar un hongo; no se las comen [V W52] |
@@ -304,12 +304,12 @@ Rol: **A** = ambiente con microinteracción · **C** = celebración · **H** = c
   - Estuario: oropéndola y hormigas;
   - Tapajós: oropéndola y Rosa;
   - Manaos: Rosa y nutria;
-  - Trapecio: perezoso y leoncito;
+  - Trapecio: leoncito (*actualización del 2026-10-14, D-016: sin el perezoso de ambiente; el perezoso del mundo 4 y del Mapa es TiTino, solo en el Mapa, fila 14*);
   - Loreto: aruanã y pirarucú;
   - Oriente: hoatzin y rana;
   - Madre de Dios: guacamayos y taricayas.
 - **Celebraciones:** solo en la victoria y en los hitos, dentro de los 1,4 s del canon antes de que salga el botón Siguiente (07 §5.4). Nunca retrasan el CTA.
-- **Los miquitos en la victoria** [P]: solo en los hitos (cada 10 niveles). Un miquito de la especie del mundo hace su gesto firma en una esquina superior (las colas entrelazadas, el salto) mientras entra Capi. Nunca en el centro y nunca hablando: presenta Capi (07 §1.3 y §2.2).
+- **Los miquitos en la victoria** [P]: solo en los hitos (cada 10 niveles). Un miquito de la especie del mundo hace su gesto firma en una esquina superior (las colas entrelazadas, el salto) mientras entra Capi. Nunca en el centro y nunca hablando: presenta Capi (07 §1.3 y §2.2). *Actualización del 2026-10-14 (D-016, d.6 de la propuesta de TiTino): un solo animal protagonista por victoria; en la victoria celebra TiTino (D-013), no Capi, y en el fin de mundo el miquito no sale; en las otras victorias múltiplo de 10 puede salir y TiTino solo hace el gesto.*
 
 ---
 

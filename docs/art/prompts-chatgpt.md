@@ -70,7 +70,7 @@ Familias (una conversación cada una, con la clave adjunta salvo S0): **S0** cla
 | 16 | `ui_placa_nivel.png` | S4 | 1536 × 1024 | 544 × 208 | Sí | — (tamaño fijo) | 400 | Insignia de 136 × 52 dp | Opcional (guía 3.5) | Opcional |
 | 17 | `wood_dark_tile.png` | S5 | 1024 × 1024 | 512 × 512, tesela perfecta | No | — (tesela) | 400 | Tesela de 128 dp | Opcional: madera de bandeja y placa (guía 4.4) | Opcional |
 | 18 | `wood_light_tile.png` | S5 | 1024 × 1024 | 512 × 512, tesela perfecta | No | — (tesela) | 400 | Tesela de 128 dp | Opcional: repisas (guía 4.5) | Opcional |
-| 19 | `capi_idle.png` | S6 | 1024 × 1024 | 512 × 512 | Sí | — | — | 64 × 56 dp en juego; 96-140 dp en banners | Capi (guía 3.7; puede adelantarse a F7) | Jugabilidad |
+| 19 | `capi_idle.png` | S6 | 1024 × 1024 | 512 × 512 | Sí | — | — | 96-140 dp en banners (ya no va a 64 × 56 dp en el muelle: D-016) | Capi (guía 3.7, retirada por D-016) | Jugabilidad |
 | 20 | `fruta_acai.png` | S7 | 1024 × 1024 | 256 × 256 | Sí | — | — | 48-96 dp | Tarjeta «Fruta nueva» | Jugabilidad |
 | 21 | `fruta_aguaje.png` | S7 | 1024 × 1024 | 256 × 256 | Sí | — | — | Ídem | Ídem | Jugabilidad |
 | 22 | `fruta_tapereba.png` | S7 | 1024 × 1024 | 256 × 256 | Sí | — | — | Ídem | Ídem | Jugabilidad |
@@ -310,6 +310,8 @@ Do not include: text, logos, watermark, objects, paper texture, gold, metal.
 ### 3.14 `capi_idle.png`: Capi en pose neutra (fase de jugabilidad)
 
 Familia S6, con la clave adjunta. Generar a 1024 × 1024 y llevar a **512 × 512**. Transparente, con un margen del 10 %. Colores de la hoja de modelo de 07 §6.1. Mira al jugador, nunca a un lado donde pueda haber una cuia (guía 3.7). Queda pendiente de revisión cultural y de la búsqueda de marca del nombre (glosario §3.1). Si el dueño lo aprueba antes, puede entrar como Capi estático en F7 (guía 10.2).
+
+> *Actualización del 2026-10-14 (D-016, decidida el 2026-10-13):* ninguna mascota fija en el muelle durante la partida (guía 3.7, retirada; C4 cerrado). Capi solo entra en escena para la Cuia extra, la Cuia de rescate y el banner de mundo, así que este sprite sirve para esas apariciones (96-140 dp), no a 64 × 56 dp en el muelle. El prompt de la hoja de modelo de TiTino que pedía f.3 de `docs/research/personaje/propuesta-titino.md` **queda pendiente** (D-016): se escribirá con su hoja de modelo, después del asesor cultural.
 
 ```text
 Character sprite of a mascot for a cozy Amazon-themed mobile puzzle game, 1024x1024 pixels, PNG with a fully transparent background, full body, centered, about 10% empty margin on every side.
