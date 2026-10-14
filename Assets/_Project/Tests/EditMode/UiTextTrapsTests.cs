@@ -1,7 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using AF.Localization;
@@ -22,15 +21,15 @@ namespace AF.Tests.EditMode
     /// <item>Las plantillas llevan marcadores con nombre y sintaxis válida; ninguna pantalla pega « · », hace <c>Replace</c> sobre
     /// el texto ni elige el plural con <c>== 1</c>.</item>
     /// <item>Las cifras siguen la región de <see cref="Loc"/>: sin región, es-CO («1.000»); el camino por buffer, sin asignar.</item>
+    /// <item>Con L2b los textos salen de las tablas (<c>Data/Loc/strings.csv</c> y <c>facts.csv</c>): el golden sigue igual y las
+    /// cuatro plantillas que eran posicionales (<c>{0}</c> con <c>string.Format</c>) dan el mismo texto con marcadores con
+    /// nombre.</item>
     /// </list>
-    /// La fachada <see cref="Loc"/> es estática: cada test parte de su estado sin configurar (es-419 y cifras de es-CO) y lo
-    /// deja como estaba.
+    /// La fachada <see cref="Loc"/> es estática: cada test parte de es-419 con las tablas del proyecto y sin región del teléfono
+    /// (cifras de es-CO; <see cref="LocSetUpFixture.ConfigureEs419"/>) y lo deja como estaba.
     /// </summary>
     public sealed class UiTextTrapsTests
     {
-        // Las plantillas de UiText que siguen siendo posicionales porque las usan con string.Format pantallas de fuera de L1.
-        private static readonly string[] PositionalLeft = { "Missing", "LevelFailedReward", "NoCanoesRefill", "NoCanoesInfinite" };
-
         private static int s_end;
         private LocStateSnapshot _loc;
 
@@ -42,7 +41,7 @@ namespace AF.Tests.EditMode
         public void SetUp()
         {
             _loc = LocStateSnapshot.Take();
-            Loc.Reset();
+            LocSetUpFixture.ConfigureEs419();
         }
 
         [TearDown]
@@ -158,47 +157,63 @@ namespace AF.Tests.EditMode
         [Test]
         public void StuckCards_FixedBreaksLiveInTheString_SepOnlyWhereTheScreenChooses()
         {
-            foreach (string fixedBreak in new[] { UiText.StuckUndoRefillAd, UiText.StuckPack, UiText.StuckBalsa })
+            foreach (string key in new[] { UiText.Keys.StuckUndoRefillAd, UiText.Keys.StuckPack, UiText.Keys.StuckBalsa })
             {
+                string fixedBreak = Loc.Template(key)!;
                 Assert.That(LocFormat.SeparatorCount(fixedBreak), Is.EqualTo(0), "«" + fixedBreak + "»: sin {sep}");
                 Assert.That(fixedBreak.IndexOf('\n'), Is.GreaterThan(0), "«" + fixedBreak + "»: el salto, en la cadena");
                 Assert.That(fixedBreak.IndexOf('\n'), Is.EqualTo(fixedBreak.LastIndexOf('\n')), "«" + fixedBreak + "»: un solo salto");
             }
 
-            Assert.That(LocFormat.SeparatorCount(UiText.StuckUndoRefillSeeds), Is.EqualTo(1), "la recarga por semillas sí elige");
+            Assert.That(LocFormat.SeparatorCount(Loc.Template(UiText.Keys.StuckUndoRefillSeeds)!), Is.EqualTo(1), "la recarga por semillas sí elige");
 
-            // Lo mismo que hará Loc.T(key, args) cuando L2b las lleve a la tabla: cada {sep} sería un salto, y aquí no hay.
-            LocNumberFormat numbers = Loc.NumberFormat;
-            Assert.That(LocFormat.Format(UiText.StuckUndoRefillAd, LocArgs.OfDigits("n", 3), LocLocale.SourceLocale, numbers),
-                Is.EqualTo(UiText.StuckRefillVideo(3)));
-            Assert.That(LocFormat.Format(UiText.StuckPack, LocArgs.Of("seeds", 1000L).And("price", "US$ 1,99"), LocLocale.SourceLocale, numbers),
-                Is.EqualTo(UiText.StuckPackLine(1000, "US$ 1,99")));
-            Assert.That(LocFormat.Format(UiText.StuckBalsa, LocArgs.Of("price", "COP 3.900"), LocLocale.SourceLocale, numbers),
-                Is.EqualTo(UiText.StuckBalsaLine("COP 3.900")));
+            // El formato por defecto de la tabla (Loc.T(key, args)): cada {sep} sería un salto, y aquí no hay.
+            Assert.That(Loc.T(UiText.Keys.StuckUndoRefillAd, LocArgs.OfDigits("n", 3)), Is.EqualTo(UiText.StuckRefillVideo(3)));
+            Assert.That(Loc.T(UiText.Keys.StuckPack, LocArgs.Of("seeds", 1000L).And("price", "US$ 1,99")), Is.EqualTo(UiText.StuckPackLine(1000, "US$ 1,99")));
+            Assert.That(Loc.T(UiText.Keys.StuckBalsa, LocArgs.Of("price", "COP 3.900")), Is.EqualTo(UiText.StuckBalsaLine("COP 3.900")));
+        }
+
+        /// <summary>
+        /// Las cuatro plantillas que L1 dejó posicionales porque sus pantallas las usaban con <c>string.Format</c> (la burbuja de
+        /// la bandeja, Nivel fallido y los dos botones de Sin canoas) pasan a la tabla con marcadores con nombre y a un método de
+        /// UiText: dan el mismo texto que antes con las cifras de siempre y, con 1, el singular.
+        /// </summary>
+        [Test]
+        public void FormerPositionalTemplates_GiveTheSameTextAsBefore()
+        {
+            System.Globalization.CultureInfo inv = System.Globalization.CultureInfo.InvariantCulture;
+            foreach (int n in new[] { 2, 30, 460, 1000, 1234567 })
+            {
+                Assert.That(UiText.TrayMissing(n), Is.EqualTo(string.Format(inv, "Te faltan {0}", UiText.Grouped(n))));
+                Assert.That(UiText.LevelFailedReward(n), Is.EqualTo(string.Format(inv, "Premio: {0} semillas", UiText.Grouped(n))));
+            }
+
+            Assert.That(UiText.TrayMissing(1), Is.EqualTo("Te falta 1"));
+            Assert.That(UiText.LevelFailedReward(1), Is.EqualTo("Premio: 1 semilla"));
+            Assert.That(UiText.NoCanoesRefill(5), Is.EqualTo(string.Format(inv, "Llenar canoas · {0}/{0}", 5)));
+            Assert.That(UiText.NoCanoesInfinite("COP 3.900"), Is.EqualTo(string.Format(inv, "Canoas infinitas 1 h · {0}", "COP 3.900")));
+            Assert.That(UiText.NoCanoesInfinite(string.Empty), Is.EqualTo("Canoas infinitas 1 h · "));
         }
 
         [Test]
-        public void Templates_AreNamedAndValid_ExceptTheFourStillUsedWithStringFormat()
+        public void TableTemplates_AreNamedAndValid_NoPositionalLeft()
         {
-            int checkedCount = 0;
-            foreach (FieldInfo f in typeof(UiText).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static))
+            LocTable strings = Loc.Catalog.Strings;
+            int templates = 0;
+            for (int r = 0; r < strings.Count; r++)
             {
-                if (!f.IsLiteral || f.FieldType != typeof(string) || !(f.GetValue(null) is string template) || template.IndexOf('{') < 0)
+                string template = strings.TextAt(r, LocLocale.SourceLocale);
+                if (template.IndexOf('{') < 0)
                 {
                     continue;
                 }
 
-                if (System.Array.IndexOf(PositionalLeft, f.Name) >= 0)
-                {
-                    Assert.That(template, Does.Contain("{0}"), f.Name + ": sigue posicional hasta que su pantalla pase a la tabla");
-                    continue;
-                }
-
-                Assert.That(LocFormat.Validate(template), Is.Null, f.Name + ": «" + template + "»");
-                checkedCount++;
+                Assert.That(LocFormat.Validate(template), Is.Null, strings.KeyAt(r) + ": «" + template + "»");
+                Assert.That(Regex.IsMatch(template, "\\{[0-9]"), Is.False, strings.KeyAt(r) + ": nunca posicional");
+                templates++;
             }
 
-            Assert.That(checkedCount, Is.GreaterThanOrEqualTo(20));
+            Assert.That(templates, Is.GreaterThanOrEqualTo(24));
         }
 
         [Test]
@@ -258,8 +273,8 @@ namespace AF.Tests.EditMode
             Assert.That(keys.Count, Is.EqualTo(11));
             foreach (string key in keys)
             {
-                Assert.That(key, Does.StartWith("fauna_"), "claves fauna_<id>_dato (L2b las lleva a facts.csv)");
-                Assert.That(key, Does.EndWith("_dato"), "claves fauna_<id>_dato (L2b las lleva a facts.csv)");
+                Assert.That(key, Does.StartWith("fauna_"), "claves fauna_<id>_dato de facts.csv");
+                Assert.That(key, Does.EndWith("_dato"), "claves fauna_<id>_dato de facts.csv");
             }
         }
 

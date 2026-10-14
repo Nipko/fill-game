@@ -8,19 +8,21 @@ using AF.Localization;
 namespace AF.UI
 {
     /// <summary>
-    /// Textos ES-419 con su clave del glosario (§5.1, §10) y de GDD 04 §6.5. Clase parcial (arquitectura del paso 1, §9): los
-    /// textos de la tarjeta previa, de la Luciérnaga y del banner del mundo van en sus propios archivos (UiText.Cards.cs,
-    /// UiText.Reveal.cs y UiText.World.cs).
-    /// <para>Idiomas, nivel 1 (D-018; propuesta de idiomas §3.1, §3.2 y §6; tarea L1 de la tanda 4): sin trampas para traducir y
-    /// sin cambiar ningún texto en es-419 (lo comprueba el golden de <c>UiTextTrapsTests</c>). Las plantillas que aún viven aquí
-    /// llevan marcadores con nombre (<c>{n}</c>, <c>{price}</c>), plurales con la sintaxis de la tabla
-    /// (<c>{n:plural:a|b}</c>, nunca <c>n == 1</c>), el salto «\n» dentro de la cadena donde es fijo (lo decide el traductor,
-    /// regla de G1) y el corte <c>{sep}</c> solo donde la pantalla elige de verdad si parte la línea; se
-    /// formatean con <see cref="LocFormat"/> en es-419, su idioma, y las cifras con los separadores de <see cref="Loc"/> (hoy
-    /// es-CO, «1.000»: aún no se lee la región del teléfono). Ninguna pantalla pega trozos ni hace <c>Replace</c> sobre texto
-    /// visible. L2b las pasa a <c>Data/Loc/strings.csv</c> y <c>facts.csv</c> con estas mismas claves. Quedan posicionales
-    /// (<c>{0}</c>) las cuatro que usan con <c>string.Format</c> pantallas de fuera de L1 (<see cref="Missing"/>,
-    /// <see cref="LevelFailedReward"/>, <see cref="NoCanoesRefill"/> y <see cref="NoCanoesInfinite"/>).</para>
+    /// Acceso tipado a los textos de la UI (08 §2.2: «<c>UiText</c> queda como acceso tipado»; D-018; contrato 32): cada texto es
+    /// una propiedad o un método que pide su clave a <see cref="Loc"/>, y los textos viven en las tablas
+    /// <c>Assets/_Project/Data/Loc/strings.csv</c> (UI) y <c>facts.csv</c> (textos largos), con las claves de <see cref="Keys"/>
+    /// (glosario §10 y GDD 04 §6.5, o derivadas [P]). Clase parcial (arquitectura del paso 1, §9): los textos de la tarjeta
+    /// previa, de la Luciérnaga y del banner del mundo van en UiText.Cards.cs, UiText.Reveal.cs y UiText.World.cs.
+    /// <list type="bullet">
+    /// <item>Idiomas, nivel 2 (propuesta de idiomas §6; tarea L2b de la tanda 4): ningún texto en el código. En es-419 los textos
+    /// son los mismos que antes, carácter a carácter (lo comprueba el golden de <c>UiTextTrapsTests</c>).</item>
+    /// <item>Los textos sin argumentos no asignan memoria (<see cref="Loc.T(string)"/>). Los que llevan argumentos
+    /// (<see cref="Loc.T(string, in LocArgs, string, int)"/>: marcadores con nombre, plurales del idioma de <see cref="Loc"/> y
+    /// cifras con los separadores de su región) asignan la cadena: solo al construir o colocar la pantalla, nunca por fotograma.
+    /// Los que se arman una vez y se guardan (la canoa, el banner del mundo) se rehacen con <see cref="Loc.Changed"/>.</item>
+    /// <item>Sin configurar <see cref="Loc"/> (o con una clave que falta) se ve «[clave]» en desarrollo y nada en release:
+    /// <c>GameBootstrap</c> lo configura antes de construir la UI y los tests, en su <c>[SetUpFixture]</c>.</item>
+    /// </list>
     /// </summary>
     public static partial class UiText
     {
@@ -30,393 +32,326 @@ namespace AF.UI
         /// </summary>
         internal const string Separator = " · ";
 
+        private static string? s_loseOneCanoe;
+        private static string? s_quitOneCanoe;
+
         static UiText()
         {
             // Los textos que se arman una vez y se guardan (la canoa, el banner del mundo) se rehacen si cambian el idioma o
-            // la región de las cifras (L2b los saca de la tabla con estas mismas claves).
+            // la región de las cifras.
             Loc.Changed += ClearCaches;
         }
 
-        /// <summary><c>level_n</c>: «Nivel {n}».</summary>
-        public const string LevelN = "Nivel {n}";
+        /// <summary><c>fauna_sighted_card</c> [P] (guion de la intro §4.5, Q10 A): «¡Miquito a la vista!». Pendiente del asesor.</summary>
+        public static string FaunaSightedCard => Loc.T(Keys.FaunaSightedCard);
 
-        /// <summary>
-        /// <c>play_level</c> [P]: «Jugar · Nivel {n}», el botón del inicio (06 §4.7; D-008 punto 6) en una sola frase, sin pegar
-        /// <c>play</c> y <c>level_n</c> (el orden de las palabras cambia por idioma).
-        /// </summary>
-        public const string PlayLevelN = "Jugar · Nivel {n}";
-
-        /// <summary>
-        /// <c>fauna_sighted_card</c> [P] (guion de la intro §4.5, Q10 A): «avistamiento», nunca «nuevo» ni «tu mono». Pendiente
-        /// del dueño (Q10) y del asesor cultural (07 §8.2); EN «Monkey spotted!».
-        /// </summary>
-        public const string FaunaSightedCard = "¡Miquito a la vista!";
-
-        /// <summary>
-        /// «Nivel {n} · intento {k}» [P]: rótulo de la intro corta del reintento (02 §2, INTRO: «En reintento muestra Nivel N ·
-        /// intento k»), con k = <c>fails_level</c> + 1. Sin clave en el glosario §10: pendiente con los textos de P14.
-        /// </summary>
-        public const string LevelAttemptN = "Nivel {n} · intento {attempt}";
-
-        /// <summary>
-        /// Título del aviso de perfil en solo lectura [P] (08 §4.4; el texto de la pantalla de <c>biz_min_app_version</c> de
-        /// 08 §9). Pendiente de que el dueño decida entre este aviso y una pantalla de bloqueo.
-        /// </summary>
-        public const string ProfileLockedTitle = "Actualiza Tintalú";
+        /// <summary>Título del aviso de perfil en solo lectura [P] (08 §4.4): «Actualiza Tintalú».</summary>
+        public static string ProfileLockedTitle => Loc.T(Keys.ProfileLockedTitle);
 
         /// <summary>Cuerpo del aviso con un perfil de una versión más nueva (<c>ProfileLoadStatus.TooNew</c>) [P].</summary>
-        public const string ProfileLockedTooNew = "Tu progreso es de una versión más nueva de Tintalú y sigue a salvo. Actualiza la app para jugar con él: lo que juegues ahora no se guardará y no hay compras.";
+        public static string ProfileLockedTooNew => Loc.T(Keys.ProfileLockedTooNew);
 
         /// <summary>Cuerpo del aviso cuando falló la migración del perfil (<c>ProfileLoadStatus.MigrationFailed</c>) [P].</summary>
-        public const string ProfileLockedMigration = "No pudimos abrir tu progreso, pero sigue a salvo. Actualiza la app para recuperarlo: lo que juegues ahora no se guardará y no hay compras.";
+        public static string ProfileLockedMigration => Loc.T(Keys.ProfileLockedMigration);
 
-        /// <summary>Botón del aviso de perfil en solo lectura [P].</summary>
-        public const string ProfileLockedPlay = "Jugar sin guardar";
+        /// <summary>Botón del aviso de perfil en solo lectura [P]: «Jugar sin guardar».</summary>
+        public static string ProfileLockedPlay => Loc.T(Keys.ProfileLockedPlay);
 
         /// <summary><c>undo</c>: etiqueta funcional de Marea en la bandeja (glosario §0.2).</summary>
-        public const string Undo = "Deshacer";
+        public static string Undo => Loc.T(Keys.Undo);
 
         /// <summary><c>restart</c>: etiqueta funcional de Volver a la orilla.</summary>
-        public const string Restart = "Reiniciar";
+        public static string Restart => Loc.T(Keys.Restart);
 
         /// <summary><c>next</c>.</summary>
-        public const string Next = "Siguiente";
+        public static string Next => Loc.T(Keys.Next);
 
         /// <summary><c>level_complete</c>.</summary>
-        public const string LevelComplete = "¡Nivel completado!";
+        public static string LevelComplete => Loc.T(Keys.LevelComplete);
 
         /// <summary><c>stuck_title</c> (= <c>no_moves</c>).</summary>
-        public const string StuckTitle = "No hay más vertidos";
+        public static string StuckTitle => Loc.T(Keys.StuckTitle);
 
         /// <summary><c>stuck_subtitle</c>.</summary>
-        public const string StuckSubtitle = "Aguas estancadas";
+        public static string StuckSubtitle => Loc.T(Keys.StuckSubtitle);
 
         /// <summary><c>stuck_undo</c>.</summary>
-        public const string StuckUndo = "Deshacer · Marea";
+        public static string StuckUndo => Loc.T(Keys.StuckUndo);
 
         /// <summary><c>stuck_restart</c>.</summary>
-        public const string StuckRestart = "Volver a la orilla (gratis)";
+        public static string StuckRestart => Loc.T(Keys.StuckRestart);
 
         /// <summary><c>play</c>.</summary>
-        public const string Play = "Jugar";
+        public static string Play => Loc.T(Keys.Play);
 
         /// <summary><c>currency</c> (nombre del contador de semillas para el lector de pantalla).</summary>
-        public const string Seeds = "Semillas";
+        public static string Seeds => Loc.T(Keys.Currency);
 
         /// <summary><c>lives</c>.</summary>
-        public const string Canoes = "Canoas";
+        public static string Canoes => Loc.T(Keys.Lives);
 
         /// <summary><c>settings</c>.</summary>
-        public const string Settings = "Ajustes";
+        public static string Settings => Loc.T(Keys.Settings);
 
-        /// <summary>
-        /// «Inicio» [P]: botón secundario de la victoria y pestaña de la pantalla de inicio (06 §4.7; D-008 puntos 3 y 6). Aún
-        /// sin clave en el glosario §10 (pendiente con los textos de P14).
-        /// </summary>
-        public const string Home = "Inicio";
+        /// <summary><c>home</c> [P]: botón secundario de la victoria y pestaña de la pantalla de inicio (06 §4.7; D-008).</summary>
+        public static string Home => Loc.T(Keys.Home);
 
         /// <summary><c>back</c>.</summary>
-        public const string Back = "Volver";
+        public static string Back => Loc.T(Keys.Back);
 
         /// <summary><c>difficulty_hard</c> (chip del botón Jugar [P], 06 §4.7).</summary>
-        public const string DifficultyHard = "Difícil";
+        public static string DifficultyHard => Loc.T(Keys.DifficultyHard);
 
         /// <summary><c>very_hard</c> (chip del botón Jugar [P], 06 §4.7).</summary>
-        public const string DifficultyVeryHard = "Muy difícil";
+        public static string DifficultyVeryHard => Loc.T(Keys.VeryHard);
 
         /// <summary>Subtítulo temático de Difícil (glosario §6.1; 02 §10): «Aguas bravas».</summary>
-        public const string DifficultySubtitleHard = "Aguas bravas";
+        public static string DifficultySubtitleHard => Loc.T(Keys.DifficultySubtitleHard);
 
         /// <summary>
         /// Subtítulo temático de Muy difícil (glosario §6.1; 02 §10): «Noche de jaguar». Nombra fauna: pendiente de revisión del
         /// asesor cultural (07 §8.2).
         /// </summary>
-        public const string DifficultySubtitleVeryHard = "Noche de jaguar";
-
-        /// <summary>
-        /// Cinta del premio multiplicado (propuesta-mecanicas-dificultad.md §c.2: «×3» y «×4» sobre las 20 de un nivel normal).
-        /// Con «×» U+00D7, que está en el atlas de las fuentes.
-        /// </summary>
-        public const string RibbonFormat = "×{n}";
-
-        /// <summary>Premio de la tarjeta previa (propuesta §c.1: «Premio: 60»; <c>eco_reward_*</c>, 08 §9).</summary>
-        public const string RewardLineFormat = "Premio: {n}";
+        public static string DifficultySubtitleVeryHard => Loc.T(Keys.DifficultySubtitleVeryHard);
 
         /// <summary>Título de la pantalla de final de contenido (06 §9; 08 §6.2).</summary>
-        public const string ContentEndTitle = "El río sigue creciendo";
-
-        /// <summary>
-        /// Texto [P] de «El río sigue creciendo» con <c>live_content_end_message.next_batch_eta_days</c> (06 §9: «fecha estimada
-        /// de los próximos 100 niveles»), redactado sobre el push «Nuevos niveles» de 06 §8.3. Pendiente de aprobación (P14).
-        /// Con plural (L1): «en unos {n} días» y, con 1, «en 1 día» [P], nunca «en unos 1 días».
-        /// </summary>
-        public const string ContentEndEta = "Río arriba llegan 100 niveles nuevos en {n:plural:{} día|unos {} días}.";
+        public static string ContentEndTitle => Loc.T(Keys.ContentEndTitle);
 
         /// <summary>Título de Sin canoas (04 §7.3).</summary>
-        public const string NoCanoesTitle = "Sin canoas";
+        public static string NoCanoesTitle => Loc.T(Keys.NoCanoesTitle);
 
         /// <summary>Cronómetro de Sin canoas (04 §7.3; D-008 paso 4).</summary>
-        public const string NoCanoesNext = "Tu próxima canoa vuelve en";
+        public static string NoCanoesNext => Loc.T(Keys.NoCanoesNext);
 
         /// <summary>Etiqueta funcional de Cuia extra en la bandeja (04 §2.2; glosario §0.2).</summary>
-        public const string ExtraCuia = "+1 cuia";
+        public static string ExtraCuia => Loc.T(Keys.ExtraCuia);
 
         /// <summary>Texto de Capi al regalar la Cuia extra en el nivel 8 (04 §2.2).</summary>
-        public const string ExtraCuiaGift = "Capi te trae una cuia más para este nivel. La próxima la encuentras en tu Canasta";
+        public static string ExtraCuiaGift => Loc.T(Keys.ExtraCuiaGift);
 
         /// <summary><c>stuck_rescue_cta</c>.</summary>
-        public const string StuckRescueCta = "Continuar: +1 cuia";
+        public static string StuckRescueCta => Loc.T(Keys.StuckRescueCta);
 
         /// <summary>
         /// <c>stuck_rescue_discount</c> («Primer rescate del día: −50 %»). El atlas de las fuentes no tiene el signo menos
-        /// U+2212: se escribe con la raya corta U+2013, que sí tiene (también en las demás cifras negativas).
+        /// U+2212: la tabla lo escribe con la raya corta U+2013, que sí tiene (también en las demás cifras negativas).
         /// </summary>
-        public const string StuckRescueDiscount = "Primer rescate del día: –50 %";
-
-        /// <summary>
-        /// <c>stuck_rescue_missing</c>: «Te faltan {n} semillas», con plural (L1): con 1, «Te falta 1 semilla», nunca «Te faltan
-        /// 1 semillas».
-        /// </summary>
-        public const string StuckRescueMissing = "{n:plural:Te falta {} semilla|Te faltan {} semillas}";
-
-        /// <summary>
-        /// «Te faltan {n}» del precio en rojo (04 §1.1; bandeja). Aún posicional: la usa BoosterTray con <c>string.Format</c>,
-        /// fuera de L1 (pasa a la tabla con L2b).
-        /// </summary>
-        public const string Missing = "Te faltan {0}";
-
-        /// <summary>
-        /// <c>stuck_undo_refill_ad</c> (la cifra es <c>undo_refill_amount</c>): «+{n} Deshacer», salto de línea y «Ver video»
-        /// (<see cref="StuckRefillVideo"/>). Aguas estancadas siempre la parte ahí: el salto es fijo y va en la cadena («\n»),
-        /// donde el traductor puede moverlo; sin <c>{sep}</c>.
-        /// </summary>
-        public const string StuckUndoRefillAd = "+{n} Deshacer\nVer video";
-
-        /// <summary>
-        /// <c>stuck_undo_refill_seeds</c> (cifras: <c>undo_refill_amount</c> y <c>undo_refill_seed_price</c>): «+{n} Deshacer ·
-        /// {price} semillas», con plural y el corte <c>{sep}</c>: aquí sí elige la pantalla, en una línea o en dos
-        /// (<see cref="StuckRefillSeeds"/>).
-        /// </summary>
-        public const string StuckUndoRefillSeeds = "+{n} Deshacer{sep}{price:plural:{} semilla|{} semillas}";
+        public static string StuckRescueDiscount => Loc.T(Keys.StuckRescueDiscount);
 
         /// <summary>Recarga gratis de +1 Marea de la rama F [P] (04 §6.3; sin clave en 04 §6.5).</summary>
-        public const string StuckUndoGift = "+1 Deshacer · gratis";
+        public static string StuckUndoGift => Loc.T(Keys.StuckUndoGift);
 
-        /// <summary>
-        /// <c>stuck_pack_199</c> («Puñado de semillas · 1.000 · {precio_local}») como la pinta su tarjeta: «Puñado de semillas»,
-        /// salto de línea y «{seeds} · {price}» (<see cref="StuckPackLine"/>). El salto es fijo y va en la cadena («\n»).
-        /// </summary>
-        public const string StuckPack = "Puñado de semillas\n{seeds} · {price}";
-
-        /// <summary>
-        /// <c>stuck_balsa_499</c>, primera parte («Balsa de rescate · {precio_local}») como la pinta su tarjeta: «Balsa de
-        /// rescate», salto de línea y el precio (<see cref="StuckBalsaLine"/>). El salto es fijo y va en la cadena («\n»).
-        /// </summary>
-        public const string StuckBalsa = "Balsa de rescate\n{price}";
-
-        /// <summary><c>stuck_balsa_499</c>, segunda parte.</summary>
-        public const string StuckBalsaContent = "Todo para seguir: semillas, una cuia y canoas infinitas";
+        /// <summary><c>stuck_balsa_499</c>, segunda parte: el contenido de la Balsa.</summary>
+        public static string StuckBalsaContent => Loc.T(Keys.StuckBalsaContent);
 
         /// <summary><c>stuck_canoe_lost</c> («Travesía perdida: −1 canoa», con U+2013 por el atlas).</summary>
-        public const string StuckCanoeLost = "Travesía perdida: –1 canoa";
+        public static string StuckCanoeLost => Loc.T(Keys.StuckCanoeLost);
 
         /// <summary><c>stuck_canoe_lost_last</c>.</summary>
-        public const string StuckCanoeLostLast = "Travesía perdida: tu última canoa";
+        public static string StuckCanoeLostLast => Loc.T(Keys.StuckCanoeLostLast);
 
         /// <summary><c>stuck_unsolvable</c> (rama F).</summary>
-        public const string StuckUnsolvable = "Ni una cuia más salva este tramo. Prueba la Marea o vuelve a la orilla.";
+        public static string StuckUnsolvable => Loc.T(Keys.StuckUnsolvable);
 
         /// <summary><c>stuck_give_up</c> [P] (D-008; P14).</summary>
-        public const string StuckGiveUp = "Rendirse";
+        public static string StuckGiveUp => Loc.T(Keys.StuckGiveUp);
 
         /// <summary><c>rescue_applied</c>.</summary>
-        public const string RescueApplied = "¡Una cuia más! Sigue desde aquí";
+        public static string RescueApplied => Loc.T(Keys.RescueApplied);
 
         /// <summary><c>giveup_confirm_title</c> [P].</summary>
-        public const string GiveUpConfirmTitle = "¿Seguro?";
+        public static string GiveUpConfirmTitle => Loc.T(Keys.GiveUpConfirmTitle);
 
         /// <summary>
-        /// «Perderás {n} canoa(s)» con plural (L1): la plantilla de <c>giveup_confirm_canoe</c> [P] y de la segunda parte de
-        /// <c>quit_confirm</c> [P], que hoy siempre llevan n = 1 (<see cref="LoseCanoes"/>).
+        /// <c>giveup_confirm_canoe</c> [P]: «Perderás 1 canoa», la plantilla con plural «Perderás {n} canoa(s)» con n = 1 (hoy
+        /// siempre se pierde una; <see cref="LoseCanoes"/>). Se arma una vez por idioma.
         /// </summary>
-        public const string LoseCanoesN = "{n:plural:Perderás {} canoa|Perderás {} canoas}";
-
-        private static string? s_loseOneCanoe;
-
-        /// <summary><c>giveup_confirm_canoe</c> [P]: «Perderás 1 canoa» (<see cref="LoseCanoesN"/> con n = 1).</summary>
         public static string GiveUpConfirmCanoe => s_loseOneCanoe ??= LoseCanoes(1);
 
         /// <summary>«Perderás tu última canoa» [P] (D-008, paso 2; sin clave propia en 04 §6.5).</summary>
-        public const string GiveUpConfirmLastCanoe = "Perderás tu última canoa";
+        public static string GiveUpConfirmLastCanoe => Loc.T(Keys.GiveUpConfirmLastCanoe);
 
         /// <summary><c>level_failed</c> [P].</summary>
-        public const string LevelFailed = "Nivel fallido";
-
-        /// <summary>
-        /// <c>level_failed_reward</c> [P]. Aún posicional y sin plural: la usa LevelFailedScreen con <c>string.Format</c>, fuera
-        /// de L1 (pasa a la tabla con L2b).
-        /// </summary>
-        public const string LevelFailedReward = "Premio: {0} semillas";
+        public static string LevelFailed => Loc.T(Keys.LevelFailed);
 
         /// <summary><c>retry</c> [P].</summary>
-        public const string Retry = "Reintentar";
+        public static string Retry => Loc.T(Keys.Retry);
 
         /// <summary><c>quit_confirm</c> [P], primera parte (título del diálogo).</summary>
-        public const string QuitConfirmTitle = "¿Salir del nivel?";
+        public static string QuitConfirmTitle => Loc.T(Keys.QuitConfirmTitle);
 
-        /// <summary><c>quit_confirm</c> [P], segunda parte: «Perderás 1 canoa» (<see cref="LoseCanoesN"/> con n = 1).</summary>
-        public static string QuitConfirmCanoe => s_loseOneCanoe ??= LoseCanoes(1);
+        /// <summary>
+        /// <c>quit_confirm</c> [P], segunda parte: «Perderás 1 canoa», su plantilla con plural con n = 1. Se arma una vez por
+        /// idioma.
+        /// </summary>
+        public static string QuitConfirmCanoe => s_quitOneCanoe ??= Format(Keys.QuitConfirmCanoe, LocArgs.OfDigits("n", 1));
 
         /// <summary>Confirmación de Volver a la orilla con ≥ 8 vertidos (04 §2.7), primera parte.</summary>
-        public const string RestartConfirmTitle = "¿Volver a la orilla?";
+        public static string RestartConfirmTitle => Loc.T(Keys.RestartConfirmTitle);
 
         /// <summary>Confirmación de Volver a la orilla con ≥ 8 vertidos (04 §2.7), segunda parte.</summary>
-        public const string RestartConfirmBody = "Perderás los vertidos de este intento";
+        public static string RestartConfirmBody => Loc.T(Keys.RestartConfirmBody);
 
         /// <summary>Botón «Volver a la orilla» (pausa y confirmación; glosario §5.1).</summary>
-        public const string RestartLong = "Volver a la orilla";
+        public static string RestartLong => Loc.T(Keys.RestartLong);
 
         /// <summary>«Salir» del menú de pausa (D-008).</summary>
-        public const string Quit = "Salir";
+        public static string Quit => Loc.T(Keys.Quit);
 
-        /// <summary>Título del menú de pausa [P].</summary>
-        public const string Pause = "Pausa";
+        /// <summary>Título del menú de pausa.</summary>
+        public static string Pause => Loc.T(Keys.Pause);
 
         /// <summary>Volver a la partida desde la pausa o un diálogo [P].</summary>
-        public const string KeepPlaying = "Seguir jugando";
+        public static string KeepPlaying => Loc.T(Keys.KeepPlaying);
 
         /// <summary>Sin canoas: «Canoa extra · Ver video» (04 §7.3).</summary>
-        public const string NoCanoesVideo = "Canoa extra · Ver video";
-
-        /// <summary>
-        /// Sin canoas: «Llenar canoas · {n}/{n}» con la etiqueta de precio (<c>canoes_refill_seed_price</c>) al lado (04 §7.3:
-        /// «Llenar canoas · 200 (S) 5/5»). Aún posicional: la usa NoCanoesScreen con <c>string.Format</c>, fuera de L1.
-        /// </summary>
-        public const string NoCanoesRefill = "Llenar canoas · {0}/{0}";
-
-        /// <summary>
-        /// Sin canoas: «Canoas infinitas 1 h · {precio}» (04 §7.3; <c>af_infinite_canoes_1h</c>). Aún posicional: la usa
-        /// NoCanoesScreen con <c>string.Format</c>, fuera de L1.
-        /// </summary>
-        public const string NoCanoesInfinite = "Canoas infinitas 1 h · {0}";
+        public static string NoCanoesVideo => Loc.T(Keys.NoCanoesVideo);
 
         /// <summary>Sin canoas: «Volver al inicio» (tarea B2-3; el wireframe de 04 §7.3 dice Mapa del río, que aún no existe).</summary>
-        public const string BackHome = "Volver al inicio";
+        public static string BackHome => Loc.T(Keys.BackHome);
 
         /// <summary><c>river_lowered_color</c>.</summary>
-        public const string RiverLoweredColor = "El río bajó: esta vez hay un color menos";
+        public static string RiverLoweredColor => Loc.T(Keys.RiverLoweredColor);
 
         /// <summary><c>river_lowered_cuia</c>.</summary>
-        public const string RiverLoweredCuia = "El río bajó: esta vez hay una cuia más";
+        public static string RiverLoweredCuia => Loc.T(Keys.RiverLoweredCuia);
 
         /// <summary>Rótulo de la pantalla de anuncio simulado (B1-3; D-008 punto 4).</summary>
-        public const string SimulatedAdClose = "Cerrar";
+        public static string SimulatedAdClose => Loc.T(Keys.SimulatedAdClose);
 
         /// <summary>Botón de compra de la hoja «Compra simulada» (B1-4).</summary>
-        public const string Buy = "Comprar";
+        public static string Buy => Loc.T(Keys.Buy);
 
         /// <summary>Cancelar la compra simulada.</summary>
-        public const string Cancel = "Cancelar";
+        public static string Cancel => Loc.T(Keys.Cancel);
 
         /// <summary><c>harvest</c>: fila de la pantalla de victoria con las semillas del nivel (02 §6; glosario §5.1).</summary>
-        public const string Harvest = "Cosecha";
+        public static string Harvest => Loc.T(Keys.Harvest);
 
         /// <summary><c>double_harvest</c>: botón de la Cosecha doble (D-008 punto 3; 02 §6; glosario: Cosecha doble, x2).</summary>
-        public const string DoubleHarvest = "Cosecha doble: x2 por video";
-
-        /// <summary>Lo que gana la Cosecha doble (02 §6: «+20 → +40»).</summary>
-        public const string DoubleHarvestDelta = "+{n} → +{doubled}";
+        public static string DoubleHarvest => Loc.T(Keys.DoubleHarvest);
 
         /// <summary>Formato del anuncio simulado en su pantalla (D-008 punto 4).</summary>
-        public const string SimulatedAdInterstitial = "intersticial";
+        public static string SimulatedAdInterstitial => Loc.T(Keys.SimulatedAdInterstitial);
 
         /// <summary>Formato del anuncio simulado recompensado.</summary>
-        public const string SimulatedAdRewarded = "recompensado";
+        public static string SimulatedAdRewarded => Loc.T(Keys.SimulatedAdRewarded);
 
-        /// <summary>
-        /// Rótulo del anuncio simulado (D-008 punto 4; B1-3): «{ubicación} · {formato}» en una sola plantilla, sin pegar trozos.
-        /// </summary>
-        public const string SimulatedAdLabelFormat = "{placement} · {format}";
-
-        /// <summary>«+20 → +40» para una Cosecha de <paramref name="seeds"/>.</summary>
+        /// <summary>«+20 → +40» para una Cosecha de <paramref name="seeds"/> (<c>double_harvest_delta</c>).</summary>
         public static string DoubleHarvestGain(int seeds)
         {
-            return Format(DoubleHarvestDelta, LocArgs.Of("n", NonNegative(seeds)).And("doubled", NonNegative(seeds * 2)));
+            return Format(Keys.DoubleHarvestDelta, LocArgs.Of("n", NonNegative(seeds)).And("doubled", NonNegative(seeds * 2)));
         }
 
-        /// <summary>"Nivel {n}".</summary>
+        /// <summary>«Nivel {n}» (<c>level_n</c>).</summary>
         public static string Level(int level)
         {
-            return Format(LevelN, LocArgs.OfDigits("n", level));
+            return Format(Keys.LevelN, LocArgs.OfDigits("n", level));
         }
 
-        /// <summary>«Nivel {n} · intento {k}» (02 §2, INTRO del reintento) [P].</summary>
+        /// <summary>«Nivel {n} · intento {k}» (02 §2, INTRO del reintento; <c>level_attempt</c>) [P].</summary>
         public static string LevelAttempt(int level, int attempt)
         {
-            return Format(LevelAttemptN, LocArgs.OfDigits("n", level).AndDigits("attempt", attempt < 1 ? 1 : attempt));
+            return Format(Keys.LevelAttempt, LocArgs.OfDigits("n", level).AndDigits("attempt", attempt < 1 ? 1 : attempt));
         }
 
         /// <summary>«Jugar · Nivel {n}» (<c>play_level</c>; 06 §4.7; D-008 punto 6): una plantilla, sin pegar trozos.</summary>
         public static string PlayLevel(int level)
         {
-            return Format(PlayLevelN, LocArgs.OfDigits("n", level));
+            return Format(Keys.PlayLevel, LocArgs.OfDigits("n", level));
         }
 
-        /// <summary>«Te faltan {n} semillas» (con 1, «Te falta 1 semilla»).</summary>
+        /// <summary>«Te faltan {n} semillas» (<c>stuck_rescue_missing</c>; con 1, «Te falta 1 semilla»).</summary>
         public static string MissingSeeds(int n)
         {
-            return Format(StuckRescueMissing, LocArgs.Of("n", NonNegative(n)));
+            return Format(Keys.StuckRescueMissing, LocArgs.Of("n", NonNegative(n)));
         }
 
-        /// <summary>«Perderás {n} canoa(s)» (<see cref="LoseCanoesN"/>).</summary>
+        /// <summary>
+        /// «Te faltan {n}» del precio en rojo de la bandeja (02 §5; 04 §1.1; <c>tray_missing</c> [P]), con separador de miles y
+        /// plural (con 1, «Te falta 1»).
+        /// </summary>
+        public static string TrayMissing(int n)
+        {
+            return Format(Keys.TrayMissing, LocArgs.Of("n", NonNegative(n)));
+        }
+
+        /// <summary>«Perderás {n} canoa(s)» (<c>giveup_confirm_canoe</c>, con plural).</summary>
         public static string LoseCanoes(int n)
         {
-            return Format(LoseCanoesN, LocArgs.OfDigits("n", n));
+            return Format(Keys.GiveUpConfirmCanoe, LocArgs.OfDigits("n", n));
+        }
+
+        /// <summary>
+        /// «Premio: {n} semillas» de Nivel fallido (<c>level_failed_reward</c> [P]; 04 §6.6), con separador de miles y plural.
+        /// </summary>
+        public static string LevelFailedReward(int seeds)
+        {
+            return Format(Keys.LevelFailedReward, LocArgs.Of("n", NonNegative(seeds)));
+        }
+
+        /// <summary>
+        /// Sin canoas: «Llenar canoas · {n}/{n}» con <paramref name="max"/> = <c>canoes_max</c>; la etiqueta de precio va al lado
+        /// (04 §7.3: «Llenar canoas · 200 (S) 5/5»).
+        /// </summary>
+        public static string NoCanoesRefill(int max)
+        {
+            return Format(Keys.NoCanoesRefill, LocArgs.OfDigits("n", max));
+        }
+
+        /// <summary>
+        /// Sin canoas: «Canoas infinitas 1 h · {precio}» (04 §7.3; <c>af_infinite_canoes_1h</c>), con el precio de la tienda tal
+        /// cual.
+        /// </summary>
+        public static string NoCanoesInfinite(string price)
+        {
+            return Format(Keys.NoCanoesInfinite, LocArgs.Of("price", price ?? string.Empty));
         }
 
         /// <summary>
         /// Recarga de Marea por video en Aguas estancadas: «+{n} Deshacer», salto de línea y «Ver video»
-        /// (<see cref="StuckUndoRefillAd"/>; el salto va en la plantilla, nunca un <c>Replace</c>).
+        /// (<c>stuck_undo_refill_ad</c>; el salto va en la cadena, nunca un <c>Replace</c>).
         /// </summary>
         public static string StuckRefillVideo(int amount)
         {
-            return Format(StuckUndoRefillAd, LocArgs.OfDigits("n", amount));
+            return Format(Keys.StuckUndoRefillAd, LocArgs.OfDigits("n", amount));
         }
 
         /// <summary>
         /// Recarga de Marea por semillas: «+{n} Deshacer · {price} semillas», o en dos líneas (<paramref name="twoLines"/>,
-        /// la fila de dos botones de Aguas estancadas) con el salto en el <c>{sep}</c> de la plantilla.
+        /// la fila de dos botones de Aguas estancadas) con el salto en el <c>{sep}</c> de la plantilla
+        /// (<c>stuck_undo_refill_seeds</c>).
         /// </summary>
         public static string StuckRefillSeeds(int amount, int price, bool twoLines)
         {
-            return Format(StuckUndoRefillSeeds, LocArgs.OfDigits("n", amount).AndDigits("price", price), twoLines ? 1 : 0);
+            return Format(Keys.StuckUndoRefillSeeds, LocArgs.OfDigits("n", amount).AndDigits("price", price), twoLines ? 1 : 0);
         }
 
         /// <summary>
         /// Tarjeta del Puñado en Aguas estancadas: «Puñado de semillas», salto de línea y «{seeds} · {price}»
-        /// (<see cref="StuckPack"/>, con el salto en la plantilla; <paramref name="price"/>, el de la tienda tal cual).
+        /// (<c>stuck_pack_199</c>, con el salto en la cadena; <paramref name="price"/>, el de la tienda tal cual).
         /// </summary>
         public static string StuckPackLine(int seeds, string price)
         {
-            return Format(StuckPack, LocArgs.Of("seeds", NonNegative(seeds)).And("price", price));
+            return Format(Keys.StuckPack, LocArgs.Of("seeds", NonNegative(seeds)).And("price", price));
         }
 
         /// <summary>
         /// Tarjeta de la Balsa en Aguas estancadas: «Balsa de rescate», salto de línea y el precio de la tienda
-        /// (<see cref="StuckBalsa"/>, con el salto en la plantilla).
+        /// (<c>stuck_balsa_499</c>, con el salto en la cadena).
         /// </summary>
         public static string StuckBalsaLine(string price)
         {
-            return Format(StuckBalsa, LocArgs.Of("price", price));
+            return Format(Keys.StuckBalsa, LocArgs.Of("price", price));
         }
 
         /// <summary>
         /// Rótulo del anuncio simulado: la ubicación (<paramref name="placementId"/>, su ID de 05 §6.3) y el formato
-        /// (<see cref="SimulatedAdLabelFormat"/>).
+        /// (<c>simulated_ad_label</c>), en una sola plantilla, sin pegar trozos.
         /// </summary>
         public static string SimulatedAdLabel(string placementId, bool rewarded)
         {
-            return Format(SimulatedAdLabelFormat, LocArgs.Of("placement", placementId).And("format", rewarded ? SimulatedAdRewarded : SimulatedAdInterstitial));
+            return Format(Keys.SimulatedAdLabel, LocArgs.Of("placement", placementId).And("format", rewarded ? SimulatedAdRewarded : SimulatedAdInterstitial));
         }
 
         /// <summary>
@@ -468,22 +403,22 @@ namespace AF.UI
             }
         }
 
-        /// <summary>«×{n}»: cinta del premio multiplicado (propuesta §c.2).</summary>
+        /// <summary>«×{n}»: cinta del premio multiplicado (propuesta §c.2; <c>ribbon</c>).</summary>
         public static string Ribbon(int multiplier)
         {
-            return Format(RibbonFormat, LocArgs.OfDigits("n", multiplier));
+            return Format(Keys.Ribbon, LocArgs.OfDigits("n", multiplier));
         }
 
-        /// <summary>«Premio: {n}» (propuesta §c.1), con separador de miles.</summary>
+        /// <summary>«Premio: {n}» (propuesta §c.1; <c>reward_line</c>), con separador de miles.</summary>
         public static string RewardLine(int seeds)
         {
-            return Format(RewardLineFormat, LocArgs.Of("n", NonNegative(seeds)));
+            return Format(Keys.RewardLine, LocArgs.Of("n", NonNegative(seeds)));
         }
 
-        /// <summary>Texto de «El río sigue creciendo» con los días estimados (con 1, «en 1 día»).</summary>
+        /// <summary>Texto de «El río sigue creciendo» con los días estimados (<c>content_end_eta</c>; con 1, «en 1 día»).</summary>
         public static string ContentEnd(int etaDays)
         {
-            return Format(ContentEndEta, LocArgs.OfDigits("n", etaDays));
+            return Format(Keys.ContentEndEta, LocArgs.OfDigits("n", etaDays));
         }
 
         /// <summary>
@@ -497,37 +432,37 @@ namespace AF.UI
             return Loc.WriteNumber(buffer, pos, NonNegative(value), grouped);
         }
 
-        // Línea de la tarjeta «¡Miquito a la vista!» por clave dato_tarjeta del catálogo de fauna (fauna_<id>_dato; propuesta de
-        // idiomas §3.1 y §3.4): una tabla clave → texto en lugar del switch, en el orden de las claves, como la tabla de textos
-        // largos. L2b la mueve a facts.csv con estas mismas claves.
-        private static readonly Dictionary<string, string> FaunaFacts = new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["fauna_aotus_trivirgatus_dato"] = "El papá carga a la cría",
-            ["fauna_ateles_chamek_dato"] = "Siembra la selva: dispersa muchas semillas",
-            ["fauna_cacajao_calvus_ucayalii_dato"] = "Su cara roja es señal de buena salud",
-            ["fauna_lagothrix_lagothricha_dato"] = "El mono más grande de Amacayacu",
-            ["fauna_mico_argentatus_dato"] = "Vive en Alter do Chão, junto al Tapajós",
-            ["fauna_pithecia_pithecia_dato"] = "Casi siempre se mueve a saltos",
-            ["fauna_plecturocebus_discolor_dato"] = "Las parejas cantan a dúo al amanecer",
-            ["fauna_saguinus_bicolor_dato"] = "Manaos tiende puentes de cuerda para él",
-            ["fauna_saguinus_imperator_dato"] = "Su bigote blanco pasa de los hombros",
-            ["fauna_saimiri_collinsi_dato"] = "Cruza el bosque en fila, por ramas finas",
-            ["fauna_saimiri_sciureus_albigena_dato"] = "Vecinos del Orinoco",
-        };
-
         /// <summary>
         /// Línea de la tarjeta «¡Miquito a la vista!» (≤ 50 caracteres, con un dato verificado; guion de la intro §4.5) para la
-        /// clave <c>dato_tarjeta</c> del catálogo de fauna (<c>fauna_&lt;id&gt;_dato</c>); cadena vacía si no hay. Todas
-        /// pendientes del asesor cultural (07 §8.2); en las especies amenazadas, una buena noticia de conservación, nunca la
-        /// etiqueta UICN. Sin asignaciones.
+        /// clave <c>dato_tarjeta</c> del catálogo de fauna (<c>fauna_&lt;id&gt;_dato</c>), de la tabla de textos largos
+        /// (<c>facts.csv</c>; <see cref="Loc.Fact(string)"/>): cadena vacía si no hay, si falta en el idioma o si no está
+        /// aprobada en un build de release. Todas pendientes del asesor cultural (07 §8.2); en las especies amenazadas, una
+        /// buena noticia de conservación, nunca la etiqueta UICN. Sin asignaciones.
         /// </summary>
         public static string FaunaFact(string key)
         {
-            return key != null && FaunaFacts.TryGetValue(key, out string? text) ? text : string.Empty;
+            return key == null ? string.Empty : Loc.Fact(key);
         }
 
-        /// <summary>Claves de <see cref="FaunaFact"/> (tests).</summary>
-        public static IEnumerable<string> FaunaFactKeys => FaunaFacts.Keys;
+        /// <summary>Claves <c>fauna_&lt;id&gt;_dato</c> de la tabla de textos largos, en su orden (tests).</summary>
+        public static IEnumerable<string> FaunaFactKeys
+        {
+            get
+            {
+                LocTable facts = Loc.Catalog.Facts;
+                var keys = new List<string>();
+                for (int r = 0; r < facts.Count; r++)
+                {
+                    string key = facts.KeyAt(r);
+                    if (key.StartsWith("fauna_", StringComparison.Ordinal) && key.EndsWith("_dato", StringComparison.Ordinal))
+                    {
+                        keys.Add(key);
+                    }
+                }
+
+                return keys;
+            }
+        }
 
         /// <summary>
         /// Idioma del catálogo de fauna (<c>nombres</c> de <c>miquitos_v0.json</c>: <c>es</c>, <c>pt</c> o <c>en</c>) para el
@@ -542,29 +477,6 @@ namespace AF.UI
             }
 
             return LocLocale.HasLanguage(locale, "pt") ? "pt" : "en";
-        }
-
-        /// <summary>
-        /// Aplica <paramref name="args"/> a una plantilla de UiText (<see cref="LocFormat"/>): plurales de es-419, el idioma en
-        /// que están escritas, y cifras con los separadores de <see cref="Loc"/> (hoy es-CO, «1.000»). El <c>{sep}</c> número i
-        /// es un salto de línea si el bit i de <paramref name="breaks"/> está puesto y, si no, <see cref="Separator"/>. Asigna
-        /// la cadena: solo al construir o colocar la pantalla, nunca por fotograma.
-        /// </summary>
-        private static string Format(string template, in LocArgs args, int breaks = 0)
-        {
-            return LocFormat.Format(template, args, LocLocale.SourceLocale, Loc.NumberFormat, Separator, breaks);
-        }
-
-        // Las cantidades de la UI nunca son negativas: como antes, un negativo se escribe 0.
-        private static long NonNegative(int value)
-        {
-            return value < 0 ? 0L : value;
-        }
-
-        private static void ClearCaches()
-        {
-            s_loseOneCanoe = null;
-            ClearWorldCaches();
         }
 
         /// <summary>
@@ -593,6 +505,339 @@ namespace AF.UI
             buffer[pos++] = (char)('0' + (seconds / 10));
             buffer[pos++] = (char)('0' + (seconds % 10));
             return pos;
+        }
+
+        /// <summary>
+        /// Texto de UI de <paramref name="key"/> con <paramref name="args"/> (<see cref="Loc.T(string, in LocArgs, string, int)"/>):
+        /// plurales del idioma de <see cref="Loc"/> y cifras con los separadores de su región. El <c>{sep}</c> número i es un
+        /// salto de línea si el bit i de <paramref name="breaks"/> está puesto y, si no, <see cref="Separator"/>. Asigna la cadena:
+        /// solo al construir o colocar la pantalla, nunca por fotograma.
+        /// </summary>
+        private static string Format(string key, in LocArgs args, int breaks = 0)
+        {
+            return Loc.T(key, args, Separator, breaks);
+        }
+
+        // Las cantidades de la UI nunca son negativas: como antes, un negativo se escribe 0.
+        private static long NonNegative(int value)
+        {
+            return value < 0 ? 0L : value;
+        }
+
+        private static void ClearCaches()
+        {
+            s_loseOneCanoe = null;
+            s_quitOneCanoe = null;
+            ClearWorldCaches();
+        }
+
+        /// <summary>
+        /// Claves de <c>strings.csv</c> que usa <see cref="UiText"/> (snake_case, iguales con las dos opciones de la pregunta 49;
+        /// glosario §10 y GDD 04 §6.5 o derivadas [P]). Una clave nunca se reutiliza para otro sentido ni se renombra. Las de los
+        /// mundos son <see cref="WorldNameKey"/>, <see cref="WorldCountryKey"/> y <see cref="WorldRiverKey"/>; las de la fauna,
+        /// las <c>dato_tarjeta</c> del catálogo (en <c>facts.csv</c>).
+        /// </summary>
+        public static class Keys
+        {
+            /// <summary><c>back</c>.</summary>
+            public const string Back = "back";
+
+            /// <summary><c>back_home</c> [P].</summary>
+            public const string BackHome = "back_home";
+
+            /// <summary><c>buy</c>.</summary>
+            public const string Buy = "buy";
+
+            /// <summary><c>cancel</c> [P].</summary>
+            public const string Cancel = "cancel";
+
+            /// <summary><c>content_end_eta</c> [P].</summary>
+            public const string ContentEndEta = "content_end_eta";
+
+            /// <summary><c>content_end_title</c>.</summary>
+            public const string ContentEndTitle = "content_end_title";
+
+            /// <summary><c>currency</c>.</summary>
+            public const string Currency = "currency";
+
+            /// <summary><c>difficulty_hard</c>.</summary>
+            public const string DifficultyHard = "difficulty_hard";
+
+            /// <summary><c>difficulty_subtitle_hard</c> [P].</summary>
+            public const string DifficultySubtitleHard = "difficulty_subtitle_hard";
+
+            /// <summary><c>difficulty_subtitle_very_hard</c> [P].</summary>
+            public const string DifficultySubtitleVeryHard = "difficulty_subtitle_very_hard";
+
+            /// <summary><c>double_harvest</c>.</summary>
+            public const string DoubleHarvest = "double_harvest";
+
+            /// <summary><c>double_harvest_delta</c> [P].</summary>
+            public const string DoubleHarvestDelta = "double_harvest_delta";
+
+            /// <summary><c>extra_cuia</c>.</summary>
+            public const string ExtraCuia = "extra_cuia";
+
+            /// <summary><c>extra_cuia_gift</c> [P].</summary>
+            public const string ExtraCuiaGift = "extra_cuia_gift";
+
+            /// <summary><c>fauna_sighted_card</c> [P].</summary>
+            public const string FaunaSightedCard = "fauna_sighted_card";
+
+            /// <summary><c>firefly_gift</c> [P].</summary>
+            public const string FireflyGift = "firefly_gift";
+
+            /// <summary><c>firefly_line</c> [P].</summary>
+            public const string FireflyLine = "firefly_line";
+
+            /// <summary><c>giveup_confirm_canoe</c> [P].</summary>
+            public const string GiveUpConfirmCanoe = "giveup_confirm_canoe";
+
+            /// <summary><c>giveup_confirm_last_canoe</c> [P].</summary>
+            public const string GiveUpConfirmLastCanoe = "giveup_confirm_last_canoe";
+
+            /// <summary><c>giveup_confirm_title</c> [P].</summary>
+            public const string GiveUpConfirmTitle = "giveup_confirm_title";
+
+            /// <summary><c>harvest</c>.</summary>
+            public const string Harvest = "harvest";
+
+            /// <summary><c>home</c> [P].</summary>
+            public const string Home = "home";
+
+            /// <summary><c>keep_playing</c> [P].</summary>
+            public const string KeepPlaying = "keep_playing";
+
+            /// <summary><c>level_attempt</c> [P].</summary>
+            public const string LevelAttempt = "level_attempt";
+
+            /// <summary><c>level_complete</c>.</summary>
+            public const string LevelComplete = "level_complete";
+
+            /// <summary><c>level_failed</c> [P].</summary>
+            public const string LevelFailed = "level_failed";
+
+            /// <summary><c>level_failed_reward</c> [P].</summary>
+            public const string LevelFailedReward = "level_failed_reward";
+
+            /// <summary><c>level_n</c>.</summary>
+            public const string LevelN = "level_n";
+
+            /// <summary><c>lives</c>.</summary>
+            public const string Lives = "lives";
+
+            /// <summary><c>next</c>.</summary>
+            public const string Next = "next";
+
+            /// <summary><c>no_canoes_infinite</c> [P].</summary>
+            public const string NoCanoesInfinite = "no_canoes_infinite";
+
+            /// <summary><c>no_canoes_next</c> [P].</summary>
+            public const string NoCanoesNext = "no_canoes_next";
+
+            /// <summary><c>no_canoes_refill</c> [P].</summary>
+            public const string NoCanoesRefill = "no_canoes_refill";
+
+            /// <summary><c>no_canoes_title</c> [P].</summary>
+            public const string NoCanoesTitle = "no_canoes_title";
+
+            /// <summary><c>no_canoes_video</c> [P].</summary>
+            public const string NoCanoesVideo = "no_canoes_video";
+
+            /// <summary><c>pause</c>.</summary>
+            public const string Pause = "pause";
+
+            /// <summary><c>play</c>.</summary>
+            public const string Play = "play";
+
+            /// <summary><c>play_level</c> [P].</summary>
+            public const string PlayLevel = "play_level";
+
+            /// <summary><c>profile_locked_migration</c> [P].</summary>
+            public const string ProfileLockedMigration = "profile_locked_migration";
+
+            /// <summary><c>profile_locked_play</c> [P].</summary>
+            public const string ProfileLockedPlay = "profile_locked_play";
+
+            /// <summary><c>profile_locked_title</c> [P].</summary>
+            public const string ProfileLockedTitle = "profile_locked_title";
+
+            /// <summary><c>profile_locked_too_new</c> [P].</summary>
+            public const string ProfileLockedTooNew = "profile_locked_too_new";
+
+            /// <summary><c>quit</c> [P].</summary>
+            public const string Quit = "quit";
+
+            /// <summary><c>quit_confirm_canoe</c> [P]: segunda parte de <c>quit_confirm</c>.</summary>
+            public const string QuitConfirmCanoe = "quit_confirm_canoe";
+
+            /// <summary><c>quit_confirm_title</c> [P]: primera parte de <c>quit_confirm</c>.</summary>
+            public const string QuitConfirmTitle = "quit_confirm_title";
+
+            /// <summary><c>rescue_applied</c>.</summary>
+            public const string RescueApplied = "rescue_applied";
+
+            /// <summary><c>restart</c>.</summary>
+            public const string Restart = "restart";
+
+            /// <summary><c>restart_confirm_body</c> [P].</summary>
+            public const string RestartConfirmBody = "restart_confirm_body";
+
+            /// <summary><c>restart_confirm_title</c> [P].</summary>
+            public const string RestartConfirmTitle = "restart_confirm_title";
+
+            /// <summary><c>restart_long</c> [P].</summary>
+            public const string RestartLong = "restart_long";
+
+            /// <summary><c>retry</c> [P].</summary>
+            public const string Retry = "retry";
+
+            /// <summary><c>reveal</c>.</summary>
+            public const string Reveal = "reveal";
+
+            /// <summary><c>reveal_gift_toast</c> [P].</summary>
+            public const string RevealGiftToast = "reveal_gift_toast";
+
+            /// <summary><c>reward_line</c> [P].</summary>
+            public const string RewardLine = "reward_line";
+
+            /// <summary><c>ribbon</c> [P].</summary>
+            public const string Ribbon = "ribbon";
+
+            /// <summary><c>river_lowered_color</c>.</summary>
+            public const string RiverLoweredColor = "river_lowered_color";
+
+            /// <summary><c>river_lowered_cuia</c>.</summary>
+            public const string RiverLoweredCuia = "river_lowered_cuia";
+
+            /// <summary><c>settings</c>.</summary>
+            public const string Settings = "settings";
+
+            /// <summary><c>simulated_ad_close</c> [P].</summary>
+            public const string SimulatedAdClose = "simulated_ad_close";
+
+            /// <summary><c>simulated_ad_interstitial</c> [P].</summary>
+            public const string SimulatedAdInterstitial = "simulated_ad_interstitial";
+
+            /// <summary><c>simulated_ad_label</c> [P].</summary>
+            public const string SimulatedAdLabel = "simulated_ad_label";
+
+            /// <summary><c>simulated_ad_rewarded</c> [P].</summary>
+            public const string SimulatedAdRewarded = "simulated_ad_rewarded";
+
+            /// <summary><c>stuck_balsa_499</c>, primera parte.</summary>
+            public const string StuckBalsa = "stuck_balsa_499";
+
+            /// <summary><c>stuck_balsa_499_content</c> [P]: segunda parte de <c>stuck_balsa_499</c>.</summary>
+            public const string StuckBalsaContent = "stuck_balsa_499_content";
+
+            /// <summary><c>stuck_canoe_lost</c>.</summary>
+            public const string StuckCanoeLost = "stuck_canoe_lost";
+
+            /// <summary><c>stuck_canoe_lost_last</c>.</summary>
+            public const string StuckCanoeLostLast = "stuck_canoe_lost_last";
+
+            /// <summary><c>stuck_give_up</c> [P].</summary>
+            public const string StuckGiveUp = "stuck_give_up";
+
+            /// <summary><c>stuck_pack_199</c>.</summary>
+            public const string StuckPack = "stuck_pack_199";
+
+            /// <summary><c>stuck_rescue_cta</c>.</summary>
+            public const string StuckRescueCta = "stuck_rescue_cta";
+
+            /// <summary><c>stuck_rescue_discount</c>.</summary>
+            public const string StuckRescueDiscount = "stuck_rescue_discount";
+
+            /// <summary><c>stuck_rescue_missing</c>.</summary>
+            public const string StuckRescueMissing = "stuck_rescue_missing";
+
+            /// <summary><c>stuck_restart</c>.</summary>
+            public const string StuckRestart = "stuck_restart";
+
+            /// <summary><c>stuck_subtitle</c>.</summary>
+            public const string StuckSubtitle = "stuck_subtitle";
+
+            /// <summary><c>stuck_title</c>.</summary>
+            public const string StuckTitle = "stuck_title";
+
+            /// <summary><c>stuck_undo</c>.</summary>
+            public const string StuckUndo = "stuck_undo";
+
+            /// <summary><c>stuck_undo_gift</c> [P].</summary>
+            public const string StuckUndoGift = "stuck_undo_gift";
+
+            /// <summary><c>stuck_undo_refill_ad</c>.</summary>
+            public const string StuckUndoRefillAd = "stuck_undo_refill_ad";
+
+            /// <summary><c>stuck_undo_refill_seeds</c>.</summary>
+            public const string StuckUndoRefillSeeds = "stuck_undo_refill_seeds";
+
+            /// <summary><c>stuck_unsolvable</c>.</summary>
+            public const string StuckUnsolvable = "stuck_unsolvable";
+
+            /// <summary><c>tray_missing</c> [P].</summary>
+            public const string TrayMissing = "tray_missing";
+
+            /// <summary><c>tutorial_alta</c> [P].</summary>
+            public const string TutorialAlta = "tutorial_alta";
+
+            /// <summary><c>tutorial_barro</c> [P].</summary>
+            public const string TutorialBarro = "tutorial_barro";
+
+            /// <summary><c>tutorial_brote</c> [P].</summary>
+            public const string TutorialBrote = "tutorial_brote";
+
+            /// <summary><c>tutorial_chica</c> [P].</summary>
+            public const string TutorialChica = "tutorial_chica";
+
+            /// <summary><c>tutorial_hoja</c> [P].</summary>
+            public const string TutorialHoja = "tutorial_hoja";
+
+            /// <summary><c>tutorial_liana</c> [P].</summary>
+            public const string TutorialLiana = "tutorial_liana";
+
+            /// <summary><c>tutorial_lluvia</c> [P].</summary>
+            public const string TutorialLluvia = "tutorial_lluvia";
+
+            /// <summary><c>tutorial_matapi</c> [P].</summary>
+            public const string TutorialMatapi = "tutorial_matapi";
+
+            /// <summary><c>tutorial_murky</c> [P].</summary>
+            public const string TutorialMurky = "tutorial_murky";
+
+            /// <summary><c>tutorial_murky_rule</c> [P].</summary>
+            public const string TutorialMurkyRule = "tutorial_murky_rule";
+
+            /// <summary><c>tutorial_pirana</c> [P].</summary>
+            public const string TutorialPirana = "tutorial_pirana";
+
+            /// <summary><c>tutorial_remolino</c> [P].</summary>
+            public const string TutorialRemolino = "tutorial_remolino";
+
+            /// <summary><c>undo</c>.</summary>
+            public const string Undo = "undo";
+
+            /// <summary><c>very_hard</c>.</summary>
+            public const string VeryHard = "very_hard";
+
+            /// <summary><c>world_banner</c> (forma partida de L1 [P]: cabecera y lugar).</summary>
+            public const string WorldBanner = "world_banner";
+
+            /// <summary><c>world_heading</c> [P].</summary>
+            public const string WorldHeading = "world_heading";
+
+            /// <summary><c>world_place</c> [P].</summary>
+            public const string WorldPlace = "world_place";
+
+            /// <summary><c>world_place_named</c> [P].</summary>
+            public const string WorldPlaceNamed = "world_place_named";
+
+            /// <summary><c>world_place_named_rich</c> [P].</summary>
+            public const string WorldPlaceNamedRich = "world_place_named_rich";
+
+            /// <summary><c>world_title</c> [P].</summary>
+            public const string WorldTitle = "world_title";
         }
     }
 }

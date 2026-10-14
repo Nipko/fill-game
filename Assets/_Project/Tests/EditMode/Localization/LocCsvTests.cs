@@ -94,7 +94,7 @@ namespace AF.Tests.EditMode
             Assert.That(table.HasArgs, Is.True);
             Assert.That(table.Locales, Is.EqualTo(new[] { "es-419", "en", "pt-BR" }));
             Assert.That(table.Count, Is.EqualTo(5));
-            Assert.That(table.UnsortedAt, Is.EqualTo(-1), "filas en orden alfabético");
+            Assert.That(table.UnsortedAt, Is.EqualTo(-1), "filas en orden ordinal");
 
             int row = table.IndexOf("stuck_rescue_missing");
             Assert.That(table.KeyAt(row), Is.EqualTo("stuck_rescue_missing"));
