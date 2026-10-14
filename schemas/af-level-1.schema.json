@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:amazonfill:schemas:af-level-1",
   "title": "Amazon Fill · paquete de niveles af-level/1",
-  "description": "JSON Schema canónico del formato de nivel definido en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.1 (pack_schema 1, 2 y 3; única copia del esquema; el formato de nivel sigue siendo af-level/1). pack_schema 2 (D-007, contrato 21) añade el tipo matapi, la Liana con fruta (key) o de cuenta (n), una y solo una, los campos obligatorios de cada tipo (hoja: key; remolino: partner; lluvia: key y n), intro_mechanic matapi, chica, alta y murky [P] y difficulty.par_approx [P]; con pack_schema 1 todo valida igual que antes. pack_schema 3 (D-019, punto 9; contrato 21) es el 2 más la Tinaja (M13): los tipos tinaja y cucharon (su cuia chica), sin campos, e intro_mechanic tinaja; con pack_schema 1 y 2 nada de eso valida y todo lo demás sigue igual. Lo emite tools/level-generator y lo validan tools/level-qa y AF.Levels (comprobación: python tools/validate_schema.py). El esquema exige: patrones de id y seed de campaña (m{mm}_v{v}_n{nnnn} / amazonfill:v1:m{mm}:v{v}:n{nnnn}) y del Reto del río (kind daily: d{b}_n{nnnn} / amazonfill:v1:daily:b{b}:d{ddd}, 03 §16); relief con al menos una variante desde el nivel 31; par de relief nulo solo en plus_empty (03 §13). Lo que el esquema no puede expresar lo comprueba tools/level-qa: igualdad de longitud de caps, cuias y attrs; cada tinte con exactamente units_per_color unidades; tinte con level_debut posterior al nivel; risk_pairs <= max_risk_pairs; K (longitud de palette) <= k_max; par >= 2*K; label coherente con bot_fail (>=0,75 hard, >=0,90 very_hard); Aguas turbias con >=1 vertido seguro en todas las realidades y ocultos en <= 3 cuias; con la Tinaja, una sola tinaja con su cuia contigua en la misma fila y hidden = todas sus capas menos la boca; variantes de relief resolubles con bot_fail que baja >=0,20 (si el base tiene bot_fail <0,20, como los debuts de 02 §9.2, basta par menor en minus_color o el vacío extra de plus_empty); bot_fail en la ventana del slot (<0,20 en debuts); semilla que reproduce el tablero base; en daily, banda y día de slot coherentes con id y seed; <=14 cuias generadas (02 R1). Cualquier cambio de este archivo que altere la validación sube pack_schema; los cambios editoriales de description no.",
+  "description": "JSON Schema canónico del formato de nivel definido en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.1 (pack_schema 1, 2 y 3; única copia del esquema; el formato de nivel sigue siendo af-level/1). pack_schema 2 (D-007, contrato 21) añade el tipo matapi, la Liana con fruta (key) o de cuenta (n), una y solo una, los campos obligatorios de cada tipo (hoja: key; remolino: partner; lluvia: key y n), intro_mechanic matapi, chica, alta y murky [P] y difficulty.par_approx [P]; con pack_schema 1 todo valida igual que antes. pack_schema 3 (D-019, punto 9; contrato 21) es el 2 más la Tinaja (M13): los tipos tinaja y cucharon (su cuia chica), sin campos, e intro_mechanic tinaja, y hidden en relief_board si y solo si la variante lleva la tinaja (su máscara); con pack_schema 1 y 2 nada de eso valida y todo lo demás sigue igual. Lo emite tools/level-generator y lo validan tools/level-qa y AF.Levels (comprobación: python tools/validate_schema.py). El esquema exige: patrones de id y seed de campaña (m{mm}_v{v}_n{nnnn} / amazonfill:v1:m{mm}:v{v}:n{nnnn}) y del Reto del río (kind daily: d{b}_n{nnnn} / amazonfill:v1:daily:b{b}:d{ddd}, 03 §16); relief con al menos una variante desde el nivel 31; par de relief nulo solo en plus_empty (03 §13). Lo que el esquema no puede expresar lo comprueba tools/level-qa: igualdad de longitud de caps, cuias y attrs; cada tinte con exactamente units_per_color unidades; tinte con level_debut posterior al nivel; risk_pairs <= max_risk_pairs; K (longitud de palette) <= k_max; par >= 2*K; label coherente con bot_fail (>=0,75 hard, >=0,90 very_hard); Aguas turbias con >=1 vertido seguro en todas las realidades y ocultos en <= 3 cuias; con la Tinaja, una sola tinaja con su cuia contigua en la misma fila y hidden = todas sus capas menos la boca, también en las variantes de relief que la lleven; variantes de relief resolubles con bot_fail que baja >=0,20 (si el base tiene bot_fail <0,20, como los debuts de 02 §9.2, basta par menor en minus_color o el vacío extra de plus_empty); bot_fail en la ventana del slot (<0,20 en debuts); semilla que reproduce el tablero base; en daily, banda y día de slot coherentes con id y seed; <=14 cuias generadas (02 R1). Cualquier cambio de este archivo que altere la validación sube pack_schema; los cambios editoriales de description no.",
   "type": "object",
   "additionalProperties": false,
   "required": ["pack_schema", "pack_id", "generator", "pool", "k_min", "k_max", "max_risk_pairs", "cap_default", "empties_default", "levels"],
@@ -103,7 +103,7 @@
     {
       "if": { "properties": { "pack_schema": { "const": 1 } }, "required": ["pack_schema"] },
       "then": {
-        "description": "pack_schema 1: la validación de siempre (sin matapi, tinaja ni cucharon, sin intro_mechanic chica/alta/matapi/murky/tinaja y sin difficulty.par_approx).",
+        "description": "pack_schema 1: la validación de siempre (sin matapi, tinaja ni cucharon, sin intro_mechanic chica/alta/matapi/murky/tinaja, sin difficulty.par_approx y sin hidden en relief).",
         "properties": {
           "levels": {
             "items": {
@@ -111,7 +111,7 @@
                 "attrs": { "items": { "$ref": "#/$defs/attr_pack1" } },
                 "intro_mechanic": { "enum": [null, "hoja", "brote", "liana", "remolino", "barro", "lluvia", "pirana"] },
                 "difficulty": { "properties": { "par_approx": false } },
-                "relief": { "items": { "properties": { "attrs": { "anyOf": [ { "type": "null" }, { "type": "array", "items": { "$ref": "#/$defs/attr_pack1" } } ] } } } }
+                "relief": { "items": { "properties": { "attrs": { "anyOf": [ { "type": "null" }, { "type": "array", "items": { "$ref": "#/$defs/attr_pack1" } } ] }, "hidden": false } } }
               }
             }
           }
@@ -121,14 +121,14 @@
     {
       "if": { "properties": { "pack_schema": { "const": 2 } }, "required": ["pack_schema"] },
       "then": {
-        "description": "pack_schema 2 (D-007; contrato 21): campos obligatorios por tipo de mecánica y Liana con key o n, una y solo una; sin la Tinaja (tipos tinaja y cucharon e intro_mechanic tinaja, solo desde el 3).",
+        "description": "pack_schema 2 (D-007; contrato 21): campos obligatorios por tipo de mecánica y Liana con key o n, una y solo una; sin la Tinaja (tipos tinaja y cucharon, intro_mechanic tinaja y hidden en relief, solo desde el 3).",
         "properties": {
           "levels": {
             "items": {
               "properties": {
                 "attrs": { "items": { "$ref": "#/$defs/attr_pack2" } },
                 "intro_mechanic": { "enum": [null, "hoja", "brote", "liana", "matapi", "remolino", "barro", "lluvia", "pirana", "chica", "alta", "murky"] },
-                "relief": { "items": { "properties": { "attrs": { "anyOf": [ { "type": "null" }, { "type": "array", "items": { "$ref": "#/$defs/attr_pack2" } } ] } } } }
+                "relief": { "items": { "properties": { "attrs": { "anyOf": [ { "type": "null" }, { "type": "array", "items": { "$ref": "#/$defs/attr_pack2" } } ] }, "hidden": false } } }
               }
             }
           }
@@ -138,13 +138,23 @@
     {
       "if": { "properties": { "pack_schema": { "const": 3 } }, "required": ["pack_schema"] },
       "then": {
-        "description": "pack_schema 3 (D-019, punto 9; contrato 21): todo lo del 2 más la Tinaja (M13), con los tipos tinaja y cucharon, sin campos, e intro_mechanic tinaja. Pendiente del dueño (contrato 21): una variante de relief repite la tinaja (03 §13) y AF.Core la exige con su máscara (todas sus capas menos la boca), pero relief_board no admite hidden (08 §4.1). El esquema acepta hoy tinaja y cucharon en relief[].attrs sin máscara, y AF.Core (TinajaMechanic.ValidateInitial) y con él AF.Levels y tools/level-qa rechazan esa variante: hasta decidir cómo la lleva, ningún pack 3 con la tinaja desde el nivel 31 se publica.",
+        "description": "pack_schema 3 (D-019, punto 9; contrato 21): todo lo del 2 más la Tinaja (M13), con los tipos tinaja y cucharon, sin campos, e intro_mechanic tinaja. Una variante de relief repite la tinaja (03 §13) con su máscara, que AF.Core exige (todas sus capas menos la boca): relief_board lleva hidden (el mismo $defs/hidden, como mucho 4 pares) si y solo si su attrs contiene la tinaja, y entonces es obligatorio y no vacío; sin la tinaja (Aguas turbias incluidas) va sin hidden (decisión del dueño del 2026-10-14, opción a de la revisión de P2a; 08 §4.1). Que sea exactamente la máscara de la tinaja lo comprueba tools/level-qa.",
         "properties": {
           "levels": {
             "items": {
               "properties": {
                 "attrs": { "items": { "$ref": "#/$defs/attr_pack3" } },
-                "relief": { "items": { "properties": { "attrs": { "anyOf": [ { "type": "null" }, { "type": "array", "items": { "$ref": "#/$defs/attr_pack3" } } ] } } } }
+                "relief": {
+                  "items": {
+                    "properties": { "attrs": { "anyOf": [ { "type": "null" }, { "type": "array", "items": { "$ref": "#/$defs/attr_pack3" } } ] } },
+                    "if": {
+                      "required": ["attrs"],
+                      "properties": { "attrs": { "type": "array", "contains": { "type": "object", "required": ["type"], "properties": { "type": { "const": "tinaja" } } } } }
+                    },
+                    "then": { "required": ["hidden"], "properties": { "hidden": { "minItems": 1 } } },
+                    "else": { "properties": { "hidden": false } }
+                  }
+                }
               }
             }
           }
@@ -263,7 +273,7 @@
       ]
     },
     "attr_pack3": {
-      "description": "Restricción de una entrada de attrs con pack_schema 3 (D-019, punto 9; contrato 21): los tipos del 2 más tinaja y cucharon, con los campos de attr_fields (se combina con attr). Una sola tinaja por nivel, su cuia contigua en la misma fila y hidden = todas sus capas menos la boca los comprueba tools/level-qa. En relief[].attrs la tinaja necesita la misma máscara, que relief_board aún no puede llevar: pendiente del dueño (contrato 21; rama del 3 en allOf).",
+      "description": "Restricción de una entrada de attrs con pack_schema 3 (D-019, punto 9; contrato 21): los tipos del 2 más tinaja y cucharon, con los campos de attr_fields (se combina con attr). Una sola tinaja por nivel, su cuia contigua en la misma fila y hidden = todas sus capas menos la boca (en el nivel y en cada variante de relief que la lleve) los comprueba tools/level-qa.",
       "anyOf": [
         { "type": "null" },
         { "type": "object", "$ref": "#/$defs/attr_fields" }
@@ -291,7 +301,7 @@
         ],
         "items": false
       },
-      "description": "Posiciones ocultas de Aguas turbias como lista [cuia, capa] (admite ocultos no contiguos; el shader las recibe como máscara de bits _HiddenMask, 08 §5.2). Máximo lvl_murky_max_hidden_units = 4 dosis en <= lvl_murky_max_cuias = 3 cuias → <= 24 realidades (02 T2; incidencia 8). Con la Tinaja (pack_schema 3, D-019) marca todas sus capas menos la boca, con un tope propio de 4 que no lee lvl_murky_max_hidden_units: el formato no cambia (como mucho 4 pares). Solo si murky = true."
+      "description": "Posiciones ocultas de Aguas turbias como lista [cuia, capa] (admite ocultos no contiguos; el shader las recibe como máscara de bits _HiddenMask, 08 §5.2). Máximo lvl_murky_max_hidden_units = 4 dosis en <= lvl_murky_max_cuias = 3 cuias → <= 24 realidades (02 T2; incidencia 8). Con la Tinaja (pack_schema 3, D-019) marca todas sus capas menos la boca, con un tope propio de 4 que no lee lvl_murky_max_hidden_units: el formato no cambia (como mucho 4 pares). En el nivel, solo si murky = true; en una variante de relief, solo la máscara de la tinaja (relief_board)."
     },
     "difficulty": {
       "type": "object",
@@ -320,13 +330,14 @@
         "cuias": { "$ref": "#/$defs/cuias" },
         "attrs": { "oneOf": [ { "type": "null" }, { "$ref": "#/$defs/attrs" } ], "description": "Opcional; null o ausente = sin mecánicas en la variante." },
         "removed": { "$ref": "#/$defs/tint_index", "description": "Índice de motor del tinte quitado; solo en minus_color." },
+        "hidden": { "$ref": "#/$defs/hidden", "description": "Solo con pack_schema 3 y si y solo si attrs contiene la tinaja (rama del 3 en allOf): la máscara de la tinaja en la variante, todas sus capas menos la boca, con los índices de la variante (como mucho 4 pares). Con pack_schema 1 y 2, y sin la tinaja, no se admite." },
         "par": { "type": ["integer", "null"], "minimum": 1, "description": "null solo en plus_empty (03 §13)" },
         "bot_fail": { "type": "number", "minimum": 0, "maximum": 1 }
       },
       "if": { "properties": { "type": { "const": "minus_color" } } },
       "then": { "required": ["removed"], "properties": { "par": { "type": "integer" } } },
       "else": { "not": { "required": ["removed"] } },
-      "description": "Tablero completo pregenerado (+1 cuia vacía o -1 color). El orden de la lista es la prioridad: relief[0] se sirve al tercer fallo consecutivo (relief_after_fails), relief[1] si existe un segundo alivio (relief_second_step_fails). minus_color lleva siempre par entero; plus_empty puede publicarse con par null (03 §13). No admite hidden (08 §4.1): en Aguas turbias las variantes van sin dosis ocultas [P]; con la Tinaja (pack_schema 3), cómo lleva la variante la máscara de la tinaja está pendiente del dueño (contrato 21)."
+      "description": "Tablero completo pregenerado (+1 cuia vacía o -1 color). El orden de la lista es la prioridad: relief[0] se sirve al tercer fallo consecutivo (relief_after_fails), relief[1] si existe un segundo alivio (relief_second_step_fails). minus_color lleva siempre par entero; plus_empty puede publicarse con par null (03 §13). hidden solo con la tinaja (08 §4.1): con pack_schema 3, la variante que lleva la tinaja en attrs lleva su máscara en hidden (obligatoria); en Aguas turbias las variantes van sin dosis ocultas [P] y sin hidden."
     },
     "level": {
       "type": "object",

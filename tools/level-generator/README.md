@@ -15,6 +15,7 @@ ejecuciones den los mismos bytes.
 | `--validate-spec <campaign.json>` | Comprueba la especificación de la campaña 11-200 | Resumen ASCII por ciclo |
 | `--parity [--report <md>]` | Paridad de las métricas con el prototipo (03 §17-§18; 09 R26) | `tools/out/parity_report.md` |
 | `--spec <campaign.json> --levels a-b --out <carpeta> [--report <md>] [--check]` | Genera la campaña (03 §2) | `Assets/_Project/Data/Levels/mundo_0N_v1.json` y `tools/out/campaign_v1_report.md` |
+| `--self-test [tinaja]` | Pruebas de la herramienta sin proyecto de tests (hoy, la Tinaja) | PASS / FAIL por consola |
 
 Códigos de salida: 0 = correcto; 1 = alguna comprobación falla; 2 = uso incorrecto o especificación ilegible.
 
@@ -87,7 +88,8 @@ for f in tools/level-generator/specs/tests/*.json; do
 done
 ```
 
-Todos deben dar `exit=1` y `presente`.
+Todos deben dar `exit=1` y `presente`. Los de la Tinaja (`tinaja_in_recovery.json` y `tinaja_in_remanso.json`) extienden
+`specs/sample_tinaja.json` y fallan por CAL-ROLE: p1, p2 y p19 son niveles puros, sin tinaja (D-019, Q-Ti1 A).
 
 ## Métricas, alivio y paridad (`Metrics/`)
 
@@ -186,3 +188,64 @@ Decisiones [P] de la generación (para revisar en la integración):
 
 Diagnóstico: con la variable de entorno `LEVELGEN_TRACE=<nivel>` el generador traza por stderr cada candidato de ese
 nivel (fuente, K, vacíos, bot_fail, motivo del rechazo y milisegundos) y un resumen del slot. No cambia la salida.
+
+## Tinaja (M13; D-019, Q-Ti1 A; 03 §8 y §9; propuesta de la tinaja c.3)
+
+La celda de calendario `Ti` (mecánica `tinaja`, clase `source` [P]: fuente de dosis ocultas) activa el paso «Ti» de la
+superposición (`Generation/Superposition.cs`), antes de «Tu»:
+
+- saca n dosis de las cimas de cuias sin mecánica con 2 dosis o más (no crea vacíos ni deja el Barro a la vista) y las
+  ordena en la tinaja (cap 5) con T4 y la boca a la vista; el resto va en `hidden`;
+- n por tipo de nivel: 3 en estreno (p3-p5), comodidad y práctica; 4-5 en retos (al azar); 5 en el hito. **Nunca en p1, p2
+  ni p19** (el paso se niega; `--validate-spec` ya lo rechaza con CAL-ROLE);
+- añade su cuia vacía (Cuia chica de 2) contigua; el orden visual (`ShuffledWithTinaja`) baraja las demás cuias y deja la
+  pareja en una ranura de la misma fila con cualquiera de las filas que el cliente puede elegir (D-006: 1 fila con ≤ 5
+  cuias, 2 con 6-10, 2 o 3 con 11-14, 3 con 15-16), con la tinaja a la izquierda o a la derecha [P];
+- solo consume números aleatorios en los slots con tinaja: los packs 11-200 no cambian (`--check`).
+
+Tablero base [P] (c.3 punto 2): vacíos de 4 sin contar la pareja, 2 en el estreno y en la comodidad (p3-p5 sin estrella)
+y 1 en la práctica (comodidades p7-p17), los retos y el hito; K ≤ 6 en el estreno (c.3 y d.3). Al relajar, los vacíos no
+cambian: K − 1 una vez, o `deep` si los candidatos quedan por debajo de la ventana.
+
+En los niveles con tinaja todas las búsquedas que deciden «hay solución» van **sin poda de fútiles**
+(`SolverOptions.ForLevel`, `SafeMoves.ForPipeline(mode, level)`; C1-8): par y trampas (`Metrics.cs`), el rechazo de `fill`
+(`FillSource.cs`), la ruta segura, los paseos y la prueba de irresolubilidad. El bot y las trampas tempranas siguen con la
+poda.
+
+Filtros (`Generation/TinajaWalks.cs`), en cada candidato que se mide:
+
+| Filtro | Qué exige |
+|---|---|
+| Ruta segura | `SafePath` (03 §8) con 20.000 nodos por realidad |
+| Paseos seguros [P] | 20, con un vertido seguro al azar hasta ganar: ninguno llega a un estado sin vertido seguro ni pasa de 400 vertidos |
+| Paseos casuales [P] | 30, con cualquier vertido útil al azar: el primer estado sin vertido seguro de cada paseo tiene que ser irresoluble en la realidad verdadera (error del jugador); si es resoluble, habría que adivinar y el nivel se rechaza |
+| S0 sin trampas | Solo en el estreno: todo vertido útil de S0 es seguro (por hash canónico) |
+| Coste de Morpho | w = 2 y 40.000 nodos por realidad (`hint_weight`, `hint_budget_nodes`), desde cero en S0, en la ruta y en los paseos: Morpho da un vertido seguro y expande como mucho `MorphoNodeCap` = 150 ms × `PcNodesPerMs` [E] ÷ `MorphoDeviceFactor` (8× [P], hasta PF1) |
+
+El motivo del rechazo separa «sin vertido seguro» de «presupuesto agotado» (`SafeMoves.Outcome`); el informe lo cuenta por
+nivel en su sección «Tinaja». Alivio (03 §13): `minus_color` nunca quita una fruta de la tinaja; las variantes conservan la
+máscara de la tinaja y repiten la ruta segura y los paseos, sin la compuerta de coste y con las opciones de Morpho (w = 2 y
+40.000 nodos por realidad) en lugar de las del pipeline [P]: un alivio tiene más espacio libre que su nivel y, sin poda de
+fútiles, A* óptimo agota los 20.000 nodos por realidad en tableros que se ganan; lo que cuenta en la variante es que Morpho
+encuentre siempre un vertido seguro (un «seguro» solo sale de soluciones encontradas, así que el filtro no se relaja). El
+`plus_empty` pone su vacío donde la pareja siga en la misma fila.
+
+`PackWriter`: un pack con la tinaja sale con `pack_schema` 3 (`{"type":"tinaja"}` y `{"type":"cucharon"}` sin campos,
+`murky` = true, `hidden` con las capas de la tinaja menos la boca e `intro_mechanic` = `tinaja` en su estreno), y cada
+variante de `relief` que lleva la tinaja escribe su máscara en `hidden`, tras `attrs` y con los índices de la variante
+(decisión del dueño del 2026-10-14, opción a de la revisión de P2a; 08 §4.1: `relief_board` admite `hidden` si y solo si su
+`attrs` contiene la tinaja). Los demás packs, con el 2 y sus variantes sin `hidden`.
+
+Muestra (no es el calendario de 201-700, que rehacen la pregunta 33 y P4):
+
+```
+dotnet run --project tools/level-generator -c Release -- --validate-spec tools/level-generator/specs/sample_tinaja.json
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/sample_tinaja.json --levels 321-340 --out tools/out/sample_tinaja --report tools/out/sample_tinaja_report.md
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/sample_tinaja.json --levels 321-340 --out tools/out/sample_tinaja --check
+dotnet run --project tools/level-generator -c Release -- --self-test tinaja
+```
+
+`specs/sample_tinaja.json` es un ciclo 321-340 con la tinaja sola en estreno (323-325), práctica (327), retos (329, 332 y
+338) e hito (340); su pack de muestra (`tools/out/sample_tinaja/mundo_07_v1.json`, `pack_schema` 3) y su informe
+(`tools/out/sample_tinaja_report.md`) se regeneran con esos comandos. Las combinaciones de d.3 (Ti+Ho, Ti+Ma y Ti+Br) no
+caben en una muestra de un ciclo (`--validate-spec` exige que cada mecánica de la tabla debute en el calendario).

@@ -1,0 +1,98 @@
+{
+  "spec": "sample_tinaja",
+  "spec_schema": 1,
+  "description": "Especificación de MUESTRA de la Tinaja (M13; D-019, Q-Ti1 A; P1 de la tanda 4): un ciclo 321-340 con la tinaja sola en estreno (323-325), práctica (327), retos (329, 332 y 338) e hito (340), para probar el paso «Ti» del generador, sus filtros (ruta segura, paseos seguros y casuales, «S0 sin trampas» y la compuerta de coste de Morpho) y el pack_schema 3. NO es el calendario de 201-700: ese lo rehacen la tabla de novedades (pregunta 33, D-020) y P4, con las combinaciones de d.3 de la propuesta de la tinaja (Ti+Ho en el 332, Ti+Ma en el 338 y Ti+Br en el 340), que aquí no caben porque --validate-spec exige que cada mecánica de la tabla debute en el calendario. Datos [P] de la muestra: el mundo 7 (Madre de Dios, glosario §8) solo con 321-340 y su world_id, k_plan (con K = 6 en el estreno, c.3 y d.3), max_risk_pairs = 2 (03 §11: «libre» desde el 201) y los retos puros 326 y 335. El resto se copia de campaign_v1 (tintes, pares de riesgo, posiciones, ventanas y etiquetas de D-009).",
+  "lap": 1,
+  "first_level": 321,
+  "last_level": 340,
+  "pour_mode": "run",
+  "tints": [
+    {"id": "guanabana", "engine": 1, "name_es": "Guanábana", "debut": 4},
+    {"id": "cupuacu", "engine": 2, "name_es": "Copoazú", "debut": 81},
+    {"id": "tapereba", "engine": 3, "name_es": "Taperebá", "debut": 2},
+    {"id": "aguaje", "engine": 4, "name_es": "Aguaje", "debut": 1},
+    {"id": "urucum", "engine": 5, "name_es": "Achiote", "debut": 41},
+    {"id": "camu_camu", "engine": 6, "name_es": "Camu camu", "debut": 21},
+    {"id": "bacaba", "engine": 7, "name_es": "Bacaba", "debut": 7},
+    {"id": "acai", "engine": 8, "name_es": "Açaí", "debut": 1},
+    {"id": "jenipapo", "engine": 9, "name_es": "Huito", "debut": 141},
+    {"id": "agua_tapajos", "engine": 10, "name_es": "Agua del Tapajós", "debut": 11},
+    {"id": "lulo", "engine": 11, "name_es": "Lulo", "debut": 111},
+    {"id": "araza", "engine": 12, "name_es": "Arazá", "debut": 301},
+    {"id": "cacao", "engine": 13, "name_es": "Cacao", "debut": 201},
+    {"id": "agua_negro", "engine": 14, "name_es": "Agua del Río Negro", "debut": 61}
+  ],
+  "risk_pairs": [[4, 5], [5, 6], [6, 13], [13, 14], [14, 4], [3, 12], [12, 11], [11, 10], [8, 9], [1, 2]],
+  "max_risk_pairs": [
+    {"levels": [321, 340], "max": 2}
+  ],
+  "worlds": [
+    {"world": 7, "world_id": "w07_madre_de_dios", "name": "Madre de Dios", "levels": [321, 340], "water_base": "white", "water_tint": "agua_tapajos"}
+  ],
+  "ranges": [
+    {"levels": [321, 340], "k": [9, 11], "cuias": [11, 13], "empties": 1, "par": [22, 36], "pct_hard": [25, 25], "pct_very_hard": [5, 5]}
+  ],
+  "k_plan_note": "K de la muestra [P]: el de las tablas medidas de la propuesta de la tinaja (c.9: estreno con K = 6, retos e hito con K = 7-8), por debajo del rango 201-400 de 03 §11 (K 9-11), que se copia en ranges solo para el informe. El estreno de la tinaja va con K ≤ 6 (Superposition.TinajaDebutMaxK).",
+  "k_plan": [
+    {"levels": [321, 340], "recovery": 7, "comfort": 7, "challenge": 8, "milestone": 8}
+  ],
+  "ramp": {
+    "levels": [11, 20],
+    "role": "comfort",
+    "k": 6,
+    "empties": 2,
+    "source": "walk",
+    "window": "[0.00, 0.20)",
+    "note": "Fuera de la muestra (la rampa 11-20 es de campaign_v1); el lector de la especificación la exige."
+  },
+  "cycle": {
+    "from_level": 321,
+    "length": 20,
+    "note": "Ciclo D-009 copiado de campaign_v1 (posiciones, ventanas y etiquetas) desde el 321 (p = ((n - 1) mod 20) + 1).",
+    "positions": [
+      {"p": [1, 2], "role": "recovery", "empties": 2, "source": "walk", "k": "recovery"},
+      {"p": [3, 4, 5], "role": "comfort", "empties": 1, "source": "walk", "k": "comfort", "debut_slot": true},
+      {"p": [6, 9, 12, 15, 18], "role": "challenge", "empties": 1, "source": "challenge", "k": "challenge"},
+      {"p": [7, 8, 10, 11, 13, 14, 16, 17], "role": "comfort", "empties": 1, "source": "walk", "k": "comfort"},
+      {"p": [19], "role": "remanso", "empties": 1, "source": "walk", "k": "comfort"},
+      {"p": [20], "role": "milestone", "empties": 1, "source": "deep", "k": "milestone"}
+    ],
+    "empties_two_until_level": 30,
+    "challenge_two_empties_until_level": 39,
+    "windows": {"recovery": "[0.00, 0.30)", "comfort": "[0.20, 0.60]", "debut": "[0.00, 0.20)", "remanso": "[0.20, 0.40]", "challenge_21_40": "[0.50, 0.70]", "challenge_41_59_labeled": "[0.75, 0.90)", "challenge_41_59_soft": "[0.50, 0.75)", "challenge_61": "[0.75, 0.90)", "milestone_40": "[0.75, 0.85]", "milestone_60": "[0.90, 1.00]"},
+    "labels": {
+      "first_hard": 40,
+      "first_very_hard": 60,
+      "labeled_41_59": [6, 12, 18],
+      "thresholds": {"hard": 0.75, "very_hard": 0.9}
+    }
+  },
+  "mechanics": [
+    {"code": "Ti", "id": "tinaja", "kind": "source", "debut": 323, "season": "B"}
+  ],
+  "mechanics_note": "Tinaja (M13): estreno en el 323 (D-019, Q-Ti3 A; mech_debut_level.tinaja, 08 §9), temporada B (aguas bajas; propuesta de la tinaja d.1). Clase «source» [P]: fuente de dosis ocultas; no es un filtro, así que --validate-spec la rechaza con Aguas turbias (FORBIDDEN), y AF.Core (LevelValidation) la rechaza con Liana, Remolino, Lluvia y Piraña. Su cuia chica (cucharon) va con ella: no es una celda aparte.",
+  "capacities": [],
+  "seasons": {"321": "B"},
+  "calendar": {
+    "321": "R",
+    "322": "R",
+    "323": "★Ti",
+    "324": "★Ti",
+    "325": "★Ti",
+    "326": "C (D)",
+    "327": "Ti",
+    "328": "C",
+    "329": "Ti (D)",
+    "330": "C",
+    "331": "C",
+    "332": "Ti (D)",
+    "333": "C",
+    "334": "C",
+    "335": "C (D)",
+    "336": "C",
+    "337": "C",
+    "338": "Ti (D)",
+    "339": "S",
+    "340": "Ti (MD)"
+  }
+}

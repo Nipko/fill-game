@@ -23,11 +23,17 @@ const string Usage = """
       dotnet run --project tools/level-generator -c Release -- --spec <campaign.json> --levels a-b --out <carpeta> [--report <informe.md>] [--check]
       dotnet run --project tools/level-generator -- --validate-spec <campaign.json>
       dotnet run --project tools/level-generator -- --parity [--report tools/out/parity_report.md]
+      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja]
       dotnet run --project tools/level-generator -- --help
 
     --validate-spec: comprueba la especificacion de la campana (specs/campaign_v1.json) contra la rotacion de la
       propuesta de D-007 (d.2, d.3 y las comprobaciones de d.4) y el escalon de D-009 (c.3, c.4); imprime un resumen
       ASCII por ciclo. Codigos: 0 = cumple; 1 = alguna regla falla; 2 = especificacion ilegible.
+    --self-test: pruebas de la herramienta sin proyecto de tests (hoy solo "tinaja", la de por defecto): el paso Ti de la
+      Tinaja con semillas fijas (tope de dosis por tipo de nivel, T4, boca, hidden, su cuia contigua y en la misma fila),
+      el slot 323 de specs/sample_tinaja.json con sus filtros (ruta segura, paseos, S0 sin trampas) y su JSON
+      (pack_schema 3), el alivio sin frutas de la tinaja y los tableros de la ficha b.2. Desde la raiz del repositorio.
+      Codigos: 0 = todo PASS; 1 = algun FAIL; 2 = uso o especificacion ilegible.
     --parity: recalcula con AF.Core/AF.Solver par, complejidad, ramificacion, trampas y la variante -1 color de los 40
       niveles del prototipo (tools/out/levels_proto.json y tools/out_inverse/levels_proto.json; GDD 03 sec. 17-18, 09 R26)
       y escribe el informe. Codigos: 0 = umbrales cumplidos; 1 = no; 2 = uso o archivos ausentes.
@@ -63,6 +69,16 @@ bool wantsHelp = args.Contains("--help") || args.Contains("-h");
 if (args.Length >= 1 && args[0] == "--validate-spec")
 {
     return args.Length == 2 ? SpecValidator.Run(args[1]) : UsageError("--validate-spec lleva un solo archivo.");
+}
+
+if (args.Length >= 1 && args[0] == "--self-test")
+{
+    if (args.Length == 1 || (args.Length == 2 && args[1] == "tinaja"))
+    {
+        return TinajaSelfTest.Run();
+    }
+
+    return UsageError("--self-test solo admite: tinaja.");
 }
 
 if (args.Length >= 1 && args[0] == "--parity")

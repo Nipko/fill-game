@@ -22,9 +22,10 @@ Casos (contrato 21 del GDD; docs/gdd/08-arquitectura-tecnica-publicacion.md §4.
     (f) pack_schema 3 (D-019, punto 9; contrato 21): la Tinaja (M13) con los tipos tinaja y cucharon, sin campos, e
         intro_mechanic tinaja; murky = true y hidden con las capas de la tinaja menos la boca (como mucho 4 pares, como
         siempre); el 3 conserva todo lo del 2 (campos obligatorios por tipo, matapi, intro_mechanic y par_approx); tinaja,
-        cucharon e intro_mechanic tinaja fallan con pack_schema 1 y 2. PENDIENTE del dueno (contrato 21): como lleva una
-        variante de relief la mascara de la tinaja, que relief_board no admite (08 §4.1); f1 y f2 llevan la tinaja en
-        relief sin mascara solo porque el esquema de hoy lo acepta, no como formato publicable (AF.Core la rechaza).
+        cucharon e intro_mechanic tinaja fallan con pack_schema 1 y 2. Mascara de la tinaja en relief (decision del dueno
+        del 2026-10-14, opcion a de la revision de P2a; 08 §4.1): con pack_schema 3, relief_board lleva hidden si y solo
+        si su attrs contiene la tinaja (obligatorio y no vacio, como mucho 4 pares); sin la tinaja (Aguas turbias
+        incluidas) y con pack_schema 1 y 2, relief_board no admite hidden.
 
 Imprime PASS/FAIL por caso y termina con codigo 1 si alguno falla. Requiere jsonschema >= 4.18.
 
@@ -338,12 +339,8 @@ def main() -> int:
         de jar_sources pasan a la tinaja (capacidad 5; con estas cuias, T4 en toda la columna), que se anade con su cuia
         chica de 2, vacia y contigua (attrs tinaja y cucharon, sin campos); murky = true y hidden = todas las capas de la
         tinaja menos la boca. Conserva los 2 vacios del ejemplo. relief[0] (minus_color) quita una fruta que no esta en la
-        tinaja (03 §13) y relief[1] (plus_empty) anade un vacio al final; las dos llevan la tinaja, pero SIN su mascara:
-        relief_board no admite hidden (08 §4.1) y como la lleva una variante esta pendiente del dueno (contrato 21).
-        AF.Core rechaza esas variantes (TinajaMechanic.ValidateInitial: «todas las dosis de la tinaja estan ocultas salvo
-        la boca»), y por eso tambien AF.Levels y tools/level-qa (QA-RELIEF-VALID): no son un formato publicable ni una
-        referencia para el generador, el QA o el cliente. Al decidirse, cambian estas variantes, f1, f2 y sus casos
-        invalidos."""
+        tinaja (03 §13) y relief[1] (plus_empty) anade un vacio al final; las dos llevan la tinaja con su mascara en
+        hidden (los mismos pares: la tinaja conserva su indice), la que exige AF.Core (TinajaMechanic.ValidateInitial)."""
         p = copy.deepcopy(example)
         p.update({"pack_schema": pack, "pack_id": "mundo_07_v1", "world": 7, "world_id": "w07_madre_de_dios",
                   "water_base": "white"})
@@ -363,23 +360,27 @@ def main() -> int:
         lv["relief"] = [
             {"type": "minus_color", "removed": removed, "caps": list(lv["caps"]),
              "cuias": [[u for u in c if u != removed] for c in cuias] + [list(jar), []],
-             "attrs": copy.deepcopy(lv["attrs"]), "par": 19, "bot_fail": 0.0},
+             "attrs": copy.deepcopy(lv["attrs"]), "hidden": copy.deepcopy(lv["hidden"]), "par": 19, "bot_fail": 0.0},
             {"type": "plus_empty", "caps": lv["caps"] + [4], "cuias": copy.deepcopy(lv["cuias"]) + [[]],
-             "attrs": copy.deepcopy(lv["attrs"]) + [None], "par": None, "bot_fail": 0.0},
+             "attrs": copy.deepcopy(lv["attrs"]) + [None], "hidden": copy.deepcopy(lv["hidden"]), "par": None,
+             "bot_fail": 0.0},
         ]
         return p
 
     def without_jar_attrs(p: dict) -> dict:
-        """Quita tinaja y cucharon de attrs (base y relief): el mismo tablero sin la mecanica."""
+        """Quita tinaja y cucharon de attrs (base y relief) y la mascara de las variantes: el mismo tablero sin la
+        mecanica (las variantes de Aguas turbias van sin hidden)."""
         lv = p["levels"][0]
         for board in [lv] + lv["relief"]:
             board["attrs"] = [None if a and a["type"] in ("tinaja", "cucharon") else a for a in board["attrs"]]
+        for board in lv["relief"]:
+            board.pop("hidden", None)
         return p
 
     check(validator, "f1", "pack 3: estreno de la Tinaja en el 323 (p3, 3 dosis y 2 ocultas; intro_mechanic tinaja; "
-          "relief con la tinaja sin mascara, pendiente del contrato 21)", tinaja_level(), True)
-    check(validator, "f2", "pack 3: tinaja de 5 dosis con 4 ocultas en el hito 340 (el tope de hidden; relief con la "
-          "tinaja sin mascara, pendiente del contrato 21)", tinaja_level(level=340, band="milestone", intro=None, doses=5), True)
+          "relief con la tinaja y su mascara en hidden)", tinaja_level(), True)
+    check(validator, "f2", "pack 3: tinaja de 5 dosis con 4 ocultas en el hito 340 (el tope de hidden, tambien en las "
+          "dos variantes de relief)", tinaja_level(level=340, band="milestone", intro=None, doses=5), True)
     d = tinaja_level(level=340, band="milestone", intro=None, doses=5)
     d["levels"][0]["hidden"].append([9, 4])
     check(validator, "f3", "pack 3: hidden con las 5 capas de la tinaja, boca incluida (hidden sigue en 4 pares como mucho)",
@@ -389,6 +390,8 @@ def main() -> int:
     d = tinaja_level(pack=2, intro=None)
     for board in [d["levels"][0]] + d["levels"][0]["relief"]:
         board["attrs"][9] = None
+    for board in d["levels"][0]["relief"]:
+        board.pop("hidden")
     check(validator, "f6", "pack 2: cucharon en attrs, sin tinaja", d, False)
     check(validator, "f7", "pack 2: el mismo tablero sin tinaja ni cucharon (murky y hidden, como Aguas turbias)",
           without_jar_attrs(tinaja_level(pack=2, intro=None)), True)
@@ -403,6 +406,8 @@ def main() -> int:
     d = tinaja_level(pack=1, intro=None)
     for board in [d["levels"][0]] + d["levels"][0]["relief"]:
         board["attrs"][9] = None
+    for board in d["levels"][0]["relief"]:
+        board.pop("hidden")
     check(validator, "f12", "pack 1: cucharon en attrs, sin tinaja", d, False)
     check(validator, "f13", "pack 1: intro_mechanic = tinaja sin la mecanica en attrs",
           without_jar_attrs(tinaja_level(pack=1)), False)
@@ -427,6 +432,43 @@ def main() -> int:
     check(validator, "f20", "pack 3: intro_mechanic = murky en el hito 100 y difficulty.par_approx [P]", d, True)
     check(attr_validator, "f21", "attr {type: tinaja} contra $defs/attr", {"type": "tinaja"}, True)
     check(attr_validator, "f22", "attr {type: cucharon} contra $defs/attr", {"type": "cucharon"}, True)
+
+    # Mascara de la tinaja en relief (decision del dueno del 2026-10-14, opcion a de la revision de P2a; 08 §4.1):
+    # con pack_schema 3, hidden en relief_board si y solo si su attrs contiene la tinaja.
+    d = tinaja_level()
+    d["levels"][0]["relief"][0].pop("hidden")
+    check(validator, "f23", "pack 3: variante minus_color con la tinaja y sin hidden (la mascara es obligatoria)", d, False)
+    d = tinaja_level()
+    d["levels"][0]["relief"][1]["hidden"] = []
+    check(validator, "f24", "pack 3: variante plus_empty con la tinaja y hidden = []", d, False)
+    d = tinaja_level(level=340, band="milestone", intro=None, doses=5)
+    d["levels"][0]["relief"][1]["hidden"].append([9, 4])
+    check(validator, "f25", "pack 3: variante con las 5 capas de la tinaja en hidden, boca incluida (4 pares como mucho)",
+          d, False)
+    d = pack2_level(4, "w04_trapecio", "white", 100, None, "murky", pack=3)
+    d["levels"][0].update({"murky": True, "hidden": [[0, 1], [0, 0]]})
+    d["levels"][0]["relief"][0]["hidden"] = [[0, 1], [0, 0]]
+    check(validator, "f26", "pack 3: hidden en una variante de Aguas turbias, sin tinaja (van sin ocultos)", d, False)
+    d = tinaja_level()
+    d["levels"][0]["relief"][0]["attrs"] = None
+    check(validator, "f27", "pack 3: variante con attrs null y hidden", d, False)
+    d = tinaja_level()
+    d["levels"][0]["relief"][1]["attrs"][9] = None
+    check(validator, "f28", "pack 3: variante con cucharon y sin tinaja, con hidden", d, False)
+    d = tinaja_level()
+    rb = d["levels"][0]["relief"][1]
+    rb.update({"caps": [4] + rb["caps"][:-1], "cuias": [[]] + rb["cuias"][:-1], "attrs": [None] + rb["attrs"][:-1],
+               "hidden": [[c + 1, layer] for c, layer in rb["hidden"]]})
+    check(validator, "f29", "pack 3: plus_empty con el vacio delante y la mascara con los indices de la variante", d, True)
+    d = pack2_level(4, "w04_trapecio", "white", 100, None, "murky")
+    d["levels"][0].update({"murky": True, "hidden": [[0, 1], [0, 0]]})
+    check(validator, "f30", "pack 2: Aguas turbias del 100 con las variantes sin hidden", copy.deepcopy(d), True)
+    d["levels"][0]["relief"][0]["hidden"] = [[0, 1], [0, 0]]
+    check(validator, "f31", "pack 2: hidden en una variante de relief (solo con pack_schema 3 y la tinaja)", d, False)
+    d = pack2_level(4, "w04_trapecio", "white", 100, None, None, pack=1)
+    d["levels"][0].update({"murky": True, "hidden": [[0, 1], [0, 0]]})
+    d["levels"][0]["relief"][0]["hidden"] = [[0, 1], [0, 0]]
+    check(validator, "f32", "pack 1: hidden en una variante de relief", d, False)
 
     failed = RESULTS.count(False)
     print(f"\n{len(RESULTS) - failed}/{len(RESULTS)} casos PASS" + (f"; {failed} FAIL" if failed else ""))
