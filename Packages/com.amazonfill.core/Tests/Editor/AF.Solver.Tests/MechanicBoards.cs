@@ -573,6 +573,73 @@ namespace AF.Solver.Tests
     }
 
     /// <summary>
+    /// Flor de vitória-régia (K3b; propuesta de D-007 b.3; 02 R10 d): una cuia sin mecánica que no empieza sellada queda bajo una
+    /// flor con dos llaves distintas que no están dentro de ella y pueden sellar fuera a la vez (una cuia de capacidad
+    /// <c>U_c</c> para cada una, dos si comparten <c>U_c</c>), como pide <c>FlorMechanic.ValidateInitial</c>.
+    /// </summary>
+    internal sealed class FlorInjector : IMechanicInjector
+    {
+        public string Name => "flor";
+
+        public bool Inject(Prng rng, int[] caps, List<int>[] doses, MechanicSpec[] attrs)
+        {
+            var units = new int[Cuia.MaxColor + 1];
+            for (int i = 0; i < doses.Length; i++)
+            {
+                for (int k = 0; k < doses[i].Count; k++)
+                {
+                    units[doses[i][k]]++;
+                }
+            }
+
+            int index = rng.NextInt(caps.Length);
+            List<int> closed = doses[index];
+            if (!attrs[index].IsNone || (closed.Count == caps[index] && units[closed[0]] == caps[index] && MechanicBoards.Colors(new[] { closed }).Count == 1))
+            {
+                return false; // ya tiene mecánica, o empezaría sellada
+            }
+
+            var keys = new List<int>();
+            List<int> colors = MechanicBoards.Colors(doses);
+            for (int c = 0; c < colors.Count; c++)
+            {
+                if (!closed.Contains(colors[c]))
+                {
+                    keys.Add(colors[c]);
+                }
+            }
+
+            if (keys.Count < 2)
+            {
+                return false;
+            }
+
+            int first = keys[rng.NextInt(keys.Count)];
+            keys.Remove(first);
+            int second = keys[rng.NextInt(keys.Count)];
+            int homes = 0;
+            int homes2 = 0;
+            for (int j = 0; j < caps.Length; j++)
+            {
+                if (j != index)
+                {
+                    homes += caps[j] == units[first] ? 1 : 0;
+                    homes2 += caps[j] == units[second] ? 1 : 0;
+                }
+            }
+
+            bool canSeal = units[first] == units[second] ? homes >= 2 : homes >= 1 && homes2 >= 1;
+            if (!canSeal)
+            {
+                return false;
+            }
+
+            attrs[index] = new MechanicSpec(MechanicType.Flor, key: first, key2: second);
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Barro (02 §9.1 M5; 03 §9: «superposición»): inserta una dosis de Barro (15) en la capa 2 o 3 (índice 1-2) de una cuia
     /// de 4 sin mecánica y con 1-3 dosis, sin quitar ninguna fruta (así cada color conserva su <c>U_c</c> y su casa).
     /// </summary>

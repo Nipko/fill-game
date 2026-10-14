@@ -408,6 +408,29 @@ namespace AF.Core.Tests.DotnetOnly
             AssertPourDoesNotAllocate(state, 1, 0, PourMode.Run, (in PourEvents e) => e.BroteOpenedMask == 1 << 0);
         }
 
+        [Test]
+        public void FlorBoard_HotLoop_DoesNotAllocate()
+        {
+            // K3b: la Flor de vitória-régia (cerrada no es origen ni destino; se abre en la etapa (d) de R10 al haber selladas
+            // sus dos frutas; 02 §1.2 y R10 d; propuesta de D-007 b.3) en movimientos útiles, bloqueo, vertido aplicado (también
+            // el que sella la segunda fruta y la abre), solver calentado y bot calentado, sin asignaciones.
+            Cuia flor = Cuia.Create(4, new[] { 3, 4 }).WithMechanic(MechanicType.Flor, key: 1, key2: 2);
+            var state = new BoardState(new[]
+            {
+                flor, Cuia.Create(4, new[] { 2, 3, 1, 4 }), Cuia.Create(4, new[] { 3, 2, 4, 1 }), Cuia.Create(4, new[] { 2, 4, 3, 1 }),
+                Cuia.Create(4, new[] { 1, 2 }), Cuia.Empty(4),
+            });
+            AssertRulesBotAndSolverDoNotAllocate(state, 29UL);
+
+            Cuia closed = Cuia.Create(4, new[] { 3, 3 }).WithMechanic(MechanicType.Flor, key: 1, key2: 2);
+            var opening = new BoardState(new[]
+            {
+                closed, Cuia.Create(4, new[] { 2 }), Cuia.Create(4, new[] { 1, 1, 1, 1 }), Cuia.Create(4, new[] { 2, 2, 2 }),
+                Cuia.Create(4, new[] { 3, 3 }), Cuia.Empty(4),
+            });
+            AssertPourDoesNotAllocate(opening, 1, 3, PourMode.Run, (in PourEvents e) => e.ReleasedMask == 1 << 0 && e.WasSealed(3));
+        }
+
         private delegate bool EventCheck(in PourEvents events);
 
         /// <summary>
@@ -723,7 +746,7 @@ namespace AF.Core.Tests.DotnetOnly
         public void WarmDeadEndProbe_DoesNotAllocate()
         {
             // R13 ampliada (D-014; CLAUDE.md, regla dura 2): el cierre acotado de LevelSession no asigna una vez calentado, ni
-            // cuando se recorre entero (nivel 66), ni cuando se llena (tablero de 14 cuias), ni con mecánicas (los 39 tableros de
+            // cuando se recorre entero (nivel 66), ni cuando se llena (tablero de 14 cuias), ni con mecánicas (los 40 tableros de
             // referencia), en los dos modos. El mínimo de hasta 3 mediciones, como en ReferenceBoard_HotLoop_DoesNotAllocate:
             // una asignación real del recorrido se repite en cada intento.
             var boards = new BoardState[ReferenceBoards.All.Length + 2];

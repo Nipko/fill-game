@@ -75,8 +75,8 @@ namespace AF.Core.Rules
         public int SealedMask { get; internal set; }
 
         /// <summary>
-        /// (d) Cuias que se soltaron por un sellado (Liana) y (f) por una condición del tablero (la cuia de la Tinaja, M13):
-        /// pasan a ser normales.
+        /// (d) Cuias que se soltaron por un sellado (Liana; la Flor de vitória-régia, que se abre al haber selladas sus dos
+        /// frutas, solo está aquí, K3b) y (f) por una condición del tablero (la cuia de la Tinaja, M13): pasan a ser normales.
         /// </summary>
         public int ReleasedMask { get; internal set; }
 
@@ -210,8 +210,8 @@ namespace AF.Core.Rules
         }
 
         /// <summary>
-        /// (d) La mecánica <paramref name="type"/> de la cuia <paramref name="index"/> se soltó por un sellado (Liana) o (f) por
-        /// una condición del tablero (la cuia de la Tinaja).
+        /// (d) La mecánica <paramref name="type"/> de la cuia <paramref name="index"/> se soltó por un sellado (Liana, Flor) o
+        /// (f) por una condición del tablero (la cuia de la Tinaja).
         /// </summary>
         internal void RecordReleased(int index, Mechanics.MechanicType type)
         {

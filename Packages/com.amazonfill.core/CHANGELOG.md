@@ -16,6 +16,36 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- **Flor de vitória-régia en el núcleo, con la segunda llave** (K3b, tanda 4; variante de la 1.0 de D-007, estreno 403; 02 §1.2,
+  R10 (d), R16, T1 y §9.2 regla 7; propuesta de D-007 b.3; firma de `pack_schema` 3, pregunta 8: `flor {key, key2}` con
+  key ≠ key2). README, «Variante de la 1.0: Flor de vitória-régia (K3b)».
+  - **Tipo:** `MechanicType.Flor` = 11 [P] (no se persiste), clave `"flor"`, `MechanicTypes.Last` = `Flor`, y `FlorMechanic`:
+    cerrada no es origen ni destino; se abre en la etapa (d) de R10 cuando existen otras cuias selladas de sus dos frutas
+    (lógica Y, en cualquier orden; también por una gota, con el punto fijo f′), y la cuia pasa a ser normal. Se deduce del estado:
+    Marea, si deshace el sellado, la vuelve a cerrar. Evento: `PourEvents.ReleasedMask` (no `LianaReleasedMask`); solo cambian
+    sus comentarios.
+  - **Segunda llave:** `MechanicSpec.Key2` (constructor, `Equals`, `GetHashCode` y `ToString`; con 0, el hash de siempre) y, en
+    `Cuia`, un campo de 4 bits (tinte − 1) en los bits 50-53, los de `n` y `k`, que la Flor no usa: `Cuia.MechanicKey2`
+    (`NoColor` fuera de la Flor), `MechanicN` y `MechanicK` = 0 en la Flor, `WithMechanic(…, key2)` solo en la Flor y la Flor
+    sin `n` ni `k`. Entra en `Packed`, así que en el orden y el hash canónicos de `BoardCanon`. Las demás mecánicas conservan sus
+    bits y su hash (vectores fijos en `FlorTests`). `MechanicKey` devuelve también la primera llave de la Flor.
+  - **`BoardBuilder`:** la Flor exige `key` y `key2`, dos tintes distintos de 1 a 14, sin más campos ni bandera; `key2` en
+    cualquier otro tipo (o sin `type`) se rechaza.
+  - **Validación:** llaves distintas, en el tablero, sin dosis dentro de la flor y capaces de sellar fuera a la vez (una cuia de
+    capacidad `U_c` para cada una; dos si comparten `U_c`). `LevelValidation` la trata como disparador: sin Aguas turbias
+    (02 T1; Q14 A) ni Tinaja (02 §9.2 regla 7). **Bloqueo provisional con capacidades mixtas** (C1-9, pregunta 24 b): P1 falla
+    también con la Flor (`FutilePropertyTests.P1_Flor_MixedCapacities_OpenR16Counterexample`: tras sellar una llave, un fútil
+    libera la casa de la otra y se gana en 4), así que exige capacidades uniformes, con el criterio de la Liana
+    (`LianaMechanic.HasMixedCapacities`, ahora `internal`). Lo comprueba después de las reglas de diseño.
+  - **Sin cambios** en la heurística, el solver, el bot, `EarlyTraps` ni Aguas turbias. Packs 1-200 idénticos (`--check` del
+    tutorial y de 11-200). Lo que falta fuera del núcleo: el esquema, el generador (que también tiene que traducir `key2` cuando
+    renumera colores) y level-qa (P2b y P5) y el cliente (TJ1), que leen `key2`.
+  - **Tests:** compartidos `FlorTests` (14), `LianaSolverTests` (A* frente a la búsqueda exhaustiva y heurística en 32 tableros,
+    uniformes y mixtos, en `run` y `single`; la solución sella las dos frutas; `FlorInjector` en `MechanicBoards`), `CuiaAttrTests`
+    (claves y `MechanicKey2`) y el comentario de `BoardBuilderTests`. Solo dotnet: `FutilePropertyTests` (P1-P3 con capacidades
+    uniformes en `run` y `single`; las mixtas, bloqueadas, con su contraejemplo), `HotLoopAllocationTests.FlorBoard_HotLoop_DoesNotAllocate`
+    (0 bytes en reglas, en el vertido que la abre y en el bot; < 1 KB por `Solve`) y la fila Fl de `ReferenceBoards` y
+    `MechanicsPerformanceTests` (percentil 75 de 30 semillas: semilla 15, par 18, 3.591 expandidos).
 - **Hoja atada y Brote de dos hojas en el núcleo** (K3a, tanda 4; variantes de la 1.0 de D-007, estrenos 283 y 343; 02 §1.2,
   §1.4, R10 (b) y R16; propuesta de D-007 b.3; firma de `pack_schema` 3, pregunta 8: `hoja_atada {key}` y `brote` con
   `n` ∈ {1, 2}). README, «Variantes de la 1.0 (K3a)».

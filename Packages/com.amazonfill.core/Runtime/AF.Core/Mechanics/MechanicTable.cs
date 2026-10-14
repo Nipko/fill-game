@@ -50,6 +50,7 @@ namespace AF.Core.Mechanics
             table[(int)MechanicType.Tinaja] = new TinajaMechanic();
             table[(int)MechanicType.Cucharon] = new CucharonMechanic();
             table[(int)MechanicType.HojaAtada] = new HojaAtadaMechanic();
+            table[(int)MechanicType.Flor] = new FlorMechanic();
             return table;
         }
 

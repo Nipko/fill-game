@@ -39,6 +39,13 @@ namespace AF.Core.Tests.DotnetOnly
     /// con 1-3 dosis y espacio ≥ 2. Verificación con <see cref="LevelValidation"/>, A* (w = 1, 300.000 nodos) y Morpho (w = 2,
     /// 40.000). De 30 semillas: 30 válidos, 30 resueltos y 30 con Morpho; expandidos, mediana 498 y máximo 25.202 (HoA) y 580
     /// y 25.266 (Br2); percentil 75 en la semilla 23 (HoA) y 29 (Br2).</para>
+    /// <para><b>Fl</b> (Flor de vitória-régia, variante de la 1.0, K3b, 2026-10-14, con un programa fuera del repositorio en el
+    /// equipo de escritorio x64, .NET 10 Release): el mismo tablero base que HoA y Br2 (<c>InverseWalk</c> con K = 10 en 13 cuias
+    /// de 4 y E = 2) y la Flor sobre una cuia con contenido y no sellada, elegida con el PRNG del núcleo
+    /// (<c>Prng.SubSeed(semilla, 4031)</c>), con dos llaves distintas que no están dentro (b.3, como la Liana con fruta; con
+    /// capacidades uniformes las dos pueden sellar fuera). Verificación con <see cref="LevelValidation"/>, A* (w = 1, 300.000 nodos)
+    /// y Morpho (w = 2, 40.000). De 30 semillas: 30 válidos, 30 resueltos y 30 con Morpho; expandidos, mediana 1.223 y máximo
+    /// 31.719; percentil 75 en la semilla 15 (par 18, la Flor de 6 y 9 sobre la cuia 0).</para>
     /// </remarks>
     internal static class ReferenceBoards
     {
@@ -50,8 +57,9 @@ namespace AF.Core.Tests.DotnetOnly
         private static readonly int[] E = new int[0];
 
         /// <summary>
-        /// Los 39 tableros: 11 de una mecánica o capacidad, las 25 combinaciones del calendario d.4, la Tinaja (M13, reto con
-        /// 5 dosis) y las variantes de la 1.0 de K3a: la Hoja atada (HoA) y el Brote de dos hojas (Br2).
+        /// Los 40 tableros: 11 de una mecánica o capacidad, las 25 combinaciones del calendario d.4, la Tinaja (M13, reto con
+        /// 5 dosis) y las variantes de la 1.0 de K3a y K3b: la Hoja atada (HoA), el Brote de dos hojas (Br2) y la Flor de
+        /// vitória-régia (Fl).
         /// </summary>
         public static readonly ReferenceBoard[] All =
         {
@@ -217,6 +225,10 @@ namespace AF.Core.Tests.DotnetOnly
                 Caps(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4),
                 Doses(D(1, 1, 1, 9), D(2, 2, 2, 10), D(3, 3, 3, 9), D(4, 4, 9, 10), D(5, 6), E, D(7, 7, 1), D(8, 4, 4, 6), D(9, 5, 7, 6), D(10, 10, 6), D(5, 5, 2, 7), E, D(8, 8, 8, 3)),
                 Attrs(At(4, MechanicType.Brote, n: 2))),
+            Board("Fl", 18, 3591,
+                Caps(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4),
+                Doses(D(1, 4, 2, 1), D(2, 2, 2, 5), D(3, 3, 4, 3), D(4, 8, 3), D(5, 5, 5, 10), D(6, 6, 6, 9), D(7, 7, 6, 7), D(1), D(9, 9, 9, 8), D(10, 10, 10, 1), E, D(7, 8, 8, 4), E),
+                Attrs(At(0, MechanicType.Flor, key: 6, key2: 9))),
         };
 
         /// <summary>Tablero <paramref name="name"/> (por ejemplo <c>"Ll+Re"</c>).</summary>
@@ -291,9 +303,9 @@ namespace AF.Core.Tests.DotnetOnly
             return attrs;
         }
 
-        private static At At(int index, MechanicType type, int key = 0, int partner = -1, int n = 0, int k = 0)
+        private static At At(int index, MechanicType type, int key = 0, int partner = -1, int n = 0, int k = 0, int key2 = 0)
         {
-            return new At(index, new MechanicSpec(type, key, partner, n, k));
+            return new At(index, new MechanicSpec(type, key, partner, n, k, key2));
         }
 
         private static int[][] Hidden(params int[][] positions)
@@ -322,7 +334,7 @@ namespace AF.Core.Tests.DotnetOnly
         /// <summary>
         /// Combinación del calendario d.4 (Ho Hoja, Ma Matapi, Li Liana con fruta, Tu Aguas turbias, Re Remolino, Ba Barro, Ll
         /// Lluvia, Br Brote, Pi Piraña, Ch Cuia chica, Al y Al6 Cuia alta), Ti, la Tinaja con su cuia (M13), o una variante de la
-        /// 1.0: HoA, la Hoja atada, y Br2, el Brote de dos hojas (K3a).
+        /// 1.0: HoA, la Hoja atada, y Br2, el Brote de dos hojas (K3a); Fl, la Flor de vitória-régia (K3b).
         /// </summary>
         public string Name { get; }
 

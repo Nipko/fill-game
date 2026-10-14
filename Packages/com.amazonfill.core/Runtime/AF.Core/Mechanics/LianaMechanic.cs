@@ -112,8 +112,9 @@ namespace AF.Core.Mechanics
         /// <summary>
         /// Alguna cuia no es de capacidad 4 o algún color no tiene 4 dosis (02 §8). El Barro (15) no es un color (02 §9.1 M5):
         /// sus dosis no cuentan (corregido en C3-3: un nivel con Barro y Liana, como el 138 del calendario d.4, se rechazaba).
+        /// También la usa el mismo bloqueo de la Flor de vitória-régia (K3b).
         /// </summary>
-        private static bool HasMixedCapacities(BoardState state)
+        internal static bool HasMixedCapacities(BoardState state)
         {
             for (int i = 0; i < state.Count; i++)
             {

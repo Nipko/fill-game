@@ -11,7 +11,8 @@ namespace AF.Solver.Tests
     /// <summary>
     /// Solver con Liana (03 §9: el disparador se deduce del estado; solo filtra origen y destino): el par de A* coincide con
     /// el de una búsqueda exhaustiva en 32 tableros pequeños por variante (con fruta y de cuenta; capacidades uniformes y
-    /// mixtas) en los dos modos, y la heurística es admisible y consistente. Test compartido (NUnit 3.5, C# 9).
+    /// mixtas) en los dos modos, y la heurística es admisible y consistente. Lo mismo con la Flor de vitória-régia, su variante
+    /// con dos llaves (K3b; propuesta de D-007 b.3). Test compartido (NUnit 3.5, C# 9).
     /// </summary>
     [TestFixture]
     public sealed class LianaSolverTests
@@ -57,6 +58,54 @@ namespace AF.Solver.Tests
                 Pour pour = result.GetMove(i);
                 state = PourRules.Apply(state, pour.Source, pour.Target, PourMode.Run, out PourEvents events);
                 released |= events.LianaReleasedMask;
+            }
+
+            Assert.That(state.IsWon(), Is.True);
+            Assert.That(released, Is.EqualTo(1));
+        }
+
+        [TestCase(PourMode.Run)]
+        [TestCase(PourMode.Single)]
+        public void Flor_AStarPar_EqualsExhaustiveSearch_AndHeuristicHolds(PourMode mode)
+        {
+            // K3b (02 R10 d; b.3: «se deduce del estado, sin bits»): sin código propio en el solver ni en la heurística.
+            var injector = new FlorInjector();
+            var boards = MechanicBoards.Generate(0x4030_0001UL, 16, injector, false);
+            boards.AddRange(MechanicBoards.Generate(0x4030_0002UL, 16, injector, true));
+            for (int i = 0; i < boards.Count; i++)
+            {
+                string label = "flor " + i + " " + boards[i];
+                MechanicBoards.AssertAStarMatchesExhaustiveSearch(boards[i], mode, label);
+                MechanicBoards.AssertHeuristicAdmissibleAndConsistent(boards[i], mode, label);
+            }
+        }
+
+        [Test]
+        public void Flor_Solver_SealsBothFruitsToUseItsContent()
+        {
+            // La Flor (1, 3) guarda el 2 que le falta a la cuia de 2: la solución tiene que sellar el 1 y el 3 antes.
+            var flor = Cuia.Create(4, new[] { 2 }).WithMechanic(MechanicType.Flor, key: 1, key2: 3);
+            var start = new BoardState(new[]
+            {
+                flor, Cuia.Create(4, new[] { 1, 2, 2 }), Cuia.Create(4, new[] { 2, 1, 1, 1 }), Cuia.Create(4, new[] { 3, 3, 3 }),
+                Cuia.Create(4, new[] { 3 }), Cuia.Empty(4),
+            });
+
+            SolveResult result = new AStarSolver().Solve(start, SolverOptions.ForPipeline(PourMode.Run));
+
+            Assert.That(result.IsSolved, Is.True);
+            BoardState state = start;
+            int released = 0;
+            for (int i = 0; i < result.MoveCount; i++)
+            {
+                Pour pour = result.GetMove(i);
+                if (released == 0)
+                {
+                    Assert.That(pour.Source, Is.Not.EqualTo(0), "la flor cerrada no es origen");
+                }
+
+                state = PourRules.Apply(state, pour.Source, pour.Target, PourMode.Run, out PourEvents events);
+                released |= events.ReleasedMask;
             }
 
             Assert.That(state.IsWon(), Is.True);

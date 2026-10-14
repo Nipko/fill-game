@@ -21,11 +21,14 @@ namespace AF.Core.Board
     /// <item><description>35: libre (0).</description></item>
     /// <item><description>36-38: capacidad (1..6).</description></item>
     /// <item><description>39-42: tipo de mecánica (<see cref="MechanicType"/>; 0 = ninguna).</description></item>
-    /// <item><description>43-46: <c>key</c>, tinte − 1 (Hoja, Hoja atada, Liana con fruta, Lluvia).</description></item>
+    /// <item><description>43-46: <c>key</c>, tinte − 1 (Hoja, Hoja atada, Liana con fruta, Lluvia, Flor de vitória-régia).</description></item>
     /// <item><description>47-49: id de la pareja del Remolino (0..7), asignado por el constructor de tableros.</description></item>
     /// <item><description>50-52: <c>n</c> (Liana de cuenta: sellos; Lluvia: gotas pendientes; Brote de dos hojas: hojas cerradas
     /// que le faltan, 2 o 1, y 0 en el Brote normal).</description></item>
     /// <item><description>53-55: <c>k</c>, ritmo en vertidos de Lluvia y Piraña (2-5, 08 §9).</description></item>
+    /// <item><description>En la Flor de vitória-régia, que no usa <c>n</c> ni <c>k</c>, los bits 50-53 guardan <c>key2</c>, tinte
+    /// − 1, y los 54-55 valen 0 (K3b; firma de <c>pack_schema</c> 3, pregunta 8). Las demás mecánicas no cambian de bits ni de
+    /// hash.</description></item>
     /// <item><description>56-58: contador de vertidos (Lluvia, Piraña).</description></item>
     /// <item><description>59-60: banderas (bit 59 = cerrada: Hoja puesta, Brote cerrado; bit 60 reservado).</description></item>
     /// <item><description>61-63: libres (0).</description></item>
@@ -88,6 +91,8 @@ namespace AF.Core.Board
         private const int PairShift = 47;
         private const int NShift = 50;
         private const int KShift = 53;
+        private const int Key2Shift = 50; // solo en la Flor, que no usa n ni k: reutiliza sus bits (50-53)
+        private const int FlorCode = (int)MechanicType.Flor;
         private const int CounterShift = 56;
         private const int FlagsShift = 59;
         private const ulong FlagsMask = 0x3UL;
@@ -206,8 +211,9 @@ namespace AF.Core.Board
         public MechanicType Mechanic => (MechanicType)MechanicCode;
 
         /// <summary>
-        /// Tinte <c>key</c> de la mecánica (1-16): la fruta de la Hoja, de la Hoja atada o de la Liana con fruta, o el tinte agua
-        /// de la Lluvia. <see cref="NoColor"/> si la mecánica no usa <c>key</c> (también la Liana de cuenta, con <c>n</c> &gt; 0).
+        /// Tinte <c>key</c> de la mecánica (1-16): la fruta de la Hoja, de la Hoja atada o de la Liana con fruta, la primera
+        /// llave de la Flor de vitória-régia, o el tinte agua de la Lluvia. <see cref="NoColor"/> si la mecánica no usa
+        /// <c>key</c> (también la Liana de cuenta, con <c>n</c> &gt; 0).
         /// </summary>
         public int MechanicKey
         {
@@ -217,22 +223,32 @@ namespace AF.Core.Board
                 bool usesKey = type == MechanicType.Hoja
                     || type == MechanicType.HojaAtada
                     || type == MechanicType.Lluvia
+                    || type == MechanicType.Flor
                     || (type == MechanicType.Liana && MechanicN == 0);
                 return usesKey ? (int)((_bits >> KeyShift) & DoseMask) + 1 : NoColor;
             }
         }
+
+        /// <summary>
+        /// Segunda llave <c>key2</c> de la Flor de vitória-régia (1-16; bits 50-53, los de <c>n</c> y <c>k</c>, que la Flor no
+        /// usa; K3b). <see cref="NoColor"/> en cualquier otra mecánica.
+        /// </summary>
+        public int MechanicKey2 => MechanicCode == FlorCode ? (int)((_bits >> Key2Shift) & DoseMask) + 1 : NoColor;
 
         /// <summary>Id de la pareja del Remolino (0..7); el constructor de tableros lo deduce de <c>partner</c>.</summary>
         public int MechanicPairId => (int)((_bits >> PairShift) & ThreeBitMask);
 
         /// <summary>
         /// <c>n</c>: sellos de la Liana de cuenta, gotas pendientes de la Lluvia u hojas cerradas que le faltan al Brote de dos
-        /// hojas (2 o 1; 0 en el Brote normal) (0..7).
+        /// hojas (2 o 1; 0 en el Brote normal) (0..7). 0 en la Flor, que guarda <c>key2</c> en esos bits.
         /// </summary>
-        public int MechanicN => (int)((_bits >> NShift) & ThreeBitMask);
+        public int MechanicN => MechanicCode == FlorCode ? 0 : (int)((_bits >> NShift) & ThreeBitMask);
 
-        /// <summary><c>k</c>: ritmo en vertidos de Lluvia y Piraña (0..7; 2-5 en campaña, 08 §9).</summary>
-        public int MechanicK => (int)((_bits >> KShift) & ThreeBitMask);
+        /// <summary>
+        /// <c>k</c>: ritmo en vertidos de Lluvia y Piraña (0..7; 2-5 en campaña, 08 §9). 0 en la Flor, que guarda <c>key2</c> en
+        /// esos bits.
+        /// </summary>
+        public int MechanicK => MechanicCode == FlorCode ? 0 : (int)((_bits >> KShift) & ThreeBitMask);
 
         /// <summary>Contador de vertidos de Lluvia o Piraña (0..7).</summary>
         public int MechanicCounter => (int)((_bits >> CounterShift) & ThreeBitMask);
@@ -242,7 +258,8 @@ namespace AF.Core.Board
 
         /// <summary>
         /// Devuelve la cuia con la mecánica indicada y sus atributos (03 §3: la clave canónica incluye
-        /// <c>(cap, tipo, key, partner, n, k, flags)</c> y los contadores). Sustituye cualquier mecánica anterior.
+        /// <c>(cap, tipo, key, partner, n, k, flags)</c> y los contadores; con la Flor, también <c>key2</c>). Sustituye cualquier
+        /// mecánica anterior.
         /// </summary>
         /// <param name="type">Mecánica; <see cref="MechanicType.None"/> equivale a <see cref="WithoutMechanic"/> (todos los atributos a 0).</param>
         /// <param name="key">Tinte llave 1-16, o 0 si la mecánica no lo usa (se guarda tinte − 1).</param>
@@ -251,8 +268,13 @@ namespace AF.Core.Board
         /// <param name="k">Ritmo en vertidos (0..7).</param>
         /// <param name="counter">Contador de vertidos (0..7).</param>
         /// <param name="flags">Banderas (0..3; <see cref="FlagClosed"/>).</param>
+        /// <param name="key2">
+        /// Segunda llave de la Flor de vitória-régia, tinte 1-16 (se guarda tinte − 1 en los bits de <c>n</c> y <c>k</c>), o 0;
+        /// solo la Flor la lleva, y la Flor no lleva <c>n</c> ni <c>k</c>.
+        /// </param>
         /// <exception cref="ArgumentOutOfRangeException">Algún atributo está fuera de su campo.</exception>
-        public Cuia WithMechanic(MechanicType type, int key = 0, int pairId = 0, int n = 0, int k = 0, int counter = 0, int flags = 0)
+        /// <exception cref="ArgumentException">Atributos en una cuia sin mecánica, <c>key2</c> fuera de la Flor o la Flor con <c>n</c> o <c>k</c>.</exception>
+        public Cuia WithMechanic(MechanicType type, int key = 0, int pairId = 0, int n = 0, int k = 0, int counter = 0, int flags = 0, int key2 = 0)
         {
             if (!MechanicTypes.IsDefined(type))
             {
@@ -261,7 +283,7 @@ namespace AF.Core.Board
 
             if (type == MechanicType.None)
             {
-                if (key != 0 || pairId != 0 || n != 0 || k != 0 || counter != 0 || flags != 0)
+                if (key != 0 || pairId != 0 || n != 0 || k != 0 || counter != 0 || flags != 0 || key2 != 0)
                 {
                     throw new ArgumentException("Una cuia sin mecánica no lleva atributos.", nameof(type));
                 }
@@ -274,6 +296,11 @@ namespace AF.Core.Board
                 throw new ArgumentOutOfRangeException(nameof(key), key, "La llave es un tinte de 1 a 16, o 0 si no se usa.");
             }
 
+            if (key2 < 0 || key2 > MaxColor)
+            {
+                throw new ArgumentOutOfRangeException(nameof(key2), key2, "La segunda llave es un tinte de 1 a 16, o 0 si no se usa.");
+            }
+
             CheckField(pairId, nameof(pairId));
             CheckField(n, nameof(n));
             CheckField(k, nameof(k));
@@ -283,6 +310,17 @@ namespace AF.Core.Board
                 throw new ArgumentOutOfRangeException(nameof(flags), flags, "Las banderas ocupan 2 bits.");
             }
 
+            bool flor = type == MechanicType.Flor;
+            if (flor && (n != 0 || k != 0))
+            {
+                throw new ArgumentException("La Flor guarda key2 en los bits de n y k: no lleva n ni k.", nameof(type));
+            }
+
+            if (!flor && key2 != 0)
+            {
+                throw new ArgumentException("Solo la Flor de vitória-régia lleva key2.", nameof(key2));
+            }
+
             ulong field = ((ulong)type << MechanicShift)
                 | ((ulong)(key == 0 ? 0 : key - 1) << KeyShift)
                 | ((ulong)pairId << PairShift)
@@ -290,6 +328,11 @@ namespace AF.Core.Board
                 | ((ulong)k << KShift)
                 | ((ulong)counter << CounterShift)
                 | ((ulong)flags << FlagsShift);
+            if (flor)
+            {
+                field |= (ulong)(key2 == 0 ? 0 : key2 - 1) << Key2Shift;
+            }
+
             return new Cuia((_bits & ~MechanicFieldMask) | field);
         }
 
@@ -560,6 +603,7 @@ namespace AF.Core.Board
             {
                 sb.Append(" | ").Append(MechanicTypes.ToKey(Mechanic));
                 AppendField(sb, "key", MechanicKey);
+                AppendField(sb, "key2", MechanicKey2);
                 AppendField(sb, "pair", MechanicPairId);
                 AppendField(sb, "n", MechanicN);
                 AppendField(sb, "k", MechanicK);

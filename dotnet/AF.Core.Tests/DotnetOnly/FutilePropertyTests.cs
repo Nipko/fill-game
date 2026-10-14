@@ -32,6 +32,9 @@ namespace AF.Core.Tests.DotnetOnly
     /// (revisión de K3a): dos Hojas atadas de la misma fruta incumplen P3 sin excepción decidida
     /// (<see cref="P3_HojaAtada_TwoOfTheSameFruit_OpenR16Counterexample"/>); con un ejemplar por fruta, P3 se cumple.</description></item>
     /// </list>
+    /// Casos conocidos de P1 con capacidades mixtas (bloqueo C1-9, pregunta 24 b): la Liana
+    /// (<see cref="P1_Liana_MixedCapacities_OpenR16Counterexample"/>) y la Flor de vitória-régia, su variante con dos llaves
+    /// (<see cref="P1_Flor_MixedCapacities_OpenR16Counterexample"/>, K3b).
     /// Cada mecánica añade su inyector (<see cref="IMechanicInjector"/>) antes de su debut (02 R16); la Tinaja (M13), que añade
     /// dos cuias y la máscara de ocultos, su propio generador (<see cref="TinajaBoards"/>). Solo dotnet: lotes grandes.
     /// </summary>
@@ -264,6 +267,49 @@ namespace AF.Core.Tests.DotnetOnly
             // C1-9: 02 R16 antes del debut de la Liana con fruta (83) y de la de cuenta (243). Con capacidades uniformes P1-P3
             // se cumplen; con mixtas P1 falla (contraejemplo abajo) y LevelValidation bloquea esa combinación.
             AssertWith(mode, family, new LianaInjector(withFruit), withFruit ? 0xF07E_0831UL : 0xF07E_2431UL);
+        }
+
+        private const string FlorMixedBlocked =
+            "BLOQUEADO (C1-9, pregunta 24 b): con Flor y capacidades mixtas P1 falla, como con la Liana "
+            + "(ver P1_Flor_MixedCapacities_OpenR16Counterexample).";
+
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed, Ignore = FlorMixedBlocked)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed, Ignore = FlorMixedBlocked)]
+        public void P1_P2_P3_HoldWithFlor(PourMode mode, CapacityFamily family)
+        {
+            // K3b: 02 R16 antes del debut de la Flor de vitória-régia (403; propuesta de D-007 b.3), con su apertura por sellados
+            // en la etapa (d) de R10. Con capacidades uniformes P1-P3 se cumplen; con mixtas P1 falla (contraejemplo abajo; la
+            // muestra de esta semilla no lo encuentra) y LevelValidation bloquea esa combinación, como la de la Liana.
+            AssertWith(mode, family, new FlorInjector(), 0xF07E_4031UL);
+        }
+
+        [Test]
+        public void P1_Flor_MixedCapacities_OpenR16Counterexample()
+        {
+            // K3b: el contraejemplo de la Liana (P1_Liana_MixedCapacities_OpenR16Counterexample) vale para la Flor, que es una
+            // Liana con dos llaves. Tablero que solo rechaza el bloqueo: Cuia alta de 5 con 4 dosis de 2 (la casa de la fruta
+            // abundante 1, U_1 = 5, está ocupada), [1, 1, 1] en una cuia de 4, una Cuia chica de 3 vacía, la Flor (2 y 3) con
+            // [1, 1], [3, 3, 3] y una Cuia chica de 1 con el último 3. El vertido 5→4 sella el 3 (la flor sigue cerrada) y deja el
+            // tablero en Aguas estancadas (solo quedan fútiles: [1,1,1] o [2,2,2,2] a una Cuia chica que no es su casa), pero el
+            // fútil [1,1,1] → chica libera una cuia de 4 para el 2, que sella y abre la flor: hay solución en 4. Fija el
+            // comportamiento actual; cuando se decida la pregunta de 02 R16 tendrá que cambiar.
+            Cuia flor = Cuia.Create(4, new[] { 1, 1 }).WithMechanic(MechanicType.Flor, key: 2, key2: 3);
+            var start = new BoardState(new[]
+            {
+                Cuia.Create(5, new[] { 2, 2, 2, 2 }), Cuia.Create(4, new[] { 1, 1, 1 }), Cuia.Empty(3), flor,
+                Cuia.Create(4, new[] { 3, 3, 3 }), Cuia.Create(1, new[] { 3 }),
+            });
+            Assert.That(LevelValidation.Validate(start), Does.Contain("bloqueo provisional"));
+
+            BoardState state = PourRules.Apply(start, 5, 4, PourMode.Run);
+            Assert.That(state.IsSealed(4), Is.True);
+            Assert.That(state[3].Mechanic, Is.EqualTo(MechanicType.Flor));
+            Assert.That(PourRules.IsStuck(state, true), Is.True);
+            Assert.That(PourRules.IsFutile(state, 1, 2), Is.True);
+            ExhaustiveSearch.Graph graph = ExhaustiveSearch.Explore(state, PourMode.Run, MaxStatesPerBoard);
+            Assert.That(graph.Distance[0], Is.EqualTo(4));
         }
 
         [Test]

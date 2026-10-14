@@ -29,11 +29,13 @@ namespace AF.Core.Board
     /// dosis, nunca está llena y su cima es visible); T4 (bajo una dosis oculta nunca va el color de la dosis de encima);
     /// ocultos solo en cuias sin mecánica; el nivel puede llevar filtros (Hoja, Brote, Matapi, Barro; también las variantes
     /// de la 1.0 Hoja atada y Brote de dos hojas, que son filtros, K3a) pero no Liana, Lluvia ni Piraña (Q14 A) ni Remolino
-    /// [P: propuesta b.2, «solo junto a filtros»]. T1 (etiqueta y nivel ≥ 100) y Q9 son del
+    /// [P: propuesta b.2, «solo junto a filtros»], ni la Flor de vitória-régia, que es un disparador (02 T1: «nunca con
+    /// mecánicas con disparador (Liana, Flor, …)»; K3b). T1 (etiqueta y nivel ≥ 100) y Q9 son del
     /// pipeline. <b>Tinaja</b> (M13; D-019, Q-Ti1 A): si el nivel la lleva, es la única fuente de ocultas (ninguna otra cuia
     /// turbia), sus ocultas son la excepción a «ocultos solo en cuias sin mecánica» y a T3, y su tope es
     /// <see cref="TinajaMaxHiddenUnits"/> en lugar de los de Remote Config; las combinaciones prohibidas de Q14 A siguen
-    /// valiendo y solo se comprueban aquí, con un motivo que nombra la tinaja. También solo se comprueban aquí T4 en toda su
+    /// valiendo (también la Flor: la tinaja va «solo con filtros y capacidades», 02 §9.2 regla 7) y solo se comprueban aquí,
+    /// con un motivo que nombra la tinaja. También solo se comprueban aquí T4 en toda su
     /// columna (con su máscara, todas sus dosis menos la boca están ocultas), su tope de ocultas y «sin Barro» (lo rechaza la
     /// regla del Barro de arriba: va en una cuia de 4 y nunca en una cuia con mecánica). El resto de sus reglas (capacidad,
     /// dosis, máscara, una sola tinaja y su cuia contigua) son de <c>TinajaMechanic</c> y
@@ -42,7 +44,9 @@ namespace AF.Core.Board
     /// Lluvia y la Piraña nunca van juntas.</description></item>
     /// <item><description>Las reglas propias de cada mecánica (03 §17 #6), con las de las variantes de la 1.0 (K3a; propuesta
     /// de D-007 b.3): la Hoja atada, con su llave en el tablero, su fruta en el fondo si empieza con dosis y capacidad =
-    /// <c>U_c</c> de su llave [P]; el Brote de dos hojas, con espacio ≥ 2.</description></item>
+    /// <c>U_c</c> de su llave [P]; el Brote de dos hojas, con espacio ≥ 2; y la Flor de vitória-régia (K3b), con dos llaves
+    /// distintas en el tablero que pueden sellar fuera de ella a la vez y, mientras dure el bloqueo C1-9 de la Liana (pregunta
+    /// 24 b), sin capacidades mixtas.</description></item>
     /// <item><description><c>atascado(S0)</c> = false con la <c>futil</c> única (02 §9.2 regla 1).</description></item>
     /// </list>
     /// </remarks>
@@ -295,7 +299,7 @@ namespace AF.Core.Board
         /// (M13; D-019, Q-Ti1 A; propuesta de la tinaja, b.2 y c.1) la tinaja es la única fuente de ocultas del nivel: sus
         /// ocultas son la excepción a «ocultos solo en cuias sin mecánica» (Q14 A) y a T3 (≤ 3 dosis y nunca llena), su tope
         /// es <see cref="TinajaMaxHiddenUnits"/> (no los de Remote Config de T2) y T4 se comprueba igual. Las combinaciones
-        /// prohibidas (Liana, Remolino, Lluvia y Piraña; b.2; con un motivo propio de la tinaja), el tope y T4 en toda la
+        /// prohibidas (Liana, Remolino, Lluvia y Piraña, b.2; y la Flor, K3b; con un motivo propio de la tinaja), el tope y T4 en toda la
         /// columna de la tinaja (b.2 regla 1) se rechazan solo aquí: una tinaja válida siempre llega con ocultas (sin ellas la
         /// rechaza su máscara en <c>TinajaMechanic.ValidateInitial</c>), y con esa máscara todas sus dosis menos la boca pasan
         /// por la comprobación de T4.
@@ -355,16 +359,19 @@ namespace AF.Core.Board
             {
                 Cuia cuia = state[i];
                 MechanicType type = cuia.Mechanic;
-                if (tinaja >= 0 && (type == MechanicType.Liana || type == MechanicType.Remolino || type == MechanicType.Lluvia || type == MechanicType.Pirana))
+                if (tinaja >= 0 && (type == MechanicType.Liana || type == MechanicType.Remolino || type == MechanicType.Lluvia || type == MechanicType.Pirana
+                    || type == MechanicType.Flor))
                 {
                     // M13 (b.2, combinaciones prohibidas: «LevelValidation ya lo prohíbe con ocultos»): la única comprobación de
                     // estas combinaciones en un nivel con tinaja, porque sus ocultas siempre llegan aquí (TinajaMechanic no la
-                    // repite). El informe nombra la tinaja, no Aguas turbias.
+                    // repite). El informe nombra la tinaja, no Aguas turbias. La Flor es un disparador y la tinaja va «solo con
+                    // filtros y capacidades» (02 §9.2 regla 7; K3b).
                     return "M13 (b.2, combinaciones; Q14 A): la tinaja no se combina con " + MechanicTypes.ToKey(type) + " (cuia " + Num(i) + ")";
                 }
 
-                if (type == MechanicType.Liana || type == MechanicType.Lluvia || type == MechanicType.Pirana)
+                if (type == MechanicType.Liana || type == MechanicType.Lluvia || type == MechanicType.Pirana || type == MechanicType.Flor)
                 {
+                    // 02 T1: «nunca con mecánicas con disparador (Liana, Flor, …) ni contadores (Lluvia, Piraña…)» (Q14 A; K3b).
                     return "D-007, Q14 A: Aguas turbias no se combina con " + MechanicTypes.ToKey(type) + " (cuia " + Num(i) + ")";
                 }
 

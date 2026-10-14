@@ -65,10 +65,13 @@ namespace AF.Core.Tests
         }
 
         [Test]
-        public void MechanicKey_IsOnlyMeaningfulForHojaHojaAtadaLluviaAndLianaWithFruit()
+        public void MechanicKey_IsOnlyMeaningfulForHojaHojaAtadaLluviaLianaWithFruitAndFlor()
         {
             Assert.That(C(4).WithMechanic(MechanicType.Hoja, key: 1).MechanicKey, Is.EqualTo(1));
             Assert.That(C(4).WithMechanic(MechanicType.HojaAtada, key: 5).MechanicKey, Is.EqualTo(5));
+            Assert.That(C(4).WithMechanic(MechanicType.Flor, key: 7, key2: 9).MechanicKey, Is.EqualTo(7));
+            Assert.That(C(4).WithMechanic(MechanicType.Flor, key: 7, key2: 9).MechanicKey2, Is.EqualTo(9));
+            Assert.That(C(4).WithMechanic(MechanicType.HojaAtada, key: 5).MechanicKey2, Is.EqualTo(Cuia.NoColor));
             Assert.That(C(4).WithMechanic(MechanicType.Brote, n: 2).MechanicKey, Is.EqualTo(Cuia.NoColor));
             Assert.That(C(4).WithMechanic(MechanicType.Liana, key: 6).MechanicKey, Is.EqualTo(6));
             Assert.That(C(4).WithMechanic(MechanicType.Liana, n: 1).MechanicKey, Is.EqualTo(Cuia.NoColor));
@@ -126,9 +129,9 @@ namespace AF.Core.Tests
         [Test]
         public void MechanicTypes_ConvertTheJsonKeys()
         {
-            // 08 §4.1 attrs.type; el Barro no es un type (02 §9.1 M5). La tinaja y su cuia (M13) son 8 y 9 y la Hoja atada (b.3;
-            // firma de pack_schema 3, pregunta 8) es 10 [P], sin huecos.
-            string[] keys = { "hoja", "brote", "liana", "matapi", "remolino", "lluvia", "pirana", "tinaja", "cucharon", "hoja_atada" };
+            // 08 §4.1 attrs.type; el Barro no es un type (02 §9.1 M5). La tinaja y su cuia (M13) son 8 y 9, y la Hoja atada y la
+            // Flor de vitória-régia (b.3; firma de pack_schema 3, pregunta 8) son 10 y 11 [P], sin huecos.
+            string[] keys = { "hoja", "brote", "liana", "matapi", "remolino", "lluvia", "pirana", "tinaja", "cucharon", "hoja_atada", "flor" };
             Assert.That(keys.Length, Is.EqualTo((int)MechanicTypes.Last));
             for (int i = 0; i < keys.Length; i++)
             {
