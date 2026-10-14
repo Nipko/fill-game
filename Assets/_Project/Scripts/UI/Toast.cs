@@ -57,6 +57,7 @@ namespace AF.UI
         private float _textHeight;
         private string? _lineText;
         private float _lineWidth;
+        private bool _fitPad; // colocada con PlaceAt: el aire de arriba y de abajo se ajusta al texto que lleva
 
         public Toast(string name, Transform parent, ProceduralArt art, float size)
         {
@@ -95,7 +96,11 @@ namespace AF.UI
         /// <summary>El <see cref="CanvasGroup"/> del aviso bloquea los toques (siempre false: los deja pasar; tests).</summary>
         public bool BlocksRaycasts => _group.blocksRaycasts;
 
-        /// <summary>Muestra <paramref name="text"/> durante <paramref name="ms"/> milisegundos.</summary>
+        /// <summary>
+        /// Muestra <paramref name="text"/> durante <paramref name="ms"/> milisegundos. Si la placa se colocó con
+        /// <see cref="PlaceAt"/>, su aire de arriba y de abajo se vuelve a ajustar a este texto (revisión de T52: dependía del
+        /// texto que se mostró antes).
+        /// </summary>
         public void Show(string text, float ms)
         {
             _label.text = text;
@@ -104,6 +109,10 @@ namespace AF.UI
             _group.alpha = 0f;
             _root.gameObject.SetActive(true);
             _root.SetAsLastSibling();
+            if (_fitPad)
+            {
+                FitPad();
+            }
         }
 
         /// <summary>Borde de arriba de la placa (dp desde arriba del lienzo; NaN antes de colocarla).</summary>
@@ -133,39 +142,55 @@ namespace AF.UI
         /// <summary>Raíz del aviso: la placa (tests de solapes).</summary>
         public RectTransform Root => _root;
 
-        /// <summary>Coloca el aviso centrado con su borde superior en <paramref name="top"/> y su alto de siempre.</summary>
+        /// <summary>
+        /// Coloca el aviso centrado con su borde superior en <paramref name="top"/>, su alto de siempre y el aire de siempre
+        /// (6 dp arriba y abajo, sea cual sea el texto: el cartel «El río bajó» y el rótulo del intento, que se colocan antes de
+        /// mostrar su texto; revisión de T52).
+        /// </summary>
         public void Place(float canvasW, float top)
         {
-            Place(canvasW, top, DefaultHeightDp);
-        }
-
-        /// <summary>
-        /// Coloca el aviso centrado con su borde superior en <paramref name="top"/> y <paramref name="height"/> dp de alto (como
-        /// mucho <see cref="DefaultHeightDp"/>; con menos, el texto conserva su tamaño y el aire de arriba y de abajo se reduce).
-        /// </summary>
-        public void Place(float canvasW, float top, float height)
-        {
             float w = FullWidthDp(canvasW);
-            PlaceAt((canvasW - w) * 0.5f, top, w, Mathf.Min(DefaultHeightDp, height));
+            SetRect((canvasW - w) * 0.5f, top, w, DefaultHeightDp);
+            _fitPad = false;
+            SetPad(PadDp);
         }
 
         /// <summary>
         /// Coloca la placa con su esquina de arriba a la izquierda en (<paramref name="left"/>, <paramref name="top"/>) y
         /// <paramref name="width"/> × <paramref name="height"/> dp (GameScreen.Notices.cs: la placa ajustada a su texto junto a
         /// las fichas de la repisa, o la que las tapa enteras). El texto conserva su tamaño; el aire de arriba y de abajo se
-        /// reparte, de 1 a 6 dp.
+        /// reparte, de 1 a 6 dp, con el texto de ahora y con el de cada <see cref="Show"/> siguiente.
         /// </summary>
         public void PlaceAt(float left, float top, float width, float height)
+        {
+            SetRect(left, top, width, height);
+            _fitPad = true;
+            FitPad();
+        }
+
+        private void SetRect(float left, float top, float width, float height)
         {
             _top = top;
             _left = left;
             _height = height;
             _width = width;
             UiBuilder.Place(_root, left, top, width, height);
-            float pad = Mathf.Clamp((height - TextHeight(width)) * 0.5f, 1f, PadDp);
+        }
+
+        // El aire de arriba y de abajo con el texto de ahora: lo que sobra de la placa, de 1 a 6 dp.
+        private void FitPad()
+        {
+            SetPad(Mathf.Clamp((_height - TextHeight(_width)) * 0.5f, 1f, PadDp));
+        }
+
+        private void SetPad(float pad)
+        {
             _label.rectTransform.offsetMin = new Vector2(SidePadDp, pad);
             _label.rectTransform.offsetMax = new Vector2(-SidePadDp, -pad);
         }
+
+        /// <summary>Aire del texto arriba y abajo dentro de la placa (dp; tests).</summary>
+        public float TextPadDp => _label.rectTransform.offsetMin.y;
 
         /// <summary>
         /// Alto mínimo de la placa para el texto de ahora a su tamaño de siempre, en un lienzo de <paramref name="canvasW"/> dp:

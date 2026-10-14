@@ -1,7 +1,10 @@
 #nullable enable
 using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 using AF.Ads;
+using AF.Boosters;
+using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
 using AF.GameFlow;
@@ -22,13 +25,18 @@ namespace AF.Tests.PlayMode
     /// <list type="bullet">
     /// <item><description><c>90_banner_l41_130</c>, <c>90b_banner_l41_100</c>, <c>90c_banner_l41_130_16x9</c> y
     /// <c>90d_banner_l141_130</c>: el banner de mundo con la escala de fuente de 02 §12 (pregunta 43);</description></item>
-    /// <item><description><c>92_l135_aviso_burbujas_despues</c> (3 filas, con las dos burbujas de dos líneas y el aviso del
-    /// rescate, que no cabe junto a la ficha «?×1» y la tapa entera: el compromiso [P]), <c>92c_l135_aviso_corto_burbujas</c>
-    /// («+1 Luciérnaga», ajustado a su texto junto a la ficha, sin taparla), <c>92d_l135_revelar_sin_semillas</c> (Revelar sin
-    /// semillas ni video: sin aviso, la burbuja «Te faltan 120» late), <c>92b_l135_aviso_sin_burbujas</c> (encogido sobre la
-    /// bandeja, sin tapar la repisa ni la ficha «?×n»), <c>93_1fila_aviso_burbuja_despues</c> y
-    /// <c>93b_l31_aviso_burbuja_despues</c> (observación 1); las de antes del cambio, con el sufijo <c>_antes</c>, se sacaron
-    /// con el código de <c>f64c19a</c>;</description></item>
+    /// <item><description>observación 1, solo con estados que se dan en el juego (revisión de T52, ronda 2):
+    /// <c>92d_l135_revelar_sin_semillas</c> y <c>92e_l135_revelar_sin_semillas_800ms</c> (Revelar sin semillas ni video: sin
+    /// aviso, la burbuja «Te faltan 120» late dos veces y se queda roja ≈ 1,1 s; es el después del mismo toque que
+    /// <c>92_l135_aviso_burbujas_antes</c>), <c>92_l135_aviso_burbujas_despues</c> (3 filas, el rescate comprado de verdad con
+    /// las 300 semillas justas: las 12 cuias, las dos burbujas de dos líneas y el aviso «¡Una cuia más!», que no cabe junto a la
+    /// ficha «?×n» y la tapa entera: el compromiso [P]), <c>92c_l135_aviso_corto_burbujas</c> («+1 Luciérnaga», ajustado a su
+    /// texto junto a la ficha, sin taparla), <c>92b_l135_aviso_sin_burbujas</c> (con semillas: «+1 Luciérnaga» sobre la bandeja,
+    /// sin tapar la repisa ni la ficha «?×n»), <c>93_1fila_aviso_burbuja_despues</c> (el tablero 6 del tutorial como nivel 46) y
+    /// <c>93b_l31_aviso_burbuja_despues</c> (2 filas), las dos con el rescate comprado de verdad y «Te faltan 150» de «+1 cuia».
+    /// Las de antes del cambio, con el sufijo <c>_antes</c>, se sacaron con el código de <c>f64c19a</c> y con avisos forzados
+    /// que el juego no da («Te faltan 120/70 semillas» con su burbuja a la vista, o en niveles sin Revelar): sirven para comparar
+    /// dónde va el aviso, no qué dice;</description></item>
     /// <item><description><c>94_remolino_l103_chorro</c> y <c>95_remolino_l140_chorro</c> (la cuia tocada se traga el chorro),
     /// <c>94b_remolino_l103_recibe</c> y <c>95b_remolino_l140_recibe</c> (la pareja se ilumina al recibir) y
     /// <c>96_remolino_blanca_l{n}_chorro</c> (el remolino de la superficie, con su contorno, sobre una dosis blanca de
@@ -58,46 +66,46 @@ namespace AF.Tests.PlayMode
         {
             string dir = SnapshotKit.Prepare();
 
-            // El 135 (3 filas) sin semillas ni video: «Te faltan 150» de «+1 cuia» y «Te faltan 120» de Revelar, y el aviso del
-            // rescate, que no cabe junto a la ficha «?×1»: la tapa entera (el compromiso [P]).
+            // El 135 (3 filas) sin semillas ni video: «Te faltan 150» de «+1 cuia» y «Te faltan 120» de Revelar.
             yield return LoadWithBubbles(135, 0, 0);
             GameBootstrap boot = GameBootstrap.Current!;
-            boot.View!.ShowNotice(UiText.RescueApplied);
-            PlayModeHelpers.Step(boot, 400);
-            yield return SaveNow(dir, "92_l135_aviso_burbujas_despues", boot);
 
             // Un aviso corto («+1 Luciérnaga»): ajustado a su texto junto a la ficha, sin taparla.
-            boot.View.NoticeToast.Hide();
-            boot.View.ShowNotice(UiText.RevealGiftToast);
+            boot.View!.ShowNotice(UiText.RevealGiftToast);
             PlayModeHelpers.Step(boot, 400);
             yield return SaveNow(dir, "92c_l135_aviso_corto_burbujas", boot);
 
-            // Revelar sin semillas ni video: sin aviso, la burbuja «Te faltan 120» late (en lo alto del latido).
+            // Revelar sin semillas ni video (el después de 92_l135_aviso_burbujas_antes, el mismo toque): sin aviso, la burbuja
+            // «Te faltan 120» late (en lo alto del primer latido) con los colores sin saldo, y a los 800 ms, con el rojo sostenido.
             boot.View.NoticeToast.Hide();
             Assert.That(boot.PressReveal(), Is.False);
-            PlayModeHelpers.TickExact(boot, Mathf.RoundToInt(BoosterTray.MissingPulseHalfMs));
+            PlayModeHelpers.TickExact(boot, Mathf.RoundToInt(BoosterTray.MissingPulseBeatMs));
             yield return SaveNow(dir, "92d_l135_revelar_sin_semillas", boot);
+            PlayModeHelpers.TickExact(boot, 800 - Mathf.RoundToInt(BoosterTray.MissingPulseBeatMs));
+            yield return SaveNow(dir, "92e_l135_revelar_sin_semillas_800ms", boot);
 
-            // El 135 con semillas: sin burbujas, el aviso encogido sobre la bandeja, sin tapar la repisa ni la ficha «?×n».
+            // El rescate de verdad en el 135 (revisión de T52, ronda 2): con las 300 semillas justas (el primero del día), Aguas
+            // estancadas por un camino de vertidos útiles, «Continuar: +1 cuia» y, ya sin semillas, las dos burbujas y el aviso
+            // «¡Una cuia más!» junto a las 12 cuias. No cabe junto a la ficha «?×n»: la tapa entera (el compromiso [P]).
+            yield return LoadWithBubbles(135, 0, 300);
+            yield return RescueForReal(dir, "92_l135_aviso_burbujas_despues", 12);
+
+            // El 135 con semillas: sin burbujas, un aviso posible («+1 Luciérnaga») sobre la bandeja, sin tapar la repisa ni la
+            // ficha «?×n».
             yield return LoadWithBubbles(135, 0, 1000);
             boot = GameBootstrap.Current!;
-            boot.View!.ShowNotice(UiText.RevealMissing(120));
+            boot.View!.ShowNotice(UiText.RevealGiftToast);
             PlayModeHelpers.Step(boot, 400);
             yield return SaveNow(dir, "92b_l135_aviso_sin_burbujas", boot);
 
-            // 1 fila: el tablero del 6 (5 cuias) como nivel 46, sin semillas: «Te faltan 150» de «+1 cuia».
-            yield return LoadWithBubbles(46, 40, 0);
-            boot = GameBootstrap.Current!;
-            boot.View!.ShowRevealMissing(70);
-            PlayModeHelpers.Step(boot, 400);
-            yield return SaveNow(dir, "93_1fila_aviso_burbuja_despues", boot);
+            // 1 fila: el tablero del 6 (5 cuias) como nivel 46, con las 300 semillas justas: el rescate de verdad (3 → 4) y, sin
+            // semillas, «Te faltan 150» de «+1 cuia» con el aviso del rescate.
+            yield return LoadWithBubbles(46, 40, 300);
+            yield return RescueForReal(dir, "93_1fila_aviso_burbuja_despues", 6);
 
-            // 2 filas: el 31 (8 cuias).
-            yield return LoadWithBubbles(31, 0, 0);
-            boot = GameBootstrap.Current!;
-            boot.View!.ShowRevealMissing(70);
-            PlayModeHelpers.Step(boot, 400);
-            yield return SaveNow(dir, "93b_l31_aviso_burbuja_despues", boot);
+            // 2 filas: el 31 (8 cuias), igual.
+            yield return LoadWithBubbles(31, 0, 300);
+            yield return RescueForReal(dir, "93b_l31_aviso_burbuja_despues", 9);
         }
 
         [UnityTest]
@@ -255,12 +263,113 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.StepUntilIdle(boot, 4000);
         }
 
+        // El nivel ya cargado con 300 semillas: juega un camino de vertidos útiles hasta Aguas estancadas con el rescate a la
+        // venta, lo compra (300, el primero del día: se queda sin semillas) y captura el aviso «¡Una cuia más!» con las cuias
+        // que quedan (cuias) y las burbujas «Te faltan {n}» de la bandeja, ya quieto.
+        private static IEnumerator RescueForReal(string dir, string name, int cuias)
+        {
+            GameBootstrap boot = GameBootstrap.Current!;
+            LevelFlow flow = boot.Flow!;
+            GameScreen view = boot.View!;
+            Pour[]? path = FindRescuableStuck(flow);
+            Assert.That(path, Is.Not.Null, name + ": un camino hasta Aguas estancadas con el rescate a la venta");
+            MechanicTestKit.PlayPrefix(boot, path!, false);
+            for (int ms = 0; ms < 5000 && flow.Phase != FlowPhase.StuckModal; ms += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.StuckModal), name);
+            PlayModeHelpers.Step(boot, 300); // el panel termina de subir
+            Assert.That(view.Stuck.View!.Rescue, Is.EqualTo(StuckRescueKind.Available), name);
+            Assert.That(view.Stuck.RescuePriceShown, Is.EqualTo(300), name + ": el primer rescate del día");
+            view.Stuck.RescueButton.onClick.Invoke();
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing), name);
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(0), name + ": sin semillas");
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RescueApplied), name);
+            PlayModeHelpers.Step(boot, 700); // la recolocación de «+1 cuia» (300 ms) y el aviso ya entero
+            Assert.That(view.Views.Length, Is.EqualTo(cuias), name);
+            Assert.That(view.Tray.ExtraShowsMissing, Is.True, name + ": «Te faltan 150» de «+1 cuia»");
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RescueApplied), name);
+            Debug.Log("AF_T52 " + name + ": " + path!.Length + " vertidos hasta Aguas estancadas; aviso " + view.NoticeToast.SeenRect);
+            yield return SaveNow(dir, name, boot);
+        }
+
+        // Un camino de vertidos útiles desde el tablero de ahora hasta Aguas estancadas (R13) con el rescate a la venta (04 §6.4:
+        // resoluble con una cuia más), en profundidad, sin repetir tableros ni ganar; null si no lo encuentra.
+        private static Pour[]? FindRescuableStuck(LevelFlow flow)
+        {
+            var search = new StuckSearch(flow.Session.PourMode, flow.Session.FutileRuleEnabled, new RescueBooster(flow.Boosters));
+            return search.Run(flow.Session.Current);
+        }
+
         private static IEnumerator SaveNow(string dir, string name, GameBootstrap boot)
         {
             SnapshotKit.Attach(boot);
             yield return null;
             SnapshotKit.Save(dir, name);
             Debug.Log("AF_T52 captura " + name);
+        }
+
+        // Búsqueda en profundidad de FindRescuableStuck (solo capturas: asigna sin cuidado).
+        private sealed class StuckSearch
+        {
+            private const int MaxDepth = 60;
+            private const int MaxStates = 50000;
+
+            private readonly PourMode _mode;
+            private readonly bool _futile;
+            private readonly RescueBooster _rescue;
+            private readonly HashSet<BoardState> _seen = new HashSet<BoardState>();
+            private readonly List<Pour> _path = new List<Pour>();
+
+            public StuckSearch(PourMode mode, bool futile, RescueBooster rescue)
+            {
+                _mode = mode;
+                _futile = futile;
+                _rescue = rescue;
+            }
+
+            public Pour[]? Run(BoardState start)
+            {
+                return Visit(start, 0) ? _path.ToArray() : null;
+            }
+
+            private bool Visit(BoardState state, int depth)
+            {
+                if (depth >= MaxDepth || _seen.Count >= MaxStates || !_seen.Add(state))
+                {
+                    return false;
+                }
+
+                var moves = new Pour[PourRules.MaxPours];
+                int n = PourRules.CollectUsefulMoves(state, _futile, _mode, moves);
+                for (int i = 0; i < n; i++)
+                {
+                    BoardState next = PourRules.Apply(state, moves[i].Source, moves[i].Target, _mode);
+                    if (next.IsWon())
+                    {
+                        continue;
+                    }
+
+                    _path.Add(moves[i]);
+                    if (PourRules.IsStuck(next, _futile))
+                    {
+                        if (RescueBooster.IsOffered(_rescue.Check(next, _mode, _futile)))
+                        {
+                            return true;
+                        }
+                    }
+                    else if (Visit(next, depth + 1))
+                    {
+                        return true;
+                    }
+
+                    _path.RemoveAt(_path.Count - 1);
+                }
+
+                return false;
+            }
         }
     }
 }

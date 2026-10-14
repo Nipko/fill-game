@@ -5,6 +5,7 @@ using AF.Ads;
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
+using AF.Economy;
 using AF.GameFlow;
 using AF.Presentation;
 using AF.Presentation.Mechanics;
@@ -28,16 +29,18 @@ namespace AF.Tests.PlayMode
     /// <item><description>observación 1 / pregunta 41 (4): el aviso no tapa las burbujas «Te faltan {n}» de la bandeja, con 1 y
     /// con 3 filas (el 135); sin burbujas tampoco tapa la repisa de abajo ni la ficha «?×n» del 135; con ellas no deja a medias
     /// ninguna ficha (o va junto a ella, ajustado a su texto, o la tapa entera: el compromiso [P]); y Revelar sin semillas ni
-    /// video ya no saca el aviso: la burbuja «Te faltan {n}» late (revisión de T52);</description></item>
+    /// video ya no saca el aviso: la burbuja «Te faltan {n}» late dos veces desde su pie sin pisar la vecina, se queda roja
+    /// ≈ 1,1 s y el botón tiembla (revisión de T52, rondas 1 y 2); el aire del cartel no depende del texto anterior;</description></item>
     /// <item><description>pregunta 43: el banner de mundo admite la escala de fuente de 02 §12 hasta el 130 %, con las mismas
     /// comprobaciones que la tarjeta previa;</description></item>
     /// <item><description>observación 4: tras ver la victoria del 40, el banner del 41 entra con «Siguiente» sin esperar
     /// (<c>wait_ms</c> ≤ 16 ms y sin respaldo): la superficie de madera ya se pintó en otro hilo con su arte (el test la saca
     /// antes de la caché del arte compartido, así que no depende de los tests que corrieron antes);</description></item>
     /// <item><description>observación 5: por el Remolino, la cuia tocada se traga el chorro (remolino con contorno en su
-    /// superficie y espiral que gira, se ilumina, late y enciende un brillo detrás del remanso) y la pareja se ilumina y late al
-    /// recibir, con su vidrio que brilla y destellos en el fondo; dentro del presupuesto de 2.800 ms, sin asignaciones por
-    /// fotograma y, con Reducir movimiento, sin giros, latidos ni partículas (ni siquiera pedidas): solo fundidos.</description></item>
+    /// superficie y espiral que gira, se ilumina y late, con el remanso que se aclara) y la pareja se ilumina y late al recibir,
+    /// con la zona vacía de su cavidad teñida del color de la racha y destellos en el fondo; sin brillos aditivos fuera de
+    /// FxLayer (guía v2 §8), dentro del presupuesto de 2.800 ms, sin asignaciones por fotograma y, con Reducir movimiento, sin
+    /// giros, latidos ni partículas (ni siquiera pedidas): solo fundidos.</description></item>
     /// </list>
     /// </summary>
     public sealed class PhoneFixesTests
@@ -242,34 +245,67 @@ namespace AF.Tests.PlayMode
             Assert.That(view.NoticesQueued, Is.EqualTo(0));
             Assert.That(view.Tray.RevealMissingPulsing, Is.True, "la burbuja responde");
             Assert.That(boot.Flow!.RevealSelecting, Is.False);
-            Rect rest = VictorySetup.CanvasRect(view.Tray.RevealMissingRect, Root(view));
-            PlayModeHelpers.Step(boot, Mathf.RoundToInt(BoosterTray.MissingPulseHalfMs));
-            Assert.That(view.Tray.RevealMissingPulseScale, Is.GreaterThan(1.1f).And.LessThanOrEqualTo(BoosterTray.MissingPulseScale + 1e-4f), "late: 1 → 1,12 → 1");
-            Assert.That(view.Tray.RevealMissingPulseColor, Is.GreaterThan(0.9f), "con los colores del precio sin saldo");
-            Assert.That(VictorySetup.CanvasRect(view.Tray.RevealMissingRect, Root(view)), Is.EqualTo(rest), "su sitio no cambia (los toques ni el aviso del tablero)");
-            PlayModeHelpers.Step(boot, Mathf.RoundToInt(BoosterTray.MissingPulseHalfMs) + 50);
-            Assert.That(view.Tray.RevealMissingPulsing, Is.False, "en 2 × 180 ms");
+            RectTransform root = Root(view);
+            Rect rest = VictorySetup.CanvasRect(view.Tray.RevealMissingRect, root);
+            Rect neighbour = VictorySetup.CanvasRect(view.Tray.ExtraMissingRect, root);
+            var body = (RectTransform)view.Tray.RevealMissingRect.Find("Body")!;
+            var button = (RectTransform)view.Tray.RevealButton.transform;
+            Rect buttonRest = VictorySetup.CanvasRect(button, root);
+
+            // Revisión de T52, ronda 2: dos latidos (2 × 2 × 150 ms) desde el centro del pie, los colores sin saldo sostenidos
+            // ≈ 1,1 s y el botón Revelar que tiembla ± 4 dp, 3 ciclos en 300 ms. Con la burbuja vecina («Te faltan 150»), el latido
+            // no la pisa: crece como mucho lo que deja 0,5 dp de aire.
+            float max = view.Tray.RevealMissingPulseMaxScale;
+            Assert.That(max, Is.GreaterThan(1.03f).And.LessThan(BoosterTray.MissingPulseScale), "con vecina, menos que 1,08");
+            Response normal = TrackResponse(boot, view, body, neighbour, rest, button, buttonRest);
+            Assert.That(normal.Beats, Is.EqualTo(BoosterTray.MissingPulseBeats), "dos latidos");
+            Assert.That(normal.MaxScale, Is.GreaterThan(max - 0.01f).And.LessThanOrEqualTo(max + 1e-4f), "hasta lo que deja la vecina");
+            Assert.That(normal.LastBeatMs, Is.LessThanOrEqualTo((4f * BoosterTray.MissingPulseBeatMs) + PlayModeHelpers.FrameMs), "en 600 ms");
+            Assert.That(normal.FullColorFromMs, Is.LessThanOrEqualTo(BoosterTray.MissingColorInMs + PlayModeHelpers.FrameMs), "el rojo entra en 100 ms");
+            Assert.That(normal.FullColorUntilMs, Is.GreaterThanOrEqualTo(BoosterTray.MissingColorHoldMs - PlayModeHelpers.FrameMs), "y se mantiene hasta los 900 ms");
+            Assert.That(normal.EndMs, Is.InRange(BoosterTray.MissingColorHoldMs + BoosterTray.MissingColorOutMs, BoosterTray.MissingColorHoldMs + BoosterTray.MissingColorOutMs + PlayModeHelpers.FrameMs), "≈ 1,1 s en total");
+            Assert.That(normal.MaxShake, Is.GreaterThan(0.75f * BoosterTray.RevealShakeDp).And.LessThanOrEqualTo(BoosterTray.RevealShakeDp + 1e-3f), "Revelar tiembla ± 4 dp");
+            Assert.That(normal.ShakeEndMs, Is.LessThanOrEqualTo(BoosterTray.RevealShakeMs + PlayModeHelpers.FrameMs), "en 300 ms");
             Assert.That(view.Tray.RevealMissingPulseScale, Is.EqualTo(1f));
             Assert.That(view.Tray.RevealMissingPulseColor, Is.EqualTo(0f));
+            Assert.That(view.Tray.RevealShakeOffset, Is.EqualTo(0f));
+            Assert.That(VictorySetup.CanvasRect(button, root), Is.EqualTo(buttonRest), "el botón vuelve a su sitio");
             Assert.That(view.Tray.RevealMissingLabel.color, Is.EqualTo(Palette.UiRedWarning), "de vuelta a sus colores");
 
-            // Con Reducir movimiento, sin latido: solo el fundido de color.
+            // Con Reducir movimiento, sin latido ni temblor: el rojo sostenido 1 s y su fundido de 200 ms.
             boot.Flow.ReduceMotion = true;
             Assert.That(boot.PressReveal(), Is.False);
             Assert.That(view.ToastText, Is.Null);
-            float maxScale = 1f;
-            float maxColor = 0f;
-            for (int ms = 0; ms < 600; ms += PlayModeHelpers.FrameMs)
-            {
-                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
-                maxScale = Mathf.Max(maxScale, view.Tray.RevealMissingPulseScale);
-                maxColor = Mathf.Max(maxColor, view.Tray.RevealMissingPulseColor);
-            }
-
-            Assert.That(maxScale, Is.EqualTo(1f), "sin latido");
-            Assert.That(maxColor, Is.GreaterThan(0.9f), "con el fundido de color");
-            Assert.That(view.Tray.RevealMissingPulsing, Is.False, "en 2 × 200 ms");
+            Response reduced = TrackResponse(boot, view, body, neighbour, rest, button, buttonRest);
+            Assert.That(reduced.MaxScale, Is.EqualTo(1f), "sin latido");
+            Assert.That(reduced.MaxShake, Is.EqualTo(0f), "sin temblor");
+            Assert.That(reduced.FullColorUntilMs, Is.GreaterThanOrEqualTo(BoosterTray.MissingColorHoldReducedMs - PlayModeHelpers.FrameMs), "el rojo, sostenido 1 s");
+            Assert.That(reduced.EndMs, Is.InRange(BoosterTray.MissingColorHoldReducedMs + BoosterTray.MissingColorOutMs, BoosterTray.MissingColorHoldReducedMs + BoosterTray.MissingColorOutMs + PlayModeHelpers.FrameMs));
             Assert.That(view.ToastText, Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator RevealWithoutSeedsNorVideo_TheBubbleAlone_BeatsUpTo108_FromItsFoot()
+        {
+            // Sin la burbuja vecina (una Cuia extra en el stock: «+1 cuia» no enseña precio), la de Revelar va ancha y late hasta
+            // 1,08 desde el centro de su pie: su borde de abajo no baja hacia el cordón de la bandeja (revisión de T52, ronda 2).
+            yield return LoadWithBubbles(135, 0, 0);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            Assert.That(boot.Wallet!.Apply(Transaction.GrantStock(BoosterKind.ExtraCuia, 1)).IsApplied, Is.True);
+            PlayModeHelpers.Step(boot, 50);
+            Assert.That(view.Tray.ExtraShowsMissing, Is.False, "condición del test: «+1 cuia» con stock, sin burbuja");
+            Assert.That(view.Tray.RevealShowsMissing, Is.True);
+            Assert.That(view.Tray.RevealMissingPulseMaxScale, Is.EqualTo(BoosterTray.MissingPulseScale), "sola, hasta 1,08");
+            RectTransform root = Root(view);
+            Rect rest = VictorySetup.CanvasRect(view.Tray.RevealMissingRect, root);
+            var body = (RectTransform)view.Tray.RevealMissingRect.Find("Body")!;
+            var button = (RectTransform)view.Tray.RevealButton.transform;
+            Assert.That(boot.PressReveal(), Is.False);
+            Assert.That(view.ToastText, Is.Null);
+            Response r = TrackResponse(boot, view, body, Rect.zero, rest, button, VictorySetup.CanvasRect(button, root));
+            Assert.That(r.Beats, Is.EqualTo(BoosterTray.MissingPulseBeats));
+            Assert.That(r.MaxScale, Is.GreaterThan(BoosterTray.MissingPulseScale - 0.01f).And.LessThanOrEqualTo(BoosterTray.MissingPulseScale + 1e-4f));
         }
 
         [UnityTest]
@@ -304,8 +340,37 @@ namespace AF.Tests.PlayMode
                 {
                     view.Tick(PlayModeHelpers.FrameMs);
                 }
-            }, Is.Not.AllocatingGCMemory(), "20 fotogramas del latido de la burbuja");
-            Assert.That(view.Tray.RevealMissingPulsing, Is.True, "aún late (2 × 180 ms)");
+            }, Is.Not.AllocatingGCMemory(), "20 fotogramas del latido de la burbuja y del temblor de Revelar");
+            Assert.That(view.Tray.RevealMissingPulsing, Is.True, "aún responde (≈ 1,1 s)");
+        }
+
+        [UnityTest]
+        public IEnumerator Toast_PadFollowsItsOwnText_NotTheOneShownBefore()
+        {
+            // Revisión de T52, ronda 2: el cartel («El río bajó», el rótulo del intento) se coloca antes de mostrar su texto y
+            // lleva siempre 6 dp de aire arriba y abajo, como antes de T52, sea cual sea el texto que se mostró antes; el aviso
+            // colocado con PlaceAt reajusta su aire al texto de cada Show.
+            yield return null;
+            var go = new GameObject("ToastPadTest", typeof(RectTransform), typeof(Canvas));
+            var banner = new Toast("Banner", go.transform, Art, 18f);
+            banner.Place(360f, 100f);
+            banner.Show(UiText.RiverLoweredColor, 2000f);
+            Assert.That(banner.TextPadDp, Is.EqualTo(6f), "«" + UiText.RiverLoweredColor + "»");
+            banner.Hide();
+            banner.Place(360f, 100f); // como GameScreen: se coloca con el texto anterior aún en la etiqueta
+            banner.Show(UiText.LevelAttempt(31, 2), 2000f);
+            Assert.That(banner.TextPadDp, Is.EqualTo(6f), "el rótulo del intento tras «El río bajó»: el aire de siempre");
+
+            var toast = new Toast("Toast", go.transform, Art, 15f);
+            toast.Show(UiText.RiverLoweredColor, 3000f);
+            toast.PlaceAt(20f, 100f, 160f, Toast.DefaultHeightDp); // estrecha: el texto largo va en varias líneas
+            float padLong = toast.TextPadDp;
+            toast.Show(UiText.RevealGiftToast, 3000f); // sin volver a colocarla
+            float padShort = toast.TextPadDp;
+            toast.PlaceAt(20f, 100f, 160f, Toast.DefaultHeightDp);
+            Assert.That(padShort, Is.EqualTo(toast.TextPadDp), "Show reajusta el aire al texto nuevo, como una colocación nueva");
+            Assert.That(padShort, Is.GreaterThan(padLong), "condición del test: el texto corto deja más aire que el largo");
+            Object.Destroy(go);
         }
 
         // ---- 2 · Pregunta 43: el banner de mundo admite la escala de fuente de 02 §12 ----
@@ -446,8 +511,9 @@ namespace AF.Tests.PlayMode
             Assert.That(intake.IntakeActive, Is.True);
             Assert.That(intake.SpiralFoamAlpha, Is.GreaterThan(RemolinoOverlay.FoamAlpha + 0.2f), "la espiral de la base se ilumina");
             Assert.That(intake.SpiralScale, Is.GreaterThan(1.08f), "y late (hasta 1,15)");
-            Assert.That(intake.PoolGlowAlphaNow, Is.GreaterThan(0.5f * RemolinoOverlay.PoolGlowAlpha), "con el brillo detrás del remanso");
-            Assert.That(intake.GlowsAdditive, Is.True, "aditivo, sin Bloom");
+            Assert.That(intake.PoolLightNow, Is.GreaterThan(0.9f * RemolinoOverlay.PoolLightMix), "y el remanso entero se aclara");
+            AssertPoolLit(intake, "la cuia tocada");
+            Assert.That(intake.AdditiveImageCount, Is.EqualTo(0), "sin brillos aditivos fuera de FxLayer (guía v2 §8)");
             Assert.That(intake.SpiralAngle, Is.Not.EqualTo(angle), "y gira deprisa");
             Assert.That(intake.IntakeSwirlAlpha, Is.GreaterThan(0.5f));
             Assert.That(intake.IsAnimating, Is.False, "acompaña al vertido: no es un paso");
@@ -458,10 +524,12 @@ namespace AF.Tests.PlayMode
             MechanicTestKit.StepToFraction(boot, MechanicStepKind.Receive, partner, 0.6f);
             Assert.That(receive.SpiralFoamAlpha, Is.GreaterThan(RemolinoOverlay.FoamAlpha + 0.2f), "la pareja se ilumina al recibir");
             Assert.That(receive.SpiralScale, Is.GreaterThan(1.08f), "y late");
-            Assert.That(receive.PoolGlowAlphaNow, Is.GreaterThan(0.5f * RemolinoOverlay.PoolGlowAlpha), "con el brillo del remanso");
-            Assert.That(receive.GlassGlowAlphaNow, Is.GreaterThan(0.05f).And.LessThanOrEqualTo(RemolinoOverlay.GlassGlowAlpha), "y su vidrio brilla al llegar la racha al fondo");
+            Assert.That(receive.PoolLightNow, Is.GreaterThan(0.5f * RemolinoOverlay.PoolLightMix), "con el remanso aclarado");
+            AssertCavityGlow(receive, view.Views[partner], "la pareja, al 60 % de la recepción");
+            Assert.That(receive.AdditiveImageCount, Is.EqualTo(0), "sin brillos aditivos fuera de FxLayer (guía v2 §8)");
             Assert.That(intake.IntakeActive || intake.IntakeSwirlVisible, Is.False, "la cuia tocada ya se apagó");
-            Assert.That(intake.PoolGlowAlphaNow, Is.EqualTo(0f), "y su brillo también");
+            Assert.That(intake.PoolLightNow, Is.EqualTo(0f), "y su remanso también");
+            Assert.That(intake.PoolColorNow, Is.EqualTo(ProceduralArt.WhirlPoolColor), "con su color de siempre");
             Assert.That(intake.SpiralFoamAlpha, Is.EqualTo(RemolinoOverlay.FoamAlpha).Within(1e-3f));
             Assert.That(intake.SpiralScale, Is.EqualTo(1f).Within(1e-4f));
             Assert.That(intake.SpiralAngle, Is.EqualTo(0f).Within(0.01f));
@@ -475,7 +543,12 @@ namespace AF.Tests.PlayMode
             MechanicTestKit.AssertViewMatchesModel(boot);
             Assert.That(receive.SpiralFoamAlpha, Is.EqualTo(RemolinoOverlay.FoamAlpha).Within(1e-3f), "en reposo, la espuma de siempre");
             Assert.That(receive.SpiralScale, Is.EqualTo(1f).Within(1e-4f));
-            Assert.That(receive.PoolGlowAlphaNow + receive.GlassGlowAlphaNow, Is.EqualTo(0f), "y sin brillos");
+            Assert.That(receive.PoolLightNow, Is.EqualTo(0f), "y el remanso de siempre");
+            Assert.That(receive.PoolColorNow, Is.EqualTo(ProceduralArt.WhirlPoolColor));
+
+            // La luz de la cavidad se apaga sola tras la recepción (≤ 100 ms × el factor de los pasos más), sin retener la cola.
+            PlayModeHelpers.Step(boot, Mathf.CeilToInt((RemolinoOverlay.CavityGlowMs - ((1f - RemolinoOverlay.FillStart) * RemolinoOverlay.ReceiveMs)) * record.SpeedFactor) + PlayModeHelpers.FrameMs);
+            Assert.That(receive.CavityGlowAlphaNow, Is.EqualTo(0f), "y la luz de la cavidad, apagada");
             TestContext.WriteLine("Nivel 103: " + elapsed + " ms del toque a la vista quieta.");
         }
 
@@ -527,8 +600,10 @@ namespace AF.Tests.PlayMode
                 bool spun = false;
                 bool pulsed = false;
                 bool swirl = false;
-                bool poolGlow = false;
-                bool glassGlow = false;
+                bool poolLit = false;
+                bool partnerPoolLit = false;
+                bool cavityGlow = false;
+                int glowFrames = 0;
                 for (int t = 0; t < 4000 && !_rig.Animator.IsIdle; t += PlayModeHelpers.FrameMs)
                 {
                     _rig.Tick(PlayModeHelpers.FrameMs);
@@ -536,16 +611,28 @@ namespace AF.Tests.PlayMode
                     spun |= Mathf.Abs(intake.SpiralAngle) > 0.01f;
                     pulsed |= intake.SpiralScale > 1.001f;
                     swirl |= intake.IntakeSwirlVisible && intake.IntakeSwirlAlpha > 0.3f;
-                    poolGlow |= intake.PoolGlowAlphaNow > 0.1f;
-                    glassGlow |= partner.GlassGlowAlphaNow > 0.05f;
+                    poolLit |= intake.PoolLightNow > 0.5f * RemolinoOverlay.PoolLightMix;
+                    partnerPoolLit |= partner.PoolLightNow > 0.5f * RemolinoOverlay.PoolLightMix;
+                    cavityGlow |= partner.CavityGlowAlphaNow > 0.25f;
+                    glowFrames += partner.CavityGlowAlphaNow > 0f ? 1 : 0;
+                    Assert.That(intake.AdditiveImageCount + partner.AdditiveImageCount, Is.EqualTo(0), "sin brillos aditivos fuera de FxLayer");
                 }
 
                 string what = reduce ? "con Reducir movimiento" : "normal";
                 Assert.That(_rig.Animator.IsIdle, Is.True, what);
                 Assert.That(_rig.Animator.ShownOf(2), Is.EqualTo(after[2]), what);
                 Assert.That(lit && swirl, Is.True, what + ": la espuma se ilumina y el remolino de la superficie se funde");
-                Assert.That(poolGlow && glassGlow, Is.True, what + ": el brillo del remanso y el del vidrio de la pareja (fundidos, también con Reducir movimiento)");
-                Assert.That(intake.PoolGlowAlphaNow + partner.PoolGlowAlphaNow + partner.GlassGlowAlphaNow, Is.EqualTo(0f), what + ": al terminar, sin brillos");
+                Assert.That(poolLit && partnerPoolLit && cavityGlow, Is.True, what + ": los remansos se aclaran y la cavidad de la pareja se ilumina (fundidos, también con Reducir movimiento)");
+                Assert.That(glowFrames, Is.GreaterThan(3), what + ": la luz de la cavidad dura varios fotogramas");
+
+                // La luz de la cavidad se apaga sola tras la recepción (≤ CavityGlowMs × el factor de los pasos desde el fondo).
+                for (int t = 0; t < RemolinoOverlay.CavityGlowMs && partner.CavityGlowAlphaNow > 0f; t += PlayModeHelpers.FrameMs)
+                {
+                    _rig.Tick(PlayModeHelpers.FrameMs);
+                }
+
+                Assert.That(intake.PoolLightNow + partner.PoolLightNow + partner.CavityGlowAlphaNow, Is.EqualTo(0f), what + ": al terminar, en reposo");
+                Assert.That(partner.PoolColorNow, Is.EqualTo(ProceduralArt.WhirlPoolColor), what);
                 Assert.That(spun, Is.EqualTo(!reduce), what + ": la espiral gira solo sin Reducir movimiento");
                 Assert.That(pulsed, Is.EqualTo(!reduce), what + ": y late");
                 Assert.That(intake.IntakeActive || intake.IntakeSwirlVisible, Is.False, what + ": al terminar, en reposo");
@@ -591,6 +678,96 @@ namespace AF.Tests.PlayMode
         }
 
         // ---- Ayudas ----
+
+        // Sigue la respuesta de la burbuja de Revelar fotograma a fotograma hasta que termina (≤ 2 s): latidos, escala, colores y
+        // temblor del botón. En cada fotograma, la burbuja no se mueve de su sitio, crece desde el centro de su pie (su borde de
+        // abajo no baja), no pisa la vecina (si la hay: neighbour no vacío) y el botón solo se desplaza a lo ancho, lo que dice
+        // RevealShakeOffset.
+        private static Response TrackResponse(GameBootstrap boot, GameScreen view, RectTransform body, Rect neighbour, Rect rest, RectTransform button, Rect buttonRest)
+        {
+            var r = new Response { MaxScale = 1f, FullColorFromMs = -1f, FullColorUntilMs = -1f, EndMs = -1f };
+            RectTransform root = Root(view);
+            float prev = 1f;
+            bool rising = false;
+            for (int ms = PlayModeHelpers.FrameMs; ms <= 2000; ms += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                if (!view.Tray.RevealMissingPulsing)
+                {
+                    r.EndMs = ms;
+                    break;
+                }
+
+                float scale = view.Tray.RevealMissingPulseScale;
+                if (scale > prev + 1e-5f)
+                {
+                    rising = true;
+                }
+                else if (rising && scale < prev - 1e-5f)
+                {
+                    rising = false;
+                    r.Beats++;
+                }
+
+                prev = scale;
+                r.MaxScale = Mathf.Max(r.MaxScale, scale);
+                if (scale > 1.0001f)
+                {
+                    r.LastBeatMs = ms;
+                }
+
+                if (view.Tray.RevealMissingPulseColor >= 0.999f)
+                {
+                    if (r.FullColorFromMs < 0f)
+                    {
+                        r.FullColorFromMs = ms;
+                    }
+
+                    r.FullColorUntilMs = ms;
+                }
+
+                float shake = view.Tray.RevealShakeOffset;
+                r.MaxShake = Mathf.Max(r.MaxShake, Mathf.Abs(shake));
+                if (Mathf.Abs(shake) > 1e-3f)
+                {
+                    r.ShakeEndMs = ms;
+                }
+
+                Canvas.ForceUpdateCanvases();
+                string at = " (" + ms + " ms)";
+                Assert.That(VictorySetup.CanvasRect(view.Tray.RevealMissingRect, root), Is.EqualTo(rest), "la burbuja no se mueve de su sitio" + at);
+                Rect b = VictorySetup.CanvasRect(body, root);
+                Assert.That(b.yMax, Is.EqualTo(rest.yMax).Within(0.05f), "crece desde su pie: no baja hacia el cordón" + at);
+                Assert.That(b.center.x, Is.EqualTo(rest.center.x).Within(0.05f), "centrada" + at);
+                if (neighbour.width > 0f)
+                {
+                    float gap = b.xMin >= neighbour.center.x ? b.xMin - neighbour.xMax : neighbour.xMin - b.xMax;
+                    Assert.That(gap, Is.GreaterThanOrEqualTo(BoosterTray.MissingPulseClearDp - 0.05f), "no pisa la burbuja vecina " + neighbour + ": " + b + at);
+                }
+
+                Rect btn = VictorySetup.CanvasRect(button, root);
+                Assert.That(btn.xMin - buttonRest.xMin, Is.EqualTo(shake).Within(0.05f), "el botón tiembla a lo ancho" + at);
+                Assert.That(btn.yMin, Is.EqualTo(buttonRest.yMin).Within(0.05f), "y no a lo alto" + at);
+            }
+
+            Assert.That(r.EndMs, Is.GreaterThan(0f), "la respuesta termina");
+            TestContext.WriteLine("Respuesta de «Te faltan {n}»: " + r.Beats + " latidos hasta " + r.MaxScale.ToString("0.000") + " (el último a los "
+                + r.LastBeatMs + " ms), rojo pleno de " + r.FullColorFromMs + " a " + r.FullColorUntilMs + " ms, temblor ± "
+                + r.MaxShake.ToString("0.00") + " dp hasta " + r.ShakeEndMs + " ms, fin a los " + r.EndMs + " ms.");
+            return r;
+        }
+
+        private struct Response
+        {
+            public int Beats;
+            public float MaxScale;
+            public float LastBeatMs;
+            public float FullColorFromMs;
+            public float FullColorUntilMs;
+            public float EndMs;
+            public float MaxShake;
+            public float ShakeEndMs;
+        }
 
         // Nivel level (con LaunchOptions.LevelOffsetOverride = offset si no es 0) con seeds semillas, sin video ni Luciérnagas,
         // en juego con la vista quieta.
@@ -788,6 +965,35 @@ namespace AF.Tests.PlayMode
             BoardBuildResult result = BoardBuilder.Build(new[] { 4, 4, 4, 4 }, cuias, attrs);
             Assert.That(result.Error, Is.Null);
             return result.State!;
+        }
+
+        // El remanso, aclarado hacia el agua del canal (revisión de T52, ronda 2): ≥ 40 niveles RGB más claro en cada canal que
+        // en reposo (el criterio de la captura 94 en el centro del remanso).
+        private static void AssertPoolLit(RemolinoOverlay whirl, string what)
+        {
+            Color now = whirl.PoolColorNow;
+            Color rest = ProceduralArt.WhirlPoolColor;
+            Assert.That(now.a, Is.EqualTo(1f), what + ": el remanso, opaco");
+            Assert.That(255f * Mathf.Min(now.r - rest.r, Mathf.Min(now.g - rest.g, now.b - rest.b)), Is.GreaterThanOrEqualTo(40f), what + ": el remanso se aclara ≥ 40 niveles RGB (" + now + ")");
+        }
+
+        // La luz de la cavidad de la pareja (revisión de T52, ronda 2): encendida, del color de la racha aclarado, dentro de la zona
+        // de dosis de la cavidad y detrás del líquido (en BodyBack, antes que el líquido).
+        private static void AssertCavityGlow(RemolinoOverlay whirl, CuiaView view, string what)
+        {
+            Assert.That(whirl.CavityGlowAlphaNow, Is.GreaterThan(0.25f).And.LessThanOrEqualTo(RemolinoOverlay.CavityGlowAlpha + 1e-4f), what + ": la cavidad se ilumina");
+            Color expected = ColorMath.Lighten(whirl.RachaColor, RemolinoOverlay.CavityGlowLighten);
+            Color glow = whirl.CavityGlowColor;
+            Assert.That(new Vector3(glow.r, glow.g, glow.b), Is.EqualTo(new Vector3(expected.r, expected.g, expected.b)), what + ": del color de la racha, aclarado");
+            Rect r = whirl.CavityGlowRectU;
+            Assert.That(r.xMin, Is.GreaterThanOrEqualTo(-CuiaGeometry.CavityHalfWidthU), what + ": dentro de la cavidad");
+            Assert.That(r.xMax, Is.LessThanOrEqualTo(CuiaGeometry.CavityHalfWidthU), what);
+            Assert.That(r.yMin, Is.EqualTo(CuiaGeometry.CavityBottomU).Within(0.01f), what + ": desde el fondo junto a las paredes");
+            Assert.That(r.yMax, Is.EqualTo(CuiaGeometry.CavityTopU(view.Capacity)).Within(0.01f), what + ": hasta el techo de las dosis");
+            Transform? glowT = view.transform.Find("Body/BodyBack/RemolinoCavityGlow");
+            Assert.That(glowT, Is.Not.Null, what + ": en BodyBack");
+            Transform liquid = view.transform.Find("Body/Liquid")!;
+            Assert.That(glowT!.parent.GetSiblingIndex(), Is.LessThan(liquid.GetSiblingIndex()), what + ": detrás del líquido");
         }
 
         private static RemolinoOverlay Whirl(CuiaView view)

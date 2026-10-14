@@ -79,17 +79,23 @@ namespace AF.Presentation.Mechanics
     /// cualquier tinte, también la Guanábana blanca: <see cref="ProceduralArt.RemolinoIntakeFrame"/>; revisión de T52) hacia
     /// cuyo centro, en el eje de la cuia, se curva el chorro, sin salpicar; y su espiral de la base gira deprisa
     /// (<see cref="IntakeTurnsPerSecond"/>) y se ilumina: la espuma pasa de <see cref="FoamAlpha"/> a <see cref="LitFoamAlpha"/>,
-    /// late hasta <see cref="PulseScale"/> y detrás del remanso se enciende un brillo aditivo del agua del canal
-    /// (<see cref="PoolGlowAlpha"/>). Al acabar el chorro se apaga en <see cref="IntakeTailMs"/>, mientras la racha sale por el
-    /// canal.</description></item>
+    /// late hasta <see cref="PulseScale"/> y el remanso entero se aclara hacia el agua del canal (<see cref="PoolLightMix"/>;
+    /// revisión de T52, ronda 2: el brillo aditivo que iba detrás del remanso no se veía). Al acabar el chorro se apaga en
+    /// <see cref="IntakeTailMs"/>, mientras la racha sale por el canal.</description></item>
     /// <item><description><b>La pareja se ilumina al recibir</b>: durante la recepción su espiral se ilumina y late igual, con el
-    /// brillo del remanso (máximo hacia la mitad de la subida); al entrar la racha por el fondo, su vidrio brilla
-    /// (<see cref="GlassGlowAlpha"/> a 0 en <see cref="GlassGlowMs"/>: la silueta del vidrio en aditivo) y, además de las
-    /// burbujas, salen <see cref="SparklesBottom"/> destellos en el fondo de la cavidad (<see cref="IBoardFx.Sparkles"/>, dentro
-    /// del tope de 44 partículas y de 8 brillos aditivos; los dos brillos no son partículas).</description></item>
+    /// remanso aclarado (máximo hacia la mitad de la subida); al entrar la racha por el fondo, la zona vacía de su cavidad se
+    /// tiñe del color de la racha aclarado (<see cref="CavityGlowAlpha"/> a 0 en <see cref="CavityGlowMs"/>, detrás del líquido;
+    /// revisión de T52, ronda 2: la silueta del vidrio en aditivo solo saturaba los cantos) y, además de las burbujas, salen
+    /// <see cref="SparklesBottom"/> destellos en el fondo de la cavidad (<see cref="IBoardFx.Sparkles"/>).</description></item>
+    /// <item><description><b>Presupuesto de la guía v2 §8</b> (≤ 8 brillos aditivos a la vez, de ≤ 96 × 96 dp): los únicos
+    /// brillos aditivos del Remolino son esos destellos, que pide a <see cref="FxLayer"/> y cuentan en su tope
+    /// (<see cref="FxLayer.MaxAdditive"/>; lo que no cabe se descarta) y en el de 44 partículas. El remanso aclarado y la luz de
+    /// la cavidad son colores con alfa normal (<see cref="AdditiveImageCount"/> = 0).</description></item>
     /// <item><description>Con Reducir movimiento, sin giros, latidos ni partículas: solo los fundidos de la espuma, del remolino
-    /// de la superficie y de los brillos. Los colores en reposo no cambian (<see cref="CollectSurfaceColors"/>): la espuma más
-    /// clara y los brillos solo duran lo que el chorro o la recepción, como las salpicaduras.</description></item>
+    /// de la superficie, del remanso y de la luz de la cavidad, que son entonces la señal de la cuia tocada y de la pareja. Los
+    /// colores en reposo no cambian (<see cref="CollectSurfaceColors"/>): la espuma más clara, el remanso aclarado y la luz de la
+    /// cavidad solo duran lo que el chorro o la recepción (la luz, hasta 100 ms × el factor de los pasos más), como las
+    /// salpicaduras.</description></item>
     /// </list>
     /// <para>Sin asignaciones tras <see cref="CuiaOverlay.Attach"/>: piezas, puntos del trazado y buffers fijos; los sprites
     /// se piden en <see cref="OnAttach"/>.</para>
@@ -184,24 +190,33 @@ namespace AF.Presentation.Mechanics
         public const float PulseScale = 1.15f;
 
         /// <summary>
-        /// Brillo aditivo detrás del remanso mientras la cuia se traga el chorro o recibe (revisión de T52) [P]: un disco suave
-        /// (<see cref="ProceduralArt.Glow"/>) de <see cref="PoolGlowScale"/> veces el remanso, del agua del canal
-        /// (<see cref="ProceduralArt.RemolinoChannelWater"/>) con este alfa en lo más claro. Sigue al brillo de la espuma.
+        /// El remanso se aclara mientras la cuia se traga el chorro o recibe (revisión de T52, ronda 2) [P]: su color va de
+        /// <see cref="ProceduralArt.WhirlPoolColor"/> hacia el agua del canal (<see cref="ProceduralArt.RemolinoChannelWater"/>,
+        /// #8FA9AE) hasta esta fracción en lo más claro, con la luz de la espuma. Pinta el remanso entero, con alfa normal: no
+        /// es un brillo aditivo (guía v2 §8: ≤ 8 a la vez, todos en <see cref="FxLayer"/>). En reposo, el color de siempre.
         /// </summary>
-        public const float PoolGlowAlpha = 0.4f;
-
-        /// <summary>Tamaño del brillo del remanso respecto al remanso (2,6 × 0,85 u) [P].</summary>
-        public const float PoolGlowScale = 1.4f;
+        public const float PoolLightMix = 0.6f;
 
         /// <summary>
-        /// Brillo del vidrio de la pareja al llegar la racha a su fondo (revisión de T52) [P]: la silueta del vidrio frontal en
-        /// aditivo, marfil, de este alfa a 0 en <see cref="GlassGlowMs"/> × el factor de los pasos. No es una partícula: no
-        /// cuenta en el tope de 44.
+        /// Luz de la cavidad de la pareja al llegar la racha a su fondo (revisión de T52, ronda 2) [P]: la zona de dosis de la
+        /// cavidad, detrás del líquido (<see cref="CuiaOverlayHost.BodyBack"/>), se tiñe del color de la racha aclarado
+        /// <see cref="CavityGlowLighten"/>, con este alfa, que se apaga a 0 en <see cref="CavityGlowMs"/> × el factor de los
+        /// pasos. Alfa normal, no aditivo, y nunca encima del líquido (guía v2 §2.5 y §7).
         /// </summary>
-        public const float GlassGlowAlpha = 0.3f;
+        public const float CavityGlowAlpha = 0.35f;
 
-        /// <summary>Duración del brillo del vidrio de la pareja (ms, × el factor de los pasos) [P].</summary>
-        public const float GlassGlowMs = 250f;
+        /// <summary>Lo que se aclara el color de la racha en la luz de la cavidad (hacia el blanco) [P].</summary>
+        public const float CavityGlowLighten = 0.3f;
+
+        /// <summary>
+        /// Duración de la luz de la cavidad de la pareja (ms, × el factor de los pasos) [P], desde que la racha llega a su fondo
+        /// (<see cref="FillStart"/>). Pasa del final de la recepción (300 ms × el factor) y se apaga sola después, sin retener
+        /// la cola (como la cola del chorro, <see cref="IntakeTailMs"/>).
+        /// </summary>
+        public const float CavityGlowMs = 400f;
+
+        // Margen de la luz de la cavidad hasta su pared, a cada lado (u): no asoma sobre el vidrio por el borde suavizado.
+        private const float CavityGlowInsetU = 0.02f;
 
         /// <summary>Entrada del brillo y del remolino de la superficie al llegar el chorro (ms; T52) [P].</summary>
         public const float IntakeFadeMs = 120f;
@@ -307,11 +322,12 @@ namespace AF.Presentation.Mechanics
         private readonly Vector2[] _sidePts = new Vector2[MaxChannelPoints];
 
         private Image _pool = null!;
-        private Image _poolGlow = null!;
         private Image _spiral = null!;
         private Image _swirl = null!;
-        private Image _glassGlow = null!;
-        private int _glassGlowPpu = -1;
+        private Image _cavityGlow = null!;
+        private float _cavityGlowAge = -1f; // ms desde que la racha llegó al fondo de la pareja; −1: apagada
+        private float _cavityGlowSpan;
+        private Color _cavityGlowColor;
         private int _spinFrame;
         private float _intakeMs = -1f;
         private float _intakeDuration;
@@ -489,15 +505,59 @@ namespace AF.Presentation.Mechanics
         /// <summary>Escala de la espiral de la base: 1 en reposo, hasta <see cref="PulseScale"/> al latir.</summary>
         public float SpiralScale => _spiral != null ? _spiral.rectTransform.localScale.x : 1f;
 
-        /// <summary>Alfa del brillo aditivo detrás del remanso (0 en reposo, hasta <see cref="PoolGlowAlpha"/>; tests).</summary>
-        public float PoolGlowAlphaNow => _poolGlow != null && _poolGlow.gameObject.activeSelf ? _poolGlow.color.a : 0f;
+        /// <summary>
+        /// Lo que el remanso se ha aclarado hacia el agua del canal (0 en reposo, hasta <see cref="PoolLightMix"/>; tests).
+        /// </summary>
+        public float PoolLightNow => _on && _spiralLight > 0f ? PoolLightMix * _spiralLight : 0f;
 
-        /// <summary>Alfa del brillo del vidrio de la pareja (0 en reposo, hasta <see cref="GlassGlowAlpha"/>; tests).</summary>
-        public float GlassGlowAlphaNow => _glassGlow != null && _glassGlow.gameObject.activeSelf ? _glassGlow.color.a : 0f;
+        /// <summary>Color con el que se pinta ahora el remanso (tests y capturas).</summary>
+        public Color PoolColorNow => _pool != null ? _pool.color : ProceduralArt.WhirlPoolColor;
 
-        /// <summary>El brillo del remanso y el del vidrio van con el material aditivo (tests: sin Bloom, guía 7).</summary>
-        public bool GlowsAdditive => _poolGlow != null && _glassGlow != null && UiMaterials.Additive != null
-            && _poolGlow.material == UiMaterials.Additive && _glassGlow.material == UiMaterials.Additive;
+        /// <summary>Alfa de la luz de la cavidad de la pareja (0 apagada, hasta <see cref="CavityGlowAlpha"/>; tests).</summary>
+        public float CavityGlowAlphaNow => _cavityGlow != null && _cavityGlow.gameObject.activeSelf ? _cavityGlow.color.a : 0f;
+
+        /// <summary>Color (sin alfa) de la luz de la cavidad de la pareja: el de la racha aclarado (tests).</summary>
+        public Color CavityGlowColor => _cavityGlowColor;
+
+        /// <summary>Rectángulo de la luz de la cavidad en las anclas de la cuia (u sobre el pie, desde el eje; tests).</summary>
+        public Rect CavityGlowRectU
+        {
+            get
+            {
+                if (_cavityGlow == null || Host.U <= 0f)
+                {
+                    return Rect.zero;
+                }
+
+                RectTransform rt = _cavityGlow.rectTransform;
+                Vector2 size = rt.sizeDelta / Host.U;
+                return new Rect((rt.anchoredPosition / Host.U) - (0.5f * size), size);
+            }
+        }
+
+        /// <summary>
+        /// Imágenes del Remolino con el material aditivo (tests: 0, los brillos aditivos del Remolino son solo los destellos de
+        /// <see cref="FxLayer"/>, que cuentan en su tope de <see cref="FxLayer.MaxAdditive"/>; guía v2 §8).
+        /// </summary>
+        public int AdditiveImageCount
+        {
+            get
+            {
+                Material? additive = UiMaterials.Additive;
+                if (additive == null)
+                {
+                    return 0;
+                }
+
+                int count = 0;
+                count += _pool != null && _pool.material == additive ? 1 : 0;
+                count += _spiral != null && _spiral.material == additive ? 1 : 0;
+                count += _swirl != null && _swirl.material == additive ? 1 : 0;
+                count += _cavityGlow != null && _cavityGlow.material == additive ? 1 : 0;
+                count += _pairTag != null && _pairTag.material == additive ? 1 : 0;
+                return count;
+            }
+        }
 
         /// <summary>
         /// La cuia tocada de un vertido por el Remolino empieza a tragarse el chorro (lo llama <c>BoardAnimator</c> cuando la cabeza
@@ -661,8 +721,7 @@ namespace AF.Presentation.Mechanics
             if (!on)
             {
                 EndIntake();
-                OverlayParts.SetVisible(_poolGlow, false);
-                OverlayParts.SetVisible(_glassGlow, false);
+                StopCavityGlow();
             }
 
             Visible = on;
@@ -679,19 +738,14 @@ namespace AF.Presentation.Mechanics
         public override void Layout(float u, float heightU)
         {
             OverlayParts.Place(_pool, 0f, PoolCenterU, PoolWidthU, PoolHeightU, u);
-            OverlayParts.Place(_poolGlow, 0f, PoolCenterU, PoolGlowScale * PoolWidthU, PoolGlowScale * PoolHeightU, u);
             OverlayParts.Place(_spiral, 0f, PoolCenterU, ProceduralArt.RemolinoSpiralWidthU, ProceduralArt.RemolinoSpiralHeightU, u);
 
-            // El brillo del vidrio: la silueta del vidrio frontal de la cuia, a la densidad de su vidrio (sin asignaciones: el
-            // sprite ya está en la caché, lo pidió la cuia).
-            OverlayParts.Place(_glassGlow, 0f, 0.5f * heightU, CuiaGeometry.WidthU, heightU, u);
-            int ppu = Host.Art.CuiaPixelsPerUFor(u);
-            if (ppu != _glassGlowPpu)
-            {
-                _glassGlowPpu = ppu;
-                _glassGlow.sprite = Host.Art.CuiaFront(Host.Capacity, ppu);
-            }
-
+            // La luz de la cavidad: la zona de dosis entera (del fondo junto a las paredes al techo; el arco del fondo y el
+            // hombro quedan fuera), por dentro de la pared.
+            int capacity = Host.Capacity;
+            float bottom = CuiaGeometry.CavityBottomU;
+            float top = CuiaGeometry.CavityTopU(capacity);
+            OverlayParts.Place(_cavityGlow, 0f, 0.5f * (bottom + top), 2f * (CuiaGeometry.CavityHalfWidthU - CavityGlowInsetU), top - bottom, u);
             SetPairMark(_pairDotCount, u);
         }
 
@@ -739,6 +793,10 @@ namespace AF.Presentation.Mechanics
             _bubbles = 0;
             _finalPainted = false;
             _animating = true;
+            StopCavityGlow(); // la de un paso anterior que aún se apagaba: se enciende otra vez al llegar esta racha al fondo
+            _cavityGlowSpan = CavityGlowMs * (ms / ReceiveMs);
+            _cavityGlowColor = ColorMath.Lighten(_rachaColor, CavityGlowLighten);
+            _cavityGlowColor.a = 1f;
             PreparePulse(ctx.OtherIndex);
             _layerRoot.SetAsLastSibling(); // la racha, sobre el canal que dibuja la otra cuia de la pareja
 
@@ -767,6 +825,13 @@ namespace AF.Presentation.Mechanics
 
             if (!_animating || _finalPainted)
             {
+                // Tras la recepción, la luz de la cavidad termina de apagarse sola (no retiene la cola).
+                if (_cavityGlowAge >= 0f)
+                {
+                    _cavityGlowAge += dtMs;
+                    PaintCavityGlow();
+                }
+
                 return;
             }
 
@@ -799,7 +864,9 @@ namespace AF.Presentation.Mechanics
             HideRacha();
             SetSpin(0);
             SetSpiralLight(0f, false);
-            OverlayParts.SetVisible(_glassGlow, false);
+
+            // La luz de la cavidad, si ya se encendió, sigue apagándose en Tick (≤ CavityGlowMs × el factor de los pasos):
+            // detrás del líquido, con el contenido final ya pintado, también tras un salto (Marea, vuelta de segundo plano).
 
             // Las franjas de esta cuia solo siguen si dibuja el canal (las de la racha de la otra cuia ya no hacen falta).
             if (_channelShown)
@@ -829,11 +896,8 @@ namespace AF.Presentation.Mechanics
         /// <inheritdoc />
         protected override void OnAttach()
         {
-            // El brillo del remanso, detrás de él (revisión de T52): aditivo, solo mientras se traga el chorro o recibe.
-            Material? additive = UiMaterials.Additive;
-            _poolGlow = OverlayParts.NewImage("RemolinoPoolGlow", Host.SlotBack, Host.Art.Glow, OverlayParts.Fade(ProceduralArt.RemolinoChannelWater, 0f));
-            _poolGlow.material = additive;
-            PreRegister(_poolGlow);
+            // El remanso se aclara él mismo al tragarse el chorro o al recibir (SetSpiralLight; revisión de T52, ronda 2): sin
+            // brillo aditivo aparte, que detrás del remanso no se veía.
             _pool = OverlayParts.NewImage("RemolinoPool", Host.SlotBack, Host.Art.WhirlPool, ProceduralArt.WhirlPoolColor);
             _spiral = OverlayParts.NewImage("RemolinoSpiral", Host.SlotBack, Host.Art.RemolinoSpiralFrame(0), OverlayParts.Fade(Palette.UiPaper, FoamAlpha));
 
@@ -842,10 +906,10 @@ namespace AF.Presentation.Mechanics
             _swirl = OverlayParts.NewImage("RemolinoIntakeSwirl", Host.BodyFront, Host.Art.RemolinoIntakeFrame(0), new Color(1f, 1f, 1f, 0f));
             PreRegister(_swirl); // se ve a mitad de un vertido: sin asignaciones al mostrarlo
 
-            // El brillo del vidrio de la pareja al recibir (revisión de T52): delante del cuerpo, aditivo.
-            _glassGlow = OverlayParts.NewImage("RemolinoGlassGlow", Host.BodyFront, null, OverlayParts.Fade(Palette.UiPaper, 0f));
-            _glassGlow.material = additive;
-            PreRegister(_glassGlow);
+            // La luz de la cavidad de la pareja al recibir (revisión de T52, ronda 2): entre el vidrio trasero (su cavidad opaca) y
+            // el líquido, un rectángulo blanco teñido con alfa normal; solo se ve donde la cavidad está vacía.
+            _cavityGlow = OverlayParts.NewImage("RemolinoCavityGlow", Host.BodyBack, null, Color.clear);
+            PreRegister(_cavityGlow);
             _pairTag = OverlayParts.NewImage("RemolinoPairTag", Host.SlotFront, Host.Art.RemolinoPairTag, Color.white);
             _pairTag.type = Image.Type.Sliced;
             for (int i = 0; i < _pairDots.Length; i++)
@@ -1480,7 +1544,12 @@ namespace AF.Presentation.Mechanics
             PaintRacha(t);
             SetSpin(Mathf.FloorToInt(SpinTurns * ProceduralArt.RemolinoSpiralFrames * Ease.Out(t)));
             SetSpiralLight(Mathf.Sin(Mathf.PI * Mathf.Clamp01((t - 0.25f) / 0.75f)), !_stepReduce);
-            PaintGlassGlow(t);
+            if (t >= FillStart)
+            {
+                _cavityGlowAge = (t - FillStart) * _duration; // desde que la racha llega al fondo
+                PaintCavityGlow();
+            }
+
             float rise = Mathf.Clamp01((t - FillStart) / (1f - FillStart));
             float p = _stepAmount * Ease.Out(rise);
             ICuiaBoard? board = _stepBoard;
@@ -1769,27 +1838,35 @@ namespace AF.Presentation.Mechanics
                 _spiral.rectTransform.localScale = scale;
             }
 
-            // El brillo del remanso, con la luz de la espuma (también con Reducir movimiento: es un fundido).
-            bool glow = _on && light > 0.001f;
-            OverlayParts.SetVisible(_poolGlow, glow);
-            if (glow)
-            {
-                OverlayParts.SetColor(_poolGlow, OverlayParts.Fade(ProceduralArt.RemolinoChannelWater, PoolGlowAlpha * light));
-            }
+            // El remanso se aclara hacia el agua del canal con la luz de la espuma (también con Reducir movimiento: es un
+            // fundido); con light = 0, el color de siempre.
+            OverlayParts.SetColor(_pool, Color.Lerp(ProceduralArt.WhirlPoolColor, ProceduralArt.RemolinoChannelWater, PoolLightMix * Mathf.Clamp01(light)));
         }
 
-        // Brillo del vidrio de la pareja (revisión de T52): de GlassGlowAlpha a 0 en GlassGlowMs × el factor de los pasos desde que
-        // la racha llega a su fondo (FillStart del paso); oculto fuera de ese tramo.
-        private void PaintGlassGlow(float t)
+        // Luz de la cavidad de la pareja (revisión de T52, ronda 2): de CavityGlowAlpha a 0 en _cavityGlowSpan desde que la racha
+        // llega a su fondo, con un apagado que empieza lento (se lee mientras sube la racha); oculta antes y después. Igual con
+        // Reducir movimiento: es un fundido.
+        private void PaintCavityGlow()
         {
-            float factor = _duration / ReceiveMs;
-            float since = (t - FillStart) * _duration;
-            float span = GlassGlowMs * factor;
-            bool on = _animating && since >= 0f && span > 0f && since < span;
-            OverlayParts.SetVisible(_glassGlow, on);
-            if (on)
+            float span = _cavityGlowSpan;
+            bool on = _on && _cavityGlowAge >= 0f && span > 0f && _cavityGlowAge < span;
+            if (!on)
             {
-                OverlayParts.SetColor(_glassGlow, OverlayParts.Fade(Palette.UiPaper, GlassGlowAlpha * (1f - (since / span))));
+                StopCavityGlow();
+                return;
+            }
+
+            float s = _cavityGlowAge / span;
+            OverlayParts.SetVisible(_cavityGlow, true);
+            OverlayParts.SetColor(_cavityGlow, OverlayParts.Fade(_cavityGlowColor, CavityGlowAlpha * (1f - (s * s))));
+        }
+
+        private void StopCavityGlow()
+        {
+            _cavityGlowAge = -1f;
+            if (_cavityGlow != null)
+            {
+                OverlayParts.SetVisible(_cavityGlow, false);
             }
         }
 
