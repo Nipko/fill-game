@@ -18,7 +18,10 @@ namespace AF.Localization
         /// <summary>Código del idioma falso (el de Android).</summary>
         public const string Locale = LocLocale.Pseudo;
 
-        /// <summary>Cuánto se alarga el texto visible, en % [P]: en el rango de +30-40 % de la propuesta (§3.7).</summary>
+        /// <summary>
+        /// Cuánto se alarga el texto visible, en % [P]. 08 §14.2 pide la pseudolocalización con +30 % de longitud como mínimo; el
+        /// plan de la tanda 4 fija 35, dentro del rango de +30-40 % de la propuesta de idiomas (§3.7), y D1 lo anota en 08 §14.2.
+        /// </summary>
         public const int ExpansionPercent = 35;
 
         /// <summary>Carácter de relleno del alargamiento (U+00B7, Latin-1).</summary>

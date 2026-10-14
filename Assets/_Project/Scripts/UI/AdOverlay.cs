@@ -59,7 +59,7 @@ namespace AF.UI
             _secondsShown = -1;
             _canvas.Canvas.gameObject.SetActive(true);
             _canvas.Measure();
-            _placement.text = ad.Placement.ToId() + " · " + (ad.Format == AdFormat.Rewarded ? UiText.SimulatedAdRewarded : UiText.SimulatedAdInterstitial);
+            _placement.text = UiText.SimulatedAdLabel(ad.Placement.ToId(), ad.Format == AdFormat.Rewarded);
             float w = _canvas.Width;
             float h = _canvas.Height;
             UiBuilder.Place(_title.rectTransform, 16f, (h * 0.30f) - 20f, w - 32f, 40f);

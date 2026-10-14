@@ -207,8 +207,10 @@ namespace AF.UI
             }
             else
             {
-                _refillVideoLabel.text = string.Format(CultureInfo.InvariantCulture, UiText.StuckUndoRefillAd, amount).Replace(" · ", "\n");
-                _refillSeedsLabel.text = string.Format(CultureInfo.InvariantCulture, UiText.StuckUndoRefillSeeds, amount, view.UndoRefillPrice).Replace(" · ", "\n");
+                // En la fila de dos botones cada etiqueta va en dos líneas: el salto es el {sep} de su plantilla (UiText), nunca un
+                // Replace sobre el texto; sin el video, la de semillas va en una.
+                _refillVideoLabel.text = UiText.StuckRefillVideo(amount);
+                _refillSeedsLabel.text = UiText.StuckRefillSeeds(amount, view.UndoRefillPrice, view.UndoVideo);
                 UiBuilder.SetEnabled(_refillSeeds.Button, view.UndoRefillMissing == 0);
                 if (view.UndoVideo)
                 {
@@ -225,7 +227,6 @@ namespace AF.UI
                 }
                 else
                 {
-                    _refillSeedsLabel.text = string.Format(CultureInfo.InvariantCulture, UiText.StuckUndoRefillSeeds, amount, view.UndoRefillPrice);
                     _refillSeedsLabel.rectTransform.sizeDelta = new Vector2(-24f, _art.CtaWood.FaceHeightDp * 0.7f);
                     _refillSeedsLabel.rectTransform.anchoredPosition = new Vector2(0f, -(_art.CtaWood.FaceHeightDp * 0.5f));
                     ModalKit.Place(_refillSeeds, 16f, y, inner);
@@ -277,9 +278,8 @@ namespace AF.UI
             {
                 string handfulPrice = services?.PriceText(StoreCatalog.Handful) ?? string.Empty;
                 string balsaPrice = services?.PriceText(StoreCatalog.Rescue) ?? string.Empty;
-                _handfulLabel.text = string.Format(CultureInfo.InvariantCulture, UiText.StuckPack, UiText.Grouped(services?.HandfulSeeds ?? 1000), handfulPrice)
-                    .Replace("semillas · ", "semillas\n");
-                _balsaLabel.text = string.Format(CultureInfo.InvariantCulture, UiText.StuckBalsa, balsaPrice).Replace(" · ", "\n");
+                _handfulLabel.text = UiText.StuckPackLine(services?.HandfulSeeds ?? 1000, handfulPrice);
+                _balsaLabel.text = UiText.StuckBalsaLine(balsaPrice);
                 float x = 16f;
                 float w = handful && balsa ? half : inner;
                 for (int i = 0; i < view.Offers.Count; i++)
