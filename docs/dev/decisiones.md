@@ -1769,10 +1769,10 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Estado:** decidida por el dueño. El escritorio le pasó las preguntas 39-44 («Cada una lleva mi recomendación; si te valen, basta con "acepto las recomendaciones"») y el dueño respondió: «Nos vamos por las recomendadas y necesitamos seguir avanzando».
   - Documentación aplicada el 2026-10-13 (T50): `docs/GDD.md` §6.3 (las seis filas pasan a decididas), 02 §6, 03 §12 (pregunta 40), 05 §4.1, §5 y Dependencias, 06 §4.5, 07 §2.2, `docs/art/direccion-visual-v2.md` (§8, fila Shaders, con la excepción de la pregunta 44, y revisión 9) y este registro.
   - Lo que pide código lo hace **T52** [P]: el aviso que tapa las burbujas «Te faltan {n}» (pregunta 41, punto 4), el aviso que se oculta al abrirse un modal del embudo (42) y la escala de fuente del banner de mundo (43).
-    - *Actualización del 2026-10-14 (T54):* T52 está integrada en `d2ce284`. Al abrirse Aguas estancadas, ¿Seguro?, Nivel fallido o Sin canoas, el aviso y la tarjeta del miquito a la vista se ocultan y se descartan, y la cola espera (42). El aviso sube por encima de las burbujas «Te faltan {n}» sin taparlas, con un compromiso [P] cuando no cabe con 3 filas (41.4). El banner admite la escala de fuente hasta el 130 % y su `wait_ms` tras «Siguiente» queda en ≈ 0 (43). Lo que T52 dejó [P] (el compromiso del aviso y la luz de la pareja del Remolino) es la pregunta 47 de `docs/GDD.md` §6.3, y «Te faltan {n} semillas» de Revelar sin medios, un [P] del paso 1 (T14) sin pregunta, es la 48.
+    - *Actualización del 2026-10-14 (T54):* T52 está integrada en `d2ce284`. Al abrirse Aguas estancadas, ¿Seguro?, Nivel fallido o Sin canoas, el aviso y la tarjeta del miquito a la vista se ocultan y se descartan, y la cola espera (42). El aviso sube por encima de las burbujas «Te faltan {n}» sin taparlas, con un compromiso [P] cuando no cabe con 3 filas (41.4). El banner admite la escala de fuente hasta el 130 % y su `wait_ms` tras «Siguiente» queda en ≈ 0 en el Editor (T52); falta medirlo en el teléfono con la tanda 3 (43). Lo que T52 dejó [P] (el compromiso del aviso y la luz de la pareja del Remolino) es la pregunta 47 de `docs/GDD.md` §6.3, y «Te faltan {n} semillas» de Revelar sin medios, un [P] del paso 1 (T14) sin pregunta, es la 48.
   - La medida del shader en un teléfono de clase A (44) es una **acción del dueño**: hace falta conseguir el teléfono.
 - **Sustituye:** los [P] y las opciones abiertas de esas seis preguntas.
-- **No sustituye:** D-011 ni D-012; las preguntas 37 y 38 siguen abiertas.
+- **No sustituye:** D-011 ni D-012; las preguntas 37 y 38 siguen abiertas (decididas el 2026-10-13: D-020).
 
 **Contexto.** Las preguntas 39 y 40 vienen del paso 2 (2026-10-12) y las 41-44, de la tanda 2 (2026-10-13). La prueba de la tanda 2 en el teléfono (2026-10-13, `docs/dev/traspaso/pruebas-telefono-2026-10-13.md`) cumple y aportó dos datos: el aviso tapa las burbujas «Te faltan» (observación 1, el punto 4 de la pregunta 41) y la medida del banner (pregunta 43: `main_ms` ≤ 2,3 ms, `fallback` `none` y `wait_ms` de 66-111 ms al entrar con «Siguiente», observación 4).
 
@@ -1853,13 +1853,13 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Qué cambia en el GDD** (aplicado el 2026-10-14, T54):
 - `docs/GDD.md`: versión 1.8; §2 #22 y #24.
 - 00: §3.1, §3.4, §10, §11 y la pregunta abierta 3.
-- 02: §5 (fila Capi y esquema), §12 (ajuste y Reducir movimiento) y §13 (TiTino en 1-3, 6 y 12; Capi en el 8).
+- 02: §4.2 (el aviso de TiTino tras Volver a la orilla), §5 (fila Capi y esquema), §6 (fila TiTino), §12 (ajuste y Reducir movimiento), §13 (TiTino en 1-3, 6 y 12; Capi en el 8) y Parámetros (fila 6 Victoria).
 - 04: §2.1 (tutorial de Marea), §2.3 (presentación de Morpho) y §2.7 (aviso tras Volver a la orilla).
 - 06: §2.2 (arranque y tutorial).
-- 07: §5.3, §5.5, §6.1, §6.4, §6.5 y §11.
-- 08: §4.3, §8.2 y §9.
+- 07: §5.3, §5.5, §6.1, §6.4, §6.5, §11 y Dependencias (fila 04: el aviso de TiTino en lugar de `capi_shrug`).
+- 08: §4.3, §8.2 y §9 (las claves `ui_sloth_*`, sin rango: la propuesta solo fija los defaults).
 - 09: §1.1 #27 y §5.
-- `docs/art/direccion-visual-v2.md` §3.7 y §11 (C4); `docs/research/intro-rio-miquitos/guion.md` §4.6 y §14; `docs/research/fauna/propuesta-fauna.md` (c.2, fila 14, y c.3); `docs/research/09-referencia-magic-sort.md` §1; la propuesta de TiTino (marcas de lo decidido).
+- `docs/art/direccion-visual-v2.md` §3.7 y §11 (C4); `docs/research/intro-rio-miquitos/guion.md` §4.6 y §14; `docs/research/fauna/propuesta-fauna.md` (c.2, fila 14, y c.3); `docs/research/09-referencia-magic-sort.md` §1; `docs/art/prompts-chatgpt.md` (`capi_idle` ya no va en el muelle; **el prompt de la hoja de modelo de TiTino que pedía f.3 queda pendiente**, con su hoja de modelo y después del asesor); la propuesta de TiTino (marcas de lo decidido).
 
 **Alternativas descartadas.** T2-B (prólogo de ≤ 8 s) y T2-C (TiTino dentro de «Llenar y teñir»); T4-B («Titino») y T4-C (otro nombre ya); T5-A (nunca durante la partida) y T5-C (fijo en el muelle).
 
@@ -1910,7 +1910,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 **Qué cambia en el GDD** (aplicado el 2026-10-14, T54):
 - `docs/GDD.md`: §2 #21 y #28, §6.3 (preguntas 45 y 49) y §7.5 (contrato 31).
-- 00: §6.4, §10 y §11; 02: §6 (fila «Dato del río») y §12; 06: §4.4, §4.5 y §4.6; 07: §5.4 (el panel sin papel), §8.2, §9.2 (`sfx_fact`) y §11 (escenas de ficha); 08: §4.6 (nueva), §8.2 y §9; 09: §1.1 #20 y #28, y §5.
+- 00: §6.4, §10 y §11; 02: §6 (fila «Dato del río») y §12; 06: §4.4, §4.5 y §4.6; 07: §5.4 (el panel sin papel), §8.2, §9.2 (`sfx_fact`) y §11 (escenas de ficha); 08: §4.6 (nueva), §8.2, §9 y Preguntas abiertas 14 (con D-018); 09: §1.1 #20 y #28, y §5.
 - La propuesta (marcas de lo decidido).
 
 **Alternativas descartadas.** Q2-B (10 líneas) y Q2-C (5); Q3-B (desde el 11) y Q3-C (desde el 21); Q4-B (sin ficha hasta el Cuaderno); Q5-B (20-50 semillas) y Q5-C en la 1.0; Q6-B («Fruta a fruta») y Q6-C («Del árbol a la cuia»); Q7-B (encima de la Cosecha).
@@ -1972,7 +1972,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 **Qué cambia en el GDD** (aplicado el 2026-10-14, T54):
 - `docs/GDD.md`: §2 #21, #26, #28 y #30; §5 (fase 3); §7.5 (contrato 32).
-- 00: §10 (regla de cifras y claves nuevas) y §11; 02: §12 (filas «Texto» e «Idioma»); 07: §6.4 (la tarjeta del miquito, a 12 sp); 08: §2.2 (`AF.Localization`), §2.3, §2.4 (`tools/loc-sync`), §4.3, §4.7 (nueva), §6.1, §8.1 y Preguntas abiertas; 09: §1.1 #28, §2.3 (fase 3), §3.4 (nueva: tandas 2 y 3), §5 y §7 (R35).
+- 00: §10 (regla de cifras y claves nuevas) y §11; 02: §12 (filas «Texto» e «Idioma»); 07: §6.4 (la tarjeta del miquito, a 12 sp); 08: §2.2 (`AF.Localization`), §2.3, §2.4 (`tools/loc-sync`), §4.3, §4.7 (nueva), §6.1, §8.1 y Preguntas abiertas 14 (con D-017); 09: §1.1 #28, §2.3 (fase 3), §3.4 (nueva: tandas 2 y 3), §5 y §7 (R35).
 
 **Alternativas descartadas.** Q1 B (el conjunto de Royal Match), C (solo los 3) y D (sin ruso); Q2 B (ya) y C (en la fase 3); Q3 B (sistema propio) y C (I2 Localization); Q4 B (Google Sheets) y C (TMS ya); Q5 B y C; Q6 B; Q7 B; Q8 B y C; Q9 B y C; Q10 B y C; Q11 B; Q12 B y C.
 
@@ -2013,7 +2013,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 3. **Q-Ti3-A: estreno en el 323** (p3 del ciclo 321-340, aguas bajas, mundo 7 Madre de Dios) **en la 1.0**, si al generar 201-700 pasa sus pruebas y si **Morpho en el cliente (con corte por tiempo) y la Luciérnaga están listos**. Si no, en la **1.1**, con el mismo nivel: build nuevo, `level_overrides` y la regla de migración de 03 §9 (si el jugador ya pasó el 323, se le sirve una vez el tablero de estreno). Los packs 11-200 no cambian.
 4. **Q-Ti4-A: la mecánica se llama «Tinaja»** (PT «Talha» y EN «Water Jar» [P]; su cuia, «su cuia chica» / «cuia pequena» / «small cuia» [P]; «Clay Jar» y «Pote de Barro» son el Cántaro). **La skin 9 se renombra** y se revisa con el asesor (territorio shipibo), que propone el nombre nuevo.
 5. **Q-Ti5-A: no enseña qué frutas guarda:** solo la boca y «×n». Interruptor `ui_tinaja_show_contents` = false, para encenderlo si el soft launch muestra quejas de suerte (al solver no le cambia nada).
-6. **Q-Ti6-A: se acepta que se pueda espiar reiniciando.** Volver a la orilla con menos de 8 vertidos es gratis y lo revelado sigue revelado (R7, T6, I5), como en Aguas turbias; el dilema de «mirar o enterrar» queda dentro de un intento. Se miden en el soft launch los reinicios con menos de 8 vertidos en niveles con tinaja. **«Intento» se define en 02 T6:** el que cuenta `attempt` = `fails_level` + 1 (04 §6.1), así que un reinicio con menos de 8 vertidos no abre uno nuevo.
+6. **Q-Ti6-A: se acepta que se pueda espiar reiniciando.** Volver a la orilla con menos de 8 vertidos es gratis y lo revelado sigue revelado (R7, T6, I5), como en Aguas turbias; el dilema de «mirar o enterrar» queda dentro de un intento. Se miden en el soft launch los reinicios con menos de 8 vertidos en niveles con tinaja. **«Intento» se define en 02 T6:** el que cuenta `attempt` = `fails_level` + 1 (04 §6.1), así que un reinicio con menos de 8 vertidos no abre uno nuevo. *Aclaración del 2026-10-14 (revisión de T54):* lo revelado sigue revelado también tras un reinicio con 8 o más vertidos (fallo blando, que sí abre un intento) y tras un fallo duro, hasta que se vuelve a cargar el nivel o se sirve la variante aliviada, que es otro tablero; así lo decían ya 04 §2.7 y `LevelSession.Restart`, y 02 T6 lo dice ahora de forma explícita. En la confirmación de reinicio («Perderás los vertidos de este intento») la palabra es coloquial: los vertidos desde el último reinicio.
 7. **Q-Ti7: solo se pregunta si el asesor confirma el riesgo** de que el gesto de sacar (la cuia entra en la tinaja y sale llena) evoque el masato; en ese caso, **A:** se mantiene el gesto con el encuadre «solo agua», sin servir a nadie.
 8. **La ficha b.2 de la propuesta entra en 02 §9.1 como M13** [P]: regla exacta, `legal` con el filtro de origen, `futil` con sus dos exenciones, R10 f, R14, Marea, Volver a la orilla, Pororoca, Luciérnaga, Morpho con su orden de respuestas, combinaciones, tutorial, aspecto, animación y cultura.
 9. **Lo que se aprueba con el lote de documentación** (c.10 de la propuesta): `mech_debut_level.tinaja` = 323, `mech_enabled.tinaja` = true y `ui_tinaja_show_contents` = false (08 §9); `pack_schema` 3 con los tipos `tinaja` y `cucharon` e `intro_mechanic` = `tinaja` (contrato 21; los hace T56); `af_mechanic_intro.mech` = `tinaja` (08 §8.2); `MechanicType` 8 (`Tinaja`) y 9 (`Cucharon`), que no se persisten (glosario §11).
@@ -2029,9 +2029,9 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Qué cambia en el GDD** (aplicado el 2026-10-14, T54):
 - `docs/GDD.md`: §2 #10 y #12; §7.5 (contratos 1, 8, 21 y 27).
 - 00: §4 (skin 9), §5.3, §6.2, §6.5, §10 y §11.
-- 02: §1.2, §1.4 (`futil` y R10 f), §3.1, §4.1, §5, §8, §9.1 (M13), §9.2, §11 (T1, T2, T3, T5 y T6) y §12.
-- 03: §5, §6, §8, §9 y §13; 04: §2.3, §2.4, §2.5, §2.7, §5.1 y §6.1.
-- 07: §4.3, §4.5, §5.6, §8.1, §8.2, §9.2 y §11; 08: §4.1, §4.4, §5.1, §8.2 y §9; 09: §1.1 (#32), §1.2, §5 y §7 (R36).
+- 02: §1.1 (R7: lo revelado sigue revelado en todo el nivel), §1.2, §1.4 (`futil` y R10 f), §2 (la k del rótulo «Nivel N · intento k»), §3.1 (C9 de la tinaja), §4.1, §5, §8, §9.1 (M13), §9.2 (reglas 5, con el orden de respuestas de Morpho, 7 y 8), §11 (T1, T2, T3, T5 y T6, con qué es un intento y hasta cuándo sigue revelado lo revelado), §12 (etiqueta accesible y C9 de la tinaja: solo la boca y las capas ya reveladas) y Parámetros (fila 9 Mecánicas).
+- 03: §5, §6, §8, §9 y §13; 04: §2.3 (regla de uso y caso a: el orden de respuestas de Morpho), §2.4, §2.5, §2.7 (qué es un intento, la confirmación de reinicio y lo revelado), §5.1 y §6.1.
+- 07: §2.2 (la skin 9, sin el nombre «Tinaja»), §4.3, §4.5, §5.6, §8.1, §8.2, §9.2 y §11; 08: §4.1, §4.4, §5.1, §8.2 y §9 (con la nota de que `lvl_murky_max_hidden_units` no rige la Tinaja); 09: §1.1 (#32), §1.2, §3.1 (la skin 9, sin el nombre «Tinaja»), §5 y §7 (R36).
 - `docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md` (nota de la excepción) y la propuesta de la tinaja (marcas).
 
 **Alternativas descartadas.** Q-Ti1-B (solo como Aguas turbias, en Difícil o Muy difícil); Q-Ti2-B (regla de color); Q-Ti3-B (directamente en la 1.1); Q-Ti4-B («Tinajón»); Q-Ti5-B (enseñar las frutas desde el estreno); Q-Ti6-B (lo revelado al sacar se pierde al reiniciar); Q-Ti7-B (la tinaja se inclina). Las variantes V2 (tinaja grande) y V3 (tinaja de la casa) quedan como variantes posteriores (d.4 de la propuesta).
@@ -2075,7 +2075,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Sin cambios** en el núcleo, el solver, los packs, la economía ni Remote Config.
 - **Siguen abiertas en 6.3:** las 18, 19 y 21-26 (pasos 1 y 2), la 45 (D-013) y las nuevas 47-50.
 
-**Qué cambia en el GDD** (aplicado el 2026-10-14, T54): `docs/GDD.md` (estado, §2 #9 y #12, §5, §6, §6.1 #6 y §6.3); 02 §1.4 (pseudocódigo, R13, R14 y R16), §5, §9.2 (regla 3), §12 y «Preguntas abiertas» 5 y 14-16; 03 §12 y «Preguntas abiertas» 10; 04 §2.5 y §5.1; 06 §5.2; 07 §2.2 (regla 6), §5.5 y §6.4; 08 §5.4, §9 (`mech_enabled`) y «Preguntas abiertas» 11 y 12; 09 §1.1 #5 y §2.3 (fase 1); `docs/dev/traspaso/README.md`.
+**Qué cambia en el GDD** (aplicado el 2026-10-14, T54): `docs/GDD.md` (estado, §2 #9 y #12, §5, §6, §6.1 #6 y §6.3); 02 §1.4 (pseudocódigo, R13, R14 y R16), §5, §9.2 (regla 3), §12 y «Preguntas abiertas» 5 y 14-16; 03 §12 y «Preguntas abiertas» 10; 04 §2.5 y §5.1; 06 §5.2; 07 §2.2 (regla 6), §5.5 y §6.4; 08 §5.4, §9 (`mech_enabled`) y «Preguntas abiertas» 11 y 12; 09 §1.1 #5, §2.3 (fase 1), §3.1 (fila «M6 Lluvia y M7 Piraña») y §8 (decisión 12); `docs/dev/traspaso/README.md`.
 
 **Alternativas descartadas.** 27 (b); 28 (b); 31 (a); 32 (a); 33 (b); 34 (b); 35 (b); 36 (b); 37 (a) y (c); 46 (b) y (c).
 

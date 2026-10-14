@@ -304,7 +304,7 @@ Rol: **A** = ambiente con microinteracción · **C** = celebración · **H** = c
   - Estuario: oropéndola y hormigas;
   - Tapajós: oropéndola y Rosa;
   - Manaos: Rosa y nutria;
-  - Trapecio: perezoso y leoncito;
+  - Trapecio: leoncito (*actualización del 2026-10-14, D-016: sin el perezoso de ambiente; el perezoso del mundo 4 y del Mapa es TiTino, solo en el Mapa, fila 14*);
   - Loreto: aruanã y pirarucú;
   - Oriente: hoatzin y rana;
   - Madre de Dios: guacamayos y taricayas.
