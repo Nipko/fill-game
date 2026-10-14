@@ -85,6 +85,7 @@ Este paso va también en la descripción del PR de integración.
 | `AF.Solver` | `Search.EarlyTraps`: trampas tempranas (jugadas iniciales que atascan en ≤ 2 vertidos; `CountUnavoidable` en lectura estricta) | Q16 B de D-007 [P] |
 | `AF.Solver` | `Search.SolverMoves` y `SolverMove`: `MOVIMIENTOS` de 03 §5 (útiles, con la cantidad del modo, cuias idénticas una sola vez y fútiles marcados con el kill-switch apagado), sin asignaciones; los usan el solver, el bot y las métricas | 03 §5 |
 | `AF.Solver` | `Search.AStarSolver`, `SolverOptions`, `SolveResult`, `SolveStatus`: A* (w entero) sobre estados canónicos en los dos modos de vertido (`SolverOptions.ForPipeline(mode)`), presupuesto de expandidos y prueba de irresolubilidad; a igual `f`, primero el de menor `g` (tupla `(f, g, S)` de 03 §5 y del prototipo). En niveles con Tinaja, sin poda de fútiles: `RequiresUnprunedSearch`, `ForLevel`, `WithFutileRule` y `ForPipeline(mode, level)` (sin tinaja, las opciones de siempre) | 03 §5; D-005; propuesta de la tinaja b.2 R14, c.2 |
+| `AF.Solver` | `Search.SolverCancellation` (`Request`, `IsRequested`, `Reset`; `PollInterval` = 256 [P]), `SolverOptions.Cancellation` y `WithCancellation` (null por defecto y en el pipeline), `SolveResult.WasCancelled` y `SafeMoves.WasCancelled`: corte cooperativo por tiempo, que marca otro hilo; el solver la consulta cada 256 expansiones sin asignar y para con `BudgetExceeded` (ver «Hilos y corte por tiempo») | 08 §9 `hint_timeout_ms`; 03 §5; 04 §2.3; 02 T5 (D-019) |
 | `AF.Solver` | `Search.SolverHeuristic`: `H = max(cortes, dispersión)`; en `Single`, `H_single = max(dosis sobre la racha del fondo, dispersión)` [P]; con Barro, `h1` resta 1 por barro y `h2` ignora el 15 (03 §9); con Lluvia y Piraña no cambia (una gota no elimina cortes; el mordisco inmediato de Q-C reparte el propio vertido: cada término baja ≤ 1 por paso), así que el par sigue siendo exacto | 03 §5, §9; decisiones.md §2.1.3; Q-C |
 | `AF.Solver` | `Murky.RealityEnumerator`: realidades de Aguas turbias (asignaciones de las posiciones ocultas coherentes con lo visible, `units_per_color` y T4 respecto al tablero inicial; > 24 → `TooMany`, el nivel se rechaza), sin asignaciones | 02 §11 T2, T4; 03 §8; 08 §2.2 |
 | `AF.Solver` | `Murky.SafeMoves`: vertidos útiles seguros en todas las realidades (A* por realidad: 20.000 nodos en el pipeline, `ForPipeline`; el cliente pasa `hint_budget_nodes`), memo exacto por estado canónico y un único `AStarSolver` (`SolveLength`, sin construir la solución); sin seguro, `Count` = 0 (T5: Morpho no cobra) y `Outcome` dice por qué, en el orden de respuestas de Morpho (`NoExit`, `SomeRealitySolvable` —nunca con R = 1—, `BudgetExceeded`; además `Found`, `Won` y `RealitiesRejected`); `ForPipeline(mode, level)` sin poda con Tinaja | 02 §11 T5; 03 §8; propuesta de la tinaja b.2 «Morpho», c.2 |
@@ -196,8 +197,9 @@ uniformes y mixtas, A* coincide con la búsqueda exhaustiva y la heurística es 
 alcanzables (32 tableros por mecánica y 8 por combinación del calendario, en `run` y `single`), P1-P3 se cumplen (R14) y los
 tableros de referencia cumplen los presupuestos de 03 §5 y 08 §14.2. La decisión es del dueño.
 
-Pendiente: cancelación por tiempo del solver para Morpho (`hint_timeout_ms`; el núcleo no lee relojes: `SafeMoves.Outcome` =
-`BudgetExceeded` es la respuesta 4 de Morpho cuando se agotan los nodos). Preguntas abiertas: 02 R16 con capacidades mixtas
+La cancelación por tiempo del solver para Morpho (`hint_timeout_ms`), que figuraba aquí como pendiente, está cerrada desde K2:
+el núcleo sigue sin leer relojes, el cliente marca una `SolverCancellation` y `SafeMoves.Outcome` = `BudgetExceeded` con
+`WasCancelled` es la respuesta 4 de Morpho (sección «Hilos y corte por tiempo»). Preguntas abiertas: 02 R16 con capacidades mixtas
 (C1-8, C1-9: la poda de fútiles puede alargar el par o dejar sin camino útil un tablero resoluble, y con una Liana hay estados atascados con solución) y la consecuencia de Q-B en
 P3 (vaivén útil del Remolino que vuelve al mismo estado); ver el CHANGELOG. Para el jugador, el vaivén sin salida de la
 pregunta 15 lo cubre R13 ampliada (D-014; sección siguiente).
@@ -314,5 +316,42 @@ esquema (`pack_schema` 3), level-qa y Unity son de T56 y de una tarea posterior.
   (R13 de reglas) no lo declara; la partida sí, por D-014 (cierre ≤ 64 estados sin victoria en `LevelSession`; T51). La
   antigua nota [P] para 02 R13 queda sustituida por D-014. `TinajaSolverTests.Morpho_TheLostBoardOfB2_…` y
   `FutilePropertyTests.P3_Tinaja_AfterTheRelease_…` fijan solo lo de las reglas.
-- **Abierto (no es del núcleo):** el corte por `hint_timeout_ms`, la Pororoca con la tinaja y el tope de ocultas por tipo de
-  nivel (pipeline).
+- **Abierto (no es del núcleo):** la Pororoca con la tinaja y el tope de ocultas por tipo de nivel (pipeline). El corte por
+  `hint_timeout_ms` ya tiene su bandera en el núcleo (K2, sección siguiente); el reloj y el hilo son del cliente (MO1).
+
+## Hilos y corte por tiempo (K2)
+
+Fuentes: 08 §9 (`hint_timeout_ms` = 150, rango 100-300; «al agotarse no se cobra»), 03 §5 («el cliente ejecuta el solver en un
+hilo y cancela por tiempo»), 04 §2.3 y 02 T5 (orden de respuestas de D-019: la 4 es «No encuentro un camino desde aquí», sin
+cobrar). **El núcleo no lee relojes.**
+
+- **Regla de hilos:** una instancia de `AStarSolver` o de `SafeMoves` por hilo (ninguna es segura entre hilos: buffers, nodos,
+  montículo y memo propios). Los `BoardState` son inmutables y se pueden compartir entre hilos, igual que las opciones
+  (`SolverOptions` es un `readonly struct`). El núcleo no tiene estado estático mutable. `SolverCancellation` es lo único que
+  toca otro hilo. Probado: 4 hilos con su propia instancia sobre 8 tableros de referencia dan lo mismo que en serie
+  (`SolverThreadingTests`).
+- **`SolverCancellation`:** clase sellada con un `int` volátil y `Request()`, `IsRequested` y `Reset()`. La marca el hilo
+  principal del cliente al pasar `hint_timeout_ms` con su `IClock`; el núcleo solo la consulta. Se pasa con
+  `options.WithCancellation(flag)` (`SolverOptions.Cancellation`). Null por defecto y en el pipeline, con el comportamiento de
+  siempre; `ForLevel` y `WithFutileRule` la conservan. `Reset()` solo con la búsqueda parada (antes de la petición siguiente); si
+  no, una instancia nueva por petición.
+- **`AStarSolver`:** consulta la bandera antes de la expansión 1 y luego cada `SolverCancellation.PollInterval` = 256 expansiones
+  [P] (una máscara sobre el contador: sin asignaciones ni closures). Al verla devuelve `BudgetExceeded` con
+  `SolveResult.WasCancelled` y `Expanded` = las expansiones hechas (múltiplo de 256). Así, tras `Request()` expande como mucho 256
+  estados más. Con null no consulta nada: los 37 tableros de referencia dan los mismos expandidos, estados y soluciones
+  (pipeline, Morpho en `run` y `single` y `SafeMoves`), medido antes y después del cambio. Con una bandera sin marcar, lo mismo
+  (`SolverThreadingTests`).
+- **`SafeMoves`:** consulta la bandera al empezar, tras enumerar las realidades (si la enumeración falla, gana
+  `RealitiesRejected`), y la propaga desde cada búsqueda A*: `Count` = 0, `Outcome` = `BudgetExceeded` y `WasCancelled`. No hay
+  Pista parcial, aunque ya hubiera vertidos seguros demostrados, y el orden de respuestas de Morpho no cambia. Lo cortado no
+  entra en el memo; lo terminado antes del corte sí, y vale para la llamada siguiente. Si la bandera llega cuando la llamada ya
+  terminó, `WasCancelled` = false y el resultado es completo. En el pipeline (`SafePath`, el generador y level-qa) va en
+  null.
+- **Asignaciones** (`HotLoopAllocationTests.SolverCancellation_UnmarkedOrCutting_DoesNotAllocate`): con la bandera sin marcar, el
+  solver calentado solo asigna la solución; `Solve` cortado y `SafeMoves` cortado, 0 bytes.
+- **Tests:** compartidos `SolverCancellationTests`: marcada antes (0 expansiones; `SafeMoves` sin ninguna búsqueda), marcada tras
+  N expansiones (para en ≤ N + 256), null idéntico, corte en cualquier consulta de `SafeMoves` y memo limpio tras `Reset`. Solo
+  dotnet `SolverThreadingTests`: 4 instancias en 4 hilos sobre 8 tableros, null idéntico en los 37 tableros de referencia y un
+  corte marcado de verdad desde otro hilo, en `AStarSolver` y en `SafeMoves`. Para los tests compartidos, que no pueden
+  sincronizarse con un hilo a mitad de búsqueda, `SolverCancellation.RequestAtPoll(k)` (interno) simula que otro hilo la marca
+  justo antes de la consulta k.

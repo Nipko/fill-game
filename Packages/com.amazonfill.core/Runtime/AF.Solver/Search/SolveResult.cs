@@ -12,21 +12,33 @@ namespace AF.Solver.Search
     {
         private readonly Pour[]? _moves;
 
-        internal SolveResult(SolveStatus status, Pour[]? moves, int expanded, int storedStates)
+        internal SolveResult(SolveStatus status, Pour[]? moves, int expanded, int storedStates, bool wasCancelled)
         {
             Status = status;
             _moves = moves;
             Expanded = expanded;
             StoredStates = storedStates;
+            WasCancelled = wasCancelled;
         }
 
-        /// <summary>Resuelto, irresoluble o presupuesto agotado.</summary>
+        /// <summary>Resuelto, irresoluble o presupuesto agotado (también cuando se cortó: <see cref="WasCancelled"/>).</summary>
         public SolveStatus Status { get; }
 
         /// <summary><see cref="Status"/> es <see cref="SolveStatus.Solved"/>.</summary>
         public bool IsSolved => Status == SolveStatus.Solved;
 
-        /// <summary>Estados expandidos (en <see cref="SolveStatus.BudgetExceeded"/>, el presupuesto + 1).</summary>
+        /// <summary>
+        /// La búsqueda se cortó porque otro hilo marcó <see cref="SolverOptions.Cancellation"/> (<c>hint_timeout_ms</c>, 08 §9;
+        /// K2): entonces <see cref="Status"/> es <see cref="SolveStatus.BudgetExceeded"/> («No encuentro un camino desde aquí»,
+        /// sin cobrar; 02 T5, respuesta 4) y no hay solución. False en cualquier otro caso, también si la bandera se marcó
+        /// cuando la búsqueda ya había decidido.
+        /// </summary>
+        public bool WasCancelled { get; }
+
+        /// <summary>
+        /// Estados expandidos (en <see cref="SolveStatus.BudgetExceeded"/> por presupuesto, el presupuesto + 1; si se cortó, los
+        /// que llegó a expandir, un múltiplo de <see cref="SolverCancellation.PollInterval"/>).
+        /// </summary>
         public int Expanded { get; }
 
         /// <summary>Estados canónicos distintos que la búsqueda llegó a guardar.</summary>

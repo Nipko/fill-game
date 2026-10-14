@@ -735,6 +735,73 @@ namespace AF.Core.Tests.DotnetOnly
         }
 
         [Test]
+        public void SolverCancellation_UnmarkedOrCutting_DoesNotAllocate()
+        {
+            // K2 (CLAUDE.md, regla dura 2): la consulta de la bandera cada 256 expansiones no asigna. Con la bandera sin marcar,
+            // el solver calentado expande lo mismo que sin ella y solo asigna la solución; cortado a mitad (sin solución), 0
+            // bytes; y SafeMoves cortado en su 3.ª búsqueda (Aguas turbias, opciones de Morpho), 0 bytes. El mínimo de hasta 3
+            // mediciones, como en ReferenceBoard_HotLoop_DoesNotAllocate.
+            BoardState state = Board();
+            var flag = new SolverCancellation();
+            var solver = new AStarSolver();
+            SolverOptions plainOptions = SolverOptions.ForPipeline(PourMode.Run);
+            SolverOptions options = plainOptions.WithCancellation(flag);
+            SolveResult plain = solver.Solve(state, plainOptions);
+            SolveResult warm = solver.Solve(state, options);
+            SolveResult again = warm;
+            long watched = long.MaxValue;
+            for (int attempt = 0; attempt < 3 && watched >= 1024; attempt++)
+            {
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                again = solver.Solve(state, options);
+                watched = Math.Min(watched, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+
+            SolveResult cut = default;
+            long cutBytes = long.MaxValue;
+            for (int attempt = 0; attempt < 3 && cutBytes != 0; attempt++)
+            {
+                flag.Reset();
+                flag.RequestAtPoll(20);
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                cut = solver.Solve(state, options);
+                cutBytes = Math.Min(cutBytes, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+
+            BoardState murky = ReferenceBoards.Get("Tu").State;
+            SolverOptions murkyOptions = new SolverOptions(40000, 2, true, PourMode.Run).ForLevel(murky).WithCancellation(flag);
+            var safe = new SafeMoves();
+            flag.Reset();
+            safe.Find(murky, murkyOptions);
+            int searches = safe.Searches;
+            long safeBytes = long.MaxValue;
+            for (int attempt = 0; attempt < 3 && safeBytes != 0; attempt++)
+            {
+                safe.ClearMemo();
+                flag.Reset();
+                flag.RequestAtPoll(3);
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                safe.Find(murky, murkyOptions);
+                safeBytes = Math.Min(safeBytes, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+
+            Assert.That(plain.MoveCount, Is.EqualTo(37));
+            Assert.That(warm.Expanded, Is.EqualTo(plain.Expanded));
+            Assert.That(again.Expanded, Is.EqualTo(plain.Expanded));
+            Assert.That(again.MoveCount, Is.EqualTo(37));
+            Assert.That(again.WasCancelled, Is.False);
+            Assert.That(watched, Is.LessThan(1024), "Solve con la bandera sin marcar");
+            Assert.That(cut.WasCancelled, Is.True);
+            Assert.That(cut.Expanded, Is.EqualTo(19 * SolverCancellation.PollInterval));
+            Assert.That(cutBytes, Is.EqualTo(0), "Solve cortado");
+            Assert.That(searches, Is.GreaterThan(3));
+            Assert.That(safe.WasCancelled, Is.True);
+            Assert.That(safe.Searches, Is.EqualTo(3));
+            Assert.That(safe.Outcome, Is.EqualTo(SafeMovesOutcome.BudgetExceeded));
+            Assert.That(safeBytes, Is.EqualTo(0), "SafeMoves cortado");
+        }
+
+        [Test]
         public void WarmSolver_OnlyAllocatesTheSolution()
         {
             // Unos 12.000 estados expandidos: si cada nodo asignara, serían cientos de KB.

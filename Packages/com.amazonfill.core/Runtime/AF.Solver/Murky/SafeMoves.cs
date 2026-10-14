@@ -31,7 +31,8 @@ namespace AF.Solver.Murky
 
         /// <summary>
         /// Se agotó el presupuesto antes de decidir entre las respuestas 1-3 (respuesta 4: «No encuentro un camino desde
-        /// aquí»; no cobra). El corte por <c>hint_timeout_ms</c> lo pone el cliente: el núcleo no lee relojes.
+        /// aquí»; no cobra), o se cortó por tiempo (<see cref="SafeMoves.WasCancelled"/>): el cliente marca la
+        /// <see cref="SolverCancellation"/> al pasar <c>hint_timeout_ms</c> (08 §9; K2), porque el núcleo no lee relojes.
         /// </summary>
         BudgetExceeded = 3,
 
@@ -69,8 +70,16 @@ namespace AF.Solver.Murky
     /// <item><description><b>Tinaja</b> (M13): la premisa se cumple (sacar solo depende de que su cuia tenga hueco y siempre
     /// mueve 1; la suelta depende del recuento visible). En un nivel con tinaja las opciones van sin poda de fútiles
     /// (<see cref="SolverOptions.ForLevel"/> y <see cref="ForPipeline(PourMode, BoardState)"/>; b.2 R14).</description></item>
-    /// <item><description>Sin asignaciones una vez calentada, salvo el crecimiento del memo. No es segura entre
-    /// hilos.</description></item>
+    /// <item><description><b>Corte por tiempo</b> (K2; 08 §9 <c>hint_timeout_ms</c>, «al agotarse no se cobra»; 04 §2.3): con
+    /// <see cref="SolverOptions.Cancellation"/> marcada, <see cref="Find(BoardState, SolverOptions, BoardState, bool, int)"/>
+    /// para (al empezar, tras enumerar las realidades, o en la búsqueda A* en curso, como mucho
+    /// <see cref="SolverCancellation.PollInterval"/> expansiones después) con <see cref="Count"/> = 0,
+    /// <see cref="Outcome"/> = <see cref="SafeMovesOutcome.BudgetExceeded"/> y <see cref="WasCancelled"/>: no hay Pista
+    /// parcial, aunque ya hubiera vertidos seguros demostrados. El orden de respuestas no cambia. Lo cortado no entra en el
+    /// memo; lo que se terminó antes del corte sí, y vale para la siguiente llamada.</description></item>
+    /// <item><description>Sin asignaciones una vez calentada, salvo el crecimiento del memo. No es segura entre hilos: una
+    /// instancia por hilo (con su propio <see cref="AStarSolver"/> y su memo); los <see cref="BoardState"/> son inmutables
+    /// y se pueden compartir, y la <see cref="SolverCancellation"/> es lo único que toca otro hilo.</description></item>
     /// </list>
     /// </remarks>
     public sealed class SafeMoves
@@ -100,6 +109,7 @@ namespace AF.Solver.Murky
         private int _width;
         private int _count;
         private SafeMovesOutcome _outcome = SafeMovesOutcome.RealitiesRejected;
+        private bool _cancelled;
 
         /// <summary>Opciones del pipeline en el modo <paramref name="mode"/>: 20.000 nodos por realidad, w = 1, con fútiles (03 §8).</summary>
         public static SolverOptions ForPipeline(PourMode mode)
@@ -127,13 +137,23 @@ namespace AF.Solver.Murky
         /// </summary>
         public SafeMovesOutcome Outcome => _outcome;
 
+        /// <summary>
+        /// La última llamada se cortó por <see cref="SolverOptions.Cancellation"/> (<c>hint_timeout_ms</c>, K2): entonces
+        /// <see cref="Count"/> = 0 y <see cref="Outcome"/> = <see cref="SafeMovesOutcome.BudgetExceeded"/> («No encuentro un camino
+        /// desde aquí», sin cobrar). False si terminó, aunque la bandera se marcara después de su última consulta: el resultado
+        /// es entonces completo y válido. También lo pone <see cref="TrueParAfter"/> si su búsqueda se corta.
+        /// </summary>
+        public bool WasCancelled => _cancelled;
+
         /// <summary>Realidades de la última llamada (<see cref="RealityEnumerator.Count"/>).</summary>
         public int RealityCount => _realities.Count;
 
         /// <summary>Estado de la enumeración de la última llamada.</summary>
         public RealityStatus Status => _realities.Status;
 
-        /// <summary>Búsquedas A* hechas desde que se creó o se vació el memo (las demás salieron del memo).</summary>
+        /// <summary>
+        /// Búsquedas A* hechas desde que se creó o se vació el memo (las demás salieron del memo), también las que se cortaron.
+        /// </summary>
         public int Searches { get; private set; }
 
         /// <summary>Estados expandidos por esas búsquedas.</summary>
@@ -146,7 +166,8 @@ namespace AF.Solver.Murky
         /// Calcula los vertidos seguros de <paramref name="state"/> en el orden de <see cref="SolverMoves"/> (origen, destino).
         /// </summary>
         /// <param name="state">Tablero actual con sus dosis ocultas.</param>
-        /// <param name="options">Presupuesto por realidad, peso, fútiles y modo de vertido.</param>
+        /// <param name="options">Presupuesto por realidad, peso, fútiles, modo de vertido y, en el cliente, la bandera de corte
+        /// por tiempo (<see cref="SolverOptions.Cancellation"/>).</param>
         /// <param name="t4Reference">Tablero de referencia de T4 (el inicial del nivel); null = <paramref name="state"/>.</param>
         /// <param name="enforceT4">Aplicar T4 a las realidades (true en campaña).</param>
         /// <param name="maxRealities">Máximo de realidades (24 por defecto, 02 T2).</param>
@@ -182,7 +203,8 @@ namespace AF.Solver.Murky
         /// <summary>
         /// Par de la realidad verdadera (el tablero de la última llamada, con sus colores reales) tras el vertido seguro
         /// <paramref name="index"/>, con el memo: lo que usa <see cref="SafePath"/> para elegir (03 §8: «el seguro con menor
-        /// par en S_real»). <see cref="Unsolvable"/> o <see cref="BudgetExceeded"/> si no hay solución demostrada.
+        /// par en S_real»). <see cref="Unsolvable"/> o <see cref="BudgetExceeded"/> si no hay solución demostrada (también si su
+        /// búsqueda se corta: entonces <see cref="WasCancelled"/>).
         /// </summary>
         public int TrueParAfter(int index)
         {
@@ -214,6 +236,7 @@ namespace AF.Solver.Murky
             _options = options;
             _width = width;
             _count = 0;
+            _cancelled = false;
             _outcome = SafeMovesOutcome.RealitiesRejected;
             Array.Copy(cuias, 0, _state, 0, width);
             Array.Copy(units, _units, CuiaRules.UnitsTableLength);
@@ -221,6 +244,12 @@ namespace AF.Solver.Murky
             if (status != RealityStatus.Ok)
             {
                 return status;
+            }
+
+            SolverCancellation? cancellation = options.Cancellation;
+            if (cancellation != null && cancellation.IsRequested)
+            {
+                return Cancelled(status); // marcada antes de empezar: ni una búsqueda
             }
 
             int candidates = SolverMoves.Collect(_state, 0, width, _units, options.PourMode, options.FutileRuleEnabled, _candidates);
@@ -233,6 +262,11 @@ namespace AF.Solver.Murky
                 for (int r = 0; r < count; r++)
                 {
                     int par = ParAfter(realities, r, move);
+                    if (_cancelled)
+                    {
+                        return Cancelled(status);
+                    }
+
                     if (par < 0)
                     {
                         // Primera realidad en la que el vertido no es seguro: irresoluble o presupuesto agotado (para Outcome).
@@ -250,6 +284,15 @@ namespace AF.Solver.Murky
             }
 
             _outcome = _count > 0 ? SafeMovesOutcome.Found : Explain(candidates, realities, count);
+            return _cancelled ? Cancelled(status) : status;
+        }
+
+        /// <summary>Corte por <see cref="SolverOptions.Cancellation"/> (K2): sin Pista parcial, respuesta 4 y no cobra.</summary>
+        private RealityStatus Cancelled(RealityStatus status)
+        {
+            _cancelled = true;
+            _count = 0;
+            _outcome = SafeMovesOutcome.BudgetExceeded;
             return status;
         }
 
@@ -273,6 +316,11 @@ namespace AF.Solver.Murky
             {
                 Array.Copy(realities, r * width, _child, 0, width);
                 int par = ParOfChild();
+                if (_cancelled)
+                {
+                    return SafeMovesOutcome.BudgetExceeded;
+                }
+
                 solvable |= par >= 0;
                 budget |= par == BudgetExceeded;
             }
@@ -302,6 +350,10 @@ namespace AF.Solver.Murky
                 for (int r = _failReality[m] + 1; r < count && !proven; r++)
                 {
                     proven = ParAfter(realities, r, _candidates[m]) == Unsolvable;
+                    if (_cancelled)
+                    {
+                        return SafeMovesOutcome.BudgetExceeded;
+                    }
                 }
 
                 if (!proven)
@@ -323,7 +375,10 @@ namespace AF.Solver.Murky
             return ParOfChild();
         }
 
-        /// <summary>Par de <see cref="_child"/>: 0 si ya es victoria; si no, del memo o de una búsqueda A*.</summary>
+        /// <summary>
+        /// Par de <see cref="_child"/>: 0 si ya es victoria; si no, del memo o de una búsqueda A*. Si la búsqueda se corta
+        /// (K2), <see cref="BudgetExceeded"/> sin guardarlo en el memo y <see cref="_cancelled"/>.
+        /// </summary>
         private int ParOfChild()
         {
             int width = _width;
@@ -340,9 +395,15 @@ namespace AF.Solver.Murky
                 return par;
             }
 
-            SolveStatus status = _solver.SolveLength(_child, 0, width, _units, _options, out int length, out int expanded);
+            SolveStatus status = _solver.SolveLength(_child, 0, width, _units, _options, out int length, out int expanded, out bool cancelled);
             Searches++;
             Expanded += expanded;
+            if (cancelled)
+            {
+                _cancelled = true;
+                return BudgetExceeded; // no es el resultado del presupuesto: no entra en el memo
+            }
+
             par = status == SolveStatus.Solved ? length : status == SolveStatus.Unsolvable ? Unsolvable : BudgetExceeded;
             _memo.Add(_canon, width, hash, par);
             return par;

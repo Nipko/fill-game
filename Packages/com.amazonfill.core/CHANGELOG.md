@@ -16,6 +16,32 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- **Corte cooperativo por tiempo del solver** (K2, tanda 4; 08 §9 `hint_timeout_ms` = 150, 100-300, «al agotarse no se
+  cobra»; 03 §5; 04 §2.3; 02 T5, respuesta 4 de D-019). Cierra el pendiente del README: el núcleo sigue sin leer relojes.
+  - **`AF.Solver.Search.SolverCancellation`** (nueva): clase sellada con un `int` volátil y `Request()`, `IsRequested` y
+    `Reset()`. La marca otro hilo (el principal del cliente, al pasar `hint_timeout_ms`); el núcleo solo la consulta.
+    `PollInterval` = 256 [P].
+  - **`SolverOptions.Cancellation` y `WithCancellation(flag)`:** null por defecto, con el comportamiento de siempre; el pipeline
+    la deja en null. `WithFutileRule` y `ForLevel` la conservan; no cuenta para el memo de `SafeMoves`.
+  - **`AStarSolver`:** consulta la bandera antes de la expansión 1 y luego cada 256, con una máscara sobre el contador, sin
+    asignar ni usar closures. Al verla devuelve `BudgetExceeded` con `SolveResult.WasCancelled` (nuevo) y `Expanded` = las
+    expansiones hechas. `SolveStatus` no cambia. `SolveLength` (interno) devuelve también si se cortó.
+  - **`SafeMoves`:** la consulta al empezar, tras enumerar las realidades, y la propaga desde cada búsqueda. Resultado:
+    `Count` = 0, `Outcome` = `BudgetExceeded` y `WasCancelled` (nuevo), sin Pista parcial y con el mismo orden de respuestas de
+    Morpho. Lo cortado no entra en el memo (no es el resultado del presupuesto); lo terminado antes, sí. Si la enumeración se
+    rechaza, sigue saliendo `RealitiesRejected`.
+  - **Sin cambios con null:** en los 37 tableros de referencia salen los mismos expandidos, estados guardados y soluciones, con
+    el A* del pipeline, el de Morpho (w = 2, 40.000) en `run` y en `single` y `SafeMoves` con las opciones de Morpho. Se midió
+    antes y después del cambio. Con una bandera sin marcar, lo mismo. Packs y pares idénticos (`--check`).
+  - **Regla de hilos** (README, «Hilos y corte por tiempo»): una instancia de `AStarSolver` o `SafeMoves` por hilo; los
+    `BoardState`, inmutables, y la bandera se pueden compartir.
+  - **Tests:** compartidos `SolverCancellationTests` (marcada antes: 0 expansiones y `SafeMoves` sin búsquedas; marcada tras N
+    expansiones: para en ≤ N + 256; null idéntico en A* y `SafeMoves`; corte en cualquier consulta de `SafeMoves` y memo limpio
+    tras `Reset`). Solo dotnet: `SolverThreadingTests` (4 instancias en 4 hilos sobre 8 tableros, iguales que en serie; null
+    idéntico en los 37 tableros de referencia; corte marcado de verdad desde otro hilo en `AStarSolver` y `SafeMoves`) y
+    `HotLoopAllocationTests.SolverCancellation_UnmarkedOrCutting_DoesNotAllocate` (sin marcar, solo la solución; cortado, 0
+    bytes). El gancho interno `SolverCancellation.RequestAtPoll(k)` existe solo para los tests compartidos: simula que otro hilo
+    marca la bandera antes de la consulta k.
 - **Aguas estancadas por bucle, R13 ampliada** (T51; D-014, decisión del dueño del 2026-10-13; 02 R13, R14; defecto del nivel 66
   en `docs/dev/traspaso/pruebas-telefono-2026-10-13.md`). `AF.Core.Session.DeadEndProbe`: cierre acotado de los estados
   alcanzables desde S, en anchura y en orden determinista, con estados canónicos (`BoardCanon` y FNV-1a de 64 bits; igualdad
