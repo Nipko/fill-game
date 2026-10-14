@@ -17,7 +17,12 @@ Casos (contrato 21 del GDD; docs/gdd/08-arquitectura-tecnica-publicacion.md §4.
     (d) un nivel >= 31 sin relief falla (y uno < 31 con relief [] pasa); par nulo solo en plus_empty;
     (e) pack_schema 2 (D-007, contrato 21): tipo matapi, Liana con key o n (uno y solo uno), campos obligatorios por
         tipo (hoja: key; remolino: partner; lluvia: key y n), intro_mechanic matapi/chica/alta/murky [P] y
-        difficulty.par_approx [P]; con pack_schema 1 nada de eso valida y todo lo demas sigue igual; pack_schema 3 falla.
+        difficulty.par_approx [P]; con pack_schema 1 nada de eso valida y todo lo demas sigue igual; una version que
+        el esquema no conoce (pack_schema 4) falla;
+    (f) pack_schema 3 (D-019, punto 9; contrato 21): la Tinaja (M13) con los tipos tinaja y cucharon, sin campos, en
+        attrs del base y de relief, e intro_mechanic tinaja; murky = true y hidden con las capas de la tinaja menos la
+        boca (como mucho 4 pares, como siempre); el 3 conserva todo lo del 2 (campos obligatorios por tipo, matapi,
+        intro_mechanic y par_approx); tinaja, cucharon e intro_mechanic tinaja fallan con pack_schema 1 y 2.
 
 Imprime PASS/FAIL por caso y termina con codigo 1 si alguno falla. Requiere jsonschema >= 4.18.
 
@@ -300,8 +305,8 @@ def main() -> int:
     check(validator, "e8", "pack 1: intro_mechanic = matapi",
           pack2_level(3, "w03_manaos", "black", 43, {"type": "hoja", "key": 4}, "matapi", pack=1), False)
     d = copy.deepcopy(example)
-    d["pack_schema"] = 3
-    check(validator, "e9", "pack_schema = 3 (el cliente lo rechazaria, 08 §4.4)", d, False)
+    d["pack_schema"] = 4
+    check(validator, "e9", "pack_schema = 4, una version que el esquema no conoce (el cliente lo rechazaria, 08 §4.4)", d, False)
     check(validator, "e10", "pack 2: Hoja sin key",
           pack2_level(3, "w03_manaos", "black", 43, {"type": "hoja"}, "hoja"), False)
     d = pack2_level(4, "w04_trapecio", "white", 103, {"type": "remolino", "partner": 8}, "remolino")
@@ -322,6 +327,99 @@ def main() -> int:
           pack2_level(2, "w02_tapajos", "clear", 14, None, "chica", pack=1), False)
     check(validator, "e17", "pack 1: Hoja sin key (pack 1 no exige campos por tipo: todo igual que hoy)",
           pack2_level(3, "w03_manaos", "black", 43, {"type": "hoja"}, "hoja", pack=1), True)
+
+    # (f) pack_schema 3 (D-019, punto 9; contrato 21; 08 §4.1 y §4.4; propuesta de la tinaja, c.4)
+    jar_sources = [0, 4, 6, 1, 7]  # cuias del ejemplo de las que salen, en orden, las dosis de la tinaja (sus cimas)
+
+    def tinaja_level(pack: int = 3, level: int = 323, band: str = "comfort", intro="tinaja", doses: int = 3) -> dict:
+        """El ejemplo de 08 §4.1 llevado al mundo 7 con la Tinaja (M13; 02 §9.1; propuesta de la tinaja, c.3): las cimas
+        de jar_sources pasan a la tinaja (capacidad 5; con estas cuias, T4 en toda la columna), que se anade con su cuia
+        chica de 2, vacia y contigua (attrs tinaja y cucharon, sin campos); murky = true y hidden = todas las capas de la
+        tinaja menos la boca. Conserva los 2 vacios del ejemplo. relief[0] (minus_color) quita una fruta que no esta en la
+        tinaja (03 §13) y relief[1] (plus_empty) anade un vacio al final; las dos llevan la tinaja."""
+        p = copy.deepcopy(example)
+        p.update({"pack_schema": pack, "pack_id": "mundo_07_v1", "world": 7, "world_id": "w07_madre_de_dios",
+                  "water_base": "white"})
+        lv = p["levels"][0]
+        lv.update({"id": f"m07_v1_n{level:04d}", "level": level, "world": 7, "seed": f"amazonfill:v1:m07:v1:n{level:04d}",
+                   "water_base": "white", "intro_mechanic": intro})
+        lv["difficulty"]["band"] = band
+        cuias = copy.deepcopy(lv["cuias"])
+        jar = [cuias[i].pop() for i in jar_sources[:doses]]
+        t = len(cuias)
+        lv["caps"] = lv["caps"] + [5, 2]
+        lv["cuias"] = cuias + [jar, []]
+        lv["attrs"] = [None] * t + [{"type": "tinaja"}, {"type": "cucharon"}]
+        lv["murky"] = True
+        lv["hidden"] = [[t, layer] for layer in range(doses - 1)]
+        removed = next(c for c in (8, 10, 7) if c not in jar)
+        lv["relief"] = [
+            {"type": "minus_color", "removed": removed, "caps": list(lv["caps"]),
+             "cuias": [[u for u in c if u != removed] for c in cuias] + [list(jar), []],
+             "attrs": copy.deepcopy(lv["attrs"]), "par": 19, "bot_fail": 0.0},
+            {"type": "plus_empty", "caps": lv["caps"] + [4], "cuias": copy.deepcopy(lv["cuias"]) + [[]],
+             "attrs": copy.deepcopy(lv["attrs"]) + [None], "par": None, "bot_fail": 0.0},
+        ]
+        return p
+
+    def without_jar_attrs(p: dict) -> dict:
+        """Quita tinaja y cucharon de attrs (base y relief): el mismo tablero sin la mecanica."""
+        lv = p["levels"][0]
+        for board in [lv] + lv["relief"]:
+            board["attrs"] = [None if a and a["type"] in ("tinaja", "cucharon") else a for a in board["attrs"]]
+        return p
+
+    check(validator, "f1", "pack 3: estreno de la Tinaja en el 323 (p3, 3 dosis y 2 ocultas; tinaja y cucharon en el base "
+          "y en relief; intro_mechanic tinaja)", tinaja_level(), True)
+    check(validator, "f2", "pack 3: tinaja de 5 dosis con 4 ocultas en el hito 340 (el tope de hidden)",
+          tinaja_level(level=340, band="milestone", intro=None, doses=5), True)
+    d = tinaja_level(level=340, band="milestone", intro=None, doses=5)
+    d["levels"][0]["hidden"].append([9, 4])
+    check(validator, "f3", "pack 3: hidden con las 5 capas de la tinaja, boca incluida (hidden sigue en 4 pares como mucho)",
+          d, False)
+    check(validator, "f4", "pack 2: el estreno de la Tinaja del 323 con pack_schema 2", tinaja_level(pack=2), False)
+    check(validator, "f5", "pack 2: tinaja y cucharon en attrs, sin intro_mechanic", tinaja_level(pack=2, intro=None), False)
+    d = tinaja_level(pack=2, intro=None)
+    for board in [d["levels"][0]] + d["levels"][0]["relief"]:
+        board["attrs"][9] = None
+    check(validator, "f6", "pack 2: cucharon en attrs, sin tinaja", d, False)
+    check(validator, "f7", "pack 2: el mismo tablero sin tinaja ni cucharon (murky y hidden, como Aguas turbias)",
+          without_jar_attrs(tinaja_level(pack=2, intro=None)), True)
+    check(validator, "f8", "pack 2: intro_mechanic = tinaja sin la mecanica en attrs",
+          without_jar_attrs(tinaja_level(pack=2)), False)
+    d = without_jar_attrs(tinaja_level(pack=2, intro=None))
+    d["levels"][0]["relief"][1]["attrs"][9] = {"type": "tinaja"}
+    check(validator, "f9", "pack 2: tinaja solo en attrs de relief[1]", d, False)
+    check(validator, "f10", "pack 1: el mismo tablero sin tinaja ni cucharon (murky y hidden, como Aguas turbias)",
+          without_jar_attrs(tinaja_level(pack=1, intro=None)), True)
+    check(validator, "f11", "pack 1: tinaja y cucharon en attrs, sin intro_mechanic", tinaja_level(pack=1, intro=None), False)
+    d = tinaja_level(pack=1, intro=None)
+    for board in [d["levels"][0]] + d["levels"][0]["relief"]:
+        board["attrs"][9] = None
+    check(validator, "f12", "pack 1: cucharon en attrs, sin tinaja", d, False)
+    check(validator, "f13", "pack 1: intro_mechanic = tinaja sin la mecanica en attrs",
+          without_jar_attrs(tinaja_level(pack=1)), False)
+    d = tinaja_level()
+    for board in [d["levels"][0]] + d["levels"][0]["relief"]:
+        board["attrs"][9]["partner"] = 10
+    check(validator, "f14", "pack 3: tinaja con un campo {type: tinaja, partner: 10} (va sin campos)", d, False)
+    d = tinaja_level()
+    d["levels"][0]["attrs"][10]["key"] = 4
+    check(validator, "f15", "pack 3: cucharon con un campo {type: cucharon, key: 4} (va sin campos)", d, False)
+    check(validator, "f16", "pack 3: Hoja sin key (el 3 conserva los campos obligatorios del 2)",
+          pack2_level(3, "w03_manaos", "black", 43, {"type": "hoja"}, "hoja", pack=3), False)
+    check(validator, "f17", "pack 3: Liana con key y n a la vez",
+          pack2_level(4, "w04_trapecio", "white", 83, {"type": "liana", "key": 3, "n": 1}, "liana", pack=3), False)
+    check(validator, "f18", "pack 3: debut del Matapi en el 63 (lo del 2 sigue valiendo)",
+          pack2_level(3, "w03_manaos", "black", 63, matapi, "matapi", pack=3), True)
+    check(validator, "f19", "pack 3: Liana de cuenta {type: liana, n: 1}",
+          pack2_level(4, "w04_trapecio", "white", 83, {"type": "liana", "n": 1}, None, pack=3), True)
+    d = pack2_level(4, "w04_trapecio", "white", 100, None, "murky", pack=3)
+    d["levels"][0].update({"murky": True, "hidden": [[0, 1], [0, 0]]})
+    d["levels"][0]["difficulty"]["par_approx"] = False
+    check(validator, "f20", "pack 3: intro_mechanic = murky en el hito 100 y difficulty.par_approx [P]", d, True)
+    check(attr_validator, "f21", "attr {type: tinaja} contra $defs/attr", {"type": "tinaja"}, True)
+    check(attr_validator, "f22", "attr {type: cucharon} contra $defs/attr", {"type": "cucharon"}, True)
 
     failed = RESULTS.count(False)
     print(f"\n{len(RESULTS) - failed}/{len(RESULTS)} casos PASS" + (f"; {failed} FAIL" if failed else ""))

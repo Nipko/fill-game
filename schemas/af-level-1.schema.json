@@ -2,15 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:amazonfill:schemas:af-level-1",
   "title": "Amazon Fill · paquete de niveles af-level/1",
-  "description": "JSON Schema canónico del formato de nivel definido en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.1 (pack_schema 1 y 2; única copia del esquema; el formato de nivel sigue siendo af-level/1). pack_schema 2 (D-007, contrato 21) añade el tipo matapi, la Liana con fruta (key) o de cuenta (n), una y solo una, los campos obligatorios de cada tipo (hoja: key; remolino: partner; lluvia: key y n), intro_mechanic matapi, chica, alta y murky [P] y difficulty.par_approx [P]; con pack_schema 1 todo valida igual que antes. Lo emite tools/level-generator y lo validan tools/level-qa y AF.Levels (comprobación: python tools/validate_schema.py). El esquema exige: patrones de id y seed de campaña (m{mm}_v{v}_n{nnnn} / amazonfill:v1:m{mm}:v{v}:n{nnnn}) y del Reto del río (kind daily: d{b}_n{nnnn} / amazonfill:v1:daily:b{b}:d{ddd}, 03 §16); relief con al menos una variante desde el nivel 31; par de relief nulo solo en plus_empty (03 §13). Lo que el esquema no puede expresar lo comprueba tools/level-qa: igualdad de longitud de caps, cuias y attrs; cada tinte con exactamente units_per_color unidades; tinte con level_debut posterior al nivel; risk_pairs <= max_risk_pairs; K (longitud de palette) <= k_max; par >= 2*K; label coherente con bot_fail (>=0,75 hard, >=0,90 very_hard); Aguas turbias con >=1 vertido seguro en todas las realidades y ocultos en <= 3 cuias; variantes de relief resolubles con bot_fail que baja >=0,20 (si el base tiene bot_fail <0,20, como los debuts de 02 §9.2, basta par menor en minus_color o el vacío extra de plus_empty); bot_fail en la ventana del slot (<0,20 en debuts); semilla que reproduce el tablero base; en daily, banda y día de slot coherentes con id y seed; <=14 cuias generadas (02 R1). Cualquier cambio de este archivo que altere la validación sube pack_schema; los cambios editoriales de description no.",
+  "description": "JSON Schema canónico del formato de nivel definido en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.1 (pack_schema 1, 2 y 3; única copia del esquema; el formato de nivel sigue siendo af-level/1). pack_schema 2 (D-007, contrato 21) añade el tipo matapi, la Liana con fruta (key) o de cuenta (n), una y solo una, los campos obligatorios de cada tipo (hoja: key; remolino: partner; lluvia: key y n), intro_mechanic matapi, chica, alta y murky [P] y difficulty.par_approx [P]; con pack_schema 1 todo valida igual que antes. pack_schema 3 (D-019, punto 9; contrato 21) es el 2 más la Tinaja (M13): los tipos tinaja y cucharon (su cuia chica), sin campos, e intro_mechanic tinaja; con pack_schema 1 y 2 nada de eso valida y todo lo demás sigue igual. Lo emite tools/level-generator y lo validan tools/level-qa y AF.Levels (comprobación: python tools/validate_schema.py). El esquema exige: patrones de id y seed de campaña (m{mm}_v{v}_n{nnnn} / amazonfill:v1:m{mm}:v{v}:n{nnnn}) y del Reto del río (kind daily: d{b}_n{nnnn} / amazonfill:v1:daily:b{b}:d{ddd}, 03 §16); relief con al menos una variante desde el nivel 31; par de relief nulo solo en plus_empty (03 §13). Lo que el esquema no puede expresar lo comprueba tools/level-qa: igualdad de longitud de caps, cuias y attrs; cada tinte con exactamente units_per_color unidades; tinte con level_debut posterior al nivel; risk_pairs <= max_risk_pairs; K (longitud de palette) <= k_max; par >= 2*K; label coherente con bot_fail (>=0,75 hard, >=0,90 very_hard); Aguas turbias con >=1 vertido seguro en todas las realidades y ocultos en <= 3 cuias; con la Tinaja, una sola tinaja con su cuia contigua en la misma fila y hidden = todas sus capas menos la boca; variantes de relief resolubles con bot_fail que baja >=0,20 (si el base tiene bot_fail <0,20, como los debuts de 02 §9.2, basta par menor en minus_color o el vacío extra de plus_empty); bot_fail en la ventana del slot (<0,20 en debuts); semilla que reproduce el tablero base; en daily, banda y día de slot coherentes con id y seed; <=14 cuias generadas (02 R1). Cualquier cambio de este archivo que altere la validación sube pack_schema; los cambios editoriales de description no.",
   "type": "object",
   "additionalProperties": false,
   "required": ["pack_schema", "pack_id", "generator", "pool", "k_min", "k_max", "max_risk_pairs", "cap_default", "empties_default", "levels"],
   "properties": {
     "pack_schema": {
       "type": "integer",
-      "enum": [1, 2],
-      "description": "Versión de la estructura del pack (08 §4.4): 1 = formato original; 2 = mecánicas de D-007 (matapi, Liana con fruta o de cuenta, campos obligatorios por tipo, intro_mechanic chica/alta/matapi/murky y difficulty.par_approx). El cliente rechaza un paquete remoto con pack_schema mayor al que conoce."
+      "enum": [1, 2, 3],
+      "description": "Versión de la estructura del pack (08 §4.4): 1 = formato original; 2 = mecánicas de D-007 (matapi, Liana con fruta o de cuenta, campos obligatorios por tipo, intro_mechanic chica/alta/matapi/murky y difficulty.par_approx); 3 = el 2 más la Tinaja de D-019 (tipos tinaja y cucharon, sin campos, e intro_mechanic tinaja). Los packs 11-200 siguen con el 2. El cliente rechaza un paquete remoto con pack_schema mayor al que conoce."
     },
     "schema_file": {
       "type": "string",
@@ -103,7 +103,7 @@
     {
       "if": { "properties": { "pack_schema": { "const": 1 } }, "required": ["pack_schema"] },
       "then": {
-        "description": "pack_schema 1: la validación de siempre (sin matapi, sin intro_mechanic chica/alta/matapi/murky y sin difficulty.par_approx).",
+        "description": "pack_schema 1: la validación de siempre (sin matapi, tinaja ni cucharon, sin intro_mechanic chica/alta/matapi/murky/tinaja y sin difficulty.par_approx).",
         "properties": {
           "levels": {
             "items": {
@@ -121,13 +121,30 @@
     {
       "if": { "properties": { "pack_schema": { "const": 2 } }, "required": ["pack_schema"] },
       "then": {
-        "description": "pack_schema 2 (D-007; contrato 21): campos obligatorios por tipo de mecánica y Liana con key o n, una y solo una.",
+        "description": "pack_schema 2 (D-007; contrato 21): campos obligatorios por tipo de mecánica y Liana con key o n, una y solo una; sin la Tinaja (tipos tinaja y cucharon e intro_mechanic tinaja, solo desde el 3).",
         "properties": {
           "levels": {
             "items": {
               "properties": {
                 "attrs": { "items": { "$ref": "#/$defs/attr_pack2" } },
+                "intro_mechanic": { "enum": [null, "hoja", "brote", "liana", "matapi", "remolino", "barro", "lluvia", "pirana", "chica", "alta", "murky"] },
                 "relief": { "items": { "properties": { "attrs": { "anyOf": [ { "type": "null" }, { "type": "array", "items": { "$ref": "#/$defs/attr_pack2" } } ] } } } }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "pack_schema": { "const": 3 } }, "required": ["pack_schema"] },
+      "then": {
+        "description": "pack_schema 3 (D-019, punto 9; contrato 21): todo lo del 2 más la Tinaja (M13), con los tipos tinaja y cucharon, sin campos, en attrs del base y de relief, e intro_mechanic tinaja.",
+        "properties": {
+          "levels": {
+            "items": {
+              "properties": {
+                "attrs": { "items": { "$ref": "#/$defs/attr_pack3" } },
+                "relief": { "items": { "properties": { "attrs": { "anyOf": [ { "type": "null" }, { "type": "array", "items": { "$ref": "#/$defs/attr_pack3" } } ] } } } }
               }
             }
           }
@@ -175,8 +192,8 @@
     },
     "mechanic_type": {
       "type": "string",
-      "enum": ["hoja", "brote", "liana", "matapi", "remolino", "lluvia", "pirana"],
-      "description": "Tipos de attrs (02 §9.1 y §9.3; glosario §6.5; D-007). Debuts de D-007: Hoja 43, Matapi 63, Liana con fruta 83, Remolino 103, Lluvia 143, Brote 163, Piraña 183 (lista única de 02 §9.1; mech_debut_level, 08 §9). matapi solo con pack_schema 2. El Barro (debut 123) no es un attr: es la unidad 15 dentro de cuias."
+      "enum": ["hoja", "brote", "liana", "matapi", "remolino", "lluvia", "pirana", "tinaja", "cucharon"],
+      "description": "Tipos de attrs (02 §9.1 y §9.3; glosario §6.5; D-007 y D-019). Debuts de D-007: Hoja 43, Matapi 63, Liana con fruta 83, Remolino 103, Lluvia 143, Brote 163, Piraña 183 (lista única de 02 §9.1; mech_debut_level, 08 §9); Tinaja (M13, D-019) 323 [P]. matapi solo desde pack_schema 2; tinaja (la tinaja) y cucharon (su cuia chica), sin campos, solo con pack_schema 3: una sola tinaja por nivel, y cada pieza encuentra a la otra por su tipo (08 §4.1). El Barro (debut 123) no es un attr: es la unidad 15 dentro de cuias."
     },
     "caps": {
       "type": "array",
@@ -210,33 +227,46 @@
       }
     },
     "attr_pack1": {
-      "description": "Restricción de una entrada de attrs con pack_schema 1: sin matapi (se combina con attr).",
+      "description": "Restricción de una entrada de attrs con pack_schema 1: sin matapi, tinaja ni cucharon (se combina con attr).",
       "anyOf": [
         { "type": "null" },
         { "type": "object", "properties": { "type": { "enum": ["hoja", "brote", "liana", "remolino", "lluvia", "pirana"] } } }
       ]
     },
+    "attr_fields": {
+      "description": "Campos por tipo desde pack_schema 2 (D-007 y D-019; contrato 21): hoja lleva key; remolino, partner; lluvia, key y n; liana, key (con fruta) o n (de cuenta), uno y solo uno; matapi no exige campos; tinaja y cucharon van sin campos, solo con type (02 §9.1, M13). Lo usan attr_pack2 y attr_pack3 sobre un objeto attr.",
+      "allOf": [
+        { "if": { "properties": { "type": { "const": "hoja" } } }, "then": { "required": ["key"] } },
+        { "if": { "properties": { "type": { "const": "remolino" } } }, "then": { "required": ["partner"] } },
+        { "if": { "properties": { "type": { "const": "lluvia" } } }, "then": { "required": ["key", "n"] } },
+        {
+          "if": { "properties": { "type": { "const": "liana" } } },
+          "then": {
+            "oneOf": [
+              { "required": ["key"], "not": { "required": ["n"] } },
+              { "required": ["n"], "not": { "required": ["key"] } }
+            ]
+          }
+        },
+        { "if": { "properties": { "type": { "enum": ["tinaja", "cucharon"] } } }, "then": { "propertyNames": { "const": "type" } } }
+      ]
+    },
     "attr_pack2": {
-      "description": "Restricción de una entrada de attrs con pack_schema 2 (D-007; contrato 21): hoja lleva key; remolino, partner; lluvia, key y n; liana, key (con fruta) o n (de cuenta), uno y solo uno; matapi no exige campos (se combina con attr).",
+      "description": "Restricción de una entrada de attrs con pack_schema 2 (D-007; contrato 21): los tipos de D-007, sin tinaja ni cucharon, con los campos de attr_fields (se combina con attr).",
       "anyOf": [
         { "type": "null" },
         {
           "type": "object",
-          "allOf": [
-            { "if": { "properties": { "type": { "const": "hoja" } } }, "then": { "required": ["key"] } },
-            { "if": { "properties": { "type": { "const": "remolino" } } }, "then": { "required": ["partner"] } },
-            { "if": { "properties": { "type": { "const": "lluvia" } } }, "then": { "required": ["key", "n"] } },
-            {
-              "if": { "properties": { "type": { "const": "liana" } } },
-              "then": {
-                "oneOf": [
-                  { "required": ["key"], "not": { "required": ["n"] } },
-                  { "required": ["n"], "not": { "required": ["key"] } }
-                ]
-              }
-            }
-          ]
+          "properties": { "type": { "enum": ["hoja", "brote", "liana", "matapi", "remolino", "lluvia", "pirana"] } },
+          "$ref": "#/$defs/attr_fields"
         }
+      ]
+    },
+    "attr_pack3": {
+      "description": "Restricción de una entrada de attrs con pack_schema 3 (D-019, punto 9; contrato 21): los tipos del 2 más tinaja y cucharon, con los campos de attr_fields (se combina con attr). Una sola tinaja por nivel, su cuia contigua en la misma fila y hidden = todas sus capas menos la boca los comprueba tools/level-qa.",
+      "anyOf": [
+        { "type": "null" },
+        { "type": "object", "$ref": "#/$defs/attr_fields" }
       ]
     },
     "attrs": {
@@ -261,7 +291,7 @@
         ],
         "items": false
       },
-      "description": "Posiciones ocultas de Aguas turbias como lista [cuia, capa] (admite ocultos no contiguos; el shader las recibe como máscara de bits _HiddenMask, 08 §5.2). Máximo lvl_murky_max_hidden_units = 4 dosis en <= lvl_murky_max_cuias = 3 cuias → <= 24 realidades (02 T2; incidencia 8). Solo si murky = true."
+      "description": "Posiciones ocultas de Aguas turbias como lista [cuia, capa] (admite ocultos no contiguos; el shader las recibe como máscara de bits _HiddenMask, 08 §5.2). Máximo lvl_murky_max_hidden_units = 4 dosis en <= lvl_murky_max_cuias = 3 cuias → <= 24 realidades (02 T2; incidencia 8). Con la Tinaja (pack_schema 3, D-019) marca todas sus capas menos la boca, con un tope propio de 4 que no lee lvl_murky_max_hidden_units: el formato no cambia (como mucho 4 pares). Solo si murky = true."
     },
     "difficulty": {
       "type": "object",
@@ -276,7 +306,7 @@
         "traps": { "type": "number", "minimum": 0, "maximum": 1 },
         "complexity": { "type": "number", "minimum": 0 },
         "D": { "type": "number", "description": "Índice de 03 §7: suma ponderada de z-scores del pool del rango; puede ser negativo" },
-        "par_approx": { "type": "boolean", "description": "Solo pack_schema 2 [P]: true marcaría un par que no es el óptimo exacto. Ninguna mecánica de la 1.0 lo usa: con el mordisco inmediato de Q-C el par de la Piraña es exacto (03 §9; 08 §4.1). Si falta, el par es exacto." },
+        "par_approx": { "type": "boolean", "description": "Desde pack_schema 2 [P] (no con el 1): true marcaría un par que no es el óptimo exacto. Ninguna mecánica de la 1.0 lo usa: con el mordisco inmediato de Q-C el par de la Piraña es exacto (03 §9; 08 §4.1). Si falta, el par es exacto." },
         "band": { "type": "string", "enum": ["comfort", "challenge", "recovery", "milestone"], "description": "Posición en el ciclo de 20 (03 §12)." }
       }
     },
@@ -361,13 +391,13 @@
         "caps": { "$ref": "#/$defs/caps" },
         "cuias": { "$ref": "#/$defs/cuias" },
         "attrs": { "$ref": "#/$defs/attrs" },
-        "murky": { "type": "boolean", "description": "Nivel de Aguas turbias (lvl_murky_from_level = 100)." },
+        "murky": { "type": "boolean", "description": "El nivel tiene dosis ocultas (Aguas turbias o tinaja): Aguas turbias desde lvl_murky_from_level = 100; la tinaja (D-019), solo con pack_schema 3." },
         "hidden": { "$ref": "#/$defs/hidden" },
         "difficulty": { "$ref": "#/$defs/difficulty" },
         "risk_pairs": { "type": "integer", "minimum": 0, "maximum": 10, "description": "Pares de riesgo presentes; <= max_risk_pairs de la cabecera." },
         "intro_mechanic": {
-          "enum": [null, "hoja", "brote", "liana", "matapi", "remolino", "barro", "lluvia", "pirana", "chica", "alta", "murky"],
-          "description": "Mecánica que debuta en este nivel (af_mechanic_intro) o null. Incluye barro (debut 123), que no es un tipo de attrs sino la unidad 15 en cuias. Solo con pack_schema 2 [P]: matapi (63), chica (Cuia chica, 14) y alta (Cuia alta, 27), con los ids de mech_debut_level (08 §9), y murky (Aguas turbias, 100; glosario §6.2)."
+          "enum": [null, "hoja", "brote", "liana", "matapi", "remolino", "barro", "lluvia", "pirana", "chica", "alta", "murky", "tinaja"],
+          "description": "Mecánica que debuta en este nivel (af_mechanic_intro) o null. Incluye barro (debut 123), que no es un tipo de attrs sino la unidad 15 en cuias. Desde pack_schema 2 [P]: matapi (63), chica (Cuia chica, 14) y alta (Cuia alta, 27), con los ids de mech_debut_level (08 §9), y murky (Aguas turbias, 100; glosario §6.2). Solo con pack_schema 3: tinaja (323 [P]; D-019)."
         },
         "skippable": { "type": "boolean", "description": "Salto del Boto permitido." },
         "hint_supported": { "type": "boolean", "description": "Morpho permitido." },
