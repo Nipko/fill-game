@@ -84,6 +84,10 @@ namespace AF.Core.Mechanics
                 }
             }
 
+            // Las combinaciones prohibidas de b.2 (Liana, Remolino, Lluvia y Piraña; «LevelValidation ya lo prohíbe con
+            // ocultos») no se comprueban aquí: si se llega a este punto, la máscara de arriba garantiza ≥ 2 ocultas, así que
+            // LevelValidation.MurkyError, que va antes que ValidateInitial, ya las vio y rechazó la combinación. Es su única
+            // comprobación (TinajaValidationTests fija su motivo).
             int cucharones = 0;
             for (int j = 0; j < state.Count; j++)
             {
@@ -96,11 +100,6 @@ namespace AF.Core.Mechanics
                 if (type == MechanicType.Cucharon)
                 {
                     cucharones++;
-                }
-
-                if (type == MechanicType.Liana || type == MechanicType.Remolino || type == MechanicType.Lluvia || type == MechanicType.Pirana)
-                {
-                    return "M13 (combinaciones): la tinaja no se combina con " + MechanicTypes.ToKey(type) + " (cuia " + Num(j) + "; Q14 A)";
                 }
             }
 

@@ -304,6 +304,33 @@ namespace AF.Solver.Tests
         }
 
         [Test]
+        public void Morpho_OneSolvableReality_WithoutASafePour_IsOutOfBudget_NeverTheFirefly()
+        {
+            // b.2 «Morpho», respuesta 3: nunca la Luciérnaga con R = 1. Si la única realidad tiene solución, el primer vertido
+            // de esa solución la deja resoluble; si ningún vertido sale seguro es que faltó presupuesto (rama R = 1 de
+            // SafeMoves). Con w = 1 y H consistente no se da (los expandidos desde el hijo óptimo no superan los del padre);
+            // con w > 1 sí: en este tablero sin ocultas, A* con w = 5 resuelve el estado (38 expandidos) y necesita más desde
+            // cada uno de sus dos hijos. Con el presupuesto justo del estado, el estado se resuelve y los hijos no.
+            BoardState state = Board(C(4, 1, 1, 1, 2), C(4, 3, 4, 3), C(4, 1, 3, 2, 4), C(4, 3), C(4, 2, 4, 2, 4));
+            var roomy = new SolverOptions(100000, 5, true, PourMode.Run);
+            SolveResult current = new AStarSolver().Solve(state, roomy);
+            Assert.That(current.Status, Is.EqualTo(SolveStatus.Solved));
+            var tight = new SolverOptions(current.Expanded, 5, true, PourMode.Run);
+            Assert.That(new AStarSolver().Solve(state, tight).Status, Is.EqualTo(SolveStatus.Solved)); // la realidad tiene solución
+
+            var safe = new SafeMoves();
+            Assert.That(safe.Find(state, tight), Is.EqualTo(RealityStatus.Ok));
+            Assert.That(safe.RealityCount, Is.EqualTo(1));
+            Assert.That(safe.Count, Is.EqualTo(0), "el tablero ya no agota el presupuesto en todos los hijos: busca otro");
+            Assert.That(safe.Outcome, Is.EqualTo(SafeMovesOutcome.BudgetExceeded));
+
+            // Con presupuesto de sobra, el primer vertido de la solución sale seguro.
+            Assert.That(safe.Find(state, roomy), Is.EqualTo(RealityStatus.Ok));
+            Assert.That(safe.Count, Is.GreaterThan(0));
+            Assert.That(safe.Outcome, Is.EqualTo(SafeMovesOutcome.Found));
+        }
+
+        [Test]
         public void Morpho_WonBoard_AndRejectedRealities()
         {
             var safe = new SafeMoves();

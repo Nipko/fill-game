@@ -32,8 +32,8 @@ namespace AF.Core.Board
     /// pipeline. <b>Tinaja</b> (M13; D-019, Q-Ti1 A): si el nivel la lleva, es la única fuente de ocultas (ninguna otra cuia
     /// turbia), sus ocultas son la excepción a «ocultos solo en cuias sin mecánica» y a T3, y su tope es
     /// <see cref="TinajaMaxHiddenUnits"/> en lugar de los de Remote Config; las combinaciones prohibidas de Q14 A siguen
-    /// valiendo. El resto de sus reglas (capacidad, dosis, máscara, T4 en la columna, su cuia contigua) son de
-    /// <c>TinajaMechanic</c> y <c>CucharonMechanic</c>.</description></item>
+    /// valiendo y solo se comprueban aquí, con un motivo que nombra la tinaja. El resto de sus reglas (capacidad, dosis,
+    /// máscara, T4 en la columna, su cuia contigua) son de <c>TinajaMechanic</c> y <c>CucharonMechanic</c>.</description></item>
     /// <item><description>Como mucho un contador por nivel (Lluvia o Piraña; propuesta de D-007 b.2 M6-M7 y d.2 regla 6): la
     /// Lluvia y la Piraña nunca van juntas.</description></item>
     /// <item><description>Las reglas propias de cada mecánica (03 §17 #6).</description></item>
@@ -285,7 +285,10 @@ namespace AF.Core.Board
         /// Aguas turbias (02 §11 T2-T4; D-007, Q14 A) o null si el tablero no tiene dosis ocultas o son válidas. Con una Tinaja
         /// (M13; D-019, Q-Ti1 A; propuesta de la tinaja, b.2 y c.1) la tinaja es la única fuente de ocultas del nivel: sus
         /// ocultas son la excepción a «ocultos solo en cuias sin mecánica» (Q14 A) y a T3 (≤ 3 dosis y nunca llena), su tope
-        /// es <see cref="TinajaMaxHiddenUnits"/> (no los de Remote Config de T2) y T4 se comprueba igual.
+        /// es <see cref="TinajaMaxHiddenUnits"/> (no los de Remote Config de T2) y T4 se comprueba igual. Las combinaciones
+        /// prohibidas (Liana, Remolino, Lluvia y Piraña; b.2) se rechazan aquí con un motivo propio de la tinaja: es su única
+        /// comprobación, porque una tinaja válida siempre llega con ocultas (sin ellas la rechaza su máscara en
+        /// <c>TinajaMechanic.ValidateInitial</c>).
         /// </summary>
         private static string? MurkyError(BoardState state, int maxCuias, int maxHiddenUnits)
         {
@@ -342,6 +345,14 @@ namespace AF.Core.Board
             {
                 Cuia cuia = state[i];
                 MechanicType type = cuia.Mechanic;
+                if (tinaja >= 0 && (type == MechanicType.Liana || type == MechanicType.Remolino || type == MechanicType.Lluvia || type == MechanicType.Pirana))
+                {
+                    // M13 (b.2, combinaciones prohibidas: «LevelValidation ya lo prohíbe con ocultos»): la única comprobación de
+                    // estas combinaciones en un nivel con tinaja, porque sus ocultas siempre llegan aquí (TinajaMechanic no la
+                    // repite). El informe nombra la tinaja, no Aguas turbias.
+                    return "M13 (b.2, combinaciones; Q14 A): la tinaja no se combina con " + MechanicTypes.ToKey(type) + " (cuia " + Num(i) + ")";
+                }
+
                 if (type == MechanicType.Liana || type == MechanicType.Lluvia || type == MechanicType.Pirana)
                 {
                     return "D-007, Q14 A: Aguas turbias no se combina con " + MechanicTypes.ToKey(type) + " (cuia " + Num(i) + ")";

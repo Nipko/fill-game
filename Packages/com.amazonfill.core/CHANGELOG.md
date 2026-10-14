@@ -32,8 +32,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   - **`TinajaMechanic`** (b.2 reglas 1-4 y 7-9): `AllowsTarget` solo hacia la cuia `Cucharon`; `CheckTarget` = Reject (nunca
     recibe, tampoco desde su cuia); `ExemptAsSource` (sin la exención, sacar la última fruta visible a su cuia vacía sería
     fútil y R13 declararía Aguas estancadas en un nivel ganable); `ValidateInitial`: capacidad 5, 3-5 dosis, ocultas = todas
-    menos la boca, T4 en toda la columna, sin Barro, una sola tinaja, su cuia presente y sin Liana, Remolino, Lluvia ni
-    Piraña. Cantidad 1 siempre (T4), en `run` y en `single`. Vacía queda inerte (conserva su tipo): ni origen ni destino, y
+    menos la boca, T4 en toda la columna, sin Barro, una sola tinaja y una sola cuia suya (las combinaciones prohibidas
+    las comprueba solo `LevelValidation`). Cantidad 1 siempre (T4), en `run` y en `single`. Vacía queda inerte (conserva su tipo): ni origen ni destino, y
     cuenta como vacía para R12.
   - **`CucharonMechanic`** (b.2 reglas 5, 6 y 8): `CheckTarget` = Accept solo desde la tinaja y con hueco (cualquier fruta, dos
     dosis en capas; Q-Ti2 A); como origen, la regla normal y nunca a la tinaja; `ExemptAsSource` mientras cuelga (como el
@@ -48,7 +48,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
     fruta abundante ni casa de una fruta de U = 5); en Aguas turbias, si hay tinaja es la única fuente de ocultas, sus
     ocultas son la excepción a Q14 A («ocultos solo en cuias sin mecánica») y a T3, y su tope es la constante propia
     `TinajaMaxHiddenUnits` = 4 [P] en lugar de `lvl_murky_max_*` (si se baja el tope de Aguas turbias no se rechazan tinajas
-    publicadas); las combinaciones de Q14 A siguen prohibidas. Constantes públicas `TinajaCapacity`, `TinajaMinDoses`,
+    publicadas); las combinaciones de Q14 A siguen prohibidas (Liana, Remolino, Lluvia y Piraña; las comprueba solo
+    `MurkyError`, que con tinaja da su propio motivo: «M13 (b.2, combinaciones; Q14 A): la tinaja no se combina con …»; sin
+    tinaja, el motivo de Aguas turbias no cambia). Constantes públicas `TinajaCapacity`, `TinajaMinDoses`,
     `TinajaMaxDoses`, `TinajaMaxHiddenUnits` y `CucharonCapacity` para el pipeline.
   - **Bot (`CasualBot.Score`), solo la rama mínima de c.2:** con la cuia colgada como destino, el +16 de «juntar» (y el +40
     que cuelga de él) solo suma si su cima es de la fruta sacada; sacar a la cuia vacía puntúa 4 − 20 = −16. El resto de
@@ -67,11 +69,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   - **Tests** (uno por regla, con su §): compartidos `TinajaTests` (M13 reglas 2-8, Hoja y Barro expuesto tras el filtro de
     origen, `futil` del anexo B y Q-B, R10 f, Marea e I5, Luciérnaga, R14 con la cuia colgada, `BoardBuilder`),
     `TinajaValidationTests` (las dos comparaciones de 02 §8, Q14 A, T3 y el tope propio, combinaciones prohibidas y
-    permitidas, reglas de las dos piezas) y `TinajaSolverTests` (A* con y sin poda frente a la búsqueda exhaustiva en 24
+    permitidas con el motivo exacto, reglas de las dos piezas, también con dos cuias de tinaja) y `TinajaSolverTests` (A* con y sin poda frente a la búsqueda exhaustiva en 24
     tableros pequeños de `TinajaBoards`, uniformes y mixtos, en `run` y `single`; heurística admisible y consistente; el
     contraejemplo de b.2: con poda «irresoluble», sin poda 10, `SafeMoves` 0 frente a 1, y alcanzable; la suelta igual en las
     6 realidades; Morpho: el tablero perdido de b.2 da `NoExit` con R = 1, S0 tiene ruta segura, `SomeRealitySolvable`,
-    `BudgetExceeded`, `Won`; la rama del bot). Solo dotnet: `FutilePropertyTests.P1_P2_P3_HoldWithTinaja` (capacidades 2, 4,
+    `BudgetExceeded` (también con R = 1 y la realidad resoluble, w = 5: nunca la Luciérnaga), `Won`; la rama del bot). Solo dotnet: `FutilePropertyTests.P1_P2_P3_HoldWithTinaja` (capacidades 2, 4,
     5 y 6, `run` y `single`, unos 20.000 estados por combinación con la cuia colgada y suelta, sin violaciones) y
     `P3_Tinaja_AfterTheRelease_…` (el vaivén útil con la cuia ya suelta vuelve al mismo estado en un nivel perdido: la
     incompletitud conocida de R13, C1-2), `HotLoopAllocationTests.TinajaBoard_HotLoop_DoesNotAllocate` (0 bytes en reglas,

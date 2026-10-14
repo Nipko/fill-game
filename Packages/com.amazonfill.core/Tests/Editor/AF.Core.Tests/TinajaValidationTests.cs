@@ -90,16 +90,31 @@ namespace AF.Core.Tests
         [Test]
         public void Tinaja_WithLianaRemolinoLluviaOrPirana_IsRejected_Q14A()
         {
-            // b.2, combinaciones prohibidas: Liana, Remolino, Lluvia y Piraña (LevelValidation ya lo prohíbe con ocultos).
+            // b.2, combinaciones prohibidas: Liana, Remolino, Lluvia y Piraña («LevelValidation ya lo prohíbe con ocultos»). La
+            // única comprobación es la de Aguas turbias (MurkyError, antes de las reglas de cada mecánica), que en un nivel con
+            // tinaja da su propio motivo: se fija el texto entero para que un cambio de fuente o de orden no pase sin verse.
             Cuia liana = C(4, 1).WithMechanic(MechanicType.Liana, key: 2);
             Cuia remolino = Cuia.Empty(4).WithMechanic(MechanicType.Remolino, pairId: 0);
             Cuia lluvia = Cuia.Empty(4).WithMechanic(MechanicType.Lluvia, key: LevelValidation.TapajosWater, n: 2, k: 3);
             Cuia pirana = Cuia.Empty(2).WithMechanic(MechanicType.Pirana, k: 3);
 
-            Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2), C(4, 2, 2, 2), T(0x3, 3, 1, 3), Ch(), liana)), Does.Contain("no se combina con"));
-            Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x3, 3, 1, 3), Ch(), remolino, remolino)), Does.Contain("no se combina con"));
-            Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x3, 3, 1, 3), Ch(), C(4, 10, 10), lluvia)), Does.Contain("no se combina con"));
-            Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x3, 3, 1, 3), Ch(), pirana)), Does.Contain("no se combina con"));
+            Assert.That(
+                LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2), C(4, 2, 2, 2), T(0x3, 3, 1, 3), Ch(), liana)),
+                Is.EqualTo("M13 (b.2, combinaciones; Q14 A): la tinaja no se combina con liana (cuia 5)"));
+            Assert.That(
+                LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x3, 3, 1, 3), Ch(), remolino, remolino)),
+                Is.EqualTo("M13 (b.2, combinaciones; Q14 A): la tinaja no se combina con remolino (cuia 5)"));
+            Assert.That(
+                LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x3, 3, 1, 3), Ch(), C(4, 10, 10), lluvia)),
+                Is.EqualTo("M13 (b.2, combinaciones; Q14 A): la tinaja no se combina con lluvia (cuia 6)"));
+            Assert.That(
+                LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x3, 3, 1, 3), Ch(), pirana)),
+                Is.EqualTo("M13 (b.2, combinaciones; Q14 A): la tinaja no se combina con pirana (cuia 5)"));
+
+            // Sin tinaja, el motivo de Aguas turbias no cambia (packs 1-200).
+            Assert.That(
+                LevelValidation.Validate(Board(C(4, 3, 3, 1), Cuia.Create(4, new[] { 1, 2, 1 }, 0x1), C(4, 2, 2, 2), C(4, 3, 3), liana)),
+                Is.EqualTo("D-007, Q14 A: Aguas turbias no se combina con liana (cuia 4)"));
         }
 
         [Test]
@@ -131,6 +146,11 @@ namespace AF.Core.Tests
             Assert.That(
                 LevelValidation.Validate(Board(C(4, 3, 3), C(4, 2, 1), C(4, 2, 2), T(0x3, 3, 1, 3), Ch(), C(4), T(0x3, 1, 2, 1), Ch())),
                 Does.Contain("una sola tinaja"));
+
+            // b.2 regla 1, «una sola tinaja con su cuia»: con dos cuias de tinaja, la tinaja (que va antes) cuenta 2.
+            Assert.That(
+                LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x3, 3, 1, 3), Ch(), C(4), Ch())),
+                Is.EqualTo("cuia 3 (tinaja): M13 (regla 1): la tinaja lleva su cuia chica, una sola (hay 2)"));
         }
 
         [Test]
@@ -142,7 +162,13 @@ namespace AF.Core.Tests
             Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), T(0x3, 3, 1, 3), big)), Does.Contain("Cuia chica de 2"));
             Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 2, 1), C(4, 2, 2, 2), T(0x3, 3, 1, 3), full)), Does.Contain("empieza vacía"));
             Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), Ch(), C(4, 2, 2, 2), T(0x3, 3, 1, 3))), Does.Contain("contigua"));
-            Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), Ch(), C(4, 1, 3, 3))), Does.Contain("una sola por nivel"));
+            Assert.That(LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), Ch(), C(4, 1, 3, 3))), Does.Contain("una sola por nivel (hay 0)"));
+
+            // b.2 regla 1, «una sola tinaja con su cuia»: dos cuias de tinaja, las dos contiguas a ella (Ch, T, Ch); la primera
+            // (que va antes que la tinaja) ve la otra.
+            Assert.That(
+                LevelValidation.Validate(Board(C(4, 3, 3, 1), C(4, 1, 2, 1), C(4, 2, 2, 2), Ch(), T(0x3, 3, 1, 3), Ch())),
+                Is.EqualTo("cuia 3 (cucharon): M13 (regla 1): una sola cuia de tinaja por nivel (otra en la cuia 5)"));
         }
     }
 }

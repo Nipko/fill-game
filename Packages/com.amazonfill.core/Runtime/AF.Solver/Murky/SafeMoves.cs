@@ -285,7 +285,9 @@ namespace AF.Solver.Murky
             if (count == 1)
             {
                 // Una realidad con solución: el primer vertido de esa solución deja el tablero resoluble, así que si no salió
-                // como seguro es que su búsqueda agotó el presupuesto. Nunca la Luciérnaga con R = 1 (b.2, respuesta 3).
+                // como seguro es que su búsqueda agotó el presupuesto. Nunca la Luciérnaga con R = 1 (b.2, respuesta 3). Con
+                // w = 1 y H consistente no ocurre (los expandidos desde el hijo óptimo no superan los del padre); con w > 1 sí
+                // (TinajaSolverTests.Morpho_OneSolvableReality_WithoutASafePour_IsOutOfBudget_NeverTheFirefly).
                 return SafeMovesOutcome.BudgetExceeded;
             }
 
