@@ -361,8 +361,9 @@ def revisar_otros_datos(doc, ids, etiqueta_de, errores):
 
 
 def autoprueba_marcadores():
-    """Casos fijos de revisar_texto con el plural del contrato 32 (M2.7f): el positivo no da errores y mide la forma
-    más larga con su cifra; el negativo (plural sin su valor en «args») sí los da. Devuelve los fallos de la prueba."""
+    """Casos fijos de revisar_texto con el plural del contrato 32 (M2.7f y FIXI): el positivo no da errores y mide la
+    forma más larga con su cifra; los negativos sí los dan: el plural sin su valor en «args» y el plural con un valor
+    que no es una cifra («1200» en texto o True). Devuelve los fallos de la prueba."""
     plural = "Faltan {n:plural:{} nivel|{} niveles} para el lago."
     fallos = []
     positivo = []
@@ -375,7 +376,29 @@ def autoprueba_marcadores():
     revisar_texto("autoprueba negativa", plural, {}, negativo)
     if not any("no coinciden" in e for e in negativo):
         fallos.append("autoprueba: el plural sin su valor en args no da error")
+    for valor in ("1200", True):
+        sin_cifra = []
+        revisar_texto("autoprueba sin cifra", plural, {"n": valor}, sin_cifra)
+        if not any("necesita una cifra en args" in e for e in sin_cifra):
+            fallos.append(f"autoprueba: el plural con {valor!r} en args no da «necesita una cifra en args»")
     return fallos
+
+
+def autoprueba_otros_datos():
+    """Caso fijo de revisar_otros_datos (FIXI): una parada candidata de §5.1 bis cuyas entradas de «otros_datos» no son
+    objetos ("texto" y null) da «no es un objeto» por cada una y ningún otro error (los de candidatos que faltan se
+    filtran), sin lanzar ninguna excepción. Devuelve los fallos de la prueba."""
+    doc = {"fuentes": [], "paradas_1_200": [{"id": "belem", "otros_datos": ["texto", None]}]}
+    errores = []
+    try:
+        revisar_otros_datos(doc, set(), {}, errores)
+    except Exception as e:  # la prueba tiene que fallar con un mensaje, no romper --check
+        return [f"autoprueba: «otros_datos» con entradas que no son objetos lanza {type(e).__name__}: {e}"]
+    esperados = [f"parada belem: otros_datos[{i}]: no es un objeto" for i in range(2)]
+    resto = [e for e in errores if "falta el candidato de §5.1 bis" not in e]
+    if resto != esperados:
+        return [f"autoprueba: «otros_datos» con entradas que no son objetos da {resto} y se esperaba {esperados}"]
+    return []
 
 
 def primer_nivel_del_sitio(mundo, nombre):
@@ -487,6 +510,7 @@ def check(doc, pr):
     # «Otro dato» de cada tarjeta (M2.7): campos, claves únicas, texto, etiqueta, fuentes reabiertas y candidatos.
     revisar_otros_datos(doc, ids, etiqueta_de, errores)
     errores.extend(autoprueba_marcadores())
+    errores.extend(autoprueba_otros_datos())
     # Toda etiqueta «[V id]» / «[E id]» de cualquier texto del JSON (datos, notas, preguntas, cuidado, miradores, puntos
     # de paso, ríos, cruces…) tiene que llevar a una entrada de «fuentes» con su URL.
     def textos(o, ruta):
