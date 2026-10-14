@@ -55,10 +55,17 @@ namespace AF.Presentation
         /// <summary>No está en la caché.</summary>
         None,
 
-        /// <summary>La pintó <see cref="ProceduralArt.ModalSurfaceFor"/> en el hilo principal.</summary>
+        /// <summary>
+        /// La pintó el hilo principal: <see cref="ProceduralArt.ModalSurfaceFor"/>, o el trabajo del arte del banner de mundo
+        /// corrido en el acto (<see cref="ProceduralArt.RequestBannerArt"/> sin <c>offMainThread</c>, como con
+        /// <c>LaunchOptions.BannerArtSyncOverride</c> de los tests).
+        /// </summary>
         MainThread,
 
-        /// <summary>La pintó otro hilo (el trabajo del arte del banner de mundo) y el hilo principal solo creó la textura.</summary>
+        /// <summary>
+        /// La pintó otro hilo (el trabajo del arte del banner de mundo, en el grupo de hilos) y el hilo principal solo creó la
+        /// textura.
+        /// </summary>
         OtherThread,
     }
 
@@ -159,14 +166,15 @@ namespace AF.Presentation
             return (w * 4096) + h;
         }
 
-        // La superficie que pintó otro hilo (el arte del banner de mundo, RequestBannerArt), a la caché si aún no está: el hilo
-        // principal solo crea la textura.
-        private void AdoptModalSurface(int key, int w, int h, BannerPixels px)
+        // La superficie que pintó el trabajo del arte del banner de mundo (RequestBannerArt), a la caché si aún no está: aquí
+        // solo se crea la textura. Su origen es el del trabajo: OtherThread si corrió en un hilo del grupo y MainThread si corrió
+        // en el acto (sin hilo; los tests con BannerArtSyncOverride), como la que pinta ModalSurfaceFor (revisión de T52, U1).
+        private void AdoptModalSurface(int key, int w, int h, BannerPixels px, ModalSurfaceOrigin origin)
         {
             if (!_surfaces.ContainsKey(key))
             {
                 _surfaces[key] = MakeSprite32(px, ModalSurfaceName(w, h), new Vector2(0.5f, 0.5f), ModalSurfacePxPerDp);
-                _surfaceOrigin[key] = ModalSurfaceOrigin.OtherThread;
+                _surfaceOrigin[key] = origin;
             }
         }
 

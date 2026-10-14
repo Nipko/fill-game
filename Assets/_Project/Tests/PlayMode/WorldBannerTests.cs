@@ -34,7 +34,8 @@ namespace AF.Tests.PlayMode
     /// mientras espera el arte; el arte pintado fuera del hilo principal, como en el juego: mientras llega, el velo en el acto y
     /// los toques ignorados; si falla, no se puede encolar o no llega en su tiempo límite, la tarjeta sin arte (el respaldo de
     /// D-012) y el arte tardío descartado; el tiempo límite y el <c>wait_ms</c>, de reloj real desde la petición y no la suma
-    /// del dt; pedido antes en la victoria del 10 y al ofrecer «Jugar» con un nivel que abre mundo;
+    /// del dt; pedido antes en la victoria del 10 y al ofrecer «Jugar» con un nivel que abre mundo; el origen de la superficie
+    /// de madera, el hilo en que corrió el trabajo del arte (el principal en el acto; revisión de T52, U1);
     /// y las sondas <c>AF_STATE world_banner</c>, <c>world_banner_art</c> y <c>world_banner_closed</c> y el
     /// <c>AF_LAYOUT</c>. Salvo los tests del arte en otro hilo, todos lo piden en el acto
     /// (<see cref="LaunchOptions.BannerArtSyncOverride"/>, <see cref="CardSetup.Load"/>).
@@ -448,6 +449,66 @@ namespace AF.Tests.PlayMode
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Intro));
             Assert.That(view.CardArt.MascotsBuilt, Is.False);
             CardSetup.StepUntilPlaying(boot);
+        }
+
+        [UnityTest]
+        public IEnumerator Banner_SurfaceOrigin_IsWhereTheArtJobRan_MainThreadInTheAct_OtherThreadInThePool([Values(true, false)] bool sync)
+        {
+            // Revisión de T52 (U1): el mismo trabajo del arte pinta la superficie de madera de la tarjeta en los dos caminos, y su
+            // origen dice dónde corrió. En el acto (BannerArtSyncOverride, los tests que miden instantes exactos) corre en el hilo
+            // principal: MainThread (antes decía OtherThread, «la pintó otro hilo»). Como en el juego, en un hilo del grupo:
+            // OtherThread. La superficie se saca antes de la caché del arte compartido, así que no depende de otros tests.
+            LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.BannerArtTimeoutMsOverride = 60000f;
+            if (sync)
+            {
+                LaunchOptions.BannerArtSyncOverride = true;
+            }
+
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1240));
+            yield return PlayModeHelpers.LoadGame(42, new MemoryProgressStore(42, 41));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            ProceduralArt art = view.CardArt;
+            WorldBannerView banner = view.WorldBannerView;
+            art.ReleaseBannerArt(); // el arte es de toda la sesión: nada pedido de antes
+            var surface = new Vector2(LevelCardView.MaxWidthDp - 16f, 281f); // la compartida de 281 dp, a 360 dp de ancho
+            art.ForgetModalSurface(surface.x, surface.y);
+            Assert.That(art.ModalSurfaceOriginOf(surface.x, surface.y), Is.EqualTo(ModalSurfaceOrigin.None), "condición del test");
+
+            flow.Load(41);
+            Assert.That(flow.WorldBanner, Is.EqualTo(3));
+            Assert.That(banner.AsyncArt, Is.EqualTo(!sync));
+            if (sync)
+            {
+                Assert.That(banner.ArtReady, Is.True, "en el acto");
+                Assert.That(art.MascotsMainMs, Is.GreaterThanOrEqualTo(art.MascotsMs), "todo en el hilo principal");
+            }
+            else
+            {
+                Assert.That(banner.ArtReady, Is.False, "se pinta en otro hilo");
+                var watch = Stopwatch.StartNew();
+                while (!banner.CardShown && watch.ElapsedMilliseconds < 20000)
+                {
+                    yield return null; // tiempo de verdad para el hilo que pinta
+                    PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                }
+
+                Assert.That(art.MascotsMainMs, Is.LessThan(art.MascotsMs), "en el hilo principal, solo las texturas");
+            }
+
+            Assert.That(banner.ArtReady, Is.True);
+            Assert.That(banner.Fallback, Is.EqualTo(WorldBannerView.FallbackNone));
+            Assert.That(banner.SurfaceSizeDp, Is.EqualTo(surface), "la superficie compartida de 281 dp");
+            Assert.That(art.HasModalSurface(surface.x, surface.y), Is.True, "la pintó el trabajo del arte");
+            ModalSurfaceOrigin expected = sync ? ModalSurfaceOrigin.MainThread : ModalSurfaceOrigin.OtherThread;
+            Assert.That(art.ModalSurfaceOriginOf(surface.x, surface.y), Is.EqualTo(expected), sync ? "en el acto, en el hilo principal" : "en un hilo del grupo");
+            Assert.That(banner.Surface.sprite, Is.SameAs(art.ModalSurfaceFor(surface.x, surface.y)), "la tarjeta usa la de la caché");
+            Assert.That(art.ModalSurfaceOriginOf(surface.x, surface.y), Is.EqualTo(expected), "pedirla otra vez no cambia su origen");
+            Assert.That(view.LastWorldBannerArtProbe, Does.Contain("\"async\":" + (sync ? "false" : "true")).And.Contain("\"fallback\":\"none\""));
+            yield return WorldBannerSetup.CloseThenTheIntro(boot, 41, 3);
         }
 
         [UnityTest]

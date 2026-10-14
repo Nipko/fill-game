@@ -364,7 +364,7 @@ namespace AF.Presentation
             AbandonBannerArt(); // otra petición con otras medidas: la anterior para y se descarta
             BannerArtFailure = BannerArtFailure.None;
             var job = new BannerArtJob(key, w, h, water, meetWater, seed, _capiPaw == null, _rosa == null, _rosaSpray == null,
-                _rosaRipple == null, _rosaFoam == null, BannerArtFault, surfaceKey, surfaceW, surfaceH);
+                _rosaRipple == null, _rosaFoam == null, BannerArtFault, surfaceKey, surfaceW, surfaceH, offMainThread);
             _bannerJob = job;
             if (offMainThread)
             {
@@ -422,7 +422,9 @@ namespace AF.Presentation
             _rosaFoam = _rosaFoam != null ? _rosaFoam : FoamSprite(job.Foam!);
             if (job.Surface != null)
             {
-                AdoptModalSurface(job.SurfaceKey, job.SurfaceWidthDp, job.SurfaceHeightDp, job.Surface);
+                // Su origen, el hilo en que corrió el trabajo: en el acto (sin hilo) la pintó el hilo principal.
+                AdoptModalSurface(job.SurfaceKey, job.SurfaceWidthDp, job.SurfaceHeightDp, job.Surface,
+                    job.OffMainThread ? ModalSurfaceOrigin.OtherThread : ModalSurfaceOrigin.MainThread);
             }
 
             watch.Stop();
@@ -1687,8 +1689,9 @@ namespace AF.Presentation
             private volatile bool _cancelled;
 
             public BannerArtJob(string key, int w, int h, Color water, Color? meet, int seed, bool paw, bool rosa, bool spray,
-                bool ripple, bool foam, BannerArtFault fault, int surfaceKey, int surfaceWidthDp, int surfaceHeightDp)
+                bool ripple, bool foam, BannerArtFault fault, int surfaceKey, int surfaceWidthDp, int surfaceHeightDp, bool offMainThread)
             {
+                OffMainThread = offMainThread;
                 SurfaceKey = surfaceKey;
                 SurfaceWidthDp = surfaceWidthDp;
                 SurfaceHeightDp = surfaceHeightDp;
@@ -1709,6 +1712,13 @@ namespace AF.Presentation
             public string Key { get; }
 
             public BannerArtFault Fault { get; }
+
+            /// <summary>
+            /// Corre en un hilo del grupo (true) o en el acto, en el hilo principal (false: <see cref="RequestBannerArt"/> sin
+            /// <c>offMainThread</c>, como con <c>LaunchOptions.BannerArtSyncOverride</c> de los tests). Fija el origen de la
+            /// superficie que pinta (<see cref="ModalSurfaceOriginOf"/>; revisión de T52, U1).
+            /// </summary>
+            public bool OffMainThread { get; }
 
             public bool Done => _done;
 

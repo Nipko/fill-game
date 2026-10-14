@@ -32,8 +32,10 @@ namespace AF.UI
     /// siempre esté ya, se pide antes (<see cref="PrefetchWorldBanner"/>): en la victoria del nivel anterior (el 10, el 40, el 80
     /// y el 140) y al ofrecer «Jugar» con un nivel que abre mundo (GameBootstrap). El mismo trabajo pinta la superficie de madera
     /// de la tarjeta (T52, observación 4 de la prueba del 2026-10-13: se pintaba en el hilo principal al abrir el banner, de 66
-    /// a 111 ms en el teléfono, y era eso lo que medía <c>wait_ms</c> al entrar con «Siguiente» aunque el arte ya estuviera). Los tests que miden instantes exactos lo piden
-    /// en el acto con <see cref="LaunchOptions.BannerArtSyncOverride"/>; los del respaldo lo fuerzan con
+    /// a 111 ms en el teléfono, y era eso lo que medía <c>wait_ms</c> al entrar con «Siguiente» aunque el arte ya estuviera).
+    /// Los tests que miden instantes exactos lo piden en el acto con <see cref="LaunchOptions.BannerArtSyncOverride"/>: el mismo
+    /// trabajo, corrido en el hilo principal, y así lo registra el origen de la superficie
+    /// (<c>ProceduralArt.ModalSurfaceOriginOf</c>: <c>MainThread</c>; revisión de T52, U1). Los del respaldo lo fuerzan con
     /// <see cref="LaunchOptions.BannerArtFaultOverride"/> y <see cref="LaunchOptions.BannerArtTimeoutMsOverride"/>.</para>
     /// <para>En desarrollo (los documenta docs/dev/prototipo-v0.md): al abrirse, <c>AF_STATE {"event":"world_banner",…}</c>
     /// con <c>level</c>, <c>world</c>, <c>text</c> (la clave entera), <c>then</c> (<c>"level_card"</c> si al cerrarlo sale la
