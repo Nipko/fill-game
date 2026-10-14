@@ -44,8 +44,12 @@ namespace AF.UI
         /// </summary>
         public const string TutorialMurkyRule = "Debajo nunca se repite la fruta de encima.";
 
-        /// <summary>Aguas turbias [P] (§b.2; estreno en el 100, en la tarjeta combinada), con la línea T4. Pendiente del asesor cultural.</summary>
-        public const string TutorialMurky = "El agua turbia esconde frutas. " + TutorialMurkyRule;
+        /// <summary>
+        /// Aguas turbias [P] (§b.2; estreno en el 100, en la tarjeta combinada), con la línea T4 (<see cref="TutorialMurkyRule"/>)
+        /// al final. Una sola frase de la tabla, sin pegar la regla (D-018, tarea L1: cada idioma la escribe entera); los tests
+        /// comprueban que termina en la regla. Pendiente del asesor cultural.
+        /// </summary>
+        public const string TutorialMurky = "El agua turbia esconde frutas. Debajo nunca se repite la fruta de encima.";
 
         /// <summary>Remolino (02 §9.1 M4; estreno en el 103). Pendiente de revisión del asesor cultural.</summary>
         public const string TutorialRemolino = "Las dos cuias del remolino están unidas por debajo: lo que viertes en una aparece en el fondo de la otra.";

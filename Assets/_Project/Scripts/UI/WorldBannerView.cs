@@ -26,8 +26,10 @@ namespace AF.UI
     /// hasta que termina (<c>LevelFlow.WorldBannerExitMs</c>) y solo entonces abre la tarjeta previa o arranca «Llenar y teñir»
     /// (07 §5.1: «se muestra antes de esta animación, no encima»). Mientras sale sigue recibiendo el toque: un segundo toque
     /// termina la salida en el acto. No se cierra sola, como la tarjeta previa [P].</para>
-    /// <para>La línea del lugar va en 1 línea o, si no cabe, en 2 con el corte en un « · » (nunca dentro de un nombre: «ríos» o
-    /// «Negro +» no se quedan solos al final de la línea) a 18 sp o, si hace falta, más pequeña hasta 15.</para>
+    /// <para>La línea del lugar va en 1 línea o, si no cabe, en 2 con el corte en uno de los <c>{sep}</c> de su plantilla
+    /// (<see cref="UiText.WorldPlaceLine"/>; « · » en es-419; nunca dentro de un nombre: «ríos» o «Negro +» no se quedan solos al
+    /// final de la línea) a 18 sp o, si hace falta, más pequeña hasta 15. El banner elige qué corte da el salto de línea; el
+    /// texto, la negrita y el orden de los trozos son los de la plantilla (D-018, tarea L1).</para>
     /// <para><b>Escala de la fuente</b> (<see cref="FontScale"/>; 02 §12: hasta el 130 % sin desbordes ni recortes; pregunta 43,
     /// decidida por el dueño el 2026-10-13; T52), con el mismo mecanismo que la tarjeta previa (<see cref="LevelCardView"/>):
     /// los textos se multiplican por ella (la cabecera de 24 sp y la línea del lugar de 18 a 15 sp) y la tarjeta crece en alto:
@@ -998,7 +1000,6 @@ namespace AF.UI
             _nameInTitle = WidthOf(_title, heading) <= inner - (2f * TitleInsetDp) - FitSlackDp;
             SetText(_title, _nameInTitle ? heading : UiText.WorldTitle(world));
             _placeText = _nameInTitle ? UiText.WorldPlace(world) : UiText.WorldPlaceNamed(world);
-            string placeRich = _nameInTitle ? _placeText : "<b>" + UiText.WorldName(world) + "</b>" + UiText.WorldSeparator + UiText.WorldPlace(world);
 
             // Con la escala, la placa de la cabecera crece con ella y, como en la tarjeta previa, al menos hasta el alto de línea de
             // su título (Baloo 2: ≈ 1,6 veces el tamaño); a 100 % se queda en sus 40 dp de siempre.
@@ -1009,8 +1010,9 @@ namespace AF.UI
                 headerH = Mathf.Max(HeaderDp * s, titleH + 2f);
             }
 
-            // El lugar, centrado bajo la viñeta, en 1 línea o en 2 cortadas en un « · »; la viñeta crece hasta el alto mínimo.
-            FitPlace(placeRich, inner - FitSlackDp, s);
+            // El lugar, centrado bajo la viñeta, en 1 línea o en 2 cortadas en uno de sus {sep}; la viñeta crece hasta el alto
+            // mínimo. Con «Mundo {n}» en la cabecera, el nombre abre la línea en negrita (la negrita va en su plantilla).
+            FitPlace(world, !_nameInTitle, inner - FitSlackDp, s);
             placeH = Mathf.Ceil(_place.GetPreferredValues(_place.text, inner, float.PositiveInfinity).y) + 2f;
             float sceneY = PadDp + headerH + 8f;
             float rest = SceneDp + 10f + placeH + PadDp + 4f;
@@ -1026,20 +1028,22 @@ namespace AF.UI
             }
         }
 
-        // La línea del lugar en 1 línea o, si no cabe, en 2 cortadas en el « · » más equilibrado (nunca dentro de un nombre), de
-        // 18 a 15 sp por la escala scale. Asigna (cadenas nuevas), pero solo al colocar el banner.
-        private void FitPlace(string rich, float room, float scale)
+        // La línea del lugar del mundo world (con el nombre delante si named) en 1 línea o, si no cabe, en 2 cortadas en el {sep}
+        // más equilibrado de su plantilla (nunca dentro de un nombre), de 18 a 15 sp por la escala scale. Asigna (cadenas nuevas),
+        // pero solo al colocar el banner.
+        private void FitPlace(int world, bool named, float room, float scale)
         {
+            string line = UiText.WorldPlaceLine(world, named, 0);
             for (float sp = PlaceSp; sp >= PlaceMinSp; sp -= 1f)
             {
                 _place.fontSize = sp * scale;
-                if (WidthOf(_place, rich) <= room)
+                if (WidthOf(_place, line) <= room)
                 {
-                    SetText(_place, rich);
+                    SetText(_place, line);
                     return;
                 }
 
-                string? split = BestSplit(rich, room);
+                string? split = BestSplit(world, named, room);
                 if (split != null)
                 {
                     SetText(_place, split);
@@ -1048,28 +1052,27 @@ namespace AF.UI
             }
 
             // Ni a 15 sp caben las dos mitades: el corte más equilibrado, y TMP parte lo que sobre.
-            SetText(_place, BestSplit(rich, float.PositiveInfinity) ?? rich);
+            SetText(_place, BestSplit(world, named, float.PositiveInfinity) ?? line);
         }
 
-        // El corte en un « · » con la línea más larga más corta (y que quepa en room), o null.
-        private string? BestSplit(string rich, float room)
+        // De los {sep} de la línea del lugar, el que da la línea más larga más corta (y que quepa en room), con el salto de línea
+        // en él y « · » en los demás (UiText.WorldPlaceLine); o null. Cada línea se mide por separado, como siempre: el texto
+        // que se pinta es el de la plantilla, sin tocar.
+        private string? BestSplit(int world, bool named, float room)
         {
-            string sep = UiText.WorldSeparator;
             string? best = null;
             float bestW = float.MaxValue;
-            int i = rich.IndexOf(sep, StringComparison.Ordinal);
-            while (i >= 0)
+            int cuts = UiText.WorldPlaceSeparators(named);
+            for (int k = 0; k < cuts; k++)
             {
-                string a = rich.Substring(0, i);
-                string b = rich.Substring(i + sep.Length);
-                float w = Mathf.Max(WidthOf(_place, a), WidthOf(_place, b));
+                string split = UiText.WorldPlaceLine(world, named, 1 << k);
+                int lineBreak = split.IndexOf('\n');
+                float w = Mathf.Max(WidthOf(_place, split.Substring(0, lineBreak)), WidthOf(_place, split.Substring(lineBreak + 1)));
                 if (w <= room && w < bestW)
                 {
                     bestW = w;
-                    best = a + "\n" + b;
+                    best = split;
                 }
-
-                i = rich.IndexOf(sep, i + sep.Length, StringComparison.Ordinal);
             }
 
             return best;

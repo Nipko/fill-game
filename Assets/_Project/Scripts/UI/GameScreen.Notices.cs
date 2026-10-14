@@ -4,6 +4,7 @@ using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.GameFlow;
 using AF.Levels;
+using AF.Localization;
 using AF.Presentation;
 using AF.Presentation.Mechanics;
 using UnityEngine;
@@ -548,7 +549,8 @@ namespace AF.UI
             }
 
             _sighting.Place(_canvasW, top);
-            _sighting.Show(_art.MonkeyArtFor(species).Portrait, species.NameIn("es"), UiText.FaunaFact(species.FactKey));
+            // El nombre en el idioma de la UI (D-018; tarea L1): el catálogo trae es, pt y en, y cae al español si falta.
+            _sighting.Show(_art.MonkeyArtFor(species).Portrait, species.NameIn(UiText.FaunaLanguage(Loc.Locale)), UiText.FaunaFact(species.FactKey));
         }
 
         private struct Notice

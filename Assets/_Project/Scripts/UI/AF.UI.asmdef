@@ -12,6 +12,7 @@
     "AF.Boosters",
     "AF.Ads",
     "AF.IAP",
+    "AF.Localization",
     "UnityEngine.UI",
     "Unity.InputSystem",
     "Unity.TextMeshPro"

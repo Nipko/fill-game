@@ -869,6 +869,116 @@ namespace AF.Tests.PlayMode
             Assert.That(Exit, Is.Not.AllocatingGCMemory(), "salida");
         }
 
+        [UnityTest]
+        public IEnumerator Banner_PlaceLineCuts_AsBeforeL1_EveryWorld_At100And130()
+        {
+            // Tarea L1 (D-018): la línea del lugar sale de una plantilla con {sep} y el banner elige qué corte da el salto. Para los
+            // 13 mundos, a 100 % y a 130 %, a 360 × 780 dp y en 16:9, el texto pintado y su tamaño son los que daba el código de
+            // antes (FitPlace y BestSplit sobre la cadena pegada, reproducidos aquí tal cual en una copia de la etiqueta).
+            foreach (Vector4 screen in new[] { HudLabelTests.Screen780, HudLabelTests.Screen640 })
+            {
+                GameScreen.SimulatedScreen = screen;
+                yield return CardSetup.Load(41);
+                GameBootstrap boot = GameBootstrap.Current!;
+                GameScreen view = boot.View!;
+                WorldBannerView banner = view.WorldBannerView;
+                Assert.That(banner.Visible, Is.True);
+                banner.AsyncArt = false;
+                int twoLines = 0;
+                int named = 0;
+                foreach (float scale in new[] { 1f, 1.3f })
+                {
+                    for (int w = 1; w <= AF.Levels.WorldTable.WorldCount; w++)
+                    {
+                        string where = "mundo " + w + " al " + (scale * 100f).ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                            + " % a " + screen.x + " × " + screen.y;
+                        banner.HideNow();
+                        banner.FontScale = scale;
+                        banner.Show(w, Palette.WaterClear, true, view.CanvasWidth, view.CardCanvasHeight, view.SafeTopDp, view.CardSafeBottom);
+                        TextMeshProUGUI place = banner.PlaceLabel;
+                        string expectedPlain = banner.NameInTitle ? UiText.WorldPlace(w) : UiText.WorldName(w) + " · " + UiText.WorldPlace(w);
+                        Assert.That(banner.PlaceText, Is.EqualTo(expectedPlain), where);
+                        Assert.That(banner.TitleText, Is.EqualTo(banner.NameInTitle ? UiText.WorldHeading(w) : UiText.WorldTitle(w)), where);
+
+                        GameObject copy = UnityEngine.Object.Instantiate(place.gameObject, place.transform.parent);
+                        try
+                        {
+                            TextMeshProUGUI legacy = copy.GetComponent<TextMeshProUGUI>();
+                            float room = place.rectTransform.rect.width - LegacyFitSlackDp;
+                            string rich = banner.NameInTitle ? UiText.WorldPlace(w) : "<b>" + UiText.WorldName(w) + "</b> · " + UiText.WorldPlace(w);
+                            string expected = LegacyFitPlace(legacy, rich, room, scale);
+                            Assert.That(place.text, Is.EqualTo(expected), where + ": el mismo corte que antes");
+                            Assert.That(place.fontSize, Is.EqualTo(legacy.fontSize).Within(0.001f), where + ": al mismo tamaño");
+                        }
+                        finally
+                        {
+                            UnityEngine.Object.Destroy(copy);
+                        }
+
+                        twoLines += place.text.IndexOf('\n') >= 0 ? 1 : 0;
+                        named += banner.NameInTitle ? 0 : 1;
+                    }
+                }
+
+                Assert.That(twoLines, Is.GreaterThan(0), "condición del test: algún mundo se parte en dos líneas");
+                Assert.That(named, Is.GreaterThan(0), "condición del test: algún nombre abre la línea del lugar, en negrita");
+                banner.HideNow();
+            }
+        }
+
+        // WorldBannerView.FitSlackDp: el aire que deja la línea del lugar al medirse.
+        private const float LegacyFitSlackDp = 4f;
+
+        // El ajuste de la línea del lugar de antes de L1 (WorldBannerView.FitPlace en 99af945), sobre la cadena pegada: 1 línea o 2
+        // cortadas en el « · » más equilibrado, de 18 a 15 sp por la escala. Deja en t el tamaño elegido y devuelve el texto.
+        private static string LegacyFitPlace(TextMeshProUGUI t, string rich, float room, float scale)
+        {
+            for (float sp = WorldBannerView.PlaceSp; sp >= WorldBannerView.PlaceMinSp; sp -= 1f)
+            {
+                t.fontSize = sp * scale;
+                if (LegacyWidth(t, rich) <= room)
+                {
+                    return rich;
+                }
+
+                string? split = LegacyBestSplit(t, rich, room);
+                if (split != null)
+                {
+                    return split;
+                }
+            }
+
+            return LegacyBestSplit(t, rich, float.PositiveInfinity) ?? rich;
+        }
+
+        private static string? LegacyBestSplit(TextMeshProUGUI t, string rich, float room)
+        {
+            const string sep = " · ";
+            string? best = null;
+            float bestW = float.MaxValue;
+            int i = rich.IndexOf(sep, StringComparison.Ordinal);
+            while (i >= 0)
+            {
+                string a = rich.Substring(0, i);
+                string b = rich.Substring(i + sep.Length);
+                float w = Mathf.Max(LegacyWidth(t, a), LegacyWidth(t, b));
+                if (w <= room && w < bestW)
+                {
+                    bestW = w;
+                    best = a + "\n" + b;
+                }
+
+                i = rich.IndexOf(sep, i + sep.Length, StringComparison.Ordinal);
+            }
+
+            return best;
+        }
+
+        private static float LegacyWidth(TextMeshProUGUI t, string text)
+        {
+            return t.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x;
+        }
+
         // Las líneas de la sonda (AF_STATE y AF_LAYOUT) y los avisos del arte, en orden.
         private void OnLog(string condition, string stackTrace, LogType type)
         {
