@@ -1,5 +1,6 @@
 #nullable enable
 using AF.Core.Board;
+using AF.Core.Mechanics;
 using AF.Core.Rules;
 using AF.Solver.Murky;
 using AF.Solver.Search;
@@ -131,6 +132,17 @@ namespace AF.Solver.Tests
             Assert.That(options.WithFutileRule(false).Cancellation, Is.SameAs(flag));
             Assert.That(options.ForLevel(Fill()).Cancellation, Is.SameAs(flag));
             Assert.That(options.WithCancellation(null).Cancellation, Is.Null);
+
+            // Con Tinaja, ForLevel quita la poda de fútiles (M13, b.2 R14) y conserva la bandera.
+            var withTinaja = new BoardState(new[]
+            {
+                C(4, 3, 3, 3), C(4, 1, 2, 1, 1), C(4, 2, 2, 2),
+                Cuia.Create(5, new[] { 3, 1 }, 0x1).WithMechanic(MechanicType.Tinaja), Cuia.Empty(2).WithMechanic(MechanicType.Cucharon),
+            });
+            SolverOptions level = options.ForLevel(withTinaja);
+            Assert.That(options.FutileRuleEnabled, Is.True);
+            Assert.That(level.FutileRuleEnabled, Is.False);
+            Assert.That(level.Cancellation, Is.SameAs(flag));
         }
 
         [Test]

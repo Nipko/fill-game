@@ -8,9 +8,9 @@ namespace AF.Core.Session
     /// <summary>
     /// Cierre acotado de Aguas estancadas por bucle (02 R13 ampliada; D-014): un estado en el que todavía hay vertidos útiles
     /// está igualmente perdido si todos los estados que se alcanzan desde él con todos los vertidos legales (opción (a) de la
-    /// pregunta 46 de <c>docs/GDD.md</c> §6.3, pendiente del dueño) son pocos (como mucho <see cref="MaxStates"/>) y ninguno es
-    /// victoria (R12). Es el caso del nivel 66 (prueba en el teléfono del 2026-10-13): dos vaivenes parciales útiles que llevan
-    /// siempre a los mismos tableros, sin salida.
+    /// pregunta 46 de <c>docs/GDD.md</c> §6.3, decidida el 2026-10-13; D-020) son pocos (como mucho
+    /// <see cref="MaxStates"/>) y ninguno es victoria (R12). Es el caso del nivel 66 (prueba en el teléfono del 2026-10-13): dos
+    /// vaivenes parciales útiles que llevan siempre a los mismos tableros, sin salida.
     /// </summary>
     /// <remarks>
     /// <para><b>Recorrido.</b> En anchura desde S, en orden determinista (vertidos (A, B) ascendentes sobre el tablero en orden
@@ -20,14 +20,14 @@ namespace AF.Core.Session
     /// partida y el solver), así que las mecánicas con estado (Hoja, Brote, Liana, contadores de Lluvia y Piraña…) forman parte
     /// del estado y del hash. Las cuias idénticas se prueban una sola vez como origen y como destino, como en el solver (dan los
     /// mismos hijos canónicos). Se recorren <b>todos los vertidos legales</b>: los útiles y también los fútiles (con su
-    /// <c>futil</c> de R13 y el anexo B, que decide que un fútil no avanza los contadores, Q18 B). Con capacidades iguales un
-    /// fútil no cambia el estado canónico en <see cref="PourMode.Run"/> (P2 de R16), así que no añade estados; con capacidades
-    /// mixtas sí puede abrir un camino a la victoria (CHANGELOG del núcleo, C1-8), y dejarlo fuera haría que el cierre declarase
-    /// perdido un tablero que se gana (el texto de D-014 dice «vertidos útiles», pero también exige que nunca se declare un
-    /// tablero ganable; en el propio nivel 66, tras el 6.º vertido del dueño, el cierre solo con útiles no tiene victoria y el
-    /// nivel se gana con un fútil). Por lo mismo no depende de <c>futile_rule_enabled</c>: el kill-switch de R16 solo cambia
-    /// R13. Es la opción (a) de la pregunta 46 de <c>docs/GDD.md</c> §6.3, la recomendada y pendiente del dueño: con (b) o
-    /// (c) cambian <c>Expand</c> y sus tests.</para>
+    /// <c>futil</c> de R13 y el anexo B, que decide que un fútil no avanza los contadores, Q18 B). Con capacidades iguales, un
+    /// fútil entre cuias sin mecánica no cambia el estado canónico en <see cref="PourMode.Run"/> (P2 de R16), así que no añade
+    /// estados; con capacidades mixtas sí puede abrir un camino a la victoria (CHANGELOG del núcleo, C1-8), y dejarlo fuera
+    /// haría que el cierre declarase perdido un tablero que se gana (el texto de D-014 dice «vertidos útiles», pero también
+    /// exige que nunca se declare un tablero ganable; en el propio nivel 66, tras el 6.º vertido del dueño, el cierre solo con
+    /// útiles no tiene victoria y el nivel se gana con un fútil). Por lo mismo no depende de <c>futile_rule_enabled</c>: el
+    /// kill-switch de R16 solo cambia R13. Es la opción (a) de la pregunta 46 de <c>docs/GDD.md</c> §6.3, la recomendada,
+    /// decidida por el dueño el 2026-10-13 (D-020).</para>
     /// <para><b>Veredicto.</b> Si el cierre se agota con <see cref="MaxStates"/> estados o menos (S incluido) y ninguno es
     /// victoria, S está perdido (<see cref="IsDeadEnd(BoardState, PourMode)"/> = true). Si aparece un estado ganado o haría falta
     /// guardar uno más, no se declara nada: es conservador y nunca declara perdido un tablero desde el que se puede ganar (R14).

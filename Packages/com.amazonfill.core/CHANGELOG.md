@@ -16,6 +16,31 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- **Hoja atada y Brote de dos hojas en el núcleo** (K3a, tanda 4; variantes de la 1.0 de D-007, estrenos 283 y 343; 02 §1.2,
+  §1.4, R10 (b) y R16; propuesta de D-007 b.3; firma de `pack_schema` 3, pregunta 8: `hoja_atada {key}` y `brote` con
+  `n` ∈ {1, 2}). README, «Variantes de la 1.0 (K3a)».
+  - **Hoja atada:** `MechanicType.HojaAtada` = 10 [P] (no se persiste), clave `"hoja_atada"`, `MechanicTypes.Last` =
+    `HojaAtada`, y `HojaAtadaMechanic`: solo recibe su fruta `key` (vacía o con ella en la cima), sí es origen, nunca se suelta
+    (tampoco al sellar), nunca es fútil como destino (anexo B) y no está exenta como origen. `BoardBuilder` exige `key` (tinte
+    1-14) sin más campos ni bandera; `Cuia.MechanicKey` devuelve su llave. Validación: llave en el tablero, su fruta en el fondo
+    si empieza con dosis (b.3) y, **[P]**, capacidad = `U_c` de su llave: sin esa regla, con capacidades mixtas, la exención de
+    destino de `futil` rompe P3 (un vaivén útil entre la casa de su fruta y la hoja atada vuelve al mismo estado;
+    `FutilePropertyTests.P3_HojaAtada_NotTheHomeOfItsFruit_ARoundTripReturnsToTheSameState`). Pregunta para el dueño.
+  - **Brote de dos hojas:** el Brote con `n` = 2. `Cuia.MechanicN` guarda las hojas que le faltan (2, luego 1; 0 en el Brote
+    normal); en la etapa (b) resta las dosis recibidas y germina al llegar a 0 (en `run` un tramo de 2 lo abre de una vez). El
+    gancho interno `IMechanic.OnReceived` recibe ahora la cantidad. Evento nuevo `PourEvents.BroteLeafOpenedMask` (una hoja
+    abierta sin germinar; `BoardRules` solo anota `OpenedMask` cuando la cuia queda sin mecánica). `BoardBuilder` lee `n` ∈ {1, 2}:
+    sin `n` o con 1, el Brote normal con el mismo `Packed` y el mismo hash que antes; con 2, el de dos hojas. Validación: espacio
+    ≥ 2 al empezar y, en un tablero inicial, solo `n` = 0 o 2.
+  - **Sin cambios** en la heurística, el solver, el bot, `EarlyTraps` ni Aguas turbias: `H` y `H_single` siguen siendo
+    admisibles y consistentes y el par de A* con `w = 1`, exacto. Packs 1-200 idénticos (`--check` del tutorial y de 11-200).
+  - **Tests:** compartidos `HojaAtadaTests` y `BroteDosHojasTests` (una regla por test, con su §), `FilterSolverTests` (A* frente
+    a la búsqueda exhaustiva y heurística en 32 tableros por variante, uniformes y mixtos, en `run` y `single`; inyectores
+    `HojaAtadaInjector` y `BroteDosHojasInjector` en `MechanicBoards`) y `CuiaAttrTests` (claves y `MechanicKey`). Solo dotnet:
+    `FutilePropertyTests` (P1-P3 en `run` y `single`, uniformes y mixtas, y el contraejemplo de la regla [P]),
+    `HotLoopAllocationTests` (`HojaAtadaBoard_` y `BroteDosHojasBoard_HotLoop_DoesNotAllocate`: 0 bytes en reglas, vertidos,
+    también el que abre una hoja, y bot; < 1 KB por `Solve`) y las filas HoA y Br2 de `ReferenceBoards` y
+    `MechanicsPerformanceTests` (percentil 75 de 30 semillas; 1.965 y 2.068 expandidos, par 17 y 18).
 - **Corte cooperativo por tiempo del solver** (K2, tanda 4; 08 §9 `hint_timeout_ms` = 150, 100-300, «al agotarse no se
   cobra»; 03 §5; 04 §2.3; 02 T5, respuesta 4 de D-019). Cierra el pendiente del README: el núcleo sigue sin leer relojes.
   - **`AF.Solver.Search.SolverCancellation`** (nueva): clase sellada con un `int` volátil y `Request()`, `IsRequested` y
@@ -39,8 +64,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
     `BoardState`, inmutables, y la bandera se pueden compartir.
   - **Tests:** compartidos `SolverCancellationTests` (marcada antes: 0 expansiones y `SafeMoves` sin búsquedas; marcada tras N
     expansiones: para en ≤ N + 256; null idéntico en A* y `SafeMoves`; corte en cualquier consulta de `SafeMoves` y memo limpio
-    tras `Reset`; corte en `TrueParAfter` con la respuesta de `Find` intacta y `WasCancelled` reiniciado después). Solo dotnet: `SolverThreadingTests` (4 instancias en 4 hilos sobre 8 tableros, iguales que en serie; null
-    idéntico en los 37 tableros de referencia; corte marcado de verdad desde otro hilo en `AStarSolver` y `SafeMoves`) y
+    tras `Reset`; corte en `TrueParAfter` con la respuesta de `Find` intacta y `WasCancelled` reiniciado después). Solo
+    dotnet: `SolverThreadingTests` (4 instancias en 4 hilos sobre 8 tableros, iguales que en serie; null idéntico en los 37
+    tableros de referencia; corte marcado de verdad desde otro hilo en `AStarSolver` y `SafeMoves`) y
     `HotLoopAllocationTests.SolverCancellation_UnmarkedOrCutting_DoesNotAllocate` (sin marcar, solo la solución; cortado, 0
     bytes). El gancho interno `SolverCancellation.RequestAtPoll(k)` existe solo para los tests compartidos: simula que otro hilo
     marca la bandera antes de la consulta k.
@@ -474,6 +500,11 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Cambiado
 
+- K3a (tanda 4; bajas de la revisión de K1 y K2): `DeadEndProbe` cita P2 con «entre cuias sin mecánica» y la pregunta 46 como
+  decidida (D-020); el README da por decidida la consecuencia de Q-B en P3 (pregunta 34 (a), D-020, 02 R16); `DeadEndProbeTests`
+  pierde el parámetro `attrs` y el `using` que sobraban; `SolverCancellationTests` comprueba que `ForLevel` conserva la bandera
+  con un tablero con Tinaja (y que quita la poda de fútiles); la frase de los hilos de `AStarSolver` dice, como el README, que
+  dan lo mismo que en serie con la bandera sin marcar. Sin cambios de comportamiento.
 - K1 (tanda 4; bajas de la revisión de T51): el tablero del nivel 66 (`m03_v1_n0066`) y la secuencia del dueño están en un solo
   helper compartido, `Level66Board` (AF.Core.Tests), con `Initial()` (Hoja cerrada en la 6), `Final()` (el bucle, tras los 12
   vertidos) y los vertidos de la secuencia. Lo usan `DeadEndProbeTests` y, solo en dotnet, `DeadEndProbePerformanceTests` y

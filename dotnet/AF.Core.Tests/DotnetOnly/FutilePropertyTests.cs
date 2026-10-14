@@ -92,6 +92,28 @@ namespace AF.Core.Tests.DotnetOnly
         [TestCase(PourMode.Run, CapacityFamily.Mixed)]
         [TestCase(PourMode.Single, CapacityFamily.Uniform)]
         [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithHojaAtada(PourMode mode, CapacityFamily family)
+        {
+            // K3a: 02 R16 antes del debut de la Hoja atada (283; propuesta de D-007 b.3), con la exención de futil como destino
+            // (02 §1.4, anexo B) y sin exención como origen.
+            AssertWith(mode, family, new HojaAtadaInjector(), 0xF07E_2831UL);
+        }
+
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithBroteDosHojas(PourMode mode, CapacityFamily family)
+        {
+            // K3a: 02 R16 antes del debut del Brote de dos hojas (343; 02 R10 b; propuesta de D-007 b.3): en run un tramo de 2
+            // lo abre de una vez y en single hacen falta dos vertidos.
+            AssertWith(mode, family, new BroteDosHojasInjector(), 0xF07E_3431UL);
+        }
+
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
         public void P1_P2_P3_HoldWithMatapi(PourMode mode, CapacityFamily family)
         {
             // C1-8: 02 R16 antes del debut del Matapi (63).
@@ -257,6 +279,38 @@ namespace AF.Core.Tests.DotnetOnly
             ExhaustiveSearch.Graph graph = ExhaustiveSearch.Explore(state, PourMode.Run, MaxStatesPerBoard);
             Assert.That(graph.Distance[0], Is.EqualTo(4));
             Assert.That(LevelValidation.Validate(state), Does.Contain("bloqueo provisional"));
+        }
+
+        [TestCase(PourMode.Run)]
+        [TestCase(PourMode.Single)]
+        public void P3_HojaAtada_NotTheHomeOfItsFruit_ARoundTripReturnsToTheSameState(PourMode mode)
+        {
+            // K3a: por qué la Hoja atada es la casa de su fruta ([P] de HojaAtadaMechanic; 02 R16). Con la exención de destino de
+            // futil (02 §1.4, anexo B), una Cuia chica de 3 atada al 1 (U_1 = 4) rompe P3: [1, 1, 1] en su casa de 4 → la hoja
+            // atada es útil (cambia al recibir) y volver es útil (va a la casa correcta), y el tablero vuelve al mismo estado
+            // canónico. Con la regla (capacidad = U_c de su llave), P1-P3 se cumplen (P1_P2_P3_HoldWithHojaAtada) y
+            // LevelValidation rechaza este tablero.
+            Cuia atada = Cuia.Empty(3).WithMechanic(AF.Core.Mechanics.MechanicType.HojaAtada, key: 1);
+            var state = new BoardState(new[] { Cuia.Create(4, new[] { 1, 1, 1 }), atada, Cuia.Create(4, new[] { 2, 2, 2, 1 }), Cuia.Create(4, new[] { 2 }) });
+
+            Assert.That(PourRules.IsFutile(state, 0, 1), Is.False);
+            BoardState there = PourRules.Apply(state, 0, 1, mode);
+            if (mode == PourMode.Single)
+            {
+                there = PourRules.Apply(PourRules.Apply(there, 0, 1, mode), 0, 1, mode);
+            }
+
+            Assert.That(there[0].IsEmpty, Is.True);
+            Assert.That(PourRules.IsLegal(there, 1, 0), Is.True);
+            Assert.That(PourRules.IsFutile(there, 1, 0), Is.False);
+            BoardState back = PourRules.Apply(there, 1, 0, mode);
+            if (mode == PourMode.Single)
+            {
+                back = PourRules.Apply(PourRules.Apply(back, 1, 0, mode), 1, 0, mode);
+            }
+
+            Assert.That(back.CanonicalHash(), Is.EqualTo(state.CanonicalHash()));
+            Assert.That(LevelValidation.Validate(state), Does.Contain("casa de su fruta"));
         }
 
         private static void AssertWith(PourMode mode, CapacityFamily family, IMechanicInjector injector, ulong seed)

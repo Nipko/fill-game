@@ -1,6 +1,5 @@
 #nullable enable
 using AF.Core.Board;
-using AF.Core.Mechanics;
 using AF.Core.Rules;
 using AF.Core.Session;
 using AF.Solver.Search;
@@ -38,9 +37,9 @@ namespace AF.Core.Tests
             return Cuia.Create(capacity, colorsBottomToTop);
         }
 
-        private static BoardState Build(int[] caps, int[][] cuias, MechanicSpec[]? attrs)
+        private static BoardState Build(int[] caps, int[][] cuias)
         {
-            BoardBuildResult built = BoardBuilder.Build(caps, cuias, attrs);
+            BoardBuildResult built = BoardBuilder.Build(caps, cuias, null);
             Assert.That(built.Error, Is.Null);
             return built.State!;
         }
@@ -53,7 +52,7 @@ namespace AF.Core.Tests
                 caps[i] = 4;
             }
 
-            return Build(caps, cuias, null);
+            return Build(caps, cuias);
         }
 
         [Test]

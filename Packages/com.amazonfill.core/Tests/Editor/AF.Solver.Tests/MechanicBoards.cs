@@ -352,6 +352,105 @@ namespace AF.Solver.Tests
     }
 
     /// <summary>
+    /// Brote de dos hojas (02 R10 b; propuesta de D-007 b.3): una cuia con 1-3 dosis visibles y espacio ≥ 2 pasa a tener el
+    /// tapón cerrado con dos hojas (<c>n</c> = 2).
+    /// </summary>
+    internal sealed class BroteDosHojasInjector : IMechanicInjector
+    {
+        public string Name => "brote de dos hojas";
+
+        public bool Inject(Prng rng, int[] caps, List<int>[] doses, MechanicSpec[] attrs)
+        {
+            var candidates = new List<int>();
+            for (int i = 0; i < caps.Length; i++)
+            {
+                if (attrs[i].IsNone && doses[i].Count >= 1 && doses[i].Count <= 3 && caps[i] - doses[i].Count >= 2)
+                {
+                    candidates.Add(i);
+                }
+            }
+
+            if (candidates.Count == 0)
+            {
+                return false;
+            }
+
+            attrs[candidates[rng.NextInt(candidates.Count)]] = new MechanicSpec(MechanicType.Brote, n: 2);
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Hoja atada (02 §1.2; propuesta de D-007 b.3): una cuia sin mecánica que no empieza sellada pasa a llevar la hoja atada
+    /// de la fruta de su fondo o, si está vacía, de una fruta del tablero; en los dos casos, de una fruta cuya casa puede ser
+    /// (capacidad = <c>U_c</c> de la llave, la regla [P] de <c>HojaAtadaMechanic</c>).
+    /// </summary>
+    internal sealed class HojaAtadaInjector : IMechanicInjector
+    {
+        public string Name => "hoja atada";
+
+        public bool Inject(Prng rng, int[] caps, List<int>[] doses, MechanicSpec[] attrs)
+        {
+            var units = new int[Cuia.MaxColor + 1];
+            for (int i = 0; i < doses.Length; i++)
+            {
+                for (int k = 0; k < doses[i].Count; k++)
+                {
+                    units[doses[i][k]]++;
+                }
+            }
+
+            List<int> colors = MechanicBoards.Colors(doses);
+            var candidates = new List<int>();
+            var keys = new List<int>();
+            for (int i = 0; i < caps.Length; i++)
+            {
+                List<int> d = doses[i];
+                if (!attrs[i].IsNone)
+                {
+                    continue;
+                }
+
+                if (d.Count > 0)
+                {
+                    bool sealedStart = d.Count == caps[i] && MechanicBoards.Colors(new[] { d }).Count == 1;
+                    if (units[d[0]] == caps[i] && !sealedStart)
+                    {
+                        candidates.Add(i);
+                        keys.Add(d[0]);
+                    }
+
+                    continue;
+                }
+
+                var homes = new List<int>();
+                for (int c = 0; c < colors.Count; c++)
+                {
+                    if (units[colors[c]] == caps[i])
+                    {
+                        homes.Add(colors[c]);
+                    }
+                }
+
+                if (homes.Count > 0)
+                {
+                    candidates.Add(i);
+                    keys.Add(homes[rng.NextInt(homes.Count)]);
+                }
+            }
+
+            if (candidates.Count == 0)
+            {
+                return false;
+            }
+
+            int pick = rng.NextInt(candidates.Count);
+            attrs[candidates[pick]] = new MechanicSpec(MechanicType.HojaAtada, key: keys[pick]);
+            return true;
+        }
+    }
+
+    /// <summary>
     /// Matapi (D-007, regla 3): una cuia vacía pasa a ser Matapi o, si hay alguna, una con 1-3 dosis de un solo color y
     /// capacidad = U_c de ese color.
     /// </summary>

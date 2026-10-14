@@ -21,9 +21,10 @@ namespace AF.Core.Board
     /// <item><description>35: libre (0).</description></item>
     /// <item><description>36-38: capacidad (1..6).</description></item>
     /// <item><description>39-42: tipo de mecánica (<see cref="MechanicType"/>; 0 = ninguna).</description></item>
-    /// <item><description>43-46: <c>key</c>, tinte − 1 (Hoja, Liana con fruta, Lluvia).</description></item>
+    /// <item><description>43-46: <c>key</c>, tinte − 1 (Hoja, Hoja atada, Liana con fruta, Lluvia).</description></item>
     /// <item><description>47-49: id de la pareja del Remolino (0..7), asignado por el constructor de tableros.</description></item>
-    /// <item><description>50-52: <c>n</c> (Liana de cuenta: sellos; Lluvia: gotas pendientes).</description></item>
+    /// <item><description>50-52: <c>n</c> (Liana de cuenta: sellos; Lluvia: gotas pendientes; Brote de dos hojas: hojas cerradas
+    /// que le faltan, 2 o 1, y 0 en el Brote normal).</description></item>
     /// <item><description>53-55: <c>k</c>, ritmo en vertidos de Lluvia y Piraña (2-5, 08 §9).</description></item>
     /// <item><description>56-58: contador de vertidos (Lluvia, Piraña).</description></item>
     /// <item><description>59-60: banderas (bit 59 = cerrada: Hoja puesta, Brote cerrado; bit 60 reservado).</description></item>
@@ -205,8 +206,8 @@ namespace AF.Core.Board
         public MechanicType Mechanic => (MechanicType)MechanicCode;
 
         /// <summary>
-        /// Tinte <c>key</c> de la mecánica (1-16): la fruta de la Hoja o de la Liana con fruta, o el tinte agua de la Lluvia.
-        /// <see cref="NoColor"/> si la mecánica no usa <c>key</c> (también la Liana de cuenta, con <c>n</c> &gt; 0).
+        /// Tinte <c>key</c> de la mecánica (1-16): la fruta de la Hoja, de la Hoja atada o de la Liana con fruta, o el tinte agua
+        /// de la Lluvia. <see cref="NoColor"/> si la mecánica no usa <c>key</c> (también la Liana de cuenta, con <c>n</c> &gt; 0).
         /// </summary>
         public int MechanicKey
         {
@@ -214,6 +215,7 @@ namespace AF.Core.Board
             {
                 MechanicType type = Mechanic;
                 bool usesKey = type == MechanicType.Hoja
+                    || type == MechanicType.HojaAtada
                     || type == MechanicType.Lluvia
                     || (type == MechanicType.Liana && MechanicN == 0);
                 return usesKey ? (int)((_bits >> KeyShift) & DoseMask) + 1 : NoColor;
@@ -223,7 +225,10 @@ namespace AF.Core.Board
         /// <summary>Id de la pareja del Remolino (0..7); el constructor de tableros lo deduce de <c>partner</c>.</summary>
         public int MechanicPairId => (int)((_bits >> PairShift) & ThreeBitMask);
 
-        /// <summary><c>n</c>: sellos de la Liana de cuenta o gotas pendientes de la Lluvia (0..7).</summary>
+        /// <summary>
+        /// <c>n</c>: sellos de la Liana de cuenta, gotas pendientes de la Lluvia u hojas cerradas que le faltan al Brote de dos
+        /// hojas (2 o 1; 0 en el Brote normal) (0..7).
+        /// </summary>
         public int MechanicN => (int)((_bits >> NShift) & ThreeBitMask);
 
         /// <summary><c>k</c>: ritmo en vertidos de Lluvia y Piraña (0..7; 2-5 en campaña, 08 §9).</summary>
@@ -242,7 +247,7 @@ namespace AF.Core.Board
         /// <param name="type">Mecánica; <see cref="MechanicType.None"/> equivale a <see cref="WithoutMechanic"/> (todos los atributos a 0).</param>
         /// <param name="key">Tinte llave 1-16, o 0 si la mecánica no lo usa (se guarda tinte − 1).</param>
         /// <param name="pairId">Id de la pareja del Remolino (0..7).</param>
-        /// <param name="n">Sellos de la Liana de cuenta o gotas pendientes de la Lluvia (0..7).</param>
+        /// <param name="n">Sellos de la Liana de cuenta, gotas pendientes de la Lluvia u hojas que le faltan al Brote de dos hojas (0..7).</param>
         /// <param name="k">Ritmo en vertidos (0..7).</param>
         /// <param name="counter">Contador de vertidos (0..7).</param>
         /// <param name="flags">Banderas (0..3; <see cref="FlagClosed"/>).</param>
@@ -300,7 +305,10 @@ namespace AF.Core.Board
             return new Cuia((_bits & ~(ThreeBitMask << CounterShift)) | ((ulong)counter << CounterShift));
         }
 
-        /// <summary>La misma cuia con otro <c>n</c> (gotas pendientes de la Lluvia). Bucle caliente: no valida el rango.</summary>
+        /// <summary>
+        /// La misma cuia con otro <c>n</c> (gotas pendientes de la Lluvia, hojas que le faltan al Brote de dos hojas). Bucle
+        /// caliente: no valida el rango.
+        /// </summary>
         internal Cuia WithMechanicN(int n)
         {
             return new Cuia((_bits & ~(ThreeBitMask << NShift)) | ((ulong)n << NShift));

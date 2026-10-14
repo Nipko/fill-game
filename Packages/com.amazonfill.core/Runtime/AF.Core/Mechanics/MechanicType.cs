@@ -11,9 +11,11 @@ namespace AF.Core.Mechanics
     /// <para>El Barro no es un tipo: es el color 15 dentro del contenido (02 §9.1 M5). Aguas turbias tampoco: es la máscara de
     /// ocultos (02 §11).</para>
     /// <para>Los códigos 8 y 9 son la Tinaja (M13) y su cuia chica (D-019; propuesta
-    /// <c>docs/research/cultura-ribera/propuesta-tinaja.md</c>, c.1). Los códigos 10-15 quedan libres para la 1.1 (Aguapé,
-    /// Palizada, Lancha y Cocha; Q7 y Q8 b′ de D-007) y las variantes. Nadie persiste el valor numérico fuera de la cuia: el
-    /// JSON usa las claves de <see cref="MechanicTypes.ToKey"/>.</para>
+    /// <c>docs/research/cultura-ribera/propuesta-tinaja.md</c>, c.1). El 10 [P] es la Hoja atada, variante de la 1.0 (D-007,
+    /// propuesta de D-007 b.3; firma de <c>pack_schema</c> 3, pregunta 8). El Brote de dos hojas no es un tipo: es el Brote con
+    /// <c>n</c> = 2 (<see cref="Board.Cuia.MechanicN"/>). Los códigos 11-15 quedan libres para la 1.1 (Aguapé, Palizada, Lancha
+    /// y Cocha; Q7 y Q8 b′ de D-007) y las demás variantes. Nadie persiste el valor numérico fuera de la cuia: el JSON usa las
+    /// claves de <see cref="MechanicTypes.ToKey"/>.</para>
     /// </remarks>
     public enum MechanicType
     {
@@ -23,7 +25,10 @@ namespace AF.Core.Mechanics
         /// <summary>M1 Hoja: vacío reservado a la fruta <c>key</c>; cae con su primer vertido (debut 43).</summary>
         Hoja = 1,
 
-        /// <summary>M2 Brote: cerrado no es origen; germina al recibir su color (debut 163 por D-007).</summary>
+        /// <summary>
+        /// M2 Brote: cerrado no es origen; germina al recibir su color (debut 163 por D-007). Con <c>n</c> = 2 es el Brote de
+        /// dos hojas (variante de la 1.0, debut 343; propuesta de D-007 b.3): germina al recibir 2 dosis de su color.
+        /// </summary>
         Brote = 2,
 
         /// <summary>M3 Liana: atada no es origen ni destino; con fruta (<c>key</c>) o de cuenta (<c>n</c>) (debut 83).</summary>
@@ -54,15 +59,23 @@ namespace AF.Core.Mechanics
         /// queda vacía se suelta (R10 f) y pasa a ser una Cuia chica normal. Sin campos en el JSON.
         /// </summary>
         Cucharon = 9,
+
+        /// <summary>
+        /// Hoja atada (variante de M1 de la 1.0, debut 283; D-007, propuesta de D-007 b.3; 02 §1.2 y §1.4): filtro persistente
+        /// de la fruta <c>key</c>. Solo recibe su fruta (vacía o con ella en la cima), sí es origen y nunca se suelta; puede
+        /// empezar con dosis cuyo fondo es su fruta. Como destino nunca es fútil (anexo B). Código 10 [P]; clave
+        /// <c>"hoja_atada"</c>.
+        /// </summary>
+        HojaAtada = 10,
     }
 
     /// <summary>Claves de <c>attrs[i].type</c> en <c>af-level/1</c> (08 §4.1) y su conversión con <see cref="MechanicType"/>.</summary>
     public static class MechanicTypes
     {
         /// <summary>Último código de mecánica definido.</summary>
-        public const MechanicType Last = MechanicType.Cucharon;
+        public const MechanicType Last = MechanicType.HojaAtada;
 
-        private static readonly string[] Keys = { "none", "hoja", "brote", "liana", "matapi", "remolino", "lluvia", "pirana", "tinaja", "cucharon" };
+        private static readonly string[] Keys = { "none", "hoja", "brote", "liana", "matapi", "remolino", "lluvia", "pirana", "tinaja", "cucharon", "hoja_atada" };
 
         /// <summary><paramref name="type"/> es un valor definido.</summary>
         public static bool IsDefined(MechanicType type)
@@ -72,7 +85,7 @@ namespace AF.Core.Mechanics
 
         /// <summary>
         /// Clave del JSON: <c>"hoja"</c>, <c>"brote"</c>, <c>"liana"</c>, <c>"matapi"</c>, <c>"remolino"</c>, <c>"lluvia"</c>,
-        /// <c>"pirana"</c>, <c>"tinaja"</c> o <c>"cucharon"</c>.
+        /// <c>"pirana"</c>, <c>"tinaja"</c>, <c>"cucharon"</c> o <c>"hoja_atada"</c>.
         /// </summary>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="type"/> no es una mecánica definida (ni <see cref="MechanicType.None"/>).</exception>
         public static string ToKey(MechanicType type)

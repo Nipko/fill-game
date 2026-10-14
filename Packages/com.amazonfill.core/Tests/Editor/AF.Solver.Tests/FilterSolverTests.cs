@@ -49,6 +49,34 @@ namespace AF.Solver.Tests
             }
         }
 
+        [TestCase(PourMode.Run)]
+        [TestCase(PourMode.Single)]
+        public void HojaAtada_AStarPar_EqualsExhaustiveSearch_AndHeuristicHolds(PourMode mode)
+        {
+            // K3a (02 §1.2; propuesta de D-007 b.3): filtro persistente que sí es origen.
+            List<BoardState> boards = Boards(new HojaAtadaInjector(), 0x2830_0001UL);
+            for (int i = 0; i < boards.Count; i++)
+            {
+                string label = "hoja atada " + i + " " + boards[i];
+                MechanicBoards.AssertAStarMatchesExhaustiveSearch(boards[i], mode, label);
+                MechanicBoards.AssertHeuristicAdmissibleAndConsistent(boards[i], mode, label);
+            }
+        }
+
+        [TestCase(PourMode.Run)]
+        [TestCase(PourMode.Single)]
+        public void BroteDosHojas_AStarPar_EqualsExhaustiveSearch_AndHeuristicHolds(PourMode mode)
+        {
+            // K3a (02 R10 b; propuesta de D-007 b.3): el contador de hojas va en la cuia y entra en el estado canónico.
+            List<BoardState> boards = Boards(new BroteDosHojasInjector(), 0x3430_0001UL);
+            for (int i = 0; i < boards.Count; i++)
+            {
+                string label = "brote de dos hojas " + i + " " + boards[i];
+                MechanicBoards.AssertAStarMatchesExhaustiveSearch(boards[i], mode, label);
+                MechanicBoards.AssertHeuristicAdmissibleAndConsistent(boards[i], mode, label);
+            }
+        }
+
         [Test]
         public void M10_Solver_NeverPoursFromAMatapi()
         {

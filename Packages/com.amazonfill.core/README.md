@@ -70,6 +70,7 @@ Este paso va también en la descripción del PR de integración.
 | `AF.Core` | Lluvia (M6, debut 143; C3-1): `LluviaMechanic`; cada `k` vertidos útiles (nunca en un fútil, Q18 B) cae una gota del agua `key` encima, sin regla de color, si hay hueco (si no, espera al siguiente vertido útil); con la última se va la nube; solo sella con agua; con gotas pendientes impide la victoria y no es fútil como destino ni, por Q-B, como origen; `U_agua` = dosis + gotas = 4; eventos `LluviaDropMask`, `LluviaWaitingMask`, `LluviaEndedMask`; validación: `key` 10 o 14, `k` 2-5, sin ocultos, un contador por nivel | 02 R3, §9.1 M6, §9.2; 03 §9; anexo B; Q-B, Q14 A, Q18 B |
 | `AF.Core` | Piraña (M7, debut 183; C3-2): `PiranaMechanic` en la cueva; cada `k` vertidos útiles (nunca en un fútil) muerde la dosis superior de la cuia que recibió el vertido y la lleva a la cueva, salvo sellado, Matapi, la propia cueva o cueva llena (Q-C: el mordisco se pierde y el contador sigue); eventos `PiranaBittenMask`, `PiranaCaveMask`, `PiranaBiteLostMask`; validación: `k` 2-5, sin ocultos ni Remolino [P], un contador por nivel | 02 §9.1 M7, §9.2; 03 §9; anexo B; Q-C, Q14 A, Q18 B |
 | `AF.Core` | Tinaja (M13, debut 323 [P]; T55, D-019): `TinajaMechanic` (capacidad 5, 3-5 dosis ocultas salvo la boca; nunca recibe; **solo vierte en su cuia** por el gancho `IMechanic.AllowsTarget`, la primera línea de `BoardRules.Accepts`; una dosis cada vez por T4; exenta como origen en `futil`; vacía queda inerte) y `CucharonMechanic` (su Cuia chica de 2, contigua: solo recibe de la tinaja, cualquier fruta; exenta como origen mientras cuelga; se suelta en R10 f cuando la tinaja queda vacía y pasa a ser una Cuia chica normal); evento `CucharonReleasedMask`; validación: una tinaja con su cuia, T4 en la columna, sin Barro ni Liana, Remolino, Lluvia o Piraña, única fuente de ocultas con tope propio (4) y fuera de las dos comparaciones de capacidades de 02 §8. Ver «Tinaja (M13)» | Propuesta de la tinaja b.2, c.1-c.2; 02 §1.2, §1.4, R10, R14, §8, §11; Q14 A; Q-Ti1, Q-Ti2, Q-Ti6 |
+| `AF.Core` | Variantes de la 1.0 (K3a; propuesta de D-007 b.3; firma de `pack_schema` 3, pregunta 8): **Hoja atada** (`MechanicType.HojaAtada` = 10 [P], clave `hoja_atada`, debut 283; `HojaAtadaMechanic`: solo recibe su fruta `key`, vacía o con ella en la cima; sí es origen; nunca se suelta, ni al sellar; nunca es fútil como destino; puede empezar con su fruta en el fondo; capacidad = `U_c` de su llave [P]) y **Brote de dos hojas** (el Brote con `n` = 2, debut 343: `Cuia.MechanicN` = hojas que le faltan, resta las dosis recibidas en la etapa (b) y germina al llegar a 0; un tramo de 2 lo abre de una vez en `run`; evento `BroteLeafOpenedMask`; espacio ≥ 2 al empezar). Ver «Variantes de la 1.0 (K3a)» | 02 §1.2, §1.4, R10 (b), R16; 02 §9.1; propuesta de D-007 b.3 |
 | `AF.Core` | `Session.LevelCounter`: contador visible del nivel para el HUD (Lluvia o Piraña: `Remaining` vertidos útiles hasta la gota o el mordisco, gotas pendientes, `Blocked`), en `LevelSession.Counter` y `PourResult.Counter`; solo baja con vertidos útiles | 02 R8, §9.1 M6-M7; D-007, Q10, Q18 B |
 | `AF.Core` | Barro (M5, debut 123; núcleo 2): color 15 inerte dentro del contenido, sin despacho de mecánica. Con Barro en la cima (`Cuia.MudExposed`) la cuia no es origen y acepta cualquier color; el primer vertido lo lava y ocupa su lugar (`CuiaRules.EffectiveSpace`: espacio + 1); una cuia con Barro no está sellada ni vacía; evento `BarroWashedMask` / `PourResult.BarroWashed`; validación: capa 2-3 de una cuia de 4, nunca con mecánica ni oculto | 02 R2, §1.2, §9.1 M5; 03 §9; propuesta b.2 M5 |
 | `AF.Core` | Aguas turbias en la partida (núcleo 2): `LevelSession` con máscara de revelado del nivel (`RevealedLayers`), que persiste tras Marea y Volver a la orilla; `Reveal(cuia)` (Luciérnaga), `RevealAll()` (Pororoca) y `RestoreRevealed(cuia, layers)` (restaurar capas reveladas, también en parte, al reanudar y al rehacer la sesión; ver «Restaurar las capas reveladas»); `PourEvents.RevealedMask`; validación T2-T4 con los límites de 08 §9 como parámetros y las combinaciones de Q14 A | 02 R7, R8, §11 T2-T4, T6, §14; 04 §2.1, §2.2, §2.4 a, §2.5, §2.7, §5.1; D-007 |
@@ -126,7 +127,8 @@ los tiempos oscilan un 10-30 % entre repeticiones). Tableros de referencia de 12
 combinación del calendario 1-200 de D-007 (d.4) en `dotnet/AF.Core.Tests/DotnetOnly/ReferenceBoards.cs`: tablero base con
 `InverseWalk` (K = 10, E = 2), superposición de las mecánicas (03 §9) y verificación con `LevelValidation` y A*; de 30 semillas
 por combinación se eligió el del percentil 75 de expandidos. Ho Hoja, Ma Matapi, Li Liana con fruta, Tu Aguas turbias, Re
-Remolino, Ba Barro, Ll Lluvia, Br Brote, Pi Piraña, Ch Cuia chica, Al y Al6 Cuia alta. Comando de la tabla:
+Remolino, Ba Barro, Ll Lluvia, Br Brote, Pi Piraña, Ch Cuia chica, Al y Al6 Cuia alta; Ti Tinaja; HoA Hoja atada y Br2 Brote de
+dos hojas (K3a). Comando de la tabla:
 `dotnet test dotnet/AmazonFill.slnx -c Release --filter Category=Performance`.
 
 | Tablero | Cuias | Par | A* w = 1: expandidos (ms) | Morpho w = 2 (ms) | Bot ×40 (ms) | 30 semillas: válidos · resueltos · sin presupuesto · irresolubles | Expandidos: mediana / máx. |
@@ -168,16 +170,21 @@ Remolino, Ba Barro, Ll Lluvia, Br Brote, Pi Piraña, Ch Cuia chica, Al y Al6 Cui
 | Pi+Ba | 14 | 18 | 8.678 (81) | 0,35 | 1,3 | 30 · 29 · 1 · 0 | 1.105 / 166.983 |
 | Ma+Li | 12 | 22 | 14.292 (43) | 0,25 | 0,5 | 30 · 30 · 0 · 0 | 7.366 / 29.035 |
 | Ti | 12 | 23 | 7.946 (16, sin poda; 6 realidades: SafeMoves 510 ms en el pipeline, 5,0 ms con Morpho) | 0,25 | 1,0 | 30 · 30 · 0 · 0 | 4.434 / 25.596 |
+| HoA | 13 | 17 | 1.965 (8) | 0,20 | 0,5 | 30 · 30 · 0 · 0 | 498 / 25.202 |
+| Br2 | 13 | 18 | 2.068 (6) | 0,18 | 0,6 | 30 · 30 · 0 · 0 | 580 / 25.266 |
 
 Ll+Li+Al6 no pasa hoy `LevelValidation` por el bloqueo provisional de la Liana con capacidades mixtas (C1-9); el solver la
 resuelve igual. **Ti** (Tinaja, M13; T55, 2026-10-13, .NET 10 Release en el equipo de escritorio x64): el reto o hito de c.9
 de la propuesta de la tinaja (K = 9, 1 vacío, 5 dosis con 4 ocultas), con las búsquedas sin poda de fútiles; en sus 30
-semillas, las 30 tienen ruta segura (2-24 realidades). Criterios de C3-3:
+semillas, las 30 tienen ruta segura (2-24 realidades). **HoA** y **Br2** (variantes de la 1.0; K3a, 2026-10-14, .NET 10 Release en
+el equipo de escritorio x64): `InverseWalk` con K = 10 en 13 cuias de 4 (E = 2) y la variante sobre una cuia elegida con el PRNG
+del núcleo (la Hoja atada sobre una cuia con dosis, con la llave = la fruta de su fondo; el Brote de dos hojas sobre una con 1-3
+dosis y espacio ≥ 2); en sus 30 semillas, las 30 son válidas y las resuelven A* y Morpho. Criterios de C3-3:
 
-1. **Asignaciones** (`HotLoopAllocationTests.ReferenceBoard_HotLoop_DoesNotAllocate`, los 37 tableros, Ti incluido): 0
+1. **Asignaciones** (`HotLoopAllocationTests.ReferenceBoard_HotLoop_DoesNotAllocate`, los 39 tableros, Ti, HoA y Br2 incluidos): 0
    bytes en `SolverMoves`, `IsStuck`, `BoardRules.ApplyInPlace` y el bot ×40 calentado; menos de 1 KB por `Solve`
    calentado y por realidad en `SafeMoves`. Cumplido.
-2. **A\* (w = 1)**: los 37 tableros (Ti, sin poda) se resuelven con 186.346 expandidos como máximo (Ll+Ho, 0,93 s); el
+2. **A\* (w = 1)**: los 39 tableros (Ti, sin poda) se resuelven con 186.346 expandidos como máximo (Ll+Ho, 0,93 s); el
    número de cada uno queda fijado con un 25 % de margen (`MechanicsPerformanceTests`). En el reparto de 30 semillas por
    combinación, el presupuesto de 300.000 se agota en Ll+Re 13/30, Pi+Ma 7/30, Re+Ma 5/30, Re, Pi y Ba+Re 4/30, Re+Li y
    Ll+Ho 3/30, Re+Ho 2/30 y Ma+Ho, Ll+Ba y Pi+Ba 1/30; en el resto, nunca. El Remolino es lo que más estados añade y la
@@ -199,10 +206,11 @@ tableros de referencia cumplen los presupuestos de 03 §5 y 08 §14.2. La decisi
 
 La cancelación por tiempo del solver para Morpho (`hint_timeout_ms`), que figuraba aquí como pendiente, está cerrada desde K2:
 el núcleo sigue sin leer relojes, el cliente marca una `SolverCancellation` y, tras `SafeMoves.Find`, `Outcome` = `BudgetExceeded` con
-`WasCancelled` es la respuesta 4 de Morpho (sección «Hilos y corte por tiempo»). Preguntas abiertas: 02 R16 con capacidades mixtas
-(C1-8, C1-9: la poda de fútiles puede alargar el par o dejar sin camino útil un tablero resoluble, y con una Liana hay estados atascados con solución) y la consecuencia de Q-B en
-P3 (vaivén útil del Remolino que vuelve al mismo estado); ver el CHANGELOG. Para el jugador, el vaivén sin salida de la
-pregunta 15 lo cubre R13 ampliada (D-014; sección siguiente).
+`WasCancelled` es la respuesta 4 de Morpho (sección «Hilos y corte por tiempo»). Pregunta abierta: 02 R16 con capacidades
+mixtas (C1-8, C1-9: la poda de fútiles puede alargar el par o dejar sin camino útil un tablero resoluble, y con una Liana hay
+estados atascados con solución); ver el CHANGELOG. La consecuencia de Q-B en P3 (vaivén útil del Remolino que vuelve al mismo
+estado) ya está decidida: se ratifican P1-P3 con la excepción del Remolino en P3 (pregunta 34 de `docs/GDD.md` §6.3, (a);
+D-020; 02 R16). Para el jugador, el vaivén sin salida de la pregunta 15 lo cubre R13 ampliada (D-014; sección siguiente).
 
 ## Aguas estancadas por bucle (R13 ampliada, D-014)
 
@@ -358,3 +366,42 @@ cobrar). **El núcleo no lee relojes.**
   corte marcado de verdad desde otro hilo, en `AStarSolver` y en `SafeMoves`. Para los tests compartidos, que no pueden
   sincronizarse con un hilo a mitad de búsqueda, `SolverCancellation.RequestAtPoll(k)` (interno) simula que otro hilo la marca
   justo antes de la consulta k.
+
+## Variantes de la 1.0: Hoja atada y Brote de dos hojas (K3a)
+
+Fuentes: 02 §1.2 (`legal`: «la Hoja atada sí es origen» y «solo recibe su fruta (vacía o con ella en la cima)»), 02 §1.4 (anexo B:
+la Hoja atada en `cambia_al_recibir`), 02 R10 (b) (el Brote de dos hojas «resta las dosis recibidas»), 02 R16 (P1-P3 antes de cada
+estreno), 02 §9.1 (variantes de D-007) y la propuesta de D-007 b.3; formato, la firma de `pack_schema` 3 (pregunta 8:
+`hoja_atada {key}` y `brote` con `n` ∈ {1, 2}). Estrenos: Hoja atada en el 283 y Brote de dos hojas en el 343.
+
+- **Hoja atada** (`MechanicType.HojaAtada` = 10 [P], que no se persiste; clave `"hoja_atada"`; `HojaAtadaMechanic`): filtro de
+  destino persistente de la fruta `key` (solo su fruta, y solo vacía o con ella en la cima; la regla normal decide el resto). Sí es
+  origen y nunca se suelta, ni al recibir ni al sellar (sellada sigue atada y vale para ganar). Como destino nunca es fútil (anexo
+  B); como origen no está exenta. Sin estado propio. Puede empezar con dosis si la del fondo es de su fruta (b.3). `BoardBuilder`
+  exige `key` (un tinte de 1 a 14) y nada más; no lleva bandera. `Cuia.MechanicKey` devuelve su llave.
+- **La Hoja atada es la casa de su fruta [P]** (validación): su capacidad es la `U_c` de su llave. Sin esta regla, con capacidades
+  mixtas la exención de destino de `futil` rompe P3 de 02 R16: la fruta va de su casa a la hoja atada (útil, porque cambia al
+  recibir) y vuelve (útil, porque va a la casa correcta), y el tablero vuelve al mismo estado canónico; lo fija
+  `FutilePropertyTests.P3_HojaAtada_NotTheHomeOfItsFruit_ARoundTripReturnsToTheSameState`. Con la regla, P1-P3 se cumplen en `run`
+  y `single` con capacidades uniformes y mixtas. Es coherente con b.3 («conserva la cuerda tras sellar»). **Pregunta para el dueño**
+  (con el generador, P2b, que tiene que respetarla): ratificarla o elegir otra salida (una excepción de P3, como la del Remolino).
+- **Brote de dos hojas** (el Brote con `n` = 2; `BroteMechanic`): `Cuia.MechanicN` guarda las hojas cerradas que le faltan (2 al
+  empezar, 1 tras recibir una dosis; 0 en el Brote normal, que equivale a una). En la etapa (b) de R10 resta las dosis recibidas
+  (`IMechanic.OnReceived` recibe ahora la cantidad) y germina al llegar a 0, como el Brote normal; en `run` un tramo de 2 lo abre
+  de una vez y en `single` hacen falta dos vertidos. Abrir una hoja sin germinar es el evento `PourEvents.BroteLeafOpenedMask` (no
+  entra en `OpenedMask` ni en `WasUnlocked`). El contador va en `Packed`, así que entra en el hash y en la clave canónica (03 §3).
+  `BoardBuilder` lee `n` ∈ {1, 2}: sin `n` o con 1 es el Brote normal, con `n` = 0 en la cuia y el mismo `Packed` y el mismo hash
+  que antes (los packs 1-200 no cambian); con 2, el de dos hojas. Validación: espacio ≥ 2 al empezar (b.3) y, en un tablero inicial,
+  solo `n` = 0 o 2.
+- **Solver, bot y heurística:** sin código propio. `H` y `H_single` siguen siendo admisibles y consistentes (los vertidos mueven
+  las dosis igual: cada término baja ≤ 1 por paso), y A* con `w = 1` da el par exacto: A* frente a la búsqueda exhaustiva y la
+  heurística en todos los estados alcanzables de 32 tableros por variante, uniformes y mixtos, en `run` y `single`
+  (`FilterSolverTests`). El bot no cambia (su puntuación sigue congelada).
+- **Combinaciones:** la Hoja atada es un filtro (02 §9.1 la cuenta así en la Tinaja), así que `LevelValidation` la deja ir con
+  Aguas turbias y con la Tinaja, como la Hoja; nunca lleva ocultas ni Barro (reglas generales de las cuias con mecánica).
+- **Pack:** el núcleo acepta los campos; que solo aparezcan con `pack_schema` 3 lo comprueban el esquema y el generador (P2b) y el
+  cliente (TJ1). Los packs 1-200 no cambian (`--check` del tutorial y de la campaña 11-200).
+- **Tests:** compartidos `HojaAtadaTests` y `BroteDosHojasTests` (una regla por test, con su §), `FilterSolverTests` (A* y
+  heurística) y `CuiaAttrTests` (claves y `MechanicKey`); solo dotnet `FutilePropertyTests` (P1-P3 en `run` y `single`, uniformes y
+  mixtas, y el contraejemplo de la regla [P]), `HotLoopAllocationTests` (un tablero por variante: 0 bytes en reglas, vertidos y bot;
+  menos de 1 KB por `Solve`) y una fila por variante en `ReferenceBoards` y `MechanicsPerformanceTests` (HoA y Br2).

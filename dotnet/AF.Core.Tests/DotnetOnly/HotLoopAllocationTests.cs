@@ -376,6 +376,79 @@ namespace AF.Core.Tests.DotnetOnly
         }
 
         [Test]
+        public void HojaAtadaBoard_HotLoop_DoesNotAllocate()
+        {
+            // K3a: la Hoja atada (filtro de destino persistente que sí es origen; 02 §1.2 y §1.4; propuesta de D-007 b.3) en
+            // movimientos útiles, bloqueo, vertido aplicado (también el que entra en ella, sin abrirla), solver calentado y bot
+            // calentado, sin asignaciones. Empieza con su fruta en el fondo.
+            Cuia atada = Cuia.Create(4, new[] { 1 }).WithMechanic(MechanicType.HojaAtada, key: 1);
+            var state = new BoardState(new[]
+            {
+                atada, Cuia.Create(4, new[] { 2, 3, 1, 4 }), Cuia.Create(4, new[] { 3, 2, 4, 1 }), Cuia.Create(4, new[] { 2, 4, 3, 1 }),
+                Cuia.Create(4, new[] { 4, 2, 3 }), Cuia.Empty(4),
+            });
+            AssertRulesBotAndSolverDoNotAllocate(state, 19UL);
+            AssertPourDoesNotAllocate(state, 2, 0, PourMode.Run, (in PourEvents e) => e.ChangedMask == ((1 << 0) | (1 << 2)) && e.OpenedMask == 0);
+        }
+
+        [Test]
+        public void BroteDosHojasBoard_HotLoop_DoesNotAllocate()
+        {
+            // K3a: el Brote de dos hojas (02 R10 b; propuesta de D-007 b.3: resta las dosis recibidas en la etapa (b)) en
+            // movimientos útiles, bloqueo, vertido aplicado (el que abre una hoja sin germinar, en single, y el tramo de 2 que lo
+            // abre, en run), solver calentado y bot calentado, sin asignaciones.
+            Cuia brote = Cuia.Create(4, new[] { 2, 1 }).WithMechanic(MechanicType.Brote, n: 2, flags: Cuia.FlagClosed);
+            var state = new BoardState(new[]
+            {
+                brote, Cuia.Create(4, new[] { 3, 4, 1, 1 }), Cuia.Create(4, new[] { 4, 3, 2, 2 }), Cuia.Create(4, new[] { 3, 4 }),
+                Cuia.Create(4, new[] { 2, 4, 3, 1 }), Cuia.Empty(4),
+            });
+            AssertRulesBotAndSolverDoNotAllocate(state, 23UL);
+            AssertPourDoesNotAllocate(state, 1, 0, PourMode.Single, (in PourEvents e) => e.BroteLeafOpenedMask == 1 << 0);
+            AssertPourDoesNotAllocate(state, 1, 0, PourMode.Run, (in PourEvents e) => e.BroteOpenedMask == 1 << 0);
+        }
+
+        private delegate bool EventCheck(in PourEvents events);
+
+        /// <summary>
+        /// El vertido <paramref name="source"/> → <paramref name="target"/> aplicado 200 veces sobre una copia del tablero no
+        /// asigna (el mínimo de 3 intentos, como en <see cref="ReferenceBoard_HotLoop_DoesNotAllocate"/>), y sus eventos son los
+        /// esperados.
+        /// </summary>
+        private static void AssertPourDoesNotAllocate(BoardState state, int source, int target, PourMode mode, EventCheck expected)
+        {
+            int width = state.Count;
+            var cuias = new Cuia[width];
+            var work = new Cuia[width];
+            for (int i = 0; i < width; i++)
+            {
+                cuias[i] = state[i];
+            }
+
+            int[] units = state.UnitsTable;
+            bool futile = BoardRules.IsFutile(cuias, 0, width, units, source, target);
+            var events = default(PourEvents);
+            Array.Copy(cuias, work, width);
+            BoardRules.ApplyInPlace(work, 0, width, units, source, target, mode, futile, ref events);
+            Assert.That(expected(in events), Is.True, "eventos del vertido " + source + "→" + target + " en " + mode);
+
+            long bytes = long.MaxValue;
+            for (int attempt = 0; attempt < 3 && bytes != 0; attempt++)
+            {
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                for (int repeat = 0; repeat < 200; repeat++)
+                {
+                    Array.Copy(cuias, work, width);
+                    BoardRules.ApplyInPlace(work, 0, width, units, source, target, mode, futile, ref events);
+                }
+
+                bytes = Math.Min(bytes, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+
+            Assert.That(bytes, Is.EqualTo(0));
+        }
+
+        [Test]
         public void TinajaBoard_HotLoop_DoesNotAllocate()
         {
             // M13 (T55; propuesta de la tinaja, c.6): con la tinaja y su cuia (filtro de origen al principio de Accepts, suelta
@@ -650,7 +723,7 @@ namespace AF.Core.Tests.DotnetOnly
         public void WarmDeadEndProbe_DoesNotAllocate()
         {
             // R13 ampliada (D-014; CLAUDE.md, regla dura 2): el cierre acotado de LevelSession no asigna una vez calentado, ni
-            // cuando se recorre entero (nivel 66), ni cuando se llena (tablero de 14 cuias), ni con mecánicas (los 36 tableros de
+            // cuando se recorre entero (nivel 66), ni cuando se llena (tablero de 14 cuias), ni con mecánicas (los 39 tableros de
             // referencia), en los dos modos. El mínimo de hasta 3 mediciones, como en ReferenceBoard_HotLoop_DoesNotAllocate:
             // una asignación real del recorrido se repite en cada intento.
             var boards = new BoardState[ReferenceBoards.All.Length + 2];

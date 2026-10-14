@@ -27,8 +27,9 @@ namespace AF.Core.Board
     /// <item><description>Aguas turbias (02 §11; D-007, Q14 A): T2 (como mucho <c>lvl_murky_max_cuias</c> cuias turbias y
     /// <c>lvl_murky_max_hidden_units</c> dosis ocultas; por defecto 3 y 4, 08 §9); T3 (una cuia turbia tiene como mucho 3
     /// dosis, nunca está llena y su cima es visible); T4 (bajo una dosis oculta nunca va el color de la dosis de encima);
-    /// ocultos solo en cuias sin mecánica; el nivel puede llevar filtros (Hoja, Brote, Matapi, Barro) pero no Liana, Lluvia
-    /// ni Piraña (Q14 A) ni Remolino [P: propuesta b.2, «solo junto a filtros»]. T1 (etiqueta y nivel ≥ 100) y Q9 son del
+    /// ocultos solo en cuias sin mecánica; el nivel puede llevar filtros (Hoja, Brote, Matapi, Barro; también las variantes
+    /// de la 1.0 Hoja atada y Brote de dos hojas, que son filtros, K3a) pero no Liana, Lluvia ni Piraña (Q14 A) ni Remolino
+    /// [P: propuesta b.2, «solo junto a filtros»]. T1 (etiqueta y nivel ≥ 100) y Q9 son del
     /// pipeline. <b>Tinaja</b> (M13; D-019, Q-Ti1 A): si el nivel la lleva, es la única fuente de ocultas (ninguna otra cuia
     /// turbia), sus ocultas son la excepción a «ocultos solo en cuias sin mecánica» y a T3, y su tope es
     /// <see cref="TinajaMaxHiddenUnits"/> en lugar de los de Remote Config; las combinaciones prohibidas de Q14 A siguen
@@ -39,7 +40,9 @@ namespace AF.Core.Board
     /// <c>CucharonMechanic</c>.</description></item>
     /// <item><description>Como mucho un contador por nivel (Lluvia o Piraña; propuesta de D-007 b.2 M6-M7 y d.2 regla 6): la
     /// Lluvia y la Piraña nunca van juntas.</description></item>
-    /// <item><description>Las reglas propias de cada mecánica (03 §17 #6).</description></item>
+    /// <item><description>Las reglas propias de cada mecánica (03 §17 #6), con las de las variantes de la 1.0 (K3a; propuesta
+    /// de D-007 b.3): la Hoja atada, con su llave en el tablero, su fruta en el fondo si empieza con dosis y capacidad =
+    /// <c>U_c</c> de su llave [P]; el Brote de dos hojas, con espacio ≥ 2.</description></item>
     /// <item><description><c>atascado(S0)</c> = false con la <c>futil</c> única (02 §9.2 regla 1).</description></item>
     /// </list>
     /// </remarks>
