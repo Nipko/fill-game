@@ -218,9 +218,10 @@ namespace AF.Save
 
         /// <summary>
         /// <c>map_seen_level</c> (D-013 punto 14; 08 §4.3): el último nivel cuyo estado del Mapa del río ya vio el jugador; 0
-        /// por defecto. Lo escribe quien abre el Mapa o muestra la franja de llegada (<c>AF.GameFlow</c>). Al guardar y al
-        /// leer queda recortado a [0, <see cref="MaxLevel"/>] (<see cref="ClampedMapSeenLevel"/>); en la fusión de la nube
-        /// gana el máximo (<see cref="MergeMapSeenLevel"/>).
+        /// por defecto. Lo escribe <c>AF.GameFlow</c> al cerrar el Mapa y tras la franja de llegada de la victoria (08 §4.3);
+        /// con él, el Mapa anima exactamente lo pendiente al abrirse. Al guardar y al leer queda recortado a
+        /// [0, <see cref="MaxLevel"/>] (<see cref="ClampedMapSeenLevel"/>); en la fusión de la nube gana el máximo
+        /// (<see cref="MergeMapSeenLevel"/>).
         /// </summary>
         public int MapSeenLevel { get; set; }
 
@@ -306,7 +307,11 @@ namespace AF.Save
         public List<string> Skins { get; } = new List<string>();
     }
 
-    /// <summary>Valor de <c>settings.patterns</c>: el ajuste «Patrones de fruta» (02 §12; glosario §10 <c>patterns_toggle</c>).</summary>
+    /// <summary>
+    /// Valor de <c>settings.patterns</c>: el ajuste «Patrones de fruta» (02 §12; glosario §10 <c>patterns_toggle</c>). Vive
+    /// aquí porque se persiste en el perfil. Lo resuelve <c>AF.UI</c> (<c>Auto</c> = <c>Palette.PatternsOnFor(level)</c>) y a
+    /// <c>AF.Presentation</c> solo le llega un bool: Presentation no referencia AF.Save (08 §2.2).
+    /// </summary>
     public enum PatternsSetting
     {
         /// <summary><c>auto</c> (default): los patrones salen según el nivel, como hasta ahora.</summary>
