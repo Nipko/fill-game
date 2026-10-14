@@ -6,6 +6,7 @@ using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
+using AF.Core.Session;
 using AF.GameFlow;
 using AF.Presentation;
 using AF.Presentation.Mechanics;
@@ -716,16 +717,20 @@ namespace AF.Tests.PlayMode
             return path!.Length;
         }
 
-        // Un camino de vertidos útiles desde el tablero de ahora hasta Aguas estancadas (R13) con el rescate a la venta (04 §6.4:
+        // Un camino de vertidos útiles desde el tablero de ahora hasta Aguas estancadas con el rescate a la venta (04 §6.4:
         // resoluble con una cuia más) y, si accept no es null, con el tablero bloqueado que lo cumple; en profundidad, sin
-        // repetir tableros ni ganar; null si no lo encuentra.
+        // repetir tableros ni ganar; null si no lo encuentra. Cada vertido se simula con LevelSession, la misma semántica que la
+        // partida: R13 y su ampliación por bucle (D-014, el cierre acotado sin victoria), así que el camino se corta en el primer
+        // Aguas estancadas, tras el que la partida ignora los toques (R15). Antes buscaba solo con R13 de reglas
+        // (PourRules.IsStuck) y, con D-014, la partida se bloqueaba antes del final del camino.
         private static Pour[]? FindRescuableStuck(LevelFlow flow, System.Func<BoardState, bool>? accept)
         {
             var search = new StuckSearch(flow.Session.PourMode, flow.Session.FutileRuleEnabled, new RescueBooster(flow.Boosters), accept);
             return search.Run(flow.Session.Current);
         }
 
-        // Búsqueda en profundidad de FindRescuableStuck (solo tests: asigna sin cuidado).
+        // Búsqueda en profundidad de FindRescuableStuck (solo tests: asigna sin cuidado; una LevelSession por vertido, para no
+        // arrastrar entre ramas lo revelado, que Marea no vuelve a ocultar: I5).
         private sealed class StuckSearch
         {
             private const int MaxDepth = 60;
@@ -762,15 +767,20 @@ namespace AF.Tests.PlayMode
                 int n = PourRules.CollectUsefulMoves(state, _futile, _mode, moves);
                 for (int i = 0; i < n; i++)
                 {
-                    BoardState next = PourRules.Apply(state, moves[i].Source, moves[i].Target, _mode);
-                    if (next.IsWon())
+                    // El vertido como en la partida: LevelSession desde este tablero (en juego) evalúa R10 (g) y (h) con D-014.
+                    var game = new LevelSession(state, _futile, _mode);
+                    Assert.That(game.Status, Is.EqualTo(LevelStatus.Playing), "el buscador solo sigue por tableros en juego");
+                    Assert.That(game.TryPour(moves[i].Source, moves[i].Target, out PourResult poured), Is.True, "un vertido útil es legal");
+                    BoardState next = game.Current;
+                    if (poured.Status == LevelStatus.Won)
                     {
                         continue;
                     }
 
                     _path.Add(moves[i]);
-                    if (PourRules.IsStuck(next, _futile))
+                    if (poured.Status == LevelStatus.Stuck)
                     {
+                        // El primer Aguas estancadas del camino: aquí se corta, con rescate o sin él.
                         if (RescueBooster.IsOffered(_rescue.Check(next, _mode, _futile)) && (_accept == null || _accept(next)))
                         {
                             return true;
