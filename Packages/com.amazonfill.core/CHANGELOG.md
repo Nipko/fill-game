@@ -29,7 +29,9 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   - **`SafeMoves`:** la consulta al empezar, tras enumerar las realidades, y la propaga desde cada búsqueda. Resultado:
     `Count` = 0, `Outcome` = `BudgetExceeded` y `WasCancelled` (nuevo), sin Pista parcial y con el mismo orden de respuestas de
     Morpho. Lo cortado no entra en el memo (no es el resultado del presupuesto); lo terminado antes, sí. Si la enumeración se
-    rechaza, sigue saliendo `RealitiesRejected`.
+    rechaza, sigue saliendo `RealitiesRejected`. `TrueParAfter` usa la bandera de la última `Find`: cortado, devuelve
+    `BudgetExceeded` y `WasCancelled` = true solo para esa llamada, sin tocar `Count` ni `Outcome`. `Find` y `TrueParAfter`
+    reinician `WasCancelled` al empezar; la respuesta 4 se lee solo tras `Find`.
   - **Sin cambios con null:** en los 37 tableros de referencia salen los mismos expandidos, estados guardados y soluciones, con
     el A* del pipeline, el de Morpho (w = 2, 40.000) en `run` y en `single` y `SafeMoves` con las opciones de Morpho. Se midió
     antes y después del cambio. Con una bandera sin marcar, lo mismo. Packs y pares idénticos (`--check`).
@@ -37,7 +39,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
     `BoardState`, inmutables, y la bandera se pueden compartir.
   - **Tests:** compartidos `SolverCancellationTests` (marcada antes: 0 expansiones y `SafeMoves` sin búsquedas; marcada tras N
     expansiones: para en ≤ N + 256; null idéntico en A* y `SafeMoves`; corte en cualquier consulta de `SafeMoves` y memo limpio
-    tras `Reset`). Solo dotnet: `SolverThreadingTests` (4 instancias en 4 hilos sobre 8 tableros, iguales que en serie; null
+    tras `Reset`; corte en `TrueParAfter` con la respuesta de `Find` intacta y `WasCancelled` reiniciado después). Solo dotnet: `SolverThreadingTests` (4 instancias en 4 hilos sobre 8 tableros, iguales que en serie; null
     idéntico en los 37 tableros de referencia; corte marcado de verdad desde otro hilo en `AStarSolver` y `SafeMoves`) y
     `HotLoopAllocationTests.SolverCancellation_UnmarkedOrCutting_DoesNotAllocate` (sin marcar, solo la solución; cortado, 0
     bytes). El gancho interno `SolverCancellation.RequestAtPoll(k)` existe solo para los tests compartidos: simula que otro hilo

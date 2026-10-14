@@ -76,7 +76,10 @@ namespace AF.Solver.Murky
     /// <see cref="SolverCancellation.PollInterval"/> expansiones después) con <see cref="Count"/> = 0,
     /// <see cref="Outcome"/> = <see cref="SafeMovesOutcome.BudgetExceeded"/> y <see cref="WasCancelled"/>: no hay Pista
     /// parcial, aunque ya hubiera vertidos seguros demostrados. El orden de respuestas no cambia. Lo cortado no entra en el
-    /// memo; lo que se terminó antes del corte sí, y vale para la siguiente llamada.</description></item>
+    /// memo; lo que se terminó antes del corte sí, y vale para la siguiente llamada. <see cref="TrueParAfter"/> usa la bandera
+    /// de la última <see cref="Find(BoardState, SolverOptions, BoardState, bool, int)"/>: cortado, da
+    /// <see cref="BudgetExceeded"/> y <see cref="WasCancelled"/> sin tocar <see cref="Count"/> ni <see cref="Outcome"/> (la
+    /// respuesta 4 se lee solo tras <see cref="Find(BoardState, SolverOptions, BoardState, bool, int)"/>).</description></item>
     /// <item><description>Sin asignaciones una vez calentada, salvo el crecimiento del memo. No es segura entre hilos: una
     /// instancia por hilo (con su propio <see cref="AStarSolver"/> y su memo); los <see cref="BoardState"/> son inmutables
     /// y se pueden compartir, y la <see cref="SolverCancellation"/> es lo único que toca otro hilo.</description></item>
@@ -138,10 +141,19 @@ namespace AF.Solver.Murky
         public SafeMovesOutcome Outcome => _outcome;
 
         /// <summary>
-        /// La última llamada se cortó por <see cref="SolverOptions.Cancellation"/> (<c>hint_timeout_ms</c>, K2): entonces
-        /// <see cref="Count"/> = 0 y <see cref="Outcome"/> = <see cref="SafeMovesOutcome.BudgetExceeded"/> («No encuentro un camino
-        /// desde aquí», sin cobrar). False si terminó, aunque la bandera se marcara después de su última consulta: el resultado
-        /// es entonces completo y válido. También lo pone <see cref="TrueParAfter"/> si su búsqueda se corta.
+        /// La última llamada a <see cref="Find(BoardState, SolverOptions, BoardState, bool, int)"/> o a
+        /// <see cref="TrueParAfter"/> se cortó por <see cref="SolverOptions.Cancellation"/> (<c>hint_timeout_ms</c>, K2). Cada
+        /// una de las dos lo reinicia al empezar. False si la llamada terminó, aunque la bandera se marcara después de su última
+        /// consulta: el resultado es entonces completo y válido.
+        /// <list type="bullet">
+        /// <item><description>Tras <see cref="Find(BoardState, SolverOptions, BoardState, bool, int)"/> (lo que lee Morpho):
+        /// <see cref="Count"/> = 0 y <see cref="Outcome"/> = <see cref="SafeMovesOutcome.BudgetExceeded"/>, la respuesta 4 («No
+        /// encuentro un camino desde aquí», sin cobrar).</description></item>
+        /// <item><description>Tras <see cref="TrueParAfter"/>: solo que ese par no se demostró por el corte (devolvió
+        /// <see cref="BudgetExceeded"/>). <see cref="Count"/>, <see cref="Outcome"/> y los vertidos siguen siendo los de la
+        /// última <see cref="Find(BoardState, SolverOptions, BoardState, bool, int)"/>, que pudo terminar con
+        /// <see cref="SafeMovesOutcome.Found"/>.</description></item>
+        /// </list>
         /// </summary>
         public bool WasCancelled => _cancelled;
 
@@ -203,12 +215,15 @@ namespace AF.Solver.Murky
         /// <summary>
         /// Par de la realidad verdadera (el tablero de la última llamada, con sus colores reales) tras el vertido seguro
         /// <paramref name="index"/>, con el memo: lo que usa <see cref="SafePath"/> para elegir (03 §8: «el seguro con menor
-        /// par en S_real»). <see cref="Unsolvable"/> o <see cref="BudgetExceeded"/> si no hay solución demostrada (también si su
-        /// búsqueda se corta: entonces <see cref="WasCancelled"/>).
+        /// par en S_real»). <see cref="Unsolvable"/> o <see cref="BudgetExceeded"/> si no hay solución demostrada. Usa las
+        /// opciones de la última <see cref="Find(BoardState, SolverOptions, BoardState, bool, int)"/>, con su bandera: si la
+        /// búsqueda se corta (K2), <see cref="BudgetExceeded"/> sin guardarlo en el memo y <see cref="WasCancelled"/> = true hasta
+        /// la llamada siguiente; <see cref="Count"/>, <see cref="Outcome"/> y los vertidos no cambian.
         /// </summary>
         public int TrueParAfter(int index)
         {
             CheckIndex(index);
+            _cancelled = false; // WasCancelled habla de esta llamada (K2)
             SolverMove move = _safe[index];
             Array.Copy(_state, _child, _width);
             var events = default(PourEvents);

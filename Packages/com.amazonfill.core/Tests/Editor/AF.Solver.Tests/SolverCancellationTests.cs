@@ -350,6 +350,52 @@ namespace AF.Solver.Tests
             }
         }
 
+        [Test]
+        public void SafeMoves_TrueParAfter_ACut_IsBudgetExceededAndCancelled_KeepsTheFindResult_AndTheNextCallClearsIt()
+        {
+            // K2: TrueParAfter usa la bandera de la última Find. Cortado, da BudgetExceeded sin guardarlo en el memo y
+            // WasCancelled solo para esa llamada (par no demostrado); Count, Outcome y los vertidos siguen siendo los de Find
+            // (la respuesta 4 de 02 T5 se lee solo tras Find). La llamada siguiente lo reinicia y da el par de una instancia nueva.
+            BoardState board = SafeBoard();
+            SolverOptions options = SafeMoves.ForPipeline(PourMode.Run);
+            var fresh = new SafeMoves();
+            fresh.Find(board, options);
+            int expectedPar = fresh.TrueParAfter(0);
+            Assert.That(expectedPar, Is.GreaterThan(0)); // seguro y sin ser victoria: hace falta una búsqueda
+            Assert.That(fresh.WasCancelled, Is.False);
+
+            var flag = new SolverCancellation();
+            var safe = new SafeMoves();
+            safe.Find(board, options.WithCancellation(flag)); // sin marcar: el resultado completo
+            Assert.That(safe.Outcome, Is.EqualTo(SafeMovesOutcome.Found));
+            Assert.That(safe.WasCancelled, Is.False);
+            Pour[] pours = SafePours(safe);
+            Assert.That(pours, Is.EqualTo(SafePours(fresh)));
+
+            safe.ClearMemo(); // el par tras el vertido 0 ya no sale del memo
+            flag.Request();
+            int cut = safe.TrueParAfter(0);
+
+            Assert.That(cut, Is.EqualTo(SafeMoves.BudgetExceeded));
+            Assert.That(safe.WasCancelled, Is.True);
+            Assert.That(safe.MemoCount, Is.EqualTo(0));
+            Assert.That(safe.Searches, Is.EqualTo(1));
+            Assert.That(safe.Expanded, Is.EqualTo(0)); // marcada antes: corta antes de la expansión 1
+            Assert.That(safe.Count, Is.EqualTo(pours.Length));
+            Assert.That(safe.Outcome, Is.EqualTo(SafeMovesOutcome.Found));
+            Assert.That(SafePours(safe), Is.EqualTo(pours));
+
+            flag.Reset();
+            int again = safe.TrueParAfter(0);
+
+            Assert.That(again, Is.EqualTo(expectedPar));
+            Assert.That(safe.WasCancelled, Is.False);
+            Assert.That(safe.Searches, Is.EqualTo(2)); // la cortada se repite
+            Assert.That(safe.MemoCount, Is.EqualTo(1));
+            Assert.That(safe.Count, Is.EqualTo(pours.Length));
+            Assert.That(safe.Outcome, Is.EqualTo(SafeMovesOutcome.Found));
+        }
+
         [TestCase(1)]
         [TestCase(2)]
         public void SafeMoves_NullCancellation_AndAnUnmarkedFlag_GiveTheSameAnswer(int weight)

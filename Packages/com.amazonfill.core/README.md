@@ -198,7 +198,7 @@ alcanzables (32 tableros por mecánica y 8 por combinación del calendario, en `
 tableros de referencia cumplen los presupuestos de 03 §5 y 08 §14.2. La decisión es del dueño.
 
 La cancelación por tiempo del solver para Morpho (`hint_timeout_ms`), que figuraba aquí como pendiente, está cerrada desde K2:
-el núcleo sigue sin leer relojes, el cliente marca una `SolverCancellation` y `SafeMoves.Outcome` = `BudgetExceeded` con
+el núcleo sigue sin leer relojes, el cliente marca una `SolverCancellation` y, tras `SafeMoves.Find`, `Outcome` = `BudgetExceeded` con
 `WasCancelled` es la respuesta 4 de Morpho (sección «Hilos y corte por tiempo»). Preguntas abiertas: 02 R16 con capacidades mixtas
 (C1-8, C1-9: la poda de fútiles puede alargar el par o dejar sin camino útil un tablero resoluble, y con una Liana hay estados atascados con solución) y la consecuencia de Q-B en
 P3 (vaivén útil del Remolino que vuelve al mismo estado); ver el CHANGELOG. Para el jugador, el vaivén sin salida de la
@@ -345,12 +345,15 @@ cobrar). **El núcleo no lee relojes.**
   `RealitiesRejected`), y la propaga desde cada búsqueda A*: `Count` = 0, `Outcome` = `BudgetExceeded` y `WasCancelled`. No hay
   Pista parcial, aunque ya hubiera vertidos seguros demostrados, y el orden de respuestas de Morpho no cambia. Lo cortado no
   entra en el memo; lo terminado antes del corte sí, y vale para la llamada siguiente. Si la bandera llega cuando la llamada ya
-  terminó, `WasCancelled` = false y el resultado es completo. En el pipeline (`SafePath`, el generador y level-qa) va en
-  null.
+  terminó, `WasCancelled` = false y el resultado es completo. `TrueParAfter` usa la bandera de la última `Find`: si su búsqueda
+  se corta, devuelve `BudgetExceeded` (no entra en el memo) y `WasCancelled` = true solo para esa llamada (par no demostrado),
+  sin tocar `Count`, `Outcome` ni los vertidos. `Find` y `TrueParAfter` reinician `WasCancelled` al empezar, y la respuesta 4
+  se lee solo tras `Find`. En el pipeline (`SafePath`, el generador y level-qa) va en null.
 - **Asignaciones** (`HotLoopAllocationTests.SolverCancellation_UnmarkedOrCutting_DoesNotAllocate`): con la bandera sin marcar, el
   solver calentado solo asigna la solución; `Solve` cortado y `SafeMoves` cortado, 0 bytes.
 - **Tests:** compartidos `SolverCancellationTests`: marcada antes (0 expansiones; `SafeMoves` sin ninguna búsqueda), marcada tras
-  N expansiones (para en ≤ N + 256), null idéntico, corte en cualquier consulta de `SafeMoves` y memo limpio tras `Reset`. Solo
+  N expansiones (para en ≤ N + 256), null idéntico, corte en cualquier consulta de `SafeMoves` y memo limpio tras `Reset`, y
+  corte en `TrueParAfter` (respuesta de `Find` intacta y `WasCancelled` reiniciado en la llamada siguiente). Solo
   dotnet `SolverThreadingTests`: 4 instancias en 4 hilos sobre 8 tableros, null idéntico en los 37 tableros de referencia y un
   corte marcado de verdad desde otro hilo, en `AStarSolver` y en `SafeMoves`. Para los tests compartidos, que no pueden
   sincronizarse con un hilo a mitad de búsqueda, `SolverCancellation.RequestAtPoll(k)` (interno) simula que otro hilo la marca
