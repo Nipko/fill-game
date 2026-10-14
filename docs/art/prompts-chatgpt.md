@@ -11,6 +11,11 @@ Revisión 2 (2026-10-07), tras la revisión del crítico de arte (guía, secció
 
 Revisión 3 (2026-10-07), tras la revisión visual de las capturas del respaldo procedural: el río se leía como arena o playa y la escena era casi monocroma marrón. Cambian el panorama (3.1: reflejos oscuros de la selva en el agua, columna de destellos bajo el sol y el reflejo dorado solo junto al horizonte; nada de arena ni de playa) y el muelle (3.2: más estrecho que la pantalla, con río a los lados, madera más clara, haces de sol y sin postes que asomen sobre la viga). También el cielo de arriba (#5BC0EB) y la madera del muelle (#C08A58, #A8774C) de la paleta de referencia.
 
+Revisión 4 (2026-10-14, tanda 4; D-013): entran los provisionales de los fondos por parada, en la familia S8 (3.17 y 3.18): los tres primeros héroes (Ver-o-Peso, el Teatro Amazonas y el malecón de Leticia) y el kit del Estuario.
+- Son opcionales y no piden personas, canastos, banderas ni cuias.
+- **Nunca van en la ficha, las capturas ni la UA** (propuesta del Mapa del río §10.2; 07 §2.1).
+- El arte final de esas piezas, del Mapa, de TiTino, de Frutas del río y de la Tinaja es del artista: `docs/art/encargo-mapa-del-rio.md` y `docs/art/encargo-titino-frutas-tinaja.md`.
+
 Qué son estos recursos:
 - **Provisionales.** El arte final sigue siendo del artista (CLAUDE.md, «Humanos»). Las piezas orgánicas son la base de la fase visual; las de UI y material son opcionales, porque el código ya las hace bien (guía, 10.3).
 - **Pendientes de revisión cultural.** El paisaje, Capi y las frutas quedan «pendiente de revisión» hasta el visto bueno del asesor cultural (07 §8.2).
@@ -28,7 +33,7 @@ Qué son estos recursos:
      ```
    - genera en esa misma conversación todos los recursos de la familia (columna «Familia» de la tabla 2), uno detrás de otro;
    - si sale texto, un marco o algo de la lista de prohibidos, pide «same image, but remove …» en lugar de reescribir el prompt.
-3. **Orden:** prioridad 1 ya (en paralelo con F1 de la guía); prioridad 2 a continuación; los opcionales, solo si el dueño quiere compararlos con lo procedural (F7); Capi y las frutas, en la fase de jugabilidad.
+3. **Orden:** prioridad 1 ya (en paralelo con F1 de la guía); prioridad 2 a continuación; los opcionales, solo si el dueño quiere compararlos con lo procedural (F7); Capi y las frutas, en la fase de jugabilidad; los fondos por parada (S8), solo si el dueño quiere ver un sitio pintado antes de que llegue el arte del artista.
 4. **Tamaño de generación.** ChatGPT genera a 1024 × 1024, 1024 × 1536 o 1536 × 1024 px. Cada ficha indica cuál pedir y a qué tamaño final hay que llevar el PNG.
 5. **Transparencia.** Cuando la ficha pide alfa, el prompt ya pide «transparent background».
    - Si llega un fondo opaco, pide «make the background fully transparent».
@@ -48,7 +53,7 @@ Unidades para integrar: el `CanvasScaler` usa `referencePixelsPerUnit` = 100 (`G
 
 ## 2. Resumen de recursos
 
-Familias (una conversación cada una, con la clave adjunta salvo S0): **S0** clave de estilo · **S1** muelle · **S2** hojas (follaje y cinta-hoja) · **S3** botones · **S4** marcos y madera de UI · **S5** teselas de madera · **S6** Capi · **S7** frutas.
+Familias (una conversación cada una, con la clave adjunta salvo S0): **S0** clave de estilo · **S1** muelle · **S2** hojas (follaje y cinta-hoja) · **S3** botones · **S4** marcos y madera de UI · **S5** teselas de madera · **S6** Capi · **S7** frutas · **S8** fondos por parada (héroes y kit provisionales).
 
 | # | Archivo (`Assets/_Project/Art/Generated/`) | Familia | Generar | Final (px) | Alfa | 9-slice (px del PNG final: izq./der./arriba/abajo) | PPU | En pantalla | Papel (guía 10.3) | Prioridad |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -76,6 +81,10 @@ Familias (una conversación cada una, con la clave adjunta salvo S0): **S0** cla
 | 22 | `fruta_tapereba.png` | S7 | 1024 × 1024 | 256 × 256 | Sí | — | — | Ídem | Ídem | Jugabilidad |
 | 23 | `fruta_guanabana.png` | S7 | 1024 × 1024 | 256 × 256 | Sí | — | — | Ídem | Ídem | Jugabilidad |
 | 24 | `fruta_bacaba.png` | S7 | 1024 × 1024 | 256 × 256 | Sí | — | — | Ídem | Ídem | Jugabilidad |
+| 25 | `bg_hero_ver_o_peso.png` | S8 | 1536 × 1024 | 1440 × 480 (banda 3:1) | Sí: el cielo y el agua también | — | — | Héroe de 240 × 80 dp con el pie en el horizonte (Belém, niveles 1-10) | Provisional del fondo por parada (guía 10.3) | Opcional (nunca en la ficha, las capturas ni la UA) |
+| 26 | `bg_hero_teatro_amazonas.png` | S8 | 1536 × 1024 | 1440 × 480 (banda 3:1) | Sí: el cielo y el agua también | — | — | Ídem (Manaos, niveles 51-60) | Ídem | Ídem |
+| 27 | `bg_hero_leticia.png` | S8 | 1536 × 1024 | 1440 × 480 (banda 3:1) | Sí: el cielo y el agua también | — | — | Ídem (Leticia, niveles 81-100) | Ídem | Ídem |
+| 28 | `bg_kit_w01.png` | S8 | 2 × 1536 × 1024 y 6 × 1024 × 1024 | Atlas de 2048 × 2048 con 8 piezas (3.18) | Sí | — | — | Piezas del fondo de la parada del Estuario | Ídem | Ídem |
 
 Qué no se genera:
 - **Relleno del panel del tablero e interiores de los modales:** los dibuja el código (degradado por vértices o textura RGBA32 pequeña). Un interior oscuro generado por IA y comprimido en ASTC 4 × 4 trae ruido y bandas, y no pasaría VA-04 (σ L* ≤ 3).
@@ -83,7 +92,8 @@ Qué no se genera:
 - **Iconos de accesibilidad dentro de las dosis** (0,45 u, 8-11 dp): son glifos sencillos de 07 §3 y se dibujan por código.
 - **Estado deshabilitado:** es plano y se hace por código (guía 5.1).
 - **Vidrio, líquido, repisas y partículas** (gotas, plumas, hojas, destellos): procedurales.
-- **Fondos de otros mundos:** llegan después del Estuario.
+- **Fondos de otros mundos:** con D-013 son fondos por parada (cielo por código, kit del mundo y héroe del sitio). Aquí solo van los provisionales de 3.17 y 3.18; los demás kits y héroes los pinta el artista (`docs/art/encargo-mapa-del-rio.md`).
+- **TiTino, la ficha de Frutas del río y la Tinaja:** solo los pinta el artista (`docs/art/encargo-titino-frutas-tinaja.md`). TiTino se encarga después del visto bueno del asesor; la ficha y la Tinaja pasan por el asesor antes de integrarse.
 
 Cómo medir el 9-slice:
 - Los números son píxeles del **PNG final**.
@@ -311,7 +321,7 @@ Do not include: text, logos, watermark, objects, paper texture, gold, metal.
 
 Familia S6, con la clave adjunta. Generar a 1024 × 1024 y llevar a **512 × 512**. Transparente, con un margen del 10 %. Colores de la hoja de modelo de 07 §6.1. Mira al jugador, nunca a un lado donde pueda haber una cuia (guía 3.7). Queda pendiente de revisión cultural y de la búsqueda de marca del nombre (glosario §3.1). Si el dueño lo aprueba antes, puede entrar como Capi estático en F7 (guía 10.2).
 
-> *Actualización del 2026-10-14 (D-016, decidida el 2026-10-13):* ninguna mascota fija en el muelle durante la partida (guía 3.7, retirada; C4 cerrado). Capi solo entra en escena para la Cuia extra, la Cuia de rescate y el banner de mundo, así que este sprite sirve para esas apariciones (96-140 dp), no a 64 × 56 dp en el muelle. El prompt de la hoja de modelo de TiTino que pedía f.3 de `docs/research/personaje/propuesta-titino.md` **queda pendiente** (D-016): se escribirá con su hoja de modelo, después del asesor cultural.
+> *Actualización del 2026-10-14 (D-016, decidida el 2026-10-13):* ninguna mascota fija en el muelle durante la partida (guía 3.7, retirada; C4 cerrado). Capi solo entra en escena para la Cuia extra, la Cuia de rescate y el banner de mundo, así que este sprite sirve para esas apariciones (96-140 dp), no a 64 × 56 dp en el muelle. El prompt de la hoja de modelo de TiTino que pedía f.3 de `docs/research/personaje/propuesta-titino.md` **queda pendiente** (D-016): se escribirá con su hoja de modelo, después del asesor cultural. La hoja de modelo la pinta el artista, con las condiciones de `docs/art/encargo-titino-frutas-tinaja.md`.
 
 ```text
 Character sprite of a mascot for a cozy Amazon-themed mobile puzzle game, 1024x1024 pixels, PNG with a fully transparent background, full body, centered, about 10% empty margin on every side.
@@ -376,6 +386,138 @@ Do not include: grapes, blueberries or cherries look; leaves; bowls or glasses; 
 
 Ranura de Pista · Morpho, a partir del nivel 12 (fuera de v0). Silueta de **ala** de mariposa [P]: cuadrado redondeado con el borde superior derecho en curva de ala. No una hoja, que se confundiría con la mecánica Hoja y con Hoja escudo (guía 3.6). Color base azul morpho #2F6FD6 (07 §7.6). Se genera solo cuando llegue esa fase, en la familia S3 y con el prompt de 3.6 cambiando la forma y los colores.
 
+### 3.17 Héroes provisionales de parada: `bg_hero_ver_o_peso.png`, `bg_hero_teatro_amazonas.png` y `bg_hero_leticia.png` (opcionales)
+
+> **Aviso: provisionales.** Estos PNG sirven para ver un sitio pintado en desarrollo antes de que llegue el arte del artista. **Nunca van en la ficha de la tienda, en las capturas ni en los creativos de UA** (propuesta del Mapa del río §10.2; 07 §2.1), la misma regla que los miquitos provisionales (07 §6.4). Antes de grabar o capturar nada para la tienda o la UA, se sustituyen por los del artista o se quitan de la carpeta; el registro del README dice cuáles son provisionales. Los héroes no sustituyen a VA-20, que se valida con la silueta geométrica (guía 9). El arte final es del artista: `docs/art/encargo-mapa-del-rio.md`.
+
+Familia S8: los tres en la misma conversación, con la clave adjunta. Son los tres primeros sitios del encargo al artista, uno por cada mundo con fondo en el AAB y héroe de ciudad: 1 Estuario, 3 Manaos y 4 Trapecio. Qué se reconoce y qué evitar en cada uno: 07 §2.1 (tabla de paradas).
+
+Formato (propuesta del Mapa §10.2 y §10.6):
+- **Generar** a 1536 × 1024. **Recortar** una banda de 1536 × 512 que deje el horizonte (el pie del hito) al 60 % de su alto y llevarla a **1440 × 480** con escalado uniforme: es el doble de 240 × 80 dp, a 6 px por dp.
+- **Dentro de la banda final:**
+  - el horizonte queda a 288 px del borde de arriba (48 dp);
+  - la silueta puede llegar hasta el borde de arriba, pero lo que hace reconocible el sitio cabe en los 180 px justo encima del horizonte, los 30 dp que se ven con 2 filas;
+  - por debajo, como mucho 192 px (32 dp) de orilla o de muelle.
+- **Transparente** todo lo demás: el cielo, la hora y la banda de agua los pinta el código, y también el reflejo, con el mismo sprite volteado. Por eso el prompt no pide agua ni reflejo.
+- **Sin personas, canastos, banderas ni cuias** (VA-22), ni canoas o barcos, ni frutas sueltas.
+
+`bg_hero_ver_o_peso.png` (Belém, niveles 1-10; alba dorada):
+
+```text
+Wide, low landmark element for the background of a vertical mobile puzzle game, 1536x1024 pixels, PNG with a fully transparent background. The image will be cropped to a 3:1 horizontal strip, so keep everything between 25% and 75% of the image height.
+Subject: the Ver-o-Peso market in Belém, Pará, Brazil, seen from the water of Guajará Bay at sunrise: the long, low cast-iron market hall from 1901 with two slender pointed turrets at its ends, and a few slender açaí palms beside it (clumping palms with very thin trunks and drooping feathery fronds).
+Composition:
+- a straight, level horizon line at 55% of the image height; the foot of the market and the stone quay wall sit exactly on it;
+- the market is centered, low and wide, about 60% of the image width; the hall and its two turrets rise no more than 18% of the image height above the horizon; only the thin turret tips and the palm crowns may reach 30% above it;
+- below the horizon, only the front of the quay wall, down to 75% of the image height at most; no water and no reflection;
+- toward the left and right ends the riverbank becomes a few low trees that fade out, so the strip blends into a painted riverbank;
+- everything else, including the whole sky, is fully transparent.
+Light: warm golden sunrise light from the upper left, a thin low golden mist (#FFE4A8) at the foot of the market.
+Style: premium casual mobile game background, polished hand-painted 2.5D look, luminous and saturated but harmonious, soft atmospheric perspective, clean readable shapes; the silhouette must read clearly when the whole strip is shown 240 points wide.
+Do not include: people or crowds; baskets, crates, market stalls or goods; flags or flagpoles; boats, ships or canoes; gourds, calabash bowls, cups or bottles; loose fruit; religious images, processions, candles or banners; herbs, potions or charms; text, letters, signs, logos, signature or watermark; sky, clouds, sun or birds; water or reflections; frames or borders; paper or watercolor texture.
+```
+
+`bg_hero_teatro_amazonas.png` (Manaos, niveles 51-60; tarde con luz rasante):
+
+```text
+Wide, low landmark element for the background of a vertical mobile puzzle game, 1536x1024 pixels, PNG with a fully transparent background. The image will be cropped to a 3:1 horizontal strip, so keep everything between 25% and 75% of the image height.
+Subject: the Amazon Theatre (Teatro Amazonas) of Manaus, Amazonas, Brazil, seen from far away over the low roofs of the city by the Rio Negro: its large rounded dome on a short drum, covered in colorful glazed tiles, rising above the rooftops and trees; far behind it, small and hazy, the low line of the floating port and the long bridge over the Rio Negro.
+Composition:
+- a straight, level horizon line at 55% of the image height; the foot of the city and the riverbank sit exactly on it;
+- the dome is centered; the dome and its drum rise no more than 18% of the image height above the horizon, and nothing rises more than 30% above it;
+- around the dome, the city is a low, simple band of roofs and trees, about 70% of the image width, that fades out toward both ends;
+- below the horizon, only the riverbank, down to 75% of the image height at most; no water and no reflection;
+- everything else, including the whole sky, is fully transparent.
+Light: warm late-afternoon raking light from the upper left.
+Style: premium casual mobile game background, polished hand-painted 2.5D look, luminous and saturated but harmonious, soft atmospheric perspective, clean readable shapes; the silhouette must read clearly when the whole strip is shown 240 points wide.
+Do not include: people or crowds; flags or flagpoles; boats, ships or canoes; baskets; gourds, calabash bowls, cups or bottles; loose fruit; rubber trees, rubber tappers or any historical scene; cars or traffic; text, letters, signs, logos, signature or watermark; sky, clouds, sun or birds; water or reflections; frames or borders; paper or watercolor texture.
+```
+
+`bg_hero_leticia.png` (Leticia, niveles 81-100; mañana tras la lluvia; la parada 9 lo reutiliza con la LUT de atardecer):
+
+```text
+Wide, low landmark element for the background of a vertical mobile puzzle game, 1536x1024 pixels, PNG with a fully transparent background. The image will be cropped to a 3:1 horizontal strip, so keep everything between 25% and 75% of the image height.
+Subject: the riverside promenade (malecón) of Leticia, Amazonas, Colombia, on a very wide stretch of the Amazon river: a long, low waterfront walkway with a simple railing and wide steps down to the river, rows of leafy tropical trees and a few low buildings with tiled roofs behind them; far in the distance along the same bank, the low, hazy riverbank of the neighbouring town of Tabatinga.
+Composition:
+- a straight, level horizon line at 55% of the image height; the foot of the promenade sits exactly on it;
+- the promenade is centered, low and wide, about 70% of the image width; its trees and buildings rise no more than 18% of the image height above the horizon, and nothing rises more than 30% above it;
+- below the horizon, only the front wall and the steps of the promenade, down to 75% of the image height at most; no water and no reflection;
+- toward both ends it fades into low riverbank trees;
+- everything else, including the whole sky, is fully transparent.
+Light: soft, bright morning light from the upper left just after rain, wet surfaces with gentle highlights.
+Style: premium casual mobile game background, polished hand-painted 2.5D look, luminous and saturated but harmonious, soft atmospheric perspective, clean readable shapes; the silhouette must read clearly when the whole strip is shown 240 points wide.
+Do not include: people or crowds; flags or flagpoles; islands; boats, ships or canoes; baskets or market stalls; gourds, calabash bowls, cups or bottles; loose fruit; text, letters, signs, logos, signature or watermark; sky, clouds, sun or birds; water or reflections; frames or borders; paper or watercolor texture.
+```
+
+Comprobar:
+- el hito se reconoce en los 180 px de encima del horizonte, y la banda tapada salvo esa franja sigue diciendo qué sitio es (la prueba de VA-20 con 2 filas);
+- nada de personas, canastos, banderas, cuias, barcos ni frutas sueltas;
+- el cielo y el agua son 100 % transparentes y el horizonte es recto y horizontal;
+- los extremos se funden en árboles bajos, sin cortar un edificio.
+
+### 3.18 Kit provisional del Estuario: `bg_kit_w01.png` (opcional)
+
+> **Aviso: provisional.** El mismo de 3.17: nunca va en la ficha, las capturas ni la UA, y el kit final es del artista (`docs/art/encargo-mapa-del-rio.md`).
+
+Familia S8, en la misma conversación que los héroes. El kit es un **atlas de 2048 × 2048** con 8 piezas sobre fondo transparente (capa 0b de la propuesta del Mapa §10.2). El dueño lo monta con 8 imágenes generadas por separado:
+- **Reparto del atlas:** provisional [P]. El definitivo lo decide el artista, y la posición de cada pieza va en `bg.pieces` de `river_stops_v1.json` (D-023, punto 12), que escribe la tarea que integra los kits.
+- **Sin playas:** en el Estuario, el río pardo se leía como arena (revisión 3).
+- **Sin agua:** la banda de río la pinta el código; solo los árboles con el pie en el agua llevan un anillo fino de ondas.
+
+| Zona del atlas (px) | Pieza | Generar | Llevar a |
+|---|---|---|---|
+| x 0-2047, y 0-511 | 1. Tira de orilla lejana, que se repite en horizontal | 1536 × 1024 | Banda de 1536 × 384 con la línea del agua abajo, ampliada a 2048 × 512 |
+| x 0-2047, y 512-1023 | 2. Tira de orilla media, que se repite en horizontal | 1536 × 1024 | Ídem |
+| x 0-511, y 1024-1535 | 3. Grupo alto de palmeras de açaí | 1024 × 1024 | 512 × 512 |
+| x 512-1023, y 1024-1535 | 4. Grupo bajo y ancho de palmeras de açaí | 1024 × 1024 | 512 × 512 |
+| x 1024-1535, y 1024-1535 | 5. Isla de várzea pequeña | 1024 × 1024 | 512 × 512 |
+| x 1536-2047, y 1024-1535 | 6. Árboles con el pie en el agua | 1024 × 1024 | 512 × 512 |
+| x 0-511, y 1536-2047 | 7. Barco de río lejano, sin nadie a bordo | 1024 × 1024 | 512 × 512 |
+| x 512-1023, y 1536-2047 | 8. Silueta de ciudad genérica | 1024 × 1024 | 512 × 512 |
+| x 1024-2047, y 1536-2047 | Libre (transparente) | — | — |
+
+Las tiras son lo único que se amplía (×1,33): se acepta en piezas lejanas con bruma, nunca en un héroe. Cada pieza va centrada en su celda, con su base en el borde de abajo de la celda y sin salirse de ella.
+
+Tiras (piezas 1 y 2), con la misma estructura:
+
+```text
+Seamless horizontal strip for the far background of a vertical mobile puzzle game, 1536x1024 pixels, PNG with a fully transparent background. The image will be cropped to a 4:1 horizontal strip, so keep everything between 31% and 69% of the image height.
+Subject: a distant riverbank of the Amazon estuary near Belém, Pará, Brazil, at sunrise, seen from the water.
+Strip 1 (far): a thin, fairly even line of far rainforest in blue-green morning haze (#7FB0A2, #4E8C78), with a few slender açaí palm crowns poking above it and a thin golden mist (#FFE4A8) along its foot; it rises no more than 20% of the image height above its base.
+Strip 2 (middle): a closer band of floodplain (várzea) forest with varied rounded tree crowns in darker greens (#1C5236, #2C7A4B, #23824A) and a few açaí palms, rim light (#C6EF6B) on the crowns facing the upper-left light; it rises no more than 30% of the image height above its base.
+Composition: the base of the forest is a straight, level waterline at 69% of the image height; the left and right edges match exactly, so the strip repeats seamlessly side by side; no single tall tree at either edge.
+Light: warm golden sunrise light from the upper left, soft atmospheric perspective.
+Style: premium casual mobile game background, polished hand-painted 2.5D look, luminous and harmonious, clean readable shapes.
+Do not include: people or animals; houses, villages or docks; flags or flagpoles; boats, ships or canoes; baskets; gourds, calabash bowls, cups or bottles; fruit; beach, sand or sandbanks; mountains or hills; coconut palms; giant kapok (sumaúma) trees; water or reflections; sky, clouds or sun; text, letters, logos, signature or watermark; frames or borders; paper or watercolor texture.
+```
+
+Se genera dos veces: una con la línea «Strip 1» y otra con la línea «Strip 2», quitando la que no toca.
+
+Piezas 3-8: pega el prompt y sustituye la línea `Element:` por la de la pieza.
+
+```text
+Single background element for a vertical mobile puzzle game, 1024x1024 pixels, PNG with a fully transparent background, centered with about 8% empty margin; its base sits on a straight, level line at 90% of the image height, as if it stood on a distant riverbank.
+Element: (paste the line of the piece here)
+Place and light: the wide Amazon estuary near Belém, Pará, Brazil, at sunrise; warm golden light from the upper left and soft distant haze; the element is seen from far away, so it is simple, slightly hazy and low in contrast.
+Style: premium casual mobile game background, polished hand-painted 2.5D look, luminous and harmonious, clean readable silhouette.
+Do not include: people or animals; flags or flagpoles; canoes; baskets; gourds, calabash bowls, cups or bottles; loose fruit; beach, sand or sandbanks; mountains; coconut palms; giant kapok (sumaúma) trees; sky, clouds or sun; text, letters, signs, logos, signature or watermark; frames or borders; paper or watercolor texture.
+```
+
+Líneas `Element:`:
+- **3:** `Element: a tall group of five to seven slender açaí palms (clumping palms with very thin trunks and drooping feathery fronds) standing close together, three tones of green (#145A35, #23824A, #5DBB3F).`
+- **4:** `Element: a low, wide group of three or four young açaí palms among low riverbank shrubs.`
+- **5:** `Element: a small, low floodplain (várzea) island seen from the side: a narrow strip of land covered by rounded trees and a few açaí palms, with a flat waterline at its base and no beach.`
+- **6:** `Element: a few floodplain trees standing with their feet in the water, with only a thin ring of small light ripples in milky coffee-brown water (#B08A5A) around their bases.`
+- **7:** `Element: a distant two-deck wooden river passenger boat seen from the side, white with one colored stripe, small and simple, with nobody on board, no name and no letters on the hull.`
+- **8:** `Element: a generic low city skyline seen from very far away across the water: a simple row of pale low buildings and a few trees in haze, with no recognizable landmark, no towers, no domes and no churches.`
+
+Comprobar:
+- las tiras casan al repetirlas, sin costura ni árbol cortado;
+- ninguna pieza se sale de su zona del atlas;
+- las palmeras son de açaí (finas y en grupo), nunca de coco, y no hay sumaúma;
+- el barco es un barco de pasajeros lejano, sin nadie a bordo, nunca una canoa (el icono de Canoas; VA-22);
+- nada de personas, canastos, banderas, cuias ni frutas.
+
 ## 4. Comprobación de cada PNG antes de guardarlo
 
 | # | Comprobación | Cómo |
@@ -396,6 +538,9 @@ Ranura de Pista · Morpho, a partir del nivel 12 (fuera de v0). Silueta de **ala
 | 14 | **Marcos** (`ui_panel_tablero`, `ui_panel_modal`): interior y exterior 100 % transparentes, sin sombra ni relleno | Ver sobre magenta |
 | 15 | **Cinta-hoja:** la franja central es verde oscura (#2F7D32 → #236A29), lisa y sin nervios; el nervio va en el tercio superior. Con el cuentagotas, el `crema` #FFF8E6 da ≥ 4,5:1 sobre cualquier punto de la franja | Cuentagotas y una calculadora de contraste |
 | 16 | **Panorama:** palmeras de açaí y río pardo visibles entre el 16 y el 30 % de la altura, en el centro (3.1) | Tapar el resto con un rectángulo |
+| 17 | **Fondos por parada (S8):** nada de personas, canastos, banderas, cuias, canoas ni frutas sueltas (VA-22). En el héroe, el horizonte a 288 px del borde de arriba, lo reconocible en los 180 px de encima y como mucho 192 px de orilla por debajo; el cielo y el agua, transparentes. Los edificios del hito y la ciudad genérica del kit son la excepción a «casas» de la comprobación 4 | Guías en el editor de imagen y vista sobre magenta |
+| 18 | **Kit (S8):** cada pieza en su zona del atlas (3.18) y las dos tiras sin costura al repetirlas | Repetir la tira en un lienzo de 4096 px de ancho |
+| 19 | **Aviso de provisional (S8):** anotado como provisional en el registro del README, para que nunca llegue a la ficha, las capturas ni la UA | Registro del README |
 
 ## 5. Plantilla del registro (`Assets/_Project/Art/Generated/README.md`)
 
