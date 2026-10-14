@@ -14,24 +14,29 @@ using UnityEngine;
 namespace AF.IAP.Tests
 {
     /// <summary>
-    /// Guardas de B1-4 contra SKU, nombres, precios y cifras inventados: el catálogo y los precios locales se leen de
-    /// 05 §4.1 y §4.2, los defaults de <see cref="StoreConfig"/> de 08 §9, y el ensamblado <c>AF.IAP</c> no usa el motor,
-    /// el reloj del sistema ni la red.
+    /// Guardas de B1-4 contra SKU, precios y cifras inventados: el catálogo y los precios locales se leen de 05 §4.1 y
+    /// §4.2, los defaults de <see cref="StoreConfig"/> de 08 §9, y el ensamblado <c>AF.IAP</c> no usa el motor, el reloj
+    /// del sistema ni la red. Desde S12 (D-018), cada producto lleva la clave de su nombre (<c>iap_&lt;sku&gt;_name</c>
+    /// [P]) y <c>AF.IAP</c> no tiene ningún texto visible.
     /// </summary>
     public sealed class StoreCatalogTests
     {
         private static string IapDir => Path.Combine(Application.dataPath, "_Project", "Scripts", "IAP");
 
         [Test]
-        public void Catalog_HasThe13SkusOf1_0_WithTheNamesAndUsdPricesOf05_4_1()
+        public void Catalog_HasThe13SkusOf1_0_WithTheirNameKeysAndTheUsdPricesOf05_4_1()
         {
             List<string[]> rows = Sku05Rows();
             StoreCatalog catalog = StoreCatalog.Default;
 
             var skus = new List<string>();
+            var keys = new HashSet<string>(StringComparer.Ordinal);
             foreach (StoreProduct product in catalog.Products)
             {
                 skus.Add(product.Sku);
+                Assert.That(product.NameKey, Is.EqualTo("iap_" + product.Sku + "_name"), product.Sku + ": clave del nombre");
+                Assert.That(Regex.IsMatch(product.NameKey, "^[a-z0-9_]+$"), Is.True, product.NameKey + ": clave de UI en snake_case");
+                Assert.That(keys.Add(product.NameKey), Is.True, product.NameKey + " repetida");
             }
 
             var expected = new List<string>();
@@ -40,14 +45,81 @@ namespace AF.IAP.Tests
                 expected.Add(row[0]);
                 StoreProduct? product = catalog.Find(row[0]);
                 Assert.That(product, Is.Not.Null, row[0]);
-                Assert.That(product!.Name, Is.EqualTo(row[1]), row[0] + ": nombre de tienda");
-                Assert.That(product.PriceIn("USD").FormatAmount(), Is.EqualTo(row[2]), row[0] + ": USD");
+                Assert.That(product!.PriceIn("USD").FormatAmount(), Is.EqualTo(row[2]), row[0] + ": USD");
             }
 
             Assert.That(skus, Is.EqualTo(expected));
             Assert.That(skus.Count, Is.EqualTo(13));
+            Assert.That(keys.Count, Is.EqualTo(13));
+            Assert.That(typeof(StoreProduct).GetProperty("Name"), Is.Null, "Product.Name desaparece (S12)");
+            Assert.That(typeof(SimulatedPurchase).GetProperty("Name"), Is.Null);
+            Assert.That(StoreProduct.NameKeyOf("af_pass"), Is.EqualTo("iap_af_pass_name"));
+            Assert.Throws<ArgumentException>(() => StoreProduct.NameKeyOf(""));
             Assert.That(catalog.Find("af_pass"), Is.Null, "el Pase Expedición es de la v1.2");
             Assert.Throws<ArgumentException>(() => catalog.Get("af_pass"));
+        }
+
+        [Test]
+        public void IapAssembly_HasNoVisibleText()
+        {
+            // Los nombres de tienda de 05 §4.1 y el rótulo de la hoja ya no están en AF.IAP: van por clave (D-018).
+            var forbidden = new List<string> { "Compra simulada" };
+            foreach (string[] row in Sku05Rows())
+            {
+                forbidden.Add(row[1]);
+            }
+
+            Assert.That(forbidden.Count, Is.EqualTo(14));
+            string testsDir = Path.GetFullPath(Path.Combine(IapDir, "Tests")) + Path.DirectorySeparatorChar;
+            var offenders = new List<string>();
+            int files = 0;
+            foreach (string file in Directory.GetFiles(IapDir, "*.cs", SearchOption.AllDirectories))
+            {
+                if (Path.GetFullPath(file).StartsWith(testsDir, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                files++;
+                string name = Path.GetFileName(file);
+                string[] lines = File.ReadAllText(file).Replace("\r\n", "\n").Split('\n');
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    string line = lines[i].Trim();
+                    if (line.StartsWith("//", StringComparison.Ordinal))
+                    {
+                        continue; // documentación y comentarios
+                    }
+
+                    foreach (string text in forbidden)
+                    {
+                        if (line.Contains(text))
+                        {
+                            offenders.Add(name + ":" + (i + 1) + ": " + text);
+                        }
+                    }
+
+                    // Los mensajes de las excepciones y de la validación de la configuración son para el programador.
+                    if (line.Contains("Exception(") || line.Contains("Require("))
+                    {
+                        continue;
+                    }
+
+                    // Cualquier otra cadena con una frase (letras separadas por espacios) o con letras no ASCII sería texto
+                    // visible. Antes se quitan los caracteres sueltos ('"'), que confundirían la búsqueda de cadenas.
+                    string code = Regex.Replace(line, @"'(?:[^'\\]|\\.)'", "' '");
+                    foreach (Match literal in Regex.Matches(code, @"""(?:[^""\\]|\\.)*"""))
+                    {
+                        if (Regex.IsMatch(literal.Value, @"[A-Za-z]\s+[A-Za-z]") || Regex.IsMatch(literal.Value, @"[^\x20-\x7E]"))
+                        {
+                            offenders.Add(name + ":" + (i + 1) + ": " + literal.Value);
+                        }
+                    }
+                }
+            }
+
+            Assert.That(files, Is.GreaterThanOrEqualTo(5));
+            Assert.That(offenders, Is.Empty, "texto visible en AF.IAP: va por clave a la tabla de textos");
         }
 
         [Test]
@@ -215,7 +287,10 @@ namespace AF.IAP.Tests
             Assert.That(files, Is.GreaterThanOrEqualTo(5));
         }
 
-        /// <summary>Filas de 1.0 de la tabla de 05 §4.1: SKU, nombre de tienda en español y USD; el pack de skins se expande.</summary>
+        /// <summary>
+        /// Filas de 1.0 de la tabla de 05 §4.1: SKU, nombre de tienda en español (el texto de su clave, que vive en la tabla
+        /// de textos) y USD; el pack de skins se expande.
+        /// </summary>
         private static List<string[]> Sku05Rows()
         {
             string section = GddTables.Section(GddTables.Chapter("05-economia-monetizacion.md"), "### 4.1 ", "### 4.2 ");

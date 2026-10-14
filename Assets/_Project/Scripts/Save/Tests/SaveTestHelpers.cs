@@ -130,6 +130,7 @@ namespace AF.Save.Tests
             p.Progress.SkippedLevels.Add(63);
             p.Progress.SkippedLevels.Add(71);
             p.Progress.ContentVersion = "1.0.0";
+            p.Progress.MapSeenLevel = 80;
             p.LevelState = new LevelStateData
             {
                 Level = 88,
@@ -149,6 +150,17 @@ namespace AF.Save.Tests
             p.Entitlements.StarterBought = true;
             p.Entitlements.Skins.Add("af_skin_m02");
             p.Entitlements.Skins.Add("af_skin_m04");
+            p.Settings.Patterns = PatternsSetting.Off;
+            p.Settings.Language = "pt-BR";
+            p.Settings.SlothMessages = false;
+            p.Settings.IdleHint = false;
+            for (int i = 0; i < SlothData.MomentCount; i++)
+            {
+                p.Sloth.LastLine[i] = i % 3;
+            }
+
+            p.Sloth.LastGreetingDate = "2026-10-04";
+            p.Sloth.LastSeenDate = "2026-10-05";
             p.Ads.LastIap = new DateTime(2026, 10, 5, 13, 40, 0, DateTimeKind.Utc);
             p.Ads.LevelsSinceInterstitial = 2;
             p.Stats.LevelsWon = 86;
@@ -209,8 +221,10 @@ namespace AF.Save.Tests
                     + p.Daily.RescuesToday + "," + p.Daily.AfRescueShown + "," + p.Daily.AfRescueDeclinedDays + ","
                     + p.Daily.AfRescueHiddenUntil?.Ticks + "," + p.Daily.ShufflesToday + "," + p.Daily.ShieldAvailable,
                 "progress=" + p.Progress.MaxLevel + "," + p.Progress.NextLevel + "," + p.Progress.SinceLastSkip + ",["
-                    + string.Join(",", p.Progress.SkippedLevels) + "]," + p.Progress.ContentVersion,
+                    + string.Join(",", p.Progress.SkippedLevels) + "]," + p.Progress.ContentVersion + "," + p.Progress.MapSeenLevel,
                 "entitlements=" + p.Entitlements.NoAds + "," + p.Entitlements.StarterBought + ",[" + string.Join(",", p.Entitlements.Skins) + "]",
+                "settings=" + p.Settings.Patterns + "," + p.Settings.Language + "," + p.Settings.SlothMessages + "," + p.Settings.IdleHint,
+                "sloth=[" + string.Join(",", p.Sloth.LastLine) + "]," + p.Sloth.LastGreetingDate + "," + p.Sloth.LastSeenDate,
                 "ads=" + p.Ads.LastIap?.Ticks + "/" + p.Ads.LastIap?.Kind + "," + p.Ads.LevelsSinceInterstitial,
                 "stats=" + p.Stats.LevelsWon + "," + p.Stats.FailsHard + "," + p.Stats.Rescues + "," + p.Stats.RvWatched + "," + p.Stats.Sessions,
             };

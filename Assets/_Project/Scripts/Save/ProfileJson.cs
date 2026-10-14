@@ -11,7 +11,9 @@ namespace AF.Save
     /// estable, InvariantCulture y horas UTC en ISO 8601 (<c>2026-10-05T14:03:11Z</c>, con fracción solo si la hay:
     /// la ida y vuelta conserva los ticks). Escribe siempre <c>profile_schema</c> = <see cref="Profile.CurrentSchema"/>.
     /// Al leer, una clave que falta toma el default de <see cref="Profile"/> y una desconocida se ignora; un tipo
-    /// equivocado es un archivo corrupto (<see cref="FormatException"/>).
+    /// equivocado es un archivo corrupto (<see cref="FormatException"/>), salvo en lo que no es progreso ni economía:
+    /// <c>settings</c>, <c>sloth</c> y <c>progress.map_seen_level</c> toman su default ante un valor ausente o inválido
+    /// (un ajuste nunca hace corrupto un perfil), y <c>map_seen_level</c> queda recortado a [0, <c>max_level</c>].
     /// </summary>
     public static class ProfileJson
     {
@@ -119,6 +121,7 @@ namespace AF.Save
             progress.Set("since_last_skip", JsonNode.FromInt(p.Progress.SinceLastSkip));
             progress.Set("skipped_levels", IntList(p.Progress.SkippedLevels));
             progress.Set("content_version", JsonNode.FromString(p.Progress.ContentVersion));
+            progress.Set("map_seen_level", JsonNode.FromInt(p.Progress.ClampedMapSeenLevel));
             root.Set("progress", progress);
 
             root.Set("level_state", p.LevelState == null ? JsonNode.Null : LevelStateNode(p.LevelState));
@@ -128,6 +131,25 @@ namespace AF.Save
             entitlements.Set("starter_bought", JsonNode.FromBool(p.Entitlements.StarterBought));
             entitlements.Set("skins", StringList(p.Entitlements.Skins));
             root.Set("entitlements", entitlements);
+
+            JsonNode settings = JsonNode.NewObject();
+            settings.Set("patterns", JsonNode.FromString(SettingsData.PatternsText(p.Settings.Patterns)));
+            settings.Set("language", JsonNode.FromString(p.Settings.Language));
+            settings.Set("sloth_messages", JsonNode.FromBool(p.Settings.SlothMessages));
+            settings.Set("idle_hint", JsonNode.FromBool(p.Settings.IdleHint));
+            root.Set("settings", settings);
+
+            JsonNode lastLine = JsonNode.NewArray();
+            for (int i = 0; i < SlothData.MomentCount; i++)
+            {
+                lastLine.Add(JsonNode.FromInt(p.Sloth.LastLine[i]));
+            }
+
+            JsonNode sloth = JsonNode.NewObject();
+            sloth.Set("last_line", lastLine);
+            sloth.Set("last_greeting_date", JsonNode.FromString(p.Sloth.LastGreetingDate));
+            sloth.Set("last_seen_date", JsonNode.FromString(p.Sloth.LastSeenDate));
+            root.Set("sloth", sloth);
 
             JsonNode ads = JsonNode.NewObject();
             ads.Set("last_iap", Timestamp(p.Ads.LastIap));
@@ -205,6 +227,8 @@ namespace AF.Save
                 g.SinceLastSkip = ReadInt(progress, "since_last_skip", g.SinceLastSkip);
                 ReadIntList(progress, "skipped_levels", g.SkippedLevels);
                 g.ContentVersion = ReadString(progress, "content_version", g.ContentVersion);
+                g.MapSeenLevel = TolerantInt(progress, "map_seen_level", g.MapSeenLevel);
+                g.MapSeenLevel = g.ClampedMapSeenLevel;
             }
 
             JsonNode? levelState = Section(root, "level_state");
@@ -216,6 +240,18 @@ namespace AF.Save
                 p.Entitlements.NoAds = ReadBool(entitlements, "no_ads", p.Entitlements.NoAds);
                 p.Entitlements.StarterBought = ReadBool(entitlements, "starter_bought", p.Entitlements.StarterBought);
                 ReadStringList(entitlements, "skins", p.Entitlements.Skins);
+            }
+
+            JsonNode? settings = TolerantSection(root, "settings");
+            if (settings != null)
+            {
+                ReadSettings(settings, p.Settings);
+            }
+
+            JsonNode? sloth = TolerantSection(root, "sloth");
+            if (sloth != null)
+            {
+                ReadSloth(sloth, p.Sloth);
             }
 
             JsonNode? ads = Section(root, "ads");
@@ -271,6 +307,52 @@ namespace AF.Save
             s.History = ReadString(node, "history", s.History) ?? throw new FormatException("level_state.history no puede ser null.");
             s.Stuck = ReadBool(node, "stuck", s.Stuck);
             return s;
+        }
+
+        // settings y sloth: lo ausente o inválido toma el default, campo a campo.
+        private static void ReadSettings(JsonNode node, SettingsData s)
+        {
+            string? patterns = TolerantString(node, "patterns");
+            if (patterns != null && SettingsData.TryParsePatterns(patterns, out PatternsSetting value))
+            {
+                s.Patterns = value;
+            }
+
+            string? language = SettingsData.NormalizeLanguage(TolerantString(node, "language"));
+            if (language != null)
+            {
+                s.Language = language;
+            }
+
+            s.SlothMessages = TolerantBool(node, "sloth_messages", s.SlothMessages);
+            s.IdleHint = TolerantBool(node, "idle_hint", s.IdleHint);
+        }
+
+        private static void ReadSloth(JsonNode node, SlothData s)
+        {
+            // Lista de otra longitud (otra versión del banco de momentos): se toman los que hay, en orden; un elemento que
+            // no es un entero ≥ NoLine vale NoLine.
+            JsonNode? lastLine = node.Get("last_line");
+            if (lastLine != null && lastLine.Kind == JsonKind.Array)
+            {
+                IReadOnlyList<JsonNode> items = lastLine.Items;
+                for (int i = 0; i < SlothData.MomentCount && i < items.Count; i++)
+                {
+                    s.LastLine[i] = TryInt(items[i], out int line) && line >= SlothData.NoLine ? line : SlothData.NoLine;
+                }
+            }
+
+            string? greeting = TolerantString(node, "last_greeting_date");
+            if (SlothData.IsDateKey(greeting))
+            {
+                s.LastGreetingDate = greeting;
+            }
+
+            string? seen = TolerantString(node, "last_seen_date");
+            if (SlothData.IsDateKey(seen))
+            {
+                s.LastSeenDate = seen;
+            }
         }
 
         // ---------------------------------------------------------------- horas
@@ -458,6 +540,43 @@ namespace AF.Save
             {
                 target.Add(Wrap(key, items[i].AsString));
             }
+        }
+
+        /// <summary>Objeto <paramref name="key"/>, o null si falta o no es un objeto (sin error).</summary>
+        private static JsonNode? TolerantSection(JsonNode parent, string key)
+        {
+            JsonNode? node = parent.Get(key);
+            return node != null && node.Kind == JsonKind.Object ? node : null;
+        }
+
+        private static int TolerantInt(JsonNode parent, string key, int fallback)
+        {
+            JsonNode? node = parent.Get(key);
+            return node != null && TryInt(node, out int value) ? value : fallback;
+        }
+
+        private static bool TolerantBool(JsonNode parent, string key, bool fallback)
+        {
+            JsonNode? node = parent.Get(key);
+            return node != null && node.Kind == JsonKind.Bool ? node.AsBool() : fallback;
+        }
+
+        private static string? TolerantString(JsonNode parent, string key)
+        {
+            JsonNode? node = parent.Get(key);
+            return node != null && node.Kind == JsonKind.String ? node.AsString() : null;
+        }
+
+        private static bool TryInt(JsonNode node, out int value)
+        {
+            if (node.Kind == JsonKind.Number
+                && int.TryParse(node.NumberText, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out value))
+            {
+                return true;
+            }
+
+            value = 0;
+            return false;
         }
 
         private static JsonNode StringList(List<string> values)
