@@ -10,7 +10,7 @@ Fuentes: `docs/dev/decisiones.md` (D-018, idiomas; D-017, Frutas del río; D-013
 
 Valen para todo texto que el jugador ve u oye: UI, tutorial, tienda, Ajustes, modales, avisos, notificaciones, etiquetas del lector de pantalla y datos de fruta, fauna y del Mapa.
 
-**Alcance:** estas reglas valen para todo texto nuevo y para el código que se reescribe. La deuda que ya existe (los textos de `StoreCatalog` y `StuckModal` y los marcadores posicionales `{0}` de `UiText`) la migran sus tareas de la tanda 4 (L1, L2b y L3); mientras tanto no bloquea la revisión de otras tareas ni justifica migrar textos fuera de la tarea propia.
+**Alcance:** estas reglas valen para todo texto nuevo y para el código que se reescribe. La deuda que ya existe (los textos de `StoreCatalog` y `StuckModal` y los marcadores posicionales `{0}` de `UiText`) la migran sus tareas de la tanda 4 (L1, L2b, S12 y L3); mientras tanto no bloquea la revisión de otras tareas ni justifica migrar textos fuera de la tarea propia.
 
 - **Ningún texto visible fuera de las tablas:** hoy `UiText`; desde que existan, `Assets/_Project/Data/Loc/strings.csv` (UI) y `facts.csv` (textos largos). Nada de texto en catálogos, `switch`, escenas, prefabs, imágenes ni sombreadores. `AF.GameFlow` y `AF.Levels` devuelven claves, nunca texto.
 - **Una clave por frase completa,** estable, con la forma que fijen 08 §4.7 y el glosario §10:
