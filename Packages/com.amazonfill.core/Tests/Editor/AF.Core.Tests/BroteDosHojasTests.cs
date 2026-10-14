@@ -66,8 +66,10 @@ namespace AF.Core.Tests
             Assert.That(one.State.CanonicalHash(), Is.EqualTo(plain.State.CanonicalHash()));
             Assert.That(two.State.CanonicalHash(), Is.Not.EqualTo(plain.State.CanonicalHash()));
 
-            Assert.That(BoardBuilder.Build(caps, cuias, Attrs(4, 0, new MechanicSpec(MechanicType.Brote, n: 3))).Error, Does.Contain("n"));
-            Assert.That(BoardBuilder.Build(caps, cuias, Attrs(4, 0, new MechanicSpec(MechanicType.Brote, key: 1, n: 2))).Error, Does.Contain("n"));
+            // El motivo es el de la firma (n ∈ {1, 2} y ningún otro campo), no cualquier error: casi todos llevan una «n».
+            const string signature = "lleva como mucho n, 1 o 2 (Brote de dos hojas";
+            Assert.That(BoardBuilder.Build(caps, cuias, Attrs(4, 0, new MechanicSpec(MechanicType.Brote, n: 3))).Error, Does.Contain(signature));
+            Assert.That(BoardBuilder.Build(caps, cuias, Attrs(4, 0, new MechanicSpec(MechanicType.Brote, key: 1, n: 2))).Error, Does.Contain(signature));
         }
 
         [Test]

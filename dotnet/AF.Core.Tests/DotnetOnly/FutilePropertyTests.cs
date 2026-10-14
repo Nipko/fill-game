@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using AF.Core.Board;
 using AF.Core.Determinism;
+using AF.Core.Mechanics;
 using AF.Core.Rules;
+using AF.Core.Session;
 using AF.Solver.Tests;
 using NUnit.Framework;
 
@@ -26,7 +28,9 @@ namespace AF.Core.Tests.DotnetOnly
     /// exención de origen, X (Remolino monocolor) → vacía es útil y vacía → X entra por el fondo de la pareja, así que con la
     /// pareja vacía se vuelve al mismo estado canónico (X e Y son simétricos); se cuenta aparte
     /// (<see cref="Report.RemolinoCycles"/>) y lo fija
-    /// <see cref="P3_Remolino_QB_AUsefulRoundTripCanReturnToTheSameCanonicalState"/>.</description></item>
+    /// <see cref="P3_Remolino_QB_AUsefulRoundTripCanReturnToTheSameCanonicalState"/>. <b>Pregunta abierta de la Hoja atada</b>
+    /// (revisión de K3a): dos Hojas atadas de la misma fruta incumplen P3 sin excepción decidida
+    /// (<see cref="P3_HojaAtada_TwoOfTheSameFruit_OpenR16Counterexample"/>); con un ejemplar por fruta, P3 se cumple.</description></item>
     /// </list>
     /// Cada mecánica añade su inyector (<see cref="IMechanicInjector"/>) antes de su debut (02 R16); la Tinaja (M13), que añade
     /// dos cuias y la máscara de ocultos, su propio generador (<see cref="TinajaBoards"/>). Solo dotnet: lotes grandes.
@@ -95,7 +99,8 @@ namespace AF.Core.Tests.DotnetOnly
         public void P1_P2_P3_HoldWithHojaAtada(PourMode mode, CapacityFamily family)
         {
             // K3a: 02 R16 antes del debut de la Hoja atada (283; propuesta de D-007 b.3), con la exención de futil como destino
-            // (02 §1.4, anexo B) y sin exención como origen.
+            // (02 §1.4, anexo B) y sin exención como origen. Un solo ejemplar por tablero (el del estreno, 02 §9.2 regla 2); dos de
+            // frutas distintas, más abajo; dos de la misma fruta incumplen P3 (pregunta abierta, más abajo).
             AssertWith(mode, family, new HojaAtadaInjector(), 0xF07E_2831UL);
         }
 
@@ -288,8 +293,9 @@ namespace AF.Core.Tests.DotnetOnly
             // K3a: por qué la Hoja atada es la casa de su fruta ([P] de HojaAtadaMechanic; 02 R16). Con la exención de destino de
             // futil (02 §1.4, anexo B), una Cuia chica de 3 atada al 1 (U_1 = 4) rompe P3: [1, 1, 1] en su casa de 4 → la hoja
             // atada es útil (cambia al recibir) y volver es útil (va a la casa correcta), y el tablero vuelve al mismo estado
-            // canónico. Con la regla (capacidad = U_c de su llave), P1-P3 se cumplen (P1_P2_P3_HoldWithHojaAtada) y
-            // LevelValidation rechaza este tablero.
+            // canónico. Con la regla (capacidad = U_c de su llave), P1-P3 se cumplen con un ejemplar por fruta
+            // (P1_P2_P3_HoldWithHojaAtada y P1_P2_P3_HoldWithTwoHojasAtadasOfDifferentFruits) y LevelValidation rechaza este
+            // tablero.
             Cuia atada = Cuia.Empty(3).WithMechanic(AF.Core.Mechanics.MechanicType.HojaAtada, key: 1);
             var state = new BoardState(new[] { Cuia.Create(4, new[] { 1, 1, 1 }), atada, Cuia.Create(4, new[] { 2, 2, 2, 1 }), Cuia.Create(4, new[] { 2 }) });
 
@@ -311,6 +317,90 @@ namespace AF.Core.Tests.DotnetOnly
 
             Assert.That(back.CanonicalHash(), Is.EqualTo(state.CanonicalHash()));
             Assert.That(LevelValidation.Validate(state), Does.Contain("casa de su fruta"));
+        }
+
+        [TestCase(PourMode.Run, 2)]
+        [TestCase(PourMode.Run, 1)]
+        [TestCase(PourMode.Single, 1)]
+        public void P3_HojaAtada_TwoOfTheSameFruit_OpenR16Counterexample(PourMode mode, int doses)
+        {
+            // Contraejemplo de P3 (02 R16; anexo B) de la revisión de K3a, con una pregunta abierta para el dueño: dos Hojas
+            // atadas de la misma fruta, las dos de capacidad U_c (válidas con la regla [P] de la casa). Con la fruta en una y la
+            // otra vacía, atada → atada es útil (cambia al recibir) y volver también, y el tablero vuelve al mismo estado. Basta
+            // un vertido para volver al mismo estado canónico, porque el multiconjunto de cuias no cambia: es un vertido útil que
+            // equivale a no mover nada, así que atascado(S) nunca se cumple mientras exista el par. Es el problema del Remolino
+            // con Q-B, pero sin una excepción decidida. Nada lo rechaza hoy: ni HojaAtadaMechanic.ValidateInitial ni
+            // LevelValidation limitan cuántas Hojas atadas lleva una fruta. Este test fija el comportamiento actual; cuando se
+            // decida la pregunta tendrá que cambiar.
+            MechanicType hojaAtada = MechanicType.HojaAtada;
+            int[] fruit = doses == 2 ? new[] { 1, 1 } : new[] { 1 };
+            int[] rest = doses == 2 ? new[] { 2, 2 } : new[] { 2, 2, 1 };
+            var state = new BoardState(new[]
+            {
+                Cuia.Create(4, fruit).WithMechanic(hojaAtada, key: 1), Cuia.Empty(4).WithMechanic(hojaAtada, key: 1),
+                Cuia.Create(4, new[] { 2, 2, 1, 1 }), Cuia.Create(4, rest),
+            });
+            Assert.That(LevelValidation.Validate(state), Is.Null);
+
+            Assert.That(PourRules.IsLegal(state, 0, 1), Is.True);
+            Assert.That(PourRules.IsFutile(state, 0, 1), Is.False);
+            BoardState there = PourRules.Apply(state, 0, 1, mode);
+            Assert.That(there[0].IsEmpty, Is.True);
+            Assert.That(there.Equals(state), Is.False);
+            Assert.That(there.CanonicalHash(), Is.EqualTo(state.CanonicalHash()), "un solo vertido útil deja el mismo estado canónico");
+
+            Assert.That(PourRules.IsLegal(there, 1, 0), Is.True);
+            Assert.That(PourRules.IsFutile(there, 1, 0), Is.False);
+            BoardState back = PourRules.Apply(there, 1, 0, mode);
+            Assert.That(back.Equals(state), Is.True);
+        }
+
+        [TestCase(PourMode.Run)]
+        [TestCase(PourMode.Single)]
+        public void P3_HojaAtada_TwoOfTheSameFruit_RulesNeverDeclareTheLostBoard_DeadEndProbeDoes(PourMode mode)
+        {
+            // El mismo par en un tablero perdido: las dos cuias llenas tienen el 2 en la cima y las Hojas atadas solo reciben el 1,
+            // así que el único vertido legal es el ir y venir entre las dos Hojas atadas. R13 de reglas (PourRules.IsStuck) no
+            // declara Aguas estancadas, porque el vertido es útil; la partida sí, por el cierre de D-014 (DeadEndProbe), como con
+            // el Remolino de Q-B y la Tinaja tras la suelta. P1 (R14) se cumple: un vertido útil de más nunca declara bloqueo.
+            MechanicType hojaAtada = MechanicType.HojaAtada;
+            var lost = new BoardState(new[]
+            {
+                Cuia.Create(4, new[] { 1 }).WithMechanic(hojaAtada, key: 1), Cuia.Empty(4).WithMechanic(hojaAtada, key: 1),
+                Cuia.Create(4, new[] { 1, 1, 2, 2 }), Cuia.Create(3, new[] { 1, 2, 2 }),
+            });
+
+            Assert.That(PourRules.IsStuck(lost, true), Is.False);
+            Assert.That(ExhaustiveSearch.Explore(lost, mode, MaxStatesPerBoard).Distance[0], Is.EqualTo(int.MaxValue)); // perdido
+            Assert.That(new DeadEndProbe().IsDeadEnd(lost, mode), Is.True);
+        }
+
+        [TestCase(PourMode.Run, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Run, CapacityFamily.Mixed)]
+        [TestCase(PourMode.Single, CapacityFamily.Uniform)]
+        [TestCase(PourMode.Single, CapacityFamily.Mixed)]
+        public void P1_P2_P3_HoldWithTwoHojasAtadasOfDifferentFruits(PourMode mode, CapacityFamily family)
+        {
+            // Lo que sí está probado mientras el dueño decide la pregunta del contraejemplo de arriba: con un ejemplar por fruta
+            // (dos Hojas atadas de frutas distintas, que nunca se reciben la una a la otra) P1-P3 se cumplen (02 R16).
+            AssertWith(mode, family, new TwoHojasAtadasInjector(sameFruit: false), 0xF07E_2832UL);
+        }
+
+        [TestCase(PourMode.Run)]
+        [TestCase(PourMode.Single)]
+        public void P3_TwoHojasAtadasOfTheSameFruit_FailsOnGeneratedBoards(PourMode mode)
+        {
+            // El contraejemplo no es un caso aislado: en tableros generados con dos Hojas atadas de la misma fruta, P3 falla
+            // (y solo P3: P1 y P2 se cumplen). Pregunta abierta para el dueño (revisión de K3a); cuando la decida, este test
+            // tendrá que cambiar.
+            Report report = Run(mode, CapacityFamily.Uniform, new TwoHojasAtadasInjector(sameFruit: true), 0xF07E_2833UL);
+
+            TestContext.WriteLine("dos hojas atadas de la misma fruta: " + Describe(report) + "; " + report.Violations.Count.ToString(CultureInfo.InvariantCulture) + " violaciones (máx. 10)");
+            Assert.That(report.Violations, Is.Not.Empty);
+            for (int v = 0; v < report.Violations.Count; v++)
+            {
+                Assert.That(report.Violations[v], Does.StartWith("P3 "));
+            }
         }
 
         private static void AssertWith(PourMode mode, CapacityFamily family, IMechanicInjector injector, ulong seed)
@@ -542,6 +632,50 @@ namespace AF.Core.Tests.DotnetOnly
             if (report.Violations.Count < 10)
             {
                 report.Violations.Add(property + " en " + mode + ": " + state + ": " + detail);
+            }
+        }
+
+        /// <summary>
+        /// Dos Hojas atadas (<see cref="HojaAtadaInjector"/> dos veces, cada una con capacidad = <c>U_c</c> de su llave), de la
+        /// misma fruta o de frutas distintas; si salen al revés de lo pedido, se genera otro tablero.
+        /// </summary>
+        private sealed class TwoHojasAtadasInjector : IMechanicInjector
+        {
+            private readonly HojaAtadaInjector _one = new HojaAtadaInjector();
+            private readonly bool _sameFruit;
+
+            public TwoHojasAtadasInjector(bool sameFruit)
+            {
+                _sameFruit = sameFruit;
+            }
+
+            public string Name => _sameFruit ? "dos hojas atadas de la misma fruta" : "dos hojas atadas de frutas distintas";
+
+            public bool Inject(Prng rng, int[] caps, List<int>[] doses, MechanicSpec[] attrs)
+            {
+                if (!_one.Inject(rng, caps, doses, attrs) || !_one.Inject(rng, caps, doses, attrs))
+                {
+                    return false;
+                }
+
+                int first = -1;
+                for (int i = 0; i < attrs.Length; i++)
+                {
+                    if (attrs[i].Type != MechanicType.HojaAtada)
+                    {
+                        continue;
+                    }
+
+                    if (first < 0)
+                    {
+                        first = i;
+                        continue;
+                    }
+
+                    return (attrs[first].Key == attrs[i].Key) == _sameFruit;
+                }
+
+                return false;
             }
         }
     }

@@ -170,9 +170,10 @@ namespace AF.Core.Tests
             Assert.That(ok.State[3].MechanicFlags, Is.EqualTo(0), "nunca está cerrada");
             Assert.That(LevelValidation.Validate(ok.State), Is.Null);
 
-            Assert.That(BoardBuilder.Build(caps, cuias, Attrs(4, 3, new MechanicSpec(MechanicType.HojaAtada))).Error, Does.Contain("key"));
-            Assert.That(BoardBuilder.Build(caps, cuias, Attrs(4, 3, new MechanicSpec(MechanicType.HojaAtada, key: 15))).Error, Does.Contain("key"));
-            Assert.That(BoardBuilder.Build(caps, cuias, Attrs(4, 3, new MechanicSpec(MechanicType.HojaAtada, key: 2, n: 1))).Error, Does.Contain("key"));
+            const string signature = "lleva solo key, un tinte de 1 a 14 (propuesta de D-007 b.3";
+            Assert.That(BoardBuilder.Build(caps, cuias, Attrs(4, 3, new MechanicSpec(MechanicType.HojaAtada))).Error, Does.Contain(signature));
+            Assert.That(BoardBuilder.Build(caps, cuias, Attrs(4, 3, new MechanicSpec(MechanicType.HojaAtada, key: 15))).Error, Does.Contain(signature));
+            Assert.That(BoardBuilder.Build(caps, cuias, Attrs(4, 3, new MechanicSpec(MechanicType.HojaAtada, key: 2, n: 1))).Error, Does.Contain(signature));
         }
 
         [Test]

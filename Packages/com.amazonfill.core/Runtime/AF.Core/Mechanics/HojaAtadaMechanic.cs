@@ -29,7 +29,17 @@ namespace AF.Core.Mechanics
     /// 4, por ejemplo) la exención de destino de <c>futil</c> rompe P3: la fruta va de su casa a la hoja atada (útil: la hoja
     /// atada cambia al recibir) y vuelve a su casa (útil: la casa correcta), y el tablero vuelve al mismo estado canónico
     /// (<c>FutilePropertyTests.P3_HojaAtada_NotTheHomeOfItsFruit_ARoundTripReturnsToTheSameState</c>). Con la regla, P1-P3 se
-    /// cumplen en <c>run</c> y <c>single</c> con capacidades uniformes y mixtas.</description></item>
+    /// cumplen en <c>run</c> y <c>single</c> con capacidades uniformes y mixtas <b>con un ejemplar por fruta</b>: una Hoja
+    /// atada, o dos de frutas distintas, por tablero (<c>P1_P2_P3_HoldWithHojaAtada</c> y
+    /// <c>P1_P2_P3_HoldWithTwoHojasAtadasOfDifferentFruits</c>).</description></item>
+    /// <item><description><b>Pregunta abierta (revisión de K3a; 02 R16, P3):</b> dos Hojas atadas de la misma fruta, las dos
+    /// válidas con la regla de la casa, incumplen P3. Con la fruta en una y la otra vacía, el vertido de una a otra es útil en
+    /// los dos sentidos y, en <c>run</c>, uno solo ya deja el mismo estado canónico, así que <c>atascado(S)</c> no se cumple
+    /// mientras exista el par. P1 sí se cumple, y en la partida el cierre de D-014 (<c>DeadEndProbe</c>) declara el tablero
+    /// perdido. Hoy nada limita cuántas Hojas atadas lleva una fruta (<c>FutilePropertyTests.P3_HojaAtada_TwoOfTheSameFruit_*</c>
+    /// y <c>P3_TwoHojasAtadasOfTheSameFruit_FailsOnGeneratedBoards</c>). Opciones para el dueño: (a) una regla [P] en
+    /// <see cref="ValidateInitial"/>, «como mucho una Hoja atada por fruta» (o por nivel), o (b) una excepción de P3 como la
+    /// del Remolino con Q-B.</description></item>
     /// </list>
     /// </remarks>
     internal sealed class HojaAtadaMechanic : MechanicBase

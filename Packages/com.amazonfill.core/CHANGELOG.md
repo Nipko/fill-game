@@ -25,7 +25,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
     1-14) sin más campos ni bandera; `Cuia.MechanicKey` devuelve su llave. Validación: llave en el tablero, su fruta en el fondo
     si empieza con dosis (b.3) y, **[P]**, capacidad = `U_c` de su llave: sin esa regla, con capacidades mixtas, la exención de
     destino de `futil` rompe P3 (un vaivén útil entre la casa de su fruta y la hoja atada vuelve al mismo estado;
-    `FutilePropertyTests.P3_HojaAtada_NotTheHomeOfItsFruit_ARoundTripReturnsToTheSameState`). Pregunta para el dueño.
+    `FutilePropertyTests.P3_HojaAtada_NotTheHomeOfItsFruit_ARoundTripReturnsToTheSameState`). Pregunta para el dueño. Con la
+    regla, P1-P3 se cumplen solo con un ejemplar por fruta (una Hoja atada, o dos de frutas distintas, por tablero).
+  - **Pregunta abierta (revisión de K3a; 02 R16, P3):** dos Hojas atadas de la misma fruta, válidas las dos, incumplen P3. El
+    vertido de una a otra es útil en los dos sentidos y, en `run`, uno solo deja el mismo estado canónico, así que `atascado(S)`
+    no se cumple mientras exista el par. P1 se cumple, y `DeadEndProbe` (D-014) declara perdido el tablero en el que solo queda
+    ese vaivén. Nada limita hoy cuántas Hojas atadas lleva una fruta. Opciones: (a) regla [P] «como mucho una Hoja atada por
+    fruta» (o por nivel) en `ValidateInitial`; (b) excepción de P3 como la del Remolino. Lo fijan
+    `FutilePropertyTests.P3_HojaAtada_TwoOfTheSameFruit_*` y `P3_TwoHojasAtadasOfTheSameFruit_FailsOnGeneratedBoards`.
   - **Brote de dos hojas:** el Brote con `n` = 2. `Cuia.MechanicN` guarda las hojas que le faltan (2, luego 1; 0 en el Brote
     normal); en la etapa (b) resta las dosis recibidas y germina al llegar a 0 (en `run` un tramo de 2 lo abre de una vez). El
     gancho interno `IMechanic.OnReceived` recibe ahora la cantidad. Evento nuevo `PourEvents.BroteLeafOpenedMask` (una hoja
@@ -37,7 +44,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   - **Tests:** compartidos `HojaAtadaTests` y `BroteDosHojasTests` (una regla por test, con su §), `FilterSolverTests` (A* frente
     a la búsqueda exhaustiva y heurística en 32 tableros por variante, uniformes y mixtos, en `run` y `single`; inyectores
     `HojaAtadaInjector` y `BroteDosHojasInjector` en `MechanicBoards`) y `CuiaAttrTests` (claves y `MechanicKey`). Solo dotnet:
-    `FutilePropertyTests` (P1-P3 en `run` y `single`, uniformes y mixtas, y el contraejemplo de la regla [P]),
+    `FutilePropertyTests` (P1-P3 en `run` y `single`, uniformes y mixtas, con una Hoja atada o dos de frutas distintas; el
+    contraejemplo de la regla [P] y los de dos Hojas atadas de la misma fruta),
     `HotLoopAllocationTests` (`HojaAtadaBoard_` y `BroteDosHojasBoard_HotLoop_DoesNotAllocate`: 0 bytes en reglas, vertidos,
     también el que abre una hoja, y bot; < 1 KB por `Solve`) y las filas HoA y Br2 de `ReferenceBoards` y
     `MechanicsPerformanceTests` (percentil 75 de 30 semillas; 1.965 y 2.068 expandidos, par 17 y 18).
