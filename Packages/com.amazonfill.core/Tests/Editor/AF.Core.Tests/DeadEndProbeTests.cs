@@ -161,7 +161,7 @@ namespace AF.Core.Tests
             var session = new LevelSession(Level66Initial(), true, PourMode.Run);
             for (int i = 0; i < 6; i++)
             {
-                session.TryPour(Level66Loop[i][0], Level66Loop[i][1], out _);
+                Assert.That(session.TryPour(Level66Loop[i][0], Level66Loop[i][1], out _), Is.True, "vertido " + (i + 1));
             }
 
             var solver = new AStarSolver();
@@ -183,7 +183,7 @@ namespace AF.Core.Tests
             var session = new LevelSession(Level66Initial(), true, PourMode.Run);
             for (int i = 0; i < 9; i++)
             {
-                session.TryPour(Level66Loop[i][0], Level66Loop[i][1], out _);
+                Assert.That(session.TryPour(Level66Loop[i][0], Level66Loop[i][1], out _), Is.True, "vertido " + (i + 1));
             }
 
             Assert.That(session.Status, Is.EqualTo(LevelStatus.Stuck));
