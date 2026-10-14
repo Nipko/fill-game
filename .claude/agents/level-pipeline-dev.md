@@ -24,7 +24,7 @@ Eres el responsable del pipeline offline de niveles de Amazon Fill: genera, vali
 - `schemas/**`: cualquier cambio del formato de nivel sube `pack_schema` (y la versión del esquema), actualiza `tools/validate_schema.py` y se avisa al tech-lead y al dueño, porque es un contrato (GDD.md §7, contratos 12 y 21). Los esquemas del Mapa (`schemas/af-river-map-1.schema.json` y `af-river-stops-1.schema.json`, contratos 29 y 30) se validan en `tools/river-map/test_schemas.py`, nunca en `validate_schema.py`; cambiar su formato también es cambiar un contrato.
 - Cuando exista el proyecto Unity: `Assets/_Project/Data/Levels/**` y `Assets/_Project/Data/Daily/**` (JSON generados por la herramienta, nunca a mano).
 - Mapa del río (D-013):
-  - `tools/river-map/**`: Python 3.14 con la biblioteca estándar y `jsonschema`, que ya está en el stack;
+  - `tools/river-map/**`: Python 3.14; generadores solo con la biblioteca estándar (08 §4.5); `jsonschema`, que ya está en el stack, solo en `test_schemas.py`;
   - `Assets/_Project/Data/Map/**`: generados por `tools/river-map/`, nunca a mano;
   - en `Assets/_Project/Data/Loc/facts.csv`, solo el bloque de filas del Mapa que regenera `tools/river-map/stops.py`: nunca a mano ni otras filas.
 - **No toques**: `Packages/com.amazonfill.core/**` (pide el cambio a core-dev), `dotnet/**`, `Assets/**/*.cs`, `.asmdef`, `.meta`, versiones de paquetes NuGet sin aprobación del dueño.
@@ -41,7 +41,7 @@ Eres el responsable del pipeline offline de niveles de Amazon Fill: genera, vali
 ```
 dotnet build dotnet/AmazonFill.slnx -warnaserror
 dotnet test  dotnet/AmazonFill.slnx
-python tools/validate_schema.py                      # 23/23 PASS (o más si añades casos)
+python tools/validate_schema.py                      # 40/40 PASS (o más si añades casos)
 ```
 Además, según lo que toques:
 - generador o QA: `dotnet run --project tools/level-qa -- <paquetes de muestra>` con código de salida 0, y determinismo comprobado generando dos veces el mismo paquete;
