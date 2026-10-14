@@ -21,6 +21,7 @@ import json
 import math
 import re
 import sys
+import unicodedata
 from pathlib import Path
 from xml.sax.saxutils import escape
 
@@ -230,6 +231,112 @@ def ids_citados(texto):
                 yield tok
 
 
+# «Otro dato» de las tarjetas de 1-200 (M2.7; propuesta §5.1 bis y D-013, punto 11): campos de cada entrada de
+# «otros_datos», forma de la clave (glosario §10: map.stop.<lugar>.dato_NN o map.country.<iso2>.dato_NN), fecha en que
+# se reabrieron sus fuentes (R5) y los candidatos de §(e) que tienen que estar.
+CAMPOS_OTRO_DATO = ("clave", "texto", "etiqueta", "fuente", "releida", "origen", "nota")
+CLAVE_DATO = re.compile(r"^map\.(stop|country)\.[a-z0-9_]+\.dato_\d{2}$")
+FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# Q8-A (D-018): ninguna cifra con separador de miles ni decimales dentro del texto; van como {n} con su valor en «args».
+CIFRA_CON_SEPARADOR = re.compile(r"\d[.,]\d|\d[ \u00a0\u202f]\d{3}(?!\d)")
+MARCADOR = re.compile(r"\{([a-z_]+)(?::([^{}]*))?\}")
+CANDIDATOS_5_1_BIS = {  # id de la parada: claves que tienen que estar en sus «otros_datos» (propuesta §5.1 bis)
+    "belem": ("map.stop.belem.dato_01", "map.stop.belem.dato_02"),          # Ver-o-Peso (1977) y el chibé
+    "santarem": ("map.stop.santarem.dato_01",),                              # las cuias del Bajo Amazonas
+    "encontro": ("map.stop.encontro.dato_01",),                              # IPHAN, 2010
+    "manaos": ("map.stop.manaos.dato_03", "map.stop.manaos.dato_04"),       # la régua (1902) y los flutuantes
+    "tefe": ("map.stop.tefe.dato_02", "map.stop.tefe.dato_03"),             # el pirarucú de Mamirauá y el manatí
+    "tarapoto": ("map.stop.tarapoto.dato_02",),                              # Ramsar
+    "itaya": ("map.stop.itaya.dato_01",),                                    # la creciente, sin nombrar el barrio
+    "pacaya_samiria": ("map.stop.pacaya_samiria.dato_03",),                  # las tortugas, con las comunidades
+}
+
+
+def sin_tildes(texto):
+    return "".join(c for c in unicodedata.normalize("NFD", texto) if not unicodedata.combining(c)).casefold()
+
+
+def texto_mostrado(texto, args):
+    """El texto con sus marcadores resueltos en el caso más largo: cifras con separador de miles y, en los plurales
+    «{n:plural:a|b}», la forma más larga. Sirve para medir el límite de caracteres."""
+    def sustituye(m):
+        nombre, formato = m.group(1), m.group(2) or ""
+        if formato.startswith("plural:"):
+            return max(formato[len("plural:"):].split("|"), key=len)
+        valor = args.get(nombre)
+        if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+            return m.group(0)
+        return f"{valor:,}".replace(",", ".")
+    return MARCADOR.sub(sustituye, texto)
+
+
+def revisar_texto(donde, texto, args, errores, medir=True):
+    """Reglas comunes a todo texto visible de una parada: ≤ 90 caracteres, Q8-A y el veto de «Belén» (07 §8.1).
+    El dato del nivel ya se mide arriba (medir=False), para no dar dos veces el mismo error."""
+    nombres = {m.group(1) for m in MARCADOR.finditer(texto) if not (m.group(2) or "").startswith("plural:")}
+    if nombres != set(args):
+        errores.append(f"{donde}: marcadores {sorted(nombres)} y args {sorted(args)} no coinciden")
+    if CIFRA_CON_SEPARADOR.search(texto):
+        errores.append(f"{donde}: cifra con separador o decimales en el texto (va como {{n}} con su valor en args, Q8-A)")
+    n = len(texto_mostrado(texto, args))
+    if medir and n > 90:
+        errores.append(f"{donde}: {n} caracteres (> 90)")
+    if "belen" in sin_tildes(texto):
+        errores.append(f"{donde}: nombra «Belén» (07 §8.1; vetos del mundo 5)")
+
+
+def revisar_otros_datos(doc, ids, etiqueta_de, errores):
+    fuente_de = {f["id"]: f for f in doc["fuentes"]}
+    claves = {}
+    for s in doc["paradas_1_200"]:
+        d = s.get("dato_del_nivel")
+        if d:
+            claves.setdefault(d["clave"], []).append(s["id"])
+            revisar_texto(f"parada {s['id']}: dato del nivel", d["texto"], d.get("args", {}), errores, medir=False)
+        otros = s.get("otros_datos")
+        if not isinstance(otros, list):
+            errores.append(f"parada {s['id']}: sin «otros_datos» (una lista, vacía si la tarjeta no lleva «Otro dato»)")
+            continue
+        for i, o in enumerate(otros):
+            donde = f"parada {s['id']}: otros_datos[{i}]"
+            faltan = [c for c in CAMPOS_OTRO_DATO if not o.get(c)]
+            if faltan:
+                errores.append(f"{donde}: faltan {', '.join(faltan)}")
+                continue
+            clave = o["clave"]
+            claves.setdefault(clave, []).append(s["id"])
+            if not CLAVE_DATO.match(clave):
+                errores.append(f"{donde}: clave «{clave}» fuera de la forma map.stop.<lugar>.dato_NN")
+            if "belen" in sin_tildes(clave):
+                errores.append(f"{donde}: la clave nombra «Belén»")
+            args = o.get("args", {})
+            if not isinstance(args, dict):
+                errores.append(f"{donde}: «args» tiene que ser un objeto")
+                args = {}
+            revisar_texto(f"{donde} ({clave})", o["texto"], args, errores)
+            if o["etiqueta"] not in ("V", "E"):
+                errores.append(f"{donde}: etiqueta {o['etiqueta']}; solo [V] o [E] (ningún [NV] ni [P])")
+            if not FECHA.match(o["releida"]):
+                errores.append(f"{donde}: «releida» no es una fecha AAAA-MM-DD")
+            fs = re.split(r",\s*", o["fuente"])
+            for f in fs:
+                if f not in ids:
+                    errores.append(f"{donde}: fuente {f} sin entrada en 'fuentes'")
+                elif fuente_de[f].get("releida", "") < o["releida"]:
+                    errores.append(f"{donde}: la fuente {f} no se reabrió el {o['releida']} (falta «releida», R5)")
+            if o["etiqueta"] == "V" and not any(etiqueta_de.get(f) == "V" for f in fs):
+                errores.append(f"{donde}: dato [V] sin ninguna fuente [V]")
+    for clave, donde in claves.items():
+        if len(donde) > 1:
+            errores.append(f"clave {clave} repetida ({', '.join(donde)})")
+    por_id = {s["id"]: s for s in doc["paradas_1_200"]}
+    for sid, requeridas in CANDIDATOS_5_1_BIS.items():
+        tiene = {o.get("clave") for o in (por_id.get(sid, {}).get("otros_datos") or [])}
+        for c in requeridas:
+            if c not in tiene:
+                errores.append(f"parada {sid}: falta el candidato de §5.1 bis {c} en «otros_datos»")
+
+
 def primer_nivel_del_sitio(mundo, nombre):
     """Primer nivel de un sitio de 201-1.000: las paradas de cada mundo cubren 10 niveles cada una, en orden."""
     nivel = mundo["niveles"][0]
@@ -335,6 +442,8 @@ def check(doc, pr):
                     errores.append(f"parada {s['id']}: fuente {f} sin entrada en 'fuentes'")
             if d["etiqueta"] == "V" and not any(etiqueta_de.get(f) == "V" for f in fs):
                 errores.append(f"parada {s['id']}: dato [V] sin ninguna fuente [V]")
+    # «Otro dato» de cada tarjeta (M2.7): campos, claves únicas, texto, etiqueta, fuentes reabiertas y candidatos.
+    revisar_otros_datos(doc, ids, etiqueta_de, errores)
     # Toda etiqueta «[V id]» / «[E id]» de cualquier texto del JSON (datos, notas, preguntas, cuidado, miradores, puntos
     # de paso, ríos, cruces…) tiene que llevar a una entrada de «fuentes» con su URL.
     def textos(o, ruta):
