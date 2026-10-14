@@ -183,6 +183,18 @@ namespace AF.Solver.Tests
         }
 
         [Test]
+        public void SolverOptions_ForLevel_NullLevel_ThrowsWithItsParamName()
+        {
+            // La excepción nombra el parámetro que documenta cada API: level en ForLevel y en los dos ForPipeline(mode, level).
+            BoardState? none = null;
+
+            Assert.That(() => Morpho.ForLevel(none!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("level"));
+            Assert.That(() => SolverOptions.ForPipeline(PourMode.Run, none!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("level"));
+            Assert.That(() => SafeMoves.ForPipeline(PourMode.Run, none!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("level"));
+            Assert.That(() => SolverOptions.RequiresUnprunedSearch(none!), Throws.ArgumentNullException.With.Property("ParamName").EqualTo("state"));
+        }
+
+        [Test]
         public void Cucharon_ReleaseSameInAllRealities_Q14A()
         {
             // b.2 «Combinaciones» y Q-Ti1 A: la suelta depende solo del recuento visible («×n»), nunca del color de una oculta,

@@ -145,6 +145,11 @@ namespace AF.Solver.Search
         /// <exception cref="ArgumentNullException"><paramref name="level"/> es null.</exception>
         public SolverOptions ForLevel(BoardState level)
         {
+            if (level == null)
+            {
+                throw new ArgumentNullException(nameof(level));
+            }
+
             return RequiresUnprunedSearch(level) ? WithFutileRule(false) : this;
         }
     }

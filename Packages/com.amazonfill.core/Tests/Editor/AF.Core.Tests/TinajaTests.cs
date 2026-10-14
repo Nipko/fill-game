@@ -50,15 +50,21 @@ namespace AF.Core.Tests
         public void Tinaja_NeverReceives_M13r2()
         {
             // b.2 regla 2: «La tinaja nunca recibe (bloqueada_destino permanente). Tampoco desde su cuia» (R11, sin texto).
-            // La cuia 0 tiene en la cima la fruta de la boca y la tinaja tiene hueco: con la regla normal sería legal.
-            BoardState state = Board(C(4, 1, 3), T(0x1, 2, 3), Ch(2), C(4, 1, 1, 1), Cuia.Empty(4));
+            // Los tres orígenes tienen en la cima la fruta de la boca (3) y la tinaja tiene hueco: con la regla normal los tres
+            // vertidos serían legales, así que solo el Reject de la tinaja (CheckTarget) puede rechazarlos.
+            BoardState state = Board(C(4, 1, 3), T(0x1, 2, 3), Ch(3), C(4, 1, 3, 3), Cuia.Empty(4));
 
             Assert.That(PourRules.IsLegal(state, 0, 1), Is.False);
-            Assert.That(PourRules.IsLegal(state, 2, 1), Is.False); // tampoco desde su cuia
-            Assert.That(PourRules.IsLegal(state, 3, 1), Is.False);
+            Assert.That(PourRules.IsLegal(state, 2, 1), Is.False); // tampoco desde su cuia, aunque su cima sea la fruta de la boca
+            Assert.That(PourRules.IsLegal(state, 3, 1), Is.False); // ni una racha de esa fruta
+            Assert.That(PourRules.IsLegal(state, 3, 4), Is.True); // control: la cuia 3 sí es origen
             var session = new LevelSession(state, true, PourMode.Run);
+            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
             Assert.That(session.TryPour(0, 1, out _), Is.False);
+            Assert.That(session.TryPour(2, 1, out _), Is.False);
+            Assert.That(session.TryPour(3, 1, out _), Is.False);
             Assert.That(session.Current.Equals(state), Is.True);
+            Assert.That(session.AppliedPours, Is.EqualTo(0));
 
             // Vacía queda inerte: ni origen (está vacía) ni destino (regla 8).
             BoardState inert = Board(C(4, 1, 3), Cuia.Empty(LevelValidation.TinajaCapacity).WithMechanic(MechanicType.Tinaja), C(2, 2), Cuia.Empty(4));

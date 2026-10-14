@@ -62,7 +62,8 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   - **Búsquedas sin poda en niveles con tinaja (b.2 R14, C1-8), sin cambiar el comportamiento por defecto:**
     `SolverOptions.RequiresUnprunedSearch(BoardState)` (hay una tinaja, también vacía), `WithFutileRule(bool)`,
     `ForLevel(BoardState)`, `SolverOptions.ForPipeline(mode, level)` y `SafeMoves.ForPipeline(mode, level)`: sin tinaja
-    devuelven exactamente las opciones de siempre.
+    devuelven exactamente las opciones de siempre. Con `level` null, las tres lanzan `ArgumentNullException` con ese
+    `ParamName`.
   - **Tests** (uno por regla, con su §): compartidos `TinajaTests` (M13 reglas 2-8, Hoja y Barro expuesto tras el filtro de
     origen, `futil` del anexo B y Q-B, R10 f, Marea e I5, Luciérnaga, R14 con la cuia colgada, `BoardBuilder`),
     `TinajaValidationTests` (las dos comparaciones de 02 §8, Q14 A, T3 y el tope propio, combinaciones prohibidas y

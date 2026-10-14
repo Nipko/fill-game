@@ -172,14 +172,15 @@ resuelve igual. **Ti** (Tinaja, M13; T55, 2026-10-13, .NET 10 Release en el equi
 de la propuesta de la tinaja (K = 9, 1 vacío, 5 dosis con 4 ocultas), con las búsquedas sin poda de fútiles; en sus 30
 semillas, las 30 tienen ruta segura (2-24 realidades). Criterios de C3-3:
 
-1. **Asignaciones** (`HotLoopAllocationTests.ReferenceBoard_HotLoop_DoesNotAllocate`, los 36 tableros): 0 bytes en
-   `SolverMoves`, `IsStuck`, `BoardRules.ApplyInPlace` y el bot ×40 calentado; menos de 1 KB por `Solve` calentado y por
-   realidad en `SafeMoves`. Cumplido.
-2. **A\* (w = 1)**: los 36 tableros se resuelven con 186.346 expandidos como máximo (Ll+Ho, 0,93 s); el número de cada uno
-   queda fijado con un 25 % de margen (`MechanicsPerformanceTests`). En el reparto de 30 semillas por combinación, el
-   presupuesto de 300.000 se agota en Ll+Re 13/30, Pi+Ma 7/30, Re+Ma 5/30, Re, Pi y Ba+Re 4/30, Re+Li y Ll+Ho 3/30, Re+Ho
-   2/30 y Ma+Ho, Ll+Ba y Pi+Ba 1/30; en el resto, nunca. El Remolino es lo que más estados añade y la Lluvia y la Piraña los
-   multiplican por 2-3, como estimaba 03 §9. El pipeline tendrá que descartar o regenerar esos tableros (sin par exacto).
+1. **Asignaciones** (`HotLoopAllocationTests.ReferenceBoard_HotLoop_DoesNotAllocate`, los 37 tableros, Ti incluido): 0
+   bytes en `SolverMoves`, `IsStuck`, `BoardRules.ApplyInPlace` y el bot ×40 calentado; menos de 1 KB por `Solve`
+   calentado y por realidad en `SafeMoves`. Cumplido.
+2. **A\* (w = 1)**: los 37 tableros (Ti, sin poda) se resuelven con 186.346 expandidos como máximo (Ll+Ho, 0,93 s); el
+   número de cada uno queda fijado con un 25 % de margen (`MechanicsPerformanceTests`). En el reparto de 30 semillas por
+   combinación, el presupuesto de 300.000 se agota en Ll+Re 13/30, Pi+Ma 7/30, Re+Ma 5/30, Re, Pi y Ba+Re 4/30, Re+Li y
+   Ll+Ho 3/30, Re+Ho 2/30 y Ma+Ho, Ll+Ba y Pi+Ba 1/30; en el resto, nunca. El Remolino es lo que más estados añade y la
+   Lluvia y la Piraña los multiplican por 2-3, como estimaba 03 §9. El pipeline tendrá que descartar o regenerar esos
+   tableros (sin par exacto).
 3. **Morpho (w = 2, 40.000)**: determinista (mismo resultado con un solver nuevo y con uno reutilizado) y 1,0 ms como máximo
    (objetivo < 50 ms). En los tableros turbios, `SafeMoves` con las opciones de Morpho tarda 0,9-11,1 ms (02 T2: < 50 ms);
    con las del pipeline (w = 1 y 20.000 nodos por realidad), 47-2.977 ms por estado, así que la ruta segura de un nivel de 13
