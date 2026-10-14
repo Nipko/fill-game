@@ -1653,7 +1653,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Qué cambia en el GDD** (aplicado el 2026-10-13, T50):
 - `docs/GDD.md`: versión 1.7; §1 (el Mapa, TiTino y «río arriba»); §2 #20 (contrato 25, matizado: fondos de 201-700) y #24; §3.1 (índice); §4 (fila «Tema y marca»); §6, §6.2 (fondos de la 1.0) y §6.3 (la 34 apunta a D-014, las 39-44 decididas y la 45 nueva); §7.2 (#18, contrato 25) y §7.4 (contratos 29 y 30); §9 (paso 16).
 - 00 glosario: el resumen, §3.1-§3.3 y §3.4 (nueva: TiTino), §5.1-§5.2, §6.4, §7.1, §8 (mundos 9 y 13), §10 (claves del Mapa), §11 (identificadores del Mapa y de TiTino), «Parámetros» y la pregunta abierta 3 (el nombre de TiTino).
-- 01: el resumen (TiTino y «río arriba»), el concepto de UA «Rosa te lleva río arriba» y los fondos de 201-700 (§5, diferencial 6, y §11, término «AAB / PAD»).
+- 01: §1 (elevator pitch: TiTino y «río arriba»), §8.3 (el concepto de UA «Rosa te lleva río arriba») y los fondos de 201-700 (§5, diferencial 6, y §11, término «AAB / PAD»).
 - 02: §2 (estado de la victoria), §4 (Celebración: TiTino, sin Capi), §5 (pausa y Capi), §6 (llegada, victoria con vista, barra de la Canasta, banner con el viaje, TiTino y una línea por victoria) y §10 (tarjeta del hito p20).
 - 03 §13 (el Mapa, sin salir del nivel) y §17 (fondos de 201-700); 04 §2.6, §4 y §6.5 («río arriba»; el Mercado, desde el inicio).
 - 05 §4.1 y §5 (la Mochila en la victoria, el Pase fuera del Mapa, la oferta de skin y el marco de los packs de skin).
@@ -1760,7 +1760,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 - **Fecha:** 2026-10-13. Registrada el 2026-10-13.
 - **Estado:** decidida por el dueño. El escritorio le pasó las preguntas 39-44 («Cada una lleva mi recomendación; si te valen, basta con "acepto las recomendaciones"») y el dueño respondió: «Nos vamos por las recomendadas y necesitamos seguir avanzando».
-  - Documentación aplicada el 2026-10-13 (T50): `docs/GDD.md` §6.3 (las seis filas pasan a decididas), 02 §6, 05 §4.1 y §5, 06 §4.5, 07 §2.2, `docs/art/direccion-visual-v2.md` (§8, fila Shaders, con la excepción de la pregunta 44, y revisión 9) y este registro.
+  - Documentación aplicada el 2026-10-13 (T50): `docs/GDD.md` §6.3 (las seis filas pasan a decididas), 02 §6, 03 §12 (pregunta 40), 05 §4.1, §5 y Dependencias, 06 §4.5, 07 §2.2, `docs/art/direccion-visual-v2.md` (§8, fila Shaders, con la excepción de la pregunta 44, y revisión 9) y este registro.
   - Lo que pide código lo hace **T52** [P]: el aviso que tapa las burbujas «Te faltan {n}» (pregunta 41, punto 4), el aviso que se oculta al abrirse un modal del embudo (42) y la escala de fuente del banner de mundo (43).
   - La medida del shader en un teléfono de clase A (44) es una **acción del dueño**: hace falta conseguir el teléfono.
 - **Sustituye:** los [P] y las opciones abiertas de esas seis preguntas.
@@ -1788,5 +1788,5 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Cómo revertir.** Con una decisión nueva que sustituya a D-015, pregunta a pregunta.
 
 **Archivos afectados.**
-- **Documentación** (2026-10-13, T50): este registro; `docs/GDD.md` §6.3; 02 §6; 05 §4.1 y §5; 06 §4.5; 07 §2.2; `docs/art/direccion-visual-v2.md` §8 (fila Shaders) y revisión 9.
+- **Documentación** (2026-10-13, T50): este registro; `docs/GDD.md` §6.3; 02 §6; 03 §12; 05 §4.1, §5 y Dependencias; 06 §4.5; 07 §2.2; `docs/art/direccion-visual-v2.md` §8 (fila Shaders) y revisión 9.
 - **Código** (T52): los avisos (`GameScreen.Notices.cs`), la bandeja (`BoosterTray.cs`) y el banner de mundo (`WorldBannerView.cs` y `GameScreen.WorldBanner.cs`), con sus tests.
