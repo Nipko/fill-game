@@ -10,8 +10,9 @@ de las paradas (de acuerdo con los km de la investigacion); la triangulacion por
 (determinista, al dia, UTF-8 sin BOM y LF); los legs continuos, que no cruzan tierra, con la ida y vuelta por las
 confluencias y el del 41 por Obidos, Parintins, Itacoatiara y la boca del Madeira; la tolerancia del canon (15 km) con
 solo las excepciones medidas pendientes del duenno, y sus avisos; y los fallos de --check: una parada desplazada 20 km
-(tambien un sitio tierra adentro y un punto de atraque, este con los 15 km del canon), un leg roto, una boca fuera de su
-rio (tambien la del Pacaya, mas alla de su cifra medida), un candidato de la propuesta §5.1 bis ausente y el desfase.
+(tambien un sitio tierra adentro y un punto de atraque, este con los 15 km del canon), una parada que retrocede (su s
+rio abajo de la anterior o su km_from_sea menor), un leg roto, una boca fuera de su rio (tambien la del Pacaya, mas alla
+de su cifra medida), un candidato de la propuesta §5.1 bis ausente y el desfase.
 Solo biblioteca estandar.
 """
 from __future__ import annotations
@@ -427,6 +428,32 @@ class CheckTests(Base):
         stops = copy.deepcopy(self.stops)
         stops["stops"][14]["km_from_sea"] += 20
         self.assertFails("km_from_sea 3720 y su punto del rio esta en el km 3700", stops=stops)
+
+    def assertOnlyFailure(self, fragment: str, **kwargs):
+        code, out = self.check(**kwargs)
+        self.assertEqual(1, code, out)
+        fails = [line for line in out.splitlines() if line.startswith("FAIL")]
+        self.assertEqual(1, len(fails), out)
+        self.assertIn(fragment, fails[0])
+
+    def test_stop_going_back_down_the_river_fails(self):
+        # Los km no retroceden (08 §4.5): la s de la parada 9 pasa por delante (rio abajo) de la de la parada 8, en la misma
+        # linea; el leg se ajusta para que solo falle esta regla (el km sigue a menos de 15 km del suyo).
+        stops = copy.deepcopy(self.stops)
+        s = round(stops["stops"][8]["at"]["s"] + 0.00074, 6)
+        stops["stops"][9]["at"]["s"] = s
+        stops["stops"][9]["leg"]["path"][-1]["s1"] = s
+        stops["stops"][10]["leg"]["path"][0]["s0"] = s
+        self.assertOnlyFailure("parada n=9 ('leticia_atardecer'): retrocede rio abajo por amazonas desde la parada 8 "
+                               "(los km no retroceden)", stops=stops)
+
+    def test_km_from_sea_going_back_fails(self):
+        # Los km no retroceden (08 §4.5): km_from_sea de la parada 9 por debajo del de la 8 en el mismo rio, aun dentro de
+        # los 15 km de su punto del rio.
+        stops = copy.deepcopy(self.stops)
+        stops["stops"][9]["km_from_sea"] = stops["stops"][8]["km_from_sea"] - 10
+        self.assertOnlyFailure("parada n=9 ('leticia_atardecer'): km_from_sea 3135 menor que el de la parada 8 (3145) en "
+                               "el mismo rio", stops=stops)
 
     def test_broken_leg_fails(self):
         stops = copy.deepcopy(self.stops)

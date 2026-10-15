@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:amazonfill:schemas:af-river-map-1",
   "title": "Amazon Fill · geometría del Mapa del río af-river-map/1",
-  "description": "JSON Schema del formato af-river-map/1 (Mapa del río, D-013; contrato 29 de docs/GDD.md §7.4; sintaxis en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.5, con la codificación y los extras [P] de P-M1 firmados en D-023: labels, viewpoints y passing). Junto con 08 §4.5 es la copia única del formato. Lo emite tools/river-map/geometry.py en Assets/_Project/Data/Map/river_map_v1.json y lo valida tools/river-map/test_schemas.py (nunca tools/validate_schema.py, que es solo de af-level/1). Marco: equirrectangular con el factor cos(lat0), girado 90° en el sentido de las agujas del reloj y sin espejo (Andes arriba, Atlántico abajo y norte a la derecha; 06 §4.5): x = (lat − lat_min) / (lat_max − lat_min) e y = (lon − lon_min) / (lon_max − lon_min), y en pantalla px = x · W y py = y · W · aspecto, con aspecto = (lon_max − lon_min) · cos(lat0) / (lat_max − lat_min). Cada punto es un par uint16 (X, Y) = (round(65535 x), round(65535 y)). pts y verts son base64 (RFC 4648) de uint16 little-endian con el primer par absoluto y los demás como deltas módulo 65.536; tris son índices absolutos. s es la fracción de la longitud de una línea medida en pantalla (X / 65535, Y / 65535 · aspecto) desde su primer punto; los puntos van de la cabecera a la boca (en el cauce, del Mismi al Atlántico; en el ramal del Pará, de Gurupá a la bahía), así que s crece río abajo. Solo claves, nunca textos: los nombres van por convención en map.stop.<id>.name (puntos de paso y miradores) y map.country.<iso2>.name (rótulos), y los datos con su clave, en el bloque map.* de Assets/_Project/Data/Loc/facts.csv (contrato 32). Lo que el esquema no puede expresar lo comprueba tools/river-map/geometry.py --check: puntos de control a ≤ 2 dp de su vista (≤ 15 km en la vista Cuenca), bocas sobre su río, water que cubre [0, 1] en tramos seguidos, la tierra como polígono simple bien triangulado, ids únicos, ningún «Belén» y las rutas de river_stops_v1.json de acuerdo con estas líneas. Cambiar este archivo es cambiar un contrato.",
+  "description": "JSON Schema del formato af-river-map/1 (Mapa del río, D-013; contrato 29 de docs/GDD.md §7.4; sintaxis en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.5, con la codificación y los extras [P] de P-M1 firmados en D-023: labels, viewpoints y passing). Junto con 08 §4.5 es la copia única del formato. Lo emite tools/river-map/geometry.py en Assets/_Project/Data/Map/river_map_v1.json y lo valida tools/river-map/test_schemas.py (nunca tools/validate_schema.py, que es solo de af-level/1). Marco: equirrectangular con el factor cos(lat0), girado 90° en el sentido de las agujas del reloj y sin espejo (Andes arriba, Atlántico abajo y norte a la derecha; 06 §4.5): x = (lat − lat_min) / (lat_max − lat_min) e y = (lon − lon_min) / (lon_max − lon_min), y en pantalla px = x · W y py = y · W · aspecto, con aspecto = (lon_max − lon_min) · cos(lat0) / (lat_max − lat_min). Cada punto es un par uint16 (X, Y) = (round(65535 x), round(65535 y)). pts y verts son base64 (RFC 4648) de uint16 little-endian con el primer par absoluto y los demás como deltas módulo 65.536; tris son índices absolutos. s es la fracción de la longitud de una línea medida en pantalla (X / 65535, Y / 65535 · aspecto) desde su primer punto; los puntos van de la cabecera a la boca (en el cauce, del Mismi al Atlántico; en el ramal del Pará, de Gurupá a la bahía), así que s crece río abajo [P]: es una desviación, sin registrar todavía, de los valores del ejemplo de 08 §4.5, que en el cauce miden s desde el mar (aunque el leg de iquitos del mismo ejemplo va en este sentido), pendiente de que se alinee 08 §4.5 o de que el dueño elija. Solo claves, nunca textos: los nombres van por convención en map.stop.<id>.name (puntos de paso y miradores) y map.country.<iso2>.name (rótulos), y los datos con su clave, en el bloque map.* de Assets/_Project/Data/Loc/facts.csv (contrato 32). Lo que el esquema no puede expresar lo comprueba tools/river-map/geometry.py --check: puntos de control a ≤ 2 dp de su vista (≤ 15 km en la vista Cuenca), bocas sobre su río, water que cubre [0, 1] en tramos seguidos, la tierra como polígono simple bien triangulado, ids únicos, ningún «Belén» y las rutas de river_stops_v1.json de acuerdo con estas líneas. Cambiar este archivo es cambiar un contrato.",
   "type": "object",
   "additionalProperties": false,
   "required": ["format", "frame", "lines", "land", "insets", "home", "labels", "viewpoints", "passing"],
@@ -42,8 +42,8 @@
             "properties": {
               "id": { "$ref": "#/$defs/slug" },
               "tile": { "$ref": "#/$defs/slug", "description": "Mosaico del terreno [P] (en la 1.0, canopy: una sola zona hasta la máscara del artista)." },
-              "first": { "type": "integer", "minimum": 0, "description": "Primer triángulo de la zona." },
-              "count": { "type": "integer", "minimum": 0, "description": "Triángulos de la zona, seguidos desde first." }
+              "first": { "type": "integer", "minimum": 0, "description": "[P] Primer triángulo de la zona: extensión de M2.6 sobre la forma de 08 §4.5 ({id, tile}), pendiente de llevar a 08 §4.5." },
+              "count": { "type": "integer", "minimum": 0, "description": "[P] Triángulos de la zona, seguidos desde first: extensión de M2.6 sobre la forma de 08 §4.5 ({id, tile}), pendiente de llevar a 08 §4.5." }
             }
           }
         }
@@ -51,8 +51,8 @@
     },
     "insets": {
       "type": "array",
-      "maxItems": 0,
-      "description": "Recuadros fuera de la cuenca (vecinos del Orinoco y Guayanas); vacío en la 1.0 (su forma llega con el mundo 11)."
+      "items": { "$ref": "#/$defs/inset" },
+      "description": "Recuadros de los ríos de fuera de la cuenca (el Orinoco y el Maroni), con la forma de 08 §4.5. En la 1.0 el generador los deja vacíos (insets = []): es un dato, no una regla del formato."
     },
     "home": {
       "$ref": "#/$defs/on_line",
@@ -129,6 +129,28 @@
       "type": "string",
       "pattern": "^map\\.(stop\\.[a-z0-9_]+\\.dato_[0-9]{2}|country\\.[a-z]{2}\\.dato_[0-9]{2}|myth\\.[a-z0-9_]+|general\\.[a-z0-9_]+)$",
       "not": { "pattern": "belen" }
+    },
+    "inset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "rect", "lines", "link"],
+      "properties": {
+        "id": { "$ref": "#/$defs/slug" },
+        "rect": {
+          "type": "array",
+          "prefixItems": [{ "$ref": "#/$defs/unit" }, { "$ref": "#/$defs/unit" }, { "$ref": "#/$defs/unit" }, { "$ref": "#/$defs/unit" }],
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "[x0, y0, x1, y1] del recuadro, cuatro fracciones en [0, 1] (08 §4.5)."
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/slug" },
+          "description": "Ids de las líneas que dibuja el recuadro."
+        },
+        "link": { "$ref": "#/$defs/slug", "description": "Id de la línea del Mapa con la que enlaza (en 08 §4.5, el Orinoco con el Casiquiare)." }
+      }
     },
     "on_line": {
       "type": "object",

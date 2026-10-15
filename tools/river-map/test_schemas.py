@@ -150,6 +150,9 @@ def _first(key: str, field: str, value):
     return mutate
 
 
+# El recuadro del ejemplo de 08 §4.5 (y de la propuesta del Mapa §11.2).
+INSET_08 = {"id": "orinoco", "rect": [0.78, 0.05, 0.98, 0.30], "lines": ["orinoco"], "link": "casiquiare"}
+
 MAP_INVALID = [
     ("formato desconocido", _map_root("format", "af-river-map/2")),
     ("giro distinto de cw90", lambda d: d["frame"].update(rotation="ccw90")),
@@ -163,7 +166,9 @@ MAP_INVALID = [
     ("afluente sin fill_on_pass", _drop_line_key("madeira", "fill_on_pass")),
     ("fill_on_pass de 0", _line("madeira", "fill_on_pass", 0)),
     ("splits en un afluente", _line("negro", "splits", [])),
-    ("recuadros en la 1.0", _map_root("insets", [{"id": "orinoco"}])),
+    ("recuadro sin rect, lines ni link", _map_root("insets", [{"id": "orinoco"}])),
+    ("recuadro con rect fuera de [0, 1]", _map_root("insets", [dict(INSET_08, rect=[0.78, 0.05, 1.2, 0.30])])),
+    ("recuadro sin lineas", _map_root("insets", [dict(INSET_08, lines=[])])),
     ("rotulo con el pais en minusculas", _first("labels", "country", "br")),
     ("rotulo fuera de uint16", _first("labels", "xy", [70000, 0])),
     ("punto de paso con texto y no con clave", _first("passing", "fact", "El rio se aprieta a unos 2 km.")),
@@ -193,6 +198,13 @@ class MapSchemaTests(unittest.TestCase):
         errs = self.errors(self.real)
         self.assertEqual([], [f"{list(e.absolute_path)}: {e.message}" for e in errs])
         self.assertEqual(27, len(self.real["lines"]))
+
+    def test_inset_of_08_validates(self):
+        # La 1.0 deja insets vacio (un dato), pero el formato admite el recuadro con la forma de 08 §4.5.
+        self.assertEqual([], self.real["insets"])
+        doc = copy.deepcopy(self.real)
+        doc["insets"] = [copy.deepcopy(INSET_08)]
+        self.assertEqual([], [f"{list(e.absolute_path)}: {e.message}" for e in self.errors(doc)])
 
     def test_invalid_fixtures_fail(self):
         self.assertGreaterEqual(len(MAP_INVALID), 10)

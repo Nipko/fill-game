@@ -25,7 +25,9 @@ Marco y codificacion (08 §4.5; P-M1):
   little-endian, el primer par absoluto y los demas como deltas modulo 65536; tris: indices absolutos.
 - s: fraccion de la longitud de la linea medida sobre esos mismos puntos en pantalla (X / 65535, Y / 65535 * aspecto),
   desde su primer punto: el cliente la recalcula igual al decodificar. Los puntos van de la cabecera a la boca (en el cauce,
-  del Mismi al Atlantico; en el ramal del Para, de Gurupa a la bahia), asi que s crece rio abajo.
+  del Mismi al Atlantico; en el ramal del Para, de Gurupa a la bahia), asi que s crece rio abajo [P]. Se aparta de los
+  valores del ejemplo de 08 §4.5 (en el cauce, s medida desde el mar, aunque el leg de iquitos del mismo ejemplo va en
+  este sentido): pendiente de que el carril de documentacion alinee 08 §4.5 o de que el duenno elija.
 
 Que escribe:
 - lines: el cauce y el ramal del Para (main), los afluentes de los mundos (tributary), los de paso con el Tocantins
@@ -48,7 +50,8 @@ queda a <= 2 dp de su linea en su vista (con el respaldo, la Cuenca: <= TOLERANC
 menos la linea recta; cada boca cae sobre su rio; la tierra es un poligono simple bien triangulado; y las rutas de
 river_stops_v1.json (at y leg) son las de este Mapa: paradas a <= TOLERANCE_KM km de su punto del rio (medidos desde su
 punto de atraque si la investigacion lo da), km de acuerdo con km_from_sea y que no retroceden, tramos continuos que no
-cruzan tierra (ningun salto entre lineas de mas de TOLERANCE_KM km), via y mouths existentes; ademas, todas las reglas de
+cruzan tierra (dos tramos solo se unen en el mismo (line, s) o en una confluencia: la boca de un afluente, o el arranque
+del ramal, y su s sobre el anfitrion; cualquier otro salto cruza tierra), via y mouths existentes; ademas, todas las reglas de
 stops.py (candidatos de la propuesta §5.1 bis incluidos). Las unicas excepciones a TOLERANCE_KM son las pendientes del
 duenno (PENDING_SITE_KM y PENDING_MOUTH_KM: la cifra medida, sin margen). Avisa (sin fallar) de cada excepcion en uso y de
 los datos de los puntos de paso y de los miradores que aun no tienen texto en facts.csv.
