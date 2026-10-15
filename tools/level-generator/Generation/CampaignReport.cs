@@ -8,6 +8,8 @@
 // vacíos y su bot_fail (02 §9.2 regla 2). Las apariciones distinguen Li de Ln y Br de B2 (MechanicCodes.CodeOf).
 // P4: el título lleva los niveles generados (no los de la especificación: P7a genera 201-300 de campaign_v2) y, con dos
 // variantes, la variante; las fuentes salen de "report_sources" si la especificación las trae (las de campaign_v1 si no).
+// La línea «Generado por» lleva la ruta real de --report (como la de --out): reproducir el informe de la b con ese comando no
+// sobrescribe el de la a.
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -23,7 +25,7 @@ internal static class CampaignReport
 {
     public static string Build(
         CampaignSpec spec, List<GeneratedLevel> levels, Dictionary<RangeInfo, RangeStats> stats,
-        List<(WorldInfo World, string Path, byte[] Bytes, int Levels)> packs, string levelsArg)
+        List<(WorldInfo World, string Path, byte[] Bytes, int Levels)> packs, string levelsArg, string reportPath)
     {
         var sb = new StringBuilder();
         void W(string line = "") => sb.Append(line).Append('\n');
@@ -44,7 +46,7 @@ internal static class CampaignReport
         string variantArg = spec.HasVariants ? F($" --variant {spec.Variant}") : "";
         W(F($"# Campaña {firstLevel}-{lastLevel}{variantTitle}: informe de `level-generator --spec`"));
         W();
-        W(F($"Generado por `dotnet run --project tools/level-generator -c Release -- --spec {specPath} --levels {levelsArg}{variantArg} --out {outDir} --report tools/out/{spec.SpecId}_report.md`: no se edita a mano y no lleva tiempos. Generador {PackWriter.GeneratorVersion}, `pack_schema` {packSchema}, modo de vertido `run` (D-005)."));
+        W(F($"Generado por `dotnet run --project tools/level-generator -c Release -- --spec {specPath} --levels {levelsArg}{variantArg} --out {outDir} --report {reportPath.Replace('\\', '/')}`: no se edita a mano y no lleva tiempos. Generador {PackWriter.GeneratorVersion}, `pack_schema` {packSchema}, modo de vertido `run` (D-005)."));
         W();
         W("Fuentes: " + (spec.ReportSources ?? "D-009 (ciclo escalonado) y D-007 (debuts) con la propuesta `docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md` "
           + "(c.1-c.4, d.1-d.4); GDD 03 §2, §4, §7-§13 y §17; 02 §8-§11; 08 §4.1") + ". Todo se mide con `AF.Core` y `AF.Solver`: A* w = 1 a 300.000 "

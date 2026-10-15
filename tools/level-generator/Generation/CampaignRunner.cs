@@ -125,7 +125,7 @@ internal static class CampaignRunner
                 Directory.CreateDirectory(dir);
             }
 
-            File.WriteAllBytes(reportPath, PackWriter.Bytes(CampaignReport.Build(spec, result.Levels, result.Stats, packs, levelsArg)));
+            File.WriteAllBytes(reportPath, PackWriter.Bytes(CampaignReport.Build(spec, result.Levels, result.Stats, packs, levelsArg, reportPath)));
             Console.WriteLine($"informe: {reportPath.Replace('\\', '/')}");
         }
 

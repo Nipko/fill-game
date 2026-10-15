@@ -766,7 +766,9 @@ internal sealed record CombinationEntry(int Level, IReadOnlyList<string> Codes, 
 /// <item><description>la entrada es el conjunto completo, no sus pares: un trío es nuevo si esos tres códigos nunca salieron
 /// juntos; un conjunto que ya salió (también en 11-200) no vuelve a entrar;</description></item>
 /// <item><description><c>kind</c>: <c>debut</c> (un código), <c>variant</c> (un código de una variante de la 1.0, Ln, Ha, B2 o
-/// Fl) o <c>combination</c> (dos o más).</description></item>
+/// Fl) o <c>combination</c> (dos o más). Solo cuenta los códigos, no la ★: un código que sale solo por primera vez en una celda
+/// sin ★ (antes solo combinado; con las mecánicas lo impiden DEBUT-LEVEL y DEBUT-SLOT, con Al6 podría pasar) también es
+/// <c>debut</c> o <c>variant</c> (README del generador).</description></item>
 /// </list>
 /// UTF-8 sin BOM, LF y una entrada por línea: la misma especificación da los mismos bytes.
 /// </summary>

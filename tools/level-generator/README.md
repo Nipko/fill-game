@@ -109,6 +109,11 @@ Formato [P] `af-combinations/1` (`Campaign/SpecValidator.cs`, `CombinationsRegis
   primer nivel donde sale; el conjunto entero, no sus pares (un trío es nuevo si esos tres nunca salieron juntos); los
   códigos en orden ordinal y las entradas por nivel. Un conjunto que ya salió, también en 11-200, no vuelve a entrar.
 - `kind`: `debut` (un código), `variant` (un código con `variant_of`: Ln, Ha, B2 o Fl) o `combination` (dos o más).
+  `kind` solo mira cuántos códigos lleva el conjunto, no la ★: un código que sale solo por primera vez en una celda sin ★
+  (porque antes solo había salido combinado) también se anota `debut` o `variant`. Con las mecánicas no pasa (DEBUT-LEVEL y
+  DEBUT-SLOT exigen que su primer tablero sea el de estreno, con ★ y la mecánica sola); con las capacidades podría pasar
+  con la Cuia alta de 6, que debuta combinada en el 160 (Ll+Al6) y sin ★, si algún día sale sola. Hoy no pasa: las 18
+  entradas de un código del registro son estrenos con ★.
 - `source`: la cadena de `previous`; `variant`: la publicada (o la de `--variant`). UTF-8 sin BOM, LF y una entrada por
   línea: regenerarlo da los mismos bytes. Nunca se edita a mano.
 - El archivo refleja solo la variante que se publica: 102 entradas con la a (40 de 11-200 y 62 de 201-700); con la b serían
