@@ -2,7 +2,8 @@
 // cada color se barajan con Fisher-Yates y se reparten en las cuias «casa» (cap = U_c, en el orden de caps); el resto de
 // cuias (vacíos, Cuia chica) empiezan vacías. Se rechaza el candidato con una cuia sellada, atascado al inicio o
 // irresoluble; se acepta el primero que A* (w = 1, run) resuelve con par ≥ 2K o que agota el presupuesto de rechazo (lo
-// decide la verificación del slot). Reglas, sellado y bloqueo: AF.Core.
+// decide la verificación del slot). Reglas, sellado y bloqueo: AF.Core. En los slots con tinaja, A* va sin poda de fútiles
+// (propuesta de la tinaja c.2; C1-8): el nivel acaba con capacidades mixtas.
 using AF.Core.Board;
 using AF.Core.Determinism;
 using AF.Core.Rules;
@@ -24,7 +25,7 @@ internal static class FillSource
     /// </summary>
     public const int AcceptBudget = 20000;
 
-    public static FillResult Generate(int[] caps, int[] units, int colors, ulong seed, AStarSolver solver, int maxCandidates = DefaultMaxCandidates)
+    public static FillResult Generate(int[] caps, int[] units, int colors, ulong seed, AStarSolver solver, int maxCandidates = DefaultMaxCandidates, bool futileRuleEnabled = true)
     {
         var rng = new Prng(seed);
         var pool = new List<int>();
@@ -62,7 +63,7 @@ internal static class FillSource
 
         int[] shuffled = pool.ToArray();
         var cuias = new Cuia[caps.Length];
-        var options = new SolverOptions(AcceptBudget, 1, true, PourMode.Run);
+        var options = new SolverOptions(AcceptBudget, 1, futileRuleEnabled, PourMode.Run);
         for (int candidate = 1; candidate <= maxCandidates; candidate++)
         {
             for (int i = shuffled.Length - 1; i > 0; i--)

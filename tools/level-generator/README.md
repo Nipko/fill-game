@@ -15,6 +15,8 @@ ejecuciones den los mismos bytes.
 | `--validate-spec <campaign.json>` | Comprueba la especificación de la campaña 11-200 | Resumen ASCII por ciclo |
 | `--parity [--report <md>]` | Paridad de las métricas con el prototipo (03 §17-§18; 09 R26) | `tools/out/parity_report.md` |
 | `--spec <campaign.json> --levels a-b --out <carpeta> [--report <md>] [--check]` | Genera la campaña (03 §2) | `Assets/_Project/Data/Levels/mundo_0N_v1.json` y `tools/out/campaign_v1_report.md` |
+| `--seasons <campaign.json> [...] --out <tabla.json> [--check]` | Tabla de temporada del cliente (pregunta 32 b) | `Assets/_Project/Data/Levels/seasons_v1.json` |
+| `--self-test [tinaja\|seasons]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
 
 Códigos de salida: 0 = correcto; 1 = alguna comprobación falla; 2 = uso incorrecto o especificación ilegible.
 
@@ -87,7 +89,8 @@ for f in tools/level-generator/specs/tests/*.json; do
 done
 ```
 
-Todos deben dar `exit=1` y `presente`.
+Todos deben dar `exit=1` y `presente`. Los de la Tinaja (`tinaja_in_recovery.json` y `tinaja_in_remanso.json`) extienden
+`specs/sample_tinaja.json` y fallan por CAL-ROLE: p1, p2 y p19 son niveles puros, sin tinaja (D-019, Q-Ti1 A).
 
 ## Métricas, alivio y paridad (`Metrics/`)
 
@@ -154,7 +157,9 @@ Fases (los tiempos salen por la consola; el informe no lleva tiempos):
    piden más candidatos a sus retos, hito, siguientes y recuperaciones (hasta 2 rondas); un reto o hito que quede fuera de
    su ventana se publica con la etiqueta que mide (c.2: sin etiqueta si mide menos del 75 %) y el informe lo registra.
 4. **Alivio** (`Metrics/Relief.cs`) desde el nivel 31.
-5. **Packs** (`PackWriter`): `pack_schema` 2, minificado con un nivel por línea, UTF-8 sin BOM y LF, decimales fijos.
+5. **Packs** (`PackWriter`): `pack_schema` 2, o 3 si algún nivel del pack lleva la tinaja (D-019), pack a pack (la
+   cabecera del informe dice «2 (3 en los packs con tinaja: …)» si una campaña tiene de los dos; FIXG); minificado con
+   un nivel por línea, UTF-8 sin BOM y LF, decimales fijos.
 
 El informe (`tools/out/campaign_v1_report.md`) trae, además de los packs, el pool, las etiquetas, los ciclos y la tabla
 por nivel: el debut real y el hueco máximo de cada mecánica y capacidad sobre los tableros publicados, el remanso frente a
@@ -186,3 +191,129 @@ Decisiones [P] de la generación (para revisar en la integración):
 
 Diagnóstico: con la variable de entorno `LEVELGEN_TRACE=<nivel>` el generador traza por stderr cada candidato de ese
 nivel (fuente, K, vacíos, bot_fail, motivo del rechazo y milisegundos) y un resumen del slot. No cambia la salida.
+
+## Tinaja (M13; D-019, Q-Ti1 A; 03 §8 y §9; propuesta de la tinaja c.3)
+
+La celda de calendario `Ti` (mecánica `tinaja`, clase `source` [P]: fuente de dosis ocultas) activa el paso «Ti» de la
+superposición (`Generation/Superposition.cs`), antes de «Tu»:
+
+- saca n dosis de las cimas de cuias sin mecánica con 2 dosis o más (no crea vacíos ni deja el Barro a la vista) y las
+  ordena en la tinaja (cap 5) con T4 y la boca a la vista; el resto va en `hidden`;
+- n por tipo de nivel: 3 en estreno (p3-p5), comodidad y práctica; 4-5 en retos (al azar); 5 en el hito. **Nunca en p1, p2
+  ni p19** (el paso se niega; `--validate-spec` ya lo rechaza con CAL-ROLE);
+- añade su cuia vacía (Cuia chica de 2) contigua; el orden visual (`ShuffledWithTinaja`) baraja las demás cuias y deja la
+  pareja en una ranura de la misma fila con cualquiera de las filas que el cliente puede elegir (D-006: 1 fila con ≤ 5
+  cuias, 2 con 6-10, 2 o 3 con 11-14, 3 con 15-16), con la tinaja a la izquierda o a la derecha [P];
+- solo consume números aleatorios en los slots con tinaja: los packs 11-200 no cambian (`--check`).
+
+Tablero base (c.3 punto 2): vacíos de 4 sin contar la pareja, 2 en los tableros de estreno (d.3; 03 §12, p3-p5: «1 (2
+hasta el 30 y en debuts)») y 1 en los demás: práctica, retos, hito y la comodidad fuera del estreno. Esta última va con 1
+[P], **pendiente de decisión**: c.3 punto 2 dice «2 … en el debut (K ≤ 6) y en comodidad», pero ninguna fuente dice qué
+posiciones son «comodidad» y cuáles «práctica»; 03 §12 da 1 vacío a p3-p5 fuera de los debuts y, con 2 vacíos, el bot casi
+no falla (c.9: 0-2 %) y el tablero no entra en la ventana de comodidad (20-60 %). K ≤ 6 en el estreno (c.3 y d.3).
+
+**Como mucho 12 cuias con la pareja** (02 §5, fila «Tinaja y su cuia»: «como mucho 12 cuias en un nivel con tinaja» [P];
+`Superposition.TinajaMaxCuias`): si la etapa pasa de 12, se baja K y el informe lo anota («tinaja: K <= n por el tope de 12
+cuias»); si K quedara por debajo de 3, la etapa no aplica. Es un tope de layout, así que tampoco se publica un
+`plus_empty` de 13 cuias [P]. Al relajar, los vacíos no cambian: K − 1 una vez (por debajo del tope), o `deep` si los
+candidatos quedan por debajo de la ventana.
+
+En los niveles con tinaja todas las búsquedas que deciden «hay solución» van **sin poda de fútiles**
+(`SolverOptions.ForLevel`, `SafeMoves.ForPipeline(mode, level)`; C1-8): par y trampas (`Metrics.cs`), el rechazo de `fill`
+(`FillSource.cs`), la ruta segura, los paseos y la prueba de irresolubilidad. El bot y las trampas tempranas siguen con la
+poda.
+
+Filtros (`Generation/TinajaWalks.cs`), en cada candidato que se mide:
+
+| Filtro | Qué exige |
+|---|---|
+| Ruta segura | `SafePath` (03 §8) con 20.000 nodos por realidad |
+| Paseos seguros [P] | 20, con un vertido seguro al azar hasta ganar: ninguno llega a un estado sin vertido seguro ni pasa de 400 vertidos |
+| Paseos casuales [P] | 30, con cualquier vertido útil al azar. El primer estado sin vertido seguro de cada paseo se clasifica por `SafeMoves.Outcome` y, solo con `SomeRealitySolvable`, con A* en la realidad verdadera (`TinajaWalks.ClassifyCasual`; FIXG): si `SafeMoves` agota sus 20.000 nodos por realidad (los de `ReliefOptions` en las variantes), se rechaza por «presupuesto agotado» sin consultar la verdadera (aunque no tenga solución), nunca por «adivinar» (no se cuenta en la columna «a» del informe); `NoExit` es un error del jugador y el paseo acaba; con `SomeRealitySolvable`, la verdadera sin solución es un error del jugador, resoluble es «adivinar» y el nivel se rechaza, y si A* agota sus 300.000 nodos en ella, «presupuesto agotado» |
+| S0 sin trampas | Solo en el estreno: todo vertido útil de S0 es seguro (por hash canónico). Uno que no lo es se rechaza como «trampa en S0» si A* deja alguna realidad de S0 demostrada sin solución tras él y, si no, por «presupuesto agotado» (FIXG; `TinajaWalks.S0Reject`: con alguna trampa demostrada, «trampa en S0» y los demás en el sufijo «; N mas sin seguridad demostrada») |
+| Coste de Morpho | w = 2 y 40.000 nodos por realidad (`hint_weight`, `hint_budget_nodes`), desde cero en S0, en la ruta y en los paseos: Morpho da un vertido seguro y expande como mucho `MorphoNodeCap` = 150 ms × `PcNodesPerMs` [E] ÷ `MorphoDeviceFactor` (8× [P], hasta PF1) = 18.750 nodos |
+
+`PcNodesPerMs` = 1.000 [E] sale de la calibración de `--self-test tinaja` (líneas INFO «calibracion»): Morpho desde cero en
+el estado más pesado de los filtros de los retos 329 y 332 y del hito 340 del pack de muestra (8.298, 10.356 y 10.606 nodos
+por consulta). Medido el 2026-10-14 en el equipo de escritorio x64 del dueño (AMD Ryzen 9 9900X, Windows 11, .NET 10.0.402
+Release), con otros agentes en marcha: 1.000-1.463 nodos/ms por nivel en cuatro ejecuciones (6-10 ms por consulta; medias
+de 1.083-1.377). 1.000 es el mínimo medido, con el equipo cargado; con más carga podría bajar. Es la velocidad de un PC, no
+la del teléfono: el factor 8× [P] la convierte en el tope del teléfono hasta que PF1 lo mida en uno de clase A. Antes se
+calibraba con 20 consultas de 32 nodos sobre el S0 de b.2, que miden sobre todo el coste fijo; ya no.
+
+El motivo del rechazo separa «sin vertido seguro» de «presupuesto agotado» (`SafeMoves.Outcome`) en la ruta, en los paseos
+seguros y casuales y en S0 (03 §8; FIXG); el informe lo cuenta por nivel en su sección «Tinaja» (columna «Candidatos
+rechazados por la tinaja»), y `--self-test tinaja` fija la clasificación de los paseos casuales en cada combinación y la de «S0 sin trampas» (la trampa demostrada del tablero perdido de b.2, el presupuesto agotado con 1 nodo por realidad y en el estreno del fixture de QA-TINAJA-DEBUT, y el caso mixto); si falta uno de los fixtures de level-qa que usa, falla. Alivio (03 §13): `minus_color` nunca quita una fruta de la tinaja; las variantes conservan la
+máscara de la tinaja y repiten la ruta segura y los paseos, sin la compuerta de coste. **Opciones de las variantes [P],
+pendientes de decisión del tech-lead y del dueño** (revisión de P1; D-023 o la siguiente): `TinajaWalks.ReliefOptions`, que
+hoy son las de Morpho (w = 2 y 40.000 nodos por realidad) y no las del pipeline de 03 §8 (w = 1 y 20.000 nodos por
+realidad, la fila «Aguas turbias (seguridad por realidad)» de la tabla de 03 §5). Motivo: un alivio tiene más espacio libre
+que su nivel y, sin poda de fútiles, A* óptimo agota los 20.000 nodos por realidad en tableros que se ganan; lo que cuenta en
+la variante es que Morpho encuentre siempre un vertido seguro (un «seguro» solo sale de soluciones encontradas, así que el
+filtro no se relaja). 03 §13 solo dice que «las variantes repiten la ruta segura y los paseos». Es el contrato entre el
+generador y level-qa: P3 (`ReliefChecks`) usa `TinajaWalks.ReliefOptions` (level-qa enlaza `Generation/*.cs`). Si el dueño
+lo rechaza, `ReliefOptions` pasa a `SafeMoves.ForPipeline(PourMode.Run, s0)` y las variantes que agotan el presupuesto se
+tratan aparte (03 §13 exige `relief` no vacío desde el 31). El `plus_empty` pone su vacío donde la pareja siga en la misma
+fila.
+
+`PackWriter`: un pack con la tinaja sale con `pack_schema` 3 (`{"type":"tinaja"}` y `{"type":"cucharon"}` sin campos,
+`murky` = true, `hidden` con las capas de la tinaja menos la boca e `intro_mechanic` = `tinaja` en su estreno), y cada
+variante de `relief` que lleva la tinaja escribe su máscara en `hidden`, tras `attrs` y con los índices de la variante
+(decisión del dueño del 2026-10-14, opción a de la revisión de P2a; 08 §4.1: `relief_board` admite `hidden` si y solo si su
+`attrs` contiene la tinaja). Los demás packs, con el 2 y sus variantes sin `hidden`.
+
+Muestra (no es el calendario de 201-700, que rehacen la pregunta 33 y P4):
+
+```
+dotnet run --project tools/level-generator -c Release -- --validate-spec tools/level-generator/specs/sample_tinaja.json
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/sample_tinaja.json --levels 321-340 --out tools/out/sample_tinaja --report tools/out/sample_tinaja_report.md
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/sample_tinaja.json --levels 321-340 --out tools/out/sample_tinaja --check
+dotnet run --project tools/level-generator -c Release -- --self-test tinaja
+```
+
+`specs/sample_tinaja.json` es un ciclo 321-340 con la tinaja sola en estreno (323-325), práctica (327), retos (329, 332 y
+338) e hito (340); su pack de muestra (`tools/out/sample_tinaja/mundo_07_v1.json`, `pack_schema` 3) y su informe
+(`tools/out/sample_tinaja_report.md`) se regeneran con esos comandos. Las combinaciones de d.3 (Ti+Ho, Ti+Ma y Ti+Br) no
+caben en una muestra de un ciclo (`--validate-spec` exige que cada mecánica de la tabla debute en el calendario).
+
+## Tabla de temporada del cliente (`--seasons`; SE1)
+
+La temporada de cada ciclo de 20 (A = aguas altas, B = aguas bajas; D-009, punto 6; Q11 A de D-007) no va en el pack: el
+cliente la lee de **una tabla por ciclo, copiada del calendario versionado** (pregunta 32 de `docs/GDD.md` §6.3, decidida
+el 2026-10-13: (b), D-020; 03 §12; 08, «Preguntas abiertas» 12). Solo cambia la LUT del fondo, sin cartel (la lee SE2).
+
+```
+dotnet run --project tools/level-generator -- --seasons tools/level-generator/specs/campaign_v1.json --out Assets/_Project/Data/Levels/seasons_v1.json
+dotnet run --project tools/level-generator -- --seasons tools/level-generator/specs/campaign_v1.json --out Assets/_Project/Data/Levels/seasons_v1.json --check
+dotnet run --project tools/level-generator -- --self-test seasons
+```
+
+Formato [P] `af-seasons/1` (`Generation/SeasonTableWriter.cs`; no es un contrato del GDD §7 todavía):
+
+```
+{
+  "format": "af-seasons/1",
+  "source": "tools/level-generator/specs/campaign_v1.json",
+  "cycles": [
+    {"from_level": 21, "season": "B"},
+    ...
+    {"from_level": 181, "season": "B"}
+  ]
+}
+```
+
+- `source`: la ruta de cada especificación, relativa a la raíz del repositorio (no a la carpeta desde la que se ejecuta) y
+  con `/`; con varias, separadas por «, » en el orden de sus ciclos [P].
+- `cycles`: un ciclo por línea, en orden y sin huecos; cada uno va de `from_level` a `from_level` + 19. Los niveles 1-20
+  (tutorial y rampa) no tienen temporada. Hoy: los 9 ciclos 21-181 de `campaign_v1.json`, idénticos a su `seasons`.
+- UTF-8 sin BOM, LF y claves en orden fijo: la misma especificación da los mismos bytes.
+
+La herramienta copia y comprueba el formato: cada ciclo de la especificación (de `cycle.from_level` a `last_level`) con A o
+B, ninguna entrada de `seasons` fuera de un inicio de ciclo y, con varias especificaciones (P4 y P7 añadirán
+`campaign_v2.json` para 201-700: `--seasons campaign_v1.json campaign_v2.json`), contiguas y sin solaparse. Si no, sale con
+1 y no escribe. Las reglas del calendario (temporadas alternas, el ciclo de debut toma la de su mecánica) son de
+`--validate-spec` (SEASONS). `--check` no escribe y sale con 1 si la tabla del disco no coincide byte a byte (desfase con
+el calendario). `--self-test seasons` comprueba los ciclos 21-181 frente a `campaign_v1.json` (leído aparte), la temporada
+de cada nivel 21-200 frente a `CampaignSpec.SeasonOf`, el formato, el determinismo, el desfase con la tabla del disco, la
+unión de dos especificaciones y los rechazos, entre ellos el fixture `specs/tests/seasons_invalid_letter.json` (ciclo 61
+con temporada C, que también falla `--validate-spec` por SEASONS).

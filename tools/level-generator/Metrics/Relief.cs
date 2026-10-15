@@ -7,10 +7,18 @@
 // el criterio de level-qa: si el base tiene bot_fail ≥ 0,20, cada variante lo baja ≥ 0,20; si no, basta par menor en
 // minus_color y el vacío extra en plus_empty. Una variante que no lo cumple no se publica (lo registra el informe).
 // Nunca se quita un color que sea llave de una mecánica o esté dentro de una cuia con mecánica [P]. En un nivel con
-// Aguas turbias las variantes van sin ocultos (el esquema no los admite en relief [P]).
+// Aguas turbias las variantes van sin ocultos (el esquema no los admite en relief sin la tinaja [P]).
+// Tinaja (D-019; 03 §13; propuesta de la tinaja c.3 punto 4): minus_color nunca quita una fruta que esté en la tinaja (está
+// dentro de una cuia con mecánica: rompería T4 y la máscara); las variantes conservan la máscara de la tinaja (todas sus capas
+// menos la boca, la que exige AF.Core) y repiten la ruta segura y los paseos (TinajaWalks con TinajaWalks.ReliefOptions, las
+// de Morpho: w = 2 y 40.000 nodos por realidad [P], pendiente de decisión; sin la compuerta de coste). plus_empty no se
+// publica si pasa de 12 cuias (02 §5: «como mucho 12 cuias en un nivel con tinaja»; Superposition.TinajaMaxCuias) [P]. El
+// pack escribe la máscara en el hidden de la variante (decisión del dueño del 2026-10-14, opción a de la revisión de P2a;
+// 08 §4.1: relief_board admite hidden si y solo si su attrs contiene la tinaja).
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Solver.Search;
+using AmazonFill.Tools.LevelGenerator.Generation;
 
 namespace AmazonFill.Tools.LevelGenerator.Metrics;
 
@@ -22,6 +30,15 @@ internal sealed record BoardData(int[] Caps, int[][] Cuias, MechanicSpec[] Attrs
     public BoardBuildResult Build() => BoardBuilder.Build(Caps, Cuias, HasMechanics ? Attrs : null, Hidden.Length > 0 ? Hidden : null);
 
     public BoardData WithoutHidden() => this with { Hidden = [] };
+
+    /// <summary>El tablero lleva una tinaja (M13; D-019).</summary>
+    public bool HasTinaja => Attrs.Any(a => a.Type == MechanicType.Tinaja);
+
+    /// <summary>
+    /// Tablero de partida de las variantes de alivio: sin ocultos (Aguas turbias) o, con tinaja, con su máscara (todas sus
+    /// capas menos la boca), que AF.Core exige.
+    /// </summary>
+    public BoardData ForRelief() => HasTinaja ? this : WithoutHidden();
 }
 
 internal sealed record ReliefBoard(string Type, BoardData Board, int? Removed, int? Par, double BotFail, bool Meets, string Note);
@@ -38,7 +55,7 @@ internal static class Relief
     public static (List<ReliefBoard> Published, List<ReliefBoard> Rejected) Compute(
         MetricsEngine metrics, BoardData board, int basePar, double baseBot, string seedText)
     {
-        BoardData visible = board.WithoutHidden();
+        BoardData visible = board.ForRelief();
         BoardState baseState = board.Build().State!;
         int freeEmpties = MetricsEngine.FreeEmpties(baseState);
 
@@ -74,13 +91,31 @@ internal static class Relief
         return type == "plus_empty" || (par is int p && p < basePar);
     }
 
-    private static ReliefBoard PlusEmpty(MetricsEngine metrics, BoardData board, double baseBot, string seedText)
+    /// <summary>Variante +1 vacío (03 §13); interna y no privada para <c>--self-test tinaja</c> (tope de 12 cuias, 02 §5).</summary>
+    internal static ReliefBoard PlusEmpty(MetricsEngine metrics, BoardData board, double baseBot, string seedText)
     {
         var data = new BoardData(
             [.. board.Caps, Cuia.DefaultCapacity],
             [.. board.Cuias, []],
             [.. board.Attrs, MechanicSpec.None],
-            []);
+            board.Hidden);
+        if (board.HasTinaja)
+        {
+            if (data.Caps.Length > Superposition.TinajaMaxCuias)
+            {
+                return new ReliefBoard("plus_empty", data, null, null, 1, false,
+                    "tinaja: con un vacio mas pasa del tope de 12 cuias con tinaja (02 sec. 5)");
+            }
+
+            BoardData? withPair = PlusEmptyWithTinaja(board);
+            if (withPair is null)
+            {
+                return new ReliefBoard("plus_empty", data, null, null, 1, false, "tinaja: ninguna ranura deja la pareja en la misma fila");
+            }
+
+            data = withPair;
+        }
+
         BoardBuildResult built = data.Build();
         if (!built.IsValid || LevelValidation.Validate(built.State!) is not null)
         {
@@ -89,7 +124,53 @@ internal static class Relief
 
         double bot = metrics.BotFail(built.State!, seedText);
         bool meets = MeetsCriterion("plus_empty", baseBot, 0, bot, null);
-        return new ReliefBoard("plus_empty", data, null, null, bot, meets, meets ? "" : "no baja bot_fail 0,20");
+        string? tinaja = meets ? TinajaReject(data, built.State!, seedText, "plus_empty") : null;
+        return new ReliefBoard("plus_empty", data, null, null, bot, meets && tinaja is null, tinaja ?? (meets ? "" : "no baja bot_fail 0,20"));
+    }
+
+    /// <summary>
+    /// plus_empty con tinaja: el vacío de más va al final si la pareja sigue en la misma fila con una cuia más (las filas
+    /// dependen del número de cuias, D-006); si no, en la última ranura, de atrás adelante, que la deja en la misma fila
+    /// [P]. Los ocultos de la tinaja se desplazan con ella. Null si ninguna ranura lo consigue.
+    /// </summary>
+    private static BoardData? PlusEmptyWithTinaja(BoardData board)
+    {
+        int n = board.Caps.Length;
+        int left = Math.Min(
+            Array.FindIndex(board.Attrs, a => a.Type == MechanicType.Tinaja),
+            Array.FindIndex(board.Attrs, a => a.Type == MechanicType.Cucharon));
+        int at = n;
+        while (at > 0 && !Superposition.SameRow(n + 1, at <= left ? left + 1 : left))
+        {
+            at--;
+        }
+
+        if (!Superposition.SameRow(n + 1, at <= left ? left + 1 : left))
+        {
+            return null;
+        }
+
+        static T[] Insert<T>(T[] a, int at, T value) => [.. a.Take(at), value, .. a.Skip(at)];
+        return new BoardData(
+            Insert(board.Caps, at, Cuia.DefaultCapacity),
+            Insert(board.Cuias, at, []),
+            Insert(board.Attrs, at, MechanicSpec.None),
+            [.. board.Hidden.Select(h => new[] { h[0] >= at ? h[0] + 1 : h[0], h[1] })]);
+    }
+
+    /// <summary>
+    /// Con tinaja, la variante repite la ruta segura y los paseos (03 §13; propuesta de la tinaja c.3 punto 4): null si los
+    /// pasa (o si el tablero no lleva tinaja); si no, el motivo.
+    /// </summary>
+    private static string? TinajaReject(BoardData data, BoardState state, string seedText, string type)
+    {
+        if (!data.HasTinaja)
+        {
+            return null;
+        }
+
+        TinajaCheckResult check = new TinajaWalks().Check(state, debut: false, seedText + "/" + type, morphoGate: false, relief: true);
+        return check.Reject;
     }
 
     /// <summary>
@@ -171,7 +252,9 @@ internal static class Relief
         {
             double bot = metrics.BotFail(state, seedText);
             bool meets = MeetsCriterion("minus_color", baseBot, basePar, bot, par);
-            var r = new ReliefBoard("minus_color", data, color, par, bot, meets, meets ? "" : "no alivia lo bastante");
+            string? tinaja = meets ? TinajaReject(data, state, seedText, "minus_color") : null;
+            meets &= tinaja is null;
+            var r = new ReliefBoard("minus_color", data, color, par, bot, meets, tinaja ?? (meets ? "" : "no alivia lo bastante"));
             first ??= r;
             if (meets)
             {

@@ -11,6 +11,8 @@
 //   bot_fail       = AF.Solver.Bot.CasualBot ×40 con la semilla del nivel (03 §6).
 // D = 0,35·z(bot_fail) + 0,25·z(par − 2K) + 0,20·z(branching) + 0,10·z(traps) + 0,10·[E == 1] con los z-scores del pool
 // del rango (03 §7). Una instancia por hilo: reutiliza el solver, el bot y los búferes.
+// Tinaja (D-019; 03 §5): en un nivel con tinaja el par y las trampas van sin poda de fútiles (SolverOptions.ForLevel; C1-8),
+// también en la prueba de irresolubilidad; el bot y las trampas tempranas siguen con la poda.
 using AF.Core.Board;
 using AF.Core.Rules;
 using AF.Solver.Bot;
@@ -50,7 +52,7 @@ internal sealed class MetricsEngine
 
     public ParResult Par(BoardState state, int budget = ParBudget)
     {
-        SolveResult r = _solver.Solve(state, new SolverOptions(budget, 1, true, PourMode.Run));
+        SolveResult r = _solver.Solve(state, new SolverOptions(budget, 1, true, PourMode.Run).ForLevel(state));
         return new ParResult(r.Status, r.IsSolved ? r.MoveCount : -1, r.Expanded, r.CopyMoves());
     }
 
@@ -128,7 +130,7 @@ internal sealed class MetricsEngine
         int unknown = 0;
         var child = new Cuia[width];
         var sorted = new Cuia[width];
-        var trapOptions = new SolverOptions(TrapBudget, 1, true, PourMode.Run);
+        var trapOptions = new SolverOptions(TrapBudget, 1, true, PourMode.Run).ForLevel(start);
         foreach ((int stateIndex, int source, int target) in sample)
         {
             Array.Copy(states[stateIndex], child, width);
@@ -143,7 +145,7 @@ internal sealed class MetricsEngine
                 {
                     status = SolveStatus.Solved;
                 }
-                else if (BoardRules.IsStuck(child, 0, width, _units, true))
+                else if (BoardRules.IsStuck(child, 0, width, _units, trapOptions.FutileRuleEnabled))
                 {
                     status = SolveStatus.Unsolvable;
                 }

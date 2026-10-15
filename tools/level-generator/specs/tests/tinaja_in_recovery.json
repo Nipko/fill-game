@@ -1,0 +1,8 @@
+{
+  "extends": "../sample_tinaja.json",
+  "description": "Fixture negativo de --validate-spec: tinaja en una recuperación (321, p1). D-019, Q-Ti1 A: p1, p2 y p19 son niveles puros, sin tinaja (y el generador se niega: Superposition.TinajaDoses).",
+  "expect_rule": "CAL-ROLE",
+  "calendar": {
+    "321": "Ti"
+  }
+}

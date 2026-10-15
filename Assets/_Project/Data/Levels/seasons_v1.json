@@ -1,0 +1,15 @@
+{
+  "format": "af-seasons/1",
+  "source": "tools/level-generator/specs/campaign_v1.json",
+  "cycles": [
+    {"from_level": 21, "season": "B"},
+    {"from_level": 41, "season": "A"},
+    {"from_level": 61, "season": "B"},
+    {"from_level": 81, "season": "A"},
+    {"from_level": 101, "season": "B"},
+    {"from_level": 121, "season": "A"},
+    {"from_level": 141, "season": "A"},
+    {"from_level": 161, "season": "B"},
+    {"from_level": 181, "season": "B"}
+  ]
+}

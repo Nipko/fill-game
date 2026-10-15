@@ -2,6 +2,10 @@
 // tableros de estreno (CycleChecks), llave presente y la del tutorial en el estreno, mecánica permitida por la celda del
 // calendario y como mucho 2 mecánicas por nivel antes del 300. El resto de reglas de cada mecánica (Barro en la capa 2-3,
 // U_agua = 4 con las gotas, cueva de la Piraña, pares del Remolino…) las comprueba LevelValidation (QA-VALID).
+// Tinaja (M13; D-019; propuesta de la tinaja c.5; 02 §9.1 M13): la tinaja y su cuia son una sola mecánica, «Ti», con un
+// solo ejemplar (02 §9.2 regla 4); sus ocultas no son Aguas turbias (solo cuenta «Tu» si hay ocultas fuera de la tinaja), y
+// sus capacidades (5 y 2) no son Cuia alta ni Cuia chica (como la cueva de la Piraña). Sus controles propios están en
+// TinajaChecks.
 using System.Globalization;
 using AF.Core.Board;
 using AF.Core.Mechanics;
@@ -22,7 +26,32 @@ internal static class MechanicChecks
         ("QA-MECH-COUNT", "como mucho 2 mecanicas por nivel antes del 300 (02 sec. 9.2 regla 4)"),
     ];
 
-    /// <summary>Códigos de calendario de las mecánicas presentes (las capacidades no son mecánicas).</summary>
+    /// <summary>La cuia lleva la tinaja o su cuia chica (M13): las dos piezas de una misma mecánica.</summary>
+    public static bool IsTinajaPair(MechanicType type) => type is MechanicType.Tinaja or MechanicType.Cucharon;
+
+    /// <summary>
+    /// Dosis ocultas de Aguas turbias: las de <c>hidden</c> fuera de una tinaja (M13; propuesta de la tinaja c.5: «hay
+    /// ocultos» ya no quiere decir «Aguas turbias»). Una posición con un índice fuera del tablero cuenta como turbia.
+    /// </summary>
+    public static int[][] MurkyHidden(BoardData b) =>
+        b.Hidden.Where(h => h.Length < 1 || h[0] < 0 || h[0] >= b.Attrs.Length || b.Attrs[h[0]].Type != MechanicType.Tinaja).ToArray();
+
+    /// <summary>
+    /// La cuia <paramref name="i"/> es una capacidad de 02 §8 (Cuia chica o Cuia alta): capacidad distinta de 4 y no es la
+    /// cueva de la Piraña, la tinaja ni su cuia chica (propuesta de la tinaja c.5: si no, contarían como Cuia alta y Cuia chica
+    /// en QA-GAP-120, QA-MECH-CELL y QA-MECH-DEBUT).
+    /// </summary>
+    public static bool IsCapacityCuia(BoardData b, int i) =>
+        b.Caps[i] != Cuia.DefaultCapacity && b.Attrs[i].Type != MechanicType.Pirana && !IsTinajaPair(b.Attrs[i].Type);
+
+    /// <summary>Vacíos de 4 (o más) sin mecánica: los de la aritmética de 02 §8, sin contar la tinaja ni su cuia (c.3 punto 2).</summary>
+    public static int FreeEmpties(BoardData b) =>
+        Enumerable.Range(0, b.Cuias.Length).Count(i => b.Cuias[i].Length == 0 && b.Caps[i] >= Cuia.DefaultCapacity && b.Attrs[i].IsNone);
+
+    /// <summary>
+    /// Códigos de calendario de las mecánicas presentes (las capacidades no son mecánicas). La tinaja y su cuia dan «Ti»; «Tu»
+    /// solo si hay dosis ocultas fuera de la tinaja (propuesta de la tinaja c.5).
+    /// </summary>
     public static SortedSet<string> Codes(BoardData b)
     {
         var codes = new SortedSet<string>(StringComparer.Ordinal);
@@ -37,6 +66,7 @@ internal static class MechanicChecks
                 MechanicType.Remolino => "Re",
                 MechanicType.Lluvia => "Ll",
                 MechanicType.Pirana => "Pi",
+                MechanicType.Tinaja or MechanicType.Cucharon => "Ti",
                 _ => "?",
             });
         }
@@ -46,7 +76,7 @@ internal static class MechanicChecks
             codes.Add("Ba");
         }
 
-        if (b.Hidden.Length > 0)
+        if (MurkyHidden(b).Length > 0)
         {
             codes.Add("Tu");
         }
@@ -54,19 +84,26 @@ internal static class MechanicChecks
         return codes;
     }
 
-    /// <summary>Ejemplares de mecánica: un attr (el par del Remolino cuenta como uno), cada dosis de Barro y cada cuia turbia.</summary>
+    /// <summary>
+    /// Ejemplares de mecánica: un attr (el par del Remolino cuenta como uno, y la tinaja con su cuia también: c.5), cada dosis
+    /// de Barro y cada cuia turbia (sin la tinaja).
+    /// </summary>
     public static int Instances(BoardData b)
     {
         int remolino = b.Attrs.Count(a => a.Type == MechanicType.Remolino);
-        int attrs = b.Attrs.Count(a => !a.IsNone && a.Type != MechanicType.Remolino);
+        int tinaja = Math.Max(b.Attrs.Count(a => a.Type == MechanicType.Tinaja), b.Attrs.Count(a => a.Type == MechanicType.Cucharon));
+        int attrs = b.Attrs.Count(a => !a.IsNone && a.Type != MechanicType.Remolino && !IsTinajaPair(a.Type));
         int mud = b.Cuias.Sum(c => c.Count(x => x == Cuia.MudColor));
-        int murky = b.Hidden.Select(h => h[0]).Distinct().Count();
-        return attrs + (remolino / 2) + mud + murky;
+        int murky = MurkyHidden(b).Select(h => h.Length > 0 ? h[0] : -1).Distinct().Count();
+        return attrs + (remolino / 2) + tinaja + mud + murky;
     }
 
-    /// <summary>Capacidades distintas de 4 de las cuias que no son la cueva de la Piraña (02 §8).</summary>
+    /// <summary>
+    /// Capacidades distintas de 4 de las cuias que no son la cueva de la Piraña (02 §8) ni la tinaja y su cuia (propuesta de la
+    /// tinaja c.5).
+    /// </summary>
     public static IEnumerable<int> CapacityCaps(BoardData b) =>
-        b.Caps.Where((c, i) => c != Cuia.DefaultCapacity && b.Attrs[i].Type != MechanicType.Pirana);
+        b.Caps.Where((c, i) => IsCapacityCuia(b, i));
 
     /// <summary>
     /// QA-GAP-120 sobre los niveles publicados: entre dos apariciones de una mecánica (por código del calendario) o de una
@@ -138,11 +175,12 @@ internal static class MechanicChecks
             }
         }
 
-        // Capacidades (02 §8): la cueva de la Piraña no cuenta como Cuia chica.
+        // Capacidades (02 §8): la cueva de la Piraña no cuenta como Cuia chica, ni la tinaja y su cuia como Cuia alta y Cuia
+        // chica (c.5).
         for (int i = 0; i < b.Caps.Length; i++)
         {
             int cap = b.Caps[i];
-            if (cap == Cuia.DefaultCapacity || b.Attrs[i].Type == MechanicType.Pirana)
+            if (!IsCapacityCuia(b, i))
             {
                 continue;
             }

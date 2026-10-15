@@ -2,6 +2,10 @@
 // fill), superposición de mecánicas (03 §9), tintes (03 §4.5), orden visual, verificación con AF.Core/AF.Solver
 // (BoardBuilder, LevelValidation, SafePath en Aguas turbias, A* con par ≥ 2K) y medición (bot ×40 con la semilla del nivel,
 // trampas tempranas con el tope de su etiqueta, métricas de la ruta para el índice D).
+// Tinaja (D-019; propuesta de la tinaja c.3): vacíos sin contar la pareja (Superposition.TinajaEmpties), como mucho 12 cuias
+// con la pareja (02 §5; Superposition.TinajaMaxCuias: se baja K), búsquedas sin poda de fútiles (SolverOptions.ForLevel: par,
+// fill, ruta segura, paseos) y, al medir, los filtros de TinajaWalks (ruta segura, paseos seguros y casuales, «S0 sin
+// trampas» en el estreno y compuerta de coste de Morpho).
 // Rechazo por ventana (03 §4.4): hasta 30 candidatos por etapa; si no se llena el pool, se relaja en el orden de 03 §4.4
 // (comodidad: Cuia chica de 2 como «medio vacío» y después 2 vacíos; reto e hito: fill con 2 vacíos) y se registra.
 // Cada candidato sale de una sub-semilla de la semilla del nivel (03 §2, regla 1): el slot se reproduce desde su seed.
@@ -37,7 +41,7 @@ internal sealed class Candidate
     public required string MeasuredLabel { get; init; }
     public required bool InWindow { get; init; }
     public required int Complexity { get; init; }
-    public required int MaxRealities { get; init; }
+    public required int MaxRealities { get; set; }
     public int Par { get; set; } = -1;
     public int Expanded { get; set; }
     public int EarlyTraps { get; set; } = -1;
@@ -48,6 +52,9 @@ internal sealed class Candidate
     public double D { get; set; }
     public double Quantile { get; set; }
 
+    /// <summary>Resultado de los filtros de la tinaja (null si el nivel no la lleva o aún no se midió).</summary>
+    public TinajaCheckResult? TinajaCheck { get; set; }
+
     public bool PoolMember => Measured && Reject is null && InWindow;
 
     public int K => Tints.Palette.Count;
@@ -56,7 +63,11 @@ internal sealed class Candidate
 
     public int Empties => MetricsEngine.Empties(State);
 
-    public bool Murky => Board.Hidden.Length > 0;
+    /// <summary>Aguas turbias: dosis ocultas fuera de una tinaja (la tinaja es la otra fuente de ocultas, M13).</summary>
+    public bool Murky => Board.Hidden.Length > 0 && !IsTinaja;
+
+    /// <summary>El tablero lleva una tinaja (M13; D-019).</summary>
+    public bool IsTinaja => Board.Attrs.Any(a => a.Type == MechanicType.Tinaja);
 }
 
 internal sealed record SlotResult(LevelPlan Plan, List<Candidate> Candidates, int Attempts, List<string> Notes, bool MurkyDropped, int Rejected)
@@ -91,6 +102,7 @@ internal sealed class SlotGenerator(CampaignSpec spec)
     private readonly InverseDeep _deep = new();
     private readonly AStarSolver _fillSolver = new();
     private readonly SafePath _safePath = new();
+    private readonly TinajaWalks _tinaja = new();
 
     public MetricsEngine Metrics => _metrics;
 
@@ -250,6 +262,20 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             c.Branching = path.Branching;
             c.Traps = path.Traps;
         }
+
+        if (c.IsTinaja)
+        {
+            // Tinaja (03 §8; propuesta de la tinaja c.3 punto 3): ruta segura, paseos seguros y casuales, «S0 sin trampas»
+            // en los tableros de estreno y compuerta de coste de Morpho. Solo en los candidatos que se miden (los de la
+            // ventana y los de relajación): son caros.
+            TinajaCheckResult check = _tinaja.Check(c.State, plan.DebutBoard, plan.SeedText);
+            c.TinajaCheck = check;
+            c.MaxRealities = check.MaxRealities;
+            if (check.Reject is not null)
+            {
+                c.Reject = check.Reject;
+            }
+        }
     }
 
     /// <summary>Tope de trampas tempranas por etiqueta (Q16 B de D-007): 0 en Normal, 1 en Difícil, sin tope en Muy difícil.</summary>
@@ -282,6 +308,20 @@ internal sealed class SlotGenerator(CampaignSpec spec)
 
         int k = plan.K;
         int empties = plan.Empties;
+        bool tinaja = mechs.Any(m => m.Code == "Ti");
+        bool tinajaRelax = false;
+        if (tinaja)
+        {
+            // Vacíos de 4 sin contar la pareja (propuesta de la tinaja c.3 punto 2): 2 en los tableros de estreno y 1 en los
+            // demás (la comodidad fuera del estreno, 1 [P] pendiente de decisión; Superposition.TinajaEmpties).
+            empties = Superposition.TinajaEmpties(plan);
+            if (plan.DebutBoard && k > Superposition.TinajaDebutMaxK)
+            {
+                k = Superposition.TinajaDebutMaxK;
+                notes.Add("tinaja: K <= 6 en el estreno (propuesta de la tinaja c.3 y d.3)");
+            }
+        }
+
         string source = plan.Source;
         if (plan.Role is SlotRole.Challenge or SlotRole.Milestone && plan.Level > spec.ChallengeTwoEmptiesUntil)
         {
@@ -307,6 +347,16 @@ internal sealed class SlotGenerator(CampaignSpec spec)
                 deepNodes = stage == 1 ? InverseDeep.DefaultMaxNodes : 60000;
                 notes.Add(stage == 1 ? "endurecimiento: deep" : "endurecimiento: deep con 60.000 nodos");
 
+                break;
+            case 1 or 2 when tinaja:
+                // Tinaja: los vacíos son los de su tipo de nivel (c.3 punto 2) y no se relajan; se alivia con K − 1 una vez [P],
+                // por debajo del tope de 12 cuias (abajo).
+                if (stage == 2)
+                {
+                    return null;
+                }
+
+                tinajaRelax = true;
                 break;
             case 1:
                 if (plan.Role == SlotRole.Recovery || (plan.Role is SlotRole.Comfort or SlotRole.Remanso && !debutLike && empties >= 2))
@@ -425,7 +475,36 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         // retos e hitos (en ellos la dosis desplazada va al vacío y el tablero queda más apretado) [P].
         bool slack = mechs.Any(m => m.Code is "Br" or "Tu") || (mechs.Any(m => m.Code == "Ba") && !hardSlot);
         int caves = mechs.Count(m => m.Code == "Pi");
-        int total = k + baseEmpties + chicas.Count + (slack ? 1 : 0) + caves;
+        int pair = tinaja ? 2 : 0; // la tinaja y su cuia chica (M13)
+        int total = k + baseEmpties + chicas.Count + (slack ? 1 : 0) + caves + pair;
+        if (tinaja && total > Superposition.TinajaMaxCuias)
+        {
+            // Como mucho 12 cuias con tinaja (02 §5, fila «Tinaja y su cuia»; d.3: «K alto … dentro del tope de 12 cuias con
+            // tinaja») [P]: se baja K, como el K ≤ 6 del estreno; los vacíos de la tinaja no se tocan. Si K quedara por
+            // debajo de 3, la etapa no aplica.
+            int over = total - Superposition.TinajaMaxCuias;
+            if (k - over < 3)
+            {
+                return null;
+            }
+
+            k -= over;
+            total -= over;
+            notes.Add(string.Create(CultureInfo.InvariantCulture, $"tinaja: K <= {k} por el tope de {Superposition.TinajaMaxCuias} cuias con tinaja (02 sec. 5)"));
+        }
+
+        if (tinajaRelax)
+        {
+            if (k <= 3)
+            {
+                return null;
+            }
+
+            k--;
+            total--;
+            notes.Add("relajacion: K - 1 (tinaja: vacios fijos)");
+        }
+
         if (total > 14 && slack)
         {
             slack = false;
@@ -474,6 +553,7 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         // escalera de D-009 necesita variedad: deep da par cercano a 2K y fill par cercano a 3K).
         // El Brote y las Aguas turbias necesitan cuias a medias, que fill no deja (llena las casas): con ellas, deep.
         bool needsPartial = config.Mechanics.Any(m => m.Code is "Br" or "Tu");
+        bool tinaja = config.Mechanics.Any(m => m.Code == "Ti");
         string source = config.Source == "mixed" ? (attempt % 2 == 0 || needsPartial ? "deep" : "fill")
             : config.Source == "fill" && needsPartial ? "deep" : config.Source;
         try
@@ -482,7 +562,8 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             {
                 case "fill":
                 {
-                    FillResult fill = FillSource.Generate([.. caps], units, k, seed, _fillSolver);
+                    // Con tinaja, sin poda de fútiles (propuesta de la tinaja c.2; C1-8): el nivel acaba con capacidades mixtas.
+                    FillResult fill = FillSource.Generate([.. caps], units, k, seed, _fillSolver, futileRuleEnabled: !tinaja);
                     baseState = fill.State;
                     depth = fill.Candidates;
                     break;
@@ -549,7 +630,8 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         }
 
         board.MapColors(tints.Map);
-        board = board.Shuffled(new Prng(Prng.SubSeed(seed, 3)));
+        // Con tinaja, su cuia queda contigua y en la misma fila (b.2 regla 1); en los demás slots, el barajado de siempre.
+        board = tinaja ? Superposition.ShuffledWithTinaja(board, new Prng(Prng.SubSeed(seed, 3))) : board.Shuffled(new Prng(Prng.SubSeed(seed, 3)));
         BoardData data = board.ToData();
         BoardBuildResult built = data.Build();
         if (!built.IsValid)
@@ -575,7 +657,7 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         bool inWindow = plan.Window.Contains(bot) && labelAllowed && early is null;
         int realities = 0;
         string? reject = !labelAllowed ? $"etiqueta {label} no permitida en el slot" : early;
-        if (data.Hidden.Length > 0)
+        if (data.Hidden.Length > 0 && !tinaja)
         {
             // La ruta segura (03 §8) es cara: solo se busca para los candidatos que entran en la ventana.
             if (!inWindow)
@@ -584,7 +666,7 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             }
             else
             {
-                SafePathResult safe = _safePath.Find(state, SafeMoves.ForPipeline(PourMode.Run));
+                SafePathResult safe = _safePath.Find(state, SafeMoves.ForPipeline(PourMode.Run, state));
                 if (!safe.IsOk)
                 {
                     why = "Aguas turbias sin ruta segura: " + safe.Status;

@@ -1,4 +1,9 @@
 // Empaquetado af-level/1 con pack_schema 2 (08 §4.1 y §4.4; D-007): un pack por mundo y vuelta, mundo_{mm}_v1.json.
+// Un pack con la tinaja (M13; D-019, punto 9; contrato 21) sale con pack_schema 3: attrs {"type":"tinaja"} y
+// {"type":"cucharon"}, murky = true, hidden con las capas de la tinaja menos la boca e intro_mechanic "tinaja" en su estreno;
+// cada variante de relief que lleva la tinaja escribe su máscara en hidden, tras attrs (decisión del dueño del 2026-10-14,
+// opción a de la revisión de P2a; 08 §4.1: relief_board admite hidden si y solo si su attrs contiene la tinaja).
+// Los packs sin tinaja siguen con el 2 y sus variantes, sin hidden (los de 11-200 no cambian ni un byte).
 //   - claves en orden estable (el del ejemplo de 08 §4.1), InvariantCulture y números con decimales fijos
 //     (bot_fail con 3, branching, traps y D con 2);
 //   - UTF-8 sin BOM y LF; minificado (03 §2) con un nivel por línea [P] para que los diffs se lean;
@@ -30,6 +35,9 @@ internal static class PackWriter
     public const string SchemaFile = "schemas/af-level-1.schema.json";
     public const int PackSchema = 2;
 
+    /// <summary>pack_schema de los packs con la tinaja (P2a; D-019, punto 9).</summary>
+    public const int TinajaPackSchema = 3;
+
     private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
 
     public static string Fixed(double value, int decimals) =>
@@ -43,7 +51,7 @@ internal static class PackWriter
     {
         var header = new JObj
         {
-            { "pack_schema", PackSchema },
+            { "pack_schema", PackSchemaFor(levels) },
             { "schema_file", SchemaFile },
             { "pack_id", PackId(world, spec.Lap) },
             { "kind", "campaign" },
@@ -73,6 +81,12 @@ internal static class PackWriter
         sb.Append("]}\n");
         return sb.ToString();
     }
+
+    /// <summary>3 si algún nivel del pack (o alguna de sus variantes de alivio) lleva la tinaja; si no, 2.</summary>
+    public static int PackSchemaFor(IReadOnlyList<PackLevel> levels) =>
+        levels.Any(l => UsesTinaja(l.Chosen.Board.Attrs) || l.Relief.Any(r => UsesTinaja(r.Board.Attrs))) ? TinajaPackSchema : PackSchema;
+
+    private static bool UsesTinaja(MechanicSpec[] attrs) => attrs.Any(a => a.Type is MechanicType.Tinaja or MechanicType.Cucharon);
 
     public static JObj Level(CampaignSpec spec, PackLevel pl)
     {
@@ -118,7 +132,7 @@ internal static class PackWriter
             { "cuias", Cuias(b.Cuias) },
             { "attrs", Attrs(b.Attrs) },
             { "murky", b.Hidden.Length > 0 },
-            { "hidden", b.Hidden.Select(h => (object?)new List<object?> { h[0], h[1] }).ToList() },
+            { "hidden", Hidden(b.Hidden) },
             { "difficulty", difficulty },
             { "risk_pairs", c.Tints.RiskPairs },
             { "intro_mechanic", plan.Intro },
@@ -139,6 +153,12 @@ internal static class PackWriter
         o.Add("caps", r.Board.Caps.Select(x => (object?)x).ToList());
         o.Add("cuias", Cuias(r.Board.Cuias));
         o.Add("attrs", r.Board.HasMechanics ? Attrs(r.Board.Attrs) : null);
+        if (r.Board.HasTinaja)
+        {
+            // La máscara de la tinaja en la variante (todas sus capas menos la boca), con los índices de la variante.
+            o.Add("hidden", Hidden(r.Board.Hidden));
+        }
+
         o.Add("par", r.Par);
         o.Add("bot_fail", new JNum(Fixed(r.BotFail, 3)));
         return o;
@@ -160,6 +180,8 @@ internal static class PackWriter
 
         return o;
     }
+
+    private static List<object?> Hidden(int[][] hidden) => hidden.Select(h => (object?)new List<object?> { h[0], h[1] }).ToList();
 
     private static List<object?> Cuias(int[][] cuias) =>
         cuias.Select(c => (object?)c.Select(x => (object?)x).ToList()).ToList();

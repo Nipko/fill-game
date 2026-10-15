@@ -1,5 +1,7 @@
 // Lectura de paquetes af-level/1 (08 §4.1) con System.Text.Json, sin dependencias NuGet. El esquema lo valida
 // python tools/validate_schema.py --pack en el mismo paso del CI; aquí solo se leen los campos que comprueba level-qa.
+// Las variantes de relief con la tinaja llevan su máscara en hidden (pack_schema 3; decisión del dueño del 2026-10-14,
+// opción a de la revisión de P2a; 08 §4.1): se lee y se recuerda si la clave está, para QA-RELIEF-MASK.
 using System.Text;
 using System.Text.Json;
 using AF.Core.Mechanics;
@@ -7,7 +9,8 @@ using AmazonFill.Tools.LevelGenerator.Metrics;
 
 namespace AmazonFill.Tools.LevelQa;
 
-internal sealed record QaRelief(string Type, int? Removed, BoardData Board, int? Par, double BotFail);
+/// <summary>Variante de alivio; <paramref name="HiddenPresent"/>: la variante publica la clave hidden (solo con la tinaja).</summary>
+internal sealed record QaRelief(string Type, int? Removed, BoardData Board, int? Par, double BotFail, bool HiddenPresent);
 
 internal sealed record QaLevel(
     string Pack, int Index, string Id, int Level, int World, string Seed, string WaterBase,
@@ -121,12 +124,14 @@ internal static class PackReader
             foreach (JsonElement r in rel.EnumerateArray())
             {
                 JsonElement attrs = r.TryGetProperty("attrs", out JsonElement a) ? a : default;
+                bool hiddenPresent = r.TryGetProperty("hidden", out JsonElement rh);
                 relief.Add(new QaRelief(
                     Str(r, "type"),
                     r.TryGetProperty("removed", out JsonElement rm) ? rm.GetInt32() : null,
-                    Board(r.GetProperty("caps"), r.GetProperty("cuias"), attrs, default),
+                    Board(r.GetProperty("caps"), r.GetProperty("cuias"), attrs, hiddenPresent ? rh : default),
                     r.GetProperty("par").ValueKind == JsonValueKind.Number ? r.GetProperty("par").GetInt32() : null,
-                    r.GetProperty("bot_fail").GetDouble()));
+                    r.GetProperty("bot_fail").GetDouble(),
+                    hiddenPresent));
             }
         }
 

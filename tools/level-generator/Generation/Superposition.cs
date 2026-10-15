@@ -11,6 +11,11 @@
 //   Barro (M5)     en la capa 2 o 3 (índice 1-2) de una cuia de 4 sin mecánica; la dosis desplazada se recoloca en la cima
 //                  de otra cuia con hueco para conservar U_c (lectura de «retira una unidad» de 03 §9 [P]).
 //   Piraña (M7)    cueva = Cuia chica de 2 vacía (03 §9), con k = 4 escrito [P]. Nunca con Liana (LIANA-CAPS, bloqueo C1-9).
+//   Tinaja (M13)   paso «Ti», antes de «Tu» (D-019; propuesta de la tinaja c.3; 03 §8 y §9): saca n dosis de las cimas
+//                  de cuias sin mecánica (3 en estreno, comodidad y práctica; 4-5 en retos; 5 en el hito; nunca en p1, p2 ni
+//                  p19), las ordena en la tinaja (cap 5) con T4 y la boca a la vista (el resto, oculto) y añade su cuia
+//                  vacía (Cuia chica de 2) contigua; el orden visual deja la pareja junta y en la misma fila
+//                  (ShuffledWithTinaja). Solo consume números aleatorios en los slots con tinaja.
 //   Aguas turbias  1-2 cuias sin mecánica con 2-3 dosis: se ocultan las de debajo de la cima (T3), con T4 y como mucho 4
 //                  dosis (T2); en el 100 (Q9) una cuia con 2 dosis ocultas.
 using AF.Core.Board;
@@ -37,7 +42,7 @@ internal sealed class SuperpositionContext
 internal static class Superposition
 {
     /// <summary>Orden de colocación: primero las que necesitan vacíos o pares, al final las que tocan el contenido.</summary>
-    public static readonly string[] Order = ["Re", "Ho", "Ma", "Ll", "Li", "Br", "Ba", "Pi", "Tu"];
+    public static readonly string[] Order = ["Re", "Ho", "Ma", "Ll", "Li", "Br", "Ba", "Pi", "Ti", "Tu"];
 
     public static string? Apply(GenBoard b, MechanicInfo m, SuperpositionContext ctx, Prng rng)
     {
@@ -51,6 +56,7 @@ internal static class Superposition
             "Br" => Brote(b, m, ctx, rng),
             "Ba" => Barro(b, rng),
             "Pi" => Pirana(b, m, ctx),
+            "Ti" => Tinaja(b, ctx, rng),
             "Tu" => Murky(b, ctx, rng),
             _ => $"mecanica sin superposicion: {m.Code}",
         };
@@ -312,6 +318,211 @@ internal static class Superposition
         }
 
         return total == 0 ? "Aguas turbias: ninguna cuia cabe en el tope de 4 dosis" : null;
+    }
+
+    /// <summary>
+    /// Dosis de la tinaja por tipo de nivel (D-019, Q-Ti1 A; 02 §9.1 M13; 03 §8): estreno (p3-p5), comodidad y práctica, 3
+    /// (2 ocultas, ≤ 2 realidades); retos, 4-5 (3-4 ocultas); hito, 5 (4 ocultas). Null en recuperación (p1-p2), remanso
+    /// (p19) y la rampa: son niveles puros, sin tinaja. Las 5 dosis quedan sujetas a la compuerta de coste de Morpho
+    /// (<see cref="TinajaWalks"/>).
+    /// </summary>
+    public static (int Min, int Max)? TinajaDoses(LevelPlan plan) => plan.Ramp ? null : plan.Role switch
+    {
+        SlotRole.Comfort => (3, 3),
+        SlotRole.Challenge => (4, 5),
+        SlotRole.Milestone => (5, 5),
+        _ => null,
+    };
+
+    /// <summary>K máximo de los tableros de estreno de la tinaja (propuesta de la tinaja c.3 punto 2 y d.3: «K ≤ 6») [P].</summary>
+    public const int TinajaDebutMaxK = 6;
+
+    /// <summary>
+    /// Cuias como mucho en un nivel con tinaja, contando la tinaja y su cuia (02 §5, fila «Tinaja y su cuia (D-019)»: «como
+    /// mucho 12 cuias en un nivel con tinaja» [P]; propuesta de la tinaja (f) y d.3). Es un tope de layout, así que rige
+    /// también en las variantes de alivio, que el cliente dibuja igual [P]. El tope general de 14 (02 R1) queda por encima.
+    /// </summary>
+    public const int TinajaMaxCuias = 12;
+
+    /// <summary>
+    /// Vacíos de 4 del tablero base de un nivel con tinaja, sin contar la pareja (propuesta de la tinaja c.3 punto 2; P1 de
+    /// la tanda 4): 2 en los tableros de estreno (d.3: p3-p5 del ciclo de estreno, «2 vacíos sin contar la pareja»; 03 §12, p3-p5:
+    /// «1 (2 hasta el 30 y en debuts)») y 1 en los demás: práctica, comodidad, retos e hito. La comodidad fuera del estreno queda con 1 [P],
+    /// PENDIENTE DE DECISIÓN: c.3 punto 2 dice «2 en el debut y en comodidad», pero ninguna fuente define qué posiciones son
+    /// «comodidad» y cuáles «práctica», 03 §12 da 1 vacío a p3-p5 fuera de los debuts y, con 2 vacíos, el bot casi no falla
+    /// (c.9: 0-2 %) y el tablero no entra en la ventana de comodidad (20-60 %). La tinaja nunca recibe y su cuia solo recibe
+    /// de ella mientras cuelga, así que no cuentan en la aritmética de 02 §8.
+    /// </summary>
+    public static int TinajaEmpties(LevelPlan plan) => plan.DebutBoard ? 2 : 1;
+
+    private static string? Tinaja(GenBoard b, SuperpositionContext ctx, Prng rng)
+    {
+        LevelPlan plan = ctx.Plan;
+        if (TinajaDoses(plan) is not (int min, int max))
+        {
+            // D-019, Q-Ti1 A: recuperación (p1-p2), remanso (p19) y rampa son niveles puros. --validate-spec ya lo rechaza
+            // (CAL-ROLE); el generador nunca quita en silencio lo que pide la celda.
+            throw new InvalidOperationException($"nivel {plan.Level}: tinaja en {plan.RoleName} (p{plan.Position}); p1, p2 y p19 van sin tinaja (D-019, Q-Ti1 A)");
+        }
+
+        if (b.Hidden.Count > 0 || b.Attrs.Any(a => a.Type is MechanicType.Tinaja or MechanicType.Cucharon))
+        {
+            return "Tinaja: el tablero ya tiene dosis ocultas o una tinaja (una sola fuente de ocultas, M13)";
+        }
+
+        int n = min == max ? min : min + rng.NextInt(max - min + 1);
+        var taken = new List<int>(n);
+        for (int t = 0; t < n; t++)
+        {
+            // Cimas de cuias sin mecánica con 2 dosis o más (no se crea ningún vacío: los vacíos del tablero base son los del
+            // nivel) y sin dejar el Barro a la vista; nunca Barro dentro de la tinaja (b.2 regla 1).
+            var tops = new List<int>();
+            for (int i = 0; i < b.Count; i++)
+            {
+                List<int> c = b.Cuias[i];
+                if (Free(b, i) && c.Count >= 2 && c[^1] != Cuia.MudColor && c[^2] != Cuia.MudColor)
+                {
+                    tops.Add(i);
+                }
+            }
+
+            if (tops.Count == 0)
+            {
+                return "Tinaja: no quedan cimas que sacar";
+            }
+
+            List<int> from = b.Cuias[Pick(tops, rng)];
+            taken.Add(from[^1]);
+            from.RemoveAt(from.Count - 1);
+        }
+
+        List<int[]> orders = T4Orders(taken);
+        if (orders.Count == 0)
+        {
+            return "Tinaja: las dosis sacadas no admiten T4 (dos vecinas iguales)";
+        }
+
+        int[] column = orders[rng.NextInt(orders.Count)];
+        int tinaja = b.AddEmpty(LevelValidation.TinajaCapacity, new MechanicSpec(MechanicType.Tinaja));
+        b.Cuias[tinaja].AddRange(column);
+        for (int k = 0; k < n - 1; k++)
+        {
+            b.Hidden.Add((tinaja, k)); // todas ocultas salvo la boca (R7)
+        }
+
+        b.AddEmpty(LevelValidation.CucharonCapacity, new MechanicSpec(MechanicType.Cucharon));
+        return null;
+    }
+
+    /// <summary>
+    /// Órdenes distintos de <paramref name="doses"/> (de abajo arriba) con T4: dos dosis vecinas nunca son de la misma fruta.
+    /// En orden lexicográfico, para que la elección al azar sea reproducible.
+    /// </summary>
+    public static List<int[]> T4Orders(IReadOnlyList<int> doses)
+    {
+        int[] a = [.. doses.Order()];
+        var result = new List<int[]>();
+        while (true)
+        {
+            bool t4 = true;
+            for (int k = 0; k + 1 < a.Length && t4; k++)
+            {
+                t4 = a[k] != a[k + 1];
+            }
+
+            if (t4)
+            {
+                result.Add([.. a]);
+            }
+
+            // Siguiente permutación lexicográfica (las repetidas no se generan).
+            int i = a.Length - 2;
+            while (i >= 0 && a[i] >= a[i + 1])
+            {
+                i--;
+            }
+
+            if (i < 0)
+            {
+                return result;
+            }
+
+            int j = a.Length - 1;
+            while (a[j] <= a[i])
+            {
+                j--;
+            }
+
+            (a[i], a[j]) = (a[j], a[i]);
+            Array.Reverse(a, i + 1, a.Length - i - 1);
+        }
+    }
+
+    /// <summary>
+    /// Filas posibles del tablero de <paramref name="count"/> cuias generadas (D-006; <c>BoardLayout.RowsFor</c> del cliente):
+    /// 1 con T ≤ 5, 2 con 6-10, 2 o 3 con 11-14 (según el lienzo) y 3 con 15-16.
+    /// </summary>
+    public static int[] RowOptions(int count) => count switch
+    {
+        <= 5 => [1],
+        <= 10 => [2],
+        <= 14 => [2, 3],
+        _ => [3],
+    };
+
+    /// <summary>Fila de la cuia <paramref name="index"/> con <paramref name="rows"/> filas (D-006: ⌈restantes / filas⌉ de arriba abajo).</summary>
+    public static int RowOf(int count, int rows, int index)
+    {
+        int remaining = count;
+        int first = 0;
+        for (int r = 0; r < rows; r++)
+        {
+            int n = (remaining + (rows - r) - 1) / (rows - r);
+            if (index < first + n)
+            {
+                return r;
+            }
+
+            first += n;
+            remaining -= n;
+        }
+
+        return rows - 1;
+    }
+
+    /// <summary>
+    /// La tinaja (o su cuia) en <paramref name="left"/> y la otra en <paramref name="left"/> + 1 quedan en la misma fila con
+    /// cualquiera de las filas que el cliente puede elegir para <paramref name="count"/> cuias (b.2 regla 1: «en la ranura
+    /// contigua de la misma fila»).
+    /// </summary>
+    public static bool SameRow(int count, int left) =>
+        left >= 0 && left + 1 < count && RowOptions(count).All(rows => RowOf(count, rows, left) == RowOf(count, rows, left + 1));
+
+    /// <summary>
+    /// Orden visual al azar de un tablero con tinaja (sustituye a <see cref="GenBoard.Shuffled"/> solo en sus slots): las demás
+    /// cuias con Fisher-Yates y la pareja junta, en una ranura de la misma fila elegida al azar, con la tinaja a la izquierda o
+    /// a la derecha de su cuia [P] (AF.Core solo exige que sean contiguas).
+    /// </summary>
+    public static GenBoard ShuffledWithTinaja(GenBoard b, Prng rng)
+    {
+        int tinaja = b.Attrs.FindIndex(a => a.Type == MechanicType.Tinaja);
+        int cuia = b.Attrs.FindIndex(a => a.Type == MechanicType.Cucharon);
+        int[] others = [.. Enumerable.Range(0, b.Count).Where(i => i != tinaja && i != cuia)];
+        for (int i = others.Length - 1; i > 0; i--)
+        {
+            int j = rng.NextInt(i + 1);
+            (others[i], others[j]) = (others[j], others[i]);
+        }
+
+        List<int> slots = [.. Enumerable.Range(0, b.Count - 1).Where(left => SameRow(b.Count, left))];
+        int at = slots[rng.NextInt(slots.Count)];
+        bool tinajaLeft = rng.NextInt(2) == 0;
+        var order = new List<int>(b.Count);
+        order.AddRange(others.Take(at));
+        order.Add(tinajaLeft ? tinaja : cuia);
+        order.Add(tinajaLeft ? cuia : tinaja);
+        order.AddRange(others.Skip(at));
+        return b.Permuted([.. order]);
     }
 
     private static void FixDebutKey(SuperpositionContext ctx, MechanicInfo m, int color)

@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v1.json",
+  "description": "Fixture negativo de --validate-spec y de --seasons (SE1): el ciclo 61 con temporada C (solo A o B). --validate-spec falla por SEASONS y --seasons no escribe la tabla (codigo 1; lo comprueba --self-test seasons).",
+  "expect_rule": "SEASONS",
+  "seasons": {
+    "61": "C"
+  }
+}
