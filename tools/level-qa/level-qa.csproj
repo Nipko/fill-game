@@ -28,6 +28,7 @@
   <!-- La compuerta regenera la campaña en memoria para comprobar la reproducibilidad (QA-REPRO, 03 §17 #10) y medir la
        banda de cada nivel en el pool (QA-BAND-Q, 03 §7): el mismo código de generación, enlazado. -->
   <ItemGroup>
-    <Compile Include="../level-generator/Generation/*.cs" LinkBase="Shared/Generation" />
+    <!-- SeasonTableWriter (la tabla de temporada del generador) no lo usa la compuerta: se queda fuera. -->
+    <Compile Include="../level-generator/Generation/*.cs" Exclude="../level-generator/Generation/SeasonTableWriter.cs" LinkBase="Shared/Generation" />
   </ItemGroup>
 </Project>

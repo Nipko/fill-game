@@ -95,8 +95,8 @@ internal static class SeasonTableWriter
             sources.Add(SourceOf(CampaignSpec.Load(path), RepoRelative(path)));
         }
 
-        sources.Sort((a, b) => a.CycleFrom.CompareTo(b.CycleFrom));
-        return Bytes(string.Join(", ", sources.Select(s => s.Source)), Cycles(sources));
+        List<SeasonSource> ordered = Ordered(sources);
+        return Bytes(string.Join(", ", ordered.Select(s => s.Source)), CyclesInOrder(ordered));
     }
 
     public static SeasonSource SourceOf(CampaignSpec spec, string source) =>
@@ -106,14 +106,19 @@ internal static class SeasonTableWriter
     /// Los ciclos de las fuentes, en orden: cada fuente da un ciclo por cada inicio de 20 entre su CycleFrom y su LastLevel,
     /// con A o B; las fuentes van seguidas, sin hueco ni solape. Lanza <see cref="SeasonTableException"/> si no.
     /// </summary>
-    public static List<SeasonCycle> Cycles(IReadOnlyList<SeasonSource> sources)
+    public static List<SeasonCycle> Cycles(IReadOnlyList<SeasonSource> sources) => CyclesInOrder(Ordered(sources));
+
+    /// <summary>Las fuentes por su primer ciclo (el único ordenamiento: lo usan Build y Cycles).</summary>
+    private static List<SeasonSource> Ordered(IReadOnlyList<SeasonSource> sources) =>
+        sources.OrderBy(s => s.CycleFrom).ToList();
+
+    private static List<SeasonCycle> CyclesInOrder(List<SeasonSource> ordered)
     {
-        if (sources.Count == 0)
+        if (ordered.Count == 0)
         {
             throw new SeasonTableException("ninguna especificacion");
         }
 
-        var ordered = sources.OrderBy(s => s.CycleFrom).ToList();
         var cycles = new List<SeasonCycle>();
         foreach (SeasonSource src in ordered)
         {
@@ -295,22 +300,24 @@ internal static class SeasonTableWriter
         Check(Encoding.UTF8.GetString(Bytes("a, b", joined)).Contains("\"source\": \"a, b\"", StringComparison.Ordinal), "union: source con las dos especificaciones");
 
         // 7. Rechazos.
-        Rejects(Check, "hueco entre especificaciones", [v1, tail with { CycleFrom = 221, Seasons = new Dictionary<int, string> { [221] = "A", [241] = "B" } }]);
-        Rejects(Check, "solape entre especificaciones", [v1, tail with { CycleFrom = 181, Seasons = new Dictionary<int, string> { [181] = "B", [201] = "A", [221] = "A", [241] = "B" } }]);
-        Rejects(Check, "temporada distinta de A o B", [tail with { Seasons = new Dictionary<int, string> { [201] = "A", [221] = "C", [241] = "B" } }]);
-        Rejects(Check, "ciclo sin temporada", [tail with { Seasons = new Dictionary<int, string> { [201] = "A", [241] = "B" } }]);
-        Rejects(Check, "entrada fuera de un inicio de ciclo", [tail with { Seasons = new Dictionary<int, string> { [201] = "A", [210] = "B", [221] = "A", [241] = "B" } }]);
-        Rejects(Check, "entrada tras el ultimo nivel", [tail with { Seasons = new Dictionary<int, string> { [201] = "A", [221] = "A", [241] = "B", [261] = "A" } }]);
-        Rejects(Check, "primer ciclo desalineado", [tail with { CycleFrom = 202 }]);
-        Rejects(Check, "ninguna especificacion", []);
+        Rejects(Check, "hueco entre especificaciones", "deja un hueco tras el ciclo 181", [v1, tail with { CycleFrom = 221, Seasons = new Dictionary<int, string> { [221] = "A", [241] = "B" } }]);
+        Rejects(Check, "solape entre especificaciones", "(181) se solapa con el ciclo 181", [v1, tail with { CycleFrom = 181, Seasons = new Dictionary<int, string> { [181] = "B", [201] = "A", [221] = "A", [241] = "B" } }]);
+        Rejects(Check, "temporada distinta de A o B", "el ciclo 221-240 no tiene temporada A o B (C)", [tail with { Seasons = new Dictionary<int, string> { [201] = "A", [221] = "C", [241] = "B" } }]);
+        Rejects(Check, "ciclo sin temporada", "el ciclo 221-240 no tiene temporada A o B (falta)", [tail with { Seasons = new Dictionary<int, string> { [201] = "A", [241] = "B" } }]);
+        Rejects(Check, "entrada fuera de un inicio de ciclo", "la temporada de \"210\" no cae en el inicio de un ciclo", [tail with { Seasons = new Dictionary<int, string> { [201] = "A", [210] = "B", [221] = "A", [241] = "B" } }]);
+        Rejects(Check, "entrada tras el ultimo nivel", "la temporada de \"261\" no cae en el inicio de un ciclo", [tail with { Seasons = new Dictionary<int, string> { [201] = "A", [221] = "A", [241] = "B", [261] = "A" } }]);
+        Rejects(Check, "primer ciclo desalineado", "el ciclo empieza en 202", [tail with { CycleFrom = 202 }]);
+        Rejects(Check, "ninguna especificacion", "ninguna especificacion", []);
         try
         {
             Build([InvalidLetterFixture]);
             Check(false, $"rechazo: {InvalidLetterFixture} (temporada C) no se acepta");
         }
-        catch (SeasonTableException)
+        catch (SeasonTableException e)
         {
-            Check(true, $"rechazo: {InvalidLetterFixture} (temporada C) no se acepta");
+            // Por la letra C del ciclo 61 y no por otro motivo (por ejemplo, que extends dejara de fusionar seasons).
+            Check(e.Message.Contains("el ciclo 61-80 no tiene temporada A o B (C)", StringComparison.Ordinal),
+                $"rechazo: {InvalidLetterFixture} (temporada C del ciclo 61) no se acepta ({e.Message})");
         }
         catch (CampaignSpecException e)
         {
@@ -321,7 +328,8 @@ internal static class SeasonTableWriter
         return failures == 0 ? 0 : 1;
     }
 
-    private static void Rejects(Action<bool, string> check, string what, IReadOnlyList<SeasonSource> sources)
+    /// <summary>El rechazo cuenta solo si el mensaje dice el motivo esperado (<paramref name="reason"/>), no otro.</summary>
+    private static void Rejects(Action<bool, string> check, string what, string reason, IReadOnlyList<SeasonSource> sources)
     {
         try
         {
@@ -330,7 +338,7 @@ internal static class SeasonTableWriter
         }
         catch (SeasonTableException e)
         {
-            check(true, $"rechazo: {what} ({e.Message})");
+            check(e.Message.Contains(reason, StringComparison.Ordinal), $"rechazo: {what} ({e.Message})");
         }
     }
 
