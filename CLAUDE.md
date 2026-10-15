@@ -16,7 +16,7 @@ Puzzle móvil de ordenar agua (*water-sort*) con temática amazónica, **Android
 - **Unity 6000.3.25f1** (changeset `e1dba0a9aba4`), 6.3 LTS, Editor Windows ARM64, URP 2D, Shader Graph, IL2CPP ARM64, minSdk 26, targetSdk 36. Fuente: `ProjectSettings/ProjectVersion.txt`.
 - **C# 9 (`LangVersion 9.0`) y netstandard2.1** en todo lo que compila Unity. Nada de C# 10+: `namespace X;`, `global using`, `record struct`, `required`, `[1, 2]`, constructores primarios.
 - **.NET SDK 10.0.401** (`global.json`, `rollForward: latestFeature`) para `dotnet/` y `tools/`. Tests NUnit 3.14.0; los compartidos con Unity usan el subconjunto de NUnit 3.5 (solo `Assert.That`).
-- Python 3.14 con `jsonschema` (`tools/*.py`); Node 24 (más adelante, `functions/`).
+- Python 3.14 con `jsonschema` (`tools/*.py` y `tools/river-map/test_schemas.py`); Node 24 (más adelante, `functions/`).
 - Unity CLI en beta que se actualiza sola (`unity`; 1.0.0-beta.13 desde el 2026-10-07; los hooks de git la llaman por el alias estable `%LOCALAPPDATA%\Microsoft\WindowsApps\unity.exe`, no por la ruta versionada de WindowsApps) con `com.unity.pipeline` 0.8.0-exp.1 y las skills `.claude/skills/unity-cli` y `unity-pipeline`. **Sin MCP.** La CLI funciona para `run`, `test` y `recompile`; sus instaladores no (Hub MSIX): no instales nada con ella.
 - Editor: `C:\Program Files\Unity\Hub\Editor\6000.3.25f1\Editor\Unity.exe` (ARM64). .NET: `C:\Program Files\dotnet`.
 
@@ -26,8 +26,12 @@ La raíz **es** el proyecto Unity; Unity solo importa `Assets/` y `Packages/`.
 - `schemas/af-level-1.schema.json`: esquema de niveles.
 - `Packages/com.amazonfill.core/`: **única copia** de AF.Core y AF.Solver (`Runtime/`; tests compartidos en `Tests/Editor/`); los asmdef de `Runtime/` con `noEngineReferences: true` y `autoReferenced: false` (los scripts de `Assets/` los referencian desde su propio asmdef).
 - `dotnet/`: `AmazonFill.slnx`, `Directory.Build.props`, `BannedSymbols.txt`, `AF.Core`/`AF.Solver` (.csproj que enlazan los `.cs` del paquete), `AF.Core.Tests` (net10.0, con `DotnetOnly/`); salida en `dotnet/artifacts/` (ignorada).
-- `tools/`: `level-generator/` (.NET 10; `--handmade` genera el pack del tutorial desde `level-generator/specs/tutorial_v0.json` con AF.Core/AF.Solver) y `level-qa/`, `levelgen_proto.py`, `econ_sim.py`, `econ_variants.py`, `validate_schema.py`; salidas en `tools/out/` y `tools/out_inverse/`.
-- Proyecto Unity (URP 2D, creado el 2026-10-06): `Assets/_Project/` con `Scripts/` (asmdef AF.Levels y AF.GameFlow sin motor; AF.Presentation y AF.UI; gráficos provisionales por código), `Data/Levels/tutorial_v0.json` (niveles 1-10, generado: no lo edites a mano), `Scenes/Game.unity` (la crea `GameSceneBuilder.CreateGameScene`), `Tests/` (EditMode y PlayMode) y `Editor/CI/` (AF.EditorTools: `ProjectSetup`, `BuildSmoke`, `BuildDev`); `ProjectSettings/`, `Packages/manifest.json` y `packages-lock.json` (este lo regenera Unity: no lo edites a mano). Prototipo v0: `docs/dev/prototipo-v0.md`.
+- `tools/`: `level-generator/` (.NET 10; `--handmade` genera el pack del tutorial desde `level-generator/specs/tutorial_v0.json` con AF.Core/AF.Solver) y `level-qa/`, `levelgen_proto.py`, `econ_sim.py`, `econ_variants.py`, `validate_schema.py`; salidas en `tools/out/` y `tools/out_inverse/`. Cuando exista, `river-map/` (Mapa del río, D-013; Python 3.14, generadores solo con la biblioteca estándar, 08 §4.5, y `jsonschema` solo en `test_schemas.py`): genera `Data/Map/` y el bloque de filas del Mapa de `Data/Loc/facts.csv`.
+- Proyecto Unity (URP 2D, creado el 2026-10-06): `Assets/_Project/` con `Scripts/` (asmdef AF.Levels y AF.GameFlow sin motor; AF.Presentation y AF.UI; gráficos provisionales por código), `Data/Levels/tutorial_v0.json` (niveles 1-10, generado: no lo edites a mano), `Scenes/Game.unity` (la crea `GameSceneBuilder.CreateGameScene`), `Tests/` (EditMode y PlayMode) y `Editor/CI/` (AF.EditorTools: `ProjectSetup`, `BuildSmoke`, `BuildDev`); `ProjectSettings/`, `Packages/manifest.json` y `packages-lock.json` (este lo regenera Unity: no lo edites a mano). Prototipo v0: `docs/dev/prototipo-v0.md`. Previstos (cuando existan):
+  - `Scripts/Localization/`: AF.Localization, la fachada `Loc` sin motor (08 §2.2);
+  - `Data/Loc/`: tablas de textos `strings.csv`, `facts.csv` y `glossary.csv` (08 §4.7, contrato 32; reglas en `.claude/rules/localizacion.md`);
+  - `Data/Content/`: calendarios de contenido, como `frutas_del_rio_v1.json` (08 §4.6, contrato 31);
+  - `Data/Map/`: `river_map_v1.json` y `river_stops_v1.json` (08 §4.5, contratos 29 y 30), generados por `tools/river-map/`: no los edites a mano.
 - `scripts/`: `unity-compile.ps1`, `unity-test.ps1`. `ci/`: `size-gate.ps1`, `check-16kb.sh`.
 - `.claude/`: `agents/` (7 subagentes), `rules/` (reglas por ruta), `skills/` (`unity-cli`, `unity-pipeline`), `settings.json` (permisos aprobados por el dueño el 2026-10-06; el 2026-10-09 pasó todas las reglas «ask» a «allow» para trabajar sin avisos: solo quedan las «deny». Las reglas duras de este archivo siguen valiendo aunque nada pida confirmación).
 - **Pendiente (no crear a mano):**
@@ -44,10 +48,15 @@ python tools/validate_schema.py                       # 40/40 PASS; código 1 si
                                                       # reescribe tools/out/schema_example_08_4_1.json desde 08 §4.1; commitea el cambio si aparece
 python tools/econ_sim.py --runs 300 | diff --strip-trailing-cr -q - tools/out/econ_B.md
                                                       # (Git Bash) solo si tocas economía; sin salida = idéntico
+python tools/river-map/stops.py --check               # Mapa del río (los cuatro): solo si tocas el Mapa; código 1 si falla
+python tools/river-map/geometry.py --check            # cuando exista
+python -m unittest discover -s tools/river-map -p "test_*.py"
+python docs/research/mapa-del-rio/generar_mapa.py --check
 pwsh -NoProfile -File scripts/unity-compile.ps1       # ¿compila Unity? errores: solo las 30 primeras líneas "error CS"
 pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 1.506 hoy en integracion-fase1-fase2 (1.503 + 3 omitidos); dotnet test: 718 (714 + 4 omitidos)
 pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 433 (387 + 46 explícitos de capturas); antes de cada PR que toque Unity
 ```
+- Las pruebas de `tools/` van como fixtures (`tools/level-generator/specs/tests/`, `tools/level-qa/fixtures/`) y como un modo `--self-test` en la propia herramienta; `tools/river-map/` suma sus `test_*.py` (unittest). No hay proyectos de tests de `tools/` en `dotnet/AmazonFill.slnx`.
 - Los scripts de Unity lanzan `unity test <proyecto> --mode <Mode> --architecture arm64 ...` (respaldo: `Unity.exe -batchmode -runTests`). Códigos: 0 verde · 1 errores de compilación · 2 argumentos · 3 no encuentra el proyecto Unity (¿carpeta equivocada?) · 4 falta CLI o Editor · 5 proyecto abierto en un Editor · 6 sin veredicto (lee el log; no reintentes a ciegas) · 8 tests fallidos.
 - Con un Editor abierto en esa carpeta: `unity status`; `unity recompile --project-path .` (0 compila · 6 errores · 7 Editor inalcanzable o en Safe Mode).
 - Ajustes Android versionados y build de humo (sin Editor abierto en la carpeta; el build limpio tarda ~26 min):
