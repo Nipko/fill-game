@@ -340,7 +340,9 @@ la Flor a 263, 283 y 303 [P]. Otros datos [P] de la muestra: los mundos 6 y 7, e
 genere en menos de un minuto, y las temporadas 241 A · 261 B · 281 B · 301 A. Genera `tools/out/sample_variants/mundo_06_v1.json`
 y `mundo_07_v1.json` (`pack_schema` 3) y `tools/out/sample_variants_report.md`.
 
-`--self-test variants` comprueba los códigos (Li frente a Ln y Br frente a B2), que un tablero sin variantes sale igual y gasta
+`--self-test variants` comprueba los códigos (Li frente a Ln y Br frente a B2; una tabla `mechanics` con un código que no
+está en `MechanicCodes.All` falla al cargar la especificación con «codigo de mecanica desconocido», probado con una copia
+temporal de la muestra con una fila `Xx`, sin fixture en `specs/tests`), que un tablero sin variantes sale igual y gasta
 los mismos números con el orden nuevo que con el de antes, cada paso sobre un tablero base fijo con 40 semillas (colocación
 válida según `LevelValidation`, los campos de b.3 y determinismo), la `key2` en `MapColors` y `Permuted`, el estreno de cada
 variante en la muestra (un candidato en ventana con un ejemplar, 2 vacíos y `bot_fail` < 0,20; su JSON con los `attrs` de la

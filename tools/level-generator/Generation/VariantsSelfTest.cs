@@ -4,7 +4,8 @@
 // vitória-régia (Fl). Usa la especificación de muestra specs/sample_variants.json, campaign_v1.json y semillas fijas.
 // Comprueba:
 //   - los códigos del calendario (MechanicCodes.CodeOf: Li frente a Ln, Br frente a B2, Ha, Fl y Ti) y que las tres
-//     especificaciones solo usan códigos conocidos;
+//     especificaciones solo usan códigos conocidos; una tabla mechanics con un código desconocido (copia temporal de la
+//     muestra con una fila Xx) falla al cargar con CampaignSpecException «codigo de mecanica desconocido»;
 //   - que la superposición conserva el orden de antes para las demás mecánicas (Superposition.OrderBeforeVariants) y que un
 //     tablero sin variantes consume los mismos números aleatorios con el orden nuevo que con el de antes (los packs 11-200 no
 //     cambian; el --check lo confirma con los packs);
@@ -120,6 +121,62 @@ internal static class VariantsSelfTest
         }
 
         check(unknown, "un codigo que no esta en la tabla de la especificacion se rechaza al leer la celda");
+        UnknownMechanicTable(check);
+    }
+
+    /// <summary>
+    /// Una tabla <c>mechanics</c> con un código que no está en <see cref="MechanicCodes.All"/> se rechaza al cargar la
+    /// especificación (CampaignSpec.Build), no como «mecánica sin superposición» en cada slot. Copia la muestra de variantes en
+    /// un directorio temporal (fuera del bucle de fixtures de --validate-spec, que esperan exit 1 con una regla): la copia tal
+    /// cual se carga, y con una fila más de código «Xx» lanza CampaignSpecException con «codigo de mecanica desconocido».
+    /// </summary>
+    private static void UnknownMechanicTable(Action<bool, string> check)
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "af-mechanics-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            JsonObject root = JsonNode.Parse(File.ReadAllText(SpecPath, System.Text.Encoding.UTF8))!.AsObject();
+            string copy = Path.Combine(dir, "sample_variants_copy.json");
+            File.WriteAllText(copy, root.ToJsonString());
+            bool copyLoads;
+            try
+            {
+                copyLoads = CampaignSpec.Load(copy).MechanicTable.Count == root["mechanics"]!.AsArray().Count;
+            }
+            catch (CampaignSpecException)
+            {
+                copyLoads = false;
+            }
+
+            root["mechanics"]!.AsArray().Add(new JsonObject
+            {
+                ["code"] = "Xx",
+                ["id"] = "xx",
+                ["kind"] = "filter",
+                ["debut"] = 250,
+                ["season"] = "all",
+            });
+            string bad = Path.Combine(dir, "sample_variants_unknown_code.json");
+            File.WriteAllText(bad, root.ToJsonString());
+            string? message = null;
+            try
+            {
+                _ = CampaignSpec.Load(bad);
+            }
+            catch (CampaignSpecException e)
+            {
+                message = e.Message;
+            }
+
+            check(copyLoads && message is not null && message.Contains("codigo de mecanica desconocido 'Xx'", StringComparison.Ordinal),
+                "una tabla mechanics con un codigo desconocido (Xx) se rechaza al cargar la especificacion: "
+                + (message ?? (copyLoads ? "se cargo sin error" : "la copia sin cambios no se carga")));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
     }
 
     private static void Order(CampaignSpec campaign, Action<bool, string> check)
