@@ -64,12 +64,19 @@ namespace AF.Core.Rules
         /// <summary>(b) Brotes que germinaron en este vertido (02 §9.1 M2).</summary>
         public int BroteOpenedMask { get; internal set; }
 
+        /// <summary>
+        /// (b) Brotes de dos hojas que abrieron una hoja en este vertido sin germinar (02 R10 b; propuesta de D-007 b.3: «cada
+        /// dosis abre una»): siguen cerrados, con una hoja menos (<see cref="Board.Cuia.MechanicN"/>). No están en
+        /// <see cref="OpenedMask"/>: la cuia no pasa a ser normal.
+        /// </summary>
+        public int BroteLeafOpenedMask { get; internal set; }
+
         /// <summary>(c) Cuias que este vertido dejó selladas (R5).</summary>
         public int SealedMask { get; internal set; }
 
         /// <summary>
-        /// (d) Cuias que se soltaron por un sellado (Liana) y (f) por una condición del tablero (la cuia de la Tinaja, M13):
-        /// pasan a ser normales.
+        /// (d) Cuias que se soltaron por un sellado (Liana; la Flor de vitória-régia, que se abre al haber selladas sus dos
+        /// frutas, solo está aquí, K3b) y (f) por una condición del tablero (la cuia de la Tinaja, M13): pasan a ser normales.
         /// </summary>
         public int ReleasedMask { get; internal set; }
 
@@ -157,6 +164,7 @@ namespace AF.Core.Rules
             OpenedMask = 0;
             HojaOpenedMask = 0;
             BroteOpenedMask = 0;
+            BroteLeafOpenedMask = 0;
             SealedMask = 0;
             ReleasedMask = 0;
             LianaReleasedMask = 0;
@@ -195,9 +203,15 @@ namespace AF.Core.Rules
             }
         }
 
+        /// <summary>(b) El Brote de dos hojas <paramref name="index"/> abrió una hoja sin germinar (02 R10 b).</summary>
+        internal void RecordLeafOpened(int index)
+        {
+            BroteLeafOpenedMask |= 1 << index;
+        }
+
         /// <summary>
-        /// (d) La mecánica <paramref name="type"/> de la cuia <paramref name="index"/> se soltó por un sellado (Liana) o (f) por
-        /// una condición del tablero (la cuia de la Tinaja).
+        /// (d) La mecánica <paramref name="type"/> de la cuia <paramref name="index"/> se soltó por un sellado (Liana, Flor) o
+        /// (f) por una condición del tablero (la cuia de la Tinaja).
         /// </summary>
         internal void RecordReleased(int index, Mechanics.MechanicType type)
         {

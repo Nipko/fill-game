@@ -24,13 +24,13 @@ namespace AF.Core.Rules
     /// <c>espacio_efectivo + 1</c>; el vertido lo lava (<see cref="PourEvents.BarroWashedMask"/>); una cuia con Barro no
     /// está sellada ni vacía (R5, R12).</para>
     /// <para><b>R10 (anexo B).</b> Tras cada vertido: (a) revelado de la nueva cima de A (R7); (b) aperturas por recepción
-    /// en B (Hoja, Brote); (c) sellado (R5); (d) liberaciones por sellado (Liana); (e) contadores (Lluvia, Piraña), una sola
-    /// vez por vertido y solo si el vertido no es fútil (respuesta Q18 B); (f) condiciones del tablero (la cuia de la Tinaja
-    /// se suelta cuando la tinaja queda vacía, M13); (f′) se repiten
+    /// en B (Hoja, Brote; el Brote de dos hojas resta las dosis recibidas); (c) sellado (R5); (d) liberaciones por sellado
+    /// (Liana); (e) contadores (Lluvia, Piraña), una sola vez por vertido y solo si el vertido no es fútil (respuesta Q18 B);
+    /// (f) condiciones del tablero (la cuia de la Tinaja se suelta cuando la tinaja queda vacía, M13); (f′) se repiten
     /// (c), (d) y (f) hasta que nada cambie; (g) victoria (R12); (h) bloqueo (R13-R15). El orden es contrato con el solver y
     /// con Marea, que restaura el estado anterior entero.</para>
-    /// <para><b><c>futil</c> (anexo B).</b> No es fútil si <c>cambia_al_recibir(B)</c> (Hoja puesta, Brote cerrado,
-    /// Matapi, Remolino, Lluvia con gotas pendientes…) ni si el origen está exento (<c>no_puede_recibir(A)</c> y la respuesta
+    /// <para><b><c>futil</c> (anexo B).</b> No es fútil si <c>cambia_al_recibir(B)</c> (Hoja puesta, Hoja atada, Brote
+    /// cerrado, Matapi, Remolino, Lluvia con gotas pendientes…) ni si el origen está exento (<c>no_puede_recibir(A)</c> y la respuesta
     /// Q-B: cuia de Remolino o Lluvia con gotas pendientes; la Tinaja y su cuia colgada, M13); en lo demás, la regla de 02
     /// §1.4 con la excepción de Aguas turbias de 04 §5.1 (<see cref="CuiaRules.IsFutile"/>).</para>
     /// <para><b>Filtro de origen</b> (M13, propuesta de la tinaja b.2 regla 3 y c.1): <c>legal</c> evalúa primero
@@ -272,15 +272,23 @@ namespace AF.Core.Rules
             events.Receiver = receiver;
             events.ChangedMask |= 1 << receiver;
 
-            // (b) Aperturas por recepción: la mecánica que se abre deja la cuia normal (02 R16 para D-007).
+            // (b) Aperturas por recepción: la mecánica que se abre deja la cuia normal (02 R16 para D-007); el Brote de dos hojas
+            // que recibe menos dosis de las hojas que le faltan solo las resta y sigue cerrado (02 R10 b).
             Cuia received = board[receiver];
             if (received.HasMechanic)
             {
-                Cuia opened = MechanicTable.Of(received).OnReceived(received, color);
+                Cuia opened = MechanicTable.Of(received).OnReceived(received, color, amount);
                 if (opened.Packed != received.Packed)
                 {
                     board.Set(receiver, opened);
-                    events.RecordOpened(receiver, received.Mechanic);
+                    if (opened.HasMechanic)
+                    {
+                        events.RecordLeafOpened(receiver);
+                    }
+                    else
+                    {
+                        events.RecordOpened(receiver, received.Mechanic);
+                    }
                 }
             }
 

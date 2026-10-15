@@ -16,7 +16,8 @@ namespace AF.Solver.Search
     /// <c>default(SolverOptions)</c> no es válido: usa el constructor o <see cref="ForPipeline"/>. Los valores del
     /// cliente (Morpho: <c>hint_budget_nodes</c>, <c>hint_weight</c>) vienen de Remote Config (08 §9) y no se
     /// duplican aquí. El par depende del modo: un pack resuelto en un modo y jugado en el otro da pares falsos
-    /// (riesgo R-2 de decisiones.md).
+    /// (riesgo R-2 de decisiones.md). El corte por <c>hint_timeout_ms</c> va aparte, en <see cref="Cancellation"/>
+    /// (<see cref="WithCancellation"/>; K2): null por defecto, con el comportamiento de siempre; el pipeline lo deja en null.
     /// </remarks>
     public readonly struct SolverOptions
     {
@@ -26,13 +27,18 @@ namespace AF.Solver.Search
         /// <summary>Peso máximo admitido.</summary>
         public const int MaxWeight = 16;
 
-        /// <summary>Crea unas opciones.</summary>
+        /// <summary>Crea unas opciones (sin corte por tiempo: <see cref="Cancellation"/> = null).</summary>
         /// <param name="nodeBudget">Máximo de estados expandidos (≥ 1).</param>
         /// <param name="weight">Peso de la heurística (1 = óptimo; 2 = pista en cliente, 03 §5), de 1 a <see cref="MaxWeight"/>.</param>
         /// <param name="futileRuleEnabled">Excluir los vertidos fútiles (02 §1.4); false = solo vertidos legales.</param>
         /// <param name="pourMode">Modo de vertido de la partida que se resuelve (por defecto
         /// <see cref="AF.Core.Rules.PourMode.Run"/>, D-005; <see cref="AF.Core.Rules.PourMode.Single"/> para pruebas).</param>
         public SolverOptions(int nodeBudget, int weight, bool futileRuleEnabled, PourMode pourMode)
+            : this(nodeBudget, weight, futileRuleEnabled, pourMode, null)
+        {
+        }
+
+        private SolverOptions(int nodeBudget, int weight, bool futileRuleEnabled, PourMode pourMode, SolverCancellation? cancellation)
         {
             if (nodeBudget < 1)
             {
@@ -53,6 +59,7 @@ namespace AF.Solver.Search
             Weight = weight;
             FutileRuleEnabled = futileRuleEnabled;
             PourMode = pourMode;
+            Cancellation = cancellation;
         }
 
         /// <summary>
@@ -83,6 +90,13 @@ namespace AF.Solver.Search
 
         /// <summary>Modo de vertido de las transiciones (cantidad 1 en <see cref="AF.Core.Rules.PourMode.Single"/>).</summary>
         public PourMode PourMode { get; }
+
+        /// <summary>
+        /// Bandera del corte cooperativo por tiempo (<c>hint_timeout_ms</c>, 08 §9; K2) que marca otro hilo; null (por defecto)
+        /// = sin corte, exactamente el comportamiento de antes. No cuenta como opción de la búsqueda: no cambia el memo de
+        /// <see cref="AF.Solver.Murky.SafeMoves"/>, que nunca guarda lo que se cortó.
+        /// </summary>
+        public SolverCancellation? Cancellation { get; }
 
         internal bool IsValid => NodeBudget >= 1 && Weight >= 1 && Weight <= MaxWeight && PourModes.IsDefined(PourMode);
 
@@ -132,15 +146,25 @@ namespace AF.Solver.Search
             return false;
         }
 
-        /// <summary>Las mismas opciones con otro valor de <see cref="FutileRuleEnabled"/>.</summary>
+        /// <summary>Las mismas opciones (con su <see cref="Cancellation"/>) con otro valor de <see cref="FutileRuleEnabled"/>.</summary>
         public SolverOptions WithFutileRule(bool futileRuleEnabled)
         {
-            return new SolverOptions(NodeBudget, Weight, futileRuleEnabled, PourMode);
+            return new SolverOptions(NodeBudget, Weight, futileRuleEnabled, PourMode, Cancellation);
+        }
+
+        /// <summary>
+        /// Las mismas opciones con la bandera de corte <paramref name="cancellation"/> (null = sin corte). La usa el cliente
+        /// para Morpho y la pista por inactividad (08 §9 <c>hint_timeout_ms</c>); el pipeline no.
+        /// </summary>
+        public SolverOptions WithCancellation(SolverCancellation? cancellation)
+        {
+            return new SolverOptions(NodeBudget, Weight, FutileRuleEnabled, PourMode, cancellation);
         }
 
         /// <summary>
         /// Las mismas opciones para el nivel <paramref name="level"/>: sin poda de fútiles si <see cref="RequiresUnprunedSearch"/>
-        /// (Tinaja, M13); si no, sin cambios. Vale igual para las opciones de Morpho que pasa el cliente.
+        /// (Tinaja, M13); si no, sin cambios. Vale igual para las opciones de Morpho que pasa el cliente, y conserva su
+        /// <see cref="Cancellation"/>.
         /// </summary>
         /// <exception cref="ArgumentNullException"><paramref name="level"/> es null.</exception>
         public SolverOptions ForLevel(BoardState level)

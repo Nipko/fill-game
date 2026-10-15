@@ -31,6 +31,21 @@ namespace AF.Core.Tests.DotnetOnly
     /// ruta segura (2-24 realidades; 130-7.525 ms en Release); expandidos: mediana 4.434, máximo 25.596; percentil 75 en la
     /// semilla 27 (par 23, 6 realidades). Con la poda, A* expande lo mismo o unos pocos estados menos y da el mismo par en las
     /// 30.</para>
+    /// <para><b>HoA</b> y <b>Br2</b> (variantes de la 1.0, K3a, 2026-10-14, con un programa fuera del repositorio en el equipo de
+    /// escritorio x64, .NET 10 Release): tablero base con <c>InverseWalk</c> (K = 10 colores de 4, 13 cuias de 4 y E = 2, con
+    /// una cuia de más para que haya cuias a medias), y superposición de la variante en una cuia elegida con el PRNG del núcleo:
+    /// la Hoja atada sobre una cuia con dosis y no sellada, con la llave = la fruta de su fondo (b.3: «puede empezar con dosis
+    /// cuyo fondo es c»; capacidad 4 = <c>U_c</c>, la regla de K3a, ratificada en D-024, punto 1); el Brote de dos hojas
+    /// (<c>n</c> = 2) sobre una cuia con 1-3 dosis y espacio ≥ 2. Verificación con <see cref="LevelValidation"/>, A* (w = 1,
+    /// 300.000 nodos) y Morpho (w = 2, 40.000). De 30 semillas: 30 válidos, 30 resueltos y 30 con Morpho; expandidos, mediana
+    /// 498 y máximo 25.202 (HoA) y 580 y 25.266 (Br2); percentil 75 en la semilla 23 (HoA) y 29 (Br2).</para>
+    /// <para><b>Fl</b> (Flor de vitória-régia, variante de la 1.0, K3b, 2026-10-14, con un programa fuera del repositorio en el
+    /// equipo de escritorio x64, .NET 10 Release): el mismo tablero base que HoA y Br2 (<c>InverseWalk</c> con K = 10 en 13 cuias
+    /// de 4 y E = 2) y la Flor sobre una cuia con contenido y no sellada, elegida con el PRNG del núcleo
+    /// (<c>Prng.SubSeed(semilla, 4031)</c>), con dos llaves distintas que no están dentro (b.3, como la Liana con fruta; con
+    /// capacidades uniformes las dos pueden sellar fuera). Verificación con <see cref="LevelValidation"/>, A* (w = 1, 300.000 nodos)
+    /// y Morpho (w = 2, 40.000). De 30 semillas: 30 válidos, 30 resueltos y 30 con Morpho; expandidos, mediana 1.223 y máximo
+    /// 31.719; percentil 75 en la semilla 15 (par 18, la Flor de 6 y 9 sobre la cuia 0).</para>
     /// </remarks>
     internal static class ReferenceBoards
     {
@@ -42,8 +57,9 @@ namespace AF.Core.Tests.DotnetOnly
         private static readonly int[] E = new int[0];
 
         /// <summary>
-        /// Los 37 tableros: 11 de una mecánica o capacidad, las 25 combinaciones del calendario d.4 y la Tinaja (M13, reto con
-        /// 5 dosis).
+        /// Los 40 tableros: 11 de una mecánica o capacidad, las 25 combinaciones del calendario d.4, la Tinaja (M13, reto con
+        /// 5 dosis) y las variantes de la 1.0 de K3a y K3b: la Hoja atada (HoA), el Brote de dos hojas (Br2) y la Flor de
+        /// vitória-régia (Fl).
         /// </summary>
         public static readonly ReferenceBoard[] All =
         {
@@ -201,6 +217,18 @@ namespace AF.Core.Tests.DotnetOnly
                 Doses(E, D(7, 3, 1, 3), D(9, 9, 7, 4), D(4, 4), D(5, 5, 3, 7), D(6, 6, 6), D(2, 2, 2, 8), D(8, 8, 8), D(9, 9, 7), D(5, 6, 3, 1), D(5, 1, 2, 1, 4), E),
                 Attrs(At(10, MechanicType.Tinaja), At(11, MechanicType.Cucharon)),
                 Hidden(H(10, 3), H(10, 2), H(10, 1), H(10, 0))),
+            Board("HoA", 17, 1965,
+                Caps(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4),
+                Doses(D(1, 1, 8, 9), D(2, 2, 10, 2), D(3, 3, 9), D(4, 4, 4, 7), D(5, 5, 5, 3), D(6, 6, 2, 1), D(7), D(8, 8, 3, 4), D(9, 7, 7, 8), D(10, 10, 10, 5), D(6, 6, 1, 9), E, E),
+                Attrs(At(4, MechanicType.HojaAtada, key: 5))),
+            Board("Br2", 18, 2068,
+                Caps(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4),
+                Doses(D(1, 1, 1, 9), D(2, 2, 2, 10), D(3, 3, 3, 9), D(4, 4, 9, 10), D(5, 6), E, D(7, 7, 1), D(8, 4, 4, 6), D(9, 5, 7, 6), D(10, 10, 6), D(5, 5, 2, 7), E, D(8, 8, 8, 3)),
+                Attrs(At(4, MechanicType.Brote, n: 2))),
+            Board("Fl", 18, 3591,
+                Caps(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4),
+                Doses(D(1, 4, 2, 1), D(2, 2, 2, 5), D(3, 3, 4, 3), D(4, 8, 3), D(5, 5, 5, 10), D(6, 6, 6, 9), D(7, 7, 6, 7), D(1), D(9, 9, 9, 8), D(10, 10, 10, 1), E, D(7, 8, 8, 4), E),
+                Attrs(At(0, MechanicType.Flor, key: 6, key2: 9))),
         };
 
         /// <summary>Tablero <paramref name="name"/> (por ejemplo <c>"Ll+Re"</c>).</summary>
@@ -275,9 +303,9 @@ namespace AF.Core.Tests.DotnetOnly
             return attrs;
         }
 
-        private static At At(int index, MechanicType type, int key = 0, int partner = -1, int n = 0, int k = 0)
+        private static At At(int index, MechanicType type, int key = 0, int partner = -1, int n = 0, int k = 0, int key2 = 0)
         {
-            return new At(index, new MechanicSpec(type, key, partner, n, k));
+            return new At(index, new MechanicSpec(type, key, partner, n, k, key2));
         }
 
         private static int[][] Hidden(params int[][] positions)
@@ -305,7 +333,8 @@ namespace AF.Core.Tests.DotnetOnly
 
         /// <summary>
         /// Combinación del calendario d.4 (Ho Hoja, Ma Matapi, Li Liana con fruta, Tu Aguas turbias, Re Remolino, Ba Barro, Ll
-        /// Lluvia, Br Brote, Pi Piraña, Ch Cuia chica, Al y Al6 Cuia alta) o Ti, la Tinaja con su cuia (M13).
+        /// Lluvia, Br Brote, Pi Piraña, Ch Cuia chica, Al y Al6 Cuia alta), Ti, la Tinaja con su cuia (M13), o una variante de la
+        /// 1.0: HoA, la Hoja atada, y Br2, el Brote de dos hojas (K3a); Fl, la Flor de vitória-régia (K3b).
         /// </summary>
         public string Name { get; }
 

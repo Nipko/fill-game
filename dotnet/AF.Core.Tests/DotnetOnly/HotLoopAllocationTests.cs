@@ -376,6 +376,102 @@ namespace AF.Core.Tests.DotnetOnly
         }
 
         [Test]
+        public void HojaAtadaBoard_HotLoop_DoesNotAllocate()
+        {
+            // K3a: la Hoja atada (filtro de destino persistente que sí es origen; 02 §1.2 y §1.4; propuesta de D-007 b.3) en
+            // movimientos útiles, bloqueo, vertido aplicado (también el que entra en ella, sin abrirla), solver calentado y bot
+            // calentado, sin asignaciones. Empieza con su fruta en el fondo.
+            Cuia atada = Cuia.Create(4, new[] { 1 }).WithMechanic(MechanicType.HojaAtada, key: 1);
+            var state = new BoardState(new[]
+            {
+                atada, Cuia.Create(4, new[] { 2, 3, 1, 4 }), Cuia.Create(4, new[] { 3, 2, 4, 1 }), Cuia.Create(4, new[] { 2, 4, 3, 1 }),
+                Cuia.Create(4, new[] { 4, 2, 3 }), Cuia.Empty(4),
+            });
+            AssertRulesBotAndSolverDoNotAllocate(state, 19UL);
+            AssertPourDoesNotAllocate(state, 2, 0, PourMode.Run, (in PourEvents e) => e.ChangedMask == ((1 << 0) | (1 << 2)) && e.OpenedMask == 0);
+        }
+
+        [Test]
+        public void BroteDosHojasBoard_HotLoop_DoesNotAllocate()
+        {
+            // K3a: el Brote de dos hojas (02 R10 b; propuesta de D-007 b.3: resta las dosis recibidas en la etapa (b)) en
+            // movimientos útiles, bloqueo, vertido aplicado (el que abre una hoja sin germinar, en single, y el tramo de 2 que lo
+            // abre, en run), solver calentado y bot calentado, sin asignaciones.
+            Cuia brote = Cuia.Create(4, new[] { 2, 1 }).WithMechanic(MechanicType.Brote, n: 2, flags: Cuia.FlagClosed);
+            var state = new BoardState(new[]
+            {
+                brote, Cuia.Create(4, new[] { 3, 4, 1, 1 }), Cuia.Create(4, new[] { 4, 3, 2, 2 }), Cuia.Create(4, new[] { 3, 4 }),
+                Cuia.Create(4, new[] { 2, 4, 3, 1 }), Cuia.Empty(4),
+            });
+            AssertRulesBotAndSolverDoNotAllocate(state, 23UL);
+            AssertPourDoesNotAllocate(state, 1, 0, PourMode.Single, (in PourEvents e) => e.BroteLeafOpenedMask == 1 << 0);
+            AssertPourDoesNotAllocate(state, 1, 0, PourMode.Run, (in PourEvents e) => e.BroteOpenedMask == 1 << 0);
+        }
+
+        [Test]
+        public void FlorBoard_HotLoop_DoesNotAllocate()
+        {
+            // K3b: la Flor de vitória-régia (cerrada no es origen ni destino; se abre en la etapa (d) de R10 al haber selladas
+            // sus dos frutas; 02 §1.2 y R10 d; propuesta de D-007 b.3) en movimientos útiles, bloqueo, vertido aplicado (también
+            // el que sella la segunda fruta y la abre), solver calentado y bot calentado, sin asignaciones.
+            Cuia flor = Cuia.Create(4, new[] { 3, 4 }).WithMechanic(MechanicType.Flor, key: 1, key2: 2);
+            var state = new BoardState(new[]
+            {
+                flor, Cuia.Create(4, new[] { 2, 3, 1, 4 }), Cuia.Create(4, new[] { 3, 2, 4, 1 }), Cuia.Create(4, new[] { 2, 4, 3, 1 }),
+                Cuia.Create(4, new[] { 1, 2 }), Cuia.Empty(4),
+            });
+            AssertRulesBotAndSolverDoNotAllocate(state, 29UL);
+
+            Cuia closed = Cuia.Create(4, new[] { 3, 3 }).WithMechanic(MechanicType.Flor, key: 1, key2: 2);
+            var opening = new BoardState(new[]
+            {
+                closed, Cuia.Create(4, new[] { 2 }), Cuia.Create(4, new[] { 1, 1, 1, 1 }), Cuia.Create(4, new[] { 2, 2, 2 }),
+                Cuia.Create(4, new[] { 3, 3 }), Cuia.Empty(4),
+            });
+            AssertPourDoesNotAllocate(opening, 1, 3, PourMode.Run, (in PourEvents e) => e.ReleasedMask == 1 << 0 && e.WasSealed(3));
+        }
+
+        private delegate bool EventCheck(in PourEvents events);
+
+        /// <summary>
+        /// El vertido <paramref name="source"/> → <paramref name="target"/> aplicado 200 veces sobre una copia del tablero no
+        /// asigna (el mínimo de 3 intentos, como en <see cref="ReferenceBoard_HotLoop_DoesNotAllocate"/>), y sus eventos son los
+        /// esperados.
+        /// </summary>
+        private static void AssertPourDoesNotAllocate(BoardState state, int source, int target, PourMode mode, EventCheck expected)
+        {
+            int width = state.Count;
+            var cuias = new Cuia[width];
+            var work = new Cuia[width];
+            for (int i = 0; i < width; i++)
+            {
+                cuias[i] = state[i];
+            }
+
+            int[] units = state.UnitsTable;
+            bool futile = BoardRules.IsFutile(cuias, 0, width, units, source, target);
+            var events = default(PourEvents);
+            Array.Copy(cuias, work, width);
+            BoardRules.ApplyInPlace(work, 0, width, units, source, target, mode, futile, ref events);
+            Assert.That(expected(in events), Is.True, "eventos del vertido " + source + "→" + target + " en " + mode);
+
+            long bytes = long.MaxValue;
+            for (int attempt = 0; attempt < 3 && bytes != 0; attempt++)
+            {
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                for (int repeat = 0; repeat < 200; repeat++)
+                {
+                    Array.Copy(cuias, work, width);
+                    BoardRules.ApplyInPlace(work, 0, width, units, source, target, mode, futile, ref events);
+                }
+
+                bytes = Math.Min(bytes, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+
+            Assert.That(bytes, Is.EqualTo(0));
+        }
+
+        [Test]
         public void TinajaBoard_HotLoop_DoesNotAllocate()
         {
             // M13 (T55; propuesta de la tinaja, c.6): con la tinaja y su cuia (filtro de origen al principio de Accepts, suelta
@@ -646,30 +742,15 @@ namespace AF.Core.Tests.DotnetOnly
             Assert.That(solve, Is.LessThan(1024));
         }
 
-        /// <summary>
-        /// Tablero del nivel 66 tras el bucle que encontró el dueño (D-014): el cierre se recorre entero y se declara (sin
-        /// mecánicas; la Hoja ya se abrió).
-        /// </summary>
-        private static BoardState Level66Loop()
-        {
-            return new BoardState(new[]
-            {
-                Cuia.Create(4, new[] { 3, 8, 10 }), Cuia.Create(4, new[] { 4, 7 }), Cuia.Create(4, new[] { 10, 7, 7, 7 }),
-                Cuia.Create(4, new[] { 14, 14, 14, 14 }), Cuia.Create(4, new[] { 6, 6, 6, 6 }), Cuia.Create(2, new[] { 4, 4 }),
-                Cuia.Create(4, new[] { 3 }), Cuia.Create(4, new[] { 8, 8, 10, 10 }), Cuia.Create(4, new[] { 3, 3, 8, 1 }),
-                Cuia.Create(4, new[] { 1, 1, 1, 4 }),
-            });
-        }
-
         [Test]
         public void WarmDeadEndProbe_DoesNotAllocate()
         {
             // R13 ampliada (D-014; CLAUDE.md, regla dura 2): el cierre acotado de LevelSession no asigna una vez calentado, ni
-            // cuando se recorre entero (nivel 66), ni cuando se llena (tablero de 14 cuias), ni con mecánicas (los 36 tableros de
+            // cuando se recorre entero (nivel 66), ni cuando se llena (tablero de 14 cuias), ni con mecánicas (los 40 tableros de
             // referencia), en los dos modos. El mínimo de hasta 3 mediciones, como en ReferenceBoard_HotLoop_DoesNotAllocate:
             // una asignación real del recorrido se repite en cada intento.
             var boards = new BoardState[ReferenceBoards.All.Length + 2];
-            boards[0] = Level66Loop();
+            boards[0] = Level66Board.Final(); // tras el bucle del dueño (D-014): el cierre se recorre entero y se declara
             boards[1] = Board();
             for (int i = 0; i < ReferenceBoards.All.Length; i++)
             {
@@ -747,6 +828,73 @@ namespace AF.Core.Tests.DotnetOnly
             Assert.That(result.MoveCount, Is.EqualTo(48));
             Assert.That(result.Expanded, Is.GreaterThan(5000));
             Assert.That(allocated, Is.LessThan(1024));
+        }
+
+        [Test]
+        public void SolverCancellation_UnmarkedOrCutting_DoesNotAllocate()
+        {
+            // K2 (CLAUDE.md, regla dura 2): la consulta de la bandera cada 256 expansiones no asigna. Con la bandera sin marcar,
+            // el solver calentado expande lo mismo que sin ella y solo asigna la solución; cortado a mitad (sin solución), 0
+            // bytes; y SafeMoves cortado en su 3.ª búsqueda (Aguas turbias, opciones de Morpho), 0 bytes. El mínimo de hasta 3
+            // mediciones, como en ReferenceBoard_HotLoop_DoesNotAllocate.
+            BoardState state = Board();
+            var flag = new SolverCancellation();
+            var solver = new AStarSolver();
+            SolverOptions plainOptions = SolverOptions.ForPipeline(PourMode.Run);
+            SolverOptions options = plainOptions.WithCancellation(flag);
+            SolveResult plain = solver.Solve(state, plainOptions);
+            SolveResult warm = solver.Solve(state, options);
+            SolveResult again = warm;
+            long watched = long.MaxValue;
+            for (int attempt = 0; attempt < 3 && watched >= 1024; attempt++)
+            {
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                again = solver.Solve(state, options);
+                watched = Math.Min(watched, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+
+            SolveResult cut = default;
+            long cutBytes = long.MaxValue;
+            for (int attempt = 0; attempt < 3 && cutBytes != 0; attempt++)
+            {
+                flag.Reset();
+                flag.RequestAtPoll(20);
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                cut = solver.Solve(state, options);
+                cutBytes = Math.Min(cutBytes, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+
+            BoardState murky = ReferenceBoards.Get("Tu").State;
+            SolverOptions murkyOptions = new SolverOptions(40000, 2, true, PourMode.Run).ForLevel(murky).WithCancellation(flag);
+            var safe = new SafeMoves();
+            flag.Reset();
+            safe.Find(murky, murkyOptions);
+            int searches = safe.Searches;
+            long safeBytes = long.MaxValue;
+            for (int attempt = 0; attempt < 3 && safeBytes != 0; attempt++)
+            {
+                safe.ClearMemo();
+                flag.Reset();
+                flag.RequestAtPoll(3);
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                safe.Find(murky, murkyOptions);
+                safeBytes = Math.Min(safeBytes, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+
+            Assert.That(plain.MoveCount, Is.EqualTo(37));
+            Assert.That(warm.Expanded, Is.EqualTo(plain.Expanded));
+            Assert.That(again.Expanded, Is.EqualTo(plain.Expanded));
+            Assert.That(again.MoveCount, Is.EqualTo(37));
+            Assert.That(again.WasCancelled, Is.False);
+            Assert.That(watched, Is.LessThan(1024), "Solve con la bandera sin marcar");
+            Assert.That(cut.WasCancelled, Is.True);
+            Assert.That(cut.Expanded, Is.EqualTo(19 * SolverCancellation.PollInterval));
+            Assert.That(cutBytes, Is.EqualTo(0), "Solve cortado");
+            Assert.That(searches, Is.GreaterThan(3));
+            Assert.That(safe.WasCancelled, Is.True);
+            Assert.That(safe.Searches, Is.EqualTo(3));
+            Assert.That(safe.Outcome, Is.EqualTo(SafeMovesOutcome.BudgetExceeded));
+            Assert.That(safeBytes, Is.EqualTo(0), "SafeMoves cortado");
         }
 
         [Test]

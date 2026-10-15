@@ -116,8 +116,9 @@ namespace AF.Core.Tests
         public void Mechanics_EveryDefinedTypeIsPorted()
         {
             // Fallar cerrado: sin sus reglas, una mecánica se jugaría como una cuia normal, así que BoardBuilder rechaza las no
-            // portadas. Con la Piraña (C3-2) están portadas las siete del catálogo 1-200 de D-007 más el Matapi; los códigos
-            // 8-15 (1.1: Aguapé, Palizada, Lancha, Cocha y variantes) aún no son tipos definidos.
+            // portadas. Con la Piraña (C3-2) están portadas las siete del catálogo 1-200 de D-007 más el Matapi; después, la
+            // Tinaja y su cuia (8 y 9, T55) y las variantes Hoja atada y Flor de vitória-régia (10 y 11, K3a y K3b). Los códigos
+            // 12-15 (1.1: Aguapé, Palizada, Lancha, Cocha y variantes) aún no son tipos definidos.
             for (MechanicType type = MechanicType.None; type <= MechanicTypes.Last; type++)
             {
                 Assert.That(MechanicTable.IsPorted(type), Is.True, type.ToString());

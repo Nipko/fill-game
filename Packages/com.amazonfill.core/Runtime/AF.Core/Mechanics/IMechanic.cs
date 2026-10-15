@@ -62,8 +62,12 @@ namespace AF.Core.Mechanics
         /// </summary>
         bool ExemptAsSource(Cuia self);
 
-        /// <summary>R10 (b): apertura por recepción. Devuelve la cuia tras recibir <paramref name="color"/> (sin mecánica si se abrió).</summary>
-        Cuia OnReceived(Cuia self, int color);
+        /// <summary>
+        /// R10 (b): apertura por recepción. Devuelve la cuia tras recibir <paramref name="amount"/> dosis de
+        /// <paramref name="color"/>: sin mecánica si se abrió; con la mecánica y otro estado si solo avanzó (el Brote de dos
+        /// hojas resta las dosis recibidas, 02 R10 b); la misma si no cambió.
+        /// </summary>
+        Cuia OnReceived(Cuia self, int color, int amount);
 
         /// <summary>R10 (d): la mecánica se suelta por el sellado de otras cuias (se deduce del estado).</summary>
         bool ReleasedBySeal(in BoardSlice board, int index);

@@ -16,6 +16,93 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Añadido
 
+- **Flor de vitória-régia en el núcleo, con la segunda llave** (K3b, tanda 4; variante de la 1.0 de D-007, estreno 403; 02 §1.2,
+  R10 (d), R16, T1 y §9.2 regla 7; propuesta de D-007 b.3; firma de `pack_schema` 3 (D-023, punto 5): `flor {key, key2}` con
+  key ≠ key2). README, «Variante de la 1.0: Flor de vitória-régia (K3b)».
+  - **Tipo:** `MechanicType.Flor` = 11 [P] (no se persiste), clave `"flor"`, `MechanicTypes.Last` = `Flor`, y `FlorMechanic`:
+    cerrada no es origen ni destino; se abre en la etapa (d) de R10 cuando existen otras cuias selladas de sus dos frutas
+    (lógica Y, en cualquier orden; también por una gota, con el punto fijo f′), y la cuia pasa a ser normal. Se deduce del estado:
+    Marea, si deshace el sellado, la vuelve a cerrar. Evento: `PourEvents.ReleasedMask` (no `LianaReleasedMask`); solo cambian
+    sus comentarios.
+  - **Segunda llave:** `MechanicSpec.Key2` (constructor, `Equals`, `GetHashCode` y `ToString`; con 0, el hash de siempre) y, en
+    `Cuia`, un campo de 4 bits (tinte − 1) en los bits 50-53, los de `n` y `k`, que la Flor no usa: `Cuia.MechanicKey2`
+    (`NoColor` fuera de la Flor), `MechanicN` y `MechanicK` = 0 en la Flor, `WithMechanic(…, key2)` solo en la Flor y la Flor
+    sin `n` ni `k`. Entra en `Packed`, así que en el orden y el hash canónicos de `BoardCanon`. Las demás mecánicas conservan sus
+    bits y su hash (vectores fijos en `FlorTests`). `MechanicKey` devuelve también la primera llave de la Flor.
+  - **`BoardBuilder`:** la Flor exige `key` y `key2`, dos tintes distintos de 1 a 14, sin más campos ni bandera; `key2` en
+    cualquier otro tipo (o sin `type`) se rechaza.
+  - **Validación:** llaves distintas, en el tablero, sin dosis dentro de la flor y capaces de sellar fuera a la vez (una cuia de
+    capacidad `U_c` para cada una; dos si comparten `U_c`). `LevelValidation` la trata como disparador: sin Aguas turbias
+    (02 T1; Q14 A) ni Tinaja (02 §9.2 regla 7). **Bloqueo provisional con capacidades mixtas** (C1-9, pregunta 24 b): P1 falla
+    también con la Flor (`FutilePropertyTests.P1_Flor_MixedCapacities_OpenR16Counterexample`: tras sellar una llave, un fútil
+    libera la casa de la otra y se gana en 4), así que exige capacidades uniformes, con el criterio de la Liana
+    (`LianaMechanic.HasMixedCapacities`, ahora `internal`). Lo comprueba después de las reglas de diseño.
+  - **Sin cambios** en la heurística, el solver, el bot, `EarlyTraps` ni Aguas turbias. Packs 1-200 idénticos (`--check` del
+    tutorial y de 11-200). Lo que falta fuera del núcleo: el esquema, el generador (que también tiene que traducir `key2` cuando
+    renumera colores) y level-qa (P2b y P5) y el cliente (TJ1), que leen `key2`.
+  - **Tests:** compartidos `FlorTests` (14), `LianaSolverTests` (A* frente a la búsqueda exhaustiva y heurística en 32 tableros,
+    uniformes y mixtos, en `run` y `single`; la solución sella las dos frutas; `FlorInjector` en `MechanicBoards`), `CuiaAttrTests`
+    (claves y `MechanicKey2`) y el comentario de `BoardBuilderTests`. Solo dotnet: `FutilePropertyTests` (P1-P3 con capacidades
+    uniformes en `run` y `single`; las mixtas, bloqueadas, con su contraejemplo), `HotLoopAllocationTests.FlorBoard_HotLoop_DoesNotAllocate`
+    (0 bytes en reglas, en el vertido que la abre y en el bot; < 1 KB por `Solve`) y la fila Fl de `ReferenceBoards` y
+    `MechanicsPerformanceTests` (percentil 75 de 30 semillas: semilla 15, par 18, 3.591 expandidos).
+- **Hoja atada y Brote de dos hojas en el núcleo** (K3a, tanda 4; variantes de la 1.0 de D-007, estrenos 283 y 343; 02 §1.2,
+  §1.4, R10 (b) y R16; propuesta de D-007 b.3; firma de `pack_schema` 3 (D-023, punto 5): `hoja_atada {key}` y `brote` con
+  `n` ∈ {1, 2}). README, «Variantes de la 1.0 (K3a)».
+  - **Hoja atada:** `MechanicType.HojaAtada` = 10 [P] (no se persiste), clave `"hoja_atada"`, `MechanicTypes.Last` =
+    `HojaAtada`, y `HojaAtadaMechanic`: solo recibe su fruta `key` (vacía o con ella en la cima), sí es origen, nunca se suelta
+    (tampoco al sellar), nunca es fútil como destino (anexo B) y no está exenta como origen. `BoardBuilder` exige `key` (tinte
+    1-14) sin más campos ni bandera; `Cuia.MechanicKey` devuelve su llave. Validación: llave en el tablero, su fruta en el fondo
+    si empieza con dosis (b.3) y capacidad = `U_c` de su llave (D-024, punto 1, que ratifica el [P] de K3a): sin esa regla, con
+    capacidades mixtas, la exención de destino de `futil` rompe P3 (un vaivén útil entre la casa de su fruta y la hoja atada
+    vuelve al mismo estado; `FutilePropertyTests.P3_HojaAtada_NotTheHomeOfItsFruit_ARoundTripReturnsToTheSameState`). Con la
+    regla, P1-P3 se cumplen solo con un ejemplar por fruta (una Hoja atada, o dos de frutas distintas, por tablero); FIXK añade
+    «como mucho una Hoja atada por fruta» (D-024, punto 2; ver «Cambiado»).
+  - **Brote de dos hojas:** el Brote con `n` = 2. `Cuia.MechanicN` guarda las hojas que le faltan (2, luego 1; 0 en el Brote
+    normal); en la etapa (b) resta las dosis recibidas y germina al llegar a 0 (en `run` un tramo de 2 lo abre de una vez). El
+    gancho interno `IMechanic.OnReceived` recibe ahora la cantidad. Evento nuevo `PourEvents.BroteLeafOpenedMask` (una hoja
+    abierta sin germinar; `BoardRules` solo anota `OpenedMask` cuando la cuia queda sin mecánica). `BoardBuilder` lee `n` ∈ {1, 2}:
+    sin `n` o con 1, el Brote normal con el mismo `Packed` y el mismo hash que antes; con 2, el de dos hojas. Validación: espacio
+    ≥ 2 al empezar y, en un tablero inicial, solo `n` = 0 o 2.
+  - **Sin cambios** en la heurística, el solver, el bot, `EarlyTraps` ni Aguas turbias: `H` y `H_single` siguen siendo
+    admisibles y consistentes y el par de A* con `w = 1`, exacto. Packs 1-200 idénticos (`--check` del tutorial y de 11-200).
+  - **Tests:** compartidos `HojaAtadaTests` y `BroteDosHojasTests` (una regla por test, con su §), `FilterSolverTests` (A* frente
+    a la búsqueda exhaustiva y heurística en 32 tableros por variante, uniformes y mixtos, en `run` y `single`; inyectores
+    `HojaAtadaInjector` y `BroteDosHojasInjector` en `MechanicBoards`) y `CuiaAttrTests` (claves y `MechanicKey`). Solo dotnet:
+    `FutilePropertyTests` (P1-P3 en `run` y `single`, uniformes y mixtas, con una Hoja atada o dos de frutas distintas; el
+    contraejemplo de la regla de la capacidad, D-024, punto 1, y los de dos Hojas atadas de la misma fruta),
+    `HotLoopAllocationTests` (`HojaAtadaBoard_` y `BroteDosHojasBoard_HotLoop_DoesNotAllocate`: 0 bytes en reglas, vertidos,
+    también el que abre una hoja, y bot; < 1 KB por `Solve`) y las filas HoA y Br2 de `ReferenceBoards` y
+    `MechanicsPerformanceTests` (percentil 75 de 30 semillas; 1.965 y 2.068 expandidos, par 17 y 18).
+- **Corte cooperativo por tiempo del solver** (K2, tanda 4; 08 §9 `hint_timeout_ms` = 150, 100-300, «al agotarse no se
+  cobra»; 03 §5; 04 §2.3; 02 T5, respuesta 4 de D-019). Cierra el pendiente del README: el núcleo sigue sin leer relojes.
+  - **`AF.Solver.Search.SolverCancellation`** (nueva): clase sellada con un `int` volátil y `Request()`, `IsRequested` y
+    `Reset()`. La marca otro hilo (el principal del cliente, al pasar `hint_timeout_ms`); el núcleo solo la consulta.
+    `PollInterval` = 256 [P].
+  - **`SolverOptions.Cancellation` y `WithCancellation(flag)`:** null por defecto, con el comportamiento de siempre; el pipeline
+    la deja en null. `WithFutileRule` y `ForLevel` la conservan; no cuenta para el memo de `SafeMoves`.
+  - **`AStarSolver`:** consulta la bandera antes de la expansión 1 y luego cada 256, con una máscara sobre el contador, sin
+    asignar ni usar closures. Al verla devuelve `BudgetExceeded` con `SolveResult.WasCancelled` (nuevo) y `Expanded` = las
+    expansiones hechas. `SolveStatus` no cambia. `SolveLength` (interno) devuelve también si se cortó.
+  - **`SafeMoves`:** la consulta al empezar, tras enumerar las realidades, y la propaga desde cada búsqueda. Resultado:
+    `Count` = 0, `Outcome` = `BudgetExceeded` y `WasCancelled` (nuevo), sin Pista parcial y con el mismo orden de respuestas de
+    Morpho. Lo cortado no entra en el memo (no es el resultado del presupuesto); lo terminado antes, sí. Si la enumeración se
+    rechaza, sigue saliendo `RealitiesRejected`. `TrueParAfter` usa la bandera de la última `Find`: cortado, devuelve
+    `BudgetExceeded` y `WasCancelled` = true solo para esa llamada, sin tocar `Count` ni `Outcome`. `Find` y `TrueParAfter`
+    reinician `WasCancelled` al empezar; la respuesta 4 se lee solo tras `Find`.
+  - **Sin cambios con null:** en los 37 tableros de referencia salen los mismos expandidos, estados guardados y soluciones, con
+    el A* del pipeline, el de Morpho (w = 2, 40.000) en `run` y en `single` y `SafeMoves` con las opciones de Morpho. Se midió
+    antes y después del cambio. Con una bandera sin marcar, lo mismo. Packs y pares idénticos (`--check`).
+  - **Regla de hilos** (README, «Hilos y corte por tiempo»): una instancia de `AStarSolver` o `SafeMoves` por hilo; los
+    `BoardState`, inmutables, y la bandera se pueden compartir.
+  - **Tests:** compartidos `SolverCancellationTests` (marcada antes: 0 expansiones y `SafeMoves` sin búsquedas; marcada tras N
+    expansiones: para en ≤ N + 256; null idéntico en A* y `SafeMoves`; corte en cualquier consulta de `SafeMoves` y memo limpio
+    tras `Reset`; corte en `TrueParAfter` con la respuesta de `Find` intacta y `WasCancelled` reiniciado después). Solo
+    dotnet: `SolverThreadingTests` (4 instancias en 4 hilos sobre 8 tableros, iguales que en serie; null idéntico en los 37
+    tableros de referencia; corte marcado de verdad desde otro hilo en `AStarSolver` y `SafeMoves`) y
+    `HotLoopAllocationTests.SolverCancellation_UnmarkedOrCutting_DoesNotAllocate` (sin marcar, solo la solución; cortado, 0
+    bytes). El gancho interno `SolverCancellation.RequestAtPoll(k)` existe solo para los tests compartidos: simula que otro hilo
+    marca la bandera antes de la consulta k.
 - **Aguas estancadas por bucle, R13 ampliada** (T51; D-014, decisión del dueño del 2026-10-13; 02 R13, R14; defecto del nivel 66
   en `docs/dev/traspaso/pruebas-telefono-2026-10-13.md`). `AF.Core.Session.DeadEndProbe`: cierre acotado de los estados
   alcanzables desde S, en anchura y en orden determinista, con estados canónicos (`BoardCanon` y FNV-1a de 64 bits; igualdad
@@ -28,9 +115,10 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   con capacidades mixtas un fútil puede ser parte de la única salida (C1-8), y solo con útiles el cierre declararía tableros que se
   ganan, contra la condición de la misma decisión y R14. En el 66, tras el 6.º vertido, la búsqueda con útiles se agota en 50
   estados y el nivel se gana en 14 con algún fútil; en partidas al azar sobre los niveles 1-200, un cierre solo con útiles habría
-  declarado 327 estados, 56 ganables (con todos los legales: 271, ninguno ganable). Con capacidades iguales los dos son idénticos (P2).
-  No depende de `futile_rule_enabled`. Es la opción (a) de la pregunta 46 de `docs/GDD.md` §6.3 (T50), la recomendada,
-  aplicada por el dueño el 2026-10-13. Sin asignaciones tras calentar y < 1 ms en Release (0,015 ms en el 66; peor
+  declarado 327 estados, 56 ganables (con todos los legales: 271, ninguno ganable). En `run`, un fútil entre dos cuias sin mecánica y
+  de la misma capacidad no cambia el estado canónico; con capacidades distintas sí puede cambiarlo (P2, 02 R16). Así que, sin
+  mecánicas y con capacidades iguales, los dos cierres son idénticos en `run`. No depende de `futile_rule_enabled`.
+  Es la opción (a) de la pregunta 46 de `docs/GDD.md` §6.3 (T50), la recomendada, aplicada por el dueño el 2026-10-13. Sin asignaciones tras calentar y < 1 ms en Release (0,015 ms en el 66; peor
   medido 0,322 ms en 4.026 estados de los tableros de referencia). Sin cambios en `BoardRules`, `PourRules`, el solver, el bot, `EarlyTraps`,
   `LevelValidation`, el generador ni level-qa: packs, informes y pares idénticos (`--check`). Tests compartidos `DeadEndProbeTests`
   (`R13b_Level66_Loop_IsStuck`, `_TheOwnersSequence_IsStuckRightAfterTheNinthPour`,
@@ -445,6 +533,62 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ### Cambiado
 
+- **FIXK (tanda 4, cierre de la ola 1; D-024 y pendientes de la revisión de K3a):**
+  - **Como mucho una Hoja atada por fruta** (D-024, punto 2, la opción (a); 02 R16, P3, y 02 §8): `HojaAtadaMechanic.ValidateInitial`
+    rechaza dos Hojas atadas de la misma llave («D-024 (02 R16, P3; 02 §8): como mucho una Hoja atada por fruta; la cuia j también
+    está atada a la fruta c»), así que `LevelValidation` (y con él el generador, P5, y level-qa, P6) las rechaza. Cierra a la vez
+    P3, que dos de la misma fruta incumplían (el vaivén útil entre las dos vuelve al mismo estado canónico), y la cuenta de
+    capacidades de 02 §8, que contaba la segunda como casa de otra fruta de la misma `U_c` y dejaba pasar tableros irresolubles.
+    Las reglas de vertido, el solver, el bot y la heurística no cambian. Packs 1-200 idénticos (`--check` del tutorial y de
+    11-200): ninguno lleva Hojas atadas.
+  - **Cuias de una sola fruta en la cuenta de 02 §8** (revisión de FIXK; 02 §8 y 03 §3: «cada color puede sellar en una cuia
+    propia con cap = `U_c`»): D-024 no bastaba para que la cuenta fuera exacta. Un Matapi con dosis de `c` nunca es origen y solo
+    recibe `c`, así que es la única casa de `c`; una Hoja atada a `c` en el mismo tablero (02 §9.2 regla 7 no prohíbe juntarlos)
+    no es la casa de nadie, pero contada solo por capacidad pasaba por casa de otra fruta de la misma `U_c`, y el validador dejaba
+    pasar tableros irresolubles. `LevelValidation` cuenta ahora cada cuia de una sola fruta (la Hoja atada por su llave y el
+    Matapi con dosis por su color, si su capacidad es la `U_c` de esa fruta; si no, la rechaza su mecánica, como antes) solo como
+    casa de su fruta, una sola por fruta, y exige que las demás frutas de esa `U_c` tengan cuias que admitan cualquier fruta
+    («02 §8: hay n colores con U_c = v y solo m cuias de capacidad v donde sellar: una Hoja atada o un Matapi con dosis solo es
+    casa de su fruta, y una sola por fruta (03 §3)»). Dos Hojas atadas de la misma fruta sin otras casas las rechaza ahora esta
+    cuenta, que va antes que D-024. Las otras dos comparaciones no cambian. Packs 1-200 idénticos (`--check`) y level-qa sin
+    fallos en 11-200: llevan Matapi pero no Hoja atada.
+  - **Capacidad de la Hoja atada = `U_c` de su llave:** el [P] de K3a queda ratificado (D-024, punto 1); el motivo del rechazo
+    cita D-024 en lugar de «[P]».
+  - **Citas:** la firma de `pack_schema` 3 se cita como «D-023, punto 5» en lugar de «pregunta 8» (que en el repositorio es otra
+    pregunta, la de Aguas turbias), en la documentación y en los motivos de `BoardBuilder` y `FlorMechanic`; `LevelSession` y
+    `LevelStatus` dan la pregunta 46 por decidida (D-020), como `DeadEndProbe`. El README atribuye el esquema a P2b, el generador
+    a P5 y level-qa a P6.
+  - **Tests:** compartidos `HojaAtadaTests.R_0214_R14_TheOnlyLegalPour_IntoItsEmptyHojaAtada_IsNotFutile_SoAWinnableBoardIsNotStuck`
+    (sustituye a `R_0214_TheOnlyUsefulPour_IntoItsHojaAtada_AvoidsStuck_R14`, que no probaba lo que decía: ahora el único vertido
+    legal es el de la fruta a su Hoja atada vacía, la regla base de `futil` sin el anexo B lo da por fútil y el tablero no está
+    atascado y se gana en `run` y `single`), `Validation_D024_AtMostOneHojaAtadaPerFruit_TwoOfDifferentFruitsAreValid` y
+    `Validation_D024_TwoHojasAtadasOfTheSameFruit_AreRejected`; `BroteDosHojasTests.R_0212_Closed_IsNotASource_AsTargetTheNormalRule`
+    pierde la aserción de `futil`, que no podía fallar (el Brote nunca está vacío). Solo dotnet, en `FutilePropertyTests`: los
+    contraejemplos de dos Hojas atadas de la misma fruta pasan a comprobar el rechazo
+    (`P3_HojaAtada_TwoOfTheSameFruit_ARoundTripReturnsToTheSameState_D024RejectsIt`,
+    `P3_TwoHojasAtadasOfTheSameFruit_FailsOnGeneratedBoards_AndD024RejectsThem`), y se añaden
+    `TwoHojasAtadasOfTheSameFruit_PassTheCapacityOnlyCount_Unsolvable_02_8AndD024RejectIt`. Por la cuenta de 02 §8: compartido
+    `HojaAtadaTests.Validation_02_8_AMatapiWithDosesAndAHojaAtadaOfTheSameFruit_AreOneHome_TheOtherFruitHasNowhereToSeal` (el
+    tablero de la revisión, rechazado, y su control, válido) y, solo dotnet,
+    `MatapiWithDosesAndHojaAtadaOfTheSameFruit_PassTheCapacityOnlyCount_Unsolvable_02_8RejectsIt` (irresoluble en `run` y
+    `single`; el control se gana) y `SingleFruitCuias_TheCountOf02_8IsExact_EveryValidBoardHasAHomeForEachFruit` (reparto exacto
+    de casas en tableros generados, uniformes y mixtos, con una Hoja atada, dos de frutas distintas o de la misma, un Matapi, y
+    un Matapi y una Hoja atada; en los mixtos el generador llega al agujero y la cuenta lo cierra). Comentarios de
+    `MechanicBoards.HojaAtadaInjector` y de la fila HoA de `ReferenceBoards`: la regla de la capacidad se cita como D-024, punto 1,
+    y no como [P].
+- K3a (tanda 4; bajas de la revisión de K1 y K2): `DeadEndProbe` cita P2 con «entre cuias sin mecánica» y la pregunta 46 como
+  decidida (D-020); el README da por decidida la consecuencia de Q-B en P3 (pregunta 34 (a), D-020, 02 R16); `DeadEndProbeTests`
+  pierde el parámetro `attrs` y el `using` que sobraban; `SolverCancellationTests` comprueba que `ForLevel` conserva la bandera
+  con un tablero con Tinaja (y que quita la poda de fútiles); la frase de los hilos de `AStarSolver` dice, como el README, que
+  dan lo mismo que en serie con la bandera sin marcar. Sin cambios de comportamiento.
+- K1 (tanda 4; bajas de la revisión de T51): el tablero del nivel 66 (`m03_v1_n0066`) y la secuencia del dueño están en un solo
+  helper compartido, `Level66Board` (AF.Core.Tests), con `Initial()` (Hoja cerrada en la 6), `Final()` (el bucle, tras los 12
+  vertidos) y los vertidos de la secuencia. Lo usan `DeadEndProbeTests` y, solo en dotnet, `DeadEndProbePerformanceTests` y
+  `HotLoopAllocationTests.WarmDeadEndProbe_DoesNotAllocate`, que antes llevaban su propia copia del tablero final con el nombre
+  `Level66Loop` (que en `DeadEndProbeTests` era la secuencia). No cambia lo que comprueban. `StuckLoopTests` (PlayMode) no puede
+  usarlo, porque AF.Core.Tests es solo de Editor. P2 se cita en el README y aquí con la redacción de 02 R16 (entre dos cuias sin
+  mecánica y de la misma capacidad; con capacidades distintas sí puede cambiar el estado canónico), y el README ya no da por
+  pendientes el generador `fill` y el pipeline de `tools/`, que existen. Sin cambios en `Runtime/`.
 - T51 (D-014): `LevelSession.Status` pasa a `Stuck` también con vertidos útiles si el cierre acotado no tiene victoria (ver
   «Añadido»). R14 se reformula con D-014 (no se anuncia irresoluble mientras exista progreso posible); P1 se mantiene y la comprueba
   `DeadEndProbePropertyTests`. `RuleCatalogTests.R14_AnUnsolvableBoardWithUsefulPours_IsNotDeclaredStuck` sí cambia lo que

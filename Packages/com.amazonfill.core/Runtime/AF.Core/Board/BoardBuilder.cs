@@ -15,6 +15,13 @@ namespace AF.Core.Board
     /// <item><description><c>partner</c> del Remolino → id de pareja (0..7) por orden de aparición; la pareja tiene que ser
     /// simétrica.</description></item>
     /// <item><description>Banderas iniciales: Hoja puesta y Brote cerrado llevan <see cref="Cuia.FlagClosed"/> (03 §9).</description></item>
+    /// <item><description>Variantes de la 1.0 con la firma de <c>pack_schema</c> 3 (D-023, punto 5; propuesta de D-007 b.3): la Hoja
+    /// atada, <c>{"type":"hoja_atada","key":c}</c>, con su llave y sin bandera (nunca se cierra ni se suelta); el Brote, con
+    /// <c>n</c> ∈ {1, 2} opcional: sin <c>n</c> o con 1 es el Brote normal (<c>n</c> = 0 en la cuia: el mismo
+    /// <see cref="Cuia.Packed"/> y el mismo hash que antes) y con 2, el Brote de dos hojas (<c>n</c> = 2 en la cuia: las hojas
+    /// cerradas que le faltan, que bajan al recibir); y la Flor de vitória-régia, <c>{"type":"flor","key":c1,"key2":c2}</c>,
+    /// con dos tintes distintos y sin bandera (se abre por sellados, que se deducen del estado; K3b). <c>key2</c> solo lo lleva
+    /// la Flor.</description></item>
     /// <item><description>Tinaja y su cuia (M13): <c>{"type":"tinaja"}</c> y <c>{"type":"cucharon"}</c>, sin campos ni id de
     /// pareja (una tinaja por nivel); las ocultas de la tinaja llegan por <c>hidden</c>, como las de Aguas turbias.</description></item>
     /// <item><description><c>k</c> ausente en Lluvia o Piraña toma el valor por defecto que pasa el llamante
@@ -237,7 +244,7 @@ namespace AF.Core.Board
                 MechanicSpec spec = attrs[i];
                 if (spec.IsNone)
                 {
-                    if (spec.Key != 0 || spec.Partner >= 0 || spec.N != 0 || spec.K != 0)
+                    if (spec.Key != 0 || spec.Partner >= 0 || spec.N != 0 || spec.K != 0 || spec.Key2 != 0)
                     {
                         return "attrs[" + Num(i) + "]: campos sin type";
                     }
@@ -246,8 +253,14 @@ namespace AF.Core.Board
                 }
 
                 string where = "attrs[" + Num(i) + "] (" + MechanicTypes.ToKey(spec.Type) + "): ";
+                if (spec.Key2 != 0 && spec.Type != MechanicType.Flor)
+                {
+                    return where + "key2 solo lo lleva la Flor de vitória-régia (D-023, punto 5)";
+                }
+
                 int flags = 0;
                 int key = 0;
+                int key2 = 0;
                 int n = 0;
                 int k = 0;
                 int pair = 0;
@@ -262,7 +275,23 @@ namespace AF.Core.Board
                         key = spec.Key;
                         flags = Cuia.FlagClosed;
                         break;
+                    case MechanicType.HojaAtada:
+                        if (!IsTint(spec.Key) || spec.Partner >= 0 || spec.N != 0 || spec.K != 0)
+                        {
+                            return where + "lleva solo key, un tinte de 1 a 14 (propuesta de D-007 b.3; D-023, punto 5)";
+                        }
+
+                        key = spec.Key;
+                        break;
                     case MechanicType.Brote:
+                        if (spec.Key != 0 || spec.Partner >= 0 || spec.K != 0 || spec.N < 0 || spec.N > BroteMechanic.TwoLeaves)
+                        {
+                            return where + "lleva como mucho n, 1 o 2 (Brote de dos hojas; propuesta de D-007 b.3; D-023, punto 5)";
+                        }
+
+                        n = spec.N == BroteMechanic.TwoLeaves ? BroteMechanic.TwoLeaves : 0;
+                        flags = Cuia.FlagClosed;
+                        break;
                     case MechanicType.Matapi:
                     case MechanicType.Tinaja:
                     case MechanicType.Cucharon:
@@ -273,7 +302,6 @@ namespace AF.Core.Board
                             return where + "no lleva campos (02 §9.1; D-007; M13)";
                         }
 
-                        flags = spec.Type == MechanicType.Brote ? Cuia.FlagClosed : 0;
                         break;
                     case MechanicType.Liana:
                         bool withFruit = spec.Key != 0;
@@ -295,6 +323,16 @@ namespace AF.Core.Board
 
                         key = spec.Key;
                         n = spec.N;
+                        break;
+                    case MechanicType.Flor:
+                        // Firma de pack_schema 3 (D-023, punto 5): flor {key, key2} con key ≠ key2; sin bandera (K3b).
+                        if (!IsTint(spec.Key) || !IsTint(spec.Key2) || spec.Key == spec.Key2 || spec.Partner >= 0 || spec.N != 0 || spec.K != 0)
+                        {
+                            return where + "lleva solo key y key2, dos tintes distintos de 1 a 14 (propuesta de D-007 b.3; D-023, punto 5)";
+                        }
+
+                        key = spec.Key;
+                        key2 = spec.Key2;
                         break;
                     case MechanicType.Remolino:
                         if (spec.Key != 0 || spec.N != 0 || spec.K != 0)
@@ -357,7 +395,7 @@ namespace AF.Core.Board
                     return where + "la mecánica aún no está portada al núcleo";
                 }
 
-                built[i] = built[i].WithMechanic(spec.Type, key, pair, n, k, 0, flags);
+                built[i] = built[i].WithMechanic(spec.Type, key, pair, n, k, 0, flags, key2);
             }
 
             return null;

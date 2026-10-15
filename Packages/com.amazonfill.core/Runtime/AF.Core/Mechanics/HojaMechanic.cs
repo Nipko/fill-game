@@ -40,7 +40,7 @@ namespace AF.Core.Mechanics
             return true;
         }
 
-        public override Cuia OnReceived(Cuia self, int color)
+        public override Cuia OnReceived(Cuia self, int color, int amount)
         {
             return color == self.MechanicKey ? self.WithoutMechanic() : self;
         }

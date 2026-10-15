@@ -5,13 +5,15 @@ using System.Globalization;
 namespace AF.Core.Mechanics
 {
     /// <summary>
-    /// Espejo de un <c>attrs[i]</c> de <c>af-level/1</c> (08 §4.1): <c>{type, key, partner, n, k}</c>, con los campos que
-    /// usa cada mecánica según 02 §9.1 y D-007. Es la entrada de <see cref="Board.BoardBuilder"/>; dentro de la cuia los
+    /// Espejo de un <c>attrs[i]</c> de <c>af-level/1</c> (08 §4.1): <c>{type, key, partner, n, k}</c> y, con la firma de
+    /// <c>pack_schema</c> 3 (D-023, punto 5), <c>key2</c> de la Flor de vitória-régia; con los campos que usa cada mecánica según
+    /// 02 §9.1, D-007 y la propuesta de D-007 b.3. Es la entrada de <see cref="Board.BoardBuilder"/>; dentro de la cuia los
     /// atributos viven empaquetados en <see cref="Board.Cuia.Packed"/>.
     /// </summary>
     /// <remarks>
-    /// Un campo ausente vale 0 (<see cref="Key"/>, <see cref="N"/>, <see cref="K"/>) o −1 (<see cref="Partner"/>, porque 0
-    /// es un índice válido). <c>default(MechanicSpec)</c> es <see cref="None"/>: el <c>null</c> del JSON.
+    /// Un campo ausente vale 0 (<see cref="Key"/>, <see cref="N"/>, <see cref="K"/>, <see cref="Key2"/>) o −1
+    /// (<see cref="Partner"/>, porque 0 es un índice válido). <c>default(MechanicSpec)</c> es <see cref="None"/>: el <c>null</c>
+    /// del JSON.
     /// </remarks>
     public readonly struct MechanicSpec : IEquatable<MechanicSpec>
     {
@@ -23,7 +25,8 @@ namespace AF.Core.Mechanics
         /// <param name="partner">Índice 0-based de la pareja del Remolino (<c>partner</c>) o −1 si falta.</param>
         /// <param name="n">Sellos de la Liana de cuenta o gotas de la Lluvia (<c>n</c>) o 0 si falta.</param>
         /// <param name="k">Ritmo en vertidos de Lluvia o Piraña (<c>k</c>) o 0 si falta.</param>
-        public MechanicSpec(MechanicType type, int key = 0, int partner = -1, int n = 0, int k = 0)
+        /// <param name="key2">Segunda llave de la Flor de vitória-régia (<c>key2</c>, 1-16) o 0 si falta.</param>
+        public MechanicSpec(MechanicType type, int key = 0, int partner = -1, int n = 0, int k = 0, int key2 = 0)
         {
             if (!MechanicTypes.IsDefined(type))
             {
@@ -40,6 +43,7 @@ namespace AF.Core.Mechanics
             _partnerPlusOne = partner + 1;
             N = n;
             K = k;
+            Key2 = key2;
         }
 
         /// <summary>Sin mecánica (<c>null</c> en el JSON).</summary>
@@ -60,13 +64,17 @@ namespace AF.Core.Mechanics
         /// <summary><c>k</c> o 0 si falta.</summary>
         public int K { get; }
 
+        /// <summary>Segunda llave (<c>key2</c>, 1-16) de la Flor de vitória-régia o 0 si falta.</summary>
+        public int Key2 { get; }
+
         /// <summary>No hay mecánica.</summary>
         public bool IsNone => Type == MechanicType.None;
 
         /// <inheritdoc />
         public bool Equals(MechanicSpec other)
         {
-            return Type == other.Type && Key == other.Key && _partnerPlusOne == other._partnerPlusOne && N == other.N && K == other.K;
+            return Type == other.Type && Key == other.Key && _partnerPlusOne == other._partnerPlusOne && N == other.N && K == other.K
+                && Key2 == other.Key2;
         }
 
         /// <inheritdoc />
@@ -78,10 +86,11 @@ namespace AF.Core.Mechanics
         /// <inheritdoc />
         public override int GetHashCode()
         {
-            return ((int)Type << 24) ^ (Key << 16) ^ (_partnerPlusOne << 8) ^ (N << 4) ^ K;
+            // key2 = 0 deja el valor de siempre en las mecánicas que no la usan.
+            return ((int)Type << 24) ^ (Key2 << 20) ^ (Key << 16) ^ (_partnerPlusOne << 8) ^ (N << 4) ^ K;
         }
 
-        /// <summary>Forma legible del JSON: <c>{type:hoja, key:4}</c>; <c>null</c> sin mecánica.</summary>
+        /// <summary>Forma legible del JSON: <c>{type:hoja, key:4}</c> o <c>{type:flor, key:3, key2:7}</c>; <c>null</c> sin mecánica.</summary>
         public override string ToString()
         {
             if (IsNone)
@@ -93,6 +102,11 @@ namespace AF.Core.Mechanics
             if (Key != 0)
             {
                 text += ", key:" + Key.ToString(CultureInfo.InvariantCulture);
+            }
+
+            if (Key2 != 0)
+            {
+                text += ", key2:" + Key2.ToString(CultureInfo.InvariantCulture);
             }
 
             if (Partner >= 0)

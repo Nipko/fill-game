@@ -19,27 +19,41 @@ namespace AF.Core.Board
     /// <item><description><c>U_c</c> ∈ {4, 5, 6} para todo color (02 R3).</description></item>
     /// <item><description>Cada color puede sellar en una cuia propia con <c>cap = U_c</c>, y cada Cuia alta (5-6) llega con su
     /// fruta abundante (02 §8; 03 §3): para cada <c>v</c>, hay al menos tantas cuias de capacidad <c>v</c> como colores con
-    /// <c>U_c = v</c>, y para <c>v</c> ∈ {5, 6} exactamente tantas. La Tinaja (M13) no cuenta en ninguna de las dos
-    /// comparaciones: nunca recibe, así que no es casa de ninguna fruta.</description></item>
+    /// <c>U_c = v</c>, y para <c>v</c> ∈ {5, 6} exactamente tantas. La Tinaja (M13) no cuenta en ninguna de las
+    /// comparaciones: nunca recibe, así que no es casa de ninguna fruta. Las cuias de una sola fruta, la Hoja atada (solo recibe
+    /// su llave; D-024) y el Matapi con dosis (nunca es origen y solo recibe su color; D-007, reglas 1-3), solo son casa de esa
+    /// fruta, y una sola por fruta: una tercera comparación exige que, para cada <c>v</c>, las frutas con <c>U_c = v</c> sin una
+    /// de ellas tengan bastantes cuias de capacidad <c>v</c> que admitan cualquier fruta. Sin ella, un Matapi con dosis de
+    /// <c>c</c> y una Hoja atada a <c>c</c> contaban como casas de dos frutas, y la segunda fruta podía quedarse sin dónde sellar
+    /// (<c>FutilePropertyTests.MatapiWithDosesAndHojaAtadaOfTheSameFruit_PassTheCapacityOnlyCount_Unsolvable_02_8RejectsIt</c>).
+    /// Con ella la cuenta es exacta para esas mecánicas: equivale a que cada fruta tenga una casa propia
+    /// (<c>FutilePropertyTests.SingleFruitCuias_TheCountOf02_8IsExact_EveryValidBoardHasAHomeForEachFruit</c>).</description></item>
     /// <item><description>Ninguna cuia sellada al inicio (03 §17 #5).</description></item>
     /// <item><description>Barro (02 §9.1 M5): solo en la capa 2 o 3 (índice 1-2) de una cuia de 4; nunca en una cuia con
     /// mecánica (propuesta de D-007 b.2 M5: «nunca dentro de un Matapi»; D-007) ni como dosis oculta [P].</description></item>
     /// <item><description>Aguas turbias (02 §11; D-007, Q14 A): T2 (como mucho <c>lvl_murky_max_cuias</c> cuias turbias y
     /// <c>lvl_murky_max_hidden_units</c> dosis ocultas; por defecto 3 y 4, 08 §9); T3 (una cuia turbia tiene como mucho 3
     /// dosis, nunca está llena y su cima es visible); T4 (bajo una dosis oculta nunca va el color de la dosis de encima);
-    /// ocultos solo en cuias sin mecánica; el nivel puede llevar filtros (Hoja, Brote, Matapi, Barro) pero no Liana, Lluvia
-    /// ni Piraña (Q14 A) ni Remolino [P: propuesta b.2, «solo junto a filtros»]. T1 (etiqueta y nivel ≥ 100) y Q9 son del
+    /// ocultos solo en cuias sin mecánica; el nivel puede llevar filtros (Hoja, Brote, Matapi, Barro; también las variantes
+    /// de la 1.0 Hoja atada y Brote de dos hojas, que son filtros, K3a) pero no Liana, Lluvia ni Piraña (Q14 A) ni Remolino
+    /// [P: propuesta b.2, «solo junto a filtros»], ni la Flor de vitória-régia, que es un disparador (02 T1: «nunca con
+    /// mecánicas con disparador (Liana, Flor, …)»; K3b). T1 (etiqueta y nivel ≥ 100) y Q9 son del
     /// pipeline. <b>Tinaja</b> (M13; D-019, Q-Ti1 A): si el nivel la lleva, es la única fuente de ocultas (ninguna otra cuia
     /// turbia), sus ocultas son la excepción a «ocultos solo en cuias sin mecánica» y a T3, y su tope es
     /// <see cref="TinajaMaxHiddenUnits"/> en lugar de los de Remote Config; las combinaciones prohibidas de Q14 A siguen
-    /// valiendo y solo se comprueban aquí, con un motivo que nombra la tinaja. También solo se comprueban aquí T4 en toda su
+    /// valiendo (también la Flor: la tinaja va «solo con filtros y capacidades», 02 §9.2 regla 7) y solo se comprueban aquí,
+    /// con un motivo que nombra la tinaja. También solo se comprueban aquí T4 en toda su
     /// columna (con su máscara, todas sus dosis menos la boca están ocultas), su tope de ocultas y «sin Barro» (lo rechaza la
     /// regla del Barro de arriba: va en una cuia de 4 y nunca en una cuia con mecánica). El resto de sus reglas (capacidad,
     /// dosis, máscara, una sola tinaja y su cuia contigua) son de <c>TinajaMechanic</c> y
     /// <c>CucharonMechanic</c>.</description></item>
     /// <item><description>Como mucho un contador por nivel (Lluvia o Piraña; propuesta de D-007 b.2 M6-M7 y d.2 regla 6): la
     /// Lluvia y la Piraña nunca van juntas.</description></item>
-    /// <item><description>Las reglas propias de cada mecánica (03 §17 #6).</description></item>
+    /// <item><description>Las reglas propias de cada mecánica (03 §17 #6), con las de las variantes de la 1.0 (K3a; propuesta
+    /// de D-007 b.3): la Hoja atada, con su llave en el tablero, su fruta en el fondo si empieza con dosis, capacidad =
+    /// <c>U_c</c> de su llave y como mucho una por fruta (D-024); el Brote de dos hojas, con espacio ≥ 2; y la Flor de
+    /// vitória-régia (K3b), con dos llaves distintas en el tablero que pueden sellar fuera de ella a la vez y, mientras dure el
+    /// bloqueo C1-9 de la Liana (pregunta 24 b), sin capacidades mixtas.</description></item>
     /// <item><description><c>atascado(S0)</c> = false con la <c>futil</c> única (02 §9.2 regla 1).</description></item>
     /// </list>
     /// </remarks>
@@ -138,15 +152,36 @@ namespace AF.Core.Board
                 colorsWithUnits[u]++;
             }
 
+            // 02 §8 y 03 §3: cada color puede sellar en una cuia propia con cap = U_c. cuiasWithCap cuenta las cuias por
+            // capacidad (las dos comparaciones de siempre, también la de la Cuia alta); openWithCap, las que pueden ser la casa de
+            // cualquier fruta de su capacidad, y housedWithUnits, las frutas que ya tienen casa en una cuia de una sola fruta
+            // (SingleFruitOf: una Hoja atada o un Matapi con dosis), una vez por fruta. La segunda cuia de una sola fruta de la
+            // misma fruta no es casa de nadie, así que no cuenta para las demás frutas de su U_c.
             var cuiasWithCap = new int[Cuia.MaxCapacity + 1];
+            var openWithCap = new int[Cuia.MaxCapacity + 1];
+            var housedWithUnits = new int[MaxUnits + 1];
+            var housed = new bool[Cuia.MaxTintColor + 1];
             for (int i = 0; i < state.Count; i++)
             {
                 // M13 (propuesta de la tinaja, b.2 regla 1 y c.1): la Tinaja no es casa de ninguna fruta (nunca recibe), así que
-                // no cuenta en ninguna de las dos comparaciones: ni como Cuia alta sin fruta abundante ni como sitio donde
+                // no cuenta en ninguna de las comparaciones: ni como Cuia alta sin fruta abundante ni como sitio donde
                 // sellar una fruta de U_c = 5.
-                if (state[i].Mechanic != MechanicType.Tinaja)
+                Cuia cuia = state[i];
+                if (cuia.Mechanic == MechanicType.Tinaja)
                 {
-                    cuiasWithCap[state[i].Capacity]++;
+                    continue;
+                }
+
+                cuiasWithCap[cuia.Capacity]++;
+                int fruit = SingleFruitOf(cuia, units);
+                if (fruit == Cuia.NoColor)
+                {
+                    openWithCap[cuia.Capacity]++;
+                }
+                else if (!housed[fruit])
+                {
+                    housed[fruit] = true;
+                    housedWithUnits[units[fruit]]++;
                 }
             }
 
@@ -160,6 +195,12 @@ namespace AF.Core.Board
                 if (v > Cuia.DefaultCapacity && cuiasWithCap[v] > colorsWithUnits[v])
                 {
                     return "02 §8: cada Cuia alta de " + Num(v) + " llega con su fruta abundante (U_c = " + Num(v) + "); hay " + Num(cuiasWithCap[v]) + " cuias y " + Num(colorsWithUnits[v]) + " frutas";
+                }
+
+                if (openWithCap[v] < colorsWithUnits[v] - housedWithUnits[v])
+                {
+                    return "02 §8: hay " + Num(colorsWithUnits[v]) + " colores con U_c = " + Num(v) + " y solo " + Num(housedWithUnits[v] + openWithCap[v])
+                        + " cuias de capacidad " + Num(v) + " donde sellar: una Hoja atada o un Matapi con dosis solo es casa de su fruta, y una sola por fruta (03 §3)";
                 }
             }
 
@@ -215,6 +256,37 @@ namespace AF.Core.Board
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// La fruta de la que la cuia solo puede ser la casa (02 §8 y 03 §3: «cada color puede sellar en una cuia propia con
+        /// cap = U_c»), o <see cref="Cuia.NoColor"/> si puede serlo de cualquier fruta de su capacidad:
+        /// <list type="bullet">
+        /// <item><description>la Hoja atada solo recibe su fruta (02 §1.2) y nunca se suelta, así que solo es la casa de su llave
+        /// (D-024);</description></item>
+        /// <item><description>un Matapi con dosis nunca es origen y solo recibe la fruta de su cima (D-007, reglas 1-3), así que
+        /// es la casa de su color, y la única: tiene que acabar sellado (R12).</description></item>
+        /// </list>
+        /// Solo cuenta si su capacidad es la <c>U_c</c> de esa fruta, como exigen las dos mecánicas; si no (o si el Matapi no es
+        /// monocolor), cuenta como siempre, por su capacidad, y la rechaza su mecánica más abajo, con su propio motivo.
+        /// </summary>
+        private static int SingleFruitOf(Cuia cuia, int[] units)
+        {
+            int fruit;
+            if (cuia.Mechanic == MechanicType.HojaAtada)
+            {
+                fruit = cuia.MechanicKey;
+            }
+            else if (cuia.Mechanic == MechanicType.Matapi && !cuia.IsEmpty && cuia.IsMonocolor)
+            {
+                fruit = cuia.TopColor;
+            }
+            else
+            {
+                return Cuia.NoColor;
+            }
+
+            return fruit >= Cuia.MinColor && fruit <= Cuia.MaxTintColor && units[fruit] == cuia.Capacity ? fruit : Cuia.NoColor;
         }
 
         /// <summary>
@@ -292,7 +364,7 @@ namespace AF.Core.Board
         /// (M13; D-019, Q-Ti1 A; propuesta de la tinaja, b.2 y c.1) la tinaja es la única fuente de ocultas del nivel: sus
         /// ocultas son la excepción a «ocultos solo en cuias sin mecánica» (Q14 A) y a T3 (≤ 3 dosis y nunca llena), su tope
         /// es <see cref="TinajaMaxHiddenUnits"/> (no los de Remote Config de T2) y T4 se comprueba igual. Las combinaciones
-        /// prohibidas (Liana, Remolino, Lluvia y Piraña; b.2; con un motivo propio de la tinaja), el tope y T4 en toda la
+        /// prohibidas (Liana, Remolino, Lluvia y Piraña, b.2; y la Flor, K3b; con un motivo propio de la tinaja), el tope y T4 en toda la
         /// columna de la tinaja (b.2 regla 1) se rechazan solo aquí: una tinaja válida siempre llega con ocultas (sin ellas la
         /// rechaza su máscara en <c>TinajaMechanic.ValidateInitial</c>), y con esa máscara todas sus dosis menos la boca pasan
         /// por la comprobación de T4.
@@ -352,16 +424,19 @@ namespace AF.Core.Board
             {
                 Cuia cuia = state[i];
                 MechanicType type = cuia.Mechanic;
-                if (tinaja >= 0 && (type == MechanicType.Liana || type == MechanicType.Remolino || type == MechanicType.Lluvia || type == MechanicType.Pirana))
+                if (tinaja >= 0 && (type == MechanicType.Liana || type == MechanicType.Remolino || type == MechanicType.Lluvia || type == MechanicType.Pirana
+                    || type == MechanicType.Flor))
                 {
                     // M13 (b.2, combinaciones prohibidas: «LevelValidation ya lo prohíbe con ocultos»): la única comprobación de
                     // estas combinaciones en un nivel con tinaja, porque sus ocultas siempre llegan aquí (TinajaMechanic no la
-                    // repite). El informe nombra la tinaja, no Aguas turbias.
+                    // repite). El informe nombra la tinaja, no Aguas turbias. La Flor es un disparador y la tinaja va «solo con
+                    // filtros y capacidades» (02 §9.2 regla 7; K3b).
                     return "M13 (b.2, combinaciones; Q14 A): la tinaja no se combina con " + MechanicTypes.ToKey(type) + " (cuia " + Num(i) + ")";
                 }
 
-                if (type == MechanicType.Liana || type == MechanicType.Lluvia || type == MechanicType.Pirana)
+                if (type == MechanicType.Liana || type == MechanicType.Lluvia || type == MechanicType.Pirana || type == MechanicType.Flor)
                 {
+                    // 02 T1: «nunca con mecánicas con disparador (Liana, Flor, …) ni contadores (Lluvia, Piraña…)» (Q14 A; K3b).
                     return "D-007, Q14 A: Aguas turbias no se combina con " + MechanicTypes.ToKey(type) + " (cuia " + Num(i) + ")";
                 }
 

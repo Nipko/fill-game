@@ -49,6 +49,8 @@ namespace AF.Core.Mechanics
             table[(int)MechanicType.Pirana] = new PiranaMechanic();
             table[(int)MechanicType.Tinaja] = new TinajaMechanic();
             table[(int)MechanicType.Cucharon] = new CucharonMechanic();
+            table[(int)MechanicType.HojaAtada] = new HojaAtadaMechanic();
+            table[(int)MechanicType.Flor] = new FlorMechanic();
             return table;
         }
 
@@ -105,7 +107,7 @@ namespace AF.Core.Mechanics
             return false;
         }
 
-        public virtual Cuia OnReceived(Cuia self, int color)
+        public virtual Cuia OnReceived(Cuia self, int color, int amount)
         {
             return self;
         }

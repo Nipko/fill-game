@@ -34,19 +34,28 @@ namespace AF.Solver.Search
     /// <b>menor</b> <c>g</c>; a igualdad total, orden de llegada (<see cref="MinHeap"/>). Con <c>w = 1</c> el par no
     /// depende del desempate (H admisible); con <c>w &gt; 1</c> (Morpho, Pororoca, Río sin fin) el desempate decide qué
     /// solución subóptima sale, y así coincide con el prototipo. Determinista en CoreCLR, Mono e IL2CPP.</description></item>
-    /// <item><description><b>Mecánicas con estado</b> (03 §9): Hoja, Brote, Lluvia (gotas pendientes y contador) y Piraña
-    /// (contador) guardan su estado en la propia cuia (<see cref="Cuia.Packed"/>), así que la clave canónica y el hash lo
-    /// incluyen sin código propio; la gota y el mordisco los aplica <see cref="BoardRules"/> en la etapa (e) de R10. El último
-    /// destino de la Piraña es el del propio vertido y no se guarda. La heurística no cambia con ninguna (ver
-    /// <see cref="SolverHeuristic"/>): el par con <c>w = 1</c> sigue siendo exacto.</description></item>
+    /// <item><description><b>Mecánicas con estado</b> (03 §9): Hoja, Brote (y las hojas que le faltan al Brote de dos hojas),
+    /// Lluvia (gotas pendientes y contador) y Piraña (contador) guardan su estado en la propia cuia
+    /// (<see cref="Cuia.Packed"/>), así que la clave canónica y el hash lo incluyen sin código propio; la gota y el mordisco los
+    /// aplica <see cref="BoardRules"/> en la etapa (e) de R10. El último destino de la Piraña es el del propio vertido y no se
+    /// guarda. La heurística no cambia con ninguna (ver <see cref="SolverHeuristic"/>), tampoco con la Hoja atada ni con el
+    /// Brote de dos hojas (K3a): el par con <c>w = 1</c> sigue siendo exacto.</description></item>
     /// <item><description><b>Solución:</b> se guarda en índices canónicos y se traduce al final a los índices reales del
     /// tablero de partida, rehaciendo cada vertido con <see cref="BoardRules"/>.</description></item>
     /// <item><description><b>Memoria:</b> cada nodo guarda solo las <c>T</c> cuias del tablero (paso <c>T</c>, no las 16 de
     /// <see cref="BoardState.MaxCuias"/>). Los arrays de nodos, la tabla y el montículo se reutilizan entre llamadas y
     /// solo crecen (duplicando, o al empezar una búsqueda con un tablero más ancho) cuando hace falta; el bucle de
     /// expansión no asigna. Por llamada solo se asigna el array de la solución.</description></item>
+    /// <item><description><b>Corte por tiempo</b> (K2; 08 §9 <c>hint_timeout_ms</c>; 03 §5): con
+    /// <see cref="SolverOptions.Cancellation"/>, la bandera se consulta antes de expandir el primer estado y luego cada
+    /// <see cref="SolverCancellation.PollInterval"/> expansiones [P] (una máscara sobre el contador, sin asignar ni closures).
+    /// Al verla, la búsqueda para con <see cref="SolveStatus.BudgetExceeded"/> y <see cref="SolveResult.WasCancelled"/>. Con
+    /// null no se consulta nada: mismos expandidos, estados y soluciones que sin la bandera. El núcleo no lee
+    /// relojes.</description></item>
     /// </list>
-    /// No es seguro entre hilos: usa una instancia por hilo.
+    /// No es seguro entre hilos: una instancia por hilo. Varias instancias en hilos distintos pueden compartir los
+    /// <see cref="BoardState"/> (inmutables) y una <see cref="SolverCancellation"/> y, con la bandera sin marcar, dan lo mismo
+    /// que en serie.
     /// </remarks>
     public sealed class AStarSolver
     {
@@ -54,6 +63,7 @@ namespace AF.Solver.Search
         private const int TieSpan = 1024;
         private const int MaxPriorityF = (int.MaxValue / TieSpan) - 1;
         private const int NoParent = -1;
+        private const int PollMask = SolverCancellation.PollInterval - 1;
 
         private readonly MinHeap _open;
         private readonly int[] _units = new int[CuiaRules.UnitsTableLength];
@@ -134,32 +144,34 @@ namespace AF.Solver.Search
                 _units[color] = start.UnitsOf(color);
             }
 
-            SolveStatus status = Search(width, options, out int goal, out int expanded);
+            SolveStatus status = Search(width, options, out int goal, out int expanded, out bool cancelled);
             return status == SolveStatus.Solved
                 ? BuildSolution(start, goal, expanded)
-                : new SolveResult(status, null, expanded, _nodeCount);
+                : new SolveResult(status, null, expanded, _nodeCount, cancelled);
         }
 
         /// <summary>
         /// Como <see cref="Solve"/> sobre <paramref name="width"/> cuias de un array (desde <paramref name="offset"/>) y la
         /// tabla <c>U_c</c>, sin construir la solución: devuelve el estado y, si está resuelto, la longitud de la solución en
         /// <paramref name="length"/> (el par con <c>w = 1</c>; −1 si no). No asigna memoria una vez calentado: es la ruta del
-        /// bucle caliente de Aguas turbias (una búsqueda por realidad, 03 §8).
+        /// bucle caliente de Aguas turbias (una búsqueda por realidad, 03 §8). <paramref name="cancelled"/>: la búsqueda se
+        /// cortó (<see cref="SolveResult.WasCancelled"/>).
         /// </summary>
-        internal SolveStatus SolveLength(Cuia[] cuias, int offset, int width, int[] units, SolverOptions options, out int length, out int expanded)
+        internal SolveStatus SolveLength(Cuia[] cuias, int offset, int width, int[] units, SolverOptions options, out int length, out int expanded, out bool cancelled)
         {
             Array.Copy(cuias, offset, _childBuf, 0, width);
             Array.Copy(units, _units, CuiaRules.UnitsTableLength);
-            SolveStatus status = Search(width, options, out int goal, out expanded);
+            SolveStatus status = Search(width, options, out int goal, out expanded, out cancelled);
             length = status == SolveStatus.Solved ? ChainLength(goal) : -1;
             return status;
         }
 
         /// <summary>
         /// <c>ASTAR</c> de 03 §5 desde las <paramref name="width"/> cuias de <see cref="_childBuf"/> con la tabla
-        /// <see cref="_units"/> ya cargadas. Devuelve el estado y el nodo meta.
+        /// <see cref="_units"/> ya cargadas. Devuelve el estado, el nodo meta y si se cortó por
+        /// <see cref="SolverOptions.Cancellation"/>.
         /// </summary>
-        private SolveStatus Search(int width, SolverOptions options, out int goal, out int expanded)
+        private SolveStatus Search(int width, SolverOptions options, out int goal, out int expanded, out bool cancelled)
         {
             Reset(width, options.PourMode);
             BoardCanon.Sort(_childBuf, 0, width);
@@ -167,9 +179,11 @@ namespace AF.Solver.Search
             int weight = options.Weight;
             bool futileRuleEnabled = options.FutileRuleEnabled;
             int budget = options.NodeBudget;
+            SolverCancellation? cancellation = options.Cancellation;
             _open.Push(root, Priority(root, weight));
 
             expanded = 0;
+            cancelled = false;
             while (_open.TryPop(out int node, out int priority))
             {
                 if (priority != Priority(node, weight))
@@ -181,6 +195,14 @@ namespace AF.Solver.Search
                 {
                     goal = node;
                     return SolveStatus.Solved;
+                }
+
+                // K2: corte cooperativo antes de la expansión 1, 257, 513… (null = sin consultas, como antes).
+                if (cancellation != null && (expanded & PollMask) == 0 && cancellation.Poll())
+                {
+                    goal = NoParent;
+                    cancelled = true;
+                    return SolveStatus.BudgetExceeded;
                 }
 
                 expanded++;
@@ -419,7 +441,7 @@ namespace AF.Solver.Search
                 moves[s] = new Pour(source, target, events.Amount);
             }
 
-            return new SolveResult(SolveStatus.Solved, moves, expanded, _nodeCount);
+            return new SolveResult(SolveStatus.Solved, moves, expanded, _nodeCount, false);
         }
 
         /// <summary>

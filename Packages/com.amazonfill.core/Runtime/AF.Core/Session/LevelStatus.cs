@@ -21,8 +21,9 @@ namespace AF.Core.Session
         /// <summary>
         /// Aguas estancadas: sin vertidos útiles y sin victoria (R13); o, en <see cref="LevelSession"/>, con vertidos útiles pero
         /// sin salida: los estados alcanzables con todos los vertidos legales son como mucho <see cref="DeadEndProbe.MaxStates"/>
-        /// (64 [P]) y ninguno es victoria (R13 ampliada, D-014; el bucle del nivel 66; opción (a) de la pregunta 46, pendiente
-        /// del dueño). <c>BoardRules.EvaluateStatus</c> y <c>PourRules.IsStuck</c> solo miran R13.
+        /// (64 [P]) y ninguno es victoria (R13 ampliada, D-014; el bucle del nivel 66; opción (a) de la pregunta 46 de
+        /// <c>docs/GDD.md</c> §6.3, decidida el 2026-10-13; D-020). <c>BoardRules.EvaluateStatus</c> y <c>PourRules.IsStuck</c>
+        /// solo miran R13.
         /// </summary>
         Stuck = 2,
     }

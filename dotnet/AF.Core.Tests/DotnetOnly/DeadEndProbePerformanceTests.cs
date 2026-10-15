@@ -14,9 +14,9 @@ namespace AF.Core.Tests.DotnetOnly
     /// Coste de R13 ampliada (D-014): el cierre acotado corre en <see cref="LevelSession"/> tras cada cambio de estado, así que
     /// tiene que costar menos de 1 ms por llamada en Release con tableros de 12-14 cuias. Se mide en un test explícito de la
     /// categoría <c>Performance</c>, como <see cref="MechanicsPerformanceTests"/>
-    /// (<c>dotnet test dotnet/AmazonFill.slnx -c Release --filter Category=Performance</c>): el tablero del nivel 66 (el cierre
-    /// se recorre entero), un tablero de 14 cuias (se llena) y todos los estados de partidas al azar sobre los 36 tableros de
-    /// referencia, con el peor caso como referencia. Las asignaciones van en <see cref="HotLoopAllocationTests"/>.
+    /// (<c>dotnet test dotnet/AmazonFill.slnx -c Release --filter Category=Performance</c>): el tablero del nivel 66 tras el
+    /// bucle del dueño (<see cref="Level66Board.Final"/>; el cierre se recorre entero), un tablero de 14 cuias (se llena) y todos
+    /// los estados de partidas al azar sobre los 36 tableros de referencia, con el peor caso como referencia. Las asignaciones van en <see cref="HotLoopAllocationTests"/>.
     /// </summary>
     [TestFixture]
     public sealed class DeadEndProbePerformanceTests
@@ -35,7 +35,7 @@ namespace AF.Core.Tests.DotnetOnly
         public void Report_DeadEndProbeUnder1MsInRelease()
         {
             var probe = new DeadEndProbe();
-            double level66 = Median(probe, Level66Loop(), PourMode.Run, out bool dead66);
+            double level66 = Median(probe, Level66Board.Final(), PourMode.Run, out bool dead66);
             double wide = Median(probe, Wide14(), PourMode.Run, out _);
             double worst = 0;
             double sum = 0;
@@ -107,17 +107,6 @@ namespace AF.Core.Tests.DotnetOnly
         private static string Format(double ms)
         {
             return ms.ToString("F3", CultureInfo.InvariantCulture);
-        }
-
-        private static BoardState Level66Loop()
-        {
-            return new BoardState(new[]
-            {
-                Cuia.Create(4, new[] { 3, 8, 10 }), Cuia.Create(4, new[] { 4, 7 }), Cuia.Create(4, new[] { 10, 7, 7, 7 }),
-                Cuia.Create(4, new[] { 14, 14, 14, 14 }), Cuia.Create(4, new[] { 6, 6, 6, 6 }), Cuia.Create(2, new[] { 4, 4 }),
-                Cuia.Create(4, new[] { 3 }), Cuia.Create(4, new[] { 8, 8, 10, 10 }), Cuia.Create(4, new[] { 3, 3, 8, 1 }),
-                Cuia.Create(4, new[] { 1, 1, 1, 4 }),
-            });
         }
 
         /// <summary>El tablero de 14 cuias de <see cref="HotLoopAllocationTests"/> (12 colores, 2 vacías).</summary>

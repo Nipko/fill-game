@@ -43,14 +43,16 @@ namespace AF.Core.Tests.DotnetOnly
         [Test]
         public void TheCatalog_CoversEveryMechanicAndEveryCombinationOfTheD4Calendar()
         {
-            // Propuesta de D-007, d.4: las 9 mecánicas de 1-200, las dos capacidades y las 25 combinaciones del calendario; y la
-            // Tinaja (M13; propuesta de la tinaja, c.6: «una fila en ReferenceBoards y en MechanicsPerformanceTests»).
+            // Propuesta de D-007, d.4: las 9 mecánicas de 1-200, las dos capacidades y las 25 combinaciones del calendario; la
+            // Tinaja (M13; propuesta de la tinaja, c.6: «una fila en ReferenceBoards y en MechanicsPerformanceTests»); y las
+            // variantes de la 1.0 de K3a y K3b (propuesta de D-007 b.3): la Hoja atada (283), el Brote de dos hojas (343) y la
+            // Flor de vitória-régia (403).
             string[] expected =
             {
                 "Ch", "Al", "Ho", "Ma", "Li", "Tu", "Re", "Ba", "Ll", "Br", "Pi",
                 "Ho+Ch", "Ma+Ho", "Li+Ho", "Ho+Tu", "Re+Li", "Ba+Ma", "Ll+Ho", "Br+Ba", "Pi+Ma",
                 "Ma+Tu", "Ba+Tu", "Br+Tu", "Ll+Re", "Ll+Ba", "Br+Ma", "Pi+Li", "Re+Ma", "Re+Ho",
-                "Ba+Li", "Br+Ho", "Ba+Re", "Li+Ma", "Ll+Li+Al6", "Pi+Ba", "Ma+Li", "Ti",
+                "Ba+Li", "Br+Ho", "Ba+Re", "Li+Ma", "Ll+Li+Al6", "Pi+Ba", "Ma+Li", "Ti", "HoA", "Br2", "Fl",
             };
 
             Assert.That(Names(), Is.EqualTo(expected));
