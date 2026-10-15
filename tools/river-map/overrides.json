@@ -1,6 +1,10 @@
 {
-  "note": "Decisiones [P] de P-M1 (a) que rio-amazonas.json no lleva en sus campos. Las aplica tools/river-map/stops.py, y su --check falla si una entrada no corresponde a ninguna parada o lleva un campo desconocido (campos admitidos: country, country_name, name, river y why). name y river sustituyen al nombre y al río de la investigación en las filas map.stop.<id>.name y map.stop.<id>.river de facts.csv (M1.1t): el río va en {río} de map_arrived («{lugar} · {país} · río {río}», glosario §10), así que es solo el nombre del río, sin «río» ni descripciones.",
+  "note": "Decisiones [P] de P-M1 (a) que rio-amazonas.json no lleva en sus campos. Las aplica tools/river-map/stops.py, y su --check falla si una entrada no corresponde a ninguna parada o lleva un campo desconocido (campos admitidos: country, country_name, name, river y why). name y river sustituyen al nombre y al río de la investigación en las filas map.stop.<id>.name y map.stop.<id>.river de facts.csv (M1.1t): el río va en {río} de map_arrived («{lugar} · {país} · río {río}», glosario §10), así que es solo el nombre del río, sin «río» ni descripciones (--check falla si el río lleva paréntesis, empieza por «río» o por minúscula).",
   "stops": {
+    "belem": {
+      "river": "Pará",
+      "why": "rio-amazonas.json dice «Pará (estuario)», y la descripción entre paréntesis no va en «río {río}» de map_arrived (quedaría «Belém · Brasil · río Pará (estuario)»): queda el nombre del río, el Pará (su ancla_rio). Pendiente del asesor cultural (07 §8.2)."
+    },
     "nauta": {
       "name": "Nauta",
       "why": "Nombre de la parada 17 en 07 §2.1 («Nauta», rótulo «Nauta · Perú»). rio-amazonas.json dice «Nauta: nace el nombre», que es la nota de diseño del clímax del nombre (propuesta del Mapa §5.3), no el rótulo."

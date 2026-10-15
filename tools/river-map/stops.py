@@ -23,10 +23,13 @@ status_pt-BR, notes y args):
   map.country.<iso2>.name (COUNTRY_NAMES, comprobado contra rotulos_de_pais) y, en n = 13, country_name («Colombia y
   Peru», desde pais CO/PE); 32 caracteres [P];
 - datos de llegada (arrival_fact, con su texto, etiqueta y fuentes con URL): 90 caracteres; preguntas del mundo: 50;
-- en y pt-BR vacios; status pendiente_asesor; notes con [V] o [E] (o [P] en lo que decide el diseno); args con las cifras
-  que el texto escribe como {n} (Q8-A): la fuente las da en dato_del_nivel.args;
+- en y pt-BR vacios; status pendiente_asesor; notes con la etiqueta del dato, [V] o [E] (su contexto cita cada fuente
+  con su URL), y [P] en los nombres, rios, paises y preguntas (la investigacion no les da una fuente con URL; su conf es
+  la de la coordenada); args con las cifras que el texto escribe como {n} (Q8-A): la fuente las da en
+  dato_del_nivel.args, con las reglas de LocArgs.TryParse;
 - --check falla si el bloque no esta al dia (desfase), si una clave citada no tiene fila con texto, si un texto pasa de su
-  limite, lleva una cifra con separador o decimales o cae en el veto de Belen, o si un dato [V] no tiene fuente [V].
+  limite, lleva una cifra con separador o decimales o cae en el veto de Belen, si un rio no es solo el nombre del rio
+  (parentesis, «río» o minuscula), si una fila con [V] o [E] no cita ninguna URL o si un dato [V] no tiene fuente [V].
 
 Conversion (paradas_1_200 -> stops[n]; plan del Mapa, M1.1):
 - paradas_1_200 cubre k = 0..19 (niveles 1-200, D-013 punto 3); ademas, la validacion exige que el documento termine
@@ -550,6 +553,9 @@ FACT_MAX_CHARS = 90        # 08 §4.5: el dato mide <= 90 caracteres en ES
 QUESTION_MAX_CHARS = 50    # 08 §4.5: la pregunta, <= 50
 NAME_MAX_CHARS = 32        # [P] nombres de parada, rio y pais
 MAX_ARGS = 3               # LocArgs.MaxCount (AF.Localization)
+MAX_ARG_DECIMALS = 9       # LocNumber.MaxDecimals: LocArgs.TryParse rechaza un decimal con mas cifras tras el punto
+ARG_INT_MIN, ARG_INT_MAX = -(2 ** 63), 2 ** 63 - 1   # long de C#: LocArgs.TryParse rechaza un entero fuera de rango
+SEPARATOR_ARG = "sep"      # LocFormat.SeparatorName: el marcador de corte, sin valor
 TEXT_STATUS = "pendiente_asesor"   # lo cultural nace pendiente del asesor (07 §8.2)
 EVIDENCE = ("V", "E")
 REQUIRED_COLUMNS = ("key", "es-419", "context", "max_chars", "status", "notes", "args")
@@ -565,6 +571,22 @@ RE_UNIT_SPACE = re.compile(r"(?<=[0-9}]) (?=(?:km²|km|m²|m|cm|mm|ha|kg|°C|%)(
 RE_NUMBER_TOKEN = re.compile("[0-9]+(?:[.,\u00A0\u202F\u2009' ][0-9]+)+")
 RE_ARG_NAME = re.compile(r"[a-z][a-z0-9_]*")
 RE_ARG_VALUE = re.compile(r"-?[0-9]+(?:\.[0-9]+)?")
+RE_EVIDENCE_TAG = re.compile(r"\[(?:V|E)\]")
+RE_URL = re.compile(r"https?://")
+# Dos rios en {rio} de map_arrived («Maranon y Ucayali», «Amazonas e Itaya»): la plantilla dice «rio {rio}», en singular.
+RE_TWO_RIVERS = re.compile(r" (?:y|e) ")
+
+
+def river_problem(value: str) -> str | None:
+    """Por que un texto no vale para {río} de map_arrived («{lugar} · {país} · río {río}»), o None si vale: tiene que
+    ser solo el nombre del rio, con mayuscula, sin la palabra «río» y sin descripciones entre parentesis."""
+    if "(" in value or ")" in value:
+        return "lleva una descripcion entre parentesis"
+    if value.casefold().startswith(("río ", "rio ")):
+        return "empieza por la palabra «río», que ya pone la plantilla"
+    if not value[:1].isupper():
+        return "empieza por minuscula (una descripcion, no el nombre de un rio)"
+    return None
 
 
 def clean_text(text: str) -> str:
@@ -591,8 +613,23 @@ def visible_length(text: str, args: dict) -> int:
     return max(len(shown), len(text))
 
 
+def _arg_value_error(value: str) -> str | None:
+    """Lo que LocArgs.TryParse rechazaria de una cifra ya con la forma de RE_ARG_VALUE, o None si la acepta: mas de
+    MAX_ARG_DECIMALS decimales o un entero fuera del rango de long. Una sola cifra rechazada invalidaria toda facts.csv al
+    cargarla (sin ningun dato de fauna ni del Mapa)."""
+    whole, dot, decimals = value.partition(".")
+    if dot:
+        if len(decimals) > MAX_ARG_DECIMALS:
+            return f"lleva {len(decimals)} decimales y LocArgs admite {MAX_ARG_DECIMALS}"
+    elif not ARG_INT_MIN <= int(whole) <= ARG_INT_MAX:
+        return "es un entero fuera del rango de long de C# (LocArgs)"
+    return None
+
+
 def _parse_args(raw, key: str) -> tuple[dict, list[str]]:
-    """args opcional de un dato de la fuente: {nombre: entero o "decimal con punto"} -> {nombre: texto de la cifra}."""
+    """args opcional de un dato de la fuente: {nombre: entero o "decimal con punto"} -> {nombre: texto de la cifra}, con
+    las mismas reglas que LocArgs.TryParse (nombre [a-z][a-z0-9_]* distinto de «sep», hasta 3 pares, decimales <= 9 y
+    enteros en el rango de long)."""
     if raw is None:
         return {}, []
     if not isinstance(raw, dict):
@@ -600,16 +637,24 @@ def _parse_args(raw, key: str) -> tuple[dict, list[str]]:
     out: dict = {}
     errors: list[str] = []
     for name, value in raw.items():
-        if not (isinstance(name, str) and RE_ARG_NAME.fullmatch(name)) or name == "sep":
-            errors.append(f"{key}: args lleva el nombre {name!r}, que no vale como marcador")
-        elif _is_int(value):
-            out[name] = str(value)
+        if not (isinstance(name, str) and RE_ARG_NAME.fullmatch(name)) or name == SEPARATOR_ARG:
+            errors.append(f"{key}: args lleva el nombre {name!r}, que no vale como marcador"
+                          + (" («sep» es el marcador de corte, sin valor)" if name == SEPARATOR_ARG else ""))
+            continue
+        if _is_int(value):
+            text = str(value)
         elif isinstance(value, str) and RE_ARG_VALUE.fullmatch(value):
-            out[name] = value
+            text = value
         else:
             errors.append(f"{key}: el valor de {name!r} ({value!r}) no es un entero ni un decimal con punto entre comillas")
-    if len(out) > MAX_ARGS:
-        errors.append(f"{key}: {len(out)} argumentos y la tabla admite {MAX_ARGS} (LocArgs)")
+            continue
+        problem = _arg_value_error(text)
+        if problem:
+            errors.append(f"{key}: el valor de {name!r} ({text}) {problem}")
+        else:
+            out[name] = text
+    if len(raw) > MAX_ARGS:
+        errors.append(f"{key}: {len(raw)} argumentos y la tabla admite {MAX_ARGS} (LocArgs)")
     return out, errors
 
 
@@ -708,6 +753,9 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
         for field in ("context", "notes"):
             if has_belen(row[field]):
                 errors.append(f"{key}: la columna {field} cae en el veto de Belen (D-013, punto 11)")
+        if RE_EVIDENCE_TAG.search(notes) and not RE_URL.search(context):
+            # 08 §4.5: cada etiqueta [V] o [E] lleva a una fuente con URL. Sin URL, la fila va con [P].
+            errors.append(f"{key}: notes lleva [V] o [E] y el contexto no cita ninguna fuente con URL (08 §4.5)")
         if key in rows and rows[key] != row:
             errors.append(f"{key}: dos filas distintas con la misma clave")
         rows[key] = row
@@ -718,32 +766,40 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
 
     # Nombres de parada y rio (map.stop.<id>.name y .river; 32 caracteres [P]).
     names: dict = {}
+    # Las notes no llevan [V] ni [E]: el conf de rio-amazonas.json es la confianza de la coordenada, no la del nombre, y
+    # la investigacion no da una fuente con URL para el nombre (08 §4.5: cada [V] o [E] lleva a una fuente con URL).
     for s in stops:
         n, sid = s["n"], s["id"]
         r = records.get(n, {})
         ov = over.get(sid) if isinstance(over.get(sid), dict) else {}
-        conf = r.get("conf")
-        if conf not in EVIDENCE:
-            errors.append(f"parada n={n} ({sid!r}): conf {conf!r} del lugar no es V ni E")
         for field, src_field in (("name", "nombre"), ("river", "rio")):
             value = ov.get(field, r.get(src_field))
+            key = f"map.stop.{sid}.{field}"
             if field in ov:
                 origin = (f"tools/river-map/overrides.json ({sid}: {field}), en lugar de «{r.get(src_field)}» de "
                           f"{SOURCE_REL}, paradas_1_200 k={n}")
                 notes = "[P] Decisión de overrides.json (P-M1 a)."
             else:
                 origin = f"{SOURCE_REL}, paradas_1_200 k={n} ({src_field})"
-                notes = f"[{conf}] Lugar {'verificado' if conf == 'V' else 'estimado'} en rio-amazonas.json (conf)."
+                notes = (f"[P] {'Nombre del lugar' if field == 'name' else 'Río'} de la investigación del Mapa "
+                         f"(rio-amazonas.json, {src_field}).")
             if field == "name":
                 names[n] = clean_text(value) if isinstance(value, str) else sid
                 context = (f"Nombre de la {where(s)}: {{lugar}} de map_arrived («{{lugar}} · {{país}} · río {{río}}», "
                            f"placa de llegada y tarjeta de la parada), de stop_label (rótulo del lugar) y de "
                            f"map_stop_remaining (D-013; 07 §2.1; 08 §4.5). Fuente: {origin}. {NO_CAPTURE}")
             else:
+                if isinstance(value, str) and value.strip():
+                    problem = river_problem(value.strip())
+                    if problem:
+                        errors.append(f"{key}: {value!r} {problem}; va en {{rio}} de map_arrived («rio {{rio}}»), asi "
+                                      "que es solo el nombre del rio: corrigelo en overrides.json")
+                two = (" Con dos ríos, «río {río}» queda en singular: pendiente del dueño y del asesor cultural."
+                       if isinstance(value, str) and RE_TWO_RIVERS.search(value) else "")
                 context = (f"Río de la {where(s)}, {names[n]}: {{río}} de map_arrived («{{lugar}} · {{país}} · río "
-                           f"{{río}}»), así que va sin la palabra «río» (glosario §10; 08 §4.5). Fuente: {origin}. "
+                           f"{{río}}»), así que va sin la palabra «río» (glosario §10; 08 §4.5).{two} Fuente: {origin}. "
                            f"{NO_CAPTURE}")
-            add(f"map.stop.{sid}.{field}", value, NAME_MAX_CHARS, context, notes)
+            add(key, value, NAME_MAX_CHARS, context, notes)
 
     # Paises (map.country.<iso2>.name) y la placa de dos paises (country_name, n = 13).
     by_country: dict = {}
@@ -762,7 +818,7 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
         context = (f"Nombre del país {iso}: {{país}} de map_arrived y de stop_label en las paradas {ns[0]}-{ns[-1]} del "
                    f"Mapa del río, y rótulo del país en el Mapa (glosario §8; 08 §4.5). Fuente: {SOURCE_REL}, "
                    f"rotulos_de_pais («{rotulo}»). {NO_CAPTURE}")
-        add(key, name, NAME_MAX_CHARS, context, "[V] Nombre del país en español (glosario §8).")
+        add(key, name, NAME_MAX_CHARS, context, "[P] Nombre del país en español (glosario §8).")
     for s in stops:
         if s["country_name"] is None:
             continue
@@ -794,13 +850,22 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
         errors.extend(errs)
         sources, errs = _sources_text(dato, fuentes, key)
         errors.extend(errs)
-        mapa10 = (f" Es el Dato del río 1 del Mapa del 10 (06 §2.3): habla del estuario, la parada 0 ({names.get(0)})."
-                  if n == 1 else "")
+        if n == 1:
+            # 02 §6: «en el 10, la primera llegada la cuenta el Mapa de la secuencia de 06 §2.3», no la franja de llegada.
+            shown = (f"Dato del río 1, el de la llegada a la {where(s)}, {names[n]}: no sale bajo map_arrived en la "
+                     f"victoria, sino en el Mapa del río de la secuencia de la victoria del 10 (pantalla 3 de 06 §2.3; "
+                     f"02 §6), donde TiTino se presenta desde su casa del estuario y lo da en la placa del Dato del río, "
+                     f"con su retrato, nunca en bocadillo (D-013, punto 6); luego, en la tarjeta de la parada. Habla "
+                     f"del estuario, la parada 0 ({names.get(0)})")
+        else:
+            shown = (f"Dato de llegada a la {where(s)}, {names[n]}, en la victoria del {10 * n}: lo presenta TiTino en "
+                     f"la placa del Dato del río, con su retrato y su gesto sloth_present, bajo la placa map_arrived "
+                     f"(«{{lugar}} · {{país}} · río {{río}}»), nunca en bocadillo (D-013, punto 6; 02 §6); luego, en la "
+                     f"tarjeta de la parada")
         cifras = (" Marcadores: " + ", ".join(f"{{{a}}}" for a in sorted(args))
                   + ", la cifra de la columna args con el separador de la región (D-018, Q8-A)." if args else "")
-        context = (f"Dato de llegada a la {where(s)}, {names[n]}, en la victoria del {10 * n}: placa del dato bajo "
-                   f"map_arrived y tarjeta de la parada; es también el fact_id de af_river_fact_shown (02 §6; 08 §4.5 "
-                   f"y §8.2).{mapa10}{cifras} Lugar del dato: {names.get(holder)}. {sources} {NO_CAPTURE}")
+        context = (f"{shown}. Es también el fact_id de af_river_fact_shown (02 §6; 08 §4.5 y §8.2).{cifras} Lugar del "
+                   f"dato: {names.get(holder)}. {sources} {NO_CAPTURE}")
         add(key, dato.get("texto"), FACT_MAX_CHARS, context, f"[{dato.get('etiqueta')}] Dato del Mapa del río.", args)
 
     # Otros datos de la tarjeta (facts[]): llegan con M2.6; hasta entonces, una clave sin texto es un error.

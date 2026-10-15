@@ -382,6 +382,23 @@ def _set_source(sid: str, field: str, value):
     return mutate
 
 
+def _drop_override(sid: str, field: str):
+    def mutate(src: dict, ov: dict) -> None:
+        del ov["stops"][sid][field]
+    return mutate
+
+
+def _unknown_country(src: dict, ov: dict) -> None:
+    # Las paradas del Peru (k = 14-19) pasan a un pais «XX» sin entrada en COUNTRY_NAMES, con su bandera y su cruce de
+    # pais coherentes: validate() no se queja y falla solo el nombre del pais.
+    for r in src["paradas_1_200"]:
+        if r["k"] >= 14:
+            r["pais"] = "XX"
+            if "bandera" in r:
+                r["bandera"] = "XX"
+    next(c for c in src["cruces_de_pais"] if c.get("llega_en") == {"parada_1_200": 14})["pais"] = "XX"
+
+
 def _drop_rotulo(name: str):
     def mutate(src: dict, ov: dict) -> None:
         src["rotulos_de_pais"] = [r for r in src["rotulos_de_pais"] if r["nombre"] != name]
@@ -454,6 +471,28 @@ FIXTURES = [
     ("args con un decimal sin comillas", _set_dato_with_args(5, "El Negro baja con un pH de {ph}.", {"ph": 4.5}),
      "no es un entero ni un decimal con punto"),
     ("pais sin rotulo en la investigacion", _drop_rotulo("Perú"), "map.country.pe.name: 'Peru' no es ningun rotulo"),
+    ("pais sin entrada en COUNTRY_NAMES", _unknown_country, "map.country.xx.name: el pais XX no esta en COUNTRY_NAMES"),
+    ("Belen en el nombre de una fuente (sale en el contexto)", _set_source("MR-F19", "nombre", "Mercado de Belén"),
+     "la columna context cae en el veto de Belen"),
+    # {rio} de map_arrived: solo el nombre del rio (overrides.json lo corrige donde la investigacion da una descripcion).
+    ("rio con una descripcion entre parentesis", _drop_override("belem", "river"),
+     "map.stop.belem.river: 'Para (estuario)' lleva una descripcion entre parentesis"),
+    ("rio que es una descripcion en minuscula", _drop_override("tarapoto", "river"),
+     "map.stop.tarapoto.river: 'lagos de la varzea del Amazonas' empieza por minuscula"),
+    ("rio con la palabra rio", _override_field("tefe", "river", "Río Tefé"),
+     "map.stop.tefe.river: 'Rio Tefe' empieza por la palabra"),
+    # args con las reglas de LocArgs.TryParse: lo que el cliente rechazara dejaria toda facts.csv sin cargar.
+    ("args con 10 decimales", _set_dato_with_args(5, "El Negro baja con un pH de {ph}.", {"ph": "4.1234567891"}),
+     "el valor de 'ph' (4.1234567891) lleva 10 decimales y LocArgs admite 9"),
+    ("args con un entero fuera de long", _set_dato_with_args(5, "Unos {n} litros.", {"n": 9223372036854775808}),
+     "el valor de 'n' (9223372036854775808) es un entero fuera del rango de long"),
+    ("args con un entero negativo fuera de long", _set_dato_with_args(5, "Unos {n} litros.", {"n": "-9223372036854775809"}),
+     "es un entero fuera del rango de long"),
+    ("args con mas de 3 argumentos",
+     _set_dato_with_args(5, "De {a} a {b}, de {c} a {d}.", {"a": 1, "b": 2, "c": 3, "d": 4}),
+     "map.stop.manaos.dato_02: 4 argumentos y la tabla admite 3"),
+    ("args con el nombre reservado sep", _set_dato_with_args(5, "Uno {sep} dos.", {"sep": 1}),
+     "args lleva el nombre 'sep', que no vale como marcador"),
 ]
 
 
@@ -592,6 +631,11 @@ class TextBlockTests(unittest.TestCase):
                 self.assertEqual("", row["status_pt-BR"])
                 self.assertEqual("pendiente_asesor", row["status"])
                 self.assertRegex(row["notes"], r"^\[(V|E|P)\] ")
+                if re.search(r"\[(V|E)\]", row["notes"]):
+                    # 08 §4.5: cada etiqueta [V] o [E] lleva a una fuente con URL.
+                    self.assertRegex(row["context"], r"https?://", "fila [V] o [E] sin URL en su contexto")
+                if not (".dato_" in key or key.startswith("map.general.")):
+                    self.assertTrue(row["notes"].startswith("[P] "), "nombres, rios, paises y preguntas sin [V] ni [E]")
                 self.assertIn("no se edita a mano", row["notes"])
                 self.assertTrue(row["context"])
                 expected_max = ("90" if ".dato_" in key or key.startswith("map.general.") else
@@ -619,7 +663,7 @@ class TextBlockTests(unittest.TestCase):
     def test_names_rivers_countries_and_questions(self):
         t = {k: v["es-419"] for k, v in self.table.items()}
         self.assertEqual("Belém", t["map.stop.belem.name"])
-        self.assertEqual("Pará (estuario)", t["map.stop.belem.river"])
+        self.assertEqual("Pará", t["map.stop.belem.river"], "overrides.json: sin «(estuario)» en «río {río}»")
         self.assertEqual("Alter do Chão", t["map.stop.alter_do_chao.name"])
         self.assertEqual("Tapajós", t["map.stop.alter_do_chao.river"])
         self.assertEqual("El río frontera", t["map.stop.rio_frontera.name"], "07 §2.1, por overrides.json")
@@ -633,6 +677,25 @@ class TextBlockTests(unittest.TestCase):
         self.assertEqual("¿Por qué el agua del Tapajós es clara?", t["map.world.w02.question"])
         self.assertEqual(4, sum(k.startswith("map.world.") for k in t))
         self.assertEqual(19, sum(".dato_" in k or k.startswith("map.general.") for k in t if k.startswith("map.")))
+
+    def test_rivers_are_only_the_name_of_the_river(self):
+        for key, row in self.table.items():
+            if key.startswith("map.stop.") and key.endswith(".river"):
+                with self.subTest(key=key):
+                    self.assertIsNone(stops.river_problem(row["es-419"]), row["es-419"])
+        two = self.table["map.stop.pacaya_samiria.river"]["context"]
+        self.assertIn("pendiente del dueño y del asesor", two, "dos rios en «rio {rio}»: pregunta abierta")
+        self.assertNotIn("pendiente del dueño", self.table["map.stop.manaos.river"]["context"])
+
+    def test_arrival_context_says_who_presents_the_fact_and_where(self):
+        ctx = self.table["map.stop.manaos.dato_02"]["context"]
+        self.assertIn("TiTino", ctx)
+        self.assertIn("placa del Dato del río, con su retrato", ctx)
+        self.assertIn("D-013, punto 6", ctx)
+        first = self.table["map.stop.estuario.dato_03"]["context"]
+        self.assertIn("no sale bajo map_arrived", first)
+        self.assertIn("06 §2.3", first)
+        self.assertIn("TiTino se presenta", first)
 
     def test_unit_gets_a_no_break_space(self):
         self.assertIn("6\u00a0km", self.table["map.stop.manaos.dato_01"]["es-419"])
@@ -720,6 +783,30 @@ class WriteTextsTests(unittest.TestCase):
             proc, out = self.write(committed, "--source", str(src_path))
         self.assertEqual(1, proc.returncode)
         self.assertEqual(committed, out, "con errores no se escribe nada")
+
+    def test_args_follow_locargs_tryparse(self):
+        ok, errors = stops._parse_args({"a": "4.123456789", "b": stops.ARG_INT_MAX, "c": str(stops.ARG_INT_MIN)}, "k")
+        self.assertEqual([], errors)
+        self.assertEqual({"a": "4.123456789", "b": "9223372036854775807", "c": "-9223372036854775808"}, ok)
+        for raw, fragment in (({"a": "4.1234567891"}, "10 decimales"), ({"a": stops.ARG_INT_MAX + 1}, "fuera del rango"),
+                              ({"a": str(stops.ARG_INT_MIN - 1)}, "fuera del rango"), ({"sep": 1}, "'sep'"),
+                              ({"a": 1, "b": 2, "c": 3, "d": 4}, "4 argumentos"), ({"a": True}, "no es un entero"),
+                              ({"A": 1}, "'A'")):
+            with self.subTest(raw=raw):
+                _, errors = stops._parse_args(raw, "k")
+                self.assertTrue(any(fragment in e for e in errors), errors)
+
+    def test_a_tag_without_url_fails(self):
+        # Si un dato [V] o [E] llegara sin URL en el contexto, build_texts falla (08 §4.5).
+        from unittest import mock
+        source, overrides, wt = load_json(SOURCE_PATH), load_json(OVERRIDES_PATH), WorldTable.from_cs()
+        doc, errors = stops.build(source, overrides, wt)
+        self.assertEqual([], errors)
+        with mock.patch.object(stops, "_sources_text", lambda dato, fuentes, key: ("Fuente sin enlace.", [])):
+            _, errors = stops.build_texts(doc, source, overrides)
+        self.assertTrue(errors)
+        self.assertTrue(all("no cita ninguna fuente con URL" in e for e in errors), errors)
+        self.assertEqual(19, len(errors), "uno por dato de llegada")
 
     def test_csv_helpers_round_trip(self):
         from riverdata import format_csv_row
