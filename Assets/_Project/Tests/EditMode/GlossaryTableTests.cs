@@ -23,7 +23,8 @@ namespace AF.Tests.EditMode
     /// las monedas, los personajes, los mundos y la marca, y en y pt-BR son los que da el glosario.</item>
     /// <item>Un término que es también una clave de <c>strings.csv</c> o de <c>facts.csv</c> dice lo mismo en las dos tablas: en
     /// particular, las filas de nombre de tinte de <c>facts.csv</c> (<c>tint.&lt;tinte&gt;.name</c>, F1F2), cuando existan.</item>
-    /// <item>Sus caracteres entran en los atlas al regenerarlos (<see cref="FontSetup.Characters()"/>; B1).</item>
+    /// <item>B1 lee todas sus celdas de idioma (<see cref="FontCoverage.ReadProjectTables"/>), y sus caracteres están en las TTF de
+    /// su familia y en los atlas generados (<see cref="FontSetup.AtlasGaps"/>).</item>
     /// </list>
     /// </summary>
     public sealed class GlossaryTableTests
@@ -192,6 +193,7 @@ namespace AF.Tests.EditMode
             AssertKind(glossary, "currency", "currency");
             AssertKind(glossary, "lives", "currency");
             AssertKind(glossary, "character.capi", "character");
+            AssertKind(glossary, "character.miquitos", "character");
             AssertKind(glossary, "character.rosa", "character");
             AssertKind(glossary, "character.sloth", "character");
             AssertKind(glossary, "brand.name", "brand");
@@ -238,7 +240,7 @@ namespace AF.Tests.EditMode
                 Assert.That(glossary.ContainsKey(term), Is.True, "falta " + term);
             }
 
-            Assert.That(marked, Is.EqualTo(14 + 13 + 3 + 13 + CulturalBoosters.Length), "14 tintes, 13 mecánicas sin las de capacidad, 3 personajes, 13 mundos y los comodines culturales");
+            Assert.That(marked, Is.EqualTo(14 + 13 + 4 + 13 + CulturalBoosters.Length), "14 tintes, 13 mecánicas sin las de capacidad, 4 personajes (Capi, Rosa, TiTino y los Miquitos), 13 mundos y los comodines culturales");
         }
 
         [Test]
@@ -306,17 +308,22 @@ namespace AF.Tests.EditMode
 
             Assert.That(fromGlossary, Is.EqualTo(cells), "B1 lee todas las celdas de idioma del glosario");
 
-            string characters = FontSetup.Characters();
-            foreach (GlossaryRow row in rows)
+            // Solo las celdas del glosario, contra las TTF de su familia y contra los atlas generados: un carácter del glosario que
+            // no esté en strings.csv ni en facts.csv (hoy «w» y «Á») y falte en un atlas saldría aquí como hueco.
+            var glossaryTexts = new List<LocTextEntry>();
+            foreach (LocTextEntry entry in FontCoverage.ReadProjectTables())
             {
-                foreach (string locale in Locales)
+                if (entry.File == FontCoverage.GlossaryFile)
                 {
-                    foreach (char c in row.Text(locale))
-                    {
-                        Assert.That(characters.IndexOf(c), Is.GreaterThanOrEqualTo(0), row.Term + " (" + locale + "): U+" + ((int)c).ToString("X4", System.Globalization.CultureInfo.InvariantCulture));
-                    }
+                    glossaryTexts.Add(entry);
                 }
             }
+
+            FontCoverageReport report = FontCoverage.Analyze(glossaryTexts, new FontCoverage.TtfGlyphs().Has);
+            Assert.That(report.Errors, Is.Empty, string.Join("\n", report.Errors));
+
+            List<string> gaps = FontSetup.AtlasGaps(report);
+            Assert.That(gaps, Is.Empty, string.Join("\n", gaps));
         }
 
         private static void AssertKind(Dictionary<string, GlossaryRow> glossary, string term, string kind)
