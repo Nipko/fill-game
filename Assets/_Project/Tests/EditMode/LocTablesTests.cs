@@ -458,6 +458,12 @@ namespace AF.Tests.EditMode
                 keys.Add(UiText.WorldRiverKey(w));
             }
 
+            // Los nombres de tienda (S12 y L3): una clave iap_<sku>_name por SKU del catálogo, que pinta StoreSheet.
+            foreach (AF.IAP.StoreProduct product in AF.IAP.StoreCatalog.Default.Products)
+            {
+                keys.Add(product.NameKey);
+            }
+
             return keys;
         }
 
@@ -509,6 +515,15 @@ namespace AF.Tests.EditMode
             Assert.That(line, Does.Match("^AF_STATE \\{\"event\":\"loc\",\"t\":\\d+,\"locale\":\"en-XA\",\"source\":\"dev\",\"culture\":\"en-US\"\\}$"));
             Assert.That(probe.FormatLocaleState(new LocResolution("es-419", LocSource.Fallback), string.Empty),
                 Does.EndWith(",\"locale\":\"es-419\",\"source\":\"fallback\",\"culture\":\"\"}"), "cultura invariante: vacía");
+            Assert.That(probe.FormatLocaleState(new LocResolution("es-419", LocSource.Saved), string.Empty, "es-MX", "jni", "es-MX"),
+                Does.EndWith(",\"source\":\"saved\",\"culture\":\"\",\"device\":\"es-MX\",\"device_src\":\"jni\",\"numbers\":\"es-MX\"}"),
+                "con la etiqueta que leyó el teléfono y las cifras en uso (tarea L3)");
+            Assert.That(AndroidDeviceLocale.SourceKey(AF.Platform.SystemDeviceLocale.Instance), Is.EqualTo("culture"));
+            Assert.That(AndroidDeviceLocale.SourceKey(new AF.Platform.ManualDeviceLocale("pt-BR")), Is.EqualTo("manual"));
+            Assert.That(AndroidDeviceLocale.ForPlatform(), Is.SameAs(AF.Platform.SystemDeviceLocale.Instance), "fuera de Android, la cultura de .NET");
+            var android = new AndroidDeviceLocale(new AF.Platform.ManualDeviceLocale("es-CO"));
+            Assert.That(android.LanguageTag, Is.EqualTo("es-CO"), "fuera de Android el JNI no da nada: el respaldo");
+            Assert.That(AndroidDeviceLocale.SourceKey(android), Is.EqualTo("culture"));
             Assert.That(DevProbe.SourceKey(LocSource.Saved), Is.EqualTo("saved"));
             Assert.That(DevProbe.SourceKey(LocSource.Device), Is.EqualTo("device"));
             Assert.That(DevProbe.SourceKey(LocSource.Default), Is.EqualTo("default"));

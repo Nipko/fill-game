@@ -276,21 +276,33 @@ namespace AF.Presentation
 
         /// <summary>
         /// Patrones de fruta del nivel (07 §3, regla 1; 02 §12; T-E): con true, cada cuia lleva el icono de su fruta en sus
-        /// dosis visibles (<see cref="CuiaView.SetFruitPatterns"/>). Lo fija <see cref="ApplyLevelPatterns"/>; las vistas que se
+        /// dosis visibles (<see cref="CuiaView.SetFruitPatterns"/>). Lo fija <see cref="ApplyPatterns"/>; las vistas que se
         /// unen después (<see cref="Bind"/>: una cuia añadida) lo reciben al unirse. False por defecto.
         /// </summary>
         public bool FruitPatterns { get; private set; }
 
         /// <summary>
-        /// Patrones de fruta al cargar el nivel <paramref name="level"/> (T-E.1, T-E.4 y T-E.6; sin Remote Config real, con los
-        /// defaults de 08 §9): el interruptor (<see cref="Palette.PatternsOnFor"/>: desde el 41) en cada cuia y la opacidad del
-        /// patrón (<see cref="Palette.PatternOpacityFor"/>: 0,15 hasta el 40 y 0,20 desde el 41) en el material compartido del
-        /// líquido (<see cref="LiquidGraphic.ApplyPatternOpacity"/>). Sin asignaciones.
+        /// Patrones de fruta al cargar el nivel <paramref name="level"/> con el ajuste en automático (T-E.1, T-E.4 y T-E.6; sin
+        /// Remote Config real, con los defaults de 08 §9): <see cref="ApplyPatterns"/> con <see cref="Palette.PatternsOnFor"/>
+        /// (desde el 41). Sin asignaciones.
         /// </summary>
         public void ApplyLevelPatterns(int level)
         {
-            FruitPatterns = Palette.PatternsOnFor(level);
-            LiquidGraphic.ApplyPatternOpacity(Palette.PatternOpacityFor(level));
+            ApplyPatterns(Palette.PatternsOnFor(level));
+        }
+
+        /// <summary>
+        /// Patrones de fruta según el ajuste ya resuelto (02 §12; tarea L3: Ajustes › Patrones de fruta, auto, on u off; lo
+        /// resuelve <c>AF.UI</c>, porque <c>AF.Presentation</c> no lee el perfil, 08 §2.2): con <paramref name="on"/>, el icono
+        /// en cada dosis visible de cada cuia y el patrón al 20 % (<see cref="Palette.PatternOpacityOn"/>); sin él, sin icono y
+        /// con el patrón sutil del 15 % (<see cref="Palette.PatternOpacitySubtle"/>), en el material compartido del líquido
+        /// (<see cref="LiquidGraphic.ApplyPatternOpacity"/>). Se puede llamar con el nivel en marcha: se aplica al momento. Sin
+        /// asignaciones.
+        /// </summary>
+        public void ApplyPatterns(bool on)
+        {
+            FruitPatterns = on;
+            LiquidGraphic.ApplyPatternOpacity(on ? Palette.PatternOpacityOn : Palette.PatternOpacitySubtle);
             for (int i = 0; i < _views.Length; i++)
             {
                 _views[i].SetFruitPatterns(FruitPatterns);

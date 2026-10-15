@@ -34,7 +34,7 @@ namespace AF.UI
             _canvas = new OverlayCanvas("AdOverlayCanvas", host, 60);
             Image back = UiBuilder.Image("Back", _canvas.Root, null, new Color(0.02f, 0.03f, 0.03f, 1f), true); // opaco, como un anuncio real a pantalla completa (ficha §6.2)
             UiBuilder.Stretch(back.rectTransform);
-            _title = UiBuilder.Label("Title", _canvas.Root, TextStyle.ModalTitle, SimulatedAd.Label, 28f, Palette.Cream, TextAlignmentOptions.Center);
+            _title = UiBuilder.Label("Title", _canvas.Root, TextStyle.ModalTitle, UiText.SimulatedAdTitle, 28f, Palette.Cream, TextAlignmentOptions.Center);
             _placement = UiBuilder.Label("Placement", _canvas.Root, TextStyle.PlainBold, string.Empty, 16f, Palette.Cream, TextAlignmentOptions.Center);
             _countdown = UiBuilder.Label("Countdown", _canvas.Root, TextStyle.ModalTitle, string.Empty, 64f, Palette.Cream, TextAlignmentOptions.Center);
             _close = ModalKit.Cta("CloseButton", _canvas.Root, art.CtaWood, TextStyle.PillWood, UiText.SimulatedAdClose, 18f, OnClose, out _);
@@ -42,6 +42,9 @@ namespace AF.UI
         }
 
         public bool Visible => _canvas.Canvas.gameObject.activeSelf;
+
+        /// <summary>Rótulo de la pantalla («Anuncio simulado», de <c>SimulatedAd.LabelKey</c>).</summary>
+        public string TitleText => _title.text;
 
         /// <summary>Lienzo propio (capturas de prueba).</summary>
         public Canvas Canvas => _canvas.Canvas;

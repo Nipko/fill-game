@@ -155,6 +155,14 @@ namespace AF.UI
         public static LocTableTexts? LocTablesOverride { get; set; }
 
         /// <summary>
+        /// Idioma del teléfono que sustituye a la lectura de la plataforma (<see cref="AndroidDeviceLocale.ForPlatform"/>; tarea L3):
+        /// los tests con <c>ManualDeviceLocale</c> (un teléfono en pt-BR, sin región…). Null = el de la plataforma. Solo tests:
+        /// ningún extra de intent lo rellena. <c>PlayModeHelpers</c> pone uno vacío si el test no fija ninguno, para que los
+        /// textos y las cifras no dependan de la cultura del equipo.
+        /// </summary>
+        public static AF.Platform.IDeviceLocale? DeviceLocaleOverride { get; set; }
+
+        /// <summary>
         /// Moneda de los precios simulados [P]: COP (05 §4.2; los wireframes de 04 §6.6 usan pesos colombianos) mientras no
         /// haya precios de la tienda real.
         /// </summary>
@@ -180,6 +188,7 @@ namespace AF.UI
             BannerArtTimeoutMsOverride = null;
             LanguageOverride = null;
             LocTablesOverride = null;
+            DeviceLocaleOverride = null;
         }
 
         /// <summary>

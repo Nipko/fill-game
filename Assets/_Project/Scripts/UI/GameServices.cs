@@ -5,13 +5,19 @@ using AF.Boosters;
 using AF.Economy;
 using AF.GameFlow;
 using AF.IAP;
+using AF.Platform;
+using AF.Presentation;
+using AF.Save;
 
 namespace AF.UI
 {
     /// <summary>
     /// Lo que las pantallas necesitan para pintar el embudo y la bandeja (D-008; tareas B2-1 a B2-3), por las interfaces de
     /// <c>AF.Economy</c>, <c>AF.Ads</c> y <c>AF.IAP</c> (implementaciones simuladas de la fase 2, sin SDK): la cartera, los
-    /// anuncios (¿hay video para esta ubicación?), la tienda (precio local de un SKU, ¿se ofrece la Balsa?) y la geo.
+    /// anuncios (¿hay video para esta ubicación?), la tienda (precio local de un SKU, ¿se ofrece la Balsa?) y la geo; y, desde
+    /// la tarea L3, el idioma del teléfono (<see cref="IDeviceLocale"/>: <see cref="AndroidDeviceLocale"/> en Android,
+    /// <see cref="SystemDeviceLocale"/> en el Editor) y los ajustes del jugador (<c>settings</c> del perfil, 08 §4.3), con los
+    /// Patrones de fruta ya resueltos (<see cref="PatternsOnFor"/>).
     /// </summary>
     public sealed class GameServices
     {
@@ -22,7 +28,10 @@ namespace AF.UI
         /// <param name="storeLedger">Registro de la tienda en el perfil.</param>
         /// <param name="geo">Segmento geográfico del modal.</param>
         /// <param name="purchasesBlocked">No se ofrecen compras (perfil en solo lectura; ver <see cref="PurchasesBlocked"/>).</param>
-        public GameServices(Wallet wallet, AdController ads, IStoreService store, StoreLedger storeLedger, GeoTier geo, bool purchasesBlocked = false)
+        /// <param name="deviceLocale">Idioma del teléfono (null = <see cref="SystemDeviceLocale"/>).</param>
+        /// <param name="settings">Ajustes del perfil (null = los de por defecto, sin perfil: tests).</param>
+        public GameServices(Wallet wallet, AdController ads, IStoreService store, StoreLedger storeLedger, GeoTier geo, bool purchasesBlocked = false,
+            IDeviceLocale? deviceLocale = null, SettingsData? settings = null)
         {
             Wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
             Ads = ads ?? throw new ArgumentNullException(nameof(ads));
@@ -30,7 +39,18 @@ namespace AF.UI
             StoreLedger = storeLedger ?? throw new ArgumentNullException(nameof(storeLedger));
             Geo = geo;
             PurchasesBlocked = purchasesBlocked;
+            DeviceLocale = deviceLocale ?? SystemDeviceLocale.Instance;
+            Settings = settings ?? new SettingsData();
         }
+
+        /// <summary>
+        /// Idioma del teléfono (D-018, Q7-A y Q8-A; tarea L3): el tercer paso de la resolución del idioma y la región de las
+        /// cifras.
+        /// </summary>
+        public IDeviceLocale DeviceLocale { get; }
+
+        /// <summary><c>settings</c> del perfil (08 §4.3): idioma y Patrones de fruta que elige Ajustes (tarea L3).</summary>
+        public SettingsData Settings { get; }
 
         /// <summary>Cartera.</summary>
         public Wallet Wallet { get; }
@@ -72,6 +92,38 @@ namespace AF.UI
 
         /// <summary>Semillas que da el Puñado (<c>af_coins_2</c>; <c>eco_seed_pack_amounts</c>).</summary>
         public int HandfulSeeds => StoreLedger.Config.SeedPackAmount(StoreCatalog.Handful);
+
+        /// <summary>
+        /// Patrones de fruta en el nivel <paramref name="level"/> con el ajuste del jugador (<see cref="PatternsResolver.IsOn"/>:
+        /// auto = desde el 41, on = siempre, off = nunca; 02 §12). Sin asignaciones.
+        /// </summary>
+        public bool PatternsOnFor(int level)
+        {
+            return PatternsResolver.IsOn(Settings.Patterns, level);
+        }
+    }
+
+    /// <summary>
+    /// Patrones de fruta resueltos con el ajuste (02 §12; GDD.md §2 #5: el interruptor existe siempre en Ajustes; tarea L3):
+    /// <c>AF.Save</c> guarda <see cref="PatternsSetting"/> y <c>AF.Presentation</c> solo recibe el bool
+    /// (<c>BoardAnimator.ApplyPatterns</c>), porque no lee el perfil (08 §2.2).
+    /// </summary>
+    public static class PatternsResolver
+    {
+        /// <summary>
+        /// Si van los Patrones de fruta en el nivel <paramref name="level"/>: <see cref="PatternsSetting.On"/> siempre,
+        /// <see cref="PatternsSetting.Off"/> nunca y <see cref="PatternsSetting.Auto"/> según el nivel
+        /// (<see cref="Palette.PatternsOnFor"/>: desde el 41, <c>ui_patterns_default_from_level</c>). Sin asignaciones.
+        /// </summary>
+        public static bool IsOn(PatternsSetting setting, int level)
+        {
+            switch (setting)
+            {
+                case PatternsSetting.On: return true;
+                case PatternsSetting.Off: return false;
+                default: return Palette.PatternsOnFor(level);
+            }
+        }
     }
 
     /// <summary>

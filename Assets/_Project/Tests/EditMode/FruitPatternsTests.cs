@@ -132,6 +132,51 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void PatternsSetting_AutoByLevel_OnAlways_OffNever() // L3; 02 §12: el interruptor existe siempre en Ajustes
+        {
+            Assert.That(PatternsResolver.IsOn(AF.Save.PatternsSetting.Auto, 40), Is.False, "auto: como antes, apagado hasta el 40");
+            Assert.That(PatternsResolver.IsOn(AF.Save.PatternsSetting.Auto, 41), Is.True, "y encendido desde el 41");
+            Assert.That(PatternsResolver.IsOn(AF.Save.PatternsSetting.On, 1), Is.True, "on: también en el 1");
+            Assert.That(PatternsResolver.IsOn(AF.Save.PatternsSetting.Off, 200), Is.False, "off: tampoco en el 200");
+            TestDelegate call = () => { s_sink = PatternsResolver.IsOn(AF.Save.PatternsSetting.Auto, 63) ? 1f : 0f; };
+            Assert.That(call, Is.Not.AllocatingGCMemory(), "sin asignaciones");
+
+            CuiaView a = NewView(0);
+            CuiaView b = NewView(1);
+            BoardAnimator animator = NewAnimator(new[] { a, b });
+            animator.ApplyPatterns(PatternsResolver.IsOn(AF.Save.PatternsSetting.On, 40));
+            Assert.That(animator.FruitPatterns && a.FruitPatterns && b.FruitPatterns, Is.True, "on en el 40: el icono en cada cuia");
+            Assert.That(a.FruitIconsOn, Is.True);
+            Assert.That(LiquidGraphic.ShaderPatternOpacity, Is.EqualTo(Palette.PatternOpacityOn).Within(1e-6f), "y el patrón al 20 %");
+
+            animator.ApplyPatterns(PatternsResolver.IsOn(AF.Save.PatternsSetting.Off, 41));
+            Assert.That(animator.FruitPatterns || a.FruitPatterns || b.FruitPatterns, Is.False, "off en el 41: sin icono");
+            Assert.That(a.FruitIconsOn, Is.False);
+            Assert.That(LiquidGraphic.ShaderPatternOpacity, Is.EqualTo(Palette.PatternOpacitySubtle).Within(1e-6f), "y el patrón sutil del 15 %");
+
+            animator.ApplyLevelPatterns(41);
+            Assert.That(animator.FruitPatterns, Is.True, "ApplyLevelPatterns sigue siendo el automático");
+            TestDelegate apply = () => animator.ApplyPatterns(false);
+            Assert.That(apply, Is.Not.AllocatingGCMemory(), "aplicar el ajuste no asigna");
+        }
+
+        [Test]
+        public void AfStateLoad_CarriesThePatternsOfTheSetting([Values(40, 41)] int level) // L3 con T-E.7
+        {
+            var flow = new LevelFlow(LevelCatalog.Create(TestPacks.Campaign), new MemoryProgressStore(), new RecordingListener());
+            flow.Load(level);
+            var settings = new AF.Save.SettingsData { Patterns = level == 40 ? AF.Save.PatternsSetting.On : AF.Save.PatternsSetting.Off };
+            bool on = level == 40;
+            LiquidGraphic.ApplyPatternOpacity(on ? Palette.PatternOpacityOn : Palette.PatternOpacitySubtle);
+            var probe = new DevProbe { Settings = settings };
+            string? line = probe.FormatState("load", flow, int.MinValue, null);
+            string expected = on ? ",\"patterns\":{\"on\":true,\"opacity\":0.20}}" : ",\"patterns\":{\"on\":false,\"opacity\":0.15}}";
+            Assert.That(line, Does.EndWith(expected), "el interruptor del ajuste, no el del nivel");
+            Assert.That(probe.FormatSettingsChange("patterns", "off", null), Does.Match("^AF_STATE \\{\"event\":\"settings_change\",\"t\":\\d+,\"key\":\"patterns\",\"value\":\"off\",\"on\":null,\"opacity\":0\\.\\d\\d\\}$"));
+            Assert.That(probe.FormatSettingsChange("language", "en-XA", null), Does.EndWith(",\"key\":\"language\",\"value\":\"en-XA\"}"));
+        }
+
+        [Test]
         public void IconAtlas_OneSilhouettePerTint() // T-E.3; 07 §3, columna «Icono de accesibilidad»
         {
             Texture2D atlas = _art.FruitIconAtlas;

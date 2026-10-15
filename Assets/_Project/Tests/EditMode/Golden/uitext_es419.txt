@@ -122,12 +122,14 @@ UiText.GiveUpConfirmTitle	¿Seguro?
 UiText.Harvest	Cosecha
 UiText.Home	Inicio
 UiText.KeepPlaying	Seguir jugando
+UiText.Language	Idioma
 UiText.LevelComplete	¡Nivel completado!
 UiText.LevelFailed	Nivel fallido
 UiText.Next	Siguiente
 UiText.NoCanoesNext	Tu próxima canoa vuelve en
 UiText.NoCanoesTitle	Sin canoas
 UiText.NoCanoesVideo	Canoa extra · Ver video
+UiText.PatternsToggle	Patrones de fruta
 UiText.Pause	Pausa
 UiText.Play	Jugar
 UiText.ProfileLockedMigration	No pudimos abrir tu progreso, pero sigue a salvo. Actualiza la app para recuperarlo: lo que juegues ahora no se guardará y no hay compras.
@@ -149,9 +151,15 @@ UiText.RiverLoweredColor	El río bajó: esta vez hay un color menos
 UiText.RiverLoweredCuia	El río bajó: esta vez hay una cuia más
 UiText.Seeds	Semillas
 UiText.Settings	Ajustes
+UiText.SettingsLanguageAuto	Automático
+UiText.SettingsPatternsAuto	Automático
+UiText.SettingsPatternsOff	Nunca
+UiText.SettingsPatternsOn	Siempre
 UiText.SimulatedAdClose	Cerrar
 UiText.SimulatedAdInterstitial	intersticial
 UiText.SimulatedAdRewarded	recompensado
+UiText.SimulatedAdTitle	Anuncio simulado
+UiText.SimulatedPurchaseTitle	Compra simulada
 UiText.StuckBalsaContent	Todo para seguir: semillas, una cuia y canoas infinitas
 UiText.StuckCanoeLost	Travesía perdida: –1 canoa
 UiText.StuckCanoeLostLast	Travesía perdida: tu última canoa

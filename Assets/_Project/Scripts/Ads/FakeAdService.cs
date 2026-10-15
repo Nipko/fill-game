@@ -26,11 +26,14 @@ namespace AF.Ads
         ClosedEarly = 1,
     }
 
-    /// <summary>Lo que la UI enseña en la pantalla «Anuncio simulado».</summary>
+    /// <summary>
+    /// Lo que la UI enseña en la pantalla «Anuncio simulado»: el rótulo, por su clave de la tabla de textos (D-018; tarea
+    /// L3), nunca el texto.
+    /// </summary>
     public sealed class SimulatedAd
     {
-        /// <summary>Rótulo de la pantalla.</summary>
-        public const string Label = "Anuncio simulado";
+        /// <summary>Clave del rótulo de la pantalla («Anuncio simulado»): <c>ad_simulated</c> [P].</summary>
+        public const string LabelKey = "ad_simulated";
 
         internal SimulatedAd(AdPlacement placement, TimeSpan closeEnabledAfter, TimeSpan? rewardAfter)
         {

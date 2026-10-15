@@ -73,8 +73,15 @@ namespace AF.Tests.PlayMode
             }
         }
 
+        // Sin idioma del teléfono fijado por el test, uno vacío (ManualDeviceLocale): los textos y las cifras no dependen de la
+        // cultura del equipo (tarea L3; el idioma automático da es-419 y las cifras, es-CO).
         private static IEnumerator LoadScene()
         {
+            if (LaunchOptions.DeviceLocaleOverride == null)
+            {
+                LaunchOptions.DeviceLocaleOverride = new AF.Platform.ManualDeviceLocale(string.Empty);
+            }
+
 #if UNITY_EDITOR
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
 #else

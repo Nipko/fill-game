@@ -28,7 +28,7 @@ namespace AF.Ads.Tests
             SimulatedAd rewarded = fx.Presenter.Last!;
             Assert.That(rewarded.Placement.ToId(), Is.EqualTo("rv_extra_canoe"));
             Assert.That(rewarded.RewardAfter, Is.EqualTo(TimeSpan.FromSeconds(3)));
-            Assert.That(SimulatedAd.Label, Is.EqualTo("Anuncio simulado"));
+            Assert.That(SimulatedAd.LabelKey, Is.EqualTo("ad_simulated"), "el rótulo, por clave (D-018): el texto lo pone la UI");
             Assert.That(fx.Presenter.Presented, Is.EqualTo(2));
         }
 

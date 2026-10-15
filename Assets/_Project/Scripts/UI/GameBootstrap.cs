@@ -13,7 +13,9 @@ using AF.Presentation;
 using AF.Save;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
+using UnityEngine.SceneManagement;
 
 namespace AF.UI
 {
@@ -28,6 +30,14 @@ namespace AF.UI
     /// inicio. Conecta AD_GATE con los anuncios simulados (<see cref="InterstitialGate"/>, tarea B2-4) y la sonda de desarrollo
     /// con cada anuncio y compra. Sus métodos públicos de input (<see cref="IGameActions"/>) son los mismos que llaman los
     /// toques y los tests PlayMode.
+    /// <para>Ajustes (tarea L3; <see cref="SettingsScreen"/>): se abre desde el engranaje del inicio y se cierra con su X o con el
+    /// Atrás de Android. El idioma se resuelve al arrancar con el de desarrollo (<c>af_lang</c>) &gt; <c>settings.language</c>
+    /// &gt; el del teléfono (<see cref="AndroidDeviceLocale"/>; en el Editor, <see cref="SystemDeviceLocale"/>) &gt; en, con el
+    /// respaldo es-419 [P], y las cifras con la región del teléfono (es-CO sin ella [P]). Elegir un idioma lo guarda y, si cambia
+    /// el de la UI, <see cref="Loc.SetLocale"/> lanza <see cref="Loc.Changed"/> (las cachés de <see cref="UiText"/> se vacían) y
+    /// la UI entera se reconstruye volviendo al inicio: la escena se recarga y el arranque siguiente la vuelve a construir en el
+    /// idioma nuevo (Q7-A). Los Patrones de fruta se guardan y se aplican al momento
+    /// (<see cref="GameScreen.RefreshFruitPatterns"/>).</para>
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class GameBootstrap : MonoBehaviour, IAppFlowListener, IGameActions
@@ -70,6 +80,15 @@ namespace AF.UI
         private Profile? _profile;
         private IProfileStore? _profileStore;
         private ProfileSaveBatch? _saveBatch;
+        private IDeviceLocale? _deviceLocale;
+        private string _deviceTag = string.Empty;
+        private SettingsScreen? _settingsScreen;
+
+        // Reconstrucción de la UI tras elegir idioma (tarea L3): la escena se recarga y el arranque siguiente va al inicio, con
+        // los ajustes elegidos aunque el perfil no se pueda guardar (perfil en solo lectura, 08 §4.4).
+        private static bool s_rebuildToLobby;
+        private static string? s_rebuildLanguage;
+        private static PatternsSetting s_rebuildPatterns;
 
         // Fallos del escritor de segundo plano ya registrados (T-D): lo recoja quien lo recoja, cada uno se avisa una vez.
         private int _reportedBackgroundFailures;
@@ -181,8 +200,23 @@ namespace AF.UI
         /// <summary>Tabla de textos largos asignada (<c>facts.csv</c>; escena generada por <c>GameSceneBuilder</c>).</summary>
         public TextAsset? FactsTableAsset => factsTable;
 
-        /// <summary>Idioma de la UI resuelto al arrancar y de dónde salió (null hasta <c>Start</c>; sonda <c>AF_STATE loc</c>).</summary>
+        /// <summary>
+        /// Idioma de la UI resuelto (al arrancar o al elegirlo en Ajustes) y de dónde salió (null hasta <c>Start</c>; sonda
+        /// <c>AF_STATE loc</c>).
+        /// </summary>
         public LocResolution? Locale { get; private set; }
+
+        /// <summary>
+        /// Idioma del teléfono en uso (<see cref="LaunchOptions.DeviceLocaleOverride"/> o <see cref="AndroidDeviceLocale.ForPlatform"/>;
+        /// null hasta <c>Start</c>).
+        /// </summary>
+        public IDeviceLocale? DeviceLocale => _deviceLocale;
+
+        /// <summary>Etiqueta que dio el teléfono al arrancar (<c>""</c> si no dio ninguna; sonda <c>AF_STATE loc</c>).</summary>
+        public string DeviceTag => _deviceTag;
+
+        /// <summary>Pantalla de Ajustes (null hasta <c>Start</c>).</summary>
+        internal SettingsScreen? SettingsView => _settingsScreen;
 
         /// <summary>Asigna las tablas de textos (D-018; 08 §4.7; escena generada por <c>GameSceneBuilder</c>).</summary>
         public void ConfigureLocalization(TextAsset? strings, TextAsset? facts)
@@ -642,6 +676,148 @@ namespace AF.UI
             return _app != null && _app.CloseOverlay();
         }
 
+        /// <summary>
+        /// Engranaje de Ajustes del inicio (07 §7.6; tarea L3): abre <see cref="SettingsScreen"/> con los idiomas que tienen la UI
+        /// completa (<see cref="LocLocale.Offered"/>; en desarrollo, también en-XA) y lo guardado. Solo desde el inicio.
+        /// </summary>
+        public bool PressSettings()
+        {
+            SettingsScreen? settings = _settingsScreen;
+            Profile? profile = _profile;
+            if (settings == null || profile == null || _app == null || _app.Screen != AppScreen.Lobby || settings.Visible)
+            {
+                return false;
+            }
+
+            settings.Show(LocLocale.Offered(Loc.Catalog, Loc.ShowUnapproved), profile.Settings.Language, profile.Settings.Patterns);
+            _skipNextDelta = true;
+            return true;
+        }
+
+        /// <summary>X de Ajustes o Atrás de Android con Ajustes abierto: vuelve al inicio tal como estaba.</summary>
+        public bool CloseSettings()
+        {
+            SettingsScreen? settings = _settingsScreen;
+            if (settings == null || !settings.Visible)
+            {
+                return false;
+            }
+
+            settings.Hide();
+            _probe?.SettingsClosed();
+            _skipNextDelta = true;
+            return true;
+        }
+
+        /// <summary>
+        /// Ajustes › Idioma (D-018 Q7-A; tarea L3): guarda <paramref name="language"/> en <c>settings.language</c>
+        /// (<see cref="SettingsData.LanguageAuto"/> o un idioma con la UI completa) y vuelve a resolver el idioma (desarrollo &gt;
+        /// guardado &gt; teléfono &gt; en). Si cambia el de la UI, <see cref="Loc.SetLocale"/> lanza <see cref="Loc.Changed"/> y la UI
+        /// se reconstruye volviendo al inicio (<see cref="RebuildUi"/>). False si no es una opción.
+        /// </summary>
+        public bool ChooseLanguage(string language)
+        {
+            Profile? profile = _profile;
+            string? value = SettingsData.NormalizeLanguage(language);
+            if (profile == null || value == null)
+            {
+                return false;
+            }
+
+            if (value != SettingsData.LanguageAuto && !LocLocale.IsOffered(Loc.Catalog, value, Loc.ShowUnapproved))
+            {
+                return false; // solo los idiomas que ofrece Ajustes (UI completa; en-XA, solo en desarrollo)
+            }
+
+            if (!string.Equals(profile.Settings.Language, value, StringComparison.Ordinal))
+            {
+                profile.Settings.Language = value;
+                SaveSettings(profile);
+            }
+
+            _settingsScreen?.Mark(value, profile.Settings.Patterns);
+            _probe?.SettingsChange("language", value, null);
+            LocResolution next = LocTables.Resolve(Loc.Catalog, LaunchOptions.ResolveDevLanguage(), value, _deviceTag, Debug.isDebugBuild);
+            Locale = next;
+            if (string.Equals(next.Locale, Loc.Locale, StringComparison.Ordinal))
+            {
+                return true; // la UI ya va en ese idioma (p. ej. «Automático» con el teléfono en español): nada que reconstruir
+            }
+
+            Loc.SetLocale(next.Locale); // Loc.Changed: UiText vacía sus cachés
+            if (_deviceLocale != null)
+            {
+                _probe?.LocaleState(next, _deviceLocale, _deviceTag);
+            }
+
+            RebuildUi();
+            return true;
+        }
+
+        /// <summary>
+        /// Ajustes › Patrones de fruta (02 §12; GDD.md §2 #5; tarea L3): guarda <paramref name="patterns"/> en
+        /// <c>settings.patterns</c> y lo aplica al momento al nivel cargado, sin recargarlo
+        /// (<see cref="GameScreen.RefreshFruitPatterns"/>); el siguiente nivel lo toma al cargar.
+        /// </summary>
+        public bool ChoosePatterns(PatternsSetting patterns)
+        {
+            Profile? profile = _profile;
+            if (profile == null || (patterns != PatternsSetting.Auto && patterns != PatternsSetting.On && patterns != PatternsSetting.Off))
+            {
+                return false;
+            }
+
+            if (profile.Settings.Patterns != patterns)
+            {
+                profile.Settings.Patterns = patterns;
+                SaveSettings(profile);
+            }
+
+            GameScreen? screen = _screen;
+            bool loaded = screen != null && screen.RefreshFruitPatterns();
+            _settingsScreen?.Mark(profile.Settings.Language, patterns);
+            _probe?.SettingsChange("patterns", DevProbe.PatternsKey(patterns), loaded ? screen!.FruitPatternsOn : (bool?)null);
+            return true;
+        }
+
+        // Los ajustes se guardan en el acto (escritura síncrona, como la cartera). Con el perfil en solo lectura (08 §4.4) no se
+        // puede: quedan en memoria para esta sesión.
+        private void SaveSettings(Profile profile)
+        {
+            if (_saveBatch != null && !_saveBatch.Durable.TrySave(profile) && !ProfileLocked)
+            {
+                Debug.LogWarning(LogPrefix + "no se pudieron guardar los ajustes: siguen en memoria y salen con el siguiente guardado.");
+            }
+        }
+
+        /// <summary>
+        /// Reconstruye toda la UI en el idioma nuevo volviendo al inicio (Q7-A; tarea L3): guarda el perfil, recarga la escena y
+        /// el arranque siguiente construye todas las pantallas otra vez (con <see cref="Loc"/> ya en el idioma elegido) y va al
+        /// inicio, sin el nivel de desarrollo (<c>af_level</c>) ni el de los tests.
+        /// </summary>
+        private void RebuildUi()
+        {
+            Profile? profile = _profile;
+            s_rebuildToLobby = true;
+            s_rebuildLanguage = profile?.Settings.Language;
+            s_rebuildPatterns = profile != null ? profile.Settings.Patterns : PatternsSetting.Auto;
+            _settingsScreen?.Hide();
+            PersistNow("idioma");
+            enabled = false; // nada más de este arranque: la escena se va
+            Scene scene = gameObject.scene;
+            if (scene.buildIndex >= 0)
+            {
+                SceneManager.LoadScene(scene.buildIndex, LoadSceneMode.Single);
+                return;
+            }
+
+#if UNITY_EDITOR
+            UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(scene.path, new LoadSceneParameters(LoadSceneMode.Single));
+#else
+            SceneManager.LoadScene(scene.name, LoadSceneMode.Single);
+#endif
+        }
+
         /// <inheritdoc />
         public void OnAppScreenChanged(AppScreen screen)
         {
@@ -713,9 +889,25 @@ namespace AF.UI
             _profile = profile;
             _profileStore = store;
 
-            // Textos (D-018; tarea L2b): con el perfil leído y antes de construir ninguna pantalla. Hoy el idioma lo decide el de
-            // desarrollo (af_lang) o, si no, el automático, que da es-419 (el guardado y el del teléfono llegan con L3).
-            LocResolution locale = SetUpTexts();
+            // Tras elegir idioma en Ajustes, la escena se recargó (RebuildUi): se vuelve al inicio con los ajustes elegidos (también
+            // con el perfil en solo lectura, que no los pudo guardar).
+            bool rebuilt = s_rebuildToLobby;
+            s_rebuildToLobby = false;
+            if (rebuilt)
+            {
+                if (s_rebuildLanguage != null)
+                {
+                    profile.Settings.Language = s_rebuildLanguage;
+                }
+
+                profile.Settings.Patterns = s_rebuildPatterns;
+            }
+
+            // Textos (D-018; tareas L2b y L3): con el perfil leído y antes de construir ninguna pantalla. Desarrollo (af_lang) >
+            // settings.language > teléfono > en, con el respaldo es-419, y las cifras con la región del teléfono.
+            _deviceLocale = LaunchOptions.DeviceLocaleOverride ?? AndroidDeviceLocale.ForPlatform();
+            _deviceTag = _deviceLocale.LanguageTag ?? string.Empty;
+            LocResolution locale = SetUpTexts(profile.Settings.Language, _deviceTag);
 
             // Cartera, progreso, nivel en curso, anuncios y tienda guardan el mismo perfil por el lote: dentro de una acción del
             // jugador (vertido, victoria, rescate, rendición, compra, anuncio) el perfil se escribe una sola vez (revisión B2-5).
@@ -727,8 +919,8 @@ namespace AF.UI
             IProgressStore progress = LaunchOptions.ProgressStoreOverride ?? new ProfileProgressStore(profile, batch);
 
             _art = SharedArt(catalog.WaterBase);
-            _probe = new DevProbe();
-            _probe.LocaleState(locale);
+            _probe = new DevProbe { Settings = profile.Settings };
+            _probe.LocaleState(locale, _deviceLocale, _deviceTag);
 
             // Anuncios y compras simulados (D-008 puntos 4 y 5; sin SDK, red ni identificadores): sus pantallas van en lienzos
             // propios por encima de todo; los tests las sustituyen por presentadores inmediatos (LaunchOptions).
@@ -746,13 +938,14 @@ namespace AF.UI
             _ads = AdController.Create(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()), profile, batch, clock, firstRun);
             _storeLedger = new StoreLedger(profile, _wallet, batch, clock);
             _store = new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency);
-            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: locked);
+            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings);
 
             _screen = new GameScreen(transform, _art, _probe, this);
             _screen.SetVisible(false);
             Fauna = LoadFauna();
             _screen.Fauna = Fauna; // la especie de miquito de cada intro (guion de la intro §4.3)
-            _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => { }, () => PressBack(), this);
+            _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => PressSettings(), () => PressBack(), this);
+            _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), () => CloseSettings());
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
             _flow = new LevelFlow(catalog, progress, _screen, GameConfig.TapSwitchSelection, LaunchOptions.ResolvePourMode(), _wallet)
@@ -773,8 +966,8 @@ namespace AF.UI
             _app = new AppFlow(_flow, progress, _wallet, this);
             _lobby.Bind(_app, _services);
 
-            int requested = LaunchOptions.StartLevelOverride;
-            if (requested <= 0)
+            int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
+            if (requested <= 0 && !rebuilt)
             {
                 requested = LaunchOptions.ReadIntentLevel();
             }
@@ -785,8 +978,9 @@ namespace AF.UI
             }
             else
             {
-                // 02 §14: con un nivel en curso guardado se reabre tal cual (sin intro, con su modal), sin cobrar nada.
-                _app.Start(firstRun, profile.LevelState);
+                // 02 §14: con un nivel en curso guardado se reabre tal cual (sin intro, con su modal), sin cobrar nada. Tras la
+                // reconstrucción por idioma, el inicio (se venía de él: el nivel que se dejó ya no está en curso).
+                _app.Start(firstRun && !rebuilt, profile.LevelState);
             }
 
             if (locked)
@@ -814,6 +1008,20 @@ namespace AF.UI
             }
 
             _adOverlay?.Tick(Time.unscaledDeltaTime * 1000f);
+            if (_settingsScreen != null && _settingsScreen.Visible)
+            {
+                // Ajustes solo vive sobre el inicio; el Atrás de Android (Escape en el Input System) la cierra.
+                Keyboard? keyboard = Keyboard.current;
+                if (_app.Screen != AppScreen.Lobby || (keyboard != null && keyboard.escapeKey.wasPressedThisFrame))
+                {
+                    CloseSettings();
+                }
+                else
+                {
+                    _settingsScreen.Tick();
+                }
+            }
+
             if (_app.Screen != AppScreen.Level)
             {
                 _app.RefreshNoCanoes();
@@ -856,8 +1064,9 @@ namespace AF.UI
         // Tablas de textos de la escena (o las del test, LaunchOptions.LocTablesOverride) → Loc (D-018; 08 §4.7). Si faltan o no
         // se pueden leer, LocTables.FromTextsOrEmpty decide sin lanzar (Loc sin textos en es-419, el idioma de respaldo del
         // código, LocLocale.FallbackLocale: en desarrollo cada texto se ve como «[clave]» y en release, vacío; nunca un texto en
-        // otro idioma) y aquí solo se registra el aviso o el error.
-        private LocResolution SetUpTexts()
+        // otro idioma) y aquí solo se registra el aviso o el error. El idioma: af_lang > savedLanguage (settings.language) >
+        // deviceTag (el teléfono) > en, y las cifras con la región de deviceTag (tarea L3).
+        private LocResolution SetUpTexts(string savedLanguage, string deviceTag)
         {
             bool development = Debug.isDebugBuild;
             string? devLanguage = LaunchOptions.ResolveDevLanguage();
@@ -877,7 +1086,7 @@ namespace AF.UI
                 Debug.LogWarning(LogPrefix + warning);
             }
 
-            LocResolution resolution = LocTables.Configure(catalog, devLanguage, development);
+            LocResolution resolution = LocTables.Configure(catalog, devLanguage, savedLanguage, deviceTag, development);
             if (devLanguage != null && resolution.Source != LocSource.Dev)
             {
                 Debug.LogWarning(LogPrefix + LaunchOptions.IntentExtraLanguage + " = \"" + devLanguage + "\" no tiene la UI completa: se usa " + resolution.Locale + ".");

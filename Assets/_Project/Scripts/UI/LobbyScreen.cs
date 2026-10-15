@@ -16,8 +16,8 @@ namespace AF.UI
     /// madera, hoja y agua; ni oro biselado, ni gemas, ni gatos):
     /// <list type="bullet">
     /// <item><description>arriba, Semillas, Canoas «n/5» con el cronómetro mm:ss de la próxima (solo desde el 31,
-    /// <c>rescue_min_level</c>; con Canoas infinitas, ∞ y el tiempo que queda) y Ajustes (deshabilitado hasta que exista su
-    /// pantalla);</description></item>
+    /// <c>rescue_min_level</c>; con Canoas infinitas, ∞ y el tiempo que queda) y Ajustes, que abre su pantalla
+    /// (<see cref="SettingsScreen"/>; tarea L3);</description></item>
     /// <item><description>en el centro, el Estuario (panorama, muelle y follaje del nivel) y el botón grande «Jugar · Nivel {n}»
     /// con su centro al 60 % del alto (06 §4.7), con la etiqueta de D-009 encima cuando el nivel la lleva (propuesta §c.1;
     /// 07 §7.7; <see cref="DifficultyChip"/>): Difícil, chip ámbar con la rana dardo y la cinta «×3»; Muy difícil, chip índigo
@@ -186,7 +186,7 @@ namespace AF.UI
             _canoesCount = UiBuilder.Label("Count", _canoes.transform, TextStyle.PillWood, "5/5", 19f, Palette.Cream, TextAlignmentOptions.Center);
             _canoesTimer = UiBuilder.Label("Timer", _canoes.transform, TextStyle.PillWood, string.Empty, 13f, Palette.Cream, TextAlignmentOptions.Center);
 
-            // Ajustes (07 §7.6: engranaje de madera, disco de 40 dp en un área de 48). Su pantalla aún no existe: deshabilitado.
+            // Ajustes (07 §7.6: engranaje de madera, disco de 40 dp en un área de 48): abre su pantalla (tarea L3).
             _settings = UiBuilder.Relief("SettingsButton", top, art.DiscWood, () => _onSettings());
             RectTransform settingsVisual = (RectTransform)_settings.Face.parent;
             settingsVisual.anchorMin = new Vector2(0.5f, 1f);
@@ -196,7 +196,6 @@ namespace AF.UI
             Image gear = UiBuilder.Image("Icon", _settings.Face, art.IconGear, Color.white);
             UiBuilder.Place(gear.rectTransform, 7f, 7f, 26f, 26f);
             _settings.Relief.Bind(_settings.Face, _settings.Base, _settings.FaceImage, art.DiscWood, gear, art.IconGearDisabled, null);
-            UiBuilder.SetEnabled(_settings.Button, false);
 
             // ---- Pestañas abajo: solo «Inicio» [P] mientras Mercado, Mapa del río, Reto del río y Bitácora no existan. ----
             _tabBar = UiBuilder.Sliced("TabBar", _root, art.WoodPlate, Color.white);
@@ -292,7 +291,7 @@ namespace AF.UI
         /// <summary>Contador de canoas (botón: con 0/5 abre Sin canoas).</summary>
         public Button CanoesButton => _canoes;
 
-        /// <summary>Botón de Ajustes (deshabilitado hasta que exista su pantalla).</summary>
+        /// <summary>Botón de Ajustes: abre <see cref="SettingsScreen"/> (tarea L3).</summary>
         public Button SettingsButton => _settings.Button;
 
         /// <summary>Botón Volver de la superposición («Volver al inicio» en Sin canoas).</summary>
