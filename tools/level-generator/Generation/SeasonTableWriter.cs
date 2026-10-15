@@ -71,7 +71,9 @@ internal static class SeasonTableWriter
             bool same = onDisk is not null && onDisk.AsSpan().SequenceEqual(bytes);
             Console.WriteLine(same
                 ? $"--check: {shown} coincide con el generado"
-                : $"--check: {shown} NO coincide con el generado (desfase con el calendario: regenera con --seasons sin --check)");
+                : onDisk is null
+                    ? $"--check: {shown} no existe (genera con --seasons sin --check)"
+                    : $"--check: {shown} NO coincide con el generado (desfase con el calendario: regenera con --seasons sin --check)");
             return same ? 0 : 1;
         }
 

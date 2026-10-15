@@ -40,12 +40,11 @@ const string Usage = """
       2 = uso o especificacion ilegible.
     --self-test: pruebas de la herramienta sin proyecto de tests; sin nombre, todas. "seasons": la tabla de temporada
       (ciclos 21-181 identicos a campaign_v1, formato, determinismo, desfase con la del disco, union y rechazos).
-      "tinaja": el paso Ti de la
-      Tinaja con semillas fijas (tope de dosis por tipo de nivel, T4, boca, hidden, su cuia contigua y en la misma fila),
-      el slot 323 de specs/sample_tinaja.json con sus filtros (ruta segura, paseos, S0 sin trampas) y su JSON
-      (pack_schema 3), el alivio sin frutas de la tinaja, el tope de 12 cuias con tinaja (02 sec. 5), los tableros de la
-      ficha b.2 y, como INFO, la calibracion de Morpho (nodos/ms del PC) en los estados mas pesados del pack de muestra
-      (tools/out/sample_tinaja). Desde la raiz del repositorio.
+      "tinaja": el paso Ti de la Tinaja con semillas fijas (tope de dosis por tipo de nivel, T4, boca, hidden, su cuia
+      contigua y en la misma fila), el slot 323 de specs/sample_tinaja.json con sus filtros (ruta segura, paseos, S0 sin
+      trampas) y su JSON (pack_schema 3), el alivio sin frutas de la tinaja, el tope de 12 cuias con tinaja (02 sec. 5),
+      los tableros de la ficha b.2 y, como INFO, la calibracion de Morpho (nodos/ms del PC) en los estados mas pesados
+      del pack de muestra (tools/out/sample_tinaja). Desde la raiz del repositorio.
       Codigos: 0 = todo PASS; 1 = algun FAIL; 2 = uso o especificacion ilegible.
     --parity: recalcula con AF.Core/AF.Solver par, complejidad, ramificacion, trampas y la variante -1 color de los 40
       niveles del prototipo (tools/out/levels_proto.json y tools/out_inverse/levels_proto.json; GDD 03 sec. 17-18, 09 R26)
