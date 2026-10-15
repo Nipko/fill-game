@@ -15,7 +15,8 @@ ejecuciones den los mismos bytes.
 | `--validate-spec <campaign.json>` | Comprueba la especificación de la campaña 11-200 | Resumen ASCII por ciclo |
 | `--parity [--report <md>]` | Paridad de las métricas con el prototipo (03 §17-§18; 09 R26) | `tools/out/parity_report.md` |
 | `--spec <campaign.json> --levels a-b --out <carpeta> [--report <md>] [--check]` | Genera la campaña (03 §2) | `Assets/_Project/Data/Levels/mundo_0N_v1.json` y `tools/out/campaign_v1_report.md` |
-| `--self-test [tinaja]` | Pruebas de la herramienta sin proyecto de tests (hoy, la Tinaja) | PASS / FAIL por consola |
+| `--seasons <campaign.json> [...] --out <tabla.json> [--check]` | Tabla de temporada del cliente (pregunta 32 b) | `Assets/_Project/Data/Levels/seasons_v1.json` |
+| `--self-test [tinaja\|seasons]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
 
 Códigos de salida: 0 = correcto; 1 = alguna comprobación falla; 2 = uso incorrecto o especificación ilegible.
 
@@ -274,3 +275,45 @@ dotnet run --project tools/level-generator -c Release -- --self-test tinaja
 338) e hito (340); su pack de muestra (`tools/out/sample_tinaja/mundo_07_v1.json`, `pack_schema` 3) y su informe
 (`tools/out/sample_tinaja_report.md`) se regeneran con esos comandos. Las combinaciones de d.3 (Ti+Ho, Ti+Ma y Ti+Br) no
 caben en una muestra de un ciclo (`--validate-spec` exige que cada mecánica de la tabla debute en el calendario).
+
+## Tabla de temporada del cliente (`--seasons`; SE1)
+
+La temporada de cada ciclo de 20 (A = aguas altas, B = aguas bajas; D-009, punto 6; Q11 A de D-007) no va en el pack: el
+cliente la lee de **una tabla por ciclo, copiada del calendario versionado** (pregunta 32 de `docs/GDD.md` §6.3, decidida
+el 2026-10-13: (b), D-020; 03 §12; 08, «Preguntas abiertas» 12). Solo cambia la LUT del fondo, sin cartel (la lee SE2).
+
+```
+dotnet run --project tools/level-generator -- --seasons tools/level-generator/specs/campaign_v1.json --out Assets/_Project/Data/Levels/seasons_v1.json
+dotnet run --project tools/level-generator -- --seasons tools/level-generator/specs/campaign_v1.json --out Assets/_Project/Data/Levels/seasons_v1.json --check
+dotnet run --project tools/level-generator -- --self-test seasons
+```
+
+Formato [P] `af-seasons/1` (`Generation/SeasonTableWriter.cs`; no es un contrato del GDD §7 todavía):
+
+```
+{
+  "format": "af-seasons/1",
+  "source": "tools/level-generator/specs/campaign_v1.json",
+  "cycles": [
+    {"from_level": 21, "season": "B"},
+    ...
+    {"from_level": 181, "season": "B"}
+  ]
+}
+```
+
+- `source`: la ruta de cada especificación, relativa a la raíz del repositorio (no a la carpeta desde la que se ejecuta) y
+  con `/`; con varias, separadas por «, » en el orden de sus ciclos [P].
+- `cycles`: un ciclo por línea, en orden y sin huecos; cada uno va de `from_level` a `from_level` + 19. Los niveles 1-20
+  (tutorial y rampa) no tienen temporada. Hoy: los 9 ciclos 21-181 de `campaign_v1.json`, idénticos a su `seasons`.
+- UTF-8 sin BOM, LF y claves en orden fijo: la misma especificación da los mismos bytes.
+
+La herramienta copia y comprueba el formato: cada ciclo de la especificación (de `cycle.from_level` a `last_level`) con A o
+B, ninguna entrada de `seasons` fuera de un inicio de ciclo y, con varias especificaciones (P4 y P7 añadirán
+`campaign_v2.json` para 201-700: `--seasons campaign_v1.json campaign_v2.json`), contiguas y sin solaparse. Si no, sale con
+1 y no escribe. Las reglas del calendario (temporadas alternas, el ciclo de debut toma la de su mecánica) son de
+`--validate-spec` (SEASONS). `--check` no escribe y sale con 1 si la tabla del disco no coincide byte a byte (desfase con
+el calendario). `--self-test seasons` comprueba los ciclos 21-181 frente a `campaign_v1.json` (leído aparte), la temporada
+de cada nivel 21-200 frente a `CampaignSpec.SeasonOf`, el formato, el determinismo, el desfase con la tabla del disco, la
+unión de dos especificaciones y los rechazos, entre ellos el fixture `specs/tests/seasons_invalid_letter.json` (ciclo 61
+con temporada C, que también falla `--validate-spec` por SEASONS).

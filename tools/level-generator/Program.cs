@@ -5,6 +5,8 @@
 // cabe, con vertido parcial (02 §1.2, R9); single = una dosis por vertido, solo pruebas. El pack no declara el modo
 // (08 §4.1) y asume run. --spec/--out (generación procedural): andamiaje que valida los argumentos y sale con 1 (fallar
 // cerrado); se portará desde tools/levelgen_proto.py sobre AF.Core y AF.Solver.
+// --seasons (SE1): tabla de temporada del cliente copiada del calendario versionado (pregunta 32 b, D-020;
+// Generation/SeasonTableWriter.cs).
 // Todo lo que se imprime es ASCII (.claude/rules/ci.md): la consola de Windows y Git Bash corrompen
 // '§' y los acentos al capturar la salida. Los comentarios sí pueden llevar acentos.
 using AF.Core.Board;
@@ -23,13 +25,22 @@ const string Usage = """
       dotnet run --project tools/level-generator -c Release -- --spec <campaign.json> --levels a-b --out <carpeta> [--report <informe.md>] [--check]
       dotnet run --project tools/level-generator -- --validate-spec <campaign.json>
       dotnet run --project tools/level-generator -- --parity [--report tools/out/parity_report.md]
-      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja]
+      dotnet run --project tools/level-generator -- --seasons <campaign.json> [<campaign.json> ...] --out <tabla.json> [--check]
+      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons]
       dotnet run --project tools/level-generator -- --help
 
     --validate-spec: comprueba la especificacion de la campana (specs/campaign_v1.json) contra la rotacion de la
       propuesta de D-007 (d.2, d.3 y las comprobaciones de d.4) y el escalon de D-009 (c.3, c.4); imprime un resumen
       ASCII por ciclo. Codigos: 0 = cumple; 1 = alguna regla falla; 2 = especificacion ilegible.
-    --self-test: pruebas de la herramienta sin proyecto de tests (hoy solo "tinaja", la de por defecto): el paso Ti de la
+    --seasons: tabla de temporada del cliente (pregunta 32 b de GDD.md sec. 6.3, D-020; D-009 punto 6): copia la
+      temporada A o B de cada ciclo de 20 de las especificaciones (hoy specs/campaign_v1.json: ciclos 21-181) en
+      <tabla.json> con el formato [P] af-seasons/1 {format, source, cycles[{from_level, season}]}; varias
+      especificaciones se unen en orden, sin huecos ni solapes. Con --check no escribe: falla si la del disco difiere
+      (desfase con el calendario). Codigos: 0 = escrita o identica; 1 = desfase, o algun ciclo sin temporada A o B;
+      2 = uso o especificacion ilegible.
+    --self-test: pruebas de la herramienta sin proyecto de tests; sin nombre, todas. "seasons": la tabla de temporada
+      (ciclos 21-181 identicos a campaign_v1, formato, determinismo, desfase con la del disco, union y rechazos).
+      "tinaja": el paso Ti de la
       Tinaja con semillas fijas (tope de dosis por tipo de nivel, T4, boca, hidden, su cuia contigua y en la misma fila),
       el slot 323 de specs/sample_tinaja.json con sus filtros (ruta segura, paseos, S0 sin trampas) y su JSON
       (pack_schema 3), el alivio sin frutas de la tinaja, el tope de 12 cuias con tinaja (02 sec. 5), los tableros de la
@@ -76,12 +87,57 @@ if (args.Length >= 1 && args[0] == "--validate-spec")
 
 if (args.Length >= 1 && args[0] == "--self-test")
 {
-    if (args.Length == 1 || (args.Length == 2 && args[1] == "tinaja"))
+    if (args.Length == 1)
+    {
+        int tinaja = TinajaSelfTest.Run();
+        int seasons = SeasonTableWriter.SelfTest();
+        return Math.Max(tinaja, seasons);
+    }
+
+    if (args.Length == 2 && args[1] == "tinaja")
     {
         return TinajaSelfTest.Run();
     }
 
-    return UsageError("--self-test solo admite: tinaja.");
+    if (args.Length == 2 && args[1] == "seasons")
+    {
+        return SeasonTableWriter.SelfTest();
+    }
+
+    return UsageError("--self-test solo admite: tinaja o seasons.");
+}
+
+if (args.Length >= 1 && args[0] == "--seasons")
+{
+    var seasonSpecs = new List<string>();
+    string? seasonsOut = null;
+    bool seasonsCheck = false;
+    for (int i = 1; i < args.Length; i++)
+    {
+        if (args[i] == "--out" && i + 1 < args.Length && seasonsOut is null)
+        {
+            seasonsOut = args[++i];
+        }
+        else if (args[i] == "--check" && !seasonsCheck)
+        {
+            seasonsCheck = true;
+        }
+        else if (!args[i].StartsWith("--", StringComparison.Ordinal) && seasonsOut is null && !seasonsCheck)
+        {
+            seasonSpecs.Add(args[i]);
+        }
+        else
+        {
+            return UsageError($"--seasons: argumento no valido, repetido o sin valor: {args[i]}");
+        }
+    }
+
+    if (seasonSpecs.Count == 0 || seasonsOut is null)
+    {
+        return UsageError(seasonSpecs.Count == 0 ? "--seasons lleva al menos una especificacion." : "--seasons: falta --out.");
+    }
+
+    return SeasonTableWriter.Run(seasonSpecs, seasonsOut, seasonsCheck);
 }
 
 if (args.Length >= 1 && args[0] == "--parity")
