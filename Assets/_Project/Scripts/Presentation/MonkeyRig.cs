@@ -370,6 +370,16 @@ namespace AF.Presentation
             _tail.SetWave(pose.TailWaveFromS * s, pose.TailWaveS * s, pose.TailWaveGather, pose.TailWaveHalves, pose.TailWavePhase);
         }
 
+        /// <summary>
+        /// Caja de la pieza de la cabeza en dp del lienzo con la y desde arriba (<paramref name="space"/>, como en
+        /// <see cref="CollectRects"/>; tests de la tropa lateral). Sin asignaciones.
+        /// </summary>
+        public Rect HeadRect(RectTransform space)
+        {
+            _head.rectTransform.GetWorldCorners(_corners);
+            return ToCanvas(space);
+        }
+
         /// <summary>Cola del rig (tests de la trenza).</summary>
         public BezierStripGraphic Tail => _tail;
 
@@ -702,11 +712,17 @@ namespace AF.Presentation
         public const float ClimbHz = 5f;
 
         /// <summary>
-        /// Mano que lanza al trepar (S, en la pose de <see cref="Climb"/>): por encima de la cabeza y un poco hacia fuera de la
-        /// liana (la misma que planifica la intro: <see cref="IntroChoreography.SideThrowAlongS"/> y
-        /// <see cref="IntroChoreography.SideThrowOutS"/>).
+        /// Mano que lanza al trepar (S, en la pose de <see cref="Climb"/>): a la altura de lo alto de la cabeza y pasada la liana
+        /// hacia el tablero, para que la fruta no cruce la cabeza (la misma que planifica la intro:
+        /// <see cref="IntroChoreography.SideThrowAlongS"/> y <see cref="IntroChoreography.SideThrowOutS"/>; revisión de TL1).
         /// </summary>
         public static readonly Vector2 SideThrowHandS = new Vector2(IntroChoreography.SideThrowAlongS, IntroChoreography.SideThrowOutS);
+
+        /// <summary>
+        /// Mano libre que lanza colgado de la liana lateral (S, en la pose de <see cref="Hang"/>): bajo la cabeza y hacia el
+        /// tablero (<see cref="IntroChoreography.SideHangHandInS"/> y <see cref="IntroChoreography.SideHangHandDownS"/>).
+        /// </summary>
+        public static readonly Vector2 SideHangHandS = new Vector2(IntroChoreography.SideHangHandInS, -IntroChoreography.SideHangHandDownS);
 
         /// <summary>
         /// Trepando por una liana vertical (tropa lateral, D-021; modelos <c>fila</c> y <c>sacude</c>). En la pose, la liana es el
@@ -775,6 +791,15 @@ namespace AF.Presentation
         /// </summary>
         public static MonkeyPose Hang(MonkeyArt art, float lift, float sway)
         {
+            return Hang(art, lift, sway, HangHandS);
+        }
+
+        /// <summary>
+        /// Como <see cref="Hang(MonkeyArt, float, float)"/>, pero <paramref name="lift"/> lleva la mano libre a
+        /// <paramref name="handS"/> (la tropa lateral lanza con <see cref="SideHangHandS"/>).
+        /// </summary>
+        public static MonkeyPose Hang(MonkeyArt art, float lift, float sway, Vector2 handS)
+        {
             bool tailGrip = art.TailCurls;
             bool armGrip = art.ArmUp || !tailGrip;
             float l = art.LimbScale;
@@ -806,7 +831,7 @@ namespace AF.Presentation
                 BackArmFrom = new Vector2(shoulder.x + sway, shoulder.y),
                 BackArmTo = Vector2.zero, // en la liana
                 FrontArmFrom = new Vector2(shoulder.x + 0.11f + sway, shoulder.y - 0.03f),
-                FrontArmTo = Vector2.Lerp(rest, HangHandS, Mathf.Clamp01(lift)),
+                FrontArmTo = Vector2.Lerp(rest, handS, Mathf.Clamp01(lift)),
                 BackLegFrom = new Vector2(hip.x - 0.03f + sway, hip.y),
                 BackLegTo = new Vector2(hip.x + 0.10f + (sway * 1.5f), hip.y - legLen),
                 FrontLegFrom = new Vector2(hip.x + 0.04f + sway, hip.y),

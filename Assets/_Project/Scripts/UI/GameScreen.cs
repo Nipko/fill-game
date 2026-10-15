@@ -411,6 +411,7 @@ namespace AF.UI
             _intro.Troop = _troop;
             _intro.AttachFront(_troop.WaterSlot);
             _troop.PlaceSideLayer(_board); // tropa lateral (D-021): delante del panel y del marco, detrás de las cuias (OrderBoardLayers)
+            _intro.AttachFrameSides(_troop.SideWaterSlot); // el agua de los costados del marco, por detrás de la liana lateral (TL1)
 
             // ---- Capi y accesorio del muelle (capa 8): fuera de las zonas táctiles, nunca miran una cuia. Capi solo con
             // capi_idle.png (sin respaldo procedural; revisión visual del 2026-10-07 y guía 10.2 F7). ----

@@ -120,6 +120,252 @@ namespace AF.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// Medida para el dueño (revisión de TL1, sin aserción hasta su decisión): cuánto pisa la tropa lateral la franja de la
+        /// barra de la Crecida (07 §7.4: x 348-356, y 120-560, desde el nivel 25), y el hueco que quedaría a la derecha entre la
+        /// línea de 8 dp de la cuia y la barra.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SideTroop_MeasuresTheCrecidaBarStrip([Values(86, 143)] int level)
+        {
+            GameScreen.SimulatedScreen = Screen1080;
+            yield return LoadLevel(level);
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            view.DebugReplayIntro(800, false);
+            IntroChoreography plan = view.Intro.Plan;
+            Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Side));
+            Rect bar = Rect.MinMaxRect(CrecidaBarX0, CrecidaBarY0, CrecidaBarX1, CrecidaBarY1);
+            var rects = new List<Rect>();
+            float worst = 0f;
+            int frames = 0;
+            for (int t = 0; t <= plan.ExitStartMs + IntroChoreography.ExitMs; t += 10)
+            {
+                view.Intro.Seek(t);
+                rects.Clear();
+                view.Troop.CollectRects(rects);
+                bool hit = false;
+                foreach (Rect r in rects)
+                {
+                    float w = Mathf.Min(r.xMax, bar.xMax) - Mathf.Max(r.xMin, bar.xMin);
+                    float h = Mathf.Min(r.yMax, bar.yMax) - Mathf.Max(r.yMin, bar.yMin);
+                    if (w > 0f && h > 0f)
+                    {
+                        hit = true;
+                        worst = Mathf.Max(worst, w);
+                    }
+                }
+
+                frames += hit ? 1 : 0;
+            }
+
+            float gap = CrecidaBarX0 - (view.CanvasWidth - plan.SideFreeDp);
+            Debug.Log("AF_SIDE_CRECIDA nivel " + level + ": la tropa pisa la franja de la barra en " + frames + " fotogramas (hasta "
+                + worst.ToString("0.0", CultureInfo.InvariantCulture) + " dp de ancho); hueco entre la línea de 8 dp y la barra: "
+                + gap.ToString("0.0", CultureInfo.InvariantCulture) + " dp; un miquito de 28 dp necesita "
+                + (plan.Model == TroopModel.Hang
+                    ? ((IntroChoreography.SideHangReachS * IntroChoreography.MinMonkeyDp) + IntroChoreography.SideLianaMinXDp)
+                    : (((IntroChoreography.SideClimbReachS + IntroChoreography.SideClimbBodyS) * IntroChoreography.MinMonkeyDp) - IntroChoreography.SideOffscreenDp))
+                    .ToString("0.0", CultureInfo.InvariantCulture) + " dp");
+        }
+
+        /// <summary>
+        /// En el lanzamiento el miquito se reconoce (revisión de TL1; D-021 y 07 §6.4): en cada fotograma muestreado, como mucho
+        /// una fruta (la de la mano) corta la caja de la cabeza de cada miquito lateral; y ninguna fruta en la mano o recién
+        /// soltada queda cortada por el borde de la pantalla.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SideThrow_AtMostOneFruitOverEachHead_AndNoneCutByTheScreenEdge([Values(86, 143)] int level, [Values(1080, 720)] int widthPx)
+        {
+            GameScreen.SimulatedScreen = widthPx == 1080 ? Screen1080 : Screen720;
+            yield return LoadLevel(level);
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            RectTransform space = view.Troop.SideLayer;
+            foreach (int duration in new[] { 1400, 800 })
+            {
+                view.DebugReplayIntro(duration, false);
+                IntroChoreography plan = view.Intro.Plan;
+                Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Side));
+                int checkedFrames = 0;
+                int maxOver = 0;
+                for (int t = 0; t <= plan.TotalMs; t += 4)
+                {
+                    view.Intro.Seek(t);
+                    for (int m = 0; m < plan.MonkeyCount; m++)
+                    {
+                        MonkeyRig rig = view.Troop.SideRig(m);
+                        if (!rig.Visible || rig.Alpha <= 0.01f)
+                        {
+                            continue;
+                        }
+
+                        Rect head = rig.HeadRect(space);
+                        int over = 0;
+                        for (int k = 0; k < plan.FruitCount; k++)
+                        {
+                            Image fruit = view.Intro.FruitImage(k);
+                            if (!view.Intro.FruitVisible(k) || fruit.canvasRenderer.GetAlpha() <= 0.01f)
+                            {
+                                continue;
+                            }
+
+                            Rect f = VisibleFruit(fruit.rectTransform, space);
+                            over += f.Overlaps(head) ? 1 : 0;
+                            string where = "nivel " + level + ", " + widthPx + " px, T " + duration + ", t " + t + ", fruta " + k + " " + f;
+                            Assert.That(f.xMin, Is.GreaterThanOrEqualTo(0f), "fruta cortada por el borde izquierdo: " + where);
+                            Assert.That(f.xMax, Is.LessThanOrEqualTo(view.CanvasWidth), "fruta cortada por el borde derecho: " + where);
+                        }
+
+                        maxOver = Mathf.Max(maxOver, over);
+                        checkedFrames++;
+                        Assert.That(over, Is.LessThanOrEqualTo(1), "como mucho la fruta de la mano sobre la cabeza del miquito " + m
+                            + ": nivel " + level + ", " + widthPx + " px, T " + duration + ", t " + t + ", cabeza " + head);
+                    }
+                }
+
+                Debug.Log("AF_SIDE_HEAD nivel " + level + " a " + widthPx + " px, T " + duration + ": como mucho " + maxOver
+                    + " fruta(s) sobre una cabeza en " + checkedFrames + " cabezas muestreadas");
+                Assert.That(checkedFrames, Is.GreaterThan(50));
+            }
+        }
+
+        /// <summary>
+        /// Orden de capas (revisión de TL1; D-021): la capa de la tropa lateral va por delante del agua que corre por los
+        /// costados del marco (la liana no se pierde detrás del trazo del marco) y por detrás de las cuias.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SideLayer_IsInFrontOfTheFrameWater_AndBehindTheCuias()
+        {
+            GameScreen.SimulatedScreen = Screen1080;
+            yield return LoadLevel(143);
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            view.DebugReplayIntro(800, false);
+            RectTransform side = view.Troop.SideLayer;
+            Transform board = side.parent;
+            for (int i = 0; i < view.Views.Length; i++)
+            {
+                Assert.That(view.Views[i].Root.parent, Is.EqualTo(board), "la capa lateral y las cuias, en el tablero");
+                Assert.That(side.GetSiblingIndex(), Is.LessThan(view.Views[i].Root.GetSiblingIndex()), "detrás de la cuia " + i);
+            }
+
+            Assert.That(view.Intro.Layer.parent, Is.EqualTo(board));
+            for (int s = 0; s < 2; s++)
+            {
+                Transform strip = view.Intro.FrameSideStrip(s).transform;
+                Assert.That(strip.parent, Is.EqualTo(view.Troop.SideWaterSlot), "el agua del costado " + s + " del marco, en el hueco de la capa lateral");
+                Assert.That(strip.IsChildOf(view.Intro.Layer), Is.False, "ya no en la capa de la intro, delante de las cuias");
+                for (int m = 0; m < IntroChoreography.SideMonkeys; m++)
+                {
+                    Assert.That(view.Troop.SideWaterSlot.GetSiblingIndex(), Is.LessThan(view.Troop.SideLiana(m).transform.GetSiblingIndex()), "el agua del marco, detrás de la liana " + m);
+                    Assert.That(view.Troop.SideWaterSlot.GetSiblingIndex(), Is.LessThan(view.Troop.SideRig(m).Root.GetSiblingIndex()), "y del miquito " + m);
+                }
+            }
+
+            // Y las tiras siguen corriendo por el marco en la intro (en cualquier posadero).
+            bool seen = false;
+            for (int t = 0; t <= 800 && !seen; t += 20)
+            {
+                view.Intro.Seek(t);
+                seen = view.Intro.FrameSideStrip(0).enabled && view.Intro.FrameSideStrip(1).enabled;
+            }
+
+            Assert.That(seen, Is.True, "el agua corre por los costados del marco");
+        }
+
+        /// <summary>
+        /// La liana lateral se ve (revisión de TL1): 3 dp con borde claro, y nace de un nudo de hojas en lo alto, junto al HUD,
+        /// que la contiene, sin pisar el HUD y dentro del margen lateral.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SideLiana_IsThick_AndHangsFromALeafKnot([Values(86, 143)] int level)
+        {
+            GameScreen.SimulatedScreen = Screen1080;
+            yield return LoadLevel(level);
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            view.DebugReplayIntro(800, false);
+            IntroChoreography plan = view.Intro.Plan;
+            Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Side));
+            float hudBottom = view.Intro.Input.HudBottom;
+            view.Intro.Seek(Mathf.Max(plan.SideArriveMs[0], plan.SideArriveMs[1]) + 10f);
+            for (int m = 0; m < plan.MonkeyCount; m++)
+            {
+                BezierStripGraphic liana = view.Troop.SideLiana(m);
+                Assert.That(liana.enabled, Is.True, "liana " + m);
+                Rect l = liana.LocalBounds();
+                Assert.That(l.width, Is.GreaterThanOrEqualTo(TroopLayer.SideLianaWidthDp), "liana " + m + " de ≥ 3 dp con su borde");
+                float top = -l.yMax;
+                Assert.That(top, Is.EqualTo(plan.SideLianaTopY).Within(TroopLayer.SideLianaEdgeDp + (0.5f * TroopLayer.SideLianaWidthDp) + 0.01f));
+                float x0 = float.MaxValue;
+                float x1 = float.MinValue;
+                float y0 = float.MaxValue;
+                float y1 = float.MinValue;
+                for (int i = 0; i < TroopLayer.SideKnotLeaves; i++)
+                {
+                    Image leaf = view.Troop.SideKnotLeaf(m, i);
+                    Assert.That(leaf.enabled, Is.True, "hoja " + i + " del nudo de la liana " + m);
+                    Assert.That(leaf.raycastTarget, Is.False);
+                    Assert.That(leaf.canvasRenderer.GetAlpha(), Is.EqualTo(liana.canvasRenderer.GetAlpha()).Within(0.001f), "con el alfa de la liana");
+                    Rect r = CanvasRect(leaf.rectTransform, view.Troop.SideLayer);
+                    Assert.That(r.yMin, Is.GreaterThanOrEqualTo(hudBottom), "nunca sobre el HUD");
+                    Assert.That(r.xMin, Is.GreaterThanOrEqualTo(0f));
+                    Assert.That(r.xMax, Is.LessThanOrEqualTo(view.CanvasWidth));
+                    float margin = m == 0 ? r.xMax : view.CanvasWidth - r.xMin;
+                    Assert.That(margin, Is.LessThanOrEqualTo(plan.SideFreeDp + 0.01f), "solo en el margen lateral (hasta la línea de 8 dp de la cuia)");
+                    x0 = Mathf.Min(x0, r.xMin);
+                    x1 = Mathf.Max(x1, r.xMax);
+                    y0 = Mathf.Min(y0, r.yMin);
+                    y1 = Mathf.Max(y1, r.yMax);
+                }
+
+                Assert.That(plan.SideX[m], Is.InRange(x0, x1), "la liana nace dentro del nudo");
+                Assert.That(plan.SideLianaTopY, Is.InRange(y0, y1), "el nudo cubre lo alto de la liana");
+            }
+        }
+
+        // Franja de la barra de la Crecida (07 §7.4), desde el nivel 25 (streak_unlock_level).
+        private const float CrecidaBarX0 = 348f;
+        private const float CrecidaBarX1 = 356f;
+        private const float CrecidaBarY0 = 120f;
+        private const float CrecidaBarY1 = 560f;
+
+        // Caja visible de la fruta (el lado del sprite × FruitArtFill), centrada en su sitio y sin el giro.
+        private static Rect VisibleFruit(RectTransform rt, RectTransform space)
+        {
+            Rect r = CanvasRect(rt, space);
+            float side = rt.sizeDelta.x * IntroChoreography.FruitArtFill;
+            return new Rect(r.center.x - (0.5f * side), r.center.y - (0.5f * side), side, side);
+        }
+
+        private static Rect CanvasRect(RectTransform rt, RectTransform space)
+        {
+            var corners = new Vector3[4];
+            rt.GetWorldCorners(corners);
+            Rect area = space.rect;
+            float x0 = float.MaxValue;
+            float x1 = float.MinValue;
+            float y0 = float.MaxValue;
+            float y1 = float.MinValue;
+            for (int i = 0; i < 4; i++)
+            {
+                Vector3 l = space.InverseTransformPoint(corners[i]);
+                float x = l.x - area.xMin;
+                float y = area.yMax - l.y;
+                x0 = Mathf.Min(x0, x);
+                x1 = Mathf.Max(x1, x);
+                y0 = Mathf.Min(y0, y);
+                y1 = Mathf.Max(y1, y);
+            }
+
+            return Rect.MinMaxRect(x0, y0, x1, y1);
+        }
+
         [UnityTest]
         public IEnumerator SideCalendar_IsTheCanopyCalendar_SameFruitTimesAndT([Values(86, 143)] int level)
         {

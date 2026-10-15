@@ -31,7 +31,8 @@ namespace AF.Presentation
     /// en su propio Canvas anidado dentro del tablero (<see cref="SideLayer"/>, delante del panel y del marco y detrás de las
     /// cuias), un miquito por lado baja por una liana procedural desde el borde del HUD (trepando con <see cref="MonkeyRig.Climb"/>
     /// o colgado con <see cref="MonkeyRig.Hang"/>, según el modelo de suelta), lanza la fruta y sube en cuanto se habilita el
-    /// toque; sin rama, hojas, manojos, velo ni reposo.
+    /// toque; sin rama, manojos, velo ni reposo. La liana nace de un nudo de hojas junto al HUD y pasa por delante del agua que
+    /// corre por los costados del marco (<see cref="SideWaterSlot"/>; revisión de TL1).
     /// </summary>
     public sealed class TroopLayer
     {
@@ -70,6 +71,35 @@ namespace AF.Presentation
         private static readonly Color InkLine = new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 0.8f);
         private static readonly Color Liana = Palette.Hex(0x4E6B2E);
 
+        // Liana lateral (revisión de TL1): más clara y con borde claro, para que se lea sobre el marco oscuro y el follaje.
+        private static readonly Color SideLianaBody = Palette.Hex(0x6E9A3A);
+        private static readonly Color SideLianaTip = Palette.Hex(0x5A8230);
+        private static readonly Color SideLianaEdge = new Color(0xD8 / 255f, 0xE8 / 255f, 0xA0 / 255f, 0.9f);
+
+        /// <summary>Grosor de la liana lateral (dp; revisión de TL1: con 2 dp no se veía sobre el marco).</summary>
+        public const float SideLianaWidthDp = 3f;
+
+        /// <summary>Borde claro de la liana lateral (dp).</summary>
+        public const float SideLianaEdgeDp = 0.6f;
+
+        /// <summary>Hojas del nudo de follaje de lo alto de cada liana lateral (revisión de TL1: la liana no nace del aire).</summary>
+        public const int SideKnotLeaves = 3;
+
+        /// <summary>Cada hoja del nudo mide 12 × 7 dp (largo × ancho), con los colores de hoja de la rama.</summary>
+        public const float SideKnotLeafLengthDp = 12f;
+
+        /// <summary>Ancho de cada hoja del nudo (dp).</summary>
+        public const float SideKnotLeafWidthDp = 7f;
+
+        /// <summary>Las hojas del nudo van giradas ±25° respecto a la horizontal.</summary>
+        public const float SideKnotLeafDeg = 25f;
+
+        /// <summary>El nudo se centra 4 dp bajo el borde inferior del HUD (y lo justo más abajo para no pisarlo).</summary>
+        public const float SideKnotBelowHudDp = 4f;
+
+        /// <summary>Las hojas de los lados del nudo se apartan 2,5 dp de su centro.</summary>
+        public const float SideKnotSpreadDp = 2.5f;
+
         private readonly RectTransform _layer;
         private readonly ProceduralArt _art;
         private readonly Image _night;
@@ -88,6 +118,8 @@ namespace AF.Presentation
         private readonly RectTransform _side;
         private readonly BezierStripGraphic[] _sideLianas = new BezierStripGraphic[IntroChoreography.SideMonkeys];
         private readonly MonkeyRig[] _sideRigs = new MonkeyRig[IntroChoreography.SideMonkeys];
+        private readonly Image[] _sideKnots = new Image[IntroChoreography.SideMonkeys * SideKnotLeaves];
+        private readonly RectTransform _sideWater;
         private bool _sideActive;
         private MonkeyArt? _look;
         private MonkeyArt? _lookPair;
@@ -180,11 +212,35 @@ namespace AF.Presentation
             sideGo.transform.SetParent(parent, false);
             _side = (RectTransform)sideGo.transform;
             Stretch(_side);
+
+            // Las tiras de agua de los costados del marco (la intro las trae aquí con AttachFrameSides) van por detrás de las
+            // lianas: el agua corre por el marco y la liana pasa por delante (revisión de TL1).
+            var sideWaterGo = new GameObject("FrameSidesWater", typeof(RectTransform));
+            sideWaterGo.transform.SetParent(_side, false);
+            _sideWater = (RectTransform)sideWaterGo.transform;
+            Stretch(_sideWater);
             for (int m = 0; m < _sideRigs.Length; m++)
             {
                 _sideLianas[m] = Strip("SideLiana" + m, 6, _side);
-                _sideLianas[m].SetColors(Liana, ColorMath.Darken(Liana, 0.2f), 0.8f, InkLine, 0.6f);
+                _sideLianas[m].SetColors(SideLianaBody, SideLianaTip, 0.8f, SideLianaEdge, SideLianaEdgeDp);
                 _sideRigs[m] = new MonkeyRig(_side, IntroChoreography.MaxMonkeys + m);
+            }
+
+            // Nudo de follaje en lo alto de cada liana, por delante del miquito: la liana sale de él y el miquito asoma de él.
+            for (int i = 0; i < _sideKnots.Length; i++)
+            {
+                var knotGo = new GameObject("SideKnotLeaf" + i, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                knotGo.transform.SetParent(_side, false);
+                Image img = knotGo.GetComponent<Image>();
+                img.sprite = art.LeafBit;
+                img.raycastTarget = false;
+                RectTransform rt = img.rectTransform;
+                rt.anchorMin = new Vector2(0f, 1f);
+                rt.anchorMax = new Vector2(0f, 1f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.sizeDelta = new Vector2(SideKnotLeafWidthDp, SideKnotLeafLengthDp); // la hoja apunta a +y; girada, casi horizontal
+                img.enabled = false;
+                _sideKnots[i] = img;
             }
 
             // La capa no se desactiva nunca (ni aquí ni en Hide): desactivar un Canvas anidado desregistra sus gráficos ocultos
@@ -210,6 +266,60 @@ namespace AF.Presentation
         public BezierStripGraphic SideLiana(int m)
         {
             return _sideLianas[m];
+        }
+
+        /// <summary>Hoja <paramref name="i"/> del nudo de follaje de lo alto de la liana <paramref name="m"/> (tests).</summary>
+        public Image SideKnotLeaf(int m, int i)
+        {
+            return _sideKnots[(m * SideKnotLeaves) + i];
+        }
+
+        /// <summary>
+        /// Hueco, dentro de la capa de la tropa lateral y por detrás de sus lianas, para las tiras de agua de los costados del
+        /// marco (<see cref="IntroAnimation.AttachFrameSides"/>; revisión de TL1: el agua del marco tapaba la liana).
+        /// </summary>
+        public RectTransform SideWaterSlot => _sideWater;
+
+        /// <summary>
+        /// Describe en <paramref name="input"/> la cabeza del miquito lateral de la especie preparada (centro respecto a la raíz
+        /// del rig y medio lado de su caja, en S), con la pose del modelo de suelta de <paramref name="input"/>: el planificador
+        /// no dibuja una fruta lanzada mientras corte esa caja (revisión de TL1). Sin especie, NaN (valores prudentes por
+        /// modelo). Al arrancar la intro: sin asignaciones.
+        /// </summary>
+        public void DescribeSideHead(IntroInput input)
+        {
+            input.SideHeadInS = float.NaN;
+            input.SideHeadUpS = float.NaN;
+            input.SideHeadHalfS = float.NaN;
+            MonkeyArt? look = _look;
+            if (look == null)
+            {
+                return;
+            }
+
+            float headS = look.HeadS;
+            if (_lookPair != null)
+            {
+                headS = Mathf.Max(headS, _lookPair.HeadS);
+            }
+
+            if (input.Model == TroopModel.Hang)
+            {
+                // Colgado (Place sin giro, mirando al tablero): x de la pose hacia el tablero, y hacia arriba; el balanceo
+                // mueve la cabeza ≤ 0,025 S.
+                MonkeyPose pose = MonkeyRig.Hang(look, 0f, 0f);
+                input.SideHeadInS = pose.HeadCenter.x;
+                input.SideHeadUpS = pose.HeadCenter.y;
+                input.SideHeadHalfS = (0.5f * headS) + 0.03f;
+            }
+            else
+            {
+                // Trepando (girado 90°): x de la pose hacia arriba, y hacia el borde de la pantalla.
+                MonkeyPose pose = MonkeyRig.Climb(look, 0f, 0f);
+                input.SideHeadInS = -pose.HeadCenter.y;
+                input.SideHeadUpS = pose.HeadCenter.x;
+                input.SideHeadHalfS = 0.5f * headS;
+            }
         }
 
         /// <summary>
@@ -332,6 +442,11 @@ namespace AF.Presentation
             for (int m = 0; m < _sideLianas.Length; m++)
             {
                 GraphicPool.EnsureRegistered(_sideLianas[m]); // ocultas, pero registradas en su Canvas (A10), con o sin tropa lateral
+            }
+
+            for (int i = 0; i < _sideKnots.Length; i++)
+            {
+                GraphicPool.EnsureRegistered(_sideKnots[i]);
             }
 
             if (plan.Perch == IntroPerch.Side && plan.MonkeyCount > 0 && _look != null)
@@ -576,6 +691,11 @@ namespace AF.Presentation
                 graphics.Add(_sideLianas[m]);
                 _sideRigs[m].CollectGraphics(graphics);
             }
+
+            for (int i = 0; i < _sideKnots.Length; i++)
+            {
+                graphics.Add(_sideKnots[i]);
+            }
         }
 
         /// <summary>
@@ -602,6 +722,15 @@ namespace AF.Presentation
                     if (_sideRigs[m].Visible && _sideRigs[m].Alpha != 0f)
                     {
                         _sideRigs[m].CollectRects(_side, rects);
+                    }
+                }
+
+                for (int i = 0; i < _sideKnots.Length; i++)
+                {
+                    if (_sideKnots[i].enabled && _sideKnots[i].canvasRenderer.GetAlpha() > 0f)
+                    {
+                        _sideKnots[i].rectTransform.GetWorldCorners(_corners);
+                        rects.Add(ToCanvas(_side));
                     }
                 }
 
@@ -681,6 +810,11 @@ namespace AF.Presentation
                 _sideRigs[m].SetVisible(false);
                 _sideLianas[m].enabled = false;
             }
+
+            for (int i = 0; i < _sideKnots.Length; i++)
+            {
+                _sideKnots[i].enabled = false;
+            }
         }
 
         private static void Stretch(RectTransform rt)
@@ -691,7 +825,7 @@ namespace AF.Presentation
             rt.offsetMax = Vector2.zero;
         }
 
-        // Tropa lateral (D-021): sin rama, hojas, manojos ni velo; un miquito por lado con su liana. Los rigs quedan activos
+        // Tropa lateral (D-021): sin rama, manojos ni velo; un miquito por lado con su liana y su nudo de hojas. Los rigs quedan activos
         // toda la intro (aparecen con el alfa, sin activar objetos a mitad: A10).
         private void BeginSide(IntroChoreography plan)
         {
@@ -751,7 +885,7 @@ namespace AF.Presentation
             if (hanging)
             {
                 float sway = moving ? 0.05f * Mathf.Sin(t * 0.02f) : 0.02f * Mathf.Sin(t * 0.004f);
-                pose = MonkeyRig.Hang(look, lift, sway);
+                pose = MonkeyRig.Hang(look, lift, sway, MonkeyRig.SideHangHandS); // lanza con la mano libre hacia el tablero, bajo la cabeza
                 pose.HeadBack = true; // mira hacia el follaje del borde, nunca al tablero
                 rig.Place(x, y, sign, 0f);
                 SetSideLiana(m, x, plan.SideLianaTopY, y, a);
@@ -779,6 +913,7 @@ namespace AF.Presentation
                 {
                     _sideRigs[m].SetVisible(false);
                     _sideLianas[m].enabled = false;
+                    SetSideKnot(m, plan, 0f);
                     continue;
                 }
 
@@ -807,8 +942,8 @@ namespace AF.Presentation
             }
         }
 
-        // Liana lateral: cuelga vertical desde el borde inferior del HUD (sale del follaje de detrás) hasta bottomY, con una
-        // leve curva; se funde con su miquito.
+        // Liana lateral: cuelga vertical desde el borde inferior del HUD, de un nudo de follaje (revisión de TL1), hasta bottomY,
+        // con una leve curva; 3 dp con borde claro para que se lea sobre el marco; se funde con su miquito.
         private void SetSideLiana(int m, float x, float topY, float bottomY, float alpha)
         {
             BezierStripGraphic liana = _sideLianas[m];
@@ -818,6 +953,7 @@ namespace AF.Presentation
                 liana.enabled = on;
             }
 
+            SetSideKnot(m, _plan, on ? alpha : 0f);
             if (!on)
             {
                 return;
@@ -825,8 +961,64 @@ namespace AF.Presentation
 
             var top = new Vector2(x, -topY);
             var bottom = new Vector2(x, -bottomY);
-            liana.SetCurve(top, Vector2.Lerp(top, bottom, 0.33f) + new Vector2(0.8f, 0f), Vector2.Lerp(top, bottom, 0.66f) + new Vector2(-0.6f, 0f), bottom, 2f, 1.6f);
+            liana.SetCurve(top, Vector2.Lerp(top, bottom, 0.33f) + new Vector2(0.8f, 0f), Vector2.Lerp(top, bottom, 0.66f) + new Vector2(-0.6f, 0f), bottom, SideLianaWidthDp, SideLianaWidthDp - 0.4f);
             liana.canvasRenderer.SetAlpha(alpha);
+        }
+
+        // Nudo de follaje de lo alto de la liana m (revisión de TL1): 3 hojas de 12 × 7 dp giradas ±25°, centradas en lo alto de
+        // la liana, 4 dp bajo el HUD (o lo justo más abajo para no pisarlo) y solo en el margen lateral (entre el borde de la
+        // pantalla y la línea de 8 dp de la cuia), con el alfa de la liana.
+        private void SetSideKnot(int m, IntroChoreography? plan, float alpha)
+        {
+            bool on = alpha > 0.001f && plan != null;
+            for (int i = 0; i < SideKnotLeaves; i++)
+            {
+                Image leaf = _sideKnots[(m * SideKnotLeaves) + i];
+                if (leaf.enabled != on)
+                {
+                    leaf.enabled = on;
+                }
+
+                if (!on || plan == null)
+                {
+                    continue;
+                }
+
+                int sign = IntroChoreography.SideSign(m);
+                float rad = SideKnotLeafDeg * Mathf.Deg2Rad;
+                float halfW = 0.5f * ((SideKnotLeafLengthDp * Mathf.Cos(rad)) + (SideKnotLeafWidthDp * Mathf.Sin(rad)));
+                float halfH = 0.5f * ((SideKnotLeafLengthDp * Mathf.Sin(rad)) + (SideKnotLeafWidthDp * Mathf.Cos(rad)));
+
+                // El nudo, sobre lo alto de la liana y dentro del margen (su caja entre 0,5 dp del borde y la línea de 8 dp de la
+                // cuia): hoja 0 hacia el borde, hoja 1 hacia el tablero (un poco más arriba) y hoja 2 debajo. La liana queda
+                // siempre dentro del nudo.
+                float knot = sign > 0 ? plan.SideX[m] : _canvasW - plan.SideX[m]; // distancia de lo alto de la liana al borde
+                float lo = halfW + 0.5f + SideKnotSpreadDp;
+                knot = Mathf.Clamp(knot, lo, Mathf.Max(lo, plan.SideFreeDp - halfW - SideKnotSpreadDp));
+                float dx = i == 0 ? -SideKnotSpreadDp : (i == 1 ? SideKnotSpreadDp : 0f);
+                float dy = i == 0 ? 0f : (i == 1 ? -0.5f : 3f);
+                float deg = i == 0 ? -SideKnotLeafDeg : SideKnotLeafDeg; // 0 y 1, hacia arriba; 2, hacia abajo
+                float edge = knot + dx;
+                float cx = sign > 0 ? edge : _canvasW - edge;
+                float cy = Mathf.Max(_hudBottom + SideKnotBelowHudDp, _hudBottom + halfH + 0.5f - Mathf.Min(0f, dy)) + dy;
+                RectTransform rt = leaf.rectTransform;
+                var pos = new Vector2(cx, -cy);
+                if (rt.anchoredPosition != pos)
+                {
+                    rt.anchoredPosition = pos;
+                }
+
+                // La hoja del sprite apunta a +y: ±90° la tumba hacia el borde (hojas 0 y 2) o hacia el tablero (hoja 1), y ±25°
+                // la levanta o la baja.
+                float lay = i == 1 ? -90f : 90f;
+                Quaternion r = Quaternion.Euler(0f, 0f, sign * (lay + deg));
+                if (rt.localRotation != r)
+                {
+                    rt.localRotation = r;
+                }
+
+                leaf.canvasRenderer.SetAlpha(alpha);
+            }
         }
 
         private void PoseMonkey(IntroChoreography plan, int m, float t, float alpha)
@@ -1161,14 +1353,19 @@ namespace AF.Presentation
 
         private Rect ToCanvas()
         {
-            Rect area = _layer.rect;
+            return ToCanvas(_layer);
+        }
+
+        private Rect ToCanvas(RectTransform space)
+        {
+            Rect area = space.rect;
             float x0 = float.MaxValue;
             float x1 = float.MinValue;
             float y0 = float.MaxValue;
             float y1 = float.MinValue;
             for (int i = 0; i < 4; i++)
             {
-                Vector3 l = _layer.InverseTransformPoint(_corners[i]);
+                Vector3 l = space.InverseTransformPoint(_corners[i]);
                 float x = l.x - area.xMin;
                 float y = area.yMax - l.y;
                 x0 = Mathf.Min(x0, x);

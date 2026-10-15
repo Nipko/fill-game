@@ -165,6 +165,111 @@ namespace AF.Tests.EditMode
             Assert.That(GameScreen.ThreeRowOrdinal(catalog, fauna, 95, Width, BoardTop, BoardBottom780), Is.EqualTo(3));
         }
 
+        // ---- Regla de D-021, punto 4, en el planificador puro (revisión de TL1): si la tropa lateral no cabe sin bajar de
+        // MinMonkeyDp, no se encoge y se aplica la regla de D-010 (rama si la franja mide ≥ 44 dp; si no, dosel). ----
+
+        [Test]
+        public void SideOnThreeRowsOfFive_DoesNotFit_FallsBackToTheD010Rule_WithoutShrinking(
+            [Values(13, 14, 15, 16)] int count,
+            [Values(TroopModel.Row, TroopModel.Shake, TroopModel.Hang)] TroopModel model,
+            [Values(800f, 1400f)] float totalMs)
+        {
+            IntroInput input = IntroChoreographyTests.Input(count, 780f, totalMs, IntroPerch.Side);
+            input.Model = model;
+            string at = count + " cuias, " + model + ", T " + totalMs;
+            Assert.That(input.Rows, Is.EqualTo(3), at + ": 3 filas (D-006)");
+
+            var side = new IntroChoreography();
+            side.Plan(input);
+            input.Perch = IntroPerch.Branch;
+            var branch = new IntroChoreography();
+            branch.Plan(input);
+
+            Assert.That(side.SideFitDp, Is.LessThan(IntroChoreography.MinMonkeyDp), at + ": con 5 o 6 cuias por fila no cabe (D-021)");
+            Assert.That(side.Perch, Is.Not.EqualTo(IntroPerch.Side), at + ": sin tropa lateral");
+            float band = input.PanelTop - input.HudBottom;
+            if (band < IntroChoreography.BranchMinBandDp)
+            {
+                Assert.That(side.Perch, Is.EqualTo(IntroPerch.Canopy), at + ": franja de " + band + " dp (< 44): dosel");
+            }
+
+            AssertSamePlan(side, branch, at);
+            if (side.MonkeyCount > 0)
+            {
+                Assert.That(side.MonkeyDp, Is.GreaterThanOrEqualTo(IntroChoreography.MinMonkeyDp), at + ": nunca se encoge por debajo de 28 dp");
+            }
+            else
+            {
+                Assert.That(side.MonkeyDp, Is.EqualTo(0f), at + ": sin tropa");
+            }
+        }
+
+        [Test]
+        public void SideOnTwoRows_GoesByTheD010Rule([Values(7, 10)] int count, [Values(TroopModel.Row, TroopModel.Hang)] TroopModel model)
+        {
+            IntroInput input = IntroChoreographyTests.Input(count, 780f, 800f, IntroPerch.Side);
+            input.Model = model;
+            string at = count + " cuias, " + model;
+            Assert.That(input.Rows, Is.EqualTo(2), at);
+
+            var side = new IntroChoreography();
+            side.Plan(input);
+            input.Perch = IntroPerch.Branch;
+            var branch = new IntroChoreography();
+            branch.Plan(input);
+
+            Assert.That(side.Perch, Is.Not.EqualTo(IntroPerch.Side), at + ": solo con 3 filas");
+            AssertSamePlan(side, branch, at);
+        }
+
+        [Test]
+        public void SideWithoutAnyFruitColumn_GoesByTheD010Rule_AndFitsWithFourPerRow()
+        {
+            // Control: 12 cuias (4 + 4 + 4) caben con un miquito por lado de ≥ 28 dp.
+            IntroInput input = IntroChoreographyTests.Input(12, 780f, 800f, IntroPerch.Side);
+            Assert.That(input.Rows, Is.EqualTo(3));
+            var fits = new IntroChoreography();
+            fits.Plan(input);
+            Assert.That(fits.Perch, Is.EqualTo(IntroPerch.Side), "4 cuias por fila: cabe");
+            Assert.That(fits.SideFitDp, Is.GreaterThanOrEqualTo(IntroChoreography.MinMonkeyDp));
+            Assert.That(fits.MonkeyCount, Is.EqualTo(IntroChoreography.SideMonkeys));
+            Assert.That(fits.BodyDp, Is.GreaterThanOrEqualTo(IntroChoreography.MinMonkeyDp));
+
+            // Las mismas 12, todas vacías: ninguna columna con fruta, así que no hay tropa lateral.
+            for (int i = 0; i < input.Count; i++)
+            {
+                input.SetCuia(i, input.CenterX[i], input.FootY[i], input.Row[i], System.Array.Empty<int>());
+            }
+
+            var side = new IntroChoreography();
+            side.Plan(input);
+            input.Perch = IntroPerch.Branch;
+            var branch = new IntroChoreography();
+            branch.Plan(input);
+            Assert.That(side.ColumnCount, Is.EqualTo(0));
+            Assert.That(side.Perch, Is.Not.EqualTo(IntroPerch.Side), "sin columnas con fruta");
+            AssertSamePlan(side, branch, "12 vacías");
+        }
+
+        // Pedir la tropa lateral cuando no cabe da lo mismo que pedir la rama: posadero, modelo, tropa, tamaño y calendario.
+        private static void AssertSamePlan(IntroChoreography side, IntroChoreography branch, string at)
+        {
+            Assert.That(side.Perch, Is.EqualTo(branch.Perch), at + ": el posadero de la regla de D-010");
+            Assert.That(side.Model, Is.EqualTo(branch.Model), at);
+            Assert.That(side.MonkeyCount, Is.EqualTo(branch.MonkeyCount), at);
+            Assert.That(side.MonkeyDp, Is.EqualTo(branch.MonkeyDp), at);
+            Assert.That(side.BodyDp, Is.EqualTo(branch.BodyDp), at);
+            Assert.That(side.TotalMs, Is.EqualTo(branch.TotalMs), at);
+            Assert.That(side.FruitCount, Is.EqualTo(branch.FruitCount), at);
+            for (int k = 0; k < side.FruitCount; k++)
+            {
+                Assert.That(side.FruitMonkey[k], Is.EqualTo(branch.FruitMonkey[k]), at + ", fruta " + k);
+                Assert.That(side.FruitReleaseMs[k], Is.EqualTo(branch.FruitReleaseMs[k]), at + ", fruta " + k);
+                Assert.That(side.FruitReleaseX[k], Is.EqualTo(branch.FruitReleaseX[k]), at + ", fruta " + k);
+                Assert.That(side.FruitImpactMs[k], Is.EqualTo(branch.FruitImpactMs[k]), at + ", fruta " + k);
+            }
+        }
+
         private static FaunaCatalog Fauna()
         {
             return FaunaCatalogReader.Read(File.ReadAllText(Path.Combine(Application.dataPath, "_Project/Data/Fauna/miquitos_v0.json")));

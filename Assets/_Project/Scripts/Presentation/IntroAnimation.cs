@@ -268,6 +268,25 @@ namespace AF.Presentation
         }
 
         /// <summary>
+        /// Lleva las tiras de agua de los costados del marco a <paramref name="slot"/> (<see cref="TroopLayer.SideWaterSlot"/>:
+        /// en la capa de la tropa lateral, por detrás de sus lianas y, como ella, delante del panel y detrás de las cuias). El agua
+        /// corre por el marco y la liana lateral pasa por delante (revisión de TL1: el trazo del marco tapaba la liana y el
+        /// miquito quedaba agarrado a nada). Las tiras no se acercan a las cuias, así que con cualquier posadero se ven igual.
+        /// Una vez, al montar la pantalla, en el mismo espacio que la capa de la intro (a pantalla completa en el tablero).
+        /// </summary>
+        public void AttachFrameSides(RectTransform slot)
+        {
+            _sideLeft.rectTransform.SetParent(slot, false);
+            _sideRight.rectTransform.SetParent(slot, false);
+        }
+
+        /// <summary>Tira de agua del costado izquierdo (0) o derecho (1) del marco (tests del orden de capas).</summary>
+        public Graphic FrameSideStrip(int side)
+        {
+            return side == 0 ? _sideLeft : _sideRight;
+        }
+
+        /// <summary>
         /// Cuenta lo que se ve de la intro en este fotograma (tests del presupuesto del guion §13): imágenes aditivas a la vista
         /// (espuma de los chorritos y anillos) y partículas (gotas, penachos y espuma del labio).
         /// </summary>
@@ -375,6 +394,7 @@ namespace AF.Presentation
                 _input.SetCuia(i, foot.x, -foot.y, RowOf(-foot.y), board[i]);
             }
 
+            Troop?.DescribeSideHead(_input); // la cabeza de la especie, para la tropa lateral (D-021; revisión de TL1)
             _plan.Plan(_input);
             _water = water;
             _waterA = new Color(water.r, water.g, water.b, WaterAlpha);
@@ -1032,7 +1052,9 @@ namespace AF.Presentation
                     shakeAmp = Mathf.Max(shakeAmp, 1f - Mathf.Clamp01(Mathf.Abs(t - release) / 75f));
                 }
 
-                if (t >= showFrom && t < impact + IntroChoreography.FruitFadeMs)
+                // Con la tropa lateral, la fruta lanzada no se ve hasta que deja libre la cabeza de su miquito (revisión de TL1).
+                bool hidden = p.Perch == IntroPerch.Side && t >= release && t - release < p.SideClearMs[k];
+                if (t >= showFrom && t < impact + IntroChoreography.FruitFadeMs && !hidden)
                 {
                     float size;
                     float rot;
