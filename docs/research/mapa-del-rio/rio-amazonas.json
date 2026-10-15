@@ -1,7 +1,7 @@
 {
  "formato": "af-rio-amazonas/0 [P]",
  "titulo": "Geografía limpia del Amazonas para el Mapa del río (Tintalú / Amazon Fill)",
- "estado": "Material de apoyo, no canon (docs/research). Lo usa generar_mapa.py para la muestra; el trazado de producción sale de Natural Earth (y de HydroRIVERS para las vistas de Mundo) con tools/river-map/ (propuesta §3.6). Nombres, datos y textos: pendientes del asesor cultural (07 §8.2). Revisado el 2026-10-13 con 41 hallazgos (propuesta, cabecera). Las paradas detalladas son las de 1-200 (mundos 1-5) en paradas_1_200 y, con Q14-A (la 1.0 son los niveles 1-700, GDD §2 #21), las de 201-700 en paradas_201_700 (fase F9: k = 20-29 desde M3.7a; faltan k = 30-69). Ampliado el 2026-10-14 (M2.7) con el «Otro dato» de las tarjetas de 1-200 (otros_datos de cada parada, con sus fuentes reabiertas ese día). Ampliado el 2026-10-15 (M3.7a) con las paradas k = 20-29 del mundo 6 (paradas_201_700) y sus ríos locales (rios_locales_201_700), con sus fuentes reabiertas ese día.",
+ "estado": "Material de apoyo, no canon (docs/research). Lo usa generar_mapa.py para la muestra; el trazado de producción sale de Natural Earth (y de HydroRIVERS para las vistas de Mundo) con tools/river-map/ (propuesta §3.6). Nombres, datos y textos: pendientes del asesor cultural (07 §8.2). Revisado el 2026-10-13 con 41 hallazgos (propuesta, cabecera). Las paradas detalladas son las de 1-200 (mundos 1-5) en paradas_1_200 y, con Q14-A (la 1.0 son los niveles 1-700, GDD §2 #21), las de 201-700 en paradas_201_700 (fase F9: k = 20-29 desde M3.7a y k = 30-41 desde M3.7b; faltan k = 42-69). Ampliado el 2026-10-14 (M2.7) con el «Otro dato» de las tarjetas de 1-200 (otros_datos de cada parada, con sus fuentes reabiertas ese día). Ampliado el 2026-10-15 (M3.7a) con las paradas k = 20-29 del mundo 6 (paradas_201_700) y sus ríos locales (rios_locales_201_700), con sus fuentes reabiertas ese día. Ampliado el 2026-10-15 (M3.7b) con las paradas k = 30-41 del mundo 7 (paradas_201_700), sus ríos locales (Tambopata y Manu), el punto de paso teotonio del viaje del 300 (Q18-A) y los candidatos de Pará de la tinaja como «Otro dato» de la parada 32 (pregunta 50 (a)).",
  "fecha": "2026-10-12",
  "datum": "WGS84, grados decimales (4 decimales)",
  "etiquetas": {
@@ -5609,74 +5609,105 @@
     420
    ],
    "paradas": 12,
-   "viaje_de_entrada": "Napo abajo → Amazonas (repaso de lo ya lleno) → Madeira (rápidos de Teotônio) → Villa Bella → Beni (Cachuela Esperanza, Riberalta) → Madre de Dios → Puerto Heath",
+   "viaje_de_entrada": "Napo abajo → Amazonas (repaso de lo ya lleno) → Madeira (rápidos de Teotônio: relevo del guía, Q18-A) → Villa Bella → Beni (Cachuela Esperanza, Riberalta) → Madre de Dios → Puerto Heath",
    "banderas_de_cortesia": [
     "PE y BR de paso por el Amazonas",
     "BO en Villa Bella (300): la parada de Puerto Heath está en Bolivia",
-    "PE en Puerto Maldonado (310)"
+    "PE en el lago Sandoval (310): el primer sitio del Perú río arriba de Puerto Heath, aguas abajo de Puerto Maldonado"
    ],
    "pregunta_del_mundo": "¿Por qué los guacamayos comen arcilla? → la hipótesis más apoyada: buscan la sal que les falta [E npr2017_collpas]",
    "sitios": [
     {
      "nombre": "Madre de Dios bajo (Puerto Heath, Bolivia)",
      "paradas": 1,
-     "lat": -12.5026,
-     "lon": -68.6526,
-     "conf": "V",
+     "lat": -12.5022,
+     "lon": -68.65,
+     "conf": "E",
      "xy": [
-      0.2199,
-      0.34386
+      0.21991,
+      0.34394
      ],
      "pais": "BO",
-     "nota": "Puerto Heath está en el departamento de La Paz (Bolivia), en la boca del Heath [E wp_puerto_heath]"
-    },
-    {
-     "nombre": "Puerto Maldonado",
-     "paradas": 2,
-     "lat": -12.5971,
-     "lon": -69.1665,
-     "conf": "V",
-     "xy": [
-      0.21612,
-      0.32829
-     ],
-     "pais": "PE"
+     "nota": "Puerto Heath está en el departamento de La Paz (Bolivia), en la boca del Heath [E wp_puerto_heath]. Coordenada de Wikidata del pueblo (Q6092075), la de la parada 30 (antes, −12,5026, −68,6526, el punto de la boca del Heath en la poligonal del Madre de Dios)"
     },
     {
      "nombre": "Lago Sandoval",
      "paradas": 2,
+     "lat": -12.6055,
+     "lon": -69.0419,
+     "conf": "E",
+     "xy": [
+      0.21578,
+      0.33206
+     ],
+     "nota": "Coordenada de Wikidata del lago (Q1800405; antes, −12,6, −69,0 aproximada). Va antes que Puerto Maldonado: está aguas abajo de la ciudad y los km no retroceden (M3.7b; propuesta §5.4 ter)"
+    },
+    {
+     "nombre": "Puerto Maldonado",
+     "paradas": 2,
      "lat": -12.6,
-     "lon": -69.0,
+     "lon": -69.1833,
      "conf": "E",
      "xy": [
       0.216,
-      0.33333
-     ]
+      0.32778
+     ],
+     "pais": "PE",
+     "nota": "Coordenada de Wikidata de la ciudad (Q541435; antes, −12,5971, −69,1665, el punto de la boca del Tambopata en la poligonal del Madre de Dios)"
     },
     {
      "nombre": "Collpa del Tambopata",
      "paradas": 3,
-     "nota": "Coordenadas por fijar [NV]"
+     "lat": -13.1339,
+     "lon": -69.6108,
+     "conf": "E",
+     "xy": [
+      0.19464,
+      0.31482
+     ],
+     "nota": "La collpa Colorado, sobre el Tambopata [E npr2017_collpas]; coordenada de Wikidata del Tambopata Research Center (Q115641210), junto a la collpa, que no tiene elemento propio [E wp_macaw_society]"
     },
     {
      "nombre": "Boca Manu",
      "paradas": 2,
-     "lat": -12.2715,
-     "lon": -70.9328,
-     "conf": "V",
+     "lat": -12.2648,
+     "lon": -70.9102,
+     "conf": "E",
      "xy": [
-      0.22914,
-      0.27476
-     ]
+      0.22941,
+      0.27545
+     ],
+     "nota": "Coordenada de Wikidata del pueblo (Q27051064; antes, −12,2715, −70,9328, el punto de la boca del Manu en la poligonal del Madre de Dios)"
     },
     {
      "nombre": "Manu alto",
      "paradas": 2,
-     "nota": "Coordenadas por fijar [NV]"
+     "lat": -11.9,
+     "lon": -71.3667,
+     "conf": "E",
+     "xy": [
+      0.244,
+      0.26162
+     ],
+     "nota": "Coordenada de Wikidata de la Estación Biológica de Cocha Cashu (Q5139274), en una cocha del Manu; la del parque (Q390264) no está sobre el río"
     }
    ],
-   "cuidado": "Sin minería; el istmo de Fitzcarrald no es ruta (era del caucho); tinaja en el 323; Rosa y los rápidos de Teotônio: ver la propuesta §6.1 (Q3 y asesor)",
+   "cuidado": "Sin minería; el istmo de Fitzcarrald no es ruta (era del caucho); tinaja en el 323; con Q18-A, Rosa se queda en los rápidos de Teotônio y en los mundos 7 y 8 guía el bufeo boliviano: el relevo es el punto de paso teotonio del viaje del 300 (D-023, punto 19, P-M8; propuesta §6.1)",
    "puntos_de_paso_del_viaje": [
+    {
+     "id": "teotonio",
+     "lat": -8.85,
+     "lon": -64.0333,
+     "nombre": "Rápidos de Teotônio (Madeira; hoy bajo el embalse de Santo Antônio)",
+     "conf": "E",
+     "dato": "map.stop.teotonio.dato_01 [E wp_boto]: «Río arriba de Teotônio vive otra población de delfines de río, aislada por los rápidos.»",
+     "relevo_del_guia": "Rosa se queda aquí y desde aquí guía el bufeo boliviano (el mismo rig con otra paleta, sin nombre propio) hasta el viaje del 560 (Q18-A; D-023, punto 19, P-M8: el guía se deduce del mundo, sin campo nuevo en el contrato 30)",
+     "nota": "Coordenada de Wikidata de la Cachoeira Teotônio (Q22051335, de GeoNames 3661937), a unos 2 km del Madeira de respaldo [E wd_madre_de_dios]. Wikipedia EN (Amazon river dolphin): la subespecie boliviana vive «in the upper reaches of the Madeira River, upstream of the rapids of Teotonio», y «a series of rapids and waterfalls in the Madeira River have isolated one population» [E wp_boto: reabierta el 2026-10-15]. Wikipedia EN (Madeira River): los saltos de Teotônio y de San Antônio existían antes de 2012 y hoy los cubre el embalse de Santo Antônio [E wp_madeira: reabierta el 2026-10-15]; por eso el texto no dice «estos rápidos». La misma página cuenta un estudio genético que no halló ADN mitocondrial propio río arriba de los rápidos: el texto habla de «otra población», no de otra especie.",
+     "xy": [
+      0.366,
+      0.48384
+     ]
+    },
     {
      "lat": -10.3821,
      "lon": -65.3903,
@@ -5707,7 +5738,8 @@
       0.42224
      ]
     }
-   ]
+   ],
+   "detalle": "paradas_201_700, k = 30-41 (M3.7b, 2026-10-15): cada parada con su dato, su «Otro dato», su fondo y sus vetos; el lago Sandoval va antes que Puerto Maldonado (§5.4 ter)"
   },
   {
    "mundo": 8,
@@ -6805,6 +6837,829 @@
     0.67866,
     0.07065
    ]
+  },
+  {
+   "k": 30,
+   "id": "puerto_heath",
+   "nombre": "Puerto Heath",
+   "sitio": "Madre de Dios bajo (Puerto Heath, Bolivia)",
+   "niveles": [
+    301,
+    310
+   ],
+   "llegada_al_ganar": 300,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "gran_parada",
+   "pais": "BO",
+   "rio": "Madre de Dios",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -12.5022,
+   "lon": -68.65,
+   "conf": "E",
+   "wikidata": "Q6092075",
+   "ancla_rio": "madre_de_dios",
+   "km_desde_el_mar": 2874,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Puerto Heath, sobre el punto de la boca del Heath",
+   "km_casa": 2903,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 301-320 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.country.bo.dato_01",
+    "texto": "Bolivia declaró en 2012 a su delfín de río tesoro nacional, con una ley que lo protege.",
+    "etiqueta": "E",
+    "fuente": "wp_boto",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.puerto_heath.dato_01",
+     "texto": "El río Heath, que aquí llega al Madre de Dios, marca la frontera entre Bolivia y el Perú.",
+     "etiqueta": "E",
+     "fuente": "wp_heath_river, eswp_puerto_heath",
+     "releida": "2026-10-15",
+     "origen": "§5.4 ter",
+     "nota": "Wikipedia EN (Heath River): «marks the natural border between Peru and Bolivia»; Wikipedia ES (Puerto Heath): «sobre la desembocadura del río Heath en el río Madre de Dios, en la frontera con Perú» [E wp_heath_river, eswp_puerto_heath: leídas el 2026-10-15]."
+    }
+   ],
+   "nota_dato": "Gran parada del mundo 7 (la primera; D-013 punto 3), en Bolivia: la canoa llega por el viaje del 300 (Misahuallí → Napo abajo → Amazonas, repaso de lo ya lleno → Madeira, con el punto de paso teotonio → Villa Bella → Beni → Riberalta → Madre de Dios). Bandera de Bolivia al ganar el 300 (cruces_de_pais: el viaje de entrada del mundo 7; la tricolor, la bandera nacional de uso náutico [P]; la elección frente a la wiphala la revisan el abogado y el asesor, propuesta §5.3). Dato del país: Wikipedia EN (Amazon river dolphin): «In September 2012, Bolivian President Evo Morales enacted a law to protect the dolphin and declared it a national treasure» [E wp_boto: reabierta el 2026-10-15]. El texto no nombra al presidente. Enlaza con el relevo de Q18-A: desde el 300 guía el bufeo boliviano (P-M8, D-023 punto 19). La placa «Bolivia te da la bienvenida» en la victoria del 300 sería otra extensión de P-M7 [P], como la del 220: la decide el dueño con M4.5a. Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:boca_del_heath",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Madre de Dios ancho en la frontera, con la boca del Heath y una baliza (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin puesto militar. Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "banner 301 (viaje del 300 con el relevo en Teotônio)",
+    "tinte Arazá 301 (paleta completa)",
+    "miquito 302 (pichico emperador)",
+    "bandera de Bolivia (300)",
+    "guía: el bufeo boliviano desde el 300; Rosa se queda en los rápidos de Teotônio (Q18-A)"
+   ],
+   "bandera": "BO",
+   "pregunta_del_mundo": {
+    "texto": "¿Por qué los guacamayos comen arcilla?",
+    "se_responde_en": 350
+   },
+   "notas": "Coordenada de Wikidata de Puerto Heath (Q6092075), en la boca del Heath, frontera con el Perú [E wd_madre_de_dios]. La pregunta del mundo 7 se plantea al llegar (en el banner del 301, Q4-D) y la responde la llegada del 350 a la collpa (parada 35).",
+   "xy": [
+    0.21991,
+    0.34394
+   ]
+  },
+  {
+   "k": 31,
+   "id": "sandoval",
+   "nombre": "Lago Sandoval",
+   "sitio": "Lago Sandoval",
+   "niveles": [
+    311,
+    320
+   ],
+   "llegada_al_ganar": 310,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Madre de Dios",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -12.6055,
+   "lon": -69.0419,
+   "conf": "E",
+   "wikidata": "Q1800405",
+   "ancla_rio": "madre_de_dios",
+   "km_desde_el_mar": 2920,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); el lago se proyecta sobre el tramo Puerto Heath-Puerto Maldonado y se suman unos 3 km en línea recta hasta su orilla (el sendero desde el río)",
+   "km_casa": 2949,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 301-320 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.sandoval.dato_01",
+    "texto": "El lago Sandoval es una cocha: una vuelta vieja del río que quedó separada como lago.",
+    "etiqueta": "E",
+    "fuente": "wp_lake_sandoval",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.sandoval.dato_02",
+     "texto": "El lago Sandoval, de unas {n} hectáreas, es de las mayores cochas del sureste del Perú.",
+     "etiqueta": "E",
+     "fuente": "wp_lake_sandoval",
+     "args": {
+      "n": 125
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 ter",
+     "nota": "Wikipedia EN (Lake Sandoval): «one of the largest oxbow lakes in southeastern Peru, with a surface area of about 125 ha» [E wp_lake_sandoval: leída el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "Entrada en el Perú: bandera de cortesía al ganar el 310 (Q8-A; cruces_de_pais, vuelta). Wikipedia EN: «Lake Sandoval is an oxbow lake», a unos 16 km de Puerto Maldonado, con un sendero desde el Madre de Dios [E wp_lake_sandoval: leída el 2026-10-15]. «Cocha» es el nombre del lago de meandro en la Amazonía peruana (SERNANP lo usa: «lagos en forma de herradura o cochas», sernanp_manu). Sin la placa de bienvenida: es una vuelta al Perú, como el 560 y el 960 (propuesta §5.3). Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:cocha_quieta",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el lago Sandoval como un espejo, con la orilla de bosque y la neblina del amanecer (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "hito 320 [P] (primer trío: Hoja atada + Lluvia + Brote)",
+    "bandera del Perú (310, vuelta)"
+   ],
+   "bandera": "PE",
+   "notas": "Coordenada de Wikidata del lago Sandoval (Q1800405) [E wd_madre_de_dios]. Está aguas abajo de Puerto Maldonado, así que va antes que la ciudad (los km no retroceden; propuesta §5.4 ter).",
+   "xy": [
+    0.21578,
+    0.33206
+   ]
+  },
+  {
+   "k": 32,
+   "id": "sandoval_aguajal",
+   "nombre": "Aguajal de Sandoval",
+   "sitio": "Lago Sandoval",
+   "niveles": [
+    321,
+    330
+   ],
+   "llegada_al_ganar": 320,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Madre de Dios",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -12.6055,
+   "lon": -69.0419,
+   "conf": "E",
+   "wikidata": "Q1800405",
+   "ancla_rio": "madre_de_dios",
+   "km_desde_el_mar": 2920,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); el lago se proyecta sobre el tramo Puerto Heath-Puerto Maldonado y se suman unos 3 km en línea recta hasta su orilla (el sendero desde el río)",
+   "km_casa": 2949,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 321-340 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.sandoval.dato_03",
+    "texto": "En las orillas del lago Sandoval crecen aguajes, palmeras donde viven guacamayos.",
+    "etiqueta": "E",
+    "fuente": "wp_tambopata_nr",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.sandoval.dato_04",
+     "texto": "En el Bajo Amazonas (Pará), cada casa tiene cuias sin pintar que hacen de balde y de vaso.",
+     "etiqueta": "V",
+     "fuente": "TJ-T1",
+     "releida": "2026-10-15",
+     "origen": "pregunta 50 (a)",
+     "nota": "Candidato 1 de la tinaja (b.2, «Cultura»). Carvalho, Bandeira y Rocha (2020), ensayo fotográfico en la región del Aritapera (Santarém, Pará): «Nas várzeas do Baixo Amazonas, toda casa possui cuias pitingas a servirem de baldes, coiós, copos, tigelas e vasilhas» [V TJ-T1: reabierta el 2026-10-15]. Dicho con su lugar real (Pará), aunque la tarjeta sea de una parada del Perú."
+    },
+    {
+     "clave": "map.stop.sandoval.dato_05",
+     "texto": "En Quatipuru-Mirim (Pará), las fazedeiras hacen a mano vasijas de barro para la lluvia.",
+     "etiqueta": "V",
+     "fuente": "TJ-T4",
+     "releida": "2026-10-15",
+     "origen": "pregunta 50 (a)",
+     "nota": "Candidato 2 de la tinaja. Pacheco, Vieira y Costa, Revista Cocar 22 (2023): el panelão de barro de la isla de Quatipuru-Mirim (Tracuateua, Pará) cumple «a função primária de reservatório de água», porque falta agua, y lo hacen las mujeres, «as quais são chamadas de fazedeiras»; «eu comecei a fazer panelão, porque o povo mandava eu fazer para aparar água da chuva» [V TJ-T4: reabierta el 2026-10-15]. Solo agua de lluvia: ni jugos ni bebidas guardadas (propuesta de la tinaja, b.2)."
+    },
+    {
+     "clave": "map.stop.sandoval.dato_06",
+     "texto": "El barro sin esmaltar suda: el agua que se evapora por sus poros enfría la de dentro.",
+     "etiqueta": "E",
+     "fuente": "TJ-T7",
+     "releida": "2026-10-15",
+     "origen": "pregunta 50 (a)",
+     "nota": "Candidato 3 de la tinaja, el único sin lugar: un dato general (el botijo). Wikipedia EN (Botijo): «the stored water is filtered through the pores of the clay [...] it evaporates, producing a cooling» [E TJ-T7: reabierta el 2026-10-15]. La propuesta de la tinaja lo daba con [V]; aquí va con [E], porque la fuente es Wikipedia sola (cabecera de esta propuesta). No habla de Brasil ni de la Amazonía, y el texto tampoco."
+    },
+    {
+     "clave": "map.stop.sandoval.dato_07",
+     "texto": "En Icoaraci, en Pará, hay una alfarería de cerámica para el uso diario desde 1903.",
+     "etiqueta": "E",
+     "fuente": "TJ-T5",
+     "releida": "2026-10-15",
+     "origen": "pregunta 50 (a)",
+     "nota": "Candidato 4 de la tinaja. Diário do Pará (2024-06-25): «A Olaria do Espanhol foi fundada em 1903 [...]» y «trabalha a cerâmica utilitária» [E TJ-T5: reabierta el 2026-10-15]. Con [E], porque es prensa sola (la propuesta de la tinaja lo daba con [V]). El texto no nombra la ciudad a la que pertenece el distrito ni copia réplicas marajoaras o tapajônicas (veto de la tinaja, b.2)."
+    }
+   ],
+   "nota_dato": "Estreno de la Tinaja en el 323 (D-019; d.5.2). Wikipedia EN (Tambopata National Reserve): el lago Sandoval tiene «its shores covered with palm trees (maurithia) which are home to Red Bellied Macaws, blue and yellow macaws» [E wp_tambopata_nr: leída el 2026-10-15]; maurithia es el aguaje (Mauritia flexuosa). Segunda parada del mismo sitio, sin variante de luz (en 201-700 no hay héroe que la lleve): otro nombre [P] y otro dato. «Otro dato» de la tarjeta: los cuatro candidatos de Pará de la tinaja (b.2 de su propuesta), por la pregunta 50 (a) (D-022): cada uno con su lugar real y con el visto bueno del asesor, sin texto nuevo en la victoria ni en el tutorial. Para el asesor, además: el riesgo del masato (la tinaja con bebida guardada y la cuia que sirve es la escena del masato en la Amazonía peruana: propuesta de la tinaja, b.2 y Q-Ti7); ninguna bebida fermentada, ni chicha, ni el chomo shipibo, ni las tinajas kukama. Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:orilla_de_aguajes",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: la orilla del lago con palmeras de aguaje y guacamayos lejanos en vuelo (piezas del kit)",
+    "cuidado": "Ninguna tinaja ni vasija en el fondo: la tinaja solo está en el tablero. Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "estreno de la Tinaja 323 (★Ti 323-325; respaldo sin la Tinaja en d.5.4)",
+    "«Otro dato»: los cuatro candidatos de Pará (pregunta 50 (a), D-022)"
+   ],
+   "notas": "La misma coordenada que la parada 31 (Q1800405) [E wd_madre_de_dios].",
+   "xy": [
+    0.21578,
+    0.33206
+   ]
+  },
+  {
+   "k": 33,
+   "id": "puerto_maldonado",
+   "nombre": "Puerto Maldonado",
+   "sitio": "Puerto Maldonado",
+   "niveles": [
+    331,
+    340
+   ],
+   "llegada_al_ganar": 330,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Madre de Dios y Tambopata",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -12.6,
+   "lon": -69.1833,
+   "conf": "E",
+   "wikidata": "Q541435",
+   "ancla_rio": "madre_de_dios",
+   "km_desde_el_mar": 2930,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Puerto Maldonado, en la boca del Tambopata",
+   "km_casa": 2959,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 321-340 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.puerto_maldonado.dato_01",
+    "texto": "Puerto Maldonado está donde el río Tambopata se une al Madre de Dios.",
+    "etiqueta": "E",
+    "fuente": "CR-F96",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.puerto_maldonado.dato_02",
+     "texto": "El añuje abre el coco de la castaña, come semillas y entierra otras, que pueden brotar.",
+     "etiqueta": "E",
+     "fuente": "CR-F93",
+     "releida": "2026-10-15",
+     "origen": "§(e)",
+     "nota": "Candidato «la castaña y el añuje» de §(e) del mundo 7 [F93]. Wikipedia EN (Brazil nut): el agutí (en el Perú, añuje) roe el coco, «eat some of the seeds inside while burying others for later use», y «some of these are able to germinate» [E CR-F93: reabierta el 2026-10-15]. §(e) lo daba con [V]; aquí, con [E], porque es Wikipedia sola. El nombre del animal cambia por país (añuje, cutia, guatusa, picure): asesor."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Puerto Maldonado): «located at the confluence of the Tambopata and Madre de Dios rivers» [E CR-F96: reabierta el 2026-10-15]. Ningún texto habla de la minería de oro, que la misma página cuenta entre sus industrias (veto de §(e)). Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:confluencia_tambopata",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Tambopata entra en el Madre de Dios ancho, con la ciudad lejana (piezas del kit)",
+    "cuidado": "Sin el puente ni la carretera. Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "hito 340 [P] (Tinaja + Brote, Muy difícil)"
+   ],
+   "notas": "Coordenada de Wikidata de Puerto Maldonado (Q541435) [E wd_madre_de_dios]; el punto de la poligonal del Madre de Dios (la boca del Tambopata) queda a unos 2 km.",
+   "xy": [
+    0.216,
+    0.32778
+   ]
+  },
+  {
+   "k": 34,
+   "id": "puerto_maldonado_astilleros",
+   "nombre": "Astilleros de Puerto Maldonado",
+   "sitio": "Puerto Maldonado",
+   "niveles": [
+    341,
+    350
+   ],
+   "llegada_al_ganar": 340,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Madre de Dios y Tambopata",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -12.6,
+   "lon": -69.1833,
+   "conf": "E",
+   "wikidata": "Q541435",
+   "ancla_rio": "madre_de_dios",
+   "km_desde_el_mar": 2930,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Puerto Maldonado, en la boca del Tambopata",
+   "km_casa": 2959,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 341-360 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.puerto_maldonado.dato_03",
+    "texto": "En Puerto Maldonado, el turismo y la construcción de botes dan mucho trabajo.",
+    "etiqueta": "E",
+    "fuente": "CR-F96",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.puerto_maldonado.dato_04",
+     "texto": "El coco de la castaña tarda unos {n} meses en madurar después de la flor.",
+     "etiqueta": "E",
+     "fuente": "CR-F93",
+     "args": {
+      "n": 14
+     },
+     "releida": "2026-10-15",
+     "origen": "§(e)",
+     "nota": "Wikipedia EN (Brazil nut): «The fruit takes 14 months to mature after pollination of the flowers» [E CR-F93: reabierta el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "Candidato «astilleros de Puerto Maldonado» de §(e) del mundo 7 [F96]. Wikipedia EN (Puerto Maldonado): «Tourism and related boat construction are the major sources of income» [E CR-F96: reabierta el 2026-10-15]. §(e) lo daba con [V]; aquí, con [E], porque es Wikipedia sola. Segunda parada del mismo sitio, sin variante de luz: otro nombre [P] y otro dato. El texto calla la tala y la minería de la misma frase de la fuente. Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:botes_en_la_orilla",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: botes de madera a medio hacer en la orilla alta del río (piezas del kit)",
+    "cuidado": "Solo botes y madera: ninguna draga ni balsa minera. Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "estreno del Brote de dos hojas 343"
+   ],
+   "notas": "La misma coordenada que la parada 33 (Q541435) [E wd_madre_de_dios].",
+   "xy": [
+    0.216,
+    0.32778
+   ]
+  },
+  {
+   "k": 35,
+   "id": "collpa_tambopata",
+   "nombre": "Collpa del Tambopata",
+   "sitio": "Collpa del Tambopata",
+   "niveles": [
+    351,
+    360
+   ],
+   "llegada_al_ganar": 350,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Tambopata",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -13.1339,
+   "lon": -69.6108,
+   "conf": "E",
+   "wikidata": "Q115641210",
+   "ancla_rio": "tambopata",
+   "km_desde_el_mar": 3007,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); desde Puerto Maldonado, el Tambopata en línea recta hasta la estación de la collpa (77 km; el río real es bastante más largo)",
+   "km_casa": 3036,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 341-360 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.collpa_tambopata.dato_01",
+    "texto": "Según la idea más apoyada, los guacamayos comen arcilla para tomar la sal que les falta.",
+    "etiqueta": "E",
+    "fuente": "npr2017_collpas",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.collpa_tambopata.dato_02",
+     "texto": "La arcilla de una collpa tiene unas {n} veces más sodio que la comida de los loros.",
+     "etiqueta": "E",
+     "fuente": "npr2017_collpas",
+     "args": {
+      "n": 40
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 ter",
+     "nota": "NPR (2017): «Amazonian clay lick soils typically contain levels of sodium 40 times greater than the parrots' plant foods» [E npr2017_collpas: reabierta el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "Respuesta del mundo 7 (la pregunta se plantea en el 300). NPR (2017), con el estudio de Brightsmith y otros en Ibis: dos hipótesis, las toxinas y los minerales; el análisis «did support the idea that clay works as a nutrient supplement», y Brightsmith: «what is driving this is sodium, not toxins»; los propios autores piden tomarlo «with a grain of salt» [E npr2017_collpas: reabierta el 2026-10-15]. Por eso el texto dice «la idea más apoyada» y no «la ciencia demostró». Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:pared_de_arcilla",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: la pared roja de la collpa sobre el Tambopata, con guacamayos posados al amanecer (piezas del kit)",
+    "cuidado": "Sin turistas ni plataformas de observación. Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "respuesta de la pregunta del mundo 7 (350)",
+    "hito 360 [P] (Brote de dos hojas + Remolino)"
+   ],
+   "rios_locales": [
+    "tambopata"
+   ],
+   "notas": "Coordenada de Wikidata del Tambopata Research Center (Q115641210), junto a la collpa Colorado, que no tiene elemento propio: la Macaw Society trabajó en el bosque alrededor de la collpa y tuvo su sede en ese centro de 1989 a 2020 [E wd_madre_de_dios, wp_macaw_society]. La canoa sube el Tambopata desde Puerto Maldonado (rios_locales_201_700).",
+   "xy": [
+    0.19464,
+    0.31482
+   ]
+  },
+  {
+   "k": 36,
+   "id": "collpa_guacamayos",
+   "nombre": "Los guacamayos del Tambopata",
+   "sitio": "Collpa del Tambopata",
+   "niveles": [
+    361,
+    370
+   ],
+   "llegada_al_ganar": 360,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Tambopata",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -13.1339,
+   "lon": -69.6108,
+   "conf": "E",
+   "wikidata": "Q115641210",
+   "ancla_rio": "tambopata",
+   "km_desde_el_mar": 3007,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); desde Puerto Maldonado, el Tambopata en línea recta hasta la estación de la collpa (77 km; el río real es bastante más largo)",
+   "km_casa": 3036,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 361-380 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.collpa_tambopata.dato_03",
+    "texto": "A la collpa Colorado llegan cada día loros de hasta {n} especies, a veces cientos.",
+    "etiqueta": "E",
+    "fuente": "npr2017_collpas",
+    "releida": "2026-10-15",
+    "args": {
+     "n": 18
+    }
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.collpa_tambopata.dato_04",
+     "texto": "La Reserva Nacional Tambopata se creó en 2000 y protege unas {n} hectáreas.",
+     "etiqueta": "V",
+     "fuente": "elperuano_rntamb_2025",
+     "args": {
+      "n": 274690
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 ter",
+     "nota": "El Peruano (2025-10-15), resolución del SERNANP que aprueba el Plan Maestro 2025-2030: «mediante el Decreto Supremo Nº 048-2000-AG, se establece la Reserva Nacional Tambopata, sobre una superficie de 274 690 ha» [V elperuano_rntamb_2025: leída el 2026-10-15]. La cifra va como {n} (Q8-A); el año, no."
+    }
+   ],
+   "nota_dato": "NPR (2017): «At the Colorado clay lick, a cliff face rising above the Tambopata River [...] parrots — often hundreds at a time from up to 18 species — gather each day to feast on sun-hardened clay» [E npr2017_collpas: reabierta el 2026-10-15]. Segunda parada del mismo sitio: otro nombre [P] y otro dato. La cifra va como {n} (Q8-A). Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:guacamayos_en_vuelo",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: una bandada de guacamayos de colores en vuelo frente a la collpa (piezas del kit)",
+    "cuidado": "Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "Piraña con Brote de dos hojas 366"
+   ],
+   "rios_locales": [
+    "tambopata"
+   ],
+   "notas": "La misma coordenada que la parada 35 (Q115641210) [E wd_madre_de_dios].",
+   "xy": [
+    0.19464,
+    0.31482
+   ]
+  },
+  {
+   "k": 37,
+   "id": "tambopata_nidos",
+   "nombre": "Nidos del Tambopata",
+   "sitio": "Collpa del Tambopata",
+   "niveles": [
+    371,
+    380
+   ],
+   "llegada_al_ganar": 370,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Tambopata",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -13.1339,
+   "lon": -69.6108,
+   "conf": "E",
+   "wikidata": "Q115641210",
+   "ancla_rio": "tambopata",
+   "km_desde_el_mar": 3007,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); desde Puerto Maldonado, el Tambopata en línea recta hasta la estación de la collpa (77 km; el río real es bastante más largo)",
+   "km_casa": 3036,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 361-380 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.collpa_tambopata.dato_05",
+    "texto": "Aquí, los guacamayos azul y amarillo anidan casi siempre en palmeras de aguaje muertas.",
+    "etiqueta": "E",
+    "fuente": "wp_macaw_society",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.collpa_tambopata.dato_06",
+     "texto": "En la Reserva Tambopata, la zafra de la castaña va de enero a abril.",
+     "etiqueta": "E",
+     "fuente": "CR-F94",
+     "releida": "2026-10-15",
+     "origen": "§(e)",
+     "nota": "Candidato «la zafra» de §(e) del mundo 7 [F94]. Actualidad Ambiental (2011-01-05): la zafra «se da de enero hasta el mes de abril», en el ámbito de la Reserva Nacional Tambopata y del Parque Nacional Bahuaja-Sonene [E CR-F94: reabierta el 2026-10-15]. Con [E], porque es prensa sola (§(e) lo daba con [V]). La investigación de cultura-ribera anota que otras fuentes dicen de diciembre a marzo [E]; el texto se ciñe a Tambopata. Sin personas en primer plano."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (The Macaw Society, antes Tambopata Macaw Project): junto al Tambopata Research Center, «blue-and-yellow macaws in the region almost exclusively nest in dead mauritia palms» [E wp_macaw_society: leída el 2026-10-15]. Mauritia es el aguaje. Tercera parada del mismo sitio: otro nombre [P] y otro dato. Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:aguajal_con_nidos",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: palmeras de aguaje secas en un pantano, con guacamayos azul y amarillo (piezas del kit)",
+    "cuidado": "Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 380 [P] (Piraña + Brote de dos hojas)"
+   ],
+   "rios_locales": [
+    "tambopata"
+   ],
+   "notas": "La misma coordenada que la parada 35 (Q115641210) [E wd_madre_de_dios].",
+   "xy": [
+    0.19464,
+    0.31482
+   ]
+  },
+  {
+   "k": 38,
+   "id": "boca_manu",
+   "nombre": "Boca Manu",
+   "sitio": "Boca Manu",
+   "niveles": [
+    381,
+    390
+   ],
+   "llegada_al_ganar": 380,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Madre de Dios y Manu",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -12.2648,
+   "lon": -70.9102,
+   "conf": "E",
+   "wikidata": "Q27051064",
+   "ancla_rio": "madre_de_dios",
+   "km_desde_el_mar": 3146,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Boca Manu, proyectada sobre el tramo de la boca del Blanco a la del Manu",
+   "km_casa": 3175,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 381-400 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.boca_manu.dato_01",
+    "texto": "En Boca Manu, el río Manu se junta con el Alto Madre de Dios.",
+    "etiqueta": "E",
+    "fuente": "eswp_madre_de_dios, eswp_rio_manu",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [],
+   "nota_dato": "Wikipedia ES (Río Madre de Dios): el río «recibe por la derecha al río Manu (356 km), en la localidad homónima de Manú o Boca Manu»; Wikipedia ES (Río Manu): «desemboca en el río Madre de Dios, en la parte conocida como Alto Madre de Dios, muy próximo a la localidad de Boca Manu» [E eswp_madre_de_dios, eswp_rio_manu: leídas el 2026-10-15]. El texto no nombra el distrito, que lleva el nombre de Fitzcarrald (era del caucho). Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:confluencia_manu",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Manu entra en el Alto Madre de Dios, con playas de arena al amanecer (piezas del kit)",
+    "cuidado": "Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "Hoja atada con Barro 389"
+   ],
+   "notas": "Coordenada de Wikidata de Boca Manu (Q27051064), unos 2 km aguas abajo de la boca del Manu (Q2749258) [E wd_madre_de_dios].",
+   "xy": [
+    0.22941,
+    0.27545
+   ]
+  },
+  {
+   "k": 39,
+   "id": "alto_madre_de_dios",
+   "nombre": "El Alto Madre de Dios",
+   "sitio": "Boca Manu",
+   "niveles": [
+    391,
+    400
+   ],
+   "llegada_al_ganar": 390,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Alto Madre de Dios",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -12.2648,
+   "lon": -70.9102,
+   "conf": "E",
+   "wikidata": "Q27051064",
+   "ancla_rio": "madre_de_dios",
+   "km_desde_el_mar": 3146,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Boca Manu, proyectada sobre el tramo de la boca del Blanco a la del Manu",
+   "km_casa": 3175,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 381-400 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.boca_manu.dato_02",
+    "texto": "Río arriba de aquí, el Madre de Dios se llama Alto Madre de Dios y baja de los Andes.",
+    "etiqueta": "E",
+    "fuente": "eswp_madre_de_dios",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.boca_manu.dato_03",
+     "texto": "El río Manu mide unos {n} km y corre entero por la región de Madre de Dios.",
+     "etiqueta": "E",
+     "fuente": "eswp_rio_manu",
+     "args": {
+      "n": 356
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 ter",
+     "nota": "Wikipedia ES (Río Manu): «Tiene una longitud de 356 km, todos ellos en el territorio de la región de Madre de Dios» [E eswp_rio_manu: leída el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "Wikipedia ES (Río Madre de Dios): nace «en las estribaciones orientales de la cordillera de Vilcanota» y es «conocido en este primer tramo como Alto Madre de Dios» [E eswp_madre_de_dios: leída el 2026-10-15]. Segunda parada del mismo sitio: otro nombre [P] y otro dato. Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:piedemonte_madre_de_dios",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Alto Madre de Dios con los primeros cerros de los Andes al fondo (piezas del kit)",
+    "cuidado": "Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 400 [P] (Liana con fruta + Hoja atada + Barro)"
+   ],
+   "notas": "La misma coordenada que la parada 38 (Q27051064) [E wd_madre_de_dios].",
+   "xy": [
+    0.22941,
+    0.27545
+   ]
+  },
+  {
+   "k": 40,
+   "id": "manu",
+   "nombre": "Manu alto",
+   "sitio": "Manu alto",
+   "niveles": [
+    401,
+    410
+   ],
+   "llegada_al_ganar": 400,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Manu",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -11.9,
+   "lon": -71.3667,
+   "conf": "E",
+   "wikidata": "Q5139274",
+   "ancla_rio": "manu",
+   "km_desde_el_mar": 3209,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); desde la boca del Manu, el Manu en línea recta hasta Cocha Cashu (63 km)",
+   "km_casa": 3238,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 401-420 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.manu.dato_01",
+    "texto": "El Manu es parque nacional desde 1973 y Patrimonio Natural de la Humanidad desde 1987.",
+    "etiqueta": "V",
+    "fuente": "sernanp_manu",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.manu.dato_02",
+     "texto": "En el parque del Manu se han registrado más de {n} especies de aves.",
+     "etiqueta": "V",
+     "fuente": "sernanp_manu",
+     "args": {
+      "n": 1000
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 ter",
+     "nota": "SERNANP (ficha del Parque Nacional del Manu): «más de 1,000 especies de aves (en su mayoría residentes)» [V sernanp_manu: leída el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "SERNANP: «Creación 29 de mayo de 1973» y «en 1987 fue declarado Patrimonio Natural de la Humanidad» [V sernanp_manu: leída el 2026-10-15]. Los años no llevan {n}. Para el asesor, en el Manu sobre todo: los pueblos en aislamiento (mashco piro) y las comunidades que viven en el parque (Wikipedia: yora, matsigenka, harakbut y yine); el texto solo habla del parque y su fauna. Cocha Cashu es una estación de investigación de la zona restringida: la parada no la nombra. Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:selva_del_manu",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el dosel continuo del Manu sobre un río de meandros, con neblina al amanecer (piezas del kit)",
+    "cuidado": "Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "estreno de la Flor de vitória-régia 403"
+   ],
+   "rios_locales": [
+    "manu"
+   ],
+   "notas": "Coordenada de Wikidata de la Estación Biológica de Cocha Cashu (Q5139274), en una cocha del Manu, como punto del Manu alto; la del parque (Q390264: −12,14, −71,66) no está sobre el río [E wd_madre_de_dios]. La canoa sube el Manu desde su boca (rios_locales_201_700).",
+   "xy": [
+    0.244,
+    0.26162
+   ]
+  },
+  {
+   "k": 41,
+   "id": "manu_cochas",
+   "nombre": "Las cochas del Manu",
+   "sitio": "Manu alto",
+   "niveles": [
+    411,
+    420
+   ],
+   "llegada_al_ganar": 410,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "castillo",
+   "pais": "PE",
+   "rio": "Manu",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -11.9,
+   "lon": -71.3667,
+   "conf": "E",
+   "wikidata": "Q5139274",
+   "ancla_rio": "manu",
+   "km_desde_el_mar": 3209,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); desde la boca del Manu, el Manu en línea recta hasta Cocha Cashu (63 km)",
+   "km_casa": 3238,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 401-420 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.manu.dato_03",
+    "texto": "En las cochas del Manu, lagos con forma de herradura, vive el lobo de río.",
+    "etiqueta": "V",
+    "fuente": "sernanp_manu",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.manu.dato_04",
+     "texto": "En un solo árbol del Manu se encontraron más de {n} especies de hormigas.",
+     "etiqueta": "V",
+     "fuente": "sernanp_manu",
+     "args": {
+      "n": 40
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 ter",
+     "nota": "SERNANP: «al menos 300 [especies] de hormigas (en un solo árbol se encontraron más de 40 especies)» [V sernanp_manu: leída el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "SERNANP: «Destacan también los lagos en forma de herradura o cochas donde es posible observar especies que en otros ecosistemas han desaparecido, como el lobo de río y el lagarto negro» [V sernanp_manu: leída el 2026-10-15]. Cierre del mundo 7 (el «castillo»): el Madre de Dios ya está lleno hasta aquí. Segunda parada del mismo sitio: otro nombre [P] y otro dato. Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:cocha_con_lobos",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: una cocha en herradura con lobos de río asomando entre la vegetación de la orilla (piezas del kit)",
+    "cuidado": "Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 420 «Zafra» [P] (Flor + Brote de dos hojas; d.4 y d.5.2): no nombra un lugar (D-020, 28 a)",
+    "fin del mundo 7"
+   ],
+   "notas": "La misma coordenada que la parada 40 (Q5139274) [E wd_madre_de_dios].",
+   "xy": [
+    0.244,
+    0.26162
+   ]
   }
  ],
  "rios_locales_201_700": [
@@ -6909,6 +7764,111 @@
      "xy": [
       0.7097,
       0.12424
+     ]
+    }
+   ]
+  },
+  {
+   "id": "tambopata",
+   "nombre": "Tambopata (hasta la collpa Colorado)",
+   "tipo": "rio_local",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca, como el Madre de Dios al que llega (rios: madre_de_dios) [P]",
+   "paises": [
+    "PE",
+    "BO"
+   ],
+   "mundos": [
+    7
+   ],
+   "conf": "E",
+   "boca_en": "madre_de_dios",
+   "fuentes": [
+    "wd_madre_de_dios",
+    "wp_tambopata_river"
+   ],
+   "nota": "Paradas 35-37. Puntos de Wikidata del río (Q6978442): la boca, en Puerto Maldonado, y la cabecera, con sus calificadores; en medio, el Tambopata Research Center (Q115641210), junto a la collpa Colorado. Wikipedia: «merges at the city of Puerto Maldonado»; su curso alto es frontera Perú-Bolivia [E wp_tambopata_river]. Los tramos van en línea recta, de respaldo (propuesta §3.6); el trazado de producción sale de HydroRIVERS. Su anfitrión (geometry.py, HOSTS) lo añade M4.5a.",
+   "puntos": [
+    {
+     "lat": -14.5757,
+     "lon": -69.2076,
+     "nombre": "Cabecera del Tambopata",
+     "conf": "E",
+     "xy": [
+      0.13697,
+      0.32704
+     ]
+    },
+    {
+     "lat": -13.1339,
+     "lon": -69.6108,
+     "nombre": "Collpa Colorado (Tambopata Research Center)",
+     "conf": "E",
+     "xy": [
+      0.19464,
+      0.31482
+     ]
+    },
+    {
+     "lat": -12.5971,
+     "lon": -69.1665,
+     "nombre": "Boca del Tambopata (Puerto Maldonado)",
+     "conf": "E",
+     "xy": [
+      0.21612,
+      0.32829
+     ]
+    }
+   ]
+  },
+  {
+   "id": "manu",
+   "nombre": "Manu (Manu alto)",
+   "tipo": "rio_local",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca, como el Madre de Dios al que llega (rios: madre_de_dios) [P]",
+   "paises": [
+    "PE"
+   ],
+   "mundos": [
+    7
+   ],
+   "conf": "E",
+   "boca_en": "madre_de_dios",
+   "fuentes": [
+    "wd_madre_de_dios",
+    "eswp_rio_manu"
+   ],
+   "nota": "Paradas 40 y 41. La boca, de Wikidata (Q2749258), en el Alto Madre de Dios junto a Boca Manu; la cabecera, de Wikipedia ES («12º02'43.40\" Sur - 72º06'42.07\" Oeste», a 1.400 m) [E eswp_rio_manu]; en medio, Cocha Cashu (Q5139274). Los tramos van en línea recta, de respaldo; el trazado de producción sale de HydroRIVERS. Su anfitrión (geometry.py, HOSTS) lo añade M4.5a.",
+   "puntos": [
+    {
+     "lat": -12.0454,
+     "lon": -72.1117,
+     "nombre": "Cabecera del Manu",
+     "conf": "E",
+     "xy": [
+      0.23818,
+      0.23904
+     ]
+    },
+    {
+     "lat": -11.9,
+     "lon": -71.3667,
+     "nombre": "Cocha Cashu (Manu alto)",
+     "conf": "E",
+     "xy": [
+      0.244,
+      0.26162
+     ]
+    },
+    {
+     "lat": -12.2747,
+     "lon": -70.9344,
+     "nombre": "Boca del Manu",
+     "conf": "E",
+     "xy": [
+      0.22901,
+      0.27472
      ]
     }
    ]
@@ -7200,19 +8160,19 @@
    ]
   },
   {
-   "lat": -12.5971,
-   "lon": -69.1665,
-   "nombre": "Entrada en el Perú (Puerto Maldonado)",
-   "conf": "V",
+   "lat": -12.6055,
+   "lon": -69.0419,
+   "nombre": "Entrada en el Perú (lago Sandoval, aguas abajo de Puerto Maldonado)",
+   "conf": "E",
    "nivel": 310,
    "pais": "PE",
    "llega_en": {
     "mundo": 7,
-    "sitio": "Puerto Maldonado"
+    "sitio": "Lago Sandoval"
    },
    "xy": [
-    0.21612,
-    0.32829
+    0.21578,
+    0.33206
    ],
    "vuelta": true
   },
@@ -8715,8 +9675,9 @@
    "nombre": "NPR (2017), Why do parrots (and people) eat clay?",
    "url": "https://www.npr.org/sections/thesalt/2017/09/07/547981850/why-do-parrots-and-people-eat-clay",
    "licencia": "copyright (solo hechos)",
-   "uso": "Hipótesis del sodio de Brightsmith: la más apoyada, sin prueba definitiva (búsqueda del 2026-10-12)",
-   "etiqueta": "E"
+   "uso": "Hipótesis del sodio de Brightsmith: la más apoyada, sin prueba definitiva (búsqueda del 2026-10-12). Releída el 2026-10-15 (M3.7b): la collpa Colorado, sobre el Tambopata, con loros de hasta 18 especies cada día; la arcilla, con 40 veces más sodio que sus plantas; el estudio de 13 años en Ibis apoya el sodio y no las toxinas, y sus autores piden prudencia",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
   },
   {
    "id": "wp_madidi",
@@ -8747,16 +9708,18 @@
    "nombre": "Wikipedia EN, Amazon river dolphin",
    "url": "https://en.wikipedia.org/wiki/Amazon_river_dolphin",
    "licencia": "CC BY-SA 4.0",
-   "uso": "Límites de su área: cascadas (Xingu, Tapajós) y agua muy baja; los rápidos del Madeira aíslan la población boliviana, río arriba de Teotônio (leída el 2026-10-12)",
-   "etiqueta": "E"
+   "uso": "Límites de su área: cascadas (Xingu, Tapajós) y agua muy baja; los rápidos del Madeira aíslan la población boliviana, río arriba de Teotônio (leída el 2026-10-12). Releída el 2026-10-15 (M3.7b): «upstream of the rapids of Teotonio, in Bolivia»; la ley boliviana de 2012 que lo declara tesoro nacional",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
   },
   {
    "id": "wp_madeira",
    "nombre": "Wikipedia EN, Madeira River",
    "url": "https://en.wikipedia.org/wiki/Madeira_River",
    "licencia": "CC BY-SA 4.0",
-   "uso": "Frontera Bolivia-Brasil desde su formación hasta la boca del Abunã; rápidos de Teotônio, hoy bajo el embalse de Santo Antônio (leída el 2026-10-12)",
-   "etiqueta": "E"
+   "uso": "Frontera Bolivia-Brasil desde su formación hasta la boca del Abunã; rápidos de Teotônio, hoy bajo el embalse de Santo Antônio (leída el 2026-10-12). Releída el 2026-10-15 (M3.7b): los saltos de Teotônio y San Antônio, cubiertos desde 2012 por el embalse de Santo Antônio",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
   },
   {
    "id": "wp_puerto_heath",
@@ -9120,6 +10083,176 @@
    "url": "https://en.wikipedia.org/wiki/Coca_River",
    "licencia": "CC BY-SA 4.0",
    "uso": "«The two rivers join in the city of Puerto Francisco de Orellana». Leída el 2026-10-15 (M3.7a)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wd_madre_de_dios",
+   "nombre": "Wikidata (P625) de las paradas, los ríos y el punto de paso del mundo 7",
+   "url": "https://www.wikidata.org/wiki/Q1800405",
+   "licencia": "CC0",
+   "uso": "Coordenadas de Puerto Heath (Q6092075), el lago Sandoval (Q1800405), Puerto Maldonado (Q541435), el Tambopata Research Center (Q115641210), Boca Manu (Q27051064), la Estación Biológica de Cocha Cashu (Q5139274), el Parque Nacional del Manu (Q390264), los ríos Tambopata (Q6978442), Manu (Q2749258) y Heath (Q960348) y la Cachoeira Teotônio (Q22051335), con sus calificadores de boca y cabecera. Consulta del 2026-10-15 (M3.7b)",
+   "url_extra": [
+    "https://www.wikidata.org/wiki/Q115641210",
+    "https://www.wikidata.org/wiki/Q22051335"
+   ],
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_heath_river",
+   "nombre": "Wikipedia EN, Heath River",
+   "url": "https://en.wikipedia.org/wiki/Heath_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "«marks the natural border between Peru and Bolivia». Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "eswp_puerto_heath",
+   "nombre": "Wikipedia ES, Puerto Heath",
+   "url": "https://es.wikipedia.org/wiki/Puerto_Heath",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Localidad fronteriza de Bolivia «sobre la desembocadura del río Heath en el río Madre de Dios». Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_lake_sandoval",
+   "nombre": "Wikipedia EN, Lake Sandoval",
+   "url": "https://en.wikipedia.org/wiki/Lake_Sandoval",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "«an oxbow lake»; unos 16 km de Puerto Maldonado; unas 125 ha, «one of the largest oxbow lakes in southeastern Peru»; lobos de río y caimanes negros. Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_tambopata_nr",
+   "nombre": "Wikipedia EN, Tambopata National Reserve",
+   "url": "https://en.wikipedia.org/wiki/Tambopata_National_Reserve",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "El lago Sandoval, con «its shores covered with palm trees (maurithia)» donde viven guacamayos; reserva creada el 4-9-2000. Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_tambopata_river",
+   "nombre": "Wikipedia EN, Tambopata River",
+   "url": "https://en.wikipedia.org/wiki/Tambopata_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Afluente del Madre de Dios, «into which it merges at the city of Puerto Maldonado»; su curso alto es frontera Perú-Bolivia. Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "elperuano_rntamb_2025",
+   "nombre": "El Peruano (2025-10-15), Resolución de Presidencia Ejecutiva N.º 000084-2025-SERNANP/PE (Plan Maestro de la Reserva Nacional Tambopata 2025-2030)",
+   "url": "https://busquedas.elperuano.pe/dispositivo/NL/2447821-1",
+   "licencia": "norma oficial (solo hechos)",
+   "uso": "«mediante el Decreto Supremo Nº 048-2000-AG, se establece la Reserva Nacional Tambopata, sobre una superficie de 274 690 ha». Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "V",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_macaw_society",
+   "nombre": "Wikipedia EN, The Macaw Society (antes Tambopata Macaw Project)",
+   "url": "https://en.wikipedia.org/wiki/Tambopata_Macaw_Project",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Trabaja en el bosque alrededor de la collpa Colorado, en la Reserva Nacional Tambopata; sede en el Tambopata Research Center de 1989 a 2020; los guacamayos azul y amarillo «almost exclusively nest in dead mauritia palms». Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "eswp_madre_de_dios",
+   "nombre": "Wikipedia ES, Río Madre de Dios",
+   "url": "https://es.wikipedia.org/wiki/R%C3%ADo_Madre_de_Dios",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Nace en las estribaciones de la cordillera de Vilcanota; «conocido en este primer tramo como Alto Madre de Dios»; recibe al Manu en Boca Manu, al Tambopata en Puerto Maldonado y al Heath en Puerto Heath. Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "eswp_rio_manu",
+   "nombre": "Wikipedia ES, Río Manu (Perú)",
+   "url": "https://es.wikipedia.org/wiki/R%C3%ADo_Manu_(Per%C3%BA)",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "356 km, todos en la región de Madre de Dios; coordenadas de su nacimiento; desemboca en el Alto Madre de Dios, muy cerca de Boca Manu. Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "sernanp_manu",
+   "nombre": "SERNANP (gob.pe), ficha del Parque Nacional del Manu",
+   "url": "https://www.gob.pe/institucion/sernanp/informes-publicaciones/1948163-parque-nacional-del-manu",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Creado el 29-5-1973; reserva de biosfera desde 1977 y Patrimonio Natural de la Humanidad desde 1987; más de 1.000 especies de aves; más de 40 especies de hormigas en un solo árbol; las cochas, con el lobo de río y el lagarto negro. Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "V",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "CR-F93",
+   "nombre": "Wikipedia EN, Brazil nut (F93 de docs/research/cultura-ribera/investigacion.md)",
+   "url": "https://en.wikipedia.org/wiki/Brazil_nut",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "El agutí (añuje) roe el coco, come semillas y entierra otras, que germinan; el fruto tarda 14 meses en madurar. Releída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "CR-F94",
+   "nombre": "Actualidad Ambiental (2011-01-05), inicio de la zafra castañera en la Reserva Nacional Tambopata y el Parque Nacional Bahuaja-Sonene (F94 de cultura-ribera)",
+   "url": "https://www.actualidadambiental.pe/inician-zafra-castanera-2011-en-la-reserva-nacional-tambopata-y-parque-nacional-bahuaja-sonene/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "La zafra «se da de enero hasta el mes de abril»; una barrica, unos 70-75 kg. Releída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "CR-F96",
+   "nombre": "Wikipedia EN, Puerto Maldonado (F96 de cultura-ribera)",
+   "url": "https://en.wikipedia.org/wiki/Puerto_Maldonado",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "En la confluencia del Tambopata y el Madre de Dios; «Tourism and related boat construction are the major sources of income»; fundada el 10-7-1902. Releída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "TJ-T1",
+   "nombre": "Carvalho, Bandeira y Rocha, «Cuia pitinga, natureza e cultura da várzea amazônica», Aceno 7(13), 2020 (T1 de docs/research/cultura-ribera/propuesta-tinaja.md)",
+   "url": "https://periodicoscientificos.ufmt.br/ojs/index.php/aceno/article/view/8582/7555",
+   "licencia": "revista de acceso abierto (solo hechos)",
+   "uso": "«Nas várzeas do Baixo Amazonas, toda casa possui cuias pitingas a servirem de baldes, coiós, copos, tigelas e vasilhas»; ensayo en la región del Aritapera (Santarém, Pará). Releída el 2026-10-15 (M3.7b)",
+   "nota_id": "Prefijo TJ- (tinaja): los T de la propuesta de la tinaja, con el mismo número que allí.",
+   "etiqueta": "V",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "TJ-T4",
+   "nombre": "Pacheco, Vieira y Costa, «Saberes e práticas comunitárias na confecção do panelão de barro na Ilha de Quatipuru-Mirim», Revista Cocar 22, 2023 (T4 de la propuesta de la tinaja)",
+   "url": "https://periodicos.uepa.br/index.php/cocar/article/download/6824/3251/30977",
+   "licencia": "revista de acceso abierto (solo hechos)",
+   "uso": "El panelão, depósito del agua de lluvia en una isla con escasez de agua; lo hacen las fazedeiras. Releída el 2026-10-15 (M3.7b)",
+   "nota_id": "Prefijo TJ- (tinaja): los T de la propuesta de la tinaja, con el mismo número que allí.",
+   "etiqueta": "V",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "TJ-T5",
+   "nombre": "Diário do Pará (2024-06-25), «Cerâmicas de Icoaraci dão charme à Vila Sorriso» (T5 de la propuesta de la tinaja)",
+   "url": "https://diariodopara.com.br/encartes/na-estrada-com-o-diario/ceramicas-de-icoaraci-dao-charme-a-vila-sorriso/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "La Olaria do Espanhol, fundada en 1903, trabaja la cerámica utilitaria. Releída el 2026-10-15 (M3.7b)",
+   "nota_id": "Prefijo TJ- (tinaja): los T de la propuesta de la tinaja, con el mismo número que allí.",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "TJ-T7",
+   "nombre": "Wikipedia EN, Botijo (T7 de la propuesta de la tinaja)",
+   "url": "https://en.wikipedia.org/wiki/Botijo",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "El barro sin esmaltar deja pasar el agua por sus poros, que se evapora y la enfría. Releída el 2026-10-15 (M3.7b)",
+   "nota_id": "Prefijo TJ- (tinaja): los T de la propuesta de la tinaja, con el mismo número que allí.",
    "etiqueta": "E",
    "releida": "2026-10-15"
   }
