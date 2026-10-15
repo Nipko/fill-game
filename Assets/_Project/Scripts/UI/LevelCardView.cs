@@ -141,7 +141,10 @@ namespace AF.UI
         /// <summary>Tamaños de <c>map_hito_preview</c> a 100 %, de mayor a menor (sp; 14 y, si no cabe, 12, el mínimo de 02 §12).</summary>
         public static readonly float[] HitoSizesSp = { 14f, 12f };
 
-        /// <summary>Líneas máximas de <c>map_hito_preview</c> a 100 % (plan del Mapa, M2.5).</summary>
+        /// <summary>
+        /// Líneas máximas de <c>map_hito_preview</c> a 100 % (plan del Mapa, M2.5). Al 130 % la línea conserva el tamaño elegido a
+        /// 100 % por la escala y la tarjeta crece (02 §12: «los contenedores crecen»), así que puede pasar a 3 líneas [P].
+        /// </summary>
         public const int MaxHitoLines = 2;
 
         /// <summary>Origen de la silueta del hito: el PNG del héroe del sitio.</summary>
@@ -189,6 +192,20 @@ namespace AF.UI
         // El Negro del Encuentro en la ventanita: su agua, a medias con este marrón casi negro [P], para que contraste en valor
         // con la cuña beige del Solimões.
         private static readonly Color HitoBlackWater = new Color(0.11f, 0.07f, 0.04f, 1f);
+
+        // Selva lejana de las piezas por código (revisión de M2.5) [P]: una línea fina de este verde sobre el horizonte, en lugar
+        // de la franja turquesa de la orilla, que en el Encuentro se leía como mar y no como dos ríos.
+        private static readonly Color HitoCodeShore = new Color32(0x3F, 0x6B, 0x48, 0xFF);
+        private const float HitoCodeShoreDp = 1.5f;
+
+        // Amacayacu en la ventanita (revisión de M2.5) [P]: la selva cerrada, de este verde oscuro, desde la base de las copas
+        // (la más alta de su silueta, en dp del héroe de 240) hasta el horizonte, sin el cielo crema ni la franja turquesa entre
+        // los troncos; los troncos, cortados en la línea del agua (su silueta los baja 1 dp del héroe bajo el horizonte), y el
+        // reflejo como mucho a HitoJungleReflectionAlpha. Solo en la ventanita: el panorama del tablero no cambia.
+        private static readonly Color HitoJungle = new Color32(0x2F, 0x5A, 0x3A, 0xFF);
+        private const float HitoJungleCanopyBaseDp = 13f;
+        private const float HitoJungleTrunkFootDp = 1f;
+        private const float HitoJungleReflectionAlpha = 0.3f;
 
         // Ondas del agua de la ventanita [P]: (dp bajo el horizonte, x inicial, x final), de tres en tres.
         private static readonly float[] HitoRipples = { 3f, 6f, 18f, 3f, 44f, 56f, 6f, 24f, 38f };
@@ -932,6 +949,8 @@ namespace AF.UI
             _hitoStop = null;
             _hitoOn = false;
             _hitoOmitted = false;
+            _hitoDivider.gameObject.SetActive(false); // sin tarjeta, los accesores de la fila (HitoText…) no la ven
+            _hitoRow.gameObject.SetActive(false);
             _group.alpha = 1f;
             _pop.localScale = Vector3.one;
             if (_root.gameObject.activeSelf)
@@ -1127,16 +1146,35 @@ namespace AF.UI
             water.a = 1f;
 
             StopShapeGraphic g = _hitoScene;
+            Color waterTop = Color.Lerp(water, skyHorizon, 0.3f);
             g.Rect(0f, 0f, w, hy, skyTop, skyHorizon);
-            g.Rect(0f, hy, w, h, Color.Lerp(water, skyHorizon, 0.3f), water);
+            g.Rect(0f, hy, w, h, waterTop, water);
 
             // La orilla lejana (la selva del panorama) sobre el horizonte, para que la franja de abajo se lea como río y no como
-            // arena; y unas ondas claras en el agua.
-            Color shoreTop = Palette.FarPalm * lut;
-            Color shoreBottom = Palette.FarShore * lut;
-            shoreTop.a = 1f;
-            shoreBottom.a = 1f;
-            g.Rect(0f, hy - 2f, w, hy, shoreTop, shoreBottom);
+            // arena; y unas ondas claras en el agua. En las piezas por código, una línea fina de selva lejana; en Amacayacu, la
+            // selva cerrada hasta la base de las copas.
+            bool jungle = _hitoSource == HitoSilhouetteShape && shape == StopShapes.Amacayacu;
+            if (codePiece)
+            {
+                Color codeShore = HitoCodeShore * lut;
+                codeShore.a = 1f;
+                g.Rect(0f, hy - HitoCodeShoreDp, w, hy, codeShore, codeShore);
+            }
+            else if (jungle)
+            {
+                Color forest = HitoJungle * lut;
+                forest.a = 1f;
+                g.Rect(0f, hy - (HitoJungleCanopyBaseDp * k), w, hy, forest, forest);
+            }
+            else
+            {
+                Color shoreTop = Palette.FarPalm * lut;
+                Color shoreBottom = Palette.FarShore * lut;
+                shoreTop.a = 1f;
+                shoreBottom.a = 1f;
+                g.Rect(0f, hy - 2f, w, hy, shoreTop, shoreBottom);
+            }
+
             Color ripple = Palette.WaterLine;
             ripple.a = 0.45f;
             if (!codePiece)
@@ -1183,8 +1221,14 @@ namespace AF.UI
             var heroLut = new Color(lut.r * HitoHeroValue, lut.g * HitoHeroValue, lut.b * HitoHeroValue, 1f);
             if (_hitoSource == HitoSilhouetteShape && shape != null)
             {
-                StopShapes.Draw(g, shape, w * 0.5f, hy, k, heroLut, stop.Backdrop.Lut, water, StopBackdrop.ReflectionAlpha,
-                    StopBackdrop.ReflectionDp);
+                float reflection = jungle ? Mathf.Min(StopBackdrop.ReflectionAlpha, HitoJungleReflectionAlpha) : StopBackdrop.ReflectionAlpha;
+                StopShapes.Draw(g, shape, w * 0.5f, hy, k, heroLut, stop.Backdrop.Lut, water, reflection, StopBackdrop.ReflectionDp);
+                if (jungle)
+                {
+                    // Los troncos, cortados en la línea del agua: el agua de la ventanita otra vez sobre lo que bajan del horizonte.
+                    float foot = HitoJungleTrunkFootDp * k;
+                    g.Rect(0f, hy, w, hy + foot, waterTop, Color.Lerp(waterTop, water, foot / (h - hy)));
+                }
             }
 
             g.Commit();

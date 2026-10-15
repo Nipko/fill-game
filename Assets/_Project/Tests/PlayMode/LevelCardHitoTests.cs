@@ -136,6 +136,14 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
             CardSetup.StepUntilPlaying(boot);
             Assert.That(view.LevelCard.Visible, Is.False);
+
+            // Ya oculta, la tarjeta no anuncia la fila de la anterior.
+            Assert.That(view.LevelCard.HitoStop, Is.Null, "oculta, sin parada");
+            Assert.That(view.LevelCard.HitoText, Is.Null, "oculta, sin línea");
+            Assert.That(view.LevelCard.HitoRowRect, Is.Null, "oculta, sin fila");
+            Assert.That(view.LevelCard.HitoWindowRect, Is.Null, "oculta, sin ventanita");
+            Assert.That(view.LevelCard.HitoSilhouette, Is.EqualTo(LevelCardView.HitoSilhouetteNone), "oculta, sin silueta");
+            Assert.That(view.LevelCard.HitoLines, Is.EqualTo(0), "oculta, sin líneas");
         }
 
         [UnityTest]
@@ -315,7 +323,9 @@ namespace AF.Tests.PlayMode
         public IEnumerator Level100_Fits_InALiteral360x640Canvas_At130_OrTheRowIsOmitted()
         {
             // El lienzo del juego mide siempre al menos 360 × 780 dp (02 §5); aquí, la vista sola en 360 × 640 dp literales con la
-            // zona segura de 32 y 16 dp. Y, en un lienzo demasiado bajo, la fila se omite y la tarjeta queda como sin ella.
+            // zona segura de 32 y 16 dp. Y, en el límite: el alto libre (el lienzo menos la zona segura y 16 dp de aire) igual al
+            // de la tarjeta con la fila, la fila sale; con 1 dp menos, o justo el de la tarjeta sin ella, se omite y la tarjeta queda
+            // como sin ella.
             yield return CardSetup.Load(100);
             GameScreen view = GameBootstrap.Current!.View!;
             LevelCardView card = view.LevelCard;
@@ -331,12 +341,68 @@ namespace AF.Tests.PlayMode
 
             card.Show(info, null, string.Empty, false, 360f, 640f, 32f, 16f);
             float bare = card.Panel.rect.height;
-            float tight = bare + 48f + 4f; // el alto libre justo para la tarjeta sin la fila
-            card.Show(info, stop, "white", false, 360f, tight, 32f, 16f);
+            Assert.That(height, Is.GreaterThan(bare), "la fila añade su alto");
+            const float reserved = 32f + 16f + 16f; // zona segura arriba y abajo, y el aire de la colocación
+
+            // El alto libre, justo el de la tarjeta con la fila: cabe y la fila sale.
+            card.Show(info, stop, "white", false, 360f, height + reserved, 32f, 16f);
+            Assert.That(card.HitoOmitted, Is.False, "con el alto libre justo para la tarjeta con la fila, la fila sale");
+            Assert.That(card.HitoText, Is.Not.Null);
+            Assert.That(card.HitoRowRect, Is.Not.Null);
+            Assert.That(card.Panel.rect.height, Is.EqualTo(height).Within(0.01f), "la misma tarjeta con la fila");
+
+            // 1 dp menos: ya no cabe y la fila se omite.
+            card.Show(info, stop, "white", false, 360f, height + reserved - 1f, 32f, 16f);
+            Assert.That(card.HitoOmitted, Is.True, "con 1 dp menos, la fila se omite");
+            Assert.That(card.HitoText, Is.Null);
+            Assert.That(card.Panel.rect.height, Is.EqualTo(bare).Within(0.01f), "y la tarjeta queda como sin ella");
+
+            // El alto libre, justo el de la tarjeta sin la fila.
+            card.Show(info, stop, "white", false, 360f, bare + reserved, 32f, 16f);
             Assert.That(card.HitoOmitted, Is.True, "sin sitio, la fila se omite");
             Assert.That(card.HitoText, Is.Null);
             Assert.That(card.HitoRowRect, Is.Null);
             Assert.That(card.Panel.rect.height, Is.EqualTo(bare).Within(0.01f), "y la tarjeta queda como sin ella");
+        }
+
+        [UnityTest]
+        public IEnumerator Probe_Relayout_RepublishesTheCardLayout()
+        {
+            // Al recolocar la tarjeta abierta (otra escala u otra pantalla), AF_LAYOUT level_card vuelve a salir con los
+            // rectángulos de ahora, el de la tarjeta y el de la fila (level_card_hito), para que quien toca por adb no use los de
+            // antes; y AF_STATE level_card, con la escala nueva.
+            using (var log = new AfLayoutLog())
+            {
+                yield return CardSetup.Load(40);
+                GameBootstrap boot = GameBootstrap.Current!;
+                GameScreen view = boot.View!;
+                LevelCardView card = view.LevelCard;
+                string? first = log.LastOf("level_card", 40);
+                Assert.That(first, Is.Not.Null, "AF_LAYOUT level_card al terminar la entrada");
+                AssertCardLayout(first!, card, "al entrar");
+
+                log.Clear();
+                view.CardFontScale = 1.3f;
+                Assert.That(log.AllOf("level_card", 40).Count, Is.EqualTo(1), "una línea nueva al cambiar la escala");
+                string scaled = log.LastOf("level_card", 40)!;
+                AssertCardLayout(scaled, card, "al 130 %");
+                Assert.That(AfLayoutLog.Button(scaled, "level_card")!.Value.height, Is.GreaterThan(AfLayoutLog.Button(first!, "level_card")!.Value.height), "la tarjeta crece al 130 %");
+                Assert.That(view.LastCardProbe, Does.Contain("\"scale\":1.30"));
+
+                log.Clear();
+                GameScreen.SimulatedScreen = HudLabelTests.Screen640;
+                PlayModeHelpers.Step(boot, 50);
+                Assert.That(log.AllOf("level_card", 40).Count, Is.EqualTo(1), "una línea nueva al cambiar la pantalla");
+                AssertCardLayout(log.LastOf("level_card", 40)!, card, "en 16:9");
+            }
+        }
+
+        // La línea AF_LAYOUT level_card publica la tarjeta y su fila del hito tal como se ven ahora.
+        private static void AssertCardLayout(string line, LevelCardView card, string where)
+        {
+            Assert.That(AfLayoutLog.ButtonIds(line), Is.EqualTo(new[] { "level_card", "level_card_hito" }), where + ": " + line);
+            Assert.That(AfLayoutLog.Button(line, "level_card"), Is.EqualTo(AfLayoutLog.Published(card.Panel)), "la tarjeta: " + where);
+            Assert.That(AfLayoutLog.Button(line, "level_card_hito"), Is.EqualTo(AfLayoutLog.Published(card.HitoRowRect!)), "la fila: " + where);
         }
 
         [UnityTest]
