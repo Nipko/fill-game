@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using AF.Core.Mechanics;
 using AF.GameFlow;
 using AF.Levels;
+using AF.Save;
 using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
@@ -288,6 +289,66 @@ namespace AF.Tests.EditMode
             Assert.That(flow.LevelNumber, Is.EqualTo(debut), "el número de campaña no cambia");
             Assert.That(flow.Level, Is.SameAs(replacement), "se juega el tablero del override");
             Assert.That(flow.Level.HasMechanic(MechanicType.Matapi), Is.False);
+        }
+
+        [Test]
+        public void LoadingALevel_WithoutOverride_ServesThePublished_AndWarnsOnce_InTheFlow()
+        {
+            IReadOnlyList<LevelPack> packs = TestPacks.Campaign;
+            LevelCatalog plain = LevelCatalog.Create(packs);
+            int debut = FirstWith(plain, MechanicSwitch.Matapi);
+            var warnings = new List<string>();
+            LevelCatalog catalog = LevelCatalog.Create(packs, 0, LevelOverrides.Empty, MechanicSwitches.AllOn.With(MechanicSwitch.Matapi, false), warnings.Add);
+
+            var flow = new LevelFlow(catalog, new MemoryProgressStore(), new RecordingListener());
+            flow.Load(debut);
+            Assert.That(flow.LevelNumber, Is.EqualTo(debut));
+            Assert.That(flow.Level, Is.SameAs(plain.Find(debut)), "sin override: el tablero publicado");
+            Assert.That(warnings.Count, Is.EqualTo(1), "la carga del nivel escribe el aviso");
+            Assert.That(warnings[0], Does.Contain("usa mech_enabled.matapi = false"));
+
+            flow.Load(debut);
+            Assert.That(flow.Level, Is.SameAs(plain.Find(debut)));
+            Assert.That(warnings.Count, Is.EqualTo(1), "volver a cargar el nivel no repite el aviso");
+        }
+
+        [Test]
+        public void ResumingALevel_WithoutOverride_WarnsIfNotYetWarned_AndNeverTwice()
+        {
+            IReadOnlyList<LevelPack> packs = TestPacks.Campaign;
+            LevelCatalog plain = LevelCatalog.Create(packs);
+            int debut = FirstWith(plain, MechanicSwitch.Matapi);
+            MechanicSwitches switches = MechanicSwitches.AllOn.With(MechanicSwitch.Matapi, false);
+            var store = new MemoryLevelStateStore();
+
+            // Primera sesión: se carga el nivel (un aviso) y queda guardado en curso.
+            var firstWarnings = new List<string>();
+            LevelCatalog firstCatalog = LevelCatalog.Create(packs, 0, LevelOverrides.Empty, switches, firstWarnings.Add);
+            var first = new LevelFlow(firstCatalog, new MemoryProgressStore(), new RecordingListener()) { StateStore = store };
+            first.Load(debut);
+            Assert.That(first.TapAnywhere(), Is.True);
+            Assert.That(firstWarnings.Count, Is.EqualTo(1));
+            LevelStateData saved = store.Load()!;
+            Assert.That(saved.Level, Is.EqualTo(debut));
+
+            // Con el catálogo que ya avisó, reanudar no repite el aviso.
+            var sameCatalog = new LevelFlow(firstCatalog, new MemoryProgressStore(), new RecordingListener()) { StateStore = store };
+            Assert.That(sameCatalog.Resume(saved), Is.True);
+            Assert.That(firstWarnings.Count, Is.EqualTo(1), "el aviso ya estaba escrito");
+
+            // Se reabre la app (catálogo nuevo): reanudar es la carga del nivel y escribe el aviso; cargarlo después, no.
+            var warnings = new List<string>();
+            LevelCatalog catalog = LevelCatalog.Create(packs, 0, LevelOverrides.Empty, switches, warnings.Add);
+            var again = new LevelFlow(catalog, new MemoryProgressStore(), new RecordingListener()) { StateStore = store };
+            Assert.That(again.CheckResume(saved), Is.EqualTo(ResumeCheck.Resumable));
+            Assert.That(warnings, Is.Empty, "comprobar el estado no avisa");
+            Assert.That(again.Resume(saved), Is.True);
+            Assert.That(again.Level, Is.SameAs(plain.Find(debut)), "sin override: el tablero publicado");
+            Assert.That(warnings.Count, Is.EqualTo(1), "reanudar escribe el aviso");
+            Assert.That(warnings[0], Does.Contain("usa mech_enabled.matapi = false"));
+
+            again.Load(debut);
+            Assert.That(warnings.Count, Is.EqualTo(1), "cargar el nivel tras reanudarlo no repite el aviso");
         }
 
         [Test]
