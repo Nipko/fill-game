@@ -41,6 +41,9 @@ namespace AF.Presentation
         /// <summary>Triángulos de la malla.</summary>
         public int TriangleCount => _indexCount / 3;
 
+        /// <summary>Veces que se generó la malla para el <c>CanvasRenderer</c> (<c>OnPopulateMesh</c>; tests).</summary>
+        public int PopulateCount { get; private set; }
+
         /// <summary>La malla no tiene ningún triángulo.</summary>
         public bool IsEmpty => _indexCount == 0;
 
@@ -61,6 +64,12 @@ namespace AF.Presentation
         {
             Vector2 p = _pos[i];
             return new Vector2(p.x, -p.y);
+        }
+
+        /// <summary>Índice del vértice <paramref name="i"/> de la lista de triángulos (de 3 en 3; tests).</summary>
+        public int TriangleIndexAt(int i)
+        {
+            return _tri[i];
         }
 
         /// <summary>Color del vértice <paramref name="i"/> (tests).</summary>
@@ -160,6 +169,7 @@ namespace AF.Presentation
         /// <inheritdoc />
         protected override void OnPopulateMesh(VertexHelper vh)
         {
+            PopulateCount++;
             vh.Clear();
             UIVertex v = UIVertex.simpleVert;
             for (int i = 0; i < _vertexCount; i++)

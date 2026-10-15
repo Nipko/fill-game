@@ -19,10 +19,13 @@ namespace AF.UI
     /// intro, sin añadir tiempo a la carga; corte directo en la primera carga y con Reducir movimiento.</item>
     /// <item>El panel, la intro y la tropa no cambian; nada del fondo recibe toques.</item>
     /// </list>
-    /// <para>En desarrollo, al cargar cada nivel, <c>AF_STATE {"event":"stop",…}</c> con <c>level</c>, <c>stop</c> (k o null),
-    /// <c>id</c>, <c>world</c>, <c>hero</c> (<c>png</c>, <c>shape</c> o <c>none</c>), <c>shape</c>, <c>code</c>, <c>lut</c>,
-    /// <c>water</c>, <c>change</c> (<c>cut</c>, <c>fade</c> o <c>same</c>) y <c>build_ms</c> (lo que costó componerlo; ≤ 8 ms,
-    /// 08 §5.4).</para>
+    /// <para>En desarrollo, al cargar cada nivel, <c>AF_STATE {"event":"stop",…}</c> con los campos de docs/dev/prototipo-v0.md:
+    /// <c>level</c>, <c>stop</c> (k o null), <c>id</c>, <c>world</c>, <c>hero</c> (la ranura o la pieza del kit que se pinta, o
+    /// null; <see cref="StopBackdrop.HeroId"/>), <c>lut</c>, <c>water</c>, <c>fade</c> (true si hubo fundido) y <c>build_ms</c> (lo
+    /// que costó componerlo con sus mallas; ≤ 8 ms, 08 §5.4); y además <c>hero_src</c> (<c>png</c>, <c>shape</c> o <c>none</c>),
+    /// <c>shape</c>, <c>code</c> y <c>change</c> (<c>cut</c>, <c>fade</c> o <c>same</c>).</para>
+    /// <para>La banda de agua no se pinta bajo el relleno opaco del panel (<see cref="StopBackdrop.PanelHoleInsetDp"/>), y el
+    /// hueco sigue al tablero cuando sube con la victoria o un modal.</para>
     /// </summary>
     public sealed partial class GameScreen
     {
@@ -39,6 +42,10 @@ namespace AF.UI
         private bool _stopLoadedOnce;
         private string? _lastStopProbe;
         private string _lastStopChange = StopChangeSame;
+        private float _stopHorizon;
+        private float _stopPanelTop;
+        private bool _stopHasBoard;
+        private float _stopHoleShift;
         private readonly StringBuilder _stopProbeSb = new StringBuilder(256);
 
         /// <summary>Fondo de la parada (tests y capturas).</summary>
@@ -65,6 +72,9 @@ namespace AF.UI
         /// <summary>Garza de la escena (tests: el fondo de la parada va justo detrás).</summary>
         internal RectTransform HeronRect => _heron.rectTransform;
 
+        /// <summary>Panel del tablero donde se ve ahora, con el desplazamiento del tablero (dp desde arriba; tests).</summary>
+        internal Rect StopPanelRect => PanelRect();
+
         /// <summary>
         /// Parada cuyo fondo lleva el nivel <paramref name="level"/>: la suya (<see cref="RiverStopCatalog.StopOf"/>) o, con
         /// <paramref name="perStop"/> = false (<c>ui_bg_per_stop</c>, 08 §9), la gran parada de su mundo
@@ -88,7 +98,29 @@ namespace AF.UI
 
         partial void StopLayoutBackdrop(float horizon, float panelTop, bool hasBoard)
         {
-            _stopBackdrop.Layout(_canvasW, horizon, panelTop, hasBoard, StopBandBottom());
+            _stopHorizon = horizon;
+            _stopPanelTop = panelTop;
+            _stopHasBoard = hasBoard;
+            LayoutStopBackdrop();
+        }
+
+        // La banda deja sin pintar lo que tapa el relleno opaco del panel (guía §8), allí donde se ve ahora (con el desplazamiento
+        // del tablero de la victoria o de un modal).
+        private void LayoutStopBackdrop()
+        {
+            Rect hole = new Rect(0f, 0f, 0f, 0f);
+            _stopHoleShift = _boardShift;
+            if (_stopHasBoard)
+            {
+                Rect panel = PanelRect();
+                float inset = StopBackdrop.PanelHoleInsetDp;
+                if (panel.width > 2f * inset && panel.height > 2f * inset)
+                {
+                    hole = new Rect(panel.x + inset, panel.y + inset, panel.width - (2f * inset), panel.height - (2f * inset));
+                }
+            }
+
+            _stopBackdrop.Layout(_canvasW, _stopHorizon, _stopPanelTop, _stopHasBoard, StopBandBottom(), hole);
         }
 
         partial void StopLevelLoaded(LevelFlow flow)
@@ -96,7 +128,9 @@ namespace AF.UI
             RiverStop? stop = StopForLevel(RiverStops, flow.LevelNumber, MapConfig.UiBgPerStop);
             string water = flow.Level.WaterBase;
             RiverStop? before = _stopBackdrop.Stop;
-            bool same = ReferenceEquals(before, stop) && string.Equals(_stopBackdrop.Water, water, System.StringComparison.Ordinal);
+            // Sin parada antes ni después no cambia nada visible, aunque cambie el agua del mundo (201 en adelante, sin catálogo).
+            bool same = (before == null && stop == null)
+                || (ReferenceEquals(before, stop) && string.Equals(_stopBackdrop.Water, water, System.StringComparison.Ordinal));
             bool fade = _stopLoadedOnce && !flow.ReduceMotion && !same;
             _stopLoadedOnce = true;
             _stopBackdrop.Apply(stop, water, fade, MapConfig.StopCrossfadeMs);
@@ -107,6 +141,11 @@ namespace AF.UI
 
         partial void StopTick(float dtMs)
         {
+            if (_stopHasBoard && !Mathf.Approximately(_boardShift, _stopHoleShift))
+            {
+                LayoutStopBackdrop(); // el tablero se movió: el hueco de la banda lo sigue (sin asignar memoria)
+            }
+
             if (_stopBackdrop.Tick(dtMs))
             {
                 ApplyStopLut();
@@ -154,28 +193,53 @@ namespace AF.UI
             sb.Append(",\"stop\":").Append(stop == null ? "null" : stop.N.ToString(CultureInfo.InvariantCulture));
             AppendJsonString(sb, "id", stop?.Id);
             sb.Append(",\"world\":").Append(stop == null ? "null" : stop.World.ToString(CultureInfo.InvariantCulture));
-            AppendJsonString(sb, "hero", b.HeroSource);
-            AppendJsonString(sb, "shape", b.Shape);
-            AppendJsonString(sb, "code", b.Code);
+            AppendJsonString(sb, "hero", b.HeroId);
             AppendJsonString(sb, "lut", stop?.Backdrop.Lut);
             AppendJsonString(sb, "water", b.Water);
-            AppendJsonString(sb, "change", _lastStopChange);
+            sb.Append(",\"fade\":").Append(_lastStopChange == StopChangeFade ? "true" : "false");
             sb.Append(",\"build_ms\":").Append(b.BuildMs.ToString("0.###", CultureInfo.InvariantCulture));
+            AppendJsonString(sb, "hero_src", b.HeroSource);
+            AppendJsonString(sb, "shape", b.Shape);
+            AppendJsonString(sb, "code", b.Code);
+            AppendJsonString(sb, "change", _lastStopChange);
             _lastStopProbe = sb.ToString();
             _probe.Event("stop", _lastStopProbe);
         }
 
-        private static void AppendJsonString(StringBuilder sb, string key, string? value)
+        // ,"key":"valor" con el valor escapado como cadena JSON (comillas, barras y controles), o ,"key":null. Sin asignar.
+        internal static void AppendJsonString(StringBuilder sb, string key, string? value)
         {
             sb.Append(",\"").Append(key).Append("\":");
             if (value == null)
             {
                 sb.Append("null");
+                return;
             }
-            else
+
+            sb.Append('"');
+            for (int i = 0; i < value.Length; i++)
             {
-                sb.Append('"').Append(value).Append('"');
+                char c = value[i];
+                if (c == '"' || c == '\\')
+                {
+                    sb.Append('\\').Append(c);
+                }
+                else if (c < ' ')
+                {
+                    sb.Append("\\u00").Append(HexDigit(c >> 4)).Append(HexDigit(c & 0xF));
+                }
+                else
+                {
+                    sb.Append(c);
+                }
             }
+
+            sb.Append('"');
+        }
+
+        private static char HexDigit(int v)
+        {
+            return (char)(v < 10 ? '0' + v : 'a' + (v - 10));
         }
     }
 }

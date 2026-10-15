@@ -13,14 +13,19 @@ namespace AF.Presentation
     /// <list type="number">
     /// <item><b>0a, cielo</b> con la hora del mundo de 07 §2.1 (o la luz de la parada: atardecer en la 9, alba en la 19), un
     /// degradado por vértice con alfa ≤ <see cref="SkyMaxAlpha"/> sobre el cielo del panorama [P]; en el atardecer y el alba,
-    /// hasta <see cref="SkyLowMaxAlpha"/> en el tercio de abajo, para que la hora se lea a tamaño de teléfono. El mundo 1 va
-    /// sin tinte: el panorama ya es su alba dorada.</item>
+    /// hasta <see cref="SkyLowMaxAlpha"/> en el tercio de abajo, para que la hora se lea a tamaño de teléfono (por encima del
+    /// ≤ 0,5 del plan del Mapa: pendiente del dueño con la hoja 02f). El mundo 1 va sin tinte: el panorama ya es su alba
+    /// dorada.</item>
     /// <item><b>0e, banda de agua del primer plano</b> con el <c>water_base</c> del mundo (07 §2.1; VA-23: ΔE00 ≤ 5), opaca bajo
     /// los <see cref="BandFadeDp"/> dp de junto al horizonte, donde deja ver el reflejo del cielo del panorama, con ondas finas
-    /// del mismo tono. En el alba, bruma baja sobre ella, que entra con un degradado de <see cref="MistFadeDp"/> dp.</item>
-    /// <item><b>0d, piezas por código</b>: la línea del Tapajós (#2E8B8B delante) contra el Amazonas (#B08A5A detrás) en
-    /// Santarém, una franja de agua de ≥ 28 dp con las ondas de la banda, y la diagonal negra y beige del Encuentro (#4A2C14 y
-    /// #B08A5A), que empieza en el borde de la pantalla. Las dos aguas se juntan en una costura recta de <see cref="SeamDp"/>
+    /// del mismo tono. Con tablero, no pinta lo que tapa el relleno opaco del panel (su rectángulo menos
+    /// <see cref="PanelHoleInsetDp"/> dp por lado; guía §8, capas a pantalla completa). En el alba, bruma baja sobre ella, que
+    /// entra con un degradado de <see cref="MistFadeDp"/> dp.</item>
+    /// <item><b>0d, piezas por código</b>: en Santarém, el Amazonas (#B08A5A) opaco desde el horizonte, con el reflejo de la
+    /// orilla al <see cref="ShoreReflectionAlpha"/> y las ondas de la banda, hasta una costura ondulada (seno de
+    /// <see cref="SeamWaveDp"/> dp y <see cref="SeamWavePeriodDp"/> dp de periodo) con el Tapajós (#2E8B8B) delante, y la
+    /// columna de reflejo del sol del panorama que cruza las dos aguas; y la diagonal negra y beige del Encuentro (#4A2C14 y
+    /// #B08A5A), recta, que empieza en el borde de la pantalla. Las dos aguas se juntan en una costura de <see cref="SeamDp"/>
     /// dp de #E8F0E8 al 60 % con <see cref="SeamBlendDp"/> dp de mezcla a cada lado. Ya son definitivas: salen también en
     /// release.</item>
     /// <item><b>0c, héroe</b>: el PNG de su ranura (<c>bg_hero_&lt;sitio&gt;</c>, <see cref="ArtSlots"/>) de
@@ -34,10 +39,11 @@ namespace AF.Presentation
     /// aquí tiñe el héroe y no la banda (VA-23). La LUT de temporada la añade SE2 y el velo de Muy difícil no se toca.
     /// <para>Sin parada (sin catálogo, o del 201 en adelante mientras no haya paradas) no pinta nada: el aspecto de hoy. Al
     /// cambiar de composición puede fundir en <c>fadeMs</c> (<see cref="Apply"/>): la nueva entra encima con dos juegos de capas
-    /// que se alternan; la vieja se queda entera debajo, así que su banda opaca nunca deja ver el panorama a mitad del fundido,
-    /// y solo lo que la nueva no tapa (cielo, piezas y héroe) se va con ella. Solo mallas por vértice, sin texturas en tiempo
-    /// de ejecución; construir una composición cuesta décimas de milisegundo (<see cref="BuildMs"/>) y <see cref="Tick"/> no
-    /// asigna memoria.</para>
+    /// que se alternan, cada uno con su composición; la vieja se queda entera debajo, así que su banda opaca nunca deja ver el
+    /// panorama a mitad del fundido, y solo lo que la nueva no tapa (cielo, piezas y héroe) se va con ella. Una maquetación
+    /// nueva a mitad del fundido (<see cref="Layout"/>) rehace las dos capas y el fundido sigue. Solo mallas por vértice, sin
+    /// texturas en tiempo de ejecución; construir una composición con sus mallas cuesta décimas de milisegundo
+    /// (<see cref="BuildMs"/>) y <see cref="Tick"/> no asigna memoria.</para>
     /// </summary>
     public sealed class StopBackdrop
     {
@@ -62,7 +68,11 @@ namespace AF.Presentation
         /// <summary>Tope de opacidad del tinte del cielo (plan del Mapa, M1.4) [P].</summary>
         public const float SkyMaxAlpha = 0.5f;
 
-        /// <summary>Tope de opacidad del tinte en el tercio de abajo del cielo, solo con la luz <c>dusk</c> o <c>dawn</c> [P].</summary>
+        /// <summary>
+        /// Tope de opacidad del tinte en el tercio de abajo del cielo, solo con la luz <c>dusk</c> o <c>dawn</c> [P]. Se aparta
+        /// del «alfa ≤ 0,5» del plan del Mapa (M1.4, punto 1a) para que el alba de la parada 19 se distinga del atardecer
+        /// (revisión de M1.4): pendiente del dueño con la hoja 02f.
+        /// </summary>
         public const float SkyLowMaxAlpha = 0.7f;
 
         /// <summary>Grosor de la costura entre dos aguas (dp) [P].</summary>
@@ -70,6 +80,33 @@ namespace AF.Presentation
 
         /// <summary>Mezcla de las dos aguas a cada lado de la costura (dp) [P].</summary>
         public const float SeamBlendDp = 4f;
+
+        /// <summary>Amplitud del seno de la costura de Santarém (dp) [P].</summary>
+        public const float SeamWaveDp = 1.5f;
+
+        /// <summary>Periodo del seno de la costura de Santarém (dp) [P].</summary>
+        public const float SeamWavePeriodDp = 60f;
+
+        /// <summary>Opacidad del reflejo de la orilla lejana en la línea del agua de la franja del Amazonas en Santarém [P].</summary>
+        public const float ShoreReflectionAlpha = 0.35f;
+
+        /// <summary>Alto del reflejo de la orilla lejana en la franja del Amazonas en Santarém (dp) [P].</summary>
+        public const float ShoreReflectionDp = 8f;
+
+        /// <summary>Ancho de la columna de reflejo del sol que cruza las dos aguas de Santarém (dp) [P].</summary>
+        public const float SunColumnDp = 24f;
+
+        /// <summary>Opacidad de la columna del sol sobre el agua blanca de Santarém [P].</summary>
+        public const float SunColumnAlphaFar = 0.25f;
+
+        /// <summary>Opacidad de la columna del sol sobre el agua clara, junto a la costura (se apaga hacia abajo) [P].</summary>
+        public const float SunColumnAlphaNear = 0.18f;
+
+        /// <summary>Profundidad bajo el horizonte a la que la columna del sol ya no se ve (dp) [P].</summary>
+        public const float SunColumnDepthDp = 44f;
+
+        /// <summary>Lo que la banda deja sin pintar por dentro del borde del panel, bajo su relleno opaco (dp; el marco es ≤ 12).</summary>
+        public const float PanelHoleInsetDp = 16f;
 
         /// <summary>Degradado del borde de arriba de la bruma del alba (dp) [P].</summary>
         public const float MistFadeDp = 8f;
@@ -119,9 +156,30 @@ namespace AF.Presentation
         private static readonly Color DawnHorizon = Palette.Hex(0xF6A99B);
         private static readonly Color DawnMist = Palette.Hex(0xEEF0F2);
 
+        // Opacidad del tinte del cielo arriba y en el horizonte, por luz y por mundo [P].
+        private const float DuskAlphaTop = 0.45f;
+        private const float DuskAlphaHorizon = 0.4f;
+        private const float DawnAlphaTop = 0.45f;
+        private const float DawnAlphaHorizon = 0.7f; // hasta SkyLowMaxAlpha, solo en el tercio de abajo
+        private const float NoonAlphaTop = 0.4f;
+        private const float NoonAlphaHorizon = 0.25f;
+        private const float AfternoonAlphaTop = 0.4f;
+        private const float AfternoonAlphaHorizon = 0.3f;
+        private const float CloudyAlphaTop = 0.35f;
+        private const float CloudyAlphaHorizon = 0.25f;
+        private const float SunsetAlphaTop = 0.45f;
+        private const float SunsetAlphaHorizon = 0.35f;
+        private const float DawnMistAlpha = 0.45f;
+
         // Costura entre dos aguas (07 §2.1) [P].
         private static readonly Color SeamColor = Palette.Hex(0xE8F0E8);
         private const float SeamAlpha = 0.6f;
+
+        // Reflejo del sol del panorama (Palette.Sun) en las dos aguas de Santarém [P].
+        private static readonly Color SunColumnColor = Palette.Hex(0xFFF4D6);
+
+        // Tramos de la costura ondulada por periodo del seno.
+        private const int SeamWaveSteps = 10;
 
         private const int RippleRows = 9;
         private const float MistDp = 14f;
@@ -156,6 +214,7 @@ namespace AF.Presentation
         private float _panelTop;
         private bool _hasBoard;
         private float _bandBottom;
+        private Rect _hole;
         private bool _laidOut;
         private Rect _heroRect;
 
@@ -214,6 +273,12 @@ namespace AF.Presentation
         /// <summary>Forma de <see cref="StopShapes"/> que se pinta como héroe, o null.</summary>
         public string? Shape => _heroSource == HeroShape ? _shape : null;
 
+        /// <summary>
+        /// El héroe que se pinta (sonda <c>AF_STATE stop</c>, campo <c>hero</c>): la ranura (<c>bg_hero_&lt;sitio&gt;</c>), con su
+        /// PNG o con su silueta, o la pieza del kit (<c>kit:&lt;pieza&gt;</c>) con su silueta; null si no se pinta ninguno.
+        /// </summary>
+        public string? HeroId => _heroSource == HeroNone || _stop == null ? null : (_stop.Backdrop.Hero ?? _stop.Backdrop.Code);
+
         /// <summary>Pieza por código o del kit del fondo de la parada (<c>codigo:</c> o <c>kit:</c>), o null.</summary>
         public string? Code => _stop?.Backdrop.Code;
 
@@ -241,8 +306,22 @@ namespace AF.Presentation
         /// <summary>Opacidad de la banda de agua de la parada que se va (0 sin fundido; tests).</summary>
         public float BackBandAlpha => _back.Root.gameObject.activeSelf ? _back.Group.alpha * _back.Band.canvasRenderer.GetAlpha() : 0f;
 
-        /// <summary>Lo que tardó la última composición (<see cref="Apply"/> más su maquetación), en ms.</summary>
+        /// <summary>
+        /// Lo que tardó en el hilo principal la última composición de <see cref="Apply"/>, en ms (0 si no hubo que componer):
+        /// los vértices de sus capas y las mallas de sus gráficos (<c>OnPopulateMesh</c>, el reflejo atenuado y la subida al
+        /// <c>CanvasRenderer</c>), que se generan aquí mismo y no en el rebuild del Canvas. No cuenta el lote del Canvas
+        /// anidado, que hace el motor al pintar, ni las maquetaciones de <see cref="Layout"/>.
+        /// </summary>
         public double BuildMs { get; private set; }
+
+        /// <summary>Parada del juego de capas que se va durante el fundido (null sin fundido; tests).</summary>
+        public RiverStop? LeavingStop => Fading ? _back.Stop : null;
+
+        /// <summary>Banda de agua del juego de capas que se va (tests).</summary>
+        public StopShapeGraphic LeavingBandGraphic => _back.Band;
+
+        /// <summary>Hueco de la banda bajo el relleno del panel (dp desde arriba; vacío sin tablero; tests).</summary>
+        public Rect BandHole => _hole;
 
         /// <summary>Cielo de la parada que se ve (tests).</summary>
         public StopShapeGraphic SkyGraphic => _front.Sky;
@@ -299,29 +378,29 @@ namespace AF.Presentation
             string? lut = stop.Backdrop.Lut;
             if (lut == LutDusk)
             {
-                Set(DuskTop, DuskHorizon, 0.45f, 0.4f, out top, out horizon, out alphaTop, out alphaHorizon);
+                Set(DuskTop, DuskHorizon, DuskAlphaTop, DuskAlphaHorizon, out top, out horizon, out alphaTop, out alphaHorizon);
                 return;
             }
 
             if (lut == LutDawn)
             {
-                Set(DawnTop, DawnHorizon, 0.45f, 0.7f, out top, out horizon, out alphaTop, out alphaHorizon);
+                Set(DawnTop, DawnHorizon, DawnAlphaTop, DawnAlphaHorizon, out top, out horizon, out alphaTop, out alphaHorizon);
                 return;
             }
 
             switch (stop.World)
             {
                 case 2: // mediodía luminoso, cielo alto
-                    Set(NoonTop, NoonHorizon, 0.4f, 0.25f, out top, out horizon, out alphaTop, out alphaHorizon);
+                    Set(NoonTop, NoonHorizon, NoonAlphaTop, NoonAlphaHorizon, out top, out horizon, out alphaTop, out alphaHorizon);
                     break;
                 case 3: // tarde, luz rasante
-                    Set(AfternoonTop, AfternoonHorizon, 0.4f, 0.3f, out top, out horizon, out alphaTop, out alphaHorizon);
+                    Set(AfternoonTop, AfternoonHorizon, AfternoonAlphaTop, AfternoonAlphaHorizon, out top, out horizon, out alphaTop, out alphaHorizon);
                     break;
                 case 4: // mañana nublada tras lluvia
-                    Set(CloudyTop, CloudyHorizon, 0.35f, 0.25f, out top, out horizon, out alphaTop, out alphaHorizon);
+                    Set(CloudyTop, CloudyHorizon, CloudyAlphaTop, CloudyAlphaHorizon, out top, out horizon, out alphaTop, out alphaHorizon);
                     break;
                 case 5: // atardecer reflejado en agua quieta
-                    Set(SunsetTop, SunsetHorizon, 0.45f, 0.35f, out top, out horizon, out alphaTop, out alphaHorizon);
+                    Set(SunsetTop, SunsetHorizon, SunsetAlphaTop, SunsetAlphaHorizon, out top, out horizon, out alphaTop, out alphaHorizon);
                     break;
             }
         }
@@ -380,9 +459,11 @@ namespace AF.Presentation
                 _root.gameObject.SetActive(stop != null);
             }
 
+            _front.Compose(stop, _waterColor, _lut, _heroSource, _shape, _heroSprite);
             if (_laidOut && stop != null)
             {
                 Rebuild(_front);
+                _front.BuildMeshes(); // las mallas, aquí y no en el rebuild del Canvas: BuildMs las cuenta
             }
 
             BuildWatch.Stop();
@@ -392,31 +473,43 @@ namespace AF.Presentation
         /// <summary>
         /// Maqueta las capas para un lienzo de <paramref name="w"/> dp de ancho con el horizonte en <paramref name="horizon"/>
         /// (dp desde arriba; <c>GameScreen.HorizonFor</c>) y el panel en <paramref name="panelTop"/>. La banda de agua llega hasta
-        /// <paramref name="bandBottom"/> (la viga del muelle; ≤ 0 = 96 dp bajo el panel). Solo reconstruye si algo cambió.
+        /// <paramref name="bandBottom"/> (la viga del muelle; ≤ 0 = 96 dp bajo el panel) y no pinta <paramref name="bandHole"/>
+        /// (dp desde arriba: lo que tapa el relleno opaco del panel; vacío = nada). Solo reconstruye si algo cambió; a mitad de un
+        /// fundido rehace las dos capas, cada una con su parada, y el fundido sigue.
         /// </summary>
-        public void Layout(float w, float horizon, float panelTop, bool hasBoard, float bandBottom = -1f)
+        public void Layout(float w, float horizon, float panelTop, bool hasBoard, float bandBottom = -1f, Rect bandHole = default)
         {
             if (bandBottom <= 0f)
             {
                 bandBottom = Mathf.Max(panelTop, horizon) + 96f;
             }
 
+            if (bandHole.width <= 0f || bandHole.height <= 0f)
+            {
+                bandHole = new Rect(0f, 0f, 0f, 0f);
+            }
+
             bool same = _laidOut && Mathf.Approximately(w, _w) && Mathf.Approximately(horizon, _horizon) && Mathf.Approximately(panelTop, _panelTop)
-                && hasBoard == _hasBoard && Mathf.Approximately(bandBottom, _bandBottom);
+                && hasBoard == _hasBoard && Mathf.Approximately(bandBottom, _bandBottom) && bandHole == _hole;
             _w = w;
             _horizon = horizon;
             _panelTop = panelTop;
             _hasBoard = hasBoard;
             _bandBottom = bandBottom;
+            _hole = bandHole;
             _laidOut = true;
             if (same)
             {
                 return;
             }
 
-            FinishFade(); // la parada que se va no se vuelve a maquetar: el fundido termina
             Place(_a.Root, w);
             Place(_b.Root, w);
+            if (Fading && _back.Stop != null)
+            {
+                Rebuild(_back); // la parada que se va, con la maquetación nueva: el fundido no se corta
+            }
+
             if (_stop != null)
             {
                 Rebuild(_front);
@@ -495,23 +588,23 @@ namespace AF.Presentation
             }
         }
 
-        // Vuelve a construir las mallas del juego de capas con la composición de ahora.
+        // Vuelve a construir las mallas del juego de capas con su composición (la parada que entra o la que se va).
         private void Rebuild(Layer layer)
         {
             float w = _w;
             float k = w / 360f;
             float horizon = _horizon;
             float visible = _hasBoard ? Mathf.Max(24f * k, _panelTop - horizon) : 64f * k;
-            BuildSky(layer.Sky, w, horizon);
-            BuildBand(layer.Band, w, horizon, _bandBottom, k);
-            BuildCode(layer.Code, w, horizon, visible, k);
+            BuildSky(layer.Sky, layer.Stop, w, horizon);
+            BuildBand(layer.Band, layer.Stop, layer.WaterColor, w, horizon, _bandBottom, k);
+            BuildCode(layer.Code, layer.Stop, layer.WaterColor, w, horizon, visible, k);
             BuildHero(layer, w, horizon, k);
         }
 
-        private void BuildSky(StopShapeGraphic g, float w, float horizon)
+        private static void BuildSky(StopShapeGraphic g, RiverStop? stop, float w, float horizon)
         {
             g.Clear();
-            SkyOf(_stop, out Color top, out Color bottom, out float aTop, out float aBottom);
+            SkyOf(stop, out Color top, out Color bottom, out float aTop, out float aBottom);
             if (aTop <= 0f && aBottom <= 0f)
             {
                 g.Commit();
@@ -519,7 +612,7 @@ namespace AF.Presentation
             }
 
             // Arriba, ≤ SkyMaxAlpha; en el tercio de abajo puede subir hasta SkyLowMaxAlpha con el atardecer y el alba.
-            string? lut = _stop?.Backdrop.Lut;
+            string? lut = stop?.Backdrop.Lut;
             bool twilight = lut == LutDusk || lut == LutDawn;
             top.a = Mathf.Min(aTop, SkyMaxAlpha);
             bottom.a = Mathf.Min(aBottom, twilight ? SkyLowMaxAlpha : SkyMaxAlpha);
@@ -533,24 +626,58 @@ namespace AF.Presentation
         }
 
         // Banda del primer plano (VA-23): del horizonte (transparente) a BandFadeDp (opaca) y opaca hasta la viga del muelle, con
-        // ondas en perspectiva de 1 dp, 3 tramos por fila, a ΔE00 ≤ 5 del preset. En el alba, bruma baja.
-        private void BuildBand(StopShapeGraphic g, float w, float horizon, float bottom, float k)
+        // ondas en perspectiva de 1 dp, 3 tramos por fila, a ΔE00 ≤ 5 del preset. Lo opaco no pinta el hueco del panel (lo tapa
+        // su relleno): la franja de encima, los márgenes de los lados y el tramo de debajo. En el alba, bruma baja.
+        private void BuildBand(StopShapeGraphic g, RiverStop? stop, Color water, float w, float horizon, float bottom, float k)
         {
             g.Clear();
-            Color water = _waterColor;
             Color clear = water;
             clear.a = 0f;
             float fadeEnd = horizon + (BandFadeDp * k);
+            float end = Mathf.Max(fadeEnd, bottom);
             g.Rect(0f, horizon, w, fadeEnd, clear, water);
-            g.Rect(0f, fadeEnd, w, Mathf.Max(fadeEnd, bottom), water, water);
+            float ripplesEnd = end;
+            Rect hole = _hole;
+            if (hole.width > 0f && hole.yMax > fadeEnd && hole.yMin < end && hole.xMax > 0f && hole.xMin < w)
+            {
+                float holeTop = Mathf.Clamp(hole.yMin, fadeEnd, end);
+                float holeBottom = Mathf.Clamp(hole.yMax, fadeEnd, end);
+                float holeLeft = Mathf.Clamp(hole.xMin, 0f, w);
+                float holeRight = Mathf.Clamp(hole.xMax, 0f, w);
+                if (holeTop > fadeEnd)
+                {
+                    g.Rect(0f, fadeEnd, w, holeTop, water, water);
+                }
 
-            Ripples(g, w, fadeEnd, bottom, RippleColor(water), k);
+                if (holeLeft > 0f)
+                {
+                    g.Rect(0f, holeTop, holeLeft, holeBottom, water, water);
+                }
 
-            if (_stop != null && _stop.Backdrop.Lut == LutDawn)
+                if (holeRight < w)
+                {
+                    g.Rect(holeRight, holeTop, w, holeBottom, water, water);
+                }
+
+                if (end > holeBottom)
+                {
+                    g.Rect(0f, holeBottom, w, end, water, water);
+                }
+
+                ripplesEnd = holeTop; // bajo el panel no se verían
+            }
+            else
+            {
+                g.Rect(0f, fadeEnd, w, end, water, water);
+            }
+
+            Ripples(g, w, fadeEnd, ripplesEnd, RippleColor(water), k);
+
+            if (stop != null && stop.Backdrop.Lut == LutDawn)
             {
                 // Bruma baja: entra con un degradado (sin arista arriba), a 0,45 junto al horizonte, y se va hacia el primer plano.
                 Color mist = DawnMist;
-                mist.a = 0.45f;
+                mist.a = DawnMistAlpha;
                 Color none = DawnMist;
                 none.a = 0f;
                 float mistTop = horizon - (4f * k);
@@ -589,29 +716,73 @@ namespace AF.Presentation
             return ColorMath.AddLabLightness(water, 4f);
         }
 
-        // Líneas entre aguas (07 §2.1), siempre por encima del primer plano: la del Tapajós, recta, con el Amazonas en una franja
-        // de agua de hasta 30 dp (28 con 2 filas) con las ondas de la banda, y la diagonal del Encuentro desde el borde izquierdo
-        // de la pantalla hasta el 70 % de la franja visible sobre el panel. VA-21: en los 16 dp de encima del panel, ningún
-        // detalle con ΔL* > 30 (la costura clara sobre el agua clara se queda en ≈ 29; la diagonal, sobre el agua negra, queda
-        // fuera de esa franja).
-        private void BuildCode(StopShapeGraphic g, float w, float horizon, float visible, float k)
+        /// <summary>
+        /// X de la columna de reflejo del sol del panorama en un lienzo de <paramref name="w"/> dp: la del sol del panorama
+        /// procedural, a escala del ancho (el panorama ocupa el ancho del lienzo).
+        /// </summary>
+        public static float SunColumnX(float w)
+        {
+            return ProceduralArt.PanoramaSunXDp * (w / 360f);
+        }
+
+        /// <summary>
+        /// Y de la costura de Santarém en <paramref name="x"/> (dp desde arriba): un seno de <see cref="SeamWaveDp"/> dp de amplitud
+        /// y <see cref="SeamWavePeriodDp"/> dp de periodo, a escala <paramref name="k"/>, alrededor de <paramref name="mean"/>.
+        /// </summary>
+        public static float SeamWaveY(float x, float mean, float k)
+        {
+            return mean + (SeamWaveDp * k * Mathf.Sin(2f * Mathf.PI * x / (SeamWavePeriodDp * k)));
+        }
+
+        // Líneas entre aguas (07 §2.1), siempre por encima del primer plano. En Santarém, el Amazonas opaco desde el horizonte (con
+        // el reflejo de la orilla lejana, las ondas de la banda y la columna del sol) hasta una costura ondulada de media
+        // horizonte + hasta 30 dp; en el Encuentro, la diagonal recta desde el borde izquierdo de la pantalla hasta el 70 % de la
+        // franja visible sobre el panel. VA-21: en los 16 dp de encima del panel, ningún detalle con ΔL* > 30 (la costura clara
+        // sobre el agua clara se queda en ≈ 29; la diagonal, sobre el agua negra, queda fuera de esa franja). VA-23: en los 12 dp
+        // de encima del panel no hay nada.
+        private static void BuildCode(StopShapeGraphic g, RiverStop? stop, Color near, float w, float horizon, float visible, float k)
         {
             g.Clear();
-            string? code = _stop?.Backdrop.Code;
+            string? code = stop?.Backdrop.Code;
             Color far = Palette.WaterWhite;
             Color farTop = far;
             farTop.a = 0f;
             if (code == CodeClearWhite)
             {
-                // El Amazonas café detrás, del horizonte a la costura recta, con las ondas de la banda.
-                float line = Mathf.Clamp(visible - (CalmClearDp * k), 12f * k, 30f * k);
-                float top = horizon + (2f * k);
-                float mid = top + (6f * k);
-                float y = horizon + line;
-                g.Rect(0f, top, w, mid, farTop, far);
-                g.Rect(0f, mid, w, y, far, far);
-                Ripples(g, w, mid, y - (SeamBlendDp * k), RippleColor(far), k);
-                Seam(g, new Vector2(0f, y), new Vector2(w, y), far, _waterColor, horizon, k);
+                // La cresta de la costura, como la recta de antes: 16 dp sobre el panel con 2 filas.
+                float amp = SeamWaveDp * k;
+                float line = Mathf.Clamp(visible - (CalmClearDp * k) - amp, 12f * k, 30f * k);
+                float mean = horizon + line;
+                float step = SeamWavePeriodDp * k / SeamWaveSteps;
+                int steps = Mathf.CeilToInt(w / step);
+
+                // El Amazonas café, opaco desde el horizonte hasta la costura.
+                for (int i = 0; i < steps; i++)
+                {
+                    float x0 = i * step;
+                    float x1 = Mathf.Min(w, x0 + step);
+                    g.Quad(new Vector2(x0, horizon), new Vector2(x1, horizon), new Vector2(x1, SeamWaveY(x1, mean, k)),
+                        new Vector2(x0, SeamWaveY(x0, mean, k)), far, far);
+                }
+
+                // El reflejo de la orilla lejana del panorama, que la franja opaca tapa (palmera_lejana → orilla_lejana).
+                Color shore = Color.Lerp(Palette.FarPalm, Palette.FarShore, 0.5f);
+                shore.a = ShoreReflectionAlpha;
+                Color shoreNone = shore;
+                shoreNone.a = 0f;
+                g.Rect(0f, horizon, w, horizon + (ShoreReflectionDp * k), shore, shoreNone);
+                Ripples(g, w, horizon + (8f * k), mean - amp - (SeamBlendDp * k), RippleColor(far), k);
+
+                // La columna del sol cruza las dos aguas; se corta en la costura y se apaga a SunColumnDepthDp (o 12 dp sobre el
+                // panel, VA-23).
+                float h = SeamDp * k * 0.5f;
+                float columnEnd = Mathf.Min(horizon + (SunColumnDepthDp * k), horizon + visible - ((CalmClearDp - SeamBlendDp) * k));
+                SunColumn(g, SunColumnX(w), k, horizon, mean, -h, SunColumnAlphaFar, SunColumnAlphaFar, true);
+                WavySeam(g, w, mean, step, steps, far, near, horizon, k);
+                if (columnEnd > mean + amp + h)
+                {
+                    SunColumn(g, SunColumnX(w), k, columnEnd, mean, h, SunColumnAlphaNear, 0f, false);
+                }
             }
             else if (code == CodeBlackWhite)
             {
@@ -624,10 +795,83 @@ namespace AF.Presentation
                 Vector2 b = new Vector2(w, top);
                 Vector2 c = new Vector2(w, horizon + depth);
                 g.Triangle(a, far, b, far, c, far);
-                Seam(g, a, c, far, _waterColor, horizon, k);
+                Seam(g, a, c, far, near, horizon, k);
             }
 
             g.Commit();
+        }
+
+        // Columna de reflejo del sol (SunColumnDp de ancho, con 6 dp de borde suave a cada lado) entre la costura ondulada de media
+        // mean (desplazada offset dp en vertical) y edge: por encima de la costura (above, edge = el horizonte) o por debajo
+        // (edge = donde se apaga). La opacidad va de alphaEdge en edge a alphaSeam junto a la costura.
+        private static void SunColumn(StopShapeGraphic g, float xc, float k, float edge, float mean, float offset, float alphaSeam,
+            float alphaEdge, bool above)
+        {
+            float half = SunColumnDp * k * 0.5f;
+            float soft = 6f * k;
+            float x0 = xc - half;
+            float x1 = xc - half + soft;
+            float x2 = xc + half - soft;
+            float x3 = xc + half;
+            for (int i = 0; i < 3; i++)
+            {
+                float xa = i == 0 ? x0 : (i == 1 ? x1 : x2);
+                float xb = i == 0 ? x1 : (i == 1 ? x2 : x3);
+                float fa = i == 0 ? 0f : 1f;
+                float fb = i == 2 ? 0f : 1f;
+                float seamA = SeamWaveY(xa, mean, k) + offset;
+                float seamB = SeamWaveY(xb, mean, k) + offset;
+                Color c = SunColumnColor;
+                c.a = alphaEdge * fa;
+                int ea = g.AddVertex(xa, edge, c);
+                c.a = alphaEdge * fb;
+                int eb = g.AddVertex(xb, edge, c);
+                c.a = alphaSeam * fb;
+                int sb = g.AddVertex(xb, seamB, c);
+                c.a = alphaSeam * fa;
+                int sa = g.AddVertex(xa, seamA, c);
+                if (above)
+                {
+                    g.AddTriangle(ea, eb, sb);
+                    g.AddTriangle(ea, sb, sa);
+                }
+                else
+                {
+                    g.AddTriangle(sa, sb, eb);
+                    g.AddTriangle(sa, eb, ea);
+                }
+            }
+        }
+
+        // Costura ondulada de Santarém: la de Seam, tramo a tramo y con los desplazamientos en vertical, para que los tramos
+        // compartan vértices sin huecos ni solapes.
+        private static void WavySeam(StopShapeGraphic g, float w, float mean, float step, int steps, Color far, Color near,
+            float horizon, float k)
+        {
+            float blend = SeamBlendDp * k;
+            float h = SeamDp * k * 0.5f;
+            Color nearNone = near;
+            nearNone.a = 0f;
+            Color nearHalf = near;
+            nearHalf.a = 0.5f;
+            Color farHalf = far;
+            farHalf.a = 0.5f;
+            Color farNone = far;
+            farNone.a = 0f;
+            Color seam = SeamColor;
+            seam.a = SeamAlpha;
+            for (int i = 0; i < steps; i++)
+            {
+                float x0 = i * step;
+                float x1 = Mathf.Min(w, x0 + step);
+                float y0 = SeamWaveY(x0, mean, k);
+                float y1 = SeamWaveY(x1, mean, k);
+                g.Quad(new Vector2(x0, Mathf.Max(horizon, y0 - blend)), new Vector2(x1, Mathf.Max(horizon, y1 - blend)), new Vector2(x1, y1),
+                    new Vector2(x0, y0), nearNone, nearHalf);
+                g.Quad(new Vector2(x0, y0), new Vector2(x1, y1), new Vector2(x1, y1 + blend), new Vector2(x0, y0 + blend), farHalf, farNone);
+                g.Quad(new Vector2(x0, Mathf.Max(horizon, y0 - h)), new Vector2(x1, Mathf.Max(horizon, y1 - h)), new Vector2(x1, y1 + h),
+                    new Vector2(x0, y0 + h), seam, seam);
+            }
         }
 
         // Costura de a a b entre el agua de detrás (far, por encima) y la del primer plano (near, por debajo): SeamBlendDp dp de
@@ -665,7 +909,7 @@ namespace AF.Presentation
             float footX = w * 0.5f;
             _heroRect = new Rect(footX - (hw * 0.5f), horizon - (HeroAboveDp * k), hw, hh);
             layer.Shape.Clear();
-            bool png = _heroSource == HeroPng && _heroSprite != null;
+            bool png = layer.HeroSource == HeroPng && layer.HeroSprite != null;
             layer.Hero.gameObject.SetActive(png);
             layer.ReflectionClip.gameObject.SetActive(png);
             layer.Reflection.gameObject.SetActive(png);
@@ -673,12 +917,12 @@ namespace AF.Presentation
             {
                 // El PNG con el pie en el horizonte (48 dp encima, 32 debajo) y su reflejo volteado en el recorte de 44 dp, al
                 // ReflectionAlpha en la línea del agua y apagándose hasta 0 a los 44 dp, como el de las siluetas (VA-21).
-                layer.Hero.sprite = _heroSprite;
-                layer.Hero.color = new Color(_lut.r, _lut.g, _lut.b, 1f);
+                layer.Hero.sprite = layer.HeroSprite;
+                layer.Hero.color = new Color(layer.Lut.r, layer.Lut.g, layer.Lut.b, 1f);
                 PlaceTopLeft((RectTransform)layer.Hero.transform, _heroRect.x, _heroRect.y, hw, hh);
                 PlaceTopLeft(layer.ReflectionClip, _heroRect.x, horizon, hw, ReflectionDp * k);
-                layer.Reflection.sprite = _heroSprite;
-                layer.Reflection.color = new Color(_lut.r, _lut.g, _lut.b, ReflectionAlpha);
+                layer.Reflection.sprite = layer.HeroSprite;
+                layer.Reflection.color = new Color(layer.Lut.r, layer.Lut.g, layer.Lut.b, ReflectionAlpha);
                 RectTransform rt = (RectTransform)layer.Reflection.transform;
                 rt.anchorMin = new Vector2(0.5f, 1f);
                 rt.anchorMax = new Vector2(0.5f, 1f);
@@ -688,9 +932,10 @@ namespace AF.Presentation
                 rt.localScale = new Vector3(1f, -1f, 1f);
                 layer.ReflectionFade.FadeDp = ReflectionDp * k;
             }
-            else if (_heroSource == HeroShape && _shape != null)
+            else if (layer.HeroSource == HeroShape && layer.ShapeId != null)
             {
-                StopShapes.Draw(layer.Shape, _shape, footX, horizon, k, _lut, _waterColor, ReflectionAlpha, ReflectionDp);
+                StopShapes.Draw(layer.Shape, layer.ShapeId, footX, horizon, k, layer.Lut, layer.Stop?.Backdrop.Lut, layer.WaterColor,
+                    ReflectionAlpha, ReflectionDp);
             }
 
             layer.Shape.Commit();
@@ -781,6 +1026,49 @@ namespace AF.Presentation
             public Image Reflection { get; }
 
             public StopReflectionFade ReflectionFade { get; }
+
+            // Composición que pinta este juego de capas (la parada que entra o la que se va durante el fundido).
+            public RiverStop? Stop { get; private set; }
+
+            public Color WaterColor { get; private set; } = Palette.WaterWhite;
+
+            public Color Lut { get; private set; } = Color.white;
+
+            public string HeroSource { get; private set; } = HeroNone;
+
+            public string? ShapeId { get; private set; }
+
+            public Sprite? HeroSprite { get; private set; }
+
+            public void Compose(RiverStop? stop, Color waterColor, Color lut, string heroSource, string? shapeId, Sprite? heroSprite)
+            {
+                Stop = stop;
+                WaterColor = waterColor;
+                Lut = lut;
+                HeroSource = heroSource;
+                ShapeId = shapeId;
+                HeroSprite = heroSprite;
+            }
+
+            // Genera ya las mallas de los gráficos activos (OnPopulateMesh, los efectos y la subida al CanvasRenderer), que si no
+            // haría el rebuild del Canvas al final del fotograma; los deja limpios, así que el Canvas no las repite.
+            public void BuildMeshes()
+            {
+                BuildMesh(Sky);
+                BuildMesh(Band);
+                BuildMesh(Code);
+                BuildMesh(Reflection);
+                BuildMesh(Hero);
+                BuildMesh(Shape);
+            }
+
+            private static void BuildMesh(Graphic g)
+            {
+                if (g.IsActive())
+                {
+                    g.Rebuild(CanvasUpdate.PreRender);
+                }
+            }
 
             // Opacidad del cielo, las piezas y el héroe (detail) y de la banda (band), sin reconstruir mallas ni asignar memoria.
             public void SetAlphas(float detail, float band)

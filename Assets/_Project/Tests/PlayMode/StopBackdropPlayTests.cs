@@ -155,6 +155,45 @@ namespace AF.Tests.PlayMode
             Assert.That(b.HeroRect.width, Is.EqualTo(0f));
             Assert.That(view.PanoramaTint, Is.EqualTo(Color.white), "el panorama, sin tinte");
             Assert.That(boot.TapAnywhere(), Is.True, "el nivel se juega igual");
+
+            // Sin parada antes ni después nada cambia a la vista, aunque cambie el agua del mundo (10 → 11, blanca → clara).
+            VictorySetup.WinToVictoryScreen(boot);
+            PlayModeHelpers.Step(boot, 1500);
+            Assert.That(boot.PressNext(), Is.True);
+            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(11));
+            Assert.That(b.Stop, Is.Null);
+            Assert.That(view.LastStopChange, Is.EqualTo(GameScreen.StopChangeSame), "ni corte ni fundido");
+            Assert.That(b.Fading, Is.False);
+            if (view.LastStopProbe != null)
+            {
+                StringAssert.Contains("\"hero\":null", view.LastStopProbe);
+                StringAssert.Contains("\"fade\":false", view.LastStopProbe);
+                StringAssert.Contains("\"change\":\"same\"", view.LastStopProbe);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator TheBandHole_FollowsThePanel_WhenTheBoardRisesForTheVictory()
+        {
+            yield return HudSetup.LoadAtIntro(21);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            StopBackdrop b = view.StopBackdrop;
+            float inset = StopBackdrop.PanelHoleInsetDp;
+            Rect panel = view.StopPanelRect;
+            Assert.That(b.BandHole.width, Is.GreaterThan(0f), "con tablero, la banda deja el hueco del panel");
+            Assert.That(b.BandHole.yMin, Is.EqualTo(panel.yMin + inset).Within(0.01f));
+            Assert.That(b.BandHole.xMin, Is.EqualTo(panel.xMin + inset).Within(0.01f));
+            Assert.That(b.BandHole.xMax, Is.EqualTo(panel.xMax - inset).Within(0.01f));
+            Assert.That(b.BandHole.yMax, Is.EqualTo(panel.yMax - inset).Within(0.01f));
+
+            float before = panel.yMin;
+            VictorySetup.WinToVictoryScreen(boot);
+            PlayModeHelpers.Step(boot, 1500);
+            panel = view.StopPanelRect;
+            TestContext.WriteLine("panel: de " + before + " a " + panel.yMin + " dp");
+            Assert.That(b.BandHole.yMin, Is.EqualTo(panel.yMin + inset).Within(0.01f), "el hueco sigue al tablero desplazado");
+            Assert.That(b.BandHole.yMax, Is.EqualTo(panel.yMax - inset).Within(0.01f));
         }
 
         [UnityTest]
@@ -199,9 +238,10 @@ namespace AF.Tests.PlayMode
             string line = lines[0];
             StringAssert.StartsWith("AF_STATE {\"event\":\"stop\"", line);
             StringAssert.Contains("\"level\":91", line);
-            StringAssert.Contains("\"stop\":9,\"id\":\"leticia_atardecer\",\"world\":4", line);
-            StringAssert.Contains("\"hero\":\"shape\",\"shape\":\"generic_city\"", line);
-            StringAssert.Contains("\"lut\":\"dusk\",\"water\":\"white\",\"change\":\"cut\"", line);
+            // Los campos de docs/dev/prototipo-v0.md, en su orden, y después los añadidos por M1.4.
+            StringAssert.Contains("\"stop\":9,\"id\":\"leticia_atardecer\",\"world\":4,\"hero\":\"bg_hero_leticia\"", line);
+            StringAssert.Contains("\"lut\":\"dusk\",\"water\":\"white\",\"fade\":false,\"build_ms\":", line);
+            StringAssert.Contains("\"hero_src\":\"shape\",\"shape\":\"generic_city\",\"code\":null,\"change\":\"cut\"}", line);
             Match m = Regex.Match(line, "\"build_ms\":([0-9.]+)");
             Assert.That(m.Success, Is.True, line);
             double ms = double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);

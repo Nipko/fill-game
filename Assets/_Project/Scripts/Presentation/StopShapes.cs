@@ -80,6 +80,27 @@ namespace AF.Presentation
         /// <summary>Tono propio de la forma (las tejas de la cúpula, las franjas de la baliza, los árboles de detrás de las balsas).</summary>
         public const int ToneFeature = 4;
 
+        /// <summary>Degradado con el que entra y sale lo que llega a los bordes de la caja: el zócalo y la arena (dp) [P].</summary>
+        public const float EdgeFadeDp = 16f;
+
+        /// <summary>Cuerpo de la silueta a contraluz al atardecer (<c>dusk</c>) [P].</summary>
+        public static readonly Color DuskBody = Palette.Hex(0x5E4A5C);
+
+        /// <summary>Remates de la silueta a contraluz al atardecer [P].</summary>
+        public static readonly Color DuskAccent = Palette.Hex(0x4B3A4C);
+
+        /// <summary>Ventanas encendidas al atardecer [P].</summary>
+        public static readonly Color DuskWindow = Palette.Hex(0xF6C77A);
+
+        /// <summary>Opacidad de las ventanas encendidas al atardecer [P].</summary>
+        public const float DuskWindowAlpha = 0.9f;
+
+        /// <summary>Cuerpo de la silueta a contraluz al alba (<c>dawn</c>) [P].</summary>
+        public static readonly Color DawnBody = Palette.Hex(0x7A7AA0);
+
+        /// <summary>Remates de la silueta a contraluz al alba [P].</summary>
+        public static readonly Color DawnAccent = Palette.Hex(0x66668C);
+
         private const int KindRect = 0;
         private const int KindTriangle = 1;
         private const int KindDome = 2;
@@ -360,15 +381,54 @@ namespace AF.Presentation
         }
 
         /// <summary>
+        /// Color con el que se pinta el tono <paramref name="tone"/> de <paramref name="shape"/> con la luz de la parada
+        /// (<paramref name="lut"/>, su multiplicador, y <paramref name="light"/>, su clave) [P]. De día, el tono de
+        /// <see cref="ToneColor"/> por la luz. Con <c>dusk</c> o <c>dawn</c>, la silueta va a contraluz (D-003: luz de juego
+        /// cálida, no un gris de pizarra apagado): el cuerpo y lo propio de la forma en <see cref="DuskBody"/> o
+        /// <see cref="DawnBody"/> y los remates en <see cref="DuskAccent"/> o <see cref="DawnAccent"/>; al atardecer, las ventanas
+        /// encendidas en <see cref="DuskWindow"/> al <see cref="DuskWindowAlpha"/>. La orilla y las ventanas del alba siguen con la
+        /// luz multiplicada.
+        /// </summary>
+        public static Color LitColor(string shape, int tone, Color lut, string? light)
+        {
+            bool dusk = light == StopBackdrop.LutDusk;
+            bool dawn = light == StopBackdrop.LutDawn;
+            if (dusk || dawn)
+            {
+                switch (tone)
+                {
+                    case ToneBody:
+                    case ToneFeature:
+                        return dusk ? DuskBody : DawnBody;
+                    case ToneAccent:
+                        return dusk ? DuskAccent : DawnAccent;
+                    case ToneLight:
+                        if (dusk)
+                        {
+                            Color window = DuskWindow;
+                            window.a = DuskWindowAlpha;
+                            return window;
+                        }
+
+                        break;
+                }
+            }
+
+            return Lut(ToneColor(shape, tone), lut);
+        }
+
+        /// <summary>
         /// Pinta <paramref name="shape"/> en <paramref name="g"/> con el pie en (<paramref name="footX"/>, <paramref name="horizon"/>)
         /// dp desde arriba y a escala <paramref name="k"/> (ancho del lienzo / 360). Primero el reflejo de lo que queda sobre el
         /// horizonte, volteado, teñido a medias con el agua <paramref name="water"/>, con opacidad <paramref name="reflectionAlpha"/>
         /// en la línea del agua que baja a 0 a <paramref name="reflectionDp"/> dp (y recortado ahí); después la silueta, con
-        /// cada tono multiplicado por <paramref name="lut"/>. No vacía el gráfico ni asigna memoria (salvo que su búfer tenga
-        /// que crecer). Devuelve false si no conoce la forma.
+        /// cada tono según la luz de la parada (<see cref="LitColor"/>: <paramref name="lut"/> y su clave
+        /// <paramref name="light"/>). Lo que llega a los bordes de la caja de 240 dp (el zócalo y la arena) entra y sale con un
+        /// degradado de <see cref="EdgeFadeDp"/> dp, sin aristas verticales. No vacía el gráfico ni asigna memoria (salvo que su
+        /// búfer tenga que crecer). Devuelve false si no conoce la forma.
         /// </summary>
-        public static bool Draw(StopShapeGraphic g, string shape, float footX, float horizon, float k, Color lut, Color water,
-            float reflectionAlpha, float reflectionDp)
+        public static bool Draw(StopShapeGraphic g, string shape, float footX, float horizon, float k, Color lut, string? light,
+            Color water, float reflectionAlpha, float reflectionDp)
         {
             float[]? data = Data(shape);
             if (data == null)
@@ -380,15 +440,16 @@ namespace AF.Presentation
             {
                 for (int p = 0; p < data.Length; p += Stride)
                 {
-                    Color c = Color.Lerp(Lut(ToneColor(shape, (int)data[p + 1]), lut), water, 0.5f);
-                    EmitPrimitive(g, data, p, footX, horizon, k, c, true, reflectionAlpha, reflectionDp);
+                    Color lit = LitColor(shape, (int)data[p + 1], lut, light);
+                    Color c = Color.Lerp(lit, water, 0.5f);
+                    EmitPrimitive(g, data, p, footX, horizon, k, c, true, reflectionAlpha * lit.a, reflectionDp);
                 }
             }
 
             for (int p = 0; p < data.Length; p += Stride)
             {
-                Color c = Lut(ToneColor(shape, (int)data[p + 1]), lut);
-                EmitPrimitive(g, data, p, footX, horizon, k, c, false, 1f, 0f);
+                Color c = LitColor(shape, (int)data[p + 1], lut, light);
+                EmitPrimitive(g, data, p, footX, horizon, k, c, false, c.a, 0f);
             }
 
             return true;
@@ -400,7 +461,8 @@ namespace AF.Presentation
         }
 
         // Una primitiva: tal cual o, con mirror, su parte de sobre el horizonte volteada bajo él, con la opacidad del reflejo
-        // decreciente con la profundidad y recortada a depth dp (a escala k).
+        // decreciente con la profundidad y recortada a depth dp (a escala k). alpha es su opacidad (en el reflejo, en la línea
+        // del agua).
         private static void EmitPrimitive(StopShapeGraphic g, float[] d, int p, float footX, float horizon, float k, Color c,
             bool mirror, float alpha, float depth)
         {
@@ -421,12 +483,29 @@ namespace AF.Presentation
                     y0 = Mathf.Max(0f, y0);
                 }
 
-                Vertex(g, x0, y1, footX, horizon, k, c, mirror, alpha, depth, out int a);
-                Vertex(g, x1, y1, footX, horizon, k, c, mirror, alpha, depth, out int b);
-                Vertex(g, x1, y0, footX, horizon, k, c, mirror, alpha, depth, out int e);
-                Vertex(g, x0, y0, footX, horizon, k, c, mirror, alpha, depth, out int f);
-                g.AddTriangle(a, b, e);
-                g.AddTriangle(a, e, f);
+                // Lo que llega a un borde de la caja (el zócalo, la arena) se funde en EdgeFadeDp dp.
+                const float half = WidthDp * 0.5f;
+                bool fadeLeft = x0 <= -half + 0.01f;
+                bool fadeRight = x1 >= half - 0.01f;
+                float xa = fadeLeft ? x0 + EdgeFadeDp : x0;
+                float xb = fadeRight ? x1 - EdgeFadeDp : x1;
+                if ((fadeLeft || fadeRight) && xb > xa)
+                {
+                    if (fadeLeft)
+                    {
+                        RectPart(g, x0, xa, y0, y1, 0f, 1f, footX, horizon, k, c, mirror, alpha, depth);
+                    }
+
+                    RectPart(g, xa, xb, y0, y1, 1f, 1f, footX, horizon, k, c, mirror, alpha, depth);
+                    if (fadeRight)
+                    {
+                        RectPart(g, xb, x1, y0, y1, 1f, 0f, footX, horizon, k, c, mirror, alpha, depth);
+                    }
+
+                    return;
+                }
+
+                RectPart(g, x0, x1, y0, y1, 1f, 1f, footX, horizon, k, c, mirror, alpha, depth);
                 return;
             }
 
@@ -471,19 +550,32 @@ namespace AF.Presentation
             }
         }
 
+        // Tramo de x0 a x1 de un rectángulo de y0 a y1, con la opacidad multiplicada por fa a la izquierda y por fb a la derecha.
+        private static void RectPart(StopShapeGraphic g, float x0, float x1, float y0, float y1, float fa, float fb, float footX,
+            float horizon, float k, Color c, bool mirror, float alpha, float depth)
+        {
+            Vertex(g, x0, y1, footX, horizon, k, c, mirror, alpha * fa, depth, out int a);
+            Vertex(g, x1, y1, footX, horizon, k, c, mirror, alpha * fb, depth, out int b);
+            Vertex(g, x1, y0, footX, horizon, k, c, mirror, alpha * fb, depth, out int e);
+            Vertex(g, x0, y0, footX, horizon, k, c, mirror, alpha * fa, depth, out int f);
+            g.AddTriangle(a, b, e);
+            g.AddTriangle(a, e, f);
+        }
+
         private static float MirrorClamp(float y, bool mirror)
         {
             return mirror ? Mathf.Max(0f, y) : y;
         }
 
-        // Vértice de la forma: x desde el pie e y hacia arriba en dp → dp del lienzo desde arriba. En el reflejo, la y se voltea
-        // bajo el horizonte, se recorta a depth y la opacidad baja de alpha a 0 con la profundidad.
+        // Vértice de la forma: x desde el pie e y hacia arriba en dp → dp del lienzo desde arriba, con opacidad alpha. En el
+        // reflejo, la y se voltea bajo el horizonte, se recorta a depth y la opacidad baja de alpha a 0 con la profundidad.
         private static void Vertex(StopShapeGraphic g, float x, float y, float footX, float horizon, float k, Color c, bool mirror,
             float alpha, float depth, out int index)
         {
             float px = footX + (x * k);
             if (!mirror)
             {
+                c.a = alpha;
                 index = g.AddVertex(px, horizon - (y * k), c);
                 return;
             }
