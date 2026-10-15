@@ -15,6 +15,10 @@ namespace AF.UI
     /// segunda fila de la cabecera), <c>reduce_motion</c>, <c>text_dp</c> (el tamaño del texto con la escala, 14 sp o menos si no
     /// cabía), <c>shown_dp</c> (el alto de lo que se ve) y <c>slot_dp</c> (el de la ranura).</item>
     /// </list>
+    /// Y <c>AF_PERF slot_measure</c> (revisión de F3), al cargar un nivel si las medidas de la ranura del Dato del río no salieron
+    /// de la caché (la primera vez por idioma, escala y ancho): <c>level</c>, <c>locale</c>, <c>scale</c>, <c>ms</c> (todo lo que
+    /// costó medir la ranura en el hilo principal), <c>fruit_ms</c> (la línea de fruta más alta del calendario) y <c>slot_dp</c>.
+    /// Sirve para medirlo en el teléfono con <c>adb logcat -s Unity</c>.
     /// <c>river_fact_shown</c> sale del punto común de la ranura (<see cref="RiverFactShown"/>, DevProbe.Map.cs) con el
     /// <c>fact_id</c> de la línea de fruta. Solo claves e identificadores, nunca texto visible (regla de localización).
     /// </summary>
@@ -27,6 +31,37 @@ namespace AF.UI
             {
                 Debug.Log(text);
             }
+        }
+
+        internal void SlotMeasure(int level, string locale, float scale, double ms, double fruitMs, float slotDp)
+        {
+            string? text = FormatSlotMeasure(level, locale, scale, ms, fruitMs, slotDp);
+            if (text != null)
+            {
+                Debug.Log(text);
+            }
+        }
+
+        /// <summary>Texto de la línea <c>AF_PERF slot_measure</c>; null si la sonda no escribe.</summary>
+        internal string? FormatSlotMeasure(int level, string locale, float scale, double ms, double fruitMs, float slotDp)
+        {
+            if (!Enabled)
+            {
+                return null;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_PERF {\"event\":\"slot_measure\"");
+            sb.Append(",\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"locale\":");
+            AppendKey(sb, locale);
+            sb.Append(",\"scale\":").Append(scale.ToString("0.00", CultureInfo.InvariantCulture));
+            sb.Append(",\"ms\":").Append(ms.ToString("0.00", CultureInfo.InvariantCulture));
+            sb.Append(",\"fruit_ms\":").Append(fruitMs.ToString("0.00", CultureInfo.InvariantCulture));
+            sb.Append(",\"slot_dp\":").Append(Mathf.RoundToInt(slotDp).ToString(CultureInfo.InvariantCulture));
+            sb.Append('}');
+            return sb.ToString();
         }
 
         /// <summary>Texto de la línea <c>AF_STATE fruit_line</c>; null si la sonda no escribe o la línea no se enseña.</summary>

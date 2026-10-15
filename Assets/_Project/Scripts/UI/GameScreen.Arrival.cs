@@ -59,6 +59,10 @@ namespace AF.UI
         partial void ArrivalLevelLoaded(LevelFlow flow)
         {
             _stopArriveSent = false;
+            // De F3 (la línea de fruta), no de la llegada: calienta las medidas de la ranura del Dato del río al cargar el nivel, para
+            // que la primera victoria no las pague (~20 ms; FactLineTests.Measures_AreMadeWhenTheLevelLoads_NotAtTheVictory). No la
+            // quites al rehacer este parcial: llévala al gancho propio de la ranura (SlotLevelLoaded) cuando GameScreen.cs lo declare.
+            WarmVictorySlot(flow.LevelNumber);
         }
 
         partial void ArrivalVictoryShown(LevelFlow flow)

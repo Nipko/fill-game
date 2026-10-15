@@ -16,14 +16,18 @@ namespace AF.UI
     /// del río»; propuesta de Frutas §2.2, reglas 1-9, §2.5, §2.6, §2.8 y §2.10; arquitectura de la tanda 4, §2; tarea F3). Es un
     /// proveedor de <see cref="VictoryLineSlot"/> y enseña la línea que le da el árbitro (<see cref="VictoryLine.FruitKey"/>;
     /// <see cref="VictoryLineArbiter"/>: el 10 con el Mapa, los <c>10k</c> con dato de llegada y los hitos en que habla TiTino
-    /// no llevan línea de fruta; la cadencia es <c>GameConfig.FruitLineEveryN</c>).
+    /// no llevan línea de fruta; la cadencia es <c>GameConfig.FruitLineEveryN</c>). Siempre obedece al árbitro: si da la línea de
+    /// fruta, sale.
     /// <list type="bullet">
     /// <item><b>Cabecera</b> de <see cref="VictoryLineSlot.HeaderDp"/> dp: el icono de la fruta a <see cref="IconDp"/> dp (la
     /// fruta en vuelo del tinte, <see cref="ProceduralArt.FruitFlight"/>, con su PNG <c>fruta_&lt;tinte&gt;</c> si existe), «Dato del
-    /// río» (<c>river_fact</c>) a la izquierda y «Açaí · 3/20» (<c>fact_progress</c>) a la derecha, en Nunito Bold de
-    /// <see cref="HeaderSp"/> sp. Son dos etiquetas: si no caben en una fila (al 130 % o con la pseudolocalización), el contador
-    /// baja a una segunda fila y la cabecera crece. En la última línea de la serie el contador pasa a un sello pequeño con el icono
-    /// de la fruta, junto al nombre, sin animación (Q5-A; propuesta §2.6).</item>
+    /// río» (<c>river_fact</c>) y, a continuación en la misma fila, un punto medio dibujado (<see cref="SeparatorDotDp"/> dp) y
+    /// «Açaí · 3/20» (<c>fact_progress</c>), en Nunito Bold de <see cref="HeaderSp"/> sp: «Dato del río · Açaí · 3/20». [P] 02
+    /// §6, D-017 Q1-A y el glosario §6.4 dicen «Dato del río · Açaí 3/20», y el glosario §10 da <c>fact_progress</c> =
+    /// «{name} · {k}/{n}»: la contradicción es del dueño (open issue de F3). Son dos etiquetas contiguas, nunca una cadena pegada
+    /// a otra; si no caben en una fila (al 130 % o con la pseudolocalización), el contador baja a una segunda fila, sin el punto,
+    /// y la cabecera crece. En la última línea de la serie el contador pasa a un sello pequeño con el icono de la fruta, junto al
+    /// nombre, sin animación (Q5-A; propuesta §2.6).</item>
     /// <item><b>Texto</b> (<c>Loc.Fact</c>) a todo el ancho, en Nunito Regular de <see cref="VictoryLineSlot.TextSp"/> sp, que crece
     /// hacia abajo hasta el alto fijo H de la línea de fruta (el de la ranura, <see cref="VictoryLineSlot.ContentHeightFor"/>); si
     /// una línea real no cabe, baja de medio en medio punto hasta <see cref="UiBuilder.MinTextSp"/> sp, nunca menos, y nunca se
@@ -36,8 +40,11 @@ namespace AF.UI
     /// bloquea, así que no entra en <c>AF_LAYOUT victory</c>.</item>
     /// <item><b>Textos:</b> solo si están todos en el idioma de la UI (<see cref="UiText.TryFruitLine"/>): nunca mezcla idiomas y,
     /// en release, nunca enseña nada sin aprobar.</item>
-    /// <item>Con la política <see cref="RiverFactPolicy.SingleKey"/> (no es la de hoy), en el <c>10k</c> la placa del lugar y la
-    /// línea de fruta no caben juntas en la ranura: la línea cede el sitio a la placa y queda en la ficha [P].</item>
+    /// <item><b>Sitio:</b> arriba de la ranura, a <see cref="TopAirDp"/> dp como mucho bajo su borde, con el sobrante de la ranura
+    /// debajo (la ranura puede ser más alta que H por la llegada, M1.6). Si la victoria lleva además la placa del lugar sin dato
+    /// (con <see cref="RiverFactPolicy.SingleKey"/> en los <c>10k</c>, o una llegada sin dato; arquitectura de la tanda 4, §2), la
+    /// placa va arriba (<see cref="ArrivalStrip.Stacked"/>) y la línea, <see cref="StackGapDp"/> dp debajo; la ranura reserva
+    /// la placa más alta de esos casos más H (GameScreen.Victory.cs).</item>
     /// </list>
     /// Nada de lo que hace por fotograma asigna memoria: los textos y las medidas se hacen al enseñarla y al recolocar la victoria.
     /// </summary>
@@ -46,14 +53,29 @@ namespace AF.UI
         /// <summary>Icono de la fruta de la cabecera (02 §6; propuesta §2.2, regla 5).</summary>
         public const float IconDp = VictoryLineSlot.HeaderDp;
 
+        /// <summary>
+        /// Disco bajo el icono de la cabecera, para que las frutas claras (copoazú, y las blancas) se distingan sobre la crema del
+        /// panel (revisión de F3) [P].
+        /// </summary>
+        public const float IconBackDp = 24f;
+
         /// <summary>Del icono a la cabecera [P].</summary>
         public const float IconGapDp = 8f;
 
         /// <summary>Cabecera: Nunito Bold de 12 sp (02 §6).</summary>
         public const float HeaderSp = UiBuilder.MinTextSp;
 
-        /// <summary>Hueco mínimo entre «Dato del río» y el contador en la misma fila [P].</summary>
-        public const float HeaderGapDp = 12f;
+        /// <summary>Hueco a cada lado del punto medio que separa «Dato del río» del contador en la misma fila [P].</summary>
+        public const float HeaderGapDp = 6f;
+
+        /// <summary>Punto medio dibujado entre «Dato del río» y el contador (el « · » de 02 §6) [P].</summary>
+        public const float SeparatorDotDp = 3f;
+
+        /// <summary>Aire máximo entre el borde de arriba de la ranura y la línea (revisión de F3) [P].</summary>
+        public const float TopAirDp = 12f;
+
+        /// <summary>De la placa del lugar a la línea de fruta cuando van juntas (<see cref="ArrivalStrip.Stacked"/>) [P].</summary>
+        public const float StackGapDp = 8f;
 
         /// <summary>Sello de la última línea de la serie (Q5-A): un disco de 20 dp [P].</summary>
         public const float SealDp = 20f;
@@ -73,20 +95,26 @@ namespace AF.UI
         /// <summary>Tinta del texto (07 §7.2).</summary>
         public static readonly Color TextInk = Palette.UiInk;
 
+        /// <summary>Disco bajo el icono de la cabecera: la crema del panel oscurecida un 12 % (revisión de F3) [P].</summary>
+        public static readonly Color IconBack = new Color(Palette.PanelLight.r * 0.88f, Palette.PanelLight.g * 0.88f, Palette.PanelLight.b * 0.88f, 1f);
+
         /// <summary>Aro del sello: el verde hoja de la cinta «¡Nivel completado!» [P].</summary>
         public static readonly Color SealRing = Palette.FamilyLeaf.Deep;
 
         private readonly ProceduralArt _art;
         private readonly Func<FactSchedule?> _schedule;
         private readonly Func<float> _blockDp;
+        private readonly Func<float> _aboveDp;
         private readonly TextMeshProUGUI _measureBold;
         private readonly TextMeshProUGUI _measureBody;
         private readonly List<NeedEntry> _needs = new List<NeedEntry>(4);
 
         private RectTransform? _root;
         private CanvasGroup? _group;
+        private Image? _iconBack;
         private Image? _icon;
         private TextMeshProUGUI? _headerLabel;
+        private Image? _headerDot;
         private TextMeshProUGUI? _progressLabel;
         private Image? _sealRing;
         private Image? _sealFace;
@@ -99,13 +127,15 @@ namespace AF.UI
         /// <summary>
         /// Crea la línea. <paramref name="measureParent"/> aloja las etiquetas de medir (ocultas); <paramref name="schedule"/> da el
         /// calendario de Frutas del río de ahora; <paramref name="blockDp"/>, el alto fijo H de la línea de fruta en el idioma, la
-        /// escala y el ancho de ahora (de la caché de la ranura).
+        /// escala y el ancho de ahora (de la caché de la ranura); <paramref name="aboveDp"/>, lo que ocupa encima la placa del lugar
+        /// cuando va con la línea (<see cref="ArrivalStrip.Stacked"/>; 0 si no).
         /// </summary>
-        public FactLine(ProceduralArt art, RectTransform measureParent, Func<FactSchedule?> schedule, Func<float> blockDp)
+        public FactLine(ProceduralArt art, RectTransform measureParent, Func<FactSchedule?> schedule, Func<float> blockDp, Func<float> aboveDp)
         {
             _art = art;
             _schedule = schedule;
             _blockDp = blockDp;
+            _aboveDp = aboveDp;
             RectTransform measure = UiBuilder.Rect("FactLineMeasure", measureParent);
             _measureBold = UiBuilder.Label("MeasureBold", measure, TextStyle.PlainBold, string.Empty, HeaderSp, Color.clear, TextAlignmentOptions.TopLeft);
             _measureBody = UiBuilder.Label("MeasureBody", measure, TextStyle.Body, string.Empty, VictoryLineSlot.TextSp, Color.clear, TextAlignmentOptions.TopLeft);
@@ -161,7 +191,10 @@ namespace AF.UI
         /// <summary>Alto fijo H de la línea de fruta en la última colocación (dp): hasta ahí crece el texto.</summary>
         public float BlockHeightDp { get; private set; }
 
-        /// <summary>Desplazamiento vertical de la línea dentro de la ranura (dp): el aire que deja H, repartido arriba y abajo.</summary>
+        /// <summary>
+        /// Desplazamiento vertical de la línea dentro de la ranura (dp): como mucho <see cref="TopAirDp"/>, o bajo la placa del lugar
+        /// si van juntas.
+        /// </summary>
         public float OffsetDp { get; private set; }
 
         /// <summary>Tamaño del texto que se enseña (dp, con la escala de texto): <see cref="VictoryLineSlot.TextSp"/> o menos si no cabía.</summary>
@@ -179,8 +212,14 @@ namespace AF.UI
         /// <summary>El icono de la fruta.</summary>
         public Image? Icon => _icon;
 
+        /// <summary>El disco bajo el icono de la fruta (<see cref="IconBackDp"/> dp, centrado en el icono).</summary>
+        public Image? IconBackDisc => _iconBack;
+
         /// <summary>«Dato del río».</summary>
         public TextMeshProUGUI? HeaderLabel => _headerLabel;
+
+        /// <summary>El punto medio entre «Dato del río» y el contador (solo con la cabecera en una fila).</summary>
+        public Image? HeaderDot => _headerDot;
 
         /// <summary>El contador o el nombre con el sello.</summary>
         public TextMeshProUGUI? ProgressLabel => _progressLabel;
@@ -191,8 +230,14 @@ namespace AF.UI
         /// <summary>El texto de la línea.</summary>
         public TextMeshProUGUI? TextLabel => _textLabel;
 
-        /// <summary>Milisegundos que costó la última medida de <see cref="NeedDp"/> que no salió de la caché (tests y AF_FACT).</summary>
+        /// <summary>
+        /// Milisegundos que costó la última medida de <see cref="NeedDp"/> que no salió de la caché (tests, AF_FACT y
+        /// <c>AF_PERF slot_measure</c>).
+        /// </summary>
         public double NeedMs { get; private set; }
+
+        /// <summary>Medidas de <see cref="NeedDp"/> que no salieron de la caché.</summary>
+        public int NeedMeasureCount { get; private set; }
 
         /// <summary>
         /// Índice de motor del tinte <paramref name="subject"/> (glosario §9; <see cref="ProceduralArt.TintIds"/>), o 0 si no es un
@@ -218,7 +263,8 @@ namespace AF.UI
         /// (en una fila o en dos) y su texto a <see cref="VictoryLineSlot.TextSp"/> sp, más el margen de abajo; 0 sin calendario o
         /// sin ninguna línea con texto en el idioma. La ranura reserva lo mayor de esto, del peor caso sintético de
         /// <see cref="VictoryLineSlot"/> y de la llegada más alta, así que ninguna línea real necesita bajar de 14 sp. Mide con
-        /// TextMeshPro una vez por combinación (caché), al maquetar la primera victoria: nunca por fotograma.
+        /// TextMeshPro una vez por combinación (caché): GameScreen la calienta al cargar el nivel, fuera de la victoria (revisión de
+        /// F3: unos 16-23 ms en el escritorio), y nunca por fotograma.
         /// </summary>
         public float NeedDp(float textScale, float widthDp)
         {
@@ -265,6 +311,7 @@ namespace AF.UI
             }
 
             NeedMs = watch.Elapsed.TotalMilliseconds;
+            NeedMeasureCount++;
             _needs.Add(new NeedEntry(schedule, catalog, unapproved, locale, textScale, widthDp, need));
             return need;
         }
@@ -298,27 +345,16 @@ namespace AF.UI
             ResetState();
             Level = level;
             _reduceMotion = reduceMotion;
-            FactSchedule? schedule = _schedule();
-            string? key = line.FruitKey;
 
-            // Con SingleKey, el 10k lleva la placa del lugar en la misma ranura: la línea le cede el sitio y queda en la ficha [P].
-            if (key == null || line.Arrival || schedule == null || _root == null)
-            {
-                Hide();
-                return false;
-            }
-
-            int lineLevel = schedule.LevelOf(key);
-            FactPosition position = lineLevel > 0 ? schedule.Progress(lineLevel) : default;
-            if (!position.IsValid || !string.Equals(position.Key, key, StringComparison.Ordinal)
-                || !UiText.TryFruitLine(in position, out string header, out string progress, out string text, out bool @sealed))
+            // Lo decide el árbitro: con la placa del lugar sin dato (SingleKey, o una llegada sin dato), la línea va bajo la placa.
+            if (_root == null || !TryResolve(in line, out FactPosition position, out string header, out string progress, out string text, out bool @sealed))
             {
                 Hide();
                 return false;
             }
 
             Position = position;
-            Key = key;
+            Key = line.FruitKey;
             ShownFactId = position.FactId;
             HeaderText = header;
             ProgressText = progress;
@@ -329,6 +365,39 @@ namespace AF.UI
             _group!.alpha = 0f;
             Arrange();
             return true;
+        }
+
+        /// <summary>
+        /// La línea <paramref name="line"/> del árbitro se puede enseñar en esta victoria (lo mismo que decide <see cref="ShowFor"/>,
+        /// sin enseñar nada): hay línea de fruta, la clave es del calendario y tiene todos sus textos en el idioma de la UI (en release,
+        /// aprobados). GameScreen.Victory.cs lo pregunta antes de la victoria para que la placa del lugar solo vaya arriba
+        /// (<see cref="ArrivalStrip.Stacked"/>) si la línea va de verdad debajo; si no, la placa va centrada.
+        /// </summary>
+        public bool CanShow(in VictoryLine line)
+        {
+            return SlotActive && _root != null && TryResolve(in line, out _, out _, out _, out _, out _);
+        }
+
+        // La posición y los textos de la línea que da el árbitro, o false si no hay línea de fruta, si la clave no es del calendario
+        // o si le falta algún texto en el idioma de la UI (UiText.TryFruitLine).
+        private bool TryResolve(in VictoryLine line, out FactPosition position, out string header, out string progress, out string text, out bool @sealed)
+        {
+            position = default;
+            header = string.Empty;
+            progress = string.Empty;
+            text = string.Empty;
+            @sealed = false;
+            FactSchedule? schedule = _schedule();
+            string? key = line.FruitKey;
+            if (key == null || schedule == null)
+            {
+                return false;
+            }
+
+            int lineLevel = schedule.LevelOf(key);
+            position = lineLevel > 0 ? schedule.Progress(lineLevel) : default;
+            return position.IsValid && string.Equals(position.Key, key, StringComparison.Ordinal)
+                && UiText.TryFruitLine(in position, out header, out progress, out text, out @sealed);
         }
 
         /// <inheritdoc />
@@ -400,9 +469,14 @@ namespace AF.UI
             _group.alpha = 0f;
             _group.blocksRaycasts = false;
             _group.interactable = false;
+            _iconBack = UiBuilder.Image("FruitIconBack", root, _art.Disc, IconBack);
+            _iconBack.raycastTarget = false;
             _icon = UiBuilder.Image("FruitIcon", root, null, Color.white);
             _icon.preserveAspect = true;
+            _icon.raycastTarget = false;
             _headerLabel = Label("Header", root, TextStyle.PlainBold, HeaderSp, HeaderInk, TextAlignmentOptions.MidlineLeft);
+            _headerDot = UiBuilder.Image("HeaderDot", root, _art.Disc, HeaderInk);
+            _headerDot.raycastTarget = false;
             _progressLabel = Label("Progress", root, TextStyle.PlainBold, HeaderSp, HeaderInk, TextAlignmentOptions.MidlineLeft);
             _sealRing = UiBuilder.Image("Seal", root, _art.Disc, SealRing);
             _sealFace = UiBuilder.Image("SealFace", root, _art.Disc, Palette.PanelLight);
@@ -430,29 +504,40 @@ namespace AF.UI
             BlockHeightDp = block;
 
             // H es el alto de la línea de fruta; la ranura puede ser más alta (la llegada más alta del catálogo, M1.6): la línea va
-            // centrada en ella, siempre en el mismo sitio, con el aire repartido arriba y abajo.
-            float off = Mathf.Max(0f, Mathf.Floor((_height - block) * 0.5f));
+            // arriba, a TopAirDp como mucho bajo el borde (cerca del filete que la anuncia), y el sobrante queda debajo. Con la placa
+            // del lugar encima (Stacked), justo debajo de ella.
+            float above = _aboveDp();
+            float off = above > 0f
+                ? Mathf.Ceil(above + StackGapDp)
+                : Mathf.Min(TopAirDp, Mathf.Max(0f, Mathf.Floor((_height - block) * 0.5f)));
             OffsetDp = off;
 
             int tint = TintOf(Position.Series!.Subject);
             Sprite? fruit = tint > 0 ? _art.FruitFlight(tint) : null;
             _icon!.sprite = fruit;
             SetActive(_icon, fruit != null);
+            SetActive(_iconBack, fruit != null);
+            UiBuilder.Place(_iconBack!.rectTransform, (IconDp - IconBackDp) * 0.5f, off + ((IconDp - IconBackDp) * 0.5f), IconBackDp, IconBackDp);
             UiBuilder.Place(_icon.rectTransform, 0f, off, IconDp, IconDp);
 
-            // La cabecera: «Dato del río» y el contador en una fila si caben; si no, el contador en una segunda fila.
+            // La cabecera: «Dato del río», el punto medio y el contador seguidos en una fila si caben; si no, el contador en una
+            // segunda fila, sin el punto.
             float x = IconDp + IconGapDp;
             float avail = w - x;
-            float sealW = Sealed ? SealGapDp + SealDp : 0f;
             HeaderHeightDp = HeaderHeightFor(HeaderText, ProgressText, Sealed, headerSize, LineHeight(headerSize), avail, out bool oneRow,
                 out float headerW, out float progressW, out float lineH);
             HeaderWrapped = !oneRow;
             float progressX;
             float progressTop;
+            float sealW = Sealed ? SealGapDp + SealDp : 0f;
+            SetActive(_headerDot, oneRow);
             if (oneRow)
             {
-                SetLabel(_headerLabel!, HeaderText, headerSize, x, off, Mathf.Min(avail, headerW + 1f), lineH);
-                progressX = w - sealW - progressW - 1f;
+                float headerBox = headerW + 1f;
+                SetLabel(_headerLabel!, HeaderText, headerSize, x, off, headerBox, lineH);
+                float dotX = x + headerBox + HeaderGapDp;
+                UiBuilder.Place(_headerDot!.rectTransform, dotX, off + ((lineH - SeparatorDotDp) * 0.5f), SeparatorDotDp, SeparatorDotDp);
+                progressX = dotX + SeparatorDotDp + HeaderGapDp;
                 progressTop = off;
             }
             else
@@ -462,8 +547,9 @@ namespace AF.UI
                 progressTop = off + lineH;
             }
 
-            SetLabel(_progressLabel!, ProgressText, headerSize, progressX, progressTop, Mathf.Min(avail, progressW + 1f), lineH);
-            PlaceSeal(fruit, progressX + Mathf.Min(avail - sealW, progressW + 1f) + SealGapDp, progressTop + ((lineH - SealDp) * 0.5f));
+            float progressBox = Mathf.Min(w - progressX - sealW, progressW + 1f);
+            SetLabel(_progressLabel!, ProgressText, headerSize, progressX, progressTop, progressBox, lineH);
+            PlaceSeal(fruit, progressX + progressBox + SealGapDp, progressTop + ((lineH - SealDp) * 0.5f));
 
             // El texto, a todo el ancho bajo la cabecera: 14 sp, o menos si una línea real no cabe en H (nunca menos de 12 sp).
             float top = off + HeaderHeightDp;
@@ -502,15 +588,15 @@ namespace AF.UI
             UiBuilder.Place(_sealIcon.rectTransform, x + SealRingDp + 1f, y + SealRingDp + 1f, icon, icon);
         }
 
-        // Alto de la cabecera con estos textos: una fila de IconDp si «Dato del río», el contador (y el sello) caben juntos en
-        // avail dp; si no, dos filas de texto (el contador debajo), con IconDp como mínimo.
+        // Alto de la cabecera con estos textos: una fila de IconDp si «Dato del río», el punto medio, el contador (y el sello)
+        // caben seguidos en avail dp; si no, dos filas de texto (el contador debajo), con IconDp como mínimo.
         private float HeaderHeightFor(string header, string progress, bool sealedLine, float headerSize, float textLine, float avail, out bool oneRow,
             out float headerW, out float progressW, out float lineH)
         {
             headerW = Width(header, headerSize);
             progressW = Width(progress, headerSize);
             float sealW = sealedLine ? SealGapDp + SealDp : 0f;
-            oneRow = headerW + HeaderGapDp + progressW + sealW <= avail;
+            oneRow = headerW + 1f + (2f * HeaderGapDp) + SeparatorDotDp + progressW + 1f + sealW <= avail;
             if (oneRow)
             {
                 lineH = Mathf.Max(IconDp, textLine);

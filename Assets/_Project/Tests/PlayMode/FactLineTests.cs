@@ -21,18 +21,23 @@ namespace AF.Tests.PlayMode
     /// <list type="bullet">
     /// <item>tiempo: entra con «Siguiente» (a los 600 ms de la pantalla de victoria, la fila 1,40 s) con un fundido de 200 ms, sin
     /// él con Reducir movimiento, y no recibe toques (raycastTarget false hasta F4);</item>
-    /// <item>la línea del 3 («Dato del río», «Açaí · 3/20» y su texto) y el sello de la última línea de una serie;</item>
-    /// <item>ranura fija: «Siguiente» en el mismo sitio con la línea más corta y la más larga de 1-200, en el 3 (sin Cosecha
-    /// doble) y en el 39 (con Cosecha doble y el chip), en es-419 y en-XA, al 100 % y al 130 %, a 360 × 640, con el panel y la
-    /// cinta bajo la cabecera;</item>
+    /// <item>la línea del 3 («Dato del río», el punto medio, «Açaí · 3/20» y su texto, arriba de la ranura) y el sello de la
+    /// última línea de una serie;</item>
+    /// <item>ranura fija: «Siguiente» en el mismo sitio con la línea más corta y la más larga de 1-200 de cada idioma y la más
+    /// alta de cada idioma y escala, en el 3 (sin Cosecha doble ni chip) y en el 39 (con Cosecha doble y el chip), en es-419 y
+    /// en-XA, al 100 % y al 130 %, a 360 × 640, con el panel y la cinta bajo la cabecera;</item>
+    /// <item>las medidas de la ranura se hacen al cargar el nivel, no en la victoria;</item>
     /// <item>en 1-200, cada victoria lleva su línea salvo donde el árbitro dice otra cosa (los <c>10k</c> con dato de llegada), y
     /// todas caben sin recortes en es-419 al 100 % y en en-XA al 130 %;</item>
     /// <item>el 20 (un <c>10k</c>) lleva la llegada y no la línea de fruta; el 10, la línea sin el Mapa y la ranura vacía con él;</item>
+    /// <item>la placa del lugar sin dato y la línea de fruta juntas, como dice el árbitro (arquitectura de la tanda 4, §2): el 20
+    /// con SingleKey y el 30 con Canon y otra cadencia del dato de llegada; y el 20 con SingleKey en un idioma sin la línea: la
+    /// placa, centrada;</item>
     /// <item>cadencias 0, 1 y 2 (<c>ui_fruit_line_every_n_levels</c>);</item>
     /// <item>sin mezcla de idiomas: en un idioma sin la línea traducida, no sale nada; con la línea traducida pero sin la
     /// cabecera, tampoco; en release, nada sin aprobar;</item>
     /// <item>sonda: <c>river_fact_shown</c> con <c>fact_id</c> = <c>&lt;tinte&gt;.&lt;kk&gt;</c> desde el punto común (Siguiente o
-    /// Inicio) y <c>AF_STATE fruit_line</c>.</item>
+    /// Inicio), con <c>dismissed_ms</c> desde que entra la línea, y <c>AF_STATE fruit_line</c>.</item>
     /// </list>
     /// </summary>
     public sealed class FactLineTests
@@ -129,9 +134,18 @@ namespace AF.Tests.PlayMode
             Assert.That(line.Sealed, Is.False);
             Assert.That(line.Seal!.gameObject.activeSelf, Is.False);
             Assert.That(line.HeaderWrapped, Is.False, "al 100 % en es-419, la cabecera va en una fila");
+            Assert.That(line.HeaderDot!.gameObject.activeSelf, Is.True, "«Dato del río» · «Açaí · 3/20», seguidos en la misma fila");
+            Assert.That(line.OffsetDp, Is.LessThanOrEqualTo(FactLine.TopAirDp), "arriba de la ranura, cerca del filete");
             Assert.That(line.HeaderHeightDp, Is.EqualTo(VictoryLineSlot.HeaderDp), "cabecera de 32 dp");
             Assert.That(line.Icon!.sprite, Is.Not.Null, "el icono de la fruta");
             Assert.That(line.Icon.rectTransform.rect.width, Is.EqualTo(FactLine.IconDp));
+            Image back = line.IconBackDisc!;
+            Assert.That(back.gameObject.activeSelf, Is.True, "un disco bajo el icono, para las frutas claras");
+            Assert.That(back.rectTransform.rect.width, Is.EqualTo(FactLine.IconBackDp));
+            Assert.That(back.rectTransform.GetSiblingIndex(), Is.LessThan(line.Icon.rectTransform.GetSiblingIndex()), "el disco, debajo del icono");
+            Assert.That(back.rectTransform.rect.center + back.rectTransform.anchoredPosition,
+                Is.EqualTo(line.Icon.rectTransform.rect.center + line.Icon.rectTransform.anchoredPosition), "centrado en el icono");
+            Assert.That(back.raycastTarget, Is.False);
             Assert.That(line.HeaderLabel!.fontSize, Is.EqualTo(FactLine.HeaderSp * UiBuilder.TextScale), "Nunito Bold de 12 sp");
             Assert.That(line.TextSizeDp, Is.EqualTo(VictoryLineSlot.TextSp * UiBuilder.TextScale), "el texto, a 14 sp");
             Assert.That(view.FruitLineShownCount, Is.EqualTo(1));
@@ -163,53 +177,60 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator TheSlotIsFixed_NextStaysPut_WithTheShortestAndLongestLines_At360x640()
         {
-            // La línea más corta y la más larga de 1-200 en es-419 (de las que salen en una victoria), el 3 (sin Cosecha doble ni
-            // chip) y el 39 (con Cosecha doble y el chip del 40, Difícil).
+            // Por idioma, la línea más corta y la más larga de 1-200 (de las que salen en una victoria), el 3 (sin Cosecha doble ni
+            // chip) y el 39 (con Cosecha doble y el chip del 40, Difícil); y, por idioma y escala, la línea que más alto ocupa con
+            // su cabecera (la que fija H).
             yield return HudSetup.LoadAtIntro(1);
             GameBootstrap first = GameBootstrap.Current!;
             FactSchedule schedule = first.FruitFacts!;
             RiverStopCatalog stops = first.RiverStops!;
-            int shortest = 0;
-            int longest = 0;
-            for (int level = 1; level <= 200; level++)
-            {
-                VictoryLine vl = VictoryLineArbiter.For(VictoryLineArbiter.ContextFor(level, false, stops, schedule.KeyFor(level), false));
-                if (vl.FruitKey == null)
-                {
-                    continue;
-                }
-
-                int length = Loc.Fact(vl.FruitKey).Length;
-                if (shortest == 0 || length < Loc.Fact(schedule.KeyFor(shortest)!).Length)
-                {
-                    shortest = level;
-                }
-
-                if (longest == 0 || length > Loc.Fact(schedule.KeyFor(longest)!).Length)
-                {
-                    longest = level;
-                }
-            }
-
-            TestContext.WriteLine("línea más corta: " + shortest + " (" + Loc.Fact(schedule.KeyFor(shortest)!).Length + "), más larga: " + longest
-                + " (" + Loc.Fact(schedule.KeyFor(longest)!).Length + ")");
-            var levels = new List<int> { 3 };
-            foreach (int l in new[] { shortest, longest, 39 })
-            {
-                if (!levels.Contains(l))
-                {
-                    levels.Add(l);
-                }
-            }
-
             foreach (string locale in new[] { LocLocale.SpanishLatinAmerica, LocLocale.Pseudo })
             {
+                if (Loc.Locale != locale)
+                {
+                    Loc.SetLocale(locale);
+                }
+
+                int shortest = 0;
+                int longest = 0;
+                for (int level = 1; level <= 200; level++)
+                {
+                    VictoryLine vl = VictoryLineArbiter.For(VictoryLineArbiter.ContextFor(level, false, stops, schedule.KeyFor(level), false));
+                    if (vl.FruitKey == null)
+                    {
+                        continue;
+                    }
+
+                    int length = Loc.Fact(vl.FruitKey).Length;
+                    if (shortest == 0 || length < Loc.Fact(schedule.KeyFor(shortest)!).Length)
+                    {
+                        shortest = level;
+                    }
+
+                    if (longest == 0 || length > Loc.Fact(schedule.KeyFor(longest)!).Length)
+                    {
+                        longest = level;
+                    }
+                }
+
+                TestContext.WriteLine(locale + ": línea más corta: " + shortest + " (" + Loc.Fact(schedule.KeyFor(shortest)!).Length + "), más larga: "
+                    + longest + " (" + Loc.Fact(schedule.KeyFor(longest)!).Length + ")");
                 foreach (float scale in new[] { 1f, 1.3f })
                 {
+                    var levels = new List<int> { 3 };
+                    foreach (int l in new[] { shortest, longest, 39 })
+                    {
+                        if (!levels.Contains(l))
+                        {
+                            levels.Add(l);
+                        }
+                    }
+
                     float next = -1f;
                     float reserve = -1f;
-                    foreach (int level in levels)
+                    for (int index = 0; index < levels.Count; index++)
                     {
+                        int level = levels[index];
                         string what = level + " en " + locale + " al " + Mathf.RoundToInt(scale * 100f) + " %";
                         yield return Win(level, null, locale, scale, true);
                         GameBootstrap boot = GameBootstrap.Current!;
@@ -226,6 +247,7 @@ namespace AF.Tests.PlayMode
                         else if (level == 3)
                         {
                             Assert.That(view.DoubleHarvestShown, Is.False, what + ": sin Cosecha doble antes del 11");
+                            Assert.That(view.NextChip.Visible, Is.False, what + ": sin chip");
                         }
 
                         TestContext.WriteLine(what + ": Siguiente " + view.NextTopDp + " dp, ranura " + view.VictorySlot.ContentDp + " dp, línea "
@@ -244,9 +266,40 @@ namespace AF.Tests.PlayMode
                             Assert.That(view.NextTopDp, Is.EqualTo(next).Within(0.01f), what + ": Siguiente en el mismo sitio");
                             Assert.That(view.VictorySlot.ReserveDp, Is.EqualTo(reserve).Within(0.01f), what + ": la misma reserva");
                         }
+
+                        if (index == 0)
+                        {
+                            // La línea que más alto ocupa en este idioma y esta escala (con la cabecera en una o dos filas).
+                            int tallest = TallestLine(view, stops);
+                            TestContext.WriteLine(locale + " al " + Mathf.RoundToInt(scale * 100f) + " %: la línea más alta es la del " + tallest);
+                            if (!levels.Contains(tallest))
+                            {
+                                levels.Add(tallest);
+                            }
+                        }
                     }
                 }
             }
+        }
+
+        // El nivel de 1-200 cuya línea de fruta ocupa más alto en el idioma, la escala y el ancho de view (deja la línea oculta).
+        private static int TallestLine(GameScreen view, RiverStopCatalog stops)
+        {
+            FactLine line = view.FruitLine!;
+            int tallest = 0;
+            float height = -1f;
+            for (int level = 1; level <= 200; level++)
+            {
+                VictoryLine vl = VictoryLineArbiter.For(VictoryLineArbiter.ContextFor(level, false, stops, view.FruitKeyOf!(level), false));
+                if (vl.FruitKey != null && line.ShowFor(level, false, in vl) && line.ShownHeightDp > height)
+                {
+                    height = line.ShownHeightDp;
+                    tallest = level;
+                }
+            }
+
+            line.Hide();
+            return tallest;
         }
 
         [UnityTest]
@@ -327,6 +380,140 @@ namespace AF.Tests.PlayMode
             Assert.That(view.RiverFactShownCount, Is.EqualTo(1));
             Assert.That(view.LastRiverFactId, Is.EqualTo(AlterFact), "el fact_id es el del dato de llegada");
             Assert.That(view.FruitLineShownCount, Is.EqualTo(0));
+        }
+
+        [UnityTest]
+        public IEnumerator Level20_WithSingleKey_ThePlacePlateAndTheFruitLineGoTogether_AndNextStaysPut()
+        {
+            // Arquitectura de la tanda 4, §2: «con SingleKey, la llegada solo con la placa del lugar, más la línea de fruta». La
+            // placa va arriba de la ranura y la línea debajo; la ranura reserva ese alto en todas las victorias.
+            foreach (bool small in new[] { false, true })
+            {
+                string locale = small ? LocLocale.Pseudo : LocLocale.SpanishLatinAmerica;
+                float scale = small ? 1.3f : 1f;
+                string where = small ? " en en-XA al 130 % a 360 × 640" : " en es-419 al 100 %";
+                yield return Win(3, v => v.RiverPolicyOverride = RiverFactPolicy.SingleKey, locale, scale, small);
+                GameScreen view = GameBootstrap.Current!.View!;
+                PlayModeHelpers.Step(GameBootstrap.Current!, 1000);
+                float next3 = view.NextTopDp;
+                Assert.That(view.Arrival!.Stacked, Is.False, "el 3 no tiene llegada");
+                AssertFits(view, "3 con SingleKey" + where);
+
+                yield return Win(20, v => v.RiverPolicyOverride = RiverFactPolicy.SingleKey, locale, scale, small);
+                GameBootstrap boot = GameBootstrap.Current!;
+                view = boot.View!;
+                PlayModeHelpers.Step(boot, 1600);
+                string what = "20 con SingleKey" + where;
+                VictoryLine vl = view.CurrentVictoryLine;
+                Assert.That(vl.Arrival, Is.True, what + ": la llegada");
+                Assert.That(vl.ArrivalFact, Is.False, what + ": sin dato");
+                Assert.That(vl.FruitKey, Is.EqualTo("fact.acai.20"), what + ": el árbitro da la línea de fruta");
+                ArrivalStrip strip = view.Arrival!;
+                Assert.That(strip.Kind, Is.EqualTo(ArrivalKind.Place), what + ": solo la placa del lugar");
+                Assert.That(strip.Stacked, Is.True, what);
+                Assert.That(strip.OffsetDp, Is.EqualTo(0f), what + ": la placa, arriba de la ranura");
+                Assert.That(strip.ShownFactKey, Is.Null, what);
+                FactLine line = view.FruitLine!;
+                Assert.That(line.Shown, Is.True, what + ": se ve la línea de fruta");
+                Assert.That(line.Alpha, Is.EqualTo(1f), what);
+                Assert.That(line.ShownFactId, Is.EqualTo("acai.20"), what);
+                Assert.That(line.OffsetDp, Is.GreaterThanOrEqualTo(strip.OffsetDp + strip.ShownHeightDp + FactLine.StackGapDp - 0.01f), what + ": la línea, bajo la placa");
+                AssertFits(view, what);
+                float width = view.VictorySlotWidthDp;
+                float fruit = Mathf.Max(view.VictorySlotContentHeight(Loc.Locale, UiBuilder.TextScale), line.NeedDp(UiBuilder.TextScale, width));
+                float stack = view.StackNeedDp(Loc.Locale, UiBuilder.TextScale, width, fruit);
+                Assert.That(stack, Is.GreaterThan(fruit), what + ": la placa y la línea juntas");
+                Assert.That(view.VictorySlot.ContentDp, Is.EqualTo(Mathf.Max(Mathf.Max(fruit, strip.NeedDp(UiBuilder.TextScale, width)), stack)), what + ": la ranura las reserva");
+                Assert.That(view.NextTopDp, Is.EqualTo(next3).Within(0.01f), what + ": Siguiente en el mismo sitio que en el 3");
+                TestContext.WriteLine(what + ": placa " + strip.ShownHeightDp + " dp, línea " + line.ShownHeightDp + " dp desde " + line.OffsetDp
+                    + ", ranura " + view.VictorySlot.ContentDp + " dp (juntas " + stack + "), Siguiente " + view.NextTopDp + ", cinta "
+                    + (view.VictoryPanelTopDp - 38f) + ", cabecera del HUD " + view.SlothBandTopDp);
+                Assert.That(view.VictoryPanelTopDp - 38f, Is.GreaterThanOrEqualTo(view.SlothBandTopDp), what + ": el panel y la cinta, bajo la cabecera");
+                view.NextButton.onClick.Invoke();
+                Assert.That(view.RiverFactShownCount, Is.EqualTo(1), what + ": river_fact_shown");
+                Assert.That(view.LastRiverFactId, Is.EqualTo("acai.20"), what + ": con el fact_id de la línea de fruta");
+                Assert.That(view.FruitLineShownCount, Is.EqualTo(1), what);
+                GameScreen.SimulatedScreen = null;
+                LaunchOptions.Reset();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Level20_WithSingleKey_InALocaleWithoutTheLine_ThePlacePlateStaysCentred()
+        {
+            // en: el árbitro da la placa del lugar sin dato y la clave de la línea de fruta, pero la línea no tiene inglés y no sale
+            // (D-018, Q10-A). La placa no se queda arriba con un hueco debajo: va centrada, como sin línea de fruta (revisión de F3).
+            yield return Win(20, v =>
+            {
+                v.RiverPolicyOverride = RiverFactPolicy.SingleKey;
+                Loc.SetLocale(LocLocale.English);
+            });
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            PlayModeHelpers.Step(boot, 1600);
+            string what = "20 con SingleKey en en";
+            Assert.That(Loc.Locale, Is.EqualTo(LocLocale.English));
+            VictoryLine vl = view.CurrentVictoryLine;
+            Assert.That(vl.Arrival, Is.True, what + ": la llegada");
+            Assert.That(vl.ArrivalFact, Is.False, what + ": sin dato");
+            Assert.That(vl.FruitKey, Is.EqualTo("fact.acai.20"), what + ": el árbitro da la clave; el texto lo decide el idioma");
+            Assert.That(view.FruitLine!.CanShow(in vl), Is.False, what + ": sin texto en inglés");
+            Assert.That(view.FruitLine.Shown, Is.False, what + ": no sale la línea de fruta");
+            ArrivalStrip strip = view.Arrival!;
+            Assert.That(strip.Kind, Is.EqualTo(ArrivalKind.Place), what + ": solo la placa del lugar");
+            Assert.That(strip.StackFruit, Is.False, what);
+            Assert.That(strip.Stacked, Is.False, what + ": sin la línea debajo, la placa no va arriba");
+            Assert.That(strip.ShownHeightDp, Is.LessThan(strip.SlotHeightDp), what);
+            Assert.That(strip.OffsetDp, Is.EqualTo(Mathf.Max(0f, Mathf.Floor((strip.SlotHeightDp - strip.ShownHeightDp) * 0.5f))), what + ": la placa, centrada");
+            Assert.That(strip.OffsetDp, Is.GreaterThan(0f), what + ": no pegada arriba");
+            view.NextButton.onClick.Invoke();
+            Assert.That(view.FruitLineShownCount, Is.EqualTo(0), what);
+        }
+
+        [UnityTest]
+        public IEnumerator Level30_WithCanonAndAnArrivalWithoutItsFact_CarriesThePlacePlateAndTheFruitLine()
+        {
+            // Canon con otra cadencia del dato de llegada (20): el 30 llega a su parada sin dato, y el árbitro da la línea de fruta.
+            yield return Win(30, v => v.RiverFactEveryNOverride = 20);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            PlayModeHelpers.Step(boot, 1600);
+            string what = "30 con Canon y la cadencia 20";
+            VictoryLine vl = view.CurrentVictoryLine;
+            string? key = view.FruitKeyOf!(30);
+            Assert.That(key, Is.Not.Null);
+            Assert.That(vl.Arrival, Is.True, what);
+            Assert.That(vl.ArrivalFact, Is.False, what + ": la llegada, sin dato");
+            Assert.That(vl.FruitKey, Is.EqualTo(key), what + ": y la línea de fruta");
+            Assert.That(view.Arrival!.Kind, Is.EqualTo(ArrivalKind.Place), what);
+            Assert.That(view.Arrival.Stacked, Is.True, what);
+            FactLine line = view.FruitLine!;
+            Assert.That(line.Shown, Is.True, what);
+            Assert.That(line.OffsetDp, Is.GreaterThanOrEqualTo(view.Arrival.OffsetDp + view.Arrival.ShownHeightDp + FactLine.StackGapDp - 0.01f), what);
+            AssertFits(view, what);
+            view.HomeButton.onClick.Invoke();
+            Assert.That(view.RiverFactShownCount, Is.EqualTo(1), what + ": river_fact_shown");
+            Assert.That(view.LastRiverFactId, Is.EqualTo(boot.FruitFacts!.FactIdFor(30)), what + ": con el fact_id de la línea de fruta");
+        }
+
+        [UnityTest]
+        public IEnumerator Measures_AreMadeWhenTheLevelLoads_NotAtTheVictory()
+        {
+            int atLoad = -1;
+            yield return Win(3, v =>
+            {
+                atLoad = v.FruitLine!.NeedMeasureCount;
+                Assert.That(v.SlotWarmMs, Is.GreaterThanOrEqualTo(0d), "medidas al cargar el nivel");
+                Assert.That(v.VictorySlot.Built, Is.True);
+            });
+            GameScreen view = GameBootstrap.Current!.View!;
+            Assert.That(atLoad, Is.EqualTo(1), "la línea más alta del calendario, una vez");
+            Assert.That(view.FruitLine!.NeedMeasureCount, Is.EqualTo(atLoad), "la victoria no vuelve a medir");
+            Assert.That(view.FruitLine.Shown, Is.True);
+            string? perf = new DevProbe().FormatSlotMeasure(3, Loc.Locale, UiBuilder.TextScale, view.SlotWarmMs, view.FruitLine.NeedMs, view.VictorySlot.ContentDp);
+            Assert.That(perf, Does.StartWith("AF_PERF {\"event\":\"slot_measure\"").And.Contain("\"level\":3").And.Contain("\"locale\":\"es-419\""));
+            TestContext.WriteLine("medidas de la ranura al cargar el nivel: " + view.SlotWarmMs.ToString("0.0") + " ms (la línea de fruta "
+                + view.FruitLine.NeedMs.ToString("0.0") + " ms)");
         }
 
         [UnityTest]
@@ -477,7 +664,11 @@ namespace AF.Tests.PlayMode
             view.NextButton.onClick.Invoke();
             Assert.That(view.RiverFactShownCount, Is.EqualTo(1));
             Assert.That(view.LastRiverFactId, Is.EqualTo("acai.03"), "fact_id = <tinte>.<kk> (08 §4.6 y §8.2)");
-            Assert.That(view.LastRiverFactDismissedMs, Is.EqualTo(since));
+            Assert.That(since, Is.GreaterThan(VictoryLineSlot.FruitRevealMs));
+            Assert.That(view.VictorySlot.DismissedMs, Is.EqualTo(since));
+            Assert.That(view.LastRiverFactDismissedMs, Is.EqualTo(since - VictoryLineSlot.FruitRevealMs).Within(0.01f),
+                "dismissed_ms de la línea de fruta: desde que entra la línea (Frutas §2.10), no desde la victoria");
+            Assert.That(GameScreen.FruitDismissedMs(VictoryLineSlot.FruitRevealMs - 100f), Is.EqualTo(0f), "cerrada antes de que entre: 0");
             string? shown = new DevProbe().FormatRiverFactShown(3, view.LastRiverFactId!, view.LastRiverFactDismissedMs);
             Assert.That(shown, Does.Contain("\"event\":\"river_fact_shown\"").And.Contain("\"level\":3").And.Contain("\"fact_id\":\"acai.03\""));
             PlayModeHelpers.Step(boot, 500);
@@ -553,12 +744,24 @@ namespace AF.Tests.PlayMode
                 Assert.That(label.fontSize, Is.GreaterThanOrEqualTo((UiBuilder.MinTextSp * scale) - 0.01f), what + ": " + label.name + " ≥ 12 sp");
             }
 
+            ArrivalStrip? arrival = view.Arrival;
+            if (arrival == null || !arrival.Stacked || arrival.Kind == ArrivalKind.None)
+            {
+                Assert.That(line.OffsetDp, Is.LessThanOrEqualTo(FactLine.TopAirDp), what + ": arriba de la ranura, cerca del filete");
+            }
+
             RectTransform header = line.HeaderLabel!.rectTransform;
             RectTransform progress = line.ProgressLabel!.rectTransform;
+            RectTransform dot = line.HeaderDot!.rectTransform;
+            Assert.That(line.HeaderDot.gameObject.activeSelf, Is.EqualTo(!line.HeaderWrapped), what + ": el punto medio, solo en una fila");
             if (!line.HeaderWrapped)
             {
-                Assert.That(header.anchoredPosition.x + header.rect.width, Is.LessThanOrEqualTo(progress.anchoredPosition.x + 0.5f),
-                    what + ": «Dato del río» y el contador no se pisan");
+                Assert.That(header.anchoredPosition.x + header.rect.width, Is.LessThanOrEqualTo(dot.anchoredPosition.x + 0.5f),
+                    what + ": «Dato del río», el punto");
+                Assert.That(dot.anchoredPosition.x + dot.rect.width, Is.LessThanOrEqualTo(progress.anchoredPosition.x + 0.5f),
+                    what + ": y el contador, seguidos y sin pisarse");
+                Assert.That(progress.anchoredPosition.x - (header.anchoredPosition.x + header.rect.width),
+                    Is.LessThanOrEqualTo((2f * FactLine.HeaderGapDp) + FactLine.SeparatorDotDp + 0.5f), what + ": el contador, a continuación");
             }
             else
             {

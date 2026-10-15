@@ -21,7 +21,11 @@ namespace AF.UI
     /// llena, y debajo una sola placa con el retrato de TiTino (<see cref="PortraitDp"/> dp), la bienvenida del país en los
     /// cambios de país (80 y 140; P-M7 a), «{lugar} · {país} · río {río}» (<c>map_arrived</c>, con los nombres por
     /// <see cref="Loc.Fact(string)"/>) y el dato a <see cref="FactSp"/> sp.</item>
-    /// <item><see cref="ArrivalKind.Place"/>: solo la placa del lugar (política SingleKey, o un hito en el que habla TiTino).</item>
+    /// <item><see cref="ArrivalKind.Place"/>: solo la placa del lugar (política SingleKey, un hito en el que habla TiTino o una
+    /// llegada sin dato). Si el árbitro da además la línea de fruta (<see cref="VictoryLine.FruitKey"/>; arquitectura de la
+    /// tanda 4, §2: «con SingleKey, la llegada solo con la placa del lugar, más la línea de fruta») y la línea de fruta se
+    /// enseña (<see cref="StackFruit"/>: tiene sus textos en el idioma de la UI), la placa va arriba de la ranura
+    /// (<see cref="Stacked"/>) y la línea de fruta, debajo (<see cref="FactLine"/>; tarea F3); si no, la placa va centrada.</item>
     /// <item><see cref="ArrivalKind.Deferred"/>: en el <c>10k+1</c> tras un hito en el que habló TiTino, solo la placa del dato
     /// desplazado con el retrato, que entra con «Siguiente» como la línea de fruta (<see cref="VictoryLineSlot.FruitLineAlpha"/>).</item>
     /// </list>
@@ -306,6 +310,19 @@ namespace AF.UI
         /// <summary>Alto que ocupa lo que se enseña ahora (dp; 0 sin nada).</summary>
         public float ShownHeightDp { get; private set; }
 
+        /// <summary>
+        /// La línea de fruta se enseña en la victoria de ahora (lo pone GameScreen.Victory.cs antes de cada victoria, con
+        /// <see cref="FactLine.CanShow"/>: el árbitro la da y tiene sus textos en el idioma de la UI): una placa del lugar con línea
+        /// de fruta (<see cref="VictoryLine.FruitKey"/>) va entonces arriba, con la línea debajo (<see cref="Stacked"/>); si no, centrada.
+        /// </summary>
+        public bool StackFruit { get; set; }
+
+        /// <summary>
+        /// En la victoria de ahora la placa del lugar va arriba de la ranura, sin centrar, y la línea de fruta debajo (tarea F3;
+        /// arquitectura de la tanda 4, §2).
+        /// </summary>
+        public bool Stacked { get; private set; }
+
         /// <summary>Alto del contenido de la ranura en la última maquetación (dp).</summary>
         public float SlotHeightDp => _height;
 
@@ -476,6 +493,16 @@ namespace AF.UI
         }
 
         /// <summary>
+        /// Alto (dp) de la placa del lugar de <paramref name="stop"/> sola (<see cref="ArrivalKind.Place"/>: la fila del agua, la
+        /// bienvenida si iza bandera y el lugar) en el idioma de <see cref="Loc"/>, a la escala <paramref name="textScale"/> y en
+        /// <paramref name="widthDp"/> dp: lo que ocupa encima de la línea de fruta cuando van juntas (<see cref="Stacked"/>).
+        /// </summary>
+        public float PlaceHeightOf(RiverStop stop, float textScale, float widthDp)
+        {
+            return HeightOf(ArrivalKind.Place, WelcomeFor(stop), PlaceFor(stop, PlaceTextWidth(widthDp), textScale, out _), string.Empty, textScale, widthDp);
+        }
+
+        /// <summary>
         /// Alto (dp) de lo que se enseña con <paramref name="kind"/> y estos textos (vacío = sin esa línea), a la escala
         /// <paramref name="textScale"/> y en <paramref name="widthDp"/> dp: la fila del agua, el hueco y la placa (con el retrato
         /// si hay dato) más el margen de abajo. Mide con TextMeshPro: solo al enseñar o al medir, nunca por fotograma.
@@ -552,6 +579,8 @@ namespace AF.UI
                 Hide();
                 return false;
             }
+
+            Stacked = StackFruit && Kind == ArrivalKind.Place && line.FruitKey != null;
 
             ShownFactKey = FactText.Length > 0 ? line.ArrivalFactKey : null;
             _since = 0f;
@@ -752,6 +781,7 @@ namespace AF.UI
             PlaceBreaks = 0;
             FactText = string.Empty;
             ShownHeightDp = 0f;
+            Stacked = false;
             Skipped = false;
             CompletedBy = string.Empty;
             WaterFill = LegFromFill;
@@ -872,8 +902,9 @@ namespace AF.UI
 
             ShownHeightDp = HeightOf(Kind, WelcomeText, PlaceText, FactText, scale, w);
 
-            // La ranura tiene el alto de la llegada más alta del catálogo: lo de ahora va centrado, con el aire repartido.
-            _offY = Mathf.Max(0f, Mathf.Floor((_height - ShownHeightDp) * 0.5f));
+            // La ranura tiene el alto de la llegada más alta del catálogo: lo de ahora va centrado, con el aire repartido. Con la
+            // línea de fruta debajo (Stacked), la placa va arriba: la ranura reserva la placa más alta y la línea (F3).
+            _offY = Stacked ? 0f : Mathf.Max(0f, Mathf.Floor((_height - ShownHeightDp) * 0.5f));
             float off = _offY;
             _mixed = false;
             SetActive(_bedEdge, row);
