@@ -231,6 +231,21 @@ namespace AF.EditorTools
                 return coverageCode != 0 ? coverageCode : 4;
             }
 
+            // La carpeta temporal de Save() no puede quedarse en Assets/ (acabaría commiteada con su .meta): se borra la que
+            // dejara un intento anterior interrumpido y, pase lo que pase (también con una excepción, código 4), al terminar.
+            DeleteTempDir();
+            try
+            {
+                return Generate(coverage);
+            }
+            finally
+            {
+                DeleteTempDir();
+            }
+        }
+
+        private static int Generate(FontCoverageReport coverage)
+        {
             EnsureFolder(OutputDir);
             var assets = new Dictionary<string, TMP_FontAsset>(StringComparer.Ordinal);
             bool missingAny = false;
@@ -283,10 +298,7 @@ namespace AF.EditorTools
                 assets[name] = Save(asset, name);
             }
 
-            if (AssetDatabase.IsValidFolder(TempDir))
-            {
-                AssetDatabase.DeleteAsset(TempDir);
-            }
+            DeleteTempDir();
 
             List<string> gaps = AtlasGaps(coverage);
             for (int i = 0; i < gaps.Count; i++)
@@ -304,6 +316,15 @@ namespace AF.EditorTools
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             return missingAny ? 5 : 0;
+        }
+
+        /// <summary>Borra <see cref="TempDir"/> (y su .meta) si existe.</summary>
+        private static void DeleteTempDir()
+        {
+            if (AssetDatabase.IsValidFolder(TempDir))
+            {
+                AssetDatabase.DeleteAsset(TempDir);
+            }
         }
 
         private static int RunStyles()

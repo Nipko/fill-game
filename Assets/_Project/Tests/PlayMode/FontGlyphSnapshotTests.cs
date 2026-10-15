@@ -24,7 +24,8 @@ namespace AF.Tests.PlayMode
     /// <c>[Explicit]</c>, no forman parte de la suite), en en-XA y en es-419, a 360 × 780 dp:
     /// <list type="bullet">
     /// <item><description><c>b1_01a_glifos_baloo2</c> y <c>b1_01b_glifos_nunito</c>: los estilos de texto (<see cref="TextStyle"/>)
-    /// de cada familia sobre fondo negro, cada uno con los caracteres latinos ampliados de su atlas (Latin-1 de ¡ a ÿ, la
+    /// de cada familia sobre fondo negro, cada uno con los caracteres latinos ampliados de su atlas (Latin-1 de ¡ a ÿ en tres
+    /// filas fijas y con un espacio fino entre cada carácter, la
     /// puntuación tipográfica, cifras con sus separadores y, en Baloo 2, «+20 → +40» de la tabla) y dos textos de la tabla (en
     /// en-XA, alargados, con acentos y entre corchetes);</description></item>
     /// <item><description><c>b1_02_inicio_l4</c>: el inicio con 1.240 semillas; y</description></item>
@@ -136,14 +137,7 @@ namespace AF.Tests.PlayMode
             canvas.scaleFactor = 3f; // 1 dp = 3 px en la captura de 1080 × 2340
             canvas.sortingOrder = 1000;
 
-            var latin = new StringBuilder();
-            for (int c = 0xA1; c <= 0xFF; c++)
-            {
-                if (c != 0xAD)
-                {
-                    latin.Append((char)c);
-                }
-            }
+            string latin = LatinRows();
 
             string numbers = Loc.Number(1234567) + " · " + Loc.Number(-3.5, 1);
             string sentence = Loc.T(UiText.Keys.DoubleHarvestDelta, LocArgs.Of("n", 20).And("doubled", 40));
@@ -166,12 +160,41 @@ namespace AF.Tests.PlayMode
                 rt.anchorMin = new Vector2(0f, 1f);
                 rt.anchorMax = new Vector2(0f, 1f);
                 rt.pivot = new Vector2(0f, 1f);
-                rt.anchoredPosition = new Vector2(10f, y);
-                rt.sizeDelta = new Vector2(340f, 140f);
+                rt.anchoredPosition = new Vector2(6f, y);
+                rt.sizeDelta = new Vector2(348f, 140f); // la fila más ancha (À-ß en Nunito ExtraBold) mide unos 342 dp
                 y -= 146f;
+
+                // Las filas son fijas: si alguna no cupiera en el ancho, TMP la partiría y volvería a quedar una letra suelta.
+                label.ForceMeshUpdate();
+                int lines = sample.Split('\n').Length;
+                Assert.That(label.textInfo.lineCount, Is.EqualTo(lines), "hoja de glifos " + style + ": ninguna fila se parte");
             }
 
             return go;
+        }
+
+        // Latin-1 de ¡ a ÿ (sin el guion blando U+00AD), en tres filas fijas de unos 32 caracteres (¡-¿, À-ß y à-ÿ) y con un
+        // espacio fino entre cada carácter (<cspace>, sin añadir ningún carácter que tenga que estar en el atlas): así cada
+        // letra con diacrítico se ve suelta, también las I estrechas (ÌÍÎÏ, ìíîï), cuyos acentos se juntaban seguidas.
+        private static string LatinRows()
+        {
+            var sb = new StringBuilder("<cspace=0.15em>");
+            for (int c = 0xA1; c <= 0xFF; c++)
+            {
+                if (c == 0xAD)
+                {
+                    continue;
+                }
+
+                if (c == 0xC0 || c == 0xE0)
+                {
+                    sb.Append('\n');
+                }
+
+                sb.Append((char)c);
+            }
+
+            return sb.Append("</cspace>").ToString();
         }
 
         // Estilos que pinta Baloo 2 (UiFonts): Ribbon, Badge, ModalTitle, CtaLeaf y CtaWater.

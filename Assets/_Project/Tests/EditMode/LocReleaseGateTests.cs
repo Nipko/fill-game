@@ -80,12 +80,33 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void UntranslatedFact_DoesNotBlock()
+        public void ApprovedFacts_UntranslatedOrHalfTranslated_DoNotBlock()
         {
-            // Q10-A: un dato sin traducir no se muestra; no para el build.
-            LocReleaseReport report = LocReleaseGate.Evaluate(LocCatalog.Parse(CleanStrings, CleanFacts), ReleaseId);
+            // Q10-A: un dato sin traducir (o traducido a medias) no se muestra en ese idioma; no para el build. Solo cuenta el
+            // aprobado_es del texto fuente. Varios datos aprobados: uno sin traducir, uno con en traducido y pt-BR vacío, uno con
+            // en en borrador y pt-BR revisado, y uno traducido del todo.
+            string facts = Header
+                + "fauna_a_dato,Dato sin traducir,,,Dato.,50,aprobado_es,,,,\n"
+                + "fauna_b_dato,Dato a medias,Half fact,,Dato.,50,aprobado_es,traducido,,,\n"
+                + "fauna_c_dato,Dato con borrador,Draft fact,Dado revisado,Dato.,50,aprobado_es,borrador,revisado_nativo,,\n"
+                + "fauna_d_dato,Dato completo,Full fact,Dado completo,Dato.,50,aprobado_es,revisado_nativo,revisado_nativo,,\n";
 
-            Assert.That(report.Problems, Is.Empty);
+            LocCatalog catalog = LocCatalog.Parse(CleanStrings, facts);
+            LocReleaseReport report = LocReleaseGate.Evaluate(catalog, ReleaseId);
+
+            // Las tablas tienen de verdad los estados mezclados que se prueban.
+            LocTable table = catalog.Facts;
+            Assert.That(table.Count, Is.EqualTo(4));
+            Assert.That(table.StatusAt(0, "en"), Is.EqualTo(LocStatus.Missing));
+            Assert.That(table.StatusAt(0, "pt-BR"), Is.EqualTo(LocStatus.Missing));
+            Assert.That(table.StatusAt(1, "en"), Is.EqualTo(LocStatus.Translated));
+            Assert.That(table.StatusAt(1, "pt-BR"), Is.EqualTo(LocStatus.Missing));
+            Assert.That(table.StatusAt(2, "en"), Is.EqualTo(LocStatus.Draft));
+            Assert.That(table.StatusAt(2, "pt-BR"), Is.EqualTo(LocStatus.NativeReviewed));
+            Assert.That(table.StatusAt(3, "en"), Is.EqualTo(LocStatus.NativeReviewed));
+
+            Assert.That(report.Problems, Is.Empty, string.Join("\n", report.Problems));
+            Assert.That(report.Blocks, Is.False);
         }
 
         [Test]
