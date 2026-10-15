@@ -173,5 +173,21 @@ namespace AF.Tests.EditMode
         {
             Assert.That(() => new FactSchedule(null!), NUnit.Framework.Throws.ArgumentNullException);
         }
+
+        [Test]
+        public void Position_RejectsAKOutsideTheSeries_WhenCreated()
+        {
+            FactSeries acai = Real.Catalog.SeriesOf("acai")!;
+            Assert.That(() => new FactPosition(acai, 0), NUnit.Framework.Throws.TypeOf<System.ArgumentOutOfRangeException>(), "k = 0");
+            Assert.That(() => new FactPosition(acai, -1), NUnit.Framework.Throws.TypeOf<System.ArgumentOutOfRangeException>());
+            Assert.That(() => new FactPosition(acai, acai.Lines + 1), NUnit.Framework.Throws.TypeOf<System.ArgumentOutOfRangeException>(), "k > líneas");
+            Assert.That(() => new FactPosition(null!, 1), NUnit.Framework.Throws.ArgumentNullException);
+
+            var first = new FactPosition(acai, 1);
+            Assert.That(first.Key, Is.EqualTo("fact.acai.01"));
+            var last = new FactPosition(acai, acai.Lines);
+            Assert.That(last.IsLast, Is.True);
+            Assert.That(last.FactId, Is.EqualTo("acai.20"));
+        }
     }
 }

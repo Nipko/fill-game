@@ -12,10 +12,18 @@ namespace AF.GameFlow
     /// </summary>
     public readonly struct FactPosition
     {
-        /// <summary>Crea la posición (k de 1 a las líneas de la serie).</summary>
+        /// <summary>
+        /// Crea la posición. <paramref name="k"/> va de 1 a las líneas de la serie: fuera de ese rango lanza
+        /// <see cref="ArgumentOutOfRangeException"/> aquí, y no más tarde al leer <see cref="Key"/> o <see cref="FactId"/>.
+        /// </summary>
         public FactPosition(FactSeries series, int k)
         {
             Series = series ?? throw new ArgumentNullException(nameof(series));
+            if (k < 1 || k > series.Lines)
+            {
+                throw new ArgumentOutOfRangeException(nameof(k), k, "La línea k va de 1 a las líneas de la serie.");
+            }
+
             K = k;
         }
 
