@@ -697,6 +697,69 @@ class TextBlockTests(unittest.TestCase):
         self.assertIn("06 §2.3", first)
         self.assertIn("TiTino se presenta", first)
 
+    def test_titino_milestones_move_the_arrival_fact_to_the_next_victory(self):
+        # D-022, punto 1 (pregunta 45 (a); T6-A): en el fin de mundo salvo el 10 (40, 80 y 140), el primer Difícil (40) y
+        # el primer Muy difícil (60) habla TiTino y el dato de llegada sale en la victoria siguiente.
+        moved = {
+            "map.stop.manaos.dato_01": (40, "fin del mundo 2 y primer Difícil"),
+            "map.general.dato_negra": (60, "primer Muy difícil"),
+            "map.country.co.dato_01": (80, "fin del mundo 3"),
+            "map.country.pe.dato_01": (140, "fin del mundo 4"),
+        }
+        for key, (level, why) in moved.items():
+            with self.subTest(key=key):
+                ctx = self.table[key]["context"]
+                self.assertIn(f"La victoria del {level} es un hito de TiTino ({why})", ctx)
+                self.assertIn(f"sale en la victoria siguiente, la del {level + 1}", ctx)
+                self.assertIn("D-022, punto 1", ctx)
+                self.assertIn(f"si TiTino no puede hablar en la del {level}, sale en ella", ctx)
+        for s in self.doc["stops"]:
+            key = s["arrival_fact"]
+            if key is None or key in moved:
+                continue
+            with self.subTest(key=key):
+                self.assertNotIn("hito de TiTino", self.table[key]["context"])
+                self.assertNotIn("D-022", self.table[key]["context"])
+        q3 = self.table["map.world.w03.question"]["context"]
+        self.assertIn("(map.general.dato_negra), que sale en la victoria del 61", q3)
+        self.assertIn("D-022, punto 1", q3)
+        self.assertNotIn("en la victoria del 60", q3)
+        q2 = self.table["map.world.w02.question"]["context"]
+        self.assertIn("(map.stop.flona_tapajos.dato_01), en la victoria del 30", q2)
+        self.assertNotIn("D-022", q2)
+
+    def test_country_context_names_every_place_and_skips_the_two_country_stop(self):
+        co = self.table["map.country.co.name"]["context"]
+        self.assertIn("en las paradas 8-12 del Mapa del río (la 13, El río frontera, usa "
+                      "map.stop.rio_frontera.country)", co)
+        self.assertNotIn("8-13", co)
+        self.assertIn("en las paradas 0-7 del Mapa del río;", self.table["map.country.br.name"]["context"])
+        self.assertIn("en las paradas 14-19 del Mapa del río;", self.table["map.country.pe.name"]["context"])
+        for iso in ("br", "co", "pe"):
+            with self.subTest(iso=iso):
+                ctx = self.table[f"map.country.{iso}.name"]["context"]
+                self.assertIn("map_country_welcome («{país} te da la bienvenida»", ctx)
+                self.assertIn("«O Brasil»", ctx)
+        self.assertEqual("0-2 y 5", stops.stop_ranges([5, 0, 2, 1]))
+        self.assertEqual("13", stops.stop_ranges([13]))
+        self.assertEqual("1, 3 y 5-6", stops.stop_ranges([1, 3, 5, 6]))
+
+    def test_stop_name_context_names_every_place(self):
+        # map_hito_preview solo en las paradas a las que llega un hito p20 desde el primer Difícil (40, 60, ... 180).
+        hito_stops = {4, 6, 8, 10, 12, 14, 16, 18}
+        for s in self.doc["stops"]:
+            with self.subTest(n=s["n"]):
+                ctx = self.table[f"map.stop.{s['id']}.name"]["context"]
+                self.assertIn("map_arrived", ctx)
+                self.assertIn("stop_label («{lugar} · {país}»", ctx)
+                self.assertIn("map_stop_remaining", ctx)
+                self.assertIn("«Canasta · {sitio} k/10»", ctx)
+                if s["n"] in hito_stops:
+                    self.assertIn(f"map_hito_preview («Si lo superas, llegas a {{lugar}}»), en la tarjeta previa del "
+                                  f"nivel {10 * s['n']},", ctx)
+                else:
+                    self.assertNotIn("map_hito_preview", ctx)
+
     def test_unit_gets_a_no_break_space(self):
         self.assertIn("6\u00a0km", self.table["map.stop.manaos.dato_01"]["es-419"])
         self.assertIn("42\u00a0%", self.table["map.country.co.dato_01"]["es-419"])

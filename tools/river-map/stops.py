@@ -27,6 +27,8 @@ status_pt-BR, notes y args):
   con su URL), y [P] en los nombres, rios, paises y preguntas (la investigacion no les da una fuente con URL; su conf es
   la de la coordenada); args con las cifras que el texto escribe como {n} (Q8-A): la fuente las da en
   dato_del_nivel.args, con las reglas de LocArgs.TryParse;
+- el contexto dice donde sale cada texto: en los hitos de TiTino (fin de mundo salvo el 10, primer Dificil 40 y primer
+  Muy dificil 60; D-022, punto 1), el dato de llegada del 10k sale en la victoria siguiente;
 - --check falla si el bloque no esta al dia (desfase), si una clave citada no tiene fila con texto, si un texto pasa de su
   limite, lleva una cifra con separador o decimales o cae en el veto de Belen, si un rio no es solo el nombre del rio
   (parentesis, «río» o minuscula), si una fila con [V] o [E] no cita ninguna URL o si un dato [V] no tiene fuente [V].
@@ -576,6 +578,30 @@ RE_URL = re.compile(r"https?://")
 # Dos rios en {rio} de map_arrived («Maranon y Ucayali», «Amazonas e Itaya»): la plantilla dice «rio {rio}», en singular.
 RE_TWO_RIVERS = re.compile(r" (?:y|e) ")
 
+# Hitos de TiTino en la victoria (T6-A; D-022, punto 1, pregunta 45 (a)): el fin de mundo salvo el 10, el primer Difícil
+# y el primer Muy difícil. En esas victorias del 10k habla TiTino y la franja de llegada lleva solo la placa del lugar:
+# el dato de llegada sale en la victoria siguiente (si TiTino no puede hablar, sale en el 10k). Los fines de mundo salen
+# del campo world de las paradas (el reparto de WorldTable.cs, que validate() comprueba); los primeros Difícil y Muy
+# difícil son los defaults de lvl_labels_from_level y lvl_very_hard_from_level (08 §9; 03 §11-§12; los mismos
+# FIRST_HARD_LEVEL y FIRST_VERY_HARD_LEVEL de tools/econ_sim.py).
+FIRST_HARD_LEVEL = 40
+FIRST_VERY_HARD_LEVEL = 60
+# Ciclo de 20 de D-009: el hito es la p20. Desde el primer Difícil, su tarjeta previa dice «Si lo superas, llegas a
+# {lugar}» (map_hito_preview; D-013, punto 8; 02 §10), con el lugar de la parada a la que se llega al ganarlo.
+CYCLE_LENGTH = 20
+
+
+def stop_ranges(ns: list[int]) -> str:
+    """Numeros de parada en tramos consecutivos: [0, 1, 2, 5] -> «0-2 y 5»."""
+    spans: list[list[int]] = []
+    for n in sorted(ns):
+        if spans and n == spans[-1][1] + 1:
+            spans[-1][1] = n
+        else:
+            spans.append([n, n])
+    parts = [str(a) if a == b else f"{a}-{b}" for a, b in spans]
+    return parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " y " + parts[-1]
+
 
 def river_problem(value: str) -> str | None:
     """Por que un texto no vale para {río} de map_arrived («{lugar} · {país} · río {río}»), o None si vale: tiene que
@@ -764,6 +790,22 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
         a, b = s["levels"]
         return f"parada {s['n']} del Mapa del río (niveles {a}-{b}, mundo {s['world']})"
 
+    by_n = {s["n"]: s for s in stops}
+
+    def titino_milestone(s: dict) -> str | None:
+        """Por que la victoria del 10n, la que llega a la parada s, es un hito de TiTino (T6-A), o None si no lo es."""
+        level = 10 * s["n"]
+        prev = by_n.get(s["n"] - 1)
+        reasons = []
+        # Fin de mundo salvo el 10 (el fin del mundo 1: alli TiTino se presenta en el Mapa, 06 §2.3).
+        if prev is not None and prev["world"] != s["world"] and prev["world"] > 1:
+            reasons.append(f"fin del mundo {prev['world']}")
+        if level == FIRST_HARD_LEVEL:
+            reasons.append("primer Difícil")
+        if level == FIRST_VERY_HARD_LEVEL:
+            reasons.append("primer Muy difícil")
+        return " y ".join(reasons) if reasons else None
+
     # Nombres de parada y rio (map.stop.<id>.name y .river; 32 caracteres [P]).
     names: dict = {}
     # Las notes no llevan [V] ni [E]: el conf de rio-amazonas.json es la confianza de la coordenada, no la del nombre, y
@@ -785,9 +827,15 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
                          f"(rio-amazonas.json, {src_field}).")
             if field == "name":
                 names[n] = clean_text(value) if isinstance(value, str) else sid
+                level = 10 * n
+                hito = (f"; de map_hito_preview («Si lo superas, llegas a {{lugar}}»), en la tarjeta previa del nivel "
+                        f"{level}, el hito del ciclo de 20 cuya victoria llega aquí (D-013, punto 8; 02 §10)"
+                        if level >= FIRST_HARD_LEVEL and level % CYCLE_LENGTH == 0 else "")
                 context = (f"Nombre de la {where(s)}: {{lugar}} de map_arrived («{{lugar}} · {{país}} · río {{río}}», "
-                           f"placa de llegada y tarjeta de la parada), de stop_label (rótulo del lugar) y de "
-                           f"map_stop_remaining (D-013; 07 §2.1; 08 §4.5). Fuente: {origin}. {NO_CAPTURE}")
+                           f"placa de llegada y tarjeta de la parada), de stop_label («{{lugar}} · {{país}}», rótulo "
+                           f"del lugar) y de map_stop_remaining («Faltan {{n}} niveles para {{lugar}}»){hito}; y "
+                           f"{{sitio}} de la barra de la Canasta en la victoria, «Canasta · {{sitio}} k/10» (D-013, "
+                           f"punto 8; 02 §6; 07 §2.1; 08 §4.5). Fuente: {origin}. {NO_CAPTURE}")
             else:
                 if isinstance(value, str) and value.strip():
                     problem = river_problem(value.strip())
@@ -814,9 +862,17 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
         rotulo = next((t for t in rotulos if isinstance(t, str) and (t == name or t.startswith(name + " ("))), None)
         if rotulo is None:
             errors.append(f"{key}: {name!r} no es ningun rotulo de rotulos_de_pais de rio-amazonas.json")
-        ns = by_country[iso]
-        context = (f"Nombre del país {iso}: {{país}} de map_arrived y de stop_label en las paradas {ns[0]}-{ns[-1]} del "
-                   f"Mapa del río, y rótulo del país en el Mapa (glosario §8; 08 §4.5). Fuente: {SOURCE_REL}, "
+        # Las paradas con dos paises (country_name, n = 13) usan su propia fila en map_arrived y stop_label.
+        ns = [n for n in by_country[iso] if by_n[n]["country_name"] is None]
+        shared = [by_n[n] for n in by_country[iso] if by_n[n]["country_name"] is not None]
+        on_stops = (f" en {'la parada' if len(ns) == 1 else 'las paradas'} {stop_ranges(ns)} del Mapa del río"
+                    if ns else "")
+        others = "".join(f" (la {o['n']}, {names[o['n']]}, usa {o['country_name']})" for o in shared)
+        context = (f"Nombre del país {iso}: {{país}} de map_arrived («{{lugar}} · {{país}} · río {{río}}») y de "
+                   f"stop_label («{{lugar}} · {{país}}»){on_stops}{others}; {{país}} de map_country_welcome («{{país}} "
+                   f"te da la bienvenida», la placa al izar la bandera de cortesía al entrar en el país; D-013, punto "
+                   f"5; glosario §10), donde otros idiomas pueden pedir artículo y concordancia (en PT-BR, «O Brasil», "
+                   f"«A Colômbia»); y rótulo del país en el Mapa (glosario §8; 08 §4.5). Fuente: {SOURCE_REL}, "
                    f"rotulos_de_pais («{rotulo}»). {NO_CAPTURE}")
         add(key, name, NAME_MAX_CHARS, context, "[P] Nombre del país en español (glosario §8).")
     for s in stops:
@@ -857,6 +913,16 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
                      f"02 §6), donde TiTino se presenta desde su casa del estuario y lo da en la placa del Dato del río, "
                      f"con su retrato, nunca en bocadillo (D-013, punto 6); luego, en la tarjeta de la parada. Habla "
                      f"del estuario, la parada 0 ({names.get(0)})")
+        elif titino_milestone(s):
+            # D-022, punto 1 (pregunta 45 (a); T6-A): en sus tres hitos habla TiTino y el dato pasa a la victoria
+            # siguiente, en lugar de la linea de fruta de esa victoria.
+            shown = (f"Dato de llegada a la {where(s)}, {names[n]}. La victoria del {10 * n} es un hito de TiTino "
+                     f"({titino_milestone(s)}): habla él y la franja de llegada lleva solo la placa map_arrived "
+                     f"(«{{lugar}} · {{país}} · río {{río}}»), así que este dato sale en la victoria siguiente, la del "
+                     f"{10 * n + 1}, en lugar de la línea de fruta (D-022, punto 1; T6-A); si TiTino no puede hablar "
+                     f"en la del {10 * n}, sale en ella. Lo presenta TiTino en la placa del Dato del río, con su "
+                     f"retrato y su gesto sloth_present, nunca en bocadillo (D-013, punto 6; 02 §6); luego, en la "
+                     f"tarjeta de la parada")
         else:
             shown = (f"Dato de llegada a la {where(s)}, {names[n]}, en la victoria del {10 * n}: lo presenta TiTino en "
                      f"la placa del Dato del río, con su retrato y su gesto sloth_present, bajo la placa map_arrived "
@@ -881,11 +947,24 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
             continue
         q = records.get(s["n"], {}).get("pregunta_del_mundo") or {}
         answer = next((a for a in stops if a["answers_world_question"] and a["world"] == s["world"]), None)
-        answered = (f"la responde el dato de llegada a la parada {answer['n']}, {names[answer['n']]} "
-                    f"({answer['arrival_fact']}), en la victoria del {10 * answer['n']}" if answer else "sin respuesta")
+        refs = "D-013; 08 §4.5"
+        if answer is None:
+            answered = "sin respuesta"
+        else:
+            level = 10 * answer["n"]
+            moved = titino_milestone(answer)
+            if moved:
+                # El dato que la responde sale en la victoria siguiente a un hito de TiTino (D-022, punto 1).
+                when = (f"que sale en la victoria del {level + 1}, porque la del {level} es un hito de TiTino, "
+                        f"{moved}, y habla él")
+                refs = "D-013; D-022, punto 1; 08 §4.5"
+            else:
+                when = f"en la victoria del {level}"
+            answered = (f"la responde el dato de llegada a la parada {answer['n']}, {names[answer['n']]} "
+                        f"({answer['arrival_fact']}), {when}")
         context = (f"Pregunta del mundo {s['world']} en la cabecera del Mapa del río (map_world_question, con ✓ al "
                    f"responderse): se plantea al llegar a la {where(s)}, {names[s['n']]}, en la victoria del "
-                   f"{10 * s['n']}, y {answered} (D-013; 08 §4.5). Fuente: {SOURCE_REL}, paradas_1_200 k={s['n']} "
+                   f"{10 * s['n']}, y {answered} ({refs}). Fuente: {SOURCE_REL}, paradas_1_200 k={s['n']} "
                    f"(pregunta_del_mundo). {NO_CAPTURE}")
         add(key, q.get("texto"), QUESTION_MAX_CHARS, context, "[P] Pregunta del Mapa del río (D-013).")
 
