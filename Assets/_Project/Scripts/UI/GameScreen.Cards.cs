@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Text;
 using AF.Core.Mechanics;
 using AF.GameFlow;
+using AF.Levels;
 using AF.Presentation;
 using UnityEngine;
 
@@ -33,6 +34,11 @@ namespace AF.UI
     /// <para>En desarrollo, <c>AF_STATE {"event":"level_card",…}</c> con el tipo, el nivel, la etiqueta, el estreno, las líneas y
     /// el tamaño del tutorial, los iconos y la escala; y, al terminar la entrada, <c>AF_LAYOUT {"screen":"level_card",…}</c> con
     /// el rectángulo de la tarjeta (cualquier toque la cierra).</para>
+    /// <para><b>Hito p20</b> (M2.5; 02 §10; D-013, punto 8): en el 40, el 60… la tarjeta lleva la fila «Si lo superas, llegas a
+    /// {lugar}» con la silueta del sitio (<see cref="LevelCardView.HitoStopFor"/> con <see cref="RiverStops"/>; la ventanita, con
+    /// el agua de los niveles de esa parada). <c>AF_STATE level_card</c> la anota con <c>"hito"</c> (el id de la parada o
+    /// null), <c>"hito_silhouette"</c> (<c>png</c>, <c>shape</c>, <c>code</c> o <c>none</c>) y <c>"hito_omitted"</c>, y
+    /// <c>AF_LAYOUT</c>, con el rectángulo <c>level_card_hito</c>.</para>
     /// </remarks>
     public sealed partial class GameScreen : ILevelCardListener
     {
@@ -81,7 +87,9 @@ namespace AF.UI
         {
             LevelFlow flow = RequireFlow();
             HoldIntroForCard(flow);
-            _levelCard.Show(card, flow.ReduceMotion, _canvasW, _canvasH, _safeTop, _safeBottom);
+            RiverStop? hito = LevelCardView.HitoStopFor(card.Level, RiverStops);
+            _levelCard.Show(card, hito, hito != null ? HitoWater(flow, hito) : string.Empty, flow.ReduceMotion, _canvasW, _canvasH,
+                _safeTop, _safeBottom);
             RestoreBoardUnit();
             _levelCard.Root.SetAsLastSibling(); // por encima de todo: el toque en cualquier punto es suyo
             _lastCardProbe = DevProbe.Enabled ? CardProbeJson(card) : null;
@@ -221,6 +229,14 @@ namespace AF.UI
             _introHeld = true; // después de StartIntro, que la suelta
         }
 
+        // Agua de la ventanita del hito: la de los niveles de la parada a la que se llega (el 41 del Encuentro, en el Negro), o la
+        // del nivel si el catálogo no los tiene.
+        private static string HitoWater(LevelFlow flow, RiverStop stop)
+        {
+            LevelDefinition? first = flow.Catalog.Find(stop.FirstLevel);
+            return first != null ? first.WaterBase : flow.Level.WaterBase;
+        }
+
         private void EmitCardLayout()
         {
             LevelFlow? flow = _flow;
@@ -233,6 +249,13 @@ namespace AF.UI
             _layoutRects.Clear();
             _layoutIds.Add("level_card");
             _layoutRects.Add(_levelCard.Panel);
+            RectTransform? hito = _levelCard.HitoRowRect;
+            if (hito != null)
+            {
+                _layoutIds.Add("level_card_hito");
+                _layoutRects.Add(hito);
+            }
+
             _probe.Layout("level_card", flow.LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
         }
 
@@ -282,7 +305,13 @@ namespace AF.UI
             sb.Append(']');
             sb.Append(",\"scale\":").Append(view.FontScale.ToString("0.00", CultureInfo.InvariantCulture));
             PiranaBiteDemo? bite = view.BiteDemo;
-            sb.Append(",\"bite_demo\":").Append(bite == null ? "\"none\"" : (bite.Still ? "\"still\"" : "\"animated\"")).Append('}');
+            sb.Append(",\"bite_demo\":").Append(bite == null ? "\"none\"" : (bite.Still ? "\"still\"" : "\"animated\""));
+
+            // Hito p20 (M2.5): la parada a la que se llega, el origen de la silueta y si la fila se omitió por no caber.
+            RiverStop? stop = view.HitoStop;
+            sb.Append(",\"hito\":").Append(stop != null && view.HitoText != null ? "\"" + stop.Id + "\"" : "null");
+            sb.Append(",\"hito_silhouette\":\"").Append(view.HitoSilhouette).Append('"');
+            sb.Append(",\"hito_omitted\":").Append(view.HitoOmitted ? "true" : "false").Append('}');
             return sb.ToString();
         }
 

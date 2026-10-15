@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using AF.Core.Mechanics;
 using AF.GameFlow;
+using AF.Levels;
 using AF.Presentation;
 using TMPro;
 using UnityEngine;
@@ -44,6 +45,16 @@ namespace AF.UI
     /// <para><b>Estreno de la Piraña</b> (183; D-012, punto 1: opción C + D): en lugar del medallón, un tablero en miniatura con
     /// el mordisco animado (<see cref="PiranaBiteDemo"/>): una cuia recibe la dosis y la Piraña sale de la cueva y se la lleva;
     /// termina con la tarjeta abierta y, con «Reducir movimiento», es una versión quieta.</para>
+    /// <para><b>Hito p20</b> (tarea M2.5; 02 §10 y 07 §7.7; D-013, punto 8): en la tarjeta del nivel L con L ≥ 40, L mod 20 = 0
+    /// y parada a la que se llega al ganarlo (<see cref="HitoStopFor"/>: <c>RiverStopCatalog.ArrivalOnWin(L)</c>), una fila
+    /// nueva abajo, tras una raya: la silueta del sitio en una ventanita de vidrio de <see cref="HitoSilhouetteWidthDp"/> ×
+    /// <see cref="HitoSilhouetteHeightDp"/> dp [P] con marco de madera (el cielo y el agua del sitio, y su héroe: el PNG de su
+    /// ranura o, solo con <see cref="MapArtRule"/>, la silueta provisional de <see cref="StopShapes"/>; el Encuentro, que no
+    /// tiene héroe, con su pieza por código de las dos aguas) y «Si lo superas, llegas a {lugar}» (<c>map_hito_preview</c>) en
+    /// Nunito Bold y tinta, a 14 sp si cabe en <see cref="MaxHitoLines"/> líneas a 100 % y si no a 12, nunca menos. Sin nombre
+    /// del lugar en el idioma (en release, un nombre sin el visto bueno del asesor es «») no hay fila; sin silueta que pintar,
+    /// la línea va sola. La tarjeta crece; si con la fila ya no cabe en el alto libre de la pantalla, la fila se omite
+    /// (<see cref="HitoOmitted"/>) [P]. El 200 y siguientes la llevan solos cuando el catálogo tenga sus paradas.</para>
     /// <para>Entra con un fundido y un leve rebote (<see cref="FadeInMs"/>; sin rebote con «Reducir movimiento») y sale con un
     /// fundido de <see cref="FadeOutMs"/> sin bloquear toques, para que el siguiente toque ya salte la intro [P]. Sin asignaciones
     /// por fotograma: todo se coloca al mostrarla, al cambiar la escala o la pantalla.</para>
@@ -111,6 +122,48 @@ namespace AF.UI
         /// </summary>
         public const float BiteCardMinHeightDp = 272f;
 
+        /// <summary>Primer hito p20 con la fila «Si lo superas, llegas a…» (02 §10: el 40 y, desde el 60, los Muy difícil).</summary>
+        public const int HitoFirstLevel = 40;
+
+        /// <summary>Cada cuántos niveles hay un hito p20 (el ciclo de 20 de 03 §12).</summary>
+        public const int HitoEveryLevels = 20;
+
+        /// <summary>Ancho de la silueta del sitio en la fila del hito (dp) [P] (plan del Mapa, M2.5): el héroe de 240 dp a 4/15.</summary>
+        public const float HitoSilhouetteWidthDp = 64f;
+
+        /// <summary>Alto de la silueta del sitio en la fila del hito (dp) [P]: los 80 dp del héroe a la misma escala, redondeados.</summary>
+        public const float HitoSilhouetteHeightDp = 22f;
+
+        /// <summary>Marco de madera de la ventanita de la silueta, a cada lado (dp) [P].</summary>
+        public const float HitoFrameDp = 2f;
+
+        /// <summary>Tamaños de <c>map_hito_preview</c> a 100 %, de mayor a menor (sp; 14 y, si no cabe, 12, el mínimo de 02 §12).</summary>
+        public static readonly float[] HitoSizesSp = { 14f, 12f };
+
+        /// <summary>Líneas máximas de <c>map_hito_preview</c> a 100 % (plan del Mapa, M2.5).</summary>
+        public const int MaxHitoLines = 2;
+
+        /// <summary>Origen de la silueta del hito: el PNG del héroe del sitio.</summary>
+        public const string HitoSilhouettePng = StopBackdrop.HeroPng;
+
+        /// <summary>Origen de la silueta del hito: la silueta provisional de <see cref="StopShapes"/>.</summary>
+        public const string HitoSilhouetteShape = StopBackdrop.HeroShape;
+
+        /// <summary>Origen de la silueta del hito: la pieza por código de las dos aguas (el Encuentro, ya definitiva).</summary>
+        public const string HitoSilhouetteCode = "code";
+
+        /// <summary>Sin silueta que pintar (la línea va sola) o sin fila.</summary>
+        public const string HitoSilhouetteNone = StopBackdrop.HeroNone;
+
+        // Horizonte de la ventanita (dp desde arriba): 48 dp del héroe sobre él a la escala de 64 / 240 (12,8), redondeado.
+        private const float HitoHorizonDp = 13f;
+        private const float HitoGapDp = 8f;
+        private const float HitoRadiusDp = 5f;
+        private const float HitoGlossAlpha = 0.28f;
+
+        // Ondas del agua de la ventanita [P]: (dp bajo el horizonte, x inicial, x final), de tres en tres.
+        private static readonly float[] HitoRipples = { 3f, 6f, 18f, 3f, 44f, 56f, 6f, 24f, 38f };
+
         private const float PadDp = 16f;
         private const float HeaderDp = 40f;
         private const float TitleSp = 22f;
@@ -166,6 +219,20 @@ namespace AF.UI
         private readonly Image _giftPlate;
         private readonly Image _giftGlyph;
         private readonly TextMeshProUGUI _giftText;
+        private readonly Image _hitoDivider;
+        private readonly RectTransform _hitoRow;
+        private readonly Image _hitoFrame;
+        private readonly RectTransform _hitoGlass;
+        private readonly StopShapeGraphic _hitoScene;
+        private readonly Image _hitoHero;
+        private readonly StopShapeGraphic _hitoGloss;
+        private readonly TextMeshProUGUI _hitoText;
+        private RiverStop? _hitoStop;
+        private string _hitoSource = HitoSilhouetteNone;
+        private bool _hitoOn;
+        private bool _hitoOmitted;
+        private float _hitoBaseSp;
+        private int _hitoLines;
         private PiranaBiteDemo? _bite;
         private bool _biteOn;
         private LevelCardInfo? _card;
@@ -245,6 +312,24 @@ namespace AF.UI
             _giftGlyph = UiBuilder.Image("Firefly", _gift, null, Color.white);
             _giftGlyph.preserveAspect = true;
             _giftText = UiBuilder.Label("Label", _gift, TextStyle.PlainBold, UiText.FireflyGift, GiftSp, Palette.Cream, TextAlignmentOptions.MidlineLeft);
+
+            // Hito p20 (M2.5): raya, ventanita de vidrio con marco de madera (cielo, agua y héroe del sitio, recortados al vidrio, y
+            // el brillo del vidrio encima) y «Si lo superas, llegas a {lugar}» en Nunito Bold y tinta.
+            _hitoDivider = UiBuilder.Image("HitoDivider", _panel, null, DividerColor);
+            _hitoRow = UiBuilder.Rect("Hito", _panel);
+            _hitoFrame = UiBuilder.Sliced("Frame", _hitoRow, art.RoundedRect, Palette.FamilyWood.Base);
+            _hitoFrame.pixelsPerUnitMultiplier = ProceduralArt.RoundedRectRadiusPx / HitoRadiusDp;
+            _hitoGlass = UiBuilder.Rect("Glass", _hitoFrame.transform);
+            _hitoGlass.gameObject.AddComponent<RectMask2D>();
+            _hitoScene = ShapeGraphic("Scene", _hitoGlass);
+            _hitoHero = UiBuilder.Image("Hero", _hitoGlass, null, Color.white);
+            _hitoHero.preserveAspect = false;
+            _hitoGloss = ShapeGraphic("Gloss", _hitoGlass);
+            _hitoText = UiBuilder.Label("Line", _hitoRow, TextStyle.PlainBold, string.Empty, HitoSizesSp[0], Palette.Ink, TextAlignmentOptions.MidlineLeft);
+            _hitoText.textWrappingMode = TextWrappingModes.Normal;
+            _hitoText.enableAutoSizing = false;
+            _hitoDivider.gameObject.SetActive(false);
+            _hitoRow.gameObject.SetActive(false);
             _root.gameObject.SetActive(false);
         }
 
@@ -375,6 +460,58 @@ namespace AF.UI
         /// <summary>Glifo de la píldora «+1 Luciérnaga», o null si no se ve.</summary>
         public Sprite? GiftIcon => _gift.gameObject.activeSelf ? _giftGlyph.sprite : null;
 
+        /// <summary>Parada del hito p20 de la tarjeta mostrada (con su fila a la vista o no), o null si no es un hito con parada.</summary>
+        public RiverStop? HitoStop => _hitoStop;
+
+        /// <summary>«Si lo superas, llegas a {lugar}», o null si la fila no se ve.</summary>
+        public string? HitoText => _hitoRow.gameObject.activeSelf ? _hitoText.text : null;
+
+        /// <summary>
+        /// La fila del hito se omitió porque con ella la tarjeta no cabía en el alto libre de la pantalla [P] (plan del Mapa, M2.5,
+        /// punto 2).
+        /// </summary>
+        public bool HitoOmitted => _hitoOmitted;
+
+        /// <summary>
+        /// Origen de la silueta de la fila del hito: <see cref="HitoSilhouettePng"/>, <see cref="HitoSilhouetteShape"/>,
+        /// <see cref="HitoSilhouetteCode"/> o <see cref="HitoSilhouetteNone"/> (sin ventanita o sin fila).
+        /// </summary>
+        public string HitoSilhouette => _hitoRow.gameObject.activeSelf ? _hitoSource : HitoSilhouetteNone;
+
+        /// <summary>Fila del hito (ventanita y línea), o null si no se ve (tests de solapes).</summary>
+        public RectTransform? HitoRowRect => _hitoRow.gameObject.activeSelf ? _hitoRow : null;
+
+        /// <summary>Ventanita de la silueta con su marco, o null si no se ve (tests de solapes y de tamaño).</summary>
+        public RectTransform? HitoWindowRect => _hitoRow.gameObject.activeSelf && _hitoFrame.gameObject.activeSelf ? _hitoFrame.rectTransform : null;
+
+        /// <summary>Vidrio de la ventanita (la silueta de <see cref="HitoSilhouetteWidthDp"/> × <see cref="HitoSilhouetteHeightDp"/> dp).</summary>
+        public RectTransform HitoGlass => _hitoGlass;
+
+        /// <summary>Malla de la ventanita: cielo, agua, pieza por código y silueta provisional (tests).</summary>
+        public StopShapeGraphic HitoScene => _hitoScene;
+
+        /// <summary>PNG del héroe en la ventanita, o null si no se ve (tests).</summary>
+        public Sprite? HitoHeroSprite => _hitoHero.gameObject.activeSelf ? _hitoHero.sprite : null;
+
+        /// <summary>Línea del hito (tests: líneas, tamaño y desbordes).</summary>
+        public TextMeshProUGUI HitoLine => _hitoText;
+
+        /// <summary>Tamaño de <c>map_hito_preview</c> elegido a 100 % (14 o 12 sp; 0 sin fila).</summary>
+        public float HitoBaseSp => _hitoRow.gameObject.activeSelf ? _hitoBaseSp : 0f;
+
+        /// <summary>Líneas de <c>map_hito_preview</c> con la escala actual (0 sin fila).</summary>
+        public int HitoLines => _hitoRow.gameObject.activeSelf ? _hitoLines : 0;
+
+        /// <summary>
+        /// Parada del hito p20 del nivel <paramref name="level"/> (02 §10; D-013, punto 8): la de
+        /// <see cref="RiverStopCatalog.ArrivalOnWin"/> si <paramref name="level"/> ≥ <see cref="HitoFirstLevel"/> y es múltiplo de
+        /// <see cref="HitoEveryLevels"/>; null en los demás niveles, sin catálogo o sin esa parada (el 200 con las paradas de 1-200).
+        /// </summary>
+        public static RiverStop? HitoStopFor(int level, RiverStopCatalog? stops)
+        {
+            return level >= HitoFirstLevel && level % HitoEveryLevels == 0 ? stops?.ArrivalOnWin(level) : null;
+        }
+
         /// <summary>Sprite del icono <paramref name="i"/> de la fila (0 ≤ i &lt; <see cref="IconCount"/>).</summary>
         public Sprite? IconAt(int i)
         {
@@ -404,6 +541,7 @@ namespace AF.UI
             AddIfVisible(texts, _tutorial);
             AddIfVisible(texts, _firefly);
             AddIfVisible(texts, _giftText);
+            AddIfVisible(texts, _hitoText);
             return texts;
         }
 
@@ -429,6 +567,18 @@ namespace AF.UI
         /// <paramref name="reduceMotion"/>).
         /// </summary>
         public void Show(LevelCardInfo card, bool reduceMotion, float canvasW, float canvasH, float safeTop, float safeBottom)
+        {
+            Show(card, null, string.Empty, reduceMotion, canvasW, canvasH, safeTop, safeBottom);
+        }
+
+        /// <summary>
+        /// Como <see cref="Show(LevelCardInfo, bool, float, float, float, float)"/>, con la fila del hito p20 hacia
+        /// <paramref name="hitoStop"/> (<see cref="HitoStopFor"/>; null = sin fila), cuya ventanita pinta el agua
+        /// <paramref name="hitoWater"/> (<c>water_base</c> de los niveles de esa parada: <c>white</c>, <c>clear</c> o
+        /// <c>black</c>).
+        /// </summary>
+        public void Show(LevelCardInfo card, RiverStop? hitoStop, string hitoWater, bool reduceMotion, float canvasW, float canvasH,
+            float safeTop, float safeBottom)
         {
             _card = card ?? throw new ArgumentNullException(nameof(card));
             _reduceMotion = reduceMotion;
@@ -540,6 +690,7 @@ namespace AF.UI
                 _giftGlyph.sprite = _art.CardFirefly;
             }
 
+            ShowHito(hitoStop, hitoWater);
             _root.gameObject.SetActive(true);
             _dismissing = false;
             _entered = false;
@@ -641,6 +792,30 @@ namespace AF.UI
                 y += LayoutGift(cardW, y, s) + 4f;
             }
 
+            // Hito p20, abajo y tras una raya. Si con la fila la tarjeta ya no cabe en el alto libre (el de su colocación, abajo), se
+            // omite [P].
+            _hitoOmitted = false;
+            bool hito = _hitoOn;
+            if (hito)
+            {
+                float rowY = y + 2f + 10f;
+                float rowH = LayoutHito(cardW, inner, rowY, s);
+                float withRow = Mathf.Ceil(rowY + rowH + RowGapDp + PadDp - RowGapDp + 4f);
+                if (withRow > canvasH - safeTop - safeBottom - 16f)
+                {
+                    hito = false;
+                    _hitoOmitted = true;
+                }
+                else
+                {
+                    UiBuilder.Place(_hitoDivider.rectTransform, PadDp + 24f, y, inner - 48f, 2f);
+                    y = rowY + rowH + RowGapDp;
+                }
+            }
+
+            _hitoDivider.gameObject.SetActive(hito);
+            _hitoRow.gameObject.SetActive(hito);
+
             float cardH = Mathf.Ceil(y + PadDp - RowGapDp + 4f);
             if (_biteOn && _bite != null)
             {
@@ -677,6 +852,8 @@ namespace AF.UI
             ShiftIfBelow(_firefly.rectTransform, y, air);
             ShiftIfBelow(_gift, y, air);
             ShiftIfBelow(_divider.rectTransform, y, air);
+            ShiftIfBelow(_hitoDivider.rectTransform, y, air);
+            ShiftIfBelow(_hitoRow, y, air);
         }
 
         private static void ShiftIfBelow(RectTransform rt, float y, float air)
@@ -717,6 +894,9 @@ namespace AF.UI
             _dismissing = false;
             _animMs = -1f;
             _card = null;
+            _hitoStop = null;
+            _hitoOn = false;
+            _hitoOmitted = false;
             _group.alpha = 1f;
             _pop.localScale = Vector3.one;
             if (_root.gameObject.activeSelf)
@@ -819,6 +999,196 @@ namespace AF.UI
             _icons[_iconCount].sprite = sprite;
             _slots[_iconCount].color = onWater ? ProceduralArt.CardWater : SlotColor;
             _iconCount++;
+        }
+
+        // Malla por vértices dentro del vidrio de la ventanita, con el origen arriba a la izquierda (StopShapeGraphic).
+        private static StopShapeGraphic ShapeGraphic(string name, Transform parent)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(StopShapeGraphic));
+            go.transform.SetParent(parent, false);
+            StopShapeGraphic g = go.GetComponent<StopShapeGraphic>();
+            g.Setup();
+            UiBuilder.Place(g.rectTransform, 0f, 0f, HitoSilhouetteWidthDp, HitoSilhouetteHeightDp);
+            return g;
+        }
+
+        // Prepara la fila del hito hacia stop (null = sin fila): el texto (sin nombre del lugar en el idioma, sin fila) y la
+        // ventanita (el PNG del héroe si existe; si no, la pieza por código de las dos aguas o, solo con MapArtRule, la silueta
+        // provisional; sin nada de eso, la línea va sola). La malla se construye aquí, una vez por tarjeta.
+        private void ShowHito(RiverStop? stop, string water)
+        {
+            _hitoStop = stop;
+            _hitoOn = false;
+            _hitoSource = HitoSilhouetteNone;
+            _hitoScene.Clear();
+            _hitoGloss.Clear();
+            _hitoHero.sprite = null;
+            _hitoHero.gameObject.SetActive(false);
+            string place = stop != null ? UiText.StopName(stop) : string.Empty;
+            string text = place.Length > 0 ? UiText.MapHitoPreview(place) : string.Empty;
+            _hitoText.text = text;
+            if (stop == null || text.Length == 0)
+            {
+                _hitoFrame.gameObject.SetActive(false);
+                return;
+            }
+
+            _hitoOn = true;
+            string? hero = stop.Backdrop.Hero;
+            Sprite? png = null;
+            if (hero != null)
+            {
+                Func<string, Sprite?>? find = StopBackdrop.HeroSpriteOverride;
+                png = find != null ? find(hero) : ArtSlots.Find(hero);
+            }
+
+            string? code = stop.Backdrop.Code;
+            string? shape = png == null ? StopShapes.ShapeOf(stop.Backdrop) : null;
+            if (png != null)
+            {
+                _hitoSource = HitoSilhouettePng; // el PNG final manda siempre, también en release
+            }
+            else if (code == StopBackdrop.CodeBlackWhite || code == StopBackdrop.CodeClearWhite)
+            {
+                _hitoSource = HitoSilhouetteCode; // pieza por código, ya definitiva (StopShapes: sin silueta)
+            }
+            else if (shape != null && MapArtRule.CanShow(MapArtRule.ShowProvisional, false))
+            {
+                _hitoSource = HitoSilhouetteShape;
+            }
+
+            bool window = _hitoSource != HitoSilhouetteNone;
+            _hitoFrame.gameObject.SetActive(window);
+            if (window)
+            {
+                BuildHitoScene(stop, water, png, shape);
+            }
+        }
+
+        // La ventanita de 64 × 22 dp: el cielo del sitio (el del panorama con el tinte de su mundo y su luz), su agua, el héroe con
+        // el pie en el horizonte a 64 / 240 (el PNG o la silueta provisional, con su reflejo) o las dos aguas del Encuentro, y el
+        // brillo del vidrio encima. Todo recortado al vidrio (RectMask2D).
+        private void BuildHitoScene(RiverStop stop, string waterBase, Sprite? png, string? shape)
+        {
+            const float w = HitoSilhouetteWidthDp;
+            const float h = HitoSilhouetteHeightDp;
+            const float hy = HitoHorizonDp;
+            const float k = HitoSilhouetteWidthDp / StopBackdrop.HeroWidthDp;
+            Color lut = StopBackdrop.LutOf(stop);
+            StopBackdrop.SkyOf(stop, out Color tintTop, out Color tintHorizon, out float alphaTop, out float alphaHorizon);
+            Color skyTop = Color.Lerp(Palette.SkyTop, tintTop, alphaTop) * lut;
+            Color skyHorizon = Color.Lerp(Palette.SkyHorizon, tintHorizon, alphaHorizon) * lut;
+            Color water = Palette.WaterBase(waterBase) * lut;
+            skyTop.a = 1f;
+            skyHorizon.a = 1f;
+            water.a = 1f;
+
+            StopShapeGraphic g = _hitoScene;
+            g.Rect(0f, 0f, w, hy, skyTop, skyHorizon);
+            g.Rect(0f, hy, w, h, Color.Lerp(water, skyHorizon, 0.3f), water);
+
+            // La orilla lejana (la selva del panorama) sobre el horizonte, para que la franja de abajo se lea como río y no como
+            // arena; y unas ondas claras en el agua.
+            Color shoreTop = Palette.FarPalm * lut;
+            Color shoreBottom = Palette.FarShore * lut;
+            shoreTop.a = 1f;
+            shoreBottom.a = 1f;
+            g.Rect(0f, hy - 2f, w, hy, shoreTop, shoreBottom);
+            Color ripple = Palette.WaterLine;
+            ripple.a = 0.45f;
+            for (int i = 0; i < HitoRipples.Length; i += 3)
+            {
+                float ry = hy + HitoRipples[i];
+                g.Rect(HitoRipples[i + 1], ry, HitoRipples[i + 2], ry + 0.75f, ripple, ripple);
+            }
+
+            string? code = stop.Backdrop.Code;
+            if (_hitoSource == HitoSilhouetteCode)
+            {
+                // Las dos aguas (07 §2.1): con el Negro, la cuña beige del Amazonas desde la izquierda, junto al horizonte, hasta
+                // el canto derecho; con el Tapajós, la franja beige lejana sobre el agua clara.
+                Color far = Palette.WaterWhite * lut;
+                far.a = 1f;
+                float top = hy + 0.5f;
+                if (code == StopBackdrop.CodeBlackWhite)
+                {
+                    var a = new Vector2(0f, top);
+                    var c = new Vector2(w, hy + ((h - hy) * 0.7f));
+                    g.Triangle(a, far, new Vector2(w, top), far, c, far);
+
+                    // La costura clara entre las dos aguas, a lo largo de la cuña.
+                    Color seam = Palette.WaterLine;
+                    seam.a = 0.8f;
+                    g.Quad(a, c, c + new Vector2(0f, 0.9f), a + new Vector2(0f, 0.9f), seam, seam);
+                }
+                else
+                {
+                    g.Rect(0f, top, w, hy + ((h - hy) * 0.45f), far, far);
+                }
+            }
+            else if (_hitoSource == HitoSilhouetteShape && shape != null)
+            {
+                StopShapes.Draw(g, shape, w * 0.5f, hy, k, lut, stop.Backdrop.Lut, water, StopBackdrop.ReflectionAlpha,
+                    StopBackdrop.ReflectionDp);
+            }
+
+            g.Commit();
+
+            bool hero = _hitoSource == HitoSilhouettePng && png != null;
+            _hitoHero.gameObject.SetActive(hero);
+            if (hero)
+            {
+                // El PNG del héroe (240 × 80 dp, pie en el horizonte: 48 encima y 32 debajo) a la misma escala.
+                _hitoHero.sprite = png;
+                _hitoHero.color = new Color(lut.r, lut.g, lut.b, 1f);
+                UiBuilder.Place(_hitoHero.rectTransform, (w * 0.5f) - (StopBackdrop.HeroWidthDp * k * 0.5f),
+                    hy - (StopBackdrop.HeroAboveDp * k), StopBackdrop.HeroWidthDp * k, StopBackdrop.HeroHeightDp * k);
+            }
+
+            // El brillo del vidrio: una veladura blanca que se apaga hacia el horizonte.
+            var gloss = new Color(1f, 1f, 1f, HitoGlossAlpha);
+            var clear = new Color(1f, 1f, 1f, 0f);
+            _hitoGloss.Rect(0f, 0f, w, h * 0.45f, gloss, clear);
+            _hitoGloss.Commit();
+        }
+
+        // Fila del hito: la ventanita (si la hay) y la línea a su derecha, centradas en la tarjeta. La línea va a 14 sp si a 100 %
+        // cabe en MaxHitoLines líneas junto a la ventanita y si no a 12 (02 §12: nunca menos); con la escala, ese tamaño por la
+        // escala. Su caja se estrecha hasta el ancho más pequeño con las mismas líneas (líneas equilibradas). Devuelve el alto.
+        private float LayoutHito(float cardW, float inner, float y, float s)
+        {
+            bool window = _hitoFrame.gameObject.activeSelf;
+            float winW = window ? HitoSilhouetteWidthDp + (2f * HitoFrameDp) : 0f;
+            float winH = window ? HitoSilhouetteHeightDp + (2f * HitoFrameDp) : 0f;
+            float maxText = inner - (window ? winW + HitoGapDp : 0f);
+            string text = _hitoText.text;
+            _hitoBaseSp = HitoSizesSp[HitoSizesSp.Length - 1];
+            for (int i = 0; i < HitoSizesSp.Length; i++)
+            {
+                _hitoText.fontSize = HitoSizesSp[i];
+                if (LinesAt(_hitoText, text, maxText) <= MaxHitoLines)
+                {
+                    _hitoBaseSp = HitoSizesSp[i];
+                    break;
+                }
+            }
+
+            _hitoText.fontSize = _hitoBaseSp * s;
+            float textW = BalancedWidth(_hitoText, text, maxText);
+            float textH = Mathf.Ceil(_hitoText.GetPreferredValues(text, textW, float.PositiveInfinity).y) + 2f;
+            float rowH = Mathf.Max(winH, textH);
+            float rowW = winW + (window ? HitoGapDp : 0f) + textW;
+            UiBuilder.Place(_hitoRow, Mathf.Round((cardW - rowW) * 0.5f), y, rowW, rowH);
+            if (window)
+            {
+                UiBuilder.Place(_hitoFrame.rectTransform, 0f, Mathf.Round((rowH - winH) * 0.5f), winW, winH);
+                UiBuilder.Place(_hitoGlass, HitoFrameDp, HitoFrameDp, HitoSilhouetteWidthDp, HitoSilhouetteHeightDp);
+            }
+
+            _hitoText.alignment = window ? TextAlignmentOptions.MidlineLeft : TextAlignmentOptions.Midline;
+            UiBuilder.Place(_hitoText.rectTransform, rowW - textW, Mathf.Round((rowH - textH) * 0.5f), textW, textH);
+            _hitoLines = LinesAt(_hitoText, text, textW);
+            return rowH;
         }
 
         // «Premio: 60» con la semilla delante y la cinta «×3» detrás, centrados en la tarjeta. Devuelve el alto de la fila.
@@ -1022,35 +1392,38 @@ namespace AF.UI
         private static float PlaceCentered(TextMeshProUGUI t, float cardW, float y, float maxW)
         {
             string text = t.text;
-            int lines = LinesAt(t, text, maxW);
-            float w = maxW;
-            if (lines <= 1)
-            {
-                w = Mathf.Min(maxW, Mathf.Ceil(t.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x) + 2f);
-            }
-            else
-            {
-                float lo = maxW * 0.3f;
-                float hi = maxW;
-                for (int i = 0; i < 14; i++)
-                {
-                    float mid = (lo + hi) * 0.5f;
-                    if (LinesAt(t, text, mid) <= lines)
-                    {
-                        hi = mid;
-                    }
-                    else
-                    {
-                        lo = mid;
-                    }
-                }
-
-                w = Mathf.Min(maxW, Mathf.Ceil(hi) + 2f);
-            }
-
+            float w = BalancedWidth(t, text, maxW);
             float h = Mathf.Ceil(t.GetPreferredValues(text, w, float.PositiveInfinity).y) + 2f;
             UiBuilder.Place(t.rectTransform, Mathf.Round((cardW - w) * 0.5f), y, w, h);
             return h;
+        }
+
+        // Ancho de caja con las líneas equilibradas: el de una línea si cabe en una; si no, el más pequeño (≥ 30 % de maxW) con
+        // el mismo número de líneas que en maxW, más 2 dp de holgura; como mucho maxW.
+        private static float BalancedWidth(TextMeshProUGUI t, string text, float maxW)
+        {
+            int lines = LinesAt(t, text, maxW);
+            if (lines <= 1)
+            {
+                return Mathf.Min(maxW, Mathf.Ceil(t.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x) + 2f);
+            }
+
+            float lo = maxW * 0.3f;
+            float hi = maxW;
+            for (int i = 0; i < 14; i++)
+            {
+                float mid = (lo + hi) * 0.5f;
+                if (LinesAt(t, text, mid) <= lines)
+                {
+                    hi = mid;
+                }
+                else
+                {
+                    lo = mid;
+                }
+            }
+
+            return Mathf.Min(maxW, Mathf.Ceil(hi) + 2f);
         }
 
         // Líneas de text con el tamaño de t en una caja de width dp: el alto preferido entre el de una línea (el texto entero sin
