@@ -34,8 +34,9 @@ namespace AF.Presentation
     /// sellado en pasos de 1/<see cref="FlashPackSteps"/> (<see cref="PackSurface"/>): así <c>TEXCOORD1.w</c> queda libre
     /// para la x del «?» o del icono de fruta en cualquier banda.</para>
     /// <para><b>Patrón</b> (07 §3, regla 1; T-E): la opacidad es la propiedad <c>_PatternOpacity</c> del material compartido,
-    /// que se fija por código al cargar el nivel (<see cref="ApplyPatternOpacity"/>, desde <c>BoardAnimator.ApplyLevelPatterns</c>:
-    /// 0,15 hasta el 40 y 0,20 desde el 41, <see cref="Palette.PatternOpacityFor"/>); nunca se edita un <c>.mat</c>.</para>
+    /// que se fija por código al cargar el nivel y al cambiar el ajuste (<see cref="ApplyPatternOpacity"/>, desde
+    /// <c>BoardAnimator.ApplyPatterns</c>: 0,20 con los Patrones de fruta activos y 0,15 sin ellos; activos según Ajustes, y en
+    /// automático desde el 41, tarea L3); nunca se edita un <c>.mat</c>.</para>
     /// <para><b>Icono de fruta</b> (07 §3, reglas 1 y 2; T-E.4 y T-E.5): con <see cref="SetFruitIcons"/> (Patrones de fruta
     /// desde el 41, o la cuia elevada en cualquier nivel), el shader pinta en cada dosis visible el icono de accesibilidad de
     /// su tinte (<see cref="ProceduralArt.FruitIconAtlas"/>, en <c>_IconAtlas</c>) del color <see cref="Palette.PatternBase"/>

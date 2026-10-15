@@ -24,8 +24,8 @@ namespace AF.UI
     /// lleva además los Patrones de fruta del nivel (T-E.7): <c>"patterns":{"on":true,"opacity":0.20}</c>, con <c>on</c> =
     /// el interruptor del nivel con el ajuste de Ajustes (<see cref="PatternsResolver.IsOn"/>; en automático,
     /// <see cref="Palette.PatternsOnFor"/>: desde el 41; el icono en cada dosis; tarea L3) y <c>opacity</c> =
-    /// la opacidad del patrón que lleva el shader (<see cref="LiquidGraphic.ShaderPatternOpacity"/>: 0,15 hasta el 40 y 0,20
-    /// desde el 41), con punto decimal. Del embudo de
+    /// la opacidad del patrón que lleva el shader (<see cref="LiquidGraphic.ShaderPatternOpacity"/>: 0,20 con los Patrones
+    /// activos y 0,15 sin ellos; con Siempre o Nunca no depende del nivel), con punto decimal. Del embudo de
     /// D-008 y los comodines, los de <see cref="Funnel"/> (y <c>resume</c> al reabrir el nivel guardado, B2-5). De la
     /// victoria y los anuncios simulados (B2-4): <c>victory</c>, <c>double_harvest</c>, <c>auto_next</c> (avance tras la
     /// Cosecha doble, D-011 punto 4) y <c>ad_gate</c> (<see cref="Victory"/>), <c>ad_check</c> (<see cref="AdCheck"/>),

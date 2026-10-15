@@ -175,7 +175,7 @@ namespace AF.UI
 
         /// <summary>
         /// Pares texto / fondo de la pantalla, para la comprobación de contraste ≥ 4,5:1 (07 §1.2 y §7.8): cabeceras de
-        /// sección y opciones sobre la madera clara, la opción elegida (crema sobre hoja) y las demás (madera sobre papel).
+        /// sección y opciones sobre la madera clara, la opción elegida (crema sobre hoja) y las demás (madera sobre su placa).
         /// </summary>
         public static (string Name, Color Text, Color Background)[] ContrastPairs()
         {
@@ -183,7 +183,20 @@ namespace AF.UI
             {
                 ("cabecera de sección", (Color)Palette.FamilyWood.Deep, (Color)Palette.PanelLightLow),
                 ("opción elegida", (Color)Palette.Cream, Palette.FamilyLeaf.Deep),
-                ("opción", Palette.FamilyWood.Deep, (Color)Palette.UiPaper),
+                ("opción", Palette.FamilyWood.Deep, OptionPlate),
+            };
+        }
+
+        /// <summary>
+        /// Pares límite / fondo de los componentes que no son texto, para la comprobación ≥ 3:1 (WCAG 1.4.11; revisión de L3): el
+        /// borde (opaco) de una opción no elegida sobre los dos extremos del degradado de la tarjeta.
+        /// </summary>
+        public static (string Name, Color Boundary, Color Background)[] BoundaryContrastPairs()
+        {
+            return new[]
+            {
+                ("borde de opción sobre la madera clara baja", OptionBorder, (Color)Palette.PanelLightLow),
+                ("borde de opción sobre la madera clara", OptionBorder, (Color)Palette.PanelLight),
             };
         }
 
@@ -472,10 +485,22 @@ namespace AF.UI
             }
         }
 
-        // Una opción: placa de papel (madera clara) o de hoja si está elegida, con su marca de radio a la izquierda (anillo,
+        // Placa de una opción no elegida: crema (más clara que la tarjeta, la levanta; la madera oscura encima, 11,5:1) con un
+        // borde opaco de 2 dp de la madera base #7E5638 (5,1:1 sobre la madera clara de la tarjeta, ≥ 3:1 de WCAG 1.4.11 para
+        // el límite de un componente), para que se lea como botón y no como texto suelto (revisión de L3: el papel solo se
+        // separaba de la tarjeta un 3 % de luminancia y el primer borde, la madera oscura al 25 %, daba 1,56:1). Opaco y no con
+        // alfa: el proyecto está en Linear y la GPU mezcla en lineal (ColorMath.CompositeLinear), así que la madera oscura al
+        // 60 % quedaría en 2,2:1 en pantalla aunque en sRGB dé 3,3:1.
+        private static readonly Color OptionPlate = Palette.Cream;
+        private static readonly Color OptionBorder = Palette.FamilyWood.Base;
+        private const float OptionBorderDp = 2f;
+        private const float OptionRadiusDp = 12f;
+
+        // Una opción: placa crema con borde de madera, o de hoja si está elegida, con su marca de radio a la izquierda (anillo,
         // hueco y punto: el estado no depende solo del color) y el texto. Toda la fila es el área táctil (≥ 48 dp).
         private sealed class OptionRow
         {
+            private readonly Image _border;
             private readonly Image _plate;
             private readonly Image _ring;
             private readonly Image _hole;
@@ -488,8 +513,11 @@ namespace AF.UI
                 _onClick = onClick;
                 Button = UiBuilder.BareButton(name, parent, () => _onClick?.Invoke());
                 Root = (RectTransform)Button.transform;
-                _plate = UiBuilder.Sliced("Plate", Root, art.RoundedRect, Palette.UiPaper);
+                _border = UiBuilder.Sliced("Border", Root, art.RoundedRect, OptionBorder);
+                UiBuilder.Stretch(_border.rectTransform);
+                _plate = UiBuilder.Sliced("Plate", Root, art.RoundedRect, OptionPlate);
                 UiBuilder.Stretch(_plate.rectTransform);
+                _border.pixelsPerUnitMultiplier = 24f / OptionRadiusDp;
                 _ring = Circle("Ring", art, RadioDp);
                 _hole = Circle("Hole", art, RadioDp - 6f);
                 _dot = Circle("Dot", art, 10f);
@@ -518,7 +546,7 @@ namespace AF.UI
             public void SetSelected(bool selected)
             {
                 Selected = selected;
-                Color plate = selected ? Palette.FamilyLeaf.Deep : (Color)Palette.UiPaper;
+                Color plate = selected ? Palette.FamilyLeaf.Deep : OptionPlate;
                 Color ink = selected ? (Color)Palette.Cream : Palette.FamilyWood.Deep;
                 _plate.color = plate;
                 Label.color = ink;
@@ -526,13 +554,19 @@ namespace AF.UI
                 _hole.color = plate;
                 _dot.color = ink;
                 _dot.gameObject.SetActive(selected);
+
+                // La elegida, verde llena hasta el borde y sin él; las demás, la placa dentro del borde.
+                float inset = selected ? 0f : OptionBorderDp;
+                _border.gameObject.SetActive(!selected);
+                _plate.rectTransform.offsetMin = new Vector2(inset, inset);
+                _plate.rectTransform.offsetMax = new Vector2(-inset, -inset);
+                _plate.pixelsPerUnitMultiplier = 24f / (OptionRadiusDp - inset);
             }
 
             public void Place(float x, float y, float w, float h, float s)
             {
                 UiBuilder.Place(Root, x, y, w, h);
                 float r = h * 0.5f;
-                _plate.pixelsPerUnitMultiplier = 24f / 12f;
                 Center(_ring.rectTransform, 14f + (RadioDp * 0.5f), r, RadioDp);
                 Center(_hole.rectTransform, 14f + (RadioDp * 0.5f), r, RadioDp - 6f);
                 Center(_dot.rectTransform, 14f + (RadioDp * 0.5f), r, 10f);

@@ -61,6 +61,19 @@ namespace AF.Tests.PlayMode
             Assert.That(Loc.NumberFormat.Tag, Is.EqualTo("es-CO"), "sin región, es-CO [P]");
             Assert.That(UiText.Grouped(1000), Is.EqualTo("1.000"));
 
+            // Teléfono en otro idioma sin región (en, pt): la UI es es-419 y las cifras no salen de la fila de ese idioma
+            // («1,000» de en), sino de es-CO (notas de la tanda 4, punto 10; revisión de L3).
+            foreach (string tag in new[] { "en", "pt" })
+            {
+                LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale(tag);
+                yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(4)));
+                boot = GameBootstrap.Current!;
+                Assert.That(boot.DeviceTag, Is.EqualTo(tag), "AF_STATE loc enseña la etiqueta leída");
+                Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.SourceLocale), tag);
+                Assert.That(Loc.NumberFormat.Tag, Is.EqualTo("es-CO"), tag + " sin región: es-CO [P]");
+                Assert.That(UiText.Grouped(1000), Is.EqualTo("1.000"), tag);
+            }
+
             // Teléfono en Brasil: pt-BR aún no está completo y en tampoco → es-419 de respaldo, con las cifras de Brasil.
             LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("pt-BR");
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(4)));
@@ -189,6 +202,115 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator ChoosingALanguage_KeepsTheSessionWallet_WithoutReapplyingTheDevExtras()
+        {
+            // Build de desarrollo abierto con af_seeds 500 y af_canoes 2 (simulados): se aplican al arrancar en frío…
+            LaunchOptions.ClockOverride = new ManualClock(T0);
+            LaunchOptions.DevWalletOverride = (500, 2);
+            var store = new MemoryProfileStore(ProfileAt(4));
+            yield return PlayModeHelpers.LoadApp(store);
+            GameBootstrap first = GameBootstrap.Current!;
+            Assert.That(first.Wallet!.Seeds, Is.EqualTo(500), "af_seeds al arrancar");
+            Assert.That(first.Wallet.Canoes.Count, Is.EqualTo(2), "af_canoes al arrancar");
+            Assert.That(first.Wallet.Apply(Transaction.Earn(SeedSource.Basket, 50)).IsApplied, Is.True);
+            Assert.That(first.Wallet.Seeds, Is.EqualTo(550), "lo ganado en la sesión");
+
+            // …pero volver al inicio tras elegir idioma no es un arranque en frío: la cartera sigue como estaba.
+            Assert.That(first.PressSettings(), Is.True);
+            first.SettingsView!.LanguageButton(LocLocale.Pseudo)!.onClick.Invoke();
+            yield return PlayModeHelpers.WaitFor(
+                () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AppScreen.Boot,
+                "reconstrucción de la UI en en-XA");
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.Pseudo));
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(550), "los extras de desarrollo no se vuelven a aplicar");
+            Assert.That(boot.Wallet.Canoes.Count, Is.EqualTo(2));
+            Assert.That(ProfileJson.Deserialize(store.Json!).Wallet.Seeds, Is.EqualTo(550), "ni se guardan encima de lo jugado");
+        }
+
+        [UnityTest]
+        public IEnumerator ChoosingALanguage_WithTheProfileLocked_KeepsWhatWasPlayedInMemory()
+        {
+            // Perfil en solo lectura (08 §4.4): lo jugado en la sesión solo vive en memoria, y la reconstrucción no lo descarta.
+            var store = new ReadOnlyProfileStore(ProfileLoadStatus.TooNew);
+            yield return PlayModeHelpers.LoadApp(store);
+            GameBootstrap first = GameBootstrap.Current!;
+            Assert.That(first.ProfileLocked, Is.True);
+            first.LockedNotice!.PlayButton.onClick.Invoke();
+            int seeds = first.Wallet!.Seeds;
+            Assert.That(first.Wallet.Apply(Transaction.Earn(SeedSource.Basket, 75)).IsApplied, Is.True);
+            Profile played = first.Profile!;
+
+            Assert.That(first.PressSettings(), Is.True);
+            first.SettingsView!.LanguageButton(LocLocale.Pseudo)!.onClick.Invoke();
+            yield return PlayModeHelpers.WaitFor(
+                () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AppScreen.Boot,
+                "reconstrucción de la UI en en-XA");
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.ProfileLocked, Is.True, "sigue en solo lectura");
+            Assert.That(boot.Profile, Is.SameAs(played), "el mismo perfil en memoria, no uno en blanco");
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(seeds + 75), "lo ganado en la sesión sigue");
+            Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.Pseudo), "con el idioma elegido, aunque no se pudo guardar");
+            Assert.That(boot.Services!.PurchasesBlocked, Is.True, "y sin compras");
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+        }
+
+        [UnityTest]
+        public IEnumerator ChoosingALanguage_WithANewerProfileOnDisk_NeverOverwritesIt()
+        {
+            // 08 §4.4: un profile.json de un esquema más nuevo (TooNew) «no se sobrescribe». Con el LocalProfileStore real del
+            // arranque: elegir idioma reconstruye la escena, y el arranque siguiente no puede crear otro almacén sin Load (sin
+            // bloquear) que guarde el perfil en blanco de la sesión encima (revisión de L3).
+            string dir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "af-l3-toonew-" + Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(dir);
+            try
+            {
+                string mainPath = System.IO.Path.Combine(dir, LocalProfileStore.FileName);
+                string backupPath = System.IO.Path.Combine(dir, LocalProfileStore.BackupFileName);
+                System.IO.File.WriteAllText(mainPath, "{\"profile_schema\": " + (Profile.CurrentSchema + 1) + ", \"wallet\": {\"seeds\": 5000}}");
+                System.IO.File.WriteAllText(backupPath, ProfileJson.Serialize(ProfileAt(4)));
+                byte[] main = System.IO.File.ReadAllBytes(mainPath);
+                byte[] backup = System.IO.File.ReadAllBytes(backupPath);
+
+                LaunchOptions.ClockOverride = new ManualClock(T0);
+                yield return PlayModeHelpers.LoadAppFromDisk(dir);
+                GameBootstrap first = GameBootstrap.Current!;
+                Assert.That(first.ProfileLocked, Is.True, "TooNew");
+                Assert.That(first.ProfileStore, Is.InstanceOf<LocalProfileStore>());
+                first.LockedNotice!.PlayButton.onClick.Invoke();
+
+                Assert.That(first.PressSettings(), Is.True);
+                first.SettingsView!.LanguageButton(LocLocale.Pseudo)!.onClick.Invoke();
+                yield return PlayModeHelpers.WaitFor(
+                    () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AppScreen.Boot,
+                    "reconstrucción de la UI en en-XA");
+                GameBootstrap boot = GameBootstrap.Current!;
+                Assert.That(boot.ProfileLocked, Is.True, "sigue en solo lectura");
+                Assert.That(boot.ProfileStore, Is.SameAs(first.ProfileStore), "el mismo almacén, que sigue bloqueado");
+                Assert.That(((LocalProfileStore)boot.ProfileStore!).WriteBlocked, Is.True);
+                Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.Pseudo));
+
+                // Patrones (SaveSettings), una mutación de la cartera y el cierre de la escena (PersistNow de OnDestroy): nada
+                // llega al disco.
+                Assert.That(boot.ChoosePatterns(PatternsSetting.On), Is.True);
+                Assert.That(boot.Profile!.Settings.Patterns, Is.EqualTo(PatternsSetting.On), "en memoria, para esta sesión");
+                Assert.That(boot.Wallet!.Apply(Transaction.Earn(SeedSource.Basket, 50)).IsApplied, Is.True);
+                UnityEngine.Object.Destroy(boot.gameObject);
+                yield return null;
+                yield return null;
+                Assert.That(GameBootstrap.Current, Is.Null, "escena destruida");
+
+                Assert.That(System.IO.File.ReadAllBytes(mainPath), Is.EqualTo(main), "profile.json intacto");
+                Assert.That(System.IO.File.ReadAllBytes(backupPath), Is.EqualTo(backup), "profile.bak intacto");
+                Assert.That(System.IO.File.Exists(System.IO.Path.Combine(dir, LocalProfileStore.TempFileName)), Is.False, "ni un .tmp");
+            }
+            finally
+            {
+                System.IO.Directory.Delete(dir, true);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator Patterns_OnOffAuto_ApplyToTheLoadedLevel_WithoutReloading()
         {
             var store = new MemoryProfileStore(ProfileAt(41));
@@ -282,6 +404,16 @@ namespace AF.Tests.PlayMode
             foreach ((string name, Color text, Color background) in SettingsScreen.ContrastPairs())
             {
                 Assert.That(ColorMath.ContrastRatio(text, background), Is.GreaterThanOrEqualTo(4.5f), name);
+            }
+        }
+
+        [Test]
+        public void Settings_OptionBoundaryHasContrast3()
+        {
+            // WCAG 1.4.11: el límite de una opción no elegida se distingue de la tarjeta (revisión de L3).
+            foreach ((string name, Color boundary, Color background) in SettingsScreen.BoundaryContrastPairs())
+            {
+                Assert.That(ColorMath.ContrastRatio(boundary, background), Is.GreaterThanOrEqualTo(3f), name);
             }
         }
 

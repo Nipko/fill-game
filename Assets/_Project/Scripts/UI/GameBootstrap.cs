@@ -84,11 +84,16 @@ namespace AF.UI
         private string _deviceTag = string.Empty;
         private SettingsScreen? _settingsScreen;
 
-        // Reconstrucción de la UI tras elegir idioma (tarea L3): la escena se recarga y el arranque siguiente va al inicio, con
-        // los ajustes elegidos aunque el perfil no se pueda guardar (perfil en solo lectura, 08 §4.4).
+        // Reconstrucción de la UI tras elegir idioma (tarea L3): la escena se recarga y el arranque siguiente va al inicio con el
+        // mismo perfil en memoria (ajustes, cartera y progreso de la sesión), aunque no se haya podido guardar (perfil en solo
+        // lectura, 08 §4.4, o una escritura fallida), y con el mismo almacén: un LocalProfileStore nuevo no habría hecho Load y
+        // no estaría bloqueado, así que el perfil en blanco de la sesión pisaría el profile.json más nuevo (08 §4.4: «no se
+        // sobrescribe»; revisión de L3). Solo se reutiliza si es el almacén de este arranque (el del test o el de la misma
+        // carpeta): una reconstrucción que no llegó a arrancar no se cuela en el arranque de otro test con otro almacén.
         private static bool s_rebuildToLobby;
-        private static string? s_rebuildLanguage;
-        private static PatternsSetting s_rebuildPatterns;
+        private static Profile? s_rebuildProfile;
+        private static ProfileLoadStatus s_rebuildStatus;
+        private static IProfileStore? s_rebuildStore;
 
         // Fallos del escritor de segundo plano ya registrados (T-D): lo recoja quien lo recoja, cada uno se avisa una vez.
         private int _reportedBackgroundFailures;
@@ -793,14 +798,16 @@ namespace AF.UI
         /// <summary>
         /// Reconstruye toda la UI en el idioma nuevo volviendo al inicio (Q7-A; tarea L3): guarda el perfil, recarga la escena y
         /// el arranque siguiente construye todas las pantallas otra vez (con <see cref="Loc"/> ya en el idioma elegido) y va al
-        /// inicio, sin el nivel de desarrollo (<c>af_level</c>) ni el de los tests.
+        /// inicio con el mismo perfil en memoria (no lo vuelve a leer del disco: con el perfil en solo lectura, lo jugado en la
+        /// sesión solo vive ahí), sin el nivel de desarrollo (<c>af_level</c>) ni el de los tests y sin volver a aplicar los
+        /// extras de la cartera (<c>af_seeds</c> y <c>af_canoes</c>): volver al inicio no es un arranque en frío.
         /// </summary>
         private void RebuildUi()
         {
-            Profile? profile = _profile;
-            s_rebuildToLobby = true;
-            s_rebuildLanguage = profile?.Settings.Language;
-            s_rebuildPatterns = profile != null ? profile.Settings.Patterns : PatternsSetting.Auto;
+            s_rebuildToLobby = _profile != null;
+            s_rebuildProfile = _profile;
+            s_rebuildStatus = _profileStatus;
+            s_rebuildStore = _profileStore;
             _settingsScreen?.Hide();
             PersistNow("idioma");
             enabled = false; // nada más de este arranque: la escena se va
@@ -878,30 +885,44 @@ namespace AF.UI
             }
 
             IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
-            IProfileStore store = LaunchOptions.ProfileStoreOverride ?? new LocalProfileStore(Application.persistentDataPath);
-            Profile profile = LoadProfile(store, clock, LaunchOptions.ProfileStoreOverride == null, out bool firstRun, out _profileStatus);
-            bool locked = IsLocked(_profileStatus);
-            if (LaunchOptions.ApplyDevWallet(profile, clock))
+            string profileDirectory = LaunchOptions.ProfileDirectoryOverride ?? Application.persistentDataPath;
+
+            // Tras elegir idioma en Ajustes, la escena se recargó (RebuildUi): se vuelve al inicio con el perfil de la sesión, tal
+            // cual estaba en memoria (también con el perfil en solo lectura, que no se pudo guardar), con el mismo almacén (que
+            // sigue bloqueado si lo estaba) y sin los extras de desarrollo de la cartera, que son del arranque en frío (revisión
+            // de L3).
+            IProfileStore? carriedStore = s_rebuildToLobby ? s_rebuildStore : null;
+            bool sameStore = carriedStore != null && (LaunchOptions.ProfileStoreOverride != null
+                ? ReferenceEquals(carriedStore, LaunchOptions.ProfileStoreOverride)
+                : carriedStore is LocalProfileStore local && string.Equals(local.DirectoryPath, profileDirectory, StringComparison.Ordinal));
+            Profile? carried = sameStore ? s_rebuildProfile : null;
+            bool rebuilt = carried != null;
+            ProfileLoadStatus carriedStatus = s_rebuildStatus;
+            s_rebuildToLobby = false;
+            s_rebuildProfile = null;
+            s_rebuildStore = null;
+            IProfileStore store = rebuilt ? carriedStore! : (LaunchOptions.ProfileStoreOverride ?? new LocalProfileStore(profileDirectory));
+            Profile profile;
+            bool firstRun;
+            if (carried != null)
             {
-                store.TrySave(profile); // extras af_seeds y af_canoes de los builds de desarrollo [P] (B2-6)
+                profile = carried;
+                _profileStatus = carriedStatus;
+                firstRun = false;
+            }
+            else
+            {
+                bool migrateLegacy = LaunchOptions.ProfileStoreOverride == null && LaunchOptions.ProfileDirectoryOverride == null;
+                profile = LoadProfile(store, clock, migrateLegacy, out firstRun, out _profileStatus);
+                if (LaunchOptions.ApplyDevWallet(profile, clock))
+                {
+                    store.TrySave(profile); // extras af_seeds y af_canoes de los builds de desarrollo [P] (B2-6)
+                }
             }
 
+            bool locked = IsLocked(_profileStatus);
             _profile = profile;
             _profileStore = store;
-
-            // Tras elegir idioma en Ajustes, la escena se recargó (RebuildUi): se vuelve al inicio con los ajustes elegidos (también
-            // con el perfil en solo lectura, que no los pudo guardar).
-            bool rebuilt = s_rebuildToLobby;
-            s_rebuildToLobby = false;
-            if (rebuilt)
-            {
-                if (s_rebuildLanguage != null)
-                {
-                    profile.Settings.Language = s_rebuildLanguage;
-                }
-
-                profile.Settings.Patterns = s_rebuildPatterns;
-            }
 
             // Textos (D-018; tareas L2b y L3): con el perfil leído y antes de construir ninguna pantalla. Desarrollo (af_lang) >
             // settings.language > teléfono > en, con el respaldo es-419, y las cifras con la región del teléfono.

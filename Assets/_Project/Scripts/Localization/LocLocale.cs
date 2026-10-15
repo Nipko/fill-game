@@ -281,6 +281,15 @@ namespace AF.Localization
         }
 
         /// <summary>
+        /// Si <paramref name="tag"/> trae región (un subtag de 2 letras o 3 cifras tras el idioma y el script): «es-MX», «es-419» y
+        /// «zh-Hant-TW» sí; «es», «pt», «en-u-ca-gregory» y null, no. Sin asignaciones.
+        /// </summary>
+        public static bool HasAnyRegion(string? tag)
+        {
+            return tag != null && TryFindRegion(tag, out _, out _);
+        }
+
+        /// <summary>
         /// Parte una etiqueta en idioma (minúsculas) y región (mayúsculas, o null): «es_co» → es, CO; «zh-Hant-TW» → zh, TW;
         /// «es-419» → es, 419; «en-US-u-mu-celsius» → en, US.
         /// </summary>
