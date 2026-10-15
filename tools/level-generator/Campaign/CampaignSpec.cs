@@ -2,12 +2,15 @@
 // la propuesta (c.1-c.4, d.1-d.4) y el GDD vigente (02 §8, §9.2, §13; 03 §4.4, §4.5, §11, §12; glosario §8, §9, §11;
 // 08 §9). Este archivo solo lee y deriva el plan de cada nivel; las reglas del juego viven en AF.Core y AF.Solver.
 // Lo enlazan tools/level-generator y tools/level-qa (un solo lector de la especificación).
+// Los códigos del calendario y su lectura sobre un attrs publicado (MechanicCodes) también viven aquí: con las variantes de la
+// 1.0 (P5 de la tanda 4) un tipo de AF.Core ya no basta para saber el código (liana con n es Ln; brote con n = 2, B2).
 // Una especificación puede «extender» otra (fixtures negativos de specs/tests/): "extends" apunta al archivo base y
 // "calendar" o "seasons" sustituyen solo las entradas que traen; cualquier otra clave sustituye la del base.
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using AF.Core.Mechanics;
 
 namespace AmazonFill.Tools.LevelGenerator.Campaign;
 
@@ -571,6 +574,13 @@ internal sealed class CampaignSpec
         var mechanics = root["mechanics"]!.AsArray().Select(m => new MechanicInfo(
             Str(m!, "code"), Str(m!, "id"), Str(m!, "kind"), Int(m!, "debut"), Str(m!, "season"),
             m!["debut_key"]?.GetValue<string>(), m["k"]?.GetValue<int>() ?? 0, m["cave_cap"]?.GetValue<int>() ?? 0)).ToList();
+        foreach (MechanicInfo m in mechanics.Where(m => !MechanicCodes.IsKnown(m.Code)))
+        {
+            // El generador superpone y level-qa reconoce solo los códigos de MechanicCodes: otro código sería una mecánica sin
+            // superposición que rechazaría todos los candidatos del slot.
+            throw new CampaignSpecException($"{path}: codigo de mecanica desconocido '{m.Code}' (se admiten {string.Join(", ", MechanicCodes.All)})");
+        }
+
         var capacities = root["capacities"]!.AsArray().Select(c => new CapacityInfo(
             Str(c!, "code"), Str(c!, "id"), Int(c!, "cap"), Int(c!, "debut"))).ToList();
         var seasons = root["seasons"]!.AsObject().ToDictionary(
@@ -747,4 +757,77 @@ internal sealed class CampaignSpec
 
     private static int Int(JsonNode node, string key) =>
         node[key]?.GetValue<int>() ?? throw new CampaignSpecException($"falta '{key}'");
+}
+
+/// <summary>
+/// Códigos de mecánica del calendario (d.4; d.5.1 de la propuesta de D-007 para las variantes de la 1.0) y su lectura sobre un
+/// <c>attrs[i]</c> publicado. Los códigos de las variantes son los [P] de la tarea P5 (Ln, Ha, B2 y Fl), los mismos que usa D2
+/// en d.5.1 y d.5.3 de la propuesta (rehecha el 2026-10-14), así que no cambian:
+/// <list type="bullet">
+/// <item><description>Ln: Liana de cuenta, <c>{"type":"liana","n":1|2}</c> (02 §9.1 M3; debut 243; <c>intro_mechanic</c>
+/// <c>liana_n</c> [P]);</description></item>
+/// <item><description>Ha: Hoja atada, <c>{"type":"hoja_atada","key":c}</c> (b.3; debut 283; <c>hoja_atada</c>);</description></item>
+/// <item><description>B2: Brote de dos hojas, <c>{"type":"brote","n":2}</c> (b.3; debut 343; <c>brote_n2</c> [P]);</description></item>
+/// <item><description>Fl: Flor de vitória-régia, <c>{"type":"flor","key":c1,"key2":c2}</c> con c1 ≠ c2 (b.3; debut 403;
+/// <c>flor</c>).</description></item>
+/// </list>
+/// Firma de <c>pack_schema</c> 3 (D-023, punto 5). Li y Br quedan para la Liana con fruta y el Brote de una hoja.
+/// </summary>
+internal static class MechanicCodes
+{
+    public const string Hoja = "Ho";
+    public const string Matapi = "Ma";
+    public const string Liana = "Li";
+    public const string LianaCount = "Ln";
+    public const string Murky = "Tu";
+    public const string Remolino = "Re";
+    public const string Barro = "Ba";
+    public const string Lluvia = "Ll";
+    public const string Brote = "Br";
+    public const string BroteTwo = "B2";
+    public const string Pirana = "Pi";
+    public const string Tinaja = "Ti";
+    public const string HojaAtada = "Ha";
+    public const string Flor = "Fl";
+
+    /// <summary><c>n</c> del Brote de dos hojas (b.3; firma de <c>pack_schema</c> 3: brote con n ∈ {1, 2}).</summary>
+    public const int BroteTwoLeaves = 2;
+
+    /// <summary>Todos los códigos que el generador sabe superponer y level-qa reconoce, en orden ordinal.</summary>
+    public static readonly string[] All =
+        [.. new[] { Hoja, Matapi, Liana, LianaCount, Murky, Remolino, Barro, Lluvia, Brote, BroteTwo, Pirana, Tinaja, HojaAtada, Flor }.Order(StringComparer.Ordinal)];
+
+    /// <summary>Variantes de la 1.0 (b.3): las que exigen <c>pack_schema</c> 3 en su estreno (su <c>intro_mechanic</c>).</summary>
+    public static readonly string[] Variants = [LianaCount, HojaAtada, BroteTwo, Flor];
+
+    public static bool IsKnown(string code) => Array.IndexOf(All, code) >= 0;
+
+    /// <summary>
+    /// Bloqueo C1-9 de <c>AF.Core</c> (02 R16; pregunta 24 b): la Liana con fruta, la Liana de cuenta y la Flor (K3b) no van con
+    /// capacidades mixtas, cueva de la Piraña incluida (LevelValidation las rechaza).
+    /// </summary>
+    public static bool IsMixedCapacityBlocked(string code) => code is Liana or LianaCount or Flor;
+
+    /// <summary>Necesita cuias a medias en el tablero base (cuia de holgura; fill no las deja): el Brote y el de dos hojas.</summary>
+    public static bool NeedsPartial(string code) => code is Brote or BroteTwo;
+
+    /// <summary>
+    /// Código del calendario de una entrada de <c>attrs</c> (la tinaja y su cuia dan Ti), o null sin mecánica. El Barro (Ba) y
+    /// las Aguas turbias (Tu) no son <c>attrs</c>: los lee quien mira el contenido y <c>hidden</c>.
+    /// </summary>
+    public static string? CodeOf(MechanicSpec a) => a.Type switch
+    {
+        MechanicType.None => null,
+        MechanicType.Hoja => Hoja,
+        MechanicType.Brote => a.N == BroteTwoLeaves ? BroteTwo : Brote,
+        MechanicType.Liana => a.N != 0 ? LianaCount : Liana,
+        MechanicType.Matapi => Matapi,
+        MechanicType.Remolino => Remolino,
+        MechanicType.Lluvia => Lluvia,
+        MechanicType.Pirana => Pirana,
+        MechanicType.Tinaja or MechanicType.Cucharon => Tinaja,
+        MechanicType.HojaAtada => HojaAtada,
+        MechanicType.Flor => Flor,
+        _ => throw new ArgumentOutOfRangeException(nameof(a), a.Type, "mecanica sin codigo de calendario"),
+    };
 }

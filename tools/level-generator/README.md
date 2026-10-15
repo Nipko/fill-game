@@ -16,7 +16,7 @@ ejecuciones den los mismos bytes.
 | `--parity [--report <md>]` | Paridad de las métricas con el prototipo (03 §17-§18; 09 R26) | `tools/out/parity_report.md` |
 | `--spec <campaign.json> --levels a-b --out <carpeta> [--report <md>] [--check]` | Genera la campaña (03 §2) | `Assets/_Project/Data/Levels/mundo_0N_v1.json` y `tools/out/campaign_v1_report.md` |
 | `--seasons <campaign.json> [...] --out <tabla.json> [--check]` | Tabla de temporada del cliente (pregunta 32 b) | `Assets/_Project/Data/Levels/seasons_v1.json` |
-| `--self-test [tinaja\|seasons]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
+| `--self-test [tinaja\|seasons\|variants]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
 
 Códigos de salida: 0 = correcto; 1 = alguna comprobación falla; 2 = uso incorrecto o especificación ilegible.
 
@@ -72,9 +72,9 @@ un `FAIL [regla]` por cada incumplimiento o un `AVISO`. Reglas (ids estables):
 | GAP-120 | ninguna mecánica ni capacidad (Cuia chica, Cuia alta) pasa más de 120 niveles sin volver | resumen 6; d.2 regla 4; 02 §8 |
 | FIRST-TIME | al menos una primera vez por ciclo | d.2 regla 3 |
 | CAPACITIES | ≤ 2 Cuias chicas (con la cueva) y ≤ 1 Cuia alta antes del 200; Cuia alta de 6 solo en hitos desde el 141 | 02 §8 |
-| LIANA-CAPS | la Liana nunca va con Cuia chica, Cuia alta ni Piraña: `AF.Core` la rechaza (C1-9) y el generador no quita nada de la celda | C1-9 |
+| LIANA-CAPS | la Liana (con fruta o de cuenta) y la Flor nunca van con Cuia chica, Cuia alta ni Piraña: `AF.Core` las rechaza (C1-9; K3b) y el generador no quita nada de la celda | C1-9 |
 
-Con `campaign_v1.json`: 21 reglas, 0 fallos. Las reglas comprueban el calendario; lo publicado lo comprueba `level-qa`
+Con `campaign_v1.json` y con `sample_variants.json`: 21 reglas, 0 fallos. Las reglas comprueban el calendario; lo publicado lo comprueba `level-qa`
 (QA-MECH-CELL y QA-GAP-120).
 
 ### Fixtures negativos: `specs/tests/*.json`
@@ -90,7 +90,10 @@ done
 ```
 
 Todos deben dar `exit=1` y `presente`. Los de la Tinaja (`tinaja_in_recovery.json` y `tinaja_in_remanso.json`) extienden
-`specs/sample_tinaja.json` y fallan por CAL-ROLE: p1, p2 y p19 son niveles puros, sin tinaja (D-019, Q-Ti1 A).
+`specs/sample_tinaja.json` y fallan por CAL-ROLE: p1, p2 y p19 son niveles puros, sin tinaja (D-019, Q-Ti1 A). Los de las
+variantes de la 1.0 extienden `specs/sample_variants.json`: `liana_n_with_capacity.json` (Liana de cuenta con una Cuia chica) y
+`flor_with_pirana.json` (Flor con la Piraña) fallan por LIANA-CAPS, y `brote_n2_before_debut.json` (Brote de dos hojas antes de
+su estreno), por BEFORE-DEBUT; `--self-test variants` los repite.
 
 ## Métricas, alivio y paridad (`Metrics/`)
 
@@ -157,9 +160,10 @@ Fases (los tiempos salen por la consola; el informe no lleva tiempos):
    piden más candidatos a sus retos, hito, siguientes y recuperaciones (hasta 2 rondas); un reto o hito que quede fuera de
    su ventana se publica con la etiqueta que mide (c.2: sin etiqueta si mide menos del 75 %) y el informe lo registra.
 4. **Alivio** (`Metrics/Relief.cs`) desde el nivel 31.
-5. **Packs** (`PackWriter`): `pack_schema` 2, o 3 si algún nivel del pack lleva la tinaja (D-019), pack a pack (la
-   cabecera del informe dice «2 (3 en los packs con tinaja: …)» si una campaña tiene de los dos; FIXG); minificado con
-   un nivel por línea, UTF-8 sin BOM y LF, decimales fijos.
+5. **Packs** (`PackWriter`): `pack_schema` 2, o 3 si algún nivel del pack lleva la tinaja (D-019) o una variante de la 1.0
+   del 3 (D-023, punto 5; sección «Variantes de la 1.0»), pack a pack (la cabecera del informe dice «2 (3 en los packs con
+   tinaja o con variantes de la 1.0: …)» si una campaña tiene de los dos; FIXG); minificado con un nivel por línea, UTF-8 sin
+   BOM y LF, decimales fijos.
 
 El informe (`tools/out/campaign_v1_report.md`) trae, además de los packs, el pool, las etiquetas, los ciclos y la tabla
 por nivel: el debut real y el hueco máximo de cada mecánica y capacidad sobre los tableros publicados, el remanso frente a
@@ -275,6 +279,66 @@ dotnet run --project tools/level-generator -c Release -- --self-test tinaja
 338) e hito (340); su pack de muestra (`tools/out/sample_tinaja/mundo_07_v1.json`, `pack_schema` 3) y su informe
 (`tools/out/sample_tinaja_report.md`) se regeneran con esos comandos. Las combinaciones de d.3 (Ti+Ho, Ti+Ma y Ti+Br) no
 caben en una muestra de un ciclo (`--validate-spec` exige que cada mecánica de la tabla debute en el calendario).
+
+## Variantes de la 1.0 (P5; 02 §9.1; propuesta de D-007 b.3; firma de `pack_schema` 3, D-023 punto 5)
+
+Códigos de calendario [P] de P5, los mismos de d.5.1 de la propuesta (D2), con su paso propio en la superposición
+(`Generation/Superposition.cs`) y su lectura sobre un `attrs` publicado (`MechanicCodes`, en `Campaign/CampaignSpec.cs`; el
+lector de la especificación rechaza cualquier otro código):
+
+| Código | Variante | `attrs[i]` | Paso de la superposición | `intro_mechanic` |
+|---|---|---|---|---|
+| Ln | Liana de cuenta (243) | `{"type":"liana","n":1}` o `n` = 2 | como la Liana con fruta: una cuia de 4 con contenido y sin Barro; n = 1 en los tableros de estreno y 1-2 al azar en los demás [P] (b.3: «n cuias (1-2)») | `liana_n` [P] |
+| Ha | Hoja atada (283) | `{"type":"hoja_atada","key":c}` | una cuia con contenido cuya dosis del fondo es c, con cap = U_c de c (D-024) y sin Barro, que no esté llena de c; nunca un vacío [P], para no gastar los vacíos del rol | `hoja_atada` |
+| B2 | Brote de dos hojas (343) | `{"type":"brote","n":2}` | como el Brote: una cuia con 1-2 dosis visibles (espacio ≥ 2, 02 R10 b) y sin Barro; su color es la cima; con la cuia de holgura y `deep`, como el Brote | `brote_n2` [P] |
+| Fl | Flor de vitória-régia (403) | `{"type":"flor","key":c1,"key2":c2}` | como la Liana con fruta: una cuia de 4 con contenido y sin Barro, con dos frutas de 4 dosis distintas que no están dentro | `flor` |
+
+- Orden de la superposición: `Re Ho Ma Ll Li Ln Fl Br B2 Ha Ba Pi Ti Tu`. Las variantes se intercalan sin cambiar el orden
+  relativo de las demás (`Superposition.OrderBeforeVariants`), así que solo consumen números aleatorios en los slots que las
+  llevan: los packs 11-200 no cambian (`--check`). La Hoja atada va antes del Barro (nunca en una cuia con mecánica) y de la
+  tinaja (solo saca de cuias sin mecánica).
+- La validez la decide `LevelValidation` (K3a y K3b): la Liana de cuenta con n colores que puedan sellar fuera de ella; la Hoja
+  atada con su fruta en el fondo, cap = U_c y una por fruta (D-024); el Brote de dos hojas con espacio ≥ 2; la Flor con key ≠
+  key2, ninguna dentro y las dos capaces de sellar fuera a la vez. La Liana de cuenta y la Flor van sin capacidades mixtas
+  mientras dure el bloqueo C1-9 (el generador se detiene si una celda las pide, y LIANA-CAPS lo rechaza antes) y sin la Cuia
+  chica de relajación.
+- `GenBoard.MapColors` cambia también la `key2` de la Flor, y el alivio (`minus_color`) nunca quita una llave, tampoco la `key2`.
+- `PackWriter`: un pack con la Hoja atada, la Flor (`key2` tras `key`), el Brote de dos hojas o un `intro_mechanic` de las
+  variantes (`liana_n`, `hoja_atada`, `brote_n2` y `flor`; `PackWriter.Pack3Intros`) sale con `pack_schema` 3; la Liana de
+  cuenta ya es del 2, así que un pack que solo la lleva fuera de su estreno sigue con el 2. La cabecera del informe dice «2 (3
+  en los packs con tinaja o con variantes de la 1.0: …)» si una campaña tiene de los dos.
+- `CampaignReport`: las apariciones distinguen Li de Ln y Br de B2, y la sección «Variantes de la 1.0» (solo si la
+  especificación o algún nivel las lleva) cuenta por variante los niveles, los ejemplares y los tableros de estreno que cumplen
+  02 §9.2 regla 2 (un ejemplar, 2 vacíos y `bot_fail` < 0,20), con los campos de cada nivel.
+- `tools/level-qa` lee la `key2` (`PackReader`), así que la validación, el par, el bot y la reproducción usan el tablero del
+  pack. Los controles por variante de level-qa (los códigos Ln, Ha, B2 y Fl en QA-MECH-*, y `intro_mechanic` `liana_n` y
+  `brote_n2` en QA-DEBUT) son de P6: hasta entonces, level-qa da FAIL en QA-MECH-SPEC, QA-MECH-CELL, QA-MECH-KEY y QA-DEBUT
+  sobre los packs de muestra, y 0 fallos en las demás (QA-VALID, QA-PAR, QA-BOT, QA-SCHEMA y QA-REPRO incluidas).
+
+Muestra (no es el calendario de 201-700, que copiará `campaign_v2.json` en P4 desde d.5.3 de la propuesta):
+
+```
+dotnet run --project tools/level-generator -c Release -- --validate-spec tools/level-generator/specs/sample_variants.json
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/sample_variants.json --levels 241-320 --out tools/out/sample_variants --report tools/out/sample_variants_report.md
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/sample_variants.json --levels 241-320 --out tools/out/sample_variants --check
+dotnet run --project tools/level-generator -c Release -- --self-test variants
+dotnet run --project tools/level-qa -c Release -- tools/out/sample_variants/mundo_06_v1.json tools/out/sample_variants/mundo_07_v1.json --spec tools/level-generator/specs/sample_variants.json
+```
+
+`specs/sample_variants.json` son cuatro ciclos 241-320, uno por variante, con su estreno en p3-p5 (3 tableros), la titular 8
+veces en su ciclo y su regreso como secundaria en el primer reto del ciclo siguiente. Los estrenos reales son 243, 283, 343 y
+403, que no caben en cuatro ciclos seguidos (`--validate-spec` exige que cada mecánica de la tabla debute en el calendario y
+una primera vez por ciclo): la muestra conserva el 243 de la Liana de cuenta y adelanta la Hoja atada, el Brote de dos hojas y
+la Flor a 263, 283 y 303 [P]. Otros datos [P] de la muestra: los mundos 6 y 7, el `k_plan` de 101-200 (K 8-9), para que se
+genere en menos de un minuto, y las temporadas 241 A · 261 B · 281 B · 301 A. Genera `tools/out/sample_variants/mundo_06_v1.json`
+y `mundo_07_v1.json` (`pack_schema` 3) y `tools/out/sample_variants_report.md`.
+
+`--self-test variants` comprueba los códigos (Li frente a Ln y Br frente a B2), que un tablero sin variantes sale igual y gasta
+los mismos números con el orden nuevo que con el de antes, cada paso sobre un tablero base fijo con 40 semillas (colocación
+válida según `LevelValidation`, los campos de b.3 y determinismo), la `key2` en `MapColors` y `Permuted`, el estreno de cada
+variante en la muestra (un candidato en ventana con un ejemplar, 2 vacíos y `bot_fail` < 0,20; su JSON con los `attrs` de la
+firma, `intro_mechanic`, `skippable` = false y `pack_schema` 3, leído de vuelta con el mismo tablero y el mismo hash; la Flor sin
+`key2` no se construye; el alivio no quita llaves), la muestra limpia en `--validate-spec` y los tres fixtures negativos.
 
 ## Tabla de temporada del cliente (`--seasons`; SE1)
 

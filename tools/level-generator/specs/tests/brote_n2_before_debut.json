@@ -1,0 +1,8 @@
+{
+  "extends": "../sample_variants.json",
+  "description": "Fixture negativo de --validate-spec (P5): el Brote de dos hojas en el reto 278, antes de su estreno de la muestra (283). Ninguna variante sale antes de su debut (D-007; 02 §9.2 regla 2).",
+  "expect_rule": "BEFORE-DEBUT",
+  "calendar": {
+    "278": "Ha+B2 (D)"
+  }
+}

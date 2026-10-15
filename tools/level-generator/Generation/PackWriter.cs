@@ -4,6 +4,10 @@
 // cada variante de relief que lleva la tinaja escribe su máscara en hidden, tras attrs (decisión del dueño del 2026-10-14,
 // opción a de la revisión de P2a; 08 §4.1: relief_board admite hidden si y solo si su attrs contiene la tinaja).
 // Los packs sin tinaja siguen con el 2 y sus variantes, sin hidden (los de 11-200 no cambian ni un byte).
+// Variantes de la 1.0 (P5; 02 §9.1; firma de pack_schema 3, D-023 punto 5): un pack con la Hoja atada ({"type":"hoja_atada",
+// "key":c}), la Flor ({"type":"flor","key":c1,"key2":c2}, key2 tras key), el Brote de dos hojas ({"type":"brote","n":2}) o un
+// intro_mechanic de las variantes (liana_n, hoja_atada, brote_n2 y flor) sale con pack_schema 3. La Liana de cuenta
+// ({"type":"liana","n":1|2}) ya es del 2: un pack que solo la lleva fuera de su estreno sigue con el 2.
 //   - claves en orden estable (el del ejemplo de 08 §4.1), InvariantCulture y números con decimales fijos
 //     (bot_fail con 3, branching, traps y D con 2);
 //   - UTF-8 sin BOM y LF; minificado (03 §2) con un nivel por línea [P] para que los diffs se lean;
@@ -35,8 +39,13 @@ internal static class PackWriter
     public const string SchemaFile = "schemas/af-level-1.schema.json";
     public const int PackSchema = 2;
 
-    /// <summary>pack_schema de los packs con la tinaja (P2a; D-019, punto 9).</summary>
+    /// <summary>
+    /// pack_schema de los packs con la tinaja (P2a; D-019, punto 9) o con las variantes de la 1.0 del 3 (P2b y P5; D-023, punto 5).
+    /// </summary>
     public const int TinajaPackSchema = 3;
+
+    /// <summary><c>intro_mechanic</c> que solo admite <c>pack_schema</c> 3 (esquema, rama del 3; D-019 y D-023, punto 5).</summary>
+    public static readonly string[] Pack3Intros = ["tinaja", "liana_n", "hoja_atada", "brote_n2", "flor"];
 
     private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
 
@@ -82,11 +91,18 @@ internal static class PackWriter
         return sb.ToString();
     }
 
-    /// <summary>3 si algún nivel del pack (o alguna de sus variantes de alivio) lleva la tinaja; si no, 2.</summary>
+    /// <summary>
+    /// 3 si algún nivel del pack (o alguna de sus variantes de alivio) lleva la tinaja o una variante de la 1.0 que solo admite
+    /// el 3 (Hoja atada, Flor o Brote de dos hojas), o si su <c>intro_mechanic</c> es del 3 (<see cref="Pack3Intros"/>); si no, 2.
+    /// </summary>
     public static int PackSchemaFor(IReadOnlyList<PackLevel> levels) =>
-        levels.Any(l => UsesTinaja(l.Chosen.Board.Attrs) || l.Relief.Any(r => UsesTinaja(r.Board.Attrs))) ? TinajaPackSchema : PackSchema;
+        levels.Any(l => NeedsPack3(l.Chosen.Board.Attrs) || l.Relief.Any(r => NeedsPack3(r.Board.Attrs))
+            || (l.Plan.Intro is string intro && Pack3Intros.Contains(intro))) ? TinajaPackSchema : PackSchema;
 
-    private static bool UsesTinaja(MechanicSpec[] attrs) => attrs.Any(a => a.Type is MechanicType.Tinaja or MechanicType.Cucharon);
+    /// <summary>Tipos y campos que solo admite el <c>pack_schema</c> 3: tinaja, cucharon, hoja_atada, flor (key2) y brote con n = 2.</summary>
+    private static bool NeedsPack3(MechanicSpec[] attrs) => attrs.Any(a =>
+        a.Type is MechanicType.Tinaja or MechanicType.Cucharon or MechanicType.HojaAtada or MechanicType.Flor
+        || (a.Type == MechanicType.Brote && a.N != 0) || a.Key2 != 0);
 
     public static JObj Level(CampaignSpec spec, PackLevel pl)
     {
@@ -194,6 +210,12 @@ internal static class PackWriter
         if (a.Key != 0)
         {
             o.Add("key", a.Key);
+        }
+
+        if (a.Key2 != 0)
+        {
+            // Segunda llave de la Flor (firma de pack_schema 3, D-023 punto 5): {"type":"flor","key":c1,"key2":c2}.
+            o.Add("key2", a.Key2);
         }
 
         if (a.Partner >= 0)

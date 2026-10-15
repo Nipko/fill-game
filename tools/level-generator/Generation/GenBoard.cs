@@ -86,7 +86,10 @@ internal sealed class GenBoard
         return u;
     }
 
-    /// <summary>Cambia los colores con <paramref name="map"/>[color] (el Barro, 15, no cambia), también las llaves.</summary>
+    /// <summary>
+    /// Cambia los colores con <paramref name="map"/>[color] (el Barro, 15, no cambia), también las llaves: <c>key</c> y la
+    /// segunda llave de la Flor, <c>key2</c> (P5).
+    /// </summary>
     public void MapColors(int[] map)
     {
         foreach (List<int> c in Cuias)
@@ -105,7 +108,7 @@ internal sealed class GenBoard
             MechanicSpec a = Attrs[i];
             if (!a.IsNone && a.Key != 0)
             {
-                Attrs[i] = new MechanicSpec(a.Type, map[a.Key], a.Partner, a.N, a.K);
+                Attrs[i] = new MechanicSpec(a.Type, map[a.Key], a.Partner, a.N, a.K, a.Key2 != 0 ? map[a.Key2] : 0);
             }
         }
     }
@@ -125,7 +128,7 @@ internal sealed class GenBoard
             b.Caps.Add(Caps[old]);
             b.Cuias.Add([.. Cuias[old]]);
             MechanicSpec a = Attrs[old];
-            b.Attrs.Add(a.Type == MechanicType.Remolino ? new MechanicSpec(a.Type, a.Key, inverse[a.Partner], a.N, a.K) : a);
+            b.Attrs.Add(a.Type == MechanicType.Remolino ? new MechanicSpec(a.Type, a.Key, inverse[a.Partner], a.N, a.K, a.Key2) : a);
         }
 
         foreach ((int cuia, int layer) in Hidden)
