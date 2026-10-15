@@ -7,9 +7,11 @@ namespace AF.GameFlow
     /// <summary>
     /// El viaje por el Mapa del río en funciones puras (08 §2.2; D-013; contrato común del plan del Mapa, §0): la parada
     /// k = (L − 1) / 10 cubre los niveles <c>10k+1</c> … <c>10k+10</c> y se llega a ella al ganar el <c>10k</c>. Solo lee
-    /// <see cref="WorldTable"/> y los números que recibe (<c>progress.max_level</c> y el nivel en juego); lo pendiente de
-    /// animar entre <c>map_seen_level</c> y <c>max_level</c> lo añade M3.1b. Sin estado, sin motor y sin asignaciones. Los
-    /// niveles fuera de 1..1.000 lanzan <see cref="ArgumentOutOfRangeException"/>, como <see cref="WorldTable"/>.
+    /// <see cref="WorldTable"/> y los números que recibe (<c>progress.max_level</c>, <c>progress.map_seen_level</c> y el nivel
+    /// en juego); lo pendiente de animar entre <c>map_seen_level</c> y <c>max_level</c> («ponerse al día», propuesta del Mapa
+    /// §4.2) son <see cref="HasUnseenArrival"/>, <see cref="CatchUpFrom"/> y <see cref="CatchUpMs"/> (M3.1b). Sin estado, sin
+    /// motor y sin asignaciones. Los niveles fuera de 1..1.000 lanzan <see cref="ArgumentOutOfRangeException"/>, como
+    /// <see cref="WorldTable"/>.
     /// </summary>
     public static class RiverJourney
     {
@@ -18,6 +20,13 @@ namespace AF.GameFlow
 
         /// <summary>Guía del Mapa en los mundos 7 y 8: el bufeo boliviano, sin nombre propio (D-013, Q18-A; 07 §6.2).</summary>
         public const string GuideBufeo = "bufeo";
+
+        /// <summary>
+        /// Boyas que enciende como mucho «ponerse al día» (propuesta del Mapa §4.2): las de un tramo, 10, que a
+        /// <see cref="MapConfig.CatchUpPerBuoyMs"/> = 150 ms caben justas en <see cref="MapConfig.CatchUpMaxMs"/> = 1,5 s.
+        /// Con un tramo entero, la ventana siempre incluye la última llegada sin ver.
+        /// </summary>
+        public const int CatchUpMaxBuoys = RiverStopCatalog.LevelsPerStop;
 
         private const int LevelsPerStop = RiverStopCatalog.LevelsPerStop;
 
@@ -90,6 +99,44 @@ namespace AF.GameFlow
         }
 
         /// <summary>
+        /// Hay una llegada a parada sin ver en el Mapa (el punto de la pestaña del inicio; 06 §4.7; 08 §4.3): con
+        /// <paramref name="max"/> = <c>max_level</c> y <paramref name="seen"/> = <c>map_seen_level</c>, max ≥ 10 y
+        /// max / 10 &gt; seen / 10, es decir, se ganó un <c>10k</c> después del último nivel visto. 9/10 y 19/20 dan true,
+        /// 10/10 y 52/58 false. Un <paramref name="seen"/> mayor que <paramref name="max"/> cuenta como visto.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="max"/> no está en 0..1.000 o <paramref name="seen"/> es negativo.</exception>
+        public static bool HasUnseenArrival(int seen, int max)
+        {
+            CheckSeenAndMax(seen, max);
+            return max >= LevelsPerStop && max / LevelsPerStop > seen / LevelsPerStop;
+        }
+
+        /// <summary>
+        /// Nivel desde el que «ponerse al día» enciende boyas al abrir el Mapa (propuesta del Mapa §4.2): se encienden en orden
+        /// las de los niveles CatchUpFrom + 1 … <paramref name="max"/>, como mucho <see cref="CatchUpMaxBuoys"/> (= máx(seen,
+        /// max − 10), con seen recortado a max). Con seen 52 y max 58, 52 (6 boyas); con 58 y 60, 58 (2 boyas, con la llegada
+        /// del 60); con 0 y 58, 48 (10 boyas, con la llegada del 50); con seen ≥ max, max (nada que animar).
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="max"/> no está en 0..1.000 o <paramref name="seen"/> es negativo.</exception>
+        public static int CatchUpFrom(int seen, int max)
+        {
+            CheckSeenAndMax(seen, max);
+            int from = Math.Min(seen, max);
+            return Math.Max(from, max - CatchUpMaxBuoys);
+        }
+
+        /// <summary>
+        /// Lo que dura «ponerse al día», en ms: (max − <see cref="CatchUpFrom"/>) · <see cref="MapConfig.CatchUpPerBuoyMs"/>,
+        /// nunca más de <see cref="MapConfig.CatchUpMaxMs"/> (propuesta del Mapa §4.2: 0,15 s por boya y 1,5 s como mucho).
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="max"/> no está en 0..1.000 o <paramref name="seen"/> es negativo.</exception>
+        public static int CatchUpMs(int seen, int max)
+        {
+            int buoys = max - CatchUpFrom(seen, max);
+            return Math.Min(buoys * MapConfig.CatchUpPerBuoyMs, MapConfig.CatchUpMaxMs);
+        }
+
+        /// <summary>
         /// Guía del Mapa en el mundo <paramref name="world"/> (D-013, Q18-A; P-M8: se deduce del mundo, sin campo en los datos):
         /// <see cref="GuideBufeo"/> en los mundos 7 y 8 y <see cref="GuideRosa"/> en el resto. Son identificadores, no texto.
         /// </summary>
@@ -102,6 +149,19 @@ namespace AF.GameFlow
             }
 
             return world >= FirstBufeoWorld && world <= LastBufeoWorld ? GuideBufeo : GuideRosa;
+        }
+
+        private static void CheckSeenAndMax(int seen, int max)
+        {
+            if (max < 0 || max > WorldTable.LastLevel)
+            {
+                throw new ArgumentOutOfRangeException(nameof(max), max, "max_level va de 0 a 1.000 (glosario §8).");
+            }
+
+            if (seen < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(seen), seen, "map_seen_level no es negativo (08 §4.3).");
+            }
         }
 
         private static void CheckLevel(int level)

@@ -5,10 +5,12 @@ using AF.Save;
 namespace AF.GameFlow
 {
     /// <summary>
-    /// Progreso guardado en el perfil (GDD 08 §4.3 <c>progress.max_level</c> y <c>progress.next_level</c>; tarea B1-5): lee y
-    /// escribe <see cref="Profile.Progress"/> y guarda el perfil entero con el <see cref="IProfileStore"/>, el mismo que usa
-    /// <c>AF.Economy.Wallet</c> sobre el mismo <see cref="Profile"/>. Si la escritura falla, el cambio sigue en memoria
-    /// (<see cref="PendingSave"/>) y sale con el siguiente guardado del perfil.
+    /// Progreso guardado en el perfil (GDD 08 §4.3 <c>progress.max_level</c>, <c>progress.next_level</c> y, desde M3.1b,
+    /// <c>progress.map_seen_level</c>; tarea B1-5): lee y escribe <see cref="Profile.Progress"/> y guarda el perfil entero con
+    /// el <see cref="IProfileStore"/>, el mismo que usa <c>AF.Economy.Wallet</c> sobre el mismo <see cref="Profile"/> (en el
+    /// juego, el lote <see cref="ProfileSaveBatch"/>). Si la escritura falla, el cambio sigue en memoria
+    /// (<see cref="PendingSave"/>) y sale con el siguiente guardado del perfil. Es también la vista del Mapa
+    /// (<see cref="IMapProgress"/>), que lee el perfil sin asignar memoria.
     /// </summary>
     public sealed class ProfileProgressStore : IProgressStore
     {
@@ -24,6 +26,21 @@ namespace AF.GameFlow
 
         /// <summary>El último cambio no llegó al disco (escritura fallida o almacén protegido).</summary>
         public bool PendingSave { get; private set; }
+
+        /// <inheritdoc />
+        public int MaxLevel => _profile.Progress.MaxLevel;
+
+        /// <inheritdoc />
+        public int NextLevel => _profile.Progress.NextLevel;
+
+        /// <inheritdoc />
+        public int MapSeenLevel => _profile.Progress.ClampedMapSeenLevel;
+
+        /// <inheritdoc />
+        public bool IsSkipped(int level)
+        {
+            return ProgressRules.Contains(_profile.Progress.SkippedLevels, level);
+        }
 
         /// <inheritdoc />
         public int LoadNextLevel()
@@ -60,6 +77,27 @@ namespace AF.GameFlow
             ProgressData progress = _profile.Progress;
             progress.MaxLevel = Math.Max(progress.MaxLevel, level);
             progress.NextLevel = nextLevel;
+            Persist();
+        }
+
+        /// <inheritdoc />
+        public int LoadMapSeenLevel()
+        {
+            return MapSeenLevel;
+        }
+
+        /// <inheritdoc />
+        public void SaveMapSeenLevel(int level)
+        {
+            ProgressData progress = _profile.Progress;
+            int current = progress.ClampedMapSeenLevel;
+            int seen = ProgressRules.NextMapSeen(current, level, progress.MaxLevel);
+            if (seen == current)
+            {
+                return; // sin cambios no se escribe (y un valor fuera de rango ya se recorta al guardar)
+            }
+
+            progress.MapSeenLevel = seen;
             Persist();
         }
 
