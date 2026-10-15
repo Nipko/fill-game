@@ -101,7 +101,17 @@ namespace AF.Tests.EditMode
                 "stops[2].bg.kit");
             yield return Case("ni hero ni code", Doc(Replace(TwoWorlds(), 2, Stop(2, world: 2, id: "medio", hero: "null"))), "stops[2].bg");
             yield return Case("belen en un id", Doc(Replace(TwoWorlds(), 2, Stop(2, world: 2, id: "belen_viejo"))), "stops[2].id");
-            yield return Case("id repetido", Doc(Replace(TwoWorlds(), 2, Stop(2, world: 2, id: "puerta"))), "stops[2].id");
+            // Un salto de línea final (escape \n del JSON) no pasa por id, clave ni pieza (en .NET, «$» lo admitiría).
+            yield return Case("id con salto de linea final", Doc(Replace(TwoWorlds(), 2, Stop(2, world: 2, id: "medio\\n"))), "stops[2].id");
+            yield return Case("llegada con salto de linea final", Doc(Replace(TwoWorlds(), 2, Stop(2, world: 2, id: "medio",
+                arrival: "\"map.stop.medio.dato_01\\n\""))), "stops[2].arrival_fact");
+            yield return Case("dato con salto de linea final", Doc(Replace(TwoWorlds(), 2, Stop(2, world: 2, id: "medio",
+                facts: "[\"map.myth.boto\\n\"]"))), "stops[2].facts[0]");
+            yield return Case("hero con salto de linea final", Doc(Replace(TwoWorlds(), 2, Stop(2, world: 2, id: "medio",
+                hero: "\"bg_hero_medio\\n\""))), "stops[2].bg.hero");
+            yield return Case("code con salto de linea final", Doc(Replace(TwoWorlds(), 2, Stop(2, world: 2, id: "medio", hero: "null",
+                code: "\"kit:orilla\\n\""))), "stops[2].bg.code");
+            yield return Case("id repetido",Doc(Replace(TwoWorlds(), 2, Stop(2, world: 2, id: "puerta"))), "stops[2].id");
             yield return Case("llegada null fuera de la parada 0", Doc(Replace(TwoWorlds(), 2, Stop(2, world: 2, id: "medio", arrival: "null"))),
                 "stops[2].arrival_fact");
             yield return Case("bandera sin cambio de pais", Doc(Replace(TwoWorlds(), 2, Stop(2, world: 2, id: "medio", flag: "\"BR\""))),

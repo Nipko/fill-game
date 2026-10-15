@@ -864,8 +864,9 @@ namespace AF.UI
             }
         }
 
-        // Paradas del Mapa del río de la escena (af-river-stops/1; 08 §4.5). Si faltan o no validan, un aviso y null: el juego queda
-        // como sin el Mapa (nada visible depende aún de ellas).
+        // Paradas del Mapa del río de la escena (af-river-stops/1; 08 §4.5), como los miquitos: si falta el archivo, un aviso; si no
+        // valida, un error con la ruta del valor. En los dos casos, null y el juego queda como sin el Mapa (nada visible depende aún
+        // de ellas).
         internal static RiverStopCatalog? LoadRiverStops(TextAsset? stops)
         {
             if (stops == null)
@@ -880,7 +881,7 @@ namespace AF.UI
             }
             catch (LevelFormatException e)
             {
-                Debug.LogWarning(LogPrefix + e.Message + " El juego sigue sin el Mapa.");
+                Debug.LogError(LogPrefix + e.Message + " El juego sigue sin el Mapa.");
                 return null;
             }
         }

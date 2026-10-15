@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text.RegularExpressions;
 using AF.Levels.Json;
 
 namespace AF.Levels
@@ -39,14 +38,15 @@ namespace AF.Levels
 
         private const string Belen = "belen";
 
-        private static readonly Regex IdPattern = new Regex("^[a-z0-9_]+$", RegexOptions.CultureInvariant);
-        private static readonly Regex Iso2Pattern = new Regex("^[A-Z]{2}$", RegexOptions.CultureInvariant);
-        private static readonly Regex FactKeyPattern = new Regex(
-            @"^map\.(stop\.[a-z0-9_]+\.dato_[0-9]{2}|country\.[a-z]{2}\.dato_[0-9]{2}|myth\.[a-z0-9_]+|general\.[a-z0-9_]+)$",
-            RegexOptions.CultureInvariant);
+        private const string StopFactPrefix = "map.stop.";
+        private const string CountryFactPrefix = "map.country.";
+        private const string MythFactPrefix = "map.myth.";
+        private const string GeneralFactPrefix = "map.general.";
+        private const string DatoSuffix = ".dato_";
+        private const string HeroPrefix = "bg_hero_";
+        private const string CodePrefix = "codigo:";
+        private const string KitPiecePrefix = "kit:";
 
-        private static readonly Regex HeroPattern = new Regex("^bg_hero_[a-z0-9_]+$", RegexOptions.CultureInvariant);
-        private static readonly Regex CodePattern = new Regex("^(codigo|kit):[a-z0-9_]+$", RegexOptions.CultureInvariant);
         private static readonly string[] Samples = { "white", "black", "clear", "clear_white", "black_white" };
 
         /// <summary>Lee y valida el catálogo.</summary>
@@ -235,7 +235,7 @@ namespace AF.Levels
             }
 
             string id = RequireString(node, "id", at);
-            if (!IdPattern.IsMatch(id))
+            if (!IsId(id, 0, id.Length))
             {
                 throw Fail(at + ".id", "'" + id + "' no es [a-z0-9_]+");
             }
@@ -258,7 +258,7 @@ namespace AF.Levels
             }
 
             string country = RequireString(node, "country", at);
-            if (!Iso2Pattern.IsMatch(country))
+            if (!IsIso2(country))
             {
                 throw Fail(at + ".country", "'" + country + "' no es ISO2 en mayúsculas");
             }
@@ -298,7 +298,7 @@ namespace AF.Levels
                     throw Fail(at + ".arrival_fact", "la parada 0 no tiene llegada (tiene que ser null)");
                 }
             }
-            else if (arrival == null || !FactKeyPattern.IsMatch(arrival))
+            else if (arrival == null || !IsFactKey(arrival))
             {
                 throw Fail(at + ".arrival_fact", "'" + (arrival ?? "null") + "' no es una clave de contenido map.* (glosario §10)");
             }
@@ -339,7 +339,7 @@ namespace AF.Levels
             {
                 string where = at + ".facts[" + Num(k) + "]";
                 JsonValue item = list.Items[k];
-                if (item.Kind != JsonKind.String || !FactKeyPattern.IsMatch(item.AsString()))
+                if (item.Kind != JsonKind.String || !IsFactKey(item.AsString()))
                 {
                     throw Fail(where, "no es una clave de contenido map.* (glosario §10)");
                 }
@@ -380,12 +380,12 @@ namespace AF.Levels
                 throw Fail(where, "lleva hero o code, uno y solo uno");
             }
 
-            if (hero != null && !HeroPattern.IsMatch(hero))
+            if (hero != null && !IsIdAfter(hero, HeroPrefix))
             {
                 throw Fail(where + ".hero", "'" + hero + "' no es bg_hero_<sitio>");
             }
 
-            if (code != null && !CodePattern.IsMatch(code))
+            if (code != null && !IsIdAfter(code, CodePrefix) && !IsIdAfter(code, KitPiecePrefix))
             {
                 throw Fail(where + ".code", "'" + code + "' no es codigo:<pieza> ni kit:<pieza>");
             }
@@ -499,6 +499,72 @@ namespace AF.Levels
             {
                 throw new LevelFormatException(where + ": " + e.Message, e);
             }
+        }
+
+        // Los formatos se comprueban carácter a carácter, como FaunaCatalogReader y ArtSlots (sin expresiones regulares: en .NET,
+        // «$» admite un salto de línea final y un id «manaos» seguido de salto de línea pasaría).
+
+        // [a-z0-9_]+ en [start, end).
+        private static bool IsId(string value, int start, int end)
+        {
+            if (end <= start)
+            {
+                return false;
+            }
+
+            for (int i = start; i < end; i++)
+            {
+                char c = value[i];
+                if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_'))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // <prefijo>[a-z0-9_]+
+        private static bool IsIdAfter(string value, string prefix)
+        {
+            return value.StartsWith(prefix, StringComparison.Ordinal) && IsId(value, prefix.Length, value.Length);
+        }
+
+        // [A-Z]{2}
+        private static bool IsIso2(string value)
+        {
+            return value.Length == 2 && value[0] >= 'A' && value[0] <= 'Z' && value[1] >= 'A' && value[1] <= 'Z';
+        }
+
+        // Claves de contenido del Mapa (glosario §10): map.stop.<id>.dato_NN, map.country.<aa>.dato_NN, map.myth.<id> y
+        // map.general.<id>, con <id> = [a-z0-9_]+, <aa> = [a-z]{2} y NN = [0-9]{2}.
+        private static bool IsFactKey(string key)
+        {
+            if (IsIdAfter(key, MythFactPrefix) || IsIdAfter(key, GeneralFactPrefix))
+            {
+                return true;
+            }
+
+            int dato = key.Length - DatoSuffix.Length - 2; // donde empieza «.dato_NN»
+            if (dato < 0 || string.CompareOrdinal(key, dato, DatoSuffix, 0, DatoSuffix.Length) != 0
+                || !IsDigit(key[key.Length - 2]) || !IsDigit(key[key.Length - 1]))
+            {
+                return false;
+            }
+
+            if (key.StartsWith(StopFactPrefix, StringComparison.Ordinal))
+            {
+                return IsId(key, StopFactPrefix.Length, dato);
+            }
+
+            int country = CountryFactPrefix.Length;
+            return key.StartsWith(CountryFactPrefix, StringComparison.Ordinal) && dato == country + 2
+                && key[country] >= 'a' && key[country] <= 'z' && key[country + 1] >= 'a' && key[country + 1] <= 'z';
+        }
+
+        private static bool IsDigit(char c)
+        {
+            return c >= '0' && c <= '9';
         }
 
         // Ningún id, clave, ranura ni pieza lleva «Belén» (D-013, punto 11): la parada 0 es «belem».

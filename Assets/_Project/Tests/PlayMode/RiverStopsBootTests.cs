@@ -13,9 +13,10 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Carga de las paradas del Mapa del río en la escena <c>Game</c> (D-013; 08 §4.5; tarea M1.2), como la de los miquitos: la
     /// escena que genera <c>GameSceneBuilder</c> lleva <c>river_stops_v1.json</c> y, tras el arranque, <see cref="GameBootstrap"/>
-    /// y la pantalla de nivel tienen el catálogo. <see cref="GameBootstrap.LoadRiverStops"/> sin el archivo o con uno inválido da
-    /// un aviso y null, y con la pantalla sin catálogo (null) el nivel se juega igual. El arranque completo de la escena sin el
-    /// TextAsset no se prueba aquí: haría falta un gancho de prueba en <c>LaunchOptions</c>.
+    /// y la pantalla de nivel tienen el catálogo. <see cref="GameBootstrap.LoadRiverStops"/> da null con un aviso sin el archivo
+    /// y con un error con la ruta del valor si no valida (como los miquitos), y con la pantalla sin catálogo (null) el nivel se
+    /// juega igual. El arranque completo de la escena sin el TextAsset no se prueba aquí: haría falta un gancho de prueba en
+    /// <c>LaunchOptions</c>.
     /// </summary>
     public sealed class RiverStopsBootTests
     {
@@ -48,10 +49,10 @@ namespace AF.Tests.PlayMode
         }
 
         [Test]
-        public void LoadRiverStops_WithAnInvalidFile_WarnsWithThePathAndGivesNull()
+        public void LoadRiverStops_WithAnInvalidFile_LogsAnErrorWithThePathAndGivesNull()
         {
             var broken = new TextAsset("{\"format\": \"af-river-stops/1\", \"source\": \"x\", \"stops\": [{\"n\": 3}]}");
-            LogAssert.Expect(LogType.Warning, new Regex(@"stops\[0\]\.n.*El juego sigue sin el Mapa"));
+            LogAssert.Expect(LogType.Error, new Regex(@"stops\[0\]\.n.*El juego sigue sin el Mapa"));
             Assert.That(GameBootstrap.LoadRiverStops(broken), Is.Null);
             Object.DestroyImmediate(broken);
         }
