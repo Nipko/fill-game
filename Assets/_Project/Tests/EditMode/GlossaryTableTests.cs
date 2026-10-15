@@ -32,9 +32,21 @@ namespace AF.Tests.EditMode
 
         private static readonly string[] Locales = { LocLocale.SpanishLatinAmerica, LocLocale.English, LocLocale.PortugueseBrazil };
 
-        // Tipos: la marca y lo que no se traduce, personajes, monedas, comodines (nombre temático y etiqueta), mecánicas y
-        // modificadores, tintes, mundos y los términos de UI del §10 que nombran algo del juego.
-        private static readonly string[] Kinds = { "booster", "brand", "character", "currency", "mechanic", "tint", "ui", "world" };
+        // Tipos: la marca y lo que no se traduce, personajes, monedas, comodines (nombre temático y etiqueta), mecánicas,
+        // modificadores (Aguas turbias, que no es una de las 12 mecánicas: glosario §6.2), tintes, mundos y los términos de UI
+        // del §10 que nombran algo del juego.
+        private static readonly string[] Kinds = { "booster", "brand", "character", "currency", "mechanic", "modifier", "tint", "ui", "world" };
+
+        // Lo cultural nace pendiente del asesor (.claude/rules/localizacion.md; 07 §8.2): todas las filas de estos tipos llevan
+        // la marca en las notas, salvo las variantes de capacidad de la cuia (término de marca, glosario §4).
+        private static readonly string[] CulturalKinds = { "character", "mechanic", "tint", "world" };
+
+        private static readonly string[] NotCultural = { "mechanic.alta", "mechanic.chica" };
+
+        // Comodines con nombre de fauna (Morpho, Luciérnaga, Salto del Boto) o de un fenómeno con nombre tupí (Pororoca).
+        private static readonly string[] CulturalBoosters = { "booster.hint", "booster.reveal", "booster.shuffle", "booster.skip" };
+
+        private const string AdvisorMark = "Pendiente del asesor cultural";
 
         // IDs de los comodines del glosario §11 (nombre temático del §5.1 en booster.<id>).
         private static readonly string[] Boosters = { "undo", "extra_cuia", "hint", "shuffle", "reveal", "skip", "restart", "continue_cuia", "rv_double_harvest" };
@@ -176,7 +188,7 @@ namespace AF.Tests.EditMode
                 AssertKind(glossary, "mechanic." + id, "mechanic");
             }
 
-            AssertKind(glossary, "murky", "mechanic");
+            AssertKind(glossary, "murky", "modifier");
             AssertKind(glossary, "currency", "currency");
             AssertKind(glossary, "lives", "currency");
             AssertKind(glossary, "character.capi", "character");
@@ -201,6 +213,32 @@ namespace AF.Tests.EditMode
 
             Assert.That(glossary["brand.name"].Es, Is.EqualTo("Tintalú"), "siempre con tilde en lo visible");
             Assert.That(glossary["character.sloth"].Es, Is.EqualTo("TiTino"));
+        }
+
+        [Test]
+        public void CulturalRows_CarryTheAdvisorMark()
+        {
+            Dictionary<string, GlossaryRow> glossary = ByTerm(ReadGlossary());
+            int marked = 0;
+            foreach (GlossaryRow row in glossary.Values)
+            {
+                bool cultural = Array.IndexOf(CulturalBoosters, row.Term) >= 0
+                    || (Array.IndexOf(CulturalKinds, row.Kind) >= 0 && Array.IndexOf(NotCultural, row.Term) < 0);
+                if (!cultural)
+                {
+                    continue;
+                }
+
+                marked++;
+                Assert.That(row.Notes.IndexOf(AdvisorMark, StringComparison.Ordinal), Is.GreaterThanOrEqualTo(0), row.Term + ": «" + AdvisorMark + "» en las notas (07 §8.2)");
+            }
+
+            foreach (string term in CulturalBoosters)
+            {
+                Assert.That(glossary.ContainsKey(term), Is.True, "falta " + term);
+            }
+
+            Assert.That(marked, Is.EqualTo(14 + 13 + 3 + 13 + CulturalBoosters.Length), "14 tintes, 13 mecánicas sin las de capacidad, 3 personajes, 13 mundos y los comodines culturales");
         }
 
         [Test]
