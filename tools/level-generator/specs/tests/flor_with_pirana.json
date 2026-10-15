@@ -1,0 +1,15 @@
+{
+  "extends": "../sample_variants.json",
+  "description": "Fixture negativo de --validate-spec (P5): la Flor con la Piraña (311: Fl -> Fl+Pi, una celda que ya lleva la variante, para no cambiar sus apariciones), cuya cueva es una Cuia chica de 2. AF.Core rechaza la Flor con capacidades mixtas mientras dure el bloqueo C1-9 (K3b; d.5.1: «Capacidades y Piraña»). Fallan LIANA-CAPS (la que se busca), DEBUT-LEVEL y DEBUT-SLOT (la Piraña se añade a la tabla solo aquí, con su debut del 183 fuera de la muestra y sin tableros de estreno).",
+  "expect_rule": "LIANA-CAPS",
+  "mechanics": [
+    {"code": "Ln", "id": "liana_n", "kind": "trigger", "debut": 243, "season": "A"},
+    {"code": "Ha", "id": "hoja_atada", "kind": "filter", "debut": 263, "season": "all"},
+    {"code": "B2", "id": "brote_n2", "kind": "filter", "debut": 283, "season": "all"},
+    {"code": "Fl", "id": "flor", "kind": "trigger", "debut": 303, "season": "A"},
+    {"code": "Pi", "id": "pirana", "kind": "counter", "debut": 183, "season": "B", "k": 4, "cave_cap": 2}
+  ],
+  "calendar": {
+    "311": "Fl+Pi"
+  }
+}

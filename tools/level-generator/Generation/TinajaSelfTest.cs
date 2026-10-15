@@ -515,7 +515,7 @@ internal static class TinajaSelfTest
     private static void ReportHeader(Action<bool, string> check)
     {
         string mixed = CampaignReport.PackSchemaText([("mundo_06_v1.json", 2), ("mundo_07_v1.json", 3), ("mundo_08_v1.json", 3)], 3);
-        check(mixed == "2 (3 en los packs con tinaja: `mundo_07_v1.json`, `mundo_08_v1.json`)",
+        check(mixed == "2 (3 en los packs con tinaja o con variantes de la 1.0: `mundo_07_v1.json`, `mundo_08_v1.json`)",
             "informe: pack_schema de una campana con packs con y sin tinaja: " + mixed);
         string one = CampaignReport.PackSchemaText([("mundo_07_v1.json", 3)], 3);
         string none = CampaignReport.PackSchemaText([("mundo_02_v1.json", 2), ("mundo_03_v1.json", 2)], 2);
@@ -586,7 +586,7 @@ internal static class TinajaSelfTest
     }
 
     /// <summary>Tablero inicial de un nivel del pack (caps, cuias, attrs y hidden; 08 §4.1).</summary>
-    private static BoardBuildResult FromJson(JsonObject level)
+    internal static BoardBuildResult FromJson(JsonObject level)
     {
         int[] caps = [.. level["caps"]!.AsArray().Select(c => c!.GetValue<int>())];
         int[][] cuias = [.. level["cuias"]!.AsArray().Select(c => c!.AsArray().Select(x => x!.GetValue<int>()).ToArray())];
@@ -602,7 +602,7 @@ internal static class TinajaSelfTest
             }
 
             int Int(string name, int none) => a[name] is JsonNode n ? n.GetValue<int>() : none;
-            return new MechanicSpec(type, Int("key", 0), Int("partner", -1), Int("n", 0), Int("k", 0));
+            return new MechanicSpec(type, Int("key", 0), Int("partner", -1), Int("n", 0), Int("k", 0), Int("key2", 0));
         }
     }
 

@@ -1,7 +1,12 @@
 // Mecánicas (P-9 a P-11; GDD 03 §17 #6 y 02 §9.2): debut de D-007 anterior o igual al nivel, un solo ejemplar en los
 // tableros de estreno (CycleChecks), llave presente y la del tutorial en el estreno, mecánica permitida por la celda del
-// calendario y como mucho 2 mecánicas por nivel antes del 300. El resto de reglas de cada mecánica (Barro en la capa 2-3,
-// U_agua = 4 con las gotas, cueva de la Piraña, pares del Remolino…) las comprueba LevelValidation (QA-VALID).
+// calendario y el tope de mecánicas por nivel de la especificación (02 §9.2 regla 4: 2 antes del 300 y 3 después, 3 solo en
+// retos e hitos: los retos desde el 301 y los hitos desde el 320, 03 §12 fila p20; mechanics_per_level, P6). El resto de reglas de cada mecánica (Barro en la capa 2-3, U_agua = 4 con las gotas,
+// cueva de la Piraña, pares del Remolino…) las comprueba LevelValidation (QA-VALID), y los controles propios de las variantes
+// de la 1.0, VariantChecks.
+// Códigos del calendario (P6): los lee MechanicCodes.CodeOf, el mismo código que el generador, así que la Liana de cuenta (Ln)
+// y el Brote de dos hojas (B2) no se confunden con la Liana con fruta (Li) y el Brote (Br), y la Hoja atada (Ha) y la Flor (Fl)
+// tienen su código.
 // Tinaja (M13; D-019; propuesta de la tinaja c.5; 02 §9.1 M13): la tinaja y su cuia son una sola mecánica, «Ti», con un
 // solo ejemplar (02 §9.2 regla 4); sus ocultas no son Aguas turbias (solo cuenta «Tu» si hay ocultas fuera de la tinaja), y
 // sus capacidades (5 y 2) no son Cuia alta ni Cuia chica (como la cueva de la Piraña). Sus controles propios están en
@@ -22,8 +27,8 @@ internal static class MechanicChecks
         ("QA-MECH-SPEC", "las mecanicas del nivel estan en su celda del calendario (especificacion)"),
         ("QA-MECH-CELL", "cada mecanica y capacidad de la celda esta en el nivel (sin turbias por T1: aviso) (especificacion; 02 sec. 8)"),
         ("QA-GAP-120", "ninguna mecanica ni capacidad pasa mas de 120 niveles sin volver, sobre los niveles publicados (resumen, punto 6; d.2 regla 4)"),
-        ("QA-MECH-KEY", "llave presente en el tablero; agua del mundo en la Lluvia; llave del tutorial en el estreno (02 sec. 9.1; D-007)"),
-        ("QA-MECH-COUNT", "como mucho 2 mecanicas por nivel antes del 300 (02 sec. 9.2 regla 4)"),
+        ("QA-MECH-KEY", "llave presente en el tablero (Hoja y Liana con fruta); agua del mundo en la Lluvia; llave del tutorial en el estreno (02 sec. 9.1; D-007)"),
+        ("QA-MECH-COUNT", "mecanicas por nivel dentro del tope de la especificacion (mechanics_per_level; 02 sec. 9.2 regla 4: 2 antes del 300 y 3 despues, 3 solo en retos, desde el 301, y en hitos, desde el 320; 03 sec. 12)"),
     ];
 
     /// <summary>La cuia lleva la tinaja o su cuia chica (M13): las dos piezas de una misma mecánica.</summary>
@@ -57,28 +62,19 @@ internal static class MechanicChecks
         var codes = new SortedSet<string>(StringComparer.Ordinal);
         foreach (MechanicSpec a in b.Attrs.Where(a => !a.IsNone))
         {
-            codes.Add(a.Type switch
-            {
-                MechanicType.Hoja => "Ho",
-                MechanicType.Brote => "Br",
-                MechanicType.Liana => "Li",
-                MechanicType.Matapi => "Ma",
-                MechanicType.Remolino => "Re",
-                MechanicType.Lluvia => "Ll",
-                MechanicType.Pirana => "Pi",
-                MechanicType.Tinaja or MechanicType.Cucharon => "Ti",
-                _ => "?",
-            });
+            // Un tipo fuera del calendario no lo publica PackReader (lo rechaza al leer), pero si llegara sale como «?» y lo
+            // detiene QA-MECH-SPEC.
+            codes.Add(MechanicTypes.IsDefined(a.Type) ? MechanicCodes.CodeOf(a) ?? "?" : "?");
         }
 
         if (b.Cuias.Any(c => c.Contains(Cuia.MudColor)))
         {
-            codes.Add("Ba");
+            codes.Add(MechanicCodes.Barro);
         }
 
         if (MurkyHidden(b).Length > 0)
         {
-            codes.Add("Tu");
+            codes.Add(MechanicCodes.Murky);
         }
 
         return codes;
@@ -192,9 +188,17 @@ internal static class MechanicChecks
             }
         }
 
-        if (codes.Count > 2 && lv.Level < 300)
+        // Tope de 02 §9.2 regla 4 con los niveles de la especificación (mechanics_per_level): sin plan (nivel fuera de la
+        // especificación, que ya falla QA-BAND), el tope normal.
+        int maxMechanics = spec.MaxMechanicsAt(lv.Level, e.Plan?.Role);
+        if (codes.Count > maxMechanics)
         {
-            yield return Fail("QA-MECH-COUNT", $"{codes.Count} mecanicas ({string.Join("+", codes)}) antes del 300");
+            string where = spec.RaisedMechanicsFrom is int from
+                ? string.Create(CultureInfo.InvariantCulture,
+                    $"{spec.RaisedMaxMechanics} solo en retos desde el {from} y en hitos desde el {spec.RaisedFromFor(SlotRole.Milestone)}")
+                : "en esta especificacion";
+            yield return Fail("QA-MECH-COUNT", string.Create(CultureInfo.InvariantCulture,
+                $"{codes.Count} mecanicas ({string.Join("+", codes)}); como mucho {maxMechanics} ({where})"));
         }
 
         if (e.Plan is LevelPlan plan)
@@ -233,7 +237,9 @@ internal static class MechanicChecks
         for (int i = 0; i < b.Attrs.Length; i++)
         {
             MechanicSpec a = b.Attrs[i];
-            if (a.Type is MechanicType.Hoja or MechanicType.Liana && (a.Key < 1 || a.Key > 14 || units[a.Key] == 0))
+            // La Liana de cuenta (n) no lleva llave (02 §9.1 M3); la Hoja atada y la Flor las comprueba VariantChecks.
+            bool keyed = a.Type == MechanicType.Hoja || (a.Type == MechanicType.Liana && a.N == 0);
+            if (keyed && (a.Key < Cuia.MinColor || a.Key > Cuia.MaxTintColor || units[a.Key] == 0))
             {
                 yield return Fail("QA-MECH-KEY", string.Create(CultureInfo.InvariantCulture, $"cuia {i}: la llave {a.Key} no esta en el tablero"));
             }
@@ -245,7 +251,7 @@ internal static class MechanicChecks
 
             if (!a.IsNone && e.Plan is { DebutBoard: true } p)
             {
-                MechanicInfo? m = p.Mechanics.FirstOrDefault(x => x.DebutKey is not null && x.Id == MechanicTypes.ToKey(a.Type));
+                MechanicInfo? m = p.Mechanics.FirstOrDefault(x => x.DebutKey is not null && x.Code == MechanicCodes.CodeOf(a));
                 if (m is not null)
                 {
                     int key = a.Type == MechanicType.Brote ? (b.Cuias[i].Length > 0 ? b.Cuias[i][^1] : 0) : a.Key;

@@ -2,6 +2,8 @@
 // python tools/validate_schema.py --pack en el mismo paso del CI; aquí solo se leen los campos que comprueba level-qa.
 // Las variantes de relief con la tinaja llevan su máscara en hidden (pack_schema 3; decisión del dueño del 2026-10-14,
 // opción a de la revisión de P2a; 08 §4.1): se lee y se recuerda si la clave está, para QA-RELIEF-MASK.
+// key2 de la Flor de vitória-régia (firma de pack_schema 3, D-023 punto 5; P5): se lee en el nivel y en las variantes de
+// relief, para que LevelValidation, el par y el hash del tablero sean los del pack.
 using System.Text;
 using System.Text.Json;
 using AF.Core.Mechanics;
@@ -209,7 +211,8 @@ internal static class PackReader
             a.TryGetProperty("key", out JsonElement k) ? k.GetInt32() : 0,
             a.TryGetProperty("partner", out JsonElement p) ? p.GetInt32() : -1,
             a.TryGetProperty("n", out JsonElement n) ? n.GetInt32() : 0,
-            a.TryGetProperty("k", out JsonElement kk) ? kk.GetInt32() : 0);
+            a.TryGetProperty("k", out JsonElement kk) ? kk.GetInt32() : 0,
+            a.TryGetProperty("key2", out JsonElement k2) ? k2.GetInt32() : 0);
     }
 
     private static string Str(JsonElement e, string key) =>

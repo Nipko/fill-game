@@ -6,8 +6,9 @@
 // 2 vacíos, minus_color primero. Se publican las dos variantes [P] (relief[0] según la regla y relief[1], la otra), con
 // el criterio de level-qa: si el base tiene bot_fail ≥ 0,20, cada variante lo baja ≥ 0,20; si no, basta par menor en
 // minus_color y el vacío extra en plus_empty. Una variante que no lo cumple no se publica (lo registra el informe).
-// Nunca se quita un color que sea llave de una mecánica o esté dentro de una cuia con mecánica [P]. En un nivel con
-// Aguas turbias las variantes van sin ocultos (el esquema no los admite en relief sin la tinaja [P]).
+// Nunca se quita un color que sea llave de una mecánica (también la key2 de la Flor, P5) o esté dentro de una cuia con
+// mecánica [P]. En un nivel con Aguas turbias las variantes van sin ocultos (el esquema no los admite en relief sin la tinaja
+// [P]).
 // Tinaja (D-019; 03 §13; propuesta de la tinaja c.3 punto 4): minus_color nunca quita una fruta que esté en la tinaja (está
 // dentro de una cuia con mecánica: rompería T4 y la máscara); las variantes conservan la máscara de la tinaja (todas sus capas
 // menos la boca, la que exige AF.Core) y repiten la ruta segura y los paseos (TinajaWalks con TinajaWalks.ReliefOptions, las
@@ -213,6 +214,12 @@ internal static class Relief
             if (a.Key != 0)
             {
                 excluded.Add(a.Key);
+            }
+
+            if (a.Key2 != 0)
+            {
+                // La segunda llave de la Flor (P5): tampoco se quita.
+                excluded.Add(a.Key2);
             }
 
             foreach (int c in board.Cuias[i])

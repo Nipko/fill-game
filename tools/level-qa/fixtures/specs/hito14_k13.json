@@ -1,0 +1,8 @@
+{
+  "extends": "../../../level-generator/specs/sample_variants.json",
+  "spec": "fixture_hito14_k13",
+  "description": "Especificación de PRUEBA de level-qa (P6 de la tanda 4), no de la campaña: la muestra de las variantes (sample_variants.json) con K = 13 en los hitos del k_plan, para que el fixture QA-HITO-14__hito14_con_cuia_alta.json (hito del 300) pruebe la forma de un hito de 14 cuias planificado (13 colores + 1 vacío, sin capacidades, Piraña ni Tinaja; 03 §11 y d.5.1 de la propuesta de D-007 [P]) y no solo que K = 13 caiga fuera de su hito. Solo la lee level-qa con --no-reproduce: no se genera.",
+  "k_plan": [
+    {"levels": [241, 320], "recovery": 8, "comfort": 9, "challenge": 9, "milestone": 13}
+  ]
+}

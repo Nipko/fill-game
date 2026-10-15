@@ -1,6 +1,9 @@
 // Ciclo de 20 de D-009 (P-8): propuesta c.2-c.7 (reglas del escalón y acierto de etiqueta), 03 §12-§13 y §17 #3.
 // Con p = ((n − 1) mod 20) + 1 y la especificación de la campaña (tools/level-generator/specs/campaign_v1.json).
 // Las comprobaciones entre niveles solo miran los niveles presentes en los paquetes (los fixtures traen pocos).
+// Hitos de 14 cuias (P6 de la tanda 4; 03 §1, §11 y §12, d.5.1 de la propuesta): QA-HITO-14, con los niveles que fija el k_plan
+// de la especificación (K = 13 en el hito desde el 561), nunca con un nivel escrito en el código; el vacío es la holgura de la
+// aritmética del nivel (capacidad − unidades), no una cuia vacía literal.
 using System.Globalization;
 using AF.Core.Board;
 using AmazonFill.Tools.LevelGenerator.Campaign;
@@ -23,21 +26,44 @@ internal static class CycleChecks
         ("QA-WINDOW", "bot_fail en la ventana del slot (03 sec. 17 #3; 08 sec. 4.1): falla en recuperacion, comodidad, estreno (< 0,20), remanso y rampa; un reto o un hito fuera de su ventana es aviso (c.2: se publica con la etiqueta que mide)"),
         ("QA-DEBUT", "tableros de estreno con 2 vacios (tambien los de capacidad fuera de la rampa y del hito, 02 sec. 8) y un solo ejemplar de la mecanica; intro_mechanic y skippable = false solo en el nivel de intro (02 sec. 9.2 regla 2)"),
         ("QA-LABEL-ACCURACY", "aviso: acierto de etiqueta por ciclo < 60 % (c.7)"),
+        ("QA-HITO-14", "K = 13 solo en un hito con K = 13 en el k_plan de la especificacion, con 14 cuias de 4: 13 colores + 1 vacio de holgura (capacidad - unidades = 4, sin el Barro; puede ir repartido en cuias a medias), sin capacidades, cueva de la Pirana ni Tinaja (03 sec. 1, 11-12; d.5.1 [P]); las 14 cuias con K <= 12 (la cueva de la Pirana) no son de esta comprobacion y el tope, de QA-STRUCT"),
     ];
+
+    /// <summary>K del hito de 14 cuias (03 §11: «hitos de 14 cuias: K = 13 + 1 vacío»).</summary>
+    public const int HitoK = 13;
+
+    /// <summary>Cuias del hito de 14 cuias (13 colores + 1 vacío; 02 R1: como mucho 14 cuias generadas).</summary>
+    public const int HitoCuias = HitoK + 1;
 
     /// <summary>
     /// El nivel lleva la mecánica o capacidad de su intro_mechanic. Distingue la tinaja (M13) de Aguas turbias y de las
     /// capacidades (propuesta de la tinaja c.5): «murky» pide ocultas fuera de la tinaja; «chica» y «alta», una Cuia chica o
     /// una Cuia alta que no sea la tinaja, su cuia ni la cueva de la Piraña; «tinaja», la tinaja (attrs).
+    /// <para>
+    /// Las mecánicas se buscan por su código del calendario (MechanicChecks.Codes, P6): el id de la tabla de la especificación
+    /// da el código, así que <c>liana_n</c> pide una Liana de cuenta (Ln) y <c>brote_n2</c>, un Brote de dos hojas (B2), y una
+    /// Liana con fruta o un Brote de una hoja no valen por ellas.
+    /// </para>
     /// </summary>
-    public static bool Presents(BoardData b, string intro) => intro switch
+    public static bool Presents(CampaignSpec spec, BoardData b, string intro)
     {
-        "murky" => MechanicChecks.MurkyHidden(b).Length > 0,
-        "barro" => b.Cuias.Any(c => c.Contains(Cuia.MudColor)),
-        "chica" => MechanicChecks.CapacityCaps(b).Any(c => c < Cuia.DefaultCapacity),
-        "alta" => MechanicChecks.CapacityCaps(b).Any(c => c > Cuia.DefaultCapacity),
-        _ => b.Attrs.Any(a => !a.IsNone && AF.Core.Mechanics.MechanicTypes.ToKey(a.Type) == intro),
-    };
+        switch (intro)
+        {
+            case "chica":
+                return MechanicChecks.CapacityCaps(b).Any(c => c < Cuia.DefaultCapacity);
+            case "alta":
+                return MechanicChecks.CapacityCaps(b).Any(c => c > Cuia.DefaultCapacity);
+            case "murky":
+                return MechanicChecks.MurkyHidden(b).Length > 0;
+            case "barro":
+                return b.Cuias.Any(c => c.Contains(Cuia.MudColor));
+        }
+
+        MechanicInfo? m = spec.MechanicTable.FirstOrDefault(x => x.Id == intro);
+        return m is not null
+            ? MechanicChecks.Codes(b).Contains(m.Code)
+            : b.Attrs.Any(a => !a.IsNone && AF.Core.Mechanics.MechanicTypes.ToKey(a.Type) == intro);
+    }
 
     /// <summary>
     /// Nivel puro: ni mecánicas (la tinaja con su cuia, las Aguas turbias y el Barro cuentan; MechanicChecks.Codes) ni
@@ -112,7 +138,7 @@ internal static class CycleChecks
                 yield return Fail("QA-DEBUT", $"intro_mechanic {lv.Intro ?? "null"}; corresponde {plan.Intro ?? "null"}");
             }
 
-            if (lv.Intro is string intro && !Presents(lv.Board, intro))
+            if (lv.Intro is string intro && !Presents(spec, lv.Board, intro))
             {
                 yield return Fail("QA-DEBUT", $"intro_mechanic {intro} y el nivel no lo lleva");
             }
@@ -148,6 +174,11 @@ internal static class CycleChecks
                 {
                     yield return Fail("QA-RAMP", string.Create(CultureInfo.InvariantCulture, $"bot_fail {lv.BotFail:0.000} fuera de {row.Window} (02 sec. 13)"));
                 }
+            }
+
+            foreach (QaIssue i in Hito14(lv, plan))
+            {
+                yield return i;
             }
 
             // Vecinos.
@@ -200,6 +231,96 @@ internal static class CycleChecks
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// QA-HITO-14 (03 §1 fila 3: «K = 13 solo en hitos desde el mundo 9 (Ucayali, nivel 561), en tableros de 14 cuias»; 03 §11,
+    /// fila 401-700: «hitos de 14 cuias: K = 13 + 1 vacío desde 561, el primero en el 580, sin capacidades, Piraña ni Tinaja
+    /// [P]»; 03 §12; d.5.1 de la propuesta): un nivel con K ≥ 13 es un hito (p20) cuyo K del k_plan es 13, y lleva 14 cuias de 4
+    /// con 13 colores y 1 vacío, sin la cueva de la Piraña (sería la cuia 15) ni la Tinaja y su cuia (con ella, 12 cuias como
+    /// mucho, 02 §5). Desde qué nivel lo dice la especificación (k_plan), no el código.
+    /// <para>
+    /// El «1 vacío» se cuenta como holgura de la aritmética del nivel, no como una cuia vacía literal [P]: Σ caps − Σ unidades =
+    /// 4, sin contar el Barro, que no es un color (02 §9.1 M5), y con las gotas pendientes de la Lluvia (U_agua = dosis + gotas
+    /// = 4). El calendario de 201-700 (03 §12; d.5.2 de la propuesta) pone el Brote de dos hojas en los hitos de K = 13 del 580
+    /// (Ma+B2), el 600 (Ha+B2+Ba) y la firma 700, y el Brote de dos hojas empieza con 1-2 dosis y espacio ≥ 2 (QA-VAR-B2): con
+    /// 52 dosis en 14 cuias de 4, una cuia vacía literal obligaría a empezar con las otras 13 llenas, y ese hito no podría
+    /// publicarse. El generador hace lo mismo: a 14 cuias quita la cuia de holgura del Brote (SlotGenerator: «sin cuia de
+    /// holgura (tope de 14 cuias, 02 R1)») y la holgura del nivel sigue siendo 4. La letra de 03 §1 y §11 («13 llenas + 1
+    /// vacío») queda pendiente de ajustar en el GDD.
+    /// </para>
+    /// <para>
+    /// Las 14 cuias por sí solas no hacen un hito: un reto o un hito con K ≤ 12 y la cueva de la Piraña (K + 1 vacío + la
+    /// cueva = 14) es válido (03 §11, fila 401-700: cuias 12-14; el 920 de d.5.7). El tope de 14 cuias generadas es de QA-STRUCT
+    /// (02 R1).
+    /// </para>
+    /// </summary>
+    private static IEnumerable<QaIssue> Hito14(QaLevel lv, LevelPlan plan) =>
+        Hito14Problems(lv.Board, lv.K, plan.Role, plan.K, string.Create(CultureInfo.InvariantCulture, $"{plan.RoleName} (p{plan.Position})"))
+            .Select(msg => new QaIssue("QA-HITO-14", lv.Pack, lv.Level, msg));
+
+    /// <summary>
+    /// Motivos de QA-HITO-14 para un tablero con <paramref name="k"/> colores en un slot de rol <paramref name="role"/> y K
+    /// <paramref name="planK"/> en el k_plan (vacío si cumple o si K ≤ 12). Lo prueba <c>--self-test reglas</c>
+    /// (<see cref="RulesSelfTest"/>).
+    /// </summary>
+    internal static IEnumerable<string> Hito14Problems(BoardData b, int k, SlotRole role, int planK, string where)
+    {
+        if (k < HitoK)
+        {
+            yield break;
+        }
+
+        if (role != SlotRole.Milestone || planK < HitoK)
+        {
+            yield return string.Create(CultureInfo.InvariantCulture,
+                $"K = {k} en {where} con K = {planK} en el k_plan: K = {HitoK} solo en los hitos con K = {HitoK} de la especificacion");
+        }
+
+        var problems = new List<string>();
+        if (b.Cuias.Length != HitoCuias || k != HitoK)
+        {
+            problems.Add(string.Create(CultureInfo.InvariantCulture, $"{b.Cuias.Length} cuias con K = {k} (lleva {HitoCuias} = {HitoK} colores + 1 vacio)"));
+        }
+
+        int[] caps = b.Caps.Where(c => c != Cuia.DefaultCapacity).Distinct().Order().ToArray();
+        if (caps.Length > 0)
+        {
+            problems.Add("capacidades " + string.Join(", ", caps.Select(c => c.ToString(CultureInfo.InvariantCulture))));
+        }
+
+        if (b.Attrs.Any(a => a.Type == AF.Core.Mechanics.MechanicType.Pirana))
+        {
+            problems.Add("la cueva de la Pirana");
+        }
+
+        if (b.Attrs.Any(a => MechanicChecks.IsTinajaPair(a.Type)))
+        {
+            problems.Add("la Tinaja");
+        }
+
+        int slack = Slack(b);
+        if (slack != Cuia.DefaultCapacity)
+        {
+            problems.Add(string.Create(CultureInfo.InvariantCulture,
+                $"holgura {slack} (capacidad - unidades, sin el Barro); 1 vacio es {Cuia.DefaultCapacity}"));
+        }
+
+        if (problems.Count > 0)
+        {
+            yield return "hito de 14 cuias con " + string.Join("; ", problems) + " (14 cuias de 4, 13 colores + 1 vacio, sin capacidades, Pirana ni Tinaja)";
+        }
+    }
+
+    /// <summary>
+    /// Holgura del tablero: Σ caps − Σ unidades de fruta (las dosis de tinte y las gotas pendientes de la Lluvia; el Barro no
+    /// cuenta). En cuias de 4, 4 por cada vacío de la aritmética del nivel, esté donde esté.
+    /// </summary>
+    internal static int Slack(BoardData b)
+    {
+        int units = b.Cuias.Sum(c => c.Count(x => x >= Cuia.MinColor && x <= Cuia.MaxTintColor))
+            + b.Attrs.Where(a => a.Type == AF.Core.Mechanics.MechanicType.Lluvia).Sum(a => a.N);
+        return b.Caps.Sum() - units;
     }
 
     private static IEnumerable<QaIssue> Ladder(CampaignSpec spec, int start, Dictionary<int, QaLevel> at)

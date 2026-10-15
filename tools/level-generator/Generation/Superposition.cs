@@ -18,6 +18,18 @@
 //                  (ShuffledWithTinaja). Solo consume números aleatorios en los slots con tinaja.
 //   Aguas turbias  1-2 cuias sin mecánica con 2-3 dosis: se ocultan las de debajo de la cima (T3), con T4 y como mucho 4
 //                  dosis (T2); en el 100 (Q9) una cuia con 2 dosis ocultas.
+// Variantes de la 1.0 (02 §9.1; propuesta de D-007 b.3; firma de pack_schema 3, D-023 punto 5; P5 de la tanda 4). Cada una
+// tiene su código (MechanicCodes) y su paso, y solo consume números aleatorios en los slots que la llevan: los demás pasos
+// conservan su orden relativo (Order), así que los packs 11-200 no cambian (--check).
+//   Liana de cuenta (Ln)  como la Liana con fruta, sobre una cuia de 4 con contenido y sin Barro, con n sellos: 1 en los
+//                  tableros de estreno y 1-2 al azar en los demás [P] (b.3: «n cuias (1-2)»).
+//   Hoja atada (Ha)  sobre una cuia con contenido cuyo fondo es su fruta, con cap = U_c de esa fruta (D-024) y sin Barro; nunca
+//                  sobre un vacío [P], para no gastar ninguno de los vacíos del rol (b.3: «puede empezar con dosis cuyo fondo
+//                  es c»). Una por fruta (D-024): una sola por nivel en el calendario.
+//   Brote de dos hojas (B2)  como el Brote, sobre una cuia con 1-2 dosis visibles (espacio ≥ 2, 02 R10 b) y sin Barro; su
+//                  color es la cima; n = 2.
+//   Flor (Fl)      como la Liana con fruta, sobre una cuia de 4 con contenido y sin Barro, con dos frutas de 4 dosis distintas
+//                  que no están dentro (key ≠ key2).
 using AF.Core.Board;
 using AF.Core.Determinism;
 using AF.Core.Mechanics;
@@ -42,7 +54,15 @@ internal sealed class SuperpositionContext
 internal static class Superposition
 {
     /// <summary>Orden de colocación: primero las que necesitan vacíos o pares, al final las que tocan el contenido.</summary>
-    public static readonly string[] Order = ["Re", "Ho", "Ma", "Ll", "Li", "Br", "Ba", "Pi", "Ti", "Tu"];
+    /// <remarks>
+    /// Las variantes de la 1.0 (Ln, Fl, B2 y Ha) se intercalan sin cambiar el orden relativo de las demás: un tablero sin ellas
+    /// consume los mismos números aleatorios que antes (--check de los packs 11-200). La Hoja atada va antes del Barro (el Barro
+    /// nunca cae en una cuia con mecánica) y de la tinaja (que solo saca de cuias sin mecánica).
+    /// </remarks>
+    public static readonly string[] Order = ["Re", "Ho", "Ma", "Ll", "Li", "Ln", "Fl", "Br", "B2", "Ha", "Ba", "Pi", "Ti", "Tu"];
+
+    /// <summary>El orden de colocación de antes de las variantes (P5): <see cref="Order"/> sin Ln, Fl, B2 ni Ha.</summary>
+    public static readonly string[] OrderBeforeVariants = ["Re", "Ho", "Ma", "Ll", "Li", "Br", "Ba", "Pi", "Ti", "Tu"];
 
     public static string? Apply(GenBoard b, MechanicInfo m, SuperpositionContext ctx, Prng rng)
     {
@@ -58,6 +78,10 @@ internal static class Superposition
             "Pi" => Pirana(b, m, ctx),
             "Ti" => Tinaja(b, ctx, rng),
             "Tu" => Murky(b, ctx, rng),
+            "Ln" => LianaCount(b, ctx, rng),
+            "Ha" => HojaAtada(b, rng),
+            "B2" => BroteTwo(b, m, ctx, rng),
+            "Fl" => Flor(b, ctx, rng),
             _ => $"mecanica sin superposicion: {m.Code}",
         };
     }
@@ -185,6 +209,112 @@ internal static class Superposition
         int key = Pick(keys, rng);
         b.Attrs[i] = new MechanicSpec(MechanicType.Liana, key: key);
         FixDebutKey(ctx, m, key);
+        return null;
+    }
+
+    /// <summary>Cuias de 4 con contenido, libres y sin Barro: las de la Liana (con fruta o de cuenta) y la Flor.</summary>
+    private static List<int> TiedOptions(GenBoard b) =>
+        Enumerable.Range(0, b.Count).Where(i => b.Cuias[i].Count > 0 && b.Caps[i] == Cuia.DefaultCapacity && Free(b, i)
+            && !b.Cuias[i].Contains(Cuia.MudColor)).ToList();
+
+    /// <summary>Sellos de la Liana de cuenta como mucho (02 §9.1 M3: «se suelta al sellar n cuias (1-2)»).</summary>
+    public const int LianaCountMaxN = 2;
+
+    /// <summary>
+    /// Liana de cuenta (Ln; 02 §9.1 M3, variante del 243): atada a una cuia con contenido; se suelta al sellar n cuias. n = 1 en
+    /// los tableros de estreno (fáciles, 02 §9.2 regla 2) y 1-2 al azar en los demás [P]. LevelValidation exige n colores que
+    /// puedan sellar fuera de ella, sin ocultas ni capacidades mixtas (C1-9).
+    /// </summary>
+    private static string? LianaCount(GenBoard b, SuperpositionContext ctx, Prng rng)
+    {
+        List<int> options = TiedOptions(b);
+        if (options.Count == 0)
+        {
+            return "Liana de cuenta: no hay cuia con contenido";
+        }
+
+        int i = Pick(options, rng);
+        int n = ctx.Plan.DebutBoard ? 1 : 1 + rng.NextInt(LianaCountMaxN);
+        b.Attrs[i] = new MechanicSpec(MechanicType.Liana, n: n);
+        return null;
+    }
+
+    /// <summary>
+    /// Flor de vitória-régia (Fl; b.3, variante del 403): como la Liana con fruta, sobre una cuia con contenido, con dos frutas de
+    /// 4 dosis distintas que no están dentro (key ≠ key2; D-023, punto 5). LevelValidation exige que las dos puedan sellar fuera
+    /// a la vez y, mientras dure el bloqueo C1-9, sin capacidades mixtas.
+    /// </summary>
+    private static string? Flor(GenBoard b, SuperpositionContext ctx, Prng rng)
+    {
+        List<int> options = TiedOptions(b);
+        if (options.Count == 0)
+        {
+            return "Flor: no hay cuia con contenido";
+        }
+
+        int i = Pick(options, rng);
+        var keys = FourColors(ctx).Where(c => !b.Cuias[i].Contains(c)).ToList();
+        if (keys.Count < 2)
+        {
+            return "Flor: no hay dos frutas fuera de la cuia";
+        }
+
+        int key = Pick(keys, rng);
+        keys.Remove(key);
+        int key2 = Pick(keys, rng);
+        b.Attrs[i] = new MechanicSpec(MechanicType.Flor, key: key, key2: key2);
+        return null;
+    }
+
+    /// <summary>
+    /// Hoja atada (Ha; b.3, variante del 283): sobre una cuia con contenido cuyo fondo es su fruta, con capacidad = U_c de esa
+    /// fruta (D-024: es la casa de su fruta) y sin Barro; no se pone sobre un vacío [P] (no gasta los vacíos del rol). Ni llena
+    /// de su fruta (empezaría sellada). Una por fruta (D-024) la comprueba LevelValidation.
+    /// </summary>
+    private static string? HojaAtada(GenBoard b, Prng rng)
+    {
+        SortedDictionary<int, int> units = b.Units();
+        var options = new List<int>();
+        for (int i = 0; i < b.Count; i++)
+        {
+            List<int> c = b.Cuias[i];
+            if (c.Count == 0 || !Free(b, i) || c.Contains(Cuia.MudColor) || !units.TryGetValue(c[0], out int u) || u != b.Caps[i]
+                || (c.Count == b.Caps[i] && c.All(x => x == c[0])))
+            {
+                continue;
+            }
+
+            options.Add(i);
+        }
+
+        if (options.Count == 0)
+        {
+            return "Hoja atada: no hay cuia con su fruta en el fondo y cap = U_c";
+        }
+
+        int at = Pick(options, rng);
+        b.Attrs[at] = new MechanicSpec(MechanicType.HojaAtada, key: b.Cuias[at][0]);
+        return null;
+    }
+
+    /// <summary>
+    /// Brote de dos hojas (B2; b.3, variante del 343): como el Brote, sobre una cuia con 1-2 dosis visibles (espacio ≥ 2, 02
+    /// R10 b) y sin Barro, con n = 2; su color es la cima. Necesita la cuia de holgura, como el Brote (SlotGenerator).
+    /// </summary>
+    private static string? BroteTwo(GenBoard b, MechanicInfo m, SuperpositionContext ctx, Prng rng)
+    {
+        // 1-2 dosis (b.3: «empieza con 2 dosis como mucho») y espacio ≥ 2 (02 R10 b): con una Cuia alta de 5 o 6, el espacio
+        // solo no basta, porque dejaría empezar con 3 o 4 dosis.
+        var options = Enumerable.Range(0, b.Count).Where(i => b.Cuias[i].Count is 1 or 2 && b.Caps[i] - b.Cuias[i].Count >= MechanicCodes.BroteTwoLeaves
+            && Free(b, i) && !b.Cuias[i].Contains(Cuia.MudColor)).ToList();
+        if (options.Count == 0)
+        {
+            return "Brote de dos hojas: no hay cuia con 1-2 dosis";
+        }
+
+        int i = Pick(options, rng);
+        b.Attrs[i] = new MechanicSpec(MechanicType.Brote, n: MechanicCodes.BroteTwoLeaves);
+        FixDebutKey(ctx, m, b.Top(i));
         return null;
     }
 

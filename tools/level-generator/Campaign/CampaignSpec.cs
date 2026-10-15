@@ -2,12 +2,15 @@
 // la propuesta (c.1-c.4, d.1-d.4) y el GDD vigente (02 §8, §9.2, §13; 03 §4.4, §4.5, §11, §12; glosario §8, §9, §11;
 // 08 §9). Este archivo solo lee y deriva el plan de cada nivel; las reglas del juego viven en AF.Core y AF.Solver.
 // Lo enlazan tools/level-generator y tools/level-qa (un solo lector de la especificación).
+// Los códigos del calendario y su lectura sobre un attrs publicado (MechanicCodes) también viven aquí: con las variantes de la
+// 1.0 (P5 de la tanda 4) un tipo de AF.Core ya no basta para saber el código (liana con n es Ln; brote con n = 2, B2).
 // Una especificación puede «extender» otra (fixtures negativos de specs/tests/): "extends" apunta al archivo base y
 // "calendar" o "seasons" sustituyen solo las entradas que traen; cualquier otra clave sustituye la del base.
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using AF.Core.Mechanics;
 
 namespace AmazonFill.Tools.LevelGenerator.Campaign;
 
@@ -237,6 +240,32 @@ internal sealed class CampaignSpec
     public required double HardThreshold { get; init; }
     public required double VeryHardThreshold { get; init; }
 
+    /// <summary>
+    /// Tope de mecánicas distintas por nivel (02 §9.2 regla 4; D-009): <c>mechanics_per_level.max</c>, 2 si la especificación no
+    /// lo trae (campaign_v1, 11-200, entera por debajo del 300).
+    /// </summary>
+    public int MaxMechanics { get; init; } = DefaultMaxMechanics;
+
+    /// <summary>
+    /// Primer reto con el tope alto: <c>mechanics_per_level.raised_from_level</c>, o null si la especificación no lo trae (nunca
+    /// sube). «3 después del 300» (02 §9.2 regla 4) es «hasta 3 desde el 301» en los retos (d.5.1 de la propuesta de D-009), así
+    /// que las especificaciones de 201-700 lo ponen en 301. El tope alto solo vale en retos e hitos (<see cref="MaxMechanicsAt"/>).
+    /// </summary>
+    public int? RaisedMechanicsFrom { get; init; }
+
+    /// <summary>
+    /// Primer hito con el tope alto: <c>mechanics_per_level.raised_milestone_from_level</c> (03 §12, fila p20: «2 mecánicas (3
+    /// desde el 320)»; d.5.1: «2 en el hito (hasta 3 desde el 320)»), o <see cref="RaisedMechanicsFrom"/> si la especificación no
+    /// lo trae.
+    /// </summary>
+    public int? RaisedMilestoneMechanicsFrom { get; init; }
+
+    /// <summary>Tope alto (<c>mechanics_per_level.raised_max</c>; 3 en 02 §9.2 regla 4).</summary>
+    public int RaisedMaxMechanics { get; init; } = DefaultMaxMechanics;
+
+    /// <summary>Tope por defecto de mecánicas por nivel (02 §9.2 regla 4: «máximo 2 mecánicas distintas por nivel»).</summary>
+    public const int DefaultMaxMechanics = 2;
+
     /// <summary>Regla del fixture que se espera ver fallar (solo specs/tests), o null.</summary>
     public string? ExpectRule { get; init; }
 
@@ -462,6 +491,24 @@ internal sealed class CampaignSpec
             : null;
     }
 
+    /// <summary>
+    /// Tope de mecánicas distintas del nivel (02 §9.2 regla 4; D-009: «máximo 2 mecánicas distintas por nivel antes del 300 y 3
+    /// después, 3 solo en retos e hitos»): el alto en los retos desde <see cref="RaisedMechanicsFrom"/> (301) y en los hitos
+    /// desde <see cref="RaisedMilestoneMechanicsFrom"/> (320; 03 §12, fila p20); en los demás niveles, el normal. Los niveles
+    /// salen de la especificación, no del código (P6 de la tanda 4); lo prueba <c>level-qa --self-test reglas</c>.
+    /// </summary>
+    public int MaxMechanicsAt(int level, SlotRole? role) => RaisedFromFor(role) is int from && level >= from
+        ? RaisedMaxMechanics
+        : MaxMechanics;
+
+    /// <summary>Primer nivel con el tope alto para el rol, o null si el rol nunca lo tiene (solo retos e hitos).</summary>
+    public int? RaisedFromFor(SlotRole? role) => role switch
+    {
+        SlotRole.Challenge => RaisedMechanicsFrom,
+        SlotRole.Milestone => RaisedMilestoneMechanicsFrom ?? RaisedMechanicsFrom,
+        _ => null,
+    };
+
     public static int LabelRank(string? label) => label switch
     {
         "hard" => 1,
@@ -571,6 +618,13 @@ internal sealed class CampaignSpec
         var mechanics = root["mechanics"]!.AsArray().Select(m => new MechanicInfo(
             Str(m!, "code"), Str(m!, "id"), Str(m!, "kind"), Int(m!, "debut"), Str(m!, "season"),
             m!["debut_key"]?.GetValue<string>(), m["k"]?.GetValue<int>() ?? 0, m["cave_cap"]?.GetValue<int>() ?? 0)).ToList();
+        foreach (MechanicInfo m in mechanics.Where(m => !MechanicCodes.IsKnown(m.Code)))
+        {
+            // El generador superpone y level-qa reconoce solo los códigos de MechanicCodes: otro código sería una mecánica sin
+            // superposición que rechazaría todos los candidatos del slot.
+            throw new CampaignSpecException($"{path}: codigo de mecanica desconocido '{m.Code}' (se admiten {string.Join(", ", MechanicCodes.All)})");
+        }
+
         var capacities = root["capacities"]!.AsArray().Select(c => new CapacityInfo(
             Str(c!, "code"), Str(c!, "id"), Int(c!, "cap"), Int(c!, "debut"))).ToList();
         var seasons = root["seasons"]!.AsObject().ToDictionary(
@@ -622,7 +676,22 @@ internal sealed class CampaignSpec
             HardThreshold = labels["thresholds"]!["hard"]!.GetValue<double>(),
             VeryHardThreshold = labels["thresholds"]!["very_hard"]!.GetValue<double>(),
             ExpectRule = root["expect_rule"]?.GetValue<string>(),
+            MaxMechanics = root["mechanics_per_level"]?["max"]?.GetValue<int>() ?? DefaultMaxMechanics,
+            RaisedMechanicsFrom = root["mechanics_per_level"]?["raised_from_level"]?.GetValue<int>(),
+            RaisedMilestoneMechanicsFrom = root["mechanics_per_level"]?["raised_milestone_from_level"]?.GetValue<int>(),
+            RaisedMaxMechanics = root["mechanics_per_level"]?["raised_max"]?.GetValue<int>()
+                ?? root["mechanics_per_level"]?["max"]?.GetValue<int>() ?? DefaultMaxMechanics,
         };
+
+        if (spec.MaxMechanics < 1 || spec.RaisedMaxMechanics < spec.MaxMechanics)
+        {
+            throw new CampaignSpecException($"{path}: mechanics_per_level: max >= 1 y raised_max >= max");
+        }
+
+        if (spec.RaisedMilestoneMechanicsFrom is not null && spec.RaisedMechanicsFrom is null)
+        {
+            throw new CampaignSpecException($"{path}: mechanics_per_level: raised_milestone_from_level sin raised_from_level");
+        }
 
         foreach (KeyValuePair<string, JsonNode?> kv in root["calendar"]!.AsObject())
         {
@@ -747,4 +816,80 @@ internal sealed class CampaignSpec
 
     private static int Int(JsonNode node, string key) =>
         node[key]?.GetValue<int>() ?? throw new CampaignSpecException($"falta '{key}'");
+}
+
+/// <summary>
+/// Códigos de mecánica del calendario (d.4; d.5.1 de la propuesta de D-007 para las variantes de la 1.0) y su lectura sobre un
+/// <c>attrs[i]</c> publicado. Los códigos de las variantes son los [P] de la tarea P5 (Ln, Ha, B2 y Fl), los mismos que usa D2
+/// en d.5.1 y d.5.3 de la propuesta (rehecha el 2026-10-14), así que no cambian:
+/// <list type="bullet">
+/// <item><description>Ln: Liana de cuenta, <c>{"type":"liana","n":1|2}</c> (02 §9.1 M3; debut 243; <c>intro_mechanic</c>
+/// <c>liana_n</c> [P]);</description></item>
+/// <item><description>Ha: Hoja atada, <c>{"type":"hoja_atada","key":c}</c> (b.3; debut 283; <c>hoja_atada</c>);</description></item>
+/// <item><description>B2: Brote de dos hojas, <c>{"type":"brote","n":2}</c> (b.3; debut 343; <c>brote_n2</c> [P]);</description></item>
+/// <item><description>Fl: Flor de vitória-régia, <c>{"type":"flor","key":c1,"key2":c2}</c> con c1 ≠ c2 (b.3; debut 403;
+/// <c>flor</c>).</description></item>
+/// </list>
+/// Firma de <c>pack_schema</c> 3 (D-023, punto 5). Li y Br quedan para la Liana con fruta y el Brote de una hoja.
+/// </summary>
+internal static class MechanicCodes
+{
+    public const string Hoja = "Ho";
+    public const string Matapi = "Ma";
+    public const string Liana = "Li";
+    public const string LianaCount = "Ln";
+    public const string Murky = "Tu";
+    public const string Remolino = "Re";
+    public const string Barro = "Ba";
+    public const string Lluvia = "Ll";
+    public const string Brote = "Br";
+    public const string BroteTwo = "B2";
+    public const string Pirana = "Pi";
+    public const string Tinaja = "Ti";
+    public const string HojaAtada = "Ha";
+    public const string Flor = "Fl";
+
+    /// <summary><c>n</c> del Brote de dos hojas (b.3; firma de <c>pack_schema</c> 3: brote con n ∈ {1, 2}).</summary>
+    public const int BroteTwoLeaves = 2;
+
+    /// <summary>
+    /// Todos los códigos que el generador sabe superponer, en orden ordinal. level-qa los lee con <see cref="CodeOf"/> (P6): Ha y
+    /// Fl, y Ln y B2 distintos de Li y Br.
+    /// </summary>
+    public static readonly string[] All =
+        [.. new[] { Hoja, Matapi, Liana, LianaCount, Murky, Remolino, Barro, Lluvia, Brote, BroteTwo, Pirana, Tinaja, HojaAtada, Flor }.Order(StringComparer.Ordinal)];
+
+    /// <summary>Variantes de la 1.0 (b.3): las que exigen <c>pack_schema</c> 3 en su estreno (su <c>intro_mechanic</c>).</summary>
+    public static readonly string[] Variants = [LianaCount, HojaAtada, BroteTwo, Flor];
+
+    public static bool IsKnown(string code) => Array.IndexOf(All, code) >= 0;
+
+    /// <summary>
+    /// Bloqueo C1-9 de <c>AF.Core</c> (02 R16; pregunta 24 b): la Liana con fruta, la Liana de cuenta y la Flor (K3b) no van con
+    /// capacidades mixtas, cueva de la Piraña incluida (LevelValidation las rechaza).
+    /// </summary>
+    public static bool IsMixedCapacityBlocked(string code) => code is Liana or LianaCount or Flor;
+
+    /// <summary>Necesita cuias a medias en el tablero base (cuia de holgura; fill no las deja): el Brote y el de dos hojas.</summary>
+    public static bool NeedsPartial(string code) => code is Brote or BroteTwo;
+
+    /// <summary>
+    /// Código del calendario de una entrada de <c>attrs</c> (la tinaja y su cuia dan Ti), o null sin mecánica. El Barro (Ba) y
+    /// las Aguas turbias (Tu) no son <c>attrs</c>: los lee quien mira el contenido y <c>hidden</c>.
+    /// </summary>
+    public static string? CodeOf(MechanicSpec a) => a.Type switch
+    {
+        MechanicType.None => null,
+        MechanicType.Hoja => Hoja,
+        MechanicType.Brote => a.N == BroteTwoLeaves ? BroteTwo : Brote,
+        MechanicType.Liana => a.N != 0 ? LianaCount : Liana,
+        MechanicType.Matapi => Matapi,
+        MechanicType.Remolino => Remolino,
+        MechanicType.Lluvia => Lluvia,
+        MechanicType.Pirana => Pirana,
+        MechanicType.Tinaja or MechanicType.Cucharon => Tinaja,
+        MechanicType.HojaAtada => HojaAtada,
+        MechanicType.Flor => Flor,
+        _ => throw new ArgumentOutOfRangeException(nameof(a), a.Type, "mecanica sin codigo de calendario"),
+    };
 }

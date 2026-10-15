@@ -3,6 +3,9 @@
 // Tinaja (D-019; propuesta de la tinaja c.3 punto 6): Aguas turbias («Tu») son las ocultas fuera de la tinaja, la tinaja y su
 // cuia no cuentan como Cuia alta ni Cuia chica, y la sección «Tinaja» (solo si algún nivel la lleva) separa los rechazos
 // «sin vertido seguro» de los de «presupuesto agotado».
+// Variantes de la 1.0 (P5; 02 §9.1; b.3): la sección «Variantes de la 1.0» (solo si la especificación o algún nivel las lleva)
+// las cuenta por código (Ln, Ha, B2 y Fl; MechanicCodes) con sus ejemplares y sus campos, y los tableros de estreno con sus
+// vacíos y su bot_fail (02 §9.2 regla 2). Las apariciones distinguen Li de Ln y Br de B2 (MechanicCodes.CodeOf).
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -26,11 +29,13 @@ internal static class CampaignReport
 
         string specPath = spec.Path.Replace('\\', '/');
         string outDir = packs.Count == 0 ? "." : (Path.GetDirectoryName(packs[0].Path) ?? ".").Replace('\\', '/');
-        // pack_schema de cada pack, como lo escribe PackWriter con los niveles de su mundo (3 solo en los que llevan la tinaja).
+        // pack_schema de cada pack, como lo escribe PackWriter con los niveles de su mundo (3 solo en los que llevan la tinaja o
+        // una variante de la 1.0 del 3).
         string packSchema = PackSchemaText(
             packs.Select(p => (Path.GetFileName(p.Path), PackSchemaOf(p.World, levels))).ToList(),
             PackWriter.PackSchemaFor(levels.Select(l => new PackLevel(l.Plan, l.Chosen!, l.Relief)).ToList()));
         bool tinaja = levels.Any(l => l.Chosen!.IsTinaja) || spec.MechanicTable.Any(m => m.Code == "Ti");
+        bool variants = spec.MechanicTable.Any(m => MechanicCodes.Variants.Contains(m.Code)) || levels.Any(l => VariantCodes(l.Chosen!.Board).Count > 0);
         W(F($"# Campaña {spec.FirstLevel}-{spec.LastLevel}: informe de `level-generator --spec`"));
         W();
         W(F($"Generado por `dotnet run --project tools/level-generator -c Release -- --spec {specPath} --levels {levelsArg} --out {outDir} --report tools/out/{spec.SpecId}_report.md`: no se edita a mano y no lleva tiempos. Generador {PackWriter.GeneratorVersion}, `pack_schema` {packSchema}, modo de vertido `run` (D-005)."));
@@ -369,6 +374,11 @@ internal static class CampaignReport
             TinajaSection(levels, W);
         }
 
+        if (variants)
+        {
+            VariantsSection(spec, levels, W);
+        }
+
         return sb.ToString();
     }
 
@@ -456,23 +466,105 @@ internal static class CampaignReport
     private static IEnumerable<int> Caps(BoardData b) =>
         b.Caps.Where((c, i) => c != Cuia.DefaultCapacity && b.Attrs[i].Type is not (MechanicType.Pirana or MechanicType.Tinaja or MechanicType.Cucharon));
 
+    /// <summary>
+    /// El tablero lleva la mecánica del código <paramref name="code"/>: Aguas turbias (ocultas fuera de la tinaja), Barro (15 en
+    /// el contenido) o un attr con ese código (MechanicCodes.CodeOf: la Liana de cuenta es Ln y no Li; el Brote de dos hojas, B2
+    /// y no Br).
+    /// </summary>
     private static bool Has(BoardData b, string code) => code switch
     {
         "Tu" => b.Hidden.Any(h => b.Attrs[h[0]].Type != MechanicType.Tinaja),
-        "Ti" => b.Attrs.Any(a => a.Type == MechanicType.Tinaja),
         "Ba" => b.Cuias.Any(c => c.Contains(Cuia.MudColor)),
-        _ => b.Attrs.Any(a => a.Type == code switch
-        {
-            "Ho" => MechanicType.Hoja,
-            "Br" => MechanicType.Brote,
-            "Li" => MechanicType.Liana,
-            "Ma" => MechanicType.Matapi,
-            "Re" => MechanicType.Remolino,
-            "Ll" => MechanicType.Lluvia,
-            "Pi" => MechanicType.Pirana,
-            _ => MechanicType.None,
-        } && a.Type != MechanicType.None),
+        _ => b.Attrs.Any(a => MechanicCodes.CodeOf(a) == code),
     };
+
+    /// <summary>Códigos de las variantes de la 1.0 (Ln, Ha, B2 y Fl) presentes en el tablero, en orden ordinal.</summary>
+    private static SortedSet<string> VariantCodes(BoardData b) =>
+        new(b.Attrs.Select(MechanicCodes.CodeOf).OfType<string>().Where(c => MechanicCodes.Variants.Contains(c)), StringComparer.Ordinal);
+
+    /// <summary>Forma corta de un attr de variante para el informe: «liana n=2», «hoja_atada key=4», «brote n=2», «flor key=3 key2=7».</summary>
+    private static string VariantAttr(MechanicSpec a, int doses) => a.Type switch
+    {
+        MechanicType.Liana => string.Create(CultureInfo.InvariantCulture, $"liana n={a.N} ({doses} dosis)"),
+        MechanicType.HojaAtada => string.Create(CultureInfo.InvariantCulture, $"hoja_atada key={a.Key} ({doses} dosis)"),
+        MechanicType.Brote => string.Create(CultureInfo.InvariantCulture, $"brote n={a.N} ({doses} dosis)"),
+        MechanicType.Flor => string.Create(CultureInfo.InvariantCulture, $"flor key={a.Key} key2={a.Key2} ({doses} dosis)"),
+        _ => a.ToString(),
+    };
+
+    /// <summary>
+    /// Sección de las variantes de la 1.0 (P5; 02 §9.1; b.3): cuántos niveles y ejemplares lleva cada una, sus estrenos y, por
+    /// nivel, sus campos, los vacíos (cuias de capacidad ≥ 4 vacías, como QA-DEBUT) y el bot_fail. Las celdas con una variante
+    /// que se publicaran sin ella van al final (el generador nunca quita lo que pide la celda).
+    /// </summary>
+    private static void VariantsSection(CampaignSpec spec, List<GeneratedLevel> levels, Action<string> w)
+    {
+        void W(string line = "") => w(line);
+        string F(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);
+        W();
+        W("## Variantes de la 1.0");
+        W();
+        W("Variantes de 02 §9.1 (propuesta de D-007 b.3; firma de `pack_schema` 3, D-023 punto 5) con los códigos de d.5.1 [P]: Ln = Liana de "
+          + "cuenta (`liana` con `n`; n = 1 en el estreno y 1-2 en los demás [P]), Ha = Hoja atada (`hoja_atada`, sobre una cuia con su fruta en el "
+          + "fondo y cap = U_c, D-024), B2 = Brote de dos hojas (`brote` con `n` = 2, 1-2 dosis) y Fl = Flor de vitória-régia (`flor` con `key` y "
+          + "`key2` distintas). Estreno (02 §9.2 regla 2): un ejemplar, 2 vacíos y `bot_fail` < 0,20.");
+        W();
+        W("| Variante | Debut | Niveles | Ejemplares | Tableros de estreno | Estrenos con un ejemplar, 2 vacíos y bot < 0,20 |");
+        W("|---|---|---|---|---|---|");
+        foreach (string code in MechanicCodes.Variants)
+        {
+            MechanicInfo? m = spec.MechanicTable.FirstOrDefault(x => x.Code == code);
+            List<GeneratedLevel> with = levels.Where(l => Has(l.Chosen!.Board, code)).ToList();
+            if (m is null && with.Count == 0)
+            {
+                continue;
+            }
+
+            int instances = with.Sum(l => l.Chosen!.Board.Attrs.Count(a => MechanicCodes.CodeOf(a) == code));
+            List<GeneratedLevel> debuts = levels.Where(l => l.Plan.DebutBoard && l.Plan.Mechanics.Any(x => x.Code == code)).ToList();
+            int ok = debuts.Count(l => DebutOk(l.Chosen!));
+            string debut = m is null ? "—" : F($"{m.Debut} (`{m.Id}`)");
+            W(F($"| {code} | {debut} | {with.Count} | {instances} | {debuts.Count} | {ok} de {debuts.Count} |"));
+        }
+
+        W();
+        W("| Nivel | p | Rol | Celda | Variante | Ejemplares de mecánica | Vacíos | bot_fail |");
+        W("|---|---|---|---|---|---|---|---|");
+        foreach (GeneratedLevel l in levels.Where(l => VariantCodes(l.Chosen!.Board).Count > 0))
+        {
+            BoardData b = l.Chosen!.Board;
+            string attrs = string.Join("; ", Enumerable.Range(0, b.Attrs.Length)
+                .Where(i => MechanicCodes.CodeOf(b.Attrs[i]) is string c && MechanicCodes.Variants.Contains(c))
+                .Select(i => VariantAttr(b.Attrs[i], b.Cuias[i].Length)));
+            W(F($"| {l.Plan.Level} | {l.Plan.Position} | {l.Plan.RoleName} | {l.Plan.Cell.Short} | {attrs} | {Instances(b)} | {Empties(b)} | {l.Chosen!.Bot:0.000} |"));
+        }
+
+        List<GeneratedLevel> dropped = levels.Where(l => l.Plan.Mechanics.Any(m => MechanicCodes.Variants.Contains(m.Code))
+            && l.Plan.Mechanics.Where(m => MechanicCodes.Variants.Contains(m.Code)).Any(m => !Has(l.Chosen!.Board, m.Code))).ToList();
+        W();
+        W(dropped.Count == 0
+            ? "Todas las celdas con una variante la llevan en el nivel publicado."
+            : "**Celdas con una variante publicadas sin ella:** " + string.Join(", ", dropped.Select(l => l.Plan.Level.ToString(CultureInfo.InvariantCulture))) + ".");
+    }
+
+    /// <summary>Estreno de 02 §9.2 regla 2: un ejemplar de mecánica, 2 vacíos (como QA-DEBUT) y bot_fail &lt; 0,20.</summary>
+    internal static bool DebutOk(Candidate c) => Instances(c.Board) == 1 && Empties(c.Board) >= 2 && c.Bot < 0.20;
+
+    /// <summary>Ejemplares de mecánica: cada attr (el par del Remolino y la tinaja con su cuia, uno), cada Barro y cada cuia turbia.</summary>
+    internal static int Instances(BoardData b)
+    {
+        int remolino = b.Attrs.Count(a => a.Type == MechanicType.Remolino);
+        int tinaja = Math.Max(b.Attrs.Count(a => a.Type == MechanicType.Tinaja), b.Attrs.Count(a => a.Type == MechanicType.Cucharon));
+        int attrs = b.Attrs.Count(a => !a.IsNone && a.Type is not (MechanicType.Remolino or MechanicType.Tinaja or MechanicType.Cucharon));
+        int mud = b.Cuias.Sum(c => c.Count(x => x == Cuia.MudColor));
+        int murky = b.Hidden.Where(h => b.Attrs[h[0]].Type != MechanicType.Tinaja).Select(h => h[0]).Distinct().Count();
+        return attrs + (remolino / 2) + tinaja + mud + murky;
+    }
+
+    /// <summary>Vacíos del estreno (como QA-DEBUT): cuias vacías de capacidad ≥ 4 que no son la tinaja ni su cuia.</summary>
+    internal static int Empties(BoardData b) =>
+        Enumerable.Range(0, b.Cuias.Length).Count(i => b.Cuias[i].Length == 0 && b.Caps[i] >= Cuia.DefaultCapacity
+            && b.Attrs[i].Type is not (MechanicType.Tinaja or MechanicType.Cucharon));
 
     private static string CycleName(CampaignSpec spec, LevelPlan p)
     {
@@ -488,7 +580,8 @@ internal static class CampaignReport
     /// <summary>
     /// <c>pack_schema</c> de la cabecera (revisión de P1; FIXG): el de todos los packs si coincide (o
     /// <paramref name="whole"/>, el de todos los niveles juntos, si no hay packs); si unos llevan la tinaja y otros no,
-    /// «2 (3 en los packs con tinaja: …)», con el nombre de cada uno, porque PackWriter escribe el 3 solo en esos.
+    /// «2 (3 en los packs con tinaja o con variantes de la 1.0: …)», con el nombre de cada uno, porque PackWriter escribe el 3 solo
+    /// en esos.
     /// </summary>
     internal static string PackSchemaText(IReadOnlyList<(string Pack, int Schema)> packs, int whole)
     {
@@ -496,7 +589,7 @@ internal static class CampaignReport
         return raised.Count == 0 || raised.Count == packs.Count
             ? whole.ToString(CultureInfo.InvariantCulture)
             : string.Create(CultureInfo.InvariantCulture,
-                $"{PackWriter.PackSchema} ({PackWriter.TinajaPackSchema} en los packs con tinaja: {string.Join(", ", raised)})");
+                $"{PackWriter.PackSchema} ({PackWriter.TinajaPackSchema} en los packs con tinaja o con variantes de la 1.0: {string.Join(", ", raised)})");
     }
 
     /// <summary><c>pack_schema</c> del pack del mundo <paramref name="world"/> (sus niveles y variantes; PackWriter.PackSchemaFor).</summary>

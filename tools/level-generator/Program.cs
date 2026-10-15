@@ -26,7 +26,7 @@ const string Usage = """
       dotnet run --project tools/level-generator -- --validate-spec <campaign.json>
       dotnet run --project tools/level-generator -- --parity [--report tools/out/parity_report.md]
       dotnet run --project tools/level-generator -- --seasons <campaign.json> [<campaign.json> ...] --out <tabla.json> [--check]
-      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons]
+      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants]
       dotnet run --project tools/level-generator -- --help
 
     --validate-spec: comprueba la especificacion de la campana (specs/campaign_v1.json) contra la rotacion de la
@@ -44,7 +44,11 @@ const string Usage = """
       contigua y en la misma fila), el slot 323 de specs/sample_tinaja.json con sus filtros (ruta segura, paseos, S0 sin
       trampas) y su JSON (pack_schema 3), el alivio sin frutas de la tinaja, el tope de 12 cuias con tinaja (02 sec. 5),
       los tableros de la ficha b.2 y, como INFO, la calibracion de Morpho (nodos/ms del PC) en los estados mas pesados
-      del pack de muestra (tools/out/sample_tinaja). Desde la raiz del repositorio.
+      del pack de muestra (tools/out/sample_tinaja). "variants": las variantes de la 1.0 (P5; Ln, Ha, B2 y Fl): codigos,
+      el orden de la superposicion sin las variantes, cada paso sobre tableros base fijos (colocacion valida segun
+      LevelValidation, determinismo), los estrenos 243, 263, 283 y 303 de specs/sample_variants.json (un ejemplar, 2 vacios y
+      bot < 0,20), su JSON (attrs, key2 de la Flor, intro_mechanic y pack_schema 3) leido de vuelta con el mismo hash, y la
+      key2 en el alivio y al cambiar los colores. Desde la raiz del repositorio.
       Codigos: 0 = todo PASS; 1 = algun FAIL; 2 = uso o especificacion ilegible.
     --parity: recalcula con AF.Core/AF.Solver par, complejidad, ramificacion, trampas y la variante -1 color de los 40
       niveles del prototipo (tools/out/levels_proto.json y tools/out_inverse/levels_proto.json; GDD 03 sec. 17-18, 09 R26)
@@ -60,7 +64,8 @@ const string Usage = """
       defecto, asi que un pack generado con single solo vale para jugar en single. El informe lo declara.
     --spec: generacion procedural de la campana (GDD 03 sec. 2; D-009 y D-007): candidatos por slot (walk, deep o fill),
       superposicion de mecanicas, tintes, A*, bot x40, trampas tempranas, indice D, colocacion en el ciclo de 20, alivio y
-      un pack por mundo mundo_{mm}_v1.json (af-level/1, pack_schema 2, o 3 si algun nivel lleva la tinaja, D-019).
+      un pack por mundo mundo_{mm}_v1.json (af-level/1, pack_schema 2, o 3 si algun nivel lleva la tinaja, D-019, o una
+      variante de la 1.0 del 3: Hoja atada, Flor, Brote de dos hojas o el estreno de la Liana de cuenta; D-023 punto 5).
       --levels por defecto 11-200; D depende del pool
       de cada rango de 03 sec. 11, asi que --check debe usar los mismos --levels. Con --check no escribe nada y compara
       byte a byte con los packs del disco. Los tiempos salen por consola; el informe no lleva tiempos.
@@ -90,7 +95,13 @@ if (args.Length >= 1 && args[0] == "--self-test")
     {
         int tinaja = TinajaSelfTest.Run();
         int seasons = SeasonTableWriter.SelfTest();
-        return Math.Max(tinaja, seasons);
+        int variants = VariantsSelfTest.Run();
+        return Math.Max(Math.Max(tinaja, seasons), variants);
+    }
+
+    if (args.Length == 2 && args[1] == "variants")
+    {
+        return VariantsSelfTest.Run();
     }
 
     if (args.Length == 2 && args[1] == "tinaja")
@@ -103,7 +114,7 @@ if (args.Length >= 1 && args[0] == "--self-test")
         return SeasonTableWriter.SelfTest();
     }
 
-    return UsageError("--self-test solo admite: tinaja o seasons.");
+    return UsageError("--self-test solo admite: tinaja, seasons o variants.");
 }
 
 if (args.Length >= 1 && args[0] == "--seasons")

@@ -5,7 +5,8 @@
 //     del esquema; .NET no trae un validador de JSON Schema y level-qa no usa NuGet). Sin Python o sin jsonschema, falla.
 //   - QA-REPRO (03 §17 #10): se regenera la campaña con la especificación (tools/level-generator, Generation/*.cs
 //     enlazados, en memoria) y cada pack tiene que salir byte a byte. D depende del pool de cada rango de 03 §11, así que
-//     se regenera el rango completo de la especificación (11-200) aunque se compruebe un solo pack.
+//     se regenera el rango completo de la especificación (first_level-last_level: 11-200 en campaign_v1, 201-700 en la de
+//     P4) aunque se compruebe un solo pack; el rango sale de la especificación, nunca del código (P6).
 //   - QA-BAND-Q (03 §7: «la banda coloca»): la banda medida (cuantil de D en el pool del rango, que solo existe
 //     regenerando) acorde al rol del ciclo de D-009: comodidad, estreno, remanso y rampa ≤ 0,70; recuperación ≤ 0,10 o D
 //     por debajo de la comodidad más fácil del ciclo; hito > 0,95 o par − 2K ≥ la media del pool del rango. Son las

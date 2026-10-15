@@ -1,8 +1,10 @@
 // level-qa: control de calidad de paquetes de niveles de Amazon Fill (GDD 08 §2.4 y §4.1 «Validación en tools/level-qa»;
 // 03 §17). Lee los paquetes con System.Text.Json, construye cada tablero con BoardBuilder y lo recalcula con AF.Core y
 // AF.Solver (par, bot ×40, trampas tempranas, ruta segura de Aguas turbias, filtros de la tinaja, variantes de alivio);
-// comprueba el ciclo de D-009 con la especificación de la campaña (tools/level-generator/specs/campaign_v1.json, mismo
-// lector que el generador).
+// comprueba el ciclo de D-009 con la especificación de la campaña (tools/level-generator/specs/campaign_v1.json u otra con
+// --spec, mismo lector que el generador). Los rangos de niveles (el que se regenera, el tope de mecánicas por nivel, los hitos de
+// K = 13) salen de la especificación y de la cabecera del pack, nunca de un nivel escrito en el código (P6 de la tanda 4); las
+// variantes de la 1.0 tienen sus controles en Checks/VariantChecks.cs.
 // Es la compuerta completa en un solo comando (Checks/GateChecks.cs): también valida el esquema JSON (QA-SCHEMA, con
 // python tools/validate_schema.py --pack), regenera la campaña para comprobar que la semilla reproduce cada pack (QA-REPRO,
 // 03 §17 #10) y mide la banda de cada nivel en el pool regenerado (QA-BAND-Q, 03 §7). --no-reproduce salta las dos últimas.
@@ -22,23 +24,33 @@ const string Usage = """
 
     Uso:
       dotnet run --project tools/level-qa -c Release -- <paquete.json> [<paquete.json> ...] [--report <informe.md>] [--spec <campaign.json>] [--levels a-b] [--no-reproduce]
+      dotnet run --project tools/level-qa -- --self-test [key2|reglas]
       dotnet run --project tools/level-qa -- --help
 
     Recalcula cada nivel con AF.Core y AF.Solver y comprueba: estructura, U_c, selladas, Aguas estancadas al inicio, par
     (A* w = 1, run) y par >= 2K, paleta y debuts de tinte, K, pares de riesgo, bot x40 con la semilla del nivel y su
     etiqueta, trampas tempranas por etiqueta (Q16 B), tamano, el ciclo de 20 de D-009 (bandas, etiquetas, escalera,
-    remanso, puros, ventanas, estrenos), alivio, anti-repeticion, mecanicas, Aguas turbias y la tinaja (forma, mascara,
-    topes por tipo de nivel, ruta segura, paseos y coste de Morpho, tambien en sus variantes de alivio). La especificacion
-    por defecto es tools/level-generator/specs/campaign_v1.json (ejecutar desde la raiz del repositorio).
+    remanso, puros, ventanas, estrenos, hitos de 14 cuias), alivio, anti-repeticion, mecanicas (tope por nivel de la
+    especificacion), las variantes de la 1.0 (Liana de cuenta, Hoja atada, Brote de dos hojas y Flor), Aguas turbias y la
+    tinaja (forma, mascara, topes por tipo de nivel, ruta segura, paseos y coste de Morpho, tambien en sus variantes de
+    alivio). La especificacion por defecto es tools/level-generator/specs/campaign_v1.json (ejecutar desde la raiz del
+    repositorio).
 
     Es la compuerta completa de 08 sec. 4.1 en un solo comando:
       QA-SCHEMA  cada pack contra schemas/af-level-1.schema.json (python tools/validate_schema.py --pack; exige Python 3
                  con jsonschema; sin ellos, falla);
       QA-REPRO   regenera la campana con la especificacion (--levels, por defecto el rango completo de la especificacion,
-                 11-200: D depende del pool de cada rango) y cada pack tiene que salir byte a byte (03 sec. 17 #10;
-                 tarda lo que el generador: varios minutos en Release);
+                 first_level-last_level: D depende del pool de cada rango) y cada pack tiene que salir byte a byte
+                 (03 sec. 17 #10; tarda lo que el generador: varios minutos en Release);
       QA-BAND-Q  banda medida (cuantil de D en el pool regenerado) acorde al rol del ciclo (03 sec. 7).
     --no-reproduce salta QA-REPRO y QA-BAND-Q (fixtures negativos, pruebas rapidas); nunca en el CI.
+    --self-test [key2]: genera el estreno de cada variante de la 1.0 de tools/level-generator/specs/sample_variants.json,
+    lo escribe a un pack temporal y comprueba que este lector lo lee (tambien la key2 de la Flor y el relief) con el mismo
+    tablero y el mismo hash que el generador; la Flor sin key2 no se construye. Sale con 0, 1 (algun FAIL) o 2.
+    --self-test reglas: prueba en positivo y en negativo el tope de mecanicas por nivel (QA-MECH-COUNT: retos desde el 301 y
+    hitos desde el 320 con sample_variants.json; 2 siempre con campaign_v1.json), QA-HITO-14 (el vacio del hito de K = 13
+    repartido en cuias a medias, como el 580 y el 600, y las 14 cuias con K = 12 y la cueva de la Pirana) y las casas de la
+    Flor de QA-VAR-FLOR (D-024). Sale con 0, 1 (algun FAIL) o 2.
 
     Codigos de salida: 0 = todo cumple (los avisos no fallan) o ayuda; 1 = algun nivel no cumple, el esquema falla, un
     pack no se reproduce o falta Python; 2 = uso incorrecto, sin paquetes o archivos ilegibles.
@@ -59,6 +71,28 @@ if (args.Contains("--help") || args.Contains("-h"))
     Console.WriteLine(Usage);
     Console.WriteLine($"Nucleo enlazado: {Describe(typeof(BoardState))}, {Describe(typeof(MinHeap))}");
     return 0;
+}
+
+// --self-test key2 (P5): el PackReader de level-qa lee la key2 de la Flor (y las demás variantes) del pack escrito por el
+// generador con el mismo tablero y el mismo hash (VariantsSelfTest.RunPackReadBack, enlazado del generador).
+// --self-test reglas (P6): QA-MECH-COUNT, QA-HITO-14 y las casas de QA-VAR-FLOR en positivo (Checks/RulesSelfTest.cs).
+if (args[0] == "--self-test")
+{
+    if (args.Length > 2 || (args.Length == 2 && args[1] != "key2" && args[1] != "reglas"))
+    {
+        return UsageError("--self-test solo admite: key2 o reglas.");
+    }
+
+    if (args.Length == 2 && args[1] == "reglas")
+    {
+        return RulesSelfTest.Run();
+    }
+
+    return VariantsSelfTest.RunPackReadBack("level-qa PackReader", path =>
+    {
+        QaLevel level = PackReader.Read(path).Levels[0];
+        return (level.Board, [.. level.Relief.Select(r => r.Board)]);
+    });
 }
 
 var packages = new List<string>();
@@ -152,6 +186,7 @@ foreach (LevelEval e in evals)
     issues.AddRange(MechanicChecks.Run(ctx, e));
     issues.AddRange(MurkyChecks.Run(e));
     issues.AddRange(TinajaChecks.Run(e));
+    issues.AddRange(VariantChecks.Run(e));
     issues.AddRange(ReliefChecks.Run(e));
 }
 
@@ -196,7 +231,7 @@ foreach (QaIssue i in ordered)
 
 int failures = issues.Count(i => !i.Warning);
 var allIds = BaseChecks.Ids.Concat(CycleChecks.Ids).Concat(ReliefChecks.Ids).Concat(RepetitionChecks.Ids)
-    .Concat(MechanicChecks.Ids).Concat(MurkyChecks.Ids).Concat(TinajaChecks.Ids).Concat(GateChecks.Ids).ToList();
+    .Concat(MechanicChecks.Ids).Concat(MurkyChecks.Ids).Concat(TinajaChecks.Ids).Concat(VariantChecks.Ids).Concat(GateChecks.Ids).ToList();
 Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
     $"{evals.Count} niveles, {allIds.Count} comprobaciones: {failures} fallo(s), {issues.Count(i => i.Warning)} aviso(s)"));
 if (report is not null)

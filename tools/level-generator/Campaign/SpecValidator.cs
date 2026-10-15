@@ -34,7 +34,7 @@ internal static class SpecValidator
         ("GAP-120", "ninguna mecanica ni capacidad (Cuia chica, Cuia alta) pasa mas de 120 niveles sin volver (resumen, punto 6; d.2 regla 4; 02 sec. 8)"),
         ("FIRST-TIME", "al menos una primera vez por ciclo: estreno, tinte nuevo o primera combinacion (d.2 regla 3)"),
         ("CAPACITIES", "como mucho 2 Cuias chicas (con la cueva de la Pirana) y 1 Cuia alta por nivel antes del 200; Cuia alta de 6 solo en hitos desde el 141 (02 sec. 8)"),
-        ("LIANA-CAPS", "la Liana nunca va con Cuia chica, Cuia alta ni Pirana (capacidades mixtas, bloqueo C1-9 de AF.Core): el generador no puede cumplir la celda"),
+        ("LIANA-CAPS", "la Liana (con fruta o de cuenta) y la Flor nunca van con Cuia chica, Cuia alta ni Pirana (capacidades mixtas, bloqueo C1-9 de AF.Core; K3b): el generador no puede cumplir la celda"),
     ];
 
     /// <summary>Hueco máximo entre dos apariciones de una mecánica o capacidad (resumen, punto 6; d.2 regla 4).</summary>
@@ -156,11 +156,16 @@ internal static class SpecValidator
                 Fail("CAPACITIES", n, "Cuia alta de 6 fuera de un hito desde el 141");
             }
 
-            // LIANA-CAPS: AF.Core rechaza la Liana con capacidades mixtas (C1-9); la celda no se puede generar tal cual y el
-            // generador no quita en silencio lo que pide el calendario.
-            if (c.Has("Li") && (c.Capacities.Count > 0 || c.Has("Pi")))
+            // LIANA-CAPS: AF.Core rechaza la Liana con capacidades mixtas (C1-9), y también la Liana de cuenta y la Flor (K3b;
+            // MechanicCodes.IsMixedCapacityBlocked); la celda no se puede generar tal cual y el generador no quita en silencio lo
+            // que pide el calendario.
+            foreach (MechanicInfo m in c.Mechanics.Where(m => MechanicCodes.IsMixedCapacityBlocked(m.Code)))
             {
-                Fail("LIANA-CAPS", n, "Liana con capacidades mixtas (" + c.Short + "): bloqueo C1-9 de AF.Core; mueve la capacidad o la Pirana a una celda sin Liana");
+                if (c.Capacities.Count > 0 || c.Has("Pi"))
+                {
+                    string what = m.Code switch { "Ln" => "Liana de cuenta", "Fl" => "Flor", _ => "Liana" };
+                    Fail("LIANA-CAPS", n, what + " con capacidades mixtas (" + c.Short + "): bloqueo C1-9 de AF.Core; mueve la capacidad o la Pirana a una celda sin " + what);
+                }
             }
         }
 

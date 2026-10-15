@@ -298,12 +298,13 @@ internal sealed class SlotGenerator(CampaignSpec spec)
 
         var chicas = plan.Capacities.Where(c => c.Id == "chica").Select(c => c.Cap).ToList();
         int alta = plan.Capacities.Where(c => c.Id == "alta").Select(c => c.Cap).DefaultIfEmpty(0).Max();
-        bool liana = mechs.Any(m => m.Code == "Li");
+        // La Liana con fruta, la Liana de cuenta y la Flor (MechanicCodes.IsMixedCapacityBlocked).
+        bool liana = mechs.Any(m => MechanicCodes.IsMixedCapacityBlocked(m.Code));
         if (liana && (chicas.Count > 0 || alta > 0 || mechs.Any(m => m.Code == "Pi")))
         {
             // Bloqueo C1-9 de AF.Core: --validate-spec (LIANA-CAPS) rechaza la celda antes de generar; el generador nunca
             // quita en silencio una capacidad o la cueva de la celda.
-            throw new InvalidOperationException($"nivel {plan.Level}: Liana con capacidades mixtas en la celda {plan.Cell.Short} (LIANA-CAPS)");
+            throw new InvalidOperationException($"nivel {plan.Level}: Liana o Flor con capacidades mixtas en la celda {plan.Cell.Short} (LIANA-CAPS)");
         }
 
         int k = plan.K;
@@ -471,9 +472,10 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             : (hardSlot && (stage == 0 || harder)) || (!hardSlot && harder) ? Math.Max(0, occupying - standard)
             : occupying;
         int baseEmpties = standard + extra;
-        // Cuia de holgura para tener cuias a medias: el Brote y las Aguas turbias la necesitan siempre; el Barro solo fuera de
-        // retos e hitos (en ellos la dosis desplazada va al vacío y el tablero queda más apretado) [P].
-        bool slack = mechs.Any(m => m.Code is "Br" or "Tu") || (mechs.Any(m => m.Code == "Ba") && !hardSlot);
+        // Cuia de holgura para tener cuias a medias: el Brote (también el de dos hojas) y las Aguas turbias la necesitan
+        // siempre; el Barro solo fuera de retos e hitos (en ellos la dosis desplazada va al vacío y el tablero queda más
+        // apretado) [P].
+        bool slack = mechs.Any(m => MechanicCodes.NeedsPartial(m.Code) || m.Code == "Tu") || (mechs.Any(m => m.Code == "Ba") && !hardSlot);
         int caves = mechs.Count(m => m.Code == "Pi");
         int pair = tinaja ? 2 : 0; // la tinaja y su cuia chica (M13)
         int total = k + baseEmpties + chicas.Count + (slack ? 1 : 0) + caves + pair;
@@ -551,8 +553,9 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         int depth;
         // Retos e hitos desde el 41: deep y fill alternos por intento [P] (03 §4.4 admite las dos fuentes; dan D distintos y la
         // escalera de D-009 necesita variedad: deep da par cercano a 2K y fill par cercano a 3K).
-        // El Brote y las Aguas turbias necesitan cuias a medias, que fill no deja (llena las casas): con ellas, deep.
-        bool needsPartial = config.Mechanics.Any(m => m.Code is "Br" or "Tu");
+        // El Brote (también el de dos hojas) y las Aguas turbias necesitan cuias a medias, que fill no deja (llena las casas):
+        // con ellas, deep.
+        bool needsPartial = config.Mechanics.Any(m => MechanicCodes.NeedsPartial(m.Code) || m.Code == "Tu");
         bool tinaja = config.Mechanics.Any(m => m.Code == "Ti");
         string source = config.Source == "mixed" ? (attempt % 2 == 0 || needsPartial ? "deep" : "fill")
             : config.Source == "fill" && needsPartial ? "deep" : config.Source;
