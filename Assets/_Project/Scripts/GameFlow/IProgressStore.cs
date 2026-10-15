@@ -77,13 +77,14 @@ namespace AF.GameFlow
 
         /// <summary>
         /// Crea el almacén con un valor inicial (0 = sin progreso); <paramref name="mapSeenLevel"/> se recorta a
-        /// [0, <paramref name="maxLevel"/>] al leerlo, como en el perfil.
+        /// [0, <paramref name="maxLevel"/>] al crearlo, como hace el perfil al cargarlo: un valor inicial por encima de
+        /// max_level no reaparece cuando <see cref="SaveWin"/> sube max_level.
         /// </summary>
         public MemoryProgressStore(int nextLevel = 0, int maxLevel = 0, int mapSeenLevel = 0)
         {
             NextLevel = nextLevel;
             MaxLevel = maxLevel;
-            _mapSeenLevel = mapSeenLevel;
+            _mapSeenLevel = ClampSeen(mapSeenLevel, maxLevel);
         }
 
         /// <summary>Siguiente nivel guardado.</summary>

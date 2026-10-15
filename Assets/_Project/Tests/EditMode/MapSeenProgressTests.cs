@@ -110,6 +110,11 @@ namespace AF.Tests.EditMode
             Assert.That(store.MapSeenLevel, Is.EqualTo(58));
             Assert.That(() => store.SaveMapSeenLevel(-1), Throws.TypeOf<ArgumentOutOfRangeException>());
             Assert.That(new MemoryProgressStore(11, 10, 30).MapSeenLevel, Is.EqualTo(10), "el valor inicial también se recorta");
+
+            var high = new MemoryProgressStore(11, 10, 30);
+            high.SaveWin(40, 41);
+            Assert.That(high.MapSeenLevel, Is.EqualTo(10), "el valor inicial recortado no reaparece al subir max_level");
+            Assert.That(RiverJourney.HasUnseenArrival(high.MapSeenLevel, high.MaxLevel), Is.True, "la llegada sigue sin ver, como en el perfil");
         }
 
         [Test]
