@@ -60,7 +60,7 @@ namespace AF.Tests.PlayMode
             Assert.That(lobby.SeedsShown, Is.EqualTo(0));
             Assert.That(lobby.CanoesShown, Is.False, "las canoas se ven desde el 31");
             Assert.That(lobby.ChipShown, Is.False, "el tutorial no lleva etiqueta de dificultad");
-            Assert.That(lobby.SettingsButton.interactable, Is.False, "Ajustes aún no existe");
+            Assert.That(lobby.SettingsButton.interactable, Is.True, "Ajustes abre su pantalla (tarea L3)");
 
             lobby.PlayButton.onClick.Invoke();
             Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Level));

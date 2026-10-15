@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using AF.IAP;
+using AF.Localization;
 using AF.Presentation;
 using TMPro;
 using UnityEngine;
@@ -69,7 +70,9 @@ namespace AF.UI
 
     /// <summary>
     /// Hoja «Compra simulada» (tareas B1-4 y B2-2; D-008 punto 5: compras simuladas detrás de <c>AF.IAP</c>, sin Play
-    /// Billing): rótulo, producto y precio local (05 §4.2), con «Comprar» y «Cancelar». Implementa
+    /// Billing): rótulo, producto y precio local (05 §4.2), con «Comprar» y «Cancelar». El rótulo y el nombre del producto
+    /// salen de la tabla de textos por sus claves (<see cref="SimulatedPurchase.LabelKey"/> y <see cref="SimulatedPurchase.NameKey"/>,
+    /// <c>iap_&lt;sku&gt;_name</c>; D-018, tarea L3); el precio, tal como lo da la tienda. Implementa
     /// <see cref="ISimulatedPurchasePresenter"/>: llama una sola vez a la respuesta. Hoja inferior sobre un velo, en su propio
     /// lienzo por encima de todo.
     /// </summary>
@@ -80,6 +83,7 @@ namespace AF.UI
         private readonly RectTransform _panel;
         private readonly Image _surface;
         private readonly Image _header;
+        private readonly TextMeshProUGUI _title;
         private readonly TextMeshProUGUI _name;
         private readonly TextMeshProUGUI _price;
         private readonly ReliefParts _buy;
@@ -92,7 +96,7 @@ namespace AF.UI
             _canvas = new OverlayCanvas("StoreSheetCanvas", host, 50);
             ModalKit.Dim("Dim", _canvas.Root, 0.6f);
             _panel = ModalKit.Card("Panel", _canvas.Root, art, out _surface);
-            ModalKit.Header(_panel, art, SimulatedPurchase.Label, out _header);
+            _title = ModalKit.Header(_panel, art, UiText.SimulatedPurchaseTitle, out _header);
             _name = ModalKit.Line("Name", _panel, string.Empty, 18f, Palette.FamilyWood.Base);
             _price = ModalKit.Line("Price", _panel, string.Empty, 28f, Palette.Ink, TextStyle.PlainBold);
             _price.color = Palette.FamilyWood.Deep;
@@ -105,6 +109,9 @@ namespace AF.UI
 
         /// <summary>Lienzo propio (capturas de prueba).</summary>
         public Canvas Canvas => _canvas.Canvas;
+
+        /// <summary>Rótulo de la cabecera («Compra simulada», de <see cref="SimulatedPurchase.LabelKey"/>).</summary>
+        public string TitleText => _title.text;
 
         public string ProductText => _name.text;
 
@@ -120,7 +127,7 @@ namespace AF.UI
             _onClosed = onClosed;
             _canvas.Canvas.gameObject.SetActive(true);
             _canvas.Measure();
-            _name.text = purchase.Name;
+            _name.text = Loc.T(purchase.NameKey); // el nombre de tienda, de strings.csv (iap_<sku>_name; tarea L3)
             _price.text = purchase.PriceText;
             float w = Mathf.Min(360f, _canvas.Width);
             float inner = w - 32f;

@@ -204,10 +204,10 @@ namespace AF.IAP
     /// <summary>Un SKU del catálogo.</summary>
     public sealed class StoreProduct
     {
-        internal StoreProduct(string sku, string name, ProductKind kind, decimal usd, ProductContent content)
+        internal StoreProduct(string sku, ProductKind kind, decimal usd, ProductContent content)
         {
             Sku = sku;
-            Name = name;
+            NameKey = NameKeyOf(sku);
             Kind = kind;
             UsdPrice = usd;
             Content = content;
@@ -217,8 +217,11 @@ namespace AF.IAP
         /// <summary>ID de Play Console (glosario §11; 05 §4.1), p. ej. <c>af_coins_2</c>.</summary>
         public string Sku { get; }
 
-        /// <summary>Nombre de tienda en español (05 §4.1).</summary>
-        public string Name { get; }
+        /// <summary>
+        /// Clave del nombre de tienda en la tabla de textos (<c>iap_&lt;sku&gt;_name</c> [P]; 05 §4.1 da el texto en español,
+        /// D-018: toda cadena visible por clave). <c>AF.IAP</c> no lleva ningún texto visible.
+        /// </summary>
+        public string NameKey { get; }
 
         /// <summary>Tipo.</summary>
         public ProductKind Kind { get; }
@@ -234,13 +237,25 @@ namespace AF.IAP
         {
             return StorePrices.Local(UsdPrice, currency);
         }
+
+        /// <summary>Clave del nombre de tienda de <paramref name="sku"/>: <c>iap_&lt;sku&gt;_name</c> [P] (p. ej. <c>iap_af_coins_2_name</c>).</summary>
+        public static string NameKeyOf(string sku)
+        {
+            if (string.IsNullOrEmpty(sku))
+            {
+                throw new ArgumentException("Falta el SKU.", nameof(sku));
+            }
+
+            return "iap_" + sku + "_name";
+        }
     }
 
     /// <summary>
     /// Catálogo de los 13 SKU de 1.0 (05 §4.1; glosario §11): <c>af_starter</c>, <c>af_coins_2</c> … <c>af_coins_6</c>,
     /// <c>af_rescue</c>, <c>af_noads</c>, <c>af_piggy</c>, <c>af_infinite_canoes_1h</c> y <c>af_skin_m02</c> …
     /// <c>af_skin_m04</c>. <c>af_pass</c> es de la v1.2 y no está. Las semillas de los packs y el bono de Sin anuncios salen
-    /// de <see cref="StoreConfig"/> (08 §9); el resto del contenido, de 05 §4.1.
+    /// de <see cref="StoreConfig"/> (08 §9); el resto del contenido, de 05 §4.1. Los nombres de tienda no están aquí: cada
+    /// producto lleva su clave (<see cref="StoreProduct.NameKey"/>) y el texto vive en la tabla de textos (D-018).
     /// </summary>
     public sealed class StoreCatalog
     {
@@ -274,41 +289,40 @@ namespace AF.IAP
             }
 
             config.Validate();
-            Add(Starter, "Mochila de inicio", ProductKind.OncePerAccount, 0.99m, new ProductContent
+            Add(Starter, ProductKind.OncePerAccount, 0.99m, new ProductContent
             {
                 Seeds = 500,
                 Stock = StockDelta.Of(BoosterKind.ExtraCuia, 2).Plus(BoosterKind.Hint, 3),
             });
-            string[] packNames = { "Puñado de semillas", "Bolsa de semillas", "Saco de semillas", "Costal de semillas", "Cosecha de semillas" };
             decimal[] packPrices = { 1.99m, 4.99m, 9.99m, 19.99m, 49.99m };
-            for (int i = 0; i < packNames.Length; i++)
+            for (int i = 0; i < packPrices.Length; i++)
             {
                 string sku = "af_coins_" + (i + 2).ToString(CultureInfo.InvariantCulture);
-                Add(sku, packNames[i], ProductKind.Consumable, packPrices[i], new ProductContent { Seeds = config.SeedPackAmount(sku) });
+                Add(sku, ProductKind.Consumable, packPrices[i], new ProductContent { Seeds = config.SeedPackAmount(sku) });
             }
 
-            Add(Rescue, "Balsa de rescate", ProductKind.Consumable, 4.99m, new ProductContent
+            Add(Rescue, ProductKind.Consumable, 4.99m, new ProductContent
             {
                 AppliesRescue = true,
                 Seeds = 1000,
                 Stock = StockDelta.Of(BoosterKind.ExtraCuia, 1),
                 InfiniteCanoes = TimeSpan.FromMinutes(30),
             });
-            Add(NoAds, "Sin anuncios", ProductKind.NonConsumable, 4.99m, new ProductContent
+            Add(NoAds, ProductKind.NonConsumable, 4.99m, new ProductContent
             {
                 GrantsNoAds = true,
                 Seeds = config.EcoNoadsBonusSeeds,
             });
-            Add(Piggy, "Cántaro", ProductKind.Consumable, 2.99m, new ProductContent { PiggySeeds = true });
-            Add(InfiniteCanoes1h, "Canoas infinitas 1 h", ProductKind.Consumable, 1.99m, new ProductContent
+            Add(Piggy, ProductKind.Consumable, 2.99m, new ProductContent { PiggySeeds = true });
+            Add(InfiniteCanoes1h, ProductKind.Consumable, 1.99m, new ProductContent
             {
                 InfiniteCanoes = TimeSpan.FromMinutes(60),
             });
-            string[] skinNames = { "Pack Cuia de Santarém", "Pack Cuia del Encuentro", "Pack Totuma" };
-            for (int i = 0; i < skinNames.Length; i++)
+            for (int world = 2; world <= 4; world++)
             {
-                string sku = "af_skin_m0" + (i + 2).ToString(CultureInfo.InvariantCulture);
-                Add(sku, skinNames[i], ProductKind.NonConsumable, 1.99m, new ProductContent { GrantsSkin = true, Seeds = 300 });
+                // af_skin_m02 … af_skin_m04: los packs de skins de los mundos 2-4 (05 §4.1).
+                string sku = "af_skin_m0" + world.ToString(CultureInfo.InvariantCulture);
+                Add(sku, ProductKind.NonConsumable, 1.99m, new ProductContent { GrantsSkin = true, Seeds = 300 });
             }
         }
 
@@ -340,9 +354,9 @@ namespace AF.IAP
             return null;
         }
 
-        private void Add(string sku, string name, ProductKind kind, decimal usd, ProductContent content)
+        private void Add(string sku, ProductKind kind, decimal usd, ProductContent content)
         {
-            _products.Add(new StoreProduct(sku, name, kind, usd, content));
+            _products.Add(new StoreProduct(sku, kind, usd, content));
         }
     }
 }

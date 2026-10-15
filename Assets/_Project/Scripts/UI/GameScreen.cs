@@ -1417,6 +1417,32 @@ namespace AF.UI
             }
         }
 
+        /// <summary>
+        /// Vuelve a aplicar los Patrones de fruta al nivel cargado con el ajuste de ahora (Ajustes › Patrones de fruta; 02 §12;
+        /// tarea L3: se aplica al momento, sin recargar el nivel). Sin nivel cargado no hace nada: el siguiente lo toma al cargar.
+        /// Devuelve si había nivel.
+        /// </summary>
+        internal bool RefreshFruitPatterns()
+        {
+            LevelFlow? flow = _flow;
+            if (flow == null || !flow.HasLevel || _views.Length == 0)
+            {
+                return false;
+            }
+
+            _animator.ApplyPatterns(PatternsOn(flow.LevelNumber));
+            return true;
+        }
+
+        /// <summary>Patrones de fruta en curso (el interruptor que lleva cada cuia; tests).</summary>
+        internal bool FruitPatternsOn => _animator.FruitPatterns;
+
+        // Patrones de fruta del nivel con el ajuste del jugador (GameServices.PatternsOnFor); sin servicios (tests), el automático.
+        private bool PatternsOn(int level)
+        {
+            return _services != null ? _services.PatternsOnFor(level) : Palette.PatternsOnFor(level);
+        }
+
         private LevelFlow RequireFlow()
         {
             return _flow ?? throw new InvalidOperationException("GameScreen sin LevelFlow: llama a Bind antes de cargar.");
@@ -1455,7 +1481,7 @@ namespace AF.UI
             _animator.SpeedFactor = f;
             _animator.ReduceMotion = flow.ReduceMotion;
             _fx.ReduceMotion = flow.ReduceMotion;
-            _animator.ApplyLevelPatterns(flow.LevelNumber); // Patrones de fruta: 20 % e icono desde el 41 (07 §3; T-E)
+            _animator.ApplyPatterns(PatternsOn(flow.LevelNumber)); // Patrones de fruta: el ajuste; en auto, 20 % e icono desde el 41 (07 §3; T-E; L3)
             for (int i = 0; i < board.Count; i++)
             {
                 _animator.ShowContent(i, board[i], board.IsSealed(i));

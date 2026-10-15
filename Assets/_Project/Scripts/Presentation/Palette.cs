@@ -318,9 +318,10 @@ namespace AF.Presentation
 
         /// <summary>
         /// Interruptor Patrones de fruta del nivel <paramref name="level"/> (T-E.6): activo desde
-        /// <see cref="PatternsDefaultFromLevel"/>. Es el valor por defecto del toggle de Ajustes (07 §3, reglas 1 y 5; 02 §12),
-        /// que aún no existe: sin pantalla de Ajustes, nadie lo cambia (pendiente en docs/dev/prototipo-v0.md). Gobierna la
-        /// opacidad del 20 % y el icono de cada dosis; el icono de la cuia elevada (07 §3, regla 2) no depende de él.
+        /// <see cref="PatternsDefaultFromLevel"/>. Es el valor del toggle de Ajustes en automático (07 §3, reglas 1 y 5; 02 §12;
+        /// <c>settings.patterns</c> = auto): con on u off, el ajuste manda (lo resuelve <c>AF.UI</c> y lo aplica
+        /// <see cref="BoardAnimator.ApplyPatterns"/>; tarea L3). Gobierna la opacidad del 20 % y el icono de cada dosis; el icono de
+        /// la cuia elevada (07 §3, regla 2) no depende de él.
         /// </summary>
         public static bool PatternsOnFor(int level)
         {

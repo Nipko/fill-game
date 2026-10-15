@@ -61,6 +61,23 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
+        /// Como <see cref="LoadApp"/>, pero con el <c>LocalProfileStore</c> que crea el propio arranque en la carpeta
+        /// <paramref name="directory"/> (<see cref="LaunchOptions.ProfileDirectoryOverride"/>) en vez de un almacén del test.
+        /// </summary>
+        public static IEnumerator LoadAppFromDisk(string directory)
+        {
+            LaunchOptions.StartLevelOverride = 0;
+            LaunchOptions.ProgressStoreOverride = null;
+            LaunchOptions.ProfileStoreOverride = null;
+            LaunchOptions.ProfileDirectoryOverride = directory;
+            NoLevelCardsUnlessSet();
+            yield return LoadScene();
+            yield return WaitFor(
+                () => GameBootstrap.Current != null && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AppScreen.Boot,
+                "arranque de la escena Game con el perfil en disco");
+        }
+
+        /// <summary>
         /// Apaga la tarjeta previa (LEVEL_CARD, 02 §10) si el test no la fijó (<see cref="LaunchOptions.LevelCardsOverride"/> =
         /// null): los tests que no tratan de ella entran al nivel por la intro, como antes de que existiera, aunque
         /// <c>GameConfig.LevelCardsEnabledDefault</c> pase a true (T13). <see cref="LaunchOptions.Reset"/> la vuelve a null.
@@ -73,8 +90,15 @@ namespace AF.Tests.PlayMode
             }
         }
 
+        // Sin idioma del teléfono fijado por el test, uno vacío (ManualDeviceLocale): los textos y las cifras no dependen de la
+        // cultura del equipo (tarea L3; el idioma automático da es-419 y las cifras, es-CO).
         private static IEnumerator LoadScene()
         {
+            if (LaunchOptions.DeviceLocaleOverride == null)
+            {
+                LaunchOptions.DeviceLocaleOverride = new AF.Platform.ManualDeviceLocale(string.Empty);
+            }
+
 #if UNITY_EDITOR
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode(ScenePath, new LoadSceneParameters(LoadSceneMode.Single));
 #else

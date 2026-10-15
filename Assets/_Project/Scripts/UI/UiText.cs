@@ -537,7 +537,7 @@ namespace AF.UI
         /// mundos son <see cref="WorldNameKey"/>, <see cref="WorldCountryKey"/> y <see cref="WorldRiverKey"/>; las de la fauna,
         /// las <c>dato_tarjeta</c> del catálogo (en <c>facts.csv</c>).
         /// </summary>
-        public static class Keys
+        public static partial class Keys
         {
             /// <summary><c>back</c>.</summary>
             public const string Back = "back";

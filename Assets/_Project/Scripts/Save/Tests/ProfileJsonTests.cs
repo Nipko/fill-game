@@ -8,7 +8,8 @@ namespace AF.Save.Tests
     /// <summary>
     /// Formato JSON del perfil (GDD 08 §4.3, con el inventario de 04 §10.1): nombres de clave del GDD, orden estable,
     /// ida y vuelta exacta (también de los ticks de las horas), InvariantCulture, salida ASCII con LF, tope de 100 KB,
-    /// lectura tolerante a claves que faltan o sobran y estricta con los tipos (un tipo equivocado es corrupción).
+    /// lectura tolerante a claves que faltan o sobran y estricta con los tipos (un tipo equivocado es corrupción), salvo
+    /// en <c>settings</c>, <c>sloth</c> y <c>map_seen_level</c> (SettingsAndSlothTests y MapSeenLevelTests).
     /// </summary>
     public sealed class ProfileJsonTests
     {
@@ -54,13 +55,25 @@ namespace AF.Save.Tests
             "    \"next_level\": 1,",
             "    \"since_last_skip\": 0,",
             "    \"skipped_levels\": [],",
-            "    \"content_version\": null",
+            "    \"content_version\": null,",
+            "    \"map_seen_level\": 0",
             "  },",
             "  \"level_state\": null,",
             "  \"entitlements\": {",
             "    \"no_ads\": false,",
             "    \"starter_bought\": false,",
             "    \"skins\": []",
+            "  },",
+            "  \"settings\": {",
+            "    \"patterns\": \"auto\",",
+            "    \"language\": \"auto\",",
+            "    \"sloth_messages\": true,",
+            "    \"idle_hint\": true",
+            "  },",
+            "  \"sloth\": {",
+            "    \"last_line\": [-1, -1, -1, -1, -1, -1, -1, -1],",
+            "    \"last_greeting_date\": null,",
+            "    \"last_seen_date\": null",
             "  },",
             "  \"ads\": {",
             "    \"last_iap\": null,",
@@ -88,6 +101,7 @@ namespace AF.Save.Tests
             Assert.That(p.Progress.NextLevel, Is.EqualTo(1), "08 §2.3: la primera vez se entra al nivel 1");
             Assert.That(p.LevelState, Is.Null);
             Assert.That(p.CreatedAt.Kind, Is.EqualTo(DateTimeKind.Utc));
+            Assert.That(Profile.CurrentSchema, Is.EqualTo(1), "settings, sloth y map_seen_level entran sin migrar (08 §4.3)");
         }
 
         [Test]
@@ -115,6 +129,11 @@ namespace AF.Save.Tests
             StringAssert.Contains("\"skipped_levels\": [63, 71]", json);
             StringAssert.Contains("\"skins\": [\"af_skin_m02\", \"af_skin_m04\"]", json);
             StringAssert.Contains("\"last_iap\": \"2026-10-05T13:40:00Z\"", json);
+            StringAssert.Contains("\"map_seen_level\": 80", json);
+            StringAssert.Contains("\"patterns\": \"off\"", json);
+            StringAssert.Contains("\"language\": \"pt-BR\"", json);
+            StringAssert.Contains("\"last_line\": [0, 1, 2, 0, 1, 2, 0, 1]", json);
+            StringAssert.Contains("\"last_seen_date\": \"2026-10-05\"", json);
         }
 
         [Test]
@@ -176,6 +195,12 @@ namespace AF.Save.Tests
             Assert.That(p.Progress.SkippedLevels, Is.Empty);
             Assert.That(p.LevelState, Is.Null);
             Assert.That(p.EconomyTs, Is.Null);
+            Assert.That(p.Progress.MapSeenLevel, Is.EqualTo(0));
+            Assert.That(p.Settings.Language, Is.EqualTo(SettingsData.LanguageAuto));
+            Assert.That(p.Settings.Patterns, Is.EqualTo(PatternsSetting.Auto));
+            Assert.That(p.Settings.SlothMessages, Is.True);
+            Assert.That(p.Settings.IdleHint, Is.True);
+            Assert.That(p.Sloth.LastLine, Is.EqualTo(new[] { -1, -1, -1, -1, -1, -1, -1, -1 }));
             Assert.That(ProfileJson.Serialize(p).Contains("gems"), Is.False);
         }
 

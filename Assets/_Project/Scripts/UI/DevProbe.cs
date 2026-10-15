@@ -7,6 +7,7 @@ using AF.Core.Rules;
 using AF.Core.Session;
 using AF.GameFlow;
 using AF.Presentation;
+using AF.Save;
 using UnityEngine;
 
 namespace AF.UI
@@ -21,9 +22,10 @@ namespace AF.UI
     /// <para>Eventos de <c>AF_STATE</c>: <c>load</c>, <c>ready</c>, <c>pour</c>, <c>reject</c>, <c>undo</c>, <c>restart</c>,
     /// <c>win</c> y <c>stuck</c> (contrato) más <c>select</c> y <c>deselect</c> (ayuda para seguir los toques). <c>load</c>
     /// lleva además los Patrones de fruta del nivel (T-E.7): <c>"patterns":{"on":true,"opacity":0.20}</c>, con <c>on</c> =
-    /// el interruptor del nivel (<see cref="Palette.PatternsOnFor"/>: desde el 41; el icono en cada dosis) y <c>opacity</c> =
-    /// la opacidad del patrón que lleva el shader (<see cref="LiquidGraphic.ShaderPatternOpacity"/>: 0,15 hasta el 40 y 0,20
-    /// desde el 41), con punto decimal. Del embudo de
+    /// el interruptor del nivel con el ajuste de Ajustes (<see cref="PatternsResolver.IsOn"/>; en automático,
+    /// <see cref="Palette.PatternsOnFor"/>: desde el 41; el icono en cada dosis; tarea L3) y <c>opacity</c> =
+    /// la opacidad del patrón que lleva el shader (<see cref="LiquidGraphic.ShaderPatternOpacity"/>: 0,20 con los Patrones
+    /// activos y 0,15 sin ellos; con Siempre o Nunca no depende del nivel), con punto decimal. Del embudo de
     /// D-008 y los comodines, los de <see cref="Funnel"/> (y <c>resume</c> al reabrir el nivel guardado, B2-5). De la
     /// victoria y los anuncios simulados (B2-4): <c>victory</c>, <c>double_harvest</c>, <c>auto_next</c> (avance tras la
     /// Cosecha doble, D-011 punto 4) y <c>ad_gate</c> (<see cref="Victory"/>), <c>ad_check</c> (<see cref="AdCheck"/>),
@@ -303,13 +305,20 @@ namespace AF.UI
         }
 
         /// <summary>
+        /// Ajustes del jugador (<c>settings</c> del perfil; tarea L3) para el campo <c>patterns</c> de <c>load</c>; null = los de
+        /// por defecto (Patrones de fruta en automático).
+        /// </summary>
+        public SettingsData? Settings { get; set; }
+
+        /// <summary>
         /// Campo <c>"patterns":{"on":bool,"opacity":x}</c> del nivel <paramref name="level"/> (T-E.7): el interruptor Patrones de
-        /// fruta (<see cref="Palette.PatternsOnFor"/>) y la opacidad del patrón que lleva el material del líquido
+        /// fruta con el ajuste <paramref name="setting"/> (<see cref="PatternsResolver.IsOn"/>: en automático,
+        /// <see cref="Palette.PatternsOnFor"/>; tarea L3) y la opacidad del patrón que lleva el material del líquido
         /// (<see cref="LiquidGraphic.ShaderPatternOpacity"/>), con dos decimales y punto, como InvariantCulture, sin asignar.
         /// </summary>
-        internal static void AppendPatterns(StringBuilder sb, int level)
+        internal static void AppendPatterns(StringBuilder sb, int level, PatternsSetting setting)
         {
-            sb.Append(",\"patterns\":{\"on\":").Append(Palette.PatternsOnFor(level) ? "true" : "false");
+            sb.Append(",\"patterns\":{\"on\":").Append(PatternsResolver.IsOn(setting, level) ? "true" : "false");
             sb.Append(",\"opacity\":");
             AppendUnit2(sb, LiquidGraphic.ShaderPatternOpacity);
             sb.Append('}');
@@ -398,7 +407,7 @@ namespace AF.UI
 
             if (string.Equals(evt, "load", System.StringComparison.Ordinal))
             {
-                AppendPatterns(sb, flow.LevelNumber);
+                AppendPatterns(sb, flow.LevelNumber, Settings != null ? Settings.Patterns : PatternsSetting.Auto);
             }
 
             sb.Append('}');

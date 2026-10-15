@@ -82,6 +82,14 @@ namespace AF.UI
         /// </summary>
         public static IProfileStore? ProfileStoreOverride { get; set; }
 
+        /// <summary>
+        /// Carpeta (absoluta) del <c>LocalProfileStore</c> real en vez de <c>Application.persistentDataPath</c>: para probar el
+        /// almacén del juego tal cual lo crea el arranque (revisión de L3: un perfil más nuevo no se sobrescribe tras elegir
+        /// idioma) sin tocar el perfil del Editor. Con este gancho tampoco se migra <c>af_v0_level</c>. Null = la del juego. Solo
+        /// tests; <see cref="ProfileStoreOverride"/> manda si están los dos.
+        /// </summary>
+        public static string? ProfileDirectoryOverride { get; set; }
+
         /// <summary>Reloj que sustituye al del sistema (tests de canoas).</summary>
         public static IClock? ClockOverride { get; set; }
 
@@ -155,6 +163,20 @@ namespace AF.UI
         public static LocTableTexts? LocTablesOverride { get; set; }
 
         /// <summary>
+        /// Idioma del teléfono que sustituye a la lectura de la plataforma (<see cref="AndroidDeviceLocale.ForPlatform"/>; tarea L3):
+        /// los tests con <c>ManualDeviceLocale</c> (un teléfono en pt-BR, sin región…). Null = el de la plataforma. Solo tests:
+        /// ningún extra de intent lo rellena. <c>PlayModeHelpers</c> pone uno vacío si el test no fija ninguno, para que los
+        /// textos y las cifras no dependan de la cultura del equipo.
+        /// </summary>
+        public static AF.Platform.IDeviceLocale? DeviceLocaleOverride { get; set; }
+
+        /// <summary>
+        /// Extras <c>af_seeds</c> y <c>af_canoes</c> simulados por un test (−1 = no tocar; revisión de L3: volver al inicio tras
+        /// elegir idioma no los vuelve a aplicar). Null = los del intent. Solo tests.
+        /// </summary>
+        public static (int Seeds, int Canoes)? DevWalletOverride { get; set; }
+
+        /// <summary>
         /// Moneda de los precios simulados [P]: COP (05 §4.2; los wireframes de 04 §6.6 usan pesos colombianos) mientras no
         /// haya precios de la tienda real.
         /// </summary>
@@ -170,6 +192,7 @@ namespace AF.UI
             PourModeOverride = null;
             ProgressStoreOverride = null;
             ProfileStoreOverride = null;
+            ProfileDirectoryOverride = null;
             ClockOverride = null;
             LevelOffsetOverride = null;
             LevelPackJsonOverride = null;
@@ -180,6 +203,8 @@ namespace AF.UI
             BannerArtTimeoutMsOverride = null;
             LanguageOverride = null;
             LocTablesOverride = null;
+            DeviceLocaleOverride = null;
+            DevWalletOverride = null;
         }
 
         /// <summary>
@@ -272,12 +297,13 @@ namespace AF.UI
         /// <summary>
         /// Extras <c>af_seeds</c> y <c>af_canoes</c> de los builds de desarrollo [P] (tarea B2-6): los aplica al perfil antes de
         /// crear la cartera. Devuelve si cambió algo (quien llama guarda el perfil). Fuera de un build de desarrollo en Android
-        /// no hace nada.
+        /// no hace nada, salvo con <see cref="DevWalletOverride"/> (tests).
         /// </summary>
         public static bool ApplyDevWallet(Profile profile, IClock clock)
         {
-            int seeds = ReadIntentInt(IntentExtraSeeds, -1);
-            int canoes = ReadIntentInt(IntentExtraCanoes, -1);
+            (int Seeds, int Canoes)? simulated = DevWalletOverride;
+            int seeds = simulated?.Seeds ?? ReadIntentInt(IntentExtraSeeds, -1);
+            int canoes = simulated?.Canoes ?? ReadIntentInt(IntentExtraCanoes, -1);
             return ApplyDevWallet(profile, clock, seeds, canoes, AF.Economy.EconomyConfig.Defaults);
         }
 

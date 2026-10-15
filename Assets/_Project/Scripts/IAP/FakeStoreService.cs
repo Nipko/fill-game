@@ -13,11 +13,14 @@ namespace AF.IAP
         Fail = 1,
     }
 
-    /// <summary>Lo que la UI enseña en la hoja «Compra simulada».</summary>
+    /// <summary>
+    /// Lo que la UI enseña en la hoja «Compra simulada»: claves de la tabla de textos (D-018), nunca el texto, y el precio
+    /// local, que en la tienda real da Play.
+    /// </summary>
     public sealed class SimulatedPurchase
     {
-        /// <summary>Rótulo de la hoja.</summary>
-        public const string Label = "Compra simulada";
+        /// <summary>Clave del rótulo de la hoja («Compra simulada»): <c>iap_simulated_purchase</c> [P].</summary>
+        public const string LabelKey = "iap_simulated_purchase";
 
         internal SimulatedPurchase(StoreProduct product, LocalPrice price)
         {
@@ -31,8 +34,8 @@ namespace AF.IAP
         /// <summary>SKU.</summary>
         public string Sku => Product.Sku;
 
-        /// <summary>Nombre de tienda (05 §4.1).</summary>
-        public string Name => Product.Name;
+        /// <summary>Clave del nombre de tienda (<see cref="StoreProduct.NameKey"/>; el texto, 05 §4.1).</summary>
+        public string NameKey => Product.NameKey;
 
         /// <summary>Precio local (05 §4.2).</summary>
         public LocalPrice Price { get; }
@@ -43,7 +46,8 @@ namespace AF.IAP
 
     /// <summary>
     /// La hoja «Compra simulada» que pinta la UI (B2-4, <c>StoreSheet</c>): rótulo, producto y precio, con Comprar y
-    /// Cancelar. Llama a <c>onClosed</c> una sola vez: true si el jugador confirma.
+    /// Cancelar; los textos, por sus claves (<see cref="SimulatedPurchase.LabelKey"/> y
+    /// <see cref="SimulatedPurchase.NameKey"/>). Llama a <c>onClosed</c> una sola vez: true si el jugador confirma.
     /// </summary>
     public interface ISimulatedPurchasePresenter
     {
@@ -80,7 +84,7 @@ namespace AF.IAP
 
     /// <summary>
     /// Compras simuladas de la fase 2 (D-008, aprobado por el dueño el 2026-10-08): sin Play Billing, sin red y sin
-    /// identificadores. <see cref="Purchase"/> pide a la UI la hoja «Compra simulada» con el nombre y el precio local;
+    /// identificadores. <see cref="Purchase"/> pide a la UI la hoja «Compra simulada» con la clave del nombre y el precio local;
     /// al confirmar se acredita con <see cref="StoreLedger.Fulfill"/> (<c>Wallet.Apply</c>); al cancelar no cambia nada,
     /// salvo anotar el rechazo si era la Balsa de rescate (04 §6.2). Una compra a la vez.
     /// </summary>

@@ -121,22 +121,55 @@ namespace AF.UI
 #endif
 
         /// <summary>
-        /// Resuelve el idioma de la UI y configura <see cref="Loc"/> (D-018, Q7-A; arquitectura de la tanda 4, §1): el de desarrollo
-        /// (<paramref name="devLanguage"/>, <c>af_lang</c>; solo con <paramref name="development"/>) y, si no vale, el automático.
-        /// Hoy el idioma guardado y el del teléfono aún no llegan (L3), y es-419 es el único idioma con la UI completa: la
-        /// resolución automática da es-419 (notas de la tanda 4, punto 10). <paramref name="development"/> es también
-        /// <c>showUnapproved</c>: enseña lo no aprobado, marca las claves que faltan y permite en-XA.
+        /// Resuelve el idioma de la UI y configura <see cref="Loc"/> sin idioma guardado ni del teléfono: como
+        /// <see cref="Configure(LocCatalog, string, string, string, bool)"/> con <c>settings.language</c> = auto y sin etiqueta del
+        /// teléfono (cifras de la región del idioma: es-419 → es-CO [P]).
         /// </summary>
         public static LocResolution Configure(LocCatalog catalog, string? devLanguage, bool development)
+        {
+            return Configure(catalog, devLanguage, null, null, development);
+        }
+
+        /// <summary>
+        /// Resuelve el idioma de la UI y configura <see cref="Loc"/> (D-018, Q7-A y Q8-A; arquitectura de la tanda 4, §1; tarea
+        /// L3): el de desarrollo (<paramref name="devLanguage"/>, <c>af_lang</c>; solo con <paramref name="development"/>) &gt; el
+        /// guardado (<paramref name="savedLanguage"/>, <c>settings.language</c>; <c>auto</c> no cuenta) &gt; el del teléfono
+        /// (<paramref name="deviceTag"/>, de <c>IDeviceLocale</c>) &gt; en, y solo un idioma con la UI completa (si no, es-419 [P]:
+        /// mientras EN y PT-BR no estén completos, el automático se queda en es-419; notas de la tanda 4, punto 10). Las cifras van
+        /// con la región del teléfono (<paramref name="deviceTag"/>; Q8-A) y, si no la trae («es», «en», «pt») o no hay etiqueta,
+        /// con la del idioma de la UI (es-419 → es-CO [P]; <see cref="NumberTag"/>). <paramref name="development"/> es también
+        /// <c>showUnapproved</c>: enseña lo no aprobado, marca las claves que faltan y permite en-XA.
+        /// </summary>
+        public static LocResolution Configure(LocCatalog catalog, string? devLanguage, string? savedLanguage, string? deviceTag, bool development)
+        {
+            LocResolution resolution = Resolve(catalog, devLanguage, savedLanguage, deviceTag, development);
+            // Sin región del teléfono («es», «en», «pt»…), las cifras no salen del idioma del teléfono sino del de la UI
+            // (LocLocale.DefaultNumberTag): con la UI en es-419, es-CO (notas de la tanda 4, punto 10; L3, cambio 3).
+            Loc.Configure(catalog, resolution.Locale, development, NumberTag(deviceTag));
+            return resolution;
+        }
+
+        /// <summary>
+        /// Etiqueta del teléfono para las cifras (Q8-A): la del teléfono si trae región («es-MX», «pt-BR»); si no («es», «en»,
+        /// «pt»), null, y <see cref="Loc"/> usa la del idioma de la UI (es-419 → es-CO [P]; notas de la tanda 4, punto 10).
+        /// </summary>
+        public static string? NumberTag(string? deviceTag)
+        {
+            return LocLocale.HasAnyRegion(deviceTag) ? deviceTag : null;
+        }
+
+        /// <summary>
+        /// El idioma que tocaría con estas fuentes, sin tocar <see cref="Loc"/> (el mismo orden que
+        /// <see cref="Configure(LocCatalog, string, string, string, bool)"/>): para decidir en Ajustes si elegir un idioma cambia la UI.
+        /// </summary>
+        public static LocResolution Resolve(LocCatalog catalog, string? devLanguage, string? savedLanguage, string? deviceTag, bool development)
         {
             if (catalog == null)
             {
                 throw new ArgumentNullException(nameof(catalog));
             }
 
-            LocResolution resolution = LocLocale.Resolve(catalog, development ? devLanguage : null, null, null, development);
-            Loc.Configure(catalog, resolution.Locale, development);
-            return resolution;
+            return LocLocale.Resolve(catalog, development ? devLanguage : null, savedLanguage, deviceTag, development);
         }
     }
 

@@ -168,15 +168,16 @@ namespace AF.IAP.Tests
         }
 
         [Test]
-        public void TheSheet_ShowsNameAndLocalPrice()
+        public void TheSheet_ShowsNameKeyAndLocalPrice()
         {
             var fx = new StoreFixture(currency: "COP");
 
             fx.Buy("af_coins_2");
 
             SimulatedPurchase sheet = fx.Presenter.Last!;
-            Assert.That(SimulatedPurchase.Label, Is.EqualTo("Compra simulada"));
-            Assert.That(sheet.Name, Is.EqualTo("Puñado de semillas"));
+            Assert.That(SimulatedPurchase.LabelKey, Is.EqualTo("iap_simulated_purchase"), "el rótulo, por clave (D-018)");
+            Assert.That(sheet.NameKey, Is.EqualTo("iap_af_coins_2_name"), "el nombre, por clave: el texto lo pone la UI");
+            Assert.That(sheet.Sku, Is.EqualTo("af_coins_2"));
             Assert.That(sheet.PriceText, Is.EqualTo("COP 3.900"));
             Assert.That(fx.Service.PriceOf("af_infinite_canoes_1h").ToString(), Is.EqualTo("COP 3.900"));
             Assert.Throws<ArgumentException>(() => new FakeStoreService(fx.Ledger, fx.Presenter, "EUR"));

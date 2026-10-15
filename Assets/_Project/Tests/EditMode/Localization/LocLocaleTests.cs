@@ -125,6 +125,9 @@ namespace AF.Tests.EditMode
             Assert.That(LocLocale.HasRegion("es-419", "419"), Is.True);
             Assert.That(LocLocale.HasRegion("pt_pt", "PT"), Is.True);
             Assert.That(LocLocale.HasRegion("en-u-ca-gregory", "CA"), Is.False, "una extensión no es la región");
+            Assert.That(LocLocale.HasAnyRegion("es-MX") && LocLocale.HasAnyRegion("es-419") && LocLocale.HasAnyRegion("zh-Hant-TW"), Is.True);
+            Assert.That(LocLocale.HasAnyRegion("es") || LocLocale.HasAnyRegion("pt") || LocLocale.HasAnyRegion("en-u-ca-gregory"), Is.False, "sin región");
+            Assert.That(LocLocale.HasAnyRegion(null) || LocLocale.HasAnyRegion(string.Empty), Is.False);
             Assert.That(LocLocale.IsPseudo("en-XA"), Is.True);
             Assert.That(LocLocale.IsPseudo("en-US"), Is.False);
         }
