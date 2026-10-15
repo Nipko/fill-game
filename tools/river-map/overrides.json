@@ -1,0 +1,35 @@
+{
+  "note": "Decisiones [P] de P-M1 (a) que rio-amazonas.json no lleva en sus campos. Las aplica tools/river-map/stops.py, y su --check falla si una entrada no corresponde a ninguna parada o lleva un campo desconocido (campos admitidos: country, country_name, name, river y why). name y river sustituyen al nombre y al río de la investigación en las filas map.stop.<id>.name y map.stop.<id>.river de facts.csv (M1.1t): el río va en {río} de map_arrived («{lugar} · {país} · río {río}», glosario §10), así que es solo el nombre del río, sin «río» ni descripciones (--check falla si el río lleva paréntesis, empieza por «río» o por minúscula).",
+  "stops": {
+    "belem": {
+      "river": "Pará",
+      "why": "rio-amazonas.json dice «Pará (estuario)», y la descripción entre paréntesis no va en «río {río}» de map_arrived (quedaría «Belém · Brasil · río Pará (estuario)»): queda el nombre del río, el Pará (su ancla_rio). Pendiente del asesor cultural (07 §8.2)."
+    },
+    "nauta": {
+      "name": "Nauta",
+      "why": "Nombre de la parada 17 en 07 §2.1 («Nauta», rótulo «Nauta · Perú»). rio-amazonas.json dice «Nauta: nace el nombre», que es la nota de diseño del clímax del nombre (propuesta del Mapa §5.3), no el rótulo."
+    },
+    "pacaya_alba": {
+      "river": "Marañón y Ucayali",
+      "why": "rio-amazonas.json dice «cochas entre el Marañón y el Ucayali», que no cabe en «río {río}» de map_arrived ni en 32 caracteres [P]: quedan los dos ríos que nombra la investigación, como en Nauta (n = 17). Pendiente del asesor cultural (07 §8.2)."
+    },
+    "pacaya_samiria": {
+      "river": "Marañón y Ucayali",
+      "why": "rio-amazonas.json dice «cochas entre el Marañón y el Ucayali», que no cabe en «río {río}» de map_arrived ni en 32 caracteres [P]: quedan los dos ríos que nombra la investigación, como en Nauta (n = 17). Pendiente del asesor cultural (07 §8.2)."
+    },
+    "rio_frontera": {
+      "country": "CO",
+      "country_name": "map.stop.rio_frontera.country",
+      "name": "El río frontera",
+      "why": "La parada 13 (El río frontera, boca del Atacuari) tiene a Colombia en una orilla y al Perú en la otra: rio-amazonas.json dice «CO/PE». P-M1 (a): country = CO, el país del mundo 4 (la bandera del Perú se iza al llegar a Iquitos, n = 14), y la placa nombra los dos países con la clave country_name («Colombia y Perú», que stops.py escribe en facts.csv desde «CO/PE») [P]. El nombre es el de 07 §2.1 (rótulo «El río frontera · Colombia y Perú»): «El río frontera (boca del Atacuari)» de la investigación pasa de 32 caracteres [P]."
+    },
+    "tarapoto": {
+      "river": "Amazonas",
+      "why": "rio-amazonas.json dice «lagos de la várzea del Amazonas», que no es un río para «río {río}» de map_arrived: queda el río de esos lagos, el Amazonas (su ancla_rio). Pendiente del asesor cultural (07 §8.2)."
+    },
+    "tefe": {
+      "river": "Tefé",
+      "why": "rio-amazonas.json dice «lago de Tefé (río Tefé, junto al Solimões)», que no cabe en «río {río}» de map_arrived ni en 32 caracteres [P]: queda el río que nombra la propia investigación, el Tefé (su dato de llegada: «El río Tefé es de agua negra…»). Pendiente del asesor cultural (07 §8.2)."
+    }
+  }
+}

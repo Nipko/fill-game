@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections;
 using System.IO;
+using AF.Localization;
 using AF.Presentation;
 using AF.UI;
 using UnityEngine;
@@ -10,9 +11,11 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Utilidades de las capturas visuales de revisión (<c>[Explicit]</c>; las usan <see cref="VisualSnapshotTests"/> y los
     /// archivos de capturas de cada tarea): una cámara y una textura de 1080 × 2340 px (20:9 aprox., 360 × 780 dp) con zona
-    /// segura, el ambiente congelado (guía visual v2, 9) y los PNG en <c>Logs/snapshots/</c> (ignorada por git). Necesitan
-    /// gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter &lt;Fixture&gt;</c> sin <c>-nographics</c>. Quien llama a
-    /// <see cref="Prepare"/> llama a <see cref="Release"/> en su <c>[TearDown]</c>.
+    /// segura, el ambiente congelado (guía visual v2, 9) y los PNG en <c>Logs/snapshots/&lt;idioma&gt;/</c> (ignorada por git;
+    /// propuesta de idiomas §3.8; tarea L2b): <c>es-419</c> por defecto y, con <see cref="Prepare(string)"/>, el idioma de la
+    /// captura (<c>en-XA</c> para la pseudolocalización). Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
+    /// &lt;Fixture&gt;</c> sin <c>-nographics</c>. Quien llama a <see cref="Prepare()"/> llama a <see cref="Release"/> en su
+    /// <c>[TearDown]</c>.
     /// </summary>
     public static class SnapshotKit
     {
@@ -24,16 +27,38 @@ namespace AF.Tests.PlayMode
 
         private static Camera? s_camera;
         private static RenderTexture? s_target;
+        private static string s_locale = LocLocale.SourceLocale;
 
-        /// <summary>Cámara de las capturas (null antes de <see cref="Prepare"/> y después de <see cref="Release"/>).</summary>
+        /// <summary>Cámara de las capturas (null antes de <see cref="Prepare()"/> y después de <see cref="Release"/>).</summary>
         public static Camera? CaptureCamera => s_camera;
 
+        /// <summary>Idioma de las capturas (el de <see cref="Prepare(string)"/>; es-419 por defecto).</summary>
+        public static string Locale => s_locale;
+
         /// <summary>
-        /// Cámara y textura de las capturas (1080 × 2340 px, 20:9 aprox., 360 × 780 dp) con zona segura y el ambiente congelado;
-        /// devuelve la carpeta de las capturas.
+        /// Cámara y textura de las capturas (1080 × 2340 px, 20:9 aprox., 360 × 780 dp) con zona segura y el ambiente congelado,
+        /// en es-419; devuelve la carpeta de las capturas (<c>Logs/snapshots/es-419/</c>).
         /// </summary>
         public static string Prepare()
         {
+            return Prepare(LocLocale.SourceLocale);
+        }
+
+        /// <summary>
+        /// Como <see cref="Prepare()"/>, con las capturas en <paramref name="locale"/> (D-018; propuesta de idiomas §3.8): fija el
+        /// idioma de desarrollo de la escena (<see cref="LaunchOptions.LanguageOverride"/>, el de <c>af_lang</c>) y el de
+        /// <see cref="Loc"/>, y devuelve <c>Logs/snapshots/&lt;locale&gt;/</c>. Con en-XA todo texto de la tabla sale entre
+        /// corchetes. Quien llame a <see cref="LaunchOptions.Reset"/> después lo vuelve a es-419 en las escenas que cargue.
+        /// </summary>
+        public static string Prepare(string locale)
+        {
+            s_locale = locale;
+            LaunchOptions.LanguageOverride = locale == LocLocale.SourceLocale ? null : locale;
+            if (Loc.IsConfigured && Loc.Locale != locale)
+            {
+                Loc.SetLocale(locale);
+            }
+
             GameScreen.SimulatedScreen = new Vector4(Width, Height, 96f, 48f); // 32 dp de cutout arriba, 16 dp de gestos abajo
             AmbientLayer.Frozen = true;
             s_target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
@@ -45,16 +70,26 @@ namespace AF.Tests.PlayMode
             s_camera.backgroundColor = Color.black;
             s_camera.orthographic = true;
             s_camera.enabled = false;
-            string dir = Path.Combine(Application.dataPath, "../Logs/snapshots");
+            string dir = Path.Combine(Application.dataPath, "../Logs/snapshots", locale);
             Directory.CreateDirectory(dir);
             return dir;
         }
 
-        /// <summary>Deshace <see cref="Prepare"/>: pantalla real, ambiente vivo y sin cámara ni textura.</summary>
+        /// <summary>
+        /// Deshace <see cref="Prepare()"/>: pantalla real, ambiente vivo, sin cámara ni textura y los textos otra vez en es-419
+        /// (<see cref="LocSetUpFixture.ConfigureEs419"/>).
+        /// </summary>
         public static void Release()
         {
             GameScreen.SimulatedScreen = null;
             AmbientLayer.Frozen = false;
+            if (s_locale != LocLocale.SourceLocale || (Loc.IsConfigured && Loc.Locale != LocLocale.SourceLocale))
+            {
+                LaunchOptions.LanguageOverride = null;
+                LocSetUpFixture.ConfigureEs419();
+            }
+
+            s_locale = LocLocale.SourceLocale;
             if (s_camera != null)
             {
                 Object.Destroy(s_camera.gameObject);

@@ -13,8 +13,8 @@ namespace AF.UI.Editor
     /// Genera la escena <c>Assets/_Project/Scenes/Game.unity</c> del prototipo v0 (docs/dev/prototipo-v0.md c) y la
     /// deja como la única de Build Settings. La escena es casi vacía (.claude/rules/unity-assets.md): cámara, EventSystem
     /// con <see cref="InputSystemUIInputModule"/> y <see cref="GameBootstrap"/> enlazado a los paquetes de niveles
-    /// (<see cref="LevelPackPaths"/>); la UI se
-    /// construye por código en tiempo de ejecución. Es la forma versionada de crear la escena (CLAUDE.md, regla dura 3).
+    /// (<see cref="LevelPackPaths"/>), al catálogo de miquitos y a las tablas de textos (<see cref="LocTables"/>; tarea L2b); la
+    /// UI se construye por código en tiempo de ejecución. Es la forma versionada de crear la escena (CLAUDE.md, regla dura 3).
     ///
     /// Uso en batchmode (sin ningún Editor abierto en la carpeta; <c>x86_64</c> en un equipo x64):
     ///   unity run &lt;repo&gt; --architecture arm64 --log-file Logs/game-scene.log --non-interactive
@@ -127,6 +127,16 @@ namespace AF.UI.Editor
             }
 
             bootstrap.ConfigureFauna(fauna);
+
+            // Tablas de textos (D-018; 08 §4.7): sin ellas el juego arranca, avisa y va sin textos (GameBootstrap).
+            TextAsset? strings = AssetDatabase.LoadAssetAtPath<TextAsset>(LocTables.StringsAssetPath);
+            TextAsset? facts = AssetDatabase.LoadAssetAtPath<TextAsset>(LocTables.FactsAssetPath);
+            if (strings == null || facts == null)
+            {
+                Debug.LogWarning(LogPrefix + "no existen las tablas de textos " + LocTables.StringsAssetPath + " y " + LocTables.FactsAssetPath + ": la UI irá sin textos.");
+            }
+
+            bootstrap.ConfigureLocalization(strings, facts);
             EditorUtility.SetDirty(bootstrap);
 
             if (!EditorSceneManager.SaveScene(scene, ScenePath))

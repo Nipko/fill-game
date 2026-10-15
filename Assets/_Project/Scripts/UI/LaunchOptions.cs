@@ -16,10 +16,11 @@ namespace AF.UI
     /// <c>adb shell am start ... --ei af_level N</c>, docs/dev/prototipo-v0.md c; <c>af_rules_pour_mode</c>, modo de
     /// vertido, <c>--es af_rules_pour_mode single</c> para probar el modo de pruebas, D-005; y <c>af_level_offset</c> [P],
     /// <c>--ei af_level_offset 30</c>, que desplaza los números de nivel para probar las compuertas de 11, 22 y 31 con los
-    /// tableros del tutorial, tarea B1-5; y, para probar el embudo y los anuncios en el teléfono [P], tarea B2-6:
-    /// <c>af_seeds</c>, <c>af_canoes</c> y <c>af_ads_fill</c>) y los ganchos de los tests PlayMode (nivel de arranque, modo de
-    /// vertido, progreso, perfil y reloj en memoria, desplazamiento y paquete de niveles). <see cref="GameBootstrap"/> los lee
-    /// al arrancar; los tests los quitan con <see cref="Reset"/>.
+    /// tableros del tutorial, tarea B1-5; para probar el embudo y los anuncios en el teléfono [P], tarea B2-6:
+    /// <c>af_seeds</c>, <c>af_canoes</c> y <c>af_ads_fill</c>; y el idioma de desarrollo <c>af_lang</c>, tarea L2b) y los ganchos
+    /// de los tests PlayMode (nivel de arranque, modo de vertido, progreso, perfil y reloj en memoria, desplazamiento, paquete de
+    /// niveles, idioma y tablas de textos). <see cref="GameBootstrap"/> los lee al arrancar; los tests los quitan con
+    /// <see cref="Reset"/>.
     /// </summary>
     public static class LaunchOptions
     {
@@ -58,6 +59,13 @@ namespace AF.UI
         /// <c>fill</c>, <c>no_fill</c> o <c>error</c> (<c>--es af_ads_fill no_fill</c>). Nunca en release.
         /// </summary>
         public const string IntentExtraAdsFill = "af_ads_fill";
+
+        /// <summary>
+        /// Extra de intent (string) de los builds de desarrollo (D-018; tarea L2b): el idioma de la UI, primero en la resolución
+        /// (dev &gt; guardado &gt; teléfono &gt; en), p. ej. <c>--es af_lang en-XA</c> (pseudolocalización: todo entre corchetes).
+        /// Solo vale un idioma con la UI completa o en-XA; si no, el automático. Nunca en release.
+        /// </summary>
+        public const string IntentExtraLanguage = "af_lang";
 
         /// <summary>Nivel de arranque forzado por un test (0 = ninguno).</summary>
         public static int StartLevelOverride { get; set; }
@@ -134,6 +142,19 @@ namespace AF.UI
         public static float? BannerArtTimeoutMsOverride { get; set; }
 
         /// <summary>
+        /// Idioma de desarrollo forzado por un test (el de <c>af_lang</c>: «en-XA» para la pseudolocalización); null = ninguno.
+        /// Solo cuenta en desarrollo (<see cref="Debug.isDebugBuild"/>, también en el Editor).
+        /// </summary>
+        public static string? LanguageOverride { get; set; }
+
+        /// <summary>
+        /// Tablas de textos que sustituyen a los TextAsset de la escena (tarea L2b, punto 4): para arrancar sin tablas o con una
+        /// rota y comprobar que el juego construye la UI igual (<see cref="LocTables.FromTextsOrEmpty"/>). Null = las de la escena.
+        /// Solo tests: ningún extra de intent lo rellena.
+        /// </summary>
+        public static LocTableTexts? LocTablesOverride { get; set; }
+
+        /// <summary>
         /// Moneda de los precios simulados [P]: COP (05 §4.2; los wireframes de 04 §6.6 usan pesos colombianos) mientras no
         /// haya precios de la tienda real.
         /// </summary>
@@ -157,6 +178,23 @@ namespace AF.UI
             BannerArtSyncOverride = null;
             BannerArtFaultOverride = null;
             BannerArtTimeoutMsOverride = null;
+            LanguageOverride = null;
+            LocTablesOverride = null;
+        }
+
+        /// <summary>
+        /// Idioma de desarrollo (D-018; tarea L2b): el del test (<see cref="LanguageOverride"/>) o, si no, el del extra
+        /// <c>af_lang</c> (solo builds de desarrollo en Android); null si no hay. Fuera de desarrollo, siempre null.
+        /// </summary>
+        public static string? ResolveDevLanguage()
+        {
+            if (!Debug.isDebugBuild)
+            {
+                return null;
+            }
+
+            string? value = LanguageOverride ?? ReadIntentString(IntentExtraLanguage);
+            return string.IsNullOrWhiteSpace(value) ? null : value!.Trim();
         }
 
         /// <summary>

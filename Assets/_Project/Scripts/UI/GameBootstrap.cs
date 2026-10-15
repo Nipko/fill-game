@@ -7,6 +7,7 @@ using AF.Economy;
 using AF.GameFlow;
 using AF.IAP;
 using AF.Levels;
+using AF.Localization;
 using AF.Platform;
 using AF.Presentation;
 using AF.Save;
@@ -21,11 +22,12 @@ namespace AF.UI
     /// niveles (TextAsset) y arma el catálogo (tarea B1-5), carga el perfil local (<c>AF.Save</c>, migrando una vez el
     /// <c>af_v0_level</c> de v0), crea la cartera, los anuncios y la tienda simulados (<c>AF.Ads</c> y <c>AF.IAP</c>, sin SDK:
     /// D-008), genera los gráficos provisionales, construye las pantallas de inicio y de nivel, el <see cref="LevelFlow"/> y el
-    /// <see cref="AppFlow"/> y los hace avanzar cada fotograma. La primera vez entra directamente al nivel 1; con un nivel en
-    /// curso guardado (<c>level_state</c>, tarea B2-5), lo reabre tal cual; si no, la pantalla de inicio. Conecta AD_GATE con
-    /// los anuncios simulados (<see cref="InterstitialGate"/>, tarea B2-4) y la sonda de desarrollo con cada anuncio y
-    /// compra. Sus métodos públicos de input (<see cref="IGameActions"/>) son los mismos que llaman los toques y los tests
-    /// PlayMode.
+    /// <see cref="AppFlow"/> y los hace avanzar cada fotograma. Configura los textos (<see cref="Loc"/>, con las tablas de
+    /// <c>Data/Loc/</c>; tarea L2b) después de leer el perfil y antes de construir la UI. La primera vez entra directamente al
+    /// nivel 1; con un nivel en curso guardado (<c>level_state</c>, tarea B2-5), lo reabre tal cual; si no, la pantalla de
+    /// inicio. Conecta AD_GATE con los anuncios simulados (<see cref="InterstitialGate"/>, tarea B2-4) y la sonda de desarrollo
+    /// con cada anuncio y compra. Sus métodos públicos de input (<see cref="IGameActions"/>) son los mismos que llaman los
+    /// toques y los tests PlayMode.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class GameBootstrap : MonoBehaviour, IAppFlowListener, IGameActions
@@ -43,6 +45,12 @@ namespace AF.UI
 
         [SerializeField]
         private TextAsset? faunaCatalog;
+
+        [SerializeField]
+        private TextAsset? stringsTable;
+
+        [SerializeField]
+        private TextAsset? factsTable;
 
         private static ProceduralArt? s_art;
         private static string? s_artKey;
@@ -165,6 +173,22 @@ namespace AF.UI
         public void ConfigureFauna(TextAsset? catalog)
         {
             faunaCatalog = catalog;
+        }
+
+        /// <summary>Tabla de textos de la UI asignada (<c>strings.csv</c>; escena generada por <c>GameSceneBuilder</c>).</summary>
+        public TextAsset? StringsTableAsset => stringsTable;
+
+        /// <summary>Tabla de textos largos asignada (<c>facts.csv</c>; escena generada por <c>GameSceneBuilder</c>).</summary>
+        public TextAsset? FactsTableAsset => factsTable;
+
+        /// <summary>Idioma de la UI resuelto al arrancar y de dónde salió (null hasta <c>Start</c>; sonda <c>AF_STATE loc</c>).</summary>
+        public LocResolution? Locale { get; private set; }
+
+        /// <summary>Asigna las tablas de textos (D-018; 08 §4.7; escena generada por <c>GameSceneBuilder</c>).</summary>
+        public void ConfigureLocalization(TextAsset? strings, TextAsset? facts)
+        {
+            stringsTable = strings;
+            factsTable = facts;
         }
 
         /// <summary>Asigna el paquete de niveles (escena generada por <c>GameSceneBuilder</c>).</summary>
@@ -689,6 +713,10 @@ namespace AF.UI
             _profile = profile;
             _profileStore = store;
 
+            // Textos (D-018; tarea L2b): con el perfil leído y antes de construir ninguna pantalla. Hoy el idioma lo decide el de
+            // desarrollo (af_lang) o, si no, el automático, que da es-419 (el guardado y el del teléfono llegan con L3).
+            LocResolution locale = SetUpTexts();
+
             // Cartera, progreso, nivel en curso, anuncios y tienda guardan el mismo perfil por el lote: dentro de una acción del
             // jugador (vertido, victoria, rescate, rendición, compra, anuncio) el perfil se escribe una sola vez (revisión B2-5).
             // Con el perfil en disco (LocalProfileStore), el lote escribe en segundo plano (T-D): el vertido solo serializa en el
@@ -700,6 +728,7 @@ namespace AF.UI
 
             _art = SharedArt(catalog.WaterBase);
             _probe = new DevProbe();
+            _probe.LocaleState(locale);
 
             // Anuncios y compras simulados (D-008 puntos 4 y 5; sin SDK, red ni identificadores): sus pantallas van en lienzos
             // propios por encima de todo; los tests las sustituyen por presentadores inmediatos (LaunchOptions).
@@ -822,6 +851,40 @@ namespace AF.UI
                 _screen.SettleReveal();
                 _flow.ClearSelection();
             }
+        }
+
+        // Tablas de textos de la escena (o las del test, LaunchOptions.LocTablesOverride) → Loc (D-018; 08 §4.7). Si faltan o no
+        // se pueden leer, LocTables.FromTextsOrEmpty decide sin lanzar (Loc sin textos en es-419, el idioma de respaldo del
+        // código, LocLocale.FallbackLocale: en desarrollo cada texto se ve como «[clave]» y en release, vacío; nunca un texto en
+        // otro idioma) y aquí solo se registra el aviso o el error.
+        private LocResolution SetUpTexts()
+        {
+            bool development = Debug.isDebugBuild;
+            string? devLanguage = LaunchOptions.ResolveDevLanguage();
+            string? warning;
+            string? error;
+            LocTableTexts? test = LaunchOptions.LocTablesOverride;
+            LocCatalog catalog = test != null
+                ? LocTables.FromTextsOrEmpty(test.Strings, test.Facts, out warning, out error)
+                : LocTables.FromAssetsOrEmpty(stringsTable, factsTable, out warning, out error);
+            if (error != null)
+            {
+                Debug.LogError(LogPrefix + error);
+            }
+
+            if (warning != null)
+            {
+                Debug.LogWarning(LogPrefix + warning);
+            }
+
+            LocResolution resolution = LocTables.Configure(catalog, devLanguage, development);
+            if (devLanguage != null && resolution.Source != LocSource.Dev)
+            {
+                Debug.LogWarning(LogPrefix + LaunchOptions.IntentExtraLanguage + " = \"" + devLanguage + "\" no tiene la UI completa: se usa " + resolution.Locale + ".");
+            }
+
+            Locale = resolution;
+            return resolution;
         }
 
         // Catálogo de miquitos de la escena (af-fauna/0). Si falta o no valida, la intro va siempre en modo dosel (sin tropa).

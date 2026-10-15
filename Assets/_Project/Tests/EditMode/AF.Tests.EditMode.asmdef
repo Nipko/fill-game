@@ -16,7 +16,8 @@
     "AF.Boosters",
     "AF.Ads",
     "AF.IAP",
-    "AF.EditorTools"
+    "AF.EditorTools",
+    "AF.Localization"
   ],
   "includePlatforms": [
     "Editor"
