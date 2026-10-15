@@ -125,6 +125,16 @@ UiText.KeepPlaying	Seguir jugando
 UiText.Language	Idioma
 UiText.LevelComplete	¡Nivel completado!
 UiText.LevelFailed	Nivel fallido
+UiText.MapBackToCanoe	Volver a la canoa
+UiText.MapBackToLevel	Volver al nivel
+UiText.MapCardOtherFact	Otro dato
+UiText.MapL10Intro	Yo vivo aquí, donde el río entra al mar.
+UiText.MapLabelAndes	Andes ↑
+UiText.MapLabelAtlantic	Océano Atlántico ↓
+UiText.MapNorthUp	Norte arriba
+UiText.MapOpen	Ver mapa
+UiText.MapViewBasin	Cuenca
+UiText.MapViewWorld	Mundo
 UiText.Next	Siguiente
 UiText.NoCanoesNext	Tu próxima canoa vuelve en
 UiText.NoCanoesTitle	Sin canoas

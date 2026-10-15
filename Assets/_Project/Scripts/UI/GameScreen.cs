@@ -416,6 +416,8 @@ namespace AF.UI
             _troop.Layer.SetSiblingIndex(_foliage[0].transform.GetSiblingIndex());
             _intro.Troop = _troop;
             _intro.AttachFront(_troop.WaterSlot);
+            _troop.PlaceSideLayer(_board); // tropa lateral (D-021): delante del panel y del marco, detrás de las cuias (OrderBoardLayers)
+            _intro.AttachFrameSides(_troop.SideWaterSlot); // el agua de los costados del marco, por detrás de la liana lateral (TL1)
 
             // ---- Accesorio del muelle (capa 8): el poste, fuera de las zonas táctiles. Ninguna mascota fija en el muelle durante
             // la partida (D-016, T5-B; 02 §5): Capi ya no se dibuja aquí; solo entra con la Cuia extra, la de rescate y el banner
@@ -1937,6 +1939,7 @@ namespace AF.UI
 
             input.FrameDp = PanelFrameDp;
             input.HudBottom = BoardTop;
+            input.TrayTop = TrayTop;
             input.CanvasWidth = _canvasW;
             input.Seed = flow.LevelNumber;
             // En release, sin su arte final: dosel, nunca la especie de otro mundo (guion §4.3); la regla, en FaunaArtAvailable.
@@ -1944,7 +1947,9 @@ namespace AF.UI
             bool art = candidate != null && FaunaArtAvailable(candidate, false);
             FaunaSpecies? species = IntroCast.Resolve(Fauna, flow.Level.World, flow.LevelNumber, isShort ? 2 : 1, art);
             _introSpecies = species;
-            input.Perch = species != null ? IntroPerch.Branch : IntroPerch.Canopy;
+            // Con 3 filas, la tropa lateral en los niveles que le tocan (D-021; IntroSideSchedule); si no cabe, el planificador
+            // vuelve a la regla de D-010 (rama con franja ≥ 44 dp; si no, dosel).
+            input.Perch = species == null ? IntroPerch.Canopy : (SideTroopFor(flow, isShort) ? IntroPerch.Side : IntroPerch.Branch);
             if (species != null)
             {
                 input.Model = species.Model == FaunaModel.Hang ? TroopModel.Hang : (species.Model == FaunaModel.Shake ? TroopModel.Shake : TroopModel.Row);
@@ -1960,6 +1965,72 @@ namespace AF.UI
             Color water = Palette.WaterBase(flow.Level.WaterBase);
             IntroWaterColor = water;
             _intro.Start(_views, flow.Session.Current, water, durationMs);
+        }
+
+        // D-021: ¿va este intento con la tropa lateral? Solo en primer intento, con el tablero en 3 filas y según el ordinal del
+        // nivel entre los de 3 filas de su tramo (IntroSideSchedule), con la misma regla de filas del tablero en este lienzo.
+        private bool SideTroopFor(LevelFlow flow, bool retry)
+        {
+            BoardLayoutResult? l = _layout;
+            if (retry || l == null || l.Rows != 3)
+            {
+                return false;
+            }
+
+            int ordinal = ThreeRowOrdinal(flow.Catalog, Fauna, flow.LevelNumber, _canvasW, BoardTop, BoardBottom);
+            return IntroSideSchedule.IsSide(ordinal, retry);
+        }
+
+        /// <summary>
+        /// El nivel <paramref name="def"/> va en 3 filas en un lienzo de <paramref name="canvasWidth"/> dp con el tablero entre
+        /// <paramref name="boardTop"/> y <paramref name="boardBottom"/> (la regla de <see cref="BoardLayout.RowsFor"/> con sus
+        /// cuias generadas y la cuia más alta). Sin asignaciones.
+        /// </summary>
+        internal static bool HasThreeRows(LevelDefinition def, float canvasWidth, float boardTop, float boardBottom)
+        {
+            int count = def.CuiaCount;
+            if (count < 1 || count > 16)
+            {
+                return false;
+            }
+
+            float heightU = 0f;
+            for (int i = 0; i < count; i++)
+            {
+                heightU = Mathf.Max(heightU, CuiaGeometry.HeightU(def.CapacityOf(i)));
+            }
+
+            return BoardLayout.RowsFor(count, heightU, canvasWidth, boardTop, boardBottom) == 3;
+        }
+
+        /// <summary>
+        /// Ordinal del nivel <paramref name="level"/> entre los niveles de 3 filas de su tramo (D-021; el mundo y, dentro de él,
+        /// la especie del nivel si empieza más tarde: <see cref="IntroSideSchedule.SegmentStart"/>), contando desde 0; −1 si no
+        /// está en el catálogo o no va en 3 filas. Determinista por el número de nivel y el lienzo. Sin asignaciones.
+        /// </summary>
+        internal static int ThreeRowOrdinal(LevelCatalog catalog, FaunaCatalog? fauna, int level, float canvasWidth, float boardTop, float boardBottom)
+        {
+            LevelDefinition? def = catalog.Find(level);
+            if (def == null || !HasThreeRows(def, canvasWidth, boardTop, boardBottom))
+            {
+                return -1;
+            }
+
+            int world = def.World;
+            int worldFirst = world >= 1 && world <= WorldTable.WorldCount ? WorldTable.FirstLevel(world) : catalog.FirstLevel;
+            FaunaSpecies? species = fauna?.ForLevel(level);
+            int start = IntroSideSchedule.SegmentStart(level, worldFirst, species != null ? species.FromLevel : worldFirst);
+            int ordinal = 0;
+            for (int n = start; n < level; n++)
+            {
+                LevelDefinition? other = catalog.Find(n);
+                if (other != null && other.World == world && HasThreeRows(other, canvasWidth, boardTop, boardBottom))
+                {
+                    ordinal++;
+                }
+            }
+
+            return ordinal;
         }
 
         /// <summary>
