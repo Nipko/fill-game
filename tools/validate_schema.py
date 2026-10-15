@@ -26,9 +26,9 @@ Casos (contrato 21 del GDD; docs/gdd/08-arquitectura-tecnica-publicacion.md §4.
         del 2026-10-14, opcion a de la revision de P2a; 08 §4.1): con pack_schema 3, relief_board lleva hidden si y solo
         si su attrs contiene la tinaja (obligatorio y no vacio, como mucho 4 pares); sin la tinaja (Aguas turbias
         incluidas) y con pack_schema 1 y 2, relief_board no admite hidden;
-    (g) pack_schema 3, paso 2 (P2b; firma de la pregunta 8 del plan de la tanda 4; 02 §9.1 y propuesta de D-007, b.3):
+    (g) pack_schema 3, paso 2 (P2b; D-023, punto 5; 02 §9.1 y propuesta de D-007, b.3):
         hoja_atada exige key; el Brote admite n 1 o 2 (Brote de dos hojas); flor exige key y key2, con key distinta de
-        key2 [P]; intro_mechanic hoja_atada, flor, brote_n2 [P] y liana_n [P]; key2 solo en la Flor. Con pack_schema 1 y
+        key2; intro_mechanic hoja_atada, flor, brote_n2 [P] y liana_n [P]; key2 solo en la Flor. Con pack_schema 1 y
         2 nada de eso valida (hoja_atada en un pack 2 falla) y lo demas sigue igual (el 2 no restringe el n del Brote).
 
 Imprime PASS/FAIL por caso y termina con codigo 1 si alguno falla. Requiere jsonschema >= 4.18.
@@ -474,8 +474,8 @@ def main() -> int:
     d["levels"][0]["relief"][0]["hidden"] = [[0, 1], [0, 0]]
     check(validator, "f32", "pack 1: hidden en una variante de relief", d, False)
 
-    # (g) pack_schema 3, paso 2 (P2b; firma de la pregunta 8 del plan de la tanda 4; 02 §9.1 y propuesta de D-007, b.3;
-    # contrato 21): hoja_atada {key}, Brote con n 1 o 2, flor {key, key2} con key distinta de key2 [P] e intro_mechanic
+    # (g) pack_schema 3, paso 2 (P2b; D-023, punto 5; 02 §9.1 y propuesta de D-007, b.3;
+    # contrato 21): hoja_atada {key}, Brote con n 1 o 2, flor {key, key2} con key distinta de key2 e intro_mechanic
     # hoja_atada, flor, brote_n2 [P] y liana_n [P]; nada de eso valida con pack_schema 1 y 2.
     def variant_level(level: int, mech: dict | None, intro, pack: int = 3) -> dict:
         """pack2_level en el mundo de la variante: Oriente (201-300) o Madre de Dios (301-420)."""
@@ -506,9 +506,9 @@ def main() -> int:
           variant_level(403, flor, "flor"), True)
     check(validator, "g13", "pack 3: Flor sin key2", variant_level(403, {"type": "flor", "key": 3}, "flor"), False)
     check(validator, "g14", "pack 3: Flor sin key", variant_level(403, {"type": "flor", "key2": 4}, "flor"), False)
-    check(validator, "g15", "pack 3: Flor con key = key2 = 3 [P]",
+    check(validator, "g15", "pack 3: Flor con key = key2 = 3",
           variant_level(403, {"type": "flor", "key": 3, "key2": 3}, "flor"), False)
-    check(validator, "g16", "pack 3: Flor con key = key2 = 16 (el ultimo indice de motor) [P]",
+    check(validator, "g16", "pack 3: Flor con key = key2 = 16 (el ultimo indice de motor)",
           variant_level(403, {"type": "flor", "key": 16, "key2": 16}, "flor"), False)
     check(validator, "g17", "pack 3: Flor con key2 = 17 (fuera de tint_index)",
           variant_level(403, {"type": "flor", "key": 3, "key2": 17}, "flor"), False)
