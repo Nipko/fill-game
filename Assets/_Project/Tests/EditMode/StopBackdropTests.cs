@@ -173,12 +173,186 @@ namespace AF.Tests.EditMode
             Assert.That(_b.HeroReflectionClip.sizeDelta.y, Is.EqualTo(44f), "recortado a 44 dp");
             Assert.That(-_b.HeroReflectionClip.anchoredPosition.y, Is.EqualTo(Horizon2).Within(0.001f), "desde el horizonte");
             Assert.That(_b.HeroReflectionClip.GetComponent<RectMask2D>(), Is.Not.Null);
+            Assert.That(_b.HeroReflection.gameObject.activeSelf, Is.True, "el reflejo se ve");
             Assert.That(_b.HeroReflection.color.a, Is.EqualTo(0.35f).Within(0.0001f));
+            Assert.That(_b.HeroReflectionFade.FadeDp, Is.EqualTo(44f).Within(0.0001f), "se apaga a los 44 dp");
             Assert.That(_b.HeroReflection.transform.localScale.y, Is.EqualTo(-1f), "volteado");
             Assert.That(_b.HeroReflection.raycastTarget, Is.False);
 
             Show(4);
             Assert.That(_b.HeroImage.gameObject.activeSelf, Is.False, "el Encuentro no tiene PNG de héroe");
+        }
+
+        [Test]
+        public void VA21_ThePngReflection_FadesWithDepth_EvenForABlackAndWhiteHero()
+        {
+            // El peor héroe posible: la mitad blanca y la mitad negra, en columnas (cada fila tiene los dos).
+            const int texW = 720;
+            const int texH = 240;
+            _pngTexture = new Texture2D(texW, texH, TextureFormat.RGBA32, false);
+            var pixels = new Color32[texW * texH];
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                pixels[i] = (i % texW) < (texW / 2) ? new Color32(255, 255, 255, 255) : new Color32(0, 0, 0, 255);
+            }
+
+            _pngTexture.SetPixels32(pixels);
+            _pngTexture.Apply();
+            _png = Sprite.Create(_pngTexture, new Rect(0f, 0f, texW, texH), new Vector2(0.5f, 0.5f), 300f);
+            StopBackdrop.HeroSpriteOverride = _ => _png;
+
+            Color[] texels = { Color.white, Color.black };
+            int checkedStops = 0;
+            for (int n = 0; n < Stops.Count; n++)
+            {
+                Show(n);
+                if (_b.HeroSource != StopBackdrop.HeroPng)
+                {
+                    continue; // las piezas por código no tienen PNG
+                }
+
+                checkedStops++;
+                Image reflection = _b.HeroReflection;
+                Assert.That(reflection.gameObject.activeInHierarchy, Is.True, "parada " + n);
+                using (var vh = new VertexHelper())
+                {
+                    ReflectionMesh(reflection, vh);
+                    Assert.That(vh.currentVertCount, Is.EqualTo(8), "parada " + n + ": cuatro filas (orilla, línea del agua, 44 dp y arriba)");
+                    Assert.That(AlphaAtDepth(vh, 0f), Is.EqualTo(0.35f).Within(0.005f), "parada " + n + ": en la línea del agua");
+                    Assert.That(AlphaAtDepth(vh, 44f), Is.EqualTo(0f).Within(0.005f), "parada " + n + ": a los 44 dp");
+
+                    // VA-21: en los 16 dp de encima del panel, el blanco y el negro del reflejo sobre el agua, a ΔL* ≤ 30.
+                    Color preset = _b.BandColor;
+                    float presetL = ColorMath.LabLightness(preset);
+                    foreach (float y in new[] { PanelTop2 - 16f, PanelTop2 - 8f, PanelTop2 })
+                    {
+                        float alpha = AlphaAtDepth(vh, y - Horizon2);
+                        foreach (Color texel in texels)
+                        {
+                            Color seen = ColorMath.CompositeLinear(texel, alpha, preset);
+                            Assert.That(Mathf.Abs(ColorMath.LabLightness(seen) - presetL), Is.LessThanOrEqualTo(30f),
+                                "parada " + n + ", y " + y + ", alfa " + alpha);
+                        }
+                    }
+                }
+            }
+
+            Assert.That(checkedStops, Is.EqualTo(Stops.Count - 4), "todas menos las dos piezas por código y las dos del kit");
+            Assert.That(StopReflectionFade.DepthFactor(0f, 44f), Is.EqualTo(1f));
+            Assert.That(StopReflectionFade.DepthFactor(22f, 44f), Is.EqualTo(0.5f).Within(0.0001f));
+            Assert.That(StopReflectionFade.DepthFactor(50f, 44f), Is.EqualTo(0f));
+        }
+
+        // La malla de la imagen Simple del reflejo (el cuadrilátero de su rect, con su color) tras la atenuación por profundidad.
+        private static void ReflectionMesh(Image image, VertexHelper vh)
+        {
+            Rect r = ((RectTransform)image.transform).rect;
+            Color32 color = image.color;
+            AddCorner(vh, r.xMin, r.yMin, 0f, 0f, color);
+            AddCorner(vh, r.xMin, r.yMax, 0f, 1f, color);
+            AddCorner(vh, r.xMax, r.yMax, 1f, 1f, color);
+            AddCorner(vh, r.xMax, r.yMin, 1f, 0f, color);
+            vh.AddTriangle(0, 1, 2);
+            vh.AddTriangle(2, 3, 0);
+            image.GetComponent<StopReflectionFade>().ModifyMesh(vh);
+        }
+
+        private static void AddCorner(VertexHelper vh, float x, float y, float u, float v, Color32 color)
+        {
+            UIVertex vertex = UIVertex.simpleVert;
+            vertex.position = new Vector3(x, y, 0f);
+            vertex.color = color;
+            vertex.uv0 = new Vector4(u, v, 0f, 0f);
+            vh.AddVert(vertex);
+        }
+
+        // Opacidad del reflejo a depth dp bajo la línea del agua: la y local del reflejo volteado es la profundidad; entre filas,
+        // lineal, como la interpola la GPU.
+        private static float AlphaAtDepth(VertexHelper vh, float depth)
+        {
+            float loY = float.MinValue;
+            float loA = 0f;
+            float hiY = float.MaxValue;
+            float hiA = 0f;
+            UIVertex v = default;
+            for (int i = 0; i < vh.currentVertCount; i++)
+            {
+                vh.PopulateUIVertex(ref v, i);
+                float y = v.position.y;
+                float a = v.color.a / 255f;
+                if (y <= depth && y > loY)
+                {
+                    loY = y;
+                    loA = a;
+                }
+
+                if (y >= depth && y < hiY)
+                {
+                    hiY = y;
+                    hiA = a;
+                }
+            }
+
+            return hiY - loY < 0.0001f ? loA : Mathf.Lerp(loA, hiA, (depth - loY) / (hiY - loY));
+        }
+
+        [Test]
+        public void TheLinesBetweenWaters_AreStraightSeams_FromTheScreenEdge()
+        {
+            // Santarém: la franja del Amazonas, ≥ 28 dp con 2 filas, con ondas, y una costura recta.
+            Show(1);
+            StopShapeGraphic code = _b.CodeGraphic;
+            Color far = Palette.WaterWhite;
+            float farBottom = 0f;
+            int ripples = 0;
+            for (int i = 0; i < code.VertexCount; i++)
+            {
+                Color c = code.ColorAt(i);
+                if (c.a > 0.999f && ColorMath.DeltaE00(c, far) < 0.5f)
+                {
+                    farBottom = Mathf.Max(farBottom, code.PositionAt(i).y);
+                }
+
+                if (c.a > 0.999f && ColorMath.DeltaE00(c, StopBackdrop.RippleColor(far)) < 0.5f)
+                {
+                    ripples++;
+                }
+            }
+
+            Assert.That(farBottom - Horizon2, Is.GreaterThanOrEqualTo(28f), "la franja de agua blanca, ≥ 28 dp");
+            Assert.That(ripples, Is.GreaterThanOrEqualTo(12), "con las ondas de la banda");
+            Assert.That(code.MinX, Is.LessThanOrEqualTo(0.001f), "de borde a borde");
+            Assert.That(code.MaxX, Is.GreaterThanOrEqualTo(360f - 0.001f), "de borde a borde");
+
+            // El Encuentro: la cuña empieza en el borde izquierdo, junto al horizonte (sin arista vertical en la orilla).
+            Show(4);
+            code = _b.CodeGraphic;
+            Assert.That(code.MinX, Is.LessThanOrEqualTo(0.001f), "desde el borde de la pantalla");
+            Assert.That(code.MinY, Is.GreaterThanOrEqualTo(Horizon2 - 0.001f), "nada por encima del horizonte");
+            for (int i = 0; i < code.VertexCount; i++)
+            {
+                Vector2 p = code.PositionAt(i);
+                if (p.x < 0.001f)
+                {
+                    Assert.That(p.y, Is.LessThanOrEqualTo(Horizon2 + 8f), "en el borde izquierdo, solo el arranque de la cuña");
+                }
+            }
+        }
+
+        [Test]
+        public void TheDawnMist_FadesIn_WithoutAHardTopEdge()
+        {
+            Show(19);
+            StopShapeGraphic band = _b.BandGraphic;
+            float top = band.MinY;
+            Assert.That(top, Is.EqualTo(Horizon2 - 4f - StopBackdrop.MistFadeDp).Within(0.001f));
+            for (int i = 0; i < band.VertexCount; i++)
+            {
+                if (Mathf.Abs(band.PositionAt(i).y - top) < 0.001f)
+                {
+                    Assert.That(band.ColorAt(i).a, Is.EqualTo(0f), "el borde de arriba de la bruma, transparente");
+                }
+            }
         }
 
         [Test]
@@ -215,7 +389,7 @@ namespace AF.Tests.EditMode
                     // Las líneas entre aguas quedan por encima del primer plano: en los 12 dp sobre el panel solo hay preset.
                     if (!_b.CodeGraphic.IsEmpty)
                     {
-                        Assert.That(_b.CodeGraphic.MaxY, Is.LessThanOrEqualTo(panelTop - 12f), "parada " + n);
+                        Assert.That(_b.CodeGraphic.MaxY, Is.LessThanOrEqualTo(panelTop - 12f + 0.01f), "parada " + n);
                     }
                 }
             }
@@ -266,7 +440,9 @@ namespace AF.Tests.EditMode
                 RiverStop stop = Stops.At(n)!;
                 StopBackdrop.SkyOf(stop, out Color top, out Color horizon, out float aTop, out float aHorizon);
                 Assert.That(aTop, Is.LessThanOrEqualTo(StopBackdrop.SkyMaxAlpha), "alfa ≤ 0,5");
-                Assert.That(aHorizon, Is.LessThanOrEqualTo(StopBackdrop.SkyMaxAlpha));
+                bool twilight = n == 9 || n == 19;
+                Assert.That(aHorizon, Is.LessThanOrEqualTo(twilight ? StopBackdrop.SkyLowMaxAlpha : StopBackdrop.SkyMaxAlpha),
+                    "parada " + n + ": hasta 0,7 en el tercio de abajo solo con dusk y dawn");
                 if (stop.World == 1)
                 {
                     Assert.That(aTop + aHorizon, Is.EqualTo(0f), "el mundo 1 va sin tinte (el panorama ya es su alba)");
@@ -325,6 +501,7 @@ namespace AF.Tests.EditMode
                 Assert.That(r.xMin, Is.GreaterThanOrEqualTo(-StopShapes.WidthDp * 0.5f), shape);
                 Assert.That(r.xMax, Is.LessThanOrEqualTo(StopShapes.WidthDp * 0.5f), shape);
                 Assert.That(r.yMax, Is.LessThanOrEqualTo(StopShapes.MaxAboveDp), shape + ": ≤ 48 dp sobre el horizonte");
+                Assert.That(r.yMax, Is.LessThanOrEqualTo(StopShapes.RecognizableDp), shape + ": cabe en los 30 dp que se ven con 2 filas");
                 Assert.That(r.yMin, Is.GreaterThanOrEqualTo(-StopShapes.MaxBelowDp), shape + ": ≤ 32 dp de orilla");
                 Assert.That(r.yMax, Is.GreaterThan(8f), shape + ": algo sobre el horizonte");
             }
@@ -369,7 +546,9 @@ namespace AF.Tests.EditMode
             Assert.That(_b.BackAlpha, Is.EqualTo(1f), "la vieja sigue entera al empezar");
             Assert.That(_b.Tick(125f), Is.True);
             Assert.That(_b.FrontAlpha, Is.EqualTo(0.5f).Within(0.001f));
-            Assert.That(_b.BackAlpha, Is.EqualTo(0.5f).Within(0.001f));
+            Assert.That(_b.BackAlpha, Is.EqualTo(1f), "la vieja sigue entera debajo: su banda no deja ver el panorama");
+            Assert.That(_b.BackBandAlpha, Is.EqualTo(1f));
+            Assert.That(_b.BackDetailAlpha, Is.EqualTo(0.5f).Within(0.001f), "su cielo, sus piezas y su héroe se van");
             Assert.That(_b.FadeProgress, Is.EqualTo(0.5f).Within(0.001f));
             Assert.That(_b.Tick(125f), Is.True, "el fotograma en que termina");
             Assert.That(_b.Fading, Is.False);
@@ -408,7 +587,9 @@ namespace AF.Tests.EditMode
             _b.Apply(null, "white", true, 250f);
             Assert.That(_b.Fading, Is.True);
             Assert.That(_b.Root.gameObject.activeSelf, Is.True, "mientras se va");
-            _b.Tick(260f);
+            _b.Tick(125f);
+            Assert.That(_b.BackBandAlpha, Is.EqualTo(0.5f).Within(0.001f), "sin parada nueva, también la banda se va");
+            _b.Tick(135f);
             Assert.That(_b.Root.gameObject.activeSelf, Is.False);
 
             // De ninguna a una parada no hay nada que fundir: corte.

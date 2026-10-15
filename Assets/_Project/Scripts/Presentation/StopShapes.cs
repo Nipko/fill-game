@@ -14,9 +14,15 @@ namespace AF.Presentation
     /// validar VA-20 antes de encargar los héroes (direccion-visual-v2 §9); nunca en la ficha, las capturas de la tienda ni la UA.
     /// <para>Cada forma es una lista de primitivas en dp con el pie del héroe en el origen: x de −120 a 120 (240 dp de ancho) e y
     /// hacia arriba desde el horizonte, como mucho <see cref="MaxAboveDp"/> por encima y <see cref="MaxBelowDp"/> por debajo
-    /// (07 §2.1: héroe de ≈ 240 × 80 dp, 48 sobre el horizonte y 32 de orilla). Sin personas, canastos, banderas, cuias ni
-    /// canoas (VA-22). <see cref="Draw"/> las pinta con su reflejo volteado en un <see cref="StopShapeGraphic"/>, sin
-    /// asignar memoria.</para>
+    /// (07 §2.1: héroe de ≈ 240 × 80 dp, 48 sobre el horizonte y 32 de orilla). Todas caben enteras en los
+    /// <see cref="RecognizableDp"/> dp de sobre el horizonte, que es lo que se ve con un tablero de 2 filas (07 §2.1;
+    /// direccion-visual-v2 §3.4; propuesta del Mapa §10.6): las agujas, la cúpula y la marca de la baliza no suben a la fila del
+    /// HUD. Sin personas, canastos, banderas, cuias ni canoas (VA-22). <see cref="Draw"/> las pinta con su reflejo volteado en
+    /// un <see cref="StopShapeGraphic"/>, sin asignar memoria.</para>
+    /// <para><b>Pendiente del asesor cultural</b> (07 §2.1 y §8.2; D-013: «todo nombre, dato y texto del Mapa queda pendiente
+    /// del asesor»): representan lugares reales (el mercado de Ver-o-Peso, el Teatro Amazonas, las casas flotantes del Itaya…),
+    /// así que tanto las formas como su asignación a cada sitio (<c>SourceShapes</c>) quedan pendientes de revisión, con asesor
+    /// obligatorio en la parada 15 (Itaya) y en la 11.</para>
     /// </summary>
     public static class StopShapes
     {
@@ -26,7 +32,7 @@ namespace AF.Presentation
         /// <summary>Cúpula sobre un tambor, con la ciudad baja: el Teatro Amazonas (parada 5).</summary>
         public const string Dome = "dome";
 
-        /// <summary>Casas sobre balsas: la creciente del Itaya (parada 15).</summary>
+        /// <summary>Casas sobre balsas: la creciente del Itaya (parada 15; pendiente del asesor cultural, obligatorio en esta parada).</summary>
         public const string Rafts = "rafts";
 
         /// <summary>Ciudad baja y lejana (malecones de Leticia e Iquitos, Nauta lejana).</summary>
@@ -52,6 +58,12 @@ namespace AF.Presentation
 
         /// <summary>Tope de orilla bajo el horizonte (dp; 07 §2.1).</summary>
         public const float MaxBelowDp = 32f;
+
+        /// <summary>
+        /// Lo reconocible de la forma, sobre el horizonte, como mucho (dp): lo que se ve con un tablero de 2 filas (07 §2.1;
+        /// propuesta del Mapa §10.6).
+        /// </summary>
+        public const float RecognizableDp = 30f;
 
         /// <summary>Tono del cuerpo de la silueta.</summary>
         public const int ToneBody = 0;
@@ -79,26 +91,26 @@ namespace AF.Presentation
         private static readonly float[] TwoSpiresData =
         {
             0, ToneShore, -120, -4, 120, 2, 0, 0,
-            0, ToneBody, -118, 0, -80, 8, 0, 0,
-            0, ToneBody, 80, 0, 118, 9, 0, 0,
-            0, ToneBody, -72, 0, 72, 15, 0, 0,
-            0, ToneAccent, -76, 15, 76, 18, 0, 0,
-            1, ToneAccent, -18, 18, 18, 18, 0, 25,
-            0, ToneBody, -64, 0, -46, 26, 0, 0,
-            0, ToneAccent, -66, 26, -44, 28, 0, 0,
-            1, ToneAccent, -65, 28, -45, 28, -55, 40,
-            0, ToneBody, 46, 0, 64, 26, 0, 0,
-            0, ToneAccent, 44, 26, 66, 28, 0, 0,
-            1, ToneAccent, 45, 28, 65, 28, 55, 40,
-            0, ToneLight, -36, 4, -28, 11, 0, 0,
-            0, ToneLight, -16, 4, -8, 11, 0, 0,
-            0, ToneLight, 8, 4, 16, 11, 0, 0,
-            0, ToneLight, 28, 4, 36, 11, 0, 0,
-            0, ToneLight, -58, 16, -52, 22, 0, 0,
-            0, ToneLight, 52, 16, 58, 22, 0, 0,
+            0, ToneBody, -118, 0, -80, 6, 0, 0,
+            0, ToneBody, 80, 0, 118, 7, 0, 0,
+            0, ToneBody, -72, 0, 72, 11, 0, 0,
+            0, ToneAccent, -76, 11, 76, 13, 0, 0,
+            1, ToneAccent, -18, 13, 18, 13, 0, 18,
+            0, ToneBody, -64, 0, -46, 17, 0, 0,
+            0, ToneAccent, -66, 17, -44, 19, 0, 0,
+            1, ToneAccent, -65, 19, -45, 19, -55, 30,
+            0, ToneBody, 46, 0, 64, 17, 0, 0,
+            0, ToneAccent, 44, 17, 66, 19, 0, 0,
+            1, ToneAccent, 45, 19, 65, 19, 55, 30,
+            0, ToneLight, -36, 3, -28, 8, 0, 0,
+            0, ToneLight, -16, 3, -8, 8, 0, 0,
+            0, ToneLight, 8, 3, 16, 8, 0, 0,
+            0, ToneLight, 28, 3, 36, 8, 0, 0,
+            0, ToneLight, -58, 11, -52, 15, 0, 0,
+            0, ToneLight, 52, 11, 58, 15, 0, 0,
         };
 
-        // La cúpula, lo reconocible, cabe entera en los 30 dp que se ven sobre el horizonte con 2 filas (07 §2.1).
+        // La cúpula, lo reconocible, cabe entera (con su remate) en los 30 dp que se ven sobre el horizonte con 2 filas (07 §2.1).
         private static readonly float[] DomeData =
         {
             0, ToneShore, -120, -4, 120, 2, 0, 0,
@@ -115,9 +127,9 @@ namespace AF.Presentation
             0, ToneLight, 11, 2, 15, 9, 0, 0,
             0, ToneLight, 24, 2, 28, 9, 0, 0,
             1, ToneAccent, -24, 12, 24, 12, 0, 16,
-            0, ToneAccent, -14, 14, 14, 18, 0, 0,
-            2, ToneFeature, 0, 18, 16, 11, 0, 0,
-            0, ToneAccent, -2, 29, 2, 33, 0, 0,
+            0, ToneAccent, -14, 13, 14, 17, 0, 0,
+            2, ToneFeature, 0, 17, 16, 10, 0, 0,
+            0, ToneAccent, -2, 27, 2, 30, 0, 0,
         };
 
         private static readonly float[] RaftsData =
@@ -154,8 +166,8 @@ namespace AF.Presentation
             0, ToneBody, -92, 0, -70, 20, 0, 0,
             1, ToneAccent, -92, 20, -70, 20, -81, 26,
             0, ToneBody, -70, 0, -50, 10, 0, 0,
-            0, ToneBody, -50, 0, -24, 26, 0, 0,
-            0, ToneAccent, -38, 26, -36, 36, 0, 0,
+            0, ToneBody, -50, 0, -24, 24, 0, 0,
+            0, ToneAccent, -38, 24, -36, 30, 0, 0,
             0, ToneBody, -24, 0, -4, 15, 0, 0,
             0, ToneBody, -4, 0, 22, 21, 0, 0,
             0, ToneBody, 22, 0, 44, 11, 0, 0,
@@ -173,14 +185,14 @@ namespace AF.Presentation
         private static readonly float[] GenericNatureData =
         {
             0, ToneShore, -120, -4, 120, 2, 0, 0,
-            2, ToneBody, 10, 0, 104, 30, 0, 0,
+            2, ToneBody, 10, 0, 104, 24, 0, 0,
             2, ToneAccent, -96, 0, 16, 12, 0, 0,
             2, ToneAccent, -74, 2, 14, 14, 0, 0,
             2, ToneAccent, -50, 8, 16, 14, 0, 0,
-            2, ToneAccent, -24, 16, 14, 13, 0, 0,
-            2, ToneFeature, 4, 22, 16, 14, 0, 0,
-            2, ToneAccent, 30, 20, 14, 12, 0, 0,
-            2, ToneFeature, 54, 12, 16, 13, 0, 0,
+            2, ToneAccent, -24, 14, 14, 13, 0, 0,
+            2, ToneFeature, 4, 18, 16, 12, 0, 0,
+            2, ToneAccent, 30, 16, 14, 12, 0, 0,
+            2, ToneFeature, 54, 10, 16, 13, 0, 0,
             2, ToneAccent, 80, 4, 14, 13, 0, 0,
             2, ToneAccent, 104, 0, 14, 10, 0, 0,
         };
@@ -210,10 +222,10 @@ namespace AF.Presentation
             2, ToneBody, 72, 2, 12, 8, 0, 0,
             2, ToneBody, 98, 2, 14, 6, 0, 0,
             0, ToneAccent, -16, -3, 4, 1, 0, 0,
-            0, ToneAccent, -8, 0, -4, 26, 0, 0,
-            0, ToneFeature, -10, 10, -2, 14, 0, 0,
-            0, ToneFeature, -10, 18, -2, 22, 0, 0,
-            1, ToneFeature, -14, 26, 2, 26, -6, 38,
+            0, ToneAccent, -8, 0, -4, 18, 0, 0,
+            0, ToneFeature, -10, 6, -2, 9, 0, 0,
+            0, ToneFeature, -10, 12, -2, 15, 0, 0,
+            1, ToneFeature, -14, 18, 2, 18, -6, 28,
         };
 
         // Héroe pintado (ranura bg_hero_<sitio>) o pieza del kit (kit:<pieza>) → forma de respaldo [P]. Puerto Nariño va como

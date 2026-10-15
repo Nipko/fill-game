@@ -93,7 +93,8 @@ namespace AF.Tests.PlayMode
             Assert.That(b.FrontAlpha, Is.EqualTo(0f));
             PlayModeHelpers.TickExact(boot, 125);
             Assert.That(b.FrontAlpha, Is.EqualTo(0.5f).Within(0.01f), "a mitad del fundido");
-            Assert.That(b.BackAlpha, Is.EqualTo(0.5f).Within(0.01f));
+            Assert.That(b.BackAlpha, Is.EqualTo(1f), "la vieja sigue entera debajo: la banda no deja ver el panorama");
+            Assert.That(b.BackDetailAlpha, Is.EqualTo(0.5f).Within(0.01f), "lo que la nueva no tapa se va");
             PlayModeHelpers.TickExact(boot, 120);
             Assert.That(b.Fading, Is.True, "a los 245 ms aún funde");
             PlayModeHelpers.TickExact(boot, 5);
