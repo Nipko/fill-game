@@ -27,6 +27,9 @@ namespace AF.EditorTools
     ///   3  falta el módulo Android o no se pudo cambiar la plataforma activa
     ///   4  falló el build o hubo una excepción (lee el log)
     ///   5  Build Settings no incluye Assets/_Project/Scenes/Game.unity (ejecuta AF.UI.Editor.GameSceneBuilder.CreateGameScene)
+    ///   6  compuerta de release de los textos (<see cref="LocReleaseGate"/>; 08 §4.7): con un applicationId distinto de
+    ///      com.amazonfill.dev, un idioma ofrecido con la UI incompleta o texto cultural sin aprobado_es. Con
+    ///      com.amazonfill.dev solo avisa en el log. Va antes de comprobar los Player Settings.
     /// Firma: clave de depuración de Unity. Nunca se sube a Google Play.
     /// </summary>
     public static class BuildDev
@@ -44,6 +47,7 @@ namespace AF.EditorTools
         private const int ExitPlatform = 3;
         private const int ExitBuildFailed = 4;
         private const int ExitNoGameScene = 5;
+        private const int ExitLocGate = 6;
 
         [MenuItem("Amazon Fill/CI/Build de desarrollo Android (dev.apk)")]
         public static void BuildAndroidDev()
@@ -87,6 +91,11 @@ namespace AF.EditorTools
             {
                 Debug.LogError(LogPrefix + "no se pudo cambiar la plataforma activa a Android.");
                 return ExitPlatform;
+            }
+
+            if (!LocReleaseGate.Check(PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android), LogPrefix))
+            {
+                return ExitLocGate;
             }
 
             List<string> problems = ProjectSetup.Validate();

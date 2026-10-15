@@ -1,0 +1,137 @@
+#nullable enable
+using System.Text.RegularExpressions;
+using AF.EditorTools;
+using AF.Localization;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
+
+namespace AF.Tests.EditMode
+{
+    /// <summary>
+    /// Compuerta de release de los textos (08 §4.7; D-018, Q10-A; propuesta de idiomas §3.10; tarea B1): con
+    /// <c>com.amazonfill.dev</c> solo avisa; con otro <c>applicationId</c>, para el build si un idioma ofrecido (una columna de
+    /// <c>strings.csv</c>) tiene la UI incompleta o hay texto cultural sin <c>aprobado_es</c> (toda fila de <c>facts.csv</c> y
+    /// las de <c>strings.csv</c> en <c>pendiente_asesor</c>).
+    /// </summary>
+    public sealed class LocReleaseGateTests
+    {
+        private const string ReleaseId = "com.estudio.tintalu";
+        private const string Header = "key,es-419,en,pt-BR,context,max_chars,status,status_en,status_pt-BR,notes,args\n";
+
+        // Todo completo y aprobado: un build de release pasa.
+        private const string CleanStrings = Header
+            + "back,Volver,Back,Voltar,Botón Volver.,12,aprobado_es,revisado_nativo,revisado_nativo,,\n"
+            + "play,Jugar,Play,Jogar,Botón Jugar.,12,aprobado_es,revisado_nativo,revisado_nativo,,\n";
+
+        private const string CleanFacts = Header
+            + "fauna_x_dato,Dato aprobado,,,Dato.,50,aprobado_es,,,,\n";
+
+        [Test]
+        public void CleanTables_ReleaseId_Passes()
+        {
+            LocReleaseReport report = LocReleaseGate.Evaluate(LocCatalog.Parse(CleanStrings, CleanFacts), ReleaseId);
+
+            Assert.That(report.Problems, Is.Empty, string.Join("\n", report.Problems));
+            Assert.That(report.Blocks, Is.False);
+            LogAssert.Expect(LogType.Log, new Regex(@"\[AF\.LocReleaseGate\] OK"));
+            Assert.That(LocReleaseGate.Log(report, "[test] "), Is.True);
+        }
+
+        [Test]
+        public void IncompleteUi_ReleaseId_Blocks_AndListsTheLocaleAndKeys()
+        {
+            string strings = Header
+                + "back,Volver,Back,,Botón Volver.,12,aprobado_es,revisado_nativo,,,\n"
+                + "play,Jugar,,,Botón Jugar.,12,aprobado_es,,,,\n";
+
+            LocReleaseReport report = LocReleaseGate.Evaluate(LocCatalog.Parse(strings, CleanFacts), ReleaseId);
+
+            Assert.That(report.Blocks, Is.True);
+            Assert.That(report.Problems, Has.Count.EqualTo(2), string.Join("\n", report.Problems));
+            Assert.That(report.Problems[0], Is.EqualTo("UI incompleta en en: claves de strings.csv sin texto: 1 (play)."));
+            Assert.That(report.Problems[1], Is.EqualTo("UI incompleta en pt-BR: claves de strings.csv sin texto: 2 (back, play)."));
+
+            LogAssert.Expect(LogType.Error, new Regex(@"ERROR UI incompleta en en"));
+            LogAssert.Expect(LogType.Error, new Regex(@"ERROR UI incompleta en pt-BR"));
+            LogAssert.Expect(LogType.Error, new Regex(@"build de release \(com\.estudio\.tintalu\) parado"));
+            Assert.That(LocReleaseGate.Log(report, "[test] "), Is.False);
+        }
+
+        [Test]
+        public void CulturalTextWithoutApprovedEs_ReleaseId_Blocks()
+        {
+            string strings = CleanStrings
+                + "world_name,Tapajós,Tapajós,Tapajós,Nombre de mundo.,20,pendiente_asesor,revisado_nativo,revisado_nativo,,\n";
+            string facts = Header
+                + "fauna_a_dato,Dato pendiente,,,Dato.,50,pendiente_asesor,,,,\n"
+                + "fauna_b_dato,Dato en borrador,,,Dato.,50,borrador,,,,\n"
+                + "fauna_c_dato,Dato aprobado,,,Dato.,50,aprobado_es,,,,\n";
+
+            LocReleaseReport report = LocReleaseGate.Evaluate(LocCatalog.Parse(strings, facts), ReleaseId);
+
+            Assert.That(report.Blocks, Is.True);
+            Assert.That(report.Problems, Is.EqualTo(new[]
+            {
+                "texto cultural sin aprobado_es: strings.csv:4 world_name (pendiente_asesor).",
+                "texto cultural sin aprobado_es: facts.csv:2 fauna_a_dato (pendiente_asesor).",
+                "texto cultural sin aprobado_es: facts.csv:3 fauna_b_dato (borrador).",
+            }));
+        }
+
+        [Test]
+        public void UntranslatedFact_DoesNotBlock()
+        {
+            // Q10-A: un dato sin traducir no se muestra; no para el build.
+            LocReleaseReport report = LocReleaseGate.Evaluate(LocCatalog.Parse(CleanStrings, CleanFacts), ReleaseId);
+
+            Assert.That(report.Problems, Is.Empty);
+        }
+
+        [Test]
+        public void DevelopmentId_OnlyWarns()
+        {
+            string strings = Header + "play,Jugar,,,Botón Jugar.,12,pendiente_asesor,,,,\n";
+
+            LocReleaseReport report = LocReleaseGate.Evaluate(LocCatalog.Parse(strings, CleanFacts), ProjectSetup.ApplicationId);
+
+            Assert.That(report.IsDevelopmentId, Is.True);
+            Assert.That(report.Problems, Has.Count.EqualTo(3), string.Join("\n", report.Problems));
+            Assert.That(report.Blocks, Is.False);
+            LogAssert.Expect(LogType.Warning, new Regex(@"aviso \(com\.amazonfill\.dev, build de prueba: no bloquea\)\. Problemas de textos que pararían un build de release: 3\."));
+            Assert.That(LocReleaseGate.Log(report, "[test] "), Is.True);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ProjectTables_DevelopmentBuild_Warns_ReleaseBuild_Blocks()
+        {
+            // Hoy EN y PT-BR están incompletos y hay textos pendientes del asesor: la compuerta avisa en desarrollo y para un
+            // build con el applicationId definitivo (la rama de error con las tablas reales).
+            LocCatalog catalog = LocReleaseGate.ReadProjectCatalog();
+
+            LocReleaseReport dev = LocReleaseGate.Evaluate(catalog, ProjectSetup.ApplicationId);
+            LocReleaseReport release = LocReleaseGate.Evaluate(catalog, ReleaseId);
+
+            Assert.That(dev.Blocks, Is.False);
+            Assert.That(dev.Problems, Is.Not.Empty);
+            Assert.That(release.Blocks, Is.True);
+            Assert.That(release.Problems, Has.Some.StartsWith("UI incompleta en en:"));
+            Assert.That(release.Problems, Has.Some.StartsWith("UI incompleta en pt-BR:"));
+            Assert.That(release.Problems, Has.None.StartsWith("UI incompleta en es-419"));
+            Assert.That(release.Problems, Has.Some.Contains("facts.csv:"));
+
+            LogAssert.Expect(LogType.Warning, new Regex(@"\[AF\.LocReleaseGate\] aviso"));
+            Assert.That(LocReleaseGate.Check(ProjectSetup.ApplicationId, "[test] "), Is.True);
+            LogAssert.ignoreFailingMessages = true;
+            try
+            {
+                Assert.That(LocReleaseGate.Check(ReleaseId, "[test] "), Is.False);
+            }
+            finally
+            {
+                LogAssert.ignoreFailingMessages = false;
+            }
+        }
+    }
+}

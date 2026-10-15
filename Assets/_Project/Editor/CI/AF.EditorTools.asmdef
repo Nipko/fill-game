@@ -3,7 +3,8 @@
   "rootNamespace": "AF.EditorTools",
   "references": [
     "Unity.TextMeshPro",
-    "AF.Presentation"
+    "AF.Presentation",
+    "AF.Localization"
   ],
   "includePlatforms": [
     "Editor"
