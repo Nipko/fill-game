@@ -1,0 +1,11 @@
+{
+  "extends": "../campaign_v2.json",
+  "description": "Fixture negativo de --validate-spec (P4): un hueco de 61 niveles entre dos primeras veces (D-009 punto 8: nunca más de 60). Se quitan las tres primeras veces de 541-580 con combinaciones que ya salieron (560 Fl+Re -> Fl+Ho, del 432; 569 B2+Ba -> B2+Re, del 360; 580 Ma+B2 -> Ma+Ba, del 132) y el 587 (C) pasa a Re+Ch, un conjunto nunca visto: del 526 al 587 hay 61 niveles. Fallan NOVELTY-60 (la que se busca, en las dos variantes) y FIRST-TIME en 541-560 y 561-580: con una primera vez por ciclo, el hueco no puede pasar de 59, así que NOVELTY-60 nunca falla sola.",
+  "expect_rule": "NOVELTY-60",
+  "calendar": {
+    "560": "Fl+Ho (MD)",
+    "569": "B2+Re (D)",
+    "580": "Ma+Ba (MD; K = 13)",
+    "587": "Re+Ch"
+  }
+}

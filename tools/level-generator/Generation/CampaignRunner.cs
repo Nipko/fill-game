@@ -57,13 +57,17 @@ internal static class CampaignRunner
     /// <summary>Primer intento de las rondas turbias extra (las de la colocación usan 1000-2999).</summary>
     public const int MurkyRoundFirstAttempt = 10000;
 
-    public static int Run(string specPath, string levelsArg, string outDir, string? reportPath, bool check)
+    /// <summary>
+    /// Modo --spec: genera los niveles <paramref name="levelsArg"/> (null = todos los de la especificación, first_level-last_level)
+    /// con la variante <paramref name="variant"/> (null = la publicada; «b» con los respaldos de "fallback", salida B de D-019).
+    /// </summary>
+    public static int Run(string specPath, string? levelsArg, string outDir, string? reportPath, bool check, string? variant = null)
     {
         var total = Stopwatch.StartNew();
         CampaignSpec spec;
         try
         {
-            spec = CampaignSpec.Load(specPath);
+            spec = CampaignSpec.Load(specPath, variant);
         }
         catch (CampaignSpecException e)
         {
@@ -78,6 +82,7 @@ internal static class CampaignRunner
             return 1;
         }
 
+        levelsArg ??= string.Create(CultureInfo.InvariantCulture, $"{spec.FirstLevel}-{spec.LastLevel}");
         if (!TryParseLevels(levelsArg, spec, out int first, out int last))
         {
             Console.Error.WriteLine($"level-generator: --levels debe ser a-b dentro de {spec.FirstLevel}-{spec.LastLevel}: {levelsArg}");

@@ -6,6 +6,8 @@
 // Variantes de la 1.0 (P5; 02 §9.1; b.3): la sección «Variantes de la 1.0» (solo si la especificación o algún nivel las lleva)
 // las cuenta por código (Ln, Ha, B2 y Fl; MechanicCodes) con sus ejemplares y sus campos, y los tableros de estreno con sus
 // vacíos y su bot_fail (02 §9.2 regla 2). Las apariciones distinguen Li de Ln y Br de B2 (MechanicCodes.CodeOf).
+// P4: el título lleva los niveles generados (no los de la especificación: P7a genera 201-300 de campaign_v2) y, con dos
+// variantes, la variante; las fuentes salen de "report_sources" si la especificación las trae (las de campaign_v1 si no).
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -36,12 +38,16 @@ internal static class CampaignReport
             PackWriter.PackSchemaFor(levels.Select(l => new PackLevel(l.Plan, l.Chosen!, l.Relief)).ToList()));
         bool tinaja = levels.Any(l => l.Chosen!.IsTinaja) || spec.MechanicTable.Any(m => m.Code == "Ti");
         bool variants = spec.MechanicTable.Any(m => MechanicCodes.Variants.Contains(m.Code)) || levels.Any(l => VariantCodes(l.Chosen!.Board).Count > 0);
-        W(F($"# Campaña {spec.FirstLevel}-{spec.LastLevel}: informe de `level-generator --spec`"));
+        int firstLevel = levels.Count == 0 ? spec.FirstLevel : levels.Min(l => l.Plan.Level);
+        int lastLevel = levels.Count == 0 ? spec.LastLevel : levels.Max(l => l.Plan.Level);
+        string variantTitle = spec.HasVariants ? F($" (variante {spec.Variant})") : "";
+        string variantArg = spec.HasVariants ? F($" --variant {spec.Variant}") : "";
+        W(F($"# Campaña {firstLevel}-{lastLevel}{variantTitle}: informe de `level-generator --spec`"));
         W();
-        W(F($"Generado por `dotnet run --project tools/level-generator -c Release -- --spec {specPath} --levels {levelsArg} --out {outDir} --report tools/out/{spec.SpecId}_report.md`: no se edita a mano y no lleva tiempos. Generador {PackWriter.GeneratorVersion}, `pack_schema` {packSchema}, modo de vertido `run` (D-005)."));
+        W(F($"Generado por `dotnet run --project tools/level-generator -c Release -- --spec {specPath} --levels {levelsArg}{variantArg} --out {outDir} --report tools/out/{spec.SpecId}_report.md`: no se edita a mano y no lleva tiempos. Generador {PackWriter.GeneratorVersion}, `pack_schema` {packSchema}, modo de vertido `run` (D-005)."));
         W();
-        W("Fuentes: D-009 (ciclo escalonado) y D-007 (debuts) con la propuesta `docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md` "
-          + "(c.1-c.4, d.1-d.4); GDD 03 §2, §4, §7-§13 y §17; 02 §8-§11; 08 §4.1. Todo se mide con `AF.Core` y `AF.Solver`: A* w = 1 a 300.000 "
+        W("Fuentes: " + (spec.ReportSources ?? "D-009 (ciclo escalonado) y D-007 (debuts) con la propuesta `docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md` "
+          + "(c.1-c.4, d.1-d.4); GDD 03 §2, §4, §7-§13 y §17; 02 §8-§11; 08 §4.1") + ". Todo se mide con `AF.Core` y `AF.Solver`: A* w = 1 a 300.000 "
           + "(par), bot ×40 con la semilla del nivel (`bot_fail` y etiqueta), `EarlyTraps` (trampas tempranas, Q16 B), ruta de referencia "
           + "para ramificación y trampas (`--parity`), `SafePath` en Aguas turbias y `LevelValidation` en cada tablero.");
         W();

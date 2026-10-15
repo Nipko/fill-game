@@ -1,13 +1,25 @@
 // --validate-spec: comprueba la especificación de la campaña contra las reglas de la rotación (propuesta de D-007 d.2,
-// d.3 y las «Comprobaciones de la tabla» de d.4), las del escalón de D-009 (c.3, c.4) y las de 02 §8-§9.2 que se
-// pueden decidir sin generar tableros. Cada regla tiene un id estable (lo citan los fixtures de specs/tests/).
-// La salida es ASCII (.claude/rules/ci.md).
+// d.3 y las «Comprobaciones de la tabla» de d.4; d.5.1 y d.5.5 desde el 201), las del escalón de D-009 (c.3, c.4) y las de
+// 02 §8-§9.2 que se pueden decidir sin generar tableros. Cada regla tiene un id estable (lo citan los fixtures de
+// specs/tests/). La salida es ASCII (.claude/rules/ci.md).
+//
+// P4 de la tanda 4 (201-700, campaign_v2.json):
+//   - las reglas que necesitan historia (GAP-120, NO-3-ROW, SEASONS, RETURN, FIRST-TIME y NOVELTY-60) cuentan también el
+//     calendario de las especificaciones anteriores ("previous": campaign_v1, 11-200), pero solo fallan en los niveles de esta;
+//   - una especificación con dos variantes (d.5.4) se comprueba entera en cada una, y cada variante con su propio registro de
+//     combinaciones, calculado en memoria (d.5.6: nunca contra el archivo versionado);
+//   - FIRST-TIME cuenta conjuntos de códigos del registro (CombinationsRegistry), no pares: un conjunto que ya salió, también
+//     en 11-200, no es nuevo; NOVELTY-60 mide el hueco entre dos primeras veces seguidas (entradas del registro o tintes nuevos);
+//   - los topes (MAX-2, CAPACITIES) y los «antes del N» salen de la especificación (mechanics_per_level, capacities_per_level).
+// Con campaign_v1.json se aplican las 21 reglas de antes y dan lo mismo; FALLBACK, HITO-14 y NOVELTY-60 solo se aplican a las
+// especificaciones que los necesitan (Applies).
 using System.Globalization;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace AmazonFill.Tools.LevelGenerator.Campaign;
 
-internal sealed record SpecIssue(string Rule, int Level, string Message, bool Warning = false);
+internal sealed record SpecIssue(string Rule, int Level, string Message, bool Warning = false, string? Variant = null);
 
 internal static class SpecValidator
 {
@@ -20,30 +32,48 @@ internal static class SpecValidator
         ("TITULAR-8", "cada titular sale 8 veces en su ciclo de debut (d.4)"),
         ("PURE-30", "al menos un 30 % de niveles puros por ciclo (d.2 regla 1)"),
         ("PURE-COMFORT", "al menos 3 de las 8 comodidades de p7-p17 puras (c.4)"),
-        ("FORBIDDEN", "combinaciones prohibidas: turbias solo con filtros (Q14 A), un contador por nivel, Lluvia nunca con Pirana, Remolino nunca con Pirana [P] (d.3)"),
+        ("FORBIDDEN", "combinaciones prohibidas: turbias solo con filtros (Q14 A), un contador por nivel, Lluvia nunca con Pirana, Remolino nunca con Pirana [P] (d.3); not_with y only_with de la tabla y una variante nunca con su base (d.5.1)"),
         ("MURKY-SLOT", "Aguas turbias solo en slots con etiqueta (T1; propuesta b.2)"),
         ("MURKY-2", "Aguas turbias como mucho 2 veces por ciclo (propuesta b.2)"),
         ("BEFORE-DEBUT", "ninguna mecanica ni capacidad antes de su debut (D-007; 02 sec. 8)"),
         ("DEBUT-LEVEL", "el primer tablero de cada mecanica y capacidad es su nivel de debut y lleva estrella (D-007; 02 sec. 8)"),
         ("DEBUT-SLOT", "ningun debut en un reto o un hito salvo las turbias en el 100; 2-3 tableros de estreno seguidos, con la mecanica sola (c.3 regla 6; 02 sec. 9.2 regla 2)"),
-        ("MAX-2", "como mucho 2 mecanicas por nivel antes del 300; las capacidades no cuentan [P] (02 sec. 9.2 regla 4)"),
+        ("MAX-2", "mecanicas por nivel dentro del tope de mechanics_per_level: 2 antes del 300 y 3 despues, 3 solo en retos e hitos; las capacidades no cuentan [P] (02 sec. 9.2 regla 4; d.5.1)"),
         ("RETURN", "cada titular vuelve como secundaria (reto o hito) en el ciclo siguiente (d.4)"),
         ("CAP-CYCLE", "una mecanica sale en 6 niveles por ciclo como mucho (8 en su ciclo de debut) (d.2 regla 2)"),
         ("NO-3-ROW", "una mecanica nunca en 3 niveles seguidos fuera de su estreno (d.2 regla 2)"),
-        ("SEASONS", "temporadas A/B alternas, nunca mas de 2 ciclos seguidos iguales; el ciclo de debut toma la temporada de la mecanica (d.2 regla 7)"),
-        ("GAP-120", "ninguna mecanica ni capacidad (Cuia chica, Cuia alta) pasa mas de 120 niveles sin volver (resumen, punto 6; d.2 regla 4; 02 sec. 8)"),
-        ("FIRST-TIME", "al menos una primera vez por ciclo: estreno, tinte nuevo o primera combinacion (d.2 regla 3)"),
-        ("CAPACITIES", "como mucho 2 Cuias chicas (con la cueva de la Pirana) y 1 Cuia alta por nivel antes del 200; Cuia alta de 6 solo en hitos desde el 141 (02 sec. 8)"),
+        ("SEASONS", "temporadas A/B alternas, nunca mas de 2 ciclos seguidos iguales; el ciclo de debut toma la temporada de la mecanica, salvo las variantes (d.2 regla 7)"),
+        ("GAP-120", "ninguna mecanica ni capacidad (Cuia chica, Cuia alta) pasa mas de 120 niveles sin volver, contando las especificaciones anteriores (resumen, punto 6; d.2 regla 4; 02 sec. 8)"),
+        ("FIRST-TIME", "al menos una primera vez por ciclo: estreno, tinte nuevo o entrada del registro de combinaciones, un conjunto de codigos nunca visto (d.2 regla 3; d.5.6)"),
+        ("CAPACITIES", "Cuias chicas (con la cueva de la Pirana) y Cuias altas por nivel dentro de capacities_per_level (2 y 1 antes del 200); Cuia alta de 6 solo en hitos desde el 141 (02 sec. 8)"),
         ("LIANA-CAPS", "la Liana (con fruta o de cuenta) y la Flor nunca van con Cuia chica, Cuia alta ni Pirana (capacidades mixtas, bloqueo C1-9 de AF.Core; K3b): el generador no puede cumplir la celda"),
+        ("FALLBACK", "con dos variantes, cada celda con una mecanica de una sola variante (la Tinaja) lleva su respaldo sin ella en fallback, y solo esas (d.5.4; D-019 salida B)"),
+        ("HITO-14", "K >= 13 (14 cuias con 1 vacio) solo en hitos, con \"K = 13\" en la celda igual al k_plan, sin capacidades, Pirana ni Tinaja (03 sec. 11; d.5.1)"),
+        ("NOVELTY-60", "nunca mas de novelty_max_gap (60) niveles entre dos primeras veces seguidas: entradas del registro de combinaciones o tintes nuevos, contando las especificaciones anteriores (D-009 punto 8; d.5 punto 5; d.5.6)"),
     ];
 
     /// <summary>Hueco máximo entre dos apariciones de una mecánica o capacidad (resumen, punto 6; d.2 regla 4).</summary>
     public const int MaxGap = 120;
 
+    /// <summary>Cuias generadas como mucho (02 R1): con 1 vacío, K = 13 es el hito de 14 cuias (03 §11; d.5.1).</summary>
+    public const int MaxCuias = 14;
+
+    public const int HitoK = MaxCuias - 1;
+
+    /// <summary>La regla se aplica a la especificación (las 21 de campaign_v1 siempre; las de 201-700 solo si las necesita).</summary>
+    public static bool Applies(string rule, CampaignSpec spec) => rule switch
+    {
+        "FALLBACK" => spec.HasVariants,
+        "HITO-14" => spec.KPlan.Any(r => Math.Max(Math.Max(r.Recovery, r.Comfort), Math.Max(r.Challenge, r.Milestone)) >= HitoK)
+            || spec.Calendar.Values.Any(c => NoteK(c) is not null),
+        "NOVELTY-60" => spec.NoveltyMaxGap is not null,
+        _ => true,
+    };
+
     public static List<SpecIssue> Validate(CampaignSpec spec)
     {
         var issues = new List<SpecIssue>();
-        void Fail(string rule, int level, string message) => issues.Add(new SpecIssue(rule, level, message));
+        void Fail(string rule, int level, string message) => issues.Add(new SpecIssue(rule, level, message, Variant: spec.HasVariants ? spec.Variant : null));
 
         // CAL-COVER
         for (int n = spec.FirstLevel; n <= spec.LastLevel; n++)
@@ -65,6 +95,12 @@ internal static class SpecValidator
         }
 
         List<CalendarCell> cells = Enumerable.Range(spec.FirstLevel, spec.LastLevel - spec.FirstLevel + 1).Select(n => spec.Calendar[n]).ToList();
+
+        // Historia ("previous") más esta especificación, por nivel: la cuentan GAP-120, NO-3-ROW, FIRST-TIME y NOVELTY-60.
+        List<CalendarCell> all = spec.CellsWithHistory();
+        List<CombinationEntry> registry = CombinationsRegistry.Build(all, spec.VariantCodes);
+        var registryLevels = registry.Select(e => e.Level).ToHashSet();
+        bool hito14 = Applies("HITO-14", spec);
 
         foreach (CalendarCell c in cells)
         {
@@ -120,6 +156,35 @@ internal static class SpecValidator
                 Fail("FORBIDDEN", n, "Remolino con Pirana [P: la ultima cuia destino no esta definida; LevelValidation lo rechaza]");
             }
 
+            // FORBIDDEN de la tabla (d.5.1): not_with, only_with y una variante con su base. Un mensaje por par de códigos.
+            var forbidden = new SortedSet<string>(StringComparer.Ordinal);
+            foreach (MechanicInfo m in c.Mechanics)
+            {
+                foreach (MechanicInfo other in c.Mechanics.Where(o => o.Code != m.Code))
+                {
+                    string pair = string.CompareOrdinal(m.Code, other.Code) < 0 ? $"{m.Code}+{other.Code}" : $"{other.Code}+{m.Code}";
+                    if (m.NotWith.Contains(other.Code))
+                    {
+                        forbidden.Add($"{pair}: {m.Id} no va con {other.Id} (not_with; d.5.1)");
+                    }
+
+                    if (m.OnlyWith is not null && !m.OnlyWith.Contains(other.Code))
+                    {
+                        forbidden.Add($"{pair}: {m.Id} solo va con {string.Join(", ", m.OnlyWith)} (only_with; d.5.1)");
+                    }
+
+                    if (m.VariantOf == other.Code)
+                    {
+                        forbidden.Add($"{pair}: una mecanica y su variante no van juntas ({other.Id} y {m.Id}; d.5.1, b.3)");
+                    }
+                }
+            }
+
+            foreach (string message in forbidden)
+            {
+                Fail("FORBIDDEN", n, message);
+            }
+
             // MURKY-SLOT
             if (c.Has("Tu") && c.Mark is not ("D" or "MD"))
             {
@@ -137,18 +202,19 @@ internal static class SpecValidator
                 Fail("BEFORE-DEBUT", n, $"{cap.Code} antes de su debut ({cap.Debut})");
             }
 
-            // MAX-2
-            if (c.Mechanics.Count > 2 && n < 300)
+            // MAX-2 (02 §9.2 regla 4): el tope de la especificación para el rol del nivel.
+            int maxMechanics = spec.MaxMechanicsAt(n, role);
+            if (c.Mechanics.Count > maxMechanics)
             {
-                Fail("MAX-2", n, $"{c.Mechanics.Count} mecanicas antes del 300");
+                Fail("MAX-2", n, $"{c.Mechanics.Count} mecanicas (como mucho {maxMechanics} en {RoleText(role)} del {n}; mechanics_per_level)");
             }
 
             // CAPACITIES
             int chicas = c.Capacities.Count(x => x.Id == "chica") + (c.Has("Pi") ? 1 : 0);
             int altas = c.Capacities.Count(x => x.Id == "alta");
-            if (n < 200 && (chicas > 2 || altas > 1))
+            if (n < spec.CapacityLimitsBefore && (chicas > spec.MaxChicas || altas > spec.MaxAltas))
             {
-                Fail("CAPACITIES", n, $"{chicas} Cuias chicas y {altas} Cuias altas (como mucho 2 y 1 antes del 200)");
+                Fail("CAPACITIES", n, $"{chicas} Cuias chicas y {altas} Cuias altas (como mucho {spec.MaxChicas} y {spec.MaxAltas} antes del {spec.CapacityLimitsBefore})");
             }
 
             if (c.HasCapacity("Al6") && (role != SlotRole.Milestone || n < 141))
@@ -167,10 +233,69 @@ internal static class SpecValidator
                     Fail("LIANA-CAPS", n, what + " con capacidades mixtas (" + c.Short + "): bloqueo C1-9 de AF.Core; mueve la capacidad o la Pirana a una celda sin " + what);
                 }
             }
+
+            // HITO-14 (03 §11; d.5.1): K = 13 + 1 vacío solo en hitos, declarado en la celda y sin capacidades, cueva ni Tinaja.
+            if (hito14)
+            {
+                int? k = spec.KAt(n);
+                int? noted = NoteK(c);
+                if (noted is int nk && nk != k)
+                {
+                    Fail("HITO-14", n, $"la celda dice K = {nk} y el k_plan da K = {(k is null ? "-" : k.Value.ToString(CultureInfo.InvariantCulture))}");
+                }
+
+                if (k >= HitoK)
+                {
+                    if (role != SlotRole.Milestone)
+                    {
+                        Fail("HITO-14", n, $"K = {k} ({k + 1} cuias o mas) fuera de un hito");
+                    }
+                    else if (noted is null)
+                    {
+                        Fail("HITO-14", n, $"hito de K = {k} sin \"K = {k}\" en la celda ({c.Literal})");
+                    }
+
+                    if (c.Capacities.Count > 0 || c.Mechanics.Any(m => m.CaveCap > 0 || m.Code == MechanicCodes.Tinaja))
+                    {
+                        Fail("HITO-14", n, $"hito de 14 cuias con capacidades, la cueva de la Pirana o la Tinaja ({c.Short}; d.5.1)");
+                    }
+                }
+            }
         }
 
-        // Debuts: primer uso, estrella y slot.
-        foreach (MechanicInfo m in spec.MechanicTable)
+        // FALLBACK (d.5.4): en cada variante, ninguna celda con una mecánica de la otra; en la «a», los respaldos solo en celdas
+        // con una mecánica de una sola variante y sin ella.
+        if (spec.HasVariants)
+        {
+            foreach (CalendarCell c in cells)
+            {
+                foreach (MechanicInfo m in c.Mechanics.Where(m => !spec.MechanicTable.Contains(m)))
+                {
+                    Fail("FALLBACK", c.Level, $"{m.Id} no existe en la variante {spec.Variant} (only_variant {m.OnlyVariant}): la celda necesita su respaldo en fallback");
+                }
+            }
+
+            if (spec.Variant == CampaignSpec.VariantA)
+            {
+                foreach ((int level, CalendarCell fb) in spec.FallbackCells.OrderBy(kv => kv.Key))
+                {
+                    if (!spec.Calendar[level].Mechanics.Any(m => m.OnlyVariant is not null))
+                    {
+                        Fail("FALLBACK", level, $"respaldo '{fb.Literal}' de una celda sin mecanica de una sola variante ({spec.Calendar[level].Literal})");
+                    }
+
+                    foreach (MechanicInfo m in fb.Mechanics.Where(m => m.OnlyVariant is not null))
+                    {
+                        Fail("FALLBACK", level, $"el respaldo '{fb.Literal}' lleva {m.Id}, que es de una sola variante");
+                    }
+                }
+            }
+        }
+
+        // Debuts: primer uso, estrella y slot. Con "previous", los debuts anteriores al primer nivel los comprueba la
+        // especificación anterior (campaign_v1 para los de 11-200).
+        bool OwnDebut(int debut) => spec.Previous is null || debut >= spec.FirstLevel;
+        foreach (MechanicInfo m in spec.MechanicTable.Where(m => OwnDebut(m.Debut)))
         {
             List<CalendarCell> uses = cells.Where(c => c.Mechanics.Contains(m)).ToList();
             if (uses.Count == 0)
@@ -218,7 +343,7 @@ internal static class SpecValidator
             }
         }
 
-        foreach (CapacityInfo cap in spec.CapacityTable)
+        foreach (CapacityInfo cap in spec.CapacityTable.Where(cap => OwnDebut(cap.Debut)))
         {
             CalendarCell? first = cells.FirstOrDefault(c => c.Capacities.Contains(cap));
             if (first is null)
@@ -276,56 +401,55 @@ internal static class SpecValidator
                     Fail("TITULAR-8", start, $"ciclo {name}: la titular {m.Id} sale {count} veces (8 en su ciclo de debut)");
                 }
 
-                if (titular && start + 20 <= spec.LastLevel)
+                if (titular && start + 20 <= spec.LastLevel && !ReturnsIn(spec, cells, m, start + 20))
                 {
-                    bool returns = cells.Any(c => c.Level >= start + 20 && c.Level < start + 40 && c.Mechanics.Contains(m)
-                        && spec.Positions.First(r => r.Positions.Contains(CampaignSpec.PositionOf(c.Level))).Role is SlotRole.Challenge or SlotRole.Milestone);
-                    if (!returns)
-                    {
-                        Fail("RETURN", start + 20, $"la titular {m.Id} del ciclo {name} no vuelve como secundaria en un reto o hito del ciclo {CycleName(start + 20)}");
-                    }
+                    Fail("RETURN", start + 20, $"la titular {m.Id} del ciclo {name} no vuelve como secundaria en un reto o hito del ciclo {CycleName(start + 20)}");
                 }
             }
 
-            // FIRST-TIME: estreno, tinte nuevo o primera combinación de dos códigos.
-            bool novelty = cycle.Any(c => c.Star || c.TintDebutName is not null);
+            // FIRST-TIME: estreno, tinte nuevo o entrada del registro (un conjunto de códigos nunca visto, d.5.6).
+            bool novelty = cycle.Any(c => c.Star || c.TintDebutName is not null || registryLevels.Contains(c.Level));
             if (!novelty)
             {
-                var seenBefore = new HashSet<string>(cells.Where(c => c.Level < start).SelectMany(Combinations));
-                novelty = cycle.SelectMany(Combinations).Any(combo => !seenBefore.Contains(combo));
-            }
-
-            if (!novelty)
-            {
-                Fail("FIRST-TIME", start, $"ciclo {name}: ninguna primera vez (estreno, tinte o combinacion nueva)");
+                Fail("FIRST-TIME", start, $"ciclo {name}: ninguna primera vez (estreno, tinte o entrada nueva del registro de combinaciones)");
             }
         }
 
-        // NO-3-ROW
+        // RETURN de las titulares que debutan en el último ciclo de la especificación anterior (183 Piraña → 201-220).
+        foreach (MechanicInfo m in spec.MechanicTable.Where(m => m.Code != "Tu" && m.Debut < spec.FirstLevel && CampaignSpec.PositionOf(m.Debut) == 3))
+        {
+            int next = m.Debut - 2 + 20;
+            if (next >= spec.FirstLevel && next + 19 <= spec.LastLevel && !ReturnsIn(spec, cells, m, next))
+            {
+                Fail("RETURN", next, $"la titular {m.Id} del ciclo {CycleName(next - 20)} no vuelve como secundaria en un reto o hito del ciclo {CycleName(next)}");
+            }
+        }
+
+        // NO-3-ROW (con la historia: el 199-201 cuenta; solo falla en los niveles de esta especificación).
         foreach (MechanicInfo m in spec.MechanicTable)
         {
             int run = 0;
-            foreach (CalendarCell c in cells)
+            foreach (CalendarCell c in all)
             {
-                bool counts = c.Mechanics.Contains(m) && !c.Star;
+                bool counts = c.Mechanics.Any(x => x.Code == m.Code) && !c.Star;
                 run = counts ? run + 1 : 0;
-                if (run == 3)
+                if (run == 3 && c.Level >= spec.FirstLevel)
                 {
                     Fail("NO-3-ROW", c.Level, $"{m.Id} en 3 niveles seguidos ({c.Level - 2}-{c.Level}) fuera de su estreno");
                 }
             }
         }
 
-        // GAP-120: mecánicas y, por id, las capacidades (la Cuia alta de 5 y la de 6 son la misma Cuia alta).
+        // GAP-120: mecánicas y, por id, las capacidades (la Cuia alta de 5 y la de 6 son la misma Cuia alta), con la historia.
         IEnumerable<(string Id, List<int> Levels)> tracked = spec.MechanicTable
-            .Select(m => (m.Id, cells.Where(c => c.Mechanics.Contains(m)).Select(c => c.Level).ToList()))
+            .Select(m => (m.Id, all.Where(c => c.Mechanics.Any(x => x.Code == m.Code)).Select(c => c.Level).ToList()))
             .Concat(spec.CapacityTable.Select(x => x.Id).Distinct()
-                .Select(id => (id, cells.Where(c => c.Capacities.Any(x => x.Id == id)).Select(c => c.Level).ToList())));
+                .Select(id => (id, all.Where(c => c.Capacities.Any(x => x.Id == id)).Select(c => c.Level).ToList())));
         foreach ((string id, List<int> levels) in tracked)
         {
             for (int i = 1; i < levels.Count; i++)
             {
-                if (levels[i] - levels[i - 1] > MaxGap)
+                if (levels[i] - levels[i - 1] > MaxGap && levels[i] >= spec.FirstLevel)
                 {
                     Fail("GAP-120", levels[i], $"{id} pasa {levels[i] - levels[i - 1]} niveles sin volver");
                 }
@@ -337,26 +461,35 @@ internal static class SpecValidator
             }
         }
 
-        // SEASONS
-        List<int> starts = Cycles(spec, cells).Select(x => x.Start).ToList();
+        // SEASONS (la racha de temporadas sigue desde la especificación anterior).
         string? prev = null;
         int same = 0;
-        foreach (int s in starts)
+        foreach ((int s, string? season) in spec.CycleSeasonsWithHistory())
         {
-            if (!spec.Seasons.TryGetValue(s, out string? season) || season is not ("A" or "B"))
+            bool own = s >= spec.FirstLevel;
+            if (season is not ("A" or "B"))
             {
-                Fail("SEASONS", s, $"el ciclo {CycleName(s)} no tiene temporada A o B");
+                if (own)
+                {
+                    Fail("SEASONS", s, $"el ciclo {CycleName(s)} no tiene temporada A o B");
+                }
+
                 continue;
             }
 
             same = season == prev ? same + 1 : 1;
             prev = season;
+            if (!own)
+            {
+                continue;
+            }
+
             if (same > 2)
             {
                 Fail("SEASONS", s, $"{same} ciclos seguidos de temporada {season} (como mucho 2)");
             }
 
-            foreach (MechanicInfo m in spec.MechanicTable.Where(m => m.Debut >= s && m.Debut < s + 20 && m.Season is "A" or "B"))
+            foreach (MechanicInfo m in spec.MechanicTable.Where(m => m.Debut >= s && m.Debut < s + 20 && m.Season is "A" or "B" && m.VariantOf is null))
             {
                 if (m.Season != season)
                 {
@@ -365,20 +498,74 @@ internal static class SpecValidator
             }
         }
 
+        // NOVELTY-60 (D-009 punto 8; d.5 punto 5): hueco entre dos primeras veces seguidas, desde la última de la historia.
+        if (spec.NoveltyMaxGap is int maxNovelty)
+        {
+            List<int> firsts = NoveltyLevels(all, registry);
+            for (int i = 1; i < firsts.Count; i++)
+            {
+                if (firsts[i] >= spec.FirstLevel && firsts[i] - firsts[i - 1] > maxNovelty)
+                {
+                    Fail("NOVELTY-60", firsts[i], $"{firsts[i] - firsts[i - 1]} niveles sin una primera vez ({firsts[i - 1]} -> {firsts[i]}; como mucho {maxNovelty})");
+                }
+            }
+
+            if (firsts.Count == 0 || spec.LastLevel - firsts[^1] > maxNovelty)
+            {
+                Fail("NOVELTY-60", spec.LastLevel, $"{(firsts.Count == 0 ? "ninguna primera vez" : $"ninguna primera vez desde el {firsts[^1]}")} hasta el {spec.LastLevel} (como mucho {maxNovelty})");
+            }
+        }
+
         return issues;
     }
 
-    private static IEnumerable<string> Combinations(CalendarCell c)
+    /// <summary>Niveles con una primera vez para NOVELTY-60: entradas del registro y debuts de tinte, en orden.</summary>
+    public static List<int> NoveltyLevels(IEnumerable<CalendarCell> cells, IEnumerable<CombinationEntry> registry) =>
+        registry.Select(e => e.Level).Concat(cells.Where(c => c.TintDebutName is not null).Select(c => c.Level)).Distinct().Order().ToList();
+
+    /// <summary>Hueco máximo entre dos primeras veces seguidas desde <paramref name="from"/> (para el resumen): (hueco, desde, hasta).</summary>
+    public static (int Gap, int From, int To) MaxNoveltyGap(List<int> firsts, int from)
     {
-        var codes = c.Mechanics.Select(m => m.Code).Concat(c.Capacities.Select(x => x.Code)).Order(StringComparer.Ordinal).ToList();
-        for (int i = 0; i < codes.Count; i++)
+        (int Gap, int From, int To) best = (0, 0, 0);
+        for (int i = 1; i < firsts.Count; i++)
         {
-            for (int j = i + 1; j < codes.Count; j++)
+            if (firsts[i] >= from && firsts[i] - firsts[i - 1] > best.Gap)
             {
-                yield return codes[i] + "+" + codes[j];
+                best = (firsts[i] - firsts[i - 1], firsts[i - 1], firsts[i]);
             }
         }
+
+        return best;
     }
+
+    private static bool ReturnsIn(CampaignSpec spec, List<CalendarCell> cells, MechanicInfo m, int cycleStart) =>
+        cells.Any(c => c.Level >= cycleStart && c.Level < cycleStart + 20 && c.Mechanics.Contains(m)
+            && spec.Positions.First(r => r.Positions.Contains(CampaignSpec.PositionOf(c.Level))).Role is SlotRole.Challenge or SlotRole.Milestone);
+
+    /// <summary>K declarado en la celda («(MD; K = 13)»), o null.</summary>
+    public static int? NoteK(CalendarCell c)
+    {
+        foreach (string note in c.Notes)
+        {
+            Match m = Regex.Match(note, @"^K\s*=\s*(\d+)$");
+            if (m.Success)
+            {
+                return int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
+            }
+        }
+
+        return null;
+    }
+
+    private static string RoleText(SlotRole? role) => role switch
+    {
+        null => "la rampa",
+        SlotRole.Challenge => "un reto",
+        SlotRole.Milestone => "un hito",
+        SlotRole.Recovery => "una recuperacion",
+        SlotRole.Remanso => "un remanso",
+        _ => "una comodidad",
+    };
 
     private static string? ExpectedMark(CampaignSpec spec, int level, int p, SlotRole? role)
     {
@@ -420,7 +607,12 @@ internal static class SpecValidator
     {
         var sb = new StringBuilder();
         IReadOnlyDictionary<int, string> intro = spec.IntroLevels;
-        var blocks = new List<(int First, int Last, string Name)> { (spec.RampFirst, spec.RampLast, "rampa") };
+        var blocks = new List<(int First, int Last, string Name)>();
+        if (spec.HasRamp)
+        {
+            blocks.Add((spec.RampFirst, spec.RampLast, "rampa"));
+        }
+
         for (int start = spec.CycleFrom; start <= spec.LastLevel; start += 20)
         {
             blocks.Add((start, Math.Min(start + 19, spec.LastLevel), "temporada " + (spec.Seasons.TryGetValue(start, out string? s) ? s : "-")));
@@ -460,13 +652,20 @@ internal static class SpecValidator
         return sb.ToString();
     }
 
-    /// <summary>Ejecuta --validate-spec: 0 = cumple; 1 = alguna regla falla; 2 = especificación ilegible.</summary>
+    /// <summary>
+    /// Ejecuta --validate-spec: 0 = cumple; 1 = alguna regla falla; 2 = especificación ilegible. Una especificación con dos
+    /// variantes se comprueba en las dos (d.5.4), cada una con su registro de combinaciones en memoria (d.5.6).
+    /// </summary>
     public static int Run(string path)
     {
-        CampaignSpec spec;
+        var specs = new List<CampaignSpec>();
         try
         {
-            spec = CampaignSpec.Load(path);
+            CampaignSpec published = CampaignSpec.Load(path);
+            foreach (string variant in published.Variants)
+            {
+                specs.Add(variant == published.Variant ? published : CampaignSpec.Load(path, variant));
+            }
         }
         catch (CampaignSpecException e)
         {
@@ -474,26 +673,172 @@ internal static class SpecValidator
             return 2;
         }
 
-        List<SpecIssue> issues = Validate(spec);
-        Console.WriteLine(AsciiText.Of($"especificacion {spec.SpecId} ({path.Replace('\\', '/')}): niveles {spec.FirstLevel}-{spec.LastLevel}"));
-        Console.Write(AsciiText.Of(Summary(spec)));
-        foreach (SpecIssue issue in issues.OrderBy(i => i.Warning).ThenBy(i => i.Level).ThenBy(i => i.Rule, StringComparer.Ordinal))
+        CampaignSpec main = specs[0];
+        var issues = new List<SpecIssue>();
+        string header = $"especificacion {main.SpecId} ({path.Replace('\\', '/')}): niveles {main.FirstLevel}-{main.LastLevel}";
+        if (main.Previous is not null)
         {
+            header += $"; historia: {string.Join(", ", main.Previous.SourceIds)} ({main.Previous.CellsWithHistory()[0].Level}-{main.Previous.LastLevel})";
+        }
+
+        if (main.HasVariants)
+        {
+            header += $"; variantes {string.Join(", ", main.Variants)} (publicada: {main.PublishedVariant})";
+        }
+
+        Console.WriteLine(AsciiText.Of(header));
+        foreach (CampaignSpec spec in specs)
+        {
+            if (main.HasVariants)
+            {
+                Console.WriteLine($"-- variante {spec.Variant} --");
+            }
+
+            Console.Write(AsciiText.Of(Summary(spec)));
+            if (spec.Previous is not null || spec.NoveltyMaxGap is not null)
+            {
+                List<CalendarCell> all = spec.CellsWithHistory();
+                List<CombinationEntry> registry = CombinationsRegistry.Build(all, spec.VariantCodes);
+                int before = registry.Count(e => e.Level < spec.FirstLevel);
+                (int gap, int from, int to) = MaxNoveltyGap(NoveltyLevels(all, registry), spec.FirstLevel);
+                Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
+                    $"registro de combinaciones: {registry.Count} entradas ({before} antes del {spec.FirstLevel} y {registry.Count - before} en {spec.FirstLevel}-{spec.LastLevel}); hueco maximo entre primeras veces: {gap} ({from} -> {to})"));
+            }
+
+            issues.AddRange(Validate(spec));
+        }
+
+        foreach (SpecIssue issue in issues.OrderBy(i => i.Warning).ThenBy(i => i.Level).ThenBy(i => i.Rule, StringComparer.Ordinal)
+                     .ThenBy(i => i.Variant, StringComparer.Ordinal))
+        {
+            string where = issue.Variant is null ? "" : $"variante {issue.Variant}, ";
             Console.WriteLine(AsciiText.Of(string.Create(CultureInfo.InvariantCulture,
-                $"{(issue.Warning ? "AVISO" : "FAIL ")} [{issue.Rule}] nivel {issue.Level}: {issue.Message}")));
+                $"{(issue.Warning ? "AVISO" : "FAIL ")} [{issue.Rule}] {where}nivel {issue.Level}: {issue.Message}")));
         }
 
         int failures = issues.Count(i => !i.Warning);
         int warnings = issues.Count(i => i.Warning);
         Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
-            $"{Rules.Length} reglas; {failures} fallo(s), {warnings} aviso(s)"));
-        if (spec.ExpectRule is not null)
+            $"{Rules.Count(r => Applies(r.Id, main))} reglas; {failures} fallo(s), {warnings} aviso(s)"));
+        if (main.ExpectRule is not null)
         {
-            bool present = issues.Any(i => !i.Warning && i.Rule == spec.ExpectRule);
-            Console.WriteLine($"esperado: [{spec.ExpectRule}] {(present ? "presente" : "AUSENTE")}");
+            bool present = issues.Any(i => !i.Warning && i.Rule == main.ExpectRule && (main.ExpectVariant is null || i.Variant == main.ExpectVariant));
+            string inVariant = main.ExpectVariant is null ? "" : $" en la variante {main.ExpectVariant}";
+            Console.WriteLine($"esperado: [{main.ExpectRule}]{inVariant} {(present ? "presente" : "AUSENTE")}");
         }
 
         return failures == 0 ? 0 : 1;
+    }
+}
+
+/// <summary>Entrada del registro de combinaciones publicadas (d.5.6): el primer nivel de un conjunto de códigos.</summary>
+internal sealed record CombinationEntry(int Level, IReadOnlyList<string> Codes, string Kind);
+
+/// <summary>
+/// Registro de combinaciones publicadas (propuesta de D-009 d.2 regla 3 y d.5.6 [P]; 03 §17 comprobación 15): formato
+/// <c>af-combinations/1</c> en <c>tools/level-generator/specs/combinations_registry_v1.json</c>, generado desde campaign_v1 y
+/// campaign_v2 (la cadena de "previous") con la variante publicada; nunca a mano.
+/// <list type="bullet">
+/// <item><description>una entrada por conjunto de códigos de celda (mecánicas y capacidades, sin R, C, S, marcas, tintes ni
+/// nombres), en el primer nivel donde sale; los códigos en orden ordinal y las entradas por nivel;</description></item>
+/// <item><description>la entrada es el conjunto completo, no sus pares: un trío es nuevo si esos tres códigos nunca salieron
+/// juntos; un conjunto que ya salió (también en 11-200) no vuelve a entrar;</description></item>
+/// <item><description><c>kind</c>: <c>debut</c> (un código), <c>variant</c> (un código de una variante de la 1.0, Ln, Ha, B2 o
+/// Fl) o <c>combination</c> (dos o más).</description></item>
+/// </list>
+/// UTF-8 sin BOM, LF y una entrada por línea: la misma especificación da los mismos bytes.
+/// </summary>
+internal static class CombinationsRegistry
+{
+    public const string Format = "af-combinations/1";
+
+    public static List<CombinationEntry> Build(IEnumerable<CalendarCell> cellsInOrder, IReadOnlySet<string> variantCodes)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var entries = new List<CombinationEntry>();
+        foreach (CalendarCell c in cellsInOrder.OrderBy(c => c.Level))
+        {
+            string[] codes = [.. c.Mechanics.Select(m => m.Code).Concat(c.Capacities.Select(x => x.Code)).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
+            if (codes.Length == 0 || !seen.Add(string.Join("+", codes)))
+            {
+                continue;
+            }
+
+            string kind = codes.Length > 1 ? "combination" : variantCodes.Contains(codes[0]) ? "variant" : "debut";
+            entries.Add(new CombinationEntry(c.Level, codes, kind));
+        }
+
+        return entries;
+    }
+
+    /// <summary>Los bytes del registro de la especificación (su variante y la cadena de "previous").</summary>
+    public static byte[] Bytes(CampaignSpec spec)
+    {
+        List<CombinationEntry> entries = Build(spec.CellsWithHistory(), spec.VariantCodes);
+        var sb = new StringBuilder();
+        sb.Append("{\n");
+        sb.Append("  \"format\": \"").Append(Format).Append("\",\n");
+        sb.Append("  \"source\": [").Append(string.Join(", ", spec.SourceIds.Select(Quote))).Append("],\n");
+        sb.Append("  \"variant\": ").Append(Quote(spec.Variant)).Append(",\n");
+        sb.Append("  \"combinations\": [\n");
+        for (int i = 0; i < entries.Count; i++)
+        {
+            CombinationEntry e = entries[i];
+            sb.Append(string.Create(CultureInfo.InvariantCulture,
+                $"    {{\"level\": {e.Level}, \"codes\": [{string.Join(", ", e.Codes.Select(Quote))}], \"kind\": {Quote(e.Kind)}}}"));
+            sb.Append(i + 1 < entries.Count ? ",\n" : "\n");
+        }
+
+        sb.Append("  ]\n}\n");
+        return new UTF8Encoding(encoderShouldEmitUTF8Identifier: false).GetBytes(sb.ToString());
+    }
+
+    private static string Quote(string s) => System.Text.Json.JsonSerializer.Serialize(s);
+
+    /// <summary>
+    /// Modo --registry: escribe (o, con --check, compara byte a byte sin escribir) el registro de la especificación con la
+    /// variante <paramref name="variant"/> (null = la publicada). La especificación tiene que pasar --validate-spec en esa
+    /// variante. Códigos: 0 = escrito o idéntico; 1 = difiere o la especificación no pasa; 2 = especificación ilegible.
+    /// </summary>
+    public static int Run(string specPath, string outPath, string? variant, bool check)
+    {
+        CampaignSpec spec;
+        try
+        {
+            spec = CampaignSpec.Load(specPath, variant);
+        }
+        catch (CampaignSpecException e)
+        {
+            Console.Error.WriteLine(AsciiText.Of($"level-generator --registry: {e.Message}"));
+            return 2;
+        }
+
+        if (SpecValidator.Validate(spec).Any(i => !i.Warning))
+        {
+            Console.Error.WriteLine($"level-generator --registry: la especificacion no pasa --validate-spec en la variante {spec.Variant}; corrigela antes.");
+            return 1;
+        }
+
+        byte[] bytes = Bytes(spec);
+        int count = Build(spec.CellsWithHistory(), spec.VariantCodes).Count;
+        string shown = outPath.Replace('\\', '/');
+        if (check)
+        {
+            byte[]? onDisk = File.Exists(outPath) ? File.ReadAllBytes(outPath) : null;
+            bool same = onDisk is not null && onDisk.AsSpan().SequenceEqual(bytes);
+            Console.WriteLine($"--check: {shown} {(same ? "coincide" : "NO coincide")} con el registro de {spec.SpecId} (variante {spec.Variant}, {count} entradas)");
+            return same ? 0 : 1;
+        }
+
+        string? dir = Path.GetDirectoryName(Path.GetFullPath(outPath));
+        if (dir is not null)
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        File.WriteAllBytes(outPath, bytes);
+        Console.WriteLine($"registro: {shown} (variante {spec.Variant}, {count} entradas, {bytes.Length} bytes)");
+        return 0;
     }
 }
 

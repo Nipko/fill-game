@@ -12,11 +12,12 @@ ejecuciones den los mismos bytes.
 | Modo | Qué hace | Salida |
 |---|---|---|
 | `--handmade <spec> --out <carpeta> --report <md> [--check]` | Tutorial 1-10 hecho a mano (02 §13) | `Assets/_Project/Data/Levels/tutorial_v0.json` y `tools/out/tutorial_v0_report.md` |
-| `--validate-spec <campaign.json>` | Comprueba la especificación de la campaña 11-200 | Resumen ASCII por ciclo |
+| `--validate-spec <campaign.json>` | Comprueba la especificación de la campaña (11-200 y 201-700, esta en sus dos variantes) | Resumen ASCII por ciclo |
+| `--registry <campaign.json> --out <registro.json> [--variant a\|b] [--check]` | Registro de combinaciones publicadas (d.5.6; P4) | `tools/level-generator/specs/combinations_registry_v1.json` |
 | `--parity [--report <md>]` | Paridad de las métricas con el prototipo (03 §17-§18; 09 R26) | `tools/out/parity_report.md` |
-| `--spec <campaign.json> --levels a-b --out <carpeta> [--report <md>] [--check]` | Genera la campaña (03 §2) | `Assets/_Project/Data/Levels/mundo_0N_v1.json` y `tools/out/campaign_v1_report.md` |
+| `--spec <campaign.json> [--levels a-b] [--variant a\|b] --out <carpeta> [--report <md>] [--check]` | Genera la campaña (03 §2); sin `--levels`, todos los niveles de la especificación | `Assets/_Project/Data/Levels/mundo_0N_v1.json` y `tools/out/campaign_v1_report.md` |
 | `--seasons <campaign.json> [...] --out <tabla.json> [--check]` | Tabla de temporada del cliente (pregunta 32 b) | `Assets/_Project/Data/Levels/seasons_v1.json` |
-| `--self-test [tinaja\|seasons\|variants]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
+| `--self-test [tinaja\|seasons\|variants\|registry]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
 
 Códigos de salida: 0 = correcto; 1 = alguna comprobación falla; 2 = uso incorrecto o especificación ilegible.
 
@@ -41,6 +42,81 @@ que `level-qa` enlaza). Fuentes:
 - **[P] de la especificación**: K por rol (`k_plan`, limitado por el pool y por los pares de riesgo), ventanas de
   bot de los retos (41-59 con etiqueta 75-89 %, suaves 50-74 %, desde el 61 75-89 %), «Ch» = Cuia chica de 2.
 
+## Especificación de 201-700: `specs/campaign_v2.json` (P4)
+
+Copia versionada de la tabla de novedades de 201-700 rehecha por D2 (propuesta, d.5-d.5.8; 03 §11 y §12), cuya
+recomendación aplica D-023, punto 10. Mismo formato que `campaign_v1.json`, con estas claves nuevas [P] (todas opcionales:
+`campaign_v1.json` no cambia):
+
+- `calendar`: las 500 celdas de d.5.3, literales (copiadas por programa de las tablas de la propuesta), con los códigos de
+  d.5.1 (Ln, Ha, Ti, B2 y Fl) y «(MD; K = 13)» en los hitos de 14 cuias. Es la **variante a**, con la Tinaja (estreno en el
+  323, D-019).
+- `fallback`: el respaldo sin la Tinaja de cada una de sus 19 celdas (d.5.4). `--variant b` (en `--spec`, `--registry` y
+  en la lectura, `CampaignSpec.Load(path, "b")`) toma el calendario con esas celdas: la **variante b**, la salida B de
+  D-019. `published_variant` (a) es la que se lee sin `--variant`; la cambia C1b si se publica la b (d.5.8).
+- En la tabla `mechanics`, las nueve de `campaign_v1` (para leer las celdas y contar la historia) más las de la 1.0, con
+  `variant_of` (Ln y Fl de la Liana con fruta, Ha de la Hoja y B2 del Brote: pueden estrenarse en cualquier temporada, no van
+  con su base y su estreno entra en el registro como `variant`), `not_with` y `only_with` (la columna «Con qué no va» de
+  d.5.1; la Tinaja solo con Ho, Ha, Br, B2, Ma, Ba y capacidades) y `only_variant` (la Tinaja, solo en la a).
+- `previous`: `campaign_v1.json`. Su calendario es la historia de las reglas que la necesitan (GAP-120, NO-3-ROW, SEASONS,
+  el RETURN de la Piraña en 201-220, FIRST-TIME y NOVELTY-60), que solo fallan en 201-700; el registro sale de las dos.
+- `max_risk_pairs` con `"max": "libre"` desde el 201 (03 §11): el lector lo toma como los 10 pares de riesgo (el máximo de
+  la cabecera del pack).
+- `mechanics_per_level` (2; 3 en retos desde el 301 y en hitos desde el 320), `capacities_per_level` (2 Cuias chicas y 1
+  Cuia alta antes del 200, 02 §8: desde el 201 no hay tope por nivel) y `novelty_max_gap` (60, D-009 punto 8). Con ellas,
+  ningún «antes del 300» ni «antes del 200» queda en el código: sin la clave, valen los de `campaign_v1` (02 §8 y §9.2).
+- Sin `ramp` (la rampa 11-20 es de `campaign_v1`); `report_sources`, las fuentes del informe de la generación.
+
+Datos del GDD: rangos de las filas 201-400 y 401-700 de 03 §11; mundos 6-9 del glosario §8 (Oriente 201-300, Madre de
+Dios 301-420, Madidi 421-560 y Ucayali 561-700; `world_id` [P]); temporadas de d.5, punto 4; ciclo, ventanas y etiquetas
+de D-009, como en `campaign_v1`. `k_plan` [P]: mundo 6, recuperación 9 y el resto 10; mundos 7 y 8, 10 y 11; mundo 9,
+recuperación 10, comodidad 11, retos 12 e hito 13 (K = 13 + 1 vacío desde el 561, el primero en el 580). Con la Tinaja el
+generador baja K hasta 12 cuias (02 §5).
+
+```
+dotnet run --project tools/level-generator -c Release -- --validate-spec tools/level-generator/specs/campaign_v2.json
+dotnet run --project tools/level-generator -c Release -- --registry tools/level-generator/specs/campaign_v2.json --out tools/level-generator/specs/combinations_registry_v1.json --check
+dotnet run --project tools/level-generator -c Release -- --self-test registry
+```
+
+No genera packs: los mundos 6-9 los generan P7a-P7d con `--levels` por mundo (y la b con `--variant b`, en `tools/out`).
+
+## Registro de combinaciones publicadas (`--registry`; P4)
+
+La entrada versionada del pipeline que pide d.2, regla 3 (03 §17, comprobación 15; d.5.6 de la propuesta): con él,
+«primera combinación» se decide sin mirar los packs y la reproducibilidad por hash sigue valiendo.
+
+```
+dotnet run --project tools/level-generator -c Release -- --registry tools/level-generator/specs/campaign_v2.json --out tools/level-generator/specs/combinations_registry_v1.json
+```
+
+Formato [P] `af-combinations/1` (`Campaign/SpecValidator.cs`, `CombinationsRegistry`):
+
+```
+{
+  "format": "af-combinations/1",
+  "source": ["campaign_v1", "campaign_v2"],
+  "variant": "a",
+  "combinations": [
+    {"level": 14, "codes": ["Ch"], "kind": "debut"},
+    {"level": 35, "codes": ["Al", "Ch"], "kind": "combination"},
+    ...
+  ]
+}
+```
+
+- Una entrada por conjunto de códigos de celda (mecánicas y capacidades, sin R, C, S, marcas, tintes ni nombres), en el
+  primer nivel donde sale; el conjunto entero, no sus pares (un trío es nuevo si esos tres nunca salieron juntos); los
+  códigos en orden ordinal y las entradas por nivel. Un conjunto que ya salió, también en 11-200, no vuelve a entrar.
+- `kind`: `debut` (un código), `variant` (un código con `variant_of`: Ln, Ha, B2 o Fl) o `combination` (dos o más).
+- `source`: la cadena de `previous`; `variant`: la publicada (o la de `--variant`). UTF-8 sin BOM, LF y una entrada por
+  línea: regenerarlo da los mismos bytes. Nunca se edita a mano.
+- El archivo refleja solo la variante que se publica: 102 entradas con la a (40 de 11-200 y 62 de 201-700); con la b serían
+  96 (40 y 56). **Se regenera antes de fusionar** si cambia lo que se publica (la b, el respaldo del hito 340 o el del 354;
+  d.5.6 y d.5.8). `--check` no escribe y sale con 1 si el del disco difiere; la especificación tiene que pasar
+  `--validate-spec` en esa variante (si no, 1).
+- `--validate-spec` no lo lee: cada variante se comprueba con su propio registro, calculado en memoria (d.5.6).
+
 ## `--validate-spec`
 
 ```
@@ -52,30 +128,37 @@ un `FAIL [regla]` por cada incumplimiento o un `AVISO`. Reglas (ids estables):
 
 | Id | Regla | Fuente |
 |---|---|---|
-| CAL-COVER | calendario 11-200 sin huecos | — |
+| CAL-COVER | calendario de `first_level` a `last_level` sin huecos | — |
 | CAL-ROLE | R solo en p1-p2, S solo en p19, p1-p2 y p19 puros | c.3, c.4 |
 | LABELS | (s), (D) y (MD) en su posición | D-009; c.3 regla 7 |
 | TITULAR-8 | cada titular sale 8 veces en su ciclo de debut | d.4 |
 | PURE-30 | al menos un 30 % de niveles puros por ciclo | d.2 regla 1 |
 | PURE-COMFORT | al menos 3 de las 8 comodidades de p7-p17 puras | c.4 |
-| FORBIDDEN | turbias solo con filtros; un contador por nivel; Lluvia nunca con Piraña; Remolino nunca con Piraña [P] | d.3; Q14 A |
+| FORBIDDEN | turbias solo con filtros; un contador por nivel; Lluvia nunca con Piraña; Remolino nunca con Piraña [P]; `not_with` y `only_with` de la tabla; una variante nunca con su base (`variant_of`) | d.3; Q14 A; d.5.1 |
 | MURKY-SLOT | turbias solo en slots con etiqueta | T1; b.2 |
 | MURKY-2 | turbias como mucho 2 veces por ciclo | b.2 |
 | BEFORE-DEBUT | nada antes de su debut | D-007; 02 §8 |
 | DEBUT-LEVEL | el primer uso es el debut, con ★ | D-007; 02 §8 |
 | DEBUT-SLOT | ningún debut en reto ni hito salvo las turbias en el 100; 2-3 estrenos seguidos con la mecánica sola | c.3 regla 6; 02 §9.2 regla 2 |
-| MAX-2 | como mucho 2 mecánicas por nivel antes del 300 (las capacidades no cuentan [P]) | 02 §9.2 regla 4 |
+| MAX-2 | mecánicas por nivel dentro de `mechanics_per_level` (2; 3 en retos desde el 301 y en hitos desde el 320; las capacidades no cuentan [P]) | 02 §9.2 regla 4; d.5.1 |
 | RETURN | la titular vuelve como secundaria en un reto o hito del ciclo siguiente | d.4 |
 | CAP-CYCLE | 6 niveles por ciclo como mucho (8 en el de debut) | d.2 regla 2 |
 | NO-3-ROW | nunca 3 niveles seguidos fuera del estreno | d.2 regla 2 |
-| SEASONS | temporadas alternas, el ciclo de debut toma la de la mecánica | d.2 regla 7 |
-| GAP-120 | ninguna mecánica ni capacidad (Cuia chica, Cuia alta) pasa más de 120 niveles sin volver | resumen 6; d.2 regla 4; 02 §8 |
-| FIRST-TIME | al menos una primera vez por ciclo | d.2 regla 3 |
-| CAPACITIES | ≤ 2 Cuias chicas (con la cueva) y ≤ 1 Cuia alta antes del 200; Cuia alta de 6 solo en hitos desde el 141 | 02 §8 |
+| SEASONS | temporadas alternas (la racha sigue desde `previous`), el ciclo de debut toma la de la mecánica salvo las variantes | d.2 regla 7 |
+| GAP-120 | ninguna mecánica ni capacidad (Cuia chica, Cuia alta) pasa más de 120 niveles sin volver, contando `previous` | resumen 6; d.2 regla 4; 02 §8 |
+| FIRST-TIME | al menos una primera vez por ciclo: estreno, tinte nuevo o entrada del registro de combinaciones (un conjunto nunca visto, también contra 11-200) | d.2 regla 3; d.5.6 |
+| CAPACITIES | Cuias chicas (con la cueva) y Cuias altas dentro de `capacities_per_level` (≤ 2 y ≤ 1 antes del 200); Cuia alta de 6 solo en hitos desde el 141 | 02 §8 |
 | LIANA-CAPS | la Liana (con fruta o de cuenta) y la Flor nunca van con Cuia chica, Cuia alta ni Piraña: `AF.Core` las rechaza (C1-9; K3b) y el generador no quita nada de la celda | C1-9 |
+| FALLBACK | con dos variantes, cada celda con una mecánica de una sola variante (la Tinaja) lleva su respaldo sin ella en `fallback`, y solo esas | d.5.4; D-019 |
+| HITO-14 | K ≥ 13 (14 cuias) solo en hitos, con «K = 13» en la celda igual al `k_plan`, sin capacidades, Piraña ni Tinaja | 03 §11; d.5.1 |
+| NOVELTY-60 | nunca más de `novelty_max_gap` (60) niveles entre dos primeras veces seguidas (entradas del registro o tintes nuevos), desde la última de `previous` | D-009 punto 8; d.5 punto 5; d.5.6 |
 
-Con `campaign_v1.json` y con `sample_variants.json`: 21 reglas, 0 fallos. Las reglas comprueban el calendario; lo publicado lo comprueba `level-qa`
-(QA-MECH-CELL y QA-GAP-120).
+Las tres últimas solo se aplican si la especificación las necesita (dos variantes, un K ≥ 13 o `novelty_max_gap`). Con
+`campaign_v1.json` y con `sample_variants.json`: 21 reglas, 0 fallos (la salida no cambia con P4, salvo el texto de MAX-2).
+Con `campaign_v2.json`: 24 reglas, 0 fallos en las dos variantes, que se comprueban enteras, cada una con su resumen, su
+registro en memoria (102 entradas en la a y 96 en la b) y su hueco máximo entre primeras veces (34, del 526 al 560); los
+fallos llevan la variante. Las reglas comprueban el calendario; lo publicado lo comprueba `level-qa` (QA-MECH-CELL y
+QA-GAP-120).
 
 ### Fixtures negativos: `specs/tests/*.json`
 
@@ -89,7 +172,14 @@ for f in tools/level-generator/specs/tests/*.json; do
 done
 ```
 
-Todos deben dar `exit=1` y `presente`. Los de la Tinaja (`tinaja_in_recovery.json` y `tinaja_in_remanso.json`) extienden
+Todos deben dar `exit=1` y `presente`. Los de P4 extienden `specs/campaign_v2.json` y se comprueban en sus dos variantes
+(con `"expect_variant"`, el fallo tiene que salir en esa): `novelty_gap_61.json` (61 niveles del 526 al 587 sin primera vez:
+NOVELTY-60, y FIRST-TIME en 541-560 y 561-580, porque con una primera vez por ciclo el hueco no pasa de 59),
+`combination_from_v1_not_new.json` (el 229 pasa a Ll+Ba, del 158: una combinación de 11-200 no cuenta como nueva y 221-240 falla
+FIRST-TIME), `variant_b_forbidden.json` (el respaldo del 329 con dos contadores: FORBIDDEN solo en la b),
+`tinaja_without_fallback.json` (la Tinaja en el 464 sin respaldo: FALLBACK en la b), `hito14_with_capacity.json` (Cuia alta en
+el hito de 14 cuias 620: HITO-14) y `variant_with_base.json` (Hoja atada con Hoja en el 292: FORBIDDEN); `--self-test registry`
+los repite. Los de la Tinaja (`tinaja_in_recovery.json` y `tinaja_in_remanso.json`) extienden
 `specs/sample_tinaja.json` y fallan por CAL-ROLE: p1, p2 y p19 son niveles puros, sin tinaja (D-019, Q-Ti1 A). Los de las
 variantes de la 1.0 extienden `specs/sample_variants.json`: `liana_n_with_capacity.json` (Liana de cuenta con una Cuia chica) y
 `flor_with_pirana.json` (Flor con la Piraña) fallan por LIANA-CAPS, y `brote_n2_before_debut.json` (Brote de dos hojas antes de
@@ -133,7 +223,9 @@ El segundo comando es la compuerta completa (`tools/level-qa/README.md`): compro
 código, y compara byte a byte) y banda medida. Usa siempre `-c Release` (en Debug tarda varias veces más). `--check`
 regenera y compara byte a byte con los packs del disco sin escribir nada (03 §17 #10), sin las demás comprobaciones. El
 índice D depende del pool de cada rango de 03 §11, así que un pack solo se reproduce con los mismos `--levels` (por
-defecto 11-200).
+defecto, todos los de la especificación: 11-200 con `campaign_v1.json`). `--variant` elige la variante de una especificación
+con respaldos (por defecto, la publicada); el informe lleva en el título los niveles generados y, con dos variantes, la
+variante.
 
 Fases (los tiempos salen por la consola; el informe no lleva tiempos):
 
@@ -323,10 +415,10 @@ lector de la especificación rechaza cualquier otro código):
   `--spec tools/level-generator/specs/sample_variants.json` (`tools/level-qa/README.md`). La clave `mechanics_per_level` de
   las especificaciones (`{"max": 2, "raised_from_level": 301, "raised_milestone_from_level": 320, "raised_max": 3}`: 02 §9.2
   regla 4, con los retos hasta 3 desde el 301 y los hitos desde el 320, 03 §12 fila p20 y d.5.1) solo la lee level-qa por
-  ahora (`CampaignSpec.MaxMechanicsAt`, probado por `level-qa --self-test reglas`); MAX-2 de `--validate-spec` sigue con el
-  300 en el código hasta P4.
+  ahora (`CampaignSpec.MaxMechanicsAt`, probado por `level-qa --self-test reglas`); desde P4 también MAX-2 de
+  `--validate-spec`.
 
-Muestra (no es el calendario de 201-700, que copiará `campaign_v2.json` en P4 desde d.5.3 de la propuesta):
+Muestra (no es el calendario de 201-700, que es `campaign_v2.json`, P4):
 
 ```
 dotnet run --project tools/level-generator -c Release -- --validate-spec tools/level-generator/specs/sample_variants.json
@@ -385,12 +477,13 @@ Formato [P] `af-seasons/1` (`Generation/SeasonTableWriter.cs`; no es un contrato
 - `source`: la ruta de cada especificación, relativa a la raíz del repositorio (no a la carpeta desde la que se ejecuta) y
   con `/`; con varias, separadas por «, » en el orden de sus ciclos [P].
 - `cycles`: un ciclo por línea, en orden y sin huecos; cada uno va de `from_level` a `from_level` + 19. Los niveles 1-20
-  (tutorial y rampa) no tienen temporada. Hoy: los 9 ciclos 21-181 de `campaign_v1.json`, idénticos a su `seasons`.
+  (tutorial y rampa) no tienen temporada. Hoy: los 9 ciclos 21-181 de `campaign_v1.json`, idénticos a su `seasons`; con
+  `campaign_v2.json` (P4), 34 ciclos 21-681 (`--self-test registry` lo comprueba; la tabla del cliente la amplía P7).
 - UTF-8 sin BOM, LF y claves en orden fijo: la misma especificación da los mismos bytes.
 
 La herramienta copia y comprueba el formato: cada ciclo de la especificación (de `cycle.from_level` a `last_level`) con A o
-B, ninguna entrada de `seasons` fuera de un inicio de ciclo y, con varias especificaciones (P4 y P7 añadirán
-`campaign_v2.json` para 201-700: `--seasons campaign_v1.json campaign_v2.json`), contiguas y sin solaparse. Si no, sale con
+B, ninguna entrada de `seasons` fuera de un inicio de ciclo y, con varias especificaciones (`campaign_v2.json` para
+201-700: `--seasons campaign_v1.json campaign_v2.json`), contiguas y sin solaparse. Si no, sale con
 1 y no escribe. Las reglas del calendario (temporadas alternas, el ciclo de debut toma la de su mecánica) son de
 `--validate-spec` (SEASONS). `--check` no escribe y sale con 1 si la tabla del disco no coincide byte a byte (desfase con
 el calendario). `--self-test seasons` comprueba los ciclos 21-181 frente a `campaign_v1.json` (leído aparte), la temporada

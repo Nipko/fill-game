@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v2.json",
+  "description": "Fixture negativo de --validate-spec (P4): un hito de 14 cuias (K = 13 + 1 vacío, k_plan del 561-700) con una Cuia alta (03 §11 y d.5.1: sin capacidades, Piraña ni Tinaja). El 620 pasa de Ln+Ll+Re a Ll+Re+Al (MD; K = 13); falla HITO-14 (y no LIANA-CAPS: la celda ya no lleva la Liana de cuenta).",
+  "expect_rule": "HITO-14",
+  "calendar": {
+    "620": "Ll+Re+Al (MD; K = 13)"
+  }
+}
