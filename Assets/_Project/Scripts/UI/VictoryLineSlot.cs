@@ -36,7 +36,12 @@ namespace AF.UI
         /// </summary>
         bool Show(LevelFlow flow, in VictoryLine line);
 
-        /// <summary>Avanza <paramref name="dtMs"/>; <paramref name="sinceShownMs"/> cuenta desde que se vio la victoria.</summary>
+        /// <summary>
+        /// Avanza <paramref name="dtMs"/>; <paramref name="sinceShownMs"/> cuenta desde que se vio la victoria (OnVictoryScreen:
+        /// el panel empieza a subir, fila 0,80 de 07 §5.4; «Siguiente» entra a los <see cref="GameScreen.VictoryButtonsInMs"/>
+        /// ms, fila 1,40). Con eso cada proveedor decide cuándo y cómo aparece lo suyo y cuándo recibe toques: la ranura no oculta,
+        /// no retrasa ni bloquea nada.
+        /// </summary>
         void Tick(float dtMs, float sinceShownMs);
 
         /// <summary>Se acabó la victoria sin enseñar nada suyo (o se dejó de usar la ranura): oculta lo que tenga.</summary>
@@ -56,17 +61,25 @@ namespace AF.UI
     /// caracteres en es-419 y <see cref="TranslatedWorstChars"/> en en, pt-BR y en-XA) a <see cref="TextSp"/> sp, medido con
     /// TextMeshPro y guardado en caché. Así «Siguiente» sube una sola vez y queda en el mismo sitio en todos los niveles.</item>
     /// <item>Solo existe con algún proveedor activo: sin ninguno, la victoria es la de siempre.</item>
-    /// <item>No retrasa nada: «Siguiente» sigue saliendo a los 0,60-0,75 s y entero a los 1,40 s (VA-13), en el mismo
-    /// milisegundo que sin ranura; el contenido aparece a los <see cref="RevealMs"/> ms con un fundido de
-    /// <see cref="FadeMs"/> ms (con Reducir movimiento, sin fundido).</item>
+    /// <item>No retrasa nada: «Siguiente» entra en el mismo milisegundo que sin ranura (a los
+    /// <see cref="GameScreen.VictoryButtonsInMs"/> ms de la pantalla de victoria, la fila 1,40 de 07 §5.4).</item>
+    /// <item>No decide cuándo aparece ni si recibe toques lo que ponen los proveedores: el contenido es visible y recibe toques
+    /// desde que se ve la victoria, y cada proveedor gobierna lo suyo con el <c>sinceShownMs</c> de
+    /// <see cref="IVictoryLineProvider.Tick"/>. La línea de fruta (F3) sale con «Siguiente» y un fundido de
+    /// <see cref="FruitFadeMs"/> ms (<see cref="FruitLineAlpha"/>; 02 §6, fila «Dato del río»); la llegada (M1.6) tiene su franja
+    /// de 1,2 s desde la subida del panel, un toque que la completa y «Ver mapa» (02 §6, fila Llegada).</item>
     /// </list>
     /// Las cadenas del peor caso solo se miden: nunca se enseñan (los textos visibles son los de las tablas, D-018).
     /// <para>Medidas de M1.3b (VictorySlotMeasureSnapshotTests, 360 × 780 y 360 × 640, victoria del 39 con chip y Cosecha
     /// doble): H = 94 dp en los cuatro idiomas al 100 %; al 130 %, 111 en es-419 y 136 en en, pt-BR y en-XA (la ranura añade
     /// 11 dp más con el hueco y el filete). La llegada de 02 §6 no cabe en H: completa, 161-199 dp al 100 % y 245-295 al
-    /// 130 %; compacta con la opción (a) de la pregunta 11 (la fila del agua y una placa con retrato, lugar y dato), 129-164 al
-    /// 100 % (120-137 con el dato a 12 sp). Se aplica la (a) [P] (NOTAS de la tanda 4, respuesta 11): M1.6 compacta la llegada
-    /// para que quepa en H, sin cambiar H ni mover Siguiente.</para>
+    /// 130 %. La opción (a) de la pregunta 11 (compactar la llegada: la fila del agua y una placa con retrato, lugar y dato) se
+    /// aplica [P] (NOTAS de la tanda 4, respuesta 11), pero no basta: 129-164 dp al 100 % (120-137 con el dato a 12 sp) y
+    /// 166-226 al 130 %. Solo la forma ceñida (el lugar en la fila del agua y el dato a todo el ancho) con el dato a 12 sp cabe,
+    /// y solo al 100 % en es-419, pt-BR y en-XA (76-92 dp; en, 109); al 130 % no cabe ninguna. Queda como pregunta nueva para el
+    /// dueño (H = máx(línea de fruta, llegada compacta), con Siguiente más arriba; dato de llegada a 12 sp con la forma ceñida;
+    /// o un tope de caracteres menor para el dato de llegada): hasta su respuesta, M1.6 no puede prometer que la llegada cabe
+    /// en H.</para>
     /// </summary>
     internal sealed class VictoryLineSlot
     {
@@ -94,11 +107,14 @@ namespace AF.UI
         /// <summary>Toda la línea es un botón de 48 dp como mínimo (02 §6; 07 §7.8).</summary>
         public const float MinContentDp = 48f;
 
-        /// <summary>El contenido aparece cuando ya están los botones: a los 1,40 s de la victoria (02 §6; 07 §5.4).</summary>
-        public const float RevealMs = 1400f;
+        /// <summary>
+        /// La línea de fruta empieza a verse con «Siguiente», en la fila 1,40 de 07 §5.4: a los
+        /// <see cref="GameScreen.VictoryButtonsInMs"/> ms de la pantalla de victoria (02 §6, fila «Dato del río»).
+        /// </summary>
+        public const float FruitRevealMs = GameScreen.VictoryButtonsInMs;
 
-        /// <summary>Fundido de entrada del contenido (02 §6; propuesta de Frutas §2.2, regla 2).</summary>
-        public const float FadeMs = 200f;
+        /// <summary>Fundido de entrada de la línea de fruta (02 §6; propuesta de Frutas §2.2, regla 2).</summary>
+        public const float FruitFadeMs = 200f;
 
         /// <summary>Peor caso en es-419: el tope de un dato (<see cref="RiverStopCatalog.FactMaxChars"/>, 90; 02 §6).</summary>
         public const int SourceWorstChars = RiverStopCatalog.FactMaxChars;
@@ -118,13 +134,11 @@ namespace AF.UI
         private RectTransform? _root;
         private Image? _rule;
         private RectTransform? _content;
-        private CanvasGroup? _group;
         private TextMeshProUGUI? _measure;
         private float _reserveDp;
         private float _contentDp;
         private float _sinceShownMs = -1f;
         private float _dismissedMs = -1f;
-        private bool _instant;
         private bool _shown;
 
         /// <summary>Hay algún proveedor activo: la ranura se reserva (<see cref="IVictoryLineProvider.SlotActive"/>).</summary>
@@ -161,9 +175,6 @@ namespace AF.UI
 
         /// <summary>El contenido bajo el filete, padre de lo que crean los proveedores; null hasta que hace falta.</summary>
         public RectTransform? Content => _content;
-
-        /// <summary>Opacidad del contenido (0 hasta <see cref="RevealMs"/>; tests).</summary>
-        public float ContentAlpha => _group != null ? _group.alpha : 0f;
 
         /// <summary>Algún proveedor enseña algo en la victoria de ahora.</summary>
         public bool Shown => _shown;
@@ -205,6 +216,23 @@ namespace AF.UI
             }
         }
 
+        /// <summary>
+        /// Opacidad de la línea de fruta a los <paramref name="sinceShownMs"/> ms de la pantalla de victoria (02 §6, fila «Dato del
+        /// río»; 07 §5.4, fila 1,40): 0 hasta que entra «Siguiente» (<see cref="FruitRevealMs"/>) y después un fundido de
+        /// <see cref="FruitFadeMs"/> ms; con <paramref name="reduceMotion"/>, sin fundido. Para el proveedor de la línea de fruta
+        /// (F3); la llegada lleva sus propios tiempos.
+        /// </summary>
+        public static float FruitLineAlpha(float sinceShownMs, bool reduceMotion)
+        {
+            float t = sinceShownMs - FruitRevealMs;
+            if (t <= 0f)
+            {
+                return 0f;
+            }
+
+            return reduceMotion ? 1f : Mathf.Clamp01(t / FruitFadeMs);
+        }
+
         /// <summary>Registra <paramref name="provider"/> (una vez).</summary>
         public void Register(IVictoryLineProvider provider)
         {
@@ -223,7 +251,10 @@ namespace AF.UI
             }
         }
 
-        /// <summary>Crea la ranura bajo el panel de victoria (una vez): filete, contenido con su fundido y la etiqueta de medir.</summary>
+        /// <summary>
+        /// Crea la ranura bajo el panel de victoria (una vez): filete, contenido y la etiqueta de medir. El contenido no lleva
+        /// CanvasGroup: lo que pongan los proveedores se ve y recibe toques según decida cada uno.
+        /// </summary>
         public void Build(RectTransform panel)
         {
             if (_root != null)
@@ -239,10 +270,6 @@ namespace AF.UI
             rule.gameObject.SetActive(false);
             _rule = rule;
             _content = UiBuilder.Rect("Content", _root);
-            _group = _content.gameObject.AddComponent<CanvasGroup>();
-            _group.alpha = 0f;
-            _group.blocksRaycasts = false; // hasta F4 la línea no abre nada (F3, punto 3)
-            _group.interactable = false;
 
             // Medidas con la fuente de verdad (Nunito Regular, como el texto de la línea); vacía e invisible fuera de la medida.
             _measure = UiBuilder.Label("Measure", _root, TextStyle.Body, string.Empty, TextSp, new Color(0f, 0f, 0f, 0f), TextAlignmentOptions.TopLeft);
@@ -327,14 +354,13 @@ namespace AF.UI
 
         /// <summary>
         /// La victoria de <paramref name="flow"/> se ve con la línea <paramref name="line"/>: cada proveedor activo enseña lo suyo
-        /// o lo oculta; el contenido empieza invisible y aparece a los <see cref="RevealMs"/> ms (sin fundido con
-        /// <paramref name="reduceMotion"/>).
+        /// (con sus propios tiempos, <see cref="IVictoryLineProvider.Tick"/>) o lo oculta, y empieza a contar
+        /// <see cref="SinceShownMs"/>.
         /// </summary>
-        public void Show(LevelFlow flow, in VictoryLine line, bool reduceMotion)
+        public void Show(LevelFlow flow, in VictoryLine line)
         {
             _sinceShownMs = 0f;
             _dismissedMs = -1f;
-            _instant = reduceMotion;
             _shown = false;
             for (int i = 0; i < _providers.Count; i++)
             {
@@ -346,11 +372,6 @@ namespace AF.UI
                 }
 
                 _shown |= p.Show(flow, in line);
-            }
-
-            if (_group != null)
-            {
-                _group.alpha = 0f;
             }
 
             if (_rule != null)
@@ -368,16 +389,6 @@ namespace AF.UI
             }
 
             _sinceShownMs += dtMs;
-            if (_group != null)
-            {
-                float t = _sinceShownMs - RevealMs;
-                float alpha = t < 0f ? 0f : (_instant ? 1f : Mathf.Clamp01(t / FadeMs));
-                if (_group.alpha != alpha)
-                {
-                    _group.alpha = alpha;
-                }
-            }
-
             for (int i = 0; i < _providers.Count; i++)
             {
                 if (_providers[i].SlotActive)

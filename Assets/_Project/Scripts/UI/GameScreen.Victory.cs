@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using AF.GameFlow;
 using AF.Levels;
 using AF.Localization;
+using AF.Presentation;
 using UnityEngine;
 
 namespace AF.UI
@@ -17,8 +18,10 @@ namespace AF.UI
     /// <item>La ranura solo existe con algún proveedor activo (<see cref="RegisterVictoryLineProvider"/>: la llegada en M1.6
     /// y la línea de fruta en F3); entonces reserva bajo «Inicio» el alto fijo H(idioma, escala, ancho), guardado en caché, y
     /// «Siguiente» queda en el mismo sitio en todas las victorias. Sin proveedores, la victoria es la de siempre.</item>
-    /// <item>«Siguiente» no cambia de tiempo: se habilita en el mismo milisegundo con y sin ranura, y a los 1,40 s está entero
-    /// (VA-13); el contenido de la ranura aparece entonces (<see cref="VictoryLineSlot.RevealMs"/>).</item>
+    /// <item>«Siguiente» no cambia de tiempo: se habilita en el mismo milisegundo con y sin ranura y entra a los
+    /// <see cref="VictoryButtonsInMs"/> ms de la pantalla de victoria (la fila 1,40 de 07 §5.4; VA-13). La ranura no decide
+    /// cuándo aparece lo de sus proveedores: la línea de fruta (F3) entra con «Siguiente»
+    /// (<see cref="VictoryLineSlot.FruitLineAlpha"/>) y la llegada (M1.6) lleva su franja desde la subida del panel.</item>
     /// <item>TiTino puede hablar si <see cref="SlothVoice"/> (<c>ui_sloth_enabled</c> ∧ <c>settings.sloth_messages</c>; lo
     /// enciende TI6a cuando TiTino exista en la victoria) y su caja mide ≥ <see cref="SlothSpeakBoxDp"/> dp. Solo cuenta con
     /// <see cref="HitoLinePolicy.SlothHito"/>, que también llega con TI6a.</item>
@@ -31,6 +34,14 @@ namespace AF.UI
         /// [P, a confirmar con las capturas de TI6a].
         /// </summary>
         internal const float SlothSpeakBoxDp = 104f;
+
+        /// <summary>
+        /// «Siguiente», «Inicio» y la Cosecha doble empiezan a entrar (de 0,9 a 1,0 en 150 ms; ApplyVictoryAnim) a los 600 ms de la
+        /// pantalla de victoria, que se abre con la subida del panel (fila 0,80 de 07 §5.4): es la fila 1,40, la de los botones y la
+        /// línea de fruta (02 §6; guía 6.9). Lo comparten ApplyVictoryAnim y la línea de fruta
+        /// (<see cref="VictoryLineSlot.FruitRevealMs"/>).
+        /// </summary>
+        internal const float VictoryButtonsInMs = 600f;
 
         private readonly VictoryLineSlot _slot = new VictoryLineSlot();
         private VictoryLine _victoryLine;
@@ -153,9 +164,7 @@ namespace AF.UI
         {
             int won = flow.LevelNumber;
 
-            // SlothCanSpeak: en un hito, el de la caja de ahora; en el 10k+1, si TiTino habló en el hito (el árbitro es puro y no
-            // lo recuerda: así el dato desplazado sale una vez y solo una).
-            bool canSpeak = VictoryLineArbiter.IsSlothHito(won) ? _slothCanSpeak : _slothSpokeAt > 0 && won == _slothSpokeAt + 1;
+            bool canSpeak = SlothCanSpeakFor(won, _slothCanSpeak, _slothSpokeAt);
             SlothCouldSpeak = canSpeak;
             _slothCanSpeak = false;
             if (won >= 1 && won <= WorldTable.LastLevel)
@@ -174,7 +183,7 @@ namespace AF.UI
                 _slothSpokeAt = won;
             }
 
-            _slot.Show(flow, in _victoryLine, flow.ReduceMotion);
+            _slot.Show(flow, in _victoryLine);
         }
 
         partial void SlotTick(float dtMs)
@@ -205,11 +214,56 @@ namespace AF.UI
             _slot.Dismiss();
         }
 
+        /// <summary>
+        /// <c>SlothCanSpeak</c> que se pasa al árbitro en la victoria de <paramref name="won"/> (arquitectura de la tanda 4, §2;
+        /// T6-A): en un hito (<see cref="VictoryLineArbiter.IsSlothHito"/>), <paramref name="hitoBoxCanSpeak"/> (voz ∧ caja ≥
+        /// <see cref="SlothSpeakBoxDp"/> dp, del gancho <c>SlothVictoryShown</c>); en el 10k+1, si TiTino habló en el hito
+        /// anterior (<paramref name="spokeAt"/> = el nivel en que habló por última vez, o ≤ 0 si nunca): el árbitro es puro y
+        /// no lo recuerda, y así el dato desplazado sale una vez y solo una; en el resto, false.
+        /// </summary>
+        internal static bool SlothCanSpeakFor(int won, bool hitoBoxCanSpeak, int spokeAt)
+        {
+            if (VictoryLineArbiter.IsSlothHito(won))
+            {
+                return hitoBoxCanSpeak;
+            }
+
+            return spokeAt > 0 && won == spokeAt + 1;
+        }
+
         partial void SlothVictoryShown(LevelFlow flow, float top, float bottom)
         {
             _slothBandTop = top;
             _slothBandBottom = bottom;
             _slothCanSpeak = SlothVoice && bottom - top >= SlothSpeakBoxDp;
+        }
+
+        // Caja de TiTino en la victoria (propuesta de TiTino d.4; gancho SlothVictoryShown, que OnVictoryScreen llama con esta
+        // franja): la libre entre el pie de la cabecera (la insignia, lo más bajo del HUD) y lo más alto de las cuias con su
+        // elevación, con el tablero ya en el sitio al que lo lleva ShiftToClear (dp desde arriba). Sin tablero, vacía.
+        private void VictoryFreeBand(out float top, out float bottom)
+        {
+            top = HudBadgeBottom;
+            bottom = top;
+            if (_layout == null || _views.Length == 0)
+            {
+                return;
+            }
+
+            bottom = Mathf.Max(top, CuiasTopDp() - _boardShiftTarget);
+        }
+
+        // Lo más alto de las cuias con su elevación, con el tablero sin desplazar (dp desde arriba): la misma cima que usa
+        // ShiftToClear (GameScreen.cs), que hoy la calcula por su cuenta; que la use también es cosa de la dueña de GameScreen.cs.
+        private float CuiasTopDp()
+        {
+            float highestTop = float.MaxValue;
+            for (int i = 0; i < _views.Length; i++)
+            {
+                highestTop = Mathf.Min(highestTop, _layout!.FootY[i] - (_views[i].HeightU * _views[i].Unit) - CuiaView.LiftDp);
+            }
+
+            return highestTop;
         }
     }
 }

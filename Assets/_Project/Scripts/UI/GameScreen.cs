@@ -2187,7 +2187,7 @@ namespace AF.UI
             {
                 _views[i].SetVictoryAura(fade);
             }
-            float nt = Mathf.Clamp01((ms - 600f) / 150f);
+            float nt = Mathf.Clamp01((ms - VictoryButtonsInMs) / 150f);
             _nextGroup.alpha = nt;
             _homeGroup.alpha = nt;
             _doubleGroup.alpha = nt;
@@ -2696,27 +2696,6 @@ namespace AF.UI
             float needed = _layout.PanelBottom - (panelTop - gap);
             float room = highestTop - BoardTop;
             return Mathf.Clamp(needed, 0f, Mathf.Max(0f, room));
-        }
-
-        // Caja de TiTino en la victoria (propuesta de TiTino d.4; gancho SlothVictoryShown): la franja libre entre el pie de la
-        // cabecera (la insignia, lo más bajo del HUD) y lo más alto de las cuias con su elevación, con el tablero ya en el sitio
-        // al que lo lleva ShiftToClear (dp desde arriba). Sin tablero, vacía.
-        private void VictoryFreeBand(out float top, out float bottom)
-        {
-            top = HudBadgeBottom;
-            bottom = top;
-            if (_layout == null || _views.Length == 0)
-            {
-                return;
-            }
-
-            float highestTop = float.MaxValue;
-            for (int i = 0; i < _views.Length; i++)
-            {
-                highestTop = Mathf.Min(highestTop, _layout.FootY[i] - (_views[i].HeightU * _views[i].Unit) - CuiaView.LiftDp);
-            }
-
-            bottom = Mathf.Max(top, highestTop - _boardShiftTarget);
         }
 
         private void ShiftBoard(float target, bool animate)
