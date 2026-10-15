@@ -58,16 +58,17 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator DockDecor_StaysOutOfTouchAreas_AndControlsAreAtLeast48dp()
         {
-            // Nivel 1: una fila, banda libre de 172,5 dp con las cuias de 64 dp (D-004): el poste se ve; Capi solo con su PNG
-            // (capi_idle.png, sin respaldo procedural: revisión visual del 2026-10-07).
+            // Nivel 1: una fila, banda libre de 172,5 dp con las cuias de 64 dp (D-004): el poste se ve; Capi ya no se queda en el
+            // muelle durante la partida (D-016, T5-B; 02 §5), ni siquiera con su PNG.
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
             boot.TapAnywhere();
             PlayModeHelpers.Step(boot, 200);
             GameScreen view = boot.View!;
-            Assert.That(view.CapiVisible, Is.EqualTo(ArtSlots.Find(ArtSlots.Capi) != null), "Capi solo con capi_idle.png");
-            Assert.That(view.DecorRects[1].gameObject.activeSelf, Is.True, "poste de amarre en el muelle (banda ≥ 64 dp)");
+            Assert.That(view.CapiVisible, Is.False, "ninguna mascota fija en el muelle (D-016, T5-B)");
+            Assert.That(view.DecorRects.Length, Is.EqualTo(1), "solo el poste");
+            Assert.That(view.DecorRects[0].gameObject.activeSelf, Is.True, "poste de amarre en el muelle (banda ≥ 64 dp)");
 
             Rect[] touch = new Rect[view.Views.Length + 2];
             for (int i = 0; i < view.Views.Length; i++)
