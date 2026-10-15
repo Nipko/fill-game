@@ -1209,7 +1209,16 @@ namespace AF.UI
                     return null;
                 }
 
-                LevelCatalog catalog = LevelCatalog.Create(packs, LaunchOptions.ResolveLevelOffset());
+                // Kill switch de mecánicas (KS1; D-020, pregunta 31 b): mech_enabled.* (defaults de GameConfig y af_mech_off en
+                // desarrollo) y level_overrides (fuente local vacía hasta AF.RemoteConfig), con los ids buscados en los paquetes.
+                MechanicSwitches switches = LaunchOptions.ResolveMechSwitches();
+                LevelOverrides overrides = LevelOverrides.Create(LaunchOptions.ResolveLevelOverridesJson(), packs);
+                for (int i = 0; i < overrides.Problems.Count; i++)
+                {
+                    Debug.LogWarning(LogPrefix + overrides.Problems[i]);
+                }
+
+                LevelCatalog catalog = LevelCatalog.Create(packs, LaunchOptions.ResolveLevelOffset(), overrides, switches, w => Debug.LogWarning(LogPrefix + w));
                 watch.Stop();
                 if (DevProbe.Enabled)
                 {
@@ -1221,6 +1230,12 @@ namespace AF.UI
                 if (!catalog.IsContiguous)
                 {
                     Debug.LogError(LogPrefix + "faltan niveles en el catálogo: " + catalog.DescribeGaps() + ". Al llegar a ellos se verá «El río sigue creciendo».");
+                }
+
+                if (switches.AnyOff)
+                {
+                    Debug.LogWarning(LogPrefix + switches + ": " + catalog.OverriddenLevels.Count + " niveles con override y "
+                        + catalog.FallbackLevels.Count + " sin él (se sirven publicados, con aviso al cargarlos).");
                 }
 
                 if (catalog.LevelOffset > 0)

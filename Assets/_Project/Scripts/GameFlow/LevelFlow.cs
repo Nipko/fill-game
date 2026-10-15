@@ -234,7 +234,7 @@ namespace AF.GameFlow
             using (Saves())
             {
                 int number = ResolveLevel(level);
-                LevelDefinition def = _catalog.Find(number)!;
+                LevelDefinition def = _catalog.Serve(number)!; // con el kill switch (KS1): el override o el publicado con aviso
                 bool firstEntry = _attempt.Level != number; // se entra en el nivel (no se vuelve a entrar en él): el banner de mundo
                 EndRevealSelection();
                 ResetLevelCard();
