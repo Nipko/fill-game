@@ -42,7 +42,9 @@ namespace AF.Tests.PlayMode
     {
         private const char MissingGlyph = '□';
 
-        // Puntuación tipográfica fija de los atlas (la de AF.EditorTools.FontSetup.Typography).
+        // Puntuación tipográfica fija de los atlas: la de AF.EditorTools.FontSetup.Typography (este ensamblado no puede
+        // referenciar el de Editor; FontCoverageTests.SnapshotTypography_IsTheOneOfFontSetup comprueba que coinciden). Se pinta
+        // con el mismo espaciado que Latin-1 para que el guion corto y el largo se distingan.
         private const string Typography = "–—‘’“”…•";
 
         private GameObject? _sheet;
@@ -152,7 +154,7 @@ namespace AF.Tests.PlayMode
                     continue;
                 }
 
-                string sample = style + "  " + locale + "\n" + latin + "\n" + Typography + "  " + numbers
+                string sample = style + "  " + locale + "\n" + latin + "\n" + "<cspace=0.15em>" + Typography + "</cspace>  " + numbers
                     + (title ? "  " + sentence : string.Empty) + "\n" + Loc.T(UiText.Keys.Back) + " · " + UiText.Play;
                 TextMeshProUGUI label = UiBuilder.Label("Glyphs_" + style, go.transform, style, sample, 13f, Palette.Cream, TextAlignmentOptions.TopLeft);
                 label.textWrappingMode = TextWrappingModes.Normal;

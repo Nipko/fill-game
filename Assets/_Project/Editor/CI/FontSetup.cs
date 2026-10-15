@@ -30,7 +30,8 @@ namespace AF.EditorTools
     /// Solo los materiales de estilo (conserva los font assets y los GUID de los materiales):
     ///   ... -executeMethod AF.EditorTools.FontSetup.ApplyStyles
     /// Códigos de salida (solo en batchmode): 0 OK · 2 faltan los recursos esenciales de TMP tras importarlos (vuelve a
-    /// ejecutarlo) · 3 falta una fuente (o un font asset, con ApplyStyles) · 4 excepción · 5 un carácter de las tablas no está
+    /// ejecutarlo) · 3 falta una fuente (o un font asset, con ApplyStyles), o una fuente no tiene familia en
+    /// <see cref="FontCoverage"/> · 4 excepción · 5 un carácter de las tablas no está
     /// en la TTF de su familia o está prohibido (<see cref="FontCoverage"/>), o los glifos no caben en el atlas más grande ·
     /// 6 las tablas de textos no se pueden leer.
     /// </summary>
@@ -62,7 +63,9 @@ namespace AF.EditorTools
         /// <summary>Puntuación tipográfica fija de la guía 5.6 (la de siempre, además de lo que piden las tablas).</summary>
         public const string Typography = "–—‘’“”…•";
 
-        private static readonly string[] Fonts =
+        // Las cinco fuentes de los atlas: cada una tiene que estar en FontCoverage.BodyFonts o en FontCoverage.TitleFonts (si no,
+        // Generate para con el código 3; FontCoverageTests comprueba que las listas coinciden).
+        internal static readonly string[] Fonts =
         {
             "Baloo2-ExtraBold",
             "Baloo2-Bold",
@@ -246,6 +249,17 @@ namespace AF.EditorTools
 
         private static int Generate(FontCoverageReport coverage)
         {
+            // Antes de crear ningún atlas: una fuente sin familia en FontCoverage recibiría los glifos del cuerpo sin que nadie
+            // comprobara su TTF.
+            for (int i = 0; i < Fonts.Length; i++)
+            {
+                if (FontCoverage.FamilyOfFont(Fonts[i]) == GlyphFamily.None)
+                {
+                    Debug.LogError(LogPrefix + Fonts[i] + " no está en FontCoverage.BodyFonts ni en FontCoverage.TitleFonts: sin familia, no se sabe qué glifos pide.");
+                    return 3;
+                }
+            }
+
             EnsureFolder(OutputDir);
             var assets = new Dictionary<string, TMP_FontAsset>(StringComparer.Ordinal);
             bool missingAny = false;
@@ -270,6 +284,8 @@ namespace AF.EditorTools
                 string notInFont = NotInFont(name, missing, out string notFitting);
                 if (asset != null && notFitting.Length > 0)
                 {
+                    Debug.LogWarning(LogPrefix + name + ": " + notFitting.Length + " glifos no caben en 1024 × 1024; el atlas pasa a 2048 × 1024 y dobla su peso. "
+                        + "Mide el AAB: criterio de B1 «el AAB crece ≤ 0,5 MB [E]».");
                     UnityEngine.Object.DestroyImmediate(asset.material);
                     UnityEngine.Object.DestroyImmediate(asset.atlasTexture);
                     UnityEngine.Object.DestroyImmediate(asset);

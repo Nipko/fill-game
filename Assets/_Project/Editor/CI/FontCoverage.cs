@@ -3,11 +3,16 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 using AF.Localization;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.TextCore.LowLevel;
+
+// Las costuras internas de AF.EditorTools (lecturas de las tablas inyectables, lista de fuentes de FontSetup) las prueban los
+// tests EditMode (tarea B1).
+[assembly: InternalsVisibleTo("AF.Tests.EditMode")]
 
 namespace AF.EditorTools
 {
@@ -205,11 +210,25 @@ namespace AF.EditorTools
         /// </summary>
         public static int Run(bool atlases, out FontCoverageReport? report)
         {
+            return Run(atlases, out report, ReadProjectTables);
+        }
+
+        /// <summary>
+        /// Como <see cref="Run(bool, out FontCoverageReport?)"/>, con los textos que devuelve <paramref name="read"/> (costura de
+        /// los tests: una lectura que lanza <see cref="LocCsvException"/> prueba el código 6).
+        /// </summary>
+        internal static int Run(bool atlases, out FontCoverageReport? report, Func<IReadOnlyList<LocTextEntry>> read)
+        {
+            if (read == null)
+            {
+                throw new ArgumentNullException(nameof(read));
+            }
+
             report = null;
             IReadOnlyList<LocTextEntry> texts;
             try
             {
-                texts = ReadProjectTables();
+                texts = read();
             }
             catch (Exception e) when (e is LocCsvException || e is IOException || e is FormatException)
             {

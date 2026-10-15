@@ -1,10 +1,14 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Reflection;
+using System.Text.RegularExpressions;
 using AF.EditorTools;
 using AF.Localization;
 using AF.UI;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace AF.Tests.EditMode
 {
@@ -41,6 +45,89 @@ namespace AF.Tests.EditMode
             List<string> gaps = FontSetup.AtlasGaps(report);
 
             Assert.That(gaps, Is.Empty, string.Join("\n", gaps));
+        }
+
+        [Test]
+        public void AtlasGaps_NewCharacterInANormalKey_ReportsEveryAtlas()
+        {
+            // Un carácter nuevo en las tablas sin regenerar los atlas (la rama de error de AtlasGaps): una clave normal se puede
+            // pintar en las dos familias, así que falta en los cinco atlas.
+            var texts = new[] { new LocTextEntry("strings.csv", 7, "zz_test", LocLocale.English, "Agua 水") };
+            FontCoverageReport report = FontCoverage.Analyze(texts, (font, c) => true);
+
+            List<string> gaps = FontSetup.AtlasGaps(report);
+
+            var expected = new List<string>();
+            foreach (string font in FontSetup.Fonts)
+            {
+                expected.Add(FontSetup.OutputDir + "/" + font + " SDF.asset no tiene U+6C34 (atlas desactualizado): ejecuta AF.EditorTools.FontSetup.ApplyAll.");
+            }
+
+            Assert.That(gaps, Has.Count.EqualTo(5), string.Join("\n", gaps));
+            Assert.That(gaps, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void AtlasGaps_NewCharacterInATitleOnlyKey_ReportsOnlyTheBaloo2Atlases()
+        {
+            var texts = new[] { new LocTextEntry("strings.csv", 4, FontCoverage.TitleOnlyKeys[0], LocLocale.SpanishLatinAmerica, "+20 水 +40") };
+            FontCoverageReport report = FontCoverage.Analyze(texts, (font, c) => true);
+
+            List<string> gaps = FontSetup.AtlasGaps(report);
+
+            Assert.That(gaps, Is.EqualTo(new[]
+            {
+                FontSetup.OutputDir + "/Baloo2-ExtraBold SDF.asset no tiene U+6C34 (atlas desactualizado): ejecuta AF.EditorTools.FontSetup.ApplyAll.",
+                FontSetup.OutputDir + "/Baloo2-Bold SDF.asset no tiene U+6C34 (atlas desactualizado): ejecuta AF.EditorTools.FontSetup.ApplyAll.",
+            }));
+        }
+
+        [Test]
+        public void Run_TablesCannotBeRead_Returns6WithoutReport()
+        {
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[AF\.FontCoverage\] no se pueden leer las tablas de textos: strings\.csv, línea 3: celda rota$"));
+
+            int code = FontCoverage.Run(true, out FontCoverageReport? report, () => throw new LocCsvException("strings.csv", 3, "celda rota"));
+
+            Assert.That(code, Is.EqualTo(6));
+            Assert.That(report, Is.Null);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void SetupFonts_AreExactlyTheBodyAndTitleFontsOfTheCoverage()
+        {
+            // Una fuente de FontSetup sin familia en FontCoverage recibiría GlyphFamily.None (Generate para con el código 3).
+            var coverage = new List<string>(FontCoverage.BodyFonts);
+            coverage.AddRange(FontCoverage.TitleFonts);
+
+            Assert.That(FontSetup.Fonts, Is.EquivalentTo(coverage));
+            foreach (string font in FontSetup.Fonts)
+            {
+                Assert.That(FontCoverage.FamilyOfFont(font), Is.Not.EqualTo(GlyphFamily.None), font);
+            }
+        }
+
+        [Test]
+        public void SnapshotTypography_IsTheOneOfFontSetup()
+        {
+            // La hoja de glifos de FontGlyphSnapshotTests (PlayMode) no puede referenciar AF.EditorTools: su copia de la
+            // puntuación tipográfica se lee por reflexión del ensamblado de PlayMode, que también se carga en el Editor.
+            Type? snapshot = null;
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (assembly.GetName().Name == "AF.Tests.PlayMode")
+                {
+                    snapshot = assembly.GetType("AF.Tests.PlayMode.FontGlyphSnapshotTests");
+                    break;
+                }
+            }
+
+            Assert.That(snapshot, Is.Not.Null, "AF.Tests.PlayMode.FontGlyphSnapshotTests cargado en el Editor");
+            FieldInfo? field = snapshot!.GetField("Typography", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.That(field, Is.Not.Null, "FontGlyphSnapshotTests.Typography");
+            Assert.That(field!.IsLiteral, Is.True);
+            Assert.That(field.GetRawConstantValue(), Is.EqualTo(FontSetup.Typography));
         }
 
         [Test]

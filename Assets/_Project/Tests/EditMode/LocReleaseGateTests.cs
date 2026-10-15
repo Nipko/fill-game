@@ -125,34 +125,54 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void ProjectTables_DevelopmentBuild_Warns_ReleaseBuild_Blocks()
+        public void ProjectTables_GateIsCoherent()
         {
-            // Hoy EN y PT-BR están incompletos y hay textos pendientes del asesor: la compuerta avisa en desarrollo y para un
-            // build con el applicationId definitivo (la rama de error con las tablas reales).
+            // Con las tablas reales solo se comprueba la coherencia (hoy en y pt-BR están incompletos, pero eso cambiará con las
+            // traducciones): en desarrollo nunca bloquea y en release bloquea si y solo si hay problemas. Las ramas de error las
+            // cubren las tablas sintéticas de los otros tests.
             LocCatalog catalog = LocReleaseGate.ReadProjectCatalog();
 
             LocReleaseReport dev = LocReleaseGate.Evaluate(catalog, ProjectSetup.ApplicationId);
             LocReleaseReport release = LocReleaseGate.Evaluate(catalog, ReleaseId);
 
+            Assert.That(dev.IsDevelopmentId, Is.True);
             Assert.That(dev.Blocks, Is.False);
-            Assert.That(dev.Problems, Is.Not.Empty);
-            Assert.That(release.Blocks, Is.True);
-            Assert.That(release.Problems, Has.Some.StartsWith("UI incompleta en en:"));
-            Assert.That(release.Problems, Has.Some.StartsWith("UI incompleta en pt-BR:"));
-            Assert.That(release.Problems, Has.None.StartsWith("UI incompleta en es-419"));
-            Assert.That(release.Problems, Has.Some.Contains("facts.csv:"));
+            Assert.That(release.IsDevelopmentId, Is.False);
+            Assert.That(release.Blocks, Is.EqualTo(release.Problems.Count > 0));
+            Assert.That(release.Problems, Is.EqualTo(dev.Problems), "los problemas no dependen del applicationId");
 
-            LogAssert.Expect(LogType.Warning, new Regex(@"\[AF\.LocReleaseGate\] aviso"));
             Assert.That(LocReleaseGate.Check(ProjectSetup.ApplicationId, "[test] "), Is.True);
             LogAssert.ignoreFailingMessages = true;
             try
             {
-                Assert.That(LocReleaseGate.Check(ReleaseId, "[test] "), Is.False);
+                Assert.That(LocReleaseGate.Check(ReleaseId, "[test] "), Is.EqualTo(!release.Blocks));
             }
             finally
             {
                 LogAssert.ignoreFailingMessages = false;
             }
+        }
+
+        [Test]
+        public void UnreadableTables_ReleaseId_BlocksWithAnError()
+        {
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[test\] \[AF\.LocReleaseGate\] no se pueden leer las tablas de textos: facts\.csv, línea 5: comillas sin cerrar$"));
+
+            bool ok = LocReleaseGate.Check(ReleaseId, "[test] ", () => throw new LocCsvException("facts.csv", 5, "comillas sin cerrar"));
+
+            Assert.That(ok, Is.False);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void UnreadableTables_DevelopmentId_OnlyWarns()
+        {
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[test\] \[AF\.LocReleaseGate\] no se pueden leer las tablas de textos: facts\.csv, línea 5: comillas sin cerrar$"));
+
+            bool ok = LocReleaseGate.Check(ProjectSetup.ApplicationId, "[test] ", () => throw new LocCsvException("facts.csv", 5, "comillas sin cerrar"));
+
+            Assert.That(ok, Is.True);
+            LogAssert.NoUnexpectedReceived();
         }
     }
 }

@@ -122,10 +122,24 @@ namespace AF.EditorTools
         /// </summary>
         public static bool Check(string applicationId, string logPrefix)
         {
+            return Check(applicationId, logPrefix, ReadProjectCatalog);
+        }
+
+        /// <summary>
+        /// Como <see cref="Check(string, string)"/>, con las tablas que devuelve <paramref name="read"/> (costura de los tests: una
+        /// lectura que lanza <see cref="LocCsvException"/> prueba la rama de «las tablas no se pueden leer»).
+        /// </summary>
+        internal static bool Check(string applicationId, string logPrefix, Func<LocCatalog> read)
+        {
+            if (read == null)
+            {
+                throw new ArgumentNullException(nameof(read));
+            }
+
             LocCatalog catalog;
             try
             {
-                catalog = ReadProjectCatalog();
+                catalog = read();
             }
             catch (Exception e) when (e is LocCsvException || e is IOException || e is FormatException)
             {
