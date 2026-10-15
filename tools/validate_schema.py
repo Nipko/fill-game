@@ -29,7 +29,8 @@ Casos (contrato 21 del GDD; docs/gdd/08-arquitectura-tecnica-publicacion.md §4.
     (g) pack_schema 3, paso 2 (P2b; D-023, punto 5; 02 §9.1 y propuesta de D-007, b.3):
         hoja_atada exige key; el Brote admite n 1 o 2 (Brote de dos hojas); flor exige key y key2, con key distinta de
         key2; intro_mechanic hoja_atada, flor, brote_n2 [P] y liana_n [P]; key2 solo en la Flor. Con pack_schema 1 y
-        2 nada de eso valida (hoja_atada en un pack 2 falla) y lo demas sigue igual (el 2 no restringe el n del Brote).
+        2 nada de eso valida (hoja_atada en un pack 2 falla) y lo demas sigue igual (el 1 y el 2 no restringen el n
+        del Brote).
 
 Imprime PASS/FAIL por caso y termina con codigo 1 si alguno falla. Requiere jsonschema >= 4.18.
 
@@ -476,7 +477,8 @@ def main() -> int:
 
     # (g) pack_schema 3, paso 2 (P2b; D-023, punto 5; 02 §9.1 y propuesta de D-007, b.3;
     # contrato 21): hoja_atada {key}, Brote con n 1 o 2, flor {key, key2} con key distinta de key2 e intro_mechanic
-    # hoja_atada, flor, brote_n2 [P] y liana_n [P]; nada de eso valida con pack_schema 1 y 2.
+    # hoja_atada, flor, brote_n2 [P] y liana_n [P]; nada de eso valida con pack_schema 1 y 2, salvo el n del Brote,
+    # que el 1 y el 2 no restringen.
     def variant_level(level: int, mech: dict | None, intro, pack: int = 3) -> dict:
         """pack2_level en el mundo de la variante: Oriente (201-300) o Madre de Dios (301-420)."""
         if level <= 300:
