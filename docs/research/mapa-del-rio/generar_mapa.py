@@ -208,6 +208,12 @@ def iter_points(doc):
     for key in ("paradas_1_200", "puntos_de_paso_1_200", "miradores_1_200", "cruces_de_pais", "rotulos_de_pais"):
         for p in doc[key]:
             yield p
+    # Paradas detalladas de 201-700 (fase F9, desde M3.7a) y sus ríos locales nuevos.
+    for p in doc.get("paradas_201_700", []):
+        yield p
+    for r in doc.get("rios_locales_201_700", []):
+        for p in r["puntos"]:
+            yield p
     for m in doc["paradas_201_1000"]:
         for s in m["sitios"] + m.get("puntos_de_paso_del_viaje", []):
             if "lat" in s:
@@ -305,9 +311,11 @@ def revisar_texto(donde, texto, args, errores, medir=True):
 
 
 def revisar_otros_datos(doc, ids, etiqueta_de, errores):
+    """«Otro dato» de las tarjetas de 1-200 (M2.7) y de 201-700 (paradas_201_700, desde M3.7a): mismas reglas, y las
+    claves no se repiten entre las dos listas."""
     fuente_de = {f["id"]: f for f in doc["fuentes"]}
     claves = {}
-    for s in doc["paradas_1_200"]:
+    for s in doc["paradas_1_200"] + doc.get("paradas_201_700", []):
         d = s.get("dato_del_nivel")
         if d:
             claves.setdefault(d["clave"], []).append(s["id"])
@@ -399,6 +407,169 @@ def autoprueba_otros_datos():
     if resto != esperados:
         return [f"autoprueba: «otros_datos» con entradas que no son objetos da {resto} y se esperaba {esperados}"]
     return []
+
+
+# Paradas detalladas de 201-700 (fase F9 de la propuesta §13, con Q14-A; M3.7a-M3.7d): el mismo registro que las de
+# 1-200, más «sitio» (el del resumen de paradas_201_1000 que la contiene) y «wikidata» (el elemento de su coordenada).
+# Sin héroe (D-013, punto 2): el fondo es el kit del mundo con una pieza, kit:<pieza>. Sus ríos locales nuevos van en
+# rios_locales_201_700, con «boca_en» (su río anfitrión), hasta que tools/river-map/geometry.py los dé de alta (M4.5a).
+CLAVE_DATO_LLEGADA = re.compile(r"^map\.((stop|country)\.[a-z0-9_]+\.dato_\d{2}|myth\.[a-z0-9_]+)$")
+TIPOS_PARADA = ("gran_parada", "parada", "castillo")
+DATO_DEL_200 = "map.myth.source"  # arrival_fact de la parada 20 (08 §4.5; D-023, punto 20)
+KM_CASA_MAS = 29  # km_casa = km_desde_el_mar − 332 (Gurupá) + 361 (ramal del Pará); propuesta §2.2
+
+
+def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
+    paradas = doc.get("paradas_201_700", [])
+    if not isinstance(paradas, list):
+        errores.append("paradas_201_700 no es una lista")
+        return
+    fuente_de = {f["id"]: f for f in doc["fuentes"]}
+    resumen = {m["mundo"]: m for m in doc["paradas_201_1000"]}
+    rios = {r["id"]: r for r in doc["rios"]}
+    locales = doc.get("rios_locales_201_700", [])
+    for r in locales:
+        donde = f"río local {r.get('id')}"
+        if r.get("id") in rios:
+            errores.append(f"{donde}: repetido en 'rios'")
+        if r.get("tipo") != "rio_local":
+            errores.append(f"{donde}: tipo {r.get('tipo')!r} y se esperaba «rio_local»")
+        if len(r.get("puntos", [])) < 2:
+            errores.append(f"{donde}: menos de 2 puntos")
+        for f in r.get("fuentes", []):
+            if f not in ids:
+                errores.append(f"{donde}: fuente {f} sin entrada en 'fuentes'")
+    todos = dict(rios)
+    todos.update({r["id"]: r for r in locales})
+    for r in locales:
+        if r.get("boca_en") not in todos or r.get("boca_en") == r.get("id"):
+            errores.append(f"río local {r.get('id')}: «boca_en» {r.get('boca_en')!r} no es otro río")
+    vistos = {s["id"] for s in doc["paradas_1_200"]}
+    km_prev = {}
+    for i, s in enumerate(paradas):
+        donde = f"parada {s.get('id')}"
+        k = 20 + i
+        if s.get("k") != k:
+            errores.append(f"{donde}: k={s.get('k')} y se esperaba {k}")
+        if s.get("id") in vistos or not re.fullmatch(r"[a-z0-9_]+", s.get("id") or "") or "belen" in (s.get("id") or ""):
+            errores.append(f"{donde}: id repetido, fuera de [a-z0-9_]+ o con «Belén»")
+        vistos.add(s.get("id"))
+        a = 10 * k + 1
+        if s.get("niveles") != [a, a + 9] or s.get("llegada_al_ganar") != a - 1:
+            errores.append(f"{donde}: niveles {s.get('niveles')} o llegada {s.get('llegada_al_ganar')} y la k da {a}-{a + 9}")
+        w = world_of(a)
+        m = resumen.get(w, {})
+        if s.get("mundo") != w or s.get("mundo_id") != m.get("mundo_id"):
+            errores.append(f"{donde}: mundo {s.get('mundo')} ({s.get('mundo_id')}) y WorldTable dice {w} ({m.get('mundo_id')})")
+        ultimo = (FIRST_LEVELS[w] - 1) if w < len(FIRST_LEVELS) else 1000
+        tipo = "gran_parada" if a == FIRST_LEVELS[w - 1] else "castillo" if a + 9 == ultimo else "parada"
+        if s.get("tipo") != tipo:
+            errores.append(f"{donde}: tipo {s.get('tipo')!r} y se esperaba {tipo!r} (primera, última u otra del mundo)")
+        if s.get("conf") not in ("V", "E") or not re.fullmatch(r"Q\d+", s.get("wikidata") or ""):
+            errores.append(f"{donde}: coordenada sin conf V o E o sin su elemento de Wikidata")
+        if s.get("ancla_rio") not in todos:
+            errores.append(f"{donde}: ancla_rio {s.get('ancla_rio')!r} sin entrada en 'rios' ni en 'rios_locales_201_700'")
+        for rl in s.get("rios_locales", []):
+            if todos.get(rl, {}).get("tipo") != "rio_local":
+                errores.append(f"{donde}: río local {rl} sin entrada de tipo «rio_local»")
+        km, casa = s.get("km_desde_el_mar"), s.get("km_casa")
+        if not isinstance(km, int) or casa != km + KM_CASA_MAS:
+            errores.append(f"{donde}: km_casa {casa} y km_desde_el_mar {km} (+{KM_CASA_MAS})")
+        elif w in km_prev and casa < km_prev[w]:
+            errores.append(f"{donde}: los km hasta casa retroceden dentro del mundo {w} ({casa} < {km_prev[w]})")
+        if isinstance(casa, int):
+            km_prev[w] = casa
+        d = s.get("dato_del_nivel")
+        if not isinstance(d, dict):
+            errores.append(f"{donde}: sin dato de llegada")
+        else:
+            if not CLAVE_DATO_LLEGADA.match(d.get("clave", "")):
+                errores.append(f"{donde}: clave del dato {d.get('clave')!r} fuera de map.stop/country.<x>.dato_NN o map.myth.<tema>")
+            if k == 20 and d.get("clave") != DATO_DEL_200:
+                errores.append(f"{donde}: el dato de llegada del 200 tiene que ser {DATO_DEL_200} (08 §4.5)")
+            # Marcadores, cifras y «Belén» ya los mira revisar_otros_datos; aquí, solo la longitud.
+            largo = len(texto_mostrado(d.get("texto", ""), d.get("args", {})))
+            if largo > 90:
+                errores.append(f"{donde}: dato de {largo} caracteres (> 90)")
+            if d.get("etiqueta") not in ("V", "E"):
+                errores.append(f"{donde}: dato con etiqueta {d.get('etiqueta')}; solo [V] o [E]")
+            fs = re.split(r",\s*", d.get("fuente", ""))
+            for f in fs:
+                if f not in ids:
+                    errores.append(f"{donde}: fuente {f} sin entrada en 'fuentes'")
+                elif not FECHA.match(d.get("releida", "")) or fuente_de[f].get("releida", "") < d["releida"]:
+                    errores.append(f"{donde}: la fuente {f} del dato no se reabrió en su «releida» (R5)")
+            if d.get("etiqueta") == "V" and not any(etiqueta_de.get(f) == "V" for f in fs):
+                errores.append(f"{donde}: dato [V] sin ninguna fuente [V]")
+        fondo = s.get("fondo", {})
+        if (fondo.get("kit") != f"bg_kit_w{w:02d}" or not str(fondo.get("heroe", "")).startswith("kit:")
+                or fondo.get("tipo") != "kit_y_rotulo"):
+            errores.append(f"{donde}: fondo distinto de bg_kit_w{w:02d} con kit:<pieza> (sin héroe en 201-700, Q14-A)")
+        q = s.get("pregunta_del_mundo")
+        if q:
+            responde = [p for p in paradas if p.get("mundo") == w and p.get("llegada_al_ganar") == q.get("se_responde_en")]
+            if len(q.get("texto", "")) > 50 or not str(m.get("pregunta_del_mundo", "")).startswith(q.get("texto", "?")):
+                errores.append(f"{donde}: pregunta de más de 50 caracteres o distinta de la del resumen del mundo {w}")
+            if not responde or q.get("se_responde_en") <= s.get("llegada_al_ganar", 0):
+                errores.append(f"{donde}: la pregunta no se responde en una llegada posterior del mismo mundo")
+        b = s.get("bandera")
+        if b and not any(c.get("pais") == b and c.get("nivel") == s.get("llegada_al_ganar") for c in doc["cruces_de_pais"]):
+            errores.append(f"{donde}: bandera {b} sin cruce de país en el {s.get('llegada_al_ganar')}")
+        if not isinstance(s.get("asesor"), bool) or not s.get("temporada") or not isinstance(s.get("coincidencias"), list):
+            errores.append(f"{donde}: faltan asesor (true/false), temporada o coincidencias")
+        cadenas = json.dumps(s, ensure_ascii=False)
+        if "[NV]" in cadenas or "belen" in sin_tildes(cadenas):
+            errores.append(f"{donde}: lleva un [NV] o nombra «Belén» (ningún [NV] en las paradas de 201-700)")
+    # Cada mundo con paradas detalladas, entero y con los sitios de su resumen, en su orden y con sus paradas.
+    for w in sorted({s.get("mundo") for s in paradas}):
+        m = resumen.get(w)
+        if m is None:
+            continue
+        orden = []
+        for s in paradas:
+            if s.get("mundo") == w:
+                if not orden or orden[-1][0] != s.get("sitio"):
+                    orden.append([s.get("sitio"), 0])
+                orden[-1][1] += 1
+        esperado = [[x["nombre"], x["paradas"]] for x in m["sitios"]]
+        if orden != esperado:
+            errores.append(f"mundo {w}: las paradas detalladas dan {orden} y el resumen {esperado}")
+        preguntas = [s for s in paradas if s.get("mundo") == w and s.get("pregunta_del_mundo")]
+        if len(preguntas) != 1:
+            errores.append(f"mundo {w}: {len(preguntas)} paradas con la pregunta del mundo y debería ser 1")
+    # Las banderas que el resumen pone en un sitio de un mundo detallado tienen que estar en su primera parada.
+    detallados = {s.get("mundo") for s in paradas}
+    for c in doc["cruces_de_pais"]:
+        ll = c.get("llega_en", {})
+        if ll.get("mundo") in detallados:
+            hay = [s for s in paradas if s.get("bandera") == c.get("pais") and s.get("llegada_al_ganar") == c.get("nivel")]
+            if not hay:
+                errores.append(f"cruce {c['nombre']}: ninguna parada de 201-700 lleva su bandera en el {c.get('nivel')}")
+
+
+def autoprueba_paradas_201_700(doc):
+    """Casos fijos de revisar_paradas_201_700 (M3.7a): con la parada 20 de verdad no da errores propios; con su dato
+    cambiado de clave, con un [NV] en una nota o con un héroe pintado, sí. Devuelve los fallos de la prueba."""
+    paradas = doc.get("paradas_201_700", [])
+    if not paradas:
+        return []
+    ids = {f["id"] for f in doc["fuentes"]}
+    etiqueta_de = {f["id"]: f.get("etiqueta") for f in doc["fuentes"]}
+    fallos = []
+    casos = (
+        ("el dato del 200 con otra clave", lambda p: p["dato_del_nivel"].update(clave="map.stop.mazan.dato_09"),
+         "tiene que ser map.myth.source"),
+        ("un [NV] en una nota", lambda p: p.update(notas="punto aproximado [NV]"), "lleva un [NV]"),
+        ("un héroe pintado", lambda p: p["fondo"].update(heroe="bg_hero_mazan", tipo="pintado"), "sin héroe en 201-700"),
+    )
+    for nombre, cambia, esperado in casos:
+        copia = json.loads(json.dumps(doc))
+        cambia(copia["paradas_201_700"][0])
+        errores = []
+        revisar_paradas_201_700(copia, ids, etiqueta_de, errores)
+        if not any(esperado in e for e in errores):
+            fallos.append(f"autoprueba: {nombre} no da «{esperado}» ({errores})")
+    return fallos
 
 
 def primer_nivel_del_sitio(mundo, nombre):
@@ -509,8 +680,11 @@ def check(doc, pr):
                 errores.append(f"parada {s['id']}: dato [V] sin ninguna fuente [V]")
     # «Otro dato» de cada tarjeta (M2.7): campos, claves únicas, texto, etiqueta, fuentes reabiertas y candidatos.
     revisar_otros_datos(doc, ids, etiqueta_de, errores)
+    # Paradas detalladas de 201-700 (F9; M3.7a): registro completo, dato, fondo sin héroe, sitios del resumen y banderas.
+    revisar_paradas_201_700(doc, ids, etiqueta_de, errores)
     errores.extend(autoprueba_marcadores())
     errores.extend(autoprueba_otros_datos())
+    errores.extend(autoprueba_paradas_201_700(doc))
     # Toda etiqueta «[V id]» / «[E id]» de cualquier texto del JSON (datos, notas, preguntas, cuidado, miradores, puntos
     # de paso, ríos, cruces…) tiene que llevar a una entrada de «fuentes» con su URL.
     def textos(o, ruta):
@@ -1126,7 +1300,8 @@ def main(argv=None):
         n, errores = check(doc, pr)
         for e in errores:
             print("ERROR:", e)
-        print(f"{n} puntos, {len(doc['paradas_1_200'])} paradas de 1-200, {sum(m['paradas'] for m in doc['paradas_201_1000'])} de 201-1.000: "
+        print(f"{n} puntos, {len(doc['paradas_1_200'])} paradas de 1-200, {sum(m['paradas'] for m in doc['paradas_201_1000'])} de 201-1.000 "
+              f"({len(doc.get('paradas_201_700', []))} detalladas): "
               + ("todo correcto" if not errores else f"{len(errores)} errores"))
         return 1 if errores else 0
     if not args.actualizar_xy:
