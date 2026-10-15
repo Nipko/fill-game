@@ -11,9 +11,9 @@ namespace AF.Save
     /// estable, InvariantCulture y horas UTC en ISO 8601 (<c>2026-10-05T14:03:11Z</c>, con fracción solo si la hay:
     /// la ida y vuelta conserva los ticks). Escribe siempre <c>profile_schema</c> = <see cref="Profile.CurrentSchema"/>.
     /// Al leer, una clave que falta toma el default de <see cref="Profile"/> y una desconocida se ignora; un tipo
-    /// equivocado es un archivo corrupto (<see cref="FormatException"/>), salvo en <c>settings</c>, <c>sloth</c> y
-    /// <c>progress.map_seen_level</c>, que toman su default ante un valor ausente o inválido (un ajuste o una marca de vista
-    /// nunca hace corrupto un perfil), y <c>map_seen_level</c> queda recortado a [0, <c>max_level</c>].
+    /// equivocado es un archivo corrupto (<see cref="FormatException"/>), salvo en lo que no es progreso ni economía:
+    /// <c>settings</c>, <c>sloth</c> y <c>progress.map_seen_level</c> toman su default ante un valor ausente o inválido
+    /// (un ajuste nunca hace corrupto un perfil), y <c>map_seen_level</c> queda recortado a [0, <c>max_level</c>].
     /// </summary>
     public static class ProfileJson
     {

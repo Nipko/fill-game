@@ -13,7 +13,9 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Carga de las paradas del Mapa del río en la escena <c>Game</c> (D-013; 08 §4.5; tarea M1.2), como la de los miquitos: la
     /// escena que genera <c>GameSceneBuilder</c> lleva <c>river_stops_v1.json</c> y, tras el arranque, <see cref="GameBootstrap"/>
-    /// y la pantalla de nivel tienen el catálogo; sin el archivo o con uno inválido, un aviso y null, y el juego sigue igual.
+    /// y la pantalla de nivel tienen el catálogo. <see cref="GameBootstrap.LoadRiverStops"/> sin el archivo o con uno inválido da
+    /// un aviso y null, y con la pantalla sin catálogo (null) el nivel se juega igual. El arranque completo de la escena sin el
+    /// TextAsset no se prueba aquí: haría falta un gancho de prueba en <c>LaunchOptions</c>.
     /// </summary>
     public sealed class RiverStopsBootTests
     {
@@ -55,11 +57,12 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator WithoutTheCatalog_TheLevelStillPlays()
+        public IEnumerator WithTheScreenCatalogNull_TheLevelStillPlays()
         {
             yield return PlayModeHelpers.LoadGame(58, new MemoryProgressStore(58, 57));
             GameBootstrap boot = GameBootstrap.Current!;
-            boot.View!.RiverStops = null; // como sin el archivo: nada del nivel depende aún de las paradas
+            // Solo la pantalla queda sin catálogo (tras el arranque): nada del nivel depende aún de las paradas.
+            boot.View!.RiverStops = null;
             Assert.That(boot.TapAnywhere(), Is.True, "salta la intro");
             Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Playing));
             Assert.That(boot.Flow.LevelNumber, Is.EqualTo(58));
