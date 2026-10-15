@@ -30,6 +30,13 @@ namespace AF.UI
     /// M1.3b dicen que ni compactada cabe siempre en el alto de la línea de fruta, así que la ranura reserva
     /// máx(línea de fruta, <see cref="NeedDp"/>), con <see cref="NeedDp"/> = la llegada más alta del catálogo en el idioma y la
     /// escala de ahora: nada se recorta y «Siguiente» sigue en el mismo sitio en todas las victorias (Q7-A).</para>
+    /// <para><b>Aspecto (revisión de M1.6; D-003):</b> la fila del agua va en un cauce (fondo #E2D2B0 con borde de 1 dp #B89A6A
+    /// [P]) con la línea de agua de 2 dp y un brillo de 1 dp; la mini cuia se pinta con el mismo color que la barra (su agua va
+    /// encima del vidrio provisional, cuyo interior es opaco, y encima de todo un brillo del vidrio al 25 %); la placa es una
+    /// tarjeta de esquinas de <see cref="PlateRadiusDp"/> dp con borde de 1 dp #E3D3B0 [P], alineada con la fila del agua, con
+    /// <see cref="PlatePadDp"/> dp de relleno y <see cref="PlateRightPadDp"/> a la derecha del texto. La ranura tiene un alto fijo
+    /// (la llegada más alta del catálogo): lo que se enseña va centrado en vertical dentro de ella, con el aire repartido arriba
+    /// y abajo.</para>
     /// <para><b>Tiempos:</b> la franja dura <see cref="MapConfig.ArrivalStripMs"/> ms desde que termina de subir el panel
     /// (<see cref="GameScreen.VictoryPanelUpMs"/>); un toque la completa y el texto se queda hasta que se cierra la victoria
     /// (D-011). Nunca toca «Siguiente», «Inicio» ni la Cosecha doble. Con Reducir movimiento, el estado final con un fundido de
@@ -59,7 +66,7 @@ namespace AF.UI
         /// <summary>Entre las líneas de la placa [P].</summary>
         public const float LineGapDp = 2f;
 
-        /// <summary>Margen bajo la placa (el de la ranura).</summary>
+        /// <summary>Margen bajo la fila del agua cuando no hay placa (el de la ranura); con placa, su relleno hace de margen.</summary>
         public const float BottomDp = VictoryLineSlot.BottomDp;
 
         /// <summary>El tramo llega lleno a 9/10 (el 10k: nueve niveles del tramo ganados; <see cref="RiverJourney.LegFill"/>).</summary>
@@ -92,8 +99,29 @@ namespace AF.UI
         /// <summary>Duración del parpadeo [P].</summary>
         public const float BlinkMs = 120f;
 
-        /// <summary>Opacidad del fondo de la placa (madera del panel, apenas marcada) [P].</summary>
-        public const float PlateAlpha = 0.10f;
+        /// <summary>Relleno de la placa a la izquierda, arriba y abajo [P].</summary>
+        public const float PlatePadDp = 6f;
+
+        /// <summary>Relleno de la placa a la derecha del texto (revisión de M1.6) [P].</summary>
+        public const float PlateRightPadDp = 12f;
+
+        /// <summary>Radio de las esquinas de la placa [P].</summary>
+        public const float PlateRadiusDp = 10f;
+
+        /// <summary>Brillo del vidrio de la mini cuia, encima del agua (revisión de M1.6: ≤ 0,25) [P].</summary>
+        public const float MiniGlintAlpha = 0.25f;
+
+        /// <summary>Brillo de la superficie del agua de la fila: 1 dp blanco al 35 %, a 3 dp de su borde de arriba [P].</summary>
+        public const float WaterGlintAlpha = 0.35f;
+
+        /// <summary>Borde de la placa (#E3D3B0) [P].</summary>
+        public static readonly Color PlateEdge = Palette.Hex(0xE3D3B0);
+
+        /// <summary>Fondo del cauce de la fila del agua (#E2D2B0) [P].</summary>
+        public static readonly Color BedColor = Palette.Hex(0xE2D2B0);
+
+        /// <summary>Borde de 1 dp del cauce (#B89A6A): el agua blanca se lee como agua sobre el crema del panel [P].</summary>
+        public static readonly Color BedEdge = Palette.Hex(0xB89A6A);
 
         private const float MiniCuiaW = RowDp * ProceduralArt.MiniCuiaWidthDp / ProceduralArt.MiniCuiaHeightDp;
         private const float CanoeW = RowDp * ProceduralArt.MapCanoeWidthDp / ProceduralArt.MapCanoeHeightDp;
@@ -109,15 +137,20 @@ namespace AF.UI
         private RectTransform? _content;
         private Button? _root;
         private CanvasGroup? _group;
+        private Image? _plateEdge;
         private Image? _plateBack;
+        private Image? _bedEdge;
+        private Image? _bed;
         private Image? _track;
         private Image? _waterA;
         private Image? _waterB;
         private Image? _waterLine;
+        private Image? _waterGlint;
         private Image? _canoe;
         private Image? _miniWaterA;
         private Image? _miniWaterB;
         private Image? _miniGlass;
+        private Image? _miniGlint;
         private Image? _portrait;
         private TextMeshProUGUI? _welcomeLabel;
         private TextMeshProUGUI? _placeLabel;
@@ -129,6 +162,7 @@ namespace AF.UI
         private float _trackW;
         private float _canoeFrom;
         private float _canoeTo;
+        private float _offY;
         private float _since = -1f;
         private float _elapsed = -1f;
         private bool _reduceMotion;
@@ -243,6 +277,15 @@ namespace AF.UI
         /// <summary>El vidrio de la mini cuia.</summary>
         public RectTransform? MiniCuia => _miniGlass != null ? _miniGlass.rectTransform : null;
 
+        /// <summary>El agua de la mini cuia (encima del vidrio).</summary>
+        public RectTransform? MiniWater => _miniWaterA != null ? _miniWaterA.rectTransform : null;
+
+        /// <summary>La placa (su borde: el rectángulo entero).</summary>
+        public RectTransform? Plate => _plateEdge != null ? _plateEdge.rectTransform : null;
+
+        /// <summary>Desplazamiento vertical de lo que se enseña dentro de la ranura (dp; el aire se reparte arriba y abajo).</summary>
+        public float OffsetDp => _offY;
+
         /// <summary>El retrato de TiTino (null en release sin su PNG).</summary>
         public Image? Portrait => _portrait;
 
@@ -330,23 +373,24 @@ namespace AF.UI
         /// </summary>
         public float HeightOf(ArrivalKind kind, string welcome, string place, string fact, float textScale, float widthDp)
         {
-            float textW = widthDp - PortraitDp - PortraitGapDp;
+            float textW = FactTextWidth(widthDp);
+            const float pads = 2f * PlatePadDp;
             switch (kind)
             {
                 case ArrivalKind.Arrival:
                     {
                         float block = Lines(welcome, place, textW, textScale) + Measure(_measureBody, fact, FactSp * textScale, textW);
-                        return Mathf.Ceil(RowDp + GapDp + Mathf.Max(PortraitDp, block) + BottomDp);
+                        return Mathf.Ceil(RowDp + GapDp + pads + Mathf.Max(PortraitDp, block));
                     }
 
                 case ArrivalKind.Place:
                     {
-                        float block = Lines(welcome, place, widthDp, textScale);
-                        return Mathf.Ceil(RowDp + (block > 0f ? GapDp + block - LineGapDp : 0f) + BottomDp);
+                        float block = Lines(welcome, place, PlaceTextWidth(widthDp), textScale);
+                        return Mathf.Ceil(RowDp + (block > 0f ? GapDp + pads + block - LineGapDp : BottomDp));
                     }
 
                 case ArrivalKind.Deferred:
-                    return Mathf.Ceil(Mathf.Max(PortraitDp, Measure(_measureBody, fact, FactSp * textScale, textW)) + BottomDp);
+                    return Mathf.Ceil(pads + Mathf.Max(PortraitDp, Measure(_measureBody, fact, FactSp * textScale, textW)));
 
                 default:
                     return 0f;
@@ -511,6 +555,18 @@ namespace AF.UI
             return name.Length > 0 && country.Length > 0 && river.Length > 0 ? UiText.MapArrived(name, country, river) : string.Empty;
         }
 
+        // Ancho del texto de la placa con el retrato (el dato): relleno, retrato, hueco y relleno derecho.
+        private static float FactTextWidth(float widthDp)
+        {
+            return widthDp - PlatePadDp - PortraitDp - PortraitGapDp - PlateRightPadDp;
+        }
+
+        // Ancho del texto de la placa sin retrato (solo el lugar).
+        private static float PlaceTextWidth(float widthDp)
+        {
+            return widthDp - PlatePadDp - PlateRightPadDp;
+        }
+
         // Alto de la bienvenida y del lugar (cada una con su hueco debajo) a PlaceSp en width dp.
         private float Lines(string welcome, string place, float width, float textScale)
         {
@@ -597,17 +653,28 @@ namespace AF.UI
             _root = root;
             RectTransform rt = (RectTransform)root.transform;
             _group = root.gameObject.AddComponent<CanvasGroup>();
-            _plateBack = UiBuilder.Image("PlateBack", rt, null, WithAlpha(Palette.FamilyWood.Base, PlateAlpha));
+            _plateEdge = UiBuilder.Sliced("PlateEdge", rt, _art.RoundedRect, PlateEdge);
+            _plateEdge.pixelsPerUnitMultiplier = ProceduralArt.RoundedRectRadiusPx / PlateRadiusDp;
+            _plateBack = UiBuilder.Sliced("PlateBack", rt, _art.RoundedRect, Palette.PanelLight);
+            _plateBack.pixelsPerUnitMultiplier = ProceduralArt.RoundedRectRadiusPx / (PlateRadiusDp - 1f);
+            _bedEdge = UiBuilder.Image("BedEdge", rt, null, BedEdge);
+            _bed = UiBuilder.Image("Bed", rt, null, BedColor);
             _track = UiBuilder.Image("Leg", rt, null, Color.white);
             _waterA = UiBuilder.Image("Water", rt, null, Color.white);
             _waterB = UiBuilder.Image("WaterMeet", rt, null, Color.white);
-            _waterLine = UiBuilder.Image("WaterLine", rt, null, WithAlpha(Palette.WaterLine, 0.85f));
+            _waterLine = UiBuilder.Image("WaterLine", rt, null, Palette.WaterLine);
+            _waterGlint = UiBuilder.Image("WaterGlint", rt, null, new Color(1f, 1f, 1f, WaterGlintAlpha));
             _canoe = UiBuilder.Image("Canoe", rt, _art.MapCanoe, Color.white);
             _canoe.preserveAspect = true;
-            _miniWaterA = FilledWater("MiniCuiaWater", rt);
-            _miniWaterB = FilledWater("MiniCuiaWaterMeet", rt);
+
+            // El vidrio provisional (ProceduralArt.MapIcons) tiene el interior casi opaco: con el agua detrás, la muestra se veía
+            // oscura (revisión de M1.6). El agua va encima del vidrio, con el mismo color que la barra, y encima de todo un brillo
+            // del vidrio al 25 %.
             _miniGlass = UiBuilder.Image("MiniCuia", rt, _art.MapMiniCuia, Color.white);
             _miniGlass.preserveAspect = true;
+            _miniWaterA = FilledWater("MiniCuiaWater", rt);
+            _miniWaterB = FilledWater("MiniCuiaWaterMeet", rt);
+            _miniGlint = UiBuilder.Image("MiniCuiaGlint", rt, null, new Color(1f, 1f, 1f, MiniGlintAlpha));
             _portrait = UiBuilder.Image("Portrait", rt, null, Color.white);
             _portrait.preserveAspect = true;
             _welcomeLabel = PlateLabel("Welcome", rt, TextStyle.PlainBold, PlaceSp, Palette.FamilyWood.Deep);
@@ -642,14 +709,21 @@ namespace AF.UI
             bool fact = Kind == ArrivalKind.Arrival || Kind == ArrivalKind.Deferred;
             ShownHeightDp = HeightOf(Kind, WelcomeText, PlaceText, FactText, scale, w);
 
+            // La ranura tiene el alto de la llegada más alta del catálogo: lo de ahora va centrado, con el aire repartido.
+            _offY = Mathf.Max(0f, Mathf.Floor((_height - ShownHeightDp) * 0.5f));
+            float off = _offY;
             _mixed = false;
+            SetActive(_bedEdge, row);
+            SetActive(_bed, row);
             SetActive(_track, row);
             SetActive(_waterA, row);
             SetActive(_waterB, false);
             SetActive(_waterLine, row);
+            SetActive(_waterGlint, row);
             SetActive(_canoe, row);
             SetActive(_miniGlass, row);
             SetActive(_miniWaterA, row);
+            SetActive(_miniGlint, row);
             if (row)
             {
                 Color a = SampleWater(Stop!.Sample, out Color? b);
@@ -659,16 +733,20 @@ namespace AF.UI
                 _trackW = w - MiniCuiaW - 6f;
                 _canoeFrom = (_trackW * 0.5f) - CanoeW;
                 _canoeTo = _trackW - CanoeW - 2f;
+                float half = RowDp * 0.5f;
+                UiBuilder.Place(_bedEdge!.rectTransform, -1f, off + half - 1f, _trackW + 2f, half + 2f);
+                UiBuilder.Place(_bed!.rectTransform, 0f, off + half, _trackW, half);
                 _track!.color = WithAlpha(a, 0.28f);
-                UiBuilder.Place(_track.rectTransform, 0f, RowDp * 0.5f, _trackW, RowDp * 0.5f);
+                UiBuilder.Place(_track.rectTransform, 0f, off + half, _trackW, half);
                 _waterA!.color = a;
                 _waterB!.color = b ?? a;
                 _miniWaterA!.color = a;
                 _miniWaterB!.color = b ?? a;
                 float miniX = w - MiniCuiaW;
-                UiBuilder.Place(_miniGlass!.rectTransform, miniX, 0f, MiniCuiaW, RowDp);
-                UiBuilder.Place(_miniWaterA.rectTransform, miniX, 0f, MiniCuiaW, RowDp);
-                UiBuilder.Place(_miniWaterB.rectTransform, miniX, 0f, MiniCuiaW, RowDp);
+                UiBuilder.Place(_miniGlass!.rectTransform, miniX, off, MiniCuiaW, RowDp);
+                UiBuilder.Place(_miniWaterA.rectTransform, miniX, off, MiniCuiaW, RowDp);
+                UiBuilder.Place(_miniWaterB.rectTransform, miniX, off, MiniCuiaW, RowDp);
+                PlaceMiniGlint(miniX, off);
             }
             else
             {
@@ -679,29 +757,48 @@ namespace AF.UI
             _portraitOpen = open;
             _portraitClosed = open != null ? _art.SlothPortrait(true) : null;
             SetActive(_portrait, open != null);
-            float top = row ? RowDp + GapDp : 0f;
-            float textX = open != null ? PortraitDp + PortraitGapDp : 0f;
-            float textW = (fact ? w - PortraitDp - PortraitGapDp : w);
+            float plateTop = off + (row ? RowDp + GapDp : 0f);
+            float top = plateTop + PlatePadDp;
+            float textX = PlatePadDp + (open != null ? PortraitDp + PortraitGapDp : 0f);
+            float textW = fact ? FactTextWidth(w) : PlaceTextWidth(w);
             if (open != null)
             {
                 _portrait!.sprite = open;
-                UiBuilder.Place(_portrait.rectTransform, 0f, top, PortraitDp, PortraitDp);
+                UiBuilder.Place(_portrait.rectTransform, PlatePadDp, top, PortraitDp, PortraitDp);
             }
 
-            float plateH = Mathf.Max(0f, ShownHeightDp - top - BottomDp);
-            SetActive(_plateBack, plateH > 0f && (fact || WelcomeText.Length > 0 || PlaceText.Length > 0));
-            UiBuilder.Place(_plateBack!.rectTransform, -4f, top - 2f, w + 8f, plateH + 4f);
+            // La placa: alineada con la fila del agua (de 0 a w), del hueco bajo la fila al pie de lo que se enseña.
+            bool plate = fact || (row && (WelcomeText.Length > 0 || PlaceText.Length > 0));
+            float plateH = Mathf.Max(0f, off + ShownHeightDp - plateTop);
+            plate &= plateH > 0f;
+            SetActive(_plateEdge, plate);
+            SetActive(_plateBack, plate);
+            UiBuilder.Place(_plateEdge!.rectTransform, 0f, plateTop, w, plateH);
+            UiBuilder.Place(_plateBack!.rectTransform, 1f, plateTop + 1f, w - 2f, Mathf.Max(0f, plateH - 2f));
 
             float y = top;
             if (!fact)
             {
-                textX = 0f;
-                textW = w;
+                textX = PlatePadDp;
             }
 
             y = PlaceLine(_welcomeLabel!, row ? WelcomeText : string.Empty, textX, y, textW, scale);
             y = PlaceLine(_placeLabel!, row ? PlaceText : string.Empty, textX, y, textW, scale);
             SetLine(_factLabel!, fact ? FactText : string.Empty, FactSp * scale, textX, y, textW);
+        }
+
+        // Brillo vertical del vidrio de la mini cuia (a la izquierda de la cavidad, como el del vidrio provisional), encima del
+        // agua: la cavidad de capacidad ProceduralArt.MiniCuiaCapacity en la caja de RowDp de alto.
+        private void PlaceMiniGlint(float miniX, float off)
+        {
+            const float s = RowDp / ProceduralArt.MiniCuiaHeightDp;
+            const int cap = ProceduralArt.MiniCuiaCapacity;
+            float u = (ProceduralArt.MiniCuiaHeightDp - 1f) / CuiaGeometry.HeightU(cap);
+            float bottom = 0.5f + (CuiaGeometry.CavityBottomU * u);
+            float topU = 0.5f + (CuiaGeometry.CavityTopU(cap) * u);
+            float cx = (ProceduralArt.MiniCuiaWidthDp * 0.5f) - (0.55f * u);
+            float gw = Mathf.Max(1f, 0.26f * u * s);
+            UiBuilder.Place(_miniGlint!.rectTransform, miniX + (cx * s) - (gw * 0.5f), off + RowDp - (topU * s), gw, (topU - bottom) * s);
         }
 
         private static float PlaceLine(TextMeshProUGUI label, string text, float x, float y, float w, float scale)
@@ -745,7 +842,8 @@ namespace AF.UI
                 _group.alpha = a;
                 SetAlpha(_factLabel, 1f);
                 SetAlpha(_portrait, 1f);
-                SetAlpha(_plateBack, PlateAlpha);
+                SetAlpha(_plateEdge, 1f);
+                SetAlpha(_plateBack, 1f);
                 ApplyPortrait(_completedFired || _reduceMotion ? float.MaxValue : _since - VictoryLineSlot.FruitRevealMs);
                 return;
             }
@@ -771,15 +869,19 @@ namespace AF.UI
 
             float waterW = _trackW * WaterFill;
             float half = RowDp * 0.5f;
-            UiBuilder.Place(_waterA!.rectTransform, 0f, half, waterW, _mixed ? half * 0.5f : half);
-            UiBuilder.Place(_waterB!.rectTransform, 0f, half * 1.5f, waterW, half * 0.5f);
-            UiBuilder.Place(_waterLine!.rectTransform, 0f, half, waterW, 1.5f);
-            UiBuilder.Place(_canoe!.rectTransform, Mathf.Lerp(_canoeFrom, _canoeTo, CanoeProgress), 0f, CanoeW, RowDp);
+            float off = _offY;
+            UiBuilder.Place(_waterA!.rectTransform, 0f, off + half, waterW, _mixed ? half * 0.5f : half);
+            UiBuilder.Place(_waterB!.rectTransform, 0f, off + (half * 1.5f), waterW, half * 0.5f);
+            UiBuilder.Place(_waterLine!.rectTransform, 0f, off + half, waterW, 2f);
+            UiBuilder.Place(_waterGlint!.rectTransform, 2f, off + half + 3f, Mathf.Max(0f, waterW - 4f), 1f);
+            UiBuilder.Place(_canoe!.rectTransform, Mathf.Lerp(_canoeFrom, _canoeTo, CanoeProgress), off, CanoeW, RowDp);
             _miniWaterA!.fillAmount = SampleFill;
             _miniWaterB!.fillAmount = Mathf.Min(SampleFill, 0.5f);
             SetAlpha(_welcomeLabel, placeA);
             SetAlpha(_placeLabel, placeA);
-            SetAlpha(_plateBack, PlateAlpha * Mathf.Max(placeA, factA));
+            float plateA = Mathf.Max(placeA, factA);
+            SetAlpha(_plateEdge, plateA);
+            SetAlpha(_plateBack, plateA);
             SetAlpha(_factLabel, factA);
             SetAlpha(_portrait, factA);
             ApplyPortrait(t - FactInMs);

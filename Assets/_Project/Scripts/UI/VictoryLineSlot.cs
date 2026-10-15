@@ -56,10 +56,13 @@ namespace AF.UI
     /// de la tanda 4, §2; tarea M1.3b): un hueco de alto fijo bajo «Inicio», separado por un filete, donde cabe la única línea
     /// de texto de la victoria (T6-A): la llegada a la parada del Mapa (M1.6) o la línea de fruta (F3).
     /// <list type="bullet">
-    /// <item>Su alto H(idioma, escala, ancho) es el de la línea de fruta más larga de ese idioma a esa escala: cabecera de
-    /// <see cref="HeaderDp"/> dp más el texto del peor caso (<see cref="WorstCaseText"/>: <see cref="SourceWorstChars"/>
-    /// caracteres en es-419 y <see cref="TranslatedWorstChars"/> en en, pt-BR y en-XA) a <see cref="TextSp"/> sp, medido con
-    /// TextMeshPro y guardado en caché. Así «Siguiente» sube una sola vez y queda en el mismo sitio en todos los niveles.</item>
+    /// <item>Su alto de contenido es fijo por idioma, escala y ancho, y lo decide GameScreen.SlotContentDp (GameScreen.Victory.cs;
+    /// pregunta 11, opción (a) [P], tarea M1.6): máx(línea de fruta más larga, llegada más alta del catálogo). La línea de fruta
+    /// (<see cref="ContentHeightFor"/>) es la cabecera de <see cref="HeaderDp"/> dp más el texto del peor caso
+    /// (<see cref="WorstCaseText"/>: <see cref="SourceWorstChars"/> caracteres en es-419 y <see cref="TranslatedWorstChars"/> en
+    /// en, pt-BR y en-XA) a <see cref="TextSp"/> sp, medido con TextMeshPro y guardado en caché; la llegada, ArrivalStrip.NeedDp.
+    /// Lo que reserva bajo «Inicio» es <see cref="ReserveOf"/> de ese alto. Así «Siguiente» sube una sola vez y queda en el
+    /// mismo sitio en todos los niveles.</item>
     /// <item>Solo existe con algún proveedor activo: sin ninguno, la victoria es la de siempre.</item>
     /// <item>No retrasa nada: «Siguiente» entra en el mismo milisegundo que sin ranura (a los
     /// <see cref="GameScreen.VictoryButtonsInMs"/> ms de la pantalla de victoria, la fila 1,40 de 07 §5.4).</item>
@@ -78,8 +81,9 @@ namespace AF.UI
     /// 166-226 al 130 %. Solo la forma ceñida (el lugar en la fila del agua y el dato a todo el ancho) con el dato a 12 sp cabe,
     /// y solo al 100 % en es-419, pt-BR y en-XA (76-92 dp; en, 109); al 130 % no cabe ninguna. Queda como pregunta nueva para el
     /// dueño (H = máx(línea de fruta, llegada compacta), con Siguiente más arriba; dato de llegada a 12 sp con la forma ceñida;
-    /// o un tope de caracteres menor para el dato de llegada): hasta su respuesta, M1.6 no puede prometer que la llegada cabe
-    /// en H.</para>
+    /// o un tope de caracteres menor para el dato de llegada). M1.6 aplica la primera [P] (política de preguntas de la ola 2):
+    /// la ranura reserva máx(línea de fruta, llegada más alta del catálogo), así que la llegada cabe siempre y «Siguiente»
+    /// sube lo que haga falta, una sola vez.</para>
     /// </summary>
     internal sealed class VictoryLineSlot
     {
@@ -299,10 +303,10 @@ namespace AF.UI
             return height;
         }
 
-        /// <summary>Lo que la ranura añade bajo «Inicio»: el hueco, el filete y <see cref="ContentHeightFor"/>.</summary>
-        public float ReserveFor(string locale, float textScale, float widthDp)
+        /// <summary>Lo que la ranura añade bajo «Inicio» con <paramref name="contentDp"/> dp de contenido: el hueco, el filete y el contenido.</summary>
+        public static float ReserveOf(float contentDp)
         {
-            return RuleGapDp + RuleDp + RuleBelowDp + ContentHeightFor(locale, textScale, widthDp);
+            return RuleGapDp + RuleDp + RuleBelowDp + contentDp;
         }
 
         /// <summary>
@@ -327,7 +331,7 @@ namespace AF.UI
         {
             RectTransform root = _root!;
             _contentDp = contentDp;
-            _reserveDp = RuleGapDp + RuleDp + RuleBelowDp + contentDp;
+            _reserveDp = ReserveOf(contentDp);
             root.gameObject.SetActive(true);
             UiBuilder.Place(root, x, top, widthDp, _reserveDp);
             RectTransform content = _content!;

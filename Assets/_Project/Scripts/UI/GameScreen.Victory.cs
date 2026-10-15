@@ -199,7 +199,7 @@ namespace AF.UI
 
             _slot.Build(_victoryPanel);
             string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
-            y += VictoryLineSlot.RuleGapDp + VictoryLineSlot.RuleDp + VictoryLineSlot.RuleBelowDp + SlotContentDp(locale, UiBuilder.TextScale);
+            y += VictoryLineSlot.ReserveOf(SlotContentDp(locale, UiBuilder.TextScale));
         }
 
         partial void SlotLayout()

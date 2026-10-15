@@ -73,7 +73,7 @@ namespace AF.Tests.PlayMode
             Assert.That(strip.Started && strip.Completed, Is.True);
             Assert.That(strip.CompletedBy, Is.EqualTo("time"));
             Assert.That(strip.Skipped, Is.False);
-            Assert.That(strip.PlaceText, Is.EqualTo("Alter do Chão · Brasil · río Tapajós"));
+            Assert.That(strip.PlaceText, Is.EqualTo("Alter do Chão · Brasil · río\u00A0Tapajós"));
             Assert.That(strip.FactText, Is.EqualTo(Loc.Fact(AlterFact)));
             Assert.That(strip.FactText, Does.StartWith("Cuando el río baja"));
             Assert.That(strip.Welcome, Is.False, "el 20 no cambia de país");
@@ -95,6 +95,19 @@ namespace AF.Tests.PlayMode
             Assert.That(view.LastStopArriveSkipped, Is.False, "vista entera");
             Assert.That(view.ArrivalLayoutCount, Is.EqualTo(1), "AF_LAYOUT arrival al empezar");
             AssertFits(view, "20");
+
+            // Revisión de M1.6: la muestra con el color de la barra (encima del vidrio), la placa alineada con la fila del agua,
+            // el relleno derecho del texto y lo que se enseña centrado en la ranura.
+            Assert.That(strip.MiniWater!.GetSiblingIndex(), Is.GreaterThan(strip.MiniCuia!.GetSiblingIndex()), "el agua de la muestra, encima del vidrio");
+            float width = view.VictorySlotWidthDp;
+            Assert.That(strip.Plate!.gameObject.activeSelf, Is.True);
+            Assert.That(strip.Plate.anchoredPosition.x, Is.EqualTo(strip.Track!.anchoredPosition.x), "la placa empieza donde la fila del agua");
+            Assert.That(strip.Plate.rect.width, Is.EqualTo(width), "y acaba en el canto de la mini cuia");
+            RectTransform fact = strip.FactLabel!.rectTransform;
+            Assert.That(fact.anchoredPosition.x + fact.rect.width, Is.LessThanOrEqualTo(width - ArrivalStrip.PlateRightPadDp + 0.01f), "12 dp a la derecha del texto");
+            float air = view.VictorySlot.ContentDp - strip.ShownHeightDp;
+            Assert.That(strip.OffsetDp, Is.EqualTo(Mathf.Floor(air * 0.5f)), "el aire, repartido arriba y abajo");
+            Assert.That(-strip.Plate.anchoredPosition.y + strip.Plate.rect.height, Is.EqualTo(strip.OffsetDp + strip.ShownHeightDp).Within(0.01f));
         }
 
         [UnityTest]
@@ -130,7 +143,7 @@ namespace AF.Tests.PlayMode
             Assert.That(strip.Welcome, Is.True, "cambio de país (P-M7 a)");
             Assert.That(strip.WelcomeText, Is.EqualTo("Colombia te da la bienvenida"));
             Assert.That(strip.WelcomeLabel!.gameObject.activeSelf, Is.True);
-            Assert.That(strip.PlaceText, Is.EqualTo("Leticia · Colombia · río Amazonas"));
+            Assert.That(strip.PlaceText, Is.EqualTo("Leticia · Colombia · río\u00A0Amazonas"));
             Assert.That(strip.ShownFactKey, Is.EqualTo("map.country.co.dato_01"));
             Assert.That(strip.SampleColor, Is.EqualTo(Palette.WaterWhite));
             AssertFits(view, "80");
@@ -155,7 +168,7 @@ namespace AF.Tests.PlayMode
             Assert.That(line.ArrivalFact, Is.False, "la llegada va sin dato");
             ArrivalStrip strip = view.Arrival!;
             Assert.That(strip.Kind, Is.EqualTo(ArrivalKind.Place), "solo la placa del lugar");
-            Assert.That(strip.PlaceText, Is.EqualTo("Encuentro de las Aguas · Brasil · río Negro y Solimões"));
+            Assert.That(strip.PlaceText, Is.EqualTo("Encuentro de las Aguas · Brasil · río\u00A0Negro y Solimões"));
             Assert.That(strip.ShownFactKey, Is.Null);
             Assert.That(strip.FactLabel!.gameObject.activeSelf, Is.False);
             Assert.That(strip.Portrait!.gameObject.activeSelf, Is.False, "el retrato va con el dato");
@@ -221,7 +234,7 @@ namespace AF.Tests.PlayMode
             view = GameBootstrap.Current!.View!;
             Assert.That(view.CurrentVictoryLine.FruitKey, Is.EqualTo("fruit.test.line_20"));
             Assert.That(view.Arrival!.Kind, Is.EqualTo(ArrivalKind.Place));
-            Assert.That(view.Arrival.PlaceText, Is.EqualTo("Alter do Chão · Brasil · río Tapajós"));
+            Assert.That(view.Arrival.PlaceText, Is.EqualTo("Alter do Chão · Brasil · río\u00A0Tapajós"));
             Assert.That(view.Arrival.ShownFactKey, Is.Null);
         }
 
@@ -387,12 +400,15 @@ namespace AF.Tests.PlayMode
             Assert.That(fact, Does.StartWith("AF_STATE {\"event\":\"river_fact_shown\"").And.Contain("\"level\":20")
                 .And.Contain("\"fact_id\":\"" + AlterFact + "\"").And.EndWith("\"dismissed_ms\":1234}"));
             RiverStop stop = boot.RiverStops!.At(2)!;
-            Assert.That(probe.FormatStopArrive(20, stop, false), Does.Contain("\"event\":\"stop_arrive\"").And.Contain("\"stop_id\":\"alter_do_chao\"")
+            Assert.That(probe.FormatStopArrive(20, stop, false), Does.Contain("\"event\":\"stop_arrive\"").And.Contain("\"stop_id\":\"s02\"")
                 .And.Contain("\"stop\":2").And.Contain("\"world\":2").And.Contain("\"level\":20").And.Contain("\"view\":\"victory\"")
-                .And.EndWith("\"skipped\":false}"));
-            string? arrival = probe.FormatArrival("show", view.Arrival!, view.VictorySlot.ContentDp);
-            Assert.That(arrival, Does.StartWith("AF_STATE {\"event\":\"arrival\"").And.Contain("\"phase\":\"show\"").And.Contain("\"kind\":\"arrival\"")
-                .And.Contain("\"stop_id\":\"alter_do_chao\"").And.Contain("\"fact\":\"" + AlterFact + "\""));
+                .And.EndWith("\"skipped\":false}"), "stop_id = el id de parada s{nn} (glosario §11), no el del sitio");
+            Assert.That(probe.FormatStopArrive(80, boot.RiverStops!.At(8)!, true), Does.Contain("\"stop_id\":\"s08\"").And.EndWith("\"skipped\":true}"));
+            string? arrival = probe.FormatArrival("start", view.Arrival!, view.VictorySlot.ContentDp);
+            Assert.That(arrival, Does.StartWith("AF_STATE {\"event\":\"arrival\"").And.Contain("\"level\":20").And.Contain("\"phase\":\"start\"")
+                .And.Contain("\"kind\":\"arrival\"").And.Contain("\"stop\":2").And.Contain("\"id\":\"alter_do_chao\"")
+                .And.Contain("\"fact_id\":\"" + AlterFact + "\"").And.Contain("\"welcome\":false").And.Not.Contain("stop_id"),
+                "los campos de docs/dev/prototipo-v0.md: level, stop, id, fact_id y welcome");
         }
 
         [UnityTest]

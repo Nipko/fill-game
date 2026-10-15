@@ -11,9 +11,10 @@ namespace AF.UI
     /// propuesta del Mapa §4.2 y §8.2; tarea M1.6): crea la franja (<see cref="ArrivalStrip"/>), la registra como proveedor de
     /// la ranura del Dato del río (GameScreen.Victory.cs) y escribe sus sondas de desarrollo (DevProbe.Map.cs):
     /// <list type="bullet">
-    /// <item><c>AF_STATE arrival</c> al enseñarse (<c>phase</c> = <c>show</c>) y al terminar (<c>complete</c>, con <c>by</c> =
-    /// <c>time</c> o <c>tap</c>, o <c>close</c> si la victoria se cierra antes);</item>
-    /// <item><c>AF_STATE stop_arrive</c>, el <c>af_stop_arrive</c> de la propuesta del Mapa §11.5 (<c>stop_id</c>, <c>world</c>,
+    /// <item><c>AF_STATE arrival</c> cuando empieza la franja (<c>phase</c> = <c>start</c>, tras la subida del panel o con el toque
+    /// que la adelanta) y al terminar (<c>complete</c>, con <c>by</c> = <c>time</c> o <c>tap</c>, o <c>close</c> si la victoria se
+    /// cierra antes; docs/dev/prototipo-v0.md);</item>
+    /// <item><c>AF_STATE stop_arrive</c>, el <c>af_stop_arrive</c> de 08 §8.2 (<c>stop_id</c> = <c>s{nn}</c>, <c>world</c>,
     /// <c>level</c>, <c>view</c> = <c>victory</c> y <c>skipped</c>), una vez por llegada;</item>
     /// <item><c>AF_LAYOUT arrival</c> cuando empieza la franja, con el área táctil <c>arrival</c> (un toque la completa).</item>
     /// </list>
@@ -63,13 +64,6 @@ namespace AF.UI
         partial void ArrivalVictoryShown(LevelFlow flow)
         {
             _stopArriveSent = false;
-            ArrivalStrip? strip = _arrival;
-            if (strip == null || strip.Kind == ArrivalKind.None)
-            {
-                return;
-            }
-
-            _probe.Arrival("show", strip, _slot.ContentDp);
         }
 
         partial void ArrivalAdGate(LevelFlow flow)
@@ -98,6 +92,7 @@ namespace AF.UI
 
         private void OnArrivalStarted(ArrivalStrip strip)
         {
+            _probe.Arrival("start", strip, _slot.ContentDp);
             ArrivalLayoutCount++;
             _arrivalIds.Clear();
             _arrivalRects.Clear();

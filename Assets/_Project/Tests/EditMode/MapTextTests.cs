@@ -146,7 +146,7 @@ namespace AF.Tests.EditMode
             Assert.That(alter.Id, Is.EqualTo("alter_do_chao"));
             Assert.That(UiText.StopName(alter), Is.EqualTo("Alter do Chão"));
             Assert.That(UiText.StopLabel(alter), Is.EqualTo("Alter do Chão · Brasil"));
-            Assert.That(UiText.MapArrived(alter), Is.EqualTo("Alter do Chão · Brasil · río Tapajós"), "el criterio de M1.6 al ganar el 20");
+            Assert.That(UiText.MapArrived(alter), Is.EqualTo("Alter do Chão · Brasil · río\u00A0Tapajós"), "el criterio de M1.6 al ganar el 20 (espacio duro tras «río»)");
             Assert.That(UiText.MapHitoPreview(alter), Is.EqualTo("Si lo superas, llegas a Alter do Chão"));
 
             RiverStop leticia = Stops.At(8)!;

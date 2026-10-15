@@ -92,8 +92,7 @@ namespace AF.Tests.PlayMode
             Assert.That(xa, Is.GreaterThanOrEqualTo(es));
             Assert.That(es13, Is.GreaterThan(es), "al 130 % el texto crece");
             Assert.That(xa13, Is.GreaterThan(xa));
-            Assert.That(slot.ReserveFor(LocLocale.SpanishLatinAmerica, 1f, view.VictorySlotWidthDp),
-                Is.EqualTo(es + VictoryLineSlot.RuleGapDp + VictoryLineSlot.RuleDp + VictoryLineSlot.RuleBelowDp));
+            Assert.That(VictoryLineSlot.ReserveOf(es), Is.EqualTo(es + VictoryLineSlot.RuleGapDp + VictoryLineSlot.RuleDp + VictoryLineSlot.RuleBelowDp));
         }
 
         [UnityTest]
