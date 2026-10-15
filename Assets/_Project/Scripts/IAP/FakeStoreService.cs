@@ -40,7 +40,10 @@ namespace AF.IAP
         /// <summary>Precio local (05 §4.2).</summary>
         public LocalPrice Price { get; }
 
-        /// <summary>Precio como se muestra, p. ej. <c>COP 3.900</c>.</summary>
+        /// <summary>
+        /// Precio como se muestra, con la función única de precios (<c>Loc.Price</c>; D-025): <c>COP 3.900</c> con el teléfono en
+        /// es-CO y <c>COP 3,900</c> en en-US.
+        /// </summary>
         public string PriceText => Price.ToString();
     }
 

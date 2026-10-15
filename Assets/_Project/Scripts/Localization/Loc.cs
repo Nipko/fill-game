@@ -14,7 +14,8 @@ namespace AF.Localization
     /// <item><see cref="Fact(string)"/>: textos largos (<c>facts.csv</c>). Da «» si falta la clave, si no hay texto en el idioma
     /// (nunca mezcla idiomas; Q10-A) o si no está aprobado y no se enseña lo no aprobado (<see cref="ShowUnapproved"/>).</item>
     /// <item>Cifras con los separadores de la región (<see cref="Number(long)"/>, <see cref="WriteNumber"/>; Q8-A): la del
-    /// teléfono si se da (<see cref="SetNumberTag"/>) y, si no, la del idioma (es-419 → es-CO [P]).</item>
+    /// teléfono si se da (<see cref="SetNumberTag"/>) y, si no, la del idioma (es-419 → es-CO [P]). Los precios, con el mismo
+    /// formato (<see cref="Price"/>; D-025).</item>
     /// <item><c>showUnapproved</c> es el interruptor de desarrollo: en los builds de desarrollo y en los tests enseña lo no
     /// aprobado, marca las claves que faltan y permite en-XA.</item>
     /// </list>
@@ -254,6 +255,32 @@ namespace AF.Localization
         public static string Number(double value, int decimals)
         {
             return LocNumber.Format(value, decimals, s_numbers);
+        }
+
+        /// <summary>
+        /// Precio con el formato de las cifras (D-025): código ISO 4217, un espacio y el importe con los separadores de la región
+        /// y los decimales de la moneda (<see cref="LocPrice"/>: 0 en COP y MXN, 2 en el resto), p. ej. «COP 3,900» con el
+        /// teléfono en en-US. <paramref name="minorUnits"/> va en las unidades de <see cref="LocPrice.DecimalsOf"/> (BRL 4,99 →
+        /// 499; COP 3.900 → 3900). Es la única función de precios: ningún precio lleva un formato propio.
+        /// </summary>
+        public static string Price(string iso4217, long minorUnits)
+        {
+            return LocPrice.Format(iso4217, minorUnits, s_numbers);
+        }
+
+        /// <summary>
+        /// Como <see cref="Price"/>, desde los micros de Play Billing (<c>priceAmountMicros</c>; D-025, punto 3 [P]): el adaptador
+        /// de la tienda real compone así el precio con la moneda del producto, en lugar de la cadena formateada de Google Play.
+        /// </summary>
+        public static string PriceFromMicros(string iso4217, long micros)
+        {
+            return LocPrice.Format(iso4217, LocPrice.MinorUnitsFromMicros(iso4217, micros), s_numbers);
+        }
+
+        /// <summary>Solo el importe de <see cref="Price"/>, sin el código (p. ej. «3,900»).</summary>
+        public static string PriceAmount(string iso4217, long minorUnits)
+        {
+            return LocPrice.FormatAmount(iso4217, minorUnits, s_numbers);
         }
 
         /// <summary>

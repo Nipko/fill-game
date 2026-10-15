@@ -45,7 +45,11 @@ namespace AF.IAP.Tests
                 expected.Add(row[0]);
                 StoreProduct? product = catalog.Find(row[0]);
                 Assert.That(product, Is.Not.Null, row[0]);
-                Assert.That(product!.PriceIn("USD").FormatAmount(), Is.EqualTo(row[2]), row[0] + ": USD");
+                using (NumberRegionScope.Of("es-CO"))
+                {
+                    // 05 §4.1 escribe los importes con los separadores de es-CO (D-025: los mismos que da Loc en esa región).
+                    Assert.That(product!.PriceIn("USD").FormatAmount(), Is.EqualTo(row[2]), row[0] + ": USD");
+                }
             }
 
             Assert.That(skus, Is.EqualTo(expected));
@@ -140,6 +144,8 @@ namespace AF.IAP.Tests
         [Test]
         public void LocalPrices_AreTheOnesOf05_4_2()
         {
+            // 05 §4.2 escribe los importes con los separadores de es-CO: con esa región, Loc.Price (D-025) da lo mismo.
+            using NumberRegionScope region = NumberRegionScope.Of("es-CO");
             string section = GddTables.Section(GddTables.Chapter("05-economia-monetizacion.md"), "### 4.2 ", "**Métodos de pago");
             int rows = 0;
             foreach (string line in section.Split('\n'))
@@ -170,16 +176,30 @@ namespace AF.IAP.Tests
         }
 
         [Test]
-        public void PriceFormat_DoesNotDependOnTheDeviceCulture()
+        public void PriceFormat_DoesNotDependOnTheDeviceCulture_OnlyOnTheRegionOfLoc()
         {
+            // D-025: la región de las cifras de Loc (la del teléfono) decide los separadores; la cultura del equipo, nunca.
             CultureInfo previous = Thread.CurrentThread.CurrentCulture;
             try
             {
                 Thread.CurrentThread.CurrentCulture = new CultureInfo("en-US");
-                Assert.That(new LocalPrice("COP", 94900m).ToString(), Is.EqualTo("COP 94.900"));
-                Assert.That(new LocalPrice("PEN", 3.9m).ToString(), Is.EqualTo("PEN 3,90"));
-                Assert.That(new LocalPrice("USD", 0.99m).ToString(), Is.EqualTo("USD 0,99"));
-                Assert.That(new LocalPrice("MXN", 169m).ToString(), Is.EqualTo("MXN 169"));
+                using (NumberRegionScope.Of("es-CO"))
+                {
+                    Assert.That(new LocalPrice("COP", 94900m).ToString(), Is.EqualTo("COP 94.900"));
+                    Assert.That(new LocalPrice("PEN", 3.9m).ToString(), Is.EqualTo("PEN 3,90"));
+                    Assert.That(new LocalPrice("USD", 0.99m).ToString(), Is.EqualTo("USD 0,99"));
+                    Assert.That(new LocalPrice("MXN", 169m).ToString(), Is.EqualTo("MXN 169"));
+                }
+
+                Thread.CurrentThread.CurrentCulture = new CultureInfo("de-DE");
+                using (NumberRegionScope.Of("en-US"))
+                {
+                    Assert.That(new LocalPrice("COP", 94900m).ToString(), Is.EqualTo("COP 94,900"));
+                    Assert.That(new LocalPrice("PEN", 3.9m).ToString(), Is.EqualTo("PEN 3.90"));
+                    Assert.That(new LocalPrice("BRL", 129.9m).ToString(), Is.EqualTo("BRL 129.90"));
+                    Assert.That(new LocalPrice("MXN", 169m).MinorUnits, Is.EqualTo(169L));
+                    Assert.That(new LocalPrice("BRL", 129.9m).MinorUnits, Is.EqualTo(12990L));
+                }
             }
             finally
             {

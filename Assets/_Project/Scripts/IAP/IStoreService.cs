@@ -137,7 +137,12 @@ namespace AF.IAP
         /// <summary>Catálogo.</summary>
         StoreCatalog Catalog { get; }
 
-        /// <summary>Precio que se muestra para <paramref name="sku"/> (moneda local).</summary>
+        /// <summary>
+        /// Precio que se muestra para <paramref name="sku"/> (moneda local): importe y moneda, que se escriben con la función única
+        /// de precios (<see cref="LocalPrice.ToString"/>, <c>Loc.Price</c>; D-025). El adaptador de Unity IAP lo compondrá desde
+        /// <c>priceAmountMicros</c> y el código de moneda del producto (D-025, punto 3 [P]; <c>Loc.PriceFromMicros</c>), nunca
+        /// desde la cadena formateada de Google Play.
+        /// </summary>
         LocalPrice PriceOf(string sku);
 
         /// <summary>

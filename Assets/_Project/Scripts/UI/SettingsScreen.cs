@@ -14,8 +14,9 @@ namespace AF.UI
     /// Pantalla de Ajustes (tarea L3; D-018 Q7-A y §3.5 de la propuesta de idiomas; 02 §12 y GDD.md §2 #5: Patrones de fruta
     /// siempre en Ajustes; 07 §7.6: engranaje de madera del inicio), construida por código como los modales del embudo
     /// (<see cref="ModalKit"/>, guía visual v2 5.3): una tarjeta de madera clara sobre un velo, en su propio lienzo por encima
-    /// del inicio, con la cabecera «Ajustes», el cierre (y el Atrás de Android, que maneja <c>GameBootstrap</c>) y dos secciones
-    /// de opciones con su marca de radio (el estado no depende solo del color, 07 §7.8):
+    /// del inicio, con la cabecera «Ajustes», el cierre (y el Atrás de Android, que maneja
+    /// <c>GameBootstrap.PressAndroidBack</c>) y dos secciones de opciones con su marca de radio (el estado no depende solo
+    /// del color, 07 §7.8):
     /// <list type="bullet">
     /// <item><b>Idioma</b>: «Automático» (el del teléfono, <c>settings.language</c> = auto) y cada idioma ofrecido con su
     /// nombre propio (<see cref="LocLocale.Offered"/>: solo los que tienen la UI completa; hoy es-419 y, en desarrollo,
@@ -26,7 +27,8 @@ namespace AF.UI
     /// «Mensajes de TiTino» (TI3), la pista por inactividad (MO3) y «Sobre la Amazonía» (F4) están creados y ocultos
     /// (<see cref="SlothMessagesSlot"/>, <see cref="IdleHintSlot"/> y <see cref="AboutSlot"/>): esas tareas los llenan y
     /// <see cref="Layout"/> los coloca cuando se activan. Elegir llama a quien la abre (<c>GameBootstrap</c>), que guarda el
-    /// perfil y aplica: el idioma reconstruye la UI volviendo al inicio; los patrones, al momento. Escala de la fuente
+    /// perfil y aplica: el idioma reconstruye la UI volviendo al inicio, con esta pantalla otra vez abierta (FXT); los patrones,
+    /// al momento. Escala de la fuente
     /// <see cref="FontScale"/> hasta el 130 % sin recortes (02 §12), con todo texto ≥ 12 sp.
     /// </summary>
     internal sealed class SettingsScreen

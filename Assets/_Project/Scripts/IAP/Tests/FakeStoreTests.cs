@@ -2,6 +2,7 @@
 using System;
 using AF.Ads;
 using AF.Economy;
+using AF.Localization;
 using AF.Save;
 using NUnit.Framework;
 
@@ -178,9 +179,51 @@ namespace AF.IAP.Tests
             Assert.That(SimulatedPurchase.LabelKey, Is.EqualTo("iap_simulated_purchase"), "el rótulo, por clave (D-018)");
             Assert.That(sheet.NameKey, Is.EqualTo("iap_af_coins_2_name"), "el nombre, por clave: el texto lo pone la UI");
             Assert.That(sheet.Sku, Is.EqualTo("af_coins_2"));
-            Assert.That(sheet.PriceText, Is.EqualTo("COP 3.900"));
-            Assert.That(fx.Service.PriceOf("af_infinite_canoes_1h").ToString(), Is.EqualTo("COP 3.900"));
+            Assert.That(sheet.Price.MinorUnits, Is.EqualTo(3900L));
+            using (NumberRegionScope.Of("es-CO"))
+            {
+                Assert.That(sheet.PriceText, Is.EqualTo("COP 3.900"));
+                Assert.That(fx.Service.PriceOf("af_infinite_canoes_1h").ToString(), Is.EqualTo("COP 3.900"));
+            }
+
             Assert.Throws<ArgumentException>(() => new FakeStoreService(fx.Ledger, fx.Presenter, "EUR"));
+        }
+
+        // D-025: el precio de la hoja y el de la tienda salen con la función única (Loc.Price): el formato de la región del
+        // teléfono, también en caliente, con los decimales de la moneda (0 en COP y MXN; 2 en el resto).
+        [TestCase("COP", "en-US", "COP 3,900")]
+        [TestCase("COP", "es-CO", "COP 3.900")]
+        [TestCase("MXN", "es-MX", "MXN 19")]
+        [TestCase("BRL", "pt-BR", "BRL 4,99")]
+        [TestCase("USD", "en-US", "USD 1.99")]
+        [TestCase("PEN", "es-PE", "PEN 3.90")]
+        public void PriceText_UsesTheSingleNumberFormat_OfThePhoneRegion(string currency, string region, string expected)
+        {
+            var fx = new StoreFixture(currency: currency);
+            fx.Buy(StoreCatalog.Handful);
+            SimulatedPurchase sheet = fx.Presenter.Last!;
+
+            using (NumberRegionScope.Of(region))
+            {
+                Assert.That(sheet.PriceText, Is.EqualTo(expected), "hoja «Compra simulada»");
+                Assert.That(fx.Service.PriceOf(StoreCatalog.Handful).ToString(), Is.EqualTo(expected), "PriceOf");
+                Assert.That(sheet.PriceText, Is.EqualTo(Loc.Price(currency, sheet.Price.MinorUnits)), "la misma función");
+            }
+        }
+
+        [Test]
+        public void PriceText_FollowsARegionChange_WithoutRebuildingTheStore()
+        {
+            var fx = new StoreFixture(currency: "COP");
+
+            using (NumberRegionScope.Of("es-CO"))
+            {
+                Assert.That(fx.Service.PriceOf(StoreCatalog.Rescue).ToString(), Is.EqualTo("COP 9.900"));
+                Loc.SetNumberTag("en-US");
+                Assert.That(fx.Service.PriceOf(StoreCatalog.Rescue).ToString(), Is.EqualTo("COP 9,900"), "en caliente");
+                Loc.SetNumberTag("fr-FR");
+                Assert.That(fx.Service.PriceOf(StoreCatalog.Rescue).ToString(), Is.EqualTo("COP 9 900"), "U+00A0 en francés");
+            }
         }
 
         [Test]

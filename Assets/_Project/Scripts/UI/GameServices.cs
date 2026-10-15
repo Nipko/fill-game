@@ -84,7 +84,11 @@ namespace AF.UI
             return Ads.CheckRewarded(placement).IsAllowed;
         }
 
-        /// <summary>Precio local de <paramref name="sku"/>, p. ej. <c>COP 3.900</c> (05 §4.2).</summary>
+        /// <summary>
+        /// Precio local de <paramref name="sku"/> (05 §4.2) como lo da la tienda, escrito con la función única de precios
+        /// (<c>Loc.Price</c>; D-025): p. ej. <c>COP 3.900</c> en es-CO y <c>COP 3,900</c> en en-US. Todos los textos con
+        /// precio (Aguas estancadas, Sin canoas) lo toman de aquí.
+        /// </summary>
         public string PriceText(string sku)
         {
             return Store.PriceOf(sku).ToString();
