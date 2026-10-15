@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using AF.Levels;
 using UnityEngine;
 using UnityEngine.UI;
@@ -30,9 +31,13 @@ namespace AF.Presentation
     /// netos (cada tramo con sus propios vértices). Un tramo sin agua comprobada ([NV]) se dibuja en vidrio.</description></item>
     /// <item><description>El lleno y el vidrio se distinguen también por el trazo: el vidrio lleva un borde claro (#EAF7F3) y el
     /// agua, una orilla más oscura que su color; con Patrones de fruta (02 §12; <see cref="SetPatterns"/>), el agua lleva además
-    /// una trama por tipo: puntos en la blanca y la andina, rayas en la negra y ondas en la clara.</description></item>
+    /// una trama por tipo: puntos en la blanca y la andina, rayas en la negra y ondas en la clara, con la opacidad canónica del
+    /// patrón (07 §3, regla 1: <c>ui_pattern_opacity</c>, 0,20; 0,35 solo en Alto contraste, que pasa quien la usa).</description></item>
     /// <item><description>Presupuesto de vértices (<see cref="SetVertexBudget"/>): si el intervalo no cabe, se saltan puntos
-    /// intermedios de la línea de forma uniforme, y la trama sale solo mientras quede presupuesto; nunca se pasa del
+    /// intermedios de la línea de forma uniforme (si no cabe ninguno, todos) y la cinta une los que quedan con cuerdas: el
+    /// inglete de cada sección y la trama siguen esas cuerdas, no la polilínea original. Las dos puntas se dibujan siempre
+    /// (si no caben todos los cambios de agua, se omiten los últimos antes que la sección final), salvo con un tope que no
+    /// admite ni dos secciones, que deja la malla vacía; la trama sale solo mientras quede presupuesto. Nunca se pasa del
     /// tope.</description></item>
     /// </list>
     /// Las coordenadas son las locales de su RectTransform según <see cref="MapSpace"/>. Solo se reconstruye cuando cambia algo
@@ -66,10 +71,10 @@ namespace AF.Presentation
         public const float PatternStepDp = 4f;
 
         /// <summary>
-        /// Mezcla de la trama hacia la tinta o el papel [P]: 0,35, la opacidad del patrón en Alto contraste (07 §3), porque sobre
-        /// una cinta de 2-6 dp la del tablero (0,20) no se distingue.
+        /// Opacidad del patrón en Alto contraste (07 §3, reglas 1 y 5: 35 %, solo en ese modo). La cinta no lee el modo: quien la
+        /// configura la pasa a <see cref="SetPatterns"/>.
         /// </summary>
-        public const float PatternMix = 0.35f;
+        public const float PatternOpacityHighContrast = 0.35f;
 
         private const float RimMaxFraction = 0.35f;
 
@@ -87,12 +92,23 @@ namespace AF.Presentation
         private MapSpace _space = new MapSpace(MapSpace.BasinWidthDp, Vector2.zero);
         private RibbonLook _look = RibbonLook.Glass;
         private bool _patterns;
+        private float _patternOpacity = Palette.PatternOpacityOn;
         private float _s0;
         private float _s1 = 1f;
         private float _widthDp = -1f;
         private int _budget = MaxVertices;
         private int _vertexCount;
         private int _markCount;
+
+        // Plan de la malla (las secciones, antes de dibujarlas): se reutiliza y solo crece, así que tras la primera vez con el
+        // intervalo más largo no asigna memoria.
+        private float[] _planArc = Array.Empty<float>();
+        private int[] _planVertex = Array.Empty<int>();
+        private Vector2[] _planPoint = Array.Empty<Vector2>();
+        private RunLook[] _planLook = Array.Empty<RunLook>();
+        private bool[] _planConnect = Array.Empty<bool>();
+        private int _planCount;
+        private bool _decimated;
 
         /// <summary>Configura el gráfico (sin raycast).</summary>
         public void Setup()
@@ -117,6 +133,14 @@ namespace AF.Presentation
 
         /// <summary>Lleva la trama de Patrones de fruta.</summary>
         public bool Patterns => _patterns;
+
+        /// <summary>Opacidad de la trama (<see cref="SetPatterns"/>).</summary>
+        public float PatternOpacity => _patternOpacity;
+
+        /// <summary>
+        /// La última malla saltó puntos de la línea por el presupuesto: la cinta sigue cuerdas entre los puntos que quedan.
+        /// </summary>
+        public bool LastWasDecimated => _decimated;
 
         /// <summary>Tope de vértices.</summary>
         public int VertexBudget => _budget;
@@ -180,13 +204,14 @@ namespace AF.Presentation
 
         /// <summary>
         /// Color de la trama sobre el agua <paramref name="water"/> (opaco): hacia el papel sobre las aguas oscuras (L* &lt; 50) y
-        /// hacia la tinta sobre las claras, con <see cref="PatternMix"/>, como <see cref="Palette.PatternMark(Color, int, float)"/>.
+        /// hacia la tinta sobre las claras, con la opacidad <paramref name="opacity"/> (por defecto la canónica,
+        /// <see cref="Palette.PatternOpacityOn"/>), mezclada en sRGB como <see cref="Palette.PatternMark(Color, int, float)"/>.
         /// </summary>
-        public static Color MarkColor(RiverWater water)
+        public static Color MarkColor(RiverWater water, float opacity = Palette.PatternOpacityOn)
         {
             Color body = WaterColor(water);
             Color toward = ColorMath.LabLightness(body) < 50f ? Palette.UiPaper : Palette.UiInk;
-            Color mark = Color.Lerp(body, toward, PatternMix);
+            Color mark = Color.Lerp(body, toward, Mathf.Clamp01(opacity));
             mark.a = 1f;
             return mark;
         }
@@ -229,12 +254,18 @@ namespace AF.Presentation
             }
         }
 
-        /// <summary>Trama de Patrones de fruta (02 §12): solo en el aspecto de agua.</summary>
-        public void SetPatterns(bool on)
+        /// <summary>
+        /// Trama de Patrones de fruta (02 §12): solo en el aspecto de agua. <paramref name="opacity"/> es la del patrón (07 §3,
+        /// regla 1): <c>ui_pattern_opacity</c> (por defecto <see cref="Palette.PatternOpacityOn"/>, 0,20) o, en Alto contraste,
+        /// <see cref="PatternOpacityHighContrast"/>.
+        /// </summary>
+        public void SetPatterns(bool on, float opacity = Palette.PatternOpacityOn)
         {
-            if (on != _patterns)
+            opacity = Mathf.Clamp01(opacity);
+            if (on != _patterns || opacity != _patternOpacity)
             {
                 _patterns = on;
+                _patternOpacity = opacity;
                 SetVerticesDirty();
             }
         }
@@ -286,6 +317,8 @@ namespace AF.Presentation
             vh.Clear();
             _vertexCount = 0;
             _markCount = 0;
+            _planCount = 0;
+            _decimated = false;
             RiverLine? line = _line;
             PolylineCursor? cursor = _cursor;
             if (line == null || cursor == null || cursor.Length <= 0f || _s1 <= _s0 || _space.DpPerUnit <= 0f)
@@ -317,7 +350,7 @@ namespace AF.Presentation
             int inner = Mathf.Max(0, last - first + 1);
 
             // Presupuesto: secciones fijas (los dos extremos y cada cambio de agua, que va dos veces) y, si no caben todas, se
-            // salta uno de cada «stride» puntos intermedios.
+            // salta uno de cada «stride» puntos intermedios; si no cabe ninguno, se saltan todos.
             int boundaries = 0;
             bool anySplit = false;
             if (water)
@@ -334,48 +367,78 @@ namespace AF.Presentation
             }
 
             int perSection = 2 * (anySplit ? 4 : 3);
+            if (2 * perSection > _budget)
+            {
+                return; // ni las dos puntas caben
+            }
+
             int fixedSections = 2 + (2 * boundaries);
             int stride = 1;
+            int nextVertex = first;
             if ((inner + fixedSections) * perSection > _budget)
             {
                 int room = (_budget / perSection) - fixedSections;
-                stride = room >= 1 ? (inner + room - 1) / room : inner + 1;
+                if (room >= 1)
+                {
+                    stride = (inner + room - 1) / room;
+                }
+                else
+                {
+                    nextVertex = last + 1; // solo las secciones fijas
+                }
             }
 
+            EnsurePlanCapacity(inner + fixedSections + 1);
+            int keptVertices = 0;
             RunLook look = LookAt(line, _s0, water);
-            int previous = EmitSection(vh, cursor, aStart, -1, look, half, rim, -1);
-            int nextVertex = first;
+            int used = AddPlan(cursor, aStart, -1, look, false);
             float nextBoundary = water ? line.NextBoundaryAfter(_s0) : 2f;
-            while (previous >= 0)
+            while (true)
             {
                 float vertexArc = nextVertex <= last ? cursor.ArcOfPoint(nextVertex) : float.MaxValue;
                 float boundaryArc = nextBoundary < _s1 ? nextBoundary * length : float.MaxValue;
                 float arc = Mathf.Min(aEnd, Mathf.Min(vertexArc, boundaryArc));
                 bool atVertex = vertexArc <= arc && arc < aEnd;
                 bool atBoundary = boundaryArc <= arc && arc < aEnd;
-                int vertex = atVertex ? nextVertex : -1;
+                RunLook after = atBoundary ? LookAt(line, nextBoundary, water) : look;
+                bool change = atBoundary && !after.Equals(look);
 
-                previous = EmitSection(vh, cursor, arc, vertex, look, half, rim, previous);
-                if (previous < 0 || arc >= aEnd)
+                // La sección final tiene su sitio reservado: si esta (y la que abre el agua nueva) no lo dejan, se salta a ella.
+                int cost = Cost(look) + (change ? Cost(after) : 0);
+                if (arc >= aEnd || used + cost + perSection > _budget)
                 {
+                    AddPlan(cursor, aEnd, -1, look, true);
                     break;
                 }
 
+                int vertex = atVertex ? nextVertex : -1;
+                used += AddPlan(cursor, arc, vertex, look, true);
                 if (atVertex)
                 {
+                    keptVertices++;
                     nextVertex += stride;
                 }
 
                 if (atBoundary)
                 {
-                    float s = nextBoundary;
-                    nextBoundary = line.NextBoundaryAfter(s);
-                    RunLook after = LookAt(line, s, water);
-                    if (!after.Equals(look))
+                    nextBoundary = line.NextBoundaryAfter(nextBoundary);
+                    if (change)
                     {
                         look = after;
-                        previous = EmitSection(vh, cursor, arc, vertex, look, half, rim, -1); // cambio neto: tira nueva
+                        used += AddPlan(cursor, arc, vertex, look, false); // cambio neto: tira nueva
                     }
+                }
+            }
+
+            _decimated = keptVertices < inner;
+            int previous = -1;
+            for (int i = 0; i < _planCount; i++)
+            {
+                Vector2 offset = SectionOffset(cursor, i);
+                previous = EmitSection(vh, _planPoint[i], offset, _planLook[i], half, rim, _planConnect[i] ? previous : -1);
+                if (previous < 0)
+                {
+                    break; // no pasa: el plan ya cuenta el presupuesto
                 }
             }
 
@@ -387,11 +450,108 @@ namespace AF.Presentation
             _vertexCount = vh.currentVertCount;
         }
 
-        // Una sección transversal a la longitud de arco «arc» (en el punto «vertex» de la línea, con inglete, o dentro de un
-        // tramo): dos vértices por banda. Si «connect» ≥ 0, la une con la sección anterior de la misma tira. Devuelve el primer
-        // vértice de la sección, o −1 si no cabe en el presupuesto.
-        private int EmitSection(VertexHelper vh, PolylineCursor cursor, float arc, int vertex, RunLook look, float half, float rim,
-            int connect)
+        // Vértices de una sección con el aspecto «look».
+        private static int Cost(RunLook look)
+        {
+            return 2 * (look.Split ? 4 : 3);
+        }
+
+        private void EnsurePlanCapacity(int sections)
+        {
+            if (_planArc.Length >= sections)
+            {
+                return;
+            }
+
+            _planArc = new float[sections];
+            _planVertex = new int[sections];
+            _planPoint = new Vector2[sections];
+            _planLook = new RunLook[sections];
+            _planConnect = new bool[sections];
+        }
+
+        // Añade una sección al plan (en el punto «vertex» de la línea, o dentro de un tramo si es −1) y devuelve sus vértices.
+        private int AddPlan(PolylineCursor cursor, float arc, int vertex, RunLook look, bool connect)
+        {
+            if (_planCount >= _planArc.Length)
+            {
+                return 0; // no pasa: la capacidad cuenta todas las secciones posibles
+            }
+
+            int i = _planCount++;
+            _planArc[i] = arc;
+            _planVertex[i] = vertex;
+            _planPoint[i] = vertex >= 0 ? cursor.Point(vertex) : cursor.PointAtArc(arc);
+            _planLook[i] = look;
+            _planConnect[i] = connect;
+            return Cost(look);
+        }
+
+        // Desplazamiento de la sección i del plan hacia la orilla izquierda, en medios anchos. Sin puntos saltados, el de la
+        // polilínea: inglete en un punto de la línea y la normal del tramo dentro de él. Con puntos saltados, la cinta sigue
+        // cuerdas entre las secciones, así que el inglete se hace entre la cuerda que llega y la que sale (en las puntas, la
+        // única cuerda).
+        private Vector2 SectionOffset(PolylineCursor cursor, int i)
+        {
+            if (!_decimated)
+            {
+                int vertex = _planVertex[i];
+                if (vertex >= 0)
+                {
+                    cursor.DirectionsAt(vertex, out Vector2 incoming, out Vector2 outgoing);
+                    return Miter(Normal(incoming), Normal(outgoing));
+                }
+
+                return Normal(cursor.SegmentDirection(cursor.Locate(_planArc[i], out _)));
+            }
+
+            Vector2 p = _planPoint[i];
+            bool hasIn = false;
+            bool hasOut = false;
+            Vector2 dIn = Vector2.zero;
+            Vector2 dOut = Vector2.zero;
+            for (int k = i - 1; k >= 0 && !hasIn; k--)
+            {
+                hasIn = TryChord(_planPoint[k], p, out dIn);
+            }
+
+            for (int k = i + 1; k < _planCount && !hasOut; k++)
+            {
+                hasOut = TryChord(p, _planPoint[k], out dOut);
+            }
+
+            if (hasIn && hasOut)
+            {
+                return Miter(Normal(dIn), Normal(dOut));
+            }
+
+            if (hasIn || hasOut)
+            {
+                return Normal(hasIn ? dIn : dOut);
+            }
+
+            return Normal(cursor.SegmentDirection(cursor.Locate(_planArc[i], out _)));
+        }
+
+        // Dirección unitaria de «a» a «b» en el marco, si no son el mismo punto.
+        private static bool TryChord(Vector2 a, Vector2 b, out Vector2 direction)
+        {
+            Vector2 d = b - a;
+            float lengthSq = d.sqrMagnitude;
+            if (lengthSq <= 1e-14f)
+            {
+                direction = Vector2.zero;
+                return false;
+            }
+
+            direction = d / Mathf.Sqrt(lengthSq);
+            return true;
+        }
+
+        // Una sección transversal en el punto «mapPoint» del marco con el desplazamiento «offset» (en medios anchos): dos
+        // vértices por banda. Si «connect» ≥ 0, la une con la sección anterior de la misma tira. Devuelve el primer vértice de la
+        // sección, o −1 si no cabe en el presupuesto.
+        private int EmitSection(VertexHelper vh, Vector2 mapPoint, Vector2 offset, RunLook look, float half, float rim, int connect)
         {
             int bands = look.Split ? 4 : 3;
             if (vh.currentVertCount + (2 * bands) > _budget)
@@ -399,21 +559,7 @@ namespace AF.Presentation
                 return -1;
             }
 
-            Vector2 center;
-            Vector2 offset;
-            if (vertex >= 0)
-            {
-                center = _space.ToLocal(cursor.Point(vertex));
-                cursor.DirectionsAt(vertex, out Vector2 incoming, out Vector2 outgoing);
-                offset = Miter(Normal(incoming), Normal(outgoing));
-            }
-            else
-            {
-                int segment = cursor.Locate(arc, out _);
-                center = _space.ToLocal(cursor.PointAtArc(arc));
-                offset = Normal(cursor.SegmentDirection(segment));
-            }
-
+            Vector2 center = _space.ToLocal(mapPoint);
             offset *= half;
             float alpha = color.a;
             int start = vh.currentVertCount;
@@ -490,18 +636,45 @@ namespace AF.Presentation
         }
 
         // Trama de Patrones de fruta (02 §12; propuesta del Mapa §11.4): una marca cada PatternStepDp, de 4 vértices, mientras
-        // quede presupuesto. En las dos aguas, una marca por mitad.
+        // quede presupuesto. En las dos aguas, una marca por mitad. Con puntos saltados, las marcas van sobre las cuerdas que
+        // dibuja la cinta (la posición, por la longitud de arco entre las dos secciones que las rodean) y con su aspecto.
         private void AddPattern(VertexHelper vh, RiverLine line, PolylineCursor cursor, float aStart, float aEnd, float half)
         {
             float step = PatternStepDp / _space.DpPerUnit;
             int marks = Mathf.Min(MaxVertices / 4, Mathf.FloorToInt((aEnd - aStart) / step));
+            int chord = 0;
             for (int index = 0; index < marks; index++)
             {
                 float arc = aStart + (step * (index + 0.5f));
-                RunLook look = LookAt(line, arc / cursor.Length, true);
-                int segment = cursor.Locate(arc, out _);
-                Vector2 center = _space.ToLocal(cursor.PointAtArc(arc));
-                Vector2 dir = MapSpace.DirectionToLocal(cursor.SegmentDirection(segment));
+                RunLook look;
+                Vector2 center;
+                Vector2 dir;
+                if (_decimated && _planCount >= 2)
+                {
+                    // La cuerda [chord, chord + 1] con arco[chord] ≤ arc < arco[chord + 1] (las secciones repetidas de un cambio de
+                    // agua tienen el mismo arco y se pasan de largo).
+                    while (chord + 2 < _planCount && _planArc[chord + 1] <= arc)
+                    {
+                        chord++;
+                    }
+
+                    float a0 = _planArc[chord];
+                    float a1 = _planArc[chord + 1];
+                    float t = a1 > a0 ? Mathf.Clamp01((arc - a0) / (a1 - a0)) : 0f;
+                    Vector2 p0 = _planPoint[chord];
+                    Vector2 p1 = _planPoint[chord + 1];
+                    look = _planLook[chord + 1]; // la tira entre las dos secciones lleva el aspecto de la de llegada
+                    center = _space.ToLocal(Vector2.LerpUnclamped(p0, p1, t));
+                    dir = MapSpace.DirectionToLocal(TryChord(p0, p1, out Vector2 d) ? d : cursor.SegmentDirection(cursor.Locate(arc, out _)));
+                }
+                else
+                {
+                    look = LookAt(line, arc / cursor.Length, true);
+                    int segment = cursor.Locate(arc, out _);
+                    center = _space.ToLocal(cursor.PointAtArc(arc));
+                    dir = MapSpace.DirectionToLocal(cursor.SegmentDirection(segment));
+                }
+
                 Vector2 normal = new Vector2(-dir.y, dir.x);
                 if (look.Split)
                 {
@@ -580,7 +753,7 @@ namespace AF.Presentation
 
         private Color32 MarkColorWithAlpha(RiverWater water)
         {
-            Color c = MarkColor(water);
+            Color c = MarkColor(water, _patternOpacity);
             c.a *= color.a;
             return c;
         }

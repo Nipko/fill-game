@@ -276,7 +276,8 @@ namespace AF.Tests.EditMode
 
         private static IEnumerable<TestCaseData> InvalidCases()
         {
-            yield return Case("no es JSON", "{\"format\": ", "no es JSON válido");
+            yield return new TestCaseData("{\"format\": ", "El Mapa del río no es JSON válido:")
+                .SetName("Reader_RejectsInvalid_WithThePath(no es JSON)");
             yield return Case("format ajeno", Doc(format: "af-river-stops/1"), "format");
             yield return Case("giro distinto", Doc(frame: Frame(rotation: "ccw90")), "frame.rotation");
             yield return Case("lat al reves", Doc(frame: Frame(lat: "[7.0, -18.0]")), "frame.lat");
@@ -330,15 +331,31 @@ namespace AF.Tests.EditMode
                 "viewpoints[0].reveal_on");
             yield return Case("pais en minusculas", Doc(labels: "[{\"country\": \"br\", \"xy\": [100, 200]}]"), "labels[0].country");
             yield return Case("rotulo fuera de uint16", Doc(labels: "[{\"country\": \"BR\", \"xy\": [70000, 200]}]"), "labels[0].xy[0]");
-            yield return Case("recuadro enlazado a nada", Doc(insets: "[{\"id\": \"orinoco\", \"rect\": [0.78, 0.05, 0.98, 0.3], \"lines\": [\"negro\"], "
-                + "\"link\": \"casiquiare\"}]"), "insets[0].link");
+            yield return Case("recuadro enlazado a nada", Doc(insets: Inset(link: "casiquiare")), "insets[0].link");
+            yield return Case("main con fill_on_pass", Doc(lines: Lines(Main(extra: ", \"fill_on_pass\": 0.1"), Trib())), "lines[0].fill_on_pass");
+            yield return Case("water de largo cero", Doc(lines: Lines(Main(water: Water("0.0", "0.4", "andean") + ", " + Water("0.4", "0.4", "white")),
+                Trib())), "lines[0].water[1].s1");
+            yield return Case("tierra con dos vertices", Doc(land: Land(verts: EncodePoints(new ushort[] { 0, 0, 65535, 0 }))), "land.verts");
+            yield return Case("zonas vacias", Doc(land: Land(zones: "[]")), "land.zones");
+            yield return Case("zona fuera de los triangulos", Doc(land: Land(zones: "[{\"id\": \"a\", \"tile\": \"canopy\", \"first\": 1, \"count\": 2}]")),
+                "land.zones[0]");
+            yield return Case("id de mirador repetido", Doc(viewpoints: "[" + Viewpoint() + ", " + Viewpoint() + "]"), "viewpoints[1].id");
+            yield return Case("id de punto de paso repetido", Doc(passing: "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": null}, "
+                + "{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.7, \"fact\": null}]"), "passing[1].id");
+            yield return Case("mirador revelado despues del 1000", Doc(viewpoints: "[" + Viewpoint(reveal: "1001") + "]"), "viewpoints[0].reveal_on");
+            yield return Case("mirador sin fact", Doc(viewpoints: "[{\"id\": \"boca\", \"xy\": [10, 10], \"reveal_on\": 10}]"), "viewpoints[0].fact");
+            yield return Case("fact con belen", Doc(viewpoints: "[" + Viewpoint(fact: "\"map.stop.belen.dato_01\"") + "]"), "viewpoints[0].fact");
+            yield return Case("recuadro al reves", Doc(insets: Inset(rect: "[0.98, 0.05, 0.78, 0.3]")), "insets[0].rect");
+            yield return Case("recuadro de tres valores", Doc(insets: Inset(rect: "[0.78, 0.05, 0.98]")), "insets[0].rect");
+            yield return Case("recuadro fuera de [0, 1]", Doc(insets: Inset(rect: "[0.78, 0.05, 1.2, 0.3]")), "insets[0].rect[2]");
+            yield return Case("recuadro con una linea desconocida", Doc(insets: Inset(lines: "[\"nadie\"]")), "insets[0].lines[0]");
         }
 
         [TestCaseSource(nameof(InvalidCases))]
-        public void Reader_RejectsInvalid_WithThePath(string json, string path)
+        public void Reader_RejectsInvalid_WithThePath(string json, string prefix)
         {
             var e = Assert.Throws<LevelFormatException>(() => RiverMapReader.Read(json));
-            Assert.That(e!.Message, Does.Contain(path));
+            Assert.That(e!.Message, Does.Contain(prefix));
         }
 
         private static IEnumerable<TestCaseData> InvalidRoutes()
@@ -359,6 +376,13 @@ namespace AF.Tests.EditMode
                 "stops[1].leg.path[0].s1");
             yield return RouteCase("via que no es punto de paso", Routes(Stop(0), Stop(1, via: "[\"manaos\"]")), "stops[1].leg.via[0]");
             yield return RouteCase("boca de una linea main", Routes(Stop(0), Stop(1, mouths: "[\"amazonas\"]")), "stops[1].leg.mouths[0]");
+            yield return RouteCase("parada sin id", Routes(Stop(0), Stop(1, id: null)), "stops[1].id");
+            yield return RouteCase("parada con id numerico", Routes(Stop(0), Stop(1, id: "7")), "stops[1].id");
+            yield return RouteCase("leg que no es un objeto", Routes(Stop(0), Stop(1, leg: "[]")), "stops[1].leg");
+            yield return RouteCase("leg ausente", Routes(Stop(0), Stop(1, leg: string.Empty)), "stops[1].leg");
+            yield return RouteCase("path vacio", Routes(Stop(0), Stop(1, path: "[]")), "stops[1].leg.path");
+            yield return RouteCase("via que no es una lista", Routes(Stop(0), Stop(1, via: "\"gurupa\"")), "stops[1].leg.via");
+            yield return RouteCase("mouths que no es una lista", Routes(Stop(0), Stop(1, mouths: "{}")), "stops[1].leg.mouths");
         }
 
         [Test]
@@ -372,11 +396,11 @@ namespace AF.Tests.EditMode
         }
 
         [TestCaseSource(nameof(InvalidRoutes))]
-        public void Routes_RejectInvalid_WithThePath(string json, string path)
+        public void Routes_RejectInvalid_WithThePath(string json, string prefix)
         {
             RiverMap map = RiverMapReader.Read(Doc());
             var e = Assert.Throws<LevelFormatException>(() => RiverMapReader.ReadRoutes(json, map));
-            Assert.That(e!.Message, Does.Contain(path));
+            Assert.That(e!.Message, Does.Contain(prefix));
         }
 
         // ---------------------------------------------------------------------------------------------- sin asignaciones
@@ -520,9 +544,22 @@ namespace AF.Tests.EditMode
             return "{\"verts\": \"" + verts + "\", \"tris\": \"" + tris + "\", \"zones\": " + zones + "}";
         }
 
+        private static string Viewpoint(string reveal = "10", string fact = "\"map.stop.estuario.dato_01\"")
+        {
+            return "{\"id\": \"boca\", \"xy\": [10, 10], \"reveal_on\": " + reveal + ", \"fact\": " + fact + "}";
+        }
+
+        private static string Inset(string rect = "[0.78, 0.05, 0.98, 0.3]", string lines = "[\"negro\"]", string link = "amazonas")
+        {
+            return "[{\"id\": \"orinoco\", \"rect\": " + rect + ", \"lines\": " + lines + ", \"link\": \"" + link + "\"}]";
+        }
+
         // Paradas mínimas para las rutas sobre el documento mínimo: n = 0 en el cauce (s 0,9) y n = 1 en el Negro (s 0,5),
         // remontando el cauce hasta su boca (s 0,3) y el Negro desde la boca.
-        private static string Stop(int n, string? at = null, string? path = null, string? via = null, string? mouths = null)
+        // id: el valor JSON del campo (por defecto "p<n>"; null lo omite). leg: el objeto entero (por defecto, con path, via y
+        // mouths; vacío lo omite).
+        private static string Stop(int n, string? at = null, string? path = null, string? via = null, string? mouths = null,
+            string? id = "", string? leg = null)
         {
             at ??= n == 0 ? "{\"line\": \"amazonas\", \"s\": 0.9}" : "{\"line\": \"negro\", \"s\": 0.5}";
             path ??= n == 0
@@ -530,8 +567,14 @@ namespace AF.Tests.EditMode
                 : "[{\"line\": \"amazonas\", \"s0\": 0.9, \"s1\": 0.3}, {\"line\": \"negro\", \"s0\": 1.0, \"s1\": 0.5}]";
             via ??= n == 0 ? "[]" : "[\"gurupa\"]";
             mouths ??= n == 0 ? "[]" : "[\"negro\"]";
-            return "{\"n\": " + n.ToString(CultureInfo.InvariantCulture) + ", \"id\": \"p" + n.ToString(CultureInfo.InvariantCulture)
-                + "\", \"at\": " + at + ", \"leg\": {\"path\": " + path + ", \"via\": " + via + ", \"mouths\": " + mouths + "}}";
+            leg ??= "{\"path\": " + path + ", \"via\": " + via + ", \"mouths\": " + mouths + "}";
+            if (id != null && id.Length == 0)
+            {
+                id = "\"p" + n.ToString(CultureInfo.InvariantCulture) + "\"";
+            }
+
+            return "{\"n\": " + n.ToString(CultureInfo.InvariantCulture) + (id != null ? ", \"id\": " + id : string.Empty)
+                + ", \"at\": " + at + (leg.Length > 0 ? ", \"leg\": " + leg : string.Empty) + "}";
         }
 
         private static string Routes(params string[] stops)
@@ -539,14 +582,16 @@ namespace AF.Tests.EditMode
             return "{\"format\": \"af-river-stops/1\", \"stops\": [" + string.Join(", ", stops) + "]}";
         }
 
+        // El lector escribe «Mapa del río, <ruta>: …» (y las rutas, «Rutas del Mapa, <ruta>: …»): se compara ese prefijo exacto,
+        // para que un error en una ruta más profunda (land.zones[0] en lugar de land.zones) no pase por bueno.
         private static TestCaseData Case(string name, string json, string path)
         {
-            return new TestCaseData(json, path).SetName("Reader_RejectsInvalid_WithThePath(" + name + ")");
+            return new TestCaseData(json, "Mapa del río, " + path + ":").SetName("Reader_RejectsInvalid_WithThePath(" + name + ")");
         }
 
         private static TestCaseData RouteCase(string name, string json, string path)
         {
-            return new TestCaseData(json, path).SetName("Routes_RejectInvalid_WithThePath(" + name + ")");
+            return new TestCaseData(json, "Rutas del Mapa, " + path + ":").SetName("Routes_RejectInvalid_WithThePath(" + name + ")");
         }
     }
 }

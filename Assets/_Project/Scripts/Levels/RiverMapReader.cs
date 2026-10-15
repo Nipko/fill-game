@@ -88,7 +88,7 @@ namespace AF.Levels
             }
 
             RiverMapFrame frame = ReadFrame(root);
-            float aspect = (float)frame.Aspect;
+            double aspect = frame.Aspect; // en doble hasta guardar xy y la longitud, como la herramienta
 
             JsonValue? list = root.Get("lines");
             if (list == null || list.Kind != JsonKind.Array || list.Items.Count == 0)
@@ -178,7 +178,7 @@ namespace AF.Levels
             }
         }
 
-        private static RiverLine ReadLine(JsonValue node, int index, string[] ids, float aspect)
+        private static RiverLine ReadLine(JsonValue node, int index, string[] ids, double aspect)
         {
             string at = "lines[" + Num(index) + "]";
             string id = ids[index];
@@ -363,7 +363,7 @@ namespace AF.Levels
             return splits;
         }
 
-        private static RiverLand ReadLand(JsonValue root, float aspect)
+        private static RiverLand ReadLand(JsonValue root, double aspect)
         {
             JsonValue? land = root.Get("land");
             if (land == null || land.Kind != JsonKind.Object)
@@ -522,7 +522,7 @@ namespace AF.Levels
             return insets;
         }
 
-        private static RiverMapLabel[] ReadLabels(JsonValue root, float aspect)
+        private static RiverMapLabel[] ReadLabels(JsonValue root, double aspect)
         {
             JsonValue? list = root.Get("labels");
             if (list == null || list.Kind != JsonKind.Array)
@@ -553,7 +553,7 @@ namespace AF.Levels
             return labels;
         }
 
-        private static RiverViewpoint[] ReadViewpoints(JsonValue root, float aspect)
+        private static RiverViewpoint[] ReadViewpoints(JsonValue root, double aspect)
         {
             JsonValue? list = root.Get("viewpoints");
             if (list == null || list.Kind != JsonKind.Array)
@@ -957,7 +957,7 @@ namespace AF.Levels
             throw Fail(where, "'" + id + "' no es una línea del Mapa");
         }
 
-        private static void ReadXy(JsonValue node, string at, float aspect, out float x, out float y)
+        private static void ReadXy(JsonValue node, string at, double aspect, out float x, out float y)
         {
             string where = at + ".xy";
             JsonValue? xy = node.Get("xy");

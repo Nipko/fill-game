@@ -301,6 +301,25 @@ namespace AF.Tests.EditMode
 
             Assert.That(dots && stripes && waves, Is.True, "puntos en la blanca, rayas en la negra y ondas en la clara");
 
+            // La opacidad canónica del patrón (07 §3, regla 1): ui_pattern_opacity = 0,20 por defecto y 0,35 solo en Alto
+            // contraste, que pasa quien configura la cinta.
+            Assert.That(patterned.PatternOpacity, Is.EqualTo(Palette.PatternOpacityOn));
+            Assert.That(RiverRibbonGraphic.PatternOpacityHighContrast, Is.EqualTo(0.35f));
+            Assert.That(Same(RiverRibbonGraphic.MarkColor(RiverWater.White), RiverRibbonGraphic.MarkColor(RiverWater.White, 0.20f)), Is.True);
+            Color32 subtle = RiverRibbonGraphic.MarkColor(RiverWater.White);
+            Color32 strong = RiverRibbonGraphic.MarkColor(RiverWater.White, RiverRibbonGraphic.PatternOpacityHighContrast);
+            Assert.That(Same(subtle, strong), Is.False);
+            patterned.SetPatterns(true, RiverRibbonGraphic.PatternOpacityHighContrast);
+            bool strongSeen = false;
+            bool subtleSeen = false;
+            foreach (UIVertex v in Mesh(patterned))
+            {
+                strongSeen |= Same(v.color, strong);
+                subtleSeen |= Same(v.color, subtle);
+            }
+
+            Assert.That(strongSeen && !subtleSeen, Is.True, "en Alto contraste, la trama al 35 %");
+
             RiverRibbonGraphic glass = Ribbon(amazonas, RibbonLook.Glass);
             glass.SetPatterns(true);
             Mesh(glass);
@@ -339,6 +358,72 @@ namespace AF.Tests.EditMode
             front.SetFill(0.80f, 0.81f);
             Assert.That(Mesh(front).Count, Is.LessThan(RiverRibbonGraphic.FrontMaxVertices / 2));
             Assert.That(front.LastMarkCount, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void SmallBudget_WithManyWaterChanges_KeepsBothEnds([Values(16, 30, 48, 60, 84, 100)] int budget)
+        {
+            // El cauce entero en agua: cinco cambios (andina a blanca y las dos franjas de dos aguas) son 12 secciones fijas, que
+            // con secciones de hasta 8 vértices no caben en 96. Ningún punto intermedio cabe y, si tampoco caben todos los
+            // cambios, la sección final se queda con su sitio.
+            RiverLine amazonas = _map.Lines[0];
+            RiverRibbonGraphic ribbon = Ribbon(amazonas, RibbonLook.Water);
+            ribbon.SetVertexBudget(budget);
+            List<UIVertex> verts = Mesh(ribbon);
+            Assert.That(verts.Count, Is.LessThanOrEqualTo(budget));
+            Assert.That(verts.Count, Is.GreaterThan(0));
+            Assert.That(ribbon.LastWasDecimated, Is.True);
+            var cursor = new PolylineCursor(amazonas);
+            var space = new MapSpace(Basin, Vector2.zero);
+            Assert.That(Nearest(verts, space.ToLocal(cursor.PointAtS(0f))), Is.LessThanOrEqualTo(3.01f), "punta de arriba");
+            Assert.That(Nearest(verts, space.ToLocal(cursor.PointAtS(1f))), Is.LessThanOrEqualTo(3.01f), "punta de abajo");
+        }
+
+        [Test]
+        public void Budget_TooSmallForTwoSections_LeavesTheMeshEmpty()
+        {
+            RiverRibbonGraphic ribbon = Ribbon(_map.Lines[0], RibbonLook.Water);
+            ribbon.SetVertexBudget(8);
+            Assert.That(Mesh(ribbon).Count, Is.EqualTo(0), "una sección sola no es una cinta");
+        }
+
+        [Test]
+        public void Decimated_RibbonAndTrama_FollowTheChords()
+        {
+            // Con puntos saltados, la cinta une los que quedan con cuerdas: cada marca de la trama cae dentro de un triángulo
+            // de la cinta (antes seguían la polilínea original y algunas quedaban fuera).
+            RiverLine amazonas = _map.Lines[0];
+            RiverRibbonGraphic ribbon = Ribbon(amazonas, RibbonLook.Water);
+            ribbon.SetPatterns(true);
+            ribbon.SetVertexBudget(700);
+            var stream = new List<UIVertex>();
+            using (var vh = new VertexHelper())
+            {
+                RibbonPopulate.Invoke(ribbon, new object[] { vh });
+                vh.GetUIVertexStream(stream);
+            }
+
+            Assert.That(ribbon.LastWasDecimated, Is.True);
+            int marks = ribbon.LastMarkCount;
+            Assert.That(marks, Is.GreaterThan(20));
+            int ribbonCount = stream.Count - (6 * marks); // dos triángulos por marca, al final
+            float worst = 0f;
+            for (int m = 0; m < marks; m++)
+            {
+                // Los cuatro vértices de la marca (b, b + 1, b + 2 y b + 3 en (b, b+1, b+2) y (b+2, b+3, b)) promedian su centro.
+                int at = ribbonCount + (6 * m);
+                Vector2 c = ((Vector2)stream[at].position + (Vector2)stream[at + 1].position + (Vector2)stream[at + 2].position
+                    + (Vector2)stream[at + 4].position) * 0.25f;
+                float best = float.MaxValue;
+                for (int t = 0; t + 2 < ribbonCount && best > 0f; t += 3)
+                {
+                    best = Mathf.Min(best, TriangleDistance(c, stream[t].position, stream[t + 1].position, stream[t + 2].position));
+                }
+
+                worst = Mathf.Max(worst, best);
+            }
+
+            Assert.That(worst, Is.LessThanOrEqualTo(0.05f), "la marca más alejada de la cinta, en dp");
         }
 
         [Test]
@@ -515,6 +600,35 @@ namespace AF.Tests.EditMode
             return list;
         }
 
+        // Distancia de p al triángulo (a, b, c): 0 dentro.
+        private static float TriangleDistance(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
+        {
+            float d1 = Cross(b - a, p - a);
+            float d2 = Cross(c - b, p - b);
+            float d3 = Cross(a - c, p - c);
+            bool hasNeg = d1 < 0f || d2 < 0f || d3 < 0f;
+            bool hasPos = d1 > 0f || d2 > 0f || d3 > 0f;
+            if (!(hasNeg && hasPos))
+            {
+                return 0f;
+            }
+
+            return Mathf.Min(SegmentDistance(p, a, b), Mathf.Min(SegmentDistance(p, b, c), SegmentDistance(p, c, a)));
+        }
+
+        private static float Cross(Vector2 u, Vector2 v)
+        {
+            return (u.x * v.y) - (u.y * v.x);
+        }
+
+        private static float SegmentDistance(Vector2 p, Vector2 a, Vector2 b)
+        {
+            Vector2 ab = b - a;
+            float lengthSq = ab.sqrMagnitude;
+            float t = lengthSq > 0f ? Mathf.Clamp01(Vector2.Dot(p - a, ab) / lengthSq) : 0f;
+            return Vector2.Distance(p, a + (ab * t));
+        }
+
         private static float Nearest(List<UIVertex> verts, Vector2 p)
         {
             float best = float.MaxValue;
@@ -534,6 +648,11 @@ namespace AF.Tests.EditMode
         private static bool Same(Color32 a, Color b)
         {
             return Same(a, (Color32)b);
+        }
+
+        private static bool Same(Color a, Color b)
+        {
+            return Same((Color32)a, (Color32)b);
         }
 
         private static ushort Quant(double x)
