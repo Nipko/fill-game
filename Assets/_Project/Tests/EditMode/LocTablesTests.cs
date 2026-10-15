@@ -193,6 +193,7 @@ namespace AF.Tests.EditMode
                 {
                     string key = table.KeyAt(r);
                     bool cultural = key.StartsWith("fauna_", StringComparison.Ordinal) || key.StartsWith("tutorial_", StringComparison.Ordinal)
+                        || key.StartsWith("difficulty_subtitle_", StringComparison.Ordinal)
                         || (key.StartsWith("world_w", StringComparison.Ordinal) && key.Length > "world_w00_".Length && char.IsDigit(key[7]));
                     if (cultural)
                     {
