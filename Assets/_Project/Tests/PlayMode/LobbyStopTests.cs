@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using AF.Ads;
 using AF.Economy;
 using AF.GameFlow;
 using AF.IAP;
@@ -25,8 +26,8 @@ namespace AF.Tests.PlayMode
     /// <item>el fondo es el de la parada de «Jugar» (en el 58, Manaos), el mismo que el del tablero de ese nivel;</item>
     /// <item>«Faltan {n} niveles para {lugar}» bajo «Jugar», en Nunito Bold de 14 sp, correcto en el 51, el 58 y el 60, y oculto
     /// con el fin de contenido, sin parada siguiente en el catálogo y con Sin canoas;</item>
-    /// <item>la ventanita de casa: «a unos 1.480 km» en Manaos, sin píldora en Belém, oculta con Sin canoas y con la hoja de
-    /// compra delante, y sin toques;</item>
+    /// <item>la ventanita de casa: «a unos 1.480 km» en Manaos, sin píldora en Belém, oculta con Sin canoas, con la hoja de
+    /// compra delante y con el anuncio simulado delante, y sin toques;</item>
     /// <item>sin catálogo, el inicio de siempre;</item>
     /// <item>sin solapes a 360 × 640 ni a 360 × 800 dp (y, a 360 × 800, sin tapar el héroe del fondo);</item>
     /// <item>la línea <c>AF_LAYOUT</c> del inicio con <c>stop_remaining</c> y <c>home_window</c>.</item>
@@ -103,7 +104,36 @@ namespace AF.Tests.PlayMode
                 Rect remaining = CanvasRect(lobby.StopRemainingRect, lobby);
                 Assert.That(remaining.yMin, Is.GreaterThanOrEqualTo(play.yMax - 0.5f), "bajo «Jugar»");
                 Assert.That(remaining.center.x, Is.EqualTo(play.center.x).Within(1f), "centrado con «Jugar»");
+                Assert.That(remaining.width, Is.LessThanOrEqualTo(play.width + 0.5f), "nunca más ancha que «Jugar»");
             }
+        }
+
+        [UnityTest]
+        public IEnumerator StopRemaining_WithTheLongestName_StaysInThePlayColumn_InTwoLines()
+        {
+            // En el 28 (Alter do Chão) la parada siguiente es la de nombre más largo: la placa no pasa del ancho de «Jugar» y el
+            // texto baja a una segunda línea, a 14 sp y sin autoajuste, entero dentro de la placa.
+            GameScreen.SimulatedScreen = new Vector4(1080, 1920, 96f, 48f);
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(28)));
+            LobbyScreen lobby = GameBootstrap.Current!.Lobby!;
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            Assert.That(lobby.StopRemainingShown, Is.True);
+            Assert.That(lobby.StopRemainingText, Is.EqualTo("Faltan 3 niveles para Floresta Nacional do Tapajós"));
+            TextMeshProUGUI label = lobby.StopRemainingLabel;
+            Assert.That(label.enableAutoSizing, Is.False);
+            Assert.That(label.fontSize, Is.EqualTo(LobbyScreen.StopRemainingSp * UiBuilder.TextScale).Within(0.01f));
+
+            Rect play = CanvasRect((RectTransform)lobby.PlayButton.transform, lobby);
+            Rect remaining = CanvasRect(lobby.StopRemainingRect, lobby);
+            Assert.That(remaining.width, Is.LessThanOrEqualTo(play.width + 0.5f), "la columna de «Jugar»");
+            Assert.That(remaining.center.x, Is.EqualTo(play.center.x).Within(1f));
+            Assert.That(remaining.yMin, Is.GreaterThanOrEqualTo(play.yMax - 0.5f));
+
+            label.ForceMeshUpdate();
+            Assert.That(label.textInfo.lineCount, Is.EqualTo(2), "en dos líneas");
+            Assert.That(label.isTextOverflowing, Is.False, "entero");
+            Assert.That(label.preferredHeight, Is.LessThanOrEqualTo(lobby.StopRemainingRect.rect.height + 0.5f), "dentro de la placa");
         }
 
         [UnityTest]
@@ -210,6 +240,43 @@ namespace AF.Tests.PlayMode
             yield return null;
             Assert.That(lobby.CommerceOpen, Is.False);
             Assert.That(lobby.HomeWindow.Visible, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator HomeWindow_HidesWithTheSimulatedAdOverTheLobby()
+        {
+            var clock = new ManualClock(T0);
+            LaunchOptions.ClockOverride = clock;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(58, clock)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            LobbyScreen lobby = boot.Lobby!;
+            yield return null;
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+            Assert.That(lobby.CommerceOpen, Is.False);
+            Assert.That(lobby.HomeWindow.Visible, Is.True);
+
+            // El anuncio simulado delante del inicio (g.2, regla 9; d.11): la ventanita se va mientras dure, sin Sin canoas
+            // de por medio (la otra rama de CommerceOpen, la de AdOverlay).
+            AdOverlay ad = boot.AdOverlayView!;
+            Assert.That(boot.Ads!.CheckRewarded(AdPlacement.Hint).IsAllowed, Is.True);
+            AdResult? result = null;
+            boot.Ads.ShowRewarded(AdPlacement.Hint, r => result = r);
+            Assert.That(ad.Visible, Is.True, "el anuncio simulado está delante del inicio");
+            yield return null;
+            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Lobby), "sin otra pantalla debajo");
+            Assert.That(boot.StoreSheetView == null || !boot.StoreSheetView.Visible, Is.True, "sin la hoja de compra");
+            Assert.That(lobby.CommerceOpen, Is.True);
+            Assert.That(lobby.HomeWindow.Visible, Is.False, "oculta con el anuncio");
+            Assert.That(lobby.HomeWindow.PillShown, Is.False);
+
+            // Se cierra al acabar la cuenta atrás: la ventanita vuelve.
+            ad.Tick((float)FakeAdService.RewardedDuration.TotalMilliseconds);
+            ad.CloseButton.onClick.Invoke();
+            Assert.That(ad.Visible, Is.False);
+            Assert.That(result, Is.Not.Null, "el anuncio avisa al cerrarse");
+            yield return null;
+            Assert.That(lobby.CommerceOpen, Is.False);
+            Assert.That(lobby.HomeWindow.Visible, Is.True, "vuelve con el inicio");
         }
 
         [UnityTest]

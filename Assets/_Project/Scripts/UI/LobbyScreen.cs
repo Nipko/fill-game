@@ -766,7 +766,7 @@ namespace AF.UI
             UiBuilder.Place((RectTransform)_settings.Button.transform, w - 8f - MinTouchDp, topY, MinTouchDp, MinTouchDp);
 
             // Botón central y chip.
-            float playW = Mathf.Min(PlayMaxWidth, w - 64f);
+            float playW = PlayWidth(w);
             UiBuilder.Place((RectTransform)_play.Button.transform, (w - playW) * 0.5f, _playTop, playW, PlayTouchHeight);
             LayoutChip();
             LayoutRemaining();
@@ -787,6 +787,12 @@ namespace AF.UI
             UiBuilder.Place(_overlayHeader.rectTransform, 16f, 16f, inner, 40f);
             UiBuilder.Place(_overlayBody.rectTransform, 16f, 66f, inner, 66f);
             UiBuilder.Place((RectTransform)_back.Button.transform, 16f, 148f, inner, 64f);
+        }
+
+        // Ancho de «Jugar» en un lienzo de w dp: también el tope de la placa de «Faltan…».
+        private static float PlayWidth(float w)
+        {
+            return Mathf.Min(PlayMaxWidth, w - 64f);
         }
 
         private void LayoutCanoesContent()
@@ -856,12 +862,12 @@ namespace AF.UI
             _home.Apply(_currentStop, hideHome);
         }
 
-        // «Faltan…» centrado bajo «Jugar», en una placa de madera a la medida del texto; si no cabe en una línea a 360 dp, en dos
-        // (su caja crece; 02 §12). Se mide al colocar, nunca por fotograma.
+        // «Faltan…» centrado bajo «Jugar», en una placa de madera a la medida del texto y nunca más ancha que el botón (la columna
+        // que marca «Jugar»); si no cabe en una línea, en dos (su caja crece; 02 §12). Se mide al colocar, nunca por fotograma.
         private void LayoutRemaining()
         {
             float w = _canvasW;
-            float maxW = w - (2f * SideGutterDp);
+            float maxW = PlayWidth(w);
             float textW = string.IsNullOrEmpty(_remainingLabel.text) ? 0f : Mathf.Ceil(UiBuilder.MinTextWidth(_remainingLabel));
             float boxW = Mathf.Min(maxW, textW + (2f * RemainingPadDp));
             float innerW = boxW - (2f * RemainingPadDp);

@@ -21,6 +21,9 @@ namespace AF.UI
     /// el Mapa.</item>
     /// <item>Arte provisional de P-M5 (<see cref="MapArtRule"/>): sin los PNG de <c>map_home_window</c> y del retrato, solo sale
     /// en el Editor y en desarrollo (<see cref="CanShow"/>); en release, nada hasta que exista su arte.</item>
+    /// <item>La embaúba está pendiente del asesor cultural (propuesta de TiTino g.2, punto 1; encargo del Mapa, fila 11): si la
+    /// desaconseja, el árbol de la ventanita pasa a una rama genérica sin especie reconocible (o la que proponga el asesor), sin
+    /// tocar esta clase (<see cref="ProceduralArt.HomeWindow"/>).</item>
     /// <item>Nunca en pantallas de pago (g.2, regla 9; d.11): quien la usa la oculta con Sin canoas, la hoja de compra o una
     /// oferta delante (<see cref="Apply"/>).</item>
     /// </list>

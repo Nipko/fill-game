@@ -12,6 +12,10 @@ namespace AF.Presentation
     /// ceniza (g.2, punto 1); nunca la sumaúma ni la lupuna.
     /// </summary>
     /// <remarks>
+    /// <para><b>La embaúba está pendiente del asesor cultural</b> (propuesta de TiTino g.2, punto 1, y c.4; encargo del Mapa,
+    /// fila 11, que encarga <c>map_home_window</c> cuando el asesor la confirme). Si la desaconseja, la alternativa prevista es una
+    /// rama genérica sin especie reconocible (o la que proponga el asesor): solo cambia el dibujo del árbol, no el marco, el
+    /// retrato ni la ranura.</para>
     /// <para>El PNG de la ranura <see cref="HomeWindowSlot"/> (<c>map_home_window</c>, glosario §11) manda y se pinta en 9 cortes:
     /// es la ventanita entera, marco y embaúba [P]. Sin él, la provisional solo sale con <see cref="MapArtRule.ShowProvisional"/>
     /// (P-M5: Editor y desarrollo); en release, nada (<see cref="HomeWindowFor"/> da null).</para>
