@@ -236,11 +236,20 @@ namespace AF.GameFlow
     /// (<c>ui_sloth_*</c> de 08 §9 y <c>settings.sloth_messages</c>), lo que va de sesión (frases dichas y si la pantalla anterior
     /// tuvo frase), la última frase vista de cada momento (<c>sloth.last_line</c>) y los datos del momento que se decide
     /// (<see cref="WithVictory"/>, <see cref="WithFail"/>, <see cref="WithRestart"/> y <see cref="WithHome"/>). Valor puro: misma
-    /// entrada, mismo resultado; lo crea <see cref="SlothSession.Context"/> o un test.
+    /// entrada, mismo resultado; <c>sloth.last_line</c> se copia al crearlo (sin asignaciones), así que un
+    /// <see cref="SlothSession.Record"/> posterior no lo cambia. Lo crea <see cref="SlothSession.Context"/> o un test.
     /// </summary>
     public readonly struct SlothContext
     {
-        private readonly int[]? _lastLine;
+        // Copia de sloth.last_line, un campo por momento (en el orden de SlothMoment), para no guardar el array del perfil.
+        private readonly int _lastWin;
+        private readonly int _lastHard;
+        private readonly int _lastFail;
+        private readonly int _lastRestart;
+        private readonly int _lastStreak;
+        private readonly int _lastReturn;
+        private readonly int _lastDebut;
+        private readonly int _lastMilestone;
 
         /// <summary>Crea el contexto sin datos de ningún momento.</summary>
         /// <param name="enabled"><c>ui_sloth_enabled</c>.</param>
@@ -250,7 +259,8 @@ namespace AF.GameFlow
         /// <param name="linesPerSessionMax"><c>ui_sloth_lines_per_session_max</c>.</param>
         /// <param name="linesThisSession">Frases dichas en esta sesión.</param>
         /// <param name="previousScreenSpoke">La pantalla anterior con TiTino tuvo frase.</param>
-        /// <param name="lastLine"><c>sloth.last_line</c> (<see cref="SlothData.LastLine"/>; solo se lee), o null si no hay perfil.</param>
+        /// <param name="lastLine"><c>sloth.last_line</c> (<see cref="SlothData.LastLine"/>; se copia y no se guarda la referencia), o null si
+        /// no hay perfil. Los momentos que falten valen <see cref="SlothData.NoLine"/>.</param>
         public SlothContext(bool enabled, bool messages, bool failEnabled, int winLineEveryN, int linesPerSessionMax, int linesThisSession,
             bool previousScreenSpoke, int[]? lastLine)
         {
@@ -261,7 +271,14 @@ namespace AF.GameFlow
             LinesPerSessionMax = linesPerSessionMax;
             LinesThisSession = linesThisSession;
             PreviousScreenSpoke = previousScreenSpoke;
-            _lastLine = lastLine;
+            _lastWin = LineAt(lastLine, SlothMoment.Win);
+            _lastHard = LineAt(lastLine, SlothMoment.Hard);
+            _lastFail = LineAt(lastLine, SlothMoment.Fail);
+            _lastRestart = LineAt(lastLine, SlothMoment.Restart);
+            _lastStreak = LineAt(lastLine, SlothMoment.Streak);
+            _lastReturn = LineAt(lastLine, SlothMoment.Return);
+            _lastDebut = LineAt(lastLine, SlothMoment.Debut);
+            _lastMilestone = LineAt(lastLine, SlothMoment.Milestone);
             Victory = default;
             Fail = default;
             Restart = default;
@@ -314,8 +331,33 @@ namespace AF.GameFlow
         /// <summary>Índice de la última frase vista del momento <paramref name="moment"/>, o <see cref="SlothData.NoLine"/>.</summary>
         public int LastLineOf(SlothMoment moment)
         {
+            switch (moment)
+            {
+                case SlothMoment.Win:
+                    return _lastWin;
+                case SlothMoment.Hard:
+                    return _lastHard;
+                case SlothMoment.Fail:
+                    return _lastFail;
+                case SlothMoment.Restart:
+                    return _lastRestart;
+                case SlothMoment.Streak:
+                    return _lastStreak;
+                case SlothMoment.Return:
+                    return _lastReturn;
+                case SlothMoment.Debut:
+                    return _lastDebut;
+                case SlothMoment.Milestone:
+                    return _lastMilestone;
+                default:
+                    return SlothData.NoLine;
+            }
+        }
+
+        private static int LineAt(int[]? lastLine, SlothMoment moment)
+        {
             int i = (int)moment;
-            return _lastLine != null && i < _lastLine.Length ? _lastLine[i] : SlothData.NoLine;
+            return lastLine != null && i < lastLine.Length ? lastLine[i] : SlothData.NoLine;
         }
 
         /// <summary>Copia con los datos de la victoria.</summary>

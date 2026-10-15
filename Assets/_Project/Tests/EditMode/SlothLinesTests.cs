@@ -626,6 +626,49 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Home_Morning_IsTheFirstOpeningOfTheDay_OnlyIfItFallsFrom6To12()
+        {
+            // Lectura [P] de d.7 y d.10 (ver SlothLines.ForHome): la primera apertura del día, si cae entre las 06:00 y las
+            // 12:00. Abrir a las 05:30 apunta la apertura sin saludo; a las 07:00 del mismo día ya no es la primera.
+            var data = new SlothData { LastSeenDate = "2026-10-14" };
+            var early = new SlothSession(data, true);
+            SlothContext c1 = early.Context.WithHome(early.HomeFacts("2026-10-15", 5, 58));
+            SlothLine dawn = SlothLines.ForHome(in c1);
+            Assert.That(dawn.Greeting || dawn.Gesture != SlothGesture.None, Is.False, "a las 05:30, TiTino duerme");
+            early.Record(in dawn, in c1);
+            Assert.That(data.LastSeenDate, Is.EqualTo("2026-10-15"), "la apertura queda apuntada");
+            Assert.That(data.LastGreetingDate, Is.Null, "sin saludo");
+
+            var later = new SlothSession(data, true);
+            SlothContext c2 = later.Context.WithHome(later.HomeFacts("2026-10-15", 7, 58));
+            SlothLine seven = SlothLines.ForHome(in c2);
+            Assert.That(seven.Greeting || seven.Gesture != SlothGesture.None, Is.False, "a las 07:00 ya no es la primera apertura del día");
+        }
+
+        [Test]
+        public void Context_CopiesLastLine_RecordDoesNotChangeIt()
+        {
+            // El contexto es un valor: copia sloth.last_line al crearlo, y un Record posterior no cambia su resultado.
+            var data = new SlothData();
+            var session = new SlothSession(data, true, true, true, 1, 4);
+            SlothContext c = session.Context.WithFail(new SlothFailFacts(true, false, 3, true));
+            SlothLine before = SlothLines.ForFail(45, in c);
+            Assert.That(before.Speaks, Is.True);
+            session.Record(in before, in c);
+            Assert.That(data.LastLine[(int)SlothMoment.Fail], Is.EqualTo(before.Index));
+            Assert.That(c.LastLineOf(SlothMoment.Fail), Is.EqualTo(SlothData.NoLine), "el contexto no ve el Record");
+            AssertSame(SlothLines.ForFail(45, in c), before, "mismo contexto, mismo resultado tras Record");
+
+            int[] last = NewLast();
+            SlothContext copy = Ctx(last: last);
+            last[(int)SlothMoment.Win] = 5;
+            Assert.That(copy.LastLineOf(SlothMoment.Win), Is.EqualTo(SlothData.NoLine), "tampoco ve cambios en el array de origen");
+            Assert.That(Ctx(last: new[] { 4, 1 }).LastLineOf(SlothMoment.Hard), Is.EqualTo(1));
+            Assert.That(Ctx(last: new[] { 4, 1 }).LastLineOf(SlothMoment.Milestone), Is.EqualTo(SlothData.NoLine), "los que faltan, sin frase");
+            Assert.That(new SlothContext(true, true, true, 4, 4, 0, false, null).LastLineOf(SlothMoment.Win), Is.EqualTo(SlothData.NoLine));
+        }
+
+        [Test]
         public void Home_LevelLineCarriesTheLevel_AndIsSkippedWithoutIt()
         {
             bool sawLevel = false;

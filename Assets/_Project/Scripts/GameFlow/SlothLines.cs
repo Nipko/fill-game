@@ -329,6 +329,10 @@ namespace AF.GameFlow
         /// de regreso, tras ≥ 3 días sin abrir (<c>sloth.last_seen_date</c>; frases 22-24); si no, en la primera apertura del día
         /// entre las 06:00 y las 12:00, el de la mañana (n.º 25), nunca el mismo día que el de regreso. Con los topes de la
         /// sesión; sin frase, solo el saludo con la mano. Lee <see cref="SlothContext.Home"/>.
+        /// <para>«Primera apertura del día entre las 06:00 y las 12:00» (d.7 y d.10) se lee [P] (pendiente del dueño) como «la
+        /// primera apertura del día, si cae entre las 06:00 y las 12:00»: se mira <c>sloth.last_seen_date</c>, que se apunta en
+        /// cada inicio aunque no haya saludo, así que quien abre a las 05:30 y otra vez a las 07:00 del mismo día no tiene el de
+        /// la mañana. La otra lectura («la primera apertura dentro de esa franja») se basaría en <c>sloth.last_greeting_date</c>.</para>
         /// </summary>
         public static SlothLine ForHome(in SlothContext c)
         {
