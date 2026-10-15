@@ -1,6 +1,6 @@
 # Recursos generados (provisionales): ranuras de arte
 
-Carpeta de los PNG pintados provisionales de la dirección visual v2 «Selva brillante premium» (D-003; `docs/art/direccion-visual-v2.md` 10.3). Los genera el dueño con ChatGPT a partir de `docs/art/prompts-chatgpt.md`. Son provisionales: el arte final es del artista (CLAUDE.md, «Humanos»). Estado cultural: pendiente de revisión (07 §8.2).
+Carpeta de los PNG pintados provisionales de la dirección visual v2 «Selva brillante premium» (D-003; `docs/art/direccion-visual-v2.md` 10.3). Los genera el dueño con ChatGPT a partir de `docs/art/prompts-chatgpt.md`. Son provisionales: el arte final es del artista (CLAUDE.md, «Humanos»), que entra por las mismas ranuras con los encargos `docs/art/encargo-mapa-del-rio.md` y `docs/art/encargo-titino-frutas-tinaja.md`. Estado cultural: pendiente de revisión (07 §8.2).
 
 ## Cómo funciona
 
@@ -45,7 +45,46 @@ PPU 300 = 3 px por dp; PPU 400 = 4 px por dp. Bordes 9-slice en px del PNG final
 
 Siempre por código, sin ranura (guía 10.3): relleno del panel y de los modales, vidrio, líquido, cavidad, repisas, sombras y partículas.
 
+## Ranuras reservadas: fondos por parada, Mapa del río, TiTino y Frutas del río
+
+Nombres del glosario §11 (D-013, D-016 y D-017). **Reservada** quiere decir que el nombre está fijado, pero el juego todavía no pinta esa ranura: un PNG con ese nombre aún no cambia nada y, mientras `ArtSlots.IsKnown` no conozca el nombre, se ignora con un aviso en la consola. Cada ranura pasa a «Conectada» con la tarea que la integra.
+- **Excepción: las dos ranuras de TiTino con patrón de fauna.** `fauna_bradypus_variegatus_partes` y `fauna_bradypus_variegatus_retrato` ya pasan `ArtSlots.IsKnown`, porque el patrón `fauna_<id>_partes` / `fauna_<id>_retrato` acepta cualquier especie. Si entra su PNG, `GeneratedArt` lo importa en ASTC 4×4 y lo mete en `ArtSlotCatalog`, sin ningún aviso; con el catálogo, entra en el build y queda residente, aunque nada lo pinte hasta que lo conecten M1.5 (el retrato) y TI4 (las piezas del rig). El arte final lo integra AR1. Por eso conviene no añadir sus PNG antes de esas tareas.
+- **Arte final:** del artista, con los encargos `docs/art/encargo-mapa-del-rio.md` y `docs/art/encargo-titino-frutas-tinaja.md` (orden y condiciones de envío).
+- **Provisionales del dueño:** los de `docs/art/prompts-chatgpt.md` (3.17 y 3.18). Nunca van en la ficha, las capturas ni la UA.
+- **Compresión en Android** (propuesta del Mapa §10.7; la aplica el script de importación, nunca el `.meta` a mano): **ASTC 8×8 en los kits, 6×6 en los héroes y 4×4 en la UI**. Las demás familias van marcadas en la tabla.
+
+| Ranura (`<ranura>.png`) | Medida (px) | Uso | Respaldo sin PNG | Compresión | Estado |
+|---|---|---|---|---|---|
+| `bg_kit_w{nn}`: en la 1.0, `bg_kit_w01` … `bg_kit_w09` (`w01`-`w05` en 1-200; `w06`-`w09` en 201-700) | Entrega: atlas de 2048 × 2048 (a 2×) con 8-10 piezas. En el build: 1024 × 1024 [P] | Capa 0b del fondo de cada parada de su mundo (tablero, inicio, banner, victoria con vista y tarjeta del Mapa): orilla lejana en tiras que se repiten, selva y palmeras del mundo, islas, playas de río, árboles en el agua, barcos lejanos sin personas y silueta de ciudad genérica. La posición de cada pieza va en `bg.pieces` de `river_stops_v1.json` (D-023, punto 12). En 201-700 es todo el fondo, sin héroe | El panorama procedural de hoy; si falta el pack del mundo, el «río genérico» del canon | ASTC 8×8 | Reservada |
+| `bg_hero_<sitio>`: en 1-200, `bg_hero_ver_o_peso`, `bg_hero_alter_do_chao`, `bg_hero_flona_tapajos`, `bg_hero_teatro_amazonas`, `bg_hero_anavilhanas`, `bg_hero_lago_tefe`, `bg_hero_leticia`, `bg_hero_amacayacu`, `bg_hero_puerto_narino`, `bg_hero_tarapoto`, `bg_hero_iquitos`, `bg_hero_itaya_creciente`, `bg_hero_allpahuayo` y `bg_hero_pacaya_samiria`, más la reserva `bg_hero_casa_de_fierro` (07 §2.1). Nunca `belen` | Entrega: 1440 × 480 (2× de 240 × 80 dp). En el build: 720 × 240 [P] | Capa 0c: el héroe del sitio, con el pie en el horizonte de `GameScreen.HorizonFor`. Hasta 48 dp de silueta por encima, con lo reconocible en sus 30 dp de abajo, y hasta 32 dp de orilla por debajo; el código alarga el reflejo con el mismo sprite volteado (propuesta del Mapa §10.2 y §10.6) | La silueta geométrica de la misma altura, que es también el héroe provisional de VA-20, solo en el Editor y en desarrollo; en release, la parada va sin héroe (D-023, punto 16) | ASTC 6×6 | Reservada |
+| `amb_*`: `amb_parakeets`, `amb_dolphin_back` y `amb_mist` | 256 × 256 | Capa 1: el ambiente del sitio, animado por código con 16 partículas como mucho: pericos en Leticia, lomos de delfín en Tarapoto y bruma en Pacaya-Samiria | Sin el sprite, el sitio va sin su ambiente [P]; lo fija la tarea que lo integra | ASTC 4×4 [P], como los sprites de fauna de hoy | Reservada |
+| `map_tile_*`: `map_tile_canopy`, `map_tile_varzea`, `map_tile_savanna`, `map_tile_rock` y `map_tile_snow` | 512 × 512, tesela sin costuras | Tierra del Mapa del río en mosaico, una por zona (dosel, várzea, sabana, roca y nieve). Las zonas salen de la máscara del artista, que es un dato de `tools/river-map` y no una ranura | Por código (guía 10.3) | ASTC 6×6 (§10.7) | Reservada |
+| `map_canoe` | Bucle de 12 fotogramas a 32-40 dp | La canoa de Capi remando en el Mapa, con las cuias atadas con cuerda y un mástil con anclaje para la bandera; sin personas (del bucle de `capi_rescue`) | Por código | ASTC 4×4 | Reservada |
+| `map_flag_<iso2>`: solo banderas oficiales; `map_flag_br`, `map_flag_co` y `map_flag_pe` en 1-200, y también `map_flag_ec` y `map_flag_bo` en 201-700 | 96 × 64, con 2 fotogramas | La bandera de cortesía en el mástil de la canoa, que se iza al entrar en un país. Nunca en tierra, en islas ni en zonas reclamadas; Bolivia, con la tricolor [P]; el uso de símbolos nacionales lo revisan el abogado y el asesor (D-013) | Bandera simplificada solo en el Editor y en desarrollo; en release, solo las oficiales aprobadas (D-023, punto 16) | ASTC 4×4 | Reservada |
+| `map_minicuia` | 96 × 160, vidrio en capas | La mini cuia del Muestrario, con su etiqueta: la silueta de D-006, nunca un tubo. El líquido lo pinta el código | Por código | ASTC 4×4 | Reservada |
+| `map_rack` | 9-slice (bordes medidos en el PNG real) | La repisa del Muestrario, de madera tallada (guía 4.4 y 4.5) | Por código | ASTC 4×4 | Reservada |
+| `map_home` | 256 × 256 | La casa de TiTino en el Mapa: su embaúba a escala de Mapa. Lleva la condición de TiTino: el asesor confirma la embaúba (encargo de TiTino) | Por código, solo en el Editor y en desarrollo [P]: D-023, punto 16, lo dice de la ventanita, no de la casa | ASTC 4×4 | Reservada |
+| `map_home_window` | 9-slice (bordes medidos en el PNG real) | La ventanita de casa de TiTino, en el Mapa y en el inicio (Q17-A de D-013) | Por código, solo en el Editor y en desarrollo (D-023, punto 16) | ASTC 4×4 | Reservada |
+| `map_compass`, `map_plaque`, `map_buoy`, `map_beacon` y `map_mirador` | Piezas del atlas de UI del Mapa | La rosa de los vientos, las placas, la boya, la baliza y el «?» de los miradores, en madera y vidrio | Por código | ASTC 4×4 | Reservada |
+| `fauna_bradypus_variegatus_partes` | 1024 × 1024, rejilla de 4 × 4 celdas de 256 px con pivotes fijos | Las piezas del rig de TiTino; las poses `sloth_*` las anima el código. Incluye las hojas de `sloth_cheer` (propuesta de TiTino, c.7) | El rig procedural provisional, solo en el Editor y en desarrollo; en release, TiTino no sale sin su arte final (D-016, «Consecuencias»; 07 §6.4, por analogía con los miquitos) | ASTC 4×4, como la fauna de hoy | Reservada, pero `ArtSlots.IsKnown` ya la acepta (ver la excepción de arriba) |
+| `fauna_bradypus_variegatus_retrato` | 512 × 512 | El retrato de TiTino: la placa del Dato del río en el Mapa, la instrucción del tutorial, el aviso tras Volver a la orilla y los bocadillos | El retrato procedural, solo en el Editor y en desarrollo | ASTC 4×4 | Reservada, pero `ArtSlots.IsKnown` ya la acepta (ver la excepción de arriba) |
+| `arbol_embauba` | 1024 × 256 | La rama de embaúba que entra con TiTino en cada pantalla (no usa el patrón `rama_<mundo>`, que es de los mundos) | La rama procedural, solo en el Editor y en desarrollo | ASTC 4×4, como las ramas de hoy | Reservada |
+| `ficha_<id del tinte>` [P] × 14, en el orden de las series: `ficha_acai`, `ficha_agua_tapajos`, `ficha_urucum`, `ficha_agua_negro`, `ficha_cupuacu`, `ficha_aguaje`, `ficha_bacaba`, `ficha_jenipapo`, `ficha_camu_camu`, `ficha_tapereba`, `ficha_cacao`, `ficha_lulo`, `ficha_guanabana` y `ficha_araza` (ids del glosario §9) | 1024 × 640 | La escena de la cabecera de la ficha «Frutas del río» (y de la página Frutas del Cuaderno, en la 1.1): la planta en su paisaje y el fruto entero y abierto | La ficha funciona solo con el icono `fruta_<id del tinte>` (propuesta de Frutas, §7) | ASTC 6×6 [P], como un fondo | Reservada |
+
+**Para estimar el peso** (tarea B0) y fijar la importación (M5.2):
+- **Héroes y kits:** las cifras de la propuesta del Mapa (§10.7) suponen las piezas de fondo a 1× en el build (3 px/dp): un héroe de 720 × 240 son 75,0 KiB en ASTC 6×6 y un kit de 1024 × 1024, 256 KiB en 8×8. Importados a su medida de entrega (2×), pesarían 4 veces más: 300 KiB y 1 MiB [cálculo]. Cómo se pasa de 2× a 1× lo decide la tarea de importación.
+- **Mapa:** las piezas de UI cuentan como un atlas de 1024 × 1024 en ASTC 4×4 (≈ 1,0 MiB, con las siluetas de las muestras horneadas) y las 5 texturas de terreno, 0,56 MiB en 6×6 (§10.7).
+- **Fichas:** las 14 escenas suman ≈ 3,9 MiB en 6×6 y 8,75 MiB en 4×4 [cálculo].
+
+**Piezas encargadas que aún no tienen nombre de ranura en el glosario §11.** El nombre se fija allí antes de integrarlas; mientras tanto, ningún PNG lleva un nombre inventado. Son:
+- el sello «Ya conoces» [P] (256 × 256) y los dos marcos 9-slice de la línea y de la ficha de Frutas del río;
+- el bocadillo 9-slice de TiTino;
+- las piezas de la Tinaja: cuerpo, máscara de la boca, bandas encendidas, boca abajo, jirau y asa de la cuia;
+- el segundo juego de follaje, de Amazonia occidental (propuesta del Mapa §12, n.º 4), que la guía visual llama `foliage_<juego>_*` (10.3).
+
 ## Registro de PNG
+
+Cada PNG que entra en la carpeta se anota aquí. El del artista lleva «Artista» y su encargo en la columna «Prompt (sección)». Así se sabe qué PNG es provisional: los provisionales de los fondos por parada y del Mapa nunca van en la ficha, las capturas ni la UA (07 §2.1; propuesta del Mapa §10.2), como los miquitos provisionales (07 §6.4).
 
 | Archivo | Fecha | Prompt (sección) | Familia | Clave de estilo adjunta | Cambios al prompt | Posproceso | 9-slice medido (px) | Revisión cultural |
 |---|---|---|---|---|---|---|---|---|
