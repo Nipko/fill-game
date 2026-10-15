@@ -698,6 +698,69 @@ namespace AF.Presentation
             return p;
         }
 
+        /// <summary>Ciclo de las extremidades al trepar por la liana lateral (Hz).</summary>
+        public const float ClimbHz = 5f;
+
+        /// <summary>
+        /// Mano que lanza al trepar (S, en la pose de <see cref="Climb"/>): por encima de la cabeza y un poco hacia fuera de la
+        /// liana (la misma que planifica la intro: <see cref="IntroChoreography.SideThrowAlongS"/> y
+        /// <see cref="IntroChoreography.SideThrowOutS"/>).
+        /// </summary>
+        public static readonly Vector2 SideThrowHandS = new Vector2(IntroChoreography.SideThrowAlongS, IntroChoreography.SideThrowOutS);
+
+        /// <summary>
+        /// Trepando por una liana vertical (tropa lateral, D-021; modelos <c>fila</c> y <c>sacude</c>). En la pose, la liana es el
+        /// eje x (y = 0), la cabeza va hacia +x y el lomo hacia +y; <see cref="TroopLayer"/> gira el rig 90° para que la liana
+        /// quede vertical, la cabeza arriba (mira a lo largo de la liana, nunca a una cuia: D-002) y el lomo hacia el borde de la
+        /// pantalla. El cuerpo va pegado a la liana, compacto: manos, pies y cola asoman ≤ 0,12 S hacia el tablero
+        /// (<see cref="IntroChoreography.SideClimbReachS"/>) y el lomo y la cabeza ≤ 0,66 S hacia fuera
+        /// (<see cref="IntroChoreography.SideClimbBodyS"/>). <paramref name="phase"/> mueve las extremidades al trepar (0:
+        /// agarrado y quieto) y <paramref name="lift"/> lleva el brazo de delante a la mano que lanza.
+        /// </summary>
+        public static MonkeyPose Climb(MonkeyArt art, float phase, float lift)
+        {
+            float sw = Mathf.Sin(phase);
+            float l = Mathf.Min(1.15f, art.LimbScale);
+            var p = new MonkeyPose
+            {
+                TorsoCenter = new Vector2(0f, 0.20f),
+                TorsoSize = new Vector2(0.54f, 0.28f),
+                TorsoAngle = 0f,
+                HeadCenter = new Vector2(0.34f, 0.25f),
+                HeadAngle = 0f,
+                FrontArmFrom = new Vector2(0.18f, 0.24f),
+                FrontArmTo = new Vector2(0.18f + (0.16f * l) + (0.06f * sw), 0.03f),
+                BackArmFrom = new Vector2(0.14f, 0.24f),
+                BackArmTo = new Vector2(0.14f + (0.12f * l) - (0.06f * sw), 0.03f),
+                FrontLegFrom = new Vector2(-0.16f, 0.18f),
+                FrontLegTo = new Vector2(-0.10f - (0.06f * sw), 0.03f),
+                BackLegFrom = new Vector2(-0.20f, 0.18f),
+                BackLegTo = new Vector2(-0.28f + (0.06f * sw), 0.03f),
+            };
+
+            if (lift > 0f)
+            {
+                p.FrontArmTo = Vector2.Lerp(p.FrontArmTo, SideThrowHandS, Mathf.Clamp01(lift));
+            }
+
+            // La cola cuelga a lo largo de la liana (hacia −x), un poco separada de ella; la prensil se enrosca en la liana.
+            var b = new Vector2(-0.24f, 0.20f);
+            p.Tail0 = b;
+            if (art.TailCurls)
+            {
+                p.Tail1 = b + new Vector2(-0.20f, -0.04f);
+                p.Tail2 = b + new Vector2(-0.34f, -0.16f);
+                p.Tail3 = b + new Vector2(-0.24f, -0.18f);
+                return p;
+            }
+
+            float k = art.TailLength;
+            p.Tail1 = b + (new Vector2(-0.22f, 0.04f) * k);
+            p.Tail2 = b + (new Vector2(-0.42f, 0.08f) * k);
+            p.Tail3 = b + (new Vector2(-0.60f, 0.02f) * k);
+            return p;
+        }
+
         /// <summary>Ángulo del brazo que agarra la liana con la vertical (grados): sale del hombro hacia la liana, al lado de la cabeza.</summary>
         public const float HangArmDeg = 22f;
 

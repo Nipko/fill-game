@@ -27,7 +27,11 @@ namespace AF.Presentation
     /// trenzadas dos vueltas; el churuco lleva la fruta abrazada al pecho; el segundo individuo usa la <c>paleta_pareja</c>
     /// si la hay; y con <c>iluminacion = noche</c> un velo nocturno cubre la franja mientras no exista la pintura de noche del
     /// mundo (07 §2.1). Todo es función del tiempo de la intro, así que una captura en t es siempre la misma. Nada depende de
-    /// la selección, de un vertido ni de la legalidad (D-002); nada recibe toques.
+    /// la selección, de un vertido ni de la legalidad (D-002); nada recibe toques. Tropa lateral (D-021, tableros de 3 filas):
+    /// en su propio Canvas anidado dentro del tablero (<see cref="SideLayer"/>, delante del panel y del marco y detrás de las
+    /// cuias), un miquito por lado baja por una liana procedural desde el borde del HUD (trepando con <see cref="MonkeyRig.Climb"/>
+    /// o colgado con <see cref="MonkeyRig.Hang"/>, según el modelo de suelta), lanza la fruta y sube en cuanto se habilita el
+    /// toque; sin rama, hojas, manojos, velo ni reposo.
     /// </summary>
     public sealed class TroopLayer
     {
@@ -81,6 +85,10 @@ namespace AF.Presentation
         private readonly int[] _restTint = new int[IntroChoreography.MaxMonkeys];
         private readonly bool[] _reachesCorner = new bool[IntroChoreography.MaxMonkeys];
         private readonly Vector3[] _corners = new Vector3[4];
+        private readonly RectTransform _side;
+        private readonly BezierStripGraphic[] _sideLianas = new BezierStripGraphic[IntroChoreography.SideMonkeys];
+        private readonly MonkeyRig[] _sideRigs = new MonkeyRig[IntroChoreography.SideMonkeys];
+        private bool _sideActive;
         private MonkeyArt? _look;
         private MonkeyArt? _lookPair;
         private FaunaSpecies? _species;
@@ -97,10 +105,7 @@ namespace AF.Presentation
             var go = new GameObject("TroopLayer", typeof(RectTransform), typeof(Canvas));
             go.transform.SetParent(parent, false);
             _layer = (RectTransform)go.transform;
-            _layer.anchorMin = Vector2.zero;
-            _layer.anchorMax = Vector2.one;
-            _layer.offsetMin = Vector2.zero;
-            _layer.offsetMax = Vector2.zero;
+            Stretch(_layer);
 
             var nightGo = new GameObject("NightVeil", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             nightGo.transform.SetParent(_layer, false);
@@ -124,11 +129,11 @@ namespace AF.Presentation
 
             for (int m = 0; m < _lianas.Length; m++)
             {
-                _lianas[m] = Strip("Liana" + m, 6);
+                _lianas[m] = Strip("Liana" + m, 6, _layer);
                 _lianas[m].SetColors(Liana, ColorMath.Darken(Liana, 0.2f), 0.8f, InkLine, 0.6f);
             }
 
-            _branch = Strip("Branch", 20);
+            _branch = Strip("Branch", 20, _layer);
             _branch.SetColors(Bark, BarkTip, 0.5f, InkLine, 1f);
             for (int i = 0; i < Leaves; i++)
             {
@@ -168,12 +173,54 @@ namespace AF.Presentation
                 _ends[i] = img;
             }
 
+            // Tropa lateral (D-021): Canvas anidado propio con una liana y un miquito por lado. Nace junto a la capa de la rama y
+            // la pantalla la lleva al tablero, delante del panel y de su marco y detrás de las cuias (PlaceSideLayer): durante la
+            // intro la tropa lateral pisa el margen lateral y el marco, nunca una cuia.
+            var sideGo = new GameObject("TroopSide", typeof(RectTransform), typeof(Canvas));
+            sideGo.transform.SetParent(parent, false);
+            _side = (RectTransform)sideGo.transform;
+            Stretch(_side);
+            for (int m = 0; m < _sideRigs.Length; m++)
+            {
+                _sideLianas[m] = Strip("SideLiana" + m, 6, _side);
+                _sideLianas[m].SetColors(Liana, ColorMath.Darken(Liana, 0.2f), 0.8f, InkLine, 0.6f);
+                _sideRigs[m] = new MonkeyRig(_side, IntroChoreography.MaxMonkeys + m);
+            }
+
             // La capa no se desactiva nunca (ni aquí ni en Hide): desactivar un Canvas anidado desregistra sus gráficos ocultos
             // y volver a mostrarlos en mitad de la intro asignaría memoria (GraphicRegistry, A10). Todo empieza oculto pieza a pieza.
         }
 
         /// <summary>Raíz de la capa (orden de capas y tests).</summary>
         public RectTransform Layer => _layer;
+
+        /// <summary>Capa de la tropa lateral (D-021): la pantalla la lleva a su sitio con <see cref="PlaceSideLayer"/>.</summary>
+        public RectTransform SideLayer => _side;
+
+        /// <summary>La tropa lateral (D-021) está en pantalla.</summary>
+        public bool SideActive => _active && _sideActive;
+
+        /// <summary>Rig del miquito lateral <paramref name="m"/> (0 a la izquierda, 1 a la derecha; tests y capturas).</summary>
+        public MonkeyRig SideRig(int m)
+        {
+            return _sideRigs[m];
+        }
+
+        /// <summary>Liana del miquito lateral <paramref name="m"/> (tests).</summary>
+        public BezierStripGraphic SideLiana(int m)
+        {
+            return _sideLianas[m];
+        }
+
+        /// <summary>
+        /// Lleva la capa de la tropa lateral a <paramref name="parent"/> (el tablero, a pantalla completa como el lienzo), donde
+        /// la pantalla la deja detrás de las cuias y delante del panel. Una vez, al montar la pantalla.
+        /// </summary>
+        public void PlaceSideLayer(RectTransform parent)
+        {
+            _side.SetParent(parent, false);
+            Stretch(_side);
+        }
 
         /// <summary>Hueco por detrás de la rama (y de la tropa) para el labio del río que desborda (lo rellena la intro).</summary>
         public RectTransform WaterSlot => _water;
@@ -280,6 +327,17 @@ namespace AF.Presentation
             if (!_layer.gameObject.activeSelf)
             {
                 _layer.gameObject.SetActive(true);
+            }
+
+            for (int m = 0; m < _sideLianas.Length; m++)
+            {
+                GraphicPool.EnsureRegistered(_sideLianas[m]); // ocultas, pero registradas en su Canvas (A10), con o sin tropa lateral
+            }
+
+            if (plan.Perch == IntroPerch.Side && plan.MonkeyCount > 0 && _look != null)
+            {
+                BeginSide(plan);
+                return;
             }
 
             if (plan.Perch != IntroPerch.Branch || plan.MonkeyCount == 0 || _look == null)
@@ -407,6 +465,16 @@ namespace AF.Presentation
             float fadeFrom = plan.ExitStartMs + IntroChoreography.ExitMs - IntroChoreography.ExitFadeMs;
             float exit = 1f - Mathf.Clamp01((t - fadeFrom) / IntroChoreography.ExitFadeMs);
             float a = Mathf.Clamp01(alpha) * exit;
+            if (_sideActive)
+            {
+                for (int m = 0; m < plan.MonkeyCount && m < _sideRigs.Length; m++)
+                {
+                    PoseSide(plan, m, t, a);
+                }
+
+                return;
+            }
+
             SetDecorAlpha(a);
             for (int m = 0; m < plan.MonkeyCount; m++)
             {
@@ -423,6 +491,12 @@ namespace AF.Presentation
             IntroChoreography? plan = _plan;
             if (!_active || plan == null || _look == null)
             {
+                return;
+            }
+
+            if (_sideActive)
+            {
+                ApplySideStill(plan, alpha);
                 return;
             }
 
@@ -496,6 +570,12 @@ namespace AF.Presentation
                 graphics.Add(_lianas[m]);
                 _rigs[m].CollectGraphics(graphics);
             }
+
+            for (int m = 0; m < _sideRigs.Length; m++)
+            {
+                graphics.Add(_sideLianas[m]);
+                _sideRigs[m].CollectGraphics(graphics);
+            }
         }
 
         /// <summary>
@@ -506,6 +586,25 @@ namespace AF.Presentation
         {
             if (!_active)
             {
+                return;
+            }
+
+            if (_sideActive)
+            {
+                for (int m = 0; m < _sideRigs.Length; m++)
+                {
+                    if (_sideLianas[m].enabled && _sideLianas[m].canvasRenderer.GetAlpha() > 0f)
+                    {
+                        Rect l = _sideLianas[m].LocalBounds();
+                        rects.Add(Rect.MinMaxRect(l.xMin, -l.yMax, l.xMax, -l.yMin));
+                    }
+
+                    if (_sideRigs[m].Visible && _sideRigs[m].Alpha != 0f)
+                    {
+                        _sideRigs[m].CollectRects(_side, rects);
+                    }
+                }
+
                 return;
             }
 
@@ -575,6 +674,159 @@ namespace AF.Presentation
                 _rigs[m].SetVisible(false);
                 _lianas[m].enabled = false;
             }
+
+            _sideActive = false;
+            for (int m = 0; m < _sideRigs.Length; m++)
+            {
+                _sideRigs[m].SetVisible(false);
+                _sideLianas[m].enabled = false;
+            }
+        }
+
+        private static void Stretch(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+        }
+
+        // Tropa lateral (D-021): sin rama, hojas, manojos ni velo; un miquito por lado con su liana. Los rigs quedan activos
+        // toda la intro (aparecen con el alfa, sin activar objetos a mitad: A10).
+        private void BeginSide(IntroChoreography plan)
+        {
+            HideTroop();
+            _active = true;
+            _sideActive = true;
+            for (int m = 0; m < _sideRigs.Length; m++)
+            {
+                bool on = m < plan.MonkeyCount;
+                GraphicPool.EnsureRegistered(_sideLianas[m]);
+                _sideRigs[m].SetVisible(on);
+                if (!on)
+                {
+                    continue;
+                }
+
+                _sideRigs[m].SetArt(LookOf(m), plan.BodyDp);
+                _sideRigs[m].SetTailSegments(8);
+                _sideRigs[m].EnsureRegistered();
+                _sideRigs[m].SetAlpha(0f);
+            }
+        }
+
+        // Un miquito lateral en t (D-021): trepando (fila y sacude: la pose Climb girada 90°, la cabeza arriba a lo largo de la
+        // liana y el lomo hacia el borde de la pantalla) o colgado de su liana (cuelga: mirando al tablero con la cabeza vuelta
+        // hacia el borde). Baja hasta su sitio, lanza cada fruta con el brazo (el gesto de ~100 ms de la rama) y sube en cuanto
+        // se habilita el toque. Nunca mira, señala ni reacciona a una cuia (D-002): mira a lo largo de su liana o hacia el
+        // follaje del borde.
+        private void PoseSide(IntroChoreography plan, int m, float t, float alpha)
+        {
+            MonkeyRig rig = _sideRigs[m];
+            MonkeyArt look = LookOf(m);
+            float s = plan.BodyDp;
+            float x = plan.SideX[m];
+            float y = plan.SideRootY(m, t);
+            bool moving = Mathf.Abs(plan.SideVelocityY(m, t)) > 0.0001f;
+            float a = alpha * plan.SideAlpha(m, t);
+            int sign = IntroChoreography.SideSign(m);
+            float lift = 0f;
+            for (int k = 0; k < plan.FruitCount; k++)
+            {
+                if (plan.FruitMonkey[k] != m)
+                {
+                    continue;
+                }
+
+                float g = (t - (plan.FruitReleaseMs[k] - IntroChoreography.HoldMs)) / (IntroChoreography.HoldMs + IntroChoreography.GestureTailMs);
+                if (g >= 0f && g <= 1f)
+                {
+                    lift = Mathf.Max(lift, Mathf.Sin(Mathf.PI * Mathf.Min(1f, g / 1.2f)));
+                }
+            }
+
+            bool blink = !moving && Mathf.Repeat(t + (m * 731f), 2400f) < 120f;
+            bool hanging = plan.Model == TroopModel.Hang;
+            MonkeyPose pose;
+            if (hanging)
+            {
+                float sway = moving ? 0.05f * Mathf.Sin(t * 0.02f) : 0.02f * Mathf.Sin(t * 0.004f);
+                pose = MonkeyRig.Hang(look, lift, sway);
+                pose.HeadBack = true; // mira hacia el follaje del borde, nunca al tablero
+                rig.Place(x, y, sign, 0f);
+                SetSideLiana(m, x, plan.SideLianaTopY, y, a);
+            }
+            else
+            {
+                float phase = moving ? t * (Mathf.PI * 2f * MonkeyRig.ClimbHz / 1000f) : 0f;
+                pose = MonkeyRig.Climb(look, phase, lift);
+                rig.Place(x, y, sign, 90f); // la cabeza arriba y el lomo hacia el borde (MonkeyRig.Climb)
+                SetSideLiana(m, x, plan.SideLianaTopY, plan.SidePerchY[m] + (IntroChoreography.SideLianaBelowS * s), a);
+            }
+
+            pose.Blink = blink;
+            rig.Hold(null, Vector2.zero, 0f); // sin fruta abrazada: la siguiente ya asoma en la mano que lanza (una cada vez)
+            rig.Apply(pose);
+            rig.SetAlpha(a);
+        }
+
+        // Reducir movimiento con la tropa lateral: solo el de la izquierda, quieto en su sitio, con su liana.
+        private void ApplySideStill(IntroChoreography plan, float alpha)
+        {
+            for (int m = 0; m < _sideRigs.Length; m++)
+            {
+                if (m != 0 || m >= plan.MonkeyCount)
+                {
+                    _sideRigs[m].SetVisible(false);
+                    _sideLianas[m].enabled = false;
+                    continue;
+                }
+
+                MonkeyRig rig = _sideRigs[m];
+                MonkeyArt look = LookOf(m);
+                float x = plan.SideX[m];
+                float y = plan.SidePerchY[m];
+                int sign = IntroChoreography.SideSign(m);
+                if (plan.Model == TroopModel.Hang)
+                {
+                    MonkeyPose pose = MonkeyRig.Hang(look, 0f, 0f);
+                    pose.HeadBack = true;
+                    rig.Place(x, y, sign, 0f);
+                    rig.Apply(pose);
+                    SetSideLiana(m, x, plan.SideLianaTopY, y, alpha);
+                }
+                else
+                {
+                    rig.Place(x, y, sign, 90f);
+                    rig.Apply(MonkeyRig.Climb(look, 0f, 0f));
+                    SetSideLiana(m, x, plan.SideLianaTopY, y + (IntroChoreography.SideLianaBelowS * plan.BodyDp), alpha);
+                }
+
+                rig.Hold(null, Vector2.zero, 0f);
+                rig.SetAlpha(alpha);
+            }
+        }
+
+        // Liana lateral: cuelga vertical desde el borde inferior del HUD (sale del follaje de detrás) hasta bottomY, con una
+        // leve curva; se funde con su miquito.
+        private void SetSideLiana(int m, float x, float topY, float bottomY, float alpha)
+        {
+            BezierStripGraphic liana = _sideLianas[m];
+            bool on = alpha > 0.001f && bottomY > topY + 2f;
+            if (liana.enabled != on)
+            {
+                liana.enabled = on;
+            }
+
+            if (!on)
+            {
+                return;
+            }
+
+            var top = new Vector2(x, -topY);
+            var bottom = new Vector2(x, -bottomY);
+            liana.SetCurve(top, Vector2.Lerp(top, bottom, 0.33f) + new Vector2(0.8f, 0f), Vector2.Lerp(top, bottom, 0.66f) + new Vector2(-0.6f, 0f), bottom, 2f, 1.6f);
+            liana.canvasRenderer.SetAlpha(alpha);
         }
 
         private void PoseMonkey(IntroChoreography plan, int m, float t, float alpha)
@@ -891,10 +1143,10 @@ namespace AF.Presentation
             }
         }
 
-        private BezierStripGraphic Strip(string name, int segments)
+        private static BezierStripGraphic Strip(string name, int segments, RectTransform parent)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(BezierStripGraphic));
-            go.transform.SetParent(_layer, false);
+            go.transform.SetParent(parent, false);
             BezierStripGraphic strip = go.GetComponent<BezierStripGraphic>();
             strip.Setup(segments);
             RectTransform rt = strip.rectTransform;

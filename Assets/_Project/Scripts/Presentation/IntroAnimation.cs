@@ -1023,9 +1023,9 @@ namespace AF.Presentation
                 float impact = p.FruitImpactMs[k];
                 float tau = Mathf.Max(1f, impact - release);
                 // En la mano (o en la rama: sacudida, o la fruta que ningún miquito alcanza) 60 ms antes de soltarla; del dosel,
-                // asoma al soltarla.
+                // asoma al soltarla; con la tropa lateral, una fruta en la mano cada vez (D-021).
                 bool held = p.FruitMonkey[k] >= 0 || p.Perch == IntroPerch.Branch;
-                float showFrom = held ? release - IntroChoreography.HoldMs : release;
+                float showFrom = p.Perch == IntroPerch.Side ? p.SideHoldFromMs[k] : (held ? release - IntroChoreography.HoldMs : release);
                 if (p.FruitMonkey[k] < 0)
                 {
                     // Cae del dosel o de la rama sin miquito: el follaje de las esquinas (de donde sale la rama) se sacude.
