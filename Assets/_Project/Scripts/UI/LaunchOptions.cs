@@ -18,7 +18,7 @@ namespace AF.UI
     /// <c>--ei af_level_offset 30</c>, que desplaza los números de nivel para probar las compuertas de 11, 22 y 31 con los
     /// tableros del tutorial, tarea B1-5; para probar el embudo y los anuncios en el teléfono [P], tarea B2-6:
     /// <c>af_seeds</c>, <c>af_canoes</c> y <c>af_ads_fill</c>; <c>af_font_scale</c> [P], la escala de texto, tarea A1; y el
-    /// idioma de desarrollo <c>af_lang</c>, tarea L2b) y los ganchos de los tests PlayMode (nivel de arranque, modo de vertido,
+    /// idioma de desarrollo <c>af_lang</c>, tarea L2b; y <c>af_mech_off</c>, el kill switch de mecánicas, tarea KS1) y los ganchos de los tests PlayMode (nivel de arranque, modo de vertido,
     /// progreso, perfil y reloj en memoria, desplazamiento, paquete de niveles, escala de texto, idioma y tablas de textos).
     /// <see cref="GameBootstrap"/> los lee al arrancar (la escala, al crear los textos: <see cref="UiBuilder.TextScale"/>); los
     /// tests los quitan con <see cref="Reset"/>.
@@ -77,6 +77,29 @@ namespace AF.UI
         /// Solo vale un idioma con la UI completa o en-XA; si no, el automático. Nunca en release.
         /// </summary>
         public const string IntentExtraLanguage = "af_lang";
+
+        /// <summary>
+        /// Extra de intent (string) de los builds de desarrollo (tarea KS1; D-020, pregunta 31 b): apaga los kill switches
+        /// <c>mech_enabled.&lt;id&gt;</c> de 08 §9 de la lista separada por comas (<c>--es af_mech_off hoja,matapi</c>). En el
+        /// teléfono solo prueba el respaldo sin override: <c>level_overrides</c> sale de la fuente local
+        /// (<see cref="LevelOverrides.LocalSource"/>, <c>{}</c>), así que <see cref="LevelCatalog"/> sirve el publicado y escribe el
+        /// aviso [P]. La sustitución con un override la prueban los tests EditMode (<see cref="LevelOverridesJsonOverride"/>). Un id
+        /// desconocido se ignora y se avisa en el log. Nunca se lee en un build de release.
+        /// </summary>
+        public const string IntentExtraMechOff = "af_mech_off";
+
+        /// <summary>
+        /// Lista de mecánicas apagadas forzada por un test (el valor de <c>af_mech_off</c>: <c>"hoja,matapi"</c>); null = la del
+        /// extra. Solo tests.
+        /// </summary>
+        public static string? MechOffOverride { get; set; }
+
+        /// <summary>
+        /// <c>level_overrides</c> (JSON <c>{slot: level_id}</c>, 08 §9) forzado por un test en lugar de la fuente local
+        /// (<see cref="LevelOverrides.LocalSource"/>, vacía). Null = la fuente local. Solo tests: ningún extra de intent lo rellena,
+        /// así que en un build de desarrollo <c>af_mech_off</c> no puede ejercitar la sustitución (solo el respaldo con aviso).
+        /// </summary>
+        public static string? LevelOverridesJsonOverride { get; set; }
 
         /// <summary>Nivel de arranque forzado por un test (0 = ninguno).</summary>
         public static int StartLevelOverride { get; set; }
@@ -225,6 +248,39 @@ namespace AF.UI
             LocTablesOverride = null;
             DeviceLocaleOverride = null;
             DevWalletOverride = null;
+            MechOffOverride = null;
+            LevelOverridesJsonOverride = null;
+        }
+
+        /// <summary>
+        /// Kill switches de la partida (tarea KS1): los defaults compilados de <c>mech_enabled.*</c>
+        /// (<see cref="GameConfig.MechEnabled"/>, todos true) con las mecánicas apagadas por el test (<see cref="MechOffOverride"/>)
+        /// o, si no, por el extra <c>af_mech_off</c> (solo builds de desarrollo en Android). Un id desconocido se ignora y se avisa.
+        /// </summary>
+        public static MechanicSwitches ResolveMechSwitches()
+        {
+            string? list = MechOffOverride ?? ReadIntentString(IntentExtraMechOff);
+            MechanicSwitches switches = GameConfig.MechEnabled.WithOffList(list, out string? unknown);
+            if (unknown != null)
+            {
+                Debug.LogWarning("[AF.LaunchOptions] " + IntentExtraMechOff + ": mecánicas desconocidas (\"" + unknown + "\"); se ignoran.");
+            }
+
+            if (switches.AnyOff)
+            {
+                Debug.LogWarning("[AF.LaunchOptions] " + switches + " (" + IntentExtraMechOff + ", KS1).");
+            }
+
+            return switches;
+        }
+
+        /// <summary>
+        /// Texto de <c>level_overrides</c> de la partida (tarea KS1): el del test (<see cref="LevelOverridesJsonOverride"/>) o, si
+        /// no, la fuente local (<see cref="LevelOverrides.LocalSource"/>, <c>{}</c>) hasta que exista <c>AF.RemoteConfig</c>.
+        /// </summary>
+        public static string ResolveLevelOverridesJson()
+        {
+            return LevelOverridesJsonOverride ?? LevelOverrides.LocalSource;
         }
 
         /// <summary>
