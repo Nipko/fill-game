@@ -240,6 +240,24 @@ internal sealed class CampaignSpec
     public required double HardThreshold { get; init; }
     public required double VeryHardThreshold { get; init; }
 
+    /// <summary>
+    /// Tope de mecánicas distintas por nivel (02 §9.2 regla 4; D-009): <c>mechanics_per_level.max</c>, 2 si la especificación no
+    /// lo trae (campaign_v1, 11-200, entera por debajo del 300).
+    /// </summary>
+    public int MaxMechanics { get; init; } = DefaultMaxMechanics;
+
+    /// <summary>
+    /// Primer nivel con el tope alto («3 después del 300», 02 §9.2 regla 4): <c>mechanics_per_level.raised_from_level</c>, o
+    /// null si la especificación no lo trae (nunca sube). El tope alto solo vale en retos e hitos (<see cref="MaxMechanicsAt"/>).
+    /// </summary>
+    public int? RaisedMechanicsFrom { get; init; }
+
+    /// <summary>Tope alto (<c>mechanics_per_level.raised_max</c>; 3 en 02 §9.2 regla 4).</summary>
+    public int RaisedMaxMechanics { get; init; } = DefaultMaxMechanics;
+
+    /// <summary>Tope por defecto de mecánicas por nivel (02 §9.2 regla 4: «máximo 2 mecánicas distintas por nivel»).</summary>
+    public const int DefaultMaxMechanics = 2;
+
     /// <summary>Regla del fixture que se espera ver fallar (solo specs/tests), o null.</summary>
     public string? ExpectRule { get; init; }
 
@@ -465,6 +483,16 @@ internal sealed class CampaignSpec
             : null;
     }
 
+    /// <summary>
+    /// Tope de mecánicas distintas del nivel (02 §9.2 regla 4; D-009: «máximo 2 mecánicas distintas por nivel antes del 300 y 3
+    /// después, 3 solo en retos e hitos»): el alto desde <see cref="RaisedMechanicsFrom"/> y solo en retos e hitos; si no, el
+    /// normal. Los niveles salen de la especificación, no del código (P6 de la tanda 4).
+    /// </summary>
+    public int MaxMechanicsAt(int level, SlotRole? role) =>
+        RaisedMechanicsFrom is int from && level >= from && role is SlotRole.Challenge or SlotRole.Milestone
+            ? RaisedMaxMechanics
+            : MaxMechanics;
+
     public static int LabelRank(string? label) => label switch
     {
         "hard" => 1,
@@ -632,7 +660,16 @@ internal sealed class CampaignSpec
             HardThreshold = labels["thresholds"]!["hard"]!.GetValue<double>(),
             VeryHardThreshold = labels["thresholds"]!["very_hard"]!.GetValue<double>(),
             ExpectRule = root["expect_rule"]?.GetValue<string>(),
+            MaxMechanics = root["mechanics_per_level"]?["max"]?.GetValue<int>() ?? DefaultMaxMechanics,
+            RaisedMechanicsFrom = root["mechanics_per_level"]?["raised_from_level"]?.GetValue<int>(),
+            RaisedMaxMechanics = root["mechanics_per_level"]?["raised_max"]?.GetValue<int>()
+                ?? root["mechanics_per_level"]?["max"]?.GetValue<int>() ?? DefaultMaxMechanics,
         };
+
+        if (spec.MaxMechanics < 1 || spec.RaisedMaxMechanics < spec.MaxMechanics)
+        {
+            throw new CampaignSpecException($"{path}: mechanics_per_level: max >= 1 y raised_max >= max");
+        }
 
         foreach (KeyValuePair<string, JsonNode?> kv in root["calendar"]!.AsObject())
         {
@@ -794,8 +831,8 @@ internal static class MechanicCodes
     public const int BroteTwoLeaves = 2;
 
     /// <summary>
-    /// Todos los códigos que el generador sabe superponer, en orden ordinal. level-qa aún no reconoce Ha ni Fl (en QA-MECH-SPEC
-    /// salen como «?») ni distingue Ln de Li ni B2 de Br: lo hará con P6, con <see cref="CodeOf"/> en sus controles.
+    /// Todos los códigos que el generador sabe superponer, en orden ordinal. level-qa los lee con <see cref="CodeOf"/> (P6): Ha y
+    /// Fl, y Ln y B2 distintos de Li y Br.
     /// </summary>
     public static readonly string[] All =
         [.. new[] { Hoja, Matapi, Liana, LianaCount, Murky, Remolino, Barro, Lluvia, Brote, BroteTwo, Pirana, Tinaja, HojaAtada, Flor }.Order(StringComparer.Ordinal)];

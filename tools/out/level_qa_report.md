@@ -34,6 +34,7 @@ Generado por `dotnet run --project tools/level-qa -c Release -- Assets/_Project/
 | `QA-WINDOW` | bot_fail en la ventana del slot (03 sec. 17 #3; 08 sec. 4.1): falla en recuperacion, comodidad, estreno (< 0,20), remanso y rampa; un reto o un hito fuera de su ventana es aviso (c.2: se publica con la etiqueta que mide) | 0 |
 | `QA-DEBUT` | tableros de estreno con 2 vacios (tambien los de capacidad fuera de la rampa y del hito, 02 sec. 8) y un solo ejemplar de la mecanica; intro_mechanic y skippable = false solo en el nivel de intro (02 sec. 9.2 regla 2) | 0 |
 | `QA-LABEL-ACCURACY` | aviso: acierto de etiqueta por ciclo < 60 % (c.7) | 0 |
+| `QA-HITO-14` | K = 13 y 14 cuias solo en un hito con K = 13 en el k_plan de la especificacion: 13 colores + 1 vacio, sin capacidades, cueva de la Pirana ni Tinaja; 14 cuias como maximo (03 sec. 11-12; d.5.1 [P]) | 0 |
 | `QA-RELIEF-MIN` | relief con al menos una variante desde el nivel 31 (03 sec. 13; 08 sec. 4.1) | 0 |
 | `QA-RELIEF-VALID` | cada variante es un tablero valido (BoardBuilder y LevelValidation; con tinaja, su forma: una, su cuia contigua y en la misma fila, <= 12 cuias, T4 y combinaciones) | 0 |
 | `QA-RELIEF-MINUS` | minus_color resoluble (A* a 100.000) con el par entero publicado y sin el color removed, que nunca es una fruta de la tinaja (03 sec. 13; propuesta de la tinaja c.3 punto 4) | 0 |
@@ -47,8 +48,8 @@ Generado por `dotnet run --project tools/level-qa -c Release -- Assets/_Project/
 | `QA-MECH-SPEC` | las mecanicas del nivel estan en su celda del calendario (especificacion) | 0 |
 | `QA-MECH-CELL` | cada mecanica y capacidad de la celda esta en el nivel (sin turbias por T1: aviso) (especificacion; 02 sec. 8) | 0 |
 | `QA-GAP-120` | ninguna mecanica ni capacidad pasa mas de 120 niveles sin volver, sobre los niveles publicados (resumen, punto 6; d.2 regla 4) | 0 |
-| `QA-MECH-KEY` | llave presente en el tablero; agua del mundo en la Lluvia; llave del tutorial en el estreno (02 sec. 9.1; D-007) | 0 |
-| `QA-MECH-COUNT` | como mucho 2 mecanicas por nivel antes del 300 (02 sec. 9.2 regla 4) | 0 |
+| `QA-MECH-KEY` | llave presente en el tablero (Hoja y Liana con fruta); agua del mundo en la Lluvia; llave del tutorial en el estreno (02 sec. 9.1; D-007) | 0 |
+| `QA-MECH-COUNT` | mecanicas por nivel dentro del tope de la especificacion (mechanics_per_level; 02 sec. 9.2 regla 4: 2 antes del 300 y 3 despues, 3 solo en retos e hitos) | 0 |
 | `QA-MURKY-FLAG` | murky = true si y solo si hay posiciones en hidden (08 sec. 4.1) | 0 |
 | `QA-MURKY-T1` | Aguas turbias solo desde el 100 y en niveles Dificil o Muy dificil (02 T1); la tinaja queda fuera (excepcion de D-019, Q-Ti1 A) | 0 |
 | `QA-MURKY-LIMITS` | como mucho 3 cuias turbias y 4 dosis ocultas; T4 (02 T2-T4) | 0 |
@@ -66,6 +67,11 @@ Generado por `dotnet run --project tools/level-qa -c Release -- Assets/_Project/
 | `QA-TINAJA-DEBUT` | estreno con tinaja: sola y un ejemplar, 2 vacios sin contar la pareja, bot_fail < 0,20 y S0 sin trampas (02 sec. 9.2 regla 2; propuesta de la tinaja c.3 y d.3) | 0 |
 | `QA-TINAJA-SAFE` | ruta segura, 20 paseos seguros y 30 casuales [P] (03 sec. 8; D-019, Q-Ti1 A; propuesta de la tinaja c.3 punto 3) | 0 |
 | `QA-TINAJA-MORPHO` | coste de Morpho (w = 2, 40.000 nodos por realidad) en S0, la ruta y los paseos dentro de hint_timeout_ms con el factor del telefono [P] (propuesta de la tinaja c.3 punto 3; 08 sec. 9) | 0 |
+| `QA-VAR-HA` | Hoja atada: su fruta llave esta en el tablero y el nivel no empieza en Aguas estancadas (propuesta de D-007 b.3; 03 sec. 17 #6; 02 sec. 9.2 regla 1) | 0 |
+| `QA-VAR-B2` | Brote de dos hojas: espacio >= 2 al empezar, con 1-2 dosis (propuesta de D-007 b.3; 02 R10 b) | 0 |
+| `QA-VAR-FLOR` | Flor de vitoria-regia: key != key2, las dos frutas en el tablero, sin dosis suyas dentro y con casa fuera de ella a la vez (b.3; D-023 punto 5) | 0 |
+| `QA-VAR-LN` | Liana de cuenta: n de 1 a 2 (02 sec. 9.1 M3; b.3) | 0 |
+| `QA-VAR-DEBUT` | estreno de una variante de la 1.0: sola (sin otra mecanica ni capacidad) y un ejemplar (02 sec. 9.2 regla 2) | 0 |
 | `QA-SCHEMA` | JSON valido contra schemas/af-level-1.schema.json con python tools/validate_schema.py --pack; sin Python o sin jsonschema, falla (08 sec. 4.1; 03 sec. 17 #11) | 0 |
 | `QA-REPRO` | la especificacion y las semillas reproducen el pack byte a byte: se regenera la campana completa en memoria (03 sec. 17 #10; 08 sec. 2.4 y 4.1) | 0 |
 | `QA-BAND-Q` | banda medida (cuantil de D en el pool del rango) acorde al rol: comodidad, estreno, remanso y rampa <= 0,70; recuperacion <= 0,10 o D bajo la comodidad mas facil del ciclo; hito > 0,95 o par - 2K >= media del pool (03 sec. 7; c.3 reglas 3 y 5) | 0 |

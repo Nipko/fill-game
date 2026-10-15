@@ -13,8 +13,8 @@ asignan el esquema y el determinismo por semilla): además de las comprobaciones
 - valida cada pack contra `schemas/af-level-1.schema.json` lanzando `python tools/validate_schema.py --pack` (QA-SCHEMA;
   la única copia del esquema, y .NET no trae un validador de JSON Schema). Sin Python 3 con `jsonschema`, falla;
 - regenera la campaña en memoria con la especificación y comprueba que cada pack sale byte a byte (QA-REPRO, 03 §17 #10).
-  D depende del pool de cada rango de 03 §11, así que siempre se regenera el rango completo de la especificación (11-200),
-  aunque se compruebe un solo pack: tarda lo que el generador (en Release con 8 hilos en la máquina del dueño, entre 6 y
+  D depende del pool de cada rango de 03 §11, así que siempre se regenera el rango completo de la especificación
+  (`first_level`-`last_level`: 11-200 en `campaign_v1.json`), aunque se compruebe un solo pack: tarda lo que el generador (en Release con 8 hilos en la máquina del dueño, entre 6 y
   13 minutos según la carga);
 - con el pool regenerado, mide la banda de cada nivel (cuantil de D) y la compara con su rol (QA-BAND-Q, 03 §7).
 
@@ -30,6 +30,24 @@ en las variantes de alivio, la ruta y los paseos con `TinajaWalks.ReliefOptions`
 van con las opciones del nivel: el par y las trampas con `SolverOptions.ForLevel` y la ruta segura de Aguas turbias con
 `SafeMoves.ForPipeline(modo, nivel)`, sin poda de fútiles en los niveles con tinaja. Los packs sin tinaja dan el mismo
 resultado que antes.
+
+**201-700 y las variantes de la 1.0 (P6 de la tanda 4; 03 §11-§12; 02 §9.1 y §9.2; propuesta de D-007 b.3 y d.5.1).**
+
+- **Rangos desde la especificación y la cabecera, no desde el código.** El rango que se regenera es el de la especificación
+  (`first_level`-`last_level`); K, con el `k_min`-`k_max` de la cabecera del pack (QA-KMAX); el tope de mecánicas por nivel
+  (QA-MECH-COUNT), con la clave `mechanics_per_level` de la especificación: `{"max": 2, "raised_from_level": 300,
+  "raised_max": 3}` dice «2 antes del 300 y 3 después, 3 solo en retos e hitos» (02 §9.2 regla 4). Sin la clave, el tope es
+  `max` (2) en todos los niveles: es el caso de `campaign_v1.json` (11-200), que no la lleva y no cambia. La llevan
+  `sample_variants.json` y `sample_tinaja.json`, y la llevará `campaign_v2.json` (P4). Los hitos de K = 13 (QA-HITO-14) salen
+  del `k_plan` (el hito con K = 13, desde el 561 en 03 §11).
+- **Códigos del calendario de las variantes.** `MechanicChecks.Codes` lee cada `attrs[i]` con `MechanicCodes.CodeOf`, el mismo
+  código que el generador: la Liana de cuenta es `Ln` y no `Li`, el Brote de dos hojas `B2` y no `Br`, y la Hoja atada `Ha` y
+  la Flor `Fl` tienen su código (antes salían como `?`). Así QA-MECH-SPEC, QA-MECH-CELL, QA-MECH-DEBUT, QA-GAP-120, QA-MECH-COUNT
+  y el `intro_mechanic` de QA-DEBUT (`liana_n` pide una Liana de cuenta y `brote_n2` un Brote de dos hojas, por el código de la
+  tabla de la especificación) las cuentan bien. QA-MECH-KEY ya no pide llave a la Liana de cuenta (lleva `n`, no `key`).
+- **Controles por variante (QA-VAR-*, `Checks/VariantChecks.cs`)**, sobre los datos publicados (también si `BoardBuilder` los
+  rechaza) y en cada variante de alivio. `LevelValidation` de AF.Core (QA-VALID y QA-RELIEF-VALID) sigue siendo la regla
+  completa de cada mecánica; estos controles repiten, con un motivo propio, lo que pide P6.
 
 ## Uso
 
@@ -63,8 +81,14 @@ estreno de la Liana de cuenta, la Hoja atada, el Brote de dos hojas y la Flor de
 (243, 263, 283 y 303), lo escribe con `PackWriter` y su alivio a un pack temporal y comprueba que `PackReader` da el mismo
 tablero, los mismos `attrs` (también la `key2` de la Flor) y el mismo hash que el generador, en el nivel y en cada variante
 de relief, y que la Flor sin `key2` no se construye (`VariantsSelfTest.RunPackReadBack`, enlazado del generador). Así, si
-`PackReader` dejara de leer la `key2`, falla aquí aunque los packs de muestra ya den FAIL por los controles de las variantes
-que faltan (P6). Sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra la especificación; tarda unos segundos.
+`PackReader` dejara de leer la `key2`, falla aquí aunque los controles de las variantes (P6) no lo notaran. Sale con 0 si todo
+pasa, 1 si algo falla y 2 si no encuentra la especificación; tarda unos segundos.
+
+Packs de muestra de las variantes (P5; `pack_schema` 3, niveles 241-320), con su especificación (P6: pasan con 0 fallos):
+
+```
+dotnet run --project tools/level-qa -c Release -- tools/out/sample_variants/mundo_06_v1.json tools/out/sample_variants/mundo_07_v1.json --spec tools/level-generator/specs/sample_variants.json
+```
 
 ## Comprobaciones
 
@@ -100,6 +124,7 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-WINDOW | `bot_fail` en la ventana del slot: falla en recuperación, comodidad, estreno (< 0,20), remanso y rampa; un reto o el hito fuera de su ventana es aviso (se publica con la etiqueta que mide) | 03 §17 #3; 08 §4.1; c.2 |
 | QA-DEBUT | estrenos con 2 vacíos sin contar la tinaja ni su cuia (también el de una capacidad fuera de la rampa y del hito: la Cuia chica de 3 en el 22) y un ejemplar (la tinaja con su cuia es uno); `intro_mechanic` y `skippable` = false solo en el nivel de intro | 02 §9.2 regla 2; 02 §8; propuesta de la tinaja c.5 |
 | QA-LABEL-ACCURACY | aviso: acierto de etiqueta por ciclo < 60 % | c.7 |
+| QA-HITO-14 | K = 13 o 14 cuias solo en un hito (p20) cuyo K del `k_plan` de la especificación es 13 (desde el 561); el hito de 14 cuias lleva 13 colores + 1 vacío, sin capacidades, sin la cueva de la Piraña (sería la cuia 15) y sin la Tinaja (con ella, 12 cuias como mucho); más de 14 cuias, QA-STRUCT. La firma 920 de 701-1000 (K = 12 + 1 vacío + la cueva, d.5.7 [P]) queda fuera de 201-700 y fallaría aquí | 03 §11-§12; d.5.1 [P]; 02 R1 y §5 |
 | QA-RELIEF-MIN | ≥ 1 variante desde el 31 | 03 §13 |
 | QA-RELIEF-VALID | variantes válidas; con tinaja, también su forma (una, su cuia contigua y en la misma fila, ≤ 12 cuias, T4 y combinaciones) | 03 §13; 02 §9.1 M13 |
 | QA-RELIEF-MINUS | `minus_color` resoluble con el par entero publicado y sin quitar una fruta de la tinaja | 03 §13; propuesta de la tinaja c.3 punto 4 |
@@ -113,8 +138,13 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-MECH-SPEC | mecánicas permitidas por la celda del calendario | especificación |
 | QA-MECH-CELL | cada mecánica y capacidad de la celda está en el nivel; sin turbias por el respaldo de T1, aviso | especificación; 02 §8 |
 | QA-GAP-120 | ninguna mecánica ni capacidad (Cuia chica, Cuia alta) pasa más de 120 niveles sin volver, sobre lo publicado; solo cuenta un hueco con todos sus niveles en los paquetes | resumen 6; d.2 regla 4 |
-| QA-MECH-KEY | llave presente; agua del mundo en la Lluvia; llave del tutorial en el estreno | 02 §9.1; D-007 |
-| QA-MECH-COUNT | ≤ 2 mecánicas por nivel antes del 300 (la tinaja con su cuia cuenta como una) | 02 §9.2 regla 4 |
+| QA-MECH-KEY | llave presente (Hoja y Liana con fruta; la Hoja atada y la Flor, en QA-VAR-HA y QA-VAR-FLOR); agua del mundo en la Lluvia; llave del tutorial en el estreno | 02 §9.1; D-007 |
+| QA-MECH-COUNT | mecánicas distintas por nivel dentro del tope de `mechanics_per_level` de la especificación: 2 antes del 300 y 3 después, 3 solo en retos e hitos (la tinaja con su cuia cuenta como una; las capacidades no cuentan [P]) | 02 §9.2 regla 4; D-009 |
+| QA-VAR-HA | Hoja atada: su fruta llave en el tablero y el nivel no empieza en Aguas estancadas | propuesta de D-007 b.3; 03 §17 #6; 02 §9.2 regla 1 |
+| QA-VAR-B2 | Brote de dos hojas: espacio ≥ 2 al empezar, con 1-2 dosis («empieza con 2 dosis como mucho») | b.3; 02 R10 b |
+| QA-VAR-FLOR | Flor de vitória-régia: `key` ≠ `key2` (c1 ≠ c2), las dos frutas en el tablero, ninguna dosis suya dentro de la flor y casa fuera de ella para las dos a la vez (una cuia con cap = U_c de cada una; dos si coinciden) | b.3; D-023 punto 5 |
+| QA-VAR-LN | Liana de cuenta: `n` de 1 a 2 | 02 §9.1 M3; b.3 |
+| QA-VAR-DEBUT | tablero de estreno de una variante (Ln, Ha, B2, Fl): sola, sin otra mecánica ni capacidad, y un ejemplar (los 2 vacíos y `bot_fail` < 0,20, QA-DEBUT y QA-WINDOW) | 02 §9.2 regla 2 |
 | QA-MURKY-FLAG | `murky` coherente con `hidden` (Aguas turbias o tinaja) | 08 §4.1 |
 | QA-MURKY-T1 | Aguas turbias solo desde el 100 y en Difícil o Muy difícil; la tinaja queda fuera (excepción de D-019) | 02 T1; D-019, Q-Ti1 A |
 | QA-MURKY-LIMITS | ≤ 3 cuias y ≤ 4 dosis ocultas; T4 | 02 T2-T4 |
@@ -147,7 +177,12 @@ Cada fixture es un paquete con un defecto. El nombre empieza por el id de la com
 ```
 for f in tools/level-qa/fixtures/QA-*.json; do
   id=$(basename "$f" | sed 's/__.*//')
-  case "$f" in *__tinaja_*) spec="--spec tools/level-generator/specs/sample_tinaja.json";; *) spec="";; esac
+  case "$f" in
+    *__tinaja_*) spec="--spec tools/level-generator/specs/sample_tinaja.json";;
+    *__variante_*) spec="--spec tools/level-generator/specs/sample_variants.json";;
+    *__hito14_*) spec="--spec tools/level-qa/fixtures/specs/hito14_k13.json";;
+    *) spec="";;
+  esac
   out=$(dotnet run --project tools/level-qa -c Release --no-build -- "$f" --no-reproduce $spec); code=$?
   echo "$(basename "$f"): exit=$code $(echo "$out" | grep -q "\[$id\]" && echo presente || echo AUSENTE)"
 done
@@ -185,3 +220,20 @@ clasificación de FIXG; QA-TINAJA-MORPHO, un hito de 12 cuias con 5 dosis en el 
 (tope 18.750), y QA-RELIEF-SAFE, una variante `minus_color` válida para AF.Core y sin Aguas estancadas al empezar en la que
 ninguna realidad tiene solución (con las opciones de alivio, los tableros de prueba que se ganan en la realidad verdadera
 siempre tuvieron ruta segura; por eso da también QA-RELIEF-MINUS).
+
+Los de las variantes y de 201-700 (P6; `QA-*__variante_*.json`, niveles 241-320) se pasan con la especificación de la muestra
+de P5 (`specs/sample_variants.json`) y salen de sus packs con un defecto; además del suyo, dan los fallos que se citan:
+QA-VAR-HA (`hoja_atada_sin_su_fruta`: la llave del 263 pasa a Arazá, que no está en el tablero; también QA-VALID y
+QA-RELIEF-VALID, y QA-VAR-HA en las dos variantes de alivio; `hoja_atada_atascada`: cinco cuias llenas en cuadrado latino con la
+Hoja atada, que empieza en Aguas estancadas; también QA-STUCK), QA-VAR-B2 (`brote_dos_hojas_sin_espacio`: el Brote de dos hojas
+del 283 con 3 dosis; también QA-VALID), QA-VAR-FLOR (`flor_llaves_iguales`: key2 = key en el 303, que `BoardBuilder` y el
+esquema rechazan, QA-STRUCT y QA-SCHEMA; `flor_con_su_fruta_dentro`: una dosis de su key2 dentro de la Flor; también QA-VALID),
+QA-VAR-LN (`liana_de_cuenta_n3`: n = 3 en el 243; también QA-STRUCT), QA-VAR-DEBUT (`estreno_con_dos_ejemplares`: dos Lianas de
+cuenta en el 243; `estreno_con_otra_mecanica`: el estreno de la Hoja atada con una Liana de cuenta; los dos, también QA-DEBUT)
+y QA-MECH-COUNT (`tres_mecanicas_antes_del_300`: el reto 286 con una tercera mecánica; `tres_mecanicas_en_comodidad`: la
+comodidad 307 con tres, que desde el 300 solo valen en retos e hitos; los dos, también QA-MECH-SPEC). QA-HITO-14 tiene dos:
+`variante_k13_fuera_de_su_hito`, un hito del 300 con 14 cuias (K = 13 + 1 vacío) cuando el `k_plan` de la muestra lleva K = 9
+en el hito, y `hito14_con_cuia_alta`, el mismo hito con una Cuia alta de 5, que se pasa con `fixtures/specs/hito14_k13.json`
+(la muestra con K = 13 en los hitos; solo para este fixture, no se genera): el hito de 14 cuias está planificado y solo falla
+su forma. Los tableros rehechos a mano (`hoja_atada_atascada`, `brote_dos_hojas_sin_espacio`, `flor_con_su_fruta_dentro` y los
+dos de QA-HITO-14) no llevan variantes de alivio, así que dan además QA-RELIEF-MIN y QA-SCHEMA.

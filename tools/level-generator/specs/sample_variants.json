@@ -23,6 +23,7 @@
     {"id": "agua_negro", "engine": 14, "name_es": "Agua del Río Negro", "debut": 61}
   ],
   "risk_pairs": [[4, 5], [5, 6], [6, 13], [13, 14], [14, 4], [3, 12], [12, 11], [11, 10], [8, 9], [1, 2]],
+  "mechanics_per_level": {"max": 2, "raised_from_level": 300, "raised_max": 3, "note": "02 §9.2 regla 4 (D-009): como mucho 2 mecánicas distintas por nivel antes del 300 y 3 después, 3 solo en retos e hitos; las capacidades no cuentan [P]. Lo lee level-qa (QA-MECH-COUNT, P6); sin esta clave, el tope es 2 en todos los niveles (campaign_v1, 11-200)."},
   "max_risk_pairs": [
     {"levels": [241, 320], "max": 2}
   ],

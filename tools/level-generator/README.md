@@ -317,9 +317,12 @@ lector de la especificación rechaza cualquier otro código):
   pack. Lo fija `dotnet run --project tools/level-qa -c Release -- --self-test key2` (`VariantsSelfTest.RunPackReadBack`,
   enlazado en level-qa): el estreno de cada variante de la muestra, escrito con `PackWriter` y su alivio a un pack temporal,
   se lee con el `PackReader` de level-qa con el mismo tablero, los mismos `attrs` (también la `key2`) y el mismo hash que el
-  del generador, en el nivel y en sus variantes de relief; la Flor sin `key2` no se construye. Los controles por variante de level-qa (los códigos Ln, Ha, B2 y Fl en QA-MECH-*, y `intro_mechanic` `liana_n` y
-  `brote_n2` en QA-DEBUT) son de P6: hasta entonces, level-qa da FAIL en QA-MECH-SPEC, QA-MECH-CELL, QA-MECH-KEY y QA-DEBUT
-  sobre los packs de muestra, y 0 fallos en las demás (QA-VALID, QA-PAR, QA-BOT, QA-SCHEMA y QA-REPRO incluidas).
+  del generador, en el nivel y en sus variantes de relief; la Flor sin `key2` no se construye. Los controles por variante de
+  level-qa (P6: los códigos Ln, Ha, B2 y Fl en QA-MECH-*, `intro_mechanic` `liana_n` y `brote_n2` en QA-DEBUT, QA-VAR-* y el
+  tope de mecánicas de `mechanics_per_level`) los cumplen los packs de muestra: level-qa sale con 0 fallos con
+  `--spec tools/level-generator/specs/sample_variants.json` (`tools/level-qa/README.md`). La clave `mechanics_per_level` de
+  las especificaciones (`{"max": 2, "raised_from_level": 300, "raised_max": 3}`, 02 §9.2 regla 4) solo la lee level-qa por
+  ahora; MAX-2 de `--validate-spec` sigue con el 300 en el código hasta P4.
 
 Muestra (no es el calendario de 201-700, que copiará `campaign_v2.json` en P4 desde d.5.3 de la propuesta):
 
