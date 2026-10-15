@@ -1,7 +1,6 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using AF.Ads;
 using AF.Economy;
 using AF.IAP;
@@ -183,7 +182,7 @@ namespace AF.UI
             _refillNote.gameObject.SetActive(false);
             if (refillOn)
             {
-                _refillLabel.text = string.Format(CultureInfo.InvariantCulture, UiText.NoCanoesRefill, max);
+                _refillLabel.text = UiText.NoCanoesRefill(max);
                 UiBuilder.SetEnabled(_refill.Button, missing == 0);
                 _refillPrice.Set(price, 0, missing > 0);
                 ModalKit.Place(_refill, 16f, y, inner);
@@ -204,7 +203,7 @@ namespace AF.UI
             _infinite.Button.gameObject.SetActive(infiniteOn);
             if (infiniteOn)
             {
-                _infiniteLabel.text = string.Format(CultureInfo.InvariantCulture, UiText.NoCanoesInfinite, services?.PriceText(StoreCatalog.InfiniteCanoes1h) ?? string.Empty);
+                _infiniteLabel.text = UiText.NoCanoesInfinite(services?.PriceText(StoreCatalog.InfiniteCanoes1h) ?? string.Empty);
                 ModalKit.Place(_infinite, 16f, y, inner);
                 y += ModalKit.HeightOf(_infinite) + 6f;
             }

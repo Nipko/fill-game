@@ -24,8 +24,8 @@ namespace AF.Localization
     /// </list>
     /// Las claves van en <c>[a-z0-9_.]</c> (UI en <c>snake_case</c> y contenido con puntos; 49 a) y no se repiten. Cualquier
     /// otra columna es un error (con la forma correcta si solo cambian las mayúsculas o el separador: «pt-br» → «pt-BR»), para
-    /// que una errata no se lea como un idioma. El orden alfabético de las filas lo comprueban los tests de las tablas
-    /// (<see cref="UnsortedAt"/>).
+    /// que una errata no se lea como un idioma. El orden ordinal de las filas por clave (<c>sorted()</c> en Python,
+    /// <c>StringComparer.Ordinal</c> en C#; regla de G1) lo comprueban los tests de las tablas (<see cref="UnsortedAt"/>).
     /// </summary>
     public sealed class LocTable
     {
@@ -110,8 +110,8 @@ namespace AF.Localization
         public int Count => _rows.Length;
 
         /// <summary>
-        /// Primera fila cuya clave no va después de la anterior en orden ordinal (filas en orden alfabético por clave, 08
-        /// §4.7), o -1 si están en orden.
+        /// Primera fila cuya clave no va después de la anterior en orden ordinal (filas en orden ordinal por clave, por código
+        /// Unicode y nunca por la cultura; regla de G1), o -1 si están en orden.
         /// </summary>
         public int UnsortedAt { get; }
 

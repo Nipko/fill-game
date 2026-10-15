@@ -1,6 +1,5 @@
 #nullable enable
 using System.Collections.Generic;
-using System.Globalization;
 using AF.Levels;
 using AF.Presentation;
 using TMPro;
@@ -106,7 +105,7 @@ namespace AF.UI
         {
             _root.gameObject.SetActive(true);
             _title.text = UiText.Level(level);
-            _reward.text = string.Format(CultureInfo.InvariantCulture, UiText.LevelFailedReward, UiText.Grouped(reward));
+            _reward.text = UiText.LevelFailedReward(reward);
             float width = Mathf.Min(328f, canvasW - 32f);
             float inner = width - 32f;
             float y = 16f;

@@ -50,8 +50,10 @@ namespace AF.UI
     /// <c>level</c>, <c>world</c> y <c>next</c> (del mismo vocabulario que <c>then</c>). Y <c>AF_LAYOUT</c> con
     /// <c>"screen":"level_card"</c> o <c>"screen":"world_banner"</c> (id <c>world_banner</c>, el rectángulo de la tarjeta) al
     /// terminar su entrada; en la línea <c>level</c>, el id <c>world_banner</c> solo con la tarjeta a la vista.</para>
+    /// <para>Clase parcial (arquitectura de la tanda 4, §3): cada función añade su <c>DevProbe.&lt;Función&gt;.cs</c>; el idioma de
+    /// la UI (<c>loc</c>), en DevProbe.Loc.cs.</para>
     /// </remarks>
-    public sealed class DevProbe
+    public sealed partial class DevProbe
     {
         private readonly StringBuilder _sb = new StringBuilder(1024);
         private readonly Vector3[] _corners = new Vector3[4];

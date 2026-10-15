@@ -79,7 +79,7 @@ namespace AF.Tests.EditMode
         [TestCase("es-MX", "es-MX", "1,234,567", "1,234.5")]
         [TestCase("es-PE", "es-PE", "1,234,567", "1,234.5")]
         [TestCase("es-419", "es-419", "1,234,567", "1,234.5")]
-        [TestCase("es-CR", "es-CR", "1 234 567", "1 234,5")]
+        [TestCase("es-CR", "es-CR", "1\u00A0234\u00A0567", "1\u00A0234,5")]
         [TestCase("es-CO", "es-CO", "1.234.567", "1.234,5")]
         [TestCase("es-AR", "es-AR", "1.234.567", "1.234,5")]
         [TestCase("es-ES", "es-ES", "1.234.567", "1.234,5")]
