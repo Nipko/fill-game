@@ -1,0 +1,364 @@
+ContentEnd(0)	Río arriba llegan 100 niveles nuevos en unos 0 días.
+ContentEnd(14)	Río arriba llegan 100 niveles nuevos en unos 14 días.
+ContentEnd(2)	Río arriba llegan 100 niveles nuevos en unos 2 días.
+ContentEnd(21)	Río arriba llegan 100 niveles nuevos en unos 21 días.
+DifficultyChip(hard)	Difícil
+DifficultyChip(normal)	<null>
+DifficultyChip(very_hard)	Muy difícil
+DifficultySubtitle(hard,off)	<null>
+DifficultySubtitle(hard,on)	Aguas bravas
+DifficultySubtitle(normal,off)	<null>
+DifficultySubtitle(normal,on)	<null>
+DifficultySubtitle(very_hard,off)	<null>
+DifficultySubtitle(very_hard,on)	Noche de jaguar
+DoubleHarvestGain(1000)	+1.000 → +2.000
+DoubleHarvestGain(20)	+20 → +40
+DoubleHarvestGain(60)	+60 → +120
+FaunaFact(fauna_aotus_trivirgatus_dato)	El papá carga a la cría
+FaunaFact(fauna_ateles_chamek_dato)	Siembra la selva: dispersa muchas semillas
+FaunaFact(fauna_cacajao_calvus_ucayalii_dato)	Su cara roja es señal de buena salud
+FaunaFact(fauna_lagothrix_lagothricha_dato)	El mono más grande de Amacayacu
+FaunaFact(fauna_mico_argentatus_dato)	Vive en Alter do Chão, junto al Tapajós
+FaunaFact(fauna_otro_dato)	
+FaunaFact(fauna_pithecia_pithecia_dato)	Casi siempre se mueve a saltos
+FaunaFact(fauna_plecturocebus_discolor_dato)	Las parejas cantan a dúo al amanecer
+FaunaFact(fauna_saguinus_bicolor_dato)	Manaos tiende puentes de cuerda para él
+FaunaFact(fauna_saguinus_imperator_dato)	Su bigote blanco pasa de los hombros
+FaunaFact(fauna_saimiri_collinsi_dato)	Cruza el bosque en fila, por ramas finas
+FaunaFact(fauna_saimiri_sciureus_albigena_dato)	Vecinos del Orinoco
+Grouped(0)	0
+Grouped(1000)	1.000
+Grouped(1234567)	1.234.567
+Grouped(36000)	36.000
+Grouped(999)	999
+Level(1)	Nivel 1
+Level(1000)	Nivel 1000
+Level(41)	Nivel 41
+LevelAttempt(41,2)	Nivel 41 · intento 2
+LevelAttempt(7,0)	Nivel 7 · intento 1
+MissingSeeds(0)	Te faltan 0 semillas
+MissingSeeds(1000)	Te faltan 1.000 semillas
+MissingSeeds(1234567)	Te faltan 1.234.567 semillas
+MissingSeeds(2)	Te faltan 2 semillas
+MissingSeeds(21)	Te faltan 21 semillas
+MissingSeeds(460)	Te faltan 460 semillas
+PlayLevel(1)	Jugar · Nivel 1
+PlayLevel(1000)	Jugar · Nivel 1000
+PlayLevel(387)	Jugar · Nivel 387
+RevealMissing(0)	Te faltan 0 semillas
+RevealMissing(1000)	Te faltan 1.000 semillas
+RevealMissing(1234567)	Te faltan 1.234.567 semillas
+RevealMissing(2)	Te faltan 2 semillas
+RevealMissing(21)	Te faltan 21 semillas
+RevealMissing(460)	Te faltan 460 semillas
+RewardLine(1000)	Premio: 1.000
+RewardLine(20)	Premio: 20
+RewardLine(60)	Premio: 60
+Ribbon(3)	×3
+Ribbon(4)	×4
+SimulatedAdLabel(interstitial_post_level,interstitial)	interstitial_post_level · intersticial
+SimulatedAdLabel(interstitial_post_level,rewarded)	interstitial_post_level · recompensado
+SimulatedAdLabel(rv_daily_chest,interstitial)	rv_daily_chest · intersticial
+SimulatedAdLabel(rv_daily_chest,rewarded)	rv_daily_chest · recompensado
+SimulatedAdLabel(rv_double_harvest,interstitial)	rv_double_harvest · intersticial
+SimulatedAdLabel(rv_double_harvest,rewarded)	rv_double_harvest · recompensado
+SimulatedAdLabel(rv_extra_canoe,interstitial)	rv_extra_canoe · intersticial
+SimulatedAdLabel(rv_extra_canoe,rewarded)	rv_extra_canoe · recompensado
+SimulatedAdLabel(rv_hint,interstitial)	rv_hint · intersticial
+SimulatedAdLabel(rv_hint,rewarded)	rv_hint · recompensado
+SimulatedAdLabel(rv_reveal,interstitial)	rv_reveal · intersticial
+SimulatedAdLabel(rv_reveal,rewarded)	rv_reveal · recompensado
+SimulatedAdLabel(rv_undo_refill,interstitial)	rv_undo_refill · intersticial
+SimulatedAdLabel(rv_undo_refill,rewarded)	rv_undo_refill · recompensado
+StuckBalsa()	Balsa de rescate\n
+StuckBalsa(COP 3.900)	Balsa de rescate\nCOP 3.900
+StuckBalsa(US$ 1,99)	Balsa de rescate\nUS$ 1,99
+StuckPack(1000,)	Puñado de semillas\n1.000 · 
+StuckPack(1000,COP 3.900)	Puñado de semillas\n1.000 · COP 3.900
+StuckPack(1000,US$ 1,99)	Puñado de semillas\n1.000 · US$ 1,99
+StuckPack(2500,)	Puñado de semillas\n2.500 · 
+StuckPack(2500,COP 3.900)	Puñado de semillas\n2.500 · COP 3.900
+StuckPack(2500,US$ 1,99)	Puñado de semillas\n2.500 · US$ 1,99
+StuckRefillAd(3,100)	+3 Deshacer\nVer video
+StuckRefillAd(3,1000)	+3 Deshacer\nVer video
+StuckRefillAd(3,150)	+3 Deshacer\nVer video
+StuckRefillSeeds(3,100,one)	+3 Deshacer · 100 semillas
+StuckRefillSeeds(3,100,two)	+3 Deshacer\n100 semillas
+StuckRefillSeeds(3,1000,one)	+3 Deshacer · 1000 semillas
+StuckRefillSeeds(3,1000,two)	+3 Deshacer\n1000 semillas
+StuckRefillSeeds(3,150,one)	+3 Deshacer · 150 semillas
+StuckRefillSeeds(3,150,two)	+3 Deshacer\n150 semillas
+Tutorial(alta)	Esta agua tiene cinco dosis: solo cabe en la cuia alta
+Tutorial(barro)	El barro acepta cualquier fruta; el primer vertido lo lava… y entierra lo que hay debajo.
+Tutorial(brote)	El brote está cerrado: vierte más camu camu encima para que germine.
+Tutorial(chica)	Esta cuia chica solo guarda dos dosis: úsala para apartar, no para terminar
+Tutorial(hoja)	Esta hoja solo deja pasar aguaje. Vierte aguaje para abrirla.
+Tutorial(liana)	La liana se suelta cuando selles una cuia de taperebá.
+Tutorial(lluvia)	La lluvia llena esta cuia cada tres vertidos: deja arriba el agua o saca la fruta antes de que la tape.
+Tutorial(matapi)	Lo que entra al matapi no sale. Llénalo con una sola fruta.
+Tutorial(murky)	El agua turbia esconde frutas. Debajo nunca se repite la fruta de encima.
+Tutorial(otro)	<null>
+Tutorial(pirana)	Cada cuatro vertidos, la piraña muerde la cuia que acabas de llenar. Sellarla a tiempo evita el mordisco.
+Tutorial(remolino)	Las dos cuias del remolino están unidas por debajo: lo que viertes en una aparece en el fondo de la otra.
+UiText.Back	Volver
+UiText.BackHome	Volver al inicio
+UiText.Buy	Comprar
+UiText.Cancel	Cancelar
+UiText.Canoes	Canoas
+UiText.ContentEndTitle	El río sigue creciendo
+UiText.DifficultyHard	Difícil
+UiText.DifficultySubtitleHard	Aguas bravas
+UiText.DifficultySubtitleVeryHard	Noche de jaguar
+UiText.DifficultyVeryHard	Muy difícil
+UiText.DoubleHarvest	Cosecha doble: x2 por video
+UiText.ExtraCuia	+1 cuia
+UiText.ExtraCuiaGift	Capi te trae una cuia más para este nivel. La próxima la encuentras en tu Canasta
+UiText.FaunaSightedCard	¡Miquito a la vista!
+UiText.FireflyGift	+1 Luciérnaga
+UiText.FireflyLine	Una luciérnaga ilumina las de una cuia
+UiText.GiveUpConfirmCanoe	Perderás 1 canoa
+UiText.GiveUpConfirmLastCanoe	Perderás tu última canoa
+UiText.GiveUpConfirmTitle	¿Seguro?
+UiText.Harvest	Cosecha
+UiText.Home	Inicio
+UiText.KeepPlaying	Seguir jugando
+UiText.LevelComplete	¡Nivel completado!
+UiText.LevelFailed	Nivel fallido
+UiText.Next	Siguiente
+UiText.NoCanoesNext	Tu próxima canoa vuelve en
+UiText.NoCanoesTitle	Sin canoas
+UiText.NoCanoesVideo	Canoa extra · Ver video
+UiText.Pause	Pausa
+UiText.Play	Jugar
+UiText.ProfileLockedMigration	No pudimos abrir tu progreso, pero sigue a salvo. Actualiza la app para recuperarlo: lo que juegues ahora no se guardará y no hay compras.
+UiText.ProfileLockedPlay	Jugar sin guardar
+UiText.ProfileLockedTitle	Actualiza Tintalú
+UiText.ProfileLockedTooNew	Tu progreso es de una versión más nueva de Tintalú y sigue a salvo. Actualiza la app para jugar con él: lo que juegues ahora no se guardará y no hay compras.
+UiText.Quit	Salir
+UiText.QuitConfirmCanoe	Perderás 1 canoa
+UiText.QuitConfirmTitle	¿Salir del nivel?
+UiText.RescueApplied	¡Una cuia más! Sigue desde aquí
+UiText.Restart	Reiniciar
+UiText.RestartConfirmBody	Perderás los vertidos de este intento
+UiText.RestartConfirmTitle	¿Volver a la orilla?
+UiText.RestartLong	Volver a la orilla
+UiText.Retry	Reintentar
+UiText.RevealGiftToast	+1 Luciérnaga
+UiText.RevealLabel	Revelar
+UiText.RiverLoweredColor	El río bajó: esta vez hay un color menos
+UiText.RiverLoweredCuia	El río bajó: esta vez hay una cuia más
+UiText.Seeds	Semillas
+UiText.Settings	Ajustes
+UiText.SimulatedAdClose	Cerrar
+UiText.SimulatedAdInterstitial	intersticial
+UiText.SimulatedAdRewarded	recompensado
+UiText.StuckBalsaContent	Todo para seguir: semillas, una cuia y canoas infinitas
+UiText.StuckCanoeLost	Travesía perdida: –1 canoa
+UiText.StuckCanoeLostLast	Travesía perdida: tu última canoa
+UiText.StuckGiveUp	Rendirse
+UiText.StuckRescueCta	Continuar: +1 cuia
+UiText.StuckRescueDiscount	Primer rescate del día: –50 %
+UiText.StuckRestart	Volver a la orilla (gratis)
+UiText.StuckSubtitle	Aguas estancadas
+UiText.StuckTitle	No hay más vertidos
+UiText.StuckUndo	Deshacer · Marea
+UiText.StuckUndoGift	+1 Deshacer · gratis
+UiText.StuckUnsolvable	Ni una cuia más salva este tramo. Prueba la Marea o vuelve a la orilla.
+UiText.TutorialAlta	Esta agua tiene cinco dosis: solo cabe en la cuia alta
+UiText.TutorialBarro	El barro acepta cualquier fruta; el primer vertido lo lava… y entierra lo que hay debajo.
+UiText.TutorialBrote	El brote está cerrado: vierte más camu camu encima para que germine.
+UiText.TutorialChica	Esta cuia chica solo guarda dos dosis: úsala para apartar, no para terminar
+UiText.TutorialHoja	Esta hoja solo deja pasar aguaje. Vierte aguaje para abrirla.
+UiText.TutorialLiana	La liana se suelta cuando selles una cuia de taperebá.
+UiText.TutorialLluvia	La lluvia llena esta cuia cada tres vertidos: deja arriba el agua o saca la fruta antes de que la tape.
+UiText.TutorialMatapi	Lo que entra al matapi no sale. Llénalo con una sola fruta.
+UiText.TutorialMurky	El agua turbia esconde frutas. Debajo nunca se repite la fruta de encima.
+UiText.TutorialMurkyRule	Debajo nunca se repite la fruta de encima.
+UiText.TutorialPirana	Cada cuatro vertidos, la piraña muerde la cuia que acabas de llenar. Sellarla a tiempo evita el mordisco.
+UiText.TutorialRemolino	Las dos cuias del remolino están unidas por debajo: lo que viertes en una aparece en el fondo de la otra.
+UiText.Undo	Deshacer
+UiText.WorldSeparator	 · 
+WorldBanner(1)	Mundo 1: Estuario · Brasil (Pará) · Amazonas / Tocantins
+WorldBanner(10)	Mundo 10: Alto Negro · Venezuela / Brasil · Negro, Casiquiare
+WorldBanner(11)	Mundo 11: Escudo de Guayana · Guyana / Surinam / Guayana Francesa · Takutu / Branco, Maroni
+WorldBanner(12)	Mundo 12: Invitados del Orinoco · Venezuela / Colombia · Caroní, Caño Cristales (vecinos del Orinoco)
+WorldBanner(13)	Mundo 13: El origen · Perú (Andes) · Marañón alto
+WorldBanner(2)	Mundo 2: Tapajós · Brasil (Pará) · Tapajós
+WorldBanner(3)	Mundo 3: Manaos · Brasil (Amazonas) · Negro + Solimões
+WorldBanner(4)	Mundo 4: Trapecio · Colombia · Amazonas / Putumayo
+WorldBanner(5)	Mundo 5: Loreto · Perú · Marañón-Ucayali
+WorldBanner(6)	Mundo 6: Oriente · Ecuador · Napo + lagunas negras de Cuyabeno
+WorldBanner(7)	Mundo 7: Madre de Dios · Perú · Tambopata / Madre de Dios
+WorldBanner(8)	Mundo 8: Madidi · Bolivia · Beni / Mamoré, Iténez
+WorldBanner(9)	Mundo 9: Ucayali · Perú · Ucayali, Shanay-Timpishka
+WorldCountry(1)	Brasil (Pará)
+WorldCountry(10)	Venezuela / Brasil
+WorldCountry(11)	Guyana / Surinam / Guayana Francesa
+WorldCountry(12)	Venezuela / Colombia
+WorldCountry(13)	Perú (Andes)
+WorldCountry(2)	Brasil (Pará)
+WorldCountry(3)	Brasil (Amazonas)
+WorldCountry(4)	Colombia
+WorldCountry(5)	Perú
+WorldCountry(6)	Ecuador
+WorldCountry(7)	Perú
+WorldCountry(8)	Bolivia
+WorldCountry(9)	Perú
+WorldHeading(1)	Mundo 1: Estuario
+WorldHeading(10)	Mundo 10: Alto Negro
+WorldHeading(11)	Mundo 11: Escudo de Guayana
+WorldHeading(12)	Mundo 12: Invitados del Orinoco
+WorldHeading(13)	Mundo 13: El origen
+WorldHeading(2)	Mundo 2: Tapajós
+WorldHeading(3)	Mundo 3: Manaos
+WorldHeading(4)	Mundo 4: Trapecio
+WorldHeading(5)	Mundo 5: Loreto
+WorldHeading(6)	Mundo 6: Oriente
+WorldHeading(7)	Mundo 7: Madre de Dios
+WorldHeading(8)	Mundo 8: Madidi
+WorldHeading(9)	Mundo 9: Ucayali
+WorldName(1)	Estuario
+WorldName(10)	Alto Negro
+WorldName(11)	Escudo de Guayana
+WorldName(12)	Invitados del Orinoco
+WorldName(13)	El origen
+WorldName(2)	Tapajós
+WorldName(3)	Manaos
+WorldName(4)	Trapecio
+WorldName(5)	Loreto
+WorldName(6)	Oriente
+WorldName(7)	Madre de Dios
+WorldName(8)	Madidi
+WorldName(9)	Ucayali
+WorldPlace(1)	Brasil (Pará) · Amazonas / Tocantins
+WorldPlace(10)	Venezuela / Brasil · Negro, Casiquiare
+WorldPlace(11)	Guyana / Surinam / Guayana Francesa · Takutu / Branco, Maroni
+WorldPlace(12)	Venezuela / Colombia · Caroní, Caño Cristales (vecinos del Orinoco)
+WorldPlace(13)	Perú (Andes) · Marañón alto
+WorldPlace(2)	Brasil (Pará) · Tapajós
+WorldPlace(3)	Brasil (Amazonas) · Negro + Solimões
+WorldPlace(4)	Colombia · Amazonas / Putumayo
+WorldPlace(5)	Perú · Marañón-Ucayali
+WorldPlace(6)	Ecuador · Napo + lagunas negras de Cuyabeno
+WorldPlace(7)	Perú · Tambopata / Madre de Dios
+WorldPlace(8)	Bolivia · Beni / Mamoré, Iténez
+WorldPlace(9)	Perú · Ucayali, Shanay-Timpishka
+WorldPlaceLine(1,named)	<b>Estuario</b> · Brasil (Pará) · Amazonas / Tocantins
+WorldPlaceLine(1,place)	Brasil (Pará) · Amazonas / Tocantins
+WorldPlaceLine(10,named)	<b>Alto Negro</b> · Venezuela / Brasil · Negro, Casiquiare
+WorldPlaceLine(10,place)	Venezuela / Brasil · Negro, Casiquiare
+WorldPlaceLine(11,named)	<b>Escudo de Guayana</b> · Guyana / Surinam / Guayana Francesa · Takutu / Branco, Maroni
+WorldPlaceLine(11,place)	Guyana / Surinam / Guayana Francesa · Takutu / Branco, Maroni
+WorldPlaceLine(12,named)	<b>Invitados del Orinoco</b> · Venezuela / Colombia · Caroní, Caño Cristales (vecinos del Orinoco)
+WorldPlaceLine(12,place)	Venezuela / Colombia · Caroní, Caño Cristales (vecinos del Orinoco)
+WorldPlaceLine(13,named)	<b>El origen</b> · Perú (Andes) · Marañón alto
+WorldPlaceLine(13,place)	Perú (Andes) · Marañón alto
+WorldPlaceLine(2,named)	<b>Tapajós</b> · Brasil (Pará) · Tapajós
+WorldPlaceLine(2,place)	Brasil (Pará) · Tapajós
+WorldPlaceLine(3,named)	<b>Manaos</b> · Brasil (Amazonas) · Negro + Solimões
+WorldPlaceLine(3,place)	Brasil (Amazonas) · Negro + Solimões
+WorldPlaceLine(4,named)	<b>Trapecio</b> · Colombia · Amazonas / Putumayo
+WorldPlaceLine(4,place)	Colombia · Amazonas / Putumayo
+WorldPlaceLine(5,named)	<b>Loreto</b> · Perú · Marañón-Ucayali
+WorldPlaceLine(5,place)	Perú · Marañón-Ucayali
+WorldPlaceLine(6,named)	<b>Oriente</b> · Ecuador · Napo + lagunas negras de Cuyabeno
+WorldPlaceLine(6,place)	Ecuador · Napo + lagunas negras de Cuyabeno
+WorldPlaceLine(7,named)	<b>Madre de Dios</b> · Perú · Tambopata / Madre de Dios
+WorldPlaceLine(7,place)	Perú · Tambopata / Madre de Dios
+WorldPlaceLine(8,named)	<b>Madidi</b> · Bolivia · Beni / Mamoré, Iténez
+WorldPlaceLine(8,place)	Bolivia · Beni / Mamoré, Iténez
+WorldPlaceLine(9,named)	<b>Ucayali</b> · Perú · Ucayali, Shanay-Timpishka
+WorldPlaceLine(9,place)	Perú · Ucayali, Shanay-Timpishka
+WorldPlaceNamed(1)	Estuario · Brasil (Pará) · Amazonas / Tocantins
+WorldPlaceNamed(10)	Alto Negro · Venezuela / Brasil · Negro, Casiquiare
+WorldPlaceNamed(11)	Escudo de Guayana · Guyana / Surinam / Guayana Francesa · Takutu / Branco, Maroni
+WorldPlaceNamed(12)	Invitados del Orinoco · Venezuela / Colombia · Caroní, Caño Cristales (vecinos del Orinoco)
+WorldPlaceNamed(13)	El origen · Perú (Andes) · Marañón alto
+WorldPlaceNamed(2)	Tapajós · Brasil (Pará) · Tapajós
+WorldPlaceNamed(3)	Manaos · Brasil (Amazonas) · Negro + Solimões
+WorldPlaceNamed(4)	Trapecio · Colombia · Amazonas / Putumayo
+WorldPlaceNamed(5)	Loreto · Perú · Marañón-Ucayali
+WorldPlaceNamed(6)	Oriente · Ecuador · Napo + lagunas negras de Cuyabeno
+WorldPlaceNamed(7)	Madre de Dios · Perú · Tambopata / Madre de Dios
+WorldPlaceNamed(8)	Madidi · Bolivia · Beni / Mamoré, Iténez
+WorldPlaceNamed(9)	Ucayali · Perú · Ucayali, Shanay-Timpishka
+WorldPlaceSplit(1,named,0)	<b>Estuario</b>\nBrasil (Pará) · Amazonas / Tocantins
+WorldPlaceSplit(1,named,1)	<b>Estuario</b> · Brasil (Pará)\nAmazonas / Tocantins
+WorldPlaceSplit(1,place,0)	Brasil (Pará)\nAmazonas / Tocantins
+WorldPlaceSplit(10,named,0)	<b>Alto Negro</b>\nVenezuela / Brasil · Negro, Casiquiare
+WorldPlaceSplit(10,named,1)	<b>Alto Negro</b> · Venezuela / Brasil\nNegro, Casiquiare
+WorldPlaceSplit(10,place,0)	Venezuela / Brasil\nNegro, Casiquiare
+WorldPlaceSplit(11,named,0)	<b>Escudo de Guayana</b>\nGuyana / Surinam / Guayana Francesa · Takutu / Branco, Maroni
+WorldPlaceSplit(11,named,1)	<b>Escudo de Guayana</b> · Guyana / Surinam / Guayana Francesa\nTakutu / Branco, Maroni
+WorldPlaceSplit(11,place,0)	Guyana / Surinam / Guayana Francesa\nTakutu / Branco, Maroni
+WorldPlaceSplit(12,named,0)	<b>Invitados del Orinoco</b>\nVenezuela / Colombia · Caroní, Caño Cristales (vecinos del Orinoco)
+WorldPlaceSplit(12,named,1)	<b>Invitados del Orinoco</b> · Venezuela / Colombia\nCaroní, Caño Cristales (vecinos del Orinoco)
+WorldPlaceSplit(12,place,0)	Venezuela / Colombia\nCaroní, Caño Cristales (vecinos del Orinoco)
+WorldPlaceSplit(13,named,0)	<b>El origen</b>\nPerú (Andes) · Marañón alto
+WorldPlaceSplit(13,named,1)	<b>El origen</b> · Perú (Andes)\nMarañón alto
+WorldPlaceSplit(13,place,0)	Perú (Andes)\nMarañón alto
+WorldPlaceSplit(2,named,0)	<b>Tapajós</b>\nBrasil (Pará) · Tapajós
+WorldPlaceSplit(2,named,1)	<b>Tapajós</b> · Brasil (Pará)\nTapajós
+WorldPlaceSplit(2,place,0)	Brasil (Pará)\nTapajós
+WorldPlaceSplit(3,named,0)	<b>Manaos</b>\nBrasil (Amazonas) · Negro + Solimões
+WorldPlaceSplit(3,named,1)	<b>Manaos</b> · Brasil (Amazonas)\nNegro + Solimões
+WorldPlaceSplit(3,place,0)	Brasil (Amazonas)\nNegro + Solimões
+WorldPlaceSplit(4,named,0)	<b>Trapecio</b>\nColombia · Amazonas / Putumayo
+WorldPlaceSplit(4,named,1)	<b>Trapecio</b> · Colombia\nAmazonas / Putumayo
+WorldPlaceSplit(4,place,0)	Colombia\nAmazonas / Putumayo
+WorldPlaceSplit(5,named,0)	<b>Loreto</b>\nPerú · Marañón-Ucayali
+WorldPlaceSplit(5,named,1)	<b>Loreto</b> · Perú\nMarañón-Ucayali
+WorldPlaceSplit(5,place,0)	Perú\nMarañón-Ucayali
+WorldPlaceSplit(6,named,0)	<b>Oriente</b>\nEcuador · Napo + lagunas negras de Cuyabeno
+WorldPlaceSplit(6,named,1)	<b>Oriente</b> · Ecuador\nNapo + lagunas negras de Cuyabeno
+WorldPlaceSplit(6,place,0)	Ecuador\nNapo + lagunas negras de Cuyabeno
+WorldPlaceSplit(7,named,0)	<b>Madre de Dios</b>\nPerú · Tambopata / Madre de Dios
+WorldPlaceSplit(7,named,1)	<b>Madre de Dios</b> · Perú\nTambopata / Madre de Dios
+WorldPlaceSplit(7,place,0)	Perú\nTambopata / Madre de Dios
+WorldPlaceSplit(8,named,0)	<b>Madidi</b>\nBolivia · Beni / Mamoré, Iténez
+WorldPlaceSplit(8,named,1)	<b>Madidi</b> · Bolivia\nBeni / Mamoré, Iténez
+WorldPlaceSplit(8,place,0)	Bolivia\nBeni / Mamoré, Iténez
+WorldPlaceSplit(9,named,0)	<b>Ucayali</b>\nPerú · Ucayali, Shanay-Timpishka
+WorldPlaceSplit(9,named,1)	<b>Ucayali</b> · Perú\nUcayali, Shanay-Timpishka
+WorldPlaceSplit(9,place,0)	Perú\nUcayali, Shanay-Timpishka
+WorldRiver(1)	Amazonas / Tocantins
+WorldRiver(10)	Negro, Casiquiare
+WorldRiver(11)	Takutu / Branco, Maroni
+WorldRiver(12)	Caroní, Caño Cristales (vecinos del Orinoco)
+WorldRiver(13)	Marañón alto
+WorldRiver(2)	Tapajós
+WorldRiver(3)	Negro + Solimões
+WorldRiver(4)	Amazonas / Putumayo
+WorldRiver(5)	Marañón-Ucayali
+WorldRiver(6)	Napo + lagunas negras de Cuyabeno
+WorldRiver(7)	Tambopata / Madre de Dios
+WorldRiver(8)	Beni / Mamoré, Iténez
+WorldRiver(9)	Ucayali, Shanay-Timpishka
+WorldTitle(1)	Mundo 1
+WorldTitle(10)	Mundo 10
+WorldTitle(11)	Mundo 11
+WorldTitle(12)	Mundo 12
+WorldTitle(13)	Mundo 13
+WorldTitle(2)	Mundo 2
+WorldTitle(3)	Mundo 3
+WorldTitle(4)	Mundo 4
+WorldTitle(5)	Mundo 5
+WorldTitle(6)	Mundo 6
+WorldTitle(7)	Mundo 7
+WorldTitle(8)	Mundo 8
+WorldTitle(9)	Mundo 9
+WriteClock(0)	00:00
+WriteClock(1500)	25:00
+WriteClock(3600)	1:00:00
+WriteClock(45296)	12:34:56
+WriteClock(59)	00:59
+WriteNumber(-5,grouped)	0
+WriteNumber(-5,plain)	0
+WriteNumber(0,grouped)	0
+WriteNumber(0,plain)	0
+WriteNumber(1234567,grouped)	1.234.567
+WriteNumber(1234567,plain)	1234567
+WriteNumber(1240,grouped)	1.240
+WriteNumber(1240,plain)	1240
+WriteNumber(7,grouped)	7
+WriteNumber(7,plain)	7

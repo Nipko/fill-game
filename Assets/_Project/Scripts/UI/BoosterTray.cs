@@ -774,7 +774,7 @@ namespace AF.UI
                 if (missing > 0 && missing != _missingShown)
                 {
                     _missingShown = missing;
-                    string text = string.Format(System.Globalization.CultureInfo.InvariantCulture, UiText.Missing, UiText.Grouped(missing));
+                    string text = UiText.TrayMissing(missing);
                     _missingText.text = text;
 
                     // Ancho en una línea a 12 sp, solo cuando cambia la cifra.
