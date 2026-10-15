@@ -29,6 +29,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-021 | 2026-10-14 | Miquitos por los lados en los tableros de 3 filas, alternando | Decidida por el dueño (idea propia, 2026-10-14). Frecuencia y restricciones [P] de este registro. Sin implementar: tarea de la tropa lateral en `docs/dev/traspaso/README.md`, paso 3 |
 | D-022 | 2026-10-14 | Respuestas a las preguntas 45, 47-50 y 51 de `docs/GDD.md` §6.3 | Decidida por el dueño (la recomendación de la 45 y de las 47-50; la 51, «traducción con ia»: (b)). Documentación aplicada el 2026-10-14 (T58). Tareas que deja: la línea única de la victoria con su prioridad y la clave `ui_fruit_line_every_n_levels` [P] (45), la burbuja de Revelar sin aviso (48), la cabecera de las tablas de textos (49) y el «Otro dato» de la parada k = 32 (50) |
 | D-023 | 2026-10-14 | Decisiones de detalle de la tanda 4: preguntas de sus planes y [P] del plan consolidado | Decidida por el dueño (la recomendación de cada pregunta, por «Sí, aplica las recomendadas también»): las P-M1 a P-M8 del plan del Mapa del río, las preguntas del plan consolidado de la tanda 4 (textos del Mapa en `facts.csv`, firma de las variantes de `pack_schema` 3, máscara de la tinaja en `relief`, Cuia de la casa fuera de la 1.0, idioma automático y región, alto de la llegada y tabla de D2) y los detalles [P] del plan. Documentación aplicada el 2026-10-14 (D1, que absorbe M1.7). En implementación: tanda 4 |
+| D-024 | 2026-10-14 | Reglas de la Hoja atada: la capacidad de su llave y una por fruta | Decidida por el dueño (las recomendadas de la revisión de K3a, por «Sí, aplica las recomendadas también»). Documentación aplicada el 2026-10-14 (FIXD). En implementación: FIXK, en el núcleo; el generador y level-qa la heredan por `LevelValidation` |
 
 ---
 
@@ -2193,7 +2194,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Siguen abiertas en 6.3:** las 18, 19 y 21-26 (pasos 1 y 2).
 
 **Qué cambia en el GDD** (aplicado el 2026-10-14, T58):
-- `docs/GDD.md`: versión 1.9, estado, §2 #21 y #30, §6, §6.3 (45, 47-50, la 51, nueva, y la referencia a la 47 desde la 41), §7.5 (contrato 32) y §9 (paso 18).
+- `docs/GDD.md`: versión 1.9, estado, §2 #21 y #30, §6, §6.3 (45, 47-50, la 51, nueva, y la referencia a la 47 desde la 41), §7.5 (contrato 32) y §9 (pasos 17 y 18).
 - 00: §6.4 (Dato del río), §10 (forma de las claves), §11 (TiTino y Frutas del río) y Parámetros (`ui_fruit_line_every_n_levels`).
 - 02: §4.1 (el Remolino de T52, ratificado), §4.2 (el aviso frente a las burbujas, ratificado, y Revelar sin medios), §6 (esquema, filas «Dato del río» y TiTino), §9.1 (M13: los Datos del río de su estreno) y Parámetros (fila 6).
 - 04: §2.5 (Revelar sin medios).
@@ -2230,7 +2231,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - en D-013 («Consecuencias», F2), «Python 3.14, solo biblioteca estándar» para todo `tools/river-map/`: los generadores siguen solo con la biblioteca estándar, y las pruebas validan los esquemas con `jsonschema`, que ya está en el stack (punto 32);
   - el nombre [P] del hito 80, «Puerto de Manaos», en la tabla d.4 de la propuesta de mecánicas y en el ejemplo de 07 §8.2: pasa a «Lago de Tefé» [P], como D-013 («Estado», implementación) ya pedía para `campaign_v1.json` (punto 21);
   - en el plan consolidado, lo que esperaba a la 45 y a la 50 (el árbitro en `Canon` «hasta la 45», la cadencia de la línea de fruta «fuera de 08 §9 hasta la 45» y el «Otro dato» de la parada k = 32 «reservado»): D-022 ya las decidió (puntos 22 y 38).
-- **No sustituye:** D-013 a D-022. La prioridad de la victoria y `ui_fruit_line_every_n_levels` (D-022, punto 1), las claves y columnas de las tablas de textos (D-022, punto 4) y los datos de Pará en la parada k = 32 (D-022, punto 5) siguen como están: aquí solo se dice cómo se implementan. No cambian Remote Config, la analítica, la economía ni las reglas del núcleo.
+- **No sustituye:** D-013 a D-022, salvo la frase de D-013 (F2) citada arriba; la prioridad de la victoria y `ui_fruit_line_every_n_levels` (D-022, punto 1), las claves y columnas de las tablas de textos (D-022, punto 4) y los datos de Pará en la parada k = 32 (D-022, punto 5) siguen como están: aquí solo se dice cómo se implementan. No cambian Remote Config, la analítica, la economía ni las reglas del núcleo.
 
 **Contexto.**
 - El plan del Mapa dejó ocho preguntas cerradas, P-M1 a P-M8, y comprobó cuatro críticas. Su tarea de documentación, M1.7, llevaba al GDD lo que T50 no cubrió: la fila de 04 §5.2, los formatos de P-M1 y las claves de P-M2.
@@ -2250,7 +2251,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
    - `flor` con `key` y `key2`, distintas;
    - `intro_mechanic` con `hoja_atada`, `brote_n2` [P], `flor` y `liana_n` [P].
    Con la parte de la tinaja (`tinaja`, `cucharon` e `intro_mechanic` `tinaja`, aprobada con D-019), `pack_schema` 3 entra en dos pasos, siempre antes de publicar ningún pack 3 (contrato 21; glosario §11; lista n.º 20; arquitectura §6). Los packs 1-200 no cambian.
-6. **Máscara de la tinaja en `relief` (pregunta de la tarea P2a; notas de la tanda 4, «Reanudación de la ola 1») → (a).** Con `pack_schema` 3, `relief_board` admite `hidden` (el mismo `$defs/hidden`, como mucho 4 pares) si y solo si sus `attrs` llevan la tinaja, con la máscara de todas sus capas menos la boca; las variantes de Aguas turbias siguen sin `hidden`. Lo cambian el esquema, el generador y 08 §4.1 (P1), y lo comprueban level-qa (P3) y el cliente (TJ1). Es el contrato 21, y ningún pack 3 se ha publicado.
+6. **Máscara de la tinaja en `relief` (pregunta de la tarea P2a; notas de la tanda 4, «Reanudación de la ola 1») → (a).** Con `pack_schema` 3, `relief_board` admite `hidden` (el mismo `$defs/hidden`, como mucho 4 pares) si y solo si sus `attrs` llevan la tinaja, con la máscara de todas sus capas menos la boca; las variantes de Aguas turbias siguen sin `hidden`. Lo cambian el esquema y el generador (P2a y P1) y, en 08 §4.1, el carril de documentación (FIXD, que cierra el pendiente de D1), y lo comprueban level-qa (P3) y el cliente (TJ1). Es el contrato 21, y ningún pack 3 se ha publicado.
 7. **Pregunta 9 → no.** La Cuia de la casa (V3 de la tinaja) no entra en la 1.0: D-019 la deja como variante posterior. La tarea K4 sale del plan (lista n.º 23).
 8. **Pregunta 10 → sí.** Mientras EN y PT-BR no estén completos, el idioma automático se queda en es-419 [P]; si el teléfono no da región, las cifras van con es-CO [P].
 9. **Pregunta 11 → (a)**, solo si las medidas de la ranura (punto 24) dicen que la llegada no cabe en el alto de la línea de fruta: se compacta la llegada (la fila del agua más una placa con lugar y dato, sin bienvenida aparte).
@@ -2313,7 +2314,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 32. Los esquemas del Mapa se validan en `tools/river-map/test_schemas.py` con `jsonschema`, y `tools/validate_schema.py` sigue siendo solo de `af-level/1`. Los generadores de `tools/river-map/` usan solo la biblioteca estándar. Fuente: lista n.º 18 y arquitectura §7 (`tools/river-map`); sustituye a D-013 F2 en este punto («Sustituye»).
 33. Las pruebas de `tools/` van como fixtures (`specs/tests/*.json` y `fixtures/QA-*.json`) y modos `--self-test`, sin proyectos de tests nuevos en la solución. Fuente: lista n.º 19 y arquitectura §6.
-34. En el núcleo, los códigos [P] de las variantes, que no se persisten: 10 para la Hoja atada y 11 para la Flor en `MechanicType`. La `key2` de la Flor va en los bits de `N` y `K` de `MechanicSpec`. Fuente: lista n.º 20.
+34. En el núcleo, los códigos [P] de las variantes, que no se persisten: 10 para la Hoja atada y 11 para la Flor en `MechanicType`. `MechanicSpec` gana la propiedad `Key2`. Dentro de la cuia, `key2` ocupa un campo de 4 bits de `Cuia.Packed` (bits 50-53) que reutiliza los de `n` y `k` (bits 50-55), que la Flor no usa (K3b). Fuente: lista n.º 20.
 35. El solver consulta la cancelación cada 256 expansiones [P]. La compuerta de coste de Morpho usa un factor 8× [P] en una constante, hasta medirlo en un teléfono de clase A (tarea PF1); si la medida lo cambia, se regeneran los packs que dependen de ella. Fuente: lista n.º 21 y los riesgos del plan («Rendimiento»).
 36. D2 entrega dos variantes del calendario de 201-700 (con la tinaja y sin ella), las dos con la regla de novedad de 60 niveles (NOVELTY-60: nunca más de 60 niveles sin algo nunca visto), y rehace la tabla de 701-1000 sin generar esos niveles. Fuente: lista n.º 22.
 37. El tablero del 66 tiene un helper único (`Level66Board`) para las pruebas del núcleo y de dotnet, pero no para `StuckLoopTests`: es PlayMode y no puede referenciar `AF.Core.Tests`, cuyo asmdef es solo de Editor. Fuente: lista n.º 28 y crítica 2.
@@ -2332,7 +2333,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Consecuencias.**
 - **Contratos:**
   - el 29 y el 30 ganan los extras [P] de P-M1 (08 §4.5; `docs/GDD.md` §7.4);
-  - el 21 gana la firma de las variantes de `pack_schema` 3 y la máscara de la tinaja en `relief` (`docs/GDD.md` §7.5). El esquema y 08 §4.1 los cambian P1 y P2b;
+  - el 21 gana la firma de las variantes de `pack_schema` 3 y la máscara de la tinaja en `relief` (`docs/GDD.md` §7.5). El esquema lo cambian P2a, P1 (la máscara) y P2b (las variantes); 08 §4.1, el carril de documentación (FIXD, 2026-10-14);
   - el 32 no cambia: los textos del Mapa ya iban en `facts.csv`.
 - **Canon que no es decisión nueva:** la fila de 04 §5.2 «Abrir el Mapa del río desde la pausa» desarrolla D-013 (punto 7).
 - **Sin cambios** en Remote Config, la analítica, la economía ni las reglas del núcleo (el núcleo gana las variantes, con la firma).
@@ -2345,7 +2346,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - 03: §13 (remite a la fila de 04 §5.2).
 - 04: §5.2 (la fila del Mapa del río desde la pausa).
 - 07: §8.2 (el hito 80, «Lago de Tefé»).
-- 08: §4.5 (los extras de P-M1, la codificación, los esquemas, los nombres por convención, la clave de `country_name` y los textos en `facts.csv`), §4.7 (orden ordinal y LF) y §14.2 (pseudolocalización).
+- 08: §4.1 (la firma de las variantes en las filas `schema`, `attrs` e `intro_mechanic` y la máscara de la tinaja en `relief`; FIXD, 2026-10-14), §4.5 (los extras de P-M1, la codificación, los esquemas, los nombres por convención, la clave de `country_name` y los textos en `facts.csv`), §4.7 (orden ordinal y LF) y §14.2 (pseudolocalización).
 - La cabecera de los capítulos 00, 03, 04, 07 y 08 registra D-023 con estas secciones.
 - Fuera del GDD: `docs/dev/prototipo-v0.md` (sondas previstas), la propuesta de mecánicas (`docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md`, d.4), `docs/dev/traspaso/README.md` (§7, la fila de D-023), este registro (la nota de D-013 en F2 y el estado de D-007, D-013, D-018 y D-019 en la tabla) y `.claude/rules/localizacion.md` (el `context` de los textos largos y el alcance de la regla).
 
@@ -2359,3 +2360,44 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Archivos afectados.**
 - **Documentación** (2026-10-14, D1): este registro y los de «Qué cambia en el GDD».
 - **Código y datos** (tanda 4): las tareas del plan consolidado; nada de esto está aún en el cliente.
+
+---
+
+## D-024 · Reglas de la Hoja atada: la capacidad de su llave y una por fruta
+
+- **Fecha:** 2026-10-14. Registrada el 2026-10-14 (FIXD, tanda 4).
+- **Estado:** decidida por el dueño; en implementación (FIXK, tanda 4).
+  - Para todo lo pendiente, el dueño tiene dicho «Sí, aplica las recomendadas también» (2026-10-13), y lo aplicó el 2026-10-14 a las preguntas de la tanda 4, como en D-022 y D-023. Gana la recomendación de cada pregunta.
+  - **Fuentes:** la revisión de la tarea K3a (la Hoja atada y el Brote de dos hojas en el núcleo), que pidió llevar las dos preguntas al dueño, y las notas de la tanda 4 de la sesión principal («Cierre de la ola 1»), con su respuesta. Como en D-023, las notas viven fuera del repositorio: este registro es su copia.
+- **Sustituye:** nada del GDD. Cierra la pregunta abierta de dos Hojas atadas de la misma fruta que K3a dejó en el código (`HojaAtadaMechanic`) y convierte en decisión el [P] de su capacidad, que K3a añadió sin estar registrado.
+- **No sustituye:** D-007 (la Hoja atada como variante de la 1.0, con estreno en el 283; propuesta b.3), D-023 (la firma `hoja_atada {key}`, punto 5), el precedente del Matapi de 02 §9.1 ni la pregunta 34 de D-020 (la excepción del Remolino en P3, que sigue siendo la única).
+
+**Contexto.**
+- K3a llevó al núcleo la Hoja atada de la propuesta de D-007 (b.3): un filtro de color persistente, que solo recibe su fruta (vacía o con ella en la cima), sí es origen y nunca se suelta. Como destino nunca es fútil (02 §1.4, anexo B: cambia al recibir).
+- **Capacidad.** Al probar P1-P3 (02 R16) con capacidades mixtas, esa exención deja que la fruta vaya de su casa a una Hoja atada de otra capacidad y vuelva, con el mismo estado canónico: P3 falla. K3a lo resolvió con una regla de validación [P], «la Hoja atada tiene la capacidad `U_c` de su llave», con el precedente del Matapi («con dosis, su capacidad es la `U_c` de ese color [P]», 02 §9.1). La revisión de K3a encontró que era una regla nueva que el dueño no había visto (CLAUDE.md: no inventar reglas) y pidió llevársela.
+- **Dos de la misma fruta.** Con dos Hojas atadas de la misma fruta, las dos de capacidad `U_c`, el vertido de una a otra es útil en los dos sentidos y P3 falla igual. Además, la cuenta de capacidades de 02 §8 de `LevelValidation`, contada solo por capacidad, tomaba la segunda por casa de otra fruta y dejaba pasar tableros irresolubles. Opciones de la revisión: (a) un límite, por fruta o por nivel; (b) una excepción de P3, como la del Remolino.
+
+**Decisión.**
+1. **La capacidad de la Hoja atada es la `U_c` de su llave** [P]: se ratifica la regla de validación de K3a. La Hoja atada es la casa de su fruta, como el Matapi con dosis.
+2. **Como mucho una Hoja atada por fruta** en cada nivel (opción (a), por fruta): cierra P3 y la cuenta de capacidades de 02 §8 a la vez. No limita las Hojas atadas de frutas distintas, con las que P1-P3 se cumplen (K3a), y el estreno sigue con un solo ejemplar (02 §9.2, regla 2).
+
+**Consecuencias.**
+- **Código** (tanda 4; sin paquetes, SDK, permisos ni versiones nuevas): FIXK lo implementa en el núcleo (la validación de `HojaAtadaMechanic` y `LevelValidation`, que cuenta cada cuia de una sola fruta solo como casa de esa fruta). El generador (P5) y level-qa (P6, QA-VALID) lo heredan por `LevelValidation`, sin regla propia.
+- **Calendario de 201-700:** con las dos reglas, K3a comprobó que P1-P3 se cumplen también con capacidades mixtas, así que el 354 (la Hoja atada con la Cuia alta) se queda como está. Su respaldo, por si una medida posterior lo tumbara, es el reto 346, dentro del C+3 (propuesta de D-009, d.5, punto 3; 03 §12).
+- **Sin cambios** en el formato (`hoja_atada {key}`, D-023, punto 5: la capacidad ya va en `caps`), Remote Config, la analítica ni la economía. Ningún pack publicado lleva Hoja atada.
+
+**Qué cambia en el GDD** (aplicado el 2026-10-14, FIXD):
+- `docs/GDD.md`: versión 1.11, estado, §2 #12, §6.3 (entrada) y §9 (paso 19).
+- 02: §9.1 («Variantes»).
+- 03: §17 (comprobación 6).
+- 08: §4.1 (fila `attrs`).
+- La cabecera de los capítulos 02, 03 y 08 registra D-024 con estas secciones.
+- Fuera del GDD: este registro (tabla y entrada) y la propuesta de mecánicas (`docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md`, d.5, punto 3: el 354 se queda y su respaldo cae en el C+3).
+
+**Alternativas descartadas.** (b), una excepción de P3 para la Hoja atada; el límite de una Hoja atada por nivel, más estricto de lo que hace falta; y una Hoja atada de cualquier capacidad.
+
+**Cómo revertir.** Con una decisión nueva que sustituya a D-024. Mientras no se publique ningún pack 3, sin coste en los datos.
+
+**Archivos afectados.**
+- **Documentación** (2026-10-14, FIXD): este registro y los de «Qué cambia en el GDD».
+- **Código** (tanda 4, FIXK): `Packages/com.amazonfill.core/Runtime/AF.Core/Mechanics/HojaAtadaMechanic.cs` y `Board/LevelValidation.cs`, con sus tests y `dotnet/AF.Core.Tests/DotnetOnly/FutilePropertyTests.cs`.

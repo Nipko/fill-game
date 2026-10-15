@@ -637,7 +637,7 @@ Ch y Al marcan los niveles donde la capacidad es protagonista. En el resto, el g
 
 ### d.5 Regla para 201-1000
 
-> **Rehecha el 2026-10-14 (D2).** El dueño decidió rehacer la tabla de novedades antes de generar 201-700 (pregunta 33 de `docs/GDD.md` §6.3, (a); D-020), con el alcance de la 1.0 de D-007 (Q8 c + b′), la Tinaja en el 323 (D-019) y las variantes. Los puntos 1, 2, 4 y 6 no cambian; el 3 añade cómo se leen «invitada» y «descansa» y el ciclo de vida de las variantes y la Tinaja, y el 5 cambia entero. El calendario de 201-700 va nivel a nivel, como d.4, en dos variantes: **A**, con la Tinaja, y **B**, sin ella (la salida B de D-019). Las dos cumplen la regla de 60 niveles (d.5.1-d.5.5). El apartado tiene además el registro de combinaciones (d.5.6), la tabla de 701-1000, orientativa (d.5.7), y la recomendación (d.5.8), que se aplica por D-023, punto 10. La columna «Estrenos y novedades» y las firmas de la sección (e) para los mundos 6-13 son de la revisión del 2026-10-08: mandan las de este apartado.
+> **Rehecha el 2026-10-14 (D2).** El dueño decidió rehacer la tabla de novedades antes de generar 201-700 (pregunta 33 de `docs/GDD.md` §6.3, (a); D-020), con el alcance de la 1.0 de D-007 (Q8 c + b′), la Tinaja en el 323 (D-019) y las variantes. Los puntos 1, 2, 4 y 6 no cambian; el 3 añade cómo se leen «invitada» y «descansa» y el ciclo de vida de las variantes y la Tinaja, y el 5 cambia entero. El calendario de 201-700 va nivel a nivel, como d.4, en dos variantes: **A**, con la Tinaja, y **B**, sin ella (la salida B de D-019). Las dos cumplen la regla de 60 niveles (d.5.1-d.5.5). El apartado tiene además el registro de combinaciones (d.5.6), la tabla de 701-1000, orientativa (d.5.7), y la recomendación (d.5.8), que se aplica por D-023, punto 10. La columna «Estrenos y novedades» y las firmas de la sección (e) para los mundos 6-13 son de la revisión del 2026-10-08: mandan las de este apartado. **Retocada el mismo día (FIXD):** el respaldo del 354 dentro del C+3 (punto 3), un registro por variante y cuándo se regenera (d.5.4, d.5.6 y d.5.8) y el 920 como excepción a los hitos de 14 cuias (d.5.7).
 
 1. **Plantilla del ciclo:** la misma de c.3 y c.4, con las reglas de d.2 y d.3.
 2. **Etiquetas:** cerca del 25 % de Difícil y del 5 % de Muy difícil desde el 201 (03 §11, sin cambios).
@@ -647,7 +647,7 @@ Ch y Al marcan los niveles donde la capacidad es protagonista. En el resto, el g
    - **descansa:** no es titular en el siguiente ciclo de su temporada (las de todo el año, en el ciclo siguiente), pero puede salir como invitada o en una comodidad;
    - **las variantes y la Tinaja** siguen el ciclo de vida de d.1 desde su estreno: 8 niveles en su ciclo (C0), secundaria en 2 retos del siguiente (C+1; a veces también en su hito), descanso en el C+2 y regreso con una combinación nueva (una entrada del registro, d.5.6) en el C+3 o el C+4:
      - la Liana de cuenta, en el reto 318, con la Lluvia (C+3);
-     - la Hoja atada, en la comodidad 354, con la Cuia alta (C+3). Es su única celda con una capacidad: si K3a encuentra que la Hoja atada con capacidades mixtas falla P1, como la Liana (bloqueo C1-9), el 354 vuelve a ser Ha sola y su regreso pasa al 389, con el Barro (C+5) [P];
+     - la Hoja atada, en la comodidad 354, con la Cuia alta (C+3). Es su única celda con una capacidad, y cuenta como combinación nueva porque el registro lleva las capacidades como códigos, como en 11-200 (d.5.6). K3a comprobó el 2026-10-14, con las reglas de validación de D-024 (capacidad = `U_c` de su llave y una Hoja atada por fruta), que P1-P3 se cumplen también con capacidades mixtas, así que el 354 se queda como está. **Respaldo [P]**, solo si una medida posterior encontrara que la Hoja atada con capacidades mixtas falla P1, como la Liana (bloqueo C1-9): el 354 vuelve a ser Ha sola y el regreso pasa al reto 346, Ha+Ln (D), en lugar de Ln+Re, que ya salió en el 252. Sigue en el C+3 y vuelve con otra mecánica (la Hoja atada y la Liana de cuenta pueden ir juntas, d.5.1); conserva los 8 tableros del Brote de dos hojas en 341-360, la primera vez de los demás ciclos (también la del 526) y las 102 entradas del registro, que se regenera (d.5.6). No hace falta ninguna excepción a 03 §12;
      - la Tinaja, en el reto 392, con la Hoja atada (C+3; solo en la variante A);
      - el Brote de dos hojas, en el hito 420, con la Flor (C+3);
      - la Flor, en el reto 498, con la Hoja atada (C+4).
@@ -878,6 +878,7 @@ La condición de D-019 (Q-Ti3-A) es que la Tinaja pase sus pruebas en el pipelin
 - **321-340:** las titulares pasan a ser Matapi y Barro, y la «primera vez» del ciclo es Barro + Hoja (332), que no sale antes del 332. **341-360:** la invitada Tinaja pasa a ser el Barro (352), y el reto 355 lleva solo el Remolino.
 - **Novedades:** las de A, salvo el 323, que pasa a ser el 332. Del 320 al 332 hay 12 niveles y del 332 al 343, 11. La regla de 60 se cumple igual, con un hueco máximo de 34.
 - **El hito 340 tiene respaldo también en A:** si la tinaja no llega al 0,90 del bot (lo más probable, según la propuesta de la Tinaja, d.3), el pipeline usa Br+Ba (MD) y la Tinaja se queda en 7 apariciones en su ciclo.
+- **El registro sigue a lo que se publica** (d.5.6): si C1b publica la B, o si el 340 usa su respaldo en A, se cambia la variante o la celda en `campaign_v2.json` y se regenera `combinations_registry_v1.json` antes de fusionar.
 - **Con la 1.1,** las celdas de A vuelven por `level_overrides` con la regla de migración (03 §9): el estreno, 323-340 (D-019), y las demás si el dueño quiere.
 
 #### d.5.5 Comprobaciones
@@ -891,7 +892,7 @@ Las dos variantes se comprobaron con un script el 2026-10-14, junto con 11-200 (
   - nunca 3 niveles seguidos fuera de su estreno;
   - un contador por nivel.
 - **Estrenos:** las 4 variantes y la Tinaja están en p3-p5, solas y en 3 tableros seguidos, con 8 apariciones en su ciclo. Las de la Tinaja son 323, 324, 325, 327, 329, 332, 338 y 340, como en la propuesta de la Tinaja, d.3.
-- **Ciclo de vida (d.1; 03 §12):** las variantes y la Tinaja vuelven como secundarias en 2 retos del ciclo siguiente, y a veces en su hito; descansan en el C+2, donde no salen; y vuelven con una entrada nueva del registro en el C+3 o el C+4 (318, 354, 392, 420 y 498; d.5, punto 3).
+- **Ciclo de vida (d.1; 03 §12):** las variantes y la Tinaja vuelven como secundarias en 2 retos del ciclo siguiente, y a veces en su hito; descansan en el C+2, donde no salen; y vuelven con una entrada nueva del registro en el C+3 o el C+4 (318, 354, 392, 420 y 498; d.5, punto 3). El respaldo del 354, el reto 346 (Ha+Ln), también cae en el C+3, así que la regla se cumple con él.
 - **Hitos:** mecánicas con 15 niveles o más desde su estreno y que ya salieron en un reto, y la firma al final de cada mundo.
 - **Prohibidas:**
   - ninguna combinación de d.3 ni de 02 §9.2, regla 7, ni las de d.5.1;
@@ -909,8 +910,10 @@ Las dos variantes se comprobaron con un script el 2026-10-14, junto con 11-200 (
 
 Es la entrada versionada del pipeline que pide d.2, regla 3 (03 §17, comprobación 15). Con él, «primera combinación» se decide sin mirar los packs generados, así que el test de reproducibilidad por hash sigue valiendo.
 - **Archivo:** `tools/level-generator/specs/combinations_registry_v1.json`.
-  - Lo genera la tarea P4 desde `campaign_v1.json` (11-200) y `campaign_v2.json` (201-700), en la variante que se publica.
+  - Lo genera la tarea P4 desde `campaign_v1.json` (11-200) y `campaign_v2.json` (201-700). **El archivo versionado refleja solo la variante que se publica** (campo `variant`). P4 lo genera en la Ola 3, antes de que se elija la variante, así que lo escribe con la A, la recomendada (d.5.8).
   - Nunca se edita a mano, y regenerarlo da los mismos bytes (UTF-8 sin BOM y LF).
+  - **Cada variante se comprueba con su propio registro,** calculado en memoria a partir de esa variante, nunca contra el archivo versionado. Contra el registro de A, la comprobación de B fallaría sin motivo o pasaría de forma espuria: la primera vez del ciclo 321-340 en B es Ba+Ho en el 332, que en A no sale hasta el 638, y A tiene entradas en el 332 y el 338 que B no publica.
+  - **Se regenera antes de fusionar** si cambia lo que se publica: si C1b publica la B (con `--variant b`, y `variant` = b), si el hito 340 usa su respaldo en A (Br+Ba en lugar de Ti+Br, d.5.4) o si se usa el respaldo del 354 (d.5, punto 3), se cambia la variante o la celda en `campaign_v2.json` y se regenera el registro. Si no, las comprobaciones de 701+ irían contra conjuntos que no se publicaron (las 6 entradas de la Tinaja: 323, 332, 338, 340, 352 y 392) y con niveles equivocados (Ba+Ho y B2+Ba).
 - **Formato** (`af-combinations/1`):
 
 ```json
@@ -936,14 +939,14 @@ Es la entrada versionada del pipeline que pide d.2, regla 3 (03 §17, comprobaci
   - `debut`: un código solo, en su celda con ★ (mecánica del catálogo, Tinaja o capacidad);
   - `variant`: un código solo, en la ★ de una variante (Ln, Ha, B2 o Fl);
   - `combination`: dos o más códigos.
-- **Lo que comprueba P4 con él,** en las dos variantes:
+- **Lo que comprueba P4 con él,** en las dos variantes, cada una con su propio registro en memoria:
   - FIRST-TIME: cada ciclo tiene una ★, un tinte nuevo o una entrada del registro. Hoy `--validate-spec` cuenta pares: `SpecValidator.Combinations` devuelve «A+B» para cada par de códigos de la celda. P4 pasa FIRST-TIME a conjuntos, contra el registro. Por conjuntos la regla es algo menos estricta, porque un par nuevo siempre trae un conjunto nuevo, así que `campaign_v1.json` sigue en verde; el calendario de 201-700 cumple con las dos lecturas (d.5.5);
   - NOVELTY-60: entre dos primeras veces seguidas (entradas del registro o tintes nuevos) nunca hay más de 60 niveles, desde el 200 y hasta el 700.
 - **Cifras de este calendario:** 102 entradas con la Tinaja (40 de 11-200 y 62 de 201-700) y 96 sin ella (40 y 56).
 
 #### d.5.7 Tabla de 701-1000 (orientativa, sin generar)
 
-701-1000 no son de la 1.0: llegan después, por `levels_remote` (08 §6.2), cuando el build de la 1.1 ya trae Aguapé, Palizada, Lancha y Cocha. La tabla supone ese catálogo; si una mecánica de la 1.1 no llega, su fila se cambia por una combinación nueva con lo que haya. Las filas [P] son ejemplos: al generar, cada combinación nueva tiene que ser primera vez en el registro, como en 201-700, y si ya está se elige otra. Las firmas son la excepción: cuentan como primera vez por ser firmas (d.2, regla 3), aunque su combinación ya esté en el registro, como la del 960. Siguen los hitos de 14 cuias (K = 13 + 1 vacío). K = 14 solo se juega en el evento Encuentro de las Aguas (03 §11).
+701-1000 no son de la 1.0: llegan después, por `levels_remote` (08 §6.2), cuando el build de la 1.1 ya trae Aguapé, Palizada, Lancha y Cocha. La tabla supone ese catálogo; si una mecánica de la 1.1 no llega, su fila se cambia por una combinación nueva con lo que haya. Las filas [P] son ejemplos: al generar, cada combinación nueva tiene que ser primera vez en el registro, como en 201-700, y si ya está se elige otra. Las firmas son la excepción: cuentan como primera vez por ser firmas (d.2, regla 3), aunque su combinación ya esté en el registro, como la del 960. Siguen los hitos de 14 cuias (K = 13 + 1 vacío). **El 920 es la excepción [P]:** «Rupununi» lleva la Piraña, cuya cueva sería la cuia 15 con K = 13 (02 R1), así que se juega con K = 12 + 1 vacío + la cueva, 14 cuias en total, y la cueva es su única capacidad. K = 14 solo se juega en el evento Encuentro de las Aguas (03 §11).
 
 | Ciclo · mundo | Temp. | Novedad | Tipo | Distancia |
 |---|---|---|---|---|
@@ -969,7 +972,7 @@ Es la entrada versionada del pipeline que pide d.2, regla 3 (03 §17, comprobaci
 - **Respecto a la revisión del 2026-10-08:**
   - el 860 pasa a ser «el primer trío con el Aguapé», porque 201-700 ya tiene tríos con la Lluvia (320, 520 y 620);
   - el primer trío de aguas bajas pasa del 640 al 880, porque necesita la Palizada y la Cocha;
-  - las firmas 820, 920, 960 y 1000 no cambian.
+  - las firmas 820, 920, 960 y 1000 no cambian. El 920 conserva su combinación, Palizada + Piraña, y pasa a ser la excepción a los hitos de 14 cuias: K = 12 + 1 vacío + la cueva (párrafo de la tabla), porque con K = 13 su cueva sería la cuia 15.
 - **Reserva sin decidir, que no cuenta para la regla:** las variantes de la Tinaja (Dos tinajas, Tinaja grande y Cuia de la casa; propuesta de la Tinaja, d.4).
 
 #### d.5.8 Recomendación
@@ -982,7 +985,7 @@ Es la entrada versionada del pipeline que pide d.2, regla 3 (03 §17, comprobaci
   - Morpho en el cliente, con corte por tiempo (MO1 y MO2);
   - la Luciérnaga con la Tinaja (TJ4).
 
-  Si TJ4 y la compuerta de PF1 están en verde, se publica la A. Si no, se publica la B de los tres mundos, y se anota para el dueño.
+  Si TJ4 y la compuerta de PF1 están en verde, se publica la A. Si no, se publica la B de los tres mundos, y se anota para el dueño. **Si se publica la B,** C1b cambia `campaign_v2.json` a la B, regenera `combinations_registry_v1.json` con `--variant b` y lo commitea antes de fusionar (d.5.6).
 - **La B** cumple la regla de 60 y todas las demás; solo pierde la seña propia, que vuelve en la 1.1.
 
 El dueño decidió aplicar la recomendación de esta tabla (D-023, punto 10).
