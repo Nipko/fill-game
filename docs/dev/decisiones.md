@@ -2251,7 +2251,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
    - `flor` con `key` y `key2`, distintas;
    - `intro_mechanic` con `hoja_atada`, `brote_n2` [P], `flor` y `liana_n` [P].
    Con la parte de la tinaja (`tinaja`, `cucharon` e `intro_mechanic` `tinaja`, aprobada con D-019), `pack_schema` 3 entra en dos pasos, siempre antes de publicar ningún pack 3 (contrato 21; glosario §11; lista n.º 20; arquitectura §6). Los packs 1-200 no cambian.
-6. **Máscara de la tinaja en `relief` (pregunta de la tarea P2a; notas de la tanda 4, «Reanudación de la ola 1») → (a).** Con `pack_schema` 3, `relief_board` admite `hidden` (el mismo `$defs/hidden`, como mucho 4 pares) si y solo si sus `attrs` llevan la tinaja, con la máscara de todas sus capas menos la boca; las variantes de Aguas turbias siguen sin `hidden`. Lo cambian el esquema y el generador (P2a y P1) y, en 08 §4.1, el carril de documentación (FIXD, que cierra el pendiente de D1), y lo comprueban level-qa (P3) y el cliente (TJ1). Es el contrato 21, y ningún pack 3 se ha publicado.
+6. **Máscara de la tinaja en `relief` (pregunta de la tarea P2a; notas de la tanda 4, «Reanudación de la ola 1») → (a).** Con `pack_schema` 3, `relief_board` admite `hidden` (el mismo `$defs/hidden`, como mucho 4 pares) si y solo si sus `attrs` llevan la tinaja, con la máscara de todas sus capas menos la boca; las variantes de Aguas turbias siguen sin `hidden`. Lo cambian el esquema, el generador y la frase de 08 §4.1 (P1), y lo comprueban level-qa (P3) y el cliente (TJ1). Es el contrato 21, y ningún pack 3 se ha publicado.
 7. **Pregunta 9 → no.** La Cuia de la casa (V3 de la tinaja) no entra en la 1.0: D-019 la deja como variante posterior. La tarea K4 sale del plan (lista n.º 23).
 8. **Pregunta 10 → sí.** Mientras EN y PT-BR no estén completos, el idioma automático se queda en es-419 [P]; si el teléfono no da región, las cifras van con es-CO [P].
 9. **Pregunta 11 → (a)**, solo si las medidas de la ranura (punto 24) dicen que la llegada no cabe en el alto de la línea de fruta: se compacta la llegada (la fila del agua más una placa con lugar y dato, sin bienvenida aparte).
@@ -2333,7 +2333,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Consecuencias.**
 - **Contratos:**
   - el 29 y el 30 ganan los extras [P] de P-M1 (08 §4.5; `docs/GDD.md` §7.4);
-  - el 21 gana la firma de las variantes de `pack_schema` 3 y la máscara de la tinaja en `relief` (`docs/GDD.md` §7.5). El esquema lo cambian P2a, P1 (la máscara) y P2b (las variantes); 08 §4.1, el carril de documentación (FIXD, 2026-10-14);
+  - el 21 gana la firma de las variantes de `pack_schema` 3 y la máscara de la tinaja en `relief` (`docs/GDD.md` §7.5). El esquema lo cambian P2a, P1 (la máscara) y P2b (las variantes). En 08 §4.1, la firma de las variantes (filas `schema`, `attrs` e `intro_mechanic`) la escribe el carril de documentación (FIXD, 2026-10-14), porque P2b no puede tocar 08, y la frase de la máscara en `relief`, P1;
   - el 32 no cambia: los textos del Mapa ya iban en `facts.csv`.
 - **Canon que no es decisión nueva:** la fila de 04 §5.2 «Abrir el Mapa del río desde la pausa» desarrolla D-013 (punto 7).
 - **Sin cambios** en Remote Config, la analítica, la economía ni las reglas del núcleo (el núcleo gana las variantes, con la firma).
@@ -2346,7 +2346,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - 03: §13 (remite a la fila de 04 §5.2).
 - 04: §5.2 (la fila del Mapa del río desde la pausa).
 - 07: §8.2 (el hito 80, «Lago de Tefé»).
-- 08: §4.1 (la firma de las variantes en las filas `schema`, `attrs` e `intro_mechanic` y la máscara de la tinaja en `relief`; FIXD, 2026-10-14), §4.5 (los extras de P-M1, la codificación, los esquemas, los nombres por convención, la clave de `country_name` y los textos en `facts.csv`), §4.7 (orden ordinal y LF) y §14.2 (pseudolocalización).
+- 08: §4.1 (la firma de las variantes en las filas `schema`, `attrs` e `intro_mechanic`, FIXD, 2026-10-14; y la frase de la máscara de la tinaja en `relief`, P1), §4.5 (los extras de P-M1, la codificación, los esquemas, los nombres por convención, la clave de `country_name` y los textos en `facts.csv`), §4.7 (orden ordinal y LF) y §14.2 (pseudolocalización).
 - La cabecera de los capítulos 00, 03, 04, 07 y 08 registra D-023 con estas secciones.
 - Fuera del GDD: `docs/dev/prototipo-v0.md` (sondas previstas), la propuesta de mecánicas (`docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md`, d.4), `docs/dev/traspaso/README.md` (§7, la fila de D-023), este registro (la nota de D-013 en F2 y el estado de D-007, D-013, D-018 y D-019 en la tabla) y `.claude/rules/localizacion.md` (el `context` de los textos largos y el alcance de la regla).
 
@@ -2383,7 +2383,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 **Consecuencias.**
 - **Código** (tanda 4; sin paquetes, SDK, permisos ni versiones nuevas): FIXK lo implementa en el núcleo (la validación de `HojaAtadaMechanic` y `LevelValidation`, que cuenta cada cuia de una sola fruta solo como casa de esa fruta). El generador (P5) y level-qa (P6, QA-VALID) lo heredan por `LevelValidation`, sin regla propia.
-- **Calendario de 201-700:** con las dos reglas, K3a comprobó que P1-P3 se cumplen también con capacidades mixtas, así que el 354 (la Hoja atada con la Cuia alta) se queda como está. Su respaldo, por si una medida posterior lo tumbara, es el reto 346, dentro del C+3 (propuesta de D-009, d.5, punto 3; 03 §12).
+- **Calendario de 201-700:** con las dos reglas, K3a comprobó que P1-P3 se cumplen también con capacidades mixtas, así que el 354 (la Hoja atada con la Cuia alta) se queda como está. Su respaldo, por si una medida posterior lo tumbara, es el reto 346, dentro del C+3, con 3 invitadas en 341-360 como excepción declarada a la plantilla [P] (propuesta de D-009, d.5, punto 3; 03 §12).
 - **Sin cambios** en el formato (`hoja_atada {key}`, D-023, punto 5: la capacidad ya va en `caps`), Remote Config, la analítica ni la economía. Ningún pack publicado lleva Hoja atada.
 
 **Qué cambia en el GDD** (aplicado el 2026-10-14, FIXD):
