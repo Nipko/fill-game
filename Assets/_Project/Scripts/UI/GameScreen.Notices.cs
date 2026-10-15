@@ -112,6 +112,19 @@ namespace AF.UI
         /// <summary>Lo que el borde de arriba del aviso queda sobre una ficha de la repisa que tapa entera (dp) [P].</summary>
         internal const float NoticeChipCoverDp = 2f;
 
+        /// <summary>
+        /// La tarjeta del miquito va sobre la franja del panorama si mide al menos esto (dp; 07 §6.4: «sobre la franja del
+        /// panorama si mide ≥ 64 dp»).
+        /// </summary>
+        internal const float SightingBandDp = 64f;
+
+        /// <summary>
+        /// Si la tarjeta del miquito crece (el dato en dos líneas o la escala de texto; A1), la franja tiene que medir además su
+        /// alto + esto (dp) [P]: cabe entera y centrada, con el aire de la tarjeta de 60 dp en la franja de 64. Con el dato en
+        /// una línea a la escala 1 (61 dp), el umbral sigue siendo <see cref="SightingBandDp"/>.
+        /// </summary>
+        internal const float SightingBandAirDp = 3f;
+
         /// <summary>Borde de abajo del aviso de siempre sobre el borde de arriba de la bandeja (dp).</summary>
         private const float NoticeAboveTrayDp = 8f;
 
@@ -546,10 +559,11 @@ namespace AF.UI
             _sightingPending = species;
         }
 
-        // Sobre la franja del panorama si mide al menos el alto de la tarjeta + 4 dp (antes, 64 dp fijos); si no,
-        // sobre el muelle, bajo la última fila y por encima de la bandeja y de sus burbujas «Te faltan {n}» (SightingDockLimit);
-        // si no cabe sin tapar cuias, botones ni burbujas, no sale. El alto es el de la tarjeta con su nombre y su dato (crece si
-        // el dato va en dos líneas o con la escala de texto; A1).
+        // Sobre la franja del panorama si mide al menos SightingBandDp (64 dp, 07 §6.4) y, si la tarjeta crece (el dato en dos
+        // líneas o la escala de texto; A1), al menos su alto + SightingBandAirDp, para que quepa entera y centrada: con el dato
+        // en una línea a la escala 1 (61 dp), el umbral es el de 07 §6.4. Si no, sobre el muelle, bajo la última fila y por
+        // encima de la bandeja y de sus burbujas «Te faltan {n}» (SightingDockLimit); si no cabe sin tapar cuias, botones ni
+        // burbujas, no sale.
         private void ShowSightingNow(FaunaSpecies species)
         {
             BoardLayoutResult? l = _layout;
@@ -565,7 +579,7 @@ namespace AF.UI
             float height = _sighting.Measure(_canvasW, name, fact);
             float band = l.PanelY - BoardTop;
             float top;
-            if (band >= height + 4f)
+            if (band >= Mathf.Max(SightingBandDp, height + SightingBandAirDp))
             {
                 top = BoardTop + ((band - height) * 0.5f);
             }

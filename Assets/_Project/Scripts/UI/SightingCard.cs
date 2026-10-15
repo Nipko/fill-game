@@ -37,10 +37,23 @@ namespace AF.UI
         public const float EdgeDp = 3f;
 
         /// <summary>
-        /// Holgura de la caja del dato en dos líneas sobre la mitad de su ancho en una (dp) [P]: la primera línea no se queda con
-        /// todo y deja una palabra suelta en la segunda (revisión de A1, D-003: acabado premium).
+        /// Holgura de la caja del dato equilibrado sobre la mitad de su ancho en una línea (dp) [P]: la primera línea no se queda
+        /// con todo y deja una palabra suelta en la segunda (revisión de A1, D-003: acabado premium).
         /// </summary>
         public const float BalancedSlackDp = 24f;
+
+        /// <summary>
+        /// El dato se corta con el ancho entero de la columna (como cualquier texto) y solo se equilibra si así su última línea
+        /// mide menos que esta parte de la primera [P] (segunda revisión de A1: equilibrado siempre, el bloque quedaba cojo, con
+        /// un gran hueco a la derecha de la tarjeta).
+        /// </summary>
+        public const float ShortLastLineRatio = 0.35f;
+
+        /// <summary>
+        /// Con el dato equilibrado, la tarjeta se encoge al ancho de su texto más esto a su derecha (dp) [P] y va centrada
+        /// (segunda revisión de A1).
+        /// </summary>
+        public const float ShrunkRightPadDp = 16f;
 
         private const float FadeMs = 200f;
 
@@ -63,6 +76,7 @@ namespace AF.UI
         private float _height = HeightDp;
         private float _factHeight = 16f;
         private float _factWidth = -1f; // con Measure; < 0, el de la columna
+        private float _cardWidth = -1f; // con Measure, si se encoge al texto; < 0, el de siempre
 
         public SightingCard(Transform parent, ProceduralArt art)
         {
@@ -140,11 +154,13 @@ namespace AF.UI
         /// <summary>
         /// Pone el nombre y el dato que va a mostrar y devuelve el alto de la tarjeta en un lienzo de <paramref name="canvasW"/>
         /// dp (<see cref="Height"/>): las filas del título, el nombre y el dato por la escala de texto, y la del dato, si a 12 sp
-        /// no cabe en una línea, de las que necesite (pregunta 36 (a)); al menos <see cref="HeightDp"/> por la escala. Si el dato
-        /// va en dos líneas, su caja se estrecha a la mitad de su ancho en una más <see cref="BalancedSlackDp"/> (o de
-        /// <see cref="BalancedSlackDp"/> en <see cref="BalancedSlackDp"/> más, si así necesitara más líneas; nunca más que la
-        /// columna), para que las dos líneas queden equilibradas («Siembra la selva: dispersa / muchas semillas») y no una
-        /// palabra suelta en la segunda. Se llama antes de decidir dónde va (GameScreen.Notices.cs) y de <see cref="Place"/>;
+        /// no cabe en una línea, de las que necesite (pregunta 36 (a)); al menos <see cref="HeightDp"/> por la escala. El dato se
+        /// corta con el ancho entero de la columna; solo si así su última línea queda por debajo de
+        /// <see cref="ShortLastLineRatio"/> de la primera (una palabra suelta), su caja se estrecha a la mitad de su ancho en una
+        /// más <see cref="BalancedSlackDp"/> (o de <see cref="BalancedSlackDp"/> en <see cref="BalancedSlackDp"/> más, si así
+        /// necesitara más líneas; nunca más que la columna), para que las líneas queden equilibradas («Siembra la selva:
+        /// dispersa / muchas semillas»), y la tarjeta se encoge al ancho de su texto más <see cref="ShrunkRightPadDp"/>, centrada.
+        /// Se llama antes de decidir dónde va (GameScreen.Notices.cs) y de <see cref="Place"/>;
         /// mide una vez por tarjeta, nunca por fotograma.
         /// </summary>
         public float Measure(float canvasW, string name, string fact)
@@ -155,9 +171,10 @@ namespace AF.UI
             float column = TextWidth(canvasW);
             float height = UiBuilder.MinTextHeight(_fact, column);
             _factWidth = column;
-            float line = UiBuilder.MinTextWidth(_fact);
-            if (line > column + 0.01f)
+            int lines = UiBuilder.GreedyLines(_fact, column, out float first, out float last, out _);
+            if (lines >= 2 && last < first * ShortLastLineRatio)
             {
+                float line = UiBuilder.MinTextWidth(_fact);
                 // Si el corte cae mal («Siembra la selva: / dispersa muchas / semillas»), un poco más ancha, de BalancedSlackDp en
                 // BalancedSlackDp (como mucho unas 5 veces, al medir), hasta que quepa en las líneas de la columna entera.
                 for (float balanced = Mathf.Ceil(line * 0.5f) + BalancedSlackDp; balanced < column - 0.01f; balanced += BalancedSlackDp)
@@ -170,6 +187,18 @@ namespace AF.UI
                 }
             }
 
+            // Con el dato equilibrado, la tarjeta se encoge a lo ancho de su texto (el título, el nombre y la línea más larga del
+            // dato) más ShrunkRightPadDp y va centrada: sin un gran hueco a la derecha (segunda revisión de A1; D-003).
+            _cardWidth = -1f;
+            if (_factWidth < column - 0.01f)
+            {
+                int split = UiBuilder.GreedyLines(_fact, _factWidth, out float top, out float bottom, out _);
+                float factW = split == 2 ? Mathf.Max(top, bottom) : _factWidth;
+                float content = Mathf.Max(factW, Mathf.Max(PreferredWidth(_title), PreferredWidth(_name)));
+                _cardWidth = Mathf.Ceil(TextX + content + ShrunkRightPadDp);
+                _factWidth = Mathf.Min(_factWidth, _cardWidth - TextX - TextRightPadDp);
+            }
+
             _factHeight = Mathf.Max(16f * s, Mathf.Ceil(height));
             _height = Mathf.Max(HeightDp * s, (38f * s) + _factHeight + (6f * s));
             return _height;
@@ -179,20 +208,31 @@ namespace AF.UI
         public float FactWidth => _factWidth;
 
         /// <summary>
-        /// Coloca la tarjeta centrada con su borde superior en <paramref name="top"/> (dp desde arriba), del alto del último
-        /// <see cref="Measure"/>.
+        /// Coloca la tarjeta centrada con su borde superior en <paramref name="top"/> (dp desde arriba), del alto y, si se encogió
+        /// a su texto, del ancho del último <see cref="Measure"/>.
         /// </summary>
         public void Place(float canvasW, float top)
         {
             float w = Mathf.Min(320f, canvasW - 32f);
+            if (_cardWidth > 0f)
+            {
+                w = Mathf.Min(w, _cardWidth);
+            }
+
             float s = _scale;
             UiBuilder.Place(_root, (canvasW - w) * 0.5f, top, w, _height);
-            float textW = TextWidth(canvasW);
+            float textW = w - TextX - TextRightPadDp;
             // El título y el nombre, centrados a lo alto en 14 y 30,5 dp (por la escala) como siempre, en filas de 22 y 20 dp, que
             // caben enteros a 15 y 14 sp (con 18 y 17 se encogían y las letras asomaban por arriba; A1).
             UiBuilder.Place(_title.rectTransform, TextX, 3f * s, textW, 22f * s);
             UiBuilder.Place(_name.rectTransform, TextX, 20.5f * s, textW, 20f * s);
             UiBuilder.Place(_fact.rectTransform, TextX, 38f * s, _factWidth > 0f ? Mathf.Min(_factWidth, textW) : textW, _factHeight);
+        }
+
+        // Ancho de su texto de ahora en una línea, al tamaño al que mide TextMeshPro (con autoajuste, su máximo).
+        private static float PreferredWidth(TextMeshProUGUI text)
+        {
+            return string.IsNullOrEmpty(text.text) ? 0f : text.GetPreferredValues(text.text, float.PositiveInfinity, float.PositiveInfinity).x;
         }
 
         private static float TextWidth(float canvasW)

@@ -384,19 +384,27 @@ namespace AF.Tests.PlayMode
 
                 TextMeshProUGUI factLabel = card.Texts[2];
                 factLabel.ForceMeshUpdate(true, true);
+                if (percent == 100 && factLabel.textInfo.lineCount == 1)
+                {
+                    // Con el dato en una línea a la escala 1, la franja del panorama le basta con los 64 dp de 07 §6.4.
+                    Assert.That(BandNeedDp(height), Is.EqualTo(GameScreen.SightingBandDp), where + ": el umbral de la franja, el de 07 §6.4");
+                }
                 if (factLabel.textInfo.lineCount > 1)
                 {
-                    // En dos líneas equilibradas, sin una palabra suelta en la segunda (revisión de A1; D-003): la caja del dato,
-                    // a la mitad de su ancho en una línea más SightingCard.BalancedSlackDp.
+                    // En dos líneas cortadas con el ancho entero de la columna y, solo si así la segunda quedaba corta (una
+                    // palabra suelta), equilibradas: ni una palabra viuda ni un bloque cojo con un gran hueco a la derecha
+                    // (revisiones de A1; D-003).
                     twoLines++;
                     Assert.That(factLabel.textInfo.lineCount, Is.EqualTo(2), where + ": el dato, en dos líneas como mucho");
                     float first = LineWidth(factLabel, 0);
                     float second = LineWidth(factLabel, 1);
-                    Assert.That(Mathf.Min(first, second) / Mathf.Max(first, second), Is.GreaterThanOrEqualTo(0.5f),
-                        where + ": las dos líneas del dato, equilibradas (" + first.ToString("0") + " y " + second.ToString("0") + " dp)");
+                    Assert.That(second, Is.GreaterThanOrEqualTo((first * SightingCard.ShortLastLineRatio) - 0.5f),
+                        where + ": sin palabra viuda (" + first.ToString("0") + " y " + second.ToString("0") + " dp)");
                     Assert.That(factLabel.rectTransform.rect.width, Is.EqualTo(card.FactWidth).Within(0.05f), where + ": la caja medida");
+                    Assert.That(Mathf.Max(first, second), Is.GreaterThanOrEqualTo(card.FactWidth * 0.5f),
+                        where + ": la línea más larga llena al menos media caja");
                     TestContext.WriteLine(where + ": «" + factLabel.text + "» en " + first.ToString("0") + " + " + second.ToString("0") + " dp (caja de "
-                        + card.FactWidth.ToString("0") + " dp).");
+                        + card.FactWidth.ToString("0") + " dp; tarjeta de " + card.Root.rect.width.ToString("0") + " dp).");
                 }
 
                 card.Hide();
@@ -444,7 +452,7 @@ namespace AF.Tests.PlayMode
                     Assert.That(view.SightingPending, Is.False, where + ": no espera más");
                     BoardLayoutResult l = view.Layout!;
                     float h = view.Sighting.Height;
-                    Assert.That(l.PanelY - (view.TopRowDp + 48f) < h + 4f && l.PanelBottom + 4f + h > DockLimitDp(view) + 0.05f, Is.True,
+                    Assert.That(l.PanelY - (view.TopRowDp + 48f) < BandNeedDp(h) && l.PanelBottom + 4f + h > DockLimitDp(view) + 0.05f, Is.True,
                         where + ": solo deja de salir si no cabe ni en la franja ni sobre el muelle (" + room + ")");
                     lost.Add(level);
                     TestContext.WriteLine(where + ": no cabe y no sale (" + room + ").");
@@ -494,7 +502,7 @@ namespace AF.Tests.PlayMode
             }
             else
             {
-                Assert.That(l.PanelY - (view.TopRowDp + 48f), Is.LessThan(height + 4f), at + ": condición del test, no cabe en la franja");
+                Assert.That(l.PanelY - (view.TopRowDp + 48f), Is.LessThan(BandNeedDp(height)), at + ": condición del test, no cabe en la franja");
                 Assert.That(l.PanelBottom + 4f + height, Is.LessThanOrEqualTo(TrayTopDp(view) - 8f + 0.05f), at + ": condición del test, hasta la bandeja cabría");
                 Assert.That(shown, Is.False, at + ": no tapa la burbuja: no sale");
             }
@@ -667,6 +675,13 @@ namespace AF.Tests.PlayMode
             return VictorySetup.CanvasRect((RectTransform)view.UndoButton.transform, Root(view)).yMin - 4f;
         }
 
+        // Lo que tiene que medir la franja del panorama para la tarjeta de height dp: 64 dp (07 §6.4) o, si la tarjeta crece, su
+        // alto + SightingBandAirDp (GameScreen.ShowSightingNow).
+        private static float BandNeedDp(float height)
+        {
+            return Mathf.Max(GameScreen.SightingBandDp, height + GameScreen.SightingBandAirDp);
+        }
+
         // El sitio que tiene la tarjeta (registro): su alto, la franja del panorama y el muelle hasta la bandeja o la burbuja.
         private static string SightingRoomText(GameScreen view)
         {
@@ -674,7 +689,7 @@ namespace AF.Tests.PlayMode
             float band = l.PanelY - (view.TopRowDp + 48f);
             float dock = DockLimitDp(view) - (l.PanelBottom + 4f);
             return "tarjeta de " + view.Sighting.Height.ToString("0.0") + " dp; franja de " + band.ToString("0.0") + " dp (le hacen falta "
-                + (view.Sighting.Height + 4f).ToString("0.0") + "); muelle de " + dock.ToString("0.0") + " dp hasta "
+                + BandNeedDp(view.Sighting.Height).ToString("0.0") + "); muelle de " + dock.ToString("0.0") + " dp hasta "
                 + (view.Tray.TryGetMissingTop(out _) ? "la burbuja más alta" : "la bandeja");
         }
 
@@ -862,6 +877,13 @@ namespace AF.Tests.PlayMode
 
                 texts++;
                 CollectTextIssues(t, scale, where, issues);
+
+                // Las notas y líneas de ModalKit.PlaceLine en dos líneas, sin palabra viuda (revisión de A1; D-003).
+                bool placedLine = t.name.EndsWith("Note", System.StringComparison.Ordinal) || t.name == "CanoeLine" || t.name == "Subtitle" || t.name == "Unsolvable";
+                if (placedLine && t.textInfo.lineCount == 2 && t.textInfo.lineInfo[1].wordCount < 2)
+                {
+                    issues.Add(where + ": «" + t.text + "» (" + t.name + ") deja una palabra viuda en su segunda línea");
+                }
             }
 
             Assert.That(texts, Is.GreaterThan(2), where + ": condición del test, sus textos");

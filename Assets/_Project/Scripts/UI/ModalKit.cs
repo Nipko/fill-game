@@ -360,14 +360,38 @@ namespace AF.UI
         /// (<paramref name="x"/>, <paramref name="y"/>) y <paramref name="width"/> dp de ancho, y devuelve el alto que ocupa: el
         /// de siempre (<paramref name="height"/>) por la escala de texto o, si su texto no cabe ahí ni a su tamaño mínimo, el que
         /// necesita a ese mínimo (02 §12: los contenedores crecen; ningún texto baja de 12 sp ni se sale de su caja). Con la
-        /// escala 1 y un texto que cabe, <paramref name="height"/>: nada cambia.
+        /// escala 1 y un texto que cabe, <paramref name="height"/>: nada cambia. Si el texto va en dos líneas y la segunda se
+        /// queda con una sola palabra («Todo para seguir: semillas, una cuia y canoas / infinitas»), su caja se estrecha, centrada,
+        /// hasta la mitad de su ancho en una línea más <see cref="WidowSlackDp"/> (o de <see cref="WidowSlackDp"/> en
+        /// <see cref="WidowSlackDp"/> más, mientras siga en dos líneas): las dos quedan equilibradas, sin palabra viuda
+        /// (revisión de A1; D-003).
         /// </summary>
         public static float PlaceLine(TextMeshProUGUI line, float x, float y, float width, float height)
         {
-            float h = Mathf.Max(height * UiBuilder.TextScale, Mathf.Ceil(UiBuilder.MinTextHeight(line, width)));
-            UiBuilder.Place(line.rectTransform, x, y, width, h);
+            float need = Mathf.Ceil(UiBuilder.MinTextHeight(line, width));
+            float h = Mathf.Max(height * UiBuilder.TextScale, need);
+            float w = width;
+            if (UiBuilder.GreedyLines(line, width, out _, out _, out int lastWords) == 2 && lastWords == 1)
+            {
+                for (float cut = Mathf.Ceil(UiBuilder.MinTextWidth(line) * 0.5f) + WidowSlackDp; cut < width - 0.01f; cut += WidowSlackDp)
+                {
+                    if (Mathf.Ceil(UiBuilder.MinTextHeight(line, cut)) <= need + 0.01f)
+                    {
+                        w = cut;
+                        break;
+                    }
+                }
+            }
+
+            UiBuilder.Place(line.rectTransform, x + ((width - w) * 0.5f), y, w, h);
             return h;
         }
+
+        /// <summary>
+        /// Holgura de la caja de una línea en dos sin palabra viuda sobre la mitad de su ancho en una (dp) [P]
+        /// (<see cref="PlaceLine"/>; revisión de A1).
+        /// </summary>
+        public const float WidowSlackDp = 8f;
 
         /// <summary>Coloca un botón con relieve (su área táctil) en el panel.</summary>
         public static void Place(ReliefParts parts, float x, float y, float w)

@@ -53,13 +53,16 @@ namespace AF.UI
 
         /// <summary>
         /// Lo que crece «Te faltan {n}» en lo alto del latido, desde el centro de su pie (crece hacia arriba y a los lados, nunca
-        /// hacia el cordón de la bandeja) [P]. Con una burbuja vecina (las dos estrechas, 70 dp con 2 dp de aire), menos: lo que
-        /// deja <see cref="MissingPulseClearDp"/> hasta ella (≈ 1,043; <see cref="RevealMissingPulseMaxScale"/>).
+        /// hacia el cordón de la bandeja) [P]. Hacia arriba crece siempre esto (<see cref="RevealMissingPulseMaxScale"/>); a los
+        /// lados, con una burbuja vecina (las dos estrechas, 70 dp con 2 dp de aire), solo lo que deja
+        /// <see cref="MissingPulseClearDp"/> hasta ella (<see cref="RevealMissingPulseMaxScaleX"/>: con 2 dp, nada, así que
+        /// late solo hacia arriba; revisión de A1: con 0,5 dp, en lo alto del latido las dos burbujas se tocaban y se leían como un
+        /// solo bloque bicolor).
         /// </summary>
         public const float MissingPulseScale = 1.08f;
 
         /// <summary>Aire que el latido deja siempre hasta la burbuja «Te faltan {n}» vecina (dp) [P].</summary>
-        public const float MissingPulseClearDp = 0.5f;
+        public const float MissingPulseClearDp = 2f;
 
         /// <summary>Los colores de la etiqueta de precio sin saldo (texto crema sobre el rojo) entran en estos ms [P].</summary>
         public const float MissingColorInMs = 100f;
@@ -175,11 +178,20 @@ namespace AF.UI
         /// <summary>«Te faltan {n}» de Revelar responde al toque (<see cref="PulseRevealMissing"/>; tests).</summary>
         public bool RevealMissingPulsing => _reveal.PulsingNow;
 
-        /// <summary>Escala de «Te faltan {n}» de Revelar en su latido (1 en reposo; tests y capturas).</summary>
+        /// <summary>Escala a lo alto de «Te faltan {n}» de Revelar en su latido (1 en reposo; tests y capturas).</summary>
         public float RevealMissingPulseScale => _reveal.PulseScaleNow;
 
-        /// <summary>Lo más que crece ahora «Te faltan {n}» de Revelar en el latido (con su vecina a la vista, menos; tests).</summary>
+        /// <summary>Escala a lo ancho de «Te faltan {n}» de Revelar en su latido (1 en reposo; tests).</summary>
+        public float RevealMissingPulseScaleX => _reveal.PulseScaleXNow;
+
+        /// <summary>Lo más que crece «Te faltan {n}» de Revelar a lo alto en el latido (<see cref="MissingPulseScale"/>; tests).</summary>
         public float RevealMissingPulseMaxScale => _reveal.PulseMaxScale;
+
+        /// <summary>
+        /// Lo más que crece ahora «Te faltan {n}» de Revelar a lo ancho en el latido (con su vecina a la vista, lo que deja
+        /// <see cref="MissingPulseClearDp"/> hasta ella; tests).
+        /// </summary>
+        public float RevealMissingPulseMaxScaleX => _reveal.PulseMaxScaleX;
 
         /// <summary>
         /// Cuánto lleva «Te faltan {n}» de Revelar los colores de la etiqueta de precio sin saldo (0 en reposo: texto rojo sobre
@@ -689,7 +701,8 @@ namespace AF.UI
             private float _pulseMs = -1f;
             private bool _pulseReduce;
             private float _pulseScale = 1f;
-            private float _pulseMaxScale = MissingPulseScale;
+            private float _pulseScaleX = 1f;
+            private float _pulseMaxScaleX = MissingPulseScale;
             private float _pulseColor;
             private float _pulseColorFrom;
             private bool _visible = true;
@@ -773,7 +786,11 @@ namespace AF.UI
 
             public float PulseScaleNow => _pulseScale;
 
-            public float PulseMaxScale => _pulseMaxScale;
+            public float PulseScaleXNow => _pulseScaleX;
+
+            public float PulseMaxScale => MissingPulseScale;
+
+            public float PulseMaxScaleX => _pulseMaxScaleX;
 
             public float PulseColorNow => _pulseColor;
 
@@ -818,15 +835,18 @@ namespace AF.UI
                 ApplyPulse(beat, Mathf.Clamp01(color));
             }
 
-            // beat = 0 en reposo, 1 en lo alto del latido (escala; sin Reducir movimiento); color = 0..1 hacia los de la etiqueta
-            // de precio sin saldo (texto crema sobre el rojo). Solo escribe lo que cambia.
+            // beat = 0 en reposo, 1 en lo alto del latido (escala: a lo alto, MissingPulseScale; a lo ancho, lo que deja la
+            // vecina; sin Reducir movimiento); color = 0..1 hacia los de la etiqueta de precio sin saldo (texto crema sobre el
+            // rojo). Solo escribe lo que cambia.
             private void ApplyPulse(float beat, float color)
             {
-                float scale = Mathf.Lerp(1f, _pulseMaxScale, beat);
-                if (!Mathf.Approximately(scale, _pulseScale))
+                float scale = Mathf.Lerp(1f, MissingPulseScale, beat);
+                float scaleX = Mathf.Lerp(1f, _pulseMaxScaleX, beat);
+                if (!Mathf.Approximately(scale, _pulseScale) || !Mathf.Approximately(scaleX, _pulseScaleX))
                 {
                     _pulseScale = scale;
-                    _missingBody.localScale = new Vector3(scale, scale, 1f);
+                    _pulseScaleX = scaleX;
+                    _missingBody.localScale = new Vector3(scaleX, scale, 1f);
                 }
 
                 if (!Mathf.Approximately(color, _pulseColor))
@@ -958,8 +978,9 @@ namespace AF.UI
                 float gap = (twoLines ? MissingTwoLinesGapDp : MissingGapDp) * _scale;
                 UiBuilder.Place(_missing, _x + ((SlotDp - widthDp) * 0.5f), _y - gap - h, widthDp, h);
 
-                // Lo más que crece en el latido: con una vecina (la burbuja estrecha), sin pisarla.
-                _pulseMaxScale = widthDp < MissingWideDp - 0.01f
+                // Lo más que crece a lo ancho en el latido: con una vecina (la burbuja estrecha), sin acercarse a ella más de
+                // MissingPulseClearDp (con 2 dp de aire entre las dos, nada: solo late hacia arriba).
+                _pulseMaxScaleX = widthDp < MissingWideDp - 0.01f
                     ? Mathf.Clamp(1f + (2f * (MissingNeighborGapDp - MissingPulseClearDp) / widthDp), 1f, MissingPulseScale)
                     : MissingPulseScale;
             }

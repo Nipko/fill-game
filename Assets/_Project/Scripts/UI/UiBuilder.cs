@@ -184,7 +184,15 @@ namespace AF.UI
         /// </summary>
         public static float MinTextWidth(TextMeshProUGUI text)
         {
-            string value = text.text;
+            return MinTextWidth(text, text.text);
+        }
+
+        /// <summary>
+        /// Ancho que necesita <paramref name="value"/> en una sola línea con la fuente de <paramref name="text"/> a su tamaño más
+        /// pequeño, como <see cref="MinTextWidth(TextMeshProUGUI)"/> (no cambia su texto); 0 sin texto.
+        /// </summary>
+        public static float MinTextWidth(TextMeshProUGUI text, string value)
+        {
             if (string.IsNullOrEmpty(value))
             {
                 return 0f;
@@ -200,6 +208,82 @@ namespace AF.UI
             float width = text.GetPreferredValues(value, float.PositiveInfinity, float.PositiveInfinity).x;
             text.fontSizeMax = max;
             return width;
+        }
+
+        /// <summary>
+        /// Corte voraz por espacios del texto de ahora de <paramref name="text"/> en líneas de <paramref name="width"/> dp a su
+        /// tamaño más pequeño (como corta TextMeshPro: en cada línea, tantas palabras como quepan; una palabra que no cabe sola
+        /// va sola). Devuelve cuántas líneas salen (0 sin texto o con saltos de línea propios, que no se miden) y, de ellas, el
+        /// ancho de la primera y de la última y las palabras de la última. Mide con TextMeshPro al colocar (una medida por
+        /// palabra), nunca por fotograma; para decidir si el corte deja la última línea corta o una palabra suelta.
+        /// </summary>
+        public static int GreedyLines(TextMeshProUGUI text, float width, out float firstWidth, out float lastWidth, out int lastWords)
+        {
+            firstWidth = 0f;
+            lastWidth = 0f;
+            lastWords = 0;
+            string value = text.text;
+            if (string.IsNullOrEmpty(value) || value.IndexOf('\n') >= 0)
+            {
+                return 0;
+            }
+
+            int n = value.Length;
+            int lines = 0;
+            int start = 0;
+            while (true)
+            {
+                while (start < n && value[start] == ' ')
+                {
+                    start++;
+                }
+
+                if (start >= n)
+                {
+                    break;
+                }
+
+                // La línea que empieza en start: suma palabras mientras quepan (la primera, aunque no quepa).
+                int end = start;
+                int words = 0;
+                float lineWidth = 0f;
+                int i = start;
+                while (i < n)
+                {
+                    int j = i;
+                    while (j < n && value[j] != ' ')
+                    {
+                        j++;
+                    }
+
+                    float w = MinTextWidth(text, value.Substring(start, j - start));
+                    if (words > 0 && w > width + 0.01f)
+                    {
+                        break;
+                    }
+
+                    end = j;
+                    words++;
+                    lineWidth = w;
+                    i = j;
+                    while (i < n && value[i] == ' ')
+                    {
+                        i++;
+                    }
+                }
+
+                lines++;
+                if (lines == 1)
+                {
+                    firstWidth = lineWidth;
+                }
+
+                lastWidth = lineWidth;
+                lastWords = words;
+                start = end;
+            }
+
+            return lines;
         }
 
         /// <summary>

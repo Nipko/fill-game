@@ -266,12 +266,19 @@ namespace AF.Tests.PlayMode
 
             // El latido: crece hasta el tope (con la vecina a la vista, el que no la pisa) a mitad y vuelve a 1; el color entra
             // en 100 ms y se mantiene.
+            // A lo alto crece MissingPulseScale; a lo ancho, con la vecina a la vista, nada: deja siempre MissingPulseClearDp de
+            // aire hasta ella (revisión de A1: con 0,5 dp se tocaban y se leían como un solo bloque).
             float maxScale = tray.RevealMissingPulseMaxScale;
-            Assert.That(maxScale, Is.GreaterThan(1f).And.LessThanOrEqualTo(BoosterTray.MissingPulseScale));
-            float grown = bubble.width * (maxScale - 1f) * 0.5f;
-            Assert.That(neighbor.xMax <= bubble.xMin - grown + 0.05f || neighbor.xMin >= bubble.xMax + grown - 0.05f, Is.True, "el latido no pisa la burbuja vecina");
+            Assert.That(maxScale, Is.EqualTo(BoosterTray.MissingPulseScale));
+            float maxScaleX = tray.RevealMissingPulseMaxScaleX;
+            Assert.That(maxScaleX, Is.GreaterThanOrEqualTo(1f).And.LessThanOrEqualTo(BoosterTray.MissingPulseScale));
+            float grown = bubble.width * (maxScaleX - 1f) * 0.5f;
+            float clear = BoosterTray.MissingPulseClearDp;
+            Assert.That(neighbor.xMax <= bubble.xMin - grown - clear + 0.05f || neighbor.xMin >= bubble.xMax + grown + clear - 0.05f, Is.True,
+                "el latido deja " + clear + " dp de aire hasta la burbuja vecina");
             PlayModeHelpers.TickExact(boot, Mathf.RoundToInt(BoosterTray.MissingPulseBeatMs));
             Assert.That(tray.RevealMissingPulseScale, Is.EqualTo(maxScale).Within(0.002f), "en lo alto del latido");
+            Assert.That(tray.RevealMissingPulseScaleX, Is.EqualTo(maxScaleX).Within(0.002f), "a lo ancho, lo que deja la vecina");
             Assert.That(tray.RevealMissingPulseColor, Is.EqualTo(1f), "con los colores del precio sin saldo");
             Assert.That(tray.RevealMissingLabel.color, Is.EqualTo((Color)Palette.Cream), "texto crema sobre el rojo");
             PlayModeHelpers.TickExact(boot, Mathf.RoundToInt(BoosterTray.MissingPulseBeatMs) + 1);
