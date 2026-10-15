@@ -25,7 +25,11 @@ Casos (contrato 21 del GDD; docs/gdd/08-arquitectura-tecnica-publicacion.md §4.
         cucharon e intro_mechanic tinaja fallan con pack_schema 1 y 2. Mascara de la tinaja en relief (decision del dueno
         del 2026-10-14, opcion a de la revision de P2a; 08 §4.1): con pack_schema 3, relief_board lleva hidden si y solo
         si su attrs contiene la tinaja (obligatorio y no vacio, como mucho 4 pares); sin la tinaja (Aguas turbias
-        incluidas) y con pack_schema 1 y 2, relief_board no admite hidden.
+        incluidas) y con pack_schema 1 y 2, relief_board no admite hidden;
+    (g) pack_schema 3, paso 2 (P2b; firma de la pregunta 8 del plan de la tanda 4; 02 §9.1 y propuesta de D-007, b.3):
+        hoja_atada exige key; el Brote admite n 1 o 2 (Brote de dos hojas); flor exige key y key2, con key distinta de
+        key2 [P]; intro_mechanic hoja_atada, flor, brote_n2 [P] y liana_n [P]; key2 solo en la Flor. Con pack_schema 1 y
+        2 nada de eso valida (hoja_atada en un pack 2 falla) y lo demas sigue igual (el 2 no restringe el n del Brote).
 
 Imprime PASS/FAIL por caso y termina con codigo 1 si alguno falla. Requiere jsonschema >= 4.18.
 
@@ -469,6 +473,72 @@ def main() -> int:
     d["levels"][0].update({"murky": True, "hidden": [[0, 1], [0, 0]]})
     d["levels"][0]["relief"][0]["hidden"] = [[0, 1], [0, 0]]
     check(validator, "f32", "pack 1: hidden en una variante de relief", d, False)
+
+    # (g) pack_schema 3, paso 2 (P2b; firma de la pregunta 8 del plan de la tanda 4; 02 §9.1 y propuesta de D-007, b.3;
+    # contrato 21): hoja_atada {key}, Brote con n 1 o 2, flor {key, key2} con key distinta de key2 [P] e intro_mechanic
+    # hoja_atada, flor, brote_n2 [P] y liana_n [P]; nada de eso valida con pack_schema 1 y 2.
+    def variant_level(level: int, mech: dict | None, intro, pack: int = 3) -> dict:
+        """pack2_level en el mundo de la variante: Oriente (201-300) o Madre de Dios (301-420)."""
+        if level <= 300:
+            return pack2_level(6, "w06_oriente", "white", level, mech, intro, pack=pack)
+        return pack2_level(7, "w07_madre_de_dios", "white", level, mech, intro, pack=pack)
+
+    hoja_atada = {"type": "hoja_atada", "key": 4}
+    brote2 = {"type": "brote", "n": 2}
+    flor = {"type": "flor", "key": 3, "key2": 4}
+    check(validator, "g1", "pack 3: debut de la Hoja atada en el 283 {type: hoja_atada, key: 4} (intro_mechanic hoja_atada)",
+          variant_level(283, hoja_atada, "hoja_atada"), True)
+    check(validator, "g2", "pack 3: Hoja atada sin key", variant_level(283, {"type": "hoja_atada"}, "hoja_atada"), False)
+    check(validator, "g3", "pack 2: debut de la Hoja atada en el 283 (solo pack_schema 3)",
+          variant_level(283, hoja_atada, "hoja_atada", pack=2), False)
+    check(validator, "g4", "pack 2: hoja_atada en attrs, sin intro_mechanic", variant_level(283, hoja_atada, None, pack=2), False)
+    check(validator, "g5", "pack 1: hoja_atada en attrs, sin intro_mechanic", variant_level(283, hoja_atada, None, pack=1), False)
+    check(validator, "g6", "pack 3: debut del Brote de dos hojas en el 343 {type: brote, n: 2} (intro_mechanic brote_n2 [P])",
+          variant_level(343, brote2, "brote_n2"), True)
+    check(validator, "g7", "pack 3: Brote con n = 1", variant_level(343, {"type": "brote", "n": 1}, None), True)
+    check(validator, "g8", "pack 3: Brote sin n (el Brote de siempre)", variant_level(343, {"type": "brote"}, None), True)
+    check(validator, "g9", "pack 3: Brote con n = 3 (n es 1 o 2)", variant_level(343, {"type": "brote", "n": 3}, None), False)
+    check(validator, "g10", "pack 2: intro_mechanic = brote_n2 (solo pack_schema 3)",
+          variant_level(343, {"type": "brote"}, "brote_n2", pack=2), False)
+    check(validator, "g11", "pack 2: Brote con n = 3 (el 2 no restringe el n del Brote: valida igual que antes de P2b)",
+          variant_level(343, {"type": "brote", "n": 3}, None, pack=2), True)
+    check(validator, "g12", "pack 3: debut de la Flor en el 403 {type: flor, key: 3, key2: 4} (intro_mechanic flor)",
+          variant_level(403, flor, "flor"), True)
+    check(validator, "g13", "pack 3: Flor sin key2", variant_level(403, {"type": "flor", "key": 3}, "flor"), False)
+    check(validator, "g14", "pack 3: Flor sin key", variant_level(403, {"type": "flor", "key2": 4}, "flor"), False)
+    check(validator, "g15", "pack 3: Flor con key = key2 = 3 [P]",
+          variant_level(403, {"type": "flor", "key": 3, "key2": 3}, "flor"), False)
+    check(validator, "g16", "pack 3: Flor con key = key2 = 16 (el ultimo indice de motor) [P]",
+          variant_level(403, {"type": "flor", "key": 16, "key2": 16}, "flor"), False)
+    check(validator, "g17", "pack 3: Flor con key2 = 17 (fuera de tint_index)",
+          variant_level(403, {"type": "flor", "key": 3, "key2": 17}, "flor"), False)
+    check(validator, "g18", "pack 2: debut de la Flor en el 403 (solo pack_schema 3)",
+          variant_level(403, flor, "flor", pack=2), False)
+    check(validator, "g19", "pack 1: flor en attrs, sin intro_mechanic", variant_level(403, flor, None, pack=1), False)
+    d = variant_level(403, None, None, pack=2)
+    d["levels"][0]["relief"][1]["attrs"][3] = dict(flor)
+    check(validator, "g20", "pack 2: flor solo en attrs de relief[1]", d, False)
+    check(validator, "g21", "pack 3: key2 en una Hoja {type: hoja, key: 4, key2: 5} (key2 solo en la Flor)",
+          variant_level(283, {"type": "hoja", "key": 4, "key2": 5}, None), False)
+    check(validator, "g22", "pack 3: key2 en una Liana con fruta {type: liana, key: 3, key2: 4}",
+          variant_level(283, {"type": "liana", "key": 3, "key2": 4}, None), False)
+    check(validator, "g23", "pack 2: key2 en una Hoja (rechazada, como antes de P2b)",
+          variant_level(283, {"type": "hoja", "key": 4, "key2": 5}, None, pack=2), False)
+    check(validator, "g24", "pack 1: key2 en una Hoja (rechazada, como antes de P2b)",
+          variant_level(283, {"type": "hoja", "key": 4, "key2": 5}, None, pack=1), False)
+    check(validator, "g25", "pack 3: debut de la Liana de cuenta en el 243 {type: liana, n: 2} (intro_mechanic liana_n [P])",
+          variant_level(243, {"type": "liana", "n": 2}, "liana_n"), True)
+    check(validator, "g26", "pack 2: intro_mechanic = liana_n (solo pack_schema 3)",
+          variant_level(243, {"type": "liana", "n": 2}, "liana_n", pack=2), False)
+    check(validator, "g27", "pack 1: intro_mechanic = hoja_atada sin la mecanica en attrs",
+          variant_level(283, None, "hoja_atada", pack=1), False)
+    check(validator, "g28", "pack 2: intro_mechanic = flor sin la mecanica en attrs", variant_level(403, None, "flor", pack=2), False)
+    d = tinaja_level(level=343, intro=None)
+    for board in [d["levels"][0]] + d["levels"][0]["relief"]:
+        board["attrs"][3] = dict(hoja_atada)
+    check(validator, "g29", "pack 3: Hoja atada junto a la Tinaja (filtro admitido con la tinaja, 02 §9.1)", d, True)
+    check(attr_validator, "g30", "attr {type: hoja_atada, key: 4} contra $defs/attr", hoja_atada, True)
+    check(attr_validator, "g31", "attr {type: flor, key: 3, key2: 4} contra $defs/attr", flor, True)
 
     failed = RESULTS.count(False)
     print(f"\n{len(RESULTS) - failed}/{len(RESULTS)} casos PASS" + (f"; {failed} FAIL" if failed else ""))
