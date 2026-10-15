@@ -92,7 +92,7 @@ namespace AF.UI
             _canvas = new OverlayCanvas("StoreSheetCanvas", host, 50);
             ModalKit.Dim("Dim", _canvas.Root, 0.6f);
             _panel = ModalKit.Card("Panel", _canvas.Root, art, out _surface);
-            ModalKit.Header(_panel, art, SimulatedPurchase.Label, out _header);
+            ModalKit.Header(_panel, art, InterimText(SimulatedPurchase.LabelKey), out _header);
             _name = ModalKit.Line("Name", _panel, string.Empty, 18f, Palette.FamilyWood.Base);
             _price = ModalKit.Line("Price", _panel, string.Empty, 28f, Palette.Ink, TextStyle.PlainBold);
             _price.color = Palette.FamilyWood.Deep;
@@ -120,7 +120,7 @@ namespace AF.UI
             _onClosed = onClosed;
             _canvas.Canvas.gameObject.SetActive(true);
             _canvas.Measure();
-            _name.text = purchase.Name;
+            _name.text = InterimText(purchase.NameKey);
             _price.text = purchase.PriceText;
             float w = Mathf.Min(360f, _canvas.Width);
             float inner = w - 32f;
@@ -145,6 +145,30 @@ namespace AF.UI
             _onClosed = null;
             _canvas.Canvas.gameObject.SetActive(false);
             done?.Invoke(confirmed);
+        }
+
+        // Puente provisional (S12): AF.IAP ya solo da claves y la tabla de textos aún no las tiene. L3 lo sustituye por
+        // Loc.T(clave), con las filas iap_*_name e iap_simulated_purchase en strings.csv, y lo borra. Textos de 05 §4.1.
+        private static string InterimText(string key)
+        {
+            switch (key)
+            {
+                case SimulatedPurchase.LabelKey: return "Compra simulada";
+                case "iap_af_starter_name": return "Mochila de inicio";
+                case "iap_af_coins_2_name": return "Puñado de semillas";
+                case "iap_af_coins_3_name": return "Bolsa de semillas";
+                case "iap_af_coins_4_name": return "Saco de semillas";
+                case "iap_af_coins_5_name": return "Costal de semillas";
+                case "iap_af_coins_6_name": return "Cosecha de semillas";
+                case "iap_af_rescue_name": return "Balsa de rescate";
+                case "iap_af_noads_name": return "Sin anuncios";
+                case "iap_af_piggy_name": return "Cántaro";
+                case "iap_af_infinite_canoes_1h_name": return "Canoas infinitas 1 h";
+                case "iap_af_skin_m02_name": return "Pack Cuia de Santarém";
+                case "iap_af_skin_m03_name": return "Pack Cuia del Encuentro";
+                case "iap_af_skin_m04_name": return "Pack Totuma";
+                default: return key;
+            }
         }
     }
 }

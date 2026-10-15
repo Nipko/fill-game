@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using AF.Platform;
 
 namespace AF.Save
@@ -9,10 +10,13 @@ namespace AF.Save
     /// Perfil del jugador guardado en <c>profile.json</c> (GDD 08 §4.3, que extiende el inventario de 04 §10.1), con
     /// <c>profile_schema</c> = <see cref="CurrentSchema"/>. Contiene el subconjunto que usa la pista B (D-008; tareas B1-1,
     /// B1-3 y B1-4): <c>created_at</c>, <c>economy_ts</c>, <c>wallet</c> (semillas y canoas), <c>stock</c>, <c>daily</c>,
-    /// <c>progress</c>, <c>level_state</c>, <c>entitlements</c> (<c>no_ads</c>, <c>starter_bought</c> y <c>skins</c>),
-    /// <c>ads</c> y <c>stats</c>, con los nombres exactos del GDD. El bloque <c>ads</c> y
-    /// <c>daily.af_rescue_hidden_until</c> no están en 08 §4.3: los nombres salen del pseudocódigo de 05 §6.3 y de la regla
-    /// de 48 h de 05 §4.1 [P]. El resto de 08 §4.3 (consentimiento, uid, calendario, álbum…) llega con su sistema.
+    /// <c>progress</c> (con <c>map_seen_level</c>, D-013), <c>level_state</c>, <c>entitlements</c> (<c>no_ads</c>,
+    /// <c>starter_bought</c> y <c>skins</c>), <c>settings</c> (<c>patterns</c>, <c>language</c> y <c>sloth_messages</c>,
+    /// D-016 y D-018; <c>idle_hint</c> [P]), <c>sloth</c> [P] (D-016), <c>ads</c> y <c>stats</c>, con los nombres exactos
+    /// del GDD. El bloque <c>ads</c> y <c>daily.af_rescue_hidden_until</c> no están en 08 §4.3: los nombres salen del
+    /// pseudocódigo de 05 §6.3 y de la regla de 48 h de 05 §4.1 [P]. El resto de 08 §4.3 (consentimiento, uid, calendario,
+    /// álbum, sonido…) llega con su sistema. <c>settings</c>, <c>sloth</c> y <c>map_seen_level</c> entran con el esquema 1
+    /// sin migrar, porque aún no se ha publicado (08 §4.3; D-013 punto 14 y D-016 punto 4).
     /// <para>
     /// Es un contenedor de datos: las reglas (topes, precios, regeneración de canoas, reinicio diario) viven en
     /// <c>AF.Economy</c>, <c>AF.Ads</c> y <c>AF.Boosters</c>, que lo mutan y lo guardan con <see cref="IProfileStore"/>.
@@ -55,6 +59,12 @@ namespace AF.Save
 
         /// <summary><c>entitlements</c>: derechos comprados.</summary>
         public EntitlementsData Entitlements { get; } = new EntitlementsData();
+
+        /// <summary><c>settings</c>: los ajustes del jugador que ya existen en el juego (08 §4.3).</summary>
+        public SettingsData Settings { get; } = new SettingsData();
+
+        /// <summary><c>sloth</c> [P]: lo que el perezoso recuerda entre sesiones (D-016 punto 4; propuesta de TiTino d.10).</summary>
+        public SlothData Sloth { get; } = new SlothData();
 
         /// <summary><c>ads</c>: estado de la cadencia de intersticiales que dura más que una sesión (05 §6.3) [P].</summary>
         public AdsData Ads { get; } = new AdsData();
@@ -205,6 +215,39 @@ namespace AF.Save
 
         /// <summary><c>content_version</c>: versión del catálogo de niveles con el que se jugó (08 §4.4), o null.</summary>
         public string? ContentVersion { get; set; }
+
+        /// <summary>
+        /// <c>map_seen_level</c> (D-013 punto 14; 08 §4.3): el último nivel cuyo estado del Mapa del río ya vio el jugador; 0
+        /// por defecto. Lo escribe <c>AF.GameFlow</c> al cerrar el Mapa y tras la franja de llegada de la victoria (08 §4.3);
+        /// con él, el Mapa anima exactamente lo pendiente al abrirse. Al guardar y al leer queda recortado a
+        /// [0, <see cref="MaxLevel"/>] (<see cref="ClampedMapSeenLevel"/>); en la fusión de la nube gana el máximo
+        /// (<see cref="MergeMapSeenLevel"/>).
+        /// </summary>
+        public int MapSeenLevel { get; set; }
+
+        /// <summary><see cref="MapSeenLevel"/> recortado a [0, <see cref="MaxLevel"/>]: lo que se guarda.</summary>
+        public int ClampedMapSeenLevel => ClampMapSeen(MapSeenLevel, MaxLevel);
+
+        /// <summary>
+        /// Fusión de 08 §11 (<c>ResolveConflict</c>): sobre el progreso del perfil ganador, <c>map_seen_level</c> pasa a ser
+        /// el máximo de los dos, como <c>max_level</c>, recortado a [0, <see cref="MaxLevel"/>] del ganador.
+        /// </summary>
+        /// <param name="other">El progreso del otro perfil (el perdedor).</param>
+        public void MergeMapSeenLevel(ProgressData other)
+        {
+            if (other == null)
+            {
+                throw new ArgumentNullException(nameof(other));
+            }
+
+            MapSeenLevel = ClampMapSeen(Math.Max(MapSeenLevel, other.MapSeenLevel), MaxLevel);
+        }
+
+        private static int ClampMapSeen(int value, int maxLevel)
+        {
+            int top = Math.Max(0, maxLevel);
+            return value < 0 ? 0 : value > top ? top : value;
+        }
     }
 
     /// <summary>
@@ -262,6 +305,212 @@ namespace AF.Save
         /// la base, <c>cuia_vidrio</c>, que es gratis).
         /// </summary>
         public List<string> Skins { get; } = new List<string>();
+    }
+
+    /// <summary>
+    /// Valor de <c>settings.patterns</c>: el ajuste «Patrones de fruta» (02 §12; glosario §10 <c>patterns_toggle</c>). Vive
+    /// aquí porque se persiste en el perfil. Lo resuelve <c>AF.UI</c> (<c>Auto</c> = <c>Palette.PatternsOnFor(level)</c>) y a
+    /// <c>AF.Presentation</c> solo le llega un bool: Presentation no referencia AF.Save (08 §2.2).
+    /// </summary>
+    public enum PatternsSetting
+    {
+        /// <summary><c>auto</c> (default): los patrones salen según el nivel, como hasta ahora.</summary>
+        Auto = 0,
+
+        /// <summary><c>on</c>: siempre.</summary>
+        On = 1,
+
+        /// <summary><c>off</c>: nunca.</summary>
+        Off = 2,
+    }
+
+    /// <summary>
+    /// <c>settings</c> (08 §4.3): solo los ajustes que ya existen en el juego. <c>sound</c>, <c>music</c>, <c>haptics</c> y
+    /// <c>push</c> llegan con su sistema. Un valor que falta o no es válido en el archivo toma el default (los ajustes nunca
+    /// hacen corrupto un perfil).
+    /// </summary>
+    public sealed class SettingsData
+    {
+        /// <summary>Valor de <see cref="Language"/> que sigue al teléfono (D-018 Q7-A; 08 §4.3): el default.</summary>
+        public const string LanguageAuto = "auto";
+
+        // Tanda 1 de D-018 (Q1-A) y el idioma falso en-XA, solo de desarrollo (glosario §11, fila Localización). El perfil
+        // solo admite estos códigos; si un idioma guardado se puede usar (UI completa, build de desarrollo) lo decide quien
+        // resuelve el idioma, no el perfil. La tanda 2 añade aquí sus códigos.
+        private static readonly string[] LanguageCodes = { "es-419", "pt-BR", "en", "en-XA" };
+
+        private string _language = LanguageAuto;
+        private PatternsSetting _patterns = PatternsSetting.Auto;
+
+        /// <summary>Códigos de idioma que admite <see cref="Language"/> además de <see cref="LanguageAuto"/>, con su forma canónica.</summary>
+        public static IReadOnlyList<string> Languages { get; } = Array.AsReadOnly(LanguageCodes);
+
+        /// <summary><c>patterns</c>: «Patrones de fruta» (<c>auto</c>, <c>on</c> u <c>off</c>; default <c>auto</c>).</summary>
+        /// <exception cref="ArgumentOutOfRangeException">Al asignar un valor que no es del enum.</exception>
+        public PatternsSetting Patterns
+        {
+            get => _patterns;
+            set
+            {
+                if (value != PatternsSetting.Auto && value != PatternsSetting.On && value != PatternsSetting.Off)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), "Ajuste de patrones desconocido.");
+                }
+
+                _patterns = value;
+            }
+        }
+
+        /// <summary>
+        /// <c>language</c> (D-018 Q7-A; 08 §4.3): <see cref="LanguageAuto"/> (seguir al teléfono; default) o uno de
+        /// <see cref="Languages"/>, en su forma canónica (se acepta sin distinguir mayúsculas: <c>ES-419</c> → <c>es-419</c>).
+        /// </summary>
+        /// <exception cref="ArgumentException">Al asignar null o un código que no está en <see cref="Languages"/>.</exception>
+        public string Language
+        {
+            get => _language;
+            set => _language = NormalizeLanguage(value)
+                ?? throw new ArgumentException("Idioma no admitido en settings.language: '" + value + "'.", nameof(value));
+        }
+
+        /// <summary><c>sloth_messages</c> (D-016 punto 4): el ajuste «Mensajes de TiTino»; apagado, solo gestos. Default true.</summary>
+        public bool SlothMessages { get; set; } = true;
+
+        /// <summary><c>idle_hint</c> [P]: la pista por inactividad (04 §2.3), que se puede apagar en Ajustes. Default true.</summary>
+        public bool IdleHint { get; set; } = true;
+
+        /// <summary>
+        /// Forma canónica de <paramref name="value"/> si vale para <see cref="Language"/> (<see cref="LanguageAuto"/> o uno de
+        /// <see cref="Languages"/>, sin distinguir mayúsculas), o null si no vale.
+        /// </summary>
+        public static string? NormalizeLanguage(string? value)
+        {
+            if (value == null)
+            {
+                return null;
+            }
+
+            if (string.Equals(value, LanguageAuto, StringComparison.OrdinalIgnoreCase))
+            {
+                return LanguageAuto;
+            }
+
+            for (int i = 0; i < LanguageCodes.Length; i++)
+            {
+                if (string.Equals(value, LanguageCodes[i], StringComparison.OrdinalIgnoreCase))
+                {
+                    return LanguageCodes[i];
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>Texto de <paramref name="value"/> en el JSON: <c>auto</c>, <c>on</c> u <c>off</c>.</summary>
+        internal static string PatternsText(PatternsSetting value)
+        {
+            return value == PatternsSetting.On ? "on" : value == PatternsSetting.Off ? "off" : "auto";
+        }
+
+        /// <summary>Lee <c>auto</c>, <c>on</c> u <c>off</c>; false con cualquier otro texto.</summary>
+        internal static bool TryParsePatterns(string text, out PatternsSetting value)
+        {
+            switch (text)
+            {
+                case "auto":
+                    value = PatternsSetting.Auto;
+                    return true;
+                case "on":
+                    value = PatternsSetting.On;
+                    return true;
+                case "off":
+                    value = PatternsSetting.Off;
+                    return true;
+                default:
+                    value = PatternsSetting.Auto;
+                    return false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// <c>sloth</c> [P] (D-016 punto 4; propuesta de TiTino d.7 y d.10): la última frase vista de cada momento, para no
+    /// repetirla nunca seguida, y las fechas locales del último saludo y de la última apertura, para los topes de 1 saludo
+    /// al día y el regreso tras ≥ 3 días. Las reglas las aplica <c>AF.GameFlow</c>; aquí solo se guardan. Un valor que
+    /// falta o no es válido en el archivo toma el default.
+    /// </summary>
+    public sealed class SlothData
+    {
+        /// <summary>Número de momentos con banco de frases (glosario §10: <c>sloth_line_&lt;momento&gt;_&lt;nn&gt;</c>).</summary>
+        public const int MomentCount = 8;
+
+        /// <summary>Valor de <see cref="LastLine"/> cuando aún no se vio ninguna frase de ese momento.</summary>
+        public const int NoLine = -1;
+
+        private static readonly string[] MomentKeys = { "win", "hard", "fail", "restart", "streak", "return", "debut", "milestone" };
+
+        private string? _lastGreetingDate;
+        private string? _lastSeenDate;
+
+        /// <summary>
+        /// Momentos en el orden de los índices de <see cref="LastLine"/> (el de D-016 punto 4 y el glosario §10). El orden
+        /// se guarda en el perfil: cambiarlo exige migrar.
+        /// </summary>
+        public static IReadOnlyList<string> Moments { get; } = Array.AsReadOnly(MomentKeys);
+
+        /// <summary>
+        /// <c>last_line</c>: por cada momento de <see cref="Moments"/>, el índice de la última frase vista de su banco, o
+        /// <see cref="NoLine"/>. Siempre tiene <see cref="MomentCount"/> elementos.
+        /// </summary>
+        public int[] LastLine { get; } = new int[] { NoLine, NoLine, NoLine, NoLine, NoLine, NoLine, NoLine, NoLine };
+
+        /// <summary><c>last_greeting_date</c>: fecha local (<c>yyyy-MM-dd</c>) del último saludo del inicio, o null.</summary>
+        /// <exception cref="ArgumentException">Al asignar un texto que no es una fecha <c>yyyy-MM-dd</c>.</exception>
+        public string? LastGreetingDate
+        {
+            get => _lastGreetingDate;
+            set => _lastGreetingDate = RequireDateKey(value);
+        }
+
+        /// <summary><c>last_seen_date</c>: fecha local (<c>yyyy-MM-dd</c>) de la última apertura del juego, o null.</summary>
+        /// <exception cref="ArgumentException">Al asignar un texto que no es una fecha <c>yyyy-MM-dd</c>.</exception>
+        public string? LastSeenDate
+        {
+            get => _lastSeenDate;
+            set => _lastSeenDate = RequireDateKey(value);
+        }
+
+        /// <summary>
+        /// true si <paramref name="text"/> es una fecha que existe con el formato de <c>ClockExtensions.LocalDateKey</c>:
+        /// <c>yyyy-MM-dd</c>, calendario gregoriano.
+        /// </summary>
+        public static bool IsDateKey(string? text)
+        {
+            if (text == null || text.Length != 10 || text[4] != '-' || text[7] != '-')
+            {
+                return false;
+            }
+
+            for (int i = 0; i < text.Length; i++)
+            {
+                if (i != 4 && i != 7 && (text[i] < '0' || text[i] > '9'))
+                {
+                    return false;
+                }
+            }
+
+            return DateTime.TryParseExact(text, "yyyy'-'MM'-'dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _);
+        }
+
+        private static string? RequireDateKey(string? value)
+        {
+            if (value != null && !IsDateKey(value))
+            {
+                throw new ArgumentException("Se espera una fecha yyyy-MM-dd o null: '" + value + "'.", nameof(value));
+            }
+
+            return value;
+        }
     }
 
     /// <summary>

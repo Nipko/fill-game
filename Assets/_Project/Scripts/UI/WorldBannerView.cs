@@ -305,7 +305,10 @@ namespace AF.UI
 
         /// <summary>
         /// El arte se pinta en un hilo del grupo y el banner espera a tenerlo (el juego); false, en el acto al abrirlo (los
-        /// tests y las capturas que miden instantes exactos: <c>LaunchOptions.BannerArtSyncOverride</c>).
+        /// tests y las capturas que miden instantes exactos: <c>LaunchOptions.BannerArtSyncOverride</c>). Lo que se pinta en el
+        /// acto, también la superficie de madera de la tarjeta, cuenta como pintado en el hilo principal
+        /// (<c>ProceduralArt.ModalSurfaceOriginOf</c> da <c>MainThread</c>, y <c>OtherThread</c> en un hilo del grupo; revisión
+        /// de T52, U1): el diagnóstico de los tests no confunde los dos caminos.
         /// </summary>
         public bool AsyncArt { get; set; } = true;
 

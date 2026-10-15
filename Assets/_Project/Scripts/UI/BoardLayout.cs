@@ -4,6 +4,15 @@ using System;
 namespace AF.UI
 {
     /// <summary>Resultado de <see cref="BoardLayout.Compute"/> (dp del lienzo; y medida desde arriba).</summary>
+    /// <remarks>
+    /// Convención de dp de AF.UI (revisión de T52, U1): las alturas van en dp del lienzo medidos desde arriba, así que crecen
+    /// hacia abajo. «pie + n» es n dp bajo la línea de pie de la fila (<see cref="RowFootY"/>, <see cref="FootY"/>) y
+    /// «pie − n», n dp por encima. Así, la repisa que dibuja GameScreen tiene la cara superior en pie − 3, el canto inferior de
+    /// la madera en pie + 17 y el final de su sombra en pie + 23 (<c>GameScreen.ShelfShadowBelowFootDp</c>); el bloque la cuenta
+    /// hasta pie + 15 (<see cref="BoardLayout.ShelfDrop"/>). Las piezas de las mecánicas de AF.Presentation miden al
+    /// revés, hacia arriba desde el centro del pie (p. ej. <c>RemolinoOverlay.PairMarkRect</c>); al pasarlas al lienzo cambia
+    /// el signo, y en los comentarios de AF.UI se escriben siempre con esta convención.
+    /// </remarks>
     public sealed class BoardLayoutResult
     {
         internal BoardLayoutResult(int count, int rows)

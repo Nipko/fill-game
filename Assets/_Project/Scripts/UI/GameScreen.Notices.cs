@@ -45,9 +45,11 @@ namespace AF.UI
     /// polen y justo detrás de la capa de vertido: el origen que vierte se dibuja delante de ellos (D-006: delante de todo),
     /// como los modales y la pausa. El cartel (<c>_banner</c>) no va en ella.</para>
     /// <para><b>Dónde va el aviso</b> (<c>PlaceToast</c>; observación 1 de la prueba del 2026-10-13 y pregunta 41 (4); T52 y su
-    /// revisión) [P]: con su alto de siempre (<see cref="Toast.DefaultHeightDp"/>) y su borde de abajo 8 dp sobre la bandeja,
-    /// como antes. Si se ve alguna burbuja «Te faltan {n}» de la bandeja (<see cref="BoosterTray.TryGetMissingTop"/>), sube lo
-    /// justo para quedar <see cref="NoticeBubbleGapDp"/> por encima de la más alta, con su canto: nunca la tapa. Para no tapar
+    /// revisión) [P]. Las alturas van en dp del lienzo, que crecen hacia abajo (la convención de <see cref="BoardLayoutResult"/>):
+    /// «pie + n» es n dp bajo la línea de pie de la fila y «pie − n», n dp por encima. Con su alto de siempre
+    /// (<see cref="Toast.DefaultHeightDp"/>) y su borde de abajo 8 dp sobre la bandeja, como antes. Si se ve alguna burbuja
+    /// «Te faltan {n}» de la bandeja (<see cref="BoosterTray.TryGetMissingTop"/>), sube lo justo para quedar
+    /// <see cref="NoticeBubbleGapDp"/> por encima de la más alta, con su canto: nunca la tapa. Para no tapar
     /// el tablero, se encoge hasta su texto (<see cref="Toast.MinHeightDp"/>) si entre la repisa de la última fila (con su
     /// sombra, <see cref="ShelfShadowBelowFootDp"/> bajo el pie, donde van la ficha «?×n» de las cuias turbias y la de la pareja
     /// del Remolino) y su borde de abajo no cabe entero. Si ni así cabe, tapa parte de esa repisa, nunca las cuias. Pasa con 3
@@ -62,11 +64,12 @@ namespace AF.UI
     /// ese tramo durante los 3 s que dura; y con «Te faltan 120 semillas» de Revelar sin semillas (captura 92d). Solo cuentan
     /// como fichas la «?×n» y la de la pareja del Remolino (<c>CollectNoticeChips</c>): si una cuia de una pareja del
     /// Remolino está en la fila de abajo, el aviso también puede tapar en parte, en su tramo, lo que de ese Remolino queda
-    /// bajo el pie (la bajada del canal por el frente de la repisa, el tramo horizontal pegado bajo ella, de pie − 17 a pie −
-    /// 21,5, y, si el aviso sube más, la mitad de abajo del remanso, que llega a pie − 12,6 dp con u = 24 dp) durante lo que
+    /// bajo el pie (la bajada del canal por el frente de la repisa; el tramo horizontal pegado bajo ella, de pie + 17 a pie +
+    /// 21,5; y, si el aviso sube más, la mitad de abajo del remanso, que llega a pie + 12,6 con u = 24 dp) durante lo que
     /// dura (3-7 s), y el canal se ve cortado. Pasa en el 103 tras el rescate (captura 92g de T52): con la cuia 8 de la pareja
-    /// bajo la primera cuia de la fila de abajo, «¡Una cuia más!» va a la derecha de su ficha (de 53,5 a 306,5 dp, desde pie
-    /// − 12,5) y tapa la bajada y el tramo horizontal; el remanso, no;</description></item>
+    /// bajo la primera cuia de la fila de abajo, «¡Una cuia más!» va a la derecha de su ficha (de 53,5 a 306,5 dp a lo ancho y
+    /// desde pie + 12,5, es decir, 12,5 dp bajo el pie, por debajo de las cuias) y tapa la bajada y el tramo horizontal; el
+    /// remanso, no;</description></item>
     /// <item><description>si así no cabe, va de su ancho de siempre y sube hasta tapar enteras las fichas que alcanza: su borde
     /// de arriba, <see cref="NoticeChipCoverDp"/> sobre ellas y nunca por encima del pie de la fila. Así no asoma una tira
     /// suelta de la ficha, que parecía un fallo de dibujo (captura 92 de la primera versión de T52), pero tapa los 23 dp bajo el
@@ -407,6 +410,12 @@ namespace AF.UI
         // Pregunta 42, opción (b) (decidida por el dueño el 2026-10-13; T52): al abrirse un modal del embudo, el aviso y la tarjeta
         // del miquito que se vean se ocultan en el acto, sin salida (como en la celebración), y se descartan. La cola y la
         // tarjeta pendiente siguen esperando a que se vuelva a jugar (NoticesHeld).
+        // En el juego llegan aquí con un aviso a la vista OnStuckModalOpened y, desde el juego, OnFunnelPhase al abrir Nivel
+        // fallido (Pausa › «Salir» confirmado desde el 31) y Sin canoas (Volver a la orilla con 0 canoas). Son defensivas las
+        // demás: OnFunnelPhase con ¿Seguro? (solo desde Aguas estancadas, que ya ocultó el aviso) y con Nivel fallido o Sin
+        // canoas dentro del embudo, OnResumed (al reanudar, OnLevelLoaded ya vació la cola) y la red de seguridad de
+        // TickNotices. NoticeHooksDefensiveTests prueba los dos caminos del juego y llama a las defensivas fuera de orden, con
+        // el aviso y la tarjeta forzados a la vista, y sin flujo (revisión de T52, U1).
         private void HideNoticesForModal()
         {
             _toast.Hide();
