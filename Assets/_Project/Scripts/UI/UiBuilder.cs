@@ -36,6 +36,26 @@ namespace AF.UI
     /// <summary>Utilidades para construir la UI por código (sin prefabs; docs/dev/prototipo-v0.md c; guía visual v2, 5).</summary>
     internal static class UiBuilder
     {
+        /// <summary>
+        /// Tamaño mínimo de un texto (sp; 02 §12, pregunta 36 (a), D-020): ningún texto se encoge por debajo para caber; donde
+        /// no quepa, va en dos líneas o su caja crece. Con la escala de texto, son 12 × <see cref="TextScale"/> dp.
+        /// </summary>
+        public const float MinTextSp = 12f;
+
+        /// <summary>Escala de texto más alta que se respeta (02 §12: «por encima del 130 % se fija ese tope»).</summary>
+        public const float MaxTextScale = 1.3f;
+
+        /// <summary>
+        /// Escala de texto global [P] (02 §12: la escala de fuente del sistema, de 1 a <see cref="MaxTextScale"/>; tarea A1):
+        /// multiplica el tamaño que recibe <see cref="Label"/> y el mínimo y el máximo de <see cref="AutoSize"/>, así que un
+        /// texto de 12 sp mide 12 × escala dp, como en Android. Con 1, la de siempre, no cambia nada. La fija
+        /// <see cref="LaunchOptions.FontScaleOverride"/> (tests) o, en desarrollo, el extra <c>af_font_scale</c>; la escala de
+        /// Android aún no llega al juego. Se lee al crear cada texto (y al llamar a <see cref="AutoSize"/>): los que ya existen
+        /// no cambian. La tarjeta previa y el banner de mundo llevan además su propia escala (<c>LevelCardView.FontScale</c> y
+        /// <c>WorldBannerView.FontScale</c>), que fija el tamaño de sus textos al colocarlos.
+        /// </summary>
+        public static float TextScale => LaunchOptions.ResolveTextScale();
+
         /// <summary>Contenedor estirado al padre.</summary>
         public static RectTransform Rect(string name, Transform parent)
         {
@@ -87,7 +107,10 @@ namespace AF.UI
             return img;
         }
 
-        /// <summary>Texto TextMeshPro con la fuente y el material de <paramref name="style"/> (guía 5.6). Sin alfa en el color.</summary>
+        /// <summary>
+        /// Texto TextMeshPro con la fuente y el material de <paramref name="style"/> (guía 5.6), de <paramref name="size"/> sp
+        /// (<paramref name="size"/> × <see cref="TextScale"/> dp). Sin alfa en el color.
+        /// </summary>
         public static TextMeshProUGUI Label(string name, Transform parent, TextStyle style, string value, float size, Color color, TextAlignmentOptions alignment)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
@@ -106,7 +129,7 @@ namespace AF.UI
             }
 
             text.text = value;
-            text.fontSize = size;
+            text.fontSize = size * TextScale;
             text.color = color;
             text.alignment = alignment;
             text.textWrappingMode = TextWrappingModes.NoWrap;
@@ -117,13 +140,150 @@ namespace AF.UI
 
         /// <summary>
         /// Ajusta el texto a su caja como la guía 3.5 y 5.5: el menor entre <paramref name="max"/> y el mayor que quepa,
-        /// con un mínimo de <paramref name="min"/>; nunca se recorta.
+        /// con un mínimo de <paramref name="min"/> (en sp: los dos, por <see cref="TextScale"/>); nunca se recorta.
         /// </summary>
         public static void AutoSize(TextMeshProUGUI text, float min, float max)
         {
+            float scale = TextScale;
             text.enableAutoSizing = true;
-            text.fontSizeMin = min;
+            text.fontSizeMin = min * scale;
+            text.fontSizeMax = max * scale;
+        }
+
+        /// <summary>
+        /// Alto que necesita el texto de ahora de <paramref name="text"/> en una caja de <paramref name="width"/> dp de ancho
+        /// (sin sus márgenes) a su tamaño más pequeño: el mínimo del autoajuste o, sin él, su tamaño (dp). Lo usan las cajas que
+        /// crecen (02 §12: donde el texto no cabe ni a su mínimo, su caja crece; donde cabe, nada cambia). Mide con
+        /// TextMeshPro al colocar, nunca por fotograma; 0 sin texto.
+        /// </summary>
+        public static float MinTextHeight(TextMeshProUGUI text, float width)
+        {
+            string value = text.text;
+            if (string.IsNullOrEmpty(value))
+            {
+                return 0f;
+            }
+
+            if (!text.enableAutoSizing)
+            {
+                return text.GetPreferredValues(value, width, float.PositiveInfinity).y;
+            }
+
+            // TextMeshPro mide los textos con autoajuste a su máximo: se mide con el máximo en el mínimo y se deja como estaba.
+            float max = text.fontSizeMax;
+            text.fontSizeMax = text.fontSizeMin;
+            float height = text.GetPreferredValues(value, width, float.PositiveInfinity).y;
             text.fontSizeMax = max;
+            return height;
+        }
+
+        /// <summary>
+        /// Ancho que necesita el texto de ahora de <paramref name="text"/> en una sola línea a su tamaño más pequeño (el mínimo
+        /// del autoajuste o, sin él, su tamaño; dp), como <see cref="MinTextHeight"/>: al colocar, nunca por fotograma; 0 sin
+        /// texto.
+        /// </summary>
+        public static float MinTextWidth(TextMeshProUGUI text)
+        {
+            return MinTextWidth(text, text.text);
+        }
+
+        /// <summary>
+        /// Ancho que necesita <paramref name="value"/> en una sola línea con la fuente de <paramref name="text"/> a su tamaño más
+        /// pequeño, como <see cref="MinTextWidth(TextMeshProUGUI)"/> (no cambia su texto); 0 sin texto.
+        /// </summary>
+        public static float MinTextWidth(TextMeshProUGUI text, string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return 0f;
+            }
+
+            if (!text.enableAutoSizing)
+            {
+                return text.GetPreferredValues(value, float.PositiveInfinity, float.PositiveInfinity).x;
+            }
+
+            float max = text.fontSizeMax;
+            text.fontSizeMax = text.fontSizeMin;
+            float width = text.GetPreferredValues(value, float.PositiveInfinity, float.PositiveInfinity).x;
+            text.fontSizeMax = max;
+            return width;
+        }
+
+        /// <summary>
+        /// Corte voraz por espacios del texto de ahora de <paramref name="text"/> en líneas de <paramref name="width"/> dp a su
+        /// tamaño más pequeño (como corta TextMeshPro: en cada línea, tantas palabras como quepan; una palabra que no cabe sola
+        /// va sola). Devuelve cuántas líneas salen (0 sin texto o con saltos de línea propios, que no se miden) y, de ellas, el
+        /// ancho de la primera y de la última y las palabras de la última. Mide con TextMeshPro al colocar (una medida por
+        /// palabra), nunca por fotograma; para decidir si el corte deja la última línea corta o una palabra suelta.
+        /// </summary>
+        public static int GreedyLines(TextMeshProUGUI text, float width, out float firstWidth, out float lastWidth, out int lastWords)
+        {
+            firstWidth = 0f;
+            lastWidth = 0f;
+            lastWords = 0;
+            string value = text.text;
+            if (string.IsNullOrEmpty(value) || value.IndexOf('\n') >= 0)
+            {
+                return 0;
+            }
+
+            int n = value.Length;
+            int lines = 0;
+            int start = 0;
+            while (true)
+            {
+                while (start < n && value[start] == ' ')
+                {
+                    start++;
+                }
+
+                if (start >= n)
+                {
+                    break;
+                }
+
+                // La línea que empieza en start: suma palabras mientras quepan (la primera, aunque no quepa).
+                int end = start;
+                int words = 0;
+                float lineWidth = 0f;
+                int i = start;
+                while (i < n)
+                {
+                    int j = i;
+                    while (j < n && value[j] != ' ')
+                    {
+                        j++;
+                    }
+
+                    float w = MinTextWidth(text, value.Substring(start, j - start));
+                    if (words > 0 && w > width + 0.01f)
+                    {
+                        break;
+                    }
+
+                    end = j;
+                    words++;
+                    lineWidth = w;
+                    i = j;
+                    while (i < n && value[i] == ' ')
+                    {
+                        i++;
+                    }
+                }
+
+                lines++;
+                if (lines == 1)
+                {
+                    firstWidth = lineWidth;
+                }
+
+                lastWidth = lineWidth;
+                lastWords = words;
+                start = end;
+            }
+
+            return lines;
         }
 
         /// <summary>
@@ -193,7 +353,15 @@ namespace AF.UI
         /// <summary>Etiqueta de CTA: centrada al 56 % de la cara y dentro de la franja del 25-85 % (guía 5.1 y 2.4).</summary>
         public static void PlaceCtaLabel(RectTransform label, ReliefSprites sprites)
         {
-            float face = sprites.FaceHeightDp;
+            PlaceCtaLabel(label, sprites.FaceHeightDp);
+        }
+
+        /// <summary>
+        /// Etiqueta de CTA en una cara de <paramref name="face"/> dp de alto (la de un CTA que crece con la escala de texto,
+        /// <c>ModalKit.FaceHeightOf</c>): centrada al 56 % de la cara y con el 60 % de su alto (guía 5.1 y 2.4).
+        /// </summary>
+        public static void PlaceCtaLabel(RectTransform label, float face)
+        {
             label.anchorMin = new Vector2(0f, 1f);
             label.anchorMax = new Vector2(1f, 1f);
             label.pivot = new Vector2(0.5f, 0.5f);

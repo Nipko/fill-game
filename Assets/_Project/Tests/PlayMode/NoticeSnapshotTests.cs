@@ -68,8 +68,9 @@ namespace AF.Tests.PlayMode
             yield return CaptureSighting(dir, 5, "a2_02_sighting_l5");
             boot = GameBootstrap.Current!;
 
-            // Un aviso que llega con la tarjeta a la vista sale cuando ella se va.
-            boot.View!.ShowRevealMissing(70);
+            // Un aviso que llega con la tarjeta a la vista sale cuando ella se va («¡Una cuia más!», un aviso que sigue existiendo
+            // tras la pregunta 48 (b)).
+            boot.View!.ShowNotice(UiText.RescueApplied);
             Assert.That(boot.View.ToastText, Is.Null);
             for (int t = 0; t < 8000 && boot.View.Sighting.Visible; t += PlayModeHelpers.FrameMs)
             {
@@ -77,7 +78,7 @@ namespace AF.Tests.PlayMode
             }
 
             PlayModeHelpers.Step(boot, 400);
-            Assert.That(boot.View.ToastText, Is.EqualTo(UiText.RevealMissing(70)));
+            Assert.That(boot.View.ToastText, Is.EqualTo(UiText.RescueApplied));
             AssertNoGhostCuias(boot.View, "a2_03_toast_after_card_l5");
             SnapshotKit.Save(dir, "a2_03_toast_after_card_l5");
 

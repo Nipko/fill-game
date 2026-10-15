@@ -17,10 +17,11 @@ namespace AF.UI
     /// vertido, <c>--es af_rules_pour_mode single</c> para probar el modo de pruebas, D-005; y <c>af_level_offset</c> [P],
     /// <c>--ei af_level_offset 30</c>, que desplaza los números de nivel para probar las compuertas de 11, 22 y 31 con los
     /// tableros del tutorial, tarea B1-5; para probar el embudo y los anuncios en el teléfono [P], tarea B2-6:
-    /// <c>af_seeds</c>, <c>af_canoes</c> y <c>af_ads_fill</c>; y el idioma de desarrollo <c>af_lang</c>, tarea L2b) y los ganchos
-    /// de los tests PlayMode (nivel de arranque, modo de vertido, progreso, perfil y reloj en memoria, desplazamiento, paquete de
-    /// niveles, idioma y tablas de textos). <see cref="GameBootstrap"/> los lee al arrancar; los tests los quitan con
-    /// <see cref="Reset"/>.
+    /// <c>af_seeds</c>, <c>af_canoes</c> y <c>af_ads_fill</c>; <c>af_font_scale</c> [P], la escala de texto, tarea A1; y el
+    /// idioma de desarrollo <c>af_lang</c>, tarea L2b) y los ganchos de los tests PlayMode (nivel de arranque, modo de vertido,
+    /// progreso, perfil y reloj en memoria, desplazamiento, paquete de niveles, escala de texto, idioma y tablas de textos).
+    /// <see cref="GameBootstrap"/> los lee al arrancar (la escala, al crear los textos: <see cref="UiBuilder.TextScale"/>); los
+    /// tests los quitan con <see cref="Reset"/>.
     /// </summary>
     public static class LaunchOptions
     {
@@ -59,6 +60,16 @@ namespace AF.UI
         /// <c>fill</c>, <c>no_fill</c> o <c>error</c> (<c>--es af_ads_fill no_fill</c>). Nunca en release.
         /// </summary>
         public const string IntentExtraAdsFill = "af_ads_fill";
+
+        /// <summary>
+        /// Extra de intent (int) de los builds de desarrollo [P] (tarea A1): la escala de texto global en tanto por ciento
+        /// (<c>--ei af_font_scale 130</c>; <see cref="UiBuilder.TextScale"/>), para ver en el teléfono los textos al 130 % de
+        /// 02 §12 mientras la escala de Android no llega al juego. Se lee una vez, al crear el primer texto. Nunca en release.
+        /// </summary>
+        public const string IntentExtraFontScale = "af_font_scale";
+
+        // Escala del extra af_font_scale, leída una vez (NaN: aún no se leyó).
+        private static float s_intentFontScale = float.NaN;
 
         /// <summary>
         /// Extra de intent (string) de los builds de desarrollo (D-018; tarea L2b): el idioma de la UI, primero en la resolución
@@ -150,6 +161,14 @@ namespace AF.UI
         public static float? BannerArtTimeoutMsOverride { get; set; }
 
         /// <summary>
+        /// Escala de texto global (<see cref="UiBuilder.TextScale"/>) forzada por un test (tarea A1; 02 §12: 1,3 para el 130 %);
+        /// null = la del extra <c>af_font_scale</c> en desarrollo o, si no, 1. Se fija antes de cargar la escena: los textos ya
+        /// creados no cambian. Fuera de 1..<see cref="UiBuilder.MaxTextScale"/> se lleva al borde (02 §12: por encima del 130 %,
+        /// el tope). Solo tests: ningún extra de intent la rellena.
+        /// </summary>
+        public static float? FontScaleOverride { get; set; }
+
+        /// <summary>
         /// Idioma de desarrollo forzado por un test (el de <c>af_lang</c>: «en-XA» para la pseudolocalización); null = ninguno.
         /// Solo cuenta en desarrollo (<see cref="Debug.isDebugBuild"/>, también en el Editor).
         /// </summary>
@@ -201,6 +220,7 @@ namespace AF.UI
             BannerArtSyncOverride = null;
             BannerArtFaultOverride = null;
             BannerArtTimeoutMsOverride = null;
+            FontScaleOverride = null;
             LanguageOverride = null;
             LocTablesOverride = null;
             DeviceLocaleOverride = null;
@@ -220,6 +240,45 @@ namespace AF.UI
 
             string? value = LanguageOverride ?? ReadIntentString(IntentExtraLanguage);
             return string.IsNullOrWhiteSpace(value) ? null : value!.Trim();
+        }
+
+        /// <summary>
+        /// Escala de texto global de la partida (<see cref="UiBuilder.TextScale"/>): la del test (<see cref="FontScaleOverride"/>),
+        /// si no la del extra <c>af_font_scale</c> (solo builds de desarrollo en Android, leída una vez) y, si no, 1; siempre
+        /// entre 1 y <see cref="UiBuilder.MaxTextScale"/> (<see cref="ClampTextScale"/>). Sin asignaciones tras la primera vez.
+        /// </summary>
+        public static float ResolveTextScale()
+        {
+            if (FontScaleOverride.HasValue)
+            {
+                return ClampTextScale(FontScaleOverride.Value);
+            }
+
+            if (float.IsNaN(s_intentFontScale))
+            {
+                int percent = ReadIntentInt(IntentExtraFontScale, 0);
+                s_intentFontScale = percent > 0 ? ClampTextScale(percent / 100f) : 1f;
+                if (percent > 0)
+                {
+                    Debug.LogWarning("[AF.LaunchOptions] " + IntentExtraFontScale + " = " + percent + ": escala de texto " + s_intentFontScale.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ".");
+                }
+            }
+
+            return s_intentFontScale;
+        }
+
+        /// <summary>
+        /// La escala de texto dentro de 1..<see cref="UiBuilder.MaxTextScale"/> (02 §12: por encima del 130 %, el tope; por
+        /// debajo de 1 los textos bajarían de 12 sp); un valor no finito, 1.
+        /// </summary>
+        public static float ClampTextScale(float scale)
+        {
+            if (float.IsNaN(scale) || float.IsInfinity(scale))
+            {
+                return 1f;
+            }
+
+            return Mathf.Clamp(scale, 1f, UiBuilder.MaxTextScale);
         }
 
         /// <summary>

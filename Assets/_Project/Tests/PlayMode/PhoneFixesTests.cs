@@ -29,11 +29,11 @@ namespace AF.Tests.PlayMode
     /// vuelve al cerrarlo, y el que esperaba en la cola sale después, como antes;</description></item>
     /// <item><description>observación 1 / pregunta 41 (4): el aviso no tapa las burbujas «Te faltan {n}» de la bandeja, con 1 y
     /// con 3 filas (el 135); sin burbujas tampoco tapa la repisa de abajo ni la ficha «?×n» del 135; con ellas no deja a medias
-    /// ninguna ficha: o va junto a ella, ajustado a su texto (el 135 tras el rescate de verdad, con 12 cuias, y Revelar sin
-    /// semillas ni video, «Te faltan 120 semillas», que sigue saliendo como aviso, el [P] de T14 sin cambios desde f64c19a, por
-    /// la cola de D-011, punto 2), o la tapa
-    /// entera (el 115 tras el rescate de verdad; y un estado forzado del 135 con 11 cuias): el compromiso [P]; el aire del cartel
-    /// no depende del texto anterior;</description></item>
+    /// ninguna ficha: o va junto a ella, ajustado a su texto (el 135 tras el rescate de verdad, con 12 cuias), o la tapa
+    /// entera (el 115 tras el rescate de verdad; y un estado forzado del 135 con 11 cuias): el compromiso [P], ratificado por el
+    /// dueño (pregunta 47, D-022); el aire del cartel no depende del texto anterior. Revelar sin semillas ni video ya no saca
+    /// aviso: responde su burbuja, con un latido y el color del precio sin saldo, y con Reducir movimiento solo el color
+    /// (pregunta 48 (b), D-022; tarea A1);</description></item>
     /// <item><description>pregunta 43: el banner de mundo admite la escala de fuente de 02 §12 hasta el 130 %, con las mismas
     /// comprobaciones que la tarjeta previa;</description></item>
     /// <item><description>observación 4: tras ver la victoria del 40, el banner del 41 entra con «Siguiente» sin esperar
@@ -93,11 +93,11 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 50);
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
 
-            // Un aviso a la vista (3 s) y otro esperando su turno.
-            string shown = UiText.RevealMissing(70);
-            string waiting = UiText.RevealMissing(50);
-            view.ShowRevealMissing(70);
-            view.ShowRevealMissing(50);
+            // Un aviso a la vista (3 s) y otro esperando su turno (avisos reales que siguen tras la pregunta 48 (b)).
+            string shown = UiText.RevealGiftToast;
+            string waiting = UiText.ExtraCuiaGift;
+            view.ShowNotice(shown);
+            view.ShowNotice(waiting);
             Assert.That(view.ToastText, Is.EqualTo(shown));
             Assert.That(view.NoticesQueued, Is.EqualTo(1));
 
@@ -157,9 +157,9 @@ namespace AF.Tests.PlayMode
             GameScreen view = boot.View!;
             Assert.That(view.Layout!.Rows, Is.EqualTo(1));
             Assert.That(view.Tray.ExtraShowsMissing, Is.True, "la burbuja de «+1 cuia»");
-            view.ShowRevealMissing(70);
+            view.ShowNotice(UiText.RescueApplied);
             PlayModeHelpers.Step(boot, 200);
-            Assert.That(view.ToastText, Is.EqualTo(UiText.RevealMissing(70)));
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RescueApplied));
             AssertToastClearOfBubbles(view, "1 fila");
             Assert.That(view.NoticeToast.Height, Is.EqualTo(Toast.DefaultHeightDp), "con sitio, del alto de siempre");
             Assert.That(view.NoticeToast.Top, Is.GreaterThanOrEqualTo(BoardFloor(view)), "y sin tapar el tablero");
@@ -170,7 +170,7 @@ namespace AF.Tests.PlayMode
             boot = GameBootstrap.Current!;
             view = boot.View!;
             Assert.That(view.Tray.ExtraShowsMissing, Is.False);
-            view.ShowRevealMissing(70);
+            view.ShowNotice(UiText.RescueApplied);
             PlayModeHelpers.Step(boot, 200);
             Rect undo = VictorySetup.CanvasRect((RectTransform)view.UndoButton.transform, Root(view));
             float trayTop = undo.yMin - 4f;
@@ -230,7 +230,7 @@ namespace AF.Tests.PlayMode
             boot = GameBootstrap.Current!;
             view = boot.View!;
             Assert.That(view.Tray.ExtraShowsMissing || view.Tray.RevealShowsMissing, Is.False);
-            view.ShowNotice(UiText.RevealMissing(120));
+            view.ShowNotice(UiText.RescueApplied);
             PlayModeHelpers.Step(boot, 200);
             Assert.That(view.NoticeToast.Top, Is.GreaterThanOrEqualTo(BoardFloor(view) + GameScreen.NoticeBoardGapDp - 0.05f), "sin tapar la repisa ni la ficha «?×n»");
             Assert.That(view.NoticeToast.Height, Is.LessThan(Toast.DefaultHeightDp).And.GreaterThanOrEqualTo(view.NoticeToast.MinHeightDp(view.CanvasWidth) - 0.05f));
@@ -240,37 +240,85 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator RevealWithoutSeedsNorVideo_TheNoticeGoesAboveTheBubbles_BesideTheChip_Level135()
+        public IEnumerator RevealWithoutSeedsNorVideo_NoNotice_TheBubbleBeatsAndTakesThePriceColors_Level135()
         {
-            // Revelar sin stock, saldo ni video en el 135 (3 filas, las dos burbujas en dos líneas): «Te faltan 120 semillas» sale
-            // como aviso, el [P] de T14 (paso 1) sin cambios desde f64c19a, por la cola de avisos y de uno en uno (D-011, punto 2),
-            // encima de las burbujas sin taparlas (observación 1) y, como llega a la repisa de abajo, ajustado a su texto junto a
-            // la ficha «?×1», sin taparla ni tapar las cuias. Estado del juego, sin forzar nada.
+            // Pregunta 48 (b) (D-022; tarea A1): Revelar sin stock, saldo ni video en el 135 (3 filas, las dos burbujas en dos
+            // líneas) no saca ningún aviso del tablero (antes, «Te faltan 120 semillas» por la cola, que repetía la burbuja y
+            // tapaba la repisa de abajo). Responde la burbuja «Te faltan 120» de la ranura: un latido, sin pisar la burbuja
+            // vecina, y los colores de la etiqueta de precio sin saldo, que vuelven después. Sin cobrar y sin asignaciones.
             yield return LoadWithBubbles(135, 0, 0);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
-            BoardLayoutResult l = view.Layout!;
-            Assert.That(l.Rows, Is.EqualTo(3));
-            Assert.That(view.Tray.ExtraShowsMissing && view.Tray.RevealShowsMissing, Is.True, "las dos burbujas");
-            Assert.That(view.Tray.RevealMissingText, Is.EqualTo("Te faltan 120"));
+            BoosterTray tray = view.Tray;
+            Assert.That(view.Layout!.Rows, Is.EqualTo(3));
+            Assert.That(tray.ExtraShowsMissing && tray.RevealShowsMissing, Is.True, "las dos burbujas");
+            Assert.That(tray.RevealMissingText, Is.EqualTo("Te faltan 120"));
+            Assert.That(tray.RevealMissingPulsing, Is.False);
+            Rect bubble = VictorySetup.CanvasRect(tray.RevealMissingRect, Root(view));
+            Rect neighbor = VictorySetup.CanvasRect(tray.ExtraMissingRect, Root(view));
             Assert.That(boot.PressReveal(), Is.False, "sin stock, saldo ni video: no hace nada más");
-            Assert.That(view.ToastText, Is.EqualTo(UiText.RevealMissing(120)), "«Te faltan 120 semillas», en el acto");
+            Assert.That(view.ToastText, Is.Null, "ningún aviso del tablero");
+            Assert.That(view.NoticesQueued, Is.EqualTo(0), "ni en la cola");
             Assert.That(boot.Flow!.RevealSelecting, Is.False);
             Assert.That(boot.Wallet!.Seeds, Is.EqualTo(0), "ningún cobro");
-            PlayModeHelpers.Step(boot, 200);
-            AssertToastClearOfBubbles(view, "135, Revelar sin semillas");
-            AssertToastTextFits(view);
-            Assert.That(view.NoticeToast.Top, Is.GreaterThanOrEqualTo(l.RowFootY[l.Rows - 1] - 0.05f), "no tapa las cuias de la fila de abajo");
-            Assert.That(view.NoticeToast.Width, Is.EqualTo(view.NoticeToast.FitWidthDp(view.CanvasWidth)).Within(0.05f), "ajustado a su texto");
-            Assert.That(AssertChipsWholeOrClear(view, "135, Revelar sin semillas"), Is.EqualTo(0), "junto a la ficha «?×1», sin taparla");
-            TestContext.WriteLine("135, «Te faltan 120 semillas»: " + view.NoticeToast.SeenRect);
+            Assert.That(tray.RevealMissingPulsing, Is.True, "responde la burbuja");
+            Assert.That(tray.RevealMissingText, Is.EqualTo("Te faltan 120"), "sin texto nuevo");
 
-            // Otro toque con el aviso a la vista: vuelve a empezar, sin repetirse en la cola.
-            PlayModeHelpers.Step(boot, 1000);
-            float left = view.NoticeToast.LeftMs;
+            // El latido: crece hasta el tope (con la vecina a la vista, el que no la pisa) a mitad y vuelve a 1; el color entra
+            // en 100 ms y se mantiene.
+            // A lo alto crece MissingPulseScale; a lo ancho, con la vecina a la vista, nada: deja siempre MissingPulseClearDp de
+            // aire hasta ella (revisión de A1: con 0,5 dp se tocaban y se leían como un solo bloque).
+            float maxScale = tray.RevealMissingPulseMaxScale;
+            Assert.That(maxScale, Is.EqualTo(BoosterTray.MissingPulseScale));
+            float maxScaleX = tray.RevealMissingPulseMaxScaleX;
+            Assert.That(maxScaleX, Is.GreaterThanOrEqualTo(1f).And.LessThanOrEqualTo(BoosterTray.MissingPulseScale));
+            float grown = bubble.width * (maxScaleX - 1f) * 0.5f;
+            float clear = BoosterTray.MissingPulseClearDp;
+            Assert.That(neighbor.xMax <= bubble.xMin - grown - clear + 0.05f || neighbor.xMin >= bubble.xMax + grown + clear - 0.05f, Is.True,
+                "el latido deja " + clear + " dp de aire hasta la burbuja vecina");
+            PlayModeHelpers.TickExact(boot, Mathf.RoundToInt(BoosterTray.MissingPulseBeatMs));
+            Assert.That(tray.RevealMissingPulseScale, Is.EqualTo(maxScale).Within(0.002f), "en lo alto del latido");
+            Assert.That(tray.RevealMissingPulseScaleX, Is.EqualTo(maxScaleX).Within(0.002f), "a lo ancho, lo que deja la vecina");
+            Assert.That(tray.RevealMissingPulseColor, Is.EqualTo(1f), "con los colores del precio sin saldo");
+            Assert.That(tray.RevealMissingLabel.color, Is.EqualTo((Color)Palette.Cream), "texto crema sobre el rojo");
+            PlayModeHelpers.TickExact(boot, Mathf.RoundToInt(BoosterTray.MissingPulseBeatMs) + 1);
+            Assert.That(tray.RevealMissingPulseScale, Is.EqualTo(1f), "un solo latido");
+            Assert.That(tray.RevealMissingPulseColor, Is.EqualTo(1f), "el color sigue");
+
+            // Otro toque lo vuelve a empezar, sin aviso; sin asignaciones por fotograma.
             Assert.That(boot.PressReveal(), Is.False);
-            Assert.That(view.NoticeToast.LeftMs, Is.GreaterThan(left + 900f), "el mismo aviso vuelve a empezar");
-            Assert.That(view.NoticesQueued, Is.EqualTo(0));
+            Assert.That(view.ToastText, Is.Null);
+            Assert.That(() =>
+            {
+                for (int f = 0; f < 20; f++)
+                {
+                    view.Tick(PlayModeHelpers.FrameMs);
+                }
+            }, Is.Not.AllocatingGCMemory(), "el latido y el color, sin asignaciones");
+            PlayModeHelpers.TickExact(boot, Mathf.RoundToInt(BoosterTray.MissingColorHoldMs + BoosterTray.MissingColorOutMs));
+            Assert.That(tray.RevealMissingPulsing, Is.False, "≈ 1,1 s después vuelve a reposo");
+            Assert.That(tray.RevealMissingPulseScale, Is.EqualTo(1f));
+            Assert.That(tray.RevealMissingPulseColor, Is.EqualTo(0f));
+            Assert.That(tray.RevealMissingLabel.color, Is.EqualTo((Color)Palette.UiRedWarning), "con sus colores de siempre");
+
+            // Con Reducir movimiento, solo el color: sin latido.
+            boot.Flow.ReduceMotion = true;
+            Assert.That(boot.PressReveal(), Is.False);
+            Assert.That(view.ToastText, Is.Null);
+            Assert.That(tray.RevealMissingPulsing, Is.True);
+            int held = 0;
+            while (held + PlayModeHelpers.FrameMs <= BoosterTray.MissingColorHoldReducedMs)
+            {
+                PlayModeHelpers.TickExact(boot, PlayModeHelpers.FrameMs);
+                held += PlayModeHelpers.FrameMs;
+                Assert.That(tray.RevealMissingPulseScale, Is.EqualTo(1f), "sin latido con Reducir movimiento (" + held + " ms)");
+            }
+
+            Assert.That(tray.RevealMissingPulseColor, Is.EqualTo(1f), "pero sí el color, hasta " + BoosterTray.MissingColorHoldReducedMs + " ms");
+            PlayModeHelpers.TickExact(boot, Mathf.RoundToInt(BoosterTray.MissingColorHoldReducedMs + BoosterTray.MissingColorOutMs) - held + 1);
+            Assert.That(tray.RevealMissingPulsing, Is.False);
+            Assert.That(tray.RevealMissingPulseColor, Is.EqualTo(0f));
+            boot.Flow.ReduceMotion = false;
         }
 
         [UnityTest]
@@ -297,17 +345,15 @@ namespace AF.Tests.PlayMode
             Assert.That(AssertChipsWholeOrClear(view, "135 tras el rescate"), Is.EqualTo(0), "junto a la ficha «?×1», sin taparla");
             TestContext.WriteLine("135 tras el rescate (12 cuias): «¡Una cuia más!» en " + view.NoticeToast.SeenRect + "; pie de la fila de abajo a " + foot.ToString("0.0") + " dp.");
 
-            // De uno en uno: Revelar sin semillas con el aviso del rescate a la vista espera su turno y sale después, en su sitio.
+            // Revelar sin semillas con el aviso del rescate a la vista: no se encola ningún aviso (pregunta 48 (b)); responde la
+            // burbuja y el aviso del rescate sigue en su sitio.
+            Rect before = view.NoticeToast.SeenRect;
             Assert.That(boot.PressReveal(), Is.False);
             Assert.That(view.ToastText, Is.EqualTo(UiText.RescueApplied), "el del rescate sigue");
-            Assert.That(view.NoticesQueued, Is.EqualTo(1), "«Te faltan 120 semillas» espera su turno");
-            for (int ms = 0; ms < 8000 && view.ToastText != UiText.RevealMissing(120); ms += PlayModeHelpers.FrameMs)
-            {
-                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
-            }
-
-            Assert.That(view.ToastText, Is.EqualTo(UiText.RevealMissing(120)), "sale al ocultarse el del rescate");
+            Assert.That(view.NoticesQueued, Is.EqualTo(0), "nada espera su turno");
+            Assert.That(view.Tray.RevealMissingPulsing, Is.True, "responde la burbuja");
             PlayModeHelpers.Step(boot, 200);
+            Assert.That(view.NoticeToast.SeenRect, Is.EqualTo(before), "el aviso no se mueve");
             AssertToastClearOfBubbles(view, "135 tras el rescate, Revelar sin semillas");
             Assert.That(AssertChipsWholeOrClear(view, "135 tras el rescate, Revelar sin semillas"), Is.EqualTo(0));
 
@@ -341,7 +387,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             PlayModeHelpers.TickExact(boot, 1200); // en régimen: los ~2,2 s que siguen al salto de la intro asignan (NoticeTests)
-            foreach (string text in new[] { UiText.RescueApplied, UiText.RevealGiftToast, UiText.RevealMissing(120) })
+            foreach (string text in new[] { UiText.RescueApplied, UiText.RevealGiftToast, UiText.ExtraCuiaGift })
             {
                 view.NoticeToast.Hide();
                 view.ShowNotice(text);
@@ -883,8 +929,9 @@ namespace AF.Tests.PlayMode
         }
 
         // El aviso no deja a medias ninguna ficha de la repisa: o no la toca (con NoticeChipClearDp de aire a lo ancho) o la tapa
-        // entera, con su borde de arriba sobre ella. Devuelve las que tapa.
-        private static int AssertChipsWholeOrClear(GameScreen view, string what)
+        // entera, con su borde de arriba sobre ella (pregunta 47, (1)). Devuelve las que tapa. También lo usa MinTextSizeTests
+        // (el 135 al 100 % y al 130 %, A1).
+        internal static int AssertChipsWholeOrClear(GameScreen view, string what)
         {
             Canvas.ForceUpdateCanvases();
             Rect toast = VictorySetup.CanvasRect(view.NoticeToast.Root, Root(view));

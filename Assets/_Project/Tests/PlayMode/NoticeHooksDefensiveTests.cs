@@ -81,10 +81,12 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
             LevelFlow flow = boot.Flow!;
             GameScreen view = boot.View!;
-            string shown = UiText.RevealMissing(70);
-            string waiting = UiText.RevealMissing(50);
-            view.ShowRevealMissing(70);
-            view.ShowRevealMissing(50);
+            // Dos avisos reales que siguen existiendo tras la pregunta 48 (b): el del rescate (sale en el 31) a la vista y «+1
+            // Luciérnaga» esperando su turno.
+            string shown = UiText.RescueApplied;
+            string waiting = UiText.RevealGiftToast;
+            view.ShowNotice(shown);
+            view.ShowNotice(waiting);
             Assert.That(view.ToastText, Is.EqualTo(shown));
             Assert.That(view.NoticesQueued, Is.EqualTo(1));
 
@@ -125,10 +127,10 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
             LevelFlow flow = boot.Flow!;
             GameScreen view = boot.View!;
-            string shown = UiText.RevealMissing(70);
-            string waiting = UiText.RevealMissing(50);
-            view.ShowRevealMissing(70);
-            view.ShowRevealMissing(50);
+            string shown = UiText.RescueApplied;
+            string waiting = UiText.RevealGiftToast;
+            view.ShowNotice(shown);
+            view.ShowNotice(waiting);
             Assert.That(view.ToastText, Is.EqualTo(shown));
             Assert.That(view.NoticesQueued, Is.EqualTo(1));
 
@@ -184,7 +186,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             FunnelSetup.GetStuck(boot);
-            view.ShowRevealMissing(50); // espera a que se vuelva a jugar
+            view.ShowNotice(UiText.RevealGiftToast); // espera a que se vuelva a jugar
             Assert.That(view.NoticesQueued, Is.EqualTo(1));
 
             // Un camino que abrió el modal sin avisar a la vista: lo que se vea se oculta en el fotograma siguiente.
@@ -211,7 +213,7 @@ namespace AF.Tests.PlayMode
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
             }
 
-            Assert.That(seen, Is.EqualTo(new[] { UiText.RevealMissing(50), UiText.RescueApplied }));
+            Assert.That(seen, Is.EqualTo(new[] { UiText.RevealGiftToast, UiText.RescueApplied }));
             Assert.That(seen, Does.Not.Contain(text));
         }
 
@@ -227,7 +229,7 @@ namespace AF.Tests.PlayMode
             Transform host = _unboundHost.transform;
             Assert.That(() => { screen = new GameScreen(host, boot.View!.CardArt, new DevProbe(), boot); }, Throws.Nothing);
             GameScreen unbound = screen!;
-            string text = UiText.RevealMissing(70);
+            string text = UiText.RescueApplied;
             Assert.That(() =>
             {
                 unbound.ShowNotice(text);
@@ -272,7 +274,7 @@ namespace AF.Tests.PlayMode
             FaunaSpecies? species = boot.Fauna?.ForLevel(boot.Flow!.LevelNumber);
             Assert.That(species, Is.Not.Null, "condición del test: una especie para el tramo del nivel");
             view.Sighting.Show(view.CardArt.MonkeyArtFor(species!).Portrait, species!.NameIn("es"), UiText.FaunaFact(species.FactKey));
-            string text = UiText.RevealMissing(70);
+            string text = UiText.ExtraCuiaGift; // un aviso real, distinto de los que encolan los tests (el rescate y «+1 Luciérnaga»)
             view.NoticeToast.Show(text, NoticeTiming.ReadMs(text));
             Assert.That(view.ToastText, Is.EqualTo(text), "condición del test: el aviso, a la vista");
             Assert.That(view.Sighting.Visible, Is.True, "condición del test: la tarjeta, a la vista");

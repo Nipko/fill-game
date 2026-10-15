@@ -26,9 +26,10 @@ namespace AF.Tests.PlayMode
     /// <item><description><c>90_banner_l41_130</c>, <c>90b_banner_l41_100</c>, <c>90c_banner_l41_130_16x9</c> y
     /// <c>90d_banner_l141_130</c>: el banner de mundo con la escala de fuente de 02 §12 (pregunta 43);</description></item>
     /// <item><description>observación 1, solo con estados que da el juego (revisión de T52, ronda 3):
-    /// <c>92d_l135_revelar_sin_semillas</c> (el 135, 11 cuias, sin semillas ni video: Revelar saca «Te faltan 120 semillas» por
-    /// la cola, encima de las dos burbujas y ajustado a su texto junto a la ficha «?×1»; es el después del mismo toque que
-    /// <c>92_l135_aviso_burbujas_antes</c>); <c>92_l135_aviso_burbujas_despues</c> (el rescate comprado de verdad con las 300
+    /// <c>92d_l135_revelar_sin_semillas</c> (el 135, 11 cuias, sin semillas ni video: desde la pregunta 48 (b), D-022, tarea A1,
+    /// Revelar no saca aviso y responde su burbuja «Te faltan 120», en lo alto de su latido y con los colores del precio sin
+    /// saldo; antes de A1 sacaba «Te faltan 120 semillas» por la cola junto a la ficha «?×1»);
+    /// <c>92_l135_aviso_burbujas_despues</c> (el rescate comprado de verdad con las 300
     /// semillas justas: 12 cuias, las dos burbujas de dos líneas y «¡Una cuia más! Sigue desde aquí» ajustado a su texto a la
     /// derecha de la ficha «?×1», sin taparla: solo tapa la cara de la repisa de abajo en su tramo, los 3 s que dura; el
     /// compromiso [P]); <c>92f_l115_aviso_tapa_ficha</c> (el 115, igual: su ficha «?×2» queda bajo la tercera cuia de la fila de
@@ -74,13 +75,14 @@ namespace AF.Tests.PlayMode
             string dir = SnapshotKit.Prepare();
 
             // El 135 (3 filas, 11 cuias) sin semillas ni video: «Te faltan 150» de «+1 cuia» y «Te faltan 120» de Revelar, en dos
-            // líneas. Revelar: «Te faltan 120 semillas» por la cola (el después del mismo toque que 92_l135_aviso_burbujas_antes).
+            // líneas. Revelar (pregunta 48 (b)): sin aviso; su burbuja late y toma los colores del precio sin saldo (en lo alto
+            // del latido).
             yield return LoadWithBubbles(135, 0, 0);
             GameBootstrap boot = GameBootstrap.Current!;
             Assert.That(boot.PressReveal(), Is.False);
-            Assert.That(boot.View!.ToastText, Is.EqualTo(UiText.RevealMissing(120)));
-            PlayModeHelpers.Step(boot, 400);
-            LogToast("92d_l135_revelar_sin_semillas", boot);
+            Assert.That(boot.View!.ToastText, Is.Null);
+            Assert.That(boot.View.Tray.RevealMissingPulsing, Is.True);
+            PlayModeHelpers.TickExact(boot, Mathf.RoundToInt(BoosterTray.MissingPulseBeatMs));
             yield return SaveNow(dir, "92d_l135_revelar_sin_semillas", boot);
 
             // El rescate de verdad en el 135 con las 300 semillas justas (el primero del día): 12 cuias, sin semillas, las dos

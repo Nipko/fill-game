@@ -11,12 +11,26 @@ namespace AF.UI
     /// <summary>
     /// Etiqueta de precio en semillas (07 §7.3: «pill ámbar con icono semilla 20 dp y cifra»; tinta sobre ámbar 5,4:1): la
     /// cifra, opcionalmente el precio sin descuento tachado (04 §6.6: «300 ~600~») y, sin saldo, en rojo aviso (07 §7.2:
-    /// «errores de compra») con crema. Sin asignaciones al refrescar si la cifra no cambia.
+    /// «errores de compra») con crema. Su ancho sale de medir las cifras (revisión de A1: antes se estimaba por dígito, la
+    /// placa dejaba unos 18-21 dp vacíos a la derecha y, con la escala de texto, le quitaba ese sitio a la etiqueta del CTA,
+    /// que se encogía al 130 %), con el mismo aire a los dos lados: la semilla se dibuja a unos 9 dp del borde izquierdo y la
+    /// última cifra queda a <see cref="RightPadDp"/> del derecho. Mide solo cuando cambia la cifra; sin asignaciones al
+    /// refrescar si no cambia.
     /// </summary>
     internal sealed class PriceTag
     {
         /// <summary>Alto de la etiqueta (dp).</summary>
         public const float HeightDp = 26f;
+
+        /// <summary>Aire a la derecha de la última cifra (dp): el que deja a la izquierda la semilla, que se dibuja más estrecha que su caja.</summary>
+        public const float RightPadDp = 9f;
+
+        // La semilla (caja de 22 dp a 5 dp del borde), el hueco hasta la cifra y el que separa la cifra del precio tachado (dp).
+        private const float SeedXDp = 5f;
+        private const float SeedDp = 22f;
+        private const float SeedGapDp = 3f;
+        private const float StrikeGapDp = 4f;
+        private const float ValueXDp = SeedXDp + SeedDp + SeedGapDp;
 
         private readonly Image _plate;
         private readonly Image _seed;
@@ -29,9 +43,10 @@ namespace AF.UI
 
         public PriceTag(string name, Transform parent, ProceduralArt art)
         {
+            Height = HeightDp * UiBuilder.TextScale;
             Root = UiBuilder.Rect(name, parent);
             _plate = UiBuilder.Sliced("Plate", Root, art.RoundedRect, Palette.UiAmber);
-            _plate.pixelsPerUnitMultiplier = 24f / (HeightDp * 0.5f);
+            _plate.pixelsPerUnitMultiplier = 24f / (Height * 0.5f);
             UiBuilder.Stretch(_plate.rectTransform);
             _seed = UiBuilder.Image("Seed", Root, art.IconSeed, Color.white);
             _seed.preserveAspect = true;
@@ -43,7 +58,13 @@ namespace AF.UI
 
         public RectTransform Root { get; }
 
-        /// <summary>Ancho que ocupa (dp), según la cifra.</summary>
+        /// <summary>
+        /// Alto de la etiqueta (dp): <see cref="HeightDp"/> por la escala de texto con la que se creó (02 §12: crece con su
+        /// cifra; <see cref="UiBuilder.TextScale"/>).
+        /// </summary>
+        public float Height { get; }
+
+        /// <summary>Ancho que ocupa (dp), según la cifra (y la escala de texto).</summary>
         public float Width { get; private set; } = 64f;
 
         /// <summary>Cifra mostrada.</summary>
@@ -76,18 +97,21 @@ namespace AF.UI
                 _strike.SetCharArray(_buf, 0, m);
             }
 
-            float valueW = 9f * n + 4f;
-            float strikeW = strike > 0 ? 8f * UiText.WriteNumber(_buf, 0, strike, true) + 6f : 0f;
-            Width = 6f + 22f + 2f + valueW + strikeW + 8f;
-            UiBuilder.Place(_seed.rectTransform, 5f, 2f, 22f, 22f);
-            UiBuilder.Place(_value.rectTransform, 29f, 0f, valueW + 2f, HeightDp);
-            UiBuilder.Place(_strike.rectTransform, 29f + valueW, 1f, strikeW, HeightDp);
+            // El ancho de las cifras medido con TextMeshPro (crecen con la escala de texto, y su sitio con ellas), solo aquí, al
+            // cambiar la cifra: la placa se ajusta a lo que lleva.
+            float valueW = Mathf.Ceil(_value.GetPreferredValues().x);
+            float strikeW = strike > 0 ? Mathf.Ceil(_strike.GetPreferredValues().x) : 0f;
+            float strikeX = ValueXDp + valueW + StrikeGapDp;
+            Width = (strike > 0 ? strikeX + strikeW : ValueXDp + valueW) + RightPadDp;
+            UiBuilder.Place(_seed.rectTransform, SeedXDp, (Height - SeedDp) * 0.5f, SeedDp, SeedDp);
+            UiBuilder.Place(_value.rectTransform, ValueXDp, 0f, valueW + 2f, Height);
+            UiBuilder.Place(_strike.rectTransform, strikeX, 1f, strikeW + 2f, Height);
         }
 
         /// <summary>Coloca la etiqueta con su esquina superior izquierda en (<paramref name="x"/>, <paramref name="y"/>).</summary>
         public void PlaceAt(float x, float y)
         {
-            UiBuilder.Place(Root, x, y, Width, HeightDp);
+            UiBuilder.Place(Root, x, y, Width, Height);
         }
     }
 
@@ -282,13 +306,27 @@ namespace AF.UI
             return close;
         }
 
-        /// <summary>Botón con relieve y su etiqueta centrada (CTA de la guía 5.1).</summary>
+        /// <summary>
+        /// Botón con relieve y su etiqueta centrada (CTA de la guía 5.1), de <paramref name="size"/> sp, que se encoge lo justo
+        /// para caber y nunca por debajo de <see cref="UiBuilder.MinTextSp"/> (02 §12; pregunta 36 (a), D-020; antes, hasta 7 sp
+        /// menos con un suelo de 11). Con la escala de texto (<see cref="UiBuilder.TextScale"/>), el botón crece en alto con ella
+        /// (07 §7.8: «crecen en alto con la fuente hasta el 130 %»; el alto de 48 dp es mínimo, no fijo) [P]: su relieve se
+        /// estira a lo alto por la escala, y su cara y su etiqueta con él (<see cref="FaceHeightOf"/>, <see cref="HeightOf"/>). A
+        /// la escala 1, el de siempre.
+        /// </summary>
         public static ReliefParts Cta(string name, Transform parent, ReliefSprites sprites, TextStyle style, string text, float size, Action onClick, out TextMeshProUGUI label)
         {
             ReliefParts cta = UiBuilder.Relief(name, parent, sprites, onClick);
+            float scale = UiBuilder.TextScale;
+            if (scale > 1f)
+            {
+                RectTransform visual = (RectTransform)cta.Face.parent;
+                visual.sizeDelta = new Vector2(visual.sizeDelta.x, sprites.HeightDp * scale);
+            }
+
             label = UiBuilder.Label("Label", cta.Face, style, text, size, Palette.Cream, TextAlignmentOptions.Center);
-            UiBuilder.PlaceCtaLabel(label.rectTransform, sprites);
-            UiBuilder.AutoSize(label, Mathf.Max(11f, size - 7f), size);
+            UiBuilder.PlaceCtaLabel(label.rectTransform, FaceHeightOf(cta));
+            UiBuilder.AutoSize(label, UiBuilder.MinTextSp, size);
             cta.Relief.Bind(cta.Face, cta.Base, cta.FaceImage, sprites, null, null, label);
             return cta;
         }
@@ -303,25 +341,86 @@ namespace AF.UI
             return link;
         }
 
-        /// <summary>Línea de texto sobre la madera clara (madera_base, 5,1:1; nunca alfa en textos).</summary>
+        /// <summary>
+        /// Línea de texto sobre la madera clara (madera_base, 5,1:1; nunca alfa en textos), de <paramref name="size"/> sp, que
+        /// pasa a otra línea si no cabe y se encoge lo justo, nunca por debajo de <see cref="UiBuilder.MinTextSp"/> (02 §12;
+        /// pregunta 36 (a), D-020; antes, hasta 4 sp menos con un suelo de 11). Se coloca con <see cref="PlaceLine"/>: si ni así
+        /// cabe, su caja crece.
+        /// </summary>
         public static TextMeshProUGUI Line(string name, Transform parent, string text, float size, Color color, TextStyle style = TextStyle.PlainBold)
         {
             TextMeshProUGUI line = UiBuilder.Label(name, parent, style, text, size, color, TextAlignmentOptions.Center);
             line.textWrappingMode = TextWrappingModes.Normal;
-            UiBuilder.AutoSize(line, Mathf.Max(11f, size - 4f), size);
+            UiBuilder.AutoSize(line, UiBuilder.MinTextSp, size);
             return line;
         }
+
+        /// <summary>
+        /// Coloca una línea (<see cref="Line"/>, con su texto ya puesto) con su esquina de arriba a la izquierda en
+        /// (<paramref name="x"/>, <paramref name="y"/>) y <paramref name="width"/> dp de ancho, y devuelve el alto que ocupa: el
+        /// de siempre (<paramref name="height"/>) por la escala de texto o, si su texto no cabe ahí ni a su tamaño mínimo, el que
+        /// necesita a ese mínimo (02 §12: los contenedores crecen; ningún texto baja de 12 sp ni se sale de su caja). Con la
+        /// escala 1 y un texto que cabe, <paramref name="height"/>: nada cambia. Si el texto va en dos líneas y la segunda se
+        /// queda con una sola palabra («Todo para seguir: semillas, una cuia y canoas / infinitas»), su caja se estrecha, centrada,
+        /// hasta la mitad de su ancho en una línea más <see cref="WidowSlackDp"/> (o de <see cref="WidowSlackDp"/> en
+        /// <see cref="WidowSlackDp"/> más, mientras siga en dos líneas): las dos quedan equilibradas, sin palabra viuda
+        /// (revisión de A1; D-003).
+        /// </summary>
+        public static float PlaceLine(TextMeshProUGUI line, float x, float y, float width, float height)
+        {
+            float need = Mathf.Ceil(UiBuilder.MinTextHeight(line, width));
+            float h = Mathf.Max(height * UiBuilder.TextScale, need);
+            float w = width;
+            if (UiBuilder.GreedyLines(line, width, out _, out _, out int lastWords) == 2 && lastWords == 1)
+            {
+                for (float cut = Mathf.Ceil(UiBuilder.MinTextWidth(line) * 0.5f) + WidowSlackDp; cut < width - 0.01f; cut += WidowSlackDp)
+                {
+                    if (Mathf.Ceil(UiBuilder.MinTextHeight(line, cut)) <= need + 0.01f)
+                    {
+                        w = cut;
+                        break;
+                    }
+                }
+            }
+
+            UiBuilder.Place(line.rectTransform, x + ((width - w) * 0.5f), y, w, h);
+            return h;
+        }
+
+        /// <summary>
+        /// Holgura de la caja de una línea en dos sin palabra viuda sobre la mitad de su ancho en una (dp) [P]
+        /// (<see cref="PlaceLine"/>; revisión de A1).
+        /// </summary>
+        public const float WidowSlackDp = 8f;
 
         /// <summary>Coloca un botón con relieve (su área táctil) en el panel.</summary>
         public static void Place(ReliefParts parts, float x, float y, float w)
         {
-            UiBuilder.Place((RectTransform)parts.Button.transform, x, y, w, Mathf.Max(48f, parts.Sprites.HeightDp - 6f));
+            UiBuilder.Place((RectTransform)parts.Button.transform, x, y, w, HeightOf(parts));
         }
 
-        /// <summary>Alto que ocupa un botón con relieve colocado con <see cref="Place"/>.</summary>
+        /// <summary>Alto que ocupa un botón con relieve colocado con <see cref="Place"/> (con el estirado de <see cref="Cta"/>).</summary>
         public static float HeightOf(ReliefParts parts)
         {
-            return Mathf.Max(48f, parts.Sprites.HeightDp - 6f);
+            return Mathf.Max(48f, (parts.Sprites.HeightDp * HeightScaleOf(parts)) - 6f);
+        }
+
+        /// <summary>
+        /// Alto de la cara de un botón con relieve (dp): el de sus sprites (<see cref="ReliefSprites.FaceHeightDp"/>) y, en un CTA
+        /// creado con la escala de texto, por esa escala (<see cref="Cta"/>). Para colocar dentro de la cara su etiqueta, sus
+        /// iconos y su precio.
+        /// </summary>
+        public static float FaceHeightOf(ReliefParts parts)
+        {
+            return parts.Sprites.FaceHeightDp * HeightScaleOf(parts);
+        }
+
+        // Lo que el relieve del botón se estiró a lo alto (1 si no; Cta con la escala de texto).
+        private static float HeightScaleOf(ReliefParts parts)
+        {
+            float h = parts.Sprites.HeightDp;
+            float visual = ((RectTransform)parts.Face.parent).sizeDelta.y;
+            return h > 0f && visual > h ? visual / h : 1f;
         }
     }
 }

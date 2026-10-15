@@ -57,6 +57,9 @@ namespace AF.UI
         private TextAsset? faunaCatalog;
 
         [SerializeField]
+        private TextAsset? riverStops;
+
+        [SerializeField]
         private TextAsset? stringsTable;
 
         [SerializeField]
@@ -197,6 +200,21 @@ namespace AF.UI
         public void ConfigureFauna(TextAsset? catalog)
         {
             faunaCatalog = catalog;
+        }
+
+        /// <summary>Paradas del Mapa del río asignadas (<c>river_stops_v1.json</c>; escena generada por <c>GameSceneBuilder</c>).</summary>
+        public TextAsset? RiverStopsAsset => riverStops;
+
+        /// <summary>
+        /// Paradas del Mapa del río leídas al arrancar (<c>af-river-stops/1</c>; D-013; 08 §4.5). Null si falta el archivo o no
+        /// valida: se avisa y el juego sigue igual, sin el Mapa.
+        /// </summary>
+        public RiverStopCatalog? RiverStops { get; private set; }
+
+        /// <summary>Asigna las paradas del Mapa del río (escena generada por <c>GameSceneBuilder</c>).</summary>
+        public void ConfigureRiverStops(TextAsset? stops)
+        {
+            riverStops = stops;
         }
 
         /// <summary>Tabla de textos de la UI asignada (<c>strings.csv</c>; escena generada por <c>GameSceneBuilder</c>).</summary>
@@ -965,6 +983,8 @@ namespace AF.UI
             _screen.SetVisible(false);
             Fauna = LoadFauna();
             _screen.Fauna = Fauna; // la especie de miquito de cada intro (guion de la intro §4.3)
+            RiverStops = LoadRiverStops(riverStops);
+            _screen.RiverStops = RiverStops; // paradas del Mapa del río (D-013; sin uso visible todavía)
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => PressSettings(), () => PressBack(), this);
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), () => CloseSettings());
 
@@ -1133,6 +1153,28 @@ namespace AF.UI
             catch (FaunaFormatException e)
             {
                 Debug.LogError(LogPrefix + e.Message);
+                return null;
+            }
+        }
+
+        // Paradas del Mapa del río de la escena (af-river-stops/1; 08 §4.5), como los miquitos: si falta el archivo, un aviso; si no
+        // valida, un error con la ruta del valor. En los dos casos, null y el juego queda como sin el Mapa (nada visible depende aún
+        // de ellas).
+        internal static RiverStopCatalog? LoadRiverStops(TextAsset? stops)
+        {
+            if (stops == null)
+            {
+                Debug.LogWarning(LogPrefix + "faltan las paradas del Mapa del río (TextAsset): el juego sigue sin el Mapa. Regenera la escena con AF.UI.Editor.GameSceneBuilder.CreateGameScene.");
+                return null;
+            }
+
+            try
+            {
+                return RiverStopCatalogReader.Read(stops.text);
+            }
+            catch (LevelFormatException e)
+            {
+                Debug.LogError(LogPrefix + e.Message + " El juego sigue sin el Mapa.");
                 return null;
             }
         }

@@ -22,10 +22,21 @@ namespace AF.UI
     /// <item><description>pie: «Volver a la orilla (gratis)» como botón en 1-30 y el enlace «Rendirse» [P] desde el 31.</description></item>
     /// </list>
     /// Se rearma con <see cref="Show"/> cada vez que cambia el contexto (p. ej. tras comprar un Puñado: mismo precio, saldo
-    /// nuevo). El alto depende de las opciones (<see cref="Height"/>).
+    /// nuevo). El alto depende de las opciones (<see cref="Height"/>) y de la escala de texto (02 §12: las líneas y los CTA
+    /// crecen, y Puñado y Balsa van una debajo de otra si a media anchura no caben). Pendiente del dueño (revisión de A1): al
+    /// 130 %, en la rama B (unos 559 dp), el panel tapa la parte de abajo de las cuias de un tablero de una fila aunque el
+    /// tablero suba hasta su tope (en el 31, el 36 % a 360 × 780 y el 50 % en 16:9), contra 02 §7 («el tablero queda entero a
+    /// la vista»); al 100 % queda entero. Compactarlo sin bajar de 12 sp × 1,3, sin partir un precio y sin renunciar a que los
+    /// CTA crezcan con la letra (07 §7.8) no llega a los 47 dp (360 × 780) y 79 dp (16:9) que faltan para no tapar las cuias:
+    /// a media anchura, las etiquetas de Puñado y Balsa no caben en sus dos líneas a 15,6 dp (<c>OfferFits</c>) y el aire entre
+    /// bloques da unos 15 dp. MinTextSizeTests registra cuánto tapa.
     /// </summary>
     internal sealed class StuckModal
     {
+        // Etiqueta de las ofertas (Puñado y Balsa): 7 dp de aire a cada lado y el 95 % del alto de la cara, en dos líneas.
+        private const float OfferLabelInsetDp = 14f;
+        private const float OfferLabelFace = 0.95f;
+
         private readonly ProceduralArt _art;
         private readonly RectTransform _panel;
         private readonly Image _surface;
@@ -161,24 +172,21 @@ namespace AF.UI
             float y = 16f;
             UiBuilder.Place(_header.rectTransform, 16f, y, inner, 40f);
             y += 42f;
-            UiBuilder.Place(_subtitle.rectTransform, 16f, y, inner, 20f);
-            y += 22f;
+            y += ModalKit.PlaceLine(_subtitle, 16f, y, inner, 20f) + 2f;
 
             bool canoeLine = view.CanoeLine != StuckCanoeLine.None;
             _canoeLine.gameObject.SetActive(canoeLine);
             if (canoeLine)
             {
                 _canoeLine.text = view.CanoeLine == StuckCanoeLine.LostLast ? UiText.StuckCanoeLostLast : UiText.StuckCanoeLost;
-                UiBuilder.Place(_canoeLine.rectTransform, 16f, y, inner, 20f);
-                y += 22f;
+                y += ModalKit.PlaceLine(_canoeLine, 16f, y, inner, 20f) + 2f;
             }
 
             bool unsolvable = view.Unsolvable;
             _unsolvable.gameObject.SetActive(unsolvable);
             if (unsolvable)
             {
-                UiBuilder.Place(_unsolvable.rectTransform, 16f, y, inner, 36f);
-                y += 38f;
+                y += ModalKit.PlaceLine(_unsolvable, 16f, y, inner, 36f) + 2f;
             }
 
             y += 6f;
@@ -200,7 +208,7 @@ namespace AF.UI
                 }
 
                 ModalKit.Place(_undo, 16f, y, inner);
-                float face = _art.CtaWater.FaceHeightDp;
+                float face = ModalKit.FaceHeightOf(_undo);
                 UiBuilder.Place(_undoBadge, inner - 40f, (face - 28f) * 0.5f, 28f, 28f);
                 _undoLabel.rectTransform.sizeDelta = new Vector2(badge ? -88f : -24f, _undoLabel.rectTransform.sizeDelta.y);
                 y += ModalKit.HeightOf(_undo) + 8f;
@@ -218,17 +226,20 @@ namespace AF.UI
                     float seedsX = view.UndoVideoFirst ? 16f + half + 8f : 16f;
                     ModalKit.Place(_refillVideo, videoX, y, half);
                     ModalKit.Place(_refillSeeds, seedsX, y, half);
-                    UiBuilder.Place(_refillVideoIcon.rectTransform, 8f, (_art.CtaWater.FaceHeightDp - 20f) * 0.5f, 22f, 20f);
-                    _refillVideoLabel.rectTransform.sizeDelta = new Vector2(-40f, _art.CtaWater.FaceHeightDp * 0.8f);
-                    _refillVideoLabel.rectTransform.anchoredPosition = new Vector2(10f, -(_art.CtaWater.FaceHeightDp * 0.5f));
-                    _refillSeedsLabel.rectTransform.sizeDelta = new Vector2(-16f, _art.CtaWood.FaceHeightDp * 0.9f);
-                    _refillSeedsLabel.rectTransform.anchoredPosition = new Vector2(0f, -(_art.CtaWood.FaceHeightDp * 0.5f));
+                    float videoFace = ModalKit.FaceHeightOf(_refillVideo);
+                    float seedsFace = ModalKit.FaceHeightOf(_refillSeeds);
+                    UiBuilder.Place(_refillVideoIcon.rectTransform, 8f, (videoFace - 20f) * 0.5f, 22f, 20f);
+                    _refillVideoLabel.rectTransform.sizeDelta = new Vector2(-40f, videoFace * 0.8f);
+                    _refillVideoLabel.rectTransform.anchoredPosition = new Vector2(10f, -(videoFace * 0.5f));
+                    _refillSeedsLabel.rectTransform.sizeDelta = new Vector2(-16f, seedsFace * 0.9f);
+                    _refillSeedsLabel.rectTransform.anchoredPosition = new Vector2(0f, -(seedsFace * 0.5f));
                     y += Mathf.Max(ModalKit.HeightOf(_refillVideo), ModalKit.HeightOf(_refillSeeds)) + 8f;
                 }
                 else
                 {
-                    _refillSeedsLabel.rectTransform.sizeDelta = new Vector2(-24f, _art.CtaWood.FaceHeightDp * 0.7f);
-                    _refillSeedsLabel.rectTransform.anchoredPosition = new Vector2(0f, -(_art.CtaWood.FaceHeightDp * 0.5f));
+                    float seedsFace = ModalKit.FaceHeightOf(_refillSeeds);
+                    _refillSeedsLabel.rectTransform.sizeDelta = new Vector2(-24f, seedsFace * 0.7f);
+                    _refillSeedsLabel.rectTransform.anchoredPosition = new Vector2(0f, -(seedsFace * 0.5f));
                     ModalKit.Place(_refillSeeds, 16f, y, inner);
                     y += ModalKit.HeightOf(_refillSeeds) + 8f;
                 }
@@ -244,8 +255,8 @@ namespace AF.UI
                 UiBuilder.SetEnabled(_rescue.Button, available);
                 _rescuePrice.Set(view.RescuePrice, view.RescueDiscounted ? view.RescueBasePrice : 0, !available);
                 ModalKit.Place(_rescue, 16f, y, inner);
-                float face = _art.CtaLeaf.FaceHeightDp;
-                _rescuePrice.PlaceAt(inner - _rescuePrice.Width - 12f, (face - 26f) * 0.5f);
+                float face = ModalKit.FaceHeightOf(_rescue);
+                _rescuePrice.PlaceAt(inner - _rescuePrice.Width - 12f, (face - _rescuePrice.Height) * 0.5f);
                 _rescueLabel.rectTransform.sizeDelta = new Vector2(-(_rescuePrice.Width + 36f), _rescueLabel.rectTransform.sizeDelta.y);
                 _rescueLabel.rectTransform.anchoredPosition = new Vector2(-(_rescuePrice.Width + 12f) * 0.5f, _rescueLabel.rectTransform.anchoredPosition.y);
                 y += ModalKit.HeightOf(_rescue);
@@ -255,8 +266,7 @@ namespace AF.UI
                     _rescueNote.gameObject.SetActive(true);
                     _rescueNote.text = note;
                     _rescueNote.color = available ? (Color)Palette.FamilyWood.Base : (Color)Palette.UiRedWarning;
-                    UiBuilder.Place(_rescueNote.rectTransform, 16f, y, inner, 18f);
-                    y += 20f;
+                    y += ModalKit.PlaceLine(_rescueNote, 16f, y, inner, 18f) + 2f;
                 }
 
                 y += 8f;
@@ -280,23 +290,34 @@ namespace AF.UI
                 string balsaPrice = services?.PriceText(StoreCatalog.Rescue) ?? string.Empty;
                 _handfulLabel.text = UiText.StuckPackLine(services?.HandfulSeeds ?? 1000, handfulPrice);
                 _balsaLabel.text = UiText.StuckBalsaLine(balsaPrice);
+                // Las dos en una fila; si a media anchura alguna etiqueta no cabe ni a 12 sp (con la escala de texto: 02 §12), una
+                // debajo de la otra, a lo ancho (la caja crece; pregunta 36 (a); A1).
+                bool both = handful && balsa;
+                bool stacked = both && !(OfferFits(_handful, _handfulLabel, half) && OfferFits(_balsa, _balsaLabel, half));
                 float x = 16f;
-                float w = handful && balsa ? half : inner;
+                float w = both && !stacked ? half : inner;
                 for (int i = 0; i < view.Offers.Count; i++)
                 {
                     ReliefParts card = view.Offers[i] == StuckOffer.Handful ? _handful : _balsa;
                     TextMeshProUGUI label = view.Offers[i] == StuckOffer.Handful ? _handfulLabel : _balsaLabel;
                     ModalKit.Place(card, x, y, w);
-                    label.rectTransform.sizeDelta = new Vector2(-14f, _art.CtaWood.FaceHeightDp * 0.95f);
-                    label.rectTransform.anchoredPosition = new Vector2(0f, -(_art.CtaWood.FaceHeightDp * 0.5f));
-                    x += w + 8f;
+                    float face = ModalKit.FaceHeightOf(card);
+                    label.rectTransform.sizeDelta = new Vector2(-OfferLabelInsetDp, face * OfferLabelFace);
+                    label.rectTransform.anchoredPosition = new Vector2(0f, -(face * 0.5f));
+                    if (stacked && i < view.Offers.Count - 1)
+                    {
+                        y += ModalKit.HeightOf(card) + 8f;
+                    }
+                    else
+                    {
+                        x += w + 8f;
+                    }
                 }
 
                 y += ModalKit.HeightOf(_handful);
                 if (balsa)
                 {
-                    UiBuilder.Place(_balsaNote.rectTransform, 16f, y, inner, 18f);
-                    y += 20f;
+                    y += ModalKit.PlaceLine(_balsaNote, 16f, y, inner, 18f) + 2f;
                 }
 
                 y += 6f;
@@ -324,6 +345,12 @@ namespace AF.UI
         public void Place(float canvasW, float top)
         {
             ModalKit.Size(_panel, _surface, _art, (canvasW - _width) * 0.5f, top, _width, Height);
+        }
+
+        // La etiqueta de una oferta (Puñado o Balsa) cabe en un botón de width dp a su tamaño mínimo (12 sp), en su caja.
+        private static bool OfferFits(ReliefParts card, TextMeshProUGUI label, float width)
+        {
+            return UiBuilder.MinTextHeight(label, width - OfferLabelInsetDp) <= (ModalKit.FaceHeightOf(card) * OfferLabelFace) + 0.01f;
         }
 
         private void OnUndo(IGameActions actions)

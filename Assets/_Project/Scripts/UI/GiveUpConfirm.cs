@@ -125,8 +125,7 @@ namespace AF.UI
                 _line.text = view.LastCanoe ? UiText.GiveUpConfirmLastCanoe : UiText.GiveUpConfirmCanoe;
                 UiBuilder.Place(_canoe.rectTransform, (_width - 132f) * 0.5f, y, 132f, 78f);
                 y += 84f;
-                UiBuilder.Place(_line.rectTransform, 16f, y, inner, 24f);
-                y += 34f;
+                y += ModalKit.PlaceLine(_line, 16f, y, inner, 24f) + 10f;
             }
             else
             {
@@ -142,7 +141,7 @@ namespace AF.UI
                 UiBuilder.SetEnabled(_rescue.Button, available);
                 _price.Set(view.RescuePrice, view.RescueDiscounted ? view.RescueBasePrice : 0, !available);
                 ModalKit.Place(_rescue, 16f, y, inner);
-                _price.PlaceAt(inner - _price.Width - 12f, (_art.CtaLeaf.FaceHeightDp - 26f) * 0.5f);
+                _price.PlaceAt(inner - _price.Width - 12f, (ModalKit.FaceHeightOf(_rescue) - _price.Height) * 0.5f);
                 _rescueLabel.rectTransform.sizeDelta = new Vector2(-(_price.Width + 36f), _rescueLabel.rectTransform.sizeDelta.y);
                 _rescueLabel.rectTransform.anchoredPosition = new Vector2(-(_price.Width + 12f) * 0.5f, _rescueLabel.rectTransform.anchoredPosition.y);
                 y += ModalKit.HeightOf(_rescue);
@@ -151,8 +150,7 @@ namespace AF.UI
                     _note.gameObject.SetActive(true);
                     _note.text = UiText.MissingSeeds(view.RescueMissing);
                     _note.color = Palette.UiRedWarning;
-                    UiBuilder.Place(_note.rectTransform, 16f, y, inner, 18f);
-                    y += 20f;
+                    y += ModalKit.PlaceLine(_note, 16f, y, inner, 18f) + 2f;
                 }
 
                 y += 8f;

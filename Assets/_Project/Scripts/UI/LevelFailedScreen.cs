@@ -117,8 +117,7 @@ namespace AF.UI
             y += 50f;
             UiBuilder.Place(_basket.rectTransform, (width - 120f) * 0.5f, y, 120f, 90f);
             y += 94f;
-            UiBuilder.Place(_reward.rectTransform, 16f, y, inner, 24f);
-            y += 34f;
+            y += ModalKit.PlaceLine(_reward, 16f, y, inner, 24f) + 10f;
             ModalKit.Place(_retry, 16f, y, inner);
             y += ModalKit.HeightOf(_retry) + 14f;
             ModalKit.Size(_panel, _surface, _art, (canvasW - width) * 0.5f, Mathf.Round((canvasH - y) * 0.45f), width, y);

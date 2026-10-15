@@ -31,6 +31,9 @@ namespace AF.EditorTools
     ///   2  los Player Settings no son los fijados (ejecuta antes ProjectSetup.ApplyAndroidDefaults)
     ///   3  falta el módulo Android o no se pudo cambiar la plataforma activa
     ///   4  falló algún build o hubo una excepción (lee el log)
+    ///   6  compuerta de release de los textos (<see cref="LocReleaseGate"/>; 08 §4.7): con un applicationId distinto de
+    ///      com.amazonfill.dev, un idioma ofrecido con la UI incompleta o texto cultural sin aprobado_es. Con
+    ///      com.amazonfill.dev solo avisa en el log. Va antes de comprobar los Player Settings.
     /// En el Editor interactivo (menú "Amazon Fill/CI") solo escribe en la consola y no cierra nada.
     /// Firma: clave de depuración de Unity (sin firma de release). Nunca se sube a Google Play.
     /// </summary>
@@ -48,6 +51,7 @@ namespace AF.EditorTools
         const int ExitSettings = 2;
         const int ExitPlatform = 3;
         const int ExitBuildFailed = 4;
+        const int ExitLocGate = 6;
 
         [MenuItem("Amazon Fill/CI/Build de humo Android (AAB + APK)")]
         public static void BuildAndroid()
@@ -91,6 +95,11 @@ namespace AF.EditorTools
             {
                 Debug.LogError(LogPrefix + "no se pudo cambiar la plataforma activa a Android.");
                 return ExitPlatform;
+            }
+
+            if (!LocReleaseGate.Check(PlayerSettings.GetApplicationIdentifier(NamedBuildTarget.Android), LogPrefix))
+            {
+                return ExitLocGate;
             }
 
             List<string> problems = ProjectSetup.Validate();

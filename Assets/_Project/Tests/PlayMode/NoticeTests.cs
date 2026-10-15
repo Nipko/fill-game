@@ -88,11 +88,11 @@ namespace AF.Tests.PlayMode
             Assert.That(view.ToastText, Is.EqualTo(UiText.ExtraCuiaGift));
             PlayModeHelpers.TickExact(boot, 1000);
 
-            string missing = UiText.RevealMissing(70);
-            view.ShowRevealMissing(70);
+            string missing = UiText.RescueApplied;
+            view.ShowNotice(missing);
             Assert.That(view.ToastText, Is.EqualTo(UiText.ExtraCuiaGift), "el segundo no pisa al primero");
             Assert.That(view.NoticesQueued, Is.EqualTo(1), "espera su turno");
-            view.ShowRevealMissing(70);
+            view.ShowNotice(missing);
             Assert.That(view.NoticesQueued, Is.EqualTo(1), "el mismo aviso no se repite en la cola");
 
             int waited = 0;
@@ -108,9 +108,9 @@ namespace AF.Tests.PlayMode
             Assert.That(view.NoticeToast.DurationMs, Is.EqualTo((float)NoticeTiming.ReadMs(missing)));
             Assert.That(view.NoticeToast.DurationMs, Is.EqualTo(3000f), "los cortos duran el mínimo");
 
-            // El mismo texto que ya se ve vuelve a empezar (Revelar tocado otra vez sin saldo), sin ponerse a la cola.
+            // El mismo texto que ya se ve vuelve a empezar, sin ponerse a la cola.
             PlayModeHelpers.TickExact(boot, 2000);
-            view.ShowRevealMissing(70);
+            view.ShowNotice(missing);
             Assert.That(view.NoticesQueued, Is.EqualTo(0));
             Assert.That(view.NoticeToast.LeftMs, Is.EqualTo(3000f));
             PlayModeHelpers.TickExact(boot, 3000);
@@ -156,8 +156,8 @@ namespace AF.Tests.PlayMode
 
             // Un aviso que llega con la tarjeta a la vista espera a que se vaya; nunca se ven los dos.
             PlayModeHelpers.TickExact(boot, 1000);
-            string missing = UiText.RevealMissing(70);
-            view.ShowRevealMissing(70);
+            string missing = UiText.RescueApplied;
+            view.ShowNotice(missing);
             Assert.That(view.ToastText, Is.Null, "no pisa la tarjeta");
             Assert.That(view.NoticesQueued, Is.EqualTo(1));
             int waited = 1000;
@@ -315,10 +315,10 @@ namespace AF.Tests.PlayMode
             Assert.That(view.ToastText, Is.Null);
 
             // Un aviso a la vista al que le quedan 200 ms y otro que espera su turno.
-            string first = UiText.RevealMissing(70);
-            string waiting = UiText.RevealMissing(50);
-            view.ShowRevealMissing(70);
-            view.ShowRevealMissing(50);
+            string first = UiText.RevealGiftToast;
+            string waiting = UiText.ExtraCuiaGift;
+            view.ShowNotice(first);
+            view.ShowNotice(waiting);
             Assert.That(view.ToastText, Is.EqualTo(first));
             Assert.That(view.NoticesQueued, Is.EqualTo(1));
             PlayModeHelpers.TickExact(boot, NoticeTiming.ReadMs(first) - 200);
@@ -378,7 +378,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             boot.TapAnywhere();
-            view.ShowRevealMissing(70);
+            view.ShowNotice(UiText.RescueApplied);
             Assert.That(view.ToastText, Is.EqualTo(UiText.ExtraCuiaGift));
             Assert.That(view.NoticesQueued, Is.EqualTo(1));
 
@@ -390,9 +390,9 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 100);
             Assert.That(view.ToastText, Is.Null, "y no vuelven tras la intro");
 
-            view.ShowRevealMissing(70);
-            view.ShowRevealMissing(50);
-            Assert.That(view.ToastText, Is.EqualTo(UiText.RevealMissing(70)));
+            view.ShowNotice(UiText.RescueApplied);
+            view.ShowNotice(UiText.RevealGiftToast);
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RescueApplied));
             Assert.That(view.NoticesQueued, Is.EqualTo(1));
             boot.Flow!.Load(9);
             Assert.That(view.ToastText, Is.Null, "ningún aviso pasa al nivel siguiente");
@@ -411,8 +411,8 @@ namespace AF.Tests.PlayMode
             GameScreen view = boot.View!;
             Assert.That(boot.TapAnywhere(), Is.True, "salta la intro");
             Assert.That(view.ToastText, Is.EqualTo(UiText.ExtraCuiaGift));
-            view.ShowRevealMissing(70);
-            Assert.That(view.NoticesQueued, Is.EqualTo(1), "«Te faltan» espera detrás del regalo");
+            view.ShowNotice(UiText.RescueApplied);
+            Assert.That(view.NoticesQueued, Is.EqualTo(1), "«¡Una cuia más!» espera detrás del regalo");
 
             // Una victoria rápida: el regalo dura 5.455 ms y la vista termina los vertidos en ≤ 3 s (MaxViewDrainWaitMs).
             TapTheSolution(boot);
@@ -433,8 +433,8 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(view.Sighting.Visible, Is.True, "la tarjeta, a la vista");
-            view.ShowRevealMissing(70);
-            Assert.That(view.NoticesQueued, Is.EqualTo(1), "«Te faltan» espera a que se vaya la tarjeta");
+            view.ShowNotice(UiText.RescueApplied);
+            Assert.That(view.NoticesQueued, Is.EqualTo(1), "«¡Una cuia más!» espera a que se vaya la tarjeta");
 
             TapTheSolution(boot);
             Assert.That(boot.Flow!.IsResolvingWin, Is.True);
@@ -475,7 +475,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             boot.TapAnywhere();
-            view.ShowRevealMissing(70);
+            view.ShowNotice(UiText.RescueApplied);
             // Ya en régimen: los ~2,2 s que siguen al salto de la intro asignan memoria también sin ningún aviso (medido en el 9;
             // ya estaba antes de la cola).
             PlayModeHelpers.TickExact(boot, 2600);
