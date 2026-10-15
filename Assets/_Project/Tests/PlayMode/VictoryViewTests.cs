@@ -10,16 +10,19 @@ using UnityEngine.TestTools;
 namespace AF.Tests.PlayMode
 {
     /// <summary>
-    /// Victoria con vista (D-013, punto 8, Q6-A; 02 §6; 07 §5.4, fila 0,50-0,75; <c>ui_victory_view</c>, 08 §9; tarea M2.2) en la
-    /// escena, con el catálogo real de paradas:
+    /// Victoria con vista (D-013, punto 8, Q6-A; 02 §6; 07 §5.4; <c>ui_victory_view</c>, 08 §9; tarea M2.2) en la escena, con el
+    /// catálogo real de paradas:
     /// <list type="bullet">
-    /// <item>al abrirse la pantalla de victoria, el tablero (el panel y las cuias) pasa del alfa 1 al 0 en 250 ms y la banda del
-    /// agua deja de tener el hueco del panel;</item>
+    /// <item>al abrirse la pantalla de victoria, tras la ola de saltos, el tablero (el panel y las cuias) pasa del alfa 1 al 0 en
+    /// 250 ms y la banda del agua deja de tener el hueco del panel;</item>
+    /// <item>con más de 10 cuias, la ola sigue al abrirse la victoria y el fundido empieza cuando acaba (con 16 cuias, 240 ms
+    /// después; paquete de prueba de 16 cuias en el 131), sin que ninguna cuia salte mientras el tablero se va;</item>
     /// <item>al ganar el 20, el fondo pasa a Alter do Chão en el mismo fundido, y el 21 carga ya con él (sin otro fundido); en una
     /// victoria sin llegada, el sitio no cambia;</item>
     /// <item>con Reducir movimiento, corte; con la clave apagada, como antes (el tablero a la vista; el fondo cambia al cargar);</item>
     /// <item>Siguiente se habilita, empieza a verse y se ve entero en el mismo milisegundo que sin la vista;</item>
-    /// <item>con 3 filas (el 131 del Trapecio), el tablero se va y el sitio queda a la vista sobre la cinta de la victoria.</item>
+    /// <item>con 3 filas (el 131 del Trapecio, 11 cuias, a 360 × 780 dp), el tablero se va al acabar la ola y el sitio queda a
+    /// la vista sobre la cinta de la victoria.</item>
     /// </list>
     /// </summary>
     public sealed class VictoryViewTests
@@ -195,9 +198,24 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             Assert.That(view.Layout!.Rows, Is.EqualTo(3), "el 131 del Trapecio, en 3 filas");
+            Assert.That(view.Views.Length, Is.EqualTo(11));
             StopBackdrop b = view.StopBackdrop;
-            PlayModeHelpers.TickExact(boot, 250);
-            Assert.That(view.BoardAlpha, Is.EqualTo(0f), "el panel ya no tapa el horizonte");
+
+            // Con 11 cuias la ola acaba a los 940 ms de la celebración, después de abrirse la victoria (≥ 900 ms).
+            float wait = view.VictoryViewWaitMs;
+            Assert.That(GameScreen.CelebrationWaveEndMs(11), Is.EqualTo(940f));
+            Assert.That(wait, Is.GreaterThan(0f).And.LessThanOrEqualTo(40f), "la ola de 11 cuias aún no ha acabado");
+            Assert.That(view.VictoryViewFading, Is.False);
+            int waitMs = Mathf.CeilToInt(wait);
+            PlayModeHelpers.TickExact(boot, waitMs - 1);
+            Assert.That(view.BoardAlpha, Is.EqualTo(1f), "el tablero, entero mientras salta la ola");
+            Assert.That(b.BandHole.width, Is.GreaterThan(0f), "con el hueco del panel mientras no se va");
+            PlayModeHelpers.TickExact(boot, 1);
+            Assert.That(view.VictoryViewFading, Is.True, "el fundido empieza al acabar la ola");
+            PlayModeHelpers.TickExact(boot, 249);
+            Assert.That(view.BoardAlpha, Is.GreaterThan(0f), "a los 249 ms del fin de la ola aún se ve");
+            PlayModeHelpers.TickExact(boot, 1);
+            Assert.That(view.BoardAlpha, Is.EqualTo(0f), "alfa 0 a los 250 ms del fin de la ola: el panel ya no tapa el horizonte");
             Assert.That(b.Stop!.Id, Is.EqualTo("rio_frontera"), "el sitio de la parada 13");
             Assert.That(b.Fading, Is.False);
             Rect hero = view.HeroRect;
@@ -206,6 +224,97 @@ namespace AF.Tests.PlayMode
             Assert.That(hero.height, Is.GreaterThan(0f), "con la silueta provisional");
             Assert.That(hero.yMax, Is.LessThanOrEqualTo(ribbonTop), "el sitio entero por encima de la cinta de la victoria");
             Assert.That(b.BandHole.width, Is.EqualTo(0f), "la banda del agua, entera");
+        }
+
+        [UnityTest]
+        public IEnumerator WithSixteenCuias_TheFadeStartsWhenTheHopWaveEnds()
+        {
+            // 16 cuias (6/5/5, siempre en 3 filas, D-006) en el 131: la última cuia salta de 900 a 1.140 ms de la celebración,
+            // así que el panel espera 240 ms tras abrirse la victoria y acaba de irse a los 1.390 ms, antes de Siguiente.
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
+            LaunchOptions.LevelPackJsonOverride = SixteenCuiaWinPack(131);
+            yield return VictoryArrivalTests.Win(131);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            CuiaView[] cuias = view.Views;
+            Assert.That(cuias.Length, Is.EqualTo(16));
+            Assert.That(view.Layout!.Rows, Is.EqualTo(3));
+            Assert.That(GameScreen.CelebrationWaveEndMs(16), Is.EqualTo(1140f));
+            Assert.That(view.VictoryViewOn, Is.True);
+            Assert.That(view.VictoryViewFading, Is.False, "la ola sigue: el fundido espera");
+            Assert.That(view.BoardAlpha, Is.EqualTo(1f));
+
+            // La victoria se abre en el primer paso de 16 ms con ≥ 900 ms de celebración: faltan 1.140 − (900…915) ms.
+            float wait = view.VictoryViewWaitMs;
+            Assert.That(wait, Is.GreaterThan(1140f - 900f - PlayModeHelpers.FrameMs).And.LessThanOrEqualTo(1140f - 900f));
+
+            // Milisegundo a milisegundo: cuándo deja de saltar la última cuia, cuándo empieza el fundido y cuándo acaba.
+            int lastHopMs = -1;
+            int fadeStart = -1;
+            int fadeEnd = -1;
+            float maxHopDuringFade = 0f;
+            for (int ms = 0; ms <= 600 && fadeEnd < 0; ms++)
+            {
+                float hop = 0f;
+                for (int i = 0; i < cuias.Length; i++)
+                {
+                    hop = Mathf.Max(hop, cuias[i].BodyOffset.y);
+                }
+
+                if (hop > 0.001f)
+                {
+                    lastHopMs = ms;
+                }
+
+                if (fadeStart < 0 && view.BoardAlpha < 1f)
+                {
+                    fadeStart = ms;
+                }
+
+                if (fadeStart >= 0)
+                {
+                    maxHopDuringFade = Mathf.Max(maxHopDuringFade, hop);
+                }
+
+                if (view.BoardAlpha <= 0f)
+                {
+                    fadeEnd = ms;
+                }
+
+                PlayModeHelpers.TickExact(boot, 1);
+            }
+
+            float unit = cuias[0].Unit;
+            TestContext.WriteLine("16 cuias, desde la victoria: espera " + wait + " ms; último salto hasta " + lastHopMs + " ms; fundido "
+                + fadeStart + "-" + fadeEnd + " ms; salto máximo durante el fundido " + maxHopDuringFade + " dp (salto entero "
+                + (0.15f * unit) + " dp)");
+            int waitMs = Mathf.CeilToInt(wait);
+            Assert.That(fadeStart, Is.EqualTo(waitMs + 1), "el tablero empieza a irse al acabar la ola (1 ms después ya baja)");
+            Assert.That(fadeEnd, Is.EqualTo(waitMs + 250), "alfa 0 a los 250 ms del fin de la ola");
+            Assert.That(lastHopMs, Is.GreaterThan(200), "la última cuia aún saltaba al abrirse la victoria");
+            Assert.That(fadeStart, Is.GreaterThanOrEqualTo(lastHopMs - PlayModeHelpers.FrameMs),
+                "el fundido no empieza antes del fin de la ola (como mucho un paso de 16 ms: la cuia arranca su salto en el paso)");
+            Assert.That(maxHopDuringFade, Is.LessThan(0.15f * unit * 0.25f), "ninguna cuia salta mientras el tablero se va");
+            float victoryAt = 1140f - wait; // ms de celebración al abrirse la victoria
+            Assert.That(victoryAt + fadeEnd, Is.LessThanOrEqualTo(1400f), "se va antes de Siguiente (1,40 s)");
+        }
+
+        /// <summary>
+        /// Paquete de un nivel <paramref name="level"/> del Trapecio (mundo 4) con 16 cuias (6/5/5, D-006) que se gana en pocos
+        /// vertidos: 14 tintes de 4 dosis en 7 parejas de cuias con una dosis cambiada (3 a + 1 b y 3 b + 1 a; ninguna empieza
+        /// sellada) y 2 vacías.
+        /// </summary>
+        internal static string SixteenCuiaWinPack(int level)
+        {
+            string[] ids = { "guanabana", "cupuacu", "tapereba", "aguaje", "urucum", "camu_camu", "bacaba", "acai", "jenipapo", "agua_tapajos", "lulo", "araza", "cacao", "agua_negro" };
+            var cuias = new int[16][];
+            for (int i = 0; i < 16; i++)
+            {
+                int a = (i & ~1) + 1; // la pareja (2k, 2k + 1) lleva los tintes 2k + 1 y 2k + 2
+                int b = a + 1;
+                cuias[i] = i >= ids.Length ? new int[0] : ((i & 1) == 0 ? new[] { a, a, a, b } : new[] { b, b, b, a });
+            }
+            return PlayModeHelpers.BoardPack(4, "w04_trapecio", "white", level, ids, cuias);
         }
 
         // Milisegundo (desde la victoria) en que Siguiente se habilita, empieza a verse y se ve entero.

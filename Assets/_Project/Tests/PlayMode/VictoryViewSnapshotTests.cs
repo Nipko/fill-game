@@ -15,10 +15,16 @@ namespace AF.Tests.PlayMode
     /// <list type="bullet">
     /// <item><c>victory_view_l20_{000|125|end}</c>: la llegada a Alter do Chão al abrirse la victoria, a mitad del fundido y con
     /// la victoria entera (360 × 780 dp);</item>
+    /// <item><c>victory_view_l10_end</c>: el 10, que no es una llegada (la cuenta el Mapa): el tablero de 2 filas se va sobre
+    /// el estuario de Belém, sin fundido del fondo;</item>
     /// <item><c>victory_view_l130_end</c>: la llegada al río de la frontera, en el Trapecio;</item>
-    /// <item><c>victory_view_l131_{000|end}</c> y <c>victory_view_l131_640_end</c>: una victoria sin llegada en un tablero de 3
-    /// filas del Trapecio (el sitio de siempre, sin el panel delante), a 360 × 780 y 360 × 640 dp (esta, recortada a la
-    /// pantalla de 640 dp: 1080 × 1920 px);</item>
+    /// <item><c>victory_view_l131_{000|end}</c>: una victoria sin llegada en un tablero de 3 filas del Trapecio (11 cuias a
+    /// 360 × 780 dp; el sitio de siempre, sin el panel delante);</item>
+    /// <item><c>victory_view_l131_640_end</c>: el mismo nivel a 360 × 640 dp, donde sus 11 cuias van en 2 filas (D-006: con
+    /// 11-14, la que dé la cuia más ancha), recortada a la pantalla de 640 dp (1080 × 1920 px);</item>
+    /// <item><c>victory_view_16_640_{000|end}</c>: 3 filas a 360 × 640 dp, con el paquete de prueba de 16 cuias (6/5/5) en el
+    /// 131, porque en 1-200 ningún nivel pasa de 12 cuias: la victoria al abrirse (la ola aún salta y el tablero sigue entero)
+    /// y entera (la cabecera, el sitio y la cinta con el panel más alto);</item>
     /// <item><c>victory_view_off_l131_end</c>: la misma victoria con <c>ui_victory_view</c> apagada, para comparar.</item>
     /// </list>
     /// Cada captura escribe su línea <c>AF_VICTORY_VIEW</c> con el alfa del tablero, la parada, el héroe, el horizonte y la cinta.
@@ -49,14 +55,17 @@ namespace AF.Tests.PlayMode
         public IEnumerator CaptureTheVictoryView()
         {
             yield return Capture(20, false, true, new[] { 0, 125 }, "victory_view_l20");
+            yield return Capture(10, false, true, new int[0], "victory_view_l10");
             yield return Capture(130, false, true, new int[0], "victory_view_l130");
             yield return Capture(131, false, true, new[] { 0 }, "victory_view_l131");
             yield return Capture(131, true, true, new int[0], "victory_view_l131_640");
+            yield return Capture(131, true, true, new[] { 0 }, "victory_view_16_640", VictoryViewTests.SixteenCuiaWinPack(131));
             yield return Capture(131, false, false, new int[0], "victory_view_off_l131");
         }
 
-        // Gana el nivel, captura en cada instante de «at» (ms desde la victoria, en orden) y con la victoria entera («_end»).
-        private static IEnumerator Capture(int level, bool small, bool view, int[] at, string name)
+        // Gana el nivel (del paquete «pack» si lo hay), captura en cada instante de «at» (ms desde la victoria, en orden) y con
+        // la victoria entera («_end»).
+        private static IEnumerator Capture(int level, bool small, bool view, int[] at, string name, string? pack = null)
         {
             FunnelSetup.Hooks();
             MapArtRule.ForceProvisional = true;
@@ -66,6 +75,12 @@ namespace AF.Tests.PlayMode
             {
                 GameScreen.SimulatedScreen = HudLabelTests.Screen640; // tras Prepare, que pone la de 360 × 780
             }
+
+            if (pack != null)
+            {
+                LaunchOptions.LevelPackJsonOverride = pack;
+            }
+
             yield return VictoryArrivalTests.Win(level);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen screen = boot.View!;

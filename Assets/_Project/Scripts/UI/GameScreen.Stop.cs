@@ -27,13 +27,18 @@ namespace AF.UI
     /// <para>La banda de agua no se pinta bajo el relleno opaco del panel (<see cref="StopBackdrop.PanelHoleInsetDp"/>), y el
     /// hueco sigue al tablero cuando sube con la victoria o un modal.</para>
     /// <para><b>Victoria con vista</b> (D-013, punto 8, Q6-A; 02 §6; 07 §5.4; <c>ui_victory_view</c>, 08 §9; tarea M2.2): al abrirse
-    /// la pantalla de victoria, tras la ola de saltos, el tablero entero (el panel, sus estantes y las cuias, con lo que va en
+    /// la pantalla de victoria (a los <c>anim_celebration_ms</c> = 900 ms de la celebración, o antes si el jugador la salta) y
+    /// tras la ola de saltos (<see cref="CelebrationWaveEndMs"/>: con más de 10 cuias acaba después de abrirse la victoria y el
+    /// fundido la espera; con 16, 240 ms), el tablero entero (el panel, sus estantes y las cuias, con lo que va en
     /// su capa) pasa del alfa 1 al 0 en <see cref="VictoryViewFadeMs"/> ms y se ve el sitio del fondo, que deja de tener el
     /// hueco del panel; si es una llegada (<see cref="RiverStopCatalog.ArrivalOnWin"/> salvo en el 10, como
     /// <see cref="MapMoments.ForVictory"/>), el fondo funde a la vez, en el mismo fundido, a la parada que traerá el nivel
     /// siguiente, así que ese nivel ya carga con su fondo (<c>change</c> = <c>same</c>). En el 10 no hay llegada (la cuenta el
     /// Mapa, 02 §6 y 06 §2.3): el tablero se va sobre el estuario y el 11 cambia de fondo al cargar.
-    /// Con Reducir movimiento, corte; con la clave apagada, como antes (el tablero a la vista y el fondo cambia al cargar).
+    /// Con Reducir movimiento, corte (también tras la ola); con la clave apagada, como antes (el tablero a la vista y el fondo
+    /// cambia al cargar). 07 §5.4 pone el fundido en la fila 0,50-0,75 s, antes del panel de 0,80 s; la tarea M2.2 lo engancha
+    /// a la pantalla de victoria, así que empieza a los 0,90 s (y, con 11-16 cuias, al acabar la ola: 0,94-1,14 s) y termina
+    /// 250 ms después, a la vez que sube el panel y antes de Siguiente (1,40 s): desviación [P] pendiente de registrar en el GDD.
     /// No mueve ningún tiempo de la victoria (Siguiente, Inicio, la Cosecha doble, AD_GATE y la ranura no cambian); la carga
     /// del nivel siguiente devuelve el alfa a 1.</para>
     /// </summary>
@@ -58,14 +63,47 @@ namespace AF.UI
         private float _stopHoleShift;
         private readonly StringBuilder _stopProbeSb = new StringBuilder(256);
 
-        /// <summary>Fundido de la victoria con vista: 250 ms (02 §6; 07 §5.4, fila 0,50-0,75; D-013, punto 8).</summary>
+        /// <summary>
+        /// Fundido de la victoria con vista: 250 ms (02 §6; 07 §5.4; D-013, punto 8). Empieza al abrirse la pantalla de victoria
+        /// o, si la ola de saltos sigue, al acabar ella (<see cref="CelebrationWaveEndMs"/>), no en la fila 0,50-0,75 s de 07 §5.4
+        /// (desviación [P] de la tarea M2.2, que lo engancha a la victoria).
+        /// </summary>
         internal const float VictoryViewFadeMs = 250f;
 
-        // Victoria con vista: grupo del tablero (se crea la primera vez), ms del fundido en curso (−1 = ninguno) y si está
-        // activa (de StopVictoryShown a la carga siguiente).
+        /// <summary>Ola de saltos de la celebración (07 §5.4; GameScreen.OnCelebrationStarted): el salto de la cuia 0, en ms.</summary>
+        internal const float CelebrationHopStartMs = 300f;
+
+        /// <summary>Ola de saltos: escalón entre una cuia y la siguiente, en ms (GameScreen.OnCelebrationStarted).</summary>
+        internal const float CelebrationHopStepMs = 40f;
+
+        /// <summary>Ola de saltos: duración de cada salto, en ms (<c>hopMs</c> de CuiaView.HopOffset).</summary>
+        internal const float CelebrationHopMs = 240f;
+
+        /// <summary>
+        /// Fin de la ola de saltos de la celebración con <paramref name="count"/> cuias en el tablero, en ms desde que empieza
+        /// la celebración: la cuia i salta de 300 + 40·i a 540 + 40·i ms, así que la ola acaba a los 540 + 40·(N − 1) ms
+        /// (900 con 10 cuias, 940 con 11 y 1.140 con 16); 0 sin cuias.
+        /// </summary>
+        internal static float CelebrationWaveEndMs(int count)
+        {
+            return count <= 0 ? 0f : CelebrationHopStartMs + (CelebrationHopStepMs * (count - 1)) + CelebrationHopMs;
+        }
+
+        // Victoria con vista: grupo del tablero (se crea la primera vez), ms del fundido en curso (−1 = ninguno), si está
+        // activa (de StopVictoryShown a la carga siguiente), ms que faltan para que acabe la ola de saltos (−1 = ninguno) y lo
+        // que se hará entonces: corte o fundido, y en una llegada, la parada y el agua del nivel siguiente.
         private CanvasGroup? _boardGroup;
         private float _victoryViewMs = -1f;
         private bool _victoryViewOn;
+        private float _victoryViewWaitMs = -1f;
+        private bool _victoryViewCut;
+        private bool _victoryViewArrival;
+        private RiverStop? _victoryViewStop;
+        private string _victoryViewWater = string.Empty;
+
+        // ms de la celebración en curso (StopTick, antes del Tick del flujo, como la ola de saltos de las cuias): en la victoria,
+        // lo que ya pasó de la ola. Vuelve a 0 con cada carga.
+        private float _stopCelebrationMs;
 
         /// <summary>
         /// Solo tests: enciende o apaga la victoria con vista (null = <c>ui_victory_view</c>, <see cref="MapConfig.UiVictoryView"/>).
@@ -80,6 +118,9 @@ namespace AF.UI
 
         /// <summary>El fundido del tablero de la victoria con vista está en curso (tests).</summary>
         internal bool VictoryViewFading => _victoryViewMs >= 0f;
+
+        /// <summary>ms que faltan para que acabe la ola de saltos y empiece la victoria con vista (−1 = ninguno; tests).</summary>
+        internal float VictoryViewWaitMs => _victoryViewWaitMs;
 
         /// <summary>Fondo de la parada (tests y capturas).</summary>
         internal StopBackdrop StopBackdrop => _stopBackdrop;
@@ -143,7 +184,7 @@ namespace AF.UI
         {
             Rect hole = new Rect(0f, 0f, 0f, 0f);
             _stopHoleShift = _boardShift;
-            if (_stopHasBoard && !_victoryViewOn) // con la victoria con vista, el panel se va: la banda entera
+            if (_stopHasBoard && !(_victoryViewOn && _victoryViewWaitMs < 0f)) // con el panel yéndose: la banda entera
             {
                 Rect panel = PanelRect();
                 float inset = StopBackdrop.PanelHoleInsetDp;
@@ -159,6 +200,7 @@ namespace AF.UI
         partial void StopLevelLoaded(LevelFlow flow)
         {
             EndVictoryView();
+            _stopCelebrationMs = 0f;
             RiverStop? stop = StopForLevel(RiverStops, flow.LevelNumber, MapConfig.UiBgPerStop);
             string water = flow.Level.WaterBase;
             RiverStop? before = _stopBackdrop.Stop;
@@ -180,23 +222,48 @@ namespace AF.UI
                 return; // como antes: el tablero a la vista y el fondo cambia al cargar el nivel siguiente
             }
 
-            bool cut = flow.ReduceMotion;
             _victoryViewOn = true;
-            LayoutStopBackdrop(); // sin hueco: bajo el panel que se va, la banda del agua
+            _victoryViewCut = flow.ReduceMotion;
 
-            // En una llegada, el fondo pasa ya, en el mismo fundido, a la parada que trae el nivel siguiente (con
+            // En una llegada, el fondo pasará, en el mismo fundido, a la parada que trae el nivel siguiente (con
             // ui_bg_per_stop = false, la gran parada de su mundo) con el agua de su mundo. El 10 no es una llegada (la misma
             // definición que MapMoments.ForVictory y VictoryLineArbiter): la primera llegada la cuenta el Mapa del 10 (02 §6,
             // fila Llegada; 06 §2.3, paso 3; D-013, punto 7), así que en el 10 el tablero se va sobre el estuario y el fondo de
             // Santarém llega con la carga del 11 (D-013, punto 9).
             int won = flow.LevelNumber;
             RiverStopCatalog? stops = RiverStops;
-            if (stops != null && won != RiverStopCatalog.LevelsPerStop && stops.ArrivalOnWin(won) != null)
+            _victoryViewArrival = stops != null && won != RiverStopCatalog.LevelsPerStop && stops.ArrivalOnWin(won) != null;
+            _victoryViewStop = null;
+            _victoryViewWater = flow.Level.WaterBase;
+            if (_victoryViewArrival)
             {
                 int next = won + 1;
-                RiverStop? stop = StopForLevel(stops, next, MapConfig.UiBgPerStop);
-                string water = flow.Catalog.Find(next)?.WaterBase ?? flow.Level.WaterBase;
-                _stopBackdrop.Apply(stop, water, !cut, VictoryViewFadeMs);
+                _victoryViewStop = StopForLevel(stops, next, MapConfig.UiBgPerStop);
+                _victoryViewWater = flow.Catalog.Find(next)?.WaterBase ?? flow.Level.WaterBase;
+            }
+
+            // Tras la ola de saltos (02 §6; 07 §5.4): con más de 10 cuias sigue saltando al abrirse la victoria (la última cuia
+            // de 16 salta de 900 a 1.140 ms), y el panel no se empieza a ir hasta que acaba.
+            float wait = CelebrationWaveEndMs(_views.Length) - _stopCelebrationMs;
+            if (wait > 0f)
+            {
+                _victoryViewWaitMs = wait;
+                return;
+            }
+
+            BeginVictoryView();
+        }
+
+        // Empieza la victoria con vista: sin el hueco del panel en la banda, el fondo de la llegada y el tablero que se va (corte
+        // con Reducir movimiento).
+        private void BeginVictoryView()
+        {
+            _victoryViewWaitMs = -1f;
+            bool cut = _victoryViewCut;
+            LayoutStopBackdrop(); // sin hueco: bajo el panel que se va, la banda del agua
+            if (_victoryViewArrival)
+            {
+                _stopBackdrop.Apply(_victoryViewStop, _victoryViewWater, !cut, VictoryViewFadeMs);
                 ApplyStopLut();
             }
 
@@ -213,6 +280,9 @@ namespace AF.UI
         private void EndVictoryView()
         {
             _victoryViewMs = -1f;
+            _victoryViewWaitMs = -1f;
+            _victoryViewArrival = false;
+            _victoryViewStop = null;
             if (_boardGroup != null && _boardGroup.alpha < 1f)
             {
                 _boardGroup.alpha = 1f;
@@ -227,10 +297,30 @@ namespace AF.UI
 
         partial void StopTick(float dtMs)
         {
+            float dt = Mathf.Max(0f, dtMs);
+            if (_flow != null && _flow.Phase == FlowPhase.Celebration)
+            {
+                _stopCelebrationMs += dt; // la vista avanza antes que el flujo: la victoria se abre con lo que ya pasó de la ola
+            }
+
+            // Al acabar la ola de saltos, el fundido empieza y avanza lo que sobró de este paso (el fondo, igual).
+            float fadeDt = dt;
+            float backdropDt = dtMs;
+            if (_victoryViewWaitMs >= 0f)
+            {
+                _victoryViewWaitMs -= dt;
+                if (_victoryViewWaitMs <= 0f)
+                {
+                    fadeDt = -_victoryViewWaitMs;
+                    backdropDt = fadeDt;
+                    BeginVictoryView();
+                }
+            }
+
             if (_victoryViewMs >= 0f && _boardGroup != null)
             {
                 // Lineal, como el fundido del fondo (StopBackdrop.Tick): el tablero se va mientras el sitio nuevo entra.
-                _victoryViewMs += Mathf.Max(0f, dtMs);
+                _victoryViewMs += fadeDt;
                 float t = Mathf.Clamp01(_victoryViewMs / VictoryViewFadeMs);
                 _boardGroup.alpha = 1f - t;
                 if (t >= 1f)
@@ -244,7 +334,7 @@ namespace AF.UI
                 LayoutStopBackdrop(); // el tablero se movió: el hueco de la banda lo sigue (sin asignar memoria)
             }
 
-            if (_stopBackdrop.Tick(dtMs))
+            if (_stopBackdrop.Tick(backdropDt))
             {
                 ApplyStopLut();
             }
