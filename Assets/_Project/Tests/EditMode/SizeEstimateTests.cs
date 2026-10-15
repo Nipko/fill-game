@@ -51,7 +51,7 @@ namespace AF.Tests.EditMode
         [Test]
         public void UnknownFamily_ExitsWith2_WithoutMeasuring()
         {
-            LogAssert.Expect(LogType.Error, new Regex(@"\[AF\.SizeEstimate\] familia desconocida 'cielo' \(válidas: kits, heroes, mapa, ambiente, titino, fichas\)"));
+            LogAssert.Expect(LogType.Error, new Regex(@"\[AF\.SizeEstimate\] familia desconocida 'cielo' \(válidas: kits, heroes, mapa, ambiente, sloth, fichas\)"));
 
             int code = SizeEstimate.Execute(new[] { "Unity.exe", "-batchmode", "-afSizeFamilies", "kits,cielo", "-afSizeReport", ReportPath }, Fake);
 
@@ -100,7 +100,7 @@ namespace AF.Tests.EditMode
             Assert.That(report, Does.Contain("| Héroes de los sitios (bg_hero_<sitio>) | 15 | 1,10 | 4,39 |"));
             Assert.That(report, Does.Contain("| Mapa del río (map_*) | 6 | 1,56 | 1,56 |"));
             Assert.That(report, Does.Contain("| Ambientes de los sitios (amb_*) | 3 | 0,19 | 0,19 |"));
-            Assert.That(report, Does.Contain("| TiTino (fauna_bradypus_variegatus_* y arbol_embauba) | 3 | 1,50 | 1,50 |"));
+            Assert.That(report, Does.Contain("| Perezoso protagonista (fauna_bradypus_variegatus_* y arbol_embauba) | 3 | 1,50 | 1,50 |"));
             Assert.That(report, Does.Contain("| Fichas de Frutas del río (ficha_<tinte>) | 14 | 3,91 | 3,91 |"));
             Assert.That(report, Does.Contain("| **Total** | 50 |"));
             Assert.That(report, Does.Contain("| Build (1×) |"));
@@ -144,6 +144,7 @@ namespace AF.Tests.EditMode
                 (w, h, b) => new SizeEstimate.Measurement(0, "prueba"));
 
             Assert.That(code, Is.EqualTo(SizeEstimate.ExitFailed));
+            Assert.That(File.Exists(ReportPath), Is.False);
         }
 
         [Test]

@@ -11,7 +11,7 @@ using UnityEngine;
 namespace AF.EditorTools
 {
     /// <summary>
-    /// Estimación temprana del peso del arte encargado (tarea B0): kits de mundo, héroes, Mapa del río, ambientes, TiTino y
+    /// Estimación temprana del peso del arte encargado (tarea B0): kits de mundo, héroes, Mapa del río, ambientes, perezoso y
     /// fichas de Frutas del río, sin esperar a una medida del AAB (M1.8: «los kits, en paralelo con los héroes en cuanto B0 dé
     /// la estimación de peso»). La medida real es de M5.2 y B2 con <c>ci/size-gate.ps1</c>.
     ///
@@ -31,7 +31,8 @@ namespace AF.EditorTools
     ///   unity run &lt;repo&gt; --architecture arm64 --log-file Logs/size-estimate.log --no-tail --non-interactive --
     ///             -nographics -buildTarget Android -executeMethod AF.EditorTools.SizeEstimate.Run
     ///             [-afSizeFamilies kits,heroes,mapa] [-afSizeReport Logs/size-estimate.md] [-afSizeAabMB 35]
-    /// Familias (<c>-afSizeFamilies</c>, separadas por comas; todas si se omite): kits, heroes, mapa, ambiente, titino, fichas.
+    /// Familias (<c>-afSizeFamilies</c>, separadas por comas; todas si se omite): kits, heroes, mapa, ambiente, sloth, fichas
+    /// (el id del perezoso protagonista no lleva su nombre: glosario §11).
     /// Informe: <see cref="DefaultReportPath"/> (Logs/ está ignorada por git) y el log de Unity.
     ///
     /// Códigos de salida (solo en batchmode):
@@ -99,7 +100,7 @@ namespace AF.EditorTools
             {
                 new ArtPiece("amb_*", 3, 256, 256, 256, 256, AstcBlock.Astc4x4),
             }),
-            new ArtFamily("titino", "TiTino (fauna_bradypus_variegatus_* y arbol_embauba)", new[]
+            new ArtFamily("sloth", "Perezoso protagonista (fauna_bradypus_variegatus_* y arbol_embauba)", new[]
             {
                 new ArtPiece("fauna_bradypus_variegatus_partes", 1, 1024, 1024, 1024, 1024, AstcBlock.Astc4x4),
                 new ArtPiece("fauna_bradypus_variegatus_retrato", 1, 512, 512, 512, 512, AstcBlock.Astc4x4),
