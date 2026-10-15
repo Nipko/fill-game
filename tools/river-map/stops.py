@@ -4,15 +4,29 @@
 
 Lee docs/research/mapa-del-rio/rio-amazonas.json (sin modificarlo) y tools/river-map/overrides.json, y escribe
 Assets/_Project/Data/Map/river_stops_v1.json: una entrada por parada (k = n, niveles 10n+1 ... 10n+10) con los campos
-de 08 §4.5 (contrato 30) y los extras [P] de P-M1 (a). Solo claves de texto, nunca textos: los textos van en
-Data/Loc/facts.csv (contrato 32; los escribe M1.1t). Solo biblioteca estandar de Python 3.14 (08 §4.5).
+de 08 §4.5 (contrato 30) y los extras [P] de P-M1 (a). Solo claves de texto, nunca textos: los textos van en el bloque
+de filas map.* de Assets/_Project/Data/Loc/facts.csv (contrato 32; 08 §4.7), que solo escribe este script (M1.1t). Solo
+biblioteca estandar de Python 3.14 (08 §4.5).
 
 Uso (desde la raiz del repositorio):
-    py -3.14 tools/river-map/stops.py            # escribe river_stops_v1.json
-    py -3.14 tools/river-map/stops.py --check    # valida y compara con lo commiteado; codigo 1 si algo falla
+    py -3.14 tools/river-map/stops.py                  # escribe river_stops_v1.json
+    py -3.14 tools/river-map/stops.py --write-texts    # regenera solo el bloque map.* de facts.csv
+    py -3.14 tools/river-map/stops.py --check          # valida y compara las dos salidas; codigo 1 si algo falla
 
-Opciones para pruebas y fixtures: --source, --overrides, --worldtable y --out cambian las rutas de entrada y salida.
-Determinista: misma entrada, mismos bytes (UTF-8 sin BOM, LF, orden de claves fijo). Mensajes solo en ASCII.
+Opciones para pruebas y fixtures: --source, --overrides, --worldtable, --out y --facts cambian las rutas de entrada y
+salida. Determinista: misma entrada, mismos bytes (UTF-8 sin BOM, LF, orden de claves fijo y filas en orden ordinal).
+Mensajes solo en ASCII.
+
+Textos (M1.1t; bloque map.* de facts.csv, cabecera de L2b: key, es-419, en, pt-BR, context, max_chars, status, status_en,
+status_pt-BR, notes y args):
+- nombres por convencion: map.stop.<id>.name y map.stop.<id>.river (nombre y rio, o los de overrides.json),
+  map.country.<iso2>.name (COUNTRY_NAMES, comprobado contra rotulos_de_pais) y, en n = 13, country_name («Colombia y
+  Peru», desde pais CO/PE); 32 caracteres [P];
+- datos de llegada (arrival_fact, con su texto, etiqueta y fuentes con URL): 90 caracteres; preguntas del mundo: 50;
+- en y pt-BR vacios; status pendiente_asesor; notes con [V] o [E] (o [P] en lo que decide el diseno); args con las cifras
+  que el texto escribe como {n} (Q8-A): la fuente las da en dato_del_nivel.args;
+- --check falla si el bloque no esta al dia (desfase), si una clave citada no tiene fila con texto, si un texto pasa de su
+  limite, lleva una cifra con separador o decimales o cae en el veto de Belen, o si un dato [V] no tiene fuente [V].
 
 Conversion (paradas_1_200 -> stops[n]; plan del Mapa, M1.1):
 - paradas_1_200 cubre k = 0..19 (niveles 1-200, D-013 punto 3); ademas, la validacion exige que el documento termine
@@ -35,14 +49,19 @@ Conversion (paradas_1_200 -> stops[n]; plan del Mapa, M1.1):
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
+    COUNTRY_NAMES,
+    FACTS_PATH,
+    FACTS_REL,
     OVERRIDES_PATH,
     ROOT,
     SOURCE_PATH,
@@ -52,9 +71,12 @@ from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
     SourceError,
     WorldTable,
     ascii_text,
+    format_csv_row,
     has_belen,
     iter_strings,
     load_json,
+    parse_csv_record,
+    split_csv_records,
 )
 
 FORMAT = "af-river-stops/1"
@@ -83,7 +105,7 @@ SAMPLES = frozenset(SAMPLE.values())
 LUT = {"atardecer": "dusk", "alba": "dawn"}
 LUTS = frozenset(LUT.values())
 BG_TIPOS = ("pintado", "codigo", "kit_y_rotulo", "variante_lut")
-OVERRIDE_FIELDS = frozenset({"country", "country_name", "why"})
+OVERRIDE_FIELDS = frozenset({"country", "country_name", "name", "river", "why"})
 
 RE_ID = re.compile(r"[a-z0-9_]+")
 RE_ISO2 = re.compile(r"[A-Z]{2}")
@@ -122,7 +144,7 @@ def _check_overrides(overrides: dict, source_ids: set) -> tuple[dict, list[str]]
             continue
         unknown = sorted(set(entry) - OVERRIDE_FIELDS)
         if unknown:
-            errors.append(f"overrides.json: {sid!r} lleva campos desconocidos {unknown} (admitidos: country, country_name, why)")
+            errors.append(f"overrides.json: {sid!r} lleva campos desconocidos {unknown} (admitidos: country, country_name, name, river y why)")
         clean[sid] = entry
     return clean, errors
 
@@ -342,7 +364,11 @@ def convert(source: dict, overrides: dict) -> tuple[dict | None, list[str]]:
 # --------------------------------------------------------------------------------------------- validacion
 
 def validate(doc: dict, wt: WorldTable) -> list[str]:
-    """Reglas de 08 §4.5 y del plan del Mapa sobre el documento generado (las mismas que RiverStopCatalog, M1.2)."""
+    """Reglas de 08 §4.5 y del plan del Mapa sobre el documento generado: aqui se comprueban todas (stops.py --check).
+
+    RiverStopCatalog (AF.Levels, M1.2) repite solo el formato, los n contiguos, levels, WorldTable, gate y close (contrato
+    30) y la parada final de cada mundo, y ArtSlots rechaza «belen»; los textos de las claves los comprueba build_texts.
+    """
     errors: list[str] = []
     if doc.get("format") != FORMAT:
         errors.append(f"format {doc.get('format')!r} y se esperaba {FORMAT!r}")
@@ -512,6 +538,382 @@ def build(source: dict, overrides: dict, wt: WorldTable) -> tuple[dict | None, l
     return doc, errors
 
 
+# --------------------------------------------------------------------------------------------- textos (M1.1t)
+#
+# Bloque de filas map.* de Assets/_Project/Data/Loc/facts.csv (contrato 32; 08 §4.7; pregunta 49 (a): contenido con
+# puntos y un estado por idioma). Solo lo escribe stops.py --write-texts; el resto del archivo (la cabecera de L2b y las
+# filas de fauna, de fruta...) no se toca, ni un byte. Las claves con el mismo prefijo «map.» quedan contiguas en orden
+# ordinal (sorted() de Python = StringComparer.Ordinal de C#; regla de G1).
+
+TEXT_PREFIX = "map."
+FACT_MAX_CHARS = 90        # 08 §4.5: el dato mide <= 90 caracteres en ES
+QUESTION_MAX_CHARS = 50    # 08 §4.5: la pregunta, <= 50
+NAME_MAX_CHARS = 32        # [P] nombres de parada, rio y pais
+MAX_ARGS = 3               # LocArgs.MaxCount (AF.Localization)
+TEXT_STATUS = "pendiente_asesor"   # lo cultural nace pendiente del asesor (07 §8.2)
+EVIDENCE = ("V", "E")
+REQUIRED_COLUMNS = ("key", "es-419", "context", "max_chars", "status", "notes", "args")
+GENERATED = "Fila generada por tools/river-map/stops.py --write-texts (M1.1t): no se edita a mano."
+NO_CAPTURE = "Captura: ninguna todavía (la placa de llegada y el Mapa aún no existen en el cliente)."
+
+RE_MARKER = re.compile(r"\{([a-z][a-z0-9_]*)\}")
+# La misma expresion que LocTablesTests.NumberWithSeparator: cifra con separador de miles o decimales («1.480», «5,2»,
+# «2 000» con espacio normal, duro o fino, «1'000»).
+RE_NUMBER_SEP = re.compile("[0-9][.,\u00A0\u202F\u2009'][0-9]|(?<![0-9])[0-9]{1,3}( [0-9]{3})+(?![0-9])")
+# Cifra (o marcador {n}) + espacio normal + unidad: el espacio pasa a U+00A0 (08 §4.7: «U+00A0 entre cifra y unidad»).
+RE_UNIT_SPACE = re.compile(r"(?<=[0-9}]) (?=(?:km²|km|m²|m|cm|mm|ha|kg|°C|%)(?![^\W_]))")
+RE_NUMBER_TOKEN = re.compile("[0-9]+(?:[.,\u00A0\u202F\u2009' ][0-9]+)+")
+RE_ARG_NAME = re.compile(r"[a-z][a-z0-9_]*")
+RE_ARG_VALUE = re.compile(r"-?[0-9]+(?:\.[0-9]+)?")
+
+
+def clean_text(text: str) -> str:
+    """Texto de la fuente para la tabla: NFC y U+00A0 entre la cifra (o {n}) y su unidad («6 km» -> «6\\u00a0km»)."""
+    return RE_UNIT_SPACE.sub("\u00A0", unicodedata.normalize("NFC", text))
+
+
+def _shown_number(value: str) -> str:
+    """Cifra como la escribe Loc.Number con es-CO (la region por defecto [P]): «1480» -> «1.480», «3.25» -> «3,25»."""
+    sign = "-" if value.startswith("-") else ""
+    whole, _, decimals = value.lstrip("-").partition(".")
+    groups = []
+    while len(whole) > 3:
+        groups.insert(0, whole[-3:])
+        whole = whole[:-3]
+    groups.insert(0, whole)
+    return sign + ".".join(groups) + ("," + decimals if decimals else "")
+
+
+def visible_length(text: str, args: dict) -> int:
+    """Lo que ocupa en pantalla: cada {marcador} con su cifra ya formateada, y nunca menos que el texto con los marcadores
+    escritos (LocTablesTests cuenta {n} como 3)."""
+    shown = RE_MARKER.sub(lambda m: _shown_number(args[m.group(1)]) if m.group(1) in args else m.group(0), text)
+    return max(len(shown), len(text))
+
+
+def _parse_args(raw, key: str) -> tuple[dict, list[str]]:
+    """args opcional de un dato de la fuente: {nombre: entero o "decimal con punto"} -> {nombre: texto de la cifra}."""
+    if raw is None:
+        return {}, []
+    if not isinstance(raw, dict):
+        return {}, [f"{key}: args tiene que ser un objeto {{nombre: cifra}}"]
+    out: dict = {}
+    errors: list[str] = []
+    for name, value in raw.items():
+        if not (isinstance(name, str) and RE_ARG_NAME.fullmatch(name)) or name == "sep":
+            errors.append(f"{key}: args lleva el nombre {name!r}, que no vale como marcador")
+        elif _is_int(value):
+            out[name] = str(value)
+        elif isinstance(value, str) and RE_ARG_VALUE.fullmatch(value):
+            out[name] = value
+        else:
+            errors.append(f"{key}: el valor de {name!r} ({value!r}) no es un entero ni un decimal con punto entre comillas")
+    if len(out) > MAX_ARGS:
+        errors.append(f"{key}: {len(out)} argumentos y la tabla admite {MAX_ARGS} (LocArgs)")
+    return out, errors
+
+
+def format_args(args: dict) -> str:
+    """Columna args [P] de facts.csv: «nombre=valor» separados por «;», en orden ordinal (LocArgs.TryParse)."""
+    return ";".join(f"{name}={args[name]}" for name in sorted(args))
+
+
+def check_text(key: str, text, max_chars: int, args: dict) -> list[str]:
+    """Reglas de un texto del bloque: no vacio, marcadores = args, sin cifras con separador, longitud y veto de Belen."""
+    if not isinstance(text, str) or not text.strip():
+        return [f"{key}: clave sin texto es-419 en la fuente"]
+    errors: list[str] = []
+    if text != text.strip() or "\n" in text or "\r" in text:
+        errors.append(f"{key}: el texto lleva espacios al principio o al final, o un salto de linea")
+    markers = sorted(set(RE_MARKER.findall(text)))
+    rest = RE_MARKER.sub("", text)
+    if "{" in rest or "}" in rest:
+        errors.append(f"{key}: llaves sueltas en {text!r} (solo marcadores {{nombre}})")
+    if markers != sorted(args):
+        errors.append(f"{key}: los marcadores {markers} y args {sorted(args)} no coinciden")
+    m = RE_NUMBER_SEP.search(text)
+    if m:
+        # La cifra entera para el mensaje («1.480», no solo «1.4»).
+        whole = next((t.group(0) for t in RE_NUMBER_TOKEN.finditer(text) if t.start() <= m.start() < t.end()), m.group(0))
+        errors.append(f"{key}: la cifra {whole!r} lleva separador de miles o decimales; va con {{n}} y su valor en "
+                      "args (D-018, Q8-A)")
+    length = visible_length(text, args)
+    if length > max_chars:
+        errors.append(f"{key}: {length} caracteres y el maximo es {max_chars} ({text!r})")
+    if has_belen(text):
+        errors.append(f"{key}: {text!r} cae en el veto de Belen (D-013, punto 11; 07 §8.1)")
+    return errors
+
+
+def cited_keys(doc: dict) -> list[str]:
+    """Claves de texto que cita river_stops_v1.json, explicitas (arrival_fact, facts, world_question y country_name) y
+    por convencion (map.stop.<id>.name, map.stop.<id>.river y map.country.<iso2>.name), en orden ordinal."""
+    keys: set = set()
+    for s in doc["stops"]:
+        keys.add(f"map.stop.{s['id']}.name")
+        keys.add(f"map.stop.{s['id']}.river")
+        keys.add(f"map.country.{s['country'].lower()}.name")
+        for k in (s["arrival_fact"], s["world_question"], s["country_name"], *s["facts"]):
+            if k is not None:
+                keys.add(k)
+    return sorted(keys)
+
+
+def _sources_text(dato: dict, fuentes: dict, key: str) -> tuple[str, list[str]]:
+    """Fuentes de un dato con su etiqueta y su URL: cada dato [V] o [E] lleva a una fuente con URL, y uno [V], a una [V]."""
+    errors: list[str] = []
+    etiqueta = dato.get("etiqueta")
+    if etiqueta not in EVIDENCE:
+        errors.append(f"{key}: etiqueta {etiqueta!r}; un dato del Mapa es [V] o [E] (ninguno [NV])")
+    raw = dato.get("fuente")
+    ids = [p.strip() for p in raw.split(",") if p.strip()] if isinstance(raw, str) else []
+    if not ids:
+        return "", errors + [f"{key}: dato sin fuente"]
+    parts = []
+    tags = []
+    for sid in ids:
+        f = fuentes.get(sid)
+        if f is None:
+            errors.append(f"{key}: la fuente {sid!r} no esta en rio-amazonas.json, fuentes")
+            continue
+        url = f.get("url")
+        if not (isinstance(url, str) and url.startswith(("https://", "http://"))):
+            errors.append(f"{key}: la fuente {sid!r} no tiene URL")
+        tags.append(f.get("etiqueta"))
+        parts.append(f"{sid} [{f.get('etiqueta')}]: {f.get('nombre')}, {url}")
+    if etiqueta == "V" and len(tags) == len(ids) and "V" not in tags:
+        errors.append(f"{key}: dato [V] sin ninguna fuente [V] ({', '.join(ids)})")
+    label = "Fuente" if len(parts) == 1 else "Fuentes"
+    return f"{label} " + "; ".join(parts) + ".", errors
+
+
+def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[str]]:
+    """Filas del bloque map.* de facts.csv para un documento ya valido: {clave: {columna: valor}}."""
+    errors: list[str] = []
+    records = {r.get("k"): r for r in source.get("paradas_1_200", []) if isinstance(r, dict)}
+    fuentes = {f.get("id"): f for f in source.get("fuentes", []) if isinstance(f, dict)}
+    rotulos = [r.get("nombre") for r in source.get("rotulos_de_pais", []) if isinstance(r, dict)]
+    over = overrides.get("stops") if isinstance(overrides.get("stops"), dict) else {}
+    stops = doc["stops"]
+    rows: dict = {}
+
+    def add(key: str, text, max_chars: int, context: str, notes: str, args: dict | None = None) -> None:
+        args = args or {}
+        if isinstance(text, str):
+            text = clean_text(text)
+        errors.extend(check_text(key, text, max_chars, args))
+        row = {"key": key, "es-419": text if isinstance(text, str) else "", "en": "", "pt-BR": "", "context": context,
+               "max_chars": str(max_chars), "status": TEXT_STATUS, "status_en": "", "status_pt-BR": "",
+               "notes": f"{notes} Pendiente del asesor cultural (07 §8.2). {GENERATED}", "args": format_args(args)}
+        for field in ("context", "notes"):
+            if has_belen(row[field]):
+                errors.append(f"{key}: la columna {field} cae en el veto de Belen (D-013, punto 11)")
+        if key in rows and rows[key] != row:
+            errors.append(f"{key}: dos filas distintas con la misma clave")
+        rows[key] = row
+
+    def where(s: dict) -> str:
+        a, b = s["levels"]
+        return f"parada {s['n']} del Mapa del río (niveles {a}-{b}, mundo {s['world']})"
+
+    # Nombres de parada y rio (map.stop.<id>.name y .river; 32 caracteres [P]).
+    names: dict = {}
+    for s in stops:
+        n, sid = s["n"], s["id"]
+        r = records.get(n, {})
+        ov = over.get(sid) if isinstance(over.get(sid), dict) else {}
+        conf = r.get("conf")
+        if conf not in EVIDENCE:
+            errors.append(f"parada n={n} ({sid!r}): conf {conf!r} del lugar no es V ni E")
+        for field, src_field in (("name", "nombre"), ("river", "rio")):
+            value = ov.get(field, r.get(src_field))
+            if field in ov:
+                origin = (f"tools/river-map/overrides.json ({sid}: {field}), en lugar de «{r.get(src_field)}» de "
+                          f"{SOURCE_REL}, paradas_1_200 k={n}")
+                notes = "[P] Decisión de overrides.json (P-M1 a)."
+            else:
+                origin = f"{SOURCE_REL}, paradas_1_200 k={n} ({src_field})"
+                notes = f"[{conf}] Lugar {'verificado' if conf == 'V' else 'estimado'} en rio-amazonas.json (conf)."
+            if field == "name":
+                names[n] = clean_text(value) if isinstance(value, str) else sid
+                context = (f"Nombre de la {where(s)}: {{lugar}} de map_arrived («{{lugar}} · {{país}} · río {{río}}», "
+                           f"placa de llegada y tarjeta de la parada), de stop_label (rótulo del lugar) y de "
+                           f"map_stop_remaining (D-013; 07 §2.1; 08 §4.5). Fuente: {origin}. {NO_CAPTURE}")
+            else:
+                context = (f"Río de la {where(s)}, {names[n]}: {{río}} de map_arrived («{{lugar}} · {{país}} · río "
+                           f"{{río}}»), así que va sin la palabra «río» (glosario §10; 08 §4.5). Fuente: {origin}. "
+                           f"{NO_CAPTURE}")
+            add(f"map.stop.{sid}.{field}", value, NAME_MAX_CHARS, context, notes)
+
+    # Paises (map.country.<iso2>.name) y la placa de dos paises (country_name, n = 13).
+    by_country: dict = {}
+    for s in stops:
+        by_country.setdefault(s["country"], []).append(s["n"])
+    for iso in sorted(by_country):
+        name = COUNTRY_NAMES.get(iso)
+        key = f"map.country.{iso.lower()}.name"
+        if name is None:
+            errors.append(f"{key}: el pais {iso} no esta en COUNTRY_NAMES (riverdata.py)")
+            continue
+        rotulo = next((t for t in rotulos if isinstance(t, str) and (t == name or t.startswith(name + " ("))), None)
+        if rotulo is None:
+            errors.append(f"{key}: {name!r} no es ningun rotulo de rotulos_de_pais de rio-amazonas.json")
+        ns = by_country[iso]
+        context = (f"Nombre del país {iso}: {{país}} de map_arrived y de stop_label en las paradas {ns[0]}-{ns[-1]} del "
+                   f"Mapa del río, y rótulo del país en el Mapa (glosario §8; 08 §4.5). Fuente: {SOURCE_REL}, "
+                   f"rotulos_de_pais («{rotulo}»). {NO_CAPTURE}")
+        add(key, name, NAME_MAX_CHARS, context, "[V] Nombre del país en español (glosario §8).")
+    for s in stops:
+        if s["country_name"] is None:
+            continue
+        r = records.get(s["n"], {})
+        pais = r.get("pais")
+        isos = pais.split("/") if isinstance(pais, str) else []
+        if len(isos) < 2 or any(i not in COUNTRY_NAMES for i in isos):
+            errors.append(f"{s['country_name']}: la parada n={s['n']} no tiene dos paises conocidos en pais ({pais!r})")
+            continue
+        text = " y ".join(COUNTRY_NAMES[i] for i in isos)
+        context = (f"Países de la {where(s)}, {names[s['n']]}: {{país}} de map_arrived y de stop_label, en lugar de "
+                   f"map.country.{s['country'].lower()}.name, porque la parada tiene un país en cada orilla (08 §4.5). "
+                   f"Fuente: {SOURCE_REL}, paradas_1_200 k={s['n']} (pais «{pais}»), y tools/river-map/overrides.json "
+                   f"(country_name). {NO_CAPTURE}")
+        add(s["country_name"], text, NAME_MAX_CHARS, context, "[P] Placa de dos países (P-M1 a).")
+
+    # Datos de llegada (arrival_fact; 90 caracteres), con su fuente y su URL.
+    for s in stops:
+        key = s["arrival_fact"]
+        if key is None:
+            continue
+        n = s["n"]
+        holder = 0 if n == 1 else n  # el dato de la llegada del 10 vive en el registro k = 0 (Mapa del 10, 06 §2.3)
+        dato = records.get(holder, {}).get("dato_del_nivel")
+        if not isinstance(dato, dict):
+            errors.append(f"{key}: clave sin texto es-419 en la fuente (sin dato_del_nivel en la parada k={holder})")
+            continue
+        args, errs = _parse_args(dato.get("args"), key)
+        errors.extend(errs)
+        sources, errs = _sources_text(dato, fuentes, key)
+        errors.extend(errs)
+        mapa10 = (f" Es el Dato del río 1 del Mapa del 10 (06 §2.3): habla del estuario, la parada 0 ({names.get(0)})."
+                  if n == 1 else "")
+        cifras = (" Marcadores: " + ", ".join(f"{{{a}}}" for a in sorted(args))
+                  + ", la cifra de la columna args con el separador de la región (D-018, Q8-A)." if args else "")
+        context = (f"Dato de llegada a la {where(s)}, {names[n]}, en la victoria del {10 * n}: placa del dato bajo "
+                   f"map_arrived y tarjeta de la parada; es también el fact_id de af_river_fact_shown (02 §6; 08 §4.5 "
+                   f"y §8.2).{mapa10}{cifras} Lugar del dato: {names.get(holder)}. {sources} {NO_CAPTURE}")
+        add(key, dato.get("texto"), FACT_MAX_CHARS, context, f"[{dato.get('etiqueta')}] Dato del Mapa del río.", args)
+
+    # Otros datos de la tarjeta (facts[]): llegan con M2.6; hasta entonces, una clave sin texto es un error.
+    for s in stops:
+        for key in s["facts"]:
+            if key not in rows:
+                errors.append(f"{key}: clave sin texto es-419 en la fuente (facts de la parada n={s['n']})")
+
+    # Preguntas del mundo (50 caracteres).
+    for s in stops:
+        key = s["world_question"]
+        if key is None:
+            continue
+        q = records.get(s["n"], {}).get("pregunta_del_mundo") or {}
+        answer = next((a for a in stops if a["answers_world_question"] and a["world"] == s["world"]), None)
+        answered = (f"la responde el dato de llegada a la parada {answer['n']}, {names[answer['n']]} "
+                    f"({answer['arrival_fact']}), en la victoria del {10 * answer['n']}" if answer else "sin respuesta")
+        context = (f"Pregunta del mundo {s['world']} en la cabecera del Mapa del río (map_world_question, con ✓ al "
+                   f"responderse): se plantea al llegar a la {where(s)}, {names[s['n']]}, en la victoria del "
+                   f"{10 * s['n']}, y {answered} (D-013; 08 §4.5). Fuente: {SOURCE_REL}, paradas_1_200 k={s['n']} "
+                   f"(pregunta_del_mundo). {NO_CAPTURE}")
+        add(key, q.get("texto"), QUESTION_MAX_CHARS, context, "[P] Pregunta del Mapa del río (D-013).")
+
+    for key in cited_keys(doc):
+        if key not in rows:
+            errors.append(f"{key}: citada en river_stops_v1.json y sin texto en el bloque")
+    return rows, errors
+
+
+def build_all(source: dict, overrides: dict, wt: WorldTable) -> tuple[dict | None, dict, list[str]]:
+    """Paradas y textos: los textos solo se generan sobre un documento de paradas valido."""
+    doc, errors = build(source, overrides, wt)
+    if errors or doc is None:
+        return doc, {}, errors
+    rows, errors = build_texts(doc, source, overrides)
+    return doc, rows, errors
+
+
+def _record_key(record: str) -> str:
+    fields = parse_csv_record(record)
+    return fields[0] if fields else ""
+
+
+def render_facts(current: str, rows: dict) -> tuple[str | None, list[str]]:
+    """facts.csv con el bloque map.* regenerado: las demas filas y la cabecera quedan byte a byte como estaban."""
+    records = split_csv_records(current)
+    if not records:
+        return None, [f"{FACTS_REL}: vacio, sin la cabecera de L2b"]
+    try:
+        header = parse_csv_record(records[0])
+        keys = [_record_key(r) for r in records[1:]]
+    except (ValueError, csv.Error) as e:
+        return None, [f"{FACTS_REL}: no se puede leer como CSV RFC 4180 ({e})"]
+    missing = [c for c in REQUIRED_COLUMNS if c not in header]
+    if missing:
+        return None, [f"{FACTS_REL}: a la cabecera le faltan las columnas {missing} (08 §4.7 y pregunta 49 a)"]
+    block = [i for i, k in enumerate(keys) if k.startswith(TEXT_PREFIX)]
+    if block and block != list(range(block[0], block[-1] + 1)):
+        return None, [f"{FACTS_REL}: el bloque {TEXT_PREFIX}* no es contiguo (hay otras filas entre las suyas)"]
+    others = [r for r, k in zip(records[1:], keys) if not k.startswith(TEXT_PREFIX)]
+    other_keys = [k for k in keys if not k.startswith(TEXT_PREFIX)]
+    generated = [format_csv_row([rows[k].get(col, "") for col in header]) for k in sorted(rows)]
+    if not generated:
+        return None, ["sin filas del Mapa que escribir"]
+    first = sorted(rows)[0]
+    at = next((i for i, k in enumerate(other_keys) if k > first), len(others))
+    body = list(others)
+    if at == len(body) and body and not body[-1].endswith("\n"):
+        body[-1] += "\n"
+    head = records[0] if records[0].endswith("\n") else records[0] + "\n"
+    return "".join([head] + body[:at] + generated + body[at:]), []
+
+
+def check_facts(path: Path, rows: dict, doc: dict) -> list[str]:
+    """--check del bloque: las claves que cita river_stops_v1.json tienen fila con texto, y el bloque esta al dia."""
+    try:
+        current = Path(path).read_bytes().decode("utf-8")
+    except FileNotFoundError:
+        return [f"falta {_rel(path)} (la tabla de textos largos de L2b)"]
+    except UnicodeDecodeError:
+        return [f"{_rel(path)} no es UTF-8"]
+    errors: list[str] = []
+    try:
+        records = split_csv_records(current)
+        header = parse_csv_record(records[0]) if records else []
+        table = {}
+        for r in records[1:]:
+            fields = parse_csv_record(r)
+            if fields:
+                table[fields[0]] = dict(zip(header, fields))
+    except (ValueError, csv.Error) as e:
+        return [f"{_rel(path)}: no se puede leer como CSV RFC 4180 ({e})"]
+    missing = [k for k in cited_keys(doc) if k not in table]
+    if len(missing) > 3:
+        errors.append(f"{len(missing)} claves citadas en river_stops_v1.json sin fila en {_rel(path)} (la primera, "
+                      f"{missing[0]}): falta el bloque {TEXT_PREFIX}*")
+    else:
+        errors.extend(f"{k}: citada en river_stops_v1.json y sin fila en {_rel(path)}" for k in missing)
+    for key in cited_keys(doc):
+        if key in table and not table[key].get("es-419", "").strip():
+            errors.append(f"{key}: citada en river_stops_v1.json y sin texto es-419 en {_rel(path)}")
+    expected, errs = render_facts(current, rows)
+    errors.extend(errs)
+    if expected is not None and expected != current:
+        want = {_record_key(r): r for r in split_csv_records(expected)[1:]}
+        have = {_record_key(r): r for r in records[1:]}
+        diff = sorted(k for k in set(want) | set(have) if want.get(k) != have.get(k))
+        where = f"primera fila distinta: {diff[0]}" if diff else "orden o fin de linea"
+        errors.append(f"desfase: el bloque {TEXT_PREFIX}* de {_rel(path)} no coincide con lo que genera la fuente "
+                      f"({where}); regeneralo con py -3.14 tools/river-map/stops.py --write-texts")
+    return errors
+
+
 # --------------------------------------------------------------------------------------------- salida
 
 def render(doc: dict) -> str:
@@ -560,13 +962,17 @@ def emit(message: str) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Genera o comprueba river_stops_v1.json (af-river-stops/1).")
-    ap.add_argument("--check", action="store_true",
-                    help="valida y compara con el archivo commiteado; codigo 1 si algo falla")
+    ap = argparse.ArgumentParser(description="Genera o comprueba river_stops_v1.json (af-river-stops/1) y el bloque map.* de facts.csv.")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--check", action="store_true",
+                      help="valida y compara con river_stops_v1.json y con el bloque map.* de facts.csv; codigo 1 si algo falla")
+    mode.add_argument("--write-texts", action="store_true",
+                      help="regenera solo el bloque map.* de facts.csv (el resto del archivo no cambia)")
     ap.add_argument("--source", type=Path, default=SOURCE_PATH, help="rio-amazonas.json (por defecto, el de docs/research)")
     ap.add_argument("--overrides", type=Path, default=OVERRIDES_PATH, help="decisiones [P] por parada")
     ap.add_argument("--worldtable", type=Path, default=WORLDTABLE_PATH, help="WorldTable.cs del cliente")
     ap.add_argument("--out", type=Path, default=STOPS_PATH, help="river_stops_v1.json que se escribe o se compara")
+    ap.add_argument("--facts", type=Path, default=FACTS_PATH, help="facts.csv cuyo bloque map.* se escribe o se compara")
     args = ap.parse_args(argv)
 
     try:
@@ -577,7 +983,7 @@ def main(argv: list[str] | None = None) -> int:
         emit(f"FAIL  {e}")
         return 1
 
-    doc, errors = build(source, overrides, wt)
+    doc, rows, errors = build_all(source, overrides, wt)
     if errors:
         for err in errors:
             emit(f"FAIL  {err}")
@@ -590,12 +996,31 @@ def main(argv: list[str] | None = None) -> int:
     count = len(doc["stops"])
     last = doc["stops"][-1]["levels"][1]
     if args.check:
-        errors = compare(text, args.out)
+        errors = compare(text, args.out) + check_facts(args.facts, rows, doc)
         for err in errors:
             emit(f"FAIL  {err}")
         if errors:
             return 1
         emit(f"OK  {count} paradas (n 0-{count - 1}, niveles 1-{last}) validas y {_rel(args.out)} al dia")
+        emit(f"OK  {len(rows)} textos {TEXT_PREFIX}* validos y su bloque de {_rel(args.facts)} al dia")
+        return 0
+
+    if args.write_texts:
+        try:
+            current = Path(args.facts).read_bytes().decode("utf-8")
+        except FileNotFoundError:
+            emit(f"FAIL  falta {_rel(args.facts)} (la tabla de textos largos de L2b)")
+            return 1
+        except UnicodeDecodeError:
+            emit(f"FAIL  {_rel(args.facts)} no es UTF-8")
+            return 1
+        new_text, errors = render_facts(current, rows)
+        for err in errors:
+            emit(f"FAIL  {err}")
+        if errors or new_text is None:
+            return 1
+        Path(args.facts).write_bytes(new_text.encode("utf-8"))
+        emit(f"OK  escrito el bloque {TEXT_PREFIX}* de {_rel(args.facts)}: {len(rows)} filas")
         return 0
 
     out = Path(args.out)

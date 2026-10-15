@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""test_stops.py - pruebas de tools/river-map/stops.py (paradas af-river-stops/1 de 1-200, M1.1).
+"""test_stops.py - pruebas de tools/river-map/stops.py (paradas af-river-stops/1 de 1-200, M1.1, y sus textos, M1.1t).
 
 Ejecutar desde la raiz del repositorio:
     py -3.14 -m unittest discover -s tools/river-map -p "test_*.py"
@@ -7,6 +7,8 @@ Ejecutar desde la raiz del repositorio:
 Cubre: los campos en n = 0, 1, 4, 8, 9, 13, 16, 17 y 19; la conversion de cada registro de rio-amazonas.json; la
 sincronia con WorldTable.cs (leido aqui con su propio analizador); el determinismo (mismos bytes con distintas semillas
 de hash); el desfase con lo commiteado; y los fixtures invalidos, cada uno con codigo 1 y mensajes ASCII en --check.
+Textos (M1.1t): el bloque map.* de facts.csv (contenido, columnas, orden ordinal, args, determinismo, filas de fuera del
+bloque intactas) y los fallos de --check (desfase, clave sin fila o sin texto, longitudes, cifras con separador y Belen).
 Solo biblioteca estandar.
 """
 from __future__ import annotations
@@ -27,6 +29,7 @@ sys.path.insert(0, str(HERE))
 
 import stops  # noqa: E402
 from riverdata import (  # noqa: E402
+    FACTS_PATH,
     OVERRIDES_PATH,
     ROOT,
     SOURCE_PATH,
@@ -34,6 +37,8 @@ from riverdata import (  # noqa: E402
     WORLDTABLE_PATH,
     WorldTable,
     load_json,
+    parse_csv_record,
+    split_csv_records,
 )
 
 STOPS_SCRIPT = HERE / "stops.py"
@@ -327,6 +332,66 @@ def _question_nobody_answers(src: dict, ov: dict) -> None:
     _rec(src, 1)["pregunta_del_mundo"]["se_responde_en"] = 35
 
 
+def _question_answered_at(k: int, level: int):
+    def mutate(src: dict, ov: dict) -> None:
+        _rec(src, k)["pregunta_del_mundo"]["se_responde_en"] = level
+    return mutate
+
+
+def _second_question(src: dict, ov: dict) -> None:
+    # Una segunda pregunta en el mundo 2 (parada k=2), respondida al llegar a ella misma (nivel 20).
+    _rec(src, 2)["pregunta_del_mundo"] = {"texto": "¿Otra pregunta?", "se_responde_en": 20}
+
+
+def _override_field(sid: str, field: str, value):
+    def mutate(src: dict, ov: dict) -> None:
+        ov["stops"].setdefault(sid, {})[field] = value
+    return mutate
+
+
+_DATO_K1 = {"clave": "map.stop.santarem.dato_01", "texto": "Un dato de Santarem.", "etiqueta": "E", "fuente": "MR-F19"}
+
+
+def _set_dato(k: int, field: str, value):
+    def mutate(src: dict, ov: dict) -> None:
+        _rec(src, k)["dato_del_nivel"][field] = value
+    return mutate
+
+
+def _set_dato_with_args(k: int, text: str, args: dict):
+    def mutate(src: dict, ov: dict) -> None:
+        _rec(src, k)["dato_del_nivel"].update(texto=text, args=args)
+    return mutate
+
+
+def _drop_dato_field(k: int, field: str):
+    def mutate(src: dict, ov: dict) -> None:
+        del _rec(src, k)["dato_del_nivel"][field]
+    return mutate
+
+
+def _set_question(k: int, text: str):
+    def mutate(src: dict, ov: dict) -> None:
+        _rec(src, k)["pregunta_del_mundo"]["texto"] = text
+    return mutate
+
+
+def _set_source(sid: str, field: str, value):
+    def mutate(src: dict, ov: dict) -> None:
+        next(f for f in src["fuentes"] if f["id"] == sid)[field] = value
+    return mutate
+
+
+def _drop_rotulo(name: str):
+    def mutate(src: dict, ov: dict) -> None:
+        src["rotulos_de_pais"] = [r for r in src["rotulos_de_pais"] if r["nombre"] != name]
+    return mutate
+
+
+# Un dato de 91 caracteres (uno mas que el limite de 08 §4.5).
+_TEXT_91 = "En Brasil el río se llama Solimões hasta aquí; con el Negro ya se llama «Amazonas», al fin."
+
+
 # (nombre, mutacion de la fuente y de overrides, fragmento esperado en la salida)
 FIXTURES = [
     ("levels mal", _set_rec(5, "niveles", [52, 61]), "levels"),
@@ -350,6 +415,45 @@ FIXTURES = [
     ("bandera sin cambio de pais", _extra_crossing, "flag_raise"),
     ("dato de llegada ausente", _set_rec(5, "dato_del_nivel", None), "dato_del_nivel"),
     ("pregunta que no responde ninguna llegada", _question_nobody_answers, "no es la llegada"),
+    # Reglas de validate() y convert() que no tenian fixture (pendientes de la revision de M1.1).
+    ("pregunta respondida antes de plantearse", _question_answered_at(1, 10), "antes de plantearse"),
+    ("segunda pregunta del mundo", _second_question, "segunda pregunta del mundo 2"),
+    ("pregunta respondida en otro mundo", _question_answered_at(1, 40), "que es del mundo 3"),
+    ("country_name fuera de la convencion", _override_field("rio_frontera", "country_name", "map.stop.leticia.country"),
+     "la convencion es map.stop.rio_frontera.country"),
+    ("dato de la llegada del 10 en la parada k=1", _set_rec(1, "dato_del_nivel", _DATO_K1),
+     "el dato de la llegada del 10 va en el registro k=0"),
+    ("registro k=0 sin el dato de la llegada del 10", _set_rec(0, "dato_del_nivel", None),
+     "el registro k=0 no tiene dato_del_nivel.clave para la llegada del 10"),
+    # Textos del bloque map.* de facts.csv (M1.1t).
+    ("dato de 91 caracteres", _set_dato(5, "texto", _TEXT_91), "map.stop.manaos.dato_02: 91 caracteres y el maximo es 90"),
+    ("dato sin texto", _set_dato(5, "texto", ""), "map.stop.manaos.dato_02: clave sin texto es-419"),
+    ("dato sin el campo texto", _drop_dato_field(5, "texto"), "map.stop.manaos.dato_02: clave sin texto es-419"),
+    ("cifra con separador de miles", _set_dato(5, "texto", "Manaos esta a unos 1.480 km del mar por el rio."),
+     "la cifra '1.480' lleva separador de miles o decimales"),
+    ("cifra con decimales", _set_dato(5, "texto", "El agua del Negro tiene un pH de 4,5 en esta orilla."),
+     "la cifra '4,5' lleva separador"),
+    ("Belen en un dato", _set_dato(15, "texto", "En la creciente, el barrio de Belén queda sobre el agua."),
+     "map.stop.iquitos.dato_01: 'En la creciente, el barrio de Belen"),
+    ("Belen en un nombre", _set_rec(15, "nombre", "Belén (Iquitos)"), "map.stop.itaya.name"),
+    ("nombre de 33 caracteres", _set_rec(3, "nombre", "Floresta Nacional do Tapajós (PA)"),
+     "map.stop.flona_tapajos.name: 33 caracteres y el maximo es 32"),
+    ("rio de 33 caracteres", _set_rec(2, "rio", "Tapajós, frente a la Ilha do Amor"),
+     "map.stop.alter_do_chao.river: 33 caracteres y el maximo es 32"),
+    ("override de nombre vacio", _override_field("nauta", "name", " "), "map.stop.nauta.name: clave sin texto"),
+    ("pregunta de 51 caracteres", _set_question(1, "¿Por qué el agua del Tapajós es tan clara como esa?"),
+     "map.world.w02.question: 51 caracteres y el maximo es 50"),
+    ("dato [V] sin fuente [V]", _set_dato(8, "fuente", "wp_tipos"), "map.country.co.dato_01: dato [V] sin ninguna fuente [V]"),
+    ("dato [NV]", _set_dato(2, "etiqueta", "NV"), "un dato del Mapa es [V] o [E]"),
+    ("dato sin fuente", _set_dato(2, "fuente", ""), "map.stop.alter_do_chao.dato_01: dato sin fuente"),
+    ("fuente que no existe", _set_dato(2, "fuente", "MR-F19, MR-F999"), "la fuente 'MR-F999' no esta"),
+    ("fuente sin URL", _set_source("MR-F19", "url", None), "la fuente 'MR-F19' no tiene URL"),
+    ("marcador sin su cifra en args", _set_dato(5, "texto", "Manaos esta a unos {n} km del mar."),
+     "los marcadores ['n'] y args [] no coinciden"),
+    ("args sin su marcador", _set_dato(5, "args", {"n": 1480}), "los marcadores [] y args ['n'] no coinciden"),
+    ("args con un decimal sin comillas", _set_dato_with_args(5, "El Negro baja con un pH de {ph}.", {"ph": 4.5}),
+     "no es un entero ni un decimal con punto"),
+    ("pais sin rotulo en la investigacion", _drop_rotulo("Perú"), "map.country.pe.name: 'Peru' no es ningun rotulo"),
 ]
 
 
@@ -422,6 +526,267 @@ class InvalidFixtureTests(unittest.TestCase):
         self.assertFalse(has_belen("Belém"))
         self.assertTrue(has_belen("Belén"))
         self.assertTrue(has_belen("bg_hero_BELEN_mercado"))
+
+
+# ------------------------------------------------------------------------------ textos del Mapa en facts.csv (M1.1t)
+
+def facts_rows(data: bytes) -> list[list[str]]:
+    """Filas de facts.csv (cabecera incluida) con el lector RFC 4180 de riverdata."""
+    return [parse_csv_record(r) for r in split_csv_records(data.decode("utf-8"))]
+
+
+def without_block(data: bytes) -> bytes:
+    """facts.csv sin las filas map.* (lo que habia antes de M1.1t)."""
+    records = split_csv_records(data.decode("utf-8"))
+    kept = [records[0]] + [r for r in records[1:] if not parse_csv_record(r)[0].startswith("map.")]
+    return "".join(kept).encode("utf-8")
+
+
+class TextBlockTests(unittest.TestCase):
+    """El bloque map.* que escribe stops.py --write-texts en facts.csv: contenido, columnas, orden y args."""
+
+    HEADER = ["key", "es-419", "en", "pt-BR", "context", "max_chars", "status", "status_en", "status_pt-BR", "notes",
+              "args"]
+
+    @classmethod
+    def setUpClass(cls):
+        cls.data = FACTS_PATH.read_bytes()
+        cls.rows = facts_rows(cls.data)
+        cls.header = cls.rows[0]
+        cls.table = {r[0]: dict(zip(cls.header, r)) for r in cls.rows[1:]}
+        cls.doc = json.loads(STOPS_PATH.read_text(encoding="utf-8"))
+        cls.source = load_json(SOURCE_PATH)
+
+    def test_header_of_l2b_utf8_without_bom_with_lf(self):
+        self.assertEqual(self.HEADER, self.header)
+        self.assertFalse(self.data.startswith(b"\xef\xbb\xbf"))
+        self.assertNotIn(b"\r", self.data)
+        self.assertTrue(self.data.endswith(b"\n"))
+
+    def test_every_key_cited_by_the_stops_has_a_row_with_text(self):
+        cited = stops.cited_keys(self.doc)
+        self.assertEqual(67, len(cited))
+        for key in cited:
+            with self.subTest(key=key):
+                self.assertIn(key, self.table)
+                self.assertTrue(self.table[key]["es-419"].strip())
+        block = [k for k in self.table if k.startswith("map.")]
+        self.assertEqual(sorted(cited), sorted(block), "el bloque tiene justo las claves que cita river_stops_v1.json")
+
+    def test_rows_are_ordinal_and_the_block_is_contiguous(self):
+        keys = [r[0] for r in self.rows[1:]]
+        self.assertEqual(sorted(keys), keys, "facts.csv en orden ordinal (sorted() = StringComparer.Ordinal)")
+        idx = [i for i, k in enumerate(keys) if k.startswith("map.")]
+        self.assertEqual(list(range(idx[0], idx[-1] + 1)), idx)
+        # El orden es por codigo: «.» (U+002E) va antes que «_» (U+005F) y que las letras.
+        self.assertLess(keys.index("map.stop.leticia.name"), keys.index("map.stop.leticia_atardecer.name"))
+
+    def test_columns_of_each_row(self):
+        for key, row in self.table.items():
+            if not key.startswith("map."):
+                continue
+            with self.subTest(key=key):
+                self.assertEqual("", row["en"])
+                self.assertEqual("", row["pt-BR"])
+                self.assertEqual("", row["status_en"])
+                self.assertEqual("", row["status_pt-BR"])
+                self.assertEqual("pendiente_asesor", row["status"])
+                self.assertRegex(row["notes"], r"^\[(V|E|P)\] ")
+                self.assertIn("no se edita a mano", row["notes"])
+                self.assertTrue(row["context"])
+                expected_max = ("90" if ".dato_" in key or key.startswith("map.general.") else
+                                "50" if key.endswith(".question") else "32")
+                self.assertEqual(expected_max, row["max_chars"])
+                self.assertLessEqual(len(row["es-419"]), int(row["max_chars"]))
+                self.assertIsNone(stops.RE_NUMBER_SEP.search(row["es-419"]))
+                self.assertEqual("", row["args"], "1-200 no tiene cifras con separador")
+
+    def test_facts_carry_their_source_url_and_mark(self):
+        records = {r["k"]: r for r in self.source["paradas_1_200"]}
+        for s in self.doc["stops"]:
+            if s["arrival_fact"] is None:
+                continue
+            row = self.table[s["arrival_fact"]]
+            dato = records[0 if s["n"] == 1 else s["n"]]["dato_del_nivel"]
+            with self.subTest(key=s["arrival_fact"]):
+                self.assertEqual(stops.clean_text(dato["texto"]), row["es-419"])
+                self.assertTrue(row["notes"].startswith(f"[{dato['etiqueta']}] "))
+                self.assertIn("https://", row["context"])
+                for sid in dato["fuente"].split(","):
+                    self.assertIn(sid.strip(), row["context"])
+                self.assertIn(f"victoria del {10 * s['n']}", row["context"])
+
+    def test_names_rivers_countries_and_questions(self):
+        t = {k: v["es-419"] for k, v in self.table.items()}
+        self.assertEqual("Belém", t["map.stop.belem.name"])
+        self.assertEqual("Pará (estuario)", t["map.stop.belem.river"])
+        self.assertEqual("Alter do Chão", t["map.stop.alter_do_chao.name"])
+        self.assertEqual("Tapajós", t["map.stop.alter_do_chao.river"])
+        self.assertEqual("El río frontera", t["map.stop.rio_frontera.name"], "07 §2.1, por overrides.json")
+        self.assertEqual("Colombia y Perú", t["map.stop.rio_frontera.country"], "pais CO/PE")
+        self.assertEqual("Nauta", t["map.stop.nauta.name"], "07 §2.1, por overrides.json")
+        self.assertEqual("Tefé", t["map.stop.tefe.river"])
+        self.assertEqual("Amazonas", t["map.stop.tarapoto.river"])
+        self.assertEqual("Marañón y Ucayali", t["map.stop.pacaya_samiria.river"])
+        self.assertEqual({"map.country.br.name": "Brasil", "map.country.co.name": "Colombia", "map.country.pe.name": "Perú"},
+                         {k: t[k] for k in t if k.startswith("map.country.") and k.endswith(".name")})
+        self.assertEqual("¿Por qué el agua del Tapajós es clara?", t["map.world.w02.question"])
+        self.assertEqual(4, sum(k.startswith("map.world.") for k in t))
+        self.assertEqual(19, sum(".dato_" in k or k.startswith("map.general.") for k in t if k.startswith("map.")))
+
+    def test_unit_gets_a_no_break_space(self):
+        self.assertIn("6\u00a0km", self.table["map.stop.manaos.dato_01"]["es-419"])
+        self.assertIn("42\u00a0%", self.table["map.country.co.dato_01"]["es-419"])
+        self.assertEqual("2 millones de hectáreas", stops.clean_text("2 millones de hectáreas"))
+        self.assertEqual("{n}\u00a0km y 35\u00a0m", stops.clean_text("{n} km y 35 m"))
+        self.assertEqual("5 metros", stops.clean_text("5 metros"))
+
+    def test_no_belen_anywhere_in_the_block(self):
+        from riverdata import has_belen
+        for key, row in self.table.items():
+            if key.startswith("map."):
+                for col, value in row.items():
+                    self.assertFalse(has_belen(value), f"{key} ({col})")
+
+
+class WriteTextsTests(unittest.TestCase):
+    """--write-texts: determinista, solo toca el bloque map.* y lo coloca en su sitio ordinal."""
+
+    def write(self, data: bytes, *extra: str, env: dict | None = None) -> tuple[subprocess.CompletedProcess, bytes]:
+        with tempfile.TemporaryDirectory() as tmp:
+            facts = Path(tmp) / "facts.csv"
+            facts.write_bytes(data)
+            proc = run_stops("--write-texts", "--facts", str(facts), *extra, env=env)
+            return proc, facts.read_bytes()
+
+    def test_regenerating_produces_no_diff_with_any_hash_seed(self):
+        committed = FACTS_PATH.read_bytes()
+        for seed in ("0", "1", "4242"):
+            with self.subTest(seed=seed):
+                proc, out = self.write(committed, env=dict(os.environ, PYTHONHASHSEED=seed))
+                self.assertEqual(0, proc.returncode, proc.stdout.decode("ascii", "replace"))
+                self.assertTrue(is_ascii(proc.stdout + proc.stderr))
+                self.assertEqual(committed, out)
+
+    def test_from_the_table_without_the_block_gives_the_committed_file(self):
+        committed = FACTS_PATH.read_bytes()
+        proc, out = self.write(without_block(committed))
+        self.assertEqual(0, proc.returncode, proc.stdout.decode("ascii", "replace"))
+        self.assertEqual(committed, out)
+
+    def test_rows_outside_the_block_do_not_change(self):
+        # Filas ajenas antes y despues del bloque en orden ordinal (una de fruta, con puntos, antes de «map.» y una de
+        # tinte despues), con comillas, comas y un salto de linea dentro de un campo: quedan byte a byte.
+        committed = FACTS_PATH.read_bytes().decode("utf-8")
+        records = split_csv_records(committed)
+        extra_before = 'fact.acai.01,"Uno, dos",,,"Linea con\nsalto y ""comillas""",90,pendiente_asesor,,,x,\n'
+        extra_after = "tint.acai.name,Açaí,,,ctx,16,pendiente_asesor,,,x,\n"
+        others = [r for r in records[1:] if not parse_csv_record(r)[0].startswith("map.")]
+        block = [r for r in records[1:] if parse_csv_record(r)[0].startswith("map.")]
+        source = "".join([records[0], extra_before] + others + [extra_after])
+        proc, out = self.write(source.encode("utf-8"))
+        self.assertEqual(0, proc.returncode, proc.stdout.decode("ascii", "replace"))
+        expected = "".join([records[0], extra_before] + others + block + [extra_after])
+        self.assertEqual(expected, out.decode("utf-8"))
+        keys = [r[0] for r in facts_rows(out)[1:]]
+        self.assertEqual(sorted(keys), keys)
+
+    def test_a_fact_with_args_writes_n_and_its_value(self):
+        src = load_json(SOURCE_PATH)
+        _rec(src, 5)["dato_del_nivel"].update(texto="Manaos está a unos {n} km del mar por el río.", args={"n": 1480})
+        with tempfile.TemporaryDirectory() as tmp:
+            src_path = Path(tmp) / "rio.json"
+            src_path.write_text(json.dumps(src, ensure_ascii=False), encoding="utf-8")
+            proc, out = self.write(FACTS_PATH.read_bytes(), "--source", str(src_path))
+        self.assertEqual(0, proc.returncode, proc.stdout.decode("ascii", "replace"))
+        row = {r[0]: r for r in facts_rows(out)}["map.stop.manaos.dato_02"]
+        self.assertEqual("Manaos está a unos {n}\u00a0km del mar por el río.", row[1])
+        self.assertEqual("n=1480", row[-1])
+        self.assertIn("{n}", row[4], "el contexto explica el marcador")
+        self.assertEqual("n=3.25;x=7", stops.format_args({"x": "7", "n": "3.25"}))
+        self.assertEqual("1.480", stops._shown_number("1480"))
+        self.assertEqual("1.234.567,5", stops._shown_number("1234567.5"))
+        # La cifra cuenta como se ve: «{n}» con 1480 ocupa 5 («1.480»), y nunca menos de lo escrito.
+        self.assertEqual(len("a 1.480 km"), stops.visible_length("a {n} km", {"n": "1480"}))
+        self.assertEqual(len("a {n} km"), stops.visible_length("a {n} km", {"n": "5"}))
+
+    def test_writing_refuses_an_invalid_source_and_leaves_the_table(self):
+        src = load_json(SOURCE_PATH)
+        _rec(src, 5)["dato_del_nivel"]["texto"] = "Manaos está a unos 1.480 km del mar."
+        committed = FACTS_PATH.read_bytes()
+        with tempfile.TemporaryDirectory() as tmp:
+            src_path = Path(tmp) / "rio.json"
+            src_path.write_text(json.dumps(src, ensure_ascii=False), encoding="utf-8")
+            proc, out = self.write(committed, "--source", str(src_path))
+        self.assertEqual(1, proc.returncode)
+        self.assertEqual(committed, out, "con errores no se escribe nada")
+
+    def test_csv_helpers_round_trip(self):
+        from riverdata import format_csv_row
+        text = 'a,b\nk,"x, y"\nq,"uno\ndos ""tres"""\nz,\n'
+        records = split_csv_records(text)
+        self.assertEqual(4, len(records))
+        self.assertEqual(text, "".join(records))
+        self.assertEqual(["q", 'uno\ndos "tres"'], parse_csv_record(records[2]))
+        self.assertEqual('q,"uno\ndos ""tres"""\n', format_csv_row(["q", 'uno\ndos "tres"']))
+        self.assertEqual("k,v,,\n", format_csv_row(["k", "v", "", ""]))
+
+
+class FactsCheckTests(unittest.TestCase):
+    """--check sobre facts.csv: desfase del bloque, claves sin fila o sin texto, bloque partido."""
+
+    def check(self, data: bytes) -> subprocess.CompletedProcess:
+        with tempfile.TemporaryDirectory() as tmp:
+            facts = Path(tmp) / "facts.csv"
+            facts.write_bytes(data)
+            return run_stops("--check", "--facts", str(facts))
+
+    def assertFails(self, data: bytes, *fragments: str):
+        proc = self.check(data)
+        out = proc.stdout.decode("ascii", "replace")
+        self.assertEqual(1, proc.returncode, out)
+        self.assertTrue(is_ascii(proc.stdout + proc.stderr), out)
+        for fragment in fragments:
+            self.assertIn(fragment, out)
+
+    def test_check_passes_on_the_committed_table(self):
+        proc = self.check(FACTS_PATH.read_bytes())
+        self.assertEqual(0, proc.returncode, proc.stdout.decode("ascii", "replace"))
+        self.assertIn(b"67 textos map.* validos", proc.stdout)
+
+    def test_edited_row_is_drift(self):
+        data = FACTS_PATH.read_bytes().replace("Ilha do Amor".encode("utf-8"), "Isla del Amor".encode("utf-8"), 1)
+        self.assertFails(data, "desfase", "map.stop.alter_do_chao.dato_01", "--write-texts")
+
+    def test_crlf_is_drift(self):
+        self.assertFails(FACTS_PATH.read_bytes().replace(b"\n", b"\r\n"), "desfase")
+
+    def test_missing_row_of_a_cited_key(self):
+        records = split_csv_records(FACTS_PATH.read_bytes().decode("utf-8"))
+        data = "".join(r for r in records if not r.startswith("map.stop.nauta.dato_01,")).encode("utf-8")
+        self.assertFails(data, "map.stop.nauta.dato_01: citada en river_stops_v1.json y sin fila", "desfase")
+
+    def test_row_without_text(self):
+        old = "map.world.w02.question,¿Por qué el agua del Tapajós es clara?,".encode("utf-8")
+        data = FACTS_PATH.read_bytes().replace(old, b"map.world.w02.question,,", 1)
+        self.assertFails(data, "map.world.w02.question: citada en river_stops_v1.json y sin texto es-419")
+
+    def test_missing_block(self):
+        self.assertFails(without_block(FACTS_PATH.read_bytes()), "67 claves citadas", "falta el bloque map.*")
+
+    def test_block_split_by_another_row(self):
+        records = split_csv_records(FACTS_PATH.read_bytes().decode("utf-8"))
+        fauna = next(r for r in records if r.startswith("fauna_aotus"))
+        moved = [r for r in records if r is not fauna]
+        at = next(i for i, r in enumerate(moved) if r.startswith("map.stop."))
+        moved.insert(at, fauna)
+        self.assertFails("".join(moved).encode("utf-8"), "no es contiguo")
+
+    def test_missing_table(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            proc = run_stops("--check", "--facts", str(Path(tmp) / "no_existe.csv"))
+        self.assertEqual(1, proc.returncode)
+        self.assertIn(b"falta", proc.stdout)
 
 
 if __name__ == "__main__":

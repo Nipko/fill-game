@@ -10,10 +10,10 @@ Herramienta del Mapa del río (D-013; propuesta del Mapa §11.3). Genera los dat
 
 | Archivo | Qué es |
 |---|---|
-| `stops.py` | Generador y comprobación de `river_stops_v1.json` (`af-river-stops/1`, contrato 30). |
-| `riverdata.py` | Lectura compartida: rutas, `rio-amazonas.json`, `WorldTable.cs` (tramos de los mundos del cliente), mensajes ASCII y el veto de «Belén». |
-| `overrides.json` | Decisiones [P] de P-M1 (a) que `rio-amazonas.json` no lleva en sus campos (hoy, el país de la parada 13). |
-| `test_stops.py` | Pruebas del generador: campos, conversión, sincronía con `WorldTable.cs`, determinismo, desfase y fixtures inválidos. |
+| `stops.py` | Generador y comprobación de `river_stops_v1.json` (`af-river-stops/1`, contrato 30) y del bloque de filas `map.*` de `facts.csv` (contrato 32; M1.1t). |
+| `riverdata.py` | Lectura compartida: rutas, `rio-amazonas.json`, `WorldTable.cs` (tramos de los mundos del cliente), nombres de país por ISO2, registros CSV RFC 4180 sin tocar sus bytes, mensajes ASCII y el veto de «Belén». |
+| `overrides.json` | Decisiones [P] de P-M1 (a) que `rio-amazonas.json` no lleva en sus campos: el país de la parada 13 y los nombres y ríos de la placa que la investigación no da en la forma de 07 §2.1 o de `map_arrived` (n = 7, 12, 13, 17, 18 y 19), cada una con su `why`. |
+| `test_stops.py` | Pruebas del generador: campos, conversión, sincronía con `WorldTable.cs`, determinismo, desfase, fixtures inválidos (una por regla) y el bloque de textos de `facts.csv`. |
 | `test_schemas.py` | Esquemas del Mapa con `jsonschema`: el esquema, el archivo real y fixtures inválidos. |
 | `../../schemas/af-river-stops-1.schema.json` | Esquema de `af-river-stops/1`; con 08 §4.5, la copia única del formato. |
 
@@ -21,13 +21,15 @@ Herramienta del Mapa del río (D-013; propuesta del Mapa §11.3). Genera los dat
 
 ```
 py -3.14 tools/river-map/stops.py                    # escribe Assets/_Project/Data/Map/river_stops_v1.json
-py -3.14 tools/river-map/stops.py --check            # valida y compara con lo commiteado; código 1 si algo falla
+py -3.14 tools/river-map/stops.py --write-texts      # regenera solo el bloque map.* de Assets/_Project/Data/Loc/facts.csv
+py -3.14 tools/river-map/stops.py --check            # valida y compara las dos salidas con lo commiteado; código 1 si algo falla
 py -3.14 -m unittest discover -s tools/river-map -p "test_*.py"
 py -3.14 docs/research/mapa-del-rio/generar_mapa.py --check
 ```
 
-- `--check` regenera en memoria y falla (código 1, mensajes solo en ASCII) si una regla no se cumple o si el archivo commiteado no es byte a byte lo que se regenera (desfase, BOM o CRLF incluidos). Con errores no se escribe nada.
-- `--source`, `--overrides`, `--worldtable` y `--out` cambian las rutas de entrada y salida: los usan las pruebas para los fixtures.
+- `--check` regenera en memoria y falla (código 1, mensajes solo en ASCII) si una regla no se cumple o si lo commiteado (`river_stops_v1.json` y el bloque `map.*` de `facts.csv`) no es byte a byte lo que se regenera (desfase, BOM o CRLF incluidos). Con errores no se escribe nada.
+- Si cambia la fuente, se regeneran las dos salidas: `stops.py` y `stops.py --write-texts`.
+- `--source`, `--overrides`, `--worldtable`, `--out` y `--facts` cambian las rutas de entrada y salida: los usan las pruebas para los fixtures.
 - Determinista: UTF-8 sin BOM, LF, raíz con 2 espacios, una parada por línea y orden de campos fijo. No depende de la semilla de hash ni de la cultura.
 - Si cambia `rio-amazonas.json` (M2.7, M3.7), la tarea que regenera (M2.6, M4.5) se fusiona con ella: si no, `--check` falla por desfase.
 
@@ -37,7 +39,7 @@ Raíz `{format, source, stops[]}` [P]: `format` = `af-river-stops/1`, `source` =
 
 `n`, `levels`, `world`, `id`, `kind`, `country`, `country_name`, [`at`], `km_from_sea`, `km_home`, `sample`, `flag_raise`, `arrival_fact`, `facts`, `world_question`, `answers_world_question`, `bg` {`kit`, `hero`, `code`, `lut`}, [`leg`].
 
-Solo claves de texto, nunca textos (08 §4.5): los textos de `arrival_fact`, `facts`, `world_question` y `country_name`, y los nombres por convención (`map.stop.<id>.name`, `map.stop.<id>.river` y `map.country.<iso2>.name`), van en `facts.csv` (contrato 32; los escribe M1.1t con la forma de clave de la pregunta 49 (a): contenido con puntos).
+Solo claves de texto, nunca textos (08 §4.5): los textos de `arrival_fact`, `facts`, `world_question` y `country_name`, y los nombres por convención (`map.stop.<id>.name`, `map.stop.<id>.river` y `map.country.<iso2>.name`), van en `facts.csv` (contrato 32; los escribe `stops.py --write-texts` con la forma de clave de la pregunta 49 (a): contenido con puntos).
 
 ### Conversión desde `paradas_1_200`
 
@@ -69,6 +71,26 @@ Solo claves de texto, nunca textos (08 §4.5): los textos de `arrival_fact`, `fa
 - `country` ISO2; `flag_raise` al empezar y al cambiar de país, y coherente con `cruces_de_pais` y con `bandera`.
 - `arrival_fact` `null` solo en n = 0; claves de contenido `map.*` (glosario §10); `country_name` = `map.stop.<id>.country`.
 - Una pregunta por mundo, respondida por una sola parada del mismo mundo, después de plantearse.
-- `overrides.json`: solo paradas que existen y campos `country`, `country_name` y `why`.
+- `overrides.json`: solo paradas que existen y campos `country`, `country_name`, `name`, `river` y `why`.
 
-Fuera de alcance (tareas siguientes): textos y longitudes (M1.1t), `at`, `leg` y `facts` (M2.6), paradas 201-700 (M4.5a y M4.5b) y la geometría de producción (M5.1).
+Las reglas completas solo las comprueba `stops.py --check`. `RiverStopCatalog` (AF.Levels, M1.2) repite solo el formato, los `n` contiguos, `levels`, `WorldTable`, `gate` y `close` (contrato 30) y la parada final de cada mundo, y `ArtSlots` rechaza «belen».
+
+## Textos del Mapa en `facts.csv` (M1.1t)
+
+`stops.py --write-texts` regenera en `Assets/_Project/Data/Loc/facts.csv` (contrato 32; 08 §4.7) el bloque de filas `map.*`, contiguo y en orden ordinal (`sorted()` de Python = `StringComparer.Ordinal` de C#; regla de G1). La cabecera y las demás filas (las de fauna de L2b y las que lleguen) quedan byte a byte como estaban; el bloque va en su sitio ordinal entre ellas. Nadie más escribe filas `map.*`.
+
+| Claves | Texto | `max_chars` | `notes` |
+|---|---|---|---|
+| `map.stop.<id>.name` | `nombre` de la parada, o `name` de `overrides.json` (07 §2.1: «El río frontera», «Nauta») | 32 [P] | [V] o [E] del lugar (`conf`); [P] si viene de `overrides.json` |
+| `map.stop.<id>.river` | `rio` de la parada, o `river` de `overrides.json`: va en {río} de `map_arrived` («{lugar} · {país} · río {río}»), sin la palabra «río» | 32 [P] | Igual |
+| `map.country.<iso2>.name` | `COUNTRY_NAMES` de `riverdata.py` (glosario §8), que tiene que estar en `rotulos_de_pais` | 32 [P] | [V] |
+| `country_name` (n = 13) | Los países de `pais` («CO/PE» → «Colombia y Perú») | 32 [P] | [P] |
+| `arrival_fact` | `dato_del_nivel.texto` (en n = 1, el del registro k = 0); el contexto lleva el lugar, la victoria y cada fuente con su etiqueta y su URL | 90 (08 §4.5) | La etiqueta del dato, [V] o [E] |
+| `world_question` | `pregunta_del_mundo.texto`; el contexto dice dónde se plantea y qué dato la responde | 50 (08 §4.5) | [P] |
+
+- Columnas (cabecera de L2b, pregunta 49 a): `en` y `pt-BR` vacías, `status` = `pendiente_asesor`, `status_en` y `status_pt-BR` vacías, `context` con el lugar, la fuente y la URL, `notes` con la etiqueta y «no se edita a mano», y `args` [P].
+- Cifras (D-018, Q8-A): toda cifra con separador de miles o decimales va como `{n}` en el texto y su valor en `args` (`n=1480`; decimales con punto). La fuente las da en `dato_del_nivel.args` (`{"n": 1480}`, o `"3.25"` entre comillas para un decimal). Las longitudes cuentan la cifra ya formateada (`1.480`). Hoy ningún texto de 1-200 lleva cifras con separador, así que `args` va vacía.
+- Entre una cifra (o `{n}`) y su unidad (`km`, `m`, `%`…) va U+00A0 (08 §4.7): el generador cambia el espacio normal.
+- `--check` falla si el bloque no está al día (desfase), si una clave que cita `river_stops_v1.json` (explícita o por convención) no tiene fila o no tiene texto es-419, si un texto pasa de su `max_chars`, si lleva una cifra con separador o decimales («1.480», «4,5»), si alguna columna cae en el veto de «Belén», si un dato es [NV], no tiene fuente, cita una fuente que no existe o sin URL, o si un dato [V] no tiene ninguna fuente [V].
+
+Fuera de alcance (tareas siguientes): `at`, `leg` y `facts` con sus textos (M2.6), paradas 201-700 (M4.5a y M4.5b) y la geometría de producción (M5.1).

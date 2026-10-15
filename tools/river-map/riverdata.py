@@ -9,9 +9,13 @@ Solo biblioteca estandar de Python 3.14 (08 §4.5). Lo usan stops.py y sus prueb
 - `WorldTable`: lee `FirstLevels` y `LastLevel` de WorldTable.cs, para que la herramienta valide contra el mismo
   reparto de niveles que usa el cliente (glosario §8) sin copiarlo a mano.
 - Utilidades de texto: mensajes solo en ASCII y el veto de «Belén» (D-013, punto 11; 07 §8.1).
+- Tablas de textos (`Assets/_Project/Data/Loc/facts.csv`, contrato 32; 08 §4.7): partir el archivo en registros RFC 4180 sin
+  tocar sus bytes y escribir filas nuevas con UTF-8, LF y comillas solo donde hacen falta (como las deja L2b).
 """
 from __future__ import annotations
 
+import csv
+import io
 import json
 import re
 import unicodedata
@@ -27,6 +31,22 @@ OVERRIDES_PATH = HERE / "overrides.json"
 MAP_DATA_DIR = ROOT / "Assets" / "_Project" / "Data" / "Map"
 STOPS_PATH = MAP_DATA_DIR / "river_stops_v1.json"
 STOPS_SCHEMA_PATH = ROOT / "schemas" / "af-river-stops-1.schema.json"
+FACTS_REL = "Assets/_Project/Data/Loc/facts.csv"
+FACTS_PATH = ROOT / FACTS_REL
+
+# Nombre visible en es-419 de cada país de la cuenca por su ISO2 (glosario §8, columna «País»; los rótulos de país de
+# rio-amazonas.json, `rotulos_de_pais`, que stops.py comprueba). Solo para escribir las filas map.country.<iso2>.name.
+COUNTRY_NAMES = {
+    "BR": "Brasil",
+    "CO": "Colombia",
+    "PE": "Perú",
+    "EC": "Ecuador",
+    "BO": "Bolivia",
+    "VE": "Venezuela",
+    "GY": "Guyana",
+    "SR": "Surinam",
+    "GF": "Guayana Francesa",
+}
 
 
 class SourceError(Exception):
@@ -144,3 +164,37 @@ def iter_strings(value, path: str = ""):
             yield from iter_strings(item, f"{path}[{i}]")
     elif isinstance(value, str):
         yield path or "/", value
+
+
+# --------------------------------------------------------------------------------------------- tablas de textos (CSV)
+
+def split_csv_records(text: str) -> list[str]:
+    """Parte un CSV RFC 4180 en registros crudos, cada uno con su LF final (el ultimo, si el archivo no acaba en LF, sin
+    el): un salto de linea dentro de comillas no corta el registro. Unir la lista devuelve el texto byte a byte."""
+    records: list[str] = []
+    start = 0
+    quoted = False
+    for i, c in enumerate(text):
+        if c == '"':
+            quoted = not quoted
+        elif c == "\n" and not quoted:
+            records.append(text[start:i + 1])
+            start = i + 1
+    if start < len(text):
+        records.append(text[start:])
+    return records
+
+
+def parse_csv_record(record: str) -> list[str]:
+    """Campos de un registro crudo (RFC 4180: comillas dobles y "" para una comilla)."""
+    rows = list(csv.reader(io.StringIO(record, newline=""), strict=True))
+    if len(rows) != 1:
+        raise ValueError("el registro no es una sola fila CSV")
+    return rows[0]
+
+
+def format_csv_row(fields: list[str]) -> str:
+    """Una fila CSV con LF y comillas solo donde hacen falta (comas, comillas o saltos de linea), como las de L2b."""
+    buf = io.StringIO(newline="")
+    csv.writer(buf, quoting=csv.QUOTE_MINIMAL, lineterminator="\n").writerow(fields)
+    return buf.getvalue()
