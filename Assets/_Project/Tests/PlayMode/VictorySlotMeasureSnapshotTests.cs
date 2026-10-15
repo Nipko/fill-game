@@ -29,10 +29,18 @@ namespace AF.Tests.PlayMode
     /// del agua y el dato a todo el ancho; la (a) más apretada [P]), y dónde quedan Siguiente, el panel y la cinta frente a la
     /// cabecera.
     /// <para>Escribe la tabla en <c>Logs/snapshots/slot_measures.txt</c> (y en el log, <c>AF_SLOT</c>) y las capturas
-    /// <c>slot_{fruit|arrival|compact|tight}_{780|640}_{100|130}.png</c> en <c>Logs/snapshots/&lt;idioma&gt;/</c> (es-419 y en-XA).
+    /// <c>slot_{fruit|arrival|compact|tight}_{780|640}_{100|130}.png</c> en <c>Logs/snapshots/&lt;idioma&gt;/</c> (es-419, en,
+    /// el peor caso real según la tabla, y en-XA), cada una con la reserva de su idioma (H de la tabla). Como en aún no tiene la
+    /// UI completa, la escena no lo ofrece y vuelve a es-419 al cargar: el test lo fuerza con <see cref="Loc.SetLocale"/> antes
+    /// de la victoria (solo aquí; un estado que el juego no alcanza hasta que en esté completo), así que en las capturas de en
+    /// los textos de la UI que aún no tienen traducción salen como <c>[clave]</c> o en el idioma con que se construyeron al
+    /// cargar; lo que se mide (la ranura y la maqueta) sí va en inglés. Las capturas miden siempre 1080 × 2340 px: la pantalla
+    /// simulada ocupa la parte de arriba (en la de 640, 1080 × 1920 px), y una raya cian de 2 px marca su borde inferior y otra
+    /// el pie de su zona segura (<c>safeArea.yMin</c>); lo que queda fuera de la de 640 va velado.
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter
-    /// AF.Tests.PlayMode.VictorySlotMeasureSnapshotTests</c> sin <c>-nographics</c>). No falla por lo que mide: las cifras
-    /// van a la pregunta 11.</para>
+    /// AF.Tests.PlayMode.VictorySlotMeasureSnapshotTests</c> sin <c>-nographics</c>). No falla por lo que mide (las cifras
+    /// van a la pregunta 11), sino solo si la escena o la reserva no son las del idioma de la captura: así nunca captura un
+    /// estado engañoso.</para>
     /// </summary>
     [Explicit("Medidas y capturas de la ranura (M1.3b); necesitan dispositivo gráfico.")]
     public sealed class VictorySlotMeasureSnapshotTests
@@ -42,9 +50,16 @@ namespace AF.Tests.PlayMode
             LocLocale.SpanishLatinAmerica, LocLocale.English, LocLocale.PortugueseBrazil, LocLocale.Pseudo,
         };
 
+        [SetUp]
+        public void SetUp()
+        {
+            GameScreen.ArrivalDisabledForTests = true; // la maqueta sola (la llegada real: ArrivalSnapshotTests)
+        }
+
         [TearDown]
         public void TearDown()
         {
+            GameScreen.ArrivalDisabledForTests = false;
             LaunchOptions.Reset();
             SnapshotKit.Release();
         }
@@ -59,7 +74,7 @@ namespace AF.Tests.PlayMode
                     + " | Siguiente (dp) | panel arriba | cinta arriba | cabecera | cinta bajo la cabecera | Cosecha doble | chip",
             };
 
-            foreach (string captureLocale in new[] { LocLocale.SpanishLatinAmerica, LocLocale.Pseudo })
+            foreach (string captureLocale in new[] { LocLocale.SpanishLatinAmerica, LocLocale.English, LocLocale.Pseudo })
             {
                 foreach (bool small in new[] { false, true })
                 {
@@ -78,11 +93,23 @@ namespace AF.Tests.PlayMode
                         GameBootstrap boot = GameBootstrap.Current!;
                         PlayModeHelpers.TakeClock(boot);
                         GameScreen view = boot.View!;
+
+                        // Un idioma sin la UI completa (hoy en) no se ofrece y la escena vuelve a es-419 al cargar (LocLocale.IsOffered;
+                        // pregunta 10): solo en este test se fuerza el de la captura para que la ranura reserve su alto, no el de es-419.
+                        if (Loc.Locale != captureLocale)
+                        {
+                            Loc.SetLocale(captureLocale);
+                        }
+
+                        Assert.That(Loc.Locale, Is.EqualTo(captureLocale), "la escena va en el idioma de la captura");
                         var maqueta = new SlotMaqueta(captureLocale, scale);
                         view.RegisterVictoryLineProvider(maqueta);
                         SnapshotKit.Attach(boot);
+                        MarkSimulatedScreen(view);
                         VictorySetup.WinToVictoryScreen(boot);
                         PlayModeHelpers.Step(boot, 1800);
+                        Assert.That(view.VictorySlot.ContentDp, Is.EqualTo(view.VictorySlotContentHeight(captureLocale, scale)).Within(0.5f),
+                            "la ranura reserva el alto del idioma de la captura");
 
                         string screen = small ? "640" : "780";
                         string pct = scale > 1.01f ? "130" : "100";
@@ -137,6 +164,34 @@ namespace AF.Tests.PlayMode
             {
                 Debug.Log("AF_SLOT " + line);
             }
+        }
+
+        // La pantalla simulada (GameScreen.SimulatedScreen) dentro de la captura de 1080 × 2340 px: el lienzo va anclado arriba,
+        // así que ocupa los primeros alto/escala dp. Raya cian de 2 px en su borde inferior y en el pie de su zona segura
+        // (safeArea.yMin) y, si la pantalla es más baja que la captura (la de 640), un velo sobre lo que queda fuera.
+        private static void MarkSimulatedScreen(GameScreen view)
+        {
+            GameScreen.ReadScreen(out int width, out int height, out Rect safe);
+            Canvas canvas = view.Canvas;
+            float k = Mathf.Max(0.01f, Mathf.Min(width / GameScreen.ReferenceWidth, height / GameScreen.ReferenceHeight));
+            float canvasW = width / k;
+            float bottomDp = height / k;
+            float captureDp = SnapshotKit.Height / k; // la cámara de las capturas pinta 1080 × 2340 px con la escala del lienzo
+            float lineDp = 2f / k;
+            RectTransform marks = UiBuilder.Rect("SimulatedScreenMarks", canvas.transform);
+            UiBuilder.Place(marks, 0f, 0f, canvasW, captureDp);
+            marks.SetAsLastSibling();
+            if (captureDp - bottomDp > 0.5f)
+            {
+                Image veil = UiBuilder.Image("OutsideVeil", marks, null, new Color(0f, 0f, 0f, 0.55f));
+                UiBuilder.Place(veil.rectTransform, 0f, bottomDp, canvasW, captureDp - bottomDp);
+            }
+
+            var cyan = new Color(0f, 0.9f, 1f, 1f);
+            Image frame = UiBuilder.Image("FrameBottom", marks, null, cyan);
+            UiBuilder.Place(frame.rectTransform, 0f, bottomDp - lineDp, canvasW, lineDp);
+            Image safeLine = UiBuilder.Image("SafeAreaYMin", marks, null, cyan);
+            UiBuilder.Place(safeLine.rectTransform, 0f, bottomDp - (safe.yMin / k), canvasW, lineDp);
         }
 
         private static string F(float v)

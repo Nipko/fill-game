@@ -1,5 +1,7 @@
 #nullable enable
 using System;
+using System.Globalization;
+using System.Text;
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.GameFlow;
@@ -13,9 +15,10 @@ namespace AF.UI
 {
     /// <summary>
     /// Avisos legibles del tablero (D-011, punto 2; prueba en el teléfono del 2026-10-11, §P2 y §P3): el aviso (<c>_toast</c>:
-    /// regalo de Capi, «¡Una cuia más!» y «+1 Luciérnaga») y la tarjeta «¡Miquito a la vista!»
-    /// (<c>_sighting</c>) salen de uno en uno, por orden de llegada, y cada uno dura lo que se tarda en leerlo
-    /// (<see cref="NoticeTiming"/>: 1.000 ms + 55 ms por carácter, entre 3 y 7 s).
+    /// regalo de Capi, «¡Una cuia más!» y «+1 Luciérnaga»), la tarjeta «¡Miquito a la vista!»
+    /// (<c>_sighting</c>) y el rótulo del lugar (<c>_stopLabel</c>, tarea M2.3) salen de uno en uno, por orden de llegada, y cada
+    /// uno dura lo que se tarda en leerlo (<see cref="NoticeTiming"/>: 1.000 ms + 55 ms por carácter, entre 3 y 7 s). La cola va
+    /// por tipos (<see cref="NoticeKind"/>: Text, Species y StopLabel; F5, TI6b y TU1a añaden los suyos).
     /// </summary>
     /// <remarks>
     /// <para><b>Cuándo</b>: solo en PLAYING y sin victoria ni bloqueo pendientes (<c>NoticesHeld</c>). Ninguno durante LOADING,
@@ -37,6 +40,12 @@ namespace AF.UI
     /// espera, las etiquetas del HUD siguen a la vista, y mientras se ve, se apartan como siempre (GameScreen.Labels.cs). Como
     /// los avisos, solo sale en PLAYING; si no cabe sin tapar cuias, botones ni las burbujas «Te faltan {n}» de la bandeja, no
     /// sale, y si una burbuja sale después bajo la tarjeta del muelle, la tarjeta se oculta (A1, criterio 3).</para>
+    /// <para><b>El rótulo del lugar</b> (<see cref="StopLabel"/>; D-013, punto 8; propuesta del Mapa §10.5, punto 5): entra en la
+    /// cola al habilitarse el toque (<c>OnIntroFinished</c>) en los niveles de <see cref="StopLabelRule"/> (31, 51, 71, 91, 101,
+    /// 121, 131, 151, 161, 171, 181 y 191 en 1-200), solo en el primer intento y nunca al reanudar; como la tarjeta del miquito,
+    /// sale cuando la tropa se ha ido de la rama, y mientras se ve aparta las etiquetas del HUD. Con 1-2 filas va sobre el
+    /// horizonte; con 3, como placa bajo el HUD. Lo ocultan y lo descartan lo mismo que al aviso: un modal del embudo, otro
+    /// intento, otro nivel y la celebración. Sonda <c>AF_STATE stop_label</c>.</para>
     /// <para>Fuera de la cola, con su propia duración: el cartel (<c>_banner</c>) con «El río bajó» (04 §2.7) y el rótulo del
     /// intento. La cola se vacía al cargar un nivel, al empezar otro intento (<c>OnRestart</c>) y al empezar la celebración
     /// (<c>OnCelebrationStarted</c>); al volver de segundo plano (<c>SnapToModel</c>) no se toca: un aviso no es una animación
@@ -142,6 +151,14 @@ namespace AF.UI
         private int _noticeCount;
         private FaunaSpecies? _sightingPending;
         private float _sightingDockBottom = float.NaN; // borde de abajo de la placa de la tarjeta sobre el muelle; NaN si no
+        private readonly StopLabel _stopLabel;
+        private readonly StringBuilder _stopLabelProbeSb = new StringBuilder(256);
+        private string? _lastStopLabelProbe;
+        private int _stopLabelLevel; // nivel cuyo rótulo ya entró en la cola en esta visita (0: ninguno)
+        private BoardLayoutResult? _stopLabelLayout; // tablero y lienzo con los que se colocó el rótulo a la vista
+        private float _stopLabelCanvasW;
+        private float _stopLabelHorizon;
+        private float _stopLabelShift;
 
         /// <summary>Avisos que esperan turno (sin contar el que se ve; tests).</summary>
         internal int NoticesQueued => _noticeCount;
@@ -183,13 +200,14 @@ namespace AF.UI
 
             for (int k = 0; k < _noticeCount; k++)
             {
-                if (string.Equals(_notices[(_noticeHead + k) % NoticeSlots].Text, text, StringComparison.Ordinal))
+                ref Notice queued = ref _notices[(_noticeHead + k) % NoticeSlots];
+                if (queued.Kind == NoticeKind.Text && string.Equals(queued.Text, text, StringComparison.Ordinal))
                 {
                     return; // ya espera su turno
                 }
             }
 
-            EnqueueNotice(text, null);
+            EnqueueNotice(NoticeKind.Text, text, null, null);
             PumpNotices();
         }
 
@@ -456,6 +474,7 @@ namespace AF.UI
         {
             _toast.Hide();
             _sighting.Hide();
+            _stopLabel.Hide();
         }
 
         // Aguas estancadas, ¿Seguro?, Nivel fallido y Sin canoas.
@@ -465,7 +484,9 @@ namespace AF.UI
                 || phase == FlowPhase.NoCanoes;
         }
 
-        private void EnqueueNotice(string? text, FaunaSpecies? species)
+        // Un aviso del tipo kind al final de la cola: el texto (Text y StopLabel), la especie (Species) y la parada (StopLabel).
+        // Con la cola llena, se descarta.
+        private void EnqueueNotice(NoticeKind kind, string? text, FaunaSpecies? species, RiverStop? stop)
         {
             if (_noticeCount >= NoticeSlots)
             {
@@ -473,29 +494,61 @@ namespace AF.UI
             }
 
             int slot = (_noticeHead + _noticeCount) % NoticeSlots;
+            _notices[slot].Kind = kind;
             _notices[slot].Text = text;
             _notices[slot].Species = species;
+            _notices[slot].Stop = stop;
             _noticeCount++;
         }
 
+        /// <summary>Hay un aviso de la cola a la vista: el aviso, la tarjeta del miquito o el rótulo del lugar.</summary>
+        internal bool NoticeShowing => _toast.Visible || _sighting.Visible || _stopLabel.Visible;
+
         // Saca de la cola el siguiente aviso si no hay ninguno a la vista y la fase lo permite (cada fotograma, al encolar y al
-        // habilitarse el toque).
+        // habilitarse el toque). El rótulo del lugar espera además a que la tropa se vaya de la rama, como la tarjeta del
+        // miquito (va en la franja del panorama o bajo el HUD, donde se sienta): mientras espera, los que van detrás también.
         private void PumpNotices()
         {
-            while (_noticeCount > 0 && !_toast.Visible && !_sighting.Visible && !NoticesHeld(_flow))
+            while (_noticeCount > 0 && !NoticeShowing && !NoticesHeld(_flow))
             {
-                string? text = _notices[_noticeHead].Text;
-                FaunaSpecies? species = _notices[_noticeHead].Species;
-                _notices[_noticeHead] = default;
+                ref Notice head = ref _notices[_noticeHead];
+                if (head.Kind == NoticeKind.StopLabel && _intro.TroopVisible)
+                {
+                    return;
+                }
+
+                NoticeKind kind = head.Kind;
+                string? text = head.Text;
+                FaunaSpecies? species = head.Species;
+                RiverStop? stop = head.Stop;
+                head = default;
                 _noticeHead = (_noticeHead + 1) % NoticeSlots;
                 _noticeCount--;
-                if (text != null)
+                switch (kind)
                 {
-                    ShowToastNow(text);
-                }
-                else if (species != null)
-                {
-                    ShowSightingNow(species); // si no cabe, no sale y pasa el siguiente
+                    case NoticeKind.Text:
+                        if (text != null)
+                        {
+                            ShowToastNow(text);
+                        }
+
+                        break;
+
+                    case NoticeKind.Species:
+                        if (species != null)
+                        {
+                            ShowSightingNow(species); // si no cabe, no sale y pasa el siguiente
+                        }
+
+                        break;
+
+                    case NoticeKind.StopLabel:
+                        if (text != null && stop != null)
+                        {
+                            ShowStopLabelNow(text, stop); // sin tablero no sale y pasa el siguiente
+                        }
+
+                        break;
                 }
             }
         }
@@ -506,18 +559,19 @@ namespace AF.UI
         {
             // Red de seguridad de HideNoticesForModal: con un modal del embudo abierto por un camino que no avisó, nada a la vista.
             LevelFlow? flow = _flow;
-            if (flow != null && flow.HasLevel && IsFunnelModal(flow.Phase) && (_toast.Visible || _sighting.Visible))
+            if (flow != null && flow.HasLevel && IsFunnelModal(flow.Phase) && NoticeShowing)
             {
                 HideNoticesForModal();
             }
 
             if (_sightingPending != null && !_intro.TroopVisible && !NoticesHeld(_flow))
             {
-                EnqueueNotice(null, _sightingPending);
+                EnqueueNotice(NoticeKind.Species, null, _sightingPending, null);
                 _sightingPending = null;
             }
 
             PumpNotices();
+            KeepStopLabelPlaced();
         }
 
         // Fuera todo: el aviso y la tarjeta a la vista, la cola y la tarjeta pendiente (otro nivel, otro intento o la celebración).
@@ -533,6 +587,7 @@ namespace AF.UI
             _sightingPending = null;
             _toast.Hide();
             _sighting.Hide();
+            _stopLabel.Hide();
         }
 
         // «¡Miquito a la vista!» (guion de la intro §4.5 y §14): al habilitarse el input tras la intro, en el primer intento del
@@ -643,11 +698,207 @@ namespace AF.UI
             }
         }
 
+        /// <summary>
+        /// Solo tests: enciende o apaga el rótulo del lugar (null = <c>ui_stop_label</c>, <see cref="MapConfig.UiStopLabel"/>).
+        /// Los tests PlayMode que no tratan de él lo apagan (<c>PlayModeHelpers</c>), para que sus avisos salgan como antes.
+        /// </summary>
+        internal static bool? StopLabelsOverride { get; set; }
+
+        /// <summary>El rótulo del lugar (tests).</summary>
+        internal StopLabel StopLabelView => _stopLabel;
+
+        /// <summary>Campos de la última sonda <c>AF_STATE stop_label</c> (null si no salió ninguno o sin sonda; tests).</summary>
+        internal string? LastStopLabelProbe => _lastStopLabelProbe;
+
+        /// <summary>Pie de la fila del HUD (dp desde arriba; tests de colocación del rótulo).</summary>
+        internal float HudBottomDp => BoardTop;
+
+        /// <summary>La tropa de la intro sigue en la rama (tests: el rótulo y la tarjeta del miquito la esperan).</summary>
+        internal bool IntroTroopVisible => _intro.TroopVisible;
+
+        // Rótulo del lugar (D-013, punto 8; propuesta del Mapa §10.5, punto 5; tarea M2.3): al habilitarse el toque
+        // (OnIntroFinished), tras decidir la tarjeta del miquito, entra en la cola si lo dice StopLabelRule: primer intento (ni
+        // la intro corta del reintento ni un nivel con fallos: tras salir al inicio y volver, el nivel ya se jugó), una sola vez
+        // por visita al nivel y sin tarjeta del miquito pendiente. Al reanudar no pasa por aquí (OnResumed: sin intro). El texto
+        // se formatea ya, con los nombres de facts.csv por Loc; si alguno no se puede enseñar (sin aprobar en un build de
+        // release, o sin traducir), no sale: nunca «· Brasil» ni un idioma mezclado.
+        private void MaybeShowStopLabel(LevelFlow flow)
+        {
+            if (!flow.HasLevel)
+            {
+                return;
+            }
+
+            int level = flow.LevelNumber;
+            bool firstAttempt = !_introRetry && flow.Attempt.FailsLevel == 0 && _stopLabelLevel != level;
+            RiverStopCatalog? stops = RiverStops;
+            if (!StopLabelRule.ShowsOn(level, stops, firstAttempt, _sightingPending != null, StopLabelsOverride ?? MapConfig.UiStopLabel))
+            {
+                return;
+            }
+
+            RiverStop stop = stops!.StopOf(level)!;
+            string place = UiText.StopName(stop);
+            string country = UiText.StopCountry(stop);
+            if (place.Length == 0 || country.Length == 0)
+            {
+                return;
+            }
+
+            string text = UiText.StopLabel(place, country);
+            if (text.Length == 0)
+            {
+                return;
+            }
+
+            _stopLabelLevel = level;
+            EnqueueNotice(NoticeKind.StopLabel, text, null, stop);
+        }
+
+        // Al cargar otro nivel, el rótulo de esta visita ya no cuenta (volver a entrar en el mismo nivel no lo repite).
+        private void StopLabelLevelLoaded(int level)
+        {
+            if (_stopLabelLevel != level)
+            {
+                _stopLabelLevel = 0;
+            }
+        }
+
+        // El rótulo, por ReadMs de su texto (D-011): con 1 o 2 filas, sobre el horizonte; con 3, como placa bajo el HUD.
+        private void ShowStopLabelNow(string text, RiverStop stop)
+        {
+            BoardLayoutResult? l = _layout;
+            if (l == null || l.Rows <= 0)
+            {
+                return;
+            }
+
+            int ms = NoticeTiming.ReadMs(text);
+            if (l.Rows >= 3)
+            {
+                _stopLabel.ShowAsPlate(text, ms, _canvasW, StopLabelPlateTop(l), StopLabelPlateLimit(l));
+            }
+            else
+            {
+                _stopLabel.ShowOnHorizon(text, ms, _canvasW, _horizonY, BoardTop + StopLabel.HudGapDp, StopLabelHorizonLimit(l));
+            }
+
+            RememberStopLabelPlace(l);
+            EmitStopLabelProbe(stop, text, ms, l.Rows);
+        }
+
+        // Lo más alto de la placa (3 filas): clavada al marco, PlateOverFrameDp sobre el canto interior de su barra de arriba (tal
+        // como se dibuja, con el desplazamiento del tablero), sin subir del pie de la fila del HUD.
+        private float StopLabelPlateTop(BoardLayoutResult l)
+        {
+            return Mathf.Max(BoardTop, l.PanelY - _boardShift + PanelFrameDp - StopLabel.PlateOverFrameDp);
+        }
+
+        // Lo más bajo de la placa (3 filas): las cuias de la fila 1 en reposo (el bloque empieza en la elevada), con su aire.
+        private float StopLabelPlateLimit(BoardLayoutResult l)
+        {
+            return l.BlockTop + BoardLayout.Lift - _boardShift - StopLabel.PlateCuiaGapDp;
+        }
+
+        // Lo más bajo del rótulo sobre el horizonte (1-2 filas): el canto de arriba del panel, con su aire.
+        private float StopLabelHorizonLimit(BoardLayoutResult l)
+        {
+            return l.PanelY - _boardShift - StopLabel.CuiaGapDp;
+        }
+
+        private void RememberStopLabelPlace(BoardLayoutResult l)
+        {
+            _stopLabelLayout = l;
+            _stopLabelCanvasW = _canvasW;
+            _stopLabelHorizon = _horizonY;
+            _stopLabelShift = _boardShift;
+        }
+
+        // Con el rótulo a la vista, si cambian el tablero, el lienzo, el horizonte o el desplazamiento del tablero, se vuelve a
+        // colocar (mide su texto solo entonces). Cada fotograma, desde TickNotices; sin asignaciones.
+        private void KeepStopLabelPlaced()
+        {
+            BoardLayoutResult? l = _layout;
+            if (!_stopLabel.Visible || l == null || l.Rows <= 0)
+            {
+                return;
+            }
+
+            if (ReferenceEquals(l, _stopLabelLayout) && _stopLabelCanvasW == _canvasW && _stopLabelHorizon == _horizonY
+                && _stopLabelShift == _boardShift)
+            {
+                return;
+            }
+
+            if (l.Rows >= 3 && _stopLabel.OnPlate)
+            {
+                _stopLabel.PlaceAsPlate(_canvasW, StopLabelPlateTop(l), StopLabelPlateLimit(l));
+            }
+            else if (l.Rows < 3 && !_stopLabel.OnPlate)
+            {
+                _stopLabel.PlaceOnHorizon(_canvasW, _horizonY, BoardTop + StopLabel.HudGapDp, StopLabelHorizonLimit(l));
+            }
+            else
+            {
+                _stopLabel.Hide(); // otro número de filas con el rótulo a la vista (otro tablero): no se cambia de forma a medias
+            }
+
+            RememberStopLabelPlace(l);
+        }
+
+        // AF_STATE stop_label (plan del Mapa §7: level, stop, text y ms; además el id del sitio, el id de parada s{nn}, la forma
+        // y las filas del tablero). Solo con la sonda.
+        private void EmitStopLabelProbe(RiverStop stop, string text, int ms, int rows)
+        {
+            if (!DevProbe.Enabled)
+            {
+                _lastStopLabelProbe = null;
+                return;
+            }
+
+            StringBuilder sb = _stopLabelProbeSb;
+            sb.Clear();
+            sb.Append("\"level\":").Append((_flow?.LevelNumber ?? 0).ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"stop\":").Append(stop.N.ToString(CultureInfo.InvariantCulture));
+            AppendJsonString(sb, "stop_id", DevProbe.StopId(stop));
+            AppendJsonString(sb, "id", stop.Id);
+            AppendJsonString(sb, "text", text);
+            sb.Append(",\"ms\":").Append(ms.ToString(CultureInfo.InvariantCulture));
+            AppendJsonString(sb, "mode", _stopLabel.OnPlate ? "plate" : "horizon");
+            sb.Append(",\"rows\":").Append(rows.ToString(CultureInfo.InvariantCulture));
+            _lastStopLabelProbe = sb.ToString();
+            _probe.Event("stop_label", _lastStopLabelProbe);
+        }
+
+        /// <summary>
+        /// Los avisos de la cola de los avisos de juego, por tipos (arquitectura de la tanda 4, §3). F5 (Fruta nueva), TI6b
+        /// (TiTino) y TU1a (tutorial) añaden los suyos; la prioridad entre tarjetas la deciden las reglas al encolar (tutorial &gt;
+        /// Fruta nueva &gt; miquito &gt; rótulo, como mucho una por nivel), no la cola, que va por orden de llegada.
+        /// </summary>
+        internal enum NoticeKind
+        {
+            /// <summary>Un aviso de texto en la placa de abajo (<c>_toast</c>): regalo de Capi, «¡Una cuia más!», «+1 Luciérnaga».</summary>
+            Text = 0,
+
+            /// <summary>La tarjeta «¡Miquito a la vista!» de una especie (<c>_sighting</c>).</summary>
+            Species = 1,
+
+            /// <summary>El rótulo del lugar, «{lugar} · {país}» (<see cref="StopLabel"/>; tarea M2.3).</summary>
+            StopLabel = 2,
+        }
+
         private struct Notice
         {
-            // Texto del aviso; null = la tarjeta del miquito de Species.
+            public NoticeKind Kind;
+
+            // Texto del aviso (Text) o del rótulo ya formateado (StopLabel; se formatea al encolar, nunca por fotograma).
             public string? Text;
+
+            // Especie de la tarjeta del miquito (Species).
             public FaunaSpecies? Species;
+
+            // Parada del rótulo (StopLabel).
+            public RiverStop? Stop;
         }
     }
 }

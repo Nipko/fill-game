@@ -565,6 +565,7 @@ namespace AF.UI
             _banner = new Toast("RiverLowered", _root, art, 18f);
             _toast = new Toast("Toast", _noticeLayer, art, 15f);
             _sighting = new SightingCard(_noticeLayer, art); // «¡Miquito a la vista!» (guion de la intro §4.5)
+            _stopLabel = new StopLabel(_noticeLayer, art); // rótulo del lugar (M2.3; GameScreen.Notices.cs)
 
             // Captura de toques para saltar Sumergir y teñir o la celebración (02 §4.2, §2): por encima de todo.
             _skipCatcher = HitLayer("SkipCatcher", _root);
@@ -855,6 +856,7 @@ namespace AF.UI
             _banner.Tick(dtMs);
             _toast.Tick(dtMs);
             _sighting.Tick(dtMs);
+            _stopLabel.Tick(dtMs);
             TickNotices(); // el siguiente aviso, si el anterior se acaba de ocultar (GameScreen.Notices.cs)
             TickHarvest(dtMs);
             TickAutoNext(dtMs);
@@ -888,6 +890,7 @@ namespace AF.UI
             HideOverlays();
             _banner.Hide();
             ClearNotices(); // ningún aviso ni tarjeta del nivel anterior pasa a este (GameScreen.Notices.cs)
+            StopLabelLevelLoaded(level);
             _attemptBanner = false;
             _introDelayMs = -1f;
             BuildBoard(flow);
@@ -978,6 +981,7 @@ namespace AF.UI
             LevelFlow ready = RequireFlow();
             MaybeShowSighting(ready);
             ShowRevealGiftIfReady(ready);
+            MaybeShowStopLabel(ready); // el rótulo del lugar, si el nivel no trae otra tarjeta (M2.3)
             PumpNotices();
             _skipCatcher.gameObject.SetActive(false);
             _probe.State("ready", RequireFlow(), int.MinValue, null);
@@ -2258,7 +2262,7 @@ namespace AF.UI
             {
                 _views[i].SetVictoryAura(fade);
             }
-            float nt = Mathf.Clamp01((ms - 600f) / 150f);
+            float nt = Mathf.Clamp01((ms - VictoryButtonsInMs) / 150f);
             _nextGroup.alpha = nt;
             _homeGroup.alpha = nt;
             _doubleGroup.alpha = nt;
@@ -2767,27 +2771,6 @@ namespace AF.UI
             float needed = _layout.PanelBottom - (panelTop - gap);
             float room = highestTop - BoardTop;
             return Mathf.Clamp(needed, 0f, Mathf.Max(0f, room));
-        }
-
-        // Caja de TiTino en la victoria (propuesta de TiTino d.4; gancho SlothVictoryShown): la franja libre entre el pie de la
-        // cabecera (la insignia, lo más bajo del HUD) y lo más alto de las cuias con su elevación, con el tablero ya en el sitio
-        // al que lo lleva ShiftToClear (dp desde arriba). Sin tablero, vacía.
-        private void VictoryFreeBand(out float top, out float bottom)
-        {
-            top = HudBadgeBottom;
-            bottom = top;
-            if (_layout == null || _views.Length == 0)
-            {
-                return;
-            }
-
-            float highestTop = float.MaxValue;
-            for (int i = 0; i < _views.Length; i++)
-            {
-                highestTop = Mathf.Min(highestTop, _layout.FootY[i] - (_views[i].HeightU * _views[i].Unit) - CuiaView.LiftDp);
-            }
-
-            bottom = Mathf.Max(top, highestTop - _boardShiftTarget);
         }
 
         private void ShiftBoard(float target, bool animate)
