@@ -569,10 +569,24 @@ def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
             if p is None:
                 errores.append(f"mundo {w}: falta el punto de paso «{pid}» en el viaje de entrada (Q18-A; D-023, punto 19)")
                 continue
-            clave = str(p.get("dato", "")).split(" ")[0]
-            if (p.get("conf") not in ("V", "E") or not isinstance(p.get("lat"), (int, float))
-                    or not CLAVE_DATO.fullmatch(clave) or not list(ids_citados(p.get("dato", "")))):
+            dato = str(p.get("dato", ""))
+            clave = dato.split(" ")[0]
+            citados = list(ids_citados(dato))
+            if (p.get("conf") not in ("V", "E") or not all(isinstance(p.get(c), (int, float)) for c in ("lat", "lon"))
+                    or not CLAVE_DATO.fullmatch(clave) or not citados):
                 errores.append(f"mundo {w}: el punto de paso «{pid}» sin coordenada V o E o sin dato «map.stop.<lugar>.dato_NN [V|E fuente]: …»")
+            # El dato irá a facts.csv como los de las paradas (passing[] en M4.5a): las mismas reglas de texto (≤ 90
+            # caracteres, Q8-A y «Belén») y fuentes con entrada en 'fuentes' y reabiertas (R5).
+            texto = re.search(r"«(.*)»", dato)
+            if texto is None:
+                errores.append(f"mundo {w}: el punto de paso «{pid}» sin el texto de su dato entre «»")
+            else:
+                revisar_texto(f"mundo {w}: el punto de paso «{pid}» ({clave})", texto.group(1), {}, errores)
+            for f in citados:
+                if f not in ids:
+                    errores.append(f"mundo {w}: el punto de paso «{pid}» cita la fuente {f} sin entrada en 'fuentes'")
+                elif not FECHA.match(fuente_de[f].get("releida", "")):
+                    errores.append(f"mundo {w}: el punto de paso «{pid}» cita la fuente {f} sin «releida» (R5)")
         # Candidatos que tienen que ir en el «Otro dato» de una parada (pregunta 50 (a) en k = 32).
         for s in paradas:
             if s.get("mundo") != w:
@@ -600,7 +614,8 @@ def autoprueba_paradas_201_700(doc):
     error, y una clave de 1-200 repetida en un «Otro dato» de 201-700 da «repetida» en revisar_otros_datos. Las reglas
     de la bandera, los km, el orden de los sitios y la unicidad de las claves las reutilizan M3.7b-M3.7d. Desde M3.7b,
     también dan error un candidato de la pregunta 50 (a) que falta en k = 32, el viaje del 300 sin el punto de paso
-    teotonio o con su dato sin etiqueta (Q18-A) y un sitio del resumen de un mundo detallado sin coordenada; y la bandera
+    teotonio o con su dato sin etiqueta, sin longitud, con un texto de más de 90 caracteres o con una fuente que no está
+    en 'fuentes' (Q18-A) y un sitio del resumen de un mundo detallado sin coordenada; y la bandera
     de un viaje de entrada (BO en el 300) se exige en la primera parada de su mundo. Devuelve los fallos de la prueba."""
     paradas = doc.get("paradas_201_700", [])
     if not paradas:
@@ -696,6 +711,18 @@ def autoprueba_paradas_201_700(doc):
                  lambda d_, i=i, pid=pid: [p.update(dato=p["dato"].split(" [")[0]) for p in
                                            d_["paradas_201_1000"][i]["puntos_de_paso_del_viaje"] if p.get("id") == pid],
                  f"el punto de paso «{pid}» sin coordenada V o E o sin dato", f"mundo {w}:")
+            caso(f"el punto de paso {pid} sin longitud", None,
+                 lambda d_, i=i, pid=pid: [p.pop("lon") for p in
+                                           d_["paradas_201_1000"][i]["puntos_de_paso_del_viaje"] if p.get("id") == pid],
+                 f"el punto de paso «{pid}» sin coordenada V o E o sin dato", f"mundo {w}:")
+            caso(f"el punto de paso {pid} con un texto de más de 90 caracteres", None,
+                 lambda d_, i=i, pid=pid: [p.update(dato=p["dato"].replace("»", " Y sigue y sigue y sigue.»")) for p in
+                                           d_["paradas_201_1000"][i]["puntos_de_paso_del_viaje"] if p.get("id") == pid],
+                 "caracteres (> 90)", f"mundo {w}: el punto de paso «{pid}»")
+            caso(f"el punto de paso {pid} con una fuente sin entrada en 'fuentes'", None,
+                 lambda d_, i=i, pid=pid: [p.update(dato=p["dato"].replace("]:", ", fuente_inventada]:", 1)) for p in
+                                           d_["paradas_201_1000"][i]["puntos_de_paso_del_viaje"] if p.get("id") == pid],
+                 "cita la fuente fuente_inventada sin entrada en 'fuentes'", f"mundo {w}:")
         caso(f"un sitio del resumen del mundo {w} sin coordenada", None,
              lambda d_, i=i: [d_["paradas_201_1000"][i]["sitios"][-1].pop(c) for c in ("lat", "lon", "xy")],
              "sin coordenada o con un [NV]", f"mundo {w}:")

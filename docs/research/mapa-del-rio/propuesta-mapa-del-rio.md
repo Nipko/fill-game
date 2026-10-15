@@ -667,7 +667,7 @@ Parte 2 de la fase F9 (k = 30-41), con el formato de 5.4 bis: las paradas están
 | 33 | 331-340 | 330 | 7 · parada | **Puerto Maldonado** | PE · Madre de Dios y Tambopata · blanca | ≈ 2.960 | B | `puerto_maldonado.dato_01`, «Puerto Maldonado está donde el río Tambopata se une al Madre de Dios.» [E CR-F96] | Hito 340 [P] |
 | 34 | 341-350 | 340 | 7 · parada | **Astilleros de Puerto Maldonado** | PE · Madre de Dios y Tambopata · blanca | ≈ 2.960 | A | `puerto_maldonado.dato_03`, «En Puerto Maldonado, el turismo y la construcción de botes dan mucho trabajo.» [E CR-F96; candidato de §(e)] | Estreno del Brote de dos hojas 343 |
 | 35 | 351-360 | 350 | 7 · parada | **Collpa del Tambopata** (asesor) | PE · Tambopata · blanca | ≈ 3.035 | A | **Respuesta del mundo 7:** «Según la idea más apoyada, los guacamayos comen arcilla para tomar la sal que les falta.» [E npr2017_collpas] | Hito 360 [P] |
-| 36 | 361-370 | 360 | 7 · parada | **Los guacamayos del Tambopata** (asesor) | PE · Tambopata · blanca | ≈ 3.035 | B | `collpa_tambopata.dato_03`, loros de hasta {n} especies cada día en la collpa Colorado (18) [E npr2017_collpas] | Piraña con Brote de dos hojas 366 |
+| 36 | 361-370 | 360 | 7 · parada | **Los guacamayos del Tambopata** (asesor) | PE · Tambopata · blanca | ≈ 3.035 | B | `collpa_tambopata.dato_03`, «A la collpa Colorado llegan cada día loros de hasta {n} especies, a veces cientos.» (18) [E npr2017_collpas] | Piraña con Brote de dos hojas 366 |
 | 37 | 371-380 | 370 | 7 · parada | **Nidos del Tambopata** (asesor) | PE · Tambopata · blanca | ≈ 3.035 | B | `collpa_tambopata.dato_05`, «Aquí, los guacamayos azul y amarillo anidan casi siempre en palmeras de aguaje muertas.» [E wp_macaw_society] | Hito 380 [P] |
 | 38 | 381-390 | 380 | 7 · parada | **Boca Manu** (asesor) | PE · Madre de Dios y Manu · blanca | ≈ 3.175 | A | `boca_manu.dato_01`, «En Boca Manu, el río Manu se junta con el Alto Madre de Dios.» [E eswp_madre_de_dios, eswp_rio_manu] | Hoja atada con Barro 389 |
 | 39 | 391-400 | 390 | 7 · parada | **El Alto Madre de Dios** (asesor) | PE · Alto Madre de Dios · blanca | ≈ 3.175 | A | `boca_manu.dato_02`, «Río arriba de aquí, el Madre de Dios se llama Alto Madre de Dios y baja de los Andes.» [E eswp_madre_de_dios] | Hito 400 [P] |
@@ -677,7 +677,7 @@ Parte 2 de la fase F9 (k = 30-41), con el formato de 5.4 bis: las paradas están
 - **Recuento:**
   - **12 paradas en 6 sitios,** los del resumen de 5.4 y en su orden, en 2 países: Bolivia (301-310) y el Perú (311-420);
   - **2 banderas izadas:** Bolivia al ganar el 300 (`bandera` de la parada 30; el cruce llega con el viaje de entrada del mundo 7) y el Perú al ganar el 310 (`bandera` de la parada 31; cruce `llega_en` {mundo 7, sitio «Lago Sandoval»}, con `vuelta`);
-  - **12 datos de llegada, 2 [V] y 10 [E],** y **15 «Otro dato», 5 [V] y 10 [E]**, más el dato del punto de paso `teotonio` [E]. Ningún [NV]. Las cifras van como `{n}` con su valor en `args` (Q8-A); los años no.
+  - **12 datos de llegada, 2 [V] y 10 [E],** y **14 «Otro dato», 5 [V] y 9 [E]** (la parada 38, Boca Manu, no lleva ninguno), más el dato del punto de paso `teotonio` [E]. Ningún [NV]. Las cifras van como `{n}` con su valor en `args` (Q8-A); los años no.
   - **Todas las paradas llevan el fondo sin héroe** de Q14-A: `bg_kit_w07` con una pieza del kit y el rótulo del sitio, a la hora del mundo 7 (el amanecer, la hora de la collpa; 07 §2.1). Las piezas [P] son la lista para el artista del kit: boca del Heath con baliza, cocha quieta, orilla de aguajes, confluencia del Tambopata, botes en la orilla, pared de arcilla, guacamayos en vuelo, aguajal con nidos, confluencia del Manu, piedemonte del Madre de Dios, selva del Manu y cocha con lobos de río.
 - **Cambios frente al resumen de 5.4** (también en `paradas_201_1000`, mundo 7):
   - **El lago Sandoval va antes que Puerto Maldonado.** El lago está a unos 16 km de la ciudad y se llega a él por un sendero desde el Madre de Dios [E wp_lake_sandoval]; su coordenada cae aguas abajo, en el tramo hacia Puerto Heath. Con el orden anterior (Puerto Maldonado ×2 y después Sandoval ×2), los km a casa retrocedían dentro del mundo. Por eso el Perú se iza en el 310 al llegar al lago, no a la ciudad: el cruce cambia de sitio y de coordenada, pero no de nivel. La Tinaja se estrena en el 323, en la segunda parada del lago (k = 32), como pide la pregunta 50.
@@ -704,7 +704,7 @@ Parte 2 de la fase F9 (k = 30-41), con el formato de 5.4 bis: las paradas están
 |---|---|---|---|---|---|
 | 30 · Puerto Heath | `map.stop.puerto_heath.dato_01` | «El río Heath, que aquí llega al Madre de Dios, marca la frontera entre Bolivia y el Perú.» | 89 | [E] wp_heath_river, eswp_puerto_heath | §5.4 ter |
 | 31 · Lago Sandoval | `map.stop.sandoval.dato_02` | «El lago Sandoval, de unas {n} hectáreas, es de las mayores cochas del sureste del Perú.» (125) | 87 | [E] wp_lake_sandoval | §5.4 ter |
-| 32 · Aguajal de Sandoval | `map.stop.sandoval.dato_04` | «En el Bajo Amazonas (Pará), cada casa tiene cuias sin pintar que hacen de balde y de vaso.» | 90 | [V] TJ-T1 | Pregunta 50 (a) |
+| 32 · Aguajal de Sandoval | `map.stop.sandoval.dato_04` | «En las várzeas del Bajo Amazonas (Pará), cada casa usa cuias sin pintar de balde y vaso.» | 88 | [V] TJ-T1 | Pregunta 50 (a) |
 | 32 · Aguajal de Sandoval | `map.stop.sandoval.dato_05` | «En Quatipuru-Mirim (Pará), las fazedeiras hacen a mano vasijas de barro para la lluvia.» | 87 | [V] TJ-T4 | Pregunta 50 (a) |
 | 32 · Aguajal de Sandoval | `map.stop.sandoval.dato_06` | «El barro sin esmaltar suda: el agua que se evapora por sus poros enfría la de dentro.» | 85 | [E] TJ-T7 | Pregunta 50 (a) |
 | 32 · Aguajal de Sandoval | `map.stop.sandoval.dato_07` | «En Icoaraci, en Pará, hay una alfarería de cerámica para el uso diario desde 1903.» | 82 | [E] TJ-T5 | Pregunta 50 (a) |
@@ -742,13 +742,13 @@ Parte 2 de la fase F9 (k = 30-41), con el formato de 5.4 bis: las paradas están
   - **la placa «Bolivia te da la bienvenida» en el 300** sería otra extensión de P-M7 [P], como la del 220: la decide el dueño con M4.5a. El 310 es una vuelta y no lleva placa;
   - **los nombres nuevos** [P]: «Aguajal de Sandoval», «Astilleros de Puerto Maldonado», «Los guacamayos del Tambopata», «Nidos del Tambopata», «El Alto Madre de Dios» y «Las cochas del Manu»; el hito 420, «Zafra» [P];
   - **el añuje:** su nombre cambia por país (añuje, cutia, guatusa, picure).
-- **`--check`** (`revisar_paradas_201_700`) suma, desde M3.7b, cinco comprobaciones:
+- **`--check`** (`revisar_paradas_201_700`) suma, desde M3.7b, cuatro comprobaciones:
   - que un sitio del resumen de un mundo detallado tenga coordenada y no lleve ningún [NV];
-  - que el viaje de entrada del mundo 7 lleve el punto de paso `teotonio` con coordenada [V] o [E] y un dato `map.stop.<lugar>.dato_NN` con su etiqueta;
+  - que el viaje de entrada del mundo 7 lleve el punto de paso `teotonio` con coordenada [V] o [E] (`lat` y `lon`) y un dato `map.stop.<lugar>.dato_NN` con su etiqueta. Como ese dato irá a `facts.csv` (`passing[]` en M4.5a), su texto entre «» pasa las mismas reglas que el de las paradas (≤ 90 caracteres, cifras como `{n}` y sin «Belén»), y cada fuente que cita tiene que estar en `fuentes` con su `releida` (R5);
   - que la parada 32 lleve los cuatro candidatos de la pregunta 50 (a) en `otros_datos`;
   - que la bandera de un cruce que llega con el viaje de entrada de un mundo detallado (Bolivia en el 300) esté en la primera parada de ese mundo.
 
-  La autoprueba suma un caso por cada una: sin un candidato de la pregunta 50, sin `teotonio`, `teotonio` sin la etiqueta de su dato y un sitio del resumen sin coordenada. El caso de la bandera ausente, que ya recorría todas las paradas con bandera, ahora también da error con Bolivia en el 300.
+  La autoprueba suma un caso por cada una: sin un candidato de la pregunta 50, sin `teotonio`, `teotonio` sin la etiqueta de su dato, sin `lon`, con un texto de más de 90 caracteres o citando una fuente que no está en `fuentes`, y un sitio del resumen sin coordenada. El caso de la bandera ausente, que ya recorría todas las paradas con bandera, ahora también da error con Bolivia en el 300.
 - **Para M4.5a** (`stops.py` y `geometry.py`):
   - `kind`: la gran parada, la parada y el cierre, como en 1-200;
   - `arrival_fact`: la clave del dato de cada parada (en n = 30, `map.country.bo.dato_01`);
