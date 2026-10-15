@@ -77,10 +77,10 @@ namespace AF.Tests.EditMode
         {
             string?[] expected =
             {
-                StopShapes.TwoSpires, null, StopShapes.GenericNature, StopShapes.GenericNature, null, StopShapes.Dome,
-                StopShapes.GenericWater, StopShapes.GenericWater, StopShapes.GenericCity, StopShapes.GenericCity,
-                StopShapes.GenericNature, StopShapes.GenericWater, StopShapes.GenericWater, StopShapes.Beacon, StopShapes.GenericCity,
-                StopShapes.Rafts, StopShapes.GenericNature, StopShapes.GenericCity, StopShapes.GenericWater, StopShapes.GenericWater,
+                StopShapes.TwoSpires, null, StopShapes.AlterDoChao, StopShapes.FlonaTapajos, null, StopShapes.Dome,
+                StopShapes.Anavilhanas, StopShapes.LagoTefe, StopShapes.Leticia, StopShapes.Leticia,
+                StopShapes.Amacayacu, StopShapes.PuertoNarino, StopShapes.Tarapoto, StopShapes.Beacon, StopShapes.Iquitos,
+                StopShapes.Rafts, StopShapes.Allpahuayo, StopShapes.Nauta, StopShapes.PacayaSamiria, StopShapes.PacayaSamiria,
             };
             Assert.That(Stops.Count, Is.EqualTo(expected.Length));
             for (int n = 0; n < Stops.Count; n++)
@@ -91,7 +91,7 @@ namespace AF.Tests.EditMode
             Assert.That(StopShapes.ShapeOf(null), Is.Null);
             Assert.That(StopShapes.ShapeOf(new RiverStopBackdrop("bg_kit_w04", "bg_hero_nuevo", null, null)), Is.EqualTo(StopShapes.GenericNature));
             Assert.That(StopShapes.ShapeOf(new RiverStopBackdrop("bg_kit_w04", null, "kit:otra_pieza", null)), Is.EqualTo(StopShapes.GenericWater));
-            Assert.That(StopShapes.All.Length, Is.EqualTo(7));
+            Assert.That(StopShapes.All.Length, Is.EqualTo(20), "17 propias (M2.4) y 3 genéricas");
             foreach (string shape in StopShapes.All)
             {
                 Assert.That(StopShapes.IsKnown(shape), Is.True, shape);
@@ -805,7 +805,7 @@ namespace AF.Tests.EditMode
         [Test]
         public void AtDuskAndDawn_TheSilhouetteIsBacklit_NotSlateGrey()
         {
-            string city = StopShapes.GenericCity;
+            string city = StopShapes.Leticia;
             Assert.That(StopShapes.LitColor(city, StopShapes.ToneBody, StopBackdrop.DuskLut, StopBackdrop.LutDusk), Is.EqualTo(StopShapes.DuskBody));
             Assert.That(StopShapes.LitColor(city, StopShapes.ToneAccent, StopBackdrop.DuskLut, StopBackdrop.LutDusk), Is.EqualTo(StopShapes.DuskAccent));
             Color window = StopShapes.LitColor(city, StopShapes.ToneLight, StopBackdrop.DuskLut, StopBackdrop.LutDusk);
@@ -848,45 +848,48 @@ namespace AF.Tests.EditMode
         [Test]
         public void TheSilhouetteBase_FadesInAtTheEdgesOfTheBox()
         {
+            // Lo que llega al borde de la caja de 240 dp (el zócalo, la arena, el malecón, la selva lejana) entra con un degradado:
+            // ningún vértice de la silueta ni de su reflejo es opaco en el borde, y a los 16 dp ya lo es (M2.4: con las formas
+            // propias, la orilla no siempre es el tono que llega al borde, así que se mira todo vértice).
             int checkedStops = 0;
             for (int n = 0; n < Stops.Count; n++)
             {
                 Show(n);
-                if (_b.HeroSource != StopBackdrop.HeroShape || _b.Shape == StopShapes.Rafts)
+                if (_b.HeroSource != StopBackdrop.HeroShape)
                 {
-                    continue; // las balsas no llegan a los bordes
+                    continue;
                 }
 
-                checkedStops++;
                 StopShapeGraphic g = _b.ShapeGraphic;
                 float left = _b.HeroRect.xMin;
                 float right = _b.HeroRect.xMax;
-
-                // El zócalo o la arena (el tono de la orilla) y su reflejo; las copas redondas que tocan el borde no son aristas.
-                Color shore = StopShapes.LitColor(_b.Shape!, StopShapes.ToneShore, _b.LutColor, _b.Stop!.Backdrop.Lut);
-                Color shoreReflection = Color.Lerp(shore, _b.BandColor, 0.5f);
-                int edges = 0;
+                int edgesLeft = 0;
+                int edgesRight = 0;
                 bool inside = false;
                 for (int i = 0; i < g.VertexCount; i++)
                 {
                     Vector2 p = g.PositionAt(i);
                     Color c = g.ColorAt(i);
-                    bool isShore = ColorMath.DeltaE00(c, shore) < 0.5f || ColorMath.DeltaE00(c, shoreReflection) < 0.5f;
-                    if (!isShore)
+                    bool atLeft = Mathf.Abs(p.x - left) < 0.01f;
+                    bool atRight = Mathf.Abs(p.x - right) < 0.01f;
+                    if (atLeft || atRight)
                     {
-                        continue;
-                    }
-
-                    if (Mathf.Abs(p.x - left) < 0.01f || Mathf.Abs(p.x - right) < 0.01f)
-                    {
-                        edges++;
+                        edgesLeft += atLeft ? 1 : 0;
+                        edgesRight += atRight ? 1 : 0;
                         Assert.That(c.a, Is.EqualTo(0f), "parada " + n + ": sin arista vertical en el borde de la caja");
                     }
 
                     inside |= Mathf.Abs(p.x - (left + StopShapes.EdgeFadeDp)) < 0.01f && c.a > 0.99f;
                 }
 
-                Assert.That(edges, Is.GreaterThanOrEqualTo(2), "parada " + n + ": la orilla llega al borde");
+                if (edgesLeft + edgesRight == 0)
+                {
+                    continue; // las balsas del Itaya no llegan a los bordes
+                }
+
+                checkedStops++;
+                Assert.That(edgesLeft, Is.GreaterThanOrEqualTo(2), "parada " + n + ": llega al borde izquierdo");
+                Assert.That(edgesRight, Is.GreaterThanOrEqualTo(2), "parada " + n + ": llega al borde derecho");
                 Assert.That(inside, Is.True, "parada " + n + ": opaco a los 16 dp del borde");
             }
 
