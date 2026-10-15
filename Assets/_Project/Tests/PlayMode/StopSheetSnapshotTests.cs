@@ -1,7 +1,9 @@
 #nullable enable
+using System;
 using System.Collections;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using AF.GameFlow;
 using AF.Levels;
 using AF.Presentation;
@@ -9,26 +11,32 @@ using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using Object = UnityEngine.Object;
 
 namespace AF.Tests.PlayMode
 {
     /// <summary>
-    /// Hoja de las 20 composiciones del fondo por parada para VA-20 (tarea M2.4; direccion-visual-v2 §9; propuesta del Mapa §10.2:
-    /// «la herramienta de capturas genera una hoja con las 20 composiciones»; 07 §2.1): el dueño y el asesor la revisan antes de
-    /// encargar los héroes. Cada parada k de 1-200 va con su silueta propia (<see cref="StopShapes"/>; arte provisional, solo en
-    /// el Editor y en desarrollo, nunca en la ficha, las capturas de la tienda ni la UA) en el tablero de 2 filas del nivel 7
-    /// (7 cuias, 4 + 3) puesto en el nivel <c>10k + 7</c> con el agua base de su mundo, como <see cref="StopSnapshotTests"/>:
+    /// Las 20 composiciones del fondo por parada y su hoja para VA-20 (tareas M1.4 y M2.4; direccion-visual-v2 §9; propuesta del
+    /// Mapa §10.2: «la herramienta de capturas genera una hoja con las 20 composiciones»; 07 §2.1): el dueño y el asesor la
+    /// revisan antes de encargar los héroes. Cada parada k de 1-200 va con su silueta propia (<see cref="StopShapes"/>; arte
+    /// provisional, solo en el Editor y en desarrollo, nunca en la ficha, las capturas de la tienda ni la UA) en el tablero de 2
+    /// filas del nivel 7 (7 cuias, 4 + 3) puesto en el nivel <c>10k + 7</c> con el agua base de su mundo
+    /// (<see cref="PlayModeHelpers.LoadStopBoard"/>). Es el único fixture que escribe las 20 composiciones (revisión de M2.4),
+    /// y la hoja las reutiliza:
     /// <list type="bullet">
-    /// <item><c>02f_board_stop_&lt;kk&gt;</c>: las 20 composiciones a pantalla completa (1080 × 2340);</item>
+    /// <item><c>02f_board_stop_&lt;kk&gt;</c>: las 20 composiciones a pantalla completa (1080 × 2340), con el HUD y el tablero;</item>
     /// <item><c>02f_board_stops_sheet</c>: la hoja única de 5 × 4, con las paradas en orden (0-4 en la primera fila, 15-19 en la
-    /// última), cada una con su número arriba y, de cada captura, la franja de arriba (0-240 dp: el HUD, el cielo, el héroe con su
-    /// reflejo, la banda de agua y el borde del panel) a media resolución (1,5 px/dp);</item>
+    /// última) y, de cada composición, solo la banda del héroe (<see cref="CropWidthDp"/> × <see cref="CropHeightDp"/> dp: de
+    /// 48 dp sobre el horizonte a 32 bajo él, con el reflejo) a 1,5 px/dp, con el número de la parada arriba y un borde ámbar
+    /// en las que exigen asesor (<see cref="AdvisorStops"/>: Tefé, Puerto Nariño y el Itaya). La leyenda (número → id del sitio
+    /// → forma) sale en el log en las líneas <c>AF_SHEET</c> y en <c>docs/dev/prototipo-v0.md</c>; la hoja no lleva texto del
+    /// juego;</item>
     /// <item><c>02f_board_stop_15_reserva</c>: la parada 15 con la reserva de su héroe (la Casa de Fierro), fuera de la hoja.</item>
     /// </list>
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.StopSheetSnapshotTests</c>
     /// sin <c>-nographics</c>); los PNG quedan en <c>Logs/snapshots/es-419/</c>.
     /// </summary>
-    [Explicit("Hoja de las 20 composiciones del fondo por parada (M2.4, VA-20); necesita dispositivo gráfico.")]
+    [Explicit("Las 20 composiciones del fondo por parada y su hoja (M1.4, M2.4, VA-20); necesita dispositivo gráfico.")]
     public sealed class StopSheetSnapshotTests
     {
         /// <summary>Columnas de la hoja.</summary>
@@ -37,10 +45,13 @@ namespace AF.Tests.PlayMode
         /// <summary>Filas de la hoja.</summary>
         public const int Rows = 4;
 
-        /// <summary>Alto de la franja de cada captura que entra en la hoja (dp desde arriba).</summary>
-        public const int CropDp = 240;
+        /// <summary>Ancho de la banda del héroe que entra en la hoja (dp, centrada en el pie del héroe: x de 40 a 320).</summary>
+        public const int CropWidthDp = 280;
 
-        /// <summary>Reducción de cada captura en la hoja (2 = media resolución).</summary>
+        /// <summary>Alto de la banda del héroe (dp): de <see cref="StopBackdrop.HeroAboveDp"/> sobre el horizonte a 32 bajo él.</summary>
+        public const int CropHeightDp = 80;
+
+        /// <summary>Reducción de cada captura en la hoja (2: de 3 px/dp a 1,5 px/dp).</summary>
         public const int Downscale = 2;
 
         /// <summary>Separación entre las casillas (px).</summary>
@@ -49,11 +60,17 @@ namespace AF.Tests.PlayMode
         /// <summary>Alto de la etiqueta con el número de la parada sobre cada casilla (px).</summary>
         public const int LabelHeight = 28;
 
-        /// <summary>Ancho de una casilla (px).</summary>
-        public const int TileWidth = SnapshotKit.Width / Downscale;
+        /// <summary>Grosor del borde de las casillas de asesor obligatorio (px).</summary>
+        public const int AdvisorBorder = 4;
 
-        /// <summary>Alto de una casilla (px).</summary>
-        public const int TileHeight = CropDp * SnapshotKit.Width / 360 / Downscale;
+        /// <summary>Píxeles de la captura por dp (1080 / 360).</summary>
+        public const int CapturePxPerDp = SnapshotKit.Width / 360;
+
+        /// <summary>Ancho de una casilla (px): 420.</summary>
+        public const int TileWidth = CropWidthDp * CapturePxPerDp / Downscale;
+
+        /// <summary>Alto de una casilla (px): 120.</summary>
+        public const int TileHeight = CropHeightDp * CapturePxPerDp / Downscale;
 
         /// <summary>Ancho de la hoja (px).</summary>
         public const int SheetWidth = (Columns * TileWidth) + ((Columns + 1) * Gutter);
@@ -61,13 +78,14 @@ namespace AF.Tests.PlayMode
         /// <summary>Alto de la hoja (px).</summary>
         public const int SheetHeight = (Rows * (LabelHeight + TileHeight)) + ((Rows + 1) * Gutter);
 
+        /// <summary>Paradas con asesor obligatorio (07 §2.1 y §8.2): 7 (Tefé), 11 (Puerto Nariño) y 15 (Itaya).</summary>
+        public static readonly int[] AdvisorStops = { 7, 11, 15 };
+
         private const int DigitScale = 4;
 
         private static readonly Color32 SheetBackground = new Color32(0x22, 0x30, 0x3A, 0xFF);
         private static readonly Color32 LabelInk = new Color32(0xF6, 0xEB, 0xD0, 0xFF);
-
-        private static readonly string[] WorldIds = { string.Empty, "w01_estuario", "w02_tapajos", "w03_manaos", "w04_trapecio", "w05_loreto" };
-        private static readonly string[] Waters = { string.Empty, "white", "clear", "black", "white", "white" };
+        private static readonly Color32 AdvisorInk = new Color32(0xE0, 0xA0, 0x30, 0xFF);
 
         // Cifras de 3 × 5 (filas de arriba abajo, 3 bits cada una) para el número de la parada.
         private static readonly string[] Digits =
@@ -93,6 +111,7 @@ namespace AF.Tests.PlayMode
                 sheet[i] = SheetBackground;
             }
 
+            var legend = new StringBuilder();
             var capture = new Texture2D(2, 2, TextureFormat.RGB24, false);
             try
             {
@@ -101,19 +120,34 @@ namespace AF.Tests.PlayMode
                     yield return LoadStop(n);
                     GameScreen view = GameBootstrap.Current!.View!;
                     StopBackdrop b = view.StopBackdrop;
-                    Assert.That(b.Stop!.N, Is.EqualTo(n));
+                    RiverStop stop = b.Stop!;
+                    Assert.That(stop.N, Is.EqualTo(n));
                     string? shape = b.Shape;
-                    Assert.That(shape == null || !StopShapes.IsGeneric(shape), Is.True, "parada " + n + ": sin forma genérica");
+                    AssertOwnShape(n, stop.Backdrop, b, shape);
                     string name = "02f_board_stop_" + n.ToString("00", CultureInfo.InvariantCulture);
                     byte[] png = SnapshotKit.Capture();
                     File.WriteAllBytes(Path.Combine(dir, name + ".png"), png);
                     Assert.That(capture.LoadImage(png), Is.True, name);
                     Assert.That(capture.width, Is.EqualTo(SnapshotKit.Width), name);
                     Assert.That(capture.height, Is.EqualTo(SnapshotKit.Height), name);
-                    Paste(sheet, capture.GetPixels32(), capture.width, capture.height, n);
+
+                    // La banda del héroe: de 48 dp sobre el horizonte a 32 bajo él, y x de 40 a 320 dp.
+                    int top = Mathf.RoundToInt((view.HorizonY - StopBackdrop.HeroAboveDp) * CapturePxPerDp);
+                    int left = ((360 - CropWidthDp) / 2) * CapturePxPerDp;
+                    Assert.That(top, Is.GreaterThanOrEqualTo(0), name);
+                    Assert.That(top + (CropHeightDp * CapturePxPerDp), Is.LessThanOrEqualTo(SnapshotKit.Height), name);
+                    Paste(sheet, capture.GetPixels32(), capture.width, capture.height, n, left, top);
                     Label(sheet, n);
-                    Debug.Log("AF_STOP " + name + ": héroe " + b.HeroSource + " " + (shape ?? b.Code ?? "-") + ", "
-                        + view.LastStopProbe);
+                    if (Array.IndexOf(AdvisorStops, n) >= 0)
+                    {
+                        Border(sheet, n);
+                    }
+
+                    string entry = n.ToString("00", CultureInfo.InvariantCulture) + " " + stop.Id + " " + (shape ?? b.Code ?? "-")
+                        + (stop.Backdrop.Lut != null ? " (" + stop.Backdrop.Lut + ")" : string.Empty)
+                        + (Array.IndexOf(AdvisorStops, n) >= 0 ? " [asesor]" : string.Empty);
+                    legend.Append(entry).Append('\n');
+                    Debug.Log("AF_STOP " + name + ": héroe " + b.HeroSource + " " + (shape ?? b.Code ?? "-") + ", " + view.LastStopProbe);
                 }
 
                 // La reserva de la parada 15: la Casa de Fierro, en el mismo tablero (fuera de la hoja).
@@ -134,18 +168,39 @@ namespace AF.Tests.PlayMode
             string sheetPath = Path.Combine(dir, "02f_board_stops_sheet.png");
             File.WriteAllBytes(sheetPath, output.EncodeToPNG());
             Object.Destroy(output);
-            Debug.Log("AF_SHEET 02f_board_stops_sheet: " + (Columns * Rows) + " composiciones, " + SheetWidth + " x " + SheetHeight + " px");
+            Debug.Log("AF_SHEET 02f_board_stops_sheet: " + (Columns * Rows) + " composiciones, " + SheetWidth + " x " + SheetHeight
+                + " px; casilla " + TileWidth + " x " + TileHeight + " px (banda del héroe a 1,5 px/dp); borde ámbar = asesor obligatorio");
+            foreach (string line in legend.ToString().Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                Debug.Log("AF_SHEET " + line);
+            }
+
             Assert.That(File.Exists(sheetPath), Is.True);
             Assert.That(File.Exists(Path.Combine(dir, "02f_board_stop_19.png")), Is.True);
         }
 
-        // Carga el tablero de 2 filas del nivel 7 en el nivel 10n + 7 (parada n) y espera al fin de la intro.
+        // Toda parada con héroe pintado o con pieza del kit lleva su silueta propia (no genérica): «ninguna parada pintada usa una
+        // forma genérica» (M2.4). Solo las dos líneas entre aguas (codigo:) van sin silueta.
+        private static void AssertOwnShape(int n, RiverStopBackdrop backdrop, StopBackdrop b, string? shape)
+        {
+            bool kit = backdrop.Code != null && backdrop.Code.StartsWith("kit:", StringComparison.Ordinal);
+            if (backdrop.Hero != null || kit)
+            {
+                Assert.That(b.HeroSource, Is.EqualTo(StopBackdrop.HeroShape), "parada " + n + ": con su silueta");
+                Assert.That(shape, Is.Not.Null, "parada " + n);
+                Assert.That(StopShapes.IsGeneric(shape), Is.False, "parada " + n + ": sin forma genérica");
+                return;
+            }
+
+            bool code = backdrop.Code != null && backdrop.Code.StartsWith("codigo:", StringComparison.Ordinal);
+            Assert.That(code, Is.True, "parada " + n + ": solo las líneas entre aguas van sin silueta");
+            Assert.That(shape, Is.Null, "parada " + n);
+        }
+
+        // La parada n en su tablero de 2 filas, con la intro terminada.
         private static IEnumerator LoadStop(int n)
         {
-            int level = (10 * n) + 7;
-            int world = WorldTable.WorldOf(level);
-            LaunchOptions.LevelPackJsonOverride = PlayModeHelpers.Level7BoardPack(world, WorldIds[world], Waters[world], level);
-            yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore(level, level - 1));
+            yield return PlayModeHelpers.LoadStopBoard(n);
             GameBootstrap boot = GameBootstrap.Current!;
             SnapshotKit.Attach(boot);
             boot.TapAnywhere();
@@ -170,7 +225,7 @@ namespace AF.Tests.PlayMode
 
         /// <summary>
         /// Esquina superior izquierda (px, desde arriba) de la casilla <paramref name="index"/> de la hoja, por filas: la etiqueta
-        /// empieza ahí y la captura, <see cref="LabelHeight"/> px más abajo.
+        /// empieza ahí y la banda del héroe, <see cref="LabelHeight"/> px más abajo.
         /// </summary>
         public static Vector2Int TileOrigin(int index)
         {
@@ -179,18 +234,18 @@ namespace AF.Tests.PlayMode
             return new Vector2Int(Gutter + (col * (TileWidth + Gutter)), Gutter + (row * (LabelHeight + TileHeight + Gutter)));
         }
 
-        // Pega la franja de arriba de la captura (filas de abajo arriba, como las da Unity) reducida a la mitad, con la media de
-        // cada bloque de 2 × 2 px.
-        private static void Paste(Color32[] sheet, Color32[] src, int srcW, int srcH, int index)
+        // Pega la banda de la captura que empieza en (left, top) px desde arriba (las filas de la captura van de abajo arriba,
+        // como las da Unity) reducida a la mitad, con la media de cada bloque de 2 × 2 px.
+        private static void Paste(Color32[] sheet, Color32[] src, int srcW, int srcH, int index, int left, int top)
         {
             Vector2Int o = TileOrigin(index);
-            int top = o.y + LabelHeight;
+            int tileTop = o.y + LabelHeight;
             for (int ty = 0; ty < TileHeight; ty++)
             {
-                int sy = ty * Downscale;
+                int sy = top + (ty * Downscale);
                 for (int tx = 0; tx < TileWidth; tx++)
                 {
-                    int sx = tx * Downscale;
+                    int sx = left + (tx * Downscale);
                     int r = 0;
                     int g = 0;
                     int b = 0;
@@ -207,7 +262,28 @@ namespace AF.Tests.PlayMode
                     }
 
                     int count = Downscale * Downscale;
-                    SetTop(sheet, o.x + tx, top + ty, new Color32((byte)(r / count), (byte)(g / count), (byte)(b / count), 0xFF));
+                    SetTop(sheet, o.x + tx, tileTop + ty, new Color32((byte)(r / count), (byte)(g / count), (byte)(b / count), 0xFF));
+                }
+            }
+        }
+
+        // Borde ámbar de AdvisorBorder px alrededor de la casilla (etiqueta y banda), dentro del margen entre casillas.
+        private static void Border(Color32[] sheet, int index)
+        {
+            Vector2Int o = TileOrigin(index);
+            int x0 = o.x - AdvisorBorder;
+            int y0 = o.y - AdvisorBorder;
+            int x1 = o.x + TileWidth + AdvisorBorder;
+            int y1 = o.y + LabelHeight + TileHeight + AdvisorBorder;
+            for (int y = y0; y < y1; y++)
+            {
+                for (int x = x0; x < x1; x++)
+                {
+                    bool inside = x >= o.x && x < o.x + TileWidth && y >= o.y && y < o.y + LabelHeight + TileHeight;
+                    if (!inside)
+                    {
+                        SetTop(sheet, x, y, AdvisorInk);
+                    }
                 }
             }
         }

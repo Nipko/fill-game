@@ -119,6 +119,30 @@ AF_STATE {"event":"pour","t":5321,"level":3,"pour_mode":"run","phase":"PLAYING",
 - **Sondas previstas de la tanda 4** (Mapa del río, Frutas del río e idiomas; D-013, D-017, D-018 y D-023). Aún no existen: se fijan aquí para que las tareas que las escriben compartan el formato, y la que añada o cambie un campo lo anota aquí en su mismo PR. Salen solo en builds de desarrollo, como las demás (cada función con su parcial `DevProbe.<Función>.cs`), y son eventos de `AF_STATE` con los campos que se indican:
   - `stop` al aplicar el fondo de la parada en la carga de un nivel (fondos por parada; 07 §2.1): `level`, `stop` (la k de la parada), `id` (el id del sitio), `world`, `hero` (el héroe que se pinta, o null), `lut` (`dusk`, `dawn` o null), `water` (el `water_base` del mundo), `fade` (si hubo fundido de 250 ms: no en la primera carga ni con Reducir movimiento) y `build_ms` (lo que costó construirlo; presupuesto: ≤ 8 ms).
     - M1.4 (`GameScreen.Stop.cs`) la escribe con esos campos: `hero` es la ranura (`bg_hero_<sitio>`, con su PNG o su silueta provisional) o la pieza del kit (`kit:<pieza>`) que se pinta, y null sin héroe (las piezas por código de Santarém y el Encuentro, o en release sin PNG); `fade` es un booleano; `build_ms` mide en el hilo principal la composición y las mallas de sus gráficos (sin el lote del Canvas, que hace el motor al pintar). Campos añadidos: `hero_src` (`png`, `shape` o `none`), `shape` (la silueta de `StopShapes`: desde M2.4, la propia de cada sitio; o null), `code` (la pieza por código o del kit, o null) y `change` (`cut`, `fade` o `same`; `same` también cuando no hay parada ni antes ni después). Ejemplo: `{"event":"stop","t":1234,"level":91,"stop":9,"id":"leticia_atardecer","world":4,"hero":"bg_hero_leticia","lut":"dusk","water":"white","fade":false,"build_ms":0.31,"hero_src":"shape","shape":"leticia","code":null,"change":"cut"}`.
+    - Hoja de VA-20 (M2.4; direccion-visual-v2 §9): `StopSheetSnapshotTests` (explícito, con gráficos) es el único fixture que escribe las 20 composiciones `02f_board_stop_00`-`19` (pantalla completa, tablero de 2 filas del nivel 7 en el nivel `10k + 7`) y la hoja `02f_board_stops_sheet.png` de 5 × 4 que las reutiliza: de cada una, solo la banda del héroe (x de 40 a 320 dp; de 48 dp sobre el horizonte a 32 bajo él) a 1,5 px/dp, en casillas de 420 × 120 px con el número de la parada; borde ámbar (#E0A030) en las de asesor obligatorio. `StopSnapshotTests` (M1.4) solo escribe `02b_board_l1` y `02f_board_stop_15_l151`. La leyenda sale también en el log, en las líneas `AF_SHEET <nn> <id> <forma>`:
+
+      | n | id del sitio | forma | |
+      |---|---|---|---|
+      | 00 | belem | two_spires | |
+      | 01 | santarem | codigo:dos_aguas_clara_blanca | pieza por código |
+      | 02 | alter_do_chao | alter_do_chao | |
+      | 03 | flona_tapajos | flona_tapajos | |
+      | 04 | encontro | codigo:dos_aguas_negra_blanca | pieza por código |
+      | 05 | manaos | dome | |
+      | 06 | anavilhanas | anavilhanas | |
+      | 07 | tefe | lago_tefe | asesor obligatorio |
+      | 08 | leticia | leticia | |
+      | 09 | leticia_atardecer | leticia | `dusk` |
+      | 10 | amacayacu | amacayacu | |
+      | 11 | puerto_narino | puerto_narino | asesor obligatorio |
+      | 12 | tarapoto | tarapoto | |
+      | 13 | rio_frontera | beacon | pieza del kit |
+      | 14 | iquitos | iquitos | |
+      | 15 | itaya | rafts | asesor obligatorio; reserva `casa_de_fierro` en `02f_board_stop_15_reserva` |
+      | 16 | allpahuayo_mishana | allpahuayo | |
+      | 17 | nauta | orilla_de_nauta | pieza del kit |
+      | 18 | pacaya_samiria | pacaya_samiria | |
+      | 19 | pacaya_alba | pacaya_samiria | `dawn` |
   - `arrival` cuando empieza la franja de llegada en la victoria del `10k` (02 §6): `level`, `stop`, `id`, `fact_id` (la clave del dato de llegada, o null si la franja lleva solo la placa del lugar, como en los hitos en los que habla TiTino; D-022) y `welcome` (true con la bienvenida al país, en el 80 y el 140; D-023, P-M7).
   - `stop_arrive`, con los parámetros de `af_stop_arrive` (08 §8.2): `{"event":"stop_arrive","stop_id":"s02","world":2,"level":20,"view":"victory","skipped":false}`. `stop_id` es el id de parada `s{nn}` (glosario §11) y `view`, `victory` o `map` (al ponerse al día en el Mapa).
   - `river_fact_shown`, con los parámetros de `af_river_fact_shown` (08 §8.2), desde un solo punto, al salir de la victoria con Siguiente o Inicio: `{"event":"river_fact_shown","level":20,"fact_id":"map.stop.alter_do_chao.dato_01","dismissed_ms":4210}`. El `fact_id` es la clave del dato de llegada o, en la línea de fruta, `<tinte>.<kk>` (`acai.03`); `dismissed_ms`, el tiempo hasta el toque en Siguiente o, si se sale con Inicio, hasta el toque en Inicio. 08 §8.2 define el `dismissed_ms` del evento solo hasta «Siguiente»: la sonda mide también la salida con Inicio, y la tarea que dé de alta el evento real alinea 08 §8.2 o lo pregunta al dueño.

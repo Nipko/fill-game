@@ -158,7 +158,16 @@ namespace AF.Tests.EditMode
                 Assert.That(r.yMax, Is.LessThanOrEqualTo(StopShapes.RecognizableDp), shape + ": entera en los 30 dp que se ven con 2 filas");
                 Assert.That(r.yMin, Is.GreaterThanOrEqualTo(-StopBackdrop.HeroBelowDp), shape + ": ≤ 32 dp de orilla");
                 Assert.That(r.height, Is.LessThanOrEqualTo(StopBackdrop.HeroHeightDp), shape);
-                Assert.That(r.yMax, Is.GreaterThan(8f), shape + ": algo sobre el horizonte");
+                if (shape == StopShapes.Tarapoto)
+                {
+                    // Lo reconocible de Tarapoto está en el agua (los delfines); sobre el horizonte, solo la orilla baja.
+                    Assert.That(r.yMin, Is.LessThanOrEqualTo(-8f), shape + ": los lomos en el agua");
+                    Assert.That(r.yMax, Is.GreaterThanOrEqualTo(3f), shape + ": la orilla lejana");
+                }
+                else
+                {
+                    Assert.That(r.yMax, Is.GreaterThan(8f), shape + ": algo sobre el horizonte");
+                }
             }
 
             // Pintadas, a dos anchos: dentro de la caja del héroe, con el reflejo como mucho a 44 dp.
@@ -195,7 +204,7 @@ namespace AF.Tests.EditMode
                     }
                 }
 
-                // Solo los rectángulos llegan al borde (y se funden); copas, techos y cúpulas se quedan dentro.
+                // Solo los rectángulos llegan al borde (y se funden); copas, techos, cúpulas y playas fundidas se quedan dentro.
                 for (int p = 0; p < StopShapes.PrimitiveCount(shape); p++)
                 {
                     StopShapes.PrimitiveAt(shape, p, out int kind, out _, out Rect box);
@@ -227,23 +236,46 @@ namespace AF.Tests.EditMode
         [Test]
         public void FlonaTapajos_HasAnEvenCanopy_WithNoEmergentTree()
         {
-            // Sin samaúma (07 §8.1; propuesta del Mapa §10.3): ninguna copa sobresale del dosel.
+            // Sin samaúma (07 §8.1; propuesta del Mapa §10.3): ninguna copa sobresale del dosel. Revisión de M2.4: el barranco de
+            // tierra firme de 6-8 dp y, encima, el dosel continuo de 12-14 dp (un bloque de borde a borde), con el borde de arriba
+            // ondulado como mucho 1,5 dp y sin copas sueltas.
             float min = float.MaxValue;
             float max = float.MinValue;
             int crowns = 0;
+            bool bank = false;
+            bool canopy = false;
+            float canopyTop = 0f;
             for (int p = 0; p < StopShapes.PrimitiveCount(StopShapes.FlonaTapajos); p++)
             {
-                StopShapes.PrimitiveAt(StopShapes.FlonaTapajos, p, out int kind, out _, out Rect box);
+                StopShapes.PrimitiveAt(StopShapes.FlonaTapajos, p, out int kind, out int tone, out Rect box);
                 if (kind == StopShapes.KindDome)
                 {
                     crowns++;
                     min = Mathf.Min(min, box.yMax);
                     max = Mathf.Max(max, box.yMax);
+                    Assert.That(box.height, Is.LessThanOrEqualTo(1.5f), "primitiva " + p + ": ondulación del borde, no una copa suelta");
+                    continue;
+                }
+
+                bool fullWidth = kind == StopShapes.KindRect && box.xMin <= -120f && box.xMax >= 120f;
+                if (fullWidth && tone == StopShapes.ToneFeature)
+                {
+                    bank = true;
+                    Assert.That(box.height, Is.InRange(6f, 8f), "el barranco");
+                }
+
+                if (fullWidth && tone == StopShapes.ToneBody)
+                {
+                    canopy = true;
+                    canopyTop = box.yMax;
+                    Assert.That(box.height, Is.InRange(12f, 14f), "el dosel continuo");
                 }
             }
 
+            Assert.That(bank && canopy, Is.True, "barranco y dosel de borde a borde");
             Assert.That(crowns, Is.GreaterThanOrEqualTo(8));
             Assert.That(max - min, Is.LessThanOrEqualTo(3f), "dosel parejo");
+            Assert.That(min - canopyTop, Is.LessThanOrEqualTo(1.5f + 0.01f), "las ondas, sobre el borde del dosel");
             Assert.That(StopShapes.Bounds(StopShapes.FlonaTapajos).yMax, Is.EqualTo(max), "nada por encima del dosel");
         }
 
@@ -260,20 +292,253 @@ namespace AF.Tests.EditMode
         [Test]
         public void PuertoNarino_IsOnlyTheRiverMouth_WithoutTheTown()
         {
-            // 07 §2.1: asesor obligatorio (aldea identificable); hasta entonces, solo la boca del río: ni casas ni ventanas, y el
-            // hueco de la boca sin orilla delante.
+            // 07 §2.1: asesor obligatorio (aldea identificable); hasta entonces, solo la boca del río: ni casas ni ventanas, ni
+            // copas sueltas, y la boca abierta 50-60 dp, sin orilla delante, entre dos orillas en cuña. Lo claro es solo la lengua
+            // de agua, en la boca y a ras del horizonte (revisión de M2.4).
             bool mouthOpen = true;
+            int tongues = 0;
+            int wedges = 0;
             for (int p = 0; p < StopShapes.PrimitiveCount(StopShapes.PuertoNarino); p++)
             {
-                StopShapes.PrimitiveAt(StopShapes.PuertoNarino, p, out _, out int tone, out Rect box);
-                Assert.That(tone, Is.Not.EqualTo(StopShapes.ToneLight), "primitiva " + p + ": sin ventanas");
+                StopShapes.PrimitiveAt(StopShapes.PuertoNarino, p, out int kind, out int tone, out Rect box);
+                Assert.That(kind, Is.Not.EqualTo(StopShapes.KindDome), "primitiva " + p + ": sin copas sueltas");
+                if (tone == StopShapes.ToneLight)
+                {
+                    tongues++;
+                    Assert.That(kind, Is.EqualTo(StopShapes.KindTriangle), "primitiva " + p + ": la lengua de agua, no una ventana");
+                    Assert.That(box.yMin, Is.EqualTo(0f), "primitiva " + p);
+                    Assert.That(box.yMax, Is.LessThanOrEqualTo(2f), "primitiva " + p + ": 2 dp");
+                    Assert.That(box.xMin, Is.GreaterThanOrEqualTo(-30f), "primitiva " + p + ": en la boca");
+                    Assert.That(box.xMax, Is.LessThanOrEqualTo(30f), "primitiva " + p + ": en la boca");
+                }
+
                 if (tone == StopShapes.ToneShore || tone == StopShapes.ToneBody)
                 {
-                    mouthOpen &= box.xMax <= -4f || box.xMin >= 4f;
+                    mouthOpen &= box.xMax <= -25f || box.xMin >= 25f;
+                    wedges += kind == StopShapes.KindTriangle && tone == StopShapes.ToneBody ? 1 : 0;
                 }
             }
 
-            Assert.That(mouthOpen, Is.True, "la boca, abierta en el centro");
+            Assert.That(mouthOpen, Is.True, "la boca, abierta 50-60 dp en el centro");
+            Assert.That(tongues, Is.EqualTo(1), "la lengua de agua");
+            Assert.That(wedges, Is.EqualTo(2), "las dos orillas en cuña");
+        }
+
+        [Test]
+        public void Tarapoto_TheDolphinsStandOut_OverALowShore()
+        {
+            // Revisión de M2.4: los dos lomos, grandes (el rosado de 36 × 7 dp; el gris de 26 × 5, con su aleta de 6 dp), cada
+            // uno con su trazo de agua clara; la orilla lejana, solo una franja baja, sin copas.
+            float pinkWidth = 0f;
+            float greyWidth = 0f;
+            float finHeight = 0f;
+            int outlines = 0;
+            for (int p = 0; p < StopShapes.PrimitiveCount(StopShapes.Tarapoto); p++)
+            {
+                StopShapes.PrimitiveAt(StopShapes.Tarapoto, p, out int kind, out int tone, out Rect box);
+                if (tone == StopShapes.ToneShore || tone == StopShapes.ToneAccent || tone == StopShapes.ToneBody)
+                {
+                    Assert.That(kind, Is.EqualTo(StopShapes.KindRect), "primitiva " + p + ": la orilla, sin copas");
+                    Assert.That(box.yMax, Is.LessThanOrEqualTo(3.5f), "primitiva " + p + ": franja baja");
+                }
+
+                outlines += tone == StopShapes.ToneLight ? 1 : 0;
+                if (kind == StopShapes.KindDome && tone == StopShapes.ToneFeature)
+                {
+                    pinkWidth = box.width;
+                    Assert.That(box.height, Is.GreaterThanOrEqualTo(7f), "lomo rosado");
+                }
+
+                if (kind == StopShapes.KindDome && tone == StopShapes.ToneDetail)
+                {
+                    greyWidth = box.width;
+                    Assert.That(box.height, Is.GreaterThanOrEqualTo(5f), "lomo gris");
+                }
+
+                if (kind == StopShapes.KindTriangle && tone == StopShapes.ToneDetail)
+                {
+                    finHeight = box.height;
+                }
+            }
+
+            Assert.That(pinkWidth, Is.GreaterThanOrEqualTo(36f));
+            Assert.That(greyWidth, Is.GreaterThanOrEqualTo(26f));
+            Assert.That(finHeight, Is.GreaterThanOrEqualTo(6f), "la aleta");
+            Assert.That(outlines, Is.EqualTo(3), "el trazo de agua de los dos lomos y de la aleta");
+
+            // De color propio, que destaca sobre el agua: no pasan a contraluz.
+            foreach (int tone in new[] { StopShapes.ToneFeature, StopShapes.ToneDetail, StopShapes.ToneLight })
+            {
+                Assert.That(StopShapes.KeepsItsTone(StopShapes.Tarapoto, tone), Is.True);
+                Color lit = StopShapes.LitColor(StopShapes.Tarapoto, tone, Color.white, StopBackdrop.LutDusk);
+                Assert.That(lit, Is.EqualTo(StopShapes.ToneColor(StopShapes.Tarapoto, tone)), "tono " + tone);
+            }
+        }
+
+        [Test]
+        public void Beacon_StandsBetweenLowFloodplainShores_WithoutCrowns()
+        {
+            // Revisión de M2.4: las orillas de várzea, bajas (≤ 4 dp) y sin copas; solo la baliza sube.
+            for (int p = 0; p < StopShapes.PrimitiveCount(StopShapes.Beacon); p++)
+            {
+                StopShapes.PrimitiveAt(StopShapes.Beacon, p, out int kind, out int tone, out Rect box);
+                Assert.That(kind, Is.Not.EqualTo(StopShapes.KindDome), "primitiva " + p + ": sin copas");
+                if (tone == StopShapes.ToneShore || tone == StopShapes.ToneBody)
+                {
+                    Assert.That(box.yMax, Is.LessThanOrEqualTo(4f), "primitiva " + p + ": orilla baja");
+                }
+            }
+
+            Assert.That(StopShapes.Bounds(StopShapes.Beacon).yMax, Is.GreaterThan(20f), "la baliza");
+        }
+
+        [Test]
+        public void Rafts_EachHouseFloatsOnItsRaft_WithWaterBetween()
+        {
+            // Revisión de M2.4: cada casa sobre una balsa de troncos de 3-4 dp con 2 o 3 juntas claras de 0,8 dp, que baja 1 dp bajo
+            // el horizonte; entre balsa y balsa, al menos 8 dp de agua.
+            var rafts = new List<Rect>();
+            var joints = new List<Rect>();
+            int houses = 0;
+            for (int p = 0; p < StopShapes.PrimitiveCount(StopShapes.Rafts); p++)
+            {
+                StopShapes.PrimitiveAt(StopShapes.Rafts, p, out int kind, out int tone, out Rect box);
+                if (kind != StopShapes.KindRect)
+                {
+                    continue;
+                }
+
+                if (tone == StopShapes.ToneShore)
+                {
+                    rafts.Add(box);
+                }
+                else if (tone == StopShapes.ToneLight && box.yMin < 0f)
+                {
+                    joints.Add(box);
+                }
+                else if (tone == StopShapes.ToneBody)
+                {
+                    houses++;
+                    Assert.That(box.yMin, Is.GreaterThan(0f), "primitiva " + p + ": la casa, sobre su balsa");
+                }
+            }
+
+            Assert.That(houses, Is.GreaterThanOrEqualTo(4));
+            Assert.That(rafts.Count, Is.EqualTo(houses), "una balsa por casa");
+            rafts.Sort((a, b) => a.xMin.CompareTo(b.xMin));
+            for (int i = 0; i < rafts.Count; i++)
+            {
+                Rect r = rafts[i];
+                Assert.That(r.height, Is.InRange(3f, 4f), "balsa " + i);
+                Assert.That(r.yMin, Is.EqualTo(-1f), "balsa " + i + ": 1 dp bajo el horizonte");
+                if (i > 0)
+                {
+                    Assert.That(r.xMin - rafts[i - 1].xMax, Is.GreaterThanOrEqualTo(8f), "agua entre las balsas " + (i - 1) + " y " + i);
+                }
+
+                int inRaft = 0;
+                foreach (Rect j in joints)
+                {
+                    if (j.xMin > r.xMin && j.xMax < r.xMax)
+                    {
+                        inRaft++;
+                        Assert.That(j.width, Is.LessThanOrEqualTo(0.801f), "junta de la balsa " + i);
+                    }
+                }
+
+                Assert.That(inRaft, Is.InRange(2, 3), "juntas de la balsa " + i);
+            }
+        }
+
+        [Test]
+        public void Anavilhanas_Beaches_FadeAtTheirEnds()
+        {
+            // Revisión de M2.4: las playas, sin remates verticales: rectángulos fundidos en sus extremos y 1 dp más anchos que su
+            // isla a cada lado.
+            int beaches = 0;
+            for (int p = 0; p < StopShapes.PrimitiveCount(StopShapes.Anavilhanas); p++)
+            {
+                StopShapes.PrimitiveAt(StopShapes.Anavilhanas, p, out int kind, out int tone, out _);
+                if (tone == StopShapes.ToneShore)
+                {
+                    beaches++;
+                    Assert.That(kind, Is.EqualTo(StopShapes.KindSoftRect), "primitiva " + p);
+                }
+            }
+
+            Assert.That(beaches, Is.EqualTo(3));
+
+            // Pintadas sin reflejo: los vértices de los extremos de cada playa son transparentes.
+            StopShapeGraphic g = NewGraphic();
+            g.Clear();
+            Color sand = StopShapes.ToneColor(StopShapes.Anavilhanas, StopShapes.ToneShore);
+            Assert.That(StopShapes.Draw(g, StopShapes.Anavilhanas, FootX, Horizon, 1f, Color.white, null, sand, 0f, 0f), Is.True);
+            foreach (float end in new[] { -111f, -41f, -27f, 27f, 41f, 111f })
+            {
+                int found = 0;
+                for (int i = 0; i < g.VertexCount; i++)
+                {
+                    Color c = g.ColorAt(i);
+                    if (Mathf.Abs(g.PositionAt(i).x - (FootX + end)) < 0.01f && Mathf.Abs(c.r - sand.r) < 0.002f
+                        && Mathf.Abs(c.g - sand.g) < 0.002f && Mathf.Abs(c.b - sand.b) < 0.002f)
+                    {
+                        found++;
+                        Assert.That(c.a, Is.EqualTo(0f), "extremo " + end);
+                    }
+                }
+
+                Assert.That(found, Is.GreaterThanOrEqualTo(2), "extremo " + end);
+            }
+        }
+
+        [Test]
+        public void PacayaSamiria_TheCochaIsATranslucentBlackMirror_EvenAtDawn()
+        {
+            // Revisión de M2.4 (D-003: luz de juego): la cocha, 4 dp de agua negra al CochaAlpha con su brillo de 1 dp arriba, y
+            // los bordes fundidos en 28 dp; al alba sigue siendo agua y no una losa a contraluz.
+            string s = StopShapes.PacayaSamiria;
+            bool cocha = false;
+            bool shine = false;
+            for (int p = 0; p < StopShapes.PrimitiveCount(s); p++)
+            {
+                StopShapes.PrimitiveAt(s, p, out int kind, out int tone, out Rect box);
+                if (box.yMax <= 0f)
+                {
+                    Assert.That(tone == StopShapes.ToneFeature || tone == StopShapes.ToneLight, Is.True,
+                        "primitiva " + p + ": bajo el horizonte, solo el agua");
+                }
+
+                if (kind == StopShapes.KindRect && tone == StopShapes.ToneFeature)
+                {
+                    cocha = true;
+                    Assert.That(box.height, Is.EqualTo(4f), "la cocha");
+                }
+
+                if (kind == StopShapes.KindRect && tone == StopShapes.ToneLight)
+                {
+                    shine = true;
+                    Assert.That(box.height, Is.EqualTo(1f), "el brillo del espejo");
+                    Assert.That(box.yMax, Is.EqualTo(0f), "en el borde de arriba de la cocha");
+                }
+            }
+
+            Assert.That(cocha && shine, Is.True);
+            Assert.That(StopShapes.EdgeFadeOf(s), Is.EqualTo(28f));
+            Assert.That(StopShapes.EdgeFadeOf(StopShapes.Tarapoto), Is.EqualTo(StopShapes.EdgeFadeDp));
+            Assert.That(StopShapes.ToneAlpha(s, StopShapes.ToneFeature), Is.InRange(0.55f, 0.65f));
+            Color water = StopShapes.ToneColor(s, StopShapes.ToneFeature);
+            Color.RGBToHSV(water, out _, out _, out float v);
+            Assert.That(v, Is.LessThan(0.3f), "agua negra");
+            foreach (string light in new[] { StopBackdrop.LutDawn, StopBackdrop.LutDusk })
+            {
+                Color lit = StopShapes.LitColor(s, StopShapes.ToneFeature, Color.white, light);
+                Assert.That(new Color(lit.r, lit.g, lit.b, 1f), Is.EqualTo(water), light + ": la cocha, con su tono");
+                Assert.That(lit.a, Is.EqualTo(StopShapes.CochaAlpha), light);
+            }
+
+            // Los aguajes, en cambio, sí van a contraluz al alba.
+            Assert.That(StopShapes.LitColor(s, StopShapes.ToneBody, StopBackdrop.DawnLut, StopBackdrop.LutDawn), Is.EqualTo(StopShapes.DawnBody));
+            Assert.That(StopShapes.LitColor(s, StopShapes.ToneDetail, StopBackdrop.DawnLut, StopBackdrop.LutDawn), Is.EqualTo(StopShapes.DawnBody));
         }
 
         [Test]

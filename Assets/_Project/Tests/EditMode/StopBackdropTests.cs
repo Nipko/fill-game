@@ -543,7 +543,9 @@ namespace AF.Tests.EditMode
                 Assert.That(r.yMax, Is.LessThanOrEqualTo(StopShapes.MaxAboveDp), shape + ": ≤ 48 dp sobre el horizonte");
                 Assert.That(r.yMax, Is.LessThanOrEqualTo(StopShapes.RecognizableDp), shape + ": cabe en los 30 dp que se ven con 2 filas");
                 Assert.That(r.yMin, Is.GreaterThanOrEqualTo(-StopShapes.MaxBelowDp), shape + ": ≤ 32 dp de orilla");
-                Assert.That(r.yMax, Is.GreaterThan(8f), shape + ": algo sobre el horizonte");
+                // Algo que se vea: sobre el horizonte o, en Tarapoto (revisión de M2.4), los delfines en el agua.
+                bool visible = shape == StopShapes.Tarapoto ? r.yMin <= -8f : r.yMax > 8f;
+                Assert.That(visible, Is.True, shape + ": algo sobre el horizonte (o en el agua, en Tarapoto)");
             }
 
             foreach (float w in new[] { 360f, 432f })
@@ -849,8 +851,10 @@ namespace AF.Tests.EditMode
         public void TheSilhouetteBase_FadesInAtTheEdgesOfTheBox()
         {
             // Lo que llega al borde de la caja de 240 dp (el zócalo, la arena, el malecón, la selva lejana) entra con un degradado:
-            // ningún vértice de la silueta ni de su reflejo es opaco en el borde, y a los 16 dp ya lo es (M2.4: con las formas
-            // propias, la orilla no siempre es el tono que llega al borde, así que se mira todo vértice).
+            // ningún vértice de la silueta ni de su reflejo es opaco en el borde, y a los 16 dp (28 en la cocha de Pacaya-Samiria) ya
+            // lo es (M2.4: con las formas propias, la orilla no siempre es el tono que llega al borde, así que se mira todo vértice).
+            // Todas las paradas con silueta llegan a los dos bordes, sin excepción: desde la revisión de M2.4, también las balsas
+            // del Itaya, con su orilla lejana; una forma que se separe del borde hace fallar el test.
             int checkedStops = 0;
             for (int n = 0; n < Stops.Count; n++)
             {
@@ -879,21 +883,16 @@ namespace AF.Tests.EditMode
                         Assert.That(c.a, Is.EqualTo(0f), "parada " + n + ": sin arista vertical en el borde de la caja");
                     }
 
-                    inside |= Mathf.Abs(p.x - (left + StopShapes.EdgeFadeDp)) < 0.01f && c.a > 0.99f;
-                }
-
-                if (edgesLeft + edgesRight == 0)
-                {
-                    continue; // las balsas del Itaya no llegan a los bordes
+                    inside |= Mathf.Abs(p.x - (left + StopShapes.EdgeFadeOf(_b.Shape!))) < 0.01f && c.a > 0.99f;
                 }
 
                 checkedStops++;
-                Assert.That(edgesLeft, Is.GreaterThanOrEqualTo(2), "parada " + n + ": llega al borde izquierdo");
-                Assert.That(edgesRight, Is.GreaterThanOrEqualTo(2), "parada " + n + ": llega al borde derecho");
-                Assert.That(inside, Is.True, "parada " + n + ": opaco a los 16 dp del borde");
+                Assert.That(edgesLeft, Is.GreaterThanOrEqualTo(2), "parada " + n + " (" + _b.Shape + "): llega al borde izquierdo");
+                Assert.That(edgesRight, Is.GreaterThanOrEqualTo(2), "parada " + n + " (" + _b.Shape + "): llega al borde derecho");
+                Assert.That(inside, Is.True, "parada " + n + ": opaco al acabar el degradado del borde");
             }
 
-            Assert.That(checkedStops, Is.GreaterThanOrEqualTo(10));
+            Assert.That(checkedStops, Is.EqualTo(18), "las 20 paradas menos las dos líneas entre aguas");
         }
 
         [Test]

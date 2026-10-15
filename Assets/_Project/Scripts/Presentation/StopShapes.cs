@@ -28,7 +28,8 @@ namespace AF.Presentation
     /// direccion-visual-v2 §3.4; propuesta del Mapa §10.6): las agujas, la cúpula y la marca de la baliza no suben a la fila del
     /// HUD. Lo que llega al borde de la caja es un rectángulo que entra y sale con <see cref="EdgeFadeDp"/> dp de degradado; las
     /// copas, los techos y las cúpulas se quedan dentro. Sin personas, canastos, banderas, cuias ni canoas (VA-22); lo que está
-    /// bajo el horizonte es la orilla, el malecón, las lanchas sin nadie y, en Tarapoto, los lomos de delfín (07 §2.1).
+    /// bajo el horizonte es la orilla, el malecón, las lanchas sin nadie, el pie de las balsas del Itaya, la cocha de Pacaya-Samiria
+    /// y, en Tarapoto, los lomos de delfín (07 §2.1); el agua y lo que está en ella no pasan a contraluz (<see cref="KeepsItsTone"/>).
     /// <see cref="Draw"/> las pinta con su reflejo volteado en un <see cref="StopShapeGraphic"/>, sin asignar memoria.</para>
     /// <para>Reglas de cada sitio (07 §2.1 y §8.1; propuesta del Mapa §10.3): la Floresta Nacional, dosel parejo sin ningún árbol
     /// emergente (sin samaúma); el lago de Tefé, todo sobre el horizonte, sin botos ni orillas secas; Puerto Nariño, solo la boca
@@ -155,6 +156,21 @@ namespace AF.Presentation
         /// <summary>Degradado con el que entra y sale lo que llega a los bordes de la caja: el zócalo y la arena (dp) [P].</summary>
         public const float EdgeFadeDp = 16f;
 
+        /// <summary>
+        /// Degradado de los bordes de <see cref="PacayaSamiria"/> (dp) [P]: más largo, para que la cocha no se vea como un
+        /// rectángulo pegado (revisión de M2.4).
+        /// </summary>
+        public const float CochaEdgeFadeDp = 28f;
+
+        /// <summary>Opacidad de la cocha de agua negra de <see cref="PacayaSamiria"/>, que deja ver el reflejo [P].</summary>
+        public const float CochaAlpha = 0.6f;
+
+        /// <summary>Opacidad del brillo del espejo, el borde superior de la cocha [P].</summary>
+        public const float CochaShineAlpha = 0.6f;
+
+        /// <summary>Degradado de los extremos de una playa (<see cref="KindSoftRect"/>) en las Anavilhanas (dp) [P].</summary>
+        public const float BeachFadeDp = 4f;
+
         /// <summary>Cuerpo de la silueta a contraluz al atardecer (<c>dusk</c>) [P].</summary>
         public static readonly Color DuskBody = Palette.Hex(0x5E4A5C);
 
@@ -182,11 +198,18 @@ namespace AF.Presentation
         /// <summary>Primitiva cúpula: media elipse superior (cx, cy, rx, ry).</summary>
         public const int KindDome = 2;
 
+        /// <summary>
+        /// Primitiva rectángulo con los extremos fundidos: (x0, y0, x1, y1, fundido en dp), que entra y sale sin remate vertical
+        /// (las playas de las Anavilhanas).
+        /// </summary>
+        public const int KindSoftRect = 3;
+
         private const int Stride = 8;
         private const int DomeSegments = 12;
 
         // Primitivas: {tipo, tono, a, b, c, d, e, f}. Rectángulo (x0, y0, x1, y1); triángulo (x0, y0, x1, y1, x2, y2); cúpula =
-        // media elipse superior (cx, cy, rx, ry). x desde el pie, y hacia arriba desde el horizonte, en dp. En orden de dibujo.
+        // media elipse superior (cx, cy, rx, ry); rectángulo fundido (x0, y0, x1, y1, fundido). x desde el pie, y hacia arriba
+        // desde el horizonte, en dp. En orden de dibujo.
         private static readonly float[] TwoSpiresData =
         {
             0, ToneShore, -120, -4, 120, 2, 0, 0,
@@ -232,30 +255,24 @@ namespace AF.Presentation
             2, ToneDetail, 30, 3, 6, 3, 0, 0,
         };
 
-        // Floresta Nacional do Tapajós: la playa estrecha, el barranco de tierra firme y el dosel parejo, con copas de la misma
-        // altura y ningún árbol emergente (sin samaúma: 07 §8.1); sin comunidades ni madera cortada.
+        // Floresta Nacional do Tapajós: la playa estrecha, el barranco de tierra firme de 7 dp y, encima, el dosel parejo y
+        // continuo de 12 dp, un solo bloque con el borde de arriba apenas ondulado (1,5 dp) y sin copas sueltas ni ningún árbol
+        // emergente (sin samaúma: 07 §8.1); sin comunidades ni madera cortada.
         private static readonly float[] FlonaTapajosData =
         {
             0, ToneShore, -120, -2, 120, 1, 0, 0,
-            0, ToneFeature, -120, 1, 120, 7, 0, 0,
-            0, ToneBody, -120, 7, 120, 13, 0, 0,
-            2, ToneBody, -104, 12, 15, 7, 0, 0,
-            2, ToneBody, -78, 12, 15, 6, 0, 0,
-            2, ToneBody, -52, 12, 15, 7, 0, 0,
-            2, ToneBody, -26, 12, 15, 6, 0, 0,
-            2, ToneBody, 0, 12, 15, 7, 0, 0,
-            2, ToneBody, 26, 12, 15, 6, 0, 0,
-            2, ToneBody, 52, 12, 15, 7, 0, 0,
-            2, ToneBody, 78, 12, 15, 6, 0, 0,
-            2, ToneBody, 104, 12, 15, 7, 0, 0,
-            2, ToneAccent, -91, 11, 9, 5, 0, 0,
-            2, ToneAccent, -65, 11, 9, 5, 0, 0,
-            2, ToneAccent, -39, 11, 9, 5, 0, 0,
-            2, ToneAccent, -13, 11, 9, 5, 0, 0,
-            2, ToneAccent, 13, 11, 9, 5, 0, 0,
-            2, ToneAccent, 39, 11, 9, 5, 0, 0,
-            2, ToneAccent, 65, 11, 9, 5, 0, 0,
-            2, ToneAccent, 91, 11, 9, 5, 0, 0,
+            0, ToneFeature, -120, 1, 120, 8, 0, 0,
+            0, ToneBody, -120, 8, 120, 20, 0, 0,
+            2, ToneBody, -96, 20, 12, 1.5f, 0, 0,
+            2, ToneBody, -72, 20, 12, 1.5f, 0, 0,
+            2, ToneBody, -48, 20, 12, 1.5f, 0, 0,
+            2, ToneBody, -24, 20, 12, 1.5f, 0, 0,
+            2, ToneBody, 0, 20, 12, 1.5f, 0, 0,
+            2, ToneBody, 24, 20, 12, 1.5f, 0, 0,
+            2, ToneBody, 48, 20, 12, 1.5f, 0, 0,
+            2, ToneBody, 72, 20, 12, 1.5f, 0, 0,
+            2, ToneBody, 96, 20, 12, 1.5f, 0, 0,
+            0, ToneAccent, -120, 8, 120, 9.5f, 0, 0,
         };
 
         // La cúpula, lo reconocible, cabe entera (con su remate) en los 30 dp que se ven sobre el horizonte con 2 filas (07 §2.1).
@@ -282,17 +299,18 @@ namespace AF.Presentation
 
         // Anavilhanas: la orilla lejana con bruma y tres islas de selva escalonadas, cada una con su playa blanca; entre ellas, el
         // agua negra abierta (el espejo lo pone el reflejo).
+        // Las playas, 1 dp más anchas que su isla a cada lado, entran y salen con BeachFadeDp de degradado, sin remate vertical.
         private static readonly float[] AnavilhanasData =
         {
             0, ToneAccent, -120, 0, 120, 3, 0, 0,
             2, ToneAccent, -36, 2, 14, 4, 0, 0,
             2, ToneAccent, 34, 2, 12, 4, 0, 0,
-            0, ToneShore, -112, -2, -40, 1, 0, 0,
+            3, ToneShore, -111, -2, -41, 1, BeachFadeDp, 0,
             2, ToneBody, -76, 0, 34, 13, 0, 0,
             2, ToneFeature, -86, 8, 10, 4, 0, 0,
-            0, ToneShore, -30, -1, 30, 1, 0, 0,
+            3, ToneShore, -27, -1, 27, 1, BeachFadeDp, 0,
             2, ToneFeature, 0, 0, 26, 9, 0, 0,
-            0, ToneShore, 40, -2, 112, 1, 0, 0,
+            3, ToneShore, 41, -2, 111, 1, BeachFadeDp, 0,
             2, ToneBody, 76, 0, 34, 15, 0, 0,
             2, ToneFeature, 66, 9, 10, 5, 0, 0,
         };
@@ -385,54 +403,49 @@ namespace AF.Presentation
             2, ToneFeature, 70, 18, 7, 4, 0, 0,
         };
 
-        // Puerto Nariño, en su alternativa de 07 §2.1: solo la boca del Loretoyacu. Dos orillas de selva que bajan hacia la boca
-        // y, en el hueco, la selva lejana con bruma; sin el pueblo ni nada identificable (asesor obligatorio).
+        // Puerto Nariño, en su alternativa de 07 §2.1: solo la boca del Loretoyacu, abierta 56 dp. Dos orillas de selva en cuña
+        // que bajan hasta la boca y, en el hueco, la selva lejana con bruma y la lengua de agua clara (2 dp) que entra hasta el
+        // horizonte; sin copas sueltas, sin el pueblo ni nada identificable (asesor obligatorio).
         private static readonly float[] PuertoNarinoData =
         {
-            0, ToneFeature, -30, 0, 30, 4, 0, 0,
-            0, ToneShore, -120, -2, -14, 0, 0, 0,
-            0, ToneShore, 14, -2, 120, 0, 0, 0,
-            0, ToneBody, -120, 0, -18, 10, 0, 0,
-            1, ToneBody, -18, 0, -18, 10, -6, 0,
-            2, ToneAccent, -104, 9, 15, 7, 0, 0,
-            2, ToneAccent, -80, 9, 14, 8, 0, 0,
-            2, ToneAccent, -56, 9, 15, 6, 0, 0,
-            2, ToneAccent, -34, 8, 12, 6, 0, 0,
-            0, ToneBody, 18, 0, 120, 12, 0, 0,
-            1, ToneBody, 18, 0, 18, 12, 6, 0,
-            2, ToneAccent, 34, 11, 13, 7, 0, 0,
-            2, ToneAccent, 58, 11, 15, 8, 0, 0,
-            2, ToneAccent, 82, 11, 14, 7, 0, 0,
-            2, ToneAccent, 104, 11, 14, 6, 0, 0,
+            0, ToneFeature, -40, 0, 40, 5, 0, 0,
+            1, ToneLight, -28, 0, 28, 0, 0, 2,
+            0, ToneShore, -120, -2, -30, 0, 0, 0,
+            0, ToneShore, 30, -2, 120, 0, 0, 0,
+            0, ToneBody, -120, 0, -64, 12, 0, 0,
+            1, ToneBody, -64, 0, -64, 12, -28, 0,
+            0, ToneAccent, -120, 0, -64, 3, 0, 0,
+            1, ToneAccent, -64, 0, -64, 3, -46, 0,
+            0, ToneBody, 64, 0, 120, 14, 0, 0,
+            1, ToneBody, 64, 0, 64, 14, 28, 0,
+            0, ToneAccent, 64, 0, 120, 3, 0, 0,
+            1, ToneAccent, 64, 0, 64, 3, 46, 0,
         };
 
-        // Lagos de Tarapoto: el lago quieto con la orilla lejana baja y, en el agua, un lomo de delfín rosado y otro gris con su
-        // aleta (07 §2.1; las victorias regias, lejos del panel: aquí no hay).
+        // Lagos de Tarapoto: el lago quieto con solo una franja baja de orilla lejana (3,5 dp, sin copas) y, en el agua, lo único
+        // que destaca: un lomo de delfín rosado y otro gris con su aleta de 6 dp, cada uno con un trazo claro de agua de 1 dp
+        // alrededor (07 §2.1; las victorias regias, lejos del panel: aquí no hay).
         private static readonly float[] TarapotoData =
         {
             0, ToneShore, -120, 0, 120, 3.5f, 0, 0,
-            2, ToneAccent, -100, 3, 16, 6, 0, 0,
-            2, ToneAccent, -70, 3, 14, 5, 0, 0,
-            2, ToneAccent, -40, 3, 16, 7, 0, 0,
-            2, ToneAccent, -8, 3, 14, 5, 0, 0,
-            2, ToneAccent, 24, 3, 16, 7, 0, 0,
-            2, ToneAccent, 56, 3, 14, 5, 0, 0,
-            2, ToneAccent, 88, 3, 16, 6, 0, 0,
-            2, ToneFeature, -44, -15, 11, 4, 0, 0,
-            2, ToneDetail, 34, -10, 8, 3, 0, 0,
-            1, ToneDetail, 31, -7.4f, 36, -7.4f, 32, -3.6f,
+            2, ToneLight, -44, -9, 19, 8, 0, 0,
+            2, ToneFeature, -44, -9, 18, 7, 0, 0,
+            2, ToneLight, 34, -7, 14, 6, 0, 0,
+            1, ToneLight, 29.6f, -4.5f, 38.4f, -4.5f, 33, 3.2f,
+            2, ToneDetail, 34, -7, 13, 5, 0, 0,
+            1, ToneDetail, 31, -4, 37, -4, 33, 2,
         };
 
+        // El río frontera (solo kit): la baliza de franjas en el río ancho entre dos orillas de várzea bajas (≤ 4 dp, sin copas),
+        // que se afinan en cuña hacia el centro.
         private static readonly float[] BeaconData =
         {
-            0, ToneShore, -120, 0, -36, 4, 0, 0,
-            0, ToneShore, 20, 0, 120, 3, 0, 0,
-            2, ToneBody, -104, 3, 14, 7, 0, 0,
-            2, ToneBody, -80, 3, 12, 8, 0, 0,
-            2, ToneBody, -56, 3, 14, 6, 0, 0,
-            2, ToneBody, 44, 2, 14, 7, 0, 0,
-            2, ToneBody, 72, 2, 12, 8, 0, 0,
-            2, ToneBody, 98, 2, 14, 6, 0, 0,
+            0, ToneShore, -120, -1, -40, 0.6f, 0, 0,
+            0, ToneShore, 26, -1, 120, 0.6f, 0, 0,
+            0, ToneBody, -120, 0, -56, 4, 0, 0,
+            1, ToneBody, -56, 0, -56, 4, -38, 0,
+            1, ToneBody, 28, 0, 46, 3.5f, 46, 0,
+            0, ToneBody, 46, 0, 120, 3.5f, 0, 0,
             0, ToneAccent, -16, -3, 4, 1, 0, 0,
             0, ToneAccent, -8, 0, -4, 18, 0, 0,
             0, ToneFeature, -10, 6, -2, 9, 0, 0,
@@ -480,31 +493,41 @@ namespace AF.Presentation
             0, ToneAccent, 40, -3, 74, -2, 0, 0,
         };
 
+        // La creciente del Itaya: la orilla lejana baja y, delante, cinco casas, cada una sobre su balsa de troncos (3,5 dp, con
+        // juntas claras) que baja 1 dp bajo el horizonte para que el reflejo la toque, separadas por 10 dp de agua.
         private static readonly float[] RaftsData =
         {
-            2, ToneFeature, -88, 0, 28, 9, 0, 0,
-            2, ToneFeature, -30, 0, 34, 8, 0, 0,
-            2, ToneFeature, 40, 0, 36, 10, 0, 0,
-            2, ToneFeature, 96, 0, 20, 8, 0, 0,
-            0, ToneShore, -104, -3, -64, 0, 0, 0,
-            0, ToneBody, -101, 0, -67, 12, 0, 0,
-            1, ToneAccent, -104, 12, -64, 12, -84, 20,
-            0, ToneLight, -87, 3, -81, 8, 0, 0,
-            0, ToneShore, -56, -3, -18, 0, 0, 0,
-            0, ToneBody, -53, 0, -21, 15, 0, 0,
-            1, ToneAccent, -56, 15, -18, 15, -37, 23,
-            0, ToneLight, -40, 4, -34, 9, 0, 0,
-            0, ToneShore, -8, -3, 30, 0, 0, 0,
-            0, ToneBody, -5, 0, 27, 13, 0, 0,
-            1, ToneAccent, -8, 13, 30, 13, 11, 21,
-            0, ToneLight, 8, 3, 14, 8, 0, 0,
-            0, ToneShore, 40, -3, 82, 0, 0, 0,
-            0, ToneBody, 43, 0, 79, 16, 0, 0,
-            1, ToneAccent, 40, 16, 82, 16, 61, 24,
-            0, ToneLight, 58, 4, 64, 9, 0, 0,
-            0, ToneShore, 88, -3, 116, 0, 0, 0,
-            0, ToneBody, 91, 0, 113, 11, 0, 0,
-            1, ToneAccent, 88, 11, 116, 11, 102, 18,
+            0, ToneFeature, -120, 0, 120, 4.5f, 0, 0,
+            0, ToneShore, -106, -1, -68, 2.5f, 0, 0,
+            0, ToneLight, -94.4f, -1, -93.6f, 2.5f, 0, 0,
+            0, ToneLight, -80.4f, -1, -79.6f, 2.5f, 0, 0,
+            0, ToneBody, -104, 2.5f, -70, 14.5f, 0, 0,
+            1, ToneAccent, -107, 14.5f, -67, 14.5f, -87, 22.5f,
+            0, ToneLight, -90, 5.5f, -84, 10.5f, 0, 0,
+            0, ToneShore, -58, -1, -22, 2.5f, 0, 0,
+            0, ToneLight, -46.4f, -1, -45.6f, 2.5f, 0, 0,
+            0, ToneLight, -34.4f, -1, -33.6f, 2.5f, 0, 0,
+            0, ToneBody, -56, 2.5f, -24, 17.5f, 0, 0,
+            1, ToneAccent, -59, 17.5f, -21, 17.5f, -40, 25.5f,
+            0, ToneLight, -43, 6.5f, -37, 11.5f, 0, 0,
+            0, ToneShore, -12, -1, 26, 2.5f, 0, 0,
+            0, ToneLight, 0.6f, -1, 1.4f, 2.5f, 0, 0,
+            0, ToneLight, 12.6f, -1, 13.4f, 2.5f, 0, 0,
+            0, ToneBody, -10, 2.5f, 24, 15.5f, 0, 0,
+            1, ToneAccent, -13, 15.5f, 27, 15.5f, 7, 23.5f,
+            0, ToneLight, 4, 5.5f, 10, 10.5f, 0, 0,
+            0, ToneShore, 36, -1, 76, 2.5f, 0, 0,
+            0, ToneLight, 45.6f, -1, 46.4f, 2.5f, 0, 0,
+            0, ToneLight, 55.6f, -1, 56.4f, 2.5f, 0, 0,
+            0, ToneLight, 65.6f, -1, 66.4f, 2.5f, 0, 0,
+            0, ToneBody, 38, 2.5f, 74, 18.5f, 0, 0,
+            1, ToneAccent, 35, 18.5f, 77, 18.5f, 56, 26.5f,
+            0, ToneLight, 53, 6.5f, 59, 11.5f, 0, 0,
+            0, ToneShore, 86, -1, 114, 2.5f, 0, 0,
+            0, ToneLight, 94.6f, -1, 95.4f, 2.5f, 0, 0,
+            0, ToneLight, 104.6f, -1, 105.4f, 2.5f, 0, 0,
+            0, ToneBody, 88, 2.5f, 112, 13.5f, 0, 0,
+            1, ToneAccent, 85, 13.5f, 115, 13.5f, 100, 20.5f,
         };
 
         // La Casa de Fierro (reserva de la parada 15): dos pisos de hierro con balcón corrido, baranda y ventanas altas, cornisa y
@@ -619,21 +642,17 @@ namespace AF.Presentation
         };
 
         // Pacaya-Samiria: la selva lejana, seis aguajes (tronco fino, copa redonda con abanico) y, bajo el horizonte, la cocha de
-        // agua negra como espejo con la selva y los troncos reflejados (el primer plano es el agua blanca del mundo 5).
+        // agua negra como espejo: 4 dp de agua al CochaAlpha, que deja ver el reflejo de la selva y los troncos, con el brillo
+        // del espejo en su borde de arriba y los bordes fundidos en CochaEdgeFadeDp (el primer plano es el agua blanca del
+        // mundo 5). Con el alba, la cocha y su brillo no pasan a contraluz (KeepsItsTone).
         private static readonly float[] PacayaSamiriaData =
         {
             0, ToneAccent, -120, 0, 120, 6, 0, 0,
             2, ToneAccent, -104, 5, 14, 4, 0, 0,
             2, ToneAccent, -12, 5, 14, 4, 0, 0,
             2, ToneAccent, 104, 5, 12, 4, 0, 0,
-            0, ToneShore, -120, -10, 120, 0, 0, 0,
-            0, ToneFeature, -120, -6, 120, 0, 0, 0,
-            0, ToneDetail, -88.8f, -10, -87.2f, 0, 0, 0,
-            0, ToneDetail, -58.8f, -10, -57.2f, 0, 0, 0,
-            0, ToneDetail, -30.8f, -10, -29.2f, 0, 0, 0,
-            0, ToneDetail, 13.2f, -10, 14.8f, 0, 0, 0,
-            0, ToneDetail, 45.2f, -10, 46.8f, 0, 0, 0,
-            0, ToneDetail, 83.2f, -10, 84.8f, 0, 0, 0,
+            0, ToneFeature, -120, -4, 120, 0, 0, 0,
+            0, ToneLight, -120, -1, 120, 0, 0, 0,
             0, ToneDetail, -88.8f, 0, -87.2f, 18, 0, 0,
             2, ToneBody, -88, 17, 5, 4, 0, 0,
             1, ToneBody, -89, 18, -98, 13, -96, 17,
@@ -735,21 +754,21 @@ namespace AF.Presentation
         // sin el turquesa caribeño ni banderas (guía §7; VA-22).
         private static readonly int[] DefaultTones = { 0x8291A2, 0x667386, 0xF2E6C8, 0x8E7C5E, 0x8291A2, 0x8291A2 };
         private static readonly int[] AlterDoChaoTones = { 0x4F8E5C, 0x6E9C7C, 0xF2E6C8, 0xEFE4C6, 0x62A06C, 0x5A9462 };
-        private static readonly int[] FlonaTapajosTones = { 0x4C8758, 0x3F774B, 0xF2E6C8, 0xE6D4A8, 0xB98A5C, 0x5E9D66 };
+        private static readonly int[] FlonaTapajosTones = { 0x4C8758, 0x3F774B, 0xF2E6C8, 0xE6D4A8, 0xA9744E, 0x5E9D66 };
         private static readonly int[] DomeTones = { 0x8291A2, 0x667386, 0xF2E6C8, 0x8E7C5E, 0xC8B04E, 0xC8B04E };
         private static readonly int[] AnavilhanasTones = { 0x4A8A58, 0x6E9C7C, 0xF2E6C8, 0xF1E8D0, 0x57966A, 0x57966A };
         private static readonly int[] LagoTefeTones = { 0x8A97A6, 0x4E7E58, 0xF2E6C8, 0x5E8E66, 0x6E8296, 0x6E8296 };
         private static readonly int[] LeticiaTones = { 0x9AA6B4, 0x6A7686, 0xF2E6C8, 0xCFC6B2, 0x5E9D66, 0x5E9D66 };
         private static readonly int[] AmacayacuTones = { 0x4E8A58, 0x6E5E4A, 0xF2E6C8, 0x6F8A62, 0x66A46E, 0x66A46E };
         private static readonly int[] PuertoNarinoTones = { 0x4C8A58, 0x40784C, 0xF2E6C8, 0xD8C8A0, 0x7AA286, 0x7AA286 };
-        private static readonly int[] TarapotoTones = { 0x5E8E66, 0x4E7E58, 0xF2E6C8, 0x5E8E66, 0xD69A98, 0x8A929A };
+        private static readonly int[] TarapotoTones = { 0x5E8E66, 0x4E7E58, 0xF4E6DA, 0x5E8E66, 0xE59AA8, 0x8A96A0 };
         private static readonly int[] BeaconTones = { 0x568A60, 0x66717F, 0xF2E6C8, 0x8F8C6C, 0xD45A44, 0xD45A44 };
         private static readonly int[] IquitosTones = { 0x9AA2AE, 0x7A6656, 0xF2E6C8, 0xCFC6B2, 0x5A7E8C, 0xC0584A };
-        private static readonly int[] RaftsTones = { 0xA58566, 0x74604C, 0xF2E6C8, 0x7E6650, 0x5A8A62, 0x5A8A62 };
+        private static readonly int[] RaftsTones = { 0xA58566, 0x74604C, 0xF2E6C8, 0x7A5A3C, 0x7FA488, 0x5A8A62 };
         private static readonly int[] CasaDeFierroTones = { 0x8C98A6, 0x5F6B78, 0xF2E6C8, 0xCFC6B2, 0xC9B48E, 0xB0704E };
         private static readonly int[] AllpahuayoTones = { 0x5C9466, 0x6E9C7C, 0xF2E6C8, 0xF0EADB, 0x4A3426, 0x8E7E66 };
         private static readonly int[] NautaTones = { 0xA5AEB8, 0x7A9A80, 0xF2E6C8, 0x86A08A, 0xA5AEB8, 0xA5AEB8 };
-        private static readonly int[] PacayaSamiriaTones = { 0x4E8C5A, 0x5E8E68, 0xF2E6C8, 0x4C3828, 0x3F5A40, 0x84705A };
+        private static readonly int[] PacayaSamiriaTones = { 0x4E8C5A, 0x5E8E68, 0xD8D2C0, 0x4C3828, 0x424234, 0x84705A };
         private static readonly int[] GenericNatureTones = { 0x548E5F, 0x437A4E, 0xF2E6C8, 0xE6D4A8, 0x5E9D66, 0x5E9D66 };
         private static readonly int[] GenericWaterTones = { 0x568A60, 0x467852, 0xF2E6C8, 0x8A9670, 0x5E9D66, 0x5E9D66 };
 
@@ -897,13 +916,14 @@ namespace AF.Presentation
         /// cálida, no un gris de pizarra apagado): el cuerpo y lo propio de la forma en <see cref="DuskBody"/> o
         /// <see cref="DawnBody"/> y los remates en <see cref="DuskAccent"/> o <see cref="DawnAccent"/>; al atardecer, las ventanas
         /// encendidas en <see cref="DuskWindow"/> al <see cref="DuskWindowAlpha"/>. La orilla y las ventanas del alba siguen con la
-        /// luz multiplicada.
+        /// luz multiplicada, y también el agua y lo que está en ella (<see cref="KeepsItsTone"/>): no son silueta. La opacidad es
+        /// la del tono (<see cref="ToneAlpha"/>).
         /// </summary>
         public static Color LitColor(string shape, int tone, Color lut, string? light)
         {
             bool dusk = light == StopBackdrop.LutDusk;
             bool dawn = light == StopBackdrop.LutDawn;
-            if (dusk || dawn)
+            if ((dusk || dawn) && !KeepsItsTone(shape, tone))
             {
                 switch (tone)
                 {
@@ -925,7 +945,65 @@ namespace AF.Presentation
                 }
             }
 
-            return Lut(ToneColor(shape, tone), lut);
+            Color c = Lut(ToneColor(shape, tone), lut);
+            c.a = ToneAlpha(shape, tone);
+            return c;
+        }
+
+        /// <summary>
+        /// Si el tono <paramref name="tone"/> de <paramref name="shape"/> es agua o está en el agua, y no pasa a contraluz al
+        /// atardecer ni al alba (revisión de M2.4; D-003: luz de juego): la cocha y su brillo en <see cref="PacayaSamiria"/>, y
+        /// los dos delfines y su trazo de agua en <see cref="Tarapoto"/>. La orilla (<see cref="ToneShore"/>) nunca pasa.
+        /// </summary>
+        public static bool KeepsItsTone(string shape, int tone)
+        {
+            if (tone == ToneShore)
+            {
+                return true;
+            }
+
+            if (shape == PacayaSamiria)
+            {
+                return tone == ToneFeature || tone == ToneLight;
+            }
+
+            if (shape == Tarapoto)
+            {
+                return tone == ToneFeature || tone == ToneDetail || tone == ToneLight;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Opacidad del tono <paramref name="tone"/> de <paramref name="shape"/> [P]: la cocha de <see cref="PacayaSamiria"/> va
+        /// al <see cref="CochaAlpha"/> y su brillo al <see cref="CochaShineAlpha"/>, para que se vea el reflejo; todo lo demás, opaco.
+        /// </summary>
+        public static float ToneAlpha(string shape, int tone)
+        {
+            if (shape == PacayaSamiria)
+            {
+                if (tone == ToneFeature)
+                {
+                    return CochaAlpha;
+                }
+
+                if (tone == ToneLight)
+                {
+                    return CochaShineAlpha;
+                }
+            }
+
+            return 1f;
+        }
+
+        /// <summary>
+        /// Degradado con el que entra y sale lo que llega a los bordes de la caja en <paramref name="shape"/> (dp):
+        /// <see cref="CochaEdgeFadeDp"/> en <see cref="PacayaSamiria"/> y <see cref="EdgeFadeDp"/> en las demás.
+        /// </summary>
+        public static float EdgeFadeOf(string shape)
+        {
+            return shape == PacayaSamiria ? CochaEdgeFadeDp : EdgeFadeDp;
         }
 
         /// <summary>
@@ -947,20 +1025,21 @@ namespace AF.Presentation
                 return false;
             }
 
+            float edgeFade = EdgeFadeOf(shape);
             if (reflectionAlpha > 0f && reflectionDp > 0f)
             {
                 for (int p = 0; p < data.Length; p += Stride)
                 {
                     Color lit = LitColor(shape, (int)data[p + 1], lut, light);
                     Color c = Color.Lerp(lit, water, 0.5f);
-                    EmitPrimitive(g, data, p, footX, horizon, k, c, true, reflectionAlpha * lit.a, reflectionDp);
+                    EmitPrimitive(g, data, p, footX, horizon, k, c, true, reflectionAlpha * lit.a, reflectionDp, edgeFade);
                 }
             }
 
             for (int p = 0; p < data.Length; p += Stride)
             {
                 Color c = LitColor(shape, (int)data[p + 1], lut, light);
-                EmitPrimitive(g, data, p, footX, horizon, k, c, false, c.a, 0f);
+                EmitPrimitive(g, data, p, footX, horizon, k, c, false, c.a, 0f, edgeFade);
             }
 
             return true;
@@ -999,12 +1078,12 @@ namespace AF.Presentation
 
         // Una primitiva: tal cual o, con mirror, su parte de sobre el horizonte volteada bajo él, con la opacidad del reflejo
         // decreciente con la profundidad y recortada a depth dp (a escala k). alpha es su opacidad (en el reflejo, en la línea
-        // del agua).
+        // del agua); edgeFade, el degradado de lo que llega a los bordes de la caja.
         private static void EmitPrimitive(StopShapeGraphic g, float[] d, int p, float footX, float horizon, float k, Color c,
-            bool mirror, float alpha, float depth)
+            bool mirror, float alpha, float depth, float edgeFade)
         {
             int kind = (int)d[p];
-            if (kind == KindRect)
+            if (kind == KindRect || kind == KindSoftRect)
             {
                 float x0 = d[p + 2];
                 float y0 = d[p + 3];
@@ -1020,12 +1099,15 @@ namespace AF.Presentation
                     y0 = Mathf.Max(0f, y0);
                 }
 
-                // Lo que llega a un borde de la caja (el zócalo, la arena) se funde en EdgeFadeDp dp.
+                // Lo que llega a un borde de la caja (el zócalo, la arena) se funde en edgeFade dp; un rectángulo fundido, en sus
+                // dos extremos, con su propio degradado.
                 const float half = WidthDp * 0.5f;
-                bool fadeLeft = x0 <= -half + 0.01f;
-                bool fadeRight = x1 >= half - 0.01f;
-                float xa = fadeLeft ? x0 + EdgeFadeDp : x0;
-                float xb = fadeRight ? x1 - EdgeFadeDp : x1;
+                bool soft = kind == KindSoftRect;
+                bool fadeLeft = soft || x0 <= -half + 0.01f;
+                bool fadeRight = soft || x1 >= half - 0.01f;
+                float fade = soft ? d[p + 6] : edgeFade;
+                float xa = fadeLeft ? x0 + fade : x0;
+                float xb = fadeRight ? x1 - fade : x1;
                 if ((fadeLeft || fadeRight) && xb > xa)
                 {
                     if (fadeLeft)
