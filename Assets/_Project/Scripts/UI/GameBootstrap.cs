@@ -903,6 +903,10 @@ namespace AF.UI
 
         private bool InLevel => _app == null || _app.Screen == AppScreen.Level;
 
+        // Hay una pantalla de pago delante: la hoja «Compra simulada» o un anuncio (y lo que lo rodea; propuesta del personaje
+        // d.11). Las ofertas que vengan (Mochila de inicio, Mercado) se suman aquí. Sin asignar memoria.
+        private bool CommerceOpen => (_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible);
+
         // Lote de guardado de una acción del jugador: el perfil se escribe una vez al cerrarlo (revisión B2-5); sin lote, nada.
         private ProfileSaveScope Saves()
         {
@@ -1050,8 +1054,9 @@ namespace AF.UI
             Fauna = LoadFauna();
             _screen.Fauna = Fauna; // la especie de miquito de cada intro (guion de la intro §4.3)
             RiverStops = LoadRiverStops(riverStops);
-            _screen.RiverStops = RiverStops; // paradas del Mapa del río (D-013; sin uso visible todavía)
+            _screen.RiverStops = RiverStops; // paradas del Mapa del río (D-013): fondo, llegada y rótulo del lugar
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => PressSettings(), () => PressBack(), this);
+            _lobby.RiverStops = RiverStops; // el sitio, «Faltan N» y la ventanita de casa en el inicio (M2.1)
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), () => CloseSettings());
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
@@ -1147,6 +1152,7 @@ namespace AF.UI
             if (_app.Screen != AppScreen.Level)
             {
                 _app.RefreshNoCanoes();
+                _lobby?.SetCommerceOpen(CommerceOpen); // la ventanita de casa no sale en pantallas de pago (M2.1; D-013, punto 6)
                 _lobby?.Tick(dt);
                 return;
             }

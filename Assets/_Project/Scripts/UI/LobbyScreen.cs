@@ -28,6 +28,19 @@ namespace AF.UI
     /// Encima, cuando toca, «El río sigue creciendo» (06 §9) o Sin canoas (04 §7.3, con sus opciones desde B2-3:
     /// <see cref="NoCanoesPanel"/>). Lienzo de 360 dp de ancho y al menos 640 de alto. Los contadores se actualizan solo al cambiar
     /// y sin asignar memoria (08 §5.4).
+    /// <para>Mapa del río en el inicio (D-013, punto 6, Q17-A; 06 §4.7; tarea M2.1), con el catálogo de paradas que le pasa
+    /// <see cref="GameBootstrap"/> (<see cref="RiverStops"/>; sin él, todo como antes):</para>
+    /// <list type="bullet">
+    /// <item><description><b>el sitio</b>: su propio <see cref="AF.Presentation.StopBackdrop"/> con la parada de «Jugar»
+    /// (<see cref="RiverStopCatalog.StopOf"/> de <see cref="AppFlow.PlayLevel"/>; el mismo fondo que el tablero de ese nivel,
+    /// <see cref="GameScreen.StopForLevel"/>), con su luz sobre el panorama y corte directo al cambiar de nivel;</description></item>
+    /// <item><description><b>«Faltan {n} niveles para {lugar}»</b> (<c>map_stop_remaining</c>, con el plural de la tabla) bajo
+    /// «Jugar», en Nunito Bold de <see cref="StopRemainingSp"/> sp sobre madera, hacia la parada siguiente; se arma solo al
+    /// cambiar de nivel y no sale con el fin de contenido, con Sin canoas ni si esa parada no está en el catálogo;</description></item>
+    /// <item><description><b>la ventanita de casa</b> (<see cref="HomeWindow"/>): el único sitio de TiTino en el inicio, a la
+    /// izquierda bajo los saldos [P], sin tapar Ajustes, los saldos ni «Jugar»; se oculta con Sin canoas y con la hoja de compra o
+    /// una oferta delante (<see cref="SetCommerceOpen"/>; propuesta del personaje g.2 y d.11).</description></item>
+    /// </list>
     /// </summary>
     public sealed class LobbyScreen
     {
@@ -52,6 +65,14 @@ namespace AF.UI
         private const float OverlayPanelHeight = 236f;
         private const float MaxHorizonDp = 200f;
         private const float RiverPropsMinBandDp = 56f;
+        private const float RemainingGapDp = 8f;
+        private const float RemainingPadDp = 12f;
+        private const float RemainingLineDp = 28f;
+        private const float HomeWindowGapDp = 8f;
+        private const float SideGutterDp = 16f;
+
+        /// <summary>Cuerpo (sp) de «Faltan {n} niveles para {lugar}» bajo «Jugar» (M2.1), en Nunito Bold.</summary>
+        public const float StopRemainingSp = 14f;
 
         private readonly ProceduralArt _art;
         private readonly DevProbe _probe;
@@ -71,6 +92,7 @@ namespace AF.UI
         private readonly Image _dock;
         private readonly Image[] _foliage = new Image[4];
         private readonly Image _scrim;
+        private readonly StopBackdrop _stopBackdrop;
 
         private readonly RectTransform _seeds;
         private readonly Image _seedsIcon;
@@ -100,7 +122,16 @@ namespace AF.UI
         private readonly TextMeshProUGUI _overlayBody;
         private readonly ReliefParts _back;
         private readonly NoCanoesPanel _noCanoes;
+        private readonly RectTransform _remaining;
+        private readonly TextMeshProUGUI _remainingLabel;
+        private readonly HomeWindow _home;
         private GameServices? _services;
+        private RiverStopCatalog? _riverStops;
+        private RiverStop? _currentStop;
+        private RiverStop? _nextStop;
+        private bool _remainingReady;
+        private bool _commerceOpen;
+        private int _stopLevelShown = -1;
 
         private readonly char[] _buf = new char[24];
 
@@ -154,6 +185,9 @@ namespace AF.UI
             UiBuilder.Stretch(baseFill.rectTransform);
             _skyFill = UiBuilder.Image("SkyFill", scene, null, Palette.SkyTop);
             _panorama = UiBuilder.Image("Panorama", scene, art.Panorama, Color.white);
+
+            // Fondo de la parada de «Jugar» (M2.1): como en el tablero, delante del panorama y detrás de la garza.
+            _stopBackdrop = new StopBackdrop(scene, art);
             _heron = UiBuilder.Image("Heron", scene, art.Heron, Color.white);
             for (int i = 0; i < _lilyPads.Length; i++)
             {
@@ -225,6 +259,15 @@ namespace AF.UI
             UiBuilder.AutoSize(_playLabel, 22f, 30f);
             _play.Relief.Bind(_play.Face, _play.Base, _play.FaceImage, art.CtaLeafLarge, null, null, _playLabel);
 
+            // ---- «Faltan {n} niveles para {lugar}» bajo «Jugar» y la ventanita de casa de TiTino (M2.1), sin toques. ----
+            _remaining = UiBuilder.Rect("StopRemaining", _root);
+            Image remainingPlate = UiBuilder.Sliced("Plate", _remaining, art.WoodPlate, Color.white);
+            UiBuilder.Stretch(remainingPlate.rectTransform);
+            _remainingLabel = UiBuilder.Label("Label", _remaining, TextStyle.PlainBold, string.Empty, StopRemainingSp, Palette.Cream, TextAlignmentOptions.Center);
+            _remainingLabel.textWrappingMode = TextWrappingModes.Normal;
+            _remaining.gameObject.SetActive(false);
+            _home = new HomeWindow(_root, art);
+
             // ---- Superposición: «El río sigue creciendo» (06 §9) o Sin canoas (04 §7.3), con el inicio atenuado detrás. ----
             _overlay = UiBuilder.Rect("Overlay", _root);
             Image dim = UiBuilder.Image("Dim", _overlay, null, new Color(0.04f, 0.06f, 0.05f, 0.62f), true);
@@ -266,6 +309,47 @@ namespace AF.UI
 
         /// <summary>Sin canoas con sus opciones (tests).</summary>
         internal NoCanoesPanel NoCanoes => _noCanoes;
+
+        /// <summary>
+        /// Paradas del Mapa del río (<c>af-river-stops/1</c>; M2.1). Null = sin el archivo o inválido: el inicio de siempre, sin
+        /// fondo de parada, sin «Faltan…» y sin ventanita. Al cambiarlo, el inicio se rehace en el siguiente fotograma.
+        /// </summary>
+        public RiverStopCatalog? RiverStops
+        {
+            get => _riverStops;
+            set
+            {
+                _riverStops = value;
+                _stopLevelShown = -1;
+            }
+        }
+
+        /// <summary>Fondo de la parada del inicio (tests y capturas).</summary>
+        internal StopBackdrop StopBackdrop => _stopBackdrop;
+
+        /// <summary>Tinte del panorama: la luz de la parada (blanco = como antes; tests).</summary>
+        internal Color PanoramaTint => _panorama.color;
+
+        /// <summary>Ventanita de casa de TiTino (tests y capturas).</summary>
+        internal HomeWindow HomeWindow => _home;
+
+        /// <summary>«Faltan {n} niveles para {lugar}» se ve.</summary>
+        public bool StopRemainingShown => _remaining.gameObject.activeSelf;
+
+        /// <summary>Texto de «Faltan {n} niveles para {lugar}» (el último armado; vacío sin parada siguiente).</summary>
+        public string StopRemainingText => _remainingLabel.text;
+
+        /// <summary>Caja de «Faltan {n} niveles para {lugar}».</summary>
+        public RectTransform StopRemainingRect => _remaining;
+
+        /// <summary>Texto de «Faltan…» (tests: tamaño y fuente).</summary>
+        internal TextMeshProUGUI StopRemainingLabel => _remainingLabel;
+
+        /// <summary>
+        /// Hay una pantalla de pago delante del inicio (la hoja de compra, un anuncio o una oferta; propuesta del personaje g.2,
+        /// regla 9, y d.11): la ventanita de casa se oculta mientras dure. Lo avisa <see cref="GameBootstrap"/>.
+        /// </summary>
+        public bool CommerceOpen => _commerceOpen;
 
         /// <summary>Ancho del lienzo en dp.</summary>
         public float CanvasWidth => _canvasW;
@@ -363,6 +447,8 @@ namespace AF.UI
                 ("pestaña Inicio", (Color)Palette.Cream, Palette.FamilyWood.Base),
                 ("pestaña Inicio (fondo de la cara)", (Color)Palette.Cream, Palette.FamilyWood.Deep),
                 ("texto de la superposición", Palette.FamilyWood.Base, (Color)Palette.PanelLightLow),
+                ("faltan N (stop_remaining)", (Color)Palette.Cream, (Color)Palette.WoodDark),
+                ("ventanita: casa a unos N km", (Color)Palette.Cream, (Color)Palette.WoodDark),
             };
             (string Name, Color Text, Color Background)[] chip = DifficultyChip.ContrastPairs();
             var all = new (string Name, Color Text, Color Background)[own.Length + chip.Length];
@@ -376,6 +462,21 @@ namespace AF.UI
         {
             _app = app;
             _services = services;
+        }
+
+        /// <summary>
+        /// Avisa de que hay (o ya no hay) una pantalla de pago delante del inicio: la hoja de compra, un anuncio o una oferta. La
+        /// ventanita de casa no sale en ellas (D-013, punto 6; propuesta del personaje g.2, regla 9, y d.11). Sin asignar memoria.
+        /// </summary>
+        public void SetCommerceOpen(bool open)
+        {
+            if (open == _commerceOpen)
+            {
+                return;
+            }
+
+            _commerceOpen = open;
+            ApplyStopVisibility();
         }
 
         /// <summary>
@@ -413,6 +514,7 @@ namespace AF.UI
                 _noCanoes.Hide();
             }
             ForceRefresh();
+            ApplyStopVisibility();
             if (_app != null)
             {
                 _probe.App(AppScreenNames.Of(screen), _app);
@@ -465,6 +567,12 @@ namespace AF.UI
             {
                 _playLevelShown = level;
                 _playLabel.text = UiText.PlayLevel(level);
+            }
+
+            if (level != _stopLevelShown)
+            {
+                _stopLevelShown = level;
+                ApplyStop(app, level);
             }
 
             string label = app.PlayLevelLabel;
@@ -637,6 +745,9 @@ namespace AF.UI
             PlaceLilyPad(0, props, 54f * k, horizon + (30f * k), 34f * k, beam);
             PlaceLilyPad(1, props, 314f * k, horizon + (22f * k), 26f * k, beam);
             PlaceLilyPad(2, props, 86f * k, horizon + (47f * k), 24f * k, beam);
+
+            // Fondo de la parada (M2.1): sin tablero, con la banda de agua hasta la viga del muelle, como en el tablero.
+            _stopBackdrop.Layout(w, horizon, _playTop, false, beam + 8f);
             PlaceAt(_foliage[0].rectTransform, -20f, 0f, 160f, 160f, new Vector2(0f, 1f));
             PlaceAt(_foliage[1].rectTransform, w + 20f, 0f, 160f, 160f, new Vector2(1f, 1f));
             float bottom = ProceduralArt.BottomFoliageDp;
@@ -658,6 +769,10 @@ namespace AF.UI
             float playW = Mathf.Min(PlayMaxWidth, w - 64f);
             UiBuilder.Place((RectTransform)_play.Button.transform, (w - playW) * 0.5f, _playTop, playW, PlayTouchHeight);
             LayoutChip();
+            LayoutRemaining();
+
+            // Ventanita de casa (M2.1): a la izquierda, bajo los saldos [P]; la píldora de la distancia, a su derecha.
+            _home.Place(SideGutterDp, topY + TopRowHeight + HomeWindowGapDp, w - SideGutterDp);
 
             // Pestañas: la barra cubre hasta el borde inferior (y la zona de gestos); «Inicio» sobresale 12 dp.
             UiBuilder.Place(_tabBar.rectTransform, -8f, tabTop, w + 16f, h - tabTop + 12f);
@@ -702,6 +817,82 @@ namespace AF.UI
             _chip.PlaceCentered(_canvasW * 0.5f, _playTop - ChipGapDp - DifficultyChip.PillBottomDp);
         }
 
+        // La parada de «Jugar» (M2.1), solo al cambiar de nivel o de catálogo: el fondo (corte directo; con ui_bg_per_stop =
+        // false, la gran parada del mundo, como el tablero), la luz sobre el panorama, «Faltan…» hacia la parada siguiente y la
+        // ventanita con la parada actual. Fuera de 1..1.000 o sin catálogo, nada: el inicio de siempre.
+        private void ApplyStop(AppFlow app, int level)
+        {
+            RiverStopCatalog? stops = _riverStops;
+            bool inRange = stops != null && level >= 1 && level <= WorldTable.LastLevel;
+            _currentStop = inRange ? stops!.StopOf(level) : null;
+            _nextStop = _currentStop != null ? stops!.At(_currentStop.N + 1) : null;
+            RiverStop? backdrop = inRange ? GameScreen.StopForLevel(stops, level, MapConfig.UiBgPerStop) : null;
+            LevelDefinition? def = app.Catalog.Find(level);
+            _stopBackdrop.Apply(backdrop, def != null ? def.WaterBase : app.Catalog.WaterBase, false, 0f);
+            ApplyStopLut();
+
+            // «Faltan N»: solo con la parada siguiente en el catálogo y con su nombre en el idioma (en release, un nombre sin el
+            // visto bueno del asesor es «» y la línea no sale).
+            string place = _nextStop != null ? UiText.StopName(_nextStop) : string.Empty;
+            _remainingReady = _nextStop != null && place.Length > 0;
+            _remainingLabel.text = _remainingReady ? UiText.MapStopRemaining(RiverJourney.LevelsLeft(level), place) : string.Empty;
+            LayoutRemaining();
+            ApplyStopVisibility();
+        }
+
+        // Qué se ve del Mapa en el inicio según la pantalla: «Faltan…» no sale con el fin de contenido ni con Sin canoas; la
+        // ventanita, tampoco con Sin canoas ni con una pantalla de pago delante (SetCommerceOpen).
+        private void ApplyStopVisibility()
+        {
+            bool lobby = _shown == AppScreen.Lobby;
+            bool available = _app == null || _app.PlayLevelAvailable;
+            bool remaining = lobby && available && _remainingReady;
+            if (_remaining.gameObject.activeSelf != remaining)
+            {
+                _remaining.gameObject.SetActive(remaining);
+            }
+
+            bool hideHome = _shown == AppScreen.NoCanoes || _commerceOpen;
+            _home.Apply(_currentStop, hideHome);
+        }
+
+        // «Faltan…» centrado bajo «Jugar», en una placa de madera a la medida del texto; si no cabe en una línea a 360 dp, en dos
+        // (su caja crece; 02 §12). Se mide al colocar, nunca por fotograma.
+        private void LayoutRemaining()
+        {
+            float w = _canvasW;
+            float maxW = w - (2f * SideGutterDp);
+            float textW = string.IsNullOrEmpty(_remainingLabel.text) ? 0f : Mathf.Ceil(UiBuilder.MinTextWidth(_remainingLabel));
+            float boxW = Mathf.Min(maxW, textW + (2f * RemainingPadDp));
+            float innerW = boxW - (2f * RemainingPadDp);
+            float boxH = RemainingLineDp;
+            if (textW > innerW + 0.5f)
+            {
+                boxH = Mathf.Max(boxH, Mathf.Ceil(UiBuilder.MinTextHeight(_remainingLabel, innerW)) + 8f);
+            }
+
+            float top = _playTop + PlayTouchHeight + RemainingGapDp;
+            UiBuilder.Place(_remaining, (w - boxW) * 0.5f, top, boxW, boxH);
+            UiBuilder.Place(_remainingLabel.rectTransform, RemainingPadDp, 0f, innerW, boxH);
+        }
+
+        // La luz de la parada sobre el panorama y el cielo que lo completa (blanco = como antes), como en el tablero.
+        private void ApplyStopLut()
+        {
+            Color lut = _stopBackdrop.LutColor;
+            if (_panorama.color != lut)
+            {
+                _panorama.color = lut;
+            }
+
+            Color sky = Palette.SkyTop * lut;
+            sky.a = 1f;
+            if (_skyFill.color != sky)
+            {
+                _skyFill.color = sky;
+            }
+        }
+
         private void EmitLayout()
         {
             if (!DevProbe.Enabled || _app == null || !_canvas.gameObject.activeSelf)
@@ -712,14 +903,30 @@ namespace AF.UI
             int level = _app.PlayLevel;
             if (_shown == AppScreen.Lobby)
             {
+                // Los botones y, si se ven, «Faltan…» (stop_remaining) y la ventanita de casa (home_window) de M2.1, sin toques.
+                var ids = new System.Collections.Generic.List<string>(6) { "play" };
+                var rects = new System.Collections.Generic.List<RectTransform>(6) { (RectTransform)_play.Button.transform };
                 if (_canoes.gameObject.activeSelf)
                 {
-                    _probe.Layout("lobby", level, null, new[] { "play", "canoes", "settings" }, new[] { (RectTransform)_play.Button.transform, (RectTransform)_canoes.transform, (RectTransform)_settings.Button.transform });
+                    ids.Add("canoes");
+                    rects.Add((RectTransform)_canoes.transform);
                 }
-                else
+
+                ids.Add("settings");
+                rects.Add((RectTransform)_settings.Button.transform);
+                if (_remaining.gameObject.activeSelf)
                 {
-                    _probe.Layout("lobby", level, null, new[] { "play", "settings" }, new[] { (RectTransform)_play.Button.transform, (RectTransform)_settings.Button.transform });
+                    ids.Add("stop_remaining");
+                    rects.Add(_remaining);
                 }
+
+                if (_home.Visible)
+                {
+                    ids.Add("home_window");
+                    rects.Add(_home.Root);
+                }
+
+                _probe.Layout("lobby", level, null, ids.ToArray(), rects.ToArray());
             }
             else if (_shown == AppScreen.NoCanoes)
             {
