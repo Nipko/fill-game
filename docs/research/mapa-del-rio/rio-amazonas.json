@@ -6230,7 +6230,7 @@
    "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
    "km_casa": 3664,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
-   "temporada": "A (aguas altas, LUT) [P]: ciclo de d.5.2 (variante A) de la propuesta de mecánicas, pendiente de la tabla de D2",
+   "temporada": "A (aguas altas, LUT): ciclo 201-220 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
    "dato_del_nivel": {
     "clave": "map.myth.source",
     "texto": "El Amazonas no tiene una sola naciente: la ciencia aún discute cuál es la más lejana.",
@@ -6302,7 +6302,7 @@
    "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
    "km_casa": 3794,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
-   "temporada": "A (aguas altas, LUT) [P]: ciclo de d.5.2 (variante A) de la propuesta de mecánicas, pendiente de la tabla de D2",
+   "temporada": "A (aguas altas, LUT): ciclo 201-220 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
    "dato_del_nivel": {
     "clave": "map.stop.santa_clotilde.dato_01",
     "texto": "Aquí el Napo lleva casi el triple de agua que en la frontera con Ecuador.",
@@ -6355,7 +6355,7 @@
    "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
    "km_casa": 4061,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
-   "temporada": "A (aguas altas, LUT) [P]: ciclo de d.5.2 (variante A) de la propuesta de mecánicas, pendiente de la tabla de D2",
+   "temporada": "A (aguas altas, LUT): ciclo 221-240 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
    "dato_del_nivel": {
     "clave": "map.country.ec.dato_01",
     "texto": "En Ecuador, a la Amazonia también la llaman «el Oriente»: queda al este de los Andes.",
@@ -6409,7 +6409,7 @@
    "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
    "km_casa": 4143,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
-   "temporada": "A (aguas altas, LUT) [P]: ciclo de d.5.2 (variante A) de la propuesta de mecánicas, pendiente de la tabla de D2",
+   "temporada": "A (aguas altas, LUT): ciclo 221-240 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
    "dato_del_nivel": {
     "clave": "map.stop.yasuni.dato_01",
     "texto": "En una hectárea típica de Yasuní crecen más de {n} especies de árbol.",
@@ -6475,7 +6475,7 @@
    "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
    "km_casa": 4143,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
-   "temporada": "B (aguas bajas, LUT) [P]: ciclo de d.5.2 (variante A) de la propuesta de mecánicas, pendiente de la tabla de D2",
+   "temporada": "B (aguas bajas, LUT): ciclo 241-260 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
    "dato_del_nivel": {
     "clave": "map.stop.yasuni.dato_03",
     "texto": "En Yasuní se han registrado al menos {n} especies de aves.",
@@ -6544,7 +6544,7 @@
    "km_desde_el_mar_conf": "cálculo (boca del Napo + Napo hasta la boca del Aguarico + Aguarico hasta la boca del Cuyabeno + Cuyabeno hasta la Laguna Grande, todo sin meandros: valor mínimo)",
    "km_casa": 4194,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
-   "temporada": "B (aguas bajas, LUT) [P]: ciclo de d.5.2 (variante A) de la propuesta de mecánicas, pendiente de la tabla de D2",
+   "temporada": "B (aguas bajas, LUT): ciclo 241-260 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
    "dato_del_nivel": {
     "clave": "map.stop.cuyabeno.dato_01",
     "texto": "Aquí está el mayor sistema de lagunas tropicales de Ecuador: {n} unidas por canales.",
@@ -6614,7 +6614,7 @@
    "km_desde_el_mar_conf": "cálculo (boca del Napo + Napo hasta la boca del Aguarico + Aguarico hasta la boca del Cuyabeno + Cuyabeno hasta la Laguna Grande, todo sin meandros: valor mínimo)",
    "km_casa": 4194,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
-   "temporada": "B (aguas bajas, LUT) [P]: ciclo de d.5.2 (variante A) de la propuesta de mecánicas, pendiente de la tabla de D2",
+   "temporada": "B (aguas bajas, LUT): ciclo 261-280 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
    "dato_del_nivel": {
     "clave": "map.stop.cuyabeno.dato_03",
     "texto": "Las lagunas con bosque inundado parecen ser la guardería de los delfines de Cuyabeno.",
@@ -6671,7 +6671,7 @@
    "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
    "km_casa": 4245,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
-   "temporada": "B (aguas bajas, LUT) [P]: ciclo de d.5.2 (variante A) de la propuesta de mecánicas, pendiente de la tabla de D2",
+   "temporada": "B (aguas bajas, LUT): ciclo 261-280 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
    "dato_del_nivel": {
     "clave": "map.stop.boca_del_coca.dato_01",
     "texto": "En esta ciudad, a la que también llaman El Coca, el río Coca se une al Napo.",
@@ -6724,7 +6724,7 @@
    "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
    "km_casa": 4246,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
-   "temporada": "A (aguas altas, LUT) [P]: ciclo de d.5.2 (variante A) de la propuesta de mecánicas, pendiente de la tabla de D2",
+   "temporada": "A (aguas altas, LUT): ciclo 281-300 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
    "dato_del_nivel": {
     "clave": "map.stop.el_coca.dato_01",
     "texto": "En el Napo, las canoas hacen de taxi: desde las cinco de la mañana van y vienen.",
@@ -6777,7 +6777,7 @@
    "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
    "km_casa": 4345,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
-   "temporada": "A (aguas altas, LUT) [P]: ciclo de d.5.2 (variante A) de la propuesta de mecánicas, pendiente de la tabla de D2",
+   "temporada": "A (aguas altas, LUT): ciclo 281-300 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
    "dato_del_nivel": {
     "clave": "map.stop.misahualli.dato_01",
     "texto": "El Napo nace en las laderas de volcanes de Ecuador, como el Cotopaxi y el Antisana.",

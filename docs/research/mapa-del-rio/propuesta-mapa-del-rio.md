@@ -558,7 +558,7 @@ Los niveles de los cruces **se derivan de las paradas** (cada una cubre 10 nivel
 | 13 El origen · 961-1.000 · 4 | **Gran viaje** por agua ya llena: Orinoco → Casiquiare → Negro → Amazonas → Nauta → Ucayali → Tambo → Ene → Apurímac. Rosa se despide al pie de los Andes. Se plantea en el 960: «Dos ríos: ¿cuál nos lleva a donde nace el agua?» | Cañón del Apurímac (961); puna alta (971); quebradas Apacheta y Carhuasanta (981); **nevado Mismi** (991), una de las nacientes; meta en el 1.000 | Perú | «¿De dónde sale tanta agua?» → de la lluvia de toda la selva; aquí arriba solo nace un hilo [E mit_ciclo_agua, wp_source] | Sin Choquequirao (ruinas); Q'eswachaka solo con el asesor (ritual) |
 
 - **Datos escritos:** las paradas de 1-200 tienen dato, y las de 201-300 (mundo 6) también, desde el 2026-10-15 (sección 5.4 bis). Para 301-1.000 faltan sitios con dato verificado y coordenadas. **Con Q14-A, la parte de 201-700 es trabajo de la 1.0** (fase F9 de la sección 13: k = 20-29 hechas en M3.7a; k = 30-69, en M3.7b-M3.7d); el resto, de la 1.1 en adelante.
-- **Temporadas de 201+:** hay que rehacer la tabla de D-009 (d.5), y los fondos 201+ se pintan después de fijarla.
+- **Temporadas de 201+:** hay que rehacer la tabla de D-009 (d.5), y los fondos 201+ se pintan después de fijarla. *Actualización del 2026-10-14:* D2 ya la rehízo (d.5 de la propuesta de mecánicas; se aplica por D-023, punto 10); las temporadas de cada ciclo están en su punto 4 y son las mismas en las variantes A y B.
 - **Cachuela Esperanza** está en el Beni aguas abajo de Riberalta (−10,54, −65,60; Riberalta, −11,01, −66,07): ya no es parada del mundo 8 sino punto de paso del viaje del 300 y del tramo Beni abajo. Su parada pasa a Riberalta (×3).
 
 #### 5.4 bis. Paradas de 201-300: mundo 6, Oriente (2026-10-15, M3.7a)
@@ -566,7 +566,7 @@ Los niveles de los cruces **se derivan de las paradas** (cada una cubre 10 nivel
 Con Q14-A (D-013, punto 2), la fase F9 detalla las paradas de 201-700. Están en `rio-amazonas.json`, lista `paradas_201_700`, con el mismo registro que las de 1-200 y dos campos más: `sitio` (el sitio del resumen de 5.4 que la contiene) y `wikidata` (el elemento de su coordenada). De ahí las toma `tools/river-map/stops.py` en M4.5a, con la conversión de M1.1. Esta es la parte 1 (k = 20-29); las partes 2-4 (k = 30-69) siguen el mismo formato. **Las coordenadas son de Wikidata y las URL de los datos se reabrieron el 2026-10-15** (R5). Todo nombre, dato y texto queda «pendiente del asesor» (07 §8.2).
 
 - **Columnas:** las de 5.1.
-  - **Temp.** es la del ciclo de la tabla d.5.2 de la propuesta de mecánicas (variante A): A en 201-240 y 281-300, B en 241-280. Es [P] hasta que D2 entregue su tabla de 201-1.000 (notas de la tanda 4, punto 12).
+  - **Temp.** es la del punto 4 de d.5 de la propuesta de mecánicas (D2, aplicada por D-023, punto 10): A en 201-240 y 281-300, B en 241-280. Es la misma en las variantes A y B.
   - **Km a casa** es el mismo [cálculo, mínimo] de 5.1: la boca del Napo cae en el km 3.596 del cauce, y a eso se suma el recorrido sin meandros por la poligonal del Napo, que mide 735 km frente a los 1.075-1.130 reales [E CR-F77]. En Cuyabeno se suman además el Aguarico y el Cuyabeno.
 - **Coincidencias:** banner del 201, debut del Cacao (glosario §9), miquito del mundo 6 (07 §6.4) y estrenos e hitos de d.4 y d.5.2 [P].
 

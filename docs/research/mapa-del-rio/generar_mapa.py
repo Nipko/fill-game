@@ -241,7 +241,9 @@ def ids_citados(texto):
 # «otros_datos», forma de la clave (glosario §10: map.stop.<lugar>.dato_NN o map.country.<iso2>.dato_NN), fecha en que
 # se reabrieron sus fuentes (R5) y los candidatos de §(e) que tienen que estar.
 CAMPOS_OTRO_DATO = ("clave", "texto", "etiqueta", "fuente", "releida", "origen", "nota")
-CLAVE_DATO = re.compile(r"^map\.(stop|country)\.[a-z0-9_]+\.dato_\d{2}$")
+# La misma forma que esas dos ramas de fact_key en schemas/af-river-stops-1.schema.json (contrato 30): [0-9] y no \d,
+# que también acepta dígitos Unicode, y se aplica con fullmatch, porque «$» de Python admite un salto de línea final.
+CLAVE_DATO = re.compile(r"^map\.(stop\.[a-z0-9_]+|country\.[a-z]{2})\.dato_[0-9]{2}$")
 FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 # Q8-A (D-018): ninguna cifra con separador de miles ni decimales dentro del texto; van como {n} con su valor en «args».
 CIFRA_CON_SEPARADOR = re.compile(r"\d[.,]\d|\d[ \u00a0\u202f]\d{3}(?!\d)")
@@ -317,9 +319,11 @@ def revisar_otros_datos(doc, ids, etiqueta_de, errores):
     claves = {}
     for s in doc["paradas_1_200"] + doc.get("paradas_201_700", []):
         d = s.get("dato_del_nivel")
-        if d:
-            claves.setdefault(d["clave"], []).append(s["id"])
-            revisar_texto(f"parada {s['id']}: dato del nivel", d["texto"], d.get("args", {}), errores, medir=False)
+        if isinstance(d, dict):
+            # Sin «clave», el error legible lo da revisar_paradas_201_700 («clave del dato None fuera de …»).
+            if d.get("clave"):
+                claves.setdefault(d["clave"], []).append(s["id"])
+            revisar_texto(f"parada {s['id']}: dato del nivel", d.get("texto", ""), d.get("args", {}), errores, medir=False)
         otros = s.get("otros_datos")
         if not isinstance(otros, list):
             errores.append(f"parada {s['id']}: sin «otros_datos» (una lista, vacía si la tarjeta no lleva «Otro dato»)")
@@ -335,8 +339,8 @@ def revisar_otros_datos(doc, ids, etiqueta_de, errores):
                 continue
             clave = o["clave"]
             claves.setdefault(clave, []).append(s["id"])
-            if not CLAVE_DATO.match(clave):
-                errores.append(f"{donde}: clave «{clave}» fuera de la forma map.stop.<lugar>.dato_NN")
+            if not CLAVE_DATO.fullmatch(clave):
+                errores.append(f"{donde}: clave «{clave}» fuera de la forma map.stop.<lugar>.dato_NN o map.country.<iso2>.dato_NN")
             if "belen" in sin_tildes(clave):
                 errores.append(f"{donde}: la clave nombra «Belén»")
             args = o.get("args", {})
@@ -413,9 +417,12 @@ def autoprueba_otros_datos():
 # 1-200, más «sitio» (el del resumen de paradas_201_1000 que la contiene) y «wikidata» (el elemento de su coordenada).
 # Sin héroe (D-013, punto 2): el fondo es el kit del mundo con una pieza, kit:<pieza>. Sus ríos locales nuevos van en
 # rios_locales_201_700, con «boca_en» (su río anfitrión), hasta que tools/river-map/geometry.py los dé de alta (M4.5a).
-# Las mismas formas que fact_key en schemas/af-river-stops-1.schema.json (glosario §10; 08 §4.5): también map.general.*,
-# como el dato del agua negra de Anavilhanas (parada 6). La unicidad de las claves la vigila revisar_otros_datos.
-CLAVE_DATO_LLEGADA = re.compile(r"^map\.((stop|country)\.[a-z0-9_]+\.dato_\d{2}|myth\.[a-z0-9_]+|general\.[a-z0-9_]+)$")
+# Las mismas formas que fact_key en schemas/af-river-stops-1.schema.json (contrato 30; glosario §10; 08 §4.5), con el
+# país en iso2 de dos letras y [0-9] en lugar de \d (que acepta dígitos Unicode), y sin «belen» (el «not» del esquema):
+# también map.general.*, como el dato del agua negra de Anavilhanas (parada 6). Se aplica con fullmatch, como CLAVE_DATO.
+# La unicidad de las claves, también frente a las de 1-200, la vigila revisar_otros_datos.
+CLAVE_DATO_LLEGADA = re.compile(
+    r"^map\.(stop\.[a-z0-9_]+\.dato_[0-9]{2}|country\.[a-z]{2}\.dato_[0-9]{2}|myth\.[a-z0-9_]+|general\.[a-z0-9_]+)$")
 TIPOS_PARADA = ("gran_parada", "parada", "castillo")
 DATO_DEL_200 = "map.myth.source"  # arrival_fact de la parada 20 (08 §4.5; D-023, punto 20)
 KM_CASA_MAS = 29  # km_casa = km_desde_el_mar − 332 (Gurupá) + 361 (ramal del Pará); propuesta §2.2
@@ -485,8 +492,11 @@ def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
         if not isinstance(d, dict):
             errores.append(f"{donde}: sin dato de llegada")
         else:
-            if not CLAVE_DATO_LLEGADA.match(d.get("clave", "")):
-                errores.append(f"{donde}: clave del dato {d.get('clave')!r} fuera de map.stop/country.<x>.dato_NN, map.myth.<tema> o map.general.<id>")
+            clave = d.get("clave")
+            if not isinstance(clave, str) or not CLAVE_DATO_LLEGADA.fullmatch(clave):
+                errores.append(f"{donde}: clave del dato {clave!r} fuera de map.stop.<lugar>.dato_NN, map.country.<iso2>.dato_NN, map.myth.<tema> o map.general.<id>")
+            elif "belen" in clave:
+                errores.append(f"{donde}: la clave del dato {clave!r} nombra «Belén» (contrato 30)")
             if k == 20 and d.get("clave") != DATO_DEL_200:
                 errores.append(f"{donde}: el dato de llegada del 200 tiene que ser {DATO_DEL_200} (08 §4.5)")
             # Marcadores, cifras y «Belén» ya los mira revisar_otros_datos; aquí, solo la longitud.
@@ -552,8 +562,11 @@ def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
 def autoprueba_paradas_201_700(doc):
     """Casos fijos de revisar_paradas_201_700 (M3.7a). Con las paradas de verdad la revisión no da ningún error; cada
     caso cambia una copia y tiene que dar un error nuevo (que no estaba en la base) con el texto esperado y a nombre de
-    la parada, el mundo o el cruce cambiado; el caso con un dato map.general.* no tiene que dar ninguno. Las reglas de
-    la bandera, los km y el orden de los sitios las reutilizan M3.7b-M3.7d. Devuelve los fallos de la prueba."""
+    la parada, el mundo o el cruce cambiado; el caso con un dato map.general.* no tiene que dar ninguno. Las claves de
+    llegada fuera del fact_key del contrato 30 (país de más de dos letras, dígitos Unicode, «belen», sin clave) dan
+    error, y una clave de 1-200 repetida en un «Otro dato» de 201-700 da «repetida» en revisar_otros_datos. Las reglas
+    de la bandera, los km, el orden de los sitios y la unicidad de las claves las reutilizan M3.7b-M3.7d. Devuelve los
+    fallos de la prueba."""
     paradas = doc.get("paradas_201_700", [])
     if not paradas:
         return []
@@ -595,6 +608,19 @@ def autoprueba_paradas_201_700(doc):
         segunda = paradas[1]["id"]
         caso("un dato de llegada map.general.* (contrato 30)", segunda,
              lambda p: p["dato_del_nivel"].update(clave="map.general.dato_prueba"), None, "")
+        fuera = "fuera de map.stop.<lugar>.dato_NN"
+        for nombre, clave in (("el país en tres letras", "map.country.ecu.dato_01"),
+                              ("el país con su nombre entero", "map.country.ecuador.dato_01"),
+                              ("el país con un guion bajo", "map.country.e_c.dato_01"),
+                              ("dígitos que no son ASCII", "map.stop.mazan.dato_\u0660\u0661"),
+                              ("un salto de línea al final", "map.stop.mazan.dato_01\n")):
+            caso(f"un dato de llegada con {nombre} ({clave!r})", segunda,
+                 lambda p, c=clave: p["dato_del_nivel"].update(clave=c), fuera, f"parada {segunda}:")
+        caso("un dato de llegada sin clave", segunda, lambda p: p["dato_del_nivel"].pop("clave"),
+             "clave del dato None fuera de", f"parada {segunda}:")
+        caso("un dato de llegada con «belen» en la clave", segunda,
+             lambda p: p["dato_del_nivel"].update(clave="map.stop.belen.dato_01"), "nombra «Belén» (contrato 30)",
+             f"parada {segunda}:")
         caso("km hasta casa que retroceden", segunda,
              lambda p: p.update(km_desde_el_mar=p["km_desde_el_mar"] - 1000, km_casa=p["km_casa"] - 1000),
              "retroceden", f"parada {segunda}:")
@@ -612,6 +638,30 @@ def autoprueba_paradas_201_700(doc):
         pais = con_bandera[0]["bandera"]
         caso(f"una bandera {pais} sobrante", otra["id"], lambda p: p.update(bandera=pais),
              "sin cruce de país", f"parada {otra['id']}:")
+    # Unicidad entre 1-200 y 201-700 (revisar_otros_datos, desde M3.7a): un «Otro dato» de 1-200 copiado en la primera
+    # parada de 201-700 da «clave … repetida» con las dos paradas; y una parada sin clave en su dato de llegada no la
+    # rompe (el error legible lo da revisar_paradas_201_700, caso de arriba).
+    base_otros = []
+    revisar_otros_datos(doc, ids, etiqueta_de, base_otros)
+    otro_1_200 = next(((s["id"], o) for s in doc["paradas_1_200"] for o in (s.get("otros_datos") or [])
+                       if isinstance(o, dict) and o.get("clave")), None)
+    if otro_1_200 is not None:
+        origen, otro = otro_1_200
+        copia = json.loads(json.dumps(doc))
+        copia["paradas_201_700"][0]["otros_datos"].append(json.loads(json.dumps(otro)))
+        errores = []
+        revisar_otros_datos(copia, ids, etiqueta_de, errores)
+        nuevos = [e for e in errores if e not in base_otros]
+        esperado = f"clave {otro['clave']} repetida ("
+        if not any(e.startswith(esperado) and origen in e and primera in e for e in nuevos):
+            fallos.append(f"autoprueba: un «Otro dato» de {origen} repetido en {primera} no da «{esperado}…» ({nuevos})")
+    if len(paradas) > 1:
+        copia = json.loads(json.dumps(doc))
+        copia["paradas_201_700"][1]["dato_del_nivel"].pop("clave", None)
+        try:
+            revisar_otros_datos(copia, ids, etiqueta_de, [])
+        except Exception as e:  # la prueba tiene que fallar con un mensaje, no romper --check
+            fallos.append(f"autoprueba: un dato de llegada sin clave rompe revisar_otros_datos ({type(e).__name__}: {e})")
     return fallos
 
 
