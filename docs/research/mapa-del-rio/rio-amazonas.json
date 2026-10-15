@@ -5540,12 +5540,13 @@
     {
      "nombre": "Nuevo Rocafuerte, frontera",
      "paradas": 1,
-     "lat": -0.9317,
-     "lon": -75.3875,
+     "lat": -0.9333,
+     "lon": -75.4,
      "conf": "E",
+     "nota": "Coordenada de Wikidata de la parroquia (Q647791), la de la parada 22 (antes, −0,9317, −75,3875, el punto «Boca del Yasuní / Nuevo Rocafuerte» del Napo de respaldo)",
      "xy": [
-      0.68273,
-      0.13977
+      0.68267,
+      0.13939
      ]
     },
     {
@@ -6363,7 +6364,7 @@
     "releida": "2026-10-15"
    },
    "otros_datos": [],
-   "nota_dato": "Entrada en Ecuador: placa «Ecuador te da la bienvenida» en la franja de la victoria del 220, antes de la placa del dato (como el 80 y el 140, D-023 punto 18), y bandera de cortesía (Q8-A; cruces_de_pais). Wikipedia ES: la región es «conocida también como Amazonía u Oriente» y la cordillera de los Andes marca su límite occidental [E eswp_amazonia_ec]. Explica el nombre del mundo. Sin la cifra del territorio: las fuentes dan del 43 % al 48 %. Vetos del mundo 6 para el asesor (§(e) y propuesta §5.4): el ritual de la guayusa; los pueblos en aislamiento (Tagaeri y Taromenane) y su zona; el petróleo, sus derrames y la consulta de 2023; el maito sin crédito; nombres en kichwa u otras lenguas solo con un hablante.",
+   "nota_dato": "Entrada en Ecuador: placa «Ecuador te da la bienvenida» en la franja de la victoria del 220, antes de la placa del dato [P] (extensión de P-M7 al 220: D-023 punto 18 solo la fija en el 80 y el 140; la decide el dueño con M4.5a), y bandera de cortesía (Q8-A; cruces_de_pais). Wikipedia ES: la región es «conocida también como Amazonía u Oriente» y la cordillera de los Andes marca su límite occidental [E eswp_amazonia_ec]. Explica el nombre del mundo. Sin la cifra del territorio: las fuentes dan del 43 % al 48 %. Vetos del mundo 6 para el asesor (§(e) y propuesta §5.4): el ritual de la guayusa; los pueblos en aislamiento (Tagaeri y Taromenane) y su zona; el petróleo, sus derrames y la consulta de 2023; el maito sin crédito; nombres en kichwa u otras lenguas solo con un hablante.",
    "fondo": {
     "kit": "bg_kit_w06",
     "heroe": "kit:napo_frontera",
@@ -6687,7 +6688,7 @@
     "hito": "Paisaje del tramo: el Coca entra en el Napo ancho, con la ciudad lejana (piezas del kit)",
     "cuidado": "Sin puentes ni oleoductos en primer plano; sin personas. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 6, crepúsculo y noche temprana (07 §2.1)."
    },
-   "asesor": false,
+   "asesor": true,
    "coincidencias": [
     "hito 280 [P] (Piraña + Brote, Muy difícil; d.5.2)"
    ],
@@ -6737,7 +6738,7 @@
     "kit": "bg_kit_w06",
     "heroe": "kit:napo_con_canoas",
     "tipo": "kit_y_rotulo",
-    "hito": "Paisaje del tramo: el Napo ancho en El Coca con canoas largas lejanas, al alba de la hora del mundo (piezas del kit)",
+    "hito": "Paisaje del tramo: el Napo ancho en El Coca con canoas largas lejanas, al crepúsculo (piezas del kit)",
     "cuidado": "Canoas sin personas identificables; sin oleoductos ni mecheros. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 6, crepúsculo y noche temprana (07 §2.1)."
    },
    "asesor": true,
