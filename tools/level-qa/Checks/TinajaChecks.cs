@@ -19,7 +19,7 @@
 //                    agotado; FIXG), y QA-TINAJA-SAFE no repite ese rechazo;
 //   QA-TINAJA-SAFE   ruta segura (03 §8), 20 paseos seguros y 30 casuales [P] (TinajaWalks.Check): el motivo separa «sin
 //                    vertido seguro» de «presupuesto agotado» también en los paseos casuales (FIXG: un SafeMoves sin
-//                    presupuesto con la realidad verdadera resoluble es «presupuesto agotado», no «adivinar»);
+//                    presupuesto es «presupuesto agotado», sin consultar la realidad verdadera, nunca «adivinar»);
 //   QA-TINAJA-MORPHO compuerta de coste de Morpho (w = 2, 40.000 nodos por realidad, tope de nodos con el factor
 //                    MorphoDeviceFactor, 8× [P] hasta PF1) en S0, en la ruta y en los paseos: el mismo tope y factor que P1.
 // El tope de dosis por tipo de nivel es QA-TINAJA-TIER (MurkyChecks); las variantes de alivio, ReliefChecks (QA-RELIEF-MASK y

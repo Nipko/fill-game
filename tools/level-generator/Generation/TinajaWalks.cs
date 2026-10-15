@@ -4,10 +4,11 @@
 //                   a un estado sin vertido seguro que no sea victoria (o no termina en 400 vertidos);
 //   paseos casuales unos 30 por nivel [P], con cualquier vertido útil al azar (02 §1.4, el criterio del juego): el primer
 //                   estado sin vertido seguro de cada paseo se clasifica por SafeMoves.Outcome y, si hace falta, con A* en la
-//                   realidad verdadera (ClassifyCasual; FIXG): si la verdadera no tiene solución, es un error del jugador;
-//                   si la tiene y SafeMoves demostró que ningún vertido es seguro en todas las realidades, habría que
-//                   adivinar y el nivel se rechaza; si SafeMoves agotó su presupuesto, se rechaza por «presupuesto
-//                   agotado», nunca por «adivinar». Es un filtro, no una prueba;
+//                   realidad verdadera (ClassifyCasual; FIXG): si SafeMoves agotó su presupuesto, se rechaza por
+//                   «presupuesto agotado» sin consultar la verdadera, nunca por «adivinar»; si ninguna realidad tiene
+//                   solución (NoExit), o SafeMoves demostró que ningún vertido es seguro en todas y la verdadera no la
+//                   tiene, es un error del jugador; si la tiene, habría que adivinar y el nivel se rechaza. Es un filtro,
+//                   no una prueba;
 //   S0 sin trampas  solo en los tableros de estreno: todo vertido útil de S0 es seguro (PourRules.CollectUsefulMoves frente
 //                   a SafeMoves, por hash canónico); uno que no es seguro sin que ninguna realidad quede demostrada sin
 //                   solución tras él (solo faltó presupuesto) se rechaza por «presupuesto agotado», no como «trampa en S0»;
@@ -82,7 +83,8 @@ internal enum CasualStop
 {
     /// <summary>
     /// Error del jugador (<see cref="TinajaCheckResult.CasualLost"/>; el paseo acaba y sigue el siguiente): la realidad
-    /// verdadera no tiene solución, así que desde aquí ningún vertido puede ser seguro.
+    /// verdadera no tiene solución (<see cref="SafeMovesOutcome.NoExit"/>, o A* tras
+    /// <see cref="SafeMovesOutcome.SomeRealitySolvable"/>), así que desde aquí ningún vertido puede ser seguro.
     /// </summary>
     Lost,
 
@@ -94,9 +96,9 @@ internal enum CasualStop
     Guess,
 
     /// <summary>
-    /// <see cref="SafeMoves"/> agotó su presupuesto por realidad antes de decidir (<see cref="SafeMovesOutcome.BudgetExceeded"/>)
-    /// y la realidad verdadera tiene solución o A* tampoco la decide: <see cref="TinajaWalks.KindBudget"/>, sin
-    /// <see cref="TinajaCheckResult.CasualGuess"/> (con una sola realidad, «adivinar» es imposible por definición).
+    /// <see cref="SafeMoves"/> agotó su presupuesto por realidad antes de decidir (<see cref="SafeMovesOutcome.BudgetExceeded"/>):
+    /// <see cref="TinajaWalks.KindBudget"/>, sin <see cref="TinajaCheckResult.CasualGuess"/> y sin consultar la realidad verdadera
+    /// (FIXG; con una sola realidad, «adivinar» es imposible por definición).
     /// </summary>
     SafeMovesBudget,
 
@@ -159,6 +161,14 @@ internal sealed class TinajaWalks
 
     private const ulong SafeWalkStream = 0x54494E00UL;
     private const ulong CasualWalkStream = 0x54494E80UL;
+
+    /// <summary>Separador de miles '.' (el de los textos del proyecto: «20.000», «1.000.000»), sin decimales.</summary>
+    private static readonly NumberFormatInfo ThousandsFormat = NumberFormatInfo.ReadOnly(new NumberFormatInfo
+    {
+        NumberGroupSeparator = ".",
+        NumberDecimalSeparator = ",",
+        NumberGroupSizes = [3],
+    });
 
     private readonly SafePath _safePath = new();
     private readonly SafeMoves _morpho = new();
@@ -318,8 +328,8 @@ internal sealed class TinajaWalks
 
                 if (safe.Count == 0)
                 {
-                    // Primer estado sin vertido seguro: se clasifica por el motivo de SafeMoves y, si hace falta, por si la
-                    // realidad verdadera aún tiene solución (ClassifyCasual; FIXG).
+                    // Primer estado sin vertido seguro: se clasifica por el motivo de SafeMoves y, solo con
+                    // SomeRealitySolvable, por si la realidad verdadera aún tiene solución (ClassifyCasual; FIXG).
                     SolveStatus? verdict = CasualNeedsTruth(safe.Outcome) ? _solver.Solve(s, truth).Status : null;
                     switch (ClassifyCasual(safe.Outcome, verdict))
                     {
@@ -335,7 +345,7 @@ internal sealed class TinajaWalks
                                 $"tinaja: el paseo casual {w + 1} llega tras {step} vertidos a un estado sin vertido seguro demostrado: presupuesto agotado ({budget})"));
                         default: // CasualStop.TruthBudget
                             return stats.Result(KindBudget, string.Create(CultureInfo.InvariantCulture,
-                                $"tinaja: el paseo casual {w + 1} llega tras {step} vertidos a un estado sin vertido seguro y A* agota {MetricsEngine.ParBudget} nodos en la realidad verdadera"));
+                                $"tinaja: el paseo casual {w + 1} llega tras {step} vertidos a un estado sin vertido seguro y A* agota {Thousands(MetricsEngine.ParBudget)} nodos en la realidad verdadera"));
                     }
 
                     break; // error del jugador: el paseo acaba aquí
@@ -451,7 +461,7 @@ internal sealed class TinajaWalks
     /// resoluble en la realidad verdadera, habría que adivinar, y el nivel se rechaza»; «El informe separa «sin vertido
     /// seguro» de «presupuesto agotado»»; FIXG). Pura: <paramref name="outcome"/> es el motivo de <see cref="SafeMoves"/>
     /// (<see cref="SafeMoves.Outcome"/>) y <paramref name="truth"/>, el de A* en la realidad verdadera, que solo se mira
-    /// cuando <see cref="CasualNeedsTruth"/> lo pide (null si no se resolvió).
+    /// cuando <see cref="CasualNeedsTruth"/> lo pide (null si no se resolvió; en los demás motivos no se mira).
     /// <list type="bullet">
     /// <item><description><see cref="SafeMovesOutcome.NoExit"/>: ninguna realidad tiene solución, tampoco la verdadera
     /// (demostrado): <see cref="CasualStop.Lost"/>.</description></item>
@@ -459,9 +469,8 @@ internal sealed class TinajaWalks
     /// con la verdadera resoluble, <see cref="CasualStop.Guess"/>; sin solución, <see cref="CasualStop.Lost"/>; si A* agota
     /// su presupuesto, <see cref="CasualStop.TruthBudget"/>.</description></item>
     /// <item><description><see cref="SafeMovesOutcome.BudgetExceeded"/>: «sin vertido seguro» no está demostrado, así que nunca
-    /// es «adivinar»: <see cref="CasualStop.SafeMovesBudget"/>, salvo que A* demuestre que la verdadera no tiene solución;
-    /// entonces ningún vertido puede ser seguro (lo sería también en la verdadera) y es un error del jugador,
-    /// <see cref="CasualStop.Lost"/>, como antes de FIXG: rechazar ahí sería una regla que 03 §8 no pone.</description></item>
+    /// es «adivinar»: <see cref="CasualStop.SafeMovesBudget"/> (<see cref="KindBudget"/>), sin consultar la realidad verdadera
+    /// (FIXG, arreglos 1 y 3), aunque no tenga solución.</description></item>
     /// </list>
     /// </summary>
     /// <exception cref="ArgumentException">Falta <paramref name="truth"/> cuando <see cref="CasualNeedsTruth"/> lo pide.</exception>
@@ -470,14 +479,16 @@ internal sealed class TinajaWalks
     /// <see cref="SafeMovesOutcome.RealitiesRejected"/>, que el paseo filtra antes).</exception>
     public static CasualStop ClassifyCasual(SafeMovesOutcome outcome, SolveStatus? truth)
     {
-        if (outcome == SafeMovesOutcome.NoExit)
+        switch (outcome)
         {
-            return CasualStop.Lost;
-        }
-
-        if (!CasualNeedsTruth(outcome))
-        {
-            throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "No es un motivo de «ningun vertido seguro».");
+            case SafeMovesOutcome.NoExit:
+                return CasualStop.Lost;
+            case SafeMovesOutcome.BudgetExceeded:
+                return CasualStop.SafeMovesBudget; // sin consultar la verdadera (FIXG, arreglos 1 y 3)
+            case SafeMovesOutcome.SomeRealitySolvable:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "No es un motivo de «ningun vertido seguro».");
         }
 
         if (truth is not SolveStatus status)
@@ -485,25 +496,23 @@ internal sealed class TinajaWalks
             throw new ArgumentException("Falta el resultado de A* en la realidad verdadera para " + outcome + ".", nameof(truth));
         }
 
-        if (status == SolveStatus.Unsolvable)
+        return status switch
         {
-            return CasualStop.Lost;
-        }
-
-        if (outcome == SafeMovesOutcome.BudgetExceeded)
-        {
-            return CasualStop.SafeMovesBudget;
-        }
-
-        return status == SolveStatus.Solved ? CasualStop.Guess : CasualStop.TruthBudget;
+            SolveStatus.Solved => CasualStop.Guess,
+            SolveStatus.Unsolvable => CasualStop.Lost,
+            _ => CasualStop.TruthBudget,
+        };
     }
 
     /// <summary>
     /// ¿Hace falta A* en la realidad verdadera para clasificar el primer estado sin vertido seguro de un paseo casual
-    /// (<see cref="ClassifyCasual"/>)? Solo si <see cref="SafeMoves"/> no lo decidió ya (<see cref="SafeMovesOutcome.NoExit"/>).
+    /// (<see cref="ClassifyCasual"/>)? Solo si <see cref="SafeMoves"/> demostró que ningún vertido es seguro en todas las
+    /// realidades sin que todas queden sin solución (<see cref="SafeMovesOutcome.SomeRealitySolvable"/>): con
+    /// <see cref="SafeMovesOutcome.NoExit"/> la verdadera tampoco la tiene y con <see cref="SafeMovesOutcome.BudgetExceeded"/>
+    /// se rechaza por presupuesto sin mirarla.
     /// </summary>
     public static bool CasualNeedsTruth(SafeMovesOutcome outcome) =>
-        outcome is SafeMovesOutcome.SomeRealitySolvable or SafeMovesOutcome.BudgetExceeded;
+        outcome == SafeMovesOutcome.SomeRealitySolvable;
 
     /// <summary>Causa del rechazo de una clasificación de <see cref="ClassifyCasual"/> (null si es un error del jugador).</summary>
     public static string? KindOf(CasualStop stop) => stop switch
@@ -608,12 +617,14 @@ internal sealed class TinajaWalks
     /// </summary>
     private static string BudgetText(SolverOptions options, bool relief)
     {
-        int n = options.NodeBudget;
-        string nodes = n >= 1000
-            ? string.Create(CultureInfo.InvariantCulture, $"{n / 1000}.{n % 1000:000}")
-            : n.ToString(CultureInfo.InvariantCulture);
-        return nodes + " nodos por realidad de " + (relief ? "ReliefOptions" : "SafeMoves");
+        return Thousands(options.NodeBudget) + " nodos por realidad de " + (relief ? "ReliefOptions" : "SafeMoves");
     }
+
+    /// <summary>
+    /// Número de nodos con separador de miles '.' («20.000»): el único formateador de los motivos de rechazo de la tinaja y
+    /// de la sección «Tinaja» del informe (<see cref="CampaignReport"/>).
+    /// </summary>
+    public static string Thousands(long n) => n.ToString("N0", ThousandsFormat);
 
     /// <summary>Motivo de <see cref="SafeMoves"/> en un rechazo; <paramref name="budget"/>, el presupuesto que se agotó (si no va ya en el motivo).</summary>
     private static string Outcome(SafeMovesOutcome outcome, string? budget = null) => outcome switch

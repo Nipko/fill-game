@@ -16,7 +16,9 @@
 //     todos «presupuesto agotado»; el estreno 323 del fixture de level-qa (QA-TINAJA-DEBUT) sale con «presupuesto agotado» y
 //     todos sus vertidos sin seguridad demostrada; y la tabla de S0Reject (trampa, presupuesto y mixto con su sufijo);
 //   - la clasificación del primer estado sin vertido seguro de un paseo casual (FIXG; TinajaWalks.ClassifyCasual), en cada
-//     combinación del motivo de SafeMoves y de A* en la realidad verdadera: el presupuesto agotado nunca es «adivinar»; y el
+//     combinación del motivo de SafeMoves y de A* en la realidad verdadera: el presupuesto agotado de SafeMoves es siempre
+//     «presupuesto agotado», sin consultar la verdadera (ni aunque no tenga solución), y nunca «adivinar»; el formato de miles
+//     de los presupuestos en los motivos (TinajaWalks.Thousands); y el
 //     candidato del 338 del fixture de level-qa (QA-TINAJA-SAFE, presupuesto agotado) sale con «presupuesto agotado» y sin
 //     ningún paseo de adivinar;
 //   - la cabecera del informe: pack_schema 2 (3 en los packs con tinaja) en una campaña con packs de los dos;
@@ -430,8 +432,9 @@ internal static class TinajaSelfTest
     /// <summary>
     /// Clasificación de los paseos casuales (FIXG; 03 §8; <see cref="TinajaWalks.ClassifyCasual"/>): cada combinación del
     /// motivo de SafeMoves y de A* en la realidad verdadera, con la causa del rechazo que da. Fija que el presupuesto agotado
-    /// de SafeMoves nunca es «adivinar» (ni suma CasualGuess, que solo crece con <see cref="CasualStop.Guess"/>) y que
-    /// «adivinar» es SomeRealitySolvable con la verdadera resoluble.
+    /// de SafeMoves es siempre <see cref="TinajaWalks.KindBudget"/> sin resolver la verdadera (FIXG, arreglos 1 y 3: ni
+    /// aunque no tenga solución) y nunca «adivinar» (ni suma CasualGuess, que solo crece con <see cref="CasualStop.Guess"/>),
+    /// y que «adivinar» es SomeRealitySolvable con la verdadera resoluble.
     /// </summary>
     private static void CasualClassification(Action<bool, string> check)
     {
@@ -441,9 +444,7 @@ internal static class TinajaSelfTest
             (SafeMovesOutcome.SomeRealitySolvable, SolveStatus.Solved, CasualStop.Guess, TinajaWalks.KindGuess),
             (SafeMovesOutcome.SomeRealitySolvable, SolveStatus.Unsolvable, CasualStop.Lost, null),
             (SafeMovesOutcome.SomeRealitySolvable, SolveStatus.BudgetExceeded, CasualStop.TruthBudget, TinajaWalks.KindBudget),
-            (SafeMovesOutcome.BudgetExceeded, SolveStatus.Solved, CasualStop.SafeMovesBudget, TinajaWalks.KindBudget),
-            (SafeMovesOutcome.BudgetExceeded, SolveStatus.BudgetExceeded, CasualStop.SafeMovesBudget, TinajaWalks.KindBudget),
-            (SafeMovesOutcome.BudgetExceeded, SolveStatus.Unsolvable, CasualStop.Lost, null),
+            (SafeMovesOutcome.BudgetExceeded, null, CasualStop.SafeMovesBudget, TinajaWalks.KindBudget),
         ];
         foreach ((SafeMovesOutcome outcome, SolveStatus? truth, CasualStop stop, string? kind) in table)
         {
@@ -452,9 +453,15 @@ internal static class TinajaSelfTest
                 F($"paseo casual: {outcome} con la realidad verdadera {(truth is SolveStatus t ? t.ToString() : "sin resolver")} -> {got} ({TinajaWalks.KindOf(got) ?? "error del jugador"}; se espera {stop})"));
         }
 
-        check(Throws<ArgumentException>(() => TinajaWalks.ClassifyCasual(SafeMovesOutcome.BudgetExceeded, null))
-            && Throws<ArgumentException>(() => TinajaWalks.ClassifyCasual(SafeMovesOutcome.SomeRealitySolvable, null)),
-            "paseo casual: sin resolver la realidad verdadera no se clasifica SomeRealitySolvable ni BudgetExceeded");
+        // La verdadera no cuenta con el presupuesto de SafeMoves agotado, ni aunque no tenga solución (FIXG): siempre KindBudget.
+        check(new SolveStatus?[] { SolveStatus.Solved, SolveStatus.Unsolvable, SolveStatus.BudgetExceeded }
+                .All(t => TinajaWalks.ClassifyCasual(SafeMovesOutcome.BudgetExceeded, t) == CasualStop.SafeMovesBudget),
+            "paseo casual: BudgetExceeded es presupuesto agotado con cualquier resultado de la realidad verdadera (tambien Unsolvable)");
+        check(Throws<ArgumentException>(() => TinajaWalks.ClassifyCasual(SafeMovesOutcome.SomeRealitySolvable, null)),
+            "paseo casual: sin resolver la realidad verdadera no se clasifica SomeRealitySolvable");
+        check(TinajaWalks.Thousands(999) == "999" && TinajaWalks.Thousands(20000) == "20.000"
+                && TinajaWalks.Thousands(300000) == "300.000" && TinajaWalks.Thousands(1000000) == "1.000.000",
+            F($"formato de miles de los presupuestos: {TinajaWalks.Thousands(999)}, {TinajaWalks.Thousands(20000)}, {TinajaWalks.Thousands(300000)} y {TinajaWalks.Thousands(1000000)}"));
         check(new[] { SafeMovesOutcome.Found, SafeMovesOutcome.Won, SafeMovesOutcome.RealitiesRejected }
                 .All(o => Throws<ArgumentOutOfRangeException>(() => TinajaWalks.ClassifyCasual(o, SolveStatus.Solved))),
             "paseo casual: Found, Won y RealitiesRejected no son motivos de «ningun vertido seguro»");
