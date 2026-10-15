@@ -29,8 +29,10 @@ namespace AF.UI
     /// <para><b>Victoria con vista</b> (D-013, punto 8, Q6-A; 02 §6; 07 §5.4; <c>ui_victory_view</c>, 08 §9; tarea M2.2): al abrirse
     /// la pantalla de victoria, tras la ola de saltos, el tablero entero (el panel, sus estantes y las cuias, con lo que va en
     /// su capa) pasa del alfa 1 al 0 en <see cref="VictoryViewFadeMs"/> ms y se ve el sitio del fondo, que deja de tener el
-    /// hueco del panel; si es una llegada (<see cref="RiverStopCatalog.ArrivalOnWin"/>), el fondo funde a la vez, en el mismo
-    /// fundido, a la parada que traerá el nivel siguiente, así que ese nivel ya carga con su fondo (<c>change</c> = <c>same</c>).
+    /// hueco del panel; si es una llegada (<see cref="RiverStopCatalog.ArrivalOnWin"/> salvo en el 10, como
+    /// <see cref="MapMoments.ForVictory"/>), el fondo funde a la vez, en el mismo fundido, a la parada que traerá el nivel
+    /// siguiente, así que ese nivel ya carga con su fondo (<c>change</c> = <c>same</c>). En el 10 no hay llegada (la cuenta el
+    /// Mapa, 02 §6 y 06 §2.3): el tablero se va sobre el estuario y el 11 cambia de fondo al cargar.
     /// Con Reducir movimiento, corte; con la clave apagada, como antes (el tablero a la vista y el fondo cambia al cargar).
     /// No mueve ningún tiempo de la victoria (Siguiente, Inicio, la Cosecha doble, AD_GATE y la ranura no cambian); la carga
     /// del nivel siguiente devuelve el alfa a 1.</para>
@@ -183,10 +185,13 @@ namespace AF.UI
             LayoutStopBackdrop(); // sin hueco: bajo el panel que se va, la banda del agua
 
             // En una llegada, el fondo pasa ya, en el mismo fundido, a la parada que trae el nivel siguiente (con
-            // ui_bg_per_stop = false, la gran parada de su mundo) con el agua de su mundo.
+            // ui_bg_per_stop = false, la gran parada de su mundo) con el agua de su mundo. El 10 no es una llegada (la misma
+            // definición que MapMoments.ForVictory y VictoryLineArbiter): la primera llegada la cuenta el Mapa del 10 (02 §6,
+            // fila Llegada; 06 §2.3, paso 3; D-013, punto 7), así que en el 10 el tablero se va sobre el estuario y el fondo de
+            // Santarém llega con la carga del 11 (D-013, punto 9).
             int won = flow.LevelNumber;
             RiverStopCatalog? stops = RiverStops;
-            if (stops != null && stops.ArrivalOnWin(won) != null)
+            if (stops != null && won != RiverStopCatalog.LevelsPerStop && stops.ArrivalOnWin(won) != null)
             {
                 int next = won + 1;
                 RiverStop? stop = StopForLevel(stops, next, MapConfig.UiBgPerStop);

@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections;
 using System.Globalization;
+using System.IO;
 using AF.Presentation;
 using AF.UI;
 using NUnit.Framework;
@@ -16,7 +17,8 @@ namespace AF.Tests.PlayMode
     /// la victoria entera (360 × 780 dp);</item>
     /// <item><c>victory_view_l130_end</c>: la llegada al río de la frontera, en el Trapecio;</item>
     /// <item><c>victory_view_l131_{000|end}</c> y <c>victory_view_l131_640_end</c>: una victoria sin llegada en un tablero de 3
-    /// filas del Trapecio (el sitio de siempre, sin el panel delante), a 360 × 780 y 360 × 640 dp;</item>
+    /// filas del Trapecio (el sitio de siempre, sin el panel delante), a 360 × 780 y 360 × 640 dp (esta, recortada a la
+    /// pantalla de 640 dp: 1080 × 1920 px);</item>
     /// <item><c>victory_view_off_l131_end</c>: la misma victoria con <c>ui_victory_view</c> apagada, para comparar.</item>
     /// </list>
     /// Cada captura escribe su línea <c>AF_VICTORY_VIEW</c> con el alfa del tablero, la parada, el héroe, el horizonte y la cinta.
@@ -73,7 +75,7 @@ namespace AF.Tests.PlayMode
             {
                 PlayModeHelpers.TickExact(boot, ms - elapsed);
                 elapsed = ms;
-                yield return Save(dir, name + "_" + ms.ToString("000", CultureInfo.InvariantCulture), screen);
+                yield return Save(dir, name + "_" + ms.ToString("000", CultureInfo.InvariantCulture), screen, small);
             }
 
             PlayModeHelpers.Step(boot, 1600);
@@ -82,20 +84,44 @@ namespace AF.Tests.PlayMode
                 Assert.That(screen.BoardAlpha, Is.EqualTo(0f), name);
             }
 
-            yield return Save(dir, name + "_end", screen);
+            yield return Save(dir, name + "_end", screen, small);
             SnapshotKit.Release();
             LaunchOptions.Reset();
         }
 
-        private static IEnumerator Save(string dir, string name, GameScreen view)
+        // Con la pantalla de 360 × 640 dp, solo lo que ve el jugador: las filas de arriba de esa pantalla (como
+        // FactLineSnapshotTests; revisión de M2.2).
+        private static IEnumerator Save(string dir, string name, GameScreen view, bool small)
         {
             yield return SnapshotKit.Wait(0.2f);
-            SnapshotKit.Save(dir, name);
+            if (small)
+            {
+                SaveTop(dir, name, (int)HudLabelTests.Screen640.y);
+            }
+            else
+            {
+                SnapshotKit.Save(dir, name);
+            }
+
             StopBackdrop b = view.StopBackdrop;
             Rect hero = view.HeroRect;
             Debug.Log("AF_VICTORY_VIEW " + name + ": tablero " + F(view.BoardAlpha) + ", filas " + (view.Layout?.Rows ?? 0) + ", parada "
                 + (b.Stop?.Id ?? "-") + (b.Fading ? " (fundiendo)" : string.Empty) + ", héroe " + b.HeroSource + " " + F(hero.yMin) + "-"
                 + F(hero.yMax) + " dp, horizonte " + F(view.HorizonY) + " dp, cinta " + F(view.VictoryPanelTopDp - 38f) + " dp");
+        }
+
+        // Guarda solo las heightPx filas de arriba de la captura (la pantalla simulada de 360 × 640 dp).
+        private static void SaveTop(string dir, string name, int heightPx)
+        {
+            var full = new Texture2D(2, 2, TextureFormat.RGB24, false);
+            Assert.That(full.LoadImage(SnapshotKit.Capture()), Is.True, name);
+            int h = Mathf.Min(heightPx, full.height);
+            var top = new Texture2D(full.width, h, TextureFormat.RGB24, false);
+            top.SetPixels(full.GetPixels(0, full.height - h, full.width, h));
+            top.Apply();
+            File.WriteAllBytes(Path.Combine(dir, name + ".png"), top.EncodeToPNG());
+            Object.Destroy(full);
+            Object.Destroy(top);
         }
 
         private static string F(float v)

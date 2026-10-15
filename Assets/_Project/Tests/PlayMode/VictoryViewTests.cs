@@ -111,6 +111,33 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Level10_IsNotAnArrival_TheBoardFadesOverTheEstuary_AndLevel11ChangesOnLoad()
+        {
+            // En el 10, la primera llegada la cuenta el Mapa (02 §6, fila Llegada; 06 §2.3, paso 3; D-013, punto 7), con la
+            // misma definición que MapMoments.ForVictory y VictoryLineArbiter: el fondo no cambia en la victoria.
+            yield return VictoryArrivalTests.Win(10);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            StopBackdrop b = view.StopBackdrop;
+            Assert.That(view.VictoryViewOn, Is.True);
+            Assert.That(b.Stop!.Id, Is.EqualTo("belem"), "la parada del 1-10 sigue");
+            Assert.That(b.Fading, Is.False, "el 10 no es una llegada: el fondo no funde");
+            PlayModeHelpers.TickExact(boot, 250);
+            Assert.That(view.BoardAlpha, Is.EqualTo(0f), "el tablero se va igual");
+            Assert.That(view.VictoryViewFading, Is.False);
+            Assert.That(b.Fading, Is.False);
+            Assert.That(b.Stop.Id, Is.EqualTo("belem"), "el estuario, sin adelantar Santarém");
+            Assert.That(b.BandHole.width, Is.EqualTo(0f));
+            PlayModeHelpers.Step(boot, 1500);
+            Assert.That(b.Stop.Id, Is.EqualTo("belem"));
+            Assert.That(boot.PressNext(), Is.True);
+            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(11));
+            Assert.That(view.BoardAlpha, Is.EqualTo(1f), "la carga devuelve el alfa a 1");
+            Assert.That(view.LastStopChange, Is.EqualTo(GameScreen.StopChangeFade), "el 11 cambia de fondo al cargar, con fundido");
+            Assert.That(b.Stop.Id, Is.EqualTo("santarem"));
+        }
+
+        [UnityTest]
         public IEnumerator WithReduceMotion_ItIsACut()
         {
             yield return VictoryArrivalTests.Win(20, v => GameBootstrap.Current!.Flow!.ReduceMotion = true);
