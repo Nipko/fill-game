@@ -24,7 +24,7 @@ const string Usage = """
 
     Uso:
       dotnet run --project tools/level-qa -c Release -- <paquete.json> [<paquete.json> ...] [--report <informe.md>] [--spec <campaign.json>] [--levels a-b] [--no-reproduce]
-      dotnet run --project tools/level-qa -- --self-test [key2]
+      dotnet run --project tools/level-qa -- --self-test [key2|reglas]
       dotnet run --project tools/level-qa -- --help
 
     Recalcula cada nivel con AF.Core y AF.Solver y comprueba: estructura, U_c, selladas, Aguas estancadas al inicio, par
@@ -47,6 +47,10 @@ const string Usage = """
     --self-test [key2]: genera el estreno de cada variante de la 1.0 de tools/level-generator/specs/sample_variants.json,
     lo escribe a un pack temporal y comprueba que este lector lo lee (tambien la key2 de la Flor y el relief) con el mismo
     tablero y el mismo hash que el generador; la Flor sin key2 no se construye. Sale con 0, 1 (algun FAIL) o 2.
+    --self-test reglas: prueba en positivo y en negativo el tope de mecanicas por nivel (QA-MECH-COUNT: retos desde el 301 y
+    hitos desde el 320 con sample_variants.json; 2 siempre con campaign_v1.json), QA-HITO-14 (el vacio del hito de K = 13
+    repartido en cuias a medias, como el 580 y el 600, y las 14 cuias con K = 12 y la cueva de la Pirana) y las casas de la
+    Flor de QA-VAR-FLOR (D-024). Sale con 0, 1 (algun FAIL) o 2.
 
     Codigos de salida: 0 = todo cumple (los avisos no fallan) o ayuda; 1 = algun nivel no cumple, el esquema falla, un
     pack no se reproduce o falta Python; 2 = uso incorrecto, sin paquetes o archivos ilegibles.
@@ -71,11 +75,17 @@ if (args.Contains("--help") || args.Contains("-h"))
 
 // --self-test key2 (P5): el PackReader de level-qa lee la key2 de la Flor (y las demás variantes) del pack escrito por el
 // generador con el mismo tablero y el mismo hash (VariantsSelfTest.RunPackReadBack, enlazado del generador).
+// --self-test reglas (P6): QA-MECH-COUNT, QA-HITO-14 y las casas de QA-VAR-FLOR en positivo (Checks/RulesSelfTest.cs).
 if (args[0] == "--self-test")
 {
-    if (args.Length > 2 || (args.Length == 2 && args[1] != "key2"))
+    if (args.Length > 2 || (args.Length == 2 && args[1] != "key2" && args[1] != "reglas"))
     {
-        return UsageError("--self-test solo admite: key2.");
+        return UsageError("--self-test solo admite: key2 o reglas.");
+    }
+
+    if (args.Length == 2 && args[1] == "reglas")
+    {
+        return RulesSelfTest.Run();
     }
 
     return VariantsSelfTest.RunPackReadBack("level-qa PackReader", path =>

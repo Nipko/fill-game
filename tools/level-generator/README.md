@@ -321,8 +321,10 @@ lector de la especificación rechaza cualquier otro código):
   level-qa (P6: los códigos Ln, Ha, B2 y Fl en QA-MECH-*, `intro_mechanic` `liana_n` y `brote_n2` en QA-DEBUT, QA-VAR-* y el
   tope de mecánicas de `mechanics_per_level`) los cumplen los packs de muestra: level-qa sale con 0 fallos con
   `--spec tools/level-generator/specs/sample_variants.json` (`tools/level-qa/README.md`). La clave `mechanics_per_level` de
-  las especificaciones (`{"max": 2, "raised_from_level": 300, "raised_max": 3}`, 02 §9.2 regla 4) solo la lee level-qa por
-  ahora; MAX-2 de `--validate-spec` sigue con el 300 en el código hasta P4.
+  las especificaciones (`{"max": 2, "raised_from_level": 301, "raised_milestone_from_level": 320, "raised_max": 3}`: 02 §9.2
+  regla 4, con los retos hasta 3 desde el 301 y los hitos desde el 320, 03 §12 fila p20 y d.5.1) solo la lee level-qa por
+  ahora (`CampaignSpec.MaxMechanicsAt`, probado por `level-qa --self-test reglas`); MAX-2 de `--validate-spec` sigue con el
+  300 en el código hasta P4.
 
 Muestra (no es el calendario de 201-700, que copiará `campaign_v2.json` en P4 desde d.5.3 de la propuesta):
 
@@ -332,6 +334,7 @@ dotnet run --project tools/level-generator -c Release -- --spec tools/level-gene
 dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/sample_variants.json --levels 241-320 --out tools/out/sample_variants --check
 dotnet run --project tools/level-generator -c Release -- --self-test variants
 dotnet run --project tools/level-qa -c Release -- --self-test key2
+dotnet run --project tools/level-qa -c Release -- --self-test reglas
 dotnet run --project tools/level-qa -c Release -- tools/out/sample_variants/mundo_06_v1.json tools/out/sample_variants/mundo_07_v1.json --spec tools/level-generator/specs/sample_variants.json
 ```
 

@@ -6,7 +6,8 @@
 //   QA-VAR-B2     el Brote de dos hojas empieza con espacio >= 2 (b.3: «el validador exige espacio >= 2: empieza con 2 dosis como
 //                 mucho»), con 1-2 dosis;
 //   QA-VAR-FLOR   la Flor lleva dos frutas distintas (c1 ≠ c2), las dos en el tablero, sin dosis suyas dentro de ella y con casa
-//                 fuera de ella a la vez (b.3: «como la Liana, regla 4»);
+//                 fuera de ella a la vez (b.3: «como la Liana, regla 4»), contando las casas como D-024: una Hoja atada, un Matapi
+//                 con dosis o la Lluvia solo son casa de su fruta, y la Liana, otra Flor o la Tinaja, de ninguna;
 //   QA-VAR-LN     la Liana de cuenta lleva n de 1 a 2 (02 §9.1 M3);
 //   QA-VAR-DEBUT  el tablero de estreno de cada variante la lleva sola (ninguna otra mecánica ni capacidad) y con un ejemplar
 //                 (02 §9.2 regla 2).
@@ -29,7 +30,7 @@ internal static class VariantChecks
     [
         ("QA-VAR-HA", "Hoja atada: su fruta llave esta en el tablero y el nivel no empieza en Aguas estancadas (propuesta de D-007 b.3; 03 sec. 17 #6; 02 sec. 9.2 regla 1)"),
         ("QA-VAR-B2", "Brote de dos hojas: espacio >= 2 al empezar, con 1-2 dosis (propuesta de D-007 b.3; 02 R10 b)"),
-        ("QA-VAR-FLOR", "Flor de vitoria-regia: key != key2, las dos frutas en el tablero, sin dosis suyas dentro y con casa fuera de ella a la vez (b.3; D-023 punto 5)"),
+        ("QA-VAR-FLOR", "Flor de vitoria-regia: key != key2, las dos frutas en el tablero, sin dosis suyas dentro y con casa fuera de ella a la vez; una Hoja atada, un Matapi con dosis o la Lluvia solo son casa de su fruta, y la Liana, otra Flor o la Tinaja, de ninguna (b.3; D-023 punto 5; D-024)"),
         ("QA-VAR-LN", "Liana de cuenta: n de 1 a 2 (02 sec. 9.1 M3; b.3)"),
         ("QA-VAR-DEBUT", "estreno de una variante de la 1.0: sola (sin otra mecanica ni capacidad) y un ejemplar (02 sec. 9.2 regla 2)"),
     ];
@@ -98,15 +99,7 @@ internal static class VariantChecks
     /// <summary>Controles de un tablero (el del nivel o el de una variante de alivio, con <paramref name="prefix"/>).</summary>
     private static IEnumerable<(string Id, string Message)> Board(BoardData b, bool stuck, string prefix)
     {
-        var units = new int[Cuia.MaxColor + 1];
-        foreach (int c in b.Cuias.SelectMany(x => x))
-        {
-            if (c >= 0 && c < units.Length)
-            {
-                units[c]++;
-            }
-        }
-
+        int[] units = Units(b);
         bool IsTintOnBoard(int key) => key >= Cuia.MinColor && key <= Cuia.MaxTintColor && units[key] > 0;
         bool hojaAtada = false;
         for (int i = 0; i < b.Attrs.Length && i < b.Cuias.Length && i < b.Caps.Length; i++)
@@ -163,11 +156,34 @@ internal static class VariantChecks
     }
 
     /// <summary>
-    /// Motivos por los que la Flor de la cuia <paramref name="i"/> no cumple b.3 y la firma: dos frutas distintas, las dos en el
-    /// tablero, ninguna dosis suya dentro de la flor y casa fuera de ella para las dos a la vez (una cuia con capacidad = U_c de
-    /// cada fruta; dos si las dos U_c coinciden).
+    /// Unidades de cada color (índice = color): las dosis de las cuias publicadas más las gotas pendientes de la Lluvia, que son
+    /// de su agua (02 R3: U_agua = dosis + gotas = 4).
     /// </summary>
-    private static IEnumerable<string> FlorProblems(BoardData b, int i, int[] units)
+    internal static int[] Units(BoardData b)
+    {
+        var units = new int[Cuia.MaxColor + 1];
+        foreach (int c in b.Cuias.SelectMany(x => x))
+        {
+            if (c >= 0 && c < units.Length)
+            {
+                units[c]++;
+            }
+        }
+
+        foreach (MechanicSpec a in b.Attrs.Where(a => a.Type == MechanicType.Lluvia && a.Key >= 0 && a.Key < units.Length))
+        {
+            units[a.Key] += a.N;
+        }
+
+        return units;
+    }
+
+    /// <summary>
+    /// Motivos por los que la Flor de la cuia <paramref name="i"/> no cumple b.3 y la firma: dos frutas distintas, las dos en el
+    /// tablero, ninguna dosis suya dentro de la flor y casa fuera de ella para las dos a la vez (<see cref="CanSealOutside"/>).
+    /// Lo prueba <c>--self-test reglas</c> (<see cref="RulesSelfTest"/>) además de los fixtures QA-VAR-FLOR.
+    /// </summary>
+    internal static IEnumerable<string> FlorProblems(BoardData b, int i, int[] units)
     {
         int key = b.Attrs[i].Key;
         int key2 = b.Attrs[i].Key2;
@@ -191,12 +207,87 @@ internal static class VariantChecks
                 + " tiene dosis dentro de la Flor: no podria sellar fuera de ella";
         }
 
-        int homes = Enumerable.Range(0, b.Caps.Length).Count(j => j != i && b.Caps[j] == units[key]);
-        int homes2 = Enumerable.Range(0, b.Caps.Length).Count(j => j != i && b.Caps[j] == units[key2]);
-        bool canSeal = units[key] == units[key2] ? homes >= 2 : homes >= 1 && homes2 >= 1;
-        if (!canSeal)
+        if (!CanSealOutside(b, i, key, key2, units))
         {
-            yield return Num($"las frutas {key} (U_c = {units[key]}) y {key2} (U_c = {units[key2]}) no tienen casa fuera de la Flor a la vez");
+            yield return Num($"las frutas {key} (U_c = {units[key]}) y {key2} (U_c = {units[key2]}) no tienen casa fuera de la Flor a la vez")
+                + " (una Hoja atada, un Matapi con dosis o la Lluvia solo son casa de su fruta; la Liana, otra Flor, la Tinaja y su cuia, de ninguna)";
+        }
+    }
+
+    /// <summary>
+    /// Las dos frutas de la Flor de la cuia <paramref name="flor"/> pueden sellar fuera de ella a la vez: una casa para cada
+    /// una, distintas (b.3, «como la Liana, regla 4»). Una casa de la fruta f es otra cuia de capacidad U_f que puede recibirla y
+    /// sellarla (D-024 y LevelValidation: «una Hoja atada o un Matapi con dosis solo es casa de su fruta»):
+    /// <list type="bullet">
+    /// <item><description>la Hoja atada, solo de su llave; el Matapi con dosis, solo de la fruta de sus dosis (vacío, de
+    /// cualquiera); la cuia de la Lluvia, solo de su agua (solo sella con agua, M6);</description></item>
+    /// <item><description>la Liana (con fruta o de cuenta) y otra Flor, de ninguna: están cerradas hasta que sellen otras frutas,
+    /// y se cuentan como si no se abrieran (cota conservadora); la Tinaja y su cuia, de ninguna (nunca reciben, M13);</description></item>
+    /// <item><description>el resto (sin mecánica, Hoja, Brote, Remolino, con Barro…), de cualquier fruta de su capacidad.</description></item>
+    /// </list>
+    /// LevelValidation de AF.Core solo cuenta las capacidades en esta regla de la Flor; aquí se cuentan las casas de verdad.
+    /// </summary>
+    internal static bool CanSealOutside(BoardData b, int flor, int key, int key2, int[] units)
+    {
+        bool own1 = false;
+        bool own2 = false;
+        int open1 = 0;
+        int open2 = 0;
+        for (int j = 0; j < b.Caps.Length && j < b.Attrs.Length && j < b.Cuias.Length; j++)
+        {
+            if (j == flor)
+            {
+                continue;
+            }
+
+            int only = HomeOnlyOf(b, j);
+            if (only == NoHome)
+            {
+                continue;
+            }
+
+            int cap = b.Caps[j];
+            if (only == AnyFruit)
+            {
+                open1 += cap == units[key] ? 1 : 0;
+                open2 += cap == units[key2] ? 1 : 0;
+            }
+            else
+            {
+                own1 |= only == key && cap == units[key];
+                own2 |= only == key2 && cap == units[key2];
+            }
+        }
+
+        int need1 = own1 ? 0 : 1;
+        int need2 = own2 ? 0 : 1;
+        return units[key] == units[key2] ? open1 >= need1 + need2 : open1 >= need1 && open2 >= need2;
+    }
+
+    private const int AnyFruit = -1;
+
+    private const int NoHome = -2;
+
+    /// <summary>De qué fruta puede ser casa la cuia <paramref name="j"/>: <see cref="AnyFruit"/>, <see cref="NoHome"/> o una fruta.</summary>
+    private static int HomeOnlyOf(BoardData b, int j)
+    {
+        MechanicSpec a = b.Attrs[j];
+        int[] doses = b.Cuias[j];
+        switch (a.Type)
+        {
+            case MechanicType.HojaAtada:
+                return a.Key;
+            case MechanicType.Matapi:
+                return doses.Length == 0 ? AnyFruit : doses.Distinct().Count() == 1 ? doses[0] : NoHome;
+            case MechanicType.Lluvia:
+                return a.Key;
+            case MechanicType.Liana:
+            case MechanicType.Flor:
+            case MechanicType.Tinaja:
+            case MechanicType.Cucharon:
+                return NoHome;
+            default:
+                return AnyFruit;
         }
     }
 

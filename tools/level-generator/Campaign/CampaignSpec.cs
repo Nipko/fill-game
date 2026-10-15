@@ -247,10 +247,18 @@ internal sealed class CampaignSpec
     public int MaxMechanics { get; init; } = DefaultMaxMechanics;
 
     /// <summary>
-    /// Primer nivel con el tope alto («3 después del 300», 02 §9.2 regla 4): <c>mechanics_per_level.raised_from_level</c>, o
-    /// null si la especificación no lo trae (nunca sube). El tope alto solo vale en retos e hitos (<see cref="MaxMechanicsAt"/>).
+    /// Primer reto con el tope alto: <c>mechanics_per_level.raised_from_level</c>, o null si la especificación no lo trae (nunca
+    /// sube). «3 después del 300» (02 §9.2 regla 4) es «hasta 3 desde el 301» en los retos (d.5.1 de la propuesta de D-009), así
+    /// que las especificaciones de 201-700 lo ponen en 301. El tope alto solo vale en retos e hitos (<see cref="MaxMechanicsAt"/>).
     /// </summary>
     public int? RaisedMechanicsFrom { get; init; }
+
+    /// <summary>
+    /// Primer hito con el tope alto: <c>mechanics_per_level.raised_milestone_from_level</c> (03 §12, fila p20: «2 mecánicas (3
+    /// desde el 320)»; d.5.1: «2 en el hito (hasta 3 desde el 320)»), o <see cref="RaisedMechanicsFrom"/> si la especificación no
+    /// lo trae.
+    /// </summary>
+    public int? RaisedMilestoneMechanicsFrom { get; init; }
 
     /// <summary>Tope alto (<c>mechanics_per_level.raised_max</c>; 3 en 02 §9.2 regla 4).</summary>
     public int RaisedMaxMechanics { get; init; } = DefaultMaxMechanics;
@@ -485,13 +493,21 @@ internal sealed class CampaignSpec
 
     /// <summary>
     /// Tope de mecánicas distintas del nivel (02 §9.2 regla 4; D-009: «máximo 2 mecánicas distintas por nivel antes del 300 y 3
-    /// después, 3 solo en retos e hitos»): el alto desde <see cref="RaisedMechanicsFrom"/> y solo en retos e hitos; si no, el
-    /// normal. Los niveles salen de la especificación, no del código (P6 de la tanda 4).
+    /// después, 3 solo en retos e hitos»): el alto en los retos desde <see cref="RaisedMechanicsFrom"/> (301) y en los hitos
+    /// desde <see cref="RaisedMilestoneMechanicsFrom"/> (320; 03 §12, fila p20); en los demás niveles, el normal. Los niveles
+    /// salen de la especificación, no del código (P6 de la tanda 4); lo prueba <c>level-qa --self-test reglas</c>.
     /// </summary>
-    public int MaxMechanicsAt(int level, SlotRole? role) =>
-        RaisedMechanicsFrom is int from && level >= from && role is SlotRole.Challenge or SlotRole.Milestone
-            ? RaisedMaxMechanics
-            : MaxMechanics;
+    public int MaxMechanicsAt(int level, SlotRole? role) => RaisedFromFor(role) is int from && level >= from
+        ? RaisedMaxMechanics
+        : MaxMechanics;
+
+    /// <summary>Primer nivel con el tope alto para el rol, o null si el rol nunca lo tiene (solo retos e hitos).</summary>
+    public int? RaisedFromFor(SlotRole? role) => role switch
+    {
+        SlotRole.Challenge => RaisedMechanicsFrom,
+        SlotRole.Milestone => RaisedMilestoneMechanicsFrom ?? RaisedMechanicsFrom,
+        _ => null,
+    };
 
     public static int LabelRank(string? label) => label switch
     {
@@ -662,6 +678,7 @@ internal sealed class CampaignSpec
             ExpectRule = root["expect_rule"]?.GetValue<string>(),
             MaxMechanics = root["mechanics_per_level"]?["max"]?.GetValue<int>() ?? DefaultMaxMechanics,
             RaisedMechanicsFrom = root["mechanics_per_level"]?["raised_from_level"]?.GetValue<int>(),
+            RaisedMilestoneMechanicsFrom = root["mechanics_per_level"]?["raised_milestone_from_level"]?.GetValue<int>(),
             RaisedMaxMechanics = root["mechanics_per_level"]?["raised_max"]?.GetValue<int>()
                 ?? root["mechanics_per_level"]?["max"]?.GetValue<int>() ?? DefaultMaxMechanics,
         };
@@ -669,6 +686,11 @@ internal sealed class CampaignSpec
         if (spec.MaxMechanics < 1 || spec.RaisedMaxMechanics < spec.MaxMechanics)
         {
             throw new CampaignSpecException($"{path}: mechanics_per_level: max >= 1 y raised_max >= max");
+        }
+
+        if (spec.RaisedMilestoneMechanicsFrom is not null && spec.RaisedMechanicsFrom is null)
+        {
+            throw new CampaignSpecException($"{path}: mechanics_per_level: raised_milestone_from_level sin raised_from_level");
         }
 
         foreach (KeyValuePair<string, JsonNode?> kv in root["calendar"]!.AsObject())

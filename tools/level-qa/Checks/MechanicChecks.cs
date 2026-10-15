@@ -1,7 +1,7 @@
 // Mecánicas (P-9 a P-11; GDD 03 §17 #6 y 02 §9.2): debut de D-007 anterior o igual al nivel, un solo ejemplar en los
 // tableros de estreno (CycleChecks), llave presente y la del tutorial en el estreno, mecánica permitida por la celda del
 // calendario y el tope de mecánicas por nivel de la especificación (02 §9.2 regla 4: 2 antes del 300 y 3 después, 3 solo en
-// retos e hitos; mechanics_per_level, P6). El resto de reglas de cada mecánica (Barro en la capa 2-3, U_agua = 4 con las gotas,
+// retos e hitos: los retos desde el 301 y los hitos desde el 320, 03 §12 fila p20; mechanics_per_level, P6). El resto de reglas de cada mecánica (Barro en la capa 2-3, U_agua = 4 con las gotas,
 // cueva de la Piraña, pares del Remolino…) las comprueba LevelValidation (QA-VALID), y los controles propios de las variantes
 // de la 1.0, VariantChecks.
 // Códigos del calendario (P6): los lee MechanicCodes.CodeOf, el mismo código que el generador, así que la Liana de cuenta (Ln)
@@ -28,7 +28,7 @@ internal static class MechanicChecks
         ("QA-MECH-CELL", "cada mecanica y capacidad de la celda esta en el nivel (sin turbias por T1: aviso) (especificacion; 02 sec. 8)"),
         ("QA-GAP-120", "ninguna mecanica ni capacidad pasa mas de 120 niveles sin volver, sobre los niveles publicados (resumen, punto 6; d.2 regla 4)"),
         ("QA-MECH-KEY", "llave presente en el tablero (Hoja y Liana con fruta); agua del mundo en la Lluvia; llave del tutorial en el estreno (02 sec. 9.1; D-007)"),
-        ("QA-MECH-COUNT", "mecanicas por nivel dentro del tope de la especificacion (mechanics_per_level; 02 sec. 9.2 regla 4: 2 antes del 300 y 3 despues, 3 solo en retos e hitos)"),
+        ("QA-MECH-COUNT", "mecanicas por nivel dentro del tope de la especificacion (mechanics_per_level; 02 sec. 9.2 regla 4: 2 antes del 300 y 3 despues, 3 solo en retos, desde el 301, y en hitos, desde el 320; 03 sec. 12)"),
     ];
 
     /// <summary>La cuia lleva la tinaja o su cuia chica (M13): las dos piezas de una misma mecánica.</summary>
@@ -193,11 +193,10 @@ internal static class MechanicChecks
         int maxMechanics = spec.MaxMechanicsAt(lv.Level, e.Plan?.Role);
         if (codes.Count > maxMechanics)
         {
-            string where = spec.RaisedMechanicsFrom is int from && lv.Level >= from
-                ? string.Create(CultureInfo.InvariantCulture, $"desde el {from}, {spec.RaisedMaxMechanics} solo en retos e hitos")
-                : spec.RaisedMechanicsFrom is int f2
-                    ? string.Create(CultureInfo.InvariantCulture, $"antes del {f2}")
-                    : "en esta especificacion";
+            string where = spec.RaisedMechanicsFrom is int from
+                ? string.Create(CultureInfo.InvariantCulture,
+                    $"{spec.RaisedMaxMechanics} solo en retos desde el {from} y en hitos desde el {spec.RaisedFromFor(SlotRole.Milestone)}")
+                : "en esta especificacion";
             yield return Fail("QA-MECH-COUNT", string.Create(CultureInfo.InvariantCulture,
                 $"{codes.Count} mecanicas ({string.Join("+", codes)}); como mucho {maxMechanics} ({where})"));
         }
