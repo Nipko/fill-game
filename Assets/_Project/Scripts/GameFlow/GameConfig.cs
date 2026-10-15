@@ -119,6 +119,16 @@ namespace AF.GameFlow
         public const bool LevelCardOnRetry = false;
 
         /// <summary>
+        /// <c>ui_fruit_line_every_n_levels</c> = 1 [P] (08 §4.6 y §9; D-017, Q2-A; pregunta 45, (a), D-022; tarea F3): cadencia de
+        /// la línea de fruta de Frutas del río. Con 1, en cada victoria; con N &gt; 1, solo si el nivel es múltiplo de N; con 0,
+        /// nunca. La prioridad de la victoria (TiTino &gt; dato de llegada &gt; línea de fruta) la decide
+        /// <see cref="VictoryLineArbiter"/>, que es quien la lee (<see cref="VictoryLineArbiter.ContextFor"/>). Constante privada
+        /// del ensamblado, sin <c>[RemoteConfigKey]</c>, hasta que exista <c>AF.RemoteConfig</c> en el cliente (08 §9: «Hasta que
+        /// exista Remote Config en el cliente, constante de <c>GameConfig</c> [P]»).
+        /// </summary>
+        internal const int FruitLineEveryN = 1;
+
+        /// <summary>
         /// <c>live_content_end_message</c> = <c>{"next_batch_eta_days":14}</c> (08 §9): días estimados hasta los próximos 100
         /// niveles, que muestra la pantalla «El río sigue creciendo» (06 §9; 08 §6.2).
         /// </summary>

@@ -1003,7 +1003,8 @@ namespace AF.UI
             _screen.Fauna = Fauna; // la especie de miquito de cada intro (guion de la intro §4.3)
             RiverStops = LoadRiverStops(riverStops);
             _screen.RiverStops = RiverStops; // paradas del Mapa del río (D-013; sin uso visible todavía)
-            FruitFacts = LoadFruitFacts(fruitCalendar); // calendario de Frutas del río (D-017; la línea de la victoria llega con F3)
+            FruitFacts = LoadFruitFacts(fruitCalendar); // calendario de Frutas del río (D-017)
+            _screen.FruitFacts = FruitFacts; // la línea de fruta de la victoria (F3)
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => PressSettings(), () => PressBack(), this);
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), () => CloseSettings());
 

@@ -31,12 +31,14 @@ namespace AF.Tests.PlayMode
         {
             FunnelSetup.Hooks();
             GameScreen.ArrivalDisabledForTests = true; // la ranura sola, con proveedores de prueba (la llegada real: VictoryArrivalTests)
+            GameScreen.FactLineDisabledForTests = true; // y sin la línea de fruta real (FactLineTests)
         }
 
         [TearDown]
         public void TearDown()
         {
             GameScreen.ArrivalDisabledForTests = false;
+            GameScreen.FactLineDisabledForTests = false;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
             if (Loc.IsConfigured && Loc.Locale != LocLocale.SpanishLatinAmerica)
@@ -114,7 +116,9 @@ namespace AF.Tests.PlayMode
             Assert.That(idle.Shows, Is.EqualTo(0));
             Assert.That(idle.Layouts, Is.EqualTo(0));
             Assert.That(idle.Hides, Is.GreaterThan(0), "lo suyo, oculto");
-            Assert.That(view.CurrentVictoryLine.FruitKey, Is.Null, "sin calendario de frutas, sin línea de fruta");
+            Assert.That(view.CurrentVictoryLine.FruitKey, Is.EqualTo("fact.acai.01"), "el árbitro da la clave del calendario (F3)");
+            Assert.That(view.FruitLine, Is.Null, "pero sin la línea de fruta real (FactLineDisabledForTests) nadie la enseña");
+            Assert.That(view.VictorySlot.Shown, Is.False);
         }
 
         [UnityTest]
