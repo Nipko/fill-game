@@ -91,6 +91,28 @@ namespace AF.Presentation
         /// <summary>Liana en tesela para el modelo <c>cuelga</c> (64 × 256).</summary>
         public const string LianaTile = "liana_tile";
 
+        /// <summary>Prefijo del kit de fondo de cada mundo (<c>bg_kit_w01</c> … <c>bg_kit_w13</c>; Mapa del río, glosario §11).</summary>
+        public const string BackdropKitPrefix = "bg_kit_w";
+
+        /// <summary>Prefijo del héroe pintado de un sitio (<c>bg_hero_&lt;sitio&gt;</c>; glosario §11; nunca <c>belen</c>).</summary>
+        public const string BackdropHeroPrefix = "bg_hero_";
+
+        /// <summary>Prefijo de las teselas del Mapa (<c>map_tile_&lt;id&gt;</c>; glosario §11).</summary>
+        public const string MapTilePrefix = "map_tile_";
+
+        /// <summary>Prefijo de las banderas del Mapa (<c>map_flag_&lt;iso2 en minúsculas&gt;</c>; glosario §11).</summary>
+        public const string MapFlagPrefix = "map_flag_";
+
+        /// <summary>Prefijo del ambiente de un sitio (<c>amb_&lt;id&gt;</c>; glosario §11).</summary>
+        public const string AmbientPrefix = "amb_";
+
+        /// <summary>Ranuras fijas del Mapa del río (D-013; glosario §11).</summary>
+        public static readonly string[] MapSlots =
+        {
+            "map_canoe", "map_minicuia", "map_rack", "map_compass", "map_plaque", "map_buoy", "map_beacon", "map_mirador", "map_home",
+            "map_home_window",
+        };
+
         /// <summary>Todas las ranuras fijas, en el orden de la tabla 2 de los prompts, con las 14 frutas.</summary>
         public static readonly string[] All =
         {
@@ -104,18 +126,46 @@ namespace AF.Presentation
 
         /// <summary>
         /// La ranura existe: una de <see cref="All"/>, la hoja de piezas o el retrato de una especie del catálogo de fauna
-        /// (<c>fauna_&lt;id&gt;_partes</c>, <c>fauna_&lt;id&gt;_retrato</c>) o la rama de un mundo (<c>rama_&lt;mundo&gt;</c>).
+        /// (<c>fauna_&lt;id&gt;_partes</c>, <c>fauna_&lt;id&gt;_retrato</c>), la rama de un mundo (<c>rama_&lt;mundo&gt;</c>) o una
+        /// del Mapa del río (glosario §11): <c>bg_kit_w01</c> … <c>bg_kit_w13</c>, <c>bg_hero_&lt;id&gt;</c>,
+        /// <c>map_tile_&lt;id&gt;</c>, <c>map_flag_&lt;iso2&gt;</c> (dos letras minúsculas), las de <see cref="MapSlots"/> y
+        /// <c>amb_&lt;id&gt;</c>, con id en <c>[a-z0-9_]</c>. Ninguna ranura que contenga «belen» existe (D-013, punto 11).
         /// </summary>
         public static bool IsKnown(string slot)
         {
-            if (string.IsNullOrEmpty(slot))
+            if (string.IsNullOrEmpty(slot) || slot.IndexOf("belen", StringComparison.OrdinalIgnoreCase) >= 0)
             {
                 return false;
             }
 
-            if (Array.IndexOf(All, slot) >= 0)
+            if (Array.IndexOf(All, slot) >= 0 || Array.IndexOf(MapSlots, slot) >= 0)
             {
                 return true;
+            }
+
+            if (slot.StartsWith(BackdropKitPrefix, StringComparison.Ordinal))
+            {
+                return slot.Length == BackdropKitPrefix.Length + 2 && IsWorld(slot[slot.Length - 2], slot[slot.Length - 1]);
+            }
+
+            if (slot.StartsWith(BackdropHeroPrefix, StringComparison.Ordinal))
+            {
+                return IsId(slot, BackdropHeroPrefix.Length);
+            }
+
+            if (slot.StartsWith(MapTilePrefix, StringComparison.Ordinal))
+            {
+                return IsId(slot, MapTilePrefix.Length);
+            }
+
+            if (slot.StartsWith(MapFlagPrefix, StringComparison.Ordinal))
+            {
+                return slot.Length == MapFlagPrefix.Length + 2 && IsLower(slot[slot.Length - 2]) && IsLower(slot[slot.Length - 1]);
+            }
+
+            if (slot.StartsWith(AmbientPrefix, StringComparison.Ordinal))
+            {
+                return IsId(slot, AmbientPrefix.Length);
             }
 
             if (slot.StartsWith(FaunaPrefix, StringComparison.Ordinal))
@@ -126,6 +176,42 @@ namespace AF.Presentation
             }
 
             return slot.StartsWith(BranchPrefix, StringComparison.Ordinal) && slot.Length > BranchPrefix.Length;
+        }
+
+        // «01» … «13».
+        private static bool IsWorld(char tens, char units)
+        {
+            if (tens == '0')
+            {
+                return units >= '1' && units <= '9';
+            }
+
+            return tens == '1' && units >= '0' && units <= '3';
+        }
+
+        private static bool IsLower(char c)
+        {
+            return c >= 'a' && c <= 'z';
+        }
+
+        // Lo que sigue al prefijo es un id no vacío en [a-z0-9_].
+        private static bool IsId(string slot, int start)
+        {
+            if (slot.Length <= start)
+            {
+                return false;
+            }
+
+            for (int i = start; i < slot.Length; i++)
+            {
+                char c = slot[i];
+                if (!(IsLower(c) || (c >= '0' && c <= '9') || c == '_'))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static ArtSlotCatalog? _catalog;

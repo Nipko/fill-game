@@ -13,7 +13,7 @@ namespace AF.UI.Editor
     /// Genera la escena <c>Assets/_Project/Scenes/Game.unity</c> del prototipo v0 (docs/dev/prototipo-v0.md c) y la
     /// deja como la única de Build Settings. La escena es casi vacía (.claude/rules/unity-assets.md): cámara, EventSystem
     /// con <see cref="InputSystemUIInputModule"/> y <see cref="GameBootstrap"/> enlazado a los paquetes de niveles
-    /// (<see cref="LevelPackPaths"/>); la UI se
+    /// (<see cref="LevelPackPaths"/>), al catálogo de miquitos y a las paradas del Mapa del río; la UI se
     /// construye por código en tiempo de ejecución. Es la forma versionada de crear la escena (CLAUDE.md, regla dura 3).
     ///
     /// Uso en batchmode (sin ningún Editor abierto en la carpeta; <c>x86_64</c> en un equipo x64):
@@ -45,6 +45,9 @@ namespace AF.UI.Editor
 
         /// <summary>Catálogo de miquitos de la intro «Llenar y teñir» (<c>af-fauna/0</c>; guion de la intro §4.3).</summary>
         public const string FaunaCatalogPath = "Assets/_Project/Data/Fauna/miquitos_v0.json";
+
+        /// <summary>Paradas del Mapa del río (<c>af-river-stops/1</c>; D-013; 08 §4.5; las genera <c>tools/river-map/stops.py</c>).</summary>
+        public const string RiverStopsPath = "Assets/_Project/Data/Map/river_stops_v1.json";
 
         private const string LogPrefix = "[AF.GameSceneBuilder] ";
 
@@ -127,6 +130,13 @@ namespace AF.UI.Editor
             }
 
             bootstrap.ConfigureFauna(fauna);
+            TextAsset? stops = AssetDatabase.LoadAssetAtPath<TextAsset>(RiverStopsPath);
+            if (stops == null)
+            {
+                Debug.LogWarning(LogPrefix + "no existen las paradas del Mapa del río " + RiverStopsPath + ": el juego seguirá sin el Mapa.");
+            }
+
+            bootstrap.ConfigureRiverStops(stops);
             EditorUtility.SetDirty(bootstrap);
 
             if (!EditorSceneManager.SaveScene(scene, ScenePath))
