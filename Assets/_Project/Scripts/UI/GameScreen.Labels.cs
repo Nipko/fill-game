@@ -503,14 +503,15 @@ namespace AF.UI
         }
 
         // Las etiquetas del HUD se ven en Playing y en la celebración con la insignia a la vista; entran con un fundido al
-        // terminar la intro (y tras el rótulo del intento o «El río bajó», y la tarjeta del miquito) y se van en el acto. La
-        // tarjeta del miquito solo las aparta mientras se ve: mientras espera a que la tropa se vaya, siguen a la vista (D-011,
-        // punto 3; GameScreen.Notices.cs).
+        // terminar la intro (y tras el rótulo del intento o «El río bajó», la tarjeta del miquito y el rótulo del lugar) y se van
+        // en el acto. La tarjeta del miquito y el rótulo del lugar (M2.3: va en su banda, sobre el horizonte o bajo el HUD) solo
+        // las apartan mientras se ven: mientras esperan a que la tropa se vaya, siguen a la vista (D-011, punto 3;
+        // GameScreen.Notices.cs).
         private void UpdateHudLabelsAlpha(float dtMs)
         {
             LevelFlow? flow = _flow;
             bool show = flow != null && flow.HasLevel && (flow.Phase == FlowPhase.Playing || flow.Phase == FlowPhase.Celebration)
-                && _badge.gameObject.activeSelf && !_banner.Visible && !_sighting.Visible;
+                && _badge.gameObject.activeSelf && !_banner.Visible && !_sighting.Visible && !_stopLabel.Visible;
             float target = show ? 1f : 0f;
             if (_hudLabelsAlpha != target)
             {

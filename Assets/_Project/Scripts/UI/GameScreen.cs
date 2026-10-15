@@ -565,6 +565,7 @@ namespace AF.UI
             _banner = new Toast("RiverLowered", _root, art, 18f);
             _toast = new Toast("Toast", _noticeLayer, art, 15f);
             _sighting = new SightingCard(_noticeLayer, art); // «¡Miquito a la vista!» (guion de la intro §4.5)
+            _stopLabel = new StopLabel(_noticeLayer, art); // rótulo del lugar (M2.3; GameScreen.Notices.cs)
 
             // Captura de toques para saltar Sumergir y teñir o la celebración (02 §4.2, §2): por encima de todo.
             _skipCatcher = HitLayer("SkipCatcher", _root);
@@ -855,6 +856,7 @@ namespace AF.UI
             _banner.Tick(dtMs);
             _toast.Tick(dtMs);
             _sighting.Tick(dtMs);
+            _stopLabel.Tick(dtMs);
             TickNotices(); // el siguiente aviso, si el anterior se acaba de ocultar (GameScreen.Notices.cs)
             TickHarvest(dtMs);
             TickAutoNext(dtMs);
@@ -888,6 +890,7 @@ namespace AF.UI
             HideOverlays();
             _banner.Hide();
             ClearNotices(); // ningún aviso ni tarjeta del nivel anterior pasa a este (GameScreen.Notices.cs)
+            StopLabelLevelLoaded(level);
             _attemptBanner = false;
             _introDelayMs = -1f;
             BuildBoard(flow);
@@ -978,6 +981,7 @@ namespace AF.UI
             LevelFlow ready = RequireFlow();
             MaybeShowSighting(ready);
             ShowRevealGiftIfReady(ready);
+            MaybeShowStopLabel(ready); // el rótulo del lugar, si el nivel no trae otra tarjeta (M2.3)
             PumpNotices();
             _skipCatcher.gameObject.SetActive(false);
             _probe.State("ready", RequireFlow(), int.MinValue, null);

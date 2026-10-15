@@ -88,6 +88,21 @@ namespace AF.Tests.PlayMode
             {
                 LaunchOptions.LevelCardsOverride = false;
             }
+
+            NoStopLabelsUnlessSet();
+        }
+
+        /// <summary>
+        /// Apaga el rótulo del lugar (M2.3) si el test no lo fijó (<see cref="GameScreen.StopLabelsOverride"/> = null): los tests
+        /// que no tratan de él juegan el 31, el 51 o el 131 con sus avisos como antes de que existiera (sin el rótulo delante en la
+        /// cola ni las etiquetas del HUD apartadas). Los que lo prueban lo encienden y lo vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoStopLabelsUnlessSet()
+        {
+            if (GameScreen.StopLabelsOverride == null)
+            {
+                GameScreen.StopLabelsOverride = false;
+            }
         }
 
         // Sin idioma del teléfono fijado por el test, uno vacío (ManualDeviceLocale): los textos y las cifras no dependen de la
