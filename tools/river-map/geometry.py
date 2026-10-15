@@ -46,11 +46,12 @@ Que escribe:
 --check (codigo 1 si algo falla): lo commiteado es lo que se regenera (desfase); cada punto de control de la investigacion
 queda a <= 2 dp de su linea en su vista (con el respaldo, la Cuenca: <= TOLERANCE_KM km); cada tramo del cauce mide al
 menos la linea recta; cada boca cae sobre su rio; la tierra es un poligono simple bien triangulado; y las rutas de
-river_stops_v1.json (at y leg) son las de este Mapa: paradas a <= TOLERANCE_KM km de su punto del rio (o del radio [P] de
-OFF_RIVER_KM), km de acuerdo con km_from_sea y que no retroceden, tramos continuos que no cruzan tierra (ningun salto entre
-lineas de mas de TOLERANCE_KM km), via y mouths existentes; ademas, todas las reglas de stops.py (candidatos de la propuesta
-§5.1 bis incluidos). Avisa (sin fallar) de los datos de los puntos de paso y de los miradores que aun no tienen texto en
-facts.csv.
+river_stops_v1.json (at y leg) son las de este Mapa: paradas a <= TOLERANCE_KM km de su punto del rio (medidos desde su
+punto de atraque si la investigacion lo da), km de acuerdo con km_from_sea y que no retroceden, tramos continuos que no
+cruzan tierra (ningun salto entre lineas de mas de TOLERANCE_KM km), via y mouths existentes; ademas, todas las reglas de
+stops.py (candidatos de la propuesta §5.1 bis incluidos). Las unicas excepciones a TOLERANCE_KM son las pendientes del
+duenno (PENDING_SITE_KM y PENDING_MOUTH_KM: la cifra medida, sin margen). Avisa (sin fallar) de cada excepcion en uso y de
+los datos de los puntos de paso y de los miradores que aun no tienen texto en facts.csv.
 """
 from __future__ import annotations
 
@@ -115,19 +116,20 @@ HOSTS = {
 }
 BRANCHES = {"para": "amazonas"}   # ramal: su primer punto esta sobre el cauce
 
-# [P] Bocas que el respaldo no dibuja sobre su rio: la del Pacaya esta en el canal de Puinahua, que el cauce de la
-# investigacion no sigue (a ~37 km). HydroRIVERS lo resuelve (M5.1). Radio admitido, en km.
-MOUTH_GAP_KM = {"pacaya": 40.0}
-
-# [P] Sitios fuera del cauce: el punto de la investigacion es el area protegida o el parque, tierra adentro; la canoa atraca
-# en su km del rio y la mini cuia se abre hasta su punto real con una linea fina (propuesta §3.2, «Racimos»). Radio
-# admitido entre el sitio y su punto del rio, en km (la distancia medida, redondeada hacia arriba con margen).
-OFF_RIVER_KM = {
-    "flona_tapajos": 25.0,    # Floresta Nacional do Tapajos: ~23 km al este del Tapajos
-    "amacayacu": 60.0,        # Parque Nacional Amacayacu: su centro, ~57 km del km 3.185 del Amazonas
-    "pacaya_samiria": 50.0,   # Reserva Nacional Pacaya-Samiria: su centro, ~46 km del km 3.995 (Maranon)
-    "pacaya_alba": 50.0,      # la misma reserva, al alba
+# Excepciones a TOLERANCE_KM PENDIENTES DEL DUENNO (pregunta abierta, propuesta como D-025; no son canon). La tolerancia es
+# <= 15 km para todo (D-023, punto 20); estas cifras son la distancia MEDIDA con los datos de hoy (redondeada hacia arriba a
+# 0,1 km, sin margen), congelada para que --check siga en verde y falle si un dato se aleja mas. --check avisa de cada una.
+# - Sitios tierra adentro: el punto de la investigacion es el centro del area protegida, no un punto del rio. Se validan
+#   por su punto de atraque (campo «atraque» {lat, lon} del registro de la investigacion) con los 15 km del canon; mientras
+#   la investigacion no lo anada, rige la cifra medida entre el centro y su punto del rio.
+PENDING_SITE_KM = {
+    "flona_tapajos": 23.1,    # centro de la FLONA do Tapajos (notas: «la canoa se amarra en la orilla del Tapajos mas cercana»)
+    "amacayacu": 57.5,        # centro del parque (notas: al norte del rio); su punto del rio, km 3.185 («frente del parque»)
+    "pacaya_samiria": 46.2,   # centro de la reserva (notas: «la canoa entra por la boca del Samiria, en el Maranon»)
+    "pacaya_alba": 46.2,      # la misma reserva, al alba
 }
+# - Bocas: la del Pacaya esta en el canal de Puinahua, que el cauce de respaldo no dibuja (37,08 km). HydroRIVERS (M5.1).
+PENDING_MOUTH_KM = {"pacaya": 37.1}
 
 # [P] Afluentes: «solo su boca (unos 80-120 km)» al pasarla (propuesta §3.4); los de paso y los locales, enteros.
 MOUTH_FILL_KM = 100.0
@@ -500,10 +502,10 @@ def build_model(source: dict) -> tuple:
         line.host = host
         line.host_s = _round_s(h.s_of(i, t))
         line.own_s = 0.0 if end == 0 else 1.0
-        allowed = MOUTH_GAP_KM.get(rid, TOLERANCE_KM)
+        allowed = PENDING_MOUTH_KM.get(rid, TOLERANCE_KM)
         if dist > allowed:
-            errors.append(f"linea {rid}: su boca queda a {dist:.1f} km de {host} (maximo {allowed:g} km, <= 2 dp en la "
-                          "vista Cuenca): mouth fuera de su rio")
+            errors.append(f"linea {rid}: su boca queda a {dist:.1f} km de {host} (maximo {allowed:g} km"
+                          f"{_limit_note(rid in PENDING_MOUTH_KM)}): mouth fuera de su rio")
     for rid in model.order:
         try:
             model.chain(rid)
@@ -956,10 +958,10 @@ def validate_map(doc: dict, model: Model, source: dict) -> list:
                 host = model.lines[mouth["on"]]
                 lat, lon = line.ll[-1]
                 d = haversine((lat, lon), host.point_at_s(mouth["s"]))
-                allowed = MOUTH_GAP_KM.get(rid, TOLERANCE_KM)
+                allowed = PENDING_MOUTH_KM.get(rid, TOLERANCE_KM)
                 if d > allowed:
                     errors.append(f"{tag}: su boca queda a {d:.1f} km de {host.id} en s = {mouth['s']} (maximo "
-                                  f"{allowed:g} km): mouth fuera de su rio")
+                                  f"{allowed:g} km{_limit_note(rid in PENDING_MOUTH_KM)}): mouth fuera de su rio")
             fill = entry.get("fill_on_pass")
             if not (isinstance(fill, (int, float)) and 0 < fill <= 1):
                 errors.append(f"{tag}: fill_on_pass fuera de (0, 1]")
@@ -1035,6 +1037,54 @@ def same_place(model: Model, a: tuple, b: tuple) -> bool:
     return False
 
 
+def _limit_note(pending: bool) -> str:
+    if pending:
+        return f": excepcion medida pendiente del duenno; el canon es {TOLERANCE_KM:g} km"
+    return ", <= 2 dp en la vista Cuenca"
+
+
+def site_point(record: dict) -> tuple:
+    """Punto de una parada que se valida contra su punto del rio: su atraque ({lat, lon}, un punto sobre el rio que da la
+    investigacion para los sitios tierra adentro) o, sin el, su lat/lon. Devuelve ((lat, lon) o None, atraque?, problema)."""
+    dock = record.get("atraque")
+    if dock is not None:
+        try:
+            return (float(dock["lat"]), float(dock["lon"])), True, None
+        except (TypeError, KeyError, ValueError):
+            return None, True, "su atraque no es {lat, lon}"
+    try:
+        return (float(record["lat"]), float(record["lon"])), False, None
+    except (TypeError, KeyError, ValueError):
+        return None, False, "su registro de la investigacion no tiene lat/lon"
+
+
+def pending_exceptions(stops_doc: dict, model: Model, records: list) -> list:
+    """Avisos de las excepciones a TOLERANCE_KM que siguen en uso (pendientes del duenno) y de las que ya sobran."""
+    warnings = []
+    by_k = {r.get("k"): r for r in records if isinstance(r, dict)}
+    for s in stops_doc.get("stops", []):
+        sid, at = s.get("id"), s.get("at")
+        if sid not in PENDING_SITE_KM or not isinstance(at, dict) or at.get("line") not in model.lines:
+            continue
+        place, docked, problem = site_point(by_k.get(s.get("n"), {}))
+        if problem:
+            continue
+        if docked:
+            warnings.append(f"{sid}: ya tiene atraque; sobra su excepcion de PENDING_SITE_KM ({PENDING_SITE_KM[sid]:g} km)")
+        else:
+            d = haversine(place, model.lines[at["line"]].point_at_s(at["s"]))
+            warnings.append(f"{sid}: sin atraque en la investigacion; el centro queda a {d:.1f} km de su punto del rio "
+                            f"(canon {TOLERANCE_KM:g} km; excepcion {PENDING_SITE_KM[sid]:g} km pendiente del duenno)")
+    for rid, limit in sorted(PENDING_MOUTH_KM.items()):
+        line = model.lines.get(rid)
+        if line is None or line.host is None:
+            continue
+        d = haversine(line.ll[-1], model.lines[line.host].point_at_s(line.host_s))
+        warnings.append(f"linea {rid}: su boca queda a {d:.1f} km de {line.host} (canon {TOLERANCE_KM:g} km; excepcion "
+                        f"{limit:g} km pendiente del duenno)")
+    return warnings
+
+
 def validate_routes(stops_doc: dict, model: Model, records: list) -> list:
     """Rutas de river_stops_v1.json (at y leg) contra el Mapa: paradas en su rio, km, continuidad y que no retroceden."""
     errors: list = []
@@ -1051,15 +1101,17 @@ def validate_routes(stops_doc: dict, model: Model, records: list) -> list:
         line = model.lines[at["line"]]
         rec = by_k.get(n, {})
         pos = line.point_at_s(at["s"])
-        try:
-            d = haversine((float(rec["lat"]), float(rec["lon"])), pos)
-        except (TypeError, KeyError, ValueError):
-            d = None
-            errors.append(f"{tag}: su registro de la investigacion no tiene lat/lon")
-        allowed = OFF_RIVER_KM.get(sid, TOLERANCE_KM)
-        if d is not None and d > allowed:
-            errors.append(f"{tag}: el sitio queda a {d:.1f} km de su punto del rio ({at['line']}, s = {at['s']}); maximo "
-                          f"{allowed:g} km (<= 2 dp en la vista Cuenca{'; sitio fuera del cauce [P]' if sid in OFF_RIVER_KM else ''})")
+        place, docked, problem = site_point(rec)
+        if problem:
+            errors.append(f"{tag}: {problem}")
+        else:
+            d = haversine(place, pos)
+            pending = not docked and sid in PENDING_SITE_KM
+            allowed = PENDING_SITE_KM[sid] if pending else TOLERANCE_KM
+            if d > allowed:
+                what = "su punto de atraque" if docked else "el sitio"
+                errors.append(f"{tag}: {what} queda a {d:.1f} km de su punto del rio ({at['line']}, s = {at['s']}); "
+                              f"maximo {allowed:g} km{_limit_note(pending)}")
         km_here = model.km_at(at["line"], at["s"])
         km_value = s.get("km_from_sea")
         if km_value is not None and (km_here is None or abs(km_here - km_value) > TOLERANCE_KM):
@@ -1190,7 +1242,7 @@ def main(argv: list | None = None) -> int:
     emit(f"OK  {len(doc['lines'])} lineas, {len(doc['passing'])} puntos de paso y {len(doc['viewpoints'])} miradores "
          f"validos y {_rel(args.out)} al dia")
     emit(f"OK  rutas de {_rel(args.stops)} (at y leg de {len(committed['stops'])} paradas) de acuerdo con el Mapa")
-    for warning in pending_facts(doc, args.facts):
+    for warning in pending_exceptions(committed, model, records) + pending_facts(doc, args.facts):
         emit(f"AVISO {warning}")
     return 0
 

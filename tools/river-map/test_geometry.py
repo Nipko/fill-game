@@ -8,8 +8,10 @@ Ejecutar desde la raiz del repositorio:
 Cubre: la proyeccion (cinco puntos contra generar_mapa.py); el base64 de ida y vuelta (<= 0,5 px); las s de las bocas y
 de las paradas (de acuerdo con los km de la investigacion); la triangulacion por orejas; el archivo commiteado
 (determinista, al dia, UTF-8 sin BOM y LF); los legs continuos, que no cruzan tierra, con la ida y vuelta por las
-confluencias y el del 41 por Obidos, Parintins, Itacoatiara y la boca del Madeira; y los fallos de --check: una parada
-desplazada 20 km, un leg roto, una boca fuera de su rio, un candidato de la propuesta §5.1 bis ausente y el desfase.
+confluencias y el del 41 por Obidos, Parintins, Itacoatiara y la boca del Madeira; la tolerancia del canon (15 km) con
+solo las excepciones medidas pendientes del duenno, y sus avisos; y los fallos de --check: una parada desplazada 20 km
+(tambien un sitio tierra adentro y un punto de atraque, este con los 15 km del canon), un leg roto, una boca fuera de su
+rio (tambien la del Pacaya, mas alla de su cifra medida), un candidato de la propuesta §5.1 bis ausente y el desfase.
 Solo biblioteca estandar.
 """
 from __future__ import annotations
@@ -316,11 +318,26 @@ class RouteTests(Base):
             if s["km_from_sea"] is not None:
                 self.assertAlmostEqual(s["km_from_sea"], self.model.km_at(s["at"]["line"], s["at"]["s"]), delta=1.0)
             pos = self.model.lines[s["at"]["line"]].point_at_s(s["at"]["s"])
-            limit = geometry.OFF_RIVER_KM.get(s["id"], geometry.TOLERANCE_KM)
+            limit = geometry.PENDING_SITE_KM.get(s["id"], geometry.TOLERANCE_KM)
             self.assertLessEqual(geometry.haversine((rec["lat"], rec["lon"]), pos), limit, s["id"])
             if prev is not None and prev["km_from_sea"] is not None:
                 self.assertGreaterEqual(s["km_from_sea"], prev["km_from_sea"])
             prev = s
+
+    def test_tolerance_is_the_canon_and_exceptions_are_only_the_pending_ones(self):
+        # 08 §4.5 y D-023, punto 20: <= 2 dp de su vista, <= 15 km en la Cuenca. Las excepciones son las medidas que esperan
+        # la firma del duenno (sin margen): ninguna nueva sin pasar por el.
+        self.assertEqual(15.0, geometry.TOLERANCE_KM)
+        self.assertEqual({"flona_tapajos": 23.1, "amacayacu": 57.5, "pacaya_samiria": 46.2, "pacaya_alba": 46.2},
+                         geometry.PENDING_SITE_KM)
+        self.assertEqual({"pacaya": 37.1}, geometry.PENDING_MOUTH_KM)
+        for s in self.stops["stops"]:
+            if s["id"] not in geometry.PENDING_SITE_KM:
+                continue
+            rec = next(r for r in self.records if r["k"] == s["n"])
+            d = geometry.haversine((rec["lat"], rec["lon"]), self.model.lines[s["at"]["line"]].point_at_s(s["at"]["s"]))
+            self.assertGreater(d, geometry.TOLERANCE_KM, f"{s['id']}: ya cumple el canon; sobra su excepcion")
+            self.assertLess(geometry.PENDING_SITE_KM[s["id"]] - d, 0.1, f"{s['id']}: la excepcion no es la cifra medida")
 
     def test_same_place_only_at_a_confluence(self):
         tapajos = self.lines["tapajos"]["mouth"]["s"]
@@ -372,6 +389,39 @@ class CheckTests(Base):
         rec = next(r for r in src["paradas_1_200"] if r["k"] == 14)
         rec["lat"] = round(rec["lat"] + 0.18, 4)   # unos 20 km al norte
         self.assertFails("parada n=14 ('iquitos'): el sitio queda a 20.", source=src)
+
+    def test_inland_site_moved_20_km_away_from_its_river_fails(self):
+        src = copy.deepcopy(self.source)
+        rec = next(r for r in src["paradas_1_200"] if r["k"] == 10)
+        rec["lat"] = round(rec["lat"] + 0.18, 4)   # unos 20 km mas al norte, mas lejos del Amazonas
+        self.assertFails("parada n=10 ('amacayacu'): el sitio queda a 77.", source=src)
+
+    def test_dock_point_is_checked_with_the_canon_tolerance(self):
+        at = self.stops["stops"][10]["at"]
+        lat, lon = self.model.lines[at["line"]].point_at_s(at["s"])
+        src = copy.deepcopy(self.source)
+        rec = next(r for r in src["paradas_1_200"] if r["k"] == 10)
+        rec["atraque"] = {"lat": round(lat, 4), "lon": round(lon, 4)}
+        code, out = self.check(source=src)
+        self.assertEqual(0, code, out)
+        self.assertIn("AVISO amacayacu: ya tiene atraque; sobra su excepcion", out)
+        rec["atraque"]["lat"] = round(lat + 0.18, 4)   # el atraque, a unos 20 km: ya no vale la excepcion
+        self.assertFails("parada n=10 ('amacayacu'): su punto de atraque queda a 20.0 km", source=src)
+        code, out = self.check(source=src)
+        self.assertIn("maximo 15 km, <= 2 dp en la vista Cuenca", out)
+
+    def test_pending_exceptions_are_warned(self):
+        code, out = self.check()
+        self.assertEqual(0, code, out)
+        for sid in geometry.PENDING_SITE_KM:
+            self.assertIn(f"AVISO {sid}: sin atraque en la investigacion", out)
+        self.assertIn("AVISO linea pacaya: su boca queda a 37.1 km de amazonas (canon 15 km; excepcion 37.1 km", out)
+
+    def test_pending_mouth_moved_further_fails(self):
+        src = copy.deepcopy(self.source)
+        pacaya = next(r for r in src["rios"] if r["id"] == "pacaya")
+        pacaya["puntos"][-1]["lat"] = round(pacaya["puntos"][-1]["lat"] + 0.2, 4)   # ~11 km mas lejos del cauce
+        self.assertFails("linea pacaya: su boca queda a 48.6 km de amazonas (maximo 37.1 km: excepcion medida", source=src)
 
     def test_stop_moved_along_the_river_fails_by_its_km(self):
         stops = copy.deepcopy(self.stops)
