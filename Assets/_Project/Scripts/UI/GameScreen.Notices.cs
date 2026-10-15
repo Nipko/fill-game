@@ -776,7 +776,7 @@ namespace AF.UI
             int ms = NoticeTiming.ReadMs(text);
             if (l.Rows >= 3)
             {
-                _stopLabel.ShowAsPlate(text, ms, _canvasW, BoardTop + StopLabel.HudGapDp, StopLabelPlateLimit(l));
+                _stopLabel.ShowAsPlate(text, ms, _canvasW, BoardTop + StopLabel.PlateHudGapDp, StopLabelPlateLimit(l));
             }
             else
             {
@@ -790,7 +790,7 @@ namespace AF.UI
         // Lo más bajo de la placa (3 filas): las cuias de la fila 1 en reposo (el bloque empieza en la elevada), con su aire.
         private float StopLabelPlateLimit(BoardLayoutResult l)
         {
-            return l.BlockTop + BoardLayout.Lift - _boardShift - StopLabel.CuiaGapDp;
+            return l.BlockTop + BoardLayout.Lift - _boardShift - StopLabel.PlateCuiaGapDp;
         }
 
         // Lo más bajo del rótulo sobre el horizonte (1-2 filas): el canto de arriba del panel, con su aire.
@@ -825,7 +825,7 @@ namespace AF.UI
 
             if (l.Rows >= 3 && _stopLabel.OnPlate)
             {
-                _stopLabel.PlaceAsPlate(_canvasW, BoardTop + StopLabel.HudGapDp, StopLabelPlateLimit(l));
+                _stopLabel.PlaceAsPlate(_canvasW, BoardTop + StopLabel.PlateHudGapDp, StopLabelPlateLimit(l));
             }
             else if (l.Rows < 3 && !_stopLabel.OnPlate)
             {

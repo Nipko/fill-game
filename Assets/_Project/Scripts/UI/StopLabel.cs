@@ -21,9 +21,11 @@ namespace AF.UI
     /// donde se ve el sitio. El contorno oscuro separa la letra de cualquier cielo o héroe (<see cref="ContrastPairs"/>).</description></item>
     /// <item><description><b>Placa bajo el HUD</b> (tableros de 3 filas, que no dejan franja: el panel empieza bajo el HUD): una
     /// placa de madera oscura con canto de <c>madera_contorno</c>, ajustada al texto (Baloo 2 ExtraBold de <see cref="PlateTextSp"/>
-    /// sp en crema con contorno, <see cref="TextStyle.ModalTitle"/>), <see cref="HudGapDp"/> dp bajo la fila del HUD y, si cabe,
-    /// <see cref="CuiaGapDp"/> dp por encima de las cuias de la fila 1 en reposo: en el margen de arriba del panel, sin tapar sus
-    /// bocas. Si no cabe, el texto se encoge, nunca por debajo de 12 sp (02 §12).</description></item>
+    /// sp en crema con contorno, <see cref="TextStyle.ModalTitle"/>; de alto <see cref="PlateHeightEm"/> veces el texto, con la
+    /// tinta centrada), <see cref="PlateHudGapDp"/> dp bajo la fila del HUD y al menos <see cref="PlateCuiaGapDp"/> dp por encima
+    /// de las cuias de la fila 1 en reposo: en el margen de arriba del panel, con aire a los dos lados y sin tapar sus bocas.
+    /// Si no cabe, el texto se encoge, nunca por debajo de 12 sp (02 §12), y solo si ni así cabe, la placa pasa de ahí
+    /// (nunca se recorta el texto).</description></item>
     /// </list>
     /// El texto se mide al enseñarlo y al cambiar de sitio, nunca por fotograma (sin asignaciones en <see cref="Tick"/>).
     /// </summary>
@@ -36,22 +38,34 @@ namespace AF.UI
         public const float TextSp = 18f;
 
         /// <summary>Texto de la placa bajo el HUD (sp) [P].</summary>
-        public const float PlateTextSp = 16f;
+        public const float PlateTextSp = 14f;
 
         /// <summary>Margen a cada lado del lienzo (dp).</summary>
         public const float SideDp = 16f;
 
-        /// <summary>Aire entre el pie de la fila del HUD y el rótulo (dp) [P].</summary>
+        /// <summary>Aire entre el pie de la fila del HUD y el rótulo sobre el horizonte (dp) [P].</summary>
         public const float HudGapDp = 2f;
 
-        /// <summary>Aire entre la placa y las cuias de la fila 1 en reposo, o entre el rótulo y el panel (dp) [P].</summary>
+        /// <summary>Aire entre el rótulo sobre el horizonte y el canto de arriba del panel (dp) [P].</summary>
         public const float CuiaGapDp = 2f;
+
+        /// <summary>Aire entre el pie de la fila del HUD y la placa (dp; revisión de M2.3) [P].</summary>
+        public const float PlateHudGapDp = 4f;
+
+        /// <summary>
+        /// Aire mínimo entre la placa y las cuias de la fila 1 en reposo (dp; revisión de M2.3: a 2-3 dp la placa parecía un
+        /// choque con las bocas). Para respetarlo el texto se encoge hasta 12 sp; solo si ni así cabe, la placa pasa de ahí.
+        /// </summary>
+        public const float PlateCuiaGapDp = 6f;
+
+        /// <summary>
+        /// Alto de la placa de una línea, en veces el tamaño de su texto [P]: ajustada a la tinta del texto (Baloo 2 trae mucho
+        /// aire en su caja de línea, ~1,6 veces el tamaño), con un margen visible arriba y abajo. Con 14 sp, 19 dp.
+        /// </summary>
+        public const float PlateHeightEm = 1.35f;
 
         /// <summary>Aire del texto a cada lado dentro de la placa (dp) [P].</summary>
         public const float PlatePadXDp = 12f;
-
-        /// <summary>Aire del texto arriba y abajo dentro de la placa (dp) [P].</summary>
-        public const float PlatePadYDp = 2f;
 
         /// <summary>Canto de la placa (dp).</summary>
         public const float PlateEdgeDp = 1.5f;
@@ -68,6 +82,8 @@ namespace AF.UI
         private readonly Image _plate;
         private readonly TextMeshProUGUI _horizonText;
         private readonly TextMeshProUGUI _plateText;
+        private readonly float _plateMaxSize;
+        private readonly float _plateMinSize;
         private float _leftMs = -1f;
         private float _totalMs;
         private bool _onPlate;
@@ -91,6 +107,10 @@ namespace AF.UI
 
             _horizonText = NewText("Text", TextStyle.Badge, TextSp);
             _plateText = NewText("PlateText", TextStyle.ModalTitle, PlateTextSp);
+            _plateMaxSize = _plateText.fontSizeMax; // PlateTextSp y 12 sp con la escala de texto (A1)
+            _plateMinSize = _plateText.fontSizeMin;
+            _plateText.enableAutoSizing = false; // el tamaño lo fija PlaceAsPlate, con el alto de la placa
+            _plateText.alignment = TextAlignmentOptions.Midline;
             _root.gameObject.SetActive(false);
         }
 
@@ -171,7 +191,7 @@ namespace AF.UI
         /// <summary>
         /// Enseña <paramref name="text"/> durante <paramref name="ms"/> ms como placa bajo el HUD, ajustada a su texto y centrada en
         /// un lienzo de <paramref name="canvasW"/> dp, con su borde de arriba en <paramref name="top"/> y, si cabe, el de abajo no
-        /// más abajo de <paramref name="maxBottom"/> (las cuias de la fila 1 en reposo − <see cref="CuiaGapDp"/>); si no cabe, el
+        /// más abajo de <paramref name="maxBottom"/> (las cuias de la fila 1 en reposo − <see cref="PlateCuiaGapDp"/>); si no cabe, el
         /// texto se encoge hasta 12 sp y, si ni así, la placa pasa de ahí (nunca se recorta el texto).
         /// </summary>
         public void ShowAsPlate(string text, float ms, float canvasW, float top, float maxBottom)
@@ -180,27 +200,50 @@ namespace AF.UI
             PlaceAsPlate(canvasW, top, maxBottom);
         }
 
-        /// <summary>Vuelve a colocar la placa (cambio de lienzo o de tablero con el rótulo a la vista).</summary>
+        /// <summary>
+        /// Vuelve a colocar la placa (cambio de lienzo o de tablero con el rótulo a la vista). El tamaño del texto es el mayor,
+        /// hasta <see cref="PlateTextSp"/> sp, con el que la placa de una línea (<see cref="PlateHeightEm"/> veces el texto) cabe
+        /// entre <paramref name="top"/> y <paramref name="maxBottom"/> y a lo ancho del lienzo, nunca menos de 12 sp. Si ni a 12
+        /// sp cabe en una línea, va a lo ancho del lienzo en varias, con la caja de línea entera.
+        /// </summary>
         public void PlaceAsPlate(float canvasW, float top, float maxBottom)
         {
             float maxWidth = Mathf.Max(0f, canvasW - (2f * SideDp));
-            float inner = maxWidth - (2f * PlatePadXDp);
+            float inner = Mathf.Max(0f, maxWidth - (2f * PlatePadXDp));
             string text = _plateText.text;
-            float line = _plateText.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x;
-            float width = Mathf.Min(maxWidth, Mathf.Ceil(line + FitSlackDp) + (2f * PlatePadXDp));
-            float textH = Mathf.Ceil(_plateText.GetPreferredValues(text, width - (2f * PlatePadXDp), float.PositiveInfinity).y);
-            float height = textH + (2f * PlatePadYDp);
-            if (top + height > maxBottom)
+            float size = Mathf.Clamp(Mathf.Floor(maxBottom - top) / PlateHeightEm, _plateMinSize, _plateMaxSize);
+            _plateText.textWrappingMode = TextWrappingModes.NoWrap;
+            _plateText.fontSize = size;
+            float line = _plateText.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x + FitSlackDp;
+            if (line > inner && size > _plateMinSize)
             {
-                float min = Mathf.Ceil(UiBuilder.MinTextHeight(_plateText, Mathf.Max(0f, inner))) + (2f * PlatePadYDp);
-                height = Mathf.Max(min, maxBottom - top);
+                size = Mathf.Max(_plateMinSize, size * (inner - FitSlackDp - 1f) / (line - FitSlackDp)); // 1 dp de margen al redondeo
+                _plateText.fontSize = size;
+                line = _plateText.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x + FitSlackDp;
+            }
+
+            float width;
+            float height;
+            if (line <= inner)
+            {
+                width = Mathf.Ceil(line) + (2f * PlatePadXDp);
+                height = Mathf.Ceil((size * PlateHeightEm) - 0.01f);
+            }
+            else
+            {
+                _plateText.textWrappingMode = TextWrappingModes.Normal;
+                width = maxWidth;
+                height = Mathf.Ceil(_plateText.GetPreferredValues(text, inner, float.PositiveInfinity).y);
             }
 
             SetRect((canvasW - width) * 0.5f, top, width, height);
+
+            // La caja del texto sobresale de la placa arriba y abajo (cabe la caja de línea entera, más alta que la placa) y la
+            // tinta se centra por su geometría (Midline), no por la caja de línea.
             RectTransform rt = _plateText.rectTransform;
             UiBuilder.Stretch(rt);
-            rt.offsetMin = new Vector2(PlatePadXDp, PlatePadYDp);
-            rt.offsetMax = new Vector2(-PlatePadXDp, -PlatePadYDp);
+            rt.offsetMin = new Vector2(PlatePadXDp, -size);
+            rt.offsetMax = new Vector2(-PlatePadXDp, size);
         }
 
         public void Hide()

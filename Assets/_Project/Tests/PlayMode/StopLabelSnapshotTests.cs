@@ -14,7 +14,7 @@ namespace AF.Tests.PlayMode
     /// Capturas del rótulo del lugar (tarea M2.3; D-013, punto 8; propuesta del Mapa §10.5, punto 5): <c>18_stop_label_l31</c>
     /// (el 31, 2 filas: «Floresta Nacional do Tapajós · Brasil» sobre el horizonte, en la franja del panorama, con la silueta
     /// provisional de la parada) y <c>18b_stop_label_3filas</c> (el 131, 11 cuias en 3 filas: «El río frontera · Colombia y
-    /// Perú» como placa bajo el HUD, por encima de las cuias de la fila 1), con el rótulo ya entrado. Sirven para mirar la
+    /// Perú» como placa bajo el HUD, con aire sobre las cuias de la fila 1), con el rótulo ya entrado. Sirven para mirar la
     /// legibilidad (crema con contorno, ≥ 4,5:1), los solapes con el HUD, el héroe y las cuias, y la línea de D-003. Cada captura
     /// escribe en el log su línea <c>AF_STOP_LABEL</c> con la sonda. Explícito: necesita gráficos (<c>unity test &lt;repo&gt;
     /// --mode PlayMode --filter AF.Tests.PlayMode.StopLabelSnapshotTests</c> sin <c>-nographics</c>); los PNG quedan en
@@ -72,7 +72,8 @@ namespace AF.Tests.PlayMode
             Rect r = view.StopLabelView.Rect;
             Debug.Log("AF_STOP_LABEL " + name + ": " + r.ToString("0.0") + ", horizonte "
                 + view.HorizonY.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " dp, HUD "
-                + view.HudBottomDp.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " dp, "
+                + view.HudBottomDp.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " dp, cuias de la fila 1 "
+                + (view.Layout!.BlockTop + BoardLayout.Lift).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " dp, "
                 + view.StopLabelView.Label.fontSize.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " dp de texto, "
                 + view.LastStopLabelProbe);
         }

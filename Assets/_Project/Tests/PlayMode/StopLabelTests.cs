@@ -23,7 +23,8 @@ namespace AF.Tests.PlayMode
     /// horizonte (2 filas), con «Floresta Nacional do Tapajós · Brasil», durante <see cref="NoticeTiming.ReadMs(string)"/> (3.035
     /// ms), sin capturar toques, apartando las etiquetas del HUD y con su sonda <c>AF_STATE stop_label</c>; un aviso que llega con
     /// el rótulo a la vista espera a que se vaya, y el rótulo espera al aviso que se ve; un modal del embudo lo oculta y en el
-    /// reintento no vuelve; al reanudar no sale; en el 131 (3 filas) va como placa bajo el HUD, por encima de las cuias de la
+    /// reintento no vuelve, ni tras Volver a la orilla (visto o aún en la cola) ni al volver al 31 desde el inicio sin fallos; al
+    /// reanudar no sale; en el 131 (3 filas) va como placa bajo el HUD, con aire sobre las cuias de la
     /// fila 1; en el 32 y con <c>ui_stop_label</c> apagada no sale; y sin asignaciones por fotograma con el rótulo a la vista.
     /// </summary>
     public sealed class StopLabelTests
@@ -198,6 +199,64 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Restart_SeenOrStillQueued_DoesNotBringItBack()
+        {
+            // Volver a la orilla con el rótulo a la vista: lo oculta y el intento nuevo no lo repite.
+            yield return Load(31);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            StopLabel label = view.StopLabelView;
+            boot.TapAnywhere();
+            StepUntilShown(boot);
+            Assert.That(boot.PressRestart(), Is.True);
+            Assert.That(label.Visible, Is.False, "otro intento: los avisos del anterior ya no valen");
+            StepWithoutIt(boot, "tras Reiniciar con el rótulo a la vista");
+            Assert.That(boot.Flow!.Attempt.FailsLevel, Is.EqualTo(0), "sin vertidos, Reiniciar no cuenta como fallo");
+
+            // Y otra vez con el rótulo ya ido: tampoco vuelve.
+            Assert.That(boot.PressRestart(), Is.True);
+            StepWithoutIt(boot, "tras Reiniciar con el rótulo ya visto");
+
+            // Volver a la orilla antes de que salga (en la cola, detrás de un aviso): ya entró en esta visita y no sale.
+            yield return Load(31);
+            boot = GameBootstrap.Current!;
+            view = boot.View!;
+            label = view.StopLabelView;
+            view.ShowNotice(UiText.RescueApplied); // durante la intro: sale antes que el rótulo al habilitarse el toque
+            boot.TapAnywhere();
+            Assert.That(view.ToastText, Is.EqualTo(UiText.RescueApplied));
+            Assert.That(view.NoticesQueued, Is.EqualTo(1), "el rótulo espera detrás del aviso");
+            Assert.That(label.Visible, Is.False);
+            Assert.That(boot.PressRestart(), Is.True);
+            Assert.That(view.NoticesQueued, Is.EqualTo(0), "Reiniciar vacía la cola");
+            StepWithoutIt(boot, "tras Reiniciar con el rótulo en la cola");
+            Assert.That(boot.Flow!.Attempt.FailsLevel, Is.EqualTo(0));
+        }
+
+        [UnityTest]
+        public IEnumerator BackToTheLobby_AndAgainLevel31_DoesNotRepeatIt()
+        {
+            yield return Load(31);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            boot.TapAnywhere();
+            StepUntilShown(boot);
+            Assert.That(boot.App!.ExitToLobby(), Is.True, "salir al inicio sin fallo");
+            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Lobby));
+            Assert.That(boot.App.PlayLevel, Is.EqualTo(31));
+
+            Assert.That(boot.PressPlay(), Is.True);
+            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Level));
+            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(31));
+            Assert.That(boot.Flow.Attempt.FailsLevel, Is.EqualTo(0), "sin fallos: lo evita la visita, no el fallo");
+            Assert.That(boot.View, Is.SameAs(view), "la misma pantalla de juego");
+            Assert.That(view.StopLabelView.Visible, Is.False, "al cargar el nivel no queda ninguno del anterior");
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Intro), "intro completa, no la corta del reintento");
+            boot.TapAnywhere();
+            StepWithoutIt(boot, "al volver al 31 desde el inicio");
+        }
+
+        [UnityTest]
         public IEnumerator Resume_DoesNotShowIt()
         {
             GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
@@ -243,13 +302,15 @@ namespace AF.Tests.PlayMode
             Assert.That(label.OnPlate, Is.True);
             Assert.That(label.Text, Is.EqualTo("El río frontera · Colombia y Perú"));
             Rect r = label.Rect;
-            Assert.That(r.yMin, Is.EqualTo(view.HudBottomDp + StopLabel.HudGapDp).Within(0.01f), "bajo el HUD");
-            Assert.That(r.yMax, Is.LessThanOrEqualTo(l.BlockTop + BoardLayout.Lift - StopLabel.CuiaGapDp + 0.01f), "sin tapar las cuias de la fila 1 en reposo");
+            Assert.That(r.yMin, Is.EqualTo(view.HudBottomDp + StopLabel.PlateHudGapDp).Within(0.01f), "bajo el HUD, con aire");
+            Assert.That(r.yMax, Is.LessThanOrEqualTo(l.BlockTop + BoardLayout.Lift - StopLabel.PlateCuiaGapDp + 0.01f), "al menos 6 dp sobre las cuias de la fila 1 en reposo");
             Assert.That(r.xMin, Is.GreaterThanOrEqualTo(StopLabel.SideDp - 0.01f));
             Assert.That(r.xMax, Is.LessThanOrEqualTo(view.CanvasWidth - StopLabel.SideDp + 0.01f));
             Assert.That(r.center.x, Is.EqualTo(view.CanvasWidth * 0.5f).Within(0.01f));
             Assert.That(label.Label.fontSize, Is.GreaterThanOrEqualTo(UiBuilder.MinTextSp - 0.01f), "nunca por debajo de 12 sp");
+            Assert.That(label.Label.fontSize, Is.LessThanOrEqualTo(StopLabel.PlateTextSp + 0.01f));
             Assert.That(label.Label.isTextOverflowing, Is.False);
+            Assert.That(r.height, Is.EqualTo(Mathf.Ceil((label.Label.fontSize * StopLabel.PlateHeightEm) - 0.01f)).Within(0.01f), "una línea");
             StringAssert.Contains("\"mode\":\"plate\"", view.LastStopLabelProbe);
             StringAssert.Contains("\"rows\":3", view.LastStopLabelProbe);
         }
@@ -317,6 +378,21 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Playing));
             Assert.That(boot.View!.StopLabelView.Visible, Is.True, "el rótulo sale tras la intro");
             Assert.That(boot.View.IntroTroopVisible, Is.False, "cuando la tropa se ha ido");
+        }
+
+        // Pasa la intro y 5 s de juego sin que el rótulo salga ni quede en la cola.
+        private static void StepWithoutIt(GameBootstrap boot, string when)
+        {
+            StopLabel label = boot.View!.StopLabelView;
+            for (int t = 0; t < 8000 && (boot.Flow!.Phase != FlowPhase.Playing || t < 5000); t += PlayModeHelpers.FrameMs)
+            {
+                Assert.That(label.Visible, Is.False, "no sale " + when + " (t = " + t + " ms)");
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(label.Visible, Is.False, when);
+            Assert.That(boot.View.NoticesQueued, Is.EqualTo(0), when);
         }
 
         private static int FirstNonEmpty(BoardState board)
