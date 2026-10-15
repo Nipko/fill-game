@@ -793,7 +793,10 @@ internal static class MechanicCodes
     /// <summary><c>n</c> del Brote de dos hojas (b.3; firma de <c>pack_schema</c> 3: brote con n ∈ {1, 2}).</summary>
     public const int BroteTwoLeaves = 2;
 
-    /// <summary>Todos los códigos que el generador sabe superponer y level-qa reconoce, en orden ordinal.</summary>
+    /// <summary>
+    /// Todos los códigos que el generador sabe superponer, en orden ordinal. level-qa aún no reconoce Ha ni Fl (en QA-MECH-SPEC
+    /// salen como «?») ni distingue Ln de Li ni B2 de Br: lo hará con P6, con <see cref="CodeOf"/> en sus controles.
+    /// </summary>
     public static readonly string[] All =
         [.. new[] { Hoja, Matapi, Liana, LianaCount, Murky, Remolino, Barro, Lluvia, Brote, BroteTwo, Pirana, Tinaja, HojaAtada, Flor }.Order(StringComparer.Ordinal)];
 

@@ -15,7 +15,8 @@
 //   - la key2 de la Flor al cambiar los colores (GenBoard.MapColors) y al reordenar (Permuted);
 //   - el estreno de cada variante en la muestra (243, 263, 283 y 303): un candidato en ventana con un solo ejemplar, 2 vacíos y
 //     bot_fail < 0,20 (02 §9.2 regla 2), válido, y su JSON (attrs de la firma, intro_mechanic, skippable = false y
-//     pack_schema 3) leído de vuelta da el mismo tablero y el mismo hash; la Flor sin key2 no se construye; el alivio no quita
+//     pack_schema 3) leído de vuelta con el lector del generador da el mismo tablero y el mismo hash (el PackReader de level-qa
+//     lo comprueba RunPackReadBack, desde el --self-test key2 de level-qa); la Flor sin key2 no se construye; el alivio no quita
 //     las llaves (también la key2) y sus variantes son válidas;
 //   - los fixtures negativos de las variantes (specs/tests: LIANA-CAPS con la Liana de cuenta y con la Flor, BEFORE-DEBUT del
 //     Brote de dos hojas) y la muestra limpia en --validate-spec.
@@ -253,6 +254,22 @@ internal static class VariantsSelfTest
         bool reasons = spec.MechanicTable.All(m => Superposition.Apply(empty.Clone(), m,
             new SuperpositionContext { Plan = spec.Plan(m.Debut), Spec = spec, Colors = BaseColors, Units = BaseUnits }, new Prng(1)) is not null);
         check(reasons, "sin cuia con contenido, cada variante devuelve su motivo (el candidato se rechaza)");
+
+        // Brote de dos hojas en una Cuia alta (d.5.1 no prohíbe B2 con capacidades): con 3 dosis en una cuia de 6 hay espacio
+        // ≥ 2, pero b.3 dice «empieza con 2 dosis como mucho»; con 2 dosis, sí.
+        MechanicInfo b2 = spec.MechanicTable.Single(m => m.Code == MechanicCodes.BroteTwo);
+        string? Tall(int doses)
+        {
+            var tall = new GenBoard();
+            tall.AddEmpty(6, MechanicSpec.None);
+            tall.Cuias[0].AddRange(Enumerable.Range(1, doses));
+            tall.AddEmpty(4, MechanicSpec.None);
+            tall.AddEmpty(4, MechanicSpec.None);
+            return Superposition.Apply(tall, b2, new SuperpositionContext { Plan = spec.Plan(b2.Debut + 8), Spec = spec, Colors = BaseColors, Units = BaseUnits }, new Prng(1));
+        }
+
+        check(Tall(3) is not null && Tall(4) is not null && Tall(2) is null && Tall(1) is null,
+            "B2 en una Cuia alta de 6: con 3 o 4 dosis no se pone (b.3: 2 dosis como mucho) y con 1 o 2 si");
     }
 
     private static void KeysThroughColorsAndOrder(Action<bool, string> check)
@@ -312,7 +329,8 @@ internal static class VariantsSelfTest
                 && JsonNode.Parse(PackWriter.Write(spec, plan.World, [new PackLevel(plan, c, [])]))!["pack_schema"]!.GetValue<int>() == 3,
                 F($"JSON del {m.Debut}: pack_schema 3"));
 
-            // Lectura de vuelta (como level-qa y el cliente): el mismo tablero y el mismo hash.
+            // Lectura de vuelta con el lector del generador (TinajaSelfTest.FromJson): el mismo tablero y el mismo hash. La de
+            // level-qa (su PackReader, sobre el pack escrito en disco) la comprueba RunPackReadBack, desde su --self-test key2.
             BoardBuildResult back = TinajaSelfTest.FromJson(level);
             check(back.IsValid && back.State!.Equals(c.State) && back.State.CanonicalHash() == c.State.CanonicalHash(),
                 F($"JSON del {m.Debut} leido de vuelta: mismo tablero y mismo hash ({c.State.CanonicalHash():x16})"));
@@ -332,6 +350,107 @@ internal static class VariantsSelfTest
             check(removedOk && validRelief && published.Count > 0,
                 F($"alivio del {m.Debut}: {published.Count} variante(s) valida(s) ({string.Join(" ", published.Select(r => r.Type))}) sin quitar las llaves ni el contenido de la variante"));
             info(F($"estreno {m.Code} ({m.Debut}): {attr.ToJsonString()}, K {c.K}, {b.Caps.Length} cuias, par {c.Par}, bot_fail {c.Bot:0.000}, candidato {c.Attempt + 1}"));
+        }
+    }
+
+    /// <summary>
+    /// Lectura de vuelta de los estrenos de las variantes con el lector de level-qa (criterio de P5: «level-qa lee las Flores con
+    /// key2 y el hash coincide»). level-qa enlaza este archivo y lo llama desde su <c>--self-test key2</c> con su PackReader:
+    /// <paramref name="read"/> recibe la ruta de un pack y devuelve el tablero de su primer nivel y los de sus variantes de
+    /// relief, en orden. El estreno de cada variante de la muestra (Ln, Ha, B2 y Fl) se escribe con PackWriter, con su alivio, a
+    /// un pack temporal, y lo leído tiene que dar el mismo tablero, las mismas mecánicas (también la key2) y el mismo hash que el
+    /// del generador, en el nivel y en cada variante de relief; la Flor del pack sin su key2 no se construye.
+    /// </summary>
+    /// <returns>0 si todo pasa, 1 si algo falla y 2 si no encuentra la especificación.</returns>
+    public static int RunPackReadBack(string reader, Func<string, (BoardData Level, BoardData[] Relief)> read)
+    {
+        CampaignSpec spec;
+        try
+        {
+            spec = CampaignSpec.Load(SpecPath);
+        }
+        catch (CampaignSpecException e)
+        {
+            Console.Error.WriteLine(AsciiText.Of("--self-test key2: " + e.Message + " (ejecuta desde la raiz del repositorio)"));
+            return 2;
+        }
+
+        int failures = 0;
+        void Check(bool ok, string what)
+        {
+            Console.WriteLine(AsciiText.Of((ok ? "PASS " : "FAIL ") + what));
+            failures += ok ? 0 : 1;
+        }
+
+        string dir = Path.Combine(Path.GetTempPath(), "af-key2-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(dir);
+        try
+        {
+            foreach (MechanicInfo m in spec.MechanicTable)
+            {
+                LevelPlan plan = spec.Plan(m.Debut);
+                var gen = new SlotGenerator(spec);
+                Candidate? c = gen.Generate(plan).Candidates.Where(x => x.PoolMember).OrderBy(x => x.Attempt).FirstOrDefault();
+                if (c is null)
+                {
+                    Check(false, F($"estreno {m.Code} ({m.Debut}): sin candidato en ventana"));
+                    continue;
+                }
+
+                List<ReliefBoard> relief = Relief.Compute(gen.Metrics, c.Board, c.Par, c.Bot, plan.SeedText).Published;
+                string json = PackWriter.Write(spec, plan.World, [new PackLevel(plan, c, relief)]);
+                string path = Path.Combine(dir, m.Code + ".json");
+                File.WriteAllText(path, json);
+                (BoardData? level, BoardData[] reliefRead) = Read(read, path, out string? error);
+                BoardBuildResult back = level is null ? default : level.Build();
+                bool same = level is not null && back.IsValid && back.State!.Equals(c.State) && level.Attrs.SequenceEqual(c.Board.Attrs)
+                    && back.State.CanonicalHash() == c.State.CanonicalHash();
+                Check(same, F($"{reader}: estreno {m.Code} ({m.Debut}) leido del pack con el mismo tablero, attrs {string.Join(" ", c.Board.Attrs.Where(a => !a.IsNone))} y hash {c.State.CanonicalHash():x16}{(error is null ? "" : " (" + error + ")")}"));
+
+                bool reliefSame = level is not null && reliefRead.Length == relief.Count && relief.Count > 0;
+                for (int i = 0; reliefSame && i < relief.Count; i++)
+                {
+                    BoardBuildResult want = relief[i].Board.Build();
+                    BoardBuildResult got = reliefRead[i].Build();
+                    reliefSame = want.IsValid && got.IsValid && got.State!.Equals(want.State) && reliefRead[i].Attrs.SequenceEqual(relief[i].Board.Attrs)
+                        && got.State.CanonicalHash() == want.State!.CanonicalHash();
+                }
+
+                Check(reliefSame, F($"{reader}: las {relief.Count} variante(s) de relief del {m.Debut} ({string.Join(" ", relief.Select(r => r.Type))}) leidas con el mismo tablero, attrs y hash"));
+
+                if (m.Code == MechanicCodes.Flor)
+                {
+                    JsonNode pack = JsonNode.Parse(json)!;
+                    pack["levels"]![0]!["attrs"]!.AsArray().OfType<JsonObject>().Single().Remove("key2");
+                    string noKey2 = Path.Combine(dir, m.Code + "-sin-key2.json");
+                    File.WriteAllText(noKey2, pack.ToJsonString());
+                    (BoardData? without, _) = Read(read, noKey2, out string? why);
+                    Check(without is null || !without.Build().IsValid,
+                        F($"{reader}: la Flor del {m.Debut} sin key2 no se construye ({why ?? (without is null ? "" : without.Build().Error)})"));
+                }
+            }
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+
+        Console.WriteLine(failures == 0 ? "self-test key2: todo PASS" : $"self-test key2: {failures} FAIL");
+        return failures == 0 ? 0 : 1;
+    }
+
+    /// <summary>Lee un pack con el lector dado; si el lector lanza, devuelve el tablero nulo y el motivo.</summary>
+    private static (BoardData? Level, BoardData[] Relief) Read(Func<string, (BoardData Level, BoardData[] Relief)> read, string path, out string? error)
+    {
+        try
+        {
+            error = null;
+            return read(path);
+        }
+        catch (Exception e)
+        {
+            error = e.GetType().Name + ": " + e.Message;
+            return (null, []);
         }
     }
 

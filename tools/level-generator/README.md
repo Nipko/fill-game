@@ -93,7 +93,10 @@ Todos deben dar `exit=1` y `presente`. Los de la Tinaja (`tinaja_in_recovery.jso
 `specs/sample_tinaja.json` y fallan por CAL-ROLE: p1, p2 y p19 son niveles puros, sin tinaja (D-019, Q-Ti1 A). Los de las
 variantes de la 1.0 extienden `specs/sample_variants.json`: `liana_n_with_capacity.json` (Liana de cuenta con una Cuia chica) y
 `flor_with_pirana.json` (Flor con la Piraña) fallan por LIANA-CAPS, y `brote_n2_before_debut.json` (Brote de dos hojas antes de
-su estreno), por BEFORE-DEBUT; `--self-test variants` los repite.
+su estreno), por BEFORE-DEBUT; `--self-test variants` los repite. Los dos de LIANA-CAPS ponen la capacidad en una celda que ya
+lleva la variante (251 y 311), para no cambiar sus apariciones; además fallan DEBUT-LEVEL (y DEBUT-SLOT el de la Piraña), porque
+la Cuia chica y la Piraña se añaden a la tabla solo ahí, y el del Brote de dos hojas falla también DEBUT-LEVEL: la `description`
+de cada fixture enumera sus reglas.
 
 ## Métricas, alivio y paridad (`Metrics/`)
 
@@ -311,7 +314,10 @@ lector de la especificación rechaza cualquier otro código):
   especificación o algún nivel las lleva) cuenta por variante los niveles, los ejemplares y los tableros de estreno que cumplen
   02 §9.2 regla 2 (un ejemplar, 2 vacíos y `bot_fail` < 0,20), con los campos de cada nivel.
 - `tools/level-qa` lee la `key2` (`PackReader`), así que la validación, el par, el bot y la reproducción usan el tablero del
-  pack. Los controles por variante de level-qa (los códigos Ln, Ha, B2 y Fl en QA-MECH-*, y `intro_mechanic` `liana_n` y
+  pack. Lo fija `dotnet run --project tools/level-qa -c Release -- --self-test key2` (`VariantsSelfTest.RunPackReadBack`,
+  enlazado en level-qa): el estreno de cada variante de la muestra, escrito con `PackWriter` y su alivio a un pack temporal,
+  se lee con el `PackReader` de level-qa con el mismo tablero, los mismos `attrs` (también la `key2`) y el mismo hash que el
+  del generador, en el nivel y en sus variantes de relief; la Flor sin `key2` no se construye. Los controles por variante de level-qa (los códigos Ln, Ha, B2 y Fl en QA-MECH-*, y `intro_mechanic` `liana_n` y
   `brote_n2` en QA-DEBUT) son de P6: hasta entonces, level-qa da FAIL en QA-MECH-SPEC, QA-MECH-CELL, QA-MECH-KEY y QA-DEBUT
   sobre los packs de muestra, y 0 fallos en las demás (QA-VALID, QA-PAR, QA-BOT, QA-SCHEMA y QA-REPRO incluidas).
 
@@ -322,6 +328,7 @@ dotnet run --project tools/level-generator -c Release -- --validate-spec tools/l
 dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/sample_variants.json --levels 241-320 --out tools/out/sample_variants --report tools/out/sample_variants_report.md
 dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/sample_variants.json --levels 241-320 --out tools/out/sample_variants --check
 dotnet run --project tools/level-generator -c Release -- --self-test variants
+dotnet run --project tools/level-qa -c Release -- --self-test key2
 dotnet run --project tools/level-qa -c Release -- tools/out/sample_variants/mundo_06_v1.json tools/out/sample_variants/mundo_07_v1.json --spec tools/level-generator/specs/sample_variants.json
 ```
 
@@ -337,8 +344,9 @@ y `mundo_07_v1.json` (`pack_schema` 3) y `tools/out/sample_variants_report.md`.
 los mismos números con el orden nuevo que con el de antes, cada paso sobre un tablero base fijo con 40 semillas (colocación
 válida según `LevelValidation`, los campos de b.3 y determinismo), la `key2` en `MapColors` y `Permuted`, el estreno de cada
 variante en la muestra (un candidato en ventana con un ejemplar, 2 vacíos y `bot_fail` < 0,20; su JSON con los `attrs` de la
-firma, `intro_mechanic`, `skippable` = false y `pack_schema` 3, leído de vuelta con el mismo tablero y el mismo hash; la Flor sin
-`key2` no se construye; el alivio no quita llaves), la muestra limpia en `--validate-spec` y los tres fixtures negativos.
+firma, `intro_mechanic`, `skippable` = false y `pack_schema` 3, leído de vuelta con el lector del generador con el mismo
+tablero y el mismo hash, que el `PackReader` de level-qa comprueba en su `--self-test key2`; la Flor sin `key2` no se
+construye; el alivio no quita llaves), la muestra limpia en `--validate-spec` y los tres fixtures negativos.
 
 ## Tabla de temporada del cliente (`--seasons`; SE1)
 

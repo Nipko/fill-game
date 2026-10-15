@@ -22,6 +22,7 @@ const string Usage = """
 
     Uso:
       dotnet run --project tools/level-qa -c Release -- <paquete.json> [<paquete.json> ...] [--report <informe.md>] [--spec <campaign.json>] [--levels a-b] [--no-reproduce]
+      dotnet run --project tools/level-qa -- --self-test [key2]
       dotnet run --project tools/level-qa -- --help
 
     Recalcula cada nivel con AF.Core y AF.Solver y comprueba: estructura, U_c, selladas, Aguas estancadas al inicio, par
@@ -39,6 +40,9 @@ const string Usage = """
                  tarda lo que el generador: varios minutos en Release);
       QA-BAND-Q  banda medida (cuantil de D en el pool regenerado) acorde al rol del ciclo (03 sec. 7).
     --no-reproduce salta QA-REPRO y QA-BAND-Q (fixtures negativos, pruebas rapidas); nunca en el CI.
+    --self-test [key2]: genera el estreno de cada variante de la 1.0 de tools/level-generator/specs/sample_variants.json,
+    lo escribe a un pack temporal y comprueba que este lector lo lee (tambien la key2 de la Flor y el relief) con el mismo
+    tablero y el mismo hash que el generador; la Flor sin key2 no se construye. Sale con 0, 1 (algun FAIL) o 2.
 
     Codigos de salida: 0 = todo cumple (los avisos no fallan) o ayuda; 1 = algun nivel no cumple, el esquema falla, un
     pack no se reproduce o falta Python; 2 = uso incorrecto, sin paquetes o archivos ilegibles.
@@ -59,6 +63,22 @@ if (args.Contains("--help") || args.Contains("-h"))
     Console.WriteLine(Usage);
     Console.WriteLine($"Nucleo enlazado: {Describe(typeof(BoardState))}, {Describe(typeof(MinHeap))}");
     return 0;
+}
+
+// --self-test key2 (P5): el PackReader de level-qa lee la key2 de la Flor (y las demás variantes) del pack escrito por el
+// generador con el mismo tablero y el mismo hash (VariantsSelfTest.RunPackReadBack, enlazado del generador).
+if (args[0] == "--self-test")
+{
+    if (args.Length > 2 || (args.Length == 2 && args[1] != "key2"))
+    {
+        return UsageError("--self-test solo admite: key2.");
+    }
+
+    return VariantsSelfTest.RunPackReadBack("level-qa PackReader", path =>
+    {
+        QaLevel level = PackReader.Read(path).Levels[0];
+        return (level.Board, [.. level.Relief.Select(r => r.Board)]);
+    });
 }
 
 var packages = new List<string>();

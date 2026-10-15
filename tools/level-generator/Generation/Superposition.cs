@@ -303,7 +303,9 @@ internal static class Superposition
     /// </summary>
     private static string? BroteTwo(GenBoard b, MechanicInfo m, SuperpositionContext ctx, Prng rng)
     {
-        var options = Enumerable.Range(0, b.Count).Where(i => b.Cuias[i].Count >= 1 && b.Caps[i] - b.Cuias[i].Count >= MechanicCodes.BroteTwoLeaves
+        // 1-2 dosis (b.3: «empieza con 2 dosis como mucho») y espacio ≥ 2 (02 R10 b): con una Cuia alta de 5 o 6, el espacio
+        // solo no basta, porque dejaría empezar con 3 o 4 dosis.
+        var options = Enumerable.Range(0, b.Count).Where(i => b.Cuias[i].Count is 1 or 2 && b.Caps[i] - b.Cuias[i].Count >= MechanicCodes.BroteTwoLeaves
             && Free(b, i) && !b.Cuias[i].Contains(Cuia.MudColor)).ToList();
         if (options.Count == 0)
         {

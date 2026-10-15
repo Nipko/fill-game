@@ -52,6 +52,20 @@ Códigos de salida: 0 = todo cumple (los avisos no fallan); 1 = algún nivel no 
 reproduce o falta Python; 2 = uso incorrecto, sin paquetes o un archivo ilegible. Sin argumentos sale con 2 (un glob vacío
 nunca deja pasar la compuerta). La consola es ASCII.
 
+### `--self-test key2` (P5 de la tanda 4)
+
+```
+dotnet run --project tools/level-qa -c Release -- --self-test key2
+```
+
+Prueba de este lector (`PackReader`) con las variantes de la 1.0 (firma de `pack_schema` 3, D-023 punto 5): genera el
+estreno de la Liana de cuenta, la Hoja atada, el Brote de dos hojas y la Flor de `tools/level-generator/specs/sample_variants.json`
+(243, 263, 283 y 303), lo escribe con `PackWriter` y su alivio a un pack temporal y comprueba que `PackReader` da el mismo
+tablero, los mismos `attrs` (también la `key2` de la Flor) y el mismo hash que el generador, en el nivel y en cada variante
+de relief, y que la Flor sin `key2` no se construye (`VariantsSelfTest.RunPackReadBack`, enlazado del generador). Así, si
+`PackReader` dejara de leer la `key2`, falla aquí aunque los packs de muestra ya den FAIL por los controles de las variantes
+que faltan (P6). Sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra la especificación; tarda unos segundos.
+
 ## Comprobaciones
 
 Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: motivo`.
