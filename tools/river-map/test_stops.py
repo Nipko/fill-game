@@ -9,6 +9,8 @@ sincronia con WorldTable.cs (leido aqui con su propio analizador); el determinis
 de hash); el desfase con lo commiteado; y los fixtures invalidos, cada uno con codigo 1 y mensajes ASCII en --check.
 Textos (M1.1t): el bloque map.* de facts.csv (contenido, columnas, orden ordinal, args, determinismo, filas de fuera del
 bloque intactas) y los fallos de --check (desfase, clave sin fila o sin texto, longitudes, cifras con separador y Belen).
+M2.6: facts[] con los «Otro dato», at y leg en cada parada, los nombres de los puntos de paso, de los miradores y de los
+paises de los rotulos, y los fixtures de las rutas (parada desplazada 20 km, boca fuera de su rio y candidato ausente).
 Solo biblioteca estandar.
 """
 from __future__ import annotations
@@ -30,6 +32,7 @@ sys.path.insert(0, str(HERE))
 import stops  # noqa: E402
 from riverdata import (  # noqa: E402
     FACTS_PATH,
+    MAP_PATH,
     OVERRIDES_PATH,
     ROOT,
     SOURCE_PATH,
@@ -91,7 +94,10 @@ class FieldTests(unittest.TestCase):
         for s in self.doc["stops"]:
             self.assertEqual(list(stops.STOP_FIELDS), list(s.keys()))
             self.assertEqual(["kit", "hero", "code", "lut"], list(s["bg"].keys()))
-            self.assertEqual([], s["facts"], "facts[] vacio hasta M2.6")
+            record = self.records[s["n"]]
+            self.assertEqual([o["clave"] for o in record["otros_datos"]], s["facts"], "facts[] = otros_datos (M2.6)")
+            self.assertEqual(["line", "s"], list(s["at"].keys()))
+            self.assertEqual(["path", "via", "mouths"], list(s["leg"].keys()))
 
     def test_n0_belem(self):
         self.assertStop(0, levels=[1, 10], world=1, id="belem", kind="gate", country="BR", country_name=None,
@@ -376,6 +382,35 @@ def _set_question(k: int, text: str):
     return mutate
 
 
+def _set_otro(k: int, i: int, field: str, value):
+    """Fixture: cambia el campo de un «Otro dato» (otros_datos[i] de la parada k)."""
+    def mutate(src: dict, ov: dict) -> None:
+        _rec(src, k)["otros_datos"][i][field] = value
+    return mutate
+
+
+def _drop_otro(k: int, key: str):
+    """Fixture: quita un «Otro dato» de la parada k (un candidato de la propuesta §5.1 bis que falta)."""
+    def mutate(src: dict, ov: dict) -> None:
+        _rec(src, k)["otros_datos"] = [o for o in _rec(src, k)["otros_datos"] if o["clave"] != key]
+    return mutate
+
+
+def _shift_stop(k: int, dlat: float):
+    """Fixture: desplaza el sitio de la parada k dlat grados de latitud (0,18 grados = 20 km)."""
+    def mutate(src: dict, ov: dict) -> None:
+        _rec(src, k)["lat"] = round(_rec(src, k)["lat"] + dlat, 4)
+    return mutate
+
+
+def _shift_mouth(rid: str, dlat: float):
+    """Fixture: mueve la boca (el ultimo punto) de un rio dlat grados de latitud."""
+    def mutate(src: dict, ov: dict) -> None:
+        river = next(r for r in src["rios"] if r["id"] == rid)
+        river["puntos"][-1]["lat"] = round(river["puntos"][-1]["lat"] + dlat, 4)
+    return mutate
+
+
 def _set_source(sid: str, field: str, value):
     def mutate(src: dict, ov: dict) -> None:
         next(f for f in src["fuentes"] if f["id"] == sid)[field] = value
@@ -472,8 +507,17 @@ FIXTURES = [
      "no es un entero ni un decimal con punto"),
     ("pais sin rotulo en la investigacion", _drop_rotulo("Perú"), "map.country.pe.name: 'Peru' no es ningun rotulo"),
     ("pais sin entrada en COUNTRY_NAMES", _unknown_country, "map.country.xx.name: el pais XX no esta en COUNTRY_NAMES"),
-    ("Belen en el nombre de una fuente (sale en el contexto)", _set_source("MR-F19", "nombre", "Mercado de Belén"),
-     "la columna context cae en el veto de Belen"),
+    # Rutas y «Otro dato» (M2.6).
+    ("candidato de la propuesta §5.1 bis ausente", _drop_otro(7, "map.stop.tefe.dato_03"),
+     "falta el candidato de la propuesta sec. 5.1 bis map.stop.tefe.dato_03"),
+    ("parada desplazada 20 km", _shift_stop(14, 0.18), "parada n=14 ('iquitos'): el sitio queda a 20."),
+    ("boca de un rio fuera de su rio", _shift_mouth("xingu", 0.3), "linea xingu: su boca queda a"),
+    ("Otro dato de 91 caracteres", _set_otro(5, 0, "texto", _TEXT_91), "map.stop.manaos.dato_03: 91 caracteres"),
+    ("Otro dato con una fuente que no existe", _set_otro(0, 1, "fuente", "CR-F999"), "map.stop.belem.dato_02: la fuente"),
+    # Belen en el contexto (M2.6: por la nota de un «Otro dato»; el titulo de una fuente con Belen se omite y queda su id
+    # y su URL, FactsSourceTitleTests).
+    ("Belen en la nota de un Otro dato (sale en el contexto)", _set_otro(15, 0, "nota", "Las casas flotantes de Belén."),
+     "map.stop.itaya.dato_01: la columna context cae en el veto de Belen"),
     # {rio} de map_arrived: solo el nombre del rio (overrides.json lo corrige donde la investigacion da una descripcion).
     ("rio con una descripcion entre parentesis", _drop_override("belem", "river"),
      "map.stop.belem.river: 'Para (estuario)' lleva una descripcion entre parentesis"),
@@ -604,13 +648,18 @@ class TextBlockTests(unittest.TestCase):
 
     def test_every_key_cited_by_the_stops_has_a_row_with_text(self):
         cited = stops.cited_keys(self.doc)
-        self.assertEqual(67, len(cited))
+        self.assertEqual(80, len(cited), "67 de M1.1t y 13 «Otro dato» de M2.6")
         for key in cited:
             with self.subTest(key=key):
                 self.assertIn(key, self.table)
                 self.assertTrue(self.table[key]["es-419"].strip())
         block = [k for k in self.table if k.startswith("map.")]
-        self.assertEqual(sorted(cited), sorted(block), "el bloque tiene justo las claves que cita river_stops_v1.json")
+        river_map = json.loads(MAP_PATH.read_text(encoding="utf-8"))
+        map_keys = ({f"map.stop.{p['id']}.name" for p in river_map["passing"] + river_map["viewpoints"]}
+                    | {f"map.country.{lab['country'].lower()}.name" for lab in river_map["labels"]})
+        self.assertEqual(26, len(map_keys - set(cited)), "17 puntos de paso, 3 miradores y 6 paises solo de los rotulos")
+        self.assertEqual(sorted(set(cited) | map_keys), sorted(block),
+                         "el bloque tiene justo las claves que citan river_stops_v1.json y river_map_v1.json")
 
     def test_rows_are_ordinal_and_the_block_is_contiguous(self):
         keys = [r[0] for r in self.rows[1:]]
@@ -672,11 +721,20 @@ class TextBlockTests(unittest.TestCase):
         self.assertEqual("Tefé", t["map.stop.tefe.river"])
         self.assertEqual("Amazonas", t["map.stop.tarapoto.river"])
         self.assertEqual("Marañón y Ucayali", t["map.stop.pacaya_samiria.river"])
-        self.assertEqual({"map.country.br.name": "Brasil", "map.country.co.name": "Colombia", "map.country.pe.name": "Perú"},
-                         {k: t[k] for k in t if k.startswith("map.country.") and k.endswith(".name")})
+        self.assertEqual({"map.country.bo.name": "Bolivia", "map.country.br.name": "Brasil", "map.country.co.name": "Colombia",
+                          "map.country.ec.name": "Ecuador", "map.country.gf.name": "Guayana Francesa",
+                          "map.country.gy.name": "Guyana", "map.country.pe.name": "Perú", "map.country.sr.name": "Surinam",
+                          "map.country.ve.name": "Venezuela"},
+                         {k: t[k] for k in t if k.startswith("map.country.") and k.endswith(".name")},
+                         "los de las paradas y los de los rotulos del Mapa (M2.6)")
+        self.assertEqual("Breves", t["map.stop.breves.name"], "sin el parentesis final")
+        self.assertEqual("Boca del Madeira", t["map.stop.boca_del_madeira.name"], "con mayuscula inicial")
+        self.assertEqual("Óbidos", t["map.stop.obidos.name"])
+        self.assertEqual("Isla de Marajó", t["map.stop.isla_de_marajo.name"])
         self.assertEqual("¿Por qué el agua del Tapajós es clara?", t["map.world.w02.question"])
         self.assertEqual(4, sum(k.startswith("map.world.") for k in t))
-        self.assertEqual(19, sum(".dato_" in k or k.startswith("map.general.") for k in t if k.startswith("map.")))
+        self.assertEqual(32, sum(".dato_" in k or k.startswith("map.general.") for k in t if k.startswith("map.")),
+                         "19 datos de llegada y 13 «Otro dato»")
 
     def test_rivers_are_only_the_name_of_the_river(self):
         for key, row in self.table.items():
@@ -759,6 +817,30 @@ class TextBlockTests(unittest.TestCase):
                                   f"nivel {10 * s['n']},", ctx)
                 else:
                     self.assertNotIn("map_hito_preview", ctx)
+
+    def test_other_facts_of_the_cards(self):
+        # «Otro dato» de la tarjeta (M2.6 con los de M2.7): texto, etiqueta, fuentes con URL y donde sale.
+        t = self.table
+        self.assertEqual(13, sum(1 for k in t if "Otro dato» de la tarjeta" in t[k]["context"]))
+        row = t["map.stop.tefe.dato_03"]
+        self.assertEqual("Cuando el agua baja, los manatíes de Mamirauá viajan a un refugio: el lago Amanã.", row["es-419"])
+        self.assertTrue(row["notes"].startswith("[V] «Otro dato» del Mapa del río."))
+        self.assertIn("map_card_other_fact", row["context"])
+        self.assertIn("https://", row["context"])
+        self.assertEqual("90", row["max_chars"])
+        self.assertEqual("pendiente_asesor", row["status"])
+        self.assertIn("5-6 m", t["map.stop.itaya.dato_01"]["es-419"], "U+00A0 entre la cifra y la unidad")
+
+    def test_a_source_titled_with_belen_is_cited_by_id_and_url_only(self):
+        # El veto de D-013 (punto 11) vale para todas las columnas: CR-F28 es la pagina del distrito (su titulo lleva el
+        # nombre vetado), asi que el contexto de itaya.dato_01 la cita por su id y su URL.
+        context = self.table["map.stop.itaya.dato_01"]["context"]
+        self.assertIn("CR-F28 [E]: título omitido por el veto de D-013, punto 11, https://", context)
+        self.assertNotIn("belen", stops.ascii_text(context).lower())
+        fuentes = {"X1": {"id": "X1", "nombre": "Mercado de Belén", "url": "https://example.org/x1", "etiqueta": "E"}}
+        text, errors = stops._sources_text({"etiqueta": "E", "fuente": "X1"}, fuentes, "map.stop.x.dato_01")
+        self.assertEqual([], errors)
+        self.assertEqual("Fuente X1 [E]: título omitido por el veto de D-013, punto 11, https://example.org/x1.", text)
 
     def test_unit_gets_a_no_break_space(self):
         self.assertIn("6\u00a0km", self.table["map.stop.manaos.dato_01"]["es-419"])
@@ -869,7 +951,7 @@ class WriteTextsTests(unittest.TestCase):
             _, errors = stops.build_texts(doc, source, overrides)
         self.assertTrue(errors)
         self.assertTrue(all("no cita ninguna fuente con URL" in e for e in errors), errors)
-        self.assertEqual(19, len(errors), "uno por dato de llegada")
+        self.assertEqual(32, len(errors), "uno por dato de llegada y otro por «Otro dato»")
 
     def test_csv_helpers_round_trip(self):
         from riverdata import format_csv_row
@@ -902,7 +984,7 @@ class FactsCheckTests(unittest.TestCase):
     def test_check_passes_on_the_committed_table(self):
         proc = self.check(FACTS_PATH.read_bytes())
         self.assertEqual(0, proc.returncode, proc.stdout.decode("ascii", "replace"))
-        self.assertIn(b"67 textos map.* validos", proc.stdout)
+        self.assertIn(b"106 textos map.* validos", proc.stdout)
 
     def test_edited_row_is_drift(self):
         data = FACTS_PATH.read_bytes().replace("Ilha do Amor".encode("utf-8"), "Isla del Amor".encode("utf-8"), 1)
@@ -922,7 +1004,7 @@ class FactsCheckTests(unittest.TestCase):
         self.assertFails(data, "map.world.w02.question: citada en river_stops_v1.json y sin texto es-419")
 
     def test_missing_block(self):
-        self.assertFails(without_block(FACTS_PATH.read_bytes()), "67 claves citadas", "falta el bloque map.*")
+        self.assertFails(without_block(FACTS_PATH.read_bytes()), "80 claves citadas", "falta el bloque map.*")
 
     def test_block_split_by_another_row(self):
         records = split_csv_records(FACTS_PATH.read_bytes().decode("utf-8"))

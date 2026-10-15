@@ -22,7 +22,10 @@ status_pt-BR, notes y args):
 - nombres por convencion: map.stop.<id>.name y map.stop.<id>.river (nombre y rio, o los de overrides.json),
   map.country.<iso2>.name (COUNTRY_NAMES, comprobado contra rotulos_de_pais) y, en n = 13, country_name («Colombia y
   Peru», desde pais CO/PE); 32 caracteres [P];
-- datos de llegada (arrival_fact, con su texto, etiqueta y fuentes con URL): 90 caracteres; preguntas del mundo: 50;
+- datos de llegada (arrival_fact, con su texto, etiqueta y fuentes con URL) y «Otro dato» de la tarjeta (facts, M2.6): 90
+  caracteres; preguntas del mundo: 50;
+- nombres de los puntos de paso y de los miradores de river_map_v1.json (map.stop.<id>.name, M2.6; place_name de
+  riverdata.py) y de los paises de sus rotulos (labels), aunque ninguna parada de 1-200 este en ellos;
 - en y pt-BR vacios; status pendiente_asesor; notes con la etiqueta del dato, [V] o [E] (su contexto cita cada fuente
   con su URL), y [P] en los nombres, rios, paises y preguntas (la investigacion no les da una fuente con URL; su conf es
   la de la coordenada); args con las cifras que el texto escribe como {n} (Q8-A): la fuente las da en
@@ -45,7 +48,13 @@ Conversion (paradas_1_200 -> stops[n]; plan del Mapa, M1.1):
 - flag_raise: el pais de cruces_de_pais con llega_en.parada_1_200 = n (BR en 0, CO en 8 y PE en 14).
 - arrival_fact: null en n = 0; en n = 1, la clave del dato del registro k = 0 (map.stop.estuario.dato_03, el Dato
   del rio 1 del Mapa del 10, 06 §2.3); desde n = 2, la clave de su propio dato_del_nivel.
-- facts = [] (lo llena M2.6 con los «Otro dato»).
+- facts = las claves de otros_datos de la parada, en su orden (los «Otro dato» de la tarjeta, M2.7; M2.6). Cada candidato
+  de la propuesta §5.1 bis (CANDIDATOS_5_1_BIS de generar_mapa.py, la copia unica de la lista) tiene que estar en los facts
+  o en el arrival_fact de su parada.
+- at y leg (M2.6; geometry.py): at = el punto del rio de la parada, en su ancla_rio y en su km_desde_el_mar (sin km, en
+  n = 0, el pie de su punto sobre el ramal del Para); leg = los tramos por agua desde la parada anterior (ida y vuelta por
+  las confluencias), con los puntos de paso (via) y las bocas que se llenan por primera vez (mouths). La parada 0 no tiene
+  viaje: su leg es un tramo de longitud cero con las bocas que van llenas desde el primer Mapa (el Tocantins).
 - world_question = map.world.wNN.question si la parada lleva pregunta_del_mundo; answers_world_question = true en la
   parada a la que se llega al ganar su se_responde_en.
 - bg: kit = fondo.kit; hero = bg_hero_x (sin el sufijo «+ LUT ...»); code = codigo:x o kit:x; lut = dusk o dawn si el
@@ -63,8 +72,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import geometry  # noqa: E402
 from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
     COUNTRY_NAMES,
+    GENERAR_MAPA_PATH,
     FACTS_PATH,
     FACTS_REL,
     OVERRIDES_PATH,
@@ -81,6 +92,8 @@ from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
     iter_strings,
     load_json,
     parse_csv_record,
+    place_id,
+    place_name,
     split_csv_records,
 )
 
@@ -90,12 +103,12 @@ FORMAT = "af-river-stops/1"
 LAST_LEVEL_1_200 = 200
 STOPS_1_200 = LAST_LEVEL_1_200 // 10
 
-# Orden fijo de los campos de cada parada (08 §4.5 con los extras de P-M1). M2.6 anade «at» tras country_name y «leg»
-# al final (el esquema ya los admite).
+# Orden fijo de los campos de cada parada (08 §4.5 con los extras de P-M1; at y leg desde M2.6).
 STOP_FIELDS = (
-    "n", "levels", "world", "id", "kind", "country", "country_name", "km_from_sea", "km_home", "sample",
-    "flag_raise", "arrival_fact", "facts", "world_question", "answers_world_question", "bg",
+    "n", "levels", "world", "id", "kind", "country", "country_name", "at", "km_from_sea", "km_home", "sample",
+    "flag_raise", "arrival_fact", "facts", "world_question", "answers_world_question", "bg", "leg",
 )
+LEG_FIELDS = ("path", "via", "mouths")
 BG_FIELDS = ("kit", "hero", "code", "lut")
 
 KIND = {"gran_parada": "gate", "parada": "stop", "variante": "stop", "castillo": "close"}
@@ -254,8 +267,43 @@ def _sample(record: dict, tag: str) -> tuple[str | None, list[str]]:
     return sample, []
 
 
-def convert(source: dict, overrides: dict) -> tuple[dict | None, list[str]]:
-    """paradas_1_200 de rio-amazonas.json -> documento af-river-stops/1 (sin validar todavia)."""
+def load_candidates(path: Path = GENERAR_MAPA_PATH) -> dict:
+    """Candidatos de la propuesta §5.1 bis ({id de parada: claves}): CANDIDATOS_5_1_BIS de generar_mapa.py, la copia
+    unica de esa lista (la misma que comprueba generar_mapa.py --check sobre otros_datos)."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("generar_mapa_candidatos", path)
+    if spec is None or spec.loader is None:
+        raise SourceError(f"no se puede cargar {path}")
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except OSError as e:
+        raise SourceError(f"no se puede leer {path}: {e.strerror}") from e
+    table = getattr(module, "CANDIDATOS_5_1_BIS", None)
+    if not isinstance(table, dict):
+        raise SourceError(f"{path}: sin CANDIDATOS_5_1_BIS")
+    return {sid: tuple(keys) for sid, keys in table.items()}
+
+
+def _other_facts(record: dict, tag: str) -> tuple[list[str], list[str]]:
+    """facts[]: las claves de otros_datos (los «Otro dato» de la tarjeta; M2.7), en su orden."""
+    otros = record.get("otros_datos")
+    if not isinstance(otros, list):
+        return [], [f"{tag}: sin otros_datos (una lista, vacia si la tarjeta no lleva «Otro dato»)"]
+    keys: list[str] = []
+    errors: list[str] = []
+    for i, o in enumerate(otros):
+        key = o.get("clave") if isinstance(o, dict) else None
+        if not isinstance(key, str):
+            errors.append(f"{tag}: otros_datos[{i}] sin clave")
+        else:
+            keys.append(key)
+    return keys, errors
+
+
+def convert(source: dict, overrides: dict, model: "geometry.Model | None" = None) -> tuple[dict | None, list[str]]:
+    """paradas_1_200 de rio-amazonas.json -> documento af-river-stops/1 (sin validar todavia). Con el modelo de
+    geometry.py, cada parada lleva at y leg; sin el, el documento sale sin rutas y validate() lo rechaza."""
     records = source.get("paradas_1_200")
     if not isinstance(records, list) or not records:
         return None, ["rio-amazonas.json: falta paradas_1_200 o esta vacia"]
@@ -286,6 +334,10 @@ def convert(source: dict, overrides: dict) -> tuple[dict | None, list[str]]:
     answer_levels, errs = _questions(records)
     errors += errs
     first_record = by_k.get(0)
+    routes: dict = {}
+    if model is not None:
+        routes, errs = geometry.build_routes(model, records)
+        errors += errs
 
     stops = []
     for r in records:
@@ -343,6 +395,10 @@ def convert(source: dict, overrides: dict) -> tuple[dict | None, list[str]]:
         bg, errs = _background(r, tag)
         errors += errs
 
+        facts, errs = _other_facts(r, tag)
+        errors += errs
+        at, leg = routes.get(k, (None, None))
+
         stop = {
             "n": k,
             "levels": r.get("niveles"),
@@ -351,15 +407,17 @@ def convert(source: dict, overrides: dict) -> tuple[dict | None, list[str]]:
             "kind": kind,
             "country": country,
             "country_name": ov.get("country_name"),
+            "at": at,
             "km_from_sea": r.get("km_desde_el_mar"),
             "km_home": r.get("km_casa"),
             "sample": sample,
             "flag_raise": flag_raise,
             "arrival_fact": arrival,
-            "facts": [],
+            "facts": facts,
             "world_question": world_question,
             "answers_world_question": _is_int(llegada) and llegada in answer_levels,
             "bg": bg,
+            "leg": leg,
         }
         stops.append(stop)
     doc = {"format": FORMAT, "source": SOURCE_REL, "stops": stops}
@@ -368,8 +426,11 @@ def convert(source: dict, overrides: dict) -> tuple[dict | None, list[str]]:
 
 # --------------------------------------------------------------------------------------------- validacion
 
-def validate(doc: dict, wt: WorldTable) -> list[str]:
+def validate(doc: dict, wt: WorldTable, model: "geometry.Model | None" = None, records: list | None = None,
+             candidates: dict | None = None) -> list[str]:
     """Reglas de 08 §4.5 y del plan del Mapa sobre el documento generado: aqui se comprueban todas (stops.py --check).
+    Con el modelo de geometry.py y los registros de la fuente, tambien las rutas (at y leg; geometry.validate_routes);
+    con los candidatos, que cada uno de la propuesta §5.1 bis este en los facts o en el arrival_fact de su parada.
 
     RiverStopCatalog (AF.Levels, M1.2) repite solo el formato, los n contiguos, levels, WorldTable, gate y close (contrato
     30) y la parada final de cada mundo, y ArtSlots rechaza «belen»; los textos de las claves los comprueba build_texts.
@@ -509,6 +570,12 @@ def validate(doc: dict, wt: WorldTable) -> list[str]:
             if lut is not None and lut not in LUTS:
                 errors.append(f"{tag}: bg.lut {lut!r} no es dusk, dawn ni null")
 
+        at, leg = s.get("at"), s.get("leg")
+        if not (isinstance(at, dict) and tuple(at.keys()) == ("line", "s")):
+            errors.append(f"{tag}: at tiene que ser {{line, s}} (M2.6)")
+        if not (isinstance(leg, dict) and tuple(leg.keys()) == LEG_FIELDS):
+            errors.append(f"{tag}: leg tiene que ser {{path, via, mouths}} (M2.6)")
+
     # El documento termina en el ultimo nivel de un mundo (1-200: el 200 del mundo 5; vale igual para 1-700). Con n
     # contiguos y levels = [10n+1, 10n+10], asi cada mundo presente esta completo: su gate y, si tiene mas de un
     # tramo, su close.
@@ -533,13 +600,37 @@ def validate(doc: dict, wt: WorldTable) -> list[str]:
     for path, text in iter_strings(doc):
         if has_belen(text):
             errors.append(f"{path}: {text!r} cae en el veto de Belen (D-013, punto 11; 07 §8.1)")
+
+    if model is not None and records is not None and not errors:
+        errors += geometry.validate_routes(doc, model, records)
+    if candidates is not None:
+        by_id = {s.get("id"): s for s in stops}
+        for sid, keys in sorted(candidates.items()):
+            s = by_id.get(sid)
+            have = (set(s.get("facts") or []) | {s.get("arrival_fact")}) if s is not None else set()
+            for key in keys:
+                if key not in have:
+                    errors.append(f"parada {sid!r}: falta el candidato de la propuesta §5.1 bis {key} (ni en facts ni "
+                                  "como arrival_fact; D-013, punto 11)")
     return errors
 
 
 def build(source: dict, overrides: dict, wt: WorldTable) -> tuple[dict | None, list[str]]:
-    doc, errors = convert(source, overrides)
+    """Paradas con sus rutas (geometry.py) y todas las reglas, candidatos de la propuesta §5.1 bis incluidos."""
+    try:
+        model, errors = geometry.build_model(source)
+    except geometry.GeometryError as e:
+        return None, [f"geometria: {e}"]
+    errors = [f"geometria: {e}" for e in errors]
+    doc, errs = convert(source, overrides, model)
+    errors += errs
     if doc is not None:
-        errors += validate(doc, wt)
+        records = [r for r in source.get("paradas_1_200", []) if isinstance(r, dict)]
+        try:
+            candidates = load_candidates()
+        except SourceError as e:
+            return doc, errors + [str(e)]
+        errors += validate(doc, wt, model, records, candidates)
     return doc, errors
 
 
@@ -751,7 +842,12 @@ def _sources_text(dato: dict, fuentes: dict, key: str) -> tuple[str, list[str]]:
         if not (isinstance(url, str) and url.startswith(("https://", "http://"))):
             errors.append(f"{key}: la fuente {sid!r} no tiene URL")
         tags.append(f.get("etiqueta"))
-        parts.append(f"{sid} [{f.get('etiqueta')}]: {f.get('nombre')}, {url}")
+        nombre = f.get("nombre")
+        if isinstance(nombre, str) and has_belen(nombre):
+            # El veto de D-013 (punto 11) vale para todas las columnas: de una fuente con «Belén» en el titulo (CR-F28,
+            # la pagina del distrito) queda su id y su URL, que la identifican.
+            nombre = "título omitido por el veto de D-013, punto 11"
+        parts.append(f"{sid} [{f.get('etiqueta')}]: {nombre}, {url}")
     if etiqueta == "V" and len(tags) == len(ids) and "V" not in tags:
         errors.append(f"{key}: dato [V] sin ninguna fuente [V] ({', '.join(ids)})")
     label = "Fuente" if len(parts) == 1 else "Fuentes"
@@ -875,6 +971,23 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
                    f"«A Colômbia»); y rótulo del país en el Mapa (glosario §8; 08 §4.5). Fuente: {SOURCE_REL}, "
                    f"rotulos_de_pais («{rotulo}»). {NO_CAPTURE}")
         add(key, name, NAME_MAX_CHARS, context, "[P] Nombre del país en español (glosario §8).")
+    # Paises que solo salen en los rotulos del Mapa (labels de river_map_v1.json; M2.6): ninguna parada de 1-200 esta en
+    # ellos, pero el Mapa los nombra en su region (sin fronteras en tierra; D-013, punto 5).
+    for rotulo in rotulos:
+        iso = next((i for i, n in COUNTRY_NAMES.items()
+                    if isinstance(rotulo, str) and (rotulo == n or rotulo.startswith(n + " ("))), None)
+        if iso is None:
+            errors.append(f"rotulos_de_pais: {rotulo!r} no es ningun pais de COUNTRY_NAMES (riverdata.py)")
+            continue
+        if iso in by_country:
+            continue
+        key = f"map.country.{iso.lower()}.name"
+        context = (f"Nombre del país {iso}: rótulo del país en su región del Mapa del río (labels de river_map_v1.json, "
+                   f"sin fronteras en tierra; D-013, punto 5; glosario §8; 08 §4.5). Ninguna parada de 1-200 está en "
+                   f"él; cuando el viaje entre en el país, también {{país}} de map_arrived, de stop_label y de "
+                   f"map_country_welcome («{{país}} te da la bienvenida»), donde otros idiomas pueden pedir artículo y "
+                   f"concordancia. Fuente: {SOURCE_REL}, rotulos_de_pais («{rotulo}»). {NO_CAPTURE}")
+        add(key, COUNTRY_NAMES[iso], NAME_MAX_CHARS, context, "[P] Nombre del país en español (glosario §8).")
     for s in stops:
         if s["country_name"] is None:
             continue
@@ -934,11 +1047,52 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
                    f"dato: {names.get(holder)}. {sources} {NO_CAPTURE}")
         add(key, dato.get("texto"), FACT_MAX_CHARS, context, f"[{dato.get('etiqueta')}] Dato del Mapa del río.", args)
 
-    # Otros datos de la tarjeta (facts[]): llegan con M2.6; hasta entonces, una clave sin texto es un error.
+    # «Otro dato» de la tarjeta (facts[]; M2.6 con los de M2.7): 90 caracteres, con su fuente y su URL.
     for s in stops:
+        n = s["n"]
+        otros = {o.get("clave"): o for o in records.get(n, {}).get("otros_datos", []) if isinstance(o, dict)}
         for key in s["facts"]:
-            if key not in rows:
-                errors.append(f"{key}: clave sin texto es-419 en la fuente (facts de la parada n={s['n']})")
+            o = otros.get(key)
+            if o is None:
+                errors.append(f"{key}: clave sin texto es-419 en la fuente (facts de la parada n={n})")
+                continue
+            args, errs = _parse_args(o.get("args"), key)
+            errors.extend(errs)
+            sources, errs = _sources_text(o, fuentes, key)
+            errors.extend(errs)
+            cifras = (" Marcadores: " + ", ".join(f"{{{a}}}" for a in sorted(args))
+                      + ", la cifra de la columna args con el separador de la región (D-018, Q8-A)." if args else "")
+            nota = f" Nota de la investigación: {o['nota']}" if isinstance(o.get("nota"), str) and o["nota"].strip() else ""
+            context = (f"«Otro dato» de la tarjeta de la {where(s)}, {names[n]}: sale en la tarjeta de la parada, en el "
+                       f"Mapa y en el Muestrario, bajo map_card_other_fact, nunca en la victoria (D-013, puntos 10 y 11; "
+                       f"06 §4.5; propuesta del Mapa §5.1 bis y §5.1 ter). No es un dato de llegada ni el fact_id de "
+                       f"af_river_fact_shown.{cifras} Origen: {o.get('origen')}. Fuentes reabiertas el {o.get('releida')} "
+                       f"(R5). {sources}{nota} {NO_CAPTURE}")
+            add(key, o.get("texto"), FACT_MAX_CHARS, context, f"[{o.get('etiqueta')}] «Otro dato» del Mapa del río.", args)
+
+    # Nombres de los puntos de paso y de los miradores de river_map_v1.json (map.stop.<id>.name por convencion; M2.6).
+    stop_ids = {s["id"] for s in stops}
+    for field, kind, what in (("puntos_de_paso_1_200", "punto de paso", "sale en el río cuando la canoa lo pasa en un "
+                               "viaje y al tocarlo en el Mapa, sin fondo, Canasta ni muestra (propuesta del Mapa §5.2; "
+                               "06 §4.5)"),
+                              ("miradores_1_200", "mirador", "un «?» fuera de la ruta que el progreso revela (desde la "
+                               "victoria del 10); al tocarlo enseña su dato y da su muestra especial del Muestrario "
+                               "(propuesta del Mapa §5.2; 06 §4.5)")):
+        for r in source.get(field, []) or []:
+            nombre = r.get("nombre") if isinstance(r, dict) else None
+            if not isinstance(nombre, str):
+                errors.append(f"{field}: una entrada sin nombre")
+                continue
+            pid = place_id(nombre)
+            if pid in stop_ids:
+                errors.append(f"{field}: {nombre!r} tiene el id {pid} de una parada (comparten map.stop.<id>.name)")
+                continue
+            key = f"map.stop.{pid}.name"
+            context = (f"Nombre del {kind} {pid} del Mapa del río: {what}. Es el nombre de la investigación sin su "
+                       f"paréntesis final y con mayúscula inicial [P]. Fuente: {SOURCE_REL}, {field} («{nombre}»). "
+                       f"{NO_CAPTURE}")
+            add(key, place_name(nombre), NAME_MAX_CHARS, context,
+                f"[P] Nombre del {kind} de la investigación del Mapa (rio-amazonas.json, nombre).")
 
     # Preguntas del mundo (50 caracteres).
     for s in stops:
@@ -1046,6 +1200,10 @@ def check_facts(path: Path, rows: dict, doc: dict) -> list[str]:
     for key in cited_keys(doc):
         if key in table and not table[key].get("es-419", "").strip():
             errors.append(f"{key}: citada en river_stops_v1.json y sin texto es-419 en {_rel(path)}")
+    # Los nombres que cita river_map_v1.json por convencion (puntos de paso, miradores y paises de los rotulos; M2.6).
+    for key in sorted(set(rows) - set(cited_keys(doc))):
+        if not table.get(key, {}).get("es-419", "").strip():
+            errors.append(f"{key}: citada en river_map_v1.json y sin fila con texto es-419 en {_rel(path)}")
     expected, errs = render_facts(current, rows)
     errors.extend(errs)
     if expected is not None and expected != current:

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:amazonfill:schemas:af-river-stops-1",
   "title": "Amazon Fill · paradas del Mapa del río af-river-stops/1",
-  "description": "JSON Schema del formato af-river-stops/1 (Mapa del río, D-013; contrato 30 de docs/GDD.md §7.4; sintaxis en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.5, con los extras [P] de P-M1 (a): km_home, answers_world_question y country_name). Junto con 08 §4.5 es la copia única del formato. Lo emite tools/river-map/stops.py en Assets/_Project/Data/Map/river_stops_v1.json y lo valida tools/river-map/test_schemas.py (nunca tools/validate_schema.py, que es solo de af-level/1). Solo lleva claves de texto, nunca textos: los textos de las claves map.* van en Assets/_Project/Data/Loc/facts.csv (contrato 32). Lo que el esquema no puede expresar lo comprueba entero tools/river-map/stops.py --check: n contiguos desde 0 y levels = [10n+1, 10n+10]; la última parada en el último nivel de un mundo (1-200: el 200), para que cada mundo presente esté completo; world igual a WorldTable; gate en el primer tramo de cada mundo y close en el último (salvo el mundo 1, de un solo tramo); bg.kit = bg_kit_w{world con 2 cifras}; uno y solo uno de bg.hero y bg.code; ids únicos; flag_raise al empezar y al cambiar de país; arrival_fact null solo en n = 0; country_name = map.stop.<id>.country; world_question = map.world.w{world}.question y una sola parada que la responde, después de plantearla, en el mismo mundo; ningún «Belén»; y los textos de todas las claves en el bloque map.* de facts.csv (M1.1t). RiverStopCatalog (AF.Levels, M1.2) repite solo el formato, los n contiguos, levels, WorldTable, gate y close (contrato 30) y la parada final de cada mundo, y ArtSlots rechaza «belen». Los campos at y leg (ruta de la canoa) los añade M2.6; hasta entonces son opcionales. Cambiar este archivo es cambiar un contrato.",
+  "description": "JSON Schema del formato af-river-stops/1 (Mapa del río, D-013; contrato 30 de docs/GDD.md §7.4; sintaxis en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.5, con los extras [P] de P-M1 (a): km_home, answers_world_question y country_name). Junto con 08 §4.5 es la copia única del formato. Lo emite tools/river-map/stops.py en Assets/_Project/Data/Map/river_stops_v1.json y lo valida tools/river-map/test_schemas.py (nunca tools/validate_schema.py, que es solo de af-level/1). Solo lleva claves de texto, nunca textos: los textos de las claves map.* van en Assets/_Project/Data/Loc/facts.csv (contrato 32). Lo que el esquema no puede expresar lo comprueba entero tools/river-map/stops.py --check: n contiguos desde 0 y levels = [10n+1, 10n+10]; la última parada en el último nivel de un mundo (1-200: el 200), para que cada mundo presente esté completo; world igual a WorldTable; gate en el primer tramo de cada mundo y close en el último (salvo el mundo 1, de un solo tramo); bg.kit = bg_kit_w{world con 2 cifras}; uno y solo uno de bg.hero y bg.code; ids únicos; flag_raise al empezar y al cambiar de país; arrival_fact null solo en n = 0; country_name = map.stop.<id>.country; world_question = map.world.w{world}.question y una sola parada que la responde, después de plantearla, en el mismo mundo; ningún «Belén»; y los textos de todas las claves en el bloque map.* de facts.csv (M1.1t). RiverStopCatalog (AF.Levels, M1.2) repite solo el formato, los n contiguos, levels, WorldTable, gate y close (contrato 30) y la parada final de cada mundo, y ArtSlots rechaza «belen». Desde M2.6, cada parada lleva at (su punto del río) y leg (el tramo por agua que lleva a ella) sobre las líneas de river_map_v1.json (af-river-map/1, contrato 29); que at, leg.path, via y mouths sean de ese Mapa, que los tramos sean continuos (solo se pasa de una línea a otra por una confluencia: las rutas no cruzan tierra), que cada sitio quede a ≤ 2 dp de su punto del río en la vista Cuenca (≤ 15 km, o el radio [P] de los sitios fuera del cauce), que los km no retrocedan y que cada candidato de la propuesta del Mapa §5.1 bis esté en facts o como arrival_fact lo comprueban tools/river-map/geometry.py --check y stops.py --check. Cambiar este archivo es cambiar un contrato.",
   "type": "object",
   "additionalProperties": false,
   "required": ["format", "source", "stops"],
@@ -34,7 +34,7 @@
     "stop": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["n", "levels", "world", "id", "kind", "country", "country_name", "km_from_sea", "km_home", "sample", "flag_raise", "arrival_fact", "facts", "world_question", "answers_world_question", "bg"],
+      "required": ["n", "levels", "world", "id", "kind", "country", "country_name", "at", "km_from_sea", "km_home", "sample", "flag_raise", "arrival_fact", "facts", "world_question", "answers_world_question", "bg", "leg"],
       "properties": {
         "n": { "type": "integer", "minimum": 0, "maximum": 99, "description": "k de la parada: cubre los niveles 10k+1 … 10k+10 y se llega a ella al ganar el 10k; su id visible es s{nn} (glosario §11)." },
         "levels": {
@@ -66,7 +66,7 @@
             "line": { "$ref": "#/$defs/slug" },
             "s": { "$ref": "#/$defs/unit" }
           },
-          "description": "Posición de la parada en una línea de river_map_v1.json (fracción s de su longitud). Desde M2.6."
+          "description": "Punto del río de la parada en una línea de river_map_v1.json (fracción s de su longitud, que crece río abajo): en su km desde el mar por el río (en n = 0, sin km, el pie de Belém sobre el ramal del Pará). Desde M2.6."
         },
         "km_from_sea": { "type": ["integer", "null"], "minimum": 0, "description": "Km desde el mar por el cauce; null en n = 0 (Belém no está en el cauce)." },
         "km_home": { "type": "integer", "minimum": 0, "description": "[P-M1] Km por agua hasta casa (Belém), para «Casa · a unos {km} km»." },
@@ -83,7 +83,7 @@
           "type": "array",
           "uniqueItems": true,
           "items": { "$ref": "#/$defs/fact_key" },
-          "description": "Claves de los «Otro dato» de la tarjeta de la parada (vacío hasta M2.6)."
+          "description": "Claves de los «Otro dato» de la tarjeta de la parada (desde M2.6; vacío si la tarjeta no lleva)."
         },
         "world_question": {
           "oneOf": [
@@ -141,7 +141,7 @@
             "via": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/slug" } },
             "mouths": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/slug" } }
           },
-          "description": "Ruta del tramo que lleva a esta parada, por agua y con ida y vuelta por las confluencias: tramos de línea, puntos de paso y bocas que se llenan. Desde M2.6."
+          "description": "Ruta del tramo que lleva a esta parada desde la anterior, por agua y con ida y vuelta por las confluencias: tramos de línea (path, de s0 a s1 en el sentido del viaje), puntos de paso que se cruzan (via, ids de passing de river_map_v1.json) y afluentes cuya boca se llena por primera vez (mouths). En n = 0, sin viaje, un tramo de longitud cero en Belém con lo que va lleno desde el primer Mapa (el Tocantins). Desde M2.6."
         }
       }
     }
