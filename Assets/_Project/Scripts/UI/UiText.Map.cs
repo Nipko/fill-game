@@ -100,10 +100,27 @@ namespace AF.UI
             return MapStopRemaining(levels, StopName(next));
         }
 
-        /// <summary><c>map_arrived</c> [P]: «{lugar} · {país} · río {río}» (placa de llegada y tarjeta de la parada).</summary>
+        /// <summary><c>map_arrived</c> [P]: «{lugar} · {país} · río {río}» (placa de llegada y tarjeta de la parada), en una línea.</summary>
         public static string MapArrived(string place, string country, string river)
         {
-            return Format(Keys.MapArrived, LocArgs.Of("place", place).And("country", country).And("river", river));
+            return MapArrived(place, country, river, 0);
+        }
+
+        /// <summary>
+        /// <c>map_arrived</c> [P] con cortes: su plantilla lleva <c>{sep}</c> donde la línea se puede partir (revisión de M1.6), y
+        /// el <c>{sep}</c> número i es un salto de línea si el bit i de <paramref name="breaks"/> está puesto y « · » si no
+        /// (<see cref="MapArrivedSeparators"/>). Así la placa nunca deja un « · » colgando al final de una línea.
+        /// </summary>
+        public static string MapArrived(string place, string country, string river, int breaks)
+        {
+            return Format(Keys.MapArrived, LocArgs.Of("place", place).And("country", country).And("river", river), breaks);
+        }
+
+        /// <summary>Cuántos cortes (<c>{sep}</c>) tiene <c>map_arrived</c> en el idioma actual. Sin asignaciones.</summary>
+        public static int MapArrivedSeparators()
+        {
+            string? template = Loc.Template(Keys.MapArrived);
+            return template == null ? 0 : LocFormat.SeparatorCount(template);
         }
 
         /// <summary><see cref="MapArrived(string, string, string)"/> de la parada <paramref name="stop"/>.</summary>

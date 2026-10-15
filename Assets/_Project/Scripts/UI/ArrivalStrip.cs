@@ -30,11 +30,19 @@ namespace AF.UI
     /// M1.3b dicen que ni compactada cabe siempre en el alto de la línea de fruta, así que la ranura reserva
     /// máx(línea de fruta, <see cref="NeedDp"/>), con <see cref="NeedDp"/> = la llegada más alta del catálogo en el idioma y la
     /// escala de ahora: nada se recorta y «Siguiente» sigue en el mismo sitio en todas las victorias (Q7-A).</para>
-    /// <para><b>Aspecto (revisión de M1.6; D-003):</b> la fila del agua va en un cauce (fondo #E2D2B0 con borde de 1 dp #B89A6A
-    /// [P]) con la línea de agua de 2 dp y un brillo de 1 dp; la mini cuia se pinta con el mismo color que la barra (su agua va
-    /// encima del vidrio provisional, cuyo interior es opaco, y encima de todo un brillo del vidrio al 25 %); la placa es una
-    /// tarjeta de esquinas de <see cref="PlateRadiusDp"/> dp con borde de 1 dp #E3D3B0 [P], alineada con la fila del agua, con
-    /// <see cref="PlatePadDp"/> dp de relleno y <see cref="PlateRightPadDp"/> a la derecha del texto. La ranura tiene un alto fijo
+    /// <para><b>Aspecto (revisiones de M1.6; D-003, vidrio, madera y luz):</b> la fila del agua es un cauce de extremos
+    /// redondeados (<see cref="BedRadiusDp"/> dp) con borde de madera oscura <see cref="BedEdge"/> de <see cref="BedEdgeDp"/> dp
+    /// y un canto de vidrio <see cref="BedColor"/> de <see cref="BedRingDp"/> dp entre el borde y el agua, que es una banda de
+    /// <see cref="WaterDp"/> dp con un brillo de superficie de <see cref="WaterGlintDp"/> dp y una línea de ondas
+    /// (<see cref="ProceduralArt.ArrivalWave"/>) <see cref="WaveBelowDp"/> dp más abajo. El agua blanca va más oscura en la franja
+    /// (<see cref="StripWhiteWater"/>, ≥ 3:1 frente al panel), y el agua, el cauce y su borde contrastan entre sí con los tres
+    /// <c>water_base</c> (<c>ArrivalStripColorTests</c>). La canoa (<see cref="CanoeDp"/> dp) flota con la quilla
+    /// <see cref="CanoeDraftDp"/> dp bajo la superficie. La mini cuia se pinta con el mismo color que la barra (su agua va encima
+    /// del vidrio provisional, cuyo interior es opaco, y encima de todo un brillo del vidrio al 25 %). La placa es una tarjeta de
+    /// esquinas de <see cref="PlateRadiusDp"/> dp con borde de 1 dp #E3D3B0 [P], alineada con la fila del agua, con
+    /// <see cref="PlatePadDp"/> dp de relleno y <see cref="PlateRightPadDp"/> a la derecha del texto; la bienvenida va en verde
+    /// hoja (<see cref="WelcomeInk"/>) para separarse de la línea del lugar. La línea del lugar se parte por sus <c>{sep}</c>
+    /// (<see cref="UiText.MapArrived(string, string, string, int)"/>) y nunca deja un « · » colgando. La ranura tiene un alto fijo
     /// (la llegada más alta del catálogo): lo que se enseña va centrado en vertical dentro de ella, con el aire repartido arriba
     /// y abajo.</para>
     /// <para><b>Tiempos:</b> la franja dura <see cref="MapConfig.ArrivalStripMs"/> ms desde que termina de subir el panel
@@ -57,7 +65,12 @@ namespace AF.UI
         /// <summary>Del retrato al texto [P].</summary>
         public const float PortraitGapDp = 8f;
 
-        /// <summary>Bienvenida y lugar: Nunito Bold de 12 sp, el mínimo (pregunta 11, a; maqueta de M1.3b) [P].</summary>
+        /// <summary>
+        /// Bienvenida y lugar: Nunito Bold de 12 sp, el mínimo (pregunta 11, a; maqueta de M1.3b) [P]. La revisión de M1.6 pidió
+        /// 13 sp si el alto de la ranura lo permitía, pero las medidas de M1.3b (<c>slot_measures.txt</c>) dicen que ni la llegada
+        /// compactada a 12 sp cabe en el alto de la línea de fruta: se queda en 12 sp y la bienvenida se distingue por el color
+        /// (<see cref="WelcomeInk"/>), sin coste de alto.
+        /// </summary>
         public const float PlaceSp = UiBuilder.MinTextSp;
 
         /// <summary>Dato: Nunito Regular de 14 sp, nunca menos de 12 (02 §6).</summary>
@@ -111,20 +124,84 @@ namespace AF.UI
         /// <summary>Brillo del vidrio de la mini cuia, encima del agua (revisión de M1.6: ≤ 0,25) [P].</summary>
         public const float MiniGlintAlpha = 0.25f;
 
-        /// <summary>Brillo de la superficie del agua de la fila: 1 dp blanco al 35 %, a 3 dp de su borde de arriba [P].</summary>
-        public const float WaterGlintAlpha = 0.35f;
+        /// <summary>
+        /// Banda de agua de la fila (dp) [P]. La revisión de M1.6 pidió de 14 a 18 dp (0,65 × <see cref="RowDp"/>); con 18 la
+        /// canoa, con la quilla <see cref="CanoeDraftDp"/> dp bajo la superficie, no pasaría de 14 dp dentro de la fila de 28: 16
+        /// deja la canoa en <see cref="CanoeDp"/> dp.
+        /// </summary>
+        public const float WaterDp = 16f;
+
+        /// <summary>Borde de madera del cauce (dp) [P].</summary>
+        public const float BedEdgeDp = 1.5f;
+
+        /// <summary>Canto de vidrio entre el borde del cauce y el agua (dp) [P].</summary>
+        public const float BedRingDp = 1f;
+
+        /// <summary>Radio de los extremos redondeados del cauce (dp; el agua, con el radio menos el borde y el canto) [P].</summary>
+        public const float BedRadiusDp = 7f;
+
+        /// <summary>Brillo de la superficie del agua de la fila: <see cref="WaterGlintDp"/> dp blanco al 45 % [P].</summary>
+        public const float WaterGlintAlpha = 0.45f;
+
+        /// <summary>Alto del brillo de la superficie del agua (dp) [P].</summary>
+        public const float WaterGlintDp = 2f;
+
+        /// <summary>Línea de ondas del agua (<see cref="ProceduralArt.ArrivalWave"/>): blanca al 35 % [P].</summary>
+        public const float WaveAlpha = 0.35f;
+
+        /// <summary>El eje de la línea de ondas va 5 dp por debajo de la superficie del agua [P].</summary>
+        public const float WaveBelowDp = 5f;
+
+        /// <summary>Alto de la canoa de Capi en la fila (dp) [P].</summary>
+        public const float CanoeDp = 17f;
+
+        /// <summary>La quilla de la canoa va 3 dp por debajo de la superficie: flota dentro del agua, no sobre la barra [P].</summary>
+        public const float CanoeDraftDp = 3f;
 
         /// <summary>Borde de la placa (#E3D3B0) [P].</summary>
         public static readonly Color PlateEdge = Palette.Hex(0xE3D3B0);
 
-        /// <summary>Fondo del cauce de la fila del agua (#E2D2B0) [P].</summary>
-        public static readonly Color BedColor = Palette.Hex(0xE2D2B0);
+        /// <summary>
+        /// Canto de vidrio del cauce, entre el borde y el agua (<see cref="Palette.GlassRim"/>, #EAF7F3): ≥ 3,6:1 frente al agua
+        /// de la franja con los tres <c>water_base</c> (<c>ArrivalStripColorTests</c>) [P].
+        /// </summary>
+        public static readonly Color BedColor = Palette.GlassRim;
 
-        /// <summary>Borde de 1 dp del cauce (#B89A6A): el agua blanca se lee como agua sobre el crema del panel [P].</summary>
-        public static readonly Color BedEdge = Palette.Hex(0xB89A6A);
+        /// <summary>
+        /// Borde de madera oscura del cauce (#7A5A32): 5,6:1 frente al panel #FBF0D9 y 5,7:1 frente al canto de vidrio; nunca del
+        /// tono del agua (ΔE00 ≥ 10 con los tres <c>water_base</c>) [P].
+        /// </summary>
+        public static readonly Color BedEdge = Palette.Hex(0x7A5A32);
+
+        /// <summary>
+        /// Agua blanca en la franja (#9C7646, solo aquí; <see cref="Palette.WaterWhite"/> #B08A5A da 2,8:1 frente al panel): 3,6:1
+        /// frente al panel, el mínimo de 3:1 de un elemento gráfico [P].
+        /// </summary>
+        public static readonly Color StripWhiteWater = Palette.Hex(0x9C7646);
+
+        /// <summary>Tinta de la bienvenida: el verde hoja de la cinta «¡Nivel completado!» (<see cref="ButtonFamily.Deep"/> de Hoja), 5,9:1 [P].</summary>
+        public static readonly Color WelcomeInk = Palette.FamilyLeaf.Deep;
+
+        /// <summary>Tinta de la línea del lugar (la de antes).</summary>
+        public static readonly Color PlaceInk = Palette.FamilyWood.Deep;
 
         private const float MiniCuiaW = RowDp * ProceduralArt.MiniCuiaWidthDp / ProceduralArt.MiniCuiaHeightDp;
-        private const float CanoeW = RowDp * ProceduralArt.MapCanoeWidthDp / ProceduralArt.MapCanoeHeightDp;
+        private const float CanoeW = CanoeDp * ProceduralArt.MapCanoeWidthDp / ProceduralArt.MapCanoeHeightDp;
+
+        // Quilla de la canoa provisional: a 5 dp del pie de su sprite de 32 dp (ProceduralArt.BuildMapCanoe).
+        private const float CanoeKeelDp = CanoeDp * 5f / ProceduralArt.MapCanoeHeightDp;
+
+        // Del borde exterior del cauce al agua: el borde de madera y el canto de vidrio.
+        private const float BedInsetDp = BedEdgeDp + BedRingDp;
+
+        // Arriba del cauce, dentro de la fila (el cauce va al pie de la fila).
+        private const float BedTopDp = RowDp - WaterDp - (2f * BedInsetDp);
+
+        // Superficie del agua, dentro de la fila.
+        private const float SurfaceDp = BedTopDp + BedInsetDp;
+
+        // Radio de las esquinas del agua.
+        private const float WaterRadiusDp = BedRadiusDp - BedInsetDp;
 
         private readonly ProceduralArt _art;
         private readonly Func<RiverStopCatalog?> _stops;
@@ -217,7 +294,10 @@ namespace AF.UI
         /// <summary>Texto de la bienvenida (vacío sin ella).</summary>
         public string WelcomeText { get; private set; } = string.Empty;
 
-        /// <summary>Texto de la placa del lugar, «{lugar} · {país} · río {río}» (vacío si falta algún nombre).</summary>
+        /// <summary>
+        /// Texto de la placa del lugar, «{lugar} · {país} · río {río}», con saltos de línea en sus cortes si no cabe en una
+        /// (<see cref="PlaceBreaks"/>; vacío si falta algún nombre).
+        /// </summary>
         public string PlaceText { get; private set; } = string.Empty;
 
         /// <summary>Texto del dato (vacío sin él).</summary>
@@ -268,8 +348,20 @@ namespace AF.UI
         /// <summary>El área táctil de la franja (un toque la completa).</summary>
         public Button? TapArea => _root;
 
-        /// <summary>Fila del agua: el tramo (tests y capturas).</summary>
-        public RectTransform? Track => _track != null ? _track.rectTransform : null;
+        /// <summary>
+        /// El área táctil recibe toques: solo mientras se ve algo de la franja (alfa &gt; 0). Con el dato desplazado o con Reducir
+        /// movimiento, antes del fundido de entrada un toque en el hueco invisible no la completa.
+        /// </summary>
+        public bool TapEnabled => _group != null && _group.blocksRaycasts;
+
+        /// <summary>Cortes de la línea del lugar: el bit i, el <c>{sep}</c> número i de <c>map_arrived</c> (0 = en una línea).</summary>
+        public int PlaceBreaks { get; private set; }
+
+        /// <summary>Fila del agua: el cauce, de 0 al canto de la mini cuia menos 6 dp (tests y capturas).</summary>
+        public RectTransform? Track => _bedEdge != null ? _bedEdge.rectTransform : null;
+
+        /// <summary>El agua de la fila (la primera, en las mezclas).</summary>
+        public RectTransform? Water => _waterA != null ? _waterA.rectTransform : null;
 
         /// <summary>La canoa de Capi.</summary>
         public RectTransform? Canoe => _canoe != null ? _canoe.rectTransform : null;
@@ -311,11 +403,27 @@ namespace AF.UI
             if (cut < 0)
             {
                 second = null;
-                return Palette.WaterBase(sample);
+                return StripWater(sample);
             }
 
-            second = Palette.WaterBase(sample.Substring(cut + 1));
-            return Palette.WaterBase(sample.Substring(0, cut));
+            second = StripWater(sample.Substring(cut + 1));
+            return StripWater(sample.Substring(0, cut));
+        }
+
+        /// <summary>
+        /// Agua de <paramref name="waterBase"/> (<c>black</c>, <c>white</c> o <c>clear</c>; glosario §11) en la franja: la de
+        /// <see cref="Palette.WaterBase"/>, salvo la blanca, que va en <see cref="StripWhiteWater"/>.
+        /// </summary>
+        public static Color StripWater(string waterBase)
+        {
+            switch (waterBase)
+            {
+                case "black":
+                case "clear":
+                    return Palette.WaterBase(waterBase);
+                default:
+                    return StripWhiteWater;
+            }
         }
 
         /// <summary>
@@ -363,7 +471,8 @@ namespace AF.UI
         {
             string fact = stop.ArrivalFact != null ? Loc.Fact(stop.ArrivalFact) : string.Empty;
             ArrivalKind kind = fact.Length > 0 ? ArrivalKind.Arrival : ArrivalKind.Place;
-            return HeightOf(kind, WelcomeFor(stop), PlaceFor(stop), fact, textScale, widthDp);
+            float placeW = kind == ArrivalKind.Arrival ? FactTextWidth(widthDp) : PlaceTextWidth(widthDp);
+            return HeightOf(kind, WelcomeFor(stop), PlaceFor(stop, placeW, textScale, out _), fact, textScale, widthDp);
         }
 
         /// <summary>
@@ -430,7 +539,6 @@ namespace AF.UI
                 Kind = FactText.Length > 0 ? ArrivalKind.Arrival : ArrivalKind.Place;
                 WelcomeText = WelcomeFor(Stop);
                 Welcome = WelcomeText.Length > 0;
-                PlaceText = PlaceFor(Stop);
             }
             else if (line.DeferredFact && line.ArrivalFactKey != null)
             {
@@ -546,13 +654,48 @@ namespace AF.UI
             return country.Length > 0 ? UiText.MapCountryWelcome(country) : string.Empty;
         }
 
-        /// <summary>«{lugar} · {país} · río {río}», o vacío si falta algún nombre (sin traducir o sin aprobar en release).</summary>
-        private static string PlaceFor(RiverStop stop)
+        /// <summary>
+        /// «{lugar} · {país} · río {río}» en <paramref name="width"/> dp a la escala <paramref name="textScale"/>, o vacío si falta
+        /// algún nombre (sin traducir o sin aprobar en release). Si no cabe en una línea, se parte por el último <c>{sep}</c> de
+        /// <c>map_arrived</c> (en ES, «Leticia · Colombia» / «río Amazonas») y, si aún no cabe, por todos: nunca deja un « · »
+        /// colgando al final de una línea (revisión de M1.6). <paramref name="breaks"/>: los cortes elegidos.
+        /// </summary>
+        private string PlaceFor(RiverStop stop, float width, float textScale, out int breaks)
         {
+            breaks = 0;
             string name = UiText.StopName(stop);
             string country = UiText.StopCountry(stop);
             string river = UiText.StopRiver(stop);
-            return name.Length > 0 && country.Length > 0 && river.Length > 0 ? UiText.MapArrived(name, country, river) : string.Empty;
+            if (name.Length == 0 || country.Length == 0 || river.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            string line = UiText.MapArrived(name, country, river, 0);
+            int seps = UiText.MapArrivedSeparators();
+            if (seps == 0 || FitsUnbroken(line, width, textScale))
+            {
+                return line;
+            }
+
+            breaks = 1 << (seps - 1);
+            string two = UiText.MapArrived(name, country, river, breaks);
+            if (seps == 1 || FitsUnbroken(two, width, textScale))
+            {
+                return two;
+            }
+
+            breaks = (1 << seps) - 1;
+            return UiText.MapArrived(name, country, river, breaks);
+        }
+
+        // Cada línea de text (las de sus saltos) cabe en width dp a PlaceSp sin que TextMeshPro la parta, con medio dp de holgura.
+        private bool FitsUnbroken(string text, float width, float textScale)
+        {
+            _measureBold.fontSize = PlaceSp * textScale;
+            float w = _measureBold.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x;
+            _measureBold.text = string.Empty;
+            return w <= width - 0.5f;
         }
 
         // Ancho del texto de la placa con el retrato (el dato): relleno, retrato, hueco y relleno derecho.
@@ -606,6 +749,7 @@ namespace AF.UI
             Welcome = false;
             WelcomeText = string.Empty;
             PlaceText = string.Empty;
+            PlaceBreaks = 0;
             FactText = string.Empty;
             ShownHeightDp = 0f;
             Skipped = false;
@@ -657,13 +801,16 @@ namespace AF.UI
             _plateEdge.pixelsPerUnitMultiplier = ProceduralArt.RoundedRectRadiusPx / PlateRadiusDp;
             _plateBack = UiBuilder.Sliced("PlateBack", rt, _art.RoundedRect, Palette.PanelLight);
             _plateBack.pixelsPerUnitMultiplier = ProceduralArt.RoundedRectRadiusPx / (PlateRadiusDp - 1f);
-            _bedEdge = UiBuilder.Image("BedEdge", rt, null, BedEdge);
-            _bed = UiBuilder.Image("Bed", rt, null, BedColor);
-            _track = UiBuilder.Image("Leg", rt, null, Color.white);
-            _waterA = UiBuilder.Image("Water", rt, null, Color.white);
+            // El cauce: borde de madera, canto de vidrio y el agua, de extremos redondeados (el RoundedRect de la placa); encima
+            // del agua, el brillo de la superficie y la línea de ondas; delante de todo, la canoa.
+            _bedEdge = Rounded("BedEdge", rt, BedEdge, BedRadiusDp);
+            _bed = Rounded("Bed", rt, BedColor, BedRadiusDp - BedEdgeDp);
+            _track = Rounded("Leg", rt, Color.white, WaterRadiusDp);
+            _waterA = Rounded("Water", rt, Color.white, WaterRadiusDp);
             _waterB = UiBuilder.Image("WaterMeet", rt, null, Color.white);
-            _waterLine = UiBuilder.Image("WaterLine", rt, null, Palette.WaterLine);
-            _waterGlint = UiBuilder.Image("WaterGlint", rt, null, new Color(1f, 1f, 1f, WaterGlintAlpha));
+            _waterLine = UiBuilder.Image("WaterGlint", rt, null, new Color(1f, 1f, 1f, WaterGlintAlpha));
+            _waterGlint = UiBuilder.Image("WaterWave", rt, _art.ArrivalWave, new Color(1f, 1f, 1f, WaveAlpha));
+            _waterGlint.type = Image.Type.Tiled;
             _canoe = UiBuilder.Image("Canoe", rt, _art.MapCanoe, Color.white);
             _canoe.preserveAspect = true;
 
@@ -677,10 +824,18 @@ namespace AF.UI
             _miniGlint = UiBuilder.Image("MiniCuiaGlint", rt, null, new Color(1f, 1f, 1f, MiniGlintAlpha));
             _portrait = UiBuilder.Image("Portrait", rt, null, Color.white);
             _portrait.preserveAspect = true;
-            _welcomeLabel = PlateLabel("Welcome", rt, TextStyle.PlainBold, PlaceSp, Palette.FamilyWood.Deep);
-            _placeLabel = PlateLabel("Place", rt, TextStyle.PlainBold, PlaceSp, Palette.FamilyWood.Deep);
+            _welcomeLabel = PlateLabel("Welcome", rt, TextStyle.PlainBold, PlaceSp, WelcomeInk);
+            _placeLabel = PlateLabel("Place", rt, TextStyle.PlainBold, PlaceSp, PlaceInk);
             _factLabel = PlateLabel("Fact", rt, TextStyle.Body, FactSp, Palette.UiInk);
             root.gameObject.SetActive(false);
+        }
+
+        // Rectángulo redondeado 9-slice con esquinas de radiusDp dp.
+        private Image Rounded(string name, RectTransform parent, Color color, float radiusDp)
+        {
+            Image img = UiBuilder.Sliced(name, parent, _art.RoundedRect, color);
+            img.pixelsPerUnitMultiplier = ProceduralArt.RoundedRectRadiusPx / radiusDp;
+            return img;
         }
 
         private Image FilledWater(string name, RectTransform parent)
@@ -707,6 +862,14 @@ namespace AF.UI
             float scale = UiBuilder.TextScale;
             bool row = Kind == ArrivalKind.Arrival || Kind == ArrivalKind.Place;
             bool fact = Kind == ArrivalKind.Arrival || Kind == ArrivalKind.Deferred;
+            float textW = fact ? FactTextWidth(w) : PlaceTextWidth(w);
+            if (Stop != null)
+            {
+                // La línea del lugar depende del ancho y de la escala: se rehace en cada colocación (al enseñar y al recolocar).
+                PlaceText = PlaceFor(Stop, textW, scale, out int breaks);
+                PlaceBreaks = breaks;
+            }
+
             ShownHeightDp = HeightOf(Kind, WelcomeText, PlaceText, FactText, scale, w);
 
             // La ranura tiene el alto de la llegada más alta del catálogo: lo de ahora va centrado, con el aire repartido.
@@ -730,14 +893,15 @@ namespace AF.UI
                 _mixed = b.HasValue;
                 SetActive(_waterB, _mixed);
                 SetActive(_miniWaterB, _mixed);
+                // El cauce va al pie de la fila, de 0 a _trackW; el agua, dentro del borde y del canto (de _trackW − 2 × inset).
                 _trackW = w - MiniCuiaW - 6f;
-                _canoeFrom = (_trackW * 0.5f) - CanoeW;
-                _canoeTo = _trackW - CanoeW - 2f;
-                float half = RowDp * 0.5f;
-                UiBuilder.Place(_bedEdge!.rectTransform, -1f, off + half - 1f, _trackW + 2f, half + 2f);
-                UiBuilder.Place(_bed!.rectTransform, 0f, off + half, _trackW, half);
+                float waterMax = _trackW - (2f * BedInsetDp);
+                _canoeFrom = BedInsetDp + (waterMax * 0.5f) - CanoeW;
+                _canoeTo = BedInsetDp + waterMax - CanoeW - WaterRadiusDp; // la pala del remo, lejos del extremo redondeado
+                UiBuilder.Place(_bedEdge!.rectTransform, 0f, off + BedTopDp, _trackW, RowDp - BedTopDp);
+                UiBuilder.Place(_bed!.rectTransform, BedEdgeDp, off + BedTopDp + BedEdgeDp, _trackW - (2f * BedEdgeDp), RowDp - BedTopDp - (2f * BedEdgeDp));
                 _track!.color = WithAlpha(a, 0.28f);
-                UiBuilder.Place(_track.rectTransform, 0f, off + half, _trackW, half);
+                UiBuilder.Place(_track.rectTransform, BedInsetDp, off + SurfaceDp, waterMax, WaterDp);
                 _waterA!.color = a;
                 _waterB!.color = b ?? a;
                 _miniWaterA!.color = a;
@@ -760,7 +924,6 @@ namespace AF.UI
             float plateTop = off + (row ? RowDp + GapDp : 0f);
             float top = plateTop + PlatePadDp;
             float textX = PlatePadDp + (open != null ? PortraitDp + PortraitGapDp : 0f);
-            float textW = fact ? FactTextWidth(w) : PlaceTextWidth(w);
             if (open != null)
             {
                 _portrait!.sprite = open;
@@ -839,7 +1002,7 @@ namespace AF.UI
             {
                 // El dato desplazado ocupa el sitio de la línea de fruta: entra con «Siguiente» como ella (02 §6).
                 float a = _completedFired ? 1f : VictoryLineSlot.FruitLineAlpha(Mathf.Max(0f, _since), _reduceMotion);
-                _group.alpha = a;
+                SetGroupAlpha(a);
                 SetAlpha(_factLabel, 1f);
                 SetAlpha(_portrait, 1f);
                 SetAlpha(_plateEdge, 1f);
@@ -852,12 +1015,12 @@ namespace AF.UI
             if (_reduceMotion)
             {
                 // Sin viaje ni llenado: el estado final con un fundido de 150 ms desde la subida del panel.
-                _group.alpha = _completedFired ? 1f : (t < 0f ? 0f : Mathf.Clamp01(t / MapConfig.ReducedMotionFadeMs));
+                SetGroupAlpha(_completedFired ? 1f : (t < 0f ? 0f : Mathf.Clamp01(t / MapConfig.ReducedMotionFadeMs)));
                 t = float.MaxValue;
             }
             else
             {
-                _group.alpha = 1f;
+                SetGroupAlpha(1f);
             }
 
             WaterFill = Mathf.Lerp(LegFromFill, 1f, Fraction(t, 0f, WaterFillMs));
@@ -867,14 +1030,19 @@ namespace AF.UI
             float placeA = Fraction(t, PlaceInMs, PlateFadeMs);
             float factA = Fraction(t, FactInMs, PlateFadeMs);
 
-            float waterW = _trackW * WaterFill;
-            float half = RowDp * 0.5f;
+            // El agua llena el tramo de izquierda a derecha; en las mezclas, la segunda agua corre por la mitad de abajo, entre los
+            // extremos redondeados. El brillo y las ondas, sin pisar los extremos; la canoa, con la quilla bajo la superficie.
+            float waterW = (_trackW - (2f * BedInsetDp)) * WaterFill;
+            float inner = Mathf.Max(0f, waterW - (2f * WaterRadiusDp));
             float off = _offY;
-            UiBuilder.Place(_waterA!.rectTransform, 0f, off + half, waterW, _mixed ? half * 0.5f : half);
-            UiBuilder.Place(_waterB!.rectTransform, 0f, off + (half * 1.5f), waterW, half * 0.5f);
-            UiBuilder.Place(_waterLine!.rectTransform, 0f, off + half, waterW, 2f);
-            UiBuilder.Place(_waterGlint!.rectTransform, 2f, off + half + 3f, Mathf.Max(0f, waterW - 4f), 1f);
-            UiBuilder.Place(_canoe!.rectTransform, Mathf.Lerp(_canoeFrom, _canoeTo, CanoeProgress), off, CanoeW, RowDp);
+            float surface = off + SurfaceDp;
+            UiBuilder.Place(_waterA!.rectTransform, BedInsetDp, surface, waterW, WaterDp);
+            UiBuilder.Place(_waterB!.rectTransform, BedInsetDp + WaterRadiusDp, surface + (WaterDp * 0.5f), inner, WaterDp * 0.5f);
+            UiBuilder.Place(_waterLine!.rectTransform, BedInsetDp + WaterRadiusDp, surface, inner, WaterGlintDp);
+            UiBuilder.Place(_waterGlint!.rectTransform, BedInsetDp + WaterRadiusDp, surface + WaveBelowDp - (ProceduralArt.ArrivalWaveHeightDp * 0.5f), inner,
+                ProceduralArt.ArrivalWaveHeightDp);
+            float canoeTop = surface + CanoeDraftDp + CanoeKeelDp - CanoeDp;
+            UiBuilder.Place(_canoe!.rectTransform, Mathf.Lerp(_canoeFrom, _canoeTo, CanoeProgress), canoeTop, CanoeW, CanoeDp);
             _miniWaterA!.fillAmount = SampleFill;
             _miniWaterB!.fillAmount = Mathf.Min(SampleFill, 0.5f);
             SetAlpha(_welcomeLabel, placeA);
@@ -885,6 +1053,18 @@ namespace AF.UI
             SetAlpha(_factLabel, factA);
             SetAlpha(_portrait, factA);
             ApplyPortrait(t - FactInMs);
+        }
+
+        // Opacidad de toda la franja; el área táctil solo recibe toques mientras se ve algo (revisión de M1.6: con el dato
+        // desplazado o con Reducir movimiento, un toque en el hueco aún invisible adelantaba la entrada y escribía las sondas).
+        private void SetGroupAlpha(float a)
+        {
+            _group!.alpha = a;
+            bool taps = a > 0f;
+            if (_group.blocksRaycasts != taps)
+            {
+                _group.blocksRaycasts = taps;
+            }
         }
 
         // Gesto sloth_present provisional: el retrato entra con un rebote y parpadea una vez (TI4 hará el rig).

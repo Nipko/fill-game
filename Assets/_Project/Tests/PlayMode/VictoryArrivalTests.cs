@@ -22,12 +22,15 @@ namespace AF.Tests.PlayMode
     /// bienvenida de Colombia; el 10 y el 21, sin llegada;</item>
     /// <item>las políticas del árbitro: Canon (llegada con dato), SingleKey (solo la placa del lugar y la línea de fruta) y, con
     /// SlothHito activado en el test, el 40 sin dato y el 41 con el dato desplazado;</item>
-    /// <item>tiempos: 1.200 ms tras la subida del panel, un toque la completa, Reducir movimiento con un fundido de 150 ms, la
-    /// Cosecha doble no la reinicia ni espera por ella, y «Siguiente» se habilita en el mismo milisegundo y queda a la misma
-    /// altura que sin llegada;</item>
+    /// <item>tiempos: 1.200 ms tras la subida del panel, un toque la completa (solo mientras se ve: el área táctil no recibe
+    /// toques con alfa 0), Reducir movimiento con un fundido de 150 ms, la Cosecha doble no la reinicia ni espera por ella, y
+    /// «Siguiente» se habilita en el mismo milisegundo que sin llegada y queda a la misma altura en el 19, el 20 y el 21 (la
+    /// ranura reserva la llegada más alta del catálogo);</item>
     /// <item>sondas: <c>stop_arrive</c> una vez por llegada (saltada si se toca o se cierra antes), <c>AF_LAYOUT arrival</c> al
     /// empezar y <c>river_fact_shown</c> desde el punto común de la ranura al cerrar la victoria con Siguiente o Inicio;</item>
-    /// <item>sin recortes: lo que se ve cabe en la ranura y cada línea en su caja, a 360 × 780 y 360 × 640, al 100 % y al 130 %.</item>
+    /// <item>sin recortes: lo que se ve cabe en la ranura y cada línea en su caja, a 360 × 780 y 360 × 640, al 100 % y al 130 %;
+    /// ninguna línea de la placa termina en «·» (al 130 %, la línea del lugar se parte por el último corte de
+    /// <c>map_arrived</c>).</item>
     /// </list>
     /// </summary>
     public sealed class VictoryArrivalTests
@@ -73,7 +76,8 @@ namespace AF.Tests.PlayMode
             Assert.That(strip.Started && strip.Completed, Is.True);
             Assert.That(strip.CompletedBy, Is.EqualTo("time"));
             Assert.That(strip.Skipped, Is.False);
-            Assert.That(strip.PlaceText, Is.EqualTo("Alter do Chão · Brasil · río\u00A0Tapajós"));
+            Assert.That(strip.PlaceText, Is.EqualTo("Alter do Chão · Brasil · río\u00A0Tapajós"), "al 100 %, en una línea");
+            Assert.That(strip.PlaceBreaks, Is.EqualTo(0));
             Assert.That(strip.FactText, Is.EqualTo(Loc.Fact(AlterFact)));
             Assert.That(strip.FactText, Does.StartWith("Cuando el río baja"));
             Assert.That(strip.Welcome, Is.False, "el 20 no cambia de país");
@@ -145,7 +149,22 @@ namespace AF.Tests.PlayMode
             Assert.That(strip.WelcomeLabel!.gameObject.activeSelf, Is.True);
             Assert.That(strip.PlaceText, Is.EqualTo("Leticia · Colombia · río\u00A0Amazonas"));
             Assert.That(strip.ShownFactKey, Is.EqualTo("map.country.co.dato_01"));
-            Assert.That(strip.SampleColor, Is.EqualTo(Palette.WaterWhite));
+            Assert.That(strip.SampleColor, Is.EqualTo(ArrivalStrip.StripWhiteWater), "agua blanca, la de la franja (≥ 3:1 frente al panel)");
+            Assert.That(strip.WelcomeLabel!.color.r, Is.EqualTo(ArrivalStrip.WelcomeInk.r).Within(0.001f), "la bienvenida, en verde hoja");
+            Assert.That(strip.WelcomeLabel!.color.g, Is.EqualTo(ArrivalStrip.WelcomeInk.g).Within(0.001f));
+            Assert.That(strip.PlaceLabel!.color.g, Is.Not.EqualTo(strip.WelcomeLabel!.color.g).Within(0.01f), "distinta de la línea del lugar");
+
+            // La fila se lee como río: el agua dentro del cauce, más ancha que la de antes (14 dp), y la canoa con la quilla bajo
+            // la superficie (entre el borde de arriba del agua y su pie).
+            RectTransform water = strip.Water!;
+            RectTransform bed = strip.Track!;
+            Assert.That(water.rect.height, Is.EqualTo(ArrivalStrip.WaterDp));
+            Assert.That(-water.anchoredPosition.y, Is.GreaterThan(-bed.anchoredPosition.y), "el agua, dentro del cauce");
+            Assert.That(-water.anchoredPosition.y + water.rect.height, Is.LessThan(-bed.anchoredPosition.y + bed.rect.height));
+            RectTransform canoe = strip.Canoe!;
+            float canoeBottom = -canoe.anchoredPosition.y + canoe.rect.height;
+            Assert.That(canoeBottom, Is.GreaterThan(-water.anchoredPosition.y + ArrivalStrip.CanoeDraftDp), "la canoa, dentro del agua");
+            Assert.That(-canoe.anchoredPosition.y, Is.GreaterThanOrEqualTo(strip.OffsetDp - 2f), "y sin salirse de la fila por arriba");
             AssertFits(view, "80");
         }
 
@@ -168,7 +187,8 @@ namespace AF.Tests.PlayMode
             Assert.That(line.ArrivalFact, Is.False, "la llegada va sin dato");
             ArrivalStrip strip = view.Arrival!;
             Assert.That(strip.Kind, Is.EqualTo(ArrivalKind.Place), "solo la placa del lugar");
-            Assert.That(strip.PlaceText, Is.EqualTo("Encuentro de las Aguas · Brasil · río\u00A0Negro y Solimões"));
+            Assert.That(strip.PlaceText.Replace("\n", " · "), Is.EqualTo("Encuentro de las Aguas · Brasil · río\u00A0Negro y Solimões"),
+                "partida o no por sus cortes");
             Assert.That(strip.ShownFactKey, Is.Null);
             Assert.That(strip.FactLabel!.gameObject.activeSelf, Is.False);
             Assert.That(strip.Portrait!.gameObject.activeSelf, Is.False, "el retrato va con el dato");
@@ -192,8 +212,10 @@ namespace AF.Tests.PlayMode
             Assert.That(strip.FactText, Is.EqualTo(Loc.Fact(EncuentroFact)));
             Assert.That(strip.Canoe!.gameObject.activeSelf, Is.False, "sin la fila del agua");
             Assert.That(strip.Alpha, Is.EqualTo(0f), "entra con Siguiente, como la línea de fruta");
+            Assert.That(strip.TapEnabled, Is.False, "sin verse, el área táctil no recibe toques");
             PlayModeHelpers.TickExact(boot, (int)VictoryLineSlot.FruitRevealMs + (int)VictoryLineSlot.FruitFadeMs + 10);
             Assert.That(strip.Alpha, Is.EqualTo(1f));
+            Assert.That(strip.TapEnabled, Is.True, "ya se ve: un toque la completa");
             Assert.That(strip.Portrait.gameObject.activeSelf, Is.True);
             AssertFits(view, "41");
 
@@ -234,7 +256,7 @@ namespace AF.Tests.PlayMode
             view = GameBootstrap.Current!.View!;
             Assert.That(view.CurrentVictoryLine.FruitKey, Is.EqualTo("fruit.test.line_20"));
             Assert.That(view.Arrival!.Kind, Is.EqualTo(ArrivalKind.Place));
-            Assert.That(view.Arrival.PlaceText, Is.EqualTo("Alter do Chão · Brasil · río\u00A0Tapajós"));
+            Assert.That(view.Arrival.PlaceText.Replace("\n", " · "), Is.EqualTo("Alter do Chão · Brasil · río\u00A0Tapajós"));
             Assert.That(view.Arrival.ShownFactKey, Is.Null);
         }
 
@@ -292,7 +314,9 @@ namespace AF.Tests.PlayMode
             Assert.That(strip.ReduceMotion, Is.True);
             PlayModeHelpers.TickExact(boot, (int)GameScreen.VictoryPanelUpMs - 1);
             Assert.That(strip.Alpha, Is.EqualTo(0f));
+            Assert.That(strip.TapEnabled, Is.False, "sin verse, el área táctil no recibe toques");
             PlayModeHelpers.TickExact(boot, 1 + (MapConfig.ReducedMotionFadeMs / 2));
+            Assert.That(strip.TapEnabled, Is.True);
             Assert.That(strip.Alpha, Is.EqualTo(0.5f).Within(0.02f), "a mitad del fundido de 150 ms");
             Assert.That(strip.CanoeProgress, Is.EqualTo(1f), "sin viaje: la canoa ya está en la parada");
             Assert.That(strip.SampleFill, Is.EqualTo(1f), "sin llenado animado");
@@ -448,6 +472,13 @@ namespace AF.Tests.PlayMode
 
                         TestContext.WriteLine(what + ": llegadas del catálogo (dp):" + heights);
                         AssertFits(view, what);
+                        if (scale > 1.01f)
+                        {
+                            // Al 130 % la línea del lugar no cabe en una: se parte por el último corte, sin « · » colgando.
+                            string place = level == 20 ? "Alter do Chão · Brasil\nrío\u00A0Tapajós" : "Leticia · Colombia\nrío\u00A0Amazonas";
+                            Assert.That(view.Arrival.PlaceText, Is.EqualTo(place), what);
+                        }
+
                         Assert.That(view.VictoryPanelTopDp - 38f, Is.GreaterThanOrEqualTo(view.SlothBandTopDp), what + ": la cinta, bajo la cabecera");
                         GameScreen.SimulatedScreen = null;
                         LaunchOptions.Reset();
@@ -477,6 +508,19 @@ namespace AF.Tests.PlayMode
                 float bottom = -rt.anchoredPosition.y + rt.rect.height;
                 Assert.That(bottom, Is.LessThanOrEqualTo(slot + 0.5f), what + ": " + label.name + " dentro de la ranura");
                 Assert.That(label.fontSize, Is.GreaterThanOrEqualTo((UiBuilder.MinTextSp * UiBuilder.TextScale) - 0.01f), what + ": ≥ 12 sp");
+
+                // Ninguna línea renderizada termina en «·» (revisión de M1.6: al 130 % la placa dejaba «Leticia · Colombia ·»).
+                label.ForceMeshUpdate();
+                TMP_TextInfo info = label.textInfo;
+                for (int i = 0; i < info.lineCount; i++)
+                {
+                    int last = info.lineInfo[i].lastVisibleCharacterIndex;
+                    if (last >= 0 && last < info.characterCount)
+                    {
+                        Assert.That(info.characterInfo[last].character, Is.Not.EqualTo('·'), what + ": " + label.name + ", la línea " + (i + 1)
+                            + " termina en «·»");
+                    }
+                }
             }
         }
 
