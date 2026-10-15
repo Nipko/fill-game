@@ -50,9 +50,16 @@ namespace AF.Tests.PlayMode
             LocLocale.SpanishLatinAmerica, LocLocale.English, LocLocale.PortugueseBrazil, LocLocale.Pseudo,
         };
 
+        [SetUp]
+        public void SetUp()
+        {
+            GameScreen.ArrivalDisabledForTests = true; // la maqueta sola (la llegada real: ArrivalSnapshotTests)
+        }
+
         [TearDown]
         public void TearDown()
         {
+            GameScreen.ArrivalDisabledForTests = false;
             LaunchOptions.Reset();
             SnapshotKit.Release();
         }

@@ -30,11 +30,13 @@ namespace AF.Tests.PlayMode
         public void SetUp()
         {
             FunnelSetup.Hooks();
+            GameScreen.ArrivalDisabledForTests = true; // la ranura sola, con proveedores de prueba (la llegada real: VictoryArrivalTests)
         }
 
         [TearDown]
         public void TearDown()
         {
+            GameScreen.ArrivalDisabledForTests = false;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
             if (Loc.IsConfigured && Loc.Locale != LocLocale.SpanishLatinAmerica)

@@ -485,7 +485,10 @@ namespace AF.Tests.PlayMode
                 Assert.That(dbl.height, Is.GreaterThanOrEqualTo(LobbyScreen.MinTouchDp - 0.5f), "07 §7.8: ≥ 48 dp");
                 Assert.That(next.height, Is.GreaterThanOrEqualTo(LobbyScreen.MinTouchDp - 0.5f));
                 Assert.That(home.height, Is.GreaterThanOrEqualTo(LobbyScreen.MinTouchDp - 0.5f));
-                Assert.That(dbl.yMin - view.VictoryPanelHeight, Is.GreaterThan(0f), "el panel no sube hasta la fila del saldo");
+                // El panel (con la cinta, que asoma 38 dp) no sube hasta la fila del saldo: queda bajo el pie de la cabecera. Con la
+                // ranura del Dato del río y la llegada (M1.6) el panel crece, y la antigua aproximación (dbl.yMin > alto del panel)
+                // ya no medía eso.
+                Assert.That(view.VictoryPanelTopDp - 38f, Is.GreaterThanOrEqualTo(view.SlothBandTopDp), "el panel no sube hasta la fila del saldo");
                 Assert.That(home.yMin - next.yMin, Is.EqualTo(68f).Within(0.5f), "Inicio, 68 dp bajo el borde del CTA (desde B1-6)");
             }
             finally

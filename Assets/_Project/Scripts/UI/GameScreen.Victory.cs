@@ -43,6 +43,12 @@ namespace AF.UI
         /// </summary>
         internal const float VictoryButtonsInMs = 600f;
 
+        /// <summary>
+        /// El panel de victoria termina de subir a los 250 ms de la pantalla (guía 6.9; ApplyVictoryAnim): ahí empieza la franja
+        /// de llegada (02 §6, fila Llegada; tarea M1.6).
+        /// </summary>
+        internal const float VictoryPanelUpMs = PanelSlideMs;
+
         private readonly VictoryLineSlot _slot = new VictoryLineSlot();
         private VictoryLine _victoryLine;
         private float _slotTopDp;
@@ -50,6 +56,7 @@ namespace AF.UI
         private float _slothBandBottom;
         private bool _slothCanSpeak;
         private int _slothSpokeAt = -1;
+        private bool _riverFactSent;
 
         /// <summary>La ranura del Dato del río (tests y proveedores).</summary>
         internal VictoryLineSlot VictorySlot => _slot;
@@ -74,6 +81,32 @@ namespace AF.UI
         /// Sin él, ningún nivel tiene línea de fruta.
         /// </summary>
         internal Func<int, string?>? FruitKeyOf { get; set; }
+
+        /// <summary>
+        /// Política de los hitos de TiTino en lugar de <see cref="MapConfig.HitoPolicy"/> (tests: SlothHito antes de TI6a); null =
+        /// la del cliente.
+        /// </summary>
+        internal HitoLinePolicy? HitoPolicyOverride { get; set; }
+
+        /// <summary>
+        /// Política del dato de llegada en lugar de <see cref="MapConfig.RiverPolicy"/> (tests: SingleKey); null = la del cliente.
+        /// </summary>
+        internal RiverFactPolicy? RiverPolicyOverride { get; set; }
+
+        /// <summary>
+        /// <c>SlothCanSpeak</c> de la caja de TiTino en los hitos en lugar de medirla (tests); null = voz ∧ caja ≥
+        /// <see cref="SlothSpeakBoxDp"/> dp.
+        /// </summary>
+        internal bool? SlothBoxCanSpeakOverride { get; set; }
+
+        /// <summary>Veces que se escribió <c>river_fact_shown</c> (tests).</summary>
+        internal int RiverFactShownCount { get; private set; }
+
+        /// <summary>El <c>fact_id</c> del último <c>river_fact_shown</c> (null antes del primero).</summary>
+        internal string? LastRiverFactId { get; private set; }
+
+        /// <summary>El <c>dismissed_ms</c> del último <c>river_fact_shown</c>.</summary>
+        internal float LastRiverFactDismissedMs { get; private set; } = -1f;
 
         /// <summary>Pie de la cabecera en la última victoria: canto de arriba de la caja de TiTino (dp desde arriba).</summary>
         internal float SlothBandTopDp => _slothBandTop;
@@ -133,6 +166,28 @@ namespace AF.UI
             return _slot.ContentHeightFor(locale, textScale, VictorySlotWidthDp);
         }
 
+        /// <summary>
+        /// Alto del contenido que reserva la ranura en el idioma de <see cref="Loc"/> a la escala <paramref name="textScale"/> con el
+        /// ancho de ahora: máx(línea de fruta, llegada más alta del catálogo) (pregunta 11, (a) [P]; <see cref="ArrivalStrip.NeedDp"/>).
+        /// </summary>
+        internal float VictorySlotHeight(float textScale)
+        {
+            _slot.Build(_victoryPanel);
+            string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
+            return SlotContentDp(locale, textScale);
+        }
+
+        // Pregunta 11, (a) [P]: la llegada compactada no siempre cabe en el alto de la línea de fruta (medidas de M1.3b), así que la
+        // ranura reserva lo mayor de los dos; los dos son fijos por idioma, escala y ancho, y «Siguiente» no se mueve de una
+        // victoria a otra (Q7-A).
+        private float SlotContentDp(string locale, float textScale)
+        {
+            float width = VictorySlotWidthDp;
+            float fruit = _slot.ContentHeightFor(locale, textScale, width);
+            ArrivalStrip? arrival = _arrival;
+            return arrival != null && arrival.SlotActive ? Mathf.Max(fruit, arrival.NeedDp(textScale, width)) : fruit;
+        }
+
         partial void SlotReserveBelowHome(ref float y)
         {
             _slotTopDp = y;
@@ -144,7 +199,7 @@ namespace AF.UI
 
             _slot.Build(_victoryPanel);
             string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
-            y += _slot.ReserveFor(locale, UiBuilder.TextScale, VictorySlotWidthDp);
+            y += VictoryLineSlot.RuleGapDp + VictoryLineSlot.RuleDp + VictoryLineSlot.RuleBelowDp + SlotContentDp(locale, UiBuilder.TextScale);
         }
 
         partial void SlotLayout()
@@ -156,7 +211,7 @@ namespace AF.UI
             }
 
             string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
-            float content = _slot.ContentHeightFor(locale, UiBuilder.TextScale, VictorySlotWidthDp);
+            float content = SlotContentDp(locale, UiBuilder.TextScale);
             _slot.Layout(VictoryLineSlot.SideDp, _slotTopDp, VictorySlotWidthDp, content);
         }
 
@@ -171,6 +226,13 @@ namespace AF.UI
             {
                 Func<int, string?>? fruit = FruitKeyOf;
                 VictoryContext context = VictoryLineArbiter.ContextFor(won, MapAvailable, RiverStops, fruit?.Invoke(won), canSpeak);
+                if (HitoPolicyOverride.HasValue || RiverPolicyOverride.HasValue)
+                {
+                    context = new VictoryContext(context.Won, context.MapAvailable, context.Stops, context.FruitKey,
+                        RiverPolicyOverride ?? context.River, HitoPolicyOverride ?? context.Hito, context.SlothCanSpeak,
+                        context.RiverFactEveryN, context.FruitEveryN);
+                }
+
                 _victoryLine = VictoryLineArbiter.For(in context);
             }
             else
@@ -183,6 +245,7 @@ namespace AF.UI
                 _slothSpokeAt = won;
             }
 
+            _riverFactSent = false;
             _slot.Show(flow, in _victoryLine);
         }
 
@@ -207,11 +270,36 @@ namespace AF.UI
         partial void SlotAdGate(LevelFlow flow)
         {
             _slot.Dismiss();
+            SendRiverFactShown(flow);
         }
 
         partial void SlotHomePressed(LevelFlow flow)
         {
             _slot.Dismiss();
+            SendRiverFactShown(flow);
+        }
+
+        // El punto común de river_fact_shown (08 §8.2, af_river_fact_shown; propuesta del Mapa §11.5): una vez por victoria, si la
+        // ranura enseñó un dato, con su clave (fact_id) y el tiempo desde la victoria hasta cerrarla (dismissed_ms). Hoy, el dato
+        // de la llegada o el desplazado (ArrivalStrip.ShownFactKey); F3 añade aquí la clave de la línea de fruta.
+        private void SendRiverFactShown(LevelFlow flow)
+        {
+            if (_riverFactSent || !_slot.Shown)
+            {
+                return;
+            }
+
+            string? factId = _arrival?.ShownFactKey;
+            if (factId == null)
+            {
+                return;
+            }
+
+            _riverFactSent = true;
+            RiverFactShownCount++;
+            LastRiverFactId = factId;
+            LastRiverFactDismissedMs = _slot.DismissedMs;
+            _probe.RiverFactShown(flow.LevelNumber, factId, _slot.DismissedMs);
         }
 
         /// <summary>
@@ -235,7 +323,7 @@ namespace AF.UI
         {
             _slothBandTop = top;
             _slothBandBottom = bottom;
-            _slothCanSpeak = SlothVoice && bottom - top >= SlothSpeakBoxDp;
+            _slothCanSpeak = SlothBoxCanSpeakOverride ?? (SlothVoice && bottom - top >= SlothSpeakBoxDp);
         }
 
         // Caja de TiTino en la victoria (propuesta de TiTino d.4; gancho SlothVictoryShown, que OnVictoryScreen llama con esta
