@@ -22,8 +22,10 @@ namespace AF.UI
     /// <item><description><b>Placa bajo el HUD</b> (tableros de 3 filas, que no dejan franja: el panel empieza bajo el HUD): una
     /// placa de madera oscura con canto de <c>madera_contorno</c>, ajustada al texto (Baloo 2 ExtraBold de <see cref="PlateTextSp"/>
     /// sp en crema con contorno, <see cref="TextStyle.ModalTitle"/>; de alto <see cref="PlateHeightEm"/> veces el texto, con la
-    /// tinta centrada), <see cref="PlateHudGapDp"/> dp bajo la fila del HUD y al menos <see cref="PlateCuiaGapDp"/> dp por encima
-    /// de las cuias de la fila 1 en reposo: en el margen de arriba del panel, con aire a los dos lados y sin tapar sus bocas.
+    /// tinta centrada), clavada al marco del panel (su borde de arriba <see cref="PlateOverFrameDp"/> dp por encima del canto
+    /// interior del marco: 3 dp dentro de la madera; nunca sobre la fila del HUD) y al menos <see cref="PlateCuiaGapDp"/> dp
+    /// por encima de las cuias de la fila 1 en reposo: monta sobre la barra de arriba del marco, con aire sobre las cuias y
+    /// sin tapar sus bocas.
     /// Si no cabe, el texto se encoge, nunca por debajo de 12 sp (02 §12), y solo si ni así cabe, la placa pasa de ahí
     /// (nunca se recorta el texto).</description></item>
     /// </list>
@@ -49,8 +51,13 @@ namespace AF.UI
         /// <summary>Aire entre el rótulo sobre el horizonte y el canto de arriba del panel (dp) [P].</summary>
         public const float CuiaGapDp = 2f;
 
-        /// <summary>Aire entre el pie de la fila del HUD y la placa (dp; revisión de M2.3) [P].</summary>
-        public const float PlateHudGapDp = 4f;
+        /// <summary>
+        /// Lo que la placa monta sobre el marco del panel, desde su canto interior tal como lo cuenta <c>PanelFrameDp</c> (dp;
+        /// revisión final de M2.3: con el borde de arriba justo donde acaba la madera clara, tangente, no se leía ni como pieza del
+        /// marco ni como hueco) [P]: tapa el canto oscuro interior del marco (~2 dp, que cuenta en <c>PanelFrameDp</c>) y 3 dp de
+        /// la madera de la barra de arriba, sin subir del pie de la fila del HUD; así se lee como una placa clavada al marco.
+        /// </summary>
+        public const float PlateOverFrameDp = 5f;
 
         /// <summary>
         /// Aire mínimo entre la placa y las cuias de la fila 1 en reposo (dp; revisión de M2.3: a 2-3 dp la placa parecía un

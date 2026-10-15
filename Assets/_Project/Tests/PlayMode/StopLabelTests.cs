@@ -302,7 +302,10 @@ namespace AF.Tests.PlayMode
             Assert.That(label.OnPlate, Is.True);
             Assert.That(label.Text, Is.EqualTo("El río frontera · Colombia y Perú"));
             Rect r = label.Rect;
-            Assert.That(r.yMin, Is.EqualTo(view.HudBottomDp + StopLabel.PlateHudGapDp).Within(0.01f), "bajo el HUD, con aire");
+            float frameInner = l.PanelY + view.PanelFrameDp; // canto interior de la barra de arriba del marco (sin desplazar)
+            Assert.That(r.yMin, Is.EqualTo(Mathf.Max(view.HudBottomDp, frameInner - StopLabel.PlateOverFrameDp)).Within(0.01f), "clavada al marco");
+            Assert.That(r.yMin, Is.GreaterThanOrEqualTo(view.HudBottomDp - 0.01f), "bajo la fila del HUD");
+            Assert.That(r.yMin, Is.LessThan(frameInner), "monta sobre el canto interior del marco (ni tangente ni con hueco)");
             Assert.That(r.yMax, Is.LessThanOrEqualTo(l.BlockTop + BoardLayout.Lift - StopLabel.PlateCuiaGapDp + 0.01f), "al menos 6 dp sobre las cuias de la fila 1 en reposo");
             Assert.That(r.xMin, Is.GreaterThanOrEqualTo(StopLabel.SideDp - 0.01f));
             Assert.That(r.xMax, Is.LessThanOrEqualTo(view.CanvasWidth - StopLabel.SideDp + 0.01f));

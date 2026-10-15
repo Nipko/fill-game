@@ -776,7 +776,7 @@ namespace AF.UI
             int ms = NoticeTiming.ReadMs(text);
             if (l.Rows >= 3)
             {
-                _stopLabel.ShowAsPlate(text, ms, _canvasW, BoardTop + StopLabel.PlateHudGapDp, StopLabelPlateLimit(l));
+                _stopLabel.ShowAsPlate(text, ms, _canvasW, StopLabelPlateTop(l), StopLabelPlateLimit(l));
             }
             else
             {
@@ -785,6 +785,13 @@ namespace AF.UI
 
             RememberStopLabelPlace(l);
             EmitStopLabelProbe(stop, text, ms, l.Rows);
+        }
+
+        // Lo más alto de la placa (3 filas): clavada al marco, PlateOverFrameDp sobre el canto interior de su barra de arriba (tal
+        // como se dibuja, con el desplazamiento del tablero), sin subir del pie de la fila del HUD.
+        private float StopLabelPlateTop(BoardLayoutResult l)
+        {
+            return Mathf.Max(BoardTop, l.PanelY - _boardShift + PanelFrameDp - StopLabel.PlateOverFrameDp);
         }
 
         // Lo más bajo de la placa (3 filas): las cuias de la fila 1 en reposo (el bloque empieza en la elevada), con su aire.
@@ -825,7 +832,7 @@ namespace AF.UI
 
             if (l.Rows >= 3 && _stopLabel.OnPlate)
             {
-                _stopLabel.PlaceAsPlate(_canvasW, BoardTop + StopLabel.PlateHudGapDp, StopLabelPlateLimit(l));
+                _stopLabel.PlaceAsPlate(_canvasW, StopLabelPlateTop(l), StopLabelPlateLimit(l));
             }
             else if (l.Rows < 3 && !_stopLabel.OnPlate)
             {

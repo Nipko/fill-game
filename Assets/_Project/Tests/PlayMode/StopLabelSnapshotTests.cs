@@ -72,7 +72,8 @@ namespace AF.Tests.PlayMode
             Rect r = view.StopLabelView.Rect;
             Debug.Log("AF_STOP_LABEL " + name + ": " + r.ToString("0.0") + ", horizonte "
                 + view.HorizonY.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " dp, HUD "
-                + view.HudBottomDp.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " dp, cuias de la fila 1 "
+                + view.HudBottomDp.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " dp, canto interior del marco "
+                + (view.Layout!.PanelY + view.PanelFrameDp).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " dp, cuias de la fila 1 "
                 + (view.Layout!.BlockTop + BoardLayout.Lift).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " dp, "
                 + view.StopLabelView.Label.fontSize.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " dp de texto, "
                 + view.LastStopLabelProbe);
