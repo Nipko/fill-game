@@ -26,6 +26,14 @@ namespace AF.UI
     /// <c>shape</c>, <c>code</c> y <c>change</c> (<c>cut</c>, <c>fade</c> o <c>same</c>).</para>
     /// <para>La banda de agua no se pinta bajo el relleno opaco del panel (<see cref="StopBackdrop.PanelHoleInsetDp"/>), y el
     /// hueco sigue al tablero cuando sube con la victoria o un modal.</para>
+    /// <para><b>Victoria con vista</b> (D-013, punto 8, Q6-A; 02 §6; 07 §5.4; <c>ui_victory_view</c>, 08 §9; tarea M2.2): al abrirse
+    /// la pantalla de victoria, tras la ola de saltos, el tablero entero (el panel, sus estantes y las cuias, con lo que va en
+    /// su capa) pasa del alfa 1 al 0 en <see cref="VictoryViewFadeMs"/> ms y se ve el sitio del fondo, que deja de tener el
+    /// hueco del panel; si es una llegada (<see cref="RiverStopCatalog.ArrivalOnWin"/>), el fondo funde a la vez, en el mismo
+    /// fundido, a la parada que traerá el nivel siguiente, así que ese nivel ya carga con su fondo (<c>change</c> = <c>same</c>).
+    /// Con Reducir movimiento, corte; con la clave apagada, como antes (el tablero a la vista y el fondo cambia al cargar).
+    /// No mueve ningún tiempo de la victoria (Siguiente, Inicio, la Cosecha doble, AD_GATE y la ranura no cambian); la carga
+    /// del nivel siguiente devuelve el alfa a 1.</para>
     /// </summary>
     public sealed partial class GameScreen
     {
@@ -47,6 +55,29 @@ namespace AF.UI
         private bool _stopHasBoard;
         private float _stopHoleShift;
         private readonly StringBuilder _stopProbeSb = new StringBuilder(256);
+
+        /// <summary>Fundido de la victoria con vista: 250 ms (02 §6; 07 §5.4, fila 0,50-0,75; D-013, punto 8).</summary>
+        internal const float VictoryViewFadeMs = 250f;
+
+        // Victoria con vista: grupo del tablero (se crea la primera vez), ms del fundido en curso (−1 = ninguno) y si está
+        // activa (de StopVictoryShown a la carga siguiente).
+        private CanvasGroup? _boardGroup;
+        private float _victoryViewMs = -1f;
+        private bool _victoryViewOn;
+
+        /// <summary>
+        /// Solo tests: enciende o apaga la victoria con vista (null = <c>ui_victory_view</c>, <see cref="MapConfig.UiVictoryView"/>).
+        /// </summary>
+        internal static bool? VictoryViewOverride { get; set; }
+
+        /// <summary>Alfa del tablero (el panel y las cuias): 1 salvo en la victoria con vista (tests).</summary>
+        internal float BoardAlpha => _boardGroup == null ? 1f : _boardGroup.alpha;
+
+        /// <summary>La victoria con vista está activa: de la pantalla de victoria a la carga siguiente (tests).</summary>
+        internal bool VictoryViewOn => _victoryViewOn;
+
+        /// <summary>El fundido del tablero de la victoria con vista está en curso (tests).</summary>
+        internal bool VictoryViewFading => _victoryViewMs >= 0f;
 
         /// <summary>Fondo de la parada (tests y capturas).</summary>
         internal StopBackdrop StopBackdrop => _stopBackdrop;
@@ -110,7 +141,7 @@ namespace AF.UI
         {
             Rect hole = new Rect(0f, 0f, 0f, 0f);
             _stopHoleShift = _boardShift;
-            if (_stopHasBoard)
+            if (_stopHasBoard && !_victoryViewOn) // con la victoria con vista, el panel se va: la banda entera
             {
                 Rect panel = PanelRect();
                 float inset = StopBackdrop.PanelHoleInsetDp;
@@ -125,6 +156,7 @@ namespace AF.UI
 
         partial void StopLevelLoaded(LevelFlow flow)
         {
+            EndVictoryView();
             RiverStop? stop = StopForLevel(RiverStops, flow.LevelNumber, MapConfig.UiBgPerStop);
             string water = flow.Level.WaterBase;
             RiverStop? before = _stopBackdrop.Stop;
@@ -139,8 +171,69 @@ namespace AF.UI
             EmitStopProbe(flow);
         }
 
+        partial void StopVictoryShown(LevelFlow flow)
+        {
+            if (!(VictoryViewOverride ?? MapConfig.UiVictoryView))
+            {
+                return; // como antes: el tablero a la vista y el fondo cambia al cargar el nivel siguiente
+            }
+
+            bool cut = flow.ReduceMotion;
+            _victoryViewOn = true;
+            LayoutStopBackdrop(); // sin hueco: bajo el panel que se va, la banda del agua
+
+            // En una llegada, el fondo pasa ya, en el mismo fundido, a la parada que trae el nivel siguiente (con
+            // ui_bg_per_stop = false, la gran parada de su mundo) con el agua de su mundo.
+            int won = flow.LevelNumber;
+            RiverStopCatalog? stops = RiverStops;
+            if (stops != null && stops.ArrivalOnWin(won) != null)
+            {
+                int next = won + 1;
+                RiverStop? stop = StopForLevel(stops, next, MapConfig.UiBgPerStop);
+                string water = flow.Catalog.Find(next)?.WaterBase ?? flow.Level.WaterBase;
+                _stopBackdrop.Apply(stop, water, !cut, VictoryViewFadeMs);
+                ApplyStopLut();
+            }
+
+            if (_boardGroup == null)
+            {
+                _boardGroup = _board.gameObject.AddComponent<CanvasGroup>();
+            }
+
+            _victoryViewMs = cut ? -1f : 0f;
+            _boardGroup.alpha = cut ? 0f : 1f;
+        }
+
+        // La carga de un nivel devuelve el tablero a la vista y el hueco del panel a la banda.
+        private void EndVictoryView()
+        {
+            _victoryViewMs = -1f;
+            if (_boardGroup != null && _boardGroup.alpha < 1f)
+            {
+                _boardGroup.alpha = 1f;
+            }
+
+            if (_victoryViewOn)
+            {
+                _victoryViewOn = false;
+                LayoutStopBackdrop();
+            }
+        }
+
         partial void StopTick(float dtMs)
         {
+            if (_victoryViewMs >= 0f && _boardGroup != null)
+            {
+                // Lineal, como el fundido del fondo (StopBackdrop.Tick): el tablero se va mientras el sitio nuevo entra.
+                _victoryViewMs += Mathf.Max(0f, dtMs);
+                float t = Mathf.Clamp01(_victoryViewMs / VictoryViewFadeMs);
+                _boardGroup.alpha = 1f - t;
+                if (t >= 1f)
+                {
+                    _victoryViewMs = -1f;
+                }
+            }
+
             if (_stopHasBoard && !Mathf.Approximately(_boardShift, _stopHoleShift))
             {
                 LayoutStopBackdrop(); // el tablero se movió: el hueco de la banda lo sigue (sin asignar memoria)

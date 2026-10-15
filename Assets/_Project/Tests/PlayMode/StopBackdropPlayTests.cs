@@ -18,7 +18,8 @@ namespace AF.Tests.PlayMode
     /// parada (1-10 las dos agujas, 11 la línea clara y blanca, 41 la diagonal, 51 el domo, 131 la baliza y 151 las balsas, estos
     /// dos en tableros de 3 filas), en la primera carga con corte; del 20 al 21, fundido de 250 ms sin retrasar la carga; con
     /// Reducir movimiento, corte; sin catálogo, el aspecto de hoy. Las capas van entre el panorama y la garza, no reciben toques y
-    /// la sonda <c>AF_STATE stop</c> dice la parada y su <c>build_ms</c> (≤ 8 ms en el Editor).
+    /// la sonda <c>AF_STATE stop</c> dice la parada y su <c>build_ms</c> (≤ 8 ms en el Editor). Lo que pasa por la victoria va con
+    /// <c>ui_victory_view</c> apagada: con ella, el fondo de la llegada cambia ya en la victoria (M2.2, <see cref="VictoryViewTests"/>).
     /// </summary>
     public sealed class StopBackdropPlayTests
     {
@@ -33,6 +34,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             GameScreen.SimulatedScreen = null;
+            GameScreen.VictoryViewOverride = null;
             LaunchOptions.Reset();
             StopBackdrop.HeroSpriteOverride = null;
             MapArtRule.ForceProvisional = null;
@@ -76,6 +78,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator From20To21_TheBackdropCrossfadesIn250Ms_WithoutDelayingTheLoad()
         {
+            GameScreen.VictoryViewOverride = false; // con ui_victory_view = true, la victoria lo cambia antes (VictoryViewTests)
             yield return HudSetup.LoadAtIntro(20);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -107,6 +110,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator WithReduceMotion_TheChangeIsACut()
         {
+            GameScreen.VictoryViewOverride = false; // con ui_victory_view = true, la victoria lo cambia antes (VictoryViewTests)
             yield return HudSetup.LoadAtIntro(20);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -175,6 +179,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator TheBandHole_FollowsThePanel_WhenTheBoardRisesForTheVictory()
         {
+            GameScreen.VictoryViewOverride = false; // con ui_victory_view = true, la victoria lo cambia antes (VictoryViewTests)
             yield return HudSetup.LoadAtIntro(21);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
