@@ -50,6 +50,9 @@ namespace AF.UI.Editor
         /// <summary>Paradas del Mapa del río (<c>af-river-stops/1</c>; D-013; 08 §4.5; las genera <c>tools/river-map/stops.py</c>).</summary>
         public const string RiverStopsPath = "Assets/_Project/Data/Map/river_stops_v1.json";
 
+        /// <summary>Calendario de Frutas del río (<c>af-facts/1</c>; D-017; 08 §4.6; contrato 31).</summary>
+        public const string FruitCalendarPath = "Assets/_Project/Data/Content/frutas_del_rio_v1.json";
+
         private const string LogPrefix = "[AF.GameSceneBuilder] ";
 
         /// <summary>Crea (o recrea) la escena y la deja como única escena de Build Settings.</summary>
@@ -138,6 +141,13 @@ namespace AF.UI.Editor
             }
 
             bootstrap.ConfigureRiverStops(stops);
+            TextAsset? fruits = AssetDatabase.LoadAssetAtPath<TextAsset>(FruitCalendarPath);
+            if (fruits == null)
+            {
+                Debug.LogWarning(LogPrefix + "no existe el calendario de Frutas del río " + FruitCalendarPath + ": el juego seguirá sin líneas de fruta.");
+            }
+
+            bootstrap.ConfigureFruitCalendar(fruits);
 
             // Tablas de textos (D-018; 08 §4.7): sin ellas el juego arranca, avisa y va sin textos (GameBootstrap).
             TextAsset? strings = AssetDatabase.LoadAssetAtPath<TextAsset>(LocTables.StringsAssetPath);

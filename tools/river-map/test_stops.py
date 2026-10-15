@@ -884,17 +884,20 @@ class WriteTextsTests(unittest.TestCase):
 
     def test_rows_outside_the_block_do_not_change(self):
         # Filas ajenas antes y despues del bloque en orden ordinal (una de fruta, con puntos, antes de «map.» y una de
-        # tinte despues), con comillas, comas y un salto de linea dentro de un campo: quedan byte a byte.
+        # tinte despues), con comillas, comas y un salto de linea dentro de un campo: quedan byte a byte. Las claves extra no
+        # estan en la tabla: desde F1F2 ya hay filas fact.* y tint.* de Frutas del rio a los dos lados del bloque.
         committed = FACTS_PATH.read_bytes().decode("utf-8")
         records = split_csv_records(committed)
-        extra_before = 'fact.acai.01,"Uno, dos",,,"Linea con\nsalto y ""comillas""",90,pendiente_asesor,,,x,\n'
-        extra_after = "tint.acai.name,Açaí,,,ctx,16,pendiente_asesor,,,x,\n"
+        extra_before = 'fact.aaa.01,"Uno, dos",,,"Linea con\nsalto y ""comillas""",90,pendiente_asesor,,,x,\n'
+        extra_after = "tint.zzz.name,Açaí,,,ctx,16,pendiente_asesor,,,x,\n"
         others = [r for r in records[1:] if not parse_csv_record(r)[0].startswith("map.")]
         block = [r for r in records[1:] if parse_csv_record(r)[0].startswith("map.")]
+        before = [r for r in others if parse_csv_record(r)[0] < "map."]
+        after = [r for r in others if parse_csv_record(r)[0] > "map."]
         source = "".join([records[0], extra_before] + others + [extra_after])
         proc, out = self.write(source.encode("utf-8"))
         self.assertEqual(0, proc.returncode, proc.stdout.decode("ascii", "replace"))
-        expected = "".join([records[0], extra_before] + others + block + [extra_after])
+        expected = "".join([records[0], extra_before] + before + block + after + [extra_after])
         self.assertEqual(expected, out.decode("utf-8"))
         keys = [r[0] for r in facts_rows(out)[1:]]
         self.assertEqual(sorted(keys), keys)
@@ -987,7 +990,10 @@ class FactsCheckTests(unittest.TestCase):
         self.assertIn(b"106 textos map.* validos", proc.stdout)
 
     def test_edited_row_is_drift(self):
-        data = FACTS_PATH.read_bytes().replace("Ilha do Amor".encode("utf-8"), "Isla del Amor".encode("utf-8"), 1)
+        # Solo en la fila del Mapa: desde F1F2, la linea 14 del Agua del Tapajos (fact.*, antes del bloque) tambien la nombra.
+        records = split_csv_records(FACTS_PATH.read_bytes().decode("utf-8"))
+        data = "".join(r.replace("Ilha do Amor", "Isla del Amor", 1) if r.startswith("map.stop.alter_do_chao.dato_01,") else r
+                       for r in records).encode("utf-8")
         self.assertFails(data, "desfase", "map.stop.alter_do_chao.dato_01", "--write-texts")
 
     def test_crlf_is_drift(self):
