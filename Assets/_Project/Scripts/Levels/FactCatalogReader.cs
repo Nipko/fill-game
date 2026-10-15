@@ -13,7 +13,7 @@ namespace AF.Levels
     /// <item><description><c>format</c> = <see cref="FactCatalog.Format"/>, <c>version</c> ≥ 1 y <c>max_chars_es</c> ≥ 1;</description></item>
     /// <item><description><c>series</c>, una lista no vacía de <c>{subject, kind, from_level, lines, step}</c>: <c>subject</c>
     /// <c>[a-z][a-z0-9_]*</c> y sin repetir (las claves de texto salen de él); <c>kind</c> = <c>tint</c>; <c>from_level</c> ≥ 1;
-    /// <c>lines</c> de 1 a <see cref="FactCatalog.MaxLines"/>; <c>step</c> ≥ 1; en orden de <c>from_level</c>, sin solaparse
+    /// <c>lines</c> de 1 a <see cref="FactCatalog.MaxLines"/>; <c>step</c> de 1 a <see cref="WorldTable.LastLevel"/>; en orden de <c>from_level</c>, sin solaparse
     /// (cada bloque <c>[from_level, from_level + lines × step)</c> empieza donde acaba el anterior o después) y dentro de la
     /// primera vuelta (<see cref="WorldTable.LastLevel"/>);</description></item>
     /// <item><description><c>sources</c>, un objeto no vacío <c>{id: {title, url}}</c>: id <c>[A-Z][A-Za-z]*[0-9]+</c>, título no
@@ -146,9 +146,11 @@ namespace AF.Levels
             }
 
             int step = RequireInt(node, "step", at);
-            if (step < 1)
+            if (step < 1 || step > WorldTable.LastLevel)
             {
-                throw Fail(at + ".step", Num(step) + " no es ≥ 1");
+                // Con un paso mayor que la primera vuelta, el bloque [from_level, from_level + lines × step) acabaría fuera de
+                // ella (y, con pasos enormes, from_level + lines × step desbordaría un int).
+                throw Fail(at + ".step", Num(step) + " fuera de 1.." + Num(WorldTable.LastLevel));
             }
 
             long last = from + ((long)(lines - 1) * step);

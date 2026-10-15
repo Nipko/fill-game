@@ -54,10 +54,27 @@ namespace AF.Levels
                 throw new ArgumentNullException(nameof(subject));
             }
 
-            if (fromLevel < 1 || lines < 1 || lines > FactCatalog.MaxLines || step < 1)
+            if (fromLevel < 1)
             {
-                throw new ArgumentOutOfRangeException(nameof(lines), "Serie fuera de rango: desde " + fromLevel.ToString(CultureInfo.InvariantCulture)
-                    + ", " + lines.ToString(CultureInfo.InvariantCulture) + " líneas, paso " + step.ToString(CultureInfo.InvariantCulture) + ".");
+                throw new ArgumentOutOfRangeException(nameof(fromLevel), fromLevel, "La serie empieza en el nivel 1 o después.");
+            }
+
+            if (lines < 1 || lines > FactCatalog.MaxLines)
+            {
+                throw new ArgumentOutOfRangeException(nameof(lines), lines, "Una serie tiene de 1 a " + FactCatalog.MaxLines.ToString(CultureInfo.InvariantCulture) + " líneas.");
+            }
+
+            if (step < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(step), step, "El paso es ≥ 1.");
+            }
+
+            // EndLevel (from_level + lines × step) tiene que caber en un int: si no, las consultas por nivel y la
+            // comprobación de solapes dejarían de valer.
+            if (fromLevel + ((long)lines * step) > int.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(nameof(step), step, "El bloque de la serie (desde " + fromLevel.ToString(CultureInfo.InvariantCulture)
+                    + ", " + lines.ToString(CultureInfo.InvariantCulture) + " líneas) no cabe en un int.");
             }
 
             Subject = subject;

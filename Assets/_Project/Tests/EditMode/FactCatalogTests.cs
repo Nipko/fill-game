@@ -42,7 +42,9 @@ namespace AF.Tests.EditMode
         /// <summary>
         /// Claves del calendario sin fila todavía: el banco del cacao y del arazá (propuesta de Frutas §5.15) tiene 16 datos y a
         /// cada serie le faltan las líneas 17-20, con el cierre «¡Ya conoces…!». Hasta redactarlas, esos niveles no llevan línea
-        /// (<c>Loc.Fact</c> da «»). Cuando lleguen, esta lista se vacía.
+        /// (<c>Loc.Fact</c> da «»). Ojo, F3 y F4: la línea 20 (niveles 220 y 320) es la del sello «Ya conoces» (D-017, Q5-A) y
+        /// hoy no tiene texto; que no salga el sello sin su línea. Redactarlas, con fuente primaria y el cierre, es un pendiente del
+        /// dueño y del asesor cultural. Cuando lleguen, esta lista se vacía.
         /// </summary>
         private static readonly string[] PendingWriting =
         {
@@ -182,6 +184,8 @@ namespace AF.Tests.EditMode
             var cited = new HashSet<string>(StringComparer.Ordinal);
             foreach (FactSeries s in catalog.Series)
             {
+                string tintName = facts.TextAt(facts.IndexOf(s.NameKey), LocLocale.SourceLocale);
+                Assert.That(tintName, Is.Not.Empty, s.NameKey);
                 for (int k = 1; k <= s.Lines; k++)
                 {
                     int row = facts.IndexOf(s.KeyAt(k));
@@ -205,7 +209,14 @@ namespace AF.Tests.EditMode
                     string notes = facts.NotesAt(row);
                     Assert.That(notes.StartsWith("[V]", StringComparison.Ordinal) || notes.StartsWith("[E]", StringComparison.Ordinal), Is.True, key + ": marca [V] o [E] en notes");
                     Assert.That(notes, Does.Not.Contain("[NV]"), key + ": ninguna [NV] (propuesta §5.14)");
-                    Assert.That(context, Does.Contain(s.Subject + " ("), key + ": context con la serie y el nombre científico");
+                    Match serie = Regex.Match(context, "línea " + k.ToString(CultureInfo.InvariantCulture) + "/" + s.Lines.ToString(CultureInfo.InvariantCulture)
+                        + " de la serie " + Regex.Escape(s.Subject) + @" \(" + Regex.Escape(tintName) + @"; (.+?)\), en la victoria del nivel "
+                        + s.LevelAt(k).ToString(CultureInfo.InvariantCulture) + ",");
+                    Assert.That(serie.Success, Is.True, key + ": context «línea k/n de la serie <tinte> (<Nombre>; <nombre científico>), en la victoria del nivel N,»");
+                    string scientific = serie.Groups[1].Value;
+                    bool water = s.Subject.StartsWith("agua_", StringComparison.Ordinal);
+                    Assert.That(Regex.IsMatch(scientific, water ? @"^río [A-Z]\p{L}+ \(agua [a-z]+\)$" : "^[A-Z][a-z]+ [a-z]+$"), Is.True,
+                        key + ": nombre científico «" + scientific + "» (en las aguas, el río y su tipo de agua)");
 
                     LocStatus status = facts.StatusAt(row, LocLocale.SourceLocale);
                     bool draft = Array.IndexOf(DraftLines, key) >= 0;
@@ -296,6 +307,42 @@ namespace AF.Tests.EditMode
             Loc.Configure(LocSetUpFixture.Catalog, LocLocale.SourceLocale, true, "es-MX");
             Assert.That(Loc.Fact("fact.acai.17"), Does.Contain("unos 5,200 millones"), "es-MX");
             Assert.That(Loc.Fact("fact.cupuacu.11"), Does.Contain("4.5 kg"), "es-MX");
+        }
+
+        /// <summary>
+        /// Sistema métrico con U+00A0 entre la cifra (o el marcador) y la unidad (08 §4.7; <c>.claude/rules/localizacion.md</c>):
+        /// con un espacio normal, en una pantalla estrecha «400» y «g» pueden quedar en líneas distintas.
+        /// </summary>
+        [Test]
+        public void Units_GoAfterANoBreakSpace()
+        {
+            LocTable facts = LocSetUpFixture.Catalog.Facts;
+            var unit = new Regex(@"[0-9}]( |\u00A0)(?:g|kg|mg|cm|mm|m|km|%|°C)(?![\p{L}0-9])");
+            var problems = new StringBuilder();
+            int units = 0;
+            for (int r = 0; r < facts.Count; r++)
+            {
+                string key = facts.KeyAt(r);
+                if (!key.StartsWith(FactCatalog.KeyPrefix, StringComparison.Ordinal) && !key.StartsWith(FactCatalog.NamePrefix, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                foreach (string locale in facts.Locales)
+                {
+                    foreach (Match m in unit.Matches(facts.TextAt(r, locale)))
+                    {
+                        units++;
+                        if (m.Groups[1].Value == " ")
+                        {
+                            problems.Append(key).Append(" (").Append(locale).Append("): «").Append(m.Value).Append("» con un espacio normal").Append('\n');
+                        }
+                    }
+                }
+            }
+
+            Assert.That(problems.ToString(), Is.Empty);
+            Assert.That(units, Is.GreaterThanOrEqualTo(46), "las 46 cifras con unidad de las líneas de fruta de la versión 1");
         }
 
         [Test]
@@ -404,6 +451,8 @@ namespace AF.Tests.EditMode
         [TestCase("\"lines\": 20", "\"lines\": 0", "series[0].lines")]
         [TestCase("\"lines\": 20", "\"lines\": 100", "series[0].lines")]
         [TestCase("\"step\": 2", "\"step\": 0", "series[1].step")]
+        [TestCase("\"step\": 2", "\"step\": 1001", "series[1].step")]
+        [TestCase("\"lines\": 10, \"step\": 2", "\"lines\": 1, \"step\": 2147483647", "series[1].step")]
         [TestCase("\"from_level\": 21", "\"from_level\": 20", "series[1].from_level")]
         [TestCase("\"from_level\": 21", "\"from_level\": 995", "series[1]")]
         [TestCase("\"A1\": {", "\"a1\": {", "sources.a1")]
@@ -417,6 +466,18 @@ namespace AF.Tests.EditMode
             string json = ReplaceFirst(Valid, from, to);
             var e = Assert.Throws<LevelFormatException>(() => FactCatalogReader.Read(json));
             Assert.That(e!.Message, Does.Contain(path + ":"), e.Message);
+        }
+
+        [Test]
+        public void Series_RejectsEachValueOutOfRange_NamingItsParameter()
+        {
+            Assert.That(Assert.Throws<ArgumentOutOfRangeException>(() => new FactSeries("acai", FactSeriesKind.Tint, 0, 20, 1))!.ParamName, Is.EqualTo("fromLevel"));
+            Assert.That(Assert.Throws<ArgumentOutOfRangeException>(() => new FactSeries("acai", FactSeriesKind.Tint, 1, 0, 1))!.ParamName, Is.EqualTo("lines"));
+            Assert.That(Assert.Throws<ArgumentOutOfRangeException>(() => new FactSeries("acai", FactSeriesKind.Tint, 1, 100, 1))!.ParamName, Is.EqualTo("lines"));
+            Assert.That(Assert.Throws<ArgumentOutOfRangeException>(() => new FactSeries("acai", FactSeriesKind.Tint, 1, 20, 0))!.ParamName, Is.EqualTo("step"));
+            Assert.That(Assert.Throws<ArgumentOutOfRangeException>(() => new FactSeries("acai", FactSeriesKind.Tint, 1, 1, int.MaxValue))!.ParamName, Is.EqualTo("step"),
+                "from_level + lines × step no cabe en un int");
+            Assert.That(new FactSeries("acai", FactSeriesKind.Tint, 1, 1, int.MaxValue - 1).EndLevel, Is.EqualTo(int.MaxValue));
         }
 
         [Test]
