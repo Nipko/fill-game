@@ -1,0 +1,10 @@
+{
+  "extends": "../campaign_v2.json",
+  "description": "Fixture POSITIVO de --validate-spec y --registry (P4): la contingencia del hito 340 en la variante a (d.5.4: si la tinaja no llega al 0,90 del bot, el pipeline usa Br+Ba (MD) y la Tinaja se queda en 7 apariciones en su ciclo; d.5.6 y d.5.8: se cambia la celda y se regenera el registro). El 340 pasa a Br+Ba (MD) y se quita su entrada de fallback (null), porque la celda ya no lleva la Tinaja. Pasa --validate-spec en las dos variantes (TITULAR-8 admite 7 apariciones de la Tinaja si su hito no la lleva; 03 sec. 12: como mucho 8) y --registry escribe el registro: sale con 0, no con 1 como los fixtures negativos.",
+  "calendar": {
+    "340": "Br+Ba (MD)"
+  },
+  "fallback": {
+    "340": null
+  }
+}

@@ -632,7 +632,7 @@
     "699": "S",
     "700": "Ma+Ha+B2 (MD; K = 13) «Yarinacocha» [P]"
   },
-  "fallback_note": "Respaldo sin la Tinaja de cada una de sus 19 celdas (d.5.4; salida B de D-019): la variante «b» (--variant b) es el calendario con estas celdas, y el resto, idéntico. Están en los tres mundos: 323-340, 352, 355 y 392 en el 7; 454, 494 y 531 en el 8; 574, 591, 631, 651 y 691 en el 9. En la «b» la primera vez de 321-340 es Ba+Ho en el 332. El hito 340 tiene respaldo también en la «a» (Br+Ba si la tinaja no llega al 0,90 del bot, d.5.4): si se usa, se cambia aquí la celda y se regenera el registro (d.5.6). --validate-spec comprueba las dos variantes, cada una con su registro en memoria (FALLBACK: toda celda con la Tinaja lleva respaldo, y solo ellas).",
+  "fallback_note": "Respaldo sin la Tinaja de cada una de sus 19 celdas (d.5.4; salida B de D-019): la variante «b» (--variant b) es el calendario con estas celdas, y el resto, idéntico. Están en los tres mundos: 323-340, 352, 355 y 392 en el 7; 454, 494 y 531 en el 8; 574, 591, 631, 651 y 691 en el 9. En la «b» la primera vez de 321-340 es Ba+Ho en el 332. El hito 340 tiene respaldo también en la «a» (Br+Ba si la tinaja no llega al 0,90 del bot, d.5.4): si se usa, se cambia aquí la celda, se quita su entrada de \"fallback\" (la celda ya no lleva la Tinaja: si se queda, falla FALLBACK) y se regenera el registro (d.5.6); TITULAR-8 admite entonces 7 apariciones de la Tinaja en 321-340 (specs/tests/hito340_fallback_in_a.json). --validate-spec comprueba las dos variantes, cada una con su registro en memoria (FALLBACK: toda celda con la Tinaja lleva respaldo, y solo ellas).",
   "fallback": {
     "323": "Ma",
     "324": "C",

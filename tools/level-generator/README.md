@@ -113,8 +113,12 @@ Formato [P] `af-combinations/1` (`Campaign/SpecValidator.cs`, `CombinationsRegis
   línea: regenerarlo da los mismos bytes. Nunca se edita a mano.
 - El archivo refleja solo la variante que se publica: 102 entradas con la a (40 de 11-200 y 62 de 201-700); con la b serían
   96 (40 y 56). **Se regenera antes de fusionar** si cambia lo que se publica (la b, el respaldo del hito 340 o el del 354;
-  d.5.6 y d.5.8). `--check` no escribe y sale con 1 si el del disco difiere; la especificación tiene que pasar
-  `--validate-spec` en esa variante (si no, 1).
+  d.5.6 y d.5.8). `--check` no escribe y sale con 1 si el del disco difiere o falta; la especificación tiene que pasar
+  `--validate-spec` en todas sus variantes, como en `--validate-spec` (si no, 1 y no escribe).
+- **Respaldo del hito 340 en la a** (d.5.4: si la tinaja no llega al 0,90 del bot): en `campaign_v2.json` se cambia la celda
+  340 a `Br+Ba (MD)`, **se quita también su entrada de `fallback`** (la celda ya no lleva la Tinaja y, si el respaldo se
+  queda, falla FALLBACK) y se regenera el registro. TITULAR-8 admite entonces 7 apariciones de la Tinaja en 321-340. El
+  fixture positivo `specs/tests/hito340_fallback_in_a.json` lo hace así y pasa `--validate-spec` y `--registry`.
 - `--validate-spec` no lo lee: cada variante se comprueba con su propio registro, calculado en memoria (d.5.6).
 
 ## `--validate-spec`
@@ -131,7 +135,7 @@ un `FAIL [regla]` por cada incumplimiento o un `AVISO`. Reglas (ids estables):
 | CAL-COVER | calendario de `first_level` a `last_level` sin huecos | — |
 | CAL-ROLE | R solo en p1-p2, S solo en p19, p1-p2 y p19 puros | c.3, c.4 |
 | LABELS | (s), (D) y (MD) en su posición | D-009; c.3 regla 7 |
-| TITULAR-8 | cada titular sale 8 veces en su ciclo de debut | d.4 |
+| TITULAR-8 | cada titular sale 8 veces en su ciclo de debut; la Tinaja, 7 si el hito de su ciclo no la lleva (el respaldo del 340 aplicado en la a) | d.4; d.5.4; 03 §12 |
 | PURE-30 | al menos un 30 % de niveles puros por ciclo | d.2 regla 1 |
 | PURE-COMFORT | al menos 3 de las 8 comodidades de p7-p17 puras | c.4 |
 | FORBIDDEN | turbias solo con filtros; un contador por nivel; Lluvia nunca con Piraña; Remolino nunca con Piraña [P]; `not_with` y `only_with` de la tabla; una variante nunca con su base (`variant_of`) | d.3; Q14 A; d.5.1 |
@@ -172,14 +176,18 @@ for f in tools/level-generator/specs/tests/*.json; do
 done
 ```
 
-Todos deben dar `exit=1` y `presente`. Los de P4 extienden `specs/campaign_v2.json` y se comprueban en sus dos variantes
+Todos deben dar `exit=1` y `presente`, salvo el positivo `hito340_fallback_in_a.json` (`exit=0`). Los de P4 extienden `specs/campaign_v2.json` y se comprueban en sus dos variantes
 (con `"expect_variant"`, el fallo tiene que salir en esa): `novelty_gap_61.json` (61 niveles del 526 al 587 sin primera vez:
 NOVELTY-60, y FIRST-TIME en 541-560 y 561-580, porque con una primera vez por ciclo el hueco no pasa de 59),
+`novelty_gap_60.json` (el límite: 60 niveles, del 526 al 586, no fallan NOVELTY-60; sí FIRST-TIME, la que declara),
 `combination_from_v1_not_new.json` (el 229 pasa a Ll+Ba, del 158: una combinación de 11-200 no cuenta como nueva y 221-240 falla
 FIRST-TIME), `variant_b_forbidden.json` (el respaldo del 329 con dos contadores: FORBIDDEN solo en la b),
-`tinaja_without_fallback.json` (la Tinaja en el 464 sin respaldo: FALLBACK en la b), `hito14_with_capacity.json` (Cuia alta en
+`tinaja_without_fallback.json` (la Tinaja en el 464 sin respaldo: FALLBACK en las dos variantes; declara la a, la que ve
+`--registry`), `hito14_with_capacity.json` (Cuia alta en
 el hito de 14 cuias 620: HITO-14) y `variant_with_base.json` (Hoja atada con Hoja en el 292: FORBIDDEN); `--self-test registry`
-los repite. Los de la Tinaja (`tinaja_in_recovery.json` y `tinaja_in_remanso.json`) extienden
+los repite. **`hito340_fallback_in_a.json` es positivo** (`exit=0`, sin línea `esperado`): el 340 con su respaldo en la a y
+sin su entrada de `fallback` (un `null` en un `fallback` que extiende quita la entrada del base); `--self-test registry`
+comprueba además que pasa `--registry` y que `--registry --check` sale con 1 si el archivo difiere o falta. Los de la Tinaja (`tinaja_in_recovery.json` y `tinaja_in_remanso.json`) extienden
 `specs/sample_tinaja.json` y fallan por CAL-ROLE: p1, p2 y p19 son niveles puros, sin tinaja (D-019, Q-Ti1 A). Los de las
 variantes de la 1.0 extienden `specs/sample_variants.json`: `liana_n_with_capacity.json` (Liana de cuenta con una Cuia chica) y
 `flor_with_pirana.json` (Flor con la Piraña) fallan por LIANA-CAPS, y `brote_n2_before_debut.json` (Brote de dos hojas antes de

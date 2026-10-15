@@ -29,7 +29,7 @@ internal static class SpecValidator
         ("CAL-COVER", "calendario completo del primer al ultimo nivel, sin huecos ni extras"),
         ("CAL-ROLE", "R solo en p1-p2, S solo en p19 y p1-p2/p19 puros (c.3, c.4; 22 = Cuia chica de 3 del canon)"),
         ("LABELS", "marcas (s)/(D)/(MD) en su posicion: 21-39 retos (s); 40 (D); 41-59 (D) en p6/p12/p18 y (s) en p9/p15; 60+ retos (D) e hito (MD) (D-009; c.3 regla 7)"),
-        ("TITULAR-8", "cada titular sale 8 veces en su ciclo de debut (d.4)"),
+        ("TITULAR-8", "cada titular sale 8 veces en su ciclo de debut (d.4); la Tinaja, 7 si su hito usa el respaldo (d.5.4; 03 sec. 12: como mucho 8)"),
         ("PURE-30", "al menos un 30 % de niveles puros por ciclo (d.2 regla 1)"),
         ("PURE-COMFORT", "al menos 3 de las 8 comodidades de p7-p17 puras (c.4)"),
         ("FORBIDDEN", "combinaciones prohibidas: turbias solo con filtros (Q14 A), un contador por nivel, Lluvia nunca con Pirana, Remolino nunca con Pirana [P] (d.3); not_with y only_with de la tabla y una variante nunca con su base (d.5.1)"),
@@ -156,16 +156,20 @@ internal static class SpecValidator
                 Fail("FORBIDDEN", n, "Remolino con Pirana [P: la ultima cuia destino no esta definida; LevelValidation lo rechaza]");
             }
 
-            // FORBIDDEN de la tabla (d.5.1): not_with, only_with y una variante con su base. Un mensaje por par de códigos.
+            // FORBIDDEN de la tabla (d.5.1): not_with, only_with y una variante con su base. Un mensaje por par de códigos y
+            // motivo: not_with se lee en las dos direcciones (Fl+Ln da un solo fallo aunque cada una lleve a la otra en su
+            // not_with) con el par en orden ordinal; only_with es de la mecánica que lo declara, y variant_of, de la variante.
             var forbidden = new SortedSet<string>(StringComparer.Ordinal);
             foreach (MechanicInfo m in c.Mechanics)
             {
                 foreach (MechanicInfo other in c.Mechanics.Where(o => o.Code != m.Code))
                 {
-                    string pair = string.CompareOrdinal(m.Code, other.Code) < 0 ? $"{m.Code}+{other.Code}" : $"{other.Code}+{m.Code}";
-                    if (m.NotWith.Contains(other.Code))
+                    bool ordered = string.CompareOrdinal(m.Code, other.Code) < 0;
+                    string pair = ordered ? $"{m.Code}+{other.Code}" : $"{other.Code}+{m.Code}";
+                    if (m.NotWith.Contains(other.Code) || other.NotWith.Contains(m.Code))
                     {
-                        forbidden.Add($"{pair}: {m.Id} no va con {other.Id} (not_with; d.5.1)");
+                        (MechanicInfo lo, MechanicInfo hi) = ordered ? (m, other) : (other, m);
+                        forbidden.Add($"{pair}: {lo.Id} y {hi.Id} no van juntas (not_with; d.5.1)");
                     }
 
                     if (m.OnlyWith is not null && !m.OnlyWith.Contains(other.Code))
@@ -263,8 +267,8 @@ internal static class SpecValidator
             }
         }
 
-        // FALLBACK (d.5.4): en cada variante, ninguna celda con una mecánica de la otra; en la «a», los respaldos solo en celdas
-        // con una mecánica de una sola variante y sin ella.
+        // FALLBACK (d.5.4): en cada variante, ninguna celda con una mecánica de la otra; en la «a» (la que se publica), cada celda
+        // con una mecánica de una sola variante lleva su respaldo, y los respaldos solo en esas celdas y sin ella.
         if (spec.HasVariants)
         {
             foreach (CalendarCell c in cells)
@@ -277,6 +281,14 @@ internal static class SpecValidator
 
             if (spec.Variant == CampaignSpec.VariantA)
             {
+                foreach (CalendarCell c in cells.Where(c => !spec.FallbackCells.ContainsKey(c.Level)))
+                {
+                    foreach (MechanicInfo m in c.Mechanics.Where(m => m.OnlyVariant is not null))
+                    {
+                        Fail("FALLBACK", c.Level, $"celda con {m.Id} (only_variant {m.OnlyVariant}) sin respaldo en fallback ({c.Literal}; d.5.4)");
+                    }
+                }
+
                 foreach ((int level, CalendarCell fb) in spec.FallbackCells.OrderBy(kv => kv.Key))
                 {
                     if (!spec.Calendar[level].Mechanics.Any(m => m.OnlyVariant is not null))
@@ -396,7 +408,7 @@ internal static class SpecValidator
                 }
 
                 bool titular = debutCycle && CampaignSpec.PositionOf(m.Debut) == 3;
-                if (titular && count != 8)
+                if (titular && count != 8 && !MilestoneFallbackApplied(spec, cycle, m, count))
                 {
                     Fail("TITULAR-8", start, $"ciclo {name}: la titular {m.Id} sale {count} veces (8 en su ciclo de debut)");
                 }
@@ -537,6 +549,16 @@ internal static class SpecValidator
 
         return best;
     }
+
+    /// <summary>
+    /// TITULAR-8 admite 7 apariciones de una mecánica de una sola variante (la Tinaja) en su ciclo de debut si el hito del ciclo
+    /// no la lleva: es el respaldo del hito 340 aplicado en la «a» (d.5.4: «el pipeline usa Br+Ba (MD) y la Tinaja se queda en 7
+    /// apariciones en su ciclo»; 03 §12: «como mucho 8 niveles en el ciclo»). Las demás titulares siguen con 8 exactas (d.4).
+    /// </summary>
+    private static bool MilestoneFallbackApplied(CampaignSpec spec, List<CalendarCell> cycle, MechanicInfo m, int count) =>
+        m.OnlyVariant is not null && count == 7
+        && cycle.Any(c => spec.Positions.First(r => r.Positions.Contains(CampaignSpec.PositionOf(c.Level))).Role == SlotRole.Milestone
+            && !c.Mechanics.Contains(m));
 
     private static bool ReturnsIn(CampaignSpec spec, List<CalendarCell> cells, MechanicInfo m, int cycleStart) =>
         cells.Any(c => c.Level >= cycleStart && c.Level < cycleStart + 20 && c.Mechanics.Contains(m)
@@ -797,15 +819,25 @@ internal static class CombinationsRegistry
 
     /// <summary>
     /// Modo --registry: escribe (o, con --check, compara byte a byte sin escribir) el registro de la especificación con la
-    /// variante <paramref name="variant"/> (null = la publicada). La especificación tiene que pasar --validate-spec en esa
-    /// variante. Códigos: 0 = escrito o idéntico; 1 = difiere o la especificación no pasa; 2 = especificación ilegible.
+    /// variante <paramref name="variant"/> (null = la publicada). La especificación tiene que pasar --validate-spec en todas sus
+    /// variantes, como en --validate-spec (d.5.4). Códigos: 0 = escrito o idéntico; 1 = difiere o la especificación no pasa;
+    /// 2 = especificación ilegible.
     /// </summary>
     public static int Run(string specPath, string outPath, string? variant, bool check)
     {
         CampaignSpec spec;
+        var failing = new List<string>();
         try
         {
             spec = CampaignSpec.Load(specPath, variant);
+            foreach (string v in spec.Variants)
+            {
+                CampaignSpec each = v == spec.Variant ? spec : CampaignSpec.Load(specPath, v);
+                if (SpecValidator.Validate(each).Any(i => !i.Warning))
+                {
+                    failing.Add(v);
+                }
+            }
         }
         catch (CampaignSpecException e)
         {
@@ -813,9 +845,9 @@ internal static class CombinationsRegistry
             return 2;
         }
 
-        if (SpecValidator.Validate(spec).Any(i => !i.Warning))
+        if (failing.Count > 0)
         {
-            Console.Error.WriteLine($"level-generator --registry: la especificacion no pasa --validate-spec en la variante {spec.Variant}; corrigela antes.");
+            Console.Error.WriteLine($"level-generator --registry: la especificacion no pasa --validate-spec en la variante {string.Join(", ", failing)}; corrigela antes.");
             return 1;
         }
 

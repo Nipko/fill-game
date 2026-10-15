@@ -41,7 +41,8 @@ const string Usage = """
     --registry: registro de combinaciones publicadas (formato [P] af-combinations/1; d.5.6): una entrada {level, codes,
       kind} por conjunto de codigos nunca visto, desde la primera especificacion de la cadena de "previous", con la
       variante publicada (published_variant) o la de --variant. Con --check no escribe: falla si el del disco difiere.
-      Codigos: 0 = escrito o identico; 1 = difiere o la especificacion no pasa --validate-spec; 2 = uso o especificacion
+      Codigos: 0 = escrito o identico; 1 = difiere, falta o la especificacion no pasa --validate-spec (en alguna de sus
+      variantes); 2 = uso o especificacion
       ilegible.
     --seasons: tabla de temporada del cliente (pregunta 32 b de GDD.md sec. 6.3, D-020; D-009 punto 6): copia la
       temporada A o B de cada ciclo de 20 de las especificaciones (hoy specs/campaign_v1.json: ciclos 21-181) en

@@ -11,7 +11,8 @@
 // Los códigos del calendario y su lectura sobre un attrs publicado (MechanicCodes) también viven aquí: con las variantes de la
 // 1.0 (P5 de la tanda 4) un tipo de AF.Core ya no basta para saber el código (liana con n es Ln; brote con n = 2, B2).
 // Una especificación puede «extender» otra (fixtures negativos de specs/tests/): "extends" apunta al archivo base y
-// "calendar" o "seasons" sustituyen solo las entradas que traen; cualquier otra clave sustituye la del base.
+// "calendar", "seasons" o "fallback" sustituyen solo las entradas que traen (null quita la del base); cualquier otra clave
+// sustituye la del base.
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -407,15 +408,21 @@ internal sealed class CampaignSpec
 
         KPlanRow? kp = KPlan.FirstOrDefault(r => r.First <= level && level <= r.Last);
         PositionRule? rule = Positions.FirstOrDefault(r => r.Positions.Contains(PositionOf(level)));
-        return kp is null || rule is null ? null : rule.KKey switch
-        {
-            "recovery" => kp.Recovery,
-            "comfort" => kp.Comfort,
-            "challenge" => kp.Challenge,
-            "milestone" => kp.Milestone,
-            _ => null,
-        };
+        return kp is null || rule is null ? null : KOf(kp, rule.KKey);
     }
+
+    /// <summary>
+    /// K de la fila del k_plan para la clave de rol de una posición (recovery, comfort, challenge o milestone), o null si la clave
+    /// no existe. Es la única lectura de esa correspondencia: la usan <see cref="KAt"/> (HITO-14) y <see cref="Plan"/> (generación).
+    /// </summary>
+    private static int? KOf(KPlanRow kp, string kKey) => kKey switch
+    {
+        "recovery" => kp.Recovery,
+        "comfort" => kp.Comfort,
+        "challenge" => kp.Challenge,
+        "milestone" => kp.Milestone,
+        _ => null,
+    };
 
     public static int PositionOf(int level) => ((level - 1) % 20) + 1;
 
@@ -515,14 +522,7 @@ internal sealed class CampaignSpec
         {
             KPlanRow kp = KPlan.FirstOrDefault(r => r.First <= level && level <= r.Last)
                 ?? throw new CampaignSpecException($"k_plan no cubre el nivel {level}");
-            k = rule!.KKey switch
-            {
-                "recovery" => kp.Recovery,
-                "comfort" => kp.Comfort,
-                "challenge" => kp.Challenge,
-                "milestone" => kp.Milestone,
-                _ => throw new CampaignSpecException($"k desconocido '{rule.KKey}'"),
-            };
+            k = KOf(kp, rule!.KKey) ?? throw new CampaignSpecException($"k desconocido '{rule.KKey}'");
             empties = rule.Empties;
             if (level <= TwoEmptiesUntil || (role == SlotRole.Challenge && level <= ChallengeTwoEmptiesUntil) || mechanicDebutBoard)
             {
@@ -738,7 +738,14 @@ internal sealed class CampaignSpec
             {
                 foreach (KeyValuePair<string, JsonNode?> entry in patch)
                 {
-                    target[entry.Key] = entry.Value?.DeepClone();
+                    // Un null quita la entrada del base (un respaldo que ya no hace falta: el hito 340 con Br+Ba en la «a», d.5.4).
+                    if (entry.Value is null)
+                    {
+                        target.Remove(entry.Key);
+                        continue;
+                    }
+
+                    target[entry.Key] = entry.Value.DeepClone();
                 }
 
                 continue;

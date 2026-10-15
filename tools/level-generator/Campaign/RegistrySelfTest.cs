@@ -10,7 +10,10 @@
 //   - lo que sale de la especificación y no del código: max_risk_pairs «libre», K = 13 en los hitos de 561-700 y el tope de
 //     mecánicas por rol;
 //   - la tabla de temporada de campaign_v1 + campaign_v2 (SE1): 34 ciclos seguidos, 21-681;
-//   - los fixtures negativos de P4 (specs/tests) fallan con su regla y, si la declaran, en su variante.
+//   - los fixtures negativos de P4 (specs/tests) fallan con su regla y, si la declaran, en su variante;
+//   - los límites: un hueco de 60 pasa NOVELTY-60 (novelty_gap_60.json), FALLBACK sale en las dos variantes, --registry
+//     --check sale con 1 si el archivo difiere o falta y con 0 si es idéntico, y el hito 340 con su respaldo en la «a»
+//     (hito340_fallback_in_a.json, positivo) pasa --validate-spec y --registry.
 // La salida es ASCII (.claude/rules/ci.md). Desde la raíz del repositorio.
 using System.Globalization;
 using AmazonFill.Tools.LevelGenerator.Generation;
@@ -29,7 +32,8 @@ internal static class RegistrySelfTest
         ("tools/level-generator/specs/tests/novelty_gap_61.json", "NOVELTY-60", null),
         ("tools/level-generator/specs/tests/combination_from_v1_not_new.json", "FIRST-TIME", null),
         ("tools/level-generator/specs/tests/variant_b_forbidden.json", "FORBIDDEN", CampaignSpec.VariantB),
-        ("tools/level-generator/specs/tests/tinaja_without_fallback.json", "FALLBACK", CampaignSpec.VariantB),
+        ("tools/level-generator/specs/tests/tinaja_without_fallback.json", "FALLBACK", CampaignSpec.VariantA),
+        ("tools/level-generator/specs/tests/novelty_gap_60.json", "FIRST-TIME", null),
         ("tools/level-generator/specs/tests/hito14_with_capacity.json", "HITO-14", null),
         ("tools/level-generator/specs/tests/variant_with_base.json", "FORBIDDEN", null),
     ];
@@ -180,8 +184,78 @@ internal static class RegistrySelfTest
             Check(present, F($"fixture {Path.GetFileName(path)}: falla con [{rule}]{(variant is null ? "" : " en la variante " + variant)}"));
         }
 
+        // 9. Casos límite y positivos de P4 (revisión): FALLBACK en las dos variantes, hueco de 60, --check y el hito 340 en A.
+        try
+        {
+            const string noFallback = "tools/level-generator/specs/tests/tinaja_without_fallback.json";
+            Check(CampaignSpec.Load(noFallback).Variants.All(v => SpecValidator.Validate(CampaignSpec.Load(noFallback, v))
+                    .Any(i => !i.Warning && i.Rule == "FALLBACK" && i.Level == 464)),
+                "tinaja_without_fallback.json: FALLBACK en el 464 en las dos variantes (en la a, la celda sin respaldo; d.5.4)");
+
+            const string gap60 = "tools/level-generator/specs/tests/novelty_gap_60.json";
+            CampaignSpec g = CampaignSpec.Load(gap60);
+            List<CalendarCell> gAll = g.CellsWithHistory();
+            (int gGap, int gFrom, int gTo) = SpecValidator.MaxNoveltyGap(SpecValidator.NoveltyLevels(gAll, CombinationsRegistry.Build(gAll, g.VariantCodes)), g.FirstLevel);
+            bool noNovelty = g.Variants.All(v => SpecValidator.Validate(CampaignSpec.Load(gap60, v)).All(i => i.Rule != "NOVELTY-60"));
+            Check((gGap, gFrom, gTo) == (60, 526, 586) && noNovelty,
+                F($"novelty_gap_60.json: hueco de {gGap} ({gFrom} -> {gTo}) y sin NOVELTY-60 en ninguna variante (60 cumple; 61 no)"));
+
+            const string hito340 = "tools/level-generator/specs/tests/hito340_fallback_in_a.json";
+            CampaignSpec h = CampaignSpec.Load(hito340);
+            int hFailures = h.Variants.Sum(v => SpecValidator.Validate(CampaignSpec.Load(hito340, v)).Count(i => !i.Warning));
+            int tinajaIn321 = Enumerable.Range(321, 20).Count(n => h.Calendar[n].Has(MechanicCodes.Tinaja));
+            Check(hFailures == 0 && tinajaIn321 == 7 && !h.FallbackCells.ContainsKey(340) && h.FallbackCells.Count == 18,
+                F($"hito340_fallback_in_a.json: el 340 en Br+Ba (MD) sin su entrada de fallback pasa --validate-spec en las dos variantes ({hFailures} fallos; la Tinaja en {tinajaIn321} niveles de 321-340)"));
+
+            string tmp = Path.Combine(Path.GetTempPath(), F($"af-registry-selftest-{Environment.ProcessId}.json"));
+            try
+            {
+                int written = Quiet(() => CombinationsRegistry.Run(hito340, tmp, null, check: false));
+                bool hitoRegistry = written == 0 && File.Exists(tmp) && File.ReadAllBytes(tmp).AsSpan().SequenceEqual(CombinationsRegistry.Bytes(h));
+                Check(hitoRegistry, F($"--registry con hito340_fallback_in_a.json: sale con {written} y escribe su registro"));
+
+                File.WriteAllBytes(tmp, once);
+                int same = Quiet(() => CombinationsRegistry.Run(CampaignV2, tmp, null, check: true));
+                byte[] altered = (byte[])once.Clone();
+                altered[^2] = (byte)' ';
+                File.WriteAllBytes(tmp, altered);
+                int differs = Quiet(() => CombinationsRegistry.Run(CampaignV2, tmp, null, check: true));
+                File.Delete(tmp);
+                int missing = Quiet(() => CombinationsRegistry.Run(CampaignV2, tmp, null, check: true));
+                int failingSpec = Quiet(() => CombinationsRegistry.Run("tools/level-generator/specs/tests/tinaja_without_fallback.json", tmp, null, check: false));
+                Check(same == 0 && differs == 1 && missing == 1 && failingSpec == 1 && !File.Exists(tmp),
+                    F($"--registry --check: {same} con el archivo identico, {differs} con un byte cambiado, {missing} sin archivo; una especificacion que no pasa: {failingSpec} y no escribe"));
+            }
+            finally
+            {
+                File.Delete(tmp);
+            }
+        }
+        catch (Exception e) when (e is CampaignSpecException or IOException)
+        {
+            Check(false, "casos limite de P4: " + e.Message);
+        }
+
         Console.WriteLine(failures == 0 ? "self-test registry: todo PASS" : F($"self-test registry: {failures} FAIL"));
         return failures == 0 ? 0 : 1;
+    }
+
+    /// <summary>Ejecuta un modo que escribe por consola sin mostrar su salida (solo cuenta su código).</summary>
+    private static int Quiet(Func<int> run)
+    {
+        TextWriter output = Console.Out;
+        TextWriter error = Console.Error;
+        Console.SetOut(TextWriter.Null);
+        Console.SetError(TextWriter.Null);
+        try
+        {
+            return run();
+        }
+        finally
+        {
+            Console.SetOut(output);
+            Console.SetError(error);
+        }
     }
 
     private static string Key(CombinationEntry e) => F($"{e.Level}:{string.Join("+", e.Codes)}:{e.Kind}");
