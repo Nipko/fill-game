@@ -14,9 +14,11 @@ namespace AF.Tests.EditMode
     /// §9, VA-20 y VA-22): ninguna parada pintada de 1-200 usa una forma genérica, cada héroe pintado y la reserva (la Casa de
     /// Fierro) tienen la suya, las dos paradas solo con el kit también y las dos líneas entre aguas no llevan silueta; todas caben
     /// en la caja de 240 × 80 dp (≤ 48 dp sobre el horizonte, lo reconocible en 30, ≤ 32 de orilla), entran por los bordes sin
-    /// arista, no bajan de V 0,25 ni usan el turquesa caribeño, y cumplen las reglas de cada sitio que se pueden medir: el dosel
-    /// parejo de la Floresta Nacional (sin samaúma), nada bajo el horizonte en Tefé (sin botos ni orillas secas), Puerto Nariño
-    /// sin pueblo y la Casa de Fierro sin torre (sin el mito de Eiffel). <see cref="StopShapes.Draw"/> no asigna memoria.
+    /// arista (y sin nada que no sea rectángulo en la franja que se funde), no bajan de V 0,25 ni usan el turquesa caribeño, y
+    /// cumplen las reglas de cada sitio que se pueden medir: el dosel parejo de la Floresta Nacional (sin samaúma), nada bajo el
+    /// horizonte en Tefé (sin botos ni orillas secas) y su ciudad de tejas distinta de Nauta, Puerto Nariño sin pueblo, la cocha de
+    /// Pacaya-Samiria como lente con el reflejo de los aguajes, lo que el follaje del marco taparía en los ±85 dp centrales y la
+    /// Casa de Fierro sin torre (sin el mito de Eiffel). <see cref="StopShapes.Draw"/> no asigna memoria.
     /// </summary>
     public sealed class StopShapesTests
     {
@@ -166,7 +168,8 @@ namespace AF.Tests.EditMode
                 }
                 else
                 {
-                    Assert.That(r.yMax, Is.GreaterThan(8f), shape + ": algo sobre el horizonte");
+                    // Nauta, la más baja (lejana, revisión de M2.4), llega a 8 dp.
+                    Assert.That(r.yMax, Is.GreaterThanOrEqualTo(8f), shape + ": algo sobre el horizonte");
                 }
             }
 
@@ -204,14 +207,24 @@ namespace AF.Tests.EditMode
                     }
                 }
 
-                // Solo los rectángulos llegan al borde (y se funden); copas, techos, cúpulas y playas fundidas se quedan dentro.
+                // Solo los rectángulos llegan al borde (y se funden); las playas fundidas se quedan dentro, y copas, techos y
+                // cúpulas (lo que no es rectángulo), además, fuera de la franja que se funde: nada opaco flota sobre un fondo que
+                // se desvanece (revisión de M2.4).
+                float half = StopBackdrop.HeroWidthDp * 0.5f;
                 for (int p = 0; p < StopShapes.PrimitiveCount(shape); p++)
                 {
                     StopShapes.PrimitiveAt(shape, p, out int kind, out _, out Rect box);
-                    if (kind != StopShapes.KindRect)
+                    if (kind == StopShapes.KindSoftRect)
                     {
-                        Assert.That(box.xMin, Is.GreaterThan(-StopBackdrop.HeroWidthDp * 0.5f + 0.01f), shape + ", primitiva " + p);
-                        Assert.That(box.xMax, Is.LessThan(StopBackdrop.HeroWidthDp * 0.5f - 0.01f), shape + ", primitiva " + p);
+                        Assert.That(box.xMin, Is.GreaterThan(-half + 0.01f), shape + ", primitiva " + p);
+                        Assert.That(box.xMax, Is.LessThan(half - 0.01f), shape + ", primitiva " + p);
+                    }
+                    else if (kind != StopShapes.KindRect)
+                    {
+                        Assert.That(box.xMin, Is.GreaterThanOrEqualTo(-half + StopShapes.EdgeFadeDp - 0.01f),
+                            shape + ", primitiva " + p + ": fuera de la franja que se funde");
+                        Assert.That(box.xMax, Is.LessThanOrEqualTo(half - StopShapes.EdgeFadeDp + 0.01f),
+                            shape + ", primitiva " + p + ": fuera de la franja que se funde");
                     }
                 }
             }
@@ -294,8 +307,11 @@ namespace AF.Tests.EditMode
         {
             // 07 §2.1: asesor obligatorio (aldea identificable); hasta entonces, solo la boca del río: ni casas ni ventanas, ni
             // copas sueltas, y la boca abierta 50-60 dp, sin orilla delante, entre dos orillas en cuña. Lo claro es solo la lengua
-            // de agua, en la boca y a ras del horizonte (revisión de M2.4).
-            bool mouthOpen = true;
+            // de agua, en la boca y a ras del horizonte (revisión de M2.4). La boca se mide: del extremo derecho de la orilla y la
+            // cuña de la izquierda al extremo izquierdo de las de la derecha.
+            float leftBank = float.MinValue;
+            float rightBank = float.MaxValue;
+            bool straddles = false;
             int tongues = 0;
             int wedges = 0;
             for (int p = 0; p < StopShapes.PrimitiveCount(StopShapes.PuertoNarino); p++)
@@ -314,12 +330,25 @@ namespace AF.Tests.EditMode
 
                 if (tone == StopShapes.ToneShore || tone == StopShapes.ToneBody)
                 {
-                    mouthOpen &= box.xMax <= -25f || box.xMin >= 25f;
+                    if (box.xMax <= 0f)
+                    {
+                        leftBank = Mathf.Max(leftBank, box.xMax);
+                    }
+                    else if (box.xMin >= 0f)
+                    {
+                        rightBank = Mathf.Min(rightBank, box.xMin);
+                    }
+                    else
+                    {
+                        straddles = true;
+                    }
+
                     wedges += kind == StopShapes.KindTriangle && tone == StopShapes.ToneBody ? 1 : 0;
                 }
             }
 
-            Assert.That(mouthOpen, Is.True, "la boca, abierta 50-60 dp en el centro");
+            Assert.That(straddles, Is.False, "ninguna orilla cruza el centro de la boca");
+            Assert.That(rightBank - leftBank, Is.InRange(50f, 60f), "la boca, abierta 50-60 dp en el centro");
             Assert.That(tongues, Is.EqualTo(1), "la lengua de agua");
             Assert.That(wedges, Is.EqualTo(2), "las dos orillas en cuña");
         }
@@ -473,7 +502,7 @@ namespace AF.Tests.EditMode
             g.Clear();
             Color sand = StopShapes.ToneColor(StopShapes.Anavilhanas, StopShapes.ToneShore);
             Assert.That(StopShapes.Draw(g, StopShapes.Anavilhanas, FootX, Horizon, 1f, Color.white, null, sand, 0f, 0f), Is.True);
-            foreach (float end in new[] { -111f, -41f, -27f, 27f, 41f, 111f })
+            foreach (float end in new[] { -105f, -39f, -27f, 27f, 39f, 105f })
             {
                 int found = 0;
                 for (int i = 0; i < g.VertexCount; i++)
@@ -492,53 +521,192 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void PacayaSamiria_TheCochaIsATranslucentBlackMirror_EvenAtDawn()
+        public void PacayaSamiria_TheCochaIsALensOfBlackWater_WithTheAguajesReflected_EvenAtDawn()
         {
-            // Revisión de M2.4 (D-003: luz de juego): la cocha, 4 dp de agua negra al CochaAlpha con su brillo de 1 dp arriba, y
-            // los bordes fundidos en 28 dp; al alba sigue siendo agua y no una losa a contraluz.
+            // Revisión de M2.4 (D-003: luz de juego): la cocha, una lente de 150 × 8 dp que baja del horizonte (media elipse
+            // inferior, con los extremos afinados), de agua negra al CochaAlpha; dentro, el reflejo claro de 2-3 aguajes y el brillo
+            // de 1 dp del espejo en los 100 dp centrales, fundido en sus extremos. Al alba sigue siendo agua y no una losa a
+            // contraluz.
             string s = StopShapes.PacayaSamiria;
-            bool cocha = false;
-            bool shine = false;
+            float rx = StopShapes.CochaWidthDp * 0.5f;
+            int lenses = 0;
+            int shines = 0;
+            int trunks = 0;
+            int crowns = 0;
             for (int p = 0; p < StopShapes.PrimitiveCount(s); p++)
             {
                 StopShapes.PrimitiveAt(s, p, out int kind, out int tone, out Rect box);
                 if (box.yMax <= 0f)
                 {
-                    Assert.That(tone == StopShapes.ToneFeature || tone == StopShapes.ToneLight, Is.True,
-                        "primitiva " + p + ": bajo el horizonte, solo el agua");
+                    Assert.That(tone == StopShapes.ToneFeature || tone == StopShapes.ToneLight || tone == StopShapes.ToneShore, Is.True,
+                        "primitiva " + p + ": bajo el horizonte, solo el agua y su reflejo");
+                    Assert.That(box.yMin, Is.GreaterThanOrEqualTo(-StopShapes.CochaDepthDp), "primitiva " + p + ": dentro de la cocha");
                 }
 
-                if (kind == StopShapes.KindRect && tone == StopShapes.ToneFeature)
+                if (tone == StopShapes.ToneFeature)
                 {
-                    cocha = true;
-                    Assert.That(box.height, Is.EqualTo(4f), "la cocha");
+                    lenses++;
+                    Assert.That(kind, Is.EqualTo(StopShapes.KindDome), "la cocha, una lente y no una franja");
+                    Assert.That(box.width, Is.EqualTo(150f), "la cocha");
+                    Assert.That(box.yMax, Is.EqualTo(0f), "desde el horizonte");
+                    Assert.That(box.yMin, Is.EqualTo(-8f), "8 dp de hondo");
+                    Assert.That(box.center.x, Is.EqualTo(0f), "centrada");
                 }
 
-                if (kind == StopShapes.KindRect && tone == StopShapes.ToneLight)
+                if (tone == StopShapes.ToneLight)
                 {
-                    shine = true;
+                    shines++;
+                    Assert.That(kind, Is.EqualTo(StopShapes.KindSoftRect), "el brillo, fundido en sus extremos");
                     Assert.That(box.height, Is.EqualTo(1f), "el brillo del espejo");
                     Assert.That(box.yMax, Is.EqualTo(0f), "en el borde de arriba de la cocha");
+                    Assert.That(box.width, Is.EqualTo(100f), "en los 100 dp centrales");
+                }
+
+                if (tone == StopShapes.ToneShore)
+                {
+                    // Dentro de la lente: en el x de la caja más alejado del centro, la elipse es al menos tan honda como ella.
+                    float far = Mathf.Max(Mathf.Abs(box.xMin), Mathf.Abs(box.xMax));
+                    float depth = far >= rx ? 0f : StopShapes.CochaDepthDp * Mathf.Sqrt(1f - ((far / rx) * (far / rx)));
+                    if (kind == StopShapes.KindRect)
+                    {
+                        trunks++;
+                        Assert.That(box.width, Is.EqualTo(1.6f).Within(0.001f), "primitiva " + p + ": tronco reflejado");
+                        Assert.That(box.height, Is.EqualTo(6f), "primitiva " + p + ": tronco reflejado");
+                        Assert.That(-box.yMin, Is.LessThanOrEqualTo(depth + 0.01f), "primitiva " + p + ": el tronco, dentro de la lente");
+                    }
+                    else
+                    {
+                        crowns++;
+                        Assert.That(kind, Is.EqualTo(StopShapes.KindDome), "primitiva " + p);
+                        Assert.That(box.width, Is.EqualTo(6f), "primitiva " + p + ": copa reflejada");
+                        Assert.That(box.height, Is.EqualTo(3f), "primitiva " + p + ": copa reflejada");
+                        float centerDepth = StopShapes.CochaDepthDp * Mathf.Sqrt(1f - ((box.center.x / rx) * (box.center.x / rx)));
+                        Assert.That(-box.yMin, Is.LessThanOrEqualTo(centerDepth + 0.01f), "primitiva " + p + ": la copa, dentro de la lente");
+                    }
                 }
             }
 
-            Assert.That(cocha && shine, Is.True);
-            Assert.That(StopShapes.EdgeFadeOf(s), Is.EqualTo(28f));
-            Assert.That(StopShapes.EdgeFadeOf(StopShapes.Tarapoto), Is.EqualTo(StopShapes.EdgeFadeDp));
-            Assert.That(StopShapes.ToneAlpha(s, StopShapes.ToneFeature), Is.InRange(0.55f, 0.65f));
+            Assert.That(lenses, Is.EqualTo(1));
+            Assert.That(shines, Is.EqualTo(1));
+            Assert.That(trunks, Is.InRange(2, 3), "el reflejo de 2-3 aguajes");
+            Assert.That(crowns, Is.EqualTo(trunks), "cada tronco reflejado, con su copa");
+            Assert.That(StopShapes.ToneAlpha(s, StopShapes.ToneFeature), Is.EqualTo(0.85f));
+            Assert.That(StopShapes.ToneAlpha(s, StopShapes.ToneLight), Is.EqualTo(0.8f));
+            Assert.That(StopShapes.ToneAlpha(s, StopShapes.ToneShore), Is.EqualTo(0.35f));
             Color water = StopShapes.ToneColor(s, StopShapes.ToneFeature);
             Color.RGBToHSV(water, out _, out _, out float v);
-            Assert.That(v, Is.LessThan(0.3f), "agua negra");
+            Assert.That(v, Is.LessThan(0.3f), "agua negra (sin bajar de V 0,25: VA-03)");
             foreach (string light in new[] { StopBackdrop.LutDawn, StopBackdrop.LutDusk })
             {
-                Color lit = StopShapes.LitColor(s, StopShapes.ToneFeature, Color.white, light);
-                Assert.That(new Color(lit.r, lit.g, lit.b, 1f), Is.EqualTo(water), light + ": la cocha, con su tono");
-                Assert.That(lit.a, Is.EqualTo(StopShapes.CochaAlpha), light);
+                foreach (int tone in new[] { StopShapes.ToneFeature, StopShapes.ToneLight, StopShapes.ToneShore })
+                {
+                    Color lit = StopShapes.LitColor(s, tone, Color.white, light);
+                    Assert.That(new Color(lit.r, lit.g, lit.b, 1f), Is.EqualTo(StopShapes.ToneColor(s, tone)), light + ", tono " + tone + ": con su tono");
+                    Assert.That(lit.a, Is.EqualTo(StopShapes.ToneAlpha(s, tone)), light + ", tono " + tone);
+                }
             }
 
             // Los aguajes, en cambio, sí van a contraluz al alba.
             Assert.That(StopShapes.LitColor(s, StopShapes.ToneBody, StopBackdrop.DawnLut, StopBackdrop.LutDawn), Is.EqualTo(StopShapes.DawnBody));
             Assert.That(StopShapes.LitColor(s, StopShapes.ToneDetail, StopBackdrop.DawnLut, StopBackdrop.LutDawn), Is.EqualTo(StopShapes.DawnBody));
+
+            // La lente y su reflejo no se vuelven a reflejar: pintada sin el reflejo de la escena, nada baja de los 8 dp de la cocha.
+            StopShapeGraphic g = NewGraphic();
+            g.Clear();
+            Assert.That(StopShapes.Draw(g, s, FootX, Horizon, 1f, Color.white, null, Palette.WaterBase("white"), 0f, 0f), Is.True);
+            Assert.That(g.MaxY, Is.LessThanOrEqualTo(Horizon + StopShapes.CochaDepthDp + 0.01f));
+        }
+
+        [Test]
+        public void LagoTefe_AWarmGabledCity_AndTheLakeShine_UnlikeNauta()
+        {
+            // Revisión de M2.4: Tefé, la ciudad de paredes cálidas y tejados a dos aguas de teja, de 16-20 dp de alto y unos 90 de
+            // ancho (x de −80 a 10), con el brillo del lago de 1 dp al 0,6 a lo largo de la orilla; Nauta, lejana: fría, de azoteas
+            // planas, de 6-8 dp y con el velo de la bruma (0,7). Así no se leen como la misma ciudad baja genérica.
+            string tefe = StopShapes.LagoTefe;
+            float cityMin = float.MaxValue;
+            float cityMax = float.MinValue;
+            float cityTop = 0f;
+            int roofs = 0;
+            bool shine = false;
+            for (int p = 0; p < StopShapes.PrimitiveCount(tefe); p++)
+            {
+                StopShapes.PrimitiveAt(tefe, p, out int kind, out int tone, out Rect box);
+                if (tone == StopShapes.ToneBody || (tone == StopShapes.ToneFeature && kind == StopShapes.KindTriangle))
+                {
+                    cityMin = Mathf.Min(cityMin, box.xMin);
+                    cityMax = Mathf.Max(cityMax, box.xMax);
+                    cityTop = Mathf.Max(cityTop, box.yMax);
+                    roofs += kind == StopShapes.KindTriangle ? 1 : 0;
+                }
+
+                if (tone == StopShapes.ToneLight)
+                {
+                    shine = true;
+                    Assert.That(kind, Is.EqualTo(StopShapes.KindRect), "el brillo del lago");
+                    Assert.That(box.xMin <= -120f && box.xMax >= 120f, Is.True, "a lo largo de la orilla");
+                    Assert.That(box.height, Is.EqualTo(1f), "1 dp");
+                }
+            }
+
+            Assert.That(shine, Is.True);
+            Assert.That(roofs, Is.GreaterThanOrEqualTo(4), "tejados a dos aguas");
+            Assert.That(cityTop, Is.InRange(16f, 20f), "la ciudad, de 16-20 dp");
+            Assert.That(cityMax - cityMin, Is.InRange(86f, 96f), "unos 90 dp de ancho");
+            Assert.That(StopShapes.ToneAlpha(tefe, StopShapes.ToneLight), Is.EqualTo(0.6f));
+            Assert.That(StopShapes.KeepsItsTone(tefe, StopShapes.ToneLight), Is.True, "el brillo es agua");
+            Assert.That(StopShapes.ToneColor(tefe, StopShapes.ToneBody), Is.EqualTo((Color)Palette.Hex(0xC9B79A)), "paredes cálidas");
+            Assert.That(StopShapes.ToneColor(tefe, StopShapes.ToneFeature), Is.EqualTo((Color)Palette.Hex(0x9A5A44)), "tejas");
+
+            string nauta = StopShapes.Nauta;
+            float nautaTop = 0f;
+            for (int p = 0; p < StopShapes.PrimitiveCount(nauta); p++)
+            {
+                StopShapes.PrimitiveAt(nauta, p, out int kind, out int tone, out Rect box);
+                if (tone == StopShapes.ToneBody)
+                {
+                    Assert.That(kind, Is.EqualTo(StopShapes.KindRect), "primitiva " + p + ": azoteas planas");
+                    nautaTop = Mathf.Max(nautaTop, box.yMax);
+                }
+
+                Assert.That(kind, Is.Not.EqualTo(StopShapes.KindTriangle), "primitiva " + p + ": sin tejados");
+            }
+
+            Assert.That(nautaTop, Is.InRange(6f, 8f), "Nauta, baja y lejana");
+            Assert.That(StopShapes.ToneAlpha(nauta, StopShapes.ToneBody), Is.EqualTo(0.7f), "con el velo de la bruma");
+            Assert.That(StopShapes.ToneColor(nauta, StopShapes.ToneBody), Is.EqualTo((Color)Palette.Hex(0xA5AEB8)), "fría");
+        }
+
+        [Test]
+        public void TheFramedFeatures_StayInTheCentral85Dp()
+        {
+            // Revisión de M2.4: el follaje del marco deja libres en el juego los ±85 dp centrales del héroe; ahí van las agujas de
+            // Ver-o-Peso, las cinco casas del Itaya con sus balsas (aleros incluidos: 1 dp más) y el pueblo de Nauta.
+            AssertCentral(StopShapes.TwoSpires, StopShapes.KindTriangle, StopShapes.ToneAccent, 3);
+            AssertCentral(StopShapes.Rafts, StopShapes.KindRect, StopShapes.ToneBody, 5);
+            AssertCentral(StopShapes.Rafts, StopShapes.KindTriangle, StopShapes.ToneAccent, 5);
+            AssertCentral(StopShapes.Rafts, StopShapes.KindRect, StopShapes.ToneShore, 5);
+            AssertCentral(StopShapes.Nauta, StopShapes.KindRect, StopShapes.ToneBody, 6);
+        }
+
+        // Las primitivas de la forma con ese tipo y tono quedan en los ±86 dp centrales (85 y 1 de alero); hay al menos min.
+        private static void AssertCentral(string shape, int kind, int tone, int min)
+        {
+            int found = 0;
+            for (int p = 0; p < StopShapes.PrimitiveCount(shape); p++)
+            {
+                StopShapes.PrimitiveAt(shape, p, out int k, out int t, out Rect box);
+                if (t != tone || k != kind)
+                {
+                    continue;
+                }
+
+                found++;
+                Assert.That(box.xMin, Is.GreaterThanOrEqualTo(-86f), shape + ", primitiva " + p);
+                Assert.That(box.xMax, Is.LessThanOrEqualTo(86f), shape + ", primitiva " + p);
+            }
+
+            Assert.That(found, Is.GreaterThanOrEqualTo(min), shape);
         }
 
         [Test]

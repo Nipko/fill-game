@@ -28,9 +28,12 @@ namespace AF.Tests.PlayMode
     /// <item><c>02f_board_stops_sheet</c>: la hoja única de 5 × 4, con las paradas en orden (0-4 en la primera fila, 15-19 en la
     /// última) y, de cada composición, solo la banda del héroe (<see cref="CropWidthDp"/> × <see cref="CropHeightDp"/> dp: de
     /// 48 dp sobre el horizonte a 32 bajo él, con el reflejo) a 1,5 px/dp, con el número de la parada arriba y un borde ámbar
-    /// en las que exigen asesor (<see cref="AdvisorStops"/>: Tefé, Puerto Nariño y el Itaya). La leyenda (número → id del sitio
-    /// → forma) sale en el log en las líneas <c>AF_SHEET</c> y en <c>docs/dev/prototipo-v0.md</c>; la hoja no lleva texto del
-    /// juego;</item>
+    /// en las que exigen asesor (<see cref="AdvisorStops"/>: Tefé, Puerto Nariño y el Itaya). La banda sale de una segunda
+    /// captura de la misma composición con la cabecera (pausa, nivel, monedas, Canoas y Reiniciar) y el follaje del marco
+    /// ocultos (<see cref="HideChrome"/>; revisión de M2.4), así que la hoja no lleva texto ni UI del juego y deja ver la silueta
+    /// entera. La leyenda (número → id del sitio → forma) sale en el log en las líneas <c>AF_SHEET</c> y en
+    /// <c>docs/dev/prototipo-v0.md</c>; la parada 11 lleva la alternativa de 07 §2.1 (solo la boca, sin el pueblo), y la
+    /// composición canónica, con el pueblo lejano, la decide el asesor;</item>
     /// <item><c>02f_board_stop_15_reserva</c>: la parada 15 con la reserva de su héroe (la Casa de Fierro), fuera de la hoja.</item>
     /// </list>
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.StopSheetSnapshotTests</c>
@@ -60,6 +63,9 @@ namespace AF.Tests.PlayMode
         /// <summary>Alto de la etiqueta con el número de la parada sobre cada casilla (px).</summary>
         public const int LabelHeight = 28;
 
+        /// <summary>Parada que va con la alternativa de 07 §2.1 (Puerto Nariño: solo la boca del río, sin el pueblo).</summary>
+        public const int AlternativeStop = 11;
+
         /// <summary>Grosor del borde de las casillas de asesor obligatorio (px).</summary>
         public const int AdvisorBorder = 4;
 
@@ -78,7 +84,10 @@ namespace AF.Tests.PlayMode
         /// <summary>Alto de la hoja (px).</summary>
         public const int SheetHeight = (Rows * (LabelHeight + TileHeight)) + ((Rows + 1) * Gutter);
 
-        /// <summary>Paradas con asesor obligatorio (07 §2.1 y §8.2): 7 (Tefé), 11 (Puerto Nariño) y 15 (Itaya).</summary>
+        /// <summary>
+        /// Paradas con asesor obligatorio: 11 (Puerto Nariño) y 15 (Itaya), que marca 07 §2.1, y 7 (Tefé), que marca la propuesta
+        /// del Mapa §10.3 (fila 7; 07 §2.1 no la marca: discrepancia que confirma el dueño).
+        /// </summary>
         public static readonly int[] AdvisorStops = { 7, 11, 15 };
 
         private const int DigitScale = 4;
@@ -125,8 +134,20 @@ namespace AF.Tests.PlayMode
                     string? shape = b.Shape;
                     AssertOwnShape(n, stop.Backdrop, b, shape);
                     string name = "02f_board_stop_" + n.ToString("00", CultureInfo.InvariantCulture);
-                    byte[] png = SnapshotKit.Capture();
-                    File.WriteAllBytes(Path.Combine(dir, name + ".png"), png);
+                    File.WriteAllBytes(Path.Combine(dir, name + ".png"), SnapshotKit.Capture());
+
+                    // Para la hoja, la misma composición sin la cabecera ni el follaje del marco (revisión de M2.4).
+                    byte[] png;
+                    float[] previous = HideChrome(view);
+                    try
+                    {
+                        png = SnapshotKit.Capture();
+                    }
+                    finally
+                    {
+                        RestoreChrome(view, previous);
+                    }
+
                     Assert.That(capture.LoadImage(png), Is.True, name);
                     Assert.That(capture.width, Is.EqualTo(SnapshotKit.Width), name);
                     Assert.That(capture.height, Is.EqualTo(SnapshotKit.Height), name);
@@ -145,7 +166,10 @@ namespace AF.Tests.PlayMode
 
                     string entry = n.ToString("00", CultureInfo.InvariantCulture) + " " + stop.Id + " " + (shape ?? b.Code ?? "-")
                         + (stop.Backdrop.Lut != null ? " (" + stop.Backdrop.Lut + ")" : string.Empty)
-                        + (Array.IndexOf(AdvisorStops, n) >= 0 ? " [asesor]" : string.Empty);
+                        + (Array.IndexOf(AdvisorStops, n) >= 0 ? " [asesor]" : string.Empty)
+                        + (n == AlternativeStop
+                            ? " [alternativa de 07 §2.1: solo la boca, sin el pueblo; la canónica, con el pueblo lejano, la decide el asesor]"
+                            : string.Empty);
                     legend.Append(entry).Append('\n');
                     Debug.Log("AF_STOP " + name + ": héroe " + b.HeroSource + " " + (shape ?? b.Code ?? "-") + ", " + view.LastStopProbe);
                 }
@@ -169,7 +193,8 @@ namespace AF.Tests.PlayMode
             File.WriteAllBytes(sheetPath, output.EncodeToPNG());
             Object.Destroy(output);
             Debug.Log("AF_SHEET 02f_board_stops_sheet: " + (Columns * Rows) + " composiciones, " + SheetWidth + " x " + SheetHeight
-                + " px; casilla " + TileWidth + " x " + TileHeight + " px (banda del héroe a 1,5 px/dp); borde ámbar = asesor obligatorio");
+                + " px; casilla " + TileWidth + " x " + TileHeight + " px (banda del héroe a 1,5 px/dp, sin la cabecera ni el follaje"
+                + " del marco); borde ámbar = asesor obligatorio");
             foreach (string line in legend.ToString().Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 Debug.Log("AF_SHEET " + line);
@@ -195,6 +220,42 @@ namespace AF.Tests.PlayMode
             bool code = backdrop.Code != null && backdrop.Code.StartsWith("codigo:", StringComparison.Ordinal);
             Assert.That(code, Is.True, "parada " + n + ": solo las líneas entre aguas van sin silueta");
             Assert.That(shape, Is.Null, "parada " + n);
+        }
+
+        // Lo que el juego pinta delante de la banda del héroe y no se juzga en la hoja: la cabecera (la capa del HUD, con la placa
+        // del nivel y Reiniciar, y la capa superior, con la pausa, las monedas y las Canoas) y el follaje de las cuatro esquinas.
+        private static readonly string[] ChromePaths = { "TopLayer", "Scene/FoliageTL", "Scene/FoliageTR", "Scene/FoliageBL", "Scene/FoliageBR" };
+
+        // Oculta (CanvasGroup al alfa 0) la cabecera y el follaje del marco para la captura de la hoja; devuelve el alfa que tenía
+        // cada uno (el HUD primero, luego ChromePaths), para RestoreChrome.
+        private static float[] HideChrome(GameScreen view)
+        {
+            var previous = new float[ChromePaths.Length + 1];
+            for (int i = 0; i < previous.Length; i++)
+            {
+                CanvasGroup group = ChromeGroup(view, i);
+                previous[i] = group.alpha;
+                group.alpha = 0f;
+            }
+
+            return previous;
+        }
+
+        // Deshace HideChrome: cada grupo, con su alfa de antes.
+        private static void RestoreChrome(GameScreen view, float[] previous)
+        {
+            for (int i = 0; i < previous.Length; i++)
+            {
+                ChromeGroup(view, i).alpha = previous[i];
+            }
+        }
+
+        // El CanvasGroup del elemento i de la cabecera o el follaje (0 = el HUD); lo crea si no lo tiene.
+        private static CanvasGroup ChromeGroup(GameScreen view, int i)
+        {
+            Transform? t = i == 0 ? view.Hud : view.Canvas.transform.Find(ChromePaths[i - 1]);
+            Assert.That(t, Is.Not.Null, i == 0 ? "Hud" : ChromePaths[i - 1]);
+            return t!.TryGetComponent(out CanvasGroup group) ? group : t.gameObject.AddComponent<CanvasGroup>();
         }
 
         // La parada n en su tablero de 2 filas, con la intro terminada.

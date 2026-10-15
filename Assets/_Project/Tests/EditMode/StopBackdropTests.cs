@@ -543,8 +543,9 @@ namespace AF.Tests.EditMode
                 Assert.That(r.yMax, Is.LessThanOrEqualTo(StopShapes.MaxAboveDp), shape + ": ≤ 48 dp sobre el horizonte");
                 Assert.That(r.yMax, Is.LessThanOrEqualTo(StopShapes.RecognizableDp), shape + ": cabe en los 30 dp que se ven con 2 filas");
                 Assert.That(r.yMin, Is.GreaterThanOrEqualTo(-StopShapes.MaxBelowDp), shape + ": ≤ 32 dp de orilla");
-                // Algo que se vea: sobre el horizonte o, en Tarapoto (revisión de M2.4), los delfines en el agua.
-                bool visible = shape == StopShapes.Tarapoto ? r.yMin <= -8f : r.yMax > 8f;
+                // Algo que se vea: sobre el horizonte (8 dp como poco: Nauta, la más baja y lejana) o, en Tarapoto (revisión de
+                // M2.4), los delfines en el agua.
+                bool visible = shape == StopShapes.Tarapoto ? r.yMin <= -8f : r.yMax >= 8f;
                 Assert.That(visible, Is.True, shape + ": algo sobre el horizonte (o en el agua, en Tarapoto)");
             }
 
@@ -851,8 +852,9 @@ namespace AF.Tests.EditMode
         public void TheSilhouetteBase_FadesInAtTheEdgesOfTheBox()
         {
             // Lo que llega al borde de la caja de 240 dp (el zócalo, la arena, el malecón, la selva lejana) entra con un degradado:
-            // ningún vértice de la silueta ni de su reflejo es opaco en el borde, y a los 16 dp (28 en la cocha de Pacaya-Samiria) ya
-            // lo es (M2.4: con las formas propias, la orilla no siempre es el tono que llega al borde, así que se mira todo vértice).
+            // ningún vértice de la silueta ni de su reflejo es opaco en el borde, y a los 16 dp ya lo es, también en Pacaya-Samiria,
+            // cuya cocha es una lente que no llega a los bordes (M2.4: con las formas propias, la orilla no siempre es el tono que
+            // llega al borde, así que se mira todo vértice).
             // Todas las paradas con silueta llegan a los dos bordes, sin excepción: desde la revisión de M2.4, también las balsas
             // del Itaya, con su orilla lejana; una forma que se separe del borde hace fallar el test.
             int checkedStops = 0;
@@ -883,7 +885,7 @@ namespace AF.Tests.EditMode
                         Assert.That(c.a, Is.EqualTo(0f), "parada " + n + ": sin arista vertical en el borde de la caja");
                     }
 
-                    inside |= Mathf.Abs(p.x - (left + StopShapes.EdgeFadeOf(_b.Shape!))) < 0.01f && c.a > 0.99f;
+                    inside |= Mathf.Abs(p.x - (left + StopShapes.EdgeFadeDp)) < 0.01f && c.a > 0.99f;
                 }
 
                 checkedStops++;
