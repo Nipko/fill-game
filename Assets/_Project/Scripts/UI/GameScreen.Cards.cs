@@ -33,7 +33,8 @@ namespace AF.UI
     /// level_card</c> lo anota con <c>"bite_demo"</c>.</para>
     /// <para>En desarrollo, <c>AF_STATE {"event":"level_card",…}</c> con el tipo, el nivel, la etiqueta, el estreno, las líneas y
     /// el tamaño del tutorial, los iconos y la escala; y, al terminar la entrada, <c>AF_LAYOUT {"screen":"level_card",…}</c> con
-    /// el rectángulo de la tarjeta (cualquier toque la cierra).</para>
+    /// el rectángulo de la tarjeta (cualquier toque la cierra). Si la tarjeta abierta se recoloca (otra escala u otra pantalla) y
+    /// cambia algo de eso, <c>AF_STATE level_card</c> vuelve a salir con lo que se ve.</para>
     /// <para><b>Hito p20</b> (M2.5; 02 §10; D-013, punto 8): en el 40, el 60… la tarjeta lleva la fila «Si lo superas, llegas a
     /// {lugar}» con la silueta del sitio (<see cref="LevelCardView.HitoStopFor"/> con <see cref="RiverStops"/>; la ventanita, con
     /// el agua de los niveles de esa parada). <c>AF_STATE level_card</c> la anota con <c>"hito"</c> (el id de la parada o
@@ -63,6 +64,7 @@ namespace AF.UI
                 {
                     _levelCard.Relayout();
                     RestoreBoardUnit();
+                    RefreshCardProbe(); // la escala y la fila del hito (que puede omitirse) cambian con ella
                 }
             }
         }
@@ -99,6 +101,24 @@ namespace AF.UI
             }
         }
 
+        // Tras recolocar la tarjeta abierta (otra escala u otra pantalla), AF_STATE level_card vuelve a salir si cambió algo
+        // (la escala, hito_omitted…): la sonda refleja siempre la tarjeta que se ve, no la del momento de mostrarla.
+        private void RefreshCardProbe()
+        {
+            LevelCardInfo? card = _levelCard.Card;
+            if (!DevProbe.Enabled || card == null || !_levelCard.Visible || _levelCard.Dismissing)
+            {
+                return;
+            }
+
+            string probe = CardProbeJson(card);
+            if (probe != _lastCardProbe)
+            {
+                _lastCardProbe = probe;
+                _probe.Event("level_card", probe);
+            }
+        }
+
         partial void CardsBuild()
         {
             _levelCard = new LevelCardView(_root, _art, OnLevelCardTapped);
@@ -112,6 +132,7 @@ namespace AF.UI
             {
                 _levelCard.Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
                 RestoreBoardUnit(); // al cambiar de pantalla, LayoutBoard pone después la unidad nueva
+                RefreshCardProbe();
             }
 
             if (_cardsBuilt)

@@ -50,8 +50,9 @@ namespace AF.UI
     /// nueva abajo, tras una raya: la silueta del sitio en una ventanita de vidrio de <see cref="HitoSilhouetteWidthDp"/> ×
     /// <see cref="HitoSilhouetteHeightDp"/> dp [P] con marco de madera (el cielo y el agua del sitio, y su héroe: el PNG de su
     /// ranura o, solo con <see cref="MapArtRule"/>, la silueta provisional de <see cref="StopShapes"/>; el Encuentro, que no
-    /// tiene héroe, con su pieza por código de las dos aguas) y «Si lo superas, llegas a {lugar}» (<c>map_hito_preview</c>) en
-    /// Nunito Bold y tinta, a 14 sp si cabe en <see cref="MaxHitoLines"/> líneas a 100 % y si no a 12, nunca menos. Sin nombre
+    /// tiene héroe, con su pieza por código de las dos aguas; el héroe, ampliado <see cref="HitoHeroZoom"/> veces y recortado por
+    /// el vidrio) y «Si lo superas, llegas a {lugar}» (<c>map_hito_preview</c>) en Nunito Bold y tinta, a 14 sp si cabe en
+    /// <see cref="MaxHitoLines"/> líneas a 100 % y si no a 12, nunca menos; la fila no pasa del ancho de su raya. Sin nombre
     /// del lugar en el idioma (en release, un nombre sin el visto bueno del asesor es «») no hay fila; sin silueta que pintar,
     /// la línea va sola. La tarjeta crece; si con la fila ya no cabe en el alto libre de la pantalla, la fila se omite
     /// (<see cref="HitoOmitted"/>) [P]. El 200 y siguientes la llevan solos cuando el catálogo tenga sus paradas.</para>
@@ -155,14 +156,47 @@ namespace AF.UI
         /// <summary>Sin silueta que pintar (la línea va sola) o sin fila.</summary>
         public const string HitoSilhouetteNone = StopBackdrop.HeroNone;
 
+        /// <summary>
+        /// Escala del héroe en la ventanita respecto a 64 / 240 [P] (revisión de M2.5): con el pie en el horizonte llena unos 70 %
+        /// del cielo y el vidrio lo recorta por los lados; entero a 4/15, dos sitios seguidos se veían iguales.
+        /// </summary>
+        public const float HitoHeroZoom = 1.25f;
+
         // Horizonte de la ventanita (dp desde arriba): 48 dp del héroe sobre él a la escala de 64 / 240 (12,8), redondeado.
         private const float HitoHorizonDp = 13f;
+
+        // Horizonte con la pieza por código de las dos aguas [P] (revisión de M2.5): más bajo, para que las aguas ocupen 13 de los
+        // 22 dp y se lean como dos ríos que se juntan, no como una playa.
+        private const float HitoCodeHorizonDp = 9f;
         private const float HitoGapDp = 8f;
         private const float HitoRadiusDp = 5f;
         private const float HitoGlossAlpha = 0.28f;
 
+        // La fila del hito y su raya dejan 24 dp a cada lado del ancho interior (inner - 48 dp).
+        private const float HitoRowInsetDp = 48f;
+
+        // Valor del héroe en la ventanita [P]: algo más oscuro que en el panorama, para que la silueta se despegue del cielo claro.
+        private const float HitoHeroValue = 0.8f;
+
+        // Remate de vidrio de la ventanita (D-003: vidrio y luz de juego) [P]: filo de luz arriba, sombra interior abajo y una
+        // diagonal de brillo en el tercio izquierdo.
+        private const float HitoEdgeDp = 1f;
+        private const float HitoEdgeLightAlpha = 0.5f;
+        private const float HitoEdgeShadowAlpha = 0.25f;
+        private const float HitoStreakDp = 6f;
+        private const float HitoStreakAlpha = 0.18f;
+
+        // El Negro del Encuentro en la ventanita: su agua, a medias con este marrón casi negro [P], para que contraste en valor
+        // con la cuña beige del Solimões.
+        private static readonly Color HitoBlackWater = new Color(0.11f, 0.07f, 0.04f, 1f);
+
         // Ondas del agua de la ventanita [P]: (dp bajo el horizonte, x inicial, x final), de tres en tres.
         private static readonly float[] HitoRipples = { 3f, 6f, 18f, 3f, 44f, 56f, 6f, 24f, 38f };
+
+        // Ondas de las dos aguas del Encuentro [P]: (dp desde arriba, x inicial, x final), de tres en tres; las del Negro, bajo la
+        // costura, y las del Solimões, dentro de la cuña (con el horizonte a 9 dp y el vértice de la cuña a 0,55 del agua).
+        private static readonly float[] HitoBlackRipples = { 14f, 3f, 13f, 17.5f, 12f, 26f, 20f, 34f, 50f };
+        private static readonly float[] HitoWhiteRipples = { 10.75f, 28f, 38f, 11.75f, 44f, 56f, 13.5f, 54f, 62f };
 
         private const float PadDp = 16f;
         private const float HeaderDp = 40f;
@@ -808,7 +842,7 @@ namespace AF.UI
                 }
                 else
                 {
-                    UiBuilder.Place(_hitoDivider.rectTransform, PadDp + 24f, y, inner - 48f, 2f);
+                    UiBuilder.Place(_hitoDivider.rectTransform, PadDp + (HitoRowInsetDp * 0.5f), y, inner - HitoRowInsetDp, 2f);
                     y = rowY + rowH + RowGapDp;
                 }
             }
@@ -841,7 +875,8 @@ namespace AF.UI
             _pop.anchoredPosition = new Vector2(left + (cardW * 0.5f), -(top + (cardH * 0.5f)));
 
             // La superficie de madera, de la escala de altos compartidos (ModalKit.SharedSurfaceHeight) y estirada al alto de la
-            // tarjeta: con 5 o 6 altos de tarjeta en 1-200, solo se generan y se guardan las superficies de 3 altos.
+            // tarjeta: en 1-200 solo se generan y se guardan las superficies de 5 altos (144, 180 y 281 dp; y, con la fila del hito
+            // p20, 225 y 352 dp [P], memoria de M2.5).
             ModalKit.Size(_panel, _surface, _art, 0f, 0f, cardW, cardH, true);
         }
 
@@ -1066,19 +1101,27 @@ namespace AF.UI
         }
 
         // La ventanita de 64 × 22 dp: el cielo del sitio (el del panorama con el tinte de su mundo y su luz), su agua, el héroe con
-        // el pie en el horizonte a 64 / 240 (el PNG o la silueta provisional, con su reflejo) o las dos aguas del Encuentro, y el
-        // brillo del vidrio encima. Todo recortado al vidrio (RectMask2D).
+        // el pie en el horizonte a 64 / 240 por HitoHeroZoom y algo más oscuro (el PNG o la silueta provisional, con su reflejo;
+        // el vidrio lo recorta por los lados) o las dos aguas del Encuentro, y el remate del vidrio encima: el brillo, el filo de
+        // luz arriba, la sombra interior abajo y la diagonal de brillo. Todo recortado al vidrio (RectMask2D).
         private void BuildHitoScene(RiverStop stop, string waterBase, Sprite? png, string? shape)
         {
             const float w = HitoSilhouetteWidthDp;
             const float h = HitoSilhouetteHeightDp;
-            const float hy = HitoHorizonDp;
-            const float k = HitoSilhouetteWidthDp / StopBackdrop.HeroWidthDp;
+            const float k = HitoSilhouetteWidthDp / StopBackdrop.HeroWidthDp * HitoHeroZoom;
+            bool codePiece = _hitoSource == HitoSilhouetteCode;
+            string? code = stop.Backdrop.Code;
+            float hy = codePiece ? HitoCodeHorizonDp : HitoHorizonDp;
             Color lut = StopBackdrop.LutOf(stop);
             StopBackdrop.SkyOf(stop, out Color tintTop, out Color tintHorizon, out float alphaTop, out float alphaHorizon);
             Color skyTop = Color.Lerp(Palette.SkyTop, tintTop, alphaTop) * lut;
             Color skyHorizon = Color.Lerp(Palette.SkyHorizon, tintHorizon, alphaHorizon) * lut;
             Color water = Palette.WaterBase(waterBase) * lut;
+            if (codePiece && code == StopBackdrop.CodeBlackWhite)
+            {
+                water = Color.Lerp(water, HitoBlackWater, 0.5f); // el Negro, oscuro: contraste de valor con la cuña beige
+            }
+
             skyTop.a = 1f;
             skyHorizon.a = 1f;
             water.a = 1f;
@@ -1096,14 +1139,15 @@ namespace AF.UI
             g.Rect(0f, hy - 2f, w, hy, shoreTop, shoreBottom);
             Color ripple = Palette.WaterLine;
             ripple.a = 0.45f;
-            for (int i = 0; i < HitoRipples.Length; i += 3)
+            if (!codePiece)
             {
-                float ry = hy + HitoRipples[i];
-                g.Rect(HitoRipples[i + 1], ry, HitoRipples[i + 2], ry + 0.75f, ripple, ripple);
+                for (int i = 0; i < HitoRipples.Length; i += 3)
+                {
+                    float ry = hy + HitoRipples[i];
+                    g.Rect(HitoRipples[i + 1], ry, HitoRipples[i + 2], ry + 0.75f, ripple, ripple);
+                }
             }
-
-            string? code = stop.Backdrop.Code;
-            if (_hitoSource == HitoSilhouetteCode)
+            else
             {
                 // Las dos aguas (07 §2.1): con el Negro, la cuña beige del Amazonas desde la izquierda, junto al horizonte, hasta
                 // el canto derecho; con el Tapajós, la franja beige lejana sobre el agua clara.
@@ -1113,22 +1157,33 @@ namespace AF.UI
                 if (code == StopBackdrop.CodeBlackWhite)
                 {
                     var a = new Vector2(0f, top);
-                    var c = new Vector2(w, hy + ((h - hy) * 0.7f));
+                    var c = new Vector2(w, hy + ((h - hy) * 0.55f));
                     g.Triangle(a, far, new Vector2(w, top), far, c, far);
 
-                    // La costura clara entre las dos aguas, a lo largo de la cuña.
+                    // La costura entre las dos aguas, apenas insinuada a lo largo de la cuña.
                     Color seam = Palette.WaterLine;
-                    seam.a = 0.8f;
-                    g.Quad(a, c, c + new Vector2(0f, 0.9f), a + new Vector2(0f, 0.9f), seam, seam);
+                    seam.a = 0.3f;
+                    g.Quad(a, c, c + new Vector2(0f, 0.5f), a + new Vector2(0f, 0.5f), seam, seam);
+
+                    // Ondas en cada agua, para que se lean como río: claras y tenues sobre el Negro, blancas en la cuña.
+                    Color blackRipple = Palette.WaterLine;
+                    blackRipple.a = 0.35f;
+                    AddRipples(g, HitoBlackRipples, blackRipple);
+                    var whiteRipple = new Color(1f, 1f, 1f, 0.45f);
+                    AddRipples(g, HitoWhiteRipples, whiteRipple);
                 }
                 else
                 {
                     g.Rect(0f, top, w, hy + ((h - hy) * 0.45f), far, far);
+                    AddRipples(g, HitoBlackRipples, ripple);
                 }
             }
-            else if (_hitoSource == HitoSilhouetteShape && shape != null)
+
+            // El héroe, algo más oscuro que en el panorama para que se despegue del cielo (HitoHeroValue).
+            var heroLut = new Color(lut.r * HitoHeroValue, lut.g * HitoHeroValue, lut.b * HitoHeroValue, 1f);
+            if (_hitoSource == HitoSilhouetteShape && shape != null)
             {
-                StopShapes.Draw(g, shape, w * 0.5f, hy, k, lut, stop.Backdrop.Lut, water, StopBackdrop.ReflectionAlpha,
+                StopShapes.Draw(g, shape, w * 0.5f, hy, k, heroLut, stop.Backdrop.Lut, water, StopBackdrop.ReflectionAlpha,
                     StopBackdrop.ReflectionDp);
             }
 
@@ -1140,16 +1195,36 @@ namespace AF.UI
             {
                 // El PNG del héroe (240 × 80 dp, pie en el horizonte: 48 encima y 32 debajo) a la misma escala.
                 _hitoHero.sprite = png;
-                _hitoHero.color = new Color(lut.r, lut.g, lut.b, 1f);
+                _hitoHero.color = heroLut;
                 UiBuilder.Place(_hitoHero.rectTransform, (w * 0.5f) - (StopBackdrop.HeroWidthDp * k * 0.5f),
                     hy - (StopBackdrop.HeroAboveDp * k), StopBackdrop.HeroWidthDp * k, StopBackdrop.HeroHeightDp * k);
             }
 
-            // El brillo del vidrio: una veladura blanca que se apaga hacia el horizonte.
+            // El remate del vidrio: una veladura blanca que se apaga hacia el horizonte, el filo de luz arriba, la sombra interior
+            // abajo y una diagonal de brillo en el tercio izquierdo, que se apaga hacia abajo (sobre el agua oscura, entera, se leía
+            // como una barra gris).
             var gloss = new Color(1f, 1f, 1f, HitoGlossAlpha);
             var clear = new Color(1f, 1f, 1f, 0f);
             _hitoGloss.Rect(0f, 0f, w, h * 0.45f, gloss, clear);
+            var edgeLight = new Color(1f, 1f, 1f, HitoEdgeLightAlpha);
+            _hitoGloss.Rect(0f, 0f, w, HitoEdgeDp, edgeLight, edgeLight);
+            var edgeShadow = new Color(0f, 0f, 0f, HitoEdgeShadowAlpha);
+            _hitoGloss.Rect(0f, h - HitoEdgeDp, w, h, edgeShadow, edgeShadow);
+            var streak = new Color(1f, 1f, 1f, HitoStreakAlpha);
+            const float streakX = 12f;
+            const float slant = 8f;
+            _hitoGloss.Quad(new Vector2(streakX, 0f), new Vector2(streakX + HitoStreakDp, 0f),
+                new Vector2(streakX + HitoStreakDp - slant, h), new Vector2(streakX - slant, h), streak, clear);
             _hitoGloss.Commit();
+        }
+
+        // Ondas de la ventanita: (dp desde arriba, x inicial, x final), de tres en tres, de 0,75 dp de grueso.
+        private static void AddRipples(StopShapeGraphic g, float[] ripples, Color color)
+        {
+            for (int i = 0; i < ripples.Length; i += 3)
+            {
+                g.Rect(ripples[i + 1], ripples[i], ripples[i + 2], ripples[i] + 0.75f, color, color);
+            }
         }
 
         // Fila del hito: la ventanita (si la hay) y la línea a su derecha, centradas en la tarjeta. La línea va a 14 sp si a 100 %
@@ -1160,7 +1235,10 @@ namespace AF.UI
             bool window = _hitoFrame.gameObject.activeSelf;
             float winW = window ? HitoSilhouetteWidthDp + (2f * HitoFrameDp) : 0f;
             float winH = window ? HitoSilhouetteHeightDp + (2f * HitoFrameDp) : 0f;
-            float maxText = inner - (window ? winW + HitoGapDp : 0f);
+            // La fila no pasa del ancho de su raya (inner - 48 dp: el margen de unos 32 dp de la raya, la descripción y las demás
+            // filas), también con un nombre corto que cabría en una línea más ancha.
+            float rowMax = inner - HitoRowInsetDp;
+            float maxText = rowMax - (window ? winW + HitoGapDp : 0f);
             string text = _hitoText.text;
             _hitoBaseSp = HitoSizesSp[HitoSizesSp.Length - 1];
             for (int i = 0; i < HitoSizesSp.Length; i++)

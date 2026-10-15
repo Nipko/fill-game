@@ -21,8 +21,8 @@ namespace AF.Tests.PlayMode
     /// y 180 en 1-200: L ≥ 40, L mod 20 = 0 y <c>ArrivalOnWin(L)</c>; el 200 aún no tiene parada); la fila con el sitio correcto,
     /// su silueta de 64 × 22 dp en su ventanita (el Encuentro del 40, con su pieza por código; los demás, con su silueta
     /// provisional, que solo sale con <see cref="MapArtRule"/>), la línea en Nunito Bold de 14 sp en 2 líneas como mucho y nunca
-    /// por debajo de 12, sin desbordes y dentro de la tarjeta, que crece y se sigue cerrando con 1 toque; las tarjetas del 30 y el
-    /// 50 no cambian; sin el nombre del lugar en el idioma no hay fila; y el 100 cabe a 360 × 780 y a «360 × 640» (16:9), a 100 %
+    /// por debajo de 12, sin desbordes y dentro de la tarjeta, que crece y se sigue cerrando con 1 toque; el 30 y el 50 siguen sin
+    /// tarjeta y una tarjeta etiquetada que no es hito (el 46 y el 52) no cambia; sin el nombre del lugar en el idioma no hay fila; y el 100 cabe a 360 × 780 y a «360 × 640» (16:9), a 100 %
     /// y al 130 %, y también en un lienzo literal de 360 × 640 dp; si no cupiera, la fila se omitiría (<see cref="LevelCardView.HitoOmitted"/>).
     /// </summary>
     public sealed class LevelCardHitoTests
@@ -195,18 +195,38 @@ namespace AF.Tests.PlayMode
                 Assert.That(card.HitoText, Is.Null, where);
                 Assert.That(card.HitoRowRect, Is.Null, where);
                 Assert.That(card.HitoSilhouette, Is.EqualTo(LevelCardView.HitoSilhouetteNone), where);
-                if (card.Visible)
-                {
-                    // La misma tarjeta que con el Show de siempre: mismo alto, sin fila.
-                    float height = card.Panel.rect.height;
-                    card.Show(card.Card!, false, view.CanvasWidth, view.CardCanvasHeight, view.SafeTopDp, view.CardSafeBottom);
-                    Assert.That(card.Panel.rect.height, Is.EqualTo(height).Within(0.01f), where);
-                    Assert.That(view.LastCardProbe, Does.Contain("\"hito\":null"), where);
-                }
-                else
-                {
-                    Assert.That(view.LastCardProbe, Is.Null, "sin tarjeta: " + where);
-                }
+
+                // El 30 y el 50 son «normal» y sin estreno: no tienen tarjeta, ni antes ni ahora.
+                Assert.That(card.Visible, Is.False, "sin tarjeta: " + where);
+                Assert.That(boot.Flow!.Phase, Is.Not.EqualTo(FlowPhase.LevelCard), where);
+                Assert.That(view.LastCardProbe, Is.Null, "sin tarjeta, sin sonda: " + where);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator TaggedCardThatIsNotAHito_Unchanged()
+        {
+            // Una tarjeta etiquetada que no es hito p20 (el 46, «Difícil» de p6, y el 52, de p12) sale igual que con el Show sin
+            // parada: mismo alto y sin fila.
+            foreach (int level in new[] { 46, 52 })
+            {
+                yield return CardSetup.Load(level);
+                GameBootstrap boot = GameBootstrap.Current!;
+                GameScreen view = boot.View!;
+                LevelCardView card = view.LevelCard;
+                string where = "nivel " + level;
+                Assert.That(card.Visible, Is.True, "tarjeta de dificultad: " + where);
+                Assert.That(card.Card!.Level, Is.EqualTo(level), where);
+                Assert.That(LevelCardView.HitoStopFor(level, view.RiverStops), Is.Null, where);
+                Assert.That(card.HitoText, Is.Null, where);
+                Assert.That(card.HitoRowRect, Is.Null, where);
+                Assert.That(view.LastCardProbe, Does.Contain("\"hito\":null"), where);
+                Assert.That(view.LastCardProbe, Does.Contain("\"hito_silhouette\":\"" + LevelCardView.HitoSilhouetteNone + "\""), where);
+                Assert.That(view.LastCardProbe, Does.Contain("\"hito_omitted\":false"), where);
+                float height = card.Panel.rect.height;
+                card.Show(card.Card!, false, view.CanvasWidth, view.CardCanvasHeight, view.SafeTopDp, view.CardSafeBottom);
+                Assert.That(card.Panel.rect.height, Is.EqualTo(height).Within(0.01f), "mismo alto que sin la fila: " + where);
+                Assert.That(card.HitoText, Is.Null, where);
             }
         }
 
@@ -339,6 +359,8 @@ namespace AF.Tests.PlayMode
                     string where = "nivel " + level + " a " + screen.x + " × " + screen.y;
                     Assert.That(card.HitoLine.fontSize, Is.EqualTo(baseSp * 1.3f).Within(0.01f), where);
                     Assert.That(card.Panel.rect.height, Is.GreaterThan(baseHeight), where);
+                    Assert.That(view.LastCardProbe, Does.Contain("\"scale\":1.30"), "la sonda, con la escala nueva: " + where);
+                    Assert.That(view.LastCardProbe, Does.Contain("\"hito_omitted\":false"), where);
                     AssertRow(view, where, 1.3f);
                     CardSetup.AssertPanelOnScreen(view);
                 }
@@ -469,8 +491,14 @@ namespace AF.Tests.PlayMode
                 Assert.That(w.xMax, Is.LessThanOrEqualTo(text.xMin), "la ventanita a la izquierda de la línea: " + where);
                 Assert.That(w.yMin, Is.GreaterThanOrEqualTo(row.yMin - 0.5f), where);
                 Assert.That(w.yMax, Is.LessThanOrEqualTo(row.yMax + 0.5f), where);
-                Assert.That(card.HitoScene.MinX, Is.GreaterThanOrEqualTo(-0.01f), "la malla de la ventanita, en el vidrio: " + where);
-                Assert.That(card.HitoScene.MaxX, Is.LessThanOrEqualTo(LevelCardView.HitoSilhouetteWidthDp + 0.01f), where);
+                // La malla, centrada en el vidrio: el héroe ampliado (HitoHeroZoom) sobresale por los lados y el vidrio lo recorta.
+                Assert.That(card.HitoGlass.GetComponent<UnityEngine.UI.RectMask2D>(), Is.Not.Null, "el vidrio recorta la escena: " + where);
+                float half = LevelCardView.HitoSilhouetteWidthDp * 0.5f * LevelCardView.HitoHeroZoom;
+                float mid = LevelCardView.HitoSilhouetteWidthDp * 0.5f;
+                Assert.That(card.HitoScene.MinX, Is.GreaterThanOrEqualTo(mid - half - 0.01f), "la malla de la ventanita, en torno al vidrio: " + where);
+                Assert.That(card.HitoScene.MaxX, Is.LessThanOrEqualTo(mid + half + 0.01f), where);
+                Assert.That(card.HitoScene.MinX, Is.LessThanOrEqualTo(0.01f), "el cielo llena el vidrio: " + where);
+                Assert.That(card.HitoScene.MaxX, Is.GreaterThanOrEqualTo(LevelCardView.HitoSilhouetteWidthDp - 0.01f), where);
             }
         }
     }
