@@ -10,6 +10,8 @@ Fuentes: `docs/dev/decisiones.md` (D-018, idiomas; D-017, Frutas del río; D-013
 
 Valen para todo texto que el jugador ve u oye: UI, tutorial, tienda, Ajustes, modales, avisos, notificaciones, etiquetas del lector de pantalla y datos de fruta, fauna y del Mapa.
 
+**Alcance:** estas reglas valen para todo texto nuevo y para el código que se reescribe. La deuda que ya existe (los textos de `StoreCatalog` y `StuckModal` y los marcadores posicionales `{0}` de `UiText`) la migran sus tareas de la tanda 4 (L1, L2b, S12 y L3); mientras tanto no bloquea la revisión de otras tareas ni justifica migrar textos fuera de la tarea propia.
+
 - **Ningún texto visible fuera de las tablas:** hoy `UiText`; desde que existan, `Assets/_Project/Data/Loc/strings.csv` (UI) y `facts.csv` (textos largos). Nada de texto en catálogos, `switch`, escenas, prefabs, imágenes ni sombreadores. `AF.GameFlow` y `AF.Levels` devuelven claves, nunca texto.
 - **Una clave por frase completa,** estable, con la forma que fijen 08 §4.7 y el glosario §10:
   - las claves de UI, en `snake_case`, como las del glosario §10;
@@ -25,6 +27,6 @@ Valen para todo texto que el jugador ve u oye: UI, tutorial, tienda, Ajustes, mo
 - **Sin `ToUpper` ni `ToLower`** (tampoco sus variantes `Invariant`) sobre texto visible: si una etiqueta va en mayúsculas, se escribe así en la tabla.
 - **La analítica y Remote Config llevan claves o ID, nunca texto** (por ejemplo, el `fact_id` de `af_river_fact_shown`).
 - **Lo cultural nace `pendiente_asesor`** (en su columna de estado): fruta, fauna, flora, pueblos y lugares. No se inventan nombres ni traducciones: salen del glosario (§3 y §8-§10) y del asesor.
-- **Cada cadena nueva lleva `context` y `max_chars`.** El contexto dice dónde sale, quién habla y qué es cada marcador.
+- **Cada cadena nueva lleva `context` y `max_chars`.** El contexto dice dónde sale, quién habla y qué es cada marcador, con una captura de referencia; en los textos largos (`facts.csv`), además, la fuente del dato con su URL (08 §4.7; propuesta de idiomas §3.4).
 - **Una traducción que falta queda vacía:** nunca se rellena con otro idioma ni se mezclan idiomas en pantalla. Un texto largo sin traducir no se muestra (D-018, Q10-A).
 - El idioma falso `en-XA` es solo para desarrollo y pruebas; nunca se ofrece en un build de release.
