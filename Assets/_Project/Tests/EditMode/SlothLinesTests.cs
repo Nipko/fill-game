@@ -174,10 +174,30 @@ namespace AF.Tests.EditMode
             var none = new SlothLine(SlothScreen.Fail, SlothGesture.Encourage, SlothMoment.Win, SlothData.NoLine, null, 0, false);
             Assert.That(UiText.TrySlothLine(in none, out text), Is.False);
 
+            // {n} del nivel, sin separador de miles (como «Nivel {n}» del HUD).
+            var back = new SlothLine(SlothScreen.Home, SlothGesture.Wave, SlothMoment.Return, 1, SlothLines.KeyOf(SlothMoment.Return, 1), 1000, true);
+            Assert.That(UiText.TrySlothLine(in back, out text), Is.True);
+            Assert.That(text, Is.EqualTo("El río sigue donde lo dejaste: nivel 1000."));
+
             Loc.Configure(LocSetUpFixture.Catalog, LocLocale.SourceLocale, false);
             Assert.That(UiText.TrySlothLine(in plain, out text), Is.False, "release: pendiente del asesor, no se enseña");
             Assert.That(text, Is.Empty);
             Assert.That(UiText.SlothFact(SlothLines.SlothFactKeys[0]), Is.Empty, "release: el dato sin aprobar es «»");
+
+            // En otro idioma, en release, ni el borrador de e.4 (traducido) ni nada sin aprobado_es y revisado_nativo.
+            foreach (string locale in new[] { LocLocale.English, LocLocale.PortugueseBrazil })
+            {
+                Loc.Configure(LocSetUpFixture.Catalog, locale, false);
+                Assert.That(UiText.TrySlothLine(in plain, out text), Is.False, locale + ": release sin revisión nativa");
+                Assert.That(text, Is.Empty, locale);
+                Assert.That(UiText.TrySlothLine(in streak, out text), Is.False, locale + ": release sin revisión nativa");
+                Assert.That(text, Is.Empty, locale);
+            }
+
+            // En desarrollo, en inglés, el texto inglés (nunca mezcla idiomas).
+            Loc.Configure(LocSetUpFixture.Catalog, LocLocale.English, true);
+            Assert.That(UiText.TrySlothLine(in plain, out text), Is.True);
+            Assert.That(text, Is.EqualTo("Step by step. You'll get the next one."));
         }
 
         // ------------------------------------------------------------------------------------------- victoria
@@ -302,6 +322,37 @@ namespace AF.Tests.EditMode
             Assert.That(Victory(103, EmptySlot, ctx, Win(streak: 5)).Moment, Is.EqualTo(SlothMoment.Streak));
             Assert.That(Victory(103, EmptySlot, ctx, Win(streak: 3)).Moment, Is.EqualTo(SlothMoment.Win), "la Crecida cuenta desde 4");
             Assert.That(Victory(103, EmptySlot, ctx, Win()).Moment, Is.EqualTo(SlothMoment.Win));
+        }
+
+        [Test]
+        public void Victory_DebutLineThatWouldRepeat_FallsToTheNextBank()
+        {
+            // Dos estrenos de mecánica seguidos con frase: el segundo no repite sloth_line_debut_01 (d.10), baja a streak o win.
+            int[] last = NewLast();
+            last[(int)SlothMoment.Debut] = 0;
+            SlothContext ctx = Ctx(last: last);
+            SlothLine streak = Victory(103, EmptySlot, ctx, Win(debut: SlothDebut.Mechanic, streak: 5));
+            Assert.That(streak.Speaks, Is.True);
+            Assert.That(streak.Moment, Is.EqualTo(SlothMoment.Streak));
+            SlothLine win = Victory(103, EmptySlot, ctx, Win(debut: SlothDebut.Mechanic));
+            Assert.That(win.Speaks, Is.True);
+            Assert.That(win.Moment, Is.EqualTo(SlothMoment.Win));
+
+            // Otro tipo de estreno sí dice su frase.
+            Assert.That(Victory(103, EmptySlot, ctx, Win(debut: SlothDebut.Fruit)).Key, Is.EqualTo("sloth_line_debut_02"));
+
+            // Con SlothSession: el segundo estreno de mecánica no repite la frase.
+            var data = new SlothData();
+            var first = new SlothSession(data, true, true, true, 1, 4);
+            SlothContext c1 = first.Context.WithVictory(Win(debut: SlothDebut.Mechanic));
+            SlothLine l1 = SlothLines.ForVictory(103, EmptySlot, in c1);
+            Assert.That(l1.Key, Is.EqualTo("sloth_line_debut_01"));
+            first.Record(in l1, in c1);
+            var second = new SlothSession(data, true, true, true, 1, 4);
+            SlothContext c2 = second.Context.WithVictory(Win(debut: SlothDebut.Mechanic));
+            SlothLine l2 = SlothLines.ForVictory(107, EmptySlot, in c2);
+            Assert.That(l2.Speaks, Is.True);
+            Assert.That(l2.Key, Is.Not.EqualTo("sloth_line_debut_01"));
         }
 
         [Test]

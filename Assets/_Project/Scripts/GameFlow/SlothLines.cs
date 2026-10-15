@@ -18,8 +18,9 @@ namespace AF.GameFlow
     /// <para><b>Topes, en el orden de d.6, punto 5:</b> como mucho <c>ui_sloth_lines_per_session_max</c> frases por sesión &gt;
     /// nunca frase en dos pantallas seguidas &gt; una sola línea de texto por victoria &gt; hito o 1 de cada N. Única excepción:
     /// el fin de mundo (salvo el 10) habla siempre. En todos los momentos, nunca la misma frase que la última vista del mismo
-    /// momento (<c>sloth.last_line</c>) cuando el banco da otra; las frases fijas de un caso (la del fin de mundo, la del primer
-    /// Muy difícil, cada tipo de estreno, el saludo de la mañana y la n.º 21) no tienen alternativa [P].</para>
+    /// momento (<c>sloth.last_line</c>) cuando el banco da otra. La frase fija de un estreno que repetiría la última del momento
+    /// cede al banco siguiente (streak &gt; win). Las frases fijas sin alternativa (la del fin de mundo, la del primer Muy
+    /// difícil, el saludo de la mañana y la n.º 21) se repiten [P] (pendiente del dueño).</para>
     /// <para><b>Fallo, reinicio e inicio:</b> <see cref="ForFail"/>, <see cref="ForRestartNotice"/> y <see cref="ForHome"/>.
     /// Con <c>settings.sloth_messages</c> apagado, solo gestos; con <c>ui_sloth_enabled</c> apagado, nada.</para>
     /// </summary>
@@ -238,7 +239,8 @@ namespace AF.GameFlow
                 return Pick(SlothScreen.Victory, gesture, SlothMoment.Hard, AllOf(HardKeys), seed, in c, 0);
             }
 
-            if (v.Debut != SlothDebut.None)
+            // Cada tipo de estreno tiene su frase fija: si repetiría la última del momento, cede al banco siguiente (d.10).
+            if (v.Debut != SlothDebut.None && c.LastLineOf(SlothMoment.Debut) != (int)v.Debut - 1)
             {
                 return Speak(SlothScreen.Victory, gesture, SlothMoment.Debut, (int)v.Debut - 1, 0);
             }

@@ -31,19 +31,28 @@ namespace AF.UI
         /// <summary>
         /// El texto de la frase de <paramref name="line"/> en el idioma de la UI (con su <c>{n}</c>: la Crecida o el nivel), o
         /// false si no habla o si la frase no se puede enseñar: sin texto en este idioma o, en release
-        /// (<see cref="Loc.ShowUnapproved"/> apagado), sin aprobar por el asesor. Nunca mezcla idiomas.
+        /// (<see cref="Loc.ShowUnapproved"/> apagado), sin aprobar por el asesor o, en otro idioma, sin revisión nativa
+        /// (<see cref="LocCatalog.IsApproved"/>). Nunca mezcla idiomas.
         /// </summary>
         public static bool TrySlothLine(in SlothLine line, out string text)
         {
             text = string.Empty;
             string? key = line.Key;
-            if (key == null || !Visible(key))
+            if (key == null || !SlothLineShown(key))
             {
                 return false;
             }
 
-            text = line.Arg > 0 ? Format(key, LocArgs.Of("n", line.Arg)) : Loc.T(key);
+            // {n} es la Crecida o el nivel: sin separador de miles, como «Nivel {n}» del HUD (UiText.LevelN).
+            text = line.Arg > 0 ? Format(key, LocArgs.OfDigits("n", line.Arg)) : Loc.T(key);
             return text.Length > 0;
+        }
+
+        // Una frase de TiTino se enseña si tiene texto y, en release, con la regla de aprobación por idioma (08 §4.7; D-018,
+        // Q5-A y Q10-A; LocTable.IsApprovedAt): el español en aprobado_es y, en otro idioma, además revisado_nativo.
+        private static bool SlothLineShown(string key)
+        {
+            return Loc.Has(key) && (Loc.ShowUnapproved || Loc.Catalog.IsApproved(key, Loc.Locale));
         }
 
         /// <summary>Dato del perezoso de <paramref name="key"/> (<c>facts.csv</c>), o «» si falta o no está aprobado en release.</summary>
