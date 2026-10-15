@@ -30,6 +30,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-022 | 2026-10-14 | Respuestas a las preguntas 45, 47-50 y 51 de `docs/GDD.md` §6.3 | Decidida por el dueño (la recomendación de la 45 y de las 47-50; la 51, «traducción con ia»: (b)). Documentación aplicada el 2026-10-14 (T58). Tareas que deja: la línea única de la victoria con su prioridad y la clave `ui_fruit_line_every_n_levels` [P] (45), la burbuja de Revelar sin aviso (48), la cabecera de las tablas de textos (49) y el «Otro dato» de la parada k = 32 (50) |
 | D-023 | 2026-10-14 | Decisiones de detalle de la tanda 4: preguntas de sus planes y [P] del plan consolidado | Decidida por el dueño (la recomendación de cada pregunta, por «Sí, aplica las recomendadas también»): las P-M1 a P-M8 del plan del Mapa del río, las preguntas del plan consolidado de la tanda 4 (textos del Mapa en `facts.csv`, firma de las variantes de `pack_schema` 3, máscara de la tinaja en `relief`, Cuia de la casa fuera de la 1.0, idioma automático y región, alto de la llegada y tabla de D2) y los detalles [P] del plan. Documentación aplicada el 2026-10-14 (D1, que absorbe M1.7). En implementación: tanda 4 |
 | D-024 | 2026-10-14 | Reglas de la Hoja atada: la capacidad de su llave y una por fruta | Decidida por el dueño (las recomendadas de la revisión de K3a, por «Sí, aplica las recomendadas también»). Documentación aplicada el 2026-10-14 (FIXD). En implementación: FIXK, en el núcleo; el generador y level-qa la heredan por `LevelValidation` |
+| D-025 | 2026-10-14 | Un solo formato de cifras, también en los precios | Decidida por el dueño («unificar formatos», tras la prueba de la tanda 4). La regla (región del teléfono, Q8-A) es [P] de este registro. Sin implementar |
 
 ---
 
@@ -2401,3 +2402,34 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Archivos afectados.**
 - **Documentación** (2026-10-14, FIXD): este registro y los de «Qué cambia en el GDD».
 - **Código** (tanda 4, FIXK): `Packages/com.amazonfill.core/Runtime/AF.Core/Mechanics/HojaAtadaMechanic.cs` y `Board/LevelValidation.cs`, con sus tests y `dotnet/AF.Core.Tests/DotnetOnly/FutilePropertyTests.cs`.
+
+---
+
+## D-025 · Un solo formato de cifras, también en los precios
+
+- **Fecha:** 2026-10-14.
+- **Estado:** decidida por el dueño («unificar formatos») tras la prueba de la ola 1 de la tanda 4 (`docs/dev/traspaso/pruebas-telefono-2026-10-14-tanda4.md`, observación 4). Que la regla sea la de la región del teléfono es la [P] de este registro, coherente con Q8-A; el dueño la puede cambiar. **Sin implementar.**
+
+**Contexto.**
+- Q8-A de D-018: las cifras del juego van con el formato de la región del teléfono, con una sola función (`Loc.Number`; sin región, es-CO [P]).
+- Los precios de la tienda salen, en cambio, con el formato fijo de 05 §4.2 por moneda (`StoreCatalog`: «COP 3.900», «BRL 4,99»).
+- Con el teléfono en en-US, el mismo botón mezcla los dos: «Puñado de semillas 1,000 · COP 3.900».
+
+**Decisión.**
+1. **Todas las cifras de la interfaz llevan un solo formato,** el de `Loc.Number` (región del teléfono; sin región, es-CO [P]): semillas, canoas, premios, contadores y **precios**.
+2. **Precio = código ISO 4217 de la moneda + importe con ese formato** y los decimales de la moneda (0 en COP y MXN; 2 en el resto, 05 §4.2). Los importes de 05 §4.2 no cambian, solo su escritura. Ejemplos:
+
+   | Teléfono | Botón |
+   |---|---|
+   | en-US | «1,000 · COP 3,900» |
+   | es-CO | «1.000 · COP 3.900» |
+   | es-MX | «1,000 · MXN 19» |
+   | pt-BR | «1.000 · BRL 4,99» |
+3. **Con la tienda real** (Unity IAP 5.4.4 y Play Billing), el precio se compone desde el importe y la moneda del producto (`priceAmountMicros` y el código de moneda), con la misma función, en lugar de la cadena ya formateada de Google Play [P]. Así la tienda simulada y la real se ven iguales.
+
+**Consecuencias.**
+- **Código:** `StoreCatalog`/`FakeStoreService.PriceText` y todos los textos con precio pasan por `Loc.Number`, con tests de las cuatro regiones de arriba. Más adelante, el adaptador de `AF.IAP`.
+- **GDD:** 05 §4.2 (cómo se escriben los precios) y glosario §10 (formato de cifras).
+
+**Cómo revertir.** Volver al formato fijo por moneda de 05 §4.2, siempre con una decisión nueva que sustituya a D-025.
+
