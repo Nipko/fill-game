@@ -121,11 +121,13 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// Medida para el dueño (revisión de TL1, sin aserción hasta su decisión): cuánto pisa la tropa lateral la franja de la
-        /// barra de la Crecida (07 §7.4: x 348-356, y 120-560, desde el nivel 25), y el hueco que quedaría a la derecha entre la
-        /// línea de 8 dp de la cuia y la barra.
+        /// Medida para el dueño (revisión de TL1; <c>[Explicit]</c>: es un informe, no una prueba, hasta que el dueño elija entre
+        /// las opciones (a), (b) y (c) de D-021): cuánto pisa la tropa lateral la franja de la barra de la Crecida (07 §7.4:
+        /// x 348-356, y 120-560, desde el nivel 25), y el hueco que quedaría a la derecha entre la línea de 8 dp de la cuia y la
+        /// barra. Con (a), pasará a aserción: ninguna pieza del miquito de la derecha en esa franja desde el nivel 25.
         /// </summary>
         [UnityTest]
+        [Explicit("medida para el dueño, D-021")]
         public IEnumerator SideTroop_MeasuresTheCrecidaBarStrip([Values(86, 143)] int level)
         {
             GameScreen.SimulatedScreen = Screen1080;
@@ -233,6 +235,119 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
+        /// La fruta lanzada se oculta solo mientras corta la cabeza de su miquito (<see cref="IntroChoreography.SideClearMs"/>), y
+        /// eso es poco (revisión de TL1): como mucho 80 ms o, en los vuelos largos, el 25 % del vuelo, así que nunca desaparece
+        /// de la mano para aparecer a media trayectoria. Con la mano por debajo del hombro (guion §4.4), en los dos modelos y
+        /// las dos versiones.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SideThrow_HidesTheThrownFruitOnlyBriefly([Values(86, 143)] int level, [Values(1080, 720)] int widthPx)
+        {
+            GameScreen.SimulatedScreen = widthPx == 1080 ? Screen1080 : Screen720;
+            yield return LoadLevel(level);
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            foreach (int duration in new[] { 1400, 800 })
+            {
+                view.DebugReplayIntro(duration, false);
+                IntroChoreography plan = view.Intro.Plan;
+                Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Side));
+                float worst = 0f;
+                float worstShare = 0f;
+                for (int k = 0; k < plan.FruitCount; k++)
+                {
+                    float tau = plan.FruitImpactMs[k] - plan.FruitReleaseMs[k];
+                    float clear = plan.SideClearMs[k];
+                    string at = "nivel " + level + ", " + widthPx + " px, T " + duration + ", fruta " + k + ": oculta " + clear + " ms de un vuelo de " + tau + " ms";
+                    Assert.That(clear, Is.LessThanOrEqualTo(Mathf.Max(MaxHiddenMs, MaxHiddenShare * tau)), at);
+                    worst = Mathf.Max(worst, clear);
+                    worstShare = Mathf.Max(worstShare, clear / Mathf.Max(1f, tau));
+                }
+
+                Debug.Log("AF_SIDE_HIDDEN nivel " + level + " a " + widthPx + " px, T " + duration + ": la fruta lanzada se oculta como mucho "
+                    + worst.ToString("0", CultureInfo.InvariantCulture) + " ms y como mucho el " + (100f * worstShare).ToString("0", CultureInfo.InvariantCulture)
+                    + " % de su vuelo; ocultas/vuelo (ms):" + HiddenList(plan));
+            }
+        }
+
+        // Tope de lo que una fruta lanzada se oculta tras salir de la mano (revisión de TL1): 80 ms o el 25 % del vuelo.
+        private const float MaxHiddenMs = 80f;
+        private const float MaxHiddenShare = 0.25f;
+
+        private static string HiddenList(IntroChoreography plan)
+        {
+            var line = new System.Text.StringBuilder();
+            for (int k = 0; k < plan.FruitCount; k++)
+            {
+                line.Append(' ').Append(plan.SideClearMs[k].ToString("0", CultureInfo.InvariantCulture)).Append('/')
+                    .Append((plan.FruitImpactMs[k] - plan.FruitReleaseMs[k]).ToString("0", CultureInfo.InvariantCulture));
+            }
+
+            return line.ToString();
+        }
+
+        /// <summary>
+        /// Colgado (el 86, churuco): la liana va sobre la banda exterior del marco, a media anchura del margen libre (como la del
+        /// que trepa) y no pegada al borde; el cuerpo cuelga justo debajo del agarre y ninguna pieza del miquito, cola incluida,
+        /// pasa a menos de 1 dp del borde de la pantalla (revisión de TL1). Su perfil de luz y su halo se ven con él.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SideHang_LianaOverTheFrame_AndTailNeverOffTheEdge([Values(1080, 720)] int widthPx)
+        {
+            GameScreen.SimulatedScreen = widthPx == 1080 ? Screen1080 : Screen720;
+            yield return LoadLevel(86);
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            GameScreen view = boot.View!;
+            RectTransform space = view.Troop.SideLayer;
+            var rects = new List<Rect>();
+            foreach (int duration in new[] { 1400, 800 })
+            {
+                view.DebugReplayIntro(duration, false);
+                IntroChoreography plan = view.Intro.Plan;
+                Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Side));
+                Assert.That(plan.Model, Is.EqualTo(TroopModel.Hang));
+                Assert.That(plan.SideHangShiftDp, Is.GreaterThan(0f), "el cuerpo, desplazado hacia el borde bajo su agarre");
+                for (int m = 0; m < plan.MonkeyCount; m++)
+                {
+                    float edge = m == 0 ? plan.SideX[m] : view.CanvasWidth - plan.SideX[m];
+                    Assert.That(edge, Is.EqualTo(IntroChoreography.SideHangLianaFraction * plan.SideFreeDp).Within(0.01f), "liana " + m + " a media anchura del margen");
+                }
+
+                int seen = 0;
+                for (int t = 0; t <= plan.ExitStartMs + IntroChoreography.ExitMs; t += 10)
+                {
+                    view.Intro.Seek(t);
+                    for (int m = 0; m < plan.MonkeyCount; m++)
+                    {
+                        MonkeyRig rig = view.Troop.SideRig(m);
+                        if (!rig.Visible || rig.Alpha <= 0f)
+                        {
+                            continue;
+                        }
+
+                        seen++;
+                        rects.Clear();
+                        rig.CollectRects(space, rects);
+                        foreach (Rect r in rects)
+                        {
+                            float out0 = m == 0 ? r.xMin : view.CanvasWidth - r.xMax;
+                            Assert.That(out0, Is.GreaterThanOrEqualTo(IntroChoreography.SideTailMinXDp - 0.01f),
+                                "ninguna pieza del miquito " + m + " a menos de 1 dp del borde: " + widthPx + " px, T " + duration + ", t " + t + ", " + r);
+                        }
+
+                        Assert.That(view.Troop.SideRim(m).Visible, Is.True, "perfil de luz del miquito " + m);
+                        Assert.That(view.Troop.SideRim(m).Alpha, Is.EqualTo(rig.Alpha).Within(0.01f), "el perfil, con el alfa del miquito");
+                        Assert.That(view.Troop.SideHalo(m).enabled, Is.True, "halo del miquito " + m);
+                    }
+                }
+
+                Assert.That(seen, Is.GreaterThan(30));
+            }
+        }
+
+        /// <summary>
         /// Orden de capas (revisión de TL1; D-021): la capa de la tropa lateral va por delante del agua que corre por los
         /// costados del marco (la liana no se pierde detrás del trazo del marco) y por detrás de las cuias.
         /// </summary>
@@ -263,6 +378,9 @@ namespace AF.Tests.PlayMode
                 {
                     Assert.That(view.Troop.SideWaterSlot.GetSiblingIndex(), Is.LessThan(view.Troop.SideLiana(m).transform.GetSiblingIndex()), "el agua del marco, detrás de la liana " + m);
                     Assert.That(view.Troop.SideWaterSlot.GetSiblingIndex(), Is.LessThan(view.Troop.SideRig(m).Root.GetSiblingIndex()), "y del miquito " + m);
+                    Assert.That(view.Troop.SideWaterSlot.GetSiblingIndex(), Is.LessThan(view.Troop.SideHalo(m).transform.GetSiblingIndex()), "el halo, delante del agua");
+                    Assert.That(view.Troop.SideHalo(m).transform.GetSiblingIndex(), Is.LessThan(view.Troop.SideLiana(m).transform.GetSiblingIndex()), "y detrás de la liana " + m);
+                    Assert.That(view.Troop.SideRim(m).Root.GetSiblingIndex(), Is.LessThan(view.Troop.SideRig(m).Root.GetSiblingIndex()), "el perfil de luz, detrás del miquito " + m);
                 }
             }
 
@@ -536,6 +654,10 @@ namespace AF.Tests.PlayMode
             line.Append(" de ").Append(p.BodyDp.ToString("0.0", CultureInfo.InvariantCulture)).Append(" dp");
             line.Append(", ancho libre por lado ").Append(p.SideFreeDp.ToString("0.0", CultureInfo.InvariantCulture)).Append(" dp");
             line.Append(", cabe hasta ").Append(p.SideFitDp.ToString("0.0", CultureInfo.InvariantCulture)).Append(" dp");
+            if (p.Perch == IntroPerch.Side && p.Model == TroopModel.Hang)
+            {
+                line.Append(", cuerpo desplazado ").Append(p.SideHangShiftDp.ToString("0.0", CultureInfo.InvariantCulture)).Append(" dp bajo el agarre");
+            }
             if (p.Perch == IntroPerch.Side)
             {
                 for (int m = 0; m < p.MonkeyCount; m++)
@@ -568,6 +690,22 @@ namespace AF.Tests.PlayMode
                             .Append(p.FruitImpactMs[k].ToString("0", CultureInfo.InvariantCulture));
                     }
                 }
+
+                // Cuánto se oculta cada fruta lanzada tras salir de la mano (SideClearMs) y la velocidad horizontal del lanzamiento.
+                line.Append(", ocultas tras soltar (ms):");
+                float vMin = float.MaxValue;
+                float vMax = 0f;
+                for (int k = 0; k < p.FruitCount; k++)
+                {
+                    line.Append(' ').Append(p.SideClearMs[k].ToString("0", CultureInfo.InvariantCulture));
+                    float tau = Mathf.Max(1f, p.FruitImpactMs[k] - p.FruitReleaseMs[k]);
+                    float v = 1000f * Mathf.Abs(p.FruitImpactX[k] - p.FruitReleaseX[k]) / tau;
+                    vMin = Mathf.Min(vMin, v);
+                    vMax = Mathf.Max(vMax, v);
+                }
+
+                line.Append(", velocidad horizontal de ").Append(vMin.ToString("0", CultureInfo.InvariantCulture)).Append(" a ")
+                    .Append(vMax.ToString("0", CultureInfo.InvariantCulture)).Append(" dp/s");
             }
 
             return line.ToString();

@@ -13,7 +13,8 @@ namespace AF.Tests.PlayMode
     /// Capturas de revisión de la tropa lateral (D-021; tarea TL1; <c>[Explicit]</c>, no forman parte de la suite): el primer
     /// nivel de 3 filas de los mundos 4 (el 86, churuco, <c>cuelga</c>: baja colgado de su liana) y 5 (el 143, huapo
     /// colorado, <c>sacude</c>: baja trepando), con la intro que ve el jugador (la corta, 800 ms), a media bajada y en el
-    /// primer lanzamiento, a 1080 × 2340 px (360 × 780 dp) y a 720 × 1600 px (360 × 800 dp):
+    /// primer lanzamiento (la primera fruta en vuelo, 30 ms después de dejar libre la cabeza), a 1080 × 2340 px (360 × 780 dp)
+    /// y a 720 × 1600 px (360 × 800 dp):
     /// <c>tl1_&lt;nivel&gt;_bajada_&lt;ancho&gt;</c> y <c>tl1_&lt;nivel&gt;_lanza_&lt;ancho&gt;</c>. Necesitan gráficos:
     /// <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.IntroSideTroopSnapshotTests</c> sin
     /// <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/es-419/</c>.
@@ -71,14 +72,20 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Troop.SideActive, Is.True);
             Save(dir, "tl1_" + level + "_bajada_" + widthPx);
 
-            // En el lanzamiento: 30 ms después de la primera suelta (la fruta acaba de salir de la mano, el brazo arriba).
+            // En el lanzamiento: la primera fruta en vuelo, 30 ms después de que deja libre la cabeza de su miquito (hasta
+            // entonces no se dibuja: SideClearMs), con la siguiente ya en la mano.
             float first = float.MaxValue;
+            int kFirst = 0;
             for (int k = 0; k < p.FruitCount; k++)
             {
-                first = Mathf.Min(first, p.FruitReleaseMs[k]);
+                if (p.FruitReleaseMs[k] < first)
+                {
+                    first = p.FruitReleaseMs[k];
+                    kFirst = k;
+                }
             }
 
-            view.Intro.Seek(first + 30f);
+            view.Intro.Seek(first + p.SideClearMs[kFirst] + 30f);
             Save(dir, "tl1_" + level + "_lanza_" + widthPx);
             yield return null;
         }

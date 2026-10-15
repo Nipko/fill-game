@@ -247,6 +247,30 @@ namespace AF.Presentation
             _tail.SetColors(art.Tail, art.TailTip, 0.72f, new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 0.8f), Mathf.Max(0.8f, 0.03f * _s));
         }
 
+        /// <summary>
+        /// Convierte el rig en una silueta plana de color <paramref name="color"/> (perfil de luz de la tropa lateral, revisión de
+        /// TL1): todas las piezas con <paramref name="material"/> (la forma del sprite con el color del vértice:
+        /// <c>AF/UI/Silhouette</c>) y la cola del mismo color, con su borde. Tras <see cref="SetArt"/>; sin asignaciones.
+        /// </summary>
+        public void SetSilhouette(Material? material, Color color)
+        {
+            for (int i = 1; i < _graphics.Length; i++)
+            {
+                Graphic g = _graphics[i];
+                if (g.material != material)
+                {
+                    g.material = material;
+                }
+
+                if (g.color != color)
+                {
+                    g.color = color;
+                }
+            }
+
+            _tail.SetColors(color, color, 0.72f, color, Mathf.Max(0.8f, 0.03f * _s));
+        }
+
         /// <summary>Muestra u oculta el rig.</summary>
         public void SetVisible(bool on)
         {
@@ -712,9 +736,10 @@ namespace AF.Presentation
         public const float ClimbHz = 5f;
 
         /// <summary>
-        /// Mano que lanza al trepar (S, en la pose de <see cref="Climb"/>): a la altura de lo alto de la cabeza y pasada la liana
-        /// hacia el tablero, para que la fruta no cruce la cabeza (la misma que planifica la intro:
-        /// <see cref="IntroChoreography.SideThrowAlongS"/> y <see cref="IntroChoreography.SideThrowOutS"/>; revisión de TL1).
+        /// Mano que lanza al trepar (S, en la pose de <see cref="Climb"/>): delante del pecho, por debajo del hombro (0,18 S) y
+        /// sobre la liana, del lado del tablero; un lanzamiento de lado, nunca por encima del hombro (guion §4.4; 07 §5.1,
+        /// fase d). La misma que planifica la intro: <see cref="IntroChoreography.SideThrowAlongS"/> y
+        /// <see cref="IntroChoreography.SideThrowOutS"/> (revisión de TL1).
         /// </summary>
         public static readonly Vector2 SideThrowHandS = new Vector2(IntroChoreography.SideThrowAlongS, IntroChoreography.SideThrowOutS);
 
@@ -862,6 +887,53 @@ namespace AF.Presentation
                 p.Tail3 = p.Tail0 + (new Vector2(-0.32f, 0.40f) * k); // hacia arriba: nada cuelga hacia el panel
             }
 
+            return p;
+        }
+
+        /// <summary>
+        /// Colgado de la liana lateral (tropa lateral, D-021; revisión de TL1): <see cref="Hang(MonkeyArt, float, float, Vector2)"/>
+        /// con la mano que lanza en <see cref="SideHangHandS"/> y todo el cuerpo desplazado <paramref name="shiftS"/> hacia el
+        /// borde de la pantalla (−x), para que cuelgue justo debajo del agarre, con el centro del cuerpo sobre la liana; el agarre
+        /// (la mano que agarra y el enrosque de la cola) se queda en la liana. Ningún punto de control de la cola pasa de
+        /// <paramref name="minXS"/> (S, hacia el borde): la cola nunca se sale por el borde de la pantalla.
+        /// </summary>
+        public static MonkeyPose SideHang(MonkeyArt art, float lift, float sway, float shiftS, float minXS)
+        {
+            MonkeyPose p = Hang(art, lift, sway, SideHangHandS);
+            if (shiftS <= 0f)
+            {
+                return p;
+            }
+
+            bool tailGrip = art.TailCurls;
+            bool armGrip = art.ArmUp || !tailGrip;
+            var d = new Vector2(-shiftS, 0f);
+            p.TorsoCenter += d;
+            p.HeadCenter += d;
+            p.BackArmFrom += d;
+            if (!armGrip)
+            {
+                p.BackArmTo += d; // sin brazo que agarre, la mano de detrás va con el cuerpo
+            }
+
+            p.FrontArmFrom += d;
+            p.FrontArmTo += d;
+            p.BackLegFrom += d;
+            p.BackLegTo += d;
+            p.FrontLegFrom += d;
+            p.FrontLegTo += d;
+            p.Tail0 += d;
+            p.Tail1 += d;
+            if (!tailGrip)
+            {
+                p.Tail2 += d;
+                p.Tail3 += d;
+            }
+
+            p.Tail0.x = Mathf.Max(p.Tail0.x, minXS);
+            p.Tail1.x = Mathf.Max(p.Tail1.x, minXS);
+            p.Tail2.x = Mathf.Max(p.Tail2.x, minXS);
+            p.Tail3.x = Mathf.Max(p.Tail3.x, minXS);
             return p;
         }
 
