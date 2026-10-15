@@ -6,7 +6,8 @@
 //   - QA-HITO-14 (CycleChecks.Hito14Problems): el hito de K = 13 con el vacío repartido en cuias a medias (Brote de dos hojas y
 //     Matapi con dosis, como el 580; con Barro, como el 600) pasa, igual que con una cuia vacía literal; un reto con K = 12 + 1
 //     vacío + la cueva de la Piraña (14 cuias) no es de esta comprobación; K = 13 fuera de su hito, con capacidades, con la
-//     Piraña o con otra holgura, falla;
+//     Piraña o con otra holgura, falla; el Brote de dos hojas del 580 y del 600 cumple QA-VAR-B2 (VariantChecks.B2Problems) y
+//     con 3 dosis no;
 //   - las casas de la Flor (QA-VAR-FLOR; VariantChecks.FlorProblems y CanSealOutside, D-024): una Hoja atada, un Matapi con dosis
 //     o la Lluvia solo son casa de su fruta, y la Liana, otra Flor o la Tinaja, de ninguna.
 // Imprime ASCII (PASS / FAIL) y sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra las especificaciones.
@@ -146,8 +147,17 @@ internal static class RulesSelfTest
         attrs580[K] = new MechanicSpec(MechanicType.Matapi);
         BoardData hito580 = Board(cuias580, attrs580);
         Expect(check, hito580, K, SlotRole.Milestone, K, pass: true, "hito K = 13 con el Brote de dos hojas (2 dosis) y un Matapi con 2 dosis, sin cuia vacia (580)");
-        check(VariantChecks.Units(hito580)[K] == Cuia.DefaultCapacity && hito580.Cuias[K - 1].Length == 2 && hito580.Caps[K - 1] - hito580.Cuias[K - 1].Length >= 2,
-            "el Brote de dos hojas de ese hito cumple QA-VAR-B2 (1-2 dosis y espacio >= 2)");
+        string[] b2Reasons580 = [.. VariantChecks.B2Problems(hito580, K - 1)];
+        check(VariantChecks.Units(hito580)[K] == Cuia.DefaultCapacity && b2Reasons580.Length == 0,
+            "el Brote de dos hojas de ese hito cumple QA-VAR-B2 (1-2 dosis y espacio >= 2)"
+            + (b2Reasons580.Length > 0 ? " [" + string.Join(" | ", b2Reasons580) + "]" : " [sin motivos]"));
+
+        // El mismo hito con 3 dosis en el Brote de dos hojas (espacio 1): QA-VAR-B2 da su motivo, así que el PASS anterior no es vacío.
+        int[][] cuias580Full = [.. b2, [K, K, K], [K]];
+        BoardData hito580Full = Board(cuias580Full, attrs580);
+        string[] b2ReasonsFull = [.. VariantChecks.B2Problems(hito580Full, K - 1)];
+        check(b2ReasonsFull.Length == 1 && b2ReasonsFull[0].Contains("espacio 1", StringComparison.Ordinal),
+            "el Brote de dos hojas con 3 dosis (espacio 1) no cumple QA-VAR-B2 [" + string.Join(" | ", b2ReasonsFull) + "]");
 
         // 600 (Ha+B2+Ba): una dosis de Barro ocupa sitio, pero no es una fruta; la holgura de la aritmética sigue en 4.
         int[][] cuias600 = [.. b2, [K, K, Cuia.MudColor], [K, K]];
@@ -155,6 +165,7 @@ internal static class RulesSelfTest
         attrs600[K] = new MechanicSpec(MechanicType.Brote, n: 2);
         BoardData hito600 = Board(cuias600, attrs600);
         Expect(check, hito600, K, SlotRole.Milestone, K, pass: true, "hito K = 13 con Barro y el Brote de dos hojas: el Barro no cuenta en la holgura (600)");
+        check(!VariantChecks.B2Problems(hito600, K).Any(), "el Brote de dos hojas del 600 cumple QA-VAR-B2 (2 dosis y espacio 2)");
 
         // K = 12 + 1 vacío + la cueva de la Piraña: 14 cuias en un reto (o en un hito de 401-560), válido (03 §11; el 920 de d.5.7).
         int[][] cave = [.. Full(12), [], []];

@@ -105,7 +105,6 @@ internal static class VariantChecks
         for (int i = 0; i < b.Attrs.Length && i < b.Cuias.Length && i < b.Caps.Length; i++)
         {
             MechanicSpec a = b.Attrs[i];
-            int[] doses = b.Cuias[i];
             switch (a.Type)
             {
                 case MechanicType.HojaAtada:
@@ -118,16 +117,12 @@ internal static class VariantChecks
                     break;
 
                 case MechanicType.Brote when a.N == TwoLeaves:
-                {
-                    int space = b.Caps[i] - doses.Length;
-                    if (space < TwoLeaves || doses.Length < 1 || doses.Length > TwoLeaves)
+                    foreach (string problem in B2Problems(b, i))
                     {
-                        yield return ("QA-VAR-B2", prefix + Num(
-                            $"cuia {i}: Brote de dos hojas con {doses.Length} dosis en una cuia de {b.Caps[i]} (espacio {space}); empieza con 1-2 dosis y espacio >= 2"));
+                        yield return ("QA-VAR-B2", prefix + Num($"cuia {i}: ") + problem);
                     }
 
                     break;
-                }
 
                 case MechanicType.Liana when a.N != 0:
                     if (a.N < LianaCountMin || a.N > LianaCountMax)
@@ -152,6 +147,21 @@ internal static class VariantChecks
         if (hojaAtada && stuck)
         {
             yield return ("QA-VAR-HA", prefix + "el nivel con la Hoja atada empieza en Aguas estancadas");
+        }
+    }
+
+    /// <summary>
+    /// Motivos por los que el Brote de dos hojas de la cuia <paramref name="i"/> no cumple QA-VAR-B2 (b.3: empieza con 1-2 dosis y
+    /// espacio >= 2). Lo prueba <c>--self-test reglas</c> (<see cref="RulesSelfTest"/>) además del fixture QA-VAR-B2.
+    /// </summary>
+    internal static IEnumerable<string> B2Problems(BoardData b, int i)
+    {
+        int doses = b.Cuias[i].Length;
+        int space = b.Caps[i] - doses;
+        if (space < TwoLeaves || doses < 1 || doses > TwoLeaves)
+        {
+            yield return Num(
+                $"Brote de dos hojas con {doses} dosis en una cuia de {b.Caps[i]} (espacio {space}); empieza con 1-2 dosis y espacio >= 2");
         }
     }
 

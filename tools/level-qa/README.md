@@ -106,6 +106,8 @@ prueba y sobre las especificaciones de muestra:
   cuenta en la holgura), y no son de esta comprobación un reto ni un hito de 401-560 con K = 12 + 1 vacío + la cueva de la
   Piraña (14 cuias); fallan K = 13 en un reto o en un hito con otro K en el `k_plan`, con una Cuia alta, con la Piraña o con
   otra holgura.
+- **QA-VAR-B2** (`VariantChecks.B2Problems`, la misma función que usa el control): el Brote de dos hojas de los hitos del 580
+  y del 600 no da motivos, y el del 580 con 3 dosis (espacio 1) da el suyo.
 - **QA-VAR-FLOR** (`VariantChecks.FlorProblems` y `CanSealOutside`): las casas de las dos frutas de la Flor se cuentan como
   D-024 (una Hoja atada, un Matapi con dosis o la Lluvia solo son casa de su fruta; la Liana, otra Flor, la Tinaja y su cuia,
   de ninguna), con un caso que pasa y otro que falla para cada una, y la fruta de U_c = 5 cuya única cuia de 5 es la Flor.
@@ -271,7 +273,7 @@ que no tiene solución; también QA-PAR, QA-BOT, QA-MECH-SPEC y QA-MECH-CELL, y 
 QA-VAR-LN (`liana_de_cuenta_n3`: n = 3 en el 243; también QA-STRUCT), QA-VAR-DEBUT (`estreno_con_dos_ejemplares`: dos Lianas de
 cuenta en el 243; `estreno_con_otra_mecanica`: el estreno de la Hoja atada con una Liana de cuenta; los dos, también QA-DEBUT)
 y QA-MECH-COUNT (`tres_mecanicas_antes_del_300`: el reto 286 con una tercera mecánica; `tres_mecanicas_en_comodidad`: la
-comodidad 307 con tres, que desde el 300 solo valen en retos e hitos; los dos, también QA-MECH-SPEC). QA-HITO-14 tiene dos:
+comodidad 307 con tres, que solo valen en los retos desde el 301 y en los hitos desde el 320; los dos, también QA-MECH-SPEC). QA-HITO-14 tiene dos:
 `variante_k13_fuera_de_su_hito`, un hito del 300 con 14 cuias (K = 13 + 1 vacío) cuando el `k_plan` de la muestra lleva K = 9
 en el hito, y `hito14_con_cuia_alta`, el mismo hito con una Cuia alta de 5, que se pasa con `fixtures/specs/hito14_k13.json`
 (la muestra con K = 13 en los hitos; solo para este fixture, no se genera): el hito de 14 cuias está planificado y solo falla
