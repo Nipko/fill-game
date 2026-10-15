@@ -155,8 +155,13 @@ QA-SCHEMA.
 Los de la tinaja (`QA-*__tinaja_*.json`) son niveles 321-340 y se pasan con la
 especificación de la muestra de P1 (`specs/sample_tinaja.json`, la única con la tinaja en el calendario hasta P4). Salen del
 pack de muestra con un defecto (QA-TINAJA-ONE, PAIR, CUIAS, MASK, T4, COMBO, SLOT en p1 y en p19, TIER, QA-RELIEF-MASK y
-QA-RELIEF-MINUS) o de tableros que rechazan los filtros del generador: QA-TINAJA-DEBUT es un estreno con 10 vertidos útiles
-de S0 que no son seguros; QA-TINAJA-SAFE (`tinaja_presupuesto_agotado`), un candidato del reto 338 de la muestra que el
+QA-RELIEF-MINUS) o de tableros que rechazan los filtros del generador: QA-TINAJA-DEBUT
+(`tinaja_estreno_s0_sin_seguridad_demostrada`; antes de FIXG, `tinaja_estreno_con_trampa_en_s0`) es un estreno con 10 vertidos
+útiles de S0 que no son seguros, ninguno demostrado inseguro: tras cada uno, A* no deja ninguna realidad de S0 demostrada sin
+solución con los 20.000 nodos por realidad, así que el motivo dice «0 demostrado(s) inseguro(s) (trampa en S0); 10 sin
+seguridad demostrada (presupuesto agotado)», y QA-TINAJA-SAFE no repite ese rechazo de S0 (el generador lo clasifica como
+«presupuesto agotado»; lo fija `--self-test tinaja`). La trampa demostrada no tiene fixture: la fija el tablero perdido de b.2
+en `--self-test tinaja`; QA-TINAJA-SAFE (`tinaja_presupuesto_agotado`), un candidato del reto 338 de la muestra que el
 generador rechazó (el «presupuesto agotado: 1» del 338 en el informe de la muestra; antes de FIXG, «adivinar: 1»): el paseo casual 2 llega tras 1 vertido a un estado en el que
 `SafeMoves` agota sus 20.000 nodos por realidad (4 realidades) y la realidad verdadera es resoluble. Es «presupuesto
 agotado», no «adivinar»: desde FIXG el motivo acaba en `[presupuesto agotado]` (antes, en `[adivinar]`), con el mismo id.

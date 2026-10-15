@@ -229,7 +229,7 @@ Filtros (`Generation/TinajaWalks.cs`), en cada candidato que se mide:
 | Ruta segura | `SafePath` (03 §8) con 20.000 nodos por realidad |
 | Paseos seguros [P] | 20, con un vertido seguro al azar hasta ganar: ninguno llega a un estado sin vertido seguro ni pasa de 400 vertidos |
 | Paseos casuales [P] | 30, con cualquier vertido útil al azar. El primer estado sin vertido seguro de cada paseo se clasifica por `SafeMoves.Outcome` y, si hace falta, con A* en la realidad verdadera (`TinajaWalks.ClassifyCasual`; FIXG): `NoExit`, o la verdadera sin solución, es un error del jugador y el paseo acaba; `SomeRealitySolvable` con la verdadera resoluble es «adivinar» y el nivel se rechaza; si `SafeMoves` agota sus 20.000 nodos por realidad (los de `ReliefOptions` en las variantes) y la verdadera es resoluble, o A* agota los suyos en la verdadera, se rechaza por «presupuesto agotado», nunca por «adivinar» (no se cuenta en la columna «a» del informe) |
-| S0 sin trampas | Solo en el estreno: todo vertido útil de S0 es seguro (por hash canónico). Uno que no lo es se rechaza como «trampa en S0» si A* deja alguna realidad de S0 demostrada sin solución tras él y, si no, por «presupuesto agotado» (FIXG) |
+| S0 sin trampas | Solo en el estreno: todo vertido útil de S0 es seguro (por hash canónico). Uno que no lo es se rechaza como «trampa en S0» si A* deja alguna realidad de S0 demostrada sin solución tras él y, si no, por «presupuesto agotado» (FIXG; `TinajaWalks.S0Reject`: con alguna trampa demostrada, «trampa en S0» y los demás en el sufijo «; N mas sin seguridad demostrada») |
 | Coste de Morpho | w = 2 y 40.000 nodos por realidad (`hint_weight`, `hint_budget_nodes`), desde cero en S0, en la ruta y en los paseos: Morpho da un vertido seguro y expande como mucho `MorphoNodeCap` = 150 ms × `PcNodesPerMs` [E] ÷ `MorphoDeviceFactor` (8× [P], hasta PF1) = 18.750 nodos |
 
 `PcNodesPerMs` = 1.000 [E] sale de la calibración de `--self-test tinaja` (líneas INFO «calibracion»): Morpho desde cero en
@@ -242,7 +242,7 @@ calibraba con 20 consultas de 32 nodos sobre el S0 de b.2, que miden sobre todo 
 
 El motivo del rechazo separa «sin vertido seguro» de «presupuesto agotado» (`SafeMoves.Outcome`) en la ruta, en los paseos
 seguros y casuales y en S0 (03 §8; FIXG); el informe lo cuenta por nivel en su sección «Tinaja» (columna «Candidatos
-rechazados por la tinaja»), y `--self-test tinaja` fija la clasificación de los paseos casuales en cada combinación. Alivio (03 §13): `minus_color` nunca quita una fruta de la tinaja; las variantes conservan la
+rechazados por la tinaja»), y `--self-test tinaja` fija la clasificación de los paseos casuales en cada combinación y la de «S0 sin trampas» (la trampa demostrada del tablero perdido de b.2, el presupuesto agotado con 1 nodo por realidad y en el estreno del fixture de QA-TINAJA-DEBUT, y el caso mixto); si falta uno de los fixtures de level-qa que usa, falla. Alivio (03 §13): `minus_color` nunca quita una fruta de la tinaja; las variantes conservan la
 máscara de la tinaja y repiten la ruta segura y los paseos, sin la compuerta de coste. **Opciones de las variantes [P],
 pendientes de decisión del tech-lead y del dueño** (revisión de P1; D-023 o la siguiente): `TinajaWalks.ReliefOptions`, que
 hoy son las de Morpho (w = 2 y 40.000 nodos por realidad) y no las del pipeline de 03 §8 (w = 1 y 20.000 nodos por

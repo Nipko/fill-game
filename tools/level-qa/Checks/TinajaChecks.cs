@@ -14,7 +14,9 @@
 //   QA-TINAJA-SLOT   ninguna tinaja en recuperación (p1, p2), remanso (p19) ni en la rampa (D-019, Q-Ti1 A;
 //                    Superposition.TinajaDoses);
 //   QA-TINAJA-DEBUT  tablero de estreno con tinaja: sola (ninguna otra mecánica ni capacidad, un ejemplar), 2 vacíos sin contar
-//                    la pareja, bot_fail < 0,20 y S0 sin trampas (todo vertido útil de S0 es seguro; c.3 punto 3; d.3);
+//                    la pareja, bot_fail < 0,20 y S0 sin trampas (todo vertido útil de S0 es seguro; c.3 punto 3; d.3): el
+//                    motivo separa los demostrados inseguros (trampa en S0) de los sin seguridad demostrada (presupuesto
+//                    agotado; FIXG), y QA-TINAJA-SAFE no repite ese rechazo;
 //   QA-TINAJA-SAFE   ruta segura (03 §8), 20 paseos seguros y 30 casuales [P] (TinajaWalks.Check): el motivo separa «sin
 //                    vertido seguro» de «presupuesto agotado» también en los paseos casuales (FIXG: un SafeMoves sin
 //                    presupuesto con la realidad verdadera resoluble es «presupuesto agotado», no «adivinar»);
@@ -102,14 +104,19 @@ internal static class TinajaChecks
 
             if (e.TinajaS0Traps > 0)
             {
+                // Separa la trampa demostrada del vertido que solo no se pudo demostrar seguro (03 §8: «El informe separa
+                // «sin vertido seguro» de «presupuesto agotado»»; TinajaWalks.S0Reject; FIXG).
+                int unproven = Math.Max(0, e.TinajaS0Unproven);
                 yield return Fail("QA-TINAJA-DEBUT", e.TinajaS0Traps == int.MaxValue
                     ? "S0 sin vertido seguro: no se puede comprobar que S0 no tenga trampas"
-                    : string.Create(CultureInfo.InvariantCulture, $"{e.TinajaS0Traps} vertido(s) util(es) de S0 no son seguros (estreno sin trampas)"));
+                    : string.Create(CultureInfo.InvariantCulture,
+                        $"{e.TinajaS0Traps} vertido(s) util(es) de S0 no son seguros (estreno sin trampas): {e.TinajaS0Traps - unproven} demostrado(s) inseguro(s) (trampa en S0); {unproven} sin seguridad demostrada (presupuesto agotado)"));
             }
         }
 
-        // Filtros del generador (los mismos que SlotGenerator.Measure). La trampa en S0 ya la dice QA-TINAJA-DEBUT.
-        if (e.Tinaja is { Reject: string why } check && check.Kind != TinajaWalks.KindS0Trap)
+        // Filtros del generador (los mismos que SlotGenerator.Measure). Un rechazo en «S0 sin trampas» (S0Traps > 0: trampa en
+        // S0 o presupuesto agotado en S0) ya lo dice QA-TINAJA-DEBUT, con los dos recuentos; aquí no se repite.
+        if (e.Tinaja is { Reject: string why } check && check.S0Traps <= 0)
         {
             yield return Fail(check.Kind == TinajaWalks.KindMorpho ? "QA-TINAJA-MORPHO" : "QA-TINAJA-SAFE",
                 AsciiText.Of(string.Create(CultureInfo.InvariantCulture, $"{why} [{check.Kind}]")));

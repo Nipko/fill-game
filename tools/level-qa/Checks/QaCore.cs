@@ -54,6 +54,12 @@ internal sealed class LevelEval
     /// </summary>
     public int TinajaS0Traps { get; init; } = -1;
 
+    /// <summary>
+    /// De <see cref="TinajaS0Traps"/>, los que no son trampas demostradas: ninguna realidad de S0 queda demostrada sin solución
+    /// tras ellos, solo faltó presupuesto («presupuesto agotado»; TinajaWalks.S0Traps con <c>out</c>; FIXG); −1 si no se mide.
+    /// </summary>
+    public int TinajaS0Unproven { get; init; } = -1;
+
     public List<ReliefEval> Relief { get; init; } = [];
 }
 
@@ -103,6 +109,7 @@ internal static class Evaluator
         SafePathStatus? safe = null;
         TinajaCheckResult? tinaja = null;
         int s0Traps = -1;
+        int s0Unproven = -1;
         if (b.HasTinaja)
         {
             // Los mismos filtros y semillas que el generador (SlotGenerator.Measure: Check(estado, plan.DebutBoard, semilla)).
@@ -115,9 +122,15 @@ internal static class Evaluator
                 {
                     // Check solo mide S0 sin trampas si la ruta y la compuerta de Morpho pasan; si no, se mide aparte (con un
                     // memo vacío) para que QA-TINAJA-DEBUT lo diga igual.
-                    s0Traps = tinaja.S0Traps >= 0
-                        ? tinaja.S0Traps
-                        : new TinajaWalks().S0Traps(state, SafeMoves.ForPipeline(PourMode.Run, state));
+                    if (tinaja.S0Traps >= 0)
+                    {
+                        s0Traps = tinaja.S0Traps;
+                        s0Unproven = tinaja.S0Unproven;
+                    }
+                    else
+                    {
+                        s0Traps = new TinajaWalks().S0Traps(state, SafeMoves.ForPipeline(PourMode.Run, state), out s0Unproven);
+                    }
                 }
             }
         }
@@ -167,6 +180,7 @@ internal static class Evaluator
             Safe = safe,
             Tinaja = tinaja,
             TinajaS0Traps = s0Traps,
+            TinajaS0Unproven = s0Unproven,
             Relief = relief,
         };
     }

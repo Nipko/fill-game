@@ -11,6 +11,10 @@
 //     lleva la máscara en hidden (08 §4.1: relief_board admite hidden si y solo si su attrs contiene la tinaja);
 //   - el tope de 12 cuias con tinaja (02 §5): la etapa baja K y plus_empty no pasa de 12 cuias;
 //   - «S0 sin trampas» detecta un vertido útil inseguro (el tablero perdido de b.2) y los filtros pasan en el S0 de b.2;
+//   - la separación trampa / presupuesto de «S0 sin trampas» (FIXG; TinajaWalks.S0Reject): el vertido del tablero perdido de
+//     b.2 es una trampa demostrada (ninguno sin demostrar); con un presupuesto mínimo, los vertidos inseguros del S0 de b.2 son
+//     todos «presupuesto agotado»; el estreno 323 del fixture de level-qa (QA-TINAJA-DEBUT) sale con «presupuesto agotado» y
+//     todos sus vertidos sin seguridad demostrada; y la tabla de S0Reject (trampa, presupuesto y mixto con su sufijo);
 //   - la clasificación del primer estado sin vertido seguro de un paseo casual (FIXG; TinajaWalks.ClassifyCasual), en cada
 //     combinación del motivo de SafeMoves y de A* en la realidad verdadera: el presupuesto agotado nunca es «adivinar»; y el
 //     candidato del 338 del fixture de level-qa (QA-TINAJA-SAFE, presupuesto agotado) sale con «presupuesto agotado» y sin
@@ -66,8 +70,10 @@ internal static class TinajaSelfTest
         Slot323(spec, Check, Info);
         CuiaCap(spec, Check);
         B2Boards(Check, Info);
+        S0Classification(Check);
+        DebutFixture(spec, Check);
         CasualClassification(Check);
-        BudgetFixture(spec, Check, Info);
+        BudgetFixture(spec, Check);
         ReportHeader(Check);
         MorphoCalibration(spec, Check, Info);
 
@@ -340,9 +346,18 @@ internal static class TinajaSelfTest
             TinajaCheckResult r = walks.Check(s0.State!, debut: false, "amazonfill:v1:selftest:b2", morphoGate: true);
             check(r.Reject is null && r.SafeWalksWon == TinajaWalks.SafeWalkCount && r.CasualGuess == 0,
                 F($"b.2: S0 con ruta segura ({r.RoutePours} vertidos), {r.SafeWalksWon}/{r.SafeWalks} paseos seguros y 0 de adivinar (casuales {r.CasualWon}/{r.CasualLost}/{r.CasualGuess}/{r.CasualOpen}) {r.Reject}"));
-            int traps = walks.S0Traps(s0.State!, SafeMoves.ForPipeline(PourMode.Run, s0.State!));
-            info(F($"b.2: vertidos utiles de S0 que no son seguros: {traps}"));
+            int traps = walks.S0Traps(s0.State!, SafeMoves.ForPipeline(PourMode.Run, s0.State!), out int unproven);
+            info(F($"b.2: vertidos utiles de S0 que no son seguros: {traps} ({unproven} sin seguridad demostrada)"));
             info(F($"Morpho en S0 de b.2: {walks.MorphoQuery(s0.State!, s0.State!).Nodes} nodos (consulta pequena: mide sobre todo el coste fijo; la calibracion va al final)"));
+
+            // Presupuesto mínimo (FIXG): SafeMoves no demuestra ningún vertido seguro y A* tampoco deja ninguna realidad
+            // demostrada sin solución, así que todo vertido útil de S0 es «presupuesto agotado», ninguno «trampa en S0».
+            SolverOptions tiny = new SolverOptions(1, 1, true, PourMode.Run).ForLevel(s0.State!);
+            int starved = new TinajaWalks().S0Traps(s0.State!, tiny, out int starvedUnproven);
+            int useful = PourRules.CollectUsefulMoves(s0.State!, true, PourMode.Run, new Pour[PourRules.MaxPours]);
+            check(starved == useful && starved > 0 && starvedUnproven == starved
+                && TinajaWalks.S0Reject(starved, starvedUnproven, "1 nodo").Kind == TinajaWalks.KindBudget,
+                F($"S0 de b.2 con 1 nodo por realidad: {starved} de {useful} vertido(s) util(es) inseguro(s), {starvedUnproven} sin seguridad demostrada (se esperan todos: presupuesto agotado, no trampa)"));
         }
 
         // Estado perdido de b.2: N[c,c,c] N[a,b,a,a] N[b,b,b] T[c(o),a] Ch[]; el único vertido útil (sacar) no es seguro.
@@ -350,9 +365,66 @@ internal static class TinajaSelfTest
         check(lost.IsValid, "b.2: tablero perdido construible " + (lost.Error ?? ""));
         if (lost.IsValid)
         {
-            int traps = new TinajaWalks().S0Traps(lost.State!, SafeMoves.ForPipeline(PourMode.Run, lost.State!));
+            int traps = new TinajaWalks().S0Traps(lost.State!, SafeMoves.ForPipeline(PourMode.Run, lost.State!), out int unproven);
             check(traps == 1, F($"S0 sin trampas detecta el vertido util inseguro del tablero perdido de b.2 ({traps} de 1)"));
+            check(unproven == 0 && TinajaWalks.S0Reject(traps, unproven, "-").Kind == TinajaWalks.KindS0Trap,
+                F($"el vertido inseguro del tablero perdido de b.2 es una trampa demostrada: {unproven} sin seguridad demostrada (se espera 0: trampa en S0, no presupuesto)"));
         }
+    }
+
+    /// <summary>
+    /// Tabla de <see cref="TinajaWalks.S0Reject"/> (FIXG; 03 §8): con alguna trampa demostrada, «trampa en S0» (y los no
+    /// demostrados en el sufijo «; N mas sin seguridad demostrada»); sin ninguna, «presupuesto agotado»; fuera de rango, error.
+    /// </summary>
+    private static void S0Classification(Action<bool, string> check)
+    {
+        const string budget = "20.000 nodos por realidad de SafeMoves";
+        (int Traps, int Unproven, string Kind, string Text)[] table =
+        [
+            (1, 0, TinajaWalks.KindS0Trap, "tinaja: 1 vertido(s) util(es) de S0 no son seguros (estreno sin trampas)"),
+            (3, 2, TinajaWalks.KindS0Trap, "tinaja: 1 vertido(s) util(es) de S0 no son seguros (estreno sin trampas); 2 mas sin seguridad demostrada: presupuesto agotado (" + budget + ")"),
+            (10, 10, TinajaWalks.KindBudget, "tinaja: 10 vertido(s) util(es) de S0 sin seguridad demostrada (estreno sin trampas): presupuesto agotado (" + budget + ")"),
+        ];
+        foreach ((int traps, int unproven, string kind, string text) in table)
+        {
+            (string gotKind, string gotText) = TinajaWalks.S0Reject(traps, unproven, budget);
+            check(gotKind == kind && gotText == text, F($"S0 sin trampas: {traps} inseguro(s), {unproven} sin demostrar -> {gotKind}: {gotText} (se espera {kind})"));
+        }
+
+        check(Throws<ArgumentOutOfRangeException>(() => TinajaWalks.S0Reject(0, 0, budget))
+            && Throws<ArgumentOutOfRangeException>(() => TinajaWalks.S0Reject(2, 3, budget))
+            && Throws<ArgumentOutOfRangeException>(() => TinajaWalks.S0Reject(2, -1, budget)),
+            "S0 sin trampas: sin vertidos inseguros, o con mas sin demostrar que inseguros, no hay rechazo");
+    }
+
+    /// <summary>
+    /// Fixture de level-qa con el estreno 323 que QA-TINAJA-DEBUT rechaza: sus 10 vertidos útiles de S0 no son seguros, pero
+    /// ninguno deja una realidad de S0 demostrada sin solución, así que es «presupuesto agotado», no «trampa en S0» (FIXG).
+    /// </summary>
+    public const string DebutFixturePath = "tools/level-qa/fixtures/QA-TINAJA-DEBUT__tinaja_estreno_s0_sin_seguridad_demostrada.json";
+
+    /// <summary>
+    /// El estreno 323 del fixture de QA-TINAJA-DEBUT: <c>Check(debut: true)</c> lo rechaza en «S0 sin trampas» por «presupuesto
+    /// agotado», con todos sus vertidos inseguros sin seguridad demostrada (FIXG). Sin el fixture, FAIL.
+    /// </summary>
+    private static void DebutFixture(CampaignSpec spec, Action<bool, string> check)
+    {
+        if (!File.Exists(DebutFixturePath))
+        {
+            check(false, "estreno del fixture de QA-TINAJA-DEBUT: falta " + DebutFixturePath + " (ejecuta desde la raiz del repositorio)");
+            return;
+        }
+
+        JsonObject json = JsonNode.Parse(File.ReadAllText(DebutFixturePath))!["levels"]!.AsArray()
+            .Single(l => l!["level"]!.GetValue<int>() == 323)!.AsObject();
+        BoardBuildResult built = FromJson(json);
+        LevelPlan plan = spec.Plan(323);
+        TinajaCheckResult r = built.IsValid
+            ? new TinajaWalks().Check(built.State!, debut: true, json["seed"]!.GetValue<string>())
+            : new TinajaCheckResult();
+        check(plan.DebutBoard && built.IsValid && r.Kind == TinajaWalks.KindBudget && r.S0Traps > 0 && r.S0Unproven == r.S0Traps
+            && r.Reject is string why && why.Contains("presupuesto agotado", StringComparison.Ordinal),
+            F($"323 del fixture de QA-TINAJA-DEBUT: {r.Kind ?? "sin rechazo"} con {r.S0Traps} vertido(s) inseguro(s) y {r.S0Unproven} sin seguridad demostrada (se espera presupuesto agotado y todos sin demostrar) {built.Error}{r.Reject}"));
     }
 
     /// <summary>
@@ -386,19 +458,19 @@ internal static class TinajaSelfTest
         check(new[] { SafeMovesOutcome.Found, SafeMovesOutcome.Won, SafeMovesOutcome.RealitiesRejected }
                 .All(o => Throws<ArgumentOutOfRangeException>(() => TinajaWalks.ClassifyCasual(o, SolveStatus.Solved))),
             "paseo casual: Found, Won y RealitiesRejected no son motivos de «ningun vertido seguro»");
+    }
 
-        static bool Throws<T>(Action action)
-            where T : Exception
+    private static bool Throws<T>(Action action)
+        where T : Exception
+    {
+        try
         {
-            try
-            {
-                action();
-                return false;
-            }
-            catch (Exception e)
-            {
-                return e.GetType() == typeof(T);
-            }
+            action();
+            return false;
+        }
+        catch (Exception e)
+        {
+            return e.GetType() == typeof(T);
         }
     }
 
@@ -410,11 +482,11 @@ internal static class TinajaSelfTest
     public const string BudgetFixturePath = "tools/level-qa/fixtures/QA-TINAJA-SAFE__tinaja_presupuesto_agotado.json";
 
     /// <summary>El candidato del 338 del fixture se rechaza por «presupuesto agotado», sin ningún paseo de adivinar (FIXG).</summary>
-    private static void BudgetFixture(CampaignSpec spec, Action<bool, string> check, Action<string> info)
+    private static void BudgetFixture(CampaignSpec spec, Action<bool, string> check)
     {
         if (!File.Exists(BudgetFixturePath))
         {
-            info("presupuesto agotado: falta " + BudgetFixturePath);
+            check(false, "338 del fixture de QA-TINAJA-SAFE: falta " + BudgetFixturePath + " (ejecuta desde la raiz del repositorio)");
             return;
         }
 

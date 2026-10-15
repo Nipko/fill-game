@@ -54,6 +54,12 @@ internal sealed record TinajaCheckResult
     /// <summary>Vertidos útiles de S0 que no son seguros (−1 si no se comprobó: solo en los tableros de estreno).</summary>
     public int S0Traps { get; init; } = -1;
 
+    /// <summary>
+    /// De <see cref="S0Traps"/>, los que no son trampas demostradas: ninguna realidad de S0 queda demostrada sin solución tras
+    /// ellos, solo faltó presupuesto para demostrarlos seguros («presupuesto agotado»; FIXG). −1 si no se comprobó.
+    /// </summary>
+    public int S0Unproven { get; init; } = -1;
+
     /// <summary>Estados distintos en los que se midió Morpho (0 si no se midió).</summary>
     public int MorphoStates { get; init; }
 
@@ -235,17 +241,11 @@ internal sealed class TinajaWalks
         if (debut)
         {
             stats.S0Traps = S0Traps(s0, options, out int unproven);
+            stats.S0Unproven = unproven;
             if (stats.S0Traps > 0)
             {
-                int proven = stats.S0Traps - unproven;
-                string more = unproven > 0
-                    ? string.Create(CultureInfo.InvariantCulture, $"; {unproven} mas sin seguridad demostrada: presupuesto agotado ({budget})")
-                    : "";
-                return proven > 0
-                    ? stats.Result(KindS0Trap, string.Create(CultureInfo.InvariantCulture,
-                        $"tinaja: {proven} vertido(s) util(es) de S0 no son seguros (estreno sin trampas){more}"))
-                    : stats.Result(KindBudget, string.Create(CultureInfo.InvariantCulture,
-                        $"tinaja: {unproven} vertido(s) util(es) de S0 sin seguridad demostrada (estreno sin trampas): presupuesto agotado ({budget})"));
+                (string kind, string why) = S0Reject(stats.S0Traps, unproven, budget);
+                return stats.Result(kind, why);
             }
         }
 
@@ -409,6 +409,41 @@ internal sealed class TinajaWalks
         }
 
         return traps;
+    }
+
+    /// <summary>
+    /// Rechazo de «S0 sin trampas» (FIXG; 03 §8: «El informe separa «sin vertido seguro» de «presupuesto agotado»»). Pura:
+    /// <paramref name="traps"/> vertidos útiles de S0 no son seguros y, de ellos, <paramref name="unproven"/> no son trampas
+    /// demostradas (<see cref="S0Traps(BoardState, SolverOptions, out int)"/>); <paramref name="budget"/> es el presupuesto
+    /// por realidad que se agotó. Con alguna trampa demostrada, <see cref="KindS0Trap"/> (y los no demostrados, en un sufijo
+    /// «; N mas sin seguridad demostrada»); si ninguna lo está, <see cref="KindBudget"/>.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="traps"/> no es positivo o <paramref name="unproven"/> no
+    /// está entre 0 y <paramref name="traps"/>.</exception>
+    public static (string Kind, string Reject) S0Reject(int traps, int unproven, string budget)
+    {
+        if (traps <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(traps), traps, "Sin vertidos inseguros en S0 no hay rechazo.");
+        }
+
+        if (unproven < 0 || unproven > traps)
+        {
+            throw new ArgumentOutOfRangeException(nameof(unproven), unproven, "Los no demostrados van de 0 a los vertidos inseguros.");
+        }
+
+        int proven = traps - unproven;
+        if (proven == 0)
+        {
+            return (KindBudget, string.Create(CultureInfo.InvariantCulture,
+                $"tinaja: {unproven} vertido(s) util(es) de S0 sin seguridad demostrada (estreno sin trampas): presupuesto agotado ({budget})"));
+        }
+
+        string more = unproven > 0
+            ? string.Create(CultureInfo.InvariantCulture, $"; {unproven} mas sin seguridad demostrada: presupuesto agotado ({budget})")
+            : "";
+        return (KindS0Trap, string.Create(CultureInfo.InvariantCulture,
+            $"tinaja: {proven} vertido(s) util(es) de S0 no son seguros (estreno sin trampas){more}"));
     }
 
     /// <summary>
@@ -602,6 +637,7 @@ internal sealed class TinajaWalks
         public int CasualGuess;
         public int CasualOpen;
         public int S0Traps = -1;
+        public int S0Unproven = -1;
         public int MorphoStates;
         public long MorphoMaxNodes;
         public BoardState? MorphoMaxState;
@@ -621,6 +657,7 @@ internal sealed class TinajaWalks
             CasualGuess = CasualGuess,
             CasualOpen = CasualOpen,
             S0Traps = S0Traps,
+            S0Unproven = S0Unproven,
             MorphoStates = MorphoStates,
             MorphoMaxNodes = MorphoMaxNodes,
             MorphoMaxState = MorphoMaxState,
