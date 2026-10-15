@@ -28,6 +28,10 @@
 /[Aa]ssets/_SmokeTemp/
 /[Aa]ssets/_SmokeTemp.meta
 
+# PNG de relleno que AF.EditorTools.SizeEstimate (tarea B0) importa y borra al terminar (por si se corta a medias).
+/[Aa]ssets/_SizeEstimateTemp/
+/[Aa]ssets/_SizeEstimateTemp.meta
+
 # Proyectos y soluciones que Unity genera para el IDE: SOLO en la raíz,
 # para que los de dotnet/ y tools/ sigan versionados.
 /*.csproj
