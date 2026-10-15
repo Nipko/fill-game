@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections;
 using System.Text;
+using System.Text.RegularExpressions;
 using AF.GameFlow;
 using AF.Localization;
 using AF.UI;
@@ -16,7 +17,9 @@ namespace AF.Tests.PlayMode
     /// (<c>GameSceneBuilder</c>) y <c>GameBootstrap</c> configura <see cref="Loc"/> con ellas antes de construir la UI. Sin
     /// <c>af_lang</c>, el idioma automático da es-419 (el único con la UI completa); con <c>af_lang</c> = en-XA (gancho
     /// <see cref="LaunchOptions.LanguageOverride"/>), todo texto de la pantalla sale entre corchetes; y un <c>af_lang</c> sin la
-    /// UI completa («en») se queda en es-419 con un aviso.
+    /// UI completa («en») se queda en es-419 con un aviso. Sin tablas o con una rota (gancho
+    /// <see cref="LaunchOptions.LocTablesOverride"/>), el juego arranca igual en es-419 y construye la UI con cada texto como
+    /// «[clave]», con un aviso o un error en el log y nunca con una excepción en <c>Start</c> (tarea L2b, punto 4).
     /// </summary>
     public sealed class LocBootTests
     {
@@ -90,12 +93,72 @@ namespace AF.Tests.PlayMode
         public IEnumerator AfLang_WithoutACompleteUi_StaysInEs419()
         {
             LaunchOptions.LanguageOverride = LocLocale.English;
-            LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex("af_lang = \"en\" no tiene la UI completa: se usa es-419"));
+            LogAssert.Expect(LogType.Warning, new Regex("af_lang = \"en\" no tiene la UI completa: se usa es-419"));
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
             GameBootstrap boot = GameBootstrap.Current!;
             Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.SourceLocale));
             Assert.That(boot.Locale.Value.Source, Is.EqualTo(LocSource.Fallback));
             Assert.That(UiText.Next, Is.EqualTo("Siguiente"));
+        }
+
+        [UnityTest]
+        public IEnumerator WithoutTables_TheGameStartsInEs419_AndBuildsItsUiWithTheKeys()
+        {
+            LaunchOptions.LocTablesOverride = new LocTableTexts(null, null);
+            LogAssert.Expect(LogType.Warning, new Regex("faltan las tablas de textos \\(TextAsset\\): la UI irá sin textos en es-419"));
+            yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.SourceLocale));
+            Assert.That(boot.Locale.Value.Source, Is.EqualTo(LocSource.Fallback));
+            Assert.That(Loc.Catalog.Strings.Count, Is.EqualTo(0));
+            Assert.That(Loc.Catalog.Facts.Count, Is.EqualTo(0));
+            Assert.That(UiText.Next, Is.EqualTo("[next]"), "en desarrollo, la clave entre corchetes");
+            yield return AssertUiShowsOnlyKeys(boot);
+        }
+
+        [UnityTest]
+        public IEnumerator AnInvalidStringsTable_LogsAnError_AndTheGameStillBuildsItsUi()
+        {
+            LaunchOptions.LocTablesOverride = new LocTableTexts("key,es-419\nnext,Siguiente\nnext,Otra vez\n", null);
+            LogAssert.Expect(LogType.Error, new Regex("la tabla de textos no es válida: strings\\.csv, línea 3: la clave «next» está repetida"));
+            LogAssert.Expect(LogType.Warning, new Regex("falta la tabla de textos largos \\(facts\\.csv\\)"));
+            yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.SourceLocale));
+            Assert.That(Loc.Catalog.Strings.Count, Is.EqualTo(0), "una tabla rota no se lee a medias");
+            Assert.That(UiText.Next, Is.EqualTo("[next]"));
+            yield return AssertUiShowsOnlyKeys(boot);
+        }
+
+        // La UI está construida y en pantalla: el nivel arrancó, hay textos y todos los que llevan letras son claves «[…]».
+        private static IEnumerator AssertUiShowsOnlyKeys(GameBootstrap boot)
+        {
+            Assert.That(boot.View, Is.Not.Null, "pantalla del nivel construida");
+            Assert.That(boot.Flow, Is.Not.Null);
+            boot.TapAnywhere();
+            yield return null;
+
+            var outside = new StringBuilder();
+            int keys = 0;
+            foreach (TMP_Text text in boot.View!.Canvas.GetComponentsInChildren<TMP_Text>(false))
+            {
+                if (!text.isActiveAndEnabled || !HasLetters(text.text))
+                {
+                    continue;
+                }
+
+                if (text.text.IndexOf('[') >= 0 && text.text.IndexOf(']') > 0)
+                {
+                    keys++;
+                }
+                else
+                {
+                    outside.Append(text.name).Append(": «").Append(text.text).Append("» ");
+                }
+            }
+
+            Assert.That(keys, Is.GreaterThan(0), "textos de la UI en pantalla, como «[clave]»");
+            Assert.That(outside.ToString(), Is.Empty, "sin tablas, ningún texto con letras que no sea una clave");
         }
 
         private static bool HasLetters(string s)

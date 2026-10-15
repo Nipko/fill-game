@@ -25,16 +25,23 @@ namespace AF.Tests.PlayMode
         private CultureInfo? _threadCulture;
         private CultureInfo? _threadUiCulture;
 
-        /// <summary>Catálogo leído de las tablas del proyecto (vacío antes del <c>[OneTimeSetUp]</c>).</summary>
+        /// <summary>
+        /// Catálogo leído de las tablas del proyecto (vacío antes del <c>[OneTimeSetUp]</c>). Solo se lee del disco en el Editor
+        /// (<c>LocTables.FromProjectFiles</c> no va en los builds): si algún día estos tests corren en un player, queda vacío y
+        /// los tests que cargan la escena <c>Game</c> configuran <see cref="Loc"/> desde sus TextAsset, sin que falle el
+        /// <c>[OneTimeSetUp]</c> de todos.
+        /// </summary>
         public static LocCatalog Catalog { get; private set; } = LocCatalog.Empty;
 
         /// <summary>Configura <see cref="Loc"/> en es-419 con las tablas del proyecto, sin región del teléfono (cifras de es-CO).</summary>
         public static void ConfigureEs419()
         {
+#if UNITY_EDITOR
             if (Catalog.Strings.Count == 0)
             {
                 Catalog = LocTables.FromProjectFiles();
             }
+#endif
 
             Loc.Configure(Catalog, LocLocale.SourceLocale, true);
         }
@@ -54,7 +61,9 @@ namespace AF.Tests.PlayMode
             CultureInfo.DefaultThreadCurrentUICulture = forced;
 
             LaunchOptions.Reset();
+#if UNITY_EDITOR
             Catalog = LocTables.FromProjectFiles();
+#endif
             ConfigureEs419();
         }
 

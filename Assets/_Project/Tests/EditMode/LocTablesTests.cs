@@ -34,8 +34,10 @@ namespace AF.Tests.EditMode
     {
         private const string Header = "key,es-419,en,pt-BR,context,max_chars,status,status_en,status_pt-BR,notes,args";
 
-        // Cifra con separador de miles o decimales («1.000», «5,2», «1 000» con espacio duro o fino, «1'000»).
-        private static readonly Regex NumberWithSeparator = new Regex("[0-9][.,\u00A0\u202F\u2009'][0-9]");
+        // Cifra con separador de miles o decimales: «1.000», «5,2», «1 000» con espacio duro o fino, «1'000» y también los
+        // miles con un espacio normal U+0020 («2 000», como los escriben las fuentes francesas y científicas), que solo cuentan
+        // con un grupo de 1-3 cifras y otro de exactamente 3 («entre 20 y 300» o «1852 200» no lo son).
+        private static readonly Regex NumberWithSeparator = new Regex("[0-9][.,\u00A0\u202F\u2009'][0-9]|(?<![0-9])[0-9]{1,3}( [0-9]{3})+(?![0-9])");
 
         private LocStateSnapshot _loc;
 
@@ -281,7 +283,13 @@ namespace AF.Tests.EditMode
 
             Assert.That(NumberWithSeparator.IsMatch("Pesa 1.000 kg"), Is.True);
             Assert.That(NumberWithSeparator.IsMatch("Mide 5,2 m"), Is.True);
+            Assert.That(NumberWithSeparator.IsMatch("Pesa 2\u00A0000 kg"), Is.True, "miles con espacio duro");
+            Assert.That(NumberWithSeparator.IsMatch("Pesa 2 000 kg"), Is.True, "miles con espacio normal");
+            Assert.That(NumberWithSeparator.IsMatch("Vive entre 2 000 y 3 000 m"), Is.True);
+            Assert.That(NumberWithSeparator.IsMatch("Hay 1 200 000 especies"), Is.True);
             Assert.That(NumberWithSeparator.IsMatch("Mide 35\u00A0m y vive 20 años"), Is.False, "sin separador, tal cual");
+            Assert.That(NumberWithSeparator.IsMatch("Entre 20 y 300 frutos"), Is.False, "dos cifras sueltas");
+            Assert.That(NumberWithSeparator.IsMatch("Wallace, 1852 200 especies"), Is.False, "un año y otra cifra no son un millar");
         }
 
         [Test]
@@ -503,6 +511,153 @@ namespace AF.Tests.EditMode
             Assert.That(DevProbe.SourceKey(LocSource.Saved), Is.EqualTo("saved"));
             Assert.That(DevProbe.SourceKey(LocSource.Device), Is.EqualTo("device"));
             Assert.That(DevProbe.SourceKey(LocSource.Default), Is.EqualTo("default"));
+        }
+    }
+
+    /// <summary>
+    /// El juego arranca aunque falten las tablas de textos o una no sea válida (D-018; tarea L2b, punto 4: «si faltan los
+    /// TextAsset, aviso y respaldo es-419»): <see cref="LocTables.FromAssetsOrEmpty"/> decide sin lanzar nunca y
+    /// <c>GameBootstrap.SetUpTexts</c> solo registra el aviso o el error. Sin la tabla de UI (o con una rota), Loc queda en
+    /// es-419 sin textos: en desarrollo cada texto se ve como «[clave]» y en release, vacío, nunca en otro idioma. Sin la de
+    /// textos largos (o con una rota), la UI va con su tabla y sin datos de fauna. El arranque de la escena sin tablas lo
+    /// prueba <c>LocBootTests</c> (PlayMode).
+    /// </summary>
+    public sealed class LocTablesFallbackTests
+    {
+        private const string FaunaKey = "fauna_saimiri_collinsi_dato";
+
+        // Tabla de UI rota: la clave «next» repetida en la línea 3.
+        private const string BrokenStrings = "key,es-419\nnext,Siguiente\nnext,Otra vez\n";
+
+        private LocStateSnapshot _loc;
+
+        [SetUp]
+        public void SetUp()
+        {
+            _loc = LocStateSnapshot.Take();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _loc.Restore();
+        }
+
+        [Test]
+        public void WithoutTheStringsTable_Es419WithoutTexts_KeysInDevelopment_EmptyInRelease()
+        {
+            LocCatalog catalog = LocTables.FromAssetsOrEmpty(null, null, out string? warning, out string? error);
+            Assert.That(catalog, Is.SameAs(LocCatalog.Empty));
+            Assert.That(warning, Is.EqualTo(LocTables.MissingStringsWarning));
+            Assert.That(warning, Does.Contain("faltan las tablas de textos"));
+            Assert.That(error, Is.Null);
+
+            LocResolution development = LocTables.Configure(catalog, null, true);
+            Assert.That(development.Locale, Is.EqualTo(LocLocale.SourceLocale));
+            Assert.That(development.Source, Is.EqualTo(LocSource.Fallback));
+            Assert.That(Loc.Locale, Is.EqualTo(LocLocale.SourceLocale));
+            Assert.That(Loc.Catalog.Strings.Count, Is.EqualTo(0));
+            Assert.That(UiText.Next, Is.EqualTo("[next]"), "en desarrollo, la clave entre corchetes");
+            Assert.That(UiText.PlayLevel(1), Is.EqualTo("[" + UiText.Keys.PlayLevel + "]"));
+            Assert.That(UiText.FaunaFact(FaunaKey), Is.Empty);
+
+            LocResolution release = LocTables.Configure(catalog, LocLocale.Pseudo, false);
+            Assert.That(release.Locale, Is.EqualTo(LocLocale.SourceLocale), "en release no hay af_lang");
+            Assert.That(UiText.Next, Is.Empty, "en release, sin texto");
+            Assert.That(UiText.PlayLevel(1), Is.Empty);
+            Assert.That(UiText.FaunaFact(FaunaKey), Is.Empty);
+        }
+
+        [Test]
+        public void WithoutTheFactsTable_TheUiKeepsItsTexts_AndThereAreNoFaunaFacts()
+        {
+            string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
+            LocCatalog catalog = LocTables.FromTextsOrEmpty(strings, null, out string? warning, out string? error);
+            Assert.That(warning, Is.EqualTo(LocTables.MissingFactsWarning));
+            Assert.That(warning, Does.Contain("facts.csv"));
+            Assert.That(error, Is.Null);
+            Assert.That(catalog.Strings.Count, Is.EqualTo(LocSetUpFixture.Catalog.Strings.Count));
+            Assert.That(catalog.Facts.Count, Is.EqualTo(0));
+
+            LocTables.Configure(catalog, null, true);
+            Assert.That(UiText.Next, Is.EqualTo("Siguiente"));
+            Assert.That(UiText.FaunaFact(FaunaKey), Is.Empty, "sin facts.csv, ningún dato de fauna (ni «[clave]»)");
+        }
+
+        [Test]
+        public void AnInvalidStringsTable_DoesNotThrow_AndLeavesEs419WithoutTexts()
+        {
+            string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile);
+            LocCatalog? catalog = null;
+            string? warning = null;
+            string? error = null;
+            Assert.DoesNotThrow(() => catalog = LocTables.FromTextsOrEmpty(BrokenStrings, facts, out warning, out error));
+            Assert.That(catalog, Is.SameAs(LocCatalog.Empty));
+            Assert.That(warning, Is.Null);
+            Assert.That(error, Does.StartWith("la tabla de textos no es válida: strings.csv, línea 3: la clave «next» está repetida"));
+            Assert.That(error, Does.EndWith("La UI irá sin textos en es-419."));
+
+            LocTables.Configure(catalog!, null, true);
+            Assert.That(Loc.Locale, Is.EqualTo(LocLocale.SourceLocale));
+            Assert.That(UiText.Next, Is.EqualTo("[next]"));
+            Assert.That(UiText.FaunaFact(FaunaKey), Is.Empty, "con la UI rota tampoco se leen los textos largos");
+            LocTables.Configure(catalog!, null, false);
+            Assert.That(UiText.Next, Is.Empty, "en release, sin texto");
+        }
+
+        [Test]
+        public void AnInvalidFactsTable_KeepsTheUi_WithoutLongTexts()
+        {
+            string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
+            LocCatalog catalog = LocTables.FromTextsOrEmpty(strings, "key,es-419\n" + FaunaKey + ",\"comillas sin cerrar\n", out string? warning, out string? error);
+            Assert.That(warning, Is.Null);
+            Assert.That(error, Does.StartWith("la tabla de textos largos no es válida: facts.csv, línea 2"));
+            Assert.That(error, Does.EndWith("La UI va con su tabla y sin datos de fauna."));
+            Assert.That(catalog.Strings.Count, Is.EqualTo(LocSetUpFixture.Catalog.Strings.Count));
+            Assert.That(catalog.Facts.Count, Is.EqualTo(0));
+
+            // Una clave de textos largos que ya está en la UI tampoco vale (LocCatalog: nunca en las dos tablas).
+            catalog = LocTables.FromTextsOrEmpty(strings, "key,es-419\nnext,Siguiente\n", out warning, out error);
+            Assert.That(warning, Is.Null);
+            Assert.That(error, Does.Contain("facts.csv, línea 2: la clave «next» ya está en strings.csv"));
+            Assert.That(catalog.Facts.Count, Is.EqualTo(0));
+
+            LocTables.Configure(catalog, null, true);
+            Assert.That(UiText.Next, Is.EqualTo("Siguiente"));
+            Assert.That(UiText.FaunaFact(FaunaKey), Is.Empty);
+        }
+
+        [Test]
+        public void WithBothTables_NoWarningAndNoError_AndADestroyedAssetCountsAsMissing()
+        {
+            var strings = new UnityEngine.TextAsset(LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile));
+            var facts = new UnityEngine.TextAsset(LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile));
+            try
+            {
+                LocCatalog catalog = LocTables.FromAssetsOrEmpty(strings, facts, out string? warning, out string? error);
+                Assert.That(warning, Is.Null);
+                Assert.That(error, Is.Null);
+                Assert.That(catalog.Strings.Count, Is.EqualTo(LocSetUpFixture.Catalog.Strings.Count));
+                Assert.That(catalog.Facts.Count, Is.EqualTo(LocSetUpFixture.Catalog.Facts.Count));
+                LocTables.Configure(catalog, null, true);
+                Assert.That(UiText.Next, Is.EqualTo("Siguiente"));
+                Assert.That(UiText.FaunaFact(FaunaKey), Is.EqualTo("Cruza el bosque en fila, por ramas finas"));
+
+                // Un TextAsset destruido cuenta como que falta (el == de Unity), sin excepción.
+                UnityEngine.Object.DestroyImmediate(facts);
+                catalog = LocTables.FromAssetsOrEmpty(strings, facts, out warning, out error);
+                Assert.That(warning, Is.EqualTo(LocTables.MissingFactsWarning));
+                Assert.That(error, Is.Null);
+                Assert.That(catalog.Facts.Count, Is.EqualTo(0));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(strings);
+                if (facts != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(facts);
+                }
+            }
         }
     }
 }

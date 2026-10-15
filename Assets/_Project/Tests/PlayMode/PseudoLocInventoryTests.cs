@@ -8,6 +8,7 @@ using System.Text;
 using AF.Economy;
 using AF.GameFlow;
 using AF.Localization;
+using AF.Presentation;
 using AF.Save;
 using AF.Solver.Search;
 using AF.UI;
@@ -22,9 +23,10 @@ namespace AF.Tests.PlayMode
     /// Inventario de desbordes en en-XA (D-018, nivel 2; propuesta de idiomas §3.7 y §3.8; tarea L2b): con la
     /// pseudolocalización (el español alargado un 35 % y entre corchetes; <see cref="LocPseudo"/>), a 360 × 640 dp (la pantalla
     /// 16:9 de 02 §5, que <c>GameScreen</c> maqueta en 438,75 × 780 dp; <see cref="HudLabelTests.Screen640"/>) y con la fuente al
-    /// 100 %, recorre el inicio, la tarjeta previa, el banner de mundo, la victoria, Aguas estancadas (ramas A, B y C), ¿Seguro?
-    /// y Nivel fallido, y <b>lista</b> sin fallar cada texto visible que se sale de su caja, que no cabe ni al tamaño mínimo
-    /// del autoajuste, que baja de 12 sp (02 §12) o que, en en-XA, sale sin corchetes (no viene de la tabla). Los arregla L4.
+    /// 100 %, recorre el inicio (con el botón Jugar de un nivel Difícil y su cinta), la tarjeta previa, el banner de mundo, la
+    /// victoria, Aguas estancadas (ramas A, B y C), ¿Seguro? y Nivel fallido, y <b>lista</b> sin fallar cada texto visible que
+    /// se sale de su caja o, en la cinta «×3»/«×4», de su franja de texto, que no cabe ni al tamaño mínimo del autoajuste, que
+    /// baja de 12 sp (02 §12) o que, en en-XA, sale sin corchetes (no viene de la tabla). Los arregla L4.
     /// La misma pasada en es-419 es la referencia: lo que ya pasa en español no es de la traducción.
     /// <para>Deja en <c>Logs/snapshots/&lt;idioma&gt;/</c> una captura por pantalla (<c>inv_*.png</c>) y el inventario
     /// (<c>inventory.txt</c>, una línea por texto con problemas; también en el log, <c>AF_LOC_INV</c>). Explícito: necesita
@@ -75,6 +77,15 @@ namespace AF.Tests.PlayMode
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p31));
             yield return Shoot(dir, inventory, "inv_inicio_l31", lobby: true);
             LaunchOptions.LevelOffsetOverride = null;
+
+            // Inicio en el 40 (Difícil): el botón Jugar con el chip y la cinta «×3» del premio multiplicado (D-009; 07 §7.7).
+            Profile p40 = Wallet.NewProfile(FunnelSetup.Clock);
+            p40.Progress.NextLevel = 40;
+            p40.Progress.MaxLevel = 39;
+            p40.Wallet.Seeds = 1240;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p40));
+            Assert.That(GameBootstrap.Current!.Lobby!.ChipRibbonText, Is.Not.Empty, "la cinta del botón Jugar en el 40");
+            yield return Shoot(dir, inventory, "inv_inicio_l40", lobby: true);
 
             // Tarjeta previa: Difícil (40), el estreno combinado de Aguas turbias (100) y el de la Piraña (183).
             foreach (int level in new[] { 40, 100, 183 })
@@ -286,6 +297,17 @@ namespace AF.Tests.PlayMode
                 problems.Add("se sale a lo ancho");
             }
 
+            // La cinta «×3»/«×4» (DifficultyChip en el botón Jugar y en el HUD; LevelCardView en la tarjeta previa): la cifra
+            // tiene que caber en la franja de texto del sprite (ProceduralArt.RibbonTagTextDp: entre el remache y la cola en V),
+            // aunque su caja sea más ancha (LevelCardView la agranda a su texto y la centra en la franja). Si no, tapa la muesca
+            // y el remache y la cinta deja de leerse como banderín (D-003).
+            float band = RibbonBandWidth(text);
+            if (band > 0f && bounds.size.x > band + Tolerance)
+            {
+                problems.Add("se sale de la franja de la cinta (" + bounds.size.x.ToString("0.#", CultureInfo.InvariantCulture) + " > "
+                    + band.ToString("0.#", CultureInfo.InvariantCulture) + " dp)");
+            }
+
             if (tall)
             {
                 problems.Add("se sale a lo alto");
@@ -312,6 +334,22 @@ namespace AF.Tests.PlayMode
             }
 
             return string.Join("; ", problems);
+        }
+
+        // Ancho de la franja de texto de la cinta (dp) si el texto es la cifra de una cinta «×3»/«×4» («Ribbon/Value»); 0 si no.
+        // La escala sale del alto del sprite de la cinta (RibbonTagHeightDp al 100 %; 0,75 en el chip compacto, × la escala de
+        // texto en la tarjeta previa) y la franja es el ancho de la cinta menos el remache y la cola (RibbonTagWidthDp −
+        // RibbonTagTextDp.width, 11 dp al 100 %): así sigue valiendo si L4 alarga la cinta para que quepa la cifra.
+        private static float RibbonBandWidth(TMP_Text text)
+        {
+            Transform? parent = text.transform.parent;
+            if (text.name != "Value" || parent == null || parent.name != "Ribbon" || !(parent is RectTransform ribbon))
+            {
+                return 0f;
+            }
+
+            float scale = ribbon.rect.height / ProceduralArt.RibbonTagHeightDp;
+            return ribbon.rect.width - ((ProceduralArt.RibbonTagWidthDp - ProceduralArt.RibbonTagTextDp.width) * scale);
         }
 
         private static bool Visible(TMP_Text text)

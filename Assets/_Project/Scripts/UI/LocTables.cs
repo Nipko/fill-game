@@ -1,6 +1,8 @@
 #nullable enable
 using System;
+#if UNITY_EDITOR
 using System.IO;
+#endif
 using AF.Localization;
 using UnityEngine;
 
@@ -9,8 +11,9 @@ namespace AF.UI
     /// <summary>
     /// Las tablas de textos del juego (D-018; 08 §4.7; contrato 32), <c>Assets/_Project/Data/Loc/strings.csv</c> (UI) y
     /// <c>facts.csv</c> (textos largos), y cómo se configura <see cref="Loc"/> con ellas: <see cref="GameBootstrap"/> las recibe
-    /// como TextAsset de la escena (<c>GameSceneBuilder</c>) y los tests y las herramientas del Editor las leen del disco
-    /// (<see cref="FromProjectFiles"/>), en UTF-8 estricto.
+    /// como TextAsset de la escena (<c>GameSceneBuilder</c>) y las lee con <see cref="FromAssetsOrEmpty"/>, que nunca lanza; en
+    /// el Editor, los tests y las herramientas las leen del disco (<c>FromProjectFiles</c>, que no va en los builds), en UTF-8
+    /// estricto.
     /// </summary>
     public static class LocTables
     {
@@ -20,39 +23,102 @@ namespace AF.UI
         /// <summary>Ruta de la tabla de textos largos en el proyecto.</summary>
         public const string FactsAssetPath = "Assets/_Project/Data/Loc/facts.csv";
 
-        /// <summary>Lee las dos tablas desde el texto de sus TextAsset (<paramref name="facts"/> puede faltar).</summary>
-        public static LocCatalog FromAssets(TextAsset strings, TextAsset? facts)
-        {
-            if (strings == null)
-            {
-                throw new ArgumentNullException(nameof(strings));
-            }
+        /// <summary>Aviso sin la tabla de UI: el juego arranca sin textos en es-419.</summary>
+        public const string MissingStringsWarning = "faltan las tablas de textos (TextAsset): la UI irá sin textos en es-419. Regenera la escena con AF.UI.Editor.GameSceneBuilder.CreateGameScene.";
 
-            return LocCatalog.Parse(strings.text, facts != null ? facts.text : null);
+        /// <summary>Aviso sin la tabla de textos largos: la UI va con su tabla y sin datos de fauna.</summary>
+        public const string MissingFactsWarning = "falta la tabla de textos largos (facts.csv): sin datos de fauna. Regenera la escena con AF.UI.Editor.GameSceneBuilder.CreateGameScene.";
+
+        /// <summary>
+        /// Lee las tablas de la escena sin lanzar nunca (D-018; tarea L2b, punto 4: «si faltan los TextAsset, aviso y respaldo
+        /// es-419»): ver <see cref="FromTextsOrEmpty"/>. Un TextAsset destruido cuenta como que falta (el == de Unity).
+        /// </summary>
+        public static LocCatalog FromAssetsOrEmpty(TextAsset? strings, TextAsset? facts, out string? warning, out string? error)
+        {
+            return FromTextsOrEmpty(strings != null ? strings.text : null, facts != null ? facts.text : null, out warning, out error);
         }
 
         /// <summary>
-        /// Lee las dos tablas del disco del proyecto (solo en el Editor y en los tests: <see cref="Application.dataPath"/> es
-        /// <c>Assets/</c>), en UTF-8 estricto (<see cref="LocCsv.Decode"/>: con BOM o con bytes que no son UTF-8, error con la
-        /// línea).
+        /// Lee las dos tablas desde su texto sin lanzar nunca, para que el juego arranque igual con la escena sin tablas o con un
+        /// CSV roto: en desarrollo, cada texto que falte se ve como «[clave]» y en release, vacío; nunca en otro idioma ni con
+        /// una excepción en <c>Start</c> que deje el juego sin UI. Quien llama registra <paramref name="warning"/> (falta una
+        /// tabla) y <paramref name="error"/> (una tabla no es válida); pueden venir los dos.
+        /// <list type="bullet">
+        /// <item>Sin <paramref name="stringsCsv"/>: <see cref="LocCatalog.Empty"/> (solo es-419, sin textos) y
+        /// <see cref="MissingStringsWarning"/>.</item>
+        /// <item><paramref name="stringsCsv"/> no válida: <see cref="LocCatalog.Empty"/> y el error, con el archivo y la
+        /// línea.</item>
+        /// <item>Sin <paramref name="factsCsv"/>: la UI con su tabla, sin textos largos, y <see cref="MissingFactsWarning"/>.</item>
+        /// <item><paramref name="factsCsv"/> no válida (o con una clave que ya está en <c>strings.csv</c>): la UI con su tabla,
+        /// sin textos largos, y el error.</item>
+        /// </list>
+        /// </summary>
+        public static LocCatalog FromTextsOrEmpty(string? stringsCsv, string? factsCsv, out string? warning, out string? error)
+        {
+            warning = null;
+            error = null;
+            if (stringsCsv == null)
+            {
+                warning = MissingStringsWarning;
+                return LocCatalog.Empty;
+            }
+
+            if (factsCsv == null)
+            {
+                warning = MissingFactsWarning;
+            }
+
+            LocTable strings;
+            try
+            {
+                strings = LocTable.Parse(stringsCsv, LocCatalog.StringsFile);
+            }
+            catch (LocCsvException e)
+            {
+                error = "la tabla de textos no es válida: " + e.Message + ". La UI irá sin textos en es-419.";
+                return LocCatalog.Empty;
+            }
+
+            if (factsCsv == null)
+            {
+                return new LocCatalog(strings);
+            }
+
+            try
+            {
+                return new LocCatalog(strings, LocTable.Parse(factsCsv, LocCatalog.FactsFile));
+            }
+            catch (LocCsvException e)
+            {
+                error = "la tabla de textos largos no es válida: " + e.Message + ". La UI va con su tabla y sin datos de fauna.";
+                return new LocCatalog(strings);
+            }
+        }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Lee las dos tablas del disco del proyecto (solo en el Editor, para los tests y las herramientas:
+        /// <see cref="Application.dataPath"/> es <c>Assets/</c>; en un player no existe), en UTF-8 estricto
+        /// (<see cref="LocCsv.Decode"/>: con BOM o con bytes que no son UTF-8, error con la línea).
         /// </summary>
         public static LocCatalog FromProjectFiles()
         {
             return LocCatalog.Parse(ReadProjectFile(StringsAssetPath, LocCatalog.StringsFile), ReadProjectFile(FactsAssetPath, LocCatalog.FactsFile));
         }
 
-        /// <summary>Texto de la tabla <paramref name="assetPath"/> («Assets/…») del proyecto, en UTF-8 estricto.</summary>
+        /// <summary>Texto de la tabla <paramref name="assetPath"/> («Assets/…») del proyecto, en UTF-8 estricto (solo en el Editor).</summary>
         public static string ReadProjectFile(string assetPath, string file)
         {
             return LocCsv.Decode(File.ReadAllBytes(ProjectPath(assetPath)), file);
         }
 
-        /// <summary>Ruta en disco de <paramref name="assetPath"/> («Assets/…»).</summary>
+        /// <summary>Ruta en disco de <paramref name="assetPath"/> («Assets/…»; solo en el Editor).</summary>
         public static string ProjectPath(string assetPath)
         {
             string root = Path.GetDirectoryName(Application.dataPath) ?? ".";
             return Path.Combine(root, assetPath);
         }
+#endif
 
         /// <summary>
         /// Resuelve el idioma de la UI y configura <see cref="Loc"/> (D-018, Q7-A; arquitectura de la tanda 4, §1): el de desarrollo
@@ -72,5 +138,25 @@ namespace AF.UI
             Loc.Configure(catalog, resolution.Locale, development);
             return resolution;
         }
+    }
+
+    /// <summary>
+    /// Texto de las dos tablas que sustituye a los TextAsset de la escena (<see cref="LaunchOptions.LocTablesOverride"/>): solo
+    /// tests, para arrancar sin tablas o con una rota (tarea L2b, punto 4). Null en una tabla = falta.
+    /// </summary>
+    public sealed class LocTableTexts
+    {
+        /// <summary>Tablas de textos con el texto de <c>strings.csv</c> y de <c>facts.csv</c> (null = falta).</summary>
+        public LocTableTexts(string? strings, string? facts)
+        {
+            Strings = strings;
+            Facts = facts;
+        }
+
+        /// <summary>Texto de <c>strings.csv</c>, o null si falta.</summary>
+        public string? Strings { get; }
+
+        /// <summary>Texto de <c>facts.csv</c>, o null si falta.</summary>
+        public string? Facts { get; }
     }
 }

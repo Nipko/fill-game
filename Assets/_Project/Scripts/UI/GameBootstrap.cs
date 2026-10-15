@@ -853,33 +853,28 @@ namespace AF.UI
             }
         }
 
-        // Tablas de textos de la escena → Loc (D-018; 08 §4.7). Si faltan o no se pueden leer, se avisa y Loc queda sin textos en
-        // es-419, el idioma de respaldo del código (LocLocale.FallbackLocale): en desarrollo cada texto se ve como «[clave]» y
-        // en release, vacío; nunca un texto en otro idioma.
+        // Tablas de textos de la escena (o las del test, LaunchOptions.LocTablesOverride) → Loc (D-018; 08 §4.7). Si faltan o no
+        // se pueden leer, LocTables.FromTextsOrEmpty decide sin lanzar (Loc sin textos en es-419, el idioma de respaldo del
+        // código, LocLocale.FallbackLocale: en desarrollo cada texto se ve como «[clave]» y en release, vacío; nunca un texto en
+        // otro idioma) y aquí solo se registra el aviso o el error.
         private LocResolution SetUpTexts()
         {
             bool development = Debug.isDebugBuild;
             string? devLanguage = LaunchOptions.ResolveDevLanguage();
-            LocCatalog catalog = LocCatalog.Empty;
-            if (stringsTable == null)
+            string? warning;
+            string? error;
+            LocTableTexts? test = LaunchOptions.LocTablesOverride;
+            LocCatalog catalog = test != null
+                ? LocTables.FromTextsOrEmpty(test.Strings, test.Facts, out warning, out error)
+                : LocTables.FromAssetsOrEmpty(stringsTable, factsTable, out warning, out error);
+            if (error != null)
             {
-                Debug.LogWarning(LogPrefix + "faltan las tablas de textos (TextAsset): la UI irá sin textos en es-419. Regenera la escena con AF.UI.Editor.GameSceneBuilder.CreateGameScene.");
-            }
-            else
-            {
-                try
-                {
-                    catalog = LocTables.FromAssets(stringsTable, factsTable);
-                }
-                catch (LocCsvException e)
-                {
-                    Debug.LogError(LogPrefix + "la tabla de textos no es válida: " + e.Message + ". La UI irá sin textos en es-419.");
-                }
+                Debug.LogError(LogPrefix + error);
             }
 
-            if (factsTable == null && stringsTable != null)
+            if (warning != null)
             {
-                Debug.LogWarning(LogPrefix + "falta la tabla de textos largos (facts.csv): sin datos de fauna. Regenera la escena con AF.UI.Editor.GameSceneBuilder.CreateGameScene.");
+                Debug.LogWarning(LogPrefix + warning);
             }
 
             LocResolution resolution = LocTables.Configure(catalog, devLanguage, development);
