@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using AF.Core.Board;
 using AF.Core.Mechanics;
+using AF.Solver.Murky;
 using AmazonFill.Tools.LevelGenerator.Campaign;
 using AmazonFill.Tools.LevelGenerator.Metrics;
 
@@ -25,7 +26,10 @@ internal static class CampaignReport
 
         string specPath = spec.Path.Replace('\\', '/');
         string outDir = packs.Count == 0 ? "." : (Path.GetDirectoryName(packs[0].Path) ?? ".").Replace('\\', '/');
-        int packSchema = PackWriter.PackSchemaFor(levels.Select(l => new PackLevel(l.Plan, l.Chosen!, l.Relief)).ToList());
+        // pack_schema de cada pack, como lo escribe PackWriter con los niveles de su mundo (3 solo en los que llevan la tinaja).
+        string packSchema = PackSchemaText(
+            packs.Select(p => (Path.GetFileName(p.Path), PackSchemaOf(p.World, levels))).ToList(),
+            PackWriter.PackSchemaFor(levels.Select(l => new PackLevel(l.Plan, l.Chosen!, l.Relief)).ToList()));
         bool tinaja = levels.Any(l => l.Chosen!.IsTinaja) || spec.MechanicTable.Any(m => m.Code == "Ti");
         W(F($"# Campaña {spec.FirstLevel}-{spec.LastLevel}: informe de `level-generator --spec`"));
         W();
@@ -381,8 +385,12 @@ internal static class CampaignReport
         W();
         W(F($"Filtros de `TinajaWalks` sobre el tablero publicado (03 §8): ruta segura (`SafePath`), {TinajaWalks.SafeWalkCount} paseos seguros ")
             + F($"(todos tienen que ganar), {TinajaWalks.CasualWalkCount} paseos casuales (ganados / perdidos por error / de adivinar / sin terminar en ")
-            + F($"{TinajaWalks.MaxSteps} vertidos; ninguno puede ser de adivinar), «S0 sin trampas» en el estreno (vertidos útiles de S0 que no son ")
-            + F($"seguros; tiene que ser 0) y la compuerta de coste de Morpho: w = {TinajaWalks.MorphoWeight} y {TinajaWalks.MorphoRealityBudget} nodos ")
+            + F($"{TinajaWalks.MaxSteps} vertidos; ninguno puede ser de adivinar; el primer estado sin vertido seguro de cada paseo es un error del ")
+            + "jugador si la realidad verdadera no tiene solución y «adivinar» si la tiene y `SafeMoves` demostró que ningún vertido es seguro en "
+            + F($"todas las realidades; si `SafeMoves` agota sus {SafeMoves.PipelineRealityBudget} nodos por realidad, o A* los {MetricsEngine.ParBudget} ")
+            + "de la verdadera, el rechazo es «presupuesto agotado», nunca «adivinar»), «S0 sin trampas» en el estreno (vertidos útiles de S0 que no son "
+            + F($"seguros; tiene que ser 0: «trampa en S0» si alguno deja una realidad demostrada sin solución y, si no, «presupuesto agotado») y la ")
+            + F($"compuerta de coste de Morpho: w = {TinajaWalks.MorphoWeight} y {TinajaWalks.MorphoRealityBudget} nodos ")
             + F($"por realidad desde cero en S0, en la ruta y en los paseos, con un tope de {TinajaWalks.MorphoNodeCap} nodos por consulta ")
             + F($"({TinajaWalks.HintTimeoutMs} ms × {TinajaWalks.PcNodesPerMs} nodos/ms del PC [E] ÷ factor {TinajaWalks.MorphoDeviceFactor}× del teléfono [P], hasta PF1). ")
             + "Todas las búsquedas van sin poda de fútiles. Dosis por tipo de nivel (D-019, Q-Ti1 A): 3 en estreno, comodidad y práctica; "
@@ -475,6 +483,24 @@ internal static class CampaignReport
         int start = spec.CycleFrom + (((p.Level - spec.CycleFrom) / 20) * 20);
         return string.Create(CultureInfo.InvariantCulture, $"{start}-{start + 19}");
     }
+
+    /// <summary>
+    /// <c>pack_schema</c> de la cabecera (revisión de P1; FIXG): el de todos los packs si coincide (o
+    /// <paramref name="whole"/>, el de todos los niveles juntos, si no hay packs); si unos llevan la tinaja y otros no,
+    /// «2 (3 en los packs con tinaja: …)», con el nombre de cada uno, porque PackWriter escribe el 3 solo en esos.
+    /// </summary>
+    internal static string PackSchemaText(IReadOnlyList<(string Pack, int Schema)> packs, int whole)
+    {
+        List<string> raised = [.. packs.Where(p => p.Schema == PackWriter.TinajaPackSchema).Select(p => "`" + p.Pack + "`")];
+        return raised.Count == 0 || raised.Count == packs.Count
+            ? whole.ToString(CultureInfo.InvariantCulture)
+            : string.Create(CultureInfo.InvariantCulture,
+                $"{PackWriter.PackSchema} ({PackWriter.TinajaPackSchema} en los packs con tinaja: {string.Join(", ", raised)})");
+    }
+
+    /// <summary><c>pack_schema</c> del pack del mundo <paramref name="world"/> (sus niveles y variantes; PackWriter.PackSchemaFor).</summary>
+    private static int PackSchemaOf(WorldInfo world, List<GeneratedLevel> levels) =>
+        PackWriter.PackSchemaFor(levels.Where(l => l.Plan.World == world).Select(l => new PackLevel(l.Plan, l.Chosen!, l.Relief)).ToList());
 
     private static int NoReliefBytes(CampaignSpec spec, WorldInfo world, List<GeneratedLevel> levels)
     {

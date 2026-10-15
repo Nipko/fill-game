@@ -116,7 +116,7 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-TINAJA-COMBO | sin Liana, Remolino, Lluvia ni Piraña, y sin Barro dentro de la tinaja o de su cuia (fuera de la pareja, sí) | 02 §9.1 M13, combinaciones |
 | QA-TINAJA-SLOT | ninguna tinaja en p1, p2, p19 ni en la rampa | D-019, Q-Ti1 A |
 | QA-TINAJA-DEBUT | tablero de estreno con tinaja: sola y un ejemplar, 2 vacíos sin contar la pareja, `bot_fail` < 0,20 y S0 sin trampas (todo vertido útil de S0 es seguro) | 02 §9.2 regla 2; propuesta de la tinaja c.3 y d.3 |
-| QA-TINAJA-SAFE | ruta segura, 20 paseos seguros y 30 casuales [P] (`TinajaWalks.Check`, la misma semilla que el generador); el motivo separa «sin vertido seguro» de «presupuesto agotado» (paseos casuales: tras FIXG; hasta entonces, un `SafeMoves` sin presupuesto con la realidad verdadera resoluble sale como «adivinar») | 03 §8; D-019, Q-Ti1 A |
+| QA-TINAJA-SAFE | ruta segura, 20 paseos seguros y 30 casuales [P] (`TinajaWalks.Check`, la misma semilla que el generador); el motivo separa «sin vertido seguro» de «presupuesto agotado» (también en los paseos casuales desde FIXG: un `SafeMoves` sin presupuesto con la realidad verdadera resoluble es «presupuesto agotado», no «adivinar») | 03 §8; D-019, Q-Ti1 A |
 | QA-TINAJA-MORPHO | coste de Morpho (w = 2, 40.000 nodos por realidad) en S0, la ruta y los paseos: tope de nodos = 150 ms × nodos/ms del PC ÷ factor del teléfono (8× [P] hasta PF1), el mismo que P1 | propuesta de la tinaja c.3 punto 3; 08 §9 |
 | QA-SCHEMA | JSON válido contra `schemas/af-level-1.schema.json` (`python tools/validate_schema.py --pack`); sin Python o sin `jsonschema`, falla | 08 §4.1; 03 §17 #11 |
 | QA-REPRO | la especificación y las semillas reproducen cada pack byte a byte (campaña regenerada en memoria) | 03 §17 #10; 08 §2.4 y §4.1 |
@@ -157,9 +157,9 @@ especificación de la muestra de P1 (`specs/sample_tinaja.json`, la única con l
 pack de muestra con un defecto (QA-TINAJA-ONE, PAIR, CUIAS, MASK, T4, COMBO, SLOT en p1 y en p19, TIER, QA-RELIEF-MASK y
 QA-RELIEF-MINUS) o de tableros que rechazan los filtros del generador: QA-TINAJA-DEBUT es un estreno con 10 vertidos útiles
 de S0 que no son seguros; QA-TINAJA-SAFE (`tinaja_presupuesto_agotado`), un candidato del reto 338 de la muestra que el
-generador rechazó (el «adivinar: 1» del informe de la muestra): el paseo casual 2 llega tras 1 vertido a un estado en el que
+generador rechazó (el «presupuesto agotado: 1» del 338 en el informe de la muestra; antes de FIXG, «adivinar: 1»): el paseo casual 2 llega tras 1 vertido a un estado en el que
 `SafeMoves` agota sus 20.000 nodos por realidad (4 realidades) y la realidad verdadera es resoluble. Es «presupuesto
-agotado», no «adivinar»: hasta FIXG el motivo acaba en `[adivinar]` y, con FIXG, en `[presupuesto agotado]`, con el mismo id.
+agotado», no «adivinar»: desde FIXG el motivo acaba en `[presupuesto agotado]` (antes, en `[adivinar]`), con el mismo id.
 El informe de la muestra no cuenta ningún otro candidato rechazado por «adivinar», así que el «adivinar» de verdad
 (`SafeMovesOutcome.SomeRealitySolvable` con la realidad verdadera resoluble) no tiene fixture: lo fija el test de
 clasificación de FIXG; QA-TINAJA-MORPHO, un hito de 12 cuias con 5 dosis en el que Morpho expande 66.496 nodos en S0

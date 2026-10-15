@@ -156,8 +156,9 @@ Fases (los tiempos salen por la consola; el informe no lleva tiempos):
    piden más candidatos a sus retos, hito, siguientes y recuperaciones (hasta 2 rondas); un reto o hito que quede fuera de
    su ventana se publica con la etiqueta que mide (c.2: sin etiqueta si mide menos del 75 %) y el informe lo registra.
 4. **Alivio** (`Metrics/Relief.cs`) desde el nivel 31.
-5. **Packs** (`PackWriter`): `pack_schema` 2, o 3 si algún nivel lleva la tinaja (D-019); minificado con un nivel por
-   línea, UTF-8 sin BOM y LF, decimales fijos.
+5. **Packs** (`PackWriter`): `pack_schema` 2, o 3 si algún nivel del pack lleva la tinaja (D-019), pack a pack (la
+   cabecera del informe dice «2 (3 en los packs con tinaja: …)» si una campaña tiene de los dos; FIXG); minificado con
+   un nivel por línea, UTF-8 sin BOM y LF, decimales fijos.
 
 El informe (`tools/out/campaign_v1_report.md`) trae, además de los packs, el pool, las etiquetas, los ciclos y la tabla
 por nivel: el debut real y el hueco máximo de cada mecánica y capacidad sobre los tableros publicados, el remanso frente a
@@ -227,8 +228,8 @@ Filtros (`Generation/TinajaWalks.cs`), en cada candidato que se mide:
 |---|---|
 | Ruta segura | `SafePath` (03 §8) con 20.000 nodos por realidad |
 | Paseos seguros [P] | 20, con un vertido seguro al azar hasta ganar: ninguno llega a un estado sin vertido seguro ni pasa de 400 vertidos |
-| Paseos casuales [P] | 30, con cualquier vertido útil al azar: el primer estado sin vertido seguro de cada paseo tiene que ser irresoluble en la realidad verdadera (error del jugador); si es resoluble, habría que adivinar y el nivel se rechaza |
-| S0 sin trampas | Solo en el estreno: todo vertido útil de S0 es seguro (por hash canónico) |
+| Paseos casuales [P] | 30, con cualquier vertido útil al azar. El primer estado sin vertido seguro de cada paseo se clasifica por `SafeMoves.Outcome` y, si hace falta, con A* en la realidad verdadera (`TinajaWalks.ClassifyCasual`; FIXG): `NoExit`, o la verdadera sin solución, es un error del jugador y el paseo acaba; `SomeRealitySolvable` con la verdadera resoluble es «adivinar» y el nivel se rechaza; si `SafeMoves` agota sus 20.000 nodos por realidad (los de `ReliefOptions` en las variantes) y la verdadera es resoluble, o A* agota los suyos en la verdadera, se rechaza por «presupuesto agotado», nunca por «adivinar» (no se cuenta en la columna «a» del informe) |
+| S0 sin trampas | Solo en el estreno: todo vertido útil de S0 es seguro (por hash canónico). Uno que no lo es se rechaza como «trampa en S0» si A* deja alguna realidad de S0 demostrada sin solución tras él y, si no, por «presupuesto agotado» (FIXG) |
 | Coste de Morpho | w = 2 y 40.000 nodos por realidad (`hint_weight`, `hint_budget_nodes`), desde cero en S0, en la ruta y en los paseos: Morpho da un vertido seguro y expande como mucho `MorphoNodeCap` = 150 ms × `PcNodesPerMs` [E] ÷ `MorphoDeviceFactor` (8× [P], hasta PF1) = 18.750 nodos |
 
 `PcNodesPerMs` = 1.000 [E] sale de la calibración de `--self-test tinaja` (líneas INFO «calibracion»): Morpho desde cero en
@@ -239,8 +240,9 @@ de 1.083-1.377). 1.000 es el mínimo medido, con el equipo cargado; con más car
 la del teléfono: el factor 8× [P] la convierte en el tope del teléfono hasta que PF1 lo mida en uno de clase A. Antes se
 calibraba con 20 consultas de 32 nodos sobre el S0 de b.2, que miden sobre todo el coste fijo; ya no.
 
-El motivo del rechazo separa «sin vertido seguro» de «presupuesto agotado» (`SafeMoves.Outcome`); el informe lo cuenta por
-nivel en su sección «Tinaja». Alivio (03 §13): `minus_color` nunca quita una fruta de la tinaja; las variantes conservan la
+El motivo del rechazo separa «sin vertido seguro» de «presupuesto agotado» (`SafeMoves.Outcome`) en la ruta, en los paseos
+seguros y casuales y en S0 (03 §8; FIXG); el informe lo cuenta por nivel en su sección «Tinaja» (columna «Candidatos
+rechazados por la tinaja»), y `--self-test tinaja` fija la clasificación de los paseos casuales en cada combinación. Alivio (03 §13): `minus_color` nunca quita una fruta de la tinaja; las variantes conservan la
 máscara de la tinaja y repiten la ruta segura y los paseos, sin la compuerta de coste. **Opciones de las variantes [P],
 pendientes de decisión del tech-lead y del dueño** (revisión de P1; D-023 o la siguiente): `TinajaWalks.ReliefOptions`, que
 hoy son las de Morpho (w = 2 y 40.000 nodos por realidad) y no las del pipeline de 03 §8 (w = 1 y 20.000 nodos por

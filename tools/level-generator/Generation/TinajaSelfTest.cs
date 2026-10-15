@@ -11,6 +11,11 @@
 //     lleva la máscara en hidden (08 §4.1: relief_board admite hidden si y solo si su attrs contiene la tinaja);
 //   - el tope de 12 cuias con tinaja (02 §5): la etapa baja K y plus_empty no pasa de 12 cuias;
 //   - «S0 sin trampas» detecta un vertido útil inseguro (el tablero perdido de b.2) y los filtros pasan en el S0 de b.2;
+//   - la clasificación del primer estado sin vertido seguro de un paseo casual (FIXG; TinajaWalks.ClassifyCasual), en cada
+//     combinación del motivo de SafeMoves y de A* en la realidad verdadera: el presupuesto agotado nunca es «adivinar»; y el
+//     candidato del 338 del fixture de level-qa (QA-TINAJA-SAFE, presupuesto agotado) sale con «presupuesto agotado» y sin
+//     ningún paseo de adivinar;
+//   - la cabecera del informe: pack_schema 2 (3 en los packs con tinaja) en una campaña con packs de los dos;
 //   - la calibración de PcNodesPerMs (INFO): Morpho desde cero en el estado más pesado de los retos 329 y 332 y del hito 340
 //     del pack de muestra (tools/out/sample_tinaja), las consultas que deciden la compuerta.
 // Imprime ASCII (PASS / FAIL / INFO) y sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra la especificación.
@@ -23,6 +28,7 @@ using AF.Core.Mechanics;
 using AF.Core.Rules;
 using AF.Solver.Generation;
 using AF.Solver.Murky;
+using AF.Solver.Search;
 using AmazonFill.Tools.LevelGenerator.Campaign;
 using AmazonFill.Tools.LevelGenerator.Metrics;
 
@@ -60,6 +66,9 @@ internal static class TinajaSelfTest
         Slot323(spec, Check, Info);
         CuiaCap(spec, Check);
         B2Boards(Check, Info);
+        CasualClassification(Check);
+        BudgetFixture(spec, Check, Info);
+        ReportHeader(Check);
         MorphoCalibration(spec, Check, Info);
 
         Console.WriteLine(failures == 0 ? "self-test tinaja: todo PASS" : $"self-test tinaja: {failures} FAIL");
@@ -344,6 +353,94 @@ internal static class TinajaSelfTest
             int traps = new TinajaWalks().S0Traps(lost.State!, SafeMoves.ForPipeline(PourMode.Run, lost.State!));
             check(traps == 1, F($"S0 sin trampas detecta el vertido util inseguro del tablero perdido de b.2 ({traps} de 1)"));
         }
+    }
+
+    /// <summary>
+    /// Clasificación de los paseos casuales (FIXG; 03 §8; <see cref="TinajaWalks.ClassifyCasual"/>): cada combinación del
+    /// motivo de SafeMoves y de A* en la realidad verdadera, con la causa del rechazo que da. Fija que el presupuesto agotado
+    /// de SafeMoves nunca es «adivinar» (ni suma CasualGuess, que solo crece con <see cref="CasualStop.Guess"/>) y que
+    /// «adivinar» es SomeRealitySolvable con la verdadera resoluble.
+    /// </summary>
+    private static void CasualClassification(Action<bool, string> check)
+    {
+        (SafeMovesOutcome Outcome, SolveStatus? Truth, CasualStop Stop, string? Kind)[] table =
+        [
+            (SafeMovesOutcome.NoExit, null, CasualStop.Lost, null),
+            (SafeMovesOutcome.SomeRealitySolvable, SolveStatus.Solved, CasualStop.Guess, TinajaWalks.KindGuess),
+            (SafeMovesOutcome.SomeRealitySolvable, SolveStatus.Unsolvable, CasualStop.Lost, null),
+            (SafeMovesOutcome.SomeRealitySolvable, SolveStatus.BudgetExceeded, CasualStop.TruthBudget, TinajaWalks.KindBudget),
+            (SafeMovesOutcome.BudgetExceeded, SolveStatus.Solved, CasualStop.SafeMovesBudget, TinajaWalks.KindBudget),
+            (SafeMovesOutcome.BudgetExceeded, SolveStatus.BudgetExceeded, CasualStop.SafeMovesBudget, TinajaWalks.KindBudget),
+            (SafeMovesOutcome.BudgetExceeded, SolveStatus.Unsolvable, CasualStop.Lost, null),
+        ];
+        foreach ((SafeMovesOutcome outcome, SolveStatus? truth, CasualStop stop, string? kind) in table)
+        {
+            CasualStop got = TinajaWalks.ClassifyCasual(outcome, truth);
+            check(got == stop && TinajaWalks.KindOf(got) == kind && TinajaWalks.CasualNeedsTruth(outcome) == truth.HasValue,
+                F($"paseo casual: {outcome} con la realidad verdadera {(truth is SolveStatus t ? t.ToString() : "sin resolver")} -> {got} ({TinajaWalks.KindOf(got) ?? "error del jugador"}; se espera {stop})"));
+        }
+
+        check(Throws<ArgumentException>(() => TinajaWalks.ClassifyCasual(SafeMovesOutcome.BudgetExceeded, null))
+            && Throws<ArgumentException>(() => TinajaWalks.ClassifyCasual(SafeMovesOutcome.SomeRealitySolvable, null)),
+            "paseo casual: sin resolver la realidad verdadera no se clasifica SomeRealitySolvable ni BudgetExceeded");
+        check(new[] { SafeMovesOutcome.Found, SafeMovesOutcome.Won, SafeMovesOutcome.RealitiesRejected }
+                .All(o => Throws<ArgumentOutOfRangeException>(() => TinajaWalks.ClassifyCasual(o, SolveStatus.Solved))),
+            "paseo casual: Found, Won y RealitiesRejected no son motivos de «ningun vertido seguro»");
+
+        static bool Throws<T>(Action action)
+            where T : Exception
+        {
+            try
+            {
+                action();
+                return false;
+            }
+            catch (Exception e)
+            {
+                return e.GetType() == typeof(T);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Fixture de level-qa con el candidato del reto 338 de la muestra que el generador rechaza (QA-TINAJA-SAFE): el paseo
+    /// casual 2 llega tras 1 vertido a un estado en el que SafeMoves agota sus 20.000 nodos por realidad y la realidad
+    /// verdadera es resoluble. Antes de FIXG salía como «adivinar» (el «adivinar: 1» del informe de la muestra).
+    /// </summary>
+    public const string BudgetFixturePath = "tools/level-qa/fixtures/QA-TINAJA-SAFE__tinaja_presupuesto_agotado.json";
+
+    /// <summary>El candidato del 338 del fixture se rechaza por «presupuesto agotado», sin ningún paseo de adivinar (FIXG).</summary>
+    private static void BudgetFixture(CampaignSpec spec, Action<bool, string> check, Action<string> info)
+    {
+        if (!File.Exists(BudgetFixturePath))
+        {
+            info("presupuesto agotado: falta " + BudgetFixturePath);
+            return;
+        }
+
+        JsonObject json = JsonNode.Parse(File.ReadAllText(BudgetFixturePath))!["levels"]!.AsArray()
+            .Single(l => l!["level"]!.GetValue<int>() == 338)!.AsObject();
+        BoardBuildResult built = FromJson(json);
+        LevelPlan plan = spec.Plan(338);
+        TinajaCheckResult r = built.IsValid
+            ? new TinajaWalks().Check(built.State!, plan.DebutBoard, json["seed"]!.GetValue<string>())
+            : new TinajaCheckResult();
+        check(built.IsValid && r.Kind == TinajaWalks.KindBudget && r.CasualGuess == 0 && r.Reject is string why && why.Contains("presupuesto agotado", StringComparison.Ordinal),
+            F($"338 del fixture de QA-TINAJA-SAFE: {r.Kind ?? "sin rechazo"} y {r.CasualGuess} paseo(s) de adivinar (se espera presupuesto agotado y 0; casuales {r.CasualWon}/{r.CasualLost}/{r.CasualGuess}/{r.CasualOpen}) {built.Error}{r.Reject}"));
+    }
+
+    /// <summary>
+    /// Cabecera del informe (revisión de P1; FIXG): con packs de los dos pack_schema, «2 (3 en los packs con tinaja: …)»; si
+    /// todos coinciden, el número solo (los informes de 11-200 y de la muestra no cambian).
+    /// </summary>
+    private static void ReportHeader(Action<bool, string> check)
+    {
+        string mixed = CampaignReport.PackSchemaText([("mundo_06_v1.json", 2), ("mundo_07_v1.json", 3), ("mundo_08_v1.json", 3)], 3);
+        check(mixed == "2 (3 en los packs con tinaja: `mundo_07_v1.json`, `mundo_08_v1.json`)",
+            "informe: pack_schema de una campana con packs con y sin tinaja: " + mixed);
+        string one = CampaignReport.PackSchemaText([("mundo_07_v1.json", 3)], 3);
+        string none = CampaignReport.PackSchemaText([("mundo_02_v1.json", 2), ("mundo_03_v1.json", 2)], 2);
+        check(one == "3" && none == "2", F($"informe: un solo pack_schema si todos los packs coinciden ({one} y {none})"));
     }
 
     /// <summary>Pack de muestra (lo regenera <c>--spec specs/sample_tinaja.json</c>; README del generador).</summary>

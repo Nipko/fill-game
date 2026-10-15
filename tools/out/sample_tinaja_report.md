@@ -125,17 +125,17 @@ Ninguno fuera del límite.
 
 ## Tinaja
 
-Filtros de `TinajaWalks` sobre el tablero publicado (03 §8): ruta segura (`SafePath`), 20 paseos seguros (todos tienen que ganar), 30 paseos casuales (ganados / perdidos por error / de adivinar / sin terminar en 400 vertidos; ninguno puede ser de adivinar), «S0 sin trampas» en el estreno (vertidos útiles de S0 que no son seguros; tiene que ser 0) y la compuerta de coste de Morpho: w = 2 y 40000 nodos por realidad desde cero en S0, en la ruta y en los paseos, con un tope de 18750 nodos por consulta (150 ms × 1000 nodos/ms del PC [E] ÷ factor 8× del teléfono [P], hasta PF1). Todas las búsquedas van sin poda de fútiles. Dosis por tipo de nivel (D-019, Q-Ti1 A): 3 en estreno, comodidad y práctica; 4-5 en retos; 5 en el hito. Vacíos sin contar la pareja: 2 en los tableros de estreno y 1 en los demás (la comodidad fuera del estreno, 1 [P], pendiente de decisión). Como mucho 12 cuias con la pareja (02 §5) [P]: si no caben, se baja K.
+Filtros de `TinajaWalks` sobre el tablero publicado (03 §8): ruta segura (`SafePath`), 20 paseos seguros (todos tienen que ganar), 30 paseos casuales (ganados / perdidos por error / de adivinar / sin terminar en 400 vertidos; ninguno puede ser de adivinar; el primer estado sin vertido seguro de cada paseo es un error del jugador si la realidad verdadera no tiene solución y «adivinar» si la tiene y `SafeMoves` demostró que ningún vertido es seguro en todas las realidades; si `SafeMoves` agota sus 20000 nodos por realidad, o A* los 300000 de la verdadera, el rechazo es «presupuesto agotado», nunca «adivinar»), «S0 sin trampas» en el estreno (vertidos útiles de S0 que no son seguros; tiene que ser 0: «trampa en S0» si alguno deja una realidad demostrada sin solución y, si no, «presupuesto agotado») y la compuerta de coste de Morpho: w = 2 y 40000 nodos por realidad desde cero en S0, en la ruta y en los paseos, con un tope de 18750 nodos por consulta (150 ms × 1000 nodos/ms del PC [E] ÷ factor 8× del teléfono [P], hasta PF1). Todas las búsquedas van sin poda de fútiles. Dosis por tipo de nivel (D-019, Q-Ti1 A): 3 en estreno, comodidad y práctica; 4-5 en retos; 5 en el hito. Vacíos sin contar la pareja: 2 en los tableros de estreno y 1 en los demás (la comodidad fuera del estreno, 1 [P], pendiente de decisión). Como mucho 12 cuias con la pareja (02 §5) [P]: si no caben, se baja K.
 
 | Nivel | p | Rol | Dosis (ocultas) | Realidades | Ruta segura | Paseos seguros | Casuales (g / p / a / s) | S0 sin trampas | Morpho: estados, nodos máx. | Candidatos rechazados por la tinaja |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 323 | 3 | estreno | 3 (2) | 1 | 16 vertidos | 20/20 | 30 / 0 / 0 / 0 | 0 | 898, 412 | — |
 | 324 | 4 | estreno | 3 (2) | 1 | 13 vertidos | 20/20 | 30 / 0 / 0 / 0 | 0 | 607, 560 | — |
-| 325 | 5 | estreno | 3 (2) | 2 | 14 vertidos | 20/20 | 30 / 0 / 0 / 0 | 0 | 465, 260 | trampa en S0: 1 |
+| 325 | 5 | estreno | 3 (2) | 2 | 14 vertidos | 20/20 | 30 / 0 / 0 / 0 | 0 | 465, 260 | presupuesto agotado: 1 |
 | 327 | 7 | comodidad | 3 (2) | 1 | 15 vertidos | 20/20 | 24 / 6 / 0 / 0 | — | 345, 205 | — |
 | 329 | 9 | reto | 5 (4) | 24 | 23 vertidos | 20/20 | 11 / 19 / 0 / 0 | — | 484, 8298 | — |
 | 332 | 12 | reto | 5 (4) | 18 | 22 vertidos | 20/20 | 19 / 11 / 0 / 0 | — | 683, 10356 | — |
-| 338 | 18 | reto | 4 (3) | 1 | 27 vertidos | 20/20 | 8 / 22 / 0 / 0 | — | 1090, 3755 | adivinar: 1 |
+| 338 | 18 | reto | 4 (3) | 1 | 27 vertidos | 20/20 | 8 / 22 / 0 / 0 | — | 1090, 3755 | presupuesto agotado: 1 |
 | 340 | 20 | hito | 5 (4) | 18 | 29 vertidos | 20/20 | 3 / 27 / 0 / 0 | — | 760, 10606 | coste de Morpho: 2 |
 
 Ningún nivel con tinaja en recuperación (p1-p2), remanso (p19) ni la rampa (D-019, Q-Ti1 A).
