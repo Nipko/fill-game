@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """riverdata.py - lectura compartida de las fuentes del Mapa del rio (D-013) para tools/river-map.
 
-Solo biblioteca estandar de Python 3.14 (08 §4.5). Lo usan stops.py y sus pruebas; mas adelante, geometry.py (M2.6).
+Solo biblioteca estandar de Python 3.14 (08 §4.5). Lo usan stops.py, geometry.py (M2.6) y sus pruebas.
 
 - Rutas del repositorio: la investigacion `docs/research/mapa-del-rio/rio-amazonas.json` (fuente de las paradas;
   nunca se modifica desde aqui), `Assets/_Project/Scripts/Levels/WorldTable.cs` (tramos de los mundos del cliente) y
@@ -11,6 +11,8 @@ Solo biblioteca estandar de Python 3.14 (08 §4.5). Lo usan stops.py y sus prueb
 - Utilidades de texto: mensajes solo en ASCII y el veto de «Belén» (D-013, punto 11; 07 §8.1).
 - Tablas de textos (`Assets/_Project/Data/Loc/facts.csv`, contrato 32; 08 §4.7): partir el archivo en registros RFC 4180 sin
   tocar sus bytes y escribir filas nuevas con UTF-8, LF y comillas solo donde hacen falta (como las deja L2b).
+- Puntos de paso y miradores de la investigacion (M2.6): su id (`place_id`), su nombre visible (`place_name`) y la clave de su
+  dato (`fact_key_of`), los mismos en river_map_v1.json (geometry.py) y en el bloque map.* de facts.csv (stops.py).
 """
 from __future__ import annotations
 
@@ -31,6 +33,11 @@ OVERRIDES_PATH = HERE / "overrides.json"
 MAP_DATA_DIR = ROOT / "Assets" / "_Project" / "Data" / "Map"
 STOPS_PATH = MAP_DATA_DIR / "river_stops_v1.json"
 STOPS_SCHEMA_PATH = ROOT / "schemas" / "af-river-stops-1.schema.json"
+MAP_PATH = MAP_DATA_DIR / "river_map_v1.json"
+MAP_SCHEMA_PATH = ROOT / "schemas" / "af-river-map-1.schema.json"
+# La muestra de la investigacion: proyeccion de referencia (test_geometry.py) y candidatos de la propuesta §5.1 bis
+# (CANDIDATOS_5_1_BIS, la copia unica de esa lista; stops.py --check).
+GENERAR_MAPA_PATH = ROOT / "docs" / "research" / "mapa-del-rio" / "generar_mapa.py"
 FACTS_REL = "Assets/_Project/Data/Loc/facts.csv"
 FACTS_PATH = ROOT / FACTS_REL
 
@@ -198,3 +205,33 @@ def format_csv_row(fields: list[str]) -> str:
     buf = io.StringIO(newline="")
     csv.writer(buf, quoting=csv.QUOTE_MINIMAL, lineterminator="\n").writerow(fields)
     return buf.getvalue()
+
+
+# --------------------------------------------------------------------------------------------- puntos de paso y miradores
+
+_RE_TRAILING_PAREN = re.compile(r"\s*\([^()]*\)\s*$")
+_RE_FACT_KEY_PREFIX = re.compile(r"^(map\.[a-z0-9_]+\.[a-z0-9_]+\.dato_[0-9]{2})(?![0-9])")
+
+
+def place_name(nombre: str) -> str:
+    """Nombre visible de un punto de paso o de un mirador [P] (M2.6): el nombre de la investigacion sin el parentesis final
+    («Breves (furos)» -> «Breves») y con mayuscula inicial («boca del Xingu» -> «Boca del Xingu»). Lo demas, tal cual."""
+    text = _RE_TRAILING_PAREN.sub("", unicodedata.normalize("NFC", nombre)).strip()
+    return text[:1].upper() + text[1:]
+
+
+def place_id(nombre: str) -> str:
+    """Id [a-z0-9_]+ de un punto de paso o de un mirador [P] (M2.6): su nombre visible en minusculas, sin tildes y con
+    guiones bajos («Óbidos» -> «obidos», «boca del Madeira» -> «boca_del_madeira»). Su nombre por convencion es
+    map.stop.<id>.name, como el de las paradas (08 §4.5)."""
+    folded = fold(place_name(nombre))
+    return re.sub(r"[^a-z0-9]+", "_", folded).strip("_")
+
+
+def fact_key_of(dato) -> str | None:
+    """Clave del dato de un punto de paso o de un mirador: el primer token de su campo «dato»
+    («map.stop.obidos.dato_01 [V MR-F21]: ...» -> «map.stop.obidos.dato_01»), o None si no lo lleva."""
+    if not isinstance(dato, str):
+        return None
+    m = _RE_FACT_KEY_PREFIX.match(dato.strip())
+    return m.group(1) if m else None

@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:amazonfill:schemas:af-river-map-1",
+  "title": "Amazon Fill · geometría del Mapa del río af-river-map/1",
+  "description": "JSON Schema del formato af-river-map/1 (Mapa del río, D-013; contrato 29 de docs/GDD.md §7.4; sintaxis en docs/gdd/08-arquitectura-tecnica-publicacion.md §4.5, con la codificación y los extras [P] de P-M1 firmados en D-023: labels, viewpoints y passing). Junto con 08 §4.5 es la copia única del formato. Lo emite tools/river-map/geometry.py en Assets/_Project/Data/Map/river_map_v1.json y lo valida tools/river-map/test_schemas.py (nunca tools/validate_schema.py, que es solo de af-level/1). Marco: equirrectangular con el factor cos(lat0), girado 90° en el sentido de las agujas del reloj y sin espejo (Andes arriba, Atlántico abajo y norte a la derecha; 06 §4.5): x = (lat − lat_min) / (lat_max − lat_min) e y = (lon − lon_min) / (lon_max − lon_min), y en pantalla px = x · W y py = y · W · aspecto, con aspecto = (lon_max − lon_min) · cos(lat0) / (lat_max − lat_min). Cada punto es un par uint16 (X, Y) = (round(65535 x), round(65535 y)). pts y verts son base64 (RFC 4648) de uint16 little-endian con el primer par absoluto y los demás como deltas módulo 65.536; tris son índices absolutos. s es la fracción de la longitud de una línea medida en pantalla (X / 65535, Y / 65535 · aspecto) desde su primer punto; los puntos van de la cabecera a la boca (en el cauce, del Mismi al Atlántico; en el ramal del Pará, de Gurupá a la bahía), así que s crece río abajo [P]: es una desviación, sin registrar todavía, de los valores del ejemplo de 08 §4.5, que en el cauce miden s desde el mar (aunque el leg de iquitos del mismo ejemplo va en este sentido), pendiente de que se alinee 08 §4.5 o de que el dueño elija. Solo claves, nunca textos: los nombres van por convención en map.stop.<id>.name (puntos de paso y miradores) y map.country.<iso2>.name (rótulos), y los datos con su clave, en el bloque map.* de Assets/_Project/Data/Loc/facts.csv (contrato 32). Lo que el esquema no puede expresar lo comprueba tools/river-map/geometry.py --check: puntos de control a ≤ 2 dp de su vista (≤ 15 km en la vista Cuenca), bocas sobre su río, water que cubre [0, 1] en tramos seguidos, la tierra como polígono simple bien triangulado, ids únicos, ningún «Belén» y las rutas de river_stops_v1.json de acuerdo con estas líneas. Cambiar este archivo es cambiar un contrato.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "frame", "lines", "land", "insets", "home", "labels", "viewpoints", "passing"],
+  "properties": {
+    "format": { "type": "string", "const": "af-river-map/1" },
+    "frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rotation", "lat", "lon", "lat0"],
+      "properties": {
+        "rotation": { "type": "string", "const": "cw90", "description": "Giro de 90° en el sentido de las agujas del reloj, sin espejo (06 §4.5; propuesta del Mapa §3.1)." },
+        "lat": { "$ref": "#/$defs/range", "description": "[lat_min, lat_max] de la caja, en grados." },
+        "lon": { "$ref": "#/$defs/range", "description": "[lon_min, lon_max] de la caja, en grados." },
+        "lat0": { "type": "number", "minimum": -90, "maximum": 90, "description": "Latitud del factor cos(lat0) de la proyección." }
+      }
+    },
+    "lines": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/line" },
+      "description": "Ríos del Mapa: el cauce y el ramal del Pará (main), los afluentes de los mundos (tributary), los de paso (passby) y los ríos locales de las paradas (local)."
+    },
+    "land": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verts", "tris", "zones"],
+      "properties": {
+        "verts": { "$ref": "#/$defs/b64", "description": "Vértices del polígono de la tierra (pares uint16 con deltas)." },
+        "tris": { "type": "string", "pattern": "^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$", "description": "Triángulos (índices uint16 absolutos de verts, de tres en tres), todos en el mismo sentido que el polígono." },
+        "zones": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "tile", "first", "count"],
+            "properties": {
+              "id": { "$ref": "#/$defs/slug" },
+              "tile": { "$ref": "#/$defs/slug", "description": "Mosaico del terreno [P] (en la 1.0, canopy: una sola zona hasta la máscara del artista)." },
+              "first": { "type": "integer", "minimum": 0, "description": "[P] Primer triángulo de la zona: extensión de M2.6 sobre la forma de 08 §4.5 ({id, tile}), pendiente de llevar a 08 §4.5." },
+              "count": { "type": "integer", "minimum": 0, "description": "[P] Triángulos de la zona, seguidos desde first: extensión de M2.6 sobre la forma de 08 §4.5 ({id, tile}), pendiente de llevar a 08 §4.5." }
+            }
+          }
+        }
+      }
+    },
+    "insets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/inset" },
+      "description": "Recuadros de los ríos de fuera de la cuenca (el Orinoco y el Maroni), con la forma de 08 §4.5. En la 1.0 el generador los deja vacíos (insets = []): es un dato, no una regla del formato."
+    },
+    "home": {
+      "$ref": "#/$defs/on_line",
+      "description": "Casa de TiTino: su embaúba en la orilla de la bahía de Guajará, en Belém (propuesta del Mapa §3.3, punto 7)."
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["country", "xy"],
+        "properties": {
+          "country": { "type": "string", "pattern": "^[A-Z]{2}$", "description": "ISO 3166-1 alfa-2; el texto es map.country.<iso2>.name." },
+          "xy": { "$ref": "#/$defs/xy" }
+        }
+      },
+      "description": "[P-M1] Rótulos de los países en su región (sin fronteras en tierra; D-013, punto 5, Q8-A)."
+    },
+    "viewpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "xy", "reveal_on", "fact"],
+        "properties": {
+          "id": { "$ref": "#/$defs/slug", "description": "Id del mirador; su nombre es map.stop.<id>.name." },
+          "xy": { "$ref": "#/$defs/xy" },
+          "reveal_on": { "type": "integer", "minimum": 1, "maximum": 1000, "description": "Nivel cuya victoria lo revela (sin estado en el perfil)." },
+          "fact": { "oneOf": [{ "$ref": "#/$defs/fact_key" }, { "type": "null" }], "description": "Clave del dato que enseña al tocarlo." }
+        }
+      },
+      "description": "[P-M1] Miradores: un «?» fuera de la ruta que el progreso revela (propuesta del Mapa §5.2)."
+    },
+    "passing": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "line", "s", "fact"],
+        "properties": {
+          "id": { "$ref": "#/$defs/slug", "description": "Id del punto de paso (lo citan los leg.via de river_stops_v1.json); su nombre es map.stop.<id>.name." },
+          "line": { "$ref": "#/$defs/slug" },
+          "s": { "$ref": "#/$defs/unit" },
+          "fact": { "oneOf": [{ "$ref": "#/$defs/fact_key" }, { "type": "null" }], "description": "Clave de su dato, si lo tiene." }
+        }
+      },
+      "description": "[P-M1] Puntos de paso: un nombre en el río que sale al pasar durante un viaje y, si tiene dato, lo cuenta al tocarlo (propuesta del Mapa §5.2)."
+    }
+  },
+  "$defs": {
+    "slug": { "type": "string", "pattern": "^[a-z0-9_]+$", "not": { "pattern": "belen" } },
+    "unit": { "type": "number", "minimum": 0, "maximum": 1 },
+    "range": {
+      "type": "array",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "u16": { "type": "integer", "minimum": 0, "maximum": 65535 },
+    "xy": {
+      "type": "array",
+      "prefixItems": [{ "$ref": "#/$defs/u16" }, { "$ref": "#/$defs/u16" }],
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "Punto (X, Y) uint16 del marco."
+    },
+    "b64": {
+      "type": "string",
+      "minLength": 8,
+      "pattern": "^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
+      "description": "Base64 (RFC 4648) de pares uint16 little-endian: el primero absoluto y los demás deltas módulo 65.536."
+    },
+    "fact_key": {
+      "type": "string",
+      "pattern": "^map\\.(stop\\.[a-z0-9_]+\\.dato_[0-9]{2}|country\\.[a-z]{2}\\.dato_[0-9]{2}|myth\\.[a-z0-9_]+|general\\.[a-z0-9_]+)$",
+      "not": { "pattern": "belen" }
+    },
+    "inset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "rect", "lines", "link"],
+      "properties": {
+        "id": { "$ref": "#/$defs/slug" },
+        "rect": {
+          "type": "array",
+          "prefixItems": [{ "$ref": "#/$defs/unit" }, { "$ref": "#/$defs/unit" }, { "$ref": "#/$defs/unit" }, { "$ref": "#/$defs/unit" }],
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "[x0, y0, x1, y1] del recuadro, cuatro fracciones en [0, 1] (08 §4.5)."
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/slug" },
+          "description": "Ids de las líneas que dibuja el recuadro."
+        },
+        "link": { "$ref": "#/$defs/slug", "description": "Id de la línea del Mapa con la que enlaza (en 08 §4.5, el Orinoco con el Casiquiare)." }
+      }
+    },
+    "on_line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["on", "s"],
+      "properties": {
+        "on": { "$ref": "#/$defs/slug", "description": "Id de una línea." },
+        "s": { "$ref": "#/$defs/unit" }
+      }
+    },
+    "water": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["s0", "s1", "type"],
+      "properties": {
+        "s0": { "$ref": "#/$defs/unit" },
+        "s1": { "$ref": "#/$defs/unit" },
+        "type": { "type": "string", "enum": ["white", "black", "clear", "andean"], "description": "Agua de Sioli (blanca, negra o clara) o andina [P] en la cabecera del cauce." }
+      }
+    },
+    "line": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "class", "src", "pts", "water"],
+      "properties": {
+        "id": { "$ref": "#/$defs/slug" },
+        "kind": { "type": "string", "enum": ["main", "tributary", "passby", "local"] },
+        "class": { "type": "integer", "minimum": 1, "maximum": 3, "description": "Grosor [P]: 1 el cauce y el ramal, 2 los afluentes, 3 los locales." },
+        "src": { "type": "string", "enum": ["rio_amazonas", "ne10m", "hydrorivers"], "description": "Origen: rio_amazonas es el respaldo de la investigación (D-013, punto 5) hasta Natural Earth (ne10m) y HydroRIVERS (M5.1)." },
+        "pts": {
+          "type": "string",
+          "minLength": 8,
+          "pattern": "^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
+          "description": "Puntos de la cabecera a la boca: un solo punto si de la línea solo se conoce la boca."
+        },
+        "water": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/water" },
+          "description": "Tramos de agua en s, seguidos y de 0 a 1; vacío si el agua está sin comprobar ([NV]): se dibuja solo en vidrio."
+        },
+        "splits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "s0", "s1", "left", "right"],
+            "properties": {
+              "id": { "$ref": "#/$defs/slug" },
+              "s0": { "$ref": "#/$defs/unit" },
+              "s1": { "$ref": "#/$defs/unit" },
+              "left": { "type": "string", "enum": ["white", "black", "clear"] },
+              "right": { "type": "string", "enum": ["white", "black", "clear"] }
+            }
+          },
+          "description": "Dos aguas lado a lado (Santarém y el Encuentro; propuesta §3.4): la cinta se parte a lo largo, con el agua de cada orilla mirando río abajo (s creciente)."
+        },
+        "mouth": {
+          "$ref": "#/$defs/on_line",
+          "description": "Dónde entra su último punto (la boca): la línea anfitriona y su s."
+        },
+        "fill_on_pass": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "description": "Fracción que se llena desde la boca al pasarla: 1 en los afluentes de paso y en los locales; en los afluentes de un mundo, solo la boca [P]."
+        }
+      },
+      "if": { "properties": { "kind": { "const": "main" } } },
+      "then": { "not": { "anyOf": [{ "required": ["mouth"] }, { "required": ["fill_on_pass"] }] } },
+      "else": { "required": ["mouth", "fill_on_pass"], "not": { "required": ["splits"] } }
+    }
+  }
+}
