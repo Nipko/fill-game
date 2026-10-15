@@ -181,6 +181,25 @@ namespace AF.Tests.PlayMode
             return BoardPack(world, worldId, water, level, ids, cuias);
         }
 
+        // Mundo (1-5) → su id y su agua base, para las paradas 0-19 de 1-200.
+        private static readonly string[] StopWorldIds = { string.Empty, "w01_estuario", "w02_tapajos", "w03_manaos", "w04_trapecio", "w05_loreto" };
+        private static readonly string[] StopWaters = { string.Empty, "white", "clear", "black", "white", "white" };
+
+        /// <summary>
+        /// Carga la escena Game con el tablero de 2 filas del nivel 7 (<see cref="Level7BoardPack"/>) puesto en el nivel
+        /// <c>10 × <paramref name="stop"/> + 7</c> (la parada <paramref name="stop"/> de 0-19, con el agua base de su mundo), sin
+        /// pasar la intro: las capturas del fondo por parada (StopSheetSnapshotTests, tareas M1.4 y M2.4). Quien llama limpia los
+        /// ganchos con <see cref="LaunchOptions.Reset"/>.
+        /// </summary>
+        public static IEnumerator LoadStopBoard(int stop)
+        {
+            int level = (10 * stop) + 7;
+            int world = AF.Levels.WorldTable.WorldOf(level);
+            Assert.That(world, Is.InRange(1, StopWorldIds.Length - 1), "parada " + stop + " fuera de 1-200");
+            yield return LoadGameWithPack(Level7BoardPack(world, StopWorldIds[world], StopWaters[world], level), level,
+                new MemoryProgressStore(level, level - 1));
+        }
+
         /// <summary>Paquete <c>af-level/1</c> (subconjunto de v0) de un solo nivel con capacidad 4.</summary>
         public static string BoardPack(int world, string worldId, string water, int level, string[] palette, int[][] board)
         {

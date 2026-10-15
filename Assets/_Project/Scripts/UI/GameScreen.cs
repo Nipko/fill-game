@@ -32,7 +32,7 @@ namespace AF.UI
     /// <remarks>
     /// Capas de atrás adelante (guía 3.4): panorama, ambiente lejano (con la capa de crecida del río), muelle, follaje, velo
     /// de escena; captura de fondo; tablero (sombra, relleno, sombra interior y marco del panel, repisas, cuias, la capa de
-    /// «Llenar y teñir» con su agua, chorritos y frutas, chorros y efectos); la tropa de miquitos y su rama; Capi y el poste;
+    /// «Llenar y teñir» con su agua, chorritos y frutas, chorros y efectos); la tropa de miquitos y su rama; el poste del muelle;
     /// velo de estado, HUD y bandeja; la cuia elevada cuyo cielo entra en la fila del HUD (tableros de 3 filas, [P]); polen;
     /// avisos del tablero (el aviso y la tarjeta «¡Miquito a la vista!», D-011, punto 2; GameScreen.Notices.cs); capa de vertido
     /// (el origen y su chorro mientras vierte, delante de todo, D-006, también de los avisos); estallido; modales; captura de
@@ -43,7 +43,9 @@ namespace AF.UI
     /// <para>Clase parcial (arquitectura del paso 1, §7): los métodos parciales <c>Labels*</c>, <c>Cards*</c>,
     /// <c>Reveal*</c> y <c>FunnelModalShowing</c> son los ganchos que implementan otros archivos (GameScreen.Labels.cs,
     /// GameScreen.Cards.cs, GameScreen.Reveal.cs y GameScreen.Funnel.cs) sin editar este. Sin implementación no hacen
-    /// nada.</para>
+    /// nada. Los del Mapa del río y de la victoria (arquitectura de la tanda 4, §2; tarea M1.3b): <c>Stop*</c> (fondo por
+    /// parada, GameScreen.Stop.cs), <c>Arrival*</c> (llegada, GameScreen.Arrival.cs), <c>Slot*</c> (ranura del Dato del río) y
+    /// <c>Sloth*</c> (TiTino en la victoria), estos dos en GameScreen.Victory.cs.</para>
     /// </remarks>
     public sealed partial class GameScreen : ILevelFlowListener
     {
@@ -59,7 +61,10 @@ namespace AF.UI
         /// <summary>Zona segura inferior mínima (02 §5).</summary>
         public const float MinSafeBottom = 24f;
 
-        /// <summary>Banda mínima del muelle bajo el panel para enseñar a Capi (guía 3.7).</summary>
+        /// <summary>
+        /// Banda mínima del muelle bajo el panel para enseñar el poste de amarre (guía 3.7 y 3.8). Capi ya no se queda en el muelle
+        /// durante la partida (D-016, T5-B; 02 §5, «Mascotas durante la partida»); el nombre se conserva.
+        /// </summary>
         public const float CapiMinBandDp = 64f;
 
         private const float PanelSlideMs = 250f;
@@ -172,7 +177,6 @@ namespace AF.UI
         private readonly RectTransform _streamLayer;
         private readonly FxLayer _fx;
 
-        private readonly Image _capi;
         private readonly Image _post;
 
         private readonly Image _scrim;
@@ -266,7 +270,6 @@ namespace AF.UI
         private float _boardShiftAnim = -1f;
         private float _confettiDelay = -1f;
         private bool _restartProbePending;
-        private float _capiTime;
         private float _horizonY = 118f;
         private PourTimings _timings;
         private int _stuckSeedsShown = -1;
@@ -337,6 +340,9 @@ namespace AF.UI
             UiBuilder.Stretch(_baseFill.rectTransform);
             _skyFill = UiBuilder.Image("SkyFill", scene, null, Palette.SkyTop); // cielo sobre el panorama si el horizonte baja
             _panorama = UiBuilder.Image("Panorama", scene, art.Panorama, Color.white);
+
+            // Fondo de la parada del Mapa del río (M1.4): sus capas van delante del panorama y detrás de la garza.
+            StopBuild(scene);
 
             // Escena del río con el horizonte bajo: garza en la orilla izquierda y vitórias-régias junto a las orillas,
             // fuera del panel y sin nada ligado al juego (D-002). Pendientes de revisión cultural.
@@ -410,14 +416,13 @@ namespace AF.UI
             _troop.Layer.SetSiblingIndex(_foliage[0].transform.GetSiblingIndex());
             _intro.Troop = _troop;
             _intro.AttachFront(_troop.WaterSlot);
+            _troop.PlaceSideLayer(_board); // tropa lateral (D-021): delante del panel y del marco, detrás de las cuias (OrderBoardLayers)
+            _intro.AttachFrameSides(_troop.SideWaterSlot); // el agua de los costados del marco, por detrás de la liana lateral (TL1)
 
-            // ---- Capi y accesorio del muelle (capa 8): fuera de las zonas táctiles, nunca miran una cuia. Capi solo con
-            // capi_idle.png (sin respaldo procedural; revisión visual del 2026-10-07 y guía 10.2 F7). ----
+            // ---- Accesorio del muelle (capa 8): el poste, fuera de las zonas táctiles. Ninguna mascota fija en el muelle durante
+            // la partida (D-016, T5-B; 02 §5): Capi ya no se dibuja aquí; solo entra con la Cuia extra, la de rescate y el banner
+            // de mundo. ----
             RectTransform decor = UiBuilder.Rect("Decor", _root);
-            _capi = UiBuilder.Image("Capi", decor, art.Capi, Color.white);
-            _capi.preserveAspect = true;
-            _capi.gameObject.AddComponent<Canvas>(); // respira: Canvas anidado propio (guía 8)
-            _capi.gameObject.SetActive(false);
             _post = UiBuilder.Image("RopePost", decor, art.RopePost, Color.white);
 
             // ---- HUD (capa 9): velo de estado, insignia, Reiniciar y bandeja con Deshacer · Marea. ----
@@ -533,6 +538,10 @@ namespace AF.UI
             UiBuilder.AutoSize(ribbonLabel, 22f, 30f);
             _victoryOverlay.gameObject.SetActive(false);
 
+            // Caja de TiTino en la victoria (TI6a; propuesta de TiTino d.4): lo que cree ahora queda delante de la victoria y
+            // detrás del embudo, la pausa y la capa superior. Sin raycast.
+            SlothBoxBuild();
+
             // ---- Embudo de D-008 (B2-2 y B2-3): ¿Seguro?, Nivel fallido y Sin canoas, con el tablero atenuado detrás. ----
             _giveUp = new GiveUpConfirm(_root, art, actions);
             _failed = new LevelFailedScreen(_root, art, actions);
@@ -569,6 +578,7 @@ namespace AF.UI
             LabelsBuild();
             CardsBuild();
             RevealBuild();
+            ArrivalBuild();
             ApplyScreenMetrics(true);
         }
 
@@ -671,11 +681,14 @@ namespace AF.UI
         /// <summary>Estallido de la victoria (presupuesto de partículas, VA-13).</summary>
         public ConfettiLayer Burst => _confetti;
 
-        /// <summary>Capi está visible en el muelle (guía 3.7: solo si la banda libre es ≥ 64 dp).</summary>
-        public bool CapiVisible => _capi.gameObject.activeSelf;
+        /// <summary>
+        /// Capi está en el muelle durante la partida: nunca (D-016, T5-B; 02 §5, «Mascotas durante la partida»: ninguna mascota
+        /// fija en el muelle ni en la orilla).
+        /// </summary>
+        public bool CapiVisible => false;
 
-        /// <summary>Rectángulos decorativos del muelle (Capi y el poste), para comprobar que no tocan zonas táctiles (VA-08).</summary>
-        public RectTransform[] DecorRects => new[] { _capi.rectTransform, _post.rectTransform };
+        /// <summary>Rectángulos decorativos del muelle (el poste), para comprobar que no tocan zonas táctiles (VA-08).</summary>
+        public RectTransform[] DecorRects => new[] { _post.rectTransform };
 
         /// <summary>Botón de Deshacer de la bandeja.</summary>
         public Button UndoButton => _tray.UndoButton;
@@ -835,7 +848,6 @@ namespace AF.UI
             _confetti.Tick(dtMs);
             _fx.Tick(dtMs);
             _ambient.Tick(dtMs);
-            TickCapi(dtMs);
             TickBoardShift(dtMs);
             TickPanels(dtMs);
             TickIntroDelay(dtMs);
@@ -850,6 +862,10 @@ namespace AF.UI
             LabelsTick(dtMs);
             CardsTick(dtMs);
             RevealTick(dtMs);
+            StopTick(dtMs);
+            ArrivalTick(dtMs);
+            SlotTick(dtMs);
+            SlothTick(dtMs);
             PlaceToast(false); // con la bandeja ya repintada: el aviso no tapa sus burbujas «Te faltan {n}» (GameScreen.Notices.cs)
         }
 
@@ -887,6 +903,8 @@ namespace AF.UI
             LabelsLevelLoaded(flow);
             CardsLevelLoaded(flow);
             RevealLevelLoaded(flow);
+            StopLevelLoaded(flow);
+            ArrivalLevelLoaded(flow);
             _levelLayoutDeferred = false;
             EmitLevelLayout();
         }
@@ -1124,6 +1142,15 @@ namespace AF.UI
             SyncChrome();
             _probe.Victory("victory", flow, _doubleShown);
             LabelsVictoryShown(flow);
+
+            // Victoria del Mapa del río y de TiTino (arquitectura de la tanda 4, §2), en este orden: TiTino mide su caja (la franja
+            // libre entre la cabecera y la cima de las cuias tras ShiftToClear) antes de que la ranura pida su línea al árbitro,
+            // que necesita SlothCanSpeak; después, el fondo de la parada y la llegada.
+            VictoryFreeBand(out float bandTop, out float bandBottom);
+            SlothVictoryShown(flow, bandTop, bandBottom);
+            SlotVictoryShown(flow);
+            StopVictoryShown(flow);
+            ArrivalVictoryShown(flow);
         }
 
         /// <inheritdoc />
@@ -1161,7 +1188,10 @@ namespace AF.UI
             UiBuilder.SetEnabled(_next.Button, false);
             UiBuilder.SetEnabled(_home.Button, false);
             UiBuilder.SetEnabled(_double.Button, false);
-            _probe.Victory("ad_gate", RequireFlow(), false);
+            LevelFlow flow = RequireFlow();
+            _probe.Victory("ad_gate", flow, false);
+            SlotAdGate(flow);
+            ArrivalAdGate(flow);
         }
 
         /// <inheritdoc />
@@ -1909,6 +1939,7 @@ namespace AF.UI
 
             input.FrameDp = PanelFrameDp;
             input.HudBottom = BoardTop;
+            input.TrayTop = TrayTop;
             input.CanvasWidth = _canvasW;
             input.Seed = flow.LevelNumber;
             // En release, sin su arte final: dosel, nunca la especie de otro mundo (guion §4.3); la regla, en FaunaArtAvailable.
@@ -1916,7 +1947,9 @@ namespace AF.UI
             bool art = candidate != null && FaunaArtAvailable(candidate, false);
             FaunaSpecies? species = IntroCast.Resolve(Fauna, flow.Level.World, flow.LevelNumber, isShort ? 2 : 1, art);
             _introSpecies = species;
-            input.Perch = species != null ? IntroPerch.Branch : IntroPerch.Canopy;
+            // Con 3 filas, la tropa lateral en los niveles que le tocan (D-021; IntroSideSchedule); si no cabe, el planificador
+            // vuelve a la regla de D-010 (rama con franja ≥ 44 dp; si no, dosel).
+            input.Perch = species == null ? IntroPerch.Canopy : (SideTroopFor(flow, isShort) ? IntroPerch.Side : IntroPerch.Branch);
             if (species != null)
             {
                 input.Model = species.Model == FaunaModel.Hang ? TroopModel.Hang : (species.Model == FaunaModel.Shake ? TroopModel.Shake : TroopModel.Row);
@@ -1932,6 +1965,72 @@ namespace AF.UI
             Color water = Palette.WaterBase(flow.Level.WaterBase);
             IntroWaterColor = water;
             _intro.Start(_views, flow.Session.Current, water, durationMs);
+        }
+
+        // D-021: ¿va este intento con la tropa lateral? Solo en primer intento, con el tablero en 3 filas y según el ordinal del
+        // nivel entre los de 3 filas de su tramo (IntroSideSchedule), con la misma regla de filas del tablero en este lienzo.
+        private bool SideTroopFor(LevelFlow flow, bool retry)
+        {
+            BoardLayoutResult? l = _layout;
+            if (retry || l == null || l.Rows != 3)
+            {
+                return false;
+            }
+
+            int ordinal = ThreeRowOrdinal(flow.Catalog, Fauna, flow.LevelNumber, _canvasW, BoardTop, BoardBottom);
+            return IntroSideSchedule.IsSide(ordinal, retry);
+        }
+
+        /// <summary>
+        /// El nivel <paramref name="def"/> va en 3 filas en un lienzo de <paramref name="canvasWidth"/> dp con el tablero entre
+        /// <paramref name="boardTop"/> y <paramref name="boardBottom"/> (la regla de <see cref="BoardLayout.RowsFor"/> con sus
+        /// cuias generadas y la cuia más alta). Sin asignaciones.
+        /// </summary>
+        internal static bool HasThreeRows(LevelDefinition def, float canvasWidth, float boardTop, float boardBottom)
+        {
+            int count = def.CuiaCount;
+            if (count < 1 || count > 16)
+            {
+                return false;
+            }
+
+            float heightU = 0f;
+            for (int i = 0; i < count; i++)
+            {
+                heightU = Mathf.Max(heightU, CuiaGeometry.HeightU(def.CapacityOf(i)));
+            }
+
+            return BoardLayout.RowsFor(count, heightU, canvasWidth, boardTop, boardBottom) == 3;
+        }
+
+        /// <summary>
+        /// Ordinal del nivel <paramref name="level"/> entre los niveles de 3 filas de su tramo (D-021; el mundo y, dentro de él,
+        /// la especie del nivel si empieza más tarde: <see cref="IntroSideSchedule.SegmentStart"/>), contando desde 0; −1 si no
+        /// está en el catálogo o no va en 3 filas. Determinista por el número de nivel y el lienzo. Sin asignaciones.
+        /// </summary>
+        internal static int ThreeRowOrdinal(LevelCatalog catalog, FaunaCatalog? fauna, int level, float canvasWidth, float boardTop, float boardBottom)
+        {
+            LevelDefinition? def = catalog.Find(level);
+            if (def == null || !HasThreeRows(def, canvasWidth, boardTop, boardBottom))
+            {
+                return -1;
+            }
+
+            int world = def.World;
+            int worldFirst = world >= 1 && world <= WorldTable.WorldCount ? WorldTable.FirstLevel(world) : catalog.FirstLevel;
+            FaunaSpecies? species = fauna?.ForLevel(level);
+            int start = IntroSideSchedule.SegmentStart(level, worldFirst, species != null ? species.FromLevel : worldFirst);
+            int ordinal = 0;
+            for (int n = start; n < level; n++)
+            {
+                LevelDefinition? other = catalog.Find(n);
+                if (other != null && other.World == world && HasThreeRows(other, canvasWidth, boardTop, boardBottom))
+                {
+                    ordinal++;
+                }
+            }
+
+            return ordinal;
         }
 
         /// <summary>
@@ -2325,7 +2424,9 @@ namespace AF.UI
             float homeW = Mathf.Min(VictoryHomeWidthDp, nextW);
             _victoryHomeTopDp = y + VictoryHomeBelowCtaDp;
             UiBuilder.Place((RectTransform)_home.Button.transform, (panelW - homeW) / 2f, _victoryHomeTopDp, homeW, 48f);
-            _victoryPanelDp = _victoryHomeTopDp + 48f + 18f;
+            float bottom = _victoryHomeTopDp + 48f;
+            SlotReserveBelowHome(ref bottom); // la ranura del Dato del río bajo Inicio: Siguiente sube una vez y el panel crece
+            _victoryPanelDp = bottom + 18f;
 
             _victoryPanelY = _canvasH - _safeBottom - 8f - _victoryPanelDp;
             UiBuilder.Place(_victoryPanel, (w - panelW) / 2f, _victoryPanelY, panelW, _victoryPanelDp);
@@ -2336,6 +2437,8 @@ namespace AF.UI
             PlaceAt(_victoryVeil.rectTransform, w * 0.5f, ribbonY, 2f * ProceduralArt.VeilHoleHalfDp, 2f * ProceduralArt.VeilHoleHalfDp, new Vector2(0.5f, 0.5f));
             _victorySurface.sprite = _art.ModalSurfaceFor(panelW - 16f, _victoryPanelDp - 16f);
             LabelsLayoutVictory();
+            SlotLayout();
+            ArrivalLayoutVictory();
         }
 
         private void EmitVictoryLayout()
@@ -2352,6 +2455,8 @@ namespace AF.UI
             _layoutRects.Add((RectTransform)_next.Button.transform);
             _layoutIds.Add("home");
             _layoutRects.Add((RectTransform)_home.Button.transform);
+            SlotLayoutIds(_layoutIds, _layoutRects);
+            ArrivalLayoutIds(_layoutIds, _layoutRects);
             _probe.Layout("victory", RequireFlow().LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
         }
 
@@ -2438,6 +2543,9 @@ namespace AF.UI
         {
             if (_autoNextMs < 0f)
             {
+                LevelFlow flow = RequireFlow();
+                SlotHomePressed(flow);
+                ArrivalHomePressed(flow);
                 _actions.PressHome();
             }
         }
@@ -2484,7 +2592,6 @@ namespace AF.UI
                 _panelFill.enabled = false;
                 _panelInner.enabled = false;
                 _panelFrame.enabled = false;
-                _capi.gameObject.SetActive(false);
                 _post.gameObject.SetActive(false);
                 LayoutBackdrop(0f, 0f, false);
                 return;
@@ -2541,16 +2648,12 @@ namespace AF.UI
                 PlaceShelf(r, ShelfRect(l, r));
             }
 
-            // Capi (solo con su PNG) y el poste en el muelle, si la banda libre bajo el panel es ≥ 64 dp (guía 3.7 y 3.8).
+            // El poste en el muelle, si la banda libre bajo el panel es ≥ 64 dp (guía 3.7 y 3.8). Capi ya no (D-016, T5-B).
             float band = TrayTop - l.PanelBottom;
             bool decor = band >= CapiMinBandDp;
-            _capi.gameObject.SetActive(decor && _art.Capi != null);
             _post.gameObject.SetActive(decor);
             if (decor)
             {
-                UiBuilder.Place(_capi.rectTransform, 12f, TrayTop - 48f, 64f, 56f);
-                _capi.rectTransform.pivot = new Vector2(0f, 0f);
-                _capi.rectTransform.anchoredPosition = new Vector2(12f, -(TrayTop + 8f));
                 UiBuilder.Place(_post.rectTransform, w - 56f, TrayTop + 4f - 48f, 40f, 48f);
             }
 
@@ -2609,6 +2712,7 @@ namespace AF.UI
             PlaceLilyPad(0, props, 54f * k, horizon + (30f * k), 34f * k, panelTop);
             PlaceLilyPad(1, props, 314f * k, horizon + (22f * k), 26f * k, panelTop);
             PlaceLilyPad(2, props, 86f * k, horizon + (47f * k), 24f * k, panelTop);
+            StopLayoutBackdrop(horizon, panelTop, hasBoard);
         }
 
         private void PlaceLilyPad(int i, bool props, float x, float y, float width, float panelTop)
@@ -2663,6 +2767,27 @@ namespace AF.UI
             float needed = _layout.PanelBottom - (panelTop - gap);
             float room = highestTop - BoardTop;
             return Mathf.Clamp(needed, 0f, Mathf.Max(0f, room));
+        }
+
+        // Caja de TiTino en la victoria (propuesta de TiTino d.4; gancho SlothVictoryShown): la franja libre entre el pie de la
+        // cabecera (la insignia, lo más bajo del HUD) y lo más alto de las cuias con su elevación, con el tablero ya en el sitio
+        // al que lo lleva ShiftToClear (dp desde arriba). Sin tablero, vacía.
+        private void VictoryFreeBand(out float top, out float bottom)
+        {
+            top = HudBadgeBottom;
+            bottom = top;
+            if (_layout == null || _views.Length == 0)
+            {
+                return;
+            }
+
+            float highestTop = float.MaxValue;
+            for (int i = 0; i < _views.Length; i++)
+            {
+                highestTop = Mathf.Min(highestTop, _layout.FootY[i] - (_views[i].HeightU * _views[i].Unit) - CuiaView.LiftDp);
+            }
+
+            bottom = Mathf.Max(top, highestTop - _boardShiftTarget);
         }
 
         private void ShiftBoard(float target, bool animate)
@@ -2752,20 +2877,6 @@ namespace AF.UI
             }
 
             return index;
-        }
-
-        // Capi (guía 3.7; solo con capi_idle.png): respiración (escala Y 1,00 ↔ 1,02, periodo 3 s). El parpadeo llega con su
-        // arte en la fase de jugabilidad. Nada en él depende de la selección ni de la legalidad (D-002).
-        private void TickCapi(float dtMs)
-        {
-            if (AmbientLayer.Frozen || !_capi.gameObject.activeSelf)
-            {
-                return;
-            }
-
-            _capiTime += dtMs;
-            float breathe = 1f + (0.01f * (1f - Mathf.Cos((_capiTime / 3000f) * Mathf.PI * 2f)));
-            _capi.rectTransform.localScale = new Vector3(1f, breathe, 1f);
         }
 
         // Coloca rt con su pivote en (x, y desde arriba) del padre, con tamaño w × h.
@@ -2880,5 +2991,86 @@ namespace AF.UI
         // Embudo (GameScreen.Funnel.cs): justo antes de abrir ¿Seguro? (GiveUpConfirm) o Nivel fallido (LevelFailed), para
         // colorear sus cabeceras.
         partial void FunnelModalShowing(FlowPhase phase, LevelFlow flow);
+
+        // ---- Ganchos del Mapa del río y de la victoria (arquitectura de la tanda 4, §2; plan del Mapa, §4; tarea M1.3b). Solo
+        // los declara la dueña de GameScreen.cs de cada ola. ----
+
+        // Fondo de la parada (GameScreen.Stop.cs, M1.4): en el constructor, tras crear el panorama y antes de la garza, con la
+        // escena como padre; lo que cree queda delante del panorama y detrás de la garza.
+        partial void StopBuild(RectTransform scene);
+
+        // Fondo de la parada: al final de LayoutBackdrop, con el horizonte (dp desde arriba), el canto de arriba del panel y si hay
+        // tablero (sin él, la escena de antes del primer nivel).
+        partial void StopLayoutBackdrop(float horizon, float panelTop, bool hasBoard);
+
+        // Fondo de la parada: al final de OnLevelLoaded, junto a los demás *LevelLoaded (antes de la AF_LAYOUT level).
+        partial void StopLevelLoaded(LevelFlow flow);
+
+        // Fondo de la parada: al final de OnVictoryScreen, tras la ranura (la victoria con vista, M2.2).
+        partial void StopVictoryShown(LevelFlow flow);
+
+        // Fondo de la parada: en cada Tick, tras RevealTick.
+        partial void StopTick(float dtMs);
+
+        // Llegada a la parada (GameScreen.Arrival.cs, M1.6): al final del constructor, junto a LabelsBuild, CardsBuild y
+        // RevealBuild.
+        partial void ArrivalBuild();
+
+        // Llegada: al final de OnLevelLoaded, tras StopLevelLoaded.
+        partial void ArrivalLevelLoaded(LevelFlow flow);
+
+        // Llegada: al final de OnVictoryScreen, tras la ranura (ya con la línea del árbitro) y el fondo.
+        partial void ArrivalVictoryShown(LevelFlow flow);
+
+        // Llegada: en cada Tick, tras StopTick.
+        partial void ArrivalTick(float dtMs);
+
+        // Llegada: al final de LayoutVictory, tras SlotLayout (la ranura ya colocada).
+        partial void ArrivalLayoutVictory();
+
+        // Llegada: botones visibles para AF_LAYOUT victory (EmitVictoryLayout, antes de emitir; «Ver mapa» desde M4.3).
+        partial void ArrivalLayoutIds(List<string> ids, List<RectTransform> rects);
+
+        // Llegada: en OnAdGate, tras SlotAdGate (Siguiente o el avance tras la Cosecha doble cierran la victoria).
+        partial void ArrivalAdGate(LevelFlow flow);
+
+        // Llegada: en OnVictoryHome, tras SlotHomePressed y antes de PressHome.
+        partial void ArrivalHomePressed(LevelFlow flow);
+
+        // Ranura del Dato del río (GameScreen.Victory.cs; 02 §6, Q7-A de D-017): en LayoutVictory, con Inicio ya colocado, antes
+        // de fijar el alto del panel. y es el pie del área táctil de Inicio (dp desde el canto de arriba del panel): lo que sume
+        // a y queda bajo Inicio, y el panel crece lo mismo hacia arriba (sigue anclado abajo), así que Siguiente sube.
+        partial void SlotReserveBelowHome(ref float y);
+
+        // Ranura: al final de LayoutVictory, tras LabelsLayoutVictory.
+        partial void SlotLayout();
+
+        // Ranura: al final de OnVictoryScreen, tras SlothVictoryShown (con SlothCanSpeak) y antes del fondo y la llegada: pide la
+        // línea al árbitro (VictoryLineArbiter) y la reparte a sus proveedores.
+        partial void SlotVictoryShown(LevelFlow flow);
+
+        // Ranura: en cada Tick, tras ArrivalTick.
+        partial void SlotTick(float dtMs);
+
+        // Ranura: botones visibles para AF_LAYOUT victory (EmitVictoryLayout, antes de emitir).
+        partial void SlotLayoutIds(List<string> ids, List<RectTransform> rects);
+
+        // Ranura: en OnAdGate, antes de ArrivalAdGate: la victoria se cierra con Siguiente (punto común de river_fact_shown).
+        partial void SlotAdGate(LevelFlow flow);
+
+        // Ranura: en OnVictoryHome, antes de ArrivalHomePressed y de PressHome: la victoria se cierra con Inicio.
+        partial void SlotHomePressed(LevelFlow flow);
+
+        // TiTino en la victoria (TI6a): en el constructor, justo tras crear la victoria y antes del embudo, la pausa y la capa
+        // superior; lo que cree queda delante de la victoria y detrás de ellos.
+        partial void SlothBoxBuild();
+
+        // TiTino: en OnVictoryScreen, antes de SlotVictoryShown, con la franja libre entre el pie de la cabecera (top) y la cima
+        // de las cuias con su elevación (bottom), en dp desde arriba y con el tablero ya desplazado por ShiftToClear (propuesta
+        // de TiTino d.4). De ahí sale SlothCanSpeak para el árbitro.
+        partial void SlothVictoryShown(LevelFlow flow, float top, float bottom);
+
+        // TiTino: en cada Tick, tras SlotTick.
+        partial void SlothTick(float dtMs);
     }
 }

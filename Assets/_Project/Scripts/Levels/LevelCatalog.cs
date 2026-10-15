@@ -41,7 +41,14 @@ namespace AF.Levels
     /// <para><see cref="LevelOffset"/> (solo builds de desarrollo, extra <c>af_level_offset</c> [P], tarea B1-5) desplaza el
     /// número de campaña: con 30, el nivel 31 se juega con el tablero del nivel 1 del paquete. Sirve para probar las
     /// compuertas de 11, 22 y 31 con los tableros del tutorial. En producción vale 0.</para>
-    /// <para>Inmutable. Las búsquedas son binarias y no asignan memoria.</para>
+    /// <para>Kill switch de mecánicas (tarea KS1; D-020, pregunta 31 b; 08 §2.2 y §9): con <c>mech_enabled.&lt;id&gt;</c> =
+    /// false (<see cref="MechanicSwitches"/>), un nivel cuyo tablero base usa esa mecánica se sustituye al crear el catálogo por
+    /// su entrada de <see cref="LevelOverrides"/> (<c>level_overrides</c>), si la hay y no usa a su vez una mecánica apagada. Si
+    /// no la hay, se sirve el publicado y, la primera vez que se carga (<see cref="Serve"/>), se escribe un aviso [P]: el
+    /// formato de respaldo por slot es de la 1.1. Con todas las mecánicas encendidas ningún nivel cambia, haya o no
+    /// <c>level_overrides</c> [P]. <see cref="Find"/> y <see cref="Serve"/> devuelven ya el nivel servido; <see cref="PackOf"/>,
+    /// el paquete del publicado.</para>
+    /// <para>Inmutable salvo la marca de «aviso ya escrito». Las búsquedas son binarias y no asignan memoria.</para>
     /// </remarks>
     public sealed class LevelCatalog
     {
@@ -53,8 +60,26 @@ namespace AF.Levels
         private readonly LevelDefinition[] _definitions;
         private readonly int[] _packOf;
         private readonly LevelGap[] _gaps;
+        private readonly LevelDefinition[] _published;
+        private readonly string?[]? _fallbackWarnings;
+        private readonly bool[]? _warned;
+        private readonly int[] _overridden;
+        private readonly int[] _fallbacks;
+        private readonly Action<string>? _warn;
 
-        private LevelCatalog(LevelPack[] packs, int[] numbers, LevelDefinition[] definitions, int[] packOf, LevelGap[] gaps, int levelOffset)
+        private LevelCatalog(
+            LevelPack[] packs,
+            int[] numbers,
+            LevelDefinition[] definitions,
+            int[] packOf,
+            LevelGap[] gaps,
+            int levelOffset,
+            LevelDefinition[] published,
+            string?[]? fallbackWarnings,
+            int[] overridden,
+            int[] fallbacks,
+            MechanicSwitches switches,
+            Action<string>? warn)
         {
             _packs = packs;
             _numbers = numbers;
@@ -62,7 +87,26 @@ namespace AF.Levels
             _packOf = packOf;
             _gaps = gaps;
             LevelOffset = levelOffset;
+            _published = published;
+            _fallbackWarnings = fallbackWarnings;
+            _warned = fallbackWarnings == null ? null : new bool[fallbackWarnings.Length];
+            _overridden = overridden;
+            _fallbacks = fallbacks;
+            Switches = switches;
+            _warn = warn;
         }
+
+        /// <summary>Kill switches con los que se creó el catálogo (<see cref="MechanicSwitches.AllOn"/> por defecto).</summary>
+        public MechanicSwitches Switches { get; }
+
+        /// <summary>Niveles servidos con su override de <c>level_overrides</c> por una mecánica apagada, de menor a mayor.</summary>
+        public IReadOnlyList<int> OverriddenLevels => _overridden;
+
+        /// <summary>
+        /// Niveles que usan una mecánica apagada y no tienen override válido: se sirve el publicado con aviso [P]. De menor a
+        /// mayor.
+        /// </summary>
+        public IReadOnlyList<int> FallbackLevels => _fallbacks;
 
         /// <summary>Desplazamiento del número de campaña respecto al de los paquetes (0 en producción).</summary>
         public int LevelOffset { get; }
@@ -107,6 +151,26 @@ namespace AF.Levels
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="levelOffset"/> fuera de 0..<see cref="MaxLevelOffset"/>.</exception>
         /// <exception cref="LevelFormatException">Un nivel está en dos paquetes.</exception>
         public static LevelCatalog Create(IReadOnlyList<LevelPack> packs, int levelOffset = 0)
+        {
+            return Create(packs, levelOffset, null, MechanicSwitches.AllOn, null);
+        }
+
+        /// <summary>
+        /// Crea el catálogo con <paramref name="packs"/> y aplica el kill switch (tarea KS1): cada nivel cuyo tablero base usa una
+        /// mecánica apagada en <paramref name="switches"/> se sustituye por su entrada de <paramref name="overrides"/> si la hay y
+        /// no usa a su vez una mecánica apagada; si no, se sirve el publicado y <see cref="Serve"/> escribe en
+        /// <paramref name="warn"/> un aviso [P] la primera vez que lo carga. Los avisos se componen aquí, una vez: cargar un nivel
+        /// no asigna memoria.
+        /// </summary>
+        /// <exception cref="ArgumentException">No hay paquetes o alguno es null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="levelOffset"/> fuera de 0..<see cref="MaxLevelOffset"/>.</exception>
+        /// <exception cref="LevelFormatException">Un nivel está en dos paquetes.</exception>
+        public static LevelCatalog Create(
+            IReadOnlyList<LevelPack> packs,
+            int levelOffset,
+            LevelOverrides? overrides,
+            MechanicSwitches switches,
+            Action<string>? warn)
         {
             if (packs == null || packs.Count == 0)
             {
@@ -169,7 +233,62 @@ namespace AF.Levels
                 }
             }
 
-            return new LevelCatalog(packArray, numbers, sortedDefinitions, sortedPackOf, gaps.ToArray(), levelOffset);
+            // Kill switch (KS1): con todo encendido no se mira nada y ningún nivel cambia.
+            LevelDefinition[] served = sortedDefinitions;
+            string?[]? warnings = null;
+            var overridden = new List<int>();
+            var fallbacks = new List<int>();
+            if (switches.AnyOff)
+            {
+                served = (LevelDefinition[])sortedDefinitions.Clone();
+                LevelOverrides table = overrides ?? LevelOverrides.Empty;
+                for (int i = 0; i < total; i++)
+                {
+                    int blocked = switches.BlockedMask(sortedDefinitions[i]);
+                    if (blocked == 0)
+                    {
+                        continue;
+                    }
+
+                    string reason;
+                    if (table.TryGet(numbers[i], out LevelDefinition replacement))
+                    {
+                        int stillBlocked = switches.BlockedMask(replacement);
+                        if (stillBlocked == 0)
+                        {
+                            served[i] = replacement;
+                            overridden.Add(numbers[i]);
+                            continue;
+                        }
+
+                        reason = "su override " + replacement.Id + " también usa " + MechanicSwitches.Describe(stillBlocked) + " = false";
+                    }
+                    else
+                    {
+                        reason = "no tiene override en " + LevelOverrides.Key;
+                    }
+
+                    warnings ??= new string?[total];
+                    warnings[i] = "nivel " + numbers[i].ToString(CultureInfo.InvariantCulture) + " (" + sortedDefinitions[i].Id + "): usa "
+                        + MechanicSwitches.Describe(blocked) + " = false y " + reason
+                        + "; se sirve el publicado [P] (el respaldo por slot es de la 1.1, D-020).";
+                    fallbacks.Add(numbers[i]);
+                }
+            }
+
+            return new LevelCatalog(
+                packArray,
+                numbers,
+                served,
+                sortedPackOf,
+                gaps.ToArray(),
+                levelOffset,
+                sortedDefinitions,
+                warnings,
+                overridden.ToArray(),
+                fallbacks.ToArray(),
+                switches,
+                warn);
         }
 
         /// <summary>El nivel de campaña <paramref name="level"/> está en el catálogo.</summary>
@@ -178,14 +297,57 @@ namespace AF.Levels
             return IndexOf(level) >= 0;
         }
 
-        /// <summary>Definición del nivel de campaña <paramref name="level"/>, o null si no está.</summary>
+        /// <summary>
+        /// Definición servida del nivel de campaña <paramref name="level"/> (el override del kill switch si lo hay; KS1), o null si
+        /// no está. No escribe avisos: para cargar el nivel, <see cref="Serve"/>.
+        /// </summary>
         public LevelDefinition? Find(int level)
         {
             int i = IndexOf(level);
             return i < 0 ? null : _definitions[i];
         }
 
-        /// <summary>Paquete que contiene el nivel de campaña <paramref name="level"/>, o null si no está.</summary>
+        /// <summary>
+        /// Carga del nivel de campaña <paramref name="level"/> (LOADING o reanudación): la definición servida, como
+        /// <see cref="Find"/>, y, si el nivel usa una mecánica apagada sin override, el aviso [P] la primera vez (KS1). Sin
+        /// asignaciones: el aviso ya está compuesto.
+        /// </summary>
+        public LevelDefinition? Serve(int level)
+        {
+            int i = IndexOf(level);
+            if (i < 0)
+            {
+                return null;
+            }
+
+            if (_fallbackWarnings != null && _warned != null && !_warned[i])
+            {
+                string? warning = _fallbackWarnings[i];
+                if (warning != null)
+                {
+                    _warned[i] = true;
+                    _warn?.Invoke(warning);
+                }
+            }
+
+            return _definitions[i];
+        }
+
+        /// <summary>Definición publicada del nivel de campaña <paramref name="level"/> (sin overrides), o null si no está.</summary>
+        public LevelDefinition? FindPublished(int level)
+        {
+            int i = IndexOf(level);
+            return i < 0 ? null : _published[i];
+        }
+
+        /// <summary>El nivel de campaña <paramref name="level"/> se sirve con su override de <c>level_overrides</c> (KS1).</summary>
+        public bool IsOverridden(int level)
+        {
+            int i = IndexOf(level);
+            return i >= 0 && !ReferenceEquals(_definitions[i], _published[i]);
+        }
+
+        /// <summary>Paquete que contiene el nivel de campaña <paramref name="level"/> (el del publicado), o null si no está.</summary>
         public LevelPack? PackOf(int level)
         {
             int i = IndexOf(level);

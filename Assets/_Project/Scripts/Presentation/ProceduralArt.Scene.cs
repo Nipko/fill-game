@@ -261,6 +261,9 @@ namespace AF.Presentation
         private const float SunYDp = 104f;
         private const float SunRadiusDp = 24f;
 
+        /// <summary>X del sol del panorama procedural, en dp sobre 360 de ancho (la columna de su reflejo en StopBackdrop).</summary>
+        public const float PanoramaSunXDp = SunXDp;
+
         // Rampa con la que los rayos del sol se apagan bajo el borde superior del panorama (revisión de D-004).
         private const float RayFadeTopDp = 48f;
 

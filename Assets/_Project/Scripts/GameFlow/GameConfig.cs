@@ -1,4 +1,5 @@
 #nullable enable
+using AF.Levels;
 
 namespace AF.GameFlow
 {
@@ -133,6 +134,49 @@ namespace AF.GameFlow
         /// sellado dura ≈ 1,56 s con los tiempos de D-006.
         /// </summary>
         public const int MaxViewDrainWaitMs = 3000;
+
+        /// <summary><c>mech_enabled.hoja</c> (08 §9; 02 §9.2, regla 3): kill switch de la Hoja (y de la Hoja atada [P]).</summary>
+        public const bool MechEnabledHoja = true;
+
+        /// <summary><c>mech_enabled.matapi</c> (08 §9; D-007).</summary>
+        public const bool MechEnabledMatapi = true;
+
+        /// <summary><c>mech_enabled.liana</c> (08 §9): kill switch de la Liana (y de la Flor [P]).</summary>
+        public const bool MechEnabledLiana = true;
+
+        /// <summary><c>mech_enabled.remolino</c> (08 §9).</summary>
+        public const bool MechEnabledRemolino = true;
+
+        /// <summary><c>mech_enabled.barro</c> (08 §9).</summary>
+        public const bool MechEnabledBarro = true;
+
+        /// <summary><c>mech_enabled.lluvia</c> (08 §9).</summary>
+        public const bool MechEnabledLluvia = true;
+
+        /// <summary><c>mech_enabled.brote</c> (08 §9).</summary>
+        public const bool MechEnabledBrote = true;
+
+        /// <summary><c>mech_enabled.pirana</c> (08 §9).</summary>
+        public const bool MechEnabledPirana = true;
+
+        /// <summary><c>mech_enabled.tinaja</c> (08 §9; D-019): kill switch de la Tinaja y su cucharón.</summary>
+        public const bool MechEnabledTinaja = true;
+
+        /// <summary>
+        /// Los kill switches <c>mech_enabled.*</c> de 08 §9 con los defaults compilados de arriba (todos true hasta que exista
+        /// <c>AF.RemoteConfig</c>; tarea KS1). En la 1.0, con false, los niveles que usan la mecánica se sustituyen con
+        /// <c>level_overrides</c> al crear el catálogo (<see cref="AF.Levels.LevelCatalog"/>; D-020, pregunta 31 b).
+        /// </summary>
+        public static MechanicSwitches MechEnabled => MechanicSwitches.AllOn
+            .With(MechanicSwitch.Hoja, MechEnabledHoja)
+            .With(MechanicSwitch.Matapi, MechEnabledMatapi)
+            .With(MechanicSwitch.Liana, MechEnabledLiana)
+            .With(MechanicSwitch.Remolino, MechEnabledRemolino)
+            .With(MechanicSwitch.Barro, MechEnabledBarro)
+            .With(MechanicSwitch.Lluvia, MechEnabledLluvia)
+            .With(MechanicSwitch.Brote, MechEnabledBrote)
+            .With(MechanicSwitch.Pirana, MechEnabledPirana)
+            .With(MechanicSwitch.Tinaja, MechEnabledTinaja);
 
         /// <summary>Duración de Sumergir y teñir para el nivel <paramref name="level"/> (02 §4.2).</summary>
         public static int TintDurationMs(int level)

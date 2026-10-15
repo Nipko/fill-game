@@ -12,6 +12,49 @@ namespace AF.Presentation
 
         /// <summary>La tropa de la especie del tramo, en su rama sobre el panel (franja ≥ 44 dp y primer intento).</summary>
         Branch = 1,
+
+        /// <summary>
+        /// Tropa lateral (D-021): solo con 3 filas y cuando lo pide <see cref="IntroSideSchedule"/>; un miquito por lado baja
+        /// por una liana desde el follaje de su esquina (trepando, o colgado de ella con <c>cuelga</c>), por el margen lateral
+        /// y el marco del panel, y lanza la fruta a las cuias con el calendario del dosel. Si no cabe sin bajar de
+        /// <see cref="IntroChoreography.MinMonkeyDp"/>, el planificador vuelve a la regla de D-010 (rama o dosel).
+        /// </summary>
+        Side = 2,
+    }
+
+    /// <summary>
+    /// Cuándo va la intro con la tropa lateral (D-021, punto 2), de forma determinista por el número de nivel y sin azar. Se
+    /// cuentan los niveles de 3 filas de cada tramo (el mundo y, dentro de él, cada especie nueva del elenco, cuando exista):
+    /// el primero de cada tramo va siempre en <see cref="IntroPerch.Side"/>; de los demás, 1 de cada
+    /// <see cref="SideEveryN"/> (el ordinal entre los de 3 filas del tramo múltiplo de <see cref="SideEveryN"/>); el resto, en
+    /// dosel como hoy; y los reintentos, siempre en dosel. Las filas de cada nivel las da quien llama, con la misma regla del
+    /// tablero (<c>BoardLayout.RowsFor</c>). Funciones puras: sin asignaciones ni estado.
+    /// </summary>
+    public static class IntroSideSchedule
+    {
+        /// <summary>
+        /// La tropa lateral sale en 1 de cada 3 niveles de 3 filas de cada tramo, contando el primero [P] (D-021, punto 2: la
+        /// frecuencia la puede ajustar el dueño). Sin clave de Remote Config.
+        /// </summary>
+        public const int SideEveryN = 3;
+
+        /// <summary>
+        /// Primer nivel del tramo del nivel <paramref name="level"/>: el primero de su mundo o, si la especie del nivel empieza
+        /// más tarde dentro del mundo (elenco de D-010), el primero de esa especie.
+        /// </summary>
+        public static int SegmentStart(int level, int worldFirstLevel, int speciesFromLevel)
+        {
+            return speciesFromLevel > worldFirstLevel && speciesFromLevel <= level ? speciesFromLevel : worldFirstLevel;
+        }
+
+        /// <summary>
+        /// Con el ordinal <paramref name="threeRowOrdinal"/> del nivel entre los de 3 filas de su tramo (0 = el primero; −1 si
+        /// no tiene 3 filas), ¿va la intro con la tropa lateral? Nunca en un reintento (<paramref name="retry"/>).
+        /// </summary>
+        public static bool IsSide(int threeRowOrdinal, bool retry)
+        {
+            return !retry && threeRowOrdinal >= 0 && threeRowOrdinal % SideEveryN == 0;
+        }
     }
 
     /// <summary>Modelo de suelta de la tropa (guion §4.4): tres modelos parametrizados en lugar de nueve gestos.</summary>
@@ -110,6 +153,22 @@ namespace AF.Presentation
 
         /// <summary>Borde inferior de la fila del HUD (safeTop + 56; 88 a 360 × 780).</summary>
         public float HudBottom = 88f;
+
+        /// <summary>Borde superior de la bandeja de comodines (dp desde arriba): la tropa lateral nunca baja de aquí (D-021).</summary>
+        public float TrayTop = 660f;
+
+        /// <summary>
+        /// Tropa lateral (D-021): centro de la cabeza del rig respecto a su raíz, hacia el tablero (S), con la pose del modelo de
+        /// suelta (trepando o colgado). Lo rellena la capa de la tropa con el arte de la especie
+        /// (<c>TroopLayer.DescribeSideHead</c>); si no, valores prudentes por modelo.
+        /// </summary>
+        public float SideHeadInS = float.NaN;
+
+        /// <summary>Tropa lateral: centro de la cabeza respecto a la raíz del rig, hacia arriba (S; negativo: por debajo).</summary>
+        public float SideHeadUpS = float.NaN;
+
+        /// <summary>Tropa lateral: medio lado de la caja de la cabeza (S), con el balanceo.</summary>
+        public float SideHeadHalfS = float.NaN;
 
         /// <summary>Duración T de la intro (ms).</summary>
         public float TotalMs = 1400f;
@@ -222,6 +281,11 @@ namespace AF.Presentation
     /// mucho 2 frutas por ciclo sin moverse), así que cortar en el tercer ciclo solo pasaría frutas al dosel en mitad de la
     /// tropa. El Barro (color 15) se trata como una dosis oculta: no es una racha, no recibe fruta y corta las rachas
     /// (<see cref="IntroInput.IsInert"/>).
+    /// <para>Tropa lateral (D-021, <see cref="IntroPerch.Side"/>): con 3 filas y cuando la pide <see cref="IntroSideSchedule"/>, el
+    /// calendario de la fruta (orden, impactos y floraciones) y T son exactamente los del dosel; solo cambia de dónde sale cada
+    /// fruta: un miquito por lado baja por su liana hasta media altura de la fila 1 (≥ 8 dp de toda cuia, sin pisar el HUD ni
+    /// la bandeja) y la lanza en arco desde la mano; la tropa sale en T, sin reposo ya en juego. Si no cabe sin bajar de
+    /// <see cref="MinMonkeyDp"/>, vuelve a la regla de D-010.</para>
     /// </remarks>
     public sealed class IntroChoreography
     {
@@ -385,6 +449,153 @@ namespace AF.Presentation
 
         /// <summary>La lámina del desborde empieza 4 dp por encima del panel.</summary>
         public const float SheetAbovePanelDp = 4f;
+
+        // ---- Tropa lateral (D-021): constantes [P] de este planificador, sin clave de Remote Config. ----
+
+        /// <summary>Tropa lateral: un miquito por lado (D-021, punto 1: «bajan por los lados»).</summary>
+        public const int SideMonkeys = 2;
+
+        /// <summary>Distancia mínima de cualquier pieza de la tropa a una cuia (guion de la intro §7.1; D-021, punto 4).</summary>
+        public const float CuiaClearanceDp = 8f;
+
+        /// <summary>La liana lateral queda al menos a 2 dp del borde de la pantalla (que se vea).</summary>
+        public const float SideLianaMinXDp = 2f;
+
+        /// <summary>
+        /// Trepando (<c>fila</c> y <c>sacude</c>, <see cref="MonkeyRig.Climb"/>): lo que las manos, los pies y la cola asoman de la
+        /// liana hacia el tablero (S).
+        /// </summary>
+        public const float SideClimbReachS = 0.12f;
+
+        /// <summary>Trepando: lo que el lomo y la cabeza salen de la liana hacia el borde de la pantalla (S).</summary>
+        public const float SideClimbBodyS = 0.66f;
+
+        /// <summary>Trepando: lo que la cabeza (y el brazo que lanza) suben por encima del apoyo en la liana (S).</summary>
+        public const float SideClimbUpS = 0.72f;
+
+        /// <summary>Trepando: hasta 2 dp del lomo pueden quedar tras el borde de la pantalla (nunca la cabeza entera).</summary>
+        public const float SideOffscreenDp = 2f;
+
+        /// <summary>Colgado (<c>cuelga</c>, <see cref="MonkeyRig.Hang"/> mirando al tablero): lo que el cuerpo (la cabeza, con el balanceo) sale del agarre hacia el tablero (S).</summary>
+        public const float SideHangReachS = 0.68f;
+
+        /// <summary>Colgado: lo que la mano y el brazo que agarran suben por encima del agarre (S).</summary>
+        public const float SideHangUpS = 0.12f;
+
+        /// <summary>
+        /// Mano que lanza, trepando, en coordenadas de la pose (S): la liana es el eje x y la cabeza va hacia +x
+        /// (<c>MonkeyRig.SideThrowHandS</c>): delante del pecho, 0,12 S sobre el apoyo, por debajo del hombro (0,18 S): un
+        /// lanzamiento de lado desde la altura del pecho, nunca por encima del hombro (guion §4.4; 07 §5.1, fase d; revisión de
+        /// TL1). La cabeza va hacia el borde, así que la fruta sale hacia las cuias sin cruzarla.
+        /// </summary>
+        public const float SideThrowAlongS = 0.12f;
+
+        /// <summary>
+        /// Mano que lanza, trepando: hacia fuera de la liana (S; negativo: hacia el tablero). Un poco hacia el tablero (−0,03 S):
+        /// con el ancho del brazo, su caja no pasa de lo que asoman manos y pies (<see cref="SideClimbReachS"/>), así que no
+        /// se acerca a la línea de 8 dp de la cuia, y la fruta lanzada deja libre la cabeza antes (revisión de TL1: se oculta
+        /// como mucho 80 ms o el 25 % de su vuelo).
+        /// </summary>
+        public const float SideThrowOutS = -0.03f;
+
+        /// <summary>
+        /// Colgado (<c>cuelga</c>), la mano libre que lanza: hacia el tablero desde el agarre (S), por debajo de la cabeza y
+        /// del lado del tablero, sin pasar de <see cref="SideHangReachS"/> con el ancho del brazo (revisión de TL1).
+        /// </summary>
+        public const float SideHangHandInS = 0.58f;
+
+        /// <summary>Colgado, la mano libre que lanza: bajo el agarre (S); lo más bajo sigue siendo <see cref="HangDepthS"/>.</summary>
+        public const float SideHangHandDownS = 0.88f;
+
+        /// <summary>
+        /// Colgado, la liana (y el agarre) va a esta fracción del margen libre desde el borde de la pantalla: sobre la banda
+        /// exterior del marco, como la del que trepa, y no pegada al borde (revisión de TL1). El cuerpo cuelga justo debajo,
+        /// desplazado hacia el borde (<see cref="SideHangShiftDp"/>): lo más interior del miquito y la fruta de la mano no se
+        /// mueven.
+        /// </summary>
+        public const float SideHangLianaFraction = 0.5f;
+
+        /// <summary>Colgado, la cola queda al menos a 1 dp del borde de la pantalla.</summary>
+        public const float SideTailMinXDp = 1f;
+
+        /// <summary>
+        /// Una fruta lanzada no se dibuja mientras su caja visible corte la de la cabeza de su miquito (con este margen, dp):
+        /// solo la de la mano puede solaparla (revisión de TL1: el miquito se reconoce en el lanzamiento).
+        /// </summary>
+        public const float SideHeadMarginDp = 1f;
+
+        /// <summary>Paso del muestreo de esa comprobación en el planificador (ms).</summary>
+        public const float SideClearStepMs = 1f;
+
+        /// <summary>
+        /// Sin el arte de la especie (tests del planificador), la cabeza trepando: centro a 0,25 S de la liana hacia el borde
+        /// (negativo hacia el tablero)…
+        /// </summary>
+        public const float SideClimbHeadInS = -0.25f;
+
+        /// <summary>…y 0,34 S por encima del apoyo (<c>MonkeyRig.Climb</c>).</summary>
+        public const float SideClimbHeadUpS = 0.34f;
+
+        /// <summary>Colgado, sin arte: centro de la cabeza a 0,42 S del agarre hacia el tablero…</summary>
+        public const float SideHangHeadInS = 0.42f;
+
+        /// <summary>…y 0,36 S por debajo de él (<c>MonkeyRig.Hang</c>).</summary>
+        public const float SideHangHeadUpS = -0.36f;
+
+        /// <summary>Sin arte, medio lado de la caja de la cabeza (S): la mayor (0,62 S) con el balanceo.</summary>
+        public const float SideHeadHalfDefaultS = 0.34f;
+
+        /// <summary>La fruta en la mano queda al menos a 2 dp del borde de la pantalla, nunca cortada por él (revisión de TL1).</summary>
+        public const float SideFruitEdgeDp = 2f;
+
+        /// <summary>Si no cabe así sin pasar de la línea de 8 dp de la cuia, la fruta en la mano sube 0,2 S.</summary>
+        public const float SideFruitLiftS = 0.2f;
+
+        /// <summary>
+        /// La fruta lanzada viaja en horizontal a unos 700 dp/s (dp/ms)… Pasa del tope de 250 dp/s de la suelta de la rama
+        /// (guion §4.4; 07 §5.1, fase d): con el calendario del dosel y la mano en el margen, no se llega a las columnas de
+        /// dentro de otra forma. Excepción pendiente del dueño (revisión de TL1).
+        /// </summary>
+        public const float SideThrowDpPerMs = 0.7f;
+
+        /// <summary>…y vuela entre 180 ms…</summary>
+        public const float SideThrowMinMs = 180f;
+
+        /// <summary>…y 320 ms (el calendario de impactos es el del dosel: la suelta se calcula hacia atrás).</summary>
+        public const float SideThrowMaxMs = 320f;
+
+        /// <summary>Al repartir las sueltas de cada mano, el vuelo puede bajar hasta 140 ms…</summary>
+        public const float SideSpreadMinMs = 140f;
+
+        /// <summary>…o subir hasta 360 ms.</summary>
+        public const float SideSpreadMaxMs = 360f;
+
+        /// <summary>Altura del arco del lanzamiento sobre el punto más alto entre la mano y la superficie: 35 % del recorrido…</summary>
+        public const float SideArcFraction = 0.35f;
+
+        /// <summary>…con un mínimo de 12 dp…</summary>
+        public const float SideArcMinDp = 12f;
+
+        /// <summary>…y un máximo de 60 dp; la cumbre nunca sube a menos de 6 dp del HUD.</summary>
+        public const float SideArcMaxDp = 60f;
+
+        /// <summary>La cumbre del arco queda al menos 6 dp por debajo del HUD.</summary>
+        public const float SideApexBelowHudDp = 6f;
+
+        /// <summary>Al entrar desde el follaje de su esquina, el miquito y su liana aparecen en 120 ms.</summary>
+        public const float SideFadeInMs = 120f;
+
+        /// <summary>
+        /// Lo alto de la liana lateral queda 3 dp bajo el HUD, dentro de su nudo de hojas (<c>TroopLayer</c>; revisión de TL1):
+        /// con 3 dp de grosor y su borde, su trazo no pisa el HUD.
+        /// </summary>
+        public const float SideLianaBelowHudDp = 3f;
+
+        /// <summary>La liana del que trepa cuelga 0,6 S por debajo de su apoyo en el sitio de lanzar.</summary>
+        public const float SideLianaBelowS = 0.6f;
+
+        /// <summary>Lo más bajo del cuerpo trepando (patas y cola, a lo largo de la liana) bajo el apoyo (S).</summary>
+        public const float SideClimbDownS = 0.95f;
 
         /// <summary>Miquitos como mucho en pantalla.</summary>
         public const int MaxMonkeys = 6;
@@ -574,6 +785,61 @@ namespace AF.Presentation
 
         /// <summary>Orientación desde cada clave (+1 derecha, −1 izquierda): <c>[m · MaxKeys + j]</c>.</summary>
         public readonly int[] MonkeyKeyFacing = new int[MaxMonkeys * MaxKeys];
+
+        // ---- Tropa lateral (D-021): el miquito 0 por la izquierda y el 1 por la derecha. ----
+
+        /// <summary>x de la liana de cada miquito lateral (dp): el apoyo de quien trepa o el agarre de quien cuelga.</summary>
+        public readonly float[] SideX = new float[SideMonkeys];
+
+        /// <summary>y de la raíz del rig arriba de su liana (dp desde arriba): de donde entra y adonde vuelve al salir.</summary>
+        public readonly float[] SideTopY = new float[SideMonkeys];
+
+        /// <summary>y de la raíz del rig en su sitio de lanzar (dp desde arriba).</summary>
+        public readonly float[] SidePerchY = new float[SideMonkeys];
+
+        /// <summary>y de la raíz del rig al empezar la entrada (arriba o, si no le da tiempo, ya bajando desde t = 0).</summary>
+        public readonly float[] SideStartY = new float[SideMonkeys];
+
+        /// <summary>Empieza a bajar (ms).</summary>
+        public readonly float[] SideStartMs = new float[SideMonkeys];
+
+        /// <summary>Llega a su sitio de lanzar (ms): ≥ 50 ms antes de su primer lanzamiento.</summary>
+        public readonly float[] SideArriveMs = new float[SideMonkeys];
+
+        /// <summary>Entra desde arriba de su liana y aparece en <see cref="SideFadeInMs"/>; si no, ya se ve desde t = 0.</summary>
+        public readonly bool[] SideFadeIn = new bool[SideMonkeys];
+
+        /// <summary>
+        /// Con la tropa lateral, desde cuándo se ve cada fruta en la mano (ms): 60 ms antes de lanzarla, pero nunca antes de que
+        /// esa mano lance la anterior (una fruta en la mano cada vez, no un racimo que tape al miquito).
+        /// </summary>
+        public readonly float[] SideHoldFromMs = new float[MaxFruits];
+
+        /// <summary>
+        /// Con la tropa lateral, cuánto tarda cada fruta lanzada en dejar libre la cabeza de su miquito (ms desde su suelta): hasta
+        /// entonces no se dibuja, así que en cada fotograma solo la fruta de la mano puede solapar la cabeza (revisión de TL1).
+        /// 0 si sale ya libre.
+        /// </summary>
+        public readonly float[] SideClearMs = new float[MaxFruits];
+
+        /// <summary>y de lo alto de las lianas laterales (3 dp bajo el borde inferior del HUD: salen de su nudo de hojas).</summary>
+        public float SideLianaTopY { get; private set; }
+
+        /// <summary>
+        /// Ancho libre en cada lado para la tropa lateral (dp): del borde de la pantalla a 8 dp de la cuia más cercana a él
+        /// (el menor de los dos lados). Lo calcula el planificador también cuando no cabe (informes y tests).
+        /// </summary>
+        public float SideFreeDp { get; private set; }
+
+        /// <summary>Tamaño que le cabría a la tropa lateral en ese ancho (dp; &lt; <see cref="MinMonkeyDp"/>: no cabe).</summary>
+        public float SideFitDp { get; private set; }
+
+        /// <summary>
+        /// Colgado (<c>cuelga</c>), cuánto se desplaza el cuerpo hacia el borde respecto a su agarre en la liana (dp; 0 trepando):
+        /// la liana va a media anchura del margen (<see cref="SideHangLianaFraction"/>) y el cuerpo, justo debajo, con lo más
+        /// interior en el mismo sitio que con el agarre a <see cref="SideLianaMinXDp"/> del borde (revisión de TL1).
+        /// </summary>
+        public float SideHangShiftDp { get; private set; }
 
         /// <summary>Cuias del plan.</summary>
         public int CuiaCount { get; private set; }
@@ -912,6 +1178,66 @@ namespace AF.Presentation
             return 0f;
         }
 
+        /// <summary>Lado del miquito lateral <paramref name="m"/>: +1 a la izquierda (el tablero le queda a la derecha), −1 a la derecha.</summary>
+        public static int SideSign(int m)
+        {
+            return m == 0 ? 1 : -1;
+        }
+
+        /// <summary>
+        /// y de la raíz del rig del miquito lateral <paramref name="m"/> en <paramref name="t"/> (dp desde arriba): baja por su
+        /// liana hasta su sitio, lanza desde ahí y, en cuanto se habilita el toque (T), sube por ella en
+        /// <see cref="ExitMs"/> (D-021, punto 3: sin reposo ya en juego).
+        /// </summary>
+        public float SideRootY(int m, float t)
+        {
+            if (t >= ExitStartMs)
+            {
+                float q = Math.Min(1f, (t - ExitStartMs) / ExitMs);
+                return SidePerchY[m] + ((SideTopY[m] - SidePerchY[m]) * q);
+            }
+
+            float start = SideStartMs[m];
+            float arrive = SideArriveMs[m];
+            if (t >= arrive || arrive - start < 0.5f)
+            {
+                return t >= arrive ? SidePerchY[m] : SideStartY[m];
+            }
+
+            if (t <= start)
+            {
+                return SideStartY[m];
+            }
+
+            return SideStartY[m] + ((SidePerchY[m] - SideStartY[m]) * ((t - start) / (arrive - start)));
+        }
+
+        /// <summary>Velocidad vertical del miquito lateral <paramref name="m"/> en <paramref name="t"/> (dp/ms; + baja, 0 quieto).</summary>
+        public float SideVelocityY(int m, float t)
+        {
+            if (t >= ExitStartMs)
+            {
+                return t < ExitStartMs + ExitMs ? (SideTopY[m] - SidePerchY[m]) / ExitMs : 0f;
+            }
+
+            float span = SideArriveMs[m] - SideStartMs[m];
+            return t > SideStartMs[m] && t < SideArriveMs[m] && span >= 0.5f ? (SidePerchY[m] - SideStartY[m]) / span : 0f;
+        }
+
+        /// <summary>
+        /// Opacidad propia del miquito lateral <paramref name="m"/> y de su liana en <paramref name="t"/>: 0 antes de entrar y en
+        /// <see cref="SideFadeInMs"/> hasta 1 al asomar del follaje (el fundido de la salida lo pone la capa, como en la rama).
+        /// </summary>
+        public float SideAlpha(int m, float t)
+        {
+            if (!SideFadeIn[m])
+            {
+                return 1f;
+            }
+
+            return Math.Max(0f, Math.Min(1f, (t - SideStartMs[m]) / SideFadeInMs));
+        }
+
         /// <summary>Posición de la fruta <paramref name="k"/> a <paramref name="dtMs"/> de su suelta (dp desde arriba).</summary>
         public float FruitY(int k, float dtMs)
         {
@@ -1125,6 +1451,17 @@ namespace AF.Presentation
             float band = input.PanelTop - input.HudBottom;
             IntroPerch perch = input.Perch;
             TroopModel model = input.Model;
+            MeasureSide(input, CuiaCount, model); // también sin tropa lateral: informes y tests (D-021, punto 4)
+            if (perch == IntroPerch.Side)
+            {
+                if (TrySide(input))
+                {
+                    return;
+                }
+
+                perch = IntroPerch.Branch; // no cabe sin encoger (D-021, punto 4): la regla de D-010, rama o dosel
+            }
+
             if (model == TroopModel.Hang && band < HangMinBandDp)
             {
                 model = TroopModel.Row; // con menos de 64 dp, se sienta en la rama baja y suelta como fila
@@ -1286,6 +1623,314 @@ namespace AF.Presentation
                 float x = MonkeyGroupX[g];
                 bool tie = Math.Abs(x - mid) <= 0.5f;
                 MonkeyFromRight[g] = twoSides ? (tie ? (lefts == rights ? EntryFromRight : rights < lefts) : x > mid) : EntryFromRight;
+            }
+        }
+
+        // Ancho libre de cada lado para la tropa lateral y el tamaño que cabe en él con el modelo de suelta (D-021, punto 4):
+        // del borde de la pantalla a 8 dp de la cuia más cercana a ese borde, en todas las filas (la liana pasa junto a todas
+        // hasta su sitio). Trepando, el apoyo va junto a ese límite con las manos y los pies asomando 0,12 S hacia el tablero, y
+        // el lomo y la cabeza (0,66 S) caben con como mucho 2 dp tras el borde; colgado, el agarre va a ≥ 2 dp del borde y el
+        // cuerpo sale 0,68 S hacia el tablero.
+        private void MeasureSide(IntroInput input, int n, TroopModel model)
+        {
+            float left = float.MaxValue;
+            float right = float.MinValue;
+            for (int i = 0; i < n; i++)
+            {
+                float half = 0.5f * CuiaGeometry.WidthU * Unit;
+                left = Math.Min(left, input.CenterX[i] - half);
+                right = Math.Max(right, input.CenterX[i] + half);
+            }
+
+            float free = n > 0 ? Math.Min(left, input.CanvasWidth - right) - CuiaClearanceDp : 0f;
+            SideFreeDp = Math.Max(0f, free);
+            SideFitDp = model == TroopModel.Hang
+                ? (SideFreeDp - SideLianaMinXDp) / SideHangReachS
+                : (SideFreeDp + SideOffscreenDp) / (SideClimbReachS + SideClimbBodyS);
+        }
+
+        // La tropa lateral (D-021): solo con 3 filas, alguna columna con fruta y sitio para miquitos de ≥ 28 dp sin encogerlos
+        // por debajo (si no cabe, false y la regla de D-010). Un miquito por lado, con el modelo de suelta de la especie
+        // (trepa por la liana o, con cuelga, baja colgado de ella): baja desde lo alto de su liana, junto al HUD, hasta su sitio
+        // de lanzar, a media altura de la fila 1, sin tocar el HUD ni la bandeja.
+        private bool TrySide(IntroInput input)
+        {
+            TroopModel model = input.Model;
+            SideHangShiftDp = 0f;
+            float size = Math.Min(input.MonkeyDp, SideFitDp);
+            if (Rows != 3 || ColumnCount == 0 || size < MinMonkeyDp)
+            {
+                return false;
+            }
+
+            bool hang = model == TroopModel.Hang;
+            float topY = hang ? input.HudBottom + (SideHangUpS * size) + 1f : input.HudBottom + (SideClimbUpS * size) + 1f;
+            float rowMid = input.RowFootY[0] - (0.5f * CuiaGeometry.HeightU(Cuia.DefaultCapacity) * Unit);
+            float perchY = hang ? rowMid - (0.5f * HangDepthS * size) : rowMid;
+            float lowest = perchY + (hang ? HangDepthS * size : SideClimbDownS * size);
+            if (lowest > input.TrayTop - CuiaClearanceDp)
+            {
+                perchY -= lowest - (input.TrayTop - CuiaClearanceDp); // nunca sobre la bandeja
+            }
+
+            perchY = Math.Max(perchY, topY);
+            float x = hang ? SideFreeDp - (SideHangReachS * size) : SideFreeDp - (SideClimbReachS * size);
+            if (hang && SideHangLianaFraction * SideFreeDp > x)
+            {
+                // Colgado: la liana, a media anchura del margen; el cuerpo, justo debajo y donde estaba (revisión de TL1).
+                SideHangShiftDp = (SideHangLianaFraction * SideFreeDp) - x;
+                x += SideHangShiftDp;
+            }
+
+            Perch = IntroPerch.Side;
+            Model = model;
+            MonkeyDp = size;
+            _hangRelease = input.PanelTop - LowBranchAbovePanelDp - 2f;
+            SetBody(size);
+            LowBranchY = input.PanelTop - LowBranchAbovePanelDp;
+            BranchY = LowBranchY;
+            _corner = 6f;
+            _sag = 0f;
+            Pair = false;
+            PairTailHangDp = 0f;
+            EntryTwoSides = true;
+            SideLianaTopY = input.HudBottom + SideLianaBelowHudDp;
+            for (int j = 0; j < MaxMonkeys; j++)
+            {
+                MonkeyKeyCount[j] = 0;
+                MonkeyFromRight[j] = false;
+                MonkeyExitDir[j] = -1;
+                MonkeyStartFacing[j] = 1;
+                MonkeyGroupX[j] = 0f;
+            }
+
+            for (int m = 0; m < SideMonkeys; m++)
+            {
+                int sign = SideSign(m);
+                SideX[m] = sign > 0 ? x : input.CanvasWidth - x;
+                SideTopY[m] = topY;
+                SidePerchY[m] = perchY;
+                SideStartY[m] = topY;
+                SideStartMs[m] = 0f;
+                SideArriveMs[m] = 0f;
+                SideFadeIn[m] = false;
+                MonkeyFromRight[m] = sign < 0;
+                MonkeyExitDir[m] = -sign;
+                MonkeyStartFacing[m] = sign;
+                MonkeyGroupX[m] = SideX[m];
+            }
+
+            MonkeyCount = SideMonkeys;
+            return true;
+        }
+
+        // Lanzamientos de la tropa lateral, con el calendario de impactos del dosel ya hecho (D-021, punto 3: el calendario de
+        // la fruta y T no cambian): cada fruta la lanza el miquito de su mitad de la pantalla desde la mano (trepando, delante
+        // del pecho; colgado, la mano libre), con un arco que sube 12-60 dp sobre lo más alto entre la mano y la
+        // superficie (nunca a menos de 6 dp del HUD); la suelta va hacia atrás desde el impacto. Con una sola fruta, el vuelo
+        // sale del recorrido (180-320 ms, a unos 700 dp/s en horizontal); con más, las sueltas de cada mano se reparten por
+        // igual, en orden de impacto, desde su primer impacto − 360 ms hasta su último − 140 ms (vuelos de 140-360 ms): una
+        // fruta tras otra, no un racimo que salga a la vez de la mano y tape al miquito. La mano (revisión de TL1) queda del
+        // lado del tablero y por debajo del hombro (un lanzamiento de lado, nunca por encima del hombro: guion §4.4): trepando,
+        // delante del pecho y sobre la liana; colgado, la mano libre bajo la cabeza y hacia el tablero; y la fruta en la mano
+        // nunca queda cortada por el borde de la pantalla.
+        private void ScheduleSide(IntroInput input)
+        {
+            float mid = input.CanvasWidth * 0.5f;
+            float s = BodyDp;
+            bool hang = Model == TroopModel.Hang;
+            float r = 0.5f * FruitFlightVisibleDp;
+            float minEdge = r + SideFruitEdgeDp;
+            float maxEdge = SideFreeDp - r; // como mucho hasta la línea de 8 dp de la cuia
+            for (int k = 0; k < FruitCount; k++)
+            {
+                float ix = FruitImpactX[k];
+                int m = Math.Abs(ix - mid) <= 0.5f ? (EntryFromRight ? 1 : 0) : (ix < mid ? 0 : 1);
+                int sign = SideSign(m);
+                FruitMonkey[k] = m;
+                float hx = hang ? SideX[m] + (sign * ((SideHangHandInS * s) - SideHangShiftDp)) : SideX[m] - (sign * SideThrowOutS * s);
+                float hy = hang ? SidePerchY[m] + (SideHangHandDownS * s) : SidePerchY[m] - (SideThrowAlongS * s);
+                float edge = sign > 0 ? hx : input.CanvasWidth - hx; // distancia del centro de la fruta a su borde
+                if (edge < minEdge)
+                {
+                    if (minEdge <= maxEdge)
+                    {
+                        edge = minEdge;
+                    }
+                    else
+                    {
+                        edge = Math.Max(edge, maxEdge);
+                        hy -= SideFruitLiftS * s; // no cabe hacia dentro: sube en lugar de salirse
+                    }
+
+                    hx = sign > 0 ? edge : input.CanvasWidth - edge;
+                }
+
+                FruitReleaseX[k] = hx;
+                FruitReleaseY[k] = hy;
+                float dist = Math.Abs(ix - FruitReleaseX[k]);
+                float tau = Math.Min(SideThrowMaxMs, Math.Max(SideThrowMinMs, dist / SideThrowDpPerMs));
+                FruitReleaseMs[k] = FruitImpactMs[k] - tau;
+            }
+
+            // Sueltas de cada mano, espaciadas por igual en orden de impacto (los impactos ya van en orden).
+            for (int m = 0; m < SideMonkeys; m++)
+            {
+                int count = 0;
+                float lo = float.MaxValue;
+                float hi = float.MinValue;
+                for (int k = 0; k < FruitCount; k++)
+                {
+                    if (FruitMonkey[k] == m)
+                    {
+                        count++;
+                        lo = Math.Min(lo, FruitImpactMs[k] - SideSpreadMaxMs);
+                        hi = Math.Max(hi, FruitImpactMs[k] - SideSpreadMinMs);
+                    }
+                }
+
+                int i = 0;
+                for (int k = 0; k < FruitCount && count > 1; k++)
+                {
+                    if (FruitMonkey[k] != m)
+                    {
+                        continue;
+                    }
+
+                    float target = lo + ((hi - lo) * i / (count - 1));
+                    float tau = Math.Min(SideSpreadMaxMs, Math.Max(SideSpreadMinMs, FruitImpactMs[k] - target));
+                    FruitReleaseMs[k] = FruitImpactMs[k] - tau;
+                    i++;
+                }
+            }
+
+            for (int k = 0; k < FruitCount; k++)
+            {
+                float tau = Math.Min(FruitImpactMs[k] - FruitReleaseMs[k], Math.Max(1f, FruitImpactMs[k])); // nunca antes de t = 0
+                float hx = FruitReleaseX[k];
+                float hy = FruitReleaseY[k];
+                float iy = FruitImpactY[k];
+                float dist = Math.Abs(FruitImpactX[k] - hx);
+                float top = Math.Min(hy, iy);
+                float arc = Math.Min(SideArcMaxDp, Math.Max(SideArcMinDp, SideArcFraction * dist));
+                float apex = Math.Max(top - arc, input.HudBottom + SideApexBelowHudDp);
+                apex = Math.Min(apex, top);
+                float up = Math.Max(0f, hy - apex);
+                float down = Math.Max(0f, iy - apex);
+                float root = (float)Math.Sqrt(up) + (float)Math.Sqrt(down);
+                float g = root > 0.0001f ? 2f * root * root / (tau * tau) : GravityDpPerMs2;
+                FruitG[k] = g;
+                FruitV0[k] = -(float)Math.Sqrt(2f * g * up); // hacia arriba: un lanzamiento, no una caída
+                FruitReleaseMs[k] = FruitImpactMs[k] - tau;
+            }
+
+            // Una fruta en la mano cada vez: la siguiente asoma cuando sale la anterior de esa mano.
+            for (int k = 0; k < FruitCount; k++)
+            {
+                float release = FruitReleaseMs[k];
+                float from = release - HoldMs;
+                for (int j = 0; j < FruitCount; j++)
+                {
+                    if (j != k && FruitMonkey[j] == FruitMonkey[k]
+                        && (FruitReleaseMs[j] < release || (FruitReleaseMs[j] == release && j < k)))
+                    {
+                        from = Math.Max(from, FruitReleaseMs[j]);
+                    }
+                }
+
+                SideHoldFromMs[k] = Math.Min(from, release);
+            }
+
+            // La fruta lanzada no se dibuja hasta que su caja visible deja libre la cabeza de su miquito y ya no vuelve a
+            // cortarla (revisión de TL1): en cada fotograma, como mucho la fruta de la mano solapa la cabeza.
+            float headIn = !float.IsNaN(input.SideHeadInS) ? input.SideHeadInS : (hang ? SideHangHeadInS : SideClimbHeadInS);
+            float headUp = !float.IsNaN(input.SideHeadUpS) ? input.SideHeadUpS : (hang ? SideHangHeadUpS : SideClimbHeadUpS);
+            float headHalf = !float.IsNaN(input.SideHeadHalfS) ? input.SideHeadHalfS : SideHeadHalfDefaultS;
+            for (int k = 0; k < FruitCount; k++)
+            {
+                int m = FruitMonkey[k];
+                float hcx = SideX[m] + (SideSign(m) * ((headIn * s) - (hang ? SideHangShiftDp : 0f)));
+                float hcy = SidePerchY[m] - (headUp * s);
+                float half = (headHalf * s) + SideHeadMarginDp;
+                float tau = Math.Max(1f, FruitImpactMs[k] - FruitReleaseMs[k]);
+                float last = -1f;
+                for (float dt = 0f; dt <= tau; dt += SideClearStepMs)
+                {
+                    float u = dt / tau;
+                    float fr = 0.5f * (FruitFlightVisibleDp + ((FruitImpactVisibleDp - FruitFlightVisibleDp) * u));
+                    float fx = FruitReleaseX[k] + ((FruitImpactX[k] - FruitReleaseX[k]) * u);
+                    float fy = FruitY(k, dt);
+                    if (Math.Abs(fx - hcx) < half + fr && Math.Abs(fy - hcy) < half + fr)
+                    {
+                        last = dt;
+                    }
+                }
+
+                SideClearMs[k] = last < 0f ? 0f : Math.Min(tau, last + SideClearStepMs);
+            }
+        }
+
+        // Entrada y salida de la tropa lateral, con los lanzamientos ya fijados: cada miquito llega a su sitio ≥ 50 ms antes de
+        // su primer lanzamiento (si no lanza nada, cuando empieza la fase d), baja en ≈ 500 ms a ≤ 450 dp/s (en la larga, nunca
+        // antes de que el río desborde) y, si no le da tiempo, ya se ve bajando desde t = 0; sale en T, en cuanto se habilita
+        // el toque, sin reposo ya en juego (D-021, punto 3).
+        private void FinishSide()
+        {
+            float last = -1f;
+            for (int k = 0; k < FruitCount; k++)
+            {
+                last = Math.Max(last, FruitReleaseMs[k]);
+            }
+
+            LastReleaseMs = last;
+            ExitStartMs = TotalMs;
+            for (int m = 0; m < SideMonkeys; m++)
+            {
+                float first = float.MaxValue;
+                for (int k = 0; k < FruitCount; k++)
+                {
+                    if (FruitMonkey[k] == m)
+                    {
+                        first = Math.Min(first, FruitReleaseMs[k]);
+                    }
+                }
+
+                float arrive = (first < float.MaxValue ? first : DStartMs) - ReleaseAfterArrivalMs;
+                arrive = Math.Max(0f, Math.Min(arrive, TotalMs));
+                float start = arrive - EnterMs;
+                if (IsLong)
+                {
+                    start = Math.Max(start, Math.Min(SheetStartMs, arrive));
+                }
+
+                start = Math.Max(0f, start);
+                float dist = Math.Max(0f, SidePerchY[m] - SideTopY[m]);
+                float span = arrive - start;
+                SideStartMs[m] = start;
+                SideArriveMs[m] = arrive;
+                if (dist < 0.5f)
+                {
+                    SideStartY[m] = SidePerchY[m];
+                    SideFadeIn[m] = true;
+                }
+                else if (span > 0.5f && dist <= (MonkeySpeedDpPerMs * span) + 0.01f)
+                {
+                    SideStartY[m] = SideTopY[m];
+                    SideFadeIn[m] = true;
+                }
+                else
+                {
+                    // No le da tiempo a ≤ 450 dp/s: ya se ve bajando desde t = 0 (como la tropa posada de la corta).
+                    SideStartY[m] = SidePerchY[m] - Math.Min(dist, MonkeySpeedDpPerMs * Math.Max(0f, span));
+                    SideFadeIn[m] = false;
+                }
+
+                MonkeyEnterStartMs[m] = start;
+                MonkeyEnterEndMs[m] = arrive;
+                MonkeyKeyCount[m] = 1;
+                MonkeyKeyT[m * MaxKeys] = 0f;
+                MonkeyKeyX[m * MaxKeys] = SideX[m];
+                MonkeyKeyFacing[m * MaxKeys] = SideSign(m);
             }
         }
 
@@ -1486,8 +2131,15 @@ namespace AF.Presentation
                 FruitSpin[k] = ((spin >> 16) & 1u) != 0u ? deg / 1000f : -deg / 1000f;
             }
 
+            bool side = Perch == IntroPerch.Side;
             if (count == 0)
             {
+                if (side)
+                {
+                    FinishSide();
+                    return;
+                }
+
                 InitMonkeys(input);
                 FinishMonkeys(input);
                 return;
@@ -1501,7 +2153,11 @@ namespace AF.Presentation
                 _ideal[k] = Math.Min(ideal, lastIdeal);
             }
 
-            InitMonkeys(input);
+            if (!side)
+            {
+                InitMonkeys(input);
+            }
+
             float prev = float.MinValue;
             for (int k = 0; k < count; k++)
             {
@@ -1639,6 +2295,15 @@ namespace AF.Presentation
             }
 
             FirstImpactMs = first;
+            if (side)
+            {
+                // Los impactos y las floraciones son los del dosel (el bucle de arriba no mira la tropa lateral): solo cambian
+                // desde dónde y cuándo sale cada fruta (D-021, punto 3).
+                ScheduleSide(input);
+                FinishSide();
+                return;
+            }
+
             FinishMonkeys(input);
         }
 
@@ -1649,9 +2314,9 @@ namespace AF.Presentation
         // el dosel por detrás del HUD.
         private float ReleaseY(IntroInput input, float x)
         {
-            if (Perch == IntroPerch.Canopy || MonkeyCount == 0)
+            if (Perch != IntroPerch.Branch || MonkeyCount == 0)
             {
-                return input.HudBottom - CanopyAboveHudDp;
+                return input.HudBottom - CanopyAboveHudDp; // dosel (con la tropa lateral, ScheduleSide la cambia después)
             }
 
             switch (Model)

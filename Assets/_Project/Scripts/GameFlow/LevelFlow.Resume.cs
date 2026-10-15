@@ -128,6 +128,7 @@ namespace AF.GameFlow
             }
 
             int number = saved.Level;
+            _catalog.Serve(number); // carga del nivel: el aviso del kill switch si se sirve el publicado (KS1)
             _attempt.Restore(number, saved.FailsLevel, relief, history.Added, history.UndoGiftUsed, history.ExtraCuiaGifted, history.RevealGifted);
             var session = new LevelSession(BoardFor(def, relief), GameConfig.FutileRuleEnabled, _pourMode);
             for (int i = 0; i < history.Sources.Count; i++)
