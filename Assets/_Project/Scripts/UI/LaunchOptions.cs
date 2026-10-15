@@ -80,9 +80,11 @@ namespace AF.UI
 
         /// <summary>
         /// Extra de intent (string) de los builds de desarrollo (tarea KS1; D-020, pregunta 31 b): apaga los kill switches
-        /// <c>mech_enabled.&lt;id&gt;</c> de 08 §9 de la lista separada por comas (<c>--es af_mech_off hoja,matapi</c>) para probar la
-        /// sustitución con <c>level_overrides</c> (<see cref="LevelCatalog"/>). Un id desconocido se ignora y se avisa en el log.
-        /// Nunca se lee en un build de release.
+        /// <c>mech_enabled.&lt;id&gt;</c> de 08 §9 de la lista separada por comas (<c>--es af_mech_off hoja,matapi</c>). En el
+        /// teléfono solo prueba el respaldo sin override: <c>level_overrides</c> sale de la fuente local
+        /// (<see cref="LevelOverrides.LocalSource"/>, <c>{}</c>), así que <see cref="LevelCatalog"/> sirve el publicado y escribe el
+        /// aviso [P]. La sustitución con un override la prueban los tests EditMode (<see cref="LevelOverridesJsonOverride"/>). Un id
+        /// desconocido se ignora y se avisa en el log. Nunca se lee en un build de release.
         /// </summary>
         public const string IntentExtraMechOff = "af_mech_off";
 
@@ -94,7 +96,8 @@ namespace AF.UI
 
         /// <summary>
         /// <c>level_overrides</c> (JSON <c>{slot: level_id}</c>, 08 §9) forzado por un test en lugar de la fuente local
-        /// (<see cref="LevelOverrides.LocalSource"/>, vacía). Null = la fuente local. Solo tests: ningún extra de intent lo rellena.
+        /// (<see cref="LevelOverrides.LocalSource"/>, vacía). Null = la fuente local. Solo tests: ningún extra de intent lo rellena,
+        /// así que en un build de desarrollo <c>af_mech_off</c> no puede ejercitar la sustitución (solo el respaldo con aviso).
         /// </summary>
         public static string? LevelOverridesJsonOverride { get; set; }
 

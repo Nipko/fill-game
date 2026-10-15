@@ -265,13 +265,38 @@ namespace AF.Tests.EditMode
         [Test]
         public void SlotsAreCampaignNumbers_WithTheDevOffset()
         {
-            // af_level_offset 30: el tutorial se juega como 31-40; el slot 33 es el del tablero del nivel 3.
-            LevelPack tutorial = TestPacks.Tutorial;
-            LevelOverrides table = LevelOverrides.Create("{\"33\": \"" + tutorial.Find(1)!.Id + "\"}", new[] { tutorial });
-            LevelCatalog catalog = LevelCatalog.Create(new[] { tutorial }, 30, table, MechanicSwitches.AllOn.With(MechanicSwitch.Hoja, false), null);
-            Assert.That(catalog.Find(33), Is.SameAs(tutorial.Find(3)), "el tutorial no usa la Hoja: nada que sustituir");
-            Assert.That(catalog.OverriddenLevels.Count, Is.EqualTo(0));
-            Assert.That(catalog.FallbackLevels.Count, Is.EqualTo(0));
+            // af_level_offset 1000: el estreno de la Hoja (nivel «debut» del paquete) se juega como debut + 1000, y ese es su slot.
+            const int offset = 1000;
+            IReadOnlyList<LevelPack> packs = TestPacks.Campaign;
+            LevelCatalog plain = LevelCatalog.Create(packs);
+            int debut = FirstWith(plain, MechanicSwitch.Hoja);
+            int slot = debut + offset;
+            LevelDefinition replacement = plain.Find(debut - 1)!;
+            Assume.That(MechanicSwitches.UsedMask(replacement), Is.EqualTo(0), "el nivel anterior al estreno no usa mecánicas");
+            MechanicSwitches switches = MechanicSwitches.AllOn.With(MechanicSwitch.Hoja, false);
+
+            // Slot desplazado: se sustituye el nivel de campaña debut + 1000.
+            LevelOverrides shifted = LevelOverrides.Create("{\"" + slot.ToString(CultureInfo.InvariantCulture) + "\": \"" + replacement.Id + "\"}", packs);
+            Assert.That(shifted.Count, Is.EqualTo(1));
+            LevelCatalog catalog = LevelCatalog.Create(packs, offset, shifted, switches, null);
+            Assert.That(catalog.Find(slot), Is.SameAs(replacement), "el slot es el número de campaña con af_level_offset");
+            Assert.That(catalog.IsOverridden(slot), Is.True);
+            Assert.That(catalog.FindPublished(slot), Is.SameAs(plain.Find(debut)));
+            Assert.That(catalog.OverriddenLevels, Is.EqualTo(new[] { slot }));
+            Assert.That(Contains(catalog.FallbackLevels, slot), Is.False);
+
+            // Slot sin desplazar (el número del paquete): no es un nivel de campaña de este catálogo y no sustituye nada.
+            LevelOverrides unshifted = LevelOverrides.Create("{\"" + debut.ToString(CultureInfo.InvariantCulture) + "\": \"" + replacement.Id + "\"}", packs);
+            Assert.That(unshifted.Count, Is.EqualTo(1));
+            var warnings = new List<string>();
+            LevelCatalog wrong = LevelCatalog.Create(packs, offset, unshifted, switches, warnings.Add);
+            Assert.That(wrong.Find(slot), Is.SameAs(plain.Find(debut)), "el slot del paquete no es el de campaña");
+            Assert.That(wrong.IsOverridden(slot), Is.False);
+            Assert.That(wrong.OverriddenLevels.Count, Is.EqualTo(0));
+            Assert.That(Contains(wrong.FallbackLevels, slot), Is.True, "sin override: el publicado con aviso");
+            Assert.That(wrong.Serve(slot), Is.SameAs(plain.Find(debut)));
+            Assert.That(warnings.Count, Is.EqualTo(1));
+            Assert.That(warnings[0], Does.StartWith("nivel " + slot.ToString(CultureInfo.InvariantCulture) + " (" + plain.Find(debut)!.Id + "): usa mech_enabled.hoja = false"));
         }
 
         [Test]
