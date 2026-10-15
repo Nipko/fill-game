@@ -1,7 +1,7 @@
 {
  "formato": "af-rio-amazonas/0 [P]",
  "titulo": "Geografía limpia del Amazonas para el Mapa del río (Tintalú / Amazon Fill)",
- "estado": "Material de apoyo, no canon (docs/research). Lo usa generar_mapa.py para la muestra; el trazado de producción sale de Natural Earth (y de HydroRIVERS para las vistas de Mundo) con tools/river-map/ (propuesta §3.6). Nombres, datos y textos: pendientes del asesor cultural (07 §8.2). Revisado el 2026-10-13 con 41 hallazgos (propuesta, cabecera). Las paradas detalladas son las de 1-200 (mundos 1-5); si la 1.0 son los niveles 1-700, como dice el GDD (§2 #21), faltan las paradas 20-69 (pregunta Q14 de la propuesta).",
+ "estado": "Material de apoyo, no canon (docs/research). Lo usa generar_mapa.py para la muestra; el trazado de producción sale de Natural Earth (y de HydroRIVERS para las vistas de Mundo) con tools/river-map/ (propuesta §3.6). Nombres, datos y textos: pendientes del asesor cultural (07 §8.2). Revisado el 2026-10-13 con 41 hallazgos (propuesta, cabecera). Las paradas detalladas son las de 1-200 (mundos 1-5); si la 1.0 son los niveles 1-700, como dice el GDD (§2 #21), faltan las paradas 20-69 (pregunta Q14 de la propuesta). Ampliado el 2026-10-14 (M2.7) con el «Otro dato» de las tarjetas de 1-200 (otros_datos de cada parada, con sus fuentes reabiertas ese día).",
  "fecha": "2026-10-12",
  "datum": "WGS84, grados decimales (4 decimales)",
  "etiquetas": {
@@ -4365,7 +4365,27 @@
     "etiqueta": "V",
     "fuente": "MR-F06"
    },
-   "nota_dato": "Es el Dato del río 1 del nivel 10 (06 §2.3: frase sobre el estuario): la despedida de casa. Otros datos (§(e) de la propuesta de D-007, canon de 07 §2.2, regla 6): Ver-o-Peso, protegido por el IPHAN desde 1977 [E CR-F62]; el chibé [E CR-F72]. Vetos del mundo 1: peconha y trabajo infantil; objetos rituales de las bancas de hierbas.",
+   "otros_datos": [
+    {
+     "clave": "map.stop.belem.dato_01",
+     "texto": "Desde 1977, el conjunto de Ver-o-Peso, con sus mercados, es patrimonio de Brasil.",
+     "etiqueta": "V",
+     "fuente": "iphan_pa_material, CR-F62",
+     "releida": "2026-10-14",
+     "origen": "§(e)",
+     "nota": "IPHAN, superintendencia de Pará: en 1977 se protegió el conjunto arquitectónico y paisajístico de Ver-o-Peso y sus áreas vecinas, con el Mercado de Carne y el de Pescado [V iphan_pa_material]. Sube de [E] (CR-F62 es Wikipedia) a [V]. Veto del mundo 1: sin objetos rituales de las bancas de hierbas."
+    },
+    {
+     "clave": "map.stop.belem.dato_02",
+     "texto": "El chibé es fariña con agua; las familias ribereñas lo toman solo o con pescado.",
+     "etiqueta": "E",
+     "fuente": "CR-F72",
+     "releida": "2026-10-14",
+     "origen": "§(e)",
+     "nota": "Portal Amazônia: «papa de farinha com água», que conoce toda familia indígena, ribereña o extractivista y se toma sola o con pescado [E CR-F72]. «Fariña» es la harina gruesa de yuca; la fuente dice solo «farinha». Sin apodos de gentilicio. Para el asesor."
+    }
+   ],
+   "nota_dato": "Es el Dato del río 1 del nivel 10 (06 §2.3: frase sobre el estuario): la despedida de casa. «Otro dato» (§(e) de la propuesta de D-007, canon de 07 §2.2, regla 6): Ver-o-Peso y el chibé, en otros_datos. Vetos del mundo 1: peconha y trabajo infantil; objetos rituales de las bancas de hierbas.",
    "fondo": {
     "kit": "bg_kit_w01",
     "heroe": "bg_hero_ver_o_peso",
@@ -4410,7 +4430,18 @@
    "km_desde_el_mar": 704,
    "temporada": "— (rampa 11-20)",
    "dato_del_nivel": null,
-   "nota_dato": "El 10 lleva el dato del estuario (canon). Los de Santarém van en su tarjeta: map.stop.santarem.dato_02 [V MR-F97] (las cuias del Bajo Amazonas, patrimonio de Brasil desde 2015; también en §(e)) y dato_01 [E]. Veto del mundo 2: copiar grafismos de las cuias.",
+   "otros_datos": [
+    {
+     "clave": "map.stop.santarem.dato_01",
+     "texto": "Desde 2015, el modo de hacer cuias del Bajo Amazonas es patrimonio cultural de Brasil.",
+     "etiqueta": "V",
+     "fuente": "CR-F59, MR-F97",
+     "releida": "2026-10-14",
+     "origen": "§(e)",
+     "nota": "Inscrito en 2015 en el Libro de los Saberes del IPHAN, con el papel central de las artesanas de ASARISAN [V CR-F59, MR-F97]. Es el único «Otro dato» de Santarém: la versión anterior lo llamaba dato_02 y citaba un dato_01 [E] sin texto. El crédito a ASARISAN en la tarjeta, con el asesor. Veto del mundo 2: no copiar grafismos de las cuias."
+    }
+   ],
+   "nota_dato": "El 10 lleva el dato del estuario (canon). El de Santarém va en su tarjeta: las cuias del Bajo Amazonas, en otros_datos (también en §(e)). Veto del mundo 2: copiar grafismos de las cuias.",
    "fondo": {
     "kit": "bg_kit_w02",
     "heroe": "codigo:dos_aguas_clara_blanca",
@@ -4465,6 +4496,7 @@
     "etiqueta": "E",
     "fuente": "MR-F19"
    },
+   "otros_datos": [],
    "fondo": {
     "kit": "bg_kit_w02",
     "heroe": "bg_hero_alter_do_chao",
@@ -4514,7 +4546,18 @@
     "etiqueta": "E",
     "fuente": "wp_tipos"
    },
-   "nota_dato": "Responde la pregunta del mundo 2 con la causa (rocas cristalinas antiguas y suelos arenosos, con pocos sedimentos [E wp_tipos]), sin «aquí» ni «se ve el fondo». Para el asesor: hoy baja turbio en largos tramos (sedimentos); el texto no lo menciona y no nombra la minería (07 §8.1). Otro dato: unidad creada por el decreto 73.684 de 1974 [E wp_flona]; Frutas k19 (nivel 39) lo repite y se cambia allí (propuesta §15).",
+   "otros_datos": [
+    {
+     "clave": "map.stop.flona_tapajos.dato_02",
+     "texto": "La Floresta Nacional do Tapajós es un área protegida desde 1974.",
+     "etiqueta": "E",
+     "fuente": "wp_flona",
+     "releida": "2026-10-14",
+     "origen": "§5.1",
+     "nota": "Decreto 73.684 del 19-02-1974 [E wp_flona]; el texto no lleva el número del decreto (Q8-A). Frutas k19 (nivel 39) lo repite y se cambia allí (propuesta §15)."
+    }
+   ],
+   "nota_dato": "Responde la pregunta del mundo 2 con la causa (rocas cristalinas antiguas y suelos arenosos, con pocos sedimentos [E wp_tipos]), sin «aquí» ni «se ve el fondo». Para el asesor: hoy baja turbio en largos tramos (sedimentos); el texto no lo menciona y no nombra la minería (07 §8.1). «Otro dato»: protegida desde 1974, en otros_datos.",
    "fondo": {
     "kit": "bg_kit_w02",
     "heroe": "bg_hero_flona_tapajos",
@@ -4564,6 +4607,17 @@
     "etiqueta": "E",
     "fuente": "MR-F24"
    },
+   "otros_datos": [
+    {
+     "clave": "map.stop.encontro.dato_01",
+     "texto": "En 2010, el consejo de patrimonio de Brasil votó por unanimidad proteger este encuentro.",
+     "etiqueta": "V",
+     "fuente": "ufam_elaborar_2017",
+     "releida": "2026-10-14",
+     "origen": "§(e)",
+     "nota": "Revista Elaborar (UFAM, 2017): protección provisional en el Diário Oficial del 11-10-2010 y voto unánime del Consejo Consultivo del IPHAN el 4-11-2010; en 2017 seguía sin homologar y en los tribunales [V ufam_elaborar_2017]. Portal Amazônia lo da por oficializado en diciembre de 2017 [E portalamazonia_encontro_2017]. Por eso el texto dice la votación y no «patrimonio desde 2010». CR-F25 no se pudo reabrir el 2026-10-14. Vetos del mundo 3: ni la sequía de 2024 ni el puerto en disputa."
+    }
+   ],
    "fondo": {
     "kit": "bg_kit_w03",
     "heroe": "codigo:dos_aguas_negra_blanca",
@@ -4587,7 +4641,7 @@
     0.59453,
     0.60895
    ],
-   "nota_dato": "Otro dato (§(e)): el Encuentro de las Aguas es patrimonio del IPHAN desde 2010 [V CR-F25]. Vetos del mundo 3: la sequía de 2024 como juego; Parintins; la demolición de la Ciudad Flotante.",
+   "nota_dato": "«Otro dato» (§(e)): la votación del IPHAN de 2010, en otros_datos. Vetos del mundo 3: la sequía de 2024 como juego; Parintins; la demolición de la Ciudad Flotante.",
    "km_casa": 1466,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
   },
@@ -4619,6 +4673,26 @@
     "etiqueta": "E",
     "fuente": "MR-F03, MR-F24"
    },
+   "otros_datos": [
+    {
+     "clave": "map.stop.manaos.dato_03",
+     "texto": "Desde 1902, en el puerto de Manaos se mide cada día la altura del río Negro.",
+     "etiqueta": "V",
+     "fuente": "CR-F11",
+     "releida": "2026-10-14",
+     "origen": "§(e)",
+     "nota": "Acta Amazonica 31(2), 2001: el nivel del Negro se mide a diario en el puerto de Manaos desde septiembre de 1902 [V CR-F11]. Sin la sequía de 2024 (veto del mundo 3)."
+    },
+    {
+     "clave": "map.stop.manaos.dato_04",
+     "texto": "Los flutuantes de Manaos son casas y negocios que flotan en el río; se llega en bote.",
+     "etiqueta": "E",
+     "fuente": "CR-F32",
+     "releida": "2026-10-14",
+     "origen": "§(e)",
+     "nota": "Portal Amazônia (2021): casas, una panadería y un templo sobre el agua de la Marina do Davi; quien vive allí necesita un bote [E CR-F32]. No se mencionan los desalojos ni la demolición de la Ciudad Flotante (veto del mundo 3); sin romantizar. Para el asesor."
+    }
+   ],
    "fondo": {
     "kit": "bg_kit_w03",
     "heroe": "bg_hero_teatro_amazonas",
@@ -4635,7 +4709,7 @@
     0.59524,
     0.6054
    ],
-   "nota_dato": "[E]: MR-F03 y MR-F24 son Wikipedia. Para [V], una fuente primaria (ANA o IBGE). Otros datos (§(e)): la régua del puerto mide el Negro a diario desde 1902 [V CR-F11]; los flutuantes [E CR-F32].",
+   "nota_dato": "[E]: MR-F03 y MR-F24 son Wikipedia. Para [V], una fuente primaria (ANA o IBGE). «Otro dato» (§(e)): la régua desde 1902 y los flutuantes, en otros_datos.",
    "km_casa": 1479,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
   },
@@ -4667,7 +4741,18 @@
     "etiqueta": "V",
     "fuente": "wp_tipos, rios_villamizar"
    },
-   "nota_dato": "Responde la pregunta del mundo 3. Otro dato: map.stop.anavilhanas.dato_01 [E] (unas 400 islas; Mariuá, río arriba, es mayor).",
+   "otros_datos": [
+    {
+     "clave": "map.stop.anavilhanas.dato_01",
+     "texto": "Anavilhanas tiene unas 400 islas: algunas solo aparecen cuando baja el río.",
+     "etiqueta": "V",
+     "fuente": "camara_anavilhanas_2008",
+     "releida": "2026-10-14",
+     "origen": "§5.1",
+     "nota": "Câmara dos Deputados (23-03-2008): unas 400 islas, permanentes y temporales según el nivel del agua [V camara_anavilhanas_2008]. Que Mariuá, río arriba, sea mayor no se pudo reabrir: no entra en el texto."
+    }
+   ],
+   "nota_dato": "Responde la pregunta del mundo 3. «Otro dato»: unas 400 islas, en otros_datos.",
    "fondo": {
     "kit": "bg_kit_w03",
     "heroe": "bg_hero_anavilhanas",
@@ -4717,6 +4802,26 @@
     "etiqueta": "E",
     "fuente": "wp_tefe_rio"
    },
+   "otros_datos": [
+    {
+     "clave": "map.stop.tefe.dato_02",
+     "texto": "Cerca de aquí, en Mamirauá, los pescadores cuentan los pirarucús que suben a respirar.",
+     "etiqueta": "V",
+     "fuente": "uakari_2011_pirarucu, CR-F44",
+     "releida": "2026-10-14",
+     "origen": "§5.1",
+     "nota": "Uakari 7(1), 2011, revista del Instituto Mamirauá: el pirarucú sube a respirar cada 5-15 min, los pescadores lo cuentan y el conteo fija la cuota anual en Mamirauá y Amanã [V uakari_2011_pirarucu] y [E CR-F44]. Sustituye al texto anterior de la tarjeta («se cuentan… antes de pescar», MR-F32), cuya fuente no se pudo reabrir el 2026-10-14. El crédito va a los pescadores. Mamirauá está a unos 150 km del lago de Tefé."
+    },
+    {
+     "clave": "map.stop.tefe.dato_03",
+     "texto": "Cuando el agua baja, los manatíes de Mamirauá viajan a un refugio: el lago Amanã.",
+     "etiqueta": "V",
+     "fuente": "arraut2017_manati, CR-F148",
+     "releida": "2026-10-14",
+     "origen": "§(e)",
+     "nota": "Arraut y otros, Acta Amazonica 47(1), 2017: en la vaciante, los manatíes dejan la várzea de Mamirauá y migran al lago Amanã, que siempre tiene agua [V arraut2017_manati, CR-F148]. Es la vaciante de cada año, no la sequía de 2023 (07 §8.1), y el texto no habla de botos."
+    }
+   ],
    "fondo": {
     "kit": "bg_kit_w03",
     "heroe": "bg_hero_lago_tefe",
@@ -4734,7 +4839,7 @@
     0.58584,
     0.46331
    ],
-   "nota_dato": "Tarjeta: «Cerca de aquí, en Mamirauá, se cuentan los pirarucús de cada lago antes de pescar.» (82 car.) [E MR-F32]. Mamirauá es várzea de agua blanca, entre el Solimões, el Japurá y el Auati-Paraná, unos 150 km al noroeste [E wp_mamiraua, wp_varzea]: no es el lago negro del fondo.",
+   "nota_dato": "Tarjeta: el pirarucú de Mamirauá y el manatí del medio Solimões, en otros_datos. Mamirauá es várzea de agua blanca, entre el Solimões, el Japurá y el Auati-Paraná, unos 150 km al noroeste [E wp_mamiraua, wp_varzea]: no es el lago negro del fondo.",
    "km_casa": 2212,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
   },
@@ -4766,6 +4871,7 @@
     "etiqueta": "V",
     "fuente": "MR-F78"
    },
+   "otros_datos": [],
    "nota_dato": "Primer país nuevo: placa «Colombia te da la bienvenida» y se iza la bandera de cortesía. Veto del mundo 4: máscaras ticuna; Cobra Grande.",
    "fondo": {
     "kit": "bg_kit_w04",
@@ -4822,6 +4928,7 @@
     "etiqueta": "E",
     "fuente": "MR-F35, CR-F103"
    },
+   "otros_datos": [],
    "fondo": {
     "kit": "bg_kit_w04",
     "heroe": "bg_hero_leticia + LUT de atardecer",
@@ -4871,6 +4978,7 @@
     "etiqueta": "E",
     "fuente": "parques_amacayacu, wp_amacayacu"
    },
+   "otros_datos": [],
    "fondo": {
     "kit": "bg_kit_w04",
     "heroe": "bg_hero_amacayacu",
@@ -4919,6 +5027,7 @@
     "etiqueta": "E",
     "fuente": "MR-F37, CR-F104"
    },
+   "otros_datos": [],
    "fondo": {
     "kit": "bg_kit_w04",
     "heroe": "bg_hero_puerto_narino",
@@ -4970,7 +5079,18 @@
     "etiqueta": "V",
     "fuente": "MR-F38"
    },
-   "nota_dato": "MinAmbiente: «funciona como una “guardería” para los delfines» y «es un lugar clave para su crianza» (leída el 2026-10-12). No dice que «enseñen a pescar» ni distingue delfines rosados y grises: esa versión quedaría [NV] y no se publica. Otro dato: primer humedal Ramsar de la Amazonia colombiana (sitio 2336, 2017) [V ramsar_tarapoto, CR-F105].",
+   "otros_datos": [
+    {
+     "clave": "map.stop.tarapoto.dato_02",
+     "texto": "Son el primer humedal Ramsar de la Amazonia colombiana, logrado con sus comunidades.",
+     "etiqueta": "V",
+     "fuente": "MR-F38, CR-F105",
+     "releida": "2026-10-14",
+     "origen": "§(e)",
+     "nota": "MinAmbiente (18-01-2018): «el primer humedal Ramsar de la Amazonía colombiana», designación hecha posible por los acuerdos de la consulta previa con las comunidades del resguardo Ticoya (ticuna, cocama y yagua) [V MR-F38, CR-F105]. La ficha Ramsar 2336 no se pudo reabrir el 2026-10-14: el texto no lleva año. Los nombres de los pueblos, con el asesor."
+    }
+   ],
+   "nota_dato": "MinAmbiente: «funciona como una “guardería” para los delfines» y «es un lugar clave para su crianza» (leída el 2026-10-12 y releída el 2026-10-14). No dice que «enseñen a pescar» ni distingue delfines rosados y grises: esa versión no se publica. «Otro dato»: primer humedal Ramsar de la Amazonia colombiana, en otros_datos.",
    "fondo": {
     "kit": "bg_kit_w04",
     "heroe": "bg_hero_tarapoto",
@@ -5022,6 +5142,7 @@
     "etiqueta": "E",
     "fuente": "trapecio"
    },
+   "otros_datos": [],
    "nota_dato": "Responde la pregunta del mundo 4.",
    "fondo": {
     "kit": "bg_kit_w04",
@@ -5074,6 +5195,7 @@
     "etiqueta": "V",
     "fuente": "MR-F77"
    },
+   "otros_datos": [],
    "nota_dato": "Entrada al Perú: placa «El Perú te da la bienvenida» y bandera de cortesía. Texto ajustado a la fuente: MINAM habla de «bosques tropicales» de América Latina, no de bosque amazónico. Vetos del mundo 5 (§(e)): Pasaje Paquito; caucho y Putumayo; mito de Eiffel; karuara; Yacumama; Belén como nombre de nivel.",
    "fondo": {
     "kit": "bg_kit_w05",
@@ -5130,6 +5252,17 @@
     "etiqueta": "V",
     "fuente": "MR-F39"
    },
+   "otros_datos": [
+    {
+     "clave": "map.stop.itaya.dato_01",
+     "texto": "En la creciente, el Itaya sube 5-6 m y hay casas sobre balsas que flotan con él.",
+     "etiqueta": "E",
+     "fuente": "CR-F28, bme_habitatio_itaya",
+     "releida": "2026-10-14",
+     "origen": "§(e)",
+     "nota": "Las dos fuentes dan 5-6 m y casas sobre balsas o pilotes en la llanura del Itaya [E CR-F28, bme_habitatio_itaya]. El texto no nombra el barrio (07 §8.1; vetos del mundo 5) ni habla de pobreza."
+    }
+   ],
    "fondo": {
     "kit": "bg_kit_w05",
     "heroe": "bg_hero_itaya_creciente",
@@ -5150,7 +5283,7 @@
    "rios_locales": [
     "itaya"
    ],
-   "nota_dato": "Otro dato (§(e)): «En la creciente, el agua sube 5-6 m y hay casas que flotan con ella.» (68 car.) [E CR-F28]. «Belén» solo puede salir dentro de la tarjeta, si el asesor lo aprueba: nunca como nombre de parada, rótulo ni nivel (07 §8.1; §(e), vetos del mundo 5).",
+   "nota_dato": "«Otro dato» (§(e)): la creciente del Itaya, en otros_datos, sin nombrar el barrio. «Belén» solo puede salir dentro de la tarjeta, si el asesor lo aprueba: nunca como nombre de parada, rótulo ni nivel (07 §8.1; §(e), vetos del mundo 5).",
    "km_casa": 3731,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
   },
@@ -5182,6 +5315,7 @@
     "etiqueta": "E",
     "fuente": "wp_antbird, actualidad_allpahuayo, wp_gnatcatcher"
    },
+   "otros_datos": [],
    "fondo": {
     "kit": "bg_kit_w05",
     "heroe": "bg_hero_allpahuayo",
@@ -5234,6 +5368,7 @@
     "etiqueta": "V",
     "fuente": "MR-F42"
    },
+   "otros_datos": [],
    "nota_dato": "Responde la pregunta del mundo 5. Clímax: todo el río que se llama Amazonas queda lleno.",
    "fondo": {
     "kit": "bg_kit_w05",
@@ -5281,6 +5416,17 @@
     "etiqueta": "E",
     "fuente": "actualidad_pacaya_48, mongabay_pacaya"
    },
+   "otros_datos": [
+    {
+     "clave": "map.stop.pacaya_samiria.dato_03",
+     "texto": "Las comunidades de Pacaya-Samiria cuidan nidos de taricaya y sueltan millones de crías.",
+     "etiqueta": "V",
+     "fuente": "minam_sinia_taricaya, CR-F14",
+     "releida": "2026-10-14",
+     "origen": "§(e)",
+     "nota": "MINAM (SINIA, 26-02-2024): los grupos de manejo de las comunidades llevan los nidos a playas seminaturales y en cinco años se liberaron unos tres millones y medio de taricayas [V minam_sinia_taricaya]. Soini (IIAP, 1996): el manejo con las comunidades ribereñas empezó en 1991 [V CR-F14]. Vetos: sin recolección ni consumo de huevos, sin moralizar y sin «charapa» (07 §8.1); el texto no dice qué parte de las crías se vende."
+    }
+   ],
    "fondo": {
     "kit": "bg_kit_w05",
     "heroe": "bg_hero_pacaya_samiria",
@@ -5303,7 +5449,7 @@
     "samiria",
     "pacaya"
    ],
-   "nota_dato": "El espejo viene de las aguas negras del Samiria [E actualidad_pacaya_48; mongabay_pacaya]. Otro dato (§(e)): el programa de tortugas (charapa y taricaya) de la reserva, con crédito a las comunidades [V CR-F14]; «charapa» solo con contexto (07 §8.1).",
+   "nota_dato": "El espejo viene de las aguas negras del Samiria [E actualidad_pacaya_48; mongabay_pacaya]. «Otro dato» (§(e)): las taricayas de los grupos de manejo de las comunidades, en otros_datos; «charapa» solo con contexto (07 §8.1).",
    "km_casa": 4024,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)"
   },
@@ -5335,6 +5481,7 @@
     "etiqueta": "E",
     "fuente": "MR-F43"
    },
+   "otros_datos": [],
    "nota_dato": "Texto ajustado a la fuente (MR-F43 no da la parte inundable). En el 200, el Dato del río es map.myth.source [E wp_source, natgeo2014]: el Amazonas no tiene una sola naciente y la ciencia aún discute cuál es la más lejana. La pregunta que se plantea en el 200 es la del mundo 6 (propuesta §2.1).",
    "fondo": {
     "kit": "bg_kit_w05",
@@ -7462,15 +7609,16 @@
    "nombre": "Wikipedia EN, Tapajós National Forest",
    "url": "https://en.wikipedia.org/wiki/Tapaj%C3%B3s_National_Forest",
    "licencia": "CC BY-SA 4.0",
-   "uso": "Coordenada, decreto 73.684 de 1974, 549.066 ha",
-   "etiqueta": "E"
+   "uso": "Coordenada, decreto 73.684 de 1974, 549.066 ha. Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "E",
+   "releida": "2026-10-14"
   },
   {
    "id": "ramsar_tarapoto",
    "nombre": "Ramsar, sitio 2336: Complejo de humedales Lagos de Tarapoto",
    "url": "https://rsis.ramsar.org/ris/2336",
    "licencia": "Ramsar (hechos)",
-   "uso": "Coordenada 03°46'35\"S 70°32'23\"W, 2017",
+   "uso": "Coordenada 03°46'35\"S 70°32'23\"W, 2017. No se pudo reabrir el 2026-10-14 (HTTP 502): el «Otro dato» de Tarapoto se apoya en MR-F38 y CR-F105, sin año.",
    "etiqueta": "V"
   },
   {
@@ -7578,7 +7726,7 @@
    "nombre": "BID, bosque inundado (Mamirauá)",
    "url": "https://www.iadb.org/en/news/man-and-nature-flooded-forest",
    "licencia": "copyright (solo hechos)",
-   "uso": "Pirarucú contado en Mamirauá (noticia institucional: [E])",
+   "uso": "Pirarucú contado en Mamirauá (noticia institucional: [E]). No se pudo reabrir el 2026-10-14 (HTTP 403): el «Otro dato» del pirarucú se apoya en uakari_2011_pirarucu.",
    "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
    "etiqueta": "E"
   },
@@ -7605,9 +7753,10 @@
    "nombre": "MinAmbiente de Colombia, Lagos de Tarapoto",
    "url": "https://www.minambiente.gov.co/lagos-de-tarapoto-nuevo-humedal-ramsar-en-colombia",
    "licencia": "copyright (solo hechos)",
-   "uso": "Tarapoto: «guardería» de los delfines de río y lugar clave para su crianza (leída el 2026-10-12); Ramsar",
+   "uso": "Tarapoto: «guardería» de los delfines de río y lugar clave para su crianza (leída el 2026-10-12); Ramsar. Releída el 2026-10-14 (M2.7).",
    "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
-   "etiqueta": "V"
+   "etiqueta": "V",
+   "releida": "2026-10-14"
   },
   {
    "id": "MR-F39",
@@ -7653,9 +7802,10 @@
    "nombre": "O Liberal, las cuias del Bajo Amazonas (registro del IPHAN, 2015)",
    "url": "https://www.oliberal.com/belem/da-arvore-a-tradicao-cuias-carregam-seculos-de-historia-e-resistem-no-cotidiano-da-amazonia-1.1009052",
    "licencia": "copyright (solo hechos)",
-   "uso": "Santarém, tarjeta",
+   "uso": "Santarém, tarjeta. Releída el 2026-10-14 (M2.7).",
    "nota_id": "Prefijo MR- (Mapa del río): los F del trabajo previo del 2026-10-12 chocaban con los F de docs/research/cultura-ribera/investigacion.md, que usan los mismos números para otras fuentes.",
-   "etiqueta": "V"
+   "etiqueta": "V",
+   "releida": "2026-10-14"
   },
   {
    "id": "MR-F11",
@@ -7698,23 +7848,25 @@
    "nombre": "Acta Amazonica (2001), régua de Manaos",
    "url": "https://www.scielo.br/j/aa/a/KH8cBzrnZSQTSppFSB55Bjg/?lang=pt",
    "licencia": "copyright (solo hechos)",
-   "uso": "La régua del puerto de Manaos mide el Negro a diario desde 1902. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
-   "etiqueta": "V"
+   "uso": "La régua del puerto de Manaos mide el Negro a diario desde 1902. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí. Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "V",
+   "releida": "2026-10-14"
   },
   {
    "id": "CR-F14",
    "nombre": "Soini, Folia Amazónica 8(1), IIAP 1996",
    "url": "https://revistas.iiap.gob.pe/index.php/foliaamazonica/article/download/310/271",
    "licencia": "copyright (solo hechos)",
-   "uso": "Tortugas (charapa y taricaya) de la Reserva Nacional Pacaya-Samiria. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
-   "etiqueta": "V"
+   "uso": "Tortugas (charapa y taricaya) de la Reserva Nacional Pacaya-Samiria. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí. Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "V",
+   "releida": "2026-10-14"
   },
   {
    "id": "CR-F25",
    "nombre": "Tombamento del Encontro das Águas (Confea)",
    "url": "https://www.confea.org.br/node/109909",
    "licencia": "copyright (solo hechos)",
-   "uso": "Encuentro de las Aguas, patrimonio del IPHAN desde 2010. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
+   "uso": "Encuentro de las Aguas, patrimonio del IPHAN desde 2010. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí. No se pudo reabrir el 2026-10-14 (conexión rechazada): el «Otro dato» del Encuentro se apoya en ufam_elaborar_2017.",
    "etiqueta": "V"
   },
   {
@@ -7722,24 +7874,27 @@
    "nombre": "Portal Amazônia, flutuantes (2021-06-14)",
    "url": "https://portalamazonia.com/cidades/flutuantes-casas-sobre-os-rios-da-amazonia/",
    "licencia": "copyright (solo hechos)",
-   "uso": "Flutuantes (casas que flotan). de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
-   "etiqueta": "E"
+   "uso": "Flutuantes (casas que flotan). de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí. Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "E",
+   "releida": "2026-10-14"
   },
   {
    "id": "CR-F62",
    "nombre": "Wikipedia EN, Ver-o-Peso Complex",
    "url": "https://en.wikipedia.org/wiki/Ver-o-Peso_Complex",
    "licencia": "CC BY-SA 4.0",
-   "uso": "Ver-o-Peso, protegido por el IPHAN desde 1977. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
-   "etiqueta": "E"
+   "uso": "Ver-o-Peso, protegido por el IPHAN desde 1977. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí. Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "E",
+   "releida": "2026-10-14"
   },
   {
    "id": "CR-F72",
    "nombre": "Portal Amazônia, chibé (2021-07-08)",
    "url": "https://portalamazonia.com/amazonia-de-a-a-z/c/chibe/",
    "licencia": "copyright (solo hechos)",
-   "uso": "El chibé. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
-   "etiqueta": "E"
+   "uso": "El chibé. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí. Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "E",
+   "releida": "2026-10-14"
   },
   {
    "id": "CR-F103",
@@ -7762,8 +7917,9 @@
    "nombre": "SINCHI (2018-02-09), Tarapoto, sitio Ramsar",
    "url": "https://en.sinchi.org.co/tarapoto-lakes-declared-ramsar-site-and-first-for-colombian-amazon",
    "licencia": "copyright (solo hechos)",
-   "uso": "Tarapoto, primer sitio Ramsar de la Amazonia colombiana. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
-   "etiqueta": "V"
+   "uso": "Tarapoto, primer sitio Ramsar de la Amazonia colombiana. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí. Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "V",
+   "releida": "2026-10-14"
   },
   {
    "id": "actualidad_pacaya_48",
@@ -7962,8 +8118,9 @@
    "nombre": "Wikipedia EN, Belén District, Maynas (= wp_belen)",
    "url": "https://en.wikipedia.org/wiki/Bel%C3%A9n_District,_Maynas",
    "licencia": "CC BY-SA 4.0",
-   "uso": "El río sube 5-6 m de febrero a julio; casas que flotan. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí",
-   "etiqueta": "E"
+   "uso": "El río sube 5-6 m de febrero a julio; casas que flotan. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí. Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "E",
+   "releida": "2026-10-14"
   },
   {
    "id": "wp_blanca",
@@ -7995,7 +8152,8 @@
    "url": "https://portalamazonia.com/meio-ambiente/saber-antigo-de-contar-pirarucu-e-aliado-ao-manejo-sustentavel-da-especie-entenda/",
    "nombre": "Portal Amazônia (2018-12-05), conteo de pirarucú",
    "licencia": "copyright (solo hechos)",
-   "uso": "Pirarucú y su manejo. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí"
+   "uso": "Pirarucú y su manejo. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí. Releída el 2026-10-14 (M2.7).",
+   "releida": "2026-10-14"
   },
   {
    "id": "CR-F47",
@@ -8011,7 +8169,8 @@
    "url": "https://agencia.fapesp.br/cuias-feitas-por-mulheres-indigenas-abasteciam-o-mercado-de-luxo-europeu-no-seculo-xviii/53069",
    "nombre": "Agência FAPESP (2024-10-18), cuias del siglo XVIII",
    "licencia": "copyright (solo hechos)",
-   "uso": "Cuias de Santarém. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí"
+   "uso": "Cuias de Santarém. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí. Releída el 2026-10-14 (M2.7).",
+   "releida": "2026-10-14"
   },
   {
    "id": "CR-F60",
@@ -8067,7 +8226,8 @@
    "url": "https://revistapesquisa.fapesp.br/en/amazonian-manatee-knows-just-when-to-migrate/",
    "nombre": "Revista Pesquisa FAPESP, el manatí sabe cuándo migrar",
    "licencia": "copyright (solo hechos)",
-   "uso": "Manatí del medio Solimões. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí"
+   "uso": "Manatí del medio Solimões. de docs/research/cultura-ribera/investigacion.md (propuesta de D-007, §(e)); mismo número que allí. Releída el 2026-10-14 (M2.7).",
+   "releida": "2026-10-14"
   },
   {
    "id": "wp_gnatcatcher",
@@ -8076,6 +8236,78 @@
    "nombre": "Wikipedia EN, Iquitos gnatcatcher (Polioptila clementsi)",
    "licencia": "CC BY-SA 4.0",
    "uso": "La perlita de Iquitos: descrita en 2005, conocida solo de la reserva Allpahuayo-Mishana, en bosque de arena blanca; BirdLife no la separa como especie (leída el 2026-10-13)"
+  },
+  {
+   "id": "iphan_pa_material",
+   "nombre": "IPHAN, superintendencia de Pará, «Patrimônio Material»",
+   "url": "https://www.gov.br/iphan/pt-br/superintendencias/para/patrimonio-material",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Ver-o-Peso: conjunto arquitectónico y paisajístico protegido en 1977, con áreas vecinas (Mercado de Carne y Mercado de Pescado). Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "V",
+   "releida": "2026-10-14"
+  },
+  {
+   "id": "ufam_elaborar_2017",
+   "nombre": "Alvatir Carolino da Silva, «Patrimonializações, no caminho da transformação», Revista Elaborar 4(2), UFAM, 2017",
+   "url": "https://periodicos.ufam.edu.br/index.php/revistaelaborar/issue/view/276/Alvatir%20Carolino%20da%20Silva",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Encuentro de las Aguas: protección provisional (DOU del 11-10-2010) y voto unánime del Consejo Consultivo del IPHAN (4-11-2010); sin homologar y en los tribunales en 2017. Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "V",
+   "releida": "2026-10-14"
+  },
+  {
+   "id": "portalamazonia_encontro_2017",
+   "nombre": "Portal Amazônia (14-12-2017), el Encuentro de las Aguas, protección oficializada",
+   "url": "https://portalamazonia.com/meio-ambiente/o-encontro-das-aguas-e-nosso-diz-roberio-braga-apos-tombamento-do-cartao-postal/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "El IPHAN oficializa la protección del Encuentro de las Aguas (prensa: [E]). Solo para la nota. Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "E",
+   "releida": "2026-10-14"
+  },
+  {
+   "id": "uakari_2011_pirarucu",
+   "nombre": "Andrade, Amaral, Silva y Queiroz, «Recount pirarucu», Uakari 7(1), 2011 (Instituto Mamirauá)",
+   "url": "https://mamiraua.org.br/wp-content/uploads/2025/11/Recount-Pirarucu-a-method-for-assessing-the-quality-of-pirarucu-countings.pdf",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Pirarucú: sube a respirar cada 5-15 min; los pescadores lo cuentan y el conteo es la base de la cuota anual en Mamirauá y Amanã. Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "V",
+   "releida": "2026-10-14"
+  },
+  {
+   "id": "arraut2017_manati",
+   "nombre": "Arraut y otros, «Bottlenecks in the migration routes of Amazonian manatees…», Acta Amazonica 47(1), 2017",
+   "url": "https://doi.org/10.1590/1809-4392201600862",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Manatíes de Mamirauá: en la vaciante migran al lago Amanã, refugio de inundación permanente. Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "V",
+   "releida": "2026-10-14"
+  },
+  {
+   "id": "camara_anavilhanas_2008",
+   "nombre": "Câmara dos Deputados (23-03-2008), «Comissão aprova Parque Nacional de Anavilhanas»",
+   "url": "https://www2.camara.leg.br/atividade-legislativa/comissoes/comissoes-permanentes/cmads/arquivos/2008-03-23-comissao-aprova-parque-nacional-de",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Anavilhanas: unas 400 islas, permanentes y temporales según el nivel del agua. Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "V",
+   "releida": "2026-10-14"
+  },
+  {
+   "id": "bme_habitatio_itaya",
+   "nombre": "Habitatio (Universidad Politécnica y Económica de Budapest), «Raft and pile houses» de la llanura del Itaya",
+   "url": "https://habitatio.epitesz.bme.hu/en/?p=4822",
+   "licencia": "copyright (solo hechos)",
+   "uso": "El Itaya varía 5-6 m; casas sobre balsas de madera de balsa o sobre pilotes (material docente: [E]). Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "E",
+   "releida": "2026-10-14"
+  },
+  {
+   "id": "minam_sinia_taricaya",
+   "nombre": "MINAM, SINIA (26-02-2024), comunidades nativas y conservación de la Reserva Nacional Pacaya-Samiria",
+   "url": "https://sinia.minam.gob.pe/novedades/comunidades-nativas-desarrollan-actividades-sostenibles-que",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Taricayas: los grupos de manejo de las comunidades llevan los nidos a playas seminaturales; unos 3,5 millones de crías liberadas en cinco años. Releída el 2026-10-14 (M2.7).",
+   "etiqueta": "V",
+   "releida": "2026-10-14"
   }
  ]
 }
