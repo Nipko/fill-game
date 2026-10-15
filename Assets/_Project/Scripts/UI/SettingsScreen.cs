@@ -21,12 +21,15 @@ namespace AF.UI
     /// nombre propio (<see cref="LocLocale.Offered"/>: solo los que tienen la UI completa; hoy es-419 y, en desarrollo,
     /// en-XA).</item>
     /// <item><b>Patrones de fruta</b>: Automático (desde el 41), Siempre o Nunca (<c>settings.patterns</c>).</item>
+    /// <item><b>Mensajes de TiTino</b> (tarea TI3; D-016, punto 4; 02 §12): una fila que se marca o se desmarca
+    /// (<c>settings.sloth_messages</c>, activada por defecto; apagada, TiTino solo hace gestos), en
+    /// <see cref="SlothMessagesSlot"/>.</item>
     /// </list>
-    /// Sin sonido, música, vibración ni Eliminar cuenta: no existen (D-008: lo que no existe se oculta). Los huecos de
-    /// «Mensajes de TiTino» (TI3), la pista por inactividad (MO3) y «Sobre la Amazonía» (F4) están creados y ocultos
-    /// (<see cref="SlothMessagesSlot"/>, <see cref="IdleHintSlot"/> y <see cref="AboutSlot"/>): esas tareas los llenan y
-    /// <see cref="Layout"/> los coloca cuando se activan. Elegir llama a quien la abre (<c>GameBootstrap</c>), que guarda el
-    /// perfil y aplica: el idioma reconstruye la UI volviendo al inicio; los patrones, al momento. Escala de la fuente
+    /// Sin sonido, música, vibración ni Eliminar cuenta: no existen (D-008: lo que no existe se oculta). Los huecos de la pista
+    /// por inactividad (MO3) y «Sobre la Amazonía» (F4) están creados y ocultos (<see cref="IdleHintSlot"/> y
+    /// <see cref="AboutSlot"/>): esas tareas los llenan y <see cref="Layout"/> los coloca cuando se activan. Elegir llama a quien
+    /// la abre (<c>GameBootstrap</c>), que guarda el perfil y aplica: el idioma reconstruye la UI volviendo al inicio; los
+    /// patrones, al momento; los mensajes de TiTino, desde su siguiente aparición. Escala de la fuente
     /// <see cref="FontScale"/> hasta el 130 % sin recortes (02 §12), con todo texto ≥ 12 sp.
     /// </summary>
     internal sealed class SettingsScreen
@@ -49,6 +52,12 @@ namespace AF.UI
         /// <summary>Id de la opción «Automático» de Idioma (sonda y tests).</summary>
         public const string LanguageAutoId = SettingsData.LanguageAuto;
 
+        /// <summary>
+        /// Id de la fila «Mensajes de TiTino» en la sonda (<c>AF_LAYOUT</c>) y valor de <c>af_settings_change.key</c> (08 §8.2):
+        /// <c>sloth_messages</c>.
+        /// </summary>
+        public const string SlothMessagesId = "sloth_messages";
+
         private const float RowGapDp = 6f;
         private const float SectionGapDp = 12f;
         private const float RadioDp = 20f;
@@ -59,6 +68,7 @@ namespace AF.UI
         private readonly DevProbe _probe;
         private readonly Action<string> _onLanguage;
         private readonly Action<PatternsSetting> _onPatterns;
+        private readonly Action<bool> _onSlothMessages;
         private readonly OverlayCanvas _canvas;
         private readonly RectTransform _panel;
         private readonly Image _surface;
@@ -70,22 +80,26 @@ namespace AF.UI
         private readonly RectTransform _languageGroup;
         private readonly List<OptionRow> _languageRows = new List<OptionRow>();
         private readonly OptionRow[] _patternRows = new OptionRow[3];
+        private readonly OptionRow _slothRow;
         private readonly List<string> _offered = new List<string>();
 
         private string _language = SettingsData.LanguageAuto;
         private PatternsSetting _patterns = PatternsSetting.Auto;
+        private bool _slothMessages = true;
         private float _fontScale = 1f;
         private int _screenW;
         private int _screenH;
         private Rect _safeArea;
 
         /// <summary>Construye la pantalla bajo <paramref name="host"/>, oculta hasta <see cref="Show"/>.</summary>
-        public SettingsScreen(Transform host, ProceduralArt art, DevProbe probe, Action<string> onLanguage, Action<PatternsSetting> onPatterns, Action onClose)
+        public SettingsScreen(Transform host, ProceduralArt art, DevProbe probe, Action<string> onLanguage, Action<PatternsSetting> onPatterns,
+            Action<bool> onSlothMessages, Action onClose)
         {
             _art = art;
             _probe = probe;
             _onLanguage = onLanguage;
             _onPatterns = onPatterns;
+            _onSlothMessages = onSlothMessages;
             _canvas = new OverlayCanvas("SettingsCanvas", host, 40);
             ModalKit.Dim("Dim", _canvas.Root, 0.62f);
             _panel = ModalKit.Card("Panel", _canvas.Root, art, out _surface);
@@ -102,8 +116,12 @@ namespace AF.UI
                     PatternLabel(value), () => _onPatterns(value));
             }
 
+            // Mensajes de TiTino (TI3): una fila que se marca o se desmarca, en su hueco.
+            SlothMessagesSlot = UiBuilder.Rect("SlothMessagesSlot", _panel);
+            _slothRow = new OptionRow(SlothMessagesSlot, art, "SlothMessages", SlothMessagesId, UiText.SettingsSlothMessages,
+                () => _onSlothMessages(!_slothMessages));
+
             // Huecos de las tareas siguientes, ocultos hasta que existan (D-008).
-            SlothMessagesSlot = HiddenSlot("SlothMessagesSlot");
             IdleHintSlot = HiddenSlot("IdleHintSlot");
             AboutSlot = HiddenSlot("AboutSlot");
 
@@ -146,8 +164,20 @@ namespace AF.UI
         /// <summary>Los Patrones de fruta que se marcan (<c>settings.patterns</c>).</summary>
         public PatternsSetting SelectedPatterns => _patterns;
 
-        /// <summary>Hueco de «Mensajes de TiTino» (TI3), oculto.</summary>
+        /// <summary>Hueco de «Mensajes de TiTino» (TI3), con su fila.</summary>
         public RectTransform SlothMessagesSlot { get; }
+
+        /// <summary>Lo que se marca en «Mensajes de TiTino» (<c>settings.sloth_messages</c>).</summary>
+        public bool SelectedSlothMessages => _slothMessages;
+
+        /// <summary>Botón de la fila «Mensajes de TiTino» (la marca o la desmarca).</summary>
+        public Button SlothMessagesButton => _slothRow.Button;
+
+        /// <summary>Texto de la fila «Mensajes de TiTino».</summary>
+        public string SlothMessagesLabel => _slothRow.Label.text;
+
+        /// <summary>Si la fila «Mensajes de TiTino» lleva la marca (mensajes activados).</summary>
+        public bool SlothMessagesMarked => _slothRow.Selected;
 
         /// <summary>Hueco de la pista por inactividad (MO3), oculto.</summary>
         public RectTransform IdleHintSlot { get; }
@@ -254,13 +284,16 @@ namespace AF.UI
             {
                 yield return _patternRows[i].Label;
             }
+
+            yield return _slothRow.Label;
         }
 
         /// <summary>
         /// Abre la pantalla con las opciones de Idioma «Automático» + <paramref name="offered"/> (idiomas con la UI completa) y
-        /// marca lo guardado: <paramref name="language"/> (<c>settings.language</c>) y <paramref name="patterns"/>.
+        /// marca lo guardado: <paramref name="language"/> (<c>settings.language</c>), <paramref name="patterns"/> y
+        /// <paramref name="slothMessages"/> (<c>settings.sloth_messages</c>).
         /// </summary>
-        public void Show(IReadOnlyList<string> offered, string language, PatternsSetting patterns)
+        public void Show(IReadOnlyList<string> offered, string language, PatternsSetting patterns, bool slothMessages)
         {
             if (offered == null)
             {
@@ -293,6 +326,7 @@ namespace AF.UI
 
             _canvas.Canvas.gameObject.SetActive(true);
             Mark(language, patterns);
+            MarkSlothMessages(slothMessages);
             ReadScreen();
             Layout();
             _probe.SettingsOpened(_language, _patterns, offered);
@@ -313,6 +347,13 @@ namespace AF.UI
             {
                 _patternRows[i].SetSelected(PatternOrder[i] == _patterns);
             }
+        }
+
+        /// <summary>Marca o desmarca «Mensajes de TiTino» sin cerrar (tras tocarla).</summary>
+        public void MarkSlothMessages(bool on)
+        {
+            _slothMessages = on;
+            _slothRow.SetSelected(on);
         }
 
         /// <summary>Cierra la pantalla (sin avisar a nadie: lo hace quien la cierra).</summary>
@@ -390,7 +431,13 @@ namespace AF.UI
                 y += rowH + RowGapDp;
             }
 
-            // Huecos de TI3, MO3 y F4: aún ocultos (no ocupan sitio).
+            // Mensajes de TiTino (TI3): una fila en su hueco, tras los patrones.
+            y += SectionGapDp - RowGapDp;
+            UiBuilder.Place(SlothMessagesSlot, 16f, y, inner, rowH);
+            _slothRow.Place(0f, 0f, inner, rowH, s);
+            y += rowH + RowGapDp;
+
+            // Huecos de MO3 y F4: aún ocultos (no ocupan sitio).
             y += 16f - RowGapDp;
 
             float h = y;
@@ -414,7 +461,7 @@ namespace AF.UI
                 return;
             }
 
-            int n = 1 + _offered.Count + _patternRows.Length;
+            int n = 2 + _offered.Count + _patternRows.Length;
             var ids = new string[n];
             var rects = new RectTransform[n];
             ids[0] = "close";
@@ -431,6 +478,9 @@ namespace AF.UI
                 ids[k] = _patternRows[i].Id;
                 rects[k] = _patternRows[i].Root;
             }
+
+            ids[k] = _slothRow.Id;
+            rects[k] = _slothRow.Root;
 
             _probe.Layout("settings", 0, null, ids, rects);
         }

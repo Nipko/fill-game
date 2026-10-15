@@ -128,8 +128,11 @@ namespace AF.Tests.PlayMode
             Assert.That(settings.PatternsLabel(PatternsSetting.On), Is.EqualTo("Siempre"));
             Assert.That(settings.PatternsLabel(PatternsSetting.Off), Is.EqualTo("Nunca"));
             Assert.That(settings.PatternsMarked(PatternsSetting.Auto), Is.True);
-            Assert.That(settings.SlothMessagesSlot.gameObject.activeSelf || settings.IdleHintSlot.gameObject.activeSelf || settings.AboutSlot.gameObject.activeSelf,
-                Is.False, "los huecos de TI3, MO3 y F4, ocultos (D-008)");
+            Assert.That(settings.IdleHintSlot.gameObject.activeSelf || settings.AboutSlot.gameObject.activeSelf,
+                Is.False, "los huecos de MO3 y F4, ocultos (D-008)");
+            Assert.That(settings.SlothMessagesSlot.gameObject.activeSelf, Is.True, "la fila de TI3, a la vista");
+            Assert.That(settings.SlothMessagesLabel, Is.EqualTo("Mensajes de TiTino"));
+            Assert.That(settings.SlothMessagesMarked && settings.SelectedSlothMessages, Is.True, "activada por defecto (D-016)");
 
             // Patrones desde su botón: se guarda y se marca, sin cerrar.
             settings.PatternsButton(PatternsSetting.On).onClick.Invoke();
@@ -148,6 +151,35 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Level));
             Assert.That(boot.PressSettings(), Is.False, "en el nivel no se abre");
             Assert.That(boot.View!.FruitPatternsOn, Is.True, "el nivel 4 sale con los patrones de «Siempre»");
+        }
+
+        [UnityTest]
+        public IEnumerator SlothMessages_TogglesAndSavesInTheAct_AndReopensMarked()
+        {
+            // Ajustes guarda settings.sloth_messages (D-016, punto 4; tarea TI3): se desmarca y se vuelve a marcar sin cerrar.
+            var store = new MemoryProfileStore(ProfileAt(4));
+            yield return PlayModeHelpers.LoadApp(store);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.PressSettings(), Is.True);
+            SettingsScreen settings = boot.SettingsView!;
+            Assert.That(settings.SlothMessagesMarked, Is.True);
+
+            settings.SlothMessagesButton.onClick.Invoke();
+            Assert.That(settings.SlothMessagesMarked, Is.False, "desmarcada: solo gestos");
+            Assert.That(settings.Visible, Is.True);
+            Assert.That(ProfileJson.Deserialize(store.Json!).Settings.SlothMessages, Is.False, "guardado en el acto");
+
+            settings.CloseButton.onClick.Invoke();
+            Assert.That(boot.PressSettings(), Is.True);
+            Assert.That(settings.SlothMessagesMarked, Is.False, "se abre con lo guardado");
+
+            settings.SlothMessagesButton.onClick.Invoke();
+            Assert.That(settings.SlothMessagesMarked, Is.True);
+            Assert.That(ProfileJson.Deserialize(store.Json!).Settings.SlothMessages, Is.True);
+            Assert.That(boot.ChooseSlothMessages(false), Is.True);
+            Assert.That(settings.SlothMessagesMarked, Is.False);
+            Assert.That(((RectTransform)settings.SlothMessagesButton.transform).rect.height, Is.GreaterThanOrEqualTo(48f), "fila ≥ 48 dp");
+            settings.CloseButton.onClick.Invoke();
         }
 
         [UnityTest]

@@ -166,6 +166,7 @@ UiText.SettingsLanguageAuto	Automático
 UiText.SettingsPatternsAuto	Automático
 UiText.SettingsPatternsOff	Nunca
 UiText.SettingsPatternsOn	Siempre
+UiText.SettingsSlothMessages	Mensajes de TiTino
 UiText.SimulatedAdClose	Cerrar
 UiText.SimulatedAdInterstitial	intersticial
 UiText.SimulatedAdRewarded	recompensado

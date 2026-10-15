@@ -730,7 +730,8 @@ namespace AF.UI
                 return false;
             }
 
-            settings.Show(LocLocale.Offered(Loc.Catalog, Loc.ShowUnapproved), profile.Settings.Language, profile.Settings.Patterns);
+            settings.Show(LocLocale.Offered(Loc.Catalog, Loc.ShowUnapproved), profile.Settings.Language, profile.Settings.Patterns,
+                profile.Settings.SlothMessages);
             _skipNextDelta = true;
             return true;
         }
@@ -818,6 +819,30 @@ namespace AF.UI
             bool loaded = screen != null && screen.RefreshFruitPatterns();
             _settingsScreen?.Mark(profile.Settings.Language, patterns);
             _probe?.SettingsChange("patterns", DevProbe.PatternsKey(patterns), loaded ? screen!.FruitPatternsOn : (bool?)null);
+            return true;
+        }
+
+        /// <summary>
+        /// Ajustes › Mensajes de TiTino (D-016, punto 4; 02 §12; tarea TI3): guarda <paramref name="on"/> en
+        /// <c>settings.sloth_messages</c> en el acto; apagado, TiTino solo hace gestos desde su siguiente aparición
+        /// (<c>AF.GameFlow.SlothLines</c>). La sonda escribe <c>settings_change</c> con la clave <c>sloth_messages</c> (08 §8.2).
+        /// </summary>
+        public bool ChooseSlothMessages(bool on)
+        {
+            Profile? profile = _profile;
+            if (profile == null)
+            {
+                return false;
+            }
+
+            if (profile.Settings.SlothMessages != on)
+            {
+                profile.Settings.SlothMessages = on;
+                SaveSettings(profile);
+            }
+
+            _settingsScreen?.MarkSlothMessages(on);
+            _probe?.SettingsChange(SettingsScreen.SlothMessagesId, on ? "true" : "false", null);
             return true;
         }
 
@@ -1006,7 +1031,7 @@ namespace AF.UI
             FruitFacts = LoadFruitFacts(fruitCalendar); // calendario de Frutas del río (D-017)
             _screen.FruitFacts = FruitFacts; // la línea de fruta de la victoria (F3)
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => PressSettings(), () => PressBack(), this);
-            _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), () => CloseSettings());
+            _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
             _flow = new LevelFlow(catalog, progress, _screen, GameConfig.TapSwitchSelection, LaunchOptions.ResolvePourMode(), _wallet)

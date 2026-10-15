@@ -13,11 +13,13 @@ namespace AF.UI
     /// <item><c>AF_STATE {"event":"settings","t":…,"language":"auto","patterns":"auto","offered":["es-419","en-XA"]}</c> al
     /// abrirla: lo guardado en <c>settings.language</c> y <c>settings.patterns</c> (08 §4.3) y los idiomas que ofrece.</item>
     /// <item><c>AF_STATE {"event":"settings_change","t":…,"key":"patterns","value":"on","on":true,"opacity":0.20}</c> al elegir
-    /// (las claves de <c>af_settings_change</c> de 08 §8.2: <c>language</c> o <c>patterns</c>); con <c>patterns</c>, el
-    /// interruptor del nivel cargado y la opacidad del shader ya aplicados (<c>on</c> es null sin nivel cargado).</item>
+    /// (las claves de <c>af_settings_change</c> de 08 §8.2: <c>language</c>, <c>patterns</c> o <c>sloth_messages</c>, este con
+    /// <c>true</c> o <c>false</c>; tarea TI3); con <c>patterns</c>, el interruptor del nivel cargado y la opacidad del shader ya
+    /// aplicados (<c>on</c> es null sin nivel cargado).</item>
     /// <item><c>AF_STATE {"event":"settings_closed","t":…}</c> al cerrarla (X o Atrás de Android).</item>
     /// <item><c>AF_LAYOUT</c> con <c>"screen":"settings"</c> y los ids <c>close</c>, <c>lang_&lt;idioma&gt;</c> (<c>lang_auto</c>,
-    /// <c>lang_es-419</c>…) y <c>patterns_&lt;auto|on|off&gt;</c>, para tocarlos con <c>adb shell input tap</c>.</item>
+    /// <c>lang_es-419</c>…), <c>patterns_&lt;auto|on|off&gt;</c> y <c>sloth_messages</c>, para tocarlos con
+    /// <c>adb shell input tap</c>.</item>
     /// </list>
     /// </summary>
     public sealed partial class DevProbe

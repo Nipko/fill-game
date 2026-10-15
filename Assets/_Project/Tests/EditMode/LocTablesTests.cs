@@ -193,6 +193,8 @@ namespace AF.Tests.EditMode
                 {
                     string key = table.KeyAt(r);
                     bool cultural = key.StartsWith("fauna_", StringComparison.Ordinal) || key.StartsWith("tutorial_", StringComparison.Ordinal)
+                        || key.StartsWith("fauna.", StringComparison.Ordinal) || key.StartsWith(AF.GameFlow.SlothLines.KeyPrefix, StringComparison.Ordinal)
+                        || key == UiText.Keys.SettingsSlothMessages
                         || key.StartsWith("difficulty_subtitle_", StringComparison.Ordinal)
                         || (key.StartsWith("world_w", StringComparison.Ordinal) && key.Length > "world_w00_".Length && char.IsDigit(key[7]));
                     if (cultural)
@@ -463,6 +465,9 @@ namespace AF.Tests.EditMode
             {
                 keys.Add(product.NameKey);
             }
+
+            // Las 30 frases de TiTino (TI3): las claves las da AF.GameFlow.SlothLines y las pinta UiText.TrySlothLine.
+            keys.AddRange(UiText.SlothLineKeys);
 
             return keys;
         }
