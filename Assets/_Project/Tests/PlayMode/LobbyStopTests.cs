@@ -158,16 +158,30 @@ namespace AF.Tests.PlayMode
             Assert.That(lobby.HomeWindow.Visible, Is.False);
             Assert.That(lobby.PlayLabel, Is.EqualTo("Jugar · Nivel 195"));
 
-            // Fin de contenido: el 201 no está publicado.
-            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(201)));
+            // Fin de contenido con la parada actual y la siguiente en el catálogo: un catálogo de niveles que acaba en el 1 y el
+            // perfil en el 58 (Manaos, con Anavilhanas detrás). «Faltan…» está armado, pero el 58 no está publicado: no sale.
+            LaunchOptions.LevelPackJsonOverride = PackEndingAtLevel1();
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(58)));
             boot = GameBootstrap.Current!;
             lobby = boot.Lobby!;
             yield return null;
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+            Assert.That(boot.App.PlayLevel, Is.EqualTo(58));
+            Assert.That(boot.App.PlayLevelAvailable, Is.False, "premisa: el 58 no está publicado");
+            RiverStop? current = lobby.StopBackdrop.Stop;
+            Assert.That(current, Is.Not.Null, "premisa: la parada actual está en el catálogo");
+            Assert.That(current!.Id, Is.EqualTo("manaos"));
+            Assert.That(lobby.RiverStops!.At(current.N + 1), Is.Not.Null, "premisa: la parada siguiente está en el catálogo");
+            Assert.That(lobby.StopRemainingText, Is.EqualTo("Faltan 3 niveles para Anavilhanas"), "premisa: «Faltan…» armado");
             Assert.That(lobby.StopRemainingShown, Is.False, "sin nivel publicado no hay «Faltan…»");
             Assert.That(boot.PressPlay(), Is.True);
-            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.ContentEnd));
+            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.ContentEnd));
             yield return null;
             Assert.That(lobby.StopRemainingShown, Is.False, "oculto con «El río sigue creciendo»");
+            Assert.That(boot.App.CloseOverlay(), Is.True);
+            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Lobby));
+            yield return null;
+            Assert.That(lobby.StopRemainingShown, Is.False, "de vuelta en el inicio, el 58 sigue sin publicar");
         }
 
         [UnityTest]
@@ -370,6 +384,17 @@ namespace AF.Tests.PlayMode
             profile.Progress.NextLevel = nextLevel;
             profile.Progress.MaxLevel = nextLevel - 1;
             return profile;
+        }
+
+        // Paquete de niveles de un solo nivel, el 1: el catálogo acaba ahí y todo lo demás es fin de contenido.
+        private static string PackEndingAtLevel1()
+        {
+            const string level = "{ \"id\": \"m01_v1_n0001\", \"level\": 1, \"world\": 1, \"lap\": 1, \"water_base\": \"white\", "
+                + "\"palette\": [\"acai\", \"aguaje\"], \"units_per_color\": 4, \"caps\": [4, 4, 4], "
+                + "\"cuias\": [[8, 8, 8, 4], [4, 4, 4, 8], []], \"attrs\": [null, null, null], \"murky\": false, \"hidden\": [], "
+                + "\"difficulty\": { \"label\": \"normal\", \"par\": 3 }, \"relief\": [] }";
+            return "{ \"subset_of\": \"af-level/1\", \"pack_id\": \"test_content_end\", \"kind\": \"campaign\", \"world\": 1, "
+                + "\"world_id\": \"w01_estuario\", \"lap\": 1, \"water_base\": \"white\", \"levels\": [ " + level + " ] }";
         }
 
         // Medio dp menos por lado: dos cajas que solo se tocan no se solapan.
