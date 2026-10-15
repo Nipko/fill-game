@@ -65,8 +65,8 @@ namespace AF.Tests.EditMode
         [TestCase(new[] { "-afSizeFamilies", "Kits" }, "familia desconocida 'Kits'")]
         [TestCase(new[] { "-afSizeFamilies" }, "falta el valor de -afSizeFamilies")]
         [TestCase(new[] { "-afSizeReport", "-afSizeFamilies", "kits" }, "falta el valor de -afSizeReport")]
-        [TestCase(new[] { "-afSizeAabMB", "35,5" }, "-afSizeAabMB necesita una cifra")]
-        [TestCase(new[] { "-afSizeAabMB", "NaN" }, "-afSizeAabMB necesita una cifra")]
+        [TestCase(new[] { "-afSizeAabMB", "35,5" }, "-afSizeAabMB necesita una cifra en MB, no negativa y con punto decimal (recibido: '35,5')")]
+        [TestCase(new[] { "-afSizeAabMB", "NaN" }, "-afSizeAabMB necesita una cifra en MB, no negativa y con punto decimal (recibido: 'NaN')")]
         [TestCase(new[] { "-afSizeFamilia", "kits" }, "opción desconocida -afSizeFamilia")]
         [TestCase(new[] { "-afSizeReport", "a.md", "-afSizeReport", "b.md" }, "opción repetida -afSizeReport")]
         public void BadArguments_ExitWith2(string[] args, string message)
