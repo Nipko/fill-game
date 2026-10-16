@@ -17,10 +17,12 @@ namespace AF.Audio.Unity
     /// <item><description>el ambiente: el agua del mundo, la lluvia si el nivel la tiene y un animal cada 20-45 s
     /// (<see cref="AudioMix.AdvanceFauna"/>) en su propia fuente.</description></item>
     /// </list>
-    /// Cada bucle se genera en un hilo de trabajo la primera vez que se pide (y se guarda el último de cada clase: el tema de
-    /// menú, el lecho de un mundo y una variante, el agua de un mundo y la lluvia); el hilo principal solo crea sus clips. Todo
-    /// va con la ganancia de <see cref="AudioMix.MusicGain"/> (ajuste Música, modo silencio, anuncio y atenuación de 6 dB).
-    /// Sin asignaciones por fotograma: solo al cambiar de pieza.
+    /// Cada bucle se genera en un hilo de trabajo la primera vez que se pide con Música encendida (con Música apagada no se
+    /// genera nada) y se guarda el último de cada clase: el tema de menú, el lecho de un mundo y una variante, el agua de un
+    /// mundo y la lluvia. Al ir al inicio, el lecho y el agua se funden y se paran sin soltarse, y al volver a un nivel del mismo
+    /// mundo (y variante) suenan otra vez sin generarse; solo se sueltan cuando se pide otro mundo o variante. El hilo principal
+    /// solo crea los clips. Todo va con la ganancia de <see cref="AudioMix.MusicGain"/> (ajuste Música, modo silencio, anuncio y
+    /// atenuación de 6 dB). Sin asignaciones por fotograma: solo al cambiar de pieza.
     /// </summary>
     public sealed partial class UnityAudioService
     {
@@ -49,10 +51,14 @@ namespace AF.Audio.Unity
         private Task<MusicLoops>? _worldTask;
         private int _worldTaskKey;
         private int _worldKey; // mundo × 2 (+1 de noche) de los clips del lecho; 0 = ninguno
+        private bool _worldPlaying; // las fuentes del lecho están en marcha (paradas en el inicio, con los clips guardados)
+        private int _worldRenders;
         private Task<MusicLoops>? _menuTask;
         private Task<float[]>? _waterTask;
         private int _waterTaskWorld;
         private int _waterWorld;
+        private bool _waterPlaying;
+        private int _waterRenders;
         private Task<float[]>? _rainTask;
         private float _worldVolume;
         private float _menuVolume;
@@ -64,6 +70,12 @@ namespace AF.Audio.Unity
 
         /// <summary>Mundo del agua que hay (0 = ninguno; tests).</summary>
         public int WaterWorld => _waterWorld;
+
+        /// <summary>Lechos generados desde que existe el servicio (tests: volver al mismo mundo no genera otro).</summary>
+        public int WorldBedRenders => _worldRenders;
+
+        /// <summary>Aguas generadas desde que existe el servicio (tests).</summary>
+        public int WaterRenders => _waterRenders;
 
         /// <summary>Ya está el tema de menú (tests).</summary>
         public bool MenuReady => _menuClip != null;
@@ -184,30 +196,44 @@ namespace AF.Audio.Unity
             UpdateFauna(dtMs);
         }
 
-        // El lecho del mundo pedido: si los clips son de otro mundo o variante, se funden a 0, se sueltan y se genera el nuevo.
+        // El lecho del mundo pedido. En el inicio (0) se funde a 0 y se para, sin soltar los clips: volver al mismo mundo y
+        // variante lo hace sonar en el acto. Si se pide otro mundo o variante, se funde a 0, se suelta y se genera el nuevo.
         private void UpdateWorldBed(float dtMs)
         {
             int wanted = _mix.MusicWorld > 0 ? (_mix.MusicWorld * 2) + (_mix.MusicNight ? 1 : 0) : 0;
             float fade = dtMs / TrackFadeMs;
-            if (_worldKey != wanted)
+            if (wanted != 0 && _worldKey == wanted)
+            {
+                if (!_worldPlaying && !_adPaused)
+                {
+                    PlayWorldBed();
+                }
+
+                _worldVolume = Math.Min(1f, _worldVolume + fade);
+            }
+            else
             {
                 _worldVolume = Math.Max(0f, _worldVolume - fade);
                 if (_worldVolume <= 0f && _worldKey != 0)
                 {
-                    ReleaseWorldBed();
+                    if (wanted == 0)
+                    {
+                        StopWorldBed();
+                    }
+                    else
+                    {
+                        ReleaseWorldBed();
+                    }
                 }
 
-                if (_worldKey == 0 && wanted != 0 && _worldTask == null)
+                if (_worldKey == 0 && wanted != 0 && _worldTask == null && _mix.Settings.Music)
                 {
                     int world = _mix.MusicWorld;
                     bool night = _mix.MusicNight;
                     _worldTaskKey = wanted;
+                    _worldRenders++;
                     _worldTask = Task.Run(() => MusicSynth.Render(world, night));
                 }
-            }
-            else if (wanted != 0)
-            {
-                _worldVolume = Math.Min(1f, _worldVolume + fade);
             }
 
             if (_worldTask != null && _worldTask.IsCompleted)
@@ -218,9 +244,10 @@ namespace AF.Audio.Unity
                 {
                     Debug.LogError("AF.Audio: no se pudo generar el lecho: " + task.Exception?.GetBaseException().Message);
                 }
-                else if (_worldKey == 0 && _worldTaskKey == wanted)
+                else if (_worldKey == 0 && (_worldTaskKey == wanted || wanted == 0))
                 {
-                    StartWorldBed(_worldTaskKey, task.Result);
+                    // Si entretanto se fue al inicio, se guarda parado para la vuelta.
+                    StartWorldBed(_worldTaskKey, task.Result, _worldTaskKey == wanted && !_adPaused);
                 }
             }
 
@@ -234,9 +261,8 @@ namespace AF.Audio.Unity
             }
         }
 
-        private void StartWorldBed(int key, MusicLoops loops)
+        private void StartWorldBed(int key, MusicLoops loops, bool play)
         {
-            double at = AudioSettings.dspTime + 0.1;
             for (int l = 0; l < MusicVoices; l++)
             {
                 float[] pcm = l == 0 ? loops.Bed : loops.Percussion[l - 1];
@@ -247,12 +273,44 @@ namespace AF.Audio.Unity
                 AudioSource source = _music[l];
                 source.clip = clip;
                 source.volume = 0f;
-                source.PlayScheduled(at); // el lecho y sus capas, a la vez y en el mismo punto del bucle
-                _layerVolume[l] = l == 0 ? 1f : 0f;
             }
 
             _worldKey = key;
             _worldVolume = 0f;
+            if (play)
+            {
+                PlayWorldBed();
+            }
+        }
+
+        // Arranca el lecho y sus capas desde el principio, a la vez y en el mismo punto del bucle.
+        private void PlayWorldBed()
+        {
+            double at = AudioSettings.dspTime + 0.1;
+            for (int l = 0; l < MusicVoices; l++)
+            {
+                _music[l].volume = 0f;
+                _music[l].PlayScheduled(at);
+                _layerVolume[l] = l == 0 ? 1f : 0f;
+            }
+
+            _worldPlaying = true;
+        }
+
+        // En el inicio: el lecho ya callado se para y sus clips se quedan.
+        private void StopWorldBed()
+        {
+            if (!_worldPlaying)
+            {
+                return;
+            }
+
+            for (int l = 0; l < MusicVoices; l++)
+            {
+                _music[l].Stop();
+            }
+
+            _worldPlaying = false;
         }
 
         private void ReleaseWorldBed()
@@ -269,13 +327,14 @@ namespace AF.Audio.Unity
             }
 
             _worldKey = 0;
+            _worldPlaying = false;
         }
 
         // El tema de menú: se genera una vez y se queda; entra y sale con el mismo fundido.
         private void UpdateMenu(float dtMs)
         {
             bool wanted = _mix.MusicMenu;
-            if (wanted && _menuClip == null && _menuTask == null)
+            if (wanted && _menuClip == null && _menuTask == null && _mix.Settings.Music)
             {
                 _menuTask = Task.Run(() => MenuThemeSynth.Render());
             }
@@ -316,36 +375,53 @@ namespace AF.Audio.Unity
             _menu.volume = _menuVolume * (_adPaused ? 0f : _mix.MusicGain);
         }
 
-        // El agua del mundo y la lluvia del nivel.
+        // El agua del mundo y la lluvia del nivel. Como el lecho: en el inicio (0) el agua se funde y se para sin soltarse, y
+        // solo se suelta al pedir otro mundo.
         private void UpdateAmbient(float dtMs)
         {
             int wanted = _mix.AmbientWorld;
             float fade = dtMs / AmbientFadeMs;
-            if (_waterWorld != wanted)
+            if (wanted != 0 && _waterWorld == wanted)
+            {
+                if (!_waterPlaying && !_adPaused)
+                {
+                    _water.volume = 0f;
+                    _water.Play();
+                    _waterPlaying = true;
+                }
+
+                _waterVolume = Math.Min(1f, _waterVolume + fade);
+            }
+            else
             {
                 _waterVolume = Math.Max(0f, _waterVolume - fade);
                 if (_waterVolume <= 0f && _waterWorld != 0)
                 {
-                    _water.Stop();
-                    _water.clip = null;
-                    if (_waterClip != null)
+                    if (_waterPlaying)
                     {
-                        Destroy(_waterClip);
-                        _waterClip = null;
+                        _water.Stop();
+                        _waterPlaying = false;
                     }
 
-                    _waterWorld = 0;
+                    if (wanted != 0)
+                    {
+                        _water.clip = null;
+                        if (_waterClip != null)
+                        {
+                            Destroy(_waterClip);
+                            _waterClip = null;
+                        }
+
+                        _waterWorld = 0;
+                    }
                 }
 
-                if (_waterWorld == 0 && wanted != 0 && _waterTask == null)
+                if (_waterWorld == 0 && wanted != 0 && _waterTask == null && _mix.Settings.Music)
                 {
                     _waterTaskWorld = wanted;
+                    _waterRenders++;
                     _waterTask = Task.Run(() => AmbientSynth.RenderWater(wanted));
                 }
-            }
-            else if (wanted != 0)
-            {
-                _waterVolume = Math.Min(1f, _waterVolume + fade);
             }
 
             if (_waterTask != null && _waterTask.IsCompleted)
@@ -356,20 +432,25 @@ namespace AF.Audio.Unity
                 {
                     Debug.LogError("AF.Audio: no se pudo generar el agua: " + task.Exception?.GetBaseException().Message);
                 }
-                else if (_waterWorld == 0 && _waterTaskWorld == wanted)
+                else if (_waterWorld == 0 && (_waterTaskWorld == wanted || wanted == 0))
                 {
-                    _waterClip = AudioClip.Create("ambient_water_" + wanted, task.Result.Length, 1, AmbientSynth.SampleRate, false);
+                    // Si entretanto se fue al inicio, se guarda parada para la vuelta.
+                    _waterClip = AudioClip.Create("ambient_water_" + _waterTaskWorld, task.Result.Length, 1, AmbientSynth.SampleRate, false);
                     _waterClip.SetData(task.Result, 0);
                     _water.clip = _waterClip;
                     _water.volume = 0f;
-                    _water.Play();
-                    _waterWorld = wanted;
+                    _waterWorld = _waterTaskWorld;
                     _waterVolume = 0f;
+                    if (_waterTaskWorld == wanted && !_adPaused)
+                    {
+                        _water.Play();
+                        _waterPlaying = true;
+                    }
                 }
             }
 
             bool rainWanted = _mix.AmbientRain && _waterWorld != 0 && _waterWorld == wanted;
-            if (rainWanted && _rainClip == null && _rainTask == null)
+            if (rainWanted && _rainClip == null && _rainTask == null && _mix.Settings.Music)
             {
                 _rainTask = Task.Run(() => AmbientSynth.RenderRain());
             }
@@ -378,7 +459,11 @@ namespace AF.Audio.Unity
             {
                 Task<float[]> task = _rainTask;
                 _rainTask = null;
-                if (!task.IsFaulted)
+                if (task.IsFaulted)
+                {
+                    Debug.LogError("AF.Audio: no se pudo generar la lluvia: " + task.Exception?.GetBaseException().Message);
+                }
+                else
                 {
                     _rainClip = AudioClip.Create("ambient_rain", task.Result.Length, 1, AmbientSynth.SampleRate, false);
                     _rainClip.SetData(task.Result, 0);

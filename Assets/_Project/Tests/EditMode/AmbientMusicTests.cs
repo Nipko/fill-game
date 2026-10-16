@@ -19,6 +19,9 @@ namespace AF.Tests.EditMode
         // Lo que el nivel puede subir y bajar más deprisa que 1,5 s en un ruido estacionario (dB): su propio grano.
         private const double MaxWobbleDb = 1.0;
 
+        // Parte mínima de la energía del lecho nocturno por encima de AudioAnalysis.SpeakerCutHz: 10·log10(0,25) ≈ −6 dB.
+        private const double NightSpeakerFraction = 0.25;
+
         [TearDown]
         public void TearDown()
         {
@@ -201,6 +204,10 @@ namespace AF.Tests.EditMode
                 // 07 §9.3: la variante nocturna, «menos agudos, más graves».
                 Assert.That(AudioAnalysis.EnergyFractionAbove(night, 500, sr), Is.LessThan(AudioAnalysis.EnergyFractionAbove(day, 500, sr)), "mundo " + world + ": más grave de noche");
                 Assert.That(AudioAnalysis.EnergyFractionAbove(night, 1300, sr), Is.LessThan(0.005), "mundo " + world + ": sin agudos de noche");
+
+                // Y el altavoz del teléfono la sigue dando: lo que pasa de SpeakerCutHz queda, como mucho, 6 dB por debajo del
+                // lecho entero (una cuarta parte de su energía). Hoy va del 27 % (Oriente) al 65 % (Trapecio); de día, 54-91 %.
+                Assert.That(AudioAnalysis.EnergyFractionAbove(night, AudioAnalysis.SpeakerCutHz, sr), Is.GreaterThanOrEqualTo(NightSpeakerFraction), "mundo " + world + ": el altavoz da la noche");
                 Assert.That(AudioAnalysis.Hash(night), Is.Not.EqualTo(AudioAnalysis.Hash(day)));
             }
 

@@ -61,8 +61,9 @@ namespace AF.Audio
     /// lecho: entran con el volumen, nunca con el tempo;</description></item>
     /// <item><description>la **variante nocturna** (Muy difícil): el mismo lecho una octava más grave, como el <c>pitchMult</c> 0,5
     /// del laboratorio, y sin agudos por encima de 1,3 kHz («menos agudos, más graves», 07 §9.3). El peso pasa al segundo
-    /// armónico para que el altavoz del teléfono la siga dando. Las capas de percusión no cambian: 07 §9.3 pide la variante del
-    /// lecho, y las maderas a la mitad (145-170 Hz) ya no salen por ese altavoz.</description></item>
+    /// armónico para que el altavoz del teléfono la siga dando: al menos una cuarta parte de su energía queda por encima de
+    /// <see cref="AudioAnalysis.SpeakerCutHz"/> (−6 dB como mucho; de día, más de la mitad). Las capas de percusión no cambian:
+    /// 07 §9.3 pide la variante del lecho, y las maderas a la mitad (145-170 Hz) ya no salen por ese altavoz.</description></item>
     /// </list>
     /// El tema de menú está en <see cref="MenuThemeSynth"/>. Determinista; se genera en un hilo de trabajo, nunca por fotograma.
     /// </summary>

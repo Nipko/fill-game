@@ -24,7 +24,8 @@ namespace AF.Tests.PlayMode
     /// (<see cref="FakeAudioService"/>): el inicio pide el tema de menú sin río; un nivel, el lecho de su mundo (nocturno en Muy
     /// difícil) y su ambiente con la lluvia que le toca; las capas siguen a las cuias selladas hasta
     /// <c>audio_music_percussion_layers</c>; la toada y el modal atenúan; el anuncio calla y vuelve en 0,5 s. Con el servicio
-    /// real: el ajuste Música apaga lecho, capas y ambiente en el acto, y su fotograma no asigna memoria.
+    /// real: el ajuste Música apaga lecho, capas y ambiente en el acto, y su fotograma no asigna memoria; el inicio para el lecho y
+    /// el agua sin soltarlos (volver al mismo mundo no genera nada), otro mundo los suelta y con Música apagada no se genera nada.
     /// </summary>
     public sealed class AmbientMusicHooksTests
     {
@@ -235,7 +236,57 @@ namespace AF.Tests.PlayMode
             yield return WaitLong(() => s.WorldBedKey == 3, "lecho nocturno", 30f);
             s.SetMenuMusic();
             s.SetAmbient(0, false, 0);
-            yield return WaitLong(() => s.MenuReady && s.MenuVolume > 0.3f && s.WorldBedKey == 0 && s.WaterWorld == 0, "tema de menú sin río", 30f);
+            yield return WaitLong(() => s.MenuReady && s.MenuVolume > 0.3f && s.MusicVolume(0) == 0f && s.WaterVolume == 0f, "tema de menú sin río", 30f);
+            Assert.That(s.WorldBedKey == 3 && s.WaterWorld == 1, Is.True, "el lecho nocturno y el agua, parados y guardados para la vuelta");
+        }
+
+        [UnityTest]
+        public IEnumerator RealService_HomeAndBackToTheSameWorld_KeepsBedAndWater_AnotherWorldReleasesThem_AndMusicOffGeneratesNothing()
+        {
+            AudioCues.Override = null;
+            _real = UnityAudioService.Ensure();
+            _real.Probe = null;
+            _real.Configure(SoundSettings.Defaults);
+            _real.SetModalDuck(false);
+            _real.SetAdActive(false);
+            UnityAudioService s = _real;
+            s.SetMusic(1, 0, false);
+            s.SetAmbient(1, false, 1);
+            yield return WaitLong(() => s.WorldBedKey == 2 && s.WaterWorld == 1 && s.MusicVolume(0) > 0.5f && s.WaterVolume > 0.5f, "lecho y agua del Estuario", 30f);
+            int beds = s.WorldBedRenders;
+            int waters = s.WaterRenders;
+
+            // Al inicio (lo que pide AudioCues.Home): se funden y se paran, pero se quedan.
+            s.SetMenuMusic();
+            s.SetAmbient(0, false, 0);
+            yield return WaitLong(() => s.MenuReady && s.MenuVolume > 0.3f && s.MusicVolume(0) == 0f && s.WaterVolume == 0f, "tema de menú", 30f);
+            Assert.That(s.WorldBedKey, Is.EqualTo(2), "el lecho del mundo 1 se guarda en el inicio");
+            Assert.That(s.WaterWorld, Is.EqualTo(1), "y el agua también");
+
+            // Vuelta a un nivel del mismo mundo: suenan desde el primer fotograma sin generar nada.
+            s.SetMusic(1, 0, false);
+            s.SetAmbient(1, false, 2);
+            yield return null;
+            Assert.That(s.WorldBedKey == 2 && s.WaterWorld == 1, Is.True, "los mismos clips");
+            yield return WaitLong(() => s.MusicVolume(0) > 0.5f && s.WaterVolume > 0.5f, "vuelven con su fundido", 5f);
+            Assert.That(s.WorldBedRenders, Is.EqualTo(beds), "volver al mismo mundo no genera otro lecho");
+            Assert.That(s.WaterRenders, Is.EqualTo(waters), "ni otra agua");
+
+            // Con Música apagada no se genera nada: otro mundo suelta lo que había y espera a que se encienda.
+            s.Configure(new SoundSettings(true, false, true));
+            s.SetMusic(2, 0, false);
+            s.SetAmbient(2, false, 101);
+            yield return WaitLong(() => s.WorldBedKey == 0 && s.WaterWorld == 0, "el mundo 1 se suelta al pedir el 2", 10f);
+            for (int i = 0; i < 10; i++)
+            {
+                yield return null;
+            }
+
+            Assert.That(s.WorldBedRenders == beds && s.WaterRenders == waters, Is.True, "Música apagada: nada se genera");
+            s.Configure(SoundSettings.Defaults);
+            yield return WaitLong(() => s.WorldBedKey == 4 && s.WaterWorld == 2 && s.MusicVolume(0) > 0.5f, "al encenderla, el lecho y el agua del mundo 2", 30f);
+            Assert.That(s.WorldBedRenders, Is.EqualTo(beds + 1));
+            Assert.That(s.WaterRenders, Is.EqualTo(waters + 1));
         }
 
         // Como PlayModeHelpers.WaitFor, con un tope propio: generar un lecho o el agua lleva un hilo de trabajo.
