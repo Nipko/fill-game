@@ -10,9 +10,10 @@ namespace AF.Tests.EditMode
 {
     /// <summary>
     /// Qué toca del Mapa del río en cada momento (<see cref="MapMoments"/>; 08 §2.2; D-013, puntos 3, 7 y 8; 02 §6; 06 §2.3;
-    /// tarea M1.3a): la victoria con y sin Mapa (el 10 lo cuenta el Mapa; 20 llega; 21 nada; 200 nada con las 20 paradas de
-    /// 1-200), el dato de la llegada con las dos políticas de los hitos (sin fijar ninguna como canon), el viaje de mundo dentro
-    /// del banner según <c>ui_map_autopen</c> y sin asignaciones. También las claves de 08 §9 de <see cref="MapConfig"/>.
+    /// tarea M1.3a): la victoria con y sin Mapa (el 10 lo cuenta el Mapa; 20 llega; 21 nada; 200 llega a Mazán y 420 nada con
+    /// las 42 paradas de 1-420, M4.5a), el dato de la llegada con las dos políticas de los hitos (sin fijar ninguna como
+    /// canon), el viaje de mundo dentro del banner según <c>ui_map_autopen</c> y sin asignaciones. También las claves de 08 §9
+    /// de <see cref="MapConfig"/>.
     /// </summary>
     public sealed class MapMomentsTests
     {

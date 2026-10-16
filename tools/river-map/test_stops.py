@@ -654,6 +654,13 @@ FIXTURES = [
      "rio aguarico: boca_en 'amazonas' de la investigacion y HOSTS (geometry.py) dice 'napo'"),
     ("Otro dato de la parada 32 de 91 caracteres", _set_otro(32, 0, "texto", _TEXT_91),
      "map.stop.sandoval.dato_04: 91 caracteres"),
+    # arrival_text de overrides.json (revision de M4.5a): otra redaccion del dato de llegada, sin tocar la investigacion.
+    ("arrival_text en una parada sin dato de llegada", _override_field("belem", "arrival_text", "Un dato de Belém."),
+     "overrides.json: 'belem' lleva arrival_text y la parada n=0 no tiene dato de llegada"),
+    ("arrival_text de 91 caracteres", _override_field("puerto_heath", "arrival_text", _TEXT_91),
+     "map.country.bo.dato_01: 91 caracteres y el maximo es 90"),
+    ("arrival_text vacio", _override_field("nuevo_rocafuerte", "arrival_text", " "),
+     "map.country.ec.dato_01: clave sin texto"),
 ]
 
 
@@ -758,6 +765,7 @@ class TextBlockTests(unittest.TestCase):
         cls.table = {r[0]: dict(zip(cls.header, r)) for r in cls.rows[1:]}
         cls.doc = json.loads(STOPS_PATH.read_text(encoding="utf-8"))
         cls.source = load_json(SOURCE_PATH)
+        cls.overrides = load_json(OVERRIDES_PATH)
         # Lugares de las claves de 201-420 (map.stop.<lugar>.*), los unicos con cifras en args (M4.5a).
         cls.stops_201 = {k.split(".")[2] for s in cls.doc["stops"] if s["n"] >= 20
                          for k in [s["arrival_fact"], *s["facts"]] if k.startswith("map.stop.")}
@@ -830,11 +838,14 @@ class TextBlockTests(unittest.TestCase):
                 continue
             row = self.table[s["arrival_fact"]]
             dato = records[0 if s["n"] == 1 else s["n"]]["dato_del_nivel"]
+            ov = self.overrides["stops"].get(s["id"], {})
             with self.subTest(key=s["arrival_fact"]):
-                self.assertEqual(stops.clean_text(dato["texto"]), row["es-419"])
+                self.assertEqual(stops.clean_text(ov.get("arrival_text", dato["texto"])), row["es-419"])
                 self.assertTrue(row["notes"].startswith(f"[{dato['etiqueta']}] "))
-                # Un texto reescrito (redaccion, M4.5a) lo dice con [P]; los demas, no.
-                self.assertEqual("redaccion" in dato, " [P] Redacción " in row["notes"])
+                # Un texto de overrides.json (arrival_text, M4.5a) lo dice con [P] y cita el de la investigacion; los
+                # demas, no.
+                self.assertEqual("arrival_text" in ov, " [P] Redacción de overrides.json" in row["notes"])
+                self.assertEqual("arrival_text" in ov, f"en lugar de «{dato['texto']}»" in row["context"])
                 self.assertIn("https://", row["context"])
                 for sid in dato["fuente"].split(","):
                     self.assertIn(sid.strip(), row["context"])
@@ -879,7 +890,8 @@ class TextBlockTests(unittest.TestCase):
                          "overrides.json: con dos rios, map_arrived pasaria de 64 caracteres (M4.5a)")
         self.assertEqual("El bosque inundado", t["map.stop.cuyabeno_igapo.name"], "overrides.json")
         self.assertEqual("Guacamayos del Tambopata", t["map.stop.collpa_guacamayos.name"], "overrides.json")
-        # Datos de llegada acortados en la investigacion (redaccion [P]): las llegadas del 220 y del 300 no pasan de las de 1-200.
+        # Datos de llegada acortados en overrides.json (arrival_text [P]; la investigacion queda intacta): las llegadas del
+        # 220 y del 300 no pasan de las de 1-200.
         self.assertEqual("En Ecuador, la Amazonia es «el Oriente»: está al este de los Andes.", t["map.country.ec.dato_01"])
         self.assertEqual("En 2012, Bolivia declaró por ley a su delfín de río tesoro nacional.", t["map.country.bo.dato_01"])
         self.assertEqual("Las cochas del Manu", t["map.stop.manu_cochas.name"])

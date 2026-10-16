@@ -402,7 +402,6 @@ namespace AF.Tests.PlayMode
             return profile;
         }
 
-        // Paquete de niveles de un solo nivel, el 1: el catálogo acaba ahí y todo lo demás es fin de contenido.
         // Catálogo de prueba con las paradas 0 … count − 1 de stops (las mismas instancias).
         private static RiverStopCatalog Truncated(RiverStopCatalog stops, int count)
         {
@@ -415,6 +414,7 @@ namespace AF.Tests.PlayMode
             return new RiverStopCatalog(stops.Source, kept);
         }
 
+        // Paquete de niveles de un solo nivel, el 1: el catálogo acaba ahí y todo lo demás es fin de contenido.
         private static string PackEndingAtLevel1()
         {
             const string level = "{ \"id\": \"m01_v1_n0001\", \"level\": 1, \"world\": 1, \"lap\": 1, \"water_base\": \"white\", "

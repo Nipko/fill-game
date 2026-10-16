@@ -30,8 +30,9 @@ status_pt-BR, notes y args):
   «» (map.stop.teotonio.dato_01, el fact de su passing[]; 90 caracteres);
 - en y pt-BR vacios; status pendiente_asesor; notes con la etiqueta del dato, [V] o [E] (su contexto cita cada fuente
   con su URL), y [P] en los nombres, rios, paises y preguntas (la investigacion no les da una fuente con URL; su conf es
-  la de la coordenada), y ademas [P] en un dato cuya fuente lleva «redaccion» (texto reescrito, acortado en M4.5a para
-  que la llegada quepa en la ranura de la victoria); args con las cifras que el texto escribe como {n} (Q8-A): la fuente las da en
+  la de la coordenada), y ademas [P] en un dato de llegada cuyo texto da overrides.json (arrival_text: la investigacion
+  queda intacta y la fila dice que es otra redaccion, acortada en M4.5a para que la llegada quepa en la ranura de la
+  victoria; n = 22 y 30); args con las cifras que el texto escribe como {n} (Q8-A): la fuente las da en
   dato_del_nivel.args, con las reglas de LocArgs.TryParse;
 - el contexto dice donde sale cada texto: en los hitos de TiTino (fin de mundo salvo el 10, primer Dificil 40 y primer
   Muy dificil 60; D-022, punto 1), el dato de llegada del 10k sale en la victoria siguiente;
@@ -47,6 +48,8 @@ Conversion (paradas_1_200 y paradas_201_700 -> stops[n]; plan del Mapa, M1.1 y M
 - n = k, levels = niveles, world = mundo, id = id; kind: gran_parada -> gate, parada y variante -> stop,
   castillo -> close.
 - country = pais (ISO2); si la parada tiene dos paises, overrides.json decide country y country_name (n = 13).
+- overrides.json tambien cambia el nombre y el rio de la placa (name y river) y, desde M4.5a, el texto del dato de llegada
+  (arrival_text, solo en una parada con arrival_fact); --check falla con un campo desconocido o una parada que no existe.
 - km_from_sea = km_desde_el_mar (null en n = 0) y km_home = km_casa.
 - sample (agua del sitio, sin el parentesis final): blanca -> white, negra -> black, clara -> clear,
   clara y blanca -> clear_white, negra y blanca -> black_white.
@@ -136,7 +139,7 @@ SAMPLES = frozenset(SAMPLE.values())
 LUT = {"atardecer": "dusk", "alba": "dawn"}
 LUTS = frozenset(LUT.values())
 BG_TIPOS = ("pintado", "codigo", "kit_y_rotulo", "variante_lut")
-OVERRIDE_FIELDS = frozenset({"country", "country_name", "name", "river", "why"})
+OVERRIDE_FIELDS = frozenset({"arrival_text", "country", "country_name", "name", "river", "why"})
 
 RE_ID = re.compile(r"[a-z0-9_]+")
 RE_ISO2 = re.compile(r"[A-Z]{2}")
@@ -175,7 +178,7 @@ def _check_overrides(overrides: dict, source_ids: set) -> tuple[dict, list[str]]
             continue
         unknown = sorted(set(entry) - OVERRIDE_FIELDS)
         if unknown:
-            errors.append(f"overrides.json: {sid!r} lleva campos desconocidos {unknown} (admitidos: country, country_name, name, river y why)")
+            errors.append(f"overrides.json: {sid!r} lleva campos desconocidos {unknown} (admitidos: arrival_text, country, country_name, name, river y why)")
         clean[sid] = entry
     return clean, errors
 
@@ -1075,7 +1078,11 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
     # Datos de llegada (arrival_fact; 90 caracteres), con su fuente y su URL.
     for s in stops:
         key = s["arrival_fact"]
+        ov = over.get(s["id"]) if isinstance(over.get(s["id"]), dict) else {}
         if key is None:
+            if "arrival_text" in ov:
+                errors.append(f"overrides.json: {s['id']!r} lleva arrival_text y la parada n={s['n']} no tiene dato de "
+                              "llegada (arrival_fact)")
             continue
         n = s["n"]
         holder = 0 if n == 1 else n  # el dato de la llegada del 10 vive en el registro k = 0 (Mapa del 10, 06 §2.3)
@@ -1111,12 +1118,18 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
                      f"tarjeta de la parada")
         cifras = (" Marcadores: " + ", ".join(f"{{{a}}}" for a in sorted(args))
                   + ", la cifra de la columna args con el separador de la región (D-018, Q8-A)." if args else "")
+        # Desde M4.5a, overrides.json puede dar otra redaccion del dato (arrival_text, acortada para que la llegada quepa
+        # en la ranura de la victoria) sin tocar la investigacion: la fila dice de donde sale con [P].
+        text, rewritten, origin = dato.get("texto"), "", ""
+        if "arrival_text" in ov:
+            text = ov["arrival_text"]
+            rewritten = (" [P] Redacción de overrides.json (P-M1 a), acortada en M4.5a para que la llegada quepa en la "
+                         "ranura de la victoria: el mismo dato y las mismas fuentes, con otro texto.")
+            origin = (f" Texto: tools/river-map/overrides.json ({s['id']}: arrival_text), en lugar de "
+                      f"«{dato.get('texto')}» de {SOURCE_REL}, {stop_list_of(holder)} k={holder} (dato_del_nivel).")
         context = (f"{shown}. Es también el fact_id de af_river_fact_shown (02 §6; 08 §4.5 y §8.2).{cifras} Lugar del "
-                   f"dato: {names.get(holder)}. {sources} {NO_CAPTURE}")
-        # Desde M4.5a, «redaccion»: el texto de la fuente se reescribió (acortado para que quepa); la fila lo dice con [P].
-        redaccion = dato.get("redaccion")
-        rewritten = (f" [P] Redacción {redaccion.strip()}" if isinstance(redaccion, str) and redaccion.strip() else "")
-        add(key, dato.get("texto"), FACT_MAX_CHARS, context, f"[{dato.get('etiqueta')}] Dato del Mapa del río.{rewritten}", args)
+                   f"dato: {names.get(holder)}.{origin} {sources} {NO_CAPTURE}")
+        add(key, text, FACT_MAX_CHARS, context, f"[{dato.get('etiqueta')}] Dato del Mapa del río.{rewritten}", args)
 
     # «Otro dato» de la tarjeta (facts[]; M2.6 con los de M2.7): 90 caracteres, con su fuente y su URL.
     for s in stops:

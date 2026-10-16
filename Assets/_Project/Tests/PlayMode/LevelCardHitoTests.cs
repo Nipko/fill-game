@@ -16,9 +16,10 @@ namespace AF.Tests.PlayMode
 {
     /// <summary>
     /// Tarjeta previa del hito p20 con «Si lo superas, llegas a {lugar}» (tarea M2.5; 02 §10 y 07 §7.7; D-013, punto 8;
-    /// glosario §10, <c>map_hito_preview</c>), con el catálogo real de 1-200, el de paradas del juego y las tarjetas encendidas
-    /// (<see cref="LaunchOptions.LevelCardsOverride"/>, con <see cref="CardSetup"/>): la regla (solo 40, 60, 80, 100, 120, 140, 160
-    /// y 180 en 1-200: L ≥ 40, L mod 20 = 0 y <c>ArrivalOnWin(L)</c>; el 200 aún no tiene parada); la fila con el sitio correcto,
+    /// glosario §10, <c>map_hito_preview</c>), con el catálogo real de 1-420 (M4.5a), el de paradas del juego y las tarjetas
+    /// encendidas (<see cref="LaunchOptions.LevelCardsOverride"/>, con <see cref="CardSetup"/>): la regla (solo 40, 60, 80, 100,
+    /// 120, 140, 160, 180 y 200 en 1-200: L ≥ 40, L mod 20 = 0 y <c>ArrivalOnWin(L)</c>; el 200 lleva a Mazán, el 220 a Nuevo
+    /// Rocafuerte y el 440 aún no tiene parada); la fila con el sitio correcto,
     /// su silueta de 64 × 22 dp en su ventanita (el Encuentro del 40, con su pieza por código; los demás, con su silueta
     /// provisional, que solo sale con <see cref="MapArtRule"/>), la línea en Nunito Bold de 14 sp en 2 líneas como mucho y nunca
     /// por debajo de 12, sin desbordes y dentro de la tarjeta, que crece y se sigue cerrando con 1 toque; el 30 y el 50 siguen sin
@@ -27,7 +28,7 @@ namespace AF.Tests.PlayMode
     /// </summary>
     public sealed class LevelCardHitoTests
     {
-        /// <summary>Hitos p20 de 1-200 con parada (sin el 100, la tarjeta combinada, que va aparte) y el id de esa parada.</summary>
+        /// <summary>Hitos p20 de 40-180 con parada (sin el 100, la tarjeta combinada, que va aparte) y el id de esa parada.</summary>
         internal static readonly (int Level, string Stop)[] Hitos =
         {
             (40, "encontro"),

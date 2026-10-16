@@ -1,5 +1,5 @@
 {
-  "note": "Decisiones [P] de P-M1 (a) que rio-amazonas.json no lleva en sus campos. Las aplica tools/river-map/stops.py, y su --check falla si una entrada no corresponde a ninguna parada o lleva un campo desconocido (campos admitidos: country, country_name, name, river y why). name y river sustituyen al nombre y al río de la investigación en las filas map.stop.<id>.name y map.stop.<id>.river de facts.csv (M1.1t): el río va en {río} de map_arrived («{lugar} · {país} · río {río}», glosario §10), así que es solo el nombre del río, sin «río» ni descripciones (--check falla si el río lleva paréntesis, empieza por «río» o por minúscula).",
+  "note": "Decisiones [P] de P-M1 (a) que rio-amazonas.json no lleva en sus campos. Las aplica tools/river-map/stops.py, y su --check falla si una entrada no corresponde a ninguna parada o lleva un campo desconocido (campos admitidos: arrival_text, country, country_name, name, river y why). name y river sustituyen al nombre y al río de la investigación en las filas map.stop.<id>.name y map.stop.<id>.river de facts.csv (M1.1t): el río va en {río} de map_arrived («{lugar} · {país} · río {río}», glosario §10), así que es solo el nombre del río, sin «río» ni descripciones (--check falla si el río lleva paréntesis, empieza por «río» o por minúscula). arrival_text (M4.5a) sustituye al texto es-419 del dato de llegada de la parada (su arrival_fact) en su fila de facts.csv, con la misma clave, la misma etiqueta y las mismas fuentes, sin tocar rio-amazonas.json: la fila lo marca con [P] y su contexto cita el texto de la investigación (--check falla si la parada no tiene dato de llegada).",
   "stops": {
     "belem": {
       "river": "Pará",
@@ -17,6 +17,10 @@
       "name": "Nauta",
       "why": "Nombre de la parada 17 en 07 §2.1 («Nauta», rótulo «Nauta · Perú»). rio-amazonas.json dice «Nauta: nace el nombre», que es la nota de diseño del clímax del nombre (propuesta del Mapa §5.3), no el rótulo."
     },
+    "nuevo_rocafuerte": {
+      "arrival_text": "En Ecuador, la Amazonia es «el Oriente»: está al este de los Andes.",
+      "why": "rio-amazonas.json dice «En Ecuador, a la Amazonia también la llaman «el Oriente»: queda al este de los Andes.» (map.country.ec.dato_01, la llegada del 220). Con la bienvenida de Ecuador y «Nuevo Rocafuerte · Ecuador» en dos líneas, esa llegada era la más alta del catálogo en en-XA al 130 % a 360 dp (254 dp frente a 234 en 1-200) y subía la ranura de todas las victorias (M4.5a, revisión); acortada, mide 229 dp. El mismo dato y la misma fuente [E eswp_amazonia_ec], con otra redacción [P]. Pendiente del asesor cultural (07 §8.2)."
+    },
     "pacaya_alba": {
       "river": "Marañón y Ucayali",
       "why": "rio-amazonas.json dice «cochas entre el Marañón y el Ucayali», que no cabe en «río {río}» de map_arrived ni en 32 caracteres [P]: quedan los dos ríos que nombra la investigación, como en Nauta (n = 17). Pendiente del asesor cultural (07 §8.2)."
@@ -24,6 +28,10 @@
     "pacaya_samiria": {
       "river": "Marañón y Ucayali",
       "why": "rio-amazonas.json dice «cochas entre el Marañón y el Ucayali», que no cabe en «río {río}» de map_arrived ni en 32 caracteres [P]: quedan los dos ríos que nombra la investigación, como en Nauta (n = 17). Pendiente del asesor cultural (07 §8.2)."
+    },
+    "puerto_heath": {
+      "arrival_text": "En 2012, Bolivia declaró por ley a su delfín de río tesoro nacional.",
+      "why": "rio-amazonas.json dice «Bolivia declaró en 2012 a su delfín de río tesoro nacional, con una ley que lo protege.» (map.country.bo.dato_01, la llegada del 300). Con la bienvenida de Bolivia, esa llegada era la más alta del catálogo en es-419 al 100 % (155 dp frente a 139 en 1-200) y subía la ranura de todas las victorias (M4.5a, revisión); acortada, mide 136 dp. El mismo dato y la misma fuente [E wp_boto], con otra redacción [P]. Pendiente del asesor cultural (07 §8.2)."
     },
     "puerto_maldonado": {
       "river": "Madre de Dios",

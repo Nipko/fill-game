@@ -20,8 +20,8 @@ namespace AF.Tests.EditMode
     /// <item>las 21 claves (las 11 del glosario y las 10 de P-M2) y ninguna <c>map_*</c> más, todas <c>pendiente_asesor</c>,
     /// solo en ES, con contexto y <c>max_chars</c>;</item>
     /// <item>el plural de <c>map_stop_remaining</c> con 0, 1, 2 y 21, y las cifras con la región de <see cref="Loc"/>;</item>
-    /// <item>las longitudes: los textos con las 20 paradas reales caben en su <c>max_chars</c>, la presentación del 10 en 50
-    /// caracteres y los nombres de las 20 paradas en 2 líneas a 296 dp;</item>
+    /// <item>las longitudes: los textos con las 42 paradas reales (1-420, M4.5a) caben en su <c>max_chars</c>, la presentación
+    /// del 10 en 50 caracteres y los nombres de las 42 paradas en 2 líneas a 296 dp;</item>
     /// <item>↑ y ↓ solo en los dos rótulos de orientación, que se pintan en Baloo 2; y el acceso tipado sin <c>PluralEs</c>,
     /// <c>Grouped</c>, <c>string.Format</c> ni <c>Replace</c>.</item>
     /// </list>

@@ -15,7 +15,7 @@ namespace AF.Tests.EditMode
     /// El árbitro de la única línea de la victoria (<see cref="VictoryLineArbiter"/>; arquitectura de la tanda 4, §2; 02 §6; T6-A;
     /// pregunta 45, (a), D-022; tarea M1.3a): tabla de casos con todas las combinaciones (Canon o SingleKey × ArrivalEverywhere
     /// o SlothHito × TiTino puede hablar o no × con o sin Mapa) en 10, 11, 20, 21, 40, 41, 60, 61, 80, 81, 140, 200, 201 y 700,
-    /// con las paradas reales de 1-200 y con un catálogo sintético de 100 paradas; una sola línea por victoria; el dato
+    /// con las paradas reales de 1-420 (42, M4.5a) y con un catálogo sintético de 100 paradas; una sola línea por victoria; el dato
     /// desplazado sale una vez y solo una; las cadencias; los defaults y cero asignaciones.
     /// </summary>
     public sealed class VictoryLineArbiterTests
@@ -424,8 +424,9 @@ namespace AF.Tests.EditMode
     }
 
     /// <summary>
-    /// Catálogos de paradas de las pruebas del Mapa (M1.3a): el real de 1-200 (<c>Data/Map/river_stops_v1.json</c>) y uno
-    /// sintético de 100 paradas (1-1.000) con un dato de llegada en cada una desde la 1, para los niveles de después del 200.
+    /// Catálogos de paradas de las pruebas del Mapa (M1.3a): el real de 1-420 (<c>Data/Map/river_stops_v1.json</c>; M4.5a) y
+    /// uno sintético de 100 paradas (1-1.000) con un dato de llegada en cada una desde la 1, para los niveles de después del
+    /// 420.
     /// </summary>
     internal static class MapTestCatalogs
     {
