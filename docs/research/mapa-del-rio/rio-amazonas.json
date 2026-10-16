@@ -5750,7 +5750,7 @@
     560
    ],
    "paradas": 14,
-   "viaje_de_entrada": "Madre de Dios abajo → Riberalta → Beni arriba; después Beni abajo → Mamoré arriba",
+   "viaje_de_entrada": "Madre de Dios abajo → Riberalta → Beni arriba; después Beni abajo (Cachuela Esperanza) → Mamoré arriba (Guayaramerín) → Iténez (ida y vuelta) → Mamoré arriba",
    "banderas_de_cortesia": [
     "BO en el 420 (viaje de entrada: Madre de Dios abajo por Puerto Heath; la parada 42, Riberalta, está en Bolivia): la tricolor [P], con el abogado y el asesor (propuesta §5.3)"
    ],
@@ -5761,7 +5761,7 @@
      "paradas": 3,
      "lat": -11.005,
      "lon": -66.0661,
-     "conf": "V",
+     "conf": "E",
      "xy": [
       0.2798,
       0.42224
@@ -5802,7 +5802,7 @@
       0.28693,
       0.44374
      ],
-     "nota": "Coordenada de Wikidata de la ciudad (Q1026253), la de la parada 50. La canoa llega Beni abajo y Mamoré arriba (baja_por_confluencia; propuesta §5.4 quater)"
+     "nota": "Coordenada de Wikidata de la ciudad (Q1026253), la de la parada 50. La canoa llega Beni abajo y Mamoré arriba (baja_por_confluencia [P], pregunta abierta para el dueño; propuesta §5.4 quater)"
     },
     {
      "nombre": "Iténez y Noel Kempff",
@@ -5831,7 +5831,7 @@
    ],
    "cuidado": "Bandera de cortesía: la tricolor, la bandera nacional, de uso náutico [P]; el DS 0241/2009 no regula banderas en embarcaciones y llama a la wiphala «símbolo sagrado» (art. 28) [V lexivox_ds241]: la elección pasa por el abogado y el asesor. Casarabe y la arqueología de los Llanos de Moxos, con el asesor; el paiche con sus dos caras; sin la isla Suárez (en disputa); con Q18-A guía el bufeo boliviano hasta el viaje del 560; lista completa para el asesor en propuesta §5.4 quater",
    "pregunta_se_plantea_en": 420,
-   "detalle": "paradas_201_700, k = 42-55 (M3.7c, 2026-10-15): cada parada con su dato, su «Otro dato», su fondo y sus vetos; dos bajadas declaradas por una confluencia (baja_por_confluencia: Guayaramerín y Trinidad; §5.4 quater)"
+   "detalle": "paradas_201_700, k = 42-55 (M3.7c, 2026-10-15): cada parada con su dato, su «Otro dato», su fondo y sus vetos; dos bajadas declaradas por una confluencia (baja_por_confluencia [P], pregunta abierta para el dueño: Guayaramerín y Trinidad; §5.4 quater)"
   },
   {
    "mundo": 9,
@@ -7703,12 +7703,12 @@
    "otros_datos": [
     {
      "clave": "map.stop.riberalta.dato_02",
-     "texto": "El paiche llegó a Bolivia por accidente en 1976: desplaza peces nativos y se pesca mucho.",
+     "texto": "El paiche llegó a Bolivia en 1976: desplaza peces nativos y da trabajo a pescadores.",
      "etiqueta": "E",
      "fuente": "CR-F92",
      "releida": "2026-10-15",
      "origen": "§(e)",
-     "nota": "Mongabay Latam (2025-07-05): el paiche «fue introducido en Bolivia de manera accidental en 1976», está en el Madre de Dios, el Beni, el Orthon y el Mamoré, «ha desplazado a las especies nativas» como el surubí y el pacú, el Estado «aún no incluye al paiche como especie invasora» y «se motiva su pesca para potenciar la economía de comunidades rurales» [E CR-F92: reabierta el 2026-10-15]. Candidato de §(e) («el paiche contado con sus dos caras»): una cara, el pez que desplaza a los nativos; la otra, la pesca. No dice «invasor» ni «especie a proteger» (veto de §(e))."
+     "nota": "Mongabay Latam (2025-07-05): el paiche «fue introducido en Bolivia de manera accidental en 1976», está en el Madre de Dios, el Beni, el Orthon y el Mamoré, «ha desplazado a las especies nativas» como el surubí y el pacú, el Estado «aún no incluye al paiche como especie invasora» y «se motiva su pesca para potenciar la economía de comunidades rurales»; el biólogo Paul Van Damme cuenta que los pescadores «están pescando un 70 % de paiche» y que el paiche «ocupa un lugar muy importante en las cadenas de valor» [E CR-F92: reabierta el 2026-10-15]. Candidato de §(e) («el paiche contado con sus dos caras»): una cara, el pez que desplaza a los nativos; la otra, la pesca que el Estado fomenta y que da trabajo a pescadores (cultura-ribera 3.9: «un dato solo negativo estigmatiza un medio de vida»). Para caber en 90 caracteres, el texto no dice «por accidente», que está en la fuente; el asesor puede cambiar «da trabajo a pescadores» por otra forma del medio de vida. No dice «invasor» ni «especie a proteger» (veto de §(e))."
     }
    ],
    "nota_dato": "Gran parada del mundo 8 (la primera; D-013 punto 3). Wikipedia EN (Riberalta): la ciudad está «situated where the Madre de Dios River joins the Beni River», en la orilla sur del Beni [E CR-F95: reabierta el 2026-10-15]. Bandera de Bolivia al ganar el 420 (cruces_de_pais: el viaje de entrada del mundo 8, con vuelta): la canoa baja el Madre de Dios desde el Manu, pasa Puerto Heath y entra en Bolivia, y la primera parada en Bolivia es Riberalta. La tricolor, la bandera nacional, de uso náutico [P]: el DS 0241/2009, sobre los símbolos del Estado, no regula las banderas en embarcaciones, y llama a la wiphala «símbolo sagrado» (art. 28) [V lexivox_ds241: leído el 2026-10-15]; la elección la revisan el abogado y el asesor (propuesta §5.3). Sin placa de bienvenida: es una vuelta, como el 310. Plantea la pregunta del mundo 8, que responde la llegada del 470 al Madidi (parada 47). Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
@@ -8207,7 +8207,7 @@
    "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Mamoré río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450)",
    "km_casa": 2518,
    "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
-   "baja_por_confluencia": "Beni abajo desde el Madidi (por Riberalta, Cachuela Esperanza y Villa Bella) y Mamoré arriba: del Beni al Mamoré por la confluencia de Villa Bella (resumen de 5.4: «después Beni abajo → Mamoré arriba»)",
+   "baja_por_confluencia": "Beni abajo desde el Madidi (por Riberalta, Cachuela Esperanza y Villa Bella) y Mamoré arriba: del Beni al Mamoré por la confluencia de Villa Bella (resumen de 5.4: «después Beni abajo (Cachuela Esperanza) → Mamoré arriba (Guayaramerín)»)",
    "temporada": "A (aguas altas, LUT): ciclo 501-520 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
    "dato_del_nivel": {
     "clave": "map.stop.guayaramerin.dato_01",
@@ -8230,7 +8230,7 @@
      "nota": "Wikipedia EN (Mamoré River): 1.930 km [E wp_mamore_river: leída el 2026-10-15]; Wikipedia EN (Guayaramerín): la ciudad está en la orilla oeste del Mamoré, frente a la brasileña Guajará-Mirim [E wp_guayaramerin]. La cifra va como {n} (Q8-A)."
     }
    ],
-   "nota_dato": "Wikipedia EN (Guayaramerín): «Guayaramerín is located on the west side of the Mamoré River, facing the Brazilian city of Guajará-Mirim» [E wp_guayaramerin: leída el 2026-10-15]. La canoa baja el Beni desde el Madidi, pasa Riberalta, Cachuela Esperanza y Villa Bella y sube el Mamoré hasta aquí: los km a casa bajan de ≈ 3.005 a ≈ 2.520 (baja_por_confluencia; propuesta §5.4 quater). Sin bandera de Brasil: la canoa sigue en Bolivia. La misma página cuenta la disputa por la isla Suárez, frente a la ciudad, y el texto y el fondo no la nombran ni la dibujan (abogado). Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "nota_dato": "Wikipedia EN (Guayaramerín): «Guayaramerín is located on the west side of the Mamoré River, facing the Brazilian city of Guajará-Mirim» [E wp_guayaramerin: leída el 2026-10-15]. La canoa baja el Beni desde el Madidi, pasa Riberalta, Cachuela Esperanza y Villa Bella y sube el Mamoré hasta aquí: los km a casa bajan de ≈ 3.005 a ≈ 2.520 (baja_por_confluencia [P], pregunta abierta para el dueño; propuesta §5.4 quater). Sin bandera de Brasil: la canoa sigue en Bolivia. La misma página cuenta la disputa por la isla Suárez, frente a la ciudad, y el texto y el fondo no la nombran ni la dibujan (abogado). Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
    "fondo": {
     "kit": "bg_kit_w08",
     "heroe": "kit:mamore_frontera",
@@ -8439,7 +8439,7 @@
      "nota": "Wikipedia EN (Trinidad, Beni): «Trinidad is technically Bolivia's wettest departmental capital» [E wp_trinidad_beni: leída el 2026-10-15]."
     }
    ],
-   "nota_dato": "Wikipedia EN (Trinidad, Beni): «The original city was on the Mamoré River, but flooding and disease forced a move» e «In 1769, the town moved to its current location, 9 miles away, due to flooding» [E wp_trinidad_beni: leída el 2026-10-15]. El texto no nombra la misión jesuita de 1686 (veto del mundo 8). La canoa baja el Iténez, sube el Mamoré y entra por el Ibare al puerto de Trinidad: los km a casa bajan de ≈ 3.135 a ≈ 2.980 (baja_por_confluencia; propuesta §5.4 quater). Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "nota_dato": "Wikipedia EN (Trinidad, Beni): «The original city was on the Mamoré River, but flooding and disease forced a move» e «In 1769, the town moved to its current location, 9 miles away, due to flooding» [E wp_trinidad_beni: leída el 2026-10-15]. El texto no nombra la misión jesuita de 1686 (veto del mundo 8). La canoa baja el Iténez, sube el Mamoré y entra por el Ibare al puerto de Trinidad: los km a casa bajan de ≈ 3.135 a ≈ 2.980 (baja_por_confluencia [P], pregunta abierta para el dueño; propuesta §5.4 quater). Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
    "fondo": {
     "kit": "bg_kit_w08",
     "heroe": "kit:puerto_del_ibare",
@@ -8564,7 +8564,7 @@
      "nota": "Wikipedia EN (Llanos de Moxos): «a mosaic of savannas and wetlands, with islands of forest and gallery forests along rivers» [E wp_llanos_de_moxos: leída el 2026-10-15]."
     }
    ],
-   "nota_dato": "Wikipedia EN (Bolivian river dolphin): «Locally known as bufeos» y, frente al delfín del Amazonas, «the Bolivian river dolphin has more teeth, a smaller skull, and a longer body» [E wp_bolivian_river_dolphin: leída el 2026-10-15]; Mongabay (2013) lo cuenta entre las especies del sitio Ramsar de los Llanos de Moxos («the endangered Bolivian river dolphin») [E mongabay2013_moxos]. La página no aclara si es especie o subespecie, y el texto no lo dice. Enlaza con el guía: el bufeo boliviano guía la canoa en los mundos 7 y 8 (Q18-A; P-M8) y Rosa vuelve en el viaje del 560. Cierre del mundo 8 (el «castillo»): el Mamoré ya está lleno hasta aquí. Tercera parada del sitio: otro nombre [P] y otro dato. Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "nota_dato": "Wikipedia EN (Bolivian river dolphin): «Locally known as bufeos» y, frente al delfín del Amazonas, «the Bolivian river dolphin has more teeth, a smaller skull, and a longer body» [E wp_bolivian_river_dolphin: leída el 2026-10-15]; Mongabay (2013) lo cuenta entre las especies del sitio Ramsar de los Llanos de Moxos («the endangered Bolivian river dolphin») [E mongabay2013_moxos]. La página lo da como subespecie de Inia geoffrensis («currently recognized as a subspecies»), aunque dice que no hay consenso, y el texto no lo dice. Enlaza con el guía: el bufeo boliviano guía la canoa en los mundos 7 y 8 (Q18-A; P-M8) y Rosa vuelve en el viaje del 560. Cierre del mundo 8 (el «castillo»): el Mamoré ya está lleno hasta aquí. Tercera parada del sitio: otro nombre [P] y otro dato. Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
    "fondo": {
     "kit": "bg_kit_w08",
     "heroe": "kit:laguna_con_bufeos",
@@ -11205,7 +11205,7 @@
   },
   {
    "id": "CR-F92",
-   "nombre": "Mongabay Latam (2025-07-05), «Paiche invasor amenaza ríos de la Amazonía de Bolivia» (F92 de cultura-ribera)",
+   "nombre": "Mongabay Latam (2025-07-05), «El paiche invasor: un pez gigante que amenaza los ríos y la biodiversidad de la Amazonía de Bolivia» (reportaje fotográfico; F92 de cultura-ribera)",
    "url": "https://es.mongabay.com/2025/07/paiche-invasor-pez-gigante-amenaza-amazonia-bolivia-reportaje-fotografico/",
    "licencia": "copyright (solo hechos)",
    "uso": "Introducido «de manera accidental en 1976»; está en el Abuná, el Madera, el Orthon, el Madre de Dios, el Beni, el Yata, el Mamoré y el Iténez; desplaza al surubí y al pacú; el Estado aún no lo declara invasor y «se motiva su pesca». Releída el 2026-10-15 (M3.7c)",
@@ -11316,7 +11316,7 @@
    "nombre": "Wikipedia EN, Bolivian river dolphin",
    "url": "https://en.wikipedia.org/wiki/Bolivian_river_dolphin",
    "licencia": "CC BY-SA 4.0",
-   "uso": "«Locally known as bufeos»; más dientes, cráneo más pequeño y cuerpo más largo que el delfín del Amazonas; aislado por los rápidos del Madeira; hoy se reconoce como subespecie. Leída el 2026-10-15 (M3.7c)",
+   "uso": "«Locally known as bufeos»; más dientes, cráneo más pequeño y cuerpo más largo que el delfín del Amazonas; aislado por los rápidos del Madeira; hoy se reconoce como subespecie de Inia geoffrensis («currently recognized as a subspecies»), aunque la página dice que no hay consenso. Leída el 2026-10-15 (M3.7c)",
    "etiqueta": "E",
    "releida": "2026-10-15"
   }
