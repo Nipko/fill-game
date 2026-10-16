@@ -125,6 +125,28 @@ prueba y sobre las especificaciones de muestra:
 
 Sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra las especificaciones; tarda menos de un segundo.
 
+### `--self-test variante` (P7b de la tanda 4)
+
+```
+dotnet run --project tools/level-qa -c Release -- --self-test variante
+```
+
+Prueba la opción `--variant` por la línea de comandos (`Checks/VariantOptionSelfTest.cs`): lanza este mismo level-qa en un
+proceso hijo, con `--no-reproduce` y `--spec tools/level-generator/specs/campaign_v2.json`, sobre un pack temporal con dos
+niveles del pack de muestra de la tinaja (`tools/out/sample_tinaja/mundo_07_v1.json`): su 323 tal cual (estreno de la tinaja;
+la celda es ★Ti en la a y Ma, su respaldo de d.5.4, en la b) y su 328, una comodidad pura, con el número 327 (Ti en la a y C en
+la b). Solo mira las comprobaciones de las mecánicas del calendario, QA-MECH-SPEC y QA-MECH-CELL (las demás fallan por ser
+dos niveles sueltos):
+
+- con `--variant a`, y sin `--variant` (la publicada de `campaign_v2.json` es la a): el 323 pasa y el 327 da QA-MECH-CELL
+  (la tinaja de su celda no está en el nivel);
+- con `--variant b`, al revés: el 327 pasa y el 323 da QA-MECH-SPEC (Ti fuera de la celda Ma) y QA-MECH-CELL (falta el
+  Matapi). Si `--variant` dejara de llegar a la especificación, la b daría lo mismo que la a y fallaría aquí;
+- `--variant c` con `campaign_v2.json` y `--variant b` con `campaign_v1.json` (sin variantes) salen con 2 y su motivo.
+
+Sale con 0 si todo pasa, 1 si algo falla y 2 si falta el pack de muestra o la especificación; tarda alrededor de un minuto
+(tres pasadas de la compuerta sin reproducción, con el bot y los filtros de la tinaja del 323).
+
 Packs de muestra de las variantes (P5; `pack_schema` 3, niveles 241-320), con su especificación (P6: pasan con 0 fallos):
 
 ```

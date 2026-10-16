@@ -43,18 +43,6 @@ internal static class CampaignRunner
 {
     public const int MaxExtraRounds = 2;
 
-    /// <summary>
-    /// Rondas de rescate [P] (P7b): si un ciclo sigue sin colocación tras las <see cref="MaxExtraRounds"/> rondas extra y el
-    /// último recurso (la bajada de banda tras una etiqueta como penalización), más candidatos para los mismos slots (retos,
-    /// hito, recuperaciones y los que siguen a un reto o al hito), hasta este número de rondas, con la colocación estricta y la
-    /// del último recurso tras cada una. Solo corren en un ciclo que antes no se generaba (salía con 1), así que los packs que
-    /// ya se generaban no cambian (--check de 11-300).
-    /// </summary>
-    public const int RescueRounds = 6;
-
-    /// <summary>Primer intento de las rondas de rescate (las extra usan 1000-2999, las turbias 10000-16999 y las de banda 20000-25999).</summary>
-    public const int RescueRoundFirstAttempt = 30000;
-
     /// <summary>Rondas de candidatos para los slots sin ningún candidato de la banda de su rol (antes de colocar) [P].</summary>
     public const int BandRounds = 6;
 
@@ -360,55 +348,6 @@ internal static class CampaignRunner
                 if (placed is not null)
                 {
                     log($"  ciclo {block[0].Plan.Level}-{block[^1].Plan.Level}: colocado sin exigir la bajada de banda tras cada etiqueta (registrado)");
-                }
-            }
-
-            // Rondas de rescate (P7b): ni el último recurso coloca el ciclo; más candidatos para los slots que deciden la escalera
-            // y, tras cada ronda, la colocación estricta y después la del último recurso. Solo corren en un ciclo que antes no se
-            // generaba, así que los packs ya publicados (11-300) no cambian.
-            for (int rescue = 0; placed is null && rescue < RescueRounds; rescue++)
-            {
-                log($"  ciclo {block[0].Plan.Level}-{block[^1].Plan.Level}: sin colocacion valida; ronda de rescate {rescue + 1}");
-                var extra = block.Where(l => !l.Plan.Ramp && (l.Plan.Role is SlotRole.Challenge or SlotRole.Milestone or SlotRole.Recovery
-                    || block.Any(o => o.Plan.Level == l.Plan.Level - 1 && o.Plan.Role is SlotRole.Challenge or SlotRole.Milestone))).ToList();
-                int rescueRound = rescue;
-                Parallel.ForEach(extra, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, l =>
-                {
-                    SlotResult more = generators.Value!.Generate(l.Plan, firstAttempt: RescueRoundFirstAttempt + (rescueRound * 1000), dropMurky: l.Slot.MurkyDropped);
-                    Pool.Score(more, stats[l.Plan.Range]);
-                    l.Slot.Candidates.AddRange(more.Candidates);
-                    l.Rounds = MaxExtraRounds + 1 + rescueRound;
-                });
-
-                foreach (bool strict in new[] { true, false })
-                {
-                    for (int guard = 0; guard < 50; guard++)
-                    {
-                        placed = Placement.PlaceCycle(spec, block.Select(b => b.Slot).ToList(), history.LastOrDefault(), history, excluded.Contains, stats, strictBand: strict);
-                        if (placed is null)
-                        {
-                            break;
-                        }
-
-                        Candidate? repeated = RepetitionViolation(block, placed, history);
-                        if (repeated is null)
-                        {
-                            break;
-                        }
-
-                        excluded.Add(repeated);
-                        placed = null;
-                    }
-
-                    if (placed is not null)
-                    {
-                        if (!strict)
-                        {
-                            log($"  ciclo {block[0].Plan.Level}-{block[^1].Plan.Level}: colocado sin exigir la bajada de banda tras cada etiqueta (registrado)");
-                        }
-
-                        break;
-                    }
                 }
             }
 

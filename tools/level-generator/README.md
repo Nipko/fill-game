@@ -267,10 +267,8 @@ Fases (los tiempos salen por la consola; el informe no lleva tiempos):
    cada bloque, los slots sin ningún candidato de la banda de su rol piden más candidatos (rondas de banda, hasta 6, con
    sub-semillas desde el intento 20.000 y los estadísticos del pool ya congelados). Si un ciclo no tiene colocación, se
    piden más candidatos a sus retos, hito, siguientes y recuperaciones (hasta 2 rondas) y se prueba el último recurso (la
-   bajada de banda tras una etiqueta pasa a penalización); si tampoco coloca, hasta 6
-   rondas de rescate [P] con los mismos slots (P7b; sub-semillas desde el intento 30.000; `CampaignRunner.RescueRounds`), cada una
-   seguida de la colocación estricta y de la del último recurso. Las rondas de rescate solo corren en un ciclo
-   que antes no se generaba (salía con 1), así que los packs 11-300 no cambian (`--check`). Un reto o hito que quede fuera de
+   bajada de banda tras una etiqueta pasa a penalización); si tampoco coloca, sale con 1 y vuelca por stderr las opciones de
+   cada slot del ciclo (etiqueta medida, D, q y si está fuera de su ventana). Un reto o hito que quede fuera de
    su ventana se publica con la etiqueta que mide (c.2: sin etiqueta si mide menos del 75 %) y el informe lo registra.
 4. **Alivio** (`Metrics/Relief.cs`) desde el nivel 31.
 5. **Packs** (`PackWriter`): `pack_schema` 2, o 3 si algún nivel del pack lleva la tinaja (D-019) o una variante de la 1.0
@@ -390,6 +388,14 @@ dotnet run --project tools/level-generator -c Release -- --self-test curation
 - La última columna («aceptar (fecha)», «sustituir (fecha): nota» con «|» escapada y los saltos de línea aplanados, «pendiente»
   y «pendiente (la decisión del … era para «…»)») y el estado: «pendiente (n de m niveles decididos)», «aceptada (m de m
   niveles)» y «anotada, con cambios pedidos en …».
+- «Dónde va la Tinaja» (P7b; `CurationReport.TinajaChecks`), con 321-340 sintéticos en las dos variantes: la Tinaja en sus 8
+  celdas da «sí», «ninguno» y 8 de 8; en p1, p2 o p19, el aviso en negrita (y «**no**» en «solo donde la pone el
+  calendario»); 9 en el ciclo de estreno, «pasa del tope»; en la b, sin ninguna, «la salida B no la lleva», y con una (el 323,
+  que en la b es Ma), «debería ser 0». El ciclo de estreno sale del plan del nivel de estreno (`Level - Position + 1` del 323),
+  no de una aritmética de ciclos; con 301-320 generados no hay línea del ciclo de estreno.
+
+Con una especificación de dos variantes, las dos líneas de comando del informe (la de «Generado por» y la de level-qa) llevan
+`--variant` explícito, también con la publicada.
 
 La anota quien recoge la decisión del dueño (tech-lead) y se regenera el informe con el comando de arriba. Si la curación pide
 cambios, se cambian la especificación o el generador y se regeneran el pack, el informe y la comprobación de level-qa.
