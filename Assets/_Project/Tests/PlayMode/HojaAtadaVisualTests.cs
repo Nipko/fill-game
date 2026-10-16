@@ -22,12 +22,14 @@ namespace AF.Tests.PlayMode
     /// Hoja atada en el cliente (tarea VA1a; 02 §9.1 «Variantes» y §1.2; propuesta de D-007 b.3: «hoja pequeña atada al cuello con
     /// fibra, con icono grande; nunca cae»; D-002; D-024) y las tarjetas de estreno de las variantes del mundo 6 (02 §10): en el
     /// banco de <see cref="MechanicTestKit"/>, la Hoja atada se distingue de la Hoja (boca abierta, cordel de fibra en el cuello y la
-    /// hoja pequeña con la llave en el hombro, sin tapar la boca ni el líquido), nunca cae (recibe su fruta, se vacía como origen y
-    /// sella, y el overlay sigue igual y sin pasos propios) y pintarla no asigna memoria; en la escena, con el paquete del mundo 6
-    /// (<c>mundo_06_v1.json</c>, <c>pack_schema</c> 3), el 283 sale con su tarjeta de estreno y la regla, que no se cierra sola ni se
-    /// salta con un toque en una cuia, y el nivel no admite el Salto del Boto (<c>skippable</c> = false, 04 §2.6); el 243 (Liana de
-    /// cuenta) lleva su tarjeta con el icono de la Liana y su texto; y en el 283 la Hoja atada sale en su cuia con su llave, se
-    /// selecciona como origen sin cambiar (D-002) y vierte.
+    /// hoja pequeña con la llave, una muestra de la dosis, en el medallón que tapa el nudo, sin tapar la boca ni el líquido), nunca
+    /// cae (recibe su fruta, se vacía como origen, apartando la llave del labio al verter, y sella, y el overlay sigue igual y sin
+    /// pasos propios) y pintarla no asigna memoria; en la escena, con el paquete del mundo 6 (<c>mundo_06_v1.json</c>,
+    /// <c>pack_schema</c> 3), el 283 sale con su tarjeta de estreno y la regla, que no se cierra sola ni se salta con un toque en
+    /// una cuia, y el nivel no admite el Salto del Boto (<c>skippable</c> = false, 04 §2.6); el 243 (Liana de cuenta) lleva su
+    /// tarjeta con su propio icono (la liana con sus cuentas) y su texto; en el 283 la Hoja atada sale en su cuia con su llave,
+    /// reflejada en la última columna, se selecciona como origen sin cambiar (D-002) y vierte; y con 14 cuias (5/5/4) en la
+    /// última columna queda a ≥ 6 dp del marco (revisión de VA1a).
     /// </summary>
     public sealed class HojaAtadaVisualTests
     {
@@ -89,9 +91,11 @@ namespace AF.Tests.PlayMode
             Assert.That(atada.TagVisible, Is.True, "la hoja pequeña que cuelga del nudo (b.3)");
             Assert.That(atada.FallingLeafVisible || atada.IsAnimating, Is.False);
             Assert.That(atada.ShownKey, Is.EqualTo(Tapereba));
-            Assert.That(atada.FruitVisible, Is.True, "con la fruta llave grande (b.3)");
-            Assert.That(atada.FruitSprite, Is.SameAs(_rig.Views[1].OverlayHost.Art.FruitFlight(Tapereba)));
-            Assert.That(atada.FruitAngleDeg, Is.EqualTo(HojaOverlay.FruitTiltDeg).Within(0.01f), "girada sobre el medallón, como en la Hoja");
+            Assert.That(atada.FruitVisible, Is.True, "con la llave grande (b.3)");
+            Assert.That(atada.FruitSprite!.name, Is.EqualTo(SwatchName(Tapereba)), "la llave, una muestra de la dosis: su tinte, su patrón y su icono (revisión de VA1a)");
+            Assert.That(atada.FruitSprite, Is.Not.SameAs(_rig.Views[1].OverlayHost.Art.FruitFlight(Tapereba)), "no la fruta en vuelo, de otro color que su líquido");
+            Assert.That(atada.FruitAngleDeg, Is.EqualTo(0f).Within(0.01f), "la muestra, derecha: su icono se lee como en las capas");
+            Assert.That(hoja.FruitSprite, Is.SameAs(_rig.Views[0].OverlayHost.Art.FruitFlight(Aguaje)), "la Hoja sigue con la fruta");
             Assert.That(atada.StepDurationMs(MechanicStepKind.Open), Is.EqualTo(0f), "nunca se suelta: sin paso Open (b.3)");
             Assert.That(atada.StepDurationMs(MechanicStepKind.Release), Is.EqualTo(0f));
 
@@ -101,14 +105,24 @@ namespace AF.Tests.PlayMode
             Assert.That(tag.GetComponent<UnityEngine.UI.Image>().sprite, Is.SameAs(cover.GetComponent<UnityEngine.UI.Image>().sprite));
             Assert.That(tag.localScale.x, Is.EqualTo(HojaOverlay.TiedLeafScale).Within(1e-4f), "pequeña");
             Assert.That(atada.TagAngleDeg, Is.InRange(-85f, -5f), "cuelga hacia abajo, a la derecha");
+            Assert.That(atada.TiedSide, Is.EqualTo(1f), "en el hombro derecho: no es la última cuia de su fila");
             Assert.That(atada.TiedKnotU.x, Is.GreaterThan(0f), "el nudo, a la derecha del cuello");
+            Assert.That(atada.TiedKeyRectU.Contains(atada.TiedKnotU), Is.True, "el medallón cuelga del nudo y lo tapa: ningún ajuste de TiedKeyXU deja el nudo suelto a la vista");
             Assert.That(Piece(_rig.Views[1], "HojaAtadaCord").GetComponent<UnityEngine.UI.Image>().color, Is.EqualTo(ProceduralArt.HojaCordTint), "de fibra, no de liana");
 
             // La llave va en el hombro derecho: deja libre el eje (el chorro y la boca del origen, D-006), queda sobre la cara del
             // líquido de la cuia llena (Q17 A) y no pasa del tope de la Hoja (la fila de arriba en los tableros de 3 filas).
             Rect key = atada.TiedKeyRectU;
             float cavityTop = CuiaGeometry.CavityTopU(4);
-            Assert.That(key.xMin, Is.GreaterThan(0.3f), "la llave, a un lado del eje");
+            Assert.That(key.xMin, Is.GreaterThan(0.25f), "la llave, a un lado del eje");
+
+            // El medallón, de unos 24 dp (como el de la Hoja) y nunca por debajo de 22 dp con cuias de 48 dp; la muestra, de unos
+            // 16 dp con las cuias de 47 dp de los tableros de 3 filas (revisión de VA1a).
+            const float dpPerU48 = 48f / CuiaGeometry.WidthU;
+            const float dpPerU47 = 47f / CuiaGeometry.WidthU;
+            Assert.That(ProceduralArt.HojaBadgeWidthU * HojaOverlay.TiedBadgeScale * dpPerU48, Is.GreaterThanOrEqualTo(22f));
+            Assert.That(key.width, Is.EqualTo(ProceduralArt.HojaBadgeWidthU * HojaOverlay.TiedBadgeScale).Within(1e-4f));
+            Assert.That(ProceduralArt.HojaAtadaSwatchU * dpPerU47, Is.InRange(15f, 17f));
             Assert.That(key.yMin, Is.GreaterThan(cavityTop + 0.1f), "por encima del líquido de la cuia llena");
             Assert.That(atada.KeyTopAboveLipU, Is.LessThanOrEqualTo(HojaOverlay.KeyTopMaxU));
             Assert.That(atada.FruitTopAboveLipU, Is.LessThanOrEqualTo(HojaOverlay.KeyTopMaxU));
@@ -145,9 +159,37 @@ namespace AF.Tests.PlayMode
             Assert.That(received[0].Mechanic, Is.EqualTo(MechanicType.HojaAtada), "nunca se suelta (b.3)");
             AssertStillTied(atada, rest, "tras recibir su fruta");
 
+            // Al verter hacia la derecha (giro horario: la boca baja por su hombro derecho), el medallón se funde y reaparece en el
+            // hombro de arriba, el izquierdo, y la llave se aparta del labio: el arranque del chorro queda limpio (revisión de
+            // VA1a, captura 54c). Al volver, todo exacto a su sitio.
+            Assert.That(atada.TiedSide, Is.EqualTo(1f));
             BoardState poured = _rig.Pour(received, 0, 3, out _);
-            Assert.That(_rig.RunUntilIdle(6000), Is.LessThan(6000));
+            float maxAway = 0f;
+            float minAlpha = 1f;
+            float awaySide = 0f;
+            float awayKeyX = 0f;
+            int ms = 0;
+            for (; ms < 6000 && !_rig.Animator.IsIdle; ms += PlayModeHelpers.FrameMs)
+            {
+                _rig.Tick(PlayModeHelpers.FrameMs);
+                minAlpha = Mathf.Min(minAlpha, atada.TiedShownAlpha);
+                if (atada.TiedPourAway > maxAway)
+                {
+                    maxAway = atada.TiedPourAway;
+                    awaySide = atada.TiedShownSide;
+                    awayKeyX = atada.TiedKeyU.x;
+                }
+            }
+
+            Assert.That(ms, Is.LessThan(6000));
             Assert.That(poured[0].IsEmpty, Is.True, "vertió su tramo: sí es origen (02 §1.2)");
+            Assert.That(maxAway, Is.EqualTo(1f).Within(1e-4f), "inclinada más de 50°, la llave apartada del todo");
+            Assert.That(awaySide, Is.EqualTo(-1f), "en el hombro de arriba, no bajo el labio por el que cae el chorro");
+            Assert.That(minAlpha, Is.LessThan(0.1f), "cambia de hombro fundiéndose (casi transparente a 16 ms por fotograma), sin salto");
+            Assert.That(awayKeyX, Is.LessThan(-HojaOverlay.TiedKeyXU - 0.1f), "apartada del labio, hacia el hombro");
+            Assert.That(atada.TiedPourAway, Is.EqualTo(0f), "de vuelta en su ranura, en su sitio");
+            Assert.That(atada.TiedShownSide, Is.EqualTo(1f));
+            Assert.That(atada.TiedShownAlpha, Is.EqualTo(1f));
             AssertStillTied(atada, rest, "tras verter como origen");
 
             Assert.That(MechanicTestKit.TryFindRecord(_rig.Animator, MechanicStepKind.Open, 0, out _), Is.False, "sin paso Open");
@@ -250,13 +292,15 @@ namespace AF.Tests.PlayMode
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
             Assert.That(card.Card!.Kind, Is.EqualTo(LevelCardKind.Debut));
             Assert.That(card.Card.IntroMechanic, Is.EqualTo(LevelCardInfo.LianaCountIntro));
-            Assert.That(card.Card.IntroIconKey, Is.EqualTo("liana"), "el icono de la Liana [P]");
+            Assert.That(card.Card.IntroIconKey, Is.EqualTo(LevelCardInfo.LianaCountIntro), "su propio icono [P]: la liana con sus cuentas");
+            Assert.That(ProceduralArt.LianaCountIconKey, Is.EqualTo(LevelCardInfo.LianaCountIntro));
             Assert.That(card.TutorialText, Is.EqualTo(UiText.TutorialLianaN));
             Assert.That(card.TutorialText, Does.Contain("cuentas"));
             Assert.That(CardSetup.LineCount(card.Tutorial), Is.InRange(1, LevelCardView.MaxTutorialLines));
             Assert.That(card.Tutorial.fontSize, Is.GreaterThanOrEqualTo(LevelCardView.MinTutorialSp));
-            Assert.That(card.HeroSprite, Is.SameAs(view.CardArt.CardHeroIcon("liana")));
-            Assert.That(card.HeroSprite!.name, Is.EqualTo("card_hero_liana"));
+            Assert.That(card.HeroSprite, Is.SameAs(view.CardArt.CardHeroIcon(LevelCardInfo.LianaCountIntro)));
+            Assert.That(card.HeroSprite!.name, Is.EqualTo("card_hero_liana_n"));
+            Assert.That(card.HeroSprite, Is.Not.SameAs(view.CardArt.CardHeroIcon("liana")), "no el de la Liana con fruta (sin baya)");
             Assert.That(view.LastCardProbe, Does.Contain("\"intro\":\"liana_n\""));
             CardSetup.AssertInsidePanel(view);
 
@@ -285,7 +329,11 @@ namespace AF.Tests.PlayMode
             HojaOverlay atada = OverlayOf(view, MechanicType.HojaAtada);
             Assert.That(atada.Visible && atada.CordVisible && atada.TagVisible && atada.FruitVisible, Is.True);
             Assert.That(atada.ShownKey, Is.EqualTo(Aguaje));
-            Assert.That(atada.FruitSprite, Is.SameAs(view.OverlayHost.Art.FruitFlight(Aguaje)));
+            Assert.That(atada.FruitSprite!.name, Is.EqualTo(SwatchName(Aguaje)), "la muestra del aguaje: naranja, con escamas y su icono");
+            Assert.That(index, Is.EqualTo(11), "la última cuia: última columna de la fila de abajo (4/4/4)");
+            Assert.That(atada.TiedSide, Is.EqualTo(-1f), "en la última columna, reflejada al hombro izquierdo, lejos del marco");
+            Assert.That(atada.TiedKeyRectU.Contains(atada.TiedKnotU), Is.True, "reflejada, el medallón sigue en el nudo");
+            AssertClearOfFrame(boot, view, 6f);
             for (int i = 0; i < boot.View.Views.Length; i++)
             {
                 if (i != index)
@@ -320,6 +368,118 @@ namespace AF.Tests.PlayMode
             MechanicTestKit.AssertViewMatchesModel(boot);
             Assert.That(flow.Session.Current[index].Mechanic, Is.EqualTo(MechanicType.HojaAtada), "nunca se suelta");
             AssertStillTied(atada, rest, "tras verter en el 283");
+        }
+
+        [UnityTest]
+        public IEnumerator HojaAtada_LastColumnOfFive_MirrorsAndKeepsClearOfTheFrame()
+        {
+            // 14 cuias (5/5/4, D-006: los hitos de K = 13 + 1 vacío del mundo 7+) con la Hoja atada en la última columna de la
+            // fila 1, la de cuias más estrechas: el medallón y la hoja que cuelga se reflejan al hombro izquierdo y quedan a ≥ 6 dp
+            // del canto interior del marco (revisión de VA1a).
+            LaunchOptions.LevelPackJsonOverride = FourteenCuiaPack();
+            yield return MechanicTestKit.LoadPlaying(283);
+            GameBootstrap boot = GameBootstrap.Current!;
+            int index = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.HojaAtada);
+            Assert.That(index, Is.EqualTo(FourteenAtada));
+            Assert.That(boot.Flow!.Session.Current.Count, Is.EqualTo(14));
+            CuiaView view = boot.View!.Views[index];
+            HojaOverlay atada = OverlayOf(view, MechanicType.HojaAtada);
+            Assert.That(atada.Visible && atada.CordVisible && atada.TagVisible && atada.FruitVisible, Is.True);
+            Assert.That(atada.TiedSide, Is.EqualTo(-1f), "la última columna de su fila: reflejada");
+            Assert.That(atada.TiedKnotU.x, Is.LessThan(0f), "el nudo, a la izquierda del cuello");
+            Assert.That(atada.TiedKeyRectU.Contains(atada.TiedKnotU), Is.True);
+            Assert.That(atada.TagAngleDeg, Is.InRange(5f, 85f), "la hoja cuelga hacia abajo, a la izquierda");
+            AssertClearOfFrame(boot, view, 6f);
+        }
+
+        /// <summary>Índice de la Hoja atada en <see cref="FourteenCuiaPack"/>: la última columna de la fila 1 (5/5/4).</summary>
+        internal const int FourteenAtada = 4;
+
+        /// <summary>
+        /// Paquete de prueba (<c>pack_schema</c> 3) en el 283 del mundo 6 con 14 cuias de 4 (5/5/4, D-006): 13 tintes del glosario
+        /// §9 (índices de motor 1-13) con 4 dosis cada uno en escalera (la cuia i lleva i, i + 3, i + 6 e i + 9) y una vacía; la
+        /// Hoja atada de urucum (la fruta de su dosis del fondo, b.3) en la cuia <see cref="FourteenAtada"/>, la última columna de la fila 1.
+        /// </summary>
+        internal static string FourteenCuiaPack()
+        {
+            string[] ids = { "guanabana", "cupuacu", "tapereba", "aguaje", "urucum", "camu_camu", "bacaba", "acai", "jenipapo", "agua_tapajos", "lulo", "araza", "cacao" };
+            var cuias = new StringBuilder();
+            var caps = new StringBuilder();
+            var attrs = new StringBuilder();
+            for (int i = 0; i < 14; i++)
+            {
+                string sep = i == 0 ? string.Empty : ", ";
+                caps.Append(sep).Append('4');
+                attrs.Append(sep).Append(i == FourteenAtada ? "{ \"type\": \"hoja_atada\", \"key\": 5 }" : "null");
+                cuias.Append(sep).Append('[');
+                if (i < ids.Length)
+                {
+                    for (int k = 0; k < 4; k++)
+                    {
+                        cuias.Append(k == 0 ? string.Empty : ", ").Append(((i + (3 * k)) % ids.Length) + 1);
+                    }
+                }
+
+                cuias.Append(']');
+            }
+
+            return "{ \"pack_schema\": 3, \"pack_id\": \"test_m06_v1_n0283_14\", \"kind\": \"campaign\", \"world\": 6, \"world_id\": \"w06_oriente\", "
+                + "\"lap\": 1, \"water_base\": \"white\", \"levels\": [ { \"id\": \"m06_v1_n0283\", \"level\": 283, \"world\": 6, \"lap\": 1, "
+                + "\"water_base\": \"white\", \"palette\": [\"" + string.Join("\", \"", ids) + "\"], \"units_per_color\": 4, "
+                + "\"caps\": [" + caps + "], \"cuias\": [" + cuias + "], \"attrs\": [" + attrs + "], "
+                + "\"murky\": false, \"hidden\": [], \"difficulty\": { \"par\": 1 }, \"relief\": [] } ] }";
+        }
+
+        /// <summary>Nombre del sprite de la muestra de la llave de la Hoja atada (<c>ProceduralArt.HojaAtadaSwatch</c>).</summary>
+        internal static string SwatchName(int tint)
+        {
+            return "mech_hoja_atada_swatch_" + ProceduralArt.TintIds[tint];
+        }
+
+        /// <summary>
+        /// Margen (dp) entre lo que dibuja la Hoja atada de la cuia <paramref name="view"/> (el cordel, la placa del medallón y la
+        /// hoja que cuelga, con su rectángulo girado entero, transparencias incluidas) y el canto interior del marco
+        /// (<c>PanelInnerShadow</c>), en el espacio del tablero (dp).
+        /// </summary>
+        internal static float FrameMarginDp(GameBootstrap boot, CuiaView view)
+        {
+            RectTransform board = boot.View!.BoardContainer;
+            Transform? inner = board.Find("PanelInnerShadow");
+            Assert.That(inner, Is.Not.Null, "PanelInnerShadow");
+            Rect frame = BoundsIn(board, (RectTransform)inner!);
+            float margin = float.MaxValue;
+            string[] pieces = { "HojaAtadaCord", "HojaAtadaBadge", "HojaAtadaLeaf", "HojaAtadaFruit" };
+            for (int i = 0; i < pieces.Length; i++)
+            {
+                Rect r = BoundsIn(board, Piece(view, pieces[i]));
+                margin = Mathf.Min(margin, Mathf.Min(r.xMin - frame.xMin, frame.xMax - r.xMax));
+            }
+
+            return margin;
+        }
+
+        private static void AssertClearOfFrame(GameBootstrap boot, CuiaView view, float minDp)
+        {
+            float margin = FrameMarginDp(boot, view);
+            TestContext.WriteLine("AF_VA1A margen al marco: " + margin.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " dp");
+            Assert.That(margin, Is.GreaterThanOrEqualTo(minDp), "el medallón y la hoja, a ≥ " + minDp + " dp del canto interior del marco");
+        }
+
+        // Caja de un RectTransform (girado o no) en el espacio local de space.
+        private static Rect BoundsIn(RectTransform space, RectTransform rt)
+        {
+            var corners = new Vector3[4];
+            rt.GetWorldCorners(corners);
+            Vector2 min = new Vector2(float.MaxValue, float.MaxValue);
+            Vector2 max = new Vector2(float.MinValue, float.MinValue);
+            for (int i = 0; i < 4; i++)
+            {
+                Vector3 p = space.InverseTransformPoint(corners[i]);
+                min = Vector2.Min(min, p);
+                max = Vector2.Max(max, p);
+            }
+
+            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
         }
 
         // Carga el nivel del mundo 6 con las tarjetas encendidas, como CardSetup.Load con el catálogo real.

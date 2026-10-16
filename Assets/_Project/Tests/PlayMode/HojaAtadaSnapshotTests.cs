@@ -26,8 +26,10 @@ namespace AF.Tests.PlayMode
     /// (vertiendo, inclinada); y, en un paquete de prueba con la Hoja y la Hoja atada juntas en la fila de arriba (b.3 no las
     /// junta en un nivel; aquí solo para compararlas), <c>54d_hoja_vs_atada</c>, <c>54e_hoja_atada_receive</c> (a mitad del
     /// vertido que la llena) y <c>54f_hoja_atada_sealed</c> (sellada, con el cordel y la llave: b.3, «conserva la cuerda tras
-    /// sellar»). Sirven para mirar a 47-56 dp que se distinga de la Hoja, que no tape la boca ni el líquido, los solapes con las
-    /// vecinas y con la fila de arriba y la línea D-003. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
+    /// sellar»); y <c>54g_hoja_atada_14_last_column</c>, con 14 cuias (5/5/4) y la Hoja atada en la última columna de la fila 1
+    /// (reflejada al hombro izquierdo, lejos del marco). Sirven para mirar a 47-56 dp que se distinga de la Hoja, que la muestra
+    /// del medallón diga la fruta, que no tape la boca ni el líquido, los solapes con las vecinas, con el marco y con la fila de
+    /// arriba y la línea D-003. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.HojaAtadaSnapshotTests</c> sin <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/</c>.
     /// </summary>
     [Explicit("Capturas visuales manuales; necesitan dispositivo gráfico.")]
@@ -113,6 +115,19 @@ namespace AF.Tests.PlayMode
             Save(dir, "54f_hoja_atada_sealed", boot, CompareAtada);
         }
 
+        [UnityTest]
+        public IEnumerator CaptureFourteenLastColumn()
+        {
+            string dir = SnapshotKit.Prepare();
+            LaunchOptions.LevelPackJsonOverride = HojaAtadaVisualTests.FourteenCuiaPack();
+            yield return Load(283);
+            GameBootstrap boot = GameBootstrap.Current!;
+            int atada = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.HojaAtada);
+            Assert.That(atada, Is.EqualTo(HojaAtadaVisualTests.FourteenAtada));
+            Save(dir, "54g_hoja_atada_14_last_column", boot, atada);
+            TestContext.WriteLine("AF_VA1A 54g: margen al marco " + HojaAtadaVisualTests.FrameMarginDp(boot, boot.View!.Views[atada]).ToString("0.0", CultureInfo.InvariantCulture) + " dp");
+        }
+
         private static IEnumerator CaptureCard(string dir, int level, string name, float fontScale)
         {
             LaunchOptions.LevelPackJsonOverride = HojaAtadaVisualTests.World6Pack();
@@ -168,7 +183,9 @@ namespace AF.Tests.PlayMode
                     + " u, medallón " + leaf.KeyTopAboveLipU.ToString("0.00", CultureInfo.InvariantCulture) + " u y fruta "
                     + leaf.FruitTopAboveLipU.ToString("0.00", CultureInfo.InvariantCulture) + " u sobre lo alto ("
                     + (leaf.FruitTopAboveLipU * u * 3f).ToString("0.0", CultureInfo.InvariantCulture) + " px), hoja a "
-                    + leaf.TagAngleDeg.ToString("0", CultureInfo.InvariantCulture) + "°");
+                    + leaf.TagAngleDeg.ToString("0", CultureInfo.InvariantCulture) + "°, lado " + leaf.TiedSide.ToString("0", CultureInfo.InvariantCulture) + " (se ve en " + leaf.TiedShownSide.ToString("0", CultureInfo.InvariantCulture) + ")"
+                    + ", apartada " + leaf.TiedPourAway.ToString("0.00", CultureInfo.InvariantCulture) + ", placa "
+                    + (ProceduralArt.HojaBadgeWidthU * HojaOverlay.TiedBadgeScale * u).ToString("0.0", CultureInfo.InvariantCulture) + " dp");
             }
 
             Assert.That(File.Exists(Path.Combine(dir, name + ".png")), Is.True);

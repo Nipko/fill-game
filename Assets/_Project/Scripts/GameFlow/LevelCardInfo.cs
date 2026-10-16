@@ -110,8 +110,8 @@ namespace AF.GameFlow
         public string? IntroMechanic { get; }
 
         /// <summary>
-        /// Clave del icono grande del estreno (<see cref="IntroIconKeyOf"/>): la de <see cref="IntroMechanic"/>, salvo en la Liana de
-        /// cuenta, que no es un tipo propio y lleva el de la Liana. Null sin estreno.
+        /// Clave del icono grande del estreno (<see cref="IntroIconKeyOf"/>): la de <see cref="IntroMechanic"/>, también en las
+        /// variantes, que llevan icono propio. Null sin estreno.
         /// </summary>
         public string? IntroIconKey => IntroIconKeyOf(IntroMechanic);
 
@@ -148,18 +148,14 @@ namespace AF.GameFlow
 
         /// <summary>
         /// Clave del icono grande de la tarjeta del estreno <paramref name="introMechanic"/> (02 §9.1 y §10): la misma clave para
-        /// las mecánicas y las capacidades (<c>hoja</c>, <c>chica</c>…) y para la Hoja atada (<c>hoja_atada</c>, que es su propio
-        /// tipo, <see cref="MechanicType.HojaAtada"/>, con su propio icono); la Liana de cuenta (<c>liana_n</c> [P], 243) es la
-        /// Liana con <c>n</c>, así que lleva el icono de la Liana [P] y la distingue su texto. Null sin estreno.
+        /// las mecánicas y las capacidades (<c>hoja</c>, <c>chica</c>…), para la Hoja atada (<c>hoja_atada</c>, que es su propio
+        /// tipo, <see cref="MechanicType.HojaAtada"/>) y para la Liana de cuenta (<c>liana_n</c> [P], 243), que aunque sea la Liana
+        /// con <c>n</c> lleva su propio icono [P]: la liana con dos cuentas y sin la baya de la Liana con fruta (revisión de VA1a:
+        /// el texto enseña a leer las cuentas). Null sin estreno.
         /// </summary>
         public static string? IntroIconKeyOf(string? introMechanic)
         {
-            if (string.IsNullOrEmpty(introMechanic))
-            {
-                return null;
-            }
-
-            return string.Equals(introMechanic, LianaCountIntro, StringComparison.Ordinal) ? MechanicTypes.ToKey(MechanicType.Liana) : introMechanic;
+            return string.IsNullOrEmpty(introMechanic) ? null : introMechanic;
         }
 
         /// <summary>El nivel tiene tarjeta previa: Difícil o Muy difícil, o estreno de una mecánica (02 §10; §c.1).</summary>
