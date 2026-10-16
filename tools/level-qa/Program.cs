@@ -23,7 +23,7 @@ const string Usage = """
     level-qa: control de calidad de paquetes de niveles de Amazon Fill (GDD 08 sec. 2.4 y 4.1; 03 sec. 17)
 
     Uso:
-      dotnet run --project tools/level-qa -c Release -- <paquete.json> [<paquete.json> ...] [--report <informe.md>] [--spec <campaign.json>] [--levels a-b] [--no-reproduce]
+      dotnet run --project tools/level-qa -c Release -- <paquete.json> [<paquete.json> ...] [--report <informe.md>] [--spec <campaign.json>] [--levels a-b] [--variant a|b] [--no-reproduce]
       dotnet run --project tools/level-qa -- --self-test [key2|reglas]
       dotnet run --project tools/level-qa -- --help
 
@@ -44,6 +44,9 @@ const string Usage = """
                  (03 sec. 17 #10; tarda lo que el generador: varios minutos en Release);
       QA-BAND-Q  banda medida (cuantil de D en el pool regenerado) acorde al rol del ciclo (03 sec. 7).
     --no-reproduce salta QA-REPRO y QA-BAND-Q (fixtures negativos, pruebas rapidas); nunca en el CI.
+    --variant a|b (P7b): la variante de una especificacion con respaldos, la misma del --variant del generador (por
+    defecto la publicada, published_variant; b = la salida B de D-019, sin la Tinaja, de campaign_v2.json): el
+    calendario de las comprobaciones y la regeneracion de QA-REPRO y QA-BAND-Q salen de ella.
     --self-test [key2]: genera el estreno de cada variante de la 1.0 de tools/level-generator/specs/sample_variants.json,
     lo escribe a un pack temporal y comprueba que este lector lo lee (tambien la key2 de la Flor y el relief) con el mismo
     tablero y el mismo hash que el generador; la Flor sin key2 no se construye. Sale con 0, 1 (algun FAIL) o 2.
@@ -99,6 +102,7 @@ var packages = new List<string>();
 string? report = null;
 string? specPath = null;
 string? levelsArg = null;
+string? variantArg = null;
 bool reproduce = true;
 for (int i = 0; i < args.Length; i++)
 {
@@ -114,6 +118,10 @@ for (int i = 0; i < args.Length; i++)
     else if (arg == "--levels" && i + 1 < args.Length && levelsArg is null)
     {
         levelsArg = args[++i];
+    }
+    else if (arg == "--variant" && i + 1 < args.Length && variantArg is null)
+    {
+        variantArg = args[++i];
     }
     else if (arg == "--no-reproduce" && reproduce)
     {
@@ -137,7 +145,7 @@ if (packages.Count == 0)
 CampaignSpec spec;
 try
 {
-    spec = CampaignSpec.Load(specPath ?? DefaultSpec);
+    spec = CampaignSpec.Load(specPath ?? DefaultSpec, variantArg);
 }
 catch (CampaignSpecException e)
 {
@@ -240,7 +248,9 @@ if (report is not null)
     sb.Append("# Informe de `level-qa`\n\n");
     sb.Append("Generado por `dotnet run --project tools/level-qa -c Release -- ")
       .Append(string.Join(" ", packages.Select(p => p.Replace('\\', '/'))))
+      .Append(specPath is null ? "" : " --spec " + specPath.Replace('\\', '/'))
       .Append(levelsArg is null ? "" : " --levels " + levelsArg)
+      .Append(variantArg is null ? "" : " --variant " + variantArg)
       .Append(reproduce ? "" : " --no-reproduce")
       .Append(" --report ").Append(report.Replace('\\', '/')).Append("`: no se edita a mano.\n\n");
     sb.Append(string.Create(CultureInfo.InvariantCulture,

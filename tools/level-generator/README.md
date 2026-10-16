@@ -266,7 +266,11 @@ Fases (los tiempos salen por la consola; el informe no lleva tiempos):
    recuperación, comodidad, estreno, remanso y rampa no se usa ningún candidato fuera de ella (03 §17 #3). Antes de colocar
    cada bloque, los slots sin ningún candidato de la banda de su rol piden más candidatos (rondas de banda, hasta 6, con
    sub-semillas desde el intento 20.000 y los estadísticos del pool ya congelados). Si un ciclo no tiene colocación, se
-   piden más candidatos a sus retos, hito, siguientes y recuperaciones (hasta 2 rondas); un reto o hito que quede fuera de
+   piden más candidatos a sus retos, hito, siguientes y recuperaciones (hasta 2 rondas) y se prueba el último recurso (la
+   bajada de banda tras una etiqueta pasa a penalización); si tampoco coloca, hasta 6
+   rondas de rescate [P] con los mismos slots (P7b; sub-semillas desde el intento 30.000; `CampaignRunner.RescueRounds`), cada una
+   seguida de la colocación estricta y de la del último recurso. Las rondas de rescate solo corren en un ciclo
+   que antes no se generaba (salía con 1), así que los packs 11-300 no cambian (`--check`). Un reto o hito que quede fuera de
    su ventana se publica con la etiqueta que mide (c.2: sin etiqueta si mide menos del 75 %) y el informe lo registra.
 4. **Alivio** (`Metrics/Relief.cs`) desde el nivel 31.
 5. **Packs** (`PackWriter`): `pack_schema` 2, o 3 si algún nivel del pack lleva la tinaja (D-019) o una variante de la 1.0
@@ -339,6 +343,10 @@ bytes. Secciones:
   de las Aguas turbias).
 - **Hitos**, uno a uno: tablero, mecánicas (con las Aguas turbias y sus realidades), medida y notas de la generación.
 - **Tableros de estreno** (02 §9.2 regla 2) y la sección **Variantes de la 1.0** del informe de la generación.
+- **Dónde va la Tinaja** (P7b; solo si algún nivel generado la lleva en la variante a o tiene respaldo en la b): cada celda con la
+  Tinaja de la a, su respaldo de la b (d.5.4) y lo que se publica, con las dosis, K y cuias; las apariciones por ciclo (como
+  mucho 8 en el de su estreno, propuesta de la tinaja d.3) y las comprobaciones «solo donde la pone el calendario», «nunca en
+  p1, p2 ni p19» y, en la b, «ninguna»; después, la sección **Tinaja** del informe de la generación (filtros por nivel).
 - **Otros niveles con avisos** y la tabla **Curación del dueño** (retos, hitos y el primer tablero de cada estreno), con la
   decisión de cada nivel copiada de `--decisions` y su estado (pendiente, aceptada o con cambios pedidos).
 
