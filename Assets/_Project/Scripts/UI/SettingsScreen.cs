@@ -63,6 +63,9 @@ namespace AF.UI
         /// </summary>
         public const string SlothMessagesId = "sloth_messages";
 
+        /// <summary>Margen interior de la tarjeta (dp): el de la cabecera arriba y el del visor abajo, dentro del marco.</summary>
+        public const float PanelInsetDp = 16f;
+
         private const float RowGapDp = 6f;
         private const float SectionGapDp = 12f;
         private const float RadioDp = 20f;
@@ -468,17 +471,19 @@ namespace AF.UI
             _slothRow.Place(0f, 0f, inner, rowH, s);
             y += rowH + RowGapDp;
 
-            // Huecos de MO3 y F4: aún ocultos (no ocupan sitio).
-            y += 16f - RowGapDp;
+            // Huecos de MO3 y F4: aún ocultos (no ocupan sitio). El contenido acaba en la última fila.
+            y -= RowGapDp;
 
             // La tarjeta crece con el contenido hasta el alto libre entre las zonas seguras; si no cabe, el contenido se desplaza
-            // (empieza arriba cada vez que se coloca).
+            // (empieza arriba cada vez que se coloca). El visor deja abajo el mismo margen interior de 16 dp que la cabecera arriba:
+            // lo que se corta, se corta dentro de la crema y nunca pisa el marco de madera (revisión de AU1; D-003).
             float contentH = y;
-            float maxH = Mathf.Max(headerBottom + MinRowDp, ch - safeTop - safeBottom - 16f);
-            float h = Mathf.Min(headerBottom + contentH, maxH);
-            UiBuilder.Place(_viewport, 0f, headerBottom, w, h - headerBottom);
+            float maxH = Mathf.Max(headerBottom + MinRowDp + PanelInsetDp, ch - safeTop - safeBottom - 16f);
+            float h = Mathf.Min(headerBottom + contentH + PanelInsetDp, maxH);
+            float viewH = h - headerBottom - PanelInsetDp;
+            UiBuilder.Place(_viewport, 0f, headerBottom, w, viewH);
             UiBuilder.Place(_content, 0f, 0f, w, contentH);
-            _scroll.vertical = contentH > h - headerBottom + 0.5f;
+            _scroll.vertical = contentH > viewH + 0.5f;
             _scroll.velocity = Vector2.zero;
             float top = Mathf.Round((ch - h) * 0.5f);
             top = Mathf.Min(top, ch - safeBottom - 8f - h);

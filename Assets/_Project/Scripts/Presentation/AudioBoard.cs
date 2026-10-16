@@ -41,17 +41,6 @@ namespace AF.Presentation
             AudioCues.PlayFruit(SfxId.Select, TopTint(cuia));
         }
 
-        /// <summary>Se bajó la selección de <paramref name="index"/>: la variante grave de <c>sfx_select</c> [P].</summary>
-        public static void Deselect(BoardState board, int index)
-        {
-            if ((uint)index >= (uint)board.Count || board[index].Mechanic == MechanicType.Tinaja)
-            {
-                return;
-            }
-
-            AudioCues.SelectDown(TopTint(board[index]));
-        }
-
         /// <summary>
         /// El lecho del mundo <paramref name="world"/> con las capas de percusión que tocan con las cuias selladas de
         /// <paramref name="board"/> (07 §9.3: la primera al sellar la primera cuia y otra cada 25 %).
@@ -123,16 +112,20 @@ namespace AF.Presentation
             }
         }
 
-        // Fruta de la dosis de arriba (1-14), o 0 si está oculta o no es una fruta (agua, Barro).
+        /// <summary>
+        /// Fruta cuya nota suena para una cima de color <paramref name="topColor"/> (1-14), o 0, la nota neutra del laboratorio, si
+        /// está oculta (<paramref name="topHidden"/>) o no es una fruta (agua, Barro): el sonido nunca delata lo que no se ve.
+        /// Aparte de <see cref="Select"/> porque una cima oculta no se puede construir (R7) y la regla se prueba igual.
+        /// </summary>
+        public static int NoteTint(int topColor, bool topHidden)
+        {
+            return !topHidden && topColor >= 1 && topColor <= SfxCatalog.FruitCount ? topColor : 0;
+        }
+
+        // Fruta de la dosis de arriba (1-14), o 0 si está vacía, oculta o no es una fruta (agua, Barro).
         private static int TopTint(Cuia cuia)
         {
-            if (cuia.IsEmpty || cuia.IsHiddenAt(cuia.Count - 1))
-            {
-                return 0;
-            }
-
-            int tint = cuia.TopColor;
-            return tint >= 1 && tint <= SfxCatalog.FruitCount ? tint : 0;
+            return cuia.IsEmpty ? 0 : NoteTint(cuia.TopColor, cuia.IsHiddenAt(cuia.Count - 1));
         }
     }
 }

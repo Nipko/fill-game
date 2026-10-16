@@ -57,18 +57,6 @@ namespace AF.Audio
             return Master(raw, e.TargetPeakDb, e.Canopy, e.Gesture);
         }
 
-        /// <summary>
-        /// Variante de <c>sfx_select</c> al bajar la selección (la lista, §1: «una variante apagada una quinta más grave»,
-        /// −35 dBFS) [P]: la misma síntesis una quinta justa por debajo (× 2/3).
-        /// </summary>
-        public static float[] RenderSelectDown(int tint = 0)
-        {
-            double hz = SfxCatalog.FruitFrequency(tint);
-            double f = (hz > 0.0 ? hz : SfxSynth.SelectDefaultHz) * (2.0 / 3.0);
-            SfxEntry e = SfxCatalog.Get(SfxId.Select);
-            return Master(SfxSynth.RenderRaw(SfxId.Select, f), SfxCatalog.SelectDownPeakDb, false, e.Gesture);
-        }
-
         /// <summary>Pasa <paramref name="raw"/> por los cuatro arreglos (cola, graves, largo y nivel) hasta <paramref name="targetPeakDb"/>.</summary>
         public static float[] Master(float[] raw, double targetPeakDb, bool canopy, bool gesture)
         {

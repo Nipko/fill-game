@@ -23,14 +23,13 @@ namespace AF.Audio
     public readonly struct AudioEvent
     {
         /// <summary>Crea el evento.</summary>
-        public AudioEvent(AudioEventKind kind, SfxId sfx, int tint, HapticKind haptic, bool audible, bool selectDown)
+        public AudioEvent(AudioEventKind kind, SfxId sfx, int tint, HapticKind haptic, bool audible)
         {
             Kind = kind;
             Sfx = sfx;
             Tint = tint;
             Haptic = haptic;
             Audible = audible;
-            SelectDown = selectDown;
         }
 
         /// <summary>Tipo.</summary>
@@ -47,9 +46,6 @@ namespace AF.Audio
 
         /// <summary>Se habría oído (efecto o chorro) o sentido (háptico).</summary>
         public bool Audible { get; }
-
-        /// <summary>Es la variante de bajar la selección.</summary>
-        public bool SelectDown { get; }
 
         /// <inheritdoc />
         public override string ToString()
@@ -110,7 +106,7 @@ namespace AF.Audio
             for (int i = 0; i < _events.Count; i++)
             {
                 AudioEvent e = _events[i];
-                if (e.Kind == AudioEventKind.Sfx && e.Sfx == id && !e.SelectDown && (!audibleOnly || e.Audible))
+                if (e.Kind == AudioEventKind.Sfx && e.Sfx == id && (!audibleOnly || e.Audible))
                 {
                     n++;
                 }
@@ -157,13 +153,7 @@ namespace AF.Audio
                 Mix.ToadaStarted();
             }
 
-            _events.Add(new AudioEvent(AudioEventKind.Sfx, id, tint, default, Mix.SfxAudible, false));
-        }
-
-        /// <inheritdoc />
-        public void PlaySelectDown(int tint)
-        {
-            _events.Add(new AudioEvent(AudioEventKind.Sfx, SfxId.Select, tint, default, Mix.SfxAudible, true));
+            _events.Add(new AudioEvent(AudioEventKind.Sfx, id, tint, default, Mix.SfxAudible));
         }
 
         /// <inheritdoc />
@@ -171,7 +161,7 @@ namespace AF.Audio
         {
             ActivePours++;
             LastPourLevel = level;
-            _events.Add(new AudioEvent(AudioEventKind.PourBegin, SfxId.PourLoop, voice, default, Mix.SfxAudible, false));
+            _events.Add(new AudioEvent(AudioEventKind.PourBegin, SfxId.PourLoop, voice, default, Mix.SfxAudible));
         }
 
         /// <inheritdoc />
@@ -184,13 +174,13 @@ namespace AF.Audio
         public void PourEnd(int voice)
         {
             ActivePours = ActivePours > 0 ? ActivePours - 1 : 0;
-            _events.Add(new AudioEvent(AudioEventKind.PourEnd, SfxId.PourLoop, voice, default, Mix.SfxAudible, false));
+            _events.Add(new AudioEvent(AudioEventKind.PourEnd, SfxId.PourLoop, voice, default, Mix.SfxAudible));
         }
 
         /// <inheritdoc />
         public void Haptic(HapticKind kind)
         {
-            _events.Add(new AudioEvent(AudioEventKind.Haptic, default, 0, kind, Mix.HapticsAllowed, false));
+            _events.Add(new AudioEvent(AudioEventKind.Haptic, default, 0, kind, Mix.HapticsAllowed));
         }
 
         /// <inheritdoc />

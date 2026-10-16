@@ -173,29 +173,40 @@ namespace AF.Audio
             return 0.0;
         }
 
+        /// <summary>Ventana a cada lado de la costura con la que se compara su salto (s): unos 5 ms.</summary>
+        public const double SeamWindowSeconds = 0.005;
+
         /// <summary>
-        /// Salto de la costura de un bucle (|última − primera|) dividido por el mayor salto entre dos muestras seguidas del
-        /// interior: ≤ 1 es una costura sin clic (no salta más que la propia onda).
+        /// Salto de la costura de un bucle (|primera − última|) dividido por el mayor salto entre dos muestras seguidas de la
+        /// ventana de <see cref="SeamWindowSeconds"/> a cada lado (el final y el principio del bucle): ≤ 1 es una costura sin clic,
+        /// porque no salta más que la onda que la rodea. Se compara con lo de alrededor y no con todo el bucle, para que un salto
+        /// en un tramo flojo no quede tapado por la burbuja más fuerte. <paramref name="sampleRate"/>: la del bucle.
         /// </summary>
-        public static double SeamRatio(float[] loop)
+        public static double SeamRatio(float[] loop, int sampleRate = Dsp.SampleRate)
         {
-            if (loop.Length < 3)
+            int n = loop.Length;
+            if (n < 3)
             {
                 return 0.0;
             }
 
-            double maxStep = 0.0;
-            for (int i = 1; i < loop.Length; i++)
+            int w = Math.Max(2, (int)Math.Round(SeamWindowSeconds * sampleRate));
+            w = Math.Min(w, (n - 1) / 2);
+            double localStep = 0.0;
+            for (int i = 1; i <= w; i++)
             {
-                double d = Math.Abs(loop[i] - loop[i - 1]);
-                if (d > maxStep)
-                {
-                    maxStep = d;
-                }
+                double head = Math.Abs(loop[i] - loop[i - 1]);
+                double tail = Math.Abs(loop[n - i] - loop[n - i - 1]);
+                localStep = Math.Max(localStep, Math.Max(head, tail));
             }
 
-            double seam = Math.Abs(loop[0] - loop[loop.Length - 1]);
-            return maxStep <= 0.0 ? 0.0 : seam / maxStep;
+            double seam = Math.Abs(loop[0] - loop[n - 1]);
+            if (localStep <= 0.0)
+            {
+                return seam <= 0.0 ? 0.0 : double.PositiveInfinity;
+            }
+
+            return seam / localStep;
         }
 
         /// <summary>Huella FNV-1a de 64 bits de las muestras (sus bits exactos): la misma síntesis da la misma huella.</summary>

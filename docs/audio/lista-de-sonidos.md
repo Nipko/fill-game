@@ -40,7 +40,7 @@ Son los sonidos que más se oyen: suenan en cada toque y cada vertido, así que 
 
 | ID | Cuándo suena | Cómo debe sonar (GDD) | Duración | Tu propuesta |
 | --- | --- | --- | --- | --- |
-| `sfx_select` | Tocar una cuia para elegirla | Toque de agua corto, afinado al color de la fruta de arriba: 14 notas de escala pentatónica, una por fruta | 0,12 s | **Gota cristalina + armónico de marimba de chonta** en la nota de la fruta superior (tabla de arriba), muy suave (−36 dBFS, como en *Magic Sort!*). Si se toca la misma cuia para bajarla, suena una variante apagada una quinta más grave (−35 dBFS). |
+| `sfx_select` | Tocar una cuia para elegirla | Toque de agua corto, afinado al color de la fruta de arriba: 14 notas de escala pentatónica, una por fruta | 0,12 s | **Gota cristalina + armónico de marimba de chonta** en la nota de la fruta superior (tabla de arriba), muy suave (−36 dBFS, como en *Magic Sort!*). Si se toca la misma cuia para bajarla, suena una variante apagada una quinta más grave (−35 dBFS). *No aplicada en el cliente:* 02 §4.1 deja la deselección sin audio y manda el GDD; queda como propuesta para el dueño (sección 9). |
 | `sfx_pour_start` | Empieza el vertido | Chorro de agua que entra en vidrio | 0,2 s | **«Glup» limpio de cuello de garrafa** + primer impacto de agua fresca en vidrio (sin salpicadura ruidosa, ataque suave de 15 ms). |
 | `sfx_pour_loop` | Mientras cae el chorro | Chorro continuo; sube de tono a medida que se llena la cuia | en bucle | **Corriente ASMR de microburbujas en cavidad de vidrio** (resonancia Helmholtz que sube de 380 Hz con 1 dosis a 920 Hz con 4 dosis). En vertidos por tramo (`run`), dura exactamente lo que el chorro (0,45-0,85 s según 1-3 dosis) con ±3 % de variación orgánica para no sonar robótico. |
 | `sfx_pour_end` | Termina el vertido | Corte del chorro, última gota | 0,2 s | **Corte limpio del hilo de agua + dos gotitas finales («plic-ploc»)** que asientan el menisco en la nota de la fruta vertida. |
@@ -220,8 +220,9 @@ Desde el 2026-10-16 el juego suena con los 61 efectos del laboratorio, portados 
 
 - **Niveles:** cada efecto sale a su pico de la tabla de abajo (±1,5 dB), sin el `tanh` global que los igualaba (en el laboratorio, `sfx_select` salía a −7 dBFS y la jerarquía quedaba en unos 4 dB; `sfx_confetti`, unos 20 dB por debajo de su objetivo). Solo queda un limitador suave por encima de −1 dBFS, que con estos picos no actúa (07 §9.4: picos ≤ −6 dBTP).
 - **Graves:** al menos el 50 % de la energía de cada efecto por encima de 300 Hz, lo que reproduce el altavoz de un teléfono. Se consigue subiendo los armónicos 2.º y 3.º del propio sonido y, en el remanso de `sfx_stuck` y la calabaza de `sfx_canoe_lost`, con sus notas también una octava más arriba. Huito y Cacao (C4 y D4) se arreglan igual.
-- **Colas:** la reverberación de dosel solo va en `sfx_win_toada`, `sfx_skip`, `sfx_tinaja_reveal` y `sfx_world_banner`. Los gestos repetidos terminan en ≤ 0,2 s: `select`, `tint`, `plip`, `ui_tap`, `ui_back`, `seeds_tick`, `pour_start` y `pour_end`. `sfx_ui_buy` conserva sus 0,4 s: es una compra, no un gesto repetido.
-- **`sfx_pour_loop`:** un bucle continuo de 1,2 s, sin costura, que suena mientras cae el chorro. Su tono sigue al nivel de la cuia de destino, de 380 Hz vacía a 920 Hz llena.
+- **Colas:** la reverberación de dosel solo va en `sfx_win_toada`, `sfx_skip`, `sfx_tinaja_reveal` y `sfx_world_banner`. Los gestos repetidos terminan en ≤ 0,2 s: `select`, `tint`, `plip`, `ui_tap`, `ui_back`, `seeds_tick`, `pour_start` y `pour_end`. `sfx_ui_buy` conserva sus 0,4 s: es una compra, no un gesto repetido (07 §9.2 da 0,08-0,4 s a la interfaz) [P]: la exención está pendiente del visto bueno del tech lead, porque la tarea AU1 incluía `ui_*` en la regla de ≤ 0,2 s.
+- **Bajar la selección no suena:** 02 §4.1 deja la deselección sin audio («Baja a su sitio | 100 ms | ease-in | — | —») y manda el GDD. La variante grave de la sección 1 queda como propuesta para el dueño; si la aprueba, se anota en 02 §4.1 y en D-026 y vuelve con su clip.
+- **`sfx_pour_loop`:** un bucle continuo de 1,2 s, sin costura (su salto no supera el de los 5 ms de cada lado), que suena mientras cae el chorro. Su tono sigue al nivel de la cuia de destino, con la regla de la tabla: nivel = (dosis − 1) / (capacidad − 1), de 380 Hz con 1 dosis (o vacía) a 920 Hz llena (4 dosis en una cuia de 4).
 
 **Música provisional:** el lecho del simulador del laboratorio (notas largas de marimba en la escala del mundo), con dos capas de percusión (`audio_music_percussion_layers` = 2, 08 §9):
 
@@ -231,7 +232,7 @@ Desde el 2026-10-16 el juego suena con los 61 efectos del laboratorio, portados 
 
 La variante nocturna, el tema de menú y el ambiente de cada mundo (sección 5) quedan para el compositor.
 
-**Coste (medido en el Editor del escritorio x64, 2026-10-16):** los 104 clips (61 efectos, más las 14 notas de `sfx_select` y de `sfx_tint` y las 15 de bajar la selección) se generan en 492,8 ms en un hilo de trabajo y su creación cuesta 3,0 ms en el hilo principal (`AF_PERF audio_build`; objetivo < 50 ms). Ocupan 6.601 KiB de PCM en float (unos 1,69 millones de muestras); el lecho de un mundo, 2.713 KiB más (3 capas de 10,5 s a 22,05 kHz), y solo se guarda el del mundo que suena. En el teléfono, por medir.
+**Coste (medido en el Editor del escritorio x64, 2026-10-16):** los 89 clips (61 efectos, más las 14 notas de `sfx_select` y de `sfx_tint`) se generan en 469,8 ms en un hilo de trabajo y su creación cuesta 2,2 ms en el hilo principal (`AF_PERF audio_build`; objetivo < 50 ms). Ocupan 6.249 KiB de PCM en float (unos 1,60 millones de muestras); el lecho de un mundo, 2.713 KiB más (3 capas de 10,5 s a 22,05 kHz), y solo se guarda el del mundo que suena. En el teléfono, por medir.
 
 **Reglas (07 §9.4 y 02 §4):**
 

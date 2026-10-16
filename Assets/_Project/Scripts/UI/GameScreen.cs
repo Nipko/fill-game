@@ -1051,7 +1051,6 @@ namespace AF.UI
 
                 case TapKind.Deselected:
                     SetLift(result.PreviousSelection, false);
-                    AudioBoard.Deselect(flow.Session.Current, result.PreviousSelection); // AU1
                     _probe.State("deselect", flow, result.Tapped, null);
                     break;
 

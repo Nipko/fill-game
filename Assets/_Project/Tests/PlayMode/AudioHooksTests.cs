@@ -4,14 +4,20 @@ using System.Collections;
 using AF.Ads;
 using AF.Audio;
 using AF.Core.Board;
+using AF.Core.Mechanics;
 using AF.Core.Rules;
 using AF.Core.Session;
+using AF.Economy;
 using AF.GameFlow;
 using AF.Platform;
+using AF.Presentation;
 using AF.Save;
 using AF.Solver.Search;
 using AF.UI;
 using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.TestTools;
 
 namespace AF.Tests.PlayMode
@@ -37,6 +43,10 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             LaunchOptions.Reset();
+            GameScreen.SimulatedScreen = null;
+            GameScreen.ArrivalDisabledForTests = false;
+            GameScreen.FactLineDisabledForTests = false;
+            MapArtRule.ForceProvisional = null;
             AudioCues.Override = null;
             AudioCues.Install(null);
         }
@@ -77,7 +87,29 @@ namespace AF.Tests.PlayMode
                 Assert.That(_audio.Heard(SfxId.PourStart), Is.True, "vertido " + i + ": empieza el chorro");
                 Assert.That(_audio.Heard(SfxId.PourEnd), Is.True, "vertido " + i + ": se corta");
                 Assert.That(_audio.ActivePours, Is.EqualTo(0), "el bucle no se queda sonando");
-                Assert.That(_audio.LastPourLevel, Is.GreaterThan(0f), "el tono sigue al nivel del destino");
+                Cuia target = flow.Session.Current[move.Target];
+                float full = PourLoopSynth.LevelForDoses(target.Count, target.Capacity);
+                Assert.That(_audio.LastPourLevel, Is.InRange(0f, full + 1e-3f), "vertido " + i + ": el tono sigue al nivel del destino, sin pasarse");
+                if (target.Count >= 2)
+                {
+                    Assert.That(_audio.LastPourLevel, Is.GreaterThan(0f), "vertido " + i + ": con 2 dosis o más, por encima de los 380 Hz");
+                }
+
+                // 07 §9.3: la primera capa de percusión del lecho entra al sellar la primera cuia.
+                bool anySealed = false;
+                for (int c = 0; c < flow.Session.Current.Count; c++)
+                {
+                    anySealed |= flow.Session.Current.IsSealed(c);
+                }
+
+                if (anySealed)
+                {
+                    Assert.That(_audio.MusicLayers, Is.GreaterThanOrEqualTo(1), "vertido " + i + ": con una cuia sellada, percusión en el lecho");
+                }
+                else
+                {
+                    Assert.That(_audio.MusicLayers, Is.EqualTo(0), "vertido " + i + ": sin cuias selladas, solo el lecho");
+                }
             }
 
             Assert.That(_audio.Count(SfxId.Seal, true), Is.GreaterThanOrEqualTo(1), "la última cuia se tapa");
@@ -242,6 +274,353 @@ namespace AF.Tests.PlayMode
             Assert.That(_audio.Mix.SfxGain, Is.LessThan(0.05f), "con un fundido desde 0");
             _audio.Tick(AudioMix.AdFadeMs);
             Assert.That(_audio.Mix.SfxGain, Is.EqualTo(1f), "0,5 s después, a su nivel");
+        }
+
+        [UnityTest]
+        public IEnumerator Luciernaga_RevealsWithItsSound()
+        {
+            FunnelSetup.Hooks();
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
+            yield return LoadPlaying(100);
+            GameBootstrap boot = GameBootstrap.Current!;
+            _audio.Clear();
+            Assert.That(boot.PressReveal(), Is.True, "el regalo del 100 (04 §2.5)");
+            Assert.That(_audio.Requested(SfxId.Reveal), Is.False, "elegir la cuia aún no revela");
+            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Ignored), "el toque elige la cuia turbia");
+            Assert.That(boot.Flow!.Session.Current[0].HiddenMask, Is.EqualTo(0), "revelada");
+            Assert.That(_audio.Count(SfxId.Reveal, true), Is.EqualTo(1), "07 §9.2: la Luciérnaga suena al revelar");
+            Assert.That(_audio.Requested(SfxId.Select), Is.False, "y no como una selección");
+        }
+
+        [UnityTest]
+        public IEnumerator RiverLowered_PlaysTheRiverDrop()
+        {
+            // El flujo avisa a la vista con OnRiverLowered antes del teñido corto de la variante aliviada (LevelFlow.BeginAttempt;
+            // esa llamada la prueban los tests de EditMode del flujo); aquí, el gancho de la vista, como en NoticeTests.
+            yield return PlayModeHelpers.LoadGame(8, new MemoryProgressStore(8, 7));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            _audio.Clear();
+            boot.View!.OnRiverLowered("plus_empty", 2000);
+            Assert.That(boot.View.BannerText, Is.EqualTo(UiText.RiverLoweredCuia), "el cartel «El río bajó»");
+            Assert.That(_audio.Count(SfxId.RiverDrop, true), Is.EqualTo(1), "07 §9.2: el agua que baja");
+        }
+
+        [UnityTest]
+        public IEnumerator GivingUp_CostsACanoe_WithTheCanoeLost_AndNoTapOnTop()
+        {
+            FunnelSetup.Hooks();
+            LaunchOptions.LevelOffsetOverride = 25;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
+            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            GameScreen view = boot.View!;
+            FunnelSetup.GetStuck(boot);
+            view.Stuck.GiveUpButton.onClick.Invoke();
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.GiveUpConfirm));
+            Assert.That(_audio.Requested(SfxId.CanoeLost), Is.False, "¿Seguro? aún no cobra la canoa");
+
+            _audio.Clear();
+            view.GiveUp.GiveUpButton.onClick.Invoke();
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed));
+            Assert.That(boot.Wallet!.Canoes.Count, Is.EqualTo(4), "se pierde una canoa");
+            Assert.That(_audio.Count(SfxId.CanoeLost, true), Is.EqualTo(1), "07 §9.2: la canoa que vuelca");
+            Assert.That(_audio.Count(SfxId.UiTap, false), Is.EqualTo(0), "el botón suena con lo que hace, sin el toque encima");
+            Assert.That(_audio.HapticTotal(), Is.EqualTo(0), "sin háptico");
+        }
+
+        [UnityTest]
+        public IEnumerator Lobby_ACanoeComesBack_WithItsSound_Once()
+        {
+            var clock = new ManualClock(LobbyT0, TimeSpan.FromHours(-5));
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(NoCanoesAt31(clock)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            LobbyScreen lobby = boot.Lobby!;
+            yield return null;
+            Assert.That(lobby.CanoesCountShown, Is.EqualTo(0));
+            Assert.That(_audio.Requested(SfxId.CanoeBack), Is.False, "al abrir el inicio, el contador no suena");
+
+            _audio.Clear();
+            clock.Advance(TimeSpan.FromMinutes(19));
+            yield return null;
+            yield return null;
+            Assert.That(lobby.CanoesCountShown, Is.EqualTo(1), "vuelve una canoa");
+            Assert.That(_audio.Count(SfxId.CanoeBack, true), Is.EqualTo(1), "07 §9.2: la canoa que vuelve");
+            yield return null;
+            yield return null;
+            Assert.That(_audio.Count(SfxId.CanoeBack, false), Is.EqualTo(1), "una sola vez");
+        }
+
+        [UnityTest]
+        public IEnumerator WorldBanner_Level41_PlaysThePihaOnce()
+        {
+            yield return CardSetup.Load(41);
+            GameBootstrap boot = GameBootstrap.Current!;
+            LevelFlow flow = boot.Flow!;
+            Assert.That(flow.WorldBanner, Is.EqualTo(3));
+            Assert.That(boot.View!.WorldBannerView.Visible, Is.True);
+            Assert.That(_audio.Count(SfxId.WorldBanner, true), Is.EqualTo(1), "07 §9.2: la piha, al entrar la tarjeta del banner");
+            Assert.That(_audio.Requested(SfxId.MechCard), Is.False, "el 41 no tiene tarjeta previa");
+            PlayModeHelpers.Step(boot, 3000);
+            Assert.That(_audio.Count(SfxId.WorldBanner, false), Is.EqualTo(1), "mientras espera el toque, no se repite");
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 2000);
+            Assert.That(flow.Phase, Is.Not.EqualTo(FlowPhase.LevelCard), "cerrado: la intro");
+            Assert.That(_audio.Count(SfxId.WorldBanner, false), Is.EqualTo(1), "una sola vez, también al cerrarse");
+        }
+
+        [UnityTest]
+        public IEnumerator LevelCard_Level43_PlaysTheMechanicCard()
+        {
+            yield return CardSetup.Load(43);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.LevelCard));
+            Assert.That(boot.Flow.LevelCard, Is.Not.Null, "el estreno de la Hoja");
+            Assert.That(_audio.Count(SfxId.MechCard, true), Is.EqualTo(1), "07 §9.2: la tarjeta previa");
+            Assert.That(_audio.Requested(SfxId.WorldBanner), Is.False, "sin banner de mundo");
+            Assert.That(boot.TapAnywhere(), Is.True, "un toque la cierra");
+            PlayModeHelpers.Step(boot, 500);
+            Assert.That(_audio.Count(SfxId.MechCard, false), Is.EqualTo(1), "una vez");
+        }
+
+        [UnityTest]
+        public IEnumerator Hoja43_Opening_PlaysItsMechanicSound()
+        {
+            yield return MechanicTestKit.LoadPlaying(43);
+            GameBootstrap boot = GameBootstrap.Current!;
+            int hoja = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Hoja);
+            Pour[]? path = MechanicTestKit.FindTrigger(boot.Flow!, (ev, b, a) => (ev.HojaOpenedMask & (1 << hoja)) != 0);
+            Assert.That(path, Is.Not.Null, "vertidos que abren la Hoja del 43");
+            MechanicTestKit.PlayPrefix(boot, path!);
+            Assert.That(_audio.Requested(SfxId.MechHoja), Is.False, "aún cerrada");
+            _audio.Clear();
+            MechanicTestKit.TapPour(boot, path![path.Length - 1], out _);
+            MechanicTestKit.StepToIdle(boot, 6000);
+            Assert.That(boot.Flow!.Session.Current[hoja].Mechanic, Is.EqualTo(MechanicType.None), "abierta");
+            Assert.That(_audio.Count(SfxId.MechHoja, true), Is.EqualTo(1), "la lista, §3: la Hoja que se abre, por el paso de MechanicStepQueue");
+        }
+
+        [UnityTest]
+        public IEnumerator Arrival_AtAStop_PlaysTheFact()
+        {
+            FunnelSetup.Hooks();
+            GameScreen.ArrivalDisabledForTests = false;
+            GameScreen.FactLineDisabledForTests = true;
+            MapArtRule.ForceProvisional = true;
+            yield return VictoryArrivalTests.Win(20);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            PlayModeHelpers.Step(boot, 1600);
+            Assert.That(view.Arrival!.Stop, Is.Not.Null, "el 20 llega a Alter do Chão");
+            Assert.That(view.Arrival.Started, Is.True);
+            Assert.That(_audio.Count(SfxId.Fact, true), Is.EqualTo(1), "07 §9.2: la llegada a la parada");
+        }
+
+        [UnityTest]
+        public IEnumerator StoreSheet_OpensWithItsSound_BuysOrCancelsWithOneSound()
+        {
+            var clock = new ManualClock(LobbyT0, TimeSpan.FromHours(-5));
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(NoCanoesAt31(clock)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            LobbyScreen lobby = boot.Lobby!;
+            _audio.Clear();
+            lobby.CanoesButton.onClick.Invoke();
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.NoCanoes));
+            Assert.That(_audio.Count(SfxId.UiTap, true), Is.EqualTo(1), "un botón sin sonido propio suena con el toque");
+            yield return null;
+
+            StoreSheet sheet = boot.StoreSheetView!;
+            _audio.Clear();
+            lobby.NoCanoes.InfiniteButton.onClick.Invoke();
+            Assert.That(sheet.Visible, Is.True, "la hoja «Compra simulada»");
+            Assert.That(_audio.Count(SfxId.StoreOpen, true), Is.EqualTo(1), "07 §9.2: abrir la tienda");
+            Assert.That(_audio.Count(SfxId.UiTap, false), Is.EqualTo(0), "sin el toque encima");
+
+            _audio.Clear();
+            sheet.CancelButton.onClick.Invoke();
+            Assert.That(sheet.Visible, Is.False);
+            Assert.That(_audio.Count(SfxId.UiBack, true), Is.EqualTo(1), "cancelar: un solo sfx_ui_back");
+            Assert.That(_audio.Count(SfxId.UiTap, false) + _audio.Count(SfxId.UiBuy, false), Is.EqualTo(0));
+
+            lobby.NoCanoes.InfiniteButton.onClick.Invoke();
+            Assert.That(sheet.Visible, Is.True);
+            _audio.Clear();
+            sheet.BuyButton.onClick.Invoke();
+            Assert.That(sheet.Visible, Is.False);
+            Assert.That(_audio.Count(SfxId.UiBuy, true), Is.EqualTo(1), "comprar: sfx_ui_buy");
+            Assert.That(_audio.Count(SfxId.UiBack, false) + _audio.Count(SfxId.UiTap, false), Is.EqualTo(0), "y nada más");
+        }
+
+        [UnityTest]
+        public IEnumerator SettingsButton_Taps_AndTheModalX_SoundsOneBack()
+        {
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(SettingsScreenTests.ProfileAt(4)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            _audio.Clear();
+            boot.Lobby!.SettingsButton.onClick.Invoke();
+            SettingsScreen settings = boot.SettingsView!;
+            Assert.That(settings.Visible, Is.True);
+            Assert.That(_audio.Count(SfxId.UiTap, true), Is.EqualTo(1), "el engranaje no tiene sonido propio: el toque");
+
+            _audio.Clear();
+            settings.CloseButton.onClick.Invoke();
+            Assert.That(settings.Visible, Is.False);
+            Assert.That(_audio.Count(SfxId.UiBack, true), Is.EqualTo(1), "la X de un modal: un solo sfx_ui_back");
+            Assert.That(_audio.Count(SfxId.UiTap, false), Is.EqualTo(0), "sin el toque encima");
+        }
+
+        [UnityTest]
+        public IEnumerator Settings_At130In16x9_TheScrollViewportStaysInsideTheCream()
+        {
+            GameScreen.SimulatedScreen = HudLabelTests.Screen640;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(SettingsScreenTests.ProfileAt(4)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.PressSettings(), Is.True);
+            yield return null;
+            SettingsScreen settings = boot.SettingsView!;
+            foreach (float scale in new[] { 1f, 1.3f })
+            {
+                settings.FontScale = scale;
+                Canvas.ForceUpdateCanvases();
+                RectTransform panel = settings.Panel;
+                var corners = new Vector3[4];
+                settings.Viewport.GetWorldCorners(corners);
+                float bottom = panel.InverseTransformPoint(corners[0]).y;
+                float top = panel.InverseTransformPoint(corners[1]).y;
+                string where = "al " + Mathf.RoundToInt(scale * 100f) + " %";
+                Assert.That(bottom - panel.rect.yMin, Is.GreaterThanOrEqualTo(SettingsScreen.PanelInsetDp - 0.5f), "el visor acaba 16 dp por encima del borde de la tarjeta: " + where);
+                Assert.That(top, Is.LessThanOrEqualTo(panel.rect.yMax + 0.5f), where);
+                if (scale > 1f)
+                {
+                    Assert.That(settings.Scrolls, Is.True, "en 16:9 al 130 % no cabe: se desplaza");
+                }
+            }
+        }
+
+        // Como LuciernagaTests: carga, salta la intro y espera a la vista quieta en juego.
+        private static IEnumerator LoadPlaying(int level)
+        {
+            yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore(level, level - 1));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            for (int t = 0; t < 4000 && (boot.Flow!.Phase != FlowPhase.Playing || !boot.View!.IsViewIdle); t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Playing), "nivel " + level + " en juego");
+            PlayModeHelpers.Step(boot, 50);
+        }
+
+        private static readonly DateTime LobbyT0 = new DateTime(2026, 10, 8, 15, 0, 0, DateTimeKind.Utc);
+
+        // Inicio en el 31 sin canoas (como SettingsBackColdStartTests): la próxima vuelve a los 18 min.
+        internal static Profile NoCanoesAt31(ManualClock clock)
+        {
+            LaunchOptions.ClockOverride = clock;
+            LaunchOptions.LevelOffsetOverride = 30;
+            Profile profile = Wallet.NewProfile(clock);
+            profile.Progress.NextLevel = 31;
+            profile.Progress.MaxLevel = 30;
+            profile.Wallet.Canoes.Count = 0;
+            profile.Wallet.Canoes.NextRegenAt = LobbyT0 + TimeSpan.FromMinutes(18);
+            return profile;
+        }
+    }
+
+    /// <summary>
+    /// El Atrás de Android y el audio (tarea AU1; la lista, §7: «Atrás no puede cerrar un aviso obligatorio»): con Aguas
+    /// estancadas delante, Atrás no cierra nada y vibra corto (<c>haptic_back_blocked</c>) sin <c>sfx_ui_back</c>; con Ajustes
+    /// abierta, la cierra con un solo <c>sfx_ui_back</c> y sin háptico. Escape se inyecta con <see cref="InputTestFixture"/>, por
+    /// el camino del juego (<c>GameBootstrap.Update</c>), como en <see cref="BackButtonTests"/>.
+    /// </summary>
+    public sealed class AudioBackTests : InputTestFixture
+    {
+        private const int FramesPressed = 3;
+        private FakeAudioService _audio = null!;
+
+        /// <inheritdoc />
+        public override void Setup()
+        {
+            base.Setup();
+            FunnelSetup.Hooks();
+            _audio = new FakeAudioService();
+            AudioCues.Override = _audio;
+        }
+
+        /// <inheritdoc />
+        public override void TearDown()
+        {
+            InputSystemUIInputModule[] modules = UnityEngine.Object.FindObjectsByType<InputSystemUIInputModule>(FindObjectsSortMode.None);
+            for (int i = 0; i < modules.Length; i++)
+            {
+                modules[i].enabled = false;
+            }
+
+            LaunchOptions.Reset();
+            AudioCues.Override = null;
+            AudioCues.Install(null);
+            base.TearDown();
+        }
+
+        [UnityTest]
+        public IEnumerator AndroidBack_OnTheStuckModal_VibratesShort_WithoutTheBackSound()
+        {
+            Keyboard keyboard = InputSystem.AddDevice<Keyboard>();
+            LaunchOptions.LevelOffsetOverride = 25;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1000));
+            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            FunnelSetup.GetStuck(boot);
+            Assert.That(boot.BackBlocked(), Is.True);
+
+            _audio.Clear();
+            yield return PressBack(boot, keyboard);
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.StuckModal), "Atrás no cierra Aguas estancadas (04 §6.6)");
+            Assert.That(_audio.HapticCount(HapticKind.BackBlocked), Is.EqualTo(1), "02 §4: el háptico corto de Atrás bloqueado");
+            Assert.That(_audio.HapticTotal(), Is.EqualTo(1), "solo ese");
+            Assert.That(_audio.Requested(SfxId.UiBack), Is.False, "sin sfx_ui_back: no se volvió a ningún sitio");
+        }
+
+        [UnityTest]
+        public IEnumerator AndroidBack_ClosesSettings_WithOneBackSound_AndNoHaptic()
+        {
+            Keyboard keyboard = InputSystem.AddDevice<Keyboard>();
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(SettingsScreenTests.ProfileAt(4)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.PressSettings(), Is.True);
+            yield return null;
+
+            _audio.Clear();
+            yield return PressBack(boot, keyboard);
+            Assert.That(boot.SettingsView!.Visible, Is.False, "Atrás cierra Ajustes");
+            Assert.That(_audio.Count(SfxId.UiBack, true), Is.EqualTo(1), "un solo sfx_ui_back");
+            Assert.That(_audio.HapticTotal(), Is.EqualTo(0), "sin háptico");
+        }
+
+        // Pulsa y suelta Escape con el bucle del juego en marcha unos fotogramas (como BackButtonTests).
+        private IEnumerator PressBack(GameBootstrap boot, Keyboard keyboard)
+        {
+            boot.enabled = true;
+            Press(keyboard.escapeKey);
+            for (int i = 0; i < FramesPressed; i++)
+            {
+                yield return null;
+            }
+
+            Release(keyboard.escapeKey);
+            for (int i = 0; i < FramesPressed; i++)
+            {
+                yield return null;
+            }
+
+            PlayModeHelpers.TakeClock(boot);
         }
     }
 }

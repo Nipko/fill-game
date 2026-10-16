@@ -69,6 +69,9 @@ namespace AF.UI
             }
         }
 
+        /// <summary>Visor del contenido desplazable (tests: queda dentro de la crema, a <see cref="PanelInsetDp"/> del borde).</summary>
+        public RectTransform Viewport => _viewport;
+
         /// <summary>El contenido no cabe y se desplaza (tests y capturas).</summary>
         public bool Scrolls => _scroll.vertical;
 

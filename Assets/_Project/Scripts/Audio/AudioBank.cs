@@ -6,27 +6,21 @@ namespace AF.Audio
 {
     /// <summary>
     /// Todo el PCM de los efectos (tarea AU1), generado de una vez al arrancar en un hilo de trabajo (<see cref="Build"/>): los 61
-    /// efectos de <see cref="SfxCatalog"/> (con <c>sfx_pour_loop</c> como bucle continuo, <see cref="PourLoopSynth"/>), las 14
-    /// frutas de <c>sfx_select</c> y <c>sfx_tint</c> y la variante grave de bajar la selección. Cada clip tiene su índice fijo
+    /// efectos de <see cref="SfxCatalog"/> (con <c>sfx_pour_loop</c> como bucle continuo, <see cref="PourLoopSynth"/>) y las 14
+    /// frutas de <c>sfx_select</c> y <c>sfx_tint</c>. Bajar la selección no suena (02 §4.1). Cada clip tiene su índice fijo
     /// (<see cref="Index"/>), así que el juego lo busca sin asignar. Se guarda en una caché estática: la generación se paga una
     /// vez por proceso.
     /// </summary>
     public sealed class AudioBank
     {
-        /// <summary>Frutas por efecto afinado, con el 0 (sin fruta: la nota del laboratorio).</summary>
-        public const int FruitSlots = SfxCatalog.FruitCount + 1;
-
         /// <summary>Primer índice de <c>sfx_select</c> por fruta (1-14).</summary>
         public const int SelectFruitBase = SfxCatalog.Count;
 
         /// <summary>Primer índice de <c>sfx_tint</c> por fruta (1-14).</summary>
         public const int TintFruitBase = SelectFruitBase + SfxCatalog.FruitCount;
 
-        /// <summary>Primer índice de la variante de bajar la selección (fruta 0-14).</summary>
-        public const int SelectDownBase = TintFruitBase + SfxCatalog.FruitCount;
-
-        /// <summary>Clips en total (104).</summary>
-        public const int ClipCount = SelectDownBase + FruitSlots;
+        /// <summary>Clips en total (89).</summary>
+        public const int ClipCount = TintFruitBase + SfxCatalog.FruitCount;
 
         private static readonly object s_lock = new object();
         private static AudioBank? s_cached;
@@ -85,13 +79,7 @@ namespace AF.Audio
             return (int)id;
         }
 
-        /// <summary>Índice de la variante de bajar la selección con la fruta <paramref name="tint"/>.</summary>
-        public static int SelectDownIndex(int tint)
-        {
-            return SelectDownBase + (tint >= 1 && tint <= SfxCatalog.FruitCount ? tint : 0);
-        }
-
-        /// <summary>El efecto de un índice (la variante de bajar la selección es <see cref="SfxId.Select"/>).</summary>
+        /// <summary>El efecto de un índice.</summary>
         public static SfxId IdOf(int index)
         {
             if (index < SfxCatalog.Count)
@@ -99,7 +87,7 @@ namespace AF.Audio
                 return (SfxId)index;
             }
 
-            return index < TintFruitBase || index >= SelectDownBase ? SfxId.Select : SfxId.Tint;
+            return index < TintFruitBase ? SfxId.Select : SfxId.Tint;
         }
 
         /// <summary>Fruta de un índice (0 si no es una variante por fruta).</summary>
@@ -115,12 +103,7 @@ namespace AF.Audio
                 return index - SelectFruitBase + 1;
             }
 
-            if (index < SelectDownBase)
-            {
-                return index - TintFruitBase + 1;
-            }
-
-            return index - SelectDownBase;
+            return index - TintFruitBase + 1;
         }
 
         /// <summary>PCM del clip <paramref name="index"/> (mono, 44,1 kHz; no se modifica).</summary>
@@ -175,11 +158,6 @@ namespace AF.Audio
             {
                 pcm[SelectFruitBase + t - 1] = SfxMaster.Render(SfxId.Select, t);
                 pcm[TintFruitBase + t - 1] = SfxMaster.Render(SfxId.Tint, t);
-            }
-
-            for (int t = 0; t <= SfxCatalog.FruitCount; t++)
-            {
-                pcm[SelectDownBase + t] = SfxMaster.RenderSelectDown(t);
             }
 
             for (int i = 0; i < ClipCount; i++)

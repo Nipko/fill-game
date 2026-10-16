@@ -169,12 +169,6 @@ namespace AF.Audio.Unity
             PlayIndex(index, id, tint);
         }
 
-        /// <inheritdoc />
-        public void PlaySelectDown(int tint)
-        {
-            PlayIndex(AudioBank.SelectDownIndex(tint), SfxId.Select, tint);
-        }
-
         private void PlayIndex(int index, SfxId id, int tint)
         {
             if (!_mix.SfxAudible || !Ready)

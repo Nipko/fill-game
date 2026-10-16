@@ -7,8 +7,9 @@ namespace AF.Presentation
     /// <summary>
     /// Sonido del vertido (07 §9.2; 02 §4; tarea AU1): parcial de <see cref="BoardAnimator"/> para que sus ganchos sean dos líneas.
     /// Cuando el chorro empieza a caer suenan <c>sfx_pour_start</c> y el bucle <c>sfx_pour_loop</c>, que dura lo que dura el
-    /// chorro (también si un vertido encadenado lo alarga) y sube de tono con el **nivel de la cuia de destino** (lo que ya se
-    /// ve lleno: dosis de antes + las que van entrando, sobre su capacidad), no con el tiempo; al cortarse el caudal suena
+    /// chorro (también si un vertido encadenado lo alarga) y sube de tono con el **nivel de la cuia de destino** (las dosis que
+    /// ya se ven dentro, las de antes más las que van entrando, con <see cref="PourLoopSynth.LevelForDoses"/>: 380 Hz con 1 dosis
+    /// y 920 Hz llena), no con el tiempo; al cortarse el caudal suena
     /// <c>sfx_pour_end</c>. Si el trabajo salta a su final (Marea, otro nivel, la vuelta de segundo plano), el bucle se calla sin
     /// más. Marea no tiene chorro: su sonido lo pone la UI. Sin asignaciones.
     /// </summary>
@@ -22,7 +23,7 @@ namespace AF.Presentation
                 return;
             }
 
-            float level = target.Capacity > 0 ? Mathf.Clamp01((job.FillBase + Mathf.Max(0f, pt)) / target.Capacity) : 0f;
+            float level = PourLoopSynth.LevelForDoses(job.FillBase + Mathf.Max(0f, pt), target.Capacity);
             if (!job.PourSounding)
             {
                 job.PourSounding = true;

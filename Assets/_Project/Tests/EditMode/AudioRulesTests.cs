@@ -201,13 +201,14 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Select_PlaysTheNoteOfTheTopFruit_TheTinajaToc_AndNothingForAHiddenTop()
+        public void Select_PlaysTheNoteOfTheTopFruit_TheTinajaToc_AndTheNeutralNoteForAHiddenTop()
         {
             BoardState board = new BoardState(new[]
             {
                 Cuia.Create(4, new[] { 9, 4 }),
                 Cuia.Empty(4),
                 Cuia.Create(4, new[] { 9, 4 }, 0b01),
+                Cuia.Create(LevelValidation.TinajaCapacity, new[] { 9, 9, 6 }, 0b011).WithMechanic(MechanicType.Tinaja),
             });
             AudioBoard.Select(board, 0);
             Assert.That(_fake.Events[0].Sfx, Is.EqualTo(SfxId.Select));
@@ -216,10 +217,33 @@ namespace AF.Tests.EditMode
             Assert.That(_fake.Events[1].Tint, Is.EqualTo(0), "vacía: la nota del laboratorio");
             AudioBoard.Select(board, 2);
             Assert.That(_fake.Events[2].Tint, Is.EqualTo(4), "con una dosis oculta debajo (Aguas turbias), la de arriba, que se ve (R7)");
-            AudioBoard.Deselect(board, 0);
-            Assert.That(_fake.Events[3].SelectDown && _fake.Events[3].Tint == 4, Is.True, "bajar: la variante grave");
+
+            // La Tinaja (D-019): el «toc» de barro, sin nota de fruta (su boca no se afina, sus capas no se delatan).
+            AudioBoard.Select(board, 3);
+            Assert.That(_fake.Events[3].Sfx, Is.EqualTo(SfxId.TinajaSelect), "la Tinaja suena a barro, no a sfx_select");
+            Assert.That(_fake.Events[3].Tint, Is.EqualTo(0), "sin fruta");
+            Assert.That(_fake.Count(SfxId.Select, false), Is.EqualTo(3), "ningún sfx_select de más por la Tinaja");
+
             AudioBoard.Select(board, 7);
             Assert.That(_fake.Events.Count, Is.EqualTo(4), "fuera del tablero, nada");
+
+            // Cima oculta: R7 no deja construirla (Cuia.Create lo rechaza), así que la regla se prueba en su función. Suena la nota
+            // neutra (fruta 0), igual con una fruta clara que con una oscura: no delata lo que hay.
+            Assert.Throws<ArgumentException>(() => Cuia.Create(4, new[] { 9, 4 }, 0b10), "R7: la cima siempre se ve");
+            Assert.That(AudioBoard.NoteTint(4, true), Is.EqualTo(0), "cima oculta: la nota neutra");
+            Assert.That(AudioBoard.NoteTint(13, true), Is.EqualTo(AudioBoard.NoteTint(1, true)), "la misma nota para cualquier fruta oculta");
+            Assert.That(AudioBoard.NoteTint(4, false), Is.EqualTo(4));
+            Assert.That(AudioBoard.NoteTint(Cuia.MudColor, false), Is.EqualTo(0), "el Barro no es una fruta");
+        }
+
+        [Test]
+        public void Deselect_IsSilent_AsInTheGdd()
+        {
+            // 02 §4.1: «Deselección | Baja a su sitio | 100 ms | … | — | —», sin audio (revisión de AU1; la variante grave de la
+            // lista era una propuesta y la lista cede ante el GDD).
+            Assert.That(typeof(AudioBoard).GetMethod("Deselect"), Is.Null, "no hay gancho de deselección");
+            Assert.That(typeof(IAudioService).GetMethod("PlaySelectDown"), Is.Null, "ni clip de bajar la selección");
+            Assert.That(AudioBank.ClipCount, Is.EqualTo(SfxCatalog.Count + (2 * SfxCatalog.FruitCount)));
         }
 
         [Test]

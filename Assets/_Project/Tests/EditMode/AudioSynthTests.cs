@@ -169,7 +169,7 @@ namespace AF.Tests.EditMode
         {
             AudioBank a = Bank;
             AudioBank b = Task.Run(() => AudioBank.Generate()).Result;
-            Assert.That(AudioBank.ClipCount, Is.EqualTo(104), "61 + 14 notas de select + 14 de tint + 15 de bajar la selección");
+            Assert.That(AudioBank.ClipCount, Is.EqualTo(89), "61 + 14 notas de select + 14 de tint (bajar la selección no suena, 02 §4.1)");
             for (int i = 0; i < AudioBank.ClipCount; i++)
             {
                 Assert.That(AudioAnalysis.Hash(b.Pcm(i)), Is.EqualTo(AudioAnalysis.Hash(a.Pcm(i))), "clip " + i + " (" + SfxCatalog.Name(AudioBank.IdOf(i)) + ")");
@@ -189,11 +189,9 @@ namespace AF.Tests.EditMode
                 Assert.That(AudioBank.TintOf(AudioBank.Index(SfxId.Select, t)), Is.EqualTo(t));
                 Assert.That(AudioBank.IdOf(AudioBank.Index(SfxId.Tint, t)), Is.EqualTo(SfxId.Tint));
                 Assert.That(AudioBank.TintOf(AudioBank.Index(SfxId.Tint, t)), Is.EqualTo(t));
-                Assert.That(AudioBank.IdOf(AudioBank.SelectDownIndex(t)), Is.EqualTo(SfxId.Select));
-                Assert.That(AudioBank.TintOf(AudioBank.SelectDownIndex(t)), Is.EqualTo(t));
             }
 
-            Assert.That(AudioBank.SelectDownIndex(99), Is.EqualTo(AudioBank.SelectDownBase), "sin fruta, la nota del laboratorio");
+            Assert.That(AudioBank.ClipCount, Is.EqualTo(SfxCatalog.Count + (2 * SfxCatalog.FruitCount)), "61 efectos y las 14 frutas de select y de tint; bajar la selección no suena (02 §4.1)");
         }
 
         [Test]
@@ -202,7 +200,7 @@ namespace AF.Tests.EditMode
             for (int i = 0; i < AudioBank.ClipCount; i++)
             {
                 SfxId id = AudioBank.IdOf(i);
-                float target = i >= AudioBank.SelectDownBase ? SfxCatalog.SelectDownPeakDb : SfxCatalog.Get(id).TargetPeakDb;
+                float target = SfxCatalog.Get(id).TargetPeakDb;
                 float peak = AudioAnalysis.PeakDb(Bank.Pcm(i));
                 Assert.That(peak, Is.EqualTo(target).Within(1.5f), "clip " + i + " " + SfxCatalog.Name(id) + " fruta " + AudioBank.TintOf(i));
                 Assert.That(Bank.GainDb(i), Is.EqualTo(peak).Within(0.06f), "gain_db de la sonda");
@@ -289,7 +287,7 @@ namespace AF.Tests.EditMode
         {
             float[] loop = Bank.Pcm((int)SfxId.PourLoop);
             Assert.That(loop.Length / (double)Dsp.SampleRate, Is.EqualTo(PourLoopSynth.LoopSeconds).Within(0.001), "un bucle, no un sonido de 0,72 s");
-            Assert.That(AudioAnalysis.SeamRatio(loop), Is.LessThanOrEqualTo(1.0), "la costura no salta más que la propia onda");
+            Assert.That(AudioAnalysis.SeamRatio(loop), Is.LessThanOrEqualTo(1.0), "la costura no salta más que la onda de los 5 ms de cada lado");
 
             // Sin silencios: el chorro suena entero mientras dura.
             int window = Dsp.SampleRate / 50;
@@ -304,10 +302,58 @@ namespace AF.Tests.EditMode
                 Assert.That(Math.Sqrt(e / window), Is.GreaterThan(AudioAnalysis.FromDb(-60.0)), "20 ms sin sonido en " + start);
             }
 
-            Assert.That(PourLoopSynth.PitchForLevel(0f), Is.EqualTo(1f).Within(1e-6f), "380 Hz con el destino vacío");
+            // Una sola regla (revisión de AU1; la lista, §1 y §9): 380 Hz con 1 dosis y 920 Hz con la cuia llena.
+            Assert.That(PourLoopSynth.LevelForDoses(1f, 4), Is.EqualTo(0f), "1 dosis de 4");
+            Assert.That(PourLoopSynth.LevelForDoses(0f, 4), Is.EqualTo(0f), "vacía, igual que con 1");
+            Assert.That(PourLoopSynth.LevelForDoses(4f, 4), Is.EqualTo(1f), "4 dosis de 4");
+            Assert.That(PourLoopSynth.LevelForDoses(2.5f, 4), Is.EqualTo(0.5f).Within(1e-6f), "a mitad del chorro, entre las dos");
+            Assert.That(PourLoopSynth.LevelForDoses(6f, 6), Is.EqualTo(1f), "llena con cualquier capacidad");
+            Assert.That(PourLoopSynth.LevelForDoses(1f, 1), Is.EqualTo(1f), "una cuia de 1, llena");
+            Assert.That(PourLoopSynth.BaseHz * PourLoopSynth.PitchForLevel(PourLoopSynth.LevelForDoses(1f, 4)), Is.EqualTo(380.0).Within(0.01), "380 Hz con 1 dosis");
+            Assert.That(PourLoopSynth.BaseHz * PourLoopSynth.PitchForLevel(PourLoopSynth.LevelForDoses(4f, 4)), Is.EqualTo(920.0).Within(0.05), "920 Hz con 4 dosis");
+            Assert.That(PourLoopSynth.PitchForLevel(0f), Is.EqualTo(1f).Within(1e-6f), "380 Hz en el nivel 0");
             Assert.That(PourLoopSynth.PitchForLevel(1f), Is.EqualTo(920f / 380f).Within(1e-4f), "920 Hz lleno");
             Assert.That(PourLoopSynth.PitchForLevel(0.5f), Is.GreaterThan(PourLoopSynth.PitchForLevel(0.25f)), "sube con el nivel");
             Assert.That(PourLoopSynth.PitchForLevel(2f), Is.EqualTo(PourLoopSynth.PitchForLevel(1f)));
+        }
+
+        [Test]
+        public void SeamRatio_CatchesAClickInAQuietStretch_EvenWithALoudBubbleElsewhere()
+        {
+            // Revisión de AU1: un bucle con una burbuja fuerte en medio y un final flojo que salta al volver al principio. Contra el
+            // mayor salto de todo el bucle (1,0, la burbuja), el clic pasaría (≈ 0,05); contra los 5 ms que lo rodean, no.
+            int n = Dsp.SampleRate / 2;
+            var loop = new float[n];
+            for (int i = 0; i < n; i++)
+            {
+                loop[i] = 0.01f * (float)Math.Sin(2.0 * Math.PI * 440.0 * i / Dsp.SampleRate);
+            }
+
+            for (int i = n / 2; i < (n / 2) + 200; i++)
+            {
+                loop[i] += (i % 2 == 0) ? 0.5f : -0.5f; // la burbuja fuerte
+            }
+
+            // El final se va despacio a +0,05 (en 50 ms, antes de la ventana): al volver al principio salta 0,05 de golpe.
+            int ramp = Dsp.SampleRate / 20;
+            int from = (3 * n) / 4;
+            for (int i = from; i < n; i++)
+            {
+                float k = Math.Min(1f, (i - from) / (float)ramp);
+                loop[i] += 0.05f * k * k * (3f - (2f * k));
+            }
+
+            Assert.That(Math.Abs(loop[n - 1] - loop[n - 2]), Is.LessThan(0.001f), "dentro del final, sin saltos");
+            Assert.That(AudioAnalysis.SeamRatio(loop), Is.GreaterThan(1.0), "el clic se detecta");
+
+            // La misma onda sin el clic: una sinusoide entera de 440 Hz no salta más en la costura que a su lado.
+            var clean = new float[Dsp.SampleRate / 10]; // 44 ciclos enteros: el principio sigue al final
+            for (int i = 0; i < clean.Length; i++)
+            {
+                clean[i] = 0.01f * (float)Math.Sin(2.0 * Math.PI * 440.0 * i / Dsp.SampleRate);
+            }
+
+            Assert.That(AudioAnalysis.SeamRatio(clean), Is.LessThanOrEqualTo(1.0 + 1e-3), "sin clic, pasa (el salto de la costura es el de un paso de la onda)");
         }
 
         [Test]
@@ -321,7 +367,7 @@ namespace AF.Tests.EditMode
             for (int l = 0; l < layers.Length; l++)
             {
                 Assert.That(layers[l].Length, Is.EqualTo(n), "las capas, del mismo largo: suenan juntas");
-                Assert.That(AudioAnalysis.SeamRatio(layers[l]), Is.LessThanOrEqualTo(1.0), "capa " + l);
+                Assert.That(AudioAnalysis.SeamRatio(layers[l], MusicSynth.SampleRate), Is.LessThanOrEqualTo(1.0), "capa " + l + ": la costura no salta más que lo que la rodea");
                 for (int i = 0; i < n; i++)
                 {
                     mix[i] += layers[l][i];

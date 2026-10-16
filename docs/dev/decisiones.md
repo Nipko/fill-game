@@ -2474,6 +2474,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - `AF.Audio.Unity`: el servicio con su pool de `AudioSource`, el lecho de música provisional y los hápticos y el modo silencio por JNI;
   - los ganchos de una línea en la vista y en la UI;
   - las filas de Ajustes, las sondas `AF_STATE sfx` y `haptic` y `AF_PERF audio_build`.
+- **Sin sonido al bajar la selección** (revisión de AU1): 02 §4.1 la deja sin audio y la variante grave de la lista de sonidos no la decidió el dueño, así que no se aplica. Queda como propuesta: si se aprueba, se anota aquí y en 02 §4.1.
 - **Datos:** las claves `sound`, `music` y `haptics` de `strings.csv` (glosario §10).
 - **GDD:** 07 §9 (el estado: audio provisional por código en el cliente).
 - **Lista de sonidos:** los IDs finales con su nivel.

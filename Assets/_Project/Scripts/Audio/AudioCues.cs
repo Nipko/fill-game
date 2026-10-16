@@ -13,9 +13,6 @@ namespace AF.Audio
         /// <summary>Suena <paramref name="id"/> (afinado a la fruta <paramref name="tint"/> si el efecto lo va).</summary>
         void Play(SfxId id, int tint);
 
-        /// <summary>Variante de <c>sfx_select</c> al bajar la selección (una quinta más grave) [P].</summary>
-        void PlaySelectDown(int tint);
-
         /// <summary>Empieza el chorro <paramref name="voice"/> (bucle), con el destino lleno en <paramref name="level"/> (0-1).</summary>
         void PourBegin(int voice, float level);
 
@@ -99,11 +96,6 @@ namespace AF.Audio
 
         /// <inheritdoc />
         public void Play(SfxId id, int tint)
-        {
-        }
-
-        /// <inheritdoc />
-        public void PlaySelectDown(int tint)
         {
         }
 
@@ -195,13 +187,6 @@ namespace AF.Audio
         {
             Serial++;
             s_service.Play(id, tint);
-        }
-
-        /// <summary>Bajar la selección: la variante grave de <c>sfx_select</c> [P].</summary>
-        public static void SelectDown(int tint)
-        {
-            Serial++;
-            s_service.PlaySelectDown(tint);
         }
 
         /// <summary>

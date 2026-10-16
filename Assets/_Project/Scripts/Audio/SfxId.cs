@@ -242,12 +242,6 @@ namespace AF.Audio
         /// <summary>Duración máxima de un gesto repetido (s), con su cola.</summary>
         public const float GestureMaxSeconds = 0.2f;
 
-        /// <summary>
-        /// Pico de la variante «bajar la selección» de <c>sfx_select</c> (dBFS): la lista, §1, «una variante apagada una quinta
-        /// más grave (−35 dBFS)» [P].
-        /// </summary>
-        public const float SelectDownPeakDb = -35f;
-
         // Frecuencia (Hz) de la nota de cada fruta por su índice de motor (1-14; 0 = sin fruta). Tabla de la lista y FRUITS del
         // laboratorio: C4 (Huito) a G6 (Guanábana), de la más oscura a la más clara.
         private static readonly double[] FruitHz =

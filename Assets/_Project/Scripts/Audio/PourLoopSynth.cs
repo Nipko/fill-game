@@ -9,17 +9,17 @@ namespace AF.Audio
     /// densidad y tono constantes en un búfer circular de <see cref="LoopSeconds"/> s que se repite sin costura (las burbujas que
     /// pasan del final vuelven al principio y el murmullo se funde consigo mismo). El tono lo pone quien lo reproduce según el
     /// **nivel de la cuia de destino** (02 §4: «el loop sube de tono con el llenado»; la lista, §1: de 380 Hz con 1 dosis a 920 Hz
-    /// con 4), con <see cref="PitchForLevel"/>. Determinista.
+    /// con 4), con <see cref="LevelForDoses"/> y <see cref="PitchForLevel"/>. Determinista.
     /// </summary>
     public static class PourLoopSynth
     {
         /// <summary>Largo del bucle (s).</summary>
         public const double LoopSeconds = 1.2;
 
-        /// <summary>Frecuencia base de las burbujas con el destino vacío (Hz; la lista: 380 Hz).</summary>
+        /// <summary>Frecuencia base de las burbujas con 1 dosis en el destino (Hz; la lista: 380 Hz), y también con 0.</summary>
         public const double BaseHz = 380.0;
 
-        /// <summary>Frecuencia con el destino lleno (Hz; la lista: 920 Hz con 4 dosis).</summary>
+        /// <summary>Frecuencia con el destino lleno (Hz; la lista: 920 Hz con 4 dosis en una cuia de 4).</summary>
         public const double FullHz = 920.0;
 
         /// <summary>Burbujas por segundo: las 34 del laboratorio en sus 0,65 s útiles.</summary>
@@ -31,8 +31,24 @@ namespace AF.Audio
         private const double SR = Dsp.SampleRate;
 
         /// <summary>
-        /// Velocidad de reproducción del bucle para un destino lleno en <paramref name="level"/> (0 vacío … 1 lleno): 1 a 380 Hz y
-        /// <see cref="FullHz"/> / <see cref="BaseHz"/> ≈ 2,42 lleno, lineal en la frecuencia.
+        /// Nivel del destino para el tono (la lista, §1: «de 380 Hz con 1 dosis a 920 Hz con 4 dosis»): (dosis − 1) / (capacidad − 1),
+        /// entre 0 y 1, con <paramref name="doses"/> las dosis que ya se ven dentro (con decimales mientras entra el chorro). Con 0
+        /// o 1 dosis, 0 (380 Hz); con la cuia llena, 1 (920 Hz). Una cuia de capacidad 1 llena da 1.
+        /// </summary>
+        public static float LevelForDoses(float doses, int capacity)
+        {
+            if (capacity <= 1)
+            {
+                return doses >= 1f ? 1f : 0f;
+            }
+
+            float l = (doses - 1f) / (capacity - 1);
+            return l < 0f ? 0f : l > 1f ? 1f : l;
+        }
+
+        /// <summary>
+        /// Velocidad de reproducción del bucle para un destino en el nivel <paramref name="level"/> (<see cref="LevelForDoses"/>:
+        /// 0 con 1 dosis … 1 lleno): 1 a 380 Hz y <see cref="FullHz"/> / <see cref="BaseHz"/> ≈ 2,42 lleno, lineal en la frecuencia.
         /// </summary>
         public static float PitchForLevel(float level)
         {
