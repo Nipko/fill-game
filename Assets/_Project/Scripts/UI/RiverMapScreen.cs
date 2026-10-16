@@ -48,7 +48,7 @@ namespace AF.UI
         /// <summary>Cambios de vista (Mundo ↔ Cuenca).</summary>
         public int ViewChanges { get; }
 
-        /// <summary>Se usó «Norte arriba» (M3.4 y siguientes: hoy, false).</summary>
+        /// <summary>Se usó «Norte arriba» (M4.4: lo fija su parcial, <c>RiverMapScreen.NorthUp.cs</c>; hasta entonces, false).</summary>
         public bool NorthUp { get; }
     }
 
@@ -78,9 +78,11 @@ namespace AF.UI
     /// nunca por fotograma; con el Mapa quieto, <see cref="Tick"/> no asigna memoria ni reconstruye nada, y
     /// <see cref="OnDemandRendering"/> pinta a <see cref="PerfTargetFpsMenus"/> fps (<c>perf_target_fps_menus</c>, 08 §9) y a 60
     /// mientras se arrastra o algo se anima. Al cerrar, vuelve a 60.</para>
-    /// <para>Los ganchos parciales (<c>Progress*</c>, <c>Markers*</c>, <c>CatchUp*</c>, <c>Samples*</c> y <c>Modes*</c>) son de
-    /// las tareas siguientes del Mapa: el río que se llena (M3.4), los marcadores y «ponerse al día» (M3.5), el Muestrario
-    /// (M4.1) y las entradas de la pausa y la victoria (M4.3). Sin cuerpo no cuestan nada.</para>
+    /// <para>Los ganchos parciales (<c>Progress*</c>, <c>Markers*</c>, <c>CatchUp*</c>, <c>Samples*</c>, <c>Sequence*</c>,
+    /// <c>Modes*</c> y <c>NorthUp*</c>) son de las tareas siguientes del Mapa: el río que se llena (M3.4), los marcadores y
+    /// «ponerse al día» (M3.5), el Muestrario (M4.1), la secuencia del Mapa del 10 (M4.2), las entradas de la pausa y la
+    /// victoria (M4.3) y «Norte arriba» (M4.4). Cada tarea los implementa en su propio archivo parcial
+    /// (<c>RiverMapScreen.Sequence.cs</c>, <c>RiverMapScreen.NorthUp.cs</c>…) sin tocar este. Sin cuerpo no cuestan nada.</para>
     /// </summary>
     public sealed partial class RiverMapScreen
     {
@@ -119,6 +121,21 @@ namespace AF.UI
 
         /// <summary>Margen que deja la canoa con el borde de la vista antes de ofrecer «Volver a la canoa» (dp) [P].</summary>
         public const float CanoeMarginDp = 24f;
+
+        /// <summary>
+        /// Radio de las esquinas de fuera del marco de madera (dp): el de <see cref="ProceduralArt.RoundedRect"/> (20 px a 100 px
+        /// por unidad, es decir, 20 dp con <c>pixelsPerUnitMultiplier</c> = 1).
+        /// </summary>
+        public const float FrameRadiusDp = ProceduralArt.RoundedRectRadiusPx;
+
+        /// <summary>
+        /// Radio de las esquinas de la zona del mapa (dp): concéntricas con las del marco, <see cref="FramePadDp"/> por dentro
+        /// (D-003: el vidrio y la tierra siguen el filete de la madera; <see cref="RectMask2D"/> recorta en ángulo recto).
+        /// </summary>
+        public const float ViewportRadiusDp = FrameRadiusDp - FramePadDp;
+
+        /// <summary>Relleno de madera entre el borde del marco y la zona del mapa (dp).</summary>
+        public const float FramePadDp = 8f;
 
         /// <summary>
         /// Mar del Mapa (<c>mar_a</c> de la muestra, <c>generar_mapa.py</c>) [P]: solo para el polígono del mar o la esquina
@@ -163,7 +180,6 @@ namespace AF.UI
         private const float RowDp = 48f;
         private const float GapDp = 8f;
         private const float FrameInsetDp = 8f;
-        private const float FramePadDp = 8f;
         private const float SegmentDp = 82f;
         private const float SwitchPadDp = 4f;
         private const float RowPadDp = 10f;
@@ -188,6 +204,7 @@ namespace AF.UI
         private readonly GlyphGraphic _check;
 
         private readonly Image _frame;
+        private readonly FrameCornersGraphic _frameCorners;
         private readonly Image _ground;
         private readonly RectTransform _viewport;
         private readonly RectTransform _content;
@@ -279,6 +296,10 @@ namespace AF.UI
             _content = UiBuilder.Rect("Content", _viewport);
             UiBuilder.Place(_content, 0f, 0f, MapSpace.BasinWidthDp, MapSpace.BasinWidthDp);
 
+            // Las esquinas redondeadas de la zona del mapa (el RectMask2D recorta en ángulo recto): cuatro rincones de madera encima
+            // del contenido, en el lienzo de la UI, que no reciben toques.
+            _frameCorners = FrameCornersGraphic.Create("ViewportCorners", _frame.transform, ViewportRadiusDp, _frame.color);
+
             _staticCanvas = NestedCanvas("StaticLayer", _content, false, out _staticLayer);
             var landGo = new GameObject("Land", typeof(RectTransform), typeof(CanvasRenderer), typeof(LandGraphic));
             landGo.transform.SetParent(_staticLayer, false);
@@ -339,6 +360,8 @@ namespace AF.UI
             UiBuilder.AutoSize(_playLabel, 22f, 30f);
             _play.Relief.Bind(_play.Face, _play.Base, _play.FaceImage, art.CtaLeafLarge, null, null, _playLabel);
 
+            SequenceBuild(_root, _dynamicLayer);
+            NorthUpBuild((RectTransform)_frame.transform);
             ApplyScreenMetrics();
             _canvas.Canvas.gameObject.SetActive(false);
         }
@@ -378,6 +401,9 @@ namespace AF.UI
 
         /// <summary>Zona visible del mapa (con la máscara).</summary>
         public RectTransform ViewportRect => _viewport;
+
+        /// <summary>Rincones de madera de la zona del mapa: sus esquinas redondeadas (tests y capturas).</summary>
+        internal FrameCornersGraphic ViewportCorners => _frameCorners;
 
         /// <summary>Contenido que se arrastra (tierra, vidrio y canoa).</summary>
         public RectTransform ContentRect => _content;
@@ -634,12 +660,15 @@ namespace AF.UI
             _canoe.sprite = _art.MapCanoe;
             _canoe.gameObject.SetActive(_hasCanoe);
             ApplyTexts(playAvailable);
+            MapView view = MapView.World;
             ModesOpen(source);
+            SequenceOpen(source, ref view);
+            NorthUpOpen();
             ProgressOpen(progress);
             MarkersOpen(progress);
             CatchUpOpen(progress);
             ApplyScreenMetrics();
-            ApplyView(MapView.World);
+            ApplyView(view);
             EmitLayout();
         }
 
@@ -658,6 +687,9 @@ namespace AF.UI
             {
                 CatchUpClose(_progress);
             }
+
+            SequenceClose();
+            NorthUpClose();
 
             _dragging = false;
             _activeMs = 0f;
@@ -706,8 +738,7 @@ namespace AF.UI
                 return;
             }
 
-            Vector2 local = _space.ToLocal(_canoeMap);
-            SetOffset(new Vector2((_viewW * 0.5f) - local.x, (_viewH * 0.5f) + local.y));
+            SetOffset(CanoeCenteredOffset());
             _activeMs = ActiveLingerMs;
             EmitLayoutIfCanoeButtonChanged(); // «Volver a la canoa» se fue: AF_LAYOUT deja de publicarlo
         }
@@ -736,6 +767,8 @@ namespace AF.UI
             ProgressTick(dtMs, ref animating);
             MarkersTick(dtMs, ref animating);
             CatchUpTick(dtMs, ref animating);
+            SequenceTick(dtMs, ref animating);
+            NorthUpTick(dtMs, ref animating);
             if (_activeMs > 0f)
             {
                 _activeMs -= dtMs;
@@ -938,6 +971,7 @@ namespace AF.UI
             _view = view;
             _viewWorld.SetSelected(view == MapView.World);
             _viewBasin.SetSelected(view == MapView.Basin);
+            NorthUpView(view);
             RiverMap? map = _map;
             if (map == null || _routes == null || _stops == null)
             {
@@ -984,20 +1018,38 @@ namespace AF.UI
 
             ProgressSpace(space);
             MarkersSpace(space);
+            SequenceSpace(space);
+            NorthUpSpace(space);
             Vector2 c = space.ToLocal(center);
             SetOffset(new Vector2((_viewW * 0.5f) - c.x, (_viewH * 0.5f) + c.y));
         }
 
-        // Coloca el contenido con su esquina en offset (dp, y hacia abajo), sin salirse del mapa, y decide «Volver a la canoa».
+        // Coloca el contenido con su esquina en offset (dp, y hacia abajo), sin salirse del mapa, y decide «Volver a la canoa»: en
+        // cualquier vista (también en la Cuenca, que en un teléfono de 640 dp no cabe entera), si la canoa queda fuera y el botón
+        // movería la vista (con la canoa pegada al borde del mapa, la vista ya está lo más cerca que puede: ningún botón que no
+        // hace nada). Sin asignaciones.
         private void SetOffset(Vector2 offset)
         {
             _offset = new Vector2(ClampAxis(offset.x, _contentW, _viewW), ClampAxis(offset.y, _contentH, _viewH));
             _content.anchoredPosition = new Vector2(_offset.x, -_offset.y);
-            bool show = _view == MapView.World && _hasCanoe && !CanoeInView;
+            bool show = false;
+            if (_hasCanoe && !CanoeInView)
+            {
+                Vector2 target = CanoeCenteredOffset();
+                show = Mathf.Abs(target.x - _offset.x) > 0.5f || Mathf.Abs(target.y - _offset.y) > 0.5f;
+            }
+
             if (_backToCanoe.Button.gameObject.activeSelf != show)
             {
                 _backToCanoe.Button.gameObject.SetActive(show);
             }
+        }
+
+        // Esquina del contenido que deja la canoa en el centro de la vista (o lo más cerca que deja el borde del mapa).
+        private Vector2 CanoeCenteredOffset()
+        {
+            Vector2 local = _space.ToLocal(_canoeMap);
+            return new Vector2(ClampAxis((_viewW * 0.5f) - local.x, _contentW, _viewW), ClampAxis((_viewH * 0.5f) + local.y, _contentH, _viewH));
         }
 
         // Un eje: el contenido cubre la vista (de vista − contenido a 0) o, si cabe, queda centrado.
@@ -1124,11 +1176,14 @@ namespace AF.UI
             _viewW = frameW - (2f * FramePadDp);
             _viewH = frameH - (2f * FramePadDp);
             UiBuilder.Place(_viewport, FramePadDp, FramePadDp, _viewW, _viewH);
+            UiBuilder.Place(_frameCorners.rectTransform, FramePadDp, FramePadDp, _viewW, _viewH);
 
             // «Volver a la canoa», abajo a la derecha de la zona del mapa, a la medida de su texto.
             float canoeLabelW = Mathf.Ceil(UiBuilder.MinTextWidth(_backToCanoeLabel));
             float buttonW = Mathf.Min(_viewW - 16f, Mathf.Max(MinTouchDp * 2f, canoeLabelW + 32f));
             UiBuilder.Place((RectTransform)_backToCanoe.Button.transform, FramePadDp + _viewW - buttonW - 8f, FramePadDp + _viewH - MinTouchDp - 8f, buttonW, MinTouchDp);
+            SequenceLayout();
+            NorthUpLayout();
         }
 
         private void EmitLayout()
@@ -1161,6 +1216,8 @@ namespace AF.UI
 
             MarkersLayoutIds(ids, rects);
             SamplesLayoutIds(ids, rects);
+            SequenceLayoutIds(ids, rects);
+            NorthUpLayoutIds(ids, rects);
             _probe.Layout("river_map", _playLevel, null, ids.ToArray(), rects.ToArray());
         }
 
@@ -1191,6 +1248,16 @@ namespace AF.UI
             {
                 EmitLayout();
             }
+        }
+
+        /// <summary>
+        /// Devuelve el pintado a todos los fotogramas (60 fps), para quien se va con el Mapa quizá abierto sin pasar por
+        /// <see cref="Close"/>: <see cref="GameBootstrap"/> al destruirse la escena (una recarga con el Mapa delante), para que el
+        /// nivel siguiente no pinte a 30 fps.
+        /// </summary>
+        public static void RestoreFullRenderRate()
+        {
+            SetRenderInterval(1);
         }
 
         private static void SetRenderInterval(int interval)
@@ -1278,6 +1345,60 @@ namespace AF.UI
 
         /// <summary>M4.3: la entrada (pausa, victoria, fin de contenido) y el modo <c>ui_map_mode</c> al abrir.</summary>
         partial void ModesOpen(MapOpenSource source);
+
+        /// <summary>
+        /// M4.2: la secuencia del Mapa del 10, al construir la pantalla (una vez): sus piezas sobre la UI (<paramref name="root"/>:
+        /// el bocadillo y saltar) y sobre el mapa (<paramref name="dynamicLayer"/>: TiTino en su casa).
+        /// </summary>
+        partial void SequenceBuild(RectTransform root, RectTransform dynamicLayer);
+
+        /// <summary>
+        /// M4.2: al abrir, tras <see cref="ModesOpen"/>. Si la secuencia arranca (<paramref name="source"/> del Mapa del 10), elige
+        /// la vista con que se abre (<paramref name="view"/>: Mundo por defecto; la secuencia, Cuenca).
+        /// </summary>
+        partial void SequenceOpen(MapOpenSource source, ref MapView view);
+
+        /// <summary>M4.2: la vista cambió de escala (también al abrir y al cambiar las métricas de la pantalla).</summary>
+        partial void SequenceSpace(MapSpace space);
+
+        /// <summary>M4.2: cada fotograma con el Mapa abierto (la canoa que sube a Santarém); <paramref name="animating"/> = true pide 60 fps.</summary>
+        partial void SequenceTick(float dtMs, ref bool animating);
+
+        /// <summary>M4.2: la pantalla se recolocó (al final de la maquetación).</summary>
+        partial void SequenceLayout();
+
+        /// <summary>M4.2: los controles de la secuencia (saltar) en <c>AF_LAYOUT</c>.</summary>
+        partial void SequenceLayoutIds(List<string> ids, List<RectTransform> rects);
+
+        /// <summary>M4.2: al cerrar, antes de dar las cifras de <c>map_close</c>.</summary>
+        partial void SequenceClose();
+
+        /// <summary>M4.4: «Norte arriba» al construir la pantalla (una vez): el botón <c>map_north_up</c> en el marco de la zona del mapa.</summary>
+        partial void NorthUpBuild(RectTransform frame);
+
+        /// <summary>M4.4: al abrir, sin giro (<see cref="Open"/> ya puso <c>_northUp</c> a false).</summary>
+        partial void NorthUpOpen();
+
+        /// <summary>
+        /// M4.4: en cada cambio de vista (también al abrir y al cambiar las métricas de la pantalla, con la misma vista): el botón
+        /// solo en la Cuenca y, fuera de ella, sin giro.
+        /// </summary>
+        partial void NorthUpView(MapView view);
+
+        /// <summary>M4.4: la vista cambió de escala.</summary>
+        partial void NorthUpSpace(MapSpace space);
+
+        /// <summary>M4.4: cada fotograma con el Mapa abierto (el giro de −90° con su escala); <paramref name="animating"/> = true pide 60 fps.</summary>
+        partial void NorthUpTick(float dtMs, ref bool animating);
+
+        /// <summary>M4.4: la pantalla se recolocó (al final de la maquetación: el botón en la zona del mapa).</summary>
+        partial void NorthUpLayout();
+
+        /// <summary>M4.4: el botón <c>map_north_up</c> en <c>AF_LAYOUT</c>.</summary>
+        partial void NorthUpLayoutIds(List<string> ids, List<RectTransform> rects);
+
+        /// <summary>M4.4: al cerrar, antes de dar las cifras de <c>map_close</c> (pone <c>_northUp</c> a true si se usó).</summary>
+        partial void NorthUpClose();
 
         // ============================================================================================ piezas
 
@@ -1450,6 +1571,88 @@ namespace AF.UI
                 vh.AddVert(q + e - n, c, Vector2.zero);
                 vh.AddTriangle(i, i + 1, i + 2);
                 vh.AddTriangle(i, i + 2, i + 3);
+            }
+        }
+
+        /// <summary>
+        /// Los cuatro rincones de madera de la zona del mapa (D-003): en cada esquina de su caja, lo que queda fuera de un cuarto de
+        /// círculo de radio <see cref="Radius"/>, con el color del marco, para que la tierra y el vidrio recortados por el
+        /// <see cref="RectMask2D"/> (en ángulo recto) sigan el filete de la madera, concéntricos con sus esquinas de fuera. El arco
+        /// lleva un borde de un píxel que se desvanece (sin dientes). Se dibuja con su malla (sin textura), solo al cambiar de tamaño;
+        /// sin raycast, así que el arrastre pasa al mapa.
+        /// </summary>
+        [RequireComponent(typeof(CanvasRenderer))]
+        internal sealed class FrameCornersGraphic : MaskableGraphic
+        {
+            /// <summary>Tramos de cada cuarto de círculo.</summary>
+            public const int ArcSegments = 12;
+
+            private float _radius;
+
+            /// <summary>Radio de las esquinas (dp).</summary>
+            public float Radius => _radius;
+
+            /// <summary>Crea los rincones bajo <paramref name="parent"/>, con radio <paramref name="radius"/> dp y el color <paramref name="tint"/>.</summary>
+            public static FrameCornersGraphic Create(string name, Transform parent, float radius, Color tint)
+            {
+                var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(FrameCornersGraphic));
+                go.transform.SetParent(parent, false);
+                FrameCornersGraphic corners = go.GetComponent<FrameCornersGraphic>();
+                corners._radius = Mathf.Max(0f, radius);
+                corners.raycastTarget = false;
+                corners.color = tint;
+                corners.SetVerticesDirty();
+                return corners;
+            }
+
+            /// <inheritdoc />
+            protected override void OnPopulateMesh(VertexHelper vh)
+            {
+                vh.Clear();
+                Rect r = rectTransform.rect;
+                float radius = Mathf.Min(_radius, Mathf.Min(r.width, r.height) * 0.5f);
+                if (radius <= 0f)
+                {
+                    return;
+                }
+
+                Canvas? root = canvas;
+                float px = root != null && root.scaleFactor > 0f ? 1f / root.scaleFactor : 1f / ProceduralArt.UiPxPerDp;
+                float half = Mathf.Min(0.5f * px, radius * 0.5f);
+                Corner(vh, new Vector2(r.xMin, r.yMin), new Vector2(1f, 1f), radius, half);
+                Corner(vh, new Vector2(r.xMax, r.yMin), new Vector2(-1f, 1f), radius, half);
+                Corner(vh, new Vector2(r.xMax, r.yMax), new Vector2(-1f, -1f), radius, half);
+                Corner(vh, new Vector2(r.xMin, r.yMax), new Vector2(1f, -1f), radius, half);
+            }
+
+            // Un rincón: abanico desde la esquina c hasta el arco (radio + half, opaco) y una franja del arco (de radio + half,
+            // opaca, a radio − half, transparente). inward apunta hacia dentro de la caja en los dos ejes.
+            private void Corner(VertexHelper vh, Vector2 c, Vector2 inward, float radius, float half)
+            {
+                Color32 solid = color;
+                Color32 clear = solid;
+                clear.a = 0;
+                var center = new Vector2(c.x + (inward.x * radius), c.y + (inward.y * radius));
+                int start = vh.currentVertCount;
+                vh.AddVert(c, solid, Vector2.zero);
+                for (int i = 0; i <= ArcSegments; i++)
+                {
+                    float a = (i / (float)ArcSegments) * (Mathf.PI * 0.5f);
+                    var dir = new Vector2(-inward.x * Mathf.Cos(a), -inward.y * Mathf.Sin(a));
+                    vh.AddVert(center + (dir * (radius + half)), solid, Vector2.zero);
+                    vh.AddVert(center + (dir * (radius - half)), clear, Vector2.zero);
+                }
+
+                for (int i = 0; i < ArcSegments; i++)
+                {
+                    int outer = start + 1 + (2 * i);
+                    int inner = outer + 1;
+                    int nextOuter = outer + 2;
+                    int nextInner = outer + 3;
+                    vh.AddTriangle(start, outer, nextOuter);
+                    vh.AddTriangle(outer, inner, nextInner);
+                    vh.AddTriangle(outer, nextInner, nextOuter);
+                }
             }
         }
     }

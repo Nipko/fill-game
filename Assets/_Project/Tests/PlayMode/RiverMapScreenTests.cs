@@ -260,7 +260,7 @@ namespace AF.Tests.PlayMode
             Assert.That(map.ViewportSize.x, Is.EqualTo(MapSpace.BasinWidthDp).Within(0.5f));
             Assert.That(map.ContentSize.y, Is.LessThanOrEqualTo(map.ViewportSize.y + 0.5f), "a 360 × 780 la cuenca entera cabe");
             Assert.That(map.CanoeInView, Is.True);
-            Assert.That(map.BackToCanoeShown, Is.False, "en la Cuenca no hace falta");
+            Assert.That(map.BackToCanoeShown, Is.False, "con la cuenca entera a la vista no hace falta (a 360 × 640, sí: Basin_At360x640_…)");
             Vector2 offset = map.ContentOffset;
             map.Drag(new Vector2(50f, 50f));
             Assert.That(map.ContentOffset, Is.EqualTo(offset), "si el mapa cabe, se queda centrado");
@@ -271,6 +271,151 @@ namespace AF.Tests.PlayMode
             map.ViewWorldButton.onClick.Invoke();
             Assert.That(map.View, Is.EqualTo(MapView.World));
             Assert.That(map.Zoom, Is.EqualTo(worldZoom).Within(1e-4f), "la misma vista Mundo");
+        }
+
+        [UnityTest]
+        public IEnumerator Basin_At360x640_DoesNotFit_AndOffersBackToCanoe()
+        {
+            // A 360 × 640 la cuenca a 1× (≈ 431 dp de alto) no cabe en la zona del mapa (≈ 354 dp): se arrastra en vertical y la
+            // canoa puede quedar fuera, así que «Volver a la canoa» sale también en la Cuenca (M3.3, punto 2; propuesta §3.2).
+            GameScreen.SimulatedScreen = new Vector4(1080f, 1920f, 96f, 48f); // un teléfono de 360 × 640 dp
+            yield return OpenAt(11); // max_level 10: la canoa en la parada 1, cerca de la desembocadura (un extremo de la cuenca)
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            map.ViewBasinButton.onClick.Invoke();
+            Assert.That(map.View, Is.EqualTo(MapView.Basin));
+            Assert.That(map.Zoom, Is.EqualTo(1f));
+            Assert.That(map.ContentSize.y, Is.GreaterThan(map.ViewportSize.y + 1f), "a 360 × 640 la cuenca no cabe entera");
+            Assert.That(map.HasCanoe, Is.True);
+
+            // Hasta un extremo; si la canoa sigue a la vista, hasta el otro.
+            map.Drag(new Vector2(0f, -100000f));
+            if (map.CanoeInView)
+            {
+                map.Drag(new Vector2(0f, 200000f));
+            }
+
+            Assert.That(map.CanoeInView, Is.False, "la canoa queda fuera en uno de los dos extremos");
+            Assert.That(map.BackToCanoeShown, Is.True, "«Volver a la canoa», también en la Cuenca");
+            Assert.That(map.BackToCanoeLabel, Is.EqualTo("Volver a la canoa"));
+
+            map.BackToCanoeButton.onClick.Invoke();
+            Assert.That(map.View, Is.EqualTo(MapView.Basin), "sin cambiar de vista");
+            Assert.That(map.CanoeInView, Is.True);
+            Assert.That(map.BackToCanoeShown, Is.False);
+            yield return null;
+
+            // De vuelta en Mundo, el botón sigue las mismas reglas.
+            map.ViewWorldButton.onClick.Invoke();
+            Assert.That(map.CanoeInView, Is.True);
+            Assert.That(map.BackToCanoeShown, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator ViewportCorners_FollowTheFrameFillet()
+        {
+            // RectMask2D recorta en ángulo recto: cuatro rincones de madera encima del contenido redondean la zona del mapa,
+            // concéntricos con las esquinas de fuera del marco (D-003).
+            yield return OpenAt(58);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            RiverMapScreen.FrameCornersGraphic corners = map.ViewportCorners;
+            Transform frame = map.ViewportRect.parent;
+            Assert.That(corners.transform.parent, Is.SameAs(frame), "en el marco, fuera de la máscara");
+            Assert.That(corners.transform.GetSiblingIndex(), Is.EqualTo(map.ViewportRect.GetSiblingIndex() + 1), "justo encima del contenido");
+            Assert.That(corners.transform.GetSiblingIndex(), Is.LessThan(map.BackToCanoeButton.transform.GetSiblingIndex()), "debajo de «Volver a la canoa»");
+            Assert.That(corners.raycastTarget, Is.False, "el arrastre pasa al mapa");
+            Assert.That(corners.color, Is.EqualTo(frame.GetComponent<Image>().color), "la madera del marco");
+            Assert.That(RiverMapScreen.ViewportRadiusDp, Is.EqualTo(RiverMapScreen.FrameRadiusDp - RiverMapScreen.FramePadDp));
+            Assert.That(corners.Radius, Is.EqualTo(RiverMapScreen.ViewportRadiusDp));
+            Assert.That(corners.Radius, Is.GreaterThan(0f));
+
+            Canvas.ForceUpdateCanvases();
+            Rect a = CanvasRect(corners.rectTransform, map.Canvas);
+            Rect b = CanvasRect(map.ViewportRect, map.Canvas);
+            Assert.That(Vector2.Distance(a.min, b.min), Is.LessThan(0.01f), "la caja de la zona del mapa");
+            Assert.That(Vector2.Distance(a.max, b.max), Is.LessThan(0.01f));
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator ReloadingTheScene_WithTheMapAtRest_GivesBack60fps()
+        {
+            // La escena se va con el Mapa abierto (una recarga, como RebuildUi): su Close no llega, pero el intervalo de pintado,
+            // que es global, vuelve a 1 al destruirse GameBootstrap, y el nivel siguiente no pinta a 30 fps.
+            yield return OpenAt(58);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            map.Tick(RiverMapScreen.ActiveLingerMs + 1f);
+            map.Tick(16f);
+            Assert.That(RiverMapScreen.RestRenderInterval, Is.GreaterThan(1), "con el objetivo de 60 fps del juego");
+            Assert.That(OnDemandRendering.renderFrameInterval, Is.EqualTo(RiverMapScreen.RestRenderInterval), "el Mapa, en reposo");
+            Assert.That(map.Visible, Is.True);
+
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(58)));
+            Assert.That(GameBootstrap.Current!.RiverMapView!.Visible, Is.False);
+            Assert.That(OnDemandRendering.renderFrameInterval, Is.EqualTo(1), "a 60 fps tras la recarga");
+        }
+
+        [UnityTest]
+        public IEnumerator WithoutMapData_FromTheStart_TheLobbyStaysAsInWave2()
+        {
+            // La escena sin river_map_v1.json (GameSceneBuilder avisa: «el juego seguirá sin la pantalla del Mapa»): con
+            // max_level ≥ 10 no hay pestaña, el Mapa no se abre por ninguna entrada, AF_LAYOUT no publica map_tab y no hay errores.
+            using var layout = new AfLayoutLog();
+            bool dropped = false;
+            void DropTheMap(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+            {
+                // sceneLoaded llega tras Awake y antes de Start: como si la escena no trajera la geometría.
+                foreach (GameObject root in scene.GetRootGameObjects())
+                {
+                    GameBootstrap? b = root.GetComponentInChildren<GameBootstrap>(true);
+                    if (b != null && b.RiverMapAsset != null)
+                    {
+                        b.ConfigureRiverMap(null);
+                        dropped = true;
+                    }
+                }
+            }
+
+            var problems = new List<string>();
+            void OnLog(string message, string stack, LogType type)
+            {
+                if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert || type == LogType.Warning)
+                {
+                    problems.Add(type + ": " + message);
+                }
+            }
+
+            Application.logMessageReceived += OnLog;
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += DropTheMap;
+            try
+            {
+                yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(58)));
+                GameBootstrap boot = GameBootstrap.Current!;
+                LobbyScreen lobby = boot.Lobby!;
+                yield return null;
+                yield return null;
+                Assert.That(dropped, Is.True, "la escena traía la geometría y se quitó antes de Start");
+                Assert.That(boot.RiverMapAsset, Is.Null);
+                Assert.That(boot.Profile!.Progress.MaxLevel, Is.EqualTo(57), "max_level ≥ 10");
+                Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+                Assert.That(boot.RiverMapAvailable, Is.False);
+                Assert.That(lobby.MapTabShown, Is.False, "sin datos, sin pestaña");
+                Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.False, "ni se abre desde el inicio");
+                Assert.That(boot.OpenRiverMap(MapOpenSource.Pause), Is.False, "ni por otra entrada");
+                Assert.That(boot.RiverMapView!.Visible, Is.False);
+                Assert.That(boot.RiverMapData, Is.Null, "no se intenta leer nada");
+                string? lobbyLine = layout.LastOf("lobby", 58);
+                Assert.That(lobbyLine, Is.Not.Null, "AF_LAYOUT del inicio");
+                Assert.That(AfLayoutLog.ButtonIds(lobbyLine!), Does.Not.Contain("map_tab"));
+                Assert.That(AfLayoutLog.ButtonIds(lobbyLine!), Does.Contain("play"), "el inicio de siempre, con «Jugar»");
+                Assert.That(OnDemandRendering.renderFrameInterval, Is.EqualTo(1));
+            }
+            finally
+            {
+                UnityEngine.SceneManagement.SceneManager.sceneLoaded -= DropTheMap;
+                Application.logMessageReceived -= OnLog;
+            }
+
+            Assert.That(problems, Is.Empty, "ni errores ni avisos: el juego sigue como en la ola 2");
         }
 
         [UnityTest]

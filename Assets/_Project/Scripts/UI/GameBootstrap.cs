@@ -1740,6 +1740,11 @@ namespace AF.UI
         private void OnDestroy()
         {
             PersistNow("destruir la escena");
+
+            // Si la escena se va con el Mapa abierto (una recarga, RebuildUi), su Close no llega: el intervalo de pintado es global
+            // y se quedaría en el de reposo del Mapa (30 fps) para el nivel siguiente. Sin tocar la pantalla, que puede estar ya
+            // destruida en este punto.
+            RiverMapScreen.RestoreFullRenderRate();
             if (_backAction != null)
             {
                 _backAction.performed -= OnBackPerformed;
