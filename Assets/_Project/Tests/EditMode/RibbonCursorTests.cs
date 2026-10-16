@@ -16,9 +16,11 @@ namespace AF.Tests.EditMode
     /// <summary>
     /// Primitivas del Mapa del río (D-013; 08 §2.2; propuesta del Mapa §3.4, §11.1 y §11.4; tarea M3.2): <see cref="PolylineCursor"/>
     /// en los extremos, a ≤ 0,5 dp de la polilínea exacta y monotónico, con las bocas del archivo real sobre su río y sin
-    /// asignaciones; <see cref="RiverRibbonGraphic"/> con el ancho por clase, el vidrio y el agua (colores por tramo y las dos
-    /// aguas a cada lado), la trama de Patrones de fruta, el frente a ≤ 400 vértices, <see cref="RiverRibbonGraphic.SetFill"/>
-    /// que no reconstruye ni asigna sin cambios, la malla sin asignaciones y el inglete limitado en un codo de 170°; y
+    /// asignaciones; <see cref="RiverRibbonGraphic"/> con el ancho por clase, el vidrio y el agua (colores por tramo, las dos
+    /// aguas a cada lado y el borde de vidrio), la trama de Patrones de fruta (con su forma en la andina), el frente a ≤ 400
+    /// vértices, la trama con el aspecto que dibuja la cinta cuando el tope omite cambios de agua, la sección final que llega
+    /// por su tramo, <see cref="RiverRibbonGraphic.SetFill"/> que no reconstruye ni asigna sin cambios, la malla sin
+    /// asignaciones y el inglete limitado en un codo de 170°; y
     /// <see cref="LandGraphic"/> con un color por zona.
     /// </summary>
     public sealed class RibbonCursorTests
@@ -202,7 +204,7 @@ namespace AF.Tests.EditMode
             Assert.That(verts.Count, Is.EqualTo(6 * amazonas.PointCount));
             Assert.That(glass.LastVertexCount, Is.EqualTo(verts.Count));
             Color32 body = RiverRibbonGraphic.GlassBody;
-            Color32 rim = RiverRibbonGraphic.GlassRim;
+            Color32 rim = Palette.GlassRim;
             foreach (UIVertex v in verts)
             {
                 Assert.That(Same(v.color, body) || Same(v.color, rim), Is.True, "el vidrio no lleva tipos de agua");
@@ -228,6 +230,7 @@ namespace AF.Tests.EditMode
             bool white = false;
             bool black = false;
             bool clear = false;
+            int rims = 0;
             foreach (UIVertex v in verts)
             {
                 andean |= Same(v.color, RiverRibbonGraphic.WaterColor(RiverWater.Andean));
@@ -235,8 +238,18 @@ namespace AF.Tests.EditMode
                 black |= Same(v.color, RiverRibbonGraphic.WaterColor(RiverWater.Black));
                 clear |= Same(v.color, RiverRibbonGraphic.WaterColor(RiverWater.Clear));
                 Assert.That(Same(v.color, RiverRibbonGraphic.GlassBody), Is.False, "el cauce tiene el agua comprobada entera");
+                bool isRim = Same(v.color, Palette.GlassRim);
+                rims += isRim ? 1 : 0;
+                Assert.That(isRim || Same(v.color, RiverRibbonGraphic.WaterColor(RiverWater.Andean))
+                    || Same(v.color, RiverRibbonGraphic.WaterColor(RiverWater.White))
+                    || Same(v.color, RiverRibbonGraphic.WaterColor(RiverWater.Black))
+                    || Same(v.color, RiverRibbonGraphic.WaterColor(RiverWater.Clear)), Is.True,
+                    "cada vértice es agua o el borde de vidrio: sin orilla oscura");
             }
 
+            // El agua llena lleva el borde vidrio_borde (#EAF7F3; propuesta del Mapa §3.5), el mismo que el vidrio: las dos
+            // bandas de fuera de cada sección (4 de sus 6 u 8 vértices).
+            Assert.That(rims, Is.GreaterThanOrEqualTo(verts.Count / 2), "el borde de vidrio en cada sección");
             Assert.That(andean && white, Is.True, "cabecera andina y el resto blanca");
             Assert.That(black, Is.True, "el Encuentro: el Negro a un lado");
             Assert.That(clear, Is.True, "Santarém: el Tapajós a un lado");
@@ -272,7 +285,7 @@ namespace AF.Tests.EditMode
             // Un río con el agua sin comprobar ([NV]) se dibuja en vidrio también en el aspecto de agua.
             foreach (UIVertex v in Mesh(Ribbon(_map.Line("pacaya")!, RibbonLook.Water)))
             {
-                Assert.That(Same(v.color, RiverRibbonGraphic.GlassBody) || Same(v.color, RiverRibbonGraphic.GlassRim), Is.True);
+                Assert.That(Same(v.color, RiverRibbonGraphic.GlassBody) || Same(v.color, Palette.GlassRim), Is.True);
             }
         }
 
@@ -292,14 +305,31 @@ namespace AF.Tests.EditMode
             bool dots = false;
             bool stripes = false;
             bool waves = false;
+            bool dashes = false;
             foreach (UIVertex v in verts)
             {
                 dots |= Same(v.color, RiverRibbonGraphic.MarkColor(RiverWater.White));
                 stripes |= Same(v.color, RiverRibbonGraphic.MarkColor(RiverWater.Black));
                 waves |= Same(v.color, RiverRibbonGraphic.MarkColor(RiverWater.Clear));
+                dashes |= Same(v.color, RiverRibbonGraphic.MarkColor(RiverWater.Andean));
             }
 
-            Assert.That(dots && stripes && waves, Is.True, "puntos en la blanca, rayas en la negra y ondas en la clara");
+            Assert.That(dots && stripes && waves && dashes, Is.True,
+                "puntos en la blanca, rayas en la negra, ondas en la clara y guiones en la andina");
+
+            // La andina tiene su propia trama [P], no los puntos de la blanca (07 §Accesibilidad: el paso de la andina a la
+            // blanca no depende solo del color): guiones a lo largo del río frente a rombos con los cuatro lados iguales.
+            float headwaters = amazonas.NextBoundaryAfter(0f);
+            Assert.That(amazonas.WaterAt(0f), Is.EqualTo(RiverWater.Andean));
+            Assert.That(amazonas.WaterAt(headwaters), Is.EqualTo(RiverWater.White), "el primer cambio: de la andina a la blanca");
+            RiverRibbonGraphic andeanSpan = Ribbon(amazonas, RibbonLook.Water);
+            andeanSpan.SetPatterns(true);
+            andeanSpan.SetFill(0f, headwaters);
+            AssertMarkShapes(andeanSpan, amazonas, RiverWater.Andean, true);
+            RiverRibbonGraphic whiteSpan = Ribbon(amazonas, RibbonLook.Water);
+            whiteSpan.SetPatterns(true);
+            whiteSpan.SetFill(headwaters, headwaters + 0.05f);
+            AssertMarkShapes(whiteSpan, amazonas, RiverWater.White, false);
 
             // La opacidad canónica del patrón (07 §3, regla 1): ui_pattern_opacity = 0,20 por defecto y 0,35 solo en Alto
             // contraste, que pasa quien configura la cinta.
@@ -469,6 +499,77 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Truncated_WaterChanges_TramaFollowsTheDrawnLook()
+        {
+            // Documento mínimo: el cauce tiene tres puntos y el segundo cae en s ≈ 0,436, así que [0,499, 0,9] no tiene puntos
+            // interiores y cruza la franja de dos aguas (0,5-0,6). Con un tope de 20 vértices, el cambio a la franja no cabe: la
+            // cinta va blanca hasta la punta, y la trama tiene que ir igual (antes tomaba el agua del archivo y pintaba la
+            // franja, con la raya de la negra, sobre una cinta blanca).
+            RiverLine main = RiverMapReader.Read(RiverMapReaderTests.Doc()).Lines[0];
+            Assert.That(main.SOfPoint(1), Is.LessThan(0.499f));
+            RiverRibbonGraphic ribbon = Ribbon(main, RibbonLook.Water);
+            ribbon.SetPatterns(true);
+            ribbon.SetVertexBudget(20);
+            ribbon.SetFill(0.499f, 0.9f);
+            List<UIVertex> verts = Mesh(ribbon);
+            Assert.That(verts.Count, Is.LessThanOrEqualTo(20));
+            Assert.That(ribbon.LastWasDecimated, Is.False, "sin puntos interiores no se salta ninguno");
+            int marks = ribbon.LastMarkCount;
+            Assert.That(marks, Is.GreaterThan(0));
+            Color32 whiteMark = RiverRibbonGraphic.MarkColor(RiverWater.White);
+            for (int i = 0; i < verts.Count; i++)
+            {
+                UIVertex v = verts[i];
+                Assert.That(Same(v.color, RiverRibbonGraphic.WaterColor(RiverWater.Black)), Is.False, "la cinta no llega a la franja");
+                if (i >= verts.Count - (4 * marks))
+                {
+                    Assert.That(Same(v.color, whiteMark), Is.True, "la trama, con el agua que dibuja la cinta (vértice " + i + ")");
+                }
+            }
+        }
+
+        [Test]
+        public void Ribbon_EndOnALinePoint_FollowsTheArrivingSegment()
+        {
+            // Si la punta del intervalo cae justo en un punto de la línea (SetFill(x, SOfPoint(k))), la sección final es
+            // perpendicular al tramo por el que llega la cinta (k − 1), no al que sale de ese punto; la inicial, en el mismo
+            // punto, al tramo por el que sale (k). Se busca, desde el punto 10, uno en el que s · largo dé justo su longitud
+            // acumulada (la igualdad exacta es el caso límite) y en el que la línea gire.
+            RiverLine amazonas = _map.Lines[0];
+            var cursor = new PolylineCursor(amazonas);
+            int k = -1;
+            for (int i = 10; i < amazonas.PointCount - 1 && k < 0; i++)
+            {
+                bool exact = cursor.ArcOfS(amazonas.SOfPoint(i)) == cursor.ArcOfPoint(i);
+                bool segments = cursor.ArcOfPoint(i - 1) < cursor.ArcOfPoint(i) && cursor.ArcOfPoint(i) < cursor.ArcOfPoint(i + 1);
+                bool turns = Vector2.Angle(cursor.SegmentDirection(i - 1), cursor.SegmentDirection(i)) > 5f;
+                if (exact && segments && turns)
+                {
+                    k = i;
+                }
+            }
+
+            Assert.That(k, Is.GreaterThanOrEqualTo(10), "un punto del cauce con la s exacta y un giro de más de 5°");
+            Vector2 arriving = MapSpace.DirectionToLocal(cursor.SegmentDirection(k - 1));
+            Vector2 leaving = MapSpace.DirectionToLocal(cursor.SegmentDirection(k));
+
+            RiverRibbonGraphic upTo = Ribbon(amazonas, RibbonLook.Glass);
+            upTo.SetFill(0f, amazonas.SOfPoint(k));
+            List<UIVertex> verts = Mesh(upTo);
+            Assert.That(verts.Count, Is.EqualTo(6 * (k + 1)), "una sección por punto, la última en el punto " + k);
+            Vector2 last = verts[verts.Count - 1].position - verts[verts.Count - 6].position;
+            Assert.That(last.magnitude, Is.EqualTo(RiverRibbonGraphic.WidthClass1Dp).Within(1e-3f));
+            Assert.That(Vector2.Dot(last.normalized, arriving), Is.EqualTo(0f).Within(1e-3f), "perpendicular al tramo " + (k - 1));
+
+            RiverRibbonGraphic fromK = Ribbon(amazonas, RibbonLook.Glass);
+            fromK.SetFill(amazonas.SOfPoint(k), 1f);
+            List<UIVertex> fv = Mesh(fromK);
+            Vector2 first = fv[5].position - fv[0].position;
+            Assert.That(first.magnitude, Is.EqualTo(RiverRibbonGraphic.WidthClass1Dp).Within(1e-3f));
+            Assert.That(Vector2.Dot(first.normalized, leaving), Is.EqualTo(0f).Within(1e-3f), "perpendicular al tramo " + k);
+        }
+
+        [Test]
         public void Ribbon_Elbow170_MiterIsLimited()
         {
             // Un codo de 170° en unidades del marco (la misma escala en los dos ejes): A → B y de vuelta casi hacia A.
@@ -598,6 +699,45 @@ namespace AF.Tests.EditMode
             }
 
             return list;
+        }
+
+        // Forma de las marcas de la trama de «ribbon» (sin puntos saltados), las últimas 4 · LastMarkCount de la malla, todas del
+        // agua «water»: con «elongated», guiones a lo largo del río (un lado al menos el triple del otro y el largo paralelo a la
+        // tangente); si no, rombos con los cuatro lados iguales.
+        private static void AssertMarkShapes(RiverRibbonGraphic ribbon, RiverLine line, RiverWater water, bool elongated)
+        {
+            List<UIVertex> verts = Mesh(ribbon);
+            int marks = ribbon.LastMarkCount;
+            Assert.That(ribbon.LastWasDecimated, Is.False);
+            Assert.That(marks, Is.GreaterThan(5), water.ToString());
+            var cursor = new PolylineCursor(line);
+            float step = RiverRibbonGraphic.PatternStepDp / Basin;
+            float aStart = ribbon.FillStart * cursor.Length;
+            int at = verts.Count - (4 * marks);
+            Color32 color = RiverRibbonGraphic.MarkColor(water);
+            for (int m = 0; m < marks; m++)
+            {
+                Vector2 p0 = verts[at + (4 * m)].position;
+                Vector2 p1 = verts[at + (4 * m) + 1].position;
+                Vector2 p2 = verts[at + (4 * m) + 2].position;
+                for (int q = 0; q < 4; q++)
+                {
+                    Assert.That(Same(verts[at + (4 * m) + q].color, color), Is.True, water + ", marca " + m);
+                }
+
+                float side01 = Vector2.Distance(p0, p1);
+                float side12 = Vector2.Distance(p1, p2);
+                if (elongated)
+                {
+                    Vector2 tangent = MapSpace.DirectionToLocal(cursor.TangentAtArc(aStart + (step * (m + 0.5f))));
+                    Assert.That(side01, Is.GreaterThanOrEqualTo(3f * side12), water + ", marca " + m + ": un guion");
+                    Assert.That(Mathf.Abs(Vector2.Dot((p1 - p0).normalized, tangent)), Is.GreaterThan(0.999f), "a lo largo del río");
+                }
+                else
+                {
+                    Assert.That(side01, Is.EqualTo(side12).Within(1e-3f), water + ", marca " + m + ": un rombo");
+                }
+            }
         }
 
         // Distancia de p al triángulo (a, b, c): 0 dentro.

@@ -12,7 +12,10 @@ namespace AF.Presentation
         /// <summary>Vidrio: «por descubrir», azul hielo translúcido con borde claro, sin tipos de agua.</summary>
         Glass = 0,
 
-        /// <summary>Agua: el color de cada tramo (<c>water</c>) y las dos aguas lado a lado (<c>splits</c>), con orilla oscura.</summary>
+        /// <summary>
+        /// Agua: el color de cada tramo (<c>water</c>) y las dos aguas lado a lado (<c>splits</c>), con el mismo borde de vidrio
+        /// (<c>vidrio_borde</c>; propuesta del Mapa §3.5).
+        /// </summary>
         Water = 1,
     }
 
@@ -29,16 +32,19 @@ namespace AF.Presentation
     /// <item><description>Agua: color por vértice según <c>water</c> (blanca, negra, clara y andina) y, en las franjas de
     /// <c>splits</c>, la cinta partida a lo largo con el agua de cada orilla mirando río abajo; los cambios de agua son
     /// netos (cada tramo con sus propios vértices). Un tramo sin agua comprobada ([NV]) se dibuja en vidrio.</description></item>
-    /// <item><description>El lleno y el vidrio se distinguen también por el trazo: el vidrio lleva un borde claro (#EAF7F3) y el
-    /// agua, una orilla más oscura que su color; con Patrones de fruta (02 §12; <see cref="SetPatterns"/>), el agua lleva además
-    /// una trama por tipo: puntos en la blanca y la andina, rayas en la negra y ondas en la clara, con la opacidad canónica del
-    /// patrón (07 §3, regla 1: <c>ui_pattern_opacity</c>, 0,20; 0,35 solo en Alto contraste, que pasa quien la usa).</description></item>
+    /// <item><description>Borde: el vidrio y el agua llevan el mismo borde claro, <c>vidrio_borde</c> (#EAF7F3,
+    /// <see cref="Palette.GlassRim"/>), como fija la propuesta del Mapa §3.5 para el agua llena y como el canto de la franja de
+    /// llegada. Con Patrones de fruta (02 §12; propuesta del Mapa §11.4; <see cref="SetPatterns"/>), el lleno se distingue del
+    /// vidrio también por el trazo: el agua lleva una trama por tipo (puntos en la blanca, rayas transversales en la negra,
+    /// ondas en la clara y, en la andina, guiones a lo largo del río [P], para que el paso de la andina a la blanca no dependa
+    /// solo del color: 07 §Accesibilidad), con la opacidad canónica del patrón (07 §3, regla 1: <c>ui_pattern_opacity</c>,
+    /// 0,20; 0,35 solo en Alto contraste, que pasa quien la usa).</description></item>
     /// <item><description>Presupuesto de vértices (<see cref="SetVertexBudget"/>): si el intervalo no cabe, se saltan puntos
     /// intermedios de la línea de forma uniforme (si no cabe ninguno, todos) y la cinta une los que quedan con cuerdas: el
     /// inglete de cada sección y la trama siguen esas cuerdas, no la polilínea original. Las dos puntas se dibujan siempre
-    /// (si no caben todos los cambios de agua, se omiten los últimos antes que la sección final), salvo con un tope que no
-    /// admite ni dos secciones, que deja la malla vacía; la trama sale solo mientras quede presupuesto. Nunca se pasa del
-    /// tope.</description></item>
+    /// (si no caben todos los cambios de agua, se omiten los últimos antes que la sección final, y la trama sigue el aspecto
+    /// que dibuja la cinta), salvo con un tope que no admite ni dos secciones, que deja la malla vacía; la trama sale solo
+    /// mientras quede presupuesto. Nunca se pasa del tope.</description></item>
     /// </list>
     /// Las coordenadas son las locales de su RectTransform según <see cref="MapSpace"/>. Solo se reconstruye cuando cambia algo
     /// (<see cref="SetFill"/> sin cambios no hace nada ni asigna memoria); al reconstruirse no asigna memoria tras la primera vez.
@@ -64,7 +70,7 @@ namespace AF.Presentation
         /// <summary>Largo máximo del inglete, en medios anchos [P].</summary>
         public const float MiterLimit = 2f;
 
-        /// <summary>Grosor del borde del vidrio y de la orilla del agua, en dp [P] (como mucho el 35 % del medio ancho).</summary>
+        /// <summary>Grosor del borde (vidrio y agua), en dp [P] (como mucho el 35 % del medio ancho).</summary>
         public const float RimDp = 1f;
 
         /// <summary>Paso de la trama de Patrones de fruta a lo largo de la cinta, en dp [P].</summary>
@@ -76,13 +82,16 @@ namespace AF.Presentation
         /// </summary>
         public const float PatternOpacityHighContrast = 0.35f;
 
+        /// <summary>
+        /// Largo del guion de la trama del agua andina, en fracciones de <see cref="PatternStepDp"/> [P] (2,8 dp de cada 4: una
+        /// línea discontinua a lo largo del río; la propuesta del Mapa §11.4 solo fija la trama de la blanca, la negra y la clara).
+        /// </summary>
+        public const float AndeanDashFraction = 0.7f;
+
         private const float RimMaxFraction = 0.35f;
 
         /// <summary>Vidrio del Mapa, azul hielo translúcido (#CFEFF3 con alfa 0,85) [P] (paleta de la muestra del Mapa).</summary>
         public static readonly Color GlassBody = new Color(0xCF / 255f, 0xEF / 255f, 0xF3 / 255f, 0.85f);
-
-        /// <summary>Borde del vidrio, <c>vidrio_borde</c> #EAF7F3 (direccion-visual-v2 §2.2).</summary>
-        public static readonly Color GlassRim = Palette.Hex(0xEAF7F3);
 
         /// <summary>Agua andina #9FC9D4 [P] (paleta de la muestra del Mapa, <c>generar_mapa.py</c>).</summary>
         public static readonly Color AndeanWater = Palette.Hex(0x9FC9D4);
@@ -109,6 +118,7 @@ namespace AF.Presentation
         private bool[] _planConnect = Array.Empty<bool>();
         private int _planCount;
         private bool _decimated;
+        private bool _truncated; // el presupuesto cortó el plan antes de algún cambio de agua
 
         /// <summary>Configura el gráfico (sin raycast).</summary>
         public void Setup()
@@ -187,19 +197,6 @@ namespace AF.Presentation
                 default:
                     return GlassBody;
             }
-        }
-
-        /// <summary>Orilla del agua <paramref name="water"/>: su color un 35 % hacia la tinta [P]; sin agua, el borde del vidrio.</summary>
-        public static Color RimColor(RiverWater water)
-        {
-            if (water == RiverWater.None)
-            {
-                return GlassRim;
-            }
-
-            Color rim = Color.Lerp(WaterColor(water), Palette.UiInk, 0.35f);
-            rim.a = 1f;
-            return rim;
         }
 
         /// <summary>
@@ -319,6 +316,7 @@ namespace AF.Presentation
             _markCount = 0;
             _planCount = 0;
             _decimated = false;
+            _truncated = false;
             RiverLine? line = _line;
             PolylineCursor? cursor = _cursor;
             if (line == null || cursor == null || cursor.Length <= 0f || _s1 <= _s0 || _space.DpPerUnit <= 0f)
@@ -407,6 +405,7 @@ namespace AF.Presentation
                 int cost = Cost(look) + (change ? Cost(after) : 0);
                 if (arc >= aEnd || used + cost + perSection > _budget)
                 {
+                    _truncated = arc < aEnd; // se omiten los cambios de agua que quedan: la punta lleva el aspecto anterior
                     AddPlan(cursor, aEnd, -1, look, true);
                     break;
                 }
@@ -502,7 +501,16 @@ namespace AF.Presentation
                     return Miter(Normal(incoming), Normal(outgoing));
                 }
 
-                return Normal(cursor.SegmentDirection(cursor.Locate(_planArc[i], out _)));
+                int segment = cursor.Locate(_planArc[i], out float t);
+                if (i > 0 && i == _planCount - 1 && t <= 0f && segment > 0)
+                {
+                    // La sección final cae justo en un punto de la línea: la cinta llega por el tramo anterior (Locate da el
+                    // siguiente, el que empieza en ese punto). La inicial no lo necesita: sale por el tramo que da Locate.
+                    cursor.DirectionsAt(segment, out Vector2 arriving, out _);
+                    return Normal(arriving);
+                }
+
+                return Normal(cursor.SegmentDirection(segment));
             }
 
             Vector2 p = _planPoint[i];
@@ -594,7 +602,7 @@ namespace AF.Presentation
                     case 0:
                         u0 = -1f;
                         u1 = -1f + rim;
-                        c = RimColor(w);
+                        c = Palette.GlassRim;
                         return;
                     case 1:
                         u0 = -1f + rim;
@@ -604,18 +612,18 @@ namespace AF.Presentation
                     default:
                         u0 = 1f - rim;
                         u1 = 1f;
-                        c = RimColor(w);
+                        c = Palette.GlassRim;
                         return;
                 }
             }
 
-            // Dos aguas: la derecha (B) de −1 a 0 y la izquierda (A) de 0 a 1, cada una con su orilla.
+            // Dos aguas: la derecha (B) de −1 a 0 y la izquierda (A) de 0 a 1, con el borde de vidrio por fuera.
             switch (k)
             {
                 case 0:
                     u0 = -1f;
                     u1 = -1f + rim;
-                    c = RimColor(look.B);
+                    c = Palette.GlassRim;
                     return;
                 case 1:
                     u0 = -1f + rim;
@@ -630,14 +638,15 @@ namespace AF.Presentation
                 default:
                     u0 = 1f - rim;
                     u1 = 1f;
-                    c = RimColor(look.A);
+                    c = Palette.GlassRim;
                     return;
             }
         }
 
         // Trama de Patrones de fruta (02 §12; propuesta del Mapa §11.4): una marca cada PatternStepDp, de 4 vértices, mientras
-        // quede presupuesto. En las dos aguas, una marca por mitad. Con puntos saltados, las marcas van sobre las cuerdas que
-        // dibuja la cinta (la posición, por la longitud de arco entre las dos secciones que las rodean) y con su aspecto.
+        // quede presupuesto. En las dos aguas, una marca por mitad. Con puntos saltados o con cambios de agua omitidos por el
+        // presupuesto, las marcas van sobre las cuerdas que dibuja la cinta (la posición, por la longitud de arco entre las dos
+        // secciones que las rodean) y con su aspecto, no con el agua del archivo, que la cinta ya no dibuja.
         private void AddPattern(VertexHelper vh, RiverLine line, PolylineCursor cursor, float aStart, float aEnd, float half)
         {
             float step = PatternStepDp / _space.DpPerUnit;
@@ -649,7 +658,7 @@ namespace AF.Presentation
                 RunLook look;
                 Vector2 center;
                 Vector2 dir;
-                if (_decimated && _planCount >= 2)
+                if ((_decimated || _truncated) && _planCount >= 2)
                 {
                     // La cuerda [chord, chord + 1] con arco[chord] ≤ arc < arco[chord + 1] (las secciones repetidas de un cambio de
                     // agua tienen el mismo arco y se pasan de largo).
@@ -691,8 +700,9 @@ namespace AF.Presentation
             }
         }
 
-        // Una marca: punto (blanca y andina), raya transversal (negra) u onda (clara: trazos diagonales alternos que forman un
-        // zigzag). Devuelve false si ya no cabe en el presupuesto.
+        // Una marca: punto (blanca), raya transversal (negra), onda (clara: trazos diagonales alternos que forman un zigzag) o
+        // guion a lo largo del río (andina [P]: una línea discontinua por el centro, para que el paso de la andina a la blanca
+        // no se distinga solo por el color). Devuelve false si ya no cabe en el presupuesto.
         private bool AddMark(VertexHelper vh, RiverWater water, Vector2 c, Vector2 dir, Vector2 normal, float room, int index)
         {
             if (water == RiverWater.None)
@@ -717,6 +727,17 @@ namespace AF.Presentation
                     vh.AddVert(c + across - thick, mark, Vector4.zero);
                     vh.AddVert(c + across + thick, mark, Vector4.zero);
                     vh.AddVert(c - across + thick, mark, Vector4.zero);
+                    break;
+                }
+
+                case RiverWater.Andean:
+                {
+                    Vector2 along = dir * (PatternStepDp * AndeanDashFraction * 0.5f);
+                    Vector2 thick = normal * 0.4f;
+                    vh.AddVert(c - along - thick, mark, Vector4.zero);
+                    vh.AddVert(c + along - thick, mark, Vector4.zero);
+                    vh.AddVert(c + along + thick, mark, Vector4.zero);
+                    vh.AddVert(c - along + thick, mark, Vector4.zero);
                     break;
                 }
 

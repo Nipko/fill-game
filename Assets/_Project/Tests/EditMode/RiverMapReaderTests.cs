@@ -272,6 +272,22 @@ namespace AF.Tests.EditMode
             Assert.That(map.Land.Zones[0].Tile, Is.EqualTo("rock"));
         }
 
+        [Test]
+        public void MinimalDoc_FactKeys_AcceptTheFourForms()
+        {
+            // Las cuatro formas de la clave de dato del Mapa (esquema, $defs/fact_key; glosario §10): el archivo real solo trae
+            // map.stop.*.dato_NN, así que las de país, mito y general se prueban aquí.
+            string viewpoints = "[" + Viewpoint(fact: "\"map.country.br.dato_01\"") + ", "
+                + "{\"id\": \"mirador_boto\", \"xy\": [20, 20], \"reveal_on\": 20, \"fact\": \"map.myth.boto\"}]";
+            string passing = "[{\"id\": \"gurupa\", \"line\": \"amazonas\", \"s\": 0.8, \"fact\": \"map.general.cuenca\"}, "
+                + "{\"id\": \"breves\", \"line\": \"amazonas\", \"s\": 0.7, \"fact\": \"map.stop.breves.dato_02\"}]";
+            RiverMap map = RiverMapReader.Read(Doc(viewpoints: viewpoints, passing: passing));
+            Assert.That(map.Viewpoints[0].Fact, Is.EqualTo("map.country.br.dato_01"));
+            Assert.That(map.Viewpoints[1].Fact, Is.EqualTo("map.myth.boto"));
+            Assert.That(map.Passing[0].Fact, Is.EqualTo("map.general.cuenca"));
+            Assert.That(map.Passing[1].Fact, Is.EqualTo("map.stop.breves.dato_02"));
+        }
+
         // ---------------------------------------------------------------------------------------------- casos inválidos
 
         private static IEnumerable<TestCaseData> InvalidCases()
@@ -349,6 +365,12 @@ namespace AF.Tests.EditMode
             yield return Case("recuadro de tres valores", Doc(insets: Inset(rect: "[0.78, 0.05, 0.98]")), "insets[0].rect");
             yield return Case("recuadro fuera de [0, 1]", Doc(insets: Inset(rect: "[0.78, 0.05, 1.2, 0.3]")), "insets[0].rect[2]");
             yield return Case("recuadro con una linea desconocida", Doc(insets: Inset(lines: "[\"nadie\"]")), "insets[0].lines[0]");
+            yield return Case("dato de pais con tres letras", Doc(viewpoints: "[" + Viewpoint(fact: "\"map.country.bra.dato_01\"") + "]"),
+                "viewpoints[0].fact");
+            yield return Case("dato de parada con un digito", Doc(viewpoints: "[" + Viewpoint(fact: "\"map.stop.x.dato_1\"") + "]"),
+                "viewpoints[0].fact");
+            yield return Case("franja con agua andina", Doc(lines: Lines(Main(splits: "{\"id\": \"encontro\", \"s0\": 0.5, \"s1\": 0.6, "
+                + "\"left\": \"andean\", \"right\": \"white\"}"), Trib())), "lines[0].splits[0].left");
         }
 
         [TestCaseSource(nameof(InvalidCases))]
